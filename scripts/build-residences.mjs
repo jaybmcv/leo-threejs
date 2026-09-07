@@ -1,0 +1,12 @@
+import fs from 'node:fs/promises';
+import {Group} from 'three';
+import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
+import {createNeighborhood,createResidentialDeck} from '../src/model.js';
+globalThis.FileReader=class{readAsArrayBuffer(b){b.arrayBuffer().then(result=>{this.result=result;this.onloadend?.();});}};
+const root=new Group();root.name='LEO_5000_furnished_twin_cabins';root.userData={cabins:5000,berths:10000,units:'metres'};
+const template=createNeighborhood();
+for(let number=1;number<=10;number++)root.add(createResidentialDeck(number,template).root);
+root.traverse(o=>{if(o.isMesh)o.geometry.normalizeNormals();});
+const bytes=await new GLTFExporter().parseAsync(root,{binary:true,onlyVisible:true});
+await fs.writeFile('output/leo-interior-v01/leo-residential-decks.glb',Buffer.from(bytes));
+console.log({neighborhoods:10,cabins:5000,berths:10000,megabytes:bytes.byteLength/1048576});

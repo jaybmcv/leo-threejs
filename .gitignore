@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.qa/
+archive/
+concepts/
+output/*
+!output/leo-interior-v01/
+output/leo-interior-v01/*
+!output/leo-interior-v01/THREE-LICENSE.txt
+!output/leo-interior-v01/assets/
+*.tar.gz
+.env*

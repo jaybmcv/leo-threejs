@@ -1,0 +1,15 @@
+import fs from 'node:fs/promises';
+import {Group} from 'three';
+import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
+import {SHIP_AREAS,createShipArea} from '../src/areas.js';
+import {createServiceCirculation} from '../src/service-circulation.js';
+import {createSpecialCirculation} from '../src/special-circulation.js';
+globalThis.FileReader=class{readAsArrayBuffer(b){b.arrayBuffer().then(result=>{this.result=result;this.onloadend?.();});}};
+const root=new Group();root.name='LEO_service_areas';
+for(const a of SHIP_AREAS)root.add(createShipArea(a).root);
+for(const deck of new Set(SHIP_AREAS.map(a=>a.deck)))for(const c of [createServiceCirculation(deck),createSpecialCirculation(deck)])if(c)root.add(c.root);
+root.traverse(o=>{if(o.isMesh)o.geometry.normalizeNormals();});
+const bytes=await new GLTFExporter().parseAsync(root,{binary:true,onlyVisible:true});
+await fs.writeFile('output/leo-interior-v01/leo-service-areas.glb',Buffer.from(bytes));
+await fs.writeFile('output/leo-interior-v01/ship-areas.json',JSON.stringify(SHIP_AREAS,null,2));
+console.log({areas:SHIP_AREAS.length,megabytes:bytes.byteLength/1048576});

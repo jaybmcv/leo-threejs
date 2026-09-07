@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LEO — exterior comparison</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#182731;color:#e8eef2;font:15px/1.5 'Segoe UI',sans-serif}header{max-width:1350px;margin:auto;padding:26px 28px 16px;display:flex;justify-content:space-between;align-items:center;gap:24px}h1{font-size:25px;font-weight:500;margin:0}p{margin:7px 0;color:#b5c4ce}a{color:#efc493}main{max-width:1350px;padding:0 28px 30px;margin:auto}.compare{position:relative;aspect-ratio:1.6;width:min(100%,calc((100vh - 260px)*1.6));min-width:280px;margin-inline:auto;overflow:hidden;border:1px solid #506472;border-radius:6px;--split:50%}.compare img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}.before{clip-path:inset(0 calc(100% - var(--split)) 0 0)}.divider{position:absolute;top:0;bottom:0;left:var(--split);width:2px;background:#f4cb93;pointer-events:none}.divider::after{content:'↔';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:42px;height:42px;border-radius:50%;background:#efc493;color:#1a2c38;display:grid;place-items:center;font-size:25px}.label{position:absolute;top:12px;padding:5px 11px;background:#192b38e8;border:1px solid #647786;border-radius:4px;font-size:12px;letter-spacing:1px}.left{left:12px}.right{right:12px}input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0}.compare:focus-within{outline:3px solid #f4cb93;outline-offset:4px}.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px}button{font:inherit;border:1px solid #647786;background:#293f4d;color:#edf2f5;padding:8px 16px;border-radius:4px;cursor:pointer}button:focus-visible,a:focus-visible{outline:2px solid #f4cb93;outline-offset:3px}.note{font-size:13px;max-width:870px;margin-top:18px}@media(max-width:600px){header{display:block;padding:18px 14px}h1{font-size:22px}main{padding:0 14px 25px}.label{font-size:10px}.note{font-size:12px}}
+</style>
+<header><div><h1>LEO / exterior refinement</h1><p>Drag the divider to compare the same view of versions 30 and 31.</p></div><a href="index.html">Explore the 3D model →</a></header>
+<main>
+<div class="compare" id="compare"><img id="after-image" src="renders/exterior-concept-shape.png" alt="Version 31 exterior: diagonal"><img id="before-image" class="before" src="comparison/exterior-v30-concept.png" alt="Version 30 exterior: diagonal"><div class="divider"></div><span class="label left">V30 · PREVIOUS</span><span class="label right">V31 · REFINED</span><input id="split" type="range" min="0" max="100" value="50" aria-label="Comparison divider; zero shows version 31, one hundred shows version 30"></div>
+<div class="controls" aria-label="Comparison view"><button data-view="concept" aria-pressed="true">Diagonal</button><button data-view="side" aria-pressed="false">Side</button><button data-view="top" aria-pressed="false">Top</button></div><p class="small" id="view-caption">Diagonal view · matching cameras · shape only</p>
+<div class="controls"><button data-value="100">Show v30</button><button data-value="50">Split view</button><button data-value="0">Show v31</button><span id="state" aria-live="polite">50% previous · 50% refined</span></div>
+<p class="note">V31 cleans the forward crown shading without moving the geometry. The short roof, rounded bow and smooth transition into the tail are retained. The approved top outline and straight forward sides are preserved.</p>
+<p><a href="reference-review.html">Compare the model with your concept →</a></p>
+<details style="margin-top:20px"><summary style="cursor:pointer;color:#efc493">View your concept reference</summary><img src="reference.png" alt="User-supplied Leo concept with sloped front glazing and angled engine pods" style="display:block;width:100%;margin-top:16px;border-radius:6px"></details>
+</main>
+<style>[data-view][aria-pressed="true"]{background:#e3b57d;color:#1b2d39;border-color:#e3b57d}</style>
+<script>
+const slider=document.getElementById('split'),compare=document.getElementById('compare'),state=document.getElementById('state');
+function update(){compare.style.setProperty('--split',slider.value+'%');state.textContent=slider.value+'% previous · '+(100-slider.value)+'% refined'}
+slider.addEventListener('input',update);
+document.querySelectorAll('[data-value]').forEach(b=>b.addEventListener('click',()=>{slider.value=b.dataset.value;update()}));
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.view;document.getElementById('after-image').src='renders/exterior-'+v+'-shape.png';document.getElementById('before-image').src='comparison/exterior-v30-'+v+'.png';document.getElementById('after-image').alt='Version 31 exterior: '+b.textContent;document.getElementById('before-image').alt='Version 30 exterior: '+b.textContent;document.getElementById('view-caption').textContent=b.textContent+' view · matching cameras · shape only';document.querySelectorAll('[data-view]').forEach(a=>a.setAttribute('aria-pressed',String(a===b)));}));
+</script></html>
+
+
+
+

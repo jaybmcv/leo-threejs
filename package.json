@@ -1,0 +1,22 @@
+{
+  "name": "leo-blockout",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-all.mjs",
+    "check": "node scripts/check-all.mjs",
+    "build:public": "node scripts/build-public.mjs",
+    "start": "node scripts/serve.mjs",
+    "build:reference": "node scripts/build-reference.mjs",
+    "start:reference": "node scripts/serve-reference.mjs"
+  },
+  "dependencies": {
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^1.0.8",
+    "esbuild": "0.28.2",
+    "gltf-validator": "^2.0.0-dev.3.10"
+  }
+}

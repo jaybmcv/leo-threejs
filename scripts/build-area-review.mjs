@@ -1,0 +1,8 @@
+import fs from 'node:fs/promises';
+import {SHIP_AREAS} from '../src/areas.js';
+const out='output/leo-interior-v01',seen=new Set(),areas=SHIP_AREAS.filter(a=>{if(seen.has(a.kind))return false;seen.add(a.kind);return true;});
+const esc=s=>s.replaceAll('&','&amp;').replaceAll('<','&lt;');
+for(const a of areas)await fs.access(`${out}/renders/interior-area-${a.id}-overview.png`);
+const cards=areas.map(a=>`<article><a href="/?area=${a.id}&view=overview"><img loading="lazy" src="renders/interior-area-${a.id}-overview.png" alt="${esc(a.name)} overview"></a><h2>${esc(a.name)}</h2><p>Deck ${a.deck} · ${esc(a.category)}</p><a href="/?area=${a.id}&view=inside">Enter this area →</a></article>`).join('');
+await fs.writeFile(`${out}/service-review.html`,`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LEO — Ship area review</title><style>body{margin:0;background:#192c37;color:#edf0e9;font:16px system-ui}header{padding:36px 4vw}h1{font-weight:500}a{color:#e4ba83}main{padding:0 4vw 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px}article{background:#253d4b;padding:0 0 22px}img{width:100%;display:block}h2,p,article>a:last-child{margin:16px 20px;font-size:16px}p{font-size:13px;color:#b8c8cf}</style><header><a href="/?area=d20-bridge-9&view=inside">← Explore Leo</a><h1>Spaces for the voyage</h1><p>${areas.length} area types across ${SHIP_AREAS.length} fitted ship areas. Select an area to open its 3D view.</p></header><main>${cards}</main></html>`);
+console.log({reviewedTypes:areas.length,fittedAreas:SHIP_AREAS.length});
