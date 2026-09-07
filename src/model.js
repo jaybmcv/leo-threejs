@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {finishCabin} from './residential-finish.js';
+import {finishGarden} from './garden-finish.js';
 import {aftOpenings} from './aft-layout.js';
 import {createAft} from './aft.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -298,6 +299,7 @@ export function createNeighborhood() {
   // Continuous handrails support both stair flights and gallery landings.
   for(let level=0;level<2;level++)for(const xx of [150.3-level*3.3,153.3-level*3.3])tube('Stair_handrail',[[xx,25.4+4*level,level===0?34.85:42.2],[xx,29.4+4*level,level===0?42.2:34.85]],.05,wood,fittings);
   for(const xx of [119,140]){const l=new T.PointLight(0xffe6c2,45,38,2);l.position.set(xx,32,27);root.add(l);}
+  finishGarden({fittings,walls,parts:fittings.children.slice(gardenFittingStart),wallParts:walls.children.slice(gardenWallStart),material});
   const gardenParts={fittings:fittings.children.slice(gardenFittingStart),walls:walls.children.slice(gardenWallStart)};
   const loungeStart={fittings:fittings.children.length,walls:walls.children.length,root:root.children.length};
   const observation=createLounge({root,walls,fittings,box,mesh,group,material,chair,catFigure,rail,tube});
@@ -335,7 +337,7 @@ export function createGardenCommons(number,template=createNeighborhood()){
   const c=COMMONS[number-1];if(!c)throw new Error('Commons must be 1–10');
   const root=group(`Fitted_garden_commons_${String(number).padStart(2,'0')}`),walls=group('Garden_walls_and_ceiling',root),fittings=group('Garden_furnishings',root);
   root.position.x=c.x-132;root.scale.z=c.z<0?-1:1;root.position.z=c.z-27*root.scale.z;
-  root.userData={neighborhood:number,decks:[17,18,19],floor:24.3,units:'metres',stage:'Furnished garden concept'};
+  root.userData={neighborhood:number,decks:[17,18,19],floor:24.3,units:'metres',stage:'Refined garden commons: layered planting, cushioned seating, oak cafe and warm gallery lighting'};
   for(const part of template.gardenParts.fittings)fittings.add(part.clone(true));
   for(const part of template.gardenParts.walls)walls.add(part.clone(true));
   if(number<9)for(const yy of [28.3,32.3])rail(fittings,[136.8,8],[138.8,8],yy);

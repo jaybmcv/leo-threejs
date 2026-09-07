@@ -91,6 +91,11 @@ This is a furnished main-ship **concept model** with aft machinery and a fin cro
 
 ## Rebuild
 
+Garden commons now share a refined finish template: layered foliage in the two
+existing planted beds, cushioned oak benches, stone cafe tables and worktops,
+coffee equipment, open reading shelves, warm pendants and under-gallery lighting.
+All ten gardens retain their accepted footprints, galleries and routes.
+
 The current residential finish pass adds rounded furniture, sage upholstered headboards,
 oak storage, reading lights, desk lighting, ensuite accessories and corridor guides.
 It repeats through all 5,000 cabins without changing their footprints or berths.
