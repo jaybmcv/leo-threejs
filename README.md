@@ -183,3 +183,7 @@ The lower nose now contains expedition stores/outfitting on Deck 1, fresh-food c
 ## Forward voyage forum — Deck 16
 
 A 52 × 48 m forum at x = 154–206 m adds 120 modeled audience seats in two banks, four open mobility-device spaces, a rear foyer, side gathering tables and a 0.25 m stage. The stage ramp has a 5 m run and 2 m clear width. The room owns its 4 m approach from the forward core; walls begin beyond the stair towers at x = 148 m. The forum is available in Ship areas and Deck layout and is included in the service and complete-ship downloads. Modeled seating is not a certified event capacity.
+
+## Lower aft services — Decks 1–3
+
+Three rooms step back progressively beneath the rising tail: Deck 1 spares and bulk stores (44 × 30 m), Deck 2 maintenance workshop (60 × 36 m), and Deck 3 engineering support and inspection (71 × 38 m). Their forward entries at x = −154 m connect to the existing service spine at x = −148 m through 6 m wide approaches. Central and transverse aisles remain clear of racks, benches and inspection equipment. All three appear in Ship areas, Deck layout and the service/full-ship downloads. The lower tail beyond these rooms remains structural space where the hull does not permit full-height rooms. Geometry and saved circulation checks are in `scripts/check-lower-aft.mjs`.
