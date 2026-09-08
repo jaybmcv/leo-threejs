@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {SUPPORT_AREAS,createSupportArea} from './neighborhood-services.js';
 import {finishShipArea} from './area-finish.js';
 import {unionRectangles,slabGeometry} from './floor-geometry.js';
 import {SPECIAL_AREAS,createSpecialArea} from './special-areas.js';
@@ -35,11 +36,12 @@ const STANDARD_AREAS=schedules.flatMap(([deck,category,rooms])=>rooms.map(([kind
   description:({cargo:'Secured freight modules, handling lanes and cargo restraints.',stores:'Inventory racks with an inspection and issue counter.',cold:'Insulated storage banks and a packing bench.',workshop:'Repair benches, tool storage and maintenance equipment.',logistics:'Dispatch consoles, status boards and transfer coordination.',arrival:'Seating, check-in counters and passenger circulation.',security:'Screening lanes, inspection stations and staff workpoints.',airlock:'Suit racks, preparation benches and paired pressure-door chambers.',baggage:'Reclaim conveyors, luggage storage and a service counter.',farm:'Stacked growing beds, irrigation lines and harvest aisles.',nursery:'Seedling benches, propagation shelves and cultivation workstations.',harvest:'Produce washing, sorting and packing worktables.',kitchen:'Preparation islands, cooking lines, sinks and meal service.',air:'Air-handling banks, filter housings and monitoring stations.',water:'Treatment tanks, filter vessels, pipe manifolds and testing benches.',thermal:'Heat-exchanger banks, coolant manifolds and maintenance access.',recycle:'Sorting stations, compactors and recovery bins.',power:'Electrical cabinets, distribution buswork and monitoring.',control:'Operator consoles and shared systems-status displays.',ward:'Patient beds, bedside services and a nursing station.',surgery:'Procedure stations, instrument carts and scrub facilities.',pharmacy:'Dispensing counter, secure cabinets and preparation benches.',isolation:'Separated patient bays and a staff preparation area.',clinic:'Consultation bays, examination beds and reception.',imaging:'Diagnostic scanner, examination stations and operator consoles.',counseling:'Small conversation settings, privacy screens and quiet seating.',shelter:'Emergency seating, supplies, hygiene stations and coordination.',classroom:'Teaching spaces, student desks and collaborative tables.',library:'Book stacks, study desks and shared reading tables.',gym:'Exercise machines, stretching space and changing lockers.',recreation:'Games, social tables and an open activity floor.',theater:'A small stage, tier-free seating and projection screens.',childcare:'Low play furniture, activity tables and supervised learning.',dining:'Shared meal tables, service counters and a wash-up station.',community:'Maker benches, materials storage and collaborative work areas.'})[kind],
 })));
 
-export const SHIP_AREAS=[...STANDARD_AREAS,...SPECIAL_AREAS];
+export const SHIP_AREAS=[...STANDARD_AREAS,...SPECIAL_AREAS,...SUPPORT_AREAS];
 
 const materials=new Map();
 function mat(name,color,extra={}){if(!materials.has(name))materials.set(name,new T.MeshStandardMaterial({name,color,roughness:.8,metalness:.08,...extra}));return materials.get(name);}
 export function createShipArea(area){
+  if(area.support)return createSupportArea(area);
   if(area.special)return createSpecialArea(area);
   const root=new T.Group();root.name=`Area_${area.id}`;root.position.set(...area.center);root.userData={...area,stage:'Furnished concept',units:'metres'};
   const shell=new T.Group();shell.name='Walls_and_ceiling';root.add(shell);

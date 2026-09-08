@@ -163,3 +163,8 @@ Ten fitted social spaces occupy the bow ahead of the residential decks. Each use
 | 15 | The Quiet Grove | Low planting, seating circles and botanical study |
 
 Open `?district=1&space=nose` or use Neighborhood → Nose commons. The selector preserves nose focus across all ten decks; Enter this space restores the lining at eye level. Both `leo-residential-decks.glb` and `leo-full-ship.glb` include all ten commons; the Neighborhood 10 download includes its grove. The existing upper garden commons remain separate. Geometry and route checks are in `scripts/check-nose-commons.mjs`. These are fitted concept interiors, not an occupancy or engineering certification.
+
+
+## Aft neighborhood services — Decks 14–15
+
+Four fitted rooms occupy x = −261 to −181 m, with 4 m doorways onto an 8 m central passage. The passage meets the existing aft landing at x = −174 m, leaving the service lift and stairs clear. Deck 14 contains laundry/linen exchange and parcel collection/returns. Deck 15 contains a repair studio and a shared-equipment/storage library. These are included in Ship areas, Deck layout, the service-areas download and complete fitted ship. Select an area for an eye-level view or locate it on its deck. The upper engineering gallery and fin access retain their existing geometry.

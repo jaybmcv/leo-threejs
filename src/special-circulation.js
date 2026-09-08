@@ -1,10 +1,12 @@
 import * as T from 'three';
+import {createSupportCirculation} from './neighborhood-services.js';
 import {finishCirculation} from './circulation-finish.js';
 import {SPECIAL_AREAS} from './special-areas.js';
 import {transitOpenings} from './transit.js';
 import {unionRectangles,slabGeometry} from './floor-geometry.js';
 
 export function createSpecialCirculation(deck){
+  if(deck===14||deck===15)return createSupportCirculation(deck);
   if(![2,7,20].includes(deck))return null;
   const root=new T.Group();root.name=`Deck_${deck}_special_area_connections`;const shell=new T.Group();shell.name='Connection_walls_and_ceiling';root.add(shell);
   const floor=new T.MeshStandardMaterial({color:0xc5baa4,roughness:.85}),wall=new T.MeshStandardMaterial({color:0xd9ddd6,roughness:.8}),light=new T.MeshStandardMaterial({color:0xffedcd,emissive:0xffe4b6,emissiveIntensity:.6});
