@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {applyContextOpacity} from './glazing-finish.js';
 import {publicAsset,enablePublicDownloads} from './public-assets.js';
 import {refineExterior} from './exterior-finish.js';
 import {createAft} from './aft.js';
@@ -111,7 +112,7 @@ function showAft(){
 }
 $('aft-section').addEventListener('change',()=>{aftSection=$('aft-section').value;showAft();});$('aft-shell').addEventListener('change',showAft);
 $('aft-eye').addEventListener('click',()=>{aftEye=true;showAft();});$('aft-overview').addEventListener('click',()=>{aftEye=false;showAft();});
-const shapeParts=/^(Crown_|Smooth_pressure_envelope_|Upper_engine_housing_|Sculpted_nacelle_shell$|Nacelle_exhaust_bulkhead$|Nacelle_chamfered_nose_face$|Engine_shroud$|Engine_bell$|Engine_nozzle_lip$|Engine_throat$|Blended_double_delta$|Wing_thermal_edge$|Wing_stabilizer_fence$|Swept_cat_tail$|Swept_tail_cap$|Tail_root_dorsal_fairing$|Contoured_aft_pressure_frame$|Forward_observation_panes$|Individual_glazing_frames$|Individual_glazing_seals$|Bridge_roof_brow$|Forward_side_vent_)/;
+const shapeParts=/^(Fin_cap_retained_white_underside$|Crown_|Smooth_pressure_envelope_|Upper_engine_housing_|Sculpted_nacelle_shell$|Nacelle_exhaust_bulkhead$|Nacelle_chamfered_nose_face$|Engine_shroud$|Engine_bell$|Engine_nozzle_lip$|Engine_throat$|Blended_double_delta$|Wing_thermal_edge$|Wing_stabilizer_fence$|Swept_cat_tail$|Swept_tail_cap$|Tail_root_dorsal_fairing$|Contoured_aft_pressure_frame$|Forward_observation_panes$|Individual_glazing_frames$|Individual_glazing_seals$|Bridge_roof_brow$|Forward_side_vent_)/;
 const exteriorMeshes=[];ship.exterior.traverse(o=>{if(o.isMesh)exteriorMeshes.push({mesh:o,visible:o.visible});});
 function applyShapeView(){const simple=mode==='exterior'&&$('shape-only').checked;for(const {mesh,visible} of exteriorMeshes)mesh.visible=visible&&(!simple||shapeParts.test(mesh.name));}
 $('shape-only').addEventListener('change',applyShapeView);
@@ -162,7 +163,7 @@ function resize(){
   const h=230*frameScale;ortho.left=-h*r.width/r.height;ortho.right=h*r.width/r.height;ortho.top=h;ortho.bottom=-h;ortho.setViewOffset(r.width,r.height,shift,shiftY,r.width,r.height);ortho.updateProjectionMatrix();
 }
 new ResizeObserver(resize).observe($('viewport'));
-function contextOpacity(value){[ship.port,ship.starboard].forEach(g=>g.traverse(o=>{if(o.isMesh){const ms=Array.isArray(o.material)?o.material:[o.material];ms.forEach(m=>{m.transparent=value<1;m.opacity=value;m.depthWrite=value===1;});}}));}
+function contextOpacity(value){[ship.port,ship.starboard].forEach(g=>applyContextOpacity(g,value));}
 let exteriorReady=false,exteriorLoad=null,modeRequest=0;
 async function loadExterior(){
   if(exteriorReady)return;
@@ -180,7 +181,7 @@ async function loadExterior(){
       Object.assign(ship,{exterior,fixed:exterior.getObjectByName('Wings_engines_tail'),port:exterior.getObjectByName('Port_shell'),starboard:exterior.getObjectByName('Starboard_shell')});
     }
     if(location.protocol==='file:'){prepareCrownExterior(ship.exterior);refineExterior(ship.exterior);ship.exterior.add(createFinCrown().root);}
-    ship.exterior.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;exteriorMeshes.push({mesh:o,visible:o.visible});}});exteriorReady=true;
+    ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});exteriorReady=true;
   })().catch(e=>{exteriorLoad=null;throw e;});
   await exteriorLoad;
 }

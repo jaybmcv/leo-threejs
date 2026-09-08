@@ -1,4 +1,6 @@
 import {addPassengerWindows} from './passenger-windows.js';
+import {tintWorldWindow} from './glazing-finish.js';
+import {bowAperturePlan,cutBowApertures} from './observation-apertures.js';
 import * as T from 'three';
 import {TessellateModifier} from 'three/addons/modifiers/TessellateModifier.js';
 
@@ -33,7 +35,7 @@ export function refineExterior(exterior){
   }
   p.needsUpdate=true;o.geometry.computeBoundingBox();o.geometry.computeBoundingSphere();
  });
- const palette={V31_Ceramic_satin:[0xd0d5d5,.4,.24],V31_Thermal_navy:[0x26384c,.5,.36],V31_Edge_alloy:[0x738995,.28,.72],V31_Recess:[0x0d1c29,.62,.25],V31_Panel_reveal:[0x71818b,.68,.18],V31_Observation_glass:[0x153849,.13,.56],V31_Amber_markers:[0xd89343,.45,.35],V31_Identity_ink:[0x18334b,.72,.05],V31_Ceramic_access_panels:[0xb9c4ca,.5,.3],V31_Thermal_service_panels:[0x304459,.54,.4],V31_Glazing_seals:[0x0b1c27,.78,.08],V31_Dorsal_service_covers:[0xbec8cd,.48,.26]};
+ const palette={V31_Ceramic_satin:[0xd8dcda,.34,.12],V31_Thermal_navy:[0x26384c,.4,.36],V31_Edge_alloy:[0x738995,.28,.72],V31_Recess:[0x0d1c29,.62,.25],V31_Panel_reveal:[0x71818b,.68,.18],V31_Observation_glass:[0x153849,.13,.56],V31_Amber_markers:[0xd89343,.45,.35],V31_Identity_ink:[0x18334b,.72,.05],V31_Ceramic_access_panels:[0xb9c4ca,.5,.3],V31_Thermal_service_panels:[0x304459,.54,.4],V31_Glazing_seals:[0x0b1c27,.78,.08],V31_Dorsal_service_covers:[0xbec8cd,.48,.26]};
  exterior.traverse(o=>{if(!o.isMesh)return;const replace=m=>{if(seen.has(m))return seen.get(m);const n=m.clone(),p=palette[m.name];if(p){n.color.setHex(p[0]);n.roughness=p[1];n.metalness=p[2];n.name=m.name.replace('V31_','V32_');}if(m.name==='V31_Engine_idle_glow'){n.color.setHex(0x508999);n.emissive.setHex(0x2b778b);n.emissiveIntensity=.55;}if(m.name==='V31_Inhabited_windows'){n.color.setHex(0x2a4855);n.emissive.setHex(0xa6c6d1);n.emissiveIntensity=.11;}seen.set(m,n);return n;};o.material=Array.isArray(o.material)?o.material.map(replace):replace(o.material);});
  const sideDetails=/^(LEO_wordmark|Mission_identifier|Mission_brand|Crest_|Individual_deck_windows|Lower_thermal_panel_fields|Thermal_panel_joint|Service_access_|Thermal_amber_|Upper_service_hatch|Upper_hatch_latch|Bow_access_|Lifeboat_|Bay_amber|Transfer_hangar_|Hangar_door_)/;
  const topDetails=/^(Dorsal_service_cover|Dorsal_cover_latch|Dorsal_maintenance_hatch|Dorsal_hatch_front|Roof_mission)$/;
@@ -81,5 +83,8 @@ export function refineExterior(exterior){
  // Separate the nozzle liners from their structural collars and heat shields.
  exterior.traverse(o=>{if(!o.isMesh)return;if(o.name==='Engine_bell'){o.material=o.material.clone();o.material.color.setHex(0x172733);o.material.roughness=.32;o.material.metalness=.8;}if(o.name==='Nozzle_internal_cooling_ring'){o.material=o.material.clone();o.material.color.setHex(0x826c56);o.material.roughness=.4;}if(o.name==='Engine_nozzle_lip'){o.material=o.material.clone();o.material.color.setHex(0xa2adb3);o.material.roughness=.24;}if(o.name==='Aft_service_louver'){o.material=o.material.clone();o.material.color.setHex(0x7b8991);o.material.metalness=.75;}});
  stats.passengerWindows=addPassengerWindows(exterior,hull,side,surfaceIndex);
- exterior.userData={...exterior.userData,revision:'35',scope:'Retained silhouette; projected markings and seams, glazing trim, satin ceramic and thermal finishes, nozzle detailing',surfaceRefinement:stats};exterior.updateMatrixWorld(true);return stats;
+ const observationPanes=[],backing=[];exterior.traverse(o=>{if(!o.isMesh)return;if(['Forward_observation_panes','Forward_side_vent_glass'].includes(o.name)&&new T.Box3().setFromObject(o).max.z>0)observationPanes.push(o);if(o.name==='Individual_glazing_seals')backing.push(o);});
+ const observationPlan=bowAperturePlan(observationPanes);stats.observationOpenings={chartTriangles:observationPlan,operations:0};for(const o of [...hull,...backing])stats.observationOpenings.operations+=cutBowApertures(o,observationPlan);
+ exterior.traverse(o=>{if(o.isMesh&&['Forward_observation_panes','Forward_side_vent_glass','Forward_navigation_sensor_glass'].includes(o.name))tintWorldWindow(o,p=>new T.Vector3(Math.max(0,p.x-125),55,p.z));});
+ exterior.userData={...exterior.userData,revision:'36',scope:'Retained silhouette; projected markings and seams, glazing trim, satin ceramic and thermal finishes, nozzle detailing',surfaceRefinement:stats};exterior.updateMatrixWorld(true);return stats;
 }

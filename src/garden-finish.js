@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {polishInterior} from './interior-polish.js';
 
 // All additions belong to the shared commons template, so every neighborhood
 // receives the same finishes without moving its floor, galleries or routes.
@@ -94,5 +95,6 @@ export function finishGarden({fittings,walls,parts,wallParts,material}){
    box('Library_book',[.23,h,.12],[x+.035,24.64+level*.6+h/2,43.8+i*.22],i%2?clay:sage);
   }
  }
- return {revision:1,plantedBeds:2,benchSeats:8,cafePendants:3,scope:'Shared commons finish template; existing routes and gallery structure retained'};
+ for(const p of [...parts,...wallParts,finish,ceiling])polishInterior(p,'Garden commons');
+ return {revision:2,plantedBeds:2,benchSeats:8,cafePendants:3,scope:'Shared commons polish; softened joinery, tailored seating and satin hardware'};
 }

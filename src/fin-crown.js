@@ -1,5 +1,7 @@
 import * as T from 'three';
 import {finishCrownLounge} from './observation-finish.js';
+import {tintBoxWindow} from './glazing-finish.js';
+import capUnderside from './assets/fin-cap-underside.json' with {type:'json'};
 import capPlan from './assets/fin-cap-plan.json' with {type:'json'};
 import {outlinedSlab,unionRectangles,slabGeometry} from './floor-geometry.js';
 
@@ -13,13 +15,16 @@ export function createFinCrown(){
  const box=(name,size,p,material,g)=>mesh(name,new T.BoxGeometry(...size),p,material,g);
  const cyl=(name,r,h,p,material,g)=>mesh(name,new T.CylinderGeometry(r,r,h,32),p,material,g);
  const y=CROWN.floor;
+ const undersideGeometry=new T.BufferGeometry();undersideGeometry.setAttribute('position',new T.Float32BufferAttribute(capUnderside.position,3));undersideGeometry.setAttribute('normal',new T.Float32BufferAttribute(capUnderside.normal,3));undersideGeometry.normalizeNormals();
+ const underside=mesh('Fin_cap_retained_white_underside',undersideGeometry,[0,0,0],'ivory',shell);underside.userData.retainedCap={top:y-.55,lift:CROWN.lift,source:'Swept_tail_cap',sourceSHA256:capUnderside.sourceSHA256};
  mesh('Crown_observation_floor',outlinedSlab(CROWN.outline,[CROWN.lift],y,.55),[0,0,0],'floor',shell);
  // Low sill and continuous glazing follow the accepted cap's projected outline.
  const perimeter=[],lengths=CROWN.outline.map((a,i)=>{const b=CROWN.outline[(i+1)%CROWN.outline.length];return Math.hypot(b[0]-a[0],b[1]-a[1]);}),total=lengths.reduce((a,b)=>a+b,0),count=Math.ceil(total/3.2);
  for(let j=0;j<count;j++){let distance=total*j/count,i=0;while(distance>lengths[i]&&i<lengths.length-1)distance-=lengths[i++];const a=CROWN.outline[i],b=CROWN.outline[(i+1)%CROWN.outline.length],t=distance/lengths[i];perimeter.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);}
- function edge(name,a,b,h,cy,thick,material){const len=Math.hypot(b[0]-a[0],b[1]-a[1]),o=box(name,[len+.02,h,thick],[(a[0]+b[0])/2,cy,(a[1]+b[1])/2],material,shell);o.rotation.y=-Math.atan2(b[1]-a[1],b[0]-a[0]);}
+ function edge(name,a,b,h,cy,thick,material){const len=Math.hypot(b[0]-a[0],b[1]-a[1]),o=box(name,[len+.02,h,thick],[(a[0]+b[0])/2,cy,(a[1]+b[1])/2],material,shell);o.rotation.y=-Math.atan2(b[1]-a[1],b[0]-a[0]);if(material==='glass'){const normal=new T.Vector3(0,0,1).applyAxisAngle(new T.Vector3(0,1,0),o.rotation.y),radial=new T.Vector3(o.position.x+235,0,o.position.z);tintBoxWindow(o,'z',Math.sign(normal.dot(radial)));}}
  for(let i=0;i<perimeter.length;i++){const a=perimeter[i],b=perimeter[(i+1)%perimeter.length];edge('Crown_window_sill',a,b,.75,y+.1,.25,'navy');edge('Crown_sill_inlay',a,b,.07,y-.12,.29,'ivory');edge('Crown_panoramic_window',a,b,4.15,y+2.55,.055,'glass');edge('Crown_window_header',a,b,.3,y+4.8,.26,'ivory');edge('Crown_header_gasket',a,b,.065,y+4.59,.27,'navy');box('Crown_window_mullion',[.1,4.4,.1],[a[0],y+2.55,a[1]],'frame',shell);}
  const roof=mesh('Crown_roof',outlinedSlab(CROWN.outline,[],CROWN.ceiling+.6,.6),[0,0,0],'ivory',shell);roofs.push(roof);
+ mesh('Crown_white_underfloor_rim',outlinedSlab(CROWN.outline,[CROWN.lift],y-.25,.34),[0,0,0],'ivory',shell);
  for(const z of [-10,10]){const o=box('Crown_ceiling_light',[59,.07,.18],[-236,CROWN.ceiling-.08,z],'light',shell);roofs.push(o);}
  // A walk-in island bar, with a clear staff entrance on its aft end.
  const barRects=[{x0:-237,x1:-227,z0:-3.3,z1:-2.3},{x0:-237,x1:-227,z0:2.3,z1:3.3},{x0:-228,x1:-227,z0:-2.3,z1:2.3}];

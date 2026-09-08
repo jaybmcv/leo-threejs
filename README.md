@@ -1,6 +1,16 @@
 # LEO — Life aboard, interior study 01
 
-The accepted V31 exterior is retained as the source baseline. The active V35 exterior adds refined hull finishes, projected markings and seams, engine service panels and the glazed panoramic fin lounge. The current interior includes all ten furnished residential decks (5,000 twin cabins / 10,000 berths), ten fitted garden commons, 68 fitted ship areas across eight decks, and the shared observation lounge. Aft pass 03 now adds machinery, reservoirs, pod interiors, wing maintenance routes and fin structure and the panoramic crown to the combined ship GLB. The source `leo-exterior.glb` remains byte-identical; the viewer and combined GLB use the same refined V35 exterior. The machinery hall, tank bay and pod interiors now have removable enclosures, open portals and route lighting. Equipment remains a concept arrangement.
+The accepted V31 exterior is retained as the source baseline. The active V36 exterior adds refined hull finishes, projected markings and seams, engine service panels and the glazed panoramic fin lounge. The current interior includes all ten furnished residential decks (5,000 twin cabins / 10,000 berths), ten fitted garden commons, 68 fitted ship areas across eight decks, and the shared observation lounge. Aft pass 03 now adds machinery, reservoirs, pod interiors, wing maintenance routes and fin structure and the panoramic crown to the combined ship GLB. The source `leo-exterior.glb` remains byte-identical; the viewer and combined GLB use the same refined V36 exterior. The machinery hall, tank bay and pod interiors now have removable enclosures, open portals and route lighting. Equipment remains a concept arrangement.
+
+## Complete polish and directional glazing — V36
+
+All 68 named rooms, nine service/command corridor groups, residential corridors, lifts, stairs, five aft sections, 5,000 cabins, ten gardens and both observation lounges share the second polish pass. It adds softened joinery, tailored upholstery seams, instrument bezels, satin hardware, stair edge markers and calibrated material finishes without moving established floors or routes.
+
+The original curved white fin-cap underside is retained below the panoramic lounge, with a clear lift opening. The same underside is present in the exterior, full ship and standalone aft lounge. The small underfloor rim joins it to the lounge floor.
+
+All 1,382 passenger windows and the bridge, observation and fin-crown glazing use opposed single-sided surfaces: exterior opacity 0.88 and interior opacity 0.12. This is an art-directed visualization treatment, not a physically reciprocal optical coating. The dual surfaces survive GLB export and remain tinted after changing viewer modes. Forward observation bands now have actual apertures through their previously opaque shell and seal backing. Existing window floor alignment is preserved; enclosed cabins away from the hull do not gain private exterior views.
+
+`node scripts/check-polish.mjs` audits the saved complete ship, including every named area, both glazing faces, clear bow sightlines and the retained lower cap against the accepted source. Historical sections and renders below describe their labeled earlier passes.
 
 ## Engine maintenance windows — V35
 

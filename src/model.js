@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {finishCabin} from './residential-finish.js';
+import {polishInterior} from './interior-polish.js';
 import {finishGarden} from './garden-finish.js';
 import {aftOpenings} from './aft-layout.js';
 import {createAft} from './aft.js';
@@ -240,6 +241,7 @@ export function createNeighborhood() {
   }
   mergedBoxes('Residential_corridor_diffusers',laneLights,light,districtWalls);
   mergedBoxes('Residential_corridor_wayfinding_inlay',laneTrim,wood,district);
+  polishInterior(district,'Residential corridors');
   // Local corridor; the paired lifts use the same source as the whole-ship network.
   box('Residential_corridor_floor',[21,.3,4],[124,16.16,0],floor,fittings);
 
@@ -344,4 +346,3 @@ export function createGardenCommons(number,template=createNeighborhood()){
   const pose=([x,y,z])=>[x+c.x-132,y,z*root.scale.z+root.position.z];
   return {root,walls,fittings,number,overview:{position:pose([174,58,77]),target:pose([132,28,28])},inside:{position:pose([145,26,12]),target:pose([132,28,28])}};
 }
-

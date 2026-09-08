@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {finishShipArea} from './area-finish.js';
+import {tintWorldWindow,tintBoxWindow} from './glazing-finish.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {frontPoint} from './hull-profile.js';
 import {bowHeight} from './diagonal-profile.js';
@@ -211,6 +212,7 @@ export function createSpecialArea(area){
   else if(area.category==='Aft engineering')engineering(area,k);
   else commandRoom(area,k);
   finishShipArea(area,k);
+  k.root.traverse(o=>{if(!o.isMesh)return;if(o.name==='Bridge_glazing_upper_exterior_row')tintWorldWindow(o,p=>new T.Vector3(Math.max(1,p.x-160),.5,p.z));if(o.name==='Shuttle_glazing'||o.name==='Lifeboat_front_glazing')tintBoxWindow(o,'x',1);});
   const [x,y,z]=area.center;
   return {...k,area,overview:area.overview||{position:[x+area.width*.9,y+Math.max(area.width,area.depth)*.9,z+area.depth*1.1],target:[x,y+1,z]},inside:area.inside||{position:[x,y+1.7,z+(z>0?-1:1)*(area.depth/2-2)],target:[x+3,y+1.3,z]}};
 }

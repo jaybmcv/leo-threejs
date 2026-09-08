@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {finishForwardLounge} from './observation-finish.js';
+import {tintWindow} from './glazing-finish.js';
 import {frontPoint} from './hull-profile.js';
 import {bowHeight} from './diagonal-profile.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -46,7 +47,7 @@ export function createLounge({root,walls,fittings,box,mesh,group,material,chair,
     const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(p,3));geo.setIndex(ix);geo.computeVertexNormals();return mesh(name,geo,mat,parent);
   }
   strip('Curved_window_sill',a=>{const p=loungeFacade(31,a,1.4);return [p[0],cy,p[2]];},a=>loungeFacade(31,a),white);
-  strip('Glazing_matching_middle_exterior_row',a=>loungeFacade(31,a,.25),a=>loungeFacade(36,a,.25),glass);
+  tintWindow(strip('Glazing_matching_middle_exterior_row',a=>loungeFacade(31,a,.25),a=>loungeFacade(36,a,.25),glass),p=>new T.Vector3(Math.max(1,p.x-160),.5,p.z));
   strip('Curved_lounge_ceiling',a=>loungeFacade(36,a,.7),a=>[170,33.8,loungeFacade(31,a,1.4)[2]],white);
   for(const a of [-.81,.81]){
     const lo=loungeFacade(31,a,1.4),hi=loungeFacade(36,a,.7);

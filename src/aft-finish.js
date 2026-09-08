@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {detailKit,FINISH_M as M} from './area-finish.js';
 import {finishCirculation} from './circulation-finish.js';
+import {polishInterior} from './interior-polish.js';
 
 export function finishAft(parts){
  const report={};
@@ -40,5 +41,5 @@ export function finishAft(parts){
  const a=finishCirculation(parts.access,accessShell,'Aft access');report.access={...report.access,...a.features};
  const finShell=new T.Group();finShell.name='Fin_access_finish_shell';parts.fin.add(finShell);
  const f=finishCirculation(parts.fin,finShell,'Fin access');report.fin={...report.fin,...f.features};
- return report;
+ for(const key of ['drive','tanks','pods','access','fin'])polishInterior(parts[key],'Aft '+key);return report;
 }

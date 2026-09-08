@@ -15,7 +15,7 @@ for(const r of POD_ENGINE_WINDOWS)for(const [u,v]of [[.5,.5],[.2,.2],[.8,.2],[.2
 for(let x=-274;x<-174;x+=.8)for(let y=-22;y<12;y+=.6){if(POD_ENGINE_WINDOWS.some(r=>x>=r.x0-.001&&x<=r.x1+.001&&y>=r.y0-.001&&y<=r.y1+.001))continue;for(const [a,b]of [[oldOuter,newOuter],[oldInner,newInner]]){const v=a(x,y);if(Number.isFinite(v)){assert.ok(Math.abs(v-b(x,y))<.001,'Pod shape moved outside window');retainedSamples++;}}}
 let interiorSamples=0;
 for(const [name,plan]of [['Machinery_side_enclosure',CENTRAL_ENGINE_WINDOWS],['Pod_side_panel',POD_ENGINE_WINDOWS]]){const wall=surfaceIndex(meshes(aft,name),'z');for(const r of plan){assert.ok(Math.abs(r.y0-r.floor-1.25)<1e-6);for(const [u,v]of [[.5,.5],[.2,.2],[.8,.8]]){assert.ok(!Number.isFinite(wall(r.x0+(r.x1-r.x0)*u,r.y0+(r.y1-r.y0)*v)),name+' blocks window');interiorSamples++;}}}
-assert.equal(meshes(aft,'Central_engine_inner_glazing').length,16);assert.equal(meshes(aft,'Pod_engine_inner_glazing').length,36);
+const panes=[];aft.traverse(o=>{if(o.userData.directionalGlazing)panes.push(o);});assert.equal(panes.filter(o=>o.name==='Central_engine_inner_glazing').length,16);assert.equal(panes.filter(o=>o.name==='Pod_engine_inner_glazing').length,36);
 for(const n of ['Central_engine_inner_glazing','Pod_engine_inner_glazing'])for(const m of meshes(aft,n))assert.ok(m.material.transparent&&m.material.opacity<1);
 // Exhausts are a separate protected shape: compare every vertex, not just bounds.
 let exhaustVertices=0;const v=new Vector3(),w=new Vector3();

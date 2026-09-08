@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {polishInterior} from './interior-polish.js';
 
 // Finishes stay inside the accepted cabin envelope and repeat with its instances.
 export function finishCabin({walls,fittings,x,y,z,box:rawBox,material}){
@@ -49,4 +50,5 @@ export function finishCabin({walls,fittings,x,y,z,box:rawBox,material}){
  round('Ensuite_mirror_light',[.035,.055,.47],[x+.55,y+2.04,z-2.24],glow);
  round('Towel_rail',[.035,.035,.48],[x+.555,y+.95,z-2.15],brass);
  round('Folded_towel',[.035,.35,.31],[x+.58,y+.8,z-2.15],linen);
+ polishInterior(fittings,'Twin cabin furnishings');polishInterior(walls,'Twin cabin lining');
 }

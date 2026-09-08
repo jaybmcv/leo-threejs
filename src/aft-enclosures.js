@@ -1,4 +1,5 @@
 import {cutWindowApertures} from './window-geometry.js';
+import {tintBoxWindow} from './glazing-finish.js';
 import {CENTRAL_ENGINE_WINDOWS,POD_ENGINE_WINDOWS} from './engine-window-plan.js';
 import * as T from 'three';
 import envelope from './assets/aft-envelope.json' with {type:'json'};
@@ -42,7 +43,7 @@ export function addAftEnclosures(parts,shells){
  function interiorWindows(g,plan,center,halfWidth,prefix){
   g.updateWorldMatrix(true,true);const walls=[];g.traverse(o=>{if(o.isMesh&&['Machinery_side_enclosure','Pod_side_panel'].includes(o.name))walls.push(o);});walls.forEach(o=>cutWindowApertures(o,plan));
   for(const s of [-1,1])for(const r of plan){const x=(r.x0+r.x1)/2,y=(r.y0+r.y1)/2,z=center+s*(halfWidth-.18),w=r.x1-r.x0,h=r.y1-r.y0;
-   box(prefix+'_inner_glazing',[w,h,.045],[x,y,z],glass,g);
+   tintBoxWindow(box(prefix+'_inner_glazing',[w,h,.045],[x,y,z],glass,g),'z',Math.sign(z-center));
    for(const xx of [r.x0-.06,r.x1+.06])box(prefix+'_window_jamb',[.12,h+.24,.08],[xx,y,z-s*.05],dark,g);
    for(const yy of [r.y0-.06,r.y1+.06])box(prefix+'_window_trim',[w+.24,.12,.08],[x,yy,z-s*.05],dark,g);
   }

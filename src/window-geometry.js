@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {mergeGeometries,mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
 import {TessellateModifier} from 'three/addons/modifiers/TessellateModifier.js';
+import {tintWindow} from './glazing-finish.js';
 
 // Subtract XY apertures directly from existing triangles. Interpolating every
 // attribute preserves the original surface and smooth normals at cut edges.
@@ -41,7 +42,6 @@ export function addGlazing(root,rects,side,steel,glass,lining,prefix='V33',orien
    frames.push(mapped(new TessellateModifier(.8,4).modify(new T.ShapeGeometry(shape)),s,y0<-17?.34:.045));
    const corners=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]],v=[];for(let j=0;j<4;j++){const a=corners[j],b=corners[(j+1)%4],az=s*side(...a),bz=s*side(...b);v.push(...a,az,...b,bz,...a,az-s*.32*orientation,...b,bz,...b,bz-s*.32*orientation,...a,az-s*.32*orientation);}const rg=new T.BufferGeometry();rg.setAttribute('position',new T.Float32BufferAttribute(v,3));rg.computeVertexNormals();reveals.push(rg);
   }
-  for(const [name,gs,mat] of [[prefix+'_passenger_glazing',panes,glass],[prefix+'_passenger_window_frames',frames,steel],[prefix+'_passenger_window_reveals',reveals,lining]]){const m=new T.Mesh(mergeGeometries(gs),mat);m.name=name;m.userData={side:s,windowCount:rects.length};m.castShadow=false;root.add(m);gs.forEach(g=>g.dispose());}
+  for(const [name,gs,mat] of [[prefix+'_passenger_glazing',panes,glass],[prefix+'_passenger_window_frames',frames,steel],[prefix+'_passenger_window_reveals',reveals,lining]]){const m=new T.Mesh(mergeGeometries(gs),mat);m.name=name;m.userData={side:s,windowCount:rects.length};m.castShadow=false;if(name.endsWith('_passenger_glazing'))tintWindow(m,()=>new T.Vector3(0,0,s*orientation));root.add(m);gs.forEach(g=>g.dispose());}
  }
 }
-

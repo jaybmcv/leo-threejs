@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {polishInterior} from './interior-polish.js';
 
 function kit(root,prefix){
  const mat=(name,color,extra={})=>new T.MeshStandardMaterial({name:prefix+' '+name,color,roughness:.65,metalness:0,...extra});
@@ -57,6 +58,7 @@ export function finishForwardLounge(lounge,shell,y){
  // A bronze collar and eyepiece turn the existing scope into a readable object.
  cyl('Scope_column',.13,.63,[203,y+.85,0],'brass');
  const lens=cyl('Scope_optical_head',.21,.12,[203.5,y+1.49,0],'dark');lens.rotation.z=-Math.PI/2.8;
+ polishInterior(lounge,'Forward observation lounge');polishInterior(shell,'Forward observation lining');
 }
 
 export function finishCrownLounge(root,y){
@@ -103,4 +105,5 @@ export function finishCrownLounge(root,y){
   box('Drawer_pull',[.3,.025,.035],[x,y+.72,-.687],'brass');
  }
  root.userData.stage='Refined panoramic lounge with upholstered banquettes and fitted central bar';
+ polishInterior(root,'Fin crown observation lounge');
 }

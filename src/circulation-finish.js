@@ -3,6 +3,7 @@ import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
 import fontData from './assets/helvetiker-bold.json' with {type:'json'};
 import {detailKit,FINISH_M as M} from './area-finish.js';
+import {polishInterior} from './interior-polish.js';
 const font=new FontLoader().parse(fontData);
 export function fixtureText(k,o,label,sign=1){
  const {c,s}=k.bounds(o),axis=s.x<s.z?'x':'z',w=axis==='x'?s.z:s.x;
@@ -33,5 +34,5 @@ export function finishCirculation(root,shell,label,deck){
    const {b,c,s}=k.bounds(o);for(const dz of [-.25,.25])k.box(o,[s.x*.94,.006,Math.min(.025,s.z*.09)],[c.x,b.max.y+.004,c.z+dz*s.z],M.dark,'stair_grip');
   }
  }
- const a=k.finish(),b=wallKit.finish();root.userData.refinement={revision:1,label,features:{...a,...b}};return root.userData.refinement;
+ const a=k.finish(),b=wallKit.finish();root.userData.refinement={revision:1,label,features:{...a,...b}};polishInterior(root,label);return root.userData.refinement;
 }

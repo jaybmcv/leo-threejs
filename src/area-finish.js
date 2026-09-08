@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {polishInterior} from './interior-polish.js';
 const mat=(name,color,roughness=.65,metalness=0)=>new T.MeshStandardMaterial({name:'Finish_'+name,color,roughness,metalness});
 export const FINISH_M={dark:mat('graphite',0x263d49),steel:mat('alloy',0x97aaa9,.35,.65),oak:mat('oak',0xa98762),linen:mat('linen',0xdedaca,.95),sage:mat('sage',0x668477,1),amber:mat('amber',0xd9b272),blue:mat('clinical_blue',0x89b8c4),ink:mat('display',0xb9e2dc),green:mat('leaf',0x58825f,.95)};
 const M=FINISH_M;
@@ -76,5 +77,5 @@ export function finishShipArea(area,{root,shell,fit}){
  const ws=[];shell.traverse(o=>{if(o.isMesh)ws.push(o);});
  for(const o of ws)if(/wall|partition|bulkhead/i.test(o.name)&&o.geometry.parameters.width)for(const sign of [-1,1]){const f=lining.face(o,sign);if(f.h>=1&&f.w>=1)f.panel(0,-f.h*.25,f.w*.94,.08,accent,'wall_trim');}
  const features=k.finish();for(const [f,n]of Object.entries(modified))features[f]=(features[f]||0)+n;lining.finish();
- root.userData.refinement={revision:1,kind:area.kind,treatment:AREA_TREATMENTS[area.kind],features};return root.userData.refinement;
+ root.userData.refinement={revision:1,kind:area.kind,treatment:AREA_TREATMENTS[area.kind],features};polishInterior(fit,area.name+' furnishings');polishInterior(shell,area.name+' lining');root.userData.polish={revision:2,kind:area.kind,furnishings:fit.userData.polish,lining:shell.userData.polish};return root.userData.refinement;
 }
