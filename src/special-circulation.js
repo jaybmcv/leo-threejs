@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {finishCirculation} from './circulation-finish.js';
 import {SPECIAL_AREAS} from './special-areas.js';
 import {transitOpenings} from './transit.js';
 import {unionRectangles,slabGeometry} from './floor-geometry.js';
@@ -28,5 +29,6 @@ export function createSpecialCirculation(deck){
   }
   for(let x=span[0]+4;x<span[1];x+=8)add('Connection_light',[3,.04,.24],[x,y+3.24,0],light,shell);
   root.userData={deck,floor:y,clearWidth:width,connections:rooms.map(a=>({id:a.id,entry:[a.center[0],y,a.center[2]-Math.sign(a.center[2])*a.depth/2]})),endpoints:span.map(x=>[x,y,0])};
+  finishCirculation(root,shell,'Special connections deck '+deck,deck);
   return {root,shell};
 }

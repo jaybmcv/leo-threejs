@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {finishShipArea} from './area-finish.js';
 import {unionRectangles,slabGeometry} from './floor-geometry.js';
 import {SPECIAL_AREAS,createSpecialArea} from './special-areas.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
@@ -140,5 +141,6 @@ export function createShipArea(area){
     for(const o of [...fit.children])if(o.name!=='Finished_floor'&&new T.Box3().setFromObject(o).intersectsBox(reserved))fit.remove(o);
     root.userData.stairLobbyNotch=notch;
   }
+  finishShipArea(area,{root,shell,fit});
   return {root,shell,fit,area,overview:{position:[area.center[0]+56,area.center[1]+53,area.center[2]+48],target:[...area.center]},inside:{position:[area.center[0]-19,area.center[1]+1.7,area.center[2]+1],target:[area.center[0]+10,area.center[1]+1.4,area.center[2]-5]}};
 }

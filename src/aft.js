@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {finishAft} from './aft-finish.js';
 import {createFinCrown,CROWN} from './fin-crown.js';
 import {addAftEnclosures} from './aft-enclosures.js';
 import envelope from './assets/aft-envelope.json' with {type:'json'};
@@ -116,5 +117,6 @@ export function createAft(){
  floor('Crown_lift_lower_lobby',[rect(-249.5,-239,-2.35,2.35)],24.294,parts.access,[CROWN.lift]);
  const crown=createFinCrown();parts.crown.add(crown.root);
  addAftEnclosures(parts,shells);
+ root.userData.refinement={revision:1,sections:finishAft(parts)};
  root.updateMatrixWorld(true);return {root,parts,shells,floors,routes,envelope,crown};
 }

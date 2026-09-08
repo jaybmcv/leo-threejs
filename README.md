@@ -91,6 +91,15 @@ This is a furnished main-ship **concept model** with aft machinery and a fin cro
 
 ## Rebuild
 
+The complete interior refinement pass covers all 68 scheduled areas, nine service
+and command corridor groups, the main lift/stair network and all five aft
+engineering sections. Treatments include clinical furnishings and patient services,
+cultivation rack details, cargo and storage identification, fitted workstations,
+public-room upholstery, command displays, shuttle and lifeboat fittings, machinery
+instruments, pipe bands, deck signage and stair grip strips. These are concept
+details, not simulated operating controls. The earlier cabin, garden and lounge
+finishes are retained. `refinement-coverage.json` audits the saved full-ship model.
+
 Both observation lounges now share warmer upholstery, stone tables and refined
 furniture details. The forward lounge has open reading shelves, layered planting
 and timber wall lining. The fin crown retains its panoramic glazing and central

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {finishCirculation} from './circulation-finish.js';
 import {COMMONS} from './model.js';
 import {unionRectangles,slabGeometry} from './floor-geometry.js';
 
@@ -129,5 +130,6 @@ export function createTransit({minimumDeck=1,maximumDeck=20,coreIds=['forward','
     for(const o of [...g.children])if(o.userData.transitFloor&&o.name!=='Lift_car_floor'){g.remove(o);o.geometry.dispose();}
     if(rects.length){const mesh=new T.Mesh(slabGeometry(unionRectangles(rects,transitOpenings(d)),floorY(d)),materials.floor);mesh.name='Connected_transit_floor';mesh.userData={transitUnion:true,deck:d};mesh.receiveShadow=true;g.add(mesh);}
   }
+  finishCirculation(root,shell,'Main lifts and stairs');
   return {root,shell,structure,decks,floors,graph,materials};
 }

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {finishCirculation} from './circulation-finish.js';
 import {SHIP_AREAS} from './areas.js';
 
 // Corridors join each room's aft entry to the longitudinal spine and both lift locations.
@@ -48,5 +49,6 @@ export function createServiceCirculation(deck){
     }
     for(let z=-e+4;z<e;z+=8)if(Math.abs(z)>4)box('Branch_light',[.25,.04,3],[bx,3.25,z],light,shell);
   }
+  finishCirculation(root,shell,'Service corridors deck '+deck,deck);
   return {root,shell,plan};
 }
