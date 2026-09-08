@@ -4,7 +4,7 @@ import {publicAsset,enablePublicDownloads} from './public-assets.js';
 import {refineExterior} from './exterior-finish.js';
 import {createAft} from './aft.js';
 import {AFT_TOUR} from './aft-tour.js';
-import {createFinCrown,prepareCrownExterior} from './fin-crown.js';
+import {attachFinCrown,prepareCrownExterior} from './fin-crown.js';
 import {AFT_VIEWS} from './aft-layout.js';
 import {createSpecialCirculation} from './special-circulation.js';
 import {createTransit,TRANSIT_CORES,floorY} from './transit.js';
@@ -180,7 +180,7 @@ async function loadExterior(){
       ship.root.remove(ship.exterior);exterior.visible=false;ship.root.add(exterior);
       Object.assign(ship,{exterior,fixed:exterior.getObjectByName('Wings_engines_tail'),port:exterior.getObjectByName('Port_shell'),starboard:exterior.getObjectByName('Starboard_shell')});
     }
-    if(location.protocol==='file:'){prepareCrownExterior(ship.exterior);refineExterior(ship.exterior);ship.exterior.add(createFinCrown().root);}
+    if(location.protocol==='file:'){prepareCrownExterior(ship.exterior);refineExterior(ship.exterior);attachFinCrown(ship.exterior);}
     ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});exteriorReady=true;
   })().catch(e=>{exteriorLoad=null;throw e;});
   await exteriorLoad;

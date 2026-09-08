@@ -3,9 +3,14 @@ import {finishCrownLounge} from './observation-finish.js';
 import {tintBoxWindow} from './glazing-finish.js';
 import capUnderside from './assets/fin-cap-underside.json' with {type:'json'};
 import capPlan from './assets/fin-cap-plan.json' with {type:'json'};
+import closureProfile from './assets/fin-cap-closure.json' with {type:'json'};
 import {outlinedSlab,unionRectangles,slabGeometry} from './floor-geometry.js';
 
 export const CROWN={floor:132.3,ceiling:137.5,outline:capPlan.map(([x,z])=>[-235+(x+235)*.985,z*.985]),lift:{x0:-249.2,x1:-244.8,z0:-2.2,z1:2.2}};
+export function attachFinCrown(exterior){
+ const owner=exterior.getObjectByName('01_EXTERIOR_REFINED_V31')||exterior;owner.updateWorldMatrix(true,false);
+ const crown=createFinCrown();crown.root.matrixAutoUpdate=false;crown.root.matrix.copy(owner.matrixWorld).invert();owner.add(crown.root);return crown;
+}
 export function createFinCrown(){
  const root=new T.Group();root.name='Fin_panorama_lounge';root.userData={floor:CROWN.floor,centralBar:1,stage:'Fin crown observation deck concept'};
  const shell=new T.Group();shell.name='Crown_exterior';root.add(shell);const roofs=[];
@@ -18,6 +23,13 @@ export function createFinCrown(){
  const undersideGeometry=new T.BufferGeometry();undersideGeometry.setAttribute('position',new T.Float32BufferAttribute(capUnderside.position,3));undersideGeometry.setAttribute('normal',new T.Float32BufferAttribute(capUnderside.normal,3));undersideGeometry.normalizeNormals();
  const underside=mesh('Fin_cap_retained_white_underside',undersideGeometry,[0,0,0],'ivory',shell);underside.userData.retainedCap={top:y-.55,lift:CROWN.lift,source:'Swept_tail_cap',sourceSHA256:capUnderside.sourceSHA256};
  mesh('Crown_observation_floor',outlinedSlab(CROWN.outline,[CROWN.lift],y,.55),[0,0,0],'floor',shell);
+ // The retained cap slopes below the level lounge floor at the aft end.
+ // A continuous ceramic skirt closes that variable-height reveal and overlaps
+ // both surfaces, following the existing floor outline without moving glazing.
+ const closurePositions=[],closureIndices=[];
+ closureProfile.forEach(([x,low,z],i)=>{closurePositions.push(x,y-.51,z,x,low,z);const a=i*2,b=((i+1)%closureProfile.length)*2;closureIndices.push(a,b,a+1,b,b+1,a+1);});
+ const closureGeometry=new T.BufferGeometry();closureGeometry.setAttribute('position',new T.Float32BufferAttribute(closurePositions,3));closureGeometry.setIndex(closureIndices);closureGeometry.computeVertexNormals();
+ const closure=mesh('Crown_underfloor_closure',closureGeometry,[0,0,0],'ivory',shell);closure.userData.crownClosure={profile:'fin-cap-closure',top:y-.51,overlap:.06};
  // Low sill and continuous glazing follow the accepted cap's projected outline.
  const perimeter=[],lengths=CROWN.outline.map((a,i)=>{const b=CROWN.outline[(i+1)%CROWN.outline.length];return Math.hypot(b[0]-a[0],b[1]-a[1]);}),total=lengths.reduce((a,b)=>a+b,0),count=Math.ceil(total/3.2);
  for(let j=0;j<count;j++){let distance=total*j/count,i=0;while(distance>lengths[i]&&i<lengths.length-1)distance-=lengths[i++];const a=CROWN.outline[i],b=CROWN.outline[(i+1)%CROWN.outline.length],t=distance/lengths[i];perimeter.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]);}
