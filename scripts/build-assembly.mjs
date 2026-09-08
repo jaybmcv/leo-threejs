@@ -31,7 +31,7 @@ const transit=createTransit();inside.add(transit.root,createObservationArea(sour
 // Adjacent floor finishes share edges; inset the transit finish 6 mm where it laps
 // the existing corridor finishes to avoid coplanar faces in the combined model.
 transit.root.traverse(o=>{if(o.userData.transitUnion)o.position.y=-.006;});
-root.userData={units:'metres',length:564,span:300,cabins:5000,berths:10000,gardens:10,areas:74,aftSystems:'Aft pass 03: enclosed machinery, refined crown bar and guided journey',liftShafts:6,stairTowers:5,mainTransitLiftShafts:4,mainTransitStairTowers:4,lifeboats:100,lifeboatSeats:10000,shuttles:4,sourceExteriorSHA256:accepted,exteriorChanges:'V35 engine-maintenance, upper-deck, aft-gallery, fin and passenger window apertures, supplied mission emblem, refined finishes and glazed fin crown',stage:'Furnished main ship with enclosed aft machinery and fin crown lounge'};
+root.userData={units:'metres',length:564,span:300,cabins:5000,berths:10000,gardens:10,areas:77,aftSystems:'Aft pass 03: enclosed machinery, refined crown bar and guided journey',liftShafts:6,stairTowers:5,mainTransitLiftShafts:4,mainTransitStairTowers:4,lifeboats:100,lifeboatSeats:10000,shuttles:4,sourceExteriorSHA256:accepted,exteriorChanges:'V35 engine-maintenance, upper-deck, aft-gallery, fin and passenger window apertures, supplied mission emblem, refined finishes and glazed fin crown',stage:'Furnished main ship with enclosed aft machinery and fin crown lounge'};
 root.userData.noseCommons=10;
 root.traverse(o=>{if(o.isMesh)o.geometry.normalizeNormals();});
 const exporter=new GLTFExporter();

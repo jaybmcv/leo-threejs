@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {createLowerBowCirculation} from './lower-bow.js';
 import {createUpperAftCirculation} from './upper-aft.js';
 import {createSupportCirculation} from './neighborhood-services.js';
 import {finishCirculation} from './circulation-finish.js';
@@ -7,6 +8,7 @@ import {transitOpenings} from './transit.js';
 import {unionRectangles,slabGeometry} from './floor-geometry.js';
 
 export function createSpecialCirculation(deck){
+  if([1,4,5].includes(deck))return createLowerBowCirculation(deck);
   if(deck===16||deck===17)return createUpperAftCirculation(deck);
   if(deck===14||deck===15)return createSupportCirculation(deck);
   if(![2,7,20].includes(deck))return null;

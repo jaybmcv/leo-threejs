@@ -20,7 +20,7 @@ for(const area of SHIP_AREAS){
  records.push({id:area.id,name:area.name,deck:area.deck,treatment:expected,newVertices,finishedSurfaces,features:refinement.features});
 }
 const connections=[];
-for(const [decks,suffix] of [[[1,2,3,4,5,16],'connected_service_corridors'],[[2,7,14,15,16,17,20],'special_area_connections']])for(const deck of decks){
+for(const [decks,suffix] of [[[1,2,3,4,5,16],'connected_service_corridors'],[[1,2,4,5,7,14,15,16,17,20],'special_area_connections']])for(const deck of decks){
  const root=g.scene.getObjectByName(`Deck_${deck}_${suffix}`);assert.ok(root,'Missing corridor '+deck+' '+suffix);
  assert.ok(root.userData.refinement?.features.corridor_lining>0,'Unfinished corridor '+deck);
  assert.ok(root.getObjectByName('Refined_corridor_lining'),'Missing saved lining geometry');connections.push({deck,type:suffix,features:root.userData.refinement.features});
@@ -42,5 +42,5 @@ for(let n=1;n<=10;n++){
  assert.ok(garden?.getObjectByName('Garden_commons_refined_furnishings'),'Missing finished garden '+n);
 }
 assert.ok(g.scene.getObjectByName('Forward_lounge_finish')&&g.scene.getObjectByName('Fin_lounge_finish'),'Missing previously refined lounges');
-const report={status:'PASS',scope:'Saved complete ship: all 74 named areas have their specialty finish and actual new geometry; all 13 corridor groups, 78 lift landing signs, stair finishes and 5 aft engineering sections are present. Ten residential neighborhoods, ten garden commons and both previously finished lounges retained. Separate geometry and integration reports cover containment and routes.',namedAreas:records.length,corridorGroups:connections.length,liftLandingSigns:78,aftSections:5,priorNeighborhoods:10,priorGardens:10,priorLounges:2,areas:records,connections,aft:aft.userData.refinement.sections};
+const report={status:'PASS',scope:'Saved complete ship: all 77 named areas have their specialty finish and actual new geometry; all 16 corridor groups, 78 lift landing signs, stair finishes and 5 aft engineering sections are present. Ten residential neighborhoods, ten garden commons and both previously finished lounges retained. Separate geometry and integration reports cover containment and routes.',namedAreas:records.length,corridorGroups:connections.length,liftLandingSigns:78,aftSections:5,priorNeighborhoods:10,priorGardens:10,priorLounges:2,areas:records,connections,aft:aft.userData.refinement.sections};
 await fs.writeFile(out+'refinement-coverage.json',JSON.stringify(report,null,2));console.log({...report,areas:undefined,connections:undefined,aft:undefined});

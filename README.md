@@ -173,3 +173,8 @@ Four fitted rooms occupy x = −261 to −181 m, with 4 m doorways onto an 8 m c
 ## Upper aft commons — Decks 16–17
 
 Deck 16 adds Voyage training & briefing on the port side; Deck 17 adds the Fin lift arrival lounge on starboard. Both have 48 × 16 m footprints at x = −233 to −185 m and 4 m entries. Deck 16 has a new connection to the aft landing. Deck 17 reuses the existing upper gallery, with a single opening in its starboard railing leading through a protected connector to the lounge. The fin lift remains at its existing location. The rooms are available through Ship areas, Deck layout, Aft systems, and the service, aft and full-ship downloads.
+
+
+## Lower bow facilities — Decks 1, 4 and 5
+
+The lower nose now contains expedition stores/outfitting on Deck 1, fresh-food cultivation and preparation on Deck 4, and rehabilitation/movement on Deck 5. Each 64 × 60 m room lies at x = 164–228 m with a 6 m main room aisle. A 4 m approach connects it to the forward core; enclosing walls begin at x = 148 m beyond the stair towers. Decks 2–3 retain the double-height shuttle bay. The three areas appear in Ship areas, Deck layout and the service/full-ship downloads. Layout and equipment are concepts; throughput and clinical provision are not certified.
