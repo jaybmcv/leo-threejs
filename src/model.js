@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {createNoseCommons} from './nose-commons.js';
 import {finishCabin} from './residential-finish.js';
 import {polishInterior} from './interior-polish.js';
 import {finishGarden} from './garden-finish.js';
@@ -130,7 +131,8 @@ export function createShip({deferExterior=false}={}) {
       if(number<6||number>15)return null;
       const deck=decks[number-1],residence=createResidentialDeck(number-5,detail);
       for(const o of deck.children)if(o.name.includes('twin_cabin_envelopes')||o.name==='Primary_corridors')o.visible=false;
-      residence.walls.visible=false;residence.districtWalls.visible=false;deck.add(residence.root);
+        residence.walls.visible=false;residence.districtWalls.visible=false;deck.add(residence.root);
+        const nose=createNoseCommons(number-5);nose.shell.visible=false;deck.add(nose.root);residence.nose=nose;
       residentialDecks.set(number,residence);return residence;
     },
     ensureServiceDeck(number){

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {createNoseCommons,NOSE_COMMONS} from './nose-commons.js';
 import {applyContextOpacity} from './glazing-finish.js';
 import {publicAsset,enablePublicDownloads} from './public-assets.js';
 import {refineExterior} from './exterior-finish.js';
@@ -39,6 +40,12 @@ const persp=camera,ortho=new T.OrthographicCamera(-400,400,240,-240,.1,6000);
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.09;controls.minDistance=1;controls.maxDistance=2200;controls.maxPolarAngle=Math.PI*.96;
 const ship=createShip({deferExterior:true});scene.add(ship.root);
 let activeDistrict=10,residenceInside=false;const districtViews=new Map();
+const noseScene=new T.Group(),noseViews=new Map();scene.add(noseScene);noseScene.visible=false;
+function noseView(){
+ if(!noseViews.has(activeDistrict)){const v=createNoseCommons(activeDistrict);noseViews.set(activeDistrict,v);noseScene.add(v.root);}
+ for(const [n,v] of noseViews)v.root.visible=n===activeDistrict;
+ const v=noseViews.get(activeDistrict);v.shell.visible=$('detail-walls').checked;return v;
+}
 function viewLink(values){if(location.protocol!=='file:')history.replaceState(null,'','?'+new URLSearchParams(values));}
 function districtView(){
   if(activeDistrict===10)return null;
@@ -48,8 +55,8 @@ function districtView(){
   }
   return districtViews.get(activeDistrict);
 }
-for(let n=1;n<=10;n++){const o=document.createElement('option');o.value=n;o.textContent='Neighborhood '+n+' · Deck '+(n+5);o.selected=n===10;$('neighborhood-select').append(o);}
-$('neighborhood-select').addEventListener('change',()=>{activeDistrict=Number($('neighborhood-select').value);setMode('neighborhood');});
+for(let n=1;n<=10;n++){const o=document.createElement('option');o.value=n;o.textContent='Deck '+(n+5)+' · '+NOSE_COMMONS[n-1].name;o.selected=n===10;$('neighborhood-select').append(o);}
+  $('neighborhood-select').addEventListener('change',async()=>{const focus=document.querySelector('[data-focus][aria-pressed="true"]')?.dataset.focus||'all';activeDistrict=Number($('neighborhood-select').value);await setMode('neighborhood');focusDetail(focus);});
 const areasRoot=new T.Group();areasRoot.visible=false;scene.add(areasRoot);const areaCache=new Map();let activeArea=SHIP_AREAS.find(a=>a.kind==='farm'),areaView='overview';
 $('area-count').textContent=SHIP_AREAS.length;
 for(const deck of [...new Set(SHIP_AREAS.map(a=>a.deck))].sort((a,b)=>a-b)){const group=document.createElement('optgroup');group.label='Deck '+deck;for(const a of SHIP_AREAS.filter(a=>a.deck===deck)){const option=document.createElement('option');option.value=a.id;option.textContent=a.name;group.append(option);}$('area-select').append(group);}
@@ -185,7 +192,8 @@ async function loadExterior(){
   })().catch(e=>{exteriorLoad=null;throw e;});
   await exteriorLoad;
 }
-async function setMode(next){
+  async function setMode(next){
+    noseScene.visible=false;
   const request=++modeRequest;
   if((next==='exterior'||next==='layout'||next==='aft'||(next==='walk'&&routeKey==='aft'))&&!exteriorReady){
     $('loading').textContent='Loading exterior model…';$('loading').hidden=false;
@@ -247,10 +255,22 @@ function updateDeck(){const selected=Number($('deck-select').value),isolate=$('i
   $('deck-cabins').textContent=d.residential?'500':'—';$('deck-berths').textContent=d.residential?'1,000':'—';
   $('deck-description').textContent=d.residential?'500 furnished twin cabins with two beds, desks, storage and compact ensuites, arranged along five 4 m corridors. Four transverse breaks connect the rows.':d.index>=16&&d.index<=18?'Ten shared commons occupy this upper zone, with openings through two gallery decks.':`${d.name}: space reserved for the next design pass. Equipment and occupancy are not yet sized.`;
   if(SHIP_AREAS.some(a=>a.deck===d.number))$('deck-description').textContent=(d.residential?'500 furnished cabins plus ':'')+SHIP_AREAS.filter(a=>a.deck===d.number).length+' fitted ship areas, including '+SHIP_AREAS.filter(a=>a.deck===d.number).map(a=>a.category).filter((c,i,list)=>list.indexOf(c)===i).join(' and ').toLowerCase()+'. Use Ship areas to inspect each space.';
-  $('status').textContent=`Deck ${d.number} / 20 · ${d.name} · floor ${d.y>0?'+':''}${d.y} m`;
+  if(d.residential)$('deck-description').textContent+=' Forward: '+NOSE_COMMONS[d.number-6].name+'. Explore it under Neighborhood → Nose commons.';
+    $('status').textContent=`Deck ${d.number} / 20 · ${d.name} · floor ${d.y>0?'+':''}${d.y} m`;
 }
-function focusDetail(focus){document.querySelectorAll('[data-focus]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.focus===focus));
-  residenceInside=false;viewLink({district:activeDistrict,space:focus});
+  function focusDetail(focus){document.querySelectorAll('[data-focus]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.focus===focus));
+    noseScene.visible=focus==='nose'||focus==='all';
+    if(noseScene.visible)noseView();
+    ship.detail.root.visible=activeDistrict===10&&focus!=='nose';
+    for(const [number,v] of districtViews)v.root.visible=number===activeDistrict&&focus!=='nose';
+    $('view-title').textContent=focus==='nose'?NOSE_COMMONS[activeDistrict-1].name:'A neighborhood aboard Leo.';
+    residenceInside=false;viewLink({district:activeDistrict,space:focus});
+    if(focus==='nose'){
+      const v=noseView(),a=NOSE_COMMONS[activeDistrict-1];
+      $('view-description').textContent='Deck '+a.deck+' · '+a.description;
+      $('status').textContent='Neighborhood '+activeDistrict+' · nose commons · '+a.name;
+      persp.fov=42;persp.near=.05;setCamera('persp',v.overview.position,v.overview.target);return;
+    }
   $('view-description').textContent=focus==='garden'?'Garden commons · Decks 17–19 · Neighborhood '+activeDistrict:focus==='cabin'?'Twin cabin · Deck '+(activeDistrict+5)+' · Neighborhood '+activeDistrict:focus==='observation'?'Shared observation lounge · upper bow · floor +26.3 m':'500 furnished twin cabins on Deck '+(activeDistrict+5)+' and an upper garden commons.';
   if(activeDistrict!==10){
     if(focus==='observation'){activeDistrict=10;$('neighborhood-select').value=10;setMode('neighborhood');focusDetail('observation');return;}
@@ -298,8 +318,13 @@ $('dimensions').addEventListener('change',()=>dimensions.visible=$('dimensions')
 DECKS.forEach(d=>{const o=document.createElement('option');o.value=d.index;o.textContent=`${String(d.number).padStart(2,'0')} · ${d.name}`;o.selected=d.index===14;$('deck-select').appendChild(o);});
 ['deck-select','isolate','shell-context'].forEach(id=>$(id).addEventListener('change',updateDeck));
 $('toggle-panels').addEventListener('click',()=>{const hidden=document.body.classList.toggle('panels-hidden');$('toggle-panels').textContent=hidden?'Show panels':'Hide panels';$('toggle-panels').setAttribute('aria-pressed',String(hidden));});
-$('enter-space').addEventListener('click',()=>{
-  const focus=document.querySelector('[data-focus][aria-pressed="true"]')?.dataset.focus;
+  $('enter-space').addEventListener('click',()=>{
+    const focus=document.querySelector('[data-focus][aria-pressed="true"]')?.dataset.focus;
+    if(focus==='nose'){
+      const v=noseView();$('detail-walls').checked=true;v.shell.visible=true;persp.fov=65;persp.near=.05;
+      setCamera('persp',v.inside.position,v.inside.target,0);residenceInside=true;
+      viewLink({district:activeDistrict,space:'nose',eye:1});$('status').textContent=NOSE_COMMONS[activeDistrict-1].name+' · 1.7 m eye level';return;
+    }
   if(activeDistrict!==10){
     const v=districtView(),garden=focus==='garden';focusDetail(garden?'garden':'cabin');
     $('detail-walls').checked=true;v.residence.walls.visible=true;v.residence.districtWalls.visible=true;v.garden.walls.visible=true;
@@ -309,7 +334,7 @@ $('enter-space').addEventListener('click',()=>{
   }
   routeKey='home';renderRouteDots();setMode('walk');goStop(({cabin:0,garden:3,observation:5})[focus]??0,0);
 });
-$('detail-walls').addEventListener('change',()=>{const enclosed=$('detail-walls').checked;ship.detail.walls.visible=enclosed;ship.detail.districtWalls.visible=enclosed;const v=districtView();if(v){v.residence.walls.visible=enclosed;v.residence.districtWalls.visible=enclosed;v.garden.walls.visible=enclosed;}});
+$('detail-walls').addEventListener('change',()=>{const enclosed=$('detail-walls').checked;if(noseScene.visible)noseView().shell.visible=enclosed;ship.detail.walls.visible=enclosed;ship.detail.districtWalls.visible=enclosed;const v=districtView();if(v){v.residence.walls.visible=enclosed;v.residence.districtWalls.visible=enclosed;v.garden.walls.visible=enclosed;}});
 renderRouteDots();
 $('next-stop').addEventListener('click',()=>{stopTour();goStop(stop+1);});$('previous-stop').addEventListener('click',()=>{stopTour();goStop(stop-1);});$('restart-tour').addEventListener('click',()=>{stopTour();goStop(0);});
 $('play-tour').addEventListener('click',()=>{if(tourPlaying){stopTour();return;}tourPlaying=true;$('play-tour').textContent='Pause';if(stop===routeStops().length-1)goStop(0);tourTimer=setTimeout(advanceTour,3000);});
@@ -390,9 +415,9 @@ $('save-interior').addEventListener('click',async()=>{
  if(params.has('aft')){aftSection=AFT_VIEWS[params.get('aft')]?params.get('aft'):'overview';aftEye=params.get('view')==='inside';}
  await setMode(params.has('aft')?'aft':params.has('transit')?'transit':areaId?'areas':initial?'neighborhood':deck>=1&&deck<=20?'layout':params.get('walk')==='1'?'walk':'exterior');
  if(areaId)showArea(areaId,params.get('view')==='inside'?'inside':'overview');
- else if(initial)focusDetail(['cabin','garden','observation','all'].includes(initial)?initial:'observation');
+ else if(initial)focusDetail(['cabin','garden','observation','nose','all'].includes(initial)?initial:'observation');
  else if(mode==='exterior'){const view=params.get('camera');viewCamera(['concept','perspective','top','side','front','aft','bow','engine','windows','aftwindows','enginewindows'].includes(view)?view:'top');}
  if(!areaId&&params.get('walk')==='1'){setMode('walk');goStop(params.has('stop')?Number(params.get('stop')):(({cabin:0,garden:3,observation:5})[initial]??0),0);}
- if(!areaId&&initial&&params.get('eye')==='1'&&activeDistrict!==10)$('enter-space').click();
+ if(!areaId&&initial&&params.get('eye')==='1'&&(activeDistrict!==10||initial==='nose'))$('enter-space').click();
  $('loading').hidden=true;requestAnimationFrame(animate);
 })().catch(e=>showError(e.message));

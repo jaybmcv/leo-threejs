@@ -143,3 +143,23 @@ npm start
 The crown geometry is derived from the projected cap outline. Only the solid cap, top marker and fin tip above the new floor are changed in the active exterior. Main hull, wings and engine pods retain the accepted shape.
 
 The build retains `output/leo-interior-v01/leo-exterior.glb` and verifies its accepted SHA-256 before and after assembly. It first builds the refined exterior, then all fitted components, the assembly and the viewer. The legacy `scripts/build.mjs` is an exterior/planning generator and is not used by this workflow. Geometry uses +X forward, +Y up and +Z starboard. The exterior mapping is `physicalX = 0.94 * logicalX - 18`. V31 sources are preserved in `archive/v31-source`. Three.js is MIT licensed; its license is included in the output.
+
+
+## Residential nose commons — Decks 6–15
+
+Ten fitted social spaces occupy the bow ahead of the residential decks. Each uses a hull-limited footprint at ceiling height, a 6 m central promenade and a 4 m approach from the forward core. No sleeping capacity was added.
+
+| Deck | Commons | Defining activity |
+|---|---|---|
+| 6 | The Daily Grind | Cafe counter, conversation groups and small tables |
+| 7 | The Reading Room | Book aisles and reading desks |
+| 8 | The Colour Works | Shared studio benches and easels |
+| 9 | Little Orbits | Soft play and child-height craft tables |
+| 10 | The Listening Room | Piano, mixing desks and listening salons |
+| 11 | The Games Club | Chess, board games and table tennis |
+| 12 | The Slow Room | Stretching, meditation and tea |
+| 13 | The Tinker Room | Electronics, printers and repair benches |
+| 14 | The Long Table | Teaching kitchen islands and shared dining |
+| 15 | The Quiet Grove | Low planting, seating circles and botanical study |
+
+Open `?district=1&space=nose` or use Neighborhood → Nose commons. The selector preserves nose focus across all ten decks; Enter this space restores the lining at eye level. Both `leo-residential-decks.glb` and `leo-full-ship.glb` include all ten commons; the Neighborhood 10 download includes its grove. The existing upper garden commons remain separate. Geometry and route checks are in `scripts/check-nose-commons.mjs`. These are fitted concept interiors, not an occupancy or engineering certification.

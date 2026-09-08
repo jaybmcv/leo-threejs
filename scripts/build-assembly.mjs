@@ -1,4 +1,5 @@
 import {createAft} from '../src/aft.js';
+import {createNoseCommons} from '../src/nose-commons.js';
 import {prepareCrownExterior} from '../src/fin-crown.js';
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
@@ -22,7 +23,7 @@ gltf.scene.traverse(o=>{const a=gltf.parser.associations.get(o);if(a?.nodes!==un
 gltf.scene.updateMatrixWorld(true);gltf.scene.getObjectByName('Fin_panorama_lounge')?.removeFromParent();
 const source=createShip({deferExterior:true}),root=new Group(),inside=new Group();root.name='LEO_COMPLETE_FITTED_SHIP';inside.name='Fitted_ship_interior';root.add(gltf.scene,inside);
 for(const deck of source.decks){const slab=deck.getObjectByName('Deck_slab');if(slab)inside.add(slab);}
-for(let n=1;n<=10;n++){inside.add(createResidentialDeck(n,source.detail).root,createGardenCommons(n,source.detail).root);}
+for(let n=1;n<=10;n++){inside.add(createResidentialDeck(n,source.detail).root,createGardenCommons(n,source.detail).root,createNoseCommons(n).root);}
 for(const area of SHIP_AREAS)inside.add(createShipArea(area).root);
 for(const d of new Set(SHIP_AREAS.map(a=>a.deck)))for(const c of [createServiceCirculation(d),createSpecialCirculation(d)])if(c)inside.add(c.root);
 inside.add(createAft().root);
@@ -31,6 +32,7 @@ const transit=createTransit();inside.add(transit.root,createObservationArea(sour
 // the existing corridor finishes to avoid coplanar faces in the combined model.
 transit.root.traverse(o=>{if(o.userData.transitUnion)o.position.y=-.006;});
 root.userData={units:'metres',length:564,span:300,cabins:5000,berths:10000,gardens:10,areas:68,aftSystems:'Aft pass 03: enclosed machinery, refined crown bar and guided journey',liftShafts:6,stairTowers:5,mainTransitLiftShafts:4,mainTransitStairTowers:4,lifeboats:100,lifeboatSeats:10000,shuttles:4,sourceExteriorSHA256:accepted,exteriorChanges:'V35 engine-maintenance, upper-deck, aft-gallery, fin and passenger window apertures, supplied mission emblem, refined finishes and glazed fin crown',stage:'Furnished main ship with enclosed aft machinery and fin crown lounge'};
+root.userData.noseCommons=10;
 root.traverse(o=>{if(o.isMesh)o.geometry.normalizeNormals();});
 const exporter=new GLTFExporter();
 for(const [name,model]of [['leo-transit',transit.root],['leo-full-ship',root]]){const b=await exporter.parseAsync(model,{binary:true,onlyVisible:true});await fs.writeFile(out+name+'.glb',Buffer.from(b));console.log(name,(b.byteLength/1048576).toFixed(2)+' MB');}
