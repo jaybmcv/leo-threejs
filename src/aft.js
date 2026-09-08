@@ -95,7 +95,9 @@ export function createAft(){
   }
  }
  floor('Tank_bay_link',[rect(-176,-174,-3,3)],-27.7,parts.access);floor('Drive_hall_link',[rect(-178,-174,-3,3)],-11.7,parts.access);
- floor('Upper_service_gallery',[rect(-245,-174,-3,3)],24.3,parts.access,[CROWN.lift]);for(const s of [-1,1])rail([-244,s*2.8],[-175,s*2.8],24.3,parts.access);
+  floor('Upper_service_gallery',[rect(-245,-174,-3,3)],24.3,parts.access,[CROWN.lift]);
+  rail([-244,-2.8],[-175,-2.8],24.3,parts.access);
+  for(const [a,b] of [[-244,-207.2],[-202.8,-175]])rail([a,2.8],[b,2.8],24.3,parts.access);
  // Fin platforms, internal spars and ladder runs follow measured shell sections.
  const rows=envelope.fin.filter(q=>q.y>=32&&q.y<=128),g=parts.fin;
  for(let i=1;i<rows.length;i++){const a=rows[i-1],b=rows[i];for(const z of [-2.5,2.5]){

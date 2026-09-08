@@ -9,7 +9,7 @@ gltf.scene.traverse(o=>{const a=gltf.parser.associations.get(o);if(a?.nodes!==un
  if(o.name==='Deck_slab')counts.structuralDecks++;if(o.name==='Observation_lounge')counts.lounge++;
  if(/space_reservations|twin_cabin_envelopes|Lift_and_transit_reservations|Ten_commons_reservations/.test(o.name))counts.reservations++;
 });
-assert.deepEqual(counts,{cabins:5000,gardens:10,areas:72,lifeboats:100,seats:10000,shuttles:4,structuralDecks:20,lounge:1,reservations:0});
+assert.deepEqual(counts,{cabins:5000,gardens:10,areas:74,lifeboats:100,seats:10000,shuttles:4,structuralDecks:20,lounge:1,reservations:0});
 interior.updateMatrixWorld(true);const slabs=[],geometry=[];interior.traverse(o=>{if(o.name==='Deck_slab')slabs.push(o);if(o.isMesh&&!o.isInstancedMesh)geometry.push({o,box:new Box3().setFromObject(o)});});
 let slabSamples=0;const roofCache=new Map();
 for(const o of slabs){const p=o.geometry.attributes.position;for(let i=0;i<p.count;i++){const v=new Vector3().fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld),k=v.x.toFixed(4)+','+v.z.toFixed(4);if(!roofCache.has(k))roofCache.set(k,finishedRoofY(logicalX(v.x),v.z));assert.ok(v.y<=roofCache.get(k)+.001,'Structural slab above roof '+v.toArray());slabSamples++;}}

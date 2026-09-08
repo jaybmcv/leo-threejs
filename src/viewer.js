@@ -104,12 +104,14 @@ for(const [key,v]of Object.entries(AFT_VIEWS)){const o=document.createElement('o
 function showAft(){
  if(!aftModel){aftModel=createAft();aftScene.add(aftModel.root);const rooms=new T.Group();rooms.name='Existing_aft_engineering';
   for(const area of SHIP_AREAS.filter(a=>a.category==='Aft engineering')){const r=createShipArea(area);r.shell.visible=false;rooms.add(r.root);}const c=createSpecialCirculation(7);c.shell.visible=false;rooms.add(c.root);aftScene.add(rooms);
+  const upper=new T.Group();upper.name='Upper_aft_commons';for(const a of SHIP_AREAS.filter(a=>a.upperAft)){const r=createShipArea(a);r.shell.visible=false;upper.add(r.root);}for(const d of [16,17]){const r=createSpecialCirculation(d);r.shell.visible=false;upper.add(r.root);}aftScene.add(upper);
   aftGhost=ship.exterior.clone(true);aftGhost.name='Aft_shell_context';aftGhost.traverse(o=>{if(o.isMesh){const ms=(Array.isArray(o.material)?o.material:[o.material]).map(m=>{const n=m.clone();n.transparent=true;n.opacity=.1;n.depthWrite=false;n.clippingPlanes=[new T.Plane(new T.Vector3(-1,0,0),-132)];return n;});o.material=Array.isArray(o.material)?ms:ms[0];o.castShadow=false;}});aftGhost.traverse(o=>o.visible=true);aftGhost.getObjectByName('Fin_panorama_lounge')?.removeFromParent();aftScene.add(aftGhost);renderer.localClippingEnabled=true;
  }
  const v=AFT_VIEWS[aftSection];if(!v.eye)aftEye=false;
  const crownSky=aftSection==='crown'&&aftEye;stars.visible=crownSky;mars.visible=crownSky;scene.background.set(crownSky?0x0a1422:0xbac8cd);
  for(const [key,g]of Object.entries(aftModel.parts))g.visible=aftSection==='overview'||key===aftSection||(aftSection==='pods'&&key==='access');
  aftScene.getObjectByName('Existing_aft_engineering').visible=aftSection==='overview';
+ aftScene.getObjectByName('Upper_aft_commons').visible=['overview','access','fin'].includes(aftSection);
  aftModel.shells.forEach(o=>o.visible=aftEye);aftModel.crown.roofs.forEach(o=>o.visible=aftEye);aftGhost.visible=$('aft-shell').checked&&!aftEye&&aftSection!=='crown';
  $('aft-shell').disabled=aftEye||aftSection==='crown';
  $('aft-section').value=aftSection;$('aft-eye').disabled=!v.eye;$('aft-eye').setAttribute('aria-pressed',String(aftEye));$('aft-overview').setAttribute('aria-pressed',String(!aftEye));

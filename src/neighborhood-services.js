@@ -21,6 +21,7 @@ function kit(root,origin=[0,0,0]){
  function text(label,pos,rotation=0,size=.28,parent=fit){const g=new TextGeometry(label,{font,size,depth:.004,curveSegments:1});g.computeBoundingBox();g.translate(-g.boundingBox.max.x/2,0,0);const o=new T.Mesh(g,M.dark);o.name='Service_wayfinding';o.position.set(...pos);o.rotation.y=rotation;parent.add(o);return o;}
  return {root,fit,shell,box,text};
 }
+export {kit as serviceKit,M as SERVICE_M};
 export function createSupportArea(area){
  const root=new T.Group();root.name='Area_'+area.id;root.userData={...area,units:'metres',stage:'Fitted neighborhood service area'};
  const k=kit(root,area.center),{fit,shell,box,text}=k,s=area.side,accent=area.deck===14?M.blue:M.amber;

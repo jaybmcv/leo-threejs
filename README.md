@@ -168,3 +168,8 @@ Open `?district=1&space=nose` or use Neighborhood → Nose commons. The selector
 ## Aft neighborhood services — Decks 14–15
 
 Four fitted rooms occupy x = −261 to −181 m, with 4 m doorways onto an 8 m central passage. The passage meets the existing aft landing at x = −174 m, leaving the service lift and stairs clear. Deck 14 contains laundry/linen exchange and parcel collection/returns. Deck 15 contains a repair studio and a shared-equipment/storage library. These are included in Ship areas, Deck layout, the service-areas download and complete fitted ship. Select an area for an eye-level view or locate it on its deck. The upper engineering gallery and fin access retain their existing geometry.
+
+
+## Upper aft commons — Decks 16–17
+
+Deck 16 adds Voyage training & briefing on the port side; Deck 17 adds the Fin lift arrival lounge on starboard. Both have 48 × 16 m footprints at x = −233 to −185 m and 4 m entries. Deck 16 has a new connection to the aft landing. Deck 17 reuses the existing upper gallery, with a single opening in its starboard railing leading through a protected connector to the lounge. The fin lift remains at its existing location. The rooms are available through Ship areas, Deck layout, Aft systems, and the service, aft and full-ship downloads.

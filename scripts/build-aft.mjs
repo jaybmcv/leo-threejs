@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';import {Group} from 'three';import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {createAft} from '../src/aft.js';import {SHIP_AREAS,createShipArea} from '../src/areas.js';import {createSpecialCirculation} from '../src/special-circulation.js';import {AFT_VIEWS} from '../src/aft-layout.js';
 globalThis.FileReader=class{readAsArrayBuffer(b){b.arrayBuffer().then(result=>{this.result=result;this.onloadend?.();});}};
-const root=new Group();root.name='LEO_AFT_SYSTEMS_01';root.add(createAft().root);for(const a of SHIP_AREAS.filter(a=>a.category==='Aft engineering'))root.add(createShipArea(a).root);root.add(createSpecialCirculation(7).root);
+const root=new Group();root.name='LEO_AFT_SYSTEMS_01';root.add(createAft().root);for(const a of SHIP_AREAS.filter(a=>a.category==='Aft engineering'||a.upperAft))root.add(createShipArea(a).root);for(const d of [7,16,17])root.add(createSpecialCirculation(d).root);
 root.traverse(o=>{if(o.isMesh)o.geometry.normalizeNormals();});const bytes=await new GLTFExporter().parseAsync(root,{binary:true,onlyVisible:true});await fs.writeFile('output/leo-interior-v01/leo-aft-systems.glb',Buffer.from(bytes));await fs.writeFile('output/leo-interior-v01/aft-areas.json',JSON.stringify(AFT_VIEWS,null,2));console.log({aftMegabytes:bytes.byteLength/1048576});
