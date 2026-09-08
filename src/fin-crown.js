@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {finishCrownLounge} from './observation-finish.js';
 import capPlan from './assets/fin-cap-plan.json' with {type:'json'};
 import {outlinedSlab,unionRectangles,slabGeometry} from './floor-geometry.js';
 
@@ -50,6 +51,7 @@ export function createFinCrown(){
  for(const x of [-237,-227]){const stem=box('Crown_pendant_stem',[.035,1.45,.035],[x,y+4.45,0],'frame');roofs.push(stem);}
  for(let x=-268;x<=-204;x+=4){const width=x>-215?11:24;const rib=box('Crown_ceiling_rib',[.14,.24,width],[x,CROWN.ceiling-.16,0],'floor');roofs.push(rib);}
  for(const z of [-3.42,3.42])box('Crown_bar_toe_light',[9.8,.07,.035],[-232,y+.16,z],'light');
+ finishCrownLounge(root,y);
  root.updateMatrixWorld(true);return {root,shell,roofs};
 }
 

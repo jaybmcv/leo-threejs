@@ -91,6 +91,12 @@ This is a furnished main-ship **concept model** with aft machinery and a fin cro
 
 ## Rebuild
 
+Both observation lounges now share warmer upholstery, stone tables and refined
+furniture details. The forward lounge has open reading shelves, layered planting
+and timber wall lining. The fin crown retains its panoramic glazing and central
+bar, adding oak battens, backed stools, table lamps and fitted service equipment.
+The accepted room outlines, window geometry and main circulation remain in place.
+
 Garden commons now share a refined finish template: layered foliage in the two
 existing planted beds, cushioned oak benches, stone cafe tables and worktops,
 coffee equipment, open reading shelves, warm pendants and under-gallery lighting.

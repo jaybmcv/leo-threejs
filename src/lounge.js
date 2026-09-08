@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {finishForwardLounge} from './observation-finish.js';
 import {frontPoint} from './hull-profile.js';
 import {bowHeight} from './diagonal-profile.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -117,5 +118,6 @@ export function createLounge({root,walls,fittings,box,mesh,group,material,chair,
   const slopedCeiling=box('Ramped_promenade_ceiling',[Math.hypot(24,2),.15,8],[158,29.225,0],white,passage);slopedCeiling.rotation.z=Math.atan2(2,24);
   for(const side of [-1,1])for(const [a,b] of [[132,146],[146,170]]){const z=side*(a===132?2.5:3.8);tube('Passage_cove_light',[[a,passageFloor(a)+3.65,z],[b,passageFloor(b)+3.65,z]],.04,light,passage);}
   for(const [x,z] of [[177,-22],[177,22],[193,0]]){const l=new T.PointLight(0xffe7bd,28,32,2);l.position.set(x,30,z);root.add(l);}
+  finishForwardLounge(lounge,shell,cy);
   return {lounge,shell,outline,glazingSamples:angles.flatMap(a=>[31,36].map(y=>loungeFacade(y,a,.25)))};
 }
