@@ -153,8 +153,20 @@ starsGeometry.setAttribute('position',new T.Float32BufferAttribute(starPositions
 const stars=new T.Points(starsGeometry,new T.PointsMaterial({color:0xd5e2eb,size:1.25,sizeAttenuation:false,transparent:true,opacity:.65}));stars.visible=false;scene.add(stars);
 let routeKey='home',tourResidence=null,tourTransit=null;const routeStops=()=>routeKey==='aft'?AFT_TOUR:ROUTE;
 let mode='exterior',transition=null,tourPlaying=false,stop=0,tourTimer=null,lookDrag=null,lastFrameScale=1,exporting=false;
+let turntable=false,lastFrameTime=0;
+function stopTurntable(){turntable=false;controls.autoRotate=false;$('turntable').textContent='Start turntable';$('turntable').setAttribute('aria-pressed','false');}
+$('turntable').addEventListener('click',()=>{
+ if(turntable){stopTurntable();return;}
+ if(mode==='walk')return;
+ if(controls.getPolarAngle()<.1){const t=controls.target.clone(),r=camera.position.distanceTo(t);setCamera('persp',t.clone().add(new T.Vector3(r*.7,r*.55,r*.7)).toArray(),t.toArray(),0);}
+ transition=null;turntable=true;controls.autoRotate=true;controls.autoRotateSpeed=.6;
+ $('turntable').textContent='Pause turntable';$('turntable').setAttribute('aria-pressed','true');
+});
+controls.addEventListener('start',stopTurntable);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopTurntable();});
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function setCamera(type,position,target,duration=850){
+  stopTurntable();
   camera=type==='ortho'?ortho:persp;controls.object=camera;controls.enabled=mode!=='walk';resize();
   if(mode!=='walk'&&type!=='ortho')position=new T.Vector3(...position).sub(new T.Vector3(...target)).multiplyScalar(lastFrameScale).add(new T.Vector3(...target)).toArray();
   if(duration===0||reduced){camera.position.set(...position);controls.target.set(...target);camera.lookAt(controls.target);if(mode!=='walk')controls.update();transition=null;return;}
@@ -195,6 +207,7 @@ async function loadExterior(){
   await exteriorLoad;
 }
   async function setMode(next){
+    stopTurntable();$('turntable').disabled=next==='walk';
     noseScene.visible=false;
   const request=++modeRequest;
   if((next==='exterior'||next==='layout'||next==='aft'||(next==='walk'&&routeKey==='aft'))&&!exteriorReady){
@@ -345,7 +358,7 @@ renderer.domElement.addEventListener('pointermove',e=>{if(!lookDrag||mode!=='wal
 renderer.domElement.addEventListener('pointerup',()=>lookDrag=null);
 renderer.domElement.addEventListener('pointercancel',()=>lookDrag=null);
 renderer.domElement.addEventListener('pointerdown',()=>{if(mode!=='walk')transition=null;});
-function animate(now){requestAnimationFrame(animate);if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);camera.lookAt(controls.target);if(t===1)transition=null;}if(mode!=='walk')controls.update();renderer.render(scene,camera);}
+function animate(now){requestAnimationFrame(animate);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);camera.lookAt(controls.target);if(t===1)transition=null;}if(mode!=='walk')controls.update(delta);renderer.render(scene,camera);}
 $('save-render').addEventListener('click',async()=>{
   if(exporting)return;exporting=true;$('save-render').disabled=true;$('render-status').textContent='Rendering exterior…';
   const view=document.querySelector('[data-camera][aria-pressed="true"]').dataset.camera,shapeOnly=$('shape-only').checked;
