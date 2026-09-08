@@ -178,3 +178,8 @@ Deck 16 adds Voyage training & briefing on the port side; Deck 17 adds the Fin l
 ## Lower bow facilities — Decks 1, 4 and 5
 
 The lower nose now contains expedition stores/outfitting on Deck 1, fresh-food cultivation and preparation on Deck 4, and rehabilitation/movement on Deck 5. Each 64 × 60 m room lies at x = 164–228 m with a 6 m main room aisle. A 4 m approach connects it to the forward core; enclosing walls begin at x = 148 m beyond the stair towers. Decks 2–3 retain the double-height shuttle bay. The three areas appear in Ship areas, Deck layout and the service/full-ship downloads. Layout and equipment are concepts; throughput and clinical provision are not certified.
+
+
+## Forward voyage forum — Deck 16
+
+A 52 × 48 m forum at x = 154–206 m adds 120 modeled audience seats in two banks, four open mobility-device spaces, a rear foyer, side gathering tables and a 0.25 m stage. The stage ramp has a 5 m run and 2 m clear width. The room owns its 4 m approach from the forward core; walls begin beyond the stair towers at x = 148 m. The forum is available in Ship areas and Deck layout and is included in the service and complete-ship downloads. Modeled seating is not a certified event capacity.
