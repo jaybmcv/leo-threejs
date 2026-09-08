@@ -13,9 +13,9 @@ export function createSpaceBackdrop(){
  const ctx=canvas.getContext('2d'),texture=new CanvasTexture(canvas);texture.colorSpace=SRGBColorSpace;
  let seed=1703;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const stars=Array.from({length:270},()=>({x:random()*1536,y:random()*864,r:.35+random()*1.1,a:.25+random()*.7}));
- const lines=Array.from({length:42},()=>({x:random()*2016-240,y:random()*1344-240,len:35+random()*190,speed:170+random()*280,a:.12+random()*.3}));
+ const lines=Array.from({length:42},()=>({x:random()*2496-480,y:random()*1824-480,len:70+random()*380,speed:340+random()*560,a:.12+random()*.3}));
  function update(dt,moving,flow={x:-1,y:0,strength:1}){
-  const wrap=(v,size)=>((v+240)%(size+480)+(size+480))%(size+480)-240;
+  const wrap=(v,size)=>((v+480)%(size+960)+(size+960))%(size+960)-480;
   ctx.fillStyle='#000000';ctx.fillRect(0,0,1536,864);
   for(const s of stars){ctx.fillStyle='rgba(221,236,255,'+s.a+')';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();}
   for(const l of lines){
@@ -29,3 +29,4 @@ export function createSpaceBackdrop(){
  }
  update(0,false);return {texture,update};
 }
+
