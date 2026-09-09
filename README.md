@@ -187,3 +187,9 @@ A 52 × 48 m forum at x = 154–206 m adds 120 modeled audience seats in two ban
 ## Lower aft services — Decks 1–3
 
 Three rooms step back progressively beneath the rising tail: Deck 1 spares and bulk stores (44 × 30 m), Deck 2 maintenance workshop (60 × 36 m), and Deck 3 engineering support and inspection (71 × 38 m). Their forward entries at x = −154 m connect to the existing service spine at x = −148 m through 6 m wide approaches. Central and transverse aisles remain clear of racks, benches and inspection equipment. All three appear in Ship areas, Deck layout and the service/full-ship downloads. The lower tail beyond these rooms remains structural space where the hull does not permit full-height rooms. Geometry and saved circulation checks are in `scripts/check-lower-aft.mjs`.
+
+## Deck 20 command finish
+
+Deck 20 now has 11 fitted rooms: the nine existing command spaces and bridge, plus an aft mission-planning studio and crew-recovery lounge. The new 52 x 20 m rooms occupy x = -116 to -64 m, beside an 8 m spine that meets the existing corridor at x = -52 m. Full-height spaces stop before the roof drops below usable height farther aft. Fit checks use the final sculpted roof, rather than the earlier conservative upper hull profile.
+
+Slate floors, blue upholstery, warm joinery, instrument details, planning-table surfaces and room signs carry through the command rooms. The main corridor has continuous inset guidance strips. The existing crew ready-room counter is moved aside to clear its entry. The accepted exterior and 10,000 modeled berths are retained. `scripts/check-command-deck.mjs` checks all Deck 20 finishes, roof containment, the connecting spine and room entries in the saved model.

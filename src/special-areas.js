@@ -85,7 +85,7 @@ function commandRoom(area,k){
   k.roomShell();const {box,round,console,table,rack,chair,cyl}=k,[x,y,z]=area.center;
   const consoles=()=>{for(const dx of [-8,0,8])for(const dz of [-6,5])console(x+dx,y,z+dz);};
   if(['navigation','mission','communications','securityops'].includes(area.kind)){
-    consoles();box('Mission_display_wall',[18,1.35,.1],[x,y+2,z-11.75],'screen');
+    consoles();box('Mission_display_wall',[18,1.35,.1],[x,y+2,z+Math.sign(z)*11.75],'screen');
     if(area.kind==='navigation'){cyl('Orbital_plotting_table',2,.8,[x,y+.4,z]);const ring=k.add('Orbit_projection',new T.TorusGeometry(1.5,.04,8,48),[x,y+1.5,z],'screen');ring.rotation.x=.7;}
     if(area.kind==='communications')for(const dx of [-11,-9,-7,7,9,11])rack(x+dx,y,z+10,'Signal_rack');
     if(area.kind==='securityops')for(const dx of [-10,-7,7,10])round('Secure_equipment_locker',[1.8,2.4,1],[x+dx,y+1.2,z+10],'metal');
@@ -93,9 +93,9 @@ function commandRoom(area,k){
     for(const dx of [-10,-6,-2,2,6,10])for(const dz of [-8,-4,4,8])rack(x+dx,y,z+dz,'Flight_computer_rack');console(x,y,z);
   }else if(area.kind==='crew'){
     table(x+3,y,z+5,9);for(const dx of [-9,-5,-1,3,7,11])chair(x+dx,y,z-5);round('Crew_lounge_table',[16,.08,2],[x,y+.5,z-7],'wood');
-    round('Refreshment_counter',[10,.95,1.3],[x-5,y+.475,z+10],'wood');for(const dx of [4,7,10])round('Crew_locker',[2,2.4,1],[x+dx,y+1.2,z+10],'metal');
+    round('Refreshment_counter',[6,.95,1.3],[x-8,y+.475,z+10],'wood');for(const dx of [4,7,10])round('Crew_locker',[2,2.4,1],[x+dx,y+1.2,z+10],'metal');
   }else if(area.kind==='briefing'){
-    table(x,y,z,17);box('Briefing_wall',[20,1.7,.12],[x,y+1.7,z-11.75],'screen');console(x-8,y,z+8);console(x+8,y,z+8);
+    table(x,y,z,17);box('Briefing_wall',[20,1.7,.12],[x,y+1.7,z+Math.sign(z)*11.75],'screen');console(x-8,y,z+8);console(x+8,y,z+8);
   }else if(area.kind==='captain'){
     console(x+6,y,z-5);table(x-5,y,z+4,7);for(const dx of [-10,-7,-4])rack(x+dx,y,z-10,'Command_records');chair(x+8,y,z+6);chair(x+10,y,z+8,Math.PI/2);
   }

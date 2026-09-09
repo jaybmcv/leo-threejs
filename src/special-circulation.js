@@ -1,3 +1,4 @@
+import {polishCommandCorridor} from './command-deck.js';
 import * as T from 'three';
 import {createLowerBowCirculation} from './lower-bow.js';
 import {createUpperAftCirculation} from './upper-aft.js';
@@ -36,5 +37,6 @@ export function createSpecialCirculation(deck){
   for(let x=span[0]+4;x<span[1];x+=8)add('Connection_light',[3,.04,.24],[x,y+3.24,0],light,shell);
   root.userData={deck,floor:y,clearWidth:width,connections:rooms.map(a=>({id:a.id,entry:[a.center[0],y,a.center[2]-Math.sign(a.center[2])*a.depth/2]})),endpoints:span.map(x=>[x,y,0])};
   finishCirculation(root,shell,'Special connections deck '+deck,deck);
+  if(deck===20)polishCommandCorridor(root);
   return {root,shell};
 }
