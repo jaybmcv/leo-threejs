@@ -62,7 +62,7 @@ function bridge(area,k){
   strip('Bridge_glazing_upper_exterior_row',a=>facade(42,a,.3),a=>facade(47,a,.3),'glass');
   strip('Bridge_ceiling',a=>facade(47,a),a=>[rear,44.6,facade(42,a,1.4)[2]],'lining');
   for(const s of [-1,1]){
-    const a=s*.8,lo=facade(42,a,1.4),hi=facade(47,a),g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute([rear,y,lo[2],...lo,...hi,rear,44.6,lo[2]],3));g.setIndex([0,1,2,0,2,3]);g.computeVertexNormals();add('Bridge_side_return',g,[0,0,0],'lining',shell);
+    const a=s*.8,lo=facade(42,a,1.4),hi=facade(47,a),g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute([rear,y,lo[2],lo[0],y,lo[2],...lo,...hi,rear,44.6,lo[2]],3));g.setIndex([0,1,2,0,2,3,0,3,4]);g.computeVertexNormals();add('Bridge_side_return',g,[0,0,0],'lining',shell);
     box('Bridge_rear_wall',[.18,8.3,Math.abs(lo[2])-3],[rear,y+4.15,s*(Math.abs(lo[2])+3)/2],'lining',shell);
     for(const x of [160,165,170])console(x,y,s*24,s>0?Math.PI:0);
   }
@@ -85,6 +85,11 @@ function bridge(area,k){
   round('Command_plinth',[6,.12,7],[170,y+.06,0],'navy',.2);
   const captain=chair(170,y+.12,0,-Math.PI/2);captain.name='Captain_command_seat';
   round('Captain_headrest',[.6,.3,.18],[0,1.43,-.3],'navy',.06,captain);
+  round('Captain_back_shell',[.82,1.05,.12],[0,1.04,-.42],'metal',.06,captain);
+  for(const s of [-1,1]){
+    round('Captain_side_bolster',[.13,.77,.22],[s*.36,.96,-.22],'navy',.045,captain);
+    box('Captain_back_piping',[.025,.82,.025],[s*.32,1.01,-.492],'amber',captain);
+  }
   for(const s of [-1,1]){
     round('Command_arm_console',[1,.85,.6],[170,y+.55,s*1.1],'navy');
     const touch=box('Touchscreen',[.78,.035,.42],[170,y+1,s*1.1],'screen');touch.rotation.z=.12;
@@ -92,6 +97,7 @@ function bridge(area,k){
     box('Command_approach_inlay',[11,.008,.055],[179,y+.005,s*3.6],'screen');
   }
   const globe=add('Navigation_globe',new T.IcosahedronGeometry(1.1,2),[162,y+1.9,12],'screen');globe.material=materials.screen;
+  globe.material=materials.screen.clone();globe.material.name='Bridge_navigation_projection';globe.material.color.setHex(0x19485c);globe.material.emissive.setHex(0x287f9a);globe.material.emissiveIntensity=.42;globe.material.roughness=.32;
   round('Navigation_plotting_table',[4,.8,4],[162,y+.4,12],'navy');
   const navFoot=add('Navigation_projector_base',new T.CylinderGeometry(1.25,1.4,.12,48),[162,y+.88,12],'metal');
   for(const r of [1.05,1.25]){
@@ -101,6 +107,10 @@ function bridge(area,k){
     const meridian=add('Navigation_globe_meridian',new T.TorusGeometry(1.115,.013,6,64),[162,y+1.9,12],'light');meridian.rotation.y=tilt;
   }
   const equator=add('Navigation_globe_equator',new T.TorusGeometry(1.115,.013,6,64),[162,y+1.9,12],'light');equator.rotation.x=Math.PI/2;
+  for(const latitude of [-.55,.55]){
+    const ring=add('Navigation_latitude',new T.TorusGeometry(Math.sqrt(1.115**2-latitude**2),.009,6,64),[162,y+1.9+latitude,12],'screen');ring.rotation.x=Math.PI/2;
+  }
+  const orbit=add('Navigation_transfer_arc',new T.TorusGeometry(1.53,.018,8,64,Math.PI*1.55),[162,y+1.9,12],'amber');orbit.rotation.set(.45,.3,.2);
   for(const s of [-1,1])box('Navigation_table_control',[.5,.04,2.7],[162+s*1.65,y+.83,12],'screen');
   for(const side of [-1,1]){
     round('Bridge_status_frame',[.16,2.15,9],[156.22,y+3.7,side*13],'navy',.06);
@@ -114,7 +124,7 @@ function bridge(area,k){
     // Keep the entry and eye-level window band open; place panels on the aft wall.
     box('Bridge_rear_accent',[.045,.055,8.9],[156.33,y+2.49,side*13],'amber');
   }
-  area.overview={position:[234,91,88],target:[179,38,0]};area.inside={position:[167,y+1.7,4],target:[200,39.5,0]};
+  area.overview={position:[234,91,88],target:[179,38,0]};area.inside={position:[159,y+1.7,-7],target:[178,y+1.4,4]};
 }
 
 function commandRoom(area,k){
