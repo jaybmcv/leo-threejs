@@ -80,7 +80,11 @@ function bridge(area,k){
       round('Helm_control_base',[.28,.08,.28],[side*.99,.98,.1],'metal',.03,helm);
       pipe('Helm_control_stick',[side*.99,1.02,.1],[side*.99,1.24,.16],.035,'dark',helm);
       round('Helm_control_grip',[.1,.12,.15],[side*.99,1.25,.16],'navy',.03,helm);
+      const pedal=round('Helm_pedal',[.22,.045,.34],[side*.17,.09,.68],'metal',.015,helm);pedal.rotation.x=-.22;
+      for(let groove=0;groove<3;groove++)box('Helm_pedal_tread',[.18,.018,.018],[side*.17,.121+groove*.013,.59+groove*.06],'dark',helm);
     }
+    box('Helm_mode_strip',[.65,.025,.16],[0,.99,.37],'dark',helm);
+    for(let i=0;i<4;i++)box('Helm_mode_key',[.1,.018,.09],[-.23+i*.15,1.012,.37],i===0?'amber':'screen',helm);
   }
   for(const z of [-14,14]){
     round('Navigation_station_floor_inset',[4.3,.016,3.8],[178.3,y+.012,z],'navy',.002);
@@ -90,6 +94,8 @@ function bridge(area,k){
   const captain=chair(170,y+.12,0,-Math.PI/2);captain.name='Captain_command_seat';
   round('Captain_headrest',[.6,.3,.18],[0,1.43,-.3],'navy',.06,captain);
   round('Captain_back_shell',[.82,1.05,.12],[0,1.04,-.42],'metal',.06,captain);
+  round('Captain_foot_support',[.68,.055,.34],[0,.18,.45],'metal',.025,captain);
+  box('Captain_foot_pad',[.58,.025,.26],[0,.221,.45],'dark',captain);
   for(const s of [-1,1]){
     round('Captain_side_bolster',[.13,.77,.22],[s*.36,.96,-.22],'navy',.045,captain);
     box('Captain_back_piping',[.025,.82,.025],[s*.32,1.01,-.492],'amber',captain);
@@ -97,6 +103,9 @@ function bridge(area,k){
   for(const s of [-1,1]){
     round('Command_arm_console',[1,.85,.6],[170,y+.55,s*1.1],'navy');
     const touch=box('Touchscreen',[.78,.035,.42],[170,y+1,s*1.1],'screen');touch.rotation.z=.12;
+    round('Captain_console_wrist_pad',[.18,.065,.47],[169.59,y+.99,s*1.1],'dark',.022);
+    round('Captain_console_access',[.035,.28,.34],[169.475,y+.53,s*1.1],'metal',.01);
+    box('Captain_console_access_pull',[.025,.035,.13],[169.448,y+.55,s*1.1],'dark');
     box('Command_dais_edge',[5.3,.025,.045],[170,y+.132,s*3.2],'amber');
     box('Command_approach_inlay',[11,.008,.055],[179,y+.005,s*3.6],'screen');
   }
@@ -106,6 +115,11 @@ function bridge(area,k){
   const navFoot=add('Navigation_projector_base',new T.CylinderGeometry(1.25,1.4,.12,48),[162,y+.88,12],'metal');
   for(const r of [1.05,1.25]){
     const ring=add('Navigation_projector_ring',new T.TorusGeometry(r,.022,8,64),[162,y+.95,12],'screen');ring.rotation.x=Math.PI/2;
+  }
+  // Projector calibration marks provide scale without invented live telemetry.
+  for(let i=0;i<24;i++){
+    const a=i*Math.PI/12,r=1.32;
+    const tick=box('Navigation_azimuth_tick',[i%6===0?.15:.075,.012,.02],[162+Math.cos(a)*r,y+.953,12+Math.sin(a)*r],i%6===0?'amber':'light');tick.rotation.y=-a;
   }
   for(const tilt of [0,Math.PI/2]){
     const meridian=add('Navigation_globe_meridian',new T.TorusGeometry(1.115,.013,6,64),[162,y+1.9,12],'light');meridian.rotation.y=tilt;
@@ -141,6 +155,20 @@ function bridge(area,k){
     }
     box('Bridge_upper_cove',[.06,.035,18],[156.2,y+7.13,side*14],'screen');
     for(const z of [-2.3,2.3])box('Command_dais_end_trim',[.045,.025,1.6],[170+side*2.65,y+.132,z],'metal');
+    for(const z of [7,10,13,16,19]){
+      round('Bridge_storage_cabinet',[.85,.9,2.7],[156.68,y+.45,side*z],'navy',.045);
+      box('Bridge_storage_face',[.025,.72,2.49],[157.12,y+.48,side*z],'metal');
+      box('Bridge_storage_seam',[.032,.67,.015],[157.141,y+.48,side*z],'dark');
+      for(const d of [-.18,.18])box('Bridge_storage_pull',[.07,.05,.13],[157.17,y+.63,side*z+d],'dark');
+    }
+    box('Bridge_storage_worktop',[1,.065,15.2],[156.73,y+.94,side*13],'metal');
+    box('Bridge_storage_toe_light',[.035,.025,14.4],[157.12,y+.13,side*13],'screen');
+    box(side<0?'Bridge_flight_equipment_label':'Bridge_comms_equipment_label',[.025,.23,3],[157.16,y+.56,side*7],'navy');
+  }
+  box('Bridge_exit_sign',[.04,.4,4],[156.14,y+3.25,0],'navy');
+  for(const side of [-1,1]){
+    box('Bridge_entry_light',[.05,2.5,.045],[156.16,y+1.3,side*3.07],'screen');
+    for(const x of [175,182,189])box('Bridge_aisle_marker',[.34,.01,.09],[x,y+.009,side*4.5],'metal');
   }
   area.overview={position:[234,91,88],target:[179,38,0]};area.inside={position:[159,y+1.7,-7],target:[178,y+1.4,4]};
 }

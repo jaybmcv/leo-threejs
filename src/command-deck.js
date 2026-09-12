@@ -78,6 +78,9 @@ export function polishCommandRoom(area,result){
   if(n==='Bridge_ceiling_ribbon')o.material=COMMAND_LIGHT;
   if(n==='Bridge_flight_status_title')fixtureText(k,o,'FLIGHT / NAVIGATION',1);
   if(n==='Bridge_systems_status_title')fixtureText(k,o,'SYSTEMS / COMMUNICATIONS',1);
+  if(n==='Bridge_exit_sign')fixtureText(k,o,'DECK 20 / COMMAND CORRIDOR',1);
+  if(n==='Bridge_flight_equipment_label')fixtureText(k,o,'FLIGHT EQUIPMENT',1);
+  if(n==='Bridge_comms_equipment_label')fixtureText(k,o,'COMMUNICATIONS EQUIPMENT',1);
   // Bridge pass 1: hardware stays attached to each station's local transform.
   if(area.kind==='bridge'&&n==='Console_body'){
    const {b,c,s}=k.bounds(o);
