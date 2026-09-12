@@ -39,6 +39,12 @@ for(const a of COMMAND){
  for(const dx of [-1.3,0,1.3])route([a.center[0]+dx,0],[a.center[0]+dx,edge+sign*1.5],y);
 }
 for(const z of [-2.5,0,2.5])route([-112,z],[164,z],36.3);
+// Walk around the captain's dais to the forward helm without crossing furniture.
+for(const side of [-1,1]){
+ route([164,0],[164,side*4.5],36.3);
+ route([164,side*4.5],[190,side*4.5],36.3);
+}
+route([190,-4.5],[190,4.5],36.3);
 for(const dx of [-1.3,0,1.3])route([-90+dx,-23],[-90+dx,23],36.3);
 const corridor=inside.getObjectByName('Deck_20_special_area_connections');assert(corridor.userData.commandPolish);
 const result={status:'PASS',finishedRooms:COMMAND.length,verticesChecked:vertices,assembledRouteSamples:samples,scope:'All Deck 20 rooms have new saved finish; actual finished roof containment; clear connected spine, all support-room entries and aft cross aisle with continuous floors. Geometry concept, not certification.'};

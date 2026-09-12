@@ -74,10 +74,26 @@ function bridge(area,k){
   }
   for(const z of [-7,7])console(186,y,z,-Math.PI/2);
   for(const z of [-14,14])console(179,y,z,-Math.PI/2);
-  round('Command_plinth',[6,.12,7],[170,y+.06,0],'navy',.2);chair(170,y+.12,0,-Math.PI/2);
-  for(const s of [-1,1])round('Command_arm_console',[1,.85,.6],[170,y+.55,s*1.1],'navy');
+  round('Command_plinth',[6,.12,7],[170,y+.06,0],'navy',.2);
+  const captain=chair(170,y+.12,0,-Math.PI/2);captain.name='Captain_command_seat';
+  round('Captain_headrest',[.6,.3,.18],[0,1.43,-.3],'navy',.06,captain);
+  for(const s of [-1,1]){
+    round('Command_arm_console',[1,.85,.6],[170,y+.55,s*1.1],'navy');
+    const touch=box('Touchscreen',[.78,.035,.42],[170,y+1,s*1.1],'screen');touch.rotation.z=.12;
+    box('Command_dais_edge',[5.3,.025,.045],[170,y+.132,s*3.2],'amber');
+    box('Command_approach_inlay',[11,.008,.055],[179,y+.005,s*3.6],'screen');
+  }
   const globe=add('Navigation_globe',new T.IcosahedronGeometry(1.1,2),[162,y+1.9,12],'screen');globe.material=materials.screen;
   round('Navigation_plotting_table',[4,.8,4],[162,y+.4,12],'navy');
+  const navFoot=add('Navigation_projector_base',new T.CylinderGeometry(1.25,1.4,.12,48),[162,y+.88,12],'metal');
+  for(const r of [1.05,1.25]){
+    const ring=add('Navigation_projector_ring',new T.TorusGeometry(r,.022,8,64),[162,y+.95,12],'screen');ring.rotation.x=Math.PI/2;
+  }
+  for(const tilt of [0,Math.PI/2]){
+    const meridian=add('Navigation_globe_meridian',new T.TorusGeometry(1.115,.013,6,64),[162,y+1.9,12],'light');meridian.rotation.y=tilt;
+  }
+  const equator=add('Navigation_globe_equator',new T.TorusGeometry(1.115,.013,6,64),[162,y+1.9,12],'light');equator.rotation.x=Math.PI/2;
+  for(const s of [-1,1])box('Navigation_table_control',[.5,.04,2.7],[162+s*1.65,y+.83,12],'screen');
   area.overview={position:[234,91,88],target:[179,38,0]};area.inside={position:[167,y+1.7,4],target:[200,39.5,0]};
 }
 

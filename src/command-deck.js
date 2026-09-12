@@ -79,7 +79,8 @@ export function polishCommandRoom(area,result){
    const {b,c,s}=k.bounds(o),f=k.face(o,1);
    const titles={bridge:'FLIGHT',navigation:'NAVIGATION',mission:'MISSION',communications:'COMMS',securityops:'SECURITY',data:'SYSTEMS',captain:'COMMAND',briefing:'PLANNING'};
    // Labels follow each console's local transform, including the curved bridge stations.
-   fixtureText(k,o,(titles[area.kind]||'OPERATIONS')+' '+String(++station).padStart(2,'0'),1);
+   const stationTitle=area.kind==='bridge'?(o.parent.position.x>184?'HELM':o.parent.position.x>175?'NAVIGATION':o.parent.position.z<0?'SYSTEMS':'COMMS'):(titles[area.kind]||'OPERATIONS');
+   fixtureText(k,o,stationTitle+' '+String(++station).padStart(2,'0'),1);
    k.box(o,[s.x*.88,.035,.025],[c.x,b.max.y-.12,b.max.z+.02],FINISH_M.steel,'command_console_trim');
    for(const sign of [-1,1])k.box(o,[.045,s.y*.62,.025],[c.x+sign*s.x*.43,c.y,b.max.z+.02],FINISH_M.steel,'command_console_trim');
    k.box(o,[s.x*.68,.055,.12],[c.x,b.min.y+.16,b.max.z+.09],FINISH_M.dark,'command_console_footrail');
