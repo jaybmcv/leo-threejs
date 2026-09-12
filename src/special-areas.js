@@ -72,7 +72,15 @@ function bridge(area,k){
     const points=angles.map(a=>{const p=facade(47,a);return new T.Vector3(p[0]*(1-t)+rear*t,p[1]*(1-t)+44.6*t-.2,p[2]*(1-t)+facade(42,a,1.4)[2]*t);});
     const path=new T.CatmullRomCurve3(points);add('Bridge_ceiling_ribbon',new T.TubeGeometry(path,72,.06,6,false),[0,0,0],'light',shell);
   }
-  for(const z of [-7,7])console(186,y,z,-Math.PI/2);
+  for(const z of [-7,7]){
+    const helm=console(186,y,z,-Math.PI/2);
+    // Compact physical controls sit beside the existing touch surface.
+    for(const side of [-1,1]){
+      round('Helm_control_base',[.28,.08,.28],[side*.99,.98,.1],'metal',.03,helm);
+      pipe('Helm_control_stick',[side*.99,1.02,.1],[side*.99,1.24,.16],.035,'dark',helm);
+      round('Helm_control_grip',[.1,.12,.15],[side*.99,1.25,.16],'navy',.03,helm);
+    }
+  }
   for(const z of [-14,14])console(179,y,z,-Math.PI/2);
   round('Command_plinth',[6,.12,7],[170,y+.06,0],'navy',.2);
   const captain=chair(170,y+.12,0,-Math.PI/2);captain.name='Captain_command_seat';
@@ -94,6 +102,18 @@ function bridge(area,k){
   }
   const equator=add('Navigation_globe_equator',new T.TorusGeometry(1.115,.013,6,64),[162,y+1.9,12],'light');equator.rotation.x=Math.PI/2;
   for(const s of [-1,1])box('Navigation_table_control',[.5,.04,2.7],[162+s*1.65,y+.83,12],'screen');
+  for(const side of [-1,1]){
+    round('Bridge_status_frame',[.16,2.15,9],[156.22,y+3.7,side*13],'navy',.06);
+    box('Bridge_status_display',[.025,1.75,8.55],[156.315,y+3.7,side*13],'dark');
+    box('Bridge_status_header',[.03,.045,7.9],[156.34,y+4.35,side*13],'screen');
+    for(let i=0;i<5;i++){
+      const z=side*13-3.1+i*1.55;
+      box('Bridge_status_module',[.03,.8,1.14],[156.345,y+3.58,z],'navy');
+      for(let j=0;j<3;j++)box('Bridge_status_trace',[.025,.04,.72-j*.14],[156.37,y+3.35+j*.22,z],'screen');
+    }
+    // Keep the entry and eye-level window band open; place panels on the aft wall.
+    box('Bridge_rear_accent',[.045,.055,8.9],[156.33,y+2.49,side*13],'amber');
+  }
   area.overview={position:[234,91,88],target:[179,38,0]};area.inside={position:[167,y+1.7,4],target:[200,39.5,0]};
 }
 
