@@ -73,6 +73,7 @@ function bridge(area,k){
     const path=new T.CatmullRomCurve3(points);add('Bridge_ceiling_ribbon',new T.TubeGeometry(path,72,.06,6,false),[0,0,0],'light',shell);
   }
   for(const z of [-7,7]){
+    round('Helm_floor_inset',[4.3,.016,3.8],[185.3,y+.012,z],'navy',.002);
     const helm=console(186,y,z,-Math.PI/2);
     // Compact physical controls sit beside the existing touch surface.
     for(const side of [-1,1]){
@@ -81,7 +82,10 @@ function bridge(area,k){
       round('Helm_control_grip',[.1,.12,.15],[side*.99,1.25,.16],'navy',.03,helm);
     }
   }
-  for(const z of [-14,14])console(179,y,z,-Math.PI/2);
+  for(const z of [-14,14]){
+    round('Navigation_station_floor_inset',[4.3,.016,3.8],[178.3,y+.012,z],'navy',.002);
+    console(179,y,z,-Math.PI/2);
+  }
   round('Command_plinth',[6,.12,7],[170,y+.06,0],'navy',.2);
   const captain=chair(170,y+.12,0,-Math.PI/2);captain.name='Captain_command_seat';
   round('Captain_headrest',[.6,.3,.18],[0,1.43,-.3],'navy',.06,captain);
@@ -111,11 +115,18 @@ function bridge(area,k){
     const ring=add('Navigation_latitude',new T.TorusGeometry(Math.sqrt(1.115**2-latitude**2),.009,6,64),[162,y+1.9+latitude,12],'screen');ring.rotation.x=Math.PI/2;
   }
   const orbit=add('Navigation_transfer_arc',new T.TorusGeometry(1.53,.018,8,64,Math.PI*1.55),[162,y+1.9,12],'amber');orbit.rotation.set(.45,.3,.2);
-  for(const s of [-1,1])box('Navigation_table_control',[.5,.04,2.7],[162+s*1.65,y+.83,12],'screen');
+  for(const s of [-1,1]){
+    box('Navigation_table_control',[.5,.04,2.7],[162+s*1.65,y+.83,12],'screen');
+    for(let i=0;i<5;i++){
+      box('Navigation_control_tile',[.34,.014,.32],[162+s*1.65,y+.858,11+i*.5],'dark');
+      box('Navigation_control_indicator',[.24,.009,.025],[162+s*1.65,y+.871,10.91+i*.5],i===2?'amber':'light');
+    }
+  }
   for(const side of [-1,1]){
     round('Bridge_status_frame',[.16,2.15,9],[156.22,y+3.7,side*13],'navy',.06);
     box('Bridge_status_display',[.025,1.75,8.55],[156.315,y+3.7,side*13],'dark');
     box('Bridge_status_header',[.03,.045,7.9],[156.34,y+4.35,side*13],'screen');
+    box(side<0?'Bridge_flight_status_title':'Bridge_systems_status_title',[.025,.26,7.8],[156.35,y+4.12,side*13],'navy');
     for(let i=0;i<5;i++){
       const z=side*13-3.1+i*1.55;
       box('Bridge_status_module',[.03,.8,1.14],[156.345,y+3.58,z],'navy');

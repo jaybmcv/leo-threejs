@@ -76,6 +76,8 @@ export function polishCommandRoom(area,result){
   }
   if(n==='Ceiling_light')o.material=light;
   if(n==='Bridge_ceiling_ribbon')o.material=COMMAND_LIGHT;
+  if(n==='Bridge_flight_status_title')fixtureText(k,o,'FLIGHT / NAVIGATION',1);
+  if(n==='Bridge_systems_status_title')fixtureText(k,o,'SYSTEMS / COMMUNICATIONS',1);
   if(n==='Console_body'){
    const {b,c,s}=k.bounds(o),f=k.face(o,1);
    const titles={bridge:'FLIGHT',navigation:'NAVIGATION',mission:'MISSION',communications:'COMMS',securityops:'SECURITY',data:'SYSTEMS',captain:'COMMAND',briefing:'PLANNING'};
