@@ -43,7 +43,7 @@ export function createCommandAft(area){
 }
 export function polishCommandRoom(area,result){
  const {root,fit,shell}=result;root.updateMatrixWorld(true);const k=detailKit(fit,'Deck 20 command finish'),sources=[];root.traverse(o=>{if(o.isMesh)sources.push(o);});
- let surfaces=0;
+ let surfaces=0,station=0,rack=0;
  const restful=['crew','captain'].includes(area.kind),light=restful?RECOVERY_LIGHT:COMMAND_LIGHT;
  for(const o of sources){
   const n=o.name;
@@ -75,6 +75,32 @@ export function polishCommandRoom(area,result){
    }
   }
   if(n==='Ceiling_light')o.material=light;
+  if(n==='Console_body'){
+   const {b,c,s}=k.bounds(o),f=k.face(o,1);
+   const titles={bridge:'FLIGHT',navigation:'NAVIGATION',mission:'MISSION',communications:'COMMS',securityops:'SECURITY',data:'SYSTEMS',captain:'COMMAND',briefing:'PLANNING'};
+   // Labels follow each console's local transform, including the curved bridge stations.
+   fixtureText(k,o,(titles[area.kind]||'OPERATIONS')+' '+String(++station).padStart(2,'0'),1);
+   k.box(o,[s.x*.88,.035,.025],[c.x,b.max.y-.12,b.max.z+.02],FINISH_M.steel,'command_console_trim');
+   for(const sign of [-1,1])k.box(o,[.045,s.y*.62,.025],[c.x+sign*s.x*.43,c.y,b.max.z+.02],FINISH_M.steel,'command_console_trim');
+   k.box(o,[s.x*.68,.055,.12],[c.x,b.min.y+.16,b.max.z+.09],FINISH_M.dark,'command_console_footrail');
+  }
+  if(/^(Flight_computer_rack|Signal_rack|Command_records|Crew_locker|Secure_equipment_locker)$/.test(n)){
+   const {b,c,s}=k.bounds(o);
+   // A small separate plaque keeps the identifier above module faces and handles.
+   const plaque=new T.Mesh(new T.BoxGeometry(s.x*.74,.17,.02));plaque.position.set(c.x,b.max.y-.14,b.max.z+.025);o.add(plaque);plaque.updateWorldMatrix(true,false);
+   k.box(plaque,[s.x*.74,.17,.02],[0,0,0],FINISH_M.dark,'command_storage_labels');
+   fixtureText(k,plaque,(n==='Crew_locker'?'CREW':n==='Command_records'?'ARCHIVE':'SYSTEM')+' '+String(++rack).padStart(2,'0'),1);
+   o.remove(plaque);plaque.geometry.dispose();plaque.material.dispose();
+  }
+  if(n==='Refreshment_counter'){
+   const {b,c,s}=k.bounds(o);
+   k.box(o,[1.5,.025,.8],[c.x+s.x*.26,b.max.y+.014,c.z],FINISH_M.dark,'command_refreshments');
+   for(let i=0;i<3;i++){
+    const x=c.x+s.x*.26-.45+i*.45;
+    k.add(o,new T.CylinderGeometry(.09,.07,.15,12).translate(x,b.max.y+.102,c.z),FINISH_M.linen,'command_refreshments');
+   }
+   k.box(o,[s.x*.86,.025,.015],[c.x,b.max.y-.16,b.max.z+.014],RECOVERY_LIGHT,'command_counter_light');
+  }
   if(n==='Entry_header'){fixtureText(k,o,area.name.toUpperCase(),area.center[2]>0?-1:1);}
   if(n==='Meeting_table'||n==='Navigation_plotting_table'){
    const {b,c,s}=k.bounds(o);k.box(o,[s.x*.56,.015,s.z*.55],[c.x,b.max.y+.018,c.z],FINISH_M.blue,'command_planning_surface');
@@ -90,7 +116,7 @@ export function polishCommandRoom(area,result){
    }
   }
  }
- const extras=k.finish();root.userData.commandPolish={surfaces,features:extras,revision:2};return result;
+ const extras=k.finish();root.userData.commandPolish={surfaces,features:extras,revision:3};return result;
 }
 
 export function polishCommandCorridor(root){
