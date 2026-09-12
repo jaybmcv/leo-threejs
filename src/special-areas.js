@@ -134,6 +134,13 @@ function bridge(area,k){
     }
     // Keep the entry and eye-level window band open; place panels on the aft wall.
     box('Bridge_rear_accent',[.045,.055,8.9],[156.33,y+2.49,side*13],'amber');
+    // Bridge pass 3: shallow rear-wall panels keep the circulation footprint intact.
+    for(const z of [6,11,16,21]){
+      round('Bridge_acoustic_panel',[.075,1.5,3.8],[156.145,y+6.2,side*z],'navy',.025);
+      for(let j=0;j<6;j++)box('Bridge_acoustic_rib',[.025,1.24,.022],[156.195,y+6.2,side*z-1.45+j*.58],'metal');
+    }
+    box('Bridge_upper_cove',[.06,.035,18],[156.2,y+7.13,side*14],'screen');
+    for(const z of [-2.3,2.3])box('Command_dais_end_trim',[.045,.025,1.6],[170+side*2.65,y+.132,z],'metal');
   }
   area.overview={position:[234,91,88],target:[179,38,0]};area.inside={position:[159,y+1.7,-7],target:[178,y+1.4,4]};
 }

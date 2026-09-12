@@ -78,6 +78,37 @@ export function polishCommandRoom(area,result){
   if(n==='Bridge_ceiling_ribbon')o.material=COMMAND_LIGHT;
   if(n==='Bridge_flight_status_title')fixtureText(k,o,'FLIGHT / NAVIGATION',1);
   if(n==='Bridge_systems_status_title')fixtureText(k,o,'SYSTEMS / COMMUNICATIONS',1);
+  // Bridge pass 1: hardware stays attached to each station's local transform.
+  if(area.kind==='bridge'&&n==='Console_body'){
+   const {b,c,s}=k.bounds(o);
+   for(let i=0;i<7;i++)k.box(o,[.075,.012,.017],[c.x+(i-3)*.13,b.min.y+.23,b.max.z+.021],FINISH_M.dark,'bridge_console_vents');
+   for(const sign of [-1,1]){
+    k.box(o,[.16,.045,.19],[c.x+sign*s.x*.37,b.max.y+.033,c.z+s.z*.28],FINISH_M.dark,'bridge_switch_housing');
+    k.box(o,[.075,.052,.085],[c.x+sign*s.x*.37,b.max.y+.074,c.z+s.z*.28],sign<0?FINISH_M.amber:FINISH_M.steel,'bridge_switches');
+   }
+  }
+  if(area.kind==='bridge'&&n==='Raised_display'){
+   const {b,c,s}=k.bounds(o);
+   for(const sign of [-1,1])k.box(o,[.018,s.y*.88,.018],[c.x+sign*s.x*.48,c.y,b.max.z+.023],FINISH_M.steel,'bridge_display_bezel');
+   k.box(o,[s.x*.9,.018,.018],[c.x,b.max.y-.013,b.max.z+.023],FINISH_M.steel,'bridge_display_bezel');
+  }
+  // Bridge pass 2: close-up upholstery and the projector's working edge.
+  if(area.kind==='bridge'&&n==='Seat_cushion'){
+   const {b,c,s}=k.bounds(o);
+   for(const sign of [-1,1])k.box(o,[.009,.006,s.z*.72],[c.x+sign*s.x*.35,b.max.y+.004,c.z],FINISH_M.linen,'bridge_seat_seams');
+  }
+  if(area.kind==='bridge'&&n==='Seat_back'){
+   const {b,c,s}=k.bounds(o);
+   k.box(o,[s.x*.69,.14,.025],[c.x,c.y-.13,b.max.z+.023],FINISH_M.dark,'bridge_lumbar_panel');
+  }
+  if(n==='Navigation_plotting_table'){
+   const {b,c,s}=k.bounds(o);
+   for(const sign of [-1,1]){
+    k.box(o,[s.x-.14,.055,.06],[c.x,b.max.y-.08,c.z+sign*(s.z/2+.02)],FINISH_M.steel,'bridge_projector_edge');
+    for(const x of [-1,1])k.box(o,[.12,.52,.08],[c.x+x*(s.x/2-.16),c.y,c.z+sign*(s.z/2+.02)],FINISH_M.steel,'bridge_projector_corner');
+   }
+   fixtureText(k,o,'NAVIGATION / ORBITAL PLOT',1);
+  }
   if(n==='Console_body'){
    const {b,c,s}=k.bounds(o),f=k.face(o,1);
    const titles={bridge:'FLIGHT',navigation:'NAVIGATION',mission:'MISSION',communications:'COMMS',securityops:'SECURITY',data:'SYSTEMS',captain:'COMMAND',briefing:'PLANNING'};
