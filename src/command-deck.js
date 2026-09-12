@@ -2,6 +2,8 @@ import * as T from 'three';
 import {serviceKit,SERVICE_M as M} from './neighborhood-services.js';
 import {finishShipArea,detailKit,FINISH_M} from './area-finish.js';
 import {fixtureText} from './circulation-finish.js';
+const COMMAND_LIGHT=new T.MeshStandardMaterial({name:'Command cool instrument light',color:0xb8e3ed,emissive:0x7eb7cb,emissiveIntensity:.45,roughness:.5});
+const RECOVERY_LIGHT=new T.MeshStandardMaterial({name:'Command warm lounge light',color:0xffe2b7,emissive:0xe9bb7c,emissiveIntensity:.35,roughness:.6});
 export const COMMAND_AFT_AREAS=[
  {id:'d20-planning-aft',name:'Mission planning studio',kind:'briefing',side:-1,description:'A collaborative planning table, navigation review stations and a mission wall for detailed work away from the bridge.'},
  {id:'d20-recovery-aft',name:'Crew recovery lounge',kind:'crew',side:1,description:'Quiet upholstered seating, a refreshment counter and small conversation tables for command crew between shifts.'},
@@ -24,7 +26,7 @@ export function createCommandAft(area){
  }else{
   for(const x of [-19,-11,10,19]){table(x,0,4);for(const z of [-2,2]){chair(x-1,z,z<0?Math.PI:0);chair(x+1,z,z<0?Math.PI:0);}}
   box('Refreshment_counter',[12,.9,1.3],[-13,.45,8.4],M.wood);box('Coffee_machine',[.9,.65,.7],[-15,1.225,8.4],M.metal);
-  for(const x of [8,14,20]){box('Passenger_bench',[4,.45,.85],[x,.225,8],M.wood);box('Seat_cushion',[3.9,.14,.8],[x,.52,8],M.blue);}
+  for(const x of [8,14,20]){box('Passenger_bench',[4,.45,.85],[x,.225,8],M.wood);box('Seat_cushion',[3.9,.14,.8],[x,.52,8],M.blue);box('Seat_back',[3.9,.65,.16],[x,.91,8.34],M.blue);}
  }
  // Each room owns its short doorway link. Port additionally owns the shared
  // aft spine, which meets the existing command corridor at x=-52.
@@ -42,28 +44,53 @@ export function createCommandAft(area){
 export function polishCommandRoom(area,result){
  const {root,fit,shell}=result;root.updateMatrixWorld(true);const k=detailKit(fit,'Deck 20 command finish'),sources=[];root.traverse(o=>{if(o.isMesh)sources.push(o);});
  let surfaces=0;
+ const restful=['crew','captain'].includes(area.kind),light=restful?RECOVERY_LIGHT:COMMAND_LIGHT;
  for(const o of sources){
   const n=o.name;
   if(/Ceiling|wall|lining|Finished_floor|Bridge_floor|Seat_cushion|Seat_back|Console_body|Meeting_table|Refreshment_counter/.test(n)&&!Array.isArray(o.material)){
    o.material=o.material.clone();
    if(/floor/.test(n)){o.material.color.setHex(0x435660);o.material.roughness=.88;}
-   else if(/Seat|Console/.test(n)){o.material.color.setHex(0x355b6a);o.material.roughness=.72;}
+   else if(/Seat|Console/.test(n)){o.material.color.setHex(restful?0x647c73:0x355b6a);o.material.roughness=.72;}
    else if(/table|counter/.test(n)){o.material.color.setHex(0x9a7854);o.material.roughness=.48;}
    else{o.material.color.setHex(0xc4d1d4);o.material.roughness=.75;}
    surfaces++;
   }
   if(/^(Raised_display|Touchscreen|Mission_display_wall|Briefing_wall)$/.test(n)){
-   const f=k.face(o);f.panel(0,0,f.w*.9,f.h*.75,FINISH_M.dark,'command_instruments');
-   for(let i=0;i<5;i++)f.panel(-f.w*.35+i*f.w*.17,-f.h*.15,f.w*.08,f.h*(.13+i*.025),FINISH_M.blue,'command_instruments');
+   const side=/wall$/.test(n)?(area.center[2]>0?-1:1):undefined;
+   const backing=k.face(o,side,.018),f=k.face(o,side,.028);
+   backing.panel(0,0,f.w*.94,f.h*.92,FINISH_M.dark,'command_instruments');
+   // Broad mission plots and compact telemetry use different visual hierarchies.
+   const plotting=['bridge','navigation','briefing','mission'].includes(area.kind);
+   f.panel(0,f.h*.27,f.w*.78,f.h*.025,light,'command_instruments');
+   if(plotting){
+    for(let i=0;i<4;i++){
+     f.panel(-f.w*.29+i*f.w*.13,-f.h*.03,f.w*.004,f.h*.43,FINISH_M.blue,'command_instruments');
+     f.panel(-f.w*.1,-f.h*.22+i*f.h*.12,f.w*.54,f.h*.01,FINISH_M.blue,'command_instruments');
+     f.panel(-f.w*.29+i*f.w*.13,-f.h*.16+i*f.h*.075,f.w*.025,f.h*.045,light,'command_instruments');
+    }
+    for(let i=0;i<3;i++)f.panel(f.w*.31,f.h*(.13-i*.16),f.w*.14,f.h*.065,i===2?FINISH_M.amber:light,'command_instruments');
+   }else for(let i=0;i<5;i++){
+    f.panel(-f.w*.35+i*f.w*.17,-f.h*.10,f.w*.09,f.h*.36,FINISH_M.steel,'command_instruments');
+    f.panel(-f.w*.35+i*f.w*.17,-f.h*.17+i*f.h*.02,f.w*.075,f.h*(.12+i*.04),light,'command_instruments');
+   }
   }
+  if(n==='Ceiling_light')o.material=light;
   if(n==='Entry_header'){fixtureText(k,o,area.name.toUpperCase(),area.center[2]>0?-1:1);}
   if(n==='Meeting_table'||n==='Navigation_plotting_table'){
    const {b,c,s}=k.bounds(o);k.box(o,[s.x*.56,.015,s.z*.55],[c.x,b.max.y+.018,c.z],FINISH_M.blue,'command_planning_surface');
+   if(!restful)for(const z of [-.17,0,.17])k.box(o,[s.x*.48,.004,.012],[c.x,b.max.y+.028,c.z+s.z*z],FINISH_M.ink,'command_table_plot');
   }
   if(n==='Command_spine_floor'){const {b,c,s}=k.bounds(o);for(const z of [-3.5,3.5])k.box(o,[s.x-.5,.008,.08],[c.x,b.max.y+.006,c.z+z],FINISH_M.blue,'command_wayfinding');}
   if(n==='Seat_back'){const {b,c,s}=k.bounds(o);k.box(o,[s.x*.82,.035,.02],[c.x,b.max.y-.07,b.max.z+.012],FINISH_M.linen,'command_upholstery');}
+  if(n==='Seat_cushion'){
+   const {b,c,s}=k.bounds(o);
+   for(const sign of [-1,1]){
+    k.box(o,[.07,.23,s.z*.65],[c.x+sign*(s.x/2+.045),b.max.y+.10,c.z],FINISH_M.dark,'command_seat_arms');
+    k.box(o,[.11,.045,s.z*.72],[c.x+sign*(s.x/2+.045),b.max.y+.235,c.z],restful?FINISH_M.oak:FINISH_M.linen,'command_seat_arms');
+   }
+  }
  }
- const extras=k.finish();root.userData.commandPolish={surfaces,features:extras,revision:1};return result;
+ const extras=k.finish();root.userData.commandPolish={surfaces,features:extras,revision:2};return result;
 }
 
 export function polishCommandCorridor(root){

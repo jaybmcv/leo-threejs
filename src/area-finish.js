@@ -12,9 +12,9 @@ export function detailKit(root,label,spatial=false){
  function add(o,g,m,f){o.updateWorldMatrix(true,false);g.applyMatrix4(inverse.clone().multiply(o.matrixWorld));const e=o.matrixWorld.elements,cell=spatial?'|'+[Math.floor(e[12]/50),Math.floor(e[13]/4),Math.floor(e[14]/25)].join(','):'';const key=f+'|'+m.name+cell;if(!batches.has(key))batches.set(key,{m,f,gs:[]});batches.get(key).gs.push(g);features[f]=(features[f]||0)+1;}
  const box=(o,size,p,m,f)=>add(o,new T.BoxGeometry(...size).translate(...p),m,f);
  function bounds(o){o.geometry.computeBoundingBox();const b=o.geometry.boundingBox;return {b,c:b.getCenter(new T.Vector3()),s:b.getSize(new T.Vector3())};}
- function face(o,side){
+ function face(o,side,offset=.004){
   const {c,s}=bounds(o),axis=s.x<=s.y&&s.x<=s.z?'x':s.y<=s.z?'y':'z',u=axis==='x'?'z':'x',v=axis==='y'?'z':'y',sign=side??(axis==='x'?-1:1);
-  function panel(a,b,w,h,m,f){const p=c.clone(),size=new T.Vector3();p[u]+=a;p[v]+=b;p[axis]+=(s[axis]/2+.004)*sign;size[u]=w;size[v]=h;size[axis]=.006;box(o,size.toArray(),p.toArray(),m,f);}
+  function panel(a,b,w,h,m,f){const p=c.clone(),size=new T.Vector3();p[u]+=a;p[v]+=b;p[axis]+=(s[axis]/2+offset)*sign;size[u]=w;size[v]=h;size[axis]=.006;box(o,size.toArray(),p.toArray(),m,f);}
   return {w:s[u],h:s[v],panel,axis};
  }
  function finish(){for(const {m,f,gs} of batches.values()){const g=mergeGeometries(gs);gs.forEach(g=>g.dispose());const o=new T.Mesh(g,m);o.name='Refined_'+f;o.receiveShadow=true;root.add(o);}root.userData.refinement={revision:1,label,features};return features;}
