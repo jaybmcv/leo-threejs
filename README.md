@@ -1,5 +1,9 @@
 # LEO — Life aboard, interior study 01
 
+![Current LEO website perspective render](src/reference-shuttle/assets/full-reference.png)
+
+The image above is the current V35 perspective export from the live viewer, captured 2026-09-14. It replaces the older reference image that was previously easy to mistake for the current ship. The earlier concept is preserved as `src/reference-shuttle/assets/full-reference-concept.png`.
+
 The accepted V31 exterior is retained as the source baseline. The active V36 exterior adds refined hull finishes, projected markings and seams, engine service panels and the glazed panoramic fin lounge. The current interior includes all ten furnished residential decks (5,000 twin cabins / 10,000 berths), ten fitted garden commons, 68 fitted ship areas across eight decks, and the shared observation lounge. Aft pass 03 now adds machinery, reservoirs, pod interiors, wing maintenance routes and fin structure and the panoramic crown to the combined ship GLB. The source `leo-exterior.glb` remains byte-identical; the viewer and combined GLB use the same refined V36 exterior. The machinery hall, tank bay and pod interiors now have removable enclosures, open portals and route lighting. Equipment remains a concept arrangement.
 
 ## Complete polish and directional glazing — V36

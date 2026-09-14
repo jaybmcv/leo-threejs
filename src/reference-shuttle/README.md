@@ -2,6 +2,8 @@
 
 Revision 6 follows the user's elongated-saucer reference. A closed 502 m by 208 m lenticular body now has its own rounded rear perimeter around an 86 m wide tail attachment. The forebody and glazing are widened together to keep the oval silhouette continuous. Side markings and service details follow the new hull. The full assembly remains approximately 600 m long and 300 m across its engine pods. Revision 5 source and GLB are preserved in `archive/reference-v05-source`.
 
+`assets/full-reference.png` is now the current V35 perspective render from the main website, so the reference viewer and downstream tools see the latest ship image. The superseded concept is preserved as `assets/full-reference-concept.png`; `assets/saucer-reference.png` remains the original saucer study.
+
 Revision 5 smooths the roof between the main body and tail, replaces the overlapping oval tail-root piece with a fillet in the hull mesh, and restores smooth surface normals. The aft panel details move with the roof. The Tail camera shows the changed area. Curvature measurements and the maximum vertex displacement are recorded with the GLB validation report. Revision 4 source and GLB are preserved in `archive/reference-v04-source`.
 
 Revision 4 introduces embedded ceramic panel and thermal tile atlases with subtle access-panel markings, individual cockpit-pane tint variation, and Cockpit / Engine close-up cameras. Both the GLB and offline procedural viewer include the same finish. Texture export uses a native canvas during the build; the viewer has no new runtime dependency. Revision 3 source and GLB are preserved in `archive/reference-v03-source`.

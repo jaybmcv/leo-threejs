@@ -2,6 +2,8 @@
 
 This is the complete procedural source for the LEO interactive ship study, including the latest five Captain's bridge refinement passes (September 12, 2026). Start here; the main README also contains historical build notes.
 
+The canonical visual reference is `src/reference-shuttle/assets/full-reference.png`, updated from the current V35 website perspective export on 2026-09-14. The older concept is retained at `src/reference-shuttle/assets/full-reference-concept.png` for comparison only.
+
 ## Run locally
 
 Use a current Node.js LTS runtime (Node 22 or newer) and npm:
