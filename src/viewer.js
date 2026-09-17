@@ -49,7 +49,7 @@ function noseView(){
  for(const [n,v] of noseViews)v.root.visible=n===activeDistrict;
  const v=noseViews.get(activeDistrict);v.shell.visible=$('detail-walls').checked;return v;
 }
-function viewLink(values){if(location.protocol!=='file:')history.replaceState(null,'','?'+new URLSearchParams(values));}
+function viewLink(values){if(location.protocol!=='file:'){const params=new URLSearchParams(values);if($('clean-branding')?.checked)params.set('clean','1');else params.delete('clean');history.replaceState(null,'','?'+params);}}
 function districtView(){
   if(activeDistrict===10)return null;
   if(!districtViews.has(activeDistrict)){
@@ -125,9 +125,13 @@ function showAft(){
 $('aft-section').addEventListener('change',()=>{aftSection=$('aft-section').value;showAft();});$('aft-shell').addEventListener('change',showAft);
 $('aft-eye').addEventListener('click',()=>{aftEye=true;showAft();});$('aft-overview').addEventListener('click',()=>{aftEye=false;showAft();});
 const shapeParts=/^(Fin_cap_retained_white_underside$|Crown_|Smooth_pressure_envelope_|Upper_engine_housing_|Sculpted_nacelle_shell$|Nacelle_exhaust_bulkhead$|Nacelle_chamfered_nose_face$|Engine_shroud$|Engine_bell$|Engine_nozzle_lip$|Engine_throat$|Blended_double_delta$|Wing_thermal_edge$|Wing_stabilizer_fence$|Swept_cat_tail$|Swept_tail_cap$|Tail_root_dorsal_fairing$|Contoured_aft_pressure_frame$|Forward_observation_panes$|Individual_glazing_frames$|Individual_glazing_seals$|Bridge_roof_brow$|Forward_side_vent_)/;
+const brandingParts=/^(LEO_wordmark|Mission_identifier|Mission_brand|Crest_|Tail_registry|Roof_mission|V33_authentic_Mars_Cats_Voyage_logo)$/;
 const exteriorMeshes=[];ship.exterior.traverse(o=>{if(o.isMesh)exteriorMeshes.push({mesh:o,visible:o.visible});});
-function applyShapeView(){const simple=mode==='exterior'&&$('shape-only').checked;for(const {mesh,visible} of exteriorMeshes)mesh.visible=visible&&(!simple||shapeParts.test(mesh.name));}
+function brandingMesh(o){return o.isMesh&&brandingParts.test(o.name);}
+function applyBrandingView(){const clean=$('clean-branding')?.checked===true;document.body.classList.toggle('clean-branding',clean);document.title=clean?'Life aboard':'LEO — Life aboard';scene.traverse(o=>{if(brandingMesh(o))o.visible=!clean;});}
+function applyShapeView(){const simple=mode==='exterior'&&$('shape-only').checked,clean=$('clean-branding')?.checked===true;for(const {mesh,visible} of exteriorMeshes)mesh.visible=visible&&(!simple||shapeParts.test(mesh.name))&&(!clean||!brandingMesh(mesh));}
 $('shape-only').addEventListener('change',applyShapeView);
+$('clean-branding').addEventListener('change',()=>{const clean=$('clean-branding').checked;try{localStorage.setItem('leo-clean-branding',clean?'1':'0');}catch{}applyBrandingView();applyShapeView();const params=new URLSearchParams(location.search);if(clean)params.set('clean','1');else params.delete('clean');if(location.protocol!=='file:')history.replaceState(null,'','?'+params);});
 function exteriorStage(){if(mode!=='exterior')return;const studio=$('studio-stage').checked;document.body.dataset.studio=studio?'1':'0';grid.visible=!studio;pad.visible=!studio;scene.background.set(studio?0x344554:0xbac8cd);scene.environmentIntensity=.55;key.intensity=1.45;hemi.intensity=.65;}
 $('studio-stage').addEventListener('change',exteriorStage);
 const grid=new T.GridHelper(1100,44,0x8d9fa7,0xaab9bf);grid.position.y=-59;grid.material.transparent=true;grid.material.opacity=.48;scene.add(grid);
@@ -206,7 +210,7 @@ async function loadExterior(){
       Object.assign(ship,{exterior,fixed:exterior.getObjectByName('Wings_engines_tail'),port:exterior.getObjectByName('Port_shell'),starboard:exterior.getObjectByName('Starboard_shell')});
     }
     if(location.protocol==='file:'){prepareCrownExterior(ship.exterior);refineExterior(ship.exterior);attachFinCrown(ship.exterior);}
-    ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);scene.add(thrusters.root);exteriorReady=true;
+    ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);scene.add(thrusters.root);exteriorReady=true;applyBrandingView();applyShapeView();
   })().catch(e=>{exteriorLoad=null;throw e;});
   await exteriorLoad;
 }
@@ -386,8 +390,8 @@ $('save-render').addEventListener('click',async()=>{
     }
     renderer.render(scene,renderCamera);
     const poster=document.createElement('canvas');poster.width=width;poster.height=height;const ctx=poster.getContext('2d');ctx.drawImage(renderer.domElement,0,0);
-    ctx.textAlign=view==='engine'?'right':'left';
-    ctx.fillStyle='#eef2f4';ctx.font='600 90px Segoe UI';ctx.fillText('LEO',view==='engine'?3100:100,150);ctx.font='24px Segoe UI';ctx.fillStyle='#b7c8d2';ctx.fillText('MARS CATS VOYAGE  /  EXTERIOR FINISH 35',view==='engine'?3100:104,198);ctx.textAlign='left';
+    const cleanBranding=$('clean-branding').checked;ctx.textAlign=view==='engine'?'right':'left';
+    if(!cleanBranding){ctx.fillStyle='#eef2f4';ctx.font='600 90px Segoe UI';ctx.fillText('LEO',view==='engine'?3100:100,150);ctx.font='24px Segoe UI';ctx.fillStyle='#b7c8d2';ctx.fillText('MARS CATS VOYAGE  /  EXTERIOR FINISH 35',view==='engine'?3100:104,198);}ctx.textAlign='left';
     ctx.strokeStyle='#8397a4';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(100,1840);ctx.lineTo(3100,1840);ctx.stroke();
     ctx.font='25px Segoe UI';ctx.fillStyle='#dbe4e9';ctx.fillText(`${view.toUpperCase()}  /  ${shapeOnly?'SHAPE STUDY':'MODEL RENDER'}`,100,1905);ctx.textAlign='right';ctx.fillText('564 m LENGTH   ·   300 m NOMINAL SPAN   ·   10,000 OCCUPANTS',3100,1905);
     const blob=await new Promise(resolve=>poster.toBlob(resolve,'image/png'));if(!blob)throw new Error('PNG encoder unavailable');
@@ -417,7 +421,7 @@ $('save-interior').addEventListener('click',async()=>{
     renderer.setPixelRatio(1);renderer.setSize(width,height,false);renderer.render(scene,c);
     const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.drawImage(renderer.domElement,0,0);
     const focus=mode==='aft'?'aft-'+aftSection+'-'+(aftEye?'inside':'overview'):mode==='transit'?'transit-'+transitCore+'-d'+transitDeck+'-'+transitPose:mode==='areas'?'area-'+activeArea.id+'-'+areaView:mode==='walk'?(routeKey==='aft'?'journey-aft-':'walk-')+(stop+1):(document.querySelector('[data-focus][aria-pressed="true"]')?.dataset.focus||'all');
-    ctx.fillStyle='#122b3ae6';ctx.fillRect(0,height-90,width,90);ctx.fillStyle='#eef0e7';ctx.font='32px Segoe UI';ctx.fillText('LEO / LIFE ABOARD',55,height-34);ctx.textAlign='right';ctx.font='24px Segoe UI';ctx.fillText(mode==='aft'?AFT_VIEWS[aftSection].name:mode==='transit'?transitCore.toUpperCase()+' CONNECTION / DECK '+transitDeck:mode==='areas'?activeArea.name+' / DECK '+activeArea.deck:mode==='walk'?routeStops()[stop].name:focus==='all'?'NEIGHBORHOOD '+activeDistrict+' / 1,000 RESIDENTS':focus.toUpperCase(),width-55,height-34);
+    ctx.fillStyle='#122b3ae6';ctx.fillRect(0,height-90,width,90);ctx.fillStyle='#eef0e7';ctx.font='32px Segoe UI';ctx.fillText($('clean-branding').checked?'LIFE ABOARD':'LEO / LIFE ABOARD',55,height-34);ctx.textAlign='right';ctx.font='24px Segoe UI';ctx.fillText(mode==='aft'?AFT_VIEWS[aftSection].name:mode==='transit'?transitCore.toUpperCase()+' CONNECTION / DECK '+transitDeck:mode==='areas'?activeArea.name+' / DECK '+activeArea.deck:mode==='walk'?routeStops()[stop].name:focus==='all'?'NEIGHBORHOOD '+activeDistrict+' / 1,000 RESIDENTS':focus.toUpperCase(),width-55,height-34);
     const blob=await new Promise(r=>canvas.toBlob(r,'image/png')),filename='interior-'+(mode==='neighborhood'?'n'+activeDistrict+'-':'')+focus+(mode==='neighborhood'&&residenceInside?'-inside':'')+'.png';
     if(location.protocol==='http:'&&['127.0.0.1','localhost'].includes(location.hostname)){
       const res=await fetch('/renders/'+filename,{method:'PUT',headers:{'Content-Type':'image/png'},body:blob});if(!res.ok)throw new Error('Could not save image');
@@ -427,7 +431,7 @@ $('save-interior').addEventListener('click',async()=>{
 });
 
 (async()=>{
- resize();const params=new URLSearchParams(location.search);routeKey=params.get('tour')==='aft'?'aft':'home';renderRouteDots();const initial=params.get('space'),areaId=params.get('area');
+ resize();const params=new URLSearchParams(location.search);let cleanBranding=params.get('clean')==='1';if(params.get('clean')===null){try{cleanBranding=localStorage.getItem('leo-clean-branding')==='1';}catch{}}$('clean-branding').checked=cleanBranding;applyBrandingView();routeKey=params.get('tour')==='aft'?'aft':'home';renderRouteDots();const initial=params.get('space'),areaId=params.get('area');
  const district=Number(params.get('district'));if(Number.isInteger(district)&&district>=1&&district<=10){activeDistrict=district;$('neighborhood-select').value=district;}
  const deck=Number(params.get('deck'));if(deck>=1&&deck<=20)$('deck-select').value=deck-1;
  if(params.has('transit')){transitCore=params.get('transit')==='aft'?'aft':'forward';transitDeck=deck>=1&&deck<=20?deck:17;transitPose=['inside','stairs'].includes(params.get('view'))?params.get('view'):'overview';}
