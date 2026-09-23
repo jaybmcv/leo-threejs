@@ -1,5 +1,7 @@
 # LEO — Life aboard, interior study 01
 
+The next residential redesign is documented in [Residential hierarchy proposal](RESIDENTIAL_HIERARCHY.md): ten accommodation tiers, 5,214 rooms and 10,000 residents. This is a proposal; the current model retains its existing 5,000 twin cabins.
+
 ![Current LEO website perspective render](src/reference-shuttle/assets/full-reference.png)
 
 The image above is the current V35 perspective export from the live viewer, captured 2026-09-14. It replaces the older reference image that was previously easy to mistake for the current ship. The earlier concept is preserved as `src/reference-shuttle/assets/full-reference-concept.png`.
