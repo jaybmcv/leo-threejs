@@ -1,5 +1,7 @@
 # LEO — Life aboard, interior study 01
 
+**[Open the interactive website](https://leo-mars-cats-voyage.jaybeepc.chatgpt.site/)**. The former `cryptoclassics6.chatgpt.site` address is no longer active following the account rename.
+
 The next residential redesign is documented in [Residential hierarchy proposal](RESIDENTIAL_HIERARCHY.md): ten accommodation tiers, 5,214 rooms and 10,000 residents. This is a proposal; the current model retains its existing 5,000 twin cabins.
 
 ![Current LEO website perspective render](src/reference-shuttle/assets/full-reference.png)
