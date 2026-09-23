@@ -31,6 +31,10 @@ Open `http://127.0.0.1:4173/?area=d20-bridge-9&view=inside` for the bridge, or `
 
 Three.js is pinned to 0.185.1 in the lockfile. Native canvas is used by the Node export pipeline; esbuild bundles the browser viewer.
 
+## Visitor view and studio mode
+
+The viewer opens in the Mars Cats Voyage visitor theme, matched to marscatsvoyage.com (second `<style>` block in `src/viewer.html`). The logo and the website's three typefaces live in `src/brand/` (fonts under SIL OFL 1.1), and `scripts/brand-assets.mjs` copies them next to `index.html` in both builds. Add `?studio=1` to any view to bring back the build tools: GLB downloads, render exports, the Notes link, V35 labels and the engineering notes.
+
 ## Preserve the design
 
 Keep the accepted exterior silhouette, deck alignment, room layout and circulation. Ship coordinates use +X toward the nose, Y up and Z across the ship. Deck 20's floor is at Y=36.3. The model is an architectural concept, not an engineering-certified vehicle. Display graphics are concept graphics, not live ship telemetry.

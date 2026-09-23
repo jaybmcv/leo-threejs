@@ -18,6 +18,11 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createShip,createResidentialDeck,createGardenCommons,DECKS,ROUTE,SAMPLE,COMMONS } from './model.js';
 
 const $=id=>document.getElementById(id);
+// Visitors get the ship; ?studio=1 restores downloads, render exports and review notes for the build team.
+const studioTools=new URLSearchParams(location.search).get('studio')==='1';document.body.classList.toggle('studio-tools',studioTools);
+const CHAPTERS={exterior:'Exterior',layout:'Deck layout',areas:'Ship areas',neighborhood:'Neighborhood',aft:'Aft systems',transit:'Connections',walk:'Tour'};
+// The last word of each view title carries the accent, as on marscatsvoyage.com.
+function setTitle(text){const el=$('view-title'),i=text.lastIndexOf(' '),em=document.createElement('em');em.textContent=i>0?text.slice(i+1):text;el.replaceChildren(...(i>0?[text.slice(0,i+1)]:[]),em);}
 enablePublicDownloads();
 document.getElementById('share-view')?.addEventListener('click',async()=>{
  const button=document.getElementById('share-view');
@@ -68,7 +73,7 @@ function showArea(id=activeArea.id,view=areaView){
   if(!areaCache.has(activeArea.id)){const room=createShipArea(activeArea);areaCache.set(activeArea.id,room);areasRoot.add(room.root);}
   for(const [key,room] of areaCache)room.root.visible=key===activeArea.id;
   const room=areaCache.get(activeArea.id);room.shell.visible=view==='inside';$('area-select').value=activeArea.id;$('area-deck').textContent=activeArea.deck;$('area-description').textContent=activeArea.description;
-  $('view-title').textContent=activeArea.name;$('view-description').textContent=activeArea.category+' · Deck '+activeArea.deck;$('status').textContent=activeArea.name+' · '+(view==='inside'?'1.7 m eye level':activeArea.width+' × '+activeArea.depth+' m concept area');
+  setTitle(activeArea.name);$('view-description').textContent=activeArea.category+' · Deck '+activeArea.deck;$('status').textContent=activeArea.name+' · '+(view==='inside'?'1.7 m eye level':activeArea.width+' × '+activeArea.depth+' m concept area');
   document.querySelectorAll('[data-area-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.areaView===view));persp.fov=view==='inside'?65:42;persp.near=.05;
   const pose=room[view];setCamera('persp',pose.position,pose.target,0);
   const bridgeSky=activeArea.kind==='bridge'&&view==='inside';mars.visible=bridgeSky;stars.visible=bridgeSky;scene.background.set(bridgeSky?0x0a1422:0xbac8cd);
@@ -90,7 +95,7 @@ function showTransit(){
   document.body.dataset.eye=transitPose==='overview'?'0':'1';
   $('transit-deck').value=transitDeck;$('transit-core').value=transitCore;
   $('transit-description').textContent=(transitCore==='forward'?'Forward core · Decks 1–20':'Aft core · Decks 1–19')+' · paired lifts, two switchback stairs and deck landings.';
-  $('view-title').textContent=transitCore==='forward'?'The forward connection.':'The aft connection.';$('view-description').textContent='Deck '+transitDeck+' · '+DECKS[transitDeck-1].name;
+  setTitle(transitCore==='forward'?'The forward connection.':'The aft connection.');$('view-description').textContent='Deck '+transitDeck+' · '+DECKS[transitDeck-1].name;
   $('status').textContent='Deck '+transitDeck+' · '+(transitPose!=='overview'?'1.7 m eye level':'Three-deck cutaway');
   document.querySelectorAll('[data-transit-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.transitView===transitPose));
   const y=floorY(transitDeck);persp.near=.05;persp.fov=transitPose!=='overview'?65:42;
@@ -118,7 +123,7 @@ function showAft(){
  aftModel.shells.forEach(o=>o.visible=aftEye);aftModel.crown.roofs.forEach(o=>o.visible=aftEye);aftGhost.visible=$('aft-shell').checked&&!aftEye&&aftSection!=='crown';
  $('aft-shell').disabled=aftEye||aftSection==='crown';
  $('aft-section').value=aftSection;$('aft-eye').disabled=!v.eye;$('aft-eye').setAttribute('aria-pressed',String(aftEye));$('aft-overview').setAttribute('aria-pressed',String(!aftEye));
- $('view-title').textContent=v.name;$('view-description').textContent=v.location;$('aft-description').textContent=v.description;$('status').textContent=v.location+' · '+(aftEye?'1.7 m inspection view':'structural blockout');
+ setTitle(v.name);$('view-description').textContent=v.location;$('aft-description').textContent=v.description;$('status').textContent=v.location+' · '+(aftEye?'1.7 m inspection view':'structural blockout');
  document.body.dataset.eye=aftEye?'1':'0';persp.near=.05;persp.fov=aftEye?65:42;setCamera('persp',aftEye?v.eye:v.position,aftEye?v.look:v.target,0);
  viewLink({aft:aftSection,view:aftEye?'inside':'overview'});
 }
@@ -181,7 +186,8 @@ function setCamera(type,position,target,duration=850){
   transition={start:performance.now(),duration,from:camera.position.clone(),to:new T.Vector3(...position),fromTarget:controls.target.clone(),toTarget:new T.Vector3(...target)};
 }
 function resize(){
-  const r=$('viewport').getBoundingClientRect();renderer.setSize(r.width,r.height);persp.aspect=r.width/r.height;
+  const r=$('viewport').getBoundingClientRect();if(!r.width||!r.height)return; // hidden or collapsed: wait for a real size
+  renderer.setSize(r.width,r.height);persp.aspect=r.width/r.height;
   const frameScale=Math.max(1,1.5/persp.aspect),ratio=frameScale/lastFrameScale;
   if(mode!=='walk'&&camera===persp&&ratio!==1){
     camera.position.sub(controls.target).multiplyScalar(ratio).add(controls.target);
@@ -233,12 +239,13 @@ async function loadExterior(){
   dimensions.visible=mode==='exterior'&&$('dimensions').checked;grid.visible=mode==='exterior'||mode==='layout';pad.visible=grid.visible;
   stars.visible=mode==='walk';mars.visible=mode==='walk'||mode==='neighborhood';controls.enabled=mode!=='walk';controls.enablePan=true;controls.minDistance=(['neighborhood','walk','areas','transit','aft'].includes(mode))?1:50;controls.maxDistance=mode==='neighborhood'?400:2200;
   $('save-interior').hidden=!['walk','neighborhood','areas','transit','aft'].includes(mode);$('interior-render-status').textContent='';$('route').hidden=mode!=='walk';$('walk-help').hidden=mode!=='walk';$('stamp').hidden=mode==='walk';
-  $('stamp').lastChild.textContent=['neighborhood','areas','transit','aft'].includes(mode)?'INTERIOR STUDY · 01':'EXTERIOR FINISH · V35';
+  $('stamp').lastChild.textContent=['neighborhood','areas','transit','aft'].includes(mode)?'INTERIOR STUDY · 01':studioTools?'EXTERIOR FINISH · V35':'564 m · 20 decks · 10,000 aboard';
   $('foot-note').textContent=mode==='walk'?'Drag to look · follow the route':'Drag to orbit · scroll to zoom · right-drag to pan';
   const texts={aft:['07 / AFT SYSTEMS','Inside the tail.','Aft machinery and maintenance structure.','AFT SYSTEMS'],transit:['06 / CONNECTIONS','Moving through Leo.','Lifts, stairs and garden promenades.','DECK CONNECTIONS'],areas:['05 / SHIP AREAS','Spaces for the voyage.','Explore the facilities that support life aboard Leo.','SHIP DIRECTORY'],exterior:['01 / EXTERIOR REFINEMENT','A home between planets.','Leo’s familiar silhouette, resolved at the scale of a traveling community.','DESIGN BASELINE'],layout:['02 / SPATIAL ALLOCATION','Room for the voyage.','Inspect the deck stack and the placement of every twin cabin.','DECK INSPECTOR'],neighborhood:['03 / HUMAN-SCALE STUDY','A neighborhood aboard Leo.','500 twin cabins, a shared garden and a panoramic lounge, connected at full scale.','NEIGHBORHOOD 10'],walk:['04 / GUIDED WALKTHROUGH','From cabin to the stars.','Follow a short route through Neighborhood 10.','LIFE ABOARD']};
-  [$('eyebrow'),$('view-title'),$('view-description'),$('panel-title')].forEach((el,i)=>el.textContent=texts[mode][i]);
+  [$('eyebrow'),$('view-title'),$('view-description'),$('panel-title')].forEach((el,i)=>el.textContent=texts[mode][i]);setTitle(texts[mode][1]);
+  if(mode==='exterior'&&!studioTools)$('eyebrow').textContent='WELCOME ABOARD';$('counter').textContent=texts[mode][0].split(' / ')[0]+' / '+CHAPTERS[mode];
   scene.background.set(mode==='walk'?0x0a1422:0xbac8cd);scene.environmentIntensity=mode==='walk'?.65:.4;hemi.intensity=mode==='walk'?.65:.7;key.intensity=mode==='walk'?.7:1.8;fill.intensity=mode==='walk'?.25:.55;rim.intensity=mode==='walk'?.25:.65;
-  if(mode==='exterior'){viewCamera('perspective');$('status').textContent='Exterior V35 / refined surfaces';}
+  if(mode==='exterior'){viewCamera('perspective');$('status').textContent=studioTools?'Exterior V35 / refined surfaces':'Exterior · refined surfaces';}
   if(mode==='layout'){updateDeck();setCamera('persp',[420,360,460],[0,-5,0]);}
   if(mode==='areas')showArea();
   if(mode==='transit')showTransit();
@@ -286,7 +293,7 @@ function updateDeck(){const selected=Number($('deck-select').value),isolate=$('i
     if(noseScene.visible)noseView();
     ship.detail.root.visible=activeDistrict===10&&focus!=='nose';
     for(const [number,v] of districtViews)v.root.visible=number===activeDistrict&&focus!=='nose';
-    $('view-title').textContent=focus==='nose'?NOSE_COMMONS[activeDistrict-1].name:'A neighborhood aboard Leo.';
+    setTitle(focus==='nose'?NOSE_COMMONS[activeDistrict-1].name:'A neighborhood aboard Leo.');
     residenceInside=false;viewLink({district:activeDistrict,space:focus});
     if(focus==='nose'){
       const v=noseView(),a=NOSE_COMMONS[activeDistrict-1];
@@ -327,7 +334,7 @@ function showTourSpace(r){
 function goStop(index,duration=1400){const list=routeStops();stop=Math.max(0,Math.min(list.length-1,Number.isFinite(index)?index:0));const r=list[stop];
  if(mode==='walk')showTourSpace(r);viewLink({walk:1,tour:routeKey,stop});
  setCamera('persp',r.position,r.target,routeKey==='aft'?0:duration);
- $('view-title').textContent=routeKey==='aft'?'From home to the fin crown.':'From cabin to the stars.';$('view-description').textContent=routeKey==='aft'?'A journey through the working ship.':'Follow a short route through Neighborhood 10.';
+ setTitle(routeKey==='aft'?'From home to the fin crown.':'From cabin to the stars.');$('view-description').textContent=routeKey==='aft'?'A journey through the working ship.':'Follow a short route through Neighborhood 10.';
  $('status').textContent=routeKey==='aft'?'Residential / engineering / panorama':'Guided neighborhood route';
  $('route-name').textContent=r.name;$('route-detail').textContent=r.detail;$('stop-count').textContent=`${String(stop+1).padStart(2,'0')} / ${String(list.length).padStart(2,'0')}`;$('previous-stop').disabled=stop===0;$('next-stop').disabled=stop===list.length-1;document.querySelectorAll('[data-stop]').forEach(b=>b.setAttribute('aria-current',Number(b.dataset.stop)===stop));
 }
@@ -340,7 +347,7 @@ document.querySelectorAll('[data-focus]').forEach(b=>b.addEventListener('click',
 $('dimensions').addEventListener('change',()=>dimensions.visible=$('dimensions').checked);
 DECKS.forEach(d=>{const o=document.createElement('option');o.value=d.index;o.textContent=`${String(d.number).padStart(2,'0')} · ${d.name}`;o.selected=d.index===14;$('deck-select').appendChild(o);});
 ['deck-select','isolate','shell-context'].forEach(id=>$(id).addEventListener('change',updateDeck));
-$('toggle-panels').addEventListener('click',()=>{const hidden=document.body.classList.toggle('panels-hidden');$('toggle-panels').textContent=hidden?'Show panels':'Hide panels';$('toggle-panels').setAttribute('aria-pressed',String(hidden));});
+$('toggle-panels').addEventListener('click',()=>{const hidden=document.body.classList.toggle('panels-hidden');$('toggle-panels').textContent=hidden?'Show UI':'Hide UI';$('toggle-panels').setAttribute('aria-pressed',String(hidden));});
   $('enter-space').addEventListener('click',()=>{
     const focus=document.querySelector('[data-focus][aria-pressed="true"]')?.dataset.focus;
     if(focus==='nose'){

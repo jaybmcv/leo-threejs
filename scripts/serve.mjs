@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 const root=path.resolve('output/leo-interior-v01');
 const port=Number(process.argv[2]||4173);
-const mime={'.html':'text/html; charset=utf-8','.glb':'model/gltf-binary','.json':'application/json','.csv':'text/csv','.md':'text/plain; charset=utf-8','.png':'image/png'};
+const mime={'.html':'text/html; charset=utf-8','.glb':'model/gltf-binary','.json':'application/json','.csv':'text/csv','.md':'text/plain; charset=utf-8','.png':'image/png','.ttf':'font/ttf'};
 http.createServer(async(req,res)=>{
   try{
     const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
