@@ -11,7 +11,8 @@ for(const [name,entry] of Object.entries(manifest)){
  for(const part of entry.parts)assert.ok((await fs.stat('dist/'+part)).size<=16*1048576);
 }
 const html=await fs.readFile('dist/index.html','utf8');
-assert.ok(html.includes('id="share-view"'));assert.ok(html.includes('window.LEO_PUBLIC_ASSETS='));
+assert.ok(html.includes('id="share-view"'));
+for(const name of ['mark.png','archivo.ttf','jetbrains.ttf','sora.ttf']){assert.ok(html.includes('brand/'+name),name);await fs.access('dist/brand/'+name);}assert.ok(html.includes('window.LEO_PUBLIC_ASSETS='));
 for(const match of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)){
  const target=match[1];if(/^(https?:|#)/.test(target)||manifest[target])continue;
  await fs.access('dist/'+target);

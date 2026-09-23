@@ -6,7 +6,8 @@ export function aftScreenFlow(camera,target){
  const a=target.clone().project(camera),b=target.clone().add(new Vector3(-1,0,0)).project(camera);
  const x=(b.x-a.x)*1536,y=-(b.y-a.y)*864,length=Math.hypot(x,y);
  const view=new Vector3(-1,0,0).transformDirection(camera.matrixWorldInverse),strength=Math.hypot(view.x,view.y);
- return length<1e-8?{x:0,y:0,strength:0}:{x:x/length,y:y/length,strength};
+ // A zero-size viewport projects to NaN; treat it like no motion instead of throwing every frame.
+ return !Number.isFinite(length)||length<1e-8?{x:0,y:0,strength:0}:{x:x/length,y:y/length,strength};
 }
 export function createSpaceBackdrop(){
  const canvas=document.createElement('canvas');canvas.width=1536;canvas.height=864;
