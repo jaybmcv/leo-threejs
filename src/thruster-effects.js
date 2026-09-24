@@ -13,8 +13,9 @@ export function createThrusterEffects(exterior){
  });
  const root=new T.Group();root.name='Subtle_thruster_plumes';const plumes=[];
  const material=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending,toneMapped:false,uniforms:{pulse:{value:1}},
- vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
- fragmentShader:'varying vec2 vUv; uniform float pulse; void main(){float fade=pow(1.-vUv.y,1.8);vec3 color=mix(vec3(.68,.88,1.),vec3(.18,.42,1.),vUv.y);gl_FragColor=vec4(color,fade*.22*pulse);}' });
+ // Log-depth chunks keep the plumes in step with the renderer's logarithmic depth buffer.
+ vertexShader:'#include <common>\n#include <logdepthbuf_pars_vertex>\nvarying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);\n#include <logdepthbuf_vertex>\n}',
+ fragmentShader:'#include <logdepthbuf_pars_fragment>\nvarying vec2 vUv; uniform float pulse; void main(){\n#include <logdepthbuf_fragment>\nfloat fade=pow(1.-vUv.y,1.8);vec3 color=mix(vec3(.68,.88,1.),vec3(.18,.42,1.),vUv.y);gl_FragColor=vec4(color,fade*.22*pulse);}' });
  for(const [i,o]of [...outlets.values(),...central].entries()){
   const g=new T.Group();g.position.set(o.x-.1,o.y,o.z);root.add(g);
   for(const [radius,length]of [[o.r,o.len],[o.r*.42,o.len*.65]]){
