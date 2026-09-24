@@ -13,6 +13,7 @@ import {createSpecialCirculation} from './special-circulation.js';
 import {createTransit,TRANSIT_CORES,floorY} from './transit.js';
 import {SHIP_AREAS,createShipArea} from './areas.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createShip,createResidentialDeck,createGardenCommons,DECKS,ROUTE,SAMPLE,COMMONS } from './model.js';
@@ -223,8 +224,10 @@ async function loadExterior(){
     if(location.protocol==='file:'){
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));ship.ensureExterior();
     }else{
-      const bytes=await publicAsset('leo-exterior-refined.glb',p=>{$('loading').textContent=`Loading Leo… ${p}%`;});
-      const loader=new GLTFLoader();
+      // Stream the meshopt web copy when the public build has one; downloads keep the lossless refined GLB.
+      const exteriorName=window.LEO_PUBLIC_ASSETS?.['leo-exterior-web.glb']?'leo-exterior-web.glb':'leo-exterior-refined.glb';
+      const bytes=await publicAsset(exteriorName,p=>{$('loading').textContent=`Loading Leo… ${p}%`;});
+      const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
       const gltf=bytes?await loader.parseAsync(bytes,''):await loader.loadAsync('leo-exterior-refined.glb');
       gltf.scene.traverse(o=>{const a=gltf.parser.associations.get(o);if(a?.nodes!==undefined)o.name=gltf.parser.json.nodes[a.nodes].name||o.name;else if(o.isMesh&&a?.meshes!==undefined)o.name=o.parent.name;});
       const exterior=gltf.scene.getObjectByName('01_EXTERIOR_REFINED_V31');

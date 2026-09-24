@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {publicAsset} from '../src/public-assets.js';
 const manifest=JSON.parse(await fs.readFile('dist/asset-manifest.json','utf8'));
+assert.ok(manifest['leo-exterior-web.glb']?.compressedBytes<manifest['leo-exterior-refined.glb'].compressedBytes/2,'the streamed exterior must be the compressed web copy');
 globalThis.window={LEO_PUBLIC_ASSETS:manifest};
 globalThis.fetch=async name=>new Response(await fs.readFile('dist/'+name));
 for(const [name,entry] of Object.entries(manifest)){
