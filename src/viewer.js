@@ -107,7 +107,24 @@ function showTransit(){
 $('transit-deck').addEventListener('change',()=>{transitDeck=Number($('transit-deck').value);showTransit();});
 $('transit-core').addEventListener('change',()=>{transitCore=$('transit-core').value;showTransit();});
 document.querySelectorAll('[data-transit-view]').forEach(b=>b.addEventListener('click',()=>{transitPose=b.dataset.transitView;showTransit();}));
-const aftScene=new T.Group();scene.add(aftScene);aftScene.visible=false;let aftModel=null,aftGhost=null,aftSection='overview',aftEye=false;
+const aftScene=new T.Group();scene.add(aftScene);aftScene.visible=false;
+// Cosmo, the crew cat, loads as its own file once the ship is up. The blockout cats stay until it is ready, so a
+// failed load degrades to the old figures. New scene parts are dressed on the next frame; a 1 s sweep of what is
+// visible catches anything built deeper inside an existing group.
+let cosmoKit=null,cosmoSweep=0;const cosmoPending=new Set();
+function loadCosmo(){
+ if(loadCosmo.started)return;loadCosmo.started=true;globalThis.LEO_THREE=T;
+ const script=Object.assign(document.createElement('script'),{src:'cosmo.js',async:true});
+ script.onload=()=>globalThis.LeoCosmo.createCosmoKit().then(kit=>{cosmoKit=kit;cosmoPending.add(scene);}).catch(err=>console.warn('Cosmo could not load; keeping the blockout figures.',err));
+ script.onerror=()=>console.warn('cosmo.js is missing; keeping the blockout figures.');
+ document.head.appendChild(script);
+}
+for(const container of [scene,noseScene,areasRoot,transitScene,aftScene])container.addEventListener('childadded',()=>{if(cosmoKit)cosmoPending.add(container);});
+function dressCosmo(now){
+ if(!cosmoKit)return;
+ for(const root of cosmoPending)globalThis.LeoCosmo.dressCats(root,cosmoKit);cosmoPending.clear();
+ if(now-cosmoSweep>1000){cosmoSweep=now;globalThis.LeoCosmo.dressCats(scene,cosmoKit,true);}
+}let aftModel=null,aftGhost=null,aftSection='overview',aftEye=false;
 for(const [key,v]of Object.entries(AFT_VIEWS)){const o=document.createElement('option');o.value=key;o.textContent=v.name;$('aft-section').append(o);}
 function showAft(){
  if(!aftModel){aftModel=createAft();aftScene.add(aftModel.root);const rooms=new T.Group();rooms.name='Existing_aft_engineering';
@@ -216,7 +233,7 @@ async function loadExterior(){
       Object.assign(ship,{exterior,fixed:exterior.getObjectByName('Wings_engines_tail'),port:exterior.getObjectByName('Port_shell'),starboard:exterior.getObjectByName('Starboard_shell')});
     }
     if(location.protocol==='file:'){prepareCrownExterior(ship.exterior);refineExterior(ship.exterior);attachFinCrown(ship.exterior);}
-    ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);scene.add(thrusters.root);exteriorReady=true;applyBrandingView();applyShapeView();
+    ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);scene.add(thrusters.root);exteriorReady=true;loadCosmo();applyBrandingView();applyShapeView();
   })().catch(e=>{exteriorLoad=null;throw e;});
   await exteriorLoad;
 }
@@ -373,7 +390,7 @@ renderer.domElement.addEventListener('pointermove',e=>{if(!lookDrag||mode!=='wal
 renderer.domElement.addEventListener('pointerup',()=>lookDrag=null);
 renderer.domElement.addEventListener('pointercancel',()=>lookDrag=null);
 renderer.domElement.addEventListener('pointerdown',()=>{if(mode!=='walk')transition=null;});
-function animate(now){requestAnimationFrame(animate);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);camera.lookAt(controls.target);if(t===1)transition=null;}if(mode!=='walk')controls.update(delta);if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
+function animate(now){requestAnimationFrame(animate);dressCosmo(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);camera.lookAt(controls.target);if(t===1)transition=null;}if(mode!=='walk')controls.update(delta);if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
 $('save-render').addEventListener('click',async()=>{
   if(exporting)return;exporting=true;$('save-render').disabled=true;$('render-status').textContent='Rendering exterior…';
   const view=document.querySelector('[data-camera][aria-pressed="true"]').dataset.camera,shapeOnly=$('shape-only').checked;
