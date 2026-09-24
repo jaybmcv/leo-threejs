@@ -32,7 +32,7 @@ document.getElementById('share-view')?.addEventListener('click',async()=>{
 window.addEventListener('error',e=>showError(e.message));
 function showError(message){$('error').hidden=false;$('error').textContent=`The 3D view could not start: ${message}. The GLB files remain available from the links below.`;$('loading').hidden=true;}
 let renderer;
-try{renderer=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});}catch(e){showError(e.message);throw e;}
+try{renderer=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true,logarithmicDepthBuffer:true});}catch(e){showError(e.message);throw e;}
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.setClearColor(0xbac8cd);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.86;
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;
 $('viewport').appendChild(renderer.domElement);
@@ -467,4 +467,6 @@ $('save-interior').addEventListener('click',async()=>{
  if(!areaId&&params.get('walk')==='1'){setMode('walk');goStop(params.has('stop')?Number(params.get('stop')):(({cabin:0,garden:3,observation:5})[initial]??0),0);}
  if(!areaId&&initial&&params.get('eye')==='1'&&(activeDistrict!==10||initial==='nose'))$('enter-space').click();
  $('loading').hidden=true;requestAnimationFrame(animate);
+ // Tour and room deep links never load the exterior, so Cosmo cannot wait for it.
+ setTimeout(loadCosmo,1500);
 })().catch(e=>showError(e.message));
