@@ -15,8 +15,12 @@
     "three": "0.185.1"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.5.0",
+    "@gltf-transform/extensions": "^4.5.0",
+    "@gltf-transform/functions": "^4.5.0",
     "@napi-rs/canvas": "^1.0.8",
     "esbuild": "0.28.2",
-    "gltf-validator": "^2.0.0-dev.3.10"
+    "gltf-validator": "^2.0.0-dev.3.10",
+    "meshoptimizer": "^1.2.0"
   }
 }
