@@ -35,6 +35,10 @@ Three.js is pinned to 0.185.1 in the lockfile. Native canvas is used by the Node
 
 The viewer opens in the Mars Cats Voyage visitor theme, matched to marscatsvoyage.com (second `<style>` block in `src/viewer.html`). The logo and the website's three typefaces live in `src/brand/` (fonts under SIL OFL 1.1), and `scripts/brand-assets.mjs` copies them next to `index.html` in both builds. Add `?studio=1` to any view to bring back the build tools: GLB downloads, render exports, the Notes link, V35 labels and the engineering notes.
 
+## Cosmo, the crew cat
+
+Every cat figure in the viewer is Cosmo (`src/vendor/cosmo/`, from the Cosmo-ThreeJS package). `src/cosmo.js` poses the T-pose rig with relaxed arms and bakes it into four shared static meshes; `scripts/build-cosmo.mjs` bundles it as `cosmo.js`, which the viewer loads after the exterior is up and uses to replace the `Mars_cat_1.75m` and `Resident_scale_1_75m` blockout figures. The exported GLBs still contain the blockout figures.
+
 ## Preserve the design
 
 Keep the accepted exterior silhouette, deck alignment, room layout and circulation. Ship coordinates use +X toward the nose, Y up and Z across the ship. Deck 20's floor is at Y=36.3. The model is an architectural concept, not an engineering-certified vehicle. Display graphics are concept graphics, not live ship telemetry.
