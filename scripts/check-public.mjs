@@ -14,7 +14,9 @@ for(const [name,entry] of Object.entries(manifest)){
 const html=await fs.readFile('dist/index.html','utf8');
 assert.ok(html.includes('id="share-view"'));
 assert.ok((await fs.stat('dist/cosmo.js')).size>1e6,'cosmo.js');assert.ok(!html.includes('createDLCat'),'Cosmo must stay out of index.html');
-for(const name of ['mark.png','share.jpg','archivo.ttf','jetbrains.ttf','sora.ttf']){assert.ok(html.includes('brand/'+name),name);await fs.access('dist/brand/'+name);}assert.ok(html.includes('window.LEO_PUBLIC_ASSETS='));
+for(const name of ['mark.png','share.jpg','archivo.ttf','jetbrains.ttf','sora.ttf']){assert.ok(html.includes('brand/'+name),name);await fs.access('dist/brand/'+name);}
+// Tour artwork is loaded by the bundled viewer script rather than named in the HTML; it only has to ship.
+for(const name of ['art-anniversary.jpg','art-astronaut-cat.jpg','art-close-encounter.jpg','art-crew.jpg','art-launch.jpg','art-mars-cats.jpg','art-spacesuit-cat.jpg'])await fs.access('dist/brand/'+name);assert.ok(html.includes('window.LEO_PUBLIC_ASSETS='));
 for(const match of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)){
  const target=match[1];if(/^(https?:|#)/.test(target)||manifest[target])continue;
  await fs.access('dist/'+target);
