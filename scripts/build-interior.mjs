@@ -1,4 +1,4 @@
-import {AFT_TOUR} from '../src/aft-tour.js';
+import {AFT_TOUR,FIN_TOUR} from '../src/aft-tour.js';
 import {createNoseCommons,NOSE_COMMONS} from '../src/nose-commons.js';
 import {createTransit} from '../src/transit.js';
 import fs from 'node:fs/promises';
@@ -23,4 +23,4 @@ await fs.writeFile(path.join(out,'design-data.json'),JSON.stringify({spec:SPEC,d
 await fs.copyFile('README.md',path.join(out,'README.md'));
 console.log(`Updated interior GLB (${(glb.byteLength/1048576).toFixed(2)} MB) and viewer. Exterior retained.`);
 
-await fs.writeFile(path.join(out,'aft-journey.json'),JSON.stringify({name:'Residential / engineering / fin crown',stops:AFT_TOUR,transfers:'Scene cuts between decks; lift travel is illustrative'},null,2));
+await fs.writeFile(path.join(out,'aft-journey.json'),JSON.stringify({name:'Residence to engineering',stops:AFT_TOUR,finCrown:{name:'Residence to the fin crown',stops:FIN_TOUR},transfers:'Scene cuts between decks; lift travel is illustrative'},null,2));

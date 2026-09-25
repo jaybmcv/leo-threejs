@@ -1,7 +1,8 @@
 import * as T from 'three';
 import {encloseNeighborhoodTour} from './tour-enclosures.js';
 import {canvasTexture,seeded,oakFloor,standard,glow} from './polish-kit.js';
-import {polishForwardDeck} from './forward-polish.js';
+import {polishForwardDeck,artMaterial} from './forward-polish.js';
+import {stylizedTree,plantClumps,EMBERS} from './stylized-plants.js';
 
 // Art pass for the guided tour's stops in Neighborhood 10: the walkthrough cabin, the Deck 15 corridor and the garden
 // commons. Other cabins keep their shared materials: meshes here get new materials, shared ones are never edited.
@@ -100,22 +101,17 @@ const livingWall=()=>canvasTexture(1024,1024,(g,w,h)=>{
 
 function inGarden(o){const b=new T.Box3().setFromObject(o),c=b.getCenter(new T.Vector3());return c.x>GARDEN.minX-1&&c.x<GARDEN.maxX+1&&c.z>GARDEN.minZ-1&&c.z<GARDEN.maxZ+1&&c.y>GARDEN.floor-1&&c.y<GARDEN.ceiling+1;}
 
-// Flowering clumps and grasses between the existing shrubs, seeded so every visit grows the same beds.
-function plantBeds(root,parent){
- const beds=[];root.traverse(o=>{if(o.isMesh&&o.name==='Planting_bed'&&inGarden(o))beds.push(new T.Box3().setFromObject(o));});
- const rnd=seeded(509),clump=new T.IcosahedronGeometry(.22,0),blade=new T.ConeGeometry(.05,.7,4),bloom=new T.IcosahedronGeometry(.07,0);
- const kinds=[[clump,standard(0x4f7f45,{roughness:.9}),900],[blade,standard(0x7fa85a,{roughness:.9}),1400],[bloom,standard(0xf85800,{roughness:.6,emissive:0x5a1e00,emissiveIntensity:.25}),420],[bloom,standard(0xf4f0e8,{roughness:.6}),420]];
- const m=new T.Matrix4(),q=new T.Quaternion(),e=new T.Euler(),p=new T.Vector3(),sc=new T.Vector3();
- for(const [geometry,material,perBed] of kinds){
-  const mesh=new T.InstancedMesh(geometry,material,perBed*beds.length);mesh.name='Garden_planting_detail';mesh.receiveShadow=true;
-  let i=0;for(const b of beds)for(let k=0;k<perBed;k++){
-   const tall=geometry===blade,lift=geometry===bloom?.35+rnd()*.35:tall?.3:.08;
-   p.set(b.min.x+.15+rnd()*(b.max.x-b.min.x-.3),b.max.y+lift,b.min.z+.15+rnd()*(b.max.z-b.min.z-.3));
-   e.set(tall?(rnd()-.5)*.5:rnd()*6,rnd()*6,tall?(rnd()-.5)*.5:0);sc.setScalar(tall?.6+rnd()*.9:.6+rnd()*.9);
-   mesh.setMatrixAt(i++,m.compose(p,q.setFromEuler(e),sc));
-  }
-  mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();parent.add(mesh);
- }
+// Stylized trees replace the blockout ones: the main tree stands where the old trunk did, and a smaller Mars-orange
+// ornamental grows at the far end of each bed. Beds get denser clumps, grasses and flowers.
+function plantGarden(root){
+ const beds=[],trunks=[],old=[];
+ root.traverse(o=>{if(!o.isMesh||!inGarden(o))return;if(o.name==='Planting_bed')beds.push(new T.Box3().setFromObject(o));if(o.name==='Tree_trunk')trunks.push(new T.Box3().setFromObject(o));if(o.name==='Tree_trunk'||o.name==='Tree_canopy')old.push(o);});
+ old.forEach(o=>{o.visible=false;});
+ trunks.forEach((t,i)=>{const c=t.getCenter(new T.Vector3());root.add(stylizedTree(new T.Vector3(c.x,t.min.y,c.z),{height:7.2,spread:5.8,seed:40+i}));});
+ beds.forEach((b,i)=>{const c=b.getCenter(new T.Vector3()),size=b.getSize(new T.Vector3()),along=size.x>size.z?'x':'z',tree=trunks.find(t=>b.containsPoint(t.getCenter(new T.Vector3()).setY(c.y)));
+  const end=c.clone();end[along]=tree&&tree.getCenter(new T.Vector3())[along]>c[along]?b.min[along]+1.6:b.max[along]-1.6;end.y=b.max.y;
+  root.add(stylizedTree(end,{height:3.6,spread:2.8,palette:EMBERS,seed:70+i}));});
+ plantClumps(root,beds,{seed:509,density:1});
 }
 
 function polishGarden(root,walkOnly){
@@ -127,7 +123,14 @@ function polishGarden(root,walkOnly){
   Circadian_light:glow(0xfff4e0,2.4),Cafe_pendant_diffuser:glow(0xffcf9a,2.6),Gallery_warm_light:glow(0xffd6a8,2),
  };
  root.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&looks[o.name]&&inGarden(o))o.material=looks[o.name];});
- plantBeds(root,root);
+ plantGarden(root);
+ // The Deck 17 lift lobby wall, seen across the garden, carries a launch mural (from the website's hero art).
+ const mural=new T.Mesh(new T.PlaneGeometry(10.2,4.37),artMaterial('art-launch.jpg'));mural.name='Garden_lobby_mural';mural.position.set(121,GARDEN.floor+4.6,-8.07);walkOnly.add(mural);
+ const muralFrame=new T.Mesh(new T.BoxGeometry(10.44,4.61,.03),standard(0x2a3440,{roughness:.5,metalness:.3}));muralFrame.name='Garden_lobby_mural_frame';muralFrame.position.set(121,GARDEN.floor+4.6,-8.1);walkOnly.add(muralFrame);
+ // The stair block's garden face, a blank wall four metres from the garden stop: the Mars Cats poster, framed
+ // between the wall's stripes and the gallery above (the bright crew artwork; the Mars poster read as a dark slab).
+ const poster=new T.Mesh(new T.PlaneGeometry(2.7,1.91),artMaterial('art-crew.jpg'));poster.name='Garden_stair_poster';poster.position.set(143.4,GARDEN.floor+2.62,7.965);walkOnly.add(poster);
+ const posterFrame=new T.Mesh(new T.BoxGeometry(2.86,2.07,.02),standard(0x2a3440,{roughness:.5,metalness:.3}));posterFrame.name='Garden_stair_poster_frame';posterFrame.position.set(143.4,GARDEN.floor+2.62,7.945);walkOnly.add(posterFrame);
  // A two-storey living wall dresses the garden's new forward end wall (walk mode only, like the wall itself).
  const wall=new T.Mesh(new T.PlaneGeometry(29.4,11),standard(0xffffff,{map:livingWall(),roughness:.95}));wall.name='Garden_living_wall';
  wall.rotation.y=-Math.PI/2;wall.position.set(GARDEN.maxX+.03,GARDEN.floor+5.5,27);walkOnly.add(wall);

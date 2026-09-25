@@ -6,13 +6,14 @@ import {applyContextOpacity} from './glazing-finish.js';
 import {publicAsset,enablePublicDownloads} from './public-assets.js';
 import {refineExterior} from './exterior-finish.js';
 import {createAft} from './aft.js';
-import {AFT_TOUR} from './aft-tour.js';
+import {AFT_TOUR,FIN_TOUR} from './aft-tour.js';
 import {attachFinCrown,prepareCrownExterior} from './fin-crown.js';
 import {AFT_VIEWS} from './aft-layout.js';
 import {createSpecialCirculation} from './special-circulation.js';
 import {createTransit,TRANSIT_CORES,floorY} from './transit.js';
 import {polishTourDeck} from './tour-polish.js';
 import {createMars} from './mars.js';
+import {polishCrown} from './forward-polish.js';
 import {encloseAftTour,encloseResidentialConnection} from './tour-enclosures.js';
 import {SHIP_AREAS,createShipArea} from './areas.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -136,11 +137,13 @@ function dressCosmo(now){
  for(const root of cosmoPending)if(globalThis.LeoCosmo.dressCats(root,cosmoKit))refreshShadows();cosmoPending.clear();
  if(now-cosmoSweep>1000){cosmoSweep=now;if(globalThis.LeoCosmo.dressCats(scene,cosmoKit,true))refreshShadows();}
 }let aftModel=null,aftGhost=null,aftSection='overview',aftEye=false;
+// The upper aft rooms are cutaways in the aft systems view; tours walk through them, so their walls and ceilings show.
+const upperAftShells=[];const showUpperAftShells=on=>upperAftShells.forEach(o=>{o.visible=on;});
 for(const [key,v]of Object.entries(AFT_VIEWS)){const o=document.createElement('option');o.value=key;o.textContent=v.name;$('aft-section').append(o);}
 function showAft(){
- if(!aftModel){aftModel=createAft();aftScene.add(aftModel.root);const rooms=new T.Group();rooms.name='Existing_aft_engineering';
+ if(!aftModel){aftModel=createAft();aftScene.add(aftModel.root);polishCrown(aftModel.root);const rooms=new T.Group();rooms.name='Existing_aft_engineering';
   for(const area of SHIP_AREAS.filter(a=>a.category==='Aft engineering')){const r=createShipArea(area);r.shell.visible=false;rooms.add(r.root);}const c=createSpecialCirculation(7);c.shell.visible=false;rooms.add(c.root);aftScene.add(rooms);
-  const upper=new T.Group();upper.name='Upper_aft_commons';for(const a of SHIP_AREAS.filter(a=>a.upperAft)){const r=createShipArea(a);r.shell.visible=false;upper.add(r.root);}for(const d of [16,17]){const r=createSpecialCirculation(d);r.shell.visible=false;upper.add(r.root);}aftScene.add(upper);
+  const upper=new T.Group();upper.name='Upper_aft_commons';for(const a of SHIP_AREAS.filter(a=>a.upperAft)){const r=createShipArea(a);r.shell.visible=false;upperAftShells.push(r.shell);upper.add(r.root);}for(const d of [16,17]){const r=createSpecialCirculation(d);r.shell.visible=false;upperAftShells.push(r.shell);upper.add(r.root);}aftScene.add(upper);
   aftGhost=ship.exterior.clone(true);aftGhost.name='Aft_shell_context';aftGhost.traverse(o=>{if(o.isMesh){const ms=(Array.isArray(o.material)?o.material:[o.material]).map(m=>{const n=m.clone();n.transparent=true;n.opacity=.1;n.depthWrite=false;n.clippingPlanes=[new T.Plane(new T.Vector3(-1,0,0),-132)];return n;});o.material=Array.isArray(o.material)?ms:ms[0];o.castShadow=false;}});aftGhost.traverse(o=>o.visible=true);aftGhost.getObjectByName('Fin_panorama_lounge')?.removeFromParent();aftScene.add(aftGhost);renderer.localClippingEnabled=true;
  }
  const v=AFT_VIEWS[aftSection];if(!v.eye)aftEye=false;
@@ -181,7 +184,13 @@ function starRandom(){starSeed=(Math.imul(starSeed,1664525)+1013904223)>>>0;retu
 for(let i=0;i<1500;i++){const y=starRandom()*2-1,a=starRandom()*Math.PI*2,r=Math.sqrt(1-y*y);starPositions.push(3800*r*Math.cos(a),3800*y,3800*r*Math.sin(a));}
 starsGeometry.setAttribute('position',new T.Float32BufferAttribute(starPositions,3));
 const stars=new T.Points(starsGeometry,new T.PointsMaterial({color:0xd5e2eb,size:1.25,sizeAttenuation:false,transparent:true,opacity:.65}));stars.visible=false;scene.add(stars);
-let routeKey='home',tourResidence=null,tourTransit=null,aftTourShell=null;const routeStops=()=>routeKey==='aft'?AFT_TOUR:ROUTE;
+// The guided tours. Home stays in Neighborhood 10; the other two cut between decks through the aft spaces.
+const TOURS={
+ home:{stops:ROUTE,title:'From cabin to the stars.',view:'Follow a short route through Neighborhood 10.',status:'Guided neighborhood route',description:'Follow a resident from a twin cabin through the garden to the forward observation lounge.'},
+ aft:{stops:AFT_TOUR,title:'From home to engineering.',view:'A journey through the working ship.',status:'Residential / engineering',description:'Travel from Neighborhood 10 through the aft residential connection to the drive, the reservoir bay and the engine pods. Deck and lift transfers use scene cuts.'},
+ fin:{stops:FIN_TOUR,title:'From home to the fin crown.',view:'Up to Deck 17, aft to the fin, and up to the panorama bar.',status:'Residential / fin / panorama',description:'Rise from Neighborhood 10 to the commons level, walk aft to the fin lounge and gallery, then ride the lift to the crown bar. Deck and lift transfers use scene cuts.'},
+};
+let routeKey='home',tourResidence=null,tourTransit=null,aftTourShell=null;const routeStops=()=>TOURS[routeKey].stops;
 let mode='exterior',transition=null,tourPlaying=false,stop=0,tourTimer=null,lookDrag=null,lastFrameScale=1,exporting=false;
 let turntable=false,lastFrameTime=0;
 function stopTurntable(){turntable=false;controls.autoRotate=false;$('turntable').textContent='Start turntable';$('turntable').setAttribute('aria-pressed','false');}
@@ -244,7 +253,7 @@ async function loadExterior(){
     stopTurntable();$('turntable').disabled=next==='walk';
     noseScene.visible=false;
   const request=++modeRequest;
-  if((next==='exterior'||next==='layout'||next==='aft'||(next==='walk'&&routeKey==='aft'))&&!exteriorReady){
+  if((next==='exterior'||next==='layout'||next==='aft'||(next==='walk'&&routeKey!=='home'))&&!exteriorReady){
     $('loading').textContent='Loading exterior model…';$('loading').hidden=false;
     try{await loadExterior();}catch(e){showError(e.message);return;}
     if(request!==modeRequest)return;
@@ -257,7 +266,7 @@ async function loadExterior(){
   aftScene.visible=mode==='aft';transitScene.visible=mode==='transit';areasRoot.visible=mode==='areas';ship.inside.visible=mode==='layout';ship.detail.root.visible=(mode==='neighborhood'&&activeDistrict===10)||mode==='walk';
   if(mode==='neighborhood')districtView();for(const [number,v]of districtViews)v.root.visible=mode==='neighborhood'&&number===activeDistrict;
   dimensions.visible=mode==='exterior'&&$('dimensions').checked;grid.visible=mode==='exterior'||mode==='layout';pad.visible=grid.visible;
-  stars.visible=mode==='walk';mars.visible=mode==='walk'||mode==='neighborhood';tourExtras.visible=mode==='walk';if(aftTourShell)aftTourShell.visible=mode==='walk';controls.enabled=mode!=='walk';controls.enablePan=true;controls.minDistance=(['neighborhood','walk','areas','transit','aft'].includes(mode))?1:50;controls.maxDistance=mode==='neighborhood'?400:2200;
+  stars.visible=mode==='walk';mars.visible=mode==='walk'||mode==='neighborhood';tourExtras.visible=mode==='walk';if(aftTourShell)aftTourShell.visible=mode==='walk';showUpperAftShells(mode==='walk');controls.enabled=mode!=='walk';controls.enablePan=true;controls.minDistance=(['neighborhood','walk','areas','transit','aft'].includes(mode))?1:50;controls.maxDistance=mode==='neighborhood'?400:2200;
   $('save-interior').hidden=!['walk','neighborhood','areas','transit','aft'].includes(mode);$('interior-render-status').textContent='';$('route').hidden=mode!=='walk';$('walk-help').hidden=mode!=='walk';$('stamp').hidden=mode==='walk';
   $('stamp').lastChild.textContent=['neighborhood','areas','transit','aft'].includes(mode)?'INTERIOR STUDY · 01':studioTools?'EXTERIOR FINISH · V35':'564 m · 20 decks · 10,000 aboard';
   $('foot-note').textContent=mode==='walk'?'Drag to look · follow the route':'Drag to orbit · scroll to zoom · right-drag to pan';
@@ -342,7 +351,7 @@ function stopTour(){tourPlaying=false;clearTimeout(tourTimer);$('play-tour').tex
 function renderRouteDots(){
  $('route-dots').replaceChildren();routeStops().forEach((r,i)=>{const b=document.createElement('button');b.dataset.stop=i;b.setAttribute('aria-label',r.name);b.addEventListener('click',()=>{stopTour();goStop(i);});$('route-dots').appendChild(b);});
  $('tour-select').value=routeKey;
- $('tour-description').textContent=routeKey==='aft'?'Travel from Neighborhood 10 through enclosed engineering spaces to the fin crown bar. Deck and lift transfers use scene cuts.':'Follow a resident from a twin cabin through the garden to the forward observation lounge.';
+ $('tour-description').textContent=TOURS[routeKey].description;
 }
 function showTourSpace(r){
  if(tourResidence)tourResidence.visible=false;if(tourTransit)tourTransit.visible=false;
@@ -353,14 +362,24 @@ function showTourSpace(r){
  }
  if(r.section){aftSection=r.section;aftEye=true;showAft();if(r.also)aftModel.parts[r.also].visible=true;
   // Walk-only walls close the engineering stops, which are cutaways in the aft systems view.
-  if(!aftTourShell){aftTourShell=encloseAftTour(aftScene);aftScene.add(aftTourShell);}aftTourShell.visible=true;}
+  if(!aftTourShell){aftTourShell=encloseAftTour(aftScene);aftScene.add(aftTourShell);}aftTourShell.visible=true;showUpperAftShells(true);}
  else {stars.visible=routeKey==='home';mars.visible=routeKey==='home'&&stop>=4;/* Mars belongs to the promenade and lounge windows */scene.background.set(routeKey==='home'?0x0a1422:0xbac8cd);}
 }
+// Tour moves glide only when the straight line between the stops is clear; otherwise (lifts, doorways) the camera
+// cuts and the view fades in, instead of flying through walls into open space.
+const tourRay=new T.Raycaster();
+function tourPathBlocked(to){
+ const from=camera.position,dir=new T.Vector3(...to).sub(from),distance=dir.length();if(distance<.5)return false;
+ const meshes=[];scene.traverseVisible(o=>{if(o.isMesh)meshes.push(o);});tourRay.set(from,dir.normalize());tourRay.far=distance;
+ return tourRay.intersectObjects(meshes,false).length>0;
+}
+function fadeIn(){renderer.domElement.animate([{opacity:0},{opacity:1}],{duration:480,easing:'ease-out'});}
 function goStop(index,duration=1400){const list=routeStops();stop=Math.max(0,Math.min(list.length-1,Number.isFinite(index)?index:0));const r=list[stop];
  if(mode==='walk')showTourSpace(r);viewLink({walk:1,tour:routeKey,stop});
- setCamera('persp',r.position,r.target,routeKey==='aft'?0:duration);
- setTitle(routeKey==='aft'?'From home to the fin crown.':'From cabin to the stars.');$('view-description').textContent=routeKey==='aft'?'A journey through the working ship.':'Follow a short route through Neighborhood 10.';
- $('status').textContent=routeKey==='aft'?'Residential / engineering / panorama':'Guided neighborhood route';
+ const cut=mode==='walk'&&duration>0&&(routeKey!=='home'||tourPathBlocked(r.position));
+ setCamera('persp',r.position,r.target,cut||routeKey!=='home'?0:duration);if(cut)fadeIn();
+ setTitle(TOURS[routeKey].title);$('view-description').textContent=TOURS[routeKey].view;
+ $('status').textContent=TOURS[routeKey].status;
  $('route-name').textContent=r.name;$('route-detail').textContent=r.detail;$('stop-count').textContent=`${String(stop+1).padStart(2,'0')} / ${String(list.length).padStart(2,'0')}`;$('previous-stop').disabled=stop===0;$('next-stop').disabled=stop===list.length-1;document.querySelectorAll('[data-stop]').forEach(b=>b.setAttribute('aria-current',Number(b.dataset.stop)===stop));
 }
 function advanceTour(){if(!tourPlaying)return;if(stop===routeStops().length-1){stopTour();return;}goStop(stop+1,2800);tourTimer=setTimeout(advanceTour,6500);}
@@ -483,7 +502,7 @@ $('save-interior').addEventListener('click',async()=>{
     const c=camera.clone();c.clearViewOffset();c.aspect=width/height;c.updateProjectionMatrix();
     renderer.setPixelRatio(1);renderer.setSize(width,height,false);renderer.render(scene,c);
     const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.drawImage(renderer.domElement,0,0);
-    const focus=mode==='aft'?'aft-'+aftSection+'-'+(aftEye?'inside':'overview'):mode==='transit'?'transit-'+transitCore+'-d'+transitDeck+'-'+transitPose:mode==='areas'?'area-'+activeArea.id+'-'+areaView:mode==='walk'?(routeKey==='aft'?'journey-aft-':'walk-')+(stop+1):(document.querySelector('[data-focus][aria-pressed="true"]')?.dataset.focus||'all');
+    const focus=mode==='aft'?'aft-'+aftSection+'-'+(aftEye?'inside':'overview'):mode==='transit'?'transit-'+transitCore+'-d'+transitDeck+'-'+transitPose:mode==='areas'?'area-'+activeArea.id+'-'+areaView:mode==='walk'?(routeKey==='home'?'walk-':'journey-'+routeKey+'-')+(stop+1):(document.querySelector('[data-focus][aria-pressed="true"]')?.dataset.focus||'all');
     ctx.fillStyle='#122b3ae6';ctx.fillRect(0,height-90,width,90);ctx.fillStyle='#eef0e7';ctx.font='32px Segoe UI';ctx.fillText($('clean-branding').checked?'LIFE ABOARD':'LEO / LIFE ABOARD',55,height-34);ctx.textAlign='right';ctx.font='24px Segoe UI';ctx.fillText(mode==='aft'?AFT_VIEWS[aftSection].name:mode==='transit'?transitCore.toUpperCase()+' CONNECTION / DECK '+transitDeck:mode==='areas'?activeArea.name+' / DECK '+activeArea.deck:mode==='walk'?routeStops()[stop].name:focus==='all'?'NEIGHBORHOOD '+activeDistrict+' / 1,000 RESIDENTS':focus.toUpperCase(),width-55,height-34);
     const blob=await new Promise(r=>canvas.toBlob(r,'image/png')),filename='interior-'+(mode==='neighborhood'?'n'+activeDistrict+'-':'')+focus+(mode==='neighborhood'&&residenceInside?'-inside':'')+'.png';
     if(location.protocol==='http:'&&['127.0.0.1','localhost'].includes(location.hostname)){
@@ -494,7 +513,7 @@ $('save-interior').addEventListener('click',async()=>{
 });
 
 (async()=>{
- resize();const params=new URLSearchParams(location.search);let cleanBranding=params.get('clean')==='1';if(params.get('clean')===null){try{cleanBranding=localStorage.getItem('leo-clean-branding')==='1';}catch{}}$('clean-branding').checked=cleanBranding;applyBrandingView();routeKey=params.get('tour')==='aft'?'aft':'home';renderRouteDots();const initial=params.get('space'),areaId=params.get('area');
+ resize();const params=new URLSearchParams(location.search);let cleanBranding=params.get('clean')==='1';if(params.get('clean')===null){try{cleanBranding=localStorage.getItem('leo-clean-branding')==='1';}catch{}}$('clean-branding').checked=cleanBranding;applyBrandingView();routeKey=(TOURS[params.get('tour')]?params.get('tour'):'home');renderRouteDots();const initial=params.get('space'),areaId=params.get('area');
  const district=Number(params.get('district'));if(Number.isInteger(district)&&district>=1&&district<=10){activeDistrict=district;$('neighborhood-select').value=district;}
  const deck=Number(params.get('deck'));if(deck>=1&&deck<=20)$('deck-select').value=deck-1;
  if(params.has('transit')){transitCore=params.get('transit')==='aft'?'aft':'forward';transitDeck=deck>=1&&deck<=20?deck:17;transitPose=['inside','stairs'].includes(params.get('view'))?params.get('view'):'overview';}
