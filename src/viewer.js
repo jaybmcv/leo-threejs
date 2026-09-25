@@ -12,6 +12,7 @@ import {AFT_VIEWS} from './aft-layout.js';
 import {createSpecialCirculation} from './special-circulation.js';
 import {createTransit,TRANSIT_CORES,floorY} from './transit.js';
 import {polishTourDeck} from './tour-polish.js';
+import {encloseAftTour,encloseResidentialConnection} from './tour-enclosures.js';
 import {SHIP_AREAS,createShipArea} from './areas.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
@@ -189,7 +190,7 @@ function starRandom(){starSeed=(Math.imul(starSeed,1664525)+1013904223)>>>0;retu
 for(let i=0;i<1500;i++){const y=starRandom()*2-1,a=starRandom()*Math.PI*2,r=Math.sqrt(1-y*y);starPositions.push(3800*r*Math.cos(a),3800*y,3800*r*Math.sin(a));}
 starsGeometry.setAttribute('position',new T.Float32BufferAttribute(starPositions,3));
 const stars=new T.Points(starsGeometry,new T.PointsMaterial({color:0xd5e2eb,size:1.25,sizeAttenuation:false,transparent:true,opacity:.65}));stars.visible=false;scene.add(stars);
-let routeKey='home',tourResidence=null,tourTransit=null;const routeStops=()=>routeKey==='aft'?AFT_TOUR:ROUTE;
+let routeKey='home',tourResidence=null,tourTransit=null,aftTourShell=null;const routeStops=()=>routeKey==='aft'?AFT_TOUR:ROUTE;
 let mode='exterior',transition=null,tourPlaying=false,stop=0,tourTimer=null,lookDrag=null,lastFrameScale=1,exporting=false;
 let turntable=false,lastFrameTime=0;
 function stopTurntable(){turntable=false;controls.autoRotate=false;$('turntable').textContent='Start turntable';$('turntable').setAttribute('aria-pressed','false');}
@@ -265,7 +266,7 @@ async function loadExterior(){
   aftScene.visible=mode==='aft';transitScene.visible=mode==='transit';areasRoot.visible=mode==='areas';ship.inside.visible=mode==='layout';ship.detail.root.visible=(mode==='neighborhood'&&activeDistrict===10)||mode==='walk';
   if(mode==='neighborhood')districtView();for(const [number,v]of districtViews)v.root.visible=mode==='neighborhood'&&number===activeDistrict;
   dimensions.visible=mode==='exterior'&&$('dimensions').checked;grid.visible=mode==='exterior'||mode==='layout';pad.visible=grid.visible;
-  stars.visible=mode==='walk';mars.visible=mode==='walk'||mode==='neighborhood';tourExtras.visible=mode==='walk';controls.enabled=mode!=='walk';controls.enablePan=true;controls.minDistance=(['neighborhood','walk','areas','transit','aft'].includes(mode))?1:50;controls.maxDistance=mode==='neighborhood'?400:2200;
+  stars.visible=mode==='walk';mars.visible=mode==='walk'||mode==='neighborhood';tourExtras.visible=mode==='walk';if(aftTourShell)aftTourShell.visible=mode==='walk';controls.enabled=mode!=='walk';controls.enablePan=true;controls.minDistance=(['neighborhood','walk','areas','transit','aft'].includes(mode))?1:50;controls.maxDistance=mode==='neighborhood'?400:2200;
   $('save-interior').hidden=!['walk','neighborhood','areas','transit','aft'].includes(mode);$('interior-render-status').textContent='';$('route').hidden=mode!=='walk';$('walk-help').hidden=mode!=='walk';$('stamp').hidden=mode==='walk';
   $('stamp').lastChild.textContent=['neighborhood','areas','transit','aft'].includes(mode)?'INTERIOR STUDY · 01':studioTools?'EXTERIOR FINISH · V35':'564 m · 20 decks · 10,000 aboard';
   $('foot-note').textContent=mode==='walk'?'Drag to look · follow the route':'Drag to orbit · scroll to zoom · right-drag to pan';
@@ -356,10 +357,12 @@ function showTourSpace(r){
  if(tourResidence)tourResidence.visible=false;if(tourTransit)tourTransit.visible=false;
  ship.detail.root.visible=!r.section&&r.space!=='residential';aftScene.visible=Boolean(r.section);
  if(r.space==='residential'){
-  if(!tourResidence){tourResidence=createResidentialDeck(10,ship.detail).root;scene.add(tourResidence);tourTransit=createTransit({minimumDeck:14,maximumDeck:16,coreIds:['aft']}).root;scene.add(tourTransit);}
+  if(!tourResidence){tourResidence=createResidentialDeck(10,ship.detail).root;scene.add(tourResidence);tourTransit=createTransit({minimumDeck:14,maximumDeck:16,coreIds:['aft']}).root;scene.add(tourTransit);tourResidence.add(encloseResidentialConnection(tourTransit));}
   tourResidence.visible=true;tourTransit.visible=true;
  }
- if(r.section){aftSection=r.section;aftEye=true;showAft();if(r.also)aftModel.parts[r.also].visible=true;}
+ if(r.section){aftSection=r.section;aftEye=true;showAft();if(r.also)aftModel.parts[r.also].visible=true;
+  // Walk-only walls close the engineering stops, which are cutaways in the aft systems view.
+  if(!aftTourShell){aftTourShell=encloseAftTour(aftScene);aftScene.add(aftTourShell);}aftTourShell.visible=true;}
  else {stars.visible=routeKey==='home';mars.visible=routeKey==='home'&&stop>=4;/* Mars belongs to the promenade and lounge windows */scene.background.set(routeKey==='home'?0x0a1422:0xbac8cd);}
 }
 function goStop(index,duration=1400){const list=routeStops();stop=Math.max(0,Math.min(list.length-1,Number.isFinite(index)?index:0));const r=list[stop];
