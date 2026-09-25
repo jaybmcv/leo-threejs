@@ -49,6 +49,12 @@ function wallStrip(x0,x1,z,bottom,top,facing,material,name){
  g.setIndex(facing>0?[0,1,2,0,2,3]:[0,2,1,0,3,2]);g.computeVertexNormals();
  const m=new T.Mesh(g,material);m.name=name;m.receiveShadow=true;return m;
 }
+// Give a UV-less surface top-down UVs in metres (x, z), for ceilings built from bare position strips.
+function planarUV(mesh){
+ const pos=mesh.geometry.attributes.position,uv=new Float32Array(pos.count*2);
+ for(let i=0;i<pos.count;i++){uv[i*2]=pos.getX(i);uv[i*2+1]=pos.getZ(i);}
+ mesh.geometry.setAttribute('uv',new T.BufferAttribute(uv,2));
+}
 // Repeat a map so one tile spans `metres`, whether the mesh's UVs are in metres or 0..1.
 function tileMetres(mesh,texture,metres){
  const uv=mesh.geometry.attributes.uv;if(!uv)return;const b=new T.Box2();for(let i=0;i<uv.count;i++)b.expandByPoint(new T.Vector2(uv.getX(i),uv.getY(i)));
@@ -104,7 +110,7 @@ function polishLounge(root){
  // Some lounge surfaces are single sheets drawn double-sided; replacements keep the original's side.
  root.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||!within(LOUNGE,o))return;const side=o.material.side;
   if(o.name==='Curved_lounge_floor'){const map=oakFloor();tileMetres(o,map,3);o.material=standard(0xffffff,{map,roughness:.55,side});}
-  if(o.name==='Curved_lounge_ceiling'){const map=fiberStars();tileMetres(o,map,9);o.material=new T.MeshStandardMaterial({color:0x0b1422,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.9,roughness:.9,side});}
+  if(o.name==='Curved_lounge_ceiling'){if(!o.geometry.attributes.uv)planarUV(o);const map=fiberStars();tileMetres(o,map,9);o.material=new T.MeshStandardMaterial({color:0x0b1422,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.9,roughness:.9,side});}
   if(o.name==='Lounge_side_return'||o.name==='Lounge_rear_wall')o.material=standard(0xe9dfcf,{roughness:.95,side});
   // The side returns lean in over the floor; their shadow read as a black gap along the wall.
   if(o.name==='Lounge_side_return')o.castShadow=false;
