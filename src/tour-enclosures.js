@@ -40,12 +40,12 @@ export function encloseNeighborhoodTour(root){
  slab(g,'Tour_deck17_lobby_end',[109.2,24.1,-8.35],[109.45,35.6,8],m.wall);
  slab(g,'Tour_deck17_lobby_ceiling',[109.2,35.5,-8.35],[136.8,35.8,8],lobby.ceiling);
  slab(g,'Tour_deck17_lobby_floor',[109.2,23.95,-8.35],[136.8,24.27,8],lobby.floor);
- // The pocket between the promenade and the garden, beside the stair.
- slab(g,'Tour_garden_pocket_floor',[145.8,24,3.9],[154.5,24.28,8],m.floor);
- slab(g,'Tour_garden_pocket_wall',[145.8,24.1,3.8],[154.8,35.6,4.05],m.wall);
- slab(g,'Tour_garden_pocket_ceiling',[145.8,35.5,3.8],[154.8,35.8,8],m.ceiling);
+ // The pocket between the promenade and the garden, beside the stair (kept behind the promenade wall at z 4).
+ slab(g,'Tour_garden_pocket_floor',[145.8,24,4.02],[154.5,24.28,8],m.floor);
+ slab(g,'Tour_garden_pocket_wall',[145.8,24.1,4.02],[154.8,35.6,4.27],m.wall);
+ slab(g,'Tour_garden_pocket_ceiling',[145.8,35.5,4.02],[154.8,35.8,8],m.ceiling);
  // The garden's forward end wall (the side that opened onto space); tour-polish dresses it as a living wall.
- slab(g,'Tour_garden_end_wall',[154.55,24,3.8],[154.8,35.8,46.1],m.wall);
+ slab(g,'Tour_garden_end_wall',[154.55,24,4.02],[154.8,35.8,46.1],m.wall);
  return g;
 }
 
