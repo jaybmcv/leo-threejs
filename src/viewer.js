@@ -218,7 +218,7 @@ function resize(){
     camera.position.sub(controls.target).multiplyScalar(ratio).add(controls.target);
     if(transition){transition.from.sub(transition.fromTarget).multiplyScalar(ratio).add(transition.fromTarget);transition.to.sub(transition.toTarget).multiplyScalar(ratio).add(transition.toTarget);}
   }
-  lastFrameScale=frameScale;const shift=r.width>1000?110:r.width>680?80:0,shiftY=r.width<=680&&mode!=='walk'?70:0;
+  lastFrameScale=frameScale;const shift=r.width>1000?110:r.width>680?80:0,shiftY=r.width<=680&&mode!=='walk'?-40:0;
   persp.setViewOffset(r.width,r.height,shift,shiftY,r.width,r.height);persp.updateProjectionMatrix();
   const h=230*frameScale;ortho.left=-h*r.width/r.height;ortho.right=h*r.width/r.height;ortho.top=h;ortho.bottom=-h;ortho.setViewOffset(r.width,r.height,shift,shiftY,r.width,r.height);ortho.updateProjectionMatrix();
 }
@@ -271,6 +271,9 @@ async function loadExterior(){
   const texts={aft:['07 / AFT SYSTEMS','Inside the tail.','Aft machinery and maintenance structure.','AFT SYSTEMS'],transit:['06 / CONNECTIONS','Moving through Leo.','Lifts, stairs and garden promenades.','DECK CONNECTIONS'],areas:['05 / SHIP AREAS','Spaces for the voyage.','Explore the facilities that support life aboard Leo.','SHIP DIRECTORY'],exterior:['01 / EXTERIOR REFINEMENT','A home between planets.','Leo’s familiar silhouette, resolved at the scale of a traveling community.','DESIGN BASELINE'],layout:['02 / SPATIAL ALLOCATION','Room for the voyage.','Inspect the deck stack and the placement of every twin cabin.','DECK INSPECTOR'],neighborhood:['03 / HUMAN-SCALE STUDY','A neighborhood aboard Leo.','500 twin cabins, a shared garden and a panoramic lounge, connected at full scale.','NEIGHBORHOOD 10'],walk:['04 / GUIDED WALKTHROUGH','From cabin to the stars.','Follow a short route through Neighborhood 10.','LIFE ABOARD']};
   [$('eyebrow'),$('view-title'),$('view-description'),$('panel-title')].forEach((el,i)=>el.textContent=texts[mode][i]);setTitle(texts[mode][1]);
   if(mode==='exterior'&&!studioTools)$('eyebrow').textContent='WELCOME ABOARD';$('counter').textContent=texts[mode][0].split(' / ')[0]+' / '+CHAPTERS[mode];
+  $('m-view-label').textContent=CHAPTERS[mode];$('m-handle-title').textContent=texts[mode][3];$('m-handle-meta').textContent=mode==='exterior'?' · 564 m · 20 decks':'';
+  document.querySelectorAll('#m-menu button,#m-steps-bar button').forEach(b=>b.classList.toggle('on',b.dataset.mode===mode));
+  $('m-steps-count').firstChild.textContent=String(STEP_ORDER.indexOf(mode)+1).padStart(2,'0');
   scene.background.set(mode==='walk'?0x0a1422:0xbac8cd);scene.environmentIntensity=mode==='walk'?.65:.4;hemi.intensity=mode==='walk'?.65:.7;key.intensity=mode==='walk'?.7:1.8;fill.intensity=mode==='walk'?.25:.55;rim.intensity=mode==='walk'?.25:.65;
   if(mode==='exterior'){viewCamera('perspective');$('status').textContent=studioTools?'Exterior V35 / refined surfaces':'Exterior · refined surfaces';}
   if(mode==='layout'){updateDeck();setCamera('persp',[420,360,460],[0,-5,0]);}
@@ -374,6 +377,26 @@ document.querySelectorAll('[data-focus]').forEach(b=>b.addEventListener('click',
 $('dimensions').addEventListener('change',()=>dimensions.visible=$('dimensions').checked);
 DECKS.forEach(d=>{const o=document.createElement('option');o.value=d.index;o.textContent=`${String(d.number).padStart(2,'0')} · ${d.name}`;o.selected=d.index===14;$('deck-select').appendChild(o);});
 ['deck-select','isolate','shell-context'].forEach(id=>$(id).addEventListener('change',updateDeck));
+// Phone chrome: a view menu stands in for the tab row, and the controls panel is a sheet opened from its handle
+// (tap, or swipe up/down). The tabs stay the single source of truth; the menu just clicks them.
+const CHAPTER_NUMBERS={exterior:'01',layout:'02',neighborhood:'03',areas:'05',transit:'06',aft:'07'};
+const STEP_ORDER=['exterior','layout','neighborhood','walk','areas','transit','aft'];
+{const menu=$('m-menu'),sheet=document.querySelector('.panel'),tab=m=>document.querySelector(`.tabs button[data-mode="${m}"]`);
+ const closeMenu=()=>{menu.hidden=true;$('m-view').setAttribute('aria-expanded','false');};
+ for(const [m,n] of Object.entries(CHAPTER_NUMBERS)){const b=document.createElement('button');b.type='button';b.dataset.mode=m;b.append(tab(m).textContent);const num=document.createElement('small');num.textContent=n;b.append(num);b.addEventListener('click',()=>{closeMenu();tab(m).click();});menu.append(b);}
+ $('m-view').addEventListener('click',()=>{const open=menu.hidden;menu.hidden=!open;$('m-view').setAttribute('aria-expanded',String(open));});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();});renderer.domElement.addEventListener('pointerdown',closeMenu);
+ $('m-tour').addEventListener('click',()=>{closeMenu();tab('walk').click();});
+ const setSheet=open=>{sheet.classList.toggle('open',open);$('m-handle').setAttribute('aria-expanded',String(open));};
+ let startY=null,swiped=false;
+ $('m-handle').addEventListener('pointerdown',e=>{startY=e.clientY;swiped=false;});
+ $('m-handle').addEventListener('pointerup',e=>{const dy=startY===null?0:e.clientY-startY;startY=null;if(Math.abs(dy)>24){swiped=true;setSheet(dy<0);}});
+ $('m-handle').addEventListener('click',()=>{if(swiped){swiped=false;return;}setSheet(!sheet.classList.contains('open'));});
+ if(matchMedia('(max-width:680px)').matches&&$('share-view'))sheet.append($('share-view'));
+ // The slider: tap a segment, or swipe across the strip for the next or previous view.
+ for(const m of STEP_ORDER){const b=document.createElement('button');b.type='button';b.dataset.mode=m;b.setAttribute('aria-label',m==='walk'?'Tour':tab(m).textContent);b.addEventListener('click',()=>{closeMenu();tab(m).click();});$('m-steps-bar').append(b);}
+ let stepX=null;$('m-steps').addEventListener('pointerdown',e=>{stepX=e.clientX;});
+ $('m-steps').addEventListener('pointerup',e=>{const dx=stepX===null?0:e.clientX-stepX;stepX=null;if(Math.abs(dx)<40)return;const i=STEP_ORDER.indexOf(mode)+(dx<0?1:-1);if(i>=0&&i<STEP_ORDER.length)tab(STEP_ORDER[i]).click();});}
 $('toggle-panels').addEventListener('click',()=>{const hidden=document.body.classList.toggle('panels-hidden');$('toggle-panels').textContent=hidden?'Show UI':'Hide UI';$('toggle-panels').setAttribute('aria-pressed',String(hidden));});
   $('enter-space').addEventListener('click',()=>{
     const focus=document.querySelector('[data-focus][aria-pressed="true"]')?.dataset.focus;
