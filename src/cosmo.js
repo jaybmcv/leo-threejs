@@ -25,7 +25,7 @@ function turn(bone,axis,degrees){setWorldQuat(bone,new T.Quaternion().setFromAxi
 // A relaxed stand instead of the rig's T-pose (Cosmo faces +z; his left is +x): weight on the left leg with the right
 // knee soft, elbows and fingers loosely bent, the head tipped a little and the tail hanging low.
 const ARM={L:{upper:[.2,-1,-.07],fore:[.07,-1,.42],curl:1},R:{upper:[.16,-1,-.03],fore:[.05,-1,.3],curl:.8}};
-const FINGER_CURL={index:24,middle:30,ring:36,pinky:40};
+const FINGER_CURL={index:16,middle:21,ring:26,pinky:30};
 function relaxArms(bone){
  for(const side of ['L','R']){
   const upper=bone('upper_arm.'+side),fore=bone('forearm.'+side),hand=bone('hand.'+side),out=Math.sign(worldPos(fore).x-worldPos(upper).x)||1,pose=ARM[side];
@@ -52,6 +52,8 @@ function relaxPose(cat){
  const skeleton=cat.meshes[0].skeleton;cat.root.updateMatrixWorld(true);
  const bone=name=>{const b=skeleton.getBoneByName(T.PropertyBinding.sanitizeNodeName(name));if(!b)throw new Error('Cosmo rig is missing '+name);return b;};
  relaxLegs(bone);relaxSpine(bone);relaxArms(bone);
+ // The finger curls use local rotations; refresh world matrices before the bake reads them.
+ cat.root.updateMatrixWorld(true);
 }
 
 // Apply the posed skin on the CPU: bindMatrixInverse · Σ w·(bone.matrixWorld · boneInverse) · bindMatrix.

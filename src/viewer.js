@@ -357,7 +357,7 @@ function showTourSpace(r){
  if(tourResidence)tourResidence.visible=false;if(tourTransit)tourTransit.visible=false;
  ship.detail.root.visible=!r.section&&r.space!=='residential';aftScene.visible=Boolean(r.section);
  if(r.space==='residential'){
-  if(!tourResidence){tourResidence=createResidentialDeck(10,ship.detail).root;tourResidence.add(encloseResidentialConnection(tourResidence));scene.add(tourResidence);tourTransit=createTransit({minimumDeck:14,maximumDeck:16,coreIds:['aft']}).root;scene.add(tourTransit);}
+  if(!tourResidence){tourResidence=createResidentialDeck(10,ship.detail).root;scene.add(tourResidence);tourTransit=createTransit({minimumDeck:14,maximumDeck:16,coreIds:['aft']}).root;scene.add(tourTransit);tourResidence.add(encloseResidentialConnection(tourTransit));}
   tourResidence.visible=true;tourTransit.visible=true;
  }
  if(r.section){aftSection=r.section;aftEye=true;showAft();if(r.also)aftModel.parts[r.also].visible=true;

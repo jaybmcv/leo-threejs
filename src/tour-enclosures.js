@@ -50,6 +50,7 @@ export function encloseNeighborhoodTour(root){
 }
 
 // The aft end of Deck 15 on the engineering tour: the cross hall behind the aft lifts ended at the section line.
+// `root` is the aft transit core, whose stair walls lend the material.
 export function encloseResidentialConnection(root){
  const g=new T.Group();g.name='Tour_residential_connection_shell';
  const m=palette(root,{wall:'Stair_end_wall',floor:'Neighborhood_circulation',ceiling:'Corridor_ceilings'});
