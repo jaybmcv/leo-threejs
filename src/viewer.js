@@ -12,6 +12,7 @@ import {AFT_VIEWS} from './aft-layout.js';
 import {createSpecialCirculation} from './special-circulation.js';
 import {createTransit,TRANSIT_CORES,floorY} from './transit.js';
 import {polishTourDeck} from './tour-polish.js';
+import {createMars} from './mars.js';
 import {encloseAftTour,encloseResidentialConnection} from './tour-enclosures.js';
 import {SHIP_AREAS,createShipArea} from './areas.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -174,17 +175,7 @@ function line(points,color=0x718996){const geo=new T.BufferGeometry().setFromPoi
 line([[-300,-45,190],[264,-45,190]]);for(let x of [-300,264])line([[x,-45,181],[x,-45,199]]);label('564 m', [-18,-43,205]);
 line([[-330,-45,-150],[-330,-45,150]]);for(let z of [-150,150])line([[-339,-45,z],[-321,-45,z]]);label('300 m',[-353,-42,0]);
 // Stylized, procedural Mars backdrop; no remote assets are needed.
-const marsGeometry=new T.SphereGeometry(180,96,64),marsColors=[];
-const terrainColor=new T.Color(),marsPositions=marsGeometry.attributes.position;
-for(let i=0;i<marsPositions.count;i++){
-  const x=marsPositions.getX(i)/180,y=marsPositions.getY(i)/180,z=marsPositions.getZ(i)/180;
-  const broad=Math.sin(x*7+Math.sin(z*5))*Math.cos(y*9-z*3),fine=Math.sin(x*35+y*17)*Math.cos(z*29-y*11);
-  terrainColor.setRGB(.38+.16*(broad+1)/2+.035*fine,.16+.1*(broad+1)/2+.015*fine,.075+.06*(broad+1)/2);
-  if(y>.91)terrainColor.lerp(new T.Color(0xd7c9b5),(y-.91)*6);
-  marsColors.push(terrainColor.r,terrainColor.g,terrainColor.b);
-}
-marsGeometry.setAttribute('color',new T.Float32BufferAttribute(marsColors,3));
-const mars=new T.Mesh(marsGeometry,new T.MeshStandardMaterial({vertexColors:true,roughness:1}));mars.position.set(1800,90,-100);mars.visible=false;scene.add(mars);
+const mars=createMars();mars.position.set(1800,90,-100);mars.visible=false;scene.add(mars);
 const starsGeometry=new T.BufferGeometry(),starPositions=[];let starSeed=731;
 function starRandom(){starSeed=(Math.imul(starSeed,1664525)+1013904223)>>>0;return starSeed/4294967296;}
 for(let i=0;i<1500;i++){const y=starRandom()*2-1,a=starRandom()*Math.PI*2,r=Math.sqrt(1-y*y);starPositions.push(3800*r*Math.cos(a),3800*y,3800*r*Math.sin(a));}

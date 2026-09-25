@@ -1,5 +1,7 @@
 import * as T from 'three';
 import {encloseNeighborhoodTour} from './tour-enclosures.js';
+import {canvasTexture,seeded,oakFloor,standard,glow} from './polish-kit.js';
+import {polishForwardDeck} from './forward-polish.js';
 
 // Art pass for the guided tour's stops in Neighborhood 10: the walkthrough cabin, the Deck 15 corridor and the garden
 // commons. Other cabins keep their shared materials: meshes here get new materials, shared ones are never edited.
@@ -7,18 +9,6 @@ const CABIN={minX:118.4,maxX:123,minZ:1.9,maxZ:8.5,minY:15.9,maxY:20};
 const FLOOR_Y=16.3,CEILING_Y=19.6,CORRIDOR_END_X=134;
 const GARDEN={minX:109.5,maxX:154.5,minZ:8,maxZ:46,floor:24.3,ceiling:35.5};
 
-function canvasTexture(w,h,draw,repeat=[1,1]){
- const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
- const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(...repeat);t.anisotropy=4;return t;
-}
-function seeded(seed){return()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};}
-
-const oakFloor=()=>canvasTexture(512,512,(g,w,h)=>{
- const rnd=seeded(11),planks=6;
- for(let i=0;i<planks;i++){const y=i*h/planks,tone=180+rnd()*26;g.fillStyle=`rgb(${tone},${tone*.74|0},${tone*.52|0})`;g.fillRect(0,y,w,h/planks);
-  for(let k=0;k<40;k++){g.strokeStyle=`rgba(90,56,30,${.05+rnd()*.08})`;g.lineWidth=1+rnd()*2;g.beginPath();const yy=y+rnd()*h/planks;g.moveTo(0,yy);g.bezierCurveTo(w*.3,yy+rnd()*6-3,w*.7,yy+rnd()*6-3,w,yy);g.stroke();}
-  g.fillStyle='rgba(60,38,22,.55)';g.fillRect(0,y,w,2);const joint=rnd()*w;g.fillRect(joint,y,2,h/planks);}
-},[2,3]);
 const runner=()=>canvasTexture(256,512,(g,w,h)=>{
  g.fillStyle='#2a3440';g.fillRect(0,0,w,h);const rnd=seeded(5);
  for(let i=0;i<2600;i++){g.fillStyle=`rgba(255,255,255,${rnd()*.04})`;g.fillRect(rnd()*w,rnd()*h,2,2);}
@@ -43,8 +33,6 @@ const bulkheadSign=()=>canvasTexture(1024,256,(g,w,h)=>{
  g.fillStyle='#a6a5b4';g.font='400 34px "JetBrains Mono", monospace';g.fillText('NOSE COMMONS  ·  DECK 15  →',60,190);
 });
 
-const standard=(color,extra={})=>new T.MeshStandardMaterial({color,roughness:.82,metalness:0,...extra});
-const glow=(color,intensity)=>new T.MeshStandardMaterial({color,emissive:color,emissiveIntensity:intensity,roughness:.5});
 
 function inCabin(o){const p=new T.Box3().setFromObject(o).getCenter(new T.Vector3());return p.x>CABIN.minX&&p.x<CABIN.maxX&&p.z>CABIN.minZ&&p.z<CABIN.maxZ&&p.y>CABIN.minY&&p.y<CABIN.maxY;}
 
@@ -152,6 +140,6 @@ function polishGarden(root,walkOnly){
 // garden dressing to its commons; the lights, walls and bulkhead go in the returned group, shown only in walk mode.
 export function polishTourDeck(root){
  root.updateMatrixWorld(true);const walkOnly=new T.Group();walkOnly.name='Tour_walk_only';walkOnly.visible=false;
- polishCabin(root,walkOnly);polishCorridor(root,walkOnly);polishGarden(root,walkOnly);walkOnly.add(encloseNeighborhoodTour(root));
+ polishCabin(root,walkOnly);polishCorridor(root,walkOnly);polishGarden(root,walkOnly);polishForwardDeck(root,walkOnly);walkOnly.add(encloseNeighborhoodTour(root));
  root.add(walkOnly);return walkOnly;
 }
