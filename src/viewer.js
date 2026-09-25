@@ -33,11 +33,13 @@ document.getElementById('share-view')?.addEventListener('click',async()=>{
 window.addEventListener('error',e=>showError(e.message));
 function showError(message){$('error').hidden=false;$('error').textContent=`The 3D view could not start: ${message}. The GLB files remain available from the links below.`;$('loading').hidden=true;}
 let renderer;
-try{renderer=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true,logarithmicDepthBuffer:true});}catch(e){showError(e.message);throw e;}
-renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.setClearColor(0xbac8cd);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.86;
-renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;
+// Phones: 1.25x pixels (1x while touching) and a half-size starfield redrawn at 30 fps. MSAA stays on: 1.25x alone leaves jagged hull edges.
+const touchScreen=matchMedia('(pointer: coarse)').matches,baseRatio=Math.min(devicePixelRatio,touchScreen?1.25:1.75);
+try{renderer=new T.WebGLRenderer({antialias:true,alpha:true,logarithmicDepthBuffer:true});}catch(e){showError(e.message);throw e;}
+renderer.setPixelRatio(baseRatio);renderer.setClearColor(0xbac8cd);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.86;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.shadowMap.autoUpdate=false;
 $('viewport').appendChild(renderer.domElement);
-const spaceBackdrop=createSpaceBackdrop();
+const spaceBackdrop=createSpaceBackdrop(touchScreen?{scale:.5,fps:30}:{});
 const scene=new T.Scene();scene.background=new T.Color(0xbac8cd);
 const pmrem=new T.PMREMGenerator(renderer);const room=new RoomEnvironment();scene.environment=pmrem.fromScene(room,.04).texture;scene.environmentIntensity=.4;room.dispose();pmrem.dispose();
 const hemi=new T.HemisphereLight(0xf3f4eb,0x657481,.7);scene.add(hemi);
@@ -120,11 +122,16 @@ function loadCosmo(){
  script.onerror=()=>console.warn('cosmo.js is missing; keeping the blockout figures.');
  document.head.appendChild(script);
 }
-for(const container of [scene,noseScene,areasRoot,transitScene,aftScene])container.addEventListener('childadded',()=>{if(cosmoKit)cosmoPending.add(container);});
+// The ship and key light never move, so the 2048 px shadow map is redrawn only after something changes (input,
+// new scene parts, Cosmo, resize) plus a 1 s safety refresh, instead of re-rendering the whole ship every frame.
+let shadowFrames=3,shadowClock=0;const refreshShadows=()=>{shadowFrames=3;};
+for(const type of ['click','change','input'])document.addEventListener(type,refreshShadows,true);addEventListener('resize',refreshShadows);
+function tickShadows(now){if(shadowFrames>0){shadowFrames--;renderer.shadowMap.needsUpdate=true;}else if(now-shadowClock>1000){shadowClock=now;renderer.shadowMap.needsUpdate=true;}}
+for(const container of [scene,noseScene,areasRoot,transitScene,aftScene])container.addEventListener('childadded',()=>{refreshShadows();if(cosmoKit)cosmoPending.add(container);});
 function dressCosmo(now){
  if(!cosmoKit)return;
- for(const root of cosmoPending)globalThis.LeoCosmo.dressCats(root,cosmoKit);cosmoPending.clear();
- if(now-cosmoSweep>1000){cosmoSweep=now;globalThis.LeoCosmo.dressCats(scene,cosmoKit,true);}
+ for(const root of cosmoPending)if(globalThis.LeoCosmo.dressCats(root,cosmoKit))refreshShadows();cosmoPending.clear();
+ if(now-cosmoSweep>1000){cosmoSweep=now;if(globalThis.LeoCosmo.dressCats(scene,cosmoKit,true))refreshShadows();}
 }let aftModel=null,aftGhost=null,aftSection='overview',aftEye=false;
 for(const [key,v]of Object.entries(AFT_VIEWS)){const o=document.createElement('option');o.value=key;o.textContent=v.name;$('aft-section').append(o);}
 function showAft(){
@@ -393,7 +400,12 @@ renderer.domElement.addEventListener('pointermove',e=>{if(!lookDrag||mode!=='wal
 renderer.domElement.addEventListener('pointerup',()=>lookDrag=null);
 renderer.domElement.addEventListener('pointercancel',()=>lookDrag=null);
 renderer.domElement.addEventListener('pointerdown',()=>{if(mode!=='walk')transition=null;});
-function animate(now){requestAnimationFrame(animate);dressCosmo(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);camera.lookAt(controls.target);if(t===1)transition=null;}if(mode!=='walk')controls.update(delta);if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
+// On phones, drop to 1x pixels while a finger is on the scene (or a pinch/scroll is under way) and sharpen 250 ms after.
+if(touchScreen){let settle=0;const setRatio=r=>{if(renderer.getPixelRatio()!==r){renderer.setPixelRatio(r);resize();refreshShadows();}};
+ const busy=()=>{clearTimeout(settle);setRatio(1);},idle=()=>{clearTimeout(settle);settle=setTimeout(()=>setRatio(baseRatio),250);};
+ renderer.domElement.addEventListener('pointerdown',busy);renderer.domElement.addEventListener('wheel',()=>{busy();idle();},{passive:true});
+ for(const type of ['pointerup','pointercancel'])renderer.domElement.addEventListener(type,idle);}
+function animate(now){requestAnimationFrame(animate);dressCosmo(now);tickShadows(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);camera.lookAt(controls.target);if(t===1)transition=null;}if(mode!=='walk')controls.update(delta);if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
 $('save-render').addEventListener('click',async()=>{
   if(exporting)return;exporting=true;$('save-render').disabled=true;$('render-status').textContent='Rendering exterior…';
   const view=document.querySelector('[data-camera][aria-pressed="true"]').dataset.camera,shapeOnly=$('shape-only').checked;
@@ -427,7 +439,8 @@ $('save-render').addEventListener('click',async()=>{
       const response=await fetch(`/renders/${filename}`,{method:'PUT',headers:{'Content-Type':'image/png'},body:blob});if(!response.ok)throw new Error('Could not save PNG');
       if(view==='top'&&shapeOnly){
         scene.background=null;renderer.setClearColor(0,0);renderer.render(scene,renderCamera);
-        const overlay=await new Promise(resolve=>renderer.domElement.toBlob(resolve,'image/png'));
+        const frame=Object.assign(document.createElement('canvas'),{width:renderer.domElement.width,height:renderer.domElement.height});frame.getContext('2d').drawImage(renderer.domElement,0,0);
+        const overlay=await new Promise(resolve=>frame.toBlob(resolve,'image/png'));
         const saved=await fetch('/renders/exterior-top-overlay.png',{method:'PUT',headers:{'Content-Type':'image/png'},body:overlay});
         if(!saved.ok)throw new Error('Could not save transparent top overlay');
       }
