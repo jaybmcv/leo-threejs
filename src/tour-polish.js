@@ -1,9 +1,11 @@
 import * as T from 'three';
+import {encloseNeighborhoodTour} from './tour-enclosures.js';
 
-// Art pass for the guided tour's first stops: the walkthrough cabin and the corridor outside it on Deck 15. Other
-// cabins keep their shared materials: meshes here get new materials, shared ones are never edited.
+// Art pass for the guided tour's stops in Neighborhood 10: the walkthrough cabin, the Deck 15 corridor and the garden
+// commons. Other cabins keep their shared materials: meshes here get new materials, shared ones are never edited.
 const CABIN={minX:118.4,maxX:123,minZ:1.9,maxZ:8.5,minY:15.9,maxY:20};
 const FLOOR_Y=16.3,CEILING_Y=19.6,CORRIDOR_END_X=134;
+const GARDEN={minX:109.5,maxX:154.5,minZ:8,maxZ:46,floor:24.3,ceiling:35.5};
 
 function canvasTexture(w,h,draw,repeat=[1,1]){
  const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
@@ -92,9 +94,64 @@ function polishCorridor(root,walkOnly){
  root.traverse(o=>{if(o.isMesh&&o.name==='Residential_corridor_diffusers')o.material=glow(0xfff0dc,1.4);});
 }
 
-// The tour's first stops render the ship's Neighborhood 10 detail. Cabin furnishings apply to its one sample cabin;
-// the lights and the corridor bulkhead go in the returned group, which the viewer shows only in walk mode.
+const pavers=()=>canvasTexture(512,512,(g,w,h)=>{
+ const rnd=seeded(23),n=4,s=w/n;
+ for(let i=0;i<n;i++)for(let j=0;j<n;j++){const t=214+rnd()*18;g.fillStyle=`rgb(${t},${t*.94|0},${t*.86|0})`;g.fillRect(i*s,j*s,s,s);
+  for(let k=0;k<160;k++){g.fillStyle=`rgba(120,100,80,${rnd()*.06})`;g.fillRect(i*s+rnd()*s,j*s+rnd()*s,2,2);}}
+ g.strokeStyle='rgba(120,104,88,.55)';g.lineWidth=3;for(let i=0;i<=n;i++){g.beginPath();g.moveTo(i*s,0);g.lineTo(i*s,h);g.stroke();g.beginPath();g.moveTo(0,i*s);g.lineTo(w,i*s);g.stroke();}
+},[45/6,38/6]);
+const daylight=()=>canvasTexture(1024,1024,(g,w,h)=>{
+ const sky=g.createRadialGradient(w*.55,h*.45,20,w*.5,h*.5,w*.75);sky.addColorStop(0,'#fdf8ee');sky.addColorStop(.45,'#dcebf4');sky.addColorStop(1,'#a9c7da');g.fillStyle=sky;g.fillRect(0,0,w,h);
+ const rnd=seeded(41);for(let i=0;i<46;i++){const x=rnd()*w,y=rnd()*h,r=40+rnd()*110,c=g.createRadialGradient(x,y,0,x,y,r);c.addColorStop(0,'rgba(255,255,255,.55)');c.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=c;g.fillRect(x-r,y-r,r*2,r*2);}
+});
+const livingWall=()=>canvasTexture(1024,1024,(g,w,h)=>{
+ g.fillStyle='#24402c';g.fillRect(0,0,w,h);const rnd=seeded(77),greens=['#2f5a38','#3f7446','#5a8f4e','#7aa65a','#35603f','#8fb86a'];
+ for(let i=0;i<5200;i++){const x=rnd()*w,y=rnd()*h,r=5+rnd()*13;g.fillStyle=greens[rnd()*greens.length|0];g.beginPath();g.ellipse(x,y,r,r*.55,rnd()*Math.PI,0,Math.PI*2);g.fill();}
+ for(let i=0;i<260;i++){g.fillStyle=rnd()<.6?'#f85800':'#f4f0e8';g.beginPath();g.arc(rnd()*w,rnd()*h,2+rnd()*3,0,Math.PI*2);g.fill();}
+},[3,1]);
+
+function inGarden(o){const b=new T.Box3().setFromObject(o),c=b.getCenter(new T.Vector3());return c.x>GARDEN.minX-1&&c.x<GARDEN.maxX+1&&c.z>GARDEN.minZ-1&&c.z<GARDEN.maxZ+1&&c.y>GARDEN.floor-1&&c.y<GARDEN.ceiling+1;}
+
+// Flowering clumps and grasses between the existing shrubs, seeded so every visit grows the same beds.
+function plantBeds(root,parent){
+ const beds=[];root.traverse(o=>{if(o.isMesh&&o.name==='Planting_bed'&&inGarden(o))beds.push(new T.Box3().setFromObject(o));});
+ const rnd=seeded(509),clump=new T.IcosahedronGeometry(.22,0),blade=new T.ConeGeometry(.05,.7,4),bloom=new T.IcosahedronGeometry(.07,0);
+ const kinds=[[clump,standard(0x4f7f45,{roughness:.9}),900],[blade,standard(0x7fa85a,{roughness:.9}),1400],[bloom,standard(0xf85800,{roughness:.6,emissive:0x5a1e00,emissiveIntensity:.25}),420],[bloom,standard(0xf4f0e8,{roughness:.6}),420]];
+ const m=new T.Matrix4(),q=new T.Quaternion(),e=new T.Euler(),p=new T.Vector3(),sc=new T.Vector3();
+ for(const [geometry,material,perBed] of kinds){
+  const mesh=new T.InstancedMesh(geometry,material,perBed*beds.length);mesh.name='Garden_planting_detail';mesh.receiveShadow=true;
+  let i=0;for(const b of beds)for(let k=0;k<perBed;k++){
+   const tall=geometry===blade,lift=geometry===bloom?.35+rnd()*.35:tall?.3:.08;
+   p.set(b.min.x+.15+rnd()*(b.max.x-b.min.x-.3),b.max.y+lift,b.min.z+.15+rnd()*(b.max.z-b.min.z-.3));
+   e.set(tall?(rnd()-.5)*.5:rnd()*6,rnd()*6,tall?(rnd()-.5)*.5:0);sc.setScalar(tall?.6+rnd()*.9:.6+rnd()*.9);
+   mesh.setMatrixAt(i++,m.compose(p,q.setFromEuler(e),sc));
+  }
+  mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();parent.add(mesh);
+ }
+}
+
+function polishGarden(root,walkOnly){
+ const plaster=standard(0xe9dfcf,{roughness:.95});
+ const looks={
+  Commons_floor:standard(0xffffff,{map:pavers(),roughness:.78}),
+  Commons_ceiling:new T.MeshStandardMaterial({color:0x000000,emissive:0xffffff,emissiveMap:daylight(),emissiveIntensity:.95,roughness:1}),
+  Commons_end_wall:plaster,Commons_rear_wall:plaster,
+  Circadian_light:glow(0xfff4e0,2.4),Cafe_pendant_diffuser:glow(0xffcf9a,2.6),Gallery_warm_light:glow(0xffd6a8,2),
+ };
+ root.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&looks[o.name]&&inGarden(o))o.material=looks[o.name];});
+ plantBeds(root,root);
+ // A two-storey living wall dresses the garden's new forward end wall (walk mode only, like the wall itself).
+ const wall=new T.Mesh(new T.PlaneGeometry(29.4,11),standard(0xffffff,{map:livingWall(),roughness:.95}));wall.name='Garden_living_wall';
+ wall.rotation.y=-Math.PI/2;wall.position.set(GARDEN.maxX+.03,GARDEN.floor+5.5,27);walkOnly.add(wall);
+ // Warm pools of light over the beds and the café (three, to keep phones quick).
+ const lights=new T.Group();lights.name='Tour_garden_lights';walkOnly.add(lights);
+ for(const [x,z] of [[124,24],[141,24],[132,39]]){const l=new T.PointLight(0xffdcb4,6,18,2);l.position.set(x,GARDEN.floor+4.6,z);lights.add(l);}
+}
+
+// The home tour renders the ship's Neighborhood 10 detail. Cabin furnishings apply to its one sample cabin and the
+// garden dressing to its commons; the lights, walls and bulkhead go in the returned group, shown only in walk mode.
 export function polishTourDeck(root){
  root.updateMatrixWorld(true);const walkOnly=new T.Group();walkOnly.name='Tour_walk_only';walkOnly.visible=false;
- polishCabin(root,walkOnly);polishCorridor(root,walkOnly);root.add(walkOnly);return walkOnly;
+ polishCabin(root,walkOnly);polishCorridor(root,walkOnly);polishGarden(root,walkOnly);walkOnly.add(encloseNeighborhoodTour(root));
+ root.add(walkOnly);return walkOnly;
 }
