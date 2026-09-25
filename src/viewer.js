@@ -11,6 +11,7 @@ import {attachFinCrown,prepareCrownExterior} from './fin-crown.js';
 import {AFT_VIEWS} from './aft-layout.js';
 import {createSpecialCirculation} from './special-circulation.js';
 import {createTransit,TRANSIT_CORES,floorY} from './transit.js';
+import {polishTourDeck} from './tour-polish.js';
 import {SHIP_AREAS,createShipArea} from './areas.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
@@ -49,7 +50,7 @@ const rim=new T.DirectionalLight(0xffffff,.65);rim.position.set(200,60,-300);sce
 let camera=new T.PerspectiveCamera(42,1,1,6000);
 const persp=camera,ortho=new T.OrthographicCamera(-400,400,240,-240,.1,6000);
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.09;controls.minDistance=1;controls.maxDistance=2200;controls.maxPolarAngle=Math.PI*.96;
-const ship=createShip({deferExterior:true});scene.add(ship.root);
+const ship=createShip({deferExterior:true});scene.add(ship.root);const tourExtras=polishTourDeck(ship.detail.root);
 let activeDistrict=10,residenceInside=false;const districtViews=new Map();
 const noseScene=new T.Group(),noseViews=new Map();scene.add(noseScene);noseScene.visible=false;
 function noseView(){
@@ -264,7 +265,7 @@ async function loadExterior(){
   aftScene.visible=mode==='aft';transitScene.visible=mode==='transit';areasRoot.visible=mode==='areas';ship.inside.visible=mode==='layout';ship.detail.root.visible=(mode==='neighborhood'&&activeDistrict===10)||mode==='walk';
   if(mode==='neighborhood')districtView();for(const [number,v]of districtViews)v.root.visible=mode==='neighborhood'&&number===activeDistrict;
   dimensions.visible=mode==='exterior'&&$('dimensions').checked;grid.visible=mode==='exterior'||mode==='layout';pad.visible=grid.visible;
-  stars.visible=mode==='walk';mars.visible=mode==='walk'||mode==='neighborhood';controls.enabled=mode!=='walk';controls.enablePan=true;controls.minDistance=(['neighborhood','walk','areas','transit','aft'].includes(mode))?1:50;controls.maxDistance=mode==='neighborhood'?400:2200;
+  stars.visible=mode==='walk';mars.visible=mode==='walk'||mode==='neighborhood';tourExtras.visible=mode==='walk';controls.enabled=mode!=='walk';controls.enablePan=true;controls.minDistance=(['neighborhood','walk','areas','transit','aft'].includes(mode))?1:50;controls.maxDistance=mode==='neighborhood'?400:2200;
   $('save-interior').hidden=!['walk','neighborhood','areas','transit','aft'].includes(mode);$('interior-render-status').textContent='';$('route').hidden=mode!=='walk';$('walk-help').hidden=mode!=='walk';$('stamp').hidden=mode==='walk';
   $('stamp').lastChild.textContent=['neighborhood','areas','transit','aft'].includes(mode)?'INTERIOR STUDY · 01':studioTools?'EXTERIOR FINISH · V35':'564 m · 20 decks · 10,000 aboard';
   $('foot-note').textContent=mode==='walk'?'Drag to look · follow the route':'Drag to orbit · scroll to zoom · right-drag to pan';
@@ -359,7 +360,7 @@ function showTourSpace(r){
   tourResidence.visible=true;tourTransit.visible=true;
  }
  if(r.section){aftSection=r.section;aftEye=true;showAft();if(r.also)aftModel.parts[r.also].visible=true;}
- else {stars.visible=routeKey==='home';mars.visible=routeKey==='home';scene.background.set(routeKey==='home'?0x0a1422:0xbac8cd);}
+ else {stars.visible=routeKey==='home';mars.visible=routeKey==='home'&&stop>=4;/* Mars belongs to the promenade and lounge windows */scene.background.set(routeKey==='home'?0x0a1422:0xbac8cd);}
 }
 function goStop(index,duration=1400){const list=routeStops();stop=Math.max(0,Math.min(list.length-1,Number.isFinite(index)?index:0));const r=list[stop];
  if(mode==='walk')showTourSpace(r);viewLink({walk:1,tour:routeKey,stop});
