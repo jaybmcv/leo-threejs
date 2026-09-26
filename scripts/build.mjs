@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {build} from 'esbuild';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
+import {writeViewerPage} from './viewer-page.mjs';
 import {createShip,CABINS,DECKS,SPEC,ROUTE,COMMONS} from '../src/model.js';
 
 const out=path.resolve('output/leo-interior-v01');await fs.mkdir(out,{recursive:true});
@@ -18,9 +18,7 @@ for(const [name,root] of [['leo-full-ship',ship.root],['leo-exterior',ship.exter
 }
 await fs.writeFile(path.join(out,'cabin-schedule.csv'),'id,neighborhood,deck,x_m,floor_y_m,z_m,envelope_width_m,envelope_depth_m,envelope_height_m,berths\n'+CABINS.map(c=>[c.id,c.neighborhood,c.deck,c.x.toFixed(2),c.y.toFixed(2),c.z.toFixed(2),c.width,c.depth,c.height,c.berths].join(',')).join('\n')+'\n');
 await fs.writeFile(path.join(out,'design-data.json'),JSON.stringify({spec:SPEC,decks:DECKS,commons:COMMONS,route:ROUTE},null,2));
-const result=await build({entryPoints:['src/viewer.js'],bundle:true,minify:true,format:'iife',write:false,target:'es2022',legalComments:'eof'});
-const html=(await fs.readFile('src/viewer.html','utf8')).replace('/* BUNDLE */',()=>result.outputFiles[0].text.replaceAll('</script','<\\/script'));
-await fs.writeFile(path.join(out,'index.html'),html);await fs.copyFile('README.md',path.join(out,'README.md'));
+await writeViewerPage(out);await fs.copyFile('README.md',path.join(out,'README.md'));
 await fs.copyFile('node_modules/three/LICENSE',path.join(out,'THREE-LICENSE.txt'));
 await fs.mkdir(path.join(out,'comparison'),{recursive:true});
 for(const view of ['top','concept','side'])await fs.copyFile(`output/leo-exterior-v30/renders/exterior-${view}-shape.png`,path.join(out,`comparison/exterior-v30-${view}.png`));

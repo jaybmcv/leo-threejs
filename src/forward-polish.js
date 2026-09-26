@@ -9,8 +9,14 @@ const LOUNGE={minX:169.8,maxX:213,halfZ:42,minY:25.5,maxY:34.5};
 const RAMP={x0:146,x1:170},LEVEL_RUNNER_X=132.2,ART_SIZE=1.6,ART_CENTRE=2.15;// frame bottom 1.27 m, wainscot top 1.1 m
 // Framed Mars Cats Voyage artwork (from the website's own images) along the promenade's right wall.
 const PROMENADE_ART=['art-close-encounter.jpg','art-astronaut-cat.jpg','art-spacesuit-cat.jpg','art-anniversary.jpg'];
-const artTexture=name=>{const t=new T.TextureLoader().load('brand/'+name);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return t;};
-export const artMaterial=name=>{const map=artTexture(name);return new T.MeshStandardMaterial({map,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.35,roughness:.6});};
+// The artwork is only shown on the tours, so it downloads on the first walk rather than with the page. Each material
+// starts with an empty texture that the image later fills, so its shader (warmed with a map) never has to change.
+const pendingArt=[];
+export const artMaterial=name=>{const map=new T.Texture();map.colorSpace=T.SRGBColorSpace;map.anisotropy=4;pendingArt.push([name,map]);return new T.MeshStandardMaterial({map,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.35,roughness:.6});};
+export function loadTourArt(){
+ if(!pendingArt.length)return;const loader=new T.ImageLoader();
+ for(const [name,map] of pendingArt.splice(0))loader.load('brand/'+name,image=>{map.image=image;map.needsUpdate=true;},undefined,()=>console.warn('Tour artwork is missing:',name));
+}
 const within=(b,o)=>{const c=new T.Box3().setFromObject(o).getCenter(new T.Vector3());return c.x>b.minX&&c.x<b.maxX&&Math.abs(c.z)<b.halfZ&&c.y>b.minY&&c.y<b.maxY;};
 
 const runnerStripes=()=>canvasTexture(512,128,(g,w,h)=>{
