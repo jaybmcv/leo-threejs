@@ -75,9 +75,10 @@ for(let n=1;n<=10;n++){const o=document.createElement('option');o.value=n;o.text
 const areasRoot=new T.Group();areasRoot.visible=false;scene.add(areasRoot);const areaCache=new Map();let activeArea=SHIP_AREAS.find(a=>a.kind==='farm'),areaView='overview';
 $('area-count').textContent=SHIP_AREAS.length;
 for(const deck of [...new Set(SHIP_AREAS.map(a=>a.deck))].sort((a,b)=>a-b)){const group=document.createElement('optgroup');group.label='Deck '+deck;for(const a of SHIP_AREAS.filter(a=>a.deck===deck)){const option=document.createElement('option');option.value=a.id;option.textContent=a.name;group.append(option);}$('area-select').append(group);}
+function ensureArea(area){if(!areaCache.has(area.id)){const room=createShipArea(area);areaCache.set(area.id,room);areasRoot.add(room.root);}return areaCache.get(area.id);}
 function showArea(id=activeArea.id,view=areaView){
   activeArea=SHIP_AREAS.find(a=>a.id===id)||activeArea;areaView=view;
-  if(!areaCache.has(activeArea.id)){const room=createShipArea(activeArea);areaCache.set(activeArea.id,room);areasRoot.add(room.root);}
+  ensureArea(activeArea);
   for(const [key,room] of areaCache)room.root.visible=key===activeArea.id;
   const room=areaCache.get(activeArea.id);room.shell.visible=view==='inside';$('area-select').value=activeArea.id;$('area-deck').textContent=activeArea.deck;$('area-description').textContent=activeArea.description;
   setTitle(activeArea.name);$('view-description').textContent=activeArea.category+' · Deck '+activeArea.deck;$('status').textContent=activeArea.name+' · '+(view==='inside'?'1.7 m eye level':activeArea.width+' × '+activeArea.depth+' m concept area');
@@ -89,15 +90,20 @@ function showArea(id=activeArea.id,view=areaView){
 $('locate-area').addEventListener('click',async()=>{ $('deck-select').value=activeArea.deck-1; $('isolate').checked=true; $('shell-context').checked=false; await setMode('layout'); setCamera('ortho',[0,600,.01],[0,0,0],0); });
 $('area-select').addEventListener('change',()=>showArea($('area-select').value));document.querySelectorAll('[data-area-view]').forEach(b=>b.addEventListener('click',()=>showArea(activeArea.id,b.dataset.areaView)));
 let transitView=null,transitKey='',transitDeck=17,transitCore='forward',transitPose='overview',previewTransit=null;
+// The forward core shown inside the neighborhood and on the home tour (it carries lights, so the warm-up builds it too).
+function ensurePreviewTransit(){if(!previewTransit){previewTransit=createTransit({minimumDeck:15,maximumDeck:19,coreIds:['forward']});ship.detail.root.add(previewTransit.root);}return previewTransit;}
 const transitScene=new T.Group();scene.add(transitScene);transitScene.visible=false;
 for(let d=1;d<=20;d++){const o=document.createElement('option');o.value=d;o.textContent='Deck '+d+' · '+DECKS[d-1].name;$('transit-deck').append(o);}
-function showTransit(){
-  const core=TRANSIT_CORES.find(c=>c.id===transitCore);transitDeck=Math.min(transitDeck,core.lastDeck);
-  const nextKey=transitCore+'-'+transitDeck;
-  if(nextKey!==transitKey){transitView?.root.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose();});transitScene.clear();transitKey=nextKey;
+// Builds the three-deck transit cutaway for the current core and deck, replacing the previous one.
+function ensureTransitView(core=TRANSIT_CORES.find(c=>c.id===transitCore)){
+  const nextKey=transitCore+'-'+transitDeck;if(nextKey===transitKey)return;
+  transitView?.root.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose();});transitScene.clear();transitKey=nextKey;
   transitView=createTransit({minimumDeck:transitDeck>=17&&transitDeck<=19?17:Math.max(1,transitDeck-1),maximumDeck:transitDeck>=17&&transitDeck<=19?19:Math.min(core.lastDeck,transitDeck+1),coreIds:[transitCore]});transitScene.add(transitView.root);transitView.shell.visible=transitPose==='inside';
   if(transitDeck>=17){for(const number of (transitCore==='forward'?[9,10]:[1,2])){const g=createGardenCommons(number,ship.detail);g.walls.visible=transitPose==='inside';transitScene.add(g.root);}}
-  }
+}
+function showTransit(){
+  const core=TRANSIT_CORES.find(c=>c.id===transitCore);transitDeck=Math.min(transitDeck,core.lastDeck);
+  ensureTransitView(core);
   transitView.shell.visible=transitPose!=='overview';transitScene.traverse(o=>{if(o.name==='Garden_walls_and_ceiling')o.visible=transitPose!=='overview';});
   document.body.dataset.eye=transitPose==='overview'?'0':'1';
   $('transit-deck').value=transitDeck;$('transit-core').value=transitCore;
@@ -140,12 +146,16 @@ function dressCosmo(now){
 // The upper aft rooms are cutaways in the aft systems view; tours walk through them, so their walls and ceilings show.
 const upperAftShells=[];const showUpperAftShells=on=>upperAftShells.forEach(o=>{o.visible=on;});
 for(const [key,v]of Object.entries(AFT_VIEWS)){const o=document.createElement('option');o.value=key;o.textContent=v.name;$('aft-section').append(o);}
-function showAft(){
+// Builds the aft model once (the aft systems view, the engineering and fin tours, and the idle warm-up use it).
+function ensureAftModel(){
  if(!aftModel){aftModel=createAft();aftScene.add(aftModel.root);polishCrown(aftModel.root);const rooms=new T.Group();rooms.name='Existing_aft_engineering';
   for(const area of SHIP_AREAS.filter(a=>a.category==='Aft engineering')){const r=createShipArea(area);r.shell.visible=false;rooms.add(r.root);}const c=createSpecialCirculation(7);c.shell.visible=false;rooms.add(c.root);aftScene.add(rooms);
   const upper=new T.Group();upper.name='Upper_aft_commons';for(const a of SHIP_AREAS.filter(a=>a.upperAft)){const r=createShipArea(a);r.shell.visible=false;upperAftShells.push(r.shell);upper.add(r.root);}for(const d of [16,17]){const r=createSpecialCirculation(d);r.shell.visible=false;upperAftShells.push(r.shell);upper.add(r.root);}aftScene.add(upper);
   aftGhost=ship.exterior.clone(true);aftGhost.name='Aft_shell_context';aftGhost.traverse(o=>{if(o.isMesh){const ms=(Array.isArray(o.material)?o.material:[o.material]).map(m=>{const n=m.clone();n.transparent=true;n.opacity=.1;n.depthWrite=false;n.clippingPlanes=[new T.Plane(new T.Vector3(-1,0,0),-132)];return n;});o.material=Array.isArray(o.material)?ms:ms[0];o.castShadow=false;}});aftGhost.traverse(o=>o.visible=true);aftGhost.getObjectByName('Fin_panorama_lounge')?.removeFromParent();aftScene.add(aftGhost);renderer.localClippingEnabled=true;
  }
+}
+function showAft(){
+ ensureAftModel();
  const v=AFT_VIEWS[aftSection];if(!v.eye)aftEye=false;
  const crownSky=aftSection==='crown'&&aftEye;stars.visible=crownSky;mars.visible=crownSky;scene.background.set(crownSky?0x0a1422:0xbac8cd);
  for(const [key,g]of Object.entries(aftModel.parts))g.visible=aftSection==='overview'||key===aftSection||(aftSection==='pods'&&key==='access');
@@ -282,7 +292,7 @@ async function loadExterior(){
   if(mode==='areas')showArea();
   if(mode==='transit')showTransit();
   if(mode==='aft')showAft();if(mode==='exterior')exteriorStage();
-  if(mode==='neighborhood'||mode==='walk'){if(!previewTransit){previewTransit=createTransit({minimumDeck:15,maximumDeck:19,coreIds:['forward']});ship.detail.root.add(previewTransit.root);}previewTransit.shell.visible=mode==='walk'||$('detail-walls').checked;}
+  if(mode==='neighborhood'||mode==='walk'){ensurePreviewTransit();previewTransit.shell.visible=mode==='walk'||$('detail-walls').checked;}
   if(mode==='neighborhood'){
     const v=districtView(),enclosed=$('detail-walls').checked;
     ship.detail.walls.visible=enclosed;ship.detail.districtWalls.visible=enclosed;
@@ -307,13 +317,21 @@ function viewCamera(view){if(mode==='exterior')viewLink({camera:view});document.
   if(view==='windows')setCamera('persp',[0,32,195],[-10,13,65]);
   if(view==='engine')setCamera('persp',[-405,22,187],[-268,-16,122]);
 }
-function updateDeck(){const selected=Number($('deck-select').value),isolate=$('isolate').checked,d=DECKS[selected];
+// Builds the decks the layout view shows for the selected deck (also run by the idle warm-up).
+function ensureLayoutDecks(selected=Number($('deck-select').value),isolate=$('isolate').checked){
   for(const deck of DECKS)if(isolate?deck.index===selected:deck.index<=selected){ship.ensureServiceDeck(deck.number);ship.ensureResidentialDeck(deck.number);}
-  viewLink({deck:selected+1});
+  ship.ensureAft();ship.ensureTransit();ship.ensureObservation();if(selected>=16&&selected<=18)ship.ensureGardens();
+}
+// The layout view's 3D state for a deck selection: which decks, aft parts and cores show, and the faded port hull.
+function applyDeckView(selected=Number($('deck-select').value),isolate=$('isolate').checked){
+  ensureLayoutDecks(selected,isolate);
   ship.decks.forEach((g,i)=>g.visible=isolate?i===selected:i<=selected);
   const aft=ship.ensureAft();aft.root.visible=true;for(const [key,g]of Object.entries(aft.parts))g.visible=({drive:selected>=7&&selected<=13,tanks:selected>=3&&selected<=6,pods:selected===5,access:selected>=3&&selected<=16,fin:selected>=16})[key];aft.shells.forEach(o=>o.visible=false);
   ship.vertical.visible=false;const tr=ship.ensureTransit();tr.root.visible=true;tr.shell.visible=false;tr.structure.visible=!isolate;for(const [n,g]of tr.decks)g.visible=isolate?n===selected+1:n<=selected+1;ship.ensureObservation().root.visible=selected>=16&&selected<=18;ship.shared.visible=selected>=16&&selected<=18;if(ship.shared.visible)ship.ensureGardens();
   ship.exterior.visible=$('shell-context').checked;ship.starboard.visible=false;ship.port.visible=true;contextOpacity(.14);
+}
+function updateDeck(){const selected=Number($('deck-select').value),isolate=$('isolate').checked,d=DECKS[selected];
+  applyDeckView(selected,isolate);viewLink({deck:selected+1});
   $('deck-cabins').textContent=d.residential?'500':'—';$('deck-berths').textContent=d.residential?'1,000':'—';
   $('deck-description').textContent=d.residential?'500 furnished twin cabins with two beds, desks, storage and compact ensuites, arranged along five 4 m corridors. Four transverse breaks connect the rows.':d.index>=16&&d.index<=18?'Ten shared commons occupy this upper zone, with openings through two gallery decks.':`${d.name}: space reserved for the next design pass. Equipment and occupancy are not yet sized.`;
   if(SHIP_AREAS.some(a=>a.deck===d.number))$('deck-description').textContent=(d.residential?'500 furnished cabins plus ':'')+SHIP_AREAS.filter(a=>a.deck===d.number).length+' fitted ship areas, including '+SHIP_AREAS.filter(a=>a.deck===d.number).map(a=>a.category).filter((c,i,list)=>list.indexOf(c)===i).join(' and ').toLowerCase()+'. Use Ship areas to inspect each space.';
@@ -447,6 +465,41 @@ if(touchScreen){let settle=0;const setRatio=r=>{if(renderer.getPixelRatio()!==r)
 // depth precision than desktops, belly panels a few cm apart otherwise flicker as the ship is flipped.
 const SHIP_CENTER=new T.Vector3(-18,41,0),SHIP_RADIUS=380;
 function fitShipDepth(){const d=camera.position.distanceTo(SHIP_CENTER),near=Math.max(camera.isOrthographicCamera?.1:1,d-SHIP_RADIUS),far=d+SHIP_RADIUS;if(Math.abs(camera.near-near)>.5||Math.abs(camera.far-far)>.5){camera.near=near;camera.far=far;camera.updateProjectionMatrix();}}
+// First visits to a tab used to stall 1–3.5 s while shaders compiled and textures uploaded on the spot. Once the page
+// is idle, build the lazily created views (hidden) and compile each view's materials in parallel under that view's own
+// lighting (each view carries its own lights, which are part of a shader's key), then upload textures a few at a time.
+const idle=()=>new Promise(r=>(globalThis.requestIdleCallback||(f=>setTimeout(f,200)))(()=>r(),{timeout:3000}));
+const WARM_WAIT_MS=12000;
+const WARM_VIEWS=[
+ {root:()=>ship.inside,exterior:true,layout:true},{root:()=>ship.exterior,exterior:true,layout:true},// deck layout: decks and the faded hull
+ {root:()=>ship.detail.root},// neighborhood
+ {root:()=>areasRoot},{root:()=>transitScene},{root:()=>aftModel&&aftScene},
+ {root:()=>ship.detail.root,walk:true},// home tour
+ {root:()=>aftModel&&aftScene,walk:true},// engineering and fin tours
+];
+// Show the scene as one view does (the other views hidden) for the duration of `run`, then put everything back.
+// Synchronous, so no on-screen frame ever sees the borrowed state.
+function asView({root,exterior=false,walk=false,layout=false},run){
+ const node=root();if(!node)return null;const saved=[ship.exterior,ship.inside,ship.detail.root,aftScene,areasRoot,transitScene,tourExtras,thrusters?.root].filter(Boolean).map(o=>[o,o.visible]);
+ ship.exterior.visible=exterior;ship.inside.visible=false;ship.detail.root.visible=false;aftScene.visible=false;areasRoot.visible=false;transitScene.visible=false;tourExtras.visible=walk;node.visible=true;
+ // The thruster glow carries three lights and shows only with the exterior (see animate).
+ if(thrusters)thrusters.root.visible=exterior&&$('thruster-glow').checked;
+ // The layout view shows only the port half of the hull, faded to 14 % (transparent variants of its materials).
+ const starboard=ship.starboard.visible;if(layout)applyDeckView();
+ try{return run(node);}finally{for(const [o,v] of saved)o.visible=v;if(layout){ship.starboard.visible=starboard;contextOpacity(1);}}
+}
+// Compile a view's materials in parallel (KHR_parallel_shader_compile), with the view briefly detached so its own
+// lights are counted once.
+const compileView=view=>asView(view,node=>{const parent=node.parent;parent.remove(node);try{return renderer.compileAsync(node,persp,scene);}finally{parent.add(node);}});
+let warmStarted=false;
+async function warmViews(){
+ if(warmStarted)return;warmStarted=true;
+ const t0=performance.now();
+ while((!exteriorReady&&exteriorLoad||!cosmoKit)&&performance.now()-t0<WARM_WAIT_MS)await idle();
+ const builders=[()=>{if(exteriorReady)ensureAftModel();},()=>{if(exteriorReady)ensureLayoutDecks();},()=>ensureArea(activeArea),()=>ensureTransitView(),()=>ensurePreviewTransit()];
+ for(const build of builders){await idle();try{build();}catch(e){console.warn('Warm-up skipped a view.',e);}}
+ for(const view of WARM_VIEWS){await idle();try{await compileView(view);}catch(e){console.warn('Shader warm-up stopped.',e);return;}}
+}
 function animate(now){requestAnimationFrame(animate);dressCosmo(now);tickShadows(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);camera.lookAt(controls.target);if(t===1)transition=null;}if(mode!=='walk')controls.update(delta);if(mode==='exterior'||mode==='layout')fitShipDepth();if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
 $('save-render').addEventListener('click',async()=>{
   if(exporting)return;exporting=true;$('save-render').disabled=true;$('render-status').textContent='Rendering exterior…';
@@ -527,4 +580,5 @@ $('save-interior').addEventListener('click',async()=>{
  $('loading').hidden=true;requestAnimationFrame(animate);
  // Tour and room deep links never load the exterior, so Cosmo cannot wait for it.
  setTimeout(loadCosmo,1500);
+ setTimeout(warmViews,3000);
 })().catch(e=>showError(e.message));
