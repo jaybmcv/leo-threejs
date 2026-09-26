@@ -37,7 +37,7 @@ The viewer opens in the Mars Cats Voyage visitor theme, matched to marscatsvoyag
 
 ## Cosmo, the crew cat
 
-Every cat figure in the viewer is Cosmo (`src/vendor/cosmo/`, from the Cosmo-ThreeJS package). `src/cosmo.js` poses the T-pose rig with relaxed arms and bakes it into four shared static meshes; `scripts/build-cosmo.mjs` bundles it as `cosmo.js`, which the viewer loads after the exterior is up and uses to replace the `Mars_cat_1.75m` and `Resident_scale_1_75m` blockout figures. The exported GLBs still contain the blockout figures.
+Every cat figure in the viewer is Cosmo (`src/vendor/cosmo/`, from the Cosmo-ThreeJS package). `src/cosmo.js` poses the T-pose rig with relaxed arms and bakes it into four shared static meshes; `scripts/build-cosmo.mjs` bundles it and `scripts/viewer-page.mjs` writes it as a content-hashed `cosmo.<hash>.js` (see Load speed), which the viewer loads after the exterior is up and uses to replace the `Mars_cat_1.75m` and `Resident_scale_1_75m` blockout figures. The exported GLBs still contain the blockout figures.
 
 ## Preserve the design
 
