@@ -485,8 +485,9 @@ function asView({root,exterior=false,walk=false,layout=false},run){
  // The thruster glow carries three lights and shows only with the exterior (see animate).
  if(thrusters)thrusters.root.visible=exterior&&$('thruster-glow').checked;
  // The layout view shows only the port half of the hull, faded to 14 % (transparent variants of its materials).
+ // Afterwards the hull goes back to the current view's fade (14 % while the layout view is open).
  const starboard=ship.starboard.visible;if(layout)applyDeckView();
- try{return run(node);}finally{for(const [o,v] of saved)o.visible=v;if(layout){ship.starboard.visible=starboard;contextOpacity(1);}}
+ try{return run(node);}finally{for(const [o,v] of saved)o.visible=v;if(layout){ship.starboard.visible=starboard;contextOpacity(mode==='layout'?.14:1);}}
 }
 // Compile a view's materials in parallel (KHR_parallel_shader_compile), with the view briefly detached so its own
 // lights are counted once.
