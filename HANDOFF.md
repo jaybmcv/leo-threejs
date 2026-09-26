@@ -64,3 +64,11 @@ For a static web distribution, run `npm run build:public` after the main build. 
 The `.openai/hosting.json` file identifies the existing Sites deployment. Another tool should build locally and should not deploy to that project or change its access unless the owner explicitly requests it.
 
 Suggested instruction to another tool: “Read HANDOFF.md, install and build the project, then inspect the Captain's bridge in the actual Three.js viewer. Preserve the existing ship geometry and layout; improve its presentation using the real source and assets rather than replacing it with a mockup.”
+
+## Load speed
+
+- The build writes `index.html` with the viewer and Cosmo as content-hashed files (`viewer.<hash>.js`, `cosmo.<hash>.js`, see `scripts/viewer-page.mjs`), so hosts can cache them for a year: a change always gets a new name. The Vercel project for leo.marscatsvoyage.com sets `Cache-Control: public, max-age=31536000, immutable` for them in its `vercel.json`.
+- Fonts ship as WOFF2 built from the OFL sources in `src/fonts-src` by `python scripts/build-fonts.py` (all weights kept; Archivo's unused width axis pinned at 100 %; subset to Latin, Greek, punctuation, arrows, maths and shapes).
+- Reflection lighting is baked into `src/brand/environment.png` (RGBE; `src/environment.js`). After changing the environment, open the viewer with `?studio=1&bake=environment` and save the download over that file. If the file is missing the viewer prefilters it at startup, as before.
+- Cosmo's textures and geometry literals are compacted by `python scripts/shrink-cosmo-textures.py` (see `src/vendor/cosmo/README.md`).
+- The tour artwork loads on the first walk; the first frame's shaders compile in parallel behind the loading screen, and each tab's shaders warm while idle (`warmViews` in `src/viewer.js`).

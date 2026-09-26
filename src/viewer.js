@@ -13,13 +13,13 @@ import {createSpecialCirculation} from './special-circulation.js';
 import {createTransit,TRANSIT_CORES,floorY} from './transit.js';
 import {polishTourDeck} from './tour-polish.js';
 import {createMars} from './mars.js';
-import {polishCrown} from './forward-polish.js';
+import {loadEnvironment,bakeEnvironmentPNG} from './environment.js';
+import {polishCrown,loadTourArt} from './forward-polish.js';
 import {encloseAftTour,encloseResidentialConnection} from './tour-enclosures.js';
 import {SHIP_AREAS,createShipArea} from './areas.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createShip,createResidentialDeck,createGardenCommons,DECKS,ROUTE,SAMPLE,COMMONS } from './model.js';
 
 const $=id=>document.getElementById(id);
@@ -45,7 +45,8 @@ renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.
 $('viewport').appendChild(renderer.domElement);
 const spaceBackdrop=createSpaceBackdrop(touchScreen?{scale:.5,fps:30}:{});
 const scene=new T.Scene();scene.background=new T.Color(0xbac8cd);
-const pmrem=new T.PMREMGenerator(renderer);const room=new RoomEnvironment();scene.environment=pmrem.fromScene(room,.04).texture;scene.environmentIntensity=.4;room.dispose();pmrem.dispose();
+// Reflection lighting: baked, decoded on the GPU while the models download (src/environment.js).
+scene.environmentIntensity=.4;const environmentReady=loadEnvironment(renderer).then(texture=>{scene.environment=texture;});
 const hemi=new T.HemisphereLight(0xf3f4eb,0x657481,.7);scene.add(hemi);
 const key=new T.DirectionalLight(0xfff4dc,1.8);key.position.set(160,420,250);key.castShadow=true;key.shadow.mapSize.set(2048,2048);Object.assign(key.shadow.camera,{left:-380,right:380,top:270,bottom:-270,near:1,far:1200});key.shadow.bias=-.0003;key.shadow.normalBias=.15;scene.add(key);
 const fill=new T.DirectionalLight(0xd7ebff,.55);fill.position.set(-260,200,-180);scene.add(fill);
@@ -127,7 +128,7 @@ const aftScene=new T.Group();scene.add(aftScene);aftScene.visible=false;
 let cosmoKit=null,cosmoSweep=0;const cosmoPending=new Set();
 function loadCosmo(){
  if(loadCosmo.started)return;loadCosmo.started=true;globalThis.LEO_THREE=T;
- const script=Object.assign(document.createElement('script'),{src:'cosmo.js',async:true});
+ const script=Object.assign(document.createElement('script'),{src:__COSMO_SCRIPT__,async:true});// the build's hashed cosmo.<hash>.js
  script.onload=()=>globalThis.LeoCosmo.createCosmoKit().then(kit=>{cosmoKit=kit;cosmoPending.add(scene);}).catch(err=>console.warn('Cosmo could not load; keeping the blockout figures.',err));
  script.onerror=()=>console.warn('cosmo.js is missing; keeping the blockout figures.');
  document.head.appendChild(script);
@@ -276,7 +277,7 @@ async function loadExterior(){
   aftScene.visible=mode==='aft';transitScene.visible=mode==='transit';areasRoot.visible=mode==='areas';ship.inside.visible=mode==='layout';ship.detail.root.visible=(mode==='neighborhood'&&activeDistrict===10)||mode==='walk';
   if(mode==='neighborhood')districtView();for(const [number,v]of districtViews)v.root.visible=mode==='neighborhood'&&number===activeDistrict;
   dimensions.visible=mode==='exterior'&&$('dimensions').checked;grid.visible=mode==='exterior'||mode==='layout';pad.visible=grid.visible;
-  stars.visible=mode==='walk';mars.visible=mode==='walk'||mode==='neighborhood';tourExtras.visible=mode==='walk';if(aftTourShell)aftTourShell.visible=mode==='walk';showUpperAftShells(mode==='walk');controls.enabled=mode!=='walk';controls.enablePan=true;controls.minDistance=(['neighborhood','walk','areas','transit','aft'].includes(mode))?1:50;controls.maxDistance=mode==='neighborhood'?400:2200;
+  stars.visible=mode==='walk';mars.visible=mode==='walk'||mode==='neighborhood';tourExtras.visible=mode==='walk';if(mode==='walk')loadTourArt();if(aftTourShell)aftTourShell.visible=mode==='walk';showUpperAftShells(mode==='walk');controls.enabled=mode!=='walk';controls.enablePan=true;controls.minDistance=(['neighborhood','walk','areas','transit','aft'].includes(mode))?1:50;controls.maxDistance=mode==='neighborhood'?400:2200;
   $('save-interior').hidden=!['walk','neighborhood','areas','transit','aft'].includes(mode);$('interior-render-status').textContent='';$('route').hidden=mode!=='walk';$('walk-help').hidden=mode!=='walk';$('stamp').hidden=mode==='walk';
   $('stamp').lastChild.textContent=['neighborhood','areas','transit','aft'].includes(mode)?'INTERIOR STUDY · 01':studioTools?'EXTERIOR FINISH · V35':'564 m · 20 decks · 10,000 aboard';
   $('foot-note').textContent=mode==='walk'?'Drag to look · follow the route':'Drag to orbit · scroll to zoom · right-drag to pan';
@@ -501,6 +502,14 @@ async function warmViews(){
  for(const build of builders){await idle();try{build();}catch(e){console.warn('Warm-up skipped a view.',e);}}
  for(const view of WARM_VIEWS){await idle();try{await compileView(view);}catch(e){console.warn('Shader warm-up stopped.',e);return;}}
 }
+// The first frame used to freeze ~1.7 s compiling its shaders on the spot. Compile what it will show in parallel
+// (KHR_parallel_shader_compile) while the loading screen is up, capped so a slow driver never holds the page.
+const FIRST_FRAME_WAIT_MS=6000;
+function firstFrameReady(){
+ // compileAsync walks `scene.traverse`; this stand-in walks only what is visible, so hidden views are left to warmViews.
+ const visibleOnly={traverse:fn=>scene.traverseVisible(fn),traverseVisible(){}};
+ return Promise.race([renderer.compileAsync(visibleOnly,camera,scene),new Promise(r=>setTimeout(r,FIRST_FRAME_WAIT_MS))]).catch(e=>console.warn('First-frame compile skipped.',e));
+}
 function animate(now){requestAnimationFrame(animate);dressCosmo(now);tickShadows(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);camera.lookAt(controls.target);if(t===1)transition=null;}if(mode!=='walk')controls.update(delta);if(mode==='exterior'||mode==='layout')fitShipDepth();if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
 $('save-render').addEventListener('click',async()=>{
   if(exporting)return;exporting=true;$('save-render').disabled=true;$('render-status').textContent='Rendering exterior…';
@@ -578,7 +587,9 @@ $('save-interior').addEventListener('click',async()=>{
  else if(mode==='exterior'){const view=params.get('camera');viewCamera(['concept','perspective','top','side','front','aft','bow','engine','windows','aftwindows','enginewindows'].includes(view)?view:'top');}
  if(!areaId&&params.get('walk')==='1'){setMode('walk');goStop(params.has('stop')?Number(params.get('stop')):(({cabin:0,garden:3,observation:5})[initial]??0),0);}
  if(!areaId&&initial&&params.get('eye')==='1'&&(activeDistrict!==10||initial==='nose'))$('enter-space').click();
+ await environmentReady;await firstFrameReady();
  $('loading').hidden=true;requestAnimationFrame(animate);
+ if(studioTools&&params.get('bake')==='environment')bakeEnvironmentPNG(renderer).then(blob=>Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:'environment.png'}).click());
  // Tour and room deep links never load the exterior, so Cosmo cannot wait for it.
  setTimeout(loadCosmo,1500);
  setTimeout(warmViews,3000);
