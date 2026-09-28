@@ -288,7 +288,7 @@ async function loadExterior(){
   document.querySelectorAll('#m-menu button,#m-steps-bar button').forEach(b=>b.classList.toggle('on',b.dataset.mode===mode));
   $('m-steps-count').firstChild.textContent=String(STEP_ORDER.indexOf(mode)+1).padStart(2,'0');
   scene.background.set(mode==='walk'?0x0a1422:0xbac8cd);scene.environmentIntensity=mode==='walk'?.65:.4;hemi.intensity=mode==='walk'?.65:.7;key.intensity=mode==='walk'?.7:1.8;fill.intensity=mode==='walk'?.25:.55;rim.intensity=mode==='walk'?.25:.65;
-  if(mode==='exterior'){viewCamera('perspective');$('status').textContent=studioTools?'Exterior V35 / refined surfaces':'Exterior · refined surfaces';}
+  if(mode==='exterior'){viewCamera(studioTools?'perspective':'boarding');$('status').textContent=studioTools?'Exterior V35 / refined surfaces':'Exterior · refined surfaces';}
   if(mode==='layout'){updateDeck();setCamera('persp',[420,360,460],[0,-5,0]);}
   if(mode==='areas')showArea();
   if(mode==='transit')showTransit();
@@ -304,9 +304,15 @@ async function loadExterior(){
   }
   if(mode==='walk'){ship.detail.walls.visible=true;ship.detail.districtWalls.visible=true;ship.detail.district.visible=true;stop=0;goStop(0,0);$('status').textContent='Guided route · artificial gravity assumed';}
 }
+// The website's "Step inside Leo" turns the ship to show its port quarter from behind and above, fin toward you. The
+// viewer opens on the same side. With the intro card and panel beside it, the orbit centre sits off the hull so Leo
+// lands in the open space between them (aft on desktops, forward and higher on tablets); phones centre on the hull.
+const BOARDING_OFFSET=[-160,320,880],BOARDING_TARGET={phone:[-40,40,0],tablet:[20,120,0],desktop:[-140,70,0]};
+function boardingCamera(width){const target=BOARDING_TARGET[width<=680?'phone':width<1200?'tablet':'desktop'];return {position:target.map((v,i)=>v+BOARDING_OFFSET[i]),target};}
 function viewCamera(view){if(mode==='exterior')viewLink({camera:view});document.querySelectorAll('[data-camera]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.camera===view));
   persp.fov=view==='concept'?37:42;persp.updateProjectionMatrix();
   if(view==='concept')setCamera('persp',[340,455,650],[0,20,0]);
+  if(view==='boarding'){const {position,target}=boardingCamera($('viewport').clientWidth);setCamera('persp',position,target);}
   if(view==='perspective')setCamera('persp',[460,300,500],[0,15,0]);
   if(view==='top')setCamera('ortho',[0,1000,.01],[0,0,0]);
   if(view==='side')setCamera('ortho',[0,30,1000],[0,30,0]);
@@ -519,9 +525,10 @@ $('save-render').addEventListener('click',async()=>{
   try{
     visibility.forEach(([o])=>o.visible=false);scene.background.set(0x344554);renderer.setPixelRatio(1);renderer.setSize(width,height,false);
     let renderCamera;
-    if(['perspective','concept','aft','bow','engine','windows','aftwindows','enginewindows'].includes(view)){
+    if(['boarding','perspective','concept','aft','bow','engine','windows','aftwindows','enginewindows'].includes(view)){
       renderCamera=new T.PerspectiveCamera(42,width/height,1,6000);
       renderCamera.position.set(...(view==='aft'?[-512,299,512]:[405,265,445]));renderCamera.lookAt(0,20,0);
+      if(view==='boarding'){const {position,target}=boardingCamera(0);renderCamera.position.set(...position);renderCamera.lookAt(...target);}
       if(view==='concept'){renderCamera.position.set(340,455,650);renderCamera.lookAt(0,20,0);renderCamera.fov=37;renderCamera.updateProjectionMatrix();}
       if(view==='bow'){renderCamera.position.set(430,112,245);renderCamera.lookAt(211,14,0);renderCamera.far=500;renderCamera.updateProjectionMatrix();}
       if(view==='enginewindows'){renderCamera.position.set(-362,39,302);renderCamera.lookAt(-228,-9,79);}
@@ -584,7 +591,7 @@ $('save-interior').addEventListener('click',async()=>{
  await setMode(params.has('aft')?'aft':params.has('transit')?'transit':areaId?'areas':initial?'neighborhood':deck>=1&&deck<=20?'layout':params.get('walk')==='1'?'walk':'exterior');
  if(areaId)showArea(areaId,params.get('view')==='inside'?'inside':'overview');
  else if(initial)focusDetail(['cabin','garden','observation','nose','all'].includes(initial)?initial:'observation');
- else if(mode==='exterior'){const view=params.get('camera');viewCamera(['concept','perspective','top','side','front','aft','bow','engine','windows','aftwindows','enginewindows'].includes(view)?view:'top');}
+ else if(mode==='exterior'){const view=params.get('camera');viewCamera(['boarding','concept','perspective','top','side','front','aft','bow','engine','windows','aftwindows','enginewindows'].includes(view)?view:'top');}
  if(!areaId&&params.get('walk')==='1'){setMode('walk');goStop(params.has('stop')?Number(params.get('stop')):(({cabin:0,garden:3,observation:5})[initial]??0),0);}
  if(!areaId&&initial&&params.get('eye')==='1'&&(activeDistrict!==10||initial==='nose'))$('enter-space').click();
  await environmentReady;await firstFrameReady();
