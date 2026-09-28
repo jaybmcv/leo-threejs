@@ -256,12 +256,13 @@ async function loadExterior(){
       Object.assign(ship,{exterior,fixed:exterior.getObjectByName('Wings_engines_tail'),port:exterior.getObjectByName('Port_shell'),starboard:exterior.getObjectByName('Starboard_shell')});
     }
     if(location.protocol==='file:'){prepareCrownExterior(ship.exterior);refineExterior(ship.exterior);attachFinCrown(ship.exterior);}
-    ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);scene.add(thrusters.root);exteriorReady=true;loadCosmo();applyBrandingView();applyShapeView();
+    ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);scene.add(thrusters.root);exteriorReady=true;if(!window.LEO_ARRIVAL)loadCosmo();applyBrandingView();applyShapeView();
   })().catch(e=>{exteriorLoad=null;throw e;});
   await exteriorLoad;
 }
   async function setMode(next){
     stopTurntable();$('turntable').disabled=next==='walk';
+    if(next!=='exterior')loadCosmo(); // held back during the arrival; any view inside the ship wants him now
     noseScene.visible=false;
   const request=++modeRequest;
   if((next==='exterior'||next==='layout'||next==='aft'||(next==='walk'&&routeKey!=='home'))&&!exteriorReady){
@@ -308,6 +309,16 @@ async function loadExterior(){
 // viewer opens on the same side. With the intro card and panel beside it, the orbit centre sits off the hull so Leo
 // lands in the open space between them (aft on desktops, forward and higher on tablets); phones centre on the hull.
 const BOARDING_OFFSET=[-160,320,880],BOARDING_TARGET={phone:[-40,40,0],tablet:[20,120,0],desktop:[-150,140,0]};
+// Opening the plain address, as the website's "Step inside Leo" link does, finishes the website's turn: Leo arrives from a
+// little farther off, still turning and tilted the way the site leaves him, and settles level into the boarding view.
+const ARRIVAL_MS=2400,ARRIVAL_TURN=.26,ARRIVAL_CLOSER=1.12,LEVEL=new T.Vector3(0,1,0),ARRIVAL_UP=new T.Vector3(.24,.97,-.09).normalize();
+function playArrival(){
+  // The whole rig turns about the hull, so Leo stays in place on screen while the view swings round to the boarding side.
+  const {position,target}=boardingCamera($('viewport').clientWidth),toTarget=new T.Vector3(...target);
+  const to=new T.Vector3(...position).sub(toTarget).multiplyScalar(lastFrameScale).add(toTarget);
+  const turned=v=>v.clone().sub(SHIP_CENTER).applyAxisAngle(LEVEL,ARRIVAL_TURN).multiplyScalar(ARRIVAL_CLOSER).add(SHIP_CENTER);
+  transition={start:performance.now(),duration:ARRIVAL_MS,from:turned(to),to,fromTarget:turned(toTarget),toTarget,upFrom:ARRIVAL_UP};
+}
 function boardingCamera(width){const target=BOARDING_TARGET[width<=680?'phone':width<1200?'tablet':'desktop'];return {position:target.map((v,i)=>v+BOARDING_OFFSET[i]),target};}
 function viewCamera(view){if(mode==='exterior')viewLink({camera:view});document.querySelectorAll('[data-camera]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.camera===view));
   persp.fov=view==='concept'?37:42;persp.updateProjectionMatrix();
@@ -516,7 +527,7 @@ function firstFrameReady(){
  const visibleOnly={traverse:fn=>scene.traverseVisible(fn),traverseVisible(){}};
  return Promise.race([renderer.compileAsync(visibleOnly,camera,scene),new Promise(r=>setTimeout(r,FIRST_FRAME_WAIT_MS))]).catch(e=>console.warn('First-frame compile skipped.',e));
 }
-function animate(now){requestAnimationFrame(animate);dressCosmo(now);tickShadows(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);camera.lookAt(controls.target);if(t===1)transition=null;}if(mode!=='walk')controls.update(delta);if(mode==='exterior'||mode==='layout')fitShipDepth();if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
+function animate(now){requestAnimationFrame(animate);dressCosmo(now);tickShadows(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);if(transition.upFrom)camera.up.lerpVectors(transition.upFrom,LEVEL,s).normalize();camera.lookAt(controls.target);if(t===1)transition=null;}if(!transition&&!persp.up.equals(LEVEL))persp.up.copy(LEVEL);if(mode!=='walk')controls.update(delta);if(mode==='exterior'||mode==='layout')fitShipDepth();if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
 $('save-render').addEventListener('click',async()=>{
   if(exporting)return;exporting=true;$('save-render').disabled=true;$('render-status').textContent='Rendering exterior…';
   const view=document.querySelector('[data-camera][aria-pressed="true"]').dataset.camera,shapeOnly=$('shape-only').checked;
@@ -595,9 +606,11 @@ $('save-interior').addEventListener('click',async()=>{
  if(!areaId&&params.get('walk')==='1'){setMode('walk');goStop(params.has('stop')?Number(params.get('stop')):(({cabin:0,garden:3,observation:5})[initial]??0),0);}
  if(!areaId&&initial&&params.get('eye')==='1'&&(activeDistrict!==10||initial==='nose'))$('enter-space').click();
  await environmentReady;await firstFrameReady();
+ if(window.LEO_ARRIVAL&&!reduced&&mode==='exterior')playArrival();
  $('loading').hidden=true;requestAnimationFrame(animate);
  if(studioTools&&params.get('bake')==='environment')bakeEnvironmentPNG(renderer).then(blob=>Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:'environment.png'}).click());
- // Tour and room deep links never load the exterior, so Cosmo cannot wait for it.
- setTimeout(loadCosmo,1500);
+ // Tour and room deep links never load the exterior, so Cosmo cannot wait for it. Building him stalls a frame or two, so
+ // the arrival goes first.
+ setTimeout(loadCosmo,window.LEO_ARRIVAL?ARRIVAL_MS+300:1500);
  setTimeout(warmViews,3000);
 })().catch(e=>showError(e.message));
