@@ -307,7 +307,7 @@ async function loadExterior(){
 // The website's "Step inside Leo" turns the ship to show its port quarter from behind and above, fin toward you. The
 // viewer opens on the same side. With the intro card and panel beside it, the orbit centre sits off the hull so Leo
 // lands in the open space between them (aft on desktops, forward and higher on tablets); phones centre on the hull.
-const BOARDING_OFFSET=[-160,320,880],BOARDING_TARGET={phone:[-40,40,0],tablet:[20,120,0],desktop:[-140,70,0]};
+const BOARDING_OFFSET=[-160,320,880],BOARDING_TARGET={phone:[-40,40,0],tablet:[20,120,0],desktop:[-150,140,0]};
 function boardingCamera(width){const target=BOARDING_TARGET[width<=680?'phone':width<1200?'tablet':'desktop'];return {position:target.map((v,i)=>v+BOARDING_OFFSET[i]),target};}
 function viewCamera(view){if(mode==='exterior')viewLink({camera:view});document.querySelectorAll('[data-camera]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.camera===view));
   persp.fov=view==='concept'?37:42;persp.updateProjectionMatrix();
