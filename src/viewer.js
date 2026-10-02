@@ -5,6 +5,7 @@ import {createNoseCommons,NOSE_COMMONS} from './nose-commons.js';
 import {applyContextOpacity} from './glazing-finish.js';
 import {publicAsset,enablePublicDownloads} from './public-assets.js';
 import {refineExterior} from './exterior-finish.js';
+import {applyConceptPaint} from './concept-paint.js';
 import {createAft} from './aft.js';
 import {AFT_TOUR,FIN_TOUR} from './aft-tour.js';
 import {attachFinCrown,prepareCrownExterior} from './fin-crown.js';
@@ -256,6 +257,7 @@ async function loadExterior(){
       Object.assign(ship,{exterior,fixed:exterior.getObjectByName('Wings_engines_tail'),port:exterior.getObjectByName('Port_shell'),starboard:exterior.getObjectByName('Starboard_shell')});
     }
     if(location.protocol==='file:'){prepareCrownExterior(ship.exterior);refineExterior(ship.exterior);attachFinCrown(ship.exterior);}
+    applyConceptPaint(ship.exterior);
     ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);scene.add(thrusters.root);exteriorReady=true;if(!window.LEO_ARRIVAL)loadCosmo();applyBrandingView();applyShapeView();
   })().catch(e=>{exteriorLoad=null;throw e;});
   await exteriorLoad;
