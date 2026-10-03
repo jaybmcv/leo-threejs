@@ -357,7 +357,7 @@ function exteriorLink(view=document.querySelector('[data-camera][aria-pressed="t
 function ensureExplodeKit(){
  if(explodeKit)return explodeKit;
  for(const deck of DECKS)ship.ensureResidentialDeck(deck.number);ship.ensureGardens();ship.ensureObservation();
- explodeKit=createExplode({exterior:ship.exterior,inside:ship.inside,decks:ship.decks,transit:ship.ensureTransit(),aft:ship.ensureAft(),thrusters});
+ explodeKit=createExplode({ship,transit:ship.ensureTransit(),aft:ship.ensureAft(),thrusters});
  for(const mesh of explodeKit.added)exteriorMeshes.push({mesh,visible:mesh.visible});
  for(const label of explodeKit.labels){const tag=document.createElement('div'),text=document.createElement('b'),detail=document.createElement('span');tag.className='explode-tag';tag.hidden=true;detail.textContent=label.detail;text.append(label.text+' · ',detail);tag.append(text);$('explode-labels').append(tag);explodeTags.push({tag,label});}
  return explodeKit;
@@ -403,7 +403,7 @@ function setExplode(value,{reframe=true}={}){
  const kit=value>0?ensureExplodeKit():explodeKit,before=kit?.frame(explodeValue);explodeValue=value;
  if(kit){
   // Decks built by the deck layout since the last explode join the detail culling.
-  if(value>0&&builtDecks!==ship.serviceDecks.size){builtDecks=ship.serviceDecks.size;kit.refreshDetail();}
+  if(value>0&&builtDecks!==ship.serviceDecks.size){builtDecks=ship.serviceDecks.size;kit.refresh();}
   kit.apply(value);explodeVisibility(value>0);if(value===0){kit.setDetail(0);detailRadius=0;}
   if(reframe&&mode==='exterior')reframeCamera(before,kit.frame(value));
   const r=explodeScale();Object.assign(key.shadow.camera,{left:-380*r,right:380*r,top:270*r,bottom:-270*r,far:1200*r});key.shadow.camera.updateProjectionMatrix();refreshShadows();
@@ -434,13 +434,13 @@ function unpackDecks(){
   ship.ensureServiceDeck(next.number);explodeRoomsAdded();unpackDecks();
  }),400);
 }
-function explodeRoomsAdded(){if(!explodeKit)return;explodeKit.refreshDetail();if(explodeValue>0&&mode==='exterior')explodeVisibility(true);refreshShadows();}
+function explodeRoomsAdded(){if(!explodeKit)return;explodeKit.refresh();if(explodeValue>0&&mode==='exterior')explodeVisibility(true);refreshShadows();}
 function stopExplodePlay(){cancelAnimationFrame(explodePlay);explodePlay=0;}
 // Places the call-outs over the exploded parts; they fade in over the last part of the dial.
 function placeExplodeTags(){
- const show=mode==='exterior'&&explodeValue>.55;
+ const show=mode==='exterior'&&explodeValue>.5;
  if(!show){if(explodeTagsShown){explodeTags.forEach(t=>t.tag.hidden=true);explodeTagsShown=false;}return;}
- explodeTagsShown=true;const alpha=Math.min(1,(explodeValue-.55)/.3).toFixed(2),view=renderer.domElement.getBoundingClientRect();
+ explodeTagsShown=true;const alpha=Math.min(1,(explodeValue-.5)/.2).toFixed(2),view=renderer.domElement.getBoundingClientRect();
  // A call-out that would sit under the intro card or the controls, or across one already placed, is left out rather
  // than half covered. Earlier call-outs in the list take precedence.
  const taken=[...document.querySelectorAll('.intro,.panel')].map(el=>el.getBoundingClientRect()).filter(r=>r.width).map(r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom}));
