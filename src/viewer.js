@@ -321,10 +321,14 @@ function playArrival(){
   const turned=v=>v.clone().sub(SHIP_CENTER).applyAxisAngle(LEVEL,ARRIVAL_TURN).multiplyScalar(ARRIVAL_CLOSER).add(SHIP_CENTER);
   transition={start:performance.now(),duration:ARRIVAL_MS,from:turned(to),to,fromTarget:turned(toTarget),toTarget,upFrom:ARRIVAL_UP};
 }
+// The concept angle keeps the sheet's direction but sits Leo low and back enough that the fin clears the intro card. Short
+// desktop and tablet screens give the card more of the height, so they step a little further back again.
+const CONCEPT_OFFSET=[340,435,650],CONCEPT_FRAME={tall:{target:[0,180,0],scale:1.22},short:{target:[0,235,0],scale:1.42}};
+function conceptCamera(width,height){const {target,scale}=CONCEPT_FRAME[width>680&&height<880?'short':'tall'];return {position:target.map((v,i)=>v+CONCEPT_OFFSET[i]*scale),target};}
 function boardingCamera(width){const target=BOARDING_TARGET[width<=680?'phone':width<1200?'tablet':'desktop'];return {position:target.map((v,i)=>v+BOARDING_OFFSET[i]),target};}
 function viewCamera(view){if(mode==='exterior')viewLink({camera:view});document.querySelectorAll('[data-camera]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.camera===view));
   persp.fov=view==='concept'?37:42;persp.updateProjectionMatrix();
-  if(view==='concept')setCamera('persp',[340,455,650],[0,20,0]);
+  if(view==='concept'){const {position,target}=conceptCamera($('viewport').clientWidth,$('viewport').clientHeight);setCamera('persp',position,target);}
   if(view==='boarding'){const {position,target}=boardingCamera($('viewport').clientWidth);setCamera('persp',position,target);}
   if(view==='perspective')setCamera('persp',[460,300,500],[0,15,0]);
   if(view==='top')setCamera('ortho',[0,1000,.01],[0,0,0]);
