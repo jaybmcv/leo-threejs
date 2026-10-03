@@ -51,10 +51,10 @@ export const ROUTE = [
 export const LOUNGE_TOUR = [
   {...ROUTE[3],detail:'Deck 17 · Neighborhood 10 commons. The observation lounge is a short walk forward.'},
   {...ROUTE[4]},
-  {name:'Into the lounge',detail:'Through the doors, the whole forward window opens up',position:[172,28,-3],target:[205,30.4,3],mars:true},
-  {name:'The shared telescope',detail:'At the centre of the window, a scope for a closer look',position:[198.5,28,3.5],target:[212,29.6,-5],mars:true},
+  {name:'Into the lounge',detail:'Through the doors, the whole forward window opens up',position:[178,28.6,-2.5],target:[206,31.8,-11],mars:true},
+  {name:'The shared telescope',detail:'At the centre of the window, a scope for a closer look',position:[198.5,28,1],target:[212,29.6,-5],mars:true},
   {name:'Seating islands',detail:'Armchairs and table lamps in two islands, leaving the window aisle clear',position:[181,28.6,10],target:[191,27.2,22],mars:true},
-  {name:'Reading corner',detail:'A bench and a wall of books on each side of the lounge',position:[179.5,28,19.5],target:[171,27.6,25],mars:true},
+  {name:'Reading corner',detail:'A bench and a wall of books beneath the Mars Cats art',position:[184,28,18],target:[171,28.4,20],mars:true},
   {name:'Settle in with Mars',detail:'Curved windows, warm light and the red planet outside',position:[180,28,31],target:[210,29,11],mars:true}
 ];
 
