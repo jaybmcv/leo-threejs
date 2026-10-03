@@ -18,7 +18,7 @@ import {loadEnvironment,bakeEnvironmentPNG} from './environment.js';
 import {polishCrown,loadTourArt} from './forward-polish.js';
 import {encloseAftTour,encloseResidentialConnection} from './tour-enclosures.js';
 import {SHIP_AREAS,createShipArea} from './areas.js';
-import {createExplode,explodeStage,ROOM_GROUPS} from './explode.js';
+import {createExplode,explodeStage,ROOM_GROUPS,ROOM_COUNTS,STOPS} from './explode.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -353,11 +353,14 @@ const DETAIL_CAMERAS=['bow','windows','aftwindows','enginewindows','engine'];
 let explodeKit=null,explodeValue=0,explodePlay=0,explodeTagsShown=false,dialDragging=false,unpackTimer=0,builtDecks=-1;const explodeTags=[];
 const exteriorStatus=()=>explodeValue>0?'Exploded view · '+explodeStage(explodeValue):studioTools?'Exterior V35 / refined surfaces':'Exterior · refined surfaces';
 const explodeScale=()=>explodeKit?explodeKit.frame(explodeValue).radius/SHIP_RADIUS:1;
+// Phones frame the exploded ship tighter than its full extent (the parts at the edges run off the sides), so the
+// decks and rooms stay large enough to read on a narrow screen.
+const PHONE_FRAME=.15,viewFrame=v=>{const f=explodeKit.frame(v);if($('viewport').clientWidth<=680)f.radius=SHIP_RADIUS+(f.radius-SHIP_RADIUS)*PHONE_FRAME;return f;};
 function exteriorLink(view=document.querySelector('[data-camera][aria-pressed="true"]')?.dataset.camera||'boarding'){viewLink({camera:view,...(explodeValue>0?{explode:Math.round(explodeValue*100)}:{})});}
 function ensureExplodeKit(){
  if(explodeKit)return explodeKit;
  for(const deck of DECKS)ship.ensureResidentialDeck(deck.number);ship.ensureGardens();ship.ensureObservation();
- explodeKit=createExplode({ship,transit:ship.ensureTransit(),aft:ship.ensureAft(),thrusters});
+ explodeKit=createExplode({ship,transit:ship.ensureTransit(),aft:ship.ensureAft(),thrusters,outline:/^(Smooth_pressure_envelope|Blended_double_delta$|Sculpted_nacelle_shell$|Swept_cat_tail$|Swept_tail_cap$|Crown_exterior$)/});
  for(const mesh of explodeKit.added)exteriorMeshes.push({mesh,visible:mesh.visible});
  for(const label of explodeKit.labels){const tag=document.createElement('div'),text=document.createElement('b'),detail=document.createElement('span');tag.className='explode-tag';tag.hidden=true;detail.textContent=label.detail;text.append(label.text+' · ',detail);tag.append(text);$('explode-labels').append(tag);explodeTags.push({tag,label});}
  return explodeKit;
@@ -393,19 +396,19 @@ function reframeCamera(a,b){
 // An overview camera preset, framed for the current amount of explode.
 function explodedPose(type,position,target){
  if(!explodeKit||explodeValue<=0)return [position,target];
- const a=explodeKit.frame(0),b=explodeKit.frame(explodeValue),k=b.radius/a.radius;
+ const a=viewFrame(0),b=viewFrame(explodeValue),k=b.radius/a.radius;
  if(type==='ortho'){ortho.zoom=1/k;ortho.updateProjectionMatrix();const shift=v=>new T.Vector3(...v).add(b.center).sub(a.center).toArray();return [shift(position),shift(target)];}
  const map=v=>new T.Vector3(...v).sub(a.center).multiplyScalar(k).add(b.center),from=map(position),to=map(target);
  tiltAbout(from,to,(b.tilt-a.tilt)*EXPLODE_TILT);return [from.toArray(),to.toArray()];
 }
 function setExplode(value,{reframe=true}={}){
  value=Math.min(1,Math.max(0,value));if(value>0&&!exteriorReady)return;
- const kit=value>0?ensureExplodeKit():explodeKit,before=kit?.frame(explodeValue);explodeValue=value;
+ const kit=value>0?ensureExplodeKit():explodeKit,before=kit&&viewFrame(explodeValue);explodeValue=value;
  if(kit){
   // Decks built by the deck layout since the last explode join the detail culling.
   if(value>0&&builtDecks!==ship.serviceDecks.size){builtDecks=ship.serviceDecks.size;kit.refresh();}
   kit.apply(value);explodeVisibility(value>0);if(value===0){kit.setDetail(0);detailRadius=0;}
-  if(reframe&&mode==='exterior')reframeCamera(before,kit.frame(value));
+  if(reframe&&mode==='exterior')reframeCamera(before,viewFrame(value));
   const r=explodeScale();Object.assign(key.shadow.camera,{left:-380*r,right:380*r,top:270*r,bottom:-270*r,far:1200*r});key.shadow.camera.updateProjectionMatrix();refreshShadows();
   if(mode==='exterior')controls.maxDistance=2200*r;
  }
@@ -414,6 +417,8 @@ function setExplode(value,{reframe=true}={}){
  $('explode-fill').style.strokeDasharray=`${(179.07*value).toFixed(2)} 238.76`;$('explode-knob').setAttribute('transform',`rotate(${(-135+270*value).toFixed(1)} 50 50)`);
  $('explode-value').firstChild.textContent=percent;$('explode-stage').textContent=explodeStage(value);
  $('explode-play').textContent=value>=.5?'Put Leo back together':'Explode Leo';
+ document.querySelectorAll('#explode-stops button').forEach(b=>b.setAttribute('aria-pressed',String(Math.abs(Number(b.dataset.value)-value)<.005)));
+ hidePick();// the rooms have moved from under the label
  $('explode-legend').hidden=value<.68;$('explode-legend').style.opacity=Math.min(1,(value-.68)/.15).toFixed(2);
  if(mode==='exterior')$('status').textContent=exteriorStatus();
  unpackDecks();
@@ -451,13 +456,64 @@ function placeExplodeTags(){
   taken.push(box);tag.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translateY(-50%)`;tag.style.opacity=alpha;if(!item.width)item.width=tag.offsetWidth;
  }
 }
+// Room labels. Once the rooms scatter, hovering one names it and outlines it in orange, and clicking opens it in its
+// own view (a ship area, nose commons, garden, cabin or the lounge). On a touch screen a tap pins the label, with an
+// Open button. Picking tests box shapes in src/explode.js, not the rooms' meshes.
+const pickRay=new T.Raycaster(),pickNdc=new T.Vector2(),pickOutline=new T.Box3Helper(new T.Box3(),0xf85800);
+Object.assign(pickOutline.material,{depthTest:false,transparent:true});pickOutline.renderOrder=10;pickOutline.visible=false;scene.add(pickOutline);
+let picked=null,pickPinned=false,pickFrame=0,pickPress=null;
+const pickable=()=>mode==='exterior'&&explodeKit&&explodeValue>=.7;
+function pickAt(x,y){const r=renderer.domElement.getBoundingClientRect();pickNdc.set((x-r.left)/r.width*2-1,1-(y-r.top)/r.height*2);pickRay.setFromCamera(pickNdc,camera);return explodeKit.pick(pickRay.ray.origin,pickRay.ray.direction);}
+function describeRoom({info,group}){
+ const use=ROOM_GROUPS.find(g=>g.key===group)?.name||'';
+ if(info.type==='area')return [info.name,(/Deck d/.test(info.name)?'':'Deck '+info.deck+' · ')+use];
+ if(info.type==='nose')return [NOSE_COMMONS[info.neighborhood-1].name,'Deck '+(info.neighborhood+5)+' · Nose commons'];
+ if(info.type==='garden')return ['Garden commons','Neighborhood '+info.neighborhood+' · Decks 17–19'];
+ if(info.type==='cabin')return ['Twin cabin '+info.id,'Deck '+info.deck+' · Neighborhood '+info.neighborhood];
+ return ['Observation lounge','Shared · upper bow'];
+}
+function showPick(result,x,y,pinned=false){
+ picked=result;pickPinned=pinned;const [name,detail]=describeRoom(result),tip=$('explode-pick'),view=$('viewport').getBoundingClientRect();
+ $('explode-pick-name').textContent=name;$('explode-pick-detail').textContent=detail+(pinned?'':' · click to open');
+ $('explode-pick-swatch').style.setProperty('--swatch','#'+(ROOM_GROUPS.find(g=>g.key===result.group)?.color??0xffffff).toString(16).padStart(6,'0'));
+ tip.classList.toggle('pinned',pinned);tip.hidden=false;
+ const left=Math.min(x-view.left+16,view.width-tip.offsetWidth-12),top=Math.min(y-view.top+16,view.height-tip.offsetHeight-12);
+ tip.style.transform=`translate(${Math.max(12,left).toFixed(0)}px,${Math.max(12,top).toFixed(0)}px)`;
+ pickOutline.box.copy(result.box);pickOutline.visible=true;document.body.classList.add('explode-hover');
+}
+function hidePick(){if(!picked&&$('explode-pick').hidden)return;picked=null;pickPinned=false;$('explode-pick').hidden=true;pickOutline.visible=false;document.body.classList.remove('explode-hover');}
+async function openRoom(info){
+ hidePick();
+ if(info.type==='area'){activeArea=SHIP_AREAS.find(a=>a.id===info.id)||activeArea;areaView='overview';await setMode('areas');return;}
+ activeDistrict=info.neighborhood||10;$('neighborhood-select').value=activeDistrict;await setMode('neighborhood');focusDetail(info.type==='cabin'?'cabin':info.type);
+}
+{const canvas=renderer.domElement;
+ canvas.addEventListener('pointermove',e=>{
+  if(e.pointerType!=='mouse'||pickPinned)return;
+  if(!pickable()||e.buttons){hidePick();return;}
+  if(pickFrame)return;pickFrame=requestAnimationFrame(()=>{pickFrame=0;const result=pickable()&&pickAt(e.clientX,e.clientY);if(result)showPick(result,e.clientX,e.clientY);else hidePick();});
+ });
+ canvas.addEventListener('pointerleave',()=>{if(!pickPinned)hidePick();});
+ canvas.addEventListener('pointerdown',e=>{pickPress={x:e.clientX,y:e.clientY,t:performance.now()};});
+ // A click (not a drag to orbit) opens the room under a mouse; a tap pins its label, and a second tap opens it.
+ canvas.addEventListener('pointerup',e=>{
+  const press=pickPress;pickPress=null;if(!press||!pickable()||Math.hypot(e.clientX-press.x,e.clientY-press.y)>6||performance.now()-press.t>500)return;
+  const result=pickAt(e.clientX,e.clientY);if(!result){hidePick();return;}
+  if(e.pointerType==='mouse'||pickPinned&&picked&&describeRoom(picked)[0]===describeRoom(result)[0])openRoom(result.info);else showPick(result,e.clientX,e.clientY,true);
+ });
+ $('explode-pick-open').addEventListener('click',()=>{if(picked)openRoom(picked.info);});
+}
 // Anything that copies the exterior (the aft systems' context shell) copies the assembled ship.
 function assembled(fn){if(!explodeKit||explodeValue<=0)return fn();explodeKit.apply(0);try{return fn();}finally{explodeKit.apply(explodeValue);}}
 {const dial=$('explode-dial'),svg='http://www.w3.org/2000/svg';
- for(const g of ROOM_GROUPS){const chip=document.createElement('span');chip.textContent=g.name;chip.style.setProperty('--swatch','#'+g.color.toString(16).padStart(6,'0'));$('explode-legend').append(chip);}
+ for(const g of ROOM_GROUPS){const chip=document.createElement('span');chip.textContent=g.name+' · '+ROOM_COUNTS[g.key].toLocaleString('en');chip.style.setProperty('--swatch','#'+g.color.toString(16).padStart(6,'0'));$('explode-legend').append(chip);}
  for(let i=0;i<=20;i++){const a=(-135+13.5*i)*Math.PI/180,major=i%5===0,line=document.createElementNS(svg,'line');
   for(const [n,r] of [['1',major?42.5:44.5],['2',48]]){line.setAttribute('x'+n,(50+r*Math.sin(a)).toFixed(2));line.setAttribute('y'+n,(50-r*Math.cos(a)).toFixed(2));}
   line.setAttribute('class','dial-tick'+(major?' major':''));$('explode-ticks').append(line);}
+ // The named stops get their own orange ticks on the ring and a button each.
+ for(const stop of STOPS){const a=(-135+270*stop.value)*Math.PI/180,line=document.createElementNS(svg,'line');for(const [n,r] of [['1',41],['2',49]]){line.setAttribute('x'+n,(50+r*Math.sin(a)).toFixed(2));line.setAttribute('y'+n,(50-r*Math.cos(a)).toFixed(2));}line.setAttribute('class','dial-tick stop');$('explode-ticks').append(line);}
+ for(const stop of [{value:0,name:'Ship'},...STOPS]){const b=document.createElement('button');b.type='button';b.dataset.value=stop.value;b.textContent=stop.name;b.setAttribute('aria-pressed',String(stop.value===0));
+  b.addEventListener('click',async()=>{stopExplodePlay();if(stop.value>0&&!await prepareExplode())return;runExplode(stop.value,{orbit:true});});$('explode-stops').append(b);}
  // The knob turns through 270°, from 7:30 round to 4:30. Dragging across the gap at the bottom stops at the near end.
  // The first turn waits for the interior to build; wherever the pointer has got to by then (even if released) applies.
  let lastPointer=null;
@@ -466,19 +522,34 @@ function assembled(fn){if(!explodeKit||explodeValue<=0)return fn();explodeKit.ap
  dial.addEventListener('pointerdown',e=>{if(!exteriorReady||e.button>0)return;e.preventDefault();dial.focus({preventScroll:true});dial.setPointerCapture(e.pointerId);dialDragging=true;dial.classList.add('dragging');stopExplodePlay();
   lastPointer=e;const first=!explodeKit;prepareExplode().then(ok=>{if(!ok)return;setExplode(valueAt(lastPointer,false));if(first&&!dialDragging)exteriorLink();});});
  dial.addEventListener('pointermove',e=>{if(!dialDragging)return;lastPointer=e;if(explodeKit)setExplode(valueAt(e,true));});
- const release=()=>{if(!dialDragging)return;dialDragging=false;dial.classList.remove('dragging');exteriorLink();};
+ // Released close to a stop (or to either end), the dial eases onto it.
+ const release=()=>{if(!dialDragging)return;dialDragging=false;dial.classList.remove('dragging');
+  const stop=[0,...STOPS.map(s=>s.value)].find(v=>Math.abs(v-explodeValue)<.05&&v!==explodeValue);if(stop!==undefined&&explodeKit)runExplode(stop,{ms:260});else exteriorLink();};
  dial.addEventListener('pointerup',release);dial.addEventListener('pointercancel',release);dial.addEventListener('lostpointercapture',release);
  dial.addEventListener('keydown',e=>{
   const step={ArrowRight:.05,ArrowUp:.05,ArrowLeft:-.05,ArrowDown:-.05,PageUp:.25,PageDown:-.25}[e.key],to=e.key==='Home'?0:e.key==='End'?1:step===undefined?null:explodeValue+step;
   if(to===null)return;e.preventDefault();stopExplodePlay();prepareExplode().then(ok=>{if(ok){setExplode(to);exteriorLink();}});});
- // The button runs the whole explode (or puts Leo back together) in about three seconds.
- $('explode-play').addEventListener('click',async()=>{
-  stopExplodePlay();if(!await prepareExplode())return;
-  const from=explodeValue,to=from>=.5?0:1,ms=3000*Math.abs(to-from);
-  if(reduced||ms<50){setExplode(to);exteriorLink();return;}
-  const start=performance.now(),step=now=>{if(mode!=='exterior'){explodePlay=0;return;}const t=Math.min(1,(now-start)/ms);setExplode(from+(to-from)*t);if(t<1)explodePlay=requestAnimationFrame(step);else{explodePlay=0;exteriorLink();}};
-  explodePlay=requestAnimationFrame(step);
- });
+ // The button runs the whole explode (or puts Leo back together) in about three seconds, orbiting slowly as it goes.
+ $('explode-play').addEventListener('click',async()=>{stopExplodePlay();if(!await prepareExplode())return;runExplode(explodeValue>=.5?0:1,{orbit:true});});
+}
+// Animates the dial to `to`; a full turn takes three seconds. With orbit, the camera circles the ship by up to
+// EXPLODE_ORBIT over a full explode (back again when assembling), so the move reads as one shot.
+const EXPLODE_ORBIT=T.MathUtils.degToRad(40);
+function orbitCamera(angle){
+ const pairs=transition?[[camera.position,controls.target],[transition.from,transition.fromTarget],[transition.to,transition.toTarget]]:[[camera.position,controls.target]];
+ for(const [position,target] of pairs)position.sub(target).applyAxisAngle(LEVEL,angle).add(target);
+}
+function runExplode(to,{ms=3000*Math.abs(to-explodeValue),orbit=false}={}){
+ stopExplodePlay();const from=explodeValue;
+ if(reduced||ms<50){setExplode(to);exteriorLink();return;}
+ const start=performance.now();let last=from;
+ const step=now=>{
+  if(mode!=='exterior'){explodePlay=0;return;}
+  const t=Math.min(1,(now-start)/ms),v=from+(to-from)*t;
+  if(orbit&&!camera.isOrthographicCamera)orbitCamera((v-last)*EXPLODE_ORBIT);last=v;
+  setExplode(v);if(t<1)explodePlay=requestAnimationFrame(step);else{explodePlay=0;exteriorLink();}
+ };
+ explodePlay=requestAnimationFrame(step);
 }
 // Builds the decks the layout view shows for the selected deck (also run by the idle warm-up).
 function ensureLayoutDecks(selected=Number($('deck-select').value),isolate=$('isolate').checked){
