@@ -21,6 +21,7 @@ Open `http://127.0.0.1:4173/?area=d20-bridge-9&view=inside` for the bridge, or `
 ## Where to work
 
 - `src/viewer.js` and `src/viewer.html`: interactive Three.js scene, cameras and browser controls.
+- `src/explode.js`: the exterior's Explode dial: which parts move where, the exploded camera frame, call-outs and detail culling.
 - `src/special-areas.js`: Captain's bridge geometry and other specialized rooms.
 - `src/command-deck.js`: Deck 20 finishes, labels and workstation details.
 - `src/areas.js`: area definitions and layout.
