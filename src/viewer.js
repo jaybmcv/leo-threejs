@@ -348,10 +348,22 @@ function ensureLayoutDecks(selected=Number($('deck-select').value),isolate=$('is
   for(const deck of DECKS)if(isolate?deck.index===selected:deck.index<=selected){ship.ensureServiceDeck(deck.number);ship.ensureResidentialDeck(deck.number);}
   ship.ensureAft();ship.ensureTransit();ship.ensureObservation();if(selected>=16&&selected<=18)ship.ensureGardens();
 }
+// Deck 2's shuttle handling bay is two decks tall, so Deck 3's floor is open above it. Isolating Deck 3 would leave that
+// opening looking onto empty space; show the bay underneath (and nothing else of Deck 2) instead.
+const SHUTTLE_BAY='Area_d02-hangar-9';let bayOnlySaved=null;
+function showShuttleBayUnder(selected,isolate){
+  const deck=ship.decks[1];
+  if(!(isolate&&selected===2)){if(bayOnlySaved){for(const [o,v] of bayOnlySaved)o.visible=v;bayOnlySaved=null;}return;}
+  ship.ensureServiceDeck(2);
+  if(!bayOnlySaved)bayOnlySaved=deck.children.map(o=>[o,o.visible]);
+  for(const o of deck.children)o.visible=o.name===SHUTTLE_BAY;
+  deck.visible=true;
+}
 // The layout view's 3D state for a deck selection: which decks, aft parts and cores show, and the faded port hull.
 function applyDeckView(selected=Number($('deck-select').value),isolate=$('isolate').checked){
   ensureLayoutDecks(selected,isolate);
   ship.decks.forEach((g,i)=>g.visible=isolate?i===selected:i<=selected);
+  showShuttleBayUnder(selected,isolate);
   const aft=ship.ensureAft();aft.root.visible=true;for(const [key,g]of Object.entries(aft.parts))g.visible=({drive:selected>=7&&selected<=13,tanks:selected>=3&&selected<=6,pods:selected===5,access:selected>=3&&selected<=16,fin:selected>=16})[key];aft.shells.forEach(o=>o.visible=false);
   ship.vertical.visible=false;const tr=ship.ensureTransit();tr.root.visible=true;tr.shell.visible=false;tr.structure.visible=!isolate;for(const [n,g]of tr.decks)g.visible=isolate?n===selected+1:n<=selected+1;ship.ensureObservation().root.visible=selected>=16&&selected<=18;ship.shared.visible=selected>=16&&selected<=18;if(ship.shared.visible)ship.ensureGardens();
   ship.exterior.visible=$('shell-context').checked;ship.starboard.visible=false;ship.port.visible=true;contextOpacity(.14);
