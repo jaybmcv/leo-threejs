@@ -18,7 +18,7 @@ import {loadEnvironment,bakeEnvironmentPNG} from './environment.js';
 import {polishCrown,loadTourArt} from './forward-polish.js';
 import {encloseAftTour,encloseResidentialConnection} from './tour-enclosures.js';
 import {SHIP_AREAS,createShipArea} from './areas.js';
-import {createExplode,explodeStage} from './explode.js';
+import {createExplode,explodeStage,ROOM_GROUPS} from './explode.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -414,6 +414,7 @@ function setExplode(value,{reframe=true}={}){
  $('explode-fill').style.strokeDasharray=`${(179.07*value).toFixed(2)} 238.76`;$('explode-knob').setAttribute('transform',`rotate(${(-135+270*value).toFixed(1)} 50 50)`);
  $('explode-value').firstChild.textContent=percent;$('explode-stage').textContent=explodeStage(value);
  $('explode-play').textContent=value>=.5?'Put Leo back together':'Explode Leo';
+ $('explode-legend').hidden=value<.68;$('explode-legend').style.opacity=Math.min(1,(value-.68)/.15).toFixed(2);
  if(mode==='exterior')$('status').textContent=exteriorStatus();
  unpackDecks();
 }
@@ -453,6 +454,7 @@ function placeExplodeTags(){
 // Anything that copies the exterior (the aft systems' context shell) copies the assembled ship.
 function assembled(fn){if(!explodeKit||explodeValue<=0)return fn();explodeKit.apply(0);try{return fn();}finally{explodeKit.apply(explodeValue);}}
 {const dial=$('explode-dial'),svg='http://www.w3.org/2000/svg';
+ for(const g of ROOM_GROUPS){const chip=document.createElement('span');chip.textContent=g.name;chip.style.setProperty('--swatch','#'+g.color.toString(16).padStart(6,'0'));$('explode-legend').append(chip);}
  for(let i=0;i<=20;i++){const a=(-135+13.5*i)*Math.PI/180,major=i%5===0,line=document.createElementNS(svg,'line');
   for(const [n,r] of [['1',major?42.5:44.5],['2',48]]){line.setAttribute('x'+n,(50+r*Math.sin(a)).toFixed(2));line.setAttribute('y'+n,(50-r*Math.cos(a)).toFixed(2));}
   line.setAttribute('class','dial-tick'+(major?' major':''));$('explode-ticks').append(line);}
@@ -474,7 +476,7 @@ function assembled(fn){if(!explodeKit||explodeValue<=0)return fn();explodeKit.ap
   stopExplodePlay();if(!await prepareExplode())return;
   const from=explodeValue,to=from>=.5?0:1,ms=3000*Math.abs(to-from);
   if(reduced||ms<50){setExplode(to);exteriorLink();return;}
-  const start=performance.now(),step=now=>{const t=Math.min(1,(now-start)/ms);setExplode(from+(to-from)*t);if(t<1)explodePlay=requestAnimationFrame(step);else{explodePlay=0;exteriorLink();}};
+  const start=performance.now(),step=now=>{if(mode!=='exterior'){explodePlay=0;return;}const t=Math.min(1,(now-start)/ms);setExplode(from+(to-from)*t);if(t<1)explodePlay=requestAnimationFrame(step);else{explodePlay=0;exteriorLink();}};
   explodePlay=requestAnimationFrame(step);
  });
 }

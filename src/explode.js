@@ -15,7 +15,7 @@ const SCATTER=.6,MID_X=-18;
 // and room floors resting on them, which flicker when the spread decks are seen from below.
 const SLAB_DROP=.06;
 // Each movement runs over its own stretch of the dial, so the ship comes apart in order.
-export const STAGES={hull:[0,.28],wing:[.2,.46],pods:[.3,.52],fin:[.14,.42],crown:[.3,.56],decks:[.14,.68],floors:[.68,.82],rooms:[.7,1]};
+export const STAGES={hull:[0,.28],wing:[.2,.46],pods:[.3,.52],fin:[.14,.42],crown:[.3,.56],decks:[.14,.68],floors:[.68,.82],rooms:[.7,1],tint:[.68,.9]};
 const ease=(p,[a,b])=>{const t=Math.min(1,Math.max(0,(p-a)/(b-a)));return t*t*(3-2*t);};
 // Parts inside the ship rise with the deck they stand on; the deck stack stretches about the Deck 1 floor.
 const deckIndex=y=>Math.max(0,Math.round((y-FLOOR)/PITCH));
@@ -23,7 +23,7 @@ const stretch=p=>1+DECK_SPREAD/PITCH*ease(p,STAGES.decks),lifted=p=>LIFT*ease(p,
 
 // kind: hull/wing/pod (side ±1), fin, crown, aftcap, nose, roof (rises with the stack), deck (rises, never scatters),
 // slab, and room (rises with its deck unless it is already a deck's child, and scatters from x, z).
-function offset({kind,side=0,y=0,x=MID_X,z=0,onDeck=false},p,out){
+function offset({kind,side=0,y=0,x=MID_X,z=0,onDeck=false,nudge=0},p,out){
  const decks=ease(p,STAGES.decks),parted=ease(p,STAGES.hull),fin=ease(p,STAGES.fin),rise=(LIFT+deckIndex(y)*DECK_SPREAD)*decks;
  if(kind==='hull')return out.set(0,-HULL_DOWN*parted,side*HULL_OUT*parted);
  if(kind==='wing'||kind==='pod')return out.set(0,-HULL_DOWN*parted+(kind==='pod'?POD_UP*ease(p,STAGES.pods):0),side*(HULL_OUT*parted+WING_OUT*ease(p,STAGES.wing)));
@@ -32,7 +32,7 @@ function offset({kind,side=0,y=0,x=MID_X,z=0,onDeck=false},p,out){
  if(kind==='aftcap')return out.set(-CAP_OUT*fin,rise,0);
  if(kind==='nose')return out.set(CAP_OUT*fin,rise,0);
  if(kind==='slab')return out.set(0,p>0?-SLAB_DROP:0,0);
- if(kind==='room'){const k=SCATTER*ease(p,STAGES.rooms);return out.set((x-MID_X)*k,onDeck?0:rise,z*k);}
+ if(kind==='room'){const k=SCATTER*ease(p,STAGES.rooms);return out.set((x-MID_X)*k,(onDeck?0:rise)+(p>0?nudge:0),z*k);}
  return out.set(0,rise,0);// deck, roof
 }
 
@@ -65,6 +65,25 @@ function splitAcross(mesh){
  return twin;
 }
 
+// Room colours for the scattered rooms, grouped from the ship-area categories (areas.js). Each room's materials are
+// swapped for tinted copies while the rooms scatter, and swapped back once they are home.
+export const ROOM_GROUPS=[
+ {key:'homes',name:'Homes',color:0xb79cdc},
+ {key:'shared',name:'Shared spaces',color:0x7cc28f},
+ {key:'food',name:'Food & life support',color:0x4fb8a6},
+ {key:'medical',name:'Medical & safety',color:0xe57373},
+ {key:'cargo',name:'Cargo & transfer',color:0xd9a35c},
+ {key:'command',name:'Command',color:0x6f9be0},
+ {key:'engineering',name:'Engineering',color:0xf2702a},
+];
+const CATEGORY_GROUP={'Cargo & logistics':'cargo','Passenger transfer':'cargo','Neighborhood services':'cargo','Food & cultivation':'food','Life support':'food','Medical & shelter':'medical','Emergency embarkation':'medical','Education & recreation':'shared','Upper aft commons':'shared','Community assembly':'shared','Command & operations':'command','Aft engineering':'engineering','Lower aft services':'engineering'};
+const KIND_GROUP={stores:'cargo',farm:'food',gym:'shared'};// the lower bow facilities mix uses
+const TINT=.62;// how far each surface moves toward its room colour
+function roomGroup(o){
+ if(o.name.startsWith('Area_'))return CATEGORY_GROUP[o.userData.category]||KIND_GROUP[o.userData.kind]||null;
+ return /^(Nose_commons_|Fitted_garden_commons_|Shared_observation_lounge)/.test(o.name)?'shared':null;
+}
+
 // The repeated cabins are instanced, one InstancedMesh per cabin part with instance i in the cabin CABIN_ORDER[i]
 // (model.js createNeighborhood), so scattering them moves each instance's translation.
 const CABIN_ORDER=CABINS.filter(c=>c.neighborhood===10&&c.id!==SAMPLE.id);
@@ -76,7 +95,10 @@ export function createExplode({ship,transit,aft,thrusters}){
  const {exterior,inside,decks}=ship;
  exterior.updateMatrixWorld(true);inside.updateMatrixWorld(true);
  const parts=[],stretched=[],added=[],floors=[],slabs=[],cabins=[],registered=new Set();
- const add=(object,kind,props={})=>{registered.add(object);parts.push({object,base:object.position.clone(),kind,...props});};
+ // Rooms whose floors overlap (the lifeboat bays share floor area with their neighbours) would be coplanar and
+ // flicker once the slabs fade, so while exploded each room sits a few centimetres off its neighbours.
+ let rooms=0;
+ const add=(object,kind,props={})=>{registered.add(object);parts.push({object,base:object.position.clone(),kind,...(kind==='room'?{nudge:(rooms++%8)*.02+(/lifeboats/.test(object.name)?.01:0)}:{}),...props});};
  for(const group of exterior.children){
   if(group.name==='Fin_panorama_lounge'){add(group,'crown');continue;}
   for(const part of [...group.children]){
@@ -98,11 +120,11 @@ export function createExplode({ship,transit,aft,thrusters}){
    if(CORRIDORS.test(o.name)){registered.add(o);floors.push(o);continue;}
    const residence=[...ship.residentialDecks.values()].find(r=>r.root===o);
    if(residence){registered.add(o);sortResidence(residence);continue;}
-   add(o,'room',roomProps(o,true));
+   add(o,'room',{...roomProps(o,true),group:roomGroup(o)});
   }
  }
  function sortResidence(residence){
-  for(const o of residence.root.children)if(o!==residence.district)add(o,'room',{x:SAMPLE.x,z:SAMPLE.z,onDeck:true});// the furnished sample cabin
+  for(const o of residence.root.children)if(o!==residence.district)add(o,'room',{x:SAMPLE.x,z:SAMPLE.z,onDeck:true,group:'homes'});// the furnished sample cabin
   for(const o of residence.district.children){
    if(o.isInstancedMesh&&o.count===CABIN_ORDER.length){
     const base=new Float32Array(o.count*3);for(let i=0;i<o.count;i++)for(let k=0;k<3;k++)base[i*3+k]=o.instanceMatrix.array[i*16+12+k];
@@ -126,16 +148,32 @@ export function createExplode({ship,transit,aft,thrusters}){
     for(const o of [...group.children]){
      let b=bounds(o);if(b.min.x===Infinity)continue;
      // Merged finish meshes that reach both pods split so each half follows its own pod.
-     if(key!=='fin'&&o.isMesh&&b.min.z<-85&&b.max.z>85){const twin=splitAcross(o);if(twin){add(twin,key==='pods'?'pod':'wing',{side:1});b=bounds(o);}}
+     if(key!=='fin'&&o.isMesh&&b.min.z<-85&&b.max.z>85){const twin=splitAcross(o);if(twin){add(twin,key==='pods'?'pod':'wing',{side:1,group:'engineering'});b=bounds(o);}}
      if(key==='fin')add(o,'fin');
-     else if(Math.abs(b.center.z)>85)add(o,key==='pods'?'pod':'wing',{side:Math.sign(b.center.z)});// pod machinery rises out of its pod
-     else add(o,'room',{x:b.center.x,z:b.center.z,y:b.min.y});
+     else if(Math.abs(b.center.z)>85)add(o,key==='pods'?'pod':'wing',{side:Math.sign(b.center.z),group:'engineering'});// pod machinery rises out of its pod
+     else add(o,'room',{x:b.center.x,z:b.center.z,y:b.min.y,group:'engineering'});
     }
    }
    continue;
   }
   // The gardens and observation lounge: each garden scatters on its own.
-  for(const o of child===ship.shared?child.children:[child])if(o.visible||child!==ship.shared){const b=bounds(o);if(b.min.x!==Infinity)add(o,'room',{x:b.center.x,z:b.center.z,y:b.min.y});}
+  for(const o of child===ship.shared?child.children:[child])if(o.visible||child!==ship.shared){const b=bounds(o);if(b.min.x!==Infinity)add(o,'room',{x:b.center.x,z:b.center.z,y:b.min.y,group:roomGroup(o)});}
+ }
+ // Tinting: each room's meshes get tinted copies of their materials (one copy per material and room group, so the
+ // shader programs are shared), whose colour moves from the original toward the group colour.
+ const targets=Object.fromEntries(ROOM_GROUPS.map(g=>[g.key,new T.Color(g.color)])),copies=new Map(),swapped=new Map();let tint=0,swapPending=true;
+ function tintCopy(m,group){
+  if(!m?.color||m.transparent)return m;// glass and fades keep their own look
+  const key=m.uuid+group;let c=copies.get(key);if(!c){c=m.clone();c.userData={tintFrom:m,tintTo:targets[group]};copies.set(key,c);}return c;
+ }
+ function setTint(t){
+  if(t>0&&swapPending){
+   swapPending=false;
+   const tinted=[...parts.filter(part=>part.group).map(part=>[part.object,part.group]),...cabins.map(c=>[c.mesh,'homes'])];
+   for(const [object,group] of tinted)object.traverse(o=>{if(!o.isMesh||swapped.has(o))return;swapped.set(o,o.material);o.material=Array.isArray(o.material)?o.material.map(m=>tintCopy(m,group)):tintCopy(o.material,group);});
+  }
+  if(t===0&&swapped.size){for(const [o,m] of swapped)o.material=m;swapped.clear();swapPending=true;}
+  if(t!==tint){tint=t;for(const c of copies.values())c.color.copy(c.userData.tintFrom.color).lerp(c.userData.tintTo,TINT*t);}
  }
  const move=new T.Vector3(),slabMaterial=slabs[0]?.material;let applied=-1,scattered=0,floorsShown=true;
  function apply(p){
@@ -147,6 +185,7 @@ export function createExplode({ship,transit,aft,thrusters}){
   if(slabMaterial){const transparent=fade>0&&fade<1;if(slabMaterial.transparent!==transparent){slabMaterial.transparent=transparent;slabMaterial.needsUpdate=true;}slabMaterial.opacity=1-fade;}
   for(const s of slabs)s.visible=fade<1;
   if(floorsShown!==fade<.5){floorsShown=fade<.5;for(const o of floors)o.visible=floorsShown;}
+  setTint(ease(p,STAGES.tint));
   const s=SCATTER*ease(p,STAGES.rooms);
   if(s!==scattered){
    scattered=s;
@@ -175,7 +214,7 @@ export function createExplode({ship,transit,aft,thrusters}){
  refreshDetail();
  // Fitted areas built since: sort them into the explode at its current amount, then into the detail culling.
  function refresh(){
-  const p=Math.max(applied,0);apply(0);inside.updateMatrixWorld(true);decks.forEach(sortDeck);apply(p);refreshDetail();
+  const p=Math.max(applied,0);apply(0);inside.updateMatrixWorld(true);decks.forEach(sortDeck);swapPending=true;apply(p);refreshDetail();
  }
  // The bounding sphere the camera frames: the assembled ship, growing as it comes apart and again as the rooms
  // scatter. `tilt` (0 to 1) raises the camera as it does, to look down into the decks.
