@@ -21,7 +21,7 @@ import {SHIP_AREAS,createShipArea} from './areas.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createShip,createResidentialDeck,createGardenCommons,DECKS,ROUTE,SAMPLE,COMMONS } from './model.js';
+import { createShip,createResidentialDeck,createGardenCommons,DECKS,ROUTE,LOUNGE_TOUR,SAMPLE,COMMONS } from './model.js';
 
 const $=id=>document.getElementById(id);
 // Visitors get the ship; ?studio=1 restores downloads, render exports and review notes for the build team.
@@ -196,13 +196,15 @@ function starRandom(){starSeed=(Math.imul(starSeed,1664525)+1013904223)>>>0;retu
 for(let i=0;i<1500;i++){const y=starRandom()*2-1,a=starRandom()*Math.PI*2,r=Math.sqrt(1-y*y);starPositions.push(3800*r*Math.cos(a),3800*y,3800*r*Math.sin(a));}
 starsGeometry.setAttribute('position',new T.Float32BufferAttribute(starPositions,3));
 const stars=new T.Points(starsGeometry,new T.PointsMaterial({color:0xd5e2eb,size:1.25,sizeAttenuation:false,transparent:true,opacity:.65}));stars.visible=false;scene.add(stars);
-// The guided tours. Home stays in Neighborhood 10; the other two cut between decks through the aft spaces.
+// The guided tours. Home and lounge stay in Neighborhood 10 and glide where the path is clear; aft and fin cut between
+// decks through the aft spaces.
 const TOURS={
- home:{stops:ROUTE,title:'From cabin to the stars.',view:'Follow a short route through Neighborhood 10.',status:'Guided neighborhood route',description:'Follow a resident from a twin cabin through the garden to the forward observation lounge.'},
+ home:{stops:ROUTE,neighborhood:true,title:'From cabin to the stars.',view:'Follow a short route through Neighborhood 10.',status:'Guided neighborhood route',description:'Follow a resident from a twin cabin through the garden to the forward observation lounge.'},
+ lounge:{stops:LOUNGE_TOUR,neighborhood:true,title:'To the observation lounge.',view:'From the garden commons into the forward observation lounge.',status:'Neighborhood 10 / observation lounge',description:'Walk from the Neighborhood 10 garden up the promenade and into the forward observation lounge: the telescope, the seating islands, a reading corner and the view of Mars.'},
  aft:{stops:AFT_TOUR,title:'From home to engineering.',view:'A journey through the working ship.',status:'Residential / engineering',description:'Travel from Neighborhood 10 through the aft residential connection to the drive, the reservoir bay and the engine pods. Deck and lift transfers use scene cuts.'},
  fin:{stops:FIN_TOUR,title:'From home to the fin crown.',view:'Up to Deck 17, aft to the fin, and up to the panorama bar.',status:'Residential / fin / panorama',description:'Rise from Neighborhood 10 to the commons level, walk aft to the fin lounge and gallery, then ride the lift to the crown bar. Deck and lift transfers use scene cuts.'},
 };
-let routeKey='home',tourResidence=null,tourTransit=null,aftTourShell=null;const routeStops=()=>TOURS[routeKey].stops;
+let routeKey='home',tourResidence=null,tourTransit=null,aftTourShell=null;const routeStops=()=>TOURS[routeKey].stops,neighborhoodTour=()=>Boolean(TOURS[routeKey].neighborhood);
 let mode='exterior',transition=null,tourPlaying=false,stop=0,tourTimer=null,lookDrag=null,lastFrameScale=1,exporting=false;
 let turntable=false,lastFrameTime=0;
 function stopTurntable(){turntable=false;controls.autoRotate=false;$('turntable').textContent='Start turntable';$('turntable').setAttribute('aria-pressed','false');}
@@ -267,7 +269,7 @@ async function loadExterior(){
     if(next!=='exterior')loadCosmo(); // held back during the arrival; any view inside the ship wants him now
     noseScene.visible=false;
   const request=++modeRequest;
-  if((next==='exterior'||next==='layout'||next==='aft'||(next==='walk'&&routeKey!=='home'))&&!exteriorReady){
+  if((next==='exterior'||next==='layout'||next==='aft'||(next==='walk'&&!neighborhoodTour()))&&!exteriorReady){
     $('loading').textContent='Loading exterior model…';$('loading').hidden=false;
     try{await loadExterior();}catch(e){showError(e.message);return;}
     if(request!==modeRequest)return;
@@ -405,26 +407,28 @@ function showTourSpace(r){
  if(r.section){aftSection=r.section;aftEye=true;showAft();if(r.also)aftModel.parts[r.also].visible=true;
   // Walk-only walls close the engineering stops, which are cutaways in the aft systems view.
   if(!aftTourShell){aftTourShell=encloseAftTour(aftScene);aftScene.add(aftTourShell);}aftTourShell.visible=true;showUpperAftShells(true);}
- else {stars.visible=routeKey==='home';mars.visible=routeKey==='home'&&stop>=4;/* Mars belongs to the promenade and lounge windows */scene.background.set(routeKey==='home'?0x0a1422:0xbac8cd);}
+ else {stars.visible=neighborhoodTour();mars.visible=neighborhoodTour()&&Boolean(r.mars);/* Mars belongs to the promenade and lounge windows */scene.background.set(neighborhoodTour()?0x0a1422:0xbac8cd);}
 }
 // Tour moves glide only when the straight line between the stops is clear; otherwise (lifts, doorways) the camera
 // cuts and the view fades in, instead of flying through walls into open space.
 const tourRay=new T.Raycaster();
+// Tour pacing: Play route glides for TOUR_GLIDE_MS and moves on every TOUR_STOP_MS; the arrows glide for TOUR_STEP_MS.
+const TOUR_GLIDE_MS=1500,TOUR_STOP_MS=4300,TOUR_STEP_MS=1000,TOUR_FADE_MS=300;
 function tourPathBlocked(to){
  const from=camera.position,dir=new T.Vector3(...to).sub(from),distance=dir.length();if(distance<.5)return false;
  const meshes=[];scene.traverseVisible(o=>{if(o.isMesh)meshes.push(o);});tourRay.set(from,dir.normalize());tourRay.far=distance;
  return tourRay.intersectObjects(meshes,false).length>0;
 }
-function fadeIn(){renderer.domElement.animate([{opacity:0},{opacity:1}],{duration:480,easing:'ease-out'});}
-function goStop(index,duration=1400){const list=routeStops();stop=Math.max(0,Math.min(list.length-1,Number.isFinite(index)?index:0));const r=list[stop];
+function fadeIn(){renderer.domElement.animate([{opacity:0},{opacity:1}],{duration:TOUR_FADE_MS,easing:'ease-out'});}
+function goStop(index,duration=TOUR_STEP_MS){const list=routeStops();stop=Math.max(0,Math.min(list.length-1,Number.isFinite(index)?index:0));const r=list[stop];
  if(mode==='walk')showTourSpace(r);viewLink({walk:1,tour:routeKey,stop});
- const cut=mode==='walk'&&duration>0&&(routeKey!=='home'||tourPathBlocked(r.position));
- setCamera('persp',r.position,r.target,cut||routeKey!=='home'?0:duration);if(cut)fadeIn();
+ const cut=mode==='walk'&&duration>0&&(!neighborhoodTour()||tourPathBlocked(r.position));
+ setCamera('persp',r.position,r.target,cut||!neighborhoodTour()?0:duration);if(cut)fadeIn();
  setTitle(TOURS[routeKey].title);$('view-description').textContent=TOURS[routeKey].view;
  $('status').textContent=TOURS[routeKey].status;
  $('route-name').textContent=r.name;$('route-detail').textContent=r.detail;$('stop-count').textContent=`${String(stop+1).padStart(2,'0')} / ${String(list.length).padStart(2,'0')}`;$('previous-stop').disabled=stop===0;$('next-stop').disabled=stop===list.length-1;document.querySelectorAll('[data-stop]').forEach(b=>b.setAttribute('aria-current',Number(b.dataset.stop)===stop));
 }
-function advanceTour(){if(!tourPlaying)return;if(stop===routeStops().length-1){stopTour();return;}goStop(stop+1,2800);tourTimer=setTimeout(advanceTour,6500);}
+function advanceTour(){if(!tourPlaying)return;if(stop===routeStops().length-1){stopTour();return;}goStop(stop+1,TOUR_GLIDE_MS);tourTimer=setTimeout(advanceTour,TOUR_STOP_MS);}
 $('tour-select').addEventListener('change',async()=>{routeKey=$('tour-select').value;renderRouteDots();await setMode('walk');});
 
 document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
