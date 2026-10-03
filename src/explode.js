@@ -118,13 +118,14 @@ const CORRIDORS=/(_connected_service_corridors|_special_area_connections)$/,PLAC
 export function createExplode({ship,transit,aft,thrusters,outline}){
  const {exterior,inside,decks}=ship;
  exterior.updateMatrixWorld(true);inside.updateMatrixWorld(true);
+ let crownBox=null;// the crown bar's assembled bounds, for its call-out
  const parts=[],stretched=[],added=[],floors=[],slabs=[],cabins=[],residences=[],registered=new Set();
  // Rooms whose floors overlap (the lifeboat bays share floor area with their neighbours) would be coplanar and
  // flicker once the slabs fade, so while exploded each room sits a few centimetres off its neighbours.
  let rooms=0;
  const add=(object,kind,props={})=>{registered.add(object);parts.push({object,base:object.position.clone(),kind,...(kind==='room'?{nudge:(rooms++%8)*.02+(/lifeboats/.test(object.name)?.01:0)}:{}),...props});};
  for(const group of exterior.children){
-  if(group.name==='Fin_panorama_lounge'){add(group,'crown');continue;}
+  if(group.name==='Fin_panorama_lounge'){add(group,'crown');crownBox=new T.Box3().setFromObject(group);continue;}
   for(const part of [...group.children]){
    const kind=exteriorKind(group,part);let b=bounds(part);
    if((kind==='hull'||kind==='wing')&&b.min.z<-10&&b.max.z>10&&part.isMesh){const twin=splitAcross(part);if(twin){added.push(twin);add(twin,kind,{side:1});b=bounds(part);}}
@@ -288,12 +289,13 @@ export function createExplode({ship,transit,aft,thrusters,outline}){
   {text:'Pressure hull',detail:'564 m',at:p=>new T.Vector3(40,30,83).add(offset({kind:'hull',side:1},p,move))},
   {text:'Wing & engine pod',detail:'300 m span',at:p=>new T.Vector3(-215,-2,135).add(offset({kind:'wing',side:1},p,move))},
   {text:'Pod machinery',detail:'Two drive chambers',at:p=>new T.Vector3(-230,0,126).add(offset({kind:'pod',side:1},p,move))},
-  {text:'Fin & crown bar',detail:'66 windows',at:p=>new T.Vector3(-205,70,6).add(offset({kind:'fin'},p,move))},
+  // On the crown's starboard face, at mid-height, moving with the crown as it lifts off the fin.
+  {text:'Fin crown bar',detail:'66 windows',at:p=>new T.Vector3((crownBox.min.x+crownBox.max.x)/2,(crownBox.min.y+crownBox.max.y)/2,crownBox.max.z).add(offset({kind:'crown'},p,move))},
   {text:'Cargo & shuttles',detail:'Decks 1–2',at:deckAt(1,225)},
   {text:'Farms & medical',detail:'Decks 3–5',at:deckAt(4,235)},
   {text:'Recreation',detail:'Deck 16',at:deckAt(16,200)},
  ];
- return {apply,setDetail,refresh,frame,labels,added,pick};
+ return {apply,setDetail,refresh,frame,labels:labels.filter(l=>crownBox||l.text!=='Fin crown bar'),added,pick};
 }
 
 export function explodeStage(p){
