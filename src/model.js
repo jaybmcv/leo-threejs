@@ -44,8 +44,18 @@ export const ROUTE = [
   {name:'Residential corridor',detail:'4 m clear corridor · Neighborhood 10 · Deck 15',position:[124.5,18,0],target:[132,18,0]},
   {name:'Lift to the commons',detail:'Deck 15 → Deck 17 · 8 m vertical connection',position:[132,26,0],target:[132,26,10]},
   {name:'Neighborhood garden',detail:'One of ten commons · three deck height',position:[145,26,12],target:[132,28,28]},
-  {name:'Forward promenade',detail:'A gentle 1:12 ramp rises toward the panoramic lounge',position:[149,26.25,0],target:[172,28,0]},
-  {name:'Observation lounge',detail:'A place to settle in · curved windows, reading corners and a view of Mars',position:[180,28,31],target:[210,29,11]}
+  {name:'Forward promenade',detail:'A gentle 1:12 ramp rises toward the panoramic lounge',position:[149,26.25,0],target:[172,28,0],mars:true},
+  {name:'Observation lounge',detail:'A place to settle in · curved windows, reading corners and a view of Mars',position:[180,28,31],target:[210,29,11],mars:true}
+];
+// The lounge tour starts in the Neighborhood 10 garden and spends most of its time inside the forward observation lounge.
+export const LOUNGE_TOUR = [
+  {...ROUTE[3],detail:'Deck 17 · Neighborhood 10 commons. The observation lounge is a short walk forward.'},
+  {...ROUTE[4]},
+  {name:'Into the lounge',detail:'Through the doors, the whole forward window opens up',position:[172,28,-3],target:[205,30.4,3],mars:true},
+  {name:'The shared telescope',detail:'At the centre of the window, a scope for a closer look',position:[198.5,28,3.5],target:[212,29.6,-5],mars:true},
+  {name:'Seating islands',detail:'Armchairs and table lamps in two islands, leaving the window aisle clear',position:[181,28.6,10],target:[191,27.2,22],mars:true},
+  {name:'Reading corner',detail:'A bench and a wall of books on each side of the lounge',position:[179.5,28,19.5],target:[171,27.6,25],mars:true},
+  {name:'Settle in with Mars',detail:'Curved windows, warm light and the red planet outside',position:[180,28,31],target:[210,29,11],mars:true}
 ];
 
 const MAT = {};
@@ -59,6 +69,10 @@ function mergedBoxes(name,items,mat,parent) {
   if(!gs.length)return null;
   const g=mergeGeometries(gs);gs.forEach(g=>g.dispose());return mesh(name,g,mat,parent);
 }
+// The deck layout cutaway is lit by the ship's own lights. The rooms' point lights (20 across the ten gardens, 3 in the
+// lounge) are for eye-level views; left on here, they recompiled every visible material for 26 lights when Decks 17-19
+// were first selected, freezing the page for seconds.
+function cutawayLights(root){root.traverse(o=>{if(o.isPointLight)o.visible=false;});}
 export function createShip({deferExterior=false}={}) {
   const root=group('LEO_564m_Exterior_v31');root.userData={...SPEC,units:'metres',axis:'X forward; Y up; Z starboard',stage:'Exterior refinement over a spatial blockout'};
   const {exterior,fixed,port,starboard}=deferExterior
@@ -120,10 +134,10 @@ export function createShip({deferExterior=false}={}) {
   const ship={root,exterior,port,starboard,fixed,inside,decks,cabinGroups,vertical,shared,detail,serviceDecks,residentialDecks,
     ensureAft(){if(!aftSystems){aftSystems=createAft();inside.add(aftSystems.root);}return aftSystems;},
     ensureTransit(){if(!transit){transit=createTransit();inside.add(transit.root);vertical.visible=false;}return transit;},
-    ensureObservation(){if(!observationArea){observationArea=createObservationArea(detail);observationArea.walls.visible=false;inside.add(observationArea.root);}return observationArea;},
+    ensureObservation(){if(!observationArea){observationArea=createObservationArea(detail);observationArea.walls.visible=false;cutawayLights(observationArea.root);inside.add(observationArea.root);}return observationArea;},
     ensureGardens(){
       if(gardensLoaded)return;for(const child of shared.children)child.visible=false;
-      for(let number=1;number<=10;number++){const garden=createGardenCommons(number,detail);garden.walls.visible=false;shared.add(garden.root);}
+      for(let number=1;number<=10;number++){const garden=createGardenCommons(number,detail);garden.walls.visible=false;cutawayLights(garden.root);shared.add(garden.root);}
       gardensLoaded=true;
     },
     ensureResidentialDeck(number){
