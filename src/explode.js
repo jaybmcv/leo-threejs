@@ -117,7 +117,7 @@ const CORRIDORS=/(_connected_service_corridors|_special_area_connections)$/,PLAC
 // cores and aft systems built. Fitted areas built later join with refresh().
 export function createExplode({ship,transit,aft,thrusters,outline}){
  const {exterior,inside,decks}=ship;
- exterior.updateMatrixWorld(true);inside.updateMatrixWorld(true);
+ exterior.updateMatrixWorld(true);inside.updateWorldMatrix(false,true);// always recurses (the viewer skips the interior's per-frame update when nothing moved)
  let crownBox=null;// the crown bar's assembled bounds, for its call-out
  const parts=[],stretched=[],added=[],floors=[],slabs=[],cabins=[],residences=[],registered=new Set();
  // Rooms whose floors overlap (the lifeboat bays share floor area with their neighbours) would be coplanar and
@@ -212,7 +212,7 @@ export function createExplode({ship,transit,aft,thrusters,outline}){
   const shapes=[];
   exterior.traverse(o=>{if(!o.isMesh||!outline.test(o.name)||!o.geometry.attributes.position)return;const g=new T.BufferGeometry();g.setAttribute('position',o.geometry.attributes.position.clone());if(o.geometry.index)g.setIndex(o.geometry.index.clone());shapes.push(g.applyMatrix4(o.matrixWorld).toNonIndexed());});
   const merged=shapes.length&&mergeGeometries(shapes);shapes.forEach(g=>g.dispose());
-  if(merged){ghost=new T.Mesh(merged,ghostMaterial);ghost.name='Explode_hull_outline';ghost.visible=false;ghost.castShadow=ghost.receiveShadow=false;ship.root.add(ghost);}
+  if(merged){ghost=new T.Mesh(merged,ghostMaterial);ghost.name='Explode_hull_outline';ghost.visible=false;ghost.castShadow=ghost.receiveShadow=false;ghost.frustumCulled=false;ship.root.add(ghost);}// not culled: always in view while shown, and measuring it would visit every vertex of the hull
  }
  function apply(p){
   applied=p;
@@ -251,9 +251,16 @@ export function createExplode({ship,transit,aft,thrusters,outline}){
   detail.sort((a,b)=>a.radius-b.radius);setDetail(keep);
  }
  refreshDetail();
+ // Only the parts move. Everything inside them keeps its local matrix, so three.js need not recompose ~25,000 of them
+ // every frame while the dial turns; their world matrices still follow their part.
+ function settle(){
+  const moving=new Set([...parts.map(part=>part.object),...stretched.map(s=>s.object)]);
+  inside.traverse(o=>{if(o===inside||!o.matrixAutoUpdate||moving.has(o))return;o.updateMatrix();o.matrixAutoUpdate=false;});
+ }
+ settle();
  // Fitted areas built since: sort them into the explode at its current amount, then into the detail culling.
  function refresh(){
-  const p=Math.max(applied,0);apply(0);inside.updateMatrixWorld(true);decks.forEach(sortDeck);swapPending=true;apply(p);refreshDetail();
+  const p=Math.max(applied,0);apply(0);inside.updateWorldMatrix(false,true);decks.forEach(sortDeck);swapPending=true;apply(p);refreshDetail();settle();
  }
  // Picking for the room labels: rays test each room's box where it is now, and each cabin's 4.4 x 3.6 x 6.4 m
  // envelope, rather than the rooms' thousands of meshes.
