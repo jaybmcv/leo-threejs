@@ -723,7 +723,22 @@ function showTourSpace(r){
 // cuts and the view fades in, instead of flying through walls into open space.
 const tourRay=new T.Raycaster();
 // Tour pacing: Play route glides for TOUR_GLIDE_MS and moves on every TOUR_STOP_MS; the arrows glide for TOUR_STEP_MS.
-const TOUR_GLIDE_MS=1500,TOUR_STOP_MS=4300,TOUR_STEP_MS=1000,TOUR_FADE_MS=300;
+const TOUR_GLIDE_MS=1500,TOUR_STOP_MS=4300,TOUR_STEP_MS=1000,TOUR_FADE_MS=300,TOUR_START_MS=3000;
+// While Play route runs, the eye looks around at each stop: a slow turn to one side (alternating stop by stop) with a
+// slight lift, back on the stop's view as the next move starts, so the walk never holds a frozen frame. Pausing eases
+// back to the stop's view; a drag takes over from whatever is on screen.
+const LOOK_YAW=.2,LOOK_PITCH=.07,LOOK_SETTLE=5,lookDirection=new T.Vector3(),lookRight=new T.Vector3();
+let lookStart=0,lookSpan=TOUR_STOP_MS,lookSwing=0;
+function lookAround(now,delta){
+ if(mode!=='walk'||reduced){lookSwing=0;return;}
+ if(tourPlaying){const u=Math.min(1,(now-lookStart)/lookSpan);lookSwing=Math.sin(Math.PI*u)*(stop%2?-1:1);}
+ else lookSwing*=Math.exp(-delta*LOOK_SETTLE);
+ if(Math.abs(lookSwing)<1e-4){lookSwing=0;return;}
+ lookDirection.subVectors(controls.target,camera.position).applyAxisAngle(LEVEL,LOOK_YAW*lookSwing);
+ lookRight.crossVectors(lookDirection,LEVEL).normalize();lookDirection.applyAxisAngle(lookRight,LOOK_PITCH*lookSwing*lookSwing);
+ camera.lookAt(lookDirection.add(camera.position));
+}
+function keepLook(){if(!lookSwing)return;const d=controls.target.distanceTo(camera.position);controls.target.copy(camera.position).addScaledVector(camera.getWorldDirection(lookDirection),d);lookSwing=0;}
 function tourPathBlocked(to){
  const from=camera.position,dir=new T.Vector3(...to).sub(from),distance=dir.length();if(distance<.5)return false;
  const meshes=[];scene.traverseVisible(o=>{if(o.isMesh)meshes.push(o);});tourRay.set(from,dir.normalize());tourRay.far=distance;
@@ -738,7 +753,7 @@ function goStop(index,duration=TOUR_STEP_MS){const list=routeStops();stop=Math.m
  $('status').textContent=TOURS[routeKey].status;
  $('route-name').textContent=r.name;$('route-detail').textContent=r.detail;$('stop-count').textContent=`${String(stop+1).padStart(2,'0')} / ${String(list.length).padStart(2,'0')}`;$('previous-stop').disabled=stop===0;$('next-stop').disabled=stop===list.length-1;document.querySelectorAll('[data-stop]').forEach(b=>b.setAttribute('aria-current',Number(b.dataset.stop)===stop));
 }
-function advanceTour(){if(!tourPlaying)return;if(stop===routeStops().length-1){stopTour();return;}goStop(stop+1,TOUR_GLIDE_MS);tourTimer=setTimeout(advanceTour,TOUR_STOP_MS);}
+function advanceTour(){if(!tourPlaying)return;if(stop===routeStops().length-1){stopTour();return;}goStop(stop+1,TOUR_GLIDE_MS);lookStart=performance.now();lookSpan=TOUR_STOP_MS;tourTimer=setTimeout(advanceTour,TOUR_STOP_MS);}
 $('tour-select').addEventListener('change',async()=>{routeKey=$('tour-select').value;renderRouteDots();await setMode('walk');});
 
 document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
@@ -787,8 +802,8 @@ $('toggle-panels').addEventListener('click',()=>{const hidden=document.body.clas
 $('detail-walls').addEventListener('change',()=>{const enclosed=$('detail-walls').checked;if(noseScene.visible)noseView().shell.visible=enclosed;ship.detail.walls.visible=enclosed;ship.detail.districtWalls.visible=enclosed;const v=districtView();if(v){v.residence.walls.visible=enclosed;v.residence.districtWalls.visible=enclosed;v.garden.walls.visible=enclosed;}});
 renderRouteDots();
 $('next-stop').addEventListener('click',()=>{stopTour();goStop(stop+1);});$('previous-stop').addEventListener('click',()=>{stopTour();goStop(stop-1);});$('restart-tour').addEventListener('click',()=>{stopTour();goStop(0);});
-$('play-tour').addEventListener('click',()=>{if(tourPlaying){stopTour();return;}tourPlaying=true;$('play-tour').textContent='Pause';if(stop===routeStops().length-1)goStop(0);tourTimer=setTimeout(advanceTour,3000);});
-renderer.domElement.addEventListener('pointerdown',e=>{if(mode!=='walk')return;stopTour();transition=null;lookDrag={x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId);});
+$('play-tour').addEventListener('click',()=>{if(tourPlaying){stopTour();return;}tourPlaying=true;$('play-tour').textContent='Pause';if(stop===routeStops().length-1)goStop(0);lookStart=performance.now();lookSpan=TOUR_START_MS;tourTimer=setTimeout(advanceTour,TOUR_START_MS);});
+renderer.domElement.addEventListener('pointerdown',e=>{if(mode!=='walk')return;keepLook();stopTour();transition=null;lookDrag={x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId);});
 renderer.domElement.addEventListener('pointermove',e=>{if(!lookDrag||mode!=='walk')return;const euler=new T.Euler().setFromQuaternion(camera.quaternion,'YXZ');euler.y-=(e.clientX-lookDrag.x)*.004;euler.x=T.MathUtils.clamp(euler.x-(e.clientY-lookDrag.y)*.004,-1.4,1.4);camera.quaternion.setFromEuler(euler);const dir=new T.Vector3(0,0,-1).applyQuaternion(camera.quaternion);controls.target.copy(camera.position).addScaledVector(dir,10);lookDrag={x:e.clientX,y:e.clientY};});
 renderer.domElement.addEventListener('pointerup',()=>lookDrag=null);
 renderer.domElement.addEventListener('pointercancel',()=>lookDrag=null);
@@ -848,7 +863,7 @@ function firstFrameReady(){
  const visibleOnly={traverse:fn=>scene.traverseVisible(fn),traverseVisible(){}};
  return Promise.race([renderer.compileAsync(visibleOnly,camera,scene),new Promise(r=>setTimeout(r,FIRST_FRAME_WAIT_MS))]).catch(e=>console.warn('First-frame compile skipped.',e));
 }
-function animate(now){requestAnimationFrame(animate);dressCosmo(now);tickShadows(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);if(transition.upFrom)camera.up.lerpVectors(transition.upFrom,LEVEL,s).normalize();camera.lookAt(controls.target);if(t===1)transition=null;}if(!transition&&!persp.up.equals(LEVEL))persp.up.copy(LEVEL);if(mode!=='walk')controls.update(delta);if(mode==='exterior'||mode==='layout')fitShipDepth();if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));if(explodeKit&&explodeValue>0&&mode==='exterior'){explodeDetail();explodeKit.sync();}placeExplodeTags();const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
+function animate(now){requestAnimationFrame(animate);dressCosmo(now);tickShadows(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);if(transition.upFrom)camera.up.lerpVectors(transition.upFrom,LEVEL,s).normalize();camera.lookAt(controls.target);if(t===1)transition=null;}if(!transition&&!persp.up.equals(LEVEL))persp.up.copy(LEVEL);lookAround(now,delta);if(mode!=='walk')controls.update(delta);if(mode==='exterior'||mode==='layout')fitShipDepth();if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));if(explodeKit&&explodeValue>0&&mode==='exterior'){explodeDetail();explodeKit.sync();}placeExplodeTags();const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
 $('save-render').addEventListener('click',async()=>{
   if(exporting)return;exporting=true;$('save-render').disabled=true;$('render-status').textContent='Rendering exterior…';
   const view=document.querySelector('[data-camera][aria-pressed="true"]').dataset.camera,shapeOnly=$('shape-only').checked;
