@@ -119,17 +119,17 @@ export function createExplode({ship,transit,aft,thrusters,outline}){
  const {exterior,inside,decks}=ship;
  exterior.updateMatrixWorld(true);inside.updateWorldMatrix(false,true);// always recurses (the viewer skips the interior's per-frame update when nothing moved)
  let crownBox=null;// the crown bar's assembled bounds, for its call-out
- const parts=[],stretched=[],added=[],floors=[],slabs=[],cabins=[],residences=[],registered=new Set();
+ const parts=[],rigid=new Set(),stretched=[],added=[],floors=[],slabs=[],cabins=[],residences=[],registered=new Set();
  // Rooms whose floors overlap (the lifeboat bays share floor area with their neighbours) would be coplanar and
  // flicker once the slabs fade, so while exploded each room sits a few centimetres off its neighbours.
  let rooms=0;
  const add=(object,kind,props={})=>{registered.add(object);parts.push({object,base:object.position.clone(),kind,...(kind==='room'?{nudge:(rooms++%8)*.02+(/lifeboats/.test(object.name)?.01:0)}:{}),...props});};
  for(const group of exterior.children){
-  if(group.name==='Fin_panorama_lounge'){add(group,'crown');crownBox=new T.Box3().setFromObject(group);continue;}
+  if(group.name==='Fin_panorama_lounge'){add(group,'crown');rigid.add(group);crownBox=new T.Box3().setFromObject(group);continue;}
   for(const part of [...group.children]){
    const kind=exteriorKind(group,part);let b=bounds(part);
-   if((kind==='hull'||kind==='wing')&&b.min.z<-10&&b.max.z>10&&part.isMesh){const twin=splitAcross(part);if(twin){added.push(twin);add(twin,kind,{side:1});b=bounds(part);}}
-   add(part,kind,{side:group.name==='Port_shell'?-1:group.name==='Starboard_shell'?1:Math.sign(b.center.z),y:b.min.y});
+   if((kind==='hull'||kind==='wing')&&b.min.z<-10&&b.max.z>10&&part.isMesh){const twin=splitAcross(part);if(twin){added.push(twin);add(twin,kind,{side:1});rigid.add(twin);b=bounds(part);}}
+   add(part,kind,{side:group.name==='Port_shell'?-1:group.name==='Starboard_shell'?1:Math.sign(b.center.z),y:b.min.y});rigid.add(part);
   }
  }
  // The plumes and their lights follow the pods and the aft service doors.
@@ -214,6 +214,132 @@ export function createExplode({ship,transit,aft,thrusters,outline}){
   const merged=shapes.length&&mergeGeometries(shapes);shapes.forEach(g=>g.dispose());
   if(merged){ghost=new T.Mesh(merged,ghostMaterial);ghost.name='Explode_hull_outline';ghost.visible=false;ghost.castShadow=ghost.receiveShadow=false;ghost.frustumCulled=false;ship.root.add(ghost);}// not culled: always in view while shown, and measuring it would visit every vertex of the hull
  }
+ // Batching. Each part (a room, a deck, the crown bar, a nacelle...) moves as one, but is drawn as dozens of meshes,
+ // each a draw call in the main pass and another in the shadow map. While exploded, the meshes of a part, or of the
+ // exterior parts that always move together (each hull half, wing and pod, the fin), that share a material are merged
+ // into one mesh, which draws in their place: they stay in the scene and keep their own visibility, and are only kept
+ // out of the render (layers). A merged mesh draws only while every mesh it covers is shown, otherwise they draw
+ // themselves. Inside, meshes are merged with others of the same size step of the detail culling (setDetail), so a
+ // merged mesh is shown or hidden as a whole, and the furniture under BATCH_RADIUS (too small to show at exploded
+ // distances) is left out to save memory. The batches are made when the ship comes apart, and again then for parts
+ // whose meshes have changed (decks fill in, Cosmo dresses a figure).
+ const BATCH_RADIUS=3,batches=new Map(),proxies=new Set(),plain=T.Object3D.prototype.onBeforeRender,local=new T.Matrix4();let batched=false;
+ const batchable=o=>o.isMesh&&!o.isInstancedMesh&&!o.isSkinnedMesh&&!proxies.has(o)&&!Array.isArray(o.material)&&!o.material.transparent&&o.geometry.attributes.position&&!Object.keys(o.geometry.morphAttributes).length&&o.geometry.drawRange.start===0&&o.geometry.drawRange.count===Infinity&&o.onBeforeRender===plain;
+ const shownIn=(o,root)=>{for(;o!==root;o=o.parent)if(!o?.visible)return false;return true;};
+ // Materials that would draw the same: the finishing passes give many meshes their own copy of a material. A tinted
+ // copy counts as its original (its colour follows the original's).
+ const MAPS=['map','normalMap','roughnessMap','metalnessMap','emissiveMap','aoMap','alphaMap','bumpMap','envMap','lightMap','displacementMap'],looks=new Map();
+ const original=m=>m.userData.tintFrom||m;
+ function look(m){
+  m=original(m);let key=looks.get(m);
+  if(!key){key=['MeshStandardMaterial','MeshLambertMaterial','MeshBasicMaterial'].includes(m.type)&&!m.clippingPlanes&&m.onBeforeCompile===T.Material.prototype.onBeforeCompile&&m.customProgramCacheKey===T.Material.prototype.customProgramCacheKey?JSON.stringify([m.type,m.color?.getHex(),m.emissive?.getHex(),m.emissiveIntensity,m.roughness,m.metalness,m.opacity,m.side,m.vertexColors,m.flatShading,m.wireframe,m.alphaTest,m.polygonOffset,m.polygonOffsetFactor,m.polygonOffsetUnits,m.depthWrite,m.depthTest,m.colorWrite,m.toneMapped,m.fog,m.envMapIntensity,m.normalScale?.toArray(),m.defines,MAPS.map(k=>m[k]?.uuid)]):m.uuid;looks.set(m,key);}
+  return key;
+ }
+ // Parts whose offset depends only on their kind and side (or deck), so they move as one (see offset).
+ const together=part=>['hull','wing','pod'].includes(part.kind)?part.kind+part.side:['fin','crown'].includes(part.kind)?part.kind:['aftcap','nose','roof','deck'].includes(part.kind)?part.kind+deckIndex(part.y):null;
+ // The meshes in a member that would be shown but for the detail culling, leaving out parts moving on their own in it.
+ function memberMeshes(member,moving,fn){
+  (function visit(o){if(o.isMesh&&(o.visible||culled.has(o))){if(batchable(o))fn(o);}else if(!o.visible)return;for(const c of o.children)if(!moving.has(c))visit(c);})(member);
+ }
+ const radiusOf=o=>{const g=o.geometry;if(!g.boundingSphere)g.computeBoundingSphere();scale.setFromMatrixScale(o.matrixWorld);return g.boundingSphere.radius*Math.max(scale.x,scale.y,scale.z);};
+ // Merges sources into one geometry in the anchor's space: positions and normals (and tangents) transformed, other
+ // attributes copied as plain floats, one index (merging needs the same attributes on every source). Transforms come
+ // from the local matrices, as the parts may have moved since the batch was started and three.js does not carry a
+ // part's move down to the world matrices of the settled objects in it until the next full update.
+ const normalMatrix=new T.Matrix3(),v=new T.Vector3(),inverse=new T.Matrix4(),chunk=()=>Object.assign([],{vertices:0});
+ function worldOf(o,out){out.identity();for(;o;o=o.parent){if(o.matrixAutoUpdate)o.updateMatrix();out.premultiply(o.matrix);}return out;}
+ function mergeSources(sources,anchor){
+  const g0=sources[0].o.geometry,names=Object.keys(g0.attributes);let vertices=0,indices=0;
+  for(const {o} of sources){const g=o.geometry;vertices+=g.attributes.position.count;indices+=g.index?g.index.count:g.attributes.position.count;}
+  const out=new T.BufferGeometry(),arrays={},index=vertices>65535?new Uint32Array(indices):new Uint16Array(indices);
+  worldOf(anchor,inverse).invert();
+  for(const name of names)arrays[name]=new Float32Array(vertices*g0.attributes[name].itemSize);
+  let base=0,at=0;
+  for(const {o} of sources){
+   const g=o.geometry,count=g.attributes.position.count;local.multiplyMatrices(inverse,worldOf(o,local));normalMatrix.getNormalMatrix(local);
+   for(const name of names){
+    const a=g.attributes[name],size=a.itemSize,target=arrays[name],offset=base*size;
+    if(a.isInterleavedBufferAttribute||a.normalized||!(a.array instanceof Float32Array))for(let i=0;i<count;i++)for(let k=0;k<size;k++)target[offset+i*size+k]=a.getComponent(i,k);
+    else target.set(a.array.subarray(0,count*size),offset);
+    const transform=name==='position'?vec=>vec.applyMatrix4(local):name==='normal'?vec=>vec.applyMatrix3(normalMatrix).normalize():name==='tangent'?vec=>vec.transformDirection(local):null;
+    if(transform)for(let i=0;i<count;i++){const j=offset+i*size;transform(v.set(target[j],target[j+1],target[j+2]));target[j]=v.x;target[j+1]=v.y;target[j+2]=v.z;}
+   }
+   const source=g.index?.array,n=g.index?g.index.count:count,flip=local.determinant()<0;// mirrored: keep the faces' winding
+   for(let i=0;i<n;i+=3)for(let k=0;k<3;k++){const c=flip&&k?3-k:k;index[at+i+k]=base+(source?source[i+c]:i+c);}
+   base+=count;at+=n;
+  }
+  for(const name of names)out.setAttribute(name,new T.BufferAttribute(arrays[name],g0.attributes[name].itemSize));
+  out.setIndex(new T.BufferAttribute(index,1));return out;
+ }
+ // The batching units: each interior part, and the exterior parts grouped by how they move (and their parent, so they
+ // share a frame). A unit's merged meshes hang from its first part, the anchor.
+ function batchUnits(){
+  const units=new Map(),within=o=>{while(o&&o!==inside)o=o.parent;return !!o;};
+  for(const part of parts){
+   const o=part.object,interior=!rigid.has(o);if(interior&&!within(o))continue;// the plumes animate
+   const group=!interior&&together(part),key=group?o.parent.uuid+group:o.uuid;
+   if(!units.has(key))units.set(key,{anchor:o,members:[],interior});units.get(key).members.push(o);
+  }
+  return units;
+ }
+ // Builds a unit's batch one merged mesh per step, registering it at once so its finished meshes draw meanwhile.
+ function* buildBatch(key,unit){
+  const {anchor,members,interior}=unit;for(const member of members)member.updateWorldMatrix(true,true);// for the sizes: hidden meshes may be behind (the viewer updates only what shows while things move)
+  const groups=new Map(),b={anchor,list:[],count:0,members:members.length,done:false},meshes=[];
+  for(const member of members)memberMeshes(member,moving,o=>meshes.push({o,member}));
+  b.count=meshes.length;batches.set(key,b);
+  for(let i=0;i<meshes.length;i++){
+   if(i%200===199)yield;
+   const {o}=meshes[i],r=radiusOf(o),vertices=o.geometry.attributes.position.count;if(interior&&r<BATCH_RADIUS||vertices>BATCH_VERTICES)continue;
+   const key=[look(o.material),o.castShadow,o.receiveShadow,o.renderOrder,o.frustumCulled,interior?Math.floor(4*Math.log2(r)):0,Object.keys(o.geometry.attributes).sort().map(n=>n+o.geometry.attributes[n].itemSize)].join('|');
+   let group=groups.get(key);if(!group)groups.set(key,group=[chunk()]);
+   let last=group.at(-1);if(last.vertices+vertices>BATCH_VERTICES)group.push(last=chunk());// each merged mesh stays under BATCH_VERTICES, so each step stays short
+   last.push(meshes[i]);last.vertices+=vertices;
+  }
+  for(const sources of [...groups.values()].flat()){
+   if(sources.length<2)continue;
+   yield;
+   const geometry=mergeSources(sources,anchor);geometry.computeBoundingSphere();geometry.computeBoundingBox();
+   const o=sources[0].o,mesh=new T.Mesh(geometry,o.material);
+   Object.assign(mesh,{name:'Explode_batch',castShadow:o.castShadow,receiveShadow:o.receiveShadow,renderOrder:o.renderOrder,frustumCulled:o.frustumCulled,visible:false});
+   proxies.add(mesh);b.list.push({mesh,sources,masks:sources.map(s=>s.o.layers.mask),originals:sources.map(s=>original(s.o.material)),on:false});
+   if(batched)hang(mesh,anchor);
+  }
+  b.done=true;
+ }
+ // The interior's matrices update only while it moves (viewer.js), so a merged mesh takes its place at once.
+ function hang(mesh,anchor){anchor.add(mesh);mesh.updateWorldMatrix(true,false);}
+ function freeBatch(b){for(const p of b.list){showSources(p,false);p.mesh.removeFromParent();p.mesh.geometry.dispose();proxies.delete(p.mesh);}}
+ function showSources(p,merged){p.on=merged;p.mesh.visible=merged;p.sources.forEach((s,i)=>{s.o.layers.mask=merged?0:p.masks[i];});}
+ // Making the batches is spread over frames, BATCH_MS at a time, so the ship comes apart without a pause; until its
+ // batch is ready a part's meshes draw themselves. refresh() has every unit checked again for new or changed meshes.
+ const BATCH_MS=3,BATCH_VERTICES=20000;let units=null,moving=null,queue=[],queued=0,task=null;// a mesh larger than BATCH_VERTICES is worth its own draw
+ function attachBatches(){
+  batched=true;
+  if(!units){
+   units=batchUnits();moving=new Set([...parts.map(part=>part.object),...stretched.map(s=>s.object)]);queue=[...units.keys()];queued=0;task=null;
+   for(const [key,b] of batches)if(!units.has(key)||!b.done){freeBatch(b);batches.delete(key);}
+  }
+  for(const [key,b] of batches)for(const p of b.list)hang(p.mesh,units.get(key).anchor);
+  syncBatches();
+ }
+ function detachBatches(){batched=false;for(const b of batches.values())for(const p of b.list){showSources(p,false);p.mesh.removeFromParent();}}
+ function* checkUnit(key){
+  const unit=units.get(key),old=batches.get(key);
+  if(old){let count=0;for(const member of unit.members)memberMeshes(member,moving,()=>count++);if(old.done&&count===old.count&&unit.members.length===old.members)return;freeBatch(old);batches.delete(key);}
+  yield* buildBatch(key,unit);
+ }
+ // Each frame while exploded: a merged mesh stands in only while its anchor and all of its meshes are shown, and the
+ // meshes still have the materials it was made from, all tinted or none (the rooms' tinted copies swap in and out). It
+ // takes the first one's.
+ function syncBatches(){
+  if(!batched)return;
+  for(const end=performance.now()+BATCH_MS;performance.now()<end;){if(!task){if(queued>=queue.length)break;task=checkUnit(queue[queued++]);}if(task.next().done)task=null;}
+  for(const b of batches.values())for(const p of b.list){
+   const m=p.sources[0].o.material,to=m.userData.tintTo,merged=b.anchor.visible&&!m.transparent&&p.sources.every((s,i)=>{const n=s.o.material;return original(n)===p.originals[i]&&n.userData.tintTo===to&&shownIn(s.o,s.member.parent);});
+   if(merged)p.mesh.material=m;if(merged!==p.on)showSources(p,merged);
+  }
+ }
  function apply(p){
   applied=p;
   for(const part of parts)part.object.position.copy(part.base).add(offset(part,p,move));
@@ -225,29 +351,32 @@ export function createExplode({ship,transit,aft,thrusters,outline}){
   if(floorsShown!==fade<.5){floorsShown=fade<.5;for(const o of floors)o.visible=floorsShown;}
   setTint(ease(p,STAGES.tint));
   const s=Math.min(Math.max(p,STAGES.rooms[0]),STAGES.rooms[1]);// the scatter only changes within its stage
-  if(s!==scattered){
-   scattered=s;for(let i=0;i<CABIN_ORDER.length;i++){const c=CABIN_ORDER[i];cabinScatter[i]=scatterAt(c.x,c.z,p);}
-   for(const {mesh,base} of cabins){
-    const a=mesh.instanceMatrix.array;
-    for(let i=0;i<mesh.count;i++){const c=CABIN_ORDER[i],k=cabinScatter[i];a[i*16+12]=base[i*3]+(c.x-MID_X)*k;a[i*16+14]=base[i*3+2]+c.z*k;}
-    mesh.instanceMatrix.needsUpdate=true;mesh.frustumCulled=p<=STAGES.rooms[0];// the cached bounds no longer hold once scattered
-   }
-  }
+  if(s!==scattered){scattered=s;for(let i=0;i<CABIN_ORDER.length;i++){const c=CABIN_ORDER[i];cabinScatter[i]=scatterAt(c.x,c.z,p);}}
+  // Cabin parts hidden by the detail culling catch up when they show again (syncCabins), except back home.
+  for(const cabin of cabins)if(cabin.mesh.visible||s===STAGES.rooms[0])placeCabins(cabin);
   if(ghost){ghost.visible=p>0;ghostMaterial.opacity=GHOST_OPACITY*ease(p,[0,.3]);}
+  if(p>0!==batched)p>0?attachBatches():detachBatches();// once everything is in place
  }
+ function placeCabins(cabin){
+  if(cabin.at===scattered)return;cabin.at=scattered;
+  const {mesh,base}=cabin,a=mesh.instanceMatrix.array;
+  for(let i=0;i<mesh.count;i++){const c=CABIN_ORDER[i],k=cabinScatter[i];a[i*16+12]=base[i*3]+(c.x-MID_X)*k;a[i*16+14]=base[i*3+2]+c.z*k;}
+  mesh.instanceMatrix.needsUpdate=true;mesh.frustumCulled=scattered<=STAGES.rooms[0];// the cached bounds no longer hold once scattered
+ }
+ function syncCabins(){for(const cabin of cabins)if(cabin.mesh.visible)placeCabins(cabin);}
  // Detail culling. With every deck built there are about 44,000 meshes, most of them furniture and fittings well under
  // a pixel at exploded distances, and each costs a draw call. Meshes smaller than minRadius hide; the list is sorted by
  // size so a change only touches the meshes between the old and new limits. setDetail(0) shows them all again.
  // Corridor meshes are left to the floor fade, and cabin floors always show (one instanced draw per deck), so the
  // 5,000 cabins still read as tiles when the rest of their furniture is too small to draw.
- const detail=[],known=new Set([...floors.filter(o=>o.isMesh),...cabins.map(c=>c.mesh).filter(o=>o.name==='Repeated_Cabin_24m2_floor')]),scale=new T.Vector3();let hidden=0,limit=0;
+ const detail=[],known=new Set([...floors.filter(o=>o.isMesh),...cabins.map(c=>c.mesh).filter(o=>o.name==='Repeated_Cabin_24m2_floor')]),scale=new T.Vector3(),culled=new Set();let hidden=0,limit=0;
  function setDetail(minRadius){
   let lo=0,hi=detail.length;while(lo<hi){const m=(lo+hi)>>1;if(detail[m].radius<minRadius)lo=m+1;else hi=m;}
-  for(let i=hidden;i<lo;i++)detail[i].mesh.visible=false;for(let i=lo;i<hidden;i++)detail[i].mesh.visible=true;hidden=lo;limit=minRadius;
+  for(let i=hidden;i<lo;i++){detail[i].mesh.visible=false;culled.add(detail[i].mesh);}for(let i=lo;i<hidden;i++){detail[i].mesh.visible=true;culled.delete(detail[i].mesh);}hidden=lo;limit=minRadius;
  }
  function refreshDetail(){
   const keep=limit;setDetail(0);
-  inside.traverse(o=>{if(!o.isMesh||!o.visible||known.has(o))return;known.add(o);const g=o.geometry;if(!g.boundingSphere)g.computeBoundingSphere();o.getWorldScale(scale);detail.push({mesh:o,radius:g.boundingSphere.radius*Math.max(scale.x,scale.y,scale.z)});});
+  inside.traverse(o=>{if(!o.isMesh||!o.visible||known.has(o)||proxies.has(o))return;known.add(o);const g=o.geometry;if(!g.boundingSphere)g.computeBoundingSphere();o.getWorldScale(scale);detail.push({mesh:o,radius:g.boundingSphere.radius*Math.max(scale.x,scale.y,scale.z)});});
   detail.sort((a,b)=>a.radius-b.radius);setDetail(keep);
  }
  refreshDetail();
@@ -260,7 +389,7 @@ export function createExplode({ship,transit,aft,thrusters,outline}){
  settle();
  // Fitted areas built since: sort them into the explode at its current amount, then into the detail culling.
  function refresh(){
-  const p=Math.max(applied,0);apply(0);inside.updateWorldMatrix(false,true);decks.forEach(sortDeck);swapPending=true;apply(p);refreshDetail();settle();
+  const p=Math.max(applied,0);apply(0);inside.updateWorldMatrix(false,true);decks.forEach(sortDeck);swapPending=true;units=null;apply(p);refreshDetail();settle();
  }
  // Picking for the room labels: rays test each room's box where it is now, and each cabin's 4.4 x 3.6 x 6.4 m
  // envelope, rather than the rooms' thousands of meshes.
@@ -302,7 +431,7 @@ export function createExplode({ship,transit,aft,thrusters,outline}){
   {text:'Farms & medical',detail:'Decks 3–5',at:deckAt(4,235)},
   {text:'Recreation',detail:'Deck 16',at:deckAt(16,200)},
  ];
- return {apply,setDetail,refresh,frame,labels:labels.filter(l=>crownBox||l.text!=='Fin crown bar'),added,pick};
+ return {apply,sync(){syncBatches();syncCabins();},setDetail,refresh,frame,labels:labels.filter(l=>crownBox||l.text!=='Fin crown bar'),added,pick};
 }
 
 export function explodeStage(p){
