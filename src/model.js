@@ -40,22 +40,22 @@ for(let n=0;n<10;n++) for(let lane=0;lane<5;lane++) for(let side of [-1,1]) for(
 export const COMMONS = Array.from({length:10},(_,i)=>({neighborhood:i+1,x:-92+Math.floor(i/2)*56,z:(i%2===0?-1:1)*(i===2||i===3?24.5:27),width:45,depth:38,y:24.3,height:11.2}));
 export const SAMPLE = CABINS.find(c=>c.neighborhood===10&&c.x>120&&c.z===5.2);
 export const ROUTE = [
-  {name:'Twin cabin', detail:'24 m² clear floor · two berths · 1.7 m eye level', position:[SAMPLE.x,18,2.6], target:[SAMPLE.x,17.5,6.4]},
-  {name:'Residential corridor',detail:'4 m clear corridor · Neighborhood 10 · Deck 15',position:[124.5,18,0],target:[132,18,0]},
-  {name:'Lift to the commons',detail:'Deck 15 → Deck 17 · 8 m vertical connection',position:[132,26,0],target:[132,26,10]},
-  {name:'Neighborhood garden',detail:'One of ten commons · three deck height',position:[145,26,12],target:[132,28,28]},
-  {name:'Forward promenade',detail:'A gentle 1:12 ramp rises toward the panoramic lounge',position:[149,26.25,0],target:[172,28,0],mars:true},
-  {name:'Observation lounge',detail:'A place to settle in · curved windows, reading corners and a view of Mars',position:[180,28,31],target:[210,29,11],mars:true}
+  {name:'Twin cabin', detail:'24 m² clear floor · two berths · 1.7 m eye level', position:[SAMPLE.x,18,2.6], target:[SAMPLE.x,17.5,6.4], look:[.24,.02,'sweep']},
+  {name:'Residential corridor',detail:'4 m clear corridor · Neighborhood 10 · Deck 15',position:[124.5,18,0],target:[132,18,0],look:[-.3,.02,'glance']},
+  {name:'Lift to the commons',detail:'Deck 15 → Deck 17 · 8 m vertical connection',position:[132,26,0],target:[132,26,10],look:[-.18,.16,'drift']},
+  {name:'Neighborhood garden',detail:'One of ten commons · three deck height',position:[145,26,12],target:[132,28,28],look:[.22,.12,'glance']},
+  {name:'Forward promenade',detail:'A gentle 1:12 ramp rises toward the panoramic lounge',position:[149,26.25,0],target:[172,28,0],mars:true,look:[-.32,0,'glance']},
+  {name:'Observation lounge',detail:'A place to settle in · curved windows, reading corners and a view of Mars',position:[180,28,31],target:[210,29,11],mars:true,look:[.16,.06,'sweep']}
 ];
 // The lounge tour starts in the Neighborhood 10 garden and spends most of its time inside the forward observation lounge.
 export const LOUNGE_TOUR = [
-  {...ROUTE[3],detail:'Deck 17 · Neighborhood 10 commons. The observation lounge is a short walk forward.'},
-  {...ROUTE[4]},
-  {name:'Into the lounge',detail:'Through the doors, the whole forward window opens up',position:[178,28.6,-2.5],target:[206,31.8,-11],mars:true},
-  {name:'The shared telescope',detail:'At the centre of the window, a scope for a closer look',position:[198.5,28,1],target:[212,29.6,-5],mars:true},
-  {name:'Seating islands',detail:'Armchairs and table lamps in two islands, leaving the window aisle clear',position:[181,28.6,10],target:[191,27.2,22],mars:true},
-  {name:'Reading corner',detail:'A bench and a wall of books beneath the Mars Cats art',position:[184,28,18],target:[171,28.4,20],mars:true},
-  {name:'Settle in with Mars',detail:'Curved windows, warm light and the red planet outside',position:[180,28,31],target:[210,29,11],mars:true}
+  {...ROUTE[3],detail:'Deck 17 · Neighborhood 10 commons. The observation lounge is a short walk forward.',look:[-.2,.1,'drift']},
+  {...ROUTE[4],look:[.26,.04,'glance']},
+  {name:'Into the lounge',detail:'Through the doors, the whole forward window opens up',position:[178,28.6,-2.5],target:[206,31.8,-11],mars:true,look:[-.22,.08,'sweep']},
+  {name:'The shared telescope',detail:'At the centre of the window, a scope for a closer look',position:[198.5,28,1],target:[212,29.6,-5],mars:true,look:[.1,.14,'drift']},
+  {name:'Seating islands',detail:'Armchairs and table lamps in two islands, leaving the window aisle clear',position:[181,28.6,10],target:[191,27.2,22],mars:true,look:[-.28,.02,'glance']},
+  {name:'Reading corner',detail:'A bench and a wall of books beneath the Mars Cats art',position:[184,28,18],target:[171,28.4,20],mars:true,look:[.2,.06,'sweep']},
+  {name:'Settle in with Mars',detail:'Curved windows, warm light and the red planet outside',position:[180,28,31],target:[210,29,11],mars:true,look:[-.14,.08,'drift']}
 ];
 
 const MAT = {};
