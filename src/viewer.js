@@ -139,7 +139,17 @@ function loadCosmo(){
 // new scene parts, Cosmo, resize) plus a 1 s safety refresh, instead of re-rendering the whole ship every frame.
 let shadowFrames=3,shadowClock=0;const refreshShadows=()=>{shadowFrames=3;};
 for(const type of ['click','change','input'])document.addEventListener(type,refreshShadows,true);addEventListener('resize',refreshShadows);
-function tickShadows(now){if(shadowFrames>0){shadowFrames--;renderer.shadowMap.needsUpdate=true;}else if(now-shadowClock>1000){shadowClock=now;renderer.shadowMap.needsUpdate=true;}}
+function tickShadows(now){if(shadowFrames>0){shadowFrames--;renderer.shadowMap.needsUpdate=interiorMoved=true;}else if(now-shadowClock>1000){shadowClock=now;renderer.shadowMap.needsUpdate=interiorMoved=true;}}
+// With its decks built the interior is ~50,000 objects, and three.js re-derives every object's matrices each frame
+// (~10 ms on a fast desktop, assembled or not). They only change when something is built, dressed or moved, which
+// all schedule a shadow refresh, so the interior re-derives its matrices on the shadow map's schedule instead.
+let interiorMoved=true;const interiorPlace=new T.Matrix4(),IDENTITY=new T.Matrix4();
+ship.inside.updateMatrixWorld=function(force){
+ if(this.matrixAutoUpdate)this.updateMatrix();
+ this.matrixWorld.multiplyMatrices(this.parent?this.parent.matrixWorld:IDENTITY,this.matrix);
+ if(interiorMoved||!this.matrixWorld.equals(interiorPlace)){interiorMoved=false;interiorPlace.copy(this.matrixWorld);T.Object3D.prototype.updateMatrixWorld.call(this,true);}
+ this.matrixWorldNeedsUpdate=false;
+};
 for(const container of [scene,noseScene,areasRoot,transitScene,aftScene])container.addEventListener('childadded',()=>{refreshShadows();if(cosmoKit)cosmoPending.add(container);});
 function dressCosmo(now){
  if(!cosmoKit)return;
@@ -350,7 +360,7 @@ function viewCamera(view){if(DETAIL_CAMERAS.includes(view)&&explodeValue>0){stop
 // deck layout or the idle warm-up has not built yet shows its massing until unpackDecks fills it in. Overview cameras
 // frame the exploded ship; close-up cameras put it back together first, since their subject has moved.
 const DETAIL_CAMERAS=['bow','windows','aftwindows','enginewindows','engine'];
-let explodeKit=null,explodeValue=0,explodePlay=0,explodeTagsShown=false,dialDragging=false,unpackTimer=0,builtDecks=-1;const explodeTags=[];
+let explodeKit=null,explodeValue=0,explodePlay=0,explodeTagsShown=false,dialDragging=false,builtDecks=-1;const explodeTags=[];
 const exteriorStatus=()=>explodeValue>0?'Exploded view · '+explodeStage(explodeValue):studioTools?'Exterior V35 / refined surfaces':'Exterior · refined surfaces';
 const explodeScale=()=>explodeKit?explodeKit.frame(explodeValue).radius/SHIP_RADIUS:1;
 // Phones frame the exploded ship tighter than its full extent (the parts at the edges run off the sides), so the
@@ -365,12 +375,47 @@ function ensureExplodeKit(){
  for(const label of explodeKit.labels){const tag=document.createElement('div'),text=document.createElement('b'),detail=document.createElement('span');tag.className='explode-tag';tag.hidden=true;detail.textContent=label.detail;text.append(label.text+' · ',detail);tag.append(text);$('explode-labels').append(tag);explodeTags.push({tag,label});}
  return explodeKit;
 }
-// Building the interior stalls for a moment the first time, so the stage line says so before it starts.
-async function prepareExplode(){
- if(explodeKit)return true;if(!exteriorReady)return false;
- // Two frames let the message paint; the timer covers a hidden tab, where frames do not run.
- $('explode-stage').textContent='Unpacking Leo…';await new Promise(r=>{requestAnimationFrame(()=>requestAnimationFrame(r));setTimeout(r,120);});
- try{ensureExplodeKit();return true;}catch(e){console.warn('The exploded view could not be built.',e);$('explode-stage').textContent=explodeStage(explodeValue);return false;}
+// The first turn builds the interior a piece per frame, with progress on the stage line, then measures its meshes a
+// few milliseconds per frame (the detail culling sizes every mesh) and compiles its shaders in parallel, so nothing
+// holds the page for long. The dial follows the pointer once it is done.
+const nextFrame=()=>new Promise(r=>document.hidden?setTimeout(r,50):requestAnimationFrame(()=>r()));// a hidden tab runs no frames
+let preparing=null;
+function prepareExplode(){
+ if(explodeKit)return Promise.resolve(true);if(!exteriorReady)return Promise.resolve(false);
+ return preparing||=(async()=>{
+  const steps=[...DECKS.filter(d=>d.number>=6&&d.number<=15).map(d=>()=>ship.ensureResidentialDeck(d.number)),()=>ship.ensureGardens(),()=>ship.ensureObservation(),()=>ship.ensureTransit(),()=>ship.ensureAft()],progress=p=>{$('explode-stage').textContent=`Unpacking Leo… ${Math.round(p*100)}%`;};
+  try{
+   for(let i=0;i<steps.length;i++){progress(i/steps.length*.6);await nextFrame();steps[i]();}
+   const meshes=[];ship.inside.traverse(o=>{if(o.isMesh&&!o.geometry.boundingSphere)meshes.push(o);});
+   for(let i=0;i<meshes.length;){progress(.6+i/meshes.length*.3);await nextFrame();for(const end=performance.now()+8;i<meshes.length&&performance.now()<end;i++)meshes[i].geometry.computeBoundingSphere();}
+   progress(.9);await nextFrame();ensureExplodeKit();
+   progress(.95);await nextFrame();await prepareShaders([ship.inside]);return true;
+  }catch(e){console.warn('The exploded view could not be built.',e);$('explode-stage').textContent=explodeStage(explodeValue);return false;}
+  finally{preparing=null;}
+ })();
+}
+// Compiles the shaders hidden parts of the scene will need (in parallel, off the main thread where the browser has
+// KHR_parallel_shader_compile) and uploads their textures a frame at a time, so the frame that first shows them does
+// not stall. three's compile visits every mesh, but a shader depends only on the material, the kind of mesh and the
+// geometry's attributes, so one sample of each is enough (the interior's ~25,000 meshes need a few hundred).
+const SHADER_WAIT_MS=4000;
+// A stand-in for `roots` that three's compile walks: their lights, and one mesh per distinct shader.
+function shaderSamples(roots){
+ const samples=new Set(),seen=new Set(),textures=new Set();
+ for(const root of roots)root.traverse(o=>{
+  if(!o.isMesh)return;const g=o.geometry,kind=`${o.isInstancedMesh&&1}${o.isInstancedMesh&&!!o.instanceColor}${o.isSkinnedMesh&&1}|${Object.keys(g.attributes)}|${g.attributes.color?.itemSize}|${Object.keys(g.morphAttributes)}`;
+  for(const m of Array.isArray(o.material)?o.material:[o.material]){
+   if(!seen.has(m.uuid+kind)){seen.add(m.uuid+kind);samples.add(o);}
+   for(const v of Object.values(m))if(v?.isTexture)textures.add(v);
+  }
+ });
+ return {traverse:fn=>samples.forEach(fn),traverseVisible:fn=>roots.forEach(r=>r.traverseVisible(fn)),textures};
+}
+async function prepareShaders(roots){
+ const sampled=shaderSamples(roots);
+ const compiled=Promise.race([renderer.compileAsync(sampled,camera,scene),new Promise(r=>setTimeout(r,SHADER_WAIT_MS))]).catch(e=>console.warn('Shader warm-up skipped.',e));
+ for(const t of sampled.textures)if(renderer.properties.get(t).__version!==t.version){renderer.initTexture(t);await nextFrame();}
+ return compiled;
 }
 // The exploded ship shows the whole exterior and the complete interior layout, with nothing cut away for a deck.
 function explodeVisibility(on){
@@ -431,14 +476,36 @@ function explodeDetail(){
  const radius=2**(Math.round(4*Math.log2(DETAIL_PX/2/pxPerMetre))/4);// quarter-octave steps, so small camera moves change nothing
  if(radius!==detailRadius){detailRadius=radius;explodeKit.setDetail(radius);refreshShadows();}
 }
-// Builds the next deck's fitted areas once the dial has been still for a moment, one deck per idle slot.
+// Fills in the remaining decks' fitted areas while the viewer is left alone: one area per frame, and only once
+// the pointer, wheel and keys have been still for UNPACK_QUIET_MS, so a build never lands mid-move or mid-hover. A
+// finished deck's shaders compile in the background before it appears.
+const UNPACK_QUIET_MS=1500,unpackFailed=new Set();let lastInput=0,unpacking=false;
+for(const type of ['pointerdown','pointermove','wheel','keydown'])addEventListener(type,()=>{lastInput=performance.now();},{capture:true,passive:true});
+// Resolves once input has been still for UNPACK_QUIET_MS, for one background job per rendered frame (the deck unpacking
+// and the view warm-up take turns rather than stacking into one long frame).
+let quietFrame=-1;
+async function quiet(){
+ for(;;){
+  await nextFrame();const wait=lastInput+UNPACK_QUIET_MS-performance.now();
+  if(wait<=0&&!explodePlay&&!dialDragging&&!transition&&!preparing){const frame=renderer.info.render.frame;if(frame!==quietFrame){quietFrame=frame;return;}continue;}
+  await new Promise(r=>setTimeout(r,Math.max(wait,250)));
+ }
+}
 function unpackDecks(){
- clearTimeout(unpackTimer);if(!explodeKit||explodeValue<=0||mode!=='exterior')return;
- const next=DECKS.find(d=>!ship.serviceDecks.has(d.number)&&SHIP_AREAS.some(a=>a.deck===d.number));if(!next)return;
- unpackTimer=setTimeout(()=>idle().then(()=>{
-  if(explodeValue<=0||mode!=='exterior')return;if(explodePlay||dialDragging){unpackDecks();return;}
-  ship.ensureServiceDeck(next.number);explodeRoomsAdded();unpackDecks();
- }),400);
+ if(unpacking||!explodeKit||explodeValue<=0||mode!=='exterior')return;
+ const next=DECKS.find(d=>!ship.serviceDecks.has(d.number)&&!unpackFailed.has(d.number)&&SHIP_AREAS.some(a=>a.deck===d.number));if(!next)return;
+ unpacking=true;
+ (async()=>{
+  const steps=ship.buildServiceDeck(next.number);
+  for(;;){
+   await quiet();
+   if(explodeValue<=0||mode!=='exterior')return;// resumes from the same step next time
+   if(ship.serviceDecks.has(next.number))break;// finished elsewhere meanwhile
+   const step=steps.next();if(step.done)break;
+   if(Array.isArray(step.value))await prepareShaders(step.value);
+  }
+  explodeRoomsAdded();
+ })().catch(e=>{unpackFailed.add(next.number);console.warn('A deck could not be unpacked.',e);}).finally(()=>{unpacking=false;unpackDecks();});
 }
 function explodeRoomsAdded(){if(!explodeKit)return;explodeKit.refresh();if(explodeValue>0&&mode==='exterior')explodeVisibility(true);refreshShadows();}
 function stopExplodePlay(){cancelAnimationFrame(explodePlay);explodePlay=0;}
@@ -521,7 +588,7 @@ function assembled(fn){if(!explodeKit||explodeValue<=0)return fn();explodeKit.ap
   const a=Math.atan2(dx,-dy)*180/Math.PI,end=explodeValue>.5?1:0;if(Math.abs(a)>135)return end;const v=(a+135)/270;return drag&&Math.abs(v-explodeValue)>.5?end:v;};
  dial.addEventListener('pointerdown',e=>{if(!exteriorReady||e.button>0)return;e.preventDefault();dial.focus({preventScroll:true});dial.setPointerCapture(e.pointerId);dialDragging=true;dial.classList.add('dragging');stopExplodePlay();
   lastPointer=e;const first=!explodeKit;prepareExplode().then(ok=>{if(!ok)return;setExplode(valueAt(lastPointer,false));if(first&&!dialDragging)exteriorLink();});});
- dial.addEventListener('pointermove',e=>{if(!dialDragging)return;lastPointer=e;if(explodeKit)setExplode(valueAt(e,true));});
+ dial.addEventListener('pointermove',e=>{if(!dialDragging)return;lastPointer=e;if(explodeKit&&!preparing)setExplode(valueAt(e,true));});
  // Released close to a stop (or to either end), the dial eases onto it.
  const release=()=>{if(!dialDragging)return;dialDragging=false;dial.classList.remove('dragging');
   const stop=[0,...STOPS.map(s=>s.value)].find(v=>Math.abs(v-explodeValue)<.05&&v!==explodeValue);if(stop!==undefined&&explodeKit)runExplode(stop,{ms:260});else exteriorLink();};
@@ -739,15 +806,16 @@ function asView({root,exterior=false,walk=false,layout=false},run){
 }
 // Compile a view's materials in parallel (KHR_parallel_shader_compile), with the view briefly detached so its own
 // lights are counted once.
-const compileView=view=>asView(view,node=>{const parent=node.parent;parent.remove(node);try{return renderer.compileAsync(node,persp,scene);}finally{parent.add(node);}});
+const compileView=view=>asView(view,node=>{const parent=node.parent;parent.remove(node);try{return renderer.compileAsync(shaderSamples([node]),persp,scene);}finally{parent.add(node);}});
 let warmStarted=false;
 async function warmViews(){
  if(warmStarted)return;warmStarted=true;
  const t0=performance.now();
  while((!exteriorReady&&exteriorLoad||!cosmoKit)&&performance.now()-t0<WARM_WAIT_MS)await idle();
  const builders=[()=>{if(exteriorReady)ensureAftModel();},()=>{if(exteriorReady){ensureLayoutDecks();explodeRoomsAdded();}},()=>ensureArea(activeArea),()=>ensureTransitView(),()=>ensurePreviewTransit()];
- for(const build of builders){await idle();try{build();}catch(e){console.warn('Warm-up skipped a view.',e);}}
- for(const view of WARM_VIEWS){await idle();try{await compileView(view);}catch(e){console.warn('Shader warm-up stopped.',e);return;}}
+ // Each piece waits until the pointer, wheel and keys have been still for a moment (quiet), so none lands mid-move.
+ for(const build of builders){await quiet();try{build();}catch(e){console.warn('Warm-up skipped a view.',e);}}
+ for(const view of WARM_VIEWS){await quiet();try{await compileView(view);}catch(e){console.warn('Shader warm-up stopped.',e);return;}}
 }
 // The first frame used to freeze ~1.7 s compiling its shaders on the spot. Compile what it will show in parallel
 // (KHR_parallel_shader_compile) while the loading screen is up, capped so a slow driver never holds the page.

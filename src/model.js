@@ -130,7 +130,20 @@ export function createShip({deferExterior=false}={}) {
   }
   const detail=createNeighborhood();root.add(detail.root);
   inside.visible=false;detail.root.visible=false;
-  const serviceDecks=new Map(),residentialDecks=new Map();let gardensLoaded=false,transit=null,observationArea=null,aftSystems=null;
+  const serviceDecks=new Map(),residentialDecks=new Map(),pendingDecks=new Map();let gardensLoaded=false,transit=null,observationArea=null,aftSystems=null;
+  function* serviceDeckSteps(number){
+    try{
+      const areas=SHIP_AREAS.filter(a=>a.deck===number);if(!areas.length)return;
+      const deck=decks[number-1],rooms=[],roots=[];
+      const place=part=>{part.shell.visible=false;part.root.visible=false;deck.add(part.root);roots.push(part.root);return part;};
+      for(const a of areas){rooms.push(place(createShipArea(a)));yield;}
+      for(const build of [createServiceCirculation,createSpecialCirculation]){const corridors=build(number);if(corridors)place(corridors);yield;}
+      yield roots;
+      for(const o of deck.children)if(o.name.endsWith('_space_reservations'))o.visible=false;
+      for(const root of roots)root.visible=true;
+      serviceDecks.set(number,rooms);
+    }finally{pendingDecks.delete(number);}
+  }
   const ship={root,exterior,port,starboard,fixed,inside,decks,cabinGroups,vertical,shared,detail,serviceDecks,residentialDecks,
     ensureAft(){if(!aftSystems){aftSystems=createAft();inside.add(aftSystems.root);}return aftSystems;},
     ensureTransit(){if(!transit){transit=createTransit();inside.add(transit.root);vertical.visible=false;}return transit;},
@@ -150,13 +163,16 @@ export function createShip({deferExterior=false}={}) {
       residentialDecks.set(number,residence);return residence;
     },
     ensureServiceDeck(number){
-      if(serviceDecks.has(number))return serviceDecks.get(number);
-      const areas=SHIP_AREAS.filter(a=>a.deck===number);if(!areas.length)return [];
-      const deck=decks[number-1];
-      for(const o of deck.children)if(o.name.endsWith('_space_reservations'))o.visible=false;
-      const rooms=areas.map(a=>{const room=createShipArea(a);room.shell.visible=false;deck.add(room.root);return room;});
-      for(const corridors of [createServiceCirculation(number),createSpecialCirculation(number)])if(corridors){corridors.shell.visible=false;deck.add(corridors.root);}
-      serviceDecks.set(number,rooms);return rooms;
+      if(!serviceDecks.has(number))for(const step of ship.buildServiceDeck(number));
+      return serviceDecks.get(number)||[];
+    },
+    // ensureServiceDeck in steps (a generator), one fitted area or corridor set per step, for callers that spread
+    // the build over idle time. The new rooms stay hidden until the last step swaps them in for the deck's massing;
+    // the step before yields their roots, so a caller can compile their shaders first. A deck left half built is
+    // finished by the next ensureServiceDeck or buildServiceDeck.
+    buildServiceDeck(number){
+      if(!pendingDecks.has(number))pendingDecks.set(number,serviceDeckSteps(number));
+      return pendingDecks.get(number);
     },
     ensureExterior(){
       if(!deferExterior)return false;
