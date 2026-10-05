@@ -143,11 +143,27 @@ function tickShadows(now){if(shadowFrames>0){shadowFrames--;renderer.shadowMap.n
 // With its decks built the interior is ~50,000 objects, and three.js re-derives every object's matrices each frame
 // (~10 ms on a fast desktop, assembled or not). They only change when something is built, dressed or moved, which
 // all schedule a shadow refresh, so the interior re-derives its matrices on the shadow map's schedule instead.
-let interiorMoved=true;const interiorPlace=new T.Matrix4(),IDENTITY=new T.Matrix4();
+// While things move only the visible objects are updated (exploded, the detail culling leaves ~3,500 of ~50,000 shown):
+// a frame renders exactly the objects visible when it starts, so those are all it needs. The first frame after the
+// moves stop brings the hidden ones up to date, for whatever shows them next.
+let interiorMoved=true,hiddenStale=false;const interiorPlace=new T.Matrix4(),IDENTITY=new T.Matrix4(),updateObject=T.Object3D.prototype.updateMatrixWorld;
+// Updates the world matrices of parent's visible descendants (parent's own is current); true if it skipped any.
+function updateVisible(parent){
+ let skipped=false;
+ for(const o of parent.children){
+  if(!o.visible){skipped=true;continue;}
+  if(o.updateMatrixWorld!==updateObject){o.updateMatrixWorld(true);continue;}// the interior, cameras, skinned meshes and the like keep their own update
+  if(o.matrixAutoUpdate)o.updateMatrix();
+  if(o.matrixWorldAutoUpdate)o.matrixWorld.multiplyMatrices(parent.matrixWorld,o.matrix);
+  o.matrixWorldNeedsUpdate=false;if(updateVisible(o))skipped=true;
+ }
+ return skipped;
+}
 ship.inside.updateMatrixWorld=function(force){
  if(this.matrixAutoUpdate)this.updateMatrix();
  this.matrixWorld.multiplyMatrices(this.parent?this.parent.matrixWorld:IDENTITY,this.matrix);
- if(interiorMoved||!this.matrixWorld.equals(interiorPlace)){interiorMoved=false;interiorPlace.copy(this.matrixWorld);T.Object3D.prototype.updateMatrixWorld.call(this,true);}
+ if(interiorMoved||!this.matrixWorld.equals(interiorPlace)){interiorMoved=false;interiorPlace.copy(this.matrixWorld);if(!this.visible||updateVisible(this))hiddenStale=true;}
+ else if(hiddenStale){hiddenStale=false;updateObject.call(this,true);}
  this.matrixWorldNeedsUpdate=false;
 };
 for(const container of [scene,noseScene,areasRoot,transitScene,aftScene])container.addEventListener('childadded',()=>{refreshShadows();if(cosmoKit)cosmoPending.add(container);});
@@ -361,6 +377,13 @@ function viewCamera(view){if(DETAIL_CAMERAS.includes(view)&&explodeValue>0){stop
 // frame the exploded ship; close-up cameras put it back together first, since their subject has moved.
 const DETAIL_CAMERAS=['bow','windows','aftwindows','enginewindows','engine'];
 let explodeKit=null,explodeValue=0,explodePlay=0,explodeTagsShown=false,dialDragging=false,builtDecks=-1;const explodeTags=[];
+// While the dial turns, the rest of the scene also updates only what is visible: the other views' ~10,000 hidden
+// objects are left until it stops, when every frame goes back to updating everything.
+scene.updateMatrixWorld=function(force){
+ if(!dialDragging&&!explodePlay)return updateObject.call(this,force);
+ if(this.matrixAutoUpdate)this.updateMatrix();
+ this.matrixWorld.copy(this.matrix);this.matrixWorldNeedsUpdate=false;updateVisible(this);
+};
 const exteriorStatus=()=>explodeValue>0?'Exploded view · '+explodeStage(explodeValue):studioTools?'Exterior V35 / refined surfaces':'Exterior · refined surfaces';
 const explodeScale=()=>explodeKit?explodeKit.frame(explodeValue).radius/SHIP_RADIUS:1;
 // Phones frame the exploded ship tighter than its full extent (the parts at the edges run off the sides), so the
@@ -840,7 +863,7 @@ function firstFrameReady(){
  const visibleOnly={traverse:fn=>scene.traverseVisible(fn),traverseVisible(){}};
  return Promise.race([renderer.compileAsync(visibleOnly,camera,scene),new Promise(r=>setTimeout(r,FIRST_FRAME_WAIT_MS))]).catch(e=>console.warn('First-frame compile skipped.',e));
 }
-function animate(now){requestAnimationFrame(animate);dressCosmo(now);tickShadows(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);if(transition.upFrom)camera.up.lerpVectors(transition.upFrom,LEVEL,s).normalize();camera.lookAt(controls.target);if(t===1)transition=null;}if(!transition&&!persp.up.equals(LEVEL))persp.up.copy(LEVEL);lookAround(now,delta);if(mode!=='walk')controls.update(delta);if(mode==='exterior'||mode==='layout')fitShipDepth();if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));if(explodeKit&&explodeValue>0&&mode==='exterior')explodeDetail();placeExplodeTags();const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
+function animate(now){requestAnimationFrame(animate);dressCosmo(now);tickShadows(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);if(transition.upFrom)camera.up.lerpVectors(transition.upFrom,LEVEL,s).normalize();camera.lookAt(controls.target);if(t===1)transition=null;}if(!transition&&!persp.up.equals(LEVEL))persp.up.copy(LEVEL);lookAround(now,delta);if(mode!=='walk')controls.update(delta);if(mode==='exterior'||mode==='layout')fitShipDepth();if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));if(explodeKit&&explodeValue>0&&mode==='exterior'){explodeDetail();explodeKit.sync();}placeExplodeTags();const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
 $('save-render').addEventListener('click',async()=>{
   if(exporting)return;exporting=true;$('save-render').disabled=true;$('render-status').textContent='Rendering exterior…';
   const view=document.querySelector('[data-camera][aria-pressed="true"]').dataset.camera,shapeOnly=$('shape-only').checked;
