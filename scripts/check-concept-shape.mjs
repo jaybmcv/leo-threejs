@@ -22,6 +22,8 @@ for(const name of ['leo-exterior-refined.glb',...(streamed?['leo-exterior-web.gl
  // The fin fillet reaches ~48 m ahead of the fin's edge on the hull top and stays within the fin's thickness.
  const fillet=after.getObjectByName('Fin_root_fillet');assert.ok(fillet,`${name}: fillet missing`);const f=bounds(after,o=>o===fillet);
  assert.ok(f.max.x>-140&&f.max.x<-125,`${name}: fillet reaches x ${f.max.x}`);assert.ok(f.max.z<=5.2&&f.min.z>=-5.2,`${name}: fillet much thicker than the fin`);
+ // Its faces point outward (the material culls back faces): sides away from the fin's centre plane, nose forward.
+ {const pos=fillet.geometry.attributes.position,nor=fillet.geometry.attributes.normal;let inward=0;for(let i=0;i<pos.count;i++){const z=pos.getZ(i);if(Math.abs(z)>.5&&Math.sign(nor.getZ(i))!==Math.sign(z))inward++;}assert.equal(inward,0,`${name}: ${inward} fillet normals face into the fin`);}
  // Pod bows curve back only below the pod interiors' floor (-19.7 m).
  const p0=points(before,pod),p1=points(after,pod);let keel=0;p0.forEach((p,i)=>{const d=Math.hypot(...p.map((v,k)=>v-p1[i][k]));if(p[1]>-20)assert.ok(d<1e-3,`${name}: pod moved above the interior floor`);if(p[1]<-33&&p[0]>-150)keel=Math.max(keel,p[0]-p1[i][0]);});
  assert.ok(keel>3.5&&keel<8,`${name}: pod keel moved back ${keel}`);

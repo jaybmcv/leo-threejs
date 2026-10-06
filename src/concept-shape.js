@@ -67,7 +67,7 @@ function addFinFillet(exterior,frame){
   // Around the section: aft on one side, round the nose, aft on the other.
   for(let k=0;k<=2*ARC;k++){const side=k<ARC?1:-1,s=k<ARC?k/ARC:(2*ARC-k)/ARC;points.push(back+(front+reach-back)*s,y,side*FILLET_HALF*(1-s**4)**.25);}
  }
- const row=2*ARC+1;for(let r=0;r<ROWS;r++)for(let k=0;k<2*ARC;k++){const a=r*row+k,b=a+row;index.push(a,b,a+1,a+1,b,b+1);}
+ const row=2*ARC+1;for(let r=0;r<ROWS;r++)for(let k=0;k<2*ARC;k++){const a=r*row+k,b=a+row;index.push(a,a+1,b,a+1,b+1,b);}
  const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(points,3));geometry.setIndex(index);
  geometry.applyMatrix4(new T.Matrix4().multiplyMatrices(frame,group.matrixWorld).invert());geometry.computeVertexNormals();
  const fillet=new T.Mesh(geometry,skin.material);fillet.name='Fin_root_fillet';group.add(fillet);fillet.updateMatrixWorld(true);
