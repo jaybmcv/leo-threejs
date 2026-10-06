@@ -10,16 +10,25 @@ import * as T from 'three';
 
 const smooth=(a,b,v)=>{const t=Math.max(0,Math.min(1,(v-a)/(b-a)));return t*t*(3-2*t);};
 
-// Fin drop: from the cap underside (124.2 m) up, the crown moves down rigidly; the fin between 55 m and the cap
-// compresses evenly. Nothing else on the ship rises above 55 m aft of x -150, so the warp touches only the fin.
+// Fin drop: from the cap underside (124.2 m) up, the crown moves down rigidly; the fin between 40 m (just above the
+// hull at the fin) and the cap compresses linearly. A linear squash keeps straight edges straight, so the fin skin's
+// long, non-conforming triangles can't open cracks. Nothing else on the ship rises above 40 m aft of x -150.
 export const FIN_DROP=12;
-const DROP_FROM=55,DROP_TO=124.2,FIN_AFT_OF=-150;
+const DROP_FROM=40,DROP_TO=124.2,FIN_AFT_OF=-150;
 const DROP_REGION=new T.Box3(new T.Vector3(-Infinity,DROP_FROM,-Infinity),new T.Vector3(FIN_AFT_OF+10,Infinity,Infinity));
-const dropAt=(x,y)=>FIN_DROP*smooth(DROP_FROM,DROP_TO,y)*smooth(FIN_AFT_OF+10,FIN_AFT_OF-10,x);
+const dropAt=(x,y)=>FIN_DROP*Math.max(0,Math.min(1,(y-DROP_FROM)/(DROP_TO-DROP_FROM)))*smooth(FIN_AFT_OF+10,FIN_AFT_OF-10,x);
 const dropFin=v=>{v.y-=dropAt(v.x,v.y);};
 // Where the drop is a plain translation (the crown, the hull below) normals keep their direction.
 dropFin.rigid=v=>v.y<=DROP_FROM||v.x>=FIN_AFT_OF+10||v.y>=DROP_TO&&v.x<=FIN_AFT_OF-10;
 export const shapePoint=([x,y,z])=>[x,y-dropAt(x,y),z];
+// The fin's own parts (skin, windows, fillet) take one even squash over their whole height, from below the skin's
+// buried root, so none of the skin's long triangles crosses a bend either. It matches the drop at the cap; lower down
+// the skin sits up to ~2 m lower than the clamped drop, sliding along its own flat sides (the fillet covers the edge).
+const FIN_ROOT=24.5,FIN_PART=/^(Upright_tail_assembly|V34_fin_)/;
+export const shapeFinPoint=([x,y,z])=>[x,y-FIN_DROP*(y-FIN_ROOT)/(DROP_TO-FIN_ROOT),z];
+const dropFinPart=v=>{v.y-=FIN_DROP*(v.y-FIN_ROOT)/(DROP_TO-FIN_ROOT);};
+// The hull never reaches the drop's zone; skipping its 265k vertices keeps the pass quick.
+const HULL=/^(Smooth_pressure_envelope|Hull_panel_seams)/;
 // Tour stops and camera views name the crown's height in their text; keep it true to the lowered crown.
 const CROWN_FLOOR=132.3,crownText=s=>s?.replace(`${CROWN_FLOOR} m`,`${(CROWN_FLOOR-FIN_DROP).toFixed(1)} m`);
 export function shapeView(view){
@@ -28,11 +37,13 @@ export function shapeView(view){
  return out;
 }
 
-// Fin fillet: a blade ahead of the fin's leading edge gives it the drawn sweep, one straight edge from under the crown
-// (124 m) to 48 m ahead of the fin's root on the hull top. It is its own mesh (the fin skin's triangulation would crack under a warp): each band of
-// height is a half-ellipse from 4 m inside the fin's edge to the new edge, as thick as the fin (10 m) where it
-// meets it so the sides run on without a crease; it is buried at the root in the hull.
-const FILLET=48,FILLET_ROOT=37,FILLET_TOP=124.2,FILLET_BURY=31,FILLET_INSIDE=4,FIN_HALF=5,ROWS=28,ARC=14;
+// Fin fillet: a blade around the fin's leading edge gives it the drawn sweep, one straight edge from under the crown
+// (124 m) to 48 m ahead of the fin's root on the hull top. It is its own mesh (the fin skin's triangulation would
+// crack under a warp). It becomes the fin's whole front edge: each band of height runs from 3 m inside the old edge (clear of the hatch outlines),
+// 15 cm proud of the fin's flat sides (never coplanar with them), to at least 5 m ahead of it, so the old rounded
+// edge stays covered. Its section is a superellipse: fin-thick along its length, rounding off at the nose. The root
+// is buried in the hull.
+const FILLET=48,FILLET_ROOT=37,FILLET_TOP=124.2,FILLET_BURY=31,FILLET_INSIDE=3,FILLET_AHEAD=5,FILLET_HALF=5.15,ROWS=36,ARC=18;
 const FIN_SKIN=/^Swept_cat_tail/,FIN_GROUP='Upright_tail_assembly';
 // The fin's leading edge is a straight swept line. Fit it to the skin's foremost point at each 2 m of height between
 // the hull and the windows' top, found where the skin's triangle edges cross that height (its triangles are tall).
@@ -52,9 +63,9 @@ function addFinFillet(exterior,frame){
  const group=exterior.getObjectByName(FIN_GROUP),skin=group&&partsOf(group,null).find(o=>FIN_SKIN.test(o.name));if(!skin)return;
  const edge=leadingEdge(skin,frame),points=[],index=[];
  for(let r=0;r<=ROWS;r++){
-  const y=FILLET_BURY+(FILLET_TOP-FILLET_BURY)*r/ROWS,front=edge(y),reach=FILLET*Math.min(1,Math.max(0,(FILLET_TOP-y)/(FILLET_TOP-FILLET_ROOT))),back=front-FILLET_INSIDE;
+  const y=FILLET_BURY+(FILLET_TOP-FILLET_BURY)*r/ROWS,front=edge(y),reach=Math.max(FILLET_AHEAD,FILLET*Math.min(1,Math.max(0,(FILLET_TOP-y)/(FILLET_TOP-FILLET_ROOT)))),back=front-FILLET_INSIDE;
   // Around the section: aft on one side, round the nose, aft on the other.
-  for(let k=0;k<=2*ARC;k++){const side=k<ARC?1:-1,s=k<ARC?k/ARC:(2*ARC-k)/ARC;points.push(back+(front+reach-back)*s,y,side*FIN_HALF*Math.sqrt(1-s*s));}
+  for(let k=0;k<=2*ARC;k++){const side=k<ARC?1:-1,s=k<ARC?k/ARC:(2*ARC-k)/ARC;points.push(back+(front+reach-back)*s,y,side*FILLET_HALF*(1-s**4)**.25);}
  }
  const row=2*ARC+1;for(let r=0;r<ROWS;r++)for(let k=0;k<2*ARC;k++){const a=r*row+k,b=a+row;index.push(a,b,a+1,a+1,b,b+1);}
  const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(points,3));geometry.setIndex(index);
@@ -113,7 +124,8 @@ export function applyConceptShape(exterior){
  exterior.updateMatrixWorld(true);const frame=frameOf(exterior);
  addFinFillet(exterior,frame);
  warpParts(partsOf(exterior,POD_PART),chinPod,frame);
- warpParts(partsOf(exterior),dropFin,frame,DROP_REGION);
+ const fin=new Set(partsOf(exterior,FIN_PART));warpParts([...fin],dropFinPart,frame);
+ warpParts(partsOf(exterior,null,HULL).filter(o=>!fin.has(o)),dropFin,frame,DROP_REGION);
 }
 // The aft interiors (fin structure, lift and crown lounge) follow the fin drop.
 export function shapeAft(root){root.updateMatrixWorld(true);warpParts(partsOf(root),dropFin,frameOf(root),DROP_REGION);}

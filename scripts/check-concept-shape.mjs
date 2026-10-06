@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {Box3,Vector3} from 'three';
-import {applyConceptShape,shapeAft,shapeView,FIN_DROP} from '../src/concept-shape.js';
+import {applyConceptShape,shapeAft,shapeView,shapeFinPoint,FIN_DROP} from '../src/concept-shape.js';
 import {createAft} from '../src/aft.js';
 import {FIN_TOUR} from '../src/aft-tour.js';
 // The concept shape pass runs in the viewer on both the lossless and the streamed (quantized) exterior.
@@ -21,13 +21,19 @@ for(const name of ['leo-exterior-refined.glb',...(streamed?['leo-exterior-web.gl
  const h0=points(before,hull),h1=points(after,hull);assert.equal(h0.length,h1.length);h0.forEach((p,i)=>assert.ok(Math.hypot(...p.map((v,k)=>v-h1[i][k]))<1e-3,`${name}: hull moved`));
  // The fin fillet reaches ~48 m ahead of the fin's edge on the hull top and stays within the fin's thickness.
  const fillet=after.getObjectByName('Fin_root_fillet');assert.ok(fillet,`${name}: fillet missing`);const f=bounds(after,o=>o===fillet);
- assert.ok(f.max.x>-140&&f.max.x<-125,`${name}: fillet reaches x ${f.max.x}`);assert.ok(f.max.z<=5.01&&f.min.z>=-5.01,`${name}: fillet thicker than the fin`);
+ assert.ok(f.max.x>-140&&f.max.x<-125,`${name}: fillet reaches x ${f.max.x}`);assert.ok(f.max.z<=5.2&&f.min.z>=-5.2,`${name}: fillet much thicker than the fin`);
  // Pod bows curve back only below the pod interiors' floor (-19.7 m).
  const p0=points(before,pod),p1=points(after,pod);let keel=0;p0.forEach((p,i)=>{const d=Math.hypot(...p.map((v,k)=>v-p1[i][k]));if(p[1]>-20)assert.ok(d<1e-3,`${name}: pod moved above the interior floor`);if(p[1]<-33&&p[0]>-150)keel=Math.max(keel,p[0]-p1[i][0]);});
  assert.ok(keel>3.5&&keel<8,`${name}: pod keel moved back ${keel}`);
  after.traverse(o=>{if(o.isMesh)for(const v of o.geometry.attributes.position.array)assert.ok(Number.isFinite(v),`${name}: ${o.name} has a non-finite position`);});
  console.log(`${name}: shape pass ${ms.toFixed(0)} ms, crown -${(c0.max.y-c1.max.y).toFixed(2)} m, fillet to x ${f.max.x.toFixed(1)}, pod keel back ${keel.toFixed(1)} m`);
 }
+// The fin skin has long, non-conforming triangles; the drop must keep every straight edge straight on them or cracks open.
+const saved=await load('leo-exterior-refined.glb');saved.updateMatrixWorld(true);let skin;saved.traverse(o=>{if(o.isMesh&&/^Swept_cat_tail/.test(o.name))skin=o;});
+{const p=skin.geometry.attributes.position,ix=skin.geometry.index,v=new Vector3(),drop=shapeFinPoint;let worst=0;
+ for(let t=0;t<ix.count;t+=3){const c=[0,1,2].map(k=>v.fromBufferAttribute(p,ix.getX(t+k)).applyMatrix4(skin.matrixWorld).toArray());const mid=[0,1,2].map(k=>(c[0][k]+c[1][k]+c[2][k])/3);
+  const warped=c.map(drop),a=drop(mid),bend=Math.abs(a[1]-(warped[0][1]+warped[1][1]+warped[2][1])/3);worst=Math.max(worst,bend);}
+ assert.ok(worst<.02,`fin drop bends the skin's triangles by ${worst} m`);}
 // The aft interiors' crown follows, and the tour stops and their text name the lowered crown.
 const aft=createAft(),r0=bounds(aft.root,crown).max.y;shapeAft(aft.root);assert.ok(Math.abs(r0-bounds(aft.root,crown).max.y-FIN_DROP)<.05,'aft crown did not follow');
 const lobby=shapeView(FIN_TOUR.find(s=>s.name==='Panorama arrival lobby'));assert.equal(lobby.position[1],134-FIN_DROP);assert.match(lobby.detail,/120\.3 m/);
