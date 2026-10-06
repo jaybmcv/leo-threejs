@@ -4,7 +4,8 @@ import * as T from 'three';
 // side silhouettes already match the sheet within a few metres; what differs is how some parts are shaped:
 // - the fin stands ~12 m taller than drawn, so the fin and its crown lounge sit lower (the fin drop);
 // - the fin's leading edge is swept further, reaching ~48 m further forward along the hull top;
-// - each engine pod's bow curves back under itself instead of ending in a tall vertical navy face.
+// - each engine pod's bow curves back under itself instead of ending in a tall vertical navy face;
+// - the bow's upper part leans back further, as drawn.
 // The pod bow and the fin drop are smooth warps of space applied to whole parts, so attached details travel with their
 // surfaces. The fin drop also moves everything built inside the fin: the aft interiors (shapeAft), tour stops and cameras (shapePoint).
 
@@ -73,6 +74,15 @@ function addFinFillet(exterior,frame){
  const fillet=new T.Mesh(geometry,skin.material);fillet.name='Fin_root_fillet';group.add(fillet);fillet.updateMatrixWorld(true);
 }
 
+// Bow rake: above 32 m the bow leans back, up to 16 m at the crown top where the bow is fully forward (eased in over the
+// last 115 m), as drawn; the middle and lower bow already match. It is exterior-only: the bridge and observation
+// lounge render without the exterior (walk, areas), and in the layout ghost and the Explode dial a metre or two at
+// the bridge's top row doesn't show. The bow mesh is fine enough that the curved warp bends its triangles < 5 cm.
+const RAKE=16,RAKE_FROM=32,RAKE_TO=54,BOW_FROM=120,BOW_TO=235;
+const BOW_REGION=new T.Box3(new T.Vector3(BOW_FROM,RAKE_FROM,-Infinity),new T.Vector3(Infinity,Infinity,Infinity));
+const rakeBow=v=>{v.x-=RAKE*smooth(RAKE_FROM,RAKE_TO,v.y)*smooth(BOW_FROM,BOW_TO,v.x);};
+export const rakeBowPoint=([x,y,z])=>{const v=new T.Vector3(x,y,z);rakeBow(v);return v.toArray();};
+
 // Pod bow: below 24 m under the pod's deck line the bow curves back, up to ~7 m at the keel, as drawn. This stays below
 // the pod interiors' floor (-19.7 m).
 const CHIN_FROM=-24,CHIN_CURVE=.04,POD_PART=/^(Port|Starboard)_nacelle$/;
@@ -81,9 +91,10 @@ const chinPod=v=>{const d=Math.max(0,CHIN_FROM-v.y);v.x-=CHIN_CURVE*d*d*smooth(-
 // Warp engine. Positions move through the warp; normals follow its local Jacobian (inverse transpose), so shading keeps
 // the saved hard and soft edges. Warps work in the frame of the part's parent (ship coordinates). Instanced copies move
 // rigidly with their origin.
-const STEP=.05,J=new T.Matrix3(),c=[new T.Vector3(),new T.Vector3(),new T.Vector3()],ahead=new T.Vector3(),behind=new T.Vector3();
-function warpNormal(warp,p,n){
- for(let i=0;i<3;i++){ahead.copy(p).setComponent(i,p.getComponent(i)+STEP);behind.copy(p).setComponent(i,p.getComponent(i)-STEP);warp(ahead);warp(behind);c[i].subVectors(ahead,behind).divideScalar(2*STEP);}
+const STEP=.05,J=new T.Matrix3(),c=[new T.Vector3(),new T.Vector3(),new T.Vector3()],ahead=new T.Vector3();
+// p is the point before the warp and at its image after it; the Jacobian is sampled one step ahead on each axis.
+function warpNormal(warp,p,at,n){
+ for(let i=0;i<3;i++){ahead.copy(p).setComponent(i,p.getComponent(i)+STEP);warp(ahead);c[i].subVectors(ahead,at).divideScalar(STEP);}
  J.set(c[0].x,c[1].x,c[2].x,c[0].y,c[1].y,c[2].y,c[0].z,c[1].z,c[2].z);
  return n.applyMatrix3(J.invert().transpose()).normalize();
 }
@@ -94,7 +105,7 @@ function warpGeometry(o,warp,frame){
  for(let i=0;i<p.count;i++){
   v.fromBufferAttribute(p,i).applyMatrix4(m);w.copy(v);warp(w);
   const shifted=w.distanceToSquared(v)>1e-10;if(shifted)moved=true;
-  if(n){q.fromBufferAttribute(n,i);if(shifted&&!warp.rigid?.(v))warpNormal(warp,v,q.applyMatrix3(toShip).normalize()).applyMatrix3(toLocal).normalize();nor[i*3]=q.x;nor[i*3+1]=q.y;nor[i*3+2]=q.z;}
+  if(n){q.fromBufferAttribute(n,i);if(shifted&&!warp.rigid?.(v))warpNormal(warp,v,w,q.applyMatrix3(toShip).normalize()).applyMatrix3(toLocal).normalize();nor[i*3]=q.x;nor[i*3+1]=q.y;nor[i*3+2]=q.z;}
   w.applyMatrix4(inv);pos[i*3]=w.x;pos[i*3+1]=w.y;pos[i*3+2]=w.z;
  }
  if(!moved)return;
@@ -124,6 +135,7 @@ export function applyConceptShape(exterior){
  exterior.updateMatrixWorld(true);const frame=frameOf(exterior);
  addFinFillet(exterior,frame);
  warpParts(partsOf(exterior,POD_PART),chinPod,frame);
+ warpParts(partsOf(exterior),rakeBow,frame,BOW_REGION);
  const fin=new Set(partsOf(exterior,FIN_PART));warpParts([...fin],dropFinPart,frame);
  warpParts(partsOf(exterior,null,HULL).filter(o=>!fin.has(o)),dropFin,frame,DROP_REGION);
 }

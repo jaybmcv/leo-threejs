@@ -2,9 +2,10 @@ import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
-import {Box3,Vector3} from 'three';
-import {applyConceptShape,shapeAft,shapeView,shapeFinPoint,FIN_DROP} from '../src/concept-shape.js';
+import {Box3,Vector3,Matrix4} from 'three';
+import {applyConceptShape,shapeAft,shapeView,shapeFinPoint,rakeBowPoint,FIN_DROP} from '../src/concept-shape.js';
 import {createAft} from '../src/aft.js';
+import {applyConceptDetail,hullSurface} from '../src/concept-detail.js';
 import {FIN_TOUR} from '../src/aft-tour.js';
 // The concept shape pass runs in the viewer on both the lossless and the streamed (quantized) exterior.
 const out='output/leo-interior-v01/';
@@ -18,7 +19,9 @@ for(const name of ['leo-exterior-refined.glb',...(streamed?['leo-exterior-web.gl
  const before=await load(name),after=await load(name),t0=performance.now();applyConceptShape(after);const ms=performance.now()-t0;
  // The crown and its lounge sit FIN_DROP lower; the hull is untouched.
  const c0=bounds(before,crown),c1=bounds(after,crown);assert.ok(Math.abs(c0.max.y-c1.max.y-FIN_DROP)<.05,`${name}: crown roof moved ${c0.max.y-c1.max.y}`);
- const h0=points(before,hull),h1=points(after,hull);assert.equal(h0.length,h1.length);h0.forEach((p,i)=>assert.ok(Math.hypot(...p.map((v,k)=>v-h1[i][k]))<1e-3,`${name}: hull moved`));
+ // The hull moves only where the bow rakes back (above 32 m, forward of x 120), only aft, and by at most 16 m.
+ const h0=points(before,hull),h1=points(after,hull);assert.equal(h0.length,h1.length);
+ h0.forEach((p,i)=>{const d=p.map((v,k)=>h1[i][k]-v);if(p[0]<120||p[1]<32)assert.ok(Math.hypot(...d)<1e-3,`${name}: hull moved outside the bow`);else assert.ok(d[0]<=1e-3&&d[0]>=-16.01&&Math.abs(d[1])<1e-3&&Math.abs(d[2])<1e-3,`${name}: bow moved ${d}`);});
  // The fin fillet reaches ~48 m ahead of the fin's edge on the hull top and stays within the fin's thickness.
  const fillet=after.getObjectByName('Fin_root_fillet');assert.ok(fillet,`${name}: fillet missing`);const f=bounds(after,o=>o===fillet);
  assert.ok(f.max.x>-140&&f.max.x<-125,`${name}: fillet reaches x ${f.max.x}`);assert.ok(f.max.z<=5.2&&f.min.z>=-5.2,`${name}: fillet much thicker than the fin`);
@@ -28,6 +31,24 @@ for(const name of ['leo-exterior-refined.glb',...(streamed?['leo-exterior-web.gl
  const p0=points(before,pod),p1=points(after,pod);let keel=0;p0.forEach((p,i)=>{const d=Math.hypot(...p.map((v,k)=>v-p1[i][k]));if(p[1]>-20)assert.ok(d<1e-3,`${name}: pod moved above the interior floor`);if(p[1]<-33&&p[0]>-150)keel=Math.max(keel,p[0]-p1[i][0]);});
  assert.ok(keel>3.5&&keel<8,`${name}: pod keel moved back ${keel}`);
  after.traverse(o=>{if(o.isMesh)for(const v of o.geometry.attributes.position.array)assert.ok(Number.isFinite(v),`${name}: ${o.name} has a non-finite position`);});
+ // Detail: the concept spine replaces the saved dorsal pads; the enlarged identity stays in its window-free bays, on the hull.
+ const identity=/^(V33_authentic_Mars_Cats_Voyage_logo|Mission_brand|LEO_wordmark|Mission_identifier)$/,surface=hullSurface(before,new Matrix4(),false),standoff=root=>points(root,o=>identity.test(o.name)).map(([x,y,z])=>Math.abs(z)-surface(x,y,z>0?1:0));
+ const lift0=standoff(before);
+ const t1=performance.now();applyConceptDetail(after);const detailMs=performance.now()-t1;
+ // Each letter keeps its height above the hull after growing.
+ {const lift1=standoff(after);let worst=0;lift0.forEach((d,i)=>{if(Number.isFinite(d)&&Number.isFinite(lift1[i]))worst=Math.max(worst,Math.abs(lift1[i]-d));});assert.ok(worst<.03,`${name}: identity standoff changed by ${worst} m`);}
+ // The spine is one Explode part.
+ assert.ok(after.getObjectByName('Dorsal_sensor_assembly')?.getObjectByName('Sensor_mast_tip'),`${name}: spine not grouped`);
+ after.traverse(o=>assert.ok(!(o.isMesh&&/^(Dorsal_sensor_rail|Sensor_fairing|Sensor_amber|Dorsal_whiskers)$/.test(o.name)),`${name}: saved dorsal pad left`));
+ assert.ok(after.getObjectByName('Dorsal_sensor_spine'),`${name}: spine missing`);
+ const panes=points(after,o=>o.name==='V33_passenger_window_reveals');
+ for(const [parts,grew] of [[/^(V33_authentic_Mars_Cats_Voyage_logo|Mission_brand)$/,1.45],[/^(LEO_wordmark|Mission_identifier)$/,1.45]])for(const side of [-1,1]){
+  const pick=o=>parts.test(o.name)&&Math.sign(new Box3().setFromObject(o).getCenter(new Vector3()).z)===side,b0=bounds(before,pick),b1=bounds(after,pick);
+  assert.ok(b1.max.x-b1.min.x>=(b0.max.x-b0.min.x)*grew,`${name}: identity did not grow`);
+  const covered=panes.filter(([x,y,z])=>Math.sign(z)===side&&x>b1.min.x&&x<b1.max.x&&y>b1.min.y&&y<b1.max.y).length;assert.equal(covered,0,`${name}: identity covers ${covered} window vertices`);
+  const d=points(after,pick);for(const [x,y,z] of d)assert.ok(Math.abs(z)>60&&Math.abs(z)<90,`${name}: identity left the hull side`);
+ }
+ console.log(`${name}: detail pass ${detailMs.toFixed(0)} ms`);
  console.log(`${name}: shape pass ${ms.toFixed(0)} ms, crown -${(c0.max.y-c1.max.y).toFixed(2)} m, fillet to x ${f.max.x.toFixed(1)}, pod keel back ${keel.toFixed(1)} m`);
 }
 // The fin skin has long, non-conforming triangles; the drop must keep every straight edge straight on them or cracks open.
@@ -36,6 +57,11 @@ const saved=await load('leo-exterior-refined.glb');saved.updateMatrixWorld(true)
  for(let t=0;t<ix.count;t+=3){const c=[0,1,2].map(k=>v.fromBufferAttribute(p,ix.getX(t+k)).applyMatrix4(skin.matrixWorld).toArray());const mid=[0,1,2].map(k=>(c[0][k]+c[1][k]+c[2][k])/3);
   const warped=c.map(drop),a=drop(mid),bend=Math.abs(a[1]-(warped[0][1]+warped[1][1]+warped[2][1])/3);worst=Math.max(worst,bend);}
  assert.ok(worst<.02,`fin drop bends the skin's triangles by ${worst} m`);}
+// The bow rake must keep the hull's triangles nearly straight, or its window cut-outs would crack.
+{let worst=0;saved.traverse(o=>{if(!o.isMesh||!/^Smooth_pressure_envelope/.test(o.name)&&!/^Smooth_pressure_envelope/.test(o.parent?.name))return;const p=o.geometry.attributes.position,ix=o.geometry.index,v=new Vector3();
+ for(let t=0;t<(ix?ix.count:p.count);t+=3){const c=[0,1,2].map(k=>v.fromBufferAttribute(p,ix?ix.getX(t+k):t+k).applyMatrix4(o.matrixWorld).toArray());if(c.every(q=>q[0]<120||q[1]<32))continue;
+  const mid=[0,1,2].map(k=>(c[0][k]+c[1][k]+c[2][k])/3),bent=rakeBowPoint(mid)[0]-c.reduce((s,q)=>s+rakeBowPoint(q)[0],0)/3;worst=Math.max(worst,Math.abs(bent));}});
+ assert.ok(worst<.08,`bow rake bends hull triangles by ${worst} m`);}
 // The aft interiors' crown follows, and the tour stops and their text name the lowered crown.
 const aft=createAft(),r0=bounds(aft.root,crown).max.y;shapeAft(aft.root);assert.ok(Math.abs(r0-bounds(aft.root,crown).max.y-FIN_DROP)<.05,'aft crown did not follow');
 const lobby=shapeView(FIN_TOUR.find(s=>s.name==='Panorama arrival lobby'));assert.equal(lobby.position[1],134-FIN_DROP);assert.match(lobby.detail,/120\.3 m/);

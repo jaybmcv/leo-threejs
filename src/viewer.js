@@ -7,6 +7,8 @@ import {publicAsset,enablePublicDownloads} from './public-assets.js';
 import {refineExterior} from './exterior-finish.js';
 import {applyConceptPaint} from './concept-paint.js';
 import {applyConceptShape,shapeAft,shapeView} from './concept-shape.js';
+import {applyConceptDetail} from './concept-detail.js';
+import {createEscortShuttle} from './escort-shuttle.js';
 import {createAft} from './aft.js';
 import {AFT_TOUR,FIN_TOUR} from './aft-tour.js';
 import {attachFinCrown,prepareCrownExterior} from './fin-crown.js';
@@ -271,7 +273,7 @@ function resize(){
 }
 new ResizeObserver(resize).observe($('viewport'));
 function contextOpacity(value){[ship.port,ship.starboard].forEach(g=>applyContextOpacity(g,value));}
-let exteriorReady=false,exteriorLoad=null,modeRequest=0,thrusters=null;
+let exteriorReady=false,exteriorLoad=null,modeRequest=0,thrusters=null,escort=null;
 async function loadExterior(){
   if(exteriorReady)return;
   if(!exteriorLoad)exteriorLoad=(async()=>{
@@ -290,8 +292,11 @@ async function loadExterior(){
       Object.assign(ship,{exterior,fixed:exterior.getObjectByName('Wings_engines_tail'),port:exterior.getObjectByName('Port_shell'),starboard:exterior.getObjectByName('Starboard_shell')});
     }
     if(location.protocol==='file:'){prepareCrownExterior(ship.exterior);refineExterior(ship.exterior);attachFinCrown(ship.exterior);}
-    applyConceptShape(ship.exterior);applyConceptPaint(ship.exterior);
-    ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);scene.add(thrusters.root);exteriorReady=true;if(!window.LEO_ARRIVAL)loadCosmo();applyBrandingView();applyShapeView();
+    // The concept passes take ~0.1 s each; yielding between them keeps the loading screen from freezing for their sum.
+    // A message-channel task, unlike a timer, isn't throttled when the tab is in the background.
+    const yieldTask=()=>new Promise(resolve=>{const channel=new MessageChannel();channel.port1.onmessage=()=>resolve();channel.port2.postMessage(0);});
+    applyConceptShape(ship.exterior);await yieldTask();applyConceptDetail(ship.exterior);await yieldTask();applyConceptPaint(ship.exterior);
+    ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);escort=createEscortShuttle();ship.root.add(escort.root);scene.add(thrusters.root);exteriorReady=true;if(!window.LEO_ARRIVAL)loadCosmo();applyBrandingView();applyShapeView();
   })().catch(e=>{exteriorLoad=null;throw e;});
   await exteriorLoad;
 }
@@ -867,12 +872,14 @@ function firstFrameReady(){
  const visibleOnly={traverse:fn=>scene.traverseVisible(fn),traverseVisible(){}};
  return Promise.race([renderer.compileAsync(visibleOnly,camera,scene),new Promise(r=>setTimeout(r,FIRST_FRAME_WAIT_MS))]).catch(e=>console.warn('First-frame compile skipped.',e));
 }
-function animate(now){requestAnimationFrame(animate);dressCosmo(now);tickShadows(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);if(transition.upFrom)camera.up.lerpVectors(transition.upFrom,LEVEL,s).normalize();camera.lookAt(controls.target);if(t===1)transition=null;}if(!transition&&!persp.up.equals(LEVEL))persp.up.copy(LEVEL);lookAround(now,delta);if(mode!=='walk')controls.update(delta);if(mode==='exterior'||mode==='layout')fitShipDepth();if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));if(explodeKit&&explodeValue>0&&mode==='exterior'){explodeDetail();explodeKit.sync();}placeExplodeTags();const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
+function animate(now){requestAnimationFrame(animate);dressCosmo(now);tickShadows(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);if(transition.upFrom)camera.up.lerpVectors(transition.upFrom,LEVEL,s).normalize();camera.lookAt(controls.target);if(t===1)transition=null;}if(!transition&&!persp.up.equals(LEVEL))persp.up.copy(LEVEL);lookAround(now,delta);if(mode!=='walk')controls.update(delta);if(mode==='exterior'||mode==='layout')fitShipDepth();if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}
+  // The escort shuttle keeps station in the plain exterior view only.
+  if(escort){escort.root.visible=mode==='exterior'&&!$('shape-only').checked&&explodeValue===0;if(escort.root.visible)escort.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));if(explodeKit&&explodeValue>0&&mode==='exterior'){explodeDetail();explodeKit.sync();}placeExplodeTags();const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
 $('save-render').addEventListener('click',async()=>{
   if(exporting)return;exporting=true;$('save-render').disabled=true;$('render-status').textContent='Rendering exterior…';
   const view=document.querySelector('[data-camera][aria-pressed="true"]').dataset.camera,shapeOnly=$('shape-only').checked;
   const width=3200,height=2000,oldRatio=renderer.getPixelRatio(),oldBackground=scene.background.clone();
-  const visibility=[grid,pad,dimensions,ship.inside,ship.detail.root].map(o=>[o,o.visible]);
+  const visibility=[grid,pad,dimensions,ship.inside,ship.detail.root,escort?.root].filter(Boolean).map(o=>[o,o.visible]);
   try{
     visibility.forEach(([o])=>o.visible=false);scene.background.set(0x344554);renderer.setPixelRatio(1);renderer.setSize(width,height,false);
     let renderCamera;
