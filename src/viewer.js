@@ -6,10 +6,11 @@ import {applyContextOpacity} from './glazing-finish.js';
 import {publicAsset,enablePublicDownloads} from './public-assets.js';
 import {refineExterior} from './exterior-finish.js';
 import {applyConceptPaint} from './concept-paint.js';
+import {applyConceptShape,shapeAft,shapeView} from './concept-shape.js';
 import {createAft} from './aft.js';
 import {AFT_TOUR,FIN_TOUR} from './aft-tour.js';
 import {attachFinCrown,prepareCrownExterior} from './fin-crown.js';
-import {AFT_VIEWS} from './aft-layout.js';
+import {AFT_VIEWS as AFT_LAYOUT} from './aft-layout.js';
 import {createSpecialCirculation} from './special-circulation.js';
 import {createTransit,TRANSIT_CORES,floorY} from './transit.js';
 import {polishTourDeck} from './tour-polish.js';
@@ -56,7 +57,10 @@ const rim=new T.DirectionalLight(0xffffff,.65);rim.position.set(200,60,-300);sce
 let camera=new T.PerspectiveCamera(42,1,1,6000);
 const persp=camera,ortho=new T.OrthographicCamera(-400,400,240,-240,.1,6000);
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.09;controls.minDistance=1;controls.maxDistance=2200;controls.maxPolarAngle=Math.PI*.96;
-const ship=createShip({deferExterior:true});scene.add(ship.root);const tourExtras=polishTourDeck(ship.detail.root);
+const ship=createShip({deferExterior:true});scene.add(ship.root);
+// The fin and its crown sit lower than in the saved model (concept-shape.js); interiors, stops and views follow.
+const ensureSavedAft=ship.ensureAft;ship.ensureAft=()=>{const first=!ship.aftShaped,aft=ensureSavedAft();if(first){shapeAft(aft.root);ship.aftShaped=true;}return aft;};
+const AFT_VIEWS=Object.fromEntries(Object.entries(AFT_LAYOUT).map(([key,view])=>[key,shapeView(view)]));const tourExtras=polishTourDeck(ship.detail.root);
 let activeDistrict=10,residenceInside=false;const districtViews=new Map();
 const noseScene=new T.Group(),noseViews=new Map();scene.add(noseScene);noseScene.visible=false;
 function noseView(){
@@ -177,7 +181,7 @@ const upperAftShells=[];const showUpperAftShells=on=>upperAftShells.forEach(o=>{
 for(const [key,v]of Object.entries(AFT_VIEWS)){const o=document.createElement('option');o.value=key;o.textContent=v.name;$('aft-section').append(o);}
 // Builds the aft model once (the aft systems view, the engineering and fin tours, and the idle warm-up use it).
 function ensureAftModel(){
- if(!aftModel){aftModel=createAft();aftScene.add(aftModel.root);polishCrown(aftModel.root);const rooms=new T.Group();rooms.name='Existing_aft_engineering';
+ if(!aftModel){aftModel=createAft();aftScene.add(aftModel.root);polishCrown(aftModel.root);shapeAft(aftModel.root);const rooms=new T.Group();rooms.name='Existing_aft_engineering';
   for(const area of SHIP_AREAS.filter(a=>a.category==='Aft engineering')){const r=createShipArea(area);r.shell.visible=false;rooms.add(r.root);}const c=createSpecialCirculation(7);c.shell.visible=false;rooms.add(c.root);aftScene.add(rooms);
   const upper=new T.Group();upper.name='Upper_aft_commons';for(const a of SHIP_AREAS.filter(a=>a.upperAft)){const r=createShipArea(a);r.shell.visible=false;upperAftShells.push(r.shell);upper.add(r.root);}for(const d of [16,17]){const r=createSpecialCirculation(d);r.shell.visible=false;upperAftShells.push(r.shell);upper.add(r.root);}aftScene.add(upper);
   aftGhost=assembled(()=>ship.exterior.clone(true));aftGhost.name='Aft_shell_context';aftGhost.traverse(o=>{if(o.isMesh){const ms=(Array.isArray(o.material)?o.material:[o.material]).map(m=>{const n=m.clone();n.transparent=true;n.opacity=.1;n.depthWrite=false;n.clippingPlanes=[new T.Plane(new T.Vector3(-1,0,0),-132)];return n;});o.material=Array.isArray(o.material)?ms:ms[0];o.castShadow=false;}});aftGhost.traverse(o=>o.visible=true);aftGhost.getObjectByName('Fin_panorama_lounge')?.removeFromParent();aftScene.add(aftGhost);renderer.localClippingEnabled=true;
@@ -199,7 +203,7 @@ function showAft(){
 }
 $('aft-section').addEventListener('change',()=>{aftSection=$('aft-section').value;showAft();});$('aft-shell').addEventListener('change',showAft);
 $('aft-eye').addEventListener('click',()=>{aftEye=true;showAft();});$('aft-overview').addEventListener('click',()=>{aftEye=false;showAft();});
-const shapeParts=/^(Fin_cap_retained_white_underside$|Crown_|Smooth_pressure_envelope_|Upper_engine_housing_|Sculpted_nacelle_shell$|Nacelle_exhaust_bulkhead$|Nacelle_chamfered_nose_face$|Engine_shroud$|Engine_bell$|Engine_nozzle_lip$|Engine_throat$|Blended_double_delta$|Wing_thermal_edge$|Wing_stabilizer_fence$|Swept_cat_tail$|Swept_tail_cap$|Tail_root_dorsal_fairing$|Contoured_aft_pressure_frame$|Forward_observation_panes$|Individual_glazing_frames$|Individual_glazing_seals$|Bridge_roof_brow$|Forward_side_vent_)/;
+const shapeParts=/^(Fin_cap_retained_white_underside$|Crown_|Smooth_pressure_envelope_|Upper_engine_housing_|Sculpted_nacelle_shell$|Nacelle_exhaust_bulkhead$|Nacelle_chamfered_nose_face$|Engine_shroud$|Engine_bell$|Engine_nozzle_lip$|Engine_throat$|Blended_double_delta$|Wing_thermal_edge$|Wing_stabilizer_fence$|Swept_cat_tail$|Fin_root_fillet$|Swept_tail_cap$|Tail_root_dorsal_fairing$|Contoured_aft_pressure_frame$|Forward_observation_panes$|Individual_glazing_frames$|Individual_glazing_seals$|Bridge_roof_brow$|Forward_side_vent_)/;
 const brandingParts=/^(LEO_wordmark|Mission_identifier|Mission_brand|Crest_|Tail_registry|Roof_mission|V33_authentic_Mars_Cats_Voyage_logo)$/;
 const exteriorMeshes=[];ship.exterior.traverse(o=>{if(o.isMesh)exteriorMeshes.push({mesh:o,visible:o.visible});});
 function brandingMesh(o){return o.isMesh&&brandingParts.test(o.name);}
@@ -229,7 +233,7 @@ const TOURS={
  home:{stops:ROUTE,neighborhood:true,title:'From cabin to the stars.',view:'Follow a short route through Neighborhood 10.',status:'Guided neighborhood route',description:'Follow a resident from a twin cabin through the garden to the forward observation lounge.'},
  lounge:{stops:LOUNGE_TOUR,neighborhood:true,title:'To the observation lounge.',view:'From the garden commons into the forward observation lounge.',status:'Neighborhood 10 / observation lounge',description:'Walk from the Neighborhood 10 garden up the promenade and into the forward observation lounge: the telescope, the seating islands, a reading corner and the view of Mars.'},
  aft:{stops:AFT_TOUR,title:'From home to engineering.',view:'A journey through the working ship.',status:'Residential / engineering',description:'Travel from Neighborhood 10 through the aft residential connection to the drive, the reservoir bay and the engine pods. Deck and lift transfers use scene cuts.'},
- fin:{stops:FIN_TOUR,title:'From home to the fin crown.',view:'Up to Deck 17, aft to the fin, and up to the panorama bar.',status:'Residential / fin / panorama',description:'Rise from Neighborhood 10 to the commons level, walk aft to the fin lounge and gallery, then ride the lift to the crown bar. Deck and lift transfers use scene cuts.'},
+ fin:{stops:FIN_TOUR.map(shapeView),title:'From home to the fin crown.',view:'Up to Deck 17, aft to the fin, and up to the panorama bar.',status:'Residential / fin / panorama',description:'Rise from Neighborhood 10 to the commons level, walk aft to the fin lounge and gallery, then ride the lift to the crown bar. Deck and lift transfers use scene cuts.'},
 };
 let routeKey='home',tourResidence=null,tourTransit=null,aftTourShell=null;const routeStops=()=>TOURS[routeKey].stops,neighborhoodTour=()=>Boolean(TOURS[routeKey].neighborhood);
 let mode='exterior',transition=null,tourPlaying=false,stop=0,tourTimer=null,lookDrag=null,lastFrameScale=1,exporting=false;
@@ -286,7 +290,7 @@ async function loadExterior(){
       Object.assign(ship,{exterior,fixed:exterior.getObjectByName('Wings_engines_tail'),port:exterior.getObjectByName('Port_shell'),starboard:exterior.getObjectByName('Starboard_shell')});
     }
     if(location.protocol==='file:'){prepareCrownExterior(ship.exterior);refineExterior(ship.exterior);attachFinCrown(ship.exterior);}
-    applyConceptPaint(ship.exterior);
+    applyConceptShape(ship.exterior);applyConceptPaint(ship.exterior);
     ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);scene.add(thrusters.root);exteriorReady=true;if(!window.LEO_ARRIVAL)loadCosmo();applyBrandingView();applyShapeView();
   })().catch(e=>{exteriorLoad=null;throw e;});
   await exteriorLoad;
@@ -393,7 +397,7 @@ function exteriorLink(view=document.querySelector('[data-camera][aria-pressed="t
 function ensureExplodeKit(){
  if(explodeKit)return explodeKit;
  for(const deck of DECKS)ship.ensureResidentialDeck(deck.number);ship.ensureGardens();ship.ensureObservation();
- explodeKit=createExplode({ship,transit:ship.ensureTransit(),aft:ship.ensureAft(),thrusters,outline:/^(Smooth_pressure_envelope|Blended_double_delta$|Sculpted_nacelle_shell$|Swept_cat_tail$|Swept_tail_cap$|Crown_exterior$)/});
+ explodeKit=createExplode({ship,transit:ship.ensureTransit(),aft:ship.ensureAft(),thrusters,outline:/^(Smooth_pressure_envelope|Blended_double_delta$|Sculpted_nacelle_shell$|Swept_cat_tail$|Fin_root_fillet$|Swept_tail_cap$|Crown_exterior$)/});
  for(const mesh of explodeKit.added)exteriorMeshes.push({mesh,visible:mesh.visible});
  for(const label of explodeKit.labels){const tag=document.createElement('div'),text=document.createElement('b'),detail=document.createElement('span');tag.className='explode-tag';tag.hidden=true;detail.textContent=label.detail;text.append(label.text+' · ',detail);tag.append(text);$('explode-labels').append(tag);explodeTags.push({tag,label});}
  return explodeKit;
