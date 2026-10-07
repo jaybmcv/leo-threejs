@@ -210,8 +210,7 @@ export function createExplode({ship,transit,aft,thrusters,outline}){
  let ghost=null;
  if(outline){
   const shapes=[];
-  // Positions are copied as floats: the streamed exterior is quantized, reshaped parts (concept-shape.js) are not.
-  exterior.traverse(o=>{if(!o.isMesh||!outline.test(o.name)||!o.geometry.attributes.position)return;const g=new T.BufferGeometry(),p=o.geometry.attributes.position,f=new Float32Array(p.count*3);for(let i=0;i<p.count;i++)f.set([p.getX(i),p.getY(i),p.getZ(i)],i*3);g.setAttribute('position',new T.BufferAttribute(f,3));if(o.geometry.index)g.setIndex(o.geometry.index.clone());shapes.push(g.applyMatrix4(o.matrixWorld).toNonIndexed());});
+  exterior.traverse(o=>{if(!o.isMesh||!outline.test(o.name)||!o.geometry.attributes.position)return;const g=new T.BufferGeometry();g.setAttribute('position',o.geometry.attributes.position.clone());if(o.geometry.index)g.setIndex(o.geometry.index.clone());shapes.push(g.applyMatrix4(o.matrixWorld).toNonIndexed());});
   const merged=shapes.length&&mergeGeometries(shapes);shapes.forEach(g=>g.dispose());
   if(merged){ghost=new T.Mesh(merged,ghostMaterial);ghost.name='Explode_hull_outline';ghost.visible=false;ghost.castShadow=ghost.receiveShadow=false;ghost.frustumCulled=false;ship.root.add(ghost);}// not culled: always in view while shown, and measuring it would visit every vertex of the hull
  }

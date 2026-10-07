@@ -402,7 +402,8 @@ function exteriorLink(view=document.querySelector('[data-camera][aria-pressed="t
 function ensureExplodeKit(){
  if(explodeKit)return explodeKit;
  for(const deck of DECKS)ship.ensureResidentialDeck(deck.number);ship.ensureGardens();ship.ensureObservation();
- explodeKit=createExplode({ship,transit:ship.ensureTransit(),aft:ship.ensureAft(),thrusters,outline:/^(Smooth_pressure_envelope|Blended_double_delta$|Sculpted_nacelle_shell$|Swept_cat_tail$|Fin_root_fillet$|Swept_tail_cap$|Crown_exterior$)/});
+ // No outline pattern: the see-through hull ghost stays off, as on the live viewer.
+ explodeKit=createExplode({ship,transit:ship.ensureTransit(),aft:ship.ensureAft(),thrusters});
  for(const mesh of explodeKit.added)exteriorMeshes.push({mesh,visible:mesh.visible});
  for(const label of explodeKit.labels){const tag=document.createElement('div'),text=document.createElement('b'),detail=document.createElement('span');tag.className='explode-tag';tag.hidden=true;detail.textContent=label.detail;text.append(label.text+' · ',detail);tag.append(text);$('explode-labels').append(tag);explodeTags.push({tag,label});}
  return explodeKit;
