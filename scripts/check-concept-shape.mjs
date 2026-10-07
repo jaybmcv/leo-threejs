@@ -37,6 +37,9 @@ for(const name of ['leo-exterior-refined.glb',...(streamed?['leo-exterior-web.gl
  const t1=performance.now();applyConceptDetail(after);const detailMs=performance.now()-t1;
  // Each letter keeps its height above the hull after growing.
  {const lift1=standoff(after);let worst=0;lift0.forEach((d,i)=>{if(Number.isFinite(d)&&Number.isFinite(lift1[i]))worst=Math.max(worst,Math.abs(lift1[i]-d));});assert.ok(worst<.03,`${name}: identity standoff changed by ${worst} m`);}
+ // Pod slots and beacons sit with their pods; the cap beacon with the crown.
+ for(const side of ['Port_nacelle','Starboard_nacelle'])for(const mark of ['Nacelle_concept_slot','Nacelle_concept_beacon'])assert.ok(after.getObjectByName(side).getObjectByName(mark),`${name}: ${side} ${mark} missing`);
+ assert.ok(after.getObjectByName('Fin_cap_retained_white_underside').parent.getObjectByName('Crown_concept_beacon'),`${name}: cap beacon missing`);
  // The spine is one Explode part.
  assert.ok(after.getObjectByName('Dorsal_sensor_assembly')?.getObjectByName('Sensor_mast_tip'),`${name}: spine not grouped`);
  after.traverse(o=>assert.ok(!(o.isMesh&&/^(Dorsal_sensor_rail|Sensor_fairing|Sensor_amber|Dorsal_whiskers)$/.test(o.name)),`${name}: saved dorsal pad left`));

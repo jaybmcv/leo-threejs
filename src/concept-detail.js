@@ -65,6 +65,27 @@ function enlargeBranding(exterior,frame){
  }
 }
 
+// Small marks from the sheet: a dark slot window on each pod's outer flank near the bow, and amber beacons on each pod's
+// top front edge and on the fin cap's nose. Each joins the group of the part it sits on, so the Explode dial carries it.
+// Positions are measured from the shaped meshes, so they follow the pod bows and the lowered crown.
+const SLOT={x:-196,y:6,length:5,radius:1.1,depth:.35},BEACON=.9;
+function pointsOf(root,frame,test){const out=[],v=new T.Vector3(),m=new T.Matrix4();root.traverse(o=>{if(!o.isMesh||!test(o))return;m.multiplyMatrices(frame,o.matrixWorld);const p=o.geometry.attributes.position;for(let i=0;i<p.count;i++)out.push(v.fromBufferAttribute(p,i).applyMatrix4(m).toArray());});return out;}
+function addMarks(exterior,frame,amber,dark){
+ const place=(group,name,geometry,material,[x,y,z])=>{geometry.translate(x,y,z);geometry.applyMatrix4(new T.Matrix4().multiplyMatrices(frame,group.matrixWorld).invert());const m=new T.Mesh(geometry,material);m.name=name;group.add(m);};
+ for(const side of ['Port_nacelle','Starboard_nacelle']){
+  const pod=exterior.getObjectByName(side);if(!pod)continue;const shell=pointsOf(pod,frame,o=>/^Sculpted_nacelle_shell/.test(o.name));if(!shell.length)continue;
+  const zs=shell.map(p=>p[2]),centre=(Math.min(...zs)+Math.max(...zs))/2,out=Math.sign(centre);
+  // The flank's outer face at the slot, and the deck line's front edge.
+  const flank=Math.max(...shell.filter(([x,y])=>Math.abs(x-SLOT.x)<3&&Math.abs(y-SLOT.y)<1.5).map(p=>Math.abs(p[2]-centre)));
+  const top=Math.max(...shell.map(p=>p[1])),front=Math.max(...shell.filter(p=>p[1]>top-.3).map(p=>p[0]));
+  const slot=new T.CapsuleGeometry(SLOT.radius,SLOT.length,4,12);slot.rotateZ(Math.PI/2);slot.scale(1,1,SLOT.depth/SLOT.radius);
+  if(Number.isFinite(flank))place(pod,'Nacelle_concept_slot',slot,dark,[SLOT.x,SLOT.y,centre+out*(flank-.05)]);
+  place(pod,'Nacelle_concept_beacon',new T.SphereGeometry(BEACON,12,8),amber,[front-1.2,top+.4,centre]);
+ }
+ const cap=exterior.getObjectByName('Fin_cap_retained_white_underside');
+ if(cap){const b=new T.Box3().setFromObject(cap).applyMatrix4(frame);place(cap.parent,'Crown_concept_beacon',new T.SphereGeometry(BEACON*1.2,12,8),amber,[b.max.x+.2,b.max.y-1.5,0]);}
+}
+
 export function applyConceptDetail(exterior){
  exterior.updateMatrixWorld(true);
  const group=exterior.getObjectByName('Wings_engines_tail'),navy=materialNamed(exterior,'V32_Thermal_navy'),amber=materialNamed(exterior,'V32_Amber_markers'),alloy=materialNamed(exterior,'V32_Edge_alloy');
@@ -89,6 +110,8 @@ export function applyConceptDetail(exterior){
  });
  for(const [x,z] of MARKERS)add('Sensor_marker_plate',new T.BoxGeometry(MARKER,.25,MARKER),amber,[x,ROOF+.05,z]);
  exterior.traverse(o=>{if(o.isMesh&&LOCATOR.test(o.name)){o.scale.multiply(new T.Vector3(...LOCATOR_SCALE));o.material=amber;}});
- enlargeBranding(exterior,exterior.parent?exterior.parent.matrixWorld.clone().invert():new T.Matrix4());
+ const frame=exterior.parent?exterior.parent.matrixWorld.clone().invert():new T.Matrix4();
+ enlargeBranding(exterior,frame);
+ addMarks(exterior,frame,amber,materialNamed(exterior,'V32_Recess')??navy);
  exterior.updateMatrixWorld(true);
 }

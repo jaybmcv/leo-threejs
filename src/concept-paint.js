@@ -2,11 +2,15 @@ import * as T from 'three';
 
 // Brings the saved exterior's finish closer to the concept sheet without touching its geometry: cool lavender-grey
 // ceramic, indigo slate navy, and passenger windows that read as quiet pale panes instead of dark openings.
-const HULL={V32_Ceramic_satin:[0xb8bbc6,.42,.14],V32_Thermal_navy:[0x262d3f,.42,.32],V32_Thermal_service_panels:[0x2f3749,.52,.36],V32_Ceramic_access_panels:[0xb3b7c3,.5,.26],V32_Dorsal_service_covers:[0xb7bbc6,.48,.24]};
+const HULL={V32_Ceramic_satin:[0xb8bbc6,.42,.14],V32_Thermal_navy:[0x262d3f,.42,.32],V32_Thermal_service_panels:[0x2f3749,.52,.36],V32_Ceramic_access_panels:[0xb3b7c3,.5,.26],V32_Dorsal_service_covers:[0xb7bbc6,.48,.24],
+ // The sheet's hull is covered in crisp dark panel lines; the saved seams are a mid grey that barely shows on the ceramic.
+ V32_Panel_reveal:[0x394355,.72,.12],V32_fine_panel_joint:[0x394355,.72,.12],
+ // Its windows are slim light dashes that recede into the hull, so the frames take the ceramic's tone, not bright alloy.
+ V33_window_frames:[0xa4aab7,.48,.18]};
 const PASSENGER_GLASS=/^V3[345]_(fin_|pod_outer_|pod_inner_)?passenger_glazing$/,BOW_GLASS=/^(Forward_observation_panes|Forward_side_vent_glass|Forward_navigation_sensor_glass)$/;
 // Panes above the navy waterline read pale, as on the sheet; those set into the navy keep a dark tint so the lower hull
 // stays one plain band. Each vertex carries its colour, so this is decided once at load.
-const PANE=[new T.Color(0x8c98aa),new T.Color(0x1e2a3b)],REVEAL=[new T.Color(0x6d7788),new T.Color(0x233c4a)],WATERLINE_BIN=10;
+const PANE=[new T.Color(0x9ba5b5),new T.Color(0x1e2a3b)],REVEAL=[new T.Color(0x8a92a1),new T.Color(0x233c4a)],WATERLINE_BIN=10;
 const paneGlass=new T.MeshPhysicalMaterial({name:'LEO_glass_concept_pane',vertexColors:true,roughness:.32,metalness:.3,transparent:true,opacity:.94,side:T.FrontSide,depthWrite:false});
 const bowGlass=new T.MeshPhysicalMaterial({name:'LEO_glass_concept_bow',color:0x2c4566,roughness:.1,metalness:.3,clearcoat:1,clearcoatRoughness:.08,transparent:true,opacity:.92,side:T.FrontSide,depthWrite:false});
 const reveal=new T.MeshStandardMaterial({name:'LEO_concept_window_reveal',vertexColors:true,roughness:.6,side:T.DoubleSide});
