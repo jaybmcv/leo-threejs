@@ -734,21 +734,29 @@ function showTourSpace(r){
 const tourRay=new T.Raycaster();
 // Tour pacing: Play route glides for TOUR_GLIDE_MS and moves on every TOUR_STOP_MS; the arrows glide for TOUR_STEP_MS.
 const TOUR_GLIDE_MS=1500,TOUR_STOP_MS=4300,TOUR_STEP_MS=1000,TOUR_FADE_MS=300,TOUR_START_MS=3000;
-// While Play route runs, the eye looks around at each stop: a slow turn to one side (alternating stop by stop) with a
-// slight lift, back on the stop's view as the next move starts, so the walk never holds a frozen frame. Pausing eases
-// back to the stop's view; a drag takes over from whatever is on screen.
-const LOOK_YAW=.2,LOOK_PITCH=.07,LOOK_SETTLE=5,lookDirection=new T.Vector3(),lookRight=new T.Vector3();
-let lookStart=0,lookSpan=TOUR_STOP_MS,lookSwing=0;
+// While Play route runs, the eye looks around at each stop, so the walk never holds a frozen frame. A stop names its
+// gesture as look:[yaw,pitch,shape] in radians (+yaw turns left, +pitch looks up): 'glance' turns, holds and comes back;
+// 'sweep' looks one way, then the other; 'drift' eases out and back in one slow arc. Stops without one take the next
+// of LOOK_DEFAULTS, so neighbouring stops never repeat a move. Every gesture starts and ends on the stop's own view at
+// rest. Pausing eases back to that view; a drag takes over from whatever is on screen.
+const smoothstep=x=>{x=Math.min(1,Math.max(0,x));return x*x*(3-2*x);},hold=u=>smoothstep(u/.4)*(1-smoothstep((u-.6)/.4)),arc=u=>Math.sin(Math.PI*u)**2;
+const LOOK_SHAPES={glance:u=>[hold(u),hold(u)],sweep:u=>[Math.sin(2*Math.PI*u)*Math.sin(Math.PI*u)/.77,arc(u)],drift:u=>[arc(u),arc(u)]};
+const LOOK_DEFAULTS=[[.22,.05,'sweep'],[-.26,.03,'glance'],[.08,.14,'drift'],[.24,-.04,'glance'],[-.18,.08,'drift']];
+const LOOK_SETTLE=5,lookDirection=new T.Vector3(),lookRight=new T.Vector3();
+let lookStart=0,lookSpan=TOUR_STOP_MS,lookYaw=0,lookPitch=0;
 function lookAround(now,delta){
- if(mode!=='walk'||reduced){lookSwing=0;return;}
- if(tourPlaying){const u=Math.min(1,(now-lookStart)/lookSpan);lookSwing=Math.sin(Math.PI*u)*(stop%2?-1:1);}
- else lookSwing*=Math.exp(-delta*LOOK_SETTLE);
- if(Math.abs(lookSwing)<1e-4){lookSwing=0;return;}
- lookDirection.subVectors(controls.target,camera.position).applyAxisAngle(LEVEL,LOOK_YAW*lookSwing);
- lookRight.crossVectors(lookDirection,LEVEL).normalize();lookDirection.applyAxisAngle(lookRight,LOOK_PITCH*lookSwing*lookSwing);
+ if(mode!=='walk'||reduced){lookYaw=lookPitch=0;return;}
+ if(tourPlaying){
+  const [yaw,pitch,shape]=routeStops()[stop]?.look||LOOK_DEFAULTS[stop%LOOK_DEFAULTS.length],[fy,fp]=LOOK_SHAPES[shape](Math.min(1,(now-lookStart)/lookSpan));
+  lookYaw=yaw*fy;lookPitch=pitch*fp;
+ }
+ else {const k=Math.exp(-delta*LOOK_SETTLE);lookYaw*=k;lookPitch*=k;}
+ if(Math.abs(lookYaw)+Math.abs(lookPitch)<1e-4){lookYaw=lookPitch=0;return;}
+ lookDirection.subVectors(controls.target,camera.position).applyAxisAngle(LEVEL,lookYaw);
+ lookRight.crossVectors(lookDirection,LEVEL).normalize();lookDirection.applyAxisAngle(lookRight,lookPitch);
  camera.lookAt(lookDirection.add(camera.position));
 }
-function keepLook(){if(!lookSwing)return;const d=controls.target.distanceTo(camera.position);controls.target.copy(camera.position).addScaledVector(camera.getWorldDirection(lookDirection),d);lookSwing=0;}
+function keepLook(){if(!lookYaw&&!lookPitch)return;const d=controls.target.distanceTo(camera.position);controls.target.copy(camera.position).addScaledVector(camera.getWorldDirection(lookDirection),d);lookYaw=lookPitch=0;}
 function tourPathBlocked(to){
  const from=camera.position,dir=new T.Vector3(...to).sub(from),distance=dir.length();if(distance<.5)return false;
  const meshes=[];scene.traverseVisible(o=>{if(o.isMesh)meshes.push(o);});tourRay.set(from,dir.normalize());tourRay.far=distance;
