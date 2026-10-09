@@ -6,7 +6,7 @@ import {applyContextOpacity} from './glazing-finish.js';
 import {publicAsset,enablePublicDownloads} from './public-assets.js';
 import {refineExterior} from './exterior-finish.js';
 import {applyConceptPaint} from './concept-paint.js';
-import {applyConceptShape,shapeAft,shapeView} from './concept-shape.js';
+import {applyConceptShape,shapeAft,shapeView,shapeInterior} from './concept-shape.js';
 import {applyConceptDetail} from './concept-detail.js';
 import {createEscortShuttle} from './escort-shuttle.js';
 import {createAft} from './aft.js';
@@ -297,7 +297,7 @@ async function loadExterior(){
     const yieldTask=()=>new Promise(resolve=>{const channel=new MessageChannel();channel.port1.onmessage=()=>resolve();channel.port2.postMessage(0);});
     // The public build bakes the shape and detail passes into the streamed exterior (scripts/bake-concept.mjs).
     if(!ship.exterior.userData.conceptBaked){applyConceptShape(ship.exterior);await yieldTask();applyConceptDetail(ship.exterior);await yieldTask();}
-    applyConceptPaint(ship.exterior);
+    applyConceptPaint(ship.exterior);shapeInterior(ship.exterior,ship.inside);
     ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);escort=createEscortShuttle();ship.root.add(escort.root);scene.add(thrusters.root);exteriorReady=true;if(!window.LEO_ARRIVAL)loadCosmo();applyBrandingView();applyShapeView();
   })().catch(e=>{exteriorLoad=null;throw e;});
   await exteriorLoad;

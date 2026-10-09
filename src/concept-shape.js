@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {fairingWarps,packFairing,fairInterior} from './hull-fairing.js';
 
 // Brings the saved exterior's form closer to the concept sheet, as concept-paint.js does for its finish. The top and
 // side silhouettes already match the sheet within a few metres; what differs is how some parts are shaped:
@@ -140,6 +141,9 @@ const frameOf=root=>root.parent?root.parent.matrixWorld.clone().invert():new T.M
 
 export function applyConceptShape(exterior){
  exterior.updateMatrixWorld(true);const frame=frameOf(exterior);
+ // Bumps out first (hull-fairing.js), so everything after builds on the faired hull.
+ const fair=fairingWarps(exterior,frame);warpParts(partsOf(exterior),fair.fairSides,frame,fair.sideRegion);warpParts(partsOf(exterior),fair.fairCrown,frame,fair.crownRegion);
+ exterior.userData.hullFairing=packFairing(fair.grid);
  addFinFillet(exterior,frame);
  warpParts(partsOf(exterior,POD_PART),chinPod,frame);
  warpParts(partsOf(exterior),rakeBow,frame,BOW_REGION);
@@ -147,5 +151,7 @@ export function applyConceptShape(exterior){
  const fin=new Set(partsOf(exterior,FIN_PART));warpParts([...fin],dropFinPart,frame);
  warpParts(partsOf(exterior,null,HULL).filter(o=>!fin.has(o)),dropFin,frame,DROP_REGION);
 }
+// The deck plates (ship.inside) follow the faired hull sides; runs once per ship, baked exterior or not.
+export function shapeInterior(exterior,inside){if(inside.userData.fairedDecks)return;inside.updateMatrixWorld(true);fairInterior(exterior,inside,(meshes,warp)=>warpParts(meshes,warp,frameOf(inside)));inside.userData.fairedDecks=1;}
 // The aft interiors (fin structure, lift and crown lounge) follow the fin drop.
 export function shapeAft(root){root.updateMatrixWorld(true);warpParts(partsOf(root),dropFin,frameOf(root),DROP_REGION);}
