@@ -789,7 +789,10 @@ const STEP_ORDER=['exterior','layout','neighborhood','walk','areas','transit','a
 {const menu=$('m-menu'),sheet=document.querySelector('.panel'),tab=m=>document.querySelector(`.tabs button[data-mode="${m}"]`);
  const closeMenu=()=>{menu.hidden=true;$('m-view').setAttribute('aria-expanded','false');};
  for(const [m,n] of Object.entries(CHAPTER_NUMBERS)){const b=document.createElement('button');b.type='button';b.dataset.mode=m;b.append(tab(m).textContent);const num=document.createElement('small');num.textContent=n;b.append(num);b.addEventListener('click',()=>{closeMenu();tab(m).click();});menu.append(b);}
- $('m-view').addEventListener('click',()=>{const open=menu.hidden;menu.hidden=!open;$('m-view').setAttribute('aria-expanded',String(open));});
+ // The desktop bar's Hide UI, reachable on phones; the top bar stays, so the menu can bring the UI back.
+ const ui=document.createElement('button');ui.type='button';ui.className='m-ui';ui.addEventListener('click',()=>{closeMenu();$('toggle-panels').click();});menu.append(ui);
+ const uiLabel=()=>{ui.textContent=$('toggle-panels').textContent;};uiLabel();
+ $('m-view').addEventListener('click',()=>{const open=menu.hidden;if(open)uiLabel();menu.hidden=!open;$('m-view').setAttribute('aria-expanded',String(open));});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();});renderer.domElement.addEventListener('pointerdown',closeMenu);
  $('m-tour').addEventListener('click',()=>{closeMenu();tab('walk').click();});
  const setSheet=open=>{sheet.classList.toggle('open',open);$('m-handle').setAttribute('aria-expanded',String(open));};
