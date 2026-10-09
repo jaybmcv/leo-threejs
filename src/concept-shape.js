@@ -5,7 +5,7 @@ import * as T from 'three';
 // - the fin stands ~12 m taller than drawn, so the fin and its crown lounge sit lower (the fin drop);
 // - the fin's leading edge is swept further, reaching ~48 m further forward along the hull top;
 // - each engine pod's bow curves back under itself instead of ending in a tall vertical navy face;
-// - the bow's upper part leans back further, as drawn.
+// - the bow's upper part leans back further, and its keel sweeps up earlier, as drawn.
 // The pod bow and the fin drop are smooth warps of space applied to whole parts, so attached details travel with their
 // surfaces. The fin drop also moves everything built inside the fin: the aft interiors (shapeAft), tour stops and cameras (shapePoint).
 
@@ -81,6 +81,13 @@ function addFinFillet(exterior,frame){
 const RAKE=16,RAKE_FROM=32,RAKE_TO=54,BOW_FROM=120,BOW_TO=235;
 const BOW_REGION=new T.Box3(new T.Vector3(BOW_FROM,RAKE_FROM,-Infinity),new T.Vector3(Infinity,Infinity,Infinity));
 const rakeBow=v=>{v.x-=RAKE*smooth(RAKE_FROM,RAKE_TO,v.y)*smooth(BOW_FROM,BOW_TO,v.x);};
+// Bow keel: the sheet's keel sweeps up into the bow earlier; under 33 m the bottom lifts toward the nose, up to 6 m at
+// the keel forward of x 250 (eased in from x 190). Exterior-only, like the rake; the lowest bow deck (-39.7 m) stays
+// well inside, and the warp bends the bow's triangles < 1 cm.
+const KEEL_LIFT=6,KEEL_FROM=190,KEEL_TO=250,KEEL_LOW=-55,KEEL_HIGH=-33;
+const KEEL_REGION=new T.Box3(new T.Vector3(KEEL_FROM,-Infinity,-Infinity),new T.Vector3(Infinity,KEEL_HIGH,Infinity));
+const liftKeel=v=>{v.y+=KEEL_LIFT*smooth(KEEL_FROM,KEEL_TO,v.x)*(1-smooth(KEEL_LOW,KEEL_HIGH,v.y));};
+export const liftKeelPoint=([x,y,z])=>{const v=new T.Vector3(x,y,z);liftKeel(v);return v.toArray();};
 export const rakeBowPoint=([x,y,z])=>{const v=new T.Vector3(x,y,z);rakeBow(v);return v.toArray();};
 
 // Pod bow: below 24 m under the pod's deck line the bow curves back, up to ~7 m at the keel, as drawn. This stays below
@@ -136,6 +143,7 @@ export function applyConceptShape(exterior){
  addFinFillet(exterior,frame);
  warpParts(partsOf(exterior,POD_PART),chinPod,frame);
  warpParts(partsOf(exterior),rakeBow,frame,BOW_REGION);
+ warpParts(partsOf(exterior),liftKeel,frame,KEEL_REGION);
  const fin=new Set(partsOf(exterior,FIN_PART));warpParts([...fin],dropFinPart,frame);
  warpParts(partsOf(exterior,null,HULL).filter(o=>!fin.has(o)),dropFin,frame,DROP_REGION);
 }

@@ -22,9 +22,10 @@ for(const name of ['leo-exterior-refined.glb',...(streamed&&!baked?['leo-exterio
  const before=await load(name),after=await load(name),t0=performance.now();applyConceptShape(after);const ms=performance.now()-t0;
  // The crown and its lounge sit FIN_DROP lower; the hull is untouched.
  const c0=bounds(before,crown),c1=bounds(after,crown);assert.ok(Math.abs(c0.max.y-c1.max.y-FIN_DROP)<.05,`${name}: crown roof moved ${c0.max.y-c1.max.y}`);
- // The hull moves only where the bow rakes back (above 32 m, forward of x 120), only aft, and by at most 16 m.
+ // The hull moves only where the bow rakes back (above 32 m, forward of x 120: only aft, at most 16 m) or the bow
+ // keel lifts (below -33 m, forward of x 190: only up, at most 6 m).
  const h0=points(before,hull),h1=points(after,hull);assert.equal(h0.length,h1.length);
- h0.forEach((p,i)=>{const d=p.map((v,k)=>h1[i][k]-v);if(p[0]<120||p[1]<32)assert.ok(Math.hypot(...d)<1e-3,`${name}: hull moved outside the bow`);else assert.ok(d[0]<=1e-3&&d[0]>=-16.01&&Math.abs(d[1])<1e-3&&Math.abs(d[2])<1e-3,`${name}: bow moved ${d}`);});
+ h0.forEach((p,i)=>{const d=p.map((v,k)=>h1[i][k]-v);if(p[0]>=190&&p[1]<-33)assert.ok(d[1]>=-1e-3&&d[1]<=6.01&&Math.abs(d[0])<1e-3&&Math.abs(d[2])<1e-3,`${name}: keel moved ${d}`);else if(p[0]<120||p[1]<32)assert.ok(Math.hypot(...d)<1e-3,`${name}: hull moved outside the bow`);else assert.ok(d[0]<=1e-3&&d[0]>=-16.01&&Math.abs(d[1])<1e-3&&Math.abs(d[2])<1e-3,`${name}: bow moved ${d}`);});
  // The fin fillet reaches ~48 m ahead of the fin's edge on the hull top and stays within the fin's thickness.
  const fillet=after.getObjectByName('Fin_root_fillet');assert.ok(fillet,`${name}: fillet missing`);const f=bounds(after,o=>o===fillet);
  assert.ok(f.max.x>-140&&f.max.x<-125,`${name}: fillet reaches x ${f.max.x}`);assert.ok(f.max.z<=5.2&&f.min.z>=-5.2,`${name}: fillet much thicker than the fin`);
