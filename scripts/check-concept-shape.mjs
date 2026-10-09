@@ -15,7 +15,10 @@ const points=(root,test)=>{const v=new Vector3(),p=[];root.updateMatrixWorld(tru
 const crown=o=>/^Crown_roof$/.test(o.name),hull=o=>/^Smooth_pressure_envelope_/.test(o.name)||/^Smooth_pressure_envelope_/.test(o.parent?.name),pod=o=>/^Sculpted_nacelle_shell/.test(o.name);
 // The streamed copy exists once build-public has run.
 const streamed=await fs.access(out+'leo-exterior-web.glb').then(()=>true,()=>false);
-for(const name of ['leo-exterior-refined.glb',...(streamed?['leo-exterior-web.glb']:[])]){
+// The streamed copy has the passes baked in by build-public (scripts/bake-concept.mjs); it is checked against the
+// lossless exterior shaped here, at the end.
+const baked=streamed&&(await load('leo-exterior-web.glb')).userData.conceptBaked;
+for(const name of ['leo-exterior-refined.glb',...(streamed&&!baked?['leo-exterior-web.glb']:[])]){
  const before=await load(name),after=await load(name),t0=performance.now();applyConceptShape(after);const ms=performance.now()-t0;
  // The crown and its lounge sit FIN_DROP lower; the hull is untouched.
  const c0=bounds(before,crown),c1=bounds(after,crown);assert.ok(Math.abs(c0.max.y-c1.max.y-FIN_DROP)<.05,`${name}: crown roof moved ${c0.max.y-c1.max.y}`);
@@ -40,6 +43,13 @@ for(const name of ['leo-exterior-refined.glb',...(streamed?['leo-exterior-web.gl
  // Pod slots and beacons sit with their pods; the cap beacon with the crown.
  for(const side of ['Port_nacelle','Starboard_nacelle'])for(const mark of ['Nacelle_concept_slot','Nacelle_concept_beacon'])assert.ok(after.getObjectByName(side).getObjectByName(mark),`${name}: ${side} ${mark} missing`);
  assert.ok(after.getObjectByName('Fin_cap_retained_white_underside').parent.getObjectByName('Crown_concept_beacon'),`${name}: cap beacon missing`);
+ // A hangar door on each side at the bow's shuttle bay, and a lid on each pod's deck.
+ {let sides=new Set();after.traverse(o=>{if(o.isMesh&&o.name==='Hangar_door_panel'){const b=new Box3().setFromObject(o);assert.ok(b.min.x>=135&&b.max.x<=175&&b.max.y<-25,`${name}: hangar door at ${b.min.toArray()}`);sides.add(Math.sign(b.getCenter(new Vector3()).z));}});assert.equal(sides.size,2,`${name}: hangar doors missing`);}
+ // Every door triangle rests on the hull (or the thermal panel field over it), never inside it.
+ {const door=hullSurface(after,new Matrix4(),false,new Box3(new Vector3(130,-50,40),new Vector3(180,-20,Infinity)),/^(Smooth_pressure_envelope|Lower_thermal_panel_fields)/),v=new Vector3();let worst=Infinity;
+  after.traverse(o=>{if(!o.isMesh||!/^Hangar_door_/.test(o.name))return;const p=o.geometry.attributes.position,ix=o.geometry.index;for(let t=0;t<ix.count;t+=3){const c=new Vector3();for(let k=0;k<3;k++)c.add(v.fromBufferAttribute(p,ix.getX(t+k)).applyMatrix4(o.matrixWorld));c.divideScalar(3);const z=door(c.x,c.y,c.z>0?1:0);if(Number.isFinite(z))worst=Math.min(worst,Math.abs(c.z)-z);}});
+  assert.ok(worst>.02,`${name}: a hangar door triangle sits ${-worst} m inside the hull`);}
+ for(const side of ['Port_nacelle','Starboard_nacelle'])assert.ok(after.getObjectByName(side).getObjectByName('Nacelle_concept_lid'),`${name}: ${side} lid missing`);
  // The spine is one Explode part.
  assert.ok(after.getObjectByName('Dorsal_sensor_assembly')?.getObjectByName('Sensor_mast_tip'),`${name}: spine not grouped`);
  after.traverse(o=>assert.ok(!(o.isMesh&&/^(Dorsal_sensor_rail|Sensor_fairing|Sensor_amber|Dorsal_whiskers)$/.test(o.name)),`${name}: saved dorsal pad left`));
@@ -65,6 +75,13 @@ const saved=await load('leo-exterior-refined.glb');saved.updateMatrixWorld(true)
  for(let t=0;t<(ix?ix.count:p.count);t+=3){const c=[0,1,2].map(k=>v.fromBufferAttribute(p,ix?ix.getX(t+k):t+k).applyMatrix4(o.matrixWorld).toArray());if(c.every(q=>q[0]<120||q[1]<32))continue;
   const mid=[0,1,2].map(k=>(c[0][k]+c[1][k]+c[2][k])/3),bent=rakeBowPoint(mid)[0]-c.reduce((s,q)=>s+rakeBowPoint(q)[0],0)/3;worst=Math.max(worst,Math.abs(bent));}});
  assert.ok(worst<.08,`bow rake bends hull triangles by ${worst} m`);}
+if(baked){
+ const shaped=await load('leo-exterior-refined.glb'),web=await load('leo-exterior-web.glb');applyConceptShape(shaped);applyConceptDetail(shaped);
+ const names=root=>{const m=new Map();root.traverse(o=>{if(o.isMesh)m.set(o.name,(m.get(o.name)||0)+1);});return m;},a=names(shaped),b=names(web);
+ for(const k of new Set([...a.keys(),...b.keys()]))assert.equal(b.get(k),a.get(k),`baked exterior: ${k} count differs`);
+ for(const part of ['Crown_roof','Fin_root_fillet','Dorsal_sensor_assembly','Hangar_door_panel']){const x=bounds(shaped,o=>o.name===part||o.parent?.name===part),y=bounds(web,o=>o.name===part||o.parent?.name===part);assert.ok(x.min.distanceTo(y.min)<.05&&x.max.distanceTo(y.max)<.05,`baked exterior: ${part} moved`);}
+ console.log('leo-exterior-web.glb: baked, matches the shaped lossless exterior');
+}
 // The aft interiors' crown follows, and the tour stops and their text name the lowered crown.
 const aft=createAft(),r0=bounds(aft.root,crown).max.y;shapeAft(aft.root);assert.ok(Math.abs(r0-bounds(aft.root,crown).max.y-FIN_DROP)<.05,'aft crown did not follow');
 const lobby=shapeView(FIN_TOUR.find(s=>s.name==='Panorama arrival lobby'));assert.equal(lobby.position[1],134-FIN_DROP);assert.match(lobby.detail,/120\.3 m/);

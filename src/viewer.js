@@ -295,7 +295,9 @@ async function loadExterior(){
     // The concept passes take ~0.1 s each; yielding between them keeps the loading screen from freezing for their sum.
     // A message-channel task, unlike a timer, isn't throttled when the tab is in the background.
     const yieldTask=()=>new Promise(resolve=>{const channel=new MessageChannel();channel.port1.onmessage=()=>resolve();channel.port2.postMessage(0);});
-    applyConceptShape(ship.exterior);await yieldTask();applyConceptDetail(ship.exterior);await yieldTask();applyConceptPaint(ship.exterior);
+    // The public build bakes the shape and detail passes into the streamed exterior (scripts/bake-concept.mjs).
+    if(!ship.exterior.userData.conceptBaked){applyConceptShape(ship.exterior);await yieldTask();applyConceptDetail(ship.exterior);await yieldTask();}
+    applyConceptPaint(ship.exterior);
     ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);escort=createEscortShuttle();ship.root.add(escort.root);scene.add(thrusters.root);exteriorReady=true;if(!window.LEO_ARRIVAL)loadCosmo();applyBrandingView();applyShapeView();
   })().catch(e=>{exteriorLoad=null;throw e;});
   await exteriorLoad;
