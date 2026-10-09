@@ -103,7 +103,8 @@ export function createShip({deferExterior=false}={}) {
       if(d.number===18)holes.push({x0:146,x1:170,z0:-4.3,z1:4.3});
       if(d.number===3)holes.push({x0:148,x1:220,z0:-54,z1:54});
       const g=outlinedSlab(outline,holes,d.y+.28,.28);dg.userData.openings=holes;
-      mesh('Deck_slab',g,material('Deck_slab',0x737f88),dg);
+      // The outline's half-width by x travels with the plate, so the hull fairing can find its edge (hull-fairing.js).
+      mesh('Deck_slab',g,material('Deck_slab',0x737f88),dg).userData.outline=points;
     }
     if(d.residential) {
       const list=CABINS.filter(c=>c.deck===d.number);

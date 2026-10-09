@@ -75,13 +75,21 @@ export function fairingWarps(exterior,frame){
 
 // The deck plates reach the hull wall, so their edges follow the faired sides. The side offsets travel with the exterior
 // (userData.hullFairing, in millimetres) so a baked exterior still carries them.
-const SLAB=/^Deck_slab$/,SLAB_FROM=[20,35];
+// Only the plate's outer outline moves: vertices within a metre or so of its outline (holes cut for the commons on
+// Decks 18-19 keep their edges).
+const SLAB=/^Deck_slab$/,SLAB_EDGE=[1.5,.3];
 export function packFairing({x0,y0,cols,rows,side}){const mm=new Int16Array(2*rows*cols);side.forEach((g,k)=>g.forEach((row,j)=>row.forEach((v,i)=>{mm[(k*rows+j)*cols+i]=Math.round(v*1000);})));
  let bin='';new Uint8Array(mm.buffer).forEach(b=>{bin+=String.fromCharCode(b);});return {x0,y0,cols,rows,mm:btoa(bin)};}
 export function fairInterior(exterior,root,warpParts){
  const f=exterior.userData.hullFairing;if(!f)return 0;const bin=atob(f.mm),bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
  const mm=new Int16Array(bytes.buffer),grid=k=>Array.from({length:f.rows},(_,j)=>Array.from({length:f.cols},(_,i)=>mm[(k*f.rows+j)*f.cols+i]/1000)),side=[grid(0),grid(1)];
  const x1=f.x0+f.cols-1,y1=f.y0+f.rows-1;
- const warp=v=>{if(v.x<f.x0||v.x>x1||v.y<f.y0||v.y>y1)return;v.z+=Math.sign(v.z)*bilinear(side[v.z>0?0:1],f.x0,f.y0,v.x,v.y)*smooth(...SLAB_FROM,Math.abs(v.z));};
- const slabs=[];root.traverse(o=>{if(o.isMesh&&SLAB.test(o.name))slabs.push(o);});warpParts(slabs,warp);return slabs.length;
+ const slabs=[];root.traverse(o=>{if(o.isMesh&&SLAB.test(o.name))slabs.push(o);});
+ for(const o of slabs){
+  // The plate's outline half-width at x, interpolated from the points it was cut from (model.js, ship x and z).
+  const pts=o.userData.outline;if(!pts?.length)continue;
+  const outline=v=>{const x=v.x;if(x<=pts[0][0])return pts[0][1];for(let i=1;i<pts.length;i++)if(x<=pts[i][0]){const [a,wa]=pts[i-1],[b,wb]=pts[i];return wa+(wb-wa)*(x-a)/(b-a||1);}return pts.at(-1)[1];};
+  warpParts([o],v=>{if(v.x<f.x0||v.x>x1||v.y<f.y0||v.y>y1)return;const out=outline(v);v.z+=Math.sign(v.z)*bilinear(side[v.z>0?0:1],f.x0,f.y0,v.x,v.y)*smooth(out-SLAB_EDGE[0],out-SLAB_EDGE[1],Math.abs(v.z));});
+ }
+ return slabs.length;
 }

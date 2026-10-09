@@ -98,7 +98,13 @@ if(baked){
 // The deck plates reach the hull wall; once faired with it (shapeInterior) none pokes through the faired sides.
 {const shaped=await load('leo-exterior-refined.glb');applyConceptShape(shaped);shaped.updateMatrixWorld(true);
  const surface=hullSurface(shaped,new Matrix4(),false,new Box3(new Vector3(-155,0,15),new Vector3(80,58,Infinity))),ship=createShip({deferExterior:true});
+ ship.root.updateMatrixWorld(true);const slabs=[];ship.inside.traverse(o=>{if(o.name==='Deck_slab')slabs.push(o);});const slabsBefore=slabs.map(o=>points(o,()=>true));
  shapeInterior(shaped,ship.inside);ship.root.updateMatrixWorld(true);let worst=-Infinity;
+ // Holes cut for the commons (Decks 18-19, edges at |z| 43.5-46) keep their edges where they lie inside the plate's
+ // outline; at the aft corner, where the hull narrows onto them, they are the outline and move with it.
+ {let holeMove=0;slabs.forEach((o,k)=>{const out=o.userData.outline,after=points(o,()=>true),at=x=>{for(let i=1;i<out.length;i++)if(x<=out[i][0]){const [a,wa]=out[i-1],[b,wb]=out[i];return wa+(wb-wa)*(x-a)/(b-a||1);}return out.at(-1)[1];};
+   slabsBefore[k].forEach((p,i)=>{if(p[1]>27&&p[1]<33&&Math.abs(p[2])>40&&Math.abs(p[2])<at(p[0])-1.5)holeMove=Math.max(holeMove,Math.abs(after[i][2]-p[2]));});});
+  assert.ok(holeMove<.05,`commons hole edges moved ${holeMove.toFixed(2)} m`);}
  for(const [x,y,z] of points(ship.inside,o=>o.name==='Deck_slab'))if(x>-150&&x<75&&y>6&&y<55&&Math.abs(z)>15){const w=surface(x,y,z>0?1:0);if(Number.isFinite(w))worst=Math.max(worst,Math.abs(z)-w);}
  assert.ok(worst<.02,`a deck plate pokes ${worst.toFixed(2)} m through the faired hull`);console.log(`deck plates clear the faired hull (closest ${(-worst).toFixed(2)} m inside)`);
  if(baked)assert.ok((await load('leo-exterior-web.glb')).userData.hullFairing?.mm,'baked exterior lost its fairing offsets');}
