@@ -45,6 +45,10 @@ for(const name of ['leo-exterior-refined.glb',...(streamed&&!baked?['leo-exterio
  assert.ok(after.getObjectByName('Fin_cap_retained_white_underside').parent.getObjectByName('Crown_concept_beacon'),`${name}: cap beacon missing`);
  // A hangar door on each side at the bow's shuttle bay, and a lid on each pod's deck.
  {let sides=new Set();after.traverse(o=>{if(o.isMesh&&o.name==='Hangar_door_panel'){const b=new Box3().setFromObject(o);assert.ok(b.min.x>=135&&b.max.x<=175&&b.max.y<-25,`${name}: hangar door at ${b.min.toArray()}`);sides.add(Math.sign(b.getCenter(new Vector3()).z));}});assert.equal(sides.size,2,`${name}: hangar doors missing`);}
+ // Every door triangle rests on the hull (or the thermal panel field over it), never inside it.
+ {const door=hullSurface(after,new Matrix4(),false,new Box3(new Vector3(130,-50,40),new Vector3(180,-20,Infinity)),/^(Smooth_pressure_envelope|Lower_thermal_panel_fields)/),v=new Vector3();let worst=Infinity;
+  after.traverse(o=>{if(!o.isMesh||!/^Hangar_door_/.test(o.name))return;const p=o.geometry.attributes.position,ix=o.geometry.index;for(let t=0;t<ix.count;t+=3){const c=new Vector3();for(let k=0;k<3;k++)c.add(v.fromBufferAttribute(p,ix.getX(t+k)).applyMatrix4(o.matrixWorld));c.divideScalar(3);const z=door(c.x,c.y,c.z>0?1:0);if(Number.isFinite(z))worst=Math.min(worst,Math.abs(c.z)-z);}});
+  assert.ok(worst>.02,`${name}: a hangar door triangle sits ${-worst} m inside the hull`);}
  for(const side of ['Port_nacelle','Starboard_nacelle'])assert.ok(after.getObjectByName(side).getObjectByName('Nacelle_concept_lid'),`${name}: ${side} lid missing`);
  // The spine is one Explode part.
  assert.ok(after.getObjectByName('Dorsal_sensor_assembly')?.getObjectByName('Sensor_mast_tip'),`${name}: spine not grouped`);

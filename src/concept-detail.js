@@ -111,9 +111,10 @@ function addHangarDoors(exterior,frame,{dark,alloy,amber}){
  };
  const {x0,x1,y0,y1,frame:w,ribs,inset,proud}=DOOR;
  for(const side of [-1,1]){
-  patch('Hangar_door_panel',[x0,x1,y0,y1],inset,dark,side);
-  for(const [a,b,c,d] of [[x0-w,x1+w,y1,y1+w],[x0-w,x1+w,y0-w,y0],[x0-w,x0,y0,y1],[x1,x1+w,y0,y1]])patch('Hangar_door_frame',[a,b,c,d],proud,alloy,side,[8,1]);
-  for(let k=1;k<ribs;k++){const y=y0+(y1-y0)*k/ribs;patch('Hangar_door_rib',[x0,x1,y-.12,y+.12],inset+.06,alloy,side,[12,1]);}
+  patch('Hangar_door_panel',[x0,x1,y0,y1],inset,dark,side,[24,24]);
+  // The side bars run up the hull's curve, so they need as many rows as the panel to stay on it.
+  for(const [a,b,c,d,steps] of [[x0-w,x1+w,y1,y1+w,[24,1]],[x0-w,x1+w,y0-w,y0,[24,1]],[x0-w,x0,y0,y1,[1,24]],[x1,x1+w,y0,y1,[1,24]]])patch('Hangar_door_frame',[a,b,c,d],proud,alloy,side,steps);
+  for(let k=1;k<ribs;k++){const y=y0+(y1-y0)*k/ribs;patch('Hangar_door_rib',[x0,x1,y-.12,y+.12],inset+.06,alloy,side,[24,1]);}
   for(const x of [x0-w*2.5,x1+w*2.5])patch('Hangar_door_light',[x-.5,x+.5,y1-.5,y1+.5],proud,amber,side,[1,1]);
  }
 }
