@@ -139,14 +139,24 @@ if(baked){
   assert.ok(rows.size>=5,`nose normals: only ${rows.size} rows sampled`);
   for(const [y,v] of rows){v.sort((x,z)=>x-z);assert.ok(v[v.length>>1]<5,`nose normals at y ${y}: ${v[v.length>>1].toFixed(1)} degrees off the surface`);}}
  // The bow's seams sit just off the hull, measured by a ray cast inward to it: the chine ~0.2 m, the lower reveal one
- // continuous strip per side (the dashed run and the joints' feet along it gone) 0.1-0.35 m.
+ // continuous strip per side (the dashed run and the joints' feet along it gone) 0.1-0.35 m, up to 0.6 m where it
+ // bridges the hull's three small panel steps (0.45 m drops at 20, 24 and 29 degrees round).
  {const hullMeshes=[];shaped.traverse(o=>{if(o.isMesh&&/^Smooth_pressure_envelope/.test(o.name))hullMeshes.push(o);});const rc=new Raycaster(),v=new Vector3();
   const gaps=name=>{const d=[];shaped.traverse(o=>{if(!o.isMesh||o.name!==name)return;const p=o.geometry.attributes.position;for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);if(v.x<130||v.y<-18||v.y>2)continue;
    const th=Math.atan2(Math.abs(v.z),v.x-NOSE.cx),dir=new Vector3(-Math.cos(th),0,-Math.sign(v.z)*Math.sin(th));rc.set(new Vector3(NOSE.cx,v.y,0).addScaledVector(dir,-400),dir);const h=rc.intersectObjects(hullMeshes,false)[0];if(h)d.push(Math.hypot(v.x-NOSE.cx,v.z)-(400-h.distance));}});return d.sort((x,y)=>x-y);};
   const chine=gaps('Continuous_chine'),at=q=>chine[Math.floor(chine.length*q)];assert.ok(at(.05)>.1&&at(.5)<.3&&at(.95)<.45,`chine floats ${at(.05).toFixed(2)}-${at(.95).toFixed(2)} m off the bow`);
   let lines=0;shaped.traverse(o=>{if(o.isMesh&&o.name==='Bow_reveal_line')lines++;});assert.equal(lines,2,`${lines} bow reveal strips`);
-  const strip=gaps('Bow_reveal_line');assert.ok(strip.length>100&&strip[0]>.05&&strip.at(-1)<.45,`bow reveal strip ${strip[0]?.toFixed(2)}-${strip.at(-1)?.toFixed(2)} m off the hull`);
-  console.log(`nose: shades as its shape; chine ${at(.5).toFixed(2)} m and reveal strip ${strip[strip.length>>1].toFixed(2)} m off the hull`);}}
+  const strip=gaps('Bow_reveal_line');assert.ok(strip.length>100&&strip[0]>.05&&strip.at(-1)<.65&&strip[Math.floor(strip.length*.95)]<.35,`bow reveal strip ${strip[0]?.toFixed(2)}-${strip.at(-1)?.toFixed(2)} m off the hull`);
+  console.log(`nose: shades as its shape; chine ${at(.5).toFixed(2)} m and reveal strip ${strip[strip.length>>1].toFixed(2)} m off the hull`);}
+ // The bow centreline: the hull halves share their normals there (no shading line down the bumper); the stray chine
+ // fragment (a chevron at y -19) is gone; port and starboard chine meet level, on the same profile.
+ {const v=new Vector3(),n=new Vector3();let lean=0,stray=0;const centre={Port_shell:[],Starboard_shell:[]};
+  shaped.traverse(o=>{if(!o.isMesh)return;const p=o.geometry.attributes.position;
+   if(/^Smooth_pressure_envelope/.test(o.name)){const q=o.geometry.attributes.normal;for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);if(v.x>110&&v.y>-40&&v.y<28&&Math.abs(v.z)<.02)lean=Math.max(lean,Math.abs(n.fromBufferAttribute(q,i).transformDirection(o.matrixWorld).z));}}
+   if(o.name==='Continuous_chine'){const ix=o.geometry.index;for(let t=0;t<ix.count;t++){v.fromBufferAttribute(p,ix.getX(t)).applyMatrix4(o.matrixWorld);if(v.x>240&&v.y>-20&&v.y<-18&&Math.abs(v.z)<5)stray++;if(v.x>200&&v.y>-13&&v.y<-11&&Math.abs(v.z)<.02)centre[o.parent.name].push(v.y);}}});
+  assert.ok(lean<.01,`bow hull halves lean apart at the centreline (normal z ${lean.toFixed(3)})`);assert.equal(stray,0,'stray chine fragment at the bow');
+  const [ps,ss]=[centre.Port_shell,centre.Starboard_shell].map(a=>[Math.min(...a),Math.max(...a)]);assert.ok(Math.abs(ps[0]-ss[0])<.01&&Math.abs(ps[1]-ss[1])<.01,`chine halves differ at the centre: ${ps} vs ${ss}`);
+  console.log(`nose: centreline welded (normal z ${lean.toFixed(3)}), chine halves meet at ${ss.map(y=>y.toFixed(2)).join('..')}`);}}
 // The aft interiors' crown follows, and the tour stops and their text name the lowered crown.
 const aft=createAft(),r0=bounds(aft.root,crown).max.y;shapeAft(aft.root);assert.ok(Math.abs(r0-bounds(aft.root,crown).max.y-FIN_DROP)<.05,'aft crown did not follow');
 const lobby=shapeView(FIN_TOUR.find(s=>s.name==='Panorama arrival lobby'));assert.equal(lobby.position[1],134-FIN_DROP);assert.match(lobby.detail,/120\.3 m/);
