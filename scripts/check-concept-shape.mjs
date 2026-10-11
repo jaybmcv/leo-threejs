@@ -5,6 +5,9 @@ import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {Box3,Vector3,Matrix4,Raycaster} from 'three';
 import {applyConceptShape,shapeAft,shapeView,shapeFinPoint,rakeBowPoint,shapeInterior,FIN_DROP} from '../src/concept-shape.js';
 import {createShip} from '../src/model.js';
+import {noseWarp,NOSE} from '../src/nose-fairing.js';
+import {SHIP_AREAS,createShipArea} from '../src/areas.js';
+import {createNoseCommons} from '../src/nose-commons.js';
 import {createAft} from '../src/aft.js';
 import {applyConceptDetail,hullSurface} from '../src/concept-detail.js';
 import {FIN_TOUR} from '../src/aft-tour.js';
@@ -30,7 +33,9 @@ for(const name of ['leo-exterior-refined.glb',...(streamed&&!baked?['leo-exterio
   // The fairing (hull-fairing.js): upper sides move across (inward, under 4 m); the crown's aft slope moves up or down.
   const inSide=p[0]>=-150&&p[0]<=75&&p[1]>=6&&p[1]<=55&&Math.abs(p[2])>5,inCrown=p[0]>=-125&&p[0]<=0&&p[1]>=38&&Math.abs(p[2])<=48;
   if((inSide||inCrown)&&Math.abs(d[0])<1e-3){assert.ok(Math.abs(d[2])<(inSide?4:1e-3)&&Math.abs(d[1])<(inCrown?7.5:.05),`${name}: faired by ${d.map(v=>v.toFixed(3))} at ${p.map(v=>v.toFixed(1))}`);return;}
-  if(p[0]>=190&&p[1]<-33)assert.ok(d[1]>=-1e-3&&d[1]<=6.01&&Math.abs(d[0])<1e-3&&Math.abs(d[2])<1e-3,`${name}: keel moved ${d}`);else if(p[0]<120||p[1]<32)assert.ok(Math.hypot(...d)<1e-3,`${name}: hull moved outside the bow at ${p.map(v=>v.toFixed(1))} by ${d.map(v=>v.toFixed(3))}`);else assert.ok(d[0]<=1e-3&&d[0]>=-16.01&&Math.abs(d[1])<1e-3&&Math.abs(d[2])<1e-3,`${name}: bow moved ${d}`);});
+  // The nose (nose-fairing.js): moves across only, outward by the bumper (< 1.6 m) or inward along the cheek.
+  if(p[0]>=110&&p[1]>=-40&&p[1]<=20){assert.ok(Math.abs(d[1])<1e-3&&Math.hypot(d[0],d[2])<8,`${name}: nose moved ${d.map(v=>v.toFixed(2))} at ${p.map(v=>v.toFixed(1))}`);return;}
+  if(p[0]>=190&&p[1]<-42)assert.ok(d[1]>=-1e-3&&d[1]<=6.01&&Math.abs(d[0])<1e-3&&Math.abs(d[2])<1e-3,`${name}: keel moved ${d}`);else if(p[0]<120||p[1]<32)assert.ok(Math.hypot(...d)<1e-3,`${name}: hull moved outside the bow at ${p.map(v=>v.toFixed(1))} by ${d.map(v=>v.toFixed(3))}`);else assert.ok(d[0]<=1e-3&&d[0]>=-16.01&&Math.abs(d[1])<1e-3&&Math.abs(d[2])<1e-3,`${name}: bow moved ${d}`);});
  // The fin fillet reaches ~48 m ahead of the fin's edge on the hull top and stays within the fin's thickness.
  const fillet=after.getObjectByName('Fin_root_fillet');assert.ok(fillet,`${name}: fillet missing`);const f=bounds(after,o=>o===fillet);
  assert.ok(f.max.x>-140&&f.max.x<-125,`${name}: fillet reaches x ${f.max.x}`);assert.ok(f.max.z<=5.2&&f.min.z>=-5.2,`${name}: fillet much thicker than the fin`);
@@ -108,6 +113,21 @@ if(baked){
  for(const [x,y,z] of points(ship.inside,o=>o.name==='Deck_slab'))if(x>-150&&x<75&&y>6&&y<55&&Math.abs(z)>15){const w=surface(x,y,z>0?1:0);if(Number.isFinite(w))worst=Math.max(worst,Math.abs(z)-w);}
  assert.ok(worst<.02,`a deck plate pokes ${worst.toFixed(2)} m through the faired hull`);console.log(`deck plates clear the faired hull (closest ${(-worst).toFixed(2)} m inside)`);
  if(baked)assert.ok((await load('leo-exterior-web.glb')).userData.hullFairing?.mm,'baked exterior lost its fairing offsets');}
+// The nose leans inward from its navy bumper to the windows with no vertical band or kink, and nothing inside pokes out.
+{const shaped=await load('leo-exterior-refined.glb');applyConceptShape(shaped);shaped.updateMatrixWorld(true);const {radius}=noseWarp(shaped,new Matrix4());
+ // Convex from the bumper's top to the windows: the saved nose had an S-bend there (a flat, near-vertical band, then a
+ // kink), which read as a straight-up wall and shaded as streaks.
+ for(const deg of [0,10,20,30,40,50]){const c=deg/NOSE.step,at=y=>radius[0][Math.round(y-NOSE.y0)][c];
+  // Averaged over neighbouring angles and heights: the sampled radius jitters per metre (triangle edges, window
+  // cut-outs); the S-bend is broad. Saved nose: 0.8-2.0; reshaped: 0.3-0.7.
+  const sm=(y)=>{let s=0,n=0;for(let dy=-1;dy<=1;dy++)for(let dc=-1;dc<=1;dc++){const v=radius[0][Math.round(y-NOSE.y0)+dy]?.[Math.max(0,c+dc)];if(Number.isFinite(v)){s+=v;n++;}}return s/n;};
+  let bend=-Infinity;for(let y=-8;y<=10;y++)bend=Math.max(bend,sm(y+4)-2*sm(y)+sm(y-4));assert.ok(bend<.9,`nose section ${deg}°: bends outward by ${bend.toFixed(2)} (S-bend)`);
+  const navy=[...Array(29).keys()].map(i=>at(-40+i));assert.ok(Math.max(...navy)>=at(-12),`nose section ${deg}°: bumper not widest`);}
+ const ship=createShip({deferExterior:true});for(const n of [6,7,8,9,10,11,12,13,14,15])ship.ensureResidentialDeck(n);ship.ensureGardens();ship.ensureObservation();ship.ensureTransit();
+ [...SHIP_AREAS.map(a=>createShipArea(a).root),createNoseCommons(10).root,ship.detail.root].forEach(r=>ship.inside.add(r));shapeInterior(shaped,ship.inside);ship.root.updateMatrixWorld(true);
+ let out=0,worst=0;for(const [x,y,z] of points(ship.inside,()=>true)){if(x<NOSE.fade[0]||y<NOSE.y0||y>NOSE.y1)continue;const a=Math.abs(z),deg=Math.atan2(a,x-NOSE.cx)*180/Math.PI,R=radius[z>0?0:1][Math.round(y-NOSE.y0)][Math.round(deg/NOSE.step)];
+  if(Number.isFinite(R)&&Math.hypot(x-NOSE.cx,a)>R+.05){out++;worst=Math.max(worst,Math.hypot(x-NOSE.cx,a)-R);}}
+ assert.equal(out,0,`${out} interior vertices poke through the nose (worst ${worst.toFixed(2)} m)`);console.log('nose: sections lean in from the bumper; interiors inside');}
 // The aft interiors' crown follows, and the tour stops and their text name the lowered crown.
 const aft=createAft(),r0=bounds(aft.root,crown).max.y;shapeAft(aft.root);assert.ok(Math.abs(r0-bounds(aft.root,crown).max.y-FIN_DROP)<.05,'aft crown did not follow');
 const lobby=shapeView(FIN_TOUR.find(s=>s.name==='Panorama arrival lobby'));assert.equal(lobby.position[1],134-FIN_DROP);assert.match(lobby.detail,/120\.3 m/);
