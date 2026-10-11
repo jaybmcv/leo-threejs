@@ -6,7 +6,7 @@ import {applyContextOpacity} from './glazing-finish.js';
 import {publicAsset,enablePublicDownloads} from './public-assets.js';
 import {refineExterior} from './exterior-finish.js';
 import {applyConceptPaint} from './concept-paint.js';
-import {applyConceptShape,shapeAft,shapeView} from './concept-shape.js';
+import {applyConceptShape,shapeAft,shapeView,shapeInterior} from './concept-shape.js';
 import {applyConceptDetail} from './concept-detail.js';
 import {createEscortShuttle} from './escort-shuttle.js';
 import {createAft} from './aft.js';
@@ -297,7 +297,7 @@ async function loadExterior(){
     const yieldTask=()=>new Promise(resolve=>{const channel=new MessageChannel();channel.port1.onmessage=()=>resolve();channel.port2.postMessage(0);});
     // The public build bakes the shape and detail passes into the streamed exterior (scripts/bake-concept.mjs).
     if(!ship.exterior.userData.conceptBaked){applyConceptShape(ship.exterior);await yieldTask();applyConceptDetail(ship.exterior);await yieldTask();}
-    applyConceptPaint(ship.exterior);
+    applyConceptPaint(ship.exterior);shapeInterior(ship.exterior,ship.inside);
     ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);escort=createEscortShuttle();ship.root.add(escort.root);scene.add(thrusters.root);exteriorReady=true;if(!window.LEO_ARRIVAL)loadCosmo();applyBrandingView();applyShapeView();
   })().catch(e=>{exteriorLoad=null;throw e;});
   await exteriorLoad;
@@ -789,7 +789,10 @@ const STEP_ORDER=['exterior','layout','neighborhood','walk','areas','transit','a
 {const menu=$('m-menu'),sheet=document.querySelector('.panel'),tab=m=>document.querySelector(`.tabs button[data-mode="${m}"]`);
  const closeMenu=()=>{menu.hidden=true;$('m-view').setAttribute('aria-expanded','false');};
  for(const [m,n] of Object.entries(CHAPTER_NUMBERS)){const b=document.createElement('button');b.type='button';b.dataset.mode=m;b.append(tab(m).textContent);const num=document.createElement('small');num.textContent=n;b.append(num);b.addEventListener('click',()=>{closeMenu();tab(m).click();});menu.append(b);}
- $('m-view').addEventListener('click',()=>{const open=menu.hidden;menu.hidden=!open;$('m-view').setAttribute('aria-expanded',String(open));});
+ // The desktop bar's Hide UI, reachable on phones; the top bar stays, so the menu can bring the UI back.
+ const ui=document.createElement('button');ui.type='button';ui.className='m-ui';ui.addEventListener('click',()=>{closeMenu();$('toggle-panels').click();});menu.append(ui);
+ const uiLabel=()=>{ui.textContent=$('toggle-panels').textContent;};uiLabel();
+ $('m-view').addEventListener('click',()=>{const open=menu.hidden;if(open)uiLabel();menu.hidden=!open;$('m-view').setAttribute('aria-expanded',String(open));});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();});renderer.domElement.addEventListener('pointerdown',closeMenu);
  $('m-tour').addEventListener('click',()=>{closeMenu();tab('walk').click();});
  const setSheet=open=>{sheet.classList.toggle('open',open);$('m-handle').setAttribute('aria-expanded',String(open));};
