@@ -4,7 +4,7 @@ import {applyConceptShape} from '../src/concept-shape.js';
 import {applyConceptDetail} from '../src/concept-detail.js';
 
 // Bakes the concept shape and detail passes into the streamed exterior, so visitors don't run them on every load
-// (~0.3 s on a desktop, more on phones). The root is marked conceptBaked; the viewer then skips both passes. The paint
+// (~2 s on a desktop, more on phones). The root is marked conceptBaked; the viewer then skips both passes. The paint
 // pass, the aft interiors' fin drop, the tour stops and the escort shuttle stay at runtime.
 globalThis.FileReader??=class{readAsArrayBuffer(b){b.arrayBuffer().then(result=>{this.result=result;this.onloadend?.();});}};
 export async function bakeConcept(bytes){
