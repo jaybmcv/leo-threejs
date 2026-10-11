@@ -15,7 +15,8 @@ for(const name of names){
  if(hash(gunzipSync(gz))!==hash(b))throw new Error('Model transport changed '+name);
  const parts=[];
  for(let i=0;i<gz.length;i+=16*1024*1024){const part=`models/${name}.${i/(16*1024*1024)}.bin`;await fs.writeFile(path.join(out,part),gz.subarray(i,i+16*1024*1024));parts.push(part);}
- manifest[name]={parts,bytes:b.length,compressedBytes:gz.length,sha256:hash(b)};
+ // Part URLs carry the model's hash, so a changed model never meets a stale cached part (hosts cache models/ for a day).
+ manifest[name]={parts:parts.map(p=>`${p}?v=${hash(b).slice(0,12)}`),bytes:b.length,compressedBytes:gz.length,sha256:hash(b)};
  console.log(`${name}: ${(b.length/1048576).toFixed(1)} → ${(gz.length/1048576).toFixed(1)} MB, ${parts.length} part(s)`);
 }
 let html=await fs.readFile(source+'/index.html','utf8');
