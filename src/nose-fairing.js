@@ -100,7 +100,8 @@ export function noseInterior(exterior,root,warpParts){
 // The bow's seam strips (the chine and the panel reveals) floated 0.06-1 m off the hull there, by an amount that
 // drifted along their length, which read as a wavy line; each now sits a constant distance off the outermost hull at its
 // own height (the chine 0.2 m, as along the midship; the reveals 8 cm), its height unchanged.
-const SEAM_BAND={y0:-18,y1:2,dy:.25,step:1};
+// Full strength over y -18..2, fading out over 4 m beyond (a hard edge stretched the diagonal joints that cross it).
+const SEAM_BAND={y0:-22,y1:6,dy:.25,step:1,ramp:4};
 const BAND={x:110,y:[-20,28],fade:[[-16,-12],[22,26]],reach:5,sigma:2.5},SEAMS=/^(Continuous_chine|Bow_horizontal_panel_reveal|Bow_cheek_panel_joint)$/,STANDOFF={Continuous_chine:.2,default:.08};
 function hullNeighbourhood(exterior,frame){
  const pts=[],m=new T.Matrix4(),nm=new T.Matrix3(),v=new T.Vector3(),n=new T.Vector3(),cells=new Map(),C=BAND.reach;
@@ -121,15 +122,16 @@ export function smoothNoseBand(exterior,frame){
   // degree, so neighbouring bins are no stand-in).
   outerAt=(k,y,deg)=>sample(outer[k],(y-S.y0)/S.dy,deg/S.step),[[a0,a1],[b0,b1]]=BAND.fade,m=new T.Matrix4(),inv=new T.Matrix4(),toShip=new T.Matrix3(),toLocal=new T.Matrix3(),v=new T.Vector3(),n=new T.Vector3();
  straightenReveal(exterior,frame,outerAt);
+ const hullAt=hullRadius(exterior,frame,[S.y0,S.y1]);
  exterior.traverse(o=>{if(!o.isMesh)return;const hull=HULL.test(o.name),seam=SEAMS.test(o.name);if(!hull&&!seam)return;
   const g=o.geometry,p=g.attributes.position,nor=g.attributes.normal;m.multiplyMatrices(frame,o.matrixWorld);inv.copy(m).invert();toShip.getNormalMatrix(m);toLocal.setFromMatrix4(m).transpose();
   const pos=new Float32Array(p.count*3),out=nor&&new Float32Array(nor.count*3);let changed=false;
   for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(m);if(nor)n.fromBufferAttribute(nor,i);
    const fade=v.x<BAND.x?0:smooth(BAND.x,BAND.x+20,v.x),w=fade*smooth(a0,a1,v.y)*(1-smooth(b0,b1,v.y)),local=fade>0&&v.y>=BAND.y[0]&&v.y<=BAND.y[1]?near(v.x,v.y,v.z):null;
    if(local&&hull&&nor&&w>0){const s=n.clone().applyMatrix3(toShip).normalize();if(s.dot(local.n)>0){s.lerp(local.n,w).normalize();n.copy(s.applyMatrix3(toLocal).normalize());changed=true;}}
-   // Seams: a constant distance off the outermost hull at their own height, radially.
-   if(seam&&fade>0&&v.y>=S.y0&&v.y<=S.y1){const k=v.z>0?0:1,a=Math.abs(v.z),r=Math.hypot(v.x-NOSE.cx,a),th=Math.atan2(a,v.x-NOSE.cx),R=outerAt(k,v.y,th*180/Math.PI);
-    if(Number.isFinite(R)){const d=(R+(STANDOFF[o.name]??STANDOFF.default)-r)*fade;v.x+=d*Math.cos(th);v.z+=Math.sign(v.z)*d*Math.sin(th);changed=true;}}
+   // Seams: a constant distance off the outermost hull at their own height, radially (ray-cast; the grid is the fallback).
+   if(seam&&fade>0&&v.y>S.y0&&v.y<S.y1){const yf=smooth(S.y0,S.y0+S.ramp,v.y)*(1-smooth(S.y1-S.ramp,S.y1,v.y));const k=v.z>0?0:1,a=Math.abs(v.z),r=Math.hypot(v.x-NOSE.cx,a),th=Math.atan2(a,v.x-NOSE.cx),h=hullAt(v.y,th,v.z>0?1:-1),R=Number.isFinite(h)?h:outerAt(k,v.y,th*180/Math.PI);
+    if(Number.isFinite(R)){const d=(R+(STANDOFF[o.name]??STANDOFF.default)-r)*fade*yf;v.x+=d*Math.cos(th);v.z+=Math.sign(v.z)*d*Math.sin(th);changed=true;}}
    const l=v.clone().applyMatrix4(inv);pos[i*3]=l.x;pos[i*3+1]=l.y;pos[i*3+2]=l.z;if(out){out[i*3]=n.x;out[i*3+1]=n.y;out[i*3+2]=n.z;}}
   if(changed){o.geometry=g.clone();o.geometry.setAttribute('position',new T.BufferAttribute(pos,3));if(out&&hull)o.geometry.setAttribute('normal',new T.BufferAttribute(out,3));o.geometry.computeBoundingBox();o.geometry.computeBoundingSphere();}
  });
@@ -172,7 +174,7 @@ function straightenReveal(exterior,frame,outerAt){
    for(const dy of [-REVEAL.width/2,REVEAL.width/2]){const h=hullMax(y+dy,th),R=(Number.isFinite(h)?h:outerAt(k,y+dy,th*180/Math.PI))+REVEAL.gap;pts.push(NOSE.cx+R*Math.cos(th),y+dy,sgn*R*Math.sin(th));}
    if(i>0){const q=2*i;sgn>0?idx.push(q-2,q-1,q,q-1,q+1,q):idx.push(q-2,q,q-1,q-1,q,q+1);}}
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(pts,3));geo.setIndex(idx);geo.applyMatrix4(new T.Matrix4().multiplyMatrices(frame,group.matrixWorld).invert());geo.computeVertexNormals();
-  const line=new T.Mesh(geo,o.material);line.name='Bow_reveal_line';group.add(line);
+  const line=new T.Mesh(geo,o.material);line.name='Bow_reveal_line';group.add(line);line.updateMatrixWorld(true);
   // The old run goes; the upper reveal stays.
   const g=o.geometry.clone();g.setIndex(keep);o.geometry=g;
   // The panel joints' horizontal feet along this line, with gaps between them, read as a second, dashed copy of it:

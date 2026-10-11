@@ -136,6 +136,7 @@ if(baked){
     for(const v of v3){n.fromBufferAttribute(q,v).transformDirection(W);const sg=f.dot(n)<0?-1:1;acc[v*3]+=sg*f.x;acc[v*3+1]+=sg*f.y;acc[v*3+2]+=sg*f.z;}}
    for(let v=0;v<p.count;v++){a.fromBufferAttribute(p,v).applyMatrix4(W);if(a.x<115||a.y<14||a.y>24)continue;n.fromBufferAttribute(q,v).transformDirection(W);if((n.x*(a.x-NOSE.cx)+n.z*a.z)/Math.hypot(a.x-NOSE.cx,a.z)<.2)continue;
     f.set(acc[v*3],acc[v*3+1],acc[v*3+2]).normalize();const r=Math.round(a.y/2)*2;(rows.get(r)??rows.set(r,[]).get(r)).push(Math.acos(Math.min(1,n.dot(f)))*180/Math.PI);}});
+  assert.ok(rows.size>=5,`nose normals: only ${rows.size} rows sampled`);
   for(const [y,v] of rows){v.sort((x,z)=>x-z);assert.ok(v[v.length>>1]<5,`nose normals at y ${y}: ${v[v.length>>1].toFixed(1)} degrees off the surface`);}}
  // The bow's seams sit just off the hull, measured by a ray cast inward to it: the chine ~0.2 m, the lower reveal one
  // continuous strip per side (the dashed run and the joints' feet along it gone) 0.1-0.35 m.
