@@ -10,14 +10,19 @@ import {SHIP_AREAS} from './areas.js';
 export const DECK_SPREAD=16;// extra metres between neighbouring decks at full explode (decks are 4 m apart)
 const FLOOR=-40,PITCH=4;// Deck 1 floor and the deck pitch, as in model.js
 // The hull halves drop as they part (the public view has no floor), so they stay clear of the decks rising between them.
-const HULL_OUT=150,HULL_DOWN=110,WING_OUT=110,POD_UP=60,LIFT=40,FIN_BACK=200,FIN_UP=90,CROWN_UP=60,CAP_OUT=60;
+// As the rooms scatter they sink HULL_SINK further, below the bottom of the spread stack, so from the raised overview
+// cameras the far half and its wing show beneath the decks instead of behind them.
+const HULL_OUT=150,HULL_DOWN=110,HULL_SINK=210,WING_OUT=110,POD_UP=60,LIFT=40,FIN_BACK=200,FIN_UP=90,CROWN_UP=60,CAP_OUT=60;
+// The fin crown bar's lid (its roof, ceiling, hanging lights and glazed bays) lifts CANOPY_UP off the lounge as the rooms
+// scatter, so the bar shows from above like every other room.
+const CANOPY_UP=16;
 // Rooms scatter horizontally away from the middle of their deck by this fraction of their distance from it.
 const SCATTER=.6,MID_X=-18;
 // While exploded the deck slabs sit 6 cm low: their undersides otherwise coincide with the undersides of the cabin
 // and room floors resting on them, which flicker when the spread decks are seen from below.
 const SLAB_DROP=.06;
 // Each movement runs over its own stretch of the dial, so the ship comes apart in order.
-export const STAGES={hull:[0,.28],wing:[.2,.46],pods:[.3,.52],fin:[.14,.42],crown:[.3,.56],decks:[.14,.67],floors:[.68,.82],rooms:[.7,1],tint:[.68,.9]};
+export const STAGES={hull:[0,.28],wing:[.2,.46],pods:[.3,.52],fin:[.14,.42],crown:[.3,.56],decks:[.14,.67],floors:[.68,.82],rooms:[.7,1],tint:[.68,.9],canopy:[.72,.94]};
 // The dial's named stops: each is where one stage has finished (the dial eases onto one when released close by).
 export const STOPS=[{value:.28,name:'Hull'},{value:.67,name:'Decks'},{value:1,name:'Rooms'}];
 const ease=(p,[a,b])=>{const t=Math.min(1,Math.max(0,(p-a)/(b-a)));return t*t*(3-2*t);};
@@ -33,12 +38,14 @@ const stackLift=p=>ease(p,STAGES.decks),stretch=p=>1+DECK_SPREAD/PITCH*stackLift
 const RIPPLE_REACH=300,RIPPLE_DELAY=.1;
 function scatterAt(x,z,p){const d=Math.min(1,Math.hypot(x-MID_X,z)/RIPPLE_REACH)*RIPPLE_DELAY;return SCATTER*ease(p,[STAGES.rooms[0]+d,STAGES.rooms[1]-RIPPLE_DELAY+d]);}
 
-// kind: hull/wing/pod (side ±1), fin, crown, aftcap, nose, roof (rises with the stack), deck (rises, never scatters),
-// slab, and room (rises with its deck unless it is already a deck's child, and scatters from x, z).
-function offset({kind,side=0,y=0,x=MID_X,z=0,onDeck=false,nudge=0},p,out){
- const parted=ease(p,STAGES.hull),fin=ease(p,STAGES.fin),up=rise(y,p);
- if(kind==='hull')return out.set(0,-HULL_DOWN*parted,side*HULL_OUT*parted);
- if(kind==='wing'||kind==='pod')return out.set(0,-HULL_DOWN*parted+(kind==='pod'?POD_UP*ease(p,STAGES.pods):0),side*(HULL_OUT*parted+WING_OUT*ease(p,STAGES.wing)));
+// kind: hull/wing/pod (side ±1), fin, crown, canopy (lifts off the crown along `lift`, its parent's up), aftcap, nose,
+// roof (rises with the stack), deck (rises, never scatters), slab, and room (rises with its deck unless it is already a
+// deck's child, and scatters from x, z).
+function offset({kind,side=0,y=0,x=MID_X,z=0,onDeck=false,nudge=0,lift},p,out){
+ const parted=ease(p,STAGES.hull),fin=ease(p,STAGES.fin),up=rise(y,p),down=-HULL_DOWN*parted-HULL_SINK*ease(p,STAGES.rooms);
+ if(kind==='hull')return out.set(0,down,side*HULL_OUT*parted);
+ if(kind==='wing'||kind==='pod')return out.set(0,down+(kind==='pod'?POD_UP*ease(p,STAGES.pods):0),side*(HULL_OUT*parted+WING_OUT*ease(p,STAGES.wing)));
+ if(kind==='canopy')return out.copy(lift).multiplyScalar(CANOPY_UP*ease(p,STAGES.canopy));
  if(kind==='fin')return out.set(-FIN_BACK*fin,FIN_UP*fin,0);
  if(kind==='crown')return out.set(-FIN_BACK*fin,FIN_UP*fin+CROWN_UP*ease(p,STAGES.crown),0);
  if(kind==='aftcap')return out.set(-CAP_OUT*fin,up,0);
@@ -72,7 +79,9 @@ function splitAcross(mesh){
  const pos=g.attributes.position,index=g.index?Array.from(g.index.array):Array.from({length:pos.count},(_,i)=>i),port=[],starboard=[],v=new T.Vector3();
  for(let i=0;i<index.length;i+=3){let z=0;for(let k=0;k<3;k++)z+=v.fromBufferAttribute(pos,index[i+k]).applyMatrix4(mesh.matrixWorld).z;(z<0?port:starboard).push(index[i],index[i+1],index[i+2]);}
  if(!port.length||!starboard.length)return null;
- const half=list=>{const h=new T.BufferGeometry();for(const [name,attribute] of Object.entries(g.attributes))h.setAttribute(name,attribute);h.setIndex(list);h.computeBoundingBox();h.computeBoundingSphere();return h;};
+ // Each half's bounds come from its own triangles: the shared position buffer still holds both halves, so three's
+ // computeBoundingBox would span tip to tip and centre the port half on the middle (it then dropped there).
+ const half=list=>{const h=new T.BufferGeometry();for(const [name,attribute] of Object.entries(g.attributes))h.setAttribute(name,attribute);h.setIndex(list);h.boundingBox=new T.Box3();for(const i of list)h.boundingBox.expandByPoint(v.fromBufferAttribute(pos,i));h.boundingSphere=h.boundingBox.getBoundingSphere(new T.Sphere());return h;};
  const twin=mesh.clone();twin.geometry=half(starboard);mesh.geometry=half(port);mesh.parent.add(twin);
  return twin;
 }
@@ -125,7 +134,18 @@ export function createExplode({ship,transit,aft,thrusters,outline}){
  let rooms=0;
  const add=(object,kind,props={})=>{registered.add(object);parts.push({object,base:object.position.clone(),kind,...(kind==='room'?{nudge:(rooms++%8)*.02+(/lifeboats/.test(object.name)?.01:0)}:{}),...props});};
  for(const group of exterior.children){
-  if(group.name==='Fin_panorama_lounge'){add(group,'crown');rigid.add(group);crownBox=new T.Box3().setFromObject(group);continue;}
+  if(group.name==='Fin_panorama_lounge'){
+   add(group,'crown');rigid.add(group);crownBox=new T.Box3().setFromObject(group);
+   // The lid: the glazed bays (panes, mullions, headers) and everything from 3.4 m up (roof, ceiling ribs and lights,
+   // the pendants and lobby canopy). Each moves along world up, expressed in its parent's frame.
+   const floor=group.getObjectByName('Crown_observation_floor');
+   if(floor){
+    const top=new T.Box3().setFromObject(floor).max.y,lid=[];
+    group.traverse(o=>{if(o===group||!o.isMesh&&o.children.length)return;const b=bounds(o);if(/^Crown_(panoramic_window|window_mullion|window_header|header_gasket)/.test(o.name)||b.min.y>=top+3.4)lid.push(o);});
+    for(const o of lid){const m=new T.Matrix3().setFromMatrix4(o.parent.matrixWorld).invert(),lift=new T.Vector3(0,1,0).applyMatrix3(m);add(o,'canopy',{lift});rigid.add(o);}
+   }
+   continue;
+  }
   for(const part of [...group.children]){
    const kind=exteriorKind(group,part);let b=bounds(part);
    if((kind==='hull'||kind==='wing')&&b.min.z<-10&&b.max.z>10&&part.isMesh){const twin=splitAcross(part);if(twin){added.push(twin);add(twin,kind,{side:1});rigid.add(twin);b=bounds(part);}}
@@ -236,7 +256,7 @@ export function createExplode({ship,transit,aft,thrusters,outline}){
   return key;
  }
  // Parts whose offset depends only on their kind and side (or deck), so they move as one (see offset).
- const together=part=>['hull','wing','pod'].includes(part.kind)?part.kind+part.side:['fin','crown'].includes(part.kind)?part.kind:['aftcap','nose','roof','deck'].includes(part.kind)?part.kind+deckIndex(part.y):null;
+ const together=part=>['hull','wing','pod'].includes(part.kind)?part.kind+part.side:['fin','crown','canopy'].includes(part.kind)?part.kind:['aftcap','nose','roof','deck'].includes(part.kind)?part.kind+deckIndex(part.y):null;
  // The meshes in a member that would be shown but for the detail culling, leaving out parts moving on their own in it.
  function memberMeshes(member,moving,fn){
   (function visit(o){if(o.isMesh&&(o.visible||culled.has(o))){if(batchable(o))fn(o);}else if(!o.visible)return;for(const c of o.children)if(!moving.has(c))visit(c);})(member);
@@ -414,7 +434,7 @@ export function createExplode({ship,transit,aft,thrusters,outline}){
  }
  // The bounding sphere the camera frames: the assembled ship, growing as it comes apart and again as the rooms
  // scatter. `tilt` (0 to 1) raises the camera as it does, to look down into the decks.
- const frame=p=>{const s=ease(p,[0,.7]),r=ease(p,STAGES.rooms);return {center:new T.Vector3(-18,41,0).lerp(new T.Vector3(110,85,0),s).add(new T.Vector3(-150*r,10*r,0)),radius:380+340*s+190*r,tilt:s};};
+ const frame=p=>{const s=ease(p,[0,.7]),r=ease(p,STAGES.rooms);return {center:new T.Vector3(-18,41,0).lerp(new T.Vector3(110,85,0),s).add(new T.Vector3(-150*r,(10-HULL_SINK*.45)*r,0)),radius:380+340*s+(190+HULL_SINK*.45)*r,tilt:s};};
  // Call-outs for the exploded ship: the deck bands at the bow end of the stack, and the larger exterior parts. Where
  // they would overlap on screen, the earlier ones in this list are kept.
  const deckAt=(deck,x)=>p=>new T.Vector3(x+(x-MID_X)*scatterAt(x,0,p),FLOOR+(deck-1)*PITCH+2+rise(FLOOR+(deck-1)*PITCH,p),0);

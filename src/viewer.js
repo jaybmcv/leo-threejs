@@ -512,10 +512,10 @@ function explodeDetail(){
  if(radius!==detailRadius){detailRadius=radius;explodeKit.setDetail(radius);refreshShadows();}
 }
 // Fills in the remaining decks' fitted areas while the viewer is left alone: one area per frame, and only once
-// the pointer, wheel and keys have been still for UNPACK_QUIET_MS, so a build never lands mid-move or mid-hover. A
+// there has been no dragging, scrolling or typing for UNPACK_QUIET_MS, so a build never lands mid-move. A
 // finished deck's shaders compile in the background before it appears.
 const UNPACK_QUIET_MS=1500,unpackFailed=new Set();let lastInput=0,unpacking=false;
-for(const type of ['pointerdown','pointermove','wheel','keydown'])addEventListener(type,()=>{lastInput=performance.now();},{capture:true,passive:true});
+for(const type of ['pointerdown','pointermove','wheel','keydown'])addEventListener(type,e=>{if(type!=='pointermove'||e.buttons)lastInput=performance.now();},{capture:true,passive:true});// hovering doesn't count: exploring the scattered rooms with the pointer used to keep the decks from ever filling in
 // Resolves once input has been still for UNPACK_QUIET_MS, for one background job per rendered frame (the deck unpacking
 // and the view warm-up take turns rather than stacking into one long frame).
 let quietFrame=-1;
