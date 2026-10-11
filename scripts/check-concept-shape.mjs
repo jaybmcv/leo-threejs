@@ -112,7 +112,7 @@ if(baked){
   assert.ok(holeMove<.05,`commons hole edges moved ${holeMove.toFixed(2)} m`);}
  for(const [x,y,z] of points(ship.inside,o=>o.name==='Deck_slab'))if(x>-150&&x<75&&y>6&&y<55&&Math.abs(z)>15){const w=surface(x,y,z>0?1:0);if(Number.isFinite(w))worst=Math.max(worst,Math.abs(z)-w);}
  assert.ok(worst<.02,`a deck plate pokes ${worst.toFixed(2)} m through the faired hull`);console.log(`deck plates clear the faired hull (closest ${(-worst).toFixed(2)} m inside)`);
- if(baked)assert.ok((await load('leo-exterior-web.glb')).userData.hullFairing?.mm,'baked exterior lost its fairing offsets');}
+ if(baked){const web=await load('leo-exterior-web.glb');assert.ok(web.userData.hullFairing?.mm,'baked exterior lost its fairing offsets');assert.ok(web.userData.noseFairing?.mm,'baked exterior lost its nose offsets');}}
 // The nose leans inward from its navy bumper to the windows with no vertical band or kink, and nothing inside pokes out.
 {const shaped=await load('leo-exterior-refined.glb');applyConceptShape(shaped);shaped.updateMatrixWorld(true);const {radius}=noseWarp(shaped,new Matrix4());
  // Convex from the bumper's top to the windows: the saved nose had an S-bend there (a flat, near-vertical band, then a
@@ -127,7 +127,25 @@ if(baked){
  [...SHIP_AREAS.map(a=>createShipArea(a).root),createNoseCommons(10).root,ship.detail.root].forEach(r=>ship.inside.add(r));shapeInterior(shaped,ship.inside);ship.root.updateMatrixWorld(true);
  let out=0,worst=0;for(const [x,y,z] of points(ship.inside,()=>true)){if(x<NOSE.fade[0]||y<NOSE.y0||y>NOSE.y1)continue;const a=Math.abs(z),deg=Math.atan2(a,x-NOSE.cx)*180/Math.PI,R=radius[z>0?0:1][Math.round(y-NOSE.y0)][Math.round(deg/NOSE.step)];
   if(Number.isFinite(R)&&Math.hypot(x-NOSE.cx,a)>R+.05){out++;worst=Math.max(worst,Math.hypot(x-NOSE.cx,a)-R);}}
- assert.equal(out,0,`${out} interior vertices poke through the nose (worst ${worst.toFixed(2)} m)`);console.log('nose: sections lean in from the bumper; interiors inside');}
+ assert.equal(out,0,`${out} interior vertices poke through the nose (worst ${worst.toFixed(2)} m)`);console.log('nose: sections lean in from the bumper; interiors inside');
+ // It shades as its shape: each outer-skin vertex normal within a few degrees of its faces' (on #34 the band over the
+ // lowest windows, y 16-22, shaded 12-40 degrees off, as a flat streak).
+ {const rows=new Map(),a=new Vector3(),b=new Vector3(),c=new Vector3(),n=new Vector3(),f=new Vector3();
+  shaped.traverse(o=>{if(!o.isMesh||!/^Smooth_pressure_envelope/.test(o.name))return;const p=o.geometry.attributes.position,q=o.geometry.attributes.normal,ix=o.geometry.index,W=o.matrixWorld,acc=new Float32Array(p.count*3);
+   for(let t=0;t<ix.count;t+=3){const v3=[0,1,2].map(m=>ix.getX(t+m));a.fromBufferAttribute(p,v3[0]).applyMatrix4(W);b.fromBufferAttribute(p,v3[1]).applyMatrix4(W);c.fromBufferAttribute(p,v3[2]).applyMatrix4(W);f.subVectors(b,a).cross(c.sub(a));
+    for(const v of v3){n.fromBufferAttribute(q,v).transformDirection(W);const sg=f.dot(n)<0?-1:1;acc[v*3]+=sg*f.x;acc[v*3+1]+=sg*f.y;acc[v*3+2]+=sg*f.z;}}
+   for(let v=0;v<p.count;v++){a.fromBufferAttribute(p,v).applyMatrix4(W);if(a.x<115||a.y<14||a.y>24)continue;n.fromBufferAttribute(q,v).transformDirection(W);if((n.x*(a.x-NOSE.cx)+n.z*a.z)/Math.hypot(a.x-NOSE.cx,a.z)<.2)continue;
+    f.set(acc[v*3],acc[v*3+1],acc[v*3+2]).normalize();const r=Math.round(a.y/2)*2;(rows.get(r)??rows.set(r,[]).get(r)).push(Math.acos(Math.min(1,n.dot(f)))*180/Math.PI);}});
+  for(const [y,v] of rows){v.sort((x,z)=>x-z);assert.ok(v[v.length>>1]<5,`nose normals at y ${y}: ${v[v.length>>1].toFixed(1)} degrees off the surface`);}}
+ // The bow's seams sit just off the hull, measured by a ray cast inward to it: the chine ~0.2 m, the lower reveal one
+ // continuous strip per side (the dashed run and the joints' feet along it gone) 0.1-0.35 m.
+ {const hullMeshes=[];shaped.traverse(o=>{if(o.isMesh&&/^Smooth_pressure_envelope/.test(o.name))hullMeshes.push(o);});const rc=new Raycaster(),v=new Vector3();
+  const gaps=name=>{const d=[];shaped.traverse(o=>{if(!o.isMesh||o.name!==name)return;const p=o.geometry.attributes.position;for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);if(v.x<130||v.y<-18||v.y>2)continue;
+   const th=Math.atan2(Math.abs(v.z),v.x-NOSE.cx),dir=new Vector3(-Math.cos(th),0,-Math.sign(v.z)*Math.sin(th));rc.set(new Vector3(NOSE.cx,v.y,0).addScaledVector(dir,-400),dir);const h=rc.intersectObjects(hullMeshes,false)[0];if(h)d.push(Math.hypot(v.x-NOSE.cx,v.z)-(400-h.distance));}});return d.sort((x,y)=>x-y);};
+  const chine=gaps('Continuous_chine'),at=q=>chine[Math.floor(chine.length*q)];assert.ok(at(.05)>.1&&at(.5)<.3&&at(.95)<.45,`chine floats ${at(.05).toFixed(2)}-${at(.95).toFixed(2)} m off the bow`);
+  let lines=0;shaped.traverse(o=>{if(o.isMesh&&o.name==='Bow_reveal_line')lines++;});assert.equal(lines,2,`${lines} bow reveal strips`);
+  const strip=gaps('Bow_reveal_line');assert.ok(strip.length>100&&strip[0]>.05&&strip.at(-1)<.45,`bow reveal strip ${strip[0]?.toFixed(2)}-${strip.at(-1)?.toFixed(2)} m off the hull`);
+  console.log(`nose: shades as its shape; chine ${at(.5).toFixed(2)} m and reveal strip ${strip[strip.length>>1].toFixed(2)} m off the hull`);}}
 // The aft interiors' crown follows, and the tour stops and their text name the lowered crown.
 const aft=createAft(),r0=bounds(aft.root,crown).max.y;shapeAft(aft.root);assert.ok(Math.abs(r0-bounds(aft.root,crown).max.y-FIN_DROP)<.05,'aft crown did not follow');
 const lobby=shapeView(FIN_TOUR.find(s=>s.name==='Panorama arrival lobby'));assert.equal(lobby.position[1],134-FIN_DROP);assert.match(lobby.detail,/120\.3 m/);

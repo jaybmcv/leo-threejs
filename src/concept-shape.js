@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {fairingWarps,packFairing,fairInterior} from './hull-fairing.js';
-import {noseWarp,packNose,noseInterior,smoothNoseNormals} from './nose-fairing.js';
+import {noseWarp,packNose,noseInterior,smoothNoseBand} from './nose-fairing.js';
 
 // Brings the saved exterior's form closer to the concept sheet, as concept-paint.js does for its finish. The top and
 // side silhouettes already match the sheet within a few metres; what differs is how some parts are shaped:
@@ -146,7 +146,7 @@ export function applyConceptShape(exterior){
  const fair=fairingWarps(exterior,frame);warpParts(partsOf(exterior),fair.fairSides,frame,fair.sideRegion);warpParts(partsOf(exterior),fair.fairCrown,frame,fair.crownRegion);
  exterior.userData.hullFairing=packFairing(fair.grid);
  const nose=noseWarp(exterior,frame);warpParts(partsOf(exterior),nose.warp,frame,nose.region);exterior.userData.noseFairing=packNose(nose.offset);
- exterior.updateMatrixWorld(true);smoothNoseNormals(exterior,frame,nose.surface);
+ exterior.updateMatrixWorld(true);smoothNoseBand(exterior,frame);
  addFinFillet(exterior,frame);
  warpParts(partsOf(exterior,POD_PART),chinPod,frame);
  warpParts(partsOf(exterior),rakeBow,frame,BOW_REGION);
