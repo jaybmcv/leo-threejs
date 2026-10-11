@@ -130,8 +130,9 @@ export function smoothNoseBand(exterior,frame){
    const fade=v.x<BAND.x?0:smooth(BAND.x,BAND.x+20,v.x),w=fade*smooth(a0,a1,v.y)*(1-smooth(b0,b1,v.y)),local=fade>0&&v.y>=BAND.y[0]&&v.y<=BAND.y[1]?near(v.x,v.y,v.z):null;
    if(local&&hull&&nor&&w>0){const s=n.clone().applyMatrix3(toShip).normalize();if(s.dot(local.n)>0){s.lerp(local.n,w).normalize();n.copy(s.applyMatrix3(toLocal).normalize());changed=true;}}
    // The two hull halves meet on the centre plane with normals leaning apart (up to 0.09 across), a hard shading line
-   // down the bow: both get the shared normal, square to the plane.
-   if(hull&&nor&&v.x>BAND.x&&Math.abs(v.z)<WELD){const s=n.clone().applyMatrix3(toShip);s.z=0;if(s.lengthSq()>1e-6){n.copy(s.normalize().applyMatrix3(toLocal).normalize());changed=true;}}
+   // down the bow (0.18 at the bumper's tip): both get the shared normal, square to the plane. Only above the nose's foot
+   // (y -40): the keel below is a deliberate crease.
+   if(hull&&nor&&v.x>BAND.x&&v.y>NOSE.y0&&Math.abs(v.z)<WELD){const s=n.clone().applyMatrix3(toShip);s.z=0;if(s.lengthSq()>1e-6){n.copy(s.normalize().applyMatrix3(toLocal).normalize());changed=true;}}
    // Seams: a constant distance off the outermost hull at their own height, radially (ray-cast; the grid is the fallback).
    // Seams: a constant distance off the outermost hull at their own height, radially (ray-cast; the grid is the fallback).
    if(seam&&fade>0&&v.y>S.y0&&v.y<S.y1){const yf=smooth(S.y0,S.y0+S.ramp,v.y)*(1-smooth(S.y1-S.ramp,S.y1,v.y));const k=v.z>0?0:1,a=Math.abs(v.z),r=Math.hypot(v.x-NOSE.cx,a),th=Math.atan2(a,v.x-NOSE.cx),h=hullAt(v.y,th,v.z>0?1:-1),R=Number.isFinite(h)?h:outerAt(k,v.y,th*180/Math.PI);
@@ -157,8 +158,13 @@ function tidyCentreline(exterior,frame){
   for(let i=0;i<p.count;i++)P.push(v.fromBufferAttribute(p,i).applyMatrix4(m).toArray());
   const S=CENTRE.stray,stray=q=>q[0]>S.x&&q[1]>S.y[0]&&q[1]<S.y[1]&&Math.abs(q[2])<S.z;
   const section=([lo,hi])=>P.filter(q=>q[0]>CENTRE.x&&Math.abs(q[2])>=lo&&Math.abs(q[2])<=hi&&!stray(q)),A=section(CENTRE.rows[0]),B=section(CENTRE.rows[1]);
-  const nearest=(set,q)=>{let best=null,d=CENTRE.reach**2;for(const r of set){const e=(r[0]-q[0])**2+(r[1]-q[1])**2;if(e<d){d=e;best=r;}}return best;};
-  const next=P.map(q=>{if(q[0]<=CENTRE.x||Math.abs(q[2])>CENTRE.weld||stray(q))return null;const a=nearest(A,q),b=a&&nearest(B,a);if(!b)return null;
+  const C=section([0,CENTRE.weld]);
+  // A section's vertices of the same line (within reach in y), and their centroid in x, y.
+  const line=(set,q)=>set.filter(r=>Math.abs(r[1]-q[1])<CENTRE.reach*2),mid=set=>set.length?[set.reduce((s,r)=>s+r[0],0)/set.length,set.reduce((s,r)=>s+r[1],0)/set.length]:null;
+  // The nearest vertex in x, y once the two sections' offset is taken out (the collapsed centre profile sits up to 0.12 m
+  // off its neighbour, about the spacing of the profile's vertices).
+  const nearest=(set,q,from)=>{const s=line(set,q),m0=mid(line(from,q)),m1=mid(s);if(!m0||!m1)return null;const x=q[0]-m0[0]+m1[0],y=q[1]-m0[1]+m1[1];let best=null,d=CENTRE.reach**2;for(const r of s){const e=(r[0]-x)**2+(r[1]-y)**2;if(e<d){d=e;best=r;}}return best;};
+  const next=P.map(q=>{if(q[0]<=CENTRE.x||Math.abs(q[2])>CENTRE.weld||stray(q))return null;const a=nearest(A,q,C),b=a&&nearest(B,a,A);if(!b)return null;
    const za=Math.abs(a[2]),k=za/2/(Math.abs(b[2])-za);return [a[0]+(a[0]-b[0])*k,a[1]+(a[1]-b[1])*k,P.indexOf(a)];});
   for(let i=0;i<P.length;i++)if(next[i]){P[i][0]=next[i][0];P[i][1]=next[i][1];}
   for(let i=0;i<P.length;i++){v.fromArray(P[i]).applyMatrix4(inv);p.setXYZ(i,v.x,v.y,v.z);}
@@ -179,8 +185,8 @@ function tidyCentreline(exterior,frame){
 const REVEAL={name:'Bow_horizontal_panel_reveal',below:-5,width:.22,gap:.1,step:.1,reach:3,fair:12};
 // A faired copy of a sequence, never below it: at each sample a Gaussian-weighted local quadratic fit (sigma
 // REVEAL.fair samples, 1.2 degrees), which follows the line's own curve around the flank and bridges only local dents.
-const fairAbove=R=>R.map((r,i)=>{const F=REVEAL.fair,M=[[0,0,0],[0,0,0],[0,0,0]],v=[0,0,0];
- for(let j=Math.max(0,i-3*F);j<=Math.min(R.length-1,i+3*F);j++){const x=(j-i)/F,g=Math.exp(-x*x/2),b=[1,x,x*x];for(let a=0;a<3;a++){v[a]+=g*b[a]*R[j];for(let c=0;c<3;c++)M[a][c]+=g*b[a]*b[c];}}
+const fairAbove=R=>R.map((r,i)=>{if(!Number.isFinite(r))return r;const F=REVEAL.fair,M=[[0,0,0],[0,0,0],[0,0,0]],v=[0,0,0];
+ for(let j=Math.max(0,i-3*F);j<=Math.min(R.length-1,i+3*F);j++){if(!Number.isFinite(R[j]))continue;const x=(j-i)/F,g=Math.exp(-x*x/2),b=[1,x,x*x];for(let a=0;a<3;a++){v[a]+=g*b[a]*R[j];for(let c=0;c<3;c++)M[a][c]+=g*b[a]*b[c];}}
  // Solve M c = v for the fit's value at x 0 (Cramer's rule).
  const det=A=>A[0][0]*(A[1][1]*A[2][2]-A[1][2]*A[2][1])-A[0][1]*(A[1][0]*A[2][2]-A[1][2]*A[2][0])+A[0][2]*(A[1][0]*A[2][1]-A[1][1]*A[2][0]),D=det(M);
  return D>1e-9?Math.max(r,det(M.map((row,a)=>[v[a],row[1],row[2]]))/D):r;});
