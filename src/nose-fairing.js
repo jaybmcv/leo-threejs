@@ -102,7 +102,7 @@ export function noseInterior(exterior,root,warpParts){
 // own height (the chine 0.2 m, as along the midship; the reveals 8 cm), its height unchanged.
 // Full strength over y -18..2, fading out over 4 m beyond (a hard edge stretched the diagonal joints that cross it).
 const SEAM_BAND={y0:-22,y1:6,dy:.25,step:1,ramp:4};
-const BAND={x:110,y:[-20,28],fade:[[-16,-12],[22,26]],reach:5,sigma:2.5},SEAMS=/^(Continuous_chine|Bow_horizontal_panel_reveal|Bow_cheek_panel_joint)$/,STANDOFF={Continuous_chine:.2,default:.08};
+const BAND={x:110,y:[-20,28],fade:[[-16,-12],[22,26]],reach:5,sigma:2.5},SEAMS=/^(Continuous_chine|Bow_horizontal_panel_reveal|Bow_cheek_panel_joint)$/,STANDOFF={Continuous_chine:.2,default:.08},WELD=.02;
 function hullNeighbourhood(exterior,frame){
  const pts=[],m=new T.Matrix4(),nm=new T.Matrix3(),v=new T.Vector3(),n=new T.Vector3(),cells=new Map(),C=BAND.reach;
  exterior.traverse(o=>{if(!o.isMesh||!HULL.test(o.name)||!o.geometry.attributes.normal)return;m.multiplyMatrices(frame,o.matrixWorld);nm.getNormalMatrix(m);const p=o.geometry.attributes.position,q=o.geometry.attributes.normal;
@@ -121,7 +121,7 @@ export function smoothNoseBand(exterior,frame){
   // The outermost hull radius at a seam vertex's height and angle, interpolated (around the flank it changes ~1 m per
   // degree, so neighbouring bins are no stand-in).
   outerAt=(k,y,deg)=>sample(outer[k],(y-S.y0)/S.dy,deg/S.step),[[a0,a1],[b0,b1]]=BAND.fade,m=new T.Matrix4(),inv=new T.Matrix4(),toShip=new T.Matrix3(),toLocal=new T.Matrix3(),v=new T.Vector3(),n=new T.Vector3();
- straightenReveal(exterior,frame,outerAt);
+ straightenReveal(exterior,frame,outerAt);tidyCentreline(exterior,frame);
  const hullAt=hullRadius(exterior,frame,[S.y0,S.y1]);
  exterior.traverse(o=>{if(!o.isMesh)return;const hull=HULL.test(o.name),seam=SEAMS.test(o.name);if(!hull&&!seam)return;
   const g=o.geometry,p=g.attributes.position,nor=g.attributes.normal;m.multiplyMatrices(frame,o.matrixWorld);inv.copy(m).invert();toShip.getNormalMatrix(m);toLocal.setFromMatrix4(m).transpose();
@@ -129,6 +129,11 @@ export function smoothNoseBand(exterior,frame){
   for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(m);if(nor)n.fromBufferAttribute(nor,i);
    const fade=v.x<BAND.x?0:smooth(BAND.x,BAND.x+20,v.x),w=fade*smooth(a0,a1,v.y)*(1-smooth(b0,b1,v.y)),local=fade>0&&v.y>=BAND.y[0]&&v.y<=BAND.y[1]?near(v.x,v.y,v.z):null;
    if(local&&hull&&nor&&w>0){const s=n.clone().applyMatrix3(toShip).normalize();if(s.dot(local.n)>0){s.lerp(local.n,w).normalize();n.copy(s.applyMatrix3(toLocal).normalize());changed=true;}}
+   // The two hull halves meet on the centre plane with normals leaning apart (up to 0.09 across), a hard shading line
+   // down the bow (0.18 at the bumper's tip): both get the shared normal, square to the plane. Only above the nose's foot
+   // (y -40): the keel below is a deliberate crease.
+   if(hull&&nor&&v.x>BAND.x&&v.y>NOSE.y0&&Math.abs(v.z)<WELD){const s=n.clone().applyMatrix3(toShip);s.z=0;if(s.lengthSq()>1e-6){n.copy(s.normalize().applyMatrix3(toLocal).normalize());changed=true;}}
+   // Seams: a constant distance off the outermost hull at their own height, radially (ray-cast; the grid is the fallback).
    // Seams: a constant distance off the outermost hull at their own height, radially (ray-cast; the grid is the fallback).
    if(seam&&fade>0&&v.y>S.y0&&v.y<S.y1){const yf=smooth(S.y0,S.y0+S.ramp,v.y)*(1-smooth(S.y1-S.ramp,S.y1,v.y));const k=v.z>0?0:1,a=Math.abs(v.z),r=Math.hypot(v.x-NOSE.cx,a),th=Math.atan2(a,v.x-NOSE.cx),h=hullAt(v.y,th,v.z>0?1:-1),R=Number.isFinite(h)?h:outerAt(k,v.y,th*180/Math.PI);
     if(Number.isFinite(R)){const d=(R+(STANDOFF[o.name]??STANDOFF.default)-r)*fade*yf;v.x+=d*Math.cos(th);v.z+=Math.sign(v.z)*d*Math.sin(th);changed=true;}}
@@ -137,10 +142,54 @@ export function smoothNoseBand(exterior,frame){
  });
 }
 
+// The bow centreline. Port and starboard trim meet there in a kink: the chine's centre cross-section is a collapsed
+// profile (two of its rows at one height) on lines that run straight in |z| to it, so the trim pinches to a V, front on.
+// Each centre vertex is rebuilt from the profile beside it: matched to the nearest vertex of the cross-sections ~1 m and
+// ~2 m out, it goes where that row's line arrives level at the centre (the parabola through the near section with the
+// slope of the two; the hull is round, so the line's x does the same). The lowest chine also had a stray fragment
+// standing 14 m above its own line at the centre (y -19, |z| < 5), read as a floating chevron on the navy bumper: it
+// goes, with the slivers that tied it to the line.
+const CENTRE={x:200,weld:.02,rows:[[.8,1.4],[1.8,2.6]],reach:.6,stray:{x:240,y:[-20,-18],z:5}};
+function tidyCentreline(exterior,frame){
+ const m=new T.Matrix4(),inv=new T.Matrix4(),v=new T.Vector3();
+ exterior.traverse(o=>{if(!o.isMesh)return;
+  if(o.name!=='Continuous_chine')return;
+  m.multiplyMatrices(frame,o.matrixWorld);inv.copy(m).invert();const g=o.geometry.clone(),p=g.attributes.position,P=[];
+  for(let i=0;i<p.count;i++)P.push(v.fromBufferAttribute(p,i).applyMatrix4(m).toArray());
+  const S=CENTRE.stray,stray=q=>q[0]>S.x&&q[1]>S.y[0]&&q[1]<S.y[1]&&Math.abs(q[2])<S.z;
+  const section=([lo,hi])=>P.filter(q=>q[0]>CENTRE.x&&Math.abs(q[2])>=lo&&Math.abs(q[2])<=hi&&!stray(q)),A=section(CENTRE.rows[0]),B=section(CENTRE.rows[1]);
+  const C=section([0,CENTRE.weld]);
+  // A section's vertices of the same line (within reach in y), and their centroid in x, y.
+  const line=(set,q)=>set.filter(r=>Math.abs(r[1]-q[1])<CENTRE.reach*2),mid=set=>set.length?[set.reduce((s,r)=>s+r[0],0)/set.length,set.reduce((s,r)=>s+r[1],0)/set.length]:null;
+  // The nearest vertex in x, y once the two sections' offset is taken out (the collapsed centre profile sits up to 0.12 m
+  // off its neighbour, about the spacing of the profile's vertices).
+  const nearest=(set,q,from)=>{const s=line(set,q),m0=mid(line(from,q)),m1=mid(s);if(!m0||!m1)return null;const x=q[0]-m0[0]+m1[0],y=q[1]-m0[1]+m1[1];let best=null,d=CENTRE.reach**2;for(const r of s){const e=(r[0]-x)**2+(r[1]-y)**2;if(e<d){d=e;best=r;}}return best;};
+  const next=P.map(q=>{if(q[0]<=CENTRE.x||Math.abs(q[2])>CENTRE.weld||stray(q))return null;const a=nearest(A,q,C),b=a&&nearest(B,a,A);if(!b)return null;
+   const za=Math.abs(a[2]),k=za/2/(Math.abs(b[2])-za);return [a[0]+(a[0]-b[0])*k,a[1]+(a[1]-b[1])*k,P.indexOf(a)];});
+  for(let i=0;i<P.length;i++)if(next[i]){P[i][0]=next[i][0];P[i][1]=next[i][1];}
+  for(let i=0;i<P.length;i++){v.fromArray(P[i]).applyMatrix4(inv);p.setXYZ(i,v.x,v.y,v.z);}
+  const ix=g.index,keep=[];
+  for(let t=0;t<ix.count;t+=3){const ids=[0,1,2].map(k=>ix.getX(t+k));if(!ids.some(i=>stray(P[i])))keep.push(...ids);}
+  g.setIndex(keep);
+  // A rebuilt vertex shades as the profile vertex it came from, square to the centre plane (the halves' authored
+  // normals mirror each other there, so both sides now agree).
+  const nor=g.attributes.normal,toShip=new T.Matrix3().getNormalMatrix(m),toLocal=new T.Matrix3().setFromMatrix4(m).transpose(),n=new T.Vector3();
+  if(nor)for(let i=0;i<P.length;i++){if(!next[i])continue;n.fromBufferAttribute(nor,next[i][2]).applyMatrix3(toShip);n.z=0;if(n.lengthSq()<1e-8)continue;n.normalize().applyMatrix3(toLocal).normalize();nor.setXYZ(i,n.x,n.y,n.z);}
+  g.computeBoundingBox();g.computeBoundingSphere();o.geometry=g;});
+}
+
+
 // The lower bow reveal (the dark line above the chine) was a run of short separate pieces stepping between heights
 // (-9.75 to -8.25 m) with gaps, which read as a dashed, stepped line. Each side's run is replaced by one continuous
 // strip at a constant gap off the hull, its height a smooth fit through the old pieces (it still rises gently aft).
-const REVEAL={name:'Bow_horizontal_panel_reveal',below:-5,width:.22,gap:.1,step:.1,reach:3};
+const REVEAL={name:'Bow_horizontal_panel_reveal',below:-5,width:.22,gap:.1,step:.1,reach:3,fair:12};
+// A faired copy of a sequence, never below it: at each sample a Gaussian-weighted local quadratic fit (sigma
+// REVEAL.fair samples, 1.2 degrees), which follows the line's own curve around the flank and bridges only local dents.
+const fairAbove=R=>R.map((r,i)=>{if(!Number.isFinite(r))return r;const F=REVEAL.fair,M=[[0,0,0],[0,0,0],[0,0,0]],v=[0,0,0];
+ for(let j=Math.max(0,i-3*F);j<=Math.min(R.length-1,i+3*F);j++){if(!Number.isFinite(R[j]))continue;const x=(j-i)/F,g=Math.exp(-x*x/2),b=[1,x,x*x];for(let a=0;a<3;a++){v[a]+=g*b[a]*R[j];for(let c=0;c<3;c++)M[a][c]+=g*b[a]*b[c];}}
+ // Solve M c = v for the fit's value at x 0 (Cramer's rule).
+ const det=A=>A[0][0]*(A[1][1]*A[2][2]-A[1][2]*A[2][1])-A[0][1]*(A[1][0]*A[2][2]-A[1][2]*A[2][0])+A[0][2]*(A[1][0]*A[2][1]-A[1][1]*A[2][0]),D=det(M);
+ return D>1e-9?Math.max(r,det(M.map((row,a)=>[v[a],row[1],row[2]]))/D):r;});
 // The outer hull's radius at (y, th), by a ray cast inward from outside it, against only the hull triangles within reach of
 // the line's heights (the section grid is too coarse here: between its samples the hull stood up to 0.2 m proud of the strip).
 function hullRadius(exterior,frame,[y0,y1]){
@@ -170,9 +219,13 @@ function straightenReveal(exterior,frame,outerAt){
   const ys=fit.map(f=>f[1]),hull=hullRadius(exterior,frame,[Math.min(...ys)-REVEAL.reach,Math.max(...ys)+REVEAL.reach]);
   // The highest hull between this vertex and its neighbours' midpoints, so a bump narrower than a step can't poke through.
   const hullMax=(y,th)=>{let r=NaN;for(let e=-REVEAL.step/2;e<=REVEAL.step/2+1e-6;e+=REVEAL.step/2){const h=hull(y,Math.max(0,th+e*Math.PI/180),sgn);if(!(h<=r))r=Number.isFinite(h)?h:r;}return r;};
-  for(let d=0,i=0;d<=thMax*180/Math.PI+1e-6;d+=REVEAL.step,i++){const th=Math.min(d*Math.PI/180,thMax),y=a+b*th*th;
-   for(const dy of [-REVEAL.width/2,REVEAL.width/2]){const h=hullMax(y+dy,th),R=(Number.isFinite(h)?h:outerAt(k,y+dy,th*180/Math.PI))+REVEAL.gap;pts.push(NOSE.cx+R*Math.cos(th),y+dy,sgn*R*Math.sin(th));}
-   if(i>0){const q=2*i;sgn>0?idx.push(q-2,q-1,q,q-1,q+1,q):idx.push(q-2,q,q-1,q-1,q,q+1);}}
+  const rows=[-REVEAL.width/2,REVEAL.width/2],at=[];
+  for(let d=0;d<=thMax*180/Math.PI+1e-6;d+=REVEAL.step){const th=Math.min(d*Math.PI/180,thMax),y=a+b*th*th;at.push({th,y,R:rows.map(dy=>{const h=hullMax(y+dy,th);return (Number.isFinite(h)?h:outerAt(k,y+dy,th*180/Math.PI))+REVEAL.gap;})});}
+  // Faired along its length: shallow dents in the hull (a jog in the line, side on) are bridged, never cut into; over a
+  // bump it keeps its own height.
+  rows.forEach((_,j)=>{const R=at.map(s=>s.R[j]),lift=fairAbove(fairAbove(R));at.forEach((s,i)=>{s.R[j]=lift[i];});});
+  at.forEach(({th,y,R},i)=>{rows.forEach((dy,j)=>pts.push(NOSE.cx+R[j]*Math.cos(th),y+dy,sgn*R[j]*Math.sin(th)));
+   if(i>0){const q=2*i;sgn>0?idx.push(q-2,q-1,q,q-1,q+1,q):idx.push(q-2,q,q-1,q-1,q,q+1);}});
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(pts,3));geo.setIndex(idx);geo.applyMatrix4(new T.Matrix4().multiplyMatrices(frame,group.matrixWorld).invert());geo.computeVertexNormals();
   const line=new T.Mesh(geo,o.material);line.name='Bow_reveal_line';group.add(line);line.updateMatrixWorld(true);
   // The old run goes; the upper reveal stays.
