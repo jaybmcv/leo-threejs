@@ -74,8 +74,9 @@ function mergedBoxes(name,items,mat,parent) {
 // were first selected, freezing the page for seconds.
 function cutawayLights(root){root.traverse(o=>{if(o.isPointLight)o.visible=false;});}
 // lazyInterior (the viewer): the deck plates and the neighborhood template are built on first use rather than up
-// front; the first screen shows only the exterior, and they were most of the page's opening freeze.
-export function createShip({deferExterior=false,lazyInterior=false}={}) {
+// front; the first screen shows only the exterior, and they were most of the page's opening freeze. onDecks runs once
+// the plates exist (the viewer fits them to the faired hull then).
+export function createShip({deferExterior=false,lazyInterior=false,onDecks=null}={}) {
   const root=group('LEO_564m_Exterior_v31');root.userData={...SPEC,units:'metres',axis:'X forward; Y up; Z starboard',stage:'Exterior refinement over a spatial blockout'};
   const {exterior,fixed,port,starboard}=deferExterior
     ? {exterior:group('Deferred_exterior',root),fixed:group('Deferred_fixed'),port:group('Deferred_port'),starboard:group('Deferred_starboard')}
@@ -121,7 +122,8 @@ export function createShip({deferExterior=false,lazyInterior=false}={}) {
       const reserve=mergedBoxes(`${d.name}_space_reservations`,blocks,material(`Zone_${d.index}`,d.color),dg);reserve.userData={status:'Unfitted volume reservation, systems not sized'};
     }
     decks.push(dg);
-  }};
+  }
+  onDecks?.();};
   const vertical=group('Lift_and_transit_reservations',inside);
   for(let x of [-132,132])for(let z of [-70,0,70]) {
     if(z!==0)continue;
@@ -149,7 +151,7 @@ export function createShip({deferExterior=false,lazyInterior=false}={}) {
     }finally{pendingDecks.delete(number);}
   }
   const ship={root,exterior,port,starboard,fixed,inside,vertical,shared,serviceDecks,residentialDecks,
-    get decks(){buildDecks();return decks;},get cabinGroups(){buildDecks();return cabinGroups;},get detail(){return ensureDetail();},get detailBuilt(){return !!detail;},
+    get decks(){buildDecks();return decks;},get cabinGroups(){buildDecks();return cabinGroups;},get detail(){return ensureDetail();},get detailBuilt(){return !!detail;},get decksBuilt(){return decks.length>0;},
     ensureAft(){if(!aftSystems){aftSystems=createAft();inside.add(aftSystems.root);}return aftSystems;},
     ensureTransit(){if(!transit){transit=createTransit();inside.add(transit.root);vertical.visible=false;}return transit;},
     ensureObservation(){if(!observationArea){observationArea=createObservationArea(ensureDetail());observationArea.walls.visible=false;cutawayLights(observationArea.root);inside.add(observationArea.root);}return observationArea;},

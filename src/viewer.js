@@ -65,7 +65,8 @@ let camera=new T.PerspectiveCamera(42,1,1,6000);
 const persp=camera,ortho=new T.OrthographicCamera(-400,400,240,-240,.1,6000);
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.09;controls.minDistance=1;controls.maxDistance=2200;controls.maxPolarAngle=Math.PI*.96;
 // The interior (deck plates, the neighborhood template) is built after the first frames, in the idle warm-up (warmViews).
-const ship=createShip({deferExterior:true,lazyInterior:true});scene.add(ship.root);
+// The deck plates are fitted to the faired hull (shapeInterior) once both exist, whichever comes first.
+const ship=createShip({deferExterior:true,lazyInterior:true,onDecks:()=>{if(exteriorReady)shapeInterior(ship.exterior,ship.inside);}});scene.add(ship.root);
 // The fin and its crown sit lower than in the saved model (concept-shape.js); interiors, stops and views follow.
 const ensureSavedAft=ship.ensureAft;ship.ensureAft=()=>{const first=!ship.aftShaped,aft=ensureSavedAft();if(first){shapeAft(aft.root);ship.aftShaped=true;}return aft;};
 const AFT_VIEWS=Object.fromEntries(Object.entries(AFT_LAYOUT).map(([key,view])=>[key,shapeView(view)]));let tourExtras=null;const ensureTourExtras=()=>{if(!tourExtras){tourExtras=polishTourDeck(ship.detail.root);tourExtras.visible=mode==='walk';}return tourExtras;};
@@ -303,7 +304,7 @@ async function loadExterior(){
     const yieldTask=()=>new Promise(resolve=>{const channel=new MessageChannel();channel.port1.onmessage=()=>resolve();channel.port2.postMessage(0);});
     // The public build bakes the shape and detail passes into the streamed exterior (scripts/bake-concept.mjs).
     if(!ship.exterior.userData.conceptBaked){applyConceptShape(ship.exterior);await yieldTask();applyConceptDetail(ship.exterior);await yieldTask();}
-    applyConceptPaint(ship.exterior);shapeInterior(ship.exterior,ship.inside);
+    applyConceptPaint(ship.exterior);if(ship.decksBuilt)shapeInterior(ship.exterior,ship.inside);
     ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);escort=createEscortShuttle();ship.root.add(escort.root);scene.add(thrusters.root);exteriorReady=true;if(!window.LEO_ARRIVAL)loadCosmo();applyBrandingView();applyShapeView();
   })().catch(e=>{exteriorLoad=null;throw e;});
   await exteriorLoad;
