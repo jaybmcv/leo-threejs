@@ -73,7 +73,10 @@ function mergedBoxes(name,items,mat,parent) {
 // lounge) are for eye-level views; left on here, they recompiled every visible material for 26 lights when Decks 17-19
 // were first selected, freezing the page for seconds.
 function cutawayLights(root){root.traverse(o=>{if(o.isPointLight)o.visible=false;});}
-export function createShip({deferExterior=false}={}) {
+// lazyInterior (the viewer): the deck plates and the neighborhood template are built on first use rather than up
+// front; the first screen shows only the exterior, and they were most of the page's opening freeze. onDecks runs once
+// the plates exist (the viewer fits them to the faired hull then).
+export function createShip({deferExterior=false,lazyInterior=false,onDecks=null}={}) {
   const root=group('LEO_564m_Exterior_v31');root.userData={...SPEC,units:'metres',axis:'X forward; Y up; Z starboard',stage:'Exterior refinement over a spatial blockout'};
   const {exterior,fixed,port,starboard}=deferExterior
     ? {exterior:group('Deferred_exterior',root),fixed:group('Deferred_fixed'),port:group('Deferred_port'),starboard:group('Deferred_starboard')}
@@ -81,6 +84,7 @@ export function createShip({deferExterior=false}={}) {
   exterior.scale.x=.94;exterior.position.x=-18;
   const trim=material('Structure',0x627581);
   const inside=group('02_INTERIOR_LAYOUT',root),decks=[],cabinGroups=[];
+  const buildDecks=()=>{if(decks.length)return;
   for(const d of DECKS) {
     const dg=group(`Deck_${String(d.number).padStart(2,'0')}_${d.name.replaceAll(' ','_')}`,inside);dg.userData={...d};
     const points=[];for(let x=-280;x<=286;x+=4){
@@ -119,6 +123,7 @@ export function createShip({deferExterior=false}={}) {
     }
     decks.push(dg);
   }
+  onDecks?.();};
   const vertical=group('Lift_and_transit_reservations',inside);
   for(let x of [-132,132])for(let z of [-70,0,70]) {
     if(z!==0)continue;
@@ -129,13 +134,13 @@ export function createShip({deferExterior=false}={}) {
     box(`N${c.neighborhood}_commons_floor`,[45,.12,38],[c.x,24.4,c.z],material('Commons_floor',0x8baf98),shared);
     for(let sx of [-1,1])box('Gallery_edge',[45,.2,3],[c.x,28.4,c.z+sx*17.5],trim,shared);
   }
-  const detail=createNeighborhood();root.add(detail.root);
-  inside.visible=false;detail.root.visible=false;
+  let detail=null;const ensureDetail=()=>{if(!detail){detail=createNeighborhood();root.add(detail.root);detail.root.visible=false;}return detail;};
+  inside.visible=false;if(!lazyInterior){buildDecks();ensureDetail();}
   const serviceDecks=new Map(),residentialDecks=new Map(),pendingDecks=new Map();let gardensLoaded=false,transit=null,observationArea=null,aftSystems=null;
   function* serviceDeckSteps(number){
     try{
       const areas=SHIP_AREAS.filter(a=>a.deck===number);if(!areas.length)return;
-      const deck=decks[number-1],rooms=[],roots=[];
+      buildDecks();const deck=decks[number-1],rooms=[],roots=[];
       const place=part=>{part.shell.visible=false;part.root.visible=false;deck.add(part.root);roots.push(part.root);return part;};
       for(const a of areas){rooms.push(place(createShipArea(a)));yield;}
       for(const build of [createServiceCirculation,createSpecialCirculation]){const corridors=build(number);if(corridors)place(corridors);yield;}
@@ -145,19 +150,20 @@ export function createShip({deferExterior=false}={}) {
       serviceDecks.set(number,rooms);
     }finally{pendingDecks.delete(number);}
   }
-  const ship={root,exterior,port,starboard,fixed,inside,decks,cabinGroups,vertical,shared,detail,serviceDecks,residentialDecks,
+  const ship={root,exterior,port,starboard,fixed,inside,vertical,shared,serviceDecks,residentialDecks,
+    get decks(){buildDecks();return decks;},get cabinGroups(){buildDecks();return cabinGroups;},get detail(){return ensureDetail();},get detailBuilt(){return !!detail;},get decksBuilt(){return decks.length>0;},
     ensureAft(){if(!aftSystems){aftSystems=createAft();inside.add(aftSystems.root);}return aftSystems;},
     ensureTransit(){if(!transit){transit=createTransit();inside.add(transit.root);vertical.visible=false;}return transit;},
-    ensureObservation(){if(!observationArea){observationArea=createObservationArea(detail);observationArea.walls.visible=false;cutawayLights(observationArea.root);inside.add(observationArea.root);}return observationArea;},
+    ensureObservation(){if(!observationArea){observationArea=createObservationArea(ensureDetail());observationArea.walls.visible=false;cutawayLights(observationArea.root);inside.add(observationArea.root);}return observationArea;},
     ensureGardens(){
       if(gardensLoaded)return;for(const child of shared.children)child.visible=false;
-      for(let number=1;number<=10;number++){const garden=createGardenCommons(number,detail);garden.walls.visible=false;cutawayLights(garden.root);shared.add(garden.root);}
+      for(let number=1;number<=10;number++){const garden=createGardenCommons(number,ensureDetail());garden.walls.visible=false;cutawayLights(garden.root);shared.add(garden.root);}
       gardensLoaded=true;
     },
     ensureResidentialDeck(number){
       if(residentialDecks.has(number))return residentialDecks.get(number);
       if(number<6||number>15)return null;
-      const deck=decks[number-1],residence=createResidentialDeck(number-5,detail);
+      buildDecks();const deck=decks[number-1],residence=createResidentialDeck(number-5,ensureDetail());
       for(const o of deck.children)if(o.name.includes('twin_cabin_envelopes')||o.name==='Primary_corridors')o.visible=false;
         residence.walls.visible=false;residence.districtWalls.visible=false;deck.add(residence.root);
         const nose=createNoseCommons(number-5);nose.shell.visible=false;deck.add(nose.root);residence.nose=nose;
