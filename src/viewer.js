@@ -43,6 +43,11 @@ window.addEventListener('error',e=>showError(e.message));
 function showError(message){$('error').hidden=false;$('error').textContent=`The 3D view could not start: ${message}. The GLB files remain available from the links below.`;$('loading').hidden=true;}
 let renderer;
 // Phones: 1.25x pixels (1x while touching) and a half-size starfield redrawn at 30 fps. MSAA stays on: 1.25x alone leaves jagged hull edges.
+// The phone layout's media query (viewer.html): upright phones, and phones on their side.
+const PHONE_LAYOUT='(max-width:680px),(max-height:500px) and (orientation:landscape) and (max-width:1000px)';
+// Phone framing (the ship raised and closer, for a tall screen) is for the phone layout less phones on their side (short
+// and wider than tall), which frame as the wider landscape screens do.
+const upright=(w,h)=>w<=680&&!(h<=500&&w>h);
 const touchScreen=matchMedia('(pointer: coarse)').matches,baseRatio=Math.min(devicePixelRatio,touchScreen?1.25:1.75);
 try{renderer=new T.WebGLRenderer({antialias:true,alpha:true,logarithmicDepthBuffer:true});}catch(e){showError(e.message);throw e;}
 renderer.setPixelRatio(baseRatio);renderer.setClearColor(0xbac8cd);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.86;
@@ -267,7 +272,7 @@ function resize(){
     camera.position.sub(controls.target).multiplyScalar(ratio).add(controls.target);
     if(transition){transition.from.sub(transition.fromTarget).multiplyScalar(ratio).add(transition.fromTarget);transition.to.sub(transition.toTarget).multiplyScalar(ratio).add(transition.toTarget);}
   }
-  lastFrameScale=frameScale;const shift=r.width>1000?110:r.width>680?80:0,shiftY=r.width<=680&&mode!=='walk'?-40:0;
+  lastFrameScale=frameScale;const shift=r.width>1000?110:!upright(r.width,r.height)?80:0,shiftY=upright(r.width,r.height)&&mode!=='walk'?-40:0;
   persp.setViewOffset(r.width,r.height,shift,shiftY,r.width,r.height);persp.updateProjectionMatrix();
   const h=230*frameScale;ortho.left=-h*r.width/r.height;ortho.right=h*r.width/r.height;ortho.top=h;ortho.bottom=-h;ortho.setViewOffset(r.width,r.height,shift,shiftY,r.width,r.height);ortho.updateProjectionMatrix();
 }
@@ -357,7 +362,7 @@ const BOARDING_OFFSET=[-160,320,880],BOARDING_TARGET={phone:[-40,40,0],tablet:[2
 const ARRIVAL_MS=2400,ARRIVAL_TURN=.26,ARRIVAL_CLOSER=1.12,LEVEL=new T.Vector3(0,1,0),ARRIVAL_UP=new T.Vector3(.24,.97,-.09).normalize();
 function playArrival(){
   // The whole rig turns about the hull, so Leo stays in place on screen while the view swings round to the boarding side.
-  const {position,target}=boardingCamera($('viewport').clientWidth),toTarget=new T.Vector3(...target);
+  const {position,target}=boardingCamera($('viewport').clientWidth,$('viewport').clientHeight),toTarget=new T.Vector3(...target);
   const to=new T.Vector3(...position).sub(toTarget).multiplyScalar(lastFrameScale).add(toTarget);
   const turned=v=>v.clone().sub(SHIP_CENTER).applyAxisAngle(LEVEL,ARRIVAL_TURN).multiplyScalar(ARRIVAL_CLOSER).add(SHIP_CENTER);
   transition={start:performance.now(),duration:ARRIVAL_MS,from:turned(to),to,fromTarget:turned(toTarget),toTarget,upFrom:ARRIVAL_UP};
@@ -365,12 +370,12 @@ function playArrival(){
 // The concept angle keeps the sheet's direction but sits Leo low and back enough that the fin clears the intro card. Short
 // desktop and tablet screens give the card more of the height, so they step a little further back again.
 const CONCEPT_OFFSET=[340,435,650],CONCEPT_FRAME={tall:{target:[0,180,0],scale:1.22},short:{target:[0,235,0],scale:1.42}};
-function conceptCamera(width,height){const {target,scale}=CONCEPT_FRAME[width>680&&height<880?'short':'tall'];return {position:target.map((v,i)=>v+CONCEPT_OFFSET[i]*scale),target};}
-function boardingCamera(width){const target=BOARDING_TARGET[width<=680?'phone':width<1200?'tablet':'desktop'];return {position:target.map((v,i)=>v+BOARDING_OFFSET[i]),target};}
+function conceptCamera(width,height){const {target,scale}=CONCEPT_FRAME[!upright(width,height)&&height<880?'short':'tall'];return {position:target.map((v,i)=>v+CONCEPT_OFFSET[i]*scale),target};}
+function boardingCamera(width,height){const target=BOARDING_TARGET[upright(width,height)?'phone':width<1200?'tablet':'desktop'];return {position:target.map((v,i)=>v+BOARDING_OFFSET[i]),target};}
 function viewCamera(view){if(DETAIL_CAMERAS.includes(view)&&explodeValue>0){stopExplodePlay();setExplode(0,{reframe:false});}if(mode==='exterior')exteriorLink(view);const go=(type,position,target)=>setCamera(type,...explodedPose(type,position,target));document.querySelectorAll('[data-camera]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.camera===view));
   persp.fov=view==='concept'?37:42;persp.updateProjectionMatrix();
   if(view==='concept'){const {position,target}=conceptCamera($('viewport').clientWidth,$('viewport').clientHeight);go('persp',position,target);}
-  if(view==='boarding'){const {position,target}=boardingCamera($('viewport').clientWidth);go('persp',position,target);}
+  if(view==='boarding'){const {position,target}=boardingCamera($('viewport').clientWidth,$('viewport').clientHeight);go('persp',position,target);}
   if(view==='perspective')go('persp',[460,300,500],[0,15,0]);
   if(view==='top')go('ortho',[0,1000,.01],[0,0,0]);
   if(view==='side')go('ortho',[0,30,1000],[0,30,0]);
@@ -399,7 +404,7 @@ const exteriorStatus=()=>explodeValue>0?'Exploded view · '+explodeStage(explode
 const explodeScale=()=>explodeKit?explodeKit.frame(explodeValue).radius/SHIP_RADIUS:1;
 // Phones frame the exploded ship tighter than its full extent (the parts at the edges run off the sides), so the
 // decks and rooms stay large enough to read on a narrow screen.
-const PHONE_FRAME=.15,viewFrame=v=>{const f=explodeKit.frame(v);if($('viewport').clientWidth<=680)f.radius=SHIP_RADIUS+(f.radius-SHIP_RADIUS)*PHONE_FRAME;return f;};
+const PHONE_FRAME=.15,viewFrame=v=>{const f=explodeKit.frame(v);if(upright($('viewport').clientWidth,$('viewport').clientHeight))f.radius=SHIP_RADIUS+(f.radius-SHIP_RADIUS)*PHONE_FRAME;return f;};
 function exteriorLink(view=document.querySelector('[data-camera][aria-pressed="true"]')?.dataset.camera||'boarding'){viewLink({camera:view,...(explodeValue>0?{explode:Math.round(explodeValue*100)}:{})});}
 function ensureExplodeKit(){
  if(explodeKit)return explodeKit;
@@ -800,7 +805,10 @@ const STEP_ORDER=['exterior','layout','neighborhood','walk','areas','transit','a
  $('m-handle').addEventListener('pointerdown',e=>{startY=e.clientY;swiped=false;});
  $('m-handle').addEventListener('pointerup',e=>{const dy=startY===null?0:e.clientY-startY;startY=null;if(Math.abs(dy)>24){swiped=true;setSheet(dy<0);}});
  $('m-handle').addEventListener('click',()=>{if(swiped){swiped=false;return;}setSheet(!sheet.classList.contains('open'));});
- if(matchMedia('(max-width:680px)').matches&&$('share-view'))sheet.append($('share-view'));
+ // The share link lives in the footer, which the phone layout hides: it moves into the sheet while that layout applies
+ // (and back when a window leaves it).
+ const share=$('share-view'),home=share&&{parent:share.parentNode,next:share.nextSibling},phoneQuery=matchMedia(PHONE_LAYOUT),placeShare=()=>{if(!share)return;if(phoneQuery.matches)sheet.append(share);else home.parent.insertBefore(share,home.next);};
+ placeShare();phoneQuery.addEventListener('change',placeShare);
  // The slider: tap a segment, or swipe across the strip for the next or previous view.
  for(const m of STEP_ORDER){const b=document.createElement('button');b.type='button';b.dataset.mode=m;b.setAttribute('aria-label',m==='walk'?'Tour':tab(m).textContent);b.addEventListener('click',()=>{closeMenu();tab(m).click();});$('m-steps-bar').append(b);}
  let stepX=null;$('m-steps').addEventListener('pointerdown',e=>{stepX=e.clientX;});
@@ -900,7 +908,7 @@ $('save-render').addEventListener('click',async()=>{
     if(['boarding','perspective','concept','aft','bow','engine','windows','aftwindows','enginewindows'].includes(view)){
       renderCamera=new T.PerspectiveCamera(42,width/height,1,6000);
       renderCamera.position.set(...(view==='aft'?[-512,299,512]:[405,265,445]));renderCamera.lookAt(0,20,0);
-      if(view==='boarding'){const {position,target}=boardingCamera(0);renderCamera.position.set(...position);renderCamera.lookAt(...target);}
+      if(view==='boarding'){const {position,target}=boardingCamera(0,1);renderCamera.position.set(...position);renderCamera.lookAt(...target);}
       if(view==='concept'){renderCamera.position.set(340,455,650);renderCamera.lookAt(0,20,0);renderCamera.fov=37;renderCamera.updateProjectionMatrix();}
       if(view==='bow'){renderCamera.position.set(430,112,245);renderCamera.lookAt(211,14,0);renderCamera.far=500;renderCamera.updateProjectionMatrix();}
       if(view==='enginewindows'){renderCamera.position.set(-362,39,302);renderCamera.lookAt(-228,-9,79);}
