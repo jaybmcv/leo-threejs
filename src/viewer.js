@@ -64,10 +64,11 @@ const rim=new T.DirectionalLight(0xffffff,.65);rim.position.set(200,60,-300);sce
 let camera=new T.PerspectiveCamera(42,1,1,6000);
 const persp=camera,ortho=new T.OrthographicCamera(-400,400,240,-240,.1,6000);
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.09;controls.minDistance=1;controls.maxDistance=2200;controls.maxPolarAngle=Math.PI*.96;
-const ship=createShip({deferExterior:true});scene.add(ship.root);
+// The interior (deck plates, the neighborhood template) is built after the first frames, in the idle warm-up (warmViews).
+const ship=createShip({deferExterior:true,lazyInterior:true});scene.add(ship.root);
 // The fin and its crown sit lower than in the saved model (concept-shape.js); interiors, stops and views follow.
 const ensureSavedAft=ship.ensureAft;ship.ensureAft=()=>{const first=!ship.aftShaped,aft=ensureSavedAft();if(first){shapeAft(aft.root);ship.aftShaped=true;}return aft;};
-const AFT_VIEWS=Object.fromEntries(Object.entries(AFT_LAYOUT).map(([key,view])=>[key,shapeView(view)]));const tourExtras=polishTourDeck(ship.detail.root);
+const AFT_VIEWS=Object.fromEntries(Object.entries(AFT_LAYOUT).map(([key,view])=>[key,shapeView(view)]));let tourExtras=null;const ensureTourExtras=()=>{if(!tourExtras){tourExtras=polishTourDeck(ship.detail.root);tourExtras.visible=mode==='walk';}return tourExtras;};
 let activeDistrict=10,residenceInside=false;const districtViews=new Map();
 const noseScene=new T.Group(),noseViews=new Map();scene.add(noseScene);noseScene.visible=false;
 function noseView(){
@@ -323,10 +324,10 @@ async function loadExterior(){
   document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===mode));
   for(let m of ['exterior','layout','neighborhood','walk','areas','transit','aft'])$(`${m}-controls`).hidden=m!==mode;
   ship.exterior.visible=mode==='exterior'||mode==='layout';ship.port.visible=true;ship.starboard.visible=true;
-  aftScene.visible=mode==='aft';transitScene.visible=mode==='transit';areasRoot.visible=mode==='areas';ship.inside.visible=mode==='layout';ship.detail.root.visible=(mode==='neighborhood'&&activeDistrict===10)||mode==='walk';
+  aftScene.visible=mode==='aft';transitScene.visible=mode==='transit';areasRoot.visible=mode==='areas';ship.inside.visible=mode==='layout';{const shown=(mode==='neighborhood'&&activeDistrict===10)||mode==='walk';if(shown||ship.detailBuilt)ship.detail.root.visible=shown;}
   if(mode==='neighborhood')districtView();for(const [number,v]of districtViews)v.root.visible=mode==='neighborhood'&&number===activeDistrict;
   dimensions.visible=mode==='exterior'&&$('dimensions').checked;grid.visible=mode==='exterior'||mode==='layout';pad.visible=grid.visible;
-  stars.visible=mode==='walk';mars.visible=mode==='walk'||mode==='neighborhood';tourExtras.visible=mode==='walk';if(mode==='walk')loadTourArt();if(aftTourShell)aftTourShell.visible=mode==='walk';showUpperAftShells(mode==='walk');controls.enabled=mode!=='walk';controls.enablePan=true;controls.minDistance=(['neighborhood','walk','areas','transit','aft'].includes(mode))?1:50;controls.maxDistance=mode==='neighborhood'?400:2200;
+  stars.visible=mode==='walk';mars.visible=mode==='walk'||mode==='neighborhood';if(tourExtras||mode==='walk')ensureTourExtras().visible=mode==='walk';if(mode==='walk')loadTourArt();if(aftTourShell)aftTourShell.visible=mode==='walk';showUpperAftShells(mode==='walk');controls.enabled=mode!=='walk';controls.enablePan=true;controls.minDistance=(['neighborhood','walk','areas','transit','aft'].includes(mode))?1:50;controls.maxDistance=mode==='neighborhood'?400:2200;
   $('save-interior').hidden=!['walk','neighborhood','areas','transit','aft'].includes(mode);$('interior-render-status').textContent='';$('route').hidden=mode!=='walk';$('walk-help').hidden=mode!=='walk';$('stamp').hidden=mode==='walk';
   $('stamp').lastChild.textContent=['neighborhood','areas','transit','aft'].includes(mode)?'INTERIOR STUDY · 01':studioTools?'EXTERIOR FINISH · V35':'564 m · 20 decks · 10,000 aboard';
   $('foot-note').textContent=mode==='walk'?'Drag to look · follow the route':'Drag to orbit · scroll to zoom · right-drag to pan';
@@ -423,7 +424,8 @@ let preparing=null;
 function prepareExplode(){
  if(explodeKit)return Promise.resolve(true);if(!exteriorReady)return Promise.resolve(false);
  return preparing||=(async()=>{
-  const steps=[...DECKS.filter(d=>d.number>=6&&d.number<=15).map(d=>()=>ship.ensureResidentialDeck(d.number)),()=>ship.ensureGardens(),()=>ship.ensureObservation(),()=>ship.ensureTransit(),()=>ship.ensureAft()],progress=p=>{$('explode-stage').textContent=`Unpacking Leo… ${Math.round(p*100)}%`;};
+  // The deck plates and the neighborhood template come first, as their own steps, when the idle warm-up hasn't built them.
+  const steps=[()=>ship.decks,()=>ship.detail,...DECKS.filter(d=>d.number>=6&&d.number<=15).map(d=>()=>ship.ensureResidentialDeck(d.number)),()=>ship.ensureGardens(),()=>ship.ensureObservation(),()=>ship.ensureTransit(),()=>ship.ensureAft()],progress=p=>{$('explode-stage').textContent=`Unpacking Leo… ${Math.round(p*100)}%`;};
   try{
    for(let i=0;i<steps.length;i++){progress(i/steps.length*.6);await nextFrame();steps[i]();}
    const meshes=[];ship.inside.traverse(o=>{if(o.isMesh&&!o.geometry.boundingSphere)meshes.push(o);});
@@ -864,8 +866,8 @@ const WARM_VIEWS=[
 // Show the scene as one view does (the other views hidden) for the duration of `run`, then put everything back.
 // Synchronous, so no on-screen frame ever sees the borrowed state.
 function asView({root,exterior=false,walk=false,layout=false},run){
- const node=root();if(!node)return null;const saved=[ship.exterior,ship.inside,ship.detail.root,aftScene,areasRoot,transitScene,tourExtras,thrusters?.root].filter(Boolean).map(o=>[o,o.visible]);
- ship.exterior.visible=exterior;ship.inside.visible=false;ship.detail.root.visible=false;aftScene.visible=false;areasRoot.visible=false;transitScene.visible=false;tourExtras.visible=walk;node.visible=true;
+ const node=root();if(!node)return null;if(walk)ensureTourExtras();const saved=[ship.exterior,ship.inside,ship.detail.root,aftScene,areasRoot,transitScene,tourExtras,thrusters?.root].filter(Boolean).map(o=>[o,o.visible]);
+ ship.exterior.visible=exterior;ship.inside.visible=false;ship.detail.root.visible=false;aftScene.visible=false;areasRoot.visible=false;transitScene.visible=false;if(tourExtras)tourExtras.visible=walk;node.visible=true;
  // The thruster glow carries three lights and shows only with the exterior (see animate).
  if(thrusters)thrusters.root.visible=exterior&&$('thruster-glow').checked;
  // The layout view shows only the port half of the hull, faded to 14 % (transparent variants of its materials).
@@ -880,8 +882,13 @@ let warmStarted=false;
 async function warmViews(){
  if(warmStarted)return;warmStarted=true;
  const t0=performance.now();
+ // The deck plates and the neighborhood template need neither the exterior nor Cosmo: built while those still load.
+ for(const build of [()=>ship.decks,()=>ship.detail]){await quiet();try{build();}catch(e){console.warn('Warm-up skipped the interior.',e);}}
  while((!exteriorReady&&exteriorLoad||!cosmoKit)&&performance.now()-t0<WARM_WAIT_MS)await idle();
- const builders=[()=>{if(exteriorReady)ensureAftModel();},()=>{if(exteriorReady){ensureLayoutDecks();explodeRoomsAdded();}},()=>ensureArea(activeArea),()=>ensureTransitView(),()=>ensurePreviewTransit()];
+ // The interior built late (createShip lazyInterior) missed Cosmo's first full dressing, and later sweeps dress only what
+ // is visible: queue it, so its cats are Cosmo (and compiled below) before anyone opens those views.
+ const dressLate=root=>{if(cosmoKit)cosmoPending.add(root);};
+ const builders=[()=>dressLate(ship.detail.root),()=>dressLate(ensureTourExtras()),()=>{if(exteriorReady)ensureAftModel();},()=>{if(exteriorReady){ensureLayoutDecks();explodeRoomsAdded();}},()=>ensureArea(activeArea),()=>ensureTransitView(),()=>ensurePreviewTransit()];
  // Each piece waits until the pointer, wheel and keys have been still for a moment (quiet), so none lands mid-move.
  for(const build of builders){await quiet();try{build();}catch(e){console.warn('Warm-up skipped a view.',e);}}
  for(const view of WARM_VIEWS){await quiet();try{await compileView(view);}catch(e){console.warn('Shader warm-up stopped.',e);return;}}
