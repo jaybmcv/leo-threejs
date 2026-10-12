@@ -45,9 +45,9 @@ let renderer;
 // Phones: 1.25x pixels (1x while touching) and a half-size starfield redrawn at 30 fps. MSAA stays on: 1.25x alone leaves jagged hull edges.
 // The phone layout's media query (viewer.html): upright phones, and phones on their side.
 const PHONE_LAYOUT='(max-width:680px),(max-height:500px) and (orientation:landscape) and (max-width:1000px)';
-// Phone framing (the ship raised and closer, for a tall screen) is for phones held upright; on their side they frame as
-// the wider landscape screens do.
-const upright=(w,h)=>w<=680&&h>=w;
+// Phone framing (the ship raised and closer, for a tall screen) is for the phone layout less phones on their side (short
+// and wider than tall), which frame as the wider landscape screens do.
+const upright=(w,h)=>w<=680&&!(h<=500&&w>h);
 const touchScreen=matchMedia('(pointer: coarse)').matches,baseRatio=Math.min(devicePixelRatio,touchScreen?1.25:1.75);
 try{renderer=new T.WebGLRenderer({antialias:true,alpha:true,logarithmicDepthBuffer:true});}catch(e){showError(e.message);throw e;}
 renderer.setPixelRatio(baseRatio);renderer.setClearColor(0xbac8cd);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.86;
@@ -805,7 +805,10 @@ const STEP_ORDER=['exterior','layout','neighborhood','walk','areas','transit','a
  $('m-handle').addEventListener('pointerdown',e=>{startY=e.clientY;swiped=false;});
  $('m-handle').addEventListener('pointerup',e=>{const dy=startY===null?0:e.clientY-startY;startY=null;if(Math.abs(dy)>24){swiped=true;setSheet(dy<0);}});
  $('m-handle').addEventListener('click',()=>{if(swiped){swiped=false;return;}setSheet(!sheet.classList.contains('open'));});
- if(matchMedia(PHONE_LAYOUT).matches&&$('share-view'))sheet.append($('share-view'));
+ // The share link lives in the footer, which the phone layout hides: it moves into the sheet while that layout applies
+ // (and back when a window leaves it).
+ const share=$('share-view'),home=share&&{parent:share.parentNode,next:share.nextSibling},phoneQuery=matchMedia(PHONE_LAYOUT),placeShare=()=>{if(!share)return;if(phoneQuery.matches)sheet.append(share);else home.parent.insertBefore(share,home.next);};
+ placeShare();phoneQuery.addEventListener('change',placeShare);
  // The slider: tap a segment, or swipe across the strip for the next or previous view.
  for(const m of STEP_ORDER){const b=document.createElement('button');b.type='button';b.dataset.mode=m;b.setAttribute('aria-label',m==='walk'?'Tour':tab(m).textContent);b.addEventListener('click',()=>{closeMenu();tab(m).click();});$('m-steps-bar').append(b);}
  let stepX=null;$('m-steps').addEventListener('pointerdown',e=>{stepX=e.clientX;});
