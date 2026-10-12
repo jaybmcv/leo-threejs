@@ -130,8 +130,9 @@ footer a{color:var(--mcv-text)}
 @media(max-width:1200px){.stamp{display:none}.hud{right:auto;left:44px;top:auto;bottom:62px;text-align:left}.hud b{display:none}}
 @media(max-width:1000px){.tabs{-webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent)}.edition{display:none}}
 .m-view,.m-tour,.m-menu,.m-handle,.m-steps{display:none}
-/* Phones: one-row bar with a view menu, a compact card, and the controls as a sheet that starts collapsed. */
-@media(max-width:680px){
+/* Phones (upright, or on their side: short and no wider than 1000 px): one-row bar with a view menu, a compact card,
+   and the controls as a sheet that starts collapsed. */
+@media(max-width:680px),(max-height:500px) and (orientation:landscape) and (max-width:1000px){
 .topbar{display:flex;align-items:center;height:56px;left:10px;right:10px;top:10px;padding:0 10px 0 12px;gap:10px;flex-wrap:nowrap}
 .brand .lockup,.brand .rule,.brand strong,.topbar .tabs{display:none}
 .m-view{display:flex;align-items:center;gap:8px;margin-left:4px;font:400 11px/1 var(--mcv-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mcv-text);background:transparent;border:1px solid var(--mcv-hairline);border-radius:8px;padding:12px}
@@ -166,6 +167,18 @@ body .intro p,body[data-mode] .intro p{display:none}
 .m-steps-bar button.on::before{top:8px;height:5px;background:var(--mcv-orange);box-shadow:0 0 12px rgba(248,88,0,.6)}
 .m-steps-count{font:400 10px/1 var(--mcv-mono);letter-spacing:.14em;color:var(--mcv-dim);white-space:nowrap}.m-steps-count b{color:var(--mcv-orange);font-weight:400}
 body .intro,body[data-mode] .intro,body[data-mode="exterior"][data-studio="1"] .intro,body[data-mode][data-eye="1"] .intro{top:100px}
+}
+/* Phones on their side: about 400 px of height, so a slimmer bar, the card top left, the sheet docked bottom right
+   (opening up to the view slider) and the tour card bottom left, leaving the middle to the ship. */
+@media(max-height:500px) and (orientation:landscape) and (max-width:1000px){
+.topbar{height:46px;top:8px}
+.m-menu{top:60px;max-height:calc(100vh - 70px);overflow:auto}.m-menu button{padding:12px 14px}
+.m-steps{top:58px;left:auto;right:22px;width:min(320px,40vw)}
+body .intro,body[data-mode] .intro,body[data-mode="exterior"][data-studio="1"] .intro,body[data-mode][data-eye="1"] .intro{top:62px;max-width:min(340px,45vw);padding:10px 14px}
+.intro h1,body[data-mode=walk] .intro h1,body[data-mode=areas] .intro h1{font-size:20px}.eyebrow,body[data-mode] .intro .eyebrow{margin-bottom:6px}
+.panel{left:auto;right:10px;bottom:8px;width:min(360px,46vw);max-height:54px}.m-handle{height:54px}
+.panel.open{max-height:calc(100vh - 96px)}
+.route{left:10px;right:auto;bottom:8px;width:min(400px,calc(100vw - min(360px,46vw) - 34px))}
 }
 </style></head>
 <body>
