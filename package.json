@@ -9,10 +9,12 @@
     "build:public": "node scripts/build-public.mjs",
     "start": "node scripts/serve.mjs",
     "build:reference": "node scripts/build-reference.mjs",
-    "start:reference": "node scripts/serve-reference.mjs"
+    "start:reference": "node scripts/serve-reference.mjs",
+    "check:walk": "node --max-old-space-size=8000 scripts/check-walk.mjs"
   },
   "dependencies": {
-    "three": "0.185.1"
+    "three": "0.185.1",
+    "three-mesh-bvh": "0.9.15"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.5.0",

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Walk around Leo · Mars Cats Voyage</title><link rel="icon" href="brand/mark.png"><meta name="theme-color" content="#000000"><meta name="description" content="Walk around Leo, the Mars Cats Voyage shuttle, as Cosmo: all 20 decks, lifts, cabins, gardens and the crown lounge.">
+<style>
+@font-face{font-family:"Archivo";src:url("brand/archivo.woff2") format("woff2");font-weight:100 900;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url("brand/jetbrains.woff2") format("woff2");font-weight:100 800;font-display:swap}
+@font-face{font-family:"Sora";src:url("brand/sora.woff2") format("woff2");font-weight:100 800;font-display:swap}
+:root{--surface:rgba(5,5,7,.82);--card:rgba(11,11,16,.94);--text:#f4f0e8;--body:#c9c3b8;--dim:#a6a5b4;--orange:#f85800;--teal:#2fd6c5;--hairline:rgba(255,255,255,.125);--display:"Archivo",sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--sans:"Sora",ui-sans-serif,system-ui,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden;overscroll-behavior:none}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}button:focus-visible,a:focus-visible{outline:2px solid var(--orange);outline-offset:3px}
+#viewport{position:fixed;inset:0;touch-action:none}#viewport canvas{display:block;width:100%;height:100%;outline:none}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:#000;z-index:20;transition:opacity .5s}
+#loading .card{text-align:center;max-width:420px;padding:0 24px}
+#loading .eyebrow{font:400 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--orange);margin-bottom:18px}
+#loading h1{font:500 44px/1 var(--display);letter-spacing:-.04em;margin:0 0 16px}
+#loading-text{font:400 11px/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+body[data-ready="1"] #loading{opacity:0;pointer-events:none}
+.top{position:fixed;left:16px;right:16px;top:14px;display:flex;align-items:center;gap:12px;z-index:5;pointer-events:none}
+.pill{pointer-events:auto;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:10px 14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.pill a{color:var(--text);text-decoration:none;font:400 11px/1 var(--mono)}
+#where{font:400 11px/1.2 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+.help{position:fixed;left:16px;bottom:14px;z-index:5;font:400 10px/1.7 var(--mono);letter-spacing:.06em;color:var(--dim);background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:10px 14px}
+.help b{color:var(--text);font-weight:500}
+#joystick{display:none;position:fixed;left:22px;bottom:30px;width:128px;height:128px;border-radius:50%;border:1px solid var(--hairline);background:rgba(10,12,16,.45);z-index:6;touch-action:none}
+#stick{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(244,240,232,.85)}
+#prompt{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--hairline);border-radius:999px;padding:9px 16px 9px 9px;font:400 12px/1 var(--mono);letter-spacing:.06em;pointer-events:none}
+#prompt[hidden]{display:none}
+#prompt .key{display:grid;place-items:center;min-width:26px;height:26px;border-radius:7px;background:var(--orange);color:#fff;font-weight:600}
+.tools{position:fixed;right:16px;top:14px;z-index:6;display:flex;gap:8px}
+.tools button,.touch button{background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:10px 14px;font:400 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.tools button:hover{border-color:var(--orange)}
+.touch{display:none;position:fixed;right:18px;bottom:30px;z-index:6;flex-direction:column;align-items:flex-end;gap:12px}
+.touch #use{background:var(--orange);border-color:var(--orange);color:#fff;border-radius:999px;padding:14px 18px}
+.touch #use[hidden]{display:none}
+.touch #jump{width:64px;height:64px;border-radius:50%;padding:0}
+.sheet{position:fixed;inset:0;z-index:15;display:grid;place-items:center;background:rgba(0,0,0,.45)}
+.sheet[hidden]{display:none}
+.sheet .card{width:min(420px,calc(100vw - 32px));max-height:calc(100vh - 64px);overflow:auto;background:var(--card);border:1px solid var(--hairline);border-radius:14px;padding:20px}
+.sheet h2{font:500 26px/1 var(--display);letter-spacing:-.03em;margin:0 0 6px}
+.sheet .eyebrow{font:400 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--orange);margin-bottom:12px}
+.sheet .stops{display:grid;gap:6px;margin:14px 0}
+.sheet .stops button{text-align:left;background:rgba(255,255,255,.04);border:1px solid var(--hairline);border-radius:10px;padding:11px 13px;font:400 13px/1.3 var(--sans)}
+.sheet .stops button:hover:not(:disabled){border-color:var(--orange)}
+.sheet .stops button:disabled{opacity:.5}
+.sheet .stops b{display:block;font-weight:500}.sheet .stops span{font:400 10px/1.4 var(--mono);letter-spacing:.06em;color:var(--dim)}
+.sheet [data-close]{background:none;border:1px solid var(--hairline);border-radius:10px;padding:10px 14px;font:400 11px/1 var(--mono)}
+@media (pointer:coarse){#joystick{display:block}.help{display:none}.touch{display:flex}}
+@media (max-width:560px){.tools button{padding:9px 11px}.top{right:140px}.pill{max-width:100%;min-width:0}#where{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+</style>
+</head>
+<body>
+<div id="viewport"></div>
+<div class="top"><div class="pill"><a href="./">← Leo</a><span id="where"></span></div></div>
+<div class="tools"><button id="go" type="button">Go to</button><button id="view" type="button" aria-label="Switch first or third person">View</button></div>
+<div class="help"><b>WASD</b> move · <b>Shift</b> run · <b>Space</b> jump · <b>Drag</b> look · <b>E</b> sit, lie, lifts · <b>M</b> go to · <b>V</b> view</div>
+<div id="prompt" hidden><span class="key">E</span><span class="label"></span></div>
+<div class="touch"><button id="use" type="button" hidden></button><button id="jump" type="button" aria-label="Jump">Jump</button></div>
+<div id="lift-panel" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="lift-title"><div class="card"><div class="eyebrow">Lift</div><h2 id="lift-title"></h2><div class="stops"></div><button type="button" data-close>Close</button></div></div>
+<div id="places" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="places-title"><div class="card"><div class="eyebrow">Walk around Leo</div><h2 id="places-title">Go to</h2><div class="stops"></div><button type="button" data-close>Close</button></div></div>
+<div id="joystick" aria-hidden="true"><div id="stick"></div></div>
+<div id="loading"><div class="card"><div class="eyebrow">Mars Cats Voyage</div><h1>Walk around Leo</h1><div id="loading-text">Loading…</div></div></div>
+<script>/* BUNDLE */</script>
+</body>
+</html>

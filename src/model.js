@@ -136,12 +136,14 @@ export function createShip({deferExterior=false,lazyInterior=false,onDecks=null}
   }
   let detail=null;const ensureDetail=()=>{if(!detail){detail=createNeighborhood();root.add(detail.root);detail.root.visible=false;}return detail;};
   inside.visible=false;if(!lazyInterior){buildDecks();ensureDetail();}
+  // Walls and ceilings the cutaway views hide; walk mode (src/walk) shows them again.
+  const cutaway=new Set(),cut=o=>{o.visible=false;cutaway.add(o);};
   const serviceDecks=new Map(),residentialDecks=new Map(),pendingDecks=new Map();let gardensLoaded=false,transit=null,observationArea=null,aftSystems=null;
   function* serviceDeckSteps(number){
     try{
       const areas=SHIP_AREAS.filter(a=>a.deck===number);if(!areas.length)return;
       buildDecks();const deck=decks[number-1],rooms=[],roots=[];
-      const place=part=>{part.shell.visible=false;part.root.visible=false;deck.add(part.root);roots.push(part.root);return part;};
+      const place=part=>{cut(part.shell);part.root.visible=false;deck.add(part.root);roots.push(part.root);return part;};
       for(const a of areas){rooms.push(place(createShipArea(a)));yield;}
       for(const build of [createServiceCirculation,createSpecialCirculation]){const corridors=build(number);if(corridors)place(corridors);yield;}
       yield roots;
@@ -150,14 +152,14 @@ export function createShip({deferExterior=false,lazyInterior=false,onDecks=null}
       serviceDecks.set(number,rooms);
     }finally{pendingDecks.delete(number);}
   }
-  const ship={root,exterior,port,starboard,fixed,inside,vertical,shared,serviceDecks,residentialDecks,
+  const ship={root,exterior,port,starboard,fixed,inside,vertical,shared,serviceDecks,residentialDecks,cutaway,
     get decks(){buildDecks();return decks;},get cabinGroups(){buildDecks();return cabinGroups;},get detail(){return ensureDetail();},get detailBuilt(){return !!detail;},get decksBuilt(){return decks.length>0;},
     ensureAft(){if(!aftSystems){aftSystems=createAft();inside.add(aftSystems.root);}return aftSystems;},
     ensureTransit(){if(!transit){transit=createTransit();inside.add(transit.root);vertical.visible=false;}return transit;},
-    ensureObservation(){if(!observationArea){observationArea=createObservationArea(ensureDetail());observationArea.walls.visible=false;cutawayLights(observationArea.root);inside.add(observationArea.root);}return observationArea;},
+    ensureObservation(){if(!observationArea){observationArea=createObservationArea(ensureDetail());cut(observationArea.walls);cutawayLights(observationArea.root);inside.add(observationArea.root);}return observationArea;},
     ensureGardens(){
       if(gardensLoaded)return;for(const child of shared.children)child.visible=false;
-      for(let number=1;number<=10;number++){const garden=createGardenCommons(number,ensureDetail());garden.walls.visible=false;cutawayLights(garden.root);shared.add(garden.root);}
+      for(let number=1;number<=10;number++){const garden=createGardenCommons(number,ensureDetail());cut(garden.walls);cutawayLights(garden.root);shared.add(garden.root);}
       gardensLoaded=true;
     },
     ensureResidentialDeck(number){
@@ -165,8 +167,8 @@ export function createShip({deferExterior=false,lazyInterior=false,onDecks=null}
       if(number<6||number>15)return null;
       buildDecks();const deck=decks[number-1],residence=createResidentialDeck(number-5,ensureDetail());
       for(const o of deck.children)if(o.name.includes('twin_cabin_envelopes')||o.name==='Primary_corridors')o.visible=false;
-        residence.walls.visible=false;residence.districtWalls.visible=false;deck.add(residence.root);
-        const nose=createNoseCommons(number-5);nose.shell.visible=false;deck.add(nose.root);residence.nose=nose;
+        cut(residence.walls);cut(residence.districtWalls);deck.add(residence.root);
+        const nose=createNoseCommons(number-5);cut(nose.shell);deck.add(nose.root);residence.nose=nose;
       residentialDecks.set(number,residence);return residence;
     },
     ensureServiceDeck(number){
