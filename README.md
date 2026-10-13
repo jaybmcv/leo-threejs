@@ -65,6 +65,20 @@ Example: http://127.0.0.1:4173/?district=3&space=garden&eye=1
 
 The new journey is available in **Walkthrough → Choose a journey → Residential / engineering / fin crown**, or directly at `?walk=1&tour=aft&stop=0`. Play, pause, next, previous and individual stop buttons are available. Eleven guided stops use scene cuts for deck and lift transfers; this is not continuous simulated walking. `aft-journey.json` records the route.
 
+## Walk around Leo
+
+`walk.html` (linked as **Walk around Leo** from the viewer's top bar and phone menu) puts you aboard as Cosmo, the same DL Cat rig and animation as Voyager's Reach: the walk, jog and jump are the Quaternius clips Voyager's Reach retargets (CC0, via pmndrs/ecctrl; `src/walk/assets/ecctrl-locomotion.json`), with a breathing idle and new sit and lie poses. You start in the Deck 2 arrival hall.
+
+- **Controls:** WASD or the arrows move, Shift runs, Space jumps, drag (or move the locked pointer) to look, the wheel zooms, E sits, lies down, calls a lift or opens its panel, M opens Go to, V swaps first and third person. On touch screens the left thumb steers a joystick (push to the rim to run), the right drags to look, and the orange button does what E does.
+- **The whole fitted interior is walkable:** all twenty decks, the 5,000 furnished cabins, every fitted room and corridor, the garden commons, the forward lounge, the stairs and the aft machinery, the fin platforms and the crown lounge. The body is a floating capsule 2 m tall and 0.7 m wide that steps over anything under 0.4 m (Voyager's Reach's capsule), so any avatar up to 2 m fits everywhere.
+- **Lifts work:** the four main lifts (Decks 1–20 / 1–19), the aft service lift (Decks 4–17) and the crown lift (service gallery, seven fin platforms, crown lounge). Call a car at the landing, step in, choose a stop; the doors slide and the car carries you.
+- **Seats and beds:** every chair, sofa, bench, stool, banquette, floor cushion and lifeboat seat can be sat on (benches offer a seat every 0.65 m) and every berth and ward bed lain in, cabins included.
+- **Go to** jumps to fourteen named places.
+
+How it is built (`src/walk`): `world.js` builds every deck with the cutaway walls and ceilings back on; `collision.js` turns solid meshes into deck-band BVHs (three-mesh-bvh; rounded boxes collide as boxes, signs and dressing don't collide) and tests the repeated cabins through their instance transforms; `partitions.js` raises lined walls wherever a designed floor meets the bare deck plate, so the unfitted volume between the fitted spaces stays closed (planned at build time by `scripts/walk-page.mjs`); `render-bake.js` merges the ~50,000 interior meshes into chunks by deck band, 40 m stretch and finish, and draws only the bands around you; `lift-ride.js` runs the cars and doors; `rest.js` finds seat and bed spots. The exterior's wings, engines and seams are hidden and don't collide inside: the wing roots pass through the hull.
+
+`npm run check:walk` (about ten minutes) floods the ship as the 2 m walker from the arrival hall, riding every lift, and checks that every room, cabin, lift landing, seat and bed is reachable and that nothing walkable is open to space; it writes `walk-report.json`.
+
 ## Modeled spaces
 
 Each neighborhood has 500 cabins with two beds, a desk, shelves, storage and a compact ensuite, arranged along five residential corridors. Cabin geometry is instanced across all 5,000 locations. The upper gardens contain planting, seating, café tables, shared kitchen and laundry facilities, parcel lockers, reading areas, two gallery levels with three-sided walkways and stairs. Gardens 3 and 4 sit 2.5 m closer to the centerline to clear a local narrowing in the pressure envelope.

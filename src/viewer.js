@@ -800,6 +800,8 @@ const STEP_ORDER=['exterior','layout','neighborhood','walk','areas','transit','a
  // The desktop bar's Hide UI, reachable on phones; the top bar stays, so the menu can bring the UI back.
  const ui=document.createElement('button');ui.type='button';ui.className='m-ui';ui.addEventListener('click',()=>{closeMenu();$('toggle-panels').click();});menu.append(ui);
  const uiLabel=()=>{ui.textContent=$('toggle-panels').textContent;};uiLabel();
+ // Walk around Leo is its own page (walk.html).
+ menu.append(Object.assign(document.createElement('a'),{href:'walk.html',className:'m-walk',textContent:'Walk around Leo →'}));
  $('m-view').addEventListener('click',()=>{const open=menu.hidden;if(open)uiLabel();menu.hidden=!open;$('m-view').setAttribute('aria-expanded',String(open));});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();});renderer.domElement.addEventListener('pointerdown',closeMenu);
  $('m-tour').addEventListener('click',()=>{closeMenu();tab('walk').click();});
