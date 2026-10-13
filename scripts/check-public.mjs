@@ -29,4 +29,6 @@ assert.ok(walkScript&&html.includes('href="walk.html"'),'the viewer links a walk
 const walkCode=await fs.readFile('dist/'+walkScript,'utf8');
 assert.ok(walkCode.includes(cosmoScript)&&!walkCode.includes('createDLCat('),'the walk page loads the shared Cosmo file');
 assert.ok(walkHtml.includes('window.LEO_PUBLIC_ASSETS=')&&walkHtml.includes('brand/archivo.woff2'),'the walk page streams the public models');
+// Cosmo's emote clips and the ship map ship as hashed files the walk script names.
+for(const [stem,ext] of [['walk-emotes','json'],['walk-map','png']]){const name=walkCode.match(new RegExp(String.raw`${stem}\.[0-9a-f]{10}\.${ext}`))?.[0];assert.ok(name,`the walk script names its ${stem} file`);await fs.access('dist/'+name);}
 console.log('PASS: browser download/decompression path restores all eight GLBs exactly; public links resolve; parts ≤16 MiB.');

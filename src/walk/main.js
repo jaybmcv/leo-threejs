@@ -14,14 +14,18 @@ import {STATIC_LIFT_PARTS} from './lifts.js';
 import {Controller} from './controller.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
-import {createWalker,WALKER} from './avatar.js';
+import {createWalker,WALKER,EMOTES} from './avatar.js';
 import {bakeForWalking,showBands} from './render-bake.js';
 import {bandOf} from './collision.js';
 import {partitionMesh} from './partitions.js';
-import partitionPlan from 'walk-partitions';
+import walkPlan from 'walk-partitions';
+import {railingMesh} from './railings.js';
+import {ShipMap,drawMiniMap,drawFullMap,deckOf} from './minimap.js';
+import {DECKS} from '../model.js';
 import {createLifts} from './lift-ride.js';
 import {findRestSpots,solidSpots,spotIndex} from './rest.js';
 import {PLACES,findStand,describe} from './places.js';
+import {openWindows,clearGlass} from './windows.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
 const $=id=>document.getElementById(id);
@@ -52,6 +56,8 @@ addEventListener('resize',resize);resize();
 
 const ship=createShip({deferExterior:true,lazyInterior:true});scene.add(ship.root);
 const colliders=new Colliders();
+// The ship map image is small; it loads alongside the models.
+const shipMap=new ShipMap(__MAP_URL__);shipMap.ready.then(()=>{$('minimap-button').hidden=false;}).catch(()=>{});
 const walls=o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name);
 
 async function loadExterior(){
@@ -70,11 +76,15 @@ async function buildShip(){
  for(const label of buildSteps(ship)){done++;status(`Building the interior… ${Math.min(99,Math.round(done/total*100))}%`);await idle();}
  shapeInterior(ship.exterior,ship.inside);
  // Lined partitions close the fitted spaces off from the bare deck plate (partitions.js; planned at build time).
- ship.inside.add(partitionMesh(partitionPlan.map(([deck,x0,x1,z0,z1,y0,y1])=>({deck,x0,x1,z0,z1,y0,y1}))));
+ ship.inside.add(partitionMesh(walkPlan.walls.map(([deck,x0,x1,z0,z1,y0,y1])=>({deck,x0,x1,z0,z1,y0,y1}))));
+ // Short railings where a floor drops away (railings.js; planned at build time too).
+ ship.inside.add(railingMesh(walkPlan.rails));
  ship.inside.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
  status('Fitting the walls…');await idle();
  prepareExteriorForWalking(ship);
  buildColliders(ship,{extra:[ship.exterior],filter:walls,into:colliders});
+ // The hull behind the glass goes for drawing only, after the colliders have it.
+ const w0=performance.now(),opened=openWindows(ship,walkPlan.windows);clearGlass(ship.root);timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
  lifts=createLifts(scene,colliders);
  rest=spotIndex(solidSpots(findRestSpots(ship.inside),colliders));
  status('Dressing the crew…');await idle();
@@ -119,7 +129,7 @@ function cull(p,now=performance.now()){
  }
 }
 
-const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),onAction:a=>actions[a]?.()});
+const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),onAction:(a,arg)=>actions[a]?.(arg)});
 const follow=new FollowCamera(camera,colliders);
 const controller=new Controller(colliders);
 let walker=null;
@@ -134,11 +144,26 @@ const actions={
   else if(t.kind==='sit'||t.kind==='lie')settle(t.spot);
  },
  escape(){closePanels();},
- map(){togglePlaces();},
+ // (Nothing below until the walk is ready.)
+ places(){if(ready())togglePlaces();},
+ map(){if(ready())toggleMap();},
+ crouch(){if(ready()&&!resting){controller.toggle('crouch');emote=null;}},
+ prone(){if(ready()&&!resting){controller.toggle('prone');emote=null;}},
+ emotes(){if(ready())toggleEmotes();},
+ // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
+ emote(i){if(ready()&&!resting&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
+ // A key pressed while a sheet is open: the key that opened it closes it, and the emote sheet takes 1-0.
+ sheet(code){
+  const open=id=>!$(id).hidden;
+  if((code==='KeyB'&&open('emotes'))||(code==='KeyN'&&open('map-sheet'))||(code==='KeyM'&&open('places'))){closePanels();return;}
+  if(open('emotes')&&/^Digit[0-9]$/.test(code)){closePanels();actions.emote((+code.slice(5)+9)%10);}
+ },
 };
+let emote=null;
+const ready=()=>document.body.dataset.ready==='1';
 
 async function loadCosmo(){
- globalThis.LEO_THREE=T;
+ globalThis.LEO_THREE=T;globalThis.LEO_COSMO_EMOTES=__EMOTES_URL__;
  await new Promise((resolve,reject)=>{const s=Object.assign(document.createElement('script'),{src:__COSMO_SCRIPT__,async:true});s.onload=resolve;s.onerror=()=>reject(new Error('Cosmo could not load'));document.head.appendChild(s);});
  walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion);scene.add(walker.holder);
  cosmoKit=await globalThis.LeoCosmo.createCosmoKit();
@@ -151,37 +176,66 @@ await buildShip();
 controller.place(findStand(colliders,START.position.toArray())||START.position);follow.yaw=START.yaw;
 walker.holder.position.copy(controller.position);
 document.body.dataset.ready='1';
-let heading=START.yaw;
+let heading=START.yaw;const safe=controller.position.clone();
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
-let last=performance.now(),acc=0,lastHud=0;const STEP=1/120,wish=new T.Vector3();
+// The ship map: the corner mini-map, redrawn a few times a second, and the full map sheet.
+const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
+function sizeCanvas(c){const r=Math.min(devicePixelRatio||1,2),w=Math.round(c.clientWidth*r),h=Math.round(c.clientHeight*r);if(w&&h&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}}
+function miniMap(p){sizeCanvas(mini);const d=drawMiniMap(mini,shipMap,{x:p.x,y:p.y,z:p.z,yaw:follow.yaw,places:PLACES});$('minimap-deck').textContent=d?`Deck ${d.number}`:p.y>100?'Crown lounge':'Fin';}
+function showMap(number){
+ mapDeck=T.MathUtils.clamp(number,1,DECKS.length);const c=$('map-canvas');sizeCanvas(c);
+ const p=controller.position;mapShown=drawFullMap(c,shipMap,mapDeck,{walker:{x:p.x,y:p.y,z:p.z,yaw:heading},places:PLACES});
+ $('map-title').textContent=`Deck ${mapDeck} · ${DECKS[mapDeck-1].name}`;$('map-deck').value=String(mapDeck);
+}
+function toggleMap(){
+ const panel=$('map-sheet');if(!panel.hidden){closePanels();return;}
+ panel.hidden=false;input.enabled=false;showMap(deckOf(controller.position.y)?.number??20);
+}
+{const select=$('map-deck');for(const d of DECKS)select.append(new Option(`Deck ${d.number}`,String(d.number)));select.onchange=()=>showMap(+select.value);
+ for(const b of document.querySelectorAll('[data-deck]'))b.addEventListener('click',()=>showMap(mapDeck+Number(b.dataset.deck)));
+ // A place marker on the map takes you there.
+ $('map-canvas').addEventListener('click',e=>{const r=e.currentTarget.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+  const hit=mapShown.find(s=>Math.hypot(s.x-x,s.y-y)<18);if(hit){goTo(hit.place);closePanels();}});
+ $('minimap-button').addEventListener('click',toggleMap);}
+let last=performance.now(),acc=0,lastHud=0,lastHeading=heading,lastSpeed=0,turnRate=0,accel=0;const STEP=1/120,wish=new T.Vector3();
+const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WALKER.prone};
 renderer.setAnimationLoop(()=>{
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
  const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));last=now;
  const k=input.read();follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
  const fwd=follow.forward(),right=new T.Vector3(-fwd.z,0,fwd.x);
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
- if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(k.run?WALKER.run:WALKER.walk);
+ if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
+ if(emote&&(wish.lengthSq()>.01||k.jump))emote=null;
  // Moving off a seat or bed stands you up.
  if(resting&&resting.phase==='in'&&resting.t===1&&wish.lengthSq()>.1)standUp();
  lifts.update(dt,controller);
  // Riding a moving car, the car carries the walker; it passes slab edges and the hull skin, which must not push.
  const riding=lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
- if(!resting&&!riding){acc+=dt;let jump=k.jump;while(acc>=STEP){controller.step(STEP,wish,jump);jump=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ // A tap shorter than a frame still counts as held for the first step.
+ if(!resting&&!riding){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  const p=controller.position;
+ // A safety net: should a walker ever fall out of the ship, it comes back to the last ground it stood on.
+ if(controller.grounded&&!riding)safe.copy(p);else if(p.y<-60){controller.place(safe);emote=null;}
  if(controller.speed>.15&&!resting)heading=dampAngle(heading,Math.atan2(controller.velocity.x,controller.velocity.z),12,dt);
+ // What the figure leans into: the turn (+ to its left) and the change of speed, both smoothed a little.
+ if(dt>0){turnRate=T.MathUtils.damp(turnRate,Math.atan2(Math.sin(heading-lastHeading),Math.cos(heading-lastHeading))/dt,10,dt);accel=T.MathUtils.damp(accel,(controller.speed-lastSpeed)/dt,10,dt);}
+ lastHeading=heading;lastSpeed=controller.speed;
  let pose=null;
  if(resting)pose=restPose(dt);
  if(!resting){walker.holder.position.copy(p);walker.holder.rotation.set(0,heading,0);walker.body.rotation.set(0,0,0);}
- walker.update(dt,{speed:resting?0:controller.speed,airborne:!resting&&!controller.grounded,rest:pose});
+ walker.update(dt,{speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
+  turnRate,accel,rise:controller.velocity.y,emote,rest:pose});
  follow.update(dt,resting?resting.view:p,WALKER.height);
  // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle).
  walker.holder.visible=follow.mode!=='first'&&follow.current>.75;
  cull(p);
  if(now-lastHud>120){lastHud=now;hud(p);}
+ if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  skyCamera.position.copy(camera.position);skyCamera.quaternion.copy(camera.quaternion);skyCamera.fov=camera.fov;skyCamera.aspect=camera.aspect;skyCamera.updateProjectionMatrix();
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(scene,camera);
 });
@@ -204,6 +258,7 @@ function hud(p){
 
 // Sitting and lying: the walker leaves the controller, eases onto the spot and back off again.
 function settle(spot){
+ emote=null;
  const p=controller.position.clone(),lie=spot.kind==='lie';
  let pos,yaw;
  if(lie){
@@ -224,7 +279,7 @@ function restPose(dt){
  h.position.lerpVectors(r.from.pos,r.to.pos,e);h.rotation.set(0,lerpAngle(r.from.heading,r.to.yaw,Math.min(1,e*1.6)),0);
  walker.body.rotation.set(r.lie?-Math.PI/2*T.MathUtils.smoothstep(r.t,.25,1):0,0,0);
  if(r.phase==='out'&&r.t===0){heading=r.from.heading;controller.place(r.from.pos);resting=null;return null;}
- return {kind:r.lie?'lie':'sit',weight:e};
+ return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight};
 }
 function lerpAngle(a,b,t){return a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;}
 
@@ -243,11 +298,22 @@ function togglePlaces(){
   b.onclick=()=>{goTo(place);closePanels();};list.appendChild(b);}
  panel.hidden=false;input.enabled=false;
 }
+// The emotes sheet: one button per emote (also keys 1-0).
+function toggleEmotes(){
+ const panel=$('emotes');if(!panel)return;if(!panel.hidden){closePanels();return;}
+ const list=panel.querySelector('.stops');list.textContent='';
+ EMOTES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';const label=name.replace(/_/g,' ');b.textContent=`${(i+1)%10} · ${label[0].toUpperCase()}${label.slice(1)}`;b.onclick=()=>{closePanels();actions.emote(i);};list.appendChild(b);});
+ panel.hidden=false;input.enabled=false;list.querySelector('button')?.focus();
+}
 function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;resting=null;controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places'])$(id).hidden=true;input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet'])$(id).hidden=true;input.enabled=true;input.down.clear();}
 for(const b of document.querySelectorAll('[data-close]'))b.addEventListener('click',closePanels);
 $('use').addEventListener('click',()=>actions.use());
 $('go').addEventListener('click',togglePlaces);
 $('view').addEventListener('click',()=>actions.view());
-$('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;});
+// Held for a higher jump, as Space is.
+$('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;input.jumpHeld=true;$('jump').setPointerCapture(e.pointerId);});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])$('jump').addEventListener(type,()=>{input.jumpHeld=false;});
+$('crouch').addEventListener('click',()=>actions.crouch());
+$('emote-button').addEventListener('click',()=>actions.emotes());

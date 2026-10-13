@@ -2,23 +2,22 @@ import fs from 'node:fs/promises';
 import * as T from 'three';
 import {CABINS,SAMPLE} from '../src/model.js';
 import {SHIP_AREAS} from '../src/areas.js';
-import {buildColliders,cabinPlacements,prepareExteriorForWalking} from '../src/walk/world.js';
-import {solid,BODY,bandOf} from '../src/walk/collision.js';
-import {LIFTS,STATIC_LIFT_PARTS,carTriangles} from '../src/walk/lifts.js';
-import {planPartitions,partitionMesh} from '../src/walk/partitions.js';
+import {cabinPlacements} from '../src/walk/world.js';
+import {BODY,bandOf} from '../src/walk/collision.js';
+import {LIFTS,carTriangles} from '../src/walk/lifts.js';
 import {findRestSpots,solidSpots} from '../src/walk/rest.js';
-import {loadWalkShip} from './walk-plan.mjs';
+import {loadWalkShip,fitForWalking} from './walk-plan.mjs';
 
 // Walk the whole ship as a 2 m tall, 0.7 m wide walker (Voyager's Reach's capsule, floating 0.4 m over the floor),
 // from the Deck 2 arrival hall, through every opening a body that size fits, up and down the stairs and in every
-// lift (a car waits at each stop). Then check that every room, cabin, lift stop, seat and bed is reachable and that
+// lift (a car waits at each stop), and off every edge it can walk over (a fall lands wherever the floor below is).
+// Then check that every room, cabin, lift stop, seat and bed is reachable and that
 // no walkable spot is open to space. About ten minutes; `npm run check:walk`.
 const t0=Date.now(),log=(...a)=>console.log(((Date.now()-t0)/1000).toFixed(0)+'s',...a);
 const ship=await loadWalkShip();
-ship.inside.add(partitionMesh(planPartitions(ship)));
-ship.inside.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
-log('exterior triangles inside the decks, dropped:',prepareExteriorForWalking(ship));
-const col=buildColliders(ship,{extra:[ship.exterior],filter:o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name)});
+// The partitions, railings and colliders exactly as the page has them (scripts/walk-plan.mjs).
+const {colliders:col,dropped,walls,rails}=fitForWalking(ship);
+log('exterior triangles inside the decks, dropped:',dropped,'; partitions',walls.length,'; railings',rails.length,`(${Math.round(rails.reduce((s,r)=>s+r[3]-r[2],0))} m)`);
 for(const lift of LIFTS)for(const stop of lift.stops)col.addMover(lift.id,carTriangles(lift,[stop.door||lift.door]),new T.Matrix4().makeTranslation(lift.car.x,stop.y,lift.car.z));
 log('world built:',col.triangles,'static triangles');
 
@@ -39,12 +38,17 @@ const snap=(v,o)=>o+Math.round((v-o)/G)*G;
 const seen=new Set(),blocked=new Set(),X=[],Y=[],Z=[];
 const push=(x,y,z)=>{const k=key(x,y,z);if(seen.has(k))return;seen.add(k);X.push(x);Y.push(y);Z.push(z);};
 push(S0.x,S0.y,S0.z);
-const ridden=new Set(),DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+const ridden=new Set(),DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];let falls=0,voidFalls=0;const voids=[];
+// Walking off an edge: the walker falls from where it stepped to the first walkable ground below (or none: the void).
+const fall=(x,y,z)=>{ray.origin.set(x,y+STEP,z);ray.direction.set(0,-1,0);const h=col.raycast(ray,120);return h&&h.normal.y>=MIN_NY?h.point.y:null;};
 for(let head=0;head<X.length&&head<BUDGET;head++){
  const x=X[head],y=Y[head],z=Z[head];
  if(head%500000===0&&head)log('flood',head);
  for(const [dx,dz] of DIRS){
-  const nx=x+dx*G,nz=z+dz*G,fy=floorAt(nx,y,nz);if(fy===null||Math.abs(fy-y)>STEP)continue;
+  const nx=x+dx*G,nz=z+dz*G;let fy=floorAt(nx,y,nz);
+  // Nothing within a step: if the body fits there, it falls (only straight moves, so a corner is not cut).
+  if(fy===null&&!dx!==!dz&&stands(nx,y,nz)){fy=fall(nx,y,nz);if(fy===null){if(voids.length<20)voids.push([nx,y,nz].map(v=>+v.toFixed(1)));voidFalls++;continue;}if(y-fy>STEP){const k=key(nx,fy,nz);if(!seen.has(k)&&!blocked.has(k)){if(stands(nx,fy,nz)){falls++;push(nx,fy,nz);}else blocked.add(k);}}continue;}
+  if(fy===null||Math.abs(fy-y)>STEP)continue;
   const k=key(nx,fy,nz);if(seen.has(k)||blocked.has(k))continue;
   if(stands(nx,fy,nz))push(nx,fy,nz);else blocked.add(k);
  }
@@ -85,8 +89,9 @@ const restRatio=usable/spots.length;if(restRatio<.995)problems.push(`seats and b
 // Space: a reached spot with nothing overhead is outside the ship.
 let open=0;const openAt=[];for(let i=0;i<X.length;i+=13){ray.origin.set(X[i],Y[i]+1,Z[i]);ray.direction.set(0,1,0);if(!col.raycast(ray,200)){open++;openAt.push([X[i],Y[i],Z[i]].map(v=>+v.toFixed(1)));}}
 if(open)problems.push(`${open} sampled positions open to space`);
+if(voidFalls)problems.push(`${voidFalls} edges fall out of the ship`);
 
-const report={status:problems.length?'FAIL':'PASS',walker:{height:H,width:2*R,step:STEP},positions:X.length,walkableM2ByDeck:Object.fromEntries([...area].sort((a,b)=>a[0]-b[0]).map(([b,a])=>[b,Math.round(a)])),
+const report={status:problems.length?'FAIL':'PASS',walker:{height:H,width:2*R,step:STEP},positions:X.length,falls,voidFalls,voids,railings:{count:rails.length,metres:Math.round(rails.reduce((s,r)=>s+r[3]-r[2],0))},walkableM2ByDeck:Object.fromEntries([...area].sort((a,b)=>a[0]-b[0]).map(([b,a])=>[b,Math.round(a)])),
  rooms:{total:rooms.length,below80:rooms.filter(r=>!r.samples||r.reached/r.samples<.8).length},cabins:`${cabins}/${CABINS.length}`,missedCabins:missedCabins.slice(0,20),liftStops:`${stops}/${stopCount}`,
  seatsAndBeds:{spots:spots.length,usable,seats:spots.filter(s=>s.kind==='sit').length,beds:spots.filter(s=>s.kind==='lie').length,unusable:[...unusable].slice(0,40)},openToSpace:open,openAt:openAt.slice(0,20),problems};
 await fs.writeFile('output/leo-interior-v01/walk-report.json',JSON.stringify(report,null,2));
