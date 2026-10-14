@@ -26,6 +26,8 @@ import {createLifts} from './lift-ride.js';
 import {findRestSpots,solidSpots,spotIndex} from './rest.js';
 import {PLACES,findStand,describe} from './places.js';
 import {openWindows,clearGlass} from './windows.js';
+import {readSpot,spotLink} from './link.js';
+import {installFeedback} from '../feedback/feedback.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
 const $=id=>document.getElementById(id);
@@ -173,10 +175,18 @@ async function loadCosmo(){
 const START={position:new T.Vector3(-135,-35.7,-38),yaw:Math.PI/2};
 await Promise.all([loadExterior(),loadCosmo()]).catch(e=>{status(e.message);throw e;});
 await buildShip();
-controller.place(findStand(colliders,START.position.toArray())||START.position);follow.yaw=START.yaw;
+// A walk link (link.js) starts wherever it was taken; otherwise the arrival hall.
+const spot=readSpot(),stand=spot&&findStand(colliders,spot.at);
+controller.place(stand||findStand(colliders,START.position.toArray())||START.position);
+follow.yaw=stand?spot.yaw:START.yaw;if(stand){follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;}
 walker.holder.position.copy(controller.position);
 document.body.dataset.ready='1';
-let heading=START.yaw;const safe=controller.position.clone();
+let heading=follow.yaw;const safe=controller.position.clone();
+// Feedback joins the top-right tools; a narrow phone has no room there, so it sits under the mini-map instead.
+installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-width:560px)').matches?null:document.querySelector('.tools'),
+ css:'.fb-button:not(.fb-mounted){left:auto;bottom:auto;right:16px;top:180px;z-index:5}',
+ context:()=>({link:spotLink({position:controller.position,yaw:follow.yaw,pitch:follow.pitch,view:follow.mode}),where:describe(controller.position)}),
+ onOpen:()=>{input.enabled=false;input.down.clear();},onClose:()=>{input.enabled=true;input.down.clear();}});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
