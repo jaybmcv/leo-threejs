@@ -1,25 +1,18 @@
 import * as T from 'three';
-import {COSMO_HEIGHT,relaxPose,aim,turn,setWorldQuat} from '../cosmo-pose.js';
-import {Locomotion} from './locomotion.js';
+import {COSMO_HEIGHT,aim,turn} from '../cosmo-pose.js';
+import {DLCatFigure} from './vr/dlCatFigure.ts';
+import {DEFAULT_DLCAT_TUNING} from './vr/dlCatTuning.ts';
+import {COSMO_EMOTES} from './vr/cosmoEmotes.ts';
+import {WALK_SPEED,RUN_SPEED} from './vr/worldCore.ts';
 
-// Cosmo as the walker: the same DL Cat rig as Voyager's Reach, animated with its retargeted walk, jog and jump
-// (locomotion.js), a breathing idle built on the viewer's relaxed stand, and two resting poses for seats and beds.
-// `holder` is what the controller moves: its origin is between the feet and it faces +z.
+// Cosmo as the walker, animated by Voyager's Reach's own figure (vr/dlCatFigure.ts): the authored Ecctrl walk and jog,
+// the reference sprint, take-off, air and landing, the turning lean, the tail spring, the idle, crouch, slide and
+// crawl, the emotes and the seated pose. Leo adds one pose of its own, lying on a bed, which Voyager's Reach has no
+// use for. `holder` is what the controller moves: its origin is between the feet and it faces +z.
 const X=new T.Vector3(1,0,0);
-export const WALKER={height:COSMO_HEIGHT,walk:2.25,run:5.2};
+export const WALKER={height:COSMO_HEIGHT,walk:WALK_SPEED,run:RUN_SPEED,crouch:2,prone:1.1};
+export const EMOTES=Object.keys(COSMO_EMOTES);
 
-function sitPose(bone){
- for(const side of ['L','R']){
-  const out=side==='L'?1:-1,feet=worldQuatOf(bone('foot.'+side));
-  aim(bone('thigh.'+side),bone('shin.'+side),new T.Vector3(out*.12,-.08,1));
-  aim(bone('shin.'+side),bone('foot.'+side),new T.Vector3(out*.03,-1,.12));
-  setWorldQuat(bone('foot.'+side),feet);
-  aim(bone('upper_arm.'+side),bone('forearm.'+side),new T.Vector3(out*.22,-1,.32));
-  aim(bone('forearm.'+side),bone('hand.'+side),new T.Vector3(-out*.18,-.35,1));
- }
- turn(bone('spine.001'),X,-6);turn(bone('spine.003'),X,4);turn(bone('spine.006'),X,6);
- for(const [i,deg] of [[1,-40],[2,-30],[3,-10]])turn(bone('Tail_springBone_'+i),X,deg);
-}
 function liePose(bone){
  for(const side of ['L','R']){
   const out=side==='L'?1:-1;
@@ -32,43 +25,34 @@ function liePose(bone){
  turn(bone('spine.006'),X,-8);
  for(const [i,deg] of [[1,-90],[2,-10]])turn(bone('Tail_springBone_'+i),X,deg);
 }
-const worldQuatOf=o=>o.getWorldQuaternion(new T.Quaternion());
 
-// `createDLCat` comes from the Cosmo bundle (or src/vendor/cosmo/DLCat.js in Node); `motion` is ecctrl-locomotion.json.
+// `createDLCat` comes from the Cosmo bundle; `motion` is ecctrl-locomotion.json, the donor clips for the walk.
 export async function createWalker(createDLCat,motion){
  const cat=await createDLCat({height:COSMO_HEIGHT,castShadow:true,receiveShadow:true});
- const skeleton=cat.meshes[0].skeleton,lookup=name=>{const b=skeleton.getBoneByName(T.PropertyBinding.sanitizeNodeName(name));if(!b)throw new Error('Cosmo rig is missing '+name);return b;};
- const bones={get:lookup};
- const holder=new T.Group();holder.name='Walker';const body=new T.Group();holder.add(body);body.add(cat.root);
- cat.root.updateMatrixWorld(true);
- for(const m of cat.meshes)m.frustumCulled=false;
- const capture=()=>skeleton.bones.map(b=>b.quaternion.clone()),restore=qs=>{skeleton.bones.forEach((b,i)=>b.quaternion.copy(qs[i]));cat.root.updateMatrixWorld(true);};
- const bind=capture();
- // The retarget calibrates against the bind pose, so it is built first.
- const locomotion=motion?new Locomotion(motion,cat.root,bones,WALKER):null;
- relaxPose(cat);const idle=capture();
- restore(bind);sitPose(lookup);cat.root.updateMatrixWorld(true);const sit=capture();
- const hips=lookup('spine').getWorldPosition(new T.Vector3());
- restore(bind);liePose(lookup);cat.root.updateMatrixWorld(true);const lie=capture();
- restore(idle);
- const spine=[lookup('spine.002'),lookup('spine.003')],head=lookup('spine.006');
- let clock=0,jumpAge=0;
+ const figure=new DLCatFigure(cat,()=>DEFAULT_DLCAT_TUNING,motion);figure.stylProportions=false;
+ const holder=new T.Group();holder.name='Walker';const body=new T.Group();holder.add(body);body.add(figure.root);
+ const bone=name=>{const b=figure.bones.get(name);if(!b)throw new Error('Cosmo rig is missing '+name);return b;};
+ // The lying pose, built once from the bind pose the figure starts in.
+ figure.root.updateMatrixWorld(true);
+ const bones=[...figure.bones.values()],rest=bones.map(b=>b.quaternion.clone());
+ liePose(bone);const lie=bones.map(b=>b.quaternion.clone());
+ bones.forEach((b,i)=>b.quaternion.copy(rest[i]));figure.root.updateMatrixWorld(true);
+ // The hips' height above the feet's origin, standing.
+ const hipHeight=bone('spine').getWorldPosition(new T.Vector3()).y-figure.root.getWorldPosition(new T.Vector3()).y;
  return {
-  holder,body,cat,locomotion,
-  // The hips' height above the feet's origin; a seat lifts the body so the hips rest on it.
-  hipHeight:hips.y,
-  // state: {speed, airborne, rest:{kind:'sit'|'lie', weight}}
-  update(dt,{speed=0,airborne=false,rest=null}={}){
-   clock+=dt;jumpAge=airborne?jumpAge+dt:0;
-   restore(idle);
-   const moving=T.MathUtils.smoothstep(speed,.05,.7);
-   if(locomotion&&!rest){locomotion.apply(speed,dt,moving);locomotion.applyJump(airborne,jumpAge,dt,speed);}
-   if(rest&&rest.weight>0){const target=rest.kind==='lie'?lie:sit;skeleton.bones.forEach((b,i)=>b.quaternion.slerp(target[i],rest.weight));}
-   // Breathing, strongest at rest.
-   const breath=Math.sin(clock*1.45)*.012*(1-moving);
-   for(const b of spine)b.rotateX(breath);head.rotateX(-breath*.8);
-   cat.root.updateMatrixWorld(true);
+  holder,body,figure,hipHeight,
+  // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight}}
+  update(dt,s){
+   const r=s.rest,seated=r?.kind==='sit'&&r.weight>.35;
+   figure.apply({pos:[0,0,0],yaw:0,dt,speedMs:r?0:s.speed,grounded:r?true:s.grounded,swimming:false,submerged:false,stance:r?'stand':s.stance||'stand',
+    jumpCount:s.jumpCount||1,jumpS:s.jumpS,turnRate:r?0:s.turnRate||0,accelMs2:r?0:s.accel||0,riseMs:r?0:s.rise||0,emote:r?null:s.emote||null,
+    seated,seatedVariant:'passenger',seatHeight:seated?r.seatHeight:undefined,seatForward:0},dt);
+   if(r?.kind==='lie'&&r.weight>0){
+    bones.forEach((b,i)=>b.quaternion.slerp(lie[i],r.weight));
+    figure.asset.root.position.y=T.MathUtils.lerp(figure.asset.root.position.y,figure.restOffset,r.weight);
+    figure.root.updateMatrixWorld(true);
+   }
   },
-  dispose(){locomotion?.dispose();holder.removeFromParent();}
+  dispose(){figure.dispose();holder.removeFromParent();}
  };
 }
