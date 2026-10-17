@@ -62,7 +62,7 @@ The build writes GLB files into `output/leo-interior-v01/`. `leo-full-ship.glb` 
 
 For a static web distribution, run `npm run build:public` after the main build. This creates `dist/` with compressed model parts and the matching browser loader. Serve that entire directory over HTTP; do not open its HTML as a file URL.
 
-The `.openai/hosting.json` file identifies the existing Sites deployment. Another tool should build locally and should not deploy to that project or change its access unless the owner explicitly requests it.
+The live site is leo.marscatsvoyage.com, served from `dist/` by its Vercel project. Another tool should build locally and should not deploy to it or change its access unless the owner explicitly requests it.
 
 Suggested instruction to another tool: “Read HANDOFF.md, install and build the project, then inspect the Captain's bridge in the actual Three.js viewer. Preserve the existing ship geometry and layout; improve its presentation using the real source and assets rather than replacing it with a mockup.”
 
