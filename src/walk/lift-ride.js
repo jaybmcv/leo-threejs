@@ -1,10 +1,12 @@
 import * as T from 'three';
 import {DECKS} from '../model.js';
 import {LIFTS,carTriangles} from './lifts.js';
+import {liftDisplay,stopShort,landingSigns,liftDisplayMount,callLight} from './signs.js';
 
 // Working lifts for walk mode. Each shaft gets a car that travels between its stops and a pair of sliding landing doors
 // at every stop; both are movable colliders, so a closed door is a wall and the car floor carries the walker.
 // Doors open when the car rests at a stop and close before it moves. Call a car from a landing; choose a stop inside.
+// Every landing has a deck plaque, a call light that stays lit until the car arrives, and a display of where the car is.
 const SPEED=5.5,ACCEL=2.6,DOOR_TIME=.9,LEAF_T=.08,DOOR_H=2.75;
 const mats={
  floor:new T.MeshStandardMaterial({name:'Lift_floor',color:0xc4b89e,roughness:.7}),
@@ -21,6 +23,8 @@ function boxMesh(name,[w,h,d],[x,y,z],m,parent){const o=new T.Mesh(new T.BoxGeom
 const boxTris=(w,h,d)=>{const g=new T.BoxGeometry(w,h,d).toNonIndexed();g.translate(0,h/2,0);return Array.from(g.attributes.position.array);};
 
 export function createLifts(scene,colliders){
+ // Signs go on the walls before this lift's doors exist, so a ray finds the wall and not a door leaf.
+ const signs=new T.Group();signs.name='Walk_lift_signs';scene.add(signs);
  const lifts=LIFTS.map(spec=>{
   const {car:c}=spec,root=new T.Group();root.name='Walk_lift_'+spec.id;root.userData.keepLive=true;scene.add(root);
   // The car: floor, panelled walls, a lit roof and a control panel. A car opens on every face one of its stops uses
@@ -42,26 +46,32 @@ export function createLifts(scene,colliders){
   }
   const main=faces[0],panel=boxMesh('Car_panel',main.door.axis==='z'?[.24,.5,.05]:[.05,.5,.24],[0,0,0],mats.panel,car);
   panel.position.copy(main.side).multiplyScalar((main.door.axis==='z'?c.width:c.depth)/2-.35).addScaledVector(main.front,main.half-.06).setY(1.25);
+  const display=liftDisplay();
+  const landings=spec.stops.map(stop=>{
+   const d=stop.door||spec.door,frontOf=d.axis==='z'?new T.Vector3(0,0,d.sign):new T.Vector3(d.sign,0,0),along=d.axis==='z'?new T.Vector3(1,0,0):new T.Vector3(0,0,1);
+   const half=(d.axis==='z'?c.depth:c.width)/2,base=new T.Vector3(c.x,stop.y,c.z).addScaledVector(frontOf,half+.14),at={base,front:frontOf,along,width:d.width};
+   landingSigns(signs,colliders,stop,at);liftDisplayMount(signs,colliders,display.material,at);
+   return {d,frontOf,along,base,light:callLight(signs,colliders,at)};
+  });
   const carMover=colliders.addMover(spec.id+'_car',carTriangles(spec,faces.map(f=>f.door)));
   // Landing doors: two leaves per stop, each its own mover so they can slide apart.
-  const stops=spec.stops.map(stop=>{
-   const d=stop.door||spec.door,frontOf=d.axis==='z'?new T.Vector3(0,0,d.sign):new T.Vector3(d.sign,0,0),along=d.axis==='z'?new T.Vector3(1,0,0):new T.Vector3(0,0,1);
-   const half=(d.axis==='z'?c.depth:c.width)/2,base=new T.Vector3(c.x,stop.y,c.z).addScaledVector(frontOf,half+.14);
+  const stops=spec.stops.map((stop,i)=>{
+   const {d,frontOf,along,base,light}=landings[i];
    const leaves=[-1,1].map(s=>{
     const size=d.axis==='z'?[d.width/2,DOOR_H,LEAF_T]:[LEAF_T,DOOR_H,d.width/2];
     const mesh=boxMesh('Landing_door',size,[0,0,0],mats.door,root);mesh.geometry.translate(0,DOOR_H/2,0);
     const mover=colliders.addMover(spec.id+'_door',boxTris(...size));
     return {s,mesh,mover};
    });
-   return {...stop,base,along,leaves,callAt:base.clone().addScaledVector(frontOf,.9),width:d.width,frontOf,face:faceOf(d)};
+   return {...stop,base,along,leaves,light,callAt:base.clone().addScaledVector(frontOf,.9),width:d.width,frontOf,face:faceOf(d)};
   });
   const parked=Math.max(0,spec.stops.findIndex(s=>s.deck===spec.parked));// the crown lift waits at its lowest stop
-  const lift={spec,root,car,carMover,faces,faceOf,stops,y:stops[parked].y,v:0,at:parked,target:parked,doors:1,phase:'open'};
+  const lift={spec,root,car,carMover,faces,faceOf,stops,display,calls:new Set(),y:stops[parked].y,v:0,at:parked,target:parked,doors:1,phase:'open'};
   place(lift);return lift;
  });
  function place(l){
   // Nothing to move while the car rests with its doors still.
-  const key=`${l.y}|${l.doors}|${l.phase}|${l.at}`;if(l.placed===key)return;l.placed=key;
+  const key=`${l.y}|${l.doors}|${l.phase}|${l.at}|${[...l.calls]}`;if(l.placed===key)return;l.placed=key;
   const c=l.spec.car;l.car.position.set(c.x,l.y,c.z);l.car.updateMatrixWorld(true);
   l.carMover.place(new T.Matrix4().makeTranslation(c.x,l.y,c.z));
   const here=l.stops[l.at];
@@ -71,14 +81,17 @@ export function createLifts(scene,colliders){
    f.gate.enabled=shut>.5;const g=f.front.clone().multiplyScalar(f.half);f.gate.place(new T.Matrix4().makeTranslation(c.x+g.x,l.y,c.z+g.z));
   }
   l.stops.forEach((s,i)=>{const open=i===l.at&&l.phase!=='moving'?l.doors:0;
+   s.light?.lit(l.calls.has(i));
    for(const leaf of s.leaves){const p=s.base.clone().addScaledVector(s.along,leaf.s*(s.width/4+open*s.width/2*.98));leaf.mesh.position.copy(p);leaf.mesh.updateMatrixWorld(true);leaf.mover.place(new T.Matrix4().makeTranslation(p.x,p.y,p.z));}
   });
  }
  const inside=(l,p)=>{const c=l.spec.car;return Math.abs(p.x-c.x)<c.width/2-.1&&Math.abs(p.z-c.z)<c.depth/2-.1&&p.y>l.y-.6&&p.y<l.y+1.2;};
+ // The stop the car is at or passing.
+ const level=l=>l.stops.reduce((b,s,i)=>Math.abs(s.y-l.y)<Math.abs(l.stops[b].y-l.y)?i:b,0);
  return {
-  lifts,inside,
-  // Send a lift to stop `index`.
-  call(l,index){if(index===l.at&&l.phase!=='moving'){if(l.doors<1)l.phase='opening';return;}l.target=index;if(l.phase!=='moving')l.phase='closing';},
+  lifts,inside,signs,level,
+  // Send a lift to stop `index`; its call light there stays lit until the car arrives.
+  call(l,index){if(index===l.at&&l.phase!=='moving'){if(l.doors<1)l.phase='opening';return;}l.calls.clear();l.calls.add(index);l.target=index;if(l.phase!=='moving')l.phase='closing';},
   // Advance the cars and doors; `walker` is the controller, carried along when standing in a moving car.
   update(dt,walker){
    for(const l of lifts){
@@ -90,8 +103,9 @@ export function createLifts(scene,colliders){
      const vmax=Math.min(SPEED,Math.sqrt(2*ACCEL*dist)+.05);l.v=Math.min(vmax,l.v+ACCEL*dt);
      const prev=l.y;l.y+=dir*Math.min(dist,l.v*dt);
      if(riding){walker.position.y+=l.y-prev;walker.velocity.y=0;}
-     if(Math.abs(goal-l.y)<1e-4){l.y=goal;l.v=0;l.at=l.target;l.phase='opening';}
+     if(Math.abs(goal-l.y)<1e-4){l.y=goal;l.v=0;l.at=l.target;l.phase='opening';l.calls.delete(l.at);}
     }
+    l.display.show(stopShort(l.stops[level(l)]),l.phase==='moving'?(l.stops[l.target].y>l.y?'up':'down'):'');
     place(l);
    }
   },
@@ -101,7 +115,11 @@ export function createLifts(scene,colliders){
    for(const l of lifts){
     if(inside(l,p))return l.phase==='moving'?{lift:l,kind:'riding'}:{lift:l,kind:'inside',label:'Choose a deck'};
     l.stops.forEach((s,i)=>{const d=Math.hypot(p.x-s.callAt.x,p.z-s.callAt.z);
-     if(d<2.2&&Math.abs(p.y-s.y)<.6&&(!best||d<best.d)&&!(i===l.at&&l.phase!=='moving'&&l.doors>0))best={lift:l,kind:'call',stop:i,d,label:'Call the lift'};});
+     if(d<2.2&&Math.abs(p.y-s.y)<.6&&(!best||d<best.d)&&!(i===l.at&&l.phase!=='moving'&&l.doors>0)){
+      // Once called, the prompt follows the car until it arrives.
+      const coming=l.calls.has(i)&&l.target===i,from=l.stops[level(l)];
+      best=coming?{lift:l,kind:'waiting',stop:i,d,label:l.phase==='moving'?`Lift coming · ${from.deck?'Deck '+from.deck:from.label}`:'Lift coming'}:{lift:l,kind:'call',stop:i,d,label:'Call the lift'};
+     }});
    }
    return best;
   },

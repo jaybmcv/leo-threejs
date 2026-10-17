@@ -111,6 +111,8 @@ export function partitionMesh(walls){
  const size=geos.reduce((n,g)=>n+g.attributes.position.count,0),P=new Float32Array(size*3),N=new Float32Array(size*3);let o=0;
  for(const g of geos){P.set(g.attributes.position.array,o*3);N.set(g.attributes.normal.array,o*3);o+=g.attributes.position.count;g.dispose();}
  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(P,3));geo.setAttribute('normal',new T.BufferAttribute(N,3));geo.setAttribute('uv',new T.BufferAttribute(new Float32Array(size*2),2));
- const mesh=new T.Mesh(geo,new T.MeshStandardMaterial({name:'Walk_partition_lining',color:0xd8dcd5,roughness:.82,metalness:.04}));mesh.name='Partition_wall';group.add(mesh);
+ const mesh=new T.Mesh(geo,new T.MeshStandardMaterial({name:'Walk_partition_lining',color:0xd8dcd5,roughness:.82,metalness:.04}));mesh.name='Partition_wall';
+ // Each wall's box, for the walk bake's coplanar check (render-bake.js).
+ mesh.userData.boxes=walls.map(w=>[w.x0,w.x1,w.y0,w.y1,w.z0,w.z1]);group.add(mesh);
  return group;
 }

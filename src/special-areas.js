@@ -91,7 +91,8 @@ function bridge(area,k){
     console(179,y,z,-Math.PI/2);
   }
   round('Command_plinth',[6,.12,7],[170,y+.06,0],'navy',.2);
-  const captain=chair(170,y+.12,0,-Math.PI/2);captain.name='Captain_command_seat';
+  // The captain faces forward, over the helm to the windows.
+  const captain=chair(170,y+.12,0,Math.PI/2);captain.name='Captain_command_seat';
   round('Captain_headrest',[.6,.3,.18],[0,1.43,-.3],'navy',.06,captain);
   round('Captain_back_shell',[.82,1.05,.12],[0,1.04,-.42],'metal',.06,captain);
   round('Captain_foot_support',[.68,.055,.34],[0,.18,.45],'metal',.025,captain);
@@ -102,10 +103,10 @@ function bridge(area,k){
   }
   for(const s of [-1,1]){
     round('Command_arm_console',[1,.85,.6],[170,y+.55,s*1.1],'navy');
-    const touch=box('Touchscreen',[.78,.035,.42],[170,y+1,s*1.1],'screen');touch.rotation.z=.12;
-    round('Captain_console_wrist_pad',[.18,.065,.47],[169.59,y+.99,s*1.1],'dark',.022);
-    round('Captain_console_access',[.035,.28,.34],[169.475,y+.53,s*1.1],'metal',.01);
-    box('Captain_console_access_pull',[.025,.035,.13],[169.448,y+.55,s*1.1],'dark');
+    const touch=box('Touchscreen',[.78,.035,.42],[170,y+1,s*1.1],'screen');touch.rotation.z=-.12;
+    round('Captain_console_wrist_pad',[.18,.065,.47],[170.41,y+.99,s*1.1],'dark',.022);
+    round('Captain_console_access',[.035,.28,.34],[170.525,y+.53,s*1.1],'metal',.01);
+    box('Captain_console_access_pull',[.025,.035,.13],[170.552,y+.55,s*1.1],'dark');
     box('Command_dais_edge',[5.3,.025,.045],[170,y+.132,s*3.2],'amber');
     box('Command_approach_inlay',[11,.008,.055],[179,y+.005,s*3.6],'screen');
   }
