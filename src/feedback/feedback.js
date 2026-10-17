@@ -1,14 +1,24 @@
 // Tester feedback: one button, a screenshot taken as it opens, a voice note or a few words, and the context a fix needs
 // (the exact view link, build, device and recent errors), all shown to the tester before anything leaves the page.
-// Hidden from visitors: ?feedback=1 turns it on for this browser, ?feedback=0 off again. Until the capture service
-// exists, Send saves the report as one JSON file the tester can pass on.
-const KEY='leo-feedback',MAX_VOICE=120,MAX_SHOT=1600,MAX_ERRORS=20;
+// Hidden from visitors. A tester's invite link (?invite=<code>) turns it on for this browser and lets Send deliver the
+// report to the capture service (config.js); ?feedback=1 turns it on without one, and Send then saves the report as a
+// file. ?feedback=0 turns it off again.
+import {FEEDBACK_CONFIG} from './config.js';
+const KEY='leo-feedback',INVITE='leo-feedback-invite',MAX_VOICE=120,MAX_SHOT=1600,MAX_ERRORS=20;
+let invite=null;
 
 export function feedbackEnabled(){
- const flag=new URLSearchParams(location.search).get('feedback');
- try{if(flag==='1')localStorage.setItem(KEY,'1');else if(flag==='0')localStorage.removeItem(KEY);return localStorage.getItem(KEY)==='1';}
- catch{return flag==='1';}
+ const params=new URLSearchParams(location.search),flag=params.get('feedback'),code=params.get('invite');
+ // The invite leaves the address straight away, so it never ends up in a shared view link or a report.
+ if(code!==null&&location.protocol!=='file:'){params.delete('invite');history.replaceState(history.state,'',location.pathname+(params.size?'?'+params:'')+location.hash);}
+ if(code)invite=code;
+ try{
+  if(code)localStorage.setItem(INVITE,code);
+  if(flag==='1'||code)localStorage.setItem(KEY,'1');else if(flag==='0'){localStorage.removeItem(KEY);localStorage.removeItem(INVITE);invite=null;}
+  invite=invite||localStorage.getItem(INVITE);return localStorage.getItem(KEY)==='1';
+ }catch{return flag==='1'||!!code;}
 }
+const sending=()=>!!(FEEDBACK_CONFIG.endpoint&&FEEDBACK_CONFIG.turnstileSiteKey&&invite);
 
 // Errors are kept as messages only, long tokens masked, from the moment the page installs this.
 const errors=[];
@@ -33,7 +43,7 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
  const grab=()=>new Promise(resolve=>{pending={resolve,queued:false};setTimeout(()=>{if(pending?.resolve===resolve){pending=null;resolve(null);}},1500);});
  const fps=()=>{const now=performance.now(),recent=frames.filter(t=>now-t<2000);return recent.length>1?Math.round((recent.length-1)/((recent[recent.length-1]-recent[0])/1000)):null;};
 
- const ui=buildPanel(css);let report=null,recorder=null,timer=0;
+ const ui=buildPanel(css);let report=null,recorder=null,timer=0,check=null,token=null;
  const place=()=>{const m=typeof mount==='function'?mount():mount;if(m?.contains(ui.button))return;
   ui.button.className='fb-button'+(m?' fb-mounted':'')+(m&&look==='link'?' fb-link':'');if(m)m.prepend(ui.button);else document.body.append(ui.button);};
  place();if(typeof mount==='function')addEventListener('resize',place);
@@ -43,8 +53,17 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
   // The screenshot first, before the panel covers the view.
   const shot=await grab();
   report={page,shot,voice:null,context:{...context(),build:build(),device:device(renderer),fps:fps(),errors:[...errors],time:new Date().toISOString()}};
-  ui.text.value='';ui.error.textContent='';showShot();showVoice();showAttached();
+  ui.text.value='';ui.error.textContent='';ui.saveInstead.hidden=true;showShot();showVoice();showAttached();
   ui.sheet.hidden=false;onOpen();ui.text.focus();
+  if(sending())humanCheck();
+ }
+ // Cloudflare Turnstile, loaded the first time a tester opens the panel; the service verifies its token.
+ async function humanCheck(){
+  token=null;ui.check.hidden=false;
+  try{await loadTurnstile();}catch(e){ui.error.textContent=e.message;return;}
+  if(check===null)check=window.turnstile.render(ui.check,{sitekey:FEEDBACK_CONFIG.turnstileSiteKey,theme:'dark',size:'flexible',
+   callback:t=>{token=t;},'expired-callback':()=>{token=null;},'error-callback':()=>{token=null;}});
+  else window.turnstile.reset(check);
  }
  function showShot(){ui.shot.hidden=!report.shot;ui.noShot.hidden=!!report.shot;if(report.shot)ui.img.src=report.shot;}
  function showVoice(){
@@ -75,8 +94,22 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
   if(!text&&!report.voice){ui.error.textContent='Say or type what happened first.';ui.text.focus();return;}
   const out={kind:'leo-feedback',version:1,page:report.page,text,context:report.context,screenshot:report.shot,
    voice:report.voice?{type:report.voice.blob.type,data:await dataURL(report.voice.blob)}:null};
-  save(out);ui.sent.hidden=false;setTimeout(()=>{ui.sent.hidden=true;close();},1600);
+  if(!sending()){save(out);done('Saved. Thank you!');return;}
+  if(!token){ui.error.textContent='One moment: the human check is still running.';return;}
+  ui.send.disabled=true;ui.send.textContent='Sending…';
+  try{
+   let r;try{r=await fetch(FEEDBACK_CONFIG.endpoint.replace(/\/$/,'')+'/reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invite,turnstile:token,report:out})});}
+   catch{throw new Error('The report could not be sent.');}
+   const reply=await r.json().catch(()=>({}));
+   if(!r.ok)throw new Error(reply.error||`The report could not be sent (${r.status}).`);
+   done(`Sent. Thank you! Reference ${reply.id}.`);
+  }catch(e){
+   // Nothing is lost: the tester can keep the report as a file and pass it on.
+   ui.error.textContent=`${e.message} You can save it as a file instead.`;ui.saveInstead.hidden=false;ui.saveInstead.onclick=()=>{save(out);done('Saved. Thank you!');};
+   token=null;if(check!==null)window.turnstile.reset(check);
+  }finally{ui.send.disabled=false;ui.send.textContent='Send';}
  }
+ function done(message){ui.sent.textContent=message;ui.sent.hidden=false;setTimeout(()=>{ui.sent.hidden=true;close();},2200);}
  ui.button.addEventListener('click',open);
  ui.dropShot.addEventListener('click',()=>{report.shot=null;showShot();});
  ui.record.addEventListener('click',startVoice);
@@ -99,6 +132,11 @@ const build=()=>[...document.scripts].map(s=>s.src.split('/').pop().split('?')[0
 function device(renderer){
  let gpu=null;try{const gl=renderer.getContext(),ext=gl.getExtension('WEBGL_debug_renderer_info');if(ext)gpu=gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);}catch{}
  return {browser:navigator.userAgent,screen:`${innerWidth}×${innerHeight} @${devicePixelRatio}x`,touch:matchMedia('(pointer:coarse)').matches,gpu};
+}
+function loadTurnstile(){
+ if(window.turnstile)return Promise.resolve();
+ return new Promise((resolve,reject)=>{const s=Object.assign(document.createElement('script'),{src:'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit',async:true});
+  s.onload=resolve;s.onerror=()=>reject(new Error('The human check could not load. You can save the report as a file instead.'));document.head.append(s);});
 }
 const dataURL=blob=>new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(blob);});
 function save(out){
@@ -134,6 +172,7 @@ const CSS=`
 .fb-actions{display:flex;gap:8px;justify-content:flex-end}
 .fb-actions .fb-send{background:#f85800;border-color:#f85800;color:#fff}
 .fb-sent{color:#2fd6c5;font-size:12px;margin-top:8px}
+.fb-check{margin:4px 0 8px;min-height:65px}
 `;
 function buildPanel(css){
  document.head.append(Object.assign(document.createElement('style'),{textContent:CSS+css}));
@@ -145,12 +184,13 @@ function buildPanel(css){
  const text=el('textarea',{placeholder:'What happened, or what would you like changed?','aria-label':'Your feedback'});
  const record=el('button',{type:'button',textContent:'Record a voice note'}),dropVoice=el('button',{type:'button',textContent:'Remove voice note'}),audio=el('audio',{controls:true});
  const list=el('div',{className:'fb-list'}),error=el('div',{className:'fb-error',role:'alert'});
- const send=el('button',{type:'button',className:'fb-send',textContent:'Send'}),cancel=el('button',{type:'button',textContent:'Cancel'});
+ const send=el('button',{type:'button',className:'fb-send',textContent:'Send'}),cancel=el('button',{type:'button',textContent:'Cancel'}),saveInstead=el('button',{type:'button',textContent:'Save as a file',hidden:true});
+ const check=el('div',{className:'fb-check',hidden:true});
  const sent=el('div',{className:'fb-sent',textContent:'Saved. Thank you!',hidden:true});
  const card=el('div',{className:'fb-card'},el('div',{className:'fb-eyebrow',textContent:'Tester feedback'}),el('h2',{id:'fb-title',textContent:'Tell us what you see'}),
   shot,noShot,text,el('div',{className:'fb-row'},record,dropVoice),audio,
-  el('details',{},el('summary',{textContent:'What gets attached'}),list),error,el('div',{className:'fb-actions'},cancel,send),sent);
+  el('details',{},el('summary',{textContent:'What gets attached'}),list),check,error,el('div',{className:'fb-actions'},cancel,saveInstead,send),sent);
  const sheet=el('div',{className:'fb-sheet',hidden:true,role:'dialog'},card);sheet.setAttribute('aria-modal','true');sheet.setAttribute('aria-labelledby','fb-title');
  document.body.append(sheet);
- return {button,sheet,img,shot,noShot,dropShot,text,record,dropVoice,audio,list,error,send,cancel,sent};
+ return {button,sheet,img,shot,noShot,dropShot,text,record,dropVoice,audio,list,check,error,send,cancel,saveInstead,sent};
 }
