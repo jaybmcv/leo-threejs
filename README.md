@@ -159,7 +159,6 @@ each transport part is at most 16 MiB. The browser restores the original GLBs.
 Local overlay/comparison tools are excluded from the public page. The live site,
 leo.marscatsvoyage.com, is the Vercel project that serves `dist/`; its `vercel.json`
 (cache headers) lives with that Vercel project, not in this repository.
-`.openai/hosting.json` is a leftover from the earlier OpenAI Sites deployment.
 
 ```sh
 npm ci
