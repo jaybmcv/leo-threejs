@@ -46,9 +46,9 @@ export function finishCabin({walls,fittings,x,y,z,box:rawBox,material}){
  box('Wardrobe_top_reveal',[.55,.018,.04],[x-1.55,y+1.89,z-1.955],ink);
  for(let i=0;i<4;i++)box('Wardrobe_vent',[.28,.012,.008],[x-1.55,y+.24+i*.045,z-1.954],ink);
  round('Cabin_runner',[1.05,.014,2.5],[x,y+.01,z+.15],material('Residential_carpet',0x9b9b88,{roughness:1,metalness:0}),fittings,.006);
- round('Ensuite_mirror',[.025,.7,.43],[x+.531,y+1.64,z-2.24],material('Residential_mirror',0xb7cacf,{metalness:.95,roughness:.08}));
- round('Ensuite_mirror_light',[.035,.055,.47],[x+.55,y+2.04,z-2.24],glow);
- round('Towel_rail',[.035,.035,.48],[x+.555,y+.95,z-2.15],brass);
- round('Folded_towel',[.035,.35,.31],[x+.58,y+.8,z-2.15],linen);
+ round('Ensuite_mirror',[.025,.7,.43],[x+.911,y+1.64,z-2.24],material('Residential_mirror',0xb7cacf,{metalness:.95,roughness:.08}));
+ round('Ensuite_mirror_light',[.035,.055,.47],[x+.93,y+2.04,z-2.24],glow);
+ round('Towel_rail',[.035,.035,.42],[x+.935,y+.95,z-1.68],brass);
+ round('Folded_towel',[.035,.35,.27],[x+.96,y+.8,z-1.68],linen);
  polishInterior(fittings,'Twin cabin furnishings');polishInterior(walls,'Twin cabin lining');
 }

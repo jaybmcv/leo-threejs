@@ -72,6 +72,7 @@ export function railingMesh(rows){
  boxes.forEach(([cx,cy,cz,sx,sy,sz],b)=>{for(let v=0;v<per;v++){const o=(b*per+v)*3;P[o]=cx+up[v*3]*sx;P[o+1]=cy+up[v*3+1]*sy;P[o+2]=cz+up[v*3+2]*sz;N.set(un.subarray(v*3,v*3+3),o);}});
  unit.dispose();
  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(P,3));geo.setAttribute('normal',new T.BufferAttribute(N,3));geo.setAttribute('uv',new T.BufferAttribute(new Float32Array(boxes.length*per*2),2));
- const mesh=new T.Mesh(geo,new T.MeshStandardMaterial({name:'Walk_railing_steel',color:0x8d99a3,roughness:.36,metalness:.55}));mesh.name='Walk_railing';group.add(mesh);
+ const mesh=new T.Mesh(geo,new T.MeshStandardMaterial({name:'Walk_railing_steel',color:0x8d99a3,roughness:.36,metalness:.55}));mesh.name='Walk_railing';
+ mesh.userData.boxes=boxes.map(([cx,cy,cz,sx,sy,sz])=>[cx-sx/2,cx+sx/2,cy-sy/2,cy+sy/2,cz-sz/2,cz+sz/2]);group.add(mesh);
  return group;
 }
