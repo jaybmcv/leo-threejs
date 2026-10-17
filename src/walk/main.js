@@ -26,6 +26,8 @@ import {createLifts} from './lift-ride.js';
 import {findRestSpots,solidSpots,spotIndex} from './rest.js';
 import {PLACES,findStand,describe} from './places.js';
 import {openWindows,clearGlass} from './windows.js';
+import {createHaze} from './haze.js';
+import {stairSigns} from './signs.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
 const $=id=>document.getElementById(id);
@@ -48,6 +50,8 @@ renderer.autoClear=false;
 // A light haze down the long corridors lets the far plane stop at 150 m.
 scene.fog=new T.Fog(0xd9dcd6,70,148);
 const camera=new T.PerspectiveCamera(phone?70:62,1,.05,150);
+// Past the far plane, the ship in haze rather than open space (haze.js); drawn between the sky and the ship.
+const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCamera(60,1,camera.far-5,1500);
 scene.add(new T.HemisphereLight(0xfff6e6,0x5d6b75,1.05));
 const fill=new T.DirectionalLight(0xfff1dc,.55);fill.position.set(.3,1,.2);scene.add(fill);
 loadEnvironment(renderer).then(t=>{scene.environment=t;}).catch(()=>{});
@@ -85,14 +89,17 @@ async function buildShip(){
  buildColliders(ship,{extra:[ship.exterior],filter:walls,into:colliders});
  // The hull behind the glass goes for drawing only, after the colliders have it.
  const w0=performance.now(),opened=openWindows(ship,walkPlan.windows);clearGlass(ship.root);timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
- lifts=createLifts(scene,colliders);
+ lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);
  rest=spotIndex(solidSpots(findRestSpots(ship.inside),colliders));
  status('Dressing the crew…');await idle();
  if(cosmoKit)globalThis.LeoCosmo.dressCats(ship.inside,cosmoKit);
  status('Preparing the walk…');await idle();
  // Decals and seams only matter from outside.
  ship.exterior.traverse(o=>{if(o.isMesh&&outsideOnly(o))o.visible=false;});
- baked=bakeForWalking(ship.root);for(const g of baked.bands.values())scene.add(g);
+ const b0=performance.now();baked=bakeForWalking(ship.root);for(const g of baked.bands.values())scene.add(g);timings.push([`${baked.sources} meshes merged into ${baked.meshes} in ${Math.round(performance.now()-b0)} ms`,Math.round(performance.now()-t0)]);
+ haze.add(createHaze(ship));
+ // Signs draw with the deck band they're on.
+ for(const o of [...lifts.signs.children]){const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);}
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
@@ -141,6 +148,7 @@ const actions={
   const t=target();if(!t)return;
   if(t.kind==='call')lifts.call(t.lift,t.stop);
   else if(t.kind==='inside')openLiftPanel(t.lift);
+  else if(t.kind==='waiting')return;
   else if(t.kind==='sit'||t.kind==='lie')settle(t.spot);
  },
  escape(){closePanels();},
@@ -180,7 +188,7 @@ let heading=START.yaw;const safe=controller.position.clone();
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
- teleport(x,y,z,yaw=follow.yaw,pitch=-.18){controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
+ teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
 // The ship map: the corner mini-map, redrawn a few times a second, and the full map sheet.
 const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
@@ -237,7 +245,8 @@ renderer.setAnimationLoop(()=>{
  if(now-lastHud>120){lastHud=now;hud(p);}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  skyCamera.position.copy(camera.position);skyCamera.quaternion.copy(camera.quaternion);skyCamera.fov=camera.fov;skyCamera.aspect=camera.aspect;skyCamera.updateProjectionMatrix();
- renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(scene,camera);
+ hazeCamera.position.copy(camera.position);hazeCamera.quaternion.copy(camera.quaternion);hazeCamera.fov=camera.fov;hazeCamera.aspect=camera.aspect;hazeCamera.updateProjectionMatrix();
+ renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,camera);
 });
 function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a));return a+d*(1-Math.exp(-lambda*dt));}
 
@@ -252,6 +261,8 @@ function hud(p){
  $('where').textContent=describe(p);
  const t=resting?{label:resting.lie?'Get up':'Stand up'}:target();
  const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=!show||touch;
+ // Waiting for a called lift there's nothing to press: the prompt just says where the car is.
+ const waiting=t?.kind==='waiting';prompt.classList.toggle('waiting',waiting);$('use').disabled=waiting;
  if(show){prompt.querySelector('.label').textContent=t.label;$('use').textContent=t.label;}
  $('use').hidden=!show;
 }
@@ -263,8 +274,9 @@ function settle(spot){
  let pos,yaw;
  if(lie){
   const head=spot.head.clone().normalize();yaw=Math.atan2(-head.x,-head.z);
-  // The body lies along the bed: the feet's origin at the foot end, the back on the mattress.
-  pos=spot.point.clone().addScaledVector(head,-WALKER.height/2+.05);pos.y=spot.height+.13;
+  // The body lies along the bed, the back on the mattress and the head on the near half of the pillow (any further and
+  // it meets the headboard); restPose tips the upper body up onto the pillow.
+  pos=spot.point.clone().addScaledVector(head,-WALKER.height/2+.25);pos.y=spot.height+.13;
  }else{
   const face=spot.facing?spot.facing.clone():new T.Vector3(p.x-spot.point.x,0,p.z-spot.point.z);
   if(face.lengthSq()<1e-6)face.set(Math.sin(heading),0,Math.cos(heading));face.normalize();
@@ -272,12 +284,13 @@ function settle(spot){
  }
  resting={spot,lie,from:{pos:p,heading},to:{pos,yaw},t:0,phase:'in',view:new T.Vector3(spot.point.x,spot.height-(lie?.35:.55),spot.point.z)};
 }
+const PILLOW_TILT=.12;
 function standUp(){if(resting&&resting.phase==='in')resting.phase='out';}
 function restPose(dt){
  const r=resting;r.t=T.MathUtils.clamp(r.t+(r.phase==='in'?1:-1)*dt/.7,0,1);
  const e=r.t*r.t*(3-2*r.t),h=walker.holder;
  h.position.lerpVectors(r.from.pos,r.to.pos,e);h.rotation.set(0,lerpAngle(r.from.heading,r.to.yaw,Math.min(1,e*1.6)),0);
- walker.body.rotation.set(r.lie?-Math.PI/2*T.MathUtils.smoothstep(r.t,.25,1):0,0,0);
+ walker.body.rotation.set(r.lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.t,.25,1):0,0,0);
  if(r.phase==='out'&&r.t===0){heading=r.from.heading;controller.place(r.from.pos);resting=null;return null;}
  return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight};
 }

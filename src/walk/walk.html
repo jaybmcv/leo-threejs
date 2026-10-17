@@ -26,6 +26,9 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 #prompt{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--hairline);border-radius:999px;padding:9px 16px 9px 9px;font:400 12px/1 var(--mono);letter-spacing:.06em;pointer-events:none}
 #prompt[hidden]{display:none}
 #prompt .key{display:grid;place-items:center;min-width:26px;height:26px;border-radius:7px;background:var(--orange);color:#fff;font-weight:600}
+#prompt.waiting{padding-left:16px;border-color:var(--orange)}#prompt.waiting .key{display:none}#prompt.waiting .label::before{content:"";display:inline-block;width:8px;height:8px;margin-right:10px;border-radius:50%;background:var(--orange);vertical-align:1px;animation:pulse 1s ease-in-out infinite alternate}
+@keyframes pulse{from{opacity:.35}to{opacity:1}}
+.touch #use:disabled{background:var(--surface);border-color:var(--orange);color:var(--text)}
 .tools{position:fixed;right:16px;top:14px;z-index:6;display:flex;gap:8px}
 .tools button,.touch button{background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:10px 14px;font:400 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .tools button:hover{border-color:var(--orange)}

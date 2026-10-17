@@ -246,10 +246,11 @@ export function createNeighborhood() {
   box('Shared_desk',[1.8,.08,.55],[x,y+.78,z+2.7],wood,fittings);chair(fittings,x,y,z+1.95,Math.PI);
   box('Storage',[.65,2.2,.7],[x-1.55,y+1.1,z-2.35],navy,fittings);
   const ensuite=group('Compact_ensuite',fittings);
-  box('Ensuite_partition',[.08,2.45,1.55],[x+.48,y+1.225,z-2.12],white,ensuite);
-  box('Ensuite_screen',[1.45,2.45,.07],[x+1.25,y+1.225,z-1.32],glass,ensuite);
-  box('Shower_tray',[.78,.08,.78],[x+1.4,y+.04,z-2.42],white,ensuite);
-  box('Wetroom_fixture',[.36,.65,.44],[x+.78,y+.325,z-2.48],white,ensuite);
+  // The ensuite stays clear of the 1.4 m doorway (x +/-0.7) and its architrave.
+  box('Ensuite_partition',[.08,2.45,1.55],[x+.86,y+1.225,z-2.12],white,ensuite);
+  box('Ensuite_screen',[1.1,2.45,.07],[x+1.45,y+1.225,z-1.32],glass,ensuite);
+  box('Shower_tray',[.7,.08,.74],[x+1.62,y+.04,z-2.48],white,ensuite);
+  box('Wetroom_fixture',[.36,.65,.44],[x+1.08,y+.325,z-2.62],white,ensuite);
   box('Cabin_ceiling_light',[2.8,.04,.4],[x,y+3.17,z],light,walls);
   finishCabin({walls,fittings,x,y,z,box,material});
   }
