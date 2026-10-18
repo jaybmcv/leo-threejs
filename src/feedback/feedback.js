@@ -1,10 +1,11 @@
-// Tester feedback: one button, a screenshot taken as it opens, a voice note or a few words, and the context a fix needs
-// (the exact view link, build, device and recent errors), all shown to the tester before anything leaves the page.
+// Tester feedback: bugs, changes and ideas. One button, a screenshot taken as it opens, a voice note or a few words,
+// images of what the tester has in mind, and the context a fix needs (the exact view link, build, device and recent
+// errors), all shown to the tester before anything leaves the page.
 // Hidden from visitors. A tester's invite link (?invite=<code>) turns it on for this browser and lets Send deliver the
 // report to the capture service (config.js); ?feedback=1 turns it on without one, and Send then saves the report as a
 // file. ?feedback=0 turns it off again.
 import {FEEDBACK_CONFIG} from './config.js';
-const KEY='leo-feedback',INVITE='leo-feedback-invite',MAX_VOICE=120,MAX_SHOT=1600,MAX_ERRORS=20;
+const KEY='leo-feedback',INVITE='leo-feedback-invite',MAX_VOICE=120,MAX_SHOT=1600,MAX_ERRORS=20,MAX_IMAGES=3;
 let invite=null;
 
 export function feedbackEnabled(){
@@ -52,8 +53,8 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
   if(!ui.sheet.hidden)return;
   // The screenshot first, before the panel covers the view.
   const shot=await grab();
-  report={page,shot,voice:null,context:{...context(),build:build(),device:device(renderer),fps:fps(),errors:[...errors],time:new Date().toISOString()}};
-  ui.text.value='';ui.error.textContent='';ui.saveInstead.hidden=true;showShot();showVoice();showAttached();
+  report={page,shot,voice:null,images:[],context:{...context(),build:build(),device:device(renderer),fps:fps(),errors:[...errors],time:new Date().toISOString()}};
+  ui.text.value='';ui.error.textContent='';ui.saveInstead.hidden=true;showShot();showVoice();showImages();showAttached();
   ui.sheet.hidden=false;onOpen();ui.text.focus();
   if(sending())humanCheck();
  }
@@ -70,6 +71,21 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
  function showVoice(){
   const v=report.voice;ui.audio.hidden=!v;ui.dropVoice.hidden=!v;ui.record.textContent=v?'Record again':'Record a voice note';
   if(v)ui.audio.src=v.url;else ui.audio.removeAttribute('src');
+ }
+ function showImages(){
+  ui.images.replaceChildren(...report.images.map((im,i)=>{const drop=Object.assign(document.createElement('button'),{type:'button',textContent:'×',title:'Remove image'});drop.setAttribute('aria-label',`Remove ${im.name}`);
+   drop.onclick=()=>{report.images.splice(i,1);showImages();};const fig=document.createElement('figure');fig.append(Object.assign(document.createElement('img'),{src:im.data,alt:im.name}),drop);return fig;}));
+  ui.images.hidden=!report.images.length;ui.addImages.hidden=report.images.length>=MAX_IMAGES;
+ }
+ // Images the tester adds (picked, pasted or dropped): scaled down and re-encoded here, so only pixels leave the page.
+ async function addImages(files){
+  const picked=[...files].filter(f=>f.type.startsWith('image/'));
+  if(files.length&&!picked.length){ui.error.textContent='Only images can be added. For a video, paste its link in the text.';return;}
+  for(const f of picked){
+   if(report.images.length>=MAX_IMAGES){ui.error.textContent=`Up to ${MAX_IMAGES} images.`;break;}
+   try{report.images.push({name:f.name||'pasted image',data:await shrink(f)});}catch{ui.error.textContent=`${f.name||'That image'} could not be read.`;}
+  }
+  showImages();
  }
  function showAttached(){
   const c=report.context,rows=[['View',c.link],['Where',c.where],['Build',c.build.join(', ')||'unknown'],['Device',`${c.device.screen} · ${c.device.touch?'touch':'mouse'} · ${c.device.gpu||'GPU not reported'}`],
@@ -92,9 +108,9 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
  async function send(){
   if(recorder){ui.error.textContent='Stop the recording first.';return;}
   const text=ui.text.value.trim();
-  if(!text&&!report.voice){ui.error.textContent='Say or type what happened first.';ui.text.focus();return;}
+  if(!text&&!report.voice){ui.error.textContent='Say or type what you would like first.';ui.text.focus();return;}
   const out={kind:'leo-feedback',version:1,page:report.page,text,context:report.context,screenshot:report.shot,
-   voice:report.voice?{type:report.voice.blob.type,data:await dataURL(report.voice.blob)}:null};
+   voice:report.voice?{type:report.voice.blob.type,data:await dataURL(report.voice.blob)}:null,images:report.images.map(im=>({name:im.name.slice(0,80),data:im.data}))};
   if(!sending()){save(out);done('Saved. Thank you!');return;}
   if(!token&&checkFailed){ui.error.textContent='The human check could not run here. You can save the report as a file instead.';offerFile(out);return;}
   if(!token){ui.error.textContent='One moment: the human check is still running.';return;}
@@ -116,6 +132,12 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
  ui.button.addEventListener('click',open);
  ui.dropShot.addEventListener('click',()=>{report.shot=null;showShot();});
  ui.record.addEventListener('click',startVoice);
+ ui.addImages.addEventListener('click',()=>ui.picker.click());
+ ui.picker.addEventListener('change',()=>{addImages(ui.picker.files);ui.picker.value='';});
+ ui.sheet.addEventListener('paste',e=>{if(report&&e.clipboardData?.files.length){e.preventDefault();addImages(e.clipboardData.files);}});
+ ui.card.addEventListener('dragover',e=>{e.preventDefault();ui.card.classList.add('fb-drop');});
+ ui.card.addEventListener('dragleave',()=>ui.card.classList.remove('fb-drop'));
+ ui.card.addEventListener('drop',e=>{e.preventDefault();ui.card.classList.remove('fb-drop');if(report)addImages(e.dataTransfer.files);});
  ui.dropVoice.addEventListener('click',()=>{URL.revokeObjectURL(report.voice.url);report.voice=null;showVoice();});
  ui.text.addEventListener('input',()=>{ui.error.textContent='';});
  ui.send.addEventListener('click',send);ui.cancel.addEventListener('click',close);
@@ -124,6 +146,12 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
  return {open,close};
 }
 
+async function shrink(file){
+ const bitmap=await createImageBitmap(file),s=Math.min(1,MAX_SHOT/Math.max(bitmap.width,bitmap.height));
+ const c=document.createElement('canvas');c.width=Math.round(bitmap.width*s);c.height=Math.round(bitmap.height*s);
+ const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(bitmap,0,0,c.width,c.height);bitmap.close();
+ return c.toDataURL('image/jpeg',.85);
+}
 function snapshot(canvas){
  const s=Math.min(1,MAX_SHOT/canvas.width),c=document.createElement('canvas');c.width=Math.round(canvas.width*s);c.height=Math.round(canvas.height*s);
  // The viewer draws on a transparent canvas; black stands in for the page behind it.
@@ -176,24 +204,33 @@ const CSS=`
 .fb-actions .fb-send{background:#f85800;border-color:#f85800;color:#fff}
 .fb-sent{color:#2fd6c5;font-size:12px;margin-top:8px}
 .fb-check{margin:4px 0 8px;min-height:65px}
+.fb-intro{color:#c9c3b8;margin:-4px 0 12px}
+.fb-label{font:400 10px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:#a6a5b4;margin:0 0 6px}
+.fb-images{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.fb-images figure{position:relative;margin:0;width:88px;height:66px}
+.fb-images img{width:100%;height:100%;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,.125)}
+.fb-card .fb-images button{position:absolute;top:3px;right:3px;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.7);font-size:13px}
+.fb-card.fb-drop{outline:2px dashed #f85800;outline-offset:-6px}
 `;
 function buildPanel(css){
  document.head.append(Object.assign(document.createElement('style'),{textContent:CSS+css}));
  const el=(tag,props={},...kids)=>{const e=Object.assign(document.createElement(tag),props);e.append(...kids);return e;};
  const button=el('button',{type:'button',className:'fb-button',textContent:'Feedback'});
- const img=el('img',{alt:'Screenshot of the view'}),dropShot=el('button',{type:'button',textContent:'Remove screenshot'});
- const shot=el('div',{className:'fb-shot'},img,el('div',{className:'fb-row'},dropShot));
+ const img=el('img',{alt:'Screenshot of your view'}),dropShot=el('button',{type:'button',textContent:'Remove screenshot'});
+ const shot=el('div',{className:'fb-shot'},el('p',{className:'fb-label',textContent:'Your view right now'}),img,el('div',{className:'fb-row'},dropShot));
  const noShot=el('p',{className:'fb-muted',textContent:'No screenshot attached.'});
- const text=el('textarea',{placeholder:'What happened, or what would you like changed?','aria-label':'Your feedback'});
+ const text=el('textarea',{placeholder:'What’s wrong, or what would you like to see here?','aria-label':'Your feedback'});
+ const addImages=el('button',{type:'button',textContent:'Add images'}),picker=el('input',{type:'file',accept:'image/*',multiple:true,hidden:true}),images=el('div',{className:'fb-images',hidden:true});
  const record=el('button',{type:'button',textContent:'Record a voice note'}),dropVoice=el('button',{type:'button',textContent:'Remove voice note'}),audio=el('audio',{controls:true});
  const list=el('div',{className:'fb-list'}),error=el('div',{className:'fb-error',role:'alert'});
  const send=el('button',{type:'button',className:'fb-send',textContent:'Send'}),cancel=el('button',{type:'button',textContent:'Cancel'}),saveInstead=el('button',{type:'button',textContent:'Save as a file',hidden:true});
  const check=el('div',{className:'fb-check',hidden:true});
  const sent=el('div',{className:'fb-sent',textContent:'Saved. Thank you!',hidden:true});
- const card=el('div',{className:'fb-card'},el('div',{className:'fb-eyebrow',textContent:'Tester feedback'}),el('h2',{id:'fb-title',textContent:'Tell us what you see'}),
-  shot,noShot,text,el('div',{className:'fb-row'},record,dropVoice),audio,
+ const card=el('div',{className:'fb-card'},el('div',{className:'fb-eyebrow',textContent:'Feedback'}),el('h2',{id:'fb-title',textContent:'What would you change?'}),
+  el('p',{className:'fb-intro',textContent:'Spotted a bug? Want a room, prop or detail added or changed? Tell us, and add a picture or a link of what you have in mind.'}),
+  shot,noShot,text,el('div',{className:'fb-row'},record,dropVoice,addImages,picker),audio,images,
   el('details',{},el('summary',{textContent:'What gets attached'}),list),check,error,el('div',{className:'fb-actions'},cancel,saveInstead,send),sent);
  const sheet=el('div',{className:'fb-sheet',hidden:true,role:'dialog'},card);sheet.setAttribute('aria-modal','true');sheet.setAttribute('aria-labelledby','fb-title');
  document.body.append(sheet);
- return {button,sheet,img,shot,noShot,dropShot,text,record,dropVoice,audio,list,check,error,send,cancel,saveInstead,sent};
+ return {button,sheet,card,img,shot,noShot,dropShot,text,record,dropVoice,addImages,picker,images,audio,list,check,error,send,cancel,saveInstead,sent};
 }
