@@ -43,7 +43,7 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
  const grab=()=>new Promise(resolve=>{pending={resolve,queued:false};setTimeout(()=>{if(pending?.resolve===resolve){pending=null;resolve(null);}},1500);});
  const fps=()=>{const now=performance.now(),recent=frames.filter(t=>now-t<2000);return recent.length>1?Math.round((recent.length-1)/((recent[recent.length-1]-recent[0])/1000)):null;};
 
- const ui=buildPanel(css);let report=null,recorder=null,timer=0,check=null,token=null;
+ const ui=buildPanel(css);let report=null,recorder=null,timer=0,check=null,token=null,checkFailed=false;
  const place=()=>{const m=typeof mount==='function'?mount():mount;if(m?.contains(ui.button))return;
   ui.button.className='fb-button'+(m?' fb-mounted':'')+(m&&look==='link'?' fb-link':'');if(m)m.prepend(ui.button);else document.body.append(ui.button);};
  place();if(typeof mount==='function')addEventListener('resize',place);
@@ -59,10 +59,11 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
  }
  // Cloudflare Turnstile, loaded the first time a tester opens the panel; the service verifies its token.
  async function humanCheck(){
-  token=null;ui.check.hidden=false;
-  try{await loadTurnstile();}catch(e){ui.error.textContent=e.message;return;}
+  token=null;checkFailed=false;ui.check.hidden=false;
+  try{await loadTurnstile();}catch(e){checkFailed=true;ui.error.textContent=e.message;return;}
   if(check===null)check=window.turnstile.render(ui.check,{sitekey:FEEDBACK_CONFIG.turnstileSiteKey,theme:'dark',size:'flexible',
-   callback:t=>{token=t;},'expired-callback':()=>{token=null;},'error-callback':()=>{token=null;}});
+   callback:t=>{token=t;checkFailed=false;ui.error.textContent='';},'expired-callback':()=>{token=null;},
+   'error-callback':()=>{token=null;checkFailed=true;ui.error.textContent='The human check could not run here. You can save the report as a file instead.';}});
   else window.turnstile.reset(check);
  }
  function showShot(){ui.shot.hidden=!report.shot;ui.noShot.hidden=!!report.shot;if(report.shot)ui.img.src=report.shot;}
@@ -95,6 +96,7 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
   const out={kind:'leo-feedback',version:1,page:report.page,text,context:report.context,screenshot:report.shot,
    voice:report.voice?{type:report.voice.blob.type,data:await dataURL(report.voice.blob)}:null};
   if(!sending()){save(out);done('Saved. Thank you!');return;}
+  if(!token&&checkFailed){ui.error.textContent='The human check could not run here. You can save the report as a file instead.';offerFile(out);return;}
   if(!token){ui.error.textContent='One moment: the human check is still running.';return;}
   ui.send.disabled=true;ui.send.textContent='Sending…';
   try{
@@ -105,10 +107,11 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
    done(`Sent. Thank you! Reference ${reply.id}.`);
   }catch(e){
    // Nothing is lost: the tester can keep the report as a file and pass it on.
-   ui.error.textContent=`${e.message} You can save it as a file instead.`;ui.saveInstead.hidden=false;ui.saveInstead.onclick=()=>{save(out);done('Saved. Thank you!');};
+   ui.error.textContent=`${e.message} You can save it as a file instead.`;offerFile(out);
    token=null;if(check!==null)window.turnstile.reset(check);
   }finally{ui.send.disabled=false;ui.send.textContent='Send';}
  }
+ function offerFile(out){ui.saveInstead.hidden=false;ui.saveInstead.onclick=()=>{save(out);done('Saved. Thank you!');};}
  function done(message){ui.sent.textContent=message;ui.sent.hidden=false;setTimeout(()=>{ui.sent.hidden=true;close();},2200);}
  ui.button.addEventListener('click',open);
  ui.dropShot.addEventListener('click',()=>{report.shot=null;showShot();});

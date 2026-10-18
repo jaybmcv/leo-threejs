@@ -3,6 +3,6 @@
 // window.LEO_FEEDBACK_CONFIG before the script loads to point at a local service.
 export const FEEDBACK_CONFIG={
  endpoint:'https://mcv-feedback.mcv-feedback.workers.dev',
- turnstileSiteKey:null,// set once the Turnstile widget exists
+ turnstileSiteKey:'0x4AAAAAAFaMFTXXxfAd5Aqg',
  ...globalThis.LEO_FEEDBACK_CONFIG,
 };
