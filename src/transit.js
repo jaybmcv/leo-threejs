@@ -69,9 +69,14 @@ export function createTransit({minimumDeck=1,maximumDeck=20,coreIds=['forward','
             box('Stair_gallery_door_header',[2,h-2.6,.14],[x-3.5,y+2.6+(h-2.6)/2,zz+s*2.57],'wall',shell);
           }else box('Stair_outer_wall',[9,h,.14],[x,y+h/2,zz+s*2.57],'wall',shell);
         }
-      }else box('Stair_outer_wall',[9,top-base,.14],[x,(base+top)/2,zz+s*2.57],'wall',shell);
+      }else for(let d=minimumDeck;d<=c.lastDeck;d++){
+        // One storey per box: walk mode culls by height band, and a full-height face would only draw near mid-ship.
+        const y0=d===minimumDeck?base:floorY(d),y1=d===c.lastDeck?top:floorY(d+1);
+        box('Stair_outer_wall',[9,y1-y0,.14],[x,(y0+y1)/2,zz+s*2.57],'wall',shell);
+        for(const end of [-1,1])box('Stair_end_wall',[.14,y1-y0,5.14],[x+end*4.57,(y0+y1)/2,zz],'wall',shell);
+      }
       box('Stair_top_ceiling',[9,.14,5],[x,top-.1,zz],'wall',shell);
-      for(const end of [-1,1])box('Stair_end_wall',[.14,top-base,5.14],[x+end*4.57,(base+top)/2,zz],'wall',shell);
+      if(c.id==='forward')for(const end of [-1,1])box('Stair_end_wall',[.14,top-base,5.14],[x+end*4.57,(base+top)/2,zz],'wall',shell);
       for(let d=minimumDeck;d<=c.lastDeck;d++){
         const y=floorY(d),g=decks.get(d);
         floor(d,x-4.5,x-2.5,zz-2.5,zz+2.5,'Stair_main_landing');
