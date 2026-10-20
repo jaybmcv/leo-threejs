@@ -54,22 +54,34 @@ export function drawMiniMap(canvas,map,{x,y,z,yaw,places=[]}){
 }
 
 // Names of the nearest rooms on the mini-map, upright: at most three, none over the arrow, each other or the deck
-// label. The room the walker is in is named in the top bar, so its label usually gives way to the arrow.
+// label. A name sits in the part of its room nearest the walker, moved further in (or out to its wall) until it fits,
+// so the rooms along a corridor stay named before you reach them. The room the walker is in is named in the top bar,
+// so its label usually gives way to the arrow.
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 function miniNames(g,{w,h,dpr,x,z,turn,y}){
  const m=3.2*dpr,c=Math.cos(turn),s=Math.sin(turn),px=Math.round(9*dpr),boxes=[{x0:w/2-14*dpr,x1:w/2+14*dpr,y0:h/2-14*dpr,y1:h/2+14*dpr}];
+ const screen=(ax,az)=>{const dx=(ax-x)*m,dz=(az-z)*m;return [w/2+dx*c-dz*s,h/2+dx*s+dz*c];};
+ // The point `inset` metres inside room `a` nearest the walker (its centre once the room is too small for that).
+ const spot=(a,inset)=>{const hx=a.width/2,hz=a.depth/2,ix=Math.min(inset,hx),iz=Math.min(inset,hz);
+  return [clamp(x,a.center[0]-hx+ix,a.center[0]+hx-ix),clamp(z,a.center[2]-hz+iz,a.center[2]+hz-iz)];};
  const near=SHIP_AREAS.filter(a=>Math.abs(a.center[1]-y)<=2.2&&a.kind!=='lifeboats'&&Math.min(a.width,a.depth)*m>=22*dpr)
-  .map(a=>{const dx=(a.center[0]-x)*m,dz=(a.center[2]-z)*m;return {a,sx:w/2+dx*c-dz*s,sy:h/2+dx*s+dz*c,d:Math.hypot(dx,dz)};})
+  .map(a=>{const [ax,az]=spot(a,4);return {a,d:Math.hypot(ax-x,az-z)};})
   .sort((p,q)=>p.d-q.d);
  g.font=`500 ${px}px "Sora",sans-serif`;g.textAlign='center';g.textBaseline='middle';g.lineJoin='round';
  let shown=0;
  for(const n of near){if(shown>=3)break;
   const lines=split(g,n.a.name,w*.42),tw=Math.max(...lines.map(l=>g.measureText(l).width)),th=lines.length*px*1.1;
-  const b={x0:n.sx-tw/2-2*dpr,x1:n.sx+tw/2+2*dpr,y0:n.sy-th/2-dpr,y1:n.sy+th/2+dpr};
-  if(b.x0<4*dpr||b.x1>w-4*dpr||b.y0<4*dpr||b.y1>h-18*dpr)continue;
-  if(boxes.some(o=>b.x0<o.x1&&b.x1>o.x0&&b.y0<o.y1&&b.y1>o.y0))continue;
-  boxes.push(b);shown++;
+  let at=null;
+  for(const inset of [4,8,12,1e9,1]){
+   const [sx,sy]=screen(...spot(n.a,inset)),b={x0:sx-tw/2-2*dpr,x1:sx+tw/2+2*dpr,y0:sy-th/2-dpr,y1:sy+th/2+dpr};
+   if(b.x0<4*dpr||b.x1>w-4*dpr||b.y0<4*dpr||b.y1>h-18*dpr)continue;
+   if(boxes.some(o=>b.x0<o.x1&&b.x1>o.x0&&b.y0<o.y1&&b.y1>o.y0))continue;
+   at={sx,sy,b};break;
+  }
+  if(!at)continue;
+  boxes.push(at.b);shown++;
   g.strokeStyle='rgba(5,5,7,.85)';g.lineWidth=3*dpr;g.fillStyle='#f4f0e8';
-  lines.forEach((l,i)=>{const ly=n.sy+(i-(lines.length-1)/2)*px*1.1;g.strokeText(l,n.sx,ly);g.fillText(l,n.sx,ly);});
+  lines.forEach((l,i)=>{const ly=at.sy+(i-(lines.length-1)/2)*px*1.1;g.strokeText(l,at.sx,ly);g.fillText(l,at.sx,ly);});
  }
 }
 
