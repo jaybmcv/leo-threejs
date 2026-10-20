@@ -41,14 +41,36 @@ export function drawMiniMap(canvas,map,{x,y,z,yaw,places=[]}){
  if(plan){
   // 3.2 screen px a metre: about 25 m either side.
   const scale=3.2*dpr*MAP.cell,[mx,mz]=toMap(x,z);
-  g.save();g.translate(w/2,h/2);g.rotate(-Math.PI/2-Math.atan2(Math.cos(yaw),Math.sin(yaw)));g.scale(scale,scale);g.imageSmoothingEnabled=false;
+  const turn=-Math.PI/2-Math.atan2(Math.cos(yaw),Math.sin(yaw));
+  g.save();g.translate(w/2,h/2);g.rotate(turn);g.scale(scale,scale);g.imageSmoothingEnabled=false;
   g.drawImage(plan,-mx,-mz);
   g.fillStyle='#f4f0e8';
   for(const p of places){if(deckOf(p.at[1])!==deck)continue;const [px,pz]=toMap(p.at[0],p.at[2]);g.beginPath();g.arc(px-mx,pz-mz,3*dpr/scale,0,Math.PI*2);g.fill();}
   g.restore();
+  miniNames(g,{w,h,dpr,x,z,turn,y:floorY(deck.number)});
  }
  g.save();g.translate(w/2,h/2);arrow(g,7*dpr,1.5*dpr);g.restore();
  return deck;
+}
+
+// Names of the nearest rooms on the mini-map, upright: at most three, none over the arrow, each other or the deck
+// label. The room the walker is in is named in the top bar, so its label usually gives way to the arrow.
+function miniNames(g,{w,h,dpr,x,z,turn,y}){
+ const m=3.2*dpr,c=Math.cos(turn),s=Math.sin(turn),px=Math.round(9*dpr),boxes=[{x0:w/2-14*dpr,x1:w/2+14*dpr,y0:h/2-14*dpr,y1:h/2+14*dpr}];
+ const near=SHIP_AREAS.filter(a=>Math.abs(a.center[1]-y)<=2.2&&a.kind!=='lifeboats'&&Math.min(a.width,a.depth)*m>=22*dpr)
+  .map(a=>{const dx=(a.center[0]-x)*m,dz=(a.center[2]-z)*m;return {a,sx:w/2+dx*c-dz*s,sy:h/2+dx*s+dz*c,d:Math.hypot(dx,dz)};})
+  .sort((p,q)=>p.d-q.d);
+ g.font=`500 ${px}px "Sora",sans-serif`;g.textAlign='center';g.textBaseline='middle';g.lineJoin='round';
+ let shown=0;
+ for(const n of near){if(shown>=3)break;
+  const lines=split(g,n.a.name,w*.42),tw=Math.max(...lines.map(l=>g.measureText(l).width)),th=lines.length*px*1.1;
+  const b={x0:n.sx-tw/2-2*dpr,x1:n.sx+tw/2+2*dpr,y0:n.sy-th/2-dpr,y1:n.sy+th/2+dpr};
+  if(b.x0<4*dpr||b.x1>w-4*dpr||b.y0<4*dpr||b.y1>h-18*dpr)continue;
+  if(boxes.some(o=>b.x0<o.x1&&b.x1>o.x0&&b.y0<o.y1&&b.y1>o.y0))continue;
+  boxes.push(b);shown++;
+  g.strokeStyle='rgba(5,5,7,.85)';g.lineWidth=3*dpr;g.fillStyle='#f4f0e8';
+  lines.forEach((l,i)=>{const ly=n.sy+(i-(lines.length-1)/2)*px*1.1;g.strokeText(l,n.sx,ly);g.fillText(l,n.sx,ly);});
+ }
 }
 
 // The full map of one deck, fitted to `canvas`, bow to the right. Returns the places drawn, with where (CSS px).
@@ -83,7 +105,12 @@ function extent(plan){
  if(e.x1<e.x0)e={x0:0,x1:plan.width,z0:0,z1:plan.height};
  extents.set(plan,e);return e;
 }
-function wrap(g,text,x,y,width,lineHeight){
+// Words broken into lines no wider than `width`.
+function split(g,text,width){
  const lines=[];let line='';for(const word of text.split(' ')){const next=line?line+' '+word:word;if(line&&g.measureText(next).width>width){lines.push(line);line=word;}else line=next;}lines.push(line);
+ return lines;
+}
+function wrap(g,text,x,y,width,lineHeight){
+ const lines=split(g,text,width);
  lines.forEach((l,i)=>g.fillText(l,x,y+(i-(lines.length-1)/2)*lineHeight));
 }
