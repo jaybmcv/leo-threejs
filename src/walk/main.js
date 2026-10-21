@@ -125,12 +125,13 @@ async function buildShip(){
 let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null;const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
-// reach, so a tall hall, an atrium or a stairwell shows its full height.
+// reach, so a tall hall, an atrium or a stairwell shows its full height. The rays skip the first 0.6 m: pressed into a
+// corner, the camera can sit inside a column, and every ray then stopped on its back faces (a garden's roof was culled).
 const VIEW_RAYS=[];for(const x of [-.96,-.5,0,.5,.96])for(const y of [-.96,-.5,0,.5,.96])VIEW_RAYS.push([x,y]);let viewSpan=[0,0],lastSpan=0;
 function span(p,now){
  if(now-lastSpan<150)return viewSpan;lastSpan=now;
  let low=p.y-3,high=p.y+4;const ray=new T.Raycaster(),ndc=new T.Vector2();
- for(const [x,y] of VIEW_RAYS){ndc.set(x,y);ray.setFromCamera(ndc,camera);const hit=colliders.raycast(ray.ray,90);const yy=hit?hit.point.y:ray.ray.at(90,new T.Vector3()).y;low=Math.min(low,yy-1);high=Math.max(high,yy+1);}
+ for(const [x,y] of VIEW_RAYS){ndc.set(x,y);ray.setFromCamera(ndc,camera);const hit=colliders.raycast(ray.ray,90,.6);const yy=hit?hit.point.y:ray.ray.at(90,new T.Vector3()).y;low=Math.min(low,yy-1);high=Math.max(high,yy+1);}
  return viewSpan=[low,high];
 }
 function cull(p,now=performance.now()){
