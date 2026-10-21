@@ -134,7 +134,10 @@ function arrow(c,x,y,angle,size,color){
  c.save();c.translate(x,y);c.rotate(angle);c.fillStyle=color;c.beginPath();
  c.moveTo(size,0);c.lineTo(0,-size*.8);c.lineTo(0,-size*.32);c.lineTo(-size,-size*.32);c.lineTo(-size,size*.32);c.lineTo(0,size*.32);c.lineTo(0,size*.8);c.closePath();c.fill();c.restore();
 }
+// Signs with the same wording share one material.
+const directions=new Map();
 function directionMaterial(cells){
+ const key=JSON.stringify(cells);let m=directions.get(key);if(m)return m;
  const {texture}=canvasTexture(768,96,(c,w,h)=>{
   panel(c,w,h,INK);c.textBaseline='middle';const third=w/3,y=h/2+2;
   c.fillStyle='rgba(255,255,255,.16)';for(const x of [third,2*third])c.fillRect(x-1,14,2,h-28);
@@ -145,14 +148,15 @@ function directionMaterial(cells){
    else{c.fillStyle=DIM;c.font=`500 26px ${FONT.mono}`;c.letterSpacing='5px';c.fillText(ahead.text,third*1.5,y);c.letterSpacing='0px';}}
   if(right){arrow(c,w-34,y,0,16,right.color);c.fillStyle=TEXT;c.textAlign='right';fit(c,right.text,`600 SIZE ${FONT.display}`,30,third-80);c.fillText(right.text,w-62,y);}
  });
- return new T.MeshBasicMaterial({map:texture,toneMapped:false});
+ m=new T.MeshBasicMaterial({map:texture,toneMapped:false});directions.set(key,m);return m;
 }
 const signBody=new T.MeshBasicMaterial({color:INK}),rodGeometry=new T.CylinderGeometry(.015,.015,1,6);
-// A sign hung from the ceiling `ceiling` metres above `at`, readable from `facing`.
-function hang(parent,material,at,facing,width,ceiling){
+// A sign hung from the ceiling `ceiling` metres above `at`, readable from `facing`; `back` is the wording on its other side.
+function hang(parent,material,back,at,facing,width,ceiling){
  const h=width/8,g=new T.Group();g.name='Walk_corridor_sign';g.position.copy(at);g.lookAt(at.clone().add(facing));
  const body=new T.Mesh(new T.BoxGeometry(width,h,.05),signBody);g.add(body);
  const face=new T.Mesh(new T.PlaneGeometry(width,h),material);face.position.z=.026;g.add(face);
+ const rear=new T.Mesh(face.geometry,back);rear.position.z=-.026;rear.rotation.y=Math.PI;g.add(rear);
  const drop=ceiling-h/2;for(const s of [-1,1]){const rod=new T.Mesh(rodGeometry,signBody);rod.scale.y=drop;rod.position.set(s*width*.4,h/2+drop/2,0);g.add(rod);}
  parent.add(g);return g;
 }
@@ -164,22 +168,22 @@ export function corridorSigns(parent){
   const plan=serviceRoutes(deck);if(!plan)continue;
   const {x0:spineStart}=plan.spine,cores=TRANSIT_CORES.filter(c=>deck<=c.lastDeck);
   const coreAhead=(x,d)=>cores.some(c=>(c.x-x)*d>0)?{text:LIFTS[d>0?'fore':'aft'],color:lifts,arrow:true}:null;
-  const tag={text:`DECK ${deck}`},both=new Map();
+  const tag={text:`DECK ${deck}`};
   for(const b of plan.branches){
    const port=b.entries.filter(e=>e.z<0).map(e=>roomName(e.id)).join(' · '),starboard=b.entries.filter(e=>e.z>0).map(e=>roomName(e.id)).join(' · ');
    const cell=text=>text?{text,color:rooms}:null;
-   // Over the spine, one sign for each way along it. Facing the nose, port is to the left.
+   // Over the spine, one sign for each way along it. Facing the nose, port is to the left. The back reads for a walker
+   // heading the other way.
+   const cells=(x,d)=>d>0?[cell(port),coreAhead(x,d),cell(starboard)]:[cell(starboard),coreAhead(x,d),cell(port)];
    for(const d of [1,-1]){
     const x=d>0?b.x0-2:b.x1+2;if(x<spineStart)continue;
-    const cells=d>0?[cell(port),coreAhead(x,d),cell(starboard)]:[cell(starboard),coreAhead(x,d),cell(port)];
-    hang(parent,directionMaterial(cells),new T.Vector3(x,plan.y+height,0),new T.Vector3(-d,0,0),5.6,ceiling);
+    hang(parent,directionMaterial(cells(x,d)),directionMaterial(cells(x,-d)),new T.Vector3(x,plan.y+height,0),new T.Vector3(-d,0,0),5.6,ceiling);
    }
-   // In each side corridor, facing a walker on the way back to the spine. From the starboard side, aft is to the left.
-   for(const s of [-1,1]){
-    let m=both.get(s);if(!m){const aft=cores.some(c=>c.id==='aft')?{text:LIFTS.aft,color:lifts}:null,fore=cores.some(c=>c.id==='forward')?{text:LIFTS.fore,color:lifts}:null;
-     m=directionMaterial(s>0?[aft,tag,fore]:[fore,tag,aft]);both.set(s,m);}
-    hang(parent,m,new T.Vector3((b.x0+b.x1)/2,plan.y+height,s*6),new T.Vector3(0,0,s),5,ceiling);
-   }
+   // In each side corridor, facing a walker on the way back to the spine. From the starboard side, aft is to the left;
+   // the back, seen on the way out, reads the other way round.
+   const aft=cores.some(c=>c.id==='aft')?{text:LIFTS.aft,color:lifts}:null,fore=cores.some(c=>c.id==='forward')?{text:LIFTS.fore,color:lifts}:null;
+   for(const s of [-1,1])hang(parent,directionMaterial(s>0?[aft,tag,fore]:[fore,tag,aft]),directionMaterial(s>0?[fore,tag,aft]:[aft,tag,fore]),
+    new T.Vector3((b.x0+b.x1)/2,plan.y+height,s*6),new T.Vector3(0,0,s),5,ceiling);
   }
  }
 }
