@@ -1,12 +1,13 @@
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {polishInterior} from './interior-polish.js';
 
 // Finishes stay inside the accepted cabin envelope and repeat with its instances.
 export function finishCabin({walls,fittings,x,y,z,box:rawBox,material}){
  const box=(name,size,pos,mat,parent=fittings)=>rawBox(name,size,pos,mat,parent);
  const oak=material('Residential_oak',0xa98762,{roughness:.65,metalness:0});
- const felt=material('Residential_sage_felt',0x688477,{roughness:1,metalness:0});
+ const felt=material('Residential_navy_felt',0x2f4766,{roughness:1,metalness:0});
  const linen=material('Residential_warm_linen',0xe7dcc7,{roughness:1,metalness:0});
  const ink=material('Residential_graphite',0x273e49,{roughness:.45,metalness:.25});
  const brass=material('Residential_satin_brass',0xb69a68,{roughness:.35,metalness:.6});
@@ -38,17 +39,28 @@ export function finishCabin({walls,fittings,x,y,z,box:rawBox,material}){
  round('Door_control_panel',[.16,.27,.035],[x-.96,y+1.25,z-2.975],ink,walls);
  round('Door_status_light',[.08,.025,.04],[x-.96,y+1.34,z-2.95],glow,walls);
  box('Desk_back_panel',[1.85,.85,.05],[x,y+1.32,z+2.97],oak);
- box('Desk_pinboard',[1.55,.5,.035],[x,y+1.43,z+2.935],felt);
+ // A dark wall screen over the desk in place of the pinboard; concept graphics only.
+ box('Desk_pinboard',[1.55,.5,.035],[x,y+1.43,z+2.935],material('Residential_cabin_screen',0x0c1626,{emissive:0x1d3b5e,emissiveIntensity:.55,roughness:.25,metalness:.1}));
  box('Desk_task_light',[1.65,.045,.13],[x,y+1.9,z+2.83],glow);
  for(const s of [-1,1])box('Desk_leg',[.055,.72,.4],[x+s*.78,y+.36,z+2.72],ink);
  round('Wardrobe_front',[.6,2.12,.035],[x-1.55,y+1.1,z-1.977],oak);
  round('Wardrobe_handle',[.035,.32,.035],[x-1.36,y+1.13,z-1.945],brass);
  box('Wardrobe_top_reveal',[.55,.018,.04],[x-1.55,y+1.89,z-1.955],ink);
  for(let i=0;i<4;i++)box('Wardrobe_vent',[.28,.012,.008],[x-1.55,y+.24+i*.045,z-1.954],ink);
- round('Cabin_runner',[1.05,.014,2.5],[x,y+.01,z+.15],material('Residential_carpet',0x9b9b88,{roughness:1,metalness:0}),fittings,.006);
+ round('Cabin_runner',[1.05,.014,2.5],[x,y+.01,z+.15],material('Residential_carpet',0x34465e,{roughness:1,metalness:0}),fittings,.006);
  round('Ensuite_mirror',[.025,.7,.43],[x+.911,y+1.64,z-2.24],material('Residential_mirror',0xb7cacf,{metalness:.95,roughness:.08}));
  round('Ensuite_mirror_light',[.035,.055,.47],[x+.93,y+2.04,z-2.24],glow);
  round('Towel_rail',[.035,.035,.42],[x+.935,y+.95,z-1.68],brass);
  round('Folded_towel',[.035,.35,.27],[x+.96,y+.8,z-1.68],linen);
+ // Warm accent strips: headboards, under the shelves, along the bed plinths and up the door frame.
+ // Each set is one merged mesh so the 499 repeats stay one draw each.
+ const accent=material('Residential_accent_diffuser',0xffe3b8,{emissive:0xffcf8e,emissiveIntensity:1.1,roughness:.5,metalness:0});
+ const strips=(name,list,parent)=>{const o=new T.Mesh(mergeGeometries(list.map(([size,pos])=>new T.BoxGeometry(...size).translate(...pos))),accent);o.name=name;parent.add(o);return o;};
+ strips('Cabin_accent_diffuser',[-1,1].flatMap(s=>[
+  [[.9,.03,.02],[x+s*1.38,y+1.3,z+1.72]],
+  [[.78,.015,.04],[x+s*1.38,y+1.502,z+1.8]],
+  [[.02,.03,1.9],[x+s*.87,y+.06,z+.7]],
+ ]),fittings);
+ strips('Door_frame_diffuser',[-1,1].map(s=>[[.03,2.2,.012],[x+s*.765,y+1.15,z-2.914]]),walls);
  polishInterior(fittings,'Twin cabin furnishings');polishInterior(walls,'Twin cabin lining');
 }
