@@ -37,10 +37,11 @@ export function findRestSpots(root){
  const spots=[];
  const seatSpots=(it)=>{
   const {c,ax,az}=it.face,lx=ax.length(),lz=az.length();if(lx<.12||lz<.12)return;
-  const long=lx>=lz?ax:az,short=lx>=lz?az:ax,half=long.length(),dir=long.clone().normalize();
+  const long=lx>=lz?ax:az,half=long.length(),dir=long.clone().normalize();
   const back=near(c,'back',1.1);
   let facing=null;
-  if(back){const away=c.clone().sub(back.face.c);away.y=0;const n=short.clone().normalize();facing=n.multiplyScalar(Math.sign(n.dot(away))||1);}
+  // Face along whichever seat axis points away from the back: a chair can be deeper than it is wide.
+  if(back){const away=c.clone().sub(back.face.c);away.y=0;const nx=ax.clone().normalize(),nz=az.clone().normalize(),n=Math.abs(nx.dot(away))>=Math.abs(nz.dot(away))?nx:nz;facing=n.multiplyScalar(Math.sign(n.dot(away))||1);}
   const count=half*2>1.25?Math.max(1,Math.floor((half*2-.15)/SPACING)):1;
   for(let i=0;i<count;i++){const t=count===1?0:(-(count-1)/2+i)*SPACING;spots.push({kind:'sit',point:c.clone().addScaledVector(dir,t),facing,height:c.y});}
  };
