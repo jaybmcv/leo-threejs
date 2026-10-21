@@ -41,7 +41,9 @@ foreach ($p in @(Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Whe
   Stop-Process -Id $p.ProcessId -Force
   Write-Output "stopped the Leo live server that was running (pid $($p.ProcessId))"
 }
-$run = "--headless cmd.exe /d /c `"`"$node`" server\leo-live.mjs >> `"$log`" 2>&1`""
+# "call" keeps cmd's /c line from opening with "" (the quoted node path): conhost mangles that and exits 0 without
+# ever starting node
+$run = "--headless cmd.exe /d /c `"call `"$node`" server\leo-live.mjs >> `"$log`" 2>&1`""
 $action = New-ScheduledTaskAction -Execute (Join-Path $env:WINDIR "System32\conhost.exe") -Argument $run -WorkingDirectory $repo
 $atLogon = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $everyMinute = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)
@@ -86,8 +88,10 @@ if ($mine.Count -eq 1 -and $mine[0].service -eq $origin) {
 }
 
 # ---- 3. DNS for the one name ------------------------------------------------------------------------------------
-$dns = cloudflared tunnel route dns $Tunnel $Hostname 2>&1 | Out-String
-Write-Output $dns.Trim()
+# cloudflared logs to stderr even when it succeeds, and with "Stop" a 2>&1 would turn that into an error; so its
+# output goes straight to the console and the exit code decides
+cloudflared tunnel route dns $Tunnel $Hostname
+if ($LASTEXITCODE -ne 0) { throw "pointing DNS for $Hostname at the tunnel failed (cloudflared exit $LASTEXITCODE); see its message above" }
 
 # ---- 4. from outside ----------------------------------------------------------------------------------------------
 $ok = $false
