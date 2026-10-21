@@ -1,10 +1,12 @@
 import * as T from 'three';
 import {DECKS} from '../model.js';
 import {TRANSIT_CORES,floorY} from '../transit.js';
+import {SHIP_AREAS} from '../areas.js';
+import {serviceRoutes} from '../service-circulation.js';
 
 // Wayfinding for walk mode, in the visitor theme's colours and type: a deck plaque beside every lift landing, a stairs
 // sign over every stair landing, and by each lift's call light a display showing where the car is. Signs are canvas
-// textures on thin panels, mounted on whatever wall a ray from the lobby finds, so they sit flush on any lift or stair.
+// textures on thin panels; overhead signs at the service corridors' junctions point to the rooms and the lifts, mounted on whatever wall a ray from the lobby finds, so they sit flush on any lift or stair.
 const INK='#0d1419',PANEL='#1b2830',TEXT='#f4f0e8',DIM='#a6b4bb',ORANGE='#f85800',TEAL='#2fd6c5';
 const FONT={display:'"Archivo", "Sora", sans-serif',mono:'"JetBrains Mono", ui-monospace, monospace',sans:'"Sora", sans-serif'};
 const deckName=n=>DECKS.find(d=>d.number===n)?.name||'';
@@ -122,5 +124,62 @@ export function stairSigns(parent,colliders){
   const y=floorY(deck),at=new T.Vector3(c.stairX-3.5,y+2.85,s*(c.stairZ-1.5));
   const hit=wallAt(colliders,at,new T.Vector3(0,0,s),6);
   if(hit)mount(parent,stairsSign(deck),[1.5,.47],hit);
+ }
+}
+
+// Overhead direction signs in the service corridors (service-circulation.js): over the spine before each side corridor,
+// its rooms to the left and right and the lifts ahead; in each side corridor near the spine, the lifts either way.
+// Each sign reads left, ahead, right, as the walker faces it.
+function arrow(c,x,y,angle,size,color){
+ c.save();c.translate(x,y);c.rotate(angle);c.fillStyle=color;c.beginPath();
+ c.moveTo(size,0);c.lineTo(0,-size*.8);c.lineTo(0,-size*.32);c.lineTo(-size,-size*.32);c.lineTo(-size,size*.32);c.lineTo(0,size*.32);c.lineTo(0,size*.8);c.closePath();c.fill();c.restore();
+}
+function directionMaterial(cells){
+ const {texture}=canvasTexture(768,96,(c,w,h)=>{
+  panel(c,w,h,INK);c.textBaseline='middle';const third=w/3,y=h/2+2;
+  c.fillStyle='rgba(255,255,255,.16)';for(const x of [third,2*third])c.fillRect(x-1,14,2,h-28);
+  const [left,ahead,right]=cells;
+  if(left){arrow(c,34,y,Math.PI,16,left.color);c.fillStyle=TEXT;c.textAlign='left';fit(c,left.text,`600 SIZE ${FONT.display}`,30,third-80);c.fillText(left.text,62,y);}
+  if(ahead){c.textAlign='center';
+   if(ahead.arrow){arrow(c,third+30,y,-Math.PI/2,16,ahead.color);c.fillStyle=TEXT;fit(c,ahead.text,`600 SIZE ${FONT.display}`,30,third-80);c.fillText(ahead.text,third*1.5+14,y);}
+   else{c.fillStyle=DIM;c.font=`500 26px ${FONT.mono}`;c.letterSpacing='5px';c.fillText(ahead.text,third*1.5,y);c.letterSpacing='0px';}}
+  if(right){arrow(c,w-34,y,0,16,right.color);c.fillStyle=TEXT;c.textAlign='right';fit(c,right.text,`600 SIZE ${FONT.display}`,30,third-80);c.fillText(right.text,w-62,y);}
+ });
+ return new T.MeshBasicMaterial({map:texture,toneMapped:false});
+}
+const signBody=new T.MeshBasicMaterial({color:INK}),rodGeometry=new T.CylinderGeometry(.015,.015,1,6);
+// A sign hung from the ceiling `ceiling` metres above `at`, readable from `facing`.
+function hang(parent,material,at,facing,width,ceiling){
+ const h=width/8,g=new T.Group();g.name='Walk_corridor_sign';g.position.copy(at);g.lookAt(at.clone().add(facing));
+ const body=new T.Mesh(new T.BoxGeometry(width,h,.05),signBody);g.add(body);
+ const face=new T.Mesh(new T.PlaneGeometry(width,h),material);face.position.z=.026;g.add(face);
+ const drop=ceiling-h/2;for(const s of [-1,1]){const rod=new T.Mesh(rodGeometry,signBody);rod.scale.y=drop;rod.position.set(s*width*.4,h/2+drop/2,0);g.add(rod);}
+ parent.add(g);return g;
+}
+const LIFTS={fore:'Forward lifts',aft:'Aft lifts'};
+export function corridorSigns(parent){
+ const roomName=id=>SHIP_AREAS.find(a=>a.id===id)?.name||'';
+ const lifts=TEAL,rooms=ORANGE,height=2.8,ceiling=3.3-height;
+ for(let deck=1;deck<=20;deck++){
+  const plan=serviceRoutes(deck);if(!plan)continue;
+  const {x0:spineStart}=plan.spine,cores=TRANSIT_CORES.filter(c=>deck<=c.lastDeck);
+  const coreAhead=(x,d)=>cores.some(c=>(c.x-x)*d>0)?{text:LIFTS[d>0?'fore':'aft'],color:lifts,arrow:true}:null;
+  const tag={text:`DECK ${deck}`},both=new Map();
+  for(const b of plan.branches){
+   const port=b.entries.filter(e=>e.z<0).map(e=>roomName(e.id)).join(' · '),starboard=b.entries.filter(e=>e.z>0).map(e=>roomName(e.id)).join(' · ');
+   const cell=text=>text?{text,color:rooms}:null;
+   // Over the spine, one sign for each way along it. Facing the nose, port is to the left.
+   for(const d of [1,-1]){
+    const x=d>0?b.x0-2:b.x1+2;if(x<spineStart)continue;
+    const cells=d>0?[cell(port),coreAhead(x,d),cell(starboard)]:[cell(starboard),coreAhead(x,d),cell(port)];
+    hang(parent,directionMaterial(cells),new T.Vector3(x,plan.y+height,0),new T.Vector3(-d,0,0),5.6,ceiling);
+   }
+   // In each side corridor, facing a walker on the way back to the spine. From the starboard side, aft is to the left.
+   for(const s of [-1,1]){
+    let m=both.get(s);if(!m){const aft=cores.some(c=>c.id==='aft')?{text:LIFTS.aft,color:lifts}:null,fore=cores.some(c=>c.id==='forward')?{text:LIFTS.fore,color:lifts}:null;
+     m=directionMaterial(s>0?[aft,tag,fore]:[fore,tag,aft]);both.set(s,m);}
+    hang(parent,m,new T.Vector3((b.x0+b.x1)/2,plan.y+height,s*6),new T.Vector3(0,0,s),5,ceiling);
+   }
+  }
  }
 }
