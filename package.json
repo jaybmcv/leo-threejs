@@ -10,11 +10,14 @@
     "start": "node scripts/serve.mjs",
     "build:reference": "node scripts/build-reference.mjs",
     "start:reference": "node scripts/serve-reference.mjs",
-    "check:walk": "node --max-old-space-size=8000 scripts/check-walk.mjs"
+    "check:walk": "node --max-old-space-size=8000 scripts/check-walk.mjs",
+    "live": "node server/leo-live.mjs",
+    "check:live": "node scripts/check-live.mjs"
   },
   "dependencies": {
     "three": "0.185.1",
-    "three-mesh-bvh": "0.9.15"
+    "three-mesh-bvh": "0.9.15",
+    "ws": "8.21.3"
   },
   "devDependencies": {
     "@gltf-transform/core": "^4.5.0",

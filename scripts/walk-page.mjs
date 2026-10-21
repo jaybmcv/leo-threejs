@@ -8,6 +8,8 @@ import {planWalk} from './walk-plan.mjs';
 // (src/walk/partitions.js) is worked out here, from the same ship the page builds, and bundled as data, so visitors
 // don't spend seconds rasterizing deck plans. Cosmo comes from the viewer's own hashed cosmo script; his emote clips
 // are a hashed file of their own, fetched the first time one plays.
+// LEO_LIVE_URL, when set, is the Leo live server the page joins (wss://.../live; server/leo-live.mjs); without it the walk
+// is solo.
 const WALK_SCRIPT=/^walk(-emotes|-map)?\.[0-9a-f]{10}\.(js|json|png)$/;
 const hashed=(stem,ext,data)=>`${stem}.${createHash('sha256').update(data).digest('hex').slice(0,10)}.${ext}`;
 export async function writeWalkPage(out,{cosmo,manifest}){
@@ -17,7 +19,7 @@ export async function writeWalkPage(out,{cosmo,manifest}){
  const walk=await planWalk(),plan=JSON.stringify(walk.plan),mapName=hashed('walk-map','png',walk.map);
  await fs.writeFile(path.join(out,mapName),walk.map);
  const partitions={name:'walk-partitions',setup(b){b.onResolve({filter:/^walk-partitions$/},()=>({path:'walk-partitions',namespace:'walk'}));b.onLoad({filter:/.*/,namespace:'walk'},()=>({contents:plan,loader:'json'}));}};
- const result=await build({entryPoints:['src/walk/main.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2022',legalComments:'eof',define:{__COSMO_SCRIPT__:JSON.stringify(cosmo),__EMOTES_URL__:JSON.stringify(emoteName),__MAP_URL__:JSON.stringify(mapName),__WALK_DEBUG__:'false'},plugins:[partitions]});
+ const result=await build({entryPoints:['src/walk/main.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2022',legalComments:'eof',define:{__COSMO_SCRIPT__:JSON.stringify(cosmo),__EMOTES_URL__:JSON.stringify(emoteName),__MAP_URL__:JSON.stringify(mapName),__LIVE_URL__:JSON.stringify(process.env.LEO_LIVE_URL||''),__WALK_DEBUG__:'false'},plugins:[partitions]});
  const code=result.outputFiles[0].text;
  if(code.includes('createDLCat('))throw new Error('The walk script must load Cosmo from its own file');
  if(code.includes('__walk'))throw new Error('The walk debug hook must not ship');

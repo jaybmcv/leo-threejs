@@ -60,13 +60,29 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font:400 10px/1.4 var(--mono);letter-spacing:.06em;color:var(--dim);margin-bottom:14px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .touch .row{display:flex;gap:8px}
+/* Leo live: the aboard count, the name sheet and the names over others' heads */
+#aboard{pointer-events:auto;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:10px 14px;font:400 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);white-space:nowrap}
+#aboard[hidden]{display:none}#aboard:hover{border-color:var(--orange)}
+#aboard i{width:8px;height:8px;border-radius:50%;background:var(--dim)}#aboard[data-status="live"] i{background:var(--teal)}#aboard[data-status="connecting"] i{background:var(--orange)}
+#names{position:fixed;inset:0;pointer-events:none;z-index:4;overflow:hidden}
+.remote-name{position:absolute;left:0;top:0;padding:4px 9px;border-radius:999px;background:rgba(5,5,7,.62);color:var(--text);font:500 11px/1.2 var(--sans);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.remote-name[hidden]{display:none}
+#name-field{display:grid;gap:8px;margin:24px auto 0;max-width:260px;text-align:left;font:400 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+#name-field[hidden]{display:none}
+#name-field input,#name-edit{font:400 15px/1.2 var(--sans);color:var(--text);background:rgba(255,255,255,.06);border:1px solid var(--hairline);border-radius:10px;padding:11px 13px;width:100%;letter-spacing:0;text-transform:none}
+#name-field input:focus,#name-edit:focus{outline:2px solid var(--orange);outline-offset:1px}
+.sheet .note{font:400 13px/1.45 var(--sans);color:var(--body);margin:0 0 14px}
+.sheet .row{display:flex;gap:8px;margin-top:14px}
+.sheet .row button[type=submit]{background:var(--orange);border:1px solid var(--orange);color:#fff;border-radius:10px;padding:10px 16px;font:500 12px/1 var(--mono);letter-spacing:.06em}
+@media (max-width:560px){#aboard{padding:9px 11px}}
 @media (pointer:coarse){#joystick{display:block}.help{display:none}.touch{display:flex}#minimap-button{width:124px;height:124px}}
 @media (max-width:560px){#minimap-button{top:58px;width:112px;height:112px}.tools button{padding:9px 11px}.top{right:140px}.pill{max-width:100%;min-width:0}#where{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 </style>
 </head>
 <body>
 <div id="viewport"></div>
-<div class="top"><div class="pill"><a href="./">← Leo</a><span id="where"></span></div></div>
+<div class="top"><div class="pill"><a href="./">← Leo</a><span id="where"></span></div><button id="aboard" type="button" hidden aria-label="Others aboard; set your name"><i></i><span></span></button></div>
+<div id="names" aria-hidden="true"></div>
 <div class="tools"><button id="go" type="button">Go to</button><button id="view" type="button" aria-label="Switch first or third person">View</button></div>
 <button id="minimap-button" type="button" aria-label="Open the ship map" hidden><canvas id="minimap"></canvas><span id="minimap-deck"></span></button>
 <div class="help"><b>WASD</b> move · <b>Shift</b> run · <b>Space</b> jump, twice in the air · <b>C</b> crouch, slide · <b>X</b> prone · <b>B</b> emotes · <b>Drag</b> look · <b>E</b> sit, lie, lifts · <b>M</b> go to · <b>N</b> map · <b>V</b> view</div>
@@ -75,9 +91,10 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 <div id="lift-panel" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="lift-title"><div class="card"><div class="eyebrow">Lift</div><h2 id="lift-title"></h2><div class="stops"></div><button type="button" data-close>Close</button></div></div>
 <div id="places" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="places-title"><div class="card"><div class="eyebrow">Walk around Leo</div><h2 id="places-title">Go to</h2><div class="stops"></div><button type="button" data-close>Close</button></div></div>
 <div id="map-sheet" class="sheet wide" hidden role="dialog" aria-modal="true" aria-labelledby="map-title"><div class="card"><div class="map-head"><div><div class="eyebrow">Ship map</div><h2 id="map-title"></h2></div><div class="map-decks"><button type="button" data-deck="1" aria-label="Deck above">▲</button><select id="map-deck" aria-label="Deck"></select><button type="button" data-deck="-1" aria-label="Deck below">▼</button></div></div><canvas id="map-canvas"></canvas><div class="legend"><span><i style="background:#f85800"></i>You · railings</span><span><i style="background:#2fd6c5"></i>Lifts · places to go</span><span><i style="background:#92aaba"></i>Stairs and raised floors</span><span><i style="background:#3a3f48"></i>Walls</span></div><button type="button" data-close>Close</button></div></div>
+<div id="name-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="name-title"><form class="card" id="name-form"><div class="eyebrow">Leo live</div><h2 id="name-title">Your name</h2><p class="note">Others aboard see it over your head. Leave it empty to go by Voyager and a number.</p><input id="name-edit" maxlength="24" autocomplete="nickname" placeholder="Voyager" aria-label="Your name"><div class="row"><button type="submit">Save</button><button type="button" data-close>Close</button></div></form></div>
 <div id="emotes" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="emotes-title"><div class="card"><div class="eyebrow">Cosmo</div><h2 id="emotes-title">Emotes</h2><div class="stops"></div><button type="button" data-close>Close</button></div></div>
 <div id="joystick" aria-hidden="true"><div id="stick"></div></div>
-<div id="loading"><div class="card"><div class="eyebrow">Mars Cats Voyage</div><h1>Walk around Leo</h1><div id="loading-text">Loading…</div></div></div>
+<div id="loading"><div class="card"><div class="eyebrow">Mars Cats Voyage</div><h1>Walk around Leo</h1><div id="loading-text">Loading…</div><label id="name-field" hidden>Your name aboard<input id="name-input" maxlength="24" autocomplete="nickname" placeholder="Voyager"></label></div></div>
 <script>/* BUNDLE */</script>
 </body>
 </html>

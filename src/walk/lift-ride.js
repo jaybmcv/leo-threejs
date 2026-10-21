@@ -1,13 +1,15 @@
 import * as T from 'three';
 import {DECKS} from '../model.js';
 import {LIFTS,carTriangles} from './lifts.js';
+import {liftState,callLift,stepLift,applyLiftWire} from './lift-motion.js';
 import {liftDisplay,stopShort,landingSigns,liftDisplayMount,callLight} from './signs.js';
 
 // Working lifts for walk mode. Each shaft gets a car that travels between its stops and a pair of sliding landing doors
 // at every stop; both are movable colliders, so a closed door is a wall and the car floor carries the walker.
-// Doors open when the car rests at a stop and close before it moves. Call a car from a landing; choose a stop inside.
+// Doors open when the car rests at a stop and close before it moves (lift-motion.js, shared with the multiplayer
+// server). Call a car from a landing; choose a stop inside.
 // Every landing has a deck plaque, a call light that stays lit until the car arrives, and a display of where the car is.
-const SPEED=5.5,ACCEL=2.6,DOOR_TIME=.9,LEAF_T=.08,DOOR_H=2.75;
+const LEAF_T=.08,DOOR_H=2.75;
 const mats={
  floor:new T.MeshStandardMaterial({name:'Lift_floor',color:0xc4b89e,roughness:.7}),
  wall:new T.MeshStandardMaterial({name:'Lift_panel',color:0xe6e8e2,roughness:.5,metalness:.2}),
@@ -65,8 +67,7 @@ export function createLifts(scene,colliders){
    });
    return {...stop,base,along,leaves,light,callAt:base.clone().addScaledVector(frontOf,.9),width:d.width,frontOf,face:faceOf(d)};
   });
-  const parked=Math.max(0,spec.stops.findIndex(s=>s.deck===spec.parked));// the crown lift waits at its lowest stop
-  const lift={spec,root,car,carMover,faces,faceOf,stops,display,calls:new Set(),y:stops[parked].y,v:0,at:parked,target:parked,doors:1,phase:'open'};
+  const lift={spec,root,car,carMover,faces,faceOf,stops,display,...liftState(spec)};
   place(lift);return lift;
  });
  function place(l){
@@ -88,23 +89,19 @@ export function createLifts(scene,colliders){
  const inside=(l,p)=>{const c=l.spec.car;return Math.abs(p.x-c.x)<c.width/2-.1&&Math.abs(p.z-c.z)<c.depth/2-.1&&p.y>l.y-.6&&p.y<l.y+1.2;};
  // The stop the car is at or passing.
  const level=l=>l.stops.reduce((b,s,i)=>Math.abs(s.y-l.y)<Math.abs(l.stops[b].y-l.y)?i:b,0);
- return {
+ const rides={
   lifts,inside,signs,level,
-  // Send a lift to stop `index`; its call light there stays lit until the car arrives.
-  call(l,index){if(index===l.at&&l.phase!=='moving'){if(l.doors<1)l.phase='opening';return;}l.calls.clear();l.calls.add(index);l.target=index;if(l.phase!=='moving')l.phase='closing';},
+  // Called with each call this page makes (the multiplayer link passes it to the server).
+  onCall:null,
+  // Send a lift to stop `index`; its call light there stays lit until the car arrives. `now`: chosen in the car.
+  call(l,index,opts){callLift(l,index,opts);rides.onCall?.(l,index,opts);},
+  // A lift's state as the server has it (multiplayer).
+  apply(id,wire){const l=lifts.find(l=>l.spec.id===id);if(l)applyLiftWire(l,wire);},
   // Advance the cars and doors; `walker` is the controller, carried along when standing in a moving car.
   update(dt,walker){
    for(const l of lifts){
-    const riding=inside(l,walker.position);
-    if(l.phase==='closing'){l.doors=Math.max(0,l.doors-dt/DOOR_TIME);if(!l.doors)l.phase=l.target!==l.at?'moving':'closed';}
-    else if(l.phase==='opening'){l.doors=Math.min(1,l.doors+dt/DOOR_TIME);if(l.doors===1)l.phase='open';}
-    else if(l.phase==='moving'){
-     const goal=l.stops[l.target].y,dir=Math.sign(goal-l.y),dist=Math.abs(goal-l.y);
-     const vmax=Math.min(SPEED,Math.sqrt(2*ACCEL*dist)+.05);l.v=Math.min(vmax,l.v+ACCEL*dt);
-     const prev=l.y;l.y+=dir*Math.min(dist,l.v*dt);
-     if(riding){walker.position.y+=l.y-prev;walker.velocity.y=0;}
-     if(Math.abs(goal-l.y)<1e-4){l.y=goal;l.v=0;l.at=l.target;l.phase='opening';l.calls.delete(l.at);}
-    }
+    const riding=inside(l,walker.position),rose=stepLift(l,l.stops,dt);
+    if(riding&&rose){walker.position.y+=rose;walker.velocity.y=0;}
     l.display.show(stopShort(l.stops[level(l)]),l.phase==='moving'?(l.stops[l.target].y>l.y?'up':'down'):'');
     place(l);
    }
@@ -117,7 +114,7 @@ export function createLifts(scene,colliders){
     l.stops.forEach((s,i)=>{const d=Math.hypot(p.x-s.callAt.x,p.z-s.callAt.z);
      if(d<2.2&&Math.abs(p.y-s.y)<.6&&(!best||d<best.d)&&!(i===l.at&&l.phase!=='moving'&&l.doors>0)){
       // Once called, the prompt follows the car until it arrives.
-      const coming=l.calls.has(i)&&l.target===i,from=l.stops[level(l)];
+      const coming=l.calls.has(i),from=l.stops[level(l)];
       best=coming?{lift:l,kind:'waiting',stop:i,d,label:l.phase==='moving'?`Lift coming · ${from.deck?'Deck '+from.deck:from.label}`:'Lift coming'}:{lift:l,kind:'call',stop:i,d,label:'Call the lift'};
      }});
    }
@@ -125,4 +122,5 @@ export function createLifts(scene,colliders){
   },
   stopsOf:l=>l.stops.map((s,i)=>({index:i,label:stopLabel(s),here:i===l.at&&l.phase!=='moving'})),
  };
+ return rides;
 }
