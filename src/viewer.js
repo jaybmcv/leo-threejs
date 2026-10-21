@@ -1,4 +1,5 @@
 import {createThrusterEffects} from './thruster-effects.js';
+import {installFeedback} from './feedback/feedback.js';
 import {createSpaceBackdrop,aftScreenFlow} from './space-backdrop.js';
 import * as T from 'three';
 import {createNoseCommons,NOSE_COMMONS} from './nose-commons.js';
@@ -53,6 +54,11 @@ try{renderer=new T.WebGLRenderer({antialias:true,alpha:true,logarithmicDepthBuff
 renderer.setPixelRatio(baseRatio);renderer.setClearColor(0xbac8cd);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.86;
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.shadowMap.autoUpdate=false;
 $('viewport').appendChild(renderer.domElement);
+// Tester feedback (?feedback=1): the view link already holds the exact view. A link in the public page's footer row; on
+// phones, which have no footer, a button above the controls handle that steps aside while the controls are open.
+installFeedback({renderer,page:'viewer',mount:()=>matchMedia(PHONE_LAYOUT).matches?null:document.querySelector('.foot-links'),look:'link',
+ css:`.fb-button:not(.fb-mounted){left:auto;right:16px;bottom:84px}body:has(#m-handle[aria-expanded="true"]) .fb-button:not(.fb-mounted){display:none}`,
+ context:()=>({link:location.href,where:`${$('eyebrow').textContent} · ${$('view-title').textContent}`})});
 const spaceBackdrop=createSpaceBackdrop(touchScreen?{scale:.5,fps:30}:{});
 const scene=new T.Scene();scene.background=new T.Color(0xbac8cd);
 // Reflection lighting: baked, decoded on the GPU while the models download (src/environment.js).

@@ -40,5 +40,4 @@ for(const name of await fs.readdir(source))if(HASHED_SCRIPT.test(name))await fs.
 // Walk around Leo (src/walk): its own page and script, sharing the viewer's Cosmo and models.
 const cosmoName=(await fs.readdir(out)).find(n=>/^cosmo\.[0-9a-f]{10}\.js$/.test(n));
 const walk=await writeWalkPage(out,{cosmo:cosmoName,manifest});console.log(`Walk page: ${walk.walk}, ${(walk.bytes/1048576).toFixed(1)} MB.`);
-const config=JSON.parse((await fs.readFile('.openai/hosting.json','utf8')).replace(/^\uFEFF/,''));config.static={directory:'dist'};await fs.writeFile('.openai/hosting.json',JSON.stringify(config,null,2)+'\n');
 console.log('Public viewer ready. All compressed models verified losslessly.');

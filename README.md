@@ -1,6 +1,6 @@
 # LEO — Life aboard, interior study 01
 
-**[Open the interactive website](https://leo-mars-cats-voyage.jaybeepc.chatgpt.site/)**. The former `cryptoclassics6.chatgpt.site` address is no longer active following the account rename.
+**[Open the interactive website](https://leo.marscatsvoyage.com/)**. It is served by the Vercel project for leo.marscatsvoyage.com. The earlier `chatgpt.site` addresses are legacy and not the canonical site.
 
 The next residential redesign is documented in [Residential hierarchy proposal](RESIDENTIAL_HIERARCHY.md): ten accommodation tiers, 5,214 rooms and 10,000 residents. This is a proposal; the current model retains its existing 5,000 twin cabins.
 
@@ -168,8 +168,9 @@ short crown. The accepted hull remains unchanged.
 The public viewer is built with `npm run build:public` after the model build.
 `dist/` contains the complete viewer and losslessly compressed model downloads;
 each transport part is at most 16 MiB. The browser restores the original GLBs.
-Local overlay/comparison tools are excluded from the public page. Public access
-is managed by the project in `.openai/hosting.json`.
+Local overlay/comparison tools are excluded from the public page. The live site,
+leo.marscatsvoyage.com, is the Vercel project that serves `dist/`; its `vercel.json`
+(cache headers) lives with that Vercel project, not in this repository.
 
 ```sh
 npm ci
