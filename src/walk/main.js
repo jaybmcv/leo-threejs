@@ -28,11 +28,19 @@ import {PLACES,findStand,describe} from './places.js';
 import {openWindows,clearGlass} from './windows.js';
 import {createHaze} from './haze.js';
 import {stairSigns} from './signs.js';
+import {connectLive,savedName} from './net/live.js';
+import {RemotePlayers} from './remotes.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
 const $=id=>document.getElementById(id);
 const timings=[],t0=performance.now();
 const status=text=>{$('loading-text').textContent=text;timings.push([text,Math.round(performance.now()-t0)]);};
+// Leo live, the multiplayer server (server/leo-live.mjs): its address comes with the build (LEO_LIVE_URL); without one
+// the walk is solo, as before. ?live= points a page at another Leo live server on localhost or marscatsvoyage.com.
+const LIVE_URL=(()=>{const asked=new URLSearchParams(location.search).get('live');
+ if(asked&&/^wss?:\/\/(localhost|127\.0\.0\.1|[a-z0-9-]+\.marscatsvoyage\.com)(:\d+)?\//.test(asked))return asked;
+ return typeof __LIVE_URL__!=='undefined'?__LIVE_URL__:'';})();
+if(LIVE_URL){$('name-field').hidden=false;$('name-input').value=savedName();}
 const renderer=new T.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true,powerPreference:'high-performance'});
 const phone=matchMedia('(pointer:coarse)').matches;
 renderer.setPixelRatio(Math.min(devicePixelRatio,phone?1.25:1.75));renderer.outputColorSpace=T.SRGBColorSpace;
@@ -185,8 +193,36 @@ controller.place(findStand(colliders,START.position.toArray())||START.position);
 walker.holder.position.copy(controller.position);
 document.body.dataset.ready='1';
 let heading=START.yaw;const safe=controller.position.clone();
+// Others aboard: their poses in, ours out, the lifts as the server runs them.
+let live=null,remotes=null,aboard=0,liveStatus='';
+if(LIVE_URL){
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names')});
+ const name=$('name-input').value.trim();
+ live=connectLive(LIVE_URL,{
+  status:s=>{liveStatus=s;showAboard();},
+  welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);},
+  poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>remotes.clear(),
+  lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
+ });
+ if(name!==savedName())live.rename(name);
+ lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
+}
+// The pose others see. Resting, the body is where the bed or seat put it, not where the controller stands.
+function myPose(riding=false){
+ const h=walker.holder,at=resting?h.position:controller.position;
+ return {pos:[at.x,at.y,at.z],yaw:resting?h.rotation.y:heading,g:controller.grounded||riding||!!resting,st:controller.stance,jc:Math.min(3,controller.jumpCount),
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):null};
+}
+// A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
+// instead (browsers run one about once a second in the background).
+if(live)setInterval(()=>{if(document.hidden||performance.now()-last>1000)live.pose(myPose());},1000);
+function showAboard(){
+ const b=$('aboard');b.hidden=!live;if(!live)return;
+ const text={live:aboard===1?'Just you aboard':`${aboard} aboard`,connecting:'Joining…',offline:'Solo · reconnecting',full:'Solo · Leo is full',replaced:'Solo · open in another tab'}[liveStatus]||'';
+ b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
+}
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -238,10 +274,12 @@ renderer.setAnimationLoop(()=>{
  if(!resting){walker.holder.position.copy(p);walker.holder.rotation.set(0,heading,0);walker.body.rotation.set(0,0,0);}
  walker.update(dt,{speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
   turnRate,accel,rise:controller.velocity.y,emote,rest:pose});
+ live?.pose(myPose(riding),now);
  follow.update(dt,resting?resting.view:p,WALKER.height);
  // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle).
  walker.holder.visible=follow.mode!=='first'&&follow.current>.75;
  cull(p);
+ remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
  if(now-lastHud>120){lastHud=now;hud(p);}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  skyCamera.position.copy(camera.position);skyCamera.quaternion.copy(camera.quaternion);skyCamera.fov=camera.fov;skyCamera.aspect=camera.aspect;skyCamera.updateProjectionMatrix();
@@ -301,7 +339,7 @@ function openLiftPanel(l){
  const panel=$('lift-panel'),list=panel.querySelector('.stops');list.textContent='';
  panel.querySelector('h2').textContent=l.spec.name;
  for(const s of lifts.stopsOf(l)){const b=document.createElement('button');b.type='button';b.textContent=s.label+(s.here?' · here':'');b.disabled=s.here;
-  b.onclick=()=>{lifts.call(l,s.index);closePanels();};list.appendChild(b);}
+  b.onclick=()=>{lifts.call(l,s.index,{now:true});closePanels();};list.appendChild(b);}
  panel.hidden=false;input.enabled=false;list.querySelector('button:not([disabled])')?.focus();
 }
 function togglePlaces(){
@@ -320,7 +358,10 @@ function toggleEmotes(){
 }
 function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;resting=null;controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet'])$(id).hidden=true;input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet'])$(id).hidden=true;input.enabled=true;input.down.clear();}
+// The name others see over your head.
+$('aboard').addEventListener('click',()=>{$('name-edit').value=savedName();$('name-sheet').hidden=false;input.enabled=false;$('name-edit').focus();});
+$('name-form').addEventListener('submit',e=>{e.preventDefault();live?.rename($('name-edit').value.trim());closePanels();});
 for(const b of document.querySelectorAll('[data-close]'))b.addEventListener('click',closePanels);
 $('use').addEventListener('click',()=>actions.use());
 $('go').addEventListener('click',togglePlaces);
