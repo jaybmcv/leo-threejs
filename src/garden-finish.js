@@ -2,6 +2,7 @@ import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {polishInterior} from './interior-polish.js';
+import {stylizedTree} from './stylized-plants.js';
 
 // All additions belong to the shared commons template, so every neighborhood
 // receives the same finishes without moving its floor, galleries or routes.
@@ -18,12 +19,13 @@ export function finishGarden({fittings,walls,parts,wallParts,material}){
  const add=(name,geo,mat,pos,parent=finish)=>{const o=new T.Mesh(geo,mat);o.name=name;o.position.set(...pos);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;};
  const box=(name,size,pos,mat,parent=finish,r=.045)=>add(name,new RoundedBoxGeometry(...size,2,Math.min(r,...size.map(s=>s*.4))),mat,pos,parent);
  const cylinder=(name,r,h,pos,mat,parent=finish)=>add(name,new T.CylinderGeometry(r,r,h,16),mat,pos,parent);
+ const trees=[];
  for(const part of [...parts,...wallParts])part.traverse(o=>{
   if(!o.isMesh)return;
   if(o.name==='Low_plant'){o.visible=false;return;}
-  if(o.name==='Tree_canopy'){
-   const radius=o.geometry.parameters.radius;o.geometry=new T.SphereGeometry(radius,14,10);o.scale.set(1,.8,1);o.material=leaves[1];
-  }
+  // The blockout trees give way to branching, leaf-clustered ones; each hidden trunk still marks its spot.
+  if(o.name==='Tree_canopy'){o.visible=false;return;}
+  if(o.name==='Tree_trunk'){o.visible=false;trees.push(o.position.clone().setY(o.position.y-o.geometry.parameters.height/2));return;}
   if(['Garden_planter','Community_cafe_counter','Shared_kitchen_island','Laundry_counter','Reading_shelf','Seat','Back'].includes(o.name)){
    const p=o.geometry.parameters;if(p.width)o.geometry=new RoundedBoxGeometry(p.width,p.height,p.depth,2,Math.min(.09,p.height*.3));
    o.material=o.name==='Garden_planter'?stone:['Seat','Back'].includes(o.name)?sage:oak;
@@ -36,6 +38,7 @@ export function finishGarden({fittings,walls,parts,wallParts,material}){
    o.geometry=new RoundedBoxGeometry(8,.35,.7,2,.055);o.position.y=24.475;o.material=oak;
   }
  });
+ trees.forEach((base,i)=>finish.add(stylizedTree(base,{height:7.2,spread:5.8,seed:40+i})));
  // Layer low shrubs, grasses and broad leaves entirely inside the two beds.
  const foliage=[[],[],[]],leafShape=new T.SphereGeometry(1,7,5);
  for(const [cx,cz] of [[125,24],[141,32]]){

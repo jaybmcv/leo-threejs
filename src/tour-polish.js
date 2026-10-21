@@ -101,13 +101,12 @@ const livingWall=()=>canvasTexture(1024,1024,(g,w,h)=>{
 
 function inGarden(o){const b=new T.Box3().setFromObject(o),c=b.getCenter(new T.Vector3());return c.x>GARDEN.minX-1&&c.x<GARDEN.maxX+1&&c.z>GARDEN.minZ-1&&c.z<GARDEN.maxZ+1&&c.y>GARDEN.floor-1&&c.y<GARDEN.ceiling+1;}
 
-// Stylized trees replace the blockout ones: the main tree stands where the old trunk did, and a smaller Mars-orange
-// ornamental grows at the far end of each bed. Beds get denser clumps, grasses and flowers.
+// The commons finish already plants the main stylized trees; a smaller Mars-orange ornamental grows at the far end
+// of each bed, away from the (hidden) blockout trunk. Beds get denser clumps, grasses and flowers.
 function plantGarden(root){
  const beds=[],trunks=[],old=[];
  root.traverse(o=>{if(!o.isMesh||!inGarden(o))return;if(o.name==='Planting_bed')beds.push(new T.Box3().setFromObject(o));if(o.name==='Tree_trunk')trunks.push(new T.Box3().setFromObject(o));if(o.name==='Tree_trunk'||o.name==='Tree_canopy')old.push(o);});
  old.forEach(o=>{o.visible=false;});
- trunks.forEach((t,i)=>{const c=t.getCenter(new T.Vector3());root.add(stylizedTree(new T.Vector3(c.x,t.min.y,c.z),{height:7.2,spread:5.8,seed:40+i}));});
  beds.forEach((b,i)=>{const c=b.getCenter(new T.Vector3()),size=b.getSize(new T.Vector3()),along=size.x>size.z?'x':'z',tree=trunks.find(t=>b.containsPoint(t.getCenter(new T.Vector3()).setY(c.y)));
   const end=c.clone();end[along]=tree&&tree.getCenter(new T.Vector3())[along]>c[along]?b.min[along]+1.6:b.max[along]-1.6;end.y=b.max.y;
   root.add(stylizedTree(end,{height:3.6,spread:2.8,palette:EMBERS,seed:70+i}));});
