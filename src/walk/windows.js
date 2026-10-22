@@ -6,10 +6,10 @@ import {MeshBVH} from 'three-mesh-bvh';
 // face fills every window. For drawing only (the colliders keep the whole envelope), the envelope is cut away wherever
 // glass lies over it, and the glass is made clear enough to see Mars and the stars through.
 // The envelope is lofted from long slivers, so a triangle along a window's edge is split into quarters, again and
-// again (down to ~0.25 m), and only the pieces under glass go; whole triangles would leave a saw-tooth along every
+// again (down to ~8 cm), and only the pieces under glass go; whole triangles would leave a saw-tooth along every
 // sill. That takes seconds, so it is planned at build time (planWindows, scripts/walk-plan.mjs) and the page only
 // replays the plan (openWindows).
-const GLASS=/^LEO_glass_/,ENVELOPE=/^Smooth_pressure_envelope/,REACH=2,CELL=2,FINEST=.3,DEPTH=4;
+const GLASS=/^LEO_glass_/,ENVELOPE=/^Smooth_pressure_envelope/,REACH=2,CELL=2,FINEST=.08,DEPTH=6;
 // Window glass gets one clear, faintly blue finish; the en-suite screens (Interior_glass) stay frosted.
 const CLEAR=/^LEO_glass_(exterior_tint|concept_bow|concept_pane|interior_clear)$/;
 
