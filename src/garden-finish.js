@@ -19,6 +19,8 @@ export function finishGarden({fittings,walls,parts,wallParts,material}){
  const add=(name,geo,mat,pos,parent=finish)=>{const o=new T.Mesh(geo,mat);o.name=name;o.position.set(...pos);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;};
  const box=(name,size,pos,mat,parent=finish,r=.045)=>add(name,new RoundedBoxGeometry(...size,2,Math.min(r,...size.map(s=>s*.4))),mat,pos,parent);
  const cylinder=(name,r,h,pos,mat,parent=finish)=>add(name,new T.CylinderGeometry(r,r,h,16),mat,pos,parent);
+ // One crew cat stood inside the second planter (x 136.5-145.5, z 27.5-36.5); it now waits just behind it.
+ for(const part of parts)if(part.name==='Mars_cat_1.75m'&&part.position.x===144&&part.position.z===36)part.position.z=38.5;
  const trees=[];
  for(const part of [...parts,...wallParts])part.traverse(o=>{
   // The kitchen island chairs sat with their backs to it; turn them in place to face the island.
