@@ -95,11 +95,15 @@ function coplanarNudges(meshes){
  }
  return nudges;
 }
-// Move a world-space vertex [x,y,z] by the nudges whose face it lies on.
+// Move a world-space vertex [x,y,z] by the nudges whose face it lies on. Faces are matched at the vertex's original
+// place: a corner nudged off one face's bounds by another must still move with it, or that face tilts back into the
+// plane it shares (a wall's top edge left flush with the deck plate's edge, flickering).
+const at0=[0,0,0];
 function nudge(p,{list,index}){
- const hit=n=>Math.abs(p[n.axis]-n.at)<EPS&&p[n.u]>n.u0&&p[n.u]<n.u1&&p[n.w]>n.w0&&p[n.w]<n.w1;
+ at0[0]=p[0];at0[1]=p[1];at0[2]=p[2];
+ const hit=n=>Math.abs(at0[n.axis]-n.at)<EPS&&at0[n.u]>n.u0&&at0[n.u]<n.u1&&at0[n.w]>n.w0&&at0[n.w]<n.w1;
  if(list){for(const n of list)if(hit(n))p[n.axis]+=n.shift;return;}
- for(let a=0;a<3;a++){const at=index.get(a*1e9+Math.round(p[a]*1000));if(at)for(const n of at)if(hit(n)){p[a]+=n.shift;break;}}
+ for(let a=0;a<3;a++){const at=index.get(a*1e9+Math.round(at0[a]*1000));if(at)for(const n of at)if(hit(n)){p[a]+=n.shift;break;}}
 }
 
 export function bakeForWalking(root,{skip=()=>false}={}){
