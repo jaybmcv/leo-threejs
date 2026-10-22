@@ -85,7 +85,6 @@ export function createLounge({root,walls,fittings,box,mesh,group,material,chair,
     box('Reading_bench_back',[.18,.75,8],[174.5,cy+.7,s*25],fabric,lounge);
     for(let k=0;k<4;k++)mesh('Bench_cushion',new RoundedBoxGeometry(.98,.15,1.8,2,.06),cushion,lounge,[175,cy+.54,s*25-3+k*2]);
     box('Bookcase',[.55,2.1,7],[171,cy+1.05,s*25],wood,lounge);
-    for(let k=0;k<16;k++)box('Library_book',[.25,.4,.22],[171.3,cy+.55+(k%3)*.55,s*25-3+Math.floor(k/3)*.9],material('Book_spines',0x688997),lounge);
     for(const z of [s*12,s*33]){
       box('Lounge_planter',[2.4,.65,2.4],[176,cy+.325,z],white,lounge);
       for(let k=0;k<5;k++)mesh('Lounge_plant',new T.IcosahedronGeometry(.65,1),material('Leaves',0x6d967b),lounge,[176+Math.cos(k*2)*.55,cy+1,z+Math.sin(k*2)*.55]);
