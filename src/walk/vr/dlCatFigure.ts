@@ -69,8 +69,7 @@ export class DLCatFigure {
   private emotesRequested=false;
   // What an emote does not stand on: the tail, which hangs wherever the
   // body's back puts it and props a cat playing dead half a metre up (the
-  // ground hides what dips below it), and the neutral bone the model hangs a
-  // few shorts vertices off, which stays where the root is.
+  // ground hides what dips below it).
   private readonly emoteFloorSkip=new Set<T.Bone>();
   private readonly legLengths: readonly [number,number];
   private clock=0;
@@ -132,7 +131,7 @@ export class DLCatFigure {
     for(const side of ['L','R'])this.feet.set(side,this.bones.get('foot.'+side)!.getWorldQuaternion(new T.Quaternion()));
     this.headForward.applyQuaternion(this.bones.get('spine.006')!.getWorldQuaternion(new T.Quaternion()).invert());
     this.authored=authoredData?new EcctrlLocomotion(authoredData,this.root,this.bones,this.lazy):null;
-    for(const [name,bone] of this.bones)if(/^Tail_springBone|^neutral_bone$/.test(name))this.emoteFloorSkip.add(bone);
+    for(const [name,bone] of this.bones)if(/^Tail_springBone/.test(name))this.emoteFloorSkip.add(bone);
     asset.root.position.y=this.restOffset;
   }
 
@@ -261,17 +260,17 @@ export class DLCatFigure {
     for(const name of names){const bone=this.bones.get(name)!;bone.quaternion.slerpQuaternions(this.runFrom.get(name)!,bone.quaternion.clone(),weight);this.lazy.edited(bone);}
   }
 
-  private applyReferenceRunTail(phase:number,weight:number,basis:T.Quaternion,tuning:DLCatTuning['locomotion']){
+  private applyReferenceRunTail(weight:number,basis:T.Quaternion){
     if(weight<=0)return;
     const names=Array.from({length:5},(_,i)=>'Tail_springBone_'+(i+1));
     for(const name of names){const bone=this.bones.get(name)!;this.cacheQuaternion(this.runFrom,name,bone.quaternion);bone.quaternion.copy(this.rest.get(name)!.q);this.lazy.edited(bone);}
-    // The video carries the tail upright, with a soft backward curl at its tip.
+    // Keep the upright resting curl. The spring solve adds sway and inertia
+    // afterward, so fitting the run cannot freeze the tail or erase turns.
     const tailAngles=[-40.5,2.84,22.89,.47,-35.13] as const;
     for(let i=0;i<tailAngles.length;i++){
       const angle=T.MathUtils.degToRad(tailAngles[i]!),up=Math.cos(angle),forward=Math.sin(angle);
-      this.aim('Tail_springBone_'+(i+1),i===4?'Tail_springBone_end':'Tail_springBone_'+(i+2),new T.Vector3(Math.sin(phase*Math.PI*2-i*.2)*.00375*tuning.tailSway/DEFAULT_DLCAT_TUNING.locomotion.tailSway,up,forward).applyQuaternion(basis));
+      this.aim('Tail_springBone_'+(i+1),i===4?'Tail_springBone_end':'Tail_springBone_'+(i+2),new T.Vector3(0,up,forward).applyQuaternion(basis));
     }
-    this.rotate(names[0]!,new T.Vector3(1,0,0).applyQuaternion(basis),T.MathUtils.degToRad(tuning.tailLift-DEFAULT_DLCAT_TUNING.locomotion.tailLift));
     for(const name of names){const bone=this.bones.get(name)!;bone.quaternion.slerpQuaternions(this.runFrom.get(name)!,bone.quaternion.clone(),weight);this.lazy.edited(bone);}
   }
 
@@ -513,19 +512,24 @@ export class DLCatFigure {
     const verticalAccel=this.initialized&&dt>0?T.MathUtils.clamp((rise-this.tailPreviousRise)/dt,-20,20):0;
     this.tailPreviousLean=f.lean;this.tailPreviousRise=rise;
     const lowTail=pose.stance==='slide'?1:pose.stance==='prone'?.55:pose.stance==='crouch'?.2:pose.swimming?.35:0;
+    // Airborne drag trails vertical travel: down while rising, up while
+    // falling. Gravity accelerates both body and tail during free fall;
+    // treating it as another body impulse lifted the tail on the way up.
+    const verticalBend=!pose.grounded&&!pose.swimming&&!pose.seated
+      ?-T.MathUtils.clamp(rise*.02,-.18,.18):-verticalAccel*.006;
     const targets=Array.from({length:5},(_,i)=>{
-      const bend=tail.tailInfluence*(leanRate*.045-verticalAccel*.006-(pose.accelMs2??0)*.008);
+      const bend=tail.tailInfluence*(leanRate*.045+verticalBend-(pose.accelMs2??0)*.008);
       return [f.tailLift*.06+T.MathUtils.degToRad(tail.tailLift)/5+T.MathUtils.degToRad(tail.tailCurl)*(i+1)/15+(i===0?lowTail:0)+bend/(1+i*.3),
         Math.sin(this.tailPhase-(i+1)*.55*tail.tailLag)*.045*tail.tailSway+f.tailTurn*.12*tail.tailTurnResponse-this.tailTurn*.04];
     });
     const spring=this.tailSpring.step(targets,dt,tail.tailStiffness,tail.tailDamping,this.scrubbed,stepMax);
+    this.applyReferenceRunTail(referenceRunWeight,basis);
     for(let i=0;i<5;i++){
       const name='Tail_springBone_'+(i+1);
       // Low poses impose immediate base clearance while the tip settles.
       this.rotate(name,x,i===0?Math.max(lowTail,spring[i]![0]!):spring[i]![0]!);
       this.rotate(name,y,spring[i]![1]!);
     }
-    this.applyReferenceRunTail(this.animationPhase,referenceRunWeight,basis,tuning.locomotion);
     const blend=this.initialized&&!edited&&!this.scrubbed?1-Math.exp(-dt*(takeoff?45:onFeet?24:15)):1;
     // The mixer already blends gait speed. Filtering the solved leg joints a
     // second time breaks boot clearance; retain that filter only on entry.
