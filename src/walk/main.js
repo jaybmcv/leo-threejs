@@ -71,6 +71,8 @@ const phone=matchMedia('(pointer:coarse)').matches;
 renderer.setPixelRatio(Math.min(devicePixelRatio,phone?1.25:1.75));renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
 $('viewport').appendChild(renderer.domElement);
+// A phone short of graphics memory drops the WebGL context: bring the card back with a reason, not a frozen view.
+renderer.domElement.addEventListener('webglcontextlost',()=>{document.body.dataset.ready='0';$('loading-text').textContent='The view stopped: this device ran short of graphics memory. Reload to walk again.';});
 const scene=new T.Scene();scene.environmentIntensity=.75;
 // Space through the windows: stars and Mars in their own pass behind the ship, so the ship's far plane can stay short.
 const sky=new T.Scene();sky.background=new T.Color(0x05080d);const skyCamera=new T.PerspectiveCamera(60,1,10,5000);
@@ -135,7 +137,7 @@ async function buildShip(){
  status('Preparing the walk…');await idle();
  // Decals and seams only matter from outside.
  ship.exterior.traverse(o=>{if(o.isMesh&&outsideOnly(o))o.visible=false;});
- const b0=performance.now();baked=bakeForWalking(ship.root);for(const g of baked.bands.values())scene.add(g);timings.push([`${baked.sources} meshes merged into ${baked.meshes} in ${Math.round(performance.now()-b0)} ms`,Math.round(performance.now()-t0)]);
+ const b0=performance.now();baked=bakeForWalking(ship.root,{release:true});for(const g of baked.bands.values())scene.add(g);timings.push([`${baked.sources} meshes merged into ${baked.meshes} in ${Math.round(performance.now()-b0)} ms`,Math.round(performance.now()-t0)]);
  haze.add(createHaze(ship));
  // Signs draw with the deck band they're on.
  for(const o of [...lifts.signs.children]){const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);}
@@ -225,8 +227,25 @@ async function loadCosmo(){
 
 // The arrival hall on Deck 2, where travellers come aboard.
 const START={position:new T.Vector3(-135,-35.7,-38),yaw:Math.PI/2};
-await Promise.all([loadExterior(),loadCosmo()]).catch(e=>{status(e.message);throw e;});
+// Building the walk takes about 1 GB at its largest: more than a phone with 4 GB or less can give one tab, which the
+// phone then closes. Such phones, and any browser whose last build never finished (its tab was closed under it), are
+// asked first, with the guided tour as the light way aboard. The note is set while building and cleared once ready or
+// on leaving the page, so only a build that was cut off leaves it behind.
+const BUILDING='leo-walk-building';
+const unfinished=(()=>{try{const t=Number(localStorage.getItem(BUILDING));return t>0&&Date.now()-t<7*864e5;}catch{return false;}})();
+const lowMemory=phone&&navigator.deviceMemory>0&&navigator.deviceMemory<=4;
+const goAhead=!unfinished&&!lowMemory?Promise.resolve():new Promise(resolve=>{
+ $('memory').hidden=false;
+ $('memory-note').textContent=unfinished?'Last time, the walk closed before it finished loading: this device likely ran out of memory. The guided tour shows Leo’s rooms with far less.'
+  :'Walking Leo builds the whole ship and needs more memory than most phones with 4 GB or less can spare. The guided tour shows the rooms with far less.';
+ $('memory-try').addEventListener('click',()=>{$('memory').hidden=true;resolve();},{once:true});
+});
+const downloads=Promise.all([loadExterior(),loadCosmo()]).catch(e=>{status(e.message);throw e;});
+await goAhead;await downloads;
+try{localStorage.setItem(BUILDING,String(Date.now()));}catch{}
+addEventListener('pagehide',()=>{try{localStorage.removeItem(BUILDING);}catch{}});
 await buildShip();
+try{localStorage.removeItem(BUILDING);}catch{}
 // A walk link (link.js) starts wherever it was taken; otherwise the arrival hall.
 const spot=readSpot(),stand=spot&&findStand(colliders,spot.at);
 controller.place(stand||findStand(colliders,START.position.toArray())||START.position);

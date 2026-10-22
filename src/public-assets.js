@@ -1,18 +1,49 @@
 // Static hosting transport: lossless gzip chunks preserve the source GLBs.
+// Phones on mobile data drop a download now and then, which used to stop the viewer until a refresh: each part gets a
+// few tries. The parts stream through the decompressor into one buffer of the model's exact size, so a model is never
+// held twice over (the compressed parts and a growing copy) while it arrives.
+const TRIES=3;
+async function fetchPart(url,name){
+ for(let attempt=1;;attempt++){
+  try{
+   const res=await fetch(url);
+   if(res.ok&&res.body)return res;
+   // Only a server hiccup is worth another try; a missing part stays missing.
+   if(res.status<500||attempt>=TRIES)throw Object.assign(new Error(`Could not load ${name} (${res.status}). Please retry.`),{final:true});
+  }catch(e){if(e.final||attempt>=TRIES)throw e.final?e:new Error(`Could not load ${name}: the connection dropped. Please retry.`);}
+  await new Promise(r=>setTimeout(r,600*attempt));
+ }
+}
 export async function publicAsset(name,onProgress){
  const entry=window.LEO_PUBLIC_ASSETS?.[name];
  if(!entry)return null;
- let loaded=0;const chunks=[];
- for(const part of entry.parts){
-  const res=await fetch(part);
-  if(!res.ok)throw new Error(`Could not load ${name} (${res.status}). Please retry.`);
-  const data=await res.arrayBuffer();chunks.push(data);loaded+=data.byteLength;
-  onProgress?.(Math.min(100,Math.round(loaded/entry.compressedBytes*100)));
+ for(let attempt=1;;attempt++){
+  try{return await streamAsset(name,entry,onProgress);}
+  catch(e){if(e.final||attempt>=TRIES)throw e;console.warn(`Retrying ${name}.`,e);}
  }
- const stream=new Blob(chunks).stream().pipeThrough(new DecompressionStream('gzip'));
- const bytes=await new Response(stream).arrayBuffer();
- if(bytes.byteLength!==entry.bytes)throw new Error(`Incomplete model: ${name}`);
- return bytes;
+}
+async function streamAsset(name,entry,onProgress){
+ const bytes=new Uint8Array(entry.bytes),inflate=new DecompressionStream('gzip'),writer=inflate.writable.getWriter();
+ let loaded=0,written=0;
+ const reading=(async()=>{
+  const reader=inflate.readable.getReader();
+  for(;;){const {done,value}=await reader.read();if(done)break;
+   if(written+value.byteLength>bytes.byteLength)throw new Error(`Incomplete model: ${name}`);
+   bytes.set(value,written);written+=value.byteLength;}
+ })().catch(e=>{writer.abort(e).catch(()=>{});throw e;});
+ // A failed read stops the writes above (they would wait on a reader that has stopped); its error is the one thrown.
+ reading.catch(()=>{});
+ try{
+  for(const part of entry.parts){
+   const reader=(await fetchPart(part,name)).body.getReader();
+   for(;;){const {done,value}=await reader.read();if(done)break;
+    await writer.write(value);loaded+=value.byteLength;onProgress?.(Math.min(100,Math.round(loaded/entry.compressedBytes*100)));}
+  }
+  await writer.close();
+ }catch(e){writer.abort(e).catch(()=>{});await reading;throw e;}
+ await reading;
+ if(written!==entry.bytes)throw new Error(`Incomplete model: ${name}`);
+ return bytes.buffer;
 }
 export function enablePublicDownloads(){
  if(!window.LEO_PUBLIC_ASSETS)return;
