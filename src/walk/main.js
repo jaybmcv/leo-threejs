@@ -97,6 +97,10 @@ async function buildShip(){
  // Short railings where a floor drops away (railings.js; planned at build time too).
  ship.inside.add(railingMesh(walkPlan.rails));
  ship.inside.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
+ // The main lift shafts are walled in nearly clear glass, so with the car away the shaft read as an open drop at your
+ // feet. Frost it on foot so it reads as the wall it is.
+ const shaftGlass=new T.MeshStandardMaterial({name:'Walk_shaft_glass',color:0xb4c8d2,roughness:.45,transparent:true,opacity:.5,depthWrite:false,side:T.DoubleSide});
+ ship.inside.traverse(o=>{if(/^Lift_(back|side)_enclosure$/.test(o.name))o.material=shaftGlass;});
  status('Fitting the walls…');await idle();
  prepareExteriorForWalking(ship);
  buildColliders(ship,{extra:[ship.exterior],filter:walls,into:colliders});
