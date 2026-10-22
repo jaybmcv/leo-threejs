@@ -30,6 +30,7 @@ import {createHaze} from './haze.js';
 import {createStarDrift} from './star-drift.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.js';
 import {connectLive,savedName} from './net/live.js';
+import {identify,currentPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
 import {readSpot,spotLink} from './link.js';
 import {installFeedback} from '../feedback/feedback.js';
@@ -43,7 +44,24 @@ const status=text=>{$('loading-text').textContent=text;timings.push([text,Math.r
 const LIVE_URL=(()=>{const asked=new URLSearchParams(location.search).get('live');
  if(asked&&/^wss?:\/\/(localhost|127\.0\.0\.1|[a-z0-9-]+\.marscatsvoyage\.com)(:\d+)?\//.test(asked))return asked;
  return typeof __LIVE_URL__!=='undefined'?__LIVE_URL__:'';})();
-if(LIVE_URL){$('name-field').hidden=false;$('name-input').value=savedName();}
+// Who is walking: their Discord account, through The Creamery (net/connect.js), or nobody in particular. Asked on the
+// loading card, while the ship is still to build, so going off to connect Discord costs no waiting. A tester's invite
+// link (?invite=, the same code that turns on tester feedback: feedback/feedback.js) always asks, so Leo live can
+// note who used it.
+let me={pass:null,name:null,error:null};
+const identity=LIVE_URL?identify().then(r=>{me=r;showWho();return r;}):Promise.resolve(me);
+function showWho(asking=!me.pass&&(invite||!skippedRecently())){
+ $('who').hidden=false;$('who-connected').hidden=!me.pass;$('who-ask').hidden=!asking;
+ $('name-field').hidden=!!me.pass||asking;$('who-later').hidden=!!me.pass||asking;
+ if(me.pass){$('who-name').textContent=me.name||'Voyager';return;}
+ $('name-input').value||=savedName();
+ $('who-note').textContent=me.error?(me.error==='cancelled'?'Discord sign-in was cancelled. Try again, or skip for now.':'Discord sign-in didn’t work. Try again, or skip for now.')
+  :invite?'You’re invited to test Leo. Connect Discord so we know it’s you.':'Connect Discord so others aboard know it’s you.';
+}
+if(LIVE_URL){
+ $('who-connect').addEventListener('click',connect);$('who-later').addEventListener('click',connect);
+ $('who-skip').addEventListener('click',()=>{if(!invite)skip();showWho(false);$('name-input').focus();});
+}
 const renderer=new T.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true,powerPreference:'high-performance'});
 const phone=matchMedia('(pointer:coarse)').matches;
 renderer.setPixelRatio(Math.min(devicePixelRatio,phone?1.25:1.75));renderer.outputColorSpace=T.SRGBColorSpace;
@@ -221,14 +239,15 @@ installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-width:560px)').
 let live=null,remotes=null,aboard=0,liveStatus='';
 if(LIVE_URL){
  remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names')});
- const name=$('name-input').value.trim();
+ await identity;
+ const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
   status:s=>{liveStatus=s;showAboard();},
   welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);},
   poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>remotes.clear(),
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
- });
- if(name!==savedName())live.rename(name);
+ },{pass:()=>me.pass?currentPass():Promise.resolve(null),refused:forget,invite});
+ if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
 }
 // The pose others see. Resting, the body is where the bed or seat put it, not where the controller stands.
@@ -385,7 +404,12 @@ function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;re
 // Keys held when a panel opened would otherwise keep walking after it closes.
 function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet'])$(id).hidden=true;input.enabled=true;input.down.clear();}
 // The name others see over your head.
-$('aboard').addEventListener('click',()=>{$('name-edit').value=savedName();$('name-sheet').hidden=false;input.enabled=false;$('name-edit').focus();});
+$('aboard').addEventListener('click',()=>{
+ // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
+ const verified=!!live?.you?.verified;$('name-sheet').dataset.verified=verified?'1':'';
+ $('name-title').textContent=verified?`Aboard as ${live.you.name}`:'Your name';
+ $('name-edit').value=savedName();$('name-sheet').hidden=false;input.enabled=false;if(!verified)$('name-edit').focus();});
+$('name-connect').addEventListener('click',connect);
 $('name-form').addEventListener('submit',e=>{e.preventDefault();live?.rename($('name-edit').value.trim());closePanels();});
 for(const b of document.querySelectorAll('[data-close]'))b.addEventListener('click',closePanels);
 $('use').addEventListener('click',()=>actions.use());

@@ -7,6 +7,13 @@
 //   PORT=8090                         where it listens; the websocket is at /live, a health check at /health
 //   LEO_LIVE_MAX=150                  most visitors at once; the next is told the ship is full
 //   LEO_LIVE_ORIGINS=...              pages allowed to connect, comma separated; a * stands for any port
+//   LEO_PASS_JWKS_URL=...             The Creamery's public keys for Leo passes (default: its production keys)
+//   LEO_PASS_ISS=...                  the issuer a pass must name (default https://creamery.marscatsvoyage.com)
+//
+// Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
+// server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
+// name they typed. A verified visitor who came by an invite link has the code and who used it written to the log
+// (invite records proper will live with The Creamery's members).
 //
 // Movement is trusted from the client, as in Reach: the server checks that a pose is well formed and inside the ship,
 // and limits how often anyone may send. Lifts are the server's: a call goes to the server, which steps every car
@@ -16,6 +23,7 @@ import {WebSocketServer} from 'ws';
 import {LIFTS} from '../src/walk/lifts.js';
 import {liftState,callLift,stepLift,liftWire} from '../src/walk/lift-motion.js';
 import {encodeRecord,encodeIdentity,assembleFrame,actorIdOf,cleanName,PROTOCOL,STANCES} from '../src/walk/net/wire.js';
+import {keySet,verifyPass} from '../src/walk/net/pass.js';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||150);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -25,6 +33,8 @@ const FLUSH_MS=50,FAR_MS=500,KEEPALIVE_MS=2000,HELLO_MS=5000,PING_MS=25000,SLOW_
 const NEAR_DY=9,NEAR_M=64;
 // The ship's bounds, generously: a pose outside them is not a pose from this page.
 const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
+const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',
+ key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
 const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4]};
 
 const visitors=new Set();
@@ -55,13 +65,15 @@ async function hello(v,msg){
  if(msg.v!==PROTOCOL){send(v.ws,{m:'reload'});v.ws.close(4000,'old page');return;}
  const id=await actorIdOf(typeof msg.key==='string'?msg.key:'');
  if(!id){v.ws.close(4001,'no key');return;}
- // One body per visitor: the same browser in a second tab takes over from the first.
- for(const o of visitors)if(o.id===id&&o!==v){send(o.ws,{m:'replaced'});o.ws.close(4002,'replaced');leave(o);}
+ const who=msg.pass?await verifyPass(msg.pass,PASS).catch(()=>null):null;
+ // One body per visitor: the same browser in a second tab, or the same Discord account elsewhere, takes over.
+ for(const o of visitors)if(o!==v&&(o.id===id||(who&&o.discord?.discordId===who.discordId))){send(o.ws,{m:'replaced'});o.ws.close(4002,'replaced');leave(o);}
  if([...visitors].filter(o=>o.ready).length>=MAX){send(v.ws,{m:'full'});v.ws.close(4003,'full');return;}
  v.slot=takeSlot();if(!v.slot){v.ws.close(4003,'full');return;}
- Object.assign(v,{id,name:cleanName(msg.name)||null,ready:true});slots.set(v.slot,v);
- send(v.ws,{m:'welcome',id,aboard:aboard(),lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)}))});
- countChanged=true;log('aboard',aboard(),'+',id,v.name||'');
+ Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,ready:true});slots.set(v.slot,v);
+ send(v.ws,{m:'welcome',id,aboard:aboard(),you:{name:v.name,verified:!!who},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)}))});
+ countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`discord:${who.discordId}`:msg.pass?'(pass refused)':'');
+ if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
 }
 function leave(v){
  if(!visitors.delete(v))return;
@@ -78,7 +90,8 @@ function onMessage(v,data,binary){
  if(!v.ready){if(msg.m==='hello'&&!v.helloSeen){v.helloSeen=true;hello(v,msg).catch(()=>v.ws.close(1011,'hello failed'));}return;}
  switch(msg.m){
   case 'pose':if(allowed(v,'pose'))readPose(v,msg.p);break;
-  case 'name':if(allowed(v,'name')){v.name=cleanName(msg.name)||null;v.nameVersion=(v.nameVersion||0)+1;}break;
+  // A verified visitor's name is their Discord name.
+  case 'name':if(allowed(v,'name')&&!v.discord){v.name=cleanName(msg.name)||null;v.nameVersion=(v.nameVersion||0)+1;}break;
   case 'call':{
    if(!allowed(v,'call'))break;
    const l=lifts.find(l=>l.spec.id===msg.lift);if(!l||!Number.isInteger(msg.stop)||msg.stop<0||msg.stop>=l.stops.length)break;
@@ -113,7 +126,7 @@ function flush(){
    const fresh=!seen||seen.id!==o.id;
    const due=fresh||(seen.version!==o.version&&(near||now-seen.at>=FAR_MS))||now-seen.at>=KEEPALIVE_MS;
    if(!due)continue;
-   if(fresh||seen.nameVersion!==(o.nameVersion||0))identities.push(encodeIdentity(o.slot,o.id,o.name));
+   if(fresh||seen.nameVersion!==(o.nameVersion||0))identities.push(encodeIdentity(o.slot,o.id,o.name,!!o.discord));
    records.push(o.record);r.seen.set(o.slot,{id:o.id,version:o.version,at:now,nameVersion:o.nameVersion||0});
   }
   if(records.length)send(r.ws,assembleFrame(identities,records));

@@ -31,7 +31,7 @@ export class RemotePlayers{
   // Sparse twice running is a rate, not a hiccup: glide across it.
   const gap=now-r.prevMs,sparse=ms=>ms>=GLIDE_MIN_MS&&ms<=GLIDE_MAX_MS;
   r.glideMs=sparse(gap)&&sparse(r.gapMs)?gap:0;r.glideFrom=[r.cur.x,r.cur.y,r.cur.z];r.gapMs=gap;
-  r.prev=p;r.prevMs=now;r.tgt=p;r.seen=now;r.name=p.name||r.name;
+  r.prev=p;r.prevMs=now;r.tgt=p;r.seen=now;r.name=p.name||r.name;r.verified=!!p.verified;
  }
  gone(id){const r=this.remotes.get(id);if(!r)return;this.release(r);r.label?.remove();this.remotes.delete(id);}
  clear(){for(const id of [...this.remotes.keys()])this.gone(id);}
@@ -99,6 +99,8 @@ export class RemotePlayers{
    p.project(camera);
    if(!r.label){r.label=document.createElement('div');r.label.className='remote-name';this.labelLayer.appendChild(r.label);}
    const text=r.name||'Voyager '+r.id.slice(-4);if(r.label.textContent!==text)r.label.textContent=text;
+   // A teal dot: the name is their Discord name, vouched for by The Creamery.
+   r.label.classList.toggle('verified',r.verified);
    r.label.hidden=!r.clear||p.z>1;
    if(!r.label.hidden)r.label.style.transform=`translate(${(p.x+1)/2*rect.width}px,${(1-p.y)/2*rect.height}px) translate(-50%,-100%)`;
   }
