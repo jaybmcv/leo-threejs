@@ -127,11 +127,15 @@ const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
 // reach, so a tall hall, an atrium or a stairwell shows its full height. The rays skip the first 0.6 m: pressed into a
 // corner, the camera can sit inside a column, and every ray then stopped on its back faces (a garden's roof was culled).
+// Seen through an opening from under a lower ceiling (the lounge from its access ramp), a taller room's ceiling can be in
+// view with no ray landing on it, so each ray also looks straight up and down from partway along for the space it crosses.
 const VIEW_RAYS=[];for(const x of [-.96,-.5,0,.5,.96])for(const y of [-.96,-.5,0,.5,.96])VIEW_RAYS.push([x,y]);let viewSpan=[0,0],lastSpan=0;
 function span(p,now){
  if(now-lastSpan<150)return viewSpan;lastSpan=now;
- let low=p.y-3,high=p.y+4;const ray=new T.Raycaster(),ndc=new T.Vector2();
- for(const [x,y] of VIEW_RAYS){ndc.set(x,y);ray.setFromCamera(ndc,camera);const hit=colliders.raycast(ray.ray,90,.6);const yy=hit?hit.point.y:ray.ray.at(90,new T.Vector3()).y;low=Math.min(low,yy-1);high=Math.max(high,yy+1);}
+ let low=p.y-3,high=p.y+4;const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();
+ const reach=y=>{low=Math.min(low,y-1);high=Math.max(high,y+1);};
+ for(const [x,y] of VIEW_RAYS){ndc.set(x,y);ray.setFromCamera(ndc,camera);const hit=colliders.raycast(ray.ray,90,.6),d=hit?hit.distance:90;reach(ray.ray.at(d,probe.origin).y);
+  for(const f of [1/3,2/3])for(const s of [1,-1]){ray.ray.at(d*f,probe.origin);probe.direction.set(0,s,0);const h=colliders.raycast(probe,12);if(h)reach(h.point.y);}}
  return viewSpan=[low,high];
 }
 function cull(p,now=performance.now()){
