@@ -1,11 +1,14 @@
 // npm run check:live: Leo live (server/leo-live.mjs) against scripted visitors. Starts real servers on spare ports and
 // checks the pose wire, joining, poses reaching others near and far, names, the shared lifts, leaving, a second tab,
-// bad input, the cap on visitors and, last, sixty visitors walking at once (bytes sent per visitor per second).
+// bad input, the cap on visitors, Leo passes (Discord identity from The Creamery, net/pass.js: here signed by a
+// stand-in key served as a local JWKS) and, last, sixty visitors walking at once (bytes sent per visitor per second).
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import WebSocket from 'ws';
 import {encodeRecord,encodeIdentity,assembleFrame,decodeFrame,WireReader,actorIdOf,PROTOCOL} from '../src/walk/net/wire.js';
 import {LIFTS} from '../src/walk/lifts.js';
+import http from 'node:http';
+import {keySet,verifyPass,readPass} from '../src/walk/net/pass.js';
 
 const results=[];let failed=0;
 const check=(what,ok,detail='')=>{results.push(`${ok?'PASS':'FAIL'} ${what}${detail?' · '+detail:''}`);if(!ok)failed++;};
@@ -30,16 +33,55 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  check('wire: a pose from a slot never introduced is skipped',reader.read(assembleFrame([],[encodeRecord(3,poses[0])])).length===0);
 }
 
+// ---- Leo passes on their own --------------------------------------------------------------------------------------
+const b64u=b=>Buffer.from(b).toString('base64url');
+async function issuer(kid='test-1'){
+ const pair=await crypto.subtle.generateKey('Ed25519',true,['sign','verify']);
+ const jwk=await crypto.subtle.exportKey('jwk',pair.publicKey);
+ return {kid,jwks:{keys:[{kty:'OKP',crv:'Ed25519',x:jwk.x,kid,alg:'EdDSA',use:'sig'}]},
+  async sign(claims,header={}){const h=b64u(JSON.stringify({alg:'EdDSA',kid,typ:'JWT',...header})),p=b64u(JSON.stringify(claims));
+   return `${h}.${p}.${b64u(await crypto.subtle.sign('Ed25519',pair.privateKey,new TextEncoder().encode(h+'.'+p)))}`;}};
+}
+const ISS='http://127.0.0.1',AUD='leo.marscatsvoyage.com',nowS=()=>Math.floor(Date.now()/1000);
+const claimsFor=(id,name,extra={})=>({iss:ISS,aud:AUD,sub:'discord:'+id,discord:{id,username:name.toLowerCase().replace(/ /g,''),global_name:name,avatar:null},
+ wallets:['0x'+'ab'.repeat(20)],iat:nowS(),exp:nowS()+600,jti:randomBytes(8).toString('hex'),...extra});
+const creamery=await issuer();
+{
+ const other=await issuer('other-1'),key=keySet('mem',{fetcher:async()=>({ok:true,json:async()=>creamery.jwks})}),opts={key,iss:ISS,aud:AUD};
+ const good=await creamery.sign(claimsFor('222222222222222222','Leo Test Cat'));
+ const who=await verifyPass(good,opts);
+ check("pass: a pass signed by The Creamery's key is accepted",who?.discordId==='222222222222222222'&&who.name==='Leo Test Cat'&&who.wallets.length===1);
+ const [h,p,sig]=good.split('.'),c=readPass(good),tampered=`${h}.${b64u(JSON.stringify({...c,discord:{...c.discord,global_name:'Someone Else'}}))}.${sig}`;
+ const bad={
+  'tampered claims':tampered,
+  'another key':await other.sign(claimsFor('222222222222222222','Leo Test Cat'),{kid:'test-1'}),
+  'an unknown key id':await other.sign(claimsFor('222222222222222222','Leo Test Cat')),
+  'expired':await creamery.sign(claimsFor('1234567','A',{iat:nowS()-1300,exp:nowS()-700})),
+  'issued in the future':await creamery.sign(claimsFor('1234567','A',{iat:nowS()+600,exp:nowS()+1200})),
+  'another audience':await creamery.sign(claimsFor('1234567','A',{aud:'reach.marscatsvoyage.com'})),
+  'another issuer':await creamery.sign(claimsFor('1234567','A',{iss:'https://evil.example'})),
+  'a sub that is not its Discord id':await creamery.sign(claimsFor('1234567','A',{sub:'discord:7654321'})),
+  'alg none':`${b64u(JSON.stringify({alg:'none',kid:'test-1'}))}.${p}.`,
+  'garbage':'not.a.pass',
+ };
+ const accepted=[];for(const [what,t] of Object.entries(bad))if(await verifyPass(t,opts))accepted.push(what);
+ check('pass: tampered, foreign-key, expired, wrong-audience/issuer, alg-none and malformed passes are refused',accepted.length===0,accepted.length?'accepted: '+accepted.join(', '):`${Object.keys(bad).length} kinds refused`);
+}
+const jwksServer=http.createServer((req,res)=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(creamery.jwks));});
+await new Promise(r=>jwksServer.listen(0,'127.0.0.1',r));
+const PASS_ENV={LEO_PASS_JWKS_URL:`http://127.0.0.1:${jwksServer.address().port}/keys.json`,LEO_PASS_ISS:ISS};
+
 // ---- a server and some visitors -----------------------------------------------------------------------------------
 function startServer(port,env={}){
- const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...env},stdio:['ignore','pipe','pipe']});
+ const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...PASS_ENV,...env},stdio:['ignore','pipe','pipe']});
+ child.log='';child.stdout.on('data',d=>{child.log+=d;});
  return new Promise((resolve,reject)=>{child.stdout.on('data',d=>{if(/Leo live on/.test(d))resolve(child);});child.on('exit',c=>reject(new Error('server exited '+c)));setTimeout(()=>reject(new Error('server did not start')),10000);});
 }
 class Bot{
- constructor(port,{name='',key=randomBytes(32).toString('hex'),origin='http://localhost:4180',v=PROTOCOL}={}){
+ constructor(port,{name='',key=randomBytes(32).toString('hex'),origin='http://localhost:4180',v=PROTOCOL,pass,invite}={}){
   Object.assign(this,{key,name,poses:new Map(),frames:0,bytes:0,msgs:[],gone:[],lifts:[],closed:null,reader:new WireReader(),got:new Map()});
   this.ws=new WebSocket(`ws://127.0.0.1:${port}/live`,{origin});
-  this.opened=new Promise((resolve,reject)=>{this.ws.on('open',()=>{this.ws.send(JSON.stringify({m:'hello',v,key,name}));resolve();});this.ws.on('error',reject);this.ws.on('unexpected-response',(q,res)=>reject(new Error('HTTP '+res.statusCode)));});
+  this.opened=new Promise((resolve,reject)=>{this.ws.on('open',()=>{this.ws.send(JSON.stringify({m:'hello',v,key,name,pass,invite}));resolve();});this.ws.on('error',reject);this.ws.on('unexpected-response',(q,res)=>reject(new Error('HTTP '+res.statusCode)));});
   this.ws.on('message',(data,binary)=>{
    if(binary){this.frames++;this.bytes+=data.length;for(const p of this.reader.read(data)){this.poses.set(p.id,p);this.got.set(p.id,(this.got.get(p.id)||0)+1);}return;}
    const msg=JSON.parse(data);this.msgs.push(msg);if(msg.m==='welcome')this.id=msg.id;if(msg.m==='gone')this.gone.push(msg.id);if(msg.m==='lift')this.lifts.push(msg);
@@ -110,6 +152,28 @@ try{
  for(const bot of [b,far,tab])bot.close();
 }finally{server.kill();}
 
+// ---- Discord identity through a pass, on a server of its own ----------------------------------------------------
+{
+ const port=PORT+3,srv=await startServer(port);
+ try{
+  const pass=await creamery.sign(claimsFor('333333333333333333','Bea Cat'));
+  const bea=new Bot(port,{name:'typed name',pass,invite:'SPRING-01'}),watch=new Bot(port,{name:'Watcher'}),forged=new Bot(port,{name:'Plain',pass:pass.slice(0,-4)+'AAAA'});
+  for(const b of [bea,watch,forged])await b.welcomed();
+  for(let i=0;i<5;i++){bea.pose([10,-3.7,0]);forged.pose([12,-3.7,0]);watch.pose([11,-3.7,0]);await sleep(100);}
+  await sleep(200);
+  const seenBea=watch.poses.get(bea.id),seenForged=watch.poses.get(forged.id);
+  check('identity: a verified visitor goes by their Discord name, marked verified',seenBea?.name==='Bea Cat'&&seenBea.verified===true,JSON.stringify({name:seenBea?.name,verified:seenBea?.verified}));
+  check('identity: the server tells a verified visitor how they are aboard',bea.msgs.find(m=>m.m==='welcome')?.you?.verified===true);
+  check('identity: a forged pass leaves the visitor anonymous with their own name',seenForged?.name==='Plain'&&!seenForged.verified);
+  bea.send({m:'name',name:'Impostor'});await sleep(150);bea.pose([10.5,-3.7,0]);await sleep(250);
+  check('identity: a verified visitor cannot rename themselves',watch.poses.get(bea.id)?.name==='Bea Cat');
+  check('invites: an invite used by a verified visitor is logged with who used it',/invite SPRING-01 used by discord:333333333333333333 beacat 0xabab/.test(srv.log));
+  const bea2=new Bot(port,{pass:await creamery.sign(claimsFor('333333333333333333','Bea Cat'))});await bea2.welcomed();await sleep(250);
+  check('identity: the same Discord account in another browser takes over from the first',bea.msgs.some(m=>m.m==='replaced')&&!!bea2.id);
+  [watch,forged,bea2].forEach(b=>b.close());
+ }finally{srv.kill();}
+}
+
 // ---- the cap on visitors, on a server of its own ------------------------------------------------------------------
 {
  const port=PORT+1,capped=await startServer(port,{LEO_LIVE_MAX:'3'});
@@ -140,6 +204,7 @@ try{
  }finally{busy.kill();}
 }
 
+jwksServer.close();
 console.log(results.join('\n'));
 console.log(failed?`${failed} FAILED`:'All Leo live checks passed');
 process.exit(failed?1:0);

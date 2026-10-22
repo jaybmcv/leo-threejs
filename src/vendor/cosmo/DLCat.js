@@ -189,12 +189,64 @@ function buildDLCatModel(images2) {
   nodes.forEach((spec, index) => {
     if (spec.skin !== void 0) nodes2[index].bind(skeletons[spec.skin], new THREE.Matrix4());
   });
+  attachShortsPockets(nodes2);
   model.updateMatrixWorld(true);
   const animations2 = animations.map((spec) => new THREE.AnimationClip(spec.name, -1, spec.tracks.map((track) => {
     const Track = track.property === "quaternion" ? THREE.QuaternionKeyframeTrack : THREE.VectorKeyframeTrack;
     return new Track(`${nodes2[track.node].name}.${track.property}`, track.times, track.values);
   })));
   return { model, animations: animations2 };
+}
+
+// The source gives both cargo pockets to neutral_bone, outside the pelvis
+// hierarchy. Transfer only those vertices to the nearest shorts surface so
+// they deform with the fabric, including when physics translates the hips.
+function attachShortsPockets(nodes) {
+  const shorts = nodes.find(node => node.userData.originalName === 'shot');
+  if (!shorts) return;
+  const geometry = shorts.geometry, positions = geometry.getAttribute('position');
+  const ids = geometry.getAttribute('skinIndex'), weights = geometry.getAttribute('skinWeight');
+  const neutral = shorts.skeleton.bones.findIndex(bone => (bone.userData.originalName ?? bone.name) === 'neutral_bone');
+  if (neutral < 0) return;
+  const pockets = new Set();
+  for (let i = 0; i < positions.count; i++) for (let k = 0; k < 4; k++) {
+    if (ids.getComponent(i, k) === neutral && weights.getComponent(i, k) > 0) pockets.add(i);
+  }
+  if (!pockets.size) return;
+  const surface = [], index = geometry.index;
+  for (let i = 0; i < index.count; i += 3) {
+    const vertices = [index.getX(i), index.getX(i + 1), index.getX(i + 2)];
+    if (vertices.some(vertex => pockets.has(vertex))) continue;
+    const triangle = new THREE.Triangle(...vertices.map(vertex => new THREE.Vector3().fromBufferAttribute(positions, vertex)));
+    if (triangle.getArea() > 1e-12) surface.push({ vertices, triangle });
+  }
+  if (!surface.length) throw new Error('Cosmo shorts have no weighted surface for their pockets.');
+  const point = new THREE.Vector3(), closest = new THREE.Vector3(), barycentric = new THREE.Vector3();
+  for (const vertex of pockets) {
+    point.fromBufferAttribute(positions, vertex);
+    let nearest, distance = Infinity;
+    for (const patch of surface) {
+      patch.triangle.closestPointToPoint(point, closest);
+      const candidate = closest.distanceToSquared(point);
+      if (candidate < distance) {
+        distance = candidate; nearest = patch;
+        patch.triangle.getBarycoord(closest, barycentric);
+      }
+    }
+    const influence = new Map();
+    for (let corner = 0; corner < 3; corner++) for (let k = 0; k < 4; k++) {
+      const source = nearest.vertices[corner], bone = ids.getComponent(source, k);
+      const weight = barycentric.getComponent(corner) * weights.getComponent(source, k);
+      if (weight > 0) influence.set(bone, (influence.get(bone) ?? 0) + weight);
+    }
+    const strongest = [...influence].sort((a, b) => b[1] - a[1]).slice(0, 4);
+    const total = strongest.reduce((sum, [, weight]) => sum + weight, 0);
+    for (let k = 0; k < 4; k++) {
+      ids.setComponent(vertex, k, strongest[k]?.[0] ?? 0);
+      weights.setComponent(vertex, k, (strongest[k]?.[1] ?? 0) / total);
+    }
+  }
+  ids.needsUpdate = weights.needsUpdate = true;
 }
 
 // src/createDLCat.js

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {DECKS} from '../model.js';
 import {TRANSIT_CORES,floorY} from '../transit.js';
 import {SHIP_AREAS} from '../areas.js';
@@ -184,6 +185,38 @@ export function corridorSigns(parent){
    const aft=cores.some(c=>c.id==='aft')?{text:LIFTS.aft,color:lifts}:null,fore=cores.some(c=>c.id==='forward')?{text:LIFTS.fore,color:lifts}:null;
    for(const s of [-1,1])hang(parent,directionMaterial(s>0?[aft,tag,fore]:[fore,tag,aft]),directionMaterial(s>0?[fore,tag,aft]:[aft,tag,fore]),
     new T.Vector3((b.x0+b.x1)/2,plan.y+height,s*6),new T.Vector3(0,0,s),5,ceiling);
+  }
+ }
+}
+
+// Lit guide lines on the service corridors' floors, in the signs' colours: teal down the spine between the lift lobbies,
+// with a bar to each pair of lift doors, and orange from the spine down each side corridor to every room's door, ending in
+// an arrow. One mesh per colour per deck, a hair above the floor and the entry thresholds.
+const guideMaterial=color=>new T.MeshStandardMaterial({name:'Walk_floor_guide',color,emissive:color,emissiveIntensity:.35,roughness:.6});
+function strip(x0,z0,x1,z1,width=.12){
+ const g=new T.PlaneGeometry(Math.hypot(x1-x0,z1-z0)+width,width);g.rotateX(-Math.PI/2);g.rotateY(-Math.atan2(z1-z0,x1-x0));g.translate((x0+x1)/2,0,(z0+z1)/2);return g;
+}
+function head(x,z,angle,size=.32){
+ const g=new T.ShapeGeometry(new T.Shape([new T.Vector2(size,0),new T.Vector2(-size*.4,size*.75),new T.Vector2(-size*.4,-size*.75)]));
+ g.rotateX(-Math.PI/2);g.rotateY(-angle);g.translate(x,0,z);return g;
+}
+export function floorGuides(parent){
+ const lifts=guideMaterial(TEAL),rooms=guideMaterial(ORANGE),lift=.03;
+ for(let deck=1;deck<=20;deck++){
+  const plan=serviceRoutes(deck);if(!plan)continue;
+  const xs=TRANSIT_CORES.filter(c=>deck<=c.lastDeck).map(c=>c.x),teal=[],orange=[];
+  const mid=plan.branches.map(b=>(b.x0+b.x1)/2),xa=Math.min(...xs,...mid),xb=Math.max(...xs,...mid);
+  teal.push(strip(xa,0,xb,0));
+  for(const x of xs)for(const s of [-1,1])teal.push(strip(x,0,x,s*3.2),head(x,s*3.45,s*Math.PI/2));
+  for(const b of plan.branches){
+   const bx=(b.x0+b.x1)/2;
+   for(const e of b.entries){
+    const s=Math.sign(e.z);orange.push(strip(bx,s*.35,bx,e.z),strip(bx,e.z,b.x1-.55,e.z),head(b.x1-.3,e.z,0));
+   }
+  }
+  for(const [list,material] of [[teal,lifts],[orange,rooms]]){
+   const o=new T.Mesh(mergeGeometries(list),material);o.name='Walk_floor_guide';o.position.y=plan.y+lift;o.receiveShadow=true;
+   list.forEach(g=>g.dispose());parent.add(o);
   }
  }
 }

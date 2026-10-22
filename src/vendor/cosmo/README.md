@@ -12,3 +12,7 @@ Voyager's Reach's custom walk/run/jump retargeting, procedural poses, movement c
 
 Leo note: the embedded textures were re-encoded to 1024² WebP and the geometry literals shortened to their exact
 float32 values by scripts/shrink-cosmo-textures.py (about 5 MB to 2 MB, 1.1 MB gzipped; the geometry is bit-identical).
+
+Pockets (from Voyager's Reach commit 959ac8ff, 2026-10-22): the source rig gives both cargo pockets on Cosmo's shorts to
+`neutral_bone`, outside the pelvis, so they stayed behind when the hips moved. `attachShortsPockets` in DLCat.js gives
+those vertices the weights of the nearest shorts surface as the model is built, so they move with the fabric.
