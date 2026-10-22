@@ -70,7 +70,8 @@ async function hello(v,msg){
  for(const o of visitors)if(o!==v&&(o.id===id||(who&&o.discord?.discordId===who.discordId))){send(o.ws,{m:'replaced'});o.ws.close(4002,'replaced');leave(o);}
  if([...visitors].filter(o=>o.ready).length>=MAX){send(v.ws,{m:'full'});v.ws.close(4003,'full');return;}
  v.slot=takeSlot();if(!v.slot){v.ws.close(4003,'full');return;}
- Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,ready:true});slots.set(v.slot,v);
+ // A tester (the page holds a tester invite) wears the captain's hat. Taken on the page's word: it is a hat.
+ Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);
  send(v.ws,{m:'welcome',id,aboard:aboard(),you:{name:v.name,verified:!!who},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)}))});
  countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`discord:${who.discordId}`:msg.pass?'(pass refused)':'');
  if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
@@ -126,7 +127,7 @@ function flush(){
    const fresh=!seen||seen.id!==o.id;
    const due=fresh||(seen.version!==o.version&&(near||now-seen.at>=FAR_MS))||now-seen.at>=KEEPALIVE_MS;
    if(!due)continue;
-   if(fresh||seen.nameVersion!==(o.nameVersion||0))identities.push(encodeIdentity(o.slot,o.id,o.name,!!o.discord));
+   if(fresh||seen.nameVersion!==(o.nameVersion||0))identities.push(encodeIdentity(o.slot,o.id,o.name,!!o.discord,o.hat));
    records.push(o.record);r.seen.set(o.slot,{id:o.id,version:o.version,at:now,nameVersion:o.nameVersion||0});
   }
   if(records.length)send(r.ws,assembleFrame(identities,records));

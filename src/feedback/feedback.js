@@ -20,6 +20,9 @@ export function feedbackEnabled(){
  }catch{return flag==='1'||!!code;}
 }
 const sending=()=>!!(FEEDBACK_CONFIG.endpoint&&FEEDBACK_CONFIG.turnstileSiteKey&&invite);
+// Whether this browser holds a tester invite (the walk gives testers a captain's hat: walk/hat.js). Call after
+// feedbackEnabled(), which takes a new invite from the address.
+export function hasTesterInvite(){try{return !!(invite||localStorage.getItem(INVITE));}catch{return !!invite;}}
 
 // Errors are kept as messages only, long tokens masked, from the moment the page installs this.
 const errors=[];

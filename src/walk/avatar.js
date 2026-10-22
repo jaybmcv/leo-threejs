@@ -37,6 +37,9 @@ export async function createWalker(createDLCat,motion){
  const bones=[...figure.bones.values()],rest=bones.map(b=>b.quaternion.clone());
  liePose(bone);const lie=bones.map(b=>b.quaternion.clone());
  bones.forEach((b,i)=>b.quaternion.copy(rest[i]));figure.root.updateMatrixWorld(true);
+ // A hat wearer (hat.js) on all fours: the tail's arc would carry its tip up through the back of the crown, so its base
+ // tips down a little more, eased in and out.
+ const tail=bone('Tail_springBone_1'),TAIL_DROP=-.55,tq=new T.Quaternion(),axis=new T.Vector3();let tailDrop=0;
  // The hips' height above the feet's origin, standing.
  const hipHeight=bone('spine').getWorldPosition(new T.Vector3()).y-figure.root.getWorldPosition(new T.Vector3()).y;
  return {
@@ -47,6 +50,14 @@ export async function createWalker(createDLCat,motion){
    figure.apply({pos:[0,0,0],yaw:0,dt,speedMs:r?0:s.speed,grounded:r?true:s.grounded,swimming:false,submerged:false,stance:r?'stand':s.stance||'stand',
     jumpCount:s.jumpCount||1,jumpS:s.jumpS,turnRate:r?0:s.turnRate||0,accelMs2:r?0:s.accel||0,riseMs:r?0:s.rise||0,emote:r?null:s.emote||null,
     seated,seatedVariant:'passenger',seatHeight:seated?r.seatHeight:undefined,seatForward:0},dt);
+   // Lying down, in a bed or playing dead, the hat comes off: on his back it would sink into the floor or the pillow.
+   if(this.hat)this.hat.mount.visible=!(r?.kind==='lie'&&r.weight>.3)&&s.emote!=='play_dead';
+   tailDrop=T.MathUtils.damp(tailDrop,this.hat&&!r&&s.stance==='prone'?1:0,8,dt);
+   if(tailDrop>.001){
+    // About the walker's own right axis, in the tail base's parent frame.
+    axis.set(1,0,0).applyQuaternion(holder.getWorldQuaternion(tq)).applyQuaternion(tail.parent.getWorldQuaternion(tq).invert());
+    tail.quaternion.premultiply(tq.setFromAxisAngle(axis,TAIL_DROP*tailDrop));
+   }
    if(r?.kind==='lie'&&r.weight>0){
     bones.forEach((b,i)=>b.quaternion.slerp(lie[i],r.weight));
     figure.asset.root.position.y=T.MathUtils.lerp(figure.asset.root.position.y,figure.restOffset,r.weight);

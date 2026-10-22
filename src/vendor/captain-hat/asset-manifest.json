@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-22",
+  "threeRevision": "186",
+  "native": {
+    "triangles": 198982,
+    "meshes": 10,
+    "nonfinite": 0,
+    "degenerate": 0,
+    "zeroNormals": 0,
+    "invalidTransforms": 0,
+    "bounds": {
+      "min": [
+        -1.7091991901397705,
+        -0.18000000715255737,
+        -1.188179850578308
+      ],
+      "max": [
+        1.7246180772781372,
+        1.4291222095489502,
+        1.8891403675079346
+      ]
+    }
+  },
+  "roundtrip": {
+    "triangles": 198982,
+    "meshes": 10,
+    "nonfinite": 0,
+    "degenerate": 0,
+    "zeroNormals": 0,
+    "invalidTransforms": 0,
+    "bounds": {
+      "min": [
+        -1.7091991901397705,
+        -0.18000000715255737,
+        -1.188179850578308
+      ],
+      "max": [
+        1.7246180772781372,
+        1.4291222095489502,
+        1.8891403675079346
+      ]
+    }
+  },
+  "glbBytes": 4049668,
+  "glbSHA256": "f96178fce8b3ba819a8dc6ba8ce53a9476d78e8aef1be5ad683fc33ce9e3262f",
+  "sourceSHA256": "df4f294f323f14fcc480ad23ead5b29026146356c90e94c9eacc9c73f5005562",
+  "sourceFiles": {
+    "src/CaptainsHat.js": "6e3b1b84222018f2d3048a0c4b09165d4a0b9604fddc30b2e783d207e6311071",
+    "src/CrownSurface.js": "5cf6a03600597d2af9266f3fef1ec890f5d5d69ac6effb66386e1b0d4c1c6f30",
+    "src/CatHelmetBadge.js": "3bd2fe57831b34e38e4b748bca49379d4fcecccaf7bcb8a363f5b10cc3c4cc3d"
+  },
+  "validator": {
+    "errors": 0,
+    "warnings": 0,
+    "infos": 0
+  },
+  "scope": "Native procedural static hat and GLB roundtrip. Browser visual checks recorded separately. No rig, avatar integration, or target-world deployment."
+}

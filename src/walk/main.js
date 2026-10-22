@@ -33,8 +33,10 @@ import {stairSigns,corridorSigns,floorGuides} from './signs.js';
 import {connectLive,savedName} from './net/live.js';
 import {identify,currentPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
+import {wearHat,fit,FIT} from './hat.js';
+import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink} from './link.js';
-import {installFeedback} from '../feedback/feedback.js';
+import {installFeedback,hasTesterInvite} from '../feedback/feedback.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
 const $=id=>document.getElementById(id);
@@ -236,10 +238,12 @@ installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-width:560px)').
  css:'.fb-button:not(.fb-mounted){left:auto;bottom:auto;right:16px;top:180px;z-index:5}',
  context:()=>({link:spotLink({position:controller.position,yaw:follow.yaw,pitch:follow.pitch,view:follow.mode}),where:describe(controller.position)}),
  onOpen:()=>{input.enabled=false;input.down.clear();},onClose:()=>{input.enabled=true;input.down.clear();}});
+// A tester (this browser holds a tester invite) wears the captain's hat (hat.js).
+if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 // Others aboard: their poses in, ours out, the lifts as the server runs them.
 let live=null,remotes=null,aboard=0,liveStatus='';
 if(LIVE_URL){
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names')});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -247,7 +251,7 @@ if(LIVE_URL){
   welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);},
   poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>remotes.clear(),
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
- },{pass:()=>me.pass?currentPass():Promise.resolve(null),refused:forget,invite});
+ },{pass:()=>me.pass?currentPass():Promise.resolve(null),refused:forget,invite,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
 }
@@ -266,7 +270,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
