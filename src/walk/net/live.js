@@ -13,21 +13,29 @@ export const savedName=()=>storage('leo-live-name')||'';
 export function saveName(name){try{localStorage.setItem('leo-live-name',name);}catch{}}
 
 // on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), aboard(n)}; status is 'connecting', 'live',
-// 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab).
-export function connectLive(url,on){
+// 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). opts.pass(): a Leo pass for this
+// (re)connection or null (connect.js); opts.refused(): the server would not take it; opts.invite: the invite code the
+// page was opened with.
+export function connectLive(url,on,opts={}){
  const reader=new WireReader(),key=browserKey();
- let ws=null,tries=0,stopped=false,last='',lastAt=0,sentAt=0,name=savedName(),id=null;
+ let ws=null,tries=0,stopped=false,last='',lastAt=0,sentAt=0,name=savedName(),id=null,you=null,sentPass=false,refused=false;
  const status=s=>on.status?.(s);
  function open(){
   if(stopped)return;status('connecting');
+  const pass=opts.pass?opts.pass().catch(()=>null):Promise.resolve(null);
   try{ws=new WebSocket(url);}catch{retry();return;}
   ws.binaryType='arraybuffer';
-  ws.onopen=()=>ws.send(JSON.stringify({m:'hello',v:PROTOCOL,key,name}));
+  ws.onopen=async()=>{const p=await pass;sentPass=!!p;if(ws.readyState===1)ws.send(JSON.stringify({m:'hello',v:PROTOCOL,key,name,...(p?{pass:p,invite:opts.invite||undefined}:{})}));};
   ws.onmessage=e=>{
    if(e.data instanceof ArrayBuffer){const poses=reader.read(e.data);if(poses.length)on.poses?.(poses.filter(p=>p.id!==id));return;}
    let msg;try{msg=JSON.parse(e.data);}catch{return;}
    switch(msg.m){
-    case 'welcome':tries=0;id=msg.id;last='';status('live');on.welcome?.(msg);on.aboard?.(msg.aboard);break;
+    case 'welcome':
+     tries=0;id=msg.id;last='';you=msg.you||null;status('live');on.welcome?.(msg);on.aboard?.(msg.aboard);
+     // A pass the server would not take (an old key, or one from another Creamery): drop it and come back once with
+     // a fresh one.
+     if(sentPass&&!you?.verified&&!refused){refused=true;opts.refused?.();ws.close();}
+     break;
     case 'gone':on.gone?.(msg.id);break;
     case 'lift':on.lift?.(msg.id,msg.s);break;
     case 'aboard':on.aboard?.(msg.n);break;
@@ -56,6 +64,8 @@ export function connectLive(url,on){
   call(lift,stop,now){if(live())ws.send(JSON.stringify({m:'call',lift,stop,now:!!now}));},
   rename(next){name=next;saveName(next);if(live())ws.send(JSON.stringify({m:'name',name:next}));},
   get live(){return !!live();},
+  // How the server has this visitor: {name, verified}.
+  get you(){return you;},
   close(){stopped=true;ws?.close();},
  };
 }

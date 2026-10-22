@@ -10,7 +10,8 @@
 //
 // A frame, little-endian:
 //   u8 tag 0x4c ('L') · u8 version
-//   u16 identities, each: u16 slot · u8 id bytes · id · u8 name bytes · name   (utf-8)
+//   u16 identities, each: u16 slot · u8 id bytes · id · u8 flags · u8 name bytes · name   (utf-8; flags 0x01: the
+//                         name is the visitor's Discord name, vouched for by The Creamery: net/pass.js)
 //   u16 poses, each:      u16 slot · u8 head · three u24 position · u16 heading · extras
 //   head:     bits 0-1 rest (0 none, 1 sitting, 2 lying) · 0x04 GROUNDED · 0x08 MOTION · 0x10 EMOTE; other bits unused
 //   position: (metres + 2048) x 4096, an eighth of a millimetre
@@ -19,7 +20,7 @@
 //   EMOTE:    u8 bytes · utf-8
 // Encoding throws on anything out of range (a bug in the sender); decoding drops a frame that does not read cleanly.
 
-export const WIRE_TAG=0x4c,WIRE_VERSION=1;
+export const WIRE_TAG=0x4c,WIRE_VERSION=2;
 export const STANCES=['stand','crouch','prone','slide'];
 export const RESTS=[null,'sit','lie'];
 const GROUNDED=0x04,MOTION=0x08,EMOTE=0x10,KNOWN=0x1f;
@@ -47,11 +48,11 @@ export function encodeRecord(slot,p){
  if(clip){v.setUint8(o,clip.length);bytes.set(clip,o+1);}
  return bytes;
 }
-export function encodeIdentity(slot,id,name){
+export function encodeIdentity(slot,id,name,verified=false){
  const a=encoder.encode(id),b=name?encoder.encode(name):new Uint8Array(0);
  if(a.length>0xff||b.length>0xff)throw new RangeError('pose wire: id or name too long');
- const bytes=new Uint8Array(2+1+a.length+1+b.length),v=new DataView(bytes.buffer);
- v.setUint16(0,slot,true);v.setUint8(2,a.length);bytes.set(a,3);v.setUint8(3+a.length,b.length);bytes.set(b,4+a.length);
+ const bytes=new Uint8Array(2+1+a.length+2+b.length),v=new DataView(bytes.buffer);
+ v.setUint16(0,slot,true);v.setUint8(2,a.length);bytes.set(a,3);v.setUint8(3+a.length,verified?1:0);v.setUint8(4+a.length,b.length);bytes.set(b,5+a.length);
  return bytes;
 }
 // Records into a frame: the server encodes each record once and copies it into every frame that carries it.
@@ -73,8 +74,8 @@ export function decodeFrame(data){
  const identities=[],poses=[],ids=v.getUint16(2,true);o=4;
  for(let i=0;i<ids;i++){
   if(!has(3))return null;const slot=v.getUint16(o,true),n=v.getUint8(o+2);o+=3;
-  if(!has(n+1))return null;const id=text(n),m=v.getUint8(o);o+=1;
-  if(!has(m))return null;identities.push({slot,id,name:m?text(m):undefined});
+  if(!has(n+2))return null;const id=text(n),flags=v.getUint8(o),m=v.getUint8(o+1);o+=2;
+  if(flags&~1||!has(m))return null;identities.push({slot,id,name:m?text(m):undefined,verified:!!(flags&1)});
  }
  if(!has(2))return null;const count=v.getUint16(o,true);o+=2;
  for(let i=0;i<count;i++){
@@ -101,7 +102,7 @@ export class WireReader{
  read(data){
   const frame=decodeFrame(data);if(!frame)return [];
   for(const w of frame.identities)this.who.set(w.slot,w);
-  const out=[];for(const {slot,pose} of frame.poses){const w=this.who.get(slot);if(w)out.push({id:w.id,name:w.name,...pose});}
+  const out=[];for(const {slot,pose} of frame.poses){const w=this.who.get(slot);if(w)out.push({id:w.id,name:w.name,verified:w.verified,...pose});}
   return out;
  }
 }
@@ -122,4 +123,5 @@ export function cleanName(name){
 // Control, zero-width and direction-changing characters: nothing a name needs.
 const UNSEEN=new RegExp('[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]','g');
 
-export const PROTOCOL=1;
+// 2: names can be Discord-verified (a Leo pass in the hello).
+export const PROTOCOL=2;
