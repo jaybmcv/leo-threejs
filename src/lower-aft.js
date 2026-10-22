@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {serviceKit,SERVICE_M as M} from './neighborhood-services.js';
-import {finishShipArea} from './area-finish.js';
+import {finishShipArea,detailKit,FINISH_M as F} from './area-finish.js';
 export const LOWER_AFT_AREAS=[
  {deck:1,kind:'stores',id:'d01-spares-aft',name:'Aft spares & bulk stores',start:-198,depth:30,description:'Secured replacement parts, reusable supply cases and an inventory packing station, set forward of the rising tail floor.'},
  {deck:2,kind:'workshop',id:'d02-maintenance-aft',name:'Aft maintenance workshop',start:-214,depth:36,description:'Repair benches, tool boards, equipment cradles and a clear handling aisle for servicing removable ship equipment.'},
@@ -24,7 +24,7 @@ export function createLowerAftArea(area){
   const z=s*(d/2-5);
   if(area.deck===1){
    for(const dx of [-2.6,2.6])for(const dz of [-.8,.8])box('Rack_post',[.1,2.7,.1],[x+dx,1.35,z+dz],M.metal);
-   for(const y of [.2,1.05,1.9]){box('Shelf',[5.4,.1,1.8],[x,y,z],M.metal);for(let i=0;i<5;i++)box('Supply_crate',[.85,.6,1.4],[x-2.1+i*1.05,y+.35,z],M.amber);}
+   [.2,1.05,1.9].forEach((y,j)=>{box('Shelf',[5.4,.1,1.8],[x,y,z],M.metal);for(let i=0;i<5;i++){const h=[.6,.48,.55,.6,.5][(i+j*2+x)&3],part=(i+j+x)%7===0;box('Supply_crate',[.85,h,part?1.1:1.4],[x-2.1+i*1.05,y+.05+h/2,z],part?M.blue:M.amber);}});
   }else{
    box('Worktop',[6,.12,1.6],[x,.86,z],M.metal);
    for(const dx of [-2.4,2.4])box('Bench_support',[.15,.8,1.4],[x+dx,.4,z],M.dark);
@@ -32,7 +32,24 @@ export function createLowerAftArea(area){
    else{box('Display',[1.4,.65,.08],[x,1.3,z],M.dark);box('Test_equipment',[1,.4,.6],[x+2,1.12,z],M.blue);}
   }
  }
- if(area.deck===1){box('Worktop',[5,.12,1.6],[w/2-10,.86,5],M.wood);for(const dx of [-2,2])box('Bench_support',[.15,.8,1.3],[w/2-10+dx,.4,5],M.metal);}
+ if(area.deck===1){
+  // Palletised floor stacks sit in the gaps between racks, clear of the
+  // central and cross aisles. One loose pair waits by the packing station.
+  [-11,-1,9].forEach((x,i)=>{for(const s of [-1,1]){
+   const z=s*10,top=(i+(s>0))%2;for(const dx of [-1.1,0,1.1])box('Pallet_runner',[.12,.1,1.5],[x+dx,.05,z],M.wood);box('Pallet_deck',[2.4,.04,1.6],[x,.12,z],M.wood);
+   for(const dx of [-.6,.6])box('Supply_crate',[1.1,.7,1.4],[x+dx,.49,z],M.amber);
+   box('Supply_crate',[1,.5,1.2],[x+(top?.6:-.6),1.09,z],top?M.blue:M.amber);
+  }});
+  box('Supply_crate',[.9,.6,.9],[15.2,.3,5.4],M.amber);box('Supply_crate',[.7,.45,.7],[15.2,.825,5.4],M.blue);
+  // Lid seams, tie-down straps and hand slots, batched into a few meshes.
+  const k=detailKit(fit,area.name+' crates'),crates=[];fit.traverse(o=>{if(o.name==='Supply_crate')crates.push(o);});
+  for(const o of crates){
+   const {b,c,s}=k.bounds(o);k.box(o,[s.x+.012,.025,s.z+.012],[c.x,b.max.y-.07,c.z],F.dark,'crate_detail');
+   for(const v of [-.3,.3])k.box(o,[.045,s.y+.01,s.z+.016],[c.x+v*s.x,c.y,c.z],F.steel,'crate_detail');
+   for(const e of [-1,1])k.box(o,[s.x*.28,.05,.008],[c.x,c.y+s.y*.18,c.z+e*(s.z/2+.006)],F.dark,'crate_detail');
+  }
+  k.finish();
+  box('Worktop',[5,.12,1.6],[w/2-10,.86,5],M.wood);for(const dx of [-2,2])box('Bench_support',[.15,.8,1.3],[w/2-10+dx,.4,5],M.metal);}
  if(area.deck===2)for(const s of [-1,1]){box('Equipment_cradle',[5,.3,2],[0,.15,s*6],M.dark);box('Removable_equipment',[3,.9,1.5],[0,.75,s*6],M.blue);}
  if(area.deck===3)for(const s of [-1,1]){box('Equipment_cabinet',[2,2.5,1.2],[-w/2+5,1.25,s*7],M.metal);box('Status_display',[.8,.4,.04],[-w/2+5,1.8,s*7+.63],M.dark);}
  finishShipArea(area,{root,fit,shell});
