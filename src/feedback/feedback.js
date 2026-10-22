@@ -20,9 +20,10 @@ export function feedbackEnabled(){
  }catch{return flag==='1'||!!code;}
 }
 const sending=()=>!!(FEEDBACK_CONFIG.endpoint&&FEEDBACK_CONFIG.turnstileSiteKey&&invite);
-// Whether this browser holds a tester invite (the walk gives testers a captain's hat: walk/hat.js). Call after
-// feedbackEnabled(), which takes a new invite from the address.
-export function hasTesterInvite(){try{return !!(invite||localStorage.getItem(INVITE));}catch{return !!invite;}}
+// The tester invite this browser holds, or null (the walk gives testers a captain's hat: walk/hat.js, and notes the
+// invite with their Discord account). Before feedbackEnabled() it knows only an invite kept from an earlier visit.
+export function testerInvite(){try{return invite||localStorage.getItem(INVITE);}catch{return invite;}}
+export const hasTesterInvite=()=>!!testerInvite();
 
 // Errors are kept as messages only, long tokens masked, from the moment the page installs this.
 const errors=[];
@@ -31,8 +32,10 @@ function remember(message){errors.push(`${new Date().toISOString().slice(11,19)}
 
 // page: 'viewer' or 'walk'. context(): {link, where} for the current view. mount: where the button goes, or a function
 // asked again on resize (null: it floats); look 'link' makes it a text link like its neighbours there. css: the page's
-// own placement rules. onOpen/onClose: pause and resume the page's own keys while the panel is up.
-export function installFeedback({renderer,page,context,mount=null,look='pill',css='',onOpen=()=>{},onClose=()=>{}}){
+// own placement rules. onOpen/onClose: pause and resume the page's own keys while the panel is up. identity(): on a page
+// that knows who the tester is, null or {name, pass()}: their Discord name, and a promise of a fresh Leo pass
+// (walk/net/connect.js) that goes with the report, so the capture service can check whose report it is.
+export function installFeedback({renderer,page,context,mount=null,look='pill',css='',identity=null,onOpen=()=>{},onClose=()=>{}}){
  if(!feedbackEnabled())return null;
  addEventListener('error',e=>remember(e.message||'Script error'));
  addEventListener('unhandledrejection',e=>remember(e.reason?.message||e.reason||'Unhandled rejection'));
@@ -93,6 +96,7 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
  function showAttached(){
   const c=report.context,rows=[['View',c.link],['Where',c.where],['Build',c.build.join(', ')||'unknown'],['Device',`${c.device.screen} · ${c.device.touch?'touch':'mouse'} · ${c.device.gpu||'GPU not reported'}`],
    ['Browser',c.device.browser],['Render rate',c.fps?`${c.fps} frames a second`:'not measured'],['Recent errors',c.errors.length?c.errors.join('\n'):'none']];
+  if(identity)rows.splice(1,0,['Discord',identity()?.name||'not connected']);
   ui.list.replaceChildren(...rows.map(([k,v])=>{const row=document.createElement('div');row.append(Object.assign(document.createElement('b'),{textContent:k}),Object.assign(document.createElement('span'),{textContent:v||'—'}));return row;}));
  }
  async function startVoice(){
@@ -119,7 +123,8 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
   if(!token){ui.error.textContent='One moment: the human check is still running.';return;}
   ui.send.disabled=true;ui.send.textContent='Sending…';
   try{
-   let r;try{r=await fetch(FEEDBACK_CONFIG.endpoint.replace(/\/$/,'')+'/reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invite,turnstile:token,report:out})});}
+   const pass=await identity?.()?.pass().catch(()=>null);
+   let r;try{r=await fetch(FEEDBACK_CONFIG.endpoint.replace(/\/$/,'')+'/reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invite,turnstile:token,report:out,...(pass?{pass}:{})})});}
    catch{throw new Error('The report could not be sent.');}
    const reply=await r.json().catch(()=>({}));
    if(!r.ok)throw new Error(reply.error||`The report could not be sent (${r.status}).`);

@@ -36,7 +36,7 @@ import {RemotePlayers} from './remotes.js';
 import {wearHat,fit,FIT} from './hat.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink} from './link.js';
-import {installFeedback,hasTesterInvite} from '../feedback/feedback.js';
+import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
 const $=id=>document.getElementById(id);
@@ -49,21 +49,22 @@ const LIVE_URL=(()=>{const asked=new URLSearchParams(location.search).get('live'
  return typeof __LIVE_URL__!=='undefined'?__LIVE_URL__:'';})();
 // Who is walking: their Discord account, through The Creamery (net/connect.js), or nobody in particular. Asked on the
 // loading card, while the ship is still to build, so going off to connect Discord costs no waiting. A tester's invite
-// link (?invite=, the same code that turns on tester feedback: feedback/feedback.js) always asks, so Leo live can
-// note who used it.
+// link (?invite=, the same code that turns on tester feedback: feedback/feedback.js), or one this browser kept from an
+// earlier visit to Leo, always asks, so Leo live can note who used it and their reports can name them.
+const tester=invite||testerInvite();
 let me={pass:null,name:null,error:null};
 const identity=LIVE_URL?identify().then(r=>{me=r;showWho();return r;}):Promise.resolve(me);
-function showWho(asking=!me.pass&&(invite||!skippedRecently())){
+function showWho(asking=!me.pass&&(tester||!skippedRecently())){
  $('who').hidden=false;$('who-connected').hidden=!me.pass;$('who-ask').hidden=!asking;
  $('name-field').hidden=!!me.pass||asking;$('who-later').hidden=!!me.pass||asking;
  if(me.pass){$('who-name').textContent=me.name||'Voyager';return;}
  $('name-input').value||=savedName();
  $('who-note').textContent=me.error?(me.error==='cancelled'?'Discord sign-in was cancelled. Try again, or skip for now.':'Discord sign-in didn’t work. Try again, or skip for now.')
-  :invite?'You’re invited to test Leo. Connect Discord so we know it’s you.':'Connect Discord so others aboard know it’s you.';
+  :tester?'You’re invited to test Leo. Connect Discord so we know it’s you.':'Connect Discord so others aboard know it’s you.';
 }
 if(LIVE_URL){
  $('who-connect').addEventListener('click',connect);$('who-later').addEventListener('click',connect);
- $('who-skip').addEventListener('click',()=>{if(!invite)skip();showWho(false);$('name-input').focus();});
+ $('who-skip').addEventListener('click',()=>{if(!tester)skip();showWho(false);$('name-input').focus();});
 }
 const renderer=new T.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true,powerPreference:'high-performance'});
 const phone=matchMedia('(pointer:coarse)').matches;
@@ -236,6 +237,7 @@ let heading=follow.yaw;const safe=controller.position.clone();
 // Feedback joins the top-right tools; a narrow phone has no room there, so it sits under the mini-map instead.
 installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-width:560px)').matches?null:document.querySelector('.tools'),
  css:'.fb-button:not(.fb-mounted){left:auto;bottom:auto;right:16px;top:180px;z-index:5}',
+ identity:()=>me.pass?{name:me.name||'Voyager',pass:currentPass}:null,
  context:()=>({link:spotLink({position:controller.position,yaw:follow.yaw,pitch:follow.pitch,view:follow.mode}),where:describe(controller.position)}),
  onOpen:()=>{input.enabled=false;input.down.clear();},onClose:()=>{input.enabled=true;input.down.clear();}});
 // A tester (this browser holds a tester invite) wears the captain's hat (hat.js).
@@ -251,7 +253,7 @@ if(LIVE_URL){
   welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);},
   poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>remotes.clear(),
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
- },{pass:()=>me.pass?currentPass():Promise.resolve(null),refused:forget,invite,hat:hasTesterInvite});
+ },{pass:()=>me.pass?currentPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
 }
