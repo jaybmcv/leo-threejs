@@ -10,5 +10,10 @@ crouch, slide, emotes and seated poses. They are copied unchanged except:
 - the two loaders at the end of `dlCatFigure.ts` (which fetch Voyager's Reach's own copy of the rig) are left out: Leo
   builds the figure from the Cosmo bundle (`../avatar.js`).
 
+`dlCatFigure.ts` also carries Voyager's Reach's later tail fix (commit 959ac8ff, 2026-10-22): the reference run keeps
+the tail's upright resting curl and the spring adds sway and inertia after it, and in the air the tail trails the body's
+vertical travel. It no longer skips `neutral_bone` when an emote finds the floor (the pockets moved off it: see
+`../../vendor/cosmo/README.md`).
+
 Refresh them by copying the same files again and reapplying those edits. The clips are CC0, from the Quaternius
 Universal Animation Library.
