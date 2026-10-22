@@ -37,12 +37,41 @@ export function finishForwardLounge(lounge,shell,y){
   cyl('Tea_cup',.07,.11,[x-.31,y+.81,z+.2],'stone');
   cyl('Cup_saucer',.105,.016,[x-.31,y+.762,z+.2],'oak');
  }
+ const spines=[0x688997,0xb18169,0x668279,0x2f4858,0xd8cdb4,0x8a5a44].map((c,i)=>new T.MeshStandardMaterial({name:'Forward book cloth '+i,color:c,roughness:.85,metalness:0})),books=spines.map(()=>[]);
+ let seed=7;const rnd=()=>(seed=seed*16807%2147483647)/2147483647;
  for(const shelf of bookcases){
   const z=shelf.position.z;
   for(let level=0;level<4;level++)box('Reading_shelf',[.55,.055,6.85],[171,y+.315+level*.55,z],'oak');
   for(const end of [-3.47,3.47])box('Bookcase_end',[.55,2.1,.06],[171,y+1.05,z+end],'oak');
   box('Library_task_light',[.055,.04,6.65],[171.29,y+2.04,z],'light');
+  // Books fill the three lower shelves end to end, broken by a few lying stacks and small objects.
+  for(let level=0;level<3;level++){
+   const base=y+.3425+level*.55;let at=z-3.42;
+   while(at<z+3.42){
+    const r=rnd();
+    if(r<.05&&at<z+3.1){
+     const c=at+.15,kind=Math.floor(rnd()*3);
+     if(kind===0)cyl('Shelf_vase',.055,.2,[171.03,base+.1,c],'glass');
+     else if(kind===1)add('Shelf_bowl',new T.CylinderGeometry(.1,.06,.07,20),[171.03,base+.035,c],'stone');
+     else{cyl('Shelf_plant_pot',.07,.11,[171.03,base+.055,c],'stone');add('Shelf_plant',new T.SphereGeometry(.11,10,8),[171.03,base+.2,c],'leaf').scale.set(1,1.2,1);}
+     at+=.3;continue;
+    }
+    if(r<.1&&at<z+3.1){
+     const n=2+Math.floor(rnd()*3);
+     for(let i=0;i<n;i++)books[Math.floor(rnd()*spines.length)].push([171.05,base+.022+i*.044,at+.14,.3,.04,.22-i*.01]);
+     at+=.3;continue;
+    }
+    const t=.03+rnd()*.04,h=.22+rnd()*.14,d=.26+rnd()*.12;
+    if(at+t>z+3.42)break;
+    books[Math.floor(rnd()*spines.length)].push([171.235-d/2,base+h/2,at+t/2,d,h,t]);at+=t+.004;
+   }
+  }
  }
+ // One instanced mesh per cloth colour keeps the few hundred books cheap to draw.
+ books.forEach((list,i)=>{
+  const mesh=new T.InstancedMesh(new T.BoxGeometry(1,1,1),spines[i],list.length);mesh.name='Forward_shelf_books';mesh.castShadow=mesh.receiveShadow=true;
+  list.forEach(([x,by,bz,d,h,t],j)=>mesh.setMatrixAt(j,new T.Matrix4().compose(new T.Vector3(x,by,bz),new T.Quaternion(),new T.Vector3(d,h,t))));detail.add(mesh);
+ });
  for(const planter of planters){
   planter.material=m.stone;planter.geometry=new RoundedBoxGeometry(2.4,.65,2.4,2,.08);
   const {x,z}=planter.position;
