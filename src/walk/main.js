@@ -28,6 +28,7 @@ import {PLACES,findStand,describe} from './places.js';
 import {openWindows,clearGlass} from './windows.js';
 import {createHaze} from './haze.js';
 import {createStarDrift} from './star-drift.js';
+import {createAmbience} from './ambience.js';
 import {stairSigns,corridorSigns} from './signs.js';
 import {connectLive,savedName} from './net/live.js';
 import {RemotePlayers} from './remotes.js';
@@ -391,6 +392,9 @@ for(const b of document.querySelectorAll('[data-close]'))b.addEventListener('cli
 $('use').addEventListener('click',()=>actions.use());
 $('go').addEventListener('click',togglePlaces);
 $('view').addEventListener('click',()=>actions.view());
+// The ship's hum and chimes (ambience.js), off until asked for.
+const ambience=createAmbience(),sound=$('sound');sound.setAttribute('aria-pressed',String(ambience.on));
+sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambience.toggle())));
 // Held for a higher jump, as Space is.
 $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;input.jumpHeld=true;$('jump').setPointerCapture(e.pointerId);});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('jump').addEventListener(type,()=>{input.jumpHeld=false;});
