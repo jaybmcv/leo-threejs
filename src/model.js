@@ -325,7 +325,8 @@ export function createNeighborhood() {
   for(let level=0;level<2;level++)for(let i=0;i<24;i++)box('Gallery_stair',[3,(i+1)/6,.3],[151.8-level*3.3,cy+level*4+(i+1)/12,level===0?35+i*.3:41.9-i*.3],white,fittings);
   box('Upper_stair_landing',[6.3,.28,1.8],[150.15,32.16,33.95],floor,fittings);
   box('Upper_gallery_connection',[1.5,.28,10],[146.25,32.16,38],floor,fittings);
-  for(let [xx,zz,r] of [[134,18,1],[144,36,2],[122,32,.8],[148,14,0]])catFigure(fittings,xx,cy,zz,r);
+  // Crew cats stand on open floor, clear of the planters (x 136.5-145.5, z 27.5-36.5 for the second one).
+  for(let [xx,zz,r] of [[134,18,1],[144,38.5,2],[122,32,.8],[148,14,0]])catFigure(fittings,xx,cy,zz,r);
   catFigure(fittings,126,28.3,44,Math.PI);catFigure(fittings,143,32.3,44,2);
   // Everyday shared spaces beside the garden, away from the central routes.
   const services=group('Neighborhood_shared_services',fittings);
