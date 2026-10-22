@@ -45,7 +45,20 @@ export function findRestSpots(root){
   const count=half*2>1.25?Math.max(1,Math.floor((half*2-.15)/SPACING)):1;
   for(let i=0;i<count;i++){const t=count===1?0:(-(count-1)/2+i)*SPACING;spots.push({kind:'sit',point:c.clone().addScaledVector(dir,t),facing,height:c.y});}
  };
- for(const it of seats)seatSpots(it);
+ // A curved banquette rings its table: spots follow the arc between the front edge and the back, facing the table.
+ const plan=(o,m,O)=>{const p=o.geometry.attributes.position,v=new T.Vector3(),out=[];for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(m);out.push([v.x-O.x,v.z-O.z]);}return out;};
+ const arcSpots=(it)=>{
+  const O=new T.Vector3().setFromMatrixPosition(it.m),c=it.face.c,mid=Math.atan2(c.z-O.z,c.x-O.x);
+  let rIn=Infinity,rOut=0,a0=Infinity,a1=-Infinity;
+  for(const [x,z] of plan(it.o,it.m,O)){const r=Math.hypot(x,z),a=Math.atan2(z,x)-mid,d=Math.atan2(Math.sin(a),Math.cos(a));rIn=Math.min(rIn,r);rOut=Math.max(rOut,r);a0=Math.min(a0,d);a1=Math.max(a1,d);}
+  const back=near(c,'back',1.1);let rBack=rOut;
+  if(back)for(const [x,z] of plan(back.o,back.m,O))rBack=Math.min(rBack,Math.hypot(x,z));
+  const r=(rIn+Math.min(rBack,rOut))/2,end=.35/r,span=a1-a0-2*end;if(span<=0)return;
+  const count=Math.max(1,Math.floor(span*r/SPACING)+1),step=count>1?span/(count-1):0;
+  for(let i=0;i<count;i++){const a=mid+a0+end+(count>1?i*step:span/2),dir=new T.Vector3(Math.cos(a),0,Math.sin(a));
+   spots.push({kind:'sit',point:O.clone().addScaledVector(dir,r).setY(c.y),facing:dir.negate(),height:c.y});}
+ };
+ for(const it of seats)(/curved/i.test(it.o.name)&&!it.o.isInstancedMesh?arcSpots:seatSpots)(it);
  // A base counts only where no cushion or seat already covers it.
  for(const it of bases)if(!near(it.face.c.clone().setY(it.face.c.y+.15),'seat',.5))seatSpots(it);
  for(const it of beds){
