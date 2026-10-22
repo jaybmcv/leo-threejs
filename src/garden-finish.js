@@ -3,6 +3,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {polishInterior} from './interior-polish.js';
 import {stylizedTree} from './stylized-plants.js';
+import {seeded} from './polish-kit.js';
 
 // All additions belong to the shared commons template, so every neighborhood
 // receives the same finishes without moving its floor, galleries or routes.
@@ -98,6 +99,29 @@ export function finishGarden({fittings,walls,parts,wallParts,material}){
    box('Library_book',[.23,h,.12],[x+.035,24.64+level*.6+h/2,43.8+i*.22],i%2?clay:sage);
   }
  }
+ // Framed abstract prints hang on bare wall runs: the end wall under the gallery and between the gallery doors.
+ // Each composition is seeded geometry, so no outside artwork or textures are needed.
+ const inks=[0x668279,0xb07d63,0xd4a24c,0x2f4858,0xa4513a].map((c,i)=>material('Commons_art_ink_'+i,c,{roughness:.9,metalness:0}));
+ const linen=material('Commons_art_linen',0xeee6d6,{roughness:.95,metalness:0});
+ const art={frame:[],linen:[],ink:inks.map(()=>[])};
+ const print=(seed,w,h,pos,yaw)=>{
+  const rnd=seeded(seed),m=new T.Matrix4().makeRotationY(yaw).setPosition(...pos),bar=.07;
+  const put=(list,g)=>list.push(g.applyMatrix4(m));
+  for(const [sx,sy,x,y] of [[w+bar*2,bar,0,(h+bar)/2],[w+bar*2,bar,0,-(h+bar)/2],[bar,h,(w+bar)/2,0],[bar,h,-(w+bar)/2,0]])put(art.frame,new T.BoxGeometry(sx,sy,.06).translate(x,y,.03));
+  put(art.linen,new T.BoxGeometry(w,h,.02).translate(0,0,.02));
+  for(let k=0,n=3+Math.floor(rnd()*3);k<n;k++){
+   const ink=art.ink[Math.floor(rnd()*inks.length)],z=.033+k*.004;
+   if(rnd()<.35){const r=Math.min(w,h)*(.12+rnd()*.18);put(ink,new T.CylinderGeometry(r,r,.006,32).rotateX(Math.PI/2).translate((rnd()-.5)*(w-r*2.4),(rnd()-.5)*(h-r*2.4),z));}
+   else{const sw=w*(.15+rnd()*.45),sh=h*(.12+rnd()*.5);put(ink,new T.BoxGeometry(sw,sh,.006).translate((rnd()-.5)*(w*.9-sw),(rnd()-.5)*(h*.9-sh),z));}
+  }
+ };
+ [22,28,34].forEach((z,i)=>print(70+i,1.6,1.2,[109.6,26.1,z],Math.PI/2));
+ print(73,2.2,1.4,[141.5,26.2,45.8],Math.PI);
+ [29.9,33.85].forEach((y,j)=>[121.5,130.5,139.5].forEach((x,i)=>print(80+j*3+i,1.4,1,[x,y,45.8],Math.PI)));
+ add('Commons_art_frame',mergeGeometries(art.frame),dark,[0,0,0]);
+ add('Commons_art_canvas',mergeGeometries(art.linen),linen,[0,0,0]);
+ art.ink.forEach((gs,i)=>{if(gs.length)add('Commons_art_print',mergeGeometries(gs),inks[i],[0,0,0]);});
+ [art.frame,art.linen,...art.ink].forEach(gs=>gs.forEach(g=>g.dispose()));
  for(const p of [...parts,...wallParts,finish,ceiling])polishInterior(p,'Garden commons');
- return {revision:2,plantedBeds:2,benchSeats:8,cafePendants:3,scope:'Shared commons polish; softened joinery, tailored seating and satin hardware'};
+ return {revision:2,plantedBeds:2,benchSeats:8,cafePendants:3,framedPrints:10,scope:'Shared commons polish; softened joinery, tailored seating and satin hardware'};
 }
