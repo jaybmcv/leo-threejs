@@ -30,6 +30,7 @@ import {createHaze} from './haze.js';
 import {createStarDrift} from './star-drift.js';
 import {createAmbience} from './ambience.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.js';
+import {corridorTrim} from './trim.js';
 import {connectLive,savedName} from './net/live.js';
 import {identify,currentPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
@@ -128,7 +129,7 @@ async function buildShip(){
  buildColliders(ship,{extra:[ship.exterior],filter:walls,into:colliders});
  // The hull behind the glass goes for drawing only, after the colliders have it.
  const w0=performance.now(),opened=openWindows(ship,walkPlan.windows);clearGlass(ship.root);timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
- lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);
+ lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);corridorTrim(lifts.signs);
  rest=spotIndex(solidSpots(findRestSpots(ship.inside),colliders));
  status('Dressing the crew…');await idle();
  if(cosmoKit)globalThis.LeoCosmo.dressCats(ship.inside,cosmoKit);
