@@ -169,6 +169,8 @@ const actions={
  crouch(){if(ready()&&!resting){controller.toggle('crouch');emote=null;}},
  prone(){if(ready()&&!resting){controller.toggle('prone');emote=null;}},
  emotes(){if(ready())toggleEmotes();},
+ // Respawn: back to the arrival hall from anywhere aboard, off any seat or bed.
+ respawn(){if(ready()){closePanels();emote=null;goTo({at:START.position.toArray(),yaw:START.yaw});}},
  // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
  emote(i){if(ready()&&!resting&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
  // A key pressed while a sheet is open: the key that opened it closes it, and the emote sheet takes 1-0.
@@ -382,3 +384,4 @@ $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('jump').addEventListener(type,()=>{input.jumpHeld=false;});
 $('crouch').addEventListener('click',()=>actions.crouch());
 $('emote-button').addEventListener('click',()=>actions.emotes());
+for(const b of document.querySelectorAll('.respawn'))b.addEventListener('click',()=>actions.respawn());
