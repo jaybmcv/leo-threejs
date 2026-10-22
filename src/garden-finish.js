@@ -21,6 +21,8 @@ export function finishGarden({fittings,walls,parts,wallParts,material}){
  const cylinder=(name,r,h,pos,mat,parent=finish)=>add(name,new T.CylinderGeometry(r,r,h,16),mat,pos,parent);
  const trees=[];
  for(const part of [...parts,...wallParts])part.traverse(o=>{
+  // The kitchen island chairs sat with their backs to it; turn them in place to face the island.
+  if(o.name==='Tail_clearance_chair'&&o.position.z===37&&o.parent?.name==='Neighborhood_shared_services')o.rotation.y=0;
   if(!o.isMesh)return;
   if(o.name==='Low_plant'){o.visible=false;return;}
   // The blockout trees give way to branching, leaf-clustered ones; each hidden trunk still marks its spot.
