@@ -27,6 +27,7 @@ import {findRestSpots,solidSpots,spotIndex} from './rest.js';
 import {PLACES,findStand,describe} from './places.js';
 import {openWindows,clearGlass} from './windows.js';
 import {createHaze} from './haze.js';
+import {createStarDrift} from './star-drift.js';
 import {stairSigns,corridorSigns} from './signs.js';
 import {connectLive,savedName} from './net/live.js';
 import {RemotePlayers} from './remotes.js';
@@ -56,6 +57,8 @@ const sky=new T.Scene();sky.background=new T.Color(0x05080d);const skyCamera=new
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));
  sky.add(new T.Points(g,new T.PointsMaterial({color:0xd5e2eb,size:1.25,sizeAttenuation:false,transparent:true,opacity:.65})));
  const mars=createMars();mars.position.set(1800,90,-100);sky.add(mars);}
+// Nearer stars drift slowly aft past the windows (star-drift.js).
+const drift=createStarDrift({count:phone?320:520,still:matchMedia('(prefers-reduced-motion: reduce)').matches});sky.add(drift.points);
 renderer.autoClear=false;
 // A light haze down the long corridors lets the far plane stop at 150 m.
 scene.fog=new T.Fog(0xd9dcd6,70,148);
@@ -295,6 +298,7 @@ renderer.setAnimationLoop(()=>{
  remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
  if(now-lastHud>120){lastHud=now;hud(p);}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
+ drift.update(dt);
  skyCamera.position.copy(camera.position);skyCamera.quaternion.copy(camera.quaternion);skyCamera.fov=camera.fov;skyCamera.aspect=camera.aspect;skyCamera.updateProjectionMatrix();
  hazeCamera.position.copy(camera.position);hazeCamera.quaternion.copy(camera.quaternion);hazeCamera.fov=camera.fov;hazeCamera.aspect=camera.aspect;hazeCamera.updateProjectionMatrix();
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,camera);
