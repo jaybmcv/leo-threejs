@@ -15,7 +15,7 @@ export function saveName(name){try{localStorage.setItem('leo-live-name',name);}c
 // on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), aboard(n)}; status is 'connecting', 'live',
 // 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). opts.pass(): a Leo pass for this
 // (re)connection or null (connect.js); opts.refused(): the server would not take it; opts.invite: the invite code the
-// page was opened with.
+// page was opened with; opts.hat(): whether this visitor wears the captain's hat (a tester).
 export function connectLive(url,on,opts={}){
  const reader=new WireReader(),key=browserKey();
  let ws=null,tries=0,stopped=false,last='',lastAt=0,sentAt=0,name=savedName(),id=null,you=null,sentPass=false,refused=false;
@@ -25,7 +25,7 @@ export function connectLive(url,on,opts={}){
   const pass=opts.pass?opts.pass().catch(()=>null):Promise.resolve(null);
   try{ws=new WebSocket(url);}catch{retry();return;}
   ws.binaryType='arraybuffer';
-  ws.onopen=async()=>{const p=await pass;sentPass=!!p;if(ws.readyState===1)ws.send(JSON.stringify({m:'hello',v:PROTOCOL,key,name,...(p?{pass:p,invite:opts.invite||undefined}:{})}));};
+  ws.onopen=async()=>{const p=await pass;sentPass=!!p;if(ws.readyState===1)ws.send(JSON.stringify({m:'hello',v:PROTOCOL,key,name,hat:!!opts.hat?.(),...(p?{pass:p,invite:opts.invite||undefined}:{})}));};
   ws.onmessage=e=>{
    if(e.data instanceof ArrayBuffer){const poses=reader.read(e.data);if(poses.length)on.poses?.(poses.filter(p=>p.id!==id));return;}
    let msg;try{msg=JSON.parse(e.data);}catch{return;}

@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {bandOf} from './collision.js';
+import {wearHat} from './hat.js';
 
 // Other visitors aboard, drawn as Cosmo (avatar.js) and moved by the poses Leo live passes on (net/live.js). The
 // easing follows Voyager's Reach's remote players (packages/client/src/scene/remotePlayers.ts): a body eases toward its
@@ -10,12 +11,13 @@ import {bandOf} from './collision.js';
 // Only the nearest MAX_RIGS visitors on the decks being drawn get a body, from a small pool that is kept and reused. A
 // body standing in a lift car stands on its floor as this page draws the car, so a rider never sinks or floats.
 const STALE_MS=12000,EASE_PER_S=10,GLIDE_MIN_MS=200,GLIDE_MAX_MS=700,STOPPED_AFTER_MS=185,STRIDE_HALF_LIFE_MS=100;
-const MAX_RIGS=24,LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12;
+const HAT_M=35,MAX_RIGS=24,LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12;
 
 export class RemotePlayers{
  // make(): a new walker (avatar.js createWalker); colliders: for hiding names behind walls; lifts: lift-ride.js.
- constructor(scene,{make,colliders,lifts,labels}){
-  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels});
+ // hatUrl: the captain's hat that testers wear (hat.js).
+ constructor(scene,{make,colliders,lifts,labels,hatUrl}){
+  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl});
   this.remotes=new Map();this.pool=[];this.making=false;this.labels=[];this.ray=new T.Ray();this.v=new T.Vector3();
  }
  get count(){return this.remotes.size;}
@@ -31,7 +33,7 @@ export class RemotePlayers{
   // Sparse twice running is a rate, not a hiccup: glide across it.
   const gap=now-r.prevMs,sparse=ms=>ms>=GLIDE_MIN_MS&&ms<=GLIDE_MAX_MS;
   r.glideMs=sparse(gap)&&sparse(r.gapMs)?gap:0;r.glideFrom=[r.cur.x,r.cur.y,r.cur.z];r.gapMs=gap;
-  r.prev=p;r.prevMs=now;r.tgt=p;r.seen=now;r.name=p.name||r.name;r.verified=!!p.verified;
+  r.prev=p;r.prevMs=now;r.tgt=p;r.seen=now;r.name=p.name||r.name;r.verified=!!p.verified;r.hat=!!p.hat;
  }
  gone(id){const r=this.remotes.get(id);if(!r)return;this.release(r);r.label?.remove();this.remotes.delete(id);}
  clear(){for(const id of [...this.remotes.keys()])this.gone(id);}
@@ -60,6 +62,8 @@ export class RemotePlayers{
     const w=this.pool.pop();if(w)r.walker=w;else{this.grow();continue;}
     this.scene.add(r.walker.holder);
    }
+   // A body from the pool may have worn someone else's hat.
+   if(r.hat&&!r.walker.hat&&this.hatUrl)wearHat(r.walker,this.hatUrl);else if(!r.hat&&r.walker.hat)r.walker.hat.remove();
    this.pose(r,dt);
   }
   this.name(bodied,camera,now);
@@ -88,6 +92,8 @@ export class RemotePlayers{
   const t=r.tgt;
   w.update(dt,{speed:r.rest?0:r.speed,grounded:t.grounded,stance:t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
    emote:t.emote,rest:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight}:null});
+  // A captain's hat is ~200k triangles: past HAT_M it is a few pixels, and not drawn.
+  if(w.hat&&r.distance>HAT_M)w.hat.mount.visible=false;
  }
  // Names over the nearest heads, hidden behind walls (checked a few times a second).
  name(bodied,camera,now){
