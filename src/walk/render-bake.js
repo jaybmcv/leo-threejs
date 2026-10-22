@@ -105,7 +105,7 @@ function nudge(p,{list,index}){
 export function bakeForWalking(root,{skip=()=>false}={}){
  root.updateMatrixWorld(true);
  const buckets=new Map(),taken=[],v=new T.Vector3(),c=new T.Vector3();
- const bucket=(material,band,cell,colors)=>{const key=`${material.uuid}|${band}|${cell}|${colors?1:0}`;let b=buckets.get(key);if(!b)buckets.set(key,b={material,band,colors,parts:[],vertices:0,indices:0});return b;};
+ const bucket=(material,band,cell,colors,top=band)=>{const key=`${material.uuid}|${band}|${top}|${cell}|${colors?1:0}`;let b=buckets.get(key);if(!b)buckets.set(key,b={material,band,top,colors,parts:[],vertices:0,indices:0});return b;};
  root.traverse(o=>{
   if(!o.isMesh||o.isInstancedMesh||o.isSkinnedMesh||Array.isArray(o.material)||!worldVisible(o)||skip(o))return;
   for(let p=o;p;p=p.parent)if(p.userData.keepLive)return;
@@ -114,15 +114,16 @@ export function bakeForWalking(root,{skip=()=>false}={}){
   const box=g.boundingBox.clone().applyMatrix4(o.matrixWorld),colors=!!(o.material.vertexColors&&g.attributes.color)||!!finishOf(o.material),material=finishOf(o.material)||o.material;
   const count=g.index?g.index.count:pos.count;taken.push(o);
   // Small parts go whole into the bucket of their centre; long or tall ones are cut up by triangle so each piece
-  // can be culled with its band and stretch of the ship.
+  // can be culled with its band and stretch of the ship. A triangle that crosses bands (a tall wall's half) draws while
+  // any band it reaches is in view, or a wall seen only low down loses its upper half.
   if(box.max.x-box.min.x<=CELL&&bandOf(box.min.y)===bandOf(box.max.y)){
    box.getCenter(c);const b=bucket(material,bandOf(c.y),Math.floor(c.x/CELL),colors);
    b.parts.push({o,tris:null});b.vertices+=pos.count;b.indices+=count;return;
   }
   const split=new Map(),idx=g.index?g.index.array:null,m=o.matrixWorld;
   for(let t=0;t<count;t+=3){
-   c.set(0,0,0);for(let k=0;k<3;k++)c.add(v.fromBufferAttribute(pos,idx?idx[t+k]:t+k).applyMatrix4(m));c.divideScalar(3);
-   const b=bucket(material,bandOf(c.y),Math.floor(c.x/CELL),colors);let list=split.get(b);if(!list)split.set(b,list=[]);list.push(t);
+   c.set(0,0,0);let lo=Infinity,hi=-Infinity;for(let k=0;k<3;k++){c.add(v.fromBufferAttribute(pos,idx?idx[t+k]:t+k).applyMatrix4(m));lo=Math.min(lo,v.y);hi=Math.max(hi,v.y);}c.divideScalar(3);
+   const b=bucket(material,bandOf(lo),Math.floor(c.x/CELL),colors,bandOf(hi));let list=split.get(b);if(!list)split.set(b,list=[]);list.push(t);
   }
   for(const [b,list] of split){b.parts.push({o,tris:list});b.vertices+=list.length*3;b.indices+=list.length*3;}
  });
@@ -158,7 +159,8 @@ export function bakeForWalking(root,{skip=()=>false}={}){
   if(C)geo.setAttribute('color',new T.BufferAttribute(C,3));
   geo.setIndex(new T.BufferAttribute(I,1));geo.computeBoundingSphere();geo.computeBoundingBox();
   const mesh=new T.Mesh(geo,b.material);mesh.name='Walk_merged_'+(b.material.name||'material');mesh.matrixAutoUpdate=false;
-  let group=bands.get(b.band);if(!group){group=new T.Group();group.name='Walk_band_'+b.band;group.userData.band=b.band;bands.set(b.band,group);}
+  const id=b.top>b.band?`${b.band}-${b.top}`:b.band;
+  let group=bands.get(id);if(!group){group=new T.Group();group.name='Walk_band_'+id;group.userData.band=b.band;group.userData.top=b.top;bands.set(id,group);}
   group.add(mesh);
  }
  // The originals stay in the scene graph (colliders and seats read them) but no longer render.
@@ -166,7 +168,7 @@ export function bakeForWalking(root,{skip=()=>false}={}){
  return {bands,meshes:buckets.size,sources:taken.length};
 }
 
-// Show the bands between `low` and `high` (heights).
+// Show the bands between `low` and `high` (heights), and every group that reaches into them.
 export function showBands(bands,low,high){
- const a=bandOf(low),b=bandOf(high);for(const [band,group] of bands)group.visible=band>=a&&band<=b;
+ const a=bandOf(low),b=bandOf(high);for(const group of bands.values()){const {band,top=band}=group.userData;group.visible=top>=a&&band<=b;}
 }
