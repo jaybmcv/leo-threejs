@@ -55,12 +55,18 @@ export function drawMiniMap(canvas,map,{x,y,z,yaw,places=[]}){
 
 // Names of the nearest rooms on the mini-map, upright: at most three, none over the arrow, each other or the deck
 // label. A name sits in the part of its room nearest the walker, moved further in (or out to its wall) until it fits,
-// so the rooms along a corridor stay named before you reach them. The room the walker is in is named in the top bar,
-// so its label usually gives way to the arrow.
+// so the rooms along a corridor stay named before you reach them. The room the walker is in keeps its name at its
+// centre, slid in from the edge of the map while the centre is out of view, and above or below the arrow if they meet.
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
 function miniNames(g,{w,h,dpr,x,z,turn,y}){
  const m=3.2*dpr,c=Math.cos(turn),s=Math.sin(turn),px=Math.round(9*dpr),boxes=[{x0:w/2-14*dpr,x1:w/2+14*dpr,y0:h/2-14*dpr,y1:h/2+14*dpr}];
  const screen=(ax,az)=>{const dx=(ax-x)*m,dz=(az-z)*m;return [w/2+dx*c-dz*s,h/2+dx*s+dz*c];};
+ const world=(sx,sy)=>{const u=sx-w/2,v=sy-h/2;return [x+(u*c+v*s)/m,z+(v*c-u*s)/m];};
+ const inside=(a,[ax,az],e=0)=>Math.abs(ax-a.center[0])<=a.width/2-e&&Math.abs(az-a.center[2])<=a.depth/2-e;
+ // Where the name of the walker's own room may go, in screen px: its centre held inside the map, then that point
+ // moved just above or below the arrow.
+ const own=(a,tw,th)=>{const [cx,cy]=screen(a.center[0],a.center[2]),sx=clamp(cx,4*dpr+tw/2+2*dpr,w-4*dpr-tw/2-2*dpr),sy=clamp(cy,4*dpr+th/2+dpr,h-18*dpr-th/2-dpr),off=14*dpr+th/2+2*dpr;
+  return [[sx,sy],[sx,h/2+(cy<h/2?-off:off)],[sx,h/2+(cy<h/2?off:-off)]].filter(p=>inside(a,world(...p),1));};
  // The point `inset` metres inside room `a` nearest the walker (its centre once the room is too small for that).
  const spot=(a,inset)=>{const hx=a.width/2,hz=a.depth/2,ix=Math.min(inset,hx),iz=Math.min(inset,hz);
   return [clamp(x,a.center[0]-hx+ix,a.center[0]+hx-ix),clamp(z,a.center[2]-hz+iz,a.center[2]+hz-iz)];};
@@ -72,8 +78,9 @@ function miniNames(g,{w,h,dpr,x,z,turn,y}){
  for(const n of near){if(shown>=3)break;
   const lines=split(g,n.a.name,w*.42),tw=Math.max(...lines.map(l=>g.measureText(l).width)),th=lines.length*px*1.1;
   let at=null;
-  for(const inset of [4,8,12,1e9,1]){
-   const [sx,sy]=screen(...spot(n.a,inset)),b={x0:sx-tw/2-2*dpr,x1:sx+tw/2+2*dpr,y0:sy-th/2-dpr,y1:sy+th/2+dpr};
+  const spots=inside(n.a,[x,z])?own(n.a,tw,th):[4,8,12,1e9,1].map(i=>screen(...spot(n.a,i)));
+  for(const [sx,sy] of spots){
+   const b={x0:sx-tw/2-2*dpr,x1:sx+tw/2+2*dpr,y0:sy-th/2-dpr,y1:sy+th/2+dpr};
    if(b.x0<4*dpr||b.x1>w-4*dpr||b.y0<4*dpr||b.y1>h-18*dpr)continue;
    if(boxes.some(o=>b.x0<o.x1&&b.x1>o.x0&&b.y0<o.y1&&b.y1>o.y0))continue;
    at={sx,sy,b};break;
