@@ -97,8 +97,9 @@ export function createLounge({root,walls,fittings,box,mesh,group,material,chair,
   // 2 m rise over 24 m joins the commons deck to the actual middle windows.
   box('Promenade_level_floor',[14,.3,5.4],[139,24.15,0],floor,fittings);
   const ramp=box('Lounge_access_ramp',[Math.hypot(24,2),.3,6],[158,25.15,0],floor,fittings);ramp.rotation.z=Math.atan2(2,24);
-  sign('LOUNGE  /  24 M',145.4,26.35,-2.3,-Math.PI/2);
-  box('Promenade_sign_post',[.1,2.3,.1],[145.4,25.45,-2.3],metal,fittings);
+  // Hung centred over the 5.4 m passage, clear of both walls and of heads, from the ceiling just above.
+  sign('LOUNGE  /  24 M',145.4,27.35,0,-Math.PI/2);
+  for(const z of [-1.8,1.8])box('Promenade_sign_hanger',[.03,.25,.03],[145.4,28.03,z],metal,fittings);
   for(const s of [-1,1]){
     for(const [a,b] of [[[132,24.34,s*2.5],[146,24.34,s*2.5]],[[146,24.34,s*2.5],[170,26.34,s*2.5]],[[170,26.34,s*2.5],[198,26.34,s*2.5]]])tube('Promenade_floor_light',[a,b],.022,light,fittings);
     tube('Ramp_handrail',[[146,25.4,s*2.85],[170,27.4,s*2.85]],.045,metal,fittings);

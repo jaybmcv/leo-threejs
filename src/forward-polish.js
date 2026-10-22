@@ -41,14 +41,14 @@ const fiberStars=()=>canvasTexture(1024,1024,(g,w,h)=>{
  for(let i=0;i<700;i++){const a=.25+rnd()*.75;g.fillStyle=`rgba(${rnd()<.2?'255,214,168':'230,238,255'},${a})`;g.beginPath();g.arc(rnd()*w,rnd()*h,.8+rnd()*1.6,0,Math.PI*2);g.fill();}
 },[1,1]);
 
-// The "Lounge / 24 m" sign stood on a post with half its width buried in the 5.4 m corridor's wall. Hang it from the
-// ceiling instead, centred and scaled to fit.
+// The tour hangs the "Lounge / 24 m" sign from its own ceiling, centred and scaled to fit the 5.4 m corridor, in
+// place of the source's hangers.
 function hangLoungeSign(root,ceilingAt){
  const sign=root.getObjectByName('Wayfinding_LOUNGE__/__24_M');if(!sign)return;
  const b=new T.Box3().setFromObject(sign),x=b.getCenter(new T.Vector3()).x,scale=Math.min(1,3.4/(b.max.z-b.min.z)),top=ceilingAt(x);
  const origin=sign.getWorldPosition(new T.Vector3()),offset=(b.getCenter(new T.Vector3()).z-origin.z)*scale;
  sign.position.copy(sign.parent.worldToLocal(new T.Vector3(origin.x,top-.55,-offset)));sign.scale.multiplyScalar(scale);
- root.traverse(o=>{if(o.name==='Promenade_sign_post'&&Math.abs(o.getWorldPosition(new T.Vector3()).x-x)<1)o.visible=false;});
+ root.traverse(o=>{if(o.name==='Promenade_sign_hanger'&&Math.abs(o.getWorldPosition(new T.Vector3()).x-x)<1)o.visible=false;});
  const rod=standard(0x6b4a2c,{roughness:.35,metalness:.6});sign.updateMatrixWorld(true);const hung=new T.Box3().setFromObject(sign);
  for(const z of [hung.min.z+.3,hung.max.z-.3]){const m=new T.Mesh(new T.CylinderGeometry(.015,.015,top-hung.max.y),rod);m.name='Lounge_sign_hanger';m.position.set(x,(top+hung.max.y)/2,z);root.add(m);}
 }
