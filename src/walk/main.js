@@ -267,9 +267,10 @@ walker.holder.position.copy(controller.position);
 const yarn=createYarn(colliders);scene.add(yarn.mesh);
 document.body.dataset.ready='1';
 let heading=follow.yaw;const safe=controller.position.clone();
-// Feedback joins the top-right tools; a narrow phone has no room there, so it sits under the mini-map instead.
+// Feedback joins the top-right tools, orange-edged like the viewer's so testers spot it; a narrow phone has no room
+// there, so it sits under the mini-map instead.
 installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-width:560px)').matches?null:document.querySelector('.tools'),
- css:'.fb-button:not(.fb-mounted){left:auto;bottom:auto;right:16px;top:180px;z-index:5}',
+ css:'.fb-button:not(.fb-mounted){left:auto;bottom:auto;right:16px;top:180px;z-index:5}.tools .fb-button,.fb-button:not(.fb-mounted){border-color:var(--orange,#f85800);color:#ff8a3d}.tools .fb-button:hover,.fb-button:not(.fb-mounted):hover{background:var(--orange,#f85800);color:#050507}',
  identity:()=>me.pass?{name:me.name||'Voyager',pass:currentPass}:null,
  context:()=>({link:spotLink({position:controller.position,yaw:follow.yaw,pitch:follow.pitch,view:follow.mode}),where:describe(controller.position)}),
  onOpen:()=>{input.enabled=false;input.down.clear();},onClose:()=>{input.enabled=true;input.down.clear();}});
