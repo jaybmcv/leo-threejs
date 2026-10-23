@@ -30,6 +30,16 @@ const probe=(x,y,z,up,down)=>{ray.origin.set(x,y+up,z);ray.direction.set(0,-1,0)
 const floorAt=(x,y,z,up=STEP+.05,down=2*STEP+.1)=>{const c=probe(x,y,z,up,down);if(c!==null&&Math.abs(c-y)<=STEP)return c;let best=c;for(const [dx,dz] of FEET.slice(1)){const h=probe(x+dx,y,z+dz,up,down);if(h!==null&&(best===null||h>best))best=h;}return best;};
 const stands=(x,y,z)=>{seg.start.set(x,y+STEP+R,z);seg.end.set(x,y+H-R,z);return !col.overlaps(seg,R);};
 
+// Stairs: climb every flight tread by tread along its middle (each tread a step of the one below it, close in plan),
+// so a partition or anything else standing across a flight shows up even where both of its ends are reached.
+const treads=[];ship.inside.traverse(o=>{if(!o.isMesh||!/^(Stair_tread_up|Stair_tread_return|Aft_stair_up|Aft_stair_return|Gallery_stair)$/.test(o.name))return;
+ o.geometry.computeBoundingBox();const b=o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld);treads.push({x:(b.min.x+b.max.x)/2,y:b.max.y,z:(b.min.z+b.max.z)/2});});
+const blockedSteps=[];let flightSteps=0;
+for(const a of treads)for(const b of treads){if(b.y<=a.y+.02||b.y>a.y+.25||Math.hypot(b.x-a.x,b.z-a.z)>.6)continue;flightSteps++;
+ let y=a.y,ok=true;for(let t=0;t<=1.001&&ok;t+=.1){const x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t,fy=floorAt(x,y,z);ok=fy!==null&&stands(x,fy,z);if(ok)y=fy;}
+ if(!ok)blockedSteps.push([a.x,a.y,a.z].map(v=>+v.toFixed(1)));}
+log('stair steps climbed:',flightSteps-blockedSteps.length,'/',flightSteps,blockedSteps.slice(0,10));
+
 // Diagnostics: SEED=x,y,z floods from elsewhere, BUDGET caps the positions and stops after the flood, DUMP saves them.
 const seed=(process.env.SEED||'-135,-35.7,-38').split(',').map(Number),BUDGET=+(process.env.BUDGET||Infinity);
 const S0={x:seed[0],z:seed[2]};S0.y=floorAt(S0.x,seed[1],S0.z,1,3);
@@ -64,6 +74,7 @@ if(Number.isFinite(BUDGET)){const box=new T.Box3();for(let i=0;i<X.length;i++)bo
 const cells=new Map();for(let i=0;i<X.length;i++){const k=Math.floor(X[i])+','+Math.floor(Z[i]);(cells.get(k)||cells.set(k,[]).get(k)).push(i);}
 const reached=(x,y,z,r=.6,below=.6,above=.6)=>{for(let i=Math.floor(x-r);i<=Math.floor(x+r);i++)for(let j=Math.floor(z-r);j<=Math.floor(z+r);j++)for(const n of cells.get(i+','+j)||[])if(Math.hypot(X[n]-x,Z[n]-z)<=r&&Y[n]>=y-below&&Y[n]<=y+above)return true;return false;};
 const problems=[];
+if(blockedSteps.length)problems.push(`stairs: ${blockedSteps.length}/${flightSteps} steps blocked, first at ${blockedSteps.slice(0,5).join(' ')}`);
 const area=new Map();for(let i=0;i<X.length;i++){const b=bandOf(Y[i]+.2)+1;area.set(b,(area.get(b)||0)+G*G);}
 // Rooms: every standable 2 m sample on the room's floor should be reached.
 // (The lifeboat banks are one 249 x 139 m area spanning the whole deck, walled-off plate included; their boats are
