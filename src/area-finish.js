@@ -42,7 +42,8 @@ export function finishShipArea(area,{root,shell,fit}){
   if(/^(Shared_table|Meeting_table|Crew_lounge_table)$/.test(n)&&['dining','crew','briefing','captain'].includes(area.kind))for(const dx of [-.25,.25]){
    k.box(o,[Math.min(.65,s.x*.2),.018,Math.min(.4,s.z*.3)],[c.x+dx*s.x,b.max.y+.013,c.z],M.linen,'table_settings');k.add(o,new T.CylinderGeometry(.065,.065,.11,12).translate(c.x+dx*s.x,b.max.y+.072,c.z+.11),M.steel,'table_settings');
   }
-  if(/^(Secured_cargo_container|Supply_crate|Book_stack)$/.test(n)){
+  if(n==='Shelf'&&area.kind==='library')for(const side of [-1,1])for(const dx of [-1.6,0,1.6])k.box(o,[.32,.06,.006],[c.x+dx,c.y,c.z+side*(s.z/2+.004)],M.linen,'inventory_labels');
+  if(/^(Secured_cargo_container|Supply_crate)$/.test(n)){
    const f=k.face(o,1),type=n==='Secured_cargo_container'?'cargo_restraints':'inventory_labels';f.panel(-f.w*.2,0,f.w*.24,f.h*.26,M.linen,type);
    for(let j=0;j<5;j++)f.panel(f.w*(-.29+j*.043),0,f.w*.018,f.h*.17,M.dark,type);
    if(n==='Secured_cargo_container')for(const v of [-.4,.4])f.panel(f.w*v,0,f.w*.025,f.h*.82,M.steel,type);
