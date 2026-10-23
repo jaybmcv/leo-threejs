@@ -27,7 +27,10 @@ function pass(renderer,target,fragmentShader,uniforms){
 function decode(renderer,image){
  const source=new T.Texture(image);Object.assign(source,{flipY:false,colorSpace:T.NoColorSpace,generateMipmaps:false,minFilter:T.NearestFilter,magFilter:T.NearestFilter,needsUpdate:true});
  const width=image.width,height=image.height/2;
- const target=new T.WebGLRenderTarget(width,height,{magFilter:T.LinearFilter,minFilter:T.LinearFilter,generateMipmaps:false,type:T.HalfFloatType,format:T.RGBAFormat,colorSpace:T.LinearSRGBColorSpace,depthBuffer:false});
+ // Drawing into a half-float target needs a colour-buffer extension some phone GPUs lack; without one the reflections
+ // would come out black and the hull flat grey. Those get an 8-bit target (highlights clip at 1, the rest is unchanged).
+ const halfFloat=renderer.extensions.has('EXT_color_buffer_half_float')||renderer.extensions.has('EXT_color_buffer_float');
+ const target=new T.WebGLRenderTarget(width,height,{magFilter:T.LinearFilter,minFilter:T.LinearFilter,generateMipmaps:false,type:halfFloat?T.HalfFloatType:T.UnsignedByteType,format:T.RGBAFormat,colorSpace:T.LinearSRGBColorSpace,depthBuffer:false});
  pass(renderer,target,`uniform sampler2D rgbe;uniform int rows;out vec4 color;
   void main(){ivec2 p=ivec2(gl_FragCoord.xy);vec3 m=texelFetch(rgbe,p,0).rgb;float e=floor(texelFetch(rgbe,p+ivec2(0,rows),0).r*255.+.5)-128.;color=vec4(m*exp2(e),1.);}`,
   {rgbe:{value:source},rows:{value:height}});

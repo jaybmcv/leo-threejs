@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Leo · GPU check</title>
+<meta name="robots" content="noindex">
+<style>
+body{margin:0;background:#000;color:#f4f0e8;font:14px/1.45 system-ui,sans-serif;padding:16px}
+h1{font-size:20px;margin:0 0 4px}p{color:#c9c3b8;margin:0 0 14px}
+table{border-collapse:collapse;width:100%;max-width:640px}td{border-top:1px solid #333;padding:6px 4px;vertical-align:top;word-break:break-word}
+td:first-child{color:#a6a5b4;width:40%}.ok{color:#2fd6c5}.bad{color:#f85800;font-weight:600}
+button{margin:14px 0;border:0;border-radius:999px;padding:11px 18px;background:#f85800;color:#000;font:600 13px system-ui}
+</style></head><body>
+<h1>Leo · GPU check</h1><p>What this device's browser can do for Leo's 3D views. Nothing is sent anywhere; take a screenshot or copy the results.</p>
+<table id="out"></table><button id="copy" type="button">Copy results</button>
+<script>
+// A diagnostic for phones the 3D views fail on: device facts, then the two GPU operations Leo leans on that phones have
+// got wrong, each checked by reading the pixels back. Self-contained, so it runs even where the viewer cannot.
+(function(){
+ var rows=[],out=document.getElementById('out');
+ function row(name,value,state){rows.push(name+': '+value);var tr=document.createElement('tr'),a=document.createElement('td'),b=document.createElement('td');a.textContent=name;b.textContent=value;if(state)b.className=state;tr.append(a,b);out.append(tr);}
+ function guard(name,fn){try{fn();}catch(e){row(name,'error: '+e.message,'bad');}}
+ row('Browser',navigator.userAgent);
+ row('Device memory',navigator.deviceMemory?navigator.deviceMemory+' GB (rounded)':'not reported');
+ row('CPU cores',String(navigator.hardwareConcurrency||'?'));
+ row('Screen',screen.width+'×'+screen.height+' at '+devicePixelRatio+'×');
+ if(performance.memory)row('JS heap limit',Math.round(performance.memory.jsHeapSizeLimit/1048576)+' MB');
+ var canvas=document.createElement('canvas'),gl=canvas.getContext('webgl2');
+ if(!gl){row('WebGL 2','not available','bad');return finish();}
+ var info=gl.getExtension('WEBGL_debug_renderer_info');
+ row('GPU',info?gl.getParameter(info.UNMASKED_RENDERER_WEBGL)+' ('+gl.getParameter(info.UNMASKED_VENDOR_WEBGL)+')':gl.getParameter(gl.RENDERER));
+ row('Max texture size',String(gl.getParameter(gl.MAX_TEXTURE_SIZE)));
+ row('Fragment uniform vectors',String(gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS)));
+ ['EXT_color_buffer_half_float','EXT_color_buffer_float','OES_texture_float_linear','KHR_parallel_shader_compile','EXT_clip_control'].forEach(function(n){var has=!!gl.getExtension(n);row(n,has?'yes':'no',has?'ok':'');});
+ // Half-float render target (the viewer's reflection lighting is decoded into one).
+ guard('Half-float target',function(){
+  var t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texStorage2D(gl.TEXTURE_2D,1,gl.RGBA16F,64,64);
+  var f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);
+  var ok=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;row('Half-float target',ok?'renders':'cannot render',ok?'ok':'bad');
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.deleteFramebuffer(f);gl.deleteTexture(t);
+ });
+ // Draws a texture into an 8-bit target and reads back the middle of each quadrant.
+ var vs='#version 300 es\nout vec2 uv;void main(){vec2 p=vec2(gl_VertexID==1?3.:-1.,gl_VertexID==2?3.:-1.);uv=p*.5+.5;gl_Position=vec4(p,0.,1.);}';
+ var fs='#version 300 es\nprecision highp float;uniform sampler2D t;in vec2 uv;out vec4 c;void main(){c=texture(t,uv);}';
+ function shader(type,src){var s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);return s;}
+ var prog=gl.createProgram();gl.attachShader(prog,shader(gl.VERTEX_SHADER,vs));gl.attachShader(prog,shader(gl.FRAGMENT_SHADER,fs));gl.linkProgram(prog);
+ function quadrants(w,h,upload){
+  var pattern=document.createElement('canvas');pattern.width=w;pattern.height=h;var c=pattern.getContext('2d',{willReadFrequently:upload==='pixels'});
+  // Top left red, top right green, bottom left blue, bottom right white (canvas rows run top down).
+  c.fillStyle='#f00';c.fillRect(0,0,w/2,h/2);c.fillStyle='#0f0';c.fillRect(w/2,0,w/2,h/2);c.fillStyle='#00f';c.fillRect(0,h/2,w/2,h/2);c.fillStyle='#fff';c.fillRect(w/2,h/2,w/2,h/2);
+  var t=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,t);gl.texStorage2D(gl.TEXTURE_2D,1,gl.SRGB8_ALPHA8,w,h);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);
+  if(upload==='pixels')gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,w,h,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array(c.getImageData(0,0,w,h).data.buffer));
+  else gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,pattern);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+  var rt=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,rt);gl.texStorage2D(gl.TEXTURE_2D,1,gl.RGBA8,w,h);
+  var f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,rt,0);
+  gl.viewport(0,0,w,h);gl.useProgram(prog);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,t);gl.uniform1i(gl.getUniformLocation(prog,'t'),0);gl.drawArrays(gl.TRIANGLES,0,3);
+  // Read rows bottom up: the top of the picture is the top of the target.
+  var expect=[[.25,.75,[255,0,0]],[.75,.75,[0,255,0]],[.25,.25,[0,0,255]],[.75,.25,[255,255,255]]],px=new Uint8Array(4),bad=[];
+  expect.forEach(function(e){gl.readPixels(Math.floor(e[0]*w),Math.floor(e[1]*h),1,1,gl.RGBA,gl.UNSIGNED_BYTE,px);if(e[2].some(function(v,i){return Math.abs(v-px[i])>24;}))bad.push(Array.prototype.slice.call(px,0,3).join(','));});
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.deleteFramebuffer(f);gl.deleteTexture(t);gl.deleteTexture(rt);
+  return bad;
+ }
+ [[210,432],[211,433],[768,432]].forEach(function(size){['canvas','pixels'].forEach(function(upload){
+  var name='Upload '+upload+' '+size[0]+'×'+size[1];
+  guard(name,function(){var bad=quadrants(size[0],size[1],upload);row(name,bad.length?'wrong pixels: '+bad.join(' / '):'correct',bad.length?'bad':'ok');});
+ });});
+ finish();
+ function finish(){document.getElementById('copy').onclick=function(){var text=rows.join('\n');(navigator.clipboard?navigator.clipboard.writeText(text):Promise.reject()).then(function(){document.getElementById('copy').textContent='Copied';},function(){window.prompt('Copy the results',text);});};}
+})();
+</script>
+</body></html>

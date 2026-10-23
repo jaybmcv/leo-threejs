@@ -45,6 +45,13 @@ import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
 const $=id=>document.getElementById(id);
+// Building the walk takes about 1 GB at its largest, more than a phone with 4 GB or less can give one tab. walk.html
+// asks such phones first, and any browser whose last start never finished (its tab was closed under it), before this
+// script loads. The note is set from here until the walk is ready, and cleared on leaving the page, so only a start
+// that was cut off leaves it behind.
+const STARTING='leo-walk-building';
+try{localStorage.setItem(STARTING,String(Date.now()));}catch{}
+addEventListener('pagehide',()=>{try{localStorage.removeItem(STARTING);}catch{}});
 const timings=[],t0=performance.now();
 const status=text=>{$('loading-text').textContent=text;timings.push([text,Math.round(performance.now()-t0)]);};
 // Leo live, the multiplayer server (server/leo-live.mjs): its address comes with the build (LEO_LIVE_URL); without one
@@ -239,25 +246,9 @@ async function loadCosmo(){
 
 // The arrival hall on Deck 2, where travellers come aboard.
 const START={position:new T.Vector3(-135,-35.7,-38),yaw:Math.PI/2};
-// Building the walk takes about 1 GB at its largest: more than a phone with 4 GB or less can give one tab, which the
-// phone then closes. Such phones, and any browser whose last build never finished (its tab was closed under it), are
-// asked first, with the guided tour as the light way aboard. The note is set while building and cleared once ready or
-// on leaving the page, so only a build that was cut off leaves it behind.
-const BUILDING='leo-walk-building';
-const unfinished=(()=>{try{const t=Number(localStorage.getItem(BUILDING));return t>0&&Date.now()-t<7*864e5;}catch{return false;}})();
-const lowMemory=phone&&navigator.deviceMemory>0&&navigator.deviceMemory<=4;
-const goAhead=!unfinished&&!lowMemory?Promise.resolve():new Promise(resolve=>{
- $('memory').hidden=false;
- $('memory-note').textContent=unfinished?'Last time, the walk closed before it finished loading: this device likely ran out of memory. The guided tour shows Leo’s rooms with far less.'
-  :'Walking Leo builds the whole ship and needs more memory than most phones with 4 GB or less can spare. The guided tour shows the rooms with far less.';
- $('memory-try').addEventListener('click',()=>{$('memory').hidden=true;resolve();},{once:true});
-});
-const downloads=Promise.all([loadExterior(),loadCosmo()]).catch(e=>{status(e.message);throw e;});
-await goAhead;await downloads;
-try{localStorage.setItem(BUILDING,String(Date.now()));}catch{}
-addEventListener('pagehide',()=>{try{localStorage.removeItem(BUILDING);}catch{}});
+await Promise.all([loadExterior(),loadCosmo()]).catch(e=>{status(e.message);throw e;});
 await buildShip();
-try{localStorage.removeItem(BUILDING);}catch{}
+try{localStorage.removeItem(STARTING);}catch{}
 // A walk link (link.js) starts wherever it was taken; otherwise the arrival hall.
 const spot=readSpot(),stand=spot&&findStand(colliders,spot.at);
 controller.place(stand||findStand(colliders,START.position.toArray())||START.position);
