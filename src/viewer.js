@@ -60,10 +60,12 @@ $('viewport').appendChild(renderer.domElement);
 // A phone short of graphics memory drops the WebGL context: say so rather than leave a frozen or black view.
 renderer.domElement.addEventListener('webglcontextlost',()=>{$('error').hidden=false;$('error').textContent='The 3D view stopped: this device ran short of graphics memory. Reload the page to start it again.';});
 renderer.domElement.addEventListener('webglcontextrestored',()=>{$('error').hidden=true;});
-// Tester feedback (?feedback=1): the view link already holds the exact view. A link in the public page's footer row; on
-// phones, which have no footer, a button above the controls handle that steps aside while the controls are open.
-installFeedback({renderer,page:'viewer',mount:()=>matchMedia(PHONE_LAYOUT).matches?null:document.querySelector('.foot-links'),look:'link',
- css:`.fb-button:not(.fb-mounted){left:auto;right:16px;bottom:84px}body:has(#m-handle[aria-expanded="true"]) .fb-button:not(.fb-mounted){display:none}`,
+// Tester feedback (?feedback=1): the view link already holds the exact view. An orange-edged button leading the public
+// page's footer row (always on screen, unlike the top bar, which scrolls on laptops); on phones, which have no footer, a
+// button above the controls handle that steps aside while the controls are open.
+installFeedback({renderer,page:'viewer',mount:()=>matchMedia(PHONE_LAYOUT).matches?null:document.querySelector('.foot-links'),
+ css:`.fb-button:not(.fb-mounted){left:auto;right:16px;bottom:84px;border-color:#f85800;color:#ff8a3d}body:has(#m-handle[aria-expanded="true"]) .fb-button:not(.fb-mounted){display:none}
+.foot-links:has(.fb-button){align-items:center}.foot-links .fb-button{border-color:#f85800;color:#ff8a3d;padding:7px 12px;white-space:nowrap}.foot-links .fb-button:hover{background:#f85800;color:#050507}`,
  context:()=>({link:location.href,where:`${$('eyebrow').textContent} · ${$('view-title').textContent}`})});
 const spaceBackdrop=createSpaceBackdrop(touchScreen?{scale:.5,fps:30}:{});
 const scene=new T.Scene();scene.background=new T.Color(0xbac8cd);
