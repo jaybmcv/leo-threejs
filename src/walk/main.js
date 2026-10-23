@@ -80,7 +80,11 @@ if(LIVE_URL){
 }
 const renderer=new T.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true,powerPreference:'high-performance'});
 const phone=matchMedia('(pointer:coarse)').matches;
-renderer.setPixelRatio(Math.min(devicePixelRatio,phone?1.25:1.75));renderer.outputColorSpace=T.SRGBColorSpace;
+// Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
+// The Res button steps through them and the choice is remembered for the next visit.
+const RES=['High','Med','Low'],RES_SCALE=[1,.75,.5],RES_KEY='leo-walk-resolution',maxRatio=Math.min(devicePixelRatio,phone?1.25:1.75);
+let res=Math.max(0,RES.indexOf((()=>{try{return localStorage.getItem(RES_KEY);}catch{return null;}})()));
+renderer.setPixelRatio(maxRatio*RES_SCALE[res]);renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
 $('viewport').appendChild(renderer.domElement);
 // A phone short of graphics memory drops the WebGL context: bring the card back with a reason, not a frozen view.
@@ -481,6 +485,10 @@ $('view').addEventListener('click',()=>actions.view());
 // The ship's hum and chimes (ambience.js), off until asked for.
 const ambience=createAmbience(),sound=$('sound');sound.setAttribute('aria-pressed',String(ambience.on));
 sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambience.toggle())));
+// Render resolution, set up with the renderer: each press steps High, Med, Low and round again.
+const resButton=$('resolution'),showRes=()=>{resButton.textContent=`Res ${RES[res]}`;};showRes();
+resButton.addEventListener('click',()=>{res=(res+1)%RES.length;try{localStorage.setItem(RES_KEY,RES[res]);}catch{}
+ renderer.setPixelRatio(maxRatio*RES_SCALE[res]);showRes();});
 // Held for a higher jump, as Space is.
 $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;input.jumpHeld=true;$('jump').setPointerCapture(e.pointerId);});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('jump').addEventListener(type,()=>{input.jumpHeld=false;});
