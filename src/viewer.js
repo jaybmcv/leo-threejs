@@ -52,10 +52,22 @@ const PHONE_LAYOUT='(max-width:680px),(max-height:500px) and (orientation:landsc
 // Phone framing (the ship raised and closer, for a tall screen) is for the phone layout less phones on their side (short
 // and wider than tall), which frame as the wider landscape screens do.
 const upright=(w,h)=>w<=680&&!(h<=500&&w>h);
-const touchScreen=matchMedia('(pointer: coarse)').matches,baseRatio=Math.min(devicePixelRatio,touchScreen?1.25:1.75);
+const touchScreen=matchMedia('(pointer: coarse)').matches;
+// Light mode, on touch screens: the hull simplified for phones (leo-exterior-phone.glb, ~520k triangles instead of
+// 1.42M), no shadow pass (which drew the hull a second time), 1x pixels, and no background build of every interior view
+// (~150 MB and ~90 shader programs before anyone opens one; each view is built when it is first opened instead). A
+// Galaxy S9 closed the whole browser under the full scene. ?lite=0 or ?lite=1 picks either mode on any device, and
+// viewer.html's safe start sets LEO_LITE when a phone retries after a start that never finished.
+const liteParam=new URLSearchParams(location.search).get('lite');
+const lite=window.LEO_LITE===true||(liteParam===null?touchScreen:liteParam==='1');
+const baseRatio=Math.min(devicePixelRatio,lite?1:touchScreen?1.25:1.75);
+// Until the ship has been on screen for a while, a note says a start is under way (viewer.html reads it next time).
+const STARTING='leo-viewer-starting';
+try{localStorage.setItem(STARTING,String(Date.now()));}catch{}
+addEventListener('pagehide',()=>{try{localStorage.removeItem(STARTING);}catch{}});
 try{renderer=new T.WebGLRenderer({antialias:true,alpha:true,logarithmicDepthBuffer:true});}catch(e){showError(e.message);throw e;}
 renderer.setPixelRatio(baseRatio);renderer.setClearColor(0xbac8cd);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.86;
-renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.shadowMap.autoUpdate=false;
+renderer.shadowMap.enabled=!lite;renderer.shadowMap.type=T.PCFShadowMap;renderer.shadowMap.autoUpdate=false;
 $('viewport').appendChild(renderer.domElement);
 // A phone short of graphics memory drops the WebGL context: say so rather than leave a frozen or black view.
 renderer.domElement.addEventListener('webglcontextlost',()=>{$('error').hidden=false;$('error').textContent='The 3D view stopped: this device ran short of graphics memory. Reload the page to start it again.';});
@@ -302,7 +314,7 @@ async function loadExterior(){
       await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));ship.ensureExterior();
     }else{
       // Stream the meshopt web copy when the public build has one; downloads keep the lossless refined GLB.
-      const exteriorName=window.LEO_PUBLIC_ASSETS?.['leo-exterior-web.glb']?'leo-exterior-web.glb':'leo-exterior-refined.glb';
+      const assets=window.LEO_PUBLIC_ASSETS,exteriorName=lite&&assets?.['leo-exterior-phone.glb']?'leo-exterior-phone.glb':assets?.['leo-exterior-web.glb']?'leo-exterior-web.glb':'leo-exterior-refined.glb';
       const bytes=await publicAsset(exteriorName,p=>{$('loading').textContent=`Loading Leo… ${p}%`;});
       const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
       const gltf=bytes?await loader.parseAsync(bytes,''):await loader.loadAsync('leo-exterior-refined.glb');
@@ -1005,5 +1017,7 @@ $('save-interior').addEventListener('click',async()=>{
  // Tour and room deep links never load the exterior, so Cosmo cannot wait for it. Building him stalls a frame or two, so
  // the arrival goes first.
  setTimeout(loadCosmo,window.LEO_ARRIVAL?ARRIVAL_MS+300:1500);
- setTimeout(warmViews,3000);
+ if(!lite)setTimeout(warmViews,3000);
+ // Ten seconds of frames: this start made it.
+ setTimeout(()=>{try{localStorage.removeItem(STARTING);}catch{}},10000);
 })().catch(e=>showError(e.message));
