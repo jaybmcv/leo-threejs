@@ -32,6 +32,9 @@ export function finishShipArea(area,{root,shell,fit}){
   if(/^(Low_bench|Activity_table|Play_block)$/.test(n))round(o,'play_furniture');
   if(/^(Mattress|Blanket|Pillow)$/.test(n)){round(o,'patient_services');o.material=n==='Blanket'?M.blue:M.linen;}
   if(o.isInstancedMesh)continue;
+  // Life-support control computers: a slim rounded screen with an alloy back, blade stand and foot.
+  if(area.kind==='control'&&n==='Display'){o.geometry=new RoundedBoxGeometry(1.08,.6,.028,2,.012);k.box(o,[.96,.5,.012],[0,0,-.02],M.steel,'slim_computers');modified.slim_computers=(modified.slim_computers||0)+1;}
+  if(area.kind==='control'&&n==='Display_stand'){o.geometry=new T.BoxGeometry(.07,.27,.014).translate(0,.075,-.035);o.material=M.steel;k.box(o,[.28,.012,.2],[0,-.054,-.02],M.steel,'slim_computers');}
   if(/^(Display|Status_display|Patient_monitor|Fitness_display|Systems_wall_display|Teaching_screen|Projection_screen|Raised_display|Touchscreen|Mission_display_wall|Briefing_wall|Propulsion_status_wall|Hatch_monitor|Module_instrument_panel)$/.test(n)){
    const f=k.face(o);for(let j=0;j<4;j++)f.panel(-f.w*.12,f.h*(.28-j*.16),f.w*(.58-j*.08),f.h*.035,M.ink,'display_graphics');f.panel(f.w*.33,0,f.w*.05,f.h*.65,accent,'display_graphics');
   }
