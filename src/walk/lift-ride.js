@@ -12,12 +12,38 @@ import {liftDisplay,stopShort,landingSigns,liftDisplayMount,callLight} from './s
 const LEAF_T=.08,DOOR_H=2.75;
 const mats={
  floor:new T.MeshStandardMaterial({name:'Lift_floor',color:0xc4b89e,roughness:.7}),
- wall:new T.MeshStandardMaterial({name:'Lift_panel',color:0xe6e8e2,roughness:.5,metalness:.2}),
+ wall:new T.MeshStandardMaterial({name:'Lift_panel',color:0xffffff,roughness:.6,emissive:0xffffff,emissiveIntensity:.7}),
  roof:new T.MeshStandardMaterial({name:'Lift_roof',color:0x294858,roughness:.7}),
  glow:new T.MeshStandardMaterial({name:'Lift_glow',color:0xfff2d8,emissive:0xffe6bd,emissiveIntensity:1.1}),
  door:new T.MeshStandardMaterial({name:'Lift_door',color:0x8b9ea6,roughness:.38,metalness:.6}),
  panel:new T.MeshStandardMaterial({name:'Lift_call_panel',color:0x1b2830,emissive:0xf85800,emissiveIntensity:.55}),
 };
+// The car walls are a black starfield, with a big Mars on the back wall. Both are drawn once on small canvases.
+function starTexture(){
+ const c=document.createElement('canvas');c.width=c.height=512;const g=c.getContext('2d');let seed=4401;
+ const rnd=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ g.fillStyle='#03050b';g.fillRect(0,0,512,512);
+ for(let i=0;i<420;i++){const r=rnd()**4*1.8+.4,b=150+rnd()*105|0;g.fillStyle=`rgba(${b},${b},${Math.min(255,b+20)},${.5+rnd()*.5})`;g.beginPath();g.arc(rnd()*512,rnd()*512,r,0,Math.PI*2);g.fill();}
+ const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(2,2);return t;
+}
+function marsTexture(){
+ const c=document.createElement('canvas');c.width=c.height=512;const g=c.getContext('2d'),r=256;let seed=1976;
+ const rnd=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ g.beginPath();g.arc(r,r,r,0,Math.PI*2);g.clip();
+ const base=g.createLinearGradient(0,0,0,512);base.addColorStop(0,'#c98a5e');base.addColorStop(.5,'#c0643a');base.addColorStop(1,'#b8764e');g.fillStyle=base;g.fillRect(0,0,512,512);
+ // Dark albedo regions, Valles Marineris and the polar caps, as on the big Mars outside (mars.js).
+ g.filter='blur(8px)';
+ for(let i=0;i<26;i++){g.fillStyle=`rgba(${70+rnd()*30|0},${28+rnd()*14|0},${14+rnd()*10|0},${.2+rnd()*.3})`;g.beginPath();g.ellipse(rnd()*512,130+rnd()*250,20+rnd()*90,10+rnd()*40,rnd()*Math.PI,0,Math.PI*2);g.fill();}
+ g.filter='blur(3px)';g.strokeStyle='rgba(60,22,10,.55)';g.lineWidth=7;g.beginPath();g.moveTo(150,276);g.bezierCurveTo(210,258,280,300,360,284);g.stroke();
+ g.fillStyle='rgba(246,240,232,.9)';g.beginPath();g.ellipse(r,8,150,34,0,0,Math.PI*2);g.fill();g.beginPath();g.ellipse(r,506,110,22,0,0,Math.PI*2);g.fill();
+ // Sunlit from the upper left, with a dark night side.
+ g.filter='none';const sh=g.createRadialGradient(170,160,40,220,220,330);sh.addColorStop(0,'rgba(0,0,0,0)');sh.addColorStop(.6,'rgba(0,0,0,.15)');sh.addColorStop(1,'rgba(0,0,0,.88)');
+ g.fillStyle=sh;g.fillRect(0,0,512,512);
+ const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;return t;
+}
+let carArt=null;
+const art=()=>{if(!carArt){const stars=starTexture();mats.wall.map=mats.wall.emissiveMap=stars;mats.wall.needsUpdate=true;
+ carArt=new T.MeshBasicMaterial({name:'Lift_mars',map:marsTexture()});}return carArt;};
 const deckName=n=>DECKS.find(d=>d.number===n)?.name;
 export const stopLabel=s=>s.deck?`Deck ${s.deck} · ${deckName(s.deck)}`:s.label;
 
@@ -39,6 +65,10 @@ export function createLifts(scene,colliders){
   boxMesh('Car_light',[c.width*.6,.03,c.depth*.6],[0,c.height-.02,0],mats.glow,car);
   for(const [a,sg] of [['x',-1],['x',1],['z',-1],['z',1]]){if(faces.some(f=>faceOf(f.door)===a+sg))continue;
    if(a==='x')boxMesh('Car_wall',[.08,c.height,c.depth],[sg*(c.width/2-.04),c.height/2,0],mats.wall,car);else boxMesh('Car_wall',[c.width,c.height,.08],[0,c.height/2,sg*(c.depth/2-.04)],mats.wall,car);}
+  // Mars fills most of the back wall, opposite the main door, just in front of its inner face.
+  {const b=faces[0].door,across=b.axis==='x'?c.depth:c.width,mars=new T.Mesh(new T.CircleGeometry(Math.min(across,c.height)*.4,64),art());
+   mars.name='Car_mars';mars.position.y=c.height*.52;mars.position[b.axis]=-b.sign*((b.axis==='x'?c.width:c.depth)/2-.085);
+   mars.rotation.y=b.axis==='x'?b.sign*Math.PI/2:(b.sign>0?0:Math.PI);car.add(mars);}
   // Car doors on each open face slide with the landing doors; a gate mover closes the face while they're shut.
   for(const f of faces){
    const d=f.door;f.side=d.axis==='z'?new T.Vector3(1,0,0):new T.Vector3(0,0,1);f.front=d.axis==='z'?new T.Vector3(0,0,d.sign):new T.Vector3(d.sign,0,0);
