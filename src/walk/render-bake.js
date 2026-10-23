@@ -6,6 +6,7 @@ import {bandOf} from './collision.js';
 // shows only the bands around the walker. Instanced meshes (the repeated cabins) and anything under a
 // userData.keepLive group (lift cars, doors) stay as they are.
 const CELL=40,WHITE=new T.Color(1,1,1);
+const fraction=x=>Math.round(Math.min(1,Math.max(0,x))*65535);
 const worldVisible=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};
 // Plain colour materials (no textures, opaque, not glowing) fold into a few shared ones that take their colour per
 // vertex, grouped by finish; ~300 materials become a handful of draw calls per chunk.
@@ -106,7 +107,15 @@ function nudge(p,{list,index}){
  for(let a=0;a<3;a++){const at=index.get(a*1e9+Math.round(at0[a]*1000));if(at)for(const n of at)if(hit(n)){p[a]+=n.shift;break;}}
 }
 
-export function bakeForWalking(root,{skip=()=>false}={}){
+// UVs only matter to a textured material (an environment map needs none); most merged parts are plain colour.
+const textured=m=>m.isShaderMaterial||Object.keys(m).some(k=>k!=='envMap'&&m[k]?.isTexture);
+// A phone cannot hold the walk twice over: about 2 GB with the ~20 million merged vertices at full float precision
+// beside the ~440 MB of meshes they came from, and its tab was killed. Normals are stored as 16-bit and colours as
+// 16-bit fractions (well under a visible step), UVs only for textured materials, and with `release` each source's
+// geometry is let go as soon as its last bucket is filled, so the originals give way while the merged copy grows.
+// Released meshes keep their place, names and bounds in the scene graph but no geometry: nothing reads it after
+// the bake (colliders, seats and windows are found before it).
+export function bakeForWalking(root,{skip=()=>false,release=false}={}){
  root.updateMatrixWorld(true);
  const buckets=new Map(),taken=[],v=new T.Vector3(),c=new T.Vector3();
  const bucket=(material,band,cell,colors,top=band)=>{const key=`${material.uuid}|${band}|${top}|${cell}|${colors?1:0}`;let b=buckets.get(key);if(!b)buckets.set(key,b={material,band,top,colors,parts:[],vertices:0,indices:0});return b;};
@@ -132,17 +141,29 @@ export function bakeForWalking(root,{skip=()=>false}={}){
   for(const [b,list] of split){b.parts.push({o,tris:list});b.vertices+=list.length*3;b.indices+=list.length*3;}
  });
  const bands=new Map(),normal=new T.Matrix3(),xyz=[0,0,0],nudges=coplanarNudges(taken);
+ // How many buckets still read each source geometry, and the geometries something left live also draws with.
+ const pending=new Map(),users=new Map(),shared=new Set(),bakedSet=new Set(taken);
+ if(release){
+  for(const b of buckets.values())for(const {o} of b.parts)pending.set(o.geometry,(pending.get(o.geometry)||0)+1);
+  for(const o of taken){let list=users.get(o.geometry);if(!list)users.set(o.geometry,list=[]);list.push(o);}
+  root.traverse(o=>{if(o.geometry&&!bakedSet.has(o))shared.add(o.geometry);});
+ }
+ const done=g=>{
+  const left=pending.get(g)-1;pending.set(g,left);if(left||shared.has(g))return;
+  const stub=new T.BufferGeometry();stub.boundingBox=g.boundingBox;stub.boundingSphere=g.boundingSphere;
+  for(const o of users.get(g))o.geometry=stub;g.dispose();
+ };
  for(const b of buckets.values()){
-  const P=new Float32Array(b.vertices*3),N=new Float32Array(b.vertices*3),U=new Float32Array(b.vertices*2),C=b.colors?new Float32Array(b.vertices*3):null;
+  const P=new Float32Array(b.vertices*3),N=new Int16Array(b.vertices*3),U=textured(b.material)?new Float32Array(b.vertices*2):null,C=b.colors?new Uint16Array(b.vertices*3):null;
   const I=b.vertices>65535?new Uint32Array(b.indices):new Uint16Array(b.indices);let vo=0,io=0;
   const put=(g,i,at)=>{
    const pos=g.attributes.position,nor=g.attributes.normal,uv=g.attributes.uv,col=g.attributes.color;
    v.fromBufferAttribute(pos,i).applyMatrix4(put.m);
    if(put.nudge){xyz[0]=v.x;xyz[1]=v.y;xyz[2]=v.z;nudge(xyz,put.nudge);v.set(xyz[0],xyz[1],xyz[2]);}
    P[at*3]=v.x;P[at*3+1]=v.y;P[at*3+2]=v.z;
-   if(nor){v.fromBufferAttribute(nor,i).applyMatrix3(normal).normalize();N[at*3]=v.x;N[at*3+1]=v.y;N[at*3+2]=v.z;}
-   if(uv){U[at*2]=uv.getX(i);U[at*2+1]=uv.getY(i);}
-   if(C){const k=put.tint,own=col&&put.own;C[at*3]=k.r*(own?col.getX(i):1);C[at*3+1]=k.g*(own?col.getY(i):1);C[at*3+2]=k.b*(own?col.getZ(i):1);}
+   if(nor){v.fromBufferAttribute(nor,i).applyMatrix3(normal).normalize();N[at*3]=Math.round(v.x*32767);N[at*3+1]=Math.round(v.y*32767);N[at*3+2]=Math.round(v.z*32767);}
+   if(uv&&U){U[at*2]=uv.getX(i);U[at*2+1]=uv.getY(i);}
+   if(C){const k=put.tint,own=col&&put.own;C[at*3]=fraction(k.r*(own?col.getX(i):1));C[at*3+1]=fraction(k.g*(own?col.getY(i):1));C[at*3+2]=fraction(k.b*(own?col.getZ(i):1));}
   };
   for(const {o,tris} of b.parts){
    const g=o.geometry,pos=g.attributes.position,idx=g.index?g.index.array:null;
@@ -159,15 +180,16 @@ export function bakeForWalking(root,{skip=()=>false}={}){
     for(const t of tris){for(let k=0;k<3;k++)put(g,idx?idx[t+k]:t+k,vo+k);I[io++]=vo;I[io++]=vo+a;I[io++]=vo+z;vo+=3;}
    }
   }
-  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(P,3));geo.setAttribute('normal',new T.BufferAttribute(N,3));geo.setAttribute('uv',new T.BufferAttribute(U,2));
-  if(C)geo.setAttribute('color',new T.BufferAttribute(C,3));
+  if(release)for(const {o} of b.parts)done(o.geometry);
+  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(P,3));geo.setAttribute('normal',new T.BufferAttribute(N,3,true));if(U)geo.setAttribute('uv',new T.BufferAttribute(U,2));
+  if(C)geo.setAttribute('color',new T.BufferAttribute(C,3,true));
   geo.setIndex(new T.BufferAttribute(I,1));geo.computeBoundingSphere();geo.computeBoundingBox();
   const mesh=new T.Mesh(geo,b.material);mesh.name='Walk_merged_'+(b.material.name||'material');mesh.matrixAutoUpdate=false;
   const id=b.top>b.band?`${b.band}-${b.top}`:b.band;
   let group=bands.get(id);if(!group){group=new T.Group();group.name='Walk_band_'+id;group.userData.band=b.band;group.userData.top=b.top;bands.set(id,group);}
   group.add(mesh);
  }
- // The originals stay in the scene graph (colliders and seats read them) but no longer render.
+ // The originals stay in the scene graph (colliders and seats were read from them) but no longer render.
  for(const o of taken){o.visible=false;o.userData.baked=true;}
  return {bands,meshes:buckets.size,sources:taken.length};
 }

@@ -44,6 +44,17 @@ function bvhOf(positions){
  return new MeshBVH(g,{targetLeafSize:8,indirect:true});
 }
 
+// A growing list of floats. The pending soups used to be plain arrays, 8 bytes a number: ~200 MB for the whole ship
+// on top of the meshes they were read from, while the walk page was at its largest.
+class Floats{
+ constructor(){this.array=new Float32Array(4096);this.length=0;}
+ push9(src,at){
+  if(this.length+9>this.array.length){const grown=new Float32Array(this.array.length*2);grown.set(this.array);this.array=grown;}
+  for(let k=0;k<9;k++)this.array[this.length++]=src[at+k];
+ }
+ get values(){return this.array.subarray(0,this.length);}
+}
+
 export class Colliders{
  constructor(){this.bands=new Map();this.pending=new Map();this.groups=[];this.movers=[];}
  // Collect the solid meshes under `root` into the pending band soups. `filter` can veto meshes.
@@ -53,7 +64,7 @@ export class Colliders{
    if(!filter(o))return;scratch.length=0;meshTriangles(o,scratch);
    for(let i=0;i<scratch.length;i+=9){
     const y0=Math.min(scratch[i+1],scratch[i+4],scratch[i+7]),y1=Math.max(scratch[i+1],scratch[i+4],scratch[i+7]);
-    for(let b=bandOf(y0);b<=bandOf(y1);b++){let list=this.pending.get(b);if(!list)this.pending.set(b,list=[]);for(let k=0;k<9;k++)list.push(scratch[i+k]);}
+    for(let b=bandOf(y0);b<=bandOf(y1);b++){let list=this.pending.get(b);if(!list)this.pending.set(b,list=new Floats());list.push9(scratch,i);}
     tris++;
    }
   });
@@ -63,7 +74,7 @@ export class Colliders{
  commit(){
   for(const [b,list] of this.pending){
    const old=this.bands.get(b),prev=old?old.geometry.attributes.position.array:null;
-   const all=new Float32Array((prev?prev.length:0)+list.length);if(prev)all.set(prev);all.set(list,prev?prev.length:0);
+   const all=new Float32Array((prev?prev.length:0)+list.length);if(prev)all.set(prev);all.set(list.values,prev?prev.length:0);
    const bvh=bvhOf(all);this.bands.set(b,{bvh,geometry:bvh.geometry,band:b});
   }
   this.pending.clear();
