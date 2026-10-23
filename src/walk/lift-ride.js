@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {DECKS} from '../model.js';
+import {marsSurface} from '../mars.js';
 import {LIFTS,carTriangles} from './lifts.js';
 import {liftState,callLift,stepLift,applyLiftWire} from './lift-motion.js';
 import {liftDisplay,stopShort,landingSigns,liftDisplayMount,callLight} from './signs.js';
@@ -19,7 +20,7 @@ const mats={
  door:new T.MeshStandardMaterial({name:'Lift_door',color:0x8b9ea6,roughness:.38,metalness:.6}),
  panel:new T.MeshStandardMaterial({name:'Lift_call_panel',color:0x1b2830,emissive:0xf85800,emissiveIntensity:.55}),
 };
-// The car walls are a black starfield, with a big Mars on the back wall. Both are drawn once on small canvases.
+// The car walls are a black starfield, drawn once on a small canvas, with a big Mars on the back wall.
 function starTexture(){
  const c=document.createElement('canvas');c.width=c.height=512;const g=c.getContext('2d');let seed=4401;
  const rnd=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
@@ -27,24 +28,52 @@ function starTexture(){
  for(let i=0;i<420;i++){const r=rnd()**4*1.8+.4,b=150+rnd()*105|0;g.fillStyle=`rgba(${b},${b},${Math.min(255,b+20)},${.5+rnd()*.5})`;g.beginPath();g.arc(rnd()*512,rnd()*512,r,0,Math.PI*2);g.fill();}
  const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(2,2);return t;
 }
-function marsTexture(){
- const c=document.createElement('canvas');c.width=c.height=512;const g=c.getContext('2d'),r=256;let seed=1976;
- const rnd=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
- g.beginPath();g.arc(r,r,r,0,Math.PI*2);g.clip();
- const base=g.createLinearGradient(0,0,0,512);base.addColorStop(0,'#c98a5e');base.addColorStop(.5,'#c0643a');base.addColorStop(1,'#b8764e');g.fillStyle=base;g.fillRect(0,0,512,512);
- // Dark albedo regions, Valles Marineris and the polar caps, as on the big Mars outside (mars.js).
- g.filter='blur(8px)';
- for(let i=0;i<26;i++){g.fillStyle=`rgba(${70+rnd()*30|0},${28+rnd()*14|0},${14+rnd()*10|0},${.2+rnd()*.3})`;g.beginPath();g.ellipse(rnd()*512,130+rnd()*250,20+rnd()*90,10+rnd()*40,rnd()*Math.PI,0,Math.PI*2);g.fill();}
- g.filter='blur(3px)';g.strokeStyle='rgba(60,22,10,.55)';g.lineWidth=7;g.beginPath();g.moveTo(150,276);g.bezierCurveTo(210,258,280,300,360,284);g.stroke();
- g.fillStyle='rgba(246,240,232,.9)';g.beginPath();g.ellipse(r,8,150,34,0,0,Math.PI*2);g.fill();g.beginPath();g.ellipse(r,506,110,22,0,0,Math.PI*2);g.fill();
- // Sunlit from the upper left, with a dark night side.
- g.filter='none';const sh=g.createRadialGradient(170,160,40,220,220,330);sh.addColorStop(0,'rgba(0,0,0,0)');sh.addColorStop(.6,'rgba(0,0,0,.15)');sh.addColorStop(1,'rgba(0,0,0,.88)');
- g.fillStyle=sh;g.fillRect(0,0,512,512);
- const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;return t;
-}
+// The globe is drawn on the GPU from the big Mars's own painted surface (mars.js, one texture for both): each pixel of
+// the disc finds its point on the sphere, seen from just south of the canyons with Tharsis to the west, and samples the
+// map there. Latitudes past 68 degrees take the ground at 68, which leaves the polar caps out. Fine grain and small
+// craters are added at the disc's own scale, then sunlight from the upper left and a dusty haze at the limb.
+// The walk renders with a logarithmic depth buffer, so the globe writes its depth the same way as everything else.
+const MARS_VERTEX=`
+#include <common>
+#include <logdepthbuf_pars_vertex>
+varying vec2 vUv;
+void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);
+ #include <logdepthbuf_vertex>
+}`;
+const MARS_FRAGMENT=`
+#include <common>
+#include <logdepthbuf_pars_fragment>
+uniform sampler2D map;varying vec2 vUv;
+const float TILT=-.2,LON=-.2,CAP=1.187;const vec3 SUN=vec3(-.55,.45,.7);
+float hash(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
+float noise(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);
+ return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
+  mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
+// Craters in a jittered 3D grid over the sphere: about one cell in three holds one. Inside, a dark floor and the wall
+// nearer the sun in shadow; the raised rim catches the light on the sun's side.
+float craters(vec3 p,float scale){vec3 i=floor(p*scale),f=fract(p*scale);float shade=0.;vec2 sun=normalize(SUN.xy);
+ for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)for(int z=-1;z<=1;z++){vec3 g=vec3(x,y,z),c=i+g;if(hash(c+3.1)>.36)continue;
+  vec3 o=g+vec3(hash(c),hash(c+11.3),hash(c+27.1))-f;float r=.18+.32*pow(hash(c+5.7),3.),t=length(o)/r;if(t>1.2)continue;
+  vec3 w=-o;vec2 off=vec2(w.x,w.y*cos(TILT)-w.z*sin(TILT));float side=dot(normalize(off+1e-5),sun);
+  shade+=t<1.?-.1-.3*side*smoothstep(.25,1.,t):.22*side*(1.-abs(t-1.1)*10.);}
+ return shade;}
+void main(){
+ #include <logdepthbuf_fragment>
+ vec2 p=vUv*2.-1.;float rr=dot(p,p);if(rr>1.)discard;float z=sqrt(1.-rr);
+ vec3 w=vec3(p.x,p.y*cos(TILT)+z*sin(TILT),z*cos(TILT)-p.y*sin(TILT));
+ float lat=clamp(asin(w.y),-CAP,CAP),lon=atan(w.x,w.z)+LON;
+ vec3 c=texture2D(map,vec2(lon/(2.*PI)+.5,.5+lat/PI)).rgb,mid=vec3(.51,.14,.048);
+ c=max(mid+(c-mid)*1.2,0.);
+ c*=(.9+.12*noise(w*60.)+.06*noise(w*170.))*(1.+craters(w,14.)+.4*craters(w,32.));
+ float d=dot(vec3(p,z),normalize(SUN)),light=.03+clamp((d+.12)/.5,0.,1.)*(.78+.3*max(d,0.))*(.88+.12*z);
+ float haze=clamp(d+.2,0.,1.)*pow(1.-z,3.)*.45;
+ gl_FragColor=vec4(mix(c*light,vec3(1.,.43,.22),haze),1.);
+ #include <tonemapping_fragment>
+ #include <colorspace_fragment>
+}`;
 let carArt=null;
 const art=()=>{if(!carArt){const stars=starTexture();mats.wall.map=mats.wall.emissiveMap=stars;mats.wall.needsUpdate=true;
- carArt=new T.MeshBasicMaterial({name:'Lift_mars',map:marsTexture()});}return carArt;};
+ carArt=new T.ShaderMaterial({name:'Lift_mars',uniforms:{map:{value:marsSurface()}},vertexShader:MARS_VERTEX,fragmentShader:MARS_FRAGMENT});}return carArt;};
 const deckName=n=>DECKS.find(d=>d.number===n)?.name;
 export const stopLabel=s=>s.deck?`Deck ${s.deck} · ${deckName(s.deck)}`:s.label;
 

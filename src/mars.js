@@ -85,9 +85,13 @@ function hazeTexture(){
  g.fillStyle=grad;g.fillRect(0,0,512,512);const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;return t;
 }
 
+// One painted surface for every Mars: the lift art (walk/lift-ride.js) draws its globe from the same texture.
+let surface=null;
+export const marsSurface=()=>surface||=surfaceTexture();
+
 export function createMars(){
  const geometry=new T.SphereGeometry(MARS_RADIUS,128,64);sunShading(geometry);
- const mars=new T.Mesh(geometry,new T.MeshBasicMaterial({map:surfaceTexture(),vertexColors:true}));mars.name='Mars';
+ const mars=new T.Mesh(geometry,new T.MeshBasicMaterial({map:marsSurface(),vertexColors:true}));mars.name='Mars';
  // The haze billboard sits at the planet's centre, so the planet hides all of it but the ring past the limb.
  const haze=new T.Sprite(new T.SpriteMaterial({map:hazeTexture(),transparent:true,depthWrite:false,blending:T.AdditiveBlending,opacity:.75}));
  haze.name='Mars_haze';haze.scale.setScalar(MARS_RADIUS*2*1.14);mars.add(haze);
