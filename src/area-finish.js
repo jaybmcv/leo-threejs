@@ -32,6 +32,9 @@ export function finishShipArea(area,{root,shell,fit}){
   if(/^(Low_bench|Activity_table|Play_block)$/.test(n))round(o,'play_furniture');
   if(/^(Mattress|Blanket|Pillow)$/.test(n)){round(o,'patient_services');o.material=n==='Blanket'?M.blue:M.linen;}
   if(o.isInstancedMesh)continue;
+  // Life-support control computers: a slim rounded screen with an alloy back, blade stand and foot.
+  if(area.kind==='control'&&n==='Display'){o.geometry=new RoundedBoxGeometry(1.08,.6,.028,2,.012);k.box(o,[.96,.5,.012],[0,0,-.02],M.steel,'slim_computers');modified.slim_computers=(modified.slim_computers||0)+1;}
+  if(area.kind==='control'&&n==='Display_stand'){o.geometry=new T.BoxGeometry(.07,.27,.014).translate(0,.075,-.035);o.material=M.steel;k.box(o,[.28,.012,.2],[0,-.054,-.02],M.steel,'slim_computers');}
   if(/^(Display|Status_display|Patient_monitor|Fitness_display|Systems_wall_display|Teaching_screen|Projection_screen|Raised_display|Touchscreen|Mission_display_wall|Briefing_wall|Propulsion_status_wall|Hatch_monitor|Module_instrument_panel)$/.test(n)){
    const f=k.face(o);for(let j=0;j<4;j++)f.panel(-f.w*.12,f.h*(.28-j*.16),f.w*(.58-j*.08),f.h*.035,M.ink,'display_graphics');f.panel(f.w*.33,0,f.w*.05,f.h*.65,accent,'display_graphics');
   }
@@ -42,7 +45,8 @@ export function finishShipArea(area,{root,shell,fit}){
   if(/^(Shared_table|Meeting_table|Crew_lounge_table)$/.test(n)&&['dining','crew','briefing','captain'].includes(area.kind))for(const dx of [-.25,.25]){
    k.box(o,[Math.min(.65,s.x*.2),.018,Math.min(.4,s.z*.3)],[c.x+dx*s.x,b.max.y+.013,c.z],M.linen,'table_settings');k.add(o,new T.CylinderGeometry(.065,.065,.11,12).translate(c.x+dx*s.x,b.max.y+.072,c.z+.11),M.steel,'table_settings');
   }
-  if(/^(Secured_cargo_container|Supply_crate|Book_stack)$/.test(n)){
+  if(n==='Shelf'&&area.kind==='library')for(const side of [-1,1])for(const dx of [-1.6,0,1.6])k.box(o,[.32,.06,.006],[c.x+dx,c.y,c.z+side*(s.z/2+.004)],M.linen,'inventory_labels');
+  if(/^(Secured_cargo_container|Supply_crate)$/.test(n)){
    const f=k.face(o,1),type=n==='Secured_cargo_container'?'cargo_restraints':'inventory_labels';f.panel(-f.w*.2,0,f.w*.24,f.h*.26,M.linen,type);
    for(let j=0;j<5;j++)f.panel(f.w*(-.29+j*.043),0,f.w*.018,f.h*.17,M.dark,type);
    if(n==='Secured_cargo_container')for(const v of [-.4,.4])f.panel(f.w*v,0,f.w*.025,f.h*.82,M.steel,type);

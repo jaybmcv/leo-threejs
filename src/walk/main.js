@@ -30,10 +30,13 @@ import {createHaze} from './haze.js';
 import {createStarDrift} from './star-drift.js';
 import {createAmbience} from './ambience.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.js';
+import {corridorTrim} from './trim.js';
 import {connectLive,savedName} from './net/live.js';
 import {identify,currentPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
+import {createHostess} from './hostess.js';
 import {wearHat,fit,FIT} from './hat.js';
+import {createYarn} from './yarn.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink} from './link.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
@@ -130,7 +133,7 @@ async function buildShip(){
  buildColliders(ship,{extra:[ship.exterior],filter:walls,into:colliders});
  // The hull behind the glass goes for drawing only, after the colliders have it.
  const w0=performance.now(),opened=openWindows(ship,walkPlan.windows);clearGlass(ship.root);timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
- lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);
+ lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);corridorTrim(lifts.signs);
  rest=spotIndex(solidSpots(findRestSpots(ship.inside),colliders));
  status('Dressing the crew…');await idle();
  if(cosmoKit)globalThis.LeoCosmo.dressCats(ship.inside,cosmoKit);
@@ -139,8 +142,10 @@ async function buildShip(){
  ship.exterior.traverse(o=>{if(o.isMesh&&outsideOnly(o))o.visible=false;});
  const b0=performance.now();baked=bakeForWalking(ship.root,{release:true});for(const g of baked.bands.values())scene.add(g);timings.push([`${baked.sources} meshes merged into ${baked.meshes} in ${Math.round(performance.now()-b0)} ms`,Math.round(performance.now()-t0)]);
  haze.add(createHaze(ship));
- // Signs draw with the deck band they're on.
- for(const o of [...lifts.signs.children]){const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);}
+ // Signs, and the Crown lounge hostess (hostess.js), draw with the deck band they're on.
+ const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
+ for(const o of [...lifts.signs.children])toBand(o);
+ if(cosmoKit)toBand(createHostess(cosmoKit));
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
@@ -205,7 +210,7 @@ const actions={
  prone(){if(ready()&&!resting){controller.toggle('prone');emote=null;}},
  emotes(){if(ready())toggleEmotes();},
  // Respawn: back to the arrival hall from anywhere aboard, off any seat or bed.
- respawn(){if(ready()){closePanels();emote=null;goTo({at:START.position.toArray(),yaw:START.yaw});}},
+ respawn(){if(ready()){closePanels();emote=null;goTo({at:START.position.toArray(),yaw:START.yaw});yarn.reset();}},
  // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
  emote(i){if(ready()&&!resting&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
  // A key pressed while a sheet is open: the key that opened it closes it, and the emote sheet takes 1-0.
@@ -251,6 +256,8 @@ const spot=readSpot(),stand=spot&&findStand(colliders,spot.at);
 controller.place(stand||findStand(colliders,START.position.toArray())||START.position);
 follow.yaw=stand?spot.yaw:START.yaw;if(stand){follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;}
 walker.holder.position.copy(controller.position);
+// A ball of yarn to push about in the arrival hall (yarn.js).
+const yarn=createYarn(colliders);scene.add(yarn.mesh);
 document.body.dataset.ready='1';
 let heading=follow.yaw;const safe=controller.position.clone();
 // Feedback joins the top-right tools; a narrow phone has no room there, so it sits under the mini-map instead.
@@ -291,7 +298,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},yarn,
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -331,6 +338,7 @@ renderer.setAnimationLoop(()=>{
  const riding=lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
  if(!resting&&!riding){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ yarn.update(dt,resting||riding?null:controller);
  const p=controller.position;
  // A safety net: should a walker ever fall out of the ship, it comes back to the last ground it stood on.
  if(controller.grounded&&!riding)safe.copy(p);else if(p.y<-60){controller.place(safe);emote=null;}
