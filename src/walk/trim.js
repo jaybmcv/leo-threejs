@@ -26,9 +26,9 @@ function corridor(frames,coves,{axis,lo,hi,mid,width,sides,start}){
  }
  for(let t=start;t<hi-RIB;t+=SPACING)if(t>lo+RIB&&sides.some(([,runs])=>onWall(runs,t)))frames.push(put(RIB,width,t,mid,HEIGHT-BEAM/2,BEAM));
 }
-// Which corridors get the spacecraft lining (wall-kit.js), and at what level. Piloted on Deck 2's side corridor into
-// the arrival hall, the first corridor a visitor walks; service corridors get level 2 once the pilot is accepted.
-const kitLevel=(deck,branch)=>deck===2&&branch?.x0===-148?2:0;
+// Which corridors get the spacecraft lining (wall-kit.js), and at what level: every service corridor, spine and side
+// corridors alike, gets level 2. Level 1 is for the residential corridors, which are built elsewhere.
+const kitLevel=()=>2;
 
 export function corridorTrim(parent){
  for(let deck=1;deck<=20;deck++){

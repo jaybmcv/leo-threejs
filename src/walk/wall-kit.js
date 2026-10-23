@@ -26,7 +26,10 @@ export function wallKit(parts,{axis,lo,hi,mid,width,sides,start,spacing},level){
  const add=(m,g)=>(parts[m]||(parts[m]=[])).push(g);
  // A box on side s's wall: centred at t along and y up, standing d proud of the wall (its centre), sized along, up, deep.
  const put=(m,s,t,y,d,along,up,deep)=>{const u=mid+s*(width/2-d);add(m,axis==='x'?new T.BoxGeometry(along,up,deep).translate(t,y,u):new T.BoxGeometry(deep,up,along).translate(u,y,t));};
- const rod=(m,s,a,b,y,r,d)=>{const g=new T.CylinderGeometry(r,r,b-a,8);const u=mid+s*(width/2-d),t=(a+b)/2;
+ // Only the front of a thin plate is ever seen: a quad facing into the corridor, its face d proud of the wall.
+ const flat=(m,s,t,y,d,along,up)=>{const g=new T.PlaneGeometry(along,up),u=mid+s*(width/2-d);
+  add(m,axis==='x'?(s>0?g.rotateY(Math.PI):g).translate(t,y,u):g.rotateY(-s*Math.PI/2).translate(u,y,t));};
+ const rod=(m,s,a,b,y,r,d)=>{const g=new T.CylinderGeometry(r,r,b-a,6);const u=mid+s*(width/2-d),t=(a+b)/2;
   add(m,axis==='x'?g.rotateZ(Math.PI/2).translate(t,y,u):g.rotateX(Math.PI/2).translate(u,y,t));};
  // Bays between the frames.
  const marks=[lo];for(let t=start;t<hi-RIB;t+=spacing)if(t>lo+RIB)marks.push(t);marks.push(hi);
@@ -36,24 +39,24 @@ export function wallKit(parts,{axis,lo,hi,mid,width,sides,start,spacing},level){
    const a=marks[i]+(i>0?RIB/2+.03:0),b=marks[i+1]-(i<marks.length-2?RIB/2+.03:0);
    for(const [p,q] of within(runs,a,b)){
     const len=q-p,mid_=(p+q)/2;if(len<.8)continue;
-    put('seam',s,mid_,(PANEL[0]+PANEL[1])/2,.003,len,PANEL[1]-PANEL[0],.004);
-    put('dark',s,mid_,KICK/2,.012,len,KICK,.02);
+    flat('seam',s,mid_,(PANEL[0]+PANEL[1])/2,.005,len,PANEL[1]-PANEL[0]);
+    flat('dark',s,mid_,KICK/2,.022,len,KICK);
     const n=Math.max(1,Math.round(len/1.9)),w=len/n,rows=[[PANEL[0],1.86],[1.9,PANEL[1]]];
     for(let j=0;j<n;j++){
      const t=p+w*(j+.5);
-     for(const [y0,y1] of rows)put('panel',s,t,(y0+y1)/2,.012,w-GAP,y1-y0-GAP,.02);
+     for(const [y0,y1] of rows)flat('panel',s,t,(y0+y1)/2,.022,w-GAP,y1-y0-GAP);
     }
     if(level<2)continue;
     // Handrail on stand-offs.
     rod('pipe',s,p+.06,q-.06,RAIL,.022,.075);
-    for(let t=p+.3;t<q-.2;t+=1.6)put('pipe',s,t,RAIL,.04,.03,.03,.07);
+    for(let t=p+.3;t<q-.2;t+=2.4)put('pipe',s,t,RAIL,.04,.03,.03,.07);
     const pick=p+w*(n>1?1.5:.5);
     if(s<0){
      // An access hatch in every other bay, with its handle and a status light.
-     if(bay%2===0&&w>.9){put('seam',s,pick,1.32,.025,.68,.94,.004);put('hatch',s,pick,1.32,.035,.62,.88,.02);put('dark',s,pick+.22,1.32,.055,.04,.26,.03);put('status',s,pick-.22,1.68,.05,.05,.05,.01);}
+     if(bay%2===0&&w>.9){flat('seam',s,pick,1.32,.027,.68,.94);flat('hatch',s,pick,1.32,.045,.62,.88);put('dark',s,pick+.22,1.32,.055,.04,.26,.03);put('status',s,pick-.22,1.68,.05,.05,.05,.01);}
     }else{
      // A vent high up in every bay; an equipment box with a status light in every other.
-     put('dark',s,pick,2.72,.025,.5,.22,.02);for(let k=-1;k<=1;k++)put('line',s,pick,2.72+k*.06,.035,.46,.022,.012);
+     flat('dark',s,pick,2.72,.035,.5,.22);for(let k=-1;k<=1;k++)flat('line',s,pick,2.72+k*.06,.041,.46,.022);
      if(bay%2===1&&n>1){const t=p+w*.5;put('dark',s,t,1.42,.08,.48,.34,.14);put('line',s,t,1.42,.155,.4,.04,.01);put('status',s,t+.16,1.53,.155,.04,.04,.01);}
     }
     bay++;
