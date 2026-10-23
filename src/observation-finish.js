@@ -124,6 +124,33 @@ export function finishCrownLounge(root,y){
   cyl('Bottle_neck',.03,.11,[x,y+1.43,z],'glass');
   cyl('Bottle_cap',.033,.025,[x,y+1.495,z],'brass');
  }
+ // One instanced mesh per part and finish keeps the tap row and back-bar bottles cheap to draw.
+ const at=(x,py,z,sx=1,sy=1,sz=1,rx=0)=>new T.Matrix4().compose(new T.Vector3(x,py,z),new T.Quaternion().setFromEuler(new T.Euler(rx,0,0)),new T.Vector3(sx,sy,sz));
+ const inst=(name,geo,material,list)=>{const o=new T.InstancedMesh(geo,material,list.length);o.name='Crown_finish_'+name;o.castShadow=o.receiveShadow=true;list.forEach((matrix,j)=>o.setMatrixAt(j,matrix));detail.add(o);return o;};
+ // Six draught taps stand along the inner edge of the starboard counter, spouts toward the staff aisle.
+ const taps=[0,1,2,3,4,5].map(i=>-234.25+i*.5),tz=2.47,badges=[[],[],[]];
+ box('Tap_drip_tray',[3.1,.025,.16],[-233,y+1.213,tz],'dark');
+ inst('Tap_column',new T.CylinderGeometry(.05,.035,.36,16),m.brass,taps.map(x=>at(x,y+1.4,tz)));
+ inst('Tap_spout',new T.BoxGeometry(.03,.03,.12),m.brass,taps.map(x=>at(x,y+1.52,tz-.08)));
+ inst('Tap_handle',new T.CylinderGeometry(.022,.03,.2,12),m.oak,taps.map(x=>at(x,y+1.68,tz)));
+ taps.forEach((x,i)=>badges[i%3].push(at(x,y+1.84,tz,1,1,1,Math.PI/2)));
+ badges.forEach((list,i)=>inst('Tap_badge',new T.CylinderGeometry(.075,.075,.015,24),[m.stone,m.sage,m.clay][i],list));
+ // A low oak step on the work island's starboard edge displays a row of spirits bottles.
+ box('Back_bar_bottle_step',[3.7,.14,.2],[-232.05,y+1.09,.6],'oak');
+ const spirit=(name,color,extra={})=>new T.MeshStandardMaterial({name:'Crown_finish spirit glass '+name,color,roughness:.15,metalness:.1,...extra});
+ const kinds=[{r:.055,h:.3,mat:spirit('amber',0x9a5a1e)},{square:true,h:.26,mat:spirit('clear',0xcfd8d3,{roughness:.08})},{r:.045,h:.34,mat:spirit('ruby',0x7a2430)},{r:.06,h:.24,mat:spirit('smoke',0x3b4a3f)}];
+ const round=kinds.map(()=>[]),square=[],necks=[],caps=[],base=y+1.16;
+ for(let i=0;i<12;i++){
+  const x=-233.75+i*.3,k=kinds[i%4],top=base+k.h;
+  if(k.square){square.push(at(x,base+k.h/2,.6,.1,k.h,.1));necks.push(at(x,top+.045,.6,.018,.09,.018));}
+  else round[i%4].push(at(x,base+k.h/2,.6,k.r,k.h,k.r),at(x,top+.045,.6,.018,.09,.018));
+  caps.push(at(x,top+.1,.6,.022,.025,.022));
+ }
+ const unit=new T.CylinderGeometry(1,1,1,16);
+ kinds.forEach((k,i)=>{if(round[i].length)inst('Spirit_bottle',unit,k.mat,round[i]);});
+ inst('Spirit_bottle',new T.BoxGeometry(1,1,1),kinds[1].mat,square);
+ inst('Spirit_bottle_neck',unit,kinds[1].mat,necks);
+ inst('Spirit_bottle_cap',unit,m.brass,caps);
  box('Coffee_machine',[.7,.42,.6],[-230.8,y+1.23,-.15],'dark');
  box('Coffee_machine_face',[.55,.24,.025],[-230.8,y+1.25,-.462],'stone');
  box('Coffee_drip_tray',[.56,.035,.13],[-230.8,y+1.055,-.5],'brass');
