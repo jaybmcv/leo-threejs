@@ -34,6 +34,7 @@ import {corridorTrim} from './trim.js';
 import {connectLive,savedName} from './net/live.js';
 import {identify,currentPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
+import {createHostess} from './hostess.js';
 import {wearHat,fit,FIT} from './hat.js';
 import {createYarn} from './yarn.js';
 import {MeshBVH} from 'three-mesh-bvh';
@@ -141,8 +142,10 @@ async function buildShip(){
  ship.exterior.traverse(o=>{if(o.isMesh&&outsideOnly(o))o.visible=false;});
  const b0=performance.now();baked=bakeForWalking(ship.root,{release:true});for(const g of baked.bands.values())scene.add(g);timings.push([`${baked.sources} meshes merged into ${baked.meshes} in ${Math.round(performance.now()-b0)} ms`,Math.round(performance.now()-t0)]);
  haze.add(createHaze(ship));
- // Signs draw with the deck band they're on.
- for(const o of [...lifts.signs.children]){const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);}
+ // Signs, and the Crown lounge hostess (hostess.js), draw with the deck band they're on.
+ const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
+ for(const o of [...lifts.signs.children])toBand(o);
+ if(cosmoKit)toBand(createHostess(cosmoKit));
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
