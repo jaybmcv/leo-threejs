@@ -198,7 +198,7 @@ export function finishCrownLounge(root,y){
   const g=mergeGeometries(parts[kind]);parts[kind].forEach(g=>g.dispose());const mesh=add(name,g,[0,0,0],kind==='crystal'?'light':kind);if(kind==='crystal')mesh.material=crystal;
  }
  // Gold panelling closes the gap from the lift housing's top to the ceiling; the arrival canopy becomes its gold ledge.
- const gold=new T.MeshStandardMaterial({name:'Crown_finish gold panelling',color:0xc9a34e,roughness:.34,metalness:.75});
+ const gold=new T.MeshStandardMaterial({name:'Crown_finish gold panelling',color:0xa8781f,roughness:.45,metalness:.55});
  root.getObjectByName('Crown_lobby_canopy').material=gold;
  add('Lift_crown_panel',new T.BoxGeometry(4.35,2.1,4.4),[-247,y+4.15,.025],'brass').material=gold;
  for(const dx of [-1.45,0,1.45])for(const s of [-1,1])box('Lift_crown_panel_seam',[.04,1.4,.03],[-247+dx,y+4.43,.025+s*2.21],'dark');
