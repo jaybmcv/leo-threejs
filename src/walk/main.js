@@ -22,6 +22,7 @@ import walkPlan from 'walk-partitions';
 import {railingMesh} from './railings.js';
 import {ShipMap,drawMiniMap,drawFullMap,deckOf} from './minimap.js';
 import {DECKS} from '../model.js';
+import {floorY} from '../transit.js';
 import {createLifts} from './lift-ride.js';
 import {findRestSpots,solidSpots,spotIndex} from './rest.js';
 import {PLACES,findStand,describe} from './places.js';
@@ -246,6 +247,8 @@ async function loadCosmo(){
 
 // The arrival hall on Deck 2, where travellers come aboard.
 const START={position:new T.Vector3(-135,-35.7,-38),yaw:Math.PI/2};
+// Below this a walker has fallen out of the ship: 3 m under Deck 1's floor.
+const BELOW_SHIP=floorY(1)-3;
 await Promise.all([loadExterior(),loadCosmo()]).catch(e=>{status(e.message);throw e;});
 await buildShip();
 try{localStorage.removeItem(STARTING);}catch{}
@@ -342,8 +345,11 @@ renderer.setAnimationLoop(()=>{
  if(!resting&&!riding){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  yarn.update(dt,resting||riding?null:controller);
  const p=controller.position;
- // A safety net: should a walker ever fall out of the ship, it comes back to the last ground it stood on.
- if(controller.grounded&&!riding)safe.copy(p);else if(p.y<-60){controller.place(safe);emote=null;}
+ // A safety net: should a walker ever fall out of the ship, it comes back to the last ground it stood on. Nothing aboard
+ // is walkable below Deck 1, and the inside of the hull under it (-54.6 m) used to catch fallers and count as safe ground.
+ // A car floor is never kept: the car may have gone by the time it is needed, leaving only the shaft.
+ if(p.y<BELOW_SHIP){controller.place(safe);emote=null;}
+ else if(controller.grounded&&!lifts.lifts.some(l=>lifts.inside(l,p)))safe.copy(p);
  if(controller.speed>.15&&!resting)heading=dampAngle(heading,Math.atan2(controller.velocity.x,controller.velocity.z),12,dt);
  // What the figure leans into: the turn (+ to its left) and the change of speed, both smoothed a little.
  if(dt>0){turnRate=T.MathUtils.damp(turnRate,Math.atan2(Math.sin(heading-lastHeading),Math.cos(heading-lastHeading))/dt,10,dt);accel=T.MathUtils.damp(accel,(controller.speed-lastSpeed)/dt,10,dt);}

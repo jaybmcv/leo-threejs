@@ -120,16 +120,24 @@ export function createLifts(scene,colliders){
  const inside=(l,p)=>{const c=l.spec.car;return Math.abs(p.x-c.x)<c.width/2-.1&&Math.abs(p.z-c.z)<c.depth/2-.1&&p.y>l.y-.6&&p.y<l.y+1.2;};
  // The stop the car is at or passing.
  const level=l=>l.stops.reduce((b,s,i)=>Math.abs(s.y-l.y)<Math.abs(l.stops[b].y-l.y)?i:b,0);
+ let walker=null;
  const rides={
   lifts,inside,signs,level,
   // Called with each call this page makes (the multiplayer link passes it to the server).
   onCall:null,
   // Send a lift to stop `index`; its call light there stays lit until the car arrives. `now`: chosen in the car.
   call(l,index,opts){callLift(l,index,opts);rides.onCall?.(l,index,opts);},
-  // A lift's state as the server has it (multiplayer).
-  apply(id,wire){const l=lifts.find(l=>l.spec.id===id);if(l)applyLiftWire(l,wire);},
-  // Advance the cars and doors; `walker` is the controller, carried along when standing in a moving car.
-  update(dt,walker){
+  // A lift's state as the server has it (multiplayer). The server's car is a little ahead of or behind this page's,
+  // so its word moves the car; whoever stands in it moves too. Left behind, a rider 0.7 m under a car the server put
+  // higher stopped counting as aboard and fell down the shaft (feedback-inbox #50, #52, #73-#75).
+  apply(id,wire){
+   const l=lifts.find(l=>l.spec.id===id);if(!l)return;
+   const aboard=walker&&inside(l,walker.position),before=l.y;applyLiftWire(l,wire);
+   if(aboard&&l.y!==before){walker.position.y+=l.y-before;walker.velocity.y=0;}
+  },
+  // Advance the cars and doors; `w` is the controller, carried along when standing in a moving car.
+  update(dt,w){
+   walker=w;
    for(const l of lifts){
     const riding=inside(l,walker.position),rose=stepLift(l,l.stops,dt);
     if(riding&&rose){walker.position.y+=rose;walker.velocity.y=0;}
