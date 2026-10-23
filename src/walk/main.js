@@ -8,9 +8,9 @@ import {loadEnvironment} from '../environment.js';
 import {publicAsset} from '../public-assets.js';
 import {createMars} from '../mars.js';
 import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
-import {buildSteps,buildColliders,cabinPlacements,outsideOnly,prepareExteriorForWalking,clipInside} from './world.js';
+import {buildSteps,buildColliders,cabinPlacements,outsideOnly,prepareExteriorForWalking} from './world.js';
 import {Colliders,solid} from './collision.js';
-import {STATIC_LIFT_PARTS,LIFTS} from './lifts.js';
+import {STATIC_LIFT_PARTS} from './lifts.js';
 import {Controller} from './controller.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
@@ -82,8 +82,6 @@ const renderer=new T.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true,p
 const phone=matchMedia('(pointer:coarse)').matches;
 renderer.setPixelRatio(Math.min(devicePixelRatio,phone?1.25:1.75));renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
-// Clipping planes cut the crown lift's shaft through the fin's skins (world.js).
-renderer.localClippingEnabled=true;
 $('viewport').appendChild(renderer.domElement);
 // A phone short of graphics memory drops the WebGL context: bring the card back with a reason, not a frozen view.
 renderer.domElement.addEventListener('webglcontextlost',()=>{document.body.dataset.ready='0';$('loading-text').textContent='The view stopped: this device ran short of graphics memory. Reload to walk again.';});
@@ -136,9 +134,6 @@ async function buildShip(){
  ship.inside.add(railingMesh(walkPlan.rails));
  // (The exterior model carries its own copy of the crown lounge, static car floor and all.)
  ship.root.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
- // The crown lounge's lift box (walls, jambs and sill) overlaps the car's outline: clip it back to the car's outside.
- {const {car:c,stops}=LIFTS.find(l=>l.id==='crown');
-  clipInside(ship.root,new T.Box3(new T.Vector3(c.x-c.width/2,stops[0].y,c.z-c.depth/2),new T.Vector3(c.x+c.width/2,stops.at(-1).y+c.height+.3,c.z+c.depth/2)),o=>/^Crown_lift_(side|back|jamb|threshold)$/.test(o.name));}
  // The main lift shafts are walled in nearly clear glass, so with the car away the shaft read as an open drop at your
  // feet. Frost it on foot so it reads as the wall it is.
  const shaftGlass=new T.MeshStandardMaterial({name:'Walk_shaft_glass',color:0xb4c8d2,roughness:.45,transparent:true,opacity:.5,depthWrite:false,side:T.DoubleSide});

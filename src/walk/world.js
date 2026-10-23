@@ -100,26 +100,42 @@ export function prepareExteriorForWalking(ship){
   if(keep.length<n){o.geometry=g.clone();o.geometry.setIndex(keep);}
  });
  // The crown lift climbs out of the decks through the hull top, the fin's root fairing and the closure under the
- // crown. Those skins are clipped away inside its shaft so they don't cut through the car. Up in the fin nothing
- // stands on them, so all of their triangles that reach the shaft go from the colliders too, and the view up the
- // shaft (main.js span) reaches the fin; the hull top keeps the ones that cross the shaft's edge, so it stays whole.
- const {car,stops}=LIFTS.find(l=>l.id==='crown'),shaft=new T.Box3(new T.Vector3(car.x-car.width/2-.1,stops[0].y+.3,car.z-car.depth/2-.1),new T.Vector3(car.x+car.width/2+.1,stops.at(-1).y-1,car.z+car.depth/2+.1));
- const hull=o=>/^Smooth_pressure_envelope/.test(o.name);
- clipInside(ship.exterior,shaft,hull,{hollow:true});clipInside(ship.exterior,shaft,o=>!hull(o),{hollow:true,touching:true});
+ // crown, and the crown lounge's lift box (walls, jambs and sill) overlaps the car's outline. All of them are cut away
+ // inside the shaft, so nothing passes through the car.
+ const {car,stops}=LIFTS.find(l=>l.id==='crown'),box=(m,y0,y1)=>new T.Box3(new T.Vector3(car.x-car.width/2-m,y0,car.z-car.depth/2-m),new T.Vector3(car.x+car.width/2+m,y1,car.z+car.depth/2+m));
+ cutOut(ship.exterior,box(.1,stops[0].y+.3,stops.at(-1).y-1));
+ cutOut(ship.root,box(0,stops[0].y,stops.at(-1).y+car.height+.3),o=>/^Crown_lift_(side|back|jamb|threshold)$/.test(o.name));
  return dropped;
 }
-// Clip away whatever of `root`'s meshes (those `pick` takes) lies inside `box`, exactly to it: each mesh with a
-// triangle in the box gets its own copy of its material, with clipping planes (the renderer needs localClippingEnabled).
-// `hollow`: its triangles wholly inside the box stop being solid too (collision.js), so nothing unseen stands there;
-// `touching`: every triangle that reaches into the box.
-export function clipInside(root,box,pick=()=>true,{hollow=false,touching=false}={}){
- const planes=[[1,0,0],[0,1,0],[0,0,1]].flatMap(([x,y,z])=>{const n=new T.Vector3(x,y,z);return [new T.Plane(n.clone().negate(),n.dot(box.min)),new T.Plane(n,-n.dot(box.max))];});
- const tri=new T.Triangle();root.updateMatrixWorld(true);
+// Cut away whatever of `root`'s meshes (those `pick` takes) lies inside `box`, exactly: each triangle reaching into it
+// is split along the box's faces and the pieces inside dropped, with every attribute carried across the cuts. A cut
+// triangle keeps its place, collapsed to a point, and its pieces go at the end, so triangle numbers stay put (the
+// hull's window plan counts on them, windows.js).
+export function cutOut(root,box,pick=()=>true){
+ root.updateMatrixWorld(true);const tb=new T.Box3(),w=new T.Vector3();
  root.traverse(o=>{
-  if(!o.isMesh||Array.isArray(o.material)||!pick(o)||!new T.Box3().setFromObject(o).intersectsBox(box))return;
-  const pos=o.geometry.attributes.position,idx=o.geometry.index?.array,n=idx?idx.length:pos.count;let hit=false;
-  for(let t=0;t<n&&!hit;t+=3){tri.a.fromBufferAttribute(pos,idx?idx[t]:t).applyMatrix4(o.matrixWorld);tri.b.fromBufferAttribute(pos,idx?idx[t+1]:t+1).applyMatrix4(o.matrixWorld);tri.c.fromBufferAttribute(pos,idx?idx[t+2]:t+2).applyMatrix4(o.matrixWorld);hit=box.intersectsTriangle(tri);}
-  if(hit){o.material=o.material.clone();o.material.clippingPlanes=planes;o.material.clipIntersection=true;if(hollow)o.userData.hollow={box,touching};}
+  if(!o.isMesh||o.isInstancedMesh||!pick(o)||!new T.Box3().setFromObject(o).intersectsBox(box))return;
+  const g=o.geometry.index?o.geometry.toNonIndexed():o.geometry,names=Object.keys(g.attributes),attrs=names.map(n=>g.attributes[n]);
+  // A vertex is its world position followed by every attribute's components.
+  const vert=i=>{w.fromBufferAttribute(g.attributes.position,i).applyMatrix4(o.matrixWorld);const v=[w.x,w.y,w.z];for(const a of attrs)for(let k=0;k<a.itemSize;k++)v.push(a.getComponent(i,k));return v;};
+  const lerp=(a,b,t)=>a.map((x,k)=>x+(b[k]-x)*t),out=[],kept=[];let cut=false;
+  for(let t=0;t<g.attributes.position.count;t+=3){
+   let poly=[vert(t),vert(t+1),vert(t+2)];tb.makeEmpty();for(const v of poly)tb.expandByPoint(w.set(v[0],v[1],v[2]));
+   if(!tb.intersectsBox(box)){kept.push(...poly);continue;}cut=true;kept.push(poly[0],poly[0],poly[0]);
+   // Peel off the part beyond each face of the box in turn; what is left after all six is inside.
+   for(let f=0;f<6&&poly.length;f++){const k=f>>1,d=v=>f&1?v[k]-box.max.getComponent(k):box.min.getComponent(k)-v[k],keep=[],rest=[];
+    poly.forEach((a,i)=>{const b=poly[(i+1)%poly.length],da=d(a),db=d(b);(da>0?keep:rest).push(a);if(da>0!==db>0){const c=lerp(a,b,da/(da-db));keep.push(c);rest.push(c);}});
+    if(keep.length>2)out.push(keep);poly=rest.length>2?rest:[];}
+  }
+  if(!cut)return;
+  // Fans of the pieces, without the slivers a cut along an edge leaves.
+  const e1=new T.Vector3(),e2=new T.Vector3(),tris=kept;
+  for(const p of out)for(let i=1;i<p.length-1;i++){const a=p[0],b=p[i],c=p[i+1];e1.set(b[0]-a[0],b[1]-a[1],b[2]-a[2]);e2.set(c[0]-a[0],c[1]-a[1],c[2]-a[2]);if(e1.cross(e2).lengthSq()>1e-12)tris.push(a,b,c);}
+  const geo=new T.BufferGeometry(),n=tris.length;
+  names.forEach((name,j)=>{const a=attrs[j],off=3+attrs.slice(0,j).reduce((s,x)=>s+x.itemSize,0),arr=new Float32Array(n*a.itemSize);let m=0;
+   for(const v of tris)for(let k=0;k<a.itemSize;k++)arr[m++]=v[off+k];
+   geo.setAttribute(name,new T.BufferAttribute(arr,a.itemSize));});
+  o.geometry=geo;
  });
 }
 

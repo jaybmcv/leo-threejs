@@ -31,7 +31,7 @@ export async function loadWalkShip(exteriorPath='output/leo-interior-v01/leo-ext
 export function fitForWalking(ship,plan){
  const decks=plan?null:rasterDecks(ship),walls=plan?plan.walls.map(([deck,x0,x1,z0,z1,y0,y1])=>({deck,x0,x1,z0,z1,y0,y1})):planPartitions(ship,decks);
  ship.inside.add(partitionMesh(walls));
- ship.inside.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
+ ship.root.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
  const dropped=prepareExteriorForWalking(ship);
  let colliders=buildColliders(ship,{extra:[ship.exterior],filter:o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name)});
  const rails=plan?plan.rails:planRails(decks,colliders);
