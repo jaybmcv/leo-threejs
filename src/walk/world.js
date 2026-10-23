@@ -2,6 +2,7 @@ import * as T from 'three';
 import {DECKS,CABINS,SAMPLE} from '../model.js';
 import {shapeAft} from '../concept-shape.js';
 import {Colliders,solid,meshTriangles} from './collision.js';
+import {LIFTS} from './lifts.js';
 
 // Leo's whole walkable interior, built into `ship` (createShip): every deck's fitted rooms and corridors, the ten
 // furnished neighborhoods, the garden commons, the forward lounge, both transit cores and the aft systems, with the
@@ -98,7 +99,24 @@ export function prepareExteriorForWalking(ship){
   }
   if(keep.length<n){o.geometry=g.clone();o.geometry.setIndex(keep);}
  });
+ // The crown lift climbs out of the decks through the hull top, the fin's root fairing and the closure under the
+ // crown. Those skins are clipped away inside its shaft so they don't cut through the car.
+ const {car,stops}=LIFTS.find(l=>l.id==='crown');
+ clipInside(ship.exterior,new T.Box3(new T.Vector3(car.x-car.width/2-.1,stops[0].y+.3,car.z-car.depth/2-.1),new T.Vector3(car.x+car.width/2+.1,stops.at(-1).y-1,car.z+car.depth/2+.1)),undefined,{hollow:true});
  return dropped;
+}
+// Clip away whatever of `root`'s meshes (those `pick` takes) lies inside `box`, exactly to it: each mesh with a
+// triangle in the box gets its own copy of its material, with clipping planes (the renderer needs localClippingEnabled).
+// `hollow`: its triangles that reach into the box stop being solid too (collision.js), so nothing unseen stands there.
+export function clipInside(root,box,pick=()=>true,{hollow=false}={}){
+ const planes=[[1,0,0],[0,1,0],[0,0,1]].flatMap(([x,y,z])=>{const n=new T.Vector3(x,y,z);return [new T.Plane(n.clone().negate(),n.dot(box.min)),new T.Plane(n,-n.dot(box.max))];});
+ const tri=new T.Triangle();root.updateMatrixWorld(true);
+ root.traverse(o=>{
+  if(!o.isMesh||Array.isArray(o.material)||!pick(o)||!new T.Box3().setFromObject(o).intersectsBox(box))return;
+  const pos=o.geometry.attributes.position,idx=o.geometry.index?.array,n=idx?idx.length:pos.count;let hit=false;
+  for(let t=0;t<n&&!hit;t+=3){tri.a.fromBufferAttribute(pos,idx?idx[t]:t).applyMatrix4(o.matrixWorld);tri.b.fromBufferAttribute(pos,idx?idx[t+1]:t+1).applyMatrix4(o.matrixWorld);tri.c.fromBufferAttribute(pos,idx?idx[t+2]:t+2).applyMatrix4(o.matrixWorld);hit=box.intersectsTriangle(tri);}
+  if(hit){o.material=o.material.clone();o.material.clippingPlanes=planes;o.material.clipIntersection=true;if(hollow)o.userData.hollow=box;}
+ });
 }
 
 export function buildColliders(ship,{extra=[],filter=solid,into=new Colliders()}={}){

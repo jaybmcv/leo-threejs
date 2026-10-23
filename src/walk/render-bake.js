@@ -13,7 +13,7 @@ const worldVisible=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;retur
 const MAPS=['map','normalMap','roughnessMap','metalnessMap','emissiveMap','aoMap','alphaMap','bumpMap'];
 const shared=new Map();
 function finishOf(m){
- if(!m.isMeshStandardMaterial||m.transparent||MAPS.some(k=>m[k])||(m.emissive&&m.emissive.getHex()&&m.emissiveIntensity>0))return null;
+ if(!m.isMeshStandardMaterial||m.transparent||m.clippingPlanes?.length||MAPS.some(k=>m[k])||(m.emissive&&m.emissive.getHex()&&m.emissiveIntensity>0))return null;
  const key=`${Math.round(m.roughness*10)}|${Math.round(m.metalness*10)}|${m.side}|${m.flatShading?1:0}`;
  let mat=shared.get(key);if(!mat){mat=new T.MeshStandardMaterial({name:'Walk_finish_'+key,vertexColors:true,roughness:Math.round(m.roughness*10)/10,metalness:Math.round(m.metalness*10)/10,side:m.side,flatShading:m.flatShading});shared.set(key,mat);}
  return mat;

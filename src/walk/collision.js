@@ -19,6 +19,7 @@ const MIN_SIZE=.18;
 const worldVisible=o=>{for(let p=o;p;p=p.parent)if(!p.visible&&!p.userData.baked)return false;return true;};
 const boxLike=g=>g.parameters&&g.parameters.width!==undefined&&g.parameters.height!==undefined&&g.parameters.depth!==undefined;
 const BOX_FACES=[[0,1,3],[0,3,2],[4,6,7],[4,7,5],[0,4,5],[0,5,1],[2,3,7],[2,7,6],[0,2,6],[0,6,4],[1,5,7],[1,7,3]];
+const TRI=new T.Triangle(),triAt=(a,i)=>(TRI.a.fromArray(a,i),TRI.b.fromArray(a,i+3),TRI.c.fromArray(a,i+6),TRI);
 
 // Push a mesh's collision triangles (world space, flat xyz triples) into `out`. Box-like parts (including the rounded
 // boxes of the polish passes) become their 12-triangle bounds; small, dense props do too.
@@ -61,8 +62,10 @@ export class Colliders{
  addStatic(root,filter=solid){
   root.updateMatrixWorld(true);let tris=0;const scratch=[];
   root.traverse(o=>{
-   if(!filter(o))return;scratch.length=0;meshTriangles(o,scratch);
+   if(!filter(o))return;scratch.length=0;meshTriangles(o,scratch);const hollow=o.userData.hollow;
    for(let i=0;i<scratch.length;i+=9){
+    // A part clipped open (world.js clipInside) isn't solid there either.
+    if(hollow&&hollow.intersectsTriangle(triAt(scratch,i)))continue;
     const y0=Math.min(scratch[i+1],scratch[i+4],scratch[i+7]),y1=Math.max(scratch[i+1],scratch[i+4],scratch[i+7]);
     for(let b=bandOf(y0);b<=bandOf(y1);b++){let list=this.pending.get(b);if(!list)this.pending.set(b,list=new Floats());list.push9(scratch,i);}
     tris++;
