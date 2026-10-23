@@ -185,6 +185,11 @@ body .intro,body[data-mode] .intro,body[data-mode="exterior"][data-studio="1"] .
    pointer). Phones also get it in the view menu. */
 .intro .walk-link{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;margin-top:18px;font:400 11px/1 var(--mcv-mono);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;color:#fff;background:var(--mcv-orange);border-radius:999px;padding:13px 18px;text-decoration:none}.intro .walk-link::after{content:"→"}
 .intro .walk-link:hover{background:#ff6a14}@media(max-width:680px){.intro .walk-link{margin-top:10px;padding:10px 14px;font-size:10px}}
+/* Safe start: a phone whose last start never finished sees the ship as a picture first (script below) */
+#safe-start{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:#000 url(brand/share.jpg) center 38%/cover no-repeat;padding:16px}#safe-start[hidden]{display:none}
+#safe-start .card{max-width:340px;margin-top:auto;background:var(--mcv-card);border:1px solid var(--mcv-hairline);border-radius:14px;padding:20px;color:var(--mcv-body);font:400 14px/1.45 var(--mcv-sans);text-align:center}
+#safe-start h2{font:500 26px/1.05 var(--mcv-display);letter-spacing:-.03em;color:var(--mcv-text);margin:0 0 10px}
+#safe-start button{margin-top:14px;border:0;border-radius:999px;padding:12px 20px;background:var(--mcv-orange);color:#000;font:500 12px/1 var(--mcv-mono);letter-spacing:.06em;cursor:pointer}
 </style></head>
 <body>
 <header class="topbar"><a class="brand" href="https://marscatsvoyage.com" aria-label="Mars Cats Voyage home"><img src="brand/mark.png" alt="" width="36" height="36"><span class="lockup">Mars Cats<br>Voyage</span><span class="rule" aria-hidden="true"></span><strong>LEO</strong></a><button class="m-view" id="m-view" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="m-menu"><span id="m-view-label">Exterior</span> <b aria-hidden="true">▾</b></button><nav class="tabs" aria-label="Model views"><button data-mode="exterior" aria-pressed="true">Exterior</button><button data-mode="layout" aria-pressed="false">Deck layout</button><button data-mode="areas" aria-pressed="false">Ship areas</button><button data-mode="neighborhood" aria-pressed="false">Neighborhood</button><button data-mode="aft" aria-pressed="false">Aft systems</button><button data-mode="transit" aria-pressed="false">Connections</button><button data-mode="walk" aria-pressed="false">Take the tour</button><button id="toggle-panels" aria-pressed="false">Hide UI</button></nav><div class="edition"><span class="counter" id="counter">01 / Exterior</span><a class="back" href="https://marscatsvoyage.com">Back to the voyage ↗</a></div><button class="m-tour" id="m-tour" type="button">Tour <span aria-hidden="true">→</span></button></header>
@@ -202,6 +207,19 @@ body .intro,body[data-mode] .intro,body[data-mode="exterior"][data-studio="1"] .
 <div class="hud"><b>Leo / Live</b><span class="status-dot"></span><span id="status" aria-live="polite">Preparing model…</span></div>
 <div id="error" class="error" role="alert" hidden></div></main>
 <footer><span id="foot-note">Drag to orbit · scroll to zoom · right-drag to pan</span><div class="foot-links"><a href="leo-full-ship.glb" download>Complete ship GLB ↓</a><a href="leo-neighborhood.glb" download>Neighborhood 10 GLB ↓</a><a href="README.md">Notes ↗</a></div></footer>
+<div id="safe-start" hidden><div class="card"><h2>Leo, in pictures first</h2><p>Last time, the 3D view closed before it finished loading on this device. It likely ran out of memory. The light 3D view uses far less.</p><button id="safe-go" type="button">Open the light 3D view</button></div></div>
+<script>
+// The viewer script is started from here (LEO_BOOT, called below with its hashed name). On a touch screen whose last
+// start never got the ship on screen for ten seconds (src/viewer.js keeps that note), which is how a phone that ran out
+// of memory looks when it comes back, the page waits on a picture and a button instead, then starts in light mode.
+window.LEO_BOOT=function(src){
+ var run=function(){var s=document.createElement('script');s.src=src;document.body.appendChild(s);},stuck=false;
+ try{var t=Number(localStorage.getItem('leo-viewer-starting'));stuck=t>0&&Date.now()-t<7*864e5;}catch(e){}
+ if(!stuck||!matchMedia('(pointer: coarse)').matches||/[?&]lite=/.test(location.search))return run();
+ var safe=document.getElementById('safe-start');safe.hidden=false;
+ document.getElementById('safe-go').onclick=function(){safe.hidden=true;window.LEO_LITE=true;run();};
+};
+</script>
 <script>/* BUNDLE */</script></body></html>
 
 

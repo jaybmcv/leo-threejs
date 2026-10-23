@@ -14,7 +14,7 @@ export async function writeViewerPage(out){
  const cosmo=await buildCosmo(),cosmoName=hashed('cosmo',cosmo);await fs.writeFile(path.join(out,cosmoName),cosmo);
  const result=await build({entryPoints:['src/viewer.js'],bundle:true,minify:true,format:'iife',write:false,target:'es2022',legalComments:'eof',define:{__COSMO_SCRIPT__:JSON.stringify(cosmoName)}});
  const viewer=result.outputFiles[0].text,viewerName=hashed('viewer',viewer);await fs.writeFile(path.join(out,viewerName),viewer);
- const html=(await fs.readFile('src/viewer.html','utf8')).replace('<script>/* BUNDLE */</script>',()=>`<script src="${viewerName}"></script>`);
+ const html=(await fs.readFile('src/viewer.html','utf8')).replace('<script>/* BUNDLE */</script>',()=>`<script>LEO_BOOT("${viewerName}")</script>`);
  if(html.includes('/* BUNDLE */'))throw new Error('viewer.html lost its bundle placeholder');
  await fs.writeFile(path.join(out,'index.html'),html);
  return {viewer:viewerName,cosmo:cosmoName};

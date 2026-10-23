@@ -7,8 +7,8 @@ import {buildWebExterior} from './build-web-exterior.mjs';
 import {writeWalkPage} from './walk-page.mjs';
 const source='output/leo-interior-v01',out='dist';
 await fs.mkdir(out+'/models',{recursive:true});
-await buildWebExterior(source+'/leo-exterior-refined.glb',source+'/leo-exterior-web.glb');
-const names=['leo-exterior-refined.glb','leo-exterior-web.glb','leo-residential-decks.glb','leo-garden-commons.glb','leo-service-areas.glb','leo-aft-systems.glb','leo-transit.glb','leo-full-ship.glb','leo-neighborhood.glb'];
+await buildWebExterior(source+'/leo-exterior-refined.glb',source+'/leo-exterior-web.glb',source+'/leo-exterior-phone.glb');
+const names=['leo-exterior-refined.glb','leo-exterior-web.glb','leo-exterior-phone.glb','leo-residential-decks.glb','leo-garden-commons.glb','leo-service-areas.glb','leo-aft-systems.glb','leo-transit.glb','leo-full-ship.glb','leo-neighborhood.glb'];
 const manifest={};
 const hash=b=>createHash('sha256').update(b).digest('hex');
 for(const name of names){

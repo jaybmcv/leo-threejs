@@ -13,7 +13,7 @@ for(const [name,entry] of Object.entries(manifest)){
 }
 const html=await fs.readFile('dist/index.html','utf8');
 assert.ok(html.includes('id="share-view"'));
-const viewerScript=html.match(/<script src="(viewer\.[0-9a-f]{10}\.js)"><\/script>/)?.[1];assert.ok(viewerScript,'index.html loads the hashed viewer script');
+const viewerScript=html.match(/<script>LEO_BOOT\("(viewer\.[0-9a-f]{10}\.js)"\)<\/script>/)?.[1];assert.ok(viewerScript,'index.html loads the hashed viewer script');
 const viewerCode=await fs.readFile('dist/'+viewerScript,'utf8'),cosmoScript=viewerCode.match(/cosmo\.[0-9a-f]{10}\.js/)?.[0];
 assert.ok(cosmoScript&&(await fs.stat('dist/'+cosmoScript)).size>2e5,'the viewer names a shipped hashed Cosmo');assert.ok(!html.includes('createDLCat')&&!viewerCode.includes('createDLCat'),'Cosmo must stay in its own file');
 for(const name of ['mark.png','share.jpg','archivo.woff2','jetbrains.woff2','sora.woff2']){assert.ok(html.includes('brand/'+name),name);await fs.access('dist/brand/'+name);}
