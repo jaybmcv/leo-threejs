@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {polishInterior} from './interior-polish.js';
 import {shrubGeometry} from './stylized-plants.js';
 
@@ -136,6 +137,28 @@ export function finishCrownLounge(root,y){
  for(const x of [-233.25,-232,-230.75]){
   box('Service_drawer',[1.13,.36,.025],[x,y+.61,-.663],'oak');
   box('Drawer_pull',[.3,.025,.035],[x,y+.72,-.687],'brass');
+ }
+ // A two-tier bronze chandelier hangs from the ceiling rib over the middle of the bar, clear of heads and the halo.
+ const cx=-232,top=y+4.92,parts={brass:[],light:[],crystal:[]},o=new T.Object3D();
+ const part=(kind,geo,p,rot=[0,0,0],sy=1)=>{o.position.set(...p);o.rotation.set(...rot);o.scale.set(1,sy,1);o.updateMatrix();parts[kind].push(geo.applyMatrix4(o.matrix));};
+ part('brass',new T.CylinderGeometry(.24,.24,.06,24),[cx,top-.03,0]);
+ part('brass',new T.CylinderGeometry(.022,.022,.82,12),[cx,top-.47,0]);
+ part('brass',new T.SphereGeometry(.15,20,14),[cx,y+3.97,0]);
+ part('brass',new T.CylinderGeometry(.05,.1,.55,20),[cx,y+3.66,0]);
+ for(const [r,h,n] of [[1.05,y+3.95,12],[.62,y+3.52,8]]){
+  part('brass',new T.TorusGeometry(r,.022,8,64),[cx,h,0],[Math.PI/2,0,0]);
+  for(let k=0;k<n;k++){
+   const a=(k+.5)/n*Math.PI*2,c=Math.cos(a),s=Math.sin(a);
+   part('brass',new T.BoxGeometry(r,.024,.024),[cx+c*r/2,h,s*r/2],[0,-a,0]);
+   part('brass',new T.CylinderGeometry(.045,.045,.05,12),[cx+c*r,h+.04,s*r]);
+   part('light',new T.SphereGeometry(.055,12,8),[cx+c*r,h+.12,s*r],undefined,1.5);
+  }
+  for(let k=0;k<n*2;k++){const a=k/(n*2)*Math.PI*2;part('crystal',new T.OctahedronGeometry(.045),[cx+Math.cos(a)*r,h-.13,Math.sin(a)*r],undefined,2);}
+ }
+ part('crystal',new T.OctahedronGeometry(.09),[cx,y+3.25,0],undefined,1.8);
+ const crystal=new T.MeshStandardMaterial({name:'Crown_finish crystal',color:0xfff4e2,emissive:0xffd8a8,emissiveIntensity:.35,roughness:.08,metalness:.1});
+ for(const [kind,name] of [['brass','Chandelier_frame'],['light','Chandelier_light_bulbs'],['crystal','Chandelier_glass_drops']]){
+  const g=mergeGeometries(parts[kind]);parts[kind].forEach(g=>g.dispose());const mesh=add(name,g,[0,0,0],kind==='crystal'?'light':kind);if(kind==='crystal')mesh.material=crystal;
  }
  root.userData.stage='Refined panoramic lounge with upholstered banquettes and fitted central bar';
  polishInterior(root,'Fin crown observation lounge');
