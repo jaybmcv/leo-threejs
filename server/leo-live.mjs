@@ -1,5 +1,5 @@
 // Leo live: the multiplayer server for walk mode (src/walk/walk.html). One process is one shuttle: everyone connected
-// walks the same Leo. It passes poses on and runs the lifts, nothing else; the ship itself is static and every visitor
+// walks the same Leo. It passes poses and pings on and runs the lifts, nothing else; the ship itself is static and every visitor
 // builds it in their own browser. Modelled on Voyager's Reach's authority (packages/server: pose fan-out by distance,
 // poses as bytes, the visitor's id proved by a key their browser keeps), cut down to what a walk needs.
 //
@@ -35,7 +35,7 @@ const NEAR_DY=9,NEAR_M=64;
 const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
 const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',
  key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
-const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4]};
+const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2]};
 
 const visitors=new Set();
 const slots=new Map();let nextSlot=1;
@@ -99,6 +99,11 @@ function onMessage(v,data,binary){
    callLift(l.state,msg.stop,{now:!!msg.now});liftChanged(l,true);break;
   }
   case 'ping':if(allowed(v,'ping'))send(v.ws,{m:'pong',t:msg.t});break;
+  // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
+  case 'mark':{
+   const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;
+   broadcast({m:'mark',id:v.id,at:a.map(n=>Math.round(n*100)/100)},v);break;
+  }
  }
 }
 
