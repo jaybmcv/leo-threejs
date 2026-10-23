@@ -65,8 +65,9 @@ export function createLifts(scene,colliders){
   boxMesh('Car_light',[c.width*.6,.03,c.depth*.6],[0,c.height-.02,0],mats.glow,car);
   for(const [a,sg] of [['x',-1],['x',1],['z',-1],['z',1]]){if(faces.some(f=>faceOf(f.door)===a+sg))continue;
    if(a==='x')boxMesh('Car_wall',[.08,c.height,c.depth],[sg*(c.width/2-.04),c.height/2,0],mats.wall,car);else boxMesh('Car_wall',[c.width,c.height,.08],[0,c.height/2,sg*(c.depth/2-.04)],mats.wall,car);}
-  // Mars fills most of the back wall, opposite the main door, just in front of its inner face.
-  {const b=faces[0].door,across=b.axis==='x'?c.depth:c.width,mars=new T.Mesh(new T.CircleGeometry(Math.min(across,c.height)*.4,64),art());
+  // Mars fills most of the back wall, just in front of its inner face: opposite the door (the crown lounge door on
+  // the crown lift, where riders board it).
+  {const b=faces.at(-1).door,across=b.axis==='x'?c.depth:c.width,mars=new T.Mesh(new T.CircleGeometry(Math.min(across,c.height)*.4,64),art());
    mars.name='Car_mars';mars.position.y=c.height*.52;mars.position[b.axis]=-b.sign*((b.axis==='x'?c.width:c.depth)/2-.085);
    mars.rotation.y=b.axis==='x'?b.sign*Math.PI/2:(b.sign>0?0:Math.PI);car.add(mars);}
   // Car doors on each open face slide with the landing doors; a gate mover closes the face while they're shut.
