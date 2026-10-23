@@ -189,6 +189,10 @@ The crown geometry is derived from the projected cap outline. Only the solid cap
 The build retains `output/leo-interior-v01/leo-exterior.glb` and verifies its accepted SHA-256 before and after assembly. It first builds the refined exterior, then all fitted components, the assembly and the viewer. The legacy `scripts/build.mjs` is an exterior/planning generator and is not used by this workflow. Geometry uses +X forward, +Y up and +Z starboard. The exterior mapping is `physicalX = 0.94 * logicalX - 18`. V31 sources are preserved in `archive/v31-source`. Three.js is MIT licensed; its license is included in the output.
 
 
+## Hydro-Nip Lounge — Neighborhood 1 garden commons, Deck 17
+
+Neighborhood 1's garden commons is now the Hydro-Nip Lounge, a catnip lounge. Lounge concept by Tochtli (Discord tochtli_13), from a render by their designer, used for layout and mood only. It has the Anti-Gravity Geodesic Hammock Dome, the Haze Maze glass tower, the Terpene Tasting Deck, the Cosmic Munchies Converger, lounge seating, cat trees, hanging catnip and string lights. The galleries, stairs and shared services are unchanged, and the other nine commons stay gardens. Phase 1 is dressing: the dome and maze are sealed glass, and the stools, beanbags and cushions can be sat on in the walk. Source: `src/hydro-nip-lounge.js`; decisions and coordinates: `HYDRO_NIP_LOUNGE.md`.
+
 ## Residential nose commons — Decks 6–15
 
 Ten fitted social spaces occupy the bow ahead of the residential decks. Each uses a hull-limited footprint at ceiling height, a 6 m central promenade and a 4 m approach from the forward core. No sleeping capacity was added.
