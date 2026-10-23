@@ -8,6 +8,7 @@ import {SUPPORT_AREAS,createSupportArea} from './neighborhood-services.js';
 import {finishShipArea} from './area-finish.js';
 import {unionRectangles,slabGeometry} from './floor-geometry.js';
 import {SPECIAL_AREAS,createSpecialArea} from './special-areas.js';
+import {glazedWallParts,visionGlass} from './room-glazing.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
 import fontData from './assets/helvetiker-bold.json' with {type:'json'};
@@ -59,6 +60,8 @@ export function createShipArea(area){
   const cream=mat('Area_lining',0xd9ddd6),floor=mat('Area_floor',0xb8b6a9),navy=mat('Area_navy',0x304e61),wood=mat('Area_timber',0x9c7b55),silver=mat('Area_equipment',0x8da0a3),blue=mat('Area_screen',0x285972,{emissive:0x1a495f,emissiveIntensity:.25}),green=mat('Area_green',0x62977c),dark=mat('Area_dark',0x24333a),linen=mat('Area_linen',0xacc6cf),amber=mat('Area_amber',0xd3a65e),glow=mat('Area_light',0xffebc7,{emissive:0xffe6b6,emissiveIntensity:.8});
   const add=(name,geo,material,p=[0,0,0],parent=fit)=>{const o=new T.Mesh(geo,material);o.name=name;o.position.set(...p);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;};
   const box=(name,size,p,material=cream,parent=fit)=>add(name,new T.BoxGeometry(...size),material,p,parent);
+  // Corridor-facing walls carry a band of vision glass; the end wall stays solid for the room's displays.
+  const glazedWall=(name,size,p)=>{const parts=glazedWallParts(size,p);if(!parts)return box(name,size,p,cream,shell);for(const q of parts)box(q.name,q.size,q.p,q.glass?visionGlass:cream,shell);};
   const cylinder=(name,r,h,p,material=silver)=>add(name,new T.CylinderGeometry(r,r,h,16),material,p);
   const tube=(name,a,b,r=.06,material=silver)=>{const va=new T.Vector3(...a),vb=new T.Vector3(...b),o=add(name,new T.CylinderGeometry(r,r,va.distanceTo(vb),10),material,va.clone().add(vb).multiplyScalar(.5).toArray());o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),vb.sub(va).normalize());return o;};
   function text(label,p,rotation=Math.PI/2,size=.32){const geo=new TextGeometry(label,{font,size,depth:.006,curveSegments:2});geo.computeBoundingBox();geo.translate(-geo.boundingBox.max.x/2,0,0);const o=add('Wayfinding_text',geo,glow,p);o.rotation.y=rotation;return o;}
@@ -66,10 +69,10 @@ export function createShipArea(area){
   const inboard=-Math.sign(area.center[2]),notch={x0:-26,x1:-12,z0:Math.min(inboard*17,inboard*9),z1:Math.max(inboard*17,inboard*9)};
   const floorPolys=coreNotch?unionRectangles([{x0:-26,x1:26,z0:-17,z1:17}],[notch]):null;
   if(coreNotch)add('Finished_floor',slabGeometry(floorPolys,0,.25),floor);else box('Finished_floor',[52,.25,34],[0,-.125,0],floor);
-  for(const s of [-1,1])if(coreNotch&&s===inboard)box('Side_wall',[38,3.3,.16],[7,1.65,s*16.92],cream,shell);else box('Side_wall',[52,3.3,.16],[0,1.65,s*16.92],cream,shell);
+  for(const s of [-1,1])if(coreNotch&&s===inboard)glazedWall('Side_wall',[38,3.3,.16],[7,1.65,s*16.92]);else if(s===inboard)glazedWall('Side_wall',[52,3.3,.16],[0,1.65,s*16.92]);else box('Side_wall',[52,3.3,.16],[0,1.65,s*16.92],cream,shell);
   if(coreNotch){box('Stair_lobby_return_wall',[.16,3.3,8],[-12.08,1.65,inboard*13],cream,shell);box('Stair_lobby_partition',[14,3.3,.16],[-19,1.65,inboard*9.08],cream,shell);}
   box('End_wall',[.16,3.3,34],[25.92,1.65,0],cream,shell);
-  for(const s of [-1,1])box('Entry_wall',[.16,3.3,15],[-25.92,1.65,s*9.5],cream,shell);
+  for(const s of [-1,1])glazedWall('Entry_wall',[.16,3.3,15],[-25.92,1.65,s*9.5]);
   box('Entry_header',[.16,.5,4],[-25.92,3.05,0],cream,shell);
   if(coreNotch)add('Ceiling',slabGeometry(floorPolys,3.44,.14),cream,[0,0,0],shell);else box('Ceiling',[52,.14,34],[0,3.37,0],cream,shell);
   for(const z of [-12,-6,0,6,12])box('Ceiling_light',[coreNotch&&z*inboard>9?33:43,.04,.22],[coreNotch&&z*inboard>9?5:0,3.27,z],glow,shell);
