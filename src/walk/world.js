@@ -100,22 +100,26 @@ export function prepareExteriorForWalking(ship){
   if(keep.length<n){o.geometry=g.clone();o.geometry.setIndex(keep);}
  });
  // The crown lift climbs out of the decks through the hull top, the fin's root fairing and the closure under the
- // crown. Those skins are clipped away inside its shaft so they don't cut through the car.
- const {car,stops}=LIFTS.find(l=>l.id==='crown');
- clipInside(ship.exterior,new T.Box3(new T.Vector3(car.x-car.width/2-.1,stops[0].y+.3,car.z-car.depth/2-.1),new T.Vector3(car.x+car.width/2+.1,stops.at(-1).y-1,car.z+car.depth/2+.1)),undefined,{hollow:true});
+ // crown. Those skins are clipped away inside its shaft so they don't cut through the car. Up in the fin nothing
+ // stands on them, so all of their triangles that reach the shaft go from the colliders too, and the view up the
+ // shaft (main.js span) reaches the fin; the hull top keeps the ones that cross the shaft's edge, so it stays whole.
+ const {car,stops}=LIFTS.find(l=>l.id==='crown'),shaft=new T.Box3(new T.Vector3(car.x-car.width/2-.1,stops[0].y+.3,car.z-car.depth/2-.1),new T.Vector3(car.x+car.width/2+.1,stops.at(-1).y-1,car.z+car.depth/2+.1));
+ const hull=o=>/^Smooth_pressure_envelope/.test(o.name);
+ clipInside(ship.exterior,shaft,hull,{hollow:true});clipInside(ship.exterior,shaft,o=>!hull(o),{hollow:true,touching:true});
  return dropped;
 }
 // Clip away whatever of `root`'s meshes (those `pick` takes) lies inside `box`, exactly to it: each mesh with a
 // triangle in the box gets its own copy of its material, with clipping planes (the renderer needs localClippingEnabled).
-// `hollow`: its triangles that reach into the box stop being solid too (collision.js), so nothing unseen stands there.
-export function clipInside(root,box,pick=()=>true,{hollow=false}={}){
+// `hollow`: its triangles wholly inside the box stop being solid too (collision.js), so nothing unseen stands there;
+// `touching`: every triangle that reaches into the box.
+export function clipInside(root,box,pick=()=>true,{hollow=false,touching=false}={}){
  const planes=[[1,0,0],[0,1,0],[0,0,1]].flatMap(([x,y,z])=>{const n=new T.Vector3(x,y,z);return [new T.Plane(n.clone().negate(),n.dot(box.min)),new T.Plane(n,-n.dot(box.max))];});
  const tri=new T.Triangle();root.updateMatrixWorld(true);
  root.traverse(o=>{
   if(!o.isMesh||Array.isArray(o.material)||!pick(o)||!new T.Box3().setFromObject(o).intersectsBox(box))return;
   const pos=o.geometry.attributes.position,idx=o.geometry.index?.array,n=idx?idx.length:pos.count;let hit=false;
   for(let t=0;t<n&&!hit;t+=3){tri.a.fromBufferAttribute(pos,idx?idx[t]:t).applyMatrix4(o.matrixWorld);tri.b.fromBufferAttribute(pos,idx?idx[t+1]:t+1).applyMatrix4(o.matrixWorld);tri.c.fromBufferAttribute(pos,idx?idx[t+2]:t+2).applyMatrix4(o.matrixWorld);hit=box.intersectsTriangle(tri);}
-  if(hit){o.material=o.material.clone();o.material.clippingPlanes=planes;o.material.clipIntersection=true;if(hollow)o.userData.hollow=box;}
+  if(hit){o.material=o.material.clone();o.material.clippingPlanes=planes;o.material.clipIntersection=true;if(hollow)o.userData.hollow={box,touching};}
  });
 }
 
