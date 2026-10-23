@@ -58,3 +58,20 @@ export function plantClumps(parent,boxes,{seed=509,density=1,flowers=true}={}){
   mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();parent.add(mesh);
  }
 }
+
+// A full potted shrub as one merged, vertex-coloured, faceted geometry rooted at the origin: overlapping leaf
+// clusters fill an upright, rounded outline, with smaller leaf tips breaking the silhouette.
+export function shrubGeometry({height=1.6,spread=1.1,palette=GREENS,seed=1}={}){
+ const rnd=seeded(seed),parts=[];
+ const leaf=(r,detail,x,y,z,color)=>{const g=tinted(new T.IcosahedronGeometry(r,detail),color);g.rotateY(rnd()*6).scale(1,.85,1).translate(x,y,z);parts.push(g);};
+ for(let i=0;i<30;i++){
+  const t=.12+rnd()*.78,a=rnd()*Math.PI*2,edge=Math.sin(Math.PI*Math.min(1,t*1.05))*spread*.42,d=edge*(.45+rnd()*.55);
+  leaf(spread*(.15+rnd()*.07),1,Math.cos(a)*d,t*height,Math.sin(a)*d,palette[rnd()*palette.length|0]);
+ }
+ leaf(spread*.2,1,0,height*.9,0,palette[3]);
+ for(let i=0;i<22;i++){
+  const t=.25+rnd()*.7,a=i*2.4+rnd()*.4,d=Math.sin(Math.PI*t)*spread*.5+.04;
+  leaf(spread*(.06+rnd()*.035),0,Math.cos(a)*d,t*height,Math.sin(a)*d,palette[(rnd()*2|0)+3]);
+ }
+ const g=mergeGeometries(parts);g.computeVertexNormals();return g;// non-indexed, so normals stay faceted in exports
+}
