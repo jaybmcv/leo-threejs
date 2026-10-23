@@ -3,14 +3,15 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {build} from 'esbuild';
 import {planWalk} from './walk-plan.mjs';
+import {PAINTINGS} from '../src/walk/paintings.js';
 
 // Writes the "Walk around Leo" page (walk.html) and its content-hashed script next to the viewer. The partition plan
 // (src/walk/partitions.js) is worked out here, from the same ship the page builds, and bundled as data, so visitors
 // don't spend seconds rasterizing deck plans. Cosmo comes from the viewer's own hashed cosmo script; his emote clips
 // are a hashed file of their own, fetched the first time one plays.
 // LEO_LIVE_URL, when set, is the Leo live server the page joins (wss://.../live; server/leo-live.mjs); without it the walk
-// is solo.
-const WALK_SCRIPT=/^walk(-emotes|-map|-hat)?\.[0-9a-f]{10}\.(js|json|png|glb)$/;
+// is solo. The walk's paintings (src/walk/paintings.js) are hashed files of their own, fetched when a walker comes near.
+const WALK_SCRIPT=/^walk(-emotes|-map|-hat|-art-[a-z0-9-]+)?\.[0-9a-f]{10}\.(js|json|png|glb|jpg)$/;
 const hashed=(stem,ext,data)=>`${stem}.${createHash('sha256').update(data).digest('hex').slice(0,10)}.${ext}`;
 export async function writeWalkPage(out,{cosmo,manifest}){
  for(const name of await fs.readdir(out))if(WALK_SCRIPT.test(name))await fs.rm(path.join(out,name));
@@ -19,10 +20,12 @@ export async function writeWalkPage(out,{cosmo,manifest}){
  // The captain's hat that testers wear (src/walk/hat.js, src/vendor/captain-hat), fetched the first time one is wanted.
  const hat=await fs.readFile('src/vendor/captain-hat/captains-hat.glb'),hatName=hashed('walk-hat','glb',hat);
  await fs.writeFile(path.join(out,hatName),hat);
+ const art={};
+ for(const {file} of PAINTINGS){const data=await fs.readFile('src/walk/art/'+file),name=hashed('walk-art-'+path.parse(file).name,'jpg',data);await fs.writeFile(path.join(out,name),data);art[file]=name;}
  const walk=await planWalk(),plan=JSON.stringify(walk.plan),mapName=hashed('walk-map','png',walk.map);
  await fs.writeFile(path.join(out,mapName),walk.map);
  const partitions={name:'walk-partitions',setup(b){b.onResolve({filter:/^walk-partitions$/},()=>({path:'walk-partitions',namespace:'walk'}));b.onLoad({filter:/.*/,namespace:'walk'},()=>({contents:plan,loader:'json'}));}};
- const result=await build({entryPoints:['src/walk/main.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2022',legalComments:'eof',define:{__COSMO_SCRIPT__:JSON.stringify(cosmo),__EMOTES_URL__:JSON.stringify(emoteName),__MAP_URL__:JSON.stringify(mapName),__HAT_URL__:JSON.stringify(hatName),__LIVE_URL__:JSON.stringify(process.env.LEO_LIVE_URL||''),__CREAMERY_URL__:JSON.stringify(process.env.LEO_CREAMERY_URL||'https://creamery.marscatsvoyage.com'),__WALK_DEBUG__:'false'},plugins:[partitions]});
+ const result=await build({entryPoints:['src/walk/main.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2022',legalComments:'eof',define:{__COSMO_SCRIPT__:JSON.stringify(cosmo),__EMOTES_URL__:JSON.stringify(emoteName),__MAP_URL__:JSON.stringify(mapName),__HAT_URL__:JSON.stringify(hatName),__ART_URLS__:JSON.stringify(art),__LIVE_URL__:JSON.stringify(process.env.LEO_LIVE_URL||''),__CREAMERY_URL__:JSON.stringify(process.env.LEO_CREAMERY_URL||'https://creamery.marscatsvoyage.com'),__WALK_DEBUG__:'false'},plugins:[partitions]});
  const code=result.outputFiles[0].text;
  if(code.includes('createDLCat('))throw new Error('The walk script must load Cosmo from its own file');
  if(code.includes('__walk'))throw new Error('The walk debug hook must not ship');
