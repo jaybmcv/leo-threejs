@@ -134,7 +134,8 @@ async function buildShip(){
  ship.inside.add(partitionMesh(walkPlan.walls.map(([deck,x0,x1,z0,z1,y0,y1])=>({deck,x0,x1,z0,z1,y0,y1}))));
  // Short railings where a floor drops away (railings.js; planned at build time too).
  ship.inside.add(railingMesh(walkPlan.rails));
- ship.inside.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
+ // (The exterior model carries its own copy of the crown lounge, static car floor and all.)
+ ship.root.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
  // The main lift shafts are walled in nearly clear glass, so with the car away the shaft read as an open drop at your
  // feet. Frost it on foot so it reads as the wall it is.
  const shaftGlass=new T.MeshStandardMaterial({name:'Walk_shaft_glass',color:0xb4c8d2,roughness:.45,transparent:true,opacity:.5,depthWrite:false,side:T.DoubleSide});
