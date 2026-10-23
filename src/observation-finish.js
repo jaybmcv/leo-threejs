@@ -1,6 +1,10 @@
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {FontLoader} from 'three/addons/loaders/FontLoader.js';
+import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
+import fontData from './assets/helvetiker-bold.json' with {type:'json'};
 import {polishInterior} from './interior-polish.js';
+const font=new FontLoader().parse(fontData);
 
 function kit(root,prefix){
  const mat=(name,color,extra={})=>new T.MeshStandardMaterial({name:prefix+' '+name,color,roughness:.65,metalness:0,...extra});
@@ -133,6 +137,12 @@ export function finishCrownLounge(root,y){
   box('Service_drawer',[1.13,.36,.025],[x,y+.61,-.663],'oak');
   box('Drawer_pull',[.3,.025,.035],[x,y+.72,-.687],'brass');
  }
+ // The arrival sign by the lift names the lounge in slanted lettering, centred on its lit face.
+ const name=new TextGeometry('Crown Lounge',{font,size:.1,depth:.004,curveSegments:6});
+ name.applyMatrix4(new T.Matrix4().makeShear(0,0,.24,0,0,0));name.computeBoundingBox();
+ const b=name.boundingBox,fitScale=Math.min(1,.9/(b.max.x-b.min.x));
+ name.translate(-(b.max.x+b.min.x)/2,-(b.max.y+b.min.y)/2,0);name.scale(fitScale,fitScale,1);
+ add('Lobby_sign_lettering',name,[-250.2,y+1.25,3.732],'dark').castShadow=false;
  root.userData.stage='Refined panoramic lounge with upholstered banquettes and fitted central bar';
  polishInterior(root,'Fin crown observation lounge');
 }
