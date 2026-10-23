@@ -40,7 +40,10 @@ document.getElementById('share-view')?.addEventListener('click',async()=>{
  try{await navigator.clipboard.writeText(location.href);button.textContent='Link copied';setTimeout(()=>button.textContent='Copy view link',2500);}
  catch{window.prompt('Copy this view link',location.href);}
 });
-window.addEventListener('error',e=>showError(e.message));
+// An error before the first frame stops the view; once it runs, a stray error elsewhere (a late warm-up, the feedback
+// button) only logs, instead of covering a working ship with "could not start".
+let viewStarted=false;
+window.addEventListener('error',e=>{if(viewStarted)console.warn('Leo viewer:',e.message);else showError(e.message);});
 function showError(message){$('error').hidden=false;$('error').textContent=`The 3D view could not start: ${message}. The GLB files remain available from the links below.`;$('loading').hidden=true;}
 let renderer;
 // Phones: 1.25x pixels (1x while touching) and a half-size starfield redrawn at 30 fps. MSAA stays on: 1.25x alone leaves jagged hull edges.
@@ -54,6 +57,9 @@ try{renderer=new T.WebGLRenderer({antialias:true,alpha:true,logarithmicDepthBuff
 renderer.setPixelRatio(baseRatio);renderer.setClearColor(0xbac8cd);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.86;
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.shadowMap.autoUpdate=false;
 $('viewport').appendChild(renderer.domElement);
+// A phone short of graphics memory drops the WebGL context: say so rather than leave a frozen or black view.
+renderer.domElement.addEventListener('webglcontextlost',()=>{$('error').hidden=false;$('error').textContent='The 3D view stopped: this device ran short of graphics memory. Reload the page to start it again.';});
+renderer.domElement.addEventListener('webglcontextrestored',()=>{$('error').hidden=true;});
 // Tester feedback (?feedback=1): the view link already holds the exact view. An orange-edged button leading the public
 // page's footer row (always on screen, unlike the top bar, which scrolls on laptops); on phones, which have no footer, a
 // button above the controls handle that steps aside while the controls are open.
@@ -276,7 +282,7 @@ function setCamera(type,position,target,duration=850){
 }
 function resize(){
   const r=$('viewport').getBoundingClientRect();if(!r.width||!r.height)return; // hidden or collapsed: wait for a real size
-  renderer.setSize(r.width,r.height);persp.aspect=r.width/r.height;
+  renderer.setSize(r.width,r.height);persp.aspect=r.width/r.height;spaceBackdrop.resize(persp.aspect);
   const frameScale=Math.max(1,1.5/persp.aspect),ratio=frameScale/lastFrameScale;
   if(mode!=='walk'&&camera===persp&&ratio!==1){
     camera.position.sub(controls.target).multiplyScalar(ratio).add(controls.target);
@@ -914,7 +920,7 @@ function firstFrameReady(){
 }
 function animate(now){requestAnimationFrame(animate);dressCosmo(now);tickShadows(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);if(transition.upFrom)camera.up.lerpVectors(transition.upFrom,LEVEL,s).normalize();camera.lookAt(controls.target);if(t===1)transition=null;}if(!transition&&!persp.up.equals(LEVEL))persp.up.copy(LEVEL);lookAround(now,delta);if(mode!=='walk')controls.update(delta);if(mode==='exterior'||mode==='layout')fitShipDepth();if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}
   // The escort shuttle keeps station in the plain exterior view only.
-  if(escort){escort.root.visible=mode==='exterior'&&!$('shape-only').checked&&explodeValue===0;if(escort.root.visible)escort.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target));if(explodeKit&&explodeValue>0&&mode==='exterior'){explodeDetail();explodeKit.sync();}placeExplodeTags();const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
+  if(escort){escort.root.visible=mode==='exterior'&&!$('shape-only').checked&&explodeValue===0;if(escort.root.visible)escort.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target,spaceBackdrop.width));if(explodeKit&&explodeValue>0&&mode==='exterior'){explodeDetail();explodeKit.sync();}placeExplodeTags();const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
 $('save-render').addEventListener('click',async()=>{
   if(exporting)return;exporting=true;$('save-render').disabled=true;$('render-status').textContent='Rendering exterior…';
   const view=document.querySelector('[data-camera][aria-pressed="true"]').dataset.camera,shapeOnly=$('shape-only').checked;
@@ -994,7 +1000,7 @@ $('save-interior').addEventListener('click',async()=>{
  if(!areaId&&initial&&params.get('eye')==='1'&&(activeDistrict!==10||initial==='nose'))$('enter-space').click();
  await environmentReady;await firstFrameReady();
  if(window.LEO_ARRIVAL&&!reduced&&mode==='exterior')playArrival();
- $('loading').hidden=true;requestAnimationFrame(animate);
+ $('loading').hidden=true;viewStarted=true;requestAnimationFrame(animate);
  if(studioTools&&params.get('bake')==='environment')bakeEnvironmentPNG(renderer).then(blob=>Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:'environment.png'}).click());
  // Tour and room deep links never load the exterior, so Cosmo cannot wait for it. Building him stalls a frame or two, so
  // the arrival goes first.
