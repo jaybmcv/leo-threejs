@@ -50,11 +50,14 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
  const grab=()=>new Promise(resolve=>{pending={resolve,queued:false};setTimeout(()=>{if(pending?.resolve===resolve){pending=null;resolve(null);}},1500);});
  const fps=()=>{const now=performance.now(),recent=frames.filter(t=>now-t<2000);return recent.length>1?Math.round((recent.length-1)/((recent[recent.length-1]-recent[0])/1000)):null;};
 
- const ui=buildPanel(css);let report=null,recorder=null,timer=0,check=null,token=null,checkFailed=false;
+ const ui=buildPanel(css);let report=null,recorder=null,timer=0,check=null,token=null,checkFailed=false,waiting=false;
  const place=()=>{const m=typeof mount==='function'?mount():mount;if(m?.contains(ui.button))return;
   ui.button.className='fb-button'+(m?' fb-mounted':'')+(m&&look==='link'?' fb-link':'');if(m)m.prepend(ui.button);else document.body.append(ui.button);};
  place();if(typeof mount==='function')addEventListener('resize',place);
- const close=()=>{stopVoice();ui.sheet.hidden=true;report=null;onClose();};
+ // The human check's script loads while the tester is still looking around, so the check can start the moment the
+ // panel opens.
+ if(sending())(window.requestIdleCallback||setTimeout)(()=>loadTurnstile().catch(()=>{}),{timeout:2000});
+ const close=()=>{stopVoice();ui.sheet.hidden=true;report=null;waiting=false;ui.send.disabled=false;ui.send.textContent='Send';onClose();};
  async function open(){
   if(!ui.sheet.hidden)return;
   // The screenshot first, before the panel covers the view.
@@ -64,13 +67,14 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
   ui.sheet.hidden=false;onOpen();ui.text.focus();
   if(sending())humanCheck();
  }
- // Cloudflare Turnstile, loaded the first time a tester opens the panel; the service verifies its token.
+ // Cloudflare Turnstile; the service verifies its token. A token not yet used is kept for the next time the panel
+ // opens (the widget renews it before it runs out). Send pressed while the check runs sends as soon as it finishes.
  async function humanCheck(){
-  token=null;checkFailed=false;ui.check.hidden=false;
+  ui.check.hidden=false;if(token)return;checkFailed=false;
   try{await loadTurnstile();}catch(e){checkFailed=true;ui.error.textContent=e.message;return;}
   if(check===null)check=window.turnstile.render(ui.check,{sitekey:FEEDBACK_CONFIG.turnstileSiteKey,theme:'dark',size:'flexible',
-   callback:t=>{token=t;checkFailed=false;ui.error.textContent='';},'expired-callback':()=>{token=null;},
-   'error-callback':()=>{token=null;checkFailed=true;ui.error.textContent='The human check could not run here. You can save the report as a file instead.';}});
+   callback:t=>{token=t;checkFailed=false;ui.error.textContent='';if(waiting)send();},'expired-callback':()=>{token=null;},
+   'error-callback':()=>{token=null;checkFailed=true;ui.error.textContent='The human check could not run here. You can save the report as a file instead.';if(waiting)send();}});
   else window.turnstile.reset(check);
  }
  function showShot(){ui.shot.hidden=!report.shot;ui.noShot.hidden=!!report.shot;if(report.shot)ui.img.src=report.shot;}
@@ -119,12 +123,14 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
   const out={kind:'leo-feedback',version:1,page:report.page,text,context:report.context,screenshot:report.shot,
    voice:report.voice?{type:report.voice.blob.type,data:await dataURL(report.voice.blob)}:null,images:report.images.map(im=>({name:im.name.slice(0,80),data:im.data}))};
   if(!sending()){save(out);done('Saved. Thank you!');return;}
-  if(!token&&checkFailed){ui.error.textContent='The human check could not run here. You can save the report as a file instead.';offerFile(out);return;}
-  if(!token){ui.error.textContent='One moment: the human check is still running.';return;}
-  ui.send.disabled=true;ui.send.textContent='Sending…';
+  if(!token&&checkFailed){waiting=false;ui.send.disabled=false;ui.send.textContent='Send';ui.error.textContent='The human check could not run here. You can save the report as a file instead.';offerFile(out);return;}
+  if(!token){waiting=true;ui.send.disabled=true;ui.send.textContent='Sending after the human check…';return;}
+  waiting=false;ui.send.disabled=true;ui.send.textContent='Sending…';
+  // A token works once; the widget starts on the next one straight away.
+  const human=token;token=null;
   try{
    const pass=await identity?.()?.pass().catch(()=>null);
-   let r;try{r=await fetch(FEEDBACK_CONFIG.endpoint.replace(/\/$/,'')+'/reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invite,turnstile:token,report:out,...(pass?{pass}:{})})});}
+   let r;try{r=await fetch(FEEDBACK_CONFIG.endpoint.replace(/\/$/,'')+'/reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invite,turnstile:human,report:out,...(pass?{pass}:{})})});}
    catch{throw new Error('The report could not be sent.');}
    const reply=await r.json().catch(()=>({}));
    if(!r.ok)throw new Error(reply.error||`The report could not be sent (${r.status}).`);
@@ -132,8 +138,7 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
   }catch(e){
    // Nothing is lost: the tester can keep the report as a file and pass it on.
    ui.error.textContent=`${e.message} You can save it as a file instead.`;offerFile(out);
-   token=null;if(check!==null)window.turnstile.reset(check);
-  }finally{ui.send.disabled=false;ui.send.textContent='Send';}
+  }finally{ui.send.disabled=false;ui.send.textContent='Send';if(check!==null)window.turnstile.reset(check);}
  }
  function offerFile(out){ui.saveInstead.hidden=false;ui.saveInstead.onclick=()=>{save(out);done('Saved. Thank you!');};}
  function done(message){ui.sent.textContent=message;ui.sent.hidden=false;setTimeout(()=>{ui.sent.hidden=true;close();},2200);}
