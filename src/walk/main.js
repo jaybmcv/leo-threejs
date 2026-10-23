@@ -22,6 +22,7 @@ import walkPlan from 'walk-partitions';
 import {railingMesh} from './railings.js';
 import {ShipMap,drawMiniMap,drawFullMap,deckOf} from './minimap.js';
 import {DECKS} from '../model.js';
+import {floorY} from '../transit.js';
 import {createLifts} from './lift-ride.js';
 import {findRestSpots,solidSpots,spotIndex} from './rest.js';
 import {PLACES,findStand,describe} from './places.js';
@@ -41,6 +42,7 @@ import {createYarn} from './yarn.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink} from './link.js';
 import {createSelfieBooth} from './selfie.js';
+import {createPaintings} from './paintings.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
@@ -132,7 +134,8 @@ async function buildShip(){
  ship.inside.add(partitionMesh(walkPlan.walls.map(([deck,x0,x1,z0,z1,y0,y1])=>({deck,x0,x1,z0,z1,y0,y1}))));
  // Short railings where a floor drops away (railings.js; planned at build time too).
  ship.inside.add(railingMesh(walkPlan.rails));
- ship.inside.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
+ // (The exterior model carries its own copy of the crown lounge, static car floor and all.)
+ ship.root.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
  // The main lift shafts are walled in nearly clear glass, so with the car away the shaft read as an open drop at your
  // feet. Frost it on foot so it reads as the wall it is.
  const shaftGlass=new T.MeshStandardMaterial({name:'Walk_shaft_glass',color:0xb4c8d2,roughness:.45,transparent:true,opacity:.5,depthWrite:false,side:T.DoubleSide});
@@ -156,6 +159,9 @@ async function buildShip(){
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
  for(const o of [...lifts.signs.children,booth.group])toBand(o);
+ // The paintings (paintings.js) span several bands each: they draw while any of them is in view.
+ paintings=createPaintings({urls:typeof __ART_URLS__!=='undefined'?__ART_URLS__:{},anisotropy:renderer.capabilities.getMaxAnisotropy()});
+ for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}
  if(cosmoKit)toBand(createHostess(cosmoKit));
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
@@ -169,7 +175,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null;const instanced=[];
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,paintings=null;const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
 // reach, so a tall hall, an atrium or a stairwell shows its full height. The rays skip the first 0.6 m: pressed into a
@@ -246,6 +252,8 @@ async function loadCosmo(){
 
 // The arrival hall on Deck 2, where travellers come aboard.
 const START={position:new T.Vector3(-135,-35.7,-38),yaw:Math.PI/2};
+// Below this a walker has fallen out of the ship: 3 m under Deck 1's floor.
+const BELOW_SHIP=floorY(1)-3;
 await Promise.all([loadExterior(),loadCosmo()]).catch(e=>{status(e.message);throw e;});
 await buildShip();
 try{localStorage.removeItem(STARTING);}catch{}
@@ -345,14 +353,19 @@ renderer.setAnimationLoop(()=>{
  if(!resting&&!riding){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  yarn.update(dt,resting||riding?null:controller);
  const p=controller.position;
+ // Neither safety net keeps a lift car's floor to return to: the car may have gone by the time it is needed, leaving
+ // only the shaft.
+ const inCar=lifts.lifts.some(l=>lifts.inside(l,p));
  // A fall over a fin platform's railing ends on the fin's skin with no way out: unless it came down on another
  // landing of the crown lift, it goes back to the platform it left (its last ground may be a rail or spar above it).
- const onLanding=controller.grounded&&!riding&&controller.ground.normal.y>.98&&onFinPlatform(p);
+ const onLanding=controller.grounded&&!riding&&!inCar&&controller.ground.normal.y>.98&&onFinPlatform(p);
  if(controller.grounded&&!riding&&controller.fell>4&&safe.distanceTo(finSafe)<6&&!onLanding){controller.place(finSafe);emote=null;}
  else if(onLanding)finSafe.copy(p);
  controller.fell=0;
- // A safety net: should a walker ever fall out of the ship, it comes back to the last ground it stood on.
- if(controller.grounded&&!riding)safe.copy(p);else if(p.y<-60){controller.place(safe);emote=null;}
+ // Should a walker ever fall out of the ship, it comes back to the last ground it stood on. Nothing aboard is walkable
+ // below Deck 1, and the inside of the hull under it (-54.6 m) used to catch fallers and count as safe ground.
+ if(p.y<BELOW_SHIP){controller.place(safe);emote=null;}
+ else if(controller.grounded&&!inCar)safe.copy(p);
  if(controller.speed>.15&&!resting)heading=dampAngle(heading,Math.atan2(controller.velocity.x,controller.velocity.z),12,dt);
  // What the figure leans into: the turn (+ to its left) and the change of speed, both smoothed a little.
  if(dt>0){turnRate=T.MathUtils.damp(turnRate,Math.atan2(Math.sin(heading-lastHeading),Math.cos(heading-lastHeading))/dt,10,dt);accel=T.MathUtils.damp(accel,(controller.speed-lastSpeed)/dt,10,dt);}
@@ -369,7 +382,7 @@ renderer.setAnimationLoop(()=>{
  cull(p);
  remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
  marks?.update(camera,p,now);
- if(now-lastHud>120){lastHud=now;hud(p);}
+ if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  draw(camera);

@@ -13,6 +13,7 @@ const LEAF_T=.08,DOOR_H=2.75;
 const mats={
  floor:new T.MeshStandardMaterial({name:'Lift_floor',color:0xc4b89e,roughness:.7}),
  wall:new T.MeshStandardMaterial({name:'Lift_panel',color:0xffffff,roughness:.6,emissive:0xffffff,emissiveIntensity:.7}),
+ glass:new T.MeshStandardMaterial({name:'Lift_glass',color:0xb4d4de,roughness:.1,metalness:.1,transparent:true,opacity:.16,depthWrite:false,side:T.DoubleSide}),
  roof:new T.MeshStandardMaterial({name:'Lift_roof',color:0x294858,roughness:.7}),
  glow:new T.MeshStandardMaterial({name:'Lift_glow',color:0xfff2d8,emissive:0xffe6bd,emissiveIntensity:1.1}),
  door:new T.MeshStandardMaterial({name:'Lift_door',color:0x8b9ea6,roughness:.38,metalness:.6}),
@@ -56,18 +57,21 @@ export function createLifts(scene,colliders){
  const lifts=LIFTS.map(spec=>{
   const {car:c}=spec,root=new T.Group();root.name='Walk_lift_'+spec.id;root.userData.keepLive=true;scene.add(root);
   // The car: floor, panelled walls, a lit roof and a control panel. A car opens on every face one of its stops uses
-  // (the crown lift opens on its side at the fin platforms and at the front in the crown lounge).
+  // (the crown lift opens on its side at the fin platforms and at the front in the crown lounge). In the passenger lifts
+  // the wall opposite the main doors is glass, so riders watch the decks (or the fin) go by.
   const car=new T.Group();root.add(car);
   const faceOf=d=>d.axis+d.sign,faces=[];
   for(const d of [spec.door,...spec.stops.map(s=>s.door).filter(Boolean)])if(!faces.some(f=>faceOf(f.door)===faceOf(d)))faces.push({door:d});
   boxMesh('Car_floor',[c.width,.2,c.depth],[0,-.1,0],mats.floor,car);
   boxMesh('Car_roof',[c.width,.12,c.depth],[0,c.height+.06,0],mats.roof,car);
   boxMesh('Car_light',[c.width*.6,.03,c.depth*.6],[0,c.height-.02,0],mats.glow,car);
-  for(const [a,sg] of [['x',-1],['x',1],['z',-1],['z',1]]){if(faces.some(f=>faceOf(f.door)===a+sg))continue;
-   if(a==='x')boxMesh('Car_wall',[.08,c.height,c.depth],[sg*(c.width/2-.04),c.height/2,0],mats.wall,car);else boxMesh('Car_wall',[c.width,c.height,.08],[0,c.height/2,sg*(c.depth/2-.04)],mats.wall,car);}
-  // Mars fills most of the back wall, just in front of its inner face: opposite the door (the crown lounge door on
-  // the crown lift, where riders board it).
-  {const b=faces.at(-1).door,across=b.axis==='x'?c.depth:c.width,mars=new T.Mesh(new T.CircleGeometry(Math.min(across,c.height)*.4,64),art());
+  const glass=spec.id==='aft-service'?null:faceOf({axis:spec.door.axis,sign:-spec.door.sign});
+  for(const [a,sg] of [['x',-1],['x',1],['z',-1],['z',1]]){if(faces.some(f=>faceOf(f.door)===a+sg))continue;const m=a+sg===glass?mats.glass:mats.wall;
+   if(a==='x')boxMesh('Car_wall',[.08,c.height,c.depth],[sg*(c.width/2-.04),c.height/2,0],m,car);else boxMesh('Car_wall',[c.width,c.height,.08],[0,c.height/2,sg*(c.depth/2-.04)],m,car);}
+  // Mars fills most of a starfield wall, just in front of its inner face, facing `b`: opposite the crown lounge door on
+  // the crown lift, where riders board it; on a side wall where the wall opposite the door is the glass.
+  {const t=faces.at(-1).door,b=faceOf({axis:t.axis,sign:-t.sign})===glass?{axis:t.axis==='x'?'z':'x',sign:-1}:t;
+   const across=b.axis==='x'?c.depth:c.width,mars=new T.Mesh(new T.CircleGeometry(Math.min(across,c.height)*.4,64),art());
    mars.name='Car_mars';mars.position.y=c.height*.52;mars.position[b.axis]=-b.sign*((b.axis==='x'?c.width:c.depth)/2-.085);
    mars.rotation.y=b.axis==='x'?b.sign*Math.PI/2:(b.sign>0?0:Math.PI);car.add(mars);}
   // Car doors on each open face slide with the landing doors; a gate mover closes the face while they're shut.
@@ -120,16 +124,24 @@ export function createLifts(scene,colliders){
  const inside=(l,p)=>{const c=l.spec.car;return Math.abs(p.x-c.x)<c.width/2-.1&&Math.abs(p.z-c.z)<c.depth/2-.1&&p.y>l.y-.6&&p.y<l.y+1.2;};
  // The stop the car is at or passing.
  const level=l=>l.stops.reduce((b,s,i)=>Math.abs(s.y-l.y)<Math.abs(l.stops[b].y-l.y)?i:b,0);
+ let walker=null;
  const rides={
   lifts,inside,signs,level,
   // Called with each call this page makes (the multiplayer link passes it to the server).
   onCall:null,
   // Send a lift to stop `index`; its call light there stays lit until the car arrives. `now`: chosen in the car.
   call(l,index,opts){callLift(l,index,opts);rides.onCall?.(l,index,opts);},
-  // A lift's state as the server has it (multiplayer).
-  apply(id,wire){const l=lifts.find(l=>l.spec.id===id);if(l)applyLiftWire(l,wire);},
-  // Advance the cars and doors; `walker` is the controller, carried along when standing in a moving car.
-  update(dt,walker){
+  // A lift's state as the server has it (multiplayer). The server's car is a little ahead of or behind this page's,
+  // so its word moves the car; whoever stands in it moves too. Left behind, a rider 0.7 m under a car the server put
+  // higher stopped counting as aboard and fell down the shaft (feedback-inbox #50, #52, #73-#75).
+  apply(id,wire){
+   const l=lifts.find(l=>l.spec.id===id);if(!l)return;
+   const aboard=walker&&inside(l,walker.position),before=l.y;applyLiftWire(l,wire);
+   if(aboard&&l.y!==before){walker.position.y+=l.y-before;walker.velocity.y=0;}
+  },
+  // Advance the cars and doors; `w` is the controller, carried along when standing in a moving car.
+  update(dt,w){
+   walker=w;
    for(const l of lifts){
     const riding=inside(l,walker.position),rose=stepLift(l,l.stops,dt);
     if(riding&&rose){walker.position.y+=rose;walker.velocity.y=0;}

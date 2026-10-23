@@ -12,6 +12,7 @@ export const GRID=(()=>{const CELL=.25,X0=-296,X1=292,Z0=-146,Z1=146;return {CEL
 const {CELL,X0,Z0,NX,NZ}=GRID;
 export const PARTITION={height:3.68,thickness:.12,close:3};
 const WALKWAY=/tread|stair|ramp|landing|step|floor|gallery|platform|bridge|walkway|threshold|dais|stage/i,ROOF=/ceiling|roof|soffit|canopy|lining/i;
+const FLIGHT=/^(Stair_tread_up|Stair_tread_return|Aft_stair_up|Aft_stair_return|Gallery_stair)$/;
 // A window keeps the plate in front of it open: a partition there would stand across the glass (the bridge's sill).
 const GLASS=/^LEO_glass_/,WINDOW_REACH=1.6;
 const worldVisible=o=>{for(let p=o;p;p=p.parent)if(!p.visible&&!p.userData.baked)return false;return true;};
@@ -43,14 +44,15 @@ export function rasterDecks(ship){
  ship.root.updateMatrixWorld(true);
  const decks=DECKS.map(d=>({number:d.number,y:floorY(d.number),designed:new Uint8Array(NX*NZ),plate:new Uint8Array(NX*NZ),window:new Uint8Array(NX*NZ),height:new Float32Array(NX*NZ).fill(NaN)}));
  // Floors at deck level count, and so do the raised walking surfaces above it (stair treads, landings, ramps), so a
- // flight that starts on an uncut plate (Deck 1) is not walled off.
- const deckAt=(y,raised)=>{for(const d of decks)if(y>d.y-.12&&y<d.y+(raised?2.2:.16))return d;return null;};
+ // flight that starts on an uncut plate (Deck 1) is not walled off. A flight's treads count all the way up to the next
+ // deck, so no partition stands across its upper half (the return flights down from Deck 2).
+ const deckAt=(y,raised,flight)=>{for(const d of decks)if(y>d.y-.12&&y<d.y+(flight?3.88:raised?2.2:.16))return d;return null;};
  ship.inside.traverse(o=>{
   if(!o.isMesh||!worldVisible(o)||!o.geometry?.attributes?.position)return;
   // The tops of ceilings and roofs that reach a deck's level (the ramped promenade's roof shows on Deck 18) count as
   // bare plate, so the designed floors beside them get a wall rather than a way onto them.
-  const roof=ROOF.test(o.name),plate=o.name==='Deck_slab'||roof,raised=roof||!plate&&WALKWAY.test(o.name);
-  eachTriangle(o,(a,b,c)=>{if(!upFacing(a,b,c))return;const d=deckAt((a.y+b.y+c.y)/3,raised);if(!d||!(raised||Math.abs(a.y-c.y)<.05&&Math.abs(a.y-b.y)<.05))return;
+  const roof=ROOF.test(o.name),plate=o.name==='Deck_slab'||roof,raised=roof||!plate&&WALKWAY.test(o.name),flight=FLIGHT.test(o.name);
+  eachTriangle(o,(a,b,c)=>{if(!upFacing(a,b,c))return;const d=deckAt((a.y+b.y+c.y)/3,raised,flight);if(!d||!(raised||Math.abs(a.y-c.y)<.05&&Math.abs(a.y-b.y)<.05))return;
    if(plate)raster(a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z,k=>{d.plate[k]=1;});
    else raster(a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z,(k,y)=>{d.designed[k]=1;if(!(d.height[k]>=y))d.height[k]=y;});});
  });
