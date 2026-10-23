@@ -5,7 +5,7 @@ import {shapePoint} from '../concept-shape.js';
 // The selfie booth in the crown lounge: a Mars backdrop across the aft end of the centre aisle and a camera on a tripod
 // facing it. Use the camera and it counts down 5 seconds, time to join the others in front of the backdrop, then takes
 // the photo from the lens and frames it in Mars Cats Voyage colours.
-const BACK_X=-272.5,LENS_X=-266.5,WIDTH=8,HEIGHT=4.4,FOV=46,COUNT=5,REACH=1.9;
+const BACK_X=-272.5,LENS_X=-265.5,WIDTH=9.6,HEIGHT=4.4,FOV=46,COUNT=5,REACH=1.9;
 const OUT={w:1600,margin:40,band:150};
 const FONT={display:'"Archivo", "Sora", sans-serif',mono:'"JetBrains Mono", ui-monospace, monospace'};
 const ORANGE='#f85800';
@@ -42,19 +42,20 @@ export function createSelfieBooth(){
  const black=new T.MeshStandardMaterial({name:'Selfie_camera_body',color:0x1a1c20,roughness:.45,metalness:.3});
  const box=(name,size,at,material)=>{const o=new T.Mesh(new T.BoxGeometry(...size),material);o.name=name;o.position.set(...at);group.add(o);return o;};
  // The backdrop: a navy frame on a low plinth, the printed face flush on its forward side.
- box('Selfie_backdrop',[.2,HEIGHT+.2,WIDTH+.2],[BACK_X-.1,floor+.3+HEIGHT/2,0],navy);
- box('Selfie_backdrop_plinth',[.9,.3,WIDTH+.2],[BACK_X-.1,floor+.15,0],navy);
+ box('Selfie_backdrop',[.2,HEIGHT+.2,WIDTH+.2],[BACK_X-.1,floor+.2+HEIGHT/2,0],navy);
+ box('Selfie_backdrop_plinth',[.5,.2,WIDTH+.2],[BACK_X-.1,floor+.1,0],navy);
  const art=new T.Mesh(new T.PlaneGeometry(WIDTH,HEIGHT),new T.MeshBasicMaterial({map:backdropTexture(),toneMapped:false}));
- art.name='Selfie_backdrop_art';art.rotation.y=Math.PI/2;art.position.set(BACK_X+.01,floor+.4+HEIGHT/2,0);group.add(art);
+ art.name='Selfie_backdrop_art';art.rotation.y=Math.PI/2;art.position.set(BACK_X+.01,floor+.3+HEIGHT/2,0);group.add(art);
  // The camera: a tripod, the body and lens facing the backdrop, a tally light that blinks through the countdown.
- const lensY=floor+1.55;
- for(let i=0;i<3;i++){const a=i*Math.PI*2/3,leg=new T.Mesh(new T.CylinderGeometry(.025,.025,1.55,8),bronze);leg.name='Selfie_tripod_leg';
-  leg.position.set(LENS_X+Math.cos(a)*.22,floor+.7,Math.sin(a)*.22);leg.rotation.set(-Math.sin(a)*.28,0,Math.cos(a)*.28);group.add(leg);}
+ const lensY=floor+1.2;
+ for(let i=0;i<3;i++){const a=i*Math.PI*2/3,leg=new T.Mesh(new T.CylinderGeometry(.025,.025,1.2,8),bronze);leg.name='Selfie_tripod_leg';
+  leg.position.set(LENS_X+Math.cos(a)*.18,floor+.55,Math.sin(a)*.18);leg.rotation.set(-Math.sin(a)*.28,0,Math.cos(a)*.28);group.add(leg);}
  box('Selfie_camera',[.22,.2,.32],[LENS_X,lensY,0],black);
  const lens=new T.Mesh(new T.CylinderGeometry(.075,.085,.16,20),black);lens.name='Selfie_camera_lens';lens.rotation.z=Math.PI/2;lens.position.set(LENS_X-.18,lensY,0);group.add(lens);
  const tally=new T.Mesh(new T.SphereGeometry(.025,10,8),new T.MeshBasicMaterial({color:0x3a1006}));tally.name='Selfie_tally_light';tally.position.set(LENS_X-.11,lensY+.07,.12);group.add(tally);
- // The photo's view: from the lens, across the space in front of the backdrop.
- const camera=new T.PerspectiveCamera(FOV,1.5,.05,150);camera.position.set(LENS_X-.26,lensY,0);camera.lookAt(BACK_X,floor+1.3,0);
+ // The photo's view: from the lens, tipped 5° up so a group standing 3 m out is in head to toe and the backdrop's name
+ // is in above them.
+ const camera=new T.PerspectiveCamera(FOV,1.5,.05,150);camera.position.set(LENS_X-.26,lensY,0);camera.lookAt(BACK_X,lensY+(LENS_X-.26-BACK_X)*Math.tan(5*Math.PI/180),0);
  const stand=new T.Vector3(LENS_X+.2,floor,0);
  // Its origin on the floor, so main.js files it with the crown's deck band.
  for(const o of group.children)o.position.y-=floor;group.position.y=floor;
