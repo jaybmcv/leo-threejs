@@ -11,6 +11,7 @@ export const KIT_MATERIALS={
  panel:standard('Walk_kit_panel',0xf1f3f2,.55,.24),
  hatch:standard('Walk_kit_hatch',0xdfe4e3,.5,.28),
  seam:standard('Walk_kit_seam',0x6f7b80,.2,.7),
+ soft:standard('Walk_kit_soft_seam',0xa4aeb0,.2,.7),
  dark:standard('Walk_kit_graphite',0x2f434d,.3,.55),
  pipe:standard('Walk_kit_pipe',0xc6cdcd,.6,.32),
  line:standard('Walk_kit_line',0x5f8796,.35,.45),
@@ -20,9 +21,9 @@ export const KIT_MATERIALS={
 // The stretches of `runs` inside [a,b].
 const within=(runs,a,b)=>runs.map(([p,q])=>[Math.max(p,a),Math.min(q,b)]).filter(([p,q])=>q-p>.1);
 
-// Adds the kit for one corridor (as in trim.js: along `axis` from lo to hi, centred at `mid`, `width` wide, with the
-// wall stretches of each side, frames from `start` every `spacing`) to `parts`, geometry lists keyed by material.
-export function wallKit(parts,{axis,lo,hi,mid,width,sides,start,spacing},level){
+// Shapes on the walls of a corridor along `axis`, centred at `mid` across it and `width` wide, added to `parts`
+// (geometry lists keyed by material). Side s is the wall at mid+s*width/2.
+function wallTools(parts,axis,mid,width){
  const add=(m,g)=>(parts[m]||(parts[m]=[])).push(g);
  // A box on side s's wall: centred at t along and y up, standing d proud of the wall (its centre), sized along, up, deep.
  const put=(m,s,t,y,d,along,up,deep)=>{const u=mid+s*(width/2-d);add(m,axis==='x'?new T.BoxGeometry(along,up,deep).translate(t,y,u):new T.BoxGeometry(deep,up,along).translate(u,y,t));};
@@ -31,6 +32,34 @@ export function wallKit(parts,{axis,lo,hi,mid,width,sides,start,spacing},level){
   add(m,axis==='x'?(s>0?g.rotateY(Math.PI):g).translate(t,y,u):g.rotateY(-s*Math.PI/2).translate(u,y,t));};
  const rod=(m,s,a,b,y,r,d)=>{const g=new T.CylinderGeometry(r,r,b-a,6);const u=mid+s*(width/2-d),t=(a+b)/2;
   add(m,axis==='x'?g.rotateZ(Math.PI/2).translate(t,y,u):g.rotateX(Math.PI/2).translate(u,y,t));};
+ return {put,flat,rod};
+}
+
+// Level 1 for a residential lane (along x, centred at z `mid`, `width` wide): `fronts` are the cabin fronts on each
+// side, [s,[[x0,x1,door0,door1],...]], a run of touching cabins with each door's opening. Panels in two rows between
+// the doors, up to the door head, and a continuous band above it, two panels to a cabin, over a soft seam backing.
+const HOME=[[.16,1.22],[1.26,2.38]],HEAD=[2.41,3.12];
+export function homeKit(parts,{mid,width,fronts}){
+ const {flat}=wallTools(parts,'x',mid,width);
+ for(const [s,runs] of fronts)for(const cabins of runs){
+  const x0=cabins[0][0],x1=cabins.at(-1)[1],edges=[x0,...cabins.flatMap(([,,a,b])=>[a,b]),x1];
+  for(let i=0;i<edges.length;i+=2){
+   const p=edges[i]+.03,q=edges[i+1]-.03,len=q-p;if(len<.4)continue;
+   flat('soft',s,(p+q)/2,(KICK+HEAD[0])/2,.005,len,HEAD[0]-KICK);
+   flat('dark',s,(p+q)/2,KICK/2,.022,len,KICK);
+   const n=Math.max(1,Math.round(len/1.7)),w=len/n;
+   for(let j=0;j<n;j++)for(const [y0,y1] of HOME)flat('panel',s,p+w*(j+.5),(y0+y1)/2,.022,w-GAP,y1-y0-GAP);
+  }
+  flat('soft',s,(x0+x1)/2,(HEAD[0]+HEAD[1])/2,.005,x1-x0,HEAD[1]-HEAD[0]);
+  const n=cabins.length*2,w=(x1-x0)/n;
+  for(let j=0;j<n;j++)flat('panel',s,x0+w*(j+.5),(HEAD[0]+HEAD[1])/2,.022,w-GAP,HEAD[1]-HEAD[0]-GAP);
+ }
+}
+
+// Adds the kit for one corridor (as in trim.js: along `axis` from lo to hi, centred at `mid`, `width` wide, with the
+// wall stretches of each side, frames from `start` every `spacing`) to `parts`.
+export function wallKit(parts,{axis,lo,hi,mid,width,sides,start,spacing},level){
+ const {put,flat,rod}=wallTools(parts,axis,mid,width);
  // Bays between the frames.
  const marks=[lo];for(let t=start;t<hi-RIB;t+=spacing)if(t>lo+RIB)marks.push(t);marks.push(hi);
  for(const [s,runs] of sides){
