@@ -43,3 +43,27 @@ A classic invaders game played through the telescope in Leo's forward observatio
 - Deploying needs the usual build and Vercel deploy, plus a restart of the `LeoLive` scheduled task on this PC, which Jay approves at the time.
 
 **Not in scope:** rewards, tokens, a shared live mode (two players in one game), or any other arcade.
+
+## As built (2026-10-23)
+
+- **Rules:** `src/walk/invasion/rules.js`, checked by `npm run check:invasion` (also in `npm run check`).
+  - The check covers the march and its drop at the edges, the speed-up, the points per kind, the one extra life, shield wear, a lost life and the return, the next wave starting lower with whole shields, landing and the game ending.
+  - Five bot games play to the end. Nothing leaves the screen, scores are always in tens, the bots reach waves 4–5 (about 4,000–5,000 points in 7–8 minutes), and the same seed replays the same game.
+- **Screen:** `src/walk/invasion/game.js`; sound: `src/walk/invasion/sound.js`.
+  - A full-window overlay at three canvas pixels per screen pixel, in JetBrains Mono.
+  - Keys (arrows or A and D to move; Space, W or up to fire; Space or Enter to start; Esc to leave), gamepad, and ◀ ▶ FIRE buttons on touch screens.
+  - It pauses when the window loses focus.
+  - The walk's keys are caught before the walk sees them, the walk stops drawing behind the game, and walking resumes on leaving.
+- **Telescope:** E within 2 m of the forward observation lounge's telescope offers "Play Alien Cat Invasion" (`target()` in `src/walk/main.js`).
+- **Presence:** pose bit `0x20` PLAYING (wire version 4, protocol 4). Old pages are told to reload. Others see "· playing" after the name.
+- **Leaderboard:** `server/leo-live.mjs`, with the messages `play`, `score` and `board`.
+  - Guests are told to sign in; only verified Discord players are kept.
+  - Refused: a score with no game started, one not in tens, or one more than 300 + 45 points per second of play allows.
+  - One best per player, kept in `leo-live-scores.json` beside the checkout (`LEO_LIVE_SCORES` overrides it), and still there after a restart.
+  - `npm run check:live` covers all of this, each test server on a temporary scores file.
+
+**Differences from the plan:**
+- **Mars:** the approved mock-up's pixel Mars is used, not the walk's Mars texture.
+- **Loading:** the game is bundled into the walk (about 19 KB minified) rather than loaded separately; at that size, a separate download isn't worth it.
+
+**Release:** deploying needs the usual build and Vercel deploy, and a restart of the `LeoLive` scheduled task on the PC that hosts Leo live, at the same time. Pages from before the deploy are told to reload.
