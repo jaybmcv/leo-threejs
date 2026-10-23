@@ -252,7 +252,7 @@ function hangar(area,k){
     box('Shuttle_cabin_floor',[12.4,.12,5.4],[-.1,1.56,0],'floor',g);
     box('Shuttle_aft_bulkhead',[.12,2.2,5.2],[-6.3,2.6,0],'lining',g);
     box('Shuttle_cabin_light',[10,.03,.3],[-.5,3.77,0],'light',g);
-    for(const dx of [-5.2,-4,-2.8,-1.6,2.2])for(const dz of [-2.2,-1.5,1.5,2.2])chair(dx,1.62,dz,Math.PI/2,g);
+    for(const dx of [-5.2,-3.7,-2.2,2.2])for(const dz of [-2.2,-1.5,1.5,2.2])chair(dx,1.62,dz,Math.PI/2,g);
     box('Shuttle_flight_deck',[.8,.8,3.6],[5.6,2.02,0],'navy',g);
     const screen=box('Touchscreen',[.6,.05,3.2],[5.5,2.45,0],'screen',g);screen.rotation.z=.25;
     for(const dz of [-.9,.9])chair(4.5,1.62,dz,Math.PI/2,g);
