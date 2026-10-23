@@ -387,7 +387,7 @@ export function createGardenCommons(number,template=createNeighborhood()){
   for(const part of template.gardenParts.walls)walls.add(part.clone(true));
   if(number<9)for(const yy of [28.3,32.3])rail(fittings,[136.8,8],[138.8,8],yy);
   // Neighborhood 1's commons is the Hydro-Nip Lounge (hydro-nip-lounge.js) in place of the garden middle.
-  if(number===1){clearGarden(fittings);clearGarden(walls);fittings.add(createHydroNipLounge());}
+  if(number===1){clearGarden(fittings);clearGarden(walls);fittings.add(createHydroNipLounge({mirror:root.scale.z}));}
   const pose=([x,y,z])=>[x+c.x-132,y,z*root.scale.z+root.position.z];
   return {root,walls,fittings,number,overview:{position:pose([174,58,77]),target:pose([132,28,28])},inside:{position:pose([145,26,12]),target:pose([132,28,28])}};
 }
