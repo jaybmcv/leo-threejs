@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {polishInterior} from './interior-polish.js';
+import {shrubGeometry} from './stylized-plants.js';
 
 function kit(root,prefix){
  const mat=(name,color,extra={})=>new T.MeshStandardMaterial({name:prefix+' '+name,color,roughness:.65,metalness:0,...extra});
@@ -93,15 +94,18 @@ export function finishForwardLounge(lounge,shell,y){
 export function finishCrownLounge(root,y){
  const detail=new T.Group();detail.name='Fin_lounge_finish';root.add(detail);
  const {m,add,box,cyl}=kit(detail,'Crown_finish');
- const tables=[],stools=[],bottles=[];
+ const tables=[],stools=[],bottles=[],plants=[];
  root.traverse(o=>{
   if(o.name==='Crown_bar_stool_seat')stools.push(o);
   if(o.name==='Crown_lounge_table')tables.push(o);
   if(o.name==='Crown_bar_bottle')bottles.push(o);
   if(o.name==='Crown_curved_banquette_seat'||o.name==='Crown_curved_banquette_back')o.material=m.sage;
-  if(o.name==='Crown_plant'){o.geometry=new T.SphereGeometry(.8,16,12);o.scale.set(.8,1.3,.8);}
+  if(o.name==='Crown_plant')plants.push(o);
   if(o.name==='Crown_bar_work_island')o.material=m.oak;
  });
+ // Each planter holds a leafy shrub rooted on its top, 0.7 m below the old plant's centre.
+ const foliage=new T.MeshStandardMaterial({name:'Crown_finish foliage',vertexColors:true,flatShading:true,roughness:.85});
+ plants.forEach((o,i)=>{o.geometry=shrubGeometry({height:1.75,spread:1.15,seed:141+i}).translate(0,-.7,0);o.material=foliage;});
  for(const s of [-1,1]){
   for(let k=0;k<49;k++)box('Bar_oak_batten',[.09,.81,.045],[-236.85+k*.2,y+.655,s*3.3225],'oak');
   box('Counter_bronze_edge',[10.24,.03,.025],[-232,y+1.15,s*3.452],'brass');
