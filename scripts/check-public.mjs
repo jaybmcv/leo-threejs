@@ -24,7 +24,7 @@ for(const match of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)){
  await fs.access('dist/'+target);
 }
 // Walk around Leo: its own page and hashed script, loading the viewer's Cosmo file and the same models.
-const walkHtml=await fs.readFile('dist/walk.html','utf8'),walkScript=walkHtml.match(/src="(walk\.[0-9a-f]{10}\.js)"/)?.[1];
+const walkHtml=await fs.readFile('dist/walk.html','utf8'),walkScript=walkHtml.match(/<script>LEO_WALK_BOOT\("(walk\.[0-9a-f]{10}\.js)"\)<\/script>/)?.[1];
 assert.ok(walkScript&&html.includes('href="walk.html"'),'the viewer links a walk page with a hashed script');
 const walkCode=await fs.readFile('dist/'+walkScript,'utf8');
 assert.ok(walkCode.includes(cosmoScript)&&!walkCode.includes('createDLCat('),'the walk page loads the shared Cosmo file');

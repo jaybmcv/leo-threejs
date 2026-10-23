@@ -27,7 +27,7 @@ export async function writeWalkPage(out,{cosmo,manifest}){
  if(code.includes('createDLCat('))throw new Error('The walk script must load Cosmo from its own file');
  if(code.includes('__walk'))throw new Error('The walk debug hook must not ship');
  const name=hashed('walk','js',code);await fs.writeFile(path.join(out,name),code);
- let html=(await fs.readFile('src/walk/walk.html','utf8')).replace('<script>/* BUNDLE */</script>',()=>`<script type="module" src="${name}"></script>`);
+ let html=(await fs.readFile('src/walk/walk.html','utf8')).replace('<script>/* BUNDLE */</script>',()=>`<script>LEO_WALK_BOOT("${name}")</script>`);
  if(html.includes('/* BUNDLE */'))throw new Error('walk.html lost its bundle placeholder');
  html=html.replace('<body>',()=>`<body><script>window.LEO_PUBLIC_ASSETS=${JSON.stringify(manifest)};</script>`);
  await fs.writeFile(path.join(out,'walk.html'),html);

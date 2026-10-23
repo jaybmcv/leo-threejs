@@ -79,7 +79,7 @@ installFeedback({renderer,page:'viewer',mount:()=>matchMedia(PHONE_LAYOUT).match
  css:`.fb-button:not(.fb-mounted){left:auto;right:16px;bottom:84px;border-color:#f85800;color:#ff8a3d}body:has(#m-handle[aria-expanded="true"]) .fb-button:not(.fb-mounted){display:none}
 .foot-links:has(.fb-button){align-items:center}.foot-links .fb-button{border-color:#f85800;color:#ff8a3d;padding:7px 12px;white-space:nowrap}.foot-links .fb-button:hover{background:#f85800;color:#050507}`,
  context:()=>({link:location.href,where:`${$('eyebrow').textContent} · ${$('view-title').textContent}`})});
-const spaceBackdrop=createSpaceBackdrop(touchScreen?{scale:.5,fps:30}:{});
+const spaceBackdrop=createSpaceBackdrop(touchScreen?{scale:.5,fps:30,pixels:true}:{});
 const scene=new T.Scene();scene.background=new T.Color(0xbac8cd);
 // Reflection lighting: baked, decoded on the GPU while the models download (src/environment.js).
 scene.environmentIntensity=.4;const environmentReady=loadEnvironment(renderer).then(texture=>{scene.environment=texture;});
