@@ -16,13 +16,15 @@ export class Controller{
  constructor(colliders,body=BODY){
   this.colliders=colliders;this.body=body;this.position=new T.Vector3();this.velocity=new T.Vector3();
   this.grounded=false;this.ground=null;this.airTime=0;
+  // The highest the feet have been since the last ground, and how far the last landing dropped from it.
+  this.top=0;this.fell=0;
   // The jump: time left on an early press, last step's key, seconds since take-off (-1 in a fall), jumps spent.
   this.jumpBuffer=0;this.jumpHeld=false;this.jumpS=-1;this.jumpCount=0;
   // 'stand' | 'crouch' | 'slide' | 'prone'; the capsule stays 2 m tall in every stance.
   this.stance='stand';this.slideS=0;
   this.segment=new T.Line3(new T.Vector3(),new T.Vector3());this.ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0));
  }
- place(p){this.position.copy(p);this.velocity.set(0,0,0);this.grounded=false;this.jumpS=-1;this.jumpCount=0;this.jumpBuffer=0;this.stance='stand';this.slideS=0;this.settle();}
+ place(p){this.position.copy(p);this.top=p.y;this.fell=0;this.velocity.set(0,0,0);this.grounded=false;this.jumpS=-1;this.jumpCount=0;this.jumpBuffer=0;this.stance='stand';this.slideS=0;this.settle();}
  // Highest walkable ground under the feet within [y-down, y+up]; null over a gap.
  groundAt(p,up,down){
   let best=null;
@@ -68,8 +70,9 @@ export class Controller{
   // Ground: snap down while walking (stairs and ramps), land when falling onto it.
   const reach=this.grounded?b.step+MOVE.snap:Math.max(.05,-v.y*dt+.05);
   const g=v.y>.5?null:this.groundAt(this.position,b.step+.05,reach);
-  if(g&&(this.grounded||v.y<=0)){this.position.y=g.point.y;v.y=0;this.grounded=true;this.ground=g;this.jumpS=-1;this.jumpCount=0;}
+  if(g&&(this.grounded||v.y<=0)){if(!this.grounded)this.fell=this.top-g.point.y;this.position.y=g.point.y;v.y=0;this.grounded=true;this.ground=g;this.jumpS=-1;this.jumpCount=0;}
   else{this.grounded=false;this.ground=null;}
+  this.top=this.grounded?this.position.y:Math.max(this.top,this.position.y);
   return this;
  }
  // The jump, settled before anything moves (movement.ts stepPlayer).
