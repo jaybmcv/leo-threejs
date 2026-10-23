@@ -12,7 +12,7 @@ const browserKey=()=>storage('leo-live-key',()=>[...crypto.getRandomValues(new U
 export const savedName=()=>storage('leo-live-name')||'';
 export function saveName(name){try{localStorage.setItem('leo-live-name',name);}catch{}}
 
-// on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), aboard(n)}; status is 'connecting', 'live',
+// on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n)}; status is 'connecting', 'live',
 // 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). opts.pass(): a Leo pass for this
 // (re)connection or null (connect.js); opts.refused(): the server would not take it; opts.invite: the invite code the
 // page was opened with; opts.hat(): whether this visitor wears the captain's hat (a tester).
@@ -38,6 +38,7 @@ export function connectLive(url,on,opts={}){
      break;
     case 'gone':on.gone?.(msg.id);break;
     case 'lift':on.lift?.(msg.id,msg.s);break;
+    case 'mark':on.mark?.(msg.id,msg.at);break;
     case 'aboard':on.aboard?.(msg.n);break;
     case 'full':stopped=true;status('full');break;
     case 'replaced':stopped=true;status('replaced');break;
@@ -62,6 +63,8 @@ export function connectLive(url,on,opts={}){
    last=same;lastAt=now;sentAt=now;ws.send(text);
   },
   call(lift,stop,now){if(live())ws.send(JSON.stringify({m:'call',lift,stop,now:!!now}));},
+  // A ping where the walker stands, for everyone else aboard (walk/marks.js).
+  mark(at){if(live())ws.send(JSON.stringify({m:'mark',at}));},
   rename(next){name=next;saveName(next);if(live())ws.send(JSON.stringify({m:'name',name:next}));},
   get live(){return !!live();},
   // How the server has this visitor: {name, verified}.

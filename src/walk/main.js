@@ -34,6 +34,7 @@ import {corridorTrim} from './trim.js';
 import {connectLive,savedName} from './net/live.js';
 import {identify,currentPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
+import {Marks} from './marks.js';
 import {createHostess} from './hostess.js';
 import {wearHat,fit,FIT} from './hat.js';
 import {createYarn} from './yarn.js';
@@ -215,6 +216,8 @@ const actions={
  emotes(){if(ready())toggleEmotes();},
  // Respawn: back to the arrival hall from anywhere aboard, off any seat or bed.
  respawn(){if(ready()){closePanels();emote=null;goTo({at:START.position.toArray(),yaw:START.yaw});yarn.reset();}},
+ // A ping where you stand, for others aboard to find (marks.js); one every few seconds at most.
+ ping(now=performance.now()){if(!ready()||!live?.live||now-pinged<PING_GAP_MS)return;pinged=now;const at=myPose().pos;live.mark(at);marks.show('me','You',at,now);},
  // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
  emote(i){if(ready()&&!resting&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
  // A key pressed while a sheet is open: the key that opened it closes it, and the emote sheet takes 1-0.
@@ -224,7 +227,7 @@ const actions={
   if(open('emotes')&&/^Digit[0-9]$/.test(code)){closePanels();actions.emote((+code.slice(5)+9)%10);}
  },
 };
-let emote=null;
+let emote=null,pinged=-Infinity;const PING_GAP_MS=4000;
 const ready=()=>document.body.dataset.ready==='1';
 
 async function loadCosmo(){
@@ -273,19 +276,22 @@ installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-width:560px)').
 // A tester (this browser holds a tester invite) wears the captain's hat (hat.js).
 if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 // Others aboard: their poses in, ours out, the lifts as the server runs them.
-let live=null,remotes=null,aboard=0,liveStatus='';
+let live=null,remotes=null,marks=null,aboard=0,liveStatus='';
 if(LIVE_URL){
+ marks=new Marks($('names'));
  remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
   status:s=>{liveStatus=s;showAboard();},
   welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);},
-  poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>remotes.clear(),
+  poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();},
+  mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
  },{pass:()=>me.pass?currentPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
+ $('ping').hidden=false;$('help-ping').hidden=false;
 }
 // The pose others see. Resting, the body is where the bed or seat put it, not where the controller stands.
 function myPose(riding=false){
@@ -361,6 +367,7 @@ renderer.setAnimationLoop(()=>{
  walker.holder.visible=follow.mode!=='first'&&follow.current>.75;
  cull(p);
  remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
+ marks?.update(camera,p,now);
  if(now-lastHud>120){lastHud=now;hud(p);}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
@@ -487,4 +494,5 @@ $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('jump').addEventListener(type,()=>{input.jumpHeld=false;});
 $('crouch').addEventListener('click',()=>actions.crouch());
 $('emote-button').addEventListener('click',()=>actions.emotes());
+$('ping').addEventListener('click',()=>actions.ping());
 for(const b of document.querySelectorAll('.respawn'))b.addEventListener('click',()=>actions.respawn());

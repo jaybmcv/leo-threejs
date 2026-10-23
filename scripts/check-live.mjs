@@ -1,5 +1,5 @@
 // npm run check:live: Leo live (server/leo-live.mjs) against scripted visitors. Starts real servers on spare ports and
-// checks the pose wire, joining, poses reaching others near and far, names, the shared lifts, leaving, a second tab,
+// checks the pose wire, joining, poses reaching others near and far, names, the shared lifts, pings, leaving, a second tab,
 // bad input, the cap on visitors, Leo passes (Discord identity from The Creamery, net/pass.js: here signed by a
 // stand-in key served as a local JWKS) and, last, sixty visitors walking at once (bytes sent per visitor per second).
 import {spawn} from 'node:child_process';
@@ -148,6 +148,14 @@ try{
  check('lifts: the car comes to the landing that called it',!!arrived&&!arrived.s.calls.includes(stop),arrived?`after ${(b.lifts.indexOf(arrived))} updates`:'never');
  tab.send({m:'call',lift:'forward-port',stop:999});tab.send({m:'call',lift:'nowhere',stop:1});await sleep(200);
  check('lifts: calls to stops that do not exist are ignored',tab.closed===null);
+ // Pings: passed on to everyone else, checked, and only so many.
+ tab.send({m:'mark',at:[10.123,-3.7,2]});await sleep(200);
+ const marks=()=>b.msgs.filter(m=>m.m==='mark'&&m.id===tab.id);
+ check('pings: a ping reaches others aboard, not its sender',marks().some(m=>m.at[0]===10.12&&m.at[1]===-3.7)&&!tab.msgs.some(m=>m.m==='mark'));
+ tab.send({m:'mark',at:[9999,0,0]});tab.send({m:'mark',at:'here'});tab.send({m:'mark'});await sleep(200);
+ check('pings: a ping outside the ship or malformed is ignored',marks().length===1);
+ for(let i=0;i<10;i++)tab.send({m:'mark',at:[11,-3.7,2]});await sleep(300);
+ check('pings: a flood of pings is rate-limited',marks().length<=3&&tab.closed===null,`${marks().length} passed on`);
  check('join: a socket that never says hello is closed',await (async()=>{for(let i=0;i<40&&!silentClosed;i++)await sleep(200);return silentClosed;})());
  for(const bot of [b,far,tab])bot.close();
 }finally{server.kill();}
