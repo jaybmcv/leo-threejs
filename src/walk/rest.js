@@ -43,7 +43,7 @@ export function findRestSpots(root){
   // Face along whichever seat axis points away from the back: a chair can be deeper than it is wide.
   if(back){const away=c.clone().sub(back.face.c);away.y=0;const nx=ax.clone().normalize(),nz=az.clone().normalize(),n=Math.abs(nx.dot(away))>=Math.abs(nz.dot(away))?nx:nz;facing=n.multiplyScalar(Math.sign(n.dot(away))||1);}
   const count=half*2>1.25?Math.max(1,Math.floor((half*2-.15)/SPACING)):1;
-  for(let i=0;i<count;i++){const t=count===1?0:(-(count-1)/2+i)*SPACING;spots.push({kind:'sit',point:c.clone().addScaledVector(dir,t),facing,height:c.y});}
+  for(let i=0;i<count;i++){const t=count===1?0:(-(count-1)/2+i)*SPACING;spots.push({kind:'sit',point:c.clone().addScaledVector(dir,t),facing,height:c.y,instanced:it.o.isInstancedMesh});}
  };
  // A curved banquette rings its table: spots follow the arc between the front edge and the back, facing the table.
  const plan=(o,m,O)=>{const p=o.geometry.attributes.position,v=new T.Vector3(),out=[];for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(m);out.push([v.x-O.x,v.z-O.z]);}return out;};
@@ -88,8 +88,9 @@ export function spotIndex(spots){
  };
 }
 
-// Keep spots that really have a seat or mattress under them (a curved banquette's plan centre is in the air).
+// Keep spots that really have a seat or mattress under them (a curved banquette's plan centre is in the air). An
+// instanced seat is its own proof: the lifeboat seating isn't in the colliders, so a ray there has nothing to hit.
 export function solidSpots(spots,colliders){
  const ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0));
- return spots.filter(s=>{ray.origin.set(s.point.x,s.height+.3,s.point.z);const hit=colliders.raycast(ray,.45);return hit&&Math.abs(hit.point.y-s.height)<.12;});
+ return spots.filter(s=>{if(s.instanced)return true;ray.origin.set(s.point.x,s.height+.3,s.point.z);const hit=colliders.raycast(ray,.45);return hit&&Math.abs(hit.point.y-s.height)<.12;});
 }

@@ -15,7 +15,7 @@ export const SPECIAL_AREAS=[
   ...Array.from({length:5},(_,i)=>({id:`d0${i+1}-lifeboats-10`,name:`Lifeboat banks · Deck ${i+1}`,kind:'lifeboats',deck:i+1,category:'Emergency embarkation',center:[0,-39.7+i*4,0],width:249,depth:139,height:3.5,special:true,description:'Twenty 100-seat lifeboats on this deck, with inboard boarding corridors. Across five decks: 100 craft and 10,000 modeled seats. Survival endurance and evacuation rates are not engineered.'})),
 ];
 
-const palette={floor:0xbdb7a8,lining:0xdbe1da,navy:0x294655,metal:0x8e9fa2,dark:0x172b36,wood:0x9d7b52,glass:0x6dacc4,amber:0xe6b878,green:0x739c89,screen:0x2b718c,light:0xffe8bc};
+const palette={floor:0xbdb7a8,lining:0xdbe1da,navy:0x294655,metal:0x8e9fa2,dark:0x172b36,wood:0x9d7b52,glass:0x6dacc4,amber:0xe6b878,green:0x739c89,screen:0x2b718c,light:0xffe8bc,rescue:0xe0662b};
 const materials=Object.fromEntries(Object.entries(palette).map(([n,color])=>[n,new T.MeshStandardMaterial({name:'Special_'+n,color,roughness:n==='glass'?.18:.75,metalness:n==='metal'?.55:.08,...(n==='screen'||n==='light'?{emissive:color,emissiveIntensity:n==='light'?.85:.2}:{}),...(n==='glass'?{transparent:true,opacity:.19,depthWrite:false,side:T.DoubleSide}:{})})]));
 materials.lining.side=T.DoubleSide;
 
@@ -281,8 +281,24 @@ function lifeboats(area,k){
       box('Lifeboat_helm',[1,1.1,2],[x+9.4,y+.55,z],'metal');
       box('Lifeboat_cross_aisle',[1.3,.018,7],[x,y+.012,z],'floor');
       box('Life_support_locker',[1.2,2,5],[x-9.5,y+1,z],'metal');
-      box('Lifeboat_front_glazing',[.08,.8,4],[x+10.61,y+1.7,z],'screen');
-      for(const dz of [-2.4,2.4]){const nozzle=k.cyl('Lifeboat_thruster',.45,.3,[x-10.7,y+.9,z+dz],'dark');nozzle.rotation.z=Math.PI/2;}
+      // Craft, not corridor: rounded bow and stern caps, a rescue-orange band with rub rails and portholes on the
+      // boarding side, and an orange hatch frame with a ready lamp over the door.
+      round('Lifeboat_bow_fairing',[.6,2.5,7],[x+10.88,y+1.4,z],'lining',.28);
+      round('Lifeboat_stern_cap',[.6,2.5,7],[x-10.88,y+1.4,z],'lining',.28);
+      box('Lifeboat_front_glazing',[.08,.8,4],[x+11.2,y+1.7,z],'screen');
+      for(const dz of [-2.4,2.4]){const nozzle=k.cyl('Lifeboat_thruster',.45,.3,[x-11.3,y+.9,z+dz],'dark');nozzle.rotation.z=Math.PI/2;}
+      const out=-side,face=z+out*3.83;
+      for(const dx of [-6,6]){
+        box('Lifeboat_livery_band',[9,.34,.03],[x+dx,y+1.02,face+out*.015],'rescue');
+        round('Lifeboat_rub_rail',[9,.14,.16],[x+dx,y+.32,face+out*.08],'metal',.06);
+        for(const px of [-3,0,3]){
+          const glass=k.cyl('Lifeboat_porthole',.27,.24,[x+dx+px,y+1.68,z+out*3.75],'screen');glass.rotation.x=Math.PI/2;
+          const ring=k.cyl('Lifeboat_porthole_ring',.36,.024,[x+dx+px,y+1.68,face+out*.012],'metal');ring.rotation.x=Math.PI/2;
+        }
+      }
+      round('Lifeboat_rub_rail',[21.4,.14,.16],[x,y+2.74,face+out*.08],'metal',.06);
+      for(const s of [-1,1])box('Lifeboat_hatch_frame',[.14,2.35,.08],[x+s*1.57,y+1.175,face+out*.04],'rescue');
+      box('Lifeboat_ready_lamp',[.6,.1,.05],[x,y+2.45,face+out*.11],'green');
       box('Boarding_light',[8,.03,.18],[x,y+3.24,side*58.9],'light',shell);
     }
   }
