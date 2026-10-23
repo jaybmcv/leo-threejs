@@ -10,7 +10,7 @@ import {createMars} from '../mars.js';
 import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
 import {buildSteps,buildColliders,cabinPlacements,outsideOnly,prepareExteriorForWalking} from './world.js';
 import {Colliders,solid} from './collision.js';
-import {STATIC_LIFT_PARTS} from './lifts.js';
+import {STATIC_LIFT_PARTS,LIFTS} from './lifts.js';
 import {Controller} from './controller.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
@@ -265,7 +265,10 @@ walker.holder.position.copy(controller.position);
 // A ball of yarn to push about in the arrival hall (yarn.js).
 const yarn=createYarn(colliders);scene.add(yarn.mesh);
 document.body.dataset.ready='1';
-let heading=follow.yaw;const safe=controller.position.clone();
+let heading=follow.yaw;const safe=controller.position.clone(),finSafe=new T.Vector3(0,-1e3,0);
+// On the floor of one of the crown lift's fin landings (the gallery and the inspection platforms), inside the fin.
+const FIN_STOPS=LIFTS.find(l=>l.id==='crown').stops.filter(s=>!/Crown/.test(s.label)).map(s=>s.y);
+function onFinPlatform(p){return p.x<-170&&Math.abs(p.z)<3&&FIN_STOPS.some(y=>Math.abs(p.y-y)<.3);}
 // Feedback joins the top-right tools, orange-edged like the viewer's so testers spot it; a narrow phone has no room
 // there, so it sits under the mini-map instead.
 installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-width:560px)').matches?null:document.querySelector('.tools'),
@@ -350,11 +353,19 @@ renderer.setAnimationLoop(()=>{
  if(!resting&&!riding){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  yarn.update(dt,resting||riding?null:controller);
  const p=controller.position;
- // A safety net: should a walker ever fall out of the ship, it comes back to the last ground it stood on. Nothing aboard
- // is walkable below Deck 1, and the inside of the hull under it (-54.6 m) used to catch fallers and count as safe ground.
- // A car floor is never kept: the car may have gone by the time it is needed, leaving only the shaft.
+ // Neither safety net keeps a lift car's floor to return to: the car may have gone by the time it is needed, leaving
+ // only the shaft.
+ const inCar=lifts.lifts.some(l=>lifts.inside(l,p));
+ // A fall over a fin platform's railing ends on the fin's skin with no way out: unless it came down on another
+ // landing of the crown lift, it goes back to the platform it left (its last ground may be a rail or spar above it).
+ const onLanding=controller.grounded&&!riding&&!inCar&&controller.ground.normal.y>.98&&onFinPlatform(p);
+ if(controller.grounded&&!riding&&controller.fell>4&&safe.distanceTo(finSafe)<6&&!onLanding){controller.place(finSafe);emote=null;}
+ else if(onLanding)finSafe.copy(p);
+ controller.fell=0;
+ // Should a walker ever fall out of the ship, it comes back to the last ground it stood on. Nothing aboard is walkable
+ // below Deck 1, and the inside of the hull under it (-54.6 m) used to catch fallers and count as safe ground.
  if(p.y<BELOW_SHIP){controller.place(safe);emote=null;}
- else if(controller.grounded&&!lifts.lifts.some(l=>lifts.inside(l,p)))safe.copy(p);
+ else if(controller.grounded&&!inCar)safe.copy(p);
  if(controller.speed>.15&&!resting)heading=dampAngle(heading,Math.atan2(controller.velocity.x,controller.velocity.z),12,dt);
  // What the figure leans into: the turn (+ to its left) and the change of speed, both smoothed a little.
  if(dt>0){turnRate=T.MathUtils.damp(turnRate,Math.atan2(Math.sin(heading-lastHeading),Math.cos(heading-lastHeading))/dt,10,dt);accel=T.MathUtils.damp(accel,(controller.speed-lastSpeed)/dt,10,dt);}
