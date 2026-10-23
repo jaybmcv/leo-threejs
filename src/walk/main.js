@@ -39,6 +39,7 @@ import {wearHat,fit,FIT} from './hat.js';
 import {createYarn} from './yarn.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink} from './link.js';
+import {createSelfieBooth} from './selfie.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
@@ -135,6 +136,8 @@ async function buildShip(){
  const w0=performance.now(),opened=openWindows(ship,walkPlan.windows);clearGlass(ship.root);timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
  lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);corridorTrim(lifts.signs);
  rest=spotIndex(solidSpots(findRestSpots(ship.inside),colliders));
+ // The crown lounge's selfie booth (selfie.js): solid, and drawn with its deck band like the signs below.
+ booth=createSelfieBooth();colliders.addStatic(booth.group);colliders.commit();
  status('Dressing the crew…');await idle();
  if(cosmoKit)globalThis.LeoCosmo.dressCats(ship.inside,cosmoKit);
  status('Preparing the walk…');await idle();
@@ -142,9 +145,9 @@ async function buildShip(){
  ship.exterior.traverse(o=>{if(o.isMesh&&outsideOnly(o))o.visible=false;});
  const b0=performance.now();baked=bakeForWalking(ship.root,{release:true});for(const g of baked.bands.values())scene.add(g);timings.push([`${baked.sources} meshes merged into ${baked.meshes} in ${Math.round(performance.now()-b0)} ms`,Math.round(performance.now()-t0)]);
  haze.add(createHaze(ship));
- // Signs, and the Crown lounge hostess (hostess.js), draw with the deck band they're on.
+ // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
- for(const o of [...lifts.signs.children])toBand(o);
+ for(const o of [...lifts.signs.children,booth.group])toBand(o);
  if(cosmoKit)toBand(createHostess(cosmoKit));
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
@@ -158,7 +161,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null;const instanced=[];
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null;const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
 // reach, so a tall hall, an atrium or a stairwell shows its full height. The rays skip the first 0.6 m: pressed into a
@@ -201,6 +204,7 @@ const actions={
   else if(t.kind==='inside')openLiftPanel(t.lift);
   else if(t.kind==='waiting')return;
   else if(t.kind==='sit'||t.kind==='lie')settle(t.spot);
+  else if(t.kind==='selfie')booth.start();
  },
  escape(){closePanels();},
  // (Nothing below until the walk is ready.)
@@ -298,7 +302,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},yarn,
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -360,15 +364,41 @@ renderer.setAnimationLoop(()=>{
  if(now-lastHud>120){lastHud=now;hud(p);}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
- skyCamera.position.copy(camera.position);skyCamera.quaternion.copy(camera.quaternion);skyCamera.fov=camera.fov;skyCamera.aspect=camera.aspect;skyCamera.updateProjectionMatrix();
- hazeCamera.position.copy(camera.position);hazeCamera.quaternion.copy(camera.quaternion);hazeCamera.fov=camera.fov;hazeCamera.aspect=camera.aspect;hazeCamera.updateProjectionMatrix();
- renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,camera);
+ draw(camera);
+ const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
+ if(shot.due)takePhoto();
 });
+// One frame of the ship from `view`: the sky, the haze past the far plane, then the ship.
+function draw(view){
+ for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
+ renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,view);
+}
+// The selfie booth's photo: drawn from its lens and copied off the canvas at once (the drawing buffer is not kept past
+// this frame), then the walker's own view drawn back over it.
+let photoUrl=null;
+function takePhoto(){
+ const canvas=renderer.domElement,shown=walker.holder.visible;walker.holder.visible=true;
+ booth.aim(canvas.width,canvas.height);booth.camera.updateMatrixWorld();draw(booth.camera);
+ const copy=document.createElement('canvas');copy.width=canvas.width;copy.height=canvas.height;copy.getContext('2d').drawImage(canvas,0,0);
+ walker.holder.visible=shown;draw(camera);
+ const flash=$('photo-flash');flash.hidden=false;flash.getAnimations?.().forEach(a=>a.cancel());flash.animate?.([{opacity:.85},{opacity:0}],{duration:450}).finished.then(()=>{flash.hidden=true;},()=>{});
+ booth.frame(copy).then(out=>out.toBlob(blob=>{if(blob)showPhoto(blob);},'image/jpeg',.92));
+}
+function showPhoto(blob){
+ if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=URL.createObjectURL(blob);
+ const name=`leo-crown-lounge-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.jpg`;
+ $('photo-image').src=photoUrl;Object.assign($('photo-save'),{href:photoUrl,download:name});
+ // Where the browser can share files (most phones), sharing is the easy way to keep or send it.
+ const file=new File([blob],name,{type:'image/jpeg'}),share=$('photo-share');
+ share.hidden=!navigator.canShare?.({files:[file]});share.onclick=()=>navigator.share({files:[file],title:'Leo · Crown lounge'}).catch(()=>{});
+ closePanels();$('photo-sheet').hidden=false;input.enabled=false;
+}
 function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a));return a+d*(1-Math.exp(-lambda*dt));}
 
-// What's in front of the walker to use: a lift (call button or car panel) first, then a seat or bed.
+// What's in front of the walker to use: a lift (call button or car panel) first, then the selfie camera, then a seat or bed.
 function target(){
  const p=controller.position,l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
+ const b=booth.near(p);if(b)return b;
  const s=rest.pick(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));
  return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':'Sit down'}:null;
 }
@@ -436,7 +466,7 @@ function toggleEmotes(){
 }
 function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;resting=null;controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet'])$(id).hidden=true;input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet'])$(id).hidden=true;input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
