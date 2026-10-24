@@ -36,7 +36,7 @@ const NEAR_DY=9,NEAR_M=64;
 const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
 const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',
  key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
-const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4]};
+const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6]};
 
 const visitors=new Set();
 const slots=new Map();let nextSlot=1;
@@ -90,6 +90,28 @@ function scored(v,msg){
  send(v.ws,{m:'scored',ok:true,best:best.score,rank:ranked().indexOf(best)+1,newBest});
 }
 
+// The ship log boards' hearts (walk/changes-board.js): which changes each Discord-verified visitor has given a heart, one
+// per change, kept in a file beside this checkout like the scores. A change is its pull request's number; any number
+// is taken, so a new change can have hearts without a restart. Everyone aboard hears the counts when they change.
+const HEARTS=process.env.LEO_LIVE_HEARTS||new URL('../../leo-live-hearts.json',import.meta.url),MOST_HEARTS=500;
+const hearts=new Map();
+try{for(const [id,list] of Object.entries(JSON.parse(fs.readFileSync(HEARTS,'utf8'))))if(Array.isArray(list))hearts.set(id,new Set(list.filter(Number.isInteger)));}catch{}
+let savingHearts=null;
+function saveHearts(){if(savingHearts)return;savingHearts=setTimeout(()=>{savingHearts=null;fs.writeFile(HEARTS,JSON.stringify(Object.fromEntries([...hearts].map(([id,s])=>[id,[...s]]))),e=>{if(e)log('hearts not saved',e.message);});},1000);}
+function heartCounts(){const n=new Map();for(const s of hearts.values())for(const c of s)n.set(c,(n.get(c)||0)+1);return [...n];}
+const heartsFor=v=>({m:'hearts',counts:heartCounts(),mine:v.discord?[...(hearts.get(v.discord.discordId)||[])]:[],verified:!!v.discord});
+function hearted(v,msg){
+ if(!v.discord){send(v.ws,{m:'hearted',ok:false,why:'sign-in'});return;}
+ const change=msg.change;if(!Number.isInteger(change)||change<1||change>99999||typeof msg.on!=='boolean')return;
+ const id=v.discord.discordId,mine=hearts.get(id)||new Set();
+ if(msg.on===mine.has(change)){send(v.ws,heartsFor(v));return;}
+ if(msg.on&&mine.size>=MOST_HEARTS){send(v.ws,{m:'hearted',ok:false,why:'too-many'});return;}
+ if(msg.on)mine.add(change);else mine.delete(change);
+ if(mine.size)hearts.set(id,mine);else hearts.delete(id);saveHearts();
+ log('heart',`discord:${id}`,v.name||'',msg.on?'+':'-',change);
+ send(v.ws,heartsFor(v));broadcast({m:'hearts',counts:heartCounts()},v);
+}
+
 async function hello(v,msg){
  if(msg.v!==PROTOCOL){send(v.ws,{m:'reload'});v.ws.close(4000,'old page');return;}
  const id=await actorIdOf(typeof msg.key==='string'?msg.key:'');
@@ -132,6 +154,9 @@ function onMessage(v,data,binary){
   case 'play':if(allowed(v,'play'))v.game={at:Date.now()};break;
   case 'score':if(allowed(v,'score'))scored(v,msg);break;
   case 'board':if(allowed(v,'board'))send(v.ws,boardFor(v));break;
+  // The ship log boards: the hearts, and a heart given or taken back.
+  case 'hearts':if(allowed(v,'hearts'))send(v.ws,heartsFor(v));break;
+  case 'heart':if(allowed(v,'heart'))hearted(v,msg);break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;
