@@ -1,18 +1,30 @@
 import * as T from 'three';
 import {BODY} from './collision.js';
 
-// A big neon pink ball of yarn in a corner of the Deck 2 arrival hall, there to be pushed about. Walking into it shoves
-// it ahead of the walker; it rolls, slows on the floor, bounces off walls and furniture and drops down stairs. Lost
-// below the decks, or on a respawn, it goes back to its corner. Each visitor has their own; Leo live does not share it.
-export const YARN={home:[-139.9,-35.7,-22.1],radius:.55,kick:1.15,roll:1.6,bounce:.4,gravity:22};
+// Big neon balls of yarn to push about: the pink one in a corner of the Deck 2 arrival hall, and one of another neon
+// colour in each of six common areas. Walking into one shoves it ahead of the walker; it rolls, slows on the floor,
+// bounces off walls and furniture and drops down stairs. Lost below the decks, or on a respawn, it goes back home.
+// Each visitor has their own; Leo live does not share them.
+export const YARN={home:[-139.9,-35.7,-22.1],color:0xff3fb4,radius:.55,kick:1.15,roll:1.6,bounce:.4,gravity:22};
+// The others sit a few metres in from where the "Go to" menu lands (places.js), by place name.
+export const YARN_SPOTS=[
+ {place:'Voyage library',offset:[4,0,5],color:0x7dff3f},
+ {place:'Community theater',offset:[4,0,-5],color:0x2ff3ff},
+ {place:'Communal dining',offset:[4,0,5],color:0xff8a1f},
+ {place:'Exercise studio',offset:[4,0,-5],color:0xfff01f},
+ {place:'Observation lounge',offset:[4,0,4],color:0xb04bff},
+ {place:'Neighborhood garden',offset:[3,0,-3],color:0x3f6bff},
+];
 const STEP=1/120;
 
-export function createYarn(colliders){
- const r=YARN.radius,home=new T.Vector3(YARN.home[0],YARN.home[1]+r+.01,YARN.home[2]);
+export function createYarn(colliders,{at=YARN.home,color=YARN.color}={}){
+ const r=YARN.radius,home=new T.Vector3(at[0],at[1]+r+.01,at[2]);
  const ball=new T.Group();ball.name='Walk_yarn_ball';
- const pink=new T.MeshStandardMaterial({name:'Walk_yarn',color:0xff3fb4,emissive:0xff1f9a,emissiveIntensity:.55,roughness:.85});
- const strand=new T.MeshStandardMaterial({name:'Walk_yarn_strand',color:0xff7acb,emissive:0xff3fb0,emissiveIntensity:.6,roughness:.9});
- ball.add(new T.Mesh(new T.SphereGeometry(r,32,20),pink));
+ // The strands are the core's colour lifted toward white.
+ const core=new T.Color(color),light=core.clone().lerp(new T.Color(0xffffff),.35);
+ const wool=new T.MeshStandardMaterial({name:'Walk_yarn',color:core,emissive:core.clone().multiplyScalar(.9),emissiveIntensity:.55,roughness:.85});
+ const strand=new T.MeshStandardMaterial({name:'Walk_yarn_strand',color:light,emissive:core,emissiveIntensity:.6,roughness:.9});
+ ball.add(new T.Mesh(new T.SphereGeometry(r,32,20),wool));
  // Wound strands: thin rings at many angles over the core.
  let seed=4471;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const ring=new T.TorusGeometry(r*1.005,.022,5,56);
@@ -57,6 +69,8 @@ export function createYarn(colliders){
  }
  // `walker` is {position, velocity} of the walker's feet, or null while it sits, lies or rides a lift.
  function update(dt,walker){
+  // A ball at rest with nobody near it has nothing to do.
+  if(grounded&&!loose&&velocity.lengthSq()<1e-6&&(!walker||walker.position.distanceToSquared(position)>9)){acc=0;return;}
   acc+=dt;loose=Math.max(0,loose-dt);if(loose)walker=null;
   while(acc>=STEP){acc-=STEP;if(walker)shove(walker.position,walker.velocity,true);step(STEP);}
   pressed=false;if(walker)shove(walker.position,walker.velocity,false);
