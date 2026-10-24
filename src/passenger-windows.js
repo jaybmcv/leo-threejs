@@ -4,9 +4,10 @@ import {cutWindowApertures,addGlazing} from './window-geometry.js';
 import {CENTRAL_ENGINE_WINDOWS,POD_ENGINE_WINDOWS} from './engine-window-plan.js';
 import {TessellateModifier} from 'three/addons/modifiers/TessellateModifier.js';
 import logo from './mcv-logo-contours.json' with {type:'json'};
+import {shapePoint,unshapeFinY} from './concept-shape.js';
 
-// The fin platforms' glass bands: sill and head above the platform, pane width and pitch (the 0.26 m between panes is
-// exactly the two frames' borders, so neighbouring frames meet without overlapping).
+// The fin platforms' glass bands: sill and head above the platform as walked, pane width and pitch (the 0.26 m between
+// panes is exactly the two frames' borders, so neighbouring frames meet without overlapping).
 export const FIN_SILL=.6,FIN_HEAD=3.2,FIN_PANE=2.74,FIN_PITCH=3;
 
 export function addPassengerWindows(exterior,hull,side,surfaceFactory){
@@ -56,8 +57,11 @@ export function addPassengerWindows(exterior,hull,side,surfaceFactory){
  });
  // Each fin inspection platform has a tall glass band along both walls, from knee height to well over head: panes on a
  // 3 m pitch whose frames meet as slim mullions, broken only by the registry and the access hatch. The upper platforms
- // run on aft of the crown lift, and are glazed there too. The topmost meets the crown just over head height, so its band
- // takes the tallest head that still gives it three panes under the fin's skin.
+ // run on aft of the crown lift, and are glazed there too. The walk and the viewer lower the fin (concept-shape.js): its
+ // platforms by the fin drop, its skin and windows by an even squash that sits up to 2 m lower. So each band is built
+ // where it lands, after both, at its sill and head above the lowered platform. The topmost meets the crown below head
+ // height, so its band takes the tallest head that still gives it three panes under the fin's skin.
+ const finHeight=(floor,h)=>unshapeFinY(shapePoint([-235,floor,0])[1]+h);
  const finPane=(x0,y0,y1)=>{const x1=x0+FIN_PANE;
   if(finKeepouts.some(r=>x1>r.x0&&x0<r.x1&&y1>r.y0&&y0<r.y1))return false;
   if(side((x0+x1)/2,(y0+y1)/2)>finSurface((x0+x1)/2,(y0+y1)/2))return false;
@@ -66,8 +70,8 @@ export function addPassengerWindows(exterior,hull,side,surfaceFactory){
  for(const q of envelope.fin.filter(q=>q.y>=32&&q.y<=128&&(q.y-32)%16===0)){
   const slots=[];for(let x0=-243;x0+FIN_PANE<=q.b-8.2;x0+=FIN_PITCH)slots.push(x0);
   for(let x0=-249.6-FIN_PANE;x0>=Math.min(q.a+6,-249.5)+.2;x0-=FIN_PITCH)slots.push(x0);
-  for(const head of [FIN_HEAD,2.8,2.4]){const y0=q.y+FIN_SILL,y1=q.y+head,panes=slots.filter(x0=>finPane(x0,y0,y1));
-   if(panes.length<3&&head>2.4)continue;
+  for(const head of [FIN_HEAD,2.8,2.4,2,1.6]){const y0=finHeight(q.y,FIN_SILL),y1=finHeight(q.y,head),panes=slots.filter(x0=>finPane(x0,y0,y1));
+   if(panes.length<3&&head>1.6)continue;
    for(const x0 of panes)finRects.push({x0,x1:x0+FIN_PANE,y0,y1,floor:q.y,zone:'fin-inspection-platform'});break;}
  }
  for(const m of fin)cutTriangles+=cutWindowApertures(m,finRects);
