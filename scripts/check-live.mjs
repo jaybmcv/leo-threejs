@@ -122,6 +122,10 @@ try{
  check('names: control and direction characters are cleaned out',seen?.name==='Jay cat',JSON.stringify(seen?.name));
  a.send({m:'name',name:'Jay B'});await sleep(150);a.pose([102,-3.7,1]);await sleep(250);
  check('names: a new name reaches others',b.poses.get(a.id)?.name==='Jay B');
+ // Sitting in a Deck 4 lifeboat seat reaches a visitor standing in the aisle.
+ b.pose([-115,-27.7,64.9]);a.pose([-120.7,-27.14,64.6],{yaw:Math.PI/2,rest:'sit'});await sleep(300);
+ const sat=b.poses.get(a.id);
+ check('rest: a visitor sitting in a lifeboat seat is seen sitting',sat?.rest==='sit'&&Math.abs(sat.pos[0]+120.7)<.01&&Math.abs(sat.pos[2]-64.6)<.01,JSON.stringify(sat&&{pos:sat.pos,rest:sat.rest}));
  // Near and far: a visitor 200 m off hears about a moving one twice a second, a near one ten times.
  const far=new Bot(PORT,{name:'Far'});await far.welcomed();far.pose([-100,-3.7,0]);b.got.clear();far.got.clear();
  for(let i=0;i<30;i++){a.pose([100+i*.3,-3.7,0]);b.pose([104,-3.7,0]);far.pose([-100,-3.7,0]);await sleep(100);}

@@ -79,7 +79,8 @@ export function finishShipArea(area,{root,shell,fit}){
   if(n==='Shuttle_boarding_door'||n==='Lifeboat_helm'){const f=k.face(o),type=n==='Lifeboat_helm'?'lifeboat_detail':'shuttle_detail';f.panel(0,0,f.w*.67,f.h*.45,M.dark,type);f.panel(0,f.h*.08,f.w*.5,f.h*.045,M.blue,type);}
  }
  const ws=[];shell.traverse(o=>{if(o.isMesh)ws.push(o);});
- for(const o of ws)if(/wall|partition|bulkhead/i.test(o.name)&&o.geometry.parameters.width)for(const sign of [-1,1]){const f=lining.face(o,sign);if(f.h>=1&&f.w>=1)f.panel(0,-f.h*.25,f.w*.94,.08,accent,'wall_trim');}
+ // A lifeboat's boarding side carries its own livery band (special-areas.js), not the corridor trim.
+ for(const o of ws)if(/wall|partition|bulkhead/i.test(o.name)&&o.geometry.parameters.width)for(const sign of [-1,1]){if(o.name==='Lifeboat_entry_wall'&&sign===-Math.sign(o.position.z))continue;const f=lining.face(o,sign);if(f.h>=1&&f.w>=1)f.panel(0,-f.h*.25,f.w*.94,.08,accent,'wall_trim');}
  const features=k.finish();for(const [f,n]of Object.entries(modified))features[f]=(features[f]||0)+n;lining.finish();
  root.userData.refinement={revision:1,kind:area.kind,treatment:AREA_TREATMENTS[area.kind],features};polishInterior(fit,area.name+' furnishings');polishInterior(shell,area.name+' lining');root.userData.polish={revision:2,kind:area.kind,furnishings:fit.userData.polish,lining:shell.userData.polish};return root.userData.refinement;
 }
