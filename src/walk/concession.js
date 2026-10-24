@@ -45,7 +45,7 @@ function menu(g,w,h){
  g.textBaseline='middle';g.fillStyle='#ffd27a';g.textAlign='center';g.font='700 64px "Archivo", "Sora", sans-serif';g.fillText('NOW SERVING',w/2,108);
  const items=[['Popcorn','4'],['Nachos','5'],['Star candy','3'],['Fizzy soda','3'],['Hot cocoa','3']];
  g.font='500 46px "Sora", sans-serif';
- items.forEach(([name,price],i)=>{const y=196+i*62;g.fillStyle='#f4ead6';g.textAlign='left';g.fillText(name,100,y);g.fillStyle='#ffb347';g.textAlign='right';g.fillText(price+' cr',w-100,y);
+ items.forEach(([name,price],i)=>{const y=184+i*56;g.fillStyle='#f4ead6';g.textAlign='left';g.fillText(name,100,y);g.fillStyle='#ffb347';g.textAlign='right';g.fillText(price+' cr',w-100,y);
   g.fillStyle='rgba(217,164,65,.35)';g.fillRect(100,y+28,w-200,2);});
 }
 
@@ -62,7 +62,7 @@ export function createConcession(ship){
  const glow=new T.MeshBasicMaterial({name:'Concession_glow',color:0xffc768,toneMapped:false});
  const red=new T.MeshStandardMaterial({name:'Concession_red',color:0x8e1c1c,roughness:.4,metalness:.2});
  const shadeGold=gold.clone();shadeGold.name='Concession_shade';shadeGold.side=T.DoubleSide;
- const glass=new T.MeshStandardMaterial({name:'Concession_glass',color:0xfff4dc,roughness:.05,transparent:true,opacity:.18,depthWrite:false});
+ const glass=new T.MeshStandardMaterial({name:'Concession_glass',color:0xfff4dc,roughness:.05,transparent:true,opacity:.3,depthWrite:false});
  const add=(name,geo,material,at=[0,0,0])=>{const o=new T.Mesh(geo,material);o.name=name;o.position.set(...at);group.add(o);return o;};
  const box=(name,[sx,sy,sz],[x,y,z],material)=>add(name,new T.BoxGeometry(sx,sy,sz),material,[x,y,z]);
  // The L: one leg facing the room (+x), one facing the doorway (+z), meeting at CORNER.
