@@ -12,7 +12,7 @@ const browserKey=()=>storage('leo-live-key',()=>[...crypto.getRandomValues(new U
 export const savedName=()=>storage('leo-live-name')||'';
 export function saveName(name){try{localStorage.setItem('leo-live-name',name);}catch{}}
 
-// on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n), board(b), scored(r)}; status
+// on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n), board(b), scored(r), hearts(h), hearted(r)}; status
 // is 'connecting', 'live',
 // 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). opts.pass(): a Leo pass for this
 // (re)connection or null (connect.js); opts.refused(): the server would not take it; opts.invite: the invite code the
@@ -44,6 +44,9 @@ export function connectLive(url,on,opts={}){
     // Alien Cat Invasion's leaderboard (walk/invasion): the top ten and this visitor's best, and a game's result.
     case 'board':on.board?.(msg);break;
     case 'scored':on.scored?.(msg);break;
+    // The ship log boards (walk/changes-board.js): every change's hearts (and this visitor's own), and a heart refused.
+    case 'hearts':on.hearts?.(msg);break;
+    case 'hearted':on.hearted?.(msg);break;
     case 'full':stopped=true;status('full');break;
     case 'replaced':stopped=true;status('replaced');break;
     case 'reload':stopped=true;status('offline');break;
@@ -73,6 +76,9 @@ export function connectLive(url,on,opts={}){
   play(){if(live())ws.send(JSON.stringify({m:'play'}));},
   score(score,wave){if(live())ws.send(JSON.stringify({m:'score',score,wave}));},
   board(){if(live())ws.send(JSON.stringify({m:'board'}));},
+  // The ship log boards: ask for the hearts; give (on) or take back a heart for a change.
+  hearts(){if(live())ws.send(JSON.stringify({m:'hearts'}));},
+  heart(change,on){if(live())ws.send(JSON.stringify({m:'heart',change,on:!!on}));},
   rename(next){name=next;saveName(next);if(live())ws.send(JSON.stringify({m:'name',name:next}));},
   get live(){return !!live();},
   // How the server has this visitor: {name, verified}.
