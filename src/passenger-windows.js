@@ -5,6 +5,10 @@ import {CENTRAL_ENGINE_WINDOWS,POD_ENGINE_WINDOWS} from './engine-window-plan.js
 import {TessellateModifier} from 'three/addons/modifiers/TessellateModifier.js';
 import logo from './mcv-logo-contours.json' with {type:'json'};
 
+// The fin platforms' glass bands: sill and head above the platform, pane width and pitch (the 0.26 m between panes is
+// exactly the two frames' borders, so neighbouring frames meet without overlapping).
+export const FIN_SILL=.6,FIN_HEAD=3.2,FIN_PANE=2.74,FIN_PITCH=3;
+
 export function addPassengerWindows(exterior,hull,side,surfaceFactory){
  const owner=exterior.getObjectByName('01_EXTERIOR_REFINED_V31')||exterior,root=new T.Group();root.name='V33_passenger_windows_and_identity';root.matrixAutoUpdate=false;root.matrix.copy(owner.matrixWorld).invert();owner.add(root);
  const obsolete=[];exterior.traverse(o=>{if(o.name==='Individual_deck_windows'||o.name==='Feline_mission_crest')obsolete.push(o);});obsolete.forEach(o=>o.removeFromParent());
@@ -50,12 +54,21 @@ export function addPassengerWindows(exterior,hull,side,surfaceFactory){
   if(o.name==='Tail_registry'){const bb=new T.Box3().setFromObject(o);finKeepouts.push({x0:bb.min.x-.5,x1:bb.max.x+.5,y0:bb.min.y-.5,y1:bb.max.y+.5});return;}
   const bins=new Map(),p=o.geometry.attributes.position,v=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);const key=Math.floor(v.y/8);if(!bins.has(key))bins.set(key,new T.Box3());bins.get(key).expandByPoint(v);}for(const bb of bins.values())finKeepouts.push({x0:bb.min.x-.4,x1:bb.max.x+.4,y0:bb.min.y-.4,y1:bb.max.y+.4});
  });
+ // Each fin inspection platform has a tall glass band along both walls, from knee height to well over head: panes on a
+ // 3 m pitch whose frames meet as slim mullions, broken only by the registry and the access hatch. The upper platforms
+ // run on aft of the crown lift, and are glazed there too. The topmost meets the crown just over head height, so its band
+ // takes the tallest head that still gives it three panes under the fin's skin.
+ const finPane=(x0,y0,y1)=>{const x1=x0+FIN_PANE;
+  if(finKeepouts.some(r=>x1>r.x0&&x0<r.x1&&y1>r.y0&&y0<r.y1))return false;
+  if(side((x0+x1)/2,(y0+y1)/2)>finSurface((x0+x1)/2,(y0+y1)/2))return false;
+  return [finSurface(x0-.15,y0-.15),finSurface(x1+.15,y1+.15),finSurface(x0-.15,y1+.15),finSurface(x1+.15,y0-.15)].every(z=>Number.isFinite(z)&&z>1);
+ };
  for(const q of envelope.fin.filter(q=>q.y>=32&&q.y<=128&&(q.y-32)%16===0)){
-  for(let x0=-243;x0<q.b-11;x0+=6){const x1=x0+2.8,y0=q.y+1.25,y1=y0+1.2;
-   if(finKeepouts.some(r=>x1>r.x0&&x0<r.x1&&y1>r.y0&&y0<r.y1))continue;
-   if(side((x0+x1)/2,(y0+y1)/2)>finSurface((x0+x1)/2,(y0+y1)/2))continue;
-   if([finSurface(x0-.15,y0-.15),finSurface(x1+.15,y1+.15),finSurface(x0-.15,y1+.15),finSurface(x1+.15,y0-.15)].every(z=>Number.isFinite(z)&&z>1))finRects.push({x0,x1,y0,y1,floor:q.y,zone:'fin-inspection-platform'});
-  }
+  const slots=[];for(let x0=-243;x0+FIN_PANE<=q.b-8.2;x0+=FIN_PITCH)slots.push(x0);
+  for(let x0=-249.6-FIN_PANE;x0>=Math.min(q.a+6,-249.5)+.2;x0-=FIN_PITCH)slots.push(x0);
+  for(const head of [FIN_HEAD,2.8,2.4]){const y0=q.y+FIN_SILL,y1=q.y+head,panes=slots.filter(x0=>finPane(x0,y0,y1));
+   if(panes.length<3&&head>2.4)continue;
+   for(const x0 of panes)finRects.push({x0,x1:x0+FIN_PANE,y0,y1,floor:q.y,zone:'fin-inspection-platform'});break;}
  }
  for(const m of fin)cutTriangles+=cutWindowApertures(m,finRects);
  addGlazing(root,finRects,finSurface,steel,glass,lining,'V34_fin');

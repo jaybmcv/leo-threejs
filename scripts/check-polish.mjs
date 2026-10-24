@@ -33,7 +33,7 @@ for(const pane of panes){
   for(const [sign,expected]of [[1,outer],[-1,inner]]){ray.set(center.clone().addScaledVector(normal,sign*.05),normal.clone().multiplyScalar(-sign));ray.near=0;ray.far=.1;const hit=ray.intersectObjects(surfaces,false)[0];assert.equal(hit?.object,expected,'Wrong visible tint face '+pane.name);rayTests++;}
  }
 }
-assert.equal(passengerWindows,1382);assert.ok(panes.filter(o=>o.name==='Crown_panoramic_window').length>=60);
+assert.equal(passengerWindows,1440);assert.ok(panes.filter(o=>o.name==='Crown_panoramic_window').length>=60);
 for(const value of [.14,1,.14,1])applyContextOpacity(exterior,value);
 for(const pane of panes)for(const o of pane.children.filter(o=>o.isMesh)){assert.equal(o.material.opacity,o.material.name==='LEO_glass_exterior_tint'?.88:.12);assert.ok(o.material.transparent&&!o.material.depthWrite,'View switch erased window tint');}
 
