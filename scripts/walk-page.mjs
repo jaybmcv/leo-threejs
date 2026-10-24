@@ -4,13 +4,15 @@ import {createHash} from 'node:crypto';
 import {build} from 'esbuild';
 import {planWalk} from './walk-plan.mjs';
 import {PAINTINGS} from '../src/walk/paintings.js';
+import {COMICS} from '../src/walk/comics.js';
 
 // Writes the "Walk around Leo" page (walk.html) and its content-hashed script next to the viewer. The partition plan
 // (src/walk/partitions.js) is worked out here, from the same ship the page builds, and bundled as data, so visitors
 // don't spend seconds rasterizing deck plans. Cosmo comes from the viewer's own hashed cosmo script; his emote clips
 // are a hashed file of their own, fetched the first time one plays.
 // LEO_LIVE_URL, when set, is the Leo live server the page joins (wss://.../live; server/leo-live.mjs); without it the walk
-// is solo. The walk's paintings (src/walk/paintings.js) are hashed files of their own, fetched when a walker comes near.
+// is solo. The walk's paintings (src/walk/paintings.js) and comic pages (src/walk/comics.js) are hashed files of their own,
+// fetched when a walker comes near or opens the book.
 const WALK_SCRIPT=/^walk(-emotes|-map|-hat|-art-[a-z0-9-]+)?\.[0-9a-f]{10}\.(js|json|png|glb|jpg)$/;
 const hashed=(stem,ext,data)=>`${stem}.${createHash('sha256').update(data).digest('hex').slice(0,10)}.${ext}`;
 export async function writeWalkPage(out,{cosmo,manifest}){
@@ -21,7 +23,7 @@ export async function writeWalkPage(out,{cosmo,manifest}){
  const hat=await fs.readFile('src/vendor/captain-hat/captains-hat.glb'),hatName=hashed('walk-hat','glb',hat);
  await fs.writeFile(path.join(out,hatName),hat);
  const art={};
- for(const {file} of PAINTINGS){const data=await fs.readFile('src/walk/art/'+file),name=hashed('walk-art-'+path.parse(file).name,'jpg',data);await fs.writeFile(path.join(out,name),data);art[file]=name;}
+ for(const file of [...PAINTINGS.map(p=>p.file),...COMICS.flatMap(c=>c.pages)]){const data=await fs.readFile('src/walk/art/'+file),name=hashed('walk-art-'+path.parse(file).name,'jpg',data);await fs.writeFile(path.join(out,name),data);art[file]=name;}
  const walk=await planWalk(),plan=JSON.stringify(walk.plan),mapName=hashed('walk-map','png',walk.map);
  await fs.writeFile(path.join(out,mapName),walk.map);
  const partitions={name:'walk-partitions',setup(b){b.onResolve({filter:/^walk-partitions$/},()=>({path:'walk-partitions',namespace:'walk'}));b.onLoad({filter:/.*/,namespace:'walk'},()=>({contents:plan,loader:'json'}));}};

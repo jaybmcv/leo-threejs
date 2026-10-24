@@ -44,6 +44,7 @@ import {readSpot,spotLink} from './link.js';
 import {createSelfieBooth} from './selfie.js';
 import {createInvasion} from './invasion/game.js';
 import {createPaintings} from './paintings.js';
+import {createComics,createComicReader} from './comics.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
@@ -163,8 +164,10 @@ async function buildShip(){
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
  for(const o of [...lifts.signs.children,booth.group])toBand(o);
  // The paintings (paintings.js) span several bands each: they draw while any of them is in view.
- paintings=createPaintings({urls:typeof __ART_URLS__!=='undefined'?__ART_URLS__:{},anisotropy:renderer.capabilities.getMaxAnisotropy()});
+ paintings=createPaintings({urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});
  for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}
+ // The comic books (comics.js) lie on counters and tables, drawn with their deck's band.
+ comics=createComics({urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});for(const g of comics.groups)toBand(g);
  if(cosmoKit)toBand(createHostess(cosmoKit));
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
@@ -178,7 +181,8 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,scope=null,paintings=null;const instanced=[];
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,scope=null,paintings=null,comics=null;
+const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
 // reach, so a tall hall, an atrium or a stairwell shows its full height. The rays skip the first 0.6 m: pressed into a
@@ -222,6 +226,7 @@ const actions={
   else if(t.kind==='waiting')return;
   else if(t.kind==='sit'||t.kind==='lie')settle(t.spot);
   else if(t.kind==='selfie')booth.start();
+  else if(t.kind==='comic'){closePanels();reader.open(t.comic);input.enabled=false;}
   else if(t.kind==='play')arcade.open();
  },
  escape(){closePanels();},
@@ -242,6 +247,7 @@ const actions={
   const open=id=>!$(id).hidden;
   if((code==='KeyB'&&open('emotes'))||(code==='KeyN'&&open('map-sheet'))||(code==='KeyM'&&open('places'))){closePanels();return;}
   if(open('emotes')&&/^Digit[0-9]$/.test(code)){closePanels();actions.emote((+code.slice(5)+9)%10);}
+  if(open('comic-sheet'))reader.key(code);
  },
 };
 let emote=null,pinged=-Infinity;const PING_GAP_MS=4000;
@@ -387,7 +393,7 @@ renderer.setAnimationLoop(()=>{
  cull(p);
  remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
  marks?.update(camera,p,now);
- if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);}
+ if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // The game covers the window: the ship need not be drawn behind it.
@@ -422,11 +428,11 @@ function showPhoto(blob){
 }
 function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a));return a+d*(1-Math.exp(-lambda*dt));}
 
-// What's in front of the walker to use: a lift (call button or car panel) first, then the selfie camera, the telescope,
-// then a seat or bed.
+// What's in front of the walker to use: a lift (call button or car panel) first, then the selfie camera, a comic book,
+// the telescope, then a seat or bed.
 function target(){
  const p=controller.position,l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
- const b=booth.near(p);if(b)return b;
+ const b=booth.near(p)||comics.near(p);if(b)return b;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
  const s=rest.pick(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));
  return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':'Sit down'}:null;
@@ -495,7 +501,7 @@ function toggleEmotes(){
 }
 function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;resting=null;controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet'])$(id).hidden=true;input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet'])$(id).hidden=true;input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
@@ -506,6 +512,8 @@ $('name-connect').addEventListener('click',connect);
 $('name-form').addEventListener('submit',e=>{e.preventDefault();live?.rename($('name-edit').value.trim());closePanels();});
 for(const b of document.querySelectorAll('[data-close]'))b.addEventListener('click',closePanels);
 $('use').addEventListener('click',()=>actions.use());
+// The comic reader (comics.js); Finish on the last page closes it.
+const reader=createComicReader($('comic-sheet'),{urls:artUrls,onClose:closePanels});
 $('go').addEventListener('click',togglePlaces);
 $('view').addEventListener('click',()=>actions.view());
 // The ship's hum and chimes (ambience.js), off until asked for.
