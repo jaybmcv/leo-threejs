@@ -17,7 +17,13 @@
 #   3. points DNS for leo-live.marscatsvoyage.com at the tunnel (that one name only)
 #   4. checks https://leo-live.marscatsvoyage.com/health
 #
-# To update the server: git pull and npm ci here, then  Stop-ScheduledTask LeoLive; Start-ScheduledTask LeoLive
+# To update the server: git pull and npm ci here, then restart it. Stopping the task ends only its console wrapper: the
+# node server keeps running and holds the port, so the new one cannot start and the old one stays live. Stop node too:
+#   Stop-ScheduledTask LeoLive
+#   Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Where-Object { $_.CommandLine -match 'server[\\/]leo-live\.mjs' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+#   Start-ScheduledTask LeoLive
+# (Running this script again does the same, as step 1 below.) When the protocol changes (PROTOCOL in
+# src/walk/net/wire.js), update the server before deploying the site: pages are told to reload if they don't match it.
 # NOTE: Reach's scripts\setup-permanent-link.ps1 sets the tunnel's routes to Reach's alone. If it is ever run again,
 # run this again afterwards to put Leo live's route back.
 param(
