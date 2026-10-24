@@ -191,7 +191,13 @@ The build retains `output/leo-interior-v01/leo-exterior.glb` and verifies its ac
 
 ## Hydro-Nip Lounge — Neighborhood 1 garden commons, Deck 17
 
-Neighborhood 1's garden commons is now the Hydro-Nip Lounge, a catnip lounge. Lounge concept by Tochtli (Discord tochtli_13), from a render by their designer, used for layout and mood only. It has the Anti-Gravity Geodesic Hammock Dome, the Haze Maze glass tower, the Terpene Tasting Deck, the Cosmic Munchies Converger, lounge seating, cat trees, hanging catnip and string lights. The galleries, stairs and shared services are unchanged, and the other nine commons stay gardens. Phase 1 is dressing: the dome and maze are sealed glass, and the stools, beanbags and cushions can be sat on in the walk. Source: `src/hydro-nip-lounge.js`; decisions and coordinates: `HYDRO_NIP_LOUNGE.md`.
+Neighborhood 1's garden commons is now the Hydro-Nip Lounge, a catnip lounge. Lounge concept by Tochtli (Discord tochtli_13), from a render by their designer, used for layout and mood only. It has the Anti-Gravity Geodesic Hammock Dome, the Haze Maze glass tower, the Terpene Tasting Deck, the Cosmic Munchies Converger, lounge seating, cat trees, hanging catnip and string lights. The galleries, stairs and shared services are unchanged, and the other nine commons stay gardens. The stools, beanbags and cushions can be sat on in the walk.
+
+In the walk you can also:
+- Go through the Haze Maze. It's a maze of frosted glass in catnip mist, with cat-shelf stairs up to two platforms, and a glass tube from each platform to the gallery at its height.
+- Walk into the dome and lie in any of its nine swaying hammocks.
+
+Both doors slide open for anyone who comes near. Source: `src/hydro-nip-lounge.js` and `src/walk/lounge.js`; decisions, coordinates and checks (`npm run check:lounge`): `HYDRO_NIP_LOUNGE.md`.
 
 ## Residential nose commons — Decks 6–15
 
