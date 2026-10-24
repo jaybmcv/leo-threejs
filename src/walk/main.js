@@ -35,6 +35,7 @@ import {corridorTrim} from './trim.js';
 import {connectLive,savedName} from './net/live.js';
 import {identify,currentPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
+import {createLounge} from './lounge.js';
 import {Marks} from './marks.js';
 import {createHostess} from './hostess.js';
 import {wearHat,fit,FIT} from './hat.js';
@@ -84,7 +85,11 @@ if(LIVE_URL){
 }
 const renderer=new T.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true,powerPreference:'high-performance'});
 const phone=matchMedia('(pointer:coarse)').matches;
-renderer.setPixelRatio(Math.min(devicePixelRatio,phone?1.25:1.75));renderer.outputColorSpace=T.SRGBColorSpace;
+// Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
+// The Res button steps through them and the choice is remembered for the next visit.
+const RES=['High','Med','Low'],RES_SCALE=[1,.75,.5],RES_KEY='leo-walk-resolution',maxRatio=Math.min(devicePixelRatio,phone?1.25:1.75);
+let res=Math.max(0,RES.indexOf((()=>{try{return localStorage.getItem(RES_KEY);}catch{return null;}})()));
+renderer.setPixelRatio(maxRatio*RES_SCALE[res]);renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
 $('viewport').appendChild(renderer.domElement);
 // A phone short of graphics memory drops the WebGL context: bring the card back with a reason, not a frozen view.
@@ -149,6 +154,8 @@ async function buildShip(){
  const w0=performance.now(),opened=openWindows(ship,walkPlan.windows);clearGlass(ship.root);timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
  lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);corridorTrim(lifts.signs);
  rest=spotIndex(solidSpots(findRestSpots(ship.inside),colliders));
+ // The Hydro-Nip Lounge's doors and hammocks (lounge.js) leave the ship for meshes of their own before the merge below.
+ lounge=createLounge(ship,colliders);
  // The crown lounge's selfie booth (selfie.js): solid, and drawn with its deck band like the signs below.
  booth=createSelfieBooth();colliders.addStatic(booth.group);colliders.commit();
  // The forward observation lounge's telescope plays Alien Cat Invasion (invasion/game.js): where it stands, on its floor.
@@ -163,6 +170,7 @@ async function buildShip(){
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
  for(const o of [...lifts.signs.children,booth.group])toBand(o);
+ if(lounge)for(const o of lounge.drawn)toBand(o);
  // The paintings (paintings.js) span several bands each: they draw while any of them is in view.
  paintings=createPaintings({urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});
  for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}
@@ -181,7 +189,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,scope=null,paintings=null,comics=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,scope=null,paintings=null,lounge=null,comics=null;const bodies=[],eye=new T.Vector3();
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -322,7 +330,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get lounge(){return lounge;},get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -392,6 +400,8 @@ renderer.setAnimationLoop(()=>{
  walker.holder.visible=follow.mode!=='first'&&follow.current>.75;
  cull(p);
  remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
+ // The lounge's doors open for anyone near them.
+ if(lounge){bodies.length=0;bodies.push(p);if(remotes)for(const r of remotes.remotes.values())bodies.push(r.cur);lounge.update(dt,bodies,camera.getWorldPosition(eye));}
  marks?.update(camera,p,now);
  if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
@@ -458,6 +468,8 @@ function settle(spot){
   // The body lies along the bed, the back on the mattress and the head on the near half of the pillow (any further and
   // it meets the headboard); restPose tips the upper body up onto the pillow.
   pos=spot.point.clone().addScaledVector(head,-WALKER.height/2+.25);pos.y=spot.height+.13;
+  // A hammock (lounge.js) has no pillow: the body lies centred along it, clear of the bars at both ends.
+  if(spot.hammock)pos.copy(spot.point).addScaledVector(head,-WALKER.height/2).setY(spot.height+.13);
  }else{
   const face=spot.facing?spot.facing.clone():new T.Vector3(p.x-spot.point.x,0,p.z-spot.point.z);
   if(face.lengthSq()<1e-6)face.set(Math.sin(heading),0,Math.cos(heading));face.normalize();
@@ -472,6 +484,9 @@ function restPose(dt){
  const e=r.t*r.t*(3-2*r.t),h=walker.holder;
  h.position.lerpVectors(r.from.pos,r.to.pos,e);h.rotation.set(0,lerpAngle(r.from.heading,r.to.yaw,Math.min(1,e*1.6)),0);
  walker.body.rotation.set(r.lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.t,.25,1):0,0,0);
+ // In a hammock (lounge.js) the body swings with it.
+ const swing=r.spot.hammock&&lounge?.swingOf(r.spot.hammock);
+ if(swing){const q=new T.Quaternion().setFromAxisAngle(swing.axis,swing.angle*e);h.position.sub(swing.pivot).applyQuaternion(q).add(swing.pivot);h.quaternion.premultiply(q);}
  if(r.phase==='out'&&r.t===0){heading=r.from.heading;controller.place(r.from.pos);resting=null;return null;}
  return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight};
 }
@@ -531,6 +546,10 @@ const arcade=createInvasion({
  },
 });
 sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambience.toggle())));
+// Render resolution, set up with the renderer: each press steps High, Med, Low and round again.
+const resButton=$('resolution'),showRes=()=>{resButton.textContent=`Res ${RES[res]}`;};showRes();
+resButton.addEventListener('click',()=>{res=(res+1)%RES.length;try{localStorage.setItem(RES_KEY,RES[res]);}catch{}
+ renderer.setPixelRatio(maxRatio*RES_SCALE[res]);showRes();});
 // Held for a higher jump, as Space is.
 $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;input.jumpHeld=true;$('jump').setPointerCapture(e.pointerId);});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('jump').addEventListener(type,()=>{input.jumpHeld=false;});

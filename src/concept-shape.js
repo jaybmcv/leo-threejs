@@ -29,6 +29,8 @@ export const shapePoint=([x,y,z])=>[x,y-dropAt(x,y),z];
 // the skin sits up to ~2 m lower than the clamped drop, sliding along its own flat sides (the fillet covers the edge).
 const FIN_ROOT=24.5,FIN_PART=/^(Upright_tail_assembly|V34_fin_)/;
 export const shapeFinPoint=([x,y,z])=>[x,y-FIN_DROP*(y-FIN_ROOT)/(DROP_TO-FIN_ROOT),z];
+// The height a fin part must be built at to land at `y` after that squash.
+export const unshapeFinY=y=>(y-FIN_DROP*FIN_ROOT/(DROP_TO-FIN_ROOT))/(1-FIN_DROP/(DROP_TO-FIN_ROOT));
 const dropFinPart=v=>{v.y-=FIN_DROP*(v.y-FIN_ROOT)/(DROP_TO-FIN_ROOT);};
 // The hull never reaches the drop's zone; skipping its 265k vertices keeps the pass quick.
 const HULL=/^(Smooth_pressure_envelope|Hull_panel_seams)/;

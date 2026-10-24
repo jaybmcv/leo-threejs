@@ -15,7 +15,7 @@ import {transitOpenings,createTransit} from './transit.js';
 import {outlinedSlab,unionRectangles,slabGeometry} from './floor-geometry.js';
 import {hullAt as logicalHullAt,halfWidth as logicalHalfWidth} from './hull-profile.js';
 import {finishedRoofY} from './exterior-profile.js';
-import {clearGarden,createHydroNipLounge} from './hydro-nip-lounge.js';
+import {clearGarden,openRails,createHydroNipLounge} from './hydro-nip-lounge.js';
 export const physicalX=x=>.94*x-18;
 export const logicalX=x=>(x+18)/.94;
 export const hullAt=x=>logicalHullAt(logicalX(x));
@@ -387,7 +387,7 @@ export function createGardenCommons(number,template=createNeighborhood()){
   for(const part of template.gardenParts.walls)walls.add(part.clone(true));
   if(number<9)for(const yy of [28.3,32.3])rail(fittings,[136.8,8],[138.8,8],yy);
   // Neighborhood 1's commons is the Hydro-Nip Lounge (hydro-nip-lounge.js) in place of the garden middle.
-  if(number===1){clearGarden(fittings);clearGarden(walls);fittings.add(createHydroNipLounge({mirror:root.scale.z}));}
+  if(number===1){clearGarden(fittings);clearGarden(walls);openRails(fittings);fittings.add(createHydroNipLounge({mirror:root.scale.z}));}
   const pose=([x,y,z])=>[x+c.x-132,y,z*root.scale.z+root.position.z];
   return {root,walls,fittings,number,overview:{position:pose([174,58,77]),target:pose([132,28,28])},inside:{position:pose([145,26,12]),target:pose([132,28,28])}};
 }
