@@ -187,26 +187,28 @@ export function createHydroNipLounge({mirror=1}={}){
     put(neon(GREEN),new T.TorusGeometry(.53,.025,4,18).applyQuaternion(new T.Quaternion().setFromUnitVectors(new T.Vector3(0,0,1),d)).translate(p.x,p.y,p.z));}}
  }
 
- // The Terpene Tasting Deck: a bar along the maze's flank, a back bar of glowing catnip blends, and stools facing the dome.
- {const z0=21,z1=30,cz=(z0+z1)/2,bx=123.1;
-  box(M.wood,[1,1.02,z1-z0],[bx,FLOOR+.51,cz]);box(M.board,[1.2,.06,z1-z0+.2],[bx,FLOOR+1.05,cz]);
-  for(const y of [FLOOR+.08,FLOOR+.98])box(neon(GREEN),[.02,.025,z1-z0],[bx+.51,y,cz]);
-  box(M.wood,[.45,2.6,z1-z0],[121.55,FLOOR+1.3,cz]);
-  for(const y of [FLOOR+1.15,FLOOR+1.75,FLOOR+2.35])box(M.board,[.5,.04,z1-z0],[121.8,y,cz]);
-  const liquids=[GREEN,AMBER,PURPLE,PINK,CYAN],flask=new T.LatheGeometry([[0,0],[.11,0],[.11,.02],[.04,.17],[.035,.26],[.04,.27]].map(([x,y])=>new T.Vector2(x,y)),8);
-  let n=0;for(const y of [FLOOR+1.17,FLOOR+1.77,FLOOR+2.37])for(let z=z0+.35;z<z1-.2;z+=.62){const k=n++%5,round=n%3===0;
-   if(round){ball(M.glass,.12,[121.82,y+.12,z],1);ball(neon(liquids[k]),.085,[121.82,y+.1,z],0);cyl(M.glass,.03,.03,.14,[121.82,y+.29,z],6,true);}
-   else{put(M.glass,flask.clone().translate(121.82,y,z));put(neon(liquids[k]),new T.ConeGeometry(.095,.12,8).translate(121.82,y+.06,z));}}
+ // The Terpene Tasting Deck: a bar across the back of the room behind the maze, facing the entrance, with a back bar of
+ // glowing catnip blends and stools on the room's side. (It stood along the maze's flank at first and hid the maze.)
+ // Its back bar leaves a 1.25 m way behind it to the reading nook; the kitchen island's chairs start past its end.
+ {const x0=117.5,x1=126.5,cx=(x0+x1)/2,bz=36.1,shelf=37.9,len=x1-x0;
+  box(M.wood,[len,1.02,1],[cx,FLOOR+.51,bz]);box(M.board,[len+.2,.06,1.2],[cx,FLOOR+1.05,bz]);
+  for(const y of [FLOOR+.08,FLOOR+.98])box(neon(GREEN),[len,.025,.02],[cx,y,bz-.51]);
+  box(M.wood,[len,2.6,.45],[cx,FLOOR+1.3,shelf]);
+  for(const y of [FLOOR+1.15,FLOOR+1.75,FLOOR+2.35])box(M.board,[len,.04,.5],[cx,y,shelf-.25]);
+  const liquids=[GREEN,AMBER,PURPLE,PINK,CYAN],flask=new T.LatheGeometry([[0,0],[.11,0],[.11,.02],[.04,.17],[.035,.26],[.04,.27]].map(([x,y])=>new T.Vector2(x,y)),8),fz=shelf-.28;
+  let n=0;for(const y of [FLOOR+1.17,FLOOR+1.77,FLOOR+2.37])for(let x=x0+.35;x<x1-.2;x+=.62){const k=n++%5,round=n%3===0;
+   if(round){ball(M.glass,.12,[x,y+.12,fz],1);ball(neon(liquids[k]),.085,[x,y+.1,fz],0);cyl(M.glass,.03,.03,.14,[x,y+.29,fz],6,true);}
+   else{put(M.glass,flask.clone().translate(x,y,fz));put(neon(liquids[k]),new T.ConeGeometry(.095,.12,8).translate(x,y+.06,fz));}}
   // Tasting flights on the bar top: little glasses of blend on a board.
-  for(let z=z0+1;z<z1-.5;z+=1.8){box(M.wood,[.3,.03,.7],[bx+.15,FLOOR+1.095,z]);for(let i=0;i<4;i++){cyl(M.glass,.03,.025,.09,[bx+.15,FLOOR+1.155,z-.24+i*.16],8,true);cyl(neon(liquids[(i+z|0)%5]),.026,.022,.04,[bx+.15,FLOOR+1.13,z-.24+i*.16],8);}}
+  for(let x=x0+1;x<x1-.5;x+=1.8){box(M.wood,[.7,.03,.3],[x,FLOOR+1.095,bz-.15]);for(let i=0;i<4;i++){cyl(M.glass,.03,.025,.09,[x-.24+i*.16,FLOOR+1.155,bz-.15],8,true);cyl(neon(liquids[(i+x|0)%5]),.026,.022,.04,[x-.24+i*.16,FLOOR+1.13,bz-.15],8);}}
   // A distillery as the centrepiece: a still, its coil and a receiving flask.
-  ball(M.metal,.3,[bx-.05,FLOOR+1.45,cz],1);cyl(M.metal,.05,.05,.5,[bx-.05,FLOOR+1.85,cz],8);
-  put(M.metal,new T.TorusGeometry(.12,.018,4,16,Math.PI*6).rotateX(Math.PI/2).translate(bx-.05,FLOOR+1.55,cz+.5));
-  ball(M.glass,.14,[bx-.05,FLOOR+1.22,cz+.75],1);ball(neon(GREEN),.1,[bx-.05,FLOOR+1.2,cz+.75],0);
-  for(let i=0;i<6;i++){const z=z0+1+i*1.4,x=bx+1.2;
+  ball(M.metal,.3,[cx,FLOOR+1.45,bz+.05],1);cyl(M.metal,.05,.05,.5,[cx,FLOOR+1.85,bz+.05],8);
+  put(M.metal,new T.TorusGeometry(.12,.018,4,16,Math.PI*6).rotateX(Math.PI/2).translate(cx+.5,FLOOR+1.55,bz+.05));
+  ball(M.glass,.14,[cx+.75,FLOOR+1.22,bz+.05],1);ball(neon(GREEN),.1,[cx+.75,FLOOR+1.2,bz+.05],0);
+  for(let i=0;i<6;i++){const x=x0+1+i*1.4,z=bz-1.2;
    seat('Seat',new T.CylinderGeometry(.22,.22,.08,14),M.purple,[x,FLOOR+.76,z]);
    cyl(M.dark,.035,.035,.72,[x,FLOOR+.36,z],6);put(M.dark,new T.TorusGeometry(.18,.015,4,16).rotateX(Math.PI/2).translate(x,FLOOR+.3,z));cyl(M.dark,.2,.2,.03,[x,FLOOR+.015,z],12);}
-  sign({at:[120.6,FLOOR+3.25,cz],normal:[1,0,0],width:6.6,height:1.25,color:GREEN,frame:AMBER,lines:[{text:'THE TERPENE',size:.3},{text:'TASTING DECK',size:.38,color:AMBER}]});
+  sign({at:[cx,FLOOR+3.25,shelf-.3],normal:[0,0,-1],width:6.6,height:1.25,color:GREEN,frame:AMBER,lines:[{text:'THE TERPENE',size:.3},{text:'TASTING DECK',size:.38,color:AMBER}]});
  }
 
  // The Cosmic Munchies Converger: a counter with snack dispensers, and the machine hung from the ceiling, beaming down.
@@ -245,7 +247,7 @@ export function createHydroNipLounge({mirror=1}={}){
   cyl(M.board,.18,.12,.08,[x,FLOOR+.465,z],12);put(M.leaf,new T.SphereGeometry(.15,8,5,0,Math.PI*2,0,Math.PI/2).translate(x,FLOOR+.49,z));}
  [[125.8,15.8,PINK],[131.6,13.6,AMBER],[136,16.8,GREEN],[139.6,15.6,PURPLE],[143.4,17.4,CYAN],[128.8,13.1,AMBER]].forEach(([x,z,c])=>put(neon(c),new T.IcosahedronGeometry(.09,1).translate(x,FLOOR+.11,z)));
  // Cat trees: sisal posts, platforms and a bed on top.
- for(const [x,z,h] of [[125,35.2,2.6],[147,18.6,2.2],[112.6,35.8,1.8]]){
+ for(const [x,z,h] of [[124.6,22.5,2.6],[147,18.6,2.2],[112.6,35.8,1.8]]){
   cyl(M.sisal,.09,.09,h,[x,FLOOR+h/2,z],8);cyl(M.sisal,.07,.07,h*.6,[x+.45,FLOOR+h*.3,z+.2],8);
   cyl(M.wood,.5,.5,.06,[x,FLOOR+.03,z],16);
   for(const [dy,dx,r] of [[h*.38,.3,.32],[h*.68,-.2,.36]])cyl(M.purple,r,r,.05,[x+dx,FLOOR+dy,z],14);
