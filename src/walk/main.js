@@ -45,6 +45,7 @@ import {createSelfieBooth} from './selfie.js';
 import {createInvasion} from './invasion/game.js';
 import {createPaintings} from './paintings.js';
 import {createComics,createComicReader} from './comics.js';
+import {createChangesBoards} from './changes-board.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
@@ -168,6 +169,8 @@ async function buildShip(){
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
  for(const o of [...lifts.signs.children,booth.group])toBand(o);
  // The paintings (paintings.js) span several bands each: they draw while any of them is in view.
+ // The ship log boards (changes-board.js) in the crown lounge and the arrival hall.
+ for(const g of changeLog.groups)toBand(g);
  paintings=createPaintings({urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});
  for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}
  // The comic books (comics.js) lie on counters and tables, drawn with their deck's band.
@@ -232,6 +235,7 @@ const actions={
   else if(t.kind==='selfie')booth.start();
   else if(t.kind==='comic'){closePanels();reader.open(t.comic);input.enabled=false;}
   else if(t.kind==='play')arcade.open();
+  else if(t.kind==='log')changeLog.open();
  },
  escape(){closePanels();},
  // (Nothing below until the walk is ready.)
@@ -256,6 +260,12 @@ const actions={
 };
 let emote=null,pinged=-Infinity;const PING_GAP_MS=4000;
 const ready=()=>document.body.dataset.ready==='1';
+// The ship log boards (changes-board.js): the walk stands still while one is open; its hearts are Leo live's.
+const changeLog=createChangesBoards({
+ onOpen(){closePanels();emote=null;input.enabled=false;},
+ onClose(){input.enabled=true;input.down.clear();},
+ hearts:{request(){live?.hearts();},toggle(id,on){live?.heart(id,on);}},
+});
 
 async function loadCosmo(){
  globalThis.LEO_THREE=T;globalThis.LEO_COSMO_EMOTES=__EMOTES_URL__;
@@ -300,12 +310,13 @@ if(LIVE_URL){
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
-  status:s=>{liveStatus=s;showAboard();},
-  welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);},
+  status:s=>{liveStatus=s;showAboard();changeLog.setStatus(s==='live'?'live':'offline');},
+  welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();},
   poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
   board:b=>arcade.setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>arcade.setResult(r),
+  hearts:h=>changeLog.setHearts(h),hearted:r=>changeLog.refused(r.why),
  },{pass:()=>me.pass?currentPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
@@ -326,7 +337,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -433,10 +444,11 @@ function showPhoto(blob){
 function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a));return a+d*(1-Math.exp(-lambda*dt));}
 
 // What's in front of the walker to use: a lift (call button or car panel) first, then the selfie camera, a comic book,
-// the telescope, then a seat or bed.
+// a ship log board, the telescope, then a seat or bed.
 function target(){
  const p=controller.position,l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
  const b=booth.near(p)||comics.near(p);if(b)return b;
+ const g=changeLog.near(p);if(g)return g;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
  const s=rest.pick(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));
  return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':'Sit down'}:null;

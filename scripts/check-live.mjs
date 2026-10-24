@@ -1,8 +1,9 @@
 // npm run check:live: Leo live (server/leo-live.mjs) against scripted visitors. Starts real servers on spare ports and
 // checks the pose wire, joining, poses reaching others near and far, names, the shared lifts, pings, leaving, a second tab,
 // bad input, the cap on visitors, Leo passes (Discord identity from The Creamery, net/pass.js: here signed by a
-// stand-in key served as a local JWKS), Alien Cat Invasion's leaderboard and, last, sixty visitors walking at once (bytes
-// sent per visitor per second). Each server keeps its scores in a temporary file, never the real board.
+// stand-in key served as a local JWKS), Alien Cat Invasion's leaderboard, the ship log boards' hearts and, last, sixty
+// visitors walking at once (bytes sent per visitor per second). Each server keeps its scores and hearts in temporary
+// files, never the real ones.
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import WebSocket from 'ws';
@@ -78,9 +79,9 @@ await new Promise(r=>jwksServer.listen(0,'127.0.0.1',r));
 const PASS_ENV={LEO_PASS_JWKS_URL:`http://127.0.0.1:${jwksServer.address().port}/keys.json`,LEO_PASS_ISS:ISS};
 
 // ---- a server and some visitors -----------------------------------------------------------------------------------
-const scoresFile=port=>path.join(os.tmpdir(),`leo-live-scores-check-${port}.json`);
+const scoresFile=port=>path.join(os.tmpdir(),`leo-live-scores-check-${port}.json`),heartsFile=port=>path.join(os.tmpdir(),`leo-live-hearts-check-${port}.json`);
 function startServer(port,env={}){
- const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...PASS_ENV,LEO_LIVE_SCORES:scoresFile(port),...env},stdio:['ignore','pipe','pipe']});
+ const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...PASS_ENV,LEO_LIVE_SCORES:scoresFile(port),LEO_LIVE_HEARTS:heartsFile(port),...env},stdio:['ignore','pipe','pipe']});
  child.log='';child.stdout.on('data',d=>{child.log+=d;});
  return new Promise((resolve,reject)=>{child.stdout.on('data',d=>{if(/Leo live on/.test(d))resolve(child);});child.on('exit',c=>reject(new Error('server exited '+c)));setTimeout(()=>reject(new Error('server did not start')),10000);});
 }
@@ -226,6 +227,44 @@ try{
   check('board: the board is still there after the server restarts',kept?.top?.length===2&&kept.top[0].name==='Cal Cat',JSON.stringify(kept?.top));
   back.close();
  }finally{srv.kill();fs.rmSync(scoresFile(port),{force:true});}
+}
+
+// ---- the ship log boards' hearts, on a server of its own --------------------------------------------------------------
+{
+ const port=PORT+5;fs.rmSync(heartsFile(port),{force:true});let srv=await startServer(port);
+ const ask=async(bot,msg,m)=>{const n=bot.msgs.length;bot.send(msg);for(let i=0;i<40&&!bot.msgs.slice(n).some(x=>x.m===m);i++)await sleep(25);return bot.msgs.slice(n).find(x=>x.m===m);};
+ const heard=async(bot,n,test)=>{for(let i=0;i<40;i++){const got=bot.msgs.slice(n).find(x=>x.m==='hearts'&&test(x));if(got)return got;await sleep(25);}return null;};
+ const countOf=(h,id)=>new Map(h?.counts||[]).get(id)||0;
+ try{
+  const guest=new Bot(port,{name:'Guest'}),bea=new Bot(port,{pass:await creamery.sign(claimsFor('777777777777777777','Bea Cat'))}),
+   cal=new Bot(port,{pass:await creamery.sign(claimsFor('888888888888888888','Cal Cat'))});
+  for(const b of [guest,bea,cal])await b.welcomed();
+  const start=await ask(guest,{m:'hearts'},'hearts');
+  check('hearts: anyone aboard can see the hearts, a guest marked not signed in',start?.verified===false&&Array.isArray(start.counts)&&start.counts.length===0,JSON.stringify(start));
+  check("hearts: a guest's heart is refused and they are told to sign in",(await ask(guest,{m:'heart',change:109,on:true},'hearted'))?.why==='sign-in');
+  // Bea gives change 109 a heart: Bea hears it as hers, and Cal and the guest, elsewhere aboard, hear the new count.
+  let nc=cal.msgs.length,ng=guest.msgs.length;
+  const mine=await ask(bea,{m:'heart',change:109,on:true},'hearts');
+  check("hearts: a signed-in visitor's heart is kept and counted as theirs",mine?.verified===true&&countOf(mine,109)===1&&mine.mine.includes(109),JSON.stringify(mine));
+  const calHeard=await heard(cal,nc,h=>countOf(h,109)===1),guestHeard=await heard(guest,ng,h=>countOf(h,109)===1);
+  check("hearts: another visitor's heart reaches everyone else aboard",!!calHeard&&!!guestHeard&&calHeard.mine===undefined,JSON.stringify(calHeard));
+  const again=await ask(bea,{m:'heart',change:109,on:true},'hearts');
+  check('hearts: one heart per change per visitor',countOf(again,109)===1);
+  nc=cal.msgs.length;await ask(cal,{m:'heart',change:109,on:true},'hearts');await ask(cal,{m:'heart',change:47,on:true},'hearts');
+  const both=await ask(bea,{m:'hearts'},'hearts');
+  check('hearts: hearts from different visitors add up, and each sees only their own as theirs',countOf(both,109)===2&&countOf(both,47)===1&&both.mine.join()==='109',JSON.stringify(both));
+  nc=cal.msgs.length;await ask(bea,{m:'heart',change:109,on:false},'hearts');
+  check('hearts: a heart taken back comes off the count for everyone',!!await heard(cal,nc,h=>countOf(h,109)===1));
+  for(const bad of [{change:0,on:true},{change:1.5,on:true},{change:'109',on:true},{change:109},{change:1e6,on:true}])bea.send({m:'heart',...bad});await sleep(300);
+  const after=await ask(bea,{m:'hearts'},'hearts');
+  check('hearts: malformed hearts are ignored',after?.counts.length===2&&countOf(after,109)===1&&countOf(after,47)===1&&bea.closed===null,JSON.stringify(after?.counts));
+  check('hearts: hearts given and taken back are logged',/heart discord:777777777777777777 Bea Cat \+ 109/.test(srv.log)&&/heart discord:777777777777777777 Bea Cat - 109/.test(srv.log));
+  [guest,bea,cal].forEach(b=>b.close());
+  await sleep(1300);srv.kill();srv=await startServer(port);
+  const back=new Bot(port,{pass:await creamery.sign(claimsFor('888888888888888888','Cal Cat'))});await back.welcomed();const kept=await ask(back,{m:'hearts'},'hearts');
+  check('hearts: the hearts are still there after the server restarts',countOf(kept,109)===1&&countOf(kept,47)===1&&kept.mine.sort().join()==='109,47',JSON.stringify(kept));
+  back.close();
+ }finally{srv.kill();fs.rmSync(heartsFile(port),{force:true});}
 }
 
 // ---- the cap on visitors, on a server of its own ------------------------------------------------------------------
