@@ -1,4 +1,4 @@
-import {newGame,step,kick,aim,left,TABLE,R,STEP,POCKETS,HEAD,colorOf,striped} from './rules.js';
+import {newGame,step,kick,aim,left,TABLE,R,STEP,POCKETS,HEAD,colorOf,striped,pocketLook} from './rules.js';
 import {createSound} from './sound.js';
 
 // Paw Pool on screen (POOL.md): a full-window overlay over the walk, like Alien Cat Invasion's, with the table seen from
@@ -37,7 +37,7 @@ export function createPawPool({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
  document.body.appendChild(root);
  const g2=canvas.getContext('2d');
 
- let open=false,screen='title',game=null,raf=0,last=0,acc=0,board={status:'loading',top:[],you:null},result=null,doneAt=0;
+ let open=false,screen='title',game=null,raf=0,last=0,acc=0,board={status:'loading',top:[],you:null},result=null,doneAt=-Infinity;
  let angle=0,charge=0,swing=null,padKick=false;
  const down=new Set();
  const held=k=>KEYS[k].some(c=>down.has(c));
@@ -130,7 +130,7 @@ export function createPawPool({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
   g.strokeStyle='rgba(244,240,232,.45)';g.lineWidth=.06;g.beginPath();g.moveTo(0,-hh);g.lineTo(0,hh);g.stroke();
   g.beginPath();g.arc(0,0,1.5,0,Math.PI*2);g.stroke();
   g.fillStyle='rgba(244,240,232,.6)';for(const x of [HEAD.x,0,-HEAD.x]){g.beginPath();g.arc(x,0,.08,0,Math.PI*2);g.fill();}
-  for(const p of POCKETS){g.fillStyle=C.pocket;g.beginPath();g.arc(p.x,p.y,p.r,0,Math.PI*2);g.fill();g.strokeStyle=C.bronze;g.lineWidth=.06;g.stroke();}
+  for(const p of POCKETS){g.fillStyle=C.pocket;g.beginPath();g.arc(p.x,p.y,pocketLook(p),0,Math.PI*2);g.fill();g.strokeStyle=C.bronze;g.lineWidth=.05;g.stroke();}
  }
  // A ball from above: its colour (a band for 9-15), soccer panels, its number upright in a white disc, a highlight.
  function drawBall(x,y,n,spin=0,turn=view.tall?-Math.PI/2:0){
@@ -188,7 +188,7 @@ export function createPawPool({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
   text('PAW POOL',18,16,22,C.orange,'left',800,FONT.display);text(screen==='play'||screen==='done'?'PRACTICE':'THE RECREATION HALL',18,44,11,C.dim);
   if(game&&screen!=='title'){text(clock(game.t*1000),w/2,12,30,C.text,'center',700);text(`${15-left(game)} OF 15 · ${game.shots} KICK${game.shots===1?'':'S'}`,w/2,48,11,C.dim,'center');}
   // The fifteen: full while on the table, faint once potted.
-  if(game&&w>640){const x0=w-84-15*20;for(let n=1;n<=15;n++){const b=game.balls[n];g2.save();g2.translate(x0+n*20,30);g2.scale(20/(2*R)*.8,20/(2*R)*.8);g2.globalAlpha=b.potted?.22:1;drawBall(0,0,n,0,0);g2.restore();}}
+  if(game&&w>=980){const x0=w-84-15*20;for(let n=1;n<=15;n++){const b=game.balls[n];g2.save();g2.translate(x0+n*20,30);g2.scale(20/(2*R)*.8,20/(2*R)*.8);g2.globalAlpha=b.potted?.22:1;drawBall(0,0,n,0,0);g2.restore();}}
   // The power bar, beside the table.
   if(screen==='play'){
    const barH=Math.min(260,OUTER[view.tall?0:1]*view.k*.7),x=Math.max(10,view.ox-OUTER[view.tall?1:0]/2*view.k-40),y=view.oy-barH/2;
@@ -218,7 +218,7 @@ export function createPawPool({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
   const w=Math.min(460,view.w-32),x=(view.w-w)/2,h=380,y=Math.max(70,view.h/2-h/2);
   panel(x,y,w,h);
   text('RACK CLEARED',view.w/2,y+16,30,C.orange,'center',800,FONT.display);
-  text(clock(game.t*1000),view.w/2,y+56,40,C.text,'center');text(`${game.shots} KICKS`,view.w/2,y+102,12,C.dim,'center');
+  text(clock(game.t*1000),view.w/2,y+56,40,C.text,'center');text(`${game.shots} KICK${game.shots===1?'':'S'}`,view.w/2,y+102,12,C.dim,'center');
   const line=!result?'SAVING…':result.ok?(result.newBest?`NEW BEST! RANK ${result.rank||'-'}`:`YOUR BEST ${clock(result.best)} · RANK ${result.rank||'-'}`):
    result.why==='sign-in'?'SIGN IN WITH DISCORD TO POST TIMES':result.why==='offline'?'OFFLINE: TIME NOT SAVED':'TIME NOT ACCEPTED';
   text(line,view.w/2,y+122,13,result?.ok?C.teal:C.dim,'center');

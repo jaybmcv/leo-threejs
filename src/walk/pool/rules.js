@@ -8,6 +8,8 @@ const HALF_W=TABLE.w/2,HALF_H=TABLE.h/2;
 // that reaches the pocket, or passes the cushion line there, drops.
 export const POCKETS=[[-1,-1],[0,-1],[1,-1],[-1,1],[0,1],[1,1]].map(([sx,sy])=>sx?{x:sx*HALF_W,y:sy*HALF_H,r:.5,corner:true}:{x:0,y:sy*(HALF_H+.1),r:.38,corner:false});
 export const MOUTH={corner:.55,side:.42};
+// How big a pocket is drawn: inside the rails, a little smaller than where a ball starts to drop.
+export const pocketLook=p=>p.corner?.42:.33;
 const ROLL=2.4,DRAG=.22,CUSHION=.78,BOUNCE=.94,STILL=.01;
 export const HEAD={x:-HALF_W/2,y:0},FOOT={x:HALF_W/2,y:0};
 // Ball colours, 1-7 solid, 9-15 striped with the same colours, 8 black.

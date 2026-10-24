@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {TABLE,R,POCKETS,MOUTH,HEAD,rack,colorOf,striped} from './rules.js';
+import {TABLE,R,POCKETS,MOUTH,HEAD,rack,colorOf,striped,pocketLook} from './rules.js';
 
 // Paw Pool's table in the Recreation Hall (POOL.md): a pool table laid flat on the activity floor and filling it, low
 // navy rails a little over knee height (too high to step over, so it is solid to walk into), six pockets, and the
@@ -64,10 +64,10 @@ export function createPoolTable(carpet){
  }
  // The pockets: dark wells with bronze rims, corner blocks behind the corner pockets and a housing behind each side
  // pocket, which also keeps a walker from slipping through the gap there.
- const rim=r=>new T.RingGeometry(r,r+.06,40).rotateX(-Math.PI/2),disc=r=>new T.CircleGeometry(r,40).rotateX(-Math.PI/2);
+ const rim=r=>new T.RingGeometry(r-.05,r,40).rotateX(-Math.PI/2),disc=r=>new T.CircleGeometry(r,40).rotateX(-Math.PI/2);
  for(const p of POCKETS){
-  add('Paw_pool_pocket',disc(p.r),well,p.x,FELT+.004,p.y,false);
-  add('Paw_pool_pocket_inlay',rim(p.r),bronze,p.x,FELT+.006,p.y,false);
+  add('Paw_pool_pocket',disc(pocketLook(p)),well,p.x,FELT+.004,p.y,false);
+  add('Paw_pool_pocket_inlay',rim(pocketLook(p)),bronze,p.x,FELT+.006,p.y,false);
   if(p.corner)box3('Paw_pool_corner',rw,RAIL_H,rw,navy,Math.sign(p.x)*(hw+rw/2),RAIL_H/2,Math.sign(p.y)*(hh+rw/2));
   else box3('Paw_pool_pocket_housing',2*MOUTH.side+.1,RAIL_H,rw*.5,navy,0,RAIL_H/2,Math.sign(p.y)*(hh+rw*.75));
  }
