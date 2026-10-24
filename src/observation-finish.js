@@ -175,24 +175,59 @@ export function finishCrownLounge(root,y){
  const b=name.boundingBox,fitScale=Math.min(1,.9/(b.max.x-b.min.x));
  name.translate(-(b.max.x+b.min.x)/2,-(b.max.y+b.min.y)/2,0);name.scale(fitScale,fitScale,1);
  add('Lobby_sign_lettering',name,[-250.2,y+1.25,3.732],'dark').castShadow=false;
- // A two-tier bronze chandelier hangs from the ceiling rib over the middle of the bar, clear of heads and the halo.
- const cx=-232,top=y+4.92,parts={brass:[],light:[],crystal:[]},o=new T.Object3D();
- const part=(kind,geo,p,rot=[0,0,0],sy=1)=>{o.position.set(...p);o.rotation.set(...rot);o.scale.set(1,sy,1);o.updateMatrix();parts[kind].push(geo.applyMatrix4(o.matrix));};
- part('brass',new T.CylinderGeometry(.24,.24,.06,24),[cx,top-.03,0]);
- part('brass',new T.CylinderGeometry(.022,.022,.82,12),[cx,top-.47,0]);
- part('brass',new T.SphereGeometry(.15,20,14),[cx,y+3.97,0]);
- part('brass',new T.CylinderGeometry(.05,.1,.55,20),[cx,y+3.66,0]);
- for(const [r,h,n] of [[1.05,y+3.95,12],[.62,y+3.52,8]]){
-  part('brass',new T.TorusGeometry(r,.022,8,64),[cx,h,0],[Math.PI/2,0,0]);
-  for(let k=0;k<n;k++){
-   const a=(k+.5)/n*Math.PI*2,c=Math.cos(a),s=Math.sin(a);
-   part('brass',new T.BoxGeometry(r,.024,.024),[cx+c*r/2,h,s*r/2],[0,-a,0]);
-   part('brass',new T.CylinderGeometry(.045,.045,.05,12),[cx+c*r,h+.04,s*r]);
-   part('light',new T.SphereGeometry(.055,12,8),[cx+c*r,h+.12,s*r],undefined,1.5);
+ // A two-tier bronze chandelier hangs from the ceiling rib over the middle of the bar, clear of heads and the halo;
+ // smaller copies hang from the ribs over the seating groups below.
+ const top=y+4.92,parts={brass:[],light:[],crystal:[]},o=new T.Object3D();
+ const chandelier=(cx,cz,q=1)=>{
+  // Heights scale toward the rib, so a smaller copy still hangs from it.
+  const part=(kind,geo,[px,py,pz],rot=[0,0,0],sy=1)=>{o.position.set(cx+(px-cx)*q,top-(top-py)*q,cz+pz*q);o.rotation.set(...rot);o.scale.set(q,sy*q,q);o.updateMatrix();parts[kind].push(geo.applyMatrix4(o.matrix));};
+  part('brass',new T.CylinderGeometry(.24,.24,.06,24),[cx,top-.03,0]);
+  part('brass',new T.CylinderGeometry(.022,.022,.82,12),[cx,top-.47,0]);
+  part('brass',new T.SphereGeometry(.15,20,14),[cx,y+3.97,0]);
+  part('brass',new T.CylinderGeometry(.05,.1,.55,20),[cx,y+3.66,0]);
+  for(const [r,h,n] of [[1.05,y+3.95,12],[.62,y+3.52,8]]){
+   part('brass',new T.TorusGeometry(r,.022,8,64),[cx,h,0],[Math.PI/2,0,0]);
+   for(let k=0;k<n;k++){
+    const a=(k+.5)/n*Math.PI*2,c=Math.cos(a),s=Math.sin(a);
+    part('brass',new T.BoxGeometry(r,.024,.024),[cx+c*r/2,h,s*r/2],[0,-a,0]);
+    part('brass',new T.CylinderGeometry(.045,.045,.05,12),[cx+c*r,h+.04,s*r]);
+    part('light',new T.SphereGeometry(.055,12,8),[cx+c*r,h+.12,s*r],undefined,1.5);
+   }
+   for(let k=0;k<n*2;k++){const a=k/(n*2)*Math.PI*2;part('crystal',new T.OctahedronGeometry(.045),[cx+Math.cos(a)*r,h-.13,Math.sin(a)*r],undefined,2);}
   }
-  for(let k=0;k<n*2;k++){const a=k/(n*2)*Math.PI*2;part('crystal',new T.OctahedronGeometry(.045),[cx+Math.cos(a)*r,h-.13,Math.sin(a)*r],undefined,2);}
- }
- part('crystal',new T.OctahedronGeometry(.09),[cx,y+3.25,0],undefined,1.8);
+  part('crystal',new T.OctahedronGeometry(.09),[cx,y+3.25,0],undefined,1.8);
+ };
+ chandelier(-232,0);
+ // Four red velvet seating groups, a sofa with its back to the windows, two armchairs and a low table, stand in the
+ // open floor between the bar stools and the window promenade, clear of the lift lobby, the bar and the banquettes.
+ // Each has its own colour: a glowing ring around a small chandelier and an underglow below the sofa. They are
+ // emissive only, with no real lights, to keep the frame rate on slower laptops.
+ const velvet=new T.MeshStandardMaterial({name:'Crown_finish red velvet fabric',color:0x8e1424,roughness:1});
+ const glows=[0xff3366,0x9b5cff,0x38c8ff,0xff4fd2].map((c,i)=>new T.MeshStandardMaterial({name:'Crown_finish accent glow '+i,color:c,emissive:c,emissiveIntensity:1.4,roughness:.6}));
+ const seats={velvet:[],brass:[],stone:[],glow:glows.map(()=>[])};
+ const piece=(kind,geo,p,turn,at,i)=>{o.position.set(...p).applyAxisAngle(T.Object3D.DEFAULT_UP,turn).add(at);o.rotation.set(0,turn,0);o.scale.set(1,1,1);o.updateMatrix();(kind==='glow'?seats.glow[i]:seats[kind]).push(geo.applyMatrix4(o.matrix));};
+ // A seat faces local -z: base, cushion, back and arms, on a recessed plinth that glows.
+ const seat=(w,at,turn,i)=>{
+  const rb=(sx,sy,sz)=>new RoundedBoxGeometry(sx,sy,sz,2,.06);
+  piece('velvet',rb(w,.3,.86),[0,.27,0],turn,at);
+  piece('velvet',rb(w-.3,.14,.66),[0,.47,-.06],turn,at);
+  piece('velvet',rb(w,.62,.22),[0,.66,.33],turn,at);
+  for(const sx of [-1,1])piece('velvet',rb(.2,.58,.86),[sx*(w/2-.1),.41,0],turn,at);
+  piece('brass',new T.BoxGeometry(w-.3,.12,.6),[0,.06,0],turn,at);
+  piece('glow',new T.BoxGeometry(w+.08,.02,.98),[0,.01,0],turn,at,i);
+ };
+ [[-240,1],[-240,-1],[-224,1],[-224,-1]].forEach(([gx,s],i)=>{
+  const at=(x,z)=>new T.Vector3(x,y,z),tz=s*9.4;
+  seat(2.3,at(gx,s*11),s>0?0:Math.PI,i);
+  for(const dx of [-1,1])seat(.9,at(gx+dx*1.65,tz),dx*Math.PI/2,i);
+  piece('stone',new T.CylinderGeometry(.55,.55,.05,32),[0,.43,0],0,at(gx,tz));
+  piece('brass',new T.CylinderGeometry(.18,.3,.4,24),[0,.2,0],0,at(gx,tz));
+  piece('glow',new T.TorusGeometry(.56,.015,6,48).rotateX(Math.PI/2),[0,.43,0],0,at(gx,tz),i);
+  chandelier(gx,tz,.7);
+  piece('glow',new T.TorusGeometry(2.1,.03,8,96).rotateX(Math.PI/2),[0,4.35,0],0,at(gx,tz),i);
+ });
+ for(const kind of ['velvet','brass','stone'])add('Lounge_'+(kind==='velvet'?'red_seating':kind==='brass'?'seating_frame':'seating_tables'),mergeGeometries(seats[kind]),[0,0,0],kind==='velvet'?'clay':kind).material=kind==='velvet'?velvet:m[kind];
+ seats.glow.forEach((list,i)=>{const g=add('Seating_glow_light',mergeGeometries(list),[0,0,0],'light');g.material=glows[i];g.castShadow=false;});
  const crystal=new T.MeshStandardMaterial({name:'Crown_finish crystal',color:0xfff4e2,emissive:0xffd8a8,emissiveIntensity:.35,roughness:.08,metalness:.1});
  for(const [kind,name] of [['brass','Chandelier_frame'],['light','Chandelier_light_bulbs'],['crystal','Chandelier_glass_drops']]){
   const g=mergeGeometries(parts[kind]);parts[kind].forEach(g=>g.dispose());const mesh=add(name,g,[0,0,0],kind==='crystal'?'light':kind);if(kind==='crystal')mesh.material=crystal;
