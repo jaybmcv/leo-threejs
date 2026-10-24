@@ -44,6 +44,7 @@ import {readSpot,spotLink} from './link.js';
 import {createSelfieBooth} from './selfie.js';
 import {createInvasion} from './invasion/game.js';
 import {createPaintings} from './paintings.js';
+import {createTheatre} from './theatre.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
@@ -156,6 +157,8 @@ async function buildShip(){
  booth=createSelfieBooth();colliders.addStatic(booth.group);colliders.commit();
  // The forward observation lounge's telescope plays Alien Cat Invasion (invasion/game.js): where it stands, on its floor.
  {const base=ship.root.getObjectByName('Shared_telescope_base');if(base){base.updateWorldMatrix(true,false);scope=base.getWorldPosition(new T.Vector3());scope.y-=.325;}}
+ // The Deck 16 theatre's cinema dressing (theatre.js), before baking so the pieces it hides stay out.
+ theatre=createTheatre(ship,{url:typeof __REEL_URL__!=='undefined'?__REEL_URL__:'',anisotropy:renderer.capabilities.getMaxAnisotropy()});
  status('Dressing the crew…');await idle();
  if(cosmoKit)globalThis.LeoCosmo.dressCats(ship.inside,cosmoKit);
  status('Preparing the walk…');await idle();
@@ -170,6 +173,7 @@ async function buildShip(){
  paintings=createPaintings({urls:typeof __ART_URLS__!=='undefined'?__ART_URLS__:{},anisotropy:renderer.capabilities.getMaxAnisotropy()});
  for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}
  if(cosmoKit)toBand(createHostess(cosmoKit));
+ if(theatre)toBand(theatre.group);
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
@@ -182,7 +186,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,scope=null,paintings=null;const instanced=[];
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,scope=null,paintings=null,theatre=null;const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
 // reach, so a tall hall, an atrium or a stairwell shows its full height. The rays skip the first 0.6 m: pressed into a
@@ -391,7 +395,7 @@ renderer.setAnimationLoop(()=>{
  cull(p);
  remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
  marks?.update(camera,p,now);
- if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);}
+ if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);theatre?.update(p);}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // The game covers the window: the ship need not be drawn behind it.
