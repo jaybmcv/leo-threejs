@@ -19,6 +19,9 @@ export const PAINTINGS=[
  // Orange Haze #5: the far wall of the Deck 2 transfer branch, seen through the arrival hall's exit (z -40 to -36) and
  // centred on it, from the threshold (-35.67) to the branch ceiling (-32.4). Portrait, so the wall shows either side.
  {name:'Orange_Haze_5',file:'orange-haze-5.jpg',size:[1195,1600],wall:[-148,-34.035,-38],facing:[1,0,0],fit:[4,2.95],floor:-35.67},
+ // Orange Haze #6: the recessed bay on the port side of the Deck 15 cross-corridor junction (x 122.9, z -2 to -8.44),
+ // centred in it, from just over the floor (16.3) to just under the corridor soffit (19.65) that fronts the bay.
+ {name:'Orange_Haze_6',file:'orange-haze-6.jpg',size:[1600,1195],wall:[122.9,18.025,-5.22],facing:[1,0,0],fit:[6,2.95],floor:16.3},
 ];
 export const NEAR=45,FRAME={width:.14,depth:.08};
 // A painting's hung width and height: as large as its fit box allows at the image's proportions.
