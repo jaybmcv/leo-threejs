@@ -2,7 +2,7 @@ import * as T from 'three';
 import {DECKS} from '../model.js';
 import {marsSurface} from '../mars.js';
 import {LIFTS,carTriangles} from './lifts.js';
-import {liftState,callLift,stepLift,applyLiftWire} from './lift-motion.js';
+import {liftState,callLift,stepLift,followLift} from './lift-motion.js';
 import {liftDisplay,stopShort,landingSigns,liftDisplayMount,callLight} from './signs.js';
 
 // Working lifts for walk mode. Each shaft gets a car that travels between its stops and a pair of sliding landing doors
@@ -161,12 +161,13 @@ export function createLifts(scene,colliders){
   // Send a lift to stop `index`; its call light there stays lit until the car arrives. `now`: chosen in the car.
   call(l,index,opts){callLift(l,index,opts);rides.onCall?.(l,index,opts);},
   // A lift's state as the server has it (multiplayer). The server's car is a little ahead of or behind this page's,
-  // so its word moves the car; whoever stands in it moves too. Left behind, a rider 0.7 m under a car the server put
-  // higher stopped counting as aboard and fell down the shaft (feedback-inbox #50, #52, #73-#75).
+  // so close by on the way the page keeps stepping its own car (followLift); further off, its word moves the car and
+  // whoever stands in it. Left behind, a rider 0.7 m under a car the server put higher stopped counting as aboard and
+  // fell down the shaft (feedback-inbox #50, #52, #73-#75).
   apply(id,wire){
    const l=lifts.find(l=>l.spec.id===id);if(!l)return;
-   const aboard=walker&&inside(l,walker.position),before=l.y;applyLiftWire(l,wire);
-   if(aboard&&l.y!==before){walker.position.y+=l.y-before;walker.velocity.y=0;}
+   const aboard=walker&&inside(l,walker.position),moved=followLift(l,wire);
+   if(aboard&&moved){walker.position.y+=moved;walker.velocity.y=0;}
   },
   // Advance the cars and doors; `w` is the controller, carried along when standing in a moving car.
   update(dt,w){

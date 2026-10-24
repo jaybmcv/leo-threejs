@@ -9,6 +9,7 @@ import {randomBytes} from 'node:crypto';
 import WebSocket from 'ws';
 import {encodeRecord,encodeIdentity,assembleFrame,decodeFrame,WireReader,actorIdOf,PROTOCOL} from '../src/walk/net/wire.js';
 import {LIFTS} from '../src/walk/lifts.js';
+import {liftState,callLift,stepLift,followLift,applyLiftWire} from '../src/walk/lift-motion.js';
 import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -161,6 +162,25 @@ try{
  check('lifts: the car comes to the landing that called it',!!arrived&&!arrived.s.calls.includes(stop),arrived?`after ${(b.lifts.indexOf(arrived))} updates`:'never');
  tab.send({m:'call',lift:'forward-port',stop:999});tab.send({m:'call',lift:'nowhere',stop:1});await sleep(200);
  check('lifts: calls to stops that do not exist are ignored',tab.closed===null);
+ // A ride as the rider's page sees it: the rider chooses Deck 1 in the car, the page steps its own car every frame and
+ // hears the server 60-200 ms late (a real connection's lag, which comes and goes). The car must go one way all the way
+ // down, never hopping back up.
+ {
+  const mine=liftState(spec),back=spec.stops.findIndex(s=>s.deck===1),heard=[],LAG=120;let lags=0;
+  b.ws.on('message',(data,binary)=>{if(binary)return;const m=JSON.parse(data);if(m.m==='lift'&&m.id==='forward-port')heard.push({t:Math.max(heard.at(-1)?.t||0,Date.now()+(lags++%2?200:60)),s:m.s});});
+  const settled=()=>b.lifts.filter(l=>l.id==='forward-port').at(-1).s;for(let i=0;i<50&&settled().phase!=='open';i++)await sleep(100);
+  // `old` takes the server's word as it comes, as pages did before: each word put the car back where the server had it.
+  const old=liftState(spec);applyLiftWire(mine,settled());applyLiftWire(old,settled());
+  callLift(mine,back,{now:true});callLift(old,back,{now:true});await sleep(LAG);tab.send({m:'call',lift:'forward-port',stop:back,now:true});
+  let last=Date.now(),hop=0,snap=0,moves=0,dir=Math.sign(spec.stops[back].y-mine.y),done=false;
+  for(let i=0;i<2000&&!done;i++){
+   await sleep(16);const now=Date.now(),dt=Math.min(.1,(now-last)/1000),before=mine.y;last=now;
+   stepLift(mine,spec.stops,dt);let was=old.y;stepLift(old,spec.stops,dt);snap=Math.max(snap,(was-old.y)*dir);
+   while(heard.length&&now>=heard[0].t){const w=heard.shift().s;moves+=w.phase==='moving';followLift(mine,w);was=old.y;applyLiftWire(old,w);snap=Math.max(snap,(was-old.y)*dir);}
+   hop=Math.max(hop,(before-mine.y)*dir);done=mine.at===back&&mine.phase==='open'&&!heard.length;
+  }
+  check("lifts: a rider's car rides smoothly on the server's word, with no hop back",done&&moves>=3&&hop<.01,`${moves} updates on the way; largest step back ${hop.toFixed(3)} m; snapping to the server as before hopped back ${snap.toFixed(2)} m`);
+ }
  // Pings: passed on to everyone else, checked, and only so many.
  tab.send({m:'mark',at:[10.123,-3.7,2]});await sleep(200);
  const marks=()=>b.msgs.filter(m=>m.m==='mark'&&m.id===tab.id);
