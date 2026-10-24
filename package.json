@@ -13,7 +13,8 @@
     "check:walk": "node --max-old-space-size=8000 scripts/check-walk.mjs",
     "live": "node server/leo-live.mjs",
     "check:live": "node scripts/check-live.mjs",
-    "check:invasion": "node scripts/check-invasion.mjs"
+    "check:invasion": "node scripts/check-invasion.mjs",
+    "check:lounge": "node --max-old-space-size=8000 scripts/check-lounge.mjs"
   },
   "dependencies": {
     "three": "0.185.1",

@@ -7,7 +7,7 @@ const SEAT=/^(Repeated_)?(Seat|Seat_cushion|Soft_seat|Passenger_bench|Garden_ben
 // Parts that sit under a cushion: used only where no cushion covers them.
 const SEAT_BASE=/^(Seat_base|Garden_bench|Passenger_bench_seat)$/;
 const BACK=/(^|_)(Back|back)$|_back_|Seat_back|Bench_back|banquette_back/;
-const BED=/^(Repeated_)?(Single_mattress|Mattress)$/;
+const BED=/^(Repeated_)?(Single_mattress|Mattress|Hammock)$/;
 const PILLOW=/^(Repeated_)?Pillow$/;
 export const SPACING=.65;
 const worldVisible=o=>{for(let p=o;p;p=p.parent)if(!p.visible&&!p.userData.baked)return false;return true;};
@@ -64,6 +64,11 @@ export function findRestSpots(root){
  for(const it of beds){
   const {c,ax,az}=it.face,long=ax.length()>=az.length()?ax:az;const pillow=near(c,'pillow',1.4);
   let head=long.clone().normalize();if(pillow&&pillow.face.c.clone().sub(c).dot(head)<0)head.negate();
+  // A hammock (the Hydro-Nip Lounge's dome) hangs from its rim: you lie in the bottom of its sag, which is the mesh's
+  // own origin less the sag, and it can swing (the walk's lounge.js), so the spot keeps the mesh.
+  if(it.o.name==='Hammock'){const b=it.o.geometry.boundingBox,low=c.clone();low.y=new T.Vector3(0,b.min.y,0).applyMatrix4(it.m).y;
+   if(it.o.userData.head){head=new T.Vector3(...it.o.userData.head).transformDirection(it.m);head.y=0;head.normalize();}
+   spots.push({kind:'lie',point:low,head,length:long.length()*2,height:low.y,hammock:it.o});continue;}
   spots.push({kind:'lie',point:c.clone(),head,length:long.length()*2,height:c.y});
  }
  return spots;
