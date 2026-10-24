@@ -13,12 +13,14 @@ export const PAINTINGS=[
  // centred on it, from the threshold (-35.67) to the branch ceiling (-32.4). Portrait, so the wall shows either side.
  {name:'Orange_Haze_5',file:'orange-haze-5.jpg',size:[1195,1600],wall:[-148,-34.035,-38],facing:[1,0,0],fit:[4,2.95],floor:-35.67},
 ];
-const NEAR=45,FRAME={width:.14,depth:.08};
+export const NEAR=45,FRAME={width:.14,depth:.08};
+// A painting's hung width and height: as large as its fit box allows at the image's proportions.
+export function hangSize(p){const aspect=p.size[0]/p.size[1],h=Math.min(p.fit[1],p.fit[0]/aspect);return [h*aspect,h];}
 
 export function createPaintings({urls={},anisotropy=1}={}){
  const frame=new T.MeshStandardMaterial({name:'Painting_frame',color:0x1c1a18,roughness:.55,metalness:.2});
  const pieces=PAINTINGS.map(p=>{
-  const aspect=p.size[0]/p.size[1],h=Math.min(p.fit[1],p.fit[0]/aspect),w=h*aspect,[x,y,z]=p.wall,f=new T.Vector3(...p.facing);
+  const [w,h]=hangSize(p),[x,y,z]=p.wall,f=new T.Vector3(...p.facing);
   // The group's origin on the floor, so it draws with the bands its height spans.
   const group=new T.Group();group.name='Painting_'+p.name;group.position.set(x,p.floor,z);group.rotation.y=Math.atan2(f.x,f.z);
   group.userData={band:bandOf(y-h/2),top:bandOf(y+h/2)};
