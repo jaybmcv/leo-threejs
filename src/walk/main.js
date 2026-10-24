@@ -251,7 +251,7 @@ const actions={
   else if(t.kind==='selfie')booth.start();
   else if(t.kind==='comic'){closePanels();reader.open(t.comic);input.enabled=false;}
   else if(t.kind==='play')arcade.open();
-  else if(t.kind==='log')changeLog.open();
+  else if(t.kind==='log')changeLog.open({near:controller.position});
   else if(t.kind==='pool')pool.open();
  },
  escape(){closePanels();},
@@ -261,6 +261,8 @@ const actions={
  crouch(){if(ready()&&!resting){controller.toggle('crouch');emote=null;}},
  prone(){if(ready()&&!resting){controller.toggle('prone');emote=null;}},
  emotes(){if(ready())toggleEmotes();},
+ // The ship log from anywhere aboard, starting on the changes made around the walker (changes-board.js).
+ log(){if(ready())openLog();},
  // Respawn: back to the arrival hall from anywhere aboard, off any seat or bed.
  respawn(){if(ready()){closePanels();emote=null;goTo({at:START.position.toArray(),yaw:START.yaw});for(const y of yarns)y.reset();}},
  // A ping where you stand, for others aboard to find (marks.js); one every few seconds at most.
@@ -278,11 +280,14 @@ const actions={
 let emote=null,pinged=-Infinity;const PING_GAP_MS=4000;
 const ready=()=>document.body.dataset.ready==='1';
 // The ship log boards (changes-board.js): the walk stands still while one is open; its hearts are Leo live's.
+// Go there in a change's details drops the walker where its pictures were taken, looking as they do.
 const changeLog=createChangesBoards({
  onOpen(){closePanels();emote=null;input.enabled=false;},
  onClose(){input.enabled=true;input.down.clear();},
+ onGo(spot){if(!goTo({at:spot.at,yaw:spot.yaw}))return false;emote=null;follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;return true;},
  hearts:{request(){live?.hearts();},toggle(id,on){live?.heart(id,on);}},
 });
+function openLog(){const p=controller.position;changeLog.open({near:p,nearFirst:changeLog.nearby(p).length>0});}
 
 async function loadCosmo(){
  globalThis.LEO_THREE=T;globalThis.LEO_COSMO_EMOTES=__EMOTES_URL__;
@@ -479,6 +484,10 @@ function target(){
 const touch=matchMedia('(pointer:coarse)').matches;
 function hud(p){
  $('where').textContent=describe(p);
+ // The changes made around here, for the ship log's chip.
+ const near=changeLog.nearby(p).length,chip=$('changes-here');
+ if(chip.dataset.count!==String(near)){chip.dataset.count=String(near);chip.hidden=!near;chip.querySelector('b').textContent=String(near);
+  chip.querySelector('span').textContent=near===1?' change here':' changes here';chip.setAttribute('aria-label',`${near} change${near===1?'':'s'} made around here: open the ship log`);}
  const t=resting?{label:resting.lie?'Get up':'Stand up'}:target();
  const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=!show||touch;
  // Waiting for a called lift there's nothing to press: the prompt just says where the car is.
@@ -532,6 +541,10 @@ function openLiftPanel(l){
 function togglePlaces(){
  const panel=$('places');if(!panel.hidden){closePanels();return;}
  const list=panel.querySelector('.stops');list.textContent='';
+ // Every change made to Leo, with its before and after: the ship log, which the keyboard opens with L.
+ const log=document.createElement('button');log.type='button';log.className='log';
+ log.append(Object.assign(document.createElement('b'),{textContent:'Ship log'}),Object.assign(document.createElement('span'),{textContent:'Every change to Leo, before and after, and a way there'}));
+ log.onclick=()=>{closePanels();openLog();};list.appendChild(log);
  for(const place of PLACES){const b=document.createElement('button');b.type='button';b.append(Object.assign(document.createElement('b'),{textContent:place.name}),Object.assign(document.createElement('span'),{textContent:place.detail}));
   b.onclick=()=>{goTo(place);closePanels();};list.appendChild(b);}
  panel.hidden=false;input.enabled=false;
@@ -559,6 +572,7 @@ $('use').addEventListener('click',()=>actions.use());
 // The comic reader (comics.js); Finish on the last page closes it.
 const reader=createComicReader($('comic-sheet'),{urls:artUrls,onClose:closePanels});
 $('go').addEventListener('click',togglePlaces);
+$('changes-here').addEventListener('click',()=>{if(ready())openLog();});
 $('view').addEventListener('click',()=>actions.view());
 // The ship's hum and chimes (ambience.js), off until asked for.
 const ambience=createAmbience(),sound=$('sound');sound.setAttribute('aria-pressed',String(ambience.on));
