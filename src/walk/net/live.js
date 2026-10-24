@@ -12,7 +12,8 @@ const browserKey=()=>storage('leo-live-key',()=>[...crypto.getRandomValues(new U
 export const savedName=()=>storage('leo-live-name')||'';
 export function saveName(name){try{localStorage.setItem('leo-live-name',name);}catch{}}
 
-// on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n)}; status is 'connecting', 'live',
+// on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n), board(b), scored(r)}; status
+// is 'connecting', 'live',
 // 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). opts.pass(): a Leo pass for this
 // (re)connection or null (connect.js); opts.refused(): the server would not take it; opts.invite: the invite code the
 // page was opened with; opts.hat(): whether this visitor wears the captain's hat (a tester).
@@ -40,6 +41,9 @@ export function connectLive(url,on,opts={}){
     case 'lift':on.lift?.(msg.id,msg.s);break;
     case 'mark':on.mark?.(msg.id,msg.at);break;
     case 'aboard':on.aboard?.(msg.n);break;
+    // Alien Cat Invasion's leaderboard (walk/invasion): the top ten and this visitor's best, and a game's result.
+    case 'board':on.board?.(msg);break;
+    case 'scored':on.scored?.(msg);break;
     case 'full':stopped=true;status('full');break;
     case 'replaced':stopped=true;status('replaced');break;
     case 'reload':stopped=true;status('offline');break;
@@ -58,13 +62,17 @@ export function connectLive(url,on,opts={}){
    if(!live()||now-sentAt<SEND_MS)return;
    const text=JSON.stringify({m:'pose',p});
    // Unchanged to the centimetre and the degree: only a keepalive now and then.
-   const same=JSON.stringify([p.pos.map(v=>Math.round(v*100)),Math.round(p.yaw*57),p.g,p.st,p.jc,p.e,p.rest]);
+   const same=JSON.stringify([p.pos.map(v=>Math.round(v*100)),Math.round(p.yaw*57),p.g,p.st,p.jc,p.e,p.rest,p.pl]);
    if(same===last&&now-lastAt<STILL_MS)return;
    last=same;lastAt=now;sentAt=now;ws.send(text);
   },
   call(lift,stop,now){if(live())ws.send(JSON.stringify({m:'call',lift,stop,now:!!now}));},
   // A ping where the walker stands, for everyone else aboard (walk/marks.js).
   mark(at){if(live())ws.send(JSON.stringify({m:'mark',at}));},
+  // Alien Cat Invasion: a game starts (the server times it), a game's score, and a request for the board.
+  play(){if(live())ws.send(JSON.stringify({m:'play'}));},
+  score(score,wave){if(live())ws.send(JSON.stringify({m:'score',score,wave}));},
+  board(){if(live())ws.send(JSON.stringify({m:'board'}));},
   rename(next){name=next;saveName(next);if(live())ws.send(JSON.stringify({m:'name',name:next}));},
   get live(){return !!live();},
   // How the server has this visitor: {name, verified}.

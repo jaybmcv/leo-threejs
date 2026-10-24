@@ -104,7 +104,8 @@ export class RemotePlayers{
    if(now-r.clearAt>250){r.clearAt=now;const d=p.clone().sub(eye),len=d.length();this.ray.set(eye,d.divideScalar(len));const hit=this.colliders.raycast(this.ray,len);r.clear=!hit||hit.distance>len-.4;}
    p.project(camera);
    if(!r.label){r.label=document.createElement('div');r.label.className='remote-name';this.labelLayer.appendChild(r.label);}
-   const text=r.name||'Voyager '+r.id.slice(-4);if(r.label.textContent!==text)r.label.textContent=text;
+   // At the lounge telescope's game, the name says so.
+   const text=(r.name||'Voyager '+r.id.slice(-4))+(r.tgt?.playing?' · playing':'');if(r.label.textContent!==text)r.label.textContent=text;
    // A teal dot: the name is their Discord name, vouched for by The Creamery.
    r.label.classList.toggle('verified',r.verified);
    r.label.hidden=!r.clear||p.z>1;
