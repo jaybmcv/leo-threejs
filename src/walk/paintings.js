@@ -9,6 +9,9 @@ export const PAINTINGS=[
  // Orange Haze #2, by M.V. Orange Haze: the forward wall of the Deck 17 starboard garden commons, between the
  // galleries' rails (z 12) and the stair landing's (z 33), the floor (24.3) and the roof rib (34.92).
  {name:'Orange_Haze_2',file:'orange-haze-2.jpg',size:[1600,1195],wall:[154.44,29.8,22.5],facing:[-1,0,0],fit:[18,9.4],floor:24.3},
+ // Orange Haze #9: the outboard wall of the Deck 2 arrival hall, centred on the aisle between the benches (x -117.5),
+ // floor (-35.7) to ceiling (-32.4).
+ {name:'Orange_Haze_9',file:'orange-haze-9.jpg',size:[1600,1223],wall:[-117.5,-34.05,-54.84],facing:[0,0,1],fit:[20,2.95],floor:-35.7},
 ];
 const NEAR=45,FRAME={width:.14,depth:.08};
 
