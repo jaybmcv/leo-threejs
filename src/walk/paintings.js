@@ -4,11 +4,16 @@ import {bandOf} from './collision.js';
 // Paintings hung on the walk's walls. Each is one entry: its image (src/walk/art, hashed into the build by
 // scripts/walk-page.mjs), the wall face's point it centres on, the way it faces, and the largest box the wall leaves it
 // clear of rails and trim. It hangs as large as that box allows at the image's own proportions, in a slim dark frame.
+// An entry with `off` stands that far out from the wall, its frame boxed back to it, to hang clear of wall fittings.
 // The image loads only once a walker comes within NEAR metres; until then the canvas shows plain.
 export const PAINTINGS=[
  // Orange Haze #2, by M.V. Orange Haze: the forward wall of the Deck 17 starboard garden commons, between the
  // galleries' rails (z 12) and the stair landing's (z 33), the floor (24.3) and the roof rib (34.92).
  {name:'Orange_Haze_2',file:'orange-haze-2.jpg',size:[1600,1195],wall:[154.44,29.8,22.5],facing:[-1,0,0],fit:[18,9.4],floor:24.3},
+ // Orange Haze #10, by M.V. Orange Haze: the aft wall of the Deck 5 side corridor (x -148), facing the Medical ward's
+ // doorway (z -40 to -36) and centred on it, from near the floor (-23.7) to near the ceiling (-20.4). The corridor's end
+ // wall at z -40 sets its width; it stands 17 cm out, in front of the wall's pipes, handrail and hatch.
+ {name:'Orange_Haze_10',file:'orange-haze-10.jpg',size:[1600,1202],wall:[-148,-22.05,-38],facing:[1,0,0],fit:[3.62,3],floor:-23.7,off:.17},
 ];
 const NEAR=45,FRAME={width:.14,depth:.08};
 
@@ -20,10 +25,10 @@ export function createPaintings({urls={},anisotropy=1}={}){
   const group=new T.Group();group.name='Painting_'+p.name;group.position.set(x,p.floor,z);group.rotation.y=Math.atan2(f.x,f.z);
   group.userData={band:bandOf(y-h/2),top:bandOf(y+h/2)};
   const box=(name,s,at)=>{const o=new T.Mesh(new T.BoxGeometry(...s),frame);o.name=name;o.position.set(...at);group.add(o);};
-  const W=FRAME.width,D=FRAME.depth,cy=y-p.floor;
+  const W=FRAME.width,D=FRAME.depth+(p.off||0),cy=y-p.floor;
   for(const s of [-1,1]){box('Painting_frame_rail',[w+2*W,W,D],[0,cy+s*(h+W)/2,D/2]);box('Painting_frame_stile',[W,h,D],[s*(w+W)/2,cy,D/2]);}
   const canvas=new T.MeshBasicMaterial({name:'Painting_canvas',color:0xe2d8c6});
-  const art=new T.Mesh(new T.PlaneGeometry(w,h),canvas);art.name='Painting_art_'+p.name;art.position.set(0,cy,D*.6);group.add(art);
+  const art=new T.Mesh(new T.PlaneGeometry(w,h),canvas);art.name='Painting_art_'+p.name;art.position.set(0,cy,D-FRAME.depth*.4);group.add(art);
   group.updateMatrixWorld(true);
   return {p,group,canvas,centre:new T.Vector3(x,y,z),url:urls[p.file],loading:false};
  });
