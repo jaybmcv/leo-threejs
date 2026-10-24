@@ -5,6 +5,8 @@ import {polishInterior} from './interior-polish.js';
 const mat=(name,color,roughness=.65,metalness=0)=>new T.MeshStandardMaterial({name:'Finish_'+name,color,roughness,metalness});
 export const FINISH_M={dark:mat('graphite',0x263d49),steel:mat('alloy',0x97aaa9,.35,.65),oak:mat('oak',0xa98762),linen:mat('linen',0xdedaca,.95),sage:mat('sage',0x668477,1),amber:mat('amber',0xd9b272),blue:mat('clinical_blue',0x89b8c4),ink:mat('display',0xb9e2dc),green:mat('leaf',0x58825f,.95)};
 const M=FINISH_M;
+const FOOD={lettuce:mat('lettuce',0x6fae4a,.8),tomato:mat('tomato',0xd8442e,.45),carrot:mat('carrot',0xe8862a,.6),crust:mat('bread_crust',0xb9783a,.85),cheese:mat('cheese',0xf0c95a,.6),curry:mat('curry',0xd9902c,.7),pasta:mat('pasta',0xf2d48a,.75),roast:mat('roast',0x7a3e24,.7),grape:mat('grape',0x6b3a7a,.4),cream:mat('cream',0xfbf3e4,.7),berry:mat('berry_icing',0xe77fa4,.6),cocoa:mat('cocoa',0x4a2a1c,.6),
+ glass:new T.MeshStandardMaterial({name:'Finish_buffet_guard_glass',color:0xd4e6ec,roughness:.08,transparent:true,opacity:.2,depthWrite:false,side:T.DoubleSide})};
 // Batch fine details in their source item's coordinate system. Keeping the
 // source transform also keeps rotated consoles, cabins and machinery aligned.
 export function detailKit(root,label,spatial=false){
@@ -19,6 +21,49 @@ export function detailKit(root,label,spatial=false){
  }
  function finish(){for(const {m,f,gs} of batches.values()){const g=mergeGeometries(gs);gs.forEach(g=>g.dispose());const o=new T.Mesh(g,m);o.name='Refined_'+f;o.receiveShadow=true;root.add(o);}root.userData.refinement={revision:1,label,features};return features;}
  return {add,box,bounds,face,finish,features};
+}
+// A buffet along the whole dining counter: salads, breads and cheese, fruit and desserts on the
+// countertop, hot dishes in pans on the service stations, behind a glass sneeze guard on the diners' side.
+function buffet(k,top,b,c,s,stations){
+ const f='buffet',y0=b.max.y,front=-Math.sign(top.position.z)||-1,zf=c.z+front*s.z*.12;
+ const cyl=(r1,r2,h,p,m,seg=14)=>k.add(top,new T.CylinderGeometry(r1,r2,h,seg).translate(...p),m,f);
+ const ball=(r,p,m,sy=1,sx=1)=>k.add(top,new T.SphereGeometry(r,9,6).scale(sx,sy,sx).translate(...p),m,f);
+ // Station footprints in the countertop's frame; the stations share its parent.
+ const hot=stations.map(o=>{const p=o.geometry.parameters;return {x:o.position.x-top.position.x,w:p.width,y:o.position.y-top.position.y+p.height/2};});
+ const onStation=x=>hot.find(h=>Math.abs(x-h.x)<h.w/2+.25);
+ const x0=b.min.x+.45,x1=b.max.x-.45,slots=Math.floor((x1-x0)/.62);
+ for(let i=0;i<=slots;i++){
+  const x=x0+i*(x1-x0)/slots,t=(x-x0)/(x1-x0),h=onStation(x);
+  if(h){
+   // Hot dishes: steel pans set into the station, each with its food and a serving spoon.
+   if(Math.abs(x-h.x)>h.w/2-.28)continue;
+   const y=h.y,fill=[FOOD.curry,FOOD.pasta,FOOD.roast,FOOD.carrot][i%4];
+   k.box(top,[.5,.07,.34],[x,y+.035,zf],M.steel,f);k.box(top,[.44,.03,.28],[x,y+.06,zf],fill,f);
+   k.add(top,new T.CylinderGeometry(.012,.012,.36,6).rotateX(.9).translate(x+.14,y+.18,zf+.05),M.steel,f);continue;
+  }
+  const y=y0,v=i%3;
+  if(t<.22){// Salads: bowls of leaves with tomatoes, carrots and cheese.
+   cyl(.2,.13,.1,[x,y+.05,zf],M.linen);ball(.17,[x,y+.1,zf],FOOD.lettuce,.42);
+   for(let j=0;j<5;j++){const a=j*1.3+i;ball(.035,[x+Math.cos(a)*.1,y+.16,zf+Math.sin(a)*.1],[FOOD.tomato,FOOD.carrot,FOOD.cheese][(j+v)%3]);}
+  }else if(t<.44){// Breads and cheese on boards.
+   k.box(top,[.5,.03,.32],[x,y+.015,zf],M.oak,f);
+   if(v<2)for(const dx of [-.12,.12])ball(.09,[x+dx,y+.08,zf],FOOD.crust,.6,1.5-v*.4);
+   else for(let j=0;j<3;j++)k.box(top,[.12,.08,.1],[x-.15+j*.15,y+.07,zf],FOOD.cheese,f);
+  }else if(t<.66){// Fruit platters.
+   cyl(.24,.2,.03,[x,y+.015,zf],M.linen);
+   for(let j=0;j<7;j++){const a=j*.9+i,r=j?.13:0;ball(j%3?.055:.07,[x+Math.cos(a)*r,y+.08+(j?0:.04),zf+Math.sin(a)*r],[FOOD.tomato,FOOD.carrot,M.green,FOOD.grape][(j+v)%4]);}
+  }else{// Desserts: layer cakes on stands and trays of cupcakes.
+   if(v===1){cyl(.03,.05,.14,[x,y+.07,zf],M.steel);cyl(.2,.2,.02,[x,y+.15,zf],M.linen);
+    [FOOD.cocoa,FOOD.cream,FOOD.berry,FOOD.cream].forEach((m,j)=>cyl(.15,.15,.05,[x,y+.185+j*.05,zf],m,18));ball(.025,[x,y+.4,zf],FOOD.tomato);}
+   else{k.box(top,[.48,.02,.32],[x,y+.01,zf],M.steel,f);
+    for(const dx of [-.15,0,.15])for(const dz of [-.08,.08]){cyl(.05,.04,.06,[x+dx,y+.05,zf+dz],FOOD.cocoa,10);ball(.05,[x+dx,y+.1,zf+dz],v?FOOD.berry:FOOD.cream,.7);}}
+  }
+ }
+ // Plate stacks at each end and a glass sneeze guard on steel posts along the diners' side.
+ for(const x of [b.min.x+.18,b.max.x-.18])for(let j=0;j<8;j++)cyl(.13,.11,.018,[x,y0+.01+j*.02,zf],M.linen,16);
+ const zg=c.z+front*(s.z/2-.05),gy=Math.max(.58,...hot.map(h=>h.y+.42)),posts=Math.ceil(s.x/2.4);
+ for(let j=0;j<=posts;j++)k.add(top,new T.CylinderGeometry(.015,.015,gy,8).translate(b.min.x+.1+j*(s.x-.2)/posts,y0+gy/2,zg),M.steel,f);
+ k.box(top,[s.x-.2,.012,.38],[c.x,y0+gy,zg-front*.17],FOOD.glass,f+'_glass');k.box(top,[s.x-.2,gy*.5,.012],[c.x,y0+gy*.72,zg],FOOD.glass,f+'_glass');
 }
 export const AREA_TREATMENTS={cargo:'cargo_restraints',stores:'inventory_labels',cold:'cabinet_hardware',pharmacy:'inventory_labels',workshop:'tool_storage',community:'tool_storage',logistics:'display_graphics',control:'display_graphics',arrival:'upholstery',security:'screening_equipment',airlock:'locker_hardware',baggage:'conveyor_detail',farm:'grow_lighting',nursery:'grow_lighting',harvest:'wash_station',kitchen:'cookware',air:'machine_grilles',thermal:'machine_grilles',water:'vessel_instruments',recycle:'machine_grilles',power:'cabinet_hardware',ward:'patient_services',isolation:'patient_services',surgery:'patient_services',clinic:'patient_services',imaging:'diagnostic_detail',counseling:'upholstery',shelter:'upholstery',classroom:'desk_equipment',library:'inventory_labels',gym:'fitness_equipment',recreation:'games',theater:'upholstery',childcare:'play_furniture',dining:'table_settings',navigation:'display_graphics',mission:'display_graphics',communications:'display_graphics',crew:'table_settings',briefing:'table_settings',data:'rack_hardware',captain:'table_settings',securityops:'display_graphics',bridge:'display_graphics',reactor:'module_instruments',drivefeed:'pump_detail',enginecontrol:'display_graphics',engineworkshop:'workbench_detail',engineaccess:'hatch_detail',hangar:'shuttle_detail',lifeboats:'lifeboat_detail'};
 export function finishShipArea(area,{root,shell,fit}){
@@ -45,6 +90,7 @@ export function finishShipArea(area,{root,shell,fit}){
   if(/^(Shared_table|Meeting_table|Crew_lounge_table)$/.test(n)&&['dining','crew','briefing','captain'].includes(area.kind))for(const dx of [-.25,.25]){
    k.box(o,[Math.min(.65,s.x*.2),.018,Math.min(.4,s.z*.3)],[c.x+dx*s.x,b.max.y+.013,c.z],M.linen,'table_settings');k.add(o,new T.CylinderGeometry(.065,.065,.11,12).translate(c.x+dx*s.x,b.max.y+.072,c.z+.11),M.steel,'table_settings');
   }
+  if(n==='Countertop'&&area.kind==='dining')buffet(k,o,b,c,s,sources.filter(m=>m.name==='Meal_service_station'));
   if(n==='Shelf'&&area.kind==='library')for(const side of [-1,1])for(const dx of [-1.6,0,1.6])k.box(o,[.32,.06,.006],[c.x+dx,c.y,c.z+side*(s.z/2+.004)],M.linen,'inventory_labels');
   if(/^(Secured_cargo_container|Supply_crate)$/.test(n)){
    const f=k.face(o,1),type=n==='Secured_cargo_container'?'cargo_restraints':'inventory_labels';f.panel(-f.w*.2,0,f.w*.24,f.h*.26,M.linen,type);
