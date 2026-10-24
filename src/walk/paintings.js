@@ -9,6 +9,10 @@ export const PAINTINGS=[
  // Orange Haze #2, by M.V. Orange Haze: the forward wall of the Deck 17 starboard garden commons, between the
  // galleries' rails (z 12) and the stair landing's (z 33), the floor (24.3) and the roof rib (34.92).
  {name:'Orange_Haze_2',file:'orange-haze-2.jpg',size:[1600,1195],wall:[154.44,29.8,22.5],facing:[-1,0,0],fit:[18,9.4],floor:24.3},
+ // Orange Haze #4, by M.V. Orange Haze: the far port wall of the Deck 17 window lounge. That wall is a twisted sheet (lounge.js): its
+ // upper, aft part stands upright and its lower, forward part leans back. The painting fills the upright part, from
+ // the rear wall (x 170) to where the lean would leave its corner 20 cm off the wall, and up to the ceiling ribs.
+ {name:'Orange_Haze_4',file:'orange-haze-4.jpg',size:[1600,1195],wall:[173.234,30.427,-40.139],facing:[-.2118,0,.9773],fit:[6,4.48],floor:26.3},
 ];
 const NEAR=45,FRAME={width:.14,depth:.08};
 
