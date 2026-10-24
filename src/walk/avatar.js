@@ -20,7 +20,8 @@ function liePose(bone){
   aim(bone('shin.'+side),bone('foot.'+side),new T.Vector3(out*.02,-1,.04));
   aim(bone('upper_arm.'+side),bone('forearm.'+side),new T.Vector3(out*.2,-1,.04));
   aim(bone('forearm.'+side),bone('hand.'+side),new T.Vector3(out*.12,-1,.28));
-  turn(bone('foot.'+side),X,-20);
+  // Feet relaxed, toes eased along the legs (pulled up to the shins, they looked braced).
+  turn(bone('foot.'+side),X,30);
  }
  turn(bone('spine.006'),X,-8);
  for(const [i,deg] of [[1,-90],[2,-10]])turn(bone('Tail_springBone_'+i),X,deg);
