@@ -135,19 +135,72 @@ function arrow(c,x,y,angle,size,color){
  c.save();c.translate(x,y);c.rotate(angle);c.fillStyle=color;c.beginPath();
  c.moveTo(size,0);c.lineTo(0,-size*.8);c.lineTo(0,-size*.32);c.lineTo(-size,-size*.32);c.lineTo(-size,size*.32);c.lineTo(0,size*.32);c.lineTo(0,size*.8);c.closePath();c.fill();c.restore();
 }
-// Signs with the same wording share one material.
+// Small icons beside each cell's wording, centred on (x,y) in a box `s` across, by room kind.
+const ICON_KIND={dining:'dining',kitchen:'dining',ward:'medical',clinic:'medical',surgery:'medical',imaging:'medical',pharmacy:'medical',
+ counseling:'medical',isolation:'medical',farm:'garden',nursery:'garden',harvest:'garden',cargo:'cargo',stores:'cargo',logistics:'cargo',
+ cold:'cold',arrival:'luggage',baggage:'luggage',airlock:'airlock',security:'shield',shelter:'shield',workshop:'gear',air:'gear',
+ thermal:'gear',recycle:'gear',control:'gear',power:'power',water:'water',classroom:'book',library:'book',theater:'screen',
+ childcare:'star',gym:'gym',recreation:'ball',community:'people'};
+function icon(c,name,x,y,s,color){
+ const u=s/2;c.save();c.translate(x,y);c.strokeStyle=c.fillStyle=color;c.lineWidth=Math.max(3,s*.11);c.lineCap=c.lineJoin='round';
+ const path=p=>{c.beginPath();c.moveTo(p[0]*u,p[1]*u);for(let i=2;i<p.length;i+=2)c.lineTo(p[i]*u,p[i+1]*u);};
+ const line=(...p)=>{path(p);c.stroke();},fill=(...p)=>{path(p);c.closePath();c.fill();};
+ const ring=(cx,cy,r,solid)=>{c.beginPath();c.arc(cx*u,cy*u,r*u,0,Math.PI*2);solid?c.fill():c.stroke();};
+ const box=(x0,y0,w,h,r=.15)=>{c.beginPath();c.roundRect(x0*u,y0*u,w*u,h*u,r*u);c.stroke();};
+ const star=(n,outer,inner)=>{c.beginPath();for(let i=0;i<n*2;i++){const a=-Math.PI/2+i*Math.PI/n,r=(i%2?inner:outer)*u;c.lineTo(Math.cos(a)*r,Math.sin(a)*r);}c.closePath();c.fill();};
+ switch(name){
+  case 'lift':box(-.62,-.9,1.24,1.8);fill(0,-.62,.32,-.14,-.32,-.14);fill(0,.62,.32,.14,-.32,.14);break;
+  case 'stairs':line(-.9,.8,-.45,.8,-.45,.3,0,.3,0,-.2,.45,-.2,.45,-.7,.9,-.7);break;
+  case 'dining':line(-.5,-.85,-.5,.85);line(-.78,-.85,-.78,-.35,-.22,-.35,-.22,-.85);
+   c.beginPath();c.moveTo(.45*u,.85*u);c.lineTo(.45*u,-.85*u);c.quadraticCurveTo(.9*u,-.4*u,.45*u,.05*u);c.stroke();break;
+  case 'medical':fill(-.25,-.85,.25,-.85,.25,-.25,.85,-.25,.85,.25,.25,.25,.25,.85,-.25,.85,-.25,.25,-.85,.25,-.85,-.25,-.25,-.25);break;
+  case 'garden':c.beginPath();c.moveTo(-.7*u,.7*u);c.quadraticCurveTo(-.8*u,-.8*u,.8*u,-.8*u);c.quadraticCurveTo(.7*u,.6*u,-.7*u,.7*u);c.stroke();line(-.85,.85,.2,-.2);break;
+  case 'cargo':box(-.85,-.6,1.7,1.4,.08);line(-.85,-.15,.85,-.15);line(-.2,-.6,-.2,-.15);line(.2,-.6,.2,-.15);break;
+  case 'cold':for(let i=0;i<3;i++){const a=i*Math.PI/3,dx=Math.cos(a)*.9,dy=Math.sin(a)*.9;line(-dx,-dy,dx,dy);}break;
+  case 'luggage':box(-.85,-.4,1.7,1.25);line(-.35,-.4,-.35,-.8,.35,-.8,.35,-.4);break;
+  case 'airlock':ring(0,0,.85);ring(0,0,.4);line(-.4,0,.4,0);break;
+  case 'shield':c.beginPath();c.moveTo(0,-.9*u);c.lineTo(.75*u,-.6*u);c.quadraticCurveTo(.75*u,.5*u,0,.9*u);c.quadraticCurveTo(-.75*u,.5*u,-.75*u,-.6*u);c.closePath();c.stroke();break;
+  case 'gear':star(8,.92,.66);c.globalCompositeOperation='destination-out';ring(0,0,.3,true);c.globalCompositeOperation='source-over';break;
+  case 'power':fill(.2,-.95,-.6,.1,-.05,.1,-.2,.95,.6,-.1,.05,-.1);break;
+  case 'water':c.beginPath();c.moveTo(0,-.9*u);c.quadraticCurveTo(.7*u,-.05*u,.6*u,.35*u);c.arc(0,.35*u,.6*u,0,Math.PI);c.quadraticCurveTo(-.7*u,-.05*u,0,-.9*u);c.fill();break;
+  case 'book':line(0,-.55,0,.75);line(0,-.55,-.85,-.75,-.85,.55,0,.75,.85,.55,.85,-.75,0,-.55);break;
+  case 'screen':box(-.9,-.7,1.8,1.3);fill(-.25,-.38,-.25,.28,.32,-.05);break;
+  case 'star':star(5,.95,.4);break;
+  case 'gym':line(-.6,0,.6,0);line(-.6,-.55,-.6,.55);line(.6,-.55,.6,.55);line(-.88,-.3,-.88,.3);line(.88,-.3,.88,.3);break;
+  case 'ball':ring(0,0,.85);c.beginPath();c.arc(-1.2*u,0,1.05*u,-.75,.75);c.stroke();c.beginPath();c.arc(1.2*u,0,1.05*u,Math.PI-.75,Math.PI+.75);c.stroke();break;
+  case 'people':for(const dx of [-.42,.42]){ring(dx,-.4,.26,true);c.beginPath();c.arc(dx*u,.75*u,.42*u,Math.PI,0);c.fill();}break;
+ }
+ c.restore();
+}
+// A cell's wording: one line if it fits at a readable size, otherwise split into two.
+function label(c,text,x,y,max){
+ fit(c,text,`600 SIZE ${FONT.display}`,30,max);
+ if(parseInt(/(\d+)px/.exec(c.font)[1])>=22||!text.includes(' ')){c.fillText(text,x,y);return;}
+ const words=text.split(' '),halves=i=>[words.slice(0,i).join(' '),words.slice(i).join(' ')];let best=1;
+ for(let i=2;i<words.length;i++){const [a,b]=halves(i),[p,q]=halves(best);if(Math.abs(a.length-b.length)<Math.abs(p.length-q.length))best=i;}
+ const [a,b]=halves(best);fit(c,a.length>b.length?a:b,`600 SIZE ${FONT.display}`,25,max);c.fillText(a,x,y-13);c.fillText(b,x,y+14);
+}
+// Signs with the same wording share one material. A cell reads its arrow, its icons, then its wording, in from the
+// sign's edge; the cell ahead fills the middle third.
+const ICON=34,GAP=8;
 const directions=new Map();
 function directionMaterial(cells){
  const key=JSON.stringify(cells);let m=directions.get(key);if(m)return m;
  const {texture}=canvasTexture(768,96,(c,w,h)=>{
   panel(c,w,h,INK);c.textBaseline='middle';const third=w/3,y=h/2+2;
   c.fillStyle='rgba(255,255,255,.16)';for(const x of [third,2*third])c.fillRect(x-1,14,2,h-28);
-  const [left,ahead,right]=cells;
-  if(left){arrow(c,34,y,Math.PI,16,left.color);c.fillStyle=TEXT;c.textAlign='left';fit(c,left.text,`600 SIZE ${FONT.display}`,30,third-80);c.fillText(left.text,62,y);}
+  const [left,ahead,right]=cells,icons=cell=>cell.icons||[];
+  if(left){arrow(c,30,y,Math.PI,15,left.color);let x=56;
+   for(const i of icons(left)){icon(c,i,x+ICON/2,y,ICON,left.color);x+=ICON+GAP;}
+   c.fillStyle=TEXT;c.textAlign='left';label(c,left.text,x+4,y,third-x-18);}
   if(ahead){c.textAlign='center';
-   if(ahead.arrow){arrow(c,third+30,y,-Math.PI/2,16,ahead.color);c.fillStyle=TEXT;fit(c,ahead.text,`600 SIZE ${FONT.display}`,30,third-80);c.fillText(ahead.text,third*1.5+14,y);}
+   if(ahead.arrow){let x=third+18;arrow(c,x+14,y,-Math.PI/2,15,ahead.color);x+=40;
+    for(const i of icons(ahead)){icon(c,i,x+ICON/2,y,ICON,ahead.color);x+=ICON+GAP;}
+    c.fillStyle=TEXT;label(c,ahead.text,(x+2*third-14)/2,y,2*third-14-x);}
    else{c.fillStyle=DIM;c.font=`500 26px ${FONT.mono}`;c.letterSpacing='5px';c.fillText(ahead.text,third*1.5,y);c.letterSpacing='0px';}}
-  if(right){arrow(c,w-34,y,0,16,right.color);c.fillStyle=TEXT;c.textAlign='right';fit(c,right.text,`600 SIZE ${FONT.display}`,30,third-80);c.fillText(right.text,w-62,y);}
+  if(right){arrow(c,w-30,y,0,15,right.color);let x=w-56;
+   for(const i of icons(right)){icon(c,i,x-ICON/2,y,ICON,right.color);x-=ICON+GAP;}
+   c.fillStyle=TEXT;c.textAlign='right';label(c,right.text,x-4,y,x-2*third-18);}
  });
  m=new T.MeshBasicMaterial({map:texture,toneMapped:false});directions.set(key,m);return m;
 }
@@ -161,18 +214,21 @@ function hang(parent,material,back,at,facing,width,ceiling){
  const drop=ceiling-h/2;for(const s of [-1,1]){const rod=new T.Mesh(rodGeometry,signBody);rod.scale.y=drop;rod.position.set(s*width*.4,h/2+drop/2,0);g.add(rod);}
  parent.add(g);return g;
 }
-const LIFTS={fore:'Forward lifts',aft:'Aft lifts'};
+// The lift cells show lift and stairs icons: each core holds both.
+const LIFTS={fore:'Forward lifts',aft:'Aft lifts'},CORE=['lift','stairs'];
 export function corridorSigns(parent){
- const roomName=id=>SHIP_AREAS.find(a=>a.id===id)?.name||'';
+ const area=id=>SHIP_AREAS.find(a=>a.id===id),roomName=id=>area(id)?.name||'';
  const lifts=TEAL,rooms=ORANGE,height=2.8,ceiling=3.3-height;
  for(let deck=1;deck<=20;deck++){
   const plan=serviceRoutes(deck);if(!plan)continue;
   const {x0:spineStart}=plan.spine,cores=TRANSIT_CORES.filter(c=>deck<=c.lastDeck);
-  const coreAhead=(x,d)=>cores.some(c=>(c.x-x)*d>0)?{text:LIFTS[d>0?'fore':'aft'],color:lifts,arrow:true}:null;
+  const coreAhead=(x,d)=>cores.some(c=>(c.x-x)*d>0)?{text:LIFTS[d>0?'fore':'aft'],color:lifts,icons:CORE,arrow:true}:null;
   const tag={text:`DECK ${deck}`};
   for(const b of plan.branches){
-   const port=b.entries.filter(e=>e.z<0).map(e=>roomName(e.id)).join(' · '),starboard=b.entries.filter(e=>e.z>0).map(e=>roomName(e.id)).join(' · ');
-   const cell=text=>text?{text,color:rooms}:null;
+   const port=b.entries.filter(e=>e.z<0),starboard=b.entries.filter(e=>e.z>0);
+   // A room cell's icon follows its first room's kind.
+   const cell=list=>{if(!list.length)return null;const i=ICON_KIND[area(list[0].id)?.kind];
+    return {text:list.map(e=>roomName(e.id)).join(' · '),color:rooms,...(i&&{icons:[i]})};};
    // Over the spine, one sign for each way along it. Facing the nose, port is to the left. The back reads for a walker
    // heading the other way.
    const cells=(x,d)=>d>0?[cell(port),coreAhead(x,d),cell(starboard)]:[cell(starboard),coreAhead(x,d),cell(port)];
@@ -182,7 +238,7 @@ export function corridorSigns(parent){
    }
    // In each side corridor, facing a walker on the way back to the spine. From the starboard side, aft is to the left;
    // the back, seen on the way out, reads the other way round.
-   const aft=cores.some(c=>c.id==='aft')?{text:LIFTS.aft,color:lifts}:null,fore=cores.some(c=>c.id==='forward')?{text:LIFTS.fore,color:lifts}:null;
+   const aft=cores.some(c=>c.id==='aft')?{text:LIFTS.aft,color:lifts,icons:CORE}:null,fore=cores.some(c=>c.id==='forward')?{text:LIFTS.fore,color:lifts,icons:CORE}:null;
    for(const s of [-1,1])hang(parent,directionMaterial(s>0?[aft,tag,fore]:[fore,tag,aft]),directionMaterial(s>0?[fore,tag,aft]:[aft,tag,fore]),
     new T.Vector3((b.x0+b.x1)/2,plan.y+height,s*6),new T.Vector3(0,0,s),5,ceiling);
   }
