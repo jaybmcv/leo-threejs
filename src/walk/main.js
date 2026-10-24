@@ -248,7 +248,7 @@ const actions={
   else if(t.kind==='inside')openLiftPanel(t.lift);
   else if(t.kind==='waiting')return;
   else if(t.kind==='sit'||t.kind==='lie')settle(t.spot);
-  else if(t.kind==='selfie')booth.start();
+  else if(t.kind==='selfie'){if(!booth.counting)live?.selfie();booth.start();}
   else if(t.kind==='comic'){closePanels();reader.open(t.comic);input.enabled=false;}
   else if(t.kind==='play')arcade.open();
   else if(t.kind==='log')changeLog.open();
@@ -337,6 +337,8 @@ if(LIVE_URL){
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
   board:b=>(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
   hearts:h=>changeLog.setHearts(h),hearted:r=>changeLog.refused(r.why),
+  // A group photo: someone pressed the selfie camera, and this page takes the photo at the same moment as theirs.
+  selfie:(id,ms)=>booth?.start(ms),
  },{pass:()=>me.pass?currentPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);

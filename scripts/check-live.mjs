@@ -2,8 +2,8 @@
 // checks the pose wire, joining, poses reaching others near and far, names, the shared lifts, pings, leaving, a second tab,
 // bad input, the cap on visitors, Leo passes (Discord identity from The Creamery, net/pass.js: here signed by a
 // stand-in key served as a local JWKS), Alien Cat Invasion's leaderboard, Paw Pool's fastest clears, the ship log
-// boards' hearts and, last, sixty visitors walking at once (bytes sent per visitor per second). Each server keeps its
-// scores and hearts in temporary files, never the real ones.
+// boards' hearts, the selfie booth's shared countdown and, last, sixty visitors walking at once (bytes sent per visitor
+// per second). Each server keeps its scores and hearts in temporary files, never the real ones.
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import WebSocket from 'ws';
@@ -189,6 +189,24 @@ try{
  check('pings: a ping outside the ship or malformed is ignored',marks().length===1);
  for(let i=0;i<10;i++)tab.send({m:'mark',at:[11,-3.7,2]});await sleep(300);
  check('pings: a flood of pings is rate-limited',marks().length<=3&&tab.closed===null,`${marks().length} passed on`);
+ // The selfie booth: a press at its camera starts one countdown on every page near the booth, and nowhere else.
+ {
+  const cam=new Bot(PORT,{name:'Cam'}),pal=new Bot(PORT,{name:'Pal'}),away=new Bot(PORT,{name:'Away'});
+  await Promise.all([cam,pal,away].map(x=>x.welcomed()));
+  cam.pose([-265.1,120.3,.8]);pal.pose([-269.5,120.3,-2.5]);away.pose([-230,120.3,0]);await sleep(200);
+  const heard=x=>x.msgs.filter(m=>m.m==='selfie');
+  away.send({m:'selfie'});await sleep(200);
+  check('selfie: a press away from the camera starts nothing',!heard(cam).length&&!heard(pal).length);
+  cam.send({m:'selfie'});await sleep(200);
+  const got=heard(pal)[0];
+  check('selfie: a press at the camera starts the same 5 s countdown for a visitor at the booth',got?.id===cam.id&&got.ms===5000&&!heard(cam).length,JSON.stringify(got));
+  check('selfie: visitors away from the booth are not counted in',!heard(away).length);
+  pal.send({m:'selfie'});await sleep(200);
+  check('selfie: a press while the countdown runs is ignored',!heard(cam).length&&heard(pal).length===1);
+  await sleep(5000);pal.pose([-265.2,120.3,-.5]);await sleep(150);pal.send({m:'selfie'});await sleep(200);
+  check('selfie: once the photo is taken the camera can be used again',heard(cam).at(-1)?.id===pal.id);
+  for(const x of [cam,pal,away])x.close();
+ }
  check('join: a socket that never says hello is closed',await (async()=>{for(let i=0;i<40&&!silentClosed;i++)await sleep(200);return silentClosed;})());
  for(const bot of [b,far,tab])bot.close();
 }finally{server.kill();}

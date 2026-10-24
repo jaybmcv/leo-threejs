@@ -37,7 +37,7 @@ const NEAR_DY=9,NEAR_M=64;
 const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
 const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',
  key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
-const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6]};
+const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2]};
 
 const visitors=new Set();
 const slots=new Map();let nextSlot=1;
@@ -136,6 +136,16 @@ function cleared(v,msg){
  send(v.ws,{m:'scored',game:'pool',ok:true,ms,best:best.ms,rank:poolRanked().indexOf(best)+1,newBest});
 }
 
+// The crown lounge's selfie booth (walk/selfie.js): a press at its camera starts one 5-second countdown for everyone
+// standing near it, so a group's pages all take the photo together. Kept nowhere; a press while one runs is ignored.
+const SELFIE={at:[-265.3,120.3,0],reach:4,near:15,ms:5000};let selfieEnds=0;
+const byBooth=(p,m)=>p&&Math.abs(p[1]-SELFIE.at[1])<3&&Math.hypot(p[0]-SELFIE.at[0],p[2]-SELFIE.at[2])<m;
+function selfie(v){
+ const now=Date.now();if(now<selfieEnds||!byBooth(v.pos,SELFIE.reach))return;
+ selfieEnds=now+SELFIE.ms;log('selfie',v.id);
+ for(const o of visitors)if(o!==v&&o.ready&&byBooth(o.pos,SELFIE.near))send(o.ws,{m:'selfie',id:v.id,ms:SELFIE.ms});
+}
+
 async function hello(v,msg){
  if(msg.v!==PROTOCOL){send(v.ws,{m:'reload'});v.ws.close(4000,'old page');return;}
  const id=await actorIdOf(typeof msg.key==='string'?msg.key:'');
@@ -181,6 +191,8 @@ function onMessage(v,data,binary){
   // The ship log boards: the hearts, and a heart given or taken back.
   case 'hearts':if(allowed(v,'hearts'))send(v.ws,heartsFor(v));break;
   case 'heart':if(allowed(v,'heart'))hearted(v,msg);break;
+  // The selfie camera pressed: a countdown for everyone at the booth.
+  case 'selfie':if(allowed(v,'selfie'))selfie(v);break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;

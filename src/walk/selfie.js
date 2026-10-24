@@ -66,7 +66,8 @@ export function createSelfieBooth(){
   // The camera's use prompt, or the countdown while it runs.
   near(p){if(Math.abs(p.y-floor)>1.5||Math.hypot(p.x-stand.x,p.z-stand.z)>REACH)return null;
    return ends?{kind:'waiting',label:'Photo in '+Math.max(1,Math.ceil((ends-performance.now())/1000))+'…'}:{kind:'selfie',label:'Take a group photo'};},
-  start(now=performance.now()){if(!ends)ends=now+COUNT*1000;},
+  // A countdown with `left` ms to go: 5 s from a press here, less when it was pressed on another page (Leo live).
+  start(left=COUNT*1000,now=performance.now()){if(!ends)ends=now+left;},
   // Each frame: the seconds left (for the on-screen count), and true once the photo is due.
   update(now){
    if(!ends)return {left:0,due:false};
