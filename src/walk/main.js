@@ -38,7 +38,7 @@ import {RemotePlayers} from './remotes.js';
 import {Marks} from './marks.js';
 import {createHostess} from './hostess.js';
 import {wearHat,fit,FIT} from './hat.js';
-import {createYarn} from './yarn.js';
+import {createYarn,YARN_SPOTS} from './yarn.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink} from './link.js';
 import {createSelfieBooth} from './selfie.js';
@@ -236,7 +236,7 @@ const actions={
  prone(){if(ready()&&!resting){controller.toggle('prone');emote=null;}},
  emotes(){if(ready())toggleEmotes();},
  // Respawn: back to the arrival hall from anywhere aboard, off any seat or bed.
- respawn(){if(ready()){closePanels();emote=null;goTo({at:START.position.toArray(),yaw:START.yaw});yarn.reset();}},
+ respawn(){if(ready()){closePanels();emote=null;goTo({at:START.position.toArray(),yaw:START.yaw});for(const y of yarns)y.reset();}},
  // A ping where you stand, for others aboard to find (marks.js); one every few seconds at most.
  ping(now=performance.now()){if(!ready()||!live?.live||now-pinged<PING_GAP_MS)return;pinged=now;const at=myPose().pos;live.mark(at);marks.show('me','You',at,now);},
  // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
@@ -270,8 +270,11 @@ const spot=readSpot(),stand=spot&&findStand(colliders,spot.at);
 controller.place(stand||findStand(colliders,START.position.toArray())||START.position);
 follow.yaw=stand?spot.yaw:START.yaw;if(stand){follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;}
 walker.holder.position.copy(controller.position);
-// A ball of yarn to push about in the arrival hall (yarn.js).
-const yarn=createYarn(colliders);scene.add(yarn.mesh);
+// Balls of yarn to push about: the arrival hall's, and one in each of six common areas (yarn.js).
+const yarn=createYarn(colliders),yarns=[yarn];
+for(const s of YARN_SPOTS){const place=PLACES.find(p=>p.name===s.place);if(!place)continue;
+ const at=findStand(colliders,place.at.map((v,i)=>v+s.offset[i]),{radius:4});if(at)yarns.push(createYarn(colliders,{at:at.toArray(),color:s.color}));}
+for(const y of yarns)scene.add(y.mesh);
 document.body.dataset.ready='1';
 let heading=follow.yaw;const safe=controller.position.clone(),finSafe=new T.Vector3(0,-1e3,0);
 // On the floor of one of the crown lift's fin landings (the gallery and the inspection platforms), inside the fin.
@@ -320,7 +323,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -360,7 +363,7 @@ renderer.setAnimationLoop(()=>{
  const riding=lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
  if(!resting&&!riding){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
- yarn.update(dt,resting||riding?null:controller);
+ for(const y of yarns)y.update(dt,resting||riding?null:controller);
  const p=controller.position;
  // Neither safety net keeps a lift car's floor to return to: the car may have gone by the time it is needed, leaving
  // only the shaft.
