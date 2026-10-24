@@ -40,3 +40,14 @@ export function stepLift(l,stops,dt){
 // The state as plain data for the wire, and back.
 export const liftWire=l=>({y:l.y,v:l.v,at:l.at,target:l.target,phase:l.phase,doors:l.doors,dwell:l.dwell,calls:[...l.calls]});
 export function applyLiftWire(l,w){Object.assign(l,{y:w.y,v:w.v,at:w.at,target:w.target,phase:w.phase,doors:w.doors,dwell:w.dwell});l.calls=new Set(w.calls);}
+// The server's word on a car a page also steps. It lands a moment old (and comes once a second on the way), so the
+// server's car is a little behind the page's; snapping to it made the ride hop down once a second. While both are
+// bound for the same stop and close, the page keeps its own height and speed, and once it has arrived it waits for
+// the server to arrive too. Further apart, the server's word wins. Returns how far the car moved.
+export const FOLLOW=1.5;
+export function followLift(l,w){
+ const before=l.y,close=w.phase==='moving'&&w.target===l.target&&Math.abs(w.y-l.y)<FOLLOW;
+ if(close&&l.phase!=='moving'&&l.at===w.target)return 0;
+ const keep=close&&l.phase==='moving'&&{y:l.y,v:l.v};applyLiftWire(l,w);if(keep)Object.assign(l,keep);
+ return l.y-before;
+}
