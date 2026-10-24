@@ -12,6 +12,10 @@ export const PAINTINGS=[
  // Orange Haze #3, by M.V. Orange Haze: the far wall of the Deck 17 forward lounge, on the upright run of its side
  // return between the aft partition (x 171) and where its foot flares toward the windows; under the ceiling ribs (33).
  {name:'Orange_Haze_3',file:'orange-haze-3.jpg',size:[1600,1195],wall:[173.825,30.81,40.011],facing:[-.2118,0,-.9773],fit:[5.1,3.8],floor:26.3},
+ // Orange Haze #4, by M.V. Orange Haze: the far port wall of the Deck 17 window lounge. That wall is a twisted sheet (lounge.js): its
+ // upper, aft part stands upright and its lower, forward part leans back. The painting fills the upright part, from
+ // the rear wall (x 170) to where the lean would leave its corner 20 cm off the wall, and up to the ceiling ribs.
+ {name:'Orange_Haze_4',file:'orange-haze-4.jpg',size:[1600,1195],wall:[173.234,30.427,-40.139],facing:[-.2118,0,.9773],fit:[6,4.48],floor:26.3},
 ];
 const NEAR=45,FRAME={width:.14,depth:.08};
 
