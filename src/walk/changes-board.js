@@ -13,10 +13,11 @@ import log from 'walk-changes';
 export const BOARDS=[
  // The crown lift's housing, forward face (x -244.82), between the floor (120.3) and its gold panelling.
  {name:'Crown_lounge',wall:[-244.82,122.3,0],facing:[1,0,0],floor:120.3},
- // The Arrival hall's inboard wall (z -21.09), between the benches at x -131 and -122, under the 3.3 m ceiling.
- {name:'Arrival_hall',wall:[-126.5,-33.75,-21.09],facing:[0,0,-1],floor:-35.7},
+ // The Arrival hall's inboard wall, on its piers' face (z -21.16, the vision glass between them is set back), between
+ // the benches at x -131 and -122, under the 3.3 m ceiling.
+ {name:'Arrival_hall',wall:[-126.5,-33.75,-21.18],facing:[0,0,-1],floor:-35.7},
 ];
-const SIZE=[4,2.3],PX=[1600,920],REACH=3.4,FAVORITES=5;
+const SIZE=[4,2.3],PX=[1600,920],REACH=3.6,FAVORITES=5;
 const INK='#0d1419',PANEL='#1b2830',TEXT='#f4f0e8',DIM='#a6b4bb',ORANGE='#f85800',TEAL='#2fd6c5',SELECT='#24404c';
 const FONT={display:'"Archivo", "Sora", sans-serif',mono:'"JetBrains Mono", ui-monospace, monospace',sans:'"Sora", sans-serif'};
 const LIST={x:40,y:150,w:1000,row:54},ROWS=Math.floor((PX[1]-LIST.y-70)/LIST.row),FAV={x:1080,y:150,w:480};
