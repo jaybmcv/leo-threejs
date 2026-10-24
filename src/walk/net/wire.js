@@ -14,24 +14,25 @@
 //                         name is the visitor's Discord name, vouched for by The Creamery: net/pass.js; 0x02: a tester,
 //                         who wears the captain's hat: walk/hat.js)
 //   u16 poses, each:      u16 slot · u8 head · three u24 position · u16 heading · extras
-//   head:     bits 0-1 rest (0 none, 1 sitting, 2 lying) · 0x04 GROUNDED · 0x08 MOTION · 0x10 EMOTE; other bits unused
+//   head:     bits 0-1 rest (0 none, 1 sitting, 2 lying) · 0x04 GROUNDED · 0x08 MOTION · 0x10 EMOTE · 0x20 PLAYING
+//             (at the lounge telescope's game: walk/invasion); other bits unused
 //   position: (metres + 2048) x 4096, an eighth of a millimetre
 //   heading:  a turn in 65,536 steps, read back in [-pi, pi)
 //   MOTION:   u8 stance | jumps << 2 · i16 rise x 300 · u16 (jumpS + 1) x 1000   (a body standing plainly sends none)
 //   EMOTE:    u8 bytes · utf-8
 // Encoding throws on anything out of range (a bug in the sender); decoding drops a frame that does not read cleanly.
 
-export const WIRE_TAG=0x4c,WIRE_VERSION=3;
+export const WIRE_TAG=0x4c,WIRE_VERSION=4;
 export const STANCES=['stand','crouch','prone','slide'];
 export const RESTS=[null,'sit','lie'];
-const GROUNDED=0x04,MOTION=0x08,EMOTE=0x10,KNOWN=0x1f;
+const GROUNDED=0x04,MOTION=0x08,EMOTE=0x10,PLAYING=0x20,KNOWN=0x3f;
 const ORIGIN=-2048,STEPS=4096,MAX_STEP=0xffffff,YAW_STEPS=65536,TURN=Math.PI*2;
 const encoder=new TextEncoder(),decoder=new TextDecoder();
 
 function range(what,n,min,max){if(!Number.isFinite(n)||n<min||n>max)throw new RangeError(`pose wire: ${what} ${n} is outside ${min}..${max}`);}
 const yawStep=yaw=>{const t=yaw/TURN;return Math.round((t-Math.floor(t))*YAW_STEPS)%YAW_STEPS;};
 
-// A pose: {pos:[x,y,z], yaw, grounded, stance, jumpCount, jumpS, rise, emote, rest}.
+// A pose: {pos:[x,y,z], yaw, grounded, stance, jumpCount, jumpS, rise, emote, rest, playing}.
 export function encodeRecord(slot,p){
  range('slot',slot,0,0xffff);
  const steps=p.pos.map(m=>{range('position',m,ORIGIN,ORIGIN+MAX_STEP/STEPS);return Math.round((m-ORIGIN)*STEPS);});
@@ -42,7 +43,7 @@ export function encodeRecord(slot,p){
  const moving=stance!==0||jumps!==0||rise!==0||jump!==0,clip=p.emote?encoder.encode(p.emote):null;
  if(clip&&clip.length>0xff)throw new RangeError('pose wire: emote too long');
  const bytes=new Uint8Array(14+(moving?5:0)+(clip?1+clip.length:0)),v=new DataView(bytes.buffer);
- v.setUint16(0,slot,true);v.setUint8(2,rest|(p.grounded?GROUNDED:0)|(moving?MOTION:0)|(clip?EMOTE:0));
+ v.setUint16(0,slot,true);v.setUint8(2,rest|(p.grounded?GROUNDED:0)|(moving?MOTION:0)|(clip?EMOTE:0)|(p.playing?PLAYING:0));
  steps.forEach((s,k)=>{v.setUint16(3+k*3,s&0xffff,true);v.setUint8(5+k*3,s>>>16);});
  v.setUint16(12,yawStep(p.yaw),true);let o=14;
  if(moving){v.setUint8(o,stance|(jumps<<2));v.setInt16(o+1,rise,true);v.setUint16(o+3,jump,true);o+=5;}
@@ -85,7 +86,7 @@ export function decodeFrame(data){
   if(head&~KNOWN||(head&3)===3)return null;
   const pos=[0,1,2].map(k=>(v.getUint16(o+3+k*3,true)+v.getUint8(o+5+k*3)*0x10000)/STEPS+ORIGIN);
   const turned=v.getUint16(o+12,true)/YAW_STEPS*TURN;o+=14;
-  const pose={pos,yaw:turned>=Math.PI?turned-TURN:turned,grounded:!!(head&GROUNDED),rest:RESTS[head&3],stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null};
+  const pose={pos,yaw:turned>=Math.PI?turned-TURN:turned,grounded:!!(head&GROUNDED),rest:RESTS[head&3],stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:!!(head&PLAYING)};
   if(head&MOTION){
    if(!has(5))return null;const first=v.getUint8(o);if(first&0xf0)return null;
    Object.assign(pose,{stance:STANCES[first&3],jumpCount:first>>2,rise:v.getInt16(o+1,true)/300,jumpS:v.getUint16(o+3,true)/1000-1});o+=5;
@@ -124,5 +125,6 @@ export function cleanName(name){
 // Control, zero-width and direction-changing characters: nothing a name needs.
 const UNSEEN=new RegExp('[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]','g');
 
-// 2: names can be Discord-verified (a Leo pass in the hello). 3: testers wear the captain's hat.
-export const PROTOCOL=3;
+// 2: names can be Discord-verified (a Leo pass in the hello). 3: testers wear the captain's hat. 4: a pose says when its
+// visitor is playing Alien Cat Invasion, and the leaderboard's messages (play, score, board).
+export const PROTOCOL=4;

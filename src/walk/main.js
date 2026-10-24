@@ -42,6 +42,7 @@ import {createYarn} from './yarn.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink} from './link.js';
 import {createSelfieBooth} from './selfie.js';
+import {createInvasion} from './invasion/game.js';
 import {createPaintings} from './paintings.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 
@@ -149,6 +150,8 @@ async function buildShip(){
  rest=spotIndex(solidSpots(findRestSpots(ship.inside),colliders));
  // The crown lounge's selfie booth (selfie.js): solid, and drawn with its deck band like the signs below.
  booth=createSelfieBooth();colliders.addStatic(booth.group);colliders.commit();
+ // The forward observation lounge's telescope plays Alien Cat Invasion (invasion/game.js): where it stands, on its floor.
+ {const base=ship.root.getObjectByName('Shared_telescope_base');if(base){base.updateWorldMatrix(true,false);scope=base.getWorldPosition(new T.Vector3());scope.y-=.325;}}
  status('Dressing the crew…');await idle();
  if(cosmoKit)globalThis.LeoCosmo.dressCats(ship.inside,cosmoKit);
  status('Preparing the walk…');await idle();
@@ -175,7 +178,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,paintings=null;const instanced=[];
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,scope=null,paintings=null;const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
 // reach, so a tall hall, an atrium or a stairwell shows its full height. The rays skip the first 0.6 m: pressed into a
@@ -219,6 +222,7 @@ const actions={
   else if(t.kind==='waiting')return;
   else if(t.kind==='sit'||t.kind==='lie')settle(t.spot);
   else if(t.kind==='selfie')booth.start();
+  else if(t.kind==='play')arcade.open();
  },
  escape(){closePanels();},
  // (Nothing below until the walk is ready.)
@@ -291,6 +295,7 @@ if(LIVE_URL){
   poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
+  board:b=>arcade.setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>arcade.setResult(r),
  },{pass:()=>me.pass?currentPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
@@ -300,7 +305,7 @@ if(LIVE_URL){
 function myPose(riding=false){
  const h=walker.holder,at=resting?h.position:controller.position;
  return {pos:[at.x,at.y,at.z],yaw:resting?h.rotation.y:heading,g:controller.grounded||riding||!!resting,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):null};
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):null,pl:arcade.isOpen};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
@@ -311,7 +316,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -385,7 +390,8 @@ renderer.setAnimationLoop(()=>{
  if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
- draw(camera);
+ // The game covers the window: the ship need not be drawn behind it.
+ if(!arcade.isOpen)draw(camera);
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
@@ -416,10 +422,12 @@ function showPhoto(blob){
 }
 function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a));return a+d*(1-Math.exp(-lambda*dt));}
 
-// What's in front of the walker to use: a lift (call button or car panel) first, then the selfie camera, then a seat or bed.
+// What's in front of the walker to use: a lift (call button or car panel) first, then the selfie camera, the telescope,
+// then a seat or bed.
 function target(){
  const p=controller.position,l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
  const b=booth.near(p);if(b)return b;
+ if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
  const s=rest.pick(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));
  return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':'Sit down'}:null;
 }
@@ -502,6 +510,18 @@ $('go').addEventListener('click',togglePlaces);
 $('view').addEventListener('click',()=>actions.view());
 // The ship's hum and chimes (ambience.js), off until asked for.
 const ambience=createAmbience(),sound=$('sound');sound.setAttribute('aria-pressed',String(ambience.on));
+// Alien Cat Invasion at the lounge telescope (invasion/game.js): the walk stands still behind it, its sound follows the
+// ship's, and its leaderboard is Leo live's (signed-in players only).
+const arcade=createInvasion({
+ onOpen(){closePanels();emote=null;input.enabled=false;},
+ onClose(){input.enabled=true;input.down.clear();},
+ muted:()=>!ambience.on,
+ scores:{
+  request(){if(live?.live)live.board();else arcade.setBoard({status:'offline'});},
+  start(){if(live?.live)live.play();},
+  submit(score,wave){if(live?.live)live.score(score,wave);else arcade.setResult({ok:false,why:'offline'});},
+ },
+});
 sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambience.toggle())));
 // Held for a higher jump, as Space is.
 $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;input.jumpHeld=true;$('jump').setPointerCapture(e.pointerId);});

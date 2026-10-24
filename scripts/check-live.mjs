@@ -1,13 +1,17 @@
 // npm run check:live: Leo live (server/leo-live.mjs) against scripted visitors. Starts real servers on spare ports and
 // checks the pose wire, joining, poses reaching others near and far, names, the shared lifts, pings, leaving, a second tab,
 // bad input, the cap on visitors, Leo passes (Discord identity from The Creamery, net/pass.js: here signed by a
-// stand-in key served as a local JWKS) and, last, sixty visitors walking at once (bytes sent per visitor per second).
+// stand-in key served as a local JWKS), Alien Cat Invasion's leaderboard and, last, sixty visitors walking at once (bytes
+// sent per visitor per second). Each server keeps its scores in a temporary file, never the real board.
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import WebSocket from 'ws';
 import {encodeRecord,encodeIdentity,assembleFrame,decodeFrame,WireReader,actorIdOf,PROTOCOL} from '../src/walk/net/wire.js';
 import {LIFTS} from '../src/walk/lifts.js';
 import http from 'node:http';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {keySet,verifyPass,readPass} from '../src/walk/net/pass.js';
 
 const results=[];let failed=0;
@@ -25,6 +29,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   &&pose.stance===poses[i].stance&&pose.jumpCount===poses[i].jumpCount&&Math.abs(pose.jumpS-poses[i].jumpS)<.001&&Math.abs(pose.rise-poses[i].rise)<.004&&pose.emote===poses[i].emote&&pose.rest===poses[i].rest&&pose.grounded===poses[i].grounded);
  check('wire: poses come back as sent',!!close,`${frame.length} bytes for 3 poses and a name`);
  check('wire: a still walking pose is 14 bytes',encodeRecord(1,poses[0]).length===14);
+ const playing=decodeFrame(assembleFrame([],[encodeRecord(1,{...poses[0],playing:true}),encodeRecord(2,poses[0])]));
+ check('wire: a pose says when its visitor is playing Alien Cat Invasion',playing?.poses[0].pose.playing===true&&playing.poses[1].pose.playing===false);
  const torn=[frame.slice(0,frame.length-1),Uint8Array.of(0x4c,9,0,0,0,0),randomBytes(40)];
  check('wire: torn, foreign and random frames are dropped',torn.every(f=>decodeFrame(f)===null));
  let threw=0;for(const bad of [{...poses[0],pos:[NaN,0,0]},{...poses[0],pos:[1e6,0,0]},{...poses[0],stance:'fly'},{...poses[0],jumpCount:9}])try{encodeRecord(1,bad);}catch{threw++;}
@@ -72,8 +78,9 @@ await new Promise(r=>jwksServer.listen(0,'127.0.0.1',r));
 const PASS_ENV={LEO_PASS_JWKS_URL:`http://127.0.0.1:${jwksServer.address().port}/keys.json`,LEO_PASS_ISS:ISS};
 
 // ---- a server and some visitors -----------------------------------------------------------------------------------
+const scoresFile=port=>path.join(os.tmpdir(),`leo-live-scores-check-${port}.json`);
 function startServer(port,env={}){
- const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...PASS_ENV,...env},stdio:['ignore','pipe','pipe']});
+ const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...PASS_ENV,LEO_LIVE_SCORES:scoresFile(port),...env},stdio:['ignore','pipe','pipe']});
  child.log='';child.stdout.on('data',d=>{child.log+=d;});
  return new Promise((resolve,reject)=>{child.stdout.on('data',d=>{if(/Leo live on/.test(d))resolve(child);});child.on('exit',c=>reject(new Error('server exited '+c)));setTimeout(()=>reject(new Error('server did not start')),10000);});
 }
@@ -181,6 +188,40 @@ try{
   check('identity: the same Discord account in another browser takes over from the first',bea.msgs.some(m=>m.m==='replaced')&&!!bea2.id);
   [watch,forged,bea2].forEach(b=>b.close());
  }finally{srv.kill();}
+}
+
+// ---- Alien Cat Invasion's leaderboard, on a server of its own -------------------------------------------------------
+{
+ const port=PORT+4;fs.rmSync(scoresFile(port),{force:true});let srv=await startServer(port);
+ const last=(bot,m)=>[...bot.msgs].reverse().find(x=>x.m===m);
+ const ask=async(bot,msg,m)=>{const n=bot.msgs.length;bot.send(msg);for(let i=0;i<40&&!bot.msgs.slice(n).some(x=>x.m===m);i++)await sleep(25);return last(bot,m);};
+ try{
+  const guest=new Bot(port,{name:'Guest'}),bea=new Bot(port,{pass:await creamery.sign(claimsFor('444444444444444444','Bea Cat'))}),
+   cal=new Bot(port,{pass:await creamery.sign(claimsFor('555555555555555555','Cal Cat'))}),dee=new Bot(port,{pass:await creamery.sign(claimsFor('666666666666666666','Dee Cat'))});
+  for(const b of [guest,bea,cal,dee])await b.welcomed();
+  guest.send({m:'play'});await sleep(50);
+  check("board: a guest's score is not kept, and they are told to sign in",(await ask(guest,{m:'score',score:100,wave:1},'scored'))?.why==='sign-in');
+  const empty=await ask(guest,{m:'board'},'board');
+  check('board: a guest sees the board, marked not signed in',empty?.verified===false&&Array.isArray(empty.top)&&empty.top.length===0);
+  bea.send({m:'play'});await sleep(400);const first=await ask(bea,{m:'score',score:100,wave:1},'scored');
+  check("board: a signed-in player's score is kept as their best",first?.ok===true&&first.newBest===true&&first.best===100&&first.rank===1,JSON.stringify(first));
+  check('board: a score with no game started is refused',(await ask(bea,{m:'score',score:60,wave:1},'scored'))?.why==='rejected');
+  cal.send({m:'play'});await sleep(50);check('board: a score too high for the time played is refused',(await ask(cal,{m:'score',score:5000,wave:1},'scored'))?.why==='rejected');
+  dee.send({m:'play'});await sleep(50);check('board: a score not in tens is refused',(await ask(dee,{m:'score',score:105,wave:1},'scored'))?.why==='rejected');
+  bea.send({m:'play'});await sleep(400);const lower=await ask(bea,{m:'score',score:50,wave:1},'scored');
+  check('board: a lower score leaves the best as it was',lower?.ok===true&&lower.newBest===false&&lower.best===100,JSON.stringify(lower));
+  cal.send({m:'play'});await sleep(400);await ask(cal,{m:'score',score:200,wave:1},'scored');
+  const top=await ask(bea,{m:'board'},'board');
+  check("board: the top scores in order, with the player's own rank",top?.verified===true&&top.top.map(e=>e.name+' '+e.score).join(',')==='Cal Cat 200,Bea Cat 100'&&top.you?.rank===2&&top.you.score===100,JSON.stringify(top));
+  bea.pose([10,-3.7,0],{pl:true});await sleep(250);
+  check('board: a player at the game shows as playing to others',cal.poses.get(bea.id)?.playing===true);
+  check('board: accepted and refused scores are logged',/score discord:444444444444444444 Bea Cat 100 wave 1 \(best\)/.test(srv.log)&&/score refused discord:555555555555555555 5000/.test(srv.log));
+  [guest,bea,cal,dee].forEach(b=>b.close());
+  await sleep(1300);srv.kill();srv=await startServer(port);
+  const back=new Bot(port,{name:'Later'});await back.welcomed();const kept=await ask(back,{m:'board'},'board');
+  check('board: the board is still there after the server restarts',kept?.top?.length===2&&kept.top[0].name==='Cal Cat',JSON.stringify(kept?.top));
+  back.close();
+ }finally{srv.kill();fs.rmSync(scoresFile(port),{force:true});}
 }
 
 // ---- the cap on visitors, on a server of its own ------------------------------------------------------------------

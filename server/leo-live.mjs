@@ -19,6 +19,7 @@
 // and limits how often anyone may send. Lifts are the server's: a call goes to the server, which steps every car
 // (lift-motion.js) and tells everyone when a car's plans change.
 import http from 'node:http';
+import fs from 'node:fs';
 import {WebSocketServer} from 'ws';
 import {LIFTS} from '../src/walk/lifts.js';
 import {liftState,callLift,stepLift,liftWire} from '../src/walk/lift-motion.js';
@@ -35,7 +36,7 @@ const NEAR_DY=9,NEAR_M=64;
 const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
 const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',
  key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
-const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2]};
+const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4]};
 
 const visitors=new Set();
 const slots=new Map();let nextSlot=1;
@@ -56,9 +57,37 @@ function readPose(v,p){
  if(!p||!Array.isArray(p.pos)||p.pos.length!==3)return false;
  const [x,y,z]=p.pos;if(!finite(x,...BOUNDS.x)||!finite(y,...BOUNDS.y)||!finite(z,...BOUNDS.z)||!finite(p.yaw,-1e3,1e3))return false;
  const pose={pos:[x,y,z],yaw:p.yaw,grounded:!!p.g,stance:STANCES.includes(p.st)?p.st:'stand',jumpCount:finite(p.jc,0,3)?Math.round(p.jc):0,
-  jumpS:finite(p.js,-1,60)?p.js:-1,rise:finite(p.r,-100,100)?p.r:0,emote:typeof p.e==='string'&&/^[a-z0-9_]{1,32}$/.test(p.e)?p.e:null,rest:p.rest==='sit'||p.rest==='lie'?p.rest:null};
+  jumpS:finite(p.js,-1,60)?p.js:-1,rise:finite(p.r,-100,100)?p.r:0,emote:typeof p.e==='string'&&/^[a-z0-9_]{1,32}$/.test(p.e)?p.e:null,rest:p.rest==='sit'||p.rest==='lie'?p.rest:null,
+  playing:p.pl===true};
  try{v.record=encodeRecord(v.slot,pose);}catch{return false;}
  v.pos=pose.pos;v.version++;return true;
+}
+
+// Alien Cat Invasion's leaderboard (walk/invasion): one best score per Discord-verified player, kept in a file beside
+// this checkout. A game is timed from its 'play' to its 'score'; a score that is not in tens, or more than the time
+// allows (the check's bots score under 15 points a second; 45 a second and a 300-point start is far past any player),
+// is refused.
+const SCORES=process.env.LEO_LIVE_SCORES||new URL('../../leo-live-scores.json',import.meta.url);
+let board=new Map();
+try{for(const e of JSON.parse(fs.readFileSync(SCORES,'utf8')))if(e&&typeof e.id==='string'&&Number.isInteger(e.score))board.set(e.id,e);}catch{}
+let saving=null;
+function saveBoard(){if(saving)return;saving=setTimeout(()=>{saving=null;fs.writeFile(SCORES,JSON.stringify([...board.values()],null,1),e=>{if(e)log('scores not saved',e.message);});},1000);}
+const ranked=()=>[...board.values()].sort((a,b)=>b.score-a.score||a.at.localeCompare(b.at));
+function boardFor(v){
+ const all=ranked(),mine=v.discord?board.get(v.discord.discordId):null;
+ return {m:'board',verified:!!v.discord,top:all.slice(0,10).map(e=>({name:e.name,score:e.score})),you:mine?{score:mine.score,rank:all.indexOf(mine)+1}:null};
+}
+function scored(v,msg){
+ const game=v.game;v.game=null;
+ if(!v.discord){send(v.ws,{m:'scored',ok:false,why:'sign-in'});return;}
+ const score=msg.score,wave=msg.wave,seconds=game?(Date.now()-game.at)/1000:0;
+ if(!game||!Number.isInteger(score)||score<=0||score%10||score>999990||!Number.isInteger(wave)||wave<1||wave>999||score>300+45*seconds||wave>1+seconds/12){
+  log('score refused',`discord:${v.discord.discordId}`,score,wave,Math.round(seconds)+'s');send(v.ws,{m:'scored',ok:false,why:'rejected'});return;}
+ const id=v.discord.discordId,had=board.get(id),newBest=!had||score>had.score;
+ if(newBest){board.set(id,{id,name:v.name||'Voyager',score,wave,at:new Date().toISOString()});saveBoard();}
+ else if(had.name!==v.name&&v.name){had.name=v.name;saveBoard();}
+ const best=board.get(id);log('score',`discord:${id}`,v.name||'',score,'wave',wave,newBest?'(best)':'');
+ send(v.ws,{m:'scored',ok:true,best:best.score,rank:ranked().indexOf(best)+1,newBest});
 }
 
 async function hello(v,msg){
@@ -99,6 +128,10 @@ function onMessage(v,data,binary){
    callLift(l.state,msg.stop,{now:!!msg.now});liftChanged(l,true);break;
   }
   case 'ping':if(allowed(v,'ping'))send(v.ws,{m:'pong',t:msg.t});break;
+  // Alien Cat Invasion: a game starts, a game's score, the board.
+  case 'play':if(allowed(v,'play'))v.game={at:Date.now()};break;
+  case 'score':if(allowed(v,'score'))scored(v,msg);break;
+  case 'board':if(allowed(v,'board'))send(v.ws,boardFor(v));break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;
