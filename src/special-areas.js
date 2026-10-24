@@ -2,6 +2,7 @@ import * as T from 'three';
 import {finishShipArea} from './area-finish.js';
 import {tintWorldWindow,tintBoxWindow} from './glazing-finish.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {cutOut} from './cut-out.js';
 import {frontPoint} from './hull-profile.js';
 import {bowHeight} from './diagonal-profile.js';
 
@@ -238,12 +239,23 @@ function engineering(area,k){
 }
 
 function hangar(area,k){
-  k.roomShell();const {box,round,add,console,pipe}=k,[x,y,z]=area.center;
+  k.roomShell();const {box,round,add,console,pipe,chair}=k,[x,y,z]=area.center;
   for(const sx of [-1,1])for(const sz of [-1,1]){
     const g=new T.Group();g.name='Transfer_shuttle';g.position.set(x+sx*17,y,sz*27);k.fit.add(g);
     round('Shuttle_lower_hull',[21,1.2,8],[0,.9,0],'navy',.5,g);
-    round('Shuttle_cabin',[16,2.8,7],[-1,2.4,0],'lining',1.2,g);
+    // The cabin can be boarded: a doorway on the platform side and the windscreen are cut through its shell (which
+    // then collides as its own curved surface), with a floor on the lower hull, seat rows and a two-seat flight deck.
+    const cabin=round('Shuttle_cabin',[16,2.8,7],[-1,2.4,0],'lining',1.2,g);cabin.removeFromParent();
+    const door=-sz*3.05;cutOut(cabin,new T.Box3(new T.Vector3(-1.05,1.45,door-.55),new T.Vector3(1.05,3.7,door+.55)));
+    cutOut(cabin,new T.Box3(new T.Vector3(6.2,2.3,-2.2),new T.Vector3(7.3,3,2.2)));g.add(cabin);
     round('Shuttle_glazing',[.2,1.1,5.6],[7.05,2.8,0],'glass',.1,g);
+    box('Shuttle_cabin_floor',[12.4,.12,5.4],[-.1,1.56,0],'floor',g);
+    box('Shuttle_aft_bulkhead',[.12,2.2,5.2],[-6.3,2.6,0],'lining',g);
+    box('Shuttle_cabin_light',[10,.03,.3],[-.5,3.77,0],'light',g);
+    for(const dx of [-5.2,-3.7,-2.2,2.2])for(const dz of [-2.2,-1.5,1.5,2.2])chair(dx,1.62,dz,Math.PI/2,g);
+    box('Shuttle_flight_deck',[.8,.8,3.6],[5.6,2.02,0],'navy',g);
+    const screen=box('Touchscreen',[.6,.05,3.2],[5.5,2.45,0],'screen',g);screen.rotation.z=.25;
+    for(const dz of [-.9,.9])chair(4.5,1.62,dz,Math.PI/2,g);
     for(const s of [-1,1]){round('Shuttle_engine',[6,1.8,2.2],[-6,1.8,s*5.1],'metal',.6,g);box('Shuttle_wing',[9,.22,3],[-3,1.5,s*3.9],'lining',g);}
     box('Shuttle_tail',[4,3,.3],[-8.5,3.2,0],'lining',g);
     for(const dx of [-7,7])for(const side of [-1,1])box('Docking_cradle',[1,.4,1],[dx,.2,side*3.2],'amber',g);
@@ -251,7 +263,7 @@ function hangar(area,k){
     box('Boarding_platform',[15,1.5,3],[px,y+.75,pz],'floor');
     for(let i=0;i<8;i++)box('Boarding_step',[3,(i+1)*.1875,.4],[px-6,y+(i+1)*.09375,pz-sz*(4.3-i*.4)],'lining');
     box('Shuttle_boarding_bridge',[3,.12,2.6],[px,y+1.44,sz*22.5],'floor');
-    box('Shuttle_boarding_door',[2.1,2,.1],[px,y+2.5,sz*23.45],'navy');
+    box('Shuttle_boarding_door',[2.1,2,.1],[px-2.2,y+2.5,sz*23.58],'navy');
     for(const side of [-1,1])pipe('Platform_rail',[px+side*7.2,y+2.6,pz-1],[px+side*7.2,y+2.6,pz+1],.045);
   }
   for(const dz of [-10,10])box('Handling_lane',[67,.018,.12],[x,y+.012,dz],'amber');
