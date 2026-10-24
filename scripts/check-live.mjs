@@ -1,9 +1,9 @@
 // npm run check:live: Leo live (server/leo-live.mjs) against scripted visitors. Starts real servers on spare ports and
 // checks the pose wire, joining, poses reaching others near and far, names, the shared lifts, pings, leaving, a second tab,
 // bad input, the cap on visitors, Leo passes (Discord identity from The Creamery, net/pass.js: here signed by a
-// stand-in key served as a local JWKS), Alien Cat Invasion's leaderboard, the ship log boards' hearts and, last, sixty
-// visitors walking at once (bytes sent per visitor per second). Each server keeps its scores and hearts in temporary
-// files, never the real ones.
+// stand-in key served as a local JWKS), Alien Cat Invasion's leaderboard, Paw Pool's fastest clears, the ship log
+// boards' hearts and, last, sixty visitors walking at once (bytes sent per visitor per second). Each server keeps its
+// scores and hearts in temporary files, never the real ones.
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import WebSocket from 'ws';
@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {keySet,verifyPass,readPass} from '../src/walk/net/pass.js';
+import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
 
 const results=[];let failed=0;
 const check=(what,ok,detail='')=>{results.push(`${ok?'PASS':'FAIL'} ${what}${detail?' · '+detail:''}`);if(!ok)failed++;};
@@ -265,6 +266,42 @@ try{
   check('hearts: the hearts are still there after the server restarts',countOf(kept,109)===1&&countOf(kept,47)===1&&kept.mine.sort().join()==='109,47',JSON.stringify(kept));
   back.close();
  }finally{srv.kill();fs.rmSync(heartsFile(port),{force:true});}
+}
+
+// ---- Paw Pool's fastest clears, a second board in the same file, on a server of its own ----------------------------
+// Real time: no clear is believed under POOL_FASTEST_S, so the players here wait that long.
+{
+ const port=PORT+6;fs.rmSync(scoresFile(port),{force:true});let srv=await startServer(port);
+ const last=(bot,m)=>[...bot.msgs].reverse().find(x=>x.m===m);
+ const ask=async(bot,msg,m)=>{const n=bot.msgs.length;bot.send(msg);for(let i=0;i<40&&!bot.msgs.slice(n).some(x=>x.m===m);i++)await sleep(25);return last(bot,m);};
+ try{
+  const guest=new Bot(port,{name:'Guest'}),bea=new Bot(port,{pass:await creamery.sign(claimsFor('744444444444444444','Bea Cat'))}),
+   cal=new Bot(port,{pass:await creamery.sign(claimsFor('755555555555555555','Cal Cat'))}),eve=new Bot(port,{pass:await creamery.sign(claimsFor('777777777777777777','Eve Cat'))});
+  for(const b of [guest,bea,cal,eve])await b.welcomed();
+  const t0=Date.now();for(const b of [guest,bea,cal,eve])b.send({m:'play',game:'pool'});
+  bea.send({m:'play'});await sleep(400);await ask(bea,{m:'score',score:100,wave:1},'scored');
+  check('pool: a clear faster than any rack can go is refused',(await ask(cal,{m:'score',game:'pool',ms:25000,shots:20},'scored'))?.why==='rejected');
+  cal.send({m:'play',game:'pool'});
+  await sleep(POOL_FASTEST_S*1000+1500-(Date.now()-t0));
+  check("pool: a guest's clear is not kept, and they are told to sign in",(await ask(guest,{m:'score',game:'pool',ms:POOL_FASTEST_S*1000+1000,shots:18},'scored'))?.why==='sign-in');
+  const first=await ask(bea,{m:'score',game:'pool',ms:POOL_FASTEST_S*1000+1000,shots:18},'scored');
+  check("pool: a signed-in player's clear is kept as their fastest",first?.ok===true&&first.game==='pool'&&first.newBest&&first.best===POOL_FASTEST_S*1000+1000&&first.rank===1,JSON.stringify(first));
+  check('pool: a clear claiming longer than the server timed is refused',(await ask(cal,{m:'score',game:'pool',ms:600000,shots:18},'scored'))?.why==='rejected'&&/pool clear refused discord:755555555555555555 600000 18 2\ds/.test(srv.log));
+  await sleep(4000);
+  const shaved=await ask(eve,{m:'score',game:'pool',ms:POOL_FASTEST_S*1000,shots:18},'scored'),served=Date.now()-t0;
+  check('pool: a clear claimed well under the server\'s clock is kept at the server\'s time, less 3 s at most',shaved?.ok===true&&shaved.ms>=served-3000-500,JSON.stringify(shaved)+` · server timed about ${served} ms`);
+  const board=await ask(cal,{m:'board',game:'pool'},'board');
+  check("pool: another visitor sees a player's clear on the board, fastest first",board?.game==='pool'&&board.top.map(e=>e.name).join(',')==='Bea Cat,Eve Cat'&&board.top[0].ms===POOL_FASTEST_S*1000+1000&&board.you===null,JSON.stringify(board));
+  const theirs=await ask(cal,{m:'board'},'board');
+  check("pool: the pool board and Alien Cat Invasion's are kept apart",!theirs.game&&theirs.top.map(e=>e.name+' '+e.score).join()==='Bea Cat 100',JSON.stringify(theirs));
+  check('pool: accepted and refused clears are logged',/pool clear discord:744444444444444444 Bea Cat 21\.0s 18 shots \(best\)/.test(srv.log)&&/pool clear refused discord:755555555555555555 25000/.test(srv.log));
+  [guest,bea,cal,eve].forEach(b=>b.close());
+  await sleep(1300);srv.kill();srv=await startServer(port);
+  const back=new Bot(port,{name:'Later'});await back.welcomed();
+  const pool=await ask(back,{m:'board',game:'pool'},'board'),inv=await ask(back,{m:'board'},'board');
+  check('pool: both boards are still there after the server restarts',pool?.top?.length===2&&pool.top[0].name==='Bea Cat'&&inv?.top?.length===1,JSON.stringify({pool:pool?.top,invasion:inv?.top}));
+  back.close();
+ }finally{srv.kill();fs.rmSync(scoresFile(port),{force:true});}
 }
 
 // ---- the cap on visitors, on a server of its own ------------------------------------------------------------------
