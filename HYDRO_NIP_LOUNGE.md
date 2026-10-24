@@ -26,7 +26,7 @@ Open floor for the lounge: x 113.5–148, z 12–42. The entrance side is z ≈ 
 | Zone | Template position |
 |---|---|
 | Haze Maze tower (glass, three storeys) | x 114–120.5, z 19–33, y 24.3–35.2 |
-| Terpene Tasting Deck (bar along z) | counter x 122.6–123.6, z 21–30 |
+| Terpene Tasting Deck | across the back behind the maze, facing the entrance: counter x 117.5–126.5, z 35.6–36.6; back bar at z 37.9; stools at z 34.9 (moved from the maze's flank on Jay's request, 2026-10-23, to open the view of the maze) |
 | Anti-Gravity Geodesic Hammock Dome | centre (134, 25), radius 6.5 |
 | Cosmic Munchies Converger | counter around (145.5, 25) (moved 1 m from the blockout so its stools have room to walk round); machine hung from the ceiling above |
 | Hydro-Nip sign | on the dome's crown, facing the entrance, y 30.9–33.1 (hung at the dome's front it blocked the upper gallery's view) |
