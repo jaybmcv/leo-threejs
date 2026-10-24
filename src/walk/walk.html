@@ -104,14 +104,14 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 .sheet .row button[type=submit]{background:var(--orange);border:1px solid var(--orange);color:#fff;border-radius:10px;padding:10px 16px;font:500 12px/1 var(--mono);letter-spacing:.06em}
 @media (max-width:560px){#aboard{padding:9px 11px}}
 @media (pointer:coarse){#joystick{display:block}.help{display:none}.touch{display:flex}.tools .respawn{display:none}#minimap-button{width:124px;height:124px}}
-@media (max-width:560px){#minimap-button{top:58px;width:112px;height:112px}.tools button{padding:9px 11px}.top{right:140px}.pill{max-width:100%;min-width:0}#where{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+@media (max-width:560px){#minimap-button{top:58px;width:112px;height:112px}.tools button{padding:9px 11px}.top{top:58px;right:140px}.pill{max-width:100%;min-width:0}#where{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 </style>
 </head>
 <body>
 <div id="viewport"></div>
 <div class="top"><div class="pill"><a href="./">← Leo</a><span id="where"></span></div><button id="aboard" type="button" hidden aria-label="Others aboard; set your name"><i></i><span></span></button></div>
 <div id="names" aria-hidden="true"></div>
-<div class="tools"><button id="go" type="button">Go to</button><button id="view" type="button" aria-label="Switch first or third person">View</button><button id="sound" type="button" aria-pressed="false" aria-label="Ship sound">Sound</button><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button></div>
+<div class="tools"><button id="go" type="button">Go to</button><button id="view" type="button" aria-label="Switch first or third person">View</button><button id="sound" type="button" aria-pressed="false" aria-label="Ship sound">Sound</button><button id="resolution" type="button" aria-label="Render resolution: lower runs smoother on slower devices">Res High</button><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button></div>
 <button id="minimap-button" type="button" aria-label="Open the ship map" hidden><canvas id="minimap"></canvas><span id="minimap-deck"></span></button>
 <div class="help"><b>WASD</b> move · <b>Shift</b> run · <b>Space</b> jump, twice in the air · <b>C</b> crouch, slide · <b>X</b> prone · <b>B</b> emotes · <b>Drag</b> look · <b>E</b> sit, lie, lifts · <b>M</b> go to · <b>N</b> map · <b>V</b> view<span id="help-ping" hidden> · <b>P</b> ping</span> · <b>R</b> respawn</div>
 <div id="prompt" hidden><span class="key">E</span><span class="label"></span></div>
