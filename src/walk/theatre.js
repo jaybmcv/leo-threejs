@@ -12,7 +12,7 @@ const BACK=25.84,SIDE=16.84,ENTRY=-25.84,NOTCH={x:-12,z:-9},DOOR=2.2,LIP=2.95,TO
 const SCREEN={w:4,h:2.25,y:1.68};
 // Wall runs a drape hangs along: from, to, and the way into the room.
 const RUNS=[
- [[BACK,-SIDE],[BACK,-SCREEN.w/2-.35],[-1,0]],[[BACK,SCREEN.w/2+.35],[BACK,SIDE],[-1,0]],
+ [[BACK,-SIDE],[BACK,-SCREEN.w/2],[-1,0]],[[BACK,SCREEN.w/2],[BACK,SIDE],[-1,0]],
  [[ENTRY,SIDE],[BACK,SIDE],[0,-1]],
  [[NOTCH.x,-SIDE],[BACK,-SIDE],[0,1]],
  [[NOTCH.x,-SIDE],[NOTCH.x,NOTCH.z],[1,0]],
@@ -90,10 +90,10 @@ function plane(flip,y,material,uv){
 // update to call a few times a second with the walker's position, which starts and stops the film.
 export function createTheatre(ship,{url,anisotropy=1}={}){
  const room=ship.root.getObjectByName(ROOM);if(!room)return null;
- // The blue backdrop panel and the plain ceiling strips and aisle lines give way to the cinema's own.
+ // The blue backdrop panel (and its painted-on graphics, the room's only ones) and the plain ceiling strips and aisle lines give way to the cinema's own.
  const title=[];
  room.traverse(o=>{
-  if(/^(Projection_screen|Ceiling_light|Main_aisle_edge|Area_identity_panel)$/.test(o.name))o.visible=false;
+  if(/^(Projection_screen|Refined_display_graphics|Ceiling_light|Main_aisle_edge|Area_identity_panel)$/.test(o.name))o.visible=false;
   if(o.name==='Wayfinding_text'&&o.position.x>25)title.push(o);
  });
  // The title sits on the pelmet above the screen, a little smaller.
@@ -102,7 +102,7 @@ export function createTheatre(ship,{url,anisotropy=1}={}){
  const group=new T.Group();group.name='Walk_theatre';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);
  const add=(name,geo,material)=>{const o=new T.Mesh(geo,material);o.name=name;group.add(o);return o;};
- add('Theatre_drapes',mergeGeometries(RUNS.map(drape)),new T.MeshBasicMaterial({name:'Theatre_drape',vertexColors:true}));
+ add('Theatre_drapes',mergeGeometries(RUNS.map(drape)),new T.MeshBasicMaterial({name:'Theatre_drape',vertexColors:true,side:T.DoubleSide}));
  add('Theatre_pelmet',mergeGeometries(PELMET.map(r=>strip(r,LIP,TOP,INSET+.16,.32))),new T.MeshBasicMaterial({name:'Theatre_pelmet',color:0x1a0c2c}));
  add('Theatre_light_line',mergeGeometries(PELMET.map(r=>strip(r,LIP-.03,LIP,INSET+.3,.06))),new T.MeshBasicMaterial({name:'Theatre_light_line',color:0x8fe0ff}));
  const sky=plane(1,TOP+.005,new T.MeshBasicMaterial({name:'Theatre_stars',map:canvasTexture(2048,1340,stars)}),(x,z)=>[(x-ENTRY)/(BACK-ENTRY),(z+SIDE)/(2*SIDE)]);
