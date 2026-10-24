@@ -41,7 +41,8 @@ export function connectLive(url,on,opts={}){
     case 'lift':on.lift?.(msg.id,msg.s);break;
     case 'mark':on.mark?.(msg.id,msg.at);break;
     case 'aboard':on.aboard?.(msg.n);break;
-    // Alien Cat Invasion's leaderboard (walk/invasion): the top ten and this visitor's best, and a game's result.
+    // The leaderboards (Alien Cat Invasion's, or Paw Pool's when game is 'pool'): the top ten and this visitor's
+    // best, and a game's result.
     case 'board':on.board?.(msg);break;
     case 'scored':on.scored?.(msg);break;
     case 'full':stopped=true;status('full');break;
@@ -69,10 +70,13 @@ export function connectLive(url,on,opts={}){
   call(lift,stop,now){if(live())ws.send(JSON.stringify({m:'call',lift,stop,now:!!now}));},
   // A ping where the walker stands, for everyone else aboard (walk/marks.js).
   mark(at){if(live())ws.send(JSON.stringify({m:'mark',at}));},
-  // Alien Cat Invasion: a game starts (the server times it), a game's score, and a request for the board.
-  play(){if(live())ws.send(JSON.stringify({m:'play'}));},
+  // Alien Cat Invasion, or Paw Pool with game 'pool': a game starts (the server times it), a game's score, and a
+  // request for the board.
+  play(game){if(live())ws.send(JSON.stringify({m:'play',game}));},
   score(score,wave){if(live())ws.send(JSON.stringify({m:'score',score,wave}));},
-  board(){if(live())ws.send(JSON.stringify({m:'board'}));},
+  board(game){if(live())ws.send(JSON.stringify({m:'board',game}));},
+  // Paw Pool: a rack cleared, in ms by the page's clock, and the kicks it took.
+  cleared(ms,shots){if(live())ws.send(JSON.stringify({m:'score',game:'pool',ms,shots}));},
   rename(next){name=next;saveName(next);if(live())ws.send(JSON.stringify({m:'name',name:next}));},
   get live(){return !!live();},
   // How the server has this visitor: {name, verified}.

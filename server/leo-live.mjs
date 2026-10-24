@@ -25,6 +25,7 @@ import {LIFTS} from '../src/walk/lifts.js';
 import {liftState,callLift,stepLift,liftWire} from '../src/walk/lift-motion.js';
 import {encodeRecord,encodeIdentity,assembleFrame,actorIdOf,cleanName,PROTOCOL,STANCES} from '../src/walk/net/wire.js';
 import {keySet,verifyPass} from '../src/walk/net/pass.js';
+import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||150);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -68,17 +69,19 @@ function readPose(v,p){
 // allows (the check's bots score under 15 points a second; 45 a second and a 300-point start is far past any player),
 // is refused.
 const SCORES=process.env.LEO_LIVE_SCORES||new URL('../../leo-live-scores.json',import.meta.url);
-let board=new Map();
-try{for(const e of JSON.parse(fs.readFileSync(SCORES,'utf8')))if(e&&typeof e.id==='string'&&Number.isInteger(e.score))board.set(e.id,e);}catch{}
+// Paw Pool's fastest clears share the file as a second board: entries marked game 'pool', with a time in ms, no score.
+let board=new Map(),pool=new Map();
+try{for(const e of JSON.parse(fs.readFileSync(SCORES,'utf8'))){if(!e||typeof e.id!=='string')continue;
+ if(e.game==='pool'){if(Number.isInteger(e.ms))pool.set(e.id,e);}else if(Number.isInteger(e.score))board.set(e.id,e);}}catch{}
 let saving=null;
-function saveBoard(){if(saving)return;saving=setTimeout(()=>{saving=null;fs.writeFile(SCORES,JSON.stringify([...board.values()],null,1),e=>{if(e)log('scores not saved',e.message);});},1000);}
+function saveBoard(){if(saving)return;saving=setTimeout(()=>{saving=null;fs.writeFile(SCORES,JSON.stringify([...board.values(),...pool.values()],null,1),e=>{if(e)log('scores not saved',e.message);});},1000);}
 const ranked=()=>[...board.values()].sort((a,b)=>b.score-a.score||a.at.localeCompare(b.at));
 function boardFor(v){
  const all=ranked(),mine=v.discord?board.get(v.discord.discordId):null;
  return {m:'board',verified:!!v.discord,top:all.slice(0,10).map(e=>({name:e.name,score:e.score})),you:mine?{score:mine.score,rank:all.indexOf(mine)+1}:null};
 }
 function scored(v,msg){
- const game=v.game;v.game=null;
+ const game=v.games.invasion;v.games.invasion=null;
  if(!v.discord){send(v.ws,{m:'scored',ok:false,why:'sign-in'});return;}
  const score=msg.score,wave=msg.wave,seconds=game?(Date.now()-game.at)/1000:0;
  if(!game||!Number.isInteger(score)||score<=0||score%10||score>999990||!Number.isInteger(wave)||wave<1||wave>999||score>300+45*seconds||wave>1+seconds/12){
@@ -88,6 +91,27 @@ function scored(v,msg){
  else if(had.name!==v.name&&v.name){had.name=v.name;saveBoard();}
  const best=board.get(id);log('score',`discord:${id}`,v.name||'',score,'wave',wave,newBest?'(best)':'');
  send(v.ws,{m:'scored',ok:true,best:best.score,rank:ranked().indexOf(best)+1,newBest});
+}
+
+// Paw Pool (walk/pool): one fastest clear of all fifteen balls per Discord-verified player. The server times the game
+// from its 'play' to its 'score'. The page's own clock is kept when it agrees: it starts a moment after the server's, so
+// it may be a little shorter, but never more than 3 s. A clear under POOL_FASTEST_S, by either clock, is refused.
+const poolRanked=()=>[...pool.values()].sort((a,b)=>a.ms-b.ms||a.at.localeCompare(b.at));
+function poolBoardFor(v){
+ const all=poolRanked(),mine=v.discord?pool.get(v.discord.discordId):null;
+ return {m:'board',game:'pool',verified:!!v.discord,top:all.slice(0,10).map(e=>({name:e.name,ms:e.ms})),you:mine?{ms:mine.ms,rank:all.indexOf(mine)+1}:null};
+}
+function cleared(v,msg){
+ const game=v.games.pool;v.games.pool=null;
+ if(!v.discord){send(v.ws,{m:'scored',game:'pool',ok:false,why:'sign-in'});return;}
+ const elapsed=game?Date.now()-game.at:0,said=msg.ms,shots=msg.shots;
+ if(!game||!Number.isInteger(said)||!Number.isInteger(shots)||shots<1||shots>999||said<POOL_FASTEST_S*1000||elapsed<POOL_FASTEST_S*1000||said>elapsed+2000){
+  log('pool clear refused',`discord:${v.discord.discordId}`,said,shots,Math.round(elapsed/1000)+'s');send(v.ws,{m:'scored',game:'pool',ok:false,why:'rejected'});return;}
+ const ms=Math.max(said,elapsed-3000),id=v.discord.discordId,had=pool.get(id),newBest=!had||ms<had.ms;
+ if(newBest){pool.set(id,{game:'pool',id,name:v.name||'Voyager',ms,shots,at:new Date().toISOString()});saveBoard();}
+ else if(had.name!==v.name&&v.name){had.name=v.name;saveBoard();}
+ const best=pool.get(id);log('pool clear',`discord:${id}`,v.name||'',(ms/1000).toFixed(1)+'s',shots,'shots',newBest?'(best)':'');
+ send(v.ws,{m:'scored',game:'pool',ok:true,ms,best:best.ms,rank:poolRanked().indexOf(best)+1,newBest});
 }
 
 async function hello(v,msg){
@@ -128,10 +152,10 @@ function onMessage(v,data,binary){
    callLift(l.state,msg.stop,{now:!!msg.now});liftChanged(l,true);break;
   }
   case 'ping':if(allowed(v,'ping'))send(v.ws,{m:'pong',t:msg.t});break;
-  // Alien Cat Invasion: a game starts, a game's score, the board.
-  case 'play':if(allowed(v,'play'))v.game={at:Date.now()};break;
-  case 'score':if(allowed(v,'score'))scored(v,msg);break;
-  case 'board':if(allowed(v,'board'))send(v.ws,boardFor(v));break;
+  // Alien Cat Invasion, or Paw Pool when game is 'pool': a game starts, a game's score, the board.
+  case 'play':if(allowed(v,'play'))v.games[msg.game==='pool'?'pool':'invasion']={at:Date.now()};break;
+  case 'score':if(allowed(v,'score'))(msg.game==='pool'?cleared:scored)(v,msg);break;
+  case 'board':if(allowed(v,'board'))send(v.ws,msg.game==='pool'?poolBoardFor(v):boardFor(v));break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;
@@ -184,7 +208,7 @@ server.on('upgrade',(req,socket,head)=>{
  wss.handleUpgrade(req,socket,head,ws=>wss.emit('connection',ws,req));
 });
 wss.on('connection',ws=>{
- const v={ws,ready:false,id:null,slot:0,name:null,record:null,pos:null,version:0,seen:new Map(),budget:{},alive:true};visitors.add(v);
+ const v={ws,ready:false,id:null,slot:0,name:null,record:null,pos:null,version:0,seen:new Map(),budget:{},games:{},alive:true};visitors.add(v);
  const timer=setTimeout(()=>{if(!v.ready)ws.close(4005,'no hello');},HELLO_MS);
  ws.on('message',(data,binary)=>onMessage(v,binary?data:data.toString(),binary));
  ws.on('pong',()=>{v.alive=true;});

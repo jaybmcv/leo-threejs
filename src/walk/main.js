@@ -43,6 +43,8 @@ import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink} from './link.js';
 import {createSelfieBooth} from './selfie.js';
 import {createInvasion} from './invasion/game.js';
+import {createPoolTable} from './pool/table.js';
+import {createPawPool} from './pool/game.js';
 import {createPaintings} from './paintings.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 
@@ -153,7 +155,10 @@ async function buildShip(){
  lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);corridorTrim(lifts.signs);
  rest=spotIndex(solidSpots(findRestSpots(ship.inside),colliders));
  // The crown lounge's selfie booth (selfie.js): solid, and drawn with its deck band like the signs below.
- booth=createSelfieBooth();colliders.addStatic(booth.group);colliders.commit();
+ booth=createSelfieBooth();colliders.addStatic(booth.group);
+ // Paw Pool's table on the Recreation Hall's activity floor (pool/table.js): solid to walk into, its rails too high to step.
+ {const carpet=ship.root.getObjectByName('Activity_floor');if(carpet){poolTable=createPoolTable(carpet);colliders.addStatic(poolTable.group);}}
+ colliders.commit();
  // The forward observation lounge's telescope plays Alien Cat Invasion (invasion/game.js): where it stands, on its floor.
  {const base=ship.root.getObjectByName('Shared_telescope_base');if(base){base.updateWorldMatrix(true,false);scope=base.getWorldPosition(new T.Vector3());scope.y-=.325;}}
  status('Dressing the crew…');await idle();
@@ -165,7 +170,7 @@ async function buildShip(){
  haze.add(createHaze(ship));
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
- for(const o of [...lifts.signs.children,booth.group])toBand(o);
+ for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[])])toBand(o);
  // The paintings (paintings.js) span several bands each: they draw while any of them is in view.
  paintings=createPaintings({urls:typeof __ART_URLS__!=='undefined'?__ART_URLS__:{},anisotropy:renderer.capabilities.getMaxAnisotropy()});
  for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}
@@ -182,7 +187,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,scope=null,paintings=null;const instanced=[];
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,scope=null,poolTable=null,paintings=null;const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
 // reach, so a tall hall, an atrium or a stairwell shows its full height. The rays skip the first 0.6 m: pressed into a
@@ -227,6 +232,7 @@ const actions={
   else if(t.kind==='sit'||t.kind==='lie')settle(t.spot);
   else if(t.kind==='selfie')booth.start();
   else if(t.kind==='play')arcade.open();
+  else if(t.kind==='pool')pool.open();
  },
  escape(){closePanels();},
  // (Nothing below until the walk is ready.)
@@ -299,7 +305,7 @@ if(LIVE_URL){
   poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
-  board:b=>arcade.setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>arcade.setResult(r),
+  board:b=>(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
  },{pass:()=>me.pass?currentPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
@@ -309,7 +315,7 @@ if(LIVE_URL){
 function myPose(riding=false){
  const h=walker.holder,at=resting?h.position:controller.position;
  return {pos:[at.x,at.y,at.z],yaw:resting?h.rotation.y:heading,g:controller.grounded||riding||!!resting,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):null,pl:arcade.isOpen};
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):null,pl:arcade.isOpen||pool.isOpen};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
@@ -394,8 +400,8 @@ renderer.setAnimationLoop(()=>{
  if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
- // The game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen)draw(camera);
+ // A game covers the window: the ship need not be drawn behind it.
+ if(!arcade.isOpen&&!pool.isOpen)draw(camera);
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
@@ -432,6 +438,7 @@ function target(){
  const p=controller.position,l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
  const b=booth.near(p);if(b)return b;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
+ const q=poolTable?.near(p);if(q)return q;
  const s=rest.pick(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));
  return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':'Sit down'}:null;
 }
@@ -524,6 +531,17 @@ const arcade=createInvasion({
   request(){if(live?.live)live.board();else arcade.setBoard({status:'offline'});},
   start(){if(live?.live)live.play();},
   submit(score,wave){if(live?.live)live.score(score,wave);else arcade.setResult({ok:false,why:'offline'});},
+ },
+});
+// Paw Pool at the Recreation Hall's table (pool/game.js), the same way: its fastest clears are Leo live's second board.
+const pool=createPawPool({
+ onOpen(){closePanels();emote=null;input.enabled=false;},
+ onClose(){input.enabled=true;input.down.clear();},
+ muted:()=>!ambience.on,
+ scores:{
+  request(){if(live?.live)live.board('pool');else pool.setBoard({status:'offline'});},
+  start(){if(live?.live)live.play('pool');},
+  submit(ms,shots){if(live?.live)live.cleared(ms,shots);else pool.setResult({ok:false,why:'offline'});},
  },
 });
 sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambience.toggle())));
