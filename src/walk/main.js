@@ -42,6 +42,7 @@ import {createYarn} from './yarn.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink} from './link.js';
 import {createSelfieBooth} from './selfie.js';
+import {createConcession} from './concession.js';
 import {createInvasion} from './invasion/game.js';
 import {createPaintings} from './paintings.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
@@ -153,7 +154,9 @@ async function buildShip(){
  lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);corridorTrim(lifts.signs);
  rest=spotIndex(solidSpots(findRestSpots(ship.inside),colliders));
  // The crown lounge's selfie booth (selfie.js): solid, and drawn with its deck band like the signs below.
- booth=createSelfieBooth();colliders.addStatic(booth.group);colliders.commit();
+ booth=createSelfieBooth();colliders.addStatic(booth.group);
+ // The Deck 16 theatre's concession stand (concession.js): solid too.
+ concession=createConcession(ship);if(concession)colliders.addStatic(concession);colliders.commit();
  // The forward observation lounge's telescope plays Alien Cat Invasion (invasion/game.js): where it stands, on its floor.
  {const base=ship.root.getObjectByName('Shared_telescope_base');if(base){base.updateWorldMatrix(true,false);scope=base.getWorldPosition(new T.Vector3());scope.y-=.325;}}
  status('Dressing the crew…');await idle();
@@ -166,6 +169,7 @@ async function buildShip(){
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
  for(const o of [...lifts.signs.children,booth.group])toBand(o);
+ if(concession)toBand(concession);
  // The paintings (paintings.js) span several bands each: they draw while any of them is in view.
  paintings=createPaintings({urls:typeof __ART_URLS__!=='undefined'?__ART_URLS__:{},anisotropy:renderer.capabilities.getMaxAnisotropy()});
  for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}
@@ -182,7 +186,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,scope=null,paintings=null;const instanced=[];
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,scope=null,paintings=null;const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
 // reach, so a tall hall, an atrium or a stairwell shows its full height. The rays skip the first 0.6 m: pressed into a
