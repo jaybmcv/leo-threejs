@@ -70,7 +70,11 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 .touch .row{display:flex;gap:8px}
 /* Leo live: the aboard count, the name sheet and the names over others' heads */
 #aboard{pointer-events:auto;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:10px 14px;font:400 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);white-space:nowrap}
-#aboard[hidden]{display:none}#aboard:hover{border-color:var(--orange)}
+#aboard[hidden]{display:none}
+/* Changes made around the walker: opens the ship log on them (changes-board.js) */
+#changes-here{pointer-events:auto;display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid rgba(47,214,197,.45);border-radius:12px;padding:10px 14px;font:400 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--teal);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);white-space:nowrap}
+#changes-here[hidden]{display:none}#changes-here:hover{border-color:var(--teal);background:rgba(47,214,197,.12)}#changes-here i{font-style:normal}#changes-here b{font-weight:600;color:var(--text)}
+.sheet .stops button.log{border-color:rgba(47,214,197,.45)}.sheet .stops button.log b{color:var(--teal)}#aboard:hover{border-color:var(--orange)}
 #aboard i{width:8px;height:8px;border-radius:50%;background:var(--dim)}#aboard[data-status="live"] i{background:var(--teal)}#aboard[data-status="connecting"] i{background:var(--orange)}
 #names{position:fixed;inset:0;pointer-events:none;z-index:4;overflow:hidden}
 .remote-name{position:absolute;left:0;top:0;padding:4px 9px;border-radius:999px;background:rgba(5,5,7,.62);color:var(--text);font:500 11px/1.2 var(--sans);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
@@ -105,18 +109,18 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 .sheet .note{font:400 13px/1.45 var(--sans);color:var(--body);margin:0 0 14px}
 .sheet .row{display:flex;gap:8px;margin-top:14px}
 .sheet .row button[type=submit]{background:var(--orange);border:1px solid var(--orange);color:#fff;border-radius:10px;padding:10px 16px;font:500 12px/1 var(--mono);letter-spacing:.06em}
-@media (max-width:560px){#aboard{padding:9px 11px}}
+@media (max-width:560px){#aboard{padding:9px 11px}#changes-here{padding:9px 11px}#changes-here span{display:none}}
 @media (pointer:coarse){#joystick{display:block}.help{display:none}.touch{display:flex}.tools .respawn{display:none}#minimap-button{width:124px;height:124px}}
 @media (max-width:560px){#minimap-button{top:58px;width:112px;height:112px}.tools button{padding:9px 11px}.top{top:58px;right:140px}.pill{max-width:100%;min-width:0}#where{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 </style>
 </head>
 <body>
 <div id="viewport"></div>
-<div class="top"><div class="pill"><a href="./">← Leo</a><span id="where"></span></div><button id="aboard" type="button" hidden aria-label="Others aboard; set your name"><i></i><span></span></button></div>
+<div class="top"><div class="pill"><a href="./">← Leo</a><span id="where"></span></div><button id="changes-here" type="button" hidden><i aria-hidden="true">✦</i><b>0</b><span> changes here</span></button><button id="aboard" type="button" hidden aria-label="Others aboard; set your name"><i></i><span></span></button></div>
 <div id="names" aria-hidden="true"></div>
 <div class="tools"><button id="go" type="button">Go to</button><button id="view" type="button" aria-label="Switch first or third person">View</button><button id="sound" type="button" aria-pressed="false" aria-label="Ship sound">Sound</button><button id="resolution" type="button" aria-label="Render resolution: lower runs smoother on slower devices">Res High</button><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button></div>
 <button id="minimap-button" type="button" aria-label="Open the ship map" hidden><canvas id="minimap"></canvas><span id="minimap-deck"></span></button>
-<div class="help"><b>WASD</b> move · <b>Shift</b> run · <b>Space</b> jump, twice in the air · <b>C</b> crouch, slide · <b>X</b> prone · <b>B</b> emotes · <b>Drag</b> look · <b>E</b> sit, lie, lifts · <b>M</b> go to · <b>N</b> map · <b>V</b> view<span id="help-ping" hidden> · <b>P</b> ping</span> · <b>R</b> respawn</div>
+<div class="help"><b>WASD</b> move · <b>Shift</b> run · <b>Space</b> jump, twice in the air · <b>C</b> crouch, slide · <b>X</b> prone · <b>B</b> emotes · <b>Drag</b> look · <b>E</b> sit, lie, lifts · <b>M</b> go to · <b>N</b> map · <b>L</b> ship log · <b>V</b> view<span id="help-ping" hidden> · <b>P</b> ping</span> · <b>R</b> respawn</div>
 <div id="prompt" hidden><span class="key">E</span><span class="label"></span></div>
 <div class="touch"><button id="use" type="button" hidden></button><div class="row"><button id="emote-button" type="button">Emote</button><button id="crouch" type="button">Crouch</button><button id="ping" type="button" hidden aria-label="Ping where you are for others aboard">Ping</button><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button></div><button id="jump" type="button" aria-label="Jump">Jump</button></div>
 <div id="lift-panel" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="lift-title"><div class="card"><div class="eyebrow">Lift</div><h2 id="lift-title"></h2><div class="stops"></div><button type="button" data-close>Close</button></div></div>

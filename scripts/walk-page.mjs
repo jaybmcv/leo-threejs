@@ -6,6 +6,7 @@ import {planWalk} from './walk-plan.mjs';
 import {PAINTINGS} from '../src/walk/paintings.js';
 import {COMICS} from '../src/walk/comics.js';
 import {shipLog} from './ship-log.mjs';
+import {loadMedia} from './ship-log-media.mjs';
 
 // Writes the "Walk around Leo" page (walk.html) and its content-hashed script next to the viewer. The partition plan
 // (src/walk/partitions.js) is worked out here, from the same ship the page builds, and bundled as data, so visitors
@@ -31,7 +32,9 @@ export async function writeWalkPage(out,{cosmo,manifest}){
  const walk=await planWalk(),plan=JSON.stringify(walk.plan),mapName=hashed('walk-map','png',walk.map);
  await fs.writeFile(path.join(out,mapName),walk.map);
  // The ship log boards' list of changes (src/walk/changes-board.js), from git: scripts/ship-log.mjs.
- const data={'walk-partitions':plan,'walk-changes':JSON.stringify(shipLog())};
+ const {media,from}=loadMedia(),log=shipLog(process.cwd(),media);
+ console.log(`ship log: ${log.length} changes, ${log.filter(e=>e.shots).length} with before-and-after pictures (from ${from})`);
+ const data={'walk-partitions':plan,'walk-changes':JSON.stringify(log)};
  const partitions={name:'walk-data',setup(b){b.onResolve({filter:/^walk-(partitions|changes)$/},a=>({path:a.path,namespace:'walk'}));b.onLoad({filter:/.*/,namespace:'walk'},a=>({contents:data[a.path],loader:'json'}));}};
  const result=await build({entryPoints:['src/walk/main.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2022',legalComments:'eof',define:{__COSMO_SCRIPT__:JSON.stringify(cosmo),__EMOTES_URL__:JSON.stringify(emoteName),__MAP_URL__:JSON.stringify(mapName),__HAT_URL__:JSON.stringify(hatName),__ART_URLS__:JSON.stringify(art),__REEL_URL__:JSON.stringify(reelName),__LIVE_URL__:JSON.stringify(process.env.LEO_LIVE_URL||''),__CREAMERY_URL__:JSON.stringify(process.env.LEO_CREAMERY_URL||'https://creamery.marscatsvoyage.com'),__WALK_DEBUG__:'false'},plugins:[partitions]});
  const code=result.outputFiles[0].text;

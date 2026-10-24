@@ -1,7 +1,7 @@
 // Keyboard, mouse and touch for walking, with Voyager's Reach's keys: WASD or the arrows move (relative to the camera),
 // Shift runs, Space jumps (hold for height, again in the air), C crouches (a slide when running), X goes prone, B opens
 // the emotes (1-0 play them), E uses what is in front of you (a seat, a bed, a lift), V or F swaps first and third
-// person, M is Go to, N the ship map, P pings where you are for others aboard and R respawns in the arrival hall. Dragging looks around; on touch screens the left thumb steers a joystick and
+// person, M is Go to, N the ship map, L the ship log, P pings where you are for others aboard and R respawns in the arrival hall. Dragging looks around; on touch screens the left thumb steers a joystick and
 // the right one looks.
 const KEYS={forward:['KeyW','ArrowUp'],back:['KeyS','ArrowDown'],left:['KeyA','ArrowLeft'],right:['KeyD','ArrowRight']};
 
@@ -27,6 +27,7 @@ export class WalkInput{
    else if(e.code==='KeyB')this.onAction('emotes');
    else if(e.code==='KeyR')this.onAction('respawn');
    else if(e.code==='KeyP')this.onAction('ping');
+   else if(e.code==='KeyL')this.onAction('log');
    else if(/^Digit[0-9]$/.test(e.code))this.onAction('emote',(+e.code.slice(5)+9)%10);
    if(e.code.startsWith('Arrow'))e.preventDefault();
    this.down.add(e.code);
