@@ -14,9 +14,15 @@ import {ARENA_ID,TRIGGERS,PODIUMS,STAGE,COUNTER,VAULT,STANDEE,STANDEES,FLOOR_COI
 // coin in the floor and either side of the screen, the rope frame round every gallery card, and the medallion in each
 // hologram.
 // Where a panel stands in for the room's own lettering or handle, that piece is hidden, but only when its art exists.
+// Outside, the door gets a brass surround and the badge goes on the arena's outer wall beside it, and a third pack
+// standee faces the door from across the corridor, so the arena is seen before it is entered.
 export const GAME_URL='https://mudwater.bayc.com/game/';
 export const MUDWATER_ART=['mudwater-badge.png','mudwater-wordmark.png','mudwater-skull.png','mudwater-medallion.png','mudwater-pack.jpg','mudwater-cartouche.png','mudwater-coin-gold.png'];
 const REACH=1.3,SPIN=.25,BOB=.03,NEAR=45;
+// The entrance from the side corridor, in room coordinates: the door's corridor face (x −26, opening z −2…2, 2.8 m
+// high, the entry header above it) and, across the 7 m corridor, its far wall (x −33), where a pack standee faces the door
+// (a little aft of it, clear of the service door on that wall).
+const DOOR={x:-26.02,half:2,h:2.8},CORRIDOR_STANDEE=[-32.55,-1.2];
 const LABEL={mudwater:'Play Mudwater',packs:'Booster packs'};
 
 // One panel's geometry: a plane `w` by `h` centred on `at` (room coordinates), facing `normal`, turned `roll` about it.
@@ -40,6 +46,18 @@ export function createMudwater(ship,{urls={},anisotropy=1}={}){
  for(const o of cards){const p=room.worldToLocal(o.getWorldPosition(new T.Vector3())),q=o.getWorldQuaternion(new T.Quaternion());
   o.removeFromParent();group.add(o);o.position.copy(p);o.quaternion.copy(q);o.userData.base={y:o.position.y,yaw:new T.Euler().setFromQuaternion(q,'YXZ').y};}
 
+ // The corridor entrance: a brass surround on the door's corridor face and a pack standee across the corridor, solid as
+ // plain boxes (main.js adds them to the colliders). Nothing narrows the 4 m opening or lowers its 2.8 m head.
+ const solid=new T.Group();solid.name='Mudwater_entrance';group.add(solid);
+ const black=new T.MeshStandardMaterial({name:'Mudwater_entrance_black',color:0x080806,roughness:.72}),brass=new T.MeshStandardMaterial({name:'Mudwater_entrance_brass',color:0xaea35d,metalness:.75,roughness:.32});
+ const block=(name,size,at,m)=>{const o=new T.Mesh(new T.BoxGeometry(...size),m);o.name=name;o.position.set(...at);solid.add(o);return o;};
+ for(const s of [-1,1])block('Mudwater_door_pilaster',[.1,DOOR.h+.05,.26],[DOOR.x-.05,(DOOR.h+.05)/2,s*(DOOR.half+.13)],brass);
+ block('Mudwater_door_lintel',[.1,.14,2*DOOR.half+.52],[DOOR.x-.05,DOOR.h+.07,0],brass);
+ {const [x,z]=CORRIDOR_STANDEE,{w,h,base}=STANDEE;
+  block('Mudwater_corridor_standee',[.06,h,w],[x,base+h/2,z],black);block('Mudwater_corridor_standee_base',[.5,base,w+.1],[x,base/2,z],black);
+  for(const s of [-1,1])block('Mudwater_corridor_standee_trim',[.08,h+.04,.03],[x,base+h/2,z+s*(w/2+.015)],brass);}
+ group.updateMatrixWorld(true);
+
  // The brand art. Each texture's panels are merged into one mesh, hidden until the texture arrives.
  const art=new Map(),pieces=[];
  const dress=(file,geos,{opaque=false,glow=false,cut=.04,metal=.35,rough=.42}={})=>{
@@ -51,7 +69,9 @@ export function createMudwater(ship,{urls={},anisotropy=1}={}){
  };
  const hide=test=>room.traverse(o=>{if(o.isMesh&&test(o))o.visible=false;});
  // The badge wordmark over the end wall's name, which it replaces.
- if(dress('mudwater-badge.png',[panel(3.6,3.6*147/543,[25.62,2.72,0],[-1,0,0])]))hide(o=>o.name==='Wayfinding_text'&&o.position.x>25);
+ // (And one on the arena's outer wall beside the door, under its window, facing walkers coming down the corridor: the
+ // corridor's ceiling hides the header over the door.)
+ if(dress('mudwater-badge.png',[panel(3.6,3.6*147/543,[25.62,2.72,0],[-1,0,0]),panel(2.2,2.2*147/543,[DOOR.x-.01,.55,5.6],[-1,0,0])]))hide(o=>o.name==='Wayfinding_text'&&o.position.x>25);
  // The base wordmark on the pack counter's face, in place of its lettering.
  const front=COUNTER.z+.56;
  if(dress('mudwater-wordmark.png',[panel(2.4,2.4*100/527,[COUNTER.x,.7,front+.03],[0,0,1])]))hide(o=>o.name==='Wayfinding_text'&&Math.abs(o.position.z-front)<.1);
@@ -61,7 +81,7 @@ export function createMudwater(ship,{urls={},anisotropy=1}={}){
  dress('mudwater-skull.png',PODIUMS.flatMap(x=>[-1,1].map(s=>panel(.62,.62*255/285,[x,STAGE.h+.55,s*.765],[0,0,s]))));
  // The pack on both faces of each standee, and on every pack fanned on the counter.
  if(dress('mudwater-pack.jpg',[
-  ...STANDEES.flatMap(([x,z])=>[-1,1].map(s=>panel(STANDEE.w*.96,STANDEE.h*.96,[x+s*.032,STANDEE.base+STANDEE.h/2,z],[s,0,0]))),
+  ...[...STANDEES,CORRIDOR_STANDEE].flatMap(([x,z])=>[-1,1].map(s=>panel(STANDEE.w*.96,STANDEE.h*.96,[x+s*.032,STANDEE.base+STANDEE.h/2,z],[s,0,0]))),
   ...PACK_FOILS.map(({at:[x,y,z],turn})=>{const n=[Math.sin(turn),0,Math.cos(turn)];return panel(.15,.24,[x+n[0]*.016,y,z+n[2]*.016],n);}),
  ],{opaque:true}))hide(o=>o.name==='Pack_foil_logo_art');
  // The gold coin set in the floor inside the door, upright to a walker coming in, and either side of the screen.
@@ -83,6 +103,8 @@ export function createMudwater(ship,{urls={},anisotropy=1}={}){
  let t=0,loading=false;const centre=origin.clone();
  return {
   group,
+  // The entrance's solid parts, for the colliders.
+  solid,
   update(dt){t+=dt;cards.forEach((o,i)=>{const b=o.userData.base;o.rotation.set(0,b.yaw+t*SPIN*(i%2?-1:1),0);o.position.y=b.y+Math.sin(t*1.3+i*1.7)*BOB;});},
   // Called with the walker's position a few times a second: load the art once a walker is near.
   load(at){
@@ -90,6 +112,8 @@ export function createMudwater(ship,{urls={},anisotropy=1}={}){
    for(const [file,meshes] of art)new T.TextureLoader().load(urls[file],tex=>{tex.colorSpace=T.SRGBColorSpace;tex.anisotropy=anisotropy;
     for(const m of meshes){m.material.map=tex;m.material.needsUpdate=true;m.visible=true;}});
   },
+  // Whether a point (a walker's feet) is inside the arena.
+  contains(p){const x=p.x-origin.x,y=p.y-origin.y,z=p.z-origin.z;return Math.abs(x)<26&&Math.abs(z)<17&&y>-.5&&y<3;},
   // The giveaway card's wordmark, once its art exists.
   wordmark:urls['mudwater-wordmark.png']||null,
   // The use prompt: the nearest trigger within reach, on its own floor.

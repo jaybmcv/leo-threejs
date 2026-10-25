@@ -12,7 +12,8 @@ const browserKey=()=>storage('leo-live-key',()=>[...crypto.getRandomValues(new U
 export const savedName=()=>storage('leo-live-name')||'';
 export function saveName(name){try{localStorage.setItem('leo-live-name',name);}catch{}}
 
-// on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n), board(b), scored(r), hearts(h), hearted(r), selfie(id,ms)}; status
+// on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n), board(b), scored(r), hearts(h), hearted(r), selfie(id,ms),
+// giveaway(g), claimed(r)}; status
 // is 'connecting', 'live',
 // 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). opts.pass(): a Leo pass for this
 // (re)connection or null (connect.js); opts.refused(): the server would not take it; opts.invite: the invite code the
@@ -50,6 +51,9 @@ export function connectLive(url,on,opts={}){
     case 'hearted':on.hearted?.(msg);break;
     // Someone at the selfie booth started its countdown (walk/selfie.js): the photo is due in ms.
     case 'selfie':if(Number.isFinite(msg.ms))on.selfie?.(msg.id,Math.min(5000,Math.max(0,msg.ms)));break;
+    // Mudwater Arena's giveaway (server/arena.mjs): its state for this visitor, and the answer to a claim.
+    case 'giveaway':on.giveaway?.(msg);break;
+    case 'claimed':on.claimed?.(msg);break;
     case 'full':stopped=true;status('full');break;
     case 'replaced':stopped=true;status('replaced');break;
     case 'reload':stopped=true;status('offline');break;
@@ -87,6 +91,11 @@ export function connectLive(url,on,opts={}){
   heart(change,on){if(live())ws.send(JSON.stringify({m:'heart',change,on:!!on}));},
   // The selfie camera pressed: everyone near the booth counts down with us.
   selfie(){if(live())ws.send(JSON.stringify({m:'selfie'}));},
+  // Mudwater Arena: ask for the giveaway's state, claim a pack (to one of this visitor's verified wallets in wallet
+  // mode), and count an arena event ('enter', 'play' or 'card').
+  giveaway(){if(live())ws.send(JSON.stringify({m:'giveaway'}));},
+  claim(wallet){if(live())ws.send(JSON.stringify({m:'claim',...(wallet?{wallet}:{})}));},
+  arena(e){if(live())ws.send(JSON.stringify({m:'arena',e}));},
   rename(next){name=next;saveName(next);if(live())ws.send(JSON.stringify({m:'name',name:next}));},
   get live(){return !!live();},
   // How the server has this visitor: {name, verified}.

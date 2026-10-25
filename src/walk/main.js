@@ -53,6 +53,7 @@ import {createPoolTable} from './pool/table.js';
 import {createPawPool} from './pool/game.js';
 import {createPawsOff} from './paws-off/game.js';
 import {createMudwater} from './mudwater.js';
+import {createGiveaway} from './mudwater-giveaway.js';
 import {createPaintings} from './paintings.js';
 import {createComics,createComicReader} from './comics.js';
 import {createChangesBoards} from './changes-board.js';
@@ -184,12 +185,12 @@ async function buildShip(){
  // Young explorers' kitten habitats (kittens.js): the climbing tree, tunnel, den and kittens solid as plain boxes.
  kittens=createKittens(ship,cosmoKit);if(kittens)colliders.addStatic(kittens.solid,()=>true);
  // Communal dining's three serving robots (dining-robots.js): solid as plain boxes.
- diningRobots=createDiningRobots(ship);if(diningRobots)colliders.addStatic(diningRobots.solid,()=>true);colliders.commit();
+ diningRobots=createDiningRobots(ship);if(diningRobots)colliders.addStatic(diningRobots.solid,()=>true);
+ // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
+ // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
+ mudwater=createMudwater(ship,{urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged.
  pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),onStart:startRun,onEnd:endRun});
- // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
- // merged.
- mudwater=createMudwater(ship,{urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});
  // The forward observation lounge's telescope plays Alien Cat Invasion (invasion/game.js): where it stands, on its floor.
  {const base=ship.root.getObjectByName('Shared_telescope_base');if(base){base.updateWorldMatrix(true,false);scope=base.getWorldPosition(new T.Vector3());scope.y-=.325;}}
  // The Deck 16 theatre's cinema dressing (theatre.js), before baking so the pieces it hides stay out.
@@ -280,8 +281,8 @@ const actions={
   else if(t.kind==='log')changeLog.open({near:controller.position});
   else if(t.kind==='pool')pool.open();
   else if(t.kind==='treadmill')pawsOff.start(t.mill);
-  else if(t.kind==='mudwater')mudwater.play();
-  else if(t.kind==='packs'){closePanels();const w=$('mudwater-wordmark');if(mudwater.wordmark&&!w.src){w.src=mudwater.wordmark;w.hidden=false;}$('mudwater-sheet').hidden=false;input.enabled=false;}
+  else if(t.kind==='mudwater'){mudwater.play();live?.arena('play');}
+  else if(t.kind==='packs'){closePanels();const w=$('mudwater-wordmark');if(mudwater.wordmark&&!w.src){w.src=mudwater.wordmark;w.hidden=false;}giveaway.open();$('mudwater-sheet').hidden=false;input.enabled=false;}
  },
  escape(){closePanels();},
  // (Nothing below until the walk is ready.)
@@ -357,7 +358,9 @@ installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-width:560px)').
 // A tester (this browser holds a tester invite) wears the captain's hat (hat.js).
 if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 // Others aboard: their poses in, ours out, the lifts as the server runs them.
-let live=null,remotes=null,marks=null,aboard=0,liveStatus='';
+let live=null,remotes=null,marks=null,aboard=0,liveStatus='',wasInArena=false;
+// The giveaway card at Mudwater Arena's counter, which claims through Leo live.
+const giveaway=createGiveaway({$,live:()=>live,connect});
 if(LIVE_URL){
  marks=new Marks($('names'));
  remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,running:p=>!!pawsOff?.onBelt(p)});
@@ -373,6 +376,8 @@ if(LIVE_URL){
   hearts:h=>changeLog.setHearts(h),hearted:r=>changeLog.refused(r.why),
   // A group photo: someone pressed the selfie camera, and this page takes the photo at the same moment as theirs.
   selfie:(id,ms)=>booth?.start(ms),
+  // Mudwater Arena's giveaway card (mudwater-giveaway.js): its state, and a claim's answer.
+  giveaway:g=>giveaway.status(g),claimed:r=>giveaway.claimed(r),
  },{pass:()=>me.pass?currentPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
@@ -476,7 +481,9 @@ renderer.setAnimationLoop(()=>{
  if(lounge)lounge.update(dt,bodies,camera.getWorldPosition(eye));
  provisions?.update(dt,bodies);
  marks?.update(camera,p,now);
- if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);}
+ if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);
+  // Walking into Mudwater Arena counts as a visit (server/arena.mjs).
+  const inArena=!!mudwater?.contains(p);if(inArena&&!wasInArena)live?.arena('enter');wasInArena=inArena;}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
