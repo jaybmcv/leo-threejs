@@ -48,6 +48,7 @@ import {createFinCasing} from './fin-casing.js';
 import {createInvasion} from './invasion/game.js';
 import {createPoolTable} from './pool/table.js';
 import {createPawPool} from './pool/game.js';
+import {createPawsOff} from './paws-off/game.js';
 import {createPaintings} from './paintings.js';
 import {createComics,createComicReader} from './comics.js';
 import {createChangesBoards} from './changes-board.js';
@@ -172,6 +173,8 @@ async function buildShip(){
  {const carpet=ship.root.getObjectByName('Activity_floor');if(carpet){poolTable=createPoolTable(carpet);colliders.addStatic(poolTable.group);}}
  // The Deck 16 theatre's concession stand (concession.js): solid too.
  concession=createConcession(ship);if(concession)colliders.addStatic(concession);colliders.commit();
+ // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged.
+ pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),onStart:startRun,onEnd:endRun});
  // The forward observation lounge's telescope plays Alien Cat Invasion (invasion/game.js): where it stands, on its floor.
  {const base=ship.root.getObjectByName('Shared_telescope_base');if(base){base.updateWorldMatrix(true,false);scope=base.getWorldPosition(new T.Vector3());scope.y-=.325;}}
  // The Deck 16 theatre's cinema dressing (theatre.js), before baking so the pieces it hides stay out.
@@ -185,7 +188,7 @@ async function buildShip(){
  haze.add(createHaze(ship));
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
- for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[])])toBand(o);
+ for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pawsOff?[pawsOff.group]:[])])toBand(o);
  if(concession)toBand(concession);
  if(lounge)for(const o of lounge.drawn)toBand(o);
  // The paintings (paintings.js) span several bands each: they draw while any of them is in view.
@@ -209,7 +212,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,scope=null,poolTable=null,paintings=null,comics=null,theatre=null,lounge=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,scope=null,poolTable=null,pawsOff=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -258,6 +261,7 @@ const actions={
   else if(t.kind==='play')arcade.open();
   else if(t.kind==='log')changeLog.open({near:controller.position});
   else if(t.kind==='pool')pool.open();
+  else if(t.kind==='treadmill')pawsOff.start(t.mill);
  },
  escape(){closePanels();},
  // (Nothing below until the walk is ready.)
@@ -336,7 +340,7 @@ if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 let live=null,remotes=null,marks=null,aboard=0,liveStatus='';
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,running:p=>!!pawsOff?.onBelt(p)});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -355,10 +359,11 @@ if(LIVE_URL){
  $('ping').hidden=false;$('help-ping').hidden=false;
 }
 // The pose others see. Resting, the body is where the bed or seat put it, not where the controller stands.
+// On a treadmill (Paws Off), it is where the run has him: on the belt, or on his back behind it after a fall.
 function myPose(riding=false){
- const h=walker.holder,at=resting?h.position:controller.position;
- return {pos:[at.x,at.y,at.z],yaw:resting?h.rotation.y:heading,g:controller.grounded||riding||!!resting,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):null,pl:arcade.isOpen||pool.isOpen};
+ const h=walker.holder,held=resting||run,at=held?h.position:controller.position;
+ return {pos:[at.x,at.y,at.z],yaw:held?h.rotation.y:heading,g:controller.grounded||riding||!!held,st:controller.stance,jc:Math.min(3,controller.jumpCount),
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||!!run};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
@@ -369,7 +374,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get lounge(){return lounge;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get lounge(){return lounge;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -405,10 +410,12 @@ renderer.setAnimationLoop(()=>{
  // Moving off a seat or bed stands you up.
  if(resting&&resting.phase==='in'&&resting.t===1&&wish.lengthSq()>.1)standUp();
  lifts.update(dt,controller);
+ // A Paws Off run holds the walker on the treadmill (paws-off/game.js); the belts of others playing run too.
+ run=pawsOff?.update(dt,remotes?[...remotes.remotes.values()].filter(r=>r.tgt?.playing).map(r=>r.cur):[])||null;
  // Riding a moving car, the car carries the walker; it passes slab edges and the hull skin, which must not push.
  const riding=lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
- if(!resting&&!riding){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ if(!resting&&!riding&&!run){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
  const p=controller.position;
  // Neither safety net keeps a lift car's floor to return to: the car may have gone by the time it is needed, leaving
@@ -430,11 +437,15 @@ renderer.setAnimationLoop(()=>{
  lastHeading=heading;lastSpeed=controller.speed;
  let pose=null;
  if(resting)pose=restPose(dt);
- if(!resting){walker.holder.position.copy(p);walker.holder.rotation.set(0,heading,0);walker.body.rotation.set(0,0,0);}
- walker.update(dt,{speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
+ else if(run){heading=run.yaw;walker.holder.position.copy(run.pos);walker.holder.rotation.set(0,run.yaw,0);
+  // Off the back: over onto his back, head first the way the belt carried him.
+  walker.body.rotation.set((-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(run.tumble,.25,1),0,0);
+  if(run.tumble>0)pose={kind:'lie',weight:run.tumble,seatHeight:walker.hipHeight};}
+ if(!resting&&!run){walker.holder.position.copy(p);walker.holder.rotation.set(0,heading,0);walker.body.rotation.set(0,0,0);}
+ walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
   turnRate,accel,rise:controller.velocity.y,emote,rest:pose});
  live?.pose(myPose(riding),now);
- follow.update(dt,resting?resting.view:p,WALKER.height);
+ follow.update(dt,resting?resting.view:run?run.pos:p,WALKER.height);
  // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle).
  walker.holder.visible=follow.mode!=='first'&&follow.current>.75;
  cull(p);
@@ -484,7 +495,7 @@ function target(){
  const b=booth.near(p)||comics.near(p);if(b)return b;
  const g=changeLog.near(p);if(g)return g;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
- const q=poolTable?.near(p);if(q)return q;
+ const q=poolTable?.near(p)||pawsOff?.near(p);if(q)return q;
  const s=rest.pick(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));
  return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':'Sit down'}:null;
 }
@@ -495,7 +506,7 @@ function hud(p){
  const near=changeLog.nearby(p).length,chip=$('changes-here');
  if(chip.dataset.count!==String(near)){chip.dataset.count=String(near);chip.hidden=!near;chip.querySelector('b').textContent=String(near);
   chip.querySelector('span').textContent=near===1?' change here':' changes here';chip.setAttribute('aria-label',`${near} change${near===1?'':'s'} made around here: open the ship log`);}
- const t=resting?{label:resting.lie?'Get up':'Stand up'}:target();
+ const t=run?null:resting?{label:resting.lie?'Get up':'Stand up'}:target();
  const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=!show||touch;
  // Waiting for a called lift there's nothing to press: the prompt just says where the car is.
  const waiting=t?.kind==='waiting';prompt.classList.toggle('waiting',waiting);$('use').disabled=waiting;
@@ -523,6 +534,14 @@ function settle(spot){
  resting={spot,lie,from:{pos:p,heading},to:{pos,yaw},t:0,phase:'in',view:new T.Vector3(spot.point.x,spot.height-(lie?.35:.55),spot.point.z)};
 }
 const PILLOW_TILT=.12;
+// Paws Off: on the treadmill, the game has the keys and the camera goes behind Cosmo; off it, the walk has them back.
+function startRun(m){
+ closePanels();emote=null;resting=null;input.enabled=false;input.down.clear();controller.velocity.set(0,0,0);
+ runView=follow.mode;follow.mode='third';follow.yaw=m.yaw;follow.pitch=-.28;follow.look(0,0);
+}
+function endRun({at,yaw}){
+ run=null;controller.place(at);heading=yaw;follow.mode=runView;walker.body.rotation.set(0,0,0);input.enabled=true;input.down.clear();
+}
 function standUp(){if(resting&&resting.phase==='in')resting.phase='out';}
 function restPose(dt){
  const r=resting;r.t=T.MathUtils.clamp(r.t+(r.phase==='in'?1:-1)*dt/.7,0,1);
@@ -563,7 +582,7 @@ function toggleEmotes(){
  EMOTES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';const label=name.replace(/_/g,' ');b.textContent=`${(i+1)%10} · ${label[0].toUpperCase()}${label.slice(1)}`;b.onclick=()=>{closePanels();actions.emote(i);};list.appendChild(b);});
  panel.hidden=false;input.enabled=false;list.querySelector('button')?.focus();
 }
-function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;resting=null;controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
+function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();resting=null;controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
 function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet'])$(id).hidden=true;input.enabled=true;input.down.clear();}
 // The name others see over your head.
