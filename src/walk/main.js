@@ -44,6 +44,7 @@ import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink} from './link.js';
 import {createSelfieBooth} from './selfie.js';
 import {createConcession} from './concession.js';
+import {createFinCasing} from './fin-casing.js';
 import {createInvasion} from './invasion/game.js';
 import {createPoolTable} from './pool/table.js';
 import {createPawPool} from './pool/game.js';
@@ -146,6 +147,8 @@ async function buildShip(){
  ship.inside.add(partitionMesh(walkPlan.walls.map(([deck,x0,x1,z0,z1,y0,y1])=>({deck,x0,x1,z0,z1,y0,y1}))));
  // Short railings where a floor drops away (railings.js; planned at build time too).
  ship.inside.add(railingMesh(walkPlan.rails));
+ // The fin root comes down through Deck 19's aft lift lobby; a clad casing boxes it in (fin-casing.js).
+ ship.inside.add(createFinCasing());
  // (The exterior model carries its own copy of the crown lounge, static car floor and all.)
  ship.root.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
  // The main lift shafts are walled in nearly clear glass, so with the car away the shaft read as an open drop at your
