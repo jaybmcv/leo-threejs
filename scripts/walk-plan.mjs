@@ -11,6 +11,7 @@ import {rasterDecks,planPartitions,partitionMesh} from '../src/walk/partitions.j
 import {planRails,railingMesh} from '../src/walk/railings.js';
 import {planMap,MAP} from '../src/walk/deck-map.js';
 import {planWindows} from '../src/walk/windows.js';
+import {createFinCasing} from '../src/walk/fin-casing.js';
 
 // The walk world in Node, exactly as the walk page builds it: the saved web exterior (concept passes baked in), every
 // deck fitted, and the deck plates faired to the hull. Shared by the page build (the partition plan) and check-walk.
@@ -31,6 +32,7 @@ export async function loadWalkShip(exteriorPath='output/leo-interior-v01/leo-ext
 export function fitForWalking(ship,plan){
  const decks=plan?null:rasterDecks(ship),walls=plan?plan.walls.map(([deck,x0,x1,z0,z1,y0,y1])=>({deck,x0,x1,z0,z1,y0,y1})):planPartitions(ship,decks);
  ship.inside.add(partitionMesh(walls));
+ ship.inside.add(createFinCasing());
  ship.root.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
  const dropped=prepareExteriorForWalking(ship);
  let colliders=buildColliders(ship,{extra:[ship.exterior],filter:o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name)});
