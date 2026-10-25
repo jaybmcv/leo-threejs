@@ -44,6 +44,7 @@ import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink} from './link.js';
 import {createSelfieBooth} from './selfie.js';
 import {createConcession} from './concession.js';
+import {stripProvisions,createProvisions} from './provisions.js';
 import {createFinCasing} from './fin-casing.js';
 import {createInvasion} from './invasion/game.js';
 import {createPoolTable} from './pool/table.js';
@@ -158,6 +159,8 @@ async function buildShip(){
  ship.inside.traverse(o=>{if(/^Lift_(back|side)_enclosure$/.test(o.name))o.material=shaftGlass;});
  status('Fitting the walls…');await idle();
  prepareExteriorForWalking(ship);
+ // Refrigerated provisions loses its shared locker cabinets before the colliders see them (provisions.js).
+ stripProvisions(ship);
  // The theatre's attendant moves behind the concession counter (theatre.js) before the walls are fitted.
  placeAttendant(ship);
  buildColliders(ship,{extra:[ship.exterior],filter:walls,into:colliders});
@@ -172,7 +175,9 @@ async function buildShip(){
  // Paw Pool's table on the Recreation Hall's activity floor (pool/table.js): solid to walk into, its rails too high to step.
  {const carpet=ship.root.getObjectByName('Activity_floor');if(carpet){poolTable=createPoolTable(carpet);colliders.addStatic(poolTable.group);}}
  // The Deck 16 theatre's concession stand (concession.js): solid too.
- concession=createConcession(ship);if(concession)colliders.addStatic(concession);colliders.commit();
+ concession=createConcession(ship);if(concession)colliders.addStatic(concession);
+ // Refrigerated provisions' fridges, shelving and strip curtain (provisions.js): solid as plain boxes, the curtain not.
+ provisions=createProvisions(ship);if(provisions)colliders.addStatic(provisions.solid,()=>true);colliders.commit();
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged.
  pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),onStart:startRun,onEnd:endRun});
  // The forward observation lounge's telescope plays Alien Cat Invasion (invasion/game.js): where it stands, on its floor.
@@ -190,6 +195,7 @@ async function buildShip(){
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
  for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pawsOff?[pawsOff.group]:[])])toBand(o);
  if(concession)toBand(concession);
+ if(provisions)toBand(provisions.group);
  if(lounge)for(const o of lounge.drawn)toBand(o);
  // The paintings (paintings.js) span several bands each: they draw while any of them is in view.
  // The ship log boards (changes-board.js) in the crown lounge and the arrival hall.
@@ -212,7 +218,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,scope=null,poolTable=null,pawsOff=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,scope=null,poolTable=null,pawsOff=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -374,7 +380,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get lounge(){return lounge;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get lounge(){return lounge;},get provisions(){return provisions;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -450,8 +456,10 @@ renderer.setAnimationLoop(()=>{
  walker.holder.visible=follow.mode!=='first'&&follow.current>.75;
  cull(p);
  remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
- // The lounge's doors open for anyone near them.
- if(lounge){bodies.length=0;bodies.push(p);if(remotes)for(const r of remotes.remotes.values())bodies.push(r.cur);lounge.update(dt,bodies,camera.getWorldPosition(eye));}
+ // The lounge's doors open, and the cold room's strip curtain parts, for anyone near them.
+ bodies.length=0;bodies.push(p);if(remotes)for(const r of remotes.remotes.values())bodies.push(r.cur);
+ if(lounge)lounge.update(dt,bodies,camera.getWorldPosition(eye));
+ provisions?.update(dt,bodies);
  marks?.update(camera,p,now);
  if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);theatre?.update(p);}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
