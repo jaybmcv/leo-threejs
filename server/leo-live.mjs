@@ -9,6 +9,7 @@
 //   LEO_LIVE_ORIGINS=...              pages allowed to connect, comma separated; a * stands for any port
 //   LEO_PASS_JWKS_URL=...             The Creamery's public keys for Leo passes (default: its production keys)
 //   LEO_PASS_ISS=...                  the issuer a pass must name (default https://creamery.marscatsvoyage.com)
+//   LEO_LIVE_GIVEAWAY=...             Mudwater Arena's giveaway settings, read again when changed (arena.mjs)
 //
 // Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
 // server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
@@ -26,6 +27,7 @@ import {liftState,callLift,stepLift,liftWire} from '../src/walk/lift-motion.js';
 import {encodeRecord,encodeIdentity,assembleFrame,actorIdOf,cleanName,PROTOCOL,STANCES} from '../src/walk/net/wire.js';
 import {keySet,verifyPass} from '../src/walk/net/pass.js';
 import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
+import {createArena} from './arena.mjs';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||150);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -37,12 +39,13 @@ const NEAR_DY=9,NEAR_M=64;
 const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
 const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',
  key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
-const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2]};
+const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6]};
 
 const visitors=new Set();
 const slots=new Map();let nextSlot=1;
 const lifts=LIFTS.map(spec=>({spec,stops:spec.stops,state:liftState(spec),sent:''}));
 const log=(...a)=>console.log(new Date().toISOString(),...a);
+const arena=createArena({log});
 
 function send(ws,msg){if(ws.readyState===1)ws.send(typeof msg==='string'||msg instanceof Uint8Array?msg:JSON.stringify(msg));}
 function broadcast(msg,except){const text=JSON.stringify(msg);for(const v of visitors)if(v.ready&&v!==except)send(v.ws,text);}
@@ -193,6 +196,10 @@ function onMessage(v,data,binary){
   case 'heart':if(allowed(v,'heart'))hearted(v,msg);break;
   // The selfie camera pressed: a countdown for everyone at the booth.
   case 'selfie':if(allowed(v,'selfie'))selfie(v);break;
+  // Mudwater Arena (arena.mjs): the giveaway card's state, a claim at the counter, and an arena event to count.
+  case 'giveaway':if(allowed(v,'giveaway'))send(v.ws,arena.statusFor(v));break;
+  case 'claim':if(allowed(v,'claim'))send(v.ws,arena.claim(v,msg));break;
+  case 'arena':if(allowed(v,'arena'))arena.event(v,msg.e);break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;
@@ -235,6 +242,8 @@ function flush(){
 setInterval(flush,FLUSH_MS);
 
 const server=http.createServer((req,res)=>{
+ // Mudwater Arena's daily counts, totals only (arena.mjs).
+ if(req.url==='/arena'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify(arena.report()));return;}
  if(req.url==='/health'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify({ok:true,aboard:aboard(),max:MAX}));return;}
  res.writeHead(200,{'Content-Type':'text/plain'});res.end('Leo live: the multiplayer server for Walk around Leo.\n');
 });
@@ -254,5 +263,5 @@ wss.on('connection',ws=>{
 });
 // Behind a tunnel an idle socket is cut after a couple of minutes; a ping keeps it open, and one never answered ends it.
 setInterval(()=>{for(const v of visitors){if(!v.alive){v.ws.terminate();leave(v);continue;}v.alive=false;v.ws.ping();}},PING_MS);
-server.listen(PORT,()=>log(`Leo live on :${PORT} (/live, /health), up to ${MAX} aboard`));
+server.listen(PORT,()=>log(`Leo live on :${PORT} (/live, /health, /arena), up to ${MAX} aboard`));
 export {server};

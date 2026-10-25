@@ -3,7 +3,7 @@ import {DECKS} from '../model.js';
 import {marsSurface} from '../mars.js';
 import {LIFTS,carTriangles} from './lifts.js';
 import {liftState,callLift,stepLift,followLift} from './lift-motion.js';
-import {liftDisplay,stopShort,landingSigns,liftDisplayMount,callLight} from './signs.js';
+import {liftDisplay,stopShort,landingSigns,liftDisplayMount,callLight,FEATURED} from './signs.js';
 
 // Working lifts for walk mode. Each shaft gets a car that travels between its stops and a pair of sliding landing doors
 // at every stop; both are movable colliders, so a closed door is a wall and the car floor carries the walker.
@@ -75,7 +75,8 @@ let carArt=null;
 const art=()=>{if(!carArt){const stars=starTexture();mats.wall.map=mats.wall.emissiveMap=stars;mats.wall.needsUpdate=true;
  carArt=new T.ShaderMaterial({name:'Lift_mars',uniforms:{map:{value:marsSurface()}},vertexShader:MARS_VERTEX,fragmentShader:MARS_FRAGMENT});}return carArt;};
 const deckName=n=>DECKS.find(d=>d.number===n)?.name;
-export const stopLabel=s=>s.deck?`Deck ${s.deck} · ${deckName(s.deck)}`:s.label;
+// A deck's headline room follows its theme (signs.js FEATURED), so the lift's buttons point to it.
+export const stopLabel=s=>s.deck?`Deck ${s.deck} · ${deckName(s.deck)}${FEATURED[s.deck]?` · ${FEATURED[s.deck]}`:''}`:s.label;
 
 function boxMesh(name,[w,h,d],[x,y,z],m,parent){const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.name=name;o.position.set(x,y,z);parent.add(o);return o;}
 const boxTris=(w,h,d)=>{const g=new T.BoxGeometry(w,h,d).toNonIndexed();g.translate(0,h/2,0);return Array.from(g.attributes.position.array);};

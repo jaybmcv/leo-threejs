@@ -11,6 +11,8 @@ import {serviceRoutes} from '../service-circulation.js';
 const INK='#0d1419',PANEL='#1b2830',TEXT='#f4f0e8',DIM='#a6b4bb',ORANGE='#f85800',TEAL='#2fd6c5';
 const FONT={display:'"Archivo", "Sora", sans-serif',mono:'"JetBrains Mono", ui-monospace, monospace',sans:'"Sora", sans-serif'};
 const deckName=n=>DECKS.find(d=>d.number===n)?.name||'';
+// A deck's headline room, named on its lift landings' plaques (in gold, in place of the deck's theme) and stair signs.
+export const FEATURED={16:'Mudwater Arena'};const GOLD='#d8cf8f';
 const drawn=[];
 
 function canvasTexture(width,height,draw){
@@ -33,7 +35,7 @@ function fit(c,text,font,size,max){let s=size;do{c.font=font.replace('SIZE',s+'p
 
 // Deck plaque: "DECK", the number, the deck's name. Fin stops get their own wording.
 function plaqueLabel(stop){
- if(stop.deck)return {eyebrow:'Deck',big:String(stop.deck),name:deckName(stop.deck)};
+ if(stop.deck)return {eyebrow:'Deck',big:String(stop.deck),name:FEATURED[stop.deck]||deckName(stop.deck),featured:!!FEATURED[stop.deck]};
  const fin=/^Fin platform (\d+)/.exec(stop.label);if(fin)return {eyebrow:'Fin',big:fin[1],name:'Inspection platform'};
  if(/Crown/.test(stop.label))return {eyebrow:'Crown',big:'C',name:'Panoramic lounge'};
  return {eyebrow:'Fin',big:'G',name:stop.label};
@@ -46,7 +48,7 @@ function plaqueMaterial(stop){
   c.fillStyle=TEAL;c.font=`500 26px ${FONT.mono}`;c.letterSpacing='6px';c.fillText(l.eyebrow.toUpperCase(),w/2,62);c.letterSpacing='0px';
   c.fillStyle=TEXT;fit(c,l.big,`600 SIZE ${FONT.display}`,170,w-40);c.fillText(l.big,w/2,214);
   c.fillStyle=ORANGE;c.fillRect(w/2-28,238,56,5);
-  c.fillStyle=DIM;fit(c,l.name,`400 SIZE ${FONT.sans}`,24,w-36);c.fillText(l.name,w/2,286);
+  c.fillStyle=l.featured?GOLD:DIM;fit(c,l.name,`${l.featured?600:400} SIZE ${FONT.sans}`,24,w-36);c.fillText(l.name,w/2,286);
  });
  m=new T.MeshBasicMaterial({map:texture,toneMapped:false});plaques.set(key,m);return m;
 }
@@ -59,6 +61,7 @@ function stairsSign(deck){
   c.fillStyle=ORANGE;for(const [y,s] of [[56,-1],[104,1]]){c.beginPath();c.moveTo(42,y+s*-18);c.lineTo(66,y+s*6);c.lineTo(18,y+s*6);c.closePath();c.fill();}
   c.fillStyle=TEXT;c.textAlign='left';c.font=`600 64px ${FONT.display}`;c.fillText('Stairs',96,72);
   c.fillStyle=DIM;c.font=`400 26px ${FONT.mono}`;c.letterSpacing='3px';c.fillText(`DECK ${deck}`,100,124);c.letterSpacing='0px';
+  if(FEATURED[deck]){const x=100+c.measureText(`DECK ${deck}`).width+30;c.fillStyle=GOLD;fit(c,FEATURED[deck].toUpperCase(),`600 SIZE ${FONT.mono}`,24,w-x-16);c.fillText(FEATURED[deck].toUpperCase(),x,124);}
  });
  m=new T.MeshBasicMaterial({map:texture,toneMapped:false});stairsDecks.set(deck,m);return m;
 }
