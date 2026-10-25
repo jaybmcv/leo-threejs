@@ -65,6 +65,57 @@ function buffet(k,top,b,c,s,stations){
  for(let j=0;j<=posts;j++)k.add(top,new T.CylinderGeometry(.015,.015,gy,8).translate(b.min.x+.1+j*(s.x-.2)/posts,y0+gy/2,zg),M.steel,f);
  k.box(top,[s.x-.2,.012,.38],[c.x,y0+gy,zg-front*.17],FOOD.glass,f+'_glass');k.box(top,[s.x-.2,gy*.5,.012],[c.x,y0+gy*.72,zg],FOOD.glass,f+'_glass');
 }
+// Communal Dining set for a formal dinner: red cloths with a candle on every table, china, silver and a wine glass at
+// each seat, ivory chairs with a brass crest rail, and three red glass pendants per table, hung 40, 60 and 50 cm
+// below the ceiling. Every glow is emissive colour, so the room adds no lights.
+const DINE={cloth:mat('red_linen',0x8e1420,.9),china:mat('ceramic_china',0xf6f1e6,.3),brass:mat('brass',0xc8a052,.3,.75),silver:mat('silver_alloy',0xd4d8da,.25,.85),
+ velvet:mat('ivory_upholstery',0xe8dcc2,.95),walnut:mat('dark_wood',0x4a2c1c,.55),wax:mat('candle_wax',0xf4ead2,.7),
+ flame:new T.MeshStandardMaterial({name:'Finish_candle_flame',color:0xffc46b,emissive:0xffa63a,emissiveIntensity:2}),
+ bulb:new T.MeshStandardMaterial({name:'Finish_pendant_bulb',color:0xffe2b0,emissive:0xffcf8a,emissiveIntensity:1.6}),
+ shade:new T.MeshStandardMaterial({name:'Finish_red_pendant_glass',color:0xd01a2e,emissive:0x7a0610,emissiveIntensity:.8,roughness:.05,transparent:true,opacity:.6,depthWrite:false,side:T.DoubleSide}),
+ crystal:new T.MeshStandardMaterial({name:'Finish_wine_glass',color:0xe4eef2,roughness:.05,transparent:true,opacity:.3,depthWrite:false,side:T.DoubleSide})};
+// The ceiling's underside above a table, in the table's own frame.
+function ceilingAbove(shell,o){
+ const ceiling=shell.getObjectByName('Ceiling');if(!ceiling)return 2.5;shell.updateWorldMatrix(true,true);
+ return new T.Box3().setFromObject(ceiling).min.y-o.getWorldPosition(new T.Vector3()).y;
+}
+function dressTable(k,o,b,c,s,ceiling){
+ const top=b.max.y+.013,cyl=(r1,r2,h,p,m,f,seg=16,open=false)=>k.add(o,new T.CylinderGeometry(r1,r2,h,seg,1,open).translate(...p),m,f);
+ // The cloth: a top sheet and a skirt falling 30 cm on every side.
+ const w=s.x+.1,d=s.z+.1,drop=.3;
+ k.box(o,[w,.012,d],[c.x,b.max.y+.006,c.z],DINE.cloth,'table_linen');
+ for(const v of [-1,1]){k.box(o,[w,drop,.01],[c.x,b.max.y-drop/2+.012,c.z+v*d/2],DINE.cloth,'table_linen');k.box(o,[.01,drop,d],[c.x+v*w/2,b.max.y-drop/2+.012,c.z],DINE.cloth,'table_linen');}
+ // A candle in a brass holder at the centre.
+ cyl(.06,.07,.03,[c.x,top+.015,c.z],DINE.brass,'table_settings');cyl(.026,.026,.2,[c.x,top+.13,c.z],DINE.wax,'table_settings',10);
+ k.add(o,new T.SphereGeometry(.018,8,6).scale(1,2,1).translate(c.x,top+.26,c.z),DINE.flame,'candle_glow');
+ // A place at each chair (seats at x = ±1, both sides): charger, dinner and salad plates, bread plate,
+ // fork on the diner's left, knife and spoon on the right, a wine glass above the knife.
+ for(const x of [c.x-1,c.x+1])for(const side of [-1,1]){
+  const z=c.z+side*(s.z/2-.28),r=-side;
+  cyl(.16,.16,.01,[x,top+.005,z],DINE.brass,'table_settings',20);cyl(.135,.115,.016,[x,top+.018,z],DINE.china,'table_settings',20);cyl(.09,.075,.012,[x,top+.032,z],DINE.china,'table_settings',18);
+  cyl(.06,.055,.01,[x-r*.24,top+.005,z-side*.2],DINE.china,'table_settings',14);
+  k.box(o,[.02,.006,.15],[x-r*.21,top+.003,z+side*.03],DINE.silver,'table_settings');k.box(o,[.032,.006,.05],[x-r*.21,top+.003,z-side*.08],DINE.silver,'table_settings');
+  k.box(o,[.018,.006,.21],[x+r*.2,top+.003,z],DINE.silver,'table_settings');
+  k.box(o,[.014,.006,.15],[x+r*.245,top+.003,z+side*.03],DINE.silver,'table_settings');k.add(o,new T.SphereGeometry(.022,8,4).scale(1,.25,1.4).translate(x+r*.245,top+.004,z-side*.07),DINE.silver,'table_settings');
+  const gx=x+r*.22,gz=z-side*.2;cyl(.032,.034,.006,[gx,top+.003,gz],DINE.crystal,'wine_glass',12);cyl(.005,.005,.1,[gx,top+.055,gz],DINE.crystal,'wine_glass',6);
+  cyl(.042,.026,.09,[gx,top+.15,gz],DINE.crystal,'wine_glass',12,true);
+ }
+ // Three pendants on a brass ceiling bar, each on its own drop: a red glass bell round a warm bulb.
+ k.box(o,[1.8,.03,.1],[c.x,ceiling-.015,c.z],DINE.brass,'pendant_lights');
+ [[-.75,.4],[0,.6],[.75,.5]].forEach(([dx,drop])=>{
+  const x=c.x+dx,y=ceiling-drop;cyl(.004,.004,drop-.03,[x,ceiling-(drop-.03)/2,c.z],DINE.walnut,'pendant_lights',5);
+  cyl(.018,.018,.04,[x,y+.01,c.z],DINE.brass,'pendant_lights',10);cyl(.05,.13,.18,[x,y-.09,c.z],DINE.shade,'pendant_lights_glass',18,true);
+  k.add(o,new T.SphereGeometry(.045,10,8).translate(x,y-.1,c.z),DINE.bulb,'pendant_lights');
+ });
+}
+// Dining chairs: ivory upholstery on a taller back, a brass crest rail with buttoned tufting, dark wood legs.
+function diningChair(k,o,n){
+ if(n==='Leg'){o.material=DINE.walnut;return;}
+ o.material=DINE.velvet;if(n!=='Back')return;
+ const p=o.geometry.parameters,h=.9;o.geometry=new RoundedBoxGeometry(p.width,h,p.depth,1,.05);o.position.y+=(h-p.height)/2;
+ k.box(o,[p.width+.04,.05,p.depth+.04],[0,h/2+.02,0],DINE.brass,'dining_chairs');
+ for(const [x,y] of [[-.18,.2],[0,.2],[.18,.2],[-.09,0],[.09,0],[-.18,-.2],[0,-.2],[.18,-.2]])k.add(o,new T.SphereGeometry(.014,6,4).translate(x,y,p.depth/2),DINE.brass,'dining_chairs');
+}
 export const AREA_TREATMENTS={cargo:'cargo_restraints',stores:'inventory_labels',cold:'cabinet_hardware',pharmacy:'inventory_labels',workshop:'tool_storage',community:'tool_storage',logistics:'display_graphics',control:'display_graphics',arrival:'upholstery',security:'screening_equipment',airlock:'locker_hardware',baggage:'conveyor_detail',farm:'grow_lighting',nursery:'grow_lighting',harvest:'wash_station',kitchen:'cookware',air:'machine_grilles',thermal:'machine_grilles',water:'vessel_instruments',recycle:'machine_grilles',power:'cabinet_hardware',ward:'patient_services',isolation:'patient_services',surgery:'patient_services',clinic:'patient_services',imaging:'diagnostic_detail',counseling:'upholstery',shelter:'upholstery',arena:'games',library:'inventory_labels',gym:'fitness_equipment',recreation:'games',theater:'upholstery',childcare:'play_furniture',dining:'table_settings',navigation:'display_graphics',mission:'display_graphics',communications:'display_graphics',crew:'table_settings',briefing:'table_settings',data:'rack_hardware',captain:'table_settings',securityops:'display_graphics',bridge:'display_graphics',reactor:'module_instruments',drivefeed:'pump_detail',enginecontrol:'display_graphics',engineworkshop:'workbench_detail',engineaccess:'hatch_detail',hangar:'shuttle_detail',lifeboats:'lifeboat_detail'};
 export function finishShipArea(area,{root,shell,fit}){
  const k=detailKit(fit,area.name),lining=detailKit(shell,area.name+' lining');
@@ -87,7 +138,9 @@ export function finishShipArea(area,{root,shell,fit}){
    k.box(o,[s.x*.56,.022,s.z*.2],[c.x,b.max.y+.015,c.z+s.z*.2],M.dark,'desk_equipment');
    for(let j=0;j<4;j++)k.box(o,[s.x*.085,.025,s.z*.13],[c.x+s.x*(-.20+j*.13),b.max.y+.035,c.z+s.z*.2],M.steel,'desk_equipment');
   }
-  if(/^(Shared_table|Meeting_table|Crew_lounge_table)$/.test(n)&&['dining','crew','briefing','captain'].includes(area.kind))for(const dx of [-.25,.25]){
+  if(area.kind==='dining'&&/^(Seat|Back|Leg)$/.test(n))diningChair(k,o,n);
+  if(n==='Shared_table'&&area.kind==='dining')dressTable(k,o,b,c,s,ceilingAbove(shell,o));
+  else if(/^(Shared_table|Meeting_table|Crew_lounge_table)$/.test(n)&&['dining','crew','briefing','captain'].includes(area.kind))for(const dx of [-.25,.25]){
    k.box(o,[Math.min(.65,s.x*.2),.018,Math.min(.4,s.z*.3)],[c.x+dx*s.x,b.max.y+.013,c.z],M.linen,'table_settings');k.add(o,new T.CylinderGeometry(.065,.065,.11,12).translate(c.x+dx*s.x,b.max.y+.072,c.z+.11),M.steel,'table_settings');
   }
   if(n==='Countertop'&&area.kind==='dining')buffet(k,o,b,c,s,sources.filter(m=>m.name==='Meal_service_station'));
