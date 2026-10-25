@@ -7,7 +7,7 @@ export {createDLCat};
 // Cosmo, the Mars Cats Voyage crew cat, stands in for the blockout figures. The rig ships in a T-pose with no motion
 // clips, so it is posed once (a relaxed stand, below) and baked into four static meshes that every figure shares.
 export {COSMO_HEIGHT,setWorldQuat,aim,turn,relaxPose} from './cosmo-pose.js';
-import {COSMO_HEIGHT,relaxPose} from './cosmo-pose.js';
+import {COSMO_HEIGHT,relaxPose,KITTEN_POSES} from './cosmo-pose.js';
 const FIGURE_NAMES=new Set(['Mars_cat_1.75m','Resident_scale_1_75m']);
 
 // Apply the posed skin on the CPU: bindMatrixInverse · Σ w·(bone.matrixWorld · boneInverse) · bindMatrix.
@@ -31,20 +31,34 @@ function bake(mesh,toRoot){
  return out;
 }
 
-export async function createCosmoKit(){
+// `poses` names extra KITTEN_POSES (cosmo-pose.js) to bake as well; figure(name) builds one, standing on its lowest point.
+export async function createCosmoKit({poses=[]}={}){
  const cat=await createDLCat({height:COSMO_HEIGHT,castShadow:true,receiveShadow:true});
- relaxPose(cat);
- const byMaterial=new Map(),rootInverse=cat.root.matrixWorld.clone().invert();
- for(const mesh of cat.meshes){
-  if(Array.isArray(mesh.material))throw new Error('Cosmo mesh '+mesh.name+' uses several materials');
-  const list=byMaterial.get(mesh.material)||[];list.push(bake(mesh,new T.Matrix4().multiplyMatrices(rootInverse,mesh.matrixWorld)));byMaterial.set(mesh.material,list);
+ const bones=cat.meshes[0].skeleton.bones,rest=bones.map(b=>b.quaternion.clone());
+ const rootInverse=cat.root.matrixWorld.clone().invert();
+ function bakeAll(floor){
+  const byMaterial=new Map();
+  for(const mesh of cat.meshes){
+   if(Array.isArray(mesh.material))throw new Error('Cosmo mesh '+mesh.name+' uses several materials');
+   const list=byMaterial.get(mesh.material)||[];list.push(bake(mesh,new T.Matrix4().multiplyMatrices(rootInverse,mesh.matrixWorld)));byMaterial.set(mesh.material,list);
+  }
+  const parts=[...byMaterial].map(([material,list])=>{const geometry=mergeGeometries(list);if(!geometry)throw new Error('Could not merge Cosmo '+material.name);return {material,geometry};});
+  if(floor){const low=Math.min(...parts.map(p=>{p.geometry.computeBoundingBox();return p.geometry.boundingBox.min.y;}));for(const p of parts)p.geometry.translate(0,-low,0);}
+  for(const p of parts)p.geometry.computeBoundingSphere();
+  return parts;
  }
- const parts=[...byMaterial].map(([material,list])=>{const geometry=mergeGeometries(list);if(!geometry)throw new Error('Could not merge Cosmo '+material.name);geometry.computeBoundingSphere();return {material,geometry};});
+ relaxPose(cat);
+ const sets={stand:bakeAll(false)};
+ for(const name of poses){
+  bones.forEach((b,i)=>b.quaternion.copy(rest[i]));cat.root.updateMatrixWorld(true);
+  relaxPose(cat);KITTEN_POSES[name](cat);sets[name]=bakeAll(true);
+ }
+ const parts=sets.stand;
  // The baked meshes keep the rig's materials and textures; only the skinned source is released.
  cat.root.removeFromParent();cat.mixer.stopAllAction();
- return {parts,figure(){
+ return {parts,figure(pose='stand'){
   const g=new T.Group();g.name='Cosmo';
-  for(const {material,geometry} of parts){const m=new T.Mesh(geometry,material);m.name='Cosmo_'+(material.name||'part');m.castShadow=true;m.receiveShadow=true;g.add(m);}
+  for(const {material,geometry} of sets[pose]){const m=new T.Mesh(geometry,material);m.name='Cosmo_'+(material.name||'part');m.castShadow=true;m.receiveShadow=true;g.add(m);}
   return g;
  }};
 }
