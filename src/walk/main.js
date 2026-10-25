@@ -51,6 +51,7 @@ import {createInvasion} from './invasion/game.js';
 import {createPoolTable} from './pool/table.js';
 import {createPawPool} from './pool/game.js';
 import {createPawsOff} from './paws-off/game.js';
+import {createMudwater} from './mudwater.js';
 import {createPaintings} from './paintings.js';
 import {createComics,createComicReader} from './comics.js';
 import {createChangesBoards} from './changes-board.js';
@@ -183,6 +184,8 @@ async function buildShip(){
  kittens=createKittens(ship,cosmoKit);if(kittens)colliders.addStatic(kittens.solid,()=>true);colliders.commit();
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged.
  pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),onStart:startRun,onEnd:endRun});
+ // Mudwater Arena's turning hologram cards, game link and pack counter (mudwater.js), before the room is merged.
+ mudwater=createMudwater(ship);
  // The forward observation lounge's telescope plays Alien Cat Invasion (invasion/game.js): where it stands, on its floor.
  {const base=ship.root.getObjectByName('Shared_telescope_base');if(base){base.updateWorldMatrix(true,false);scope=base.getWorldPosition(new T.Vector3());scope.y-=.325;}}
  // The Deck 16 theatre's cinema dressing (theatre.js), before baking so the pieces it hides stay out.
@@ -196,7 +199,7 @@ async function buildShip(){
  haze.add(createHaze(ship));
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
- for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pawsOff?[pawsOff.group]:[])])toBand(o);
+ for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pawsOff?[pawsOff.group]:[]),...(mudwater?[mudwater.group]:[])])toBand(o);
  if(concession)toBand(concession);
  if(provisions)toBand(provisions.group);
  if(kittens)toBand(kittens.group);
@@ -222,7 +225,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,scope=null,poolTable=null,pawsOff=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -272,6 +275,8 @@ const actions={
   else if(t.kind==='log')changeLog.open({near:controller.position});
   else if(t.kind==='pool')pool.open();
   else if(t.kind==='treadmill')pawsOff.start(t.mill);
+  else if(t.kind==='mudwater')mudwater.play();
+  else if(t.kind==='packs'){closePanels();$('mudwater-sheet').hidden=false;input.enabled=false;}
  },
  escape(){closePanels();},
  // (Nothing below until the walk is ready.)
@@ -384,7 +389,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get lounge(){return lounge;},get provisions(){return provisions;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get lounge(){return lounge;},get provisions(){return provisions;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -422,6 +427,7 @@ renderer.setAnimationLoop(()=>{
  lifts.update(dt,controller);
  // A Paws Off run holds the walker on the treadmill (paws-off/game.js); the belts of others playing run too.
  run=pawsOff?.update(dt,remotes?[...remotes.remotes.values()].filter(r=>r.tgt?.playing).map(r=>r.cur):[])||null;
+ mudwater?.update(dt);
  // Riding a moving car, the car carries the walker; it passes slab edges and the hull skin, which must not push.
  const riding=lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
@@ -507,7 +513,7 @@ function target(){
  const b=booth.near(p)||comics.near(p);if(b)return b;
  const g=changeLog.near(p);if(g)return g;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
- const q=poolTable?.near(p)||pawsOff?.near(p);if(q)return q;
+ const q=poolTable?.near(p)||pawsOff?.near(p)||mudwater?.near(p);if(q)return q;
  const s=rest.pick(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));
  return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':'Sit down'}:null;
 }
@@ -596,7 +602,7 @@ function toggleEmotes(){
 }
 function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();resting=null;controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet'])$(id).hidden=true;input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet'])$(id).hidden=true;input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
