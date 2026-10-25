@@ -11,13 +11,14 @@ import {wearHat} from './hat.js';
 // Only the nearest MAX_RIGS visitors on the decks being drawn get a body, from a small pool that is kept and reused. A
 // body standing in a lift car stands on its floor as this page draws the car, so a rider never sinks or floats.
 const STALE_MS=12000,EASE_PER_S=10,GLIDE_MIN_MS=200,GLIDE_MAX_MS=700,STOPPED_AFTER_MS=185,STRIDE_HALF_LIFE_MS=100;
-const HAT_M=35,MAX_RIGS=24,LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12;
+const RUN_ON_BELT=5,HAT_M=35,MAX_RIGS=24,LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12;
 
 export class RemotePlayers{
  // make(): a new walker (avatar.js createWalker); colliders: for hiding names behind walls; lifts: lift-ride.js.
- // hatUrl: the captain's hat that testers wear (hat.js).
- constructor(scene,{make,colliders,lifts,labels,hatUrl}){
-  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl});
+ // hatUrl: the captain's hat that testers wear (hat.js). running(position): standing on a Paws Off treadmill's belt
+ // (paws-off/game.js), where someone playing runs on the spot.
+ constructor(scene,{make,colliders,lifts,labels,hatUrl,running}){
+  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,running});
   this.remotes=new Map();this.pool=[];this.making=false;this.labels=[];this.ray=new T.Ray();this.v=new T.Vector3();
  }
  get count(){return this.remotes.size;}
@@ -89,8 +90,8 @@ export class RemotePlayers{
   if(dt>0)r.turnRate=T.MathUtils.damp(r.turnRate,turn/dt,10,dt);
   const e=r.rest*r.rest*(3-2*r.rest),lie=r.restKind==='lie';
   w.body.rotation.set(lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.rest,.25,1):0,0,0);
-  const t=r.tgt;
-  w.update(dt,{speed:r.rest?0:r.speed,grounded:t.grounded,stance:t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
+  const t=r.tgt,belt=t.playing&&!t.rest&&this.running?.(c);
+  w.update(dt,{speed:r.rest?0:belt?RUN_ON_BELT:r.speed,grounded:t.grounded,stance:t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
    emote:t.emote,rest:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight}:null});
   // A captain's hat is ~200k triangles: past HAT_M it is a few pixels, and not drawn.
   if(w.hat&&r.distance>HAT_M)w.hat.mount.visible=false;

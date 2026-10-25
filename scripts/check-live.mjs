@@ -129,6 +129,16 @@ try{
  b.pose([-115,-27.7,64.9]);a.pose([-120.7,-27.14,64.6],{yaw:Math.PI/2,rest:'sit'});await sleep(300);
  const sat=b.poses.get(a.id);
  check('rest: a visitor sitting in a lifeboat seat is seen sitting',sat?.rest==='sit'&&Math.abs(sat.pos[0]+120.7)<.01&&Math.abs(sat.pos[2]-64.6)<.01,JSON.stringify(sat&&{pos:sat.pos,rest:sat.rest}));
+ // Paws Off on a Deck 16 exercise studio treadmill (src/walk/paws-off): a runner on the belt is seen there, playing; after
+ // a fall, on their back behind it, still playing; stepped off, no longer playing.
+ b.pose([5,20.3,-44]);a.pose([7,20.56,-47.79],{yaw:Math.PI,pl:true});await sleep(300);
+ const running=b.poses.get(a.id);
+ check('paws off: a visitor running on a treadmill is seen on its belt, playing',running?.playing===true&&!running.rest&&Math.abs(running.pos[1]-20.56)<.01&&Math.abs(running.pos[2]+47.79)<.01,JSON.stringify(running&&{pos:running.pos,playing:running.playing}));
+ a.pose([7,20.3,-46.04],{yaw:Math.PI,pl:true,rest:'lie'});await sleep(300);
+ const fallen=b.poses.get(a.id);
+ check('paws off: a fall off the back is seen lying behind the treadmill',fallen?.rest==='lie'&&fallen.playing===true&&Math.abs(fallen.pos[2]+46.04)<.01,JSON.stringify(fallen&&{pos:fallen.pos,rest:fallen.rest}));
+ a.pose([7,20.3,-45.5]);await sleep(300);
+ check('paws off: stepped off, they are no longer playing',b.poses.get(a.id)?.playing===false&&!b.poses.get(a.id)?.rest);
  // Near and far: a visitor 200 m off hears about a moving one twice a second, a near one ten times.
  const far=new Bot(PORT,{name:'Far'});await far.welcomed();far.pose([-100,-3.7,0]);b.got.clear();far.got.clear();
  for(let i=0;i<30;i++){a.pose([100+i*.3,-3.7,0]);b.pose([104,-3.7,0]);far.pose([-100,-3.7,0]);await sleep(100);}
