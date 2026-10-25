@@ -11,6 +11,9 @@ import {shapePoint} from '../concept-shape.js';
 export const COMICS=[
  // Extraction: Go!, on the forward end of the Crown lounge's bar counter (its top is 1.2 m over the lounge floor).
  {name:'Extraction_Go',title:'Extraction: Go!',where:'Crown lounge',pages:['extraction-go-1.jpg','extraction-go-2.jpg','extraction-go-3.jpg'],size:[1073,1600],at:[-227.45,CROWN.floor+1.2,1.3],top:[-1,0,-.25]},
+ // In the Club, on the forward booth table at z -5.4 (its top is .72 m up), on the open side clear of the lamp and drinks,
+ // facing a walker standing at the table. Its shorter reach leaves the banquette's seats to Sit down.
+ {name:'In_the_Club',title:'In the Club',where:'Crown lounge',pages:['in-the-club-1.jpg','in-the-club-2.jpg','in-the-club-3.jpg'],size:[1073,1600],at:[-204.05,CROWN.floor+.72,-4.9],top:[.2,0,-1],reach:1.1},
  // The Outpost, on the booth table at x -214, z 9 (its top is .72 m up), on the open side clear of the lamp and
  // drinks, facing a walker standing at the table. Its shorter reach leaves the banquette's seats to Sit down.
  {name:'The_Outpost',title:'The Outpost',where:'Crown lounge',pages:['the-outpost-1.jpg','the-outpost-2.jpg','the-outpost-3.jpg'],size:[1073,1600],at:[-214.05,CROWN.floor+.72,8.5],top:[.2,0,1],reach:1.1},
