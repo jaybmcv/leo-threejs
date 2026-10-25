@@ -53,3 +53,33 @@ export function relaxPose(cat){
  cat.root.updateMatrixWorld(true);
 }
 
+
+// Kitten poses for the Young explorers play zones (src/walk/kittens.js), each built on the relaxed stand. The kit bakes
+// them on request and sets the lowest point on the floor, so a crouch or a sit needs no hip height of its own.
+const kittenBones=cat=>{const skeleton=cat.meshes[0].skeleton;return name=>skeleton.getBoneByName(T.PropertyBinding.sanitizeNodeName(name));};
+const v=(x,y,z)=>new T.Vector3(x,y,z);
+function limbs(bone,part,side,[x1,y1,z1],[x2,y2,z2]){
+ const s=side==='L'?1:-1,[upper,lower,end]=part.map(p=>bone(p+'.'+side));
+ aim(upper,lower,v(s*x1,y1,z1));aim(lower,end,v(s*x2,y2,z2));
+}
+const ARMS=['upper_arm','forearm','hand'],LEGS=['thigh','shin','foot'];
+export const KITTEN_POSES={
+ // Sitting on its bottom, legs out in front, both paws down between its feet on a toy; the tail curls round.
+ sit(cat){const bone=kittenBones(cat);
+  for(const s of ['L','R']){limbs(bone,LEGS,s,[.35,.1,1],[.1,-.45,.9]);limbs(bone,ARMS,s,[.12,-1,.45],[.05,-.55,1]);}
+  turn(bone('spine.001'),X,-6);turn(bone('spine.006'),X,16);
+  for(const [i,deg] of [[1,-40],[2,30],[3,35],[4,35],[5,30]])turn(bone('Tail_springBone_'+i),Y,deg);
+  cat.root.updateMatrixWorld(true);},
+ // Crouched to pounce: haunches up, chest low, front paws reaching for something on the floor, the head up.
+ pounce(cat){const bone=kittenBones(cat);
+  turn(bone('spine.001'),X,40);turn(bone('spine.003'),X,22);turn(bone('spine.005'),X,-34);turn(bone('spine.006'),X,-26);
+  for(const s of ['L','R']){limbs(bone,LEGS,s,[.25,-.2,1],[.04,-1,-.75]);limbs(bone,ARMS,s,[.2,-.85,.5],[.05,-.9,.35]);}
+  for(const [i,deg] of [[1,30],[2,25],[3,20],[4,-25],[5,-30]])turn(bone('Tail_springBone_'+i),X,deg);
+  cat.root.updateMatrixWorld(true);},
+ // Up on its hind legs batting a paw high at a playmate, the other paw out in front.
+ bat(cat){const bone=kittenBones(cat);
+  limbs(bone,ARMS,'R',[.3,.75,.55],[.1,.9,.45]);limbs(bone,ARMS,'L',[.25,-.2,1],[.05,.25,1]);
+  turn(bone('spine.003'),Z,6);turn(bone('spine.006'),X,-14);
+  for(const [i,deg] of [[1,25],[2,20],[3,15]])turn(bone('Tail_springBone_'+i),X,deg);
+  cat.root.updateMatrixWorld(true);},
+};

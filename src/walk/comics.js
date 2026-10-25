@@ -4,12 +4,19 @@ import {shapePoint} from '../concept-shape.js';
 
 // Comic books lying about the walk, to pick up and read. Each is one entry: its title, its pages in reading order
 // (src/walk/art, hashed into the build by scripts/walk-page.mjs; the first is also the cover), the pages' pixel size, the
-// point on the surface it lies on (before the fin drop) and the way its top edge points. Use one and the reader sheet
+// point on the surface it lies on (before the fin drop), the way its top edge points and, optionally, how near a walker
+// must stand to read it (REACH metres otherwise). Use one and the reader sheet
 // shows its pages one at a time, with Next page to turn and Finish on the last. The cover loads once a walker comes
 // within NEAR metres; the pages only when the book is opened.
 export const COMICS=[
  // Extraction: Go!, on the forward end of the Crown lounge's bar counter (its top is 1.2 m over the lounge floor).
  {name:'Extraction_Go',title:'Extraction: Go!',where:'Crown lounge',pages:['extraction-go-1.jpg','extraction-go-2.jpg','extraction-go-3.jpg'],size:[1073,1600],at:[-227.45,CROWN.floor+1.2,1.3],top:[-1,0,-.25]},
+ // In the Club, on the forward booth table at z -5.4 (its top is .72 m up), on the open side clear of the lamp and drinks,
+ // facing a walker standing at the table. Its shorter reach leaves the banquette's seats to Sit down.
+ {name:'In_the_Club',title:'In the Club',where:'Crown lounge',pages:['in-the-club-1.jpg','in-the-club-2.jpg','in-the-club-3.jpg'],size:[1073,1600],at:[-204.05,CROWN.floor+.72,-4.9],top:[.2,0,-1],reach:1.1},
+ // The Outpost, on the booth table at x -214, z 9 (its top is .72 m up), on the open side clear of the lamp and
+ // drinks, facing a walker standing at the table. Its shorter reach leaves the banquette's seats to Sit down.
+ {name:'The_Outpost',title:'The Outpost',where:'Crown lounge',pages:['the-outpost-1.jpg','the-outpost-2.jpg','the-outpost-3.jpg'],size:[1073,1600],at:[-214.05,CROWN.floor+.72,8.5],top:[.2,0,1],reach:1.1},
  // One Last Rodeo, a 26 cm comic stood face out on the middle shelf of the Deck 17 reading bookcase (observation-finish.js),
  // its foot at the shelf's front edge so it leans back against the book spines.
  {name:'One_Last_Rodeo',title:'One Last Rodeo',where:'Deck 17 reading shelves',pages:['one-last-rodeo-1.jpg','one-last-rodeo-2.jpg','one-last-rodeo-3.jpg'],size:[1073,1600],floor:26.3,height:.26,at:[171.27,26.3+.8925,24.6],face:[1,0,0]},
@@ -45,7 +52,7 @@ export function createComics({urls={},anisotropy=1}={}){
   },
   // The use prompt for a book within reach on the walker's own level.
   near(p){
-   for(const b of books){if(Math.abs(p.y-b.floor)>1.5||Math.hypot(p.x-b.spot.x,p.z-b.spot.z)>REACH)continue;return {kind:'comic',comic:b.c,label:'Read '+b.c.title};}
+   for(const b of books){if(Math.abs(p.y-b.floor)>1.5||Math.hypot(p.x-b.spot.x,p.z-b.spot.z)>(b.c.reach||REACH))continue;return {kind:'comic',comic:b.c,label:'Read '+b.c.title};}
    return null;
   },
  };
