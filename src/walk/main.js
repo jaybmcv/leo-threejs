@@ -534,7 +534,7 @@ function target(){
  const q=poolTable?.near(p)||pawsOff?.near(p)||mudwater?.near(p);if(q&&!(inBall&&q.kind==='treadmill'))return q;
  // In the hamster ball: no seats, beds or treadmills; with nothing else to use, E climbs out.
  if(inBall)return {kind:'ball-out',label:'Get out of the ball'};
- const b=ball.mesh.position;if(Math.abs(p.y-b.y)<1.2&&Math.hypot(p.x-b.x,p.z-b.z)<BALL.radius+1)return {kind:'ball',label:'Get in the ball'};
+ const parked=ball.mesh.position;if(Math.abs(p.y-parked.y)<1.2&&Math.hypot(p.x-parked.x,p.z-parked.z)<BALL.radius+1)return {kind:'ball',label:'Get in the ball'};
  const s=rest.pick(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));
  return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':'Sit down'}:null;
 }
