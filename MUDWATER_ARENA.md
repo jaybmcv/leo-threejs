@@ -9,10 +9,11 @@ A card-game hall on Deck 16 for Mudwater: Swamp Origins, the trading card game b
 - **Holograms:** five cards stand on the board over brass emitters, each with four number pips like the game's cards. In the walk they turn slowly and bob.
 - **Podiums:** one at each end of the board, with a slanted console and a stool behind it.
 - **Spectator tiers:** along both long walls, a bench on the floor and on 0.35 m and 0.7 m tiers, with a walkway behind the top row. You step up at the tier ends.
-- **Match tables:** ten black tables with a felt 3 × 3 board, two cream chairs facing across, a green rug and a brass pendant. Eight are in the entry half either side of the 4 m main aisle, two by the end wall.
+- **Match tables:** ten black tables with a felt 3 × 3 board, two cream chairs facing across, a rug and a brass pendant. Eight are in the entry half either side of the 4 m main aisle, two by the end wall.
 - **Pack counter:** by the door. Its face has brass rays and the name MUDWATER, with packs and sealed boxes on top. Behind it on the wall is a vault: a round brass door between lit shelves of boxes.
 - **Match screen:** on the end wall, under the room's name. It shows a board with cards between a teal and an orange score.
 - **Card gallery:** 72 framed cards in two rows on the end wall and on the long walls behind the tables, each with a caption strip. The top row has picture lights.
+- **Pack standees:** two life-size packs on plinths, either side of the aisle just inside the door.
 - **Room:** Bayou walls, an olive-black floor and ceiling, Champagne crown and skirting bands, and Swamp Brass pilasters.
 
 ## Brand palette
@@ -28,9 +29,25 @@ On 2026-10-25 the room was recoloured from the Mudwater Community Brand Kit, Jay
 | Mist | `#DCD7B7` | Seats and cushions, caption strips, and the warm lights |
 | Fog | `#6E6C5C` | Darkened (`#3B392F`) for the rugs under the tables |
 
-The kit's logos, frames, pack art and coins are the next step, once their files are exported. Every frame of the kit is marked "Confidential and proprietary" and this repository is public, so how those files are stored is Jay's decision.
+## Brand art
 
-The card art and box graphics are **stand-in colour**. The ape-skull logo and real card art stay out until BAYC supplies files and approves their use. "MUDWATER" appears only as plain text.
+Also on 2026-10-25, the kit's art was added to the walk. It was captured from the Figma file's public view, since Figma needs an account to export. Jay chose this and also chose to keep the files in this public repository: the same logo, skull and pack art are already public on mudwater.bayc.com, though each kit frame is marked "Confidential and proprietary".
+
+The files are in `src/walk/art/mudwater-*`. Gold-on-black art was cut out with its brightness as transparency; the medallion and coin are masked to circles.
+
+| Art | Where it goes in the walk |
+|---|---|
+| Badge wordmark (embossed gold) | The end wall over the match screen, replacing the room's name in letters |
+| Base wordmark | The pack counter's face, replacing its lettering; and the top of the giveaway card |
+| Skull medallion | The vault door, replacing its handle; and glowing in every hologram card |
+| Primary skull | Both long faces of each podium |
+| Pack | Both faces of each standee, and every pack fanned on the counter |
+| Gold coin | In the floor inside the door (upright to someone walking in), and either side of the match screen |
+| Rope frame | Round every gallery card |
+
+The ship viewer can't load images, so it shows the room without this art. It does show the standees as black boards.
+
+The card art and box graphics are still **stand-in colour**, because the kit has no card art.
 
 ## In the walk
 
@@ -48,7 +65,8 @@ The giveaway card is a placeholder until the real mechanism (codes, wallet claim
 |---|---|---|
 | Room | `src/mudwater-arena.js` | Builds the fittings and turns the shell dark, called from the `arena` case in `src/areas.js`. Exports the layout (stage, tables, podiums, counter) and the walk's trigger points |
 | Ship areas | `src/areas.js`, `src/area-finish.js` | Deck 16's first room is now `['arena','Mudwater Arena']` with its description. Its finish is `games`: brass lines on every `Mudwater_grid` |
-| Walk | `src/walk/mudwater.js`, `src/walk/main.js`, `src/walk/walk.html` | The holograms leave the room for their own group before the merge, so they can turn. Adds the triggers, the use actions and the `#mudwater-sheet` card |
+| Walk | `src/walk/mudwater.js`, `src/walk/main.js`, `src/walk/walk.html` | The holograms leave the room for their own group before the merge, so they can turn. Adds the brand art panels (loaded within 45 m), the triggers, the use actions and the `#mudwater-sheet` card |
+| Page build | `scripts/walk-page.mjs` | Hashes `MUDWATER_ART` with the paintings and comics, keeping each file's own extension (PNG for transparency) |
 | Signs and places | `src/walk/signs.js`, `src/walk/places.js` | A cards icon on the corridor signs, and Mudwater Arena in Go to |
 | Checks | `scripts/check-mudwater.mjs` (in `npm run check`), `scripts/check-areas.mjs` | See below |
 
@@ -58,12 +76,17 @@ The `scripts/check-mudwater.mjs` check covers:
 - every rise is within the 0.4 m step;
 - there are 130 seats, all facing away from their backs, with the tiers facing the stage;
 - each trigger stands clear of the walk's collision triangles;
+- every brand art file exists and is under 400 kB, and the pack standees are clear of the aisle;
 - the triangle budget holds.
 
 ## Budget
 
-The room is 42.9k triangles including the shell and finishing passes, against 36.9k for the learning center: about +6k, inside the agreed +20k.
+The room is 43.0k triangles including the shell and finishing passes (the brand art adds a few hundred more in the walk), against 36.9k for the learning center: about +6k, inside the agreed +20k.
 
 ## Lighting note
 
-Walk mode lights rooms with a bright environment. Glossy dark surfaces wash out to grey there, and the polish pass (`interior-polish.js`) resets the roughness of materials named for linings and stone. So the arena's darks are matte and named to stay out of that pass.
+Walk mode lights rooms with a bright environment. Glossy dark surfaces wash out to grey there, and the polish pass (`interior-polish.js`) resets the roughness of materials named for linings and stone. So the arena's darks are matte and named to stay out of that pass. For the same reason the coins are fully matte: the floor coin turned silver while it was glossy.
+
+## Art depth note
+
+The walk's bake (`render-bake.js`) steps parts whose faces coincide a few millimetres apart, one layer each, to stop flicker. The gallery's ten merged card-art colours all overlap, so some card art ends up well in front of its nominal face. The rope frames therefore sit 7 cm out; at 4 cm, half of them were hidden.

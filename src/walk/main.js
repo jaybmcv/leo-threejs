@@ -188,8 +188,9 @@ async function buildShip(){
  diningRobots=createDiningRobots(ship);if(diningRobots)colliders.addStatic(diningRobots.solid,()=>true);colliders.commit();
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged.
  pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),onStart:startRun,onEnd:endRun});
- // Mudwater Arena's turning hologram cards, game link and pack counter (mudwater.js), before the room is merged.
- mudwater=createMudwater(ship);
+ // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
+ // merged.
+ mudwater=createMudwater(ship,{urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});
  // The forward observation lounge's telescope plays Alien Cat Invasion (invasion/game.js): where it stands, on its floor.
  {const base=ship.root.getObjectByName('Shared_telescope_base');if(base){base.updateWorldMatrix(true,false);scope=base.getWorldPosition(new T.Vector3());scope.y-=.325;}}
  // The Deck 16 theatre's cinema dressing (theatre.js), before baking so the pieces it hides stay out.
@@ -281,7 +282,7 @@ const actions={
   else if(t.kind==='pool')pool.open();
   else if(t.kind==='treadmill')pawsOff.start(t.mill);
   else if(t.kind==='mudwater')mudwater.play();
-  else if(t.kind==='packs'){closePanels();$('mudwater-sheet').hidden=false;input.enabled=false;}
+  else if(t.kind==='packs'){closePanels();const w=$('mudwater-wordmark');if(mudwater.wordmark&&!w.src){w.src=mudwater.wordmark;w.hidden=false;}$('mudwater-sheet').hidden=false;input.enabled=false;}
   else if(t.kind==='ball')enterBall();
   else if(t.kind==='ball-out')leaveBall();
  },
@@ -489,7 +490,7 @@ renderer.setAnimationLoop(()=>{
  if(lounge)lounge.update(dt,bodies,camera.getWorldPosition(eye));
  provisions?.update(dt,bodies);
  marks?.update(camera,p,now);
- if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);theatre?.update(p);}
+ if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
