@@ -22,7 +22,13 @@ function canvasTexture(width,height,draw){
 // The brand fonts may still be loading when the first signs are painted; paint them again once they're in.
 document.fonts?.ready.then(()=>{for(const paint of drawn)paint();});
 
-function panel(c,w,h,fill=PANEL){c.fillStyle=fill;c.beginPath();c.roundRect(0,0,w,h,18);c.fill();c.strokeStyle='rgba(255,255,255,.14)';c.lineWidth=4;c.stroke();}
+// Every sign is a screen: dark glass with faint scanlines, a lit teal bezel inside its edge, and wording that glows a little.
+function panel(c,w,h,fill=PANEL){
+ const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,fill);g.addColorStop(1,'#060b0e');c.fillStyle=g;c.beginPath();c.roundRect(0,0,w,h,18);c.fill();
+ c.fillStyle='rgba(47,214,197,.06)';for(let y=3;y<h;y+=4)c.fillRect(6,y,w-12,1);
+ c.save();c.strokeStyle='rgba(47,214,197,.75)';c.lineWidth=3;c.shadowColor=TEAL;c.shadowBlur=10;c.beginPath();c.roundRect(6,6,w-12,h-12,12);c.stroke();c.restore();
+ c.shadowColor='rgba(47,214,197,.6)';c.shadowBlur=8;
+}
 function fit(c,text,font,size,max){let s=size;do{c.font=font.replace('SIZE',s+'px');s-=2;}while(c.measureText(text).width>max&&s>10);}
 
 // Deck plaque: "DECK", the number, the deck's name. Fin stops get their own wording.
@@ -132,7 +138,7 @@ export function stairSigns(parent,colliders){
 // its rooms to the left and right and the lifts ahead; in each side corridor near the spine, the lifts either way.
 // Each sign reads left, ahead, right, as the walker faces it.
 function arrow(c,x,y,angle,size,color){
- c.save();c.translate(x,y);c.rotate(angle);c.fillStyle=color;c.beginPath();
+ c.save();c.translate(x,y);c.rotate(angle);c.fillStyle=c.shadowColor=color;c.beginPath();
  c.moveTo(size,0);c.lineTo(0,-size*.8);c.lineTo(0,-size*.32);c.lineTo(-size,-size*.32);c.lineTo(-size,size*.32);c.lineTo(0,size*.32);c.lineTo(0,size*.8);c.closePath();c.fill();c.restore();
 }
 // Small icons beside each cell's wording, centred on (x,y) in a box `s` across, by room kind.
@@ -204,13 +210,15 @@ function directionMaterial(cells){
  });
  m=new T.MeshBasicMaterial({map:texture,toneMapped:false});directions.set(key,m);return m;
 }
-const signBody=new T.MeshBasicMaterial({color:INK}),rodGeometry=new T.CylinderGeometry(.015,.015,1,6);
-// A sign hung from the ceiling `ceiling` metres above `at`, readable from `facing`; `back` is the wording on its other side.
+const signBody=new T.MeshBasicMaterial({color:INK}),signGlow=new T.MeshBasicMaterial({color:TEAL,toneMapped:false}),rodGeometry=new T.CylinderGeometry(.015,.015,1,6);
+// A screen hung from the ceiling `ceiling` metres above `at`, readable from `facing`; `back` is the wording on its other side.
 function hang(parent,material,back,at,facing,width,ceiling){
  const h=width/8,g=new T.Group();g.name='Walk_corridor_sign';g.position.copy(at);g.lookAt(at.clone().add(facing));
  const body=new T.Mesh(new T.BoxGeometry(width,h,.05),signBody);g.add(body);
  const face=new T.Mesh(new T.PlaneGeometry(width,h),material);face.position.z=.026;g.add(face);
  const rear=new T.Mesh(face.geometry,back);rear.position.z=-.026;rear.rotation.y=Math.PI;g.add(rear);
+ // A lit strip under the screen.
+ const glow=new T.Mesh(new T.BoxGeometry(width-.1,.014,.03),signGlow);glow.position.y=-h/2-.007;g.add(glow);
  const drop=ceiling-h/2;for(const s of [-1,1]){const rod=new T.Mesh(rodGeometry,signBody);rod.scale.y=drop;rod.position.set(s*width*.4,h/2+drop/2,0);g.add(rod);}
  parent.add(g);return g;
 }
