@@ -8,17 +8,22 @@ import {LOUNGE} from '../hydro-nip-lounge.js';
 // - the nine hammocks swing gently (in the vertex shader: one draw for all nine), and a walker lying in one swings
 //   with it;
 // - inside the maze the catnip mist thins round the camera and a green haze tints the view instead, heavy on the
-//   ground floor, light on the lower platform and gone on the top one.
+//   ground floor, light on the lower platform and gone on the top one;
+// - the room's mood (from tester feedback): its ceiling panels burn dim and warm, and while the camera is in the
+//   commons the walk's lights (shared by the whole ship) ease down and warm, with a violet bounce from below, and the
+//   neon and its halos burn brighter.
 // Made after the colliders and rest spots and before the walk merges the ship for drawing: the doors and hammocks
 // leave the ship for meshes of their own, drawn with the lounge floor's deck band (main.js).
 const DOOR={reach:2.6,rise:2.5,time:.6},SWAY={amp:.075,rate:1.45};
+// In the room: the lights' share of their usual strength, their colours, and how much brighter the neon and halos burn.
+const MOOD={hemi:.32,fill:.12,env:.22,sky:0xffb26b,ground:0x5a2f99,neon:1.35,glow:1.9};
 const flip=g=>{for(const a of Object.values(g.attributes))for(let i=0;i<a.count;i+=3)for(let k=0;k<a.itemSize;k++){const t=a.array[(i+1)*a.itemSize+k];a.array[(i+1)*a.itemSize+k]=a.array[(i+2)*a.itemSize+k];a.array[(i+2)*a.itemSize+k]=t;}return g;};
 // A mesh's geometry in world space (turned back the right way out under the commons' mirror).
 const worldGeometry=o=>{const g=(o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone()).applyMatrix4(o.matrixWorld);return o.matrixWorld.determinant()<0?flip(g):g;};
 const boxTriangles=([w,h,d])=>{const out=[],c=i=>[(i&4?1:-1)*w/2,(i&2?1:-1)*h/2,(i&1?1:-1)*d/2];
  for(const f of [[0,1,3],[0,3,2],[4,6,7],[4,7,5],[0,4,5],[0,5,1],[2,3,7],[2,7,6],[0,2,6],[0,6,4],[1,5,7],[1,7,3]])for(const i of f)out.push(...c(i));return out;};
 
-export function createLounge(ship,colliders){
+export function createLounge(ship,colliders,light=null){
  const root=ship.root.getObjectByName('Hydro_Nip_Lounge');if(!root)return null;
  root.updateMatrixWorld(true);
  const frame=root.matrixWorld,toWorld=(x,y,z)=>new T.Vector3(x,y,z).applyMatrix4(frame);
@@ -85,6 +90,20 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
   tint.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:1;opacity:0;background:radial-gradient(ellipse at 50% 55%,rgba(150,255,170,.25),rgba(70,200,110,.8));mix-blend-mode:screen';
   document.body.appendChild(tint);}
 
+ // The mood. The commons' ceiling panels (Circadian_light) take a warm, dim copy of their material for good.
+ const {ROOM}=LOUNGE,room=new T.Box3().setFromPoints([toWorld(ROOM.x0,LOUNGE.FLOOR,ROOM.z0),toWorld(ROOM.x1,LOUNGE.CEILING,ROOM.z1)]);
+ let warm=null;root.parent?.parent?.traverse(o=>{if(o.isMesh&&o.name==='Circadian_light'){
+  warm||=Object.assign(o.material.clone(),{name:'Walk_lounge_ceiling_light'});warm.color.set(0x2e241c);warm.emissive.set(0xff9040);warm.emissiveIntensity=.16;o.material=warm;}});
+ const glows=[];root.traverse(o=>{if(o.isMesh&&/^Lounge_(neon_glow|additive_glow)$/.test(o.material?.name)&&!glows.some(g=>g.m===o.material))glows.push({m:o.material,k:o.material.name==='Lounge_neon_glow'?MOOD.neon:MOOD.glow});});
+ const base=light&&{hemi:light.hemi.intensity,fill:light.fill.intensity,env:light.scene.environmentIntensity,sky:light.hemi.color.clone(),ground:light.hemi.groundColor.clone()};
+ const sky=new T.Color(MOOD.sky),ground=new T.Color(MOOD.ground);let mood=0,shown=0;
+ function setMood(t){
+  if(base){const {hemi,fill,scene}=light,f=(a,b)=>a+(b-a)*t;
+   hemi.intensity=f(base.hemi,base.hemi*MOOD.hemi);fill.intensity=f(base.fill,base.fill*MOOD.fill);scene.environmentIntensity=f(base.env,base.env*MOOD.env);
+   hemi.color.lerpColors(base.sky,sky,t);hemi.groundColor.lerpColors(base.ground,ground,t);}
+  for(const {m,k} of glows)m.color.setScalar(1+(k-1)*t);
+ }
+
  return {
   drawn,doors,
   // After the merge for drawing: the maze's mist meshes (split by deck band) to thin out.
@@ -97,6 +116,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
    const inside=tower.containsPoint(eye),k=1-Math.exp(-4*dt);
    mist+=((inside?.12:1)-mist)*k;for(const o of mists)o.material.opacity=o.material.userData.full*mist;
    haze+=((inside?(eye.y<LEVELS[0]?.34:eye.y<LEVELS[1]?.16:0):0)-haze)*k;if(tint)tint.style.opacity=haze.toFixed(3);
+   mood+=((room.containsPoint(eye)?1:0)-mood)*k;if(Math.abs(mood-shown)>.002||(mood<.002&&shown)){shown=mood<.002?0:mood;setMood(shown);}
   },
   swingOf,
  };

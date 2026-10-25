@@ -3,6 +3,7 @@ import {finishShipArea} from './area-finish.js';
 import {tintWorldWindow,tintBoxWindow} from './glazing-finish.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {cutOut} from './cut-out.js';
+import {glazedWall,glassSpan,visionGlass} from './room-glazing.js';
 import {frontPoint} from './hull-profile.js';
 import {bowHeight} from './diagonal-profile.js';
 
@@ -18,6 +19,7 @@ export const SPECIAL_AREAS=[
 
 const palette={floor:0xbdb7a8,lining:0xdbe1da,navy:0x294655,metal:0x8e9fa2,dark:0x172b36,wood:0x9d7b52,glass:0x6dacc4,amber:0xe6b878,green:0x739c89,screen:0x2b718c,light:0xffe8bc,rescue:0xe0662b};
 const materials=Object.fromEntries(Object.entries(palette).map(([n,color])=>[n,new T.MeshStandardMaterial({name:'Special_'+n,color,roughness:n==='glass'?.18:.75,metalness:n==='metal'?.55:.08,...(n==='screen'||n==='light'?{emissive:color,emissiveIntensity:n==='light'?.85:.2}:{}),...(n==='glass'?{transparent:true,opacity:.19,depthWrite:false,side:T.DoubleSide}:{})})]));
+materials.vision=visionGlass;
 materials.lining.side=T.DoubleSide;
 
 function kit(area){
@@ -39,7 +41,11 @@ function kit(area){
       const s=z<0?1:-1;
       for(const side of [-1,1])box('Room_end_wall',[.16,h-.2,d],[x+side*(w/2-.08),y+(h-.2)/2,z],'lining',shell);
       box('Outboard_wall',[w,h-.2,.16],[x,y+(h-.2)/2,z-s*(d/2-.08)],'lining',shell);
-      for(const side of [-1,1])box('Entry_wall',[(w-4)/2,h-.2,.16],[x+side*(w+4)/4,y+(h-.2)/2,z+s*(d/2-.08)],'lining',shell);
+      // Deck 7's engineering rooms stand right on the aft spine (x -273 to -132, special-circulation.js), so their entry
+      // walls are its side walls too: vision glass along them, except where Engineering control's status wall hangs on it.
+      // Deck 20's rooms sit back behind link corridors and stay solid.
+      const wall=(name,size,p,glass)=>box(name,size,p,glass?'vision':'lining',shell),len=(w-4)/2;
+      for(const side of [-1,1]){const cx=x+side*(w+4)/4;glazedWall(wall,'Entry_wall',[len,h-.2,.16],[cx,y+(h-.2)/2,z+s*(d/2-.08)],area.deck===7&&area.kind!=='enginecontrol'?glassSpan(cx-len/2,cx+len/2,-273,-132):null);}
       box('Entry_header',[4,h-2.6,.16],[x,y+2.6+(h-2.6)/2,z+s*(d/2-.08)],'navy',shell);
     }else{
       for(const side of [-1,1])box('Side_wall',[w,h-.2,.16],[x,y+(h-.2)/2,z+side*(d/2-.08)],'lining',shell);

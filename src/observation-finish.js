@@ -238,6 +238,22 @@ export function finishCrownLounge(root,y){
  add('Lift_crown_panel',new T.BoxGeometry(4.35,2.1,4.4),[-247,y+4.15,.025],'brass').material=gold;
  for(const dx of [-1.45,0,1.45])for(const s of [-1,1])box('Lift_crown_panel_seam',[.04,1.4,.03],[-247+dx,y+4.43,.025+s*2.21],'dark');
  for(const dz of [-1.45,0,1.45])for(const s of [-1,1])box('Lift_crown_panel_seam',[.03,1.4,.04],[-247+s*2.185,y+4.43,.025+dz],'dark');
+ // A gold-edged red carpet replaces the two bronze floor strips: out of the lift doors, then left to the hostess by
+ // the welcome plinth. Gold stanchions and velvet ropes line its right side and front to guide arrivals her way.
+ // Instanced, so the walk treats them as dressing: nothing here stops a walker.
+ const edges=[];root.traverse(e=>{if(e.name==='Crown_lobby_edge')edges.push(e);});edges.forEach(e=>e.removeFromParent());
+ const carpet=new T.MeshStandardMaterial({name:'Crown_finish red carpet',color:0xa3172b,roughness:1});
+ const runs=[[-247,4.3,3.4,4],[-250.2,5.2,3,2.2]];
+ inst('Lobby_carpet_border',new T.BoxGeometry(1,1,1),gold,runs.map(([x,z,w,d])=>at(x,y+.004,z,w+.12,.008,d+.12)));
+ inst('Lobby_red_carpet',new T.BoxGeometry(1,1,1),carpet,runs.map(([x,z,w,d])=>at(x,y+.008,z,w,.012,d)));
+ const posts=[[-244.7,2.6],[-244.7,4.65],[-244.7,6.7],[-246.5,6.7],[-248.3,6.7],[-250.1,6.7],[-251.9,6.7]];
+ inst('Stanchion_base',new T.CylinderGeometry(.15,.17,.04,24),gold,posts.map(([x,z])=>at(x,y+.02,z)));
+ inst('Stanchion_pole',new T.CylinderGeometry(.028,.028,.9,12),gold,posts.map(([x,z])=>at(x,y+.47,z)));
+ inst('Stanchion_finial',new T.SphereGeometry(.05,16,10),gold,posts.map(([x,z])=>at(x,y+.95,z)));
+ // One rope of unit length, sagging 12 cm between its hooks, is stretched along each span.
+ const rope=new T.TubeGeometry(new T.CatmullRomCurve3([0,.25,.5,.75,1].map(t=>new T.Vector3(t,-.48*t*(1-t),0))),24,.024,8,false);
+ inst('Stanchion_velvet_rope',rope,velvet,posts.slice(1).map(([x,z],i)=>{const [px,pz]=posts[i];
+  return new T.Matrix4().compose(new T.Vector3(px,y+.88,pz),new T.Quaternion().setFromEuler(new T.Euler(0,-Math.atan2(z-pz,x-px),0)),new T.Vector3(Math.hypot(x-px,z-pz),1,1));}));
  root.userData.stage='Refined panoramic lounge with upholstered banquettes and fitted central bar';
  polishInterior(root,'Fin crown observation lounge');
 }

@@ -9,7 +9,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 // The screen plays a short muted loop (src/walk/art/theatre-loop.mp4), fetched and played only while a walker is near.
 const ROOM='Area_d16-theater-5',NEAR=40;
 const BACK=25.84,SIDE=16.84,ENTRY=-25.84,NOTCH={x:-12,z:-9},DOOR=2.2,LIP=2.95,TOP=3.28,INSET=.16;
-const SCREEN={w:4,h:2.25,y:1.68};
+const SCREEN={w:4,h:2.25,y:1.68},SERVER=[-23.65,0,-6.3];
 // Wall runs a drape hangs along: from, to, and the way into the room.
 const RUNS=[
  [[BACK,-SIDE],[BACK,-SCREEN.w/2],[-1,0]],[[BACK,SCREEN.w/2],[BACK,SIDE],[-1,0]],
@@ -84,6 +84,13 @@ function plane(flip,y,material,uv){
  for(let i=0;i<pos.count;i++)uvs.setXY(i,...uv(pos.getX(i),flip*pos.getY(i)));
  g.rotateX(flip*Math.PI/2);g.translate(0,y,0);
  return new T.Mesh(g,material);
+}
+
+// The room's attendant serves at the concession stand (concession.js): inside the L, between the popcorn case and the
+// corner, facing the room over the counter. Called before the colliders are built, so it is solid where it stands.
+export function placeAttendant(ship){
+ const room=ship.root.getObjectByName(ROOM),cat=room?.getObjectByName('Resident_scale_1_75m');if(!cat)return;
+ cat.position.set(...SERVER);cat.rotation.y=Math.PI/2;cat.updateMatrix();cat.updateMatrixWorld(true);
 }
 
 // Dress the theatre in `ship` before it is baked for walking. Returns the room group (draw it with its deck band) and an
