@@ -2,10 +2,11 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Mudwater Arena (MUDWATER_ARENA.md): the Deck 16 room that was the learning center, refitted as a card-game hall for
-// Mudwater: Swamp Origins in the game's black-and-gold art deco. A raised stage carries a giant 3 × 3 board between
-// two player podiums, with hologram cards standing on five squares; spectator tiers face it from both long walls, match
-// tables fill the entry half, a vault counter by the door holds the giveaway packs and a match screen sits on the end
-// wall under the room's name. The card art is stand-in colour until real art is supplied.
+// Mudwater: Swamp Origins in the game's black-and-gold art deco, coloured from its community brand kit: Bog black,
+// Bayou walls, Mist upholstery and light, Champagne metal shading to a deep Swamp Brass. A raised stage carries a
+// giant 3 × 3 board between two player podiums, with hologram cards standing on five squares; spectator tiers face it
+// from both long walls, match tables fill the entry half, a vault counter by the door holds the giveaway packs and a
+// match screen sits on the end wall under the room's name. The card art is stand-in colour until real art is supplied.
 // Room coordinates: the entry is at x = −26 (door at z −2…2), the end wall at x = +26, the long walls at z = ±17;
 // the Deck 16 stair lobby takes x −26…−12, z 9…17. Floor at y = 0, ceiling at 3.37.
 export const ARENA_ID='d16-arena-1';
@@ -21,18 +22,19 @@ export const TRIGGERS=[
 ];
 // Hologram cards: board square (column, row), turn, and colour.
 const HOLOGRAMS=[[-1,-1,.6,0x3fd6e0],[0,-1,-.3,0x8f6bff],[1,0,.5,0xffa040],[0,1,.2,0x5fe07a],[-1,1,-.6,0xff5f8a]];
-// Stand-in card art colours, in Mudwater's swampy, saturated range.
+// Stand-in card art colours, in Mudwater's swampy, saturated range (the card art isn't in the brand kit).
 const ART=[0x2e8f8a,0x6b4bb0,0x4f7a2e,0xb4552d,0xc9a13a,0xc0507a,0x3f74b8,0x8a5a3c,0x1f6b52,0x9a3b5e];
 
 export function fitMudwaterArena({box,add,mat,text,fit,shell}){
  // (Matte finishes: the walk's environment light washes glossy dark surfaces out to grey, and the polish pass,
  // interior-polish.js, resets the roughness of materials named for linings and stone.)
  const M={
-  black:mat('Arena_black_lacquer',0x0f0d0a,{roughness:.72}),charcoal:mat('Arena_charcoal_wall',0x211e1a,{roughness:.92}),
-  gold:mat('Arena_brass_metal',0xc49a45,{metalness:.75,roughness:.32}),cream:mat('Arena_cream_upholstery',0xe6d8b8),
-  felt:mat('Arena_felt',0x13261c,{roughness:.95}),floor:mat('Arena_floor_slate',0x29231d,{roughness:.82}),ceiling:mat('Arena_ceiling',0x1d1a17,{roughness:.95}),
-  rug:mat('Arena_felt_rug',0x1d3a2c,{roughness:.95}),glow:mat('Arena_warm_light',0xffe2a8,{emissive:0xffd28a,emissiveIntensity:1.1}),
-  screen:mat('Arena_screen',0x0e1d24,{emissive:0x12313c,emissiveIntensity:1}),lit:mat('Arena_lit_brass',0xe0b860,{emissive:0xd8a848,emissiveIntensity:.9}),
+  black:mat('Arena_bog_lacquer',0x080806,{roughness:.72}),charcoal:mat('Arena_bayou_wall',0x1b1804,{roughness:.92}),
+  gold:mat('Arena_champagne_metal',0xaea35d,{metalness:.75,roughness:.32}),deep:mat('Arena_swamp_brass_metal',0x6f6630,{metalness:.75,roughness:.38}),
+  cream:mat('Arena_mist_upholstery',0xdcd7b7),
+  felt:mat('Arena_bog_felt',0x0d0c05,{roughness:.95}),floor:mat('Arena_floor_slate',0x2a2717,{roughness:.82}),ceiling:mat('Arena_ceiling',0x121004,{roughness:.95}),
+  rug:mat('Arena_fog_rug',0x3b392f,{roughness:.95}),glow:mat('Arena_mist_light',0xf1ecd0,{emissive:0xe9e1b4,emissiveIntensity:1.1}),
+  screen:mat('Arena_screen',0x141205,{emissive:0x2a2610,emissiveIntensity:1}),lit:mat('Arena_lit_champagne',0xd8cf8f,{emissive:0xc9bd70,emissiveIntensity:.9}),
   teal:mat('Arena_score_teal',0x2fd6c5,{emissive:0x2fd6c5,emissiveIntensity:.8}),orange:mat('Arena_score_orange',0xf85800,{emissive:0xf85800,emissiveIntensity:.8}),
  };
  const art=ART.map((c,i)=>mat('Arena_card_art_'+i,c,{emissive:c,emissiveIntensity:.18,roughness:.6})),litArt=ART.map((c,i)=>mat('Arena_screen_art_'+i,c,{emissive:c,emissiveIntensity:.9}));
@@ -43,23 +45,24 @@ export function fitMudwaterArena({box,add,mat,text,fit,shell}){
  const put=(name,size,p,ry=0,m=null)=>{const g=new T.BoxGeometry(...size);if(ry)g.rotateY(ry);geo(name,g.translate(...p),m);};
  const flush=(pick)=>{for(const {name,m,gs} of bins.values()){const o=add(name,mergeGeometries(gs),m||(typeof pick==='function'?pick(name):pick));o.castShadow=false;gs.forEach(g=>g.dispose());}bins.clear();};
 
- // The shell goes dark: charcoal walls, stone floor, a dark ceiling; the identity panel turns black.
+ // The shell goes dark: Bayou walls, an olive-black floor and ceiling, a Bog identity panel and Champagne aisle lines.
  for(const root of [shell,fit])root.traverse(o=>{if(!o.isMesh)return;
   if(o.name==='Finished_floor')o.material=M.floor;
   else if(o.name==='Ceiling')o.material=M.ceiling;
   else if(o.name==='Area_identity_panel')o.material=M.black;
+  else if(o.name==='Main_aisle_edge')o.material=M.gold;
   else if(o.material?.name==='Area_lining')o.material=M.charcoal;
  });
- // Art deco trim: a brass crown band and skirting on every wall run, brass pilasters on the end wall.
+ // Art deco trim: a Champagne crown band and skirting on every wall run, Swamp Brass pilasters on the end wall.
  for(const s of [-1,1]){const inboard=s===1,x0=inboard?-12:-26,len=26-x0;
   for(const y of [3.12,.12])put('Arena_wall_trim',[len,y>1?.08:.06,.04],[x0+len/2,y,s*16.82]);}
  for(const y of [3.12,.12])put('Arena_wall_trim',[.04,y>1?.08:.06,33.6],[25.82,y,0]);
  for(const z of [-16.4,-7.6,-4.3,4.3,7.6,16.4])put('Arena_pilaster',[.1,3.3,.22],[25.79,1.65,z]);
  for(const x of [-11.9,.4])for(const s of [-1,1])put('Arena_pilaster',[.22,3.3,.1],[x,1.65,s*16.79]);
- flush(M.gold);
+ flush(n=>n==='Arena_pilaster'?M.deep:M.gold);
 
  const {x0,x1,z:sz,h}=STAGE,mid=(x0+x1)/2,len=x1-x0;
- // The floor: concentric brass rings around the stage like ripples on dark water, and green rugs under the tables.
+ // The floor: concentric Champagne rings around the stage like ripples on dark water, and Fog rugs under the tables.
  for(const [i,d] of [[0,1.2],[1,2.3],[2,3.6]]){const w=len+2*d,dz=sz*2+2*d,t=.05-i*.012;
   if(dz/2<10.3){put('Arena_floor_inlay',[w,.012,t],[mid,.006,dz/2]);put('Arena_floor_inlay',[w,.012,t],[mid,.006,-dz/2]);}
   for(const x of [x0-d,x1+d])put('Arena_floor_inlay',[t,.012,dz],[x,.006,0]);}
@@ -89,12 +92,12 @@ export function fitMudwaterArena({box,add,mat,text,fit,shell}){
   box('Seat',[.55,.1,.55],[x-s*.85,h+.62,0],M.cream);box('Back',[.1,.5,.55],[x-s*1.12,h+.93,0],M.cream);
   put('Stool_frame',[.08,.57,.08],[x-s*.85,h+.285,0]);put('Stool_frame',[.45,.03,.45],[x-s*.85,h+.015,0]);
  }
- flush(M.gold);
+ flush(n=>n==='Stool_frame'?M.deep:M.gold);
  // Hologram cards: a brass emitter on the felt, a faint beam, and the card itself (a group of its own, which the walk
  // turns slowly: walk/mudwater.js).
  const sq=bs/3,beam=new T.ConeGeometry(.55,1.9,20,1,true);
  HOLOGRAMS.forEach(([i,j,r,c],n)=>{const x=BOARD.x+i*sq,z=j*sq,m=new T.MeshStandardMaterial({name:'Arena_hologram_'+n,color:c,emissive:c,emissiveIntensity:1.3,transparent:true,opacity:.5,depthWrite:false,side:T.DoubleSide});
-  const fm=new T.MeshStandardMaterial({name:'Arena_hologram_frame_'+n,color:0xffe2a0,emissive:0xffc860,emissiveIntensity:1.2,transparent:true,opacity:.85,depthWrite:false});
+  const fm=new T.MeshStandardMaterial({name:'Arena_hologram_frame_'+n,color:0xe9e1b4,emissive:0xd8cf8f,emissiveIntensity:1.2,transparent:true,opacity:.85,depthWrite:false});
   add('Hologram_emitter',new T.CylinderGeometry(.42,.48,.06,24),M.gold,[x,top+.03,z]);
   const b=add('Hologram_beam_glow',beam,new T.MeshBasicMaterial({name:'Arena_hologram_beam_'+n,color:c,transparent:true,opacity:.12,depthWrite:false,side:T.DoubleSide}),[x,top+1.01,z]);b.rotation.x=Math.PI;b.castShadow=false;
   const g=new T.Group();g.name='Mudwater_hologram';g.position.set(x,top+1.25,z);g.rotation.y=r;fit.add(g);

@@ -13,7 +13,22 @@ A card-game hall on Deck 16 for Mudwater: Swamp Origins, the trading card game b
 - **Pack counter:** by the door. Its face has brass rays and the name MUDWATER, with packs and sealed boxes on top. Behind it on the wall is a vault: a round brass door between lit shelves of boxes.
 - **Match screen:** on the end wall, under the room's name. It shows a board with cards between a teal and an orange score.
 - **Card gallery:** 72 framed cards in two rows on the end wall and on the long walls behind the tables, each with a caption strip. The top row has picture lights.
-- **Room:** charcoal walls, a dark floor and ceiling, brass crown and skirting bands, and brass pilasters.
+- **Room:** Bayou walls, an olive-black floor and ceiling, Champagne crown and skirting bands, and Swamp Brass pilasters.
+
+## Brand palette
+
+On 2026-10-25 the room was recoloured from the Mudwater Community Brand Kit, Jay's shared Figma file. Its swatches are in the table below.
+
+| Swatch | Hex | Used for |
+|---|---|---|
+| Bog | `#000000` | Lacquered black (stage, tiers, tables, counter, vault, podiums), near Bog at `#080806` so it still shades; the board felt |
+| Bayou | `#1B1804` | Walls; the floor and ceiling are darker and lighter olive-blacks beside it |
+| Champagne | `#AEA35D` | Metal: trim, frames, inlays, the grid lines, the vault door |
+| Swamp Brass | gradient | Its deep end (`#6F6630`) on pilasters and stools; its light end as the lit bands on packs and the screen's board |
+| Mist | `#DCD7B7` | Seats and cushions, caption strips, and the warm lights |
+| Fog | `#6E6C5C` | Darkened (`#3B392F`) for the rugs under the tables |
+
+The kit's logos, frames, pack art and coins are the next step, once their files are exported. Every frame of the kit is marked "Confidential and proprietary" and this repository is public, so how those files are stored is Jay's decision.
 
 The card art and box graphics are **stand-in colour**. The ape-skull logo and real card art stay out until BAYC supplies files and approves their use. "MUDWATER" appears only as plain text.
 
