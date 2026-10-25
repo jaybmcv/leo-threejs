@@ -145,7 +145,7 @@ function arrow(c,x,y,angle,size,color){
 const ICON_KIND={dining:'dining',kitchen:'dining',ward:'medical',clinic:'medical',surgery:'medical',imaging:'medical',pharmacy:'medical',
  counseling:'medical',isolation:'medical',farm:'garden',nursery:'garden',harvest:'garden',cargo:'cargo',stores:'cargo',logistics:'cargo',
  cold:'cold',arrival:'luggage',baggage:'luggage',airlock:'airlock',security:'shield',shelter:'shield',workshop:'gear',air:'gear',
- thermal:'gear',recycle:'gear',control:'gear',power:'power',water:'water',classroom:'book',library:'book',theater:'screen',
+ thermal:'gear',recycle:'gear',control:'gear',power:'power',water:'water',arena:'cards',library:'book',theater:'screen',
  childcare:'star',gym:'gym',recreation:'ball',community:'people'};
 function icon(c,name,x,y,s,color){
  const u=s/2;c.save();c.translate(x,y);c.strokeStyle=c.fillStyle=color;c.lineWidth=Math.max(3,s*.11);c.lineCap=c.lineJoin='round';
@@ -169,6 +169,7 @@ function icon(c,name,x,y,s,color){
   case 'gear':star(8,.92,.66);c.globalCompositeOperation='destination-out';ring(0,0,.3,true);c.globalCompositeOperation='source-over';break;
   case 'power':fill(.2,-.95,-.6,.1,-.05,.1,-.2,.95,.6,-.1,.05,-.1);break;
   case 'water':c.beginPath();c.moveTo(0,-.9*u);c.quadraticCurveTo(.7*u,-.05*u,.6*u,.35*u);c.arc(0,.35*u,.6*u,0,Math.PI);c.quadraticCurveTo(-.7*u,-.05*u,0,-.9*u);c.fill();break;
+  case 'cards':for(const [dx,a] of [[-.28,-.28],[.28,.28]]){c.save();c.translate(dx*u,.05*u);c.rotate(a);c.beginPath();c.roundRect(-.38*u,-.62*u,.76*u,1.24*u,.1*u);c.stroke();c.restore();}break;
   case 'book':line(0,-.55,0,.75);line(0,-.55,-.85,-.75,-.85,.55,0,.75,.85,.55,.85,-.75,0,-.55);break;
   case 'screen':box(-.9,-.7,1.8,1.3);fill(-.25,-.38,-.25,.28,.32,-.05);break;
   case 'star':star(5,.95,.4);break;

@@ -16,7 +16,7 @@ export const PLACES=[
  {name:'Neighborhood garden',detail:'Decks 17–19 · one of ten commons',at:[ROUTE[3].position[0],24.3,ROUTE[3].position[2]],yaw:Math.atan2(ROUTE[3].target[0]-ROUTE[3].position[0],ROUTE[3].target[2]-ROUTE[3].position[2])},
  {name:'Observation lounge',detail:'Deck 18 · Mars through the forward windows',at:[LOUNGE_TOUR[2].position[0],LOUNGE_TOUR[2].position[1]-1.6,LOUNGE_TOUR[2].position[2]],yaw:Math.PI/2},
  {name:'Crown lounge',detail:'The panoramic bar at the top of the fin',at:[-240,shapePoint([-240,CROWN.floor,0])[1],4],yaw:Math.PI/2},
- ...[['d16-library-2','Voyage library'],['d16-theater-5','Community theater'],['d16-dining-7','Communal dining'],['d16-gym-3','Exercise studio'],
+ ...[['d16-arena-1','Mudwater Arena'],['d16-library-2','Voyage library'],['d16-theater-5','Community theater'],['d16-dining-7','Communal dining'],['d16-gym-3','Exercise studio'],
   ['d05-ward-1','Medical ward'],['d03-farm-1','Hydroponic garden'],['d04-control-8','Life-support control'],['d01-cargo-1','Container hold']]
   .filter(([id])=>area(id)).map(([id,name])=>{const a=area(id);return {name,detail:`Deck ${a.deck} · ${a.category}`,at:entry(a),yaw:Math.PI/2};}),
  ...SHIP_AREAS.filter(a=>/bridge/i.test(a.name)&&a.deck===20).slice(0,1).map(a=>({name:a.name,detail:'Deck 20 · Command & operations',at:[a.center[0],a.center[1],a.center[2]],yaw:Math.PI/2})),
