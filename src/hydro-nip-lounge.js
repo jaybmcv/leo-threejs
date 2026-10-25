@@ -13,7 +13,7 @@ import {canvasTexture,seeded} from './polish-kit.js';
 // lets you lie in the hammocks (the walk's side is src/walk/lounge.js).
 // Neon, glass, mist and light are merged per material here (the walk leaves glowing and see-through meshes unmerged);
 // seats, hammocks and doors stay separate meshes, named as the walk expects.
-const FLOOR=24.3,CEILING=35.65,LEVELS=[28.3,32.3];
+const FLOOR=24.3,CEILING=35.65,LEVELS=[28.3,32.3],ROOM={x0:109.5,x1:154.5,z0:8,z1:46};
 const DOME={x:134,z:25,r:6.5},MAZE={x0:114,x1:120.5,z0:19,z1:33,top:35.2},MUNCH={x:145.5,z:25};
 // The maze inside: a ground floor of 3 x 6 roomy cells, walled to chest height so you and the camera see over the
 // partitions (behind the last row, z 31.5-32.9, the first stair's foot), the lower platform in front of SPLIT and the
@@ -28,8 +28,8 @@ const PASSAGES=[[[1,0],[2,0]],[[2,0],[2,1]],[[2,1],[2,2]],[[2,2],[2,3]],[[2,3],[
 // The first stair's flight fills the last two cells of column 2.
 const STAIR_CELLS=new Set(['2,4','2,5']);
 // Where the walk finds the lounge's parts (src/walk/lounge.js), in the template frame.
-export const LOUNGE={FLOOR,LEVELS,DOME,MAZE,SPLIT,TUBES};
-const PINK=0xff4fd8,CYAN=0x45e3ff,GREEN=0x6dff7a,PURPLE=0xa77bff,AMBER=0xffc266;
+export const LOUNGE={FLOOR,CEILING,LEVELS,ROOM,DOME,MAZE,SPLIT,TUBES};
+const PINK=0xff4fd8,CYAN=0x45e3ff,GREEN=0x6dff7a,PURPLE=0xa77bff,AMBER=0xffc266,BLACKLIGHT=0x8a4dff;
 const font=new FontLoader().parse(fontData);
 
 // The garden parts the lounge replaces: planters and trees, the cafe, and the commons' cat figures.
@@ -397,6 +397,18 @@ export function createHydroNipLounge({mirror=1}={}){
     const reach=level===LEVELS[0]?1.4:2.1;
     for(let k=0;k<4;k++){const ang=k/4*Math.PI*2+rnd(),sx=px+Math.cos(ang)*.17,sz=pz+Math.sin(ang)*.17,len=reach*(.55+rnd()*.45);
      for(let d=0;d<len;d+=.23)put(M.leaf,new T.OctahedronGeometry(.075,0).scale(1,.4,1.25).rotateY(d*3+k).translate(sx+Math.sin(d*2.3)*.05,py+.1-d,sz+Math.cos(d*2.1)*.05));}}}}
+
+ // Blacklight sconces along the rear and end walls, on the floor and both galleries (from tester feedback): a violet tube
+ // between dark caps on a back plate, washing the wall round it in violet. Each sits clear of the gallery doors and
+ // columns; `n` is the way it faces, into the room.
+ {const sconce=(x,y,z,n)=>{const turn=g=>g.rotateY(Math.atan2(n[0],n[2])).translate(x,y,z);
+   put(M.dark,turn(new T.BoxGeometry(.24,.64,.06).translate(0,0,.03)));
+   for(const s of [-1,1])put(M.dark,turn(new T.BoxGeometry(.2,.05,.2).translate(0,s*.27,.12)));
+   put(neon(BLACKLIGHT),turn(new T.CylinderGeometry(.045,.045,.5,8).translate(0,0,.12)));
+   put(glow(BLACKLIGHT,.75,(u,v)=>[u*.5,v]),turn(new T.PlaneGeometry(1.5,2.4).translate(0,0,.015)));};
+  for(const [y,up] of [[FLOOR,2.3],[LEVELS[0],1.9],[LEVELS[1],1.9]]){
+   for(const x of [113.5,119,123.5,129,139,147.5])sconce(x,y+up,ROOM.z1-.1,[0,0,-1]);
+   for(const z of [14,20.5,27,33.5,40])sconce(ROOM.x0+.1,y+up,z,[1,0,0]);}}
 
  // The credit plaque by the entrance.
  {const at=[117.5,FLOOR,12.6];cyl(M.dark,.05,.05,1.1,[at[0],FLOOR+.55,at[2]+.08],8);box(M.dark,[.5,.03,.5],[at[0],FLOOR+.015,at[2]+.08]);

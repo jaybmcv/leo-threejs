@@ -115,7 +115,7 @@ scene.fog=new T.Fog(0xd9dcd6,70,148);
 const camera=new T.PerspectiveCamera(phone?70:62,1,.05,150);
 // Past the far plane, the ship in haze rather than open space (haze.js); drawn between the sky and the ship.
 const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCamera(60,1,camera.far-5,1500);
-scene.add(new T.HemisphereLight(0xfff6e6,0x5d6b75,1.05));
+const hemi=new T.HemisphereLight(0xfff6e6,0x5d6b75,1.05);scene.add(hemi);
 const fill=new T.DirectionalLight(0xfff1dc,.55);fill.position.set(.3,1,.2);scene.add(fill);
 loadEnvironment(renderer).then(t=>{scene.environment=t;}).catch(()=>{});
 function resize(){const w=innerWidth,h=innerHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
@@ -160,7 +160,7 @@ async function buildShip(){
  lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);corridorTrim(lifts.signs);
  rest=spotIndex(solidSpots(findRestSpots(ship.inside),colliders));
  // The Hydro-Nip Lounge's doors and hammocks (lounge.js) leave the ship for meshes of their own before the merge below.
- lounge=createLounge(ship,colliders);
+ lounge=createLounge(ship,colliders,{hemi,fill,scene});
  // The crown lounge's selfie booth (selfie.js): solid, and drawn with its deck band like the signs below.
  booth=createSelfieBooth();colliders.addStatic(booth.group);
  // Paw Pool's table on the Recreation Hall's activity floor (pool/table.js): solid to walk into, its rails too high to step.
