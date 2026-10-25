@@ -46,6 +46,7 @@ import {createSelfieBooth} from './selfie.js';
 import {createConcession} from './concession.js';
 import {stripProvisions,createProvisions} from './provisions.js';
 import {createKittens,KITTEN_POSE_NAMES} from './kittens.js';
+import {createDiningRobots} from './dining-robots.js';
 import {createFinCasing} from './fin-casing.js';
 import {createInvasion} from './invasion/game.js';
 import {createPoolTable} from './pool/table.js';
@@ -181,7 +182,9 @@ async function buildShip(){
  // Refrigerated provisions' fridges, shelving and strip curtain (provisions.js): solid as plain boxes, the curtain not.
  provisions=createProvisions(ship);if(provisions)colliders.addStatic(provisions.solid,()=>true);
  // Young explorers' kitten habitats (kittens.js): the climbing tree, tunnel, den and kittens solid as plain boxes.
- kittens=createKittens(ship,cosmoKit);if(kittens)colliders.addStatic(kittens.solid,()=>true);colliders.commit();
+ kittens=createKittens(ship,cosmoKit);if(kittens)colliders.addStatic(kittens.solid,()=>true);
+ // Communal dining's three serving robots (dining-robots.js): solid as plain boxes.
+ diningRobots=createDiningRobots(ship);if(diningRobots)colliders.addStatic(diningRobots.solid,()=>true);colliders.commit();
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged.
  pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),onStart:startRun,onEnd:endRun});
  // Mudwater Arena's turning hologram cards, game link and pack counter (mudwater.js), before the room is merged.
@@ -203,6 +206,7 @@ async function buildShip(){
  if(concession)toBand(concession);
  if(provisions)toBand(provisions.group);
  if(kittens)toBand(kittens.group);
+ if(diningRobots)toBand(diningRobots.group);
  if(lounge)for(const o of lounge.drawn)toBand(o);
  // The paintings (paintings.js) span several bands each: they draw while any of them is in view.
  // The ship log boards (changes-board.js) in the crown lounge and the arrival hall.
@@ -225,7 +229,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
