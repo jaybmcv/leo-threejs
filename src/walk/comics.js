@@ -17,17 +17,26 @@ export const COMICS=[
  // The Outpost, on the booth table at x -214, z 9 (its top is .72 m up), on the open side clear of the lamp and
  // drinks, facing a walker standing at the table. Its shorter reach leaves the banquette's seats to Sit down.
  {name:'The_Outpost',title:'The Outpost',where:'Crown lounge',pages:['the-outpost-1.jpg','the-outpost-2.jpg','the-outpost-3.jpg'],size:[1073,1600],at:[-214.05,CROWN.floor+.72,8.5],top:[.2,0,1],reach:1.1},
+ // One Last Rodeo, a 26 cm comic stood face out on the middle shelf of the Deck 17 reading bookcase (observation-finish.js),
+ // its foot at the shelf's front edge so it leans back against the book spines.
+ {name:'One_Last_Rodeo',title:'One Last Rodeo',where:'Deck 17 reading shelves',pages:['one-last-rodeo-1.jpg','one-last-rodeo-2.jpg','one-last-rodeo-3.jpg'],size:[1073,1600],floor:26.3,height:.26,at:[171.27,26.3+.8925,24.6],face:[1,0,0]},
 ];
-const NEAR=30,REACH=1.7,BOOK={height:.32,thick:.012};
+const NEAR=30,REACH=1.7,BOOK={height:.32,thick:.012},LEAN=.08;
 
 export function createComics({urls={},anisotropy=1}={}){
  const edge=new T.MeshStandardMaterial({name:'Comic_page_edge',color:0xeee6d6,roughness:.85});
  const books=COMICS.map(c=>{
-  const [x,y,z]=shapePoint(c.at),floor=shapePoint([c.at[0],CROWN.floor,c.at[2]])[1],h=BOOK.height,w=h*c.size[0]/c.size[1];
+  const [x,y,z]=shapePoint(c.at),floor=shapePoint([c.at[0],c.floor??CROWN.floor,c.at[2]])[1],h=c.height||BOOK.height,w=h*c.size[0]/c.size[1];
   const cover=new T.MeshStandardMaterial({name:'Comic_cover',color:0x2a2f3a,roughness:.6});
   // A box's top face shows its image upright with the image's top toward local -z; turn that toward `top`.
   const book=new T.Mesh(new T.BoxGeometry(w,BOOK.thick,h),[edge,edge,cover,edge,edge,edge]);book.name='Comic_'+c.name;
-  book.position.y=y-floor+BOOK.thick/2;book.rotation.y=Math.atan2(-c.top[0],-c.top[2]);
+  if(c.face){
+   // Standing: the cover (local +y) turns to face `face`, tipped up by LEAN, and the image's top (local -z) points up.
+   const f=new T.Vector3(...c.face).normalize(),up=new T.Vector3(0,1,0);
+   const n=f.clone().multiplyScalar(Math.cos(LEAN)).addScaledVector(up,Math.sin(LEAN)),u=up.clone().multiplyScalar(Math.cos(LEAN)).addScaledVector(f,-Math.sin(LEAN));
+   book.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(n.clone().cross(u).negate(),n,u.clone().negate()));
+   book.position.copy(u).multiplyScalar(h/2).addScaledVector(n,-BOOK.thick/2);book.position.y+=y-floor+.002;
+  }else{book.position.y=y-floor+BOOK.thick/2;book.rotation.y=Math.atan2(-c.top[0],-c.top[2]);}
   // Its origin on the floor, so main.js files it with that deck's band.
   const group=new T.Group();group.name='Comic_book_'+c.name;group.position.set(x,floor,z);group.add(book);
   return {c,group,cover,floor,spot:new T.Vector3(x,y,z),url:urls[c.pages[0]],loading:false};
