@@ -25,7 +25,9 @@ export function createSpecialCirculation(deck){
   for(const s of [-1,1]){
     const sideRooms=rooms.filter(a=>Math.sign(a.center[2])===s);
     const stairGap=(deck===7?[[-174,-169.5],[-158,-154],[-137.5,-130.1]]:[[130.1,133.9],[136.8,146]]).map(([a,b])=>[Math.max(span[0],a),Math.min(span[1],b)]).filter(([a,b])=>b>a);
-    for(const[a,b]of intervals(span[0],span[1],[...sideRooms.map(a=>[a.center[0]-2,a.center[0]+2]),...stairGap]))add('Special_spine_wall',[b-a,3.3,.16],[(a+b)/2,y+1.65,s*(width/2+.08)],wall,shell);
+    // A room standing right on the spine (Deck 7) has its own entry wall on this line, mostly glazed: no second wall.
+    const onSpine=a=>Math.abs(a.center[2])-a.depth/2<=width/2+.01,gap=a=>onSpine(a)?a.width/2:2;
+    for(const[a,b]of intervals(span[0],span[1],[...sideRooms.map(a=>[a.center[0]-gap(a),a.center[0]+gap(a)]),...stairGap]))add('Special_spine_wall',[b-a,3.3,.16],[(a+b)/2,y+1.65,s*(width/2+.08)],wall,shell);
     for(const room of sideRooms){
       const end=Math.abs(room.center[2])-room.depth/2,start=width/2;if(end<=start+.01)continue;
       const cx=room.center[0],cz=s*(end+start)/2;

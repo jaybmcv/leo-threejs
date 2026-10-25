@@ -18,7 +18,7 @@ import {readSpot} from './link.js';
 export const BOARDS=[
  // The crown lift's housing, forward face (x -244.82), between the floor (120.3) and its gold panelling.
  {name:'Crown_lounge',wall:[-244.82,122.3,0],facing:[1,0,0],floor:120.3},
- // The Arrival hall's inboard wall, on its piers' face (z -21.16, the vision glass between them is set back), between
+ // The Arrival hall's inboard wall, on its room-side face (z -21.16), between
  // the benches at x -131 and -122, under the 3.3 m ceiling.
  {name:'Arrival_hall',wall:[-126.5,-33.75,-21.18],facing:[0,0,-1],floor:-35.7},
 ];

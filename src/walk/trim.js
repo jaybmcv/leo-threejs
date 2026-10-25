@@ -80,8 +80,8 @@ export function corridorTrim(parent){
   corridor(frames,coves,accents,spine);wallKit(kit,{...spine,sides:bare(spine,plan.y),spacing:SPACING},SERVICE_LEVEL);
   for(const b of plan.branches){
    const e=b.extent,w=b.x1-b.x0;
-   // The aft wall opens only to the spine; the forward wall to the spine and each room's entry.
-   const sides=[[-1,walls(-e,e,[[-4,4]])],[1,walls(-e,e,[[-4,4],...b.entries.map(n=>[n.z-2,n.z+2])])]];
+   // The aft wall opens only to the spine; the forward wall to the spine, each room's entry and its vision glass.
+   const sides=[[-1,walls(-e,e,[[-4,4]])],[1,walls(-e,e,[[-4,4],...b.entries.flatMap(n=>[[n.z-2,n.z+2],...n.glass])])]];
    const branch={axis:'z',lo:-e,hi:e,mid:(b.x0+b.x1)/2,width:w,sides,start:-e+SPACING};
    corridor(frames,coves,accents,branch);wallKit(kit,{...branch,sides:bare(branch,plan.y),spacing:SPACING},SERVICE_LEVEL);
   }
