@@ -20,6 +20,19 @@ export const TRIGGERS=[
  ...PODIUMS.map(x=>({kind:'mudwater',at:[x+Math.sign(BOARD.x-x)*1.1,STAGE.h,0]})),
  {kind:'packs',at:[COUNTER.x,0,COUNTER.z+1.3]},
 ];
+// Brand pieces the walk dresses with the brand kit's art (walk/mudwater.js); the ship viewer shows them plain.
+// Two life-size pack standees flank the aisle inside the door, a gold coin is set in the floor between them, and two
+// more hang either side of the match screen.
+export const STANDEE={w:1.25,h:1.93,base:.15},STANDEES=[[-23,-4],[-23,4]];
+export const VAULT={x:COUNTER.x,y:1.3,z:-15.73,r:.95},FLOOR_COIN={x:-20.6,z:0,r:1.05},WALL_COINS=[-5.95,5.95];
+// The card gallery: two rows on the end wall either side of the screen and on both long walls by the tables. Each card
+// is its centre and the way it faces (+x or ±z).
+export const GALLERY=[.85,1.95].flatMap(y=>[
+ ...[-1,1].flatMap(s=>Array.from({length:8},(_,i)=>({p:[25.85,y,s*(8.3+i*1.05)],face:-1,axis:'x'}))),
+ ...[-1,1].flatMap(s=>Array.from({length:10},(_,i)=>({p:[-11+i*1.1,y,s*16.8],face:-s,axis:'z'}))),
+]);
+// The packs fanned on the counter: centre and turn of each.
+export const PACK_FOILS=Array.from({length:6},(_,i)=>COUNTER.x-2.6+i*1.04).flatMap(px=>Array.from({length:4},(_,j)=>({at:[px-.25+j*.16,1.18,COUNTER.z+.25],turn:(j-1.5)*.15})));
 // Hologram cards: board square (column, row), turn, and colour.
 const HOLOGRAMS=[[-1,-1,.6,0x3fd6e0],[0,-1,-.3,0x8f6bff],[1,0,.5,0xffa040],[0,1,.2,0x5fe07a],[-1,1,-.6,0xff5f8a]];
 // Stand-in card art colours, in Mudwater's swampy, saturated range (the card art isn't in the brand kit).
@@ -154,11 +167,11 @@ export function fitMudwaterArena({box,add,mat,text,fit,shell}){
  text('MUDWATER',[cx,.66,front+.02],0,.2);
  for(let i=0;i<6;i++){const px=cx-2.6+i*1.04;
   for(let j=0;j<3;j++){put('Pack_box',[.36,.11,.26],[px,1.115+j*.115,cz-.25]);put('Pack_box_band',[.37,.025,.265],[px,1.115+j*.115,cz-.25]);}
-  for(let j=0;j<4;j++){const a=(j-1.5)*.15,fx=px-.25+j*.16;put('Pack_foil',[.15,.24,.03],[fx,1.18,cz+.25],a);put('Pack_foil_logo_art',[.08,.08,.005],[fx+Math.sin(a)*.018,1.2,cz+.268],a);}
+  for(const {at:[fx,fy,fz],turn:a} of PACK_FOILS.filter(f=>Math.abs(f.at[0]-px)<.5)){put('Pack_foil',[.15,.24,.03],[fx,fy,fz],a);put('Pack_foil_logo_art',[.08,.08,.005],[fx+Math.sin(a)*.018,fy+.02,fz+.018],a);}
  }
  flush(n=>/band|logo/.test(n)?M.lit:M.black);
  box('Mudwater_pack_vault',[cl,2.6,1],[cx,1.3,-16.3],M.black);
- const door=add('Vault_door',new T.CylinderGeometry(.95,.95,.14,40),M.gold,[cx,1.3,-15.73]);door.rotation.x=Math.PI/2;
+ const door=add('Vault_door',new T.CylinderGeometry(VAULT.r,VAULT.r,.14,40),M.gold,[VAULT.x,VAULT.y,VAULT.z]);door.rotation.x=Math.PI/2;
  const hub=add('Vault_door_handle',new T.TorusGeometry(.32,.04,8,28),M.black,[cx,1.3,-15.64]);hub.castShadow=false;
  for(let i=0;i<3;i++){const sp=box('Vault_door_handle',[.9,.05,.05],[cx,1.3,-15.62],M.black);sp.rotation.z=i*Math.PI/3;}
  for(const dx of [-2.35,2.35]){
@@ -178,14 +191,9 @@ export function fitMudwaterArena({box,add,mat,text,fit,shell}){
  flush();
  box('Match_score_graphics',[.006,.5,1.1],[sx,1.35,-2.6],M.teal);box('Match_score_graphics',[.006,.5,1.1],[sx,1.35,2.6],M.orange);
 
- // The card gallery: two rows on the end wall either side of the screen and on both long walls by the tables, each card
- // a brass frame round its art and a cream caption strip, with a picture light over the top row.
- const cards=[];
- for(const y of [.85,1.95]){
-  for(const s of [-1,1])for(let i=0;i<8;i++)cards.push({p:[25.85,y,s*(8.3+i*1.05)],face:-1,axis:'x'});
-  for(const s of [-1,1])for(let i=0;i<10;i++)cards.push({p:[-11+i*1.1,y,s*16.8],face:-s,axis:'z'});
- }
- cards.forEach(({p:[x,y,z],face,axis},n)=>{
+ // The card gallery: each card a brass frame round its art and a cream caption strip, with a picture light over the
+ // top row.
+ GALLERY.forEach(({p:[x,y,z],face,axis},n)=>{
   const ry=axis==='x'?Math.PI/2:0,o=(d,dy=0)=>axis==='x'?[x+face*d,y+dy,z]:[x,y+dy,z+face*d];
   put('Card_frame',[.72,1,.04],o(0),ry);
   put('Card_art',[.6,.74,.012],o(.026,.07),ry,art[n*7%ART.length]);
@@ -193,4 +201,11 @@ export function fitMudwaterArena({box,add,mat,text,fit,shell}){
   if(y>1.5)put('Card_picture_light',[.5,.04,.08],[...o(.09)].map((v,i)=>i===1?2.56:v),ry);
  });
  flush(n=>n==='Card_frame'?M.gold:n==='Card_caption_label'?M.cream:M.glow);
+
+ // The pack standees: a black board on a plinth with a brass edge, the pack's art on both faces in the walk.
+ for(const [x,z] of STANDEES){const {w,h,base}=STANDEE;
+  box('Pack_standee',[.06,h,w],[x,base+h/2,z],M.black);box('Pack_standee_base',[.5,base,w+.1],[x,base/2,z],M.black);
+  for(const s of [-1,1])put('Pack_standee_trim',[.08,h+.04,.03],[x,base+h/2,z+s*(w/2+.015)]);put('Pack_standee_trim',[.08,.03,w+.06],[x,base+h+.015,z]);
+ }
+ flush(M.gold);
 }
