@@ -3,7 +3,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {polishInterior} from './interior-polish.js';
 const mat=(name,color,roughness=.65,metalness=0)=>new T.MeshStandardMaterial({name:'Finish_'+name,color,roughness,metalness});
-export const FINISH_M={dark:mat('graphite',0x263d49),steel:mat('alloy',0x97aaa9,.35,.65),oak:mat('oak',0xa98762),linen:mat('linen',0xdedaca,.95),sage:mat('sage',0x668477,1),amber:mat('amber',0xd9b272),blue:mat('clinical_blue',0x89b8c4),ink:mat('display',0xb9e2dc),green:mat('leaf',0x58825f,.95)};
+export const FINISH_M={dark:mat('graphite',0x263d49),steel:mat('alloy',0x97aaa9,.35,.65),oak:mat('oak',0xa98762),linen:mat('linen',0xdedaca,.95),sage:mat('sage',0x668477,1),amber:mat('amber',0xd9b272),champagne:mat('champagne',0xaea35d,.35,.6),blue:mat('clinical_blue',0x89b8c4),ink:mat('display',0xb9e2dc),green:mat('leaf',0x58825f,.95)};
 const M=FINISH_M;
 const FOOD={lettuce:mat('lettuce',0x6fae4a,.8),tomato:mat('tomato',0xd8442e,.45),carrot:mat('carrot',0xe8862a,.6),crust:mat('bread_crust',0xb9783a,.85),cheese:mat('cheese',0xf0c95a,.6),curry:mat('curry',0xd9902c,.7),pasta:mat('pasta',0xf2d48a,.75),roast:mat('roast',0x7a3e24,.7),grape:mat('grape',0x6b3a7a,.4),cream:mat('cream',0xfbf3e4,.7),berry:mat('berry_icing',0xe77fa4,.6),cocoa:mat('cocoa',0x4a2a1c,.6),
  glass:new T.MeshStandardMaterial({name:'Finish_buffet_guard_glass',color:0xd4e6ec,roughness:.08,transparent:true,opacity:.2,depthWrite:false,side:T.DoubleSide})};
@@ -68,7 +68,7 @@ function buffet(k,top,b,c,s,stations){
 export const AREA_TREATMENTS={cargo:'cargo_restraints',stores:'inventory_labels',cold:'cabinet_hardware',pharmacy:'inventory_labels',workshop:'tool_storage',community:'tool_storage',logistics:'display_graphics',control:'display_graphics',arrival:'upholstery',security:'screening_equipment',airlock:'locker_hardware',baggage:'conveyor_detail',farm:'grow_lighting',nursery:'grow_lighting',harvest:'wash_station',kitchen:'cookware',air:'machine_grilles',thermal:'machine_grilles',water:'vessel_instruments',recycle:'machine_grilles',power:'cabinet_hardware',ward:'patient_services',isolation:'patient_services',surgery:'patient_services',clinic:'patient_services',imaging:'diagnostic_detail',counseling:'upholstery',shelter:'upholstery',arena:'games',library:'inventory_labels',gym:'fitness_equipment',recreation:'games',theater:'upholstery',childcare:'play_furniture',dining:'table_settings',navigation:'display_graphics',mission:'display_graphics',communications:'display_graphics',crew:'table_settings',briefing:'table_settings',data:'rack_hardware',captain:'table_settings',securityops:'display_graphics',bridge:'display_graphics',reactor:'module_instruments',drivefeed:'pump_detail',enginecontrol:'display_graphics',engineworkshop:'workbench_detail',engineaccess:'hatch_detail',hangar:'shuttle_detail',lifeboats:'lifeboat_detail'};
 export function finishShipArea(area,{root,shell,fit}){
  const k=detailKit(fit,area.name),lining=detailKit(shell,area.name+' lining');
- const clinical=['ward','surgery','isolation','clinic','imaging','pharmacy'].includes(area.kind),social=['arrival','counseling','library','theater','childcare','dining','crew','briefing','captain','shelter'].includes(area.kind),accent=clinical?M.blue:social?M.sage:M.amber;
+ const clinical=['ward','surgery','isolation','clinic','imaging','pharmacy'].includes(area.kind),social=['arrival','counseling','library','theater','childcare','dining','crew','briefing','captain','shelter'].includes(area.kind),accent=clinical?M.blue:social?M.sage:area.kind==='arena'?M.champagne:M.amber;
  const sources=[],modified={};fit.traverse(o=>{if(o.isMesh)sources.push(o);});
  function round(o,f){const p=o.geometry.parameters;if(!p.width)return;o.geometry=new RoundedBoxGeometry(p.width,p.height,p.depth,1,Math.min(.055,p.height*.2,p.width*.15,p.depth*.15));o.material=accent;modified[f]=(modified[f]||0)+1;}
  for(const o of sources){
@@ -121,8 +121,8 @@ export function finishShipArea(area,{root,shell,fit}){
   if(n==='Patient_bed_base')for(const v of [-1,1])k.box(o,[.035,.18,s.z*.66],[c.x+v*s.x*.46,b.max.y+.09,c.z],M.steel,'patient_services');
   if(n==='Diagnostic_scanner'){const f=k.face(o);for(let j=0;j<5;j++)f.panel(0,f.h*(-.18+j*.09),f.w*.14,.025,M.blue,'diagnostic_detail');}
   if(n==='Treadmill'){k.box(o,[s.x*.77,.006,s.z*.76],[c.x,b.max.y+.005,c.z],M.dark,'fitness_equipment');for(const v of [-1,1])k.box(o,[.025,.008,s.z*.78],[c.x+v*s.x*.39,b.max.y+.008,c.z],M.amber,'fitness_equipment');}
-  // Mudwater boards (mudwater-arena.js): the gold lines of the 3 × 3 grid.
-  if(n==='Mudwater_grid')for(let j=1;j<3;j++)for(const ax of [0,1]){const w=Math.max(.012,s.x*.012);k.box(o,ax?[s.x,.006,w]:[w,.006,s.z],[ax?c.x:b.min.x+s.x*j/3,b.max.y+.004,ax?b.min.z+s.z*j/3:c.z],M.amber,'games');}
+  // Mudwater boards (mudwater-arena.js): the 3 × 3 grid in the brand's Champagne.
+  if(n==='Mudwater_grid')for(let j=1;j<3;j++)for(const ax of [0,1]){const w=Math.max(.012,s.x*.012);k.box(o,ax?[s.x,.006,w]:[w,.006,s.z],[ax?c.x:b.min.x+s.x*j/3,b.max.y+.004,ax?b.min.z+s.z*j/3:c.z],M.champagne,'games');}
   if(n==='Game_board')for(let ix=0;ix<6;ix++)for(let iz=0;iz<6;iz++)if((ix+iz)%2===0)k.box(o,[s.x/6,.007,s.z/6],[b.min.x+s.x*(ix+.5)/6,b.max.y+.004,b.min.z+s.z*(iz+.5)/6],M.linen,'games');
   if(n==='Shuttle_boarding_door'||n==='Lifeboat_helm'){const f=k.face(o),type=n==='Lifeboat_helm'?'lifeboat_detail':'shuttle_detail';f.panel(0,0,f.w*.67,f.h*.45,M.dark,type);f.panel(0,f.h*.08,f.w*.5,f.h*.045,M.blue,type);}
  }
