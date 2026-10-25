@@ -1,9 +1,12 @@
 import * as T from 'three';
-import {serviceKit,SERVICE_M as M} from './neighborhood-services.js';
+import {serviceKit,SERVICE_M as M,glassWall} from './neighborhood-services.js';
+import {glazedWall} from './room-glazing.js';
 import {finishShipArea,detailKit,FINISH_M} from './area-finish.js';
 import {fixtureText} from './circulation-finish.js';
 const COMMAND_LIGHT=new T.MeshStandardMaterial({name:'Command cool instrument light',color:0xb8e3ed,emissive:0x7eb7cb,emissiveIntensity:.45,roughness:.5});
 const RECOVERY_LIGHT=new T.MeshStandardMaterial({name:'Command warm lounge light',color:0xffe2b7,emissive:0xe9bb7c,emissiveIntensity:.35,roughness:.6});
+// The x spans (in a room's own frame) of the aft rooms' entry walls, where they face the aft spine.
+const AFT_GLASS=[[-26,-2],[2,26]];
 export const COMMAND_AFT_AREAS=[
  {id:'d20-planning-aft',name:'Mission planning studio',kind:'briefing',side:-1,description:'A collaborative planning table, navigation review stations and a mission wall for detailed work away from the bridge.'},
  {id:'d20-recovery-aft',name:'Crew recovery lounge',kind:'crew',side:1,description:'Quiet upholstered seating, a refreshment counter and small conversation tables for command crew between shifts.'},
@@ -13,7 +16,8 @@ export function createCommandAft(area){
  box('Finished_floor',[52,.02,20],[0,-.01,0],M.floor);box('Ceiling',[52,.1,20],[0,3.4,0],M.wall,shell);
  for(const sign of [-1,1])box('Room_end_wall',[.16,3.4,20],[sign*25.92,1.7,0],M.wall,shell);
  box('Outboard_wall',[52,3.4,.16],[0,1.7,s*9.92],M.wall,shell);
- for(const sign of [-1,1])box('Entry_wall',[24,3.4,.16],[sign*14,1.7,-s*9.92],M.wall,shell);
+ // The entry walls face the aft spine across a 0.8 m gap behind its own wall, glazed pane for pane with them.
+ for(const sign of [-1,1])glazedWall(glassWall(box,shell),'Entry_wall',[24,3.4,.16],[sign*14,1.7,-s*9.92],AFT_GLASS[sign<0?0:1]);
  box('Entry_header',[4,.8,.16],[0,3,-s*9.92],M.blue,shell);
  text(area.name.toUpperCase(),[0,2.6,s*9.78],s<0?0:Math.PI,.28);
  for(const x of [-20,-10,0,10,20])for(const z of [-6,6])box('Ceiling_light',[5,.04,.18],[x,3.27,z],M.light,shell);
@@ -36,7 +40,7 @@ export function createCommandAft(area){
  if(s<0){
   box('Command_spine_floor',[64,.02,8],[6,-.01,15],M.floor);box('Command_spine_ceiling',[64,.1,8],[6,3.4,15],M.wall,shell);
   box('Command_aft_bulkhead',[.16,3.4,8],[-25.92,1.7,15],M.wall,shell);
-  for(const z of [10.92,19.08])for(const [a,b]of [[-26,-2],[2,38]])box('Command_spine_wall',[b-a,3.4,.16],[(a+b)/2,1.7,z],M.wall,shell);
+  for(const z of [10.92,19.08])for(const [a,b]of [[-26,-2],[2,38]])glazedWall(glassWall(box,shell),'Command_spine_wall',[b-a,3.4,.16],[(a+b)/2,1.7,z],AFT_GLASS[a<0?0:1]);
   for(const x of [-20,-8,6,20,32])box('Ceiling_light',[5,.04,.16],[x,3.27,15],M.light,shell);
  }
  finishShipArea(area,{root,fit,shell});return {root,fit,shell,overview:{position:[-41,96,s*79],target:area.center},inside:{position:[-90,38,s*7],target:[-105,37.8,s*15]}};

@@ -4,6 +4,7 @@ import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
 import fontData from './assets/helvetiker-bold.json' with {type:'json'};
 import {finishShipArea} from './area-finish.js';
 import {finishCirculation} from './circulation-finish.js';
+import {glazedWall,visionGlass} from './room-glazing.js';
 
 export const SUPPORT_AREAS=[
  {deck:14,service:'laundry',kind:'stores',name:'Laundry & linen exchange',side:-1,description:'Paired washer and dryer stacks, folding islands, hanging rails, linen stores and a waiting bench.'},
@@ -21,7 +22,11 @@ function kit(root,origin=[0,0,0]){
  function text(label,pos,rotation=0,size=.28,parent=fit){const g=new TextGeometry(label,{font,size,depth:.004,curveSegments:1});g.computeBoundingBox();g.translate(-g.boundingBox.max.x/2,0,0);const o=new T.Mesh(g,M.dark);o.name='Service_wayfinding';o.position.set(...pos);o.rotation.y=rotation;parent.add(o);return o;}
  return {root,fit,shell,box,text};
 }
-export {kit as serviceKit,M as SERVICE_M};
+// A kit's box for glazedWall (room-glazing.js): lining, or vision glass for the panes.
+const glassWall=(box,shell)=>(name,size,pos,glass)=>box(name,size,pos,glass?visionGlass:M.wall,shell);
+// The world x spans along the Deck 14-15 service passage where the rooms' entry walls face it.
+const SUPPORT_GLASS=[[-261,-207],[-203,-181]];
+export {kit as serviceKit,M as SERVICE_M,glassWall};
 export function createSupportArea(area){
  const root=new T.Group();root.name='Area_'+area.id;root.userData={...area,units:'metres',stage:'Fitted neighborhood service area'};
  const k=kit(root,area.center),{fit,shell,box,text}=k,s=area.side,accent=area.deck===14?M.blue:M.amber;
@@ -31,7 +36,8 @@ export function createSupportArea(area){
  box('Outboard_wall',[80,3.4,.16],[0,1.7,s*9.92],M.wall,shell);
  // Four-metre entry opens on the central aft passage, aligned with a clear
  // transverse aisle at x=-205. Furniture stays away from both room aisles.
- for(const [a,b] of [[-40,14],[18,40]])box('Entry_wall',[b-a,3.4,.16],[(a+b)/2,1.7,-s*9.92],M.wall,shell);
+ // Both entry walls face the service passage across a 0.8 m gap behind its own wall, glazed pane for pane with them.
+ for(const [a,b] of [[-40,14],[18,40]])glazedWall(glassWall(box,shell),'Entry_wall',[b-a,3.4,.16],[(a+b)/2,1.7,-s*9.92],SUPPORT_GLASS.find(g=>g[0]-area.center[0]<b&&g[1]-area.center[0]>a)?.map(x=>x-area.center[0]));
  box('Entry_header',[4,.7,.16],[16,3.05,-s*9.92],accent,shell);
  text(area.name.toUpperCase(),[0,2.45,s*9.78],s<0?0:Math.PI,.37);
  for(const z of [-2,2])box('Service_aisle_edge',[78,.012,.055],[0,.008,z],accent);
@@ -104,7 +110,7 @@ export function createSupportCirculation(deck){
  box('Support_spine_ceiling',[87,.1,8],[-217.5,3.4,0],M.wall,shell);
  box('Support_aft_wall',[.16,3.4,8],[-260.92,1.7,0],M.wall,shell);
  for(const s of [-1,1]){
-  for(const [a,b]of [[-261,-207],[-203,-174]])box('Support_spine_wall',[b-a,3.4,.16],[(a+b)/2,1.7,s*4.08],M.wall,shell);
+  for(const [a,b]of [[-261,-207],[-203,-174]])glazedWall(glassWall(box,shell),'Support_spine_wall',[b-a,3.4,.16],[(a+b)/2,1.7,s*4.08],SUPPORT_GLASS.find(g=>g[0]<b&&g[1]>a));
   box('Room_link_floor',[4,.02,1],[-205,-.01,s*4.5],M.floor);
   box('Room_link_ceiling',[4,.1,1],[-205,3.4,s*4.5],M.wall,shell);
   for(const x of [-207.08,-202.92])box('Room_link_wall',[.16,3.4,1],[x,1.7,s*4.5],M.wall,shell);

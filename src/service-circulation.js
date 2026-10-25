@@ -1,16 +1,17 @@
 import * as T from 'three';
 import {finishCirculation} from './circulation-finish.js';
 import {SHIP_AREAS} from './areas.js';
+import {branchExtent,entryGlass} from './room-glazing.js';
 
-// Corridors join each room's aft entry to the longitudinal spine and both lift locations.
+// Corridors join each room's aft entry to the longitudinal spine and both lift locations. Each entry carries the room's
+// half depth (its entry wall stands along the corridor's forward side) and the z spans of vision glass in that wall.
 export function serviceRoutes(deck){
   const rooms=SHIP_AREAS.filter(a=>a.deck===deck&&!a.special);
   if(!rooms.length)return null;
   return {deck,y:rooms[0].center[1],spine:{x0:-148,x1:138,width:8},
-    branches:[...new Set(rooms.map(a=>a.center[0]))].map(x=>({x0:x-33,x1:x-26,
-      extent:deck<=5&&x>-115?56.9:Math.max(...rooms.filter(a=>a.center[0]===x).map(a=>Math.abs(a.center[2])))+2,
+    branches:[...new Set(rooms.map(a=>a.center[0]))].map(x=>{const extent=branchExtent(deck,x,rooms);return {x0:x-33,x1:x-26,extent,
       joinsLifeboats:deck<=5&&x>-115,
-      entries:rooms.filter(a=>a.center[0]===x).map(a=>({id:a.id,z:a.center[2],width:4}))})),
+      entries:rooms.filter(a=>a.center[0]===x).map(a=>({id:a.id,z:a.center[2],width:4,half:a.depth/2,glass:entryGlass(a,extent).filter(Boolean)}))};}),
     connections:rooms.map(a=>({id:a.id,points:[[-132,0],[a.center[0]-29.5,0],[a.center[0]-29.5,a.center[2]],[a.center[0]-26,a.center[2]]]}))};
 }
 
@@ -40,7 +41,9 @@ export function createServiceCirculation(deck){
       if(!branch.joinsLifeboats)box('Branch_end_wall',[w,3.3,.16],[bx,1.65,s*(e+.08)],lining,shell);
     }
     for(const side of [-1,1]){
-      const gaps=[[-4,4],...(side===1?branch.entries.map(e=>[e.z-2,e.z+2]):[])];
+      // Along the rooms the forward side is the rooms' own entry walls (areas.js), with their vision glass, so the
+      // corridor adds no second wall in front of them.
+      const gaps=[[-4,4],...(side===1?branch.entries.map(e=>[e.z-e.half,e.z+e.half]):[])];
       for(const [a,b]of intervals(-e,e,gaps))box('Branch_wall',[.16,3.3,b-a],[side<0?branch.x0-.08:branch.x1+.08,1.65,(a+b)/2],lining,shell);
     }
     for(const entry of branch.entries){
