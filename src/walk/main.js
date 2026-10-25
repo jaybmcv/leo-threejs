@@ -50,7 +50,7 @@ import {createPawPool} from './pool/game.js';
 import {createPaintings} from './paintings.js';
 import {createComics,createComicReader} from './comics.js';
 import {createChangesBoards} from './changes-board.js';
-import {createTheatre} from './theatre.js';
+import {createTheatre,placeAttendant} from './theatre.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
@@ -154,6 +154,8 @@ async function buildShip(){
  ship.inside.traverse(o=>{if(/^Lift_(back|side)_enclosure$/.test(o.name))o.material=shaftGlass;});
  status('Fitting the walls…');await idle();
  prepareExteriorForWalking(ship);
+ // The theatre's attendant moves behind the concession counter (theatre.js) before the walls are fitted.
+ placeAttendant(ship);
  buildColliders(ship,{extra:[ship.exterior],filter:walls,into:colliders});
  // The hull behind the glass goes for drawing only, after the colliders have it.
  const w0=performance.now(),opened=openWindows(ship,walkPlan.windows);clearGlass(ship.root);timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
