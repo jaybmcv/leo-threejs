@@ -93,7 +93,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  // The mood. The commons' ceiling panels (Circadian_light) take a warm, dim copy of their material for good.
  const {ROOM}=LOUNGE,room=new T.Box3().setFromPoints([toWorld(ROOM.x0,LOUNGE.FLOOR,ROOM.z0),toWorld(ROOM.x1,LOUNGE.CEILING,ROOM.z1)]);
  let warm=null;root.parent?.parent?.traverse(o=>{if(o.isMesh&&o.name==='Circadian_light'){
-  warm||=Object.assign(o.material.clone(),{name:'Walk_lounge_ceiling_light'});warm.color.set(0x5a4030);warm.emissive.set(0xffa04a);warm.emissiveIntensity=.3;o.material=warm;}});
+  warm||=Object.assign(o.material.clone(),{name:'Walk_lounge_ceiling_light'});warm.color.set(0x2e241c);warm.emissive.set(0xff9040);warm.emissiveIntensity=.16;o.material=warm;}});
  const glows=[];root.traverse(o=>{if(o.isMesh&&/^Lounge_(neon_glow|additive_glow)$/.test(o.material?.name)&&!glows.some(g=>g.m===o.material))glows.push({m:o.material,k:o.material.name==='Lounge_neon_glow'?MOOD.neon:MOOD.glow});});
  const base=light&&{hemi:light.hemi.intensity,fill:light.fill.intensity,env:light.scene.environmentIntensity,sky:light.hemi.color.clone(),ground:light.hemi.groundColor.clone()};
  const sky=new T.Color(MOOD.sky),ground=new T.Color(MOOD.ground);let mood=0,shown=0;

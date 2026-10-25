@@ -399,16 +399,17 @@ export function createHydroNipLounge({mirror=1}={}){
      for(let d=0;d<len;d+=.23)put(M.leaf,new T.OctahedronGeometry(.075,0).scale(1,.4,1.25).rotateY(d*3+k).translate(sx+Math.sin(d*2.3)*.05,py+.1-d,sz+Math.cos(d*2.1)*.05));}}}}
 
  // Blacklight sconces along the rear and end walls, on the floor and both galleries (from tester feedback): a violet tube
- // between dark caps on a back plate, washing the wall round it in violet. Each sits clear of the gallery doors and
- // columns; `n` is the way it faces, into the room.
+ // between dark caps on a back plate, washing the wall round it in violet. Each sits clear of the gallery doors,
+ // columns and prints; `n` is the way it faces, into the room.
  {const sconce=(x,y,z,n)=>{const turn=g=>g.rotateY(Math.atan2(n[0],n[2])).translate(x,y,z);
    put(M.dark,turn(new T.BoxGeometry(.24,.64,.06).translate(0,0,.03)));
    for(const s of [-1,1])put(M.dark,turn(new T.BoxGeometry(.2,.05,.2).translate(0,s*.27,.12)));
    put(neon(BLACKLIGHT),turn(new T.CylinderGeometry(.045,.045,.5,8).translate(0,0,.12)));
    put(glow(BLACKLIGHT,.75,(u,v)=>[u*.5,v]),turn(new T.PlaneGeometry(1.5,2.4).translate(0,0,.015)));};
-  for(const [y,up] of [[FLOOR,2.3],[LEVELS[0],1.9],[LEVELS[1],1.9]]){
-   for(const x of [113.5,119,123.5,129,139,147.5])sconce(x,y+up,ROOM.z1-.1,[0,0,-1]);
-   for(const z of [14,20.5,27,33.5,40])sconce(ROOM.x0+.1,y+up,z,[1,0,0]);}}
+  // (The end wall's prints hang between the ground floor's sconces: src/garden-finish.js.)
+  for(const [y,up,ends] of [[FLOOR,2.3,[14,19.5,25,31,37]],[LEVELS[0],1.9,[14,20.5,27,33.5,40]],[LEVELS[1],1.9,[14,20.5,27,33.5,40]]]){
+   for(const x of [113.5,119,123.5,128.4,137.4,147.5])sconce(x,y+up,ROOM.z1-.1,[0,0,-1]);
+   for(const z of ends)sconce(ROOM.x0+.1,y+up,z,[1,0,0]);}}
 
  // The credit plaque by the entrance.
  {const at=[117.5,FLOOR,12.6];cyl(M.dark,.05,.05,1.1,[at[0],FLOOR+.55,at[2]+.08],8);box(M.dark,[.5,.03,.5],[at[0],FLOOR+.015,at[2]+.08]);
