@@ -10,6 +10,9 @@ import {shapePoint} from '../concept-shape.js';
 export const COMICS=[
  // Extraction: Go!, on the forward end of the Crown lounge's bar counter (its top is 1.2 m over the lounge floor).
  {name:'Extraction_Go',title:'Extraction: Go!',where:'Crown lounge',pages:['extraction-go-1.jpg','extraction-go-2.jpg','extraction-go-3.jpg'],size:[1073,1600],at:[-227.45,CROWN.floor+1.2,1.3],top:[-1,0,-.25]},
+ // In the Club, on the forward booth table at z -5.4 (its top is .72 m up), on the open side clear of the lamp and drinks,
+ // facing a walker standing at the table.
+ {name:'In_the_Club',title:'In the Club',where:'Crown lounge',pages:['in-the-club-1.jpg','in-the-club-2.jpg','in-the-club-3.jpg'],size:[1073,1600],at:[-204.05,CROWN.floor+.72,-4.9],top:[.2,0,-1]},
 ];
 const NEAR=30,REACH=1.7,BOOK={height:.32,thick:.012};
 
