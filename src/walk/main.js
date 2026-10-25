@@ -9,7 +9,7 @@ import {publicAsset} from '../public-assets.js';
 import {createMars} from '../mars.js';
 import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
 import {buildSteps,buildColliders,cabinPlacements,outsideOnly,prepareExteriorForWalking} from './world.js';
-import {Colliders,solid} from './collision.js';
+import {Colliders,solid,BODY} from './collision.js';
 import {STATIC_LIFT_PARTS,LIFTS} from './lifts.js';
 import {Controller} from './controller.js';
 import {FollowCamera} from './camera.js';
@@ -40,6 +40,7 @@ import {Marks} from './marks.js';
 import {createHostess} from './hostess.js';
 import {wearHat,fit,FIT} from './hat.js';
 import {createYarn,YARN_SPOTS} from './yarn.js';
+import {BALL,createBallMesh} from './hamster-ball.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink} from './link.js';
 import {createSelfieBooth} from './selfie.js';
@@ -281,22 +282,24 @@ const actions={
   else if(t.kind==='treadmill')pawsOff.start(t.mill);
   else if(t.kind==='mudwater')mudwater.play();
   else if(t.kind==='packs'){closePanels();$('mudwater-sheet').hidden=false;input.enabled=false;}
+  else if(t.kind==='ball')enterBall();
+  else if(t.kind==='ball-out')leaveBall();
  },
  escape(){closePanels();},
  // (Nothing below until the walk is ready.)
  places(){if(ready())togglePlaces();},
  map(){if(ready())toggleMap();},
- crouch(){if(ready()&&!resting){controller.toggle('crouch');emote=null;}},
- prone(){if(ready()&&!resting){controller.toggle('prone');emote=null;}},
+ crouch(){if(ready()&&!resting&&!inBall){controller.toggle('crouch');emote=null;}},
+ prone(){if(ready()&&!resting&&!inBall){controller.toggle('prone');emote=null;}},
  emotes(){if(ready())toggleEmotes();},
  // The ship log from anywhere aboard, starting on the changes made around the walker (changes-board.js).
  log(){if(ready())openLog();},
  // Respawn: back to the arrival hall from anywhere aboard, off any seat or bed.
- respawn(){if(ready()){closePanels();emote=null;goTo({at:START.position.toArray(),yaw:START.yaw});for(const y of yarns)y.reset();}},
+ respawn(){if(ready()){closePanels();emote=null;goTo({at:START.position.toArray(),yaw:START.yaw});for(const y of yarns)y.reset();ball.mesh.position.copy(ballHome);}},
  // A ping where you stand, for others aboard to find (marks.js); one every few seconds at most.
  ping(now=performance.now()){if(!ready()||!live?.live||now-pinged<PING_GAP_MS)return;pinged=now;const at=myPose().pos;live.mark(at);marks.show('me','You',at,now);},
  // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
- emote(i){if(ready()&&!resting&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
+ emote(i){if(ready()&&!resting&&!inBall&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
  // A key pressed while a sheet is open: the key that opened it closes it, and the emote sheet takes 1-0.
  sheet(code){
   const open=id=>!$(id).hidden;
@@ -341,6 +344,12 @@ const yarn=createYarn(colliders),yarns=[yarn];
 for(const s of YARN_SPOTS){const place=PLACES.find(p=>p.name===s.place);if(!place)continue;
  const at=findStand(colliders,place.at.map((v,i)=>v+s.offset[i]),{radius:4});if(at)yarns.push(createYarn(colliders,{at:at.toArray(),color:s.color}));}
 for(const y of yarns)scene.add(y.mesh);
+// The hamster ball (hamster-ball.js), parked in the Deck 17 gardens until someone climbs in.
+const ballHome=findStand(colliders,BALL.home,{radius:4})||new T.Vector3(...BALL.home),ball=createBallMesh();let inBall=false;
+ball.mesh.position.copy(ballHome);scene.add(ball.mesh);
+function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());controller.stance='crouch';}
+// Out of the ball, Cosmo stands where it was and steps clear of it; it stays parked there.
+function leaveBall(){if(!inBall)return;inBall=false;controller.body=BODY;controller.stance='stand';ball.mesh.position.copy(controller.position);}
 document.body.dataset.ready='1';
 let heading=follow.yaw;const safe=controller.position.clone(),finSafe=new T.Vector3(0,-1e3,0);
 // On the floor of one of the crown lift's fin landings (the gallery and the inspection platforms), inside the fin.
@@ -382,7 +391,7 @@ if(LIVE_URL){
 function myPose(riding=false){
  const h=walker.holder,held=resting||run,at=held?h.position:controller.position;
  return {pos:[at.x,at.y,at.z],yaw:held?h.rotation.y:heading,g:controller.grounded||riding||!!held,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||!!run};
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||!!run,b:inBall};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
@@ -393,7 +402,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get lounge(){return lounge;},get provisions(){return provisions;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get lounge(){return lounge;},get provisions(){return provisions;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -424,7 +433,7 @@ renderer.setAnimationLoop(()=>{
  const k=input.read();follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
  const fwd=follow.forward(),right=new T.Vector3(-fwd.z,0,fwd.x);
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
- if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
+ if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
  if(emote&&(wish.lengthSq()>.01||k.jump))emote=null;
  // Moving off a seat or bed stands you up.
  if(resting&&resting.phase==='in'&&resting.t===1&&wish.lengthSq()>.1)standUp();
@@ -435,9 +444,13 @@ renderer.setAnimationLoop(()=>{
  // Riding a moving car, the car carries the walker; it passes slab edges and the hull skin, which must not push.
  const riding=lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
- if(!resting&&!riding&&!run){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ // In the ball there is no jumping.
+ if(!resting&&!riding&&!run){acc+=dt;let pressed=k.jump&&!inBall;while(acc>=STEP){controller.step(STEP,wish,pressed||(k.held&&!inBall));pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
  const p=controller.position;
+ // The parked ball is solid to walk into.
+ if(!inBall&&!resting&&!run&&Math.abs(p.y-ball.mesh.position.y)<1.2){const b=ball.mesh.position,dx=p.x-b.x,dz=p.z-b.z,d=Math.hypot(dx,dz),reach=BALL.radius+BODY.radius;
+  if(d<1e-4)p.x+=reach;else if(d<reach){p.x+=dx/d*(reach-d);p.z+=dz/d*(reach-d);}}
  // Neither safety net keeps a lift car's floor to return to: the car may have gone by the time it is needed, leaving
  // only the shaft.
  const inCar=lifts.lifts.some(l=>lifts.inside(l,p));
@@ -462,10 +475,11 @@ renderer.setAnimationLoop(()=>{
   walker.body.rotation.set((-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(run.tumble,.25,1),0,0);
   if(run.tumble>0)pose={kind:'lie',weight:run.tumble,seatHeight:walker.hipHeight};}
  if(!resting&&!run){walker.holder.position.copy(p);walker.holder.rotation.set(0,heading,0);walker.body.rotation.set(0,0,0);}
+ if(inBall){controller.stance='crouch';ball.mesh.position.copy(p);ball.roll(dt,controller.velocity.x,controller.velocity.z);}
  walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
   turnRate,accel,rise:controller.velocity.y,emote,rest:pose});
  live?.pose(myPose(riding),now);
- follow.update(dt,resting?resting.view:run?run.pos:p,WALKER.height);
+ follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:WALKER.height);
  // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle).
  walker.holder.visible=follow.mode!=='first'&&follow.current>.75;
  cull(p);
@@ -517,7 +531,10 @@ function target(){
  const b=booth.near(p)||comics.near(p);if(b)return b;
  const g=changeLog.near(p);if(g)return g;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
- const q=poolTable?.near(p)||pawsOff?.near(p)||mudwater?.near(p);if(q)return q;
+ const q=poolTable?.near(p)||pawsOff?.near(p)||mudwater?.near(p);if(q&&!(inBall&&q.kind==='treadmill'))return q;
+ // In the hamster ball: no seats, beds or treadmills; with nothing else to use, E climbs out.
+ if(inBall)return {kind:'ball-out',label:'Get out of the ball'};
+ const b=ball.mesh.position;if(Math.abs(p.y-b.y)<1.2&&Math.hypot(p.x-b.x,p.z-b.z)<BALL.radius+1)return {kind:'ball',label:'Get in the ball'};
  const s=rest.pick(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));
  return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':'Sit down'}:null;
 }
@@ -604,7 +621,9 @@ function toggleEmotes(){
  EMOTES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';const label=name.replace(/_/g,' ');b.textContent=`${(i+1)%10} · ${label[0].toUpperCase()}${label.slice(1)}`;b.onclick=()=>{closePanels();actions.emote(i);};list.appendChild(b);});
  panel.hidden=false;input.enabled=false;list.querySelector('button')?.focus();
 }
-function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();resting=null;controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
+function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();resting=null;
+ // Going somewhere else leaves the ball behind, back in the gardens.
+ if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
 function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet'])$(id).hidden=true;input.enabled=true;input.down.clear();}
 // The name others see over your head.

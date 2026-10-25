@@ -59,7 +59,7 @@ function readPose(v,p){
  const [x,y,z]=p.pos;if(!finite(x,...BOUNDS.x)||!finite(y,...BOUNDS.y)||!finite(z,...BOUNDS.z)||!finite(p.yaw,-1e3,1e3))return false;
  const pose={pos:[x,y,z],yaw:p.yaw,grounded:!!p.g,stance:STANCES.includes(p.st)?p.st:'stand',jumpCount:finite(p.jc,0,3)?Math.round(p.jc):0,
   jumpS:finite(p.js,-1,60)?p.js:-1,rise:finite(p.r,-100,100)?p.r:0,emote:typeof p.e==='string'&&/^[a-z0-9_]{1,32}$/.test(p.e)?p.e:null,rest:p.rest==='sit'||p.rest==='lie'?p.rest:null,
-  playing:p.pl===true};
+  playing:p.pl===true,ball:p.b===true};
  try{v.record=encodeRecord(v.slot,pose);}catch{return false;}
  v.pos=pose.pos;v.version++;return true;
 }
