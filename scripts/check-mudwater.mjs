@@ -1,11 +1,13 @@
 // Mudwater Arena (src/mudwater-arena.js, src/walk/mudwater.js), built headless: the room is the renamed Deck 16 hall
 // with its stage, board, podiums, tiers, tables, counter, screen and gallery; everything stays under the ceiling; the
 // steps up to the stage and the tiers are walkable; every bench, chair and stool gives a seat; the walk's triggers
-// stand on open floor inside the room; and the room stays within its triangle budget.
+// stand on open floor inside the room; the brand kit's art is all there for the walk, with the pack standees clear of
+// the aisle; and the room stays within its triangle budget.
+import fs from 'node:fs';
 import {Box3,Vector3} from 'three';
 import {SHIP_AREAS,createShipArea} from '../src/areas.js';
-import {ARENA_ID,STAGE,TABLES,TRIGGERS} from '../src/mudwater-arena.js';
-import {GAME_URL} from '../src/walk/mudwater.js';
+import {ARENA_ID,STAGE,TABLES,TRIGGERS,STANDEE,STANDEES} from '../src/mudwater-arena.js';
+import {GAME_URL,MUDWATER_ART} from '../src/walk/mudwater.js';
 import {findRestSpots} from '../src/walk/rest.js';
 import {BODY,solid,meshTriangles} from '../src/walk/collision.js';
 
@@ -48,6 +50,12 @@ for(const t of TRIGGERS){const p=root.localToWorld(new Vector3(...t.at)),r=BODY.
  for(let i=0;i<tris.length;i+=9){tb.makeEmpty();for(let k=0;k<9;k+=3)tb.expandByPoint(new Vector3(tris[i+k],tris[i+k+1],tris[i+k+2]));if(tb.intersectsBox(cap))hit++;}
  expect(hit===0&&Math.abs(p.x-cx)<25.5&&Math.abs(p.z-cz)<16.5,`the ${t.kind} trigger at ${t.at} stands clear inside the room (${hit} triangles in the way)`);}
 expect(GAME_URL==='https://mudwater.bayc.com/game/','Play Mudwater opens the game page');
+
+// The brand art: every file the walk asks for exists, as a PNG (with its transparency) or the pack's JPEG, and none is
+// too heavy to fetch on the way in.
+const art=MUDWATER_ART.map(f=>({f,bytes:fs.existsSync('src/walk/art/'+f)?fs.statSync('src/walk/art/'+f).size:0}));
+expect(art.every(a=>a.bytes>0&&a.bytes<400000&&/\.(png|jpg)$/.test(a.f)),`the walk's brand art is all there (${art.map(a=>`${a.f} ${Math.round(a.bytes/1024)} kB`).join(', ')})`);
+expect(named('Pack_standee').length===STANDEES.length&&STANDEES.every(([,z])=>Math.abs(z)-STANDEE.w/2>2.5),'the pack standees stand clear of the 4 m aisle');
 
 // Budget: the furnished room, shell and finishing passes included.
 let count=0;root.traverse(o=>{if(o.isMesh){const g=o.geometry;count+=(g.index?g.index.count:g.attributes.position.count)/3;}});
