@@ -606,7 +606,8 @@ $('use').addEventListener('click',()=>actions.use());
 // The comic reader (comics.js); Finish on the last page closes it.
 const reader=createComicReader($('comic-sheet'),{urls:artUrls,onClose:closePanels});
 $('go').addEventListener('click',togglePlaces);
-$('changes-here').addEventListener('click',()=>{if(ready())openLog();});
+// The ship log from the toolbar, the "changes here" chip or L.
+for(const id of ['log','changes-here'])$(id).addEventListener('click',()=>{if(ready())openLog();});
 $('view').addEventListener('click',()=>actions.view());
 // The ship's hum and chimes (ambience.js), off until asked for.
 const ambience=createAmbience(),sound=$('sound');sound.setAttribute('aria-pressed',String(ambience.on));
