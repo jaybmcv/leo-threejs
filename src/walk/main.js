@@ -36,6 +36,7 @@ import {connectLive,savedName} from './net/live.js';
 import {identify,currentPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
 import {createLounge} from './lounge.js';
+import {createRecoveryMood} from './recovery.js';
 import {Marks} from './marks.js';
 import {createHostess} from './hostess.js';
 import {wearHat,fit,FIT} from './hat.js';
@@ -180,6 +181,8 @@ async function buildShip(){
  rest=spotIndex(solidSpots(findRestSpots(ship.inside),colliders));
  // The Hydro-Nip Lounge's doors and hammocks (lounge.js) leave the ship for meshes of their own before the merge below.
  lounge=createLounge(ship,colliders,{hemi,fill,scene});
+ // The crew recovery lounge's pod side dims the lights (recovery.js).
+ recovery=createRecoveryMood(ship,{hemi,fill,scene});
  // The crown lounge's selfie booth (selfie.js): solid, and drawn with its deck band like the signs below.
  booth=createSelfieBooth();colliders.addStatic(booth.group);
  // Paw Pool's table on the Recreation Hall's activity floor (pool/table.js): solid to walk into, its rails too high to step.
@@ -245,7 +248,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -506,6 +509,7 @@ renderer.setAnimationLoop(()=>{
  // The lounge's doors open, and the cold room's strip curtain parts, for anyone near them.
  bodies.length=0;bodies.push(p);if(remotes)for(const r of remotes.remotes.values())bodies.push(r.cur);
  if(lounge)lounge.update(dt,bodies,camera.getWorldPosition(eye));
+ if(recovery)recovery.update(dt,camera.getWorldPosition(eye));
  provisions?.update(dt,bodies);
  blossom?.update(dt,p);
  marks?.update(camera,p,now);
