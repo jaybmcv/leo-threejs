@@ -12,7 +12,7 @@ import {createBallMesh} from './hamster-ball.js';
 // Only the nearest MAX_RIGS visitors on the decks being drawn get a body, from a small pool that is kept and reused. A
 // body standing in a lift car stands on its floor as this page draws the car, so a rider never sinks or floats.
 const STALE_MS=12000,EASE_PER_S=10,GLIDE_MIN_MS=200,GLIDE_MAX_MS=700,STOPPED_AFTER_MS=185,STRIDE_HALF_LIFE_MS=100;
-const RUN_ON_BELT=5,HAT_M=35,MAX_RIGS=24,LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12;
+const RUN_ON_BELT=5,HAT_M=35,MAX_RIGS=24,LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12,SAY_MS=8000;
 
 export class RemotePlayers{
  // make(): a new walker (avatar.js createWalker); colliders: for hiding names behind walls; lifts: lift-ride.js.
@@ -37,7 +37,9 @@ export class RemotePlayers{
   r.glideMs=sparse(gap)&&sparse(r.gapMs)?gap:0;r.glideFrom=[r.cur.x,r.cur.y,r.cur.z];r.gapMs=gap;
   r.prev=p;r.prevMs=now;r.tgt=p;r.seen=now;r.name=p.name||r.name;r.verified=!!p.verified;r.hat=!!p.hat;
  }
- gone(id){const r=this.remotes.get(id);if(!r)return;this.release(r);r.label?.remove();this.remotes.delete(id);}
+ gone(id){const r=this.remotes.get(id);if(!r)return;this.release(r);r.label?.remove();r.bubble?.remove();this.remotes.delete(id);}
+ // A line of chat (chat.js), shown over the speaker's head for SAY_MS.
+ say(id,text,now=performance.now()){const r=this.remotes.get(id);if(r)r.said={text,until:now+SAY_MS};}
  clear(){for(const id of [...this.remotes.keys()])this.gone(id);}
  release(r){r.ball?.mesh.removeFromParent();if(!r.walker)return;r.walker.holder.removeFromParent();this.pool.push(r.walker);r.walker=null;}
 
@@ -103,7 +105,7 @@ export class RemotePlayers{
  // Names over the nearest heads, hidden behind walls (checked a few times a second).
  name(bodied,camera,now){
   const near=bodied.filter(r=>r.distance<LABEL_M).slice(0,LABELS),eye=this.v,p=new T.Vector3(),rect=this.labelLayer.getBoundingClientRect();
-  for(const r of this.remotes.values())if(r.label&&!near.includes(r))r.label.hidden=true;
+  for(const r of this.remotes.values())if(r.label&&!near.includes(r)){r.label.hidden=true;if(r.bubble)r.bubble.hidden=true;}
   for(const r of near){
    p.set(r.cur.x,r.cur.y+(r.rest&&r.restKind==='lie'?.8:2.15),r.cur.z);
    if(now-r.clearAt>250){r.clearAt=now;const d=p.clone().sub(eye),len=d.length();this.ray.set(eye,d.divideScalar(len));const hit=this.colliders.raycast(this.ray,len);r.clear=!hit||hit.distance>len-.4;}
@@ -114,7 +116,13 @@ export class RemotePlayers{
    // A teal dot: the name is their Discord name, vouched for by The Creamery.
    r.label.classList.toggle('verified',r.verified);
    r.label.hidden=!r.clear||p.z>1;
-   if(!r.label.hidden)r.label.style.transform=`translate(${(p.x+1)/2*rect.width}px,${(1-p.y)/2*rect.height}px) translate(-50%,-100%)`;
+   const at=`translate(${(p.x+1)/2*rect.width}px,${(1-p.y)/2*rect.height}px)`;
+   if(!r.label.hidden)r.label.style.transform=`${at} translate(-50%,-100%)`;
+   // What they just said, in a bubble above the name.
+   const saying=r.said&&now<r.said.until?r.said.text:'';
+   if(saying&&!r.bubble){r.bubble=document.createElement('div');r.bubble.className='remote-say';this.labelLayer.appendChild(r.bubble);}
+   if(r.bubble){if(r.bubble.textContent!==saying)r.bubble.textContent=saying;r.bubble.hidden=!saying||r.label.hidden;
+    if(!r.bubble.hidden)r.bubble.style.transform=`${at} translate(-50%,calc(-100% - 28px))`;}
   }
  }
 }

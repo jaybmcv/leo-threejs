@@ -38,6 +38,7 @@ import {RemotePlayers} from './remotes.js';
 import {createLounge} from './lounge.js';
 import {createRecoveryMood} from './recovery.js';
 import {Marks} from './marks.js';
+import {createChat} from './chat.js';
 import {createHostess} from './hostess.js';
 import {wearHat,fit,FIT} from './hat.js';
 import {createYarn,YARN_SPOTS} from './yarn.js';
@@ -329,6 +330,8 @@ const actions={
  respawn(){if(ready()){closePanels();emote=null;goTo({at:START.position.toArray(),yaw:START.yaw});for(const y of yarns)y.reset();ball.mesh.position.copy(ballHome);}},
  // A ping where you stand, for others aboard to find (marks.js); one every few seconds at most.
  ping(now=performance.now()){if(!ready()||!live?.live||now-pinged<PING_GAP_MS)return;pinged=now;const at=myPose().pos;live.mark(at);marks.show('me','You',at,now);},
+ // Chat with everyone aboard (chat.js).
+ chat(){if(ready())chat.open();},
  // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
  emote(i){if(ready()&&!resting&&!inBall&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
  // A key pressed while a sheet is open: the key that opened it closes it, and the emote sheet takes 1-0.
@@ -348,6 +351,12 @@ const changeLog=createChangesBoards({
  onClose(){input.enabled=true;input.down.clear();},
  onGo(spot){if(!goTo({at:spot.at,yaw:spot.yaw}))return false;emote=null;follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;return true;},
  hearts:{request(){live?.hearts();},toggle(id,on){live?.heart(id,on);}},
+});
+// Chat aboard (chat.js): hidden until Leo live says who may chat; typing stops the walk.
+const chat=createChat({box:$('chat'),lines:$('chat-lines'),form:$('chat-form'),field:$('chat-input'),send:$('chat-send'),opener:$('chat-open')},{
+ say:text=>!!live?.say(text),connect,
+ onOpen(){closePanels();emote=null;input.enabled=false;input.down.clear();},
+ onClose(){input.enabled=true;input.down.clear();},
 });
 function openLog(){const p=controller.position;changeLog.open({near:p,nearFirst:changeLog.nearby(p).length>0});}
 
@@ -406,8 +415,12 @@ if(LIVE_URL){
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
-  status:s=>{liveStatus=s;showAboard();changeLog.setStatus(s==='live'?'live':'offline');},
-  welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();},
+  status:s=>{liveStatus=s;showAboard();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
+  welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();
+   // A server from before chat sends no chat: it stays hidden.
+   chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);},
+  // A line of chat: in the corner, and over the speaker's head.
+  chat:line=>{chat.add(line);if(line.id!==live.id)remotes.say(line.id,line.text);},said:r=>chat.refused(r.why),
   poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
@@ -666,7 +679,7 @@ function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;if
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet'])$(id).hidden=true;input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet'])$(id).hidden=true;chat.close();input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.

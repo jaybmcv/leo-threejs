@@ -2,7 +2,7 @@
 // checks the pose wire, joining, poses reaching others near and far, names, the shared lifts, pings, leaving, a second tab,
 // bad input, the cap on visitors, Leo passes (Discord identity from The Creamery, net/pass.js: here signed by a
 // stand-in key served as a local JWKS), Alien Cat Invasion's leaderboard, Paw Pool's fastest clears, the ship log
-// boards' hearts, the selfie booth's shared countdown and, last, sixty visitors walking at once (bytes sent per visitor
+// boards' hearts, the selfie booth's shared countdown, chat aboard and, last, sixty visitors walking at once (bytes sent per visitor
 // per second). Each server keeps its scores and hearts in temporary files, never the real ones.
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
@@ -111,7 +111,7 @@ class Bot{
  close(){this.ws.close();}
 }
 const PORT=18090+Math.floor(Math.random()*500);
-const server=await startServer(PORT);
+const server=await startServer(PORT,{LEO_LIVE_CHAT:'all'});
 try{
  // Joining.
  const a=new Bot(PORT,{name:'  Jay‮  cat\u0007 '}),b=new Bot(PORT,{name:'Bea'});
@@ -219,6 +219,36 @@ try{
  check('pings: a ping outside the ship or malformed is ignored',marks().length===1);
  for(let i=0;i<10;i++)tab.send({m:'mark',at:[11,-3.7,2]});await sleep(300);
  check('pings: a flood of pings is rate-limited',marks().length<=3&&tab.closed===null,`${marks().length} passed on`);
+ // Chat: a line reaches everyone aboard, its sender too, cleaned; links, repeats and floods are refused; newcomers get
+ // the last few lines in their welcome.
+ {
+  const lines=x=>x.msgs.filter(m=>m.m==='chat'),refusals=x=>x.msgs.filter(m=>m.m==='said').map(m=>m.why);
+  check('chat: with LEO_LIVE_CHAT=all, everyone joins with chat open to all',b.msgs.find(m=>m.m==='welcome')?.chat?.mode==='all');
+  tab.send({m:'chat',text:'  Meet at the\ncrown‮ lounge  '});await sleep(200);
+  const heard=lines(b).at(-1),own=lines(tab).at(-1);
+  check('chat: a line reaches others aboard, with who said it',heard?.id===tab.id&&heard.text==='Meet at the crown lounge'&&heard.verified===false,JSON.stringify(heard));
+  check('chat: the sender hears their own line back',own?.text===heard?.text);
+  tab.send({m:'chat',text:'x'.repeat(400)});await sleep(200);
+  check('chat: a long line is cut to 160 characters',[...lines(b).at(-1)?.text||''].length===160);
+  // (A line a link spoils still counts against the sender's allowance: wait for it to fill again first.)
+  await sleep(4000);const before=lines(b).length;
+  for(const text of ['free mint at claim-now.xyz','https://evil.example','join discord.gg/abc','site (dot) com']){tab.send({m:'chat',text});await sleep(80);}
+  await sleep(200);
+  check('chat: lines with links are refused and passed on to nobody',lines(b).length===before&&refusals(tab).filter(w=>w==='link').length===4,refusals(tab).join(','));
+  await sleep(4000);
+  tab.send({m:'chat',text:'hello'});await sleep(80);tab.send({m:'chat',text:'hello'});await sleep(200);
+  check('chat: the same line twice at once is refused',lines(b).filter(m=>m.text==='hello').length===1&&refusals(tab).includes('again'));
+  for(const text of [1,'',{},' \u200b ',null])tab.send({m:'chat',text});await sleep(200);
+  check('chat: empty and malformed lines are ignored',lines(b).filter(m=>m.text==='hello').length===1&&tab.closed===null);
+  for(let i=0;i<12;i++)tab.send({m:'chat',text:'spam '+i});await sleep(300);
+  const spam=lines(b).filter(m=>m.text.startsWith('spam')).length;
+  check('chat: a flood of lines is rate-limited',spam<=5&&refusals(tab).includes('slow')&&tab.closed===null,`${spam} of 12 passed on`);
+  const late=new Bot(PORT,{name:'Late'});await late.welcomed();
+  const history=late.msgs.find(m=>m.m==='welcome')?.chat?.lines||[];
+  check('chat: a newcomer is handed the lines said before they came',history.some(l=>l.text==='Meet at the crown lounge')&&history.some(l=>l.text==='hello'),`${history.length} lines`);
+  check('chat: lines go to the log',/chat voyager-[0-9a-f]+ .*"hello"/.test(server.log));
+  late.close();
+ }
  // The selfie booth: a press at its camera starts one countdown on every page near the booth, and nowhere else.
  {
   const cam=new Bot(PORT,{name:'Cam'}),pal=new Bot(PORT,{name:'Pal'}),away=new Bot(PORT,{name:'Away'});
@@ -376,6 +406,28 @@ try{
   check('pool: both boards are still there after the server restarts',pool?.top?.length===2&&pool.top[0].name==='Bea Cat'&&inv?.top?.length===1,JSON.stringify({pool:pool?.top,invasion:inv?.top}));
   back.close();
  }finally{srv.kill();fs.rmSync(scoresFile(port),{force:true});}
+}
+
+// ---- chat as it starts (Discord-verified visitors only), and chat turned off, on servers of their own --------------
+{
+ const port=PORT+7,only=await startServer(port);
+ try{
+  const guest=new Bot(port,{name:'Guest'}),cat=new Bot(port,{pass:await creamery.sign(claimsFor('333333333333333333','Chat Cat'))});
+  await guest.welcomed();await cat.welcomed();
+  check('chat (default, verified only): the welcome says so',guest.msgs.find(m=>m.m==='welcome')?.chat?.mode==='verified');
+  guest.send({m:'chat',text:'hi all'});cat.send({m:'chat',text:'hello from Discord'});await sleep(300);
+  const lines=guest.msgs.filter(m=>m.m==='chat');
+  check('chat (default, verified only): a guest is asked to connect Discord, a verified visitor is heard, marked verified',
+   !lines.some(m=>m.text==='hi all')&&guest.msgs.some(m=>m.m==='said'&&m.why==='sign-in')&&lines.some(m=>m.text==='hello from Discord'&&m.verified&&m.name==='Chat Cat'),JSON.stringify(lines));
+  guest.close();cat.close();
+ }finally{only.kill();}
+ const off=await startServer(port+1,{LEO_LIVE_CHAT:'off'});
+ try{
+  const a=new Bot(port+1),z=new Bot(port+1);await a.welcomed();await z.welcomed();
+  a.send({m:'chat',text:'anyone?'});await sleep(300);
+  check('chat (off): nothing is passed on and the sender is told',a.msgs.find(m=>m.m==='welcome')?.chat?.mode==='off'&&!z.msgs.some(m=>m.m==='chat')&&a.msgs.some(m=>m.m==='said'&&m.why==='off'));
+  a.close();z.close();
+ }finally{off.kill();}
 }
 
 // ---- the cap on visitors, on a server of its own ------------------------------------------------------------------

@@ -10,6 +10,7 @@
 //   LEO_PASS_JWKS_URL=...             The Creamery's public keys for Leo passes (default: its production keys)
 //   LEO_PASS_ISS=...                  the issuer a pass must name (default https://creamery.marscatsvoyage.com)
 //   LEO_LIVE_GIVEAWAY=...             Mudwater Arena's giveaway settings, read again when changed (arena.mjs)
+//   LEO_LIVE_CHAT=verified            who may chat aboard: verified (Discord-verified visitors; everyone reads), all or off
 //
 // Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
 // server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
@@ -24,7 +25,7 @@ import fs from 'node:fs';
 import {WebSocketServer} from 'ws';
 import {LIFTS} from '../src/walk/lifts.js';
 import {liftState,callLift,stepLift,liftWire} from '../src/walk/lift-motion.js';
-import {encodeRecord,encodeIdentity,assembleFrame,actorIdOf,cleanName,PROTOCOL,STANCES} from '../src/walk/net/wire.js';
+import {encodeRecord,encodeIdentity,assembleFrame,actorIdOf,cleanName,cleanChat,hasLink,PROTOCOL,STANCES} from '../src/walk/net/wire.js';
 import {keySet,verifyPass,REMEMBER_S} from '../src/walk/net/pass.js';
 import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
 import {createArena} from './arena.mjs';
@@ -41,7 +42,7 @@ const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
 // name, scores and hearts count, but a giveaway claim wants a fresh one (arena.mjs).
 const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',lapsed:REMEMBER_S,
  key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
-const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6]};
+const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6],chat:[.5,5]};
 
 const visitors=new Set();
 const slots=new Map();let nextSlot=1;
@@ -151,6 +152,32 @@ function selfie(v){
  for(const o of visitors)if(o!==v&&o.ready&&byBooth(o.pos,SELFIE.near))send(o.ws,{m:'selfie',id:v.id,ms:SELFIE.ms});
 }
 
+// Chat aboard (walk/chat.js): a line said by one visitor reaches everyone aboard, the sender included, so every page
+// shows the same lines in the same order. The last CHAT_KEEP lines of the past CHAT_KEEP_MS are kept in memory only and
+// handed to each newcomer in their welcome. Lines are plain text with no links at all (a link in a crowd that holds
+// wallets is how scams start), at most a few every few seconds, and written to the log so they can be looked into.
+// Unless LEO_LIVE_CHAT says otherwise, only Discord-verified visitors may speak, so every line has an account behind it;
+// everyone aboard reads.
+const CHAT=['all','verified','off'].includes(process.env.LEO_LIVE_CHAT)?process.env.LEO_LIVE_CHAT:'verified';
+const CHAT_KEEP=30,CHAT_KEEP_MS=15*60*1000;
+const said=[];
+const chatLog=()=>{const since=Date.now()-CHAT_KEEP_MS;while(said.length&&said[0].at<since)said.shift();return said;};
+function chat(v,msg){
+ const no=why=>send(v.ws,{m:'said',ok:false,why});
+ if(CHAT==='off')return no('off');
+ if(CHAT==='verified'&&!v.discord)return no('sign-in');
+ const text=cleanChat(msg.text);if(!text)return;
+ if(!allowed(v,'chat'))return no('slow');
+ if(hasLink(text))return no('link');
+ // The same line again at once is a stutter, or a flood.
+ if(text===v.lastSaid&&Date.now()-v.lastSaidAt<10000)return no('again');
+ v.lastSaid=text;v.lastSaidAt=Date.now();
+ const line={id:v.id,name:v.name,verified:!!v.discord,text,at:Date.now()};
+ chatLog().push(line);if(said.length>CHAT_KEEP)said.shift();
+ log('chat',v.id,v.discord?`discord:${v.discord.discordId}`:'',JSON.stringify(v.name||''),JSON.stringify(text));
+ broadcast({m:'chat',...line});
+}
+
 async function hello(v,msg){
  if(msg.v!==PROTOCOL){send(v.ws,{m:'reload'});v.ws.close(4000,'old page');return;}
  const id=await actorIdOf(typeof msg.key==='string'?msg.key:'');
@@ -162,7 +189,7 @@ async function hello(v,msg){
  v.slot=takeSlot();if(!v.slot){v.ws.close(4003,'full');return;}
  // A tester (the page holds a tester invite) wears the captain's hat. Taken on the page's word: it is a hat.
  Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);
- send(v.ws,{m:'welcome',id,aboard:aboard(),you:{name:v.name,verified:!!who},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)}))});
+ send(v.ws,{m:'welcome',id,aboard:aboard(),you:{name:v.name,verified:!!who},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:chatLog()}});
  countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`discord:${who.discordId}${who.lapsed?' (remembered)':''}`:msg.pass?'(pass refused)':'');
  if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
 }
@@ -202,6 +229,8 @@ function onMessage(v,data,binary){
   case 'giveaway':if(allowed(v,'giveaway'))send(v.ws,arena.statusFor(v));break;
   case 'claim':if(allowed(v,'claim'))send(v.ws,arena.claim(v,msg));break;
   case 'arena':if(allowed(v,'arena'))arena.event(v,msg.e);break;
+  // A line of chat, for everyone aboard.
+  case 'chat':chat(v,msg);break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;
