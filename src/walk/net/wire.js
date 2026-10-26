@@ -123,6 +123,17 @@ export function cleanName(name){
  if(typeof name!=='string')return '';
  return [...name.replace(UNSEEN,'').replace(/\s+/g,' ').trim()].slice(0,24).join('');
 }
+// A line of chat: cleaned as a name is (line breaks become spaces), at most CHAT_CHARS characters (even all emoji, well inside a message's 1 KB).
+export const CHAT_CHARS=160;
+export function cleanChat(text){
+ if(typeof text!=='string')return '';
+ return [...text.replace(/\s+/g,' ').replace(UNSEEN,'').replace(/ +/g,' ').trim()].slice(0,CHAT_CHARS).join('');
+}
+// Anything that reads as a web address, with or without its scheme ("site.xyz/claim", "discord.gg/x", "www.x"): chat
+// carries no links. "Deck 17.5", "ok.so" and "here. Live now" pass; a known top-level domain straight after a dot (or
+// a spelled-out "(dot)") does not.
+const LINK=/https?:|www\.|\b[a-z0-9-]+(?:\.|\s*[([]dot[)\]]\s*)(?:com|net|org|io|xyz|gg|app|co|me|ly|link|site|online|club|top|info|live|fun|dev|ai|art|nft|eth|finance|money|world|claim|vip|pro|biz|uk|sh|cc|ws|tv|lol|wtf|page)\b/i;
+export const hasLink=text=>LINK.test(text);
 // Control, zero-width and direction-changing characters: nothing a name needs.
 const UNSEEN=new RegExp('[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff]','g');
 
