@@ -26,8 +26,8 @@ export const PAINTINGS=[
  // Orange Haze #7: the recessed bay on the starboard side of the Deck 15 cross-corridor junction (x 122.9, z 2 to 8.44),
  // centred in it, from just over the floor (16.3) to just under the corridor soffit (19.65) that fronts the bay.
  {name:'Orange_Haze_7',file:'orange-haze-7.jpg',size:[1600,1210],wall:[122.9,18.025,5.22],facing:[1,0,0],fit:[6,2.95],floor:16.3},
- // Orange Haze #9: the outboard wall of the Deck 2 arrival hall, centred on the aisle between the benches (x -117.5),
- // floor (-35.7) to ceiling (-32.4).
+ // Orange Haze #9: the outboard wall of the Deck 2 arrival hall, across from the garden atrium's cat tree (x -117.5,
+ // arrival-atrium.js), floor (-35.7) to ceiling (-32.4).
  {name:'Orange_Haze_9',file:'orange-haze-9.jpg',size:[1600,1223],wall:[-117.5,-34.05,-54.84],facing:[0,0,1],fit:[20,2.95],floor:-35.7},
  // Orange Haze #10, by M.V. Orange Haze: the aft wall of the Deck 5 side corridor (x -148), facing the Medical ward's
  // doorway (z -40 to -36) and centred on it, from near the floor (-23.7) to near the ceiling (-20.4). The corridor's end
