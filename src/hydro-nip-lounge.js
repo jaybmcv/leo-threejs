@@ -29,7 +29,10 @@ const PASSAGES=[[[1,0],[2,0]],[[2,0],[2,1]],[[2,1],[2,2]],[[2,2],[2,3]],[[2,3],[
 const STAIR_CELLS=new Set(['2,4','2,5']);
 // Where the walk finds the lounge's parts (src/walk/lounge.js), in the template frame.
 export const LOUNGE={FLOOR,CEILING,LEVELS,ROOM,DOME,MAZE,SPLIT,TUBES};
-const PINK=0xff4fd8,CYAN=0x45e3ff,GREEN=0x6dff7a,PURPLE=0xa77bff,AMBER=0xffc266,BLACKLIGHT=0x8a4dff;
+const PINK=0xff4fd8,CYAN=0x45e3ff,GREEN=0x6dff7a,PURPLE=0xa77bff,AMBER=0xffc266,BLACKLIGHT=0x8a4dff,ORANGE=0xff7a1a;
+// The commons' broad stair (model.js): two flights of 24 treads, 0.3 m deep and 1/6 m high. Each flight's sides in x,
+// the floor it starts from, the z of its foot and the way it climbs in z, and where its handrail starts past the foot.
+const FLIGHTS=[{xs:[150.3,153.3],base:FLOOR,foot:34.85,dir:1,rail:0},{xs:[147,150],base:LEVELS[0],foot:42.05,dir:-1,rail:-.15}];
 const font=new FontLoader().parse(fontData);
 
 // The garden parts the lounge replaces: planters and trees, the cafe, and the commons' cat figures.
@@ -62,7 +65,40 @@ export function openRails(root){
      const post=new T.Mesh(new T.BoxGeometry(.06,1.1,.06),o.material);post.name='Baluster';post.position.set(xa===g.x1?xa:xb,g.y+.55,g.z);added.push([o.parent,post]);}}}
  });
  for(const o of gone)o.removeFromParent();for(const [p,o] of added)p.add(o);
+ glassRails(root);
  return gone.length;
+}
+
+// The lounge's railings and stair (from tester feedback): the handrails glow orange, glass fills each gallery railing
+// under its handrail with an orange line along its foot, the posts go dark, and the stair's treads are white marble.
+// (The stair's own glass, stringers and planter are part of the lounge: createHydroNipLounge.)
+function glassRails(root){
+ root.updateMatrixWorld(true);
+ const neon=new T.MeshBasicMaterial({name:'Lounge_rail_neon',color:ORANGE,toneMapped:false});
+ const post=new T.MeshStandardMaterial({name:'Lounge_rail_post',color:0x272131,roughness:.32,metalness:.55});
+ // Veined white marble; the Node builds have no canvas and make do with plain white.
+ const veins=typeof document!=='undefined'&&canvasTexture(512,512,(g,w,h)=>{const r=seeded(117);g.fillStyle='#f4f1ec';g.fillRect(0,0,w,h);
+  for(let i=0;i<14;i++){g.strokeStyle=`rgba(${150+r()*40|0},${145+r()*40|0},${140+r()*40|0},${.15+r()*.3})`;g.lineWidth=.6+r()*2.2;g.beginPath();let x=r()*w,y=r()*h;g.moveTo(x,y);
+   for(let k=0;k<8;k++){x+=(r()-.3)*90;y+=(r()-.5)*70;g.lineTo(x,y);}g.stroke();}});
+ const marble=new T.MeshStandardMaterial({name:'Lounge_marble_tread',color:0xffffff,map:veins||null,roughness:.2,metalness:0});
+ const inv=root.matrixWorld.clone().invert(),glass=[],strips=[];
+ root.traverse(o=>{
+  if(!o.isMesh)return;
+  if(o.name==='Gallery_stair')o.material=marble;
+  else if(/^(Handrail|Handrail_bend|Stair_handrail)$/.test(o.name))o.material=neon;
+  else if(/^(Baluster|Handrail_post)$/.test(o.name))o.material=post;
+  // A level gallery handrail, 1.1 m over its floor: glass under it, the line at its foot.
+  if(o.name!=='Handrail')return;
+  o.geometry.computeBoundingBox();const b=o.geometry.boundingBox.clone().applyMatrix4(inv.clone().multiply(o.matrixWorld)),s=b.getSize(new T.Vector3()),c=b.getCenter(new T.Vector3());
+  if(s.y>.2)return;const y=c.y-1.1,along=s.x>s.z;
+  glass.push(new T.BoxGeometry(along?s.x:.02,.96,along?.02:s.z).translate(c.x,y+.55,c.z));
+  strips.push(new T.BoxGeometry(along?s.x:.03,.03,along?.03:s.z).translate(c.x,y+.07,c.z));
+ });
+ if(!glass.length)return;
+ const pane=new T.Mesh(mergeGeometries(glass),new T.MeshStandardMaterial({name:'Lounge_rail_glass',color:0xcfeeff,transparent:true,opacity:.15,roughness:.05,metalness:.1,depthWrite:false,side:T.DoubleSide}));
+ pane.name='Lounge_rail_glass';root.add(pane);
+ const line=new T.Mesh(mergeGeometries(strips),new T.MeshBasicMaterial({name:'Lounge_rail_glow',color:ORANGE,toneMapped:false}));line.name='Lounge_rail_glow';root.add(line);
+ [...glass,...strips].forEach(g=>g.dispose());
 }
 
 export function createHydroNipLounge({mirror=1}={}){
@@ -98,6 +134,8 @@ export function createHydroNipLounge({mirror=1}={}){
   glass:std('Lounge_glass',0xffffff,{vertexColors:true,transparent:true,opacity:.15,roughness:.05,metalness:.1,depthWrite:false,side:T.DoubleSide}),
   rug:canvas?std('Lounge_rug',0xffffff,{map:rugTex,roughness:1}):std('Lounge_rug',0x3b1f5c,{roughness:1}),
   // The maze's partitions: frosted green glass you can't see through clearly, solid to walk into.
+  // The broad stair's stringers and the planter under it: white marble.
+  marble:std('Lounge_marble',0xffffff,{vertexColors:true,roughness:.22}),
   frost:std('Lounge_frosted_glass',0xffffff,{vertexColors:true,transparent:true,opacity:.62,roughness:.55,metalness:0,side:T.DoubleSide}),
  };
  // The mist inside the maze is the glow apart, so the walk can thin it out round a walker inside (src/walk/lounge.js).
@@ -311,6 +349,57 @@ export function createHydroNipLounge({mirror=1}={}){
    // anyone) sees the edge is guarded, and no railing goes in down the tube.
    for(const s of [-1,1])box(M.glass,[.03,.9,len],[t.x+s*.88,t.level+.45,zc]);
    for(let i=0;i<=n;i++)put(neon(GREEN),new T.TorusGeometry(TUBE.r+.03,.025,4,24).translate(t.x,yc,Math.min(t.from,t.to)+i*len/n));}
+ }
+
+ // The broad stair (from tester feedback): smooth white stringers down both sides of each flight, the lower one sweeping
+ // out in a curve onto the floor at its foot, glass between stringer and handrail with an orange neon line along its
+ // foot, and a jungle planter in the nook under the upper flight. The treads turn marble and the handrails orange
+ // neon in openRails(), which reaches the commons' own parts.
+ {const marble=paint('marble',0xf4f1ec);
+  for(const f of FLIGHTS){const {base,foot,dir}=f,nose=s=>base+1/6+s/1.8,cap=base+4.05,rail=s=>base+1.1+(s-f.rail)*4/7.35;
+   // (s, y) in the flight's side to the template frame at side x, for an outward face that way.
+   const side=(x,out)=>new T.Matrix4().makeBasis(new T.Vector3(0,0,dir),new T.Vector3(0,1,0),new T.Vector3(1,0,0)).setPosition(x+(out<0?-.06:0),0,foot);
+   const s0=f.base===FLOOR?-.9:0,sHead=(cap-.05-base-1/6)*1.8;
+   const shape=new T.Shape();shape.moveTo(s0,base);
+   if(s0<0)shape.quadraticCurveTo(-.1,base,.3,nose(.3)+.05);else shape.lineTo(0,nose(0)+.05);
+   shape.lineTo(sHead,cap);shape.lineTo(7.2,cap);shape.lineTo(7.2,base);shape.closePath();
+   f.xs.forEach((x,k)=>{const out=k?1:-1,m=side(x,out);
+    put(marble,mirrored(new T.ExtrudeGeometry(shape,{depth:.06,bevelEnabled:false,curveSegments:10}).applyMatrix4(m),m));
+    // The glass, from just over the stringer to just under the handrail, and the neon along its foot.
+    const at=(s,y)=>new T.Vector3(x,y,foot+dir*s),low=s=>Math.min(nose(s)+.05,cap)+.02,pts=[];
+    [[.05,sHead],[sHead,7.1]].forEach(([a,b])=>pts.push(at(a,low(a)),at(b,low(b)),at(b,rail(b)-.1),at(a,low(a)),at(b,rail(b)-.1),at(a,rail(a)-.1)));
+    const g=new T.BufferGeometry().setFromPoints(pts);g.computeVertexNormals();put(M.glass,g);
+    rod(neon(ORANGE),at(.05,low(.05)+.01).toArray(),at(sHead,cap+.03).toArray(),.018,5);rod(neon(ORANGE),at(sHead,cap+.03).toArray(),at(7.2,cap+.03).toArray(),.018,5);});
+  }
+  // The planter: marble, rounded toward the room, an orange line round its rim, soil, and jungle plants under the
+  // upper flight (4 m of headroom), none reaching into the lower flight beside it or the treads above.
+  const P={x0:147.25,x1:150.15,z0:35.4,z1:41.6,h:.55},r=.9,bed=new T.Shape();
+  bed.moveTo(P.x1,P.z0);bed.lineTo(P.x1,P.z1);bed.lineTo(P.x0+r,P.z1);bed.quadraticCurveTo(P.x0,P.z1,P.x0,P.z1-r);bed.lineTo(P.x0,P.z0+r);bed.quadraticCurveTo(P.x0,P.z0,P.x0+r,P.z0);bed.closePath();
+  put(marble,new T.ExtrudeGeometry(bed,{depth:P.h,bevelEnabled:false,curveSegments:8}).rotateX(Math.PI/2).translate(0,FLOOR+P.h,0));
+  put(paint('matte',0x2e2219),new T.ExtrudeGeometry(bed,{depth:.02,bevelEnabled:false,curveSegments:8}).rotateX(Math.PI/2).translate(-(P.x0+P.x1)/2,0,-(P.z0+P.z1)/2).scale(.95,1,.98).translate((P.x0+P.x1)/2,FLOOR+P.h+.02,(P.z0+P.z1)/2));
+  put(neon(ORANGE),new T.TubeGeometry(new T.CatmullRomCurve3(bed.getPoints(8).map(p=>new T.Vector3(p.x,FLOOR+P.h+.01,p.y)),true),120,.016,4,true));
+  const greens=[0x2f6b34,0x3f8a3f,0x24502a,0x5d9b48,0x4b7d2e],soil=FLOOR+P.h,UPY=new T.Vector3(0,1,0);
+  // A leaf piece: a thin, pointed blade from a to b.
+  const blade=(p,a,b,w)=>{const d=b.clone().sub(a),len=d.length();if(len<.01||Math.max(a.x,b.x)>P.x1-.05||Math.max(a.y,b.y)>LEVELS[0]-.25)return;
+   const q=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,0,1),d.normalize());put(p,new T.OctahedronGeometry(1,0).scale(w,.012,len/2).applyQuaternion(q).translate(...a.clone().add(b).multiplyScalar(.5).toArray()));};
+  // A frond: an arching spine from `from` along heading `a`, with leaflets down both sides, longest at its middle.
+  const frond=(p,from,a,len,lift,leaflet)=>{const h=new T.Vector3(Math.cos(a),0,Math.sin(a)),across=new T.Vector3().crossVectors(h,UPY);
+   const at=t=>from.clone().addScaledVector(h,len*t).addScaledVector(UPY,lift*Math.sin(Math.PI*t*.8)-len*.35*t*t);
+   for(let i=1;i<=14;i++){const t=i/14,c=at(t),l=leaflet*Math.sin(Math.PI*Math.min(1,t*1.1))+.04;blade(p,at(t-1/14),c,.012);
+    for(const s of [-1,1])blade(p,c,c.clone().addScaledVector(across,s*l).addScaledVector(h,l*.35).addScaledVector(UPY,-l*.45),.035);}};
+  // Palms: a ringed, leaning trunk and a crown of fronds.
+  for(const [x,z,ht,lean] of [[148.4,37,2.3,.2],[148.9,40.1,1.75,-.15],[148,38.9,1.2,.1]]){
+   const top=new T.Vector3(x+lean*.5,soil+ht,z+lean*.3);rod(paint('matte',0x5a4632),[x,soil,z],top.toArray(),.07,7);
+   for(let k=1;k<5;k++)put(paint('matte',0x463627),new T.TorusGeometry(.07,.012,4,10).rotateX(Math.PI/2).translate(x+lean*.5*k/5,soil+ht*k/5,z+lean*.3*k/5));
+   const n=10+Math.floor(rnd()*3);for(let i=0;i<n;i++)frond(paint('leaf',greens[i%greens.length]),top,i/n*Math.PI*2+rnd()*.3,1.05+rnd()*.35,.35+rnd()*.25,.28+rnd()*.08);}
+  // Ferns and a red-leaved fan palm low in the bed, broad split leaves on stems between them.
+  for(const [x,z,c] of [[147.75,36.1,greens[3]],[149.5,36.2,greens[1]],[147.7,40.9,greens[0]],[149.6,41,greens[4]],[149.6,38.5,0xa8432a]]){
+   const n=8+Math.floor(rnd()*4),at=new T.Vector3(x,soil+.05,z);for(let i=0;i<n;i++)frond(paint('leaf',c),at,i/n*Math.PI*2+rnd()*.4,.55+rnd()*.3,.35+rnd()*.2,.12+rnd()*.05);}
+  for(const [x,z] of [[147.6,37.6],[149.4,37.1],[147.9,39.9],[149.3,39.6]])for(let k=0;k<4;k++){
+   const a=k/4*Math.PI*2+rnd(),h=.55+rnd()*.5,tip=new T.Vector3(x+Math.cos(a)*.35,soil+h,z+Math.sin(a)*.35);
+   rod(paint('leaf',greens[2]),[x,soil,z],tip.toArray(),.012,4);
+   const g=new T.SphereGeometry(1,10,6).scale(.2,.018,.3);g.rotateX(-.5).rotateY(-a+Math.PI/2);
+   if(tip.x+.3<P.x1)put(paint('leaf',greens[(k+1)%greens.length]),g.translate(tip.x+Math.cos(a)*.15,tip.y-.05,tip.z+Math.sin(a)*.15));}
  }
 
  // The Terpene Tasting Deck: a bar across the back of the room behind the maze, facing the entrance, with a back bar of
