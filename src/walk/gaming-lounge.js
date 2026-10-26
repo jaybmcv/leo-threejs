@@ -103,9 +103,10 @@ void main(){
  vec2 p=vWorld.xz/.22,id=floor(p),f=fract(p)-.5;
  vec3 c=vec3(.006,.007,.016)+vec3(.01,.004,.018)*(.5+.5*sin(vWorld.x*.31+sin(vWorld.z*.47)*2.));
  float s=hash(id);
- if(s>.78){vec2 o=vec2(hash(id+3.1),hash(id+7.7))-.5;float r=mix(.035,.11,pow(hash(id+1.3),4.)),d=length(f-o*.6);
-  float px=fwidth(p.x),tw=.55+.45*sin(uTime*(.6+2.2*hash(id+9.1))+hash(id+5.3)*6.2832);
-  c+=mix(vec3(1.),vec3(.7,.82,1.),hash(id+2.9))*(1.-smoothstep(r*.35,max(r,px*1.2),d))*tw*.85;}
+ // Far off, where a pixel spans more than a star, the star fades rather than smearing into a streak.
+ if(s>.84){vec2 o=vec2(hash(id+3.1),hash(id+7.7))-.5;float r=mix(.035,.11,pow(hash(id+1.3),4.)),d=length(f-o*.6);
+  float px=length(fwidth(p)),tw=.55+.45*sin(uTime*(.6+2.2*hash(id+9.1))+hash(id+5.3)*6.2832);
+  c+=mix(vec3(1.),vec3(.7,.82,1.),hash(id+2.9))*(1.-smoothstep(r*.35,r,d))*min(1.,r*2./px)*tw*.7;}
  gl_FragColor=vec4(c,1.);
 #include <colorspace_fragment>
 }`;
@@ -231,7 +232,7 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
  for(const [a,b,n] of runs){
   const len=Math.hypot(b[0]-a[0],b[1]-a[1]),ry=-Math.atan2(b[1]-a[1],b[0]-a[0]),cx=(a[0]+b[0])/2,cz=(a[1]+b[1])/2;
   piece(strip,new T.BoxGeometry(len,.035,.04).rotateY(ry).translate(cx+n[0]*.03,3.12,cz+n[1]*.03));
-  const g=new T.PlaneGeometry(len,.5);const cols=[];for(let i=0;i<g.attributes.position.count;i++){const k=g.attributes.position.getY(i)>0?.22:0;cols.push(.55*k,.75*k,k);}
+  const g=new T.PlaneGeometry(len,.5);const cols=[];for(let i=0;i<g.attributes.position.count;i++){const k=g.attributes.position.getY(i)>0?.09:0;cols.push(.55*k,.75*k,k);}
   g.setAttribute('color',new T.Float32BufferAttribute(cols,3));
   g.rotateY(Math.atan2(n[0],n[1]));g.translate(cx+n[0]*.006,2.86,cz+n[1]*.006);wash.push(g);
  }
