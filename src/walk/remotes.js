@@ -40,6 +40,8 @@ export class RemotePlayers{
  gone(id){const r=this.remotes.get(id);if(!r)return;this.release(r);r.label?.remove();r.bubble?.remove();this.remotes.delete(id);}
  // A line of chat (chat.js), shown over the speaker's head for SAY_MS.
  say(id,text,now=performance.now()){const r=this.remotes.get(id);if(r)r.said={text,until:now+SAY_MS};}
+ // Chat hidden: any bubble showing goes at once.
+ hush(){for(const r of this.remotes.values())r.said=null;}
  clear(){for(const id of [...this.remotes.keys()])this.gone(id);}
  release(r){r.ball?.mesh.removeFromParent();if(!r.walker)return;r.walker.holder.removeFromParent();this.pool.push(r.walker);r.walker=null;}
 

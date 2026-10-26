@@ -353,10 +353,12 @@ const changeLog=createChangesBoards({
  hearts:{request(){live?.hearts();},toggle(id,on){live?.heart(id,on);}},
 });
 // Chat aboard (chat.js): hidden until Leo live says who may chat; typing stops the walk.
-const chat=createChat({box:$('chat'),lines:$('chat-lines'),form:$('chat-form'),field:$('chat-input'),send:$('chat-send'),opener:$('chat-open')},{
+const chat=createChat({box:$('chat'),lines:$('chat-lines'),form:$('chat-form'),field:$('chat-input'),send:$('chat-send'),opener:$('chat-open'),hider:$('chat-hide'),unread:$('chat-unread')},{
  say:text=>!!live?.say(text),connect,
  onOpen(){closePanels();emote=null;input.enabled=false;input.down.clear();},
  onClose(){input.enabled=true;input.down.clear();},
+ // Hidden, the bubbles over heads go too.
+ onQuiet(quiet){if(quiet)remotes?.hush();},
 });
 function openLog(){const p=controller.position;changeLog.open({near:p,nearFirst:changeLog.nearby(p).length>0});}
 
@@ -420,7 +422,7 @@ if(LIVE_URL){
    // A server from before chat sends no chat: it stays hidden.
    chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);},
   // A line of chat: in the corner, and over the speaker's head.
-  chat:line=>{chat.add(line);if(line.id!==live.id)remotes.say(line.id,line.text);},said:r=>chat.refused(r.why),
+  chat:line=>{chat.add(line);if(line.id!==live.id&&!chat.quiet)remotes.say(line.id,line.text);},said:r=>chat.refused(r.why),
   poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
