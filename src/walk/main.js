@@ -69,6 +69,7 @@ import {dressGamingLounge,createGamingLounge} from './gaming-lounge.js';
 import {createCommsDisplays} from './comms-displays.js';
 import {createMissionHolo} from './mission-holo.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
+import {createHelp} from './help.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
 const $=id=>document.getElementById(id);
@@ -339,12 +340,14 @@ const actions={
  ping(now=performance.now()){if(!ready()||!live?.live||now-pinged<PING_GAP_MS)return;pinged=now;const at=myPose().pos;live.mark(at);marks.show('me','You',at,now);},
  // Chat with everyone aboard (chat.js).
  chat(){if(ready())chat.open();},
+ // How to play, and the tester guide (help.js).
+ help(){if(ready())toggleHelp();},
  // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
  emote(i){if(ready()&&!resting&&!inBall&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
  // A key pressed while a sheet is open: the key that opened it closes it, and the emote sheet takes 1-0.
  sheet(code){
   const open=id=>!$(id).hidden;
-  if((code==='KeyB'&&open('emotes'))||(code==='KeyN'&&open('map-sheet'))||(code==='KeyM'&&open('places'))){closePanels();return;}
+  if((code==='KeyB'&&open('emotes'))||(code==='KeyN'&&open('map-sheet'))||(code==='KeyM'&&open('places'))||(code==='KeyH'&&open('help-sheet'))){closePanels();return;}
   if(open('emotes')&&/^Digit[0-9]$/.test(code)){closePanels();actions.emote((+code.slice(5)+9)%10);}
   if(open('comic-sheet'))reader.key(code);
  },
@@ -356,7 +359,7 @@ const ready=()=>document.body.dataset.ready==='1';
 const changeLog=createChangesBoards({
  onOpen(){closePanels();emote=null;input.enabled=false;},
  onClose(){input.enabled=true;input.down.clear();},
- onGo(spot){if(!goTo({at:spot.at,yaw:spot.yaw}))return false;emote=null;follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;return true;},
+ onGo:goToSpot,
  hearts:{request(){live?.hearts();},toggle(id,on){live?.heart(id,on);}},
 });
 // Chat aboard (chat.js): hidden until Leo live says who may chat; typing stops the walk.
@@ -368,6 +371,8 @@ const chat=createChat({box:$('chat'),lines:$('chat-lines'),form:$('chat-form'),f
  onQuiet(quiet){if(quiet)remotes?.hush();},
 });
 function openLog(){const p=controller.position;changeLog.open({near:p,nearFirst:changeLog.nearby(p).length>0});}
+// A spot (link.js's readSpot form), looking as it says; true if it could be reached.
+function goToSpot(spot){if(!goTo({at:spot.at,yaw:spot.yaw}))return false;emote=null;follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;return true;}
 
 async function loadCosmo(){
  globalThis.LEO_THREE=T;globalThis.LEO_COSMO_EMOTES=__EMOTES_URL__;
@@ -406,12 +411,17 @@ const FIN_STOPS=LIFTS.find(l=>l.id==='crown').stops.filter(s=>!/Crown/.test(s.la
 function onFinPlatform(p){return p.x<-170&&Math.abs(p.z)<3&&FIN_STOPS.some(y=>Math.abs(p.y-y)<.3);}
 // Feedback joins the top-right tools, orange-edged like the viewer's so testers spot it; a narrow phone has no room
 // there, so it sits under the mini-map instead.
-installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-width:560px)').matches?null:document.querySelector('.tools'),
+const feedback=installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-width:560px)').matches?null:document.querySelector('.tools'),
  css:'.fb-button:not(.fb-mounted){left:auto;bottom:auto;right:16px;top:180px;z-index:5}.tools .fb-button,.fb-button:not(.fb-mounted){border-color:var(--orange,#f85800);color:#ff8a3d}.tools .fb-button:hover,.fb-button:not(.fb-mounted):hover{background:var(--orange,#f85800);color:#050507}',
  // The pass is renewed as the panel opens unless it was got in the last two minutes, so it is fresh by Send.
  identity:()=>me.pass?{name:me.name||'Voyager',pass:bestPass,renew:()=>currentPass(480)}:null,
  context:()=>({link:spotLink({position:controller.position,yaw:follow.yaw,pitch:follow.pitch,view:follow.mode}),where:describe(controller.position)}),
  onOpen:()=>{input.enabled=false;input.down.clear();},onClose:()=>{input.enabled=true;input.down.clear();}});
+// Help (help.js): how to play, and, where Feedback is on, the tester guide, which can open it, the ship log or the spot
+// its example report was built at.
+const help=createHelp($('help-sheet'),{touch:()=>matchMedia('(pointer:coarse)').matches,tester:()=>!!feedback,live:()=>!!live,
+ onLog(){closePanels();openLog();},onFeedback(){closePanels();feedback?.open();},
+ onGo(search){const spot=readSpot(search);closePanels();if(spot)goToSpot(spot);}});
 // A tester (this browser holds a tester invite) wears the captain's hat (hat.js).
 if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 // Others aboard: their poses in, ours out, the lifts as the server runs them.
@@ -678,6 +688,8 @@ function togglePlaces(){
   b.onclick=()=>{goTo(place);closePanels();};list.appendChild(b);}
  panel.hidden=false;input.enabled=false;
 }
+// Help: H or the toolbar's Help opens it, and H, Esc or Close shut it.
+function toggleHelp(){const panel=$('help-sheet');if(!panel.hidden){closePanels();return;}closePanels();help.open();input.enabled=false;}
 // The emotes sheet: one button per emote (also keys 1-0).
 function toggleEmotes(){
  const panel=$('emotes');if(!panel)return;if(!panel.hidden){closePanels();return;}
@@ -689,7 +701,7 @@ function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;if
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet'])$(id).hidden=true;chat.close();input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','help-sheet'])$(id).hidden=true;chat.close();input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
@@ -703,6 +715,7 @@ $('use').addEventListener('click',()=>actions.use());
 // The comic reader (comics.js); Finish on the last page closes it.
 const reader=createComicReader($('comic-sheet'),{urls:artUrls,onClose:closePanels});
 $('go').addEventListener('click',togglePlaces);
+$('help').addEventListener('click',()=>actions.help());
 // The ship log from the toolbar, the "changes here" chip or L.
 for(const id of ['log','changes-here'])$(id).addEventListener('click',()=>{if(ready())openLog();});
 $('view').addEventListener('click',()=>actions.view());
