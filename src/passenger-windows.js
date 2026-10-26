@@ -5,6 +5,7 @@ import {CENTRAL_ENGINE_WINDOWS,POD_ENGINE_WINDOWS} from './engine-window-plan.js
 import {TessellateModifier} from 'three/addons/modifiers/TessellateModifier.js';
 import logo from './mcv-logo-contours.json' with {type:'json'};
 import {shapePoint,unshapeFinY} from './concept-shape.js';
+import {FIN_PLATFORMS} from './fin-crown.js';
 
 // The fin platforms' glass bands: sill and head above the platform as walked, pane width and pitch (the 0.26 m between
 // panes is exactly the two frames' borders, so neighbouring frames meet without overlapping).
@@ -67,7 +68,7 @@ export function addPassengerWindows(exterior,hull,side,surfaceFactory){
   if(side((x0+x1)/2,(y0+y1)/2)>finSurface((x0+x1)/2,(y0+y1)/2))return false;
   return [finSurface(x0-.15,y0-.15),finSurface(x1+.15,y1+.15),finSurface(x0-.15,y1+.15),finSurface(x1+.15,y0-.15)].every(z=>Number.isFinite(z)&&z>1);
  };
- for(const q of envelope.fin.filter(q=>q.y>=32&&q.y<=128&&(q.y-32)%16===0)){
+ for(const q of envelope.fin.filter(q=>FIN_PLATFORMS.includes(q.y))){
   const slots=[];for(let x0=-243;x0+FIN_PANE<=q.b-8.2;x0+=FIN_PITCH)slots.push(x0);
   for(let x0=-249.6-FIN_PANE;x0>=Math.min(q.a+6,-249.5)+.2;x0-=FIN_PITCH)slots.push(x0);
   for(const head of [FIN_HEAD,2.8,2.4,2,1.6]){const y0=finHeight(q.y,FIN_SILL),y1=finHeight(q.y,head),panes=slots.filter(x0=>finPane(x0,y0,y1));

@@ -6,6 +6,9 @@ import {bandOf} from './collision.js';
 // shows only the bands around the walker. Instanced meshes (the repeated cabins) and anything under a
 // userData.keepLive group (lift cars, doors) stay as they are.
 const CELL=40,WHITE=new T.Color(1,1,1);
+// The hull's skin is the backdrop to every opening, so it draws a band early either way: over the upper service
+// gallery the walker sees past the end of Deck 18 to the hull top, a band above any the view rays reach.
+const SKIN=/^Smooth_pressure_envelope/;
 const fraction=x=>Math.round(Math.min(1,Math.max(0,x))*65535);
 const worldVisible=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};
 // Plain colour materials (no textures, opaque, not glowing) fold into a few shared ones that take their colour per
@@ -133,10 +136,10 @@ export function bakeForWalking(root,{skip=()=>false,release=false}={}){
    box.getCenter(c);const b=bucket(material,bandOf(c.y),Math.floor(c.x/CELL),colors);
    b.parts.push({o,tris:null});b.vertices+=pos.count;b.indices+=count;return;
   }
-  const split=new Map(),idx=g.index?g.index.array:null,m=o.matrixWorld;
+  const split=new Map(),idx=g.index?g.index.array:null,m=o.matrixWorld,reach=SKIN.test(o.name)?1:0;
   for(let t=0;t<count;t+=3){
    c.set(0,0,0);let lo=Infinity,hi=-Infinity;for(let k=0;k<3;k++){c.add(v.fromBufferAttribute(pos,idx?idx[t+k]:t+k).applyMatrix4(m));lo=Math.min(lo,v.y);hi=Math.max(hi,v.y);}c.divideScalar(3);
-   const b=bucket(material,bandOf(lo),Math.floor(c.x/CELL),colors,bandOf(hi));let list=split.get(b);if(!list)split.set(b,list=[]);list.push(t);
+   const b=bucket(material,bandOf(lo)-reach,Math.floor(c.x/CELL),colors,bandOf(hi)+reach);let list=split.get(b);if(!list)split.set(b,list=[]);list.push(t);
   }
   for(const [b,list] of split){b.parts.push({o,tris:list});b.vertices+=list.length*3;b.indices+=list.length*3;}
  });

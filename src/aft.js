@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {finishAft} from './aft-finish.js';
-import {createFinCrown,CROWN} from './fin-crown.js';
+import {createFinCrown,CROWN,FIN_PLATFORMS} from './fin-crown.js';
 import {addAftEnclosures} from './aft-enclosures.js';
 import envelope from './assets/aft-envelope.json' with {type:'json'};
 import {unionRectangles,slabGeometry} from './floor-geometry.js';
@@ -106,13 +106,13 @@ export function createAft(){
  }
  }
  // A passenger lift now serves the fin platforms and panoramic crown.
- for(const q of rows.filter(q=>(q.y-32)%16===0)){
+ for(const q of rows.filter(q=>FIN_PLATFORMS.includes(q.y))){
   floor('Fin_inspection_platform',[rect(Math.min(q.a+6,-249.5),q.b-6,-2.35,2.35)],q.y,g,[CROWN.lift]);
   for(const s of [-1,1])rail([Math.min(q.a+6,-249.5),s*2.2],[q.b-6,s*2.2],q.y,g);
  }
  // The car's guide rails run just outside its front and back walls, from the lower lobby to under the crown floor.
  for(const x of [-248.8,-245.2])for(const z of [-2.28,2.28])beam('Crown_lift_guide',[x,24.3,z],[x,CROWN.floor-.6,z],.1,'frame',g);
- for(const y of [24.3,32,48,64,80,96,112,128]){
+ for(const y of [24.3,...FIN_PLATFORMS]){
   box('Crown_lift_platform_door',[.1,2.7,2.8],[-244.9,y+1.35,0],'metal',g);
   for(const z of [-1.6,1.6])box('Crown_lift_platform_jamb',[.15,2.9,.35],[-244.8,y+1.45,z],'frame',g);
   box('Crown_lift_platform_header',[.15,.3,3.55],[-244.8,y+2.85,0],'frame',g);

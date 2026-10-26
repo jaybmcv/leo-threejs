@@ -1,4 +1,4 @@
-import fs from 'node:fs/promises';import assert from 'node:assert/strict';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';import {Box3,Vector3,Raycaster} from 'three';import envelope from '../src/assets/aft-envelope.json' with {type:'json'};import {createAft} from '../src/aft.js';
+import fs from 'node:fs/promises';import assert from 'node:assert/strict';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';import {Box3,Vector3,Raycaster} from 'three';import envelope from '../src/assets/aft-envelope.json' with {type:'json'};import {FIN_PLATFORMS} from '../src/fin-crown.js';import {createAft} from '../src/aft.js';
 const b=await fs.readFile('output/leo-interior-v01/leo-full-ship.glb'),g=await new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');
 g.scene.traverse(o=>{const a=g.parser.associations.get(o);if(a?.nodes!==undefined)o.name=g.parser.json.nodes[a.nodes].name||o.name;});g.scene.updateMatrixWorld(true);
 const interior=g.scene.getObjectByName('Fitted_ship_interior'),aft=g.scene.getObjectByName('AFT_SYSTEMS_BLOCKOUT');assert.ok(aft);const geometry=[];interior.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh)geometry.push({o,b:new Box3().setFromObject(o)});});
@@ -24,7 +24,7 @@ for(const s of [-1,1])for(const dz of [-.6,0,.6])for(const h of [.3,1.1,1.7]){
  assert.equal(hits.length,0,'Pod junction obstruction: '+hits[0]?.object.name);junctionSamples++;
 }
 for(const z of [-6,6])walk([-270,132.3,z],[-211,132.3,z]);walk([-240,132.3,-6],[-240,132.3,6]);walk([-247,132.3,3],[-247,132.3,6]);
-for(const q of envelope.fin.filter(q=>q.y>=32&&q.y<=128&&(q.y-32)%16===0))walk([-243,q.y,0],[q.b-7,q.y,0]);
+for(const q of envelope.fin.filter(q=>FIN_PLATFORMS.includes(q.y)))walk([-243,q.y,0],[q.b-7,q.y,0]);
 const counts={};aft.traverse(o=>counts[o.name]=(counts[o.name]||0)+1);assert.equal(counts.Reservoir_tank,4);assert.equal(counts.Pod_drive_chamber,4);assert.equal(counts.Central_drive_train,3);assert.equal(counts.Fin_inspection_platform,7);
 assert.equal(counts.Crown_central_bar,1);assert.ok(counts.Crown_panoramic_window>40);assert.equal(counts.Crown_lift_car_floor,1);
 const report={crownBar:1,crownWindows:counts.Crown_panoramic_window,status:'PASS',reservoirTanks:4,podDriveChambers:4,centralDriveTrains:3,finPlatforms:7,headroomSamples:headroom,floorSamples:floors,levelRouteSegments:routeChecks,podJunctionSamples:junctionSamples,scope:'Reloaded assembled ship: aft counts, supporting floors and 2.1 m headroom on stair treads, wing gallery treads, core landings and central maintenance aisles. Includes crown promenades and fin lift landings. Lift motion and operating machinery are not simulated.'};await fs.writeFile('output/leo-interior-v01/aft-integration-report.json',JSON.stringify(report,null,2));console.log(report);

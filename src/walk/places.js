@@ -2,7 +2,7 @@ import * as T from 'three';
 import {DECKS,SAMPLE,ROUTE,LOUNGE_TOUR} from '../model.js';
 import {SHIP_AREAS} from '../areas.js';
 import {floorY} from '../transit.js';
-import {CROWN} from '../fin-crown.js';
+import {CROWN,FIN_PLATFORMS} from '../fin-crown.js';
 import {shapePoint} from '../concept-shape.js';
 import {BODY} from './collision.js';
 
@@ -33,7 +33,8 @@ export function findStand(colliders,at,{radius=8}={}){
 
 // "Deck 2 · Arrival hall" for a walker position.
 export function describe(p){
- if(p.y>floorY(20)+8)return p.y>100?'Crown lounge':'Fin platforms';
+ // From the first fin platform up (Deck 20's ceiling is below it), the walker is in the fin or the crown.
+ if(p.y>FIN_PLATFORMS[0]-.5)return p.y>100?'Crown lounge':'Fin platforms';
  const deck=DECKS.reduce((best,d)=>Math.abs(floorY(d.number)-p.y)<Math.abs(floorY(best.number)-p.y)?d:best,DECKS[0]);
  const room=SHIP_AREAS.find(a=>Math.abs(a.center[1]-p.y)<2.2&&Math.abs(p.x-a.center[0])<=a.width/2&&Math.abs(p.z-a.center[2])<=a.depth/2);
  return `Deck ${deck.number} · ${room?room.name:deck.name}`;
