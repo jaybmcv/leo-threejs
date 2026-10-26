@@ -59,6 +59,7 @@ import {createPaintings} from './paintings.js';
 import {createComics,createComicReader} from './comics.js';
 import {createChangesBoards} from './changes-board.js';
 import {createTheatre,placeAttendant} from './theatre.js';
+import {createCommsDisplays} from './comms-displays.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
@@ -220,6 +221,8 @@ async function buildShip(){
  comics=createComics({urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});for(const g of comics.groups)toBand(g);
  if(cosmoKit)toBand(createHostess(cosmoKit));
  if(theatre)toBand(theatre.group);
+ // Communications' wraparound star map and station screens (comms-displays.js), drawn with Deck 20's band.
+ {const comms=createCommsDisplays(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy()});if(comms)toBand(comms.group);}
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
