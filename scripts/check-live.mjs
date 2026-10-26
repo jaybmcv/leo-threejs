@@ -88,9 +88,9 @@ await new Promise(r=>jwksServer.listen(0,'127.0.0.1',r));
 const PASS_ENV={LEO_PASS_JWKS_URL:`http://127.0.0.1:${jwksServer.address().port}/keys.json`,LEO_PASS_ISS:ISS};
 
 // ---- a server and some visitors -----------------------------------------------------------------------------------
-const scoresFile=port=>path.join(os.tmpdir(),`leo-live-scores-check-${port}.json`),heartsFile=port=>path.join(os.tmpdir(),`leo-live-hearts-check-${port}.json`);
+const scoresFile=port=>path.join(os.tmpdir(),`leo-live-scores-check-${port}.json`),heartsFile=port=>path.join(os.tmpdir(),`leo-live-hearts-check-${port}.json`),chatFile=port=>path.join(os.tmpdir(),`leo-live-chat-check-${port}.json`);
 function startServer(port,env={}){
- const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...PASS_ENV,LEO_LIVE_SCORES:scoresFile(port),LEO_LIVE_HEARTS:heartsFile(port),...env},stdio:['ignore','pipe','pipe']});
+ const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...PASS_ENV,LEO_LIVE_SCORES:scoresFile(port),LEO_LIVE_HEARTS:heartsFile(port),LEO_LIVE_CHAT_LOG:chatFile(port),...env},stdio:['ignore','pipe','pipe']});
  child.log='';child.stdout.on('data',d=>{child.log+=d;});
  return new Promise((resolve,reject)=>{child.stdout.on('data',d=>{if(/Leo live on/.test(d))resolve(child);});child.on('exit',c=>reject(new Error('server exited '+c)));setTimeout(()=>reject(new Error('server did not start')),10000);});
 }
@@ -111,7 +111,7 @@ class Bot{
  close(){this.ws.close();}
 }
 const PORT=18090+Math.floor(Math.random()*500);
-const server=await startServer(PORT,{LEO_LIVE_CHAT:'all'});
+fs.rmSync(chatFile(PORT),{force:true});const server=await startServer(PORT,{LEO_LIVE_CHAT:'all'});
 try{
  // Joining.
  const a=new Bot(PORT,{name:'  Jay‮  cat\u0007 '}),b=new Bot(PORT,{name:'Bea'});
@@ -428,6 +428,28 @@ try{
   check('chat (off): nothing is passed on and the sender is told',a.msgs.find(m=>m.m==='welcome')?.chat?.mode==='off'&&!z.msgs.some(m=>m.m==='chat')&&a.msgs.some(m=>m.m==='said'&&m.why==='off'));
   a.close();z.close();
  }finally{off.kill();}
+}
+
+// ---- chat history: kept however old, up to 100 lines, and through a restart --------------------------------------
+{
+ const port=PORT+9,day=86400000,now=Date.now();
+ // A saved history of 130 lines, the oldest from three days ago, with one malformed entry and one with control characters.
+ const saved=Array.from({length:130},(_,i)=>({id:'voyager-'+'0'.repeat(19)+(i%10),name:'Old '+(i%10),verified:i%2===0,text:'old line '+i,at:now-3*day+i*60000}));
+ saved.splice(50,0,{id:7,text:'not a line'});saved[129].text='old line 128‮';
+ fs.writeFileSync(chatFile(port),JSON.stringify(saved));
+ let srv=await startServer(port,{LEO_LIVE_CHAT:'all'});
+ try{
+  const first=new Bot(port,{name:'First'});await first.welcomed();
+  const kept=first.msgs.find(m=>m.m==='welcome')?.chat?.lines||[];
+  check('chat history: a newcomer is handed the last 100 lines, however long ago they were said',kept.length===100&&kept[0].text==='old line 30'&&kept.at(-1).text==='old line 129'&&kept[0].at<now-2*day,`${kept.length} lines, ${kept[0]?.text} .. ${kept.at(-1)?.text}`);
+  check('chat history: lines read back from the file are checked and cleaned',!kept.some(l=>l.text==='not a line')&&kept.some(l=>l.text==='old line 128'));
+  first.send({m:'chat',text:'said before the restart'});await sleep(1500);first.close();
+  srv.kill();await sleep(300);srv=await startServer(port,{LEO_LIVE_CHAT:'all'});
+  const after=new Bot(port,{name:'After'});await after.welcomed();
+  const back=after.msgs.find(m=>m.m==='welcome')?.chat?.lines||[];
+  check('chat history: lines said before a restart are still there after it',back.length===100&&back.at(-1).text==='said before the restart'&&back.at(-1).name==='First',`${back.length} lines, last ${JSON.stringify(back.at(-1)?.text)}`);
+  after.close();
+ }finally{srv.kill();fs.rmSync(chatFile(port),{force:true});}
 }
 
 // ---- the cap on visitors, on a server of its own ------------------------------------------------------------------
