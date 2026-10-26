@@ -55,6 +55,7 @@ import {createPawPool} from './pool/game.js';
 import {createPawsOff} from './paws-off/game.js';
 import {createMudwater} from './mudwater.js';
 import {createGiveaway} from './mudwater-giveaway.js';
+import {createArcade} from './arcade.js';
 import {createPaintings} from './paintings.js';
 import {createComics,createComicReader} from './comics.js';
 import {createChangesBoards} from './changes-board.js';
@@ -188,6 +189,8 @@ async function buildShip(){
  kittens=createKittens(ship,cosmoKit);if(kittens)colliders.addStatic(kittens.solid,()=>true);
  // Communal dining's three serving robots (dining-robots.js): solid as plain boxes.
  diningRobots=createDiningRobots(ship);if(diningRobots)colliders.addStatic(diningRobots.solid,()=>true);
+ // The arcade row on the Hydro-Nip Lounge's forward wall (arcade.js): solid as plain boxes.
+ arcadeRow=createArcade();if(arcadeRow)colliders.addStatic(arcadeRow.solid,()=>true);
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  mudwater=createMudwater(ship,{urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
@@ -206,7 +209,7 @@ async function buildShip(){
  haze.add(createHaze(ship));
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
- for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pawsOff?[pawsOff.group]:[]),...(mudwater?[mudwater.group]:[])])toBand(o);
+ for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pawsOff?[pawsOff.group]:[]),...(mudwater?[mudwater.group]:[]),...(arcadeRow?[arcadeRow.group]:[])])toBand(o);
  if(concession)toBand(concession);
  if(provisions)toBand(provisions.group);
  if(kittens)toBand(kittens.group);
@@ -235,7 +238,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -411,7 +414,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get lounge(){return lounge;},get provisions(){return provisions;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get provisions(){return provisions;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -536,13 +539,13 @@ function showPhoto(blob){
 function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a));return a+d*(1-Math.exp(-lambda*dt));}
 
 // What's in front of the walker to use: a lift (call button or car panel) first, then the selfie camera, a comic book,
-// a ship log board, the telescope, then a seat or bed.
+// a ship log board, the telescope or an arcade cabinet, then a seat or bed.
 function target(){
  const p=controller.position,l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
  const b=booth.near(p)||comics.near(p);if(b)return b;
  const g=changeLog.near(p);if(g)return g;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
- const q=poolTable?.near(p)||pawsOff?.near(p)||mudwater?.near(p);if(q&&!(inBall&&q.kind==='treadmill'))return q;
+ const q=poolTable?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p);if(q&&!(inBall&&q.kind==='treadmill'))return q;
  // In the hamster ball: no seats, beds or treadmills; with nothing else to use, E climbs out.
  if(inBall)return {kind:'ball-out',label:'Get out of the ball'};
  const parked=ball.mesh.position;if(Math.abs(p.y-parked.y)<1.2&&Math.hypot(p.x-parked.x,p.z-parked.z)<BALL.radius+1)return {kind:'ball',label:'Get in the ball'};
