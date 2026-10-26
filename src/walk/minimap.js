@@ -2,13 +2,15 @@ import {DECKS} from '../model.js';
 import {floorY} from '../transit.js';
 import {SHIP_AREAS} from '../areas.js';
 import {MAP,MAP_CLASS} from './deck-map.js';
+import {FIN_PLATFORMS} from '../fin-crown.js';
 
 // The ship map on the page. The image (scripts/walk-plan.mjs) holds every deck's plan as a band of class values; each
 // deck is coloured into a canvas of its own the first time it shows. The mini-map turns with the camera, centred on
 // the walker; the full map lays one deck out bow to the right, with its rooms named and the Go to places marked.
 const COLOURS={[MAP_CLASS.empty]:[0,0,0,0],[MAP_CLASS.floor]:[201,206,199,235],[MAP_CLASS.raised]:[146,170,186,240],[MAP_CLASS.wall]:[58,63,72,255],[MAP_CLASS.rail]:[248,88,0,255],[MAP_CLASS.lift]:[47,214,197,255]};
-// The deck whose floor the walker is on or above (up to the next); none in the fin and the crown.
-export const deckOf=y=>{if(y>floorY(20)+8)return null;let best=DECKS[0];for(const d of DECKS)if(y>=floorY(d.number)-1.2)best=d;return best;};
+// The deck whose floor the walker is on or above (up to the next); none in the fin (from its first platform up) and
+// the crown.
+export const deckOf=y=>{if(y>FIN_PLATFORMS[0]-.5)return null;let best=DECKS[0];for(const d of DECKS)if(y>=floorY(d.number)-1.2)best=d;return best;};
 
 export class ShipMap{
  constructor(url){

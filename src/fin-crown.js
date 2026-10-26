@@ -6,6 +6,10 @@ import capPlan from './assets/fin-cap-plan.json' with {type:'json'};
 import closureProfile from './assets/fin-cap-closure.json' with {type:'json'};
 import {outlinedSlab,unionRectangles,slabGeometry} from './floor-geometry.js';
 
+// The fin inspection platforms (each on a measured fin section, before the fin drop), served by the crown lift. The
+// first stands at 40 m: at 32 m it lay under the hull's top skin at the fin root, its glass band cut into the roof
+// over the upper service gallery.
+export const FIN_PLATFORMS=[40,48,64,80,96,112,128];
 export const CROWN={floor:132.3,ceiling:137.5,outline:capPlan.map(([x,z])=>[-235+(x+235)*.985,z*.985]),lift:{x0:-249.2,x1:-244.8,z0:-2.2,z1:2.2}};
 export function attachFinCrown(exterior){
  const owner=exterior.getObjectByName('01_EXTERIOR_REFINED_V31')||exterior;owner.updateWorldMatrix(true,false);

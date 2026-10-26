@@ -1,6 +1,6 @@
 import {TRANSIT_CORES,floorY} from '../transit.js';
 import {shapePoint} from '../concept-shape.js';
-import {CROWN} from '../fin-crown.js';
+import {CROWN,FIN_PLATFORMS} from '../fin-crown.js';
 
 // Every passenger and service lift aboard, as data for walk mode and its checks. `car` is the car's plan centre and
 // size, `door` the side of the car its doors face (axis and sign) and `stops` the floor heights it serves, after the
@@ -16,7 +16,7 @@ export const LIFTS=[
   stops:deckStops(4,17),parked:8},
  {id:'crown',name:'Crown lift',car:{x:-247,z:0,width:4.2,depth:4.2,height:2.8},door:{axis:'x',sign:1,width:2.6},
   // The top platform (128 m before the fin drop) sits a metre under the crown's underfloor: no landing for anyone.
-  stops:[24.3,32,48,64,80,96,112].map((y,i)=>({deck:null,label:i===0?'Upper service gallery':`Fin platform ${i}`,y:shapePoint([-247,y,0])[1]}))
+  stops:[24.3,...FIN_PLATFORMS.slice(0,-1)].map((y,i)=>({deck:null,label:i===0?'Upper service gallery':`Fin platform ${i}`,y:shapePoint([-247,y,0])[1]}))
    .concat([{deck:null,label:'Crown lounge',y:shapePoint([-247,CROWN.floor,0])[1],door:{axis:'z',sign:1,width:2.6}}]),
   parked:null},
 ];
