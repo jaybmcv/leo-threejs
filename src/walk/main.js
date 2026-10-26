@@ -68,6 +68,7 @@ import {createTheatre,placeAttendant} from './theatre.js';
 import {dressGamingLounge,createGamingLounge} from './gaming-lounge.js';
 import {createCommsDisplays} from './comms-displays.js';
 import {createMissionHolo} from './mission-holo.js';
+import {createHalloween} from './halloween.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 import {createHelp} from './help.js';
 
@@ -228,6 +229,8 @@ async function buildShip(){
  theatre=createTheatre(ship,{url:typeof __REEL_URL__!=='undefined'?__REEL_URL__:'',anisotropy:renderer.capabilities.getMaxAnisotropy()});
  // The gaming lounge's lights, screens, glass floor and starry ceiling (gaming-lounge.js), drawn with its deck band.
  gaming=createGamingLounge(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches});
+ // Deck 15 dressed for Halloween until November (halloween.js): its lanes' ceiling diffusers go dead before the merge.
+ halloween=createHalloween(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches});
  status('Dressing the crew…');await idle();
  if(cosmoKit)globalThis.LeoCosmo.dressCats(ship.inside,cosmoKit);
  status('Preparing the walk…');await idle();
@@ -258,6 +261,7 @@ async function buildShip(){
  // Communications' wraparound star map and station screens (comms-displays.js), drawn with Deck 20's band.
  {const comms=createCommsDisplays(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy()});if(comms)toBand(comms.group);}
  if(missionHolo)toBand(missionHolo.group);
+ if(halloween)toBand(halloween.group);
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
@@ -270,7 +274,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -556,6 +560,7 @@ renderer.setAnimationLoop(()=>{
  bodies.length=0;bodies.push(p);if(remotes)for(const r of remotes.remotes.values())bodies.push(r.cur);
  if(lounge)lounge.update(dt,bodies,camera.getWorldPosition(eye));
  if(recovery)recovery.update(dt,camera.getWorldPosition(eye));
+ halloween?.update(dt,camera.getWorldPosition(eye),ambience.on);
  gaming?.update(dt,camera.getWorldPosition(eye),p);
  provisions?.update(dt,bodies);
  blossom?.update(dt,p);
