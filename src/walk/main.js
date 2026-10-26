@@ -65,6 +65,7 @@ import {createChangesBoards} from './changes-board.js';
 import {createTheatre,placeAttendant} from './theatre.js';
 import {dressGamingLounge,createGamingLounge} from './gaming-lounge.js';
 import {createCommsDisplays} from './comms-displays.js';
+import {createMissionHolo} from './mission-holo.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
@@ -207,6 +208,8 @@ async function buildShip(){
  jaguarGate=createJaguarGate();colliders.addStatic(jaguarGate.solid,()=>true);
  // The arcade row on the Hydro-Nip Lounge's forward wall (arcade.js): solid as plain boxes.
  arcadeRow=createArcade();if(arcadeRow)colliders.addStatic(arcadeRow.solid,()=>true);
+ // Mission control's holographic table (mission-holo.js): its pedestal and top solid as a plain cylinder.
+ missionHolo=createMissionHolo(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(missionHolo)colliders.addStatic(missionHolo.solid,()=>true);
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  mudwater=createMudwater(ship,{urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
@@ -247,6 +250,7 @@ async function buildShip(){
  if(gaming)toBand(gaming.group);
  // Communications' wraparound star map and station screens (comms-displays.js), drawn with Deck 20's band.
  {const comms=createCommsDisplays(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy()});if(comms)toBand(comms.group);}
+ if(missionHolo)toBand(missionHolo.group);
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
@@ -259,7 +263,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -525,6 +529,7 @@ renderer.setAnimationLoop(()=>{
  gaming?.update(dt,camera.getWorldPosition(eye),p);
  provisions?.update(dt,bodies);
  blossom?.update(dt,p);
+ missionHolo?.update(dt,p);
  marks?.update(camera,p,now);
  if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);
   // Walking into Mudwater Arena counts as a visit (server/arena.mjs).
