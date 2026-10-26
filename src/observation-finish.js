@@ -5,7 +5,7 @@ import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
 import fontData from './assets/helvetiker-bold.json' with {type:'json'};
 import {polishInterior} from './interior-polish.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {shrubGeometry} from './stylized-plants.js';
+import {shrubGeometry,boulderGeometry} from './stylized-plants.js';
 const font=new FontLoader().parse(fontData);
 
 function kit(root,prefix){
@@ -99,18 +99,26 @@ export function finishForwardLounge(lounge,shell,y){
 export function finishCrownLounge(root,y){
  const detail=new T.Group();detail.name='Fin_lounge_finish';root.add(detail);
  const {m,add,box,cyl}=kit(detail,'Crown_finish');
- const tables=[],stools=[],bottles=[],plants=[];
+ const tables=[],stools=[],bottles=[],plants=[],planters=[];
  root.traverse(o=>{
   if(o.name==='Crown_bar_stool_seat')stools.push(o);
   if(o.name==='Crown_lounge_table')tables.push(o);
   if(o.name==='Crown_bar_bottle')bottles.push(o);
   if(o.name==='Crown_curved_banquette_seat'||o.name==='Crown_curved_banquette_back')o.material=m.sage;
   if(o.name==='Crown_plant')plants.push(o);
+  if(o.name==='Crown_planter')planters.push(o);
   if(o.name==='Crown_bar_work_island')o.material=m.oak;
  });
  // Each planter holds a leafy shrub rooted on its top, 0.7 m below the old plant's centre.
  const foliage=new T.MeshStandardMaterial({name:'Crown_finish foliage',vertexColors:true,flatShading:true,roughness:.85});
  plants.forEach((o,i)=>{o.geometry=shrubGeometry({height:1.75,spread:1.15,seed:141+i}).translate(0,-.7,0);o.material=foliage;});
+ // The port planter by the aft seating gives way to a giant boulder standing on the floor where it was.
+ const rock=plants.find(o=>o.position.x===-263&&o.position.z===-12);
+ if(rock){
+  planters.find(o=>o.position.x===-263&&o.position.z===-12)?.removeFromParent();
+  rock.name='Crown_boulder';rock.geometry=boulderGeometry({width:2.3,height:2.3,depth:1.9,seed:36}).translate(0,y-rock.position.y,0);
+  rock.material=new T.MeshStandardMaterial({name:'Crown_finish boulder',vertexColors:true,flatShading:true,roughness:.95});
+ }
  for(const s of [-1,1]){
   for(let k=0;k<49;k++)box('Bar_oak_batten',[.09,.81,.045],[-236.85+k*.2,y+.655,s*3.3225],'oak');
   box('Counter_bronze_edge',[10.24,.03,.025],[-232,y+1.15,s*3.452],'brass');

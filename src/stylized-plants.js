@@ -75,3 +75,18 @@ export function shrubGeometry({height=1.6,spread=1.1,palette=GREENS,seed=1}={}){
  }
  const g=mergeGeometries(parts);g.computeVertexNormals();return g;// non-indexed, so normals stay faceted in exports
 }
+
+// A giant faceted boulder, `width` x `height` x `depth` metres, sitting on y=0: a lumpy icosphere with a flat base and
+// each facet a slightly different weathered grey or brown (one non-indexed, vertex-coloured mesh).
+const STONES=[0x6c665e,0x7b746a,0x5d5852,0x8a8173,0x6e6255,0x948b7e];
+export function boulderGeometry({width=2.4,height=2.6,depth=2,palette=STONES,seed=1}={}){
+ const rnd=seeded(seed),g=new T.IcosahedronGeometry(1,2),p=g.attributes.position,v=new T.Vector3();
+ const bumps=Array.from({length:9},()=>[new T.Vector3(rnd()-.5,rnd()-.5,rnd()-.5).normalize(),(rnd()-.4)*.35]);
+ for(let i=0;i<p.count;i++){
+  v.fromBufferAttribute(p,i).normalize();const r=1+bumps.reduce((s,[d,a])=>s+a*Math.max(0,v.dot(d))**3,0);
+  v.multiplyScalar(r);v.y=Math.max(v.y,-.7);p.setXYZ(i,v.x*width/2,(v.y+.7)/1.7*height,v.z*depth/2);
+ }
+ const colors=new Float32Array(p.count*3),c=new T.Color();
+ for(let i=0;i<p.count;i+=3){c.set(palette[rnd()*palette.length|0]).multiplyScalar(.85+p.getY(i)/height*.25);for(let k=0;k<3;k++)c.toArray(colors,(i+k)*3);}
+ g.setAttribute('color',new T.BufferAttribute(colors,3));g.deleteAttribute('uv');g.computeVertexNormals();return g;
+}
