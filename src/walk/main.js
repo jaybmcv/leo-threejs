@@ -33,7 +33,7 @@ import {createAmbience} from './ambience.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.js';
 import {corridorTrim} from './trim.js';
 import {connectLive,savedName} from './net/live.js';
-import {identify,currentPass,reportPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
+import {identify,currentPass,bestPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
 import {createLounge} from './lounge.js';
 import {createRecoveryMood} from './recovery.js';
@@ -85,7 +85,8 @@ const LIVE_URL=(()=>{const asked=new URLSearchParams(location.search).get('live'
 // Who is walking: their Discord account, through The Creamery (net/connect.js), or nobody in particular. Asked on the
 // loading card, while the ship is still to build, so going off to connect Discord costs no waiting. A tester's invite
 // link (?invite=, the same code that turns on tester feedback: feedback/feedback.js), or one this browser kept from an
-// earlier visit to Leo, always asks, so Leo live can note who used it and their reports can name them.
+// earlier visit to Leo, always asks, so Leo live can note who used it and their reports can name them. Someone who
+// connected before is remembered in this browser for 30 days, so isn't asked again; "Not you?" forgets them.
 const tester=invite||testerInvite();
 let me={pass:null,name:null,error:null};
 const identity=LIVE_URL?identify().then(r=>{me=r;showWho();return r;}):Promise.resolve(me);
@@ -100,6 +101,7 @@ function showWho(asking=!me.pass&&(tester||!skippedRecently())){
 if(LIVE_URL){
  $('who-connect').addEventListener('click',connect);$('who-later').addEventListener('click',connect);
  $('who-skip').addEventListener('click',()=>{if(!tester)skip();showWho(false);$('name-input').focus();});
+ $('who-forget').addEventListener('click',()=>{forget();me={pass:null,name:null,error:null};showWho();});
 }
 const renderer=new T.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true,powerPreference:'high-performance'});
 const phone=matchMedia('(pointer:coarse)').matches;
@@ -381,7 +383,7 @@ function onFinPlatform(p){return p.x<-170&&Math.abs(p.z)<3&&FIN_STOPS.some(y=>Ma
 installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-width:560px)').matches?null:document.querySelector('.tools'),
  css:'.fb-button:not(.fb-mounted){left:auto;bottom:auto;right:16px;top:180px;z-index:5}.tools .fb-button,.fb-button:not(.fb-mounted){border-color:var(--orange,#f85800);color:#ff8a3d}.tools .fb-button:hover,.fb-button:not(.fb-mounted):hover{background:var(--orange,#f85800);color:#050507}',
  // The pass is renewed as the panel opens unless it was got in the last two minutes, so it is fresh by Send.
- identity:()=>me.pass?{name:me.name||'Voyager',pass:reportPass,renew:()=>currentPass(480)}:null,
+ identity:()=>me.pass?{name:me.name||'Voyager',pass:bestPass,renew:()=>currentPass(480)}:null,
  context:()=>({link:spotLink({position:controller.position,yaw:follow.yaw,pitch:follow.pitch,view:follow.mode}),where:describe(controller.position)}),
  onOpen:()=>{input.enabled=false;input.down.clear();},onClose:()=>{input.enabled=true;input.down.clear();}});
 // A tester (this browser holds a tester invite) wears the captain's hat (hat.js).
@@ -407,7 +409,7 @@ if(LIVE_URL){
   selfie:(id,ms)=>booth?.start(ms),
   // Mudwater Arena's giveaway card (mudwater-giveaway.js): its state, and a claim's answer.
   giveaway:g=>giveaway.status(g),claimed:r=>giveaway.claimed(r),
- },{pass:()=>me.pass?currentPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
+ },{pass:()=>me.pass?bestPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
  $('ping').hidden=false;$('help-ping').hidden=false;

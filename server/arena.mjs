@@ -61,13 +61,14 @@ export function createArena({log=()=>{},files={},today=()=>new Date().toISOStrin
   const g=giveaway,mine=v.discord?claims.get(v.discord.discordId):null;
   if(!g.open)return {m:'giveaway',open:false};
   return {m:'giveaway',open:true,mode:g.mode,title:g.title,note:g.note,formUrl:g.mode==='form'?g.formUrl:undefined,
-   verified:!!v.discord,wallets:v.discord?(v.discord.wallets||[]).filter(w=>WALLET.test(w)).slice(0,6):[],
+   // A remembered visitor (a lapsed pass: leo-live.mjs) is asked to connect again: claims want fresh wallets.
+   verified:!!v.discord&&!v.discord.lapsed,remembered:!!v.discord?.lapsed,wallets:v.discord&&!v.discord.lapsed?(v.discord.wallets||[]).filter(w=>WALLET.test(w)).slice(0,6):[],
    claim:mine?{code:mine.code,wallet:mine.wallet,at:mine.at}:null,soldOut:g.mode!=='form'&&!mine&&left()<=0};
  }
  function claim(v,msg){
   const g=giveaway,reply=r=>({m:'claimed',...r});
   if(!g.open||g.mode==='form')return reply({ok:false,why:'closed'});
-  if(!v.discord)return reply({ok:false,why:'sign-in'});
+  if(!v.discord||v.discord.lapsed)return reply({ok:false,why:'sign-in'});
   const id=v.discord.discordId,had=claims.get(id);
   if(had)return reply({ok:true,again:true,code:had.code,wallet:had.wallet});
   if(left()<=0)return reply({ok:false,why:'sold-out'});

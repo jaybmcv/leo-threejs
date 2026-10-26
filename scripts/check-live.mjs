@@ -14,7 +14,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {keySet,verifyPass,readPass} from '../src/walk/net/pass.js';
+import {keySet,verifyPass,readPass,REMEMBER_S} from '../src/walk/net/pass.js';
 import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
 
 const results=[];let failed=0;
@@ -77,6 +77,11 @@ const creamery=await issuer();
  };
  const accepted=[];for(const [what,t] of Object.entries(bad))if(await verifyPass(t,opts))accepted.push(what);
  check('pass: tampered, foreign-key, expired, wrong-audience/issuer, alg-none and malformed passes are refused',accepted.length===0,accepted.length?'accepted: '+accepted.join(', '):`${Object.keys(bad).length} kinds refused`);
+ const remember={...opts,lapsed:REMEMBER_S},daysAgo=d=>({iat:nowS()-d*86400-600,exp:nowS()-d*86400});
+ const kept=await verifyPass(await creamery.sign(claimsFor('222222222222222222','Leo Test Cat',daysAgo(3))),remember);
+ check('pass: a remembered pass (expired 3 days ago) is taken, marked lapsed',kept?.discordId==='222222222222222222'&&kept.lapsed===true&&who.lapsed===false);
+ check('pass: a pass expired longer ago than visitors are remembered is refused',!await verifyPass(await creamery.sign(claimsFor('222222222222222222','Leo Test Cat',daysAgo(31))),remember));
+ check('pass: a remembered pass still needs The Creamery\'s signature',!await verifyPass(await other.sign(claimsFor('222222222222222222','Leo Test Cat',daysAgo(3)),{kid:'test-1'}),remember));
 }
 const jwksServer=http.createServer((req,res)=>{res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify(creamery.jwks));});
 await new Promise(r=>jwksServer.listen(0,'127.0.0.1',r));
@@ -255,7 +260,13 @@ try{
   check('invites: an invite used by a verified visitor is logged with who used it',/invite SPRING-01 used by discord:333333333333333333 beacat 0xabab/.test(srv.log));
   const bea2=new Bot(port,{pass:await creamery.sign(claimsFor('333333333333333333','Bea Cat'))});await bea2.welcomed();await sleep(250);
   check('identity: the same Discord account in another browser takes over from the first',bea.msgs.some(m=>m.m==='replaced')&&!!bea2.id);
-  [watch,forged,bea2].forEach(b=>b.close());
+  // A browser that connected days ago, whose Creamery sign-in has since run out, brings the pass it kept.
+  const kept=new Bot(port,{name:'typed',pass:await creamery.sign(claimsFor('343434343434343434','Kit Cat',{iat:nowS()-5*86400-600,exp:nowS()-5*86400}))});await kept.welcomed();
+  for(let i=0;i<3;i++){kept.pose([13,-3.7,0]);watch.pose([11,-3.7,0]);await sleep(100);}await sleep(200);
+  check('identity: a remembered visitor is aboard under their Discord name, verified',kept.msgs.find(m=>m.m==='welcome')?.you?.verified===true&&watch.poses.get(kept.id)?.name==='Kit Cat'&&/discord:343434343434343434 \(remembered\)/.test(srv.log));
+  const old=new Bot(port,{name:'Old',pass:await creamery.sign(claimsFor('353535353535353535','Old Cat',{iat:nowS()-40*86400-600,exp:nowS()-40*86400}))});await old.welcomed();
+  check('identity: a pass kept longer than visitors are remembered leaves them anonymous',old.msgs.find(m=>m.m==='welcome')?.you?.verified===false);
+  [watch,forged,bea2,kept,old].forEach(b=>b.close());
  }finally{srv.kill();}
 }
 

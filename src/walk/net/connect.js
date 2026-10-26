@@ -1,11 +1,13 @@
-import {readPass} from './pass.js';
+import {readPass,REMEMBER_S} from './pass.js';
 
 // Connecting Discord on the walk page, through The Creamery (creamery.marscatsvoyage.com), which already holds each
 // member's Discord account and verified wallets and hands Leo a signed, ten-minute pass (pass.js) saying who they are:
 //   GET  <creamery>/api/leo/pass      with this browser's Creamery cookie: {pass} when signed in there, 401 when not
 //   GET  <creamery>/leo/connect?return=<this page>   Discord sign-in at Creamery, then back here with #leo-pass=<pass>
 //                                     (or #leo-pass-error=cancelled|failed); the query string, ?invite= with it, is kept
-// The pass is only read here, for the name and its expiry; Leo live checks it. It is kept for this tab only.
+// The pass is only read here, for the name and its expiry; Leo live checks it. The last one is kept in this browser,
+// so when Creamery no longer recognises the visitor (its own sign-in ran out) they are still remembered for 30 days
+// after it (REMEMBER_S): Leo live takes it for their name, scores and hearts, but not for a giveaway claim.
 export const CREAMERY=(()=>{
  // A local Creamery for development, from a page on localhost only.
  const asked=new URLSearchParams(location.search).get('creamery');
@@ -13,7 +15,6 @@ export const CREAMERY=(()=>{
  return typeof __CREAMERY_URL__!=='undefined'?__CREAMERY_URL__:'https://creamery.marscatsvoyage.com';
 })();
 const KEPT='leo-pass',SKIPPED='leo-connect-skipped',SKIP_DAYS=7;
-const session={get(k){try{return sessionStorage.getItem(k);}catch{return null;}},set(k,v){try{v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v);}catch{}}};
 const local={get(k){try{return localStorage.getItem(k);}catch{return null;}},set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v);}catch{}}};
 
 // The invite code this page was opened with, if any: a tester's invite (feedback/feedback.js reads the same code, and
@@ -27,6 +28,8 @@ function fromAddress(){
  return {pass,error:error?(error==='cancelled'?'cancelled':'failed'):null};
 }
 const fresh=(pass,margin=60)=>{const c=readPass(pass);return c&&typeof c.exp==='number'&&c.exp-margin>Date.now()/1000?c:null;};
+const remembered=pass=>{const c=readPass(pass);return c&&typeof c.exp==='number'&&c.exp+REMEMBER_S>Date.now()/1000?c:null;};
+const nameOf=claims=>claims?.discord?.global_name||claims?.discord?.username||null;
 
 // A pass Creamery gives without asking anything: the visitor is already signed in there.
 async function silent(){
@@ -36,32 +39,36 @@ async function silent(){
  }catch{return null;}
 }
 
-// {pass, claims, name, error} for this page as it opens: a pass just brought back, one kept from earlier in this tab,
-// or one Creamery hands over silently; otherwise none (and why, if Discord sign-in was just cancelled or failed).
+// {pass, claims, name, remembered, error} for this page as it opens: a pass just brought back, a fresh one kept from
+// earlier, or one Creamery hands over silently; failing those, the one this browser kept while it is remembered
+// (remembered:true); otherwise none (and why, if Discord sign-in was just cancelled or failed).
 export async function identify(){
- const back=fromAddress();
- let pass=back.pass&&fresh(back.pass)?back.pass:null;
- if(!pass){const kept=session.get(KEPT);if(kept&&fresh(kept))pass=kept;}
- if(!pass&&!back.error)pass=await silent();
- const claims=pass?fresh(pass):null;
- session.set(KEPT,claims?pass:null);
- return {pass:claims?pass:null,claims,name:claims?(claims.discord?.global_name||claims.discord?.username||null):null,error:back.error};
+ const back=fromAddress(),kept=local.get(KEPT);
+ let pass=back.pass&&fresh(back.pass)?back.pass:kept&&fresh(kept)?kept:null;
+ if(!pass&&!back.error){const got=await silent();if(got&&fresh(got))pass=got;}
+ const old=!pass&&kept&&remembered(kept)?kept:null;
+ local.set(KEPT,pass||old);
+ const claims=readPass(pass||old);
+ return {pass:pass||old,claims,name:nameOf(claims),remembered:!!old,error:back.error};
 }
-// A pass for a (re)connection: the one we hold while it has a couple of minutes left (margin, in seconds), else a new
-// one from Creamery. When Creamery gives none, the one we held is kept for reportPass.
+// A fresh pass: the one we hold while it has a couple of minutes left (margin, in seconds), else a new one from
+// Creamery, or null when Creamery gives none (the one we held stays kept).
 export async function currentPass(margin=120){
- const kept=session.get(KEPT);if(kept&&fresh(kept,margin))return kept;
+ const kept=local.get(KEPT);if(kept&&fresh(kept,margin))return kept;
  const pass=await silent();if(!pass||!fresh(pass))return null;
- session.set(KEPT,pass);return pass;
+ local.set(KEPT,pass);return pass;
 }
-// A pass to send with a report: a current one, or else the last one this tab held though it has expired (the capture
-// service still names the account from it, marked "pass lapsed"), or null.
-export const reportPass=async()=>await currentPass()||session.get(KEPT);
+// The pass to hand Leo live or send with a report: a fresh one, or else the one this browser kept while it is
+// remembered (Leo live and the feedback capture service take it, marked lapsed), or null.
+export async function bestPass(){
+ const pass=await currentPass();if(pass)return pass;
+ const kept=local.get(KEPT);return kept&&remembered(kept)?kept:null;
+}
 // Off to Creamery to connect Discord, and back to this very page (its ?invite= too).
 export const connectUrl=()=>`${CREAMERY}/leo/connect?return=${encodeURIComponent(location.origin+location.pathname+location.search)}`;
 export function connect(){location.assign(connectUrl());}
 // "Skip for now": not asked again in this browser for a week.
 export const skippedRecently=()=>{const t=Number(local.get(SKIPPED));return t&&Date.now()-t<SKIP_DAYS*864e5;};
 export function skip(){local.set(SKIPPED,String(Date.now()));}
-// Leave: forget the pass in this tab (Creamery's own sign-in is Creamery's).
-export function forget(){session.set(KEPT,null);}
+// "Not you?", or a pass Leo live refused: forget the pass in this browser (Creamery's own sign-in is Creamery's).
+export function forget(){local.set(KEPT,null);}

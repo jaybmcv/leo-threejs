@@ -28,6 +28,8 @@ expect(!readGiveaway({open:true,mode:'form',formUrl:'javascript:alert(1)'}).open
 {const a=arenaWith({open:true,mode:'codes',note:'One each',codes:['AAAA-1','BBBB-2']});
  const s=a.statusFor(guest(1));expect(s.open&&s.mode==='codes'&&!s.verified&&s.note==='One each','a guest sees the giveaway open, and that they need to sign in');
  expect(a.claim(guest(1),{}).why==='sign-in','a guest cannot claim');
+ const kept={...verified(9),discord:{...verified(9).discord,lapsed:true}},ks=a.statusFor(kept);
+ expect(!ks.verified&&ks.remembered&&!ks.wallets.length&&a.claim(kept,{}).why==='sign-in','a remembered visitor (a lapsed pass) is asked to connect Discord again to claim, and shown no wallets');
  const one=a.claim(verified(1),{}),again=a.claim(verified(1),{}),two=a.claim(verified(2),{}),three=a.claim(verified(3),{});
  expect(one.ok&&one.code==='AAAA-1'&&again.ok&&again.again&&again.code==='AAAA-1','a verified visitor gets a code, and the same code if they claim again');
  expect(two.code==='BBBB-2'&&!three.ok&&three.why==='sold-out','the next visitor gets the next code; with none left it is sold out');

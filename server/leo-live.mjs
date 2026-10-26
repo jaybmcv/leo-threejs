@@ -25,7 +25,7 @@ import {WebSocketServer} from 'ws';
 import {LIFTS} from '../src/walk/lifts.js';
 import {liftState,callLift,stepLift,liftWire} from '../src/walk/lift-motion.js';
 import {encodeRecord,encodeIdentity,assembleFrame,actorIdOf,cleanName,PROTOCOL,STANCES} from '../src/walk/net/wire.js';
-import {keySet,verifyPass} from '../src/walk/net/pass.js';
+import {keySet,verifyPass,REMEMBER_S} from '../src/walk/net/pass.js';
 import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
 import {createArena} from './arena.mjs';
 
@@ -37,7 +37,9 @@ const FLUSH_MS=50,FAR_MS=500,KEEPALIVE_MS=2000,HELLO_MS=5000,PING_MS=25000,SLOW_
 const NEAR_DY=9,NEAR_M=64;
 // The ship's bounds, generously: a pose outside them is not a pose from this page.
 const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
-const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',
+// A pass up to REMEMBER_S past its expiry is a remembered visitor (the page kept it; Creamery's sign-in ran out): their
+// name, scores and hearts count, but a giveaway claim wants a fresh one (arena.mjs).
+const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',lapsed:REMEMBER_S,
  key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
 const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6]};
 
@@ -161,7 +163,7 @@ async function hello(v,msg){
  // A tester (the page holds a tester invite) wears the captain's hat. Taken on the page's word: it is a hat.
  Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);
  send(v.ws,{m:'welcome',id,aboard:aboard(),you:{name:v.name,verified:!!who},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)}))});
- countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`discord:${who.discordId}`:msg.pass?'(pass refused)':'');
+ countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`discord:${who.discordId}${who.lapsed?' (remembered)':''}`:msg.pass?'(pass refused)':'');
  if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
 }
 function leave(v){

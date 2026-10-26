@@ -28,7 +28,7 @@ export function createGiveaway({$,live,connect}){
    return;
   }
   if(g.soldOut){box.append(el('p',{className:'got',textContent:WHY['sold-out']}));return;}
-  if(!g.verified){box.append(el('p',{className:'why',textContent:'Claiming is for Voyagers signed in with Discord: one pack each.'}),el('button',{type:'button',className:'go',textContent:'Connect Discord',onclick:connect}));return;}
+  if(!g.verified){box.append(el('p',{className:'why',textContent:g.remembered?'Connect Discord again to claim, so The Creamery can check your wallets: one pack each.':'Claiming is for Voyagers signed in with Discord: one pack each.'}),el('button',{type:'button',className:'go',textContent:'Connect Discord',onclick:connect}));return;}
   if(g.mode==='wallet'&&!g.wallets.length){box.append(el('p',{className:'why',textContent:WHY['no-wallet']}));return;}
   let pick=null;
   if(g.mode==='wallet'&&g.wallets.length>1){pick=el('select',{ariaLabel:'Wallet'},...g.wallets.map(w=>el('option',{value:w,textContent:short(w)})));box.append(el('label',{className:'why',textContent:'Send it to '},pick));}

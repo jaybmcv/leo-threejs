@@ -33,9 +33,15 @@ export function keySet(url,{ttl=3600e3,retry=60e3,fetcher=globalThis.fetch}={}){
  };
 }
 
+// How long after its last pass a browser is still remembered (net/connect.js keeps the pass): Creamery's own sign-in
+// can run out sooner, and a visitor shouldn't have to connect Discord again on every visit.
+export const REMEMBER_S=30*86400;
+
 // The visitor a pass vouches for, or null: signature by one of Creamery's keys, EdDSA only, the right issuer and
 // audience, not expired (a minute's grace for clocks), not issued in the future, and a Discord id that matches sub.
-export async function verifyPass(token,{key,iss,aud,now=Date.now()/1000,leeway=60}){
+// lapsed: how many seconds past its expiry a pass is still taken, marked lapsed:true (a remembered visitor: their
+// name and scores count, but the wallets in it are not fresh enough to claim with); 0 by default.
+export async function verifyPass(token,{key,iss,aud,now=Date.now()/1000,leeway=60,lapsed=0}){
  if(typeof token!=='string'||token.length>4096)return null;
  const parts=token.split('.');if(parts.length!==3)return null;
  let header,claims;try{header=json(parts[0]);claims=json(parts[1]);}catch{return null;}
@@ -43,10 +49,10 @@ export async function verifyPass(token,{key,iss,aud,now=Date.now()/1000,leeway=6
  const k=await key(header.kid);if(!k)return null;
  let ok=false;try{ok=await crypto.subtle.verify('Ed25519',k,b64(parts[2]),new TextEncoder().encode(parts[0]+'.'+parts[1]));}catch{return null;}
  if(!ok||!claims||claims.iss!==iss||(Array.isArray(claims.aud)?!claims.aud.includes(aud):claims.aud!==aud))return null;
- if(typeof claims.exp!=='number'||claims.exp+leeway<now||typeof claims.iat!=='number'||claims.iat-leeway>now)return null;
+ if(typeof claims.exp!=='number'||claims.exp+leeway+lapsed<now||typeof claims.iat!=='number'||claims.iat-leeway>now)return null;
  const d=claims.discord;
  if(!d||typeof d.id!=='string'||!/^\d{5,25}$/.test(d.id)||claims.sub!=='discord:'+d.id)return null;
  const wallets=Array.isArray(claims.wallets)?claims.wallets.filter(w=>typeof w==='string'&&/^0x[0-9a-f]{40}$/.test(w)).slice(0,32):[];
  const name=[d.global_name,d.username].find(n=>typeof n==='string'&&n.trim())||null;
- return {discordId:d.id,username:typeof d.username==='string'?d.username:null,name,avatar:typeof d.avatar==='string'?d.avatar:null,wallets,exp:claims.exp,jti:claims.jti??null};
+ return {discordId:d.id,username:typeof d.username==='string'?d.username:null,name,avatar:typeof d.avatar==='string'?d.avatar:null,wallets,exp:claims.exp,jti:claims.jti??null,lapsed:claims.exp+leeway<now};
 }
