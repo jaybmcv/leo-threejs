@@ -14,6 +14,11 @@ A card-game hall on Deck 16 for Mudwater: Swamp Origins, the trading card game b
 - **Match screen:** on the end wall, under the room's name. It shows a board with cards between a teal and an orange score.
 - **Card gallery:** 72 framed cards in two rows on the end wall and on the long walls behind the tables, each with a caption strip. The top row has picture lights.
 - **Pack standees:** two life-size packs on plinths, either side of the aisle just inside the door.
+- **Entrance (walk only):**
+  - a brass surround on the door's corridor side;
+  - the badge wordmark on the arena's outer wall under its window;
+  - a third pack standee facing the door from across the side corridor.
+- **Signs:** the Deck 16 lift landings' plaques name **Mudwater Arena** in gold in place of the deck's theme. The Deck 16 stair signs add it beside the deck number, and the lift's buttons read "Deck 16 · Education & recreation · Mudwater Arena" (`signs.js` `FEATURED`).
 - **Room:** Bayou walls, an olive-black floor and ceiling, Champagne crown and skirting bands, and Swamp Brass pilasters.
 
 ## Brand palette
@@ -57,7 +62,31 @@ The card art and box graphics are still **stand-in colour**, because the kit has
 | Pack counter | **Booster packs** shows the giveaway card: packs will be given away here, details coming soon, with a link to the Mudwater site |
 | Any bench, table chair or podium stool | Sit down |
 
-The giveaway card is a placeholder until the real mechanism (codes, wallet claim or a form) is decided.
+## The giveaway
+
+The counter's card claims through Leo live (`server/arena.mjs`, `src/walk/mudwater-giveaway.js`). It is **off until switched on**, and it is switched on by one file on the Leo live server's computer: `leo-live-giveaway.json` beside the checkout (`C:/Users/Rigs/leo-live-giveaway.json` on the Reach PC), or wherever `LEO_LIVE_GIVEAWAY` points. The server reads it again within a couple of seconds of any change, so it needs no restart.
+
+```json
+{"open": true, "mode": "codes", "title": "Booster pack giveaway", "note": "One pack per Voyager while they last.",
+ "limit": 100, "codes": ["CODE-0001", "CODE-0002"], "formUrl": "https://..."}
+```
+
+| Mode | A claim | What the visitor sees |
+|---|---|---|
+| `codes` | Hands out the next unused code | Their code (with Copy), every time they come back |
+| `wallet` | Records one of the wallets The Creamery has verified for them (they pick, if several) | Where their pack will go |
+| `list` | Records their name | That they're on the list |
+| `form` | Nothing here | A button to `formUrl` (must be https) |
+
+- **Who can claim:** one claim per Discord-verified visitor. Anyone else is offered Connect Discord.
+- **Running out:** `limit` caps the claims, and codes also run out with their list. After that the card says all the packs have been claimed.
+- **Misconfigured or missing file:** the card stays on "details coming soon".
+- **Stopping:** set `"open": false`.
+- **The claims file:** claims go to `leo-live-giveaway-claims.json` beside it, with Discord id, name, time, and code or wallet. That's personal data and stays on that computer.
+
+## Counts for BAYC
+
+Leo live counts, per day (UTC), how many times walkers came into the arena (`visits`), how many different visitors that was (`visitors`), Play Mudwater opens (`plays`), giveaway card opens (`cards`) and `claims`. They're kept in `leo-live-arena-stats.json` and served, totals only, at `https://leo-live.marscatsvoyage.com/arena`. Nothing there names or identifies anyone. Visitors are told apart in memory only, so a server restart mid-day can count someone twice.
 
 ## As built
 
@@ -67,8 +96,9 @@ The giveaway card is a placeholder until the real mechanism (codes, wallet claim
 | Ship areas | `src/areas.js`, `src/area-finish.js` | Deck 16's first room is now `['arena','Mudwater Arena']` with its description. Its finish is `games`: brass lines on every `Mudwater_grid` |
 | Walk | `src/walk/mudwater.js`, `src/walk/main.js`, `src/walk/walk.html` | The holograms leave the room for their own group before the merge, so they can turn. Adds the brand art panels (loaded within 45 m), the triggers, the use actions and the `#mudwater-sheet` card |
 | Page build | `scripts/walk-page.mjs` | Hashes `MUDWATER_ART` with the paintings and comics, keeping each file's own extension (PNG for transparency) |
-| Signs and places | `src/walk/signs.js`, `src/walk/places.js` | A cards icon on the corridor signs, and Mudwater Arena in Go to |
-| Checks | `scripts/check-mudwater.mjs` (in `npm run check`), `scripts/check-areas.mjs` | See below |
+| Signs and places | `src/walk/signs.js`, `src/walk/lift-ride.js`, `src/walk/places.js` | A cards icon on the corridor signs; Mudwater Arena on the Deck 16 plaques, stair signs and lift buttons; and in Go to |
+| Giveaway and counts | `server/arena.mjs`, `server/leo-live.mjs`, `src/walk/net/live.js`, `src/walk/mudwater-giveaway.js` | The `giveaway`, `claim` and `arena` messages (no protocol change: an older server just never answers, and the card stays on "coming soon"), and `GET /arena` |
+| Checks | `scripts/check-mudwater.mjs` and `scripts/check-giveaway.mjs` (both in `npm run check`), `scripts/check-areas.mjs` | See below; the giveaway check runs every mode, refusal and limit on temporary files |
 
 The `scripts/check-mudwater.mjs` check covers:
 
