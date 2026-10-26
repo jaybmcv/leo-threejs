@@ -112,6 +112,8 @@ const RES=['High','Med','Low'],RES_SCALE=[1,.75,.5],RES_KEY='leo-walk-resolution
 let res=Math.max(0,RES.indexOf((()=>{try{return localStorage.getItem(RES_KEY);}catch{return null;}})()));
 renderer.setPixelRatio(maxRatio*RES_SCALE[res]);renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
+// Lift door shutter blades are clipped to their doorway as they open (lift-ride.js).
+renderer.localClippingEnabled=true;
 $('viewport').appendChild(renderer.domElement);
 // A phone short of graphics memory drops the WebGL context: bring the card back with a reason, not a frozen view.
 renderer.domElement.addEventListener('webglcontextlost',()=>{document.body.dataset.ready='0';$('loading-text').textContent='The view stopped: this device ran short of graphics memory. Reload to walk again.';});

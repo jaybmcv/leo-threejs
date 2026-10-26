@@ -5,8 +5,9 @@ import {LIFTS,carTriangles} from './lifts.js';
 import {liftState,callLift,stepLift,followLift} from './lift-motion.js';
 import {liftDisplay,stopShort,landingSigns,liftDisplayMount,callLight,FEATURED} from './signs.js';
 
-// Working lifts for walk mode. Each shaft gets a car that travels between its stops and a pair of sliding landing doors
-// at every stop; both are movable colliders, so a closed door is a wall and the car floor carries the walker.
+// Working lifts for walk mode. Each shaft gets a car that travels between its stops and a pair of landing doors at
+// every stop; both are movable colliders, so a closed door is a wall and the car floor carries the walker. The doors
+// look like a camera shutter (shutter() below); their colliders still slide apart as two leaves.
 // Doors open when the car rests at a stop and close before it moves (lift-motion.js, shared with the multiplayer
 // server). Call a car from a landing; choose a stop inside.
 // Every landing has a deck plaque, a call light that stays lit until the car arrives, and a display of where the car is.
@@ -17,7 +18,8 @@ const mats={
  glass:new T.MeshStandardMaterial({name:'Lift_glass',color:0xb4d4de,roughness:.1,metalness:.1,transparent:true,opacity:.16,depthWrite:false,side:T.DoubleSide}),
  roof:new T.MeshStandardMaterial({name:'Lift_roof',color:0x294858,roughness:.7}),
  glow:new T.MeshStandardMaterial({name:'Lift_glow',color:0xfff2d8,emissive:0xffe6bd,emissiveIntensity:1.1}),
- door:new T.MeshStandardMaterial({name:'Lift_door',color:0x8b9ea6,roughness:.38,metalness:.6}),
+ door:new T.MeshStandardMaterial({name:'Lift_door',color:0x8b9ea6,roughness:.38,metalness:.6,side:T.DoubleSide}),
+ blade:new T.MeshStandardMaterial({name:'Lift_door_blade',color:0x6f838c,roughness:.34,metalness:.65,side:T.DoubleSide}),
  panel:new T.MeshStandardMaterial({name:'Lift_call_panel',color:0x1b2830,emissive:0xf85800,emissiveIntensity:.55}),
 };
 // The car walls are a black starfield, drawn once on a small canvas, with a big Mars on the back wall.
@@ -80,6 +82,35 @@ export const stopLabel=s=>s.deck?`Deck ${s.deck} · ${deckName(s.deck)}${FEATURE
 
 function boxMesh(name,[w,h,d],[x,y,z],m,parent){const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.name=name;o.position.set(x,y,z);parent.add(o);return o;}
 const boxTris=(w,h,d)=>{const g=new T.BoxGeometry(w,h,d).toNonIndexed();g.translate(0,h/2,0);return Array.from(g.attributes.position.array);};
+// A six-blade shutter filling a w x h doorway, drawn in a group whose x runs along the doorway, y up and z out of it,
+// with its origin at the middle of the sill. Closed, the blades are six wedges meeting at the doorway's centre: one
+// on the sill, one on the lintel and two up each side. Opening, each slides out past its own edge of the frame with a
+// small twist, like an iris, and the four planes in `clip` cut off whatever has left the doorway.
+const TWIST=.3,BLADE_T=.04;
+function shutter(parent,w,h){
+ const g=new T.Group();g.name='Lift_shutter';parent.add(g);
+ const clip=[new T.Plane(),new T.Plane(),new T.Plane(),new T.Plane()];
+ const m=[mats.door,mats.blade].map(m=>{const c=m.clone();c.clippingPlanes=clip;return c;});
+ const P=[[-w/2,0],[w/2,0],[w/2,h/2],[w/2,h],[-w/2,h],[-w/2,h/2]],C=[0,h/2];
+ const blades=P.map((a,i)=>{const b=P[(i+1)%6],mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+  // Out across this blade's edge, and how far the centre is from it.
+  const out=a[1]===b[1]?[0,Math.sign(a[1]-C[1])]:[Math.sign(a[0]),0],reach=Math.abs(out[0]?w/2:h/2);
+  const shape=new T.Shape([new T.Vector2(C[0]-mid[0],C[1]-mid[1]),new T.Vector2(a[0]-mid[0],a[1]-mid[1]),new T.Vector2(b[0]-mid[0],b[1]-mid[1])]);
+  const geo=new T.ExtrudeGeometry(shape,{depth:BLADE_T,bevelEnabled:false});geo.translate(0,0,(i%2?.006:-.006)-BLADE_T/2);
+  const mesh=new T.Mesh(geo,m[i%2]);mesh.name='Lift_door_blade';g.add(mesh);
+  return {mesh,mid,out,travel:reach+Math.hypot(b[0]-a[0],b[1]-a[1])/2*Math.sin(TWIST)+.08};});
+ const n=new T.Vector3(),q=new T.Vector3();
+ return {group:g,
+  // Lay the shutter on its doorway (sill middle `base`, `along` the doorway) and open it by `open`, 0 shut to 1 open.
+  set(base,along,front,open){
+   g.matrix.makeBasis(along,new T.Vector3(0,1,0),front).setPosition(base);g.matrixAutoUpdate=false;g.updateMatrixWorld(true);
+   clip[0].setFromNormalAndCoplanarPoint(n.copy(along),q.copy(base).addScaledVector(along,-w/2));
+   clip[1].setFromNormalAndCoplanarPoint(n.copy(along).negate(),q.copy(base).addScaledVector(along,w/2));
+   clip[2].setFromNormalAndCoplanarPoint(n.set(0,1,0),base);clip[3].setFromNormalAndCoplanarPoint(n.set(0,-1,0),q.copy(base).setY(base.y+h));
+   for(const b of blades){b.mesh.position.set(b.mid[0]+b.out[0]*b.travel*open,b.mid[1]+b.out[1]*b.travel*open,0);b.mesh.rotation.z=TWIST*open;}
+   g.visible=open<.999;
+  }};
+}
 
 export function createLifts(scene,colliders){
  // Signs go on the walls before this lift's doors exist, so a ray finds the wall and not a door leaf.
@@ -104,11 +135,11 @@ export function createLifts(scene,colliders){
    const across=b.axis==='x'?c.depth:c.width,mars=new T.Mesh(new T.CircleGeometry(Math.min(across,c.height)*.4,64),art());
    mars.name='Car_mars';mars.position.y=c.height*.52;mars.position[b.axis]=-b.sign*((b.axis==='x'?c.width:c.depth)/2-.085);
    mars.rotation.y=b.axis==='x'?b.sign*Math.PI/2:(b.sign>0?0:Math.PI);car.add(mars);}
-  // Car doors on each open face slide with the landing doors; a gate mover closes the face while they're shut.
+  // Car doors on each open face open with the landing doors; a gate mover closes the face while they're shut.
   for(const f of faces){
    const d=f.door;f.side=d.axis==='z'?new T.Vector3(1,0,0):new T.Vector3(0,0,1);f.front=d.axis==='z'?new T.Vector3(0,0,d.sign):new T.Vector3(d.sign,0,0);
    f.half=(d.axis==='z'?c.depth:c.width)/2-.06;
-   f.leaves=[-1,1].map(sg=>{const m=boxMesh('Car_door',d.axis==='z'?[d.width/2,c.height-.05,.05]:[.05,c.height-.05,d.width/2],[0,0,0],mats.door,car);m.geometry.translate(0,(c.height-.05)/2,0);return {s:sg,mesh:m};});
+   f.shutter=shutter(root,d.width,c.height-.05);
    f.gate=colliders.addMover(spec.id+'_gate',boxTris(...(d.axis==='z'?[c.width,c.height,.06]:[.06,c.height,c.depth])));
   }
   const main=faces[0],panel=boxMesh('Car_panel',main.door.axis==='z'?[.24,.5,.05]:[.05,.5,.24],[0,0,0],mats.panel,car);
@@ -121,16 +152,14 @@ export function createLifts(scene,colliders){
    return {d,frontOf,along,base,light:callLight(signs,colliders,at)};
   });
   const carMover=colliders.addMover(spec.id+'_car',carTriangles(spec,faces.map(f=>f.door)));
-  // Landing doors: two leaves per stop, each its own mover so they can slide apart.
+  // Landing doors: a shutter per stop, and two unseen leaves, each its own mover, that slide apart as it opens.
   const stops=spec.stops.map((stop,i)=>{
    const {d,frontOf,along,base,light}=landings[i];
    const leaves=[-1,1].map(s=>{
     const size=d.axis==='z'?[d.width/2,DOOR_H,LEAF_T]:[LEAF_T,DOOR_H,d.width/2];
-    const mesh=boxMesh('Landing_door',size,[0,0,0],mats.door,root);mesh.geometry.translate(0,DOOR_H/2,0);
-    const mover=colliders.addMover(spec.id+'_door',boxTris(...size));
-    return {s,mesh,mover};
+    return {s,mover:colliders.addMover(spec.id+'_door',boxTris(...size))};
    });
-   return {...stop,base,along,leaves,light,callAt:base.clone().addScaledVector(frontOf,.9),width:d.width,frontOf,face:faceOf(d)};
+   return {...stop,base,along,leaves,shutter:shutter(root,d.width,DOOR_H),light,callAt:base.clone().addScaledVector(frontOf,.9),width:d.width,frontOf,face:faceOf(d)};
   });
   const lift={spec,root,car,carMover,faces,faceOf,stops,display,...liftState(spec)};
   place(lift);return lift;
@@ -142,13 +171,14 @@ export function createLifts(scene,colliders){
   l.carMover.place(new T.Matrix4().makeTranslation(c.x,l.y,c.z));
   const here=l.stops[l.at];
   for(const f of l.faces){
-   const shut=l.phase!=='moving'&&here.face===l.faceOf(f.door)?1-l.doors:1,dw=f.door.width;
-   for(const leaf of f.leaves)leaf.mesh.position.copy(f.front).multiplyScalar(f.half).addScaledVector(f.side,leaf.s*(dw/4+(1-shut)*dw/2*.98));
+   const shut=l.phase!=='moving'&&here.face===l.faceOf(f.door)?1-l.doors:1;
+   f.shutter.set(f.front.clone().multiplyScalar(f.half).add(l.car.position),f.side,f.front,1-shut);
    f.gate.enabled=shut>.5;const g=f.front.clone().multiplyScalar(f.half);f.gate.place(new T.Matrix4().makeTranslation(c.x+g.x,l.y,c.z+g.z));
   }
   l.stops.forEach((s,i)=>{const open=i===l.at&&l.phase!=='moving'?l.doors:0;
    s.light?.lit(l.calls.has(i));
-   for(const leaf of s.leaves){const p=s.base.clone().addScaledVector(s.along,leaf.s*(s.width/4+open*s.width/2*.98));leaf.mesh.position.copy(p);leaf.mesh.updateMatrixWorld(true);leaf.mover.place(new T.Matrix4().makeTranslation(p.x,p.y,p.z));}
+   s.shutter.set(s.base,s.along,s.frontOf,open);
+   for(const leaf of s.leaves){const p=s.base.clone().addScaledVector(s.along,leaf.s*(s.width/4+open*s.width/2*.98));leaf.mover.place(new T.Matrix4().makeTranslation(p.x,p.y,p.z));}
   });
  }
  const inside=(l,p)=>{const c=l.spec.car;return Math.abs(p.x-c.x)<c.width/2-.1&&Math.abs(p.z-c.z)<c.depth/2-.1&&p.y>l.y-.6&&p.y<l.y+1.2;};
