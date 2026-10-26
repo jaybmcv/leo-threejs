@@ -245,7 +245,7 @@ function engineering(area,k){
 }
 
 function hangar(area,k){
-  k.roomShell();const {box,round,add,console,pipe,chair}=k,[x,y,z]=area.center;
+  k.roomShell();const {box,round,add,cyl,console,pipe,chair}=k,[x,y,z]=area.center;
   for(const sx of [-1,1])for(const sz of [-1,1]){
     const g=new T.Group();g.name='Transfer_shuttle';g.position.set(x+sx*17,y,sz*27);k.fit.add(g);
     round('Shuttle_lower_hull',[21,1.2,8],[0,.9,0],'navy',.5,g);
@@ -271,6 +271,14 @@ function hangar(area,k){
     box('Shuttle_boarding_bridge',[3,.12,2.6],[px,y+1.44,sz*22.5],'floor');
     box('Shuttle_boarding_door',[2.1,2,.1],[px-2.2,y+2.5,sz*23.58],'navy');
     for(const side of [-1,1])pipe('Platform_rail',[px+side*7.2,y+2.6,pz-1],[px+side*7.2,y+2.6,pz+1],.045);
+    // Pad identity: orange safety edging, a guide line from the handling lane to the boarding steps, a large
+    // floor number that reads upright from the centre lane, and a teal status beacon at the dock corner.
+    const pad=(sz<0?0:2)+(sx<0?1:2);
+    for(const s of [-1,1]){box('Pad_safety_edge',[24,.018,.15],[px,y+.012,sz*(23.25+s*11.25)],'rescue');box('Pad_safety_edge',[.15,.018,22.5],[px+s*12,y+.012,sz*23.25],'rescue');}
+    box('Pad_guide_line',[.12,.022,5.5],[px-6,y+.013,sz*12.75],'amber');
+    const strokes={0:'abcdef',1:'bc',2:'abged',3:'abgcd',4:'fgbc'},parts={a:[0,1.85,1],b:[.85,.92,0],c:[.85,-.92,0],d:[0,-1.85,1],e:[-.85,-.92,0],f:[-.85,.92,0],g:[0,0,1]};
+    [0,pad].forEach((n,i)=>{const cx=px+3+sz*(i?-1.2:1.2);for(const p of strokes[n]){const [u,v,h]=parts[p];box('Pad_number_stencil',h?[1.7,.016,.32]:[.32,.016,1.7],[cx-sz*u,y+.011,sz*(15+v)],'navy');}});
+    cyl('Pad_beacon_post',.09,1.2,[px+11,y+.6,sz*13]);cyl('Pad_status_beacon',.16,.22,[px+11,y+1.31,sz*13],'screen');
   }
   for(const dz of [-10,10])box('Handling_lane',[67,.018,.12],[x,y+.012,dz],'amber');
   for(const dx of [-27,0,27]){box('Gantry_column',[.4,6.4,.4],[x+dx,y+3.2,-51],'metal');box('Overhead_handling_beam',[.5,.6,102],[x+dx,y+6.55,0],'metal');}
