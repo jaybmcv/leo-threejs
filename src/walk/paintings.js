@@ -7,6 +7,10 @@ import {bandOf} from './collision.js';
 // An entry with `off` stands that far out from the wall, its frame boxed back to it, to hang clear of wall fittings.
 // The image loads only once a walker comes within NEAR metres; until then the canvas shows plain.
 export const PAINTINGS=[
+ // Orange Haze #1, by M.V. Orange Haze: the back of the Crown lounge's lift housing (fin-crown.js), the dark navy face
+ // (z -2.175) that faces the lounge's port side, across its full 4.2 m and from the floor (120.3)
+ // to the housing's top (123.4).
+ {name:'Orange_Haze_1',file:'orange-haze-1.jpg',size:[1600,1195],wall:[-247,121.86,-2.175],facing:[0,0,-1],fit:[3.92,2.78],floor:120.3},
  // Orange Haze #2, by M.V. Orange Haze: the forward wall of the Deck 17 starboard garden commons, between the
  // galleries' rails (z 12) and the stair landing's (z 33), the floor (24.3) and the roof rib (34.92).
  {name:'Orange_Haze_2',file:'orange-haze-2.jpg',size:[1600,1195],wall:[154.44,29.8,22.5],facing:[-1,0,0],fit:[18,9.4],floor:24.3},
