@@ -97,6 +97,9 @@ for(const lift of LIFTS)for(const s of lift.stops){stopCount++;const d=s.door||l
 const spots=solidSpots(findRestSpots(ship.inside),col);let usable=0;const unusable=new Map();
 for(const s of spots){if(reached(s.point.x,s.height-.2,s.point.z,1.6,1.3,.25))usable++;else{const k=`${s.kind} near ${Math.round(s.point.x)},${Math.round(s.height)},${Math.round(s.point.z)}`;unusable.set(k,(unusable.get(k)||0)+1);}}
 const restRatio=usable/spots.length;if(restRatio<.995)problems.push(`seats and beds: ${usable}/${spots.length} usable`);
+// The Deck 20 crew recovery lounge's seven sleeping pods: a bed in each, with somewhere to stand in front of it.
+{const pods=spots.filter(s=>s.kind==='lie'&&s.point.x>-88&&s.point.x<-64&&s.point.z>20&&s.point.z<25&&Math.abs(s.height-36.88)<.1);
+ if(pods.length!==7||pods.some(s=>!reached(s.point.x,s.height-.2,s.point.z,1.6,1.3,.25)))problems.push(`recovery lounge pods: ${pods.length}/7 beds to lie down on`);}
 // Space: a reached spot with nothing overhead is outside the ship.
 let open=0;const openAt=[];for(let i=0;i<X.length;i+=13){ray.origin.set(X[i],Y[i]+1,Z[i]);ray.direction.set(0,1,0);if(!col.raycast(ray,200)){open++;openAt.push([X[i],Y[i],Z[i]].map(v=>+v.toFixed(1)));}}
 if(open)problems.push(`${open} sampled positions open to space`);
