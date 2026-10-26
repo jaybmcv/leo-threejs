@@ -72,22 +72,24 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font:400 10px/1.4 var(--mono);letter-spacing:.06em;color:var(--dim);margin-bottom:14px}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .touch .row{display:flex;gap:8px}
-/* Chat aboard (chat.js): the newest lines in the corner, the field and its history when open, bubbles over heads */
+/* Chat aboard (chat.js): the newest lines stay up in the corner (six; four on touch screens) unless hidden, the field
+   and its history when open, bubbles over heads */
 #chat{display:flex;flex-direction:column;align-items:flex-start;gap:8px;width:min(380px,calc(100vw - 32px));pointer-events:none}#chat[hidden]{display:none}
 #chat-lines{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;width:100%;max-height:min(38vh,320px);overflow-y:auto;overscroll-behavior:contain}
 #chat-lines li{align-self:flex-start;max-width:100%;padding:6px 10px;border-radius:10px;background:rgba(5,5,7,.66);font:400 13px/1.35 var(--sans);color:var(--text);overflow-wrap:anywhere}
 #chat-lines li b{font-weight:600;margin-right:7px}#chat-lines li.me b{color:var(--orange)}
 #chat-lines li.verified b::after{content:"";display:inline-block;width:6px;height:6px;margin-left:5px;border-radius:50%;background:var(--teal);vertical-align:1px}
 #chat-lines li.note{font:400 11px/1.4 var(--mono);letter-spacing:.04em;color:var(--dim)}
-#chat:not(.open) #chat-lines li.old{display:none}
+#chat:not(.open) #chat-lines li:not(:nth-last-child(-n+6)){display:none}#chat.quiet:not(.open) #chat-lines{display:none}
 #chat.open{pointer-events:auto}#chat.open #chat-lines{background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:8px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 #chat.open #chat-lines:empty{display:none}#chat.open #chat-lines li{background:none;padding:3px 4px}
-#chat-form{display:none;gap:8px;width:100%}#chat.open #chat-form{display:flex}#chat.open #chat-open{display:none}
+#chat-form{display:none;gap:8px;width:100%}#chat.open #chat-form{display:flex}.chat-buttons{display:flex;gap:6px}#chat.open .chat-buttons{display:none}
 #chat-input{flex:1;min-width:0;font:400 14px/1.2 var(--sans);color:var(--text);background:var(--card);border:1px solid var(--hairline);border-radius:10px;padding:10px 12px}
 #chat-input:focus{outline:2px solid var(--orange);outline-offset:1px}#chat-input:disabled{opacity:.7}
 #chat-send{background:var(--orange);border:1px solid var(--orange);color:#fff;border-radius:10px;padding:10px 14px;font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase}
 #chat-open{pointer-events:auto;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:9px 12px;font:400 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-#chat-open:hover{border-color:var(--orange)}#chat-open kbd{display:grid;place-items:center;min-width:20px;height:20px;border-radius:5px;background:rgba(255,255,255,.1);font:500 10px/1 var(--mono)}
+#chat-open:hover,#chat-hide:hover{border-color:var(--orange)}#chat-unread{min-width:18px;padding:3px 5px;border-radius:999px;background:var(--orange);color:#fff;font:600 10px/1 var(--mono);letter-spacing:0;text-align:center}#chat-unread[hidden]{display:none}
+#chat-hide{pointer-events:auto;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:9px 12px;font:400 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}#chat-open kbd{display:grid;place-items:center;min-width:20px;height:20px;border-radius:5px;background:rgba(255,255,255,.1);font:500 10px/1 var(--mono)}
 .remote-say{position:absolute;left:0;top:0;max-width:240px;padding:7px 11px;border-radius:12px;background:rgba(244,240,232,.94);color:#111;font:400 12px/1.35 var(--sans);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .remote-say[hidden]{display:none}
 /* Leo live: the aboard count, the name sheet and the names over others' heads */
@@ -136,7 +138,7 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 @media (max-width:1180px){#log .long{display:none}#changes-here span{display:none}#changes-here{padding:10px 11px}.tools button{padding:10px 11px}}
 @media (min-width:561px) and (max-width:1400px){.top{top:58px;right:204px}.pill{min-width:0}#where{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 @media (max-width:560px){#aboard{padding:9px 11px}#changes-here{padding:9px 11px}#changes-here span{display:none}#log .long{display:none}}
-@media (pointer:coarse){#joystick{display:block}.help{display:none}.corner{bottom:174px}#chat-open kbd{display:none}.touch{display:flex}.tools .respawn{display:none}#minimap-button{width:124px;height:124px}}
+@media (pointer:coarse){#joystick{display:block}.help{display:none}.corner{bottom:174px}#chat-open kbd{display:none}#chat:not(.open) #chat-lines li:not(:nth-last-child(-n+4)){display:none}.touch{display:flex}.tools .respawn{display:none}#minimap-button{width:124px;height:124px}}
 @media (max-width:560px){#minimap-button{top:58px;width:112px;height:112px}.tools button{padding:9px 11px}.top{top:58px;right:140px}.pill{max-width:100%;min-width:0}#where{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 </style>
 </head>
@@ -146,7 +148,7 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 <div id="names" aria-hidden="true"></div>
 <div class="tools"><button id="go" type="button">Go to</button><button id="log" type="button" aria-label="Ship log: every change to Leo, before and after (L)"><span class="long">Ship </span>log</button><button id="view" type="button" aria-label="Switch first or third person">View</button><button id="sound" type="button" aria-pressed="false" aria-label="Ship sound">Sound</button><button id="resolution" type="button" aria-label="Render resolution: lower runs smoother on slower devices">Res High</button><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button></div>
 <button id="minimap-button" type="button" aria-label="Open the ship map" hidden><canvas id="minimap"></canvas><span id="minimap-deck"></span></button>
-<div class="corner"><div id="chat" hidden><ol id="chat-lines" aria-live="polite" aria-label="Chat aboard"></ol><form id="chat-form" autocomplete="off"><input id="chat-input" enterkeyhint="send" aria-label="Chat message"><button id="chat-send" type="submit">Send</button></form><button id="chat-open" type="button" aria-label="Chat with everyone aboard (T)"><kbd>T</kbd>Chat</button></div>
+<div class="corner"><div id="chat" hidden><ol id="chat-lines" aria-live="polite" aria-label="Chat aboard"></ol><form id="chat-form" autocomplete="off"><input id="chat-input" enterkeyhint="send" aria-label="Chat message"><button id="chat-send" type="submit">Send</button></form><div class="chat-buttons"><button id="chat-open" type="button" aria-label="Chat with everyone aboard (T)"><kbd>T</kbd>Chat<span id="chat-unread" hidden></span></button><button id="chat-hide" type="button" aria-pressed="false">Hide</button></div></div>
 <div class="help"><b>WASD</b> move · <b>Shift</b> run · <b>Space</b> jump, twice in the air · <b>C</b> crouch, slide · <b>X</b> prone · <b>B</b> emotes · <b>Drag</b> look · <b>E</b> sit, lie, lifts, hamster ball · <b>M</b> go to · <b>N</b> map · <b>L</b> ship log · <b>V</b> view<span id="help-ping" hidden> · <b>P</b> ping · <b>T</b> chat</span> · <b>R</b> respawn</div></div>
 <div id="prompt" hidden><span class="key">E</span><span class="label"></span></div>
 <div class="touch"><button id="use" type="button" hidden></button><div class="row"><button id="emote-button" type="button">Emote</button><button id="crouch" type="button">Crouch</button><button id="ping" type="button" hidden aria-label="Ping where you are for others aboard">Ping</button><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button></div><button id="jump" type="button" aria-label="Jump">Jump</button></div>
