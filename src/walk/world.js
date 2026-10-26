@@ -5,6 +5,7 @@ import {Colliders,solid,meshTriangles} from './collision.js';
 import {LIFTS} from './lifts.js';
 import {cutOut} from '../cut-out.js';
 import {openCommonsHall} from './commons-hall.js';
+import {openArrivalAtrium} from './arrival-atrium.js';
 export {cutOut};
 
 // Leo's whole walkable interior, built into `ship` (createShip): every deck's fitted rooms and corridors, the ten
@@ -110,6 +111,8 @@ export function prepareExteriorForWalking(ship){
  cutOut(ship.root,box(0,stops[0].y,stops.at(-1).y+car.height+.3),o=>/^Crown_lift_(side|back|jamb|threshold)$/.test(o.name));
  // Deck 17's commons open into one hall (commons-hall.js).
  openCommonsHall(ship);
+ // The Deck 2 arrival hall becomes a garden atrium, open to the Deck 3 garden above (arrival-atrium.js).
+ openArrivalAtrium(ship);
  return dropped;
 }
 export function buildColliders(ship,{extra=[],filter=solid,into=new Colliders()}={}){
