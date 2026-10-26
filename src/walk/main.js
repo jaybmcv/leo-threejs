@@ -36,6 +36,7 @@ import {connectLive,savedName} from './net/live.js';
 import {identify,currentPass,bestPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
 import {createLounge} from './lounge.js';
+import {glossLoungeFloor} from './lounge-floor.js';
 import {createRecoveryMood} from './recovery.js';
 import {Marks} from './marks.js';
 import {createChat} from './chat.js';
@@ -190,6 +191,8 @@ async function buildShip(){
  rest=spotIndex(solidSpots(findRestSpots(ship.inside),colliders));
  // The Hydro-Nip Lounge's doors and hammocks (lounge.js) leave the ship for meshes of their own before the merge below.
  lounge=createLounge(ship,colliders,{hemi,fill,scene});
+ // Its floor, galleries and the promenade in front: glossy acrylic with neon swirls (lounge-floor.js).
+ glossLoungeFloor(ship);
  // The crew recovery lounge's pod side dims the lights (recovery.js).
  recovery=createRecoveryMood(ship,{hemi,fill,scene});
  // The crown lounge's selfie booth (selfie.js): solid, and drawn with its deck band like the signs below.
