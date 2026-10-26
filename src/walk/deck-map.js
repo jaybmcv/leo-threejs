@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {GRID,eachTriangle} from './partitions.js';
 import {LIFTS} from './lifts.js';
+import {openingPlan} from './arrival-atrium.js';
 
 // The ship map: each deck as a 0.5 m plan, worked out at build time from the partition grid (the floors) and the
 // interior's walls, then saved as one image, a deck to a band (scripts/walk-plan.mjs). Pixel values are classes, which
@@ -19,6 +20,12 @@ export function planMap(ship,decks,rails){
  decks.forEach((d,n)=>{const data=out[n].data;
   for(let j=0;j<NZ;j++)for(let i=0;i<NX;i++){const k=j*NX+i;if(!d.closed[k])continue;const m=Math.floor(j/ratio)*nx+Math.floor(i/ratio);
    const raised=d.height[k]>d.y+.3;if(data[m]<MAP_CLASS.floor||raised&&data[m]===MAP_CLASS.floor)data[m]=raised?MAP_CLASS.raised:MAP_CLASS.floor;}});
+ // The arrival atrium's opening in the Deck 3 garden is cut after the deck plans are taken (arrival-atrium.js): open
+ // but for the cat tree's top platform and bridge, ringed by its balustrade.
+ {const o=openingPlan(cell/2),n=out.findIndex(e=>e.number===o.deck);if(n>=0){const data=out[n].data,[xa,xb,za,zb]=o.bounds;
+  for(let z=za;z<=zb+cell;z+=cell)for(let x=xa;x<=xb+cell;x+=cell){const k=at(x,z),cx=x0+(Math.floor((x-x0)/cell)+.5)*cell,cz=z0+(Math.floor((z-z0)/cell)+.5)*cell;
+   if(k>=0&&o.open(cx,cz))data[k]=o.footing(cx,cz)?MAP_CLASS.floor:MAP_CLASS.empty;}
+  for(const [x,z] of o.rail){const k=at(x,z);if(k>=0)data[k]=MAP_CLASS.rail;}}}
  // Walls: the plan line of every steep triangle that spans a wall's height at a deck's walking level.
  const line=(data,a,b)=>{const len=Math.hypot(b.x-a.x,b.z-a.z),steps=Math.max(1,Math.ceil(len/(cell*.5)));
   for(let s=0;s<=steps;s++){const t=s/steps,k=at(a.x+(b.x-a.x)*t,a.z+(b.z-a.z)*t);if(k>=0)data[k]=MAP_CLASS.wall;}};
