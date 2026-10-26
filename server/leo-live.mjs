@@ -11,6 +11,7 @@
 //   LEO_PASS_ISS=...                  the issuer a pass must name (default https://creamery.marscatsvoyage.com)
 //   LEO_LIVE_GIVEAWAY=...             Mudwater Arena's giveaway settings, read again when changed (arena.mjs)
 //   LEO_LIVE_CHAT=verified            who may chat aboard: verified (Discord-verified visitors; everyone reads), all or off
+//   LEO_LIVE_CHAT_LOG=...             where the last 100 chat lines are kept (default ../leo-live-chat.json, beside the checkout)
 //
 // Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
 // server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
@@ -153,15 +154,20 @@ function selfie(v){
 }
 
 // Chat aboard (walk/chat.js): a line said by one visitor reaches everyone aboard, the sender included, so every page
-// shows the same lines in the same order. The last CHAT_KEEP lines of the past CHAT_KEEP_MS are kept in memory only and
-// handed to each newcomer in their welcome. Lines are plain text with no links at all (a link in a crowd that holds
-// wallets is how scams start), at most a few every few seconds, and written to the log so they can be looked into.
+// shows the same lines in the same order. The last CHAT_KEEP lines, however old, are handed to each newcomer in their
+// welcome, so what was said before they came aboard is still there; they are kept in a file beside this checkout (like
+// the scores and hearts), so a restart keeps them too. Lines are plain text with no links at all (a link in a crowd that
+// holds wallets is how scams start), at most a few every few seconds, and written to the log so they can be looked into.
 // Unless LEO_LIVE_CHAT says otherwise, only Discord-verified visitors may speak, so every line has an account behind it;
 // everyone aboard reads.
 const CHAT=['all','verified','off'].includes(process.env.LEO_LIVE_CHAT)?process.env.LEO_LIVE_CHAT:'verified';
-const CHAT_KEEP=30,CHAT_KEEP_MS=15*60*1000;
+const CHAT_KEEP=100,CHAT_FILE=process.env.LEO_LIVE_CHAT_LOG||new URL('../../leo-live-chat.json',import.meta.url);
 const said=[];
-const chatLog=()=>{const since=Date.now()-CHAT_KEEP_MS;while(said.length&&said[0].at<since)said.shift();return said;};
+try{for(const l of JSON.parse(fs.readFileSync(CHAT_FILE,'utf8'))){const text=cleanChat(l?.text);
+ if(text&&typeof l.id==='string'&&Number.isFinite(l.at))said.push({id:l.id,name:typeof l.name==='string'?cleanName(l.name)||null:null,verified:l.verified===true,text,at:l.at});}
+ said.splice(0,Math.max(0,said.length-CHAT_KEEP));}catch{}
+let savingChat=null;
+function saveChat(){if(savingChat)return;savingChat=setTimeout(()=>{savingChat=null;fs.writeFile(CHAT_FILE,JSON.stringify(said),e=>{if(e)log('chat not saved',e.message);});},1000);}
 function chat(v,msg){
  const no=why=>send(v.ws,{m:'said',ok:false,why});
  if(CHAT==='off')return no('off');
@@ -173,7 +179,7 @@ function chat(v,msg){
  if(text===v.lastSaid&&Date.now()-v.lastSaidAt<10000)return no('again');
  v.lastSaid=text;v.lastSaidAt=Date.now();
  const line={id:v.id,name:v.name,verified:!!v.discord,text,at:Date.now()};
- chatLog().push(line);if(said.length>CHAT_KEEP)said.shift();
+ said.push(line);if(said.length>CHAT_KEEP)said.shift();saveChat();
  log('chat',v.id,v.discord?`discord:${v.discord.discordId}`:'',JSON.stringify(v.name||''),JSON.stringify(text));
  broadcast({m:'chat',...line});
 }
@@ -189,7 +195,7 @@ async function hello(v,msg){
  v.slot=takeSlot();if(!v.slot){v.ws.close(4003,'full');return;}
  // A tester (the page holds a tester invite) wears the captain's hat. Taken on the page's word: it is a hat.
  Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);
- send(v.ws,{m:'welcome',id,aboard:aboard(),you:{name:v.name,verified:!!who},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:chatLog()}});
+ send(v.ws,{m:'welcome',id,aboard:aboard(),you:{name:v.name,verified:!!who},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said}});
  countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`discord:${who.discordId}${who.lapsed?' (remembered)':''}`:msg.pass?'(pass refused)':'');
  if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
 }

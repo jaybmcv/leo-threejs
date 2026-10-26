@@ -3,19 +3,26 @@ import {CHAT_CHARS} from './net/wire.js';
 // Chat aboard: everyone on Leo live (server/leo-live.mjs) shares one channel. T (or the Chat button) opens the field
 // and stops the walk while you type; Enter says the line and closes it, Escape or clicking away closes it and keeps
 // what you typed. Closed, the newest lines stay up in the corner (walk.html shows the last few); open, the last
-// MAX_LINES can be scrolled back through. Lines are plain text, set with textContent. Over a speaker's head, the line
-// shows as a bubble too (remotes.js say).
+// MAX_LINES (the server's history too, however old) can be scrolled back through, each with when it was said. Lines
+// are plain text, set with textContent. Over a speaker's head, the line shows as a bubble too (remotes.js say).
 //
 // Hide puts the corner lines and the bubbles away, remembered in this browser; the Chat button then counts the lines
 // said since, and opening the chat still shows them all.
 //
 // The server decides who may chat (LEO_LIVE_CHAT: all, verified or off); the page only reflects it.
-const MAX_LINES=60,QUIET_KEY='leo-chat-hidden';
+const MAX_LINES=100,QUIET_KEY='leo-chat-hidden';
 const REFUSED={slow:'Slow down a moment: a few lines every few seconds.',link:'Links can’t be posted in chat.',again:'You just said that.',
  'sign-in':'Connect Discord to chat aboard.',off:'Chat is off right now.',offline:'Not connected: chat comes back with Leo live.'};
 
 function remembered(){try{return localStorage.getItem(QUIET_KEY)==='1';}catch{return false;}}
 function remember(quiet){try{if(quiet)localStorage.setItem(QUIET_KEY,'1');else localStorage.removeItem(QUIET_KEY);}catch{}}
+// When a line was said, in the visitor's own time: "14:05" today, "Oct 25" before.
+function when(at){
+ const d=new Date(at),today=d.toDateString()===new Date().toDateString();
+ const t=document.createElement('time');t.dateTime=d.toISOString();t.title=d.toLocaleString();
+ t.textContent=today?d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):d.toLocaleDateString([],{month:'short',day:'numeric'});
+ return t;
+}
 
 // els: {box, lines, form, field, send, opener, hider, unread}. say(text): true when sent; connect(): connect Discord
 // (for chat that asks for it); onOpen/onClose: the walk stops and starts again; onQuiet(quiet): chat hidden or shown.
@@ -36,12 +43,12 @@ export function createChat({box,lines,form,field,send,opener,hider,unread},{say,
   hider.setAttribute('aria-label',quiet?'Show chat lines and bubbles':'Hide chat lines and bubbles');
   unread.textContent=missed>99?'99+':String(missed);unread.hidden=!quiet||!missed;
  }
- function line({id,name,verified:v,text},{note=false}={}){
+ function line({id,name,verified:v,text,at},{note=false}={}){
   const li=document.createElement('li');
   if(note){li.className='note';li.textContent=text;}
   else{
    const who=document.createElement('b');who.textContent=id===me?'You':name||'Voyager '+id.slice(-4);
-   li.classList.toggle('me',id===me);li.classList.toggle('verified',!!v);li.append(who,document.createTextNode(text));
+   li.classList.toggle('me',id===me);li.classList.toggle('verified',!!v);li.append(who,document.createTextNode(text),when(Number.isFinite(at)?at:Date.now()));
   }
   const atEnd=lines.scrollHeight-lines.scrollTop-lines.clientHeight<24;
   lines.append(li);while(lines.children.length>MAX_LINES)lines.firstChild.remove();
