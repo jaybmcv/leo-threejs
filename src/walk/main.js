@@ -33,7 +33,7 @@ import {createAmbience} from './ambience.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.js';
 import {corridorTrim} from './trim.js';
 import {connectLive,savedName} from './net/live.js';
-import {identify,currentPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
+import {identify,currentPass,reportPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
 import {createLounge} from './lounge.js';
 import {createRecoveryMood} from './recovery.js';
@@ -380,7 +380,8 @@ function onFinPlatform(p){return p.x<-170&&Math.abs(p.z)<3&&FIN_STOPS.some(y=>Ma
 // there, so it sits under the mini-map instead.
 installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-width:560px)').matches?null:document.querySelector('.tools'),
  css:'.fb-button:not(.fb-mounted){left:auto;bottom:auto;right:16px;top:180px;z-index:5}.tools .fb-button,.fb-button:not(.fb-mounted){border-color:var(--orange,#f85800);color:#ff8a3d}.tools .fb-button:hover,.fb-button:not(.fb-mounted):hover{background:var(--orange,#f85800);color:#050507}',
- identity:()=>me.pass?{name:me.name||'Voyager',pass:currentPass}:null,
+ // The pass is renewed as the panel opens unless it was got in the last two minutes, so it is fresh by Send.
+ identity:()=>me.pass?{name:me.name||'Voyager',pass:reportPass,renew:()=>currentPass(480)}:null,
  context:()=>({link:spotLink({position:controller.position,yaw:follow.yaw,pitch:follow.pitch,view:follow.mode}),where:describe(controller.position)}),
  onOpen:()=>{input.enabled=false;input.down.clear();},onClose:()=>{input.enabled=true;input.down.clear();}});
 // A tester (this browser holds a tester invite) wears the captain's hat (hat.js).

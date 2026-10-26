@@ -33,8 +33,9 @@ function remember(message){errors.push(`${new Date().toISOString().slice(11,19)}
 // page: 'viewer' or 'walk'. context(): {link, where} for the current view. mount: where the button goes, or a function
 // asked again on resize (null: it floats); look 'link' makes it a text link like its neighbours there. css: the page's
 // own placement rules. onOpen/onClose: pause and resume the page's own keys while the panel is up. identity(): on a page
-// that knows who the tester is, null or {name, pass()}: their Discord name, and a promise of a fresh Leo pass
-// (walk/net/connect.js) that goes with the report, so the capture service can check whose report it is.
+// that knows who the tester is, null or {name, pass(), renew()}: their Discord name, a promise of the Leo pass
+// (walk/net/connect.js) that goes with the report, so the capture service can check whose report it is (an expired
+// one when it could not be renewed: the issue says "pass lapsed"), and renew(), called as the panel opens.
 export function installFeedback({renderer,page,context,mount=null,look='pill',css='',identity=null,onOpen=()=>{},onClose=()=>{}}){
  if(!feedbackEnabled())return null;
  addEventListener('error',e=>remember(e.message||'Script error'));
@@ -65,7 +66,7 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
   report={page,shot,voice:null,images:[],context:{...context(),build:build(),device:device(renderer),fps:fps(),errors:[...errors],time:new Date().toISOString()}};
   ui.text.value='';ui.error.textContent='';ui.saveInstead.hidden=true;showShot();showVoice();showImages();showAttached();
   ui.sheet.hidden=false;onOpen();ui.text.focus();
-  if(sending())humanCheck();
+  if(sending()){humanCheck();identity?.()?.renew?.().catch(()=>{});}
  }
  // Cloudflare Turnstile; the service verifies its token. A token not yet used is kept for the next time the panel
  // opens (the widget renews it before it runs out). Send pressed while the check runs sends as soon as it finishes.

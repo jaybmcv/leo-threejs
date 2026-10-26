@@ -47,11 +47,16 @@ export async function identify(){
  session.set(KEPT,claims?pass:null);
  return {pass:claims?pass:null,claims,name:claims?(claims.discord?.global_name||claims.discord?.username||null):null,error:back.error};
 }
-// A pass for a (re)connection: the one we hold while it has a couple of minutes left, else a new one from Creamery.
-export async function currentPass(){
- const kept=session.get(KEPT);if(kept&&fresh(kept,120))return kept;
- const pass=await silent();session.set(KEPT,pass&&fresh(pass)?pass:null);return pass&&fresh(pass)?pass:null;
+// A pass for a (re)connection: the one we hold while it has a couple of minutes left (margin, in seconds), else a new
+// one from Creamery. When Creamery gives none, the one we held is kept for reportPass.
+export async function currentPass(margin=120){
+ const kept=session.get(KEPT);if(kept&&fresh(kept,margin))return kept;
+ const pass=await silent();if(!pass||!fresh(pass))return null;
+ session.set(KEPT,pass);return pass;
 }
+// A pass to send with a report: a current one, or else the last one this tab held though it has expired (the capture
+// service still names the account from it, marked "pass lapsed"), or null.
+export const reportPass=async()=>await currentPass()||session.get(KEPT);
 // Off to Creamery to connect Discord, and back to this very page (its ?invite= too).
 export const connectUrl=()=>`${CREAMERY}/leo/connect?return=${encodeURIComponent(location.origin+location.pathname+location.search)}`;
 export function connect(){location.assign(connectUrl());}
