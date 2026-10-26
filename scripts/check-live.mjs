@@ -463,6 +463,23 @@ try{
  }finally{capped.kill();}
 }
 
+// ---- the Halloween clown's badge code (walk/halloween.js) ---------------------------------------------------------------
+{
+ const port=PORT+11,file=path.join(os.tmpdir(),`leo-live-halloween-check-${port}.json`);fs.rmSync(file,{force:true});
+ const spooky=await startServer(port,{LEO_LIVE_HALLOWEEN:file});
+ try{
+  const a=new Bot(port,{name:'Finder'}),b=new Bot(port,{name:'Bystander'});await a.welcomed();await b.welcomed();
+  const answers=()=>a.msgs.filter(m=>m.m==='clown').map(m=>m.code);
+  a.send({m:'clown'});await sleep(200);
+  fs.writeFileSync(file,JSON.stringify({code:'BOO-2026'}));a.send({m:'clown'});await sleep(200);
+  fs.writeFileSync(file,JSON.stringify({code:'<b>boo</b>'}));a.send({m:'clown'});await sleep(200);
+  check('clown: no code until the file has one, then that code, and never anything but a plain code',JSON.stringify(answers())===JSON.stringify([null,'BOO-2026',null]),JSON.stringify(answers()));
+  check('clown: the code goes only to the visitor who knocked',!b.msgs.some(m=>m.m==='clown'));
+  check('clown: each knock is logged',(spooky.log.match(/ clown /g)||[]).length===3);
+  a.close();b.close();
+ }finally{spooky.kill();fs.rmSync(file,{force:true});}
+}
+
 // ---- sixty visitors at once -----------------------------------------------------------------------------------------
 {
  const port=PORT+2,busy=await startServer(port),N=60;

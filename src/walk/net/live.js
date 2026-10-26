@@ -13,7 +13,7 @@ export const savedName=()=>storage('leo-live-name')||'';
 export function saveName(name){try{localStorage.setItem('leo-live-name',name);}catch{}}
 
 // on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n), board(b), scored(r), hearts(h), hearted(r), selfie(id,ms),
-// giveaway(g), claimed(r), chat(line), said(r)}; status
+// giveaway(g), claimed(r), clown(r), chat(line), said(r)}; status
 // is 'connecting', 'live',
 // 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). opts.pass(): a Leo pass for this
 // (re)connection or null (connect.js); opts.refused(): the server would not take it; opts.invite: the invite code the
@@ -54,6 +54,8 @@ export function connectLive(url,on,opts={}){
     // Mudwater Arena's giveaway (server/arena.mjs): its state for this visitor, and the answer to a claim.
     case 'giveaway':on.giveaway?.(msg);break;
     case 'claimed':on.claimed?.(msg);break;
+    // Deck 15's Halloween clown (walk/halloween.js): the badge code, or null while there isn't one.
+    case 'clown':on.clown?.(msg);break;
     // Chat aboard (walk/chat.js): a line someone said (this visitor's own included), and a line of ours refused.
     case 'chat':if(typeof msg.text==='string'&&typeof msg.id==='string')on.chat?.(msg);break;
     case 'said':on.said?.(msg);break;
@@ -99,6 +101,8 @@ export function connectLive(url,on,opts={}){
   giveaway(){if(live())ws.send(JSON.stringify({m:'giveaway'}));},
   claim(wallet){if(live())ws.send(JSON.stringify({m:'claim',...(wallet?{wallet}:{})}));},
   arena(e){if(live())ws.send(JSON.stringify({m:'arena',e}));},
+  // Knocked on the Halloween clown's glass: ask for the badge code; false when there is no connection to ask on.
+  clown(){if(!live())return false;ws.send(JSON.stringify({m:'clown'}));return true;},
   // A line of chat for everyone aboard; false when there is no connection to say it on.
   say(text){if(!live())return false;ws.send(JSON.stringify({m:'chat',text}));return true;},
   rename(next){name=next;saveName(next);if(live())ws.send(JSON.stringify({m:'name',name:next}));},
