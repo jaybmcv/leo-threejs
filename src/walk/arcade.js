@@ -23,14 +23,14 @@ const SHAPES={
 };
 // The row, from the stair end: what each plays, its shape, colours and neon.
 const ROW=[
- {game:'invasion',label:'Play Alien Cat Invasion',shape:'upright',body:0x2a1440,side:0x3b1f5c,neon:[ORANGE,GREEN]},
- {game:'pool',label:'Play Paw Pool',shape:'wide',body:0x1b2f3d,side:0x233b4b,neon:[CYAN,ORANGE]},
- {shape:'tall',body:0x6b7078,side:0x575c63,neon:[PINK,PINK]},
- {shape:'low',body:0x777c84,side:0x60656c,neon:[CYAN,CYAN]},
- {shape:'upright',body:0x656a71,side:0x51565d,neon:[AMBER,AMBER]},
- {shape:'wide',body:0x70757d,side:0x5b6067,neon:[GREEN,GREEN]},
- {shape:'tall',body:0x686d74,side:0x53585f,neon:[PURPLE,PURPLE]},
- {shape:'upright',body:0x73787f,side:0x5e636a,neon:[PINK,CYAN]},
+ {game:'invasion',label:'Play Alien Cat Invasion',shape:'upright',body:0x3a1d5a,side:0x4d2a78,neon:[ORANGE,GREEN]},
+ {game:'pool',label:'Play Paw Pool',shape:'wide',body:0x24405a,side:0x2f5370,neon:[CYAN,ORANGE]},
+ {shape:'tall',body:0x9a9fa7,side:0x80858d,neon:[PINK,PINK]},
+ {shape:'low',body:0xa4a9b0,side:0x8a8f96,neon:[CYAN,CYAN]},
+ {shape:'upright',body:0x959aa2,side:0x7b8088,neon:[AMBER,AMBER]},
+ {shape:'wide',body:0x9fa4ab,side:0x858a92,neon:[GREEN,GREEN]},
+ {shape:'tall',body:0x989da5,side:0x7e838b,neon:[PURPLE,PURPLE]},
+ {shape:'upright',body:0xa1a6ad,side:0x878c94,neon:[PINK,CYAN]},
 ];
 const GAP=.95,START=-4.25;
 
@@ -99,7 +99,7 @@ export function createArcade(){
  const solid=new T.Group();solid.name='Deck17_arcade_colliders';solid.position.copy(group.position);solid.rotation.copy(group.rotation);solid.scale.copy(group.scale);
  // Geometry merged per material, coloured per vertex.
  const std=(name,o={})=>new T.MeshStandardMaterial({name,color:0xffffff,vertexColors:true,roughness:.5,metalness:.2,...o});
- const mats={body:std('Arcade_body',{roughness:.45,metalness:.25}),trim:std('Arcade_trim',{roughness:.3,metalness:.7}),
+ const mats={body:std('Arcade_body',{roughness:.55,metalness:.05}),trim:std('Arcade_trim',{roughness:.3,metalness:.7}),
   neon:new T.MeshBasicMaterial({name:'Arcade_neon',vertexColors:true,toneMapped:false})};
  const glowTex=canvas(128,128,(g,w,h)=>{const r=g.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);r.addColorStop(0,'rgba(255,255,255,.9)');r.addColorStop(.35,'rgba(255,255,255,.35)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,w,h);});
  mats.glow=new T.MeshBasicMaterial({name:'Arcade_wall_glow',vertexColors:true,map:glowTex,transparent:true,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
@@ -163,7 +163,8 @@ export function createArcade(){
  panel('sign',()=>canvas(1024,256,(g,w,h)=>{g.clearRect(0,0,w,h);g.textAlign='center';g.textBaseline='middle';g.font=font(800,150);
   g.lineWidth=10;g.shadowColor='#ff4fd8';g.shadowBlur=30;g.strokeStyle='#ff4fd8';g.strokeText('ARCADE',w/2,h/2+6);g.shadowBlur=0;g.fillStyle='#ffe3f8';g.fillText('ARCADE',w/2,h/2+6);}),
   4.2,1.05,[(START+end)/2,3.25,.03]);
- panels.get('sign').material.transparent=true;
+ // (The sign writes no depth, so the glow behind it shows through round the letters.)
+ Object.assign(panels.get('sign').material,{transparent:true,depthWrite:false});
  put('glow',PINK,new T.PlaneGeometry(6,2.2).translate((START+end)/2,3.25,.015));
  for(const [m,gs] of lists){const o=new T.Mesh(mergeGeometries(gs),mats[m]);o.name=mats[m].name;o.castShadow=m==='body'||m==='trim';o.receiveShadow=m!=='glow';gs.forEach(g=>g.dispose());group.add(o);}
  for(const {material,gs} of panels.values()){const o=new T.Mesh(mergeGeometries(gs),material);o.name=material.name;gs.forEach(g=>g.dispose());group.add(o);}
