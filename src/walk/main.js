@@ -230,7 +230,7 @@ async function buildShip(){
  // The gaming lounge's lights, screens, glass floor and starry ceiling (gaming-lounge.js), drawn with its deck band.
  gaming=createGamingLounge(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches});
  // Deck 15 dressed for Halloween until November (halloween.js): its lanes' ceiling diffusers go dead before the merge.
- halloween=createHalloween(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches});
+ halloween=createHalloween(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches,sheet:$('clown-sheet')});
  status('Dressing the crew…');await idle();
  if(cosmoKit)globalThis.LeoCosmo.dressCats(ship.inside,cosmoKit);
  status('Preparing the walk…');await idle();
@@ -328,6 +328,7 @@ const actions={
   else if(t.kind==='packs'){closePanels();const w=$('mudwater-wordmark');if(mudwater.wordmark&&!w.src){w.src=mudwater.wordmark;w.hidden=false;}giveaway.open();$('mudwater-sheet').hidden=false;input.enabled=false;}
   else if(t.kind==='ball')enterBall();
   else if(t.kind==='ball-out')leaveBall();
+  else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
  },
  escape(){closePanels();},
  // (Nothing below until the walk is ready.)
@@ -452,7 +453,7 @@ if(LIVE_URL){
   // A group photo: someone pressed the selfie camera, and this page takes the photo at the same moment as theirs.
   selfie:(id,ms)=>booth?.start(ms),
   // Mudwater Arena's giveaway card (mudwater-giveaway.js): its state, and a claim's answer.
-  giveaway:g=>giveaway.status(g),claimed:r=>giveaway.claimed(r),
+  giveaway:g=>giveaway.status(g),claimed:r=>giveaway.claimed(r),clown:r=>halloween?.got(r.code),
  },{pass:()=>me.pass?bestPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
@@ -610,7 +611,7 @@ function target(){
  const b=booth.near(p)||comics.near(p);if(b)return b;
  const g=changeLog.near(p);if(g)return g;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
- const q=poolTable?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p);if(q&&!(inBall&&q.kind==='treadmill'))return q;
+ const q=poolTable?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p);if(q&&!(inBall&&q.kind==='treadmill'))return q;
  // In the hamster ball: no seats, beds or treadmills; with nothing else to use, E climbs out.
  if(inBall)return {kind:'ball-out',label:'Get out of the ball'};
  const parked=ball.mesh.position;if(Math.abs(p.y-parked.y)<1.2&&Math.hypot(p.x-parked.x,p.z-parked.z)<BALL.radius+1)return {kind:'ball',label:'Get in the ball'};
@@ -706,7 +707,7 @@ function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;if
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','help-sheet'])$(id).hidden=true;chat.close();input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','clown-sheet','help-sheet'])$(id).hidden=true;chat.close();input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.

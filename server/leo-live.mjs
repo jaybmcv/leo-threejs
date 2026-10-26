@@ -12,6 +12,8 @@
 //   LEO_LIVE_GIVEAWAY=...             Mudwater Arena's giveaway settings, read again when changed (arena.mjs)
 //   LEO_LIVE_CHAT=verified            who may chat aboard: verified (Discord-verified visitors; everyone reads), all or off
 //   LEO_LIVE_CHAT_LOG=...             where the last 100 chat lines are kept (default ../leo-live-chat.json, beside the checkout)
+//   LEO_LIVE_HALLOWEEN=...            the Halloween clown's badge code as {"code":"..."} (default ../leo-live-halloween.json, beside
+//                                     the checkout), read at each ask: with no file the clown has no code yet
 //
 // Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
 // server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
@@ -43,7 +45,7 @@ const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
 // name, scores and hearts count, but a giveaway claim wants a fresh one (arena.mjs).
 const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',lapsed:REMEMBER_S,
  key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
-const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6],chat:[.5,5]};
+const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6],chat:[.5,5],clown:[.2,3]};
 
 const visitors=new Set();
 const slots=new Map();let nextSlot=1;
@@ -168,6 +170,14 @@ try{for(const l of JSON.parse(fs.readFileSync(CHAT_FILE,'utf8'))){const text=cle
  said.splice(0,Math.max(0,said.length-CHAT_KEEP));}catch{}
 let savingChat=null;
 function saveChat(){if(savingChat)return;savingChat=setTimeout(()=>{savingChat=null;fs.writeFile(CHAT_FILE,JSON.stringify(said),e=>{if(e)log('chat not saved',e.message);});},1000);}
+// The Halloween clown on Deck 15 gives the badge code kept in a file on this server, so it is never in the public code.
+// The file is read at each ask, so the code can be set or changed without a restart. Each find is logged.
+const HALLOWEEN_FILE=process.env.LEO_LIVE_HALLOWEEN||new URL('../../leo-live-halloween.json',import.meta.url);
+function clown(v){
+ let code=null;try{const c=JSON.parse(fs.readFileSync(HALLOWEEN_FILE,'utf8')).code;if(typeof c==='string'&&/^[\w-]{3,64}$/.test(c))code=c;}catch{}
+ log('clown',v.id,v.discord?`discord:${v.discord.discordId}`:'',JSON.stringify(v.name||''),code?'code given':'no code yet');
+ send(v.ws,{m:'clown',code});
+}
 function chat(v,msg){
  const no=why=>send(v.ws,{m:'said',ok:false,why});
  if(CHAT==='off')return no('off');
@@ -237,6 +247,8 @@ function onMessage(v,data,binary){
   case 'arena':if(allowed(v,'arena'))arena.event(v,msg.e);break;
   // A line of chat, for everyone aboard.
   case 'chat':chat(v,msg);break;
+  // A knock on the Halloween clown's glass (walk/halloween.js): its badge code, if there is one yet.
+  case 'clown':if(allowed(v,'clown'))clown(v);break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;

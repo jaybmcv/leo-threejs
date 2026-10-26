@@ -9,7 +9,9 @@ import {floorY} from '../transit.js';
 // black. The lanes' ceiling diffusers are dead, but for a power surge now and then. Fluorescent tubes hang down on their
 // cables, some steady, some stuttering, some dark but for a flash every few seconds, and red emergency beacons pulse on
 // the walls. Glowing alien goo is splashed over the floors and walls with claw gouges, and "FEEL THE FEAR?" is daubed in
-// it along the lanes. With the Sound button on, a low suspense drone and a heartbeat play while you're on the deck.
+// it along the lanes. Ceiling panels have come down and lean on the walls, cables hang from the holes they left, and
+// broken bits lie about. With the Sound button on, a low suspense drone and a heartbeat play while you're on the deck.
+// A clown hides in three cabins' showers and gives the Halloween badge's code (see CLOWN_CABINS below).
 // It is temporary: it shows until END and after that nothing here is built, so the deck is exactly as usual.
 // ?halloween=0 turns it off for a visit and ?halloween=1 shows it after END. Move END to extend it; to remove it for
 // good, delete this file and its lines in main.js. For visitors who ask for reduced motion nothing flashes or swings.
@@ -29,6 +31,56 @@ const MOOD={hemi:.05,fill:.02,env:.04,sky:0x6d8494,ground:0x2a1012,fog:0x040506,
 // The hanging tubes' kinds: two stuttering and two flashing sets keep neighbours out of step.
 const KINDS=[['steady',.25],['stutter',.14],['stutter',.14],['flash',.14],['flash',.11],['dead',.22]];
 const CABLE=.25,TUBE=1.1;
+
+// The clown: a tall cat in a clown suit, standing in the shower of three cabins behind the ensuite's glass screen, so
+// the lane never shows it: step into the cabin and turn round. E at the glass knocks. It turns its head to you, its eyes
+// flare, and it gives the code for the Leo Halloween 2026 badge, claimed at CLAIM_URL. Leo live hands the code out
+// (server/leo-live.mjs reads it from a file on the server), so it is never in this public code.
+export const CLOWN_CABINS=['N10-163','N10-334','N10-456'],CLAIM_URL='https://oswiki.xyz/claim';
+// In a cabin's own frame (model.js: the door toward -z): the shower tray's centre and top, and the glass screen's line.
+const TRAY=[1.62,.08,-2.48],GLASS=-1.32;
+const CODE=/^[\w-]{3,64}$/;
+
+const paint=(geo,hex)=>{const c=new T.Color(hex),n=geo.attributes.position.count,a=new Float32Array(n*3);for(let i=0;i<n;i++)c.toArray(a,i*3);
+ geo.setAttribute('color',new T.BufferAttribute(a,3));return geo;};
+const stripeTexture=()=>canvasTexture(256,256,(g,w,h)=>{const r=seeded(31);for(let i=0;i<8;i++){g.fillStyle=i%2?'#5a2a86':'#9be04a';g.fillRect(i*w/8,0,w/8,h);}
+ g.fillStyle='rgba(20,10,10,.35)';for(let i=0;i<60;i++)g.fillRect(r()*w,r()*h,2+r()*3,4+r()*8);},[2,1]);
+// The face, painted round the front of the head (u 0.25 faces +z): black diamonds round the eyes, a blue tear, a huge red
+// grin full of teeth, whiskers.
+const faceTexture=()=>canvasTexture(1024,512,(g,w,h)=>{
+ const cx=256;g.fillStyle='#ece6d6';g.fillRect(0,0,w,h);
+ g.fillStyle='#111';for(const s of [-1,1]){const ex=cx+s*62,ey=205;g.beginPath();g.moveTo(ex,ey-58);g.lineTo(ex+30,ey);g.lineTo(ex,ey+58);g.lineTo(ex-30,ey);g.closePath();g.fill();}
+ g.fillStyle='#2a5bd7';g.beginPath();g.ellipse(cx+62,282,7,13,0,0,Math.PI*2);g.fill();
+ g.fillStyle='#b5121b';g.beginPath();g.moveTo(cx-120,280);g.quadraticCurveTo(cx,410,cx+120,280);g.quadraticCurveTo(cx,340,cx-120,280);g.fill();
+ g.fillStyle='#f4f1e4';for(let i=-4;i<=4;i++){const x=cx+i*20,y=312-Math.abs(i)*4;g.beginPath();g.moveTo(x-8,y);g.lineTo(x+8,y);g.lineTo(x,y+18);g.fill();}
+ g.strokeStyle='#333';g.lineWidth=3;for(const s of [-1,1])for(const dy of [-10,4,18]){g.beginPath();g.moveTo(cx+s*80,290+dy*.4);g.lineTo(cx+s*150,280+dy);g.stroke();}
+});
+// A point on the head, `az` round from the front and `el` up from the middle, at radius r.
+const onHead=(az,el,r)=>new T.Vector3(Math.sin(az)*Math.cos(el)*r,Math.sin(el)*r,Math.cos(az)*Math.cos(el)*r);
+const along=(geo,dir,at)=>geo.applyQuaternion(new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),dir.clone().normalize())).translate(at.x,at.y,at.z);
+// One clown's parts, facing +z, standing on the origin: the suit (striped), the rest of the body, the face, the rest of
+// the head and the eyes. The head's parts are round its own centre, HEAD up.
+const HEAD=1.66;
+function clownParts(){
+ const body=[],suit=[],head=[];
+ for(const s of [-1,1]){
+  body.push(paint(new T.BoxGeometry(.13,.09,.34).translate(s*.1,.045,.07),0xc41a1a));
+  suit.push(new T.CylinderGeometry(.07,.08,.72,8).translate(s*.1,.45,0));
+  suit.push(new T.CylinderGeometry(.055,.06,.6,8).rotateZ(s*.12).translate(s*.28,1.12,.03));
+  body.push(paint(new T.SphereGeometry(.075,10,8).translate(s*.31,.81,.05),0xf2f0ea));
+  // Ears, dark outside, and orange tufts of hair round the sides.
+  head.push(paint(along(new T.ConeGeometry(.065,.15,8).translate(0,.075,0),onHead(s*.6,.9,1),onHead(s*.6,.9,.16)),0x3a1f4f));
+  for(const [az,el,r] of [[1.4,.35,.085],[1.6,.05,.09],[1.75,-.25,.075],[1.25,.6,.07]])head.push(paint(new T.SphereGeometry(r,8,6).translate(...onHead(s*az,el,.19).toArray()),0xf0661c));
+ }
+ suit.push(new T.CylinderGeometry(.2,.27,.62,12).translate(0,1.12,0));
+ for(const y of [1,1.15,1.3])body.push(paint(new T.SphereGeometry(.035,8,6).translate(0,y,.22-(y-1)*.1),0xc41a1a));
+ body.push(paint(new T.TorusGeometry(.16,.055,8,18).rotateX(Math.PI/2).translate(0,1.45,0),0xf2f0ea));
+ // A red nose and a little tilted hat with a bobble.
+ head.push(paint(new T.SphereGeometry(.045,10,8).translate(0,0,.19),0xd0141c));
+ head.push(paint(new T.ConeGeometry(.07,.2,10).rotateZ(-.35).translate(.05,.27,0),0xc41a1a),paint(new T.SphereGeometry(.035,8,6).translate(.1,.36,0),0xf2f0ea));
+ const eyes=mergeGeometries([-1,1].map(s=>new T.SphereGeometry(.022,8,6).translate(...onHead(s*.38,.31,.18).toArray())));
+ return {suit:mergeGeometries(suit),body:mergeGeometries(body),face:new T.SphereGeometry(.19,32,16),head:mergeGeometries(head),eyes};
+}
 
 const glowTexture=()=>canvasTexture(128,128,(g,w,h)=>{const r=g.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);
  r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(.25,'rgba(255,255,255,.45)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,w,h);});
@@ -71,7 +123,8 @@ function walls(mid,s){
 const onWall=(mid,s,x,y,w,h)=>{const g=new T.PlaneGeometry(w,h);if(s>0)g.rotateY(Math.PI);return g.translate(x,y,mid+s*(FACE-.035));};
 const onFloor=(x,z,size,turn)=>new T.PlaneGeometry(size,size).rotateX(-Math.PI/2).rotateY(turn).translate(x,.016,z);
 
-export function createHalloween(ship,light,{still=false}={}){
+// `sheet`: the clown's card (walk.html #clown-sheet).
+export function createHalloween(ship,light,{still=false,sheet=null}={}){
  if(typeof document==='undefined'||!light||!halloweenOn())return null;
  const r=seeded(1015),group=new T.Group();group.name='Deck15_halloween';group.position.y=FLOOR;
  // The lanes' ceiling diffusers go dead (a copy of their material, on this deck only), before the walk merges them.
@@ -130,13 +183,13 @@ export function createHalloween(ship,light,{still=false}={}){
  group.add(beaconMesh,washMesh);
 
  // Goo on the floors, goo and claw gouges on the walls, and the signs.
- const floor=[],splash=[],claws=[],signs=[];
+ const floor=[],splash=[],claws=[],signs=[],taken=new Set();
  for(const mid of LANES){
   // Floor splashes stay clear of the walls, so none runs under a wall into a cabin.
   for(let x=-120;x<=120;x+=6)if(r()<.42){const size=.8+r()*1.6;floor.push(onFloor(x+(r()-.5)*4,mid+(r()-.5)*2*Math.max(0,FACE-.1-size/2),size,r()*6));}
   [-1,1].forEach(s=>{let lastSign=-200+(s>0?20:0);
    for(const x of walls(mid,s)){
-    if(x-lastSign>40&&r()<.5){lastSign=x;signs.push(onWall(mid,s,x,1.75,2.4,.9));continue;}
+    if(x-lastSign>40&&r()<.5){lastSign=x;signs.push(onWall(mid,s,x,1.75,2.4,.9));taken.add(`${mid}:${s}:${x}`);continue;}
     const roll=r();
     if(roll<.1)claws.push(onWall(mid,s,x+(r()-.5)*1.4,1.4+r()*.6,1.1,1.1));
     else if(roll<.18)splash.push(onWall(mid,s,x+(r()-.5)*1.2,.4+r()*1.6,.7+r()*.8,.7+r()*.8));
@@ -145,8 +198,54 @@ export function createHalloween(ship,light,{still=false}={}){
  const decal=(list,map,name)=>{if(!list.length)return;const m=new T.Mesh(mergeGeometries(list),new T.MeshBasicMaterial({name,map,transparent:true,depthWrite:false,toneMapped:false,color:0xb8b8b8,polygonOffset:true,polygonOffsetFactor:-4}));m.name=name;group.add(m);};
  decal(floor,splatTexture(77),'Halloween_floor_goo');decal(splash,splatTexture(91),'Halloween_wall_goo');decal(claws,clawTexture(),'Halloween_claw_marks');decal(signs,signTexture(),'Halloween_signs');
 
+ // Wreckage, with its own dice so the marks above stay put: a ceiling panel fallen against the wall between two doors,
+ // broken bits round it, and the hole it left over the lane's edge with cables hanging out. Never under a sign.
+ const w=seeded(666),fallen=[],holes=[],wires=[],bits=[];
+ for(const mid of LANES)[-1,1].forEach(s=>{for(const x of walls(mid,s)){if(taken.has(`${mid}:${s}:${x}`)||w()>.11)continue;
+  const tilt=.25+w()*.25,len=1.1+w()*.3;
+  fallen.push(new T.BoxGeometry(.62,len,.03).rotateX(s*tilt).translate(x+(w()-.5)*.8,len/2*Math.cos(tilt),mid+s*(FACE-.06-len/2*Math.sin(tilt))));
+  for(let i=0;i<5;i++)bits.push(new T.BoxGeometry(.05+w()*.14,.02+w()*.05,.05+w()*.12).rotateY(w()*3).translate(x+(w()-.5)*1.6,.02,mid+s*(FACE-.3-w()*.9)));
+  const hx=x+(w()-.5)*2,hz=mid+s*(.9+w()*.4);holes.push(new T.PlaneGeometry(.62,1.2).rotateX(Math.PI/2).translate(hx,CEILING-.006,hz));
+  for(let i=0;i<3;i++){const l=.3+w()*.9;wires.push(new T.CylinderGeometry(.012,.012,l,4).translate(0,-l/2,0).rotateX((w()-.5)*.5).rotateZ((w()-.5)*.5).translate(hx+(w()-.5)*.4,CEILING,hz+(w()-.5)*.8));}
+ }});
+ const panelMat=new T.MeshStandardMaterial({name:'Walk_halloween_fallen',color:0xb9bdbd,roughness:.6,metalness:.2});
+ const holeMat=new T.MeshBasicMaterial({name:'Walk_halloween_hole',color:0x020203,polygonOffset:true,polygonOffsetFactor:-2});
+ for(const [list,mat,name] of [[[...fallen,...bits],panelMat,'Halloween_fallen_panels'],[holes,holeMat,'Halloween_ceiling_holes'],[wires,darkMat,'Halloween_hanging_cables']]){
+  if(!list.length)continue;const m=new T.Mesh(mergeGeometries(list.map(g=>g.index?g.toNonIndexed():g)),mat);m.name=name;group.add(m);}
+
+ // The clowns, each in its cabin's shower, lit by a sickly green light that stutters. Unlit materials scaled by that
+ // light, so they read in the dark cabin whatever the deck's lights are doing.
+ const parts=clownParts(),clownMats={
+  suit:new T.MeshBasicMaterial({name:'Walk_clown_suit',map:stripeTexture()}),body:new T.MeshBasicMaterial({name:'Walk_clown',vertexColors:true}),
+  face:new T.MeshBasicMaterial({name:'Walk_clown_face',map:faceTexture()}),eyes:new T.MeshBasicMaterial({name:'Walk_clown_eyes',color:0xff2010,toneMapped:false})};
+ const clowns=CLOWN_CABINS.map(id=>CABINS.find(c=>c.id===id)).filter(Boolean).map(c=>{
+  const k=Math.sign(c.z-Math.round(c.z/26)*26)||1,g=new T.Group(),head=new T.Group();g.name='Halloween_clown';
+  g.position.set(c.x+k*TRAY[0],TRAY[1],c.z+k*TRAY[2]);g.rotation.y=k>0?0:Math.PI;
+  g.add(new T.Mesh(parts.suit,clownMats.suit),new T.Mesh(parts.body,clownMats.body));
+  head.position.y=HEAD;head.add(new T.Mesh(parts.face,clownMats.face),new T.Mesh(parts.head,clownMats.body),new T.Mesh(parts.eyes,clownMats.eyes));
+  g.add(head);group.add(g);
+  return {cabin:c,k,g,head,yaw:0,tilt:0,flare:0,phase:r()*6};
+ });
+ const lampPts=new Float32Array(clowns.length*3);clowns.forEach((c,i)=>lampPts.set([c.g.position.x,2.3,c.g.position.z],i*3));
+ const showerLight=new T.Points(new T.BufferGeometry().setAttribute('position',new T.BufferAttribute(lampPts,3)),
+  new T.PointsMaterial({name:'Walk_clown_light',map:glow,size:1.4,color:0x9dff7a,transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}));
+ showerLight.name='Halloween_clown_light';showerLight.frustumCulled=false;group.add(showerLight);
+ const flicker={level:.6,next:1};
+ // Where a visitor stands, in a clown's cabin frame; null outside that cabin.
+ const inCabin=(c,p)=>{const dx=(p.x-c.cabin.x)*c.k,dz=(p.z-c.cabin.z)*c.k;return p.y>FLOOR-.5&&p.y<FLOOR+3.4&&Math.abs(dx)<2&&dz>-3&&dz<3.1?{dx,dz}:null;};
+
+ // The clown's card: the code from Leo live, or word that it isn't out yet.
+ const text=sheet?.querySelector('.clown-text'),codeEl=sheet?.querySelector('.clown-code'),claim=sheet?.querySelector('.clown-claim');
+ let waiting=0;
+ function show(code){
+  if(!sheet)return;clearTimeout(waiting);const ok=typeof code==='string'&&CODE.test(code);
+  text.textContent=code===undefined?'It presses its face to the glass…':ok?'It breathes on the glass and writes a code in the fog. Claim your Leo Halloween 2026 badge with it:':
+   'It only grins and taps the glass. The badge code isn\'t out yet: come back before 1 November.';
+  codeEl.textContent=ok?code:'';codeEl.hidden=!ok;claim.hidden=!ok;claim.href=CLAIM_URL;
+ }
+
  // The deck's sound: a low drone, two close high tones beating against each other, and now and then a heartbeat.
- let ctx=null,master=null,beats=0;
+ let ctx=null,master=null,lastSound=false;
  function sound(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);
   const low=ctx.createBiquadFilter();low.type='lowpass';low.frequency.value=170;low.Q.value=3;low.connect(master);
@@ -159,6 +258,12 @@ export function createHalloween(ship,light,{still=false}={}){
  }
  function thump(at,g){const o=ctx.createOscillator();o.frequency.setValueAtTime(70,at);o.frequency.exponentialRampToValueAtTime(38,at+.18);
   const v=ctx.createGain();v.gain.setValueAtTime(0,at);v.gain.linearRampToValueAtTime(g,at+.015);v.gain.exponentialRampToValueAtTime(.0001,at+.3);o.connect(v).connect(master);o.start(at);o.stop(at+.32);}
+ // The clown's laugh: five falling "ha"s, a buzzing voice through a band like a mouth.
+ function laugh(){
+  const now=ctx.currentTime+.05,band=ctx.createBiquadFilter();band.type='bandpass';band.frequency.value=900;band.Q.value=3;band.connect(master);
+  for(let i=0;i<5;i++){const at=now+i*.21,o=ctx.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(330-i*22,at);o.frequency.linearRampToValueAtTime(300-i*24,at+.15);
+   const v=ctx.createGain();v.gain.setValueAtTime(0,at);v.gain.linearRampToValueAtTime(.5,at+.02);v.gain.exponentialRampToValueAtTime(.001,at+.16);o.connect(v).connect(band);o.start(at);o.stop(at+.18);}
+ }
 
  // The shared lights' usual values, to ease from and back to.
  const {hemi,fill,scene}=light,fog=scene.fog,base={hemi:hemi.intensity,fill:fill.intensity,env:scene.environmentIntensity,
@@ -196,6 +301,29 @@ export function createHalloween(ship,light,{still=false}={}){
    if(soundOn&&shown&&!ctx)sound();
    if(ctx){master.gain.setTargetAtTime(soundOn?shown*.45:0,ctx.currentTime,.4);
     if(soundOn&&shown>.5&&(heartAt-=dt)<=0){heartAt=14+r()*12;const now=ctx.currentTime;for(let i=0;i<6;i++){thump(now+i*1.05,.5);thump(now+i*1.05+.28,.32);}}}
+   lastSound=soundOn;
+   // The clowns' light stutters. Each head follows whoever is in its cabin, or sways; after a knock the eyes flare.
+   if(!still&&(flicker.next-=dt)<=0){const off=flicker.level>.3;flicker.level=off?.08:.45+r()*.25;flicker.next=off?.18+r()*.4:.5+r()*3;}
+   const lit=still?.55:flicker.level;let flare=0;
+   for(const m of [clownMats.suit,clownMats.body,clownMats.face])m.color.setScalar(lit);showerLight.material.opacity=lit*.9;
+   for(const c of clowns){
+    const at=inCabin(c,eye),yaw=at?Math.max(-1.1,Math.min(1.1,Math.atan2(at.dx-TRAY[0],at.dz-TRAY[2]))):still?0:Math.sin(t*.3+c.phase)*.25;
+    c.yaw+=(yaw-c.yaw)*(1-Math.exp(-(c.flare>0?12:2)*dt));c.flare=Math.max(0,c.flare-dt*.5);flare=Math.max(flare,c.flare);
+    c.head.rotation.set((still?0:.1*Math.sin(t*.5+c.phase))+c.flare*.2,c.yaw,0);
+   }
+   clownMats.eyes.color.setHex(0xff2010).multiplyScalar(.6+flare*3);
   },
+  // E at the glass of a clown's shower knocks.
+  near(p){
+   for(const [i,c] of clowns.entries()){const at=inCabin(c,p);if(at&&at.dz>GLASS&&Math.hypot(at.dx-1.45,at.dz-GLASS-.45)<1.3)return {kind:'clown',clown:i,label:'Knock on the glass'};}
+   return null;
+  },
+  // The knock: the clown flares and laughs, and its card opens to wait for the code `ask` sends for (false when there's
+  // no Leo live to ask); with no answer in 4 s the card says the code isn't out yet.
+  knock(i,ask){
+   if(clowns[i])clowns[i].flare=1;if(ctx&&lastSound)laugh();
+   if(!sheet)return;sheet.hidden=false;show(undefined);if(ask?.())waiting=setTimeout(()=>show(null),4000);else show(null);
+  },
+  got(code){if(sheet&&!sheet.hidden)show(code);},
  };
 }
