@@ -8,6 +8,7 @@ const RECOVERY_LIGHT=new T.MeshStandardMaterial({name:'Command warm lounge light
 // The recovery lounge's pod side: dark shells in champagne frames, warm strip light, a coffee bar and dim cove light.
 const POD_M={shell:new T.MeshStandardMaterial({name:'Recovery_pod_shell',color:0x22262b,roughness:.42,metalness:.25}),frame:new T.MeshStandardMaterial({name:'Recovery_pod_frame',color:0xc8aa72,roughness:.3,metalness:.7}),
  linen:new T.MeshStandardMaterial({name:'Recovery_pod_linen',color:0xf0ebe1,roughness:.9}),throw:new T.MeshStandardMaterial({name:'Recovery_pod_throw',color:0x8a6f55,roughness:.95}),curtain:new T.MeshStandardMaterial({name:'Recovery_pod_curtain',color:0x6e665c,roughness:.95}),
+ lining:new T.MeshStandardMaterial({name:'Recovery_pod_lining',color:0xd8c4a2,emissive:0x7a5530,emissiveIntensity:.45,roughness:.85}),
  glow:new T.MeshStandardMaterial({name:'Recovery_pod_glow',color:0xffd8a8,emissive:0xffb868,emissiveIntensity:1.1}),screen:new T.MeshStandardMaterial({name:'Recovery_pod_screen',color:0x0d2430,emissive:0x4fc3e8,emissiveIntensity:.8}),
  carpet:new T.MeshStandardMaterial({name:'Recovery_pod_carpet',color:0x2b2630,roughness:.95}),stone:new T.MeshStandardMaterial({name:'Recovery_coffee_stone',color:0x1b1d21,roughness:.3,metalness:.1}),
  dim:new T.MeshStandardMaterial({name:'Recovery_pod_dim_light',color:0x4a3828,emissive:0xffa860,emissiveIntensity:.28})};
@@ -58,6 +59,9 @@ export function createCommandAft(area){
    box('Sleep_pod_roof',[L,.08,D],[0,H-.04,0],POD_M.shell,g);
    for(const x of [-1,1])box('Sleep_pod_end',[.08,H,D],[x*(L/2-.04),H/2,0],POD_M.shell,g);
    box('Sleep_pod_back',[L,H,.06],[0,H/2,D/2-.03],POD_M.shell,g);
+   // A warm lining inside, so the pod reads lit from within.
+   box('Sleep_pod_lining',[L-.2,H-.5,.02],[0,(H+.42)/2,D/2-.07],POD_M.lining,g);box('Sleep_pod_lining',[L-.2,.02,D-.2],[0,H-.09,0],POD_M.lining,g);
+   for(const x of [-1,1])box('Sleep_pod_lining',[.02,H-.5,D-.2],[x*(L/2-.09),(H+.42)/2,0],POD_M.lining,g);
    box('Mattress',[2.1,.16,1.05],[0,.5,.08],POD_M.linen,g);
    box('Pillow',[.38,.12,.72],[-.82,.64,.08],POD_M.linen,g);
    box('Pod_throw',[.8,.04,1.07],[.6,.6,.08],POD_M.throw,g);
