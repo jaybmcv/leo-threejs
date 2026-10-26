@@ -126,6 +126,58 @@ export function finishGarden({fittings,walls,parts,wallParts,material}){
  add('Commons_art_canvas',mergeGeometries(art.linen),linen,[0,0,0]);
  art.ink.forEach((gs,i)=>{if(gs.length)add('Commons_art_print',mergeGeometries(gs),inks[i],[0,0,0]);});
  [art.frame,art.linen,...art.ink].forEach(gs=>gs.forEach(g=>g.dispose()));
+ bendRails(parts,finish,dark);
  for(const p of [...parts,...wallParts,finish,ceiling])polishInterior(p,'Garden commons');
  return {revision:2,plantedBeds:2,benchSeats:8,cafePendants:3,framedPrints:10,scope:'Shared commons polish; softened joinery, tailored seating and satin hardware'};
+}
+
+// Railings read as bent tube rather than cut-off sticks. The gallery handrails meet at their corners in a smooth
+// elbow and a free end curves down into a post on the floor. The stair handrails, which hung over the flights with
+// nothing holding them, bend down at both ends into newels on the floor and stand on a post every fifth tread.
+const BEND=.25,TREADS_PER_POST=5;
+function bendRails(parts,parent,postMat){
+ const V=(...a)=>new T.Vector3(...a),down=V(0,-1,0);
+ const line=(a,b,r)=>new T.TubeGeometry(new T.LineCurve3(a,b),1,r,12,false);
+ const elbow=(a,c,b,r)=>new T.TubeGeometry(new T.QuadraticBezierCurve3(a,c,b),10,r,12,false);
+ const put=(name,gs,mat)=>{const o=new T.Mesh(mergeGeometries(gs),mat);o.name=name;o.castShadow=o.receiveShadow=true;parent.add(o);gs.forEach(g=>g.dispose());return o;};
+ const ends=o=>{const p=o.geometry.parameters?.path?.points;return p&&p.length===2?[p[0].clone().applyMatrix4(o.matrix),p[1].clone().applyMatrix4(o.matrix)]:null;};
+ // Gallery handrails (model.js rail()): level tubes 1.1 m over the floor, r .045.
+ const rails=parts.filter(o=>o.isMesh&&o.name==='Handrail').map(o=>({o,p:ends(o)})).filter(r=>r.p);
+ const bends=[];
+ for(const r of rails){
+  const cut=[0,0];
+  r.p.forEach((e,k)=>{
+   const inward=r.p[1-k].clone().sub(e).normalize();
+   let partner=null;for(const s of rails)if(s!==r)s.p.forEach((f,m)=>{if(f.distanceTo(e)<.02)partner={s,m};});
+   if(partner){
+    const other=partner.s.p[1-partner.m].clone().sub(e).normalize();
+    // Straight on: the two tubes are one rail. Turning: one elbow, drawn by the first of the pair.
+    if(Math.abs(other.dot(inward))>.99)return;
+    cut[k]=BEND;if(rails.indexOf(partner.s)>rails.indexOf(r))bends.push(elbow(e.clone().addScaledVector(inward,BEND),e.clone(),e.clone().addScaledVector(other,BEND),.045));
+    return;
+   }
+   cut[k]=BEND;const foot=e.clone().addScaledVector(down,1.1);
+   bends.push(elbow(e.clone().addScaledVector(inward,BEND),e.clone(),e.clone().addScaledVector(down,BEND),.045),line(e.clone().addScaledVector(down,BEND),foot,.045));
+  });
+  const a=r.p[0].clone().lerp(r.p[1],cut[0]/r.p[0].distanceTo(r.p[1])),b=r.p[1].clone().lerp(r.p[0],cut[1]/r.p[0].distanceTo(r.p[1]));
+  r.o.geometry.dispose();r.o.geometry=line(a.applyMatrix4(r.o.matrix.clone().invert()),b.applyMatrix4(r.o.matrix.clone().invert()),.045);
+ }
+ if(bends.length)put('Handrail_bend',bends,rails[0].o.material);
+ // Stair handrails (model.js): one sloped tube per side of each flight, 1.1 m over its foot and its head.
+ const treads=parts.filter(o=>o.isMesh&&o.name==='Gallery_stair'&&o.geometry.parameters?.width);
+ for(const o of parts.filter(o=>o.isMesh&&o.name==='Stair_handrail')){
+  const p=ends(o);if(!p)continue;
+  const [a,b]=p[0].y<p[1].y?p:[p[1],p[0]],dir=b.clone().sub(a).normalize(),r=o.geometry.parameters.radius||.05;
+  const gs=[line(a.clone().addScaledVector(down,1.1),a.clone().addScaledVector(down,BEND),r),elbow(a.clone().addScaledVector(down,BEND),a.clone(),a.clone().addScaledVector(dir,BEND),r),
+   line(a.clone().addScaledVector(dir,BEND),b.clone().addScaledVector(dir,-BEND),r),elbow(b.clone().addScaledVector(dir,-BEND),b.clone(),b.clone().addScaledVector(down,BEND),r),
+   line(b.clone().addScaledVector(down,BEND),b.clone().addScaledVector(down,1.1),r)];
+  o.geometry.dispose();o.geometry=mergeGeometries(gs.map(g=>g.applyMatrix4(o.matrix.clone().invert())));gs.forEach(g=>g.dispose());
+  // The flight's treads under this rail, foot to head; a post stands on every fifth one.
+  const mine=treads.filter(t=>{const w=t.geometry.parameters.width/2,top=t.position.y+t.geometry.parameters.height/2;return Math.abs(Math.abs(t.position.x-a.x)-w)<.02&&top>a.y-1.15&&top<b.y-1.05;})
+   .sort((s,t)=>Math.abs(s.position.z-a.z)-Math.abs(t.position.z-a.z));
+  for(let i=TREADS_PER_POST-1;i<mine.length-2;i+=TREADS_PER_POST){
+   const t=mine[i],top=t.position.y+t.geometry.parameters.height/2,y=a.y+(b.y-a.y)*(t.position.z-a.z)/(b.z-a.z);
+   const m=new T.Mesh(new T.CylinderGeometry(.022,.022,y-top,12),postMat);m.name='Handrail_post';m.position.set(a.x,(y+top)/2,t.position.z);m.castShadow=m.receiveShadow=true;parent.add(m);
+  }
+ }
 }

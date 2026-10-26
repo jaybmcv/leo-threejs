@@ -56,7 +56,7 @@ export function openRails(root){
   if(o.name==='Baluster'){const p=o.position;for(const g of gaps)if(Math.abs(p.z-g.z)<.3&&Math.abs(p.y-(g.y+.55))<.2&&p.x>g.x0-.1&&p.x<g.x1+.1)gone.push(o);}
   if(o.name==='Handrail'){o.geometry.computeBoundingBox();const b=o.geometry.boundingBox.clone().applyMatrix4(o.matrix);
    for(const g of gaps){if(!hit(g,b)||Math.abs(b.max.y-.045-(g.y+1.1))>.1)continue;gone.push(o);
-    for(const [xa,xb] of [[b.min.x+.045,g.x0],[g.x1,b.max.x-.045]])if(xb-xa>.1){
+    for(const [xa,xb] of [[b.min.x,g.x0],[g.x1,b.max.x]])if(xb-xa>.1){
      const piece=new T.Mesh(new T.TubeGeometry(new T.LineCurve3(new T.Vector3(xa,g.y+1.1,g.z),new T.Vector3(xb,g.y+1.1,g.z)),8,.045,6,false),o.material);
      piece.name='Handrail';piece.castShadow=piece.receiveShadow=true;added.push([o.parent,piece]);
      const post=new T.Mesh(new T.BoxGeometry(.06,1.1,.06),o.material);post.name='Baluster';post.position.set(xa===g.x1?xa:xb,g.y+.55,g.z);added.push([o.parent,post]);}}}
