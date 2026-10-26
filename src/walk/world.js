@@ -4,6 +4,7 @@ import {shapeAft} from '../concept-shape.js';
 import {Colliders,solid,meshTriangles} from './collision.js';
 import {LIFTS} from './lifts.js';
 import {cutOut} from '../cut-out.js';
+import {openCommonsHall} from './commons-hall.js';
 export {cutOut};
 
 // Leo's whole walkable interior, built into `ship` (createShip): every deck's fitted rooms and corridors, the ten
@@ -107,6 +108,8 @@ export function prepareExteriorForWalking(ship){
  const {car,stops}=LIFTS.find(l=>l.id==='crown'),box=(m,y0,y1)=>new T.Box3(new T.Vector3(car.x-car.width/2-m,y0,car.z-car.depth/2-m),new T.Vector3(car.x+car.width/2+m,y1,car.z+car.depth/2+m));
  cutOut(ship.exterior,box(.1,stops[0].y+.3,stops.at(-1).y-1));
  cutOut(ship.root,box(0,stops[0].y,stops.at(-1).y+car.height+.3),o=>/^Crown_lift_(side|back|jamb|threshold)$/.test(o.name));
+ // Deck 17's commons open into one hall (commons-hall.js).
+ openCommonsHall(ship);
  return dropped;
 }
 export function buildColliders(ship,{extra=[],filter=solid,into=new Colliders()}={}){

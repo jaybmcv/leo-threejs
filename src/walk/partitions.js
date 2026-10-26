@@ -2,6 +2,7 @@ import * as T from 'three';
 import {DECKS} from '../model.js';
 import {floorY} from '../transit.js';
 import {LIFTS} from './lifts.js';
+import {HALL,inHall} from './commons-hall.js';
 
 // Between Leo's fitted rooms and corridors each deck plate is bare: unfitted volume the cutaway views leave open. On
 // foot that reads as an empty hangar with black gaps along the hull. Walk mode encloses the fitted spaces instead:
@@ -68,6 +69,9 @@ export function rasterDecks(ship){
     const j0=Math.max(0,Math.floor((Math.min(a.z,b.z,c.z)-WINDOW_REACH-Z0)/CELL)),j1=Math.min(NZ-1,Math.floor((Math.max(a.z,b.z,c.z)+WINDOW_REACH-Z0)/CELL));
     for(let j=j0;j<=j1;j++)d.window.fill(1,j*NX+i0,j*NX+i1+1);}});
  });
+ // Deck 17's commons hall (commons-hall.js): the bare plate between the commons is floor.
+ {const d=decks.find(d=>d.number===HALL.deck);for(let j=0;j<NZ;j++)for(let i=0;i<NX;i++){const k=j*NX+i;
+  if(d.plate[k]&&!d.designed[k]&&inHall(X0+(i+.5)*CELL,Z0+(j+.5)*CELL)){d.designed[k]=1;d.height[k]=d.y;}}}
  for(const d of decks)d.closed=close(d.designed,PARTITION.close);
  return decks;
 }
