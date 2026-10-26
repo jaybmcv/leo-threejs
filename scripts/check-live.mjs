@@ -131,6 +131,10 @@ try{
  b.pose([-115,-27.7,64.9]);a.pose([-120.7,-27.14,64.6],{yaw:Math.PI/2,rest:'sit'});await sleep(300);
  const sat=b.poses.get(a.id);
  check('rest: a visitor sitting in a lifeboat seat is seen sitting',sat?.rest==='sit'&&Math.abs(sat.pos[0]+120.7)<.01&&Math.abs(sat.pos[2]-64.6)<.01,JSON.stringify(sat&&{pos:sat.pos,rest:sat.rest}));
+ // Lying in a sleeping pod in the Deck 20 crew recovery lounge reaches a visitor standing in front of the pods.
+ b.pose([-85,36.3,21]);a.pose([-84.5,37.01,24.17],{yaw:-Math.PI/2,rest:'lie'});await sleep(300);
+ const podded=b.poses.get(a.id);
+ check('rest: a visitor lying in a recovery lounge sleeping pod is seen lying there',podded?.rest==='lie'&&Math.abs(podded.pos[0]+84.5)<.01&&Math.abs(podded.pos[1]-37.01)<.01&&Math.abs(podded.pos[2]-24.17)<.01,JSON.stringify(podded&&{pos:podded.pos,rest:podded.rest}));
  // Paws Off on a Deck 16 exercise studio treadmill (src/walk/paws-off): a runner on the belt is seen there, playing; after
  // a fall, on their back behind it, still playing; stepped off, no longer playing.
  b.pose([5,20.3,-44]);a.pose([7,20.56,-47.79],{yaw:Math.PI,pl:true});await sleep(300);

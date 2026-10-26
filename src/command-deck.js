@@ -5,11 +5,17 @@ import {finishShipArea,detailKit,FINISH_M} from './area-finish.js';
 import {fixtureText} from './circulation-finish.js';
 const COMMAND_LIGHT=new T.MeshStandardMaterial({name:'Command cool instrument light',color:0xb8e3ed,emissive:0x7eb7cb,emissiveIntensity:.45,roughness:.5});
 const RECOVERY_LIGHT=new T.MeshStandardMaterial({name:'Command warm lounge light',color:0xffe2b7,emissive:0xe9bb7c,emissiveIntensity:.35,roughness:.6});
+// The recovery lounge's pod side: dark shells in champagne frames, warm strip light, a coffee bar and dim cove light.
+const POD_M={shell:new T.MeshStandardMaterial({name:'Recovery_pod_shell',color:0x22262b,roughness:.42,metalness:.25}),frame:new T.MeshStandardMaterial({name:'Recovery_pod_frame',color:0xc8aa72,roughness:.3,metalness:.7}),
+ linen:new T.MeshStandardMaterial({name:'Recovery_pod_linen',color:0xf0ebe1,roughness:.9}),throw:new T.MeshStandardMaterial({name:'Recovery_pod_throw',color:0x8a6f55,roughness:.95}),curtain:new T.MeshStandardMaterial({name:'Recovery_pod_curtain',color:0x6e665c,roughness:.95}),
+ glow:new T.MeshStandardMaterial({name:'Recovery_pod_glow',color:0xffd8a8,emissive:0xffb868,emissiveIntensity:1.1}),screen:new T.MeshStandardMaterial({name:'Recovery_pod_screen',color:0x0d2430,emissive:0x4fc3e8,emissiveIntensity:.8}),
+ carpet:new T.MeshStandardMaterial({name:'Recovery_pod_carpet',color:0x2b2630,roughness:.95}),stone:new T.MeshStandardMaterial({name:'Recovery_coffee_stone',color:0x1b1d21,roughness:.3,metalness:.1}),
+ dim:new T.MeshStandardMaterial({name:'Recovery_pod_dim_light',color:0x4a3828,emissive:0xffa860,emissiveIntensity:.28})};
 // The x spans (in a room's own frame) of the aft rooms' entry walls, where they face the aft spine.
 const AFT_GLASS=[[-26,-2],[2,26]];
 export const COMMAND_AFT_AREAS=[
  {id:'d20-planning-aft',name:'Mission planning studio',kind:'briefing',side:-1,description:'A collaborative planning table, navigation review stations and a mission wall for detailed work away from the bridge.'},
- {id:'d20-recovery-aft',name:'Crew recovery lounge',kind:'crew',side:1,description:'Quiet upholstered seating, a refreshment counter and small conversation tables for command crew between shifts.'},
+ {id:'d20-recovery-aft',name:'Crew recovery lounge',kind:'crew',side:1,description:'Sleeping pods and a coffee bar in a dim forward half, with quiet upholstered seating, a refreshment counter and small conversation tables for command crew between shifts.'},
 ].map(a=>({...a,deck:20,commandAft:true,special:true,category:'Command & operations',center:[-90,36.3,a.side*15],width:52,depth:20,height:3.5}));
 export function createCommandAft(area){
  const root=new T.Group();root.name='Area_'+area.id;root.userData={...area};const {fit,shell,box,text}=serviceKit(root,area.center),s=area.side;
@@ -20,7 +26,8 @@ export function createCommandAft(area){
  for(const sign of [-1,1])glazedWall(glassWall(box,shell),'Entry_wall',[24,3.4,.16],[sign*14,1.7,-s*9.92],AFT_GLASS[sign<0?0:1]);
  box('Entry_header',[4,.8,.16],[0,3,-s*9.92],M.blue,shell);
  text(area.name.toUpperCase(),[0,2.6,s*9.78],s<0?0:Math.PI,.28);
- for(const x of [-20,-10,0,10,20])for(const z of [-6,6])box('Ceiling_light',[5,.04,.18],[x,3.27,z],M.light,shell);
+ // The recovery lounge's pod side has dim cove light instead of the ceiling panels.
+ for(const x of s>0?[-20,-10,0]:[-20,-10,0,10,20])for(const z of [-6,6])box('Ceiling_light',[5,.04,.18],[x,3.27,z],M.light,shell);
  function chair(x,z,r=0){const g=new T.Group();g.position.set(x,0,z);g.rotation.y=r;fit.add(g);box('Seat_cushion',[.8,.18,.8],[0,.48,0],M.blue,g);box('Seat_back',[.8,.65,.13],[0,.86,.34],M.blue,g);box('Seat_pedestal',[.2,.39,.2],[0,.195,0],M.metal,g);}
  function table(x,z,len){box('Meeting_table',[len,.1,1.7],[x,.8,z],M.wood);for(const dx of [-len*.3,len*.3])box('Table_support',[.15,.75,1.2],[x+dx,.375,z],M.metal);}
  if(s<0){
@@ -28,9 +35,53 @@ export function createCommandAft(area){
   box('Briefing_wall',[15,1.5,.1],[-13,1.8,-9.7],M.dark);
   for(const x of [9,18]){table(x,-5,5);chair(x,-3);box('Raised_display',[2,.6,.08],[x,1.25,-5],M.dark);table(x,5,5);chair(x,7);box('Raised_display',[2,.6,.08],[x,1.25,5],M.dark);}
  }else{
-  for(const x of [-19,-11,10,19]){table(x,0,4);for(const z of [-2,2]){chair(x-1,z,z<0?Math.PI:0);chair(x+1,z,z<0?Math.PI:0);}}
+  for(const x of [-19,-11]){table(x,0,4);for(const z of [-2,2]){chair(x-1,z,z<0?Math.PI:0);chair(x+1,z,z<0?Math.PI:0);}}
   box('Refreshment_counter',[12,.9,1.3],[-13,.45,8.4],M.wood);box('Coffee_machine',[.9,.65,.7],[-15,1.225,8.4],M.metal);
-  for(const x of [8,14,20]){box('Passenger_bench',[4,.45,.85],[x,.225,8],M.wood);box('Seat_cushion',[3.9,.14,.8],[x,.52,8],M.blue);box('Seat_back',[3.9,.65,.16],[x,.91,8.34],M.blue);}
+  podLounge();
+ }
+ // The forward half of the recovery lounge (from tester feedback): seven sleeping pods along the outboard wall, open to
+ // the room on their long side, each with a mattress and pillow to lie down on (the walk's rest.js finds them by name),
+ // a warm strip light, a small screen and a curtain; a coffee bar on the end wall; low lounge chairs; dark carpet and
+ // dim cove light instead of the ceiling panels.
+ function podLounge(){
+  box('Pod_lounge_carpet',[23.8,.012,19.6],[14,.006,0],POD_M.carpet);
+  box('Pod_lounge_cove_light',[22,.05,.05],[14,3.12,9.78],POD_M.dim,shell);
+  const L=2.5,H=1.95,D=1.5,R=.3;
+  // The front frame: a rounded panel with a rounded opening above the bed base.
+  const outer=new T.Shape();outer.moveTo(-L/2+R,0);outer.lineTo(L/2-R,0);outer.quadraticCurveTo(L/2,0,L/2,R);outer.lineTo(L/2,H-R);outer.quadraticCurveTo(L/2,H,L/2-R,H);outer.lineTo(-L/2+R,H);outer.quadraticCurveTo(-L/2,H,-L/2,H-R);outer.lineTo(-L/2,R);outer.quadraticCurveTo(-L/2,0,-L/2+R,0);
+  const w=L-.36,y0=.44,y1=H-.18,r=.24,hole=new T.Path();hole.moveTo(-w/2+r,y0);hole.lineTo(w/2-r,y0);hole.quadraticCurveTo(w/2,y0,w/2,y0+r);hole.lineTo(w/2,y1-r);hole.quadraticCurveTo(w/2,y1,w/2-r,y1);hole.lineTo(-w/2+r,y1);hole.quadraticCurveTo(-w/2,y1,-w/2,y1-r);hole.lineTo(-w/2,y0+r);hole.quadraticCurveTo(-w/2,y0,-w/2+r,y0);
+  outer.holes.push(hole);const frame=new T.ExtrudeGeometry(outer,{depth:.08,bevelEnabled:false,curveSegments:6}).translate(0,0,-D/2-.04);
+  for(let i=0;i<7;i++){
+   const g=new T.Group();g.position.set(5+i*2.8,0,9.84-D/2);fit.add(g);
+   const f=new T.Mesh(frame,POD_M.frame);f.name='Sleep_pod_frame';g.add(f);
+   box('Sleep_pod_base',[L-.1,.42,D-.1],[0,.21,0],POD_M.shell,g);
+   box('Sleep_pod_roof',[L,.08,D],[0,H-.04,0],POD_M.shell,g);
+   for(const x of [-1,1])box('Sleep_pod_end',[.08,H,D],[x*(L/2-.04),H/2,0],POD_M.shell,g);
+   box('Sleep_pod_back',[L,H,.06],[0,H/2,D/2-.03],POD_M.shell,g);
+   box('Mattress',[2.1,.16,1.05],[0,.5,.08],POD_M.linen,g);
+   box('Pillow',[.38,.12,.72],[-.82,.64,.08],POD_M.linen,g);
+   box('Pod_throw',[.8,.04,1.07],[.6,.6,.08],POD_M.throw,g);
+   box('Sleep_pod_light',[L-.4,.03,.05],[0,H-.13,-D/2+.16],POD_M.glow,g);
+   box('Sleep_pod_glow',[L-.4,.03,.03],[0,1.02,D/2-.08],POD_M.glow,g);
+   box('Sleep_pod_screen_housing',[.04,.3,.46],[L/2-.1,1.12,.12],POD_M.shell,g);
+   box('Sleep_pod_screen_display',[.012,.24,.4],[L/2-.126,1.12,.12],POD_M.screen,g);
+   box('Sleep_pod_curtain',[.34,1.28,.1],[L/2-.36,1.1,-D/2+.1],POD_M.curtain,g);
+  }
+  // The coffee bar on the forward end wall, with three stools.
+  box('Coffee_bar_counter',[.85,1,6.4],[25.3,.5,-4.6],POD_M.shell);
+  box('Coffee_bar_top',[.95,.05,6.6],[25.27,1.025,-4.6],POD_M.stone);
+  box('Coffee_bar_backsplash',[.05,1.2,6.4],[25.82,1.75,-4.6],POD_M.stone);
+  box('Coffee_bar_light',[.03,.03,6.2],[24.86,.86,-4.6],POD_M.glow);
+  box('Coffee_bar_shelf',[.3,.04,5],[25.66,2.05,-4.6],POD_M.frame);
+  for(const z of [-6.7,-2.6]){box('Coffee_machine',[.55,.5,.7],[25.4,1.3,z],POD_M.frame);box('Coffee_machine_front',[.03,.3,.5],[25.11,1.32,z],POD_M.shell);}
+  for(let i=0;i<8;i++){const c=new T.Mesh(new T.CylinderGeometry(.045,.035,.1,12),POD_M.linen);c.name='Coffee_cup';c.position.set(25.66,2.12,-6.4+i*.5);fit.add(c);}
+  const sign=text('COFFEE',[25.78,2.45,-4.6],-Math.PI/2,.22);sign.material=POD_M.frame;
+  for(const z of [-6.2,-4.6,-3]){const st=new T.Mesh(new T.CylinderGeometry(.22,.22,.08,20),POD_M.linen);st.name='Seat';st.position.set(24.35,.74,z);fit.add(st);box('Stool_post',[.08,.7,.08],[24.35,.35,z],POD_M.frame);}
+  // Low lounge chairs round two coffee tables.
+  for(const x of [11,18]){
+   const t=new T.Mesh(new T.CylinderGeometry(.5,.5,.06,24),POD_M.stone);t.name='Coffee_table';t.position.set(x,.45,-3);fit.add(t);box('Coffee_table_base',[.14,.42,.14],[x,.21,-3],POD_M.frame);
+   chair(x,-4.2,Math.PI);chair(x,-1.8);
+  }
  }
  // Each room owns its short doorway link. Port additionally owns the shared
  // aft spine, which meets the existing command corridor at x=-52.
