@@ -22,6 +22,20 @@ const glsl=c=>{c=new T.Color(c);return `vec3(${c.r.toFixed(4)},${c.g.toFixed(4)}
 const fur=c=>`{vec3 c=diffuseColor.rgb;float f=smoothstep(.08,.2,c.b-max(c.r,c.g));diffuseColor.rgb=mix(c,${glsl(c)}*clamp(c.b/.63,.35,1.1),f);}`;
 const hoodie=c=>`{vec3 c=diffuseColor.rgb;float shorts=step(.12,c.r-c.b);diffuseColor.rgb=mix(${glsl(c)}*(.75+c.g*2.),c,shorts);}`;
 
+// The kittens' looks, fur and hoodie colours (the first is Cosmo's own); each look's recoloured materials are shared.
+const LOOKS=[[null,null],[0xd8873f,0x7ad6b0],[0x8c8f99,0xf29ac0],[0xeadcc0,0x8a6ad8]];
+const dressed=LOOKS.map(([f,h],i)=>{const body=new Map();return o=>{
+ if(f===null)return o.material;
+ const key=o.material.name;if(!body.has(key))body.set(key,key==='body'?recolour(o.material,'Kitten_fur_'+i,fur(f)):key==='clothes'?recolour(o.material,'Kitten_hoodie_'+i,hoodie(h)):o.material);
+ return body.get(key);};});
+// One of the Cosmo kit's posed kittens (shared meshes) at a third of his size, in one of the LOOKS; also used on the
+// arrival hall's cat tree (arrival-atrium.js).
+export function kittenFigure(kit,pose,look){
+ const g=kit.figure(pose);g.name='Kitten_'+pose;g.scale.setScalar(KITTEN);
+ for(const m of g.children)m.material=dressed[look](m);
+ return g;
+}
+
 export function createKittens(ship,kit){
  const room=ship.root.getObjectByName(ROOM);if(!room||!kit)return null;
  room.updateWorldMatrix(true,false);
@@ -73,15 +87,8 @@ export function createKittens(ship,kit){
   piece(M.pole,at(new T.CylinderGeometry(.004,.004,.14,4).rotateX(Math.PI/2).translate(0,.01,-.14),x,FLOOR+.01,z,ry));
  }
 
- // The kittens: fur and hoodie colours, shared posed meshes.
- const looks=[[null,null],[0xd8873f,0x7ad6b0],[0x8c8f99,0xf29ac0],[0xeadcc0,0x8a6ad8]];
- const dressed=looks.map(([f,h],i)=>{const body=new Map();return o=>{
-  if(f===null)return o.material;
-  const key=o.material.name;if(!body.has(key))body.set(key,key==='body'?recolour(o.material,'Kitten_fur_'+i,fur(f)):key==='clothes'?recolour(o.material,'Kitten_hoodie_'+i,hoodie(h)):o.material);
-  return body.get(key);};});
  function kitten(pose,look,x,z,face,y=FLOOR){
-  const g=kit.figure(pose);g.name='Kitten_'+pose;g.scale.setScalar(KITTEN);g.position.set(x,y,z);g.rotation.y=face;
-  for(const m of g.children)m.material=dressed[look](m);
+  const g=kittenFigure(kit,pose,look);g.position.set(x,y,z);g.rotation.y=face;
   group.add(g);block([.3,.45,.3],[x,y+.22,z]);
   return g;
  }

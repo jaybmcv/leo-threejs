@@ -50,6 +50,7 @@ import {createSelfieBooth} from './selfie.js';
 import {createConcession} from './concession.js';
 import {stripProvisions,createProvisions} from './provisions.js';
 import {createKittens,KITTEN_POSE_NAMES} from './kittens.js';
+import {createAtriumKittens} from './arrival-atrium.js';
 import {stripBlossomBed,createBlossomGarden} from './blossom.js';
 import {createDiningRobots} from './dining-robots.js';
 import {createFinCasing} from './fin-casing.js';
@@ -244,6 +245,8 @@ async function buildShip(){
  if(concession)toBand(concession);
  if(provisions)toBand(provisions.group);
  if(kittens)toBand(kittens.group);
+ // Kittens on the arrival hall's cat tree (arrival-atrium.js), dressing only.
+ {const g=createAtriumKittens(ship,cosmoKit);if(g)toBand(g);}
  if(diningRobots)toBand(diningRobots.group);
  if(blossom)toBand(blossom.group);
  toBand(jaguarGate.group);
