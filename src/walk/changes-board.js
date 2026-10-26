@@ -19,7 +19,7 @@ export const BOARDS=[
  // The crown lift's housing, forward face (x -244.82), between the floor (120.3) and its gold panelling.
  {name:'Crown_lounge',wall:[-244.82,122.3,0],facing:[1,0,0],floor:120.3},
  // The Arrival hall's inboard wall, on its room-side face (z -21.16), between
- // the benches at x -131 and -122, under the 3.3 m ceiling.
+ // a cat cubby (x -130) and a potted plant (x -121.6) of the garden atrium (arrival-atrium.js), under the 3.3 m ceiling.
  {name:'Arrival_hall',wall:[-126.5,-33.75,-21.18],facing:[0,0,-1],floor:-35.7},
 ];
 const SIZE=[4,2.3],PX=[1600,920],REACH=3.6,FAVORITES=5;

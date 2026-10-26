@@ -3,7 +3,7 @@ import * as T from 'three';
 // Every seat and bed aboard, found by name in the built interior (and through the instance transforms of the repeated
 // cabins and lifeboat seating). A seat spot is a point on a seat's top with the way a sitter faces; benches and sofas
 // get a spot every 0.65 m. A bed spot is the mattress top with the head toward the pillow.
-const SEAT=/^(Repeated_)?(Seat|Seat_cushion|Soft_seat|Passenger_bench|Garden_bench_cushion|Low_bench|Reading_bench|Shelter_bench|Airlock_preparation_bench|Bench_cushion|Child_stool|Meditation_cushion|Crown_bar_stool_seat|Crown_curved_banquette_seat|Gaming_curved_couch_seat|Evacuation_seat|Forum_audience_seat|Crew_seat|Captain_command_seat|Chair)$/;
+const SEAT=/^(Repeated_)?(Seat|Seat_cushion|Soft_seat|Passenger_bench|Garden_bench_cushion|Low_bench|Reading_bench|Shelter_bench|Airlock_preparation_bench|Bench_cushion|Child_stool|Meditation_cushion|Crown_bar_stool_seat|Crown_curved_banquette_seat|Gaming_curved_couch_seat|Atrium_curved_seat|Evacuation_seat|Forum_audience_seat|Crew_seat|Captain_command_seat|Chair)$/;
 // Parts that sit under a cushion: used only where no cushion covers them.
 const SEAT_BASE=/^(Seat_base|Garden_bench|Passenger_bench_seat)$/;
 const BACK=/(^|_)(Back|back)$|_back_|Seat_back|Bench_back|banquette_back/;
@@ -45,7 +45,8 @@ export function findRestSpots(root){
   const count=half*2>1.25?Math.max(1,Math.floor((half*2-.15)/SPACING)):1;
   for(let i=0;i<count;i++){const t=count===1?0:(-(count-1)/2+i)*SPACING;spots.push({kind:'sit',point:c.clone().addScaledVector(dir,t),facing,height:c.y,instanced:it.o.isInstancedMesh});}
  };
- // A curved banquette rings its table: spots follow the arc between the front edge and the back, facing the table.
+ // A curved banquette rings its table: spots follow the arc between the front edge and the back, facing the table. A
+ // curved seat round a planter has its back on the inside instead (the arrival hall's, arrival-atrium.js): it faces out.
  const plan=(o,m,O)=>{const p=o.geometry.attributes.position,v=new T.Vector3(),out=[];for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(m);out.push([v.x-O.x,v.z-O.z]);}return out;};
  const arcSpots=(it)=>{
   const O=new T.Vector3().setFromMatrixPosition(it.m),c=it.face.c,mid=Math.atan2(c.z-O.z,c.x-O.x);
@@ -53,10 +54,10 @@ export function findRestSpots(root){
   for(const [x,z] of plan(it.o,it.m,O)){const r=Math.hypot(x,z),a=Math.atan2(z,x)-mid,d=Math.atan2(Math.sin(a),Math.cos(a));rIn=Math.min(rIn,r);rOut=Math.max(rOut,r);a0=Math.min(a0,d);a1=Math.max(a1,d);}
   const back=near(c,'back',1.1);let rBack=rOut;
   if(back)for(const [x,z] of plan(back.o,back.m,O))rBack=Math.min(rBack,Math.hypot(x,z));
-  const r=(rIn+Math.min(rBack,rOut))/2,end=.35/r,span=a1-a0-2*end;if(span<=0)return;
+  const out=rBack<rIn,r=out?(rIn+rOut)/2:(rIn+Math.min(rBack,rOut))/2,end=.35/r,span=a1-a0-2*end;if(span<=0)return;
   const count=Math.max(1,Math.floor(span*r/SPACING)+1),step=count>1?span/(count-1):0;
   for(let i=0;i<count;i++){const a=mid+a0+end+(count>1?i*step:span/2),dir=new T.Vector3(Math.cos(a),0,Math.sin(a));
-   spots.push({kind:'sit',point:O.clone().addScaledVector(dir,r).setY(c.y),facing:dir.negate(),height:c.y});}
+   spots.push({kind:'sit',point:O.clone().addScaledVector(dir,r).setY(c.y),facing:out?dir:dir.negate(),height:c.y});}
  };
  for(const it of seats)(/curved/i.test(it.o.name)&&!it.o.isInstancedMesh?arcSpots:seatSpots)(it);
  // A base counts only where no cushion or seat already covers it.
