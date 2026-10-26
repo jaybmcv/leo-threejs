@@ -5,6 +5,7 @@ import {DECKS,CABINS} from '../model.js';
 import {floorY} from '../transit.js';
 import {wallKit,homeKit,KIT_MATERIALS} from './wall-kit.js';
 import {PAINTINGS,FRAME,hangSize} from './paintings.js';
+import {PARTITION} from './partitions.js';
 
 // Sci-fi trim for the service corridors (service-circulation.js) on foot: a frame every 8 m, two shallow ribs up the
 // walls and a beam across the ceiling, set between the ceiling lights, and a lit cove strip where wall meets ceiling, with
@@ -63,7 +64,35 @@ function lanes(deck){
  return out;
 }
 
-export function corridorTrim(parent){
+// The other corridors on foot get the same lining: the aft lift hall behind the spine on Decks 4-17 (aft.js), walled by
+// partitions (partitions.js) on z = ±4, and the plain connecting spines (special-circulation.js, upper-aft.js,
+// lower-bow.js), taken from their wall meshes. Deck 20's command corridor keeps its own finish and the glazed support
+// spines on Decks 14 and 15 keep their glass. Each is a corridor along x centred on z = 0, its sides at the walls' faces.
+const CONNECTOR=/^(Special_spine_wall|Spine_wall|Lower_bow_link_wall)$/,HALL=[-174,-132],HALL_Z=4,HALL_DECKS=[4,17];
+function otherCorridors(inside,partitions){
+ const lines=new Map(),line=(deck,face)=>{const k=deck+':'+face.toFixed(2);if(!lines.has(k))lines.set(k,{deck,face,runs:{'-1':[],'1':[]}});return lines.get(k);};
+ const deckOf=y=>Math.round((y-floorY(1))/4)+1,connected=new Map();
+ inside?.updateMatrixWorld(true);
+ inside?.traverse(o=>{
+  if(!o.isMesh||!CONNECTOR.test(o.name)||o.parent?.name==='Corridor_walls_and_ceiling')return;
+  const b=new T.Box3().setFromObject(o),deck=deckOf(b.min.y),s=Math.sign(b.min.z+b.max.z);
+  if(deck===20||!s||b.max.z-b.min.z>.3)return;
+  line(deck,s>0?b.min.z:-b.max.z).runs[s].push([b.min.x,b.max.x]);
+  (connected.get(deck)||connected.set(deck,[]).get(deck)).push([b.min.x,b.max.x]);
+ });
+ for(const [deck,x0,x1,z0,z1] of partitions){
+  const zc=(z0+z1)/2,s=Math.sign(zc);if(deck<HALL_DECKS[0]||deck>HALL_DECKS[1]||z1-z0>.3||Math.abs(Math.abs(zc)-HALL_Z)>.01)continue;
+  // The hall stops at the service spine, which has its own lining, and gives way to a connecting spine's walls.
+  const hi=Math.min(HALL[1],serviceRoutes(deck)?.spine.x0??Infinity),a=Math.max(x0,HALL[0]),b=Math.min(x1,hi);if(b-a<.8)continue;
+  line(deck,HALL_Z-PARTITION.thickness/2).runs[s].push(...walls(a,b,connected.get(deck)||[]));
+ }
+ return [...lines.values()].map(({deck,face,runs})=>{
+  const sides=[-1,1].map(s=>[s,runs[s].sort((p,q)=>p[0]-q[0])]),all=sides.flatMap(([,r])=>r),lo=Math.min(...all.map(r=>r[0])),hi=Math.max(...all.map(r=>r[1]));
+  return {deck,corridor:{axis:'x',lo,hi,mid:0,width:2*face,sides,start:lo+SPACING}};
+ }).filter(({corridor:c})=>c.hi>c.lo);
+}
+
+export function corridorTrim(parent,{inside,partitions=[]}={}){
  const draw=(lists,y)=>{for(const [list,material] of lists){
   if(!list.length)continue;
   const o=new T.Mesh(mergeGeometries(list),material);o.name=material.name;o.position.y=y;o.receiveShadow=true;
@@ -87,4 +116,8 @@ export function corridorTrim(parent){
   }
   draw([[frames,frameMaterial],[coves,coveMaterial],[accents,accentMaterial],...kitLists(kit)],plan.y);
  }
+ const byDeck=new Map();
+ for(const {deck,corridor} of otherCorridors(inside,partitions)){const kit=byDeck.get(deck)||byDeck.set(deck,{}).get(deck);
+  wallKit(kit,{...corridor,sides:bare(corridor,floorY(deck)),spacing:SPACING},SERVICE_LEVEL);}
+ for(const [deck,kit] of byDeck)draw(kitLists(kit),floorY(deck));
 }
