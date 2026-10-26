@@ -38,7 +38,7 @@ function label(text,color){
  const s=new T.Sprite(new T.SpriteMaterial({map,transparent:true,opacity:.9,depthWrite:false,toneMapped:false}));s.scale.set(.42,.105,1);return s;
 }
 
-function planet(r,color,{wire=GREEN}={}){
+function planet(r,color,{wire=color}={}){
  const g=new T.Group();
  g.add(new T.Mesh(new T.SphereGeometry(r,20,14),glow(color,.85)));
  g.add(new T.Mesh(new T.SphereGeometry(r*1.08,14,10),glow(wire,.6,{wireframe:true})));
