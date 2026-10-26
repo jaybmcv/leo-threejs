@@ -51,6 +51,7 @@ export function createJaguarGate(){
   nose:new T.MeshStandardMaterial({name:'Jaguar_nose',color:0x5a3330,roughness:.5}),
   ivory:new T.MeshStandardMaterial({name:'Jaguar_teeth',color:0xf3ecd8,roughness:.35}),
   mouth:new T.MeshStandardMaterial({name:'Jaguar_mouth_lining',map:mouthTexture(),roughness:.6,side:T.DoubleSide}),
+  gums:new T.MeshStandardMaterial({name:'Jaguar_gums',color:0x4a1020,roughness:.6}),
   tongue:new T.MeshStandardMaterial({name:'Jaguar_tongue',color:0xb04a68,roughness:.45}),
   eye:new T.MeshStandardMaterial({name:'Jaguar_eye',color:0xd8c23a,emissive:0x6a5a10,emissiveIntensity:.6,roughness:.25}),
   neon:new T.MeshBasicMaterial({name:'Jaguar_neon_glow',color:PURPLE,toneMapped:false}),
@@ -73,7 +74,10 @@ export function createJaguarGate(){
  add(mat.skin,at(new T.SphereGeometry(1,28,16),0,3.12,.55,0,0,0,[1.55,.42,.62]));
  for(const sx of [-1,1]){
   add(mat.cream,at(new T.SphereGeometry(1,20,12),sx*.5,2.98,.95,0,0,0,[.62,.26,.34]));
-  for(let k=0;k<3;k++)add(mat.dark,at(new T.SphereGeometry(.035,6,4),sx*(.32+k*.17),3.0+k*.03,1.26-k*.04));
+  // Rows of small whisker spots on each pad, set on its surface, and three long whiskers fanning out.
+  for(let k=0;k<4;k++)for(let r=0;r<2;r++){const x=sx*(.27+k*.13),y=2.93+r*.09,u=(x-sx*.5)/.62,v=(y-2.98)/.26;
+   add(mat.dark,at(new T.SphereGeometry(.022,6,4),x,y,.95+.34*Math.sqrt(Math.max(0,1-u*u-v*v))));}
+  for(let j=0;j<3;j++)add(mat.ivory,new T.TubeGeometry(new T.LineCurve3(new T.Vector3(sx*.8,2.94+j*.06,1.1),new T.Vector3(sx*1.85,2.82+j*.2,1.3)),2,.012,5,false));
   // Eyes on the cheeks above the corners of the mouth: gold almonds with a slit pupil, rimmed black, under a brow.
   add(mat.dark,at(new T.SphereGeometry(1,20,10),sx*2.75,3.0,.62,0,0,sx*.25,[.46,.25,.12]));
   add(mat.eye,at(new T.SphereGeometry(1,20,10),sx*2.75,3.0,.66,0,0,sx*.25,[.38,.19,.12]));
@@ -104,7 +108,7 @@ export function createJaguarGate(){
  }
  for(let k=-3;k<=3;k++)add(mat.ivory,at(fang(.22,.075),k*.2,mouthTop-.12,.62,Math.PI));
 
- // Inside: the lining on both walls and the roof, molars along the walls top and bottom, and a tongue down the floor.
+ // Inside: the lining on both walls and the roof, molars along the walls top and bottom, and a tongue down the gums.
  const inner=half-wall;
  for(const sx of [-1,1]){
   add(mat.mouth,at(new T.PlaneGeometry(depth,h),sx*(inner-.01),h/2,-depth/2,0,-sx*Math.PI/2));
@@ -113,6 +117,7 @@ export function createJaguarGate(){
    add(mat.ivory,at(new T.BoxGeometry(.12,.22,.42),sx*(inner-.07),.11,z));}
  }
  add(mat.mouth,at(new T.PlaneGeometry(2*inner,depth),0,h-.03,-depth/2,Math.PI/2));
+ add(mat.gums,at(new T.PlaneGeometry(2*inner,depth),0,.006,-depth/2,-Math.PI/2));
  const tongue=new T.Shape();tongue.moveTo(-1.1,0);tongue.lineTo(1.1,0);tongue.lineTo(1.25,-2.6);tongue.quadraticCurveTo(1.2,-3.7,0,-3.75);tongue.quadraticCurveTo(-1.2,-3.7,-1.25,-2.6);tongue.lineTo(-1.1,0);
  add(mat.tongue,at(new T.ShapeGeometry(tongue,12),0,.012,-.15,-Math.PI/2,Math.PI));
  add(mat.dark,at(new T.PlaneGeometry(.06,3.3),0,.016,-1.95,-Math.PI/2));
@@ -122,7 +127,7 @@ export function createJaguarGate(){
  for(const x of [-inner+.12,0,inner-.12])add(mat.neon,at(new T.CylinderGeometry(.035,.035,depth-.1,8),x,h-.1,-depth/2,Math.PI/2));
  add(mat.neon,at(new T.CylinderGeometry(.035,.035,2*inner-.2,8),0,h-.1,-.08,0,0,Math.PI/2));
  for(const sx of [-1,1])add(mat.wash,at(new T.PlaneGeometry(depth,h*.85),sx*(inner-.03),h*.575,-depth/2,0,-sx*Math.PI/2));
- const pool=new T.PlaneGeometry(2*inner-.2,depth-.2);add(new T.MeshBasicMaterial({name:'Jaguar_floor_glow',color:PURPLE,transparent:true,opacity:.22,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}),at(pool,0,.03,-depth/2,-Math.PI/2));
+ const pool=new T.PlaneGeometry(2*inner-.2,depth-.2);add(new T.MeshBasicMaterial({name:'Jaguar_floor_glow',color:PURPLE,transparent:true,opacity:.18,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}),at(pool,0,.03,-depth/2,-Math.PI/2));
 
  for(const [m,list] of parts){const o=new T.Mesh(mergeGeometries(list.map(g=>g.index?g.toNonIndexed():g)),m);o.name=m.name;o.userData.noCollide=true;group.add(o);}
  group.updateMatrixWorld(true);
