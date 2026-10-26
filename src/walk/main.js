@@ -54,6 +54,7 @@ import {createPoolTable} from './pool/table.js';
 import {createPawPool} from './pool/game.js';
 import {createPawsOff} from './paws-off/game.js';
 import {createMudwater} from './mudwater.js';
+import {createJaguarGate} from './jaguar-gate.js';
 import {createGiveaway} from './mudwater-giveaway.js';
 import {createPaintings} from './paintings.js';
 import {createComics,createComicReader} from './comics.js';
@@ -188,6 +189,8 @@ async function buildShip(){
  kittens=createKittens(ship,cosmoKit);if(kittens)colliders.addStatic(kittens.solid,()=>true);
  // Communal dining's three serving robots (dining-robots.js): solid as plain boxes.
  diningRobots=createDiningRobots(ship);if(diningRobots)colliders.addStatic(diningRobots.solid,()=>true);
+ // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
+ jaguarGate=createJaguarGate();colliders.addStatic(jaguarGate.solid,()=>true);
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  mudwater=createMudwater(ship,{urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
@@ -211,6 +214,7 @@ async function buildShip(){
  if(provisions)toBand(provisions.group);
  if(kittens)toBand(kittens.group);
  if(diningRobots)toBand(diningRobots.group);
+ toBand(jaguarGate.group);
  if(lounge)for(const o of lounge.drawn)toBand(o);
  // The paintings (paintings.js) span several bands each: they draw while any of them is in view.
  // The ship log boards (changes-board.js) in the crown lounge and the arrival hall.
@@ -235,7 +239,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
