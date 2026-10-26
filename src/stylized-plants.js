@@ -76,17 +76,20 @@ export function shrubGeometry({height=1.6,spread=1.1,palette=GREENS,seed=1}={}){
  const g=mergeGeometries(parts);g.computeVertexNormals();return g;// non-indexed, so normals stay faceted in exports
 }
 
-// A giant faceted boulder, `width` x `height` x `depth` metres, sitting on y=0: a lumpy icosphere with a flat base and
-// each facet a slightly different weathered grey or brown (one non-indexed, vertex-coloured mesh).
-const STONES=[0x6c665e,0x7b746a,0x5d5852,0x8a8173,0x6e6255,0x948b7e];
+// A giant faceted boulder, about `width` x `height` x `depth` metres, sitting on y=0: a lumpy, jittered icosphere with
+// a flat base, broader at the foot, each facet a slightly different weathered grey or brown (one non-indexed mesh).
+const STONES=[0x4f4a45,0x5c564f,0x45413d,0x6a6157,0x564b40,0x736a5e];
 export function boulderGeometry({width=2.4,height=2.6,depth=2,palette=STONES,seed=1}={}){
- const rnd=seeded(seed),g=new T.IcosahedronGeometry(1,2),p=g.attributes.position,v=new T.Vector3();
- const bumps=Array.from({length:9},()=>[new T.Vector3(rnd()-.5,rnd()-.5,rnd()-.5).normalize(),(rnd()-.4)*.35]);
+ const rnd=seeded(seed),g=new T.IcosahedronGeometry(1,1),p=g.attributes.position,v=new T.Vector3();
+ const bumps=Array.from({length:9},()=>[new T.Vector3(rnd()-.5,rnd()-.5,rnd()-.5).normalize(),(rnd()-.45)*.5]);
+ // Corners shared by several facets must move together, so each one's jitter comes from its own direction.
+ const jitter=d=>{const h=Math.sin(d.x*127.1+d.y*311.7+d.z*74.7+seed)*43758.5;return h-Math.floor(h)-.5;};
  for(let i=0;i<p.count;i++){
-  v.fromBufferAttribute(p,i).normalize();const r=1+bumps.reduce((s,[d,a])=>s+a*Math.max(0,v.dot(d))**3,0);
-  v.multiplyScalar(r);v.y=Math.max(v.y,-.7);p.setXYZ(i,v.x*width/2,(v.y+.7)/1.7*height,v.z*depth/2);
+  v.fromBufferAttribute(p,i).normalize();const r=(1+bumps.reduce((s,[d,a])=>s+a*Math.max(0,v.dot(d))**2,0))*(1+jitter(v)*.22);
+  v.multiplyScalar(r);v.y=Math.max(v.y,-.65);const t=(v.y+.65)/1.75,foot=1.15-.3*t;
+  p.setXYZ(i,v.x*foot*width/2,t*height,v.z*foot*depth/2);
  }
  const colors=new Float32Array(p.count*3),c=new T.Color();
- for(let i=0;i<p.count;i+=3){c.set(palette[rnd()*palette.length|0]).multiplyScalar(.85+p.getY(i)/height*.25);for(let k=0;k<3;k++)c.toArray(colors,(i+k)*3);}
+ for(let i=0;i<p.count;i+=3){c.set(palette[rnd()*palette.length|0]).multiplyScalar(.8+p.getY(i)/height*.3);for(let k=0;k<3;k++)c.toArray(colors,(i+k)*3);}
  g.setAttribute('color',new T.BufferAttribute(colors,3));g.deleteAttribute('uv');g.computeVertexNormals();return g;
 }
