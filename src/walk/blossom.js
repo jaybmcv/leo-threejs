@@ -136,11 +136,11 @@ export function createBlossomGarden(ship){
 
  // Fallen petals carpet the soil and spill onto the floor round the wall.
  const petal=new T.CircleGeometry(.045,5).rotateX(-Math.PI/2).scale(1,1,.6),petalColour=white('Blossom_petal',{side:T.DoubleSide,roughness:.85});
- frame.add(scatter('Blossom_fallen_petals',petal,petalColour,PINKS,1400,rnd,i=>{
+ frame.add(scatter('Blossom_fallen_petals',petal,petalColour,PINKS,3200,rnd,i=>{
   let x,z,y;
-  if(i<1150){x=BED.x+(rnd()-.5)*8.4;z=BED.z+(rnd()-.5)*8.4;y=SOIL+.004+rnd()*.01;}
+  if(i<2800){x=BED.x+(rnd()-.5)*8.4;z=BED.z+(rnd()-.5)*8.4;y=SOIL+.004+rnd()*.01;}
   else{const a=rnd()*Math.PI*2,d=H+.25+rnd()*rnd()*1.6;x=BED.x+Math.cos(a)*d*1.05;z=BED.z+Math.sin(a)*d*1.05;if(inBed(x,z,.2)){x=BED.x+Math.sign(x-BED.x)*(H+.3+rnd()*.6);}y=FLOOR+.004;}
-  return [new T.Vector3(x,y,z),new T.Euler((rnd()-.5)*.3,rnd()*6,(rnd()-.5)*.3),new T.Vector3().setScalar(.7+rnd()*.6)];}));
+  return [new T.Vector3(x,y,z),new T.Euler((rnd()-.5)*.3,rnd()*6,(rnd()-.5)*.3),new T.Vector3().setScalar(1+rnd()*.7)];}));
 
  // Petals falling from the canopy: each drifts down with a sway and a tumble, and starts again at the top on landing.
  const FALL=160,falling=new T.InstancedMesh(petal,petalColour,FALL),drop=[];falling.name='Blossom_falling_petals';falling.frustumCulled=false;
