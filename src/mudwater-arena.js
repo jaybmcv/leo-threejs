@@ -153,10 +153,10 @@ export function fitMudwaterArena({box,add,mat,text,fit,shell}){
    geo('Truss_spot_lens_glow',along(new T.CylinderGeometry(.075,.075,.012,12),.124),teal?lens.teal:lens.amber);
    // The beam, from the lens to the board, and its pool, longer along the way the beam leans.
    const from=pivot.clone().addScaledVector(dir,.13),reach=from.distanceTo(target);
-   const beam=tint(new T.CylinderGeometry(.07,reach*.16,reach,14,1,true),c,(x,y)=>y>0?.16:.015);
+   const beam=tint(new T.CylinderGeometry(.07,reach*.13,reach,14,1,true),c,(x,y)=>y>0?.03:0);
    beam.applyQuaternion(new T.Quaternion().setFromUnitVectors(up,dir.clone().negate())).translate(...from.clone().add(target).multiplyScalar(.5).toArray());
    geo('Truss_beam_glow',beam,wash);
-   const pool=tint(new T.CircleGeometry(1,24),c,(x,y)=>.5*(1-Math.min(1,Math.hypot(x,y))));
+   const pool=tint(new T.CircleGeometry(1,24),c,(x,y)=>.3*(1-Math.min(1,Math.hypot(x,y))));
    geo('Truss_beam_glow',pool.rotateX(-Math.PI/2).scale(1,1,.7).rotateY(Math.atan2(-dir.z,dir.x)).translate(aim[0],aim[1]+.012,aim[2]),wash);
   }
   flush(M.black);
