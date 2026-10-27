@@ -119,7 +119,7 @@ function scatter(name,geometry,material,colors,count,rnd,place){
 // A koi heading +z: an orange body with white patches, a fanned tail and two side fins, as one vertex-coloured geometry.
 function koiGeometry(){
  const body=new T.SphereGeometry(1,10,6).scale(.05,.035,.16).toNonIndexed(),p=body.attributes.position,col=new Float32Array(p.count*3),c=new T.Color();
- for(let i=0;i<p.count;i+=3){c.set(Math.sin(p.getZ(i)*40+1)+Math.sin(p.getX(i)*70)*.6>.6?0xfff4ea:0xff6a12);for(let k=0;k<3;k++)c.toArray(col,(i+k)*3);}
+ for(let i=0;i<p.count;i+=3){c.set(Math.sin(p.getZ(i)*40+1)+Math.sin(p.getX(i)*70)*.6>1.05?0xfff4ea:0xff5a0a);for(let k=0;k<3;k++)c.toArray(col,(i+k)*3);}
  body.setAttribute('color',new T.BufferAttribute(col,3));body.deleteAttribute('uv');
  const shape=new T.Shape();shape.moveTo(0,0);shape.quadraticCurveTo(.08,-.05,.07,-.12);shape.lineTo(0,-.08);shape.lineTo(-.07,-.12);shape.quadraticCurveTo(-.08,-.05,0,0);
  const tail=tinted(new T.ShapeGeometry(shape,3).rotateX(Math.PI/2).translate(0,0,-.13),0xff8a3a);
@@ -219,7 +219,7 @@ export function createBlossomGarden(ship){
  for(let i=0;i<6;i++)rocks.push(tinted(new T.SphereGeometry(1,5,3).scale(.035,.025,.012).translate(0,.02,.03).rotateX(-.6).rotateY(i/6*Math.PI*2).translate(137.05,WATER+.03,33.75),0xf7a8c8));
  {const o=new T.Mesh(mergeGeometries(rocks),stoneMat);o.name='Blossom_pond_stones';o.castShadow=true;o.receiveShadow=true;frame.add(o);rocks.forEach(g=>g.dispose());}
  const water=new T.Mesh(new T.PlaneGeometry(pw-.12,pd-.12).rotateX(-Math.PI/2).translate((P.x0+P.x1)/2,WATER,(P.z0+P.z1)/2),
-  new T.MeshStandardMaterial({name:'Blossom_pond_water',color:0x3d8f9a,transparent:true,opacity:.62,roughness:.06,metalness:.2,emissive:0x0d3a40,emissiveIntensity:.4,depthWrite:false}));
+  new T.MeshStandardMaterial({name:'Blossom_pond_water',color:0x3d8f9a,transparent:true,opacity:.48,roughness:.06,metalness:.2,emissive:0x0d3a40,emissiveIntensity:.4,depthWrite:false}));
  water.name='Blossom_pond_water';water.renderOrder=1;frame.add(water);
 
  // The waterfall: a clear sheet curving out from the lip as it falls into the pond, streaks running down it, foam and
@@ -238,9 +238,9 @@ export function createBlossomGarden(ship){
  streaks.name='Blossom_falls_streaks';foam.name='Blossom_falls_foam';streaks.frustumCulled=foam.frustumCulled=false;streaks.renderOrder=2;frame.add(streaks,foam);
 
  // Koi wander the pond just under the surface, passing under the bridge.
- const KOI=7,koi=new T.InstancedMesh(koiGeometry(),new T.MeshStandardMaterial({name:'Blossom_koi',vertexColors:true,roughness:.45,side:T.DoubleSide}),KOI);
- const KC={x:138,z:35},fish=Array.from({length:KOI},()=>({rx:.55+rnd()*.65,rz:.5+rnd()*.7,w:(.22+rnd()*.25)*(rnd()<.5?-1:1),ph:rnd()*6,y:WATER-.05-rnd()*.07,size:.8+rnd()*.5}));
- [0xffffff,0xffffff,0xffd9b0,0xffb98a,0xffffff,0xfff0d8,0xffc890].forEach((col,i)=>koi.setColorAt(i,new T.Color(col)));
+ const KOI=7,koi=new T.InstancedMesh(koiGeometry(),new T.MeshStandardMaterial({name:'Blossom_koi',vertexColors:true,roughness:.45,side:T.DoubleSide,emissive:0xff4a00,emissiveIntensity:.18}),KOI);
+ const KC={x:138,z:35},fish=Array.from({length:KOI},()=>({rx:.55+rnd()*.65,rz:.5+rnd()*.7,w:(.22+rnd()*.25)*(rnd()<.5?-1:1),ph:rnd()*6,y:WATER-.035-rnd()*.05,size:.8+rnd()*.5}));
+ [0xffffff,0xffffff,0xffe2b8,0xffd0a0,0xffffff,0xfff0d8,0xffe0b0].forEach((col,i)=>koi.setColorAt(i,new T.Color(col)));
  koi.name='Blossom_koi';koi.frustumCulled=false;frame.add(koi);
 
  // The red bridge: an arched deck from the floor at the planter's edge, over the pond, to the soil by the bench, with
