@@ -1,6 +1,9 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {FontLoader} from 'three/addons/loaders/FontLoader.js';
+import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
+import fontData from './assets/helvetiker-bold.json' with {type:'json'};
 import {polishInterior} from './interior-polish.js';
 const mat=(name,color,roughness=.65,metalness=0)=>new T.MeshStandardMaterial({name:'Finish_'+name,color,roughness,metalness});
 export const FINISH_M={dark:mat('graphite',0x263d49),steel:mat('alloy',0x97aaa9,.35,.65),oak:mat('oak',0xa98762),linen:mat('linen',0xdedaca,.95),sage:mat('sage',0x668477,1),amber:mat('amber',0xd9b272),champagne:mat('champagne',0xaea35d,.35,.6),blue:mat('clinical_blue',0x89b8c4),ink:mat('display',0xb9e2dc),green:mat('leaf',0x58825f,.95)};
@@ -116,6 +119,29 @@ function diningChair(k,o,n){
  k.box(o,[p.width+.04,.05,p.depth+.04],[0,h/2+.02,0],DINE.brass,'dining_chairs');
  for(const [x,y] of [[-.18,.2],[0,.2],[.18,.2],[-.09,0],[.09,0],[-.18,-.2],[0,-.2],[.18,-.2]])k.add(o,new T.SphereGeometry(.014,6,4).translate(x,y,p.depth/2),DINE.brass,'dining_chairs');
 }
+// Section plaques for the library's bookcase runs: one slim plaque on the open -x end of each run, at eye level, in its
+// section's colour, with a small pictogram and the section name. Built in the shelf's own frame, so it moves with the run.
+const SECTIONS=[['VOYAGES','starship',0x2fd6c5],['WORLDS','planet',0xf85800],['LIFE ABOARD','leaf',0x8fd694],["SHIP'S LOG",'book',0xd8cf8f]];
+const sectionFont=new FontLoader().parse(fontData);
+const sectionEnamel=new T.MeshStandardMaterial({name:'Finish_section_enamel',color:0x1b2830,roughness:.55,metalness:.1});
+const sectionLettering=new T.MeshStandardMaterial({name:'Finish_section_lettering',color:0xf4f0e8,roughness:.6});
+const sectionAccents=SECTIONS.map(([,,hex],i)=>new T.MeshStandardMaterial({name:'Finish_section_'+i,color:hex,roughness:.5,emissive:hex,emissiveIntensity:.2}));
+const SECTION_ICONS={
+ starship:()=>[new T.ConeGeometry(.012,.05,8).scale(.3,1,1),new T.BoxGeometry(.004,.006,.04).translate(0,-.012,0)],
+ planet:()=>[new T.SphereGeometry(.018,12,8).scale(.3,1,1),new T.TorusGeometry(.032,.0025,4,20).rotateY(Math.PI/2)],
+ leaf:()=>[new T.SphereGeometry(.024,10,8).scale(.25,1.3,.65)],
+ book:()=>[new T.BoxGeometry(.004,.02,.016).rotateX(.35).translate(0,.007,-.009),new T.BoxGeometry(.004,.02,.016).rotateX(-.35).translate(0,.007,.009)],
+};
+// One plaque on the -x end of a bookcase run (its middle shelf), centred at eye level, facing the entrance side.
+function sectionPlaque(k,o,c,s,index){
+ const [label,icon]=SECTIONS[index],accent=sectionAccents[index],x0=c.x-s.x/2-.02,y=1.45-o.position.y,z=c.z;
+ const part=(g,m,dx=0,dy=0,dz=0)=>k.add(o,g.translate(x0+dx,y+dy,z+dz),m,'library_sections');
+ part(new T.BoxGeometry(.02,.3,.2),sectionEnamel,.01,0,0);
+ part(new T.BoxGeometry(.004,.012,.16),accent,0,-.1,0);
+ for(const g of SECTION_ICONS[icon]())part(g,accent,0,.07,0);
+ const t=new TextGeometry(label,{font:sectionFont,size:.022,depth:.002,curveSegments:2});t.computeBoundingBox();const b=t.boundingBox;
+ t.translate(-(b.min.x+b.max.x)/2,-(b.min.y+b.max.y)/2,0).rotateY(-Math.PI/2);part(t,sectionLettering,0,-.03,0);
+}
 export const AREA_TREATMENTS={cargo:'cargo_restraints',stores:'inventory_labels',cold:'cabinet_hardware',pharmacy:'inventory_labels',workshop:'tool_storage',community:'tool_storage',logistics:'display_graphics',control:'display_graphics',arrival:'upholstery',security:'screening_equipment',airlock:'locker_hardware',baggage:'conveyor_detail',farm:'grow_lighting',nursery:'grow_lighting',harvest:'wash_station',kitchen:'cookware',air:'machine_grilles',thermal:'machine_grilles',water:'vessel_instruments',recycle:'machine_grilles',power:'cabinet_hardware',ward:'patient_services',isolation:'patient_services',surgery:'patient_services',clinic:'patient_services',imaging:'diagnostic_detail',counseling:'upholstery',shelter:'upholstery',arena:'games',library:'inventory_labels',gym:'fitness_equipment',recreation:'games',theater:'upholstery',childcare:'play_furniture',dining:'table_settings',navigation:'display_graphics',mission:'display_graphics',communications:'display_graphics',crew:'table_settings',briefing:'table_settings',data:'rack_hardware',captain:'table_settings',securityops:'display_graphics',bridge:'display_graphics',reactor:'module_instruments',drivefeed:'pump_detail',enginecontrol:'display_graphics',engineworkshop:'workbench_detail',engineaccess:'hatch_detail',hangar:'shuttle_detail',lifeboats:'lifeboat_detail'};
 export function finishShipArea(area,{root,shell,fit}){
  const k=detailKit(fit,area.name),lining=detailKit(shell,area.name+' lining');
@@ -145,6 +171,8 @@ export function finishShipArea(area,{root,shell,fit}){
   }
   if(n==='Countertop'&&area.kind==='dining')buffet(k,o,b,c,s,sources.filter(m=>m.name==='Meal_service_station'));
   if(n==='Shelf'&&area.kind==='library')for(const side of [-1,1])for(const dx of [-1.6,0,1.6])k.box(o,[.32,.06,.006],[c.x+dx,c.y,c.z+side*(s.z/2+.004)],M.linen,'inventory_labels');
+  // One plaque per bookcase run, on its middle shelf; the four sections repeat across the five runs in each row.
+  if(n==='Shelf'&&area.kind==='library'&&Math.abs(o.position.y-1.18)<.01)sectionPlaque(k,o,c,s,Math.round((o.position.x+18)/9)%SECTIONS.length);
   if(/^(Secured_cargo_container|Supply_crate)$/.test(n)){
    const f=k.face(o,1),type=n==='Secured_cargo_container'?'cargo_restraints':'inventory_labels';f.panel(-f.w*.2,0,f.w*.24,f.h*.26,M.linen,type);
    for(let j=0;j<5;j++)f.panel(f.w*(-.29+j*.043),0,f.w*.018,f.h*.17,M.dark,type);
