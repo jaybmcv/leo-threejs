@@ -17,9 +17,10 @@ const RUN_ON_BELT=5,HAT_M=35,MAX_RIGS=24,LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_T
 export class RemotePlayers{
  // make(): a new walker (avatar.js createWalker); colliders: for hiding names behind walls; lifts: lift-ride.js.
  // hatUrl: the captain's hat that testers wear (hat.js). running(position): standing on a Paws Off treadmill's belt
- // (paws-off/game.js), where someone playing runs on the spot.
- constructor(scene,{make,colliders,lifts,labels,hatUrl,running}){
-  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,running});
+ // (paws-off/game.js), where someone playing runs on the spot. hammock(position): lying in one of the Hydro-Nip
+ // Lounge's hammocks (rest.js hammockAt), where they take its pose: the wire says only that they lie.
+ constructor(scene,{make,colliders,lifts,labels,hatUrl,running,hammock}){
+  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,running,hammock});
   this.remotes=new Map();this.pool=[];this.making=false;this.labels=[];this.ray=new T.Ray();this.v=new T.Vector3();
  }
  get count(){return this.remotes.size;}
@@ -100,7 +101,7 @@ export class RemotePlayers{
   if(t.ball&&!t.rest){if(!r.ball)r.ball=createBallMesh();if(!r.ball.mesh.parent)this.scene.add(r.ball.mesh);r.ball.mesh.position.set(c.x,c.y,c.z);
    r.ball.roll(dt,Math.sin(c.yaw)*r.speed,Math.cos(c.yaw)*r.speed);}else r.ball?.mesh.removeFromParent();
   w.update(dt,{speed:r.rest?0:belt?RUN_ON_BELT:r.speed,grounded:t.grounded,stance:t.ball?'crouch':t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
-   emote:t.emote,rest:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight}:null});
+   emote:t.emote,rest:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c)}:null});
   // A captain's hat is ~200k triangles: past HAT_M it is a few pixels, and not drawn.
   if(w.hat&&r.distance>HAT_M)w.hat.mount.visible=false;
  }

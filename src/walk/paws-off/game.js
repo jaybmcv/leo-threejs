@@ -7,6 +7,8 @@ import {newGame,step,press,pad,beltAt} from './rules.js';
 // he tumbles off the back, then a card shows the time survived and this browser's best. The rules are rules.js.
 // While a run is on, the keyboard is the game's: keys are caught before the walk sees them, and Esc steps off.
 // The treadmills are the room's own meshes, found by name (areas.js is unchanged); the belts drawn over them are ours.
+// A second station, the arcade treadmill in the Deck 17 Hydro-Nip Lounge (arcade.js), is drawn by the arcade and passed
+// in; a run there is the same game.
 const ROOM='Area_d16-gym-3',REACH=1.5,READY_S=3,FALL_S=1.1,BEST_KEY='leo-paws-off-best';
 const STRIDE=1.3;// Cosmo's stride speed for a belt speed: a walk at the start, a sprint by the end
 
@@ -45,28 +47,36 @@ const CSS=`
 #paws .card button.go{background:var(--orange);border-color:var(--orange);color:#fff}
 `;
 
-// `ship`: the walk's ship (its rooms still unmerged); `ground(point)`: the floor to stand on near a point, or null.
-export function createPawsOff(ship,{ground,onStart=()=>{},onEnd=()=>{}}){
- const room=ship.root.getObjectByName(ROOM);if(!room)return null;
- room.updateMatrixWorld(true);
- const meshes=[],displays=[];
- room.traverse(o=>{if(!o.isMesh)return;if(o.name==='Treadmill')meshes.push(o);else if(o.name==='Fitness_display')displays.push(o.getWorldPosition(new T.Vector3()));});
- if(!meshes.length)return null;
- // (The group stands at the room's floor height, so it is drawn with that deck's band: main.js toBand.)
- const group=new T.Group();group.name='Paws_off_belts';group.position.y=room.getWorldPosition(new T.Vector3()).y;const texture=beltTexture();
- // Each treadmill: its belt's centre on top, the way a runner faces (to its display), its length and width.
- const mills=meshes.map((o,i)=>{
-  o.geometry.computeBoundingBox();const b=o.geometry.boundingBox,size=b.getSize(new T.Vector3()).multiply(new T.Vector3().setFromMatrixScale(o.matrixWorld));
-  const centre=b.getCenter(new T.Vector3()).applyMatrix4(o.matrixWorld),top=new T.Box3().copy(b).applyMatrix4(o.matrixWorld).max.y;
-  const display=displays.reduce((a,d)=>!a||d.distanceToSquared(centre)<a.distanceToSquared(centre)?d:a,null);
-  const front=display?new T.Vector3(display.x-centre.x,0,display.z-centre.z).normalize():new T.Vector3(0,0,-1).applyQuaternion(o.getWorldQuaternion(new T.Quaternion())).setY(0).normalize();
-  const along=Math.abs(front.x)>Math.abs(front.z)?'x':'z',length=size[along],width=size[along==='x'?'z':'x'];
-  const map=texture.clone();map.repeat.set(1,length*.77/.5);
+// `ship`: the walk's ship (its rooms still unmerged); `ground(point)`: the floor to stand on near a point, or null;
+// `more`: treadmills drawn elsewhere (the arcade's), each as below: the place its card names, the floor's height round
+// it, its belt's centre on top, the way a runner faces, its length and width.
+export function createPawsOff(ship,{ground,more=[],onStart=()=>{},onEnd=()=>{}}){
+ const room=ship.root.getObjectByName(ROOM),found=[];
+ if(room){
+  room.updateMatrixWorld(true);
+  const meshes=[],displays=[],floor=room.getWorldPosition(new T.Vector3()).y;
+  room.traverse(o=>{if(!o.isMesh)return;if(o.name==='Treadmill')meshes.push(o);else if(o.name==='Fitness_display')displays.push(o.getWorldPosition(new T.Vector3()));});
+  // Each treadmill: its belt's centre on top, the way a runner faces (to its display), its length and width.
+  for(const o of meshes){
+   o.geometry.computeBoundingBox();const b=o.geometry.boundingBox,size=b.getSize(new T.Vector3()).multiply(new T.Vector3().setFromMatrixScale(o.matrixWorld));
+   const centre=b.getCenter(new T.Vector3()).applyMatrix4(o.matrixWorld),top=new T.Box3().copy(b).applyMatrix4(o.matrixWorld).max.y;
+   const display=displays.reduce((a,d)=>!a||d.distanceToSquared(centre)<a.distanceToSquared(centre)?d:a,null);
+   const front=display?new T.Vector3(display.x-centre.x,0,display.z-centre.z).normalize():new T.Vector3(0,0,-1).applyQuaternion(o.getWorldQuaternion(new T.Quaternion())).setY(0).normalize();
+   const along=Math.abs(front.x)>Math.abs(front.z)?'x':'z';
+   found.push({place:'Exercise studio',floor,centre,top,front,length:size[along],width:size[along==='x'?'z':'x']});
+  }
+ }
+ const all=[...found,...more];if(!all.length)return null;
+ // The belts, in a group at each floor's height, so each is drawn with its deck's band (main.js toBand).
+ const groups=new Map(),texture=beltTexture();
+ const mills=all.map((t,i)=>{
+  const {place,floor,centre,top,front,length,width}=t,map=texture.clone();map.repeat.set(1,length*.77/.5);
+  if(!groups.has(floor)){const g=new T.Group();g.name='Paws_off_belts';g.position.y=floor;groups.set(floor,g);}
   const belt=new T.Mesh(new T.PlaneGeometry(width*.74,length*.74).rotateX(-Math.PI/2),new T.MeshStandardMaterial({name:'Paws_off_belt',map,roughness:.85}));
-  belt.name='Paws_off_belt_'+(i+1);belt.userData.noCollide=true;belt.position.set(centre.x,top+.012-group.position.y,centre.z);belt.rotation.y=Math.atan2(front.x,front.z);group.add(belt);
+  belt.name='Paws_off_belt_'+(i+1);belt.userData.noCollide=true;belt.position.set(centre.x,top+.012-floor,centre.z);belt.rotation.y=Math.atan2(front.x,front.z);groups.get(floor).add(belt);
   // Cosmo runs a little behind the middle, clear of the handles.
   const stand=new T.Vector3(centre.x,top,centre.z).addScaledVector(front,-length*.08);
-  return {index:i,centre,top,front,length,width,stand,yaw:Math.atan2(front.x,front.z),map,speed:0};
+  return {index:i,place,centre,top,front,length,width,stand,yaw:Math.atan2(front.x,front.z),map,speed:0};
  });
 
  // The heads-up display, the countdown, the results card and the touch pad.
@@ -90,6 +100,7 @@ export function createPawsOff(ship,{ground,onStart=()=>{},onEnd=()=>{}}){
   // The floor he lands on, behind the treadmill.
   m.floor??=ground(m.stand.clone().addScaledVector(m.front,-(m.length/2+.6)))?.y??m.top-.22;
   mill=m;game=newGame((Math.random()*2**31)|0);phase='ready';clock=0;paused=false;shown='';
+  $('.eyebrow').textContent=`Paws Off · ${m.place}`;
   hud.hidden=false;card.hidden=true;note.hidden=true;keysEl.hidden=true;timerEl.hidden=true;padEl.hidden=true;
  }
  function type(key){
@@ -147,7 +158,7 @@ export function createPawsOff(ship,{ground,onStart=()=>{},onEnd=()=>{}}){
  addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
 
  return {
-  group,mills,
+  groups:[...groups.values()],mills,
   get active(){return !!phase;},get phase(){return phase;},get game(){return game;},get result(){return result;},
   // The use prompt, standing at a treadmill (or on it).
   near(p){

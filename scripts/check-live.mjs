@@ -16,6 +16,11 @@ import os from 'node:os';
 import path from 'node:path';
 import {keySet,verifyPass,readPass,REMEMBER_S} from '../src/walk/net/pass.js';
 import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
+import * as T from 'three';
+import {createHydroNipLounge} from '../src/hydro-nip-lounge.js';
+import {findRestSpots,spotIndex} from '../src/walk/rest.js';
+import {COSMO_HEIGHT} from '../src/cosmo-pose.js';
+import {arcadeTreadmill} from '../src/walk/arcade.js';
 
 const results=[];let failed=0;
 const check=(what,ok,detail='')=>{results.push(`${ok?'PASS':'FAIL'} ${what}${detail?' · '+detail:''}`);if(!ok)failed++;};
@@ -42,6 +47,19 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  check('wire: out-of-range poses are refused',threw===4);
  const reader=new WireReader();
  check('wire: a pose from a slot never introduced is skipped',reader.read(assembleFrame([],[encodeRecord(3,poses[0])])).length===0);
+}
+
+// ---- the Hydro-Nip Lounge's hammocks, as the walk finds them --------------------------------------------------------
+// Neighborhood 1's commons moves the lounge 224 m aft and mirrors it across the centreline (model.js createGardenCommons).
+// Lying in one, the body is where main.js settle puts it; another visitor's page is sent only that they lie, and knows
+// the hammock from where the body is (rest.js hammockAt), to draw its pose (avatar.js: hands behind the head, eyes shut).
+const commons=new T.Group();commons.position.x=-224;commons.scale.z=-1;commons.add(createHydroNipLounge({mirror:-1}));
+const hammockSpots=findRestSpots(commons).filter(s=>s.hammock),hammocks=spotIndex(hammockSpots);
+const lyingIn=s=>{const head=s.head.clone().normalize(),at=s.point.clone().addScaledVector(head,-COSMO_HEIGHT/2);return {spot:s,pos:[at.x,s.height+.13,at.z],yaw:Math.atan2(-head.x,-head.z)};};
+{
+ const own=hammockSpots.filter(s=>{const {pos:[x,y,z]}=lyingIn(s);return hammocks.hammockAt({x,y,z})===s;}).length;
+ check('hammocks: a body lying in each of the nine is known for that hammock',hammockSpots.length===9&&own===9,`${own} of ${hammockSpots.length}`);
+ check('hammocks: someone standing in the dome is not in a hammock',!hammocks.hammockAt({x:-90,y:24.3,z:-25}));
 }
 
 // ---- Leo passes on their own --------------------------------------------------------------------------------------
@@ -140,6 +158,10 @@ try{
  b.pose([-85,36.3,21]);a.pose([-84.5,37.01,24.17],{yaw:-Math.PI/2,rest:'lie'});await sleep(300);
  const podded=b.poses.get(a.id);
  check('rest: a visitor lying in a recovery lounge sleeping pod is seen lying there',podded?.rest==='lie'&&Math.abs(podded.pos[0]+84.5)<.01&&Math.abs(podded.pos[1]-37.01)<.01&&Math.abs(podded.pos[2]-24.17)<.01,JSON.stringify(podded&&{pos:podded.pos,rest:podded.rest}));
+ // Lying in a hammock in the Hydro-Nip Lounge's dome reaches a visitor standing in the dome, at that hammock.
+ {const lay=lyingIn(hammockSpots[4]);b.pose([-90,24.3,-25]);a.pose(lay.pos,{yaw:lay.yaw,rest:'lie'});await sleep(300);
+  const swung=b.poses.get(a.id),found=swung&&hammocks.hammockAt({x:swung.pos[0],y:swung.pos[1],z:swung.pos[2]});
+  check('rest: a visitor lying in a lounge hammock is seen lying in that hammock',swung?.rest==='lie'&&found===lay.spot,JSON.stringify(swung&&{pos:swung.pos.map(v=>+v.toFixed(3)),rest:swung.rest,hammock:!!found}));}
  // Paws Off on a Deck 16 exercise studio treadmill (src/walk/paws-off): a runner on the belt is seen there, playing; after
  // a fall, on their back behind it, still playing; stepped off, no longer playing.
  b.pose([5,20.3,-44]);a.pose([7,20.56,-47.79],{yaw:Math.PI,pl:true});await sleep(300);
@@ -150,6 +172,19 @@ try{
  check('paws off: a fall off the back is seen lying behind the treadmill',fallen?.rest==='lie'&&fallen.playing===true&&Math.abs(fallen.pos[2]+46.04)<.01,JSON.stringify(fallen&&{pos:fallen.pos,rest:fallen.rest}));
  a.pose([7,20.3,-45.5]);await sleep(300);
  check('paws off: stepped off, they are no longer playing',b.poses.get(a.id)?.playing===false&&!b.poses.get(a.id)?.rest);
+ // Paws Off's second station, the arcade treadmill in the Deck 17 Hydro-Nip Lounge (src/walk/arcade.js), the same way, for
+ // a visitor standing in the lounge: the runner where the game holds them (paws-off/game.js), a little behind the deck's
+ // middle, and after a fall, half the deck's length and 0.55 m further back, on the floor.
+ {const t=arcadeTreadmill(),yaw=Math.atan2(t.front.x,t.front.z),on=t.centre.clone().addScaledVector(t.front,-t.length*.08),off=on.clone().addScaledVector(t.front,-(t.length/2+.55)).setY(t.floor);
+  const at=(p,q)=>!!p&&Math.abs(p.pos[0]-q.x)<.01&&Math.abs(p.pos[1]-q.y)<.01&&Math.abs(p.pos[2]-q.z)<.01;
+  b.pose([off.x-4,t.floor,off.z-2]);a.pose(on.toArray(),{yaw,pl:true});await sleep(300);
+  const arcadeRun=b.poses.get(a.id);
+  check('paws off: a visitor running on the arcade treadmill is seen on its belt, playing',arcadeRun?.playing===true&&!arcadeRun.rest&&at(arcadeRun,on),JSON.stringify(arcadeRun&&{pos:arcadeRun.pos,playing:arcadeRun.playing}));
+  a.pose(off.toArray(),{yaw,pl:true,rest:'lie'});await sleep(300);
+  const arcadeFall=b.poses.get(a.id);
+  check('paws off: a fall off the arcade treadmill is seen lying behind it',arcadeFall?.rest==='lie'&&arcadeFall.playing===true&&at(arcadeFall,off),JSON.stringify(arcadeFall&&{pos:arcadeFall.pos,rest:arcadeFall.rest}));
+  a.pose([off.x-.6,t.floor,off.z]);await sleep(300);
+  check('paws off: stepped off the arcade treadmill, they are no longer playing',b.poses.get(a.id)?.playing===false&&!b.poses.get(a.id)?.rest);}
  // The hamster ball in the Deck 17 gardens (src/walk/hamster-ball.js): one visitor climbs in and rolls off; another
  // standing nearby sees them in the ball, crouched, where it rolled; climbed out, no longer in one.
  b.pose([135,24.3,20]);a.pose([137.4,24.3,21.7],{st:'crouch',b:true});await sleep(250);a.pose([139.2,24.3,23.1],{yaw:.9,st:'crouch',b:true});await sleep(300);
