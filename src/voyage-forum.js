@@ -1,8 +1,9 @@
+import {anchorArea} from './plan/anchor-area.js';
 import * as T from 'three';
 import {serviceKit,SERVICE_M as M} from './neighborhood-services.js';
 import {finishShipArea} from './area-finish.js';
 export const VOYAGE_FORUM={id:'d16-voyage-forum-bow',name:'Forward voyage forum',kind:'theater',deck:16,special:true,forum:true,category:'Community assembly',center:[180,20.3,0],width:52,depth:48,height:3.5,description:'A small demonstration stage, 120 modeled seats in two banks, open mobility-device spaces and a rear gathering foyer. A low ramp connects the stage to the floor.'};
-export function createVoyageForum(area=VOYAGE_FORUM){
+function buildcreateVoyageForum(area=VOYAGE_FORUM){
  const root=new T.Group();root.name='Area_'+area.id;root.userData={...area,units:'metres',stage:'Fitted voyage forum',modeledSeats:120};
  const {fit,shell,box,text}=serviceKit(root,area.center);
  box('Finished_floor',[52,.02,48],[0,-.01,0],M.floor);
@@ -54,3 +55,5 @@ export function createVoyageForum(area=VOYAGE_FORUM){
  finishShipArea(area,{root,fit,shell});
  return {root,fit,shell,overview:{position:[249,95,91],target:[181,21,0]},inside:{position:[159,22,0],target:[202,22.2,0]}};
 }
+
+export function createVoyageForum(area=VOYAGE_FORUM){return anchorArea(buildcreateVoyageForum(area),area.id);}

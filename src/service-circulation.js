@@ -1,3 +1,4 @@
+import {anchorObject} from './plan/rooms.js';
 import * as T from 'three';
 import {finishCirculation} from './circulation-finish.js';
 import {SHIP_AREAS} from './areas.js';
@@ -15,7 +16,7 @@ export function serviceRoutes(deck){
     connections:rooms.map(a=>({id:a.id,points:[[-132,0],[a.center[0]-29.5,0],[a.center[0]-29.5,a.center[2]],[a.center[0]-26,a.center[2]]]}))};
 }
 
-export function createServiceCirculation(deck){
+function buildcreateServiceCirculation(deck){
   const plan=serviceRoutes(deck);if(!plan)return null;
   const root=new T.Group();root.name=`Deck_${deck}_connected_service_corridors`;root.position.y=plan.y;
   root.userData={deck,clearSpineWidth:8,clearBranchWidth:7,roomConnections:plan.connections,stage:'Concept circulation'};
@@ -55,3 +56,5 @@ export function createServiceCirculation(deck){
   finishCirculation(root,shell,'Service corridors deck '+deck,deck);
   return {root,shell,plan};
 }
+
+export function createServiceCirculation(deck){const p=buildcreateServiceCirculation(deck);if(p)anchorObject(p.root,'circulation-'+deck);return p;}

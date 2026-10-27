@@ -1,4 +1,6 @@
+import {walkCanvas} from '../canvas.js';
 import * as T from 'three';
+import {objectRoom,hasFrameOverride,deltaMatrix,anchorObject,unanchorPoint} from '../../plan/rooms.js';
 import {TABLE,R,POCKETS,MOUTH,HEAD,rack,colorOf,striped,pocketLook} from './rules.js';
 
 // Paw Pool's table in the Recreation Hall (POOL.md): a pool table laid flat on the activity floor and filling it, low
@@ -11,7 +13,7 @@ const ICOSA=[[90,0],[-90,0],...[0,1,2,3,4].map(k=>[26.57,k*72]),...[0,1,2,3,4].m
 // A ball's skin, wrapped round the sphere: its colour (a band of it for 9-15), twelve pentagon panels and its number
 // in a white disc on each side.
 function ballTexture(n){
- const c=document.createElement('canvas');c.width=256;c.height=128;const g=c.getContext('2d');
+ const c=walkCanvas();c.width=256;c.height=128;const g=c.getContext('2d');
  const color=colorOf(n),base=n===0||striped(n)?'#f4f0e8':color;
  g.fillStyle=base;g.fillRect(0,0,256,128);
  if(striped(n)){g.fillStyle=color;g.fillRect(0,40,256,48);}
@@ -27,7 +29,7 @@ function ballTexture(n){
 }
 // The turf: mown stripes across the table and white pitch lines.
 function turfTexture(){
- const c=document.createElement('canvas'),k=64;c.width=TABLE.w*k;c.height=TABLE.h*k;const g=c.getContext('2d');
+ const c=walkCanvas(),k=64;c.width=TABLE.w*k;c.height=TABLE.h*k;const g=c.getContext('2d');
  for(let i=0;i<14;i++){g.fillStyle=i%2?'#2e8b45':'#35994e';g.fillRect(i*c.width/14,0,c.width/14+1,c.height);}
  g.strokeStyle='rgba(244,240,232,.55)';g.lineWidth=.06*k;
  g.beginPath();g.moveTo(c.width/2,0);g.lineTo(c.width/2,c.height);g.stroke();
@@ -39,7 +41,8 @@ function turfTexture(){
 // `carpet`: the hall's Activity_floor mesh. The table sits on it, centred, its long side along the hall.
 export function createPoolTable(carpet){
  carpet.updateWorldMatrix(true,false);carpet.geometry.computeBoundingBox();
- const box=carpet.geometry.boundingBox.clone().applyMatrix4(carpet.matrixWorld),centre=box.getCenter(new T.Vector3()),floor=box.max.y;
+ const owner=objectRoom(carpet)||'d16-recreation-4',basis=hasFrameOverride(owner)?deltaMatrix(owner).invert().multiply(carpet.matrixWorld):carpet.matrixWorld;
+ const box=carpet.geometry.boundingBox.clone().applyMatrix4(basis),centre=box.getCenter(new T.Vector3()),floor=box.max.y;
  const group=new T.Group();group.name='Paw_pool';group.position.set(centre.x,floor,centre.z);
  const navy=new T.MeshStandardMaterial({name:'Paw_pool_navy',color:0x233b4b,roughness:.6});
  const bronze=new T.MeshStandardMaterial({name:'Paw_pool_bronze',color:0x9d7950,roughness:.4,metalness:.65});
@@ -77,11 +80,11 @@ export function createPoolTable(carpet){
   const ball=add('Paw_pool_ball_'+b.n,sphere,new T.MeshStandardMaterial({name:'Paw_pool_ball',map:ballTexture(b.n),roughness:.35}),b.x,FELT+R,b.y,false);
   ball.rotation.set(.9+((b.n*37)%7)*.08,Math.PI/2+((b.n*53)%9-4)*.12,0,'YXZ');
  }
- const reach=[hw+rw,hh+rw];
+ anchorObject(group,owner);const reach=[hw+rw,hh+rw];
  return {
-  group,
+  group,centre:new T.Vector3(...(hasFrameOverride(owner)?new T.Vector3(centre.x,floor,centre.z).applyMatrix4(deltaMatrix(owner)).toArray():[centre.x,floor,centre.z])),
   // The game's use prompt, standing beside the table on the hall floor.
-  near(p){
+  near(p){p=new T.Vector3(...unanchorPoint(owner,p.toArray()));
    if(Math.abs(p.y-floor)>1.5)return null;
    const dx=Math.max(0,Math.abs(p.x-centre.x)-reach[0]),dz=Math.max(0,Math.abs(p.z-centre.z)-reach[1]);
    return Math.hypot(dx,dz)<REACH?{kind:'pool',label:'Play Paw Pool'}:null;

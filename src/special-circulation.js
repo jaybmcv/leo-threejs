@@ -1,3 +1,4 @@
+import {anchorObject} from './plan/rooms.js';
 import {polishCommandCorridor} from './command-deck.js';
 import * as T from 'three';
 import {createLowerBowCirculation} from './lower-bow.js';
@@ -8,7 +9,7 @@ import {SPECIAL_AREAS} from './special-areas.js';
 import {transitOpenings} from './transit.js';
 import {unionRectangles,slabGeometry} from './floor-geometry.js';
 
-export function createSpecialCirculation(deck){
+function buildcreateSpecialCirculation(deck){
   if([1,4,5].includes(deck))return createLowerBowCirculation(deck);
   if(deck===16||deck===17)return createUpperAftCirculation(deck);
   if(deck===14||deck===15)return createSupportCirculation(deck);
@@ -42,3 +43,5 @@ export function createSpecialCirculation(deck){
   if(deck===20)polishCommandCorridor(root);
   return {root,shell};
 }
+
+export function createSpecialCirculation(deck){const p=buildcreateSpecialCirculation(deck);if(p)anchorObject(p.root,'circulation-'+deck);return p;}

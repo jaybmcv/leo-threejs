@@ -1,3 +1,7 @@
+import '../plan/debug.js';
+import {interactionTargets} from '../plan/debug-targets.js';
+import {prepareWalkWorld} from './prepare.js';
+import {registry,toWorld,anchoredYaw,anchoredOffset,deferRoomFrames} from '../plan/rooms.js';
 import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
@@ -8,8 +12,8 @@ import {loadEnvironment} from '../environment.js';
 import {publicAsset} from '../public-assets.js';
 import {createMars} from '../mars.js';
 import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
-import {buildSteps,buildColliders,cabinPlacements,outsideOnly,prepareExteriorForWalking} from './world.js';
-import {Colliders,solid,BODY} from './collision.js';
+import {buildSteps,cabinPlacements,outsideOnly} from './world.js';
+import {Colliders,BODY} from './collision.js';
 import {STATIC_LIFT_PARTS,LIFTS} from './lifts.js';
 import {Controller} from './controller.js';
 import {FollowCamera} from './camera.js';
@@ -24,7 +28,7 @@ import {ShipMap,drawMiniMap,drawFullMap,deckOf} from './minimap.js';
 import {DECKS} from '../model.js';
 import {floorY} from '../transit.js';
 import {createLifts} from './lift-ride.js';
-import {findRestSpots,solidSpots,spotIndex} from './rest.js';
+import {spotIndex} from './rest.js';
 import {PLACES,findStand,describe} from './places.js';
 import {openWindows,clearGlass} from './windows.js';
 import {createHaze} from './haze.js';
@@ -35,7 +39,6 @@ import {corridorTrim} from './trim.js';
 import {connectLive,savedName} from './net/live.js';
 import {identify,currentPass,bestPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
-import {createLounge} from './lounge.js';
 import {glossLoungeFloor} from './lounge-floor.js';
 import {createRecoveryMood} from './recovery.js';
 import {Marks} from './marks.js';
@@ -45,35 +48,22 @@ import {wearHat,fit,FIT} from './hat.js';
 import {createYarn,YARN_SPOTS} from './yarn.js';
 import {BALL,createBallMesh} from './hamster-ball.js';
 import {MeshBVH} from 'three-mesh-bvh';
-import {readSpot,spotLink} from './link.js';
-import {createSelfieBooth} from './selfie.js';
-import {createConcession} from './concession.js';
-import {stripProvisions,createProvisions} from './provisions.js';
-import {createLifeSupportPipes} from './life-support-pipes.js';
-import {createKittens,KITTEN_POSE_NAMES} from './kittens.js';
+import {readSpot,spotLink,remapSpot} from './link.js';
+import {KITTEN_POSE_NAMES} from './kittens.js';
 import {createAtriumKittens} from './arrival-atrium.js';
-import {prepareBlossomBed,createBlossomGarden} from './blossom.js';
-import {createDiningRobots} from './dining-robots.js';
-import {createHydrationNook} from './hydration-nook.js';
-import {createCargoTrolley} from './cargo-trolley.js';
-import {dressSurgery,createSurgeryArms} from './surgery.js';
+import {createSurgeryArms} from './surgery.js';
 import {createFinCasing} from './fin-casing.js';
 import {createInvasion} from './invasion/game.js';
-import {createPoolTable} from './pool/table.js';
 import {createPawPool} from './pool/game.js';
 import {createPawsOff} from './paws-off/game.js';
 import {createMudwater} from './mudwater.js';
-import {createJaguarGate} from './jaguar-gate.js';
 import {createGiveaway} from './mudwater-giveaway.js';
-import {createArcade} from './arcade.js';
 import {createPaintings} from './paintings.js';
 import {createComics,createComicReader} from './comics.js';
 import {createChangesBoards} from './changes-board.js';
-import {createTheatre,placeAttendant} from './theatre.js';
-import {dressGamingLounge,createGamingLounge} from './gaming-lounge.js';
+import {createTheatre} from './theatre.js';
+import {createGamingLounge} from './gaming-lounge.js';
 import {createCommsDisplays} from './comms-displays.js';
-import {createMissionHolo} from './mission-holo.js';
-import {createSwordCase} from './sword-case.js';
 import {createHalloween} from './halloween.js';
 import {createHexFloor} from './hex-floor.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
@@ -151,11 +141,10 @@ loadEnvironment(renderer).then(t=>{scene.environment=t;}).catch(()=>{});
 function resize(){const w=innerWidth,h=innerHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
 
-const ship=createShip({deferExterior:true,lazyInterior:true});scene.add(ship.root);
+deferRoomFrames();const ship=createShip({deferExterior:true,lazyInterior:true});scene.add(ship.root);
 const colliders=new Colliders();
 // The ship map image is small; it loads alongside the models.
 const shipMap=new ShipMap(__MAP_URL__);shipMap.ready.then(()=>{$('minimap-button').hidden=false;}).catch(()=>{});
-const walls=o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name);
 
 async function loadExterior(){
  const bytes=await publicAsset('leo-exterior-web.glb',p=>status(`Loading Leo… ${p}%`));
@@ -185,62 +174,19 @@ async function buildShip(){
  const shaftGlass=new T.MeshStandardMaterial({name:'Walk_shaft_glass',color:0xb4c8d2,roughness:.45,transparent:true,opacity:.5,depthWrite:false,side:T.DoubleSide});
  ship.inside.traverse(o=>{if(/^Lift_(back|side)_enclosure$/.test(o.name))o.material=shaftGlass;});
  status('Fitting the walls…');await idle();
- prepareExteriorForWalking(ship);
- // Refrigerated provisions loses its shared locker cabinets before the colliders see them (provisions.js).
- stripProvisions(ship);
- // The Deck 17 commons' aft planter loses its green tree and shrubs for the cherry blossom garden, and a corner for its
- // pond, and gains the bench under the tree (blossom.js).
- prepareBlossomBed(ship);
- // The theatre's attendant moves behind the concession counter (theatre.js) before the walls are fitted.
- placeAttendant(ship);
- // The Deck 16 training room's briefing furniture gives way to the gaming lounge's (gaming-lounge.js), solid and sittable.
- dressGamingLounge(ship);
- // The Deck 5 surgical suite's beds give way to sculpted medical beds (surgery.js), solid and lie-on-able.
- dressSurgery(ship);
- buildColliders(ship,{extra:[ship.exterior],filter:walls,into:colliders});
+ const prepared=prepareWalkWorld(ship,{into:colliders,kit:cosmoKit,anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches,urls:artUrls,light:{hemi,fill,scene},afterBase(){
  // The hull behind the glass goes for drawing only, after the colliders have it.
  const w0=performance.now(),opened=openWindows(ship,walkPlan.windows);clearGlass(ship.root);timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
  lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);corridorTrim(lifts.signs,{inside:ship.inside,partitions:walkPlan.walls});
- rest=spotIndex(solidSpots(findRestSpots(ship.inside),colliders));
- // The Hydro-Nip Lounge's doors and hammocks (lounge.js) leave the ship for meshes of their own before the merge below.
- lounge=createLounge(ship,colliders,{hemi,fill,scene});
+ },afterRest(state){
+ restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;
  // Its floor, galleries and the promenade in front: glossy acrylic with neon swirls (lounge-floor.js).
  glossLoungeFloor(ship);
  // The crew recovery lounge's pod side dims the lights (recovery.js).
  recovery=createRecoveryMood(ship,{hemi,fill,scene});
- // The crown lounge's selfie booth (selfie.js): solid, and drawn with its deck band like the signs below.
- booth=createSelfieBooth();colliders.addStatic(booth.group);
- // Paw Pool's table on the Recreation Hall's activity floor (pool/table.js): solid to walk into, its rails too high to step.
- {const carpet=ship.root.getObjectByName('Activity_floor');if(carpet){poolTable=createPoolTable(carpet);colliders.addStatic(poolTable.group);}}
- // The Deck 16 theatre's concession stand (concession.js): solid too.
- concession=createConcession(ship);if(concession)colliders.addStatic(concession);
- // Refrigerated provisions' fridges, shelving and strip curtain (provisions.js): solid as plain boxes, the curtain not.
- provisions=createProvisions(ship);if(provisions)colliders.addStatic(provisions.solid,()=>true);
- // Life-support control's colour-coded service pipework (life-support-pipes.js): its regulator boxes and supply
- // cabinets solid as plain boxes, the pipes overhead dressing.
- const pipework=createLifeSupportPipes(ship);if(pipework)colliders.addStatic(pipework.solid,()=>true);
- // Young explorers' kitten habitats (kittens.js): the climbing tree, tunnel, den and kittens solid as plain boxes.
- kittens=createKittens(ship,cosmoKit);if(kittens)colliders.addStatic(kittens.solid,()=>true);
- // Communal dining's three serving robots (dining-robots.js): solid as plain boxes.
- diningRobots=createDiningRobots(ship);if(diningRobots)colliders.addStatic(diningRobots.solid,()=>true);
- // The exercise studio's hydration and towel nook (hydration-nook.js): solid as one plain box.
- hydration=createHydrationNook(ship);if(hydration)colliders.addStatic(hydration.solid,()=>true);
- // Container hold A's parked hand trolley (cargo-trolley.js): solid as one plain box, clear of the aisle.
- const trolley=createCargoTrolley(ship);if(trolley)colliders.addStatic(trolley.solid,()=>true);
- // The cherry blossom garden (blossom.js): its trunk, bridge and pond edges solid.
- blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
- // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
- jaguarGate=createJaguarGate();colliders.addStatic(jaguarGate.solid,()=>true);
- // The arcade row on the Hydro-Nip Lounge's forward wall, Paws Off's treadmill at its far end (arcade.js): solid as plain
- // boxes.
- arcadeRow=createArcade();if(arcadeRow)colliders.addStatic(arcadeRow.solid,()=>true);
- // Mission control's holographic table (mission-holo.js): its pedestal and top solid as a plain cylinder.
- missionHolo=createMissionHolo(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(missionHolo)colliders.addStatic(missionHolo.solid,()=>true);
- // The Captain's office's gold sword case under its spotlight (sword-case.js): solid as a plain box.
- const swordCase=createSwordCase(ship);if(swordCase)colliders.addStatic(swordCase.solid,()=>true);
- // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
- // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
- mudwater=createMudwater(ship,{urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
+ }});
+ ({booth,poolTable,concession,provisions,kittens,diningRobots,hydration,blossom,jaguarGate,arcadeRow,missionHolo,mudwater}=prepared);
+ const {pipework,trolley,swordCase}=prepared;
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged; and
  // on the arcade's treadmill.
  pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),more:arcadeRow?[arcadeRow.treadmill]:[],onStart:startRun,onEnd:endRun});
@@ -307,7 +253,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -373,7 +319,7 @@ const actions={
  // The ship log from anywhere aboard, starting on the changes made around the walker (changes-board.js).
  log(){if(ready())openLog();},
  // Respawn: back to the arrival hall from anywhere aboard, off any seat or bed.
- respawn(){if(ready()){closePanels();emote=null;goTo({at:START.position.toArray(),yaw:START.yaw});for(const y of yarns)y.reset();ball.mesh.position.copy(ballHome);}},
+ respawn(){if(ready()){closePanels();emote=null;goTo({at:START.position.toArray(),yaw:START.yaw,resolved:true});for(const y of yarns)y.reset();ball.mesh.position.copy(ballHome);}},
  // A ping where you stand, for others aboard to find (marks.js); one every few seconds at most.
  ping(now=performance.now()){if(!ready()||!live?.live||now-pinged<PING_GAP_MS)return;pinged=now;const at=myPose().pos;live.mark(at);marks.show('me','You',at,now);},
  // Chat with everyone aboard (chat.js).
@@ -410,7 +356,7 @@ const chat=createChat({box:$('chat'),lines:$('chat-lines'),form:$('chat-form'),f
 });
 function openLog(){const p=controller.position;changeLog.open({near:p,nearFirst:changeLog.nearby(p).length>0});}
 // A spot (link.js's readSpot form), looking as it says; true if it could be reached.
-function goToSpot(spot){if(!goTo({at:spot.at,yaw:spot.yaw}))return false;emote=null;follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;return true;}
+function goToSpot(spot){spot=remapSpot(spot);if(!goTo({at:spot.at,yaw:spot.yaw,resolved:true}))return false;emote=null;follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;return true;}
 
 async function loadCosmo(){
  globalThis.LEO_THREE=T;globalThis.LEO_COSMO_EMOTES=__EMOTES_URL__;
@@ -420,21 +366,21 @@ async function loadCosmo(){
 }
 
 // The arrival hall on Deck 2, where travellers come aboard.
-const START={position:new T.Vector3(-135,-35.7,-38),yaw:Math.PI/2};
+const START={position:new T.Vector3(...toWorld('d02-arrival-1',[-20,0,0])),yaw:anchoredYaw('d02-arrival-1',Math.PI/2)};
 // Below this a walker has fallen out of the ship: 3 m under Deck 1's floor.
 const BELOW_SHIP=floorY(1)-3;
 await Promise.all([loadExterior(),loadCosmo()]).catch(e=>{status(e.message);throw e;});
 await buildShip();
 try{localStorage.removeItem(STARTING);}catch{}
 // A walk link (link.js) starts wherever it was taken; otherwise the arrival hall.
-const spot=readSpot(),stand=spot&&findStand(colliders,spot.at);
+const spot=remapSpot(readSpot()),stand=spot&&findStand(colliders,spot.at);
 controller.place(stand||findStand(colliders,START.position.toArray())||START.position);
 follow.yaw=stand?spot.yaw:START.yaw;if(stand){follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;}
 walker.holder.position.copy(controller.position);
 // Balls of yarn to push about: the arrival hall's, and one in each of six common areas (yarn.js).
 const yarn=createYarn(colliders),yarns=[yarn];
 for(const s of YARN_SPOTS){const place=PLACES.find(p=>p.name===s.place);if(!place)continue;
- const at=findStand(colliders,place.at.map((v,i)=>v+s.offset[i]),{radius:4});if(at)yarns.push(createYarn(colliders,{at:at.toArray(),color:s.color}));}
+ const at=findStand(colliders,place.at.map((v,i)=>v+(place.room?anchoredOffset(place.room,s.offset):s.offset)[i]),{radius:4});if(at)yarns.push(createYarn(colliders,{at:at.toArray(),color:s.color}));}
 for(const y of yarns)scene.add(y.mesh);
 // The hamster ball (hamster-ball.js), parked in the Deck 17 gardens until someone climbs in.
 const ballHome=findStand(colliders,BALL.home,{radius:4})||new T.Vector3(...BALL.home),ball=createBallMesh();let inBall=false;
@@ -508,7 +454,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get gaming(){return gaming;},get provisions(){return provisions;},get blossom(){return blossom;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,mudwater,changeLog,comics,paintings,missionHolo,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get gaming(){return gaming;},get provisions(){return provisions;},get blossom(){return blossom;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -738,7 +684,7 @@ function toggleEmotes(){
  EMOTES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';const label=name.replace(/_/g,' ');b.textContent=`${(i+1)%10} · ${label[0].toUpperCase()}${label.slice(1)}`;b.onclick=()=>{closePanels();actions.emote(i);};list.appendChild(b);});
  panel.hidden=false;input.enabled=false;list.querySelector('button')?.focus();
 }
-function goTo(place){const q=findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();resting=null;
+function goTo(place){place=remapSpot(place);const q=findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();resting=null;
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.

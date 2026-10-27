@@ -1,3 +1,5 @@
+import {roomObject} from '../plan/rooms.js';
+import {walkCanvas} from './canvas.js';
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 
@@ -12,7 +14,7 @@ const ROOM='Area_d16-dining-7';
 export const ROBOT_SPOTS=[[-22.6,3.4,[-25,0]],[-.4,7.5,[-4,6]],[10.5,-7.5,[14,-6]]];
 
 function canvasTexture(w,h,paint){
- const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;paint(canvas.getContext('2d'),w,h);
+ const canvas=walkCanvas();canvas.width=w;canvas.height=h;paint(canvas.getContext('2d'),w,h);
  const t=new T.CanvasTexture(canvas);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return t;
 }
 // The face: Mars-orange line art on a dark screen, eyes half shut under flat lids for the Mars Cats' unbothered look.
@@ -74,7 +76,7 @@ function robot(){
 }
 
 export function createDiningRobots(ship){
- const room=ship.root.getObjectByName(ROOM);if(!room)return null;
+ const room=roomObject(ship,ROOM);if(!room)return null;
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Dining_robots';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);

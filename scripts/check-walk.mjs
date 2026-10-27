@@ -5,6 +5,7 @@ import {SHIP_AREAS} from '../src/areas.js';
 import {cabinPlacements} from '../src/walk/world.js';
 import {BODY,bandOf} from '../src/walk/collision.js';
 import {LIFTS,carTriangles} from '../src/walk/lifts.js';
+import {toWorld} from '../src/plan/rooms.js';
 import {findRestSpots,solidSpots} from '../src/walk/rest.js';
 import {loadWalkShip,fitForWalking} from './walk-plan.mjs';
 
@@ -16,7 +17,9 @@ import {loadWalkShip,fitForWalking} from './walk-plan.mjs';
 const t0=Date.now(),log=(...a)=>console.log(((Date.now()-t0)/1000).toFixed(0)+'s',...a);
 const ship=await loadWalkShip();
 // The partitions, railings and colliders exactly as the page has them (scripts/walk-plan.mjs).
-const {colliders:col,dropped,walls,rails}=fitForWalking(ship);
+const {colliders:col,dropped,walls,rails,prepared}=fitForWalking(ship);
+// Automatic lounge doors open on approach in the page; the static reachability flood holds them open.
+if(prepared.lounge)prepared.lounge.update(.6,prepared.lounge.doors.map(d=>d.centre),new T.Vector3());
 log('exterior triangles inside the decks, dropped:',dropped,'; partitions',walls.length,'; railings',rails.length,`(${Math.round(rails.reduce((s,r)=>s+r[3]-r[2],0))} m)`);
 for(const lift of LIFTS)for(const stop of lift.stops)col.addMover(lift.id,carTriangles(lift,[stop.door||lift.door]),new T.Matrix4().makeTranslation(lift.car.x,stop.y,lift.car.z));
 log('world built:',col.triangles,'static triangles');
@@ -41,7 +44,7 @@ for(const a of treads)for(const b of treads){if(b.y<=a.y+.02||b.y>a.y+.25||Math.
 log('stair steps climbed:',flightSteps-blockedSteps.length,'/',flightSteps,blockedSteps.slice(0,10));
 
 // Diagnostics: SEED=x,y,z floods from elsewhere, BUDGET caps the positions and stops after the flood, DUMP saves them.
-const seed=(process.env.SEED||'-135,-35.7,-38').split(',').map(Number),BUDGET=+(process.env.BUDGET||Infinity);
+const seed=process.env.SEED?process.env.SEED.split(',').map(Number):toWorld('d02-arrival-1',[-20,0,0]),BUDGET=+(process.env.BUDGET||Infinity);
 const S0={x:seed[0],z:seed[2]};S0.y=floorAt(S0.x,seed[1],S0.z,1,3);
 const key=(x,y,z)=>((Math.round((x-S0.x)/G)+2000)*4000+(Math.round((z-S0.z)/G)+2000))*1000+Math.round((y+60)*2);
 const snap=(v,o)=>o+Math.round((v-o)/G)*G;
@@ -94,7 +97,7 @@ let stops=0,stopCount=0;
 for(const lift of LIFTS)for(const s of lift.stops){stopCount++;const d=s.door||lift.door,f=d.axis==='z'?[0,d.sign]:[d.sign,0],half=(d.axis==='z'?lift.car.depth:lift.car.width)/2;
  if(reached(lift.car.x+f[0]*(half+1),s.y,lift.car.z+f[1]*(half+1),.8,.3,.3))stops++;else problems.push(`lift ${lift.id}: ${s.label} landing not reached`);}
 // Seats and beds: somewhere to stand within 1.6 m.
-const spots=solidSpots(findRestSpots(ship.inside),col);let usable=0;const unusable=new Map();
+const spots=solidSpots(prepared.restSpots,col);let usable=0;const unusable=new Map();
 for(const s of spots){if(reached(s.point.x,s.height-.2,s.point.z,1.6,1.3,.25))usable++;else{const k=`${s.kind} near ${Math.round(s.point.x)},${Math.round(s.height)},${Math.round(s.point.z)}`;unusable.set(k,(unusable.get(k)||0)+1);}}
 const restRatio=usable/spots.length;if(restRatio<.995)problems.push(`seats and beds: ${usable}/${spots.length} usable`);
 // The Deck 20 crew recovery lounge's seven sleeping pods: a bed in each, with somewhere to stand in front of it.

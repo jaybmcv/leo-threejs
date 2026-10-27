@@ -1,3 +1,4 @@
+import {anchorArea} from './plan/anchor-area.js';
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
@@ -37,7 +38,7 @@ export function nosePlan(number){
  const end=stations.at(-1)[0],outline=[...stations.map(([x,w])=>[x,-w]),...stations.slice().reverse().map(([x,w])=>[x,w])];
  return {a,y,ceiling,stations,end,outline};
 }
-export function createNoseCommons(number){
+function buildcreateNoseCommons(number){
  const p=nosePlan(number),{a,y,ceiling,outline,end}=p,root=new T.Group(),shell=new T.Group(),fit=new T.Group();
  root.name='Nose_commons_'+String(number).padStart(2,'0');shell.name='Nose_lining';fit.name='Nose_furnishings';root.add(shell,fit);
  const accent=mat(a.kind,a.color),features={};
@@ -120,3 +121,5 @@ export function createNoseCommons(number){
  root.userData={noseCommons:true,number,deck:a.deck,name:a.name,kind:a.kind,features,bays:bays.length,floor:y,clearSpineWidth:6,description:a.description};
  return {root,shell,fit,plan:p,overview:{position:[end+32,y+76,106],target:[(148+end)/2,y,0]},inside:{position:[153,y+1.7,0],target:[183,y+1.6,15]}};
 }
+
+export function createNoseCommons(number){return anchorArea(buildcreateNoseCommons(number),'nose-commons-'+number);}

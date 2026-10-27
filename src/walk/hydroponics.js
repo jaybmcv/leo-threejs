@@ -1,3 +1,4 @@
+import {roomObject} from '../plan/rooms.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
@@ -75,7 +76,7 @@ const PLANTS={
 };
 
 export function dressHydroponics(ship){
- const room=ship.inside.getObjectByName(ROOM),fit=room?.getObjectByName('Room_fittings');if(!fit)return false;
+ const room=roomObject(ship,ROOM),fit=room?.getObjectByName('Room_fittings');if(!fit)return false;
  const racks=[];fit.traverse(o=>{if(o.name==='Hydroponic_rack')racks.push(o);});if(!racks.length)return false;
  // The old trays, their clusters and the tray trim (rails and light bars, one mesh for the room) go.
  const old=[];room.traverse(o=>{if(o.isMesh&&(OLD.test(o.name)||o.name==='Refined_grow_lighting'))old.push(o);});

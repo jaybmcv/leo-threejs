@@ -1,3 +1,4 @@
+import {toWorld,anchoredYaw} from '../plan/rooms.js';
 // Help (H, or Help in the toolbar): how to play on foot, and, for testers (feedback is on in this browser), the tester
 // guide: how a report becomes a change aboard, with a real report's before and after (the concession stand, ship log
 // #123 in scripts/ship-log-media.json) and a way to go and see it. A keyboard gets the keys, a touch screen its
@@ -5,7 +6,7 @@
 const MEDIA='https://raw.githubusercontent.com/jaybmcv/leo-threejs/pr-media/';
 const EXAMPLE={quote:'Can you add an L-shaped concession stand here that looks super fancy like this?',
  before:'feedback-issue-81/74ffeb1/tester-view-before.jpg',after:'feedback-issue-81/74ffeb1/tester-view-after.jpg',
- go:'?at=-135.29,20.3,25.58&yaw=209&pitch=-9&view=first'};
+ go:'?lv=1&at='+toWorld('d16-theater-5',[-20.29,0,-.42],{legacy:true}).join(',')+'&yaw='+209+'&pitch=-9&view=first'};
 
 // Each row: the keys, then the touch control (null: none on that kind of screen), then what it does, and on a touch
 // screen what it does there when that differs.

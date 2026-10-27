@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {deferRoomFrames,resolveRoomFrames,deltaMatrix,hasFrameOverride} from '../plan/rooms.js';
 import {DECKS,CABINS,SAMPLE} from '../model.js';
 import {shapeAft} from '../concept-shape.js';
 import {Colliders,solid,meshTriangles} from './collision.js';
@@ -22,7 +23,7 @@ const SURFACE=/^(Smooth_pressure_envelope|V3[345]_|Forward_observation|Individua
 export const RESIDENTIAL=DECKS.filter(d=>d.residential).map(d=>d.number);
 
 export function* buildSteps(ship,{order=DECKS.map(d=>d.number)}={}){
- ship.inside.visible=true;
+ deferRoomFrames();ship.inside.visible=true;
  const transit=ship.ensureTransit();transit.root.visible=true;transit.shell.visible=true;transit.structure.visible=true;
  for(const g of transit.decks.values())g.visible=true;
  yield 'transit';
@@ -49,8 +50,8 @@ export function cabinPlacements(){
   const dy=(deck-15)*4;
   for(const c of others){
    const side=c.z-Math.round(c.z/26)*26;
-   const m=new T.Matrix4().makeTranslation(c.x,c.y+dy,c.z).multiply(new T.Matrix4().makeRotationY(side<0?Math.PI:0)).multiply(new T.Matrix4().makeTranslation(-x,-y,-z));
-   out.push({deck,id:c.id,matrix:m});
+   const id=c.id.replace('N10','N'+String(deck-5).padStart(2,'0')),m=new T.Matrix4().makeTranslation(c.x,c.y+dy,c.z).multiply(new T.Matrix4().makeRotationY(side<0?Math.PI:0)).multiply(new T.Matrix4().makeTranslation(-x,-y,-z));
+   if(hasFrameOverride(id))m.premultiply(deltaMatrix(id));out.push({deck,id,matrix:m});
   }
  }
  return out;
@@ -60,7 +61,7 @@ export function cabinTemplate(ship){
  for(const part of [residence.walls.getObjectByName('Sample_cabin_walls'),residence.root.getObjectByName('Sample_cabin_fittings')]){
   part.updateMatrixWorld(true);
   // The sample sits on Deck 15 at dy 0, so its world frame is the template frame.
-  part.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&solid(o))meshTriangles(o,out);});
+  part.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&solid(o))meshTriangles(o,out,hasFrameOverride(SAMPLE.id)?deltaMatrix(SAMPLE.id).invert().multiply(o.matrixWorld):o.matrixWorld);});
  }
  return out;
 }

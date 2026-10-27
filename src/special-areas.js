@@ -1,3 +1,4 @@
+import {anchorArea} from './plan/anchor-area.js';
 import * as T from 'three';
 import {finishShipArea} from './area-finish.js';
 import {tintWorldWindow,tintBoxWindow} from './glazing-finish.js';
@@ -354,7 +355,7 @@ function lifeboats(area,k){
   area.overview={position:[205,y+235,255],target:[0,y,0]};area.inside={position:[-104,y+1.7,65.15],target:[-122,y+1.3,65.15]};
 }
 
-export function createSpecialArea(area){
+function buildcreateSpecialArea(area){
   // Keep descriptors immutable: camera poses belong to this built area instance.
   area={...area};const k=kit(area);
   if(area.kind==='bridge')bridge(area,k);
@@ -367,3 +368,5 @@ export function createSpecialArea(area){
   const [x,y,z]=area.center;
   return {...k,area,overview:area.overview||{position:[x+area.width*.9,y+Math.max(area.width,area.depth)*.9,z+area.depth*1.1],target:[x,y+1,z]},inside:area.inside||{position:[x,y+1.7,z+(z>0?-1:1)*(area.depth/2-2)],target:[x+3,y+1.3,z]}};
 }
+
+export function createSpecialArea(area){return anchorArea(buildcreateSpecialArea(area),area.id);}

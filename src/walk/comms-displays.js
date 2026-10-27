@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {anchorObject,roomObject} from '../plan/rooms.js';
 
 // Deck 20's Communications room on foot: a navigation star map wraps the back wall and both end walls, its plotted
 // courses running on across the corners, and each of the six stations gets a screen of its own. Concept graphics only,
@@ -89,7 +90,7 @@ function paintStation(c,i){
 }
 
 export function createCommsDisplays(ship,{anisotropy=8}={}){
- if(!ship.root.getObjectByName(ROOM))return null;
+ if(!roomObject(ship,ROOM))return null;
  // The group stands at floor height so it joins Deck 20's band; its pieces are placed relative to that.
  const group=new T.Group();group.name='Comms_displays';group.position.y=FLOOR;const paints=[];
  const plane=(w,h,cw,ch,at,ry,paint)=>{
@@ -100,5 +101,5 @@ export function createCommsDisplays(ship,{anisotropy=8}={}){
  let u0=0;for(const wall of WALLS){const u=u0;plane(wall.w,H,Math.round(wall.w*PX),H*PX,wall.at,wall.ry,c=>paintMap(c,wall,u));u0+=wall.w;}
  STATIONS.forEach(([x,z],i)=>plane(SW,SH,...SPX,[x,FLOOR+1.26,z-.235],0,c=>paintStation(c,i)));
  document.fonts?.ready.then(()=>{for(const d of paints)d();});
- return {group};
+ anchorObject(group,'d20-communications-3');return {group};
 }

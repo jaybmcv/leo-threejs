@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {anchorObject} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {DECKS} from '../model.js';
 import {TRANSIT_CORES,floorY} from '../transit.js';
@@ -224,7 +225,7 @@ function hang(parent,material,back,at,facing,width,ceiling){
  // A lit strip under the screen.
  const glow=new T.Mesh(new T.BoxGeometry(width-.1,.014,.03),signGlow);glow.position.y=-h/2-.007;g.add(glow);
  const drop=ceiling-h/2;for(const s of [-1,1]){const rod=new T.Mesh(rodGeometry,signBody);rod.scale.y=drop;rod.position.set(s*width*.4,h/2+drop/2,0);g.add(rod);}
- parent.add(g);return g;
+ anchorObject(g,'circulation-'+Math.max(1,Math.min(20,Math.round((at.y-2.8+39.7)/4)+1)));parent.add(g);return g;
 }
 // The lift cells show lift and stairs icons: each core holds both.
 const LIFTS={fore:'Forward lifts',aft:'Aft lifts'},CORE=['lift','stairs'];

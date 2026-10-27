@@ -1,3 +1,4 @@
+import {walkCanvas} from './canvas.js';
 import * as T from 'three';
 import {CROWN} from '../fin-crown.js';
 import {shapePoint} from '../concept-shape.js';
@@ -10,11 +11,11 @@ const OUT={w:1600,margin:40,band:150};
 const FONT={display:'"Archivo", "Sora", sans-serif',mono:'"JetBrains Mono", ui-monospace, monospace'};
 const ORANGE='#f85800';
 
-const mark=new Promise(resolve=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src='brand/mark.png';});
+const mark=typeof Image==='undefined'?Promise.resolve(null):new Promise(resolve=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>resolve(null);img.src='brand/mark.png';});
 
 // Stars over a deep-space gradient, Mars rising on the right and the voyage's name across the top.
 function backdropTexture(){
- const canvas=document.createElement('canvas');canvas.width=2048;canvas.height=Math.round(2048*HEIGHT/WIDTH);
+ const canvas=walkCanvas();canvas.width=2048;canvas.height=Math.round(2048*HEIGHT/WIDTH);
  const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=4;
  const paint=logo=>{
   const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
@@ -31,7 +32,7 @@ function backdropTexture(){
  };
  paint(null);
  // The brand fonts and mark may still be loading: paint again once they're in.
- Promise.all([mark,document.fonts?.ready]).then(([logo])=>paint(logo));
+ Promise.all([mark,globalThis.document?.fonts?.ready]).then(([logo])=>paint(logo));
  return texture;
 }
 
@@ -81,9 +82,9 @@ export function createSelfieBooth(){
   // Right after the photo is drawn into `source`: crop it to 3:2 and frame it. Resolves to a canvas.
   async frame(source){
    const w=source.width,h=source.height,cw=Math.min(w,h*1.5),ch=cw/1.5;
-   const pw=OUT.w-OUT.margin*2,ph=Math.round(pw/1.5),out=document.createElement('canvas');out.width=OUT.w;out.height=OUT.margin+ph+OUT.band;
+   const pw=OUT.w-OUT.margin*2,ph=Math.round(pw/1.5),out=walkCanvas();out.width=OUT.w;out.height=OUT.margin+ph+OUT.band;
    const c=out.getContext('2d');c.drawImage(source,(w-cw)/2,(h-ch)/2,cw,ch,OUT.margin,OUT.margin,pw,ph);
-   const logo=await mark;await document.fonts?.ready;
+   const logo=await mark;await globalThis.document?.fonts?.ready;
    c.globalCompositeOperation='destination-over';c.fillStyle='#0b0b10';c.fillRect(0,0,out.width,out.height);c.globalCompositeOperation='source-over';
    c.fillStyle=ORANGE;c.fillRect(OUT.margin,OUT.margin+ph,pw,4);
    const y=OUT.margin+ph+OUT.band/2+4;let x=OUT.margin;

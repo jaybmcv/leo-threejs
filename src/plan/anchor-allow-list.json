@@ -1,0 +1,113 @@
+[
+  {
+    "paths": [
+      "src/aft*.js",
+      "src/engineering-dressing.js",
+      "src/fin-*.js",
+      "src/walk/fin-casing.js"
+    ],
+    "room": "aft-machinery",
+    "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign."
+  },
+  {
+    "paths": [
+      "src/walk/selfie.js",
+      "src/walk/hostess.js"
+    ],
+    "room": "crown",
+    "reason": "Crown lounge stays fixed; photo framing, hostess and booth remain in its accepted frame."
+  },
+  {
+    "paths": [
+      "src/exterior*.js",
+      "src/concept-*.js",
+      "src/diagonal-profile.js",
+      "src/hull-*.js",
+      "src/nose-fairing.js",
+      "src/observation-apertures.js",
+      "src/passenger-windows.js",
+      "src/engine-window-plan.js",
+      "src/window-geometry.js",
+      "src/fin-cap-shell.js",
+      "src/walk/windows.js"
+    ],
+    "room": "exterior",
+    "reason": "Hull skin, glazing, fairing, hull-space projections and exterior dressing remain fixed in Phase 0."
+  },
+  {
+    "paths": [
+      "src/transit.js",
+      "src/walk/lifts.js",
+      "src/walk/lift-ride.js",
+      "src/walk/commons-hall.js",
+      "src/walk/partitions.js",
+      "src/walk/railings.js",
+      "src/walk/deck-map.js",
+      "src/walk/minimap.js",
+      "src/walk/haze.js"
+    ],
+    "room": "@circulation",
+    "reason": "Lifts stay fixed. Revision 1 item 6 leaves commons fill floors and spine/link circulation for later layout phases; plans and maps derive from these surfaces."
+  },
+  {
+    "paths": [
+      "src/walk/halloween.js"
+    ],
+    "room": "circulation-15",
+    "reason": "The plan explicitly does not port the temporary v1 Halloween lanes/lights, which expire November 1. Clown cabins remain seasonal v1 data."
+  },
+  {
+    "paths": [
+      "src/cosmo*.js",
+      "src/escort-shuttle.js",
+      "src/mars.js",
+      "src/space-backdrop.js",
+      "src/thruster-effects.js",
+      "src/explode.js",
+      "src/viewer.js",
+      "src/annotation-review.html",
+      "src/walk/avatar.js",
+      "src/walk/camera.js",
+      "src/walk/hat.js",
+      "src/walk/marks.js",
+      "src/walk/remotes.js",
+      "src/walk/star-drift.js",
+      "src/walk/render-bake.js",
+      "src/walk/invasion/*.js",
+      "src/walk/pool/game.js",
+      "src/walk/pool/rules.js",
+      "src/walk/vr/*"
+    ],
+    "room": null,
+    "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting."
+  },
+  {
+    "paths": [
+      "src/polish-kit.js",
+      "src/stylized-plants.js",
+      "src/glazing-finish.js",
+      "src/tour-*.js",
+      "src/floor-geometry.js",
+      "src/cut-out.js",
+      "src/walk/collision.js",
+      "src/walk/controller.js",
+      "src/walk/rest.js",
+      "src/walk/foliage.js",
+      "src/walk/wall-kit.js"
+    ],
+    "room": "inherit",
+    "reason": "Geometry/math helper: positions are supplied by a caller whose room ownership is checked separately."
+  },
+  {
+    "paths": [
+      "src/environment.js",
+      "src/public-assets.js",
+      "src/walk/chat.js",
+      "src/walk/input.js",
+      "src/walk/lift-motion.js",
+      "src/walk/link.js"
+    ],
+    "room": null,
+    "reason": "Lighting/asset loading, DOM input/chat, lift state or saved-link math; no geometry placement."
+  }
+]

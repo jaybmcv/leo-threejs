@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {objectRoom,instanceRoom,baselineMatrix,hasFrameOverride,deltaMatrix} from '../plan/rooms.js';
 
 // Every seat and bed aboard, found by name in the built interior (and through the instance transforms of the repeated
 // cabins and lifeboat seating). A seat spot is a point on a seat's top with the way a sitter faces; benches and sofas
@@ -19,7 +20,6 @@ function topFace(o,matrix){
  const ax=new T.Vector3().setFromMatrixColumn(matrix,0).multiplyScalar((b.max.x-b.min.x)/2),az=new T.Vector3().setFromMatrixColumn(matrix,2).multiplyScalar((b.max.z-b.min.z)/2);
  ax.y=0;az.y=0;return {c,ax,az};
 }
-const instances=o=>Array.from({length:o.count},(_,i)=>{const m=new T.Matrix4();o.getMatrixAt(i,m);return m.premultiply(o.matrixWorld);});
 
 export function findRestSpots(root){
  root.updateMatrixWorld(true);
@@ -27,7 +27,7 @@ export function findRestSpots(root){
  root.traverse(o=>{
   if(!o.isMesh||!worldVisible(o))return;
   const list=SEAT.test(o.name)?seats:SEAT_BASE.test(o.name)?bases:BED.test(o.name)?beds:PILLOW.test(o.name)?pillows:BACK.test(o.name)?backs:null;if(!list)return;
-  for(const m of o.isInstancedMesh?instances(o):[o.matrixWorld])list.push({o,face:topFace(o,m),m});
+  for(let i=0;i<(o.isInstancedMesh?o.count:1);i++){const owner=o.isInstancedMesh?instanceRoom(o,i):objectRoom(o),m=baselineMatrix(o,o.isInstancedMesh?i:null);list.push({o,owner,face:topFace(o,m),m});}
  });
  // Backs and pillows by plan position, for facing.
  const grid=new Map(),cell=p=>`${Math.floor(p.x/2)},${Math.floor(p.y/2)},${Math.floor(p.z/2)}`;
@@ -43,7 +43,7 @@ export function findRestSpots(root){
   // Face along whichever seat axis points away from the back: a chair can be deeper than it is wide.
   if(back){const away=c.clone().sub(back.face.c);away.y=0;const nx=ax.clone().normalize(),nz=az.clone().normalize(),n=Math.abs(nx.dot(away))>=Math.abs(nz.dot(away))?nx:nz;facing=n.multiplyScalar(Math.sign(n.dot(away))||1);}
   const count=half*2>1.25?Math.max(1,Math.floor((half*2-.15)/SPACING)):1;
-  for(let i=0;i<count;i++){const t=count===1?0:(-(count-1)/2+i)*SPACING;spots.push({kind:'sit',point:c.clone().addScaledVector(dir,t),facing,height:c.y,instanced:it.o.isInstancedMesh});}
+  for(let i=0;i<count;i++){const t=count===1?0:(-(count-1)/2+i)*SPACING;spots.push({room:it.owner,kind:'sit',point:c.clone().addScaledVector(dir,t),facing,height:c.y,instanced:it.o.isInstancedMesh});}
  };
  // A curved banquette rings its table: spots follow the arc between the front edge and the back, facing the table. A
  // curved seat round a planter has its back on the inside instead (the arrival hall's, arrival-atrium.js): it faces out.
@@ -57,7 +57,7 @@ export function findRestSpots(root){
   const out=rBack<rIn,r=out?(rIn+rOut)/2:(rIn+Math.min(rBack,rOut))/2,end=.35/r,span=a1-a0-2*end;if(span<=0)return;
   const count=Math.max(1,Math.floor(span*r/SPACING)+1),step=count>1?span/(count-1):0;
   for(let i=0;i<count;i++){const a=mid+a0+end+(count>1?i*step:span/2),dir=new T.Vector3(Math.cos(a),0,Math.sin(a));
-   spots.push({kind:'sit',point:O.clone().addScaledVector(dir,r).setY(c.y),facing:out?dir:dir.negate(),height:c.y});}
+   spots.push({room:it.owner,kind:'sit',point:O.clone().addScaledVector(dir,r).setY(c.y),facing:out?dir:dir.negate(),height:c.y});}
  };
  for(const it of seats)(/curved/i.test(it.o.name)&&!it.o.isInstancedMesh?arcSpots:seatSpots)(it);
  // A base counts only where no cushion or seat already covers it.
@@ -69,9 +69,10 @@ export function findRestSpots(root){
   // own origin less the sag, and it can swing (the walk's lounge.js), so the spot keeps the mesh.
   if(it.o.name==='Hammock'){const b=it.o.geometry.boundingBox,low=c.clone();low.y=new T.Vector3(0,b.min.y,0).applyMatrix4(it.m).y;
    if(it.o.userData.head){head=new T.Vector3(...it.o.userData.head).transformDirection(it.m);head.y=0;head.normalize();}
-   spots.push({kind:'lie',point:low,head,length:long.length()*2,height:low.y,hammock:it.o});continue;}
-  spots.push({kind:'lie',point:c.clone(),head,length:long.length()*2,height:c.y});
+   spots.push({room:it.owner,kind:'lie',point:low,head,length:long.length()*2,height:low.y,hammock:it.o});continue;}
+  spots.push({room:it.owner,kind:'lie',point:c.clone(),head,length:long.length()*2,height:c.y});
  }
+ for(const s of spots)if(s.room&&hasFrameOverride(s.room)){const m=deltaMatrix(s.room);s.point.applyMatrix4(m);if(s.facing)s.facing=s.facing.clone().transformDirection(m);if(s.head)s.head=s.head.clone().transformDirection(m);s.height=s.point.y;}
  return spots;
 }
 

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {objectRoom,unanchorPoint,anchorObject} from '../plan/rooms.js';
 import {COMMONS} from '../model.js';
 import {canvasTexture,seeded} from '../polish-kit.js';
 
@@ -29,7 +30,7 @@ const swirl=()=>canvasTexture(1024,1024,(g,w,h)=>{
 // World-planar UVs, so the swirl runs on unbroken across every floor piece at one scale.
 function planar(o){
  o.updateWorldMatrix(true,false);const g=o.geometry.clone(),p=g.attributes.position,v=new T.Vector3(),uv=new Float32Array(p.count*2);
- for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);uv[i*2]=v.x/TILE;uv[i*2+1]=-v.z/TILE;}
+ for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);if(objectRoom(o)==='commons-1')v.fromArray(unanchorPoint('commons-1',v.toArray()));uv[i*2]=v.x/TILE;uv[i*2+1]=-v.z/TILE;}
  g.setAttribute('uv',new T.BufferAttribute(uv,2));o.geometry=g;
 }
 
@@ -38,12 +39,12 @@ export function glossLoungeFloor(ship){
  const map=swirl();
  // Low roughness picks up the scene's reflections; a little of the pattern glows, like neon under blacklight.
  const material=new T.MeshStandardMaterial({name:'Lounge_acrylic_floor',map,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.4,roughness:.1,metalness:0});
- const inside=(b)=>{const c=b.getCenter(new T.Vector3());return c.x>X0&&c.x<X1&&c.z>Z0-.1&&c.z<0&&c.y>Y-1&&c.y<Y+9;};
+ const inside=(b,o)=>{const c=b.getCenter(new T.Vector3());if(objectRoom(o)==='commons-1')c.fromArray(unanchorPoint('commons-1',c.toArray()));return c.x>X0&&c.x<X1&&c.z>Z0-.1&&c.z<0&&c.y>Y-1&&c.y<Y+9;};
  const found=[];
- ship.inside.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&FLOORS.test(o.name)&&inside(new T.Box3().setFromObject(o)))found.push(o);});
+ ship.inside.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&FLOORS.test(o.name)&&inside(new T.Box3().setFromObject(o),o))found.push(o);});
  for(const o of found){planar(o);o.material=material;}
  // The promenade in front of the lounge, laid just over its own floor.
  const promenade=new T.Mesh(new T.PlaneGeometry(X1-X0,PROMENADE*2).rotateX(-Math.PI/2).translate((X0+X1)/2,Y+.006,0),material);
- promenade.name='Lounge_promenade_floor';planar(promenade);ship.inside.add(promenade);
+ promenade.name='Lounge_promenade_floor';planar(promenade);anchorObject(promenade,'commons-1');ship.inside.add(promenade);
  return {material,floors:found.length};
 }

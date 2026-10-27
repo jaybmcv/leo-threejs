@@ -1,3 +1,4 @@
+import {roomObject} from '../plan/rooms.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -114,7 +115,7 @@ void main(){
 // Take the room's briefing furniture out and put the lounge's in, before the colliders and rest spots are found. The
 // walls go dark grey and the room's title light, so it reads on them. Returns false if the room is missing.
 export function dressGamingLounge(ship){
- const room=ship.root.getObjectByName(ROOM);if(!room)return false;
+ const room=roomObject(ship,ROOM);if(!room)return false;
  const fit=room.getObjectByName('Room_fittings'),shell=room.getObjectByName('Walls_and_ceiling');if(!fit||!shell)return false;
  const old=[];room.traverse(o=>{if(o.isMesh&&(OLD.test(o.name)||o.name==='Ceiling_light'))old.push(o);});
  for(const o of old){const p=o.parent;o.removeFromParent();if(p!==fit&&p!==shell&&p!==room&&!p.children.length)p.removeFromParent();}
@@ -192,7 +193,7 @@ function headsetGeometry(){
 // The glowing and moving parts, in ship coordinates. `update` runs each frame with the camera's position and the
 // walker's (whose steps light the floor).
 export function createGamingLounge(ship,light=null,{still=false}={}){
- const room=ship.root.getObjectByName(ROOM);if(!room)return null;
+ const room=roomObject(ship,ROOM);if(!room)return null;
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Walk_gaming_lounge';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);

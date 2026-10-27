@@ -1,3 +1,4 @@
+import {anchorArea} from './plan/anchor-area.js';
 import {COMMAND_AFT_AREAS,createCommandAft,polishCommandRoom} from './command-deck.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -48,7 +49,7 @@ export const SHIP_AREAS=[...STANDARD_AREAS,...SPECIAL_AREAS,...SUPPORT_AREAS,...
 
 const materials=new Map();
 function mat(name,color,extra={}){if(!materials.has(name))materials.set(name,new T.MeshStandardMaterial({name,color,roughness:.8,metalness:.08,...extra}));return materials.get(name);}
-export function createShipArea(area){
+function buildcreateShipArea(area){
   if(area.deck===20)return polishCommandRoom(area,area.commandAft?createCommandAft(area):createSpecialArea(area));
   if(area.lowerAft)return createLowerAftArea(area);
   if(area.forum)return createVoyageForum(area);
@@ -168,3 +169,5 @@ export function createShipArea(area){
   finishShipArea(area,{root,shell,fit});
   return {root,shell,fit,area,overview:{position:[area.center[0]+56,area.center[1]+53,area.center[2]+48],target:[...area.center]},inside:{position:[area.center[0]-19,area.center[1]+1.7,area.center[2]+1],target:[area.center[0]+10,area.center[1]+1.4,area.center[2]-5]}};
 }
+
+export function createShipArea(area){return anchorArea(buildcreateShipArea(area),area.id);}

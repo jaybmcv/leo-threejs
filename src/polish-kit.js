@@ -1,8 +1,9 @@
 import * as T from 'three';
+import {walkCanvas} from './walk/canvas.js';
 
 // Shared helpers for the tour art passes: seeded canvas textures and simple materials.
 export function canvasTexture(w,h,draw,repeat=[1,1]){
- const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
+ const c=walkCanvas();c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
  const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(...repeat);t.anisotropy=4;return t;
 }
 export function seeded(seed){return()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};}

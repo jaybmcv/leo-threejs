@@ -1,3 +1,4 @@
+import {roomObject} from '../plan/rooms.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -37,7 +38,7 @@ export function kittenFigure(kit,pose,look){
 }
 
 export function createKittens(ship,kit){
- const room=ship.root.getObjectByName(ROOM);if(!room||!kit)return null;
+ const room=roomObject(ship,ROOM);if(!room)return null;kit||={figure:()=>new T.Group()};
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Young_explorers_kittens';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);

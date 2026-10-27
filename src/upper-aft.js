@@ -1,3 +1,4 @@
+import {anchorArea} from './plan/anchor-area.js';
 import * as T from 'three';
 import {serviceKit,SERVICE_M as M} from './neighborhood-services.js';
 import {finishShipArea} from './area-finish.js';
@@ -6,7 +7,7 @@ export const UPPER_AFT_AREAS=[
  {deck:16,side:-1,kind:'briefing',id:'d16-training-aft',name:'Voyage training & briefing',description:'A shared briefing table, practical learning stations and a presentation wall for voyage orientation and crew-led workshops.'},
  {deck:17,side:1,kind:'arrival',id:'d17-fin-lounge-aft',name:'Fin lift arrival lounge',description:'A relaxed waiting lounge with upholstered seating, a refreshment counter and a fin-route display, connected to the existing panoramic-bar lift gallery.'},
 ].map(a=>({...a,upperAft:true,special:true,category:'Upper aft commons',center:[-209,-39.7+(a.deck-1)*4,a.side*13],width:48,depth:16,height:3.5,entryX:-205}));
-export function createUpperAftArea(area){
+function buildcreateUpperAftArea(area){
  const root=new T.Group();root.name='Area_'+area.id;root.userData={...area,units:'metres',stage:'Fitted upper aft commons'};
  const {fit,shell,box,text}=serviceKit(root,area.center),s=area.side;
  box('Finished_floor',[48,.02,16],[0,-.01,0],M.floor);
@@ -60,3 +61,5 @@ export function createUpperAftCirculation(deck){
  text(deck===16?'TRAINING':'FIN ARRIVAL LOUNGE',[-205,2.7,s*4.95],s<0?0:Math.PI,.19);
  finishCirculation(root,shell,'Upper aft commons connection',deck);return {root,shell};
 }
+
+export function createUpperAftArea(area){return anchorArea(buildcreateUpperAftArea(area),area.id);}

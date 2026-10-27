@@ -1,3 +1,4 @@
+import {roomObject} from '../plan/rooms.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -15,7 +16,7 @@ function rng(seed){return ()=>(seed=(seed*16807)%2147483647)/2147483647;}
 
 // Take the room's old cabinets out before the colliders are built. Returns false if the room is missing.
 export function stripProvisions(ship){
- const room=ship.root.getObjectByName(ROOM);if(!room)return false;
+ const room=roomObject(ship,ROOM);if(!room)return false;
  const old=[];room.traverse(o=>{if(o.isMesh&&OLD.test(o.name))old.push(o);});
  for(const o of old){o.removeFromParent();o.geometry.dispose();}
  return true;
@@ -24,7 +25,7 @@ export function stripProvisions(ship){
 // The new fittings, in ship coordinates. `group` draws (with its deck band), `solid` holds plain boxes for the
 // colliders, and update() parts the curtain round nearby walkers.
 export function createProvisions(ship){
- const room=ship.root.getObjectByName(ROOM);if(!room)return null;
+ const room=roomObject(ship,ROOM);if(!room)return null;
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Provisions_cold_room';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);

@@ -1,3 +1,4 @@
+import {anchorArea} from './plan/anchor-area.js';
 import * as T from 'three';
 import {serviceKit,SERVICE_M as M,glassWall} from './neighborhood-services.js';
 import {glazedWall} from './room-glazing.js';
@@ -18,7 +19,7 @@ export const COMMAND_AFT_AREAS=[
  {id:'d20-planning-aft',name:'Mission planning studio',kind:'briefing',side:-1,description:'A collaborative planning table, navigation review stations and a mission wall for detailed work away from the bridge.'},
  {id:'d20-recovery-aft',name:'Crew recovery lounge',kind:'crew',side:1,description:'Sleeping pods and a coffee bar in a dim forward half, with quiet upholstered seating, a refreshment counter and small conversation tables for command crew between shifts.'},
 ].map(a=>({...a,deck:20,commandAft:true,special:true,category:'Command & operations',center:[-90,36.3,a.side*15],width:52,depth:20,height:3.5}));
-export function createCommandAft(area){
+function buildcreateCommandAft(area){
  const root=new T.Group();root.name='Area_'+area.id;root.userData={...area};const {fit,shell,box,text}=serviceKit(root,area.center),s=area.side;
  box('Finished_floor',[52,.02,20],[0,-.01,0],M.floor);box('Ceiling',[52,.1,20],[0,3.4,0],M.wall,shell);
  for(const sign of [-1,1])box('Room_end_wall',[.16,3.4,20],[sign*25.92,1.7,0],M.wall,shell);
@@ -221,3 +222,5 @@ export function polishCommandCorridor(root){
  for(const o of items){if(o.name==='Special_spine_floor')for(const z of [-3.5,3.5])k.box(o,[207,.008,.08],[52,36.306,z],FINISH_M.blue,'command_wayfinding');if(o.name==='Special_spine_wall'&&!Array.isArray(o.material)){o.material=o.material.clone();o.material.color.setHex(0xb7c8ce);}}
  const previous=root.userData.refinement,features=k.finish();root.userData.refinement=previous;root.userData.commandPolish={features,revision:1};
 }
+
+export function createCommandAft(area){return anchorArea(buildcreateCommandAft(area),area.id);}
