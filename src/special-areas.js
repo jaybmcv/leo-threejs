@@ -17,8 +17,8 @@ export const SPECIAL_AREAS=[
   ...Array.from({length:5},(_,i)=>({id:`d0${i+1}-lifeboats-10`,name:`Lifeboat banks · Deck ${i+1}`,kind:'lifeboats',deck:i+1,category:'Emergency embarkation',center:[0,-39.7+i*4,0],width:249,depth:139,height:3.5,special:true,description:'Twenty 100-seat lifeboats on this deck, with inboard boarding corridors. Across five decks: 100 craft and 10,000 modeled seats. Survival endurance and evacuation rates are not engineered.'})),
 ];
 
-const palette={floor:0xbdb7a8,lining:0xdbe1da,navy:0x294655,metal:0x8e9fa2,dark:0x172b36,wood:0x9d7b52,glass:0x6dacc4,amber:0xe6b878,green:0x739c89,screen:0x2b718c,light:0xffe8bc,rescue:0xe0662b};
-const materials=Object.fromEntries(Object.entries(palette).map(([n,color])=>[n,new T.MeshStandardMaterial({name:'Special_'+n,color,roughness:n==='glass'?.18:.75,metalness:n==='metal'?.55:.08,...(n==='screen'||n==='light'?{emissive:color,emissiveIntensity:n==='light'?.85:.2}:{}),...(n==='glass'?{transparent:true,opacity:.19,depthWrite:false,side:T.DoubleSide}:{})})]));
+const palette={floor:0xbdb7a8,lining:0xdbe1da,navy:0x294655,metal:0x8e9fa2,dark:0x172b36,wood:0x9d7b52,glass:0x6dacc4,amber:0xe6b878,green:0x739c89,screen:0x2b718c,light:0xffe8bc,rescue:0xe0662b,teal:0x3aa79c};
+const materials=Object.fromEntries(Object.entries(palette).map(([n,color])=>[n,new T.MeshStandardMaterial({name:'Special_'+n,color,roughness:n==='glass'?.18:.75,metalness:n==='metal'?.55:.08,...(n==='screen'||n==='light'||n==='teal'?{emissive:color,emissiveIntensity:n==='light'?.85:.2}:{}),...(n==='glass'?{transparent:true,opacity:.19,depthWrite:false,side:T.DoubleSide}:{})})]));
 materials.vision=visionGlass;
 materials.lining.side=T.DoubleSide;
 
@@ -58,7 +58,7 @@ function kit(area){
 }
 
 function bridge(area,k){
-  const {box,round,add,pipe,console,chair,fit,shell}=k,y=area.center[1],rear=156,angles=Array.from({length:65},(_,i)=>-.8+1.6*i/64);
+  const {box,round,add,cyl,pipe,console,chair,fit,shell}=k,y=area.center[1],rear=156,angles=Array.from({length:65},(_,i)=>-.8+1.6*i/64);
   const facade=(level,a,inset=.75)=>{const p=frontPoint(level,Math.abs(a),a<0?-1:1);return [p[0]*.94-18-inset*Math.cos(a),bowHeight(p[0],level),p[2]-inset*Math.sin(a)];};
   const edge=angles.map(a=>facade(42,a,1.4)),shape=new T.Shape(),outline=[[rear,edge[0][2]],...edge.map(p=>[p[0],p[2]]),[rear,edge.at(-1)[2]]];
   outline.forEach(([x,z],i)=>i?shape.lineTo(x,-z):shape.moveTo(x,-z));shape.closePath();
@@ -115,6 +115,22 @@ function bridge(area,k){
     box('Captain_console_access_pull',[.025,.035,.13],[170.552,y+.55,s*1.1],'dark');
     box('Command_dais_edge',[5.3,.025,.045],[170,y+.132,s*3.2],'amber');
     box('Command_approach_inlay',[11,.008,.055],[179,y+.005,s*3.6],'screen');
+  }
+  // A compact command chair on a swivel pedestal at the forward end of the central floor, between and just behind the
+  // helms and facing the windows. Its back stops below eye level, and the side aisles and helm seats stay clear.
+  const forward=new T.Group();forward.name='Forward_command_chair';forward.position.set(182.4,y,0);forward.rotation.y=Math.PI/2;fit.add(forward);
+  add('Command_chair_floor_inset',new T.CylinderGeometry(.85,.85,.016,24),[0,.012,0],'navy',forward);
+  cyl('Command_chair_base',.36,.05,[0,.045,0],'dark',forward);
+  cyl('Command_chair_pedestal',.075,.36,[0,.25,0],'metal',forward);
+  cyl('Command_chair_swivel',.17,.05,[0,.455,0],'dark',forward);
+  round('Command_chair_seat',[.6,.12,.58],[0,.54,.02],'navy',.05,forward);
+  round('Command_chair_back',[.56,.84,.12],[0,1,-.3],'navy',.05,forward);
+  round('Command_chair_headrest',[.4,.16,.06],[0,1.27,-.22],'dark',.025,forward);
+  box('Command_chair_trim',[.44,.035,.015],[0,1.3,-.368],'amber',forward);
+  for(const s of [-1,1]){
+    box('Command_chair_arm_post',[.05,.2,.05],[s*.33,.66,-.1],'metal',forward);
+    round('Command_chair_arm',[.07,.07,.44],[s*.34,.79,.04],'navy',.025,forward);
+    box('Command_chair_arm_panel',[.06,.016,.3],[s*.34,.833,.08],'teal',forward);
   }
   const globe=add('Navigation_globe',new T.IcosahedronGeometry(1.1,2),[162,y+1.9,12],'screen');globe.material=materials.screen;
   globe.material=materials.screen.clone();globe.material.name='Bridge_navigation_projection';globe.material.color.setHex(0x19485c);globe.material.emissive.setHex(0x287f9a);globe.material.emissiveIntensity=.42;globe.material.roughness=.32;

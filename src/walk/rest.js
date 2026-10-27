@@ -3,7 +3,7 @@ import * as T from 'three';
 // Every seat and bed aboard, found by name in the built interior (and through the instance transforms of the repeated
 // cabins and lifeboat seating). A seat spot is a point on a seat's top with the way a sitter faces; benches and sofas
 // get a spot every 0.65 m. A bed spot is the mattress top with the head toward the pillow.
-const SEAT=/^(Repeated_)?(Seat|Seat_cushion|Soft_seat|Passenger_bench|Garden_bench_cushion|Low_bench|Reading_bench|Shelter_bench|Airlock_preparation_bench|Bench_cushion|Child_stool|Meditation_cushion|Crown_bar_stool_seat|Crown_curved_banquette_seat|Gaming_curved_couch_seat|Atrium_curved_seat|Evacuation_seat|Forum_audience_seat|Crew_seat|Captain_command_seat|Chair)$/;
+const SEAT=/^(Repeated_)?(Seat|Seat_cushion|Soft_seat|Passenger_bench|Garden_bench_cushion|Low_bench|Reading_bench|Shelter_bench|Airlock_preparation_bench|Bench_cushion|Child_stool|Meditation_cushion|Crown_bar_stool_seat|Crown_curved_banquette_seat|Gaming_curved_couch_seat|Atrium_curved_seat|Evacuation_seat|Forum_audience_seat|Crew_seat|Captain_command_seat|Command_chair_seat|Chair)$/;
 // Parts that sit under a cushion: used only where no cushion covers them.
 const SEAT_BASE=/^(Seat_base|Garden_bench|Passenger_bench_seat)$/;
 const BACK=/(^|_)(Back|back)$|_back_|Seat_back|Bench_back|banquette_back/;
