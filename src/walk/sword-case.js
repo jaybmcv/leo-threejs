@@ -16,7 +16,7 @@ const PLINTH=.78,BED=.87,GLASS=1.14,L=1.6,D=.6;
 // A soft warm oval: where the spotlight falls on the velvet.
 function pool(){
  const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d'),r=g.createRadialGradient(64,64,0,64,64,64);
- r.addColorStop(0,'rgba(255,226,170,.55)');r.addColorStop(.6,'rgba(255,200,130,.22)');r.addColorStop(1,'rgba(255,190,120,0)');g.fillStyle=r;g.fillRect(0,0,128,128);
+ r.addColorStop(0,'rgba(255,214,150,.3)');r.addColorStop(.6,'rgba(255,190,120,.1)');r.addColorStop(1,'rgba(255,180,110,0)');g.fillStyle=r;g.fillRect(0,0,128,128);
  const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;return t;
 }
 
@@ -44,7 +44,7 @@ export function createSwordCase(ship){
  if(!ship.root.getObjectByName(ROOM))return null;
  const gold=new T.MeshStandardMaterial({name:'Sword_case_gold',color:0xd4a33a,roughness:.3,metalness:.9});
  const lacquer=new T.MeshStandardMaterial({name:'Sword_case_lacquer',color:0x16110f,roughness:.35,metalness:.1});
- const velvet=new T.MeshStandardMaterial({name:'Sword_case_velvet',color:0x8e1424,emissive:0x5c0a14,emissiveIntensity:.5,roughness:1});
+ const velvet=new T.MeshStandardMaterial({name:'Sword_case_velvet',color:0x5e0812,emissive:0x2a0308,emissiveIntensity:.6,roughness:1});
  const glass=new T.MeshStandardMaterial({name:'Sword_case_glass',color:0xe8f4f6,roughness:.05,metalness:.1,transparent:true,opacity:.16,depthWrite:false});
  // The group stands at floor height so it joins Deck 20's band; its pieces are placed relative to the case's foot.
  const group=new T.Group();group.name='Sword_case';group.position.set(AT.x,FLOOR,AT.z);
