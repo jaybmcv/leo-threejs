@@ -16,7 +16,7 @@ import {floorY} from '../transit.js';
 // ?halloween=0 turns it off for a visit and ?halloween=1 shows it after END. Move END to extend it; to remove it for
 // good, delete this file and its lines in main.js. For visitors who ask for reduced motion nothing flashes or swings.
 // Walk only: the ship's models are unchanged, and nothing here is solid.
-export const END=Date.parse('2026-11-01T12:00:00Z');
+export const END=Date.parse('2026-11-15T12:00:00Z');
 export function halloweenOn(now=Date.now(),search=globalThis.location?.search||''){
  const q=new URLSearchParams(search).get('halloween');return q==='1'||(q!=='0'&&now<END);
 }
@@ -240,7 +240,7 @@ export function createHalloween(ship,light,{still=false,sheet=null}={}){
  function show(code){
   if(!sheet)return;clearTimeout(waiting);const ok=typeof code==='string'&&CODE.test(code);
   text.textContent=code===undefined?'It presses its face to the glass…':ok?'It breathes on the glass and writes a code in the fog. Claim your Leo Halloween 2026 badge with it:':
-   'It only grins and taps the glass. The badge code isn\'t out yet: come back before 1 November.';
+   'It only grins and taps the glass. The badge code isn\'t out yet: come back before 15 November.';
   codeEl.textContent=ok?code:'';codeEl.hidden=!ok;claim.hidden=!ok;claim.href=CLAIM_URL;
  }
 
