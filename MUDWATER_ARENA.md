@@ -8,6 +8,7 @@ A card-game hall on Deck 16 for Mudwater: Swamp Origins, the trading card game b
 - **Board:** a 3 × 3 grid about 11.4 m across, dark felt in a brass frame with stepped corners. Gold rays fan out from the centre square, as on the game's own board.
 - **Holograms:** five cards stand on the board over brass emitters, each with four number pips like the game's cards. In the walk they turn slowly and bob.
 - **Podiums:** one at each end of the board, with a slanted console and a stool behind it.
+- **Lighting truss:** a slim Champagne box truss hung across the stage over the board's centre, on two drop rods. Four small black spots hang under it, the inner two amber and angled at the entry half of the board, the outer two teal and angled at the far half. Each lens glows, with a faint beam and a soft pool of light on the felt, so the glow stays on the board and the ceiling around it stays dark (`TRUSS`, `TRUSS_SPOTS`).
 - **Spectator tiers:** along both long walls, a bench on the floor and on 0.35 m and 0.7 m tiers, with a walkway behind the top row. You step up at the tier ends.
 - **Match tables:** ten black tables with a felt 3 × 3 board, two cream chairs facing across, a rug and a brass pendant. Eight are in the entry half either side of the 4 m main aisle, two by the end wall.
 - **Pack counter:** by the door. Its face has brass rays and the name MUDWATER, with packs and sealed boxes on top. Behind it on the wall is a vault: a round brass door between lit shelves of boxes.
@@ -105,13 +106,14 @@ The `scripts/check-mudwater.mjs` check covers:
 - the pieces are all there, inside the room and under the ceiling;
 - every rise is within the 0.4 m step;
 - there are 130 seats, all facing away from their backs, with the tiers facing the stage;
+- the lighting truss leaves a 2 m walker standing room on the stage, and its spots light the board;
 - each trigger stands clear of the walk's collision triangles;
 - every brand art file exists and is under 400 kB, and the pack standees are clear of the aisle;
 - the triangle budget holds.
 
 ## Budget
 
-The room is 43.0k triangles including the shell and finishing passes (the brand art adds a few hundred more in the walk), against 36.9k for the learning center: about +6k, inside the agreed +20k.
+The room is 44.7k triangles including the shell and finishing passes (the brand art adds a few hundred more in the walk), against 36.9k for the learning center: about +8k, inside the agreed +20k. The lighting truss is about 1.6k of that.
 
 ## Lighting note
 

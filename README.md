@@ -67,7 +67,7 @@ The new journey is available in **Walkthrough → Choose a journey → Residenti
 
 ## Walk around Leo
 
-`walk.html` (linked as **Walk around Leo** from the viewer's welcome card and phone menu) puts you aboard as Cosmo, animated by Voyager's Reach's own figure code (`src/walk/vr`, copied from the game; see its README): the authored walk and jog, the reference sprint, take-off, air and landing, the turning lean, the tail spring, the idle, crouch, slide and crawl, the seated pose and the ten emotes. Leo adds a pose for lying in bed. You start in the Deck 2 arrival hall.
+`walk.html` (linked as **Walk around Leo** from the viewer's welcome card and phone menu) puts you aboard as Cosmo, animated by Voyager's Reach's own figure code (`src/walk/vr`, copied from the game; see its README): the authored walk and jog, the reference sprint, take-off, air and landing, the turning lean, the tail spring, the idle, crouch, slide and crawl, the seated pose and the ten emotes. Leo adds poses for lying in bed and, hands behind the head and eyes shut, in a hammock. You start in the Deck 2 arrival hall.
 
 - **The arrival hall is a garden atrium** (`arrival-atrium.js`): the middle of its ceiling opens in a 19 × 8 m oval into Hydroponic garden A on Deck 3, ringed up there by a glass balustrade and a planter of trailing vines under a grow-light panel. A cat tree climbs through it: four platforms a jump apart, from the seats round its planter to a top platform level with the garden floor, where a short bridge passes a gap in the balustrade into the garden. Round planters with seats facing out, timber shelves to hop along (none above 1.3 m, so a 2 m walker fits under the ceiling), cat cubbies, lanterns, a timber floor and slatted ceiling and WELCOME, VOYAGER signs (on the end wall, and hung over the aisle ahead of where you arrive) replace the rows of benches. The planting (`foliage.js`) mixes palms, heart-leaved aroids, ferns, snake plants, flowering shrubs, grass tufts and trailing pothos. Paw prints lead from where you arrive to the tree and up its platforms, a signpost says CLIMB TO THE GARDEN, and three kittens sit on the platforms. Up in the garden, beds of small trees replace the racks beside the opening, and a leafy trellis and hanging baskets ring the grow-light panel, so the view up from the hall is green. The ship map shows the opening on Deck 3, with its balustrade.
 
@@ -101,7 +101,7 @@ With a Leo live server, everyone on the walk page is aboard the same shuttle: ot
 
 **Testers wear the captain's hat.** Anyone whose browser holds a tester invite (the `?invite=` code that turns on tester feedback) walks in the revision 6 captain's hat, parented to Cosmo's head and fitted to the rig, and others aboard see it on them. See `src/vendor/captain-hat/README.md` for the fit, how it was checked against the head through every movement and emote, and its two adjustments (the tail on all fours, and the hat coming off when lying down).
 
-`npm run check:live` runs the server against scripted visitors: the wire, joining and leaving, near and far rates, names, the shared lifts, a second tab, bad input, the cap, and sixty visitors at once (about 5 KB/s to each).
+`npm run check:live` runs the server against scripted visitors: the wire, joining and leaving, near and far rates, names, lying in a hammock, the shared lifts, a second tab, bad input, the cap, and sixty visitors at once (about 5 KB/s to each).
 
 ## Modeled spaces
 

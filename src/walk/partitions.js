@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {DECKS} from '../model.js';
-import {floorY} from '../transit.js';
+import {floorY,TRANSIT_CORES} from '../transit.js';
+import {STAIRWELL} from '../interior-polish.js';
 import {LIFTS} from './lifts.js';
 import {HALL,inHall} from './commons-hall.js';
 
@@ -108,17 +109,36 @@ function sweep(src,r,want){
 }
 function close(grid,r){const out=sweep(sweep(grid,r,'any'),r,'all');for(let k=0;k<grid.length;k++)out[k]|=grid[k];return out;}
 
-// One merged mesh of lined partitions (a skirting stripe in the Leo wayfinding amber at the foot).
+// The aft stairwells' partitions (on the stair's lift side, and on Deck 1 in front of its walls) take the stairwell's
+// black metal, light line and glass panes; circulation-finish.js dresses the stairwell's own walls the same way.
+const AFT=TRANSIT_CORES.find(c=>c.id==='aft');
+const inStairwell=w=>w.x0>AFT.stairX-5&&w.x1<AFT.stairX+6&&Math.min(Math.abs(w.z0),Math.abs(w.z1))>AFT.stairZ-2.8&&Math.max(Math.abs(w.z0),Math.abs(w.z1))<AFT.stairZ+3;
+// Merged meshes of lined partitions (a skirting stripe in the Leo wayfinding amber at the foot).
 export function partitionMesh(walls){
- const geos=[];
- for(const w of walls){const g=new T.BoxGeometry(w.x1-w.x0,w.y1-w.y0,w.z1-w.z0);g.translate((w.x0+w.x1)/2,(w.y0+w.y1)/2,(w.z0+w.z1)/2);geos.push(g.toNonIndexed());}
  const group=new T.Group();group.name='Walk_partitions';
- if(!geos.length)return group;
- const size=geos.reduce((n,g)=>n+g.attributes.position.count,0),P=new Float32Array(size*3),N=new Float32Array(size*3);let o=0;
- for(const g of geos){P.set(g.attributes.position.array,o*3);N.set(g.attributes.normal.array,o*3);o+=g.attributes.position.count;g.dispose();}
- const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(P,3));geo.setAttribute('normal',new T.BufferAttribute(N,3));geo.setAttribute('uv',new T.BufferAttribute(new Float32Array(size*2),2));
- const mesh=new T.Mesh(geo,new T.MeshStandardMaterial({name:'Walk_partition_lining',color:0xd8dcd5,roughness:.82,metalness:.04}));mesh.name='Partition_wall';
- // Each wall's box, for the walk bake's coplanar check (render-bake.js).
- mesh.userData.boxes=walls.map(w=>[w.x0,w.x1,w.y0,w.y1,w.z0,w.z1]);group.add(mesh);
+ // One mesh of boxes [x0,x1,y0,y1,z0,z1], which it keeps for the walk bake's coplanar check (render-bake.js).
+ const merged=(boxes,name,material)=>{
+  if(!boxes.length)return;
+  const geos=boxes.map(([x0,x1,y0,y1,z0,z1])=>new T.BoxGeometry(x1-x0,y1-y0,z1-z0).translate((x0+x1)/2,(y0+y1)/2,(z0+z1)/2).toNonIndexed());
+  const size=geos.reduce((n,g)=>n+g.attributes.position.count,0),P=new Float32Array(size*3),N=new Float32Array(size*3);let o=0;
+  for(const g of geos){P.set(g.attributes.position.array,o*3);N.set(g.attributes.normal.array,o*3);o+=g.attributes.position.count;g.dispose();}
+  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(P,3));geo.setAttribute('normal',new T.BufferAttribute(N,3));geo.setAttribute('uv',new T.BufferAttribute(new Float32Array(size*2),2));
+  const mesh=new T.Mesh(geo,material);mesh.name=name;mesh.userData.boxes=boxes;group.add(mesh);
+ };
+ const box=w=>[w.x0,w.x1,w.y0,w.y1,w.z0,w.z1],well=walls.filter(inStairwell);
+ merged(walls.filter(w=>!inStairwell(w)).map(box),'Partition_wall',new T.MeshStandardMaterial({name:'Walk_partition_lining',color:0xd8dcd5,roughness:.82,metalness:.04}));
+ merged(well.map(box),'Partition_wall',STAIRWELL.metal);
+ // On both faces of a stairwell partition: a light line low down and a row of panes (flush dressing: no collision).
+ const glow=[],panes=[];
+ for(const w of well){
+  const x=w.x1-w.x0>=w.z1-w.z0,a0=x?w.x0:w.z0,a1=x?w.x1:w.z1,len=a1-a0;if(len<1)continue;
+  const n=Math.max(1,Math.round(len/1.6)),pitch=len*.96/n,width=pitch-.16;
+  for(const at of x?[w.z0-.007,w.z1+.007]:[w.x0-.007,w.x1+.007]){
+   const slab=(s0,s1,y0,y1)=>x?[s0,s1,y0,y1,at-.003,at+.003]:[at-.003,at+.003,y0,y1,s0,s1];
+   glow.push(slab(a0+len*.02,a1-len*.02,w.y0+.76,w.y0+.835));
+   for(let i=0;i<n;i++){const m=a0+len*.02+pitch*(i+.5);panes.push(slab(m-width/2,m+width/2,w.y0+1.2,w.y0+2.9));}
+  }
+ }
+ merged(glow,'Partition_glow',STAIRWELL.glow);merged(panes,'Partition_glass_inlay',STAIRWELL.glass);
  return group;
 }

@@ -3,7 +3,7 @@ import * as T from 'three';
 // Every seat and bed aboard, found by name in the built interior (and through the instance transforms of the repeated
 // cabins and lifeboat seating). A seat spot is a point on a seat's top with the way a sitter faces; benches and sofas
 // get a spot every 0.65 m. A bed spot is the mattress top with the head toward the pillow.
-const SEAT=/^(Repeated_)?(Seat|Seat_cushion|Soft_seat|Passenger_bench|Garden_bench_cushion|Low_bench|Reading_bench|Shelter_bench|Airlock_preparation_bench|Bench_cushion|Child_stool|Meditation_cushion|Crown_bar_stool_seat|Crown_curved_banquette_seat|Gaming_curved_couch_seat|Atrium_curved_seat|Evacuation_seat|Forum_audience_seat|Crew_seat|Captain_command_seat|Chair)$/;
+const SEAT=/^(Repeated_)?(Seat|Seat_cushion|Soft_seat|Passenger_bench|Garden_bench_cushion|Low_bench|Reading_bench|Shelter_bench|Airlock_preparation_bench|Bench_cushion|Child_stool|Meditation_cushion|Crown_bar_stool_seat|Crown_curved_banquette_seat|Gaming_curved_couch_seat|Atrium_curved_seat|Evacuation_seat|Forum_audience_seat|Crew_seat|Captain_command_seat|Command_chair_seat|Chair)$/;
 // Parts that sit under a cushion: used only where no cushion covers them.
 const SEAT_BASE=/^(Seat_base|Garden_bench|Passenger_bench_seat)$/;
 const BACK=/(^|_)(Back|back)$|_back_|Seat_back|Bench_back|banquette_back/;
@@ -89,6 +89,13 @@ export function spotIndex(spots){
     const score=d-.5*(d>1e-3?(dx*forward.x+dz*forward.z)/d:1);if(score<bs){bs=score;best=s;}
    }
    return best;
+  },
+  // The hammock a body lying at p is in (main.js settle puts it half a body from the spot, toward the feet), or null.
+  // Others aboard are only sent that they lie, so this is how their page knows a hammock from a bed (remotes.js).
+  hammockAt(p,reach=1.2){
+   for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)for(const s of grid.get(`${Math.floor(p.x/3)+i},${Math.floor(p.z/3)+j}`)||[])
+    if(s.hammock&&Math.abs(s.height+.13-p.y)<.4&&Math.hypot(s.point.x-p.x,s.point.z-p.z)<reach)return s;
+   return null;
   },
   count:spots.length,
  };
