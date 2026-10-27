@@ -49,6 +49,7 @@ import {readSpot,spotLink} from './link.js';
 import {createSelfieBooth} from './selfie.js';
 import {createConcession} from './concession.js';
 import {stripProvisions,createProvisions} from './provisions.js';
+import {createLifeSupportPipes} from './life-support-pipes.js';
 import {createKittens,KITTEN_POSE_NAMES} from './kittens.js';
 import {createAtriumKittens} from './arrival-atrium.js';
 import {stripBlossomBed,createBlossomGarden} from './blossom.js';
@@ -207,6 +208,9 @@ async function buildShip(){
  concession=createConcession(ship);if(concession)colliders.addStatic(concession);
  // Refrigerated provisions' fridges, shelving and strip curtain (provisions.js): solid as plain boxes, the curtain not.
  provisions=createProvisions(ship);if(provisions)colliders.addStatic(provisions.solid,()=>true);
+ // Life-support control's colour-coded service pipework (life-support-pipes.js): its regulator boxes and supply
+ // cabinets solid as plain boxes, the pipes overhead dressing.
+ const pipework=createLifeSupportPipes(ship);if(pipework)colliders.addStatic(pipework.solid,()=>true);
  // Young explorers' kitten habitats (kittens.js): the climbing tree, tunnel, den and kittens solid as plain boxes.
  kittens=createKittens(ship,cosmoKit);if(kittens)colliders.addStatic(kittens.solid,()=>true);
  // Communal dining's three serving robots (dining-robots.js): solid as plain boxes.
@@ -244,6 +248,7 @@ async function buildShip(){
  for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pawsOff?[pawsOff.group]:[]),...(mudwater?[mudwater.group]:[]),...(arcadeRow?[arcadeRow.group]:[])])toBand(o);
  if(concession)toBand(concession);
  if(provisions)toBand(provisions.group);
+ if(pipework)toBand(pipework.group);
  if(kittens)toBand(kittens.group);
  // Kittens on the arrival hall's cat tree (arrival-atrium.js), dressing only.
  {const g=createAtriumKittens(ship,cosmoKit);if(g)toBand(g);}
