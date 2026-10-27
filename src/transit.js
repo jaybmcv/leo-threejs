@@ -25,10 +25,12 @@ export function createTransit({minimumDeck=1,maximumDeck=20,coreIds=['forward','
   const shell=new T.Group();shell.name='Transit_enclosure';root.add(shell);
   const structure=new T.Group();structure.name='Transit_structure';root.add(structure);
   const decks=new Map();for(let d=minimumDeck;d<=maximumDeck;d++){const g=new T.Group();g.name=`Transit_deck_${d}`;g.userData.deck=d;root.add(g);decks.set(d,g);}
-  const materials={floor:new T.MeshStandardMaterial({color:0xc4b89e,roughness:.85}),wall:new T.MeshStandardMaterial({color:0xdadfd8,roughness:.82}),navy:new T.MeshStandardMaterial({color:0x294858,roughness:.7}),metal:new T.MeshStandardMaterial({color:0x778d96,metalness:.5,roughness:.55}),glass:new T.MeshStandardMaterial({color:0x83b7c4,transparent:true,opacity:.15,depthWrite:false,side:T.DoubleSide}),light:new T.MeshStandardMaterial({color:0xffe5af,emissive:0xffdf9f,emissiveIntensity:.7})};
+  const materials={floor:new T.MeshStandardMaterial({color:0xc4b89e,roughness:.85}),wall:new T.MeshStandardMaterial({color:0xdadfd8,roughness:.82}),navy:new T.MeshStandardMaterial({color:0x294858,roughness:.7}),metal:new T.MeshStandardMaterial({color:0x778d96,metalness:.5,roughness:.55}),glass:new T.MeshStandardMaterial({color:0x83b7c4,transparent:true,opacity:.15,depthWrite:false,side:T.DoubleSide}),light:new T.MeshStandardMaterial({color:0xffe5af,emissive:0xffdf9f,emissiveIntensity:.7}),
+    // The aft stairs, behind the aft lifts: blue lit treads in black metal (their light lines: circulation-finish.js).
+    holo:new T.MeshStandardMaterial({name:'Stair_holo_tread',color:0x2378c0,emissive:0x1a8cff,emissiveIntensity:.6,roughness:.22,metalness:.1}),black:new T.MeshStandardMaterial({name:'Stair_black_metal',color:0x1a1d21,metalness:.65,roughness:.32})};
   const floors=[];
   function box(name,size,p,m='wall',parent=structure){const o=new T.Mesh(new T.BoxGeometry(...size),materials[m]);o.name=name;o.position.set(...p);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
-  function rail(a,b,parent){const va=new T.Vector3(...a),vb=new T.Vector3(...b),o=new T.Mesh(new T.CylinderGeometry(.035,.035,va.distanceTo(vb),8),materials.metal);o.name='Transit_handrail';o.position.copy(va.clone().add(vb).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),vb.sub(va).normalize());parent.add(o);}
+  function rail(a,b,parent,m='metal'){const va=new T.Vector3(...a),vb=new T.Vector3(...b),o=new T.Mesh(new T.CylinderGeometry(.035,.035,va.distanceTo(vb),8),materials[m]);o.name='Transit_handrail';o.position.copy(va.clone().add(vb).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),vb.sub(va).normalize());parent.add(o);}
   function floor(deck,x0,x1,z0,z1,name){
     const rect={deck,x0,x1,z0,z1,name};floors.push(rect);
     const o=box(name,[x1-x0,.24,z1-z0],[(x0+x1)/2,floorY(deck)-.12,(z0+z1)/2],'floor',decks.get(deck));o.userData={transitFloor:true,...rect};return o;
@@ -72,28 +74,30 @@ export function createTransit({minimumDeck=1,maximumDeck=20,coreIds=['forward','
       }else for(let d=minimumDeck;d<=c.lastDeck;d++){
         // One storey per box: walk mode culls by height band, and a full-height face would only draw near mid-ship.
         const y0=d===minimumDeck?base:floorY(d),y1=d===c.lastDeck?top:floorY(d+1);
-        box('Stair_outer_wall',[9,y1-y0,.14],[x,(y0+y1)/2,zz+s*2.57],'wall',shell);
-        for(const end of [-1,1])box('Stair_end_wall',[.14,y1-y0,5.14],[x+end*4.57,(y0+y1)/2,zz],'wall',shell);
+        // `clad` names the face inside the stairwell, which circulation-finish.js clads in black metal and glass.
+        box('Stair_outer_wall',[9,y1-y0,.14],[x,(y0+y1)/2,zz+s*2.57],'wall',shell).userData.clad=-s;
+        for(const end of [-1,1])box('Stair_end_wall',[.14,y1-y0,5.14],[x+end*4.57,(y0+y1)/2,zz],'wall',shell).userData.clad=-end;
       }
       box('Stair_top_ceiling',[9,.14,5],[x,top-.1,zz],'wall',shell);
+      const look=c.id==='aft'?{tread:'holo',riser:'black',frame:'black',landing:'black'}:{tread:'floor',riser:'wall',frame:'metal',landing:'floor'};
       if(c.id==='forward')for(const end of [-1,1])box('Stair_end_wall',[.14,top-base,5.14],[x+end*4.57,(base+top)/2,zz],'wall',shell);
       for(let d=minimumDeck;d<=c.lastDeck;d++){
         const y=floorY(d),g=decks.get(d);
         floor(d,x-4.5,x-2.5,zz-2.5,zz+2.5,'Stair_main_landing');
         if(d<c.lastDeck){
-          box('Stair_half_landing',[2,.18,5],[x+3.5,y+1.91,zz],'floor',g);
+          box('Stair_half_landing',[2,.18,5],[x+3.5,y+1.91,zz],look.landing,g);
           for(let i=0;i<12;i++){
             const run=5/12,step=(i+1)/6;
-            box('Stair_tread_up',[run,.14,2.2],[x-2.5+(i+.5)*run,y+step-.07,zz-1.4],'floor',g);
-            box('Stair_riser_up',[.05,1/6,2.2],[x-2.5+i*run,y+step-1/12,zz-1.4],'wall',g);
-            box('Stair_tread_return',[run,.14,2.2],[x+2.5-(i+.5)*run,y+2+step-.07,zz+1.4],'floor',g);
-            box('Stair_riser_return',[.05,1/6,2.2],[x+2.5-i*run,y+2+step-1/12,zz+1.4],'wall',g);
+            box('Stair_tread_up',[run,.14,2.2],[x-2.5+(i+.5)*run,y+step-.07,zz-1.4],look.tread,g);
+            box('Stair_riser_up',[.05,1/6,2.2],[x-2.5+i*run,y+step-1/12,zz-1.4],look.riser,g);
+            box('Stair_tread_return',[run,.14,2.2],[x+2.5-(i+.5)*run,y+2+step-.07,zz+1.4],look.tread,g);
+            box('Stair_riser_return',[.05,1/6,2.2],[x+2.5-i*run,y+2+step-1/12,zz+1.4],look.riser,g);
           }
-          for(const dz of [-2.45,-.35])rail([x-2.5,y+1.1,zz+dz],[x+2.5,y+3.1,zz+dz],g);
-          for(const dz of [.35,2.45])rail([x+2.5,y+3.1,zz+dz],[x-2.5,y+5.1,zz+dz],g);
-          for(const dz of [-2.45,2.45])rail([x+2.5,y+3.1,zz+dz],[x+4.5,y+3.1,zz+dz],g);
-          for(const dz of [-2.2,-.6]){const beam=box('Stair_support_stringer',[Math.hypot(5,2),.16,.12],[x,y+.87,zz+dz],'metal',g);beam.rotation.z=Math.atan2(2,5);}
-          for(const dz of [.6,2.2]){const beam=box('Stair_support_stringer',[Math.hypot(5,2),.16,.12],[x,y+2.87,zz+dz],'metal',g);beam.rotation.z=-Math.atan2(2,5);}
+          for(const dz of [-2.45,-.35])rail([x-2.5,y+1.1,zz+dz],[x+2.5,y+3.1,zz+dz],g,look.frame);
+          for(const dz of [.35,2.45])rail([x+2.5,y+3.1,zz+dz],[x-2.5,y+5.1,zz+dz],g,look.frame);
+          for(const dz of [-2.45,2.45])rail([x+2.5,y+3.1,zz+dz],[x+4.5,y+3.1,zz+dz],g,look.frame);
+          for(const dz of [-2.2,-.6]){const beam=box('Stair_support_stringer',[Math.hypot(5,2),.16,.12],[x,y+.87,zz+dz],look.frame,g);beam.rotation.z=Math.atan2(2,5);}
+          for(const dz of [.6,2.2]){const beam=box('Stair_support_stringer',[Math.hypot(5,2),.16,.12],[x,y+2.87,zz+dz],look.frame,g);beam.rotation.z=-Math.atan2(2,5);}
         }
         const st=node(`${c.id}_stairs_${s}_d${d}`,d,x-3.5,zz);
         if(d>1)edge(st,`${c.id}_stairs_${s}_d${d-1}`,'stairs');

@@ -6,6 +6,13 @@ const seam=new T.MeshStandardMaterial({name:'Polish_tailored_seam',color:0xa1b4a
 const trim=new T.MeshStandardMaterial({name:'Polish_satin_edge',color:0x819b9f,roughness:.29,metalness:.65});
 const ink=new T.MeshStandardMaterial({name:'Polish_recess',color:0x162e3b,roughness:.66});
 const warm=new T.MeshStandardMaterial({name:'Polish_warm_wayfinder',color:0xe5cf9b,emissive:0xffd5a1,emissiveIntensity:.28,roughness:.6});
+// The aft stairwells' finish (transit.js, circulation-finish.js, walk/partitions.js): blue light lines, black metal
+// cladding and dark glass panes.
+export const STAIRWELL={
+ glow:new T.MeshStandardMaterial({name:'Stair_holo_glow',color:0x9fe6ff,emissive:0x3cc6ff,emissiveIntensity:1.3,roughness:.4}),
+ metal:new T.MeshStandardMaterial({name:'Stair_clad_metal',color:0x1d2126,metalness:.65,roughness:.32}),
+ glass:new T.MeshStandardMaterial({name:'Stair_glass_pane',color:0x1f4f73,emissive:0x0d3552,emissiveIntensity:.45,metalness:.5,roughness:.06}),
+};
 const cushion=/seat|cushion|pillow|mattress|headboard|banquette|soft_back|padded_arm|bed_cover|blanket/i;
 const joinery=/cabinet|locker|crate|container|counter|worktop|table|desk|shelf|drawer|wardrobe|planter|bench|console_body|bed_base|machine|pump_skid|handling_unit|exchanger|module|tool_board|play_block|treadmill|scanner/i;
 const display=/display|touchscreen|monitor|instrument_panel|call_panel|control_panel|bedside_controls/i;
@@ -16,7 +23,7 @@ export function polishInterior(root,label){
  if(root.userData.polish)return root.userData.polish;
  root.updateWorldMatrix(true,true);const inv=root.matrixWorld.clone().invert(),meshes=[],batches=new Map(),materials=new Map(),report={label,revision:2,softenedFixtures:0,tailoredSeams:0,instrumentBezels:0,metalCollars:0,materialFinishes:0};
  root.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&!o.name.startsWith('Polish_'))meshes.push(o);});
- function add(o,size,p,mat,feature){const g=new T.BoxGeometry(...size).translate(...p).applyMatrix4(inv.clone().multiply(o.matrixWorld));const wp=o.getWorldPosition(new T.Vector3()),key=feature+'|'+[Math.floor(wp.x/40),Math.floor(wp.y/4),Math.floor(wp.z/20)].join(',');if(!batches.has(key))batches.set(key,{mat,feature,gs:[]});batches.get(key).gs.push(g);}
+ function add(o,size,p,mat,feature){const g=new T.BoxGeometry(...size).translate(...p).applyMatrix4(inv.clone().multiply(o.matrixWorld));const wp=o.getWorldPosition(new T.Vector3()),key=feature+'|'+mat.name+'|'+[Math.floor(wp.x/40),Math.floor(wp.y/4),Math.floor(wp.z/20)].join(',');if(!batches.has(key))batches.set(key,{mat,feature,gs:[]});batches.get(key).gs.push(g);}
  for(const o of meshes){
   const n=o.name,p=o.geometry.parameters||{};
   if(p.width&&(cushion.test(n)||joinery.test(n))&&!/wall|ceiling|floor|roof|glazing|window|light|barrier|frame|refined_/i.test(n)){
@@ -37,7 +44,8 @@ export function polishInterior(root,label){
    const ring=new T.TorusGeometry(p.radiusTop+.002,.012,6,16);ring.rotateX(Math.PI/2);ring.translate(0,-s.y*.32,0);ring.applyMatrix4(inv.clone().multiply(o.matrixWorld));const key='metal_collar|'+Math.floor(o.position.y/4);if(!batches.has(key))batches.set(key,{mat:trim,feature:'metal_collar',gs:[]});batches.get(key).gs.push(ring);report.metalCollars++;
   }
   if(/^(Stair_tread_up|Stair_tread_return|Aft_stair_up|Aft_stair_return|Gallery_stair)$/.test(n)){
-   for(const x of [b.min.x+.09,b.max.x-.09])add(o,[.045,.004,s.z*.75],[x,b.max.y+.002,c.z],warm,'stair_edge_marker');report.stairMarkers=(report.stairMarkers||0)+2;
+   // (The aft stairs' blue treads get blue light lines.)
+   for(const x of [b.min.x+.09,b.max.x-.09])add(o,[.045,.004,s.z*.75],[x,b.max.y+.002,c.z],/holo/.test(o.material.name)?STAIRWELL.glow:warm,'stair_edge_marker');report.stairMarkers=(report.stairMarkers||0)+2;
   }
   if(/^(Closed_lift_landing_door|Aft_lift_landing_door|Crown_lift_platform_door)$/.test(n)){
    const axis=s.x<s.z?'x':'z',u=axis==='x'?'z':'x';for(const sign of [-1,1]){const size=new T.Vector3(.015,s.y*.88,.015),pos=c.clone();size[u]=.018;pos[axis]+=sign*(s[axis]/2+.002);add(o,size.toArray(),pos.toArray(),ink,'lift_door_reveal');}report.liftReveals=(report.liftReveals||0)+2;
