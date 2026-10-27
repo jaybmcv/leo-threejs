@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {finishAft} from './aft-finish.js';
-import {createFinCrown,CROWN,FIN_PLATFORMS} from './fin-crown.js';
+import {createFinCrown,CROWN,FIN_PLATFORMS,FIN_GATE} from './fin-crown.js';
+import {finDropSqueeze} from './concept-shape.js';
 import {addAftEnclosures} from './aft-enclosures.js';
 import envelope from './assets/aft-envelope.json' with {type:'json'};
 import {unionRectangles,slabGeometry} from './floor-geometry.js';
@@ -112,10 +113,13 @@ export function createAft(){
  }
  // The car's guide rails run just outside its front and back walls, from the lower lobby to under the crown floor.
  for(const x of [-248.8,-245.2])for(const z of [-2.28,2.28])beam('Crown_lift_guide',[x,24.3,z],[x,CROWN.floor-.6,z],.1,'frame',g);
+ // Each landing's gate is the size of the walk's landing door (FIN_GATE); heights are built taller by what the fin drop
+ // will squash them, so the gate ends up that size on every level.
  for(const y of [24.3,...FIN_PLATFORMS]){
-  box('Crown_lift_platform_door',[.1,2.7,2.8],[-244.9,y+1.35,0],'metal',g);
-  for(const z of [-1.6,1.6])box('Crown_lift_platform_jamb',[.15,2.9,.35],[-244.8,y+1.45,z],'frame',g);
-  box('Crown_lift_platform_header',[.15,.3,3.55],[-244.8,y+2.85,0],'frame',g);
+  const {width:w,height:h,jamb:j,header:t,x,depth:d}=FIN_GATE,s=1/finDropSqueeze(y);
+  box('Crown_lift_platform_door',[.1,h*s,w],[-244.9,y+h*s/2,0],'metal',g);
+  for(const z of [-1,1])box('Crown_lift_platform_jamb',[d,(h+t)*s,j],[x,y+(h+t)*s/2,z*(w+j)/2],'frame',g);
+  box('Crown_lift_platform_header',[d,t*s,w+2*j],[x,y+(h+t/2)*s,0],'frame',g).userData.level=y;
  }
  floor('Crown_lift_lower_lobby',[rect(-249.5,-239,-2.35,2.35)],24.294,parts.access,[CROWN.lift]);
  const crown=createFinCrown();parts.crown.add(crown.root);

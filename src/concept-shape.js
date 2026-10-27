@@ -24,6 +24,9 @@ const dropFin=v=>{v.y-=dropAt(v.x,v.y);};
 // Where the drop is a plain translation (the crown, the hull below) normals keep their direction.
 dropFin.rigid=v=>v.y<=DROP_FROM||v.x>=FIN_AFT_OF+10||v.y>=DROP_TO&&v.x<=FIN_AFT_OF-10;
 export const shapePoint=([x,y,z])=>[x,y-dropAt(x,y),z];
+// How much the drop squashes a height built at `y` inside the fin (1 below the squash band and above it, where the
+// drop is a plain translation): divide a size by it to build a part that ends up the size it is meant to be.
+export const finDropSqueeze=y=>y>=DROP_FROM&&y<DROP_TO?1-FIN_DROP/(DROP_TO-DROP_FROM):1;
 // The fin's own parts (skin, windows, fillet) take one even squash over their whole height, from below the skin's
 // buried root, so none of the skin's long triangles crosses a bend either. It matches the drop at the cap; lower down
 // the skin sits up to ~2 m lower than the clamped drop, sliding along its own flat sides (the fillet covers the edge).

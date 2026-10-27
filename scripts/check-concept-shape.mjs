@@ -11,6 +11,8 @@ import {createNoseCommons} from '../src/nose-commons.js';
 import {createAft} from '../src/aft.js';
 import {applyConceptDetail,hullSurface} from '../src/concept-detail.js';
 import {FIN_TOUR} from '../src/aft-tour.js';
+import {LIFTS} from '../src/walk/lifts.js';
+import {FIN_GATE} from '../src/fin-crown.js';
 // The concept shape pass runs in the viewer on both the lossless and the streamed (quantized) exterior.
 const out='output/leo-interior-v01/';
 async function load(name){const b=await fs.readFile(out+name);const g=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');g.scene.traverse(o=>{const a=g.parser.associations.get(o);if(a?.nodes!==undefined)o.name=g.parser.json.nodes[a.nodes].name||o.name;else if(o.isMesh&&a?.meshes!==undefined)o.name=o.parent.name;});return g.scene.getObjectByName('01_EXTERIOR_REFINED_V31');}
@@ -165,5 +167,16 @@ if(baked){
   console.log(`nose: centreline welded (normal z ${lean.toFixed(3)}), chine halves meet at ${ss.map(y=>y.toFixed(2)).join('..')}`);}}
 // The aft interiors' crown follows, and the tour stops and their text name the lowered crown.
 const aft=createAft(),r0=bounds(aft.root,crown).max.y;shapeAft(aft.root);assert.ok(Math.abs(r0-bounds(aft.root,crown).max.y-FIN_DROP)<.05,'aft crown did not follow');
+// Every fin landing's gate frames exactly the landing door (the lift's door width, the walk's 2.75 m shutter), after the drop.
+{const fin=LIFTS.find(l=>l.id==='crown').stops.filter(st=>/^Fin platform/.test(st.label));assert.equal(fin.length,6);
+ const parts=n=>{const p=[];aft.root.traverse(o=>{if(o.isMesh&&o.name===n)p.push(new Box3().setFromObject(o));});return p;},headers=parts('Crown_lift_platform_header'),jambs=parts('Crown_lift_platform_jamb');
+ for(const st of fin){
+  const h=headers.find(b=>b.min.y>st.y+1.5&&b.min.y<st.y+4),near=jambs.filter(b=>Math.abs(b.min.y-st.y)<.05);
+  assert.ok(h&&near.length===2,`${st.label}: gate not found`);
+  assert.ok(Math.abs(h.min.y-st.y-FIN_GATE.height)<.01,`${st.label}: gate opening is ${(h.min.y-st.y).toFixed(3)} m high, the door ${FIN_GATE.height}`);
+  const [lo,hi]=near.sort((p,q)=>p.min.z-q.min.z);assert.ok(Math.abs(hi.min.z-lo.max.z-FIN_GATE.width)<.01,`${st.label}: gate opening is ${(hi.min.z-lo.max.z).toFixed(3)} m wide, the door ${FIN_GATE.width}`);
+  assert.ok(Math.abs(near[0].max.y-near[0].min.y-FIN_GATE.height-FIN_GATE.header)<.01,`${st.label}: jambs do not reach the header`);
+ }
+ assert.equal(LIFTS.find(l=>l.id==='crown').door.width,FIN_GATE.width);}
 const lobby=shapeView(FIN_TOUR.find(s=>s.name==='Panorama arrival lobby'));assert.equal(lobby.position[1],134-FIN_DROP);assert.match(lobby.detail,/120\.3 m/);
 console.log('Concept shape verified: exterior, aft interiors and tour stops agree.');
