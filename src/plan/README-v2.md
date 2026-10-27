@@ -1,6 +1,6 @@
 # Phase 1 layout data — corrected atrium revision
 
-Import `LAYOUT_V2` or call `buildLayoutV2()`. The result is serializable physical ship metres: X forward, Y up, Z starboard, Three.js yaw. No existing viewer, build or walk module imports it. No layout selector is introduced.
+Import `LAYOUT_V2` or call `buildLayoutV2()`. The result is serializable physical ship metres: X forward, Y up, Z starboard, Three.js yaw. Phase 1 introduced data only. Phase 2 adds an isolated selector and walk world; see [README-phase2.md](README-phase2.md).
 
 Run `node scripts/check-plan.mjs`, `node scripts/plan-v2-render.mjs` and `npm run check`. Review `output/plan-v2/index.html`, twenty deck PNGs, the midships section, `summary.json`, `layout.json`, `check-report.json` and `determinism.json`. Output is already gitignored.
 

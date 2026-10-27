@@ -1,0 +1,10 @@
+import * as T from 'three';
+import {planRails as originalPlan,RAIL} from '../walk/railings.js?legacy';
+import {mergeBoxes,glass,metal} from './geometry.js';
+import layout from 'v2-layout';
+export {RAIL};
+export function planRails(decks,col){const rows=originalPlan(decks,col),out=[];for(const row of rows){const [deck,axis,a0,a1,at,y]=row,polys=[...layout.cabins.filter(c=>c.deck===deck).map(c=>c.polygon),...layout.circulation.stairs.filter(s=>s.deck===deck&&s.wing!==undefined).map(s=>s.polygon),...layout.decks[deck-1].slab.holes.filter(h=>/-return-headroom$/.test(h.id)).map(h=>h.polygon)];let spans=[[a0,a1]];for(const p of polys){const crosses=[];for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length],u=axis?0:1,v=1-u;if(at<=Math.min(a[u],b[u])||at>=Math.max(a[u],b[u]))continue;crosses.push(a[v]+(b[v]-a[v])*(at-a[u])/(b[u]-a[u]));}if(crosses.length<2)continue;crosses.sort((a,b)=>a-b);const lo=crosses[0]+.03,hi=crosses.at(-1)-.03;spans=spans.flatMap(([a,b])=>hi<=a||lo>=b?[[a,b]]:[[a,Math.max(a,lo)],[Math.min(b,hi),b]].filter(([a,b])=>b-a>.1));}for(const [a,b] of spans)out.push([deck,axis,a,b,at,y]);}return out;}
+
+export function railingMesh(rows){const g=new T.Group();g.name='Walk_railings';const panes=[],caps=[],loungePanes=[],glow=[],r=layout.rooms.find(r=>r.id==='commons-1'),xs=r.polygon.map(p=>p[0]),zs=r.polygon.map(p=>p[1]);for(const [,axis,a0,a1,at,y]of rows){const len=a1-a0,mid=(a0+a1)/2,x=axis?at:mid,z=axis?mid:at,inLounge=y>=r.y-.1&&y<r.y+r.height&&x>=Math.min(...xs)-.1&&x<=Math.max(...xs)+.1&&z>=Math.min(...zs)-.1&&z<=Math.max(...zs)+.1;
+ const pane=[axis?[.07,1.1,len]:[len,1.1,.07],[x,y+.55,z]],cap=[axis?[.06,.05,len]:[len,.05,.06],[x,y+1.1,z]];(inLounge?loungePanes:panes).push(pane);(inLounge?glow:caps).push(cap);if(inLounge)glow.push([axis?[.05,.04,len]:[len,.04,.05],[x,y+.04,z]]);}
+ mergeBoxes(g,'V2_guard_glass',panes,glass);mergeBoxes(g,'V2_guard_cap',caps,metal);mergeBoxes(g,'Lounge_rail_glass',loungePanes,glass);mergeBoxes(g,'Lounge_rail_glow',glow,new T.MeshBasicMaterial({name:'Lounge_rail_glow',color:0xff6b20,toneMapped:false}));return g;}

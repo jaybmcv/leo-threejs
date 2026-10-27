@@ -1,3 +1,4 @@
+import {addStructuralOpenings} from './structure-v2.js';
 import {completeProgramme} from './programme-v2.js';
 import {connectPlan as connectCirculation} from './navigation-v2.js';
 import {DECKS,CABINS,COMMONS} from '../model.js';
@@ -151,13 +152,17 @@ export function buildLayoutV2(){
   if(r.kind==='garden')gardenPieces(r,h);
  }
  allocateBerths(cabins,rooms,issues);
- const observation=rooms.find(r=>r.id==='observation-lounge');if(observation){const top=observation.door.center,base=[top[0]-24,floorY(17),top[2]];circulation.ramps.push({id:'observation-lounge-ramp',deck:17,owner:observation.id,width:4,rise:2,run:24,points:[base,top],polygon:rectangle((base[0]+top[0])/2,0,24,4)});}
+ const observation=rooms.find(r=>r.id==='observation-lounge');if(observation){const b=bounds(observation.polygon);observation.fittingFrame={origin:[observation.door.center[0],observation.y,0],yaw:0,bounds:[[-24,-2.31,b.z0],[b.x1-observation.door.center[0],observation.height,b.z1]],reason:'The plan centre stays at X190; the immutable Phase 0 authoring frame is the entry at X170.'};const top=observation.door.center,base=[top[0]-24,floorY(17),top[2]];circulation.ramps.push({id:'observation-lounge-ramp',deck:17,owner:observation.id,width:4,rise:2,run:24,points:[base,top],polygon:rectangle((base[0]+top[0])/2,0,24,4)});}
+ // Runtime integration: the last part of the 1:12 ramp rises into Deck 18's headroom.
+ // Its floor opening is part of the same plan as the ramp, before programme coverage.
+ addStructuralOpenings({decks,circulation,rooms});
  scheduleWindows({h,decks,rooms,cabins,windows,issues});
  connectCirculation({h,decks,rooms,cabins,shuttles,circulation,issues});
  completeProgramme({decks,rooms,cabins,shuttles,circulation});
  const summary={allocation:{slots:cabins.length,twins:cabins.filter(c=>c.type==='twin').length,singles:cabins.filter(c=>c.type==='single').length,unused:0},areaExceptions:rooms.filter(r=>r.areaException).map(r=>({id:r.id,reason:r.areaException})),perDeck:decks.map(d=>({deck:d.number,cabins:cabins.filter(c=>c.deck===d.number).length,twins:cabins.filter(c=>c.deck===d.number&&c.type==='twin').length,singles:cabins.filter(c=>c.deck===d.number&&c.type==='single').length,berths:cabins.filter(c=>c.deck===d.number).reduce((s,c)=>s+c.berths,0),rooms:rooms.filter(r=>r.deck===d.number).length,atriumWidth:d.atrium?.widthMid??0})),cabins:cabins.length,berths:cabins.reduce((s,c)=>s+c.berths,0),shuttles:shuttles.length,seats:shuttles.reduce((s,c)=>s+c.seats.length,0),windows:windows.length,windowsByKind:Object.fromEntries([...new Set(windows.map(w=>w.kind))].map(k=>[k,windows.filter(w=>w.kind===k).length])),issues};
  const assemblies=[{id:'arrival-garden',frame:rooms.find(r=>r.id==='d02-arrival-1').frame,members:['d02-arrival-1','d03-farm-1'],opening:{localCenter:[-4,4,0],halfAxes:[10.1,4.7],deck:3}},...rooms.filter(r=>r.kind==='garden').map(r=>({id:r.assembly,neighborhood:r.neighborhood,frame:{...r.frame,mirror:r.mirror},members:[r.id],components:r.components}))];
- return {version:2,option:'C',units:'metres',coordinates:'X forward; Y up; Z starboard; yaw is Three.js rotation.y',hull:h.provenance,decks,cabins,rooms,assemblies,shuttles,windows,circulation,summary};
+ const fixedRooms=SHIP_AREAS.filter(a=>!rooms.some(r=>r.id===a.id)).map(a=>makeRoom(a,a.center[0],a.center[2],0,{fixed:true,reason:'Retained aft engineering/support room; selected v2 frame is unchanged.'}));
+ return {fixedRooms,version:2,option:'C',units:'metres',coordinates:'X forward; Y up; Z starboard; yaw is Three.js rotation.y',hull:h.provenance,decks,cabins,rooms,assemblies,shuttles,windows,circulation,summary};
 }
 
 const NEW_PROGRAM={

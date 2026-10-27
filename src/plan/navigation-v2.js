@@ -1,3 +1,4 @@
+import {wingFlight} from './structure-v2.js';
 import {bounds,contains,distanceToSegment,rectangle,overlaps} from './geometry-v2.js';
 // Routes are measured on the planned floor, with 1.2 m clear branches and the 2.6 m ring retained.
 export function connectPlan({h,decks,rooms,cabins,shuttles,circulation,issues}){
@@ -30,7 +31,7 @@ export function connectPlan({h,decks,rooms,cabins,shuttles,circulation,issues}){
    const ramp=ramps.find(s=>s.owner===r.id),base=ramp?.points[0];terminals.push({id:r.door.id,owner:r.id,kind:'door',room:r,ramp,at:p,approach:base?[base[0]-.8,base[2]]:[p[0]+out[0]*.8,p[1]+out[1]*.8],y:r.y});
   }
   for(const o of [...circulation.lifts.filter(o=>o.deck===d.number),...circulation.stairs.filter(o=>o.deck===d.number)]){
-   const b=bounds(o.polygon),x=(b.x0+b.x1)/2,z=(b.z0+b.z1)/2,p=o.kind==='lift'?[x,z-Math.sign(z)*2.6]:o.wing!==undefined?[x,o.side*(Math.max(Math.abs(b.z0),Math.abs(b.z1))+1)]:[b.x0-1,z];terminals.push({id:'d'+d.number+'-'+o.id+'-landing',kind:o.kind,at:p,approach:p,y:d.y});
+   const b=bounds(o.polygon),x=(b.x0+b.x1)/2,z=(b.z0+b.z1)/2,p=o.kind==='lift'?[x,z-Math.sign(z)*2.6]:o.wing!==undefined?[x-4.2,(d.number===15?wingFlight(circulation.stairs.find(s=>s.wing===o.wing&&s.side===o.side&&s.deck===14),circulation.stairs).z:wingFlight(o,circulation.stairs).outer)]:[b.x0-1,z];terminals.push({id:'d'+d.number+'-'+o.id+'-landing',kind:o.kind,at:p,approach:p,y:d.y});
   }
   const used=new Set(),failed=[];
   for(const t of terminals){const reachableClosest=(p,max)=>{let best=-1,dist=max*max;for(let x=Math.max(X0,Math.floor((p[0]-max)*Q));x<=Math.min(X1,Math.ceil((p[0]+max)*Q));x++)for(let z=Math.max(Z0,Math.floor((p[1]-max)*Q));z<=Math.min(Z1,Math.ceil((p[1]+max)*Q));z++){const j=ix(x,z),dd=(x/Q-p[0])**2+(z/Q-p[1])**2;if(free[j]&&parent[j]!==-2&&dd<dist){const len=Math.sqrt(dd),poly=len>.001?rectangle((x/Q+p[0])/2,(z/Q+p[1])/2,len,1.2,-Math.atan2(z/Q-p[1],x/Q-p[0])):null,box=poly&&bounds(poly),obs=new Set();if(box)for(let xx=Math.floor(box.x0/4);xx<=Math.floor(box.x1/4);xx++)for(let zz=Math.floor(box.z0/4);zz<=Math.floor(box.z1/4);zz++)for(const o of buckets.get(xx+':'+zz)||[])obs.add(o);if(poly&&[...obs].some(o=>overlaps(poly,o.polygon)))continue;dist=dd;best=j;}}return best;};let start=reachableClosest(t.approach,2);

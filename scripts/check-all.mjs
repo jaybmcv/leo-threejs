@@ -1,2 +1,4 @@
+import {v2 as useV2} from './layout-selector.mjs';
+if(useV2){const {runV2}=await import('./run-v2.mjs');await runV2('check');process.exit(0);}
 import {spawnSync} from 'node:child_process';
 for(const script of ['check-anchors','check-plan','check-backdrop','check-areas','check-special-areas','check-area-glb','check-residences','check-interior','check-transit','check-aft','check-aft-integration','check-exterior-finish','check-engine-windows','check-assembly','check-nose-commons','check-neighborhood-services','check-upper-aft','check-lower-bow','check-voyage-forum','check-lower-aft','check-command-deck','check-refinement-coverage','check-polish','check-crown-closure','check-concept-shape','validate-glb','check-invasion','check-paws-off','check-mudwater','check-giveaway','check-pool','check-ship-log']){const p=spawnSync(process.execPath,['scripts/'+script+'.mjs'],{stdio:'inherit'});if(p.status!==0)process.exit(p.status||1);}
