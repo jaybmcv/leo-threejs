@@ -24,8 +24,8 @@ export function v2Plugin(layout,{node=false,sourceRef=null,sourceAdapters=applyV
   return {path:p,namespace:'v2-source'};
  });
  b.onLoad({filter:/.*/,namespace:'v2-source'},async a=>{
-  let actual=a.path,s;try{s=await fs.readFile(actual,'utf8');}catch(e){if(!actual.endsWith('.js'))throw e;actual=actual.slice(0,-3)+'.ts';s=await fs.readFile(actual,'utf8');}const file=path.relative(root,a.path).replaceAll('\\','/');
-  if(sourceRef&&!file.startsWith('scripts/phase3b-')&&!['src/plan/hull-skin-v2.js','src/v2/hull-prototypes.js'].includes(file)){try{s=(await promisify(execFile)('git',['--no-optional-locks','show',sourceRef+':'+file],{cwd:root,maxBuffer:32*1024*1024})).stdout;}catch(e){throw Error('Baseline source unavailable: '+sourceRef+':'+file+' '+e.message);}}
+  let actual=a.path,s;try{s=await fs.readFile(actual,'utf8');}catch(e){if(!actual.endsWith('.js'))throw e;actual=actual.slice(0,-3)+'.ts';s=await fs.readFile(actual,'utf8');}const file=path.relative(root,actual).replaceAll('\\','/');
+  if(sourceRef&&!file.startsWith('node_modules/')&&!file.startsWith('scripts/phase3b-')&&!['src/plan/hull-skin-v2.js','src/plan/finished-skin-v2.js','src/plan/coplanar-v2.js','src/v2/hull-prototypes.js'].includes(file)){try{s=(await promisify(execFile)('git',['--no-optional-locks','show',sourceRef+':'+file],{cwd:root,maxBuffer:32*1024*1024})).stdout;}catch(e){throw Error('Baseline source unavailable: '+sourceRef+':'+file+' '+e.message);}}
   s=sourceAdapters(file,s);
   return {contents:s,loader:actual.endsWith('.json')?'json':actual.endsWith('.ts')?'ts':'js',resolveDir:path.dirname(a.path)};
  });

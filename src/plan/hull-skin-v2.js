@@ -1,6 +1,6 @@
 // Actual finished pressure-skin triangles, in physical ship metres. No inferred setback.
 import * as T from 'three';
-export const WALL_BUILDUP=.20, CONTACT_TOLERANCE=.05;
+export const WALL_BUILDUP=.20, GLAZING_SETBACK=.02, CONTACT_TOLERANCE=.05;
 export function clipPolygon(poly,axis,at,sign=1){const out=[];for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length],da=sign*(a[axis]-at),db=sign*(b[axis]-at);if(da>=-1e-9)out.push(a);if((da<0)!==(db<0)){const t=da/(da-db);out.push(a.map((v,k)=>v+(b[k]-v)*t));}}return out;}
 export function triangulate(poly){const out=[];for(let i=1;i<poly.length-1;i++)out.push([poly[0],poly[i],poly[i+1]]);return out;}
 export function pressureTriangles(root){root.updateMatrixWorld(true);const out=[];root.traverse(o=>{if(!o.isMesh||!/^Smooth_pressure_envelope_/.test(o.name)&&!/^Smooth_pressure_envelope_/.test(o.parent?.name))return;const p=o.geometry.attributes.position,ix=o.geometry.index;for(let i=0;i<(ix?.count??p.count);i+=3){const q=[0,1,2].map(k=>new T.Vector3().fromBufferAttribute(p,ix?ix.getX(i+k):i+k).applyMatrix4(o.matrixWorld).toArray());const n=new T.Vector3().subVectors(new T.Vector3(...q[1]),new T.Vector3(...q[0])).cross(new T.Vector3().subVectors(new T.Vector3(...q[2]),new T.Vector3(...q[0])));if(n.lengthSq()>1e-16)out.push(q);}});return out;}
