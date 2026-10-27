@@ -75,6 +75,7 @@ import {createCommsDisplays} from './comms-displays.js';
 import {createMissionHolo} from './mission-holo.js';
 import {createSwordCase} from './sword-case.js';
 import {createHalloween} from './halloween.js';
+import {createHexFloor} from './hex-floor.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 import {createHelp} from './help.js';
 
@@ -248,6 +249,9 @@ async function buildShip(){
  gaming=createGamingLounge(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches});
  // Deck 15 dressed for Halloween until November (halloween.js): its lanes' ceiling diffusers go dead before the merge.
  halloween=createHalloween(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches,sheet:$('clown-sheet')});
+ // Deck 1's hallways: hexagon tiles that light up round the walker, teal heading forward and orange heading aft
+ // (hex-floor.js); drawn only, after the colliders, so the floor walks as before.
+ hexFloor=createHexFloor();
  status('Dressing the crew…');await idle();
  if(cosmoKit)globalThis.LeoCosmo.dressCats(ship.inside,cosmoKit);
  status('Preparing the walk…');await idle();
@@ -287,6 +291,7 @@ async function buildShip(){
  if(missionHolo)toBand(missionHolo.group);
  if(swordCase)toBand(swordCase.group);
  if(halloween)toBand(halloween.group);
+ toBand(hexFloor.group);
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
@@ -299,7 +304,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -587,6 +592,7 @@ renderer.setAnimationLoop(()=>{
  if(lounge)lounge.update(dt,bodies,camera.getWorldPosition(eye));
  if(recovery)recovery.update(dt,camera.getWorldPosition(eye));
  halloween?.update(dt,camera.getWorldPosition(eye),ambience.on);
+ hexFloor?.update(dt,camera.getWorldPosition(eye),p,heading);
  gaming?.update(dt,camera.getWorldPosition(eye),p);
  provisions?.update(dt,bodies);
  blossom?.update(dt,p);
