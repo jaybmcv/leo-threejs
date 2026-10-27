@@ -1,3 +1,5 @@
+import layout from 'v2-layout';
+import {applyPrototypeExterior,fitPrototypeStructure} from './hull-prototypes.js';
 import * as T from 'three';
 import {buildSteps as originalSteps,prepareExteriorForWalking as originalExterior,outsideOnly,cutOut,RESIDENTIAL} from '../walk/world.js?legacy';
 import {Colliders,solid,meshTriangles} from '../walk/collision.js';
@@ -11,7 +13,7 @@ export const cabinTemplate=()=>{const out=[];const g=template('twin--1');g.updat
 export function prepareExteriorForWalking(ship){
  // Accepted room dressing/cuts run in its authoring frame before world-space v2 shells.
  // Saved generated guards are restored unchanged, matching Node's after-preparation guard stage.
- const generated=ship.inside.children.filter(o=>o.name==='Walk_railings'||o.name==='Walk_partitions');for(const o of generated)o.removeFromParent();const dropped=originalExterior(ship);clearWingIntrusions(ship);fitV2Structure(ship);for(const o of generated)ship.inside.add(o);return dropped;
+ const generated=ship.inside.children.filter(o=>o.name==='Walk_railings'||o.name==='Walk_partitions');for(const o of generated)o.removeFromParent();const dropped=originalExterior(ship);applyPrototypeExterior(ship.exterior,layout);clearWingIntrusions(ship);fitV2Structure(ship);fitPrototypeStructure(ship,layout);for(const o of generated)ship.inside.add(o);return dropped;
 }
 export function buildColliders(ship,{extra=[],filter=solid,into=new Colliders()}={}){
  const col=into;ship.root.updateMatrixWorld(true);col.addStatic(ship.inside,filter);for(const root of extra)col.addStatic(root,o=>filter(o)&&!outsideOnly(o));col.commit();
