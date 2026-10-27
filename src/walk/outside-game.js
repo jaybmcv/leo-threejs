@@ -5,12 +5,12 @@
 export const NEON_ARENA_URL='https://neonarenasurvival.grok.me/';
 
 export function openOutside(sheet,frame,url=NEON_ARENA_URL){
- sheet.classList.add('loading');sheet.hidden=false;
- frame.onload=()=>{sheet.classList.remove('loading');frame.focus();};
+ sheet.classList.toggle('loading',true);sheet.hidden=false;
+ frame.onload=()=>{sheet.classList.toggle('loading',false);frame.focus();};
  frame.src=url;
 }
 // Drops the page, so the game stops and its sound with it.
 export function closeOutside(sheet,frame){
- frame.onload=null;sheet.classList.remove('loading');
+ frame.onload=null;sheet.classList.toggle('loading',false);
  const src=frame.getAttribute('src');if(src&&src!=='about:blank')frame.src='about:blank';
 }
