@@ -1,39 +1,38 @@
 import * as T from 'three';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {polishInterior} from '../interior-polish.js';
 import layout from 'v2-layout';
 import {frame} from '../plan/rooms.js';
-import {box,glass,lining,floor,metal} from './geometry.js';
+import {box,lining,metal} from './geometry.js';
+const mat=(name,color,extra={})=>new T.MeshStandardMaterial({name,color,roughness:.7,...extra});
+const oak=mat('Residential_oak',0xa98762),felt=mat('Residential_navy_felt',0x2f4766),linen=mat('Residential_warm_linen',0xe7dcc7),ink=mat('Residential_graphite',0x273e49,{metalness:.25,roughness:.45}),brass=mat('Residential_satin_brass',0xb69a68,{metalness:.6,roughness:.35}),glow=mat('Residential_warm_diffuser',0xffe8be,{emissive:0xffd598,emissiveIntensity:.7}),ceramic=mat('Residential_ceramic',0xe0e0d8),warmFloor=mat('Residential_warm_floor',0xc6c3b3),runner=mat('Residential_carpet',0x34465e),screen=mat('Residential_cabin_screen',0x0c1626,{emissive:0x1d3b5e,emissiveIntensity:.45});
+export const corridorGlass=mat('V2_corridor_clear',0xc6e0e4,{transparent:true,opacity:.085,depthWrite:false,side:T.DoubleSide,roughness:.12}),viewGlass=mat('V2_cabin_view_glass',0x79a6b2,{transparent:true,opacity:.16,depthWrite:false,side:T.DoubleSide,roughness:.2}),manifestation=mat('V2_glass_manifestation',0xdce4e2,{transparent:true,opacity:.34,depthWrite:false,side:T.DoubleSide});
 export const placements=()=>layout.cabins.map(c=>{const f=frame(c.id);return {...c,matrix:new T.Matrix4().makeTranslation(...f.origin).multiply(new T.Matrix4().makeRotationY(f.yaw))};});
-export const cabinKinds=new Map();
-export function cabinKey(c){const dz=c.door.center[2]-c.z,dx=c.door.center[0]-c.x;return c.type+'-'+(Math.sin(c.yaw)*dx+Math.cos(c.yaw)*dz>0?1:-1);}
+export const cabinKinds=new Map(),renderKinds=new Map();
+export const doorSide=c=>{const dz=c.door.center[2]-c.z,dx=c.door.center[0]-c.x;return Math.sin(c.yaw)*dx+Math.cos(c.yaw)*dz>0?1:-1;};
+export const cabinKey=c=>c.type+'-'+doorSide(c)+'-'+c.view;
 export function template(key){
- if(cabinKinds.has(key))return cabinKinds.get(key);const sign=key.includes('--')?-1:1,type=key.startsWith('twin')?'twin':'single',g=new T.Group();
- // Front is the corridor wall. The 1.1 m opening is kept clear through every layer.
- box(g,'Cabin_v2_floor',[3.18,.14,7.4],[0,-.07,0],floor);
- box(g,'Cabin_v2_ceiling',[3.18,.10,7.4],[0,3.45,0]);
- for(const s of [-1,1])box(g,'Cabin_v2_side',[.12,3.4,7.4],[s*1.53,1.7,0]);
- for(const s of [-1,1])box(g,'Cabin_v2_front_glass',[1.01,3.3,.1],[s*1.055,1.65,sign*3.65],glass);
- box(g,'Cabin_v2_front_lintel',[1.1,.7,.1],[0,3.05,sign*3.65],glass);
- // Opposite facade: real aperture at the small-window schedule; hull cutting remains Phase 5.
- for(const s of [-1,1])box(g,'Cabin_v2_window_jamb',[.49,3.3,.12],[s*1.345,1.65,-sign*3.65]);
- box(g,'Cabin_v2_window_sill',[2.2,.8,.12],[0,.4,-sign*3.65]);
- box(g,'Cabin_v2_window_head',[2.2,1.2,.12],[0,2.7,-sign*3.65]);
- box(g,'Cabin_v2_window',[2.2,1.3,.035],[0,1.45,-sign*3.65],glass);
- for(const s of type==='twin'?[-1,1]:[-1]){
-  box(g,'Cabin_v2_bed_base',[.78,.4,2.1],[s*.99,.2,.25],metal);
-  box(g,'Cabin_v2_mattress',[.78,.18,2.1],[s*.99,.49,.25],lining);
-  box(g,'Cabin_v2_pillow',[.6,.12,.35],[s*.99,.64,1.05],lining);
- }
- box(g,'Cabin_v2_desk',[1.2,.10,.55],[0,.78,-sign*2.9],floor);
- for(const s of [-1,1])box(g,'Cabin_v2_desk_leg',[.08,.73,.5],[s*.52,.365,-sign*2.9],metal);
- cabinKinds.set(key,g);return g;
+ if(cabinKinds.has(key))return cabinKinds.get(key);const [type,,view]=key.replace('--','-negative').split('-'),sign=key.includes('negative')||key.includes('--')?-1:1,atrium=key.endsWith('atrium'),g=new T.Group();g.userData.rest=[];
+ // u across the room; v from the entry towards the view. Finished clear faces: +/-1.59 and +/-3.7.
+ const put=(name,size,u,y,v,material=lining,{shell=false,role='',noCollide=false,glass=false}={})=>{const o=box(g,'Cabin_v2_'+name,size,[u,y,-sign*v],material);o.userData={shell,role,noCollide,corridorGlass:glass};return o;};
+ put('floor',[3.42,.14,7.64],0,-.07,0,warmFloor,{shell:true,role:'floor'});put('ceiling',[3.42,.1,7.64],0,3.45,0,lining,{shell:true});
+ for(const s of [-1,1]){put('side',[.12,3.4,7.64],s*1.65,1.7,0,lining,{shell:true});put('front_glass',[.99,3.4,.035],s*1.095,1.7,-3.7175,corridorGlass,{shell:true,glass:true});put('manifestation',[.99,.12,.014],s*1.095,1.25,-3.688,manifestation,{shell:true,noCollide:true,glass:true});put('door_architrave',[.065,2.45,.08],s*.635,1.225,-3.72,oak,{shell:true});put('door_diffuser',[.018,2.3,.016],s*.635,1.18,-3.668,glow,{shell:true,noCollide:true});put('skirting',[.025,.12,7.3],s*1.575,.06,0,oak,{shell:true});put('ceiling_cove_housing',[.12,.1,7.2],s*1.48,3.32,0,ink,{shell:true});put('ceiling_cove_diffuser',[.075,.02,7.05],s*1.48,3.26,0,glow,{shell:true,noCollide:true});}
+ for(const side of [-1,1]){const leaf=side<0?'left':'right';put('door_'+leaf,[.6,2.4,.035],side*.3,1.2,-3.7175,corridorGlass,{shell:true,role:'door-'+leaf,noCollide:true,glass:true});put('door_manifestation_'+leaf,[.6,.12,.014],side*.3,1.25,-3.695,manifestation,{shell:true,role:'door-'+leaf+'-band',noCollide:true,glass:true});put('door_handle_'+leaf,[.025,.35,.04],side*.08,1.2,-3.67,brass,{shell:true,role:'door-'+leaf+'-handle',noCollide:true});}
+ put('front_lintel',[1.2,.95,.035],0,2.925,-3.7175,corridorGlass,{shell:true,glass:true});put('door_header',[1.34,.065,.08],0,2.45,-3.72,oak,{shell:true});put('door_control_panel',[.16,.27,.035],-.74,1.25,-3.68,ink,{shell:true});put('door_status_light',[.08,.025,.04],-.74,1.34,-3.65,glow,{shell:true,noCollide:true});
+ if(atrium){put('atrium_glass',[3.18,3.4,.035],0,1.7,3.7175,viewGlass,{shell:true});put('Juliet_glass_rail',[3.18,1.1,.045],0,.55,3.66,viewGlass,{shell:true});put('Juliet_rail_cap',[3.18,.045,.06],0,1.1,3.66,metal,{shell:true});}
+ else {for(const s of [-1,1])put('window_jamb',[.49,3.4,.12],s*1.345,1.7,3.76,lining,{shell:true});put('window_sill',[2.2,.8,.12],0,.4,3.76,lining,{shell:true});put('window_head',[2.2,1.3,.12],0,2.75,3.76,lining,{shell:true});const p=put('window',[2.2,1.3,.035],0,1.45,3.76,viewGlass,{shell:true});p.userData.aperture={width:2.2,height:1.3,sill:.8,hullCut:'Phase 5'};put('window_reveal',[2.28,.045,.22],0,.8,3.64,oak,{shell:true});}
+ const rest=(kind,u,h,v,dir,extra={})=>g.userData.rest.push({kind,point:[u,h,-sign*v],[kind==='lie'?'head':'facing']:[dir[0],0,-sign*dir[1]],...extra});
+ for(const s of type==='twin'?[-1,1]:[-1]){const x=s*1.055,v=.55;put('bed_base',[1,.42,2.1],x,.21,v,ink);put('mattress',[.96,.18,2.03],x,.51,v,linen,{role:'bed'});put('bed_cover',[.97,.04,1.35],x,.62,v-.35,felt);put('pillow',[.7,.14,.4],x,.7,v+.73,linen);put('upholstered_headboard',[1.05,.9,.12],x,1.02,v+1.09,felt);put('personal_shelf',[.85,.08,.26],x,1.55,v+1.12,oak);put('bed_storage_drawer',[.025,.25,1.6],s*.54,.23,v-.05,oak);put('bed_drawer_pull',[.045,.035,.28],s*.52,.29,v-.05,brass);put('bedside_controls',[.19,.29,.025],x,1.38,v+1.01,ink);put('reading_light_mount',[.15,.15,.04],x,1.96,v+1.1,brass);put('reading_light',[.38,.055,.13],x,1.91,v+1.04,glow,{noCollide:true});put('bed_plinth_diffuser',[.02,.03,1.9],s*.54,.06,v,glow,{noCollide:true});rest('lie',x,.64,v,[0,1],{length:2.03});}
+ // Original 0.62 x 0.64 chair proportions; side desk leaves the centre sight/foot lane open.
+ put('desk',[.5,.08,1.15],-1.32,.78,2.55,oak);for(const v of [2.08,3.02])put('desk_leg',[.42,.72,.055],-1.32,.36,v,ink);put('desk_screen',[.025,.42,.72],-1.56,1.37,2.55,screen);put('desk_task_light',[.1,.045,.8],-1.5,1.78,2.55,glow,{noCollide:true});
+ const chair=(u,v,facing,label)=>{put(label+'_seat',[.64,.13,.62],u,.47,v,felt);put(label+'_back',[.1,.55,.62],u-facing*.29,.86,v,felt);for(const a of [-1,1])for(const b of [-1,1])put(label+'_leg',[.04,.45,.04],u+a*.23,.23,v+b*.23,metal);rest('sit',u,.535,v,[facing,0]);};chair(-.70,2.55,-1,'desk_chair');
+ if(type==='single'){chair(1.03,.55,-1,'lounge_chair');for(const v of [.22,.88])put('lounge_padded_arm',[.55,.11,.08],1.03,.67,v,felt);put('lounge_footstool',[.5,.3,.55],.98,.15,1.55,felt);}
+ put('wardrobe',[.72,2.2,1.3],-1.21,1.1,-2.75,ink);put('wardrobe_front',[.035,2.12,1.22],-.832,1.1,-2.75,oak);put('wardrobe_handle',[.035,.32,.035],-.805,1.13,-2.28,brass);for(let i=0;i<4;i++)put('wardrobe_vent',[.008,.012,.28],-.81,.24+i*.045,-2.75,ink);put('runner',[.85,.014,4.7],0,.009,.1,runner,{noCollide:true});
+ // Compact wet pod beside the entry; the entry-to-view lane is never occupied by opaque fittings.
+ put('ensuite_partition',[.08,2.45,.78],.44,1.225,-2.21,ceramic);put('ensuite_shower_tray',[1,.08,.83],1.07,.04,-3.22,ceramic);put('ensuite_shower_screen',[.27,1.95,.025],1.43,1.08,-2.78,viewGlass);put('ensuite_WC_base',[.34,.36,.54],1.4,.18,-2.15,ceramic);put('ensuite_WC_seat',[.38,.07,.55],1.4,.395,-2.15,ceramic);put('ensuite_WC_cistern',[.34,.66,.17],1.41,.36,-2.46,ceramic);put('ensuite_shower_head',[.23,.045,.2],1.1,2.14,-3.47,brass);put('ensuite_shower_riser',[.025,1.45,.025],1.1,1.38,-3.58,brass);put('ensuite_basin',[.30,.1,.24],1.42,.83,-2.46,ceramic);put('ensuite_mirror',[.025,.65,.45],.496,1.55,-2.25,mat('Residential_mirror',0xb7cacf,{metalness:.95,roughness:.08}),{noCollide:true});put('ensuite_mirror_light',[.035,.055,.47],.515,1.94,-2.25,glow,{noCollide:true});put('ensuite_towel',[.035,.35,.27],.5,.8,-1.95,linen,{noCollide:true});
+ polishInterior(g,'V2 '+key+' cabin');g.updateMatrixWorld(true);cabinKinds.set(key,g);return g;
 }
-export function buildCabins(deck){
- const root=new T.Group();root.name='V2_cabin_instances';const walls=new T.Group();walls.name='V2_cabin_shells';root.add(walls);
- const list=placements().filter(c=>c.deck===deck),keys=[...new Set(list.map(cabinKey))];
- for(const key of keys){const cs=list.filter(c=>cabinKey(c)===key),fit=new T.Group(),shells=new T.Group();fit.name='V2_fit_'+key;shells.name='V2_cabin_shells';root.add(fit);walls.add(shells);for(const p of template(key).children){
-  const o=new T.InstancedMesh(p.geometry,p.material,cs.length);o.name=p.name;const shell=/floor|ceiling|side|front|window/.test(p.name);(shell?shells:fit).add(o);
-  cs.forEach((c,i)=>o.setMatrixAt(i,c.matrix.clone().multiply(p.matrixAutoUpdate?(p.updateMatrix(),p.matrix):p.matrix)));o.userData.cabinIds=cs.map(c=>c.id);o.userData.v2Cabins=true;o.computeBoundingSphere();
- }}
- return {root,walls,district:root,districtWalls:walls,number:deck-5};
-}
-export function berthSpots(){const out=[];for(const c of placements())for(const s of c.type==='twin'?[-1,1]:[-1]){const point=new T.Vector3(s*.99,.58,.25).applyMatrix4(c.matrix),head=new T.Vector3(0,0,1).transformDirection(c.matrix);out.push({id:c.id+'-bed-'+s,room:c.id,kind:'lie',point,height:point.y,head,length:2.1,instanced:true});}return out;}
+function renderTemplate(key){if(renderKinds.has(key))return renderKinds.get(key);const g=template(key),buckets=new Map();for(const p of g.children){if(!p.isMesh)continue;const role=p.userData.role||'',k=[p.userData.shell,role,p.material.uuid].join('|');if(!buckets.has(k))buckets.set(k,{parts:[],material:p.material,shell:!!p.userData.shell,role,berths:0});const b=buckets.get(k),geo=(p.geometry.index?p.geometry.toNonIndexed():p.geometry.clone()).applyMatrix4(p.matrix);b.parts.push(geo);if(role==='bed')b.berths++;}const out=[...buckets.values()].map(b=>{const geometry=mergeGeometries(b.parts);b.parts.forEach(g=>g.dispose());return {...b,geometry,name:b.role?'Cabin_v2_'+(b.role==='bed'?'mattress':b.role):'Cabin_v2_'+(b.shell?'shell_':'fit_')+b.material.name};});renderKinds.set(key,out);return out;}
+export function buildCabins(deck){const root=new T.Group(),walls=new T.Group();root.name='V2_cabin_instances';walls.name='V2_cabin_shells';root.add(walls);const list=placements().filter(c=>c.deck===deck);for(const key of new Set(list.map(cabinKey))){const cs=list.filter(c=>cabinKey(c)===key),fit=new T.Group(),shells=new T.Group();fit.name='V2_fit_'+key;shells.name='V2_cabin_shells';root.add(fit);walls.add(shells);for(const p of renderTemplate(key)){const o=new T.InstancedMesh(p.geometry,p.material,cs.length);o.name=p.name;(p.shell?shells:fit).add(o);cs.forEach((c,i)=>o.setMatrixAt(i,c.matrix));o.userData={cabinIds:cs.map(c=>c.id),v2Cabins:true,template:key,doorSide:p.role.includes('left')?-1:p.role.includes('right')?1:0,berthsPerInstance:p.berths};o.computeBoundingSphere();}}return {root,walls,district:root,districtWalls:walls,number:deck-5};}
+export function cabinRestSpots(){const out=[];for(const c of placements())for(const [i,s] of template(cabinKey(c)).userData.rest.entries()){const point=new T.Vector3(...s.point).applyMatrix4(c.matrix),dir=s.kind==='lie'?'head':'facing';out.push({...s,id:c.id+'-'+s.kind+'-'+i,room:c.id,point,height:point.y,[dir]:new T.Vector3(...s[dir]).transformDirection(c.matrix),instanced:true});}return out;}
+export const berthSpots=()=>cabinRestSpots().filter(s=>s.kind==='lie');

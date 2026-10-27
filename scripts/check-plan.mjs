@@ -20,7 +20,7 @@ check('issues',L.summary.issues.length===0,L.summary.issues);
 check('cabins',L.cabins.length===PLAN_V2_PIN.cabins,L.cabins.length);
 check('berths',L.cabins.reduce((n,c)=>n+c.berths,0)===10000,L.summary.berths);
 for(let d=6;d<=15;d++)check('pinned deck count',L.cabins.filter(c=>c.deck===d).length===PLAN_V2_PIN.perDeck[d-6],d);
-for(const c of CABINS)check('stable v1 cabin id',L.cabins.some(n=>n.id===c.id&&n.legacyId===c.id),c.id);
+for(const c of CABINS){const n=L.cabins.find(n=>n.id===L.cabinIdMap[c.id]);check('explicit v1 cabin map',!!n&&n.legacyIds.includes(c.id),c.id);check('legacy deck and side',n?.deck===c.deck&&Math.sign(n.z)===Math.sign(c.z),c.id);}check('complete cabin remap',Object.keys(L.cabinIdMap).length===5000,'all legacy cabins');
 check('unique ids',new Set(all.map(r=>r.id)).size===all.length,'rooms/cabins/craft');
 for(const r of [...rooms,...L.cabins]){
  check('full-height containment',r.envelope?r.envelope.every(s=>h.fits(s.polygon,r.y+s.rise,s.height,2.5,0)):h.fits(r.polygon,r.y,r.height),r.id);

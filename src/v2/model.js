@@ -1,3 +1,4 @@
+import {LIFTS} from '../walk/lifts.js';
 import {cutOut} from '../cut-out.js';
 import {rectangle} from '../plan/geometry-v2.js';
 import {wingFlight} from '../plan/structure-v2.js';
@@ -7,7 +8,7 @@ import {buildCabins} from './cabins.js';
 import {polygonGeometry,mesh,box,wall,strip,glass,lining,floor,bounds} from './geometry.js';
 import {roomObject,toWorld} from '../plan/rooms.js';
 export function configureV2Ship(ship){
- ship.layout=layout;ship.root.userData={...ship.root.userData,layoutVersion:2,cabins:layout.cabins.length,berths:layout.summary.berths,cabinsPerNeighborhood:layout.summary.perDeck.filter(d=>d.cabins).map(d=>d.cabins),berthsPerCabin:'1 or 2',cabinEnvelope:[3.18,3.5,7.4],cabinInternal:[2.94,3.3,7.28]};
+ ship.layout=layout;ship.root.userData={...ship.root.userData,layoutVersion:2,cabins:layout.cabins.length,berths:layout.summary.berths,cabinsPerNeighborhood:layout.summary.perDeck.filter(d=>d.cabins).map(d=>d.cabins),berthsPerCabin:'1 or 2',cabinEnvelope:[3.42,3.5,7.64],cabinInternal:[3.18,3.4,7.4]};
  // Force only the inexpensive deck skeleton, then discard the v1 reservations.
  for(const d of ship.decks){for(const o of [...d.children]){d.remove(o);}const p=layout.decks[d.userData.number-1];d.userData.y=p.y-.3;
   const holes=p.slab.holes.map(h=>h.polygon);const slab=mesh(d,'Deck_slab',polygonGeometry(p.slab.outline,holes,p.y),floor);
@@ -73,6 +74,14 @@ export function fitV2Structure(ship){
  // Retain the existing nacelle-gallery openings through the new interior lining.
  const wingFloors=[];ship.ensureAft().root.traverse(o=>{if(o.isMesh&&o.name==='Wing_gallery_tread')wingFloors.push(o);});for(const o of wingFloors){o.updateWorldMatrix(true,false);const b=new T.Box3().setFromObject(o);b.min.y=b.max.y-.01;b.max.y+=3.2;b.min.x-=.08;b.max.x+=.08;b.min.z-=.08;b.max.z+=.08;cutOut(structure,b,o=>o.name==='V2_pressure_lining');}
  structure.updateMatrixWorld(true);for(const o of structure.children){const bb=new T.Box3().setFromObject(o);o.userData.v2Deck=Math.max(1,Math.min(20,Math.floor((bb.min.y+39.7+.3)/4)+1));}
- // Tower shaft glass and all exterior/hull geometry stay from the existing fixed transit network.
+ // The retained fin inspection terraces also need glass at their open end edges.
+ ship.v2GuardPlatforms=[];ship.ensureAft().root.updateWorldMatrix(true,true);ship.ensureAft().root.traverse(o=>{if(o.name!=='Fin_inspection_platform'||!o.isMesh)return;const b=new T.Box3().setFromObject(o,true),p={x0:b.min.x,x1:b.max.x,z0:b.min.z,z1:b.max.z,y:b.max.y};ship.v2GuardPlatforms.push(p);for(const side of [-1,1]){const a=box(structure,'V2_fin_guard',[.07,1.1,p.z1-p.z0],[side<0?p.x0:p.x1,p.y+.55,(p.z0+p.z1)/2],glass),c=box(structure,'V2_fin_guard',[p.x1-p.x0,1.1,.07],[(p.x0+p.x1)/2,p.y+.55,side<0?p.z0:p.z1],glass);for(const g of [a,c])g.userData={v2Deck:20,room:'fin'};}});
+ // Glazed returns close the two stepped bow-facade corners above the Deck 18 promenade.
+ const lounge=layout.rooms.find(r=>r.id==='observation-lounge'),level=layout.decks[17].y,entry=lounge.door.center[0],section=lounge.envelope.find(s=>s.rise>=level-lounge.y-.001),edge=Math.max(...section.polygon.filter(p=>Math.abs(p[0]-entry)<.01).map(p=>Math.abs(p[1])));
+ for(const side of [-1,1]){const h=lounge.y+lounge.height-level,o=box(structure,'V2_bow_glazed_return',[.08,h,2.6],[entry-.10,level+h/2,side*(edge-1.3)],glass);o.userData.v2Deck=18;}
+ // The retained fin lift had guide rails without a continuous shaft enclosure.
+ const crown=LIFTS.find(l=>l.id==='crown'),bottom=crown.stops[0].y,top=crown.stops.at(-1).y+3.2;
+ for(const axis of ['x','z'])for(const sign of [-1,1]){const across=axis==='x'?'z':'x',center=crown.car[across],at=crown.car[axis]+sign*2.23,doors=crown.stops.filter(s=>{const d=s.door||crown.door;return d.axis===axis&&d.sign===sign;});const put=(lo,hi,width,mid)=>{for(let y=lo;y<hi-.01;y+=4){const h=Math.min(4,hi-y),o=box(structure,'V2_crown_shaft_glass',axis==='x'?[.1,h,width]:[width,h,.1],axis==='x'?[at,y+h/2,mid]:[mid,y+h/2,at],glass);o.userData.v2Deck=20;}};for(const s of [-1,1])put(bottom,top,.93,center+s*1.765);let y=bottom;for(const d of doors){put(y,d.y,2.6,center);y=d.y+2.8;}put(y,top,2.6,center);}
+ // Tower shafts and all exterior/hull geometry retain their fixed transit frames.
 }
 function isChild(o,root){for(let p=o.parent;p;p=p.parent)if(p===root)return true;return false;}
