@@ -456,7 +456,7 @@ let live=null,remotes=null,marks=null,aboard=0,liveStatus='',wasInArena=false;
 const giveaway=createGiveaway({$,live:()=>live,connect});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,running:p=>!!pawsOff?.onBelt(p)});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p)});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -693,7 +693,7 @@ function restPose(dt){
  const swing=r.spot.hammock&&lounge?.swingOf(r.spot.hammock);
  if(swing){const q=new T.Quaternion().setFromAxisAngle(swing.axis,swing.angle*e);h.position.sub(swing.pivot).applyQuaternion(q).add(swing.pivot);h.quaternion.premultiply(q);}
  if(r.phase==='out'&&r.t===0){heading=r.from.heading;controller.place(r.from.pos);resting=null;return null;}
- return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight};
+ return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight,hammock:!!r.spot.hammock};
 }
 function lerpAngle(a,b,t){return a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;}
 
