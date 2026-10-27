@@ -20,6 +20,7 @@ import * as T from 'three';
 import {createHydroNipLounge} from '../src/hydro-nip-lounge.js';
 import {findRestSpots,spotIndex} from '../src/walk/rest.js';
 import {COSMO_HEIGHT} from '../src/cosmo-pose.js';
+import {arcadeTreadmill} from '../src/walk/arcade.js';
 
 const results=[];let failed=0;
 const check=(what,ok,detail='')=>{results.push(`${ok?'PASS':'FAIL'} ${what}${detail?' · '+detail:''}`);if(!ok)failed++;};
@@ -171,6 +172,19 @@ try{
  check('paws off: a fall off the back is seen lying behind the treadmill',fallen?.rest==='lie'&&fallen.playing===true&&Math.abs(fallen.pos[2]+46.04)<.01,JSON.stringify(fallen&&{pos:fallen.pos,rest:fallen.rest}));
  a.pose([7,20.3,-45.5]);await sleep(300);
  check('paws off: stepped off, they are no longer playing',b.poses.get(a.id)?.playing===false&&!b.poses.get(a.id)?.rest);
+ // Paws Off's second station, the arcade treadmill in the Deck 17 Hydro-Nip Lounge (src/walk/arcade.js), the same way, for
+ // a visitor standing in the lounge: the runner where the game holds them (paws-off/game.js), a little behind the deck's
+ // middle, and after a fall, half the deck's length and 0.55 m further back, on the floor.
+ {const t=arcadeTreadmill(),yaw=Math.atan2(t.front.x,t.front.z),on=t.centre.clone().addScaledVector(t.front,-t.length*.08),off=on.clone().addScaledVector(t.front,-(t.length/2+.55)).setY(t.floor);
+  const at=(p,q)=>!!p&&Math.abs(p.pos[0]-q.x)<.01&&Math.abs(p.pos[1]-q.y)<.01&&Math.abs(p.pos[2]-q.z)<.01;
+  b.pose([off.x-4,t.floor,off.z-2]);a.pose(on.toArray(),{yaw,pl:true});await sleep(300);
+  const arcadeRun=b.poses.get(a.id);
+  check('paws off: a visitor running on the arcade treadmill is seen on its belt, playing',arcadeRun?.playing===true&&!arcadeRun.rest&&at(arcadeRun,on),JSON.stringify(arcadeRun&&{pos:arcadeRun.pos,playing:arcadeRun.playing}));
+  a.pose(off.toArray(),{yaw,pl:true,rest:'lie'});await sleep(300);
+  const arcadeFall=b.poses.get(a.id);
+  check('paws off: a fall off the arcade treadmill is seen lying behind it',arcadeFall?.rest==='lie'&&arcadeFall.playing===true&&at(arcadeFall,off),JSON.stringify(arcadeFall&&{pos:arcadeFall.pos,rest:arcadeFall.rest}));
+  a.pose([off.x-.6,t.floor,off.z]);await sleep(300);
+  check('paws off: stepped off the arcade treadmill, they are no longer playing',b.poses.get(a.id)?.playing===false&&!b.poses.get(a.id)?.rest);}
  // The hamster ball in the Deck 17 gardens (src/walk/hamster-ball.js): one visitor climbs in and rolls off; another
  // standing nearby sees them in the ball, crouched, where it rolled; climbed out, no longer in one.
  b.pose([135,24.3,20]);a.pose([137.4,24.3,21.7],{st:'crouch',b:true});await sleep(250);a.pose([139.2,24.3,23.1],{yaw:.9,st:'crouch',b:true});await sleep(300);
