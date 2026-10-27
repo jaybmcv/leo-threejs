@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {LOUNGE} from '../hydro-nip-lounge.js';
+import {createLoungeSky} from './lounge-sky.js';
 
 // The Hydro-Nip Lounge on foot (HYDRO_NIP_LOUNGE.md, phases 2-3; the room itself is src/hydro-nip-lounge.js):
 // - the maze's and the dome's sliding doors open for anyone near them, other players included, and each leaf is a
@@ -9,8 +10,8 @@ import {LOUNGE} from '../hydro-nip-lounge.js';
 //   with it;
 // - inside the maze the catnip mist thins round the camera and a green haze tints the view instead, heavy on the
 //   ground floor, light on the lower platform and gone on the top one;
-// - the room's mood (from tester feedback): its ceiling panels burn dim and warm, and while the camera is in the
-//   commons the walk's lights (shared by the whole ship) ease down and warm, with a violet bounce from below, and the
+// - the room's mood (from tester feedback): its ceiling is clear glass open to the stars and a huge full moon
+//   (lounge-sky.js), and while the camera is in the commons the walk's lights (shared by the whole ship) ease down and warm, with a violet bounce from below, and the
 //   neon and its halos burn brighter.
 // Made after the colliders and rest spots and before the walk merges the ship for drawing: the doors and hammocks
 // leave the ship for meshes of their own, drawn with the lounge floor's deck band (main.js).
@@ -90,10 +91,11 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
   tint.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:1;opacity:0;background:radial-gradient(ellipse at 50% 55%,rgba(150,255,170,.25),rgba(70,200,110,.8));mix-blend-mode:screen';
   document.body.appendChild(tint);}
 
- // The mood. The commons' ceiling panels (Circadian_light) take a warm, dim copy of their material for good.
+ // The mood. The commons' ceiling panels (Circadian_light) go, and a glass roof open to space goes in under the ceiling
+ // (lounge-sky.js), drawn with the floor's band so it shows from inside the dome too, where the ceiling's band is culled.
  const {ROOM}=LOUNGE,room=new T.Box3().setFromPoints([toWorld(ROOM.x0,LOUNGE.FLOOR,ROOM.z0),toWorld(ROOM.x1,LOUNGE.CEILING,ROOM.z1)]);
- let warm=null;root.parent?.parent?.traverse(o=>{if(o.isMesh&&o.name==='Circadian_light'){
-  warm||=Object.assign(o.material.clone(),{name:'Walk_lounge_ceiling_light'});warm.color.set(0x2e241c);warm.emissive.set(0xff9040);warm.emissiveIntensity=.16;o.material=warm;}});
+ const panels=[];root.parent?.parent?.traverse(o=>{if(o.isMesh&&o.name==='Circadian_light')panels.push(o);});for(const o of panels)o.removeFromParent();
+ {const sky=createLoungeSky(frame,ROOM,LOUNGE.CEILING-.16,uniforms.uTime);place(sky.geometry,sky.material,'Walk_lounge_glass_roof');}
  const glows=[];root.traverse(o=>{if(o.isMesh&&/^Lounge_(neon_glow|additive_glow)$/.test(o.material?.name)&&!glows.some(g=>g.m===o.material))glows.push({m:o.material,k:o.material.name==='Lounge_neon_glow'?MOOD.neon:MOOD.glow});});
  const base=light&&{hemi:light.hemi.intensity,fill:light.fill.intensity,env:light.scene.environmentIntensity,sky:light.hemi.color.clone(),ground:light.hemi.groundColor.clone()};
  const sky=new T.Color(MOOD.sky),ground=new T.Color(MOOD.ground);let mood=0,shown=0;

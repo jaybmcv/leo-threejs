@@ -13,6 +13,10 @@ export const ARENA_ID='d16-arena-1';
 export const STAGE={x0:0,x1:16,z:7,h:.45},BOARD={x:8,size:11.4};
 export const TABLES=[[-9,-13],[-9,-8],[-9,8],[-9,13],[-3.5,-13],[-3.5,-8],[-3.5,8],[-3.5,13],[21,-12],[21,12]];
 export const PODIUMS=[1.6,14.4];
+// The lighting truss across the stage over the board's centre: its middle, half its length, its height and depth.
+// Each spot hangs from it at `z` and lights the board at `aim`, amber the entry half and teal the far half.
+export const TRUSS={x:BOARD.x,half:3.9,y:3.04,w:.28};
+export const TRUSS_SPOTS=[[-2.7,1],[-.9,-1],[.9,-1],[2.7,1]].map(([z,s])=>({z,teal:s>0,aim:[BOARD.x+s*2.6,STAGE.h+.04,z*.8]}));
 export const COUNTER={x:-19,z:-9,length:7};
 // Where the walk offers the game and the giveaway (walk/mudwater.js): standing points in room coordinates.
 export const TRIGGERS=[
@@ -124,6 +128,39 @@ export function fitMudwaterArena({box,add,mat,text,fit,shell}){
  flush(M.black);
  for(const x of [2,6,10,14])for(const s of [-1,1])put('Stage_spot_light_glow',[.26,.02,.26],[x,3.025,s*(sz+.8)]);
  flush(M.glow);
+ // The lighting truss (TRUSS): a slim Champagne box truss on two drop rods, laced on its sides, with four small black
+ // spots hung under it. Each lens glows in its colour and a faint beam runs to a soft pool on the felt, so the light
+ // stays on the board and the room around it keeps its dark ceiling.
+ {const {x:tx,half,y:ty,w}=TRUSS,d=w/2,bar=.04,lace=.022,bays=13,bay=half*2/bays,tilt=Math.atan2(bay,w),hang=ty-d-bar/2;
+  for(const dx of [-d,d])for(const dy of [-d,d])put('Lighting_truss',[bar,bar,half*2],[tx+dx,ty+dy,0]);
+  for(let i=0;i<=bays;i++)for(const dy of [-d,d])put('Lighting_truss',[w,lace,lace],[tx,ty+dy,-half+i*bay]);
+  for(let i=0;i<bays;i++)for(const dx of [-d,d])geo('Lighting_truss',new T.BoxGeometry(lace,Math.hypot(w,bay),lace).rotateX((i%2?1:-1)*tilt).translate(tx+dx,ty,-half+(i+.5)*bay));
+  for(const z of [-half,half])for(const dx of [-d,d])put('Lighting_truss',[lace,w,lace],[tx+dx,ty,z]);
+  for(const s of [-1,1]){const z=s*(half-bay),top=ty+d+bar/2;put('Truss_drop_rod',[.03,3.32-top,.03],[tx,(3.32+top)/2,z]);put('Truss_ceiling_plate',[.22,.02,.22],[tx,3.29,z]);}
+  flush(M.gold);
+  const lens={amber:mat('Arena_spot_amber_lens',0xffc46b,{emissive:0xffa53d,emissiveIntensity:1.6}),teal:mat('Arena_spot_teal_lens',0x8ff2e6,{emissive:0x2fd6c5,emissiveIntensity:1.6})};
+  const wash=new T.MeshBasicMaterial({name:'Arena_truss_wash',vertexColors:true,transparent:true,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,toneMapped:false});
+  // (Glow is coloured per vertex, `k` of the spot's colour: bright at the lens end of a beam and the middle of a pool.)
+  const tint=(g,c,k)=>{const p=g.attributes.position,out=[];for(let i=0;i<p.count;i++){const f=k(p.getX(i),p.getY(i),p.getZ(i));out.push(c.r*f,c.g*f,c.b*f);}return g.setAttribute('color',new T.Float32BufferAttribute(out,3));};
+  const up=new T.Vector3(0,1,0);
+  for(const {z,teal,aim} of TRUSS_SPOTS){
+   const c=new T.Color(teal?0x2fd6c5:0xffa53d),pivot=new T.Vector3(tx,hang-.21,z),target=new T.Vector3(...aim),dir=target.clone().sub(pivot).normalize();
+   const q=new T.Quaternion().setFromUnitVectors(up,dir),along=(g,t)=>g.applyQuaternion(q).translate(...pivot.clone().addScaledVector(dir,t).toArray());
+   // (A clamp bar across the two lower chords, a stem, and the yoke the can turns in.)
+   put('Truss_spot_light',[w+.06,.03,.06],[tx,hang-.015,z]);put('Truss_spot_light',[.04,.04,.04],[tx,hang-.05,z]);put('Truss_spot_light',[.05,.03,.25],[tx,hang-.085,z]);
+   for(const s of [-1,1])put('Truss_spot_light',[.04,.2,.03],[tx,hang-.19,z+s*.11]);
+   geo('Truss_spot_light',along(new T.CylinderGeometry(.09,.08,.24,12),0));
+   geo('Truss_spot_lens_glow',along(new T.CylinderGeometry(.075,.075,.012,12),.124),teal?lens.teal:lens.amber);
+   // The beam, from the lens to the board, and its pool, longer along the way the beam leans.
+   const from=pivot.clone().addScaledVector(dir,.13),reach=from.distanceTo(target);
+   const beam=tint(new T.CylinderGeometry(.07,reach*.13,reach,14,1,true),c,(x,y)=>y>0?.03:0);
+   beam.applyQuaternion(new T.Quaternion().setFromUnitVectors(up,dir.clone().negate())).translate(...from.clone().add(target).multiplyScalar(.5).toArray());
+   geo('Truss_beam_glow',beam,wash);
+   const pool=tint(new T.CircleGeometry(1,24),c,(x,y)=>.3*(1-Math.min(1,Math.hypot(x,y))));
+   geo('Truss_beam_glow',pool.rotateX(-Math.PI/2).scale(1,1,.7).rotateY(Math.atan2(-dir.z,dir.x)).translate(aim[0],aim[1]+.012,aim[2]),wash);
+  }
+  flush(M.black);
+ }
 
  // Spectator tiers on both long walls: a bench on the floor, one on a 0.35 m tier, one on a 0.7 m tier with a walkway
  // behind to the wall. The tiers run a metre past the benches so the ends are stepped up onto.

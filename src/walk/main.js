@@ -49,10 +49,14 @@ import {readSpot,spotLink} from './link.js';
 import {createSelfieBooth} from './selfie.js';
 import {createConcession} from './concession.js';
 import {stripProvisions,createProvisions} from './provisions.js';
+import {createLifeSupportPipes} from './life-support-pipes.js';
 import {createKittens,KITTEN_POSE_NAMES} from './kittens.js';
 import {createAtriumKittens} from './arrival-atrium.js';
 import {stripBlossomBed,createBlossomGarden} from './blossom.js';
 import {createDiningRobots} from './dining-robots.js';
+import {createHydrationNook} from './hydration-nook.js';
+import {createCargoTrolley} from './cargo-trolley.js';
+import {dressSurgery,createSurgeryArms} from './surgery.js';
 import {createFinCasing} from './fin-casing.js';
 import {createInvasion} from './invasion/game.js';
 import {createPoolTable} from './pool/table.js';
@@ -69,7 +73,9 @@ import {createTheatre,placeAttendant} from './theatre.js';
 import {dressGamingLounge,createGamingLounge} from './gaming-lounge.js';
 import {createCommsDisplays} from './comms-displays.js';
 import {createMissionHolo} from './mission-holo.js';
+import {createSwordCase} from './sword-case.js';
 import {createHalloween} from './halloween.js';
+import {createHexFloor} from './hex-floor.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 import {createHelp} from './help.js';
 
@@ -188,6 +194,8 @@ async function buildShip(){
  placeAttendant(ship);
  // The Deck 16 training room's briefing furniture gives way to the gaming lounge's (gaming-lounge.js), solid and sittable.
  dressGamingLounge(ship);
+ // The Deck 5 surgical suite's beds give way to sculpted medical beds (surgery.js), solid and lie-on-able.
+ dressSurgery(ship);
  buildColliders(ship,{extra:[ship.exterior],filter:walls,into:colliders});
  // The hull behind the glass goes for drawing only, after the colliders have it.
  const w0=performance.now(),opened=openWindows(ship,walkPlan.windows);clearGlass(ship.root);timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
@@ -207,10 +215,17 @@ async function buildShip(){
  concession=createConcession(ship);if(concession)colliders.addStatic(concession);
  // Refrigerated provisions' fridges, shelving and strip curtain (provisions.js): solid as plain boxes, the curtain not.
  provisions=createProvisions(ship);if(provisions)colliders.addStatic(provisions.solid,()=>true);
+ // Life-support control's colour-coded service pipework (life-support-pipes.js): its regulator boxes and supply
+ // cabinets solid as plain boxes, the pipes overhead dressing.
+ const pipework=createLifeSupportPipes(ship);if(pipework)colliders.addStatic(pipework.solid,()=>true);
  // Young explorers' kitten habitats (kittens.js): the climbing tree, tunnel, den and kittens solid as plain boxes.
  kittens=createKittens(ship,cosmoKit);if(kittens)colliders.addStatic(kittens.solid,()=>true);
  // Communal dining's three serving robots (dining-robots.js): solid as plain boxes.
  diningRobots=createDiningRobots(ship);if(diningRobots)colliders.addStatic(diningRobots.solid,()=>true);
+ // The exercise studio's hydration and towel nook (hydration-nook.js): solid as one plain box.
+ hydration=createHydrationNook(ship);if(hydration)colliders.addStatic(hydration.solid,()=>true);
+ // Container hold A's parked hand trolley (cargo-trolley.js): solid as one plain box, clear of the aisle.
+ const trolley=createCargoTrolley(ship);if(trolley)colliders.addStatic(trolley.solid,()=>true);
  // The cherry blossom garden (blossom.js): its trunk solid.
  blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
  // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
@@ -220,6 +235,8 @@ async function buildShip(){
  arcadeRow=createArcade();if(arcadeRow)colliders.addStatic(arcadeRow.solid,()=>true);
  // Mission control's holographic table (mission-holo.js): its pedestal and top solid as a plain cylinder.
  missionHolo=createMissionHolo(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(missionHolo)colliders.addStatic(missionHolo.solid,()=>true);
+ // The Captain's office's gold sword case under its spotlight (sword-case.js): solid as a plain box.
+ const swordCase=createSwordCase(ship);if(swordCase)colliders.addStatic(swordCase.solid,()=>true);
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  mudwater=createMudwater(ship,{urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
@@ -234,6 +251,9 @@ async function buildShip(){
  gaming=createGamingLounge(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches});
  // Deck 15 dressed for Halloween until November (halloween.js): its lanes' ceiling diffusers go dead before the merge.
  halloween=createHalloween(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches,sheet:$('clown-sheet')});
+ // Deck 1's hallways: hexagon tiles that light up round the walker, teal heading forward and orange heading aft
+ // (hex-floor.js); drawn only, after the colliders, so the floor walks as before.
+ hexFloor=createHexFloor();
  status('Dressing the crew…');await idle();
  if(cosmoKit)globalThis.LeoCosmo.dressCats(ship.inside,cosmoKit);
  status('Preparing the walk…');await idle();
@@ -246,10 +266,15 @@ async function buildShip(){
  for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pawsOff?pawsOff.groups:[]),...(mudwater?[mudwater.group]:[]),...(arcadeRow?[arcadeRow.group]:[])])toBand(o);
  if(concession)toBand(concession);
  if(provisions)toBand(provisions.group);
+ if(pipework)toBand(pipework.group);
  if(kittens)toBand(kittens.group);
  // Kittens on the arrival hall's cat tree (arrival-atrium.js), dressing only.
  {const g=createAtriumKittens(ship,cosmoKit);if(g)toBand(g);}
  if(diningRobots)toBand(diningRobots.group);
+ if(hydration)toBand(hydration.group);
+ if(trolley)toBand(trolley.group);
+ // The surgical suite's ceiling robot arms (surgery.js), dressing only.
+ surgeryArms=createSurgeryArms(ship,{still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(surgeryArms)toBand(surgeryArms.group);
  if(blossom)toBand(blossom.group);
  toBand(jaguarGate.group);
  if(lounge)for(const o of lounge.drawn)toBand(o);
@@ -266,7 +291,9 @@ async function buildShip(){
  // Communications' wraparound star map and station screens (comms-displays.js), drawn with Deck 20's band.
  {const comms=createCommsDisplays(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy()});if(comms)toBand(comms.group);}
  if(missionHolo)toBand(missionHolo.group);
+ if(swordCase)toBand(swordCase.group);
  if(halloween)toBand(halloween.group);
+ toBand(hexFloor.group);
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
@@ -279,7 +306,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -440,7 +467,7 @@ let live=null,remotes=null,marks=null,aboard=0,liveStatus='',wasInArena=false;
 const giveaway=createGiveaway({$,live:()=>live,connect});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,running:p=>!!pawsOff?.onBelt(p)});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p)});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -567,10 +594,12 @@ renderer.setAnimationLoop(()=>{
  if(lounge)lounge.update(dt,bodies,camera.getWorldPosition(eye));
  if(recovery)recovery.update(dt,camera.getWorldPosition(eye));
  halloween?.update(dt,camera.getWorldPosition(eye),ambience.on);
+ hexFloor?.update(dt,camera.getWorldPosition(eye),p,heading);
  gaming?.update(dt,camera.getWorldPosition(eye),p);
  provisions?.update(dt,bodies);
  blossom?.update(dt,p);
  missionHolo?.update(dt,p);
+ surgeryArms?.update(dt,p);
  marks?.update(camera,p,now);
  if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);
   // Walking into Mudwater Arena counts as a visit (server/arena.mjs).
@@ -676,7 +705,7 @@ function restPose(dt){
  const swing=r.spot.hammock&&lounge?.swingOf(r.spot.hammock);
  if(swing){const q=new T.Quaternion().setFromAxisAngle(swing.axis,swing.angle*e);h.position.sub(swing.pivot).applyQuaternion(q).add(swing.pivot);h.quaternion.premultiply(q);}
  if(r.phase==='out'&&r.t===0){heading=r.from.heading;controller.place(r.from.pos);resting=null;return null;}
- return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight};
+ return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight,hammock:!!r.spot.hammock};
 }
 function lerpAngle(a,b,t){return a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;}
 

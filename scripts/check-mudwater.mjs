@@ -1,12 +1,12 @@
 // Mudwater Arena (src/mudwater-arena.js, src/walk/mudwater.js), built headless: the room is the renamed Deck 16 hall
-// with its stage, board, podiums, tiers, tables, counter, screen and gallery; everything stays under the ceiling; the
-// steps up to the stage and the tiers are walkable; every bench, chair and stool gives a seat; the walk's triggers
-// stand on open floor inside the room; the brand kit's art is all there for the walk, with the pack standees clear of
-// the aisle; and the room stays within its triangle budget.
+// with its stage, board, podiums, tiers, tables, counter, screen and gallery; everything stays under the ceiling, and
+// the lighting truss over the head of anyone on the stage; the steps up to the stage and the tiers are walkable; every
+// bench, chair and stool gives a seat; the walk's triggers stand on open floor inside the room; the brand kit's art is
+// all there for the walk, with the pack standees clear of the aisle; and the room stays within its triangle budget.
 import fs from 'node:fs';
 import {Box3,Vector3} from 'three';
 import {SHIP_AREAS,createShipArea} from '../src/areas.js';
-import {ARENA_ID,STAGE,TABLES,TRIGGERS,STANDEE,STANDEES} from '../src/mudwater-arena.js';
+import {ARENA_ID,STAGE,BOARD,TABLES,TRIGGERS,STANDEE,STANDEES,TRUSS_SPOTS} from '../src/mudwater-arena.js';
 import {GAME_URL,MUDWATER_ART} from '../src/walk/mudwater.js';
 import {findRestSpots} from '../src/walk/rest.js';
 import {BODY,solid,meshTriangles} from '../src/walk/collision.js';
@@ -33,6 +33,12 @@ expect(high===0,`no fitting pokes through the ceiling (${high})`);
 const rises=[.22,STAGE.h-.22,.35,.35];
 expect(rises.every(r=>r>0&&r<=BODY.step),`every rise is a step a walker takes (${rises.map(r=>r.toFixed(2))} m, step ${BODY.step} m)`);
 expect(3.37-.7>=BODY.height&&3.37-STAGE.h-.04>=BODY.height,'the top tier and the stage leave standing room');
+// The lighting truss over the stage: a 2 m walker on the stage stands clear under all of it, and its spots light the
+// board.
+const rig=[];root.traverse(o=>{if(o.isMesh&&/^(Lighting_truss|Truss_)/.test(o.name)&&o.name!=='Truss_beam_glow')rig.push(new Box3().setFromObject(o));});
+const low=Math.min(...rig.map(r=>r.min.y))-cy;
+expect(rig.length>0&&low>=STAGE.h+BODY.height,`the lighting truss leaves standing room on the stage (lowest part ${low.toFixed(2)} m up)`);
+expect(TRUSS_SPOTS.length>=3&&TRUSS_SPOTS.every(({aim:[x,,z]})=>Math.abs(x-BOARD.x)<BOARD.size/2&&Math.abs(z)<BOARD.size/2),'the truss spots light the board');
 
 // Seats: three benches a side, a chair each side of every table and a stool behind each podium.
 const spots=findRestSpots(root).filter(s=>s.kind==='sit'),inside=s=>Math.abs(s.point.x-cx)<26&&Math.abs(s.point.z-cz)<17;
