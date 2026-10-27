@@ -69,6 +69,7 @@ import {createTheatre,placeAttendant} from './theatre.js';
 import {dressGamingLounge,createGamingLounge} from './gaming-lounge.js';
 import {createCommsDisplays} from './comms-displays.js';
 import {createMissionHolo} from './mission-holo.js';
+import {createSwordCase} from './sword-case.js';
 import {createHalloween} from './halloween.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 import {createHelp} from './help.js';
@@ -219,6 +220,8 @@ async function buildShip(){
  arcadeRow=createArcade();if(arcadeRow)colliders.addStatic(arcadeRow.solid,()=>true);
  // Mission control's holographic table (mission-holo.js): its pedestal and top solid as a plain cylinder.
  missionHolo=createMissionHolo(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(missionHolo)colliders.addStatic(missionHolo.solid,()=>true);
+ // The Captain's office's gold sword case under its spotlight (sword-case.js): solid as a plain box.
+ const swordCase=createSwordCase(ship);if(swordCase)colliders.addStatic(swordCase.solid,()=>true);
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  mudwater=createMudwater(ship,{urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
@@ -264,6 +267,7 @@ async function buildShip(){
  // Communications' wraparound star map and station screens (comms-displays.js), drawn with Deck 20's band.
  {const comms=createCommsDisplays(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy()});if(comms)toBand(comms.group);}
  if(missionHolo)toBand(missionHolo.group);
+ if(swordCase)toBand(swordCase.group);
  if(halloween)toBand(halloween.group);
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
