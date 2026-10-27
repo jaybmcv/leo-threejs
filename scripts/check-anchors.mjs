@@ -10,7 +10,8 @@ import {readSpot,remapSpot,spotLink} from '../src/walk/link.js';
 const rules=JSON.parse(await fs.readFile('src/plan/ownership-rules.json','utf8')),allow=JSON.parse(await fs.readFile('src/plan/anchor-allow-list.json','utf8'));
 const glob=(pattern,p)=>new RegExp('^'+pattern.replace(/[.+?^$()|[\]{}]/g,'\\$&').replaceAll('*','.*')+'$').test(p);
 const exception=p=>allow.find(a=>a.paths.some(g=>glob(g,p)));
-const digest=s=>createHash('sha256').update(s).digest('hex');
+// Text is compared and fingerprinted with LF line endings, whatever the checkout uses (core.autocrlf on Windows).
+const lf=s=>s.replace(/\r\n/g,'\n'),digest=s=>createHash('sha256').update(lf(s)).digest('hex');
 const strip=s=>s.replace(/\/\*[\s\S]*?\*\//g,'').replace(/^\s*\/\/.*$/gm,'');
 export function placementSites(source){return strip(source).split('\n').map(s=>s.trim()).filter(s=>/\.position\.(set|copy|[xyz]\s*=)|\.translate\(|\.setMatrixAt\(|\b(?:wall|home|at|center)\s*:\s*\[|\b(?:box|mesh|pipe|tube|rail|tree|chair|round|cyl|put|own|add|piece|plant|panel)\s*\(/.test(s));}
 export function anchoredModule(source,rule){return rule?.via==='inherited'||/\b(anchorArea|anchorObject|anchorCabins|roomObject|toWorld|toLocal|placed|placedV1|placeObject|resolveRoomFrames|deferRoomFrames|remapSpot)\s*\(/.test(strip(source));}
@@ -45,5 +46,5 @@ const oldLocation=globalThis.location;globalThis.location={href:'https://example
 const placements=JSON.parse(await fs.readFile('src/plan/placements.json','utf8'));for(const [key,p] of Object.entries(placements)){v1Frame(p.room);toWorld(p.room,p.local).forEach((n,i)=>assert(Math.abs(n-p.v1[i])<1e-10,key+' local frame'));}
 const inventory={layoutVersion:1,ownerSets:Object.fromEntries(['@areas','@cabins','@commons','@nose','@circulation'].map(k=>[k,expand([k])])),description:'Placement sources, their complete owner sets, collider roots and interaction ownership. Source fingerprints gate added or changed placements. Run node scripts/check-anchors.mjs --write after assigning a new feature.',placedFeatures:placements,modules:records.sort((a,b)=>a.source.localeCompare(b.source))},serialized=JSON.stringify(inventory,null,2)+'\n';
 if(errors.length)throw new Error(errors.join('\n'));
-if(process.argv.includes('--write'))await fs.writeFile('src/plan/ownership.json',serialized);else assert.equal(await fs.readFile('src/plan/ownership.json','utf8'),serialized,'Ownership inventory is stale; assign ownership then run check-anchors --write');
+if(process.argv.includes('--write'))await fs.writeFile('src/plan/ownership.json',serialized);else assert.equal(lf(await fs.readFile('src/plan/ownership.json','utf8')),lf(serialized),'Ownership inventory is stale; assign ownership then run check-anchors --write');
 console.log('Anchors: '+registry().length+' frames, '+records.length+' modules, '+records.reduce((n,r)=>n+r.placements,0)+' placement sites; old-code fixture and independent translation/rotation/mirror round trips pass.');
