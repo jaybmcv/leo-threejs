@@ -1,0 +1,410 @@
+{
+  "src/model.js": {
+    "owners": [
+      "@cabins",
+      "@commons",
+      "observation-lounge",
+      "@circulation"
+    ],
+    "via": "anchorObject"
+  },
+  "src/areas.js": {
+    "owners": [
+      "@areas"
+    ],
+    "via": "anchorArea"
+  },
+  "src/special-areas.js": {
+    "owners": [
+      "@areas"
+    ],
+    "via": "anchorArea"
+  },
+  "src/command-deck.js": {
+    "owners": [
+      "@areas"
+    ],
+    "via": "anchorArea"
+  },
+  "src/lower-aft.js": {
+    "owners": [
+      "@areas"
+    ],
+    "via": "anchorArea"
+  },
+  "src/lower-bow.js": {
+    "owners": [
+      "@areas"
+    ],
+    "via": "anchorArea"
+  },
+  "src/upper-aft.js": {
+    "owners": [
+      "@areas"
+    ],
+    "via": "anchorArea"
+  },
+  "src/neighborhood-services.js": {
+    "owners": [
+      "@areas"
+    ],
+    "via": "anchorArea"
+  },
+  "src/voyage-forum.js": {
+    "owners": [
+      "@areas"
+    ],
+    "via": "anchorArea"
+  },
+  "src/nose-commons.js": {
+    "owners": [
+      "@nose"
+    ],
+    "via": "anchorArea"
+  },
+  "src/service-circulation.js": {
+    "owners": [
+      "@circulation"
+    ],
+    "via": "anchorObject"
+  },
+  "src/special-circulation.js": {
+    "owners": [
+      "@circulation"
+    ],
+    "via": "anchorObject"
+  },
+  "src/lounge.js": {
+    "owners": [
+      "observation-lounge"
+    ],
+    "via": "inherited"
+  },
+  "src/observation-finish.js": {
+    "owners": [
+      "observation-lounge"
+    ],
+    "via": "inherited"
+  },
+  "src/forward-polish.js": {
+    "owners": [
+      "observation-lounge"
+    ],
+    "via": "inherited"
+  },
+  "src/hydro-nip-lounge.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": "inherited"
+  },
+  "src/garden-finish.js": {
+    "owners": [
+      "@commons"
+    ],
+    "via": "inherited"
+  },
+  "src/residential-finish.js": {
+    "owners": [
+      "@cabins"
+    ],
+    "via": "inherited"
+  },
+  "src/area-finish.js": {
+    "owners": [
+      "@areas"
+    ],
+    "via": "inherited"
+  },
+  "src/mudwater-arena.js": {
+    "owners": [
+      "d16-arena-1"
+    ],
+    "via": "inherited"
+  },
+  "src/room-glazing.js": {
+    "owners": [
+      "@areas"
+    ],
+    "via": "inherited"
+  },
+  "src/interior-polish.js": {
+    "owners": [
+      "@areas",
+      "@commons",
+      "@cabins",
+      "@circulation"
+    ],
+    "via": "inherited"
+  },
+  "src/circulation-finish.js": {
+    "owners": [
+      "@circulation"
+    ],
+    "via": "inherited"
+  },
+  "src/walk/arcade.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": null
+  },
+  "src/walk/arrival-atrium.js": {
+    "owners": [
+      "arrival-assembly",
+      "d02-arrival-1",
+      "d03-farm-1"
+    ],
+    "via": null
+  },
+  "src/walk/blossom.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": null
+  },
+  "src/walk/cargo-trolley.js": {
+    "owners": [
+      "d01-cargo-1"
+    ],
+    "via": null
+  },
+  "src/walk/comms-displays.js": {
+    "owners": [
+      "d20-communications-3"
+    ],
+    "via": null
+  },
+  "src/walk/concession.js": {
+    "owners": [
+      "d16-theater-5"
+    ],
+    "via": null
+  },
+  "src/walk/dining-robots.js": {
+    "owners": [
+      "d16-dining-7"
+    ],
+    "via": null
+  },
+  "src/walk/gaming-lounge.js": {
+    "owners": [
+      "d16-training-aft"
+    ],
+    "via": null
+  },
+  "src/walk/hamster-ball.js": {
+    "owners": [
+      "commons-10"
+    ],
+    "via": null
+  },
+  "src/walk/help.js": {
+    "owners": [
+      "d16-theater-5"
+    ],
+    "via": null
+  },
+  "src/walk/hydration-nook.js": {
+    "owners": [
+      "d16-gym-3"
+    ],
+    "via": null
+  },
+  "src/walk/hydroponics.js": {
+    "owners": [
+      "d03-farm-1"
+    ],
+    "via": null
+  },
+  "src/walk/jaguar-gate.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": null
+  },
+  "src/walk/kittens.js": {
+    "owners": [
+      "d16-childcare-6"
+    ],
+    "via": null
+  },
+  "src/walk/life-support-pipes.js": {
+    "owners": [
+      "d04-control-8"
+    ],
+    "via": null
+  },
+  "src/walk/lounge.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": null
+  },
+  "src/walk/lounge-floor.js": {
+    "owners": [
+      "commons-1",
+      "circulation-17"
+    ],
+    "via": null
+  },
+  "src/walk/lounge-sky.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": "inherited"
+  },
+  "src/walk/mission-holo.js": {
+    "owners": [
+      "d20-mission-2"
+    ],
+    "via": null
+  },
+  "src/walk/mudwater.js": {
+    "owners": [
+      "d16-arena-1"
+    ],
+    "via": null
+  },
+  "src/walk/provisions.js": {
+    "owners": [
+      "d03-cold-6"
+    ],
+    "via": null
+  },
+  "src/walk/recovery.js": {
+    "owners": [
+      "d20-recovery-aft"
+    ],
+    "via": null
+  },
+  "src/walk/surgery.js": {
+    "owners": [
+      "d05-surgery-2"
+    ],
+    "via": null
+  },
+  "src/walk/sword-case.js": {
+    "owners": [
+      "d20-captain-7"
+    ],
+    "via": null
+  },
+  "src/walk/theatre.js": {
+    "owners": [
+      "d16-theater-5"
+    ],
+    "via": null
+  },
+  "src/walk/yarn.js": {
+    "owners": [
+      "d02-arrival-1",
+      "d16-library-2",
+      "d16-theater-5",
+      "d16-dining-7",
+      "d16-gym-3",
+      "observation-lounge",
+      "commons-10"
+    ],
+    "via": null
+  },
+  "src/walk/paintings.js": {
+    "owners": [
+      "crown",
+      "commons-10",
+      "observation-lounge",
+      "circulation-2",
+      "circulation-15",
+      "d02-arrival-1",
+      "circulation-5",
+      "d20-captain-7"
+    ],
+    "via": null
+  },
+  "src/walk/comics.js": {
+    "owners": [
+      "crown",
+      "observation-lounge"
+    ],
+    "via": null
+  },
+  "src/walk/changes-board.js": {
+    "owners": [
+      "crown",
+      "d02-arrival-1"
+    ],
+    "via": null
+  },
+  "src/walk/places.js": {
+    "owners": [
+      "@areas",
+      "commons-10",
+      "observation-lounge",
+      "crown",
+      "@cabins"
+    ],
+    "via": null
+  },
+  "src/walk/signs.js": {
+    "owners": [
+      "@circulation"
+    ],
+    "via": null
+  },
+  "src/walk/trim.js": {
+    "owners": [
+      "@circulation"
+    ],
+    "via": null
+  },
+  "src/walk/hex-floor.js": {
+    "owners": [
+      "circulation-1"
+    ],
+    "via": null
+  },
+  "src/walk/main.js": {
+    "owners": [
+      "@areas",
+      "@commons",
+      "@cabins",
+      "@circulation",
+      "crown",
+      "fin"
+    ],
+    "via": null
+  },
+  "src/walk/world.js": {
+    "owners": [
+      "@areas",
+      "@commons",
+      "@cabins",
+      "@circulation",
+      "crown",
+      "fin"
+    ],
+    "via": null
+  },
+  "src/walk/prepare.js": {
+    "owners": [
+      "@areas",
+      "@commons",
+      "@circulation",
+      "crown"
+    ],
+    "via": null
+  },
+  "src/walk/pool/table.js": {
+    "owners": [
+      "d16-recreation-4"
+    ],
+    "via": "anchorObject"
+  },
+  "src/walk/paws-off/game.js": {
+    "owners": [
+      "d16-gym-3",
+      "commons-1"
+    ],
+    "via": "roomObject"
+  }
+}

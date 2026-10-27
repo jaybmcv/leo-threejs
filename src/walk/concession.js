@@ -1,3 +1,5 @@
+import {roomObject} from '../plan/rooms.js';
+import {walkCanvas} from './canvas.js';
 import * as T from 'three';
 
 // The Deck 16 community theatre's concession stand: an L-shaped counter in the entrance corner by the stair lobby, with
@@ -10,7 +12,7 @@ const WALL={x:-25.49,z:-8.65},CORNER={x:-22.6,z:-4.9},H=1.08,D=.62;
 
 function rng(seed){return ()=>(seed=(seed*16807)%2147483647)/2147483647;}
 function canvasTexture(w,h,paint){
- const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;paint(canvas.getContext('2d'),w,h);
+ const canvas=walkCanvas();canvas.width=w;canvas.height=h;paint(canvas.getContext('2d'),w,h);
  const t=new T.CanvasTexture(canvas);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return t;
 }
 // Vertical gold fins between dark walnut, lit from below like a lamp behind each.
@@ -52,7 +54,7 @@ function menu(g,w,h){
 // The stand, placed in `ship`'s theatre. Returns a group in ship coordinates with its origin on the theatre floor, or
 // null if the room is missing.
 export function createConcession(ship){
- const room=ship.root.getObjectByName(ROOM);if(!room)return null;
+ const room=roomObject(ship,ROOM);if(!room)return null;
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Concession_stand';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);

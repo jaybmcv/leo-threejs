@@ -1,3 +1,5 @@
+import {roomObject} from '../plan/rooms.js';
+import {walkCanvas} from './canvas.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -11,7 +13,7 @@ const ROOM='Area_d16-gym-3',WALL=25.84,DISPENSER=3.23,SHELF=4.65;
 
 // A white water drop on a navy tile, for the dispenser's front.
 function dropTexture(){
- const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');
+ const c=walkCanvas();c.width=c.height=64;const g=c.getContext('2d');
  g.fillStyle='#1d3443';g.fillRect(0,0,64,64);
  g.fillStyle='#e8fbff';g.beginPath();g.moveTo(32,10);g.bezierCurveTo(40,24,48,32,48,40);g.arc(32,40,16,0,Math.PI);g.bezierCurveTo(16,32,24,24,32,10);g.fill();
  const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;return t;
@@ -19,7 +21,7 @@ function dropTexture(){
 
 // The nook, placed in `ship`'s exercise studio. Returns {group, solid} in ship coordinates, or null if the room is missing.
 export function createHydrationNook(ship){
- const room=ship.root.getObjectByName(ROOM);if(!room)return null;
+ const room=roomObject(ship,ROOM);if(!room)return null;
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Exercise_hydration_nook';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);

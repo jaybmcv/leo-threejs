@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {placedV1,placeObject} from '../plan/placements.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {canvasTexture,seeded} from '../polish-kit.js';
 import {floorY} from '../transit.js';
@@ -12,7 +13,7 @@ import {floorY} from '../transit.js';
 // passage runs from z 0 back to −4, where it meets the lounge. Only the head's relief is solid; it stops at the
 // opening's edges, and every tooth stays above 2.2 m or tucked into a corner, so the way through is as wide and tall
 // as before.
-const GATE={x:-86.75,z:-4,half:2,h:3.68,depth:4,wall:.06};
+const [gx,,gz]=placedV1('jaguar-gate'),GATE={x:gx,z:gz,half:2,h:3.68,depth:4,wall:.06};
 const SKIN={gold:'#c98a35',deep:'#9c5f1f',cream:'#ecd9b2'},PURPLE=0xa04dff;
 
 // Jaguar rosettes on tawny gold: broken rings of black round a darker centre, small solid spots between them.
@@ -131,5 +132,5 @@ export function createJaguarGate(){
 
  for(const [m,list] of parts){const o=new T.Mesh(mergeGeometries(list.map(g=>g.index?g.toNonIndexed():g)),m);o.name=m.name;o.userData.noCollide=true;group.add(o);}
  group.updateMatrixWorld(true);
- return {group,solid};
+ placeObject(group,'jaguar-gate');return {group,solid};
 }

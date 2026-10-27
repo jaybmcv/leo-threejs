@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {anchorObject} from '../plan/rooms.js';
 import {COMMONS} from '../model.js';
 import {floorY} from '../transit.js';
 import {cutOut} from '../cut-out.js';
@@ -38,5 +39,5 @@ export function openCommonsHall(ship){
  const floor=new T.Group();floor.name='Commons_hall_floor';
  for(const r of hallFloors()){const g=new T.PlaneGeometry(r.x1-r.x0,r.z1-r.z0).rotateX(-Math.PI/2).translate((r.x0+r.x1)/2,Y,(r.z0+r.z1)/2);
   const m=new T.Mesh(g,material);m.name='Commons_hall_floor';floor.add(m);}
- ship.inside.add(floor);
+ anchorObject(floor,'circulation-17');ship.inside.add(floor);
 }

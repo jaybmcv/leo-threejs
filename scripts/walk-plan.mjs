@@ -1,8 +1,13 @@
 import fs from 'node:fs/promises';
+import {createCanvas} from '@napi-rs/canvas';
+import {installWalkCanvas} from '../src/walk/canvas.js';
+import {prepareWalkWorld} from '../src/walk/prepare.js';
+installWalkCanvas(createCanvas);
 import zlib from 'node:zlib';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {createShip} from '../src/model.js';
+import {deferRoomFrames} from '../src/plan/rooms.js';
 import {shapeInterior} from '../src/concept-shape.js';
 import {buildAll,buildColliders,prepareExteriorForWalking} from '../src/walk/world.js';
 import {solid} from '../src/walk/collision.js';
@@ -22,14 +27,14 @@ export async function loadWalkShip(exteriorPath='output/leo-interior-v01/leo-ext
  const gltf=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
  gltf.scene.traverse(o=>{const a=gltf.parser.associations.get(o);if(a?.nodes!==undefined)o.name=gltf.parser.json.nodes[a.nodes].name||o.name;else if(o.isMesh&&a?.meshes!==undefined)o.name=o.parent.name;});
  const exterior=gltf.scene.getObjectByName('01_EXTERIOR_REFINED_V31');if(!exterior)throw new Error('The saved exterior is missing its root');
- const ship=createShip({deferExterior:true});ship.root.remove(ship.exterior);ship.root.add(exterior);ship.exterior=exterior;
+ deferRoomFrames();const ship=createShip({deferExterior:true});ship.root.remove(ship.exterior);ship.root.add(exterior);ship.exterior=exterior;
  buildAll(ship);shapeInterior(ship.exterior,ship.inside);
  return ship;
 }
 // Fit a loaded ship for walking as the page does (main.js buildShip): partitions in, static lift parts out, the
 // exterior trimmed, the colliders built; then the railings, which ask the colliders where the floor drops. With a
 // saved `plan` the partitions and railings are taken from it instead of planned.
-export function fitForWalking(ship,plan){
+export function fitForWalking(ship,plan,{beforePreparation=null}={}){
  const decks=plan?null:rasterDecks(ship),walls=plan?plan.walls.map(([deck,x0,x1,z0,z1,y0,y1])=>({deck,x0,x1,z0,z1,y0,y1})):planPartitions(ship,decks);
  ship.inside.add(partitionMesh(walls));
  ship.inside.add(createFinCasing());
@@ -39,8 +44,9 @@ export function fitForWalking(ship,plan){
  const rails=plan?plan.rails:planRails(decks,colliders);
  // The railings are solid too: the colliders are built again with them in.
  const railings=railingMesh(rails);ship.inside.add(railings);
- colliders=buildColliders(ship,{extra:[ship.exterior],filter:o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name)});
- return {decks,walls,rails,colliders,dropped};
+ beforePreparation?.({decks,walls,rails});
+ const prepared=prepareWalkWorld(ship,{exteriorPrepared:true});colliders=prepared.colliders;
+ return {decks,walls,rails,colliders,dropped,prepared};
 }
 // The plan in the compact form the page bundles: partition rows [deck,x0,x1,z0,z1,y0,y1], railing rows
 // [deck,axis,a0,a1,at,y] (millimetre precision) and the window cuts in the hull envelope (windows.js).
@@ -49,8 +55,8 @@ export const compactPlan=walls=>walls.map(w=>[w.deck,w.x0,w.x1,w.z0,w.z1,w.y0,w.
 export async function planWalk(ship){
  ship||=await loadWalkShip();
  const windows=planWindows(ship);
- const {decks,walls,rails}=fitForWalking(ship);
- const map=planMap(ship,decks,rails);
+ // Preserve the accepted map stage: browser-only furniture replacements must not redraw today's map.
+ let map;const {decks,walls,rails}=fitForWalking(ship,undefined,{beforePreparation(state){map=planMap(ship,state.decks,state.rails);}});
  return {plan:{walls:compactPlan(walls),rails,windows},map:png(MAP.nx,MAP.nz*map.length,map.map(d=>d.data))};
 }
 

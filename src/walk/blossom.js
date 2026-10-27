@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {roomObject} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {plantClumps} from '../stylized-plants.js';
 import {seeded} from '../polish-kit.js';
@@ -26,7 +27,7 @@ const inPond=(x,z,pad=0)=>x>POND.x0-pad&&x<POND.x1+pad&&z>POND.z0-pad&&z<POND.z1
 // The bed as an L round the pond, `inset` in from the planter's edges: [x0,x1,z0,z1] boxes in the frame.
 const L=inset=>[[BED.x-BED.half+inset,BED.x+BED.half-inset,BED.z-BED.half+inset,POND.z0-inset],[POND.x1+inset,BED.x+BED.half-inset,POND.z0-inset,BED.z+BED.half-inset]];
 const slab=([x0,x1,z0,z1],y0,y1)=>new T.BoxGeometry(x1-x0,y1-y0,z1-z0).translate((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);
-function frameOf(ship){const root=ship.root.getObjectByName(COMMONS);if(!root)return null;root.updateWorldMatrix(true,true);return root;}
+function frameOf(ship){const root=roomObject(ship,COMMONS);if(!root)return null;root.updateWorldMatrix(true,true);return root;}
 
 // Before the colliders and seats are found: take the planter's tree, shrubs and oak edge caps out, cut the pond's
 // corner out of the planter and its soil, and set the bench under the tree. The garden foliage is merged across both of

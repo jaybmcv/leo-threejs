@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {roomObject} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {ARENA_ID,TRIGGERS,PODIUMS,STAGE,COUNTER,VAULT,STANDEE,STANDEES,FLOOR_COIN,WALL_COINS,GALLERY,PACK_FOILS} from '../mudwater-arena.js';
 
@@ -34,16 +35,16 @@ function panel(w,h,at,normal,roll=0){
 
 // `ship`: the walk's ship (its rooms still unmerged); `urls`: the build's art names (__ART_URLS__).
 export function createMudwater(ship,{urls={},anisotropy=1}={}){
- const room=ship.root.getObjectByName('Area_'+ARENA_ID);if(!room)return null;
+ const room=roomObject(ship,ARENA_ID);if(!room)return null;
  room.updateMatrixWorld(true);
  const origin=room.getWorldPosition(new T.Vector3());
  const spots=TRIGGERS.map(t=>({kind:t.kind,at:room.localToWorld(new T.Vector3(...t.at))}));
  // (The group stands at the room's floor height, so it is drawn with that deck's band: main.js toBand. Its children
  // are in room coordinates.)
- const group=new T.Group();group.name='Mudwater_arena_walk';group.position.copy(origin);
+ const group=new T.Group();group.name='Mudwater_arena_walk';room.matrixWorld.decompose(group.position,group.quaternion,group.scale);
  const cards=[];
  room.traverse(o=>{if(o.name==='Mudwater_hologram')cards.push(o);});
- for(const o of cards){const p=room.worldToLocal(o.getWorldPosition(new T.Vector3())),q=o.getWorldQuaternion(new T.Quaternion());
+ for(const o of cards){const p=room.worldToLocal(o.getWorldPosition(new T.Vector3())),q=room.getWorldQuaternion(new T.Quaternion()).invert().multiply(o.getWorldQuaternion(new T.Quaternion()));
   o.removeFromParent();group.add(o);o.position.copy(p);o.quaternion.copy(q);o.userData.base={y:o.position.y,yaw:new T.Euler().setFromQuaternion(q,'YXZ').y};}
 
  // The corridor entrance: a brass surround on the door's corridor face and a pack standee across the corridor, solid as
@@ -102,7 +103,7 @@ export function createMudwater(ship,{urls={},anisotropy=1}={}){
 
  let t=0,loading=false;const centre=origin.clone();
  return {
-  group,
+  group,spots,
   // The entrance's solid parts, for the colliders.
   solid,
   update(dt){t+=dt;cards.forEach((o,i)=>{const b=o.userData.base;o.rotation.set(0,b.yaw+t*SPIN*(i%2?-1:1),0);o.position.y=b.y+Math.sin(t*1.3+i*1.7)*BOB;});},
@@ -113,7 +114,7 @@ export function createMudwater(ship,{urls={},anisotropy=1}={}){
     for(const m of meshes){m.material.map=tex;m.material.needsUpdate=true;m.visible=true;}});
   },
   // Whether a point (a walker's feet) is inside the arena.
-  contains(p){const x=p.x-origin.x,y=p.y-origin.y,z=p.z-origin.z;return Math.abs(x)<26&&Math.abs(z)<17&&y>-.5&&y<3;},
+  contains(p){const {x,y,z}=room.worldToLocal(p.clone());return Math.abs(x)<26&&Math.abs(z)<17&&y>-.5&&y<3;},
   // The giveaway card's wordmark, once its art exists.
   wordmark:urls['mudwater-wordmark.png']||null,
   // The use prompt: the nearest trigger within reach, on its own floor.

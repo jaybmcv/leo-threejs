@@ -1,12 +1,10 @@
 import * as T from 'three';
+import {TRANSIT_CORES} from './plan/v1.js';
 import {finishCirculation} from './circulation-finish.js';
 import {COMMONS} from './model.js';
 import {unionRectangles,slabGeometry} from './floor-geometry.js';
 
-export const TRANSIT_CORES=[
-  {id:'forward',x:132,lastDeck:20,stairX:141.3,stairZ:5.3},
-  {id:'aft',x:-132,lastDeck:19,stairX:-133,stairZ:13.5},
-];
+export {TRANSIT_CORES} from './plan/v1.js';
 export const floorY=deck=>-39.7+(deck-1)*4;
 export function transitOpenings(deck){
   const holes=[];

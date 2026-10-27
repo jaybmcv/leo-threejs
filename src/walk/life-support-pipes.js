@@ -1,3 +1,5 @@
+import {roomObject} from '../plan/rooms.js';
+import {walkCanvas} from './canvas.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -17,9 +19,9 @@ const STATIONS=[-16,-6,4,14],BOX=[.36,.44,.22],BOX_Y=1.45,CAB={z0:12.05,z1:13.55
 const FONT='"Archivo", "Sora", sans-serif',MONO='"JetBrains Mono", ui-monospace, monospace';
 
 function canvasTexture(w,h,paint){
- const c=document.createElement('canvas');c.width=w;c.height=h;const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;
+ const c=walkCanvas();c.width=w;c.height=h;const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;
  const draw=()=>{const g=c.getContext('2d');g.clearRect(0,0,w,h);paint(g,w,h);t.needsUpdate=true;};
- draw();document.fonts?.ready.then(draw);return t;
+ draw();globalThis.document?.fonts?.ready.then(draw);return t;
 }
 // "H2O" with its digits set as subscripts, centred on (x, y).
 function formula(g,text,x,y,size,font){
@@ -52,7 +54,7 @@ function dial(colour){
 // The pipework in ship coordinates: `group` draws (with its deck band) and `solid` holds the regulator boxes and the
 // supply cabinets as plain boxes for the colliders. Returns null if the room is missing.
 export function createLifeSupportPipes(ship){
- const room=ship.root.getObjectByName(ROOM);if(!room)return null;
+ const room=roomObject(ship,ROOM);if(!room)return null;
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Life_support_pipework';room.matrixWorld.decompose(group.position,group.quaternion,group.scale);
  const solid=new T.Group();solid.name='Life_support_pipework_colliders';room.matrixWorld.decompose(solid.position,solid.quaternion,solid.scale);

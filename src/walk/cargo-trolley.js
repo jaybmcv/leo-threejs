@@ -1,3 +1,4 @@
+import {roomObject} from '../plan/rooms.js';
 import * as T from 'three';
 
 // Container hold A on Deck 1 gets a parked two-wheel hand trolley: a warm-orange frame and handle, charcoal-teal wheels
@@ -44,7 +45,7 @@ function trolley(){
 
 // The trolley in ship coordinates: `group` draws (with its deck band), `solid` is the plain box for the colliders.
 export function createCargoTrolley(ship){
- const room=ship.root.getObjectByName(ROOM);if(!room)return null;
+ const room=roomObject(ship,ROOM);if(!room)return null;
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Cargo_trolley_hold_A';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);

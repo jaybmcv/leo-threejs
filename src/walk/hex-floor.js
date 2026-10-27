@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {anchorObject} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {serviceRoutes} from '../service-circulation.js';
 import {TRANSIT_CORES} from '../transit.js';
@@ -72,7 +73,7 @@ export function createHexFloor(){
  const material=new T.ShaderMaterial({name:'Walk_hex_floor',vertexShader:VERTEX,fragmentShader:FRAGMENT,transparent:true,depthWrite:false,fog:true,
   uniforms:{...T.UniformsUtils.clone(T.UniformsLib.fog),uSize:{value:HEX},uTrail:{value:trail},uReach:{value:reach},uTeal:{value:TEAL},uOrange:{value:ORANGE}}});
  const mesh=new T.Mesh(geometry,material);mesh.name='Walk_hex_floor';
- const group=new T.Group();group.name='Walk_hex_floor';group.position.y=y+LIFT;group.add(mesh);
+ const group=new T.Group();group.name='Walk_hex_floor';group.position.y=y+LIFT;group.add(mesh);anchorObject(group,'circulation-1');
  const on=(x,z)=>rects.some(([x0,x1,z0,z1])=>x>x0-.5&&x<x1+.5&&z>z0-.5&&z<z1+.5);
  // The trail: the newest mark follows the walker; once they have gone a step from it, it stays behind and fades over
  // FADE seconds. The step grows with speed, so the marks always span about FADE seconds of walking.

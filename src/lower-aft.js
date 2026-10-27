@@ -1,3 +1,4 @@
+import {anchorArea} from './plan/anchor-area.js';
 import * as T from 'three';
 import {serviceKit,SERVICE_M as M} from './neighborhood-services.js';
 import {finishShipArea,detailKit,FINISH_M as F} from './area-finish.js';
@@ -6,7 +7,7 @@ export const LOWER_AFT_AREAS=[
  {deck:2,kind:'workshop',id:'d02-maintenance-aft',name:'Aft maintenance workshop',start:-214,depth:36,description:'Repair benches, tool boards, equipment cradles and a clear handling aisle for servicing removable ship equipment.'},
  {deck:3,kind:'control',id:'d03-inspection-aft',name:'Engineering support & inspection',start:-225,depth:38,description:'Diagnostic stations, inspection benches and equipment cabinets supporting the aft engineering spaces above.'},
 ].map(a=>({...a,lowerAft:true,special:true,category:'Lower aft services',center:[(a.start-154)/2,-39.7+(a.deck-1)*4,0],width:-154-a.start,height:3.5,entryX:-154}));
-export function createLowerAftArea(area){
+function buildcreateLowerAftArea(area){
  const root=new T.Group();root.name='Area_'+area.id;root.userData={...area,units:'metres',stage:'Fitted lower aft concept'};
  const {fit,shell,box,text}=serviceKit(root,area.center),w=area.width,d=area.depth;
  box('Finished_floor',[w,.02,d],[0,-.01,0],M.floor);
@@ -63,3 +64,5 @@ export function createLowerAftArea(area){
 }
 
 
+
+export function createLowerAftArea(area){return anchorArea(buildcreateLowerAftArea(area),area.id);}

@@ -4,13 +4,13 @@ import * as T from 'three';
 // is split along the box's faces and the pieces inside dropped, with every attribute carried across the cuts. A cut
 // triangle keeps its place, collapsed to a point, and its pieces go at the end, so triangle numbers stay put (the
 // hull's window plan counts on them, windows.js).
-export function cutOut(root,box,pick=()=>true){
+export function cutOut(root,box,pick=()=>true,space=null){
  root.updateMatrixWorld(true);const tb=new T.Box3(),w=new T.Vector3();
  root.traverse(o=>{
-  if(!o.isMesh||o.isInstancedMesh||!pick(o)||!new T.Box3().setFromObject(o).intersectsBox(box))return;
+  if(!o.isMesh||o.isInstancedMesh||!pick(o)||!(space?new T.Box3().setFromObject(o).applyMatrix4(space):new T.Box3().setFromObject(o)).intersectsBox(box))return;
   const g=o.geometry.index?o.geometry.toNonIndexed():o.geometry,names=Object.keys(g.attributes),attrs=names.map(n=>g.attributes[n]);
   // A vertex is its world position followed by every attribute's components.
-  const vert=i=>{w.fromBufferAttribute(g.attributes.position,i).applyMatrix4(o.matrixWorld);const v=[w.x,w.y,w.z];for(const a of attrs)for(let k=0;k<a.itemSize;k++)v.push(a.getComponent(i,k));return v;};
+  const vert=i=>{w.fromBufferAttribute(g.attributes.position,i).applyMatrix4(o.matrixWorld);if(space)w.applyMatrix4(space);const v=[w.x,w.y,w.z];for(const a of attrs)for(let k=0;k<a.itemSize;k++)v.push(a.getComponent(i,k));return v;};
   const lerp=(a,b,t)=>a.map((x,k)=>x+(b[k]-x)*t),out=[],kept=[];let cut=false;
   for(let t=0;t<g.attributes.position.count;t+=3){
    let poly=[vert(t),vert(t+1),vert(t+2)];tb.makeEmpty();for(const v of poly)tb.expandByPoint(w.set(v[0],v[1],v[2]));

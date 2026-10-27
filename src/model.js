@@ -1,4 +1,6 @@
 import * as T from 'three';
+import {CABINS,COMMONS} from './plan/v1.js';
+import {anchorObject,anchorCabins,anchorMerged,anchoredPoint,hasFrameOverride} from './plan/rooms.js';
 import {createNoseCommons} from './nose-commons.js';
 import {finishCabin} from './residential-finish.js';
 import {polishInterior} from './interior-polish.js';
@@ -32,13 +34,7 @@ export const DECKS = Array.from({length:20}, (_,d)=>({ index:d, number:d+1, y:de
   name: d<2?'Cargo & transfer':d<4?'Farms & life support':d===4?'Medical & shelter':d<15?`Neighborhood ${String(d-4).padStart(2,'0')}`:d===15?'Education & recreation':d<19?'Gardens & commons':'Command & operations',
   residential:d>=5&&d<=14, color:d<2?0xce9b56:d<4?0x72ab96:d===4?0x65b5cc:d<15?0xb8a2cb:d<19?0x82b18f:0x849eba
 }));
-export const CABINS = [];
-for(let n=0;n<10;n++) for(let lane=0;lane<5;lane++) for(let side of [-1,1]) for(let col=0;col<50;col++) {
-  CABINS.push({ id:`N${String(n+1).padStart(2,'0')}-${String(lane*100+(side===1?50:0)+col+1).padStart(3,'0')}`,
-    neighborhood:n+1, deck:n+6, x:-120.7+col*4.6+Math.floor(col/10)*4, y:deckY(n+5)+.3, z:(lane-2)*26+side*5.2,
-    width:4.4, depth:6.4, height:3.5, berths:2 });
-}
-export const COMMONS = Array.from({length:10},(_,i)=>({neighborhood:i+1,x:-92+Math.floor(i/2)*56,z:(i%2===0?-1:1)*(i===2||i===3?24.5:27),width:45,depth:38,y:24.3,height:11.2}));
+export {CABINS,COMMONS} from './plan/v1.js';
 export const SAMPLE = CABINS.find(c=>c.neighborhood===10&&c.x>120&&c.z===5.2);
 export const ROUTE = [
   {name:'Twin cabin', detail:'24 m² clear floor · two berths · 1.7 m eye level', position:[SAMPLE.x,18,2.6], target:[SAMPLE.x,17.5,6.4], look:[.24,.02,'sweep']},
@@ -47,7 +43,7 @@ export const ROUTE = [
   {name:'Neighborhood garden',detail:'One of ten commons · three deck height',position:[145,26,12],target:[132,28,28],look:[.22,.12,'glance']},
   {name:'Forward promenade',detail:'A gentle 1:12 ramp rises toward the panoramic lounge',position:[149,26.25,0],target:[172,28,0],mars:true,look:[-.32,0,'glance']},
   {name:'Observation lounge',detail:'A place to settle in · curved windows, reading corners and a view of Mars',position:[180,28,31],target:[210,29,11],mars:true,look:[.16,.06,'sweep']}
-];
+].map((p,i)=>{const id=[SAMPLE.id,'circulation-15','circulation-17','commons-10','observation-lounge','observation-lounge'][i];return {...p,position:anchoredPoint(id,p.position),target:anchoredPoint(id,p.target)};});
 // The lounge tour starts in the Neighborhood 10 garden and spends most of its time inside the forward observation lounge.
 export const LOUNGE_TOUR = [
   {...ROUTE[3],detail:'Deck 17 · Neighborhood 10 commons. The observation lounge is a short walk forward.',look:[-.2,.1,'drift']},
@@ -57,7 +53,7 @@ export const LOUNGE_TOUR = [
   {name:'Seating islands',detail:'Armchairs and table lamps in two islands, leaving the window aisle clear',position:[181,28.6,10],target:[191,27.2,22],mars:true,look:[-.28,.02,'glance']},
   {name:'Reading corner',detail:'A bench and a wall of books beneath the Mars Cats art',position:[184,28,18],target:[171,28.4,20],mars:true,look:[.2,.06,'sweep']},
   {name:'Settle in with Mars',detail:'Curved windows, warm light and the red planet outside',position:[180,28,31],target:[210,29,11],mars:true,look:[-.14,.08,'drift']}
-];
+].map((p,i)=>i<2?p:{...p,position:anchoredPoint('observation-lounge',p.position),target:anchoredPoint('observation-lounge',p.target)});
 
 const MAT = {};
 const material = (name,color,extra={}) => MAT[name] ||= new T.MeshStandardMaterial({name,color,roughness:.72,metalness:.12,...extra});
@@ -68,11 +64,13 @@ function tube(name,points,r,mat,parent){return mesh(name,new T.TubeGeometry(new 
 function mergedBoxes(name,items,mat,parent) {
   const gs=items.map(({s,p})=>new T.BoxGeometry(...s).translate(...p));
   if(!gs.length)return null;
-  const g=mergeGeometries(gs);gs.forEach(g=>g.dispose());return mesh(name,g,mat,parent);
+  const g=mergeGeometries(gs);gs.forEach(g=>g.dispose());const o=mesh(name,g,mat,parent);if(items.some(i=>i.room))anchorMerged(o,items.map(i=>i.room));return o;
 }
 // The deck layout cutaway is lit by the ship's own lights. The rooms' point lights (20 across the ten gardens, 3 in the
 // lounge) are for eye-level views; left on here, they recompiled every visible material for 26 lights when Decks 17-19
 // were first selected, freezing the page for seconds.
+const roomPolygon=(id,points,y)=>hasFrameOverride(id)?points.map(([x,z])=>{const p=anchoredPoint(id,[x,y,z]);return [p[0],p[2]];}):points;
+const roomOpening=(id,b,y)=>hasFrameOverride(id)?roomPolygon(id,[[b.x0,b.z0],[b.x1,b.z0],[b.x1,b.z1],[b.x0,b.z1]],y):b;
 function cutawayLights(root){root.traverse(o=>{if(o.isPointLight)o.visible=false;});}
 // lazyInterior (the viewer): the deck plates and the neighborhood template are built on first use rather than up
 // front; the first screen shows only the exterior, and they were most of the page's opening freeze. onDecks runs once
@@ -101,12 +99,12 @@ export function createShip({deferExterior=false,lazyInterior=false,onDecks=null}
     if(points.length){
       const outline=[...points,...points.slice().reverse().map(([x,z])=>[x,-z])],holes=[...transitOpenings(d.number),...aftOpenings(d.number)];
       if(d.index===17||d.index===18){
-        for(const c of COMMONS)holes.push({x0:c.x-22.5,x1:c.x+22.5,z0:c.z-19,z1:c.z+19});
+        for(const [i,c] of COMMONS.entries()){const id='commons-'+(i+1);holes.push(hasFrameOverride(id)?[[-22.5,-19],[22.5,-19],[22.5,19],[-22.5,19]].map(([x,z])=>{const p=anchoredPoint(id,[c.x+x,c.y,c.z+z]);return [p[0],p[2]];}):{x0:c.x-22.5,x1:c.x+22.5,z0:c.z-19,z1:c.z+19});}
         const edge=Array.from({length:73},(_,i)=>loungeFacade(31,-.81+1.62*i/72,1.4));
-        holes.push([[170,edge[0][2]],...edge.map(p=>[p[0],p[2]]),[170,edge.at(-1)[2]]]);
+        holes.push(roomPolygon('observation-lounge',[[170,edge[0][2]],...edge.map(p=>[p[0],p[2]]),[170,edge.at(-1)[2]]],d.y+.3));
       }
-      if(d.number===18)holes.push({x0:146,x1:170,z0:-4.3,z1:4.3});
-      if(d.number===3)holes.push({x0:148,x1:220,z0:-54,z1:54});
+      if(d.number===18)holes.push(roomOpening('observation-lounge',{x0:146,x1:170,z0:-4.3,z1:4.3},d.y+.3));
+      if(d.number===3)holes.push(roomOpening('d02-hangar-9',{x0:148,x1:220,z0:-54,z1:54},d.y+.3));
       const g=outlinedSlab(outline,holes,d.y+.28,.28);dg.userData.openings=holes;
       // The outline's half-width by x travels with the plate, so the hull fairing can find its edge (hull-fairing.js).
       mesh('Deck_slab',g,material('Deck_slab',0x737f88),dg).userData.outline=points;
@@ -114,12 +112,12 @@ export function createShip({deferExterior=false,lazyInterior=false,onDecks=null}
     if(d.residential) {
       const list=CABINS.filter(c=>c.deck===d.number);
       const cg=group(`N${d.number-5}_500_twin_cabin_envelopes`,dg);cg.userData={cabins:500,berths:1000,clearFloorArea:12000,envelopeFloorArea:14080};
-      mergedBoxes('500_cabin_modules',list.map(c=>({s:[4.4,3.5,6.4],p:[c.x,c.y+1.75,c.z]})),material(`Habitat_${d.number}`,d.color),cg);
+      mergedBoxes('500_cabin_modules',list.map(c=>({s:[4.4,3.5,6.4],p:[c.x,c.y+1.75,c.z],room:c.id})),material(`Habitat_${d.number}`,d.color),cg);
       const aisles=[];for(let lane=0;lane<5;lane++)aisles.push({s:[247,.04,4],p:[0,d.y+.32,(lane-2)*26]});
       for(let j=0;j<4;j++)aisles.push({s:[4,.04,120.8],p:[-75+j*50,d.y+.34,0]});
       mergedBoxes('Primary_corridors',aisles,material('Circulation',0xe8c592),dg);cabinGroups.push(cg);
     } else if(d.index<5) {
-      const blocks=[];for(let x of [-115,-45,25,95])for(let z of [-38,38])blocks.push({s:[52,2.8,34],p:[x,d.y+1.7,z]});
+      const blocks=[];for(let x of [-115,-45,25,95])for(let z of [-38,38])blocks.push({s:[52,2.8,34],p:[x,d.y+1.7,z],room:SHIP_AREAS.find(a=>a.deck===d.number&&a.center[0]===x&&a.center[2]===z)?.id});
       const reserve=mergedBoxes(`${d.name}_space_reservations`,blocks,material(`Zone_${d.index}`,d.color),dg);reserve.userData={status:'Unfitted volume reservation, systems not sized'};
     }
     decks.push(dg);
@@ -132,8 +130,8 @@ export function createShip({deferExterior=false,lazyInterior=false,onDecks=null}
   }
   const shared=group('Ten_commons_reservations',inside);
   for(const c of COMMONS) {
-    box(`N${c.neighborhood}_commons_floor`,[45,.12,38],[c.x,24.4,c.z],material('Commons_floor',0x8baf98),shared);
-    for(let sx of [-1,1])box('Gallery_edge',[45,.2,3],[c.x,28.4,c.z+sx*17.5],trim,shared);
+    anchorObject(box(`N${c.neighborhood}_commons_floor`,[45,.12,38],[c.x,24.4,c.z],material('Commons_floor',0x8baf98),shared),'commons-'+c.neighborhood);
+    for(let sx of [-1,1])anchorObject(box('Gallery_edge',[45,.2,3],[c.x,28.4,c.z+sx*17.5],trim,shared),'commons-'+c.neighborhood);
   }
   let detail=null;const ensureDetail=()=>{if(!detail){detail=createNeighborhood();root.add(detail.root);detail.root.visible=false;}return detail;};
   inside.visible=false;if(!lazyInterior){buildDecks();ensureDetail();}
@@ -358,7 +356,7 @@ export function createObservationArea(template=createNeighborhood()){
   for(const o of template.loungeParts.fittings)root.add(o.clone(true));
   for(const o of template.loungeParts.walls)walls.add(o.clone(true));
   for(const o of template.loungeParts.root)root.add(o.clone(true));
-  return {root,walls};
+  anchorObject(root,'observation-lounge');return {root,walls};
 }
 
 // Reuse the accepted furnished cabin module at every residential deck elevation.
@@ -373,7 +371,7 @@ export function createResidentialDeck(number,template=createNeighborhood()){
   const district=template.district.clone(true);district.visible=true;root.add(district);
   const districtWalls=district.getObjectByName('Repeated_cabin_walls');
   // The isolated deck uses the corridor template with its ceilings independently toggleable.
-  return {root,walls,district,districtWalls,number,
+  anchorCabins(root,number);return {root,walls,district,districtWalls,number,
     overview:{position:[70,150+dy,190],target:[0,17+dy,0]},
     inside:{position:[SAMPLE.x,18+dy,2.6],target:[SAMPLE.x,17.5+dy,6.4]}};
 }
@@ -388,6 +386,6 @@ export function createGardenCommons(number,template=createNeighborhood()){
   if(number<9)for(const yy of [28.3,32.3])rail(fittings,[136.8,8],[138.8,8],yy);
   // Neighborhood 1's commons is the Hydro-Nip Lounge (hydro-nip-lounge.js) in place of the garden middle.
   if(number===1){clearGarden(fittings);clearGarden(walls);openRails(fittings);fittings.add(createHydroNipLounge({mirror:root.scale.z}));}
-  const pose=([x,y,z])=>[x+c.x-132,y,z*root.scale.z+root.position.z];
+  anchorObject(root,'commons-'+number);const pose=([x,y,z])=>anchoredPoint('commons-'+number,[x+c.x-132,y,z*root.scale.z+root.position.z]);
   return {root,walls,fittings,number,overview:{position:pose([174,58,77]),target:pose([132,28,28])},inside:{position:pose([145,26,12]),target:pose([132,28,28])}};
 }

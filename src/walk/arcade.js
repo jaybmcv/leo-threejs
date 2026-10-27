@@ -1,4 +1,6 @@
+import {walkCanvas,hasWalkCanvas} from './canvas.js';
 import * as T from 'three';
+import {anchorObject} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {COMMONS} from '../model.js';
 import {SPRITES,spriteCanvas} from './invasion/sprites.js';
@@ -46,7 +48,7 @@ const MX=ROW_END+MILL.gap+SHAPES.tower.w/2,END=MX+SHAPES.tower.w/2;
 // The row's frame in the ship (see createArcade).
 function frame(){
  const c=COMMONS[0],g=new T.Group();g.position.set(c.x+WALL,FLOOR,c.z);g.rotation.y=-Math.PI/2;
- if(c.z>0)g.scale.x=-1;g.updateMatrixWorld(true);return g;
+ if(c.z>0)g.scale.x=-1;anchorObject(g,'commons-1');g.updateMatrixWorld(true);return g;
 }
 // The arcade treadmill as Paws Off takes it, in the ship's frame: its deck's centre on top, the way a runner faces (the
 // wall), its length and width, the floor round it and the place its results card names. Node can read it too
@@ -56,7 +58,7 @@ export function arcadeTreadmill(at=frame()){
  return {place:'Arcade',floor:FLOOR,centre,top:centre.y,front:ahead.sub(centre).setY(0).normalize(),length:l,width:w};
 }
 
-const canvas=(w,h,draw)=>{const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
+const canvas=(w,h,draw)=>{const c=walkCanvas();c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
  const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return t;};
 const font=(weight,size)=>`${weight} ${size}px "Archivo", system-ui, sans-serif`;
 const glowText=(g,text,x,y,color,blur=18)=>{g.shadowColor=color;g.shadowBlur=blur;g.fillStyle=color;g.fillText(text,x,y);g.shadowBlur=0;};
@@ -132,7 +134,7 @@ function profile(s){
 
 // The row stands in Neighborhood 1's commons (model.js COMMONS). Returns null without a canvas (Node).
 export function createArcade(){
- if(typeof document==='undefined')return null;
+ if(!hasWalkCanvas())return null;
  // The row's frame: on the wall, facing into the room. x runs along the wall toward the commons' entrance side
  // (template z falling), which with Neighborhood 1's mirroring is world +z.
  const group=frame();group.name='Deck17_arcade_row';
@@ -229,7 +231,7 @@ export function createArcade(){
  for(const {material,gs} of panels.values()){const o=new T.Mesh(mergeGeometries(gs),material);o.name=material.name;gs.forEach(g=>g.dispose());group.add(o);}
  group.updateMatrixWorld(true);solid.updateMatrixWorld(true);
  for(const s of spots)group.localToWorld(s.at);
- return {group,solid,treadmill:arcadeTreadmill(group),
+ return {group,solid,spots,treadmill:arcadeTreadmill(group),
   // E in front of a playing cabinet: Invasion opens the telescope's game, Pool the Recreation Hall's.
   near(p){if(Math.abs(p.y-FLOOR)>1.5)return null;for(const s of spots)if(Math.hypot(p.x-s.at.x,p.z-s.at.z)<REACH)return {kind:s.kind,label:s.label};return null;},
  };

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {roomObject} from '../../plan/rooms.js';
 import {newGame,step,press,pad,beltAt} from './rules.js';
 
 // Paws Off (PAWS_OFF.md, stage 1): a typing run on the Deck 16 exercise studio's six treadmills, played in the
@@ -51,7 +52,7 @@ const CSS=`
 // `more`: treadmills drawn elsewhere (the arcade's), each as below: the place its card names, the floor's height round
 // it, its belt's centre on top, the way a runner faces, its length and width.
 export function createPawsOff(ship,{ground,more=[],onStart=()=>{},onEnd=()=>{}}){
- const room=ship.root.getObjectByName(ROOM),found=[];
+ const room=roomObject(ship,ROOM),found=[];
  if(room){
   room.updateMatrixWorld(true);
   const meshes=[],displays=[],floor=room.getWorldPosition(new T.Vector3()).y;
@@ -63,7 +64,7 @@ export function createPawsOff(ship,{ground,more=[],onStart=()=>{},onEnd=()=>{}})
    const display=displays.reduce((a,d)=>!a||d.distanceToSquared(centre)<a.distanceToSquared(centre)?d:a,null);
    const front=display?new T.Vector3(display.x-centre.x,0,display.z-centre.z).normalize():new T.Vector3(0,0,-1).applyQuaternion(o.getWorldQuaternion(new T.Quaternion())).setY(0).normalize();
    const along=Math.abs(front.x)>Math.abs(front.z)?'x':'z';
-   found.push({place:'Exercise studio',floor,centre,top,front,length:size[along],width:size[along==='x'?'z':'x']});
+   found.push({place:'Exercise studio',floor,centre,top,front,length:Math.max(size.x,size.z),width:Math.min(size.x,size.z)});
   }
  }
  const all=[...found,...more];if(!all.length)return null;

@@ -1,3 +1,4 @@
+import {anchorArea} from './plan/anchor-area.js';
 import * as T from 'three';
 import {serviceKit,SERVICE_M as M} from './neighborhood-services.js';
 import {finishShipArea} from './area-finish.js';
@@ -7,7 +8,7 @@ export const LOWER_BOW_AREAS=[
  {deck:4,kind:'farm',id:'d04-cultivation-bow',name:'Fresh food cultivation & preparation',description:'Low growing racks, propagation trays, a produce wash station and sorting benches beneath dedicated grow lighting.'},
  {deck:5,kind:'gym',id:'d05-rehabilitation-bow',name:'Rehabilitation & movement',description:'An open movement room with parallel bars, low stepping platforms, walking machines, stretching mats and rest seating.'},
 ].map(a=>({...a,lowerBow:true,special:true,category:'Lower bow facilities',center:[196,-39.7+(a.deck-1)*4,0],width:64,depth:60,height:3.5,entryX:164}));
-export function createLowerBowArea(area){
+function buildcreateLowerBowArea(area){
  const root=new T.Group();root.name='Area_'+area.id;root.userData={...area,units:'metres',stage:'Fitted lower bow concept'};
  const {fit,shell,box,text}=serviceKit(root,area.center),accent=area.deck===4?M.linen:area.deck===5?M.blue:M.amber;
  box('Finished_floor',[64,.02,60],[0,-.01,0],M.floor);box('Ceiling',[64,.1,60],[0,3.4,0],M.wall,shell);
@@ -81,3 +82,5 @@ export function createLowerBowCirculation(deck){
  text('D'+deck+' / FORWARD COMMONS',[163.9,2.65,0],-Math.PI/2,.19);
  finishCirculation(root,shell,'Lower bow connection',deck);return {root,shell};
 }
+
+export function createLowerBowArea(area){return anchorArea(buildcreateLowerBowArea(area),area.id);}

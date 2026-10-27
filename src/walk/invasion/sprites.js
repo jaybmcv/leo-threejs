@@ -1,3 +1,4 @@
+import {walkCanvas} from '../canvas.js';
 // Alien Cat Invasion's pixel art (feedback-inbox #69): each sprite is rows of characters, one per pixel, and a palette
 // for the characters ('.' is clear). Leo is traced from the ship's own top view: the rounded bow, the windowed hull
 // and the two engine pods on swept wings. The three Alien Cats and their mothership are placeholder designs until
@@ -125,7 +126,7 @@ export const SPRITES={
 export const COLORS={shot:'#f85800',bomb:'#b6ff5c',ground:'#3fd0a0',text:'#f4f0e8',accent:'#f85800',dim:'#8c94a3'};
 
 // A sprite (or one frame) drawn at `scale` pixels per pixel into a canvas.
-export function spriteCanvas(rows,palette,scale=1,make=(w,h)=>Object.assign(document.createElement('canvas'),{width:w,height:h})){
+export function spriteCanvas(rows,palette,scale=1,make=(w,h)=>Object.assign(walkCanvas(),{width:w,height:h})){
  const c=make(rows[0].length*scale,rows.length*scale),g=c.getContext('2d');
  rows.forEach((row,y)=>[...row].forEach((ch,x)=>{if(ch!=='.'){g.fillStyle=palette[ch];g.fillRect(x*scale,y*scale,scale,scale);}}));
  return c;

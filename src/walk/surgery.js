@@ -1,3 +1,5 @@
+import {roomObject} from '../plan/rooms.js';
+import {walkCanvas} from './canvas.js';
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 
@@ -17,7 +19,7 @@ const BATCHED=/^(Refined_patient_services|Refined_display_graphics|Polish_tailor
 const inBay=(x,y,z)=>y>.02&&y<CEILING-.1&&BAYS.some(([bx,bz])=>x>bx-1&&x<bx+1.3&&Math.abs(z-bz)<1.2);
 
 function canvasTexture(w,h,paint){
- const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;paint(canvas.getContext('2d'),w,h);
+ const canvas=walkCanvas();canvas.width=w;canvas.height=h;paint(canvas.getContext('2d'),w,h);
  const t=new T.CanvasTexture(canvas);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return t;
 }
 // Concept graphics for the floating panel: a heart trace, a ring gauge and a few bars, cyan on a faint blue glass.
@@ -76,7 +78,7 @@ function bed(fit,x,z,panel){
 // The old bed parts out and the new beds into the room's fittings, before the colliders are built and the room is
 // merged. Returns false if the room is missing.
 export function dressSurgery(ship){
- const room=ship.root.getObjectByName(ROOM);if(!room)return false;
+ const room=roomObject(ship,ROOM);if(!room)return false;
  const fit=room.getObjectByName('Room_fittings');if(!fit)return false;
  room.updateWorldMatrix(true,true);
  const toRoom=room.matrixWorld.clone().invert(),v=new T.Vector3(),old=[],batched=[];
@@ -123,7 +125,7 @@ function arm(){
 // The six arms over the beds, drawn with their deck band. update() moves them only while the walker is on Deck 5
 // near the suite, and keeps them still for reduced motion.
 export function createSurgeryArms(ship,{still=false}={}){
- const room=ship.root.getObjectByName(ROOM);if(!room)return null;
+ const room=roomObject(ship,ROOM);if(!room)return null;
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Surgery_robot_arms';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);

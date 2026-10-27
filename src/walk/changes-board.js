@@ -1,6 +1,7 @@
 import * as T from 'three';
+import {placed,placedV1,placedFacing,placeObject} from '../plan/placements.js';
 import log from 'walk-changes';
-import {readSpot} from './link.js';
+import {readSpot,remapSpot} from './link.js';
 
 // The ship log boards: every change made to Leo (scripts/ship-log.mjs, from git at build time), newest first, with the
 // day it was completed, and beside the list the five changes with the most hearts. One board on the Crown lounge lift's
@@ -17,10 +18,10 @@ import {readSpot} from './link.js';
 // setHearts({counts:[[id,n]], mine:[id]|undefined, verified}) · setStatus('live'|'offline') · refused(why)
 export const BOARDS=[
  // The crown lift's housing, forward face (x -244.82), between the floor (120.3) and its gold panelling.
- {name:'Crown_lounge',wall:[-244.82,122.3,0],facing:[1,0,0],floor:120.3},
+ {name:'Crown_lounge',wall:placed('board/Crown_lounge'),facing:[1,0,0],floor:120.3},
  // The Arrival hall's inboard wall, on its room-side face (z -21.16), between
  // a cat cubby (x -130) and a potted plant (x -121.6) of the garden atrium (arrival-atrium.js), under the 3.3 m ceiling.
- {name:'Arrival_hall',wall:[-126.5,-33.75,-21.18],facing:[0,0,-1],floor:-35.7},
+ {name:'Arrival_hall',wall:placed('board/Arrival_hall'),facing:[0,0,-1],floor:-35.7},
 ];
 const SIZE=[4,2.3],PX=[1600,920],REACH=3.6,FAVORITES=5;
 const INK='#0d1419',PANEL='#1b2830',TEXT='#f4f0e8',DIM='#a6b4bb',ORANGE='#f85800',TEAL='#2fd6c5',SELECT='#24404c';
@@ -31,7 +32,7 @@ const MEDIA='https://raw.githubusercontent.com/jaybmcv/leo-threejs/pr-media/',PU
 // A change is near the walker when one of its spots is on the same floor (within 2.5 m up or down) and 12 m across.
 const NEAR={across:12,up:2.5};
 const day=d=>{const [y,m,n]=d.split('-').map(Number);return `${n} ${'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[m-1]} ${y}`;};
-const spotsOf=new Map(log.map(e=>[e.id,[e.go,...(e.shots||[]).map(s=>s.at)].filter(Boolean).map(q=>readSpot('?'+q)).filter(Boolean)]));
+const spotsOf=new Map(log.map(e=>[e.id,[e.go,...(e.shots||[]).map(s=>s.at)].filter(Boolean).map(q=>remapSpot(readSpot('?'+q))).filter(Boolean)]));
 
 function clip(c,text,max){if(c.measureText(text).width<=max)return text;let s=text;while(s.length>1&&c.measureText(s+'…').width>max)s=s.slice(0,-1);return s+'…';}
 // Up to two lines of `text` in `max` pixels, the second cut short if it must be.
@@ -144,12 +145,12 @@ export function createChangesBoards({hearts,onOpen=()=>{},onClose=()=>{},onGo=()
  const frame=new T.MeshStandardMaterial({name:'Ship_log_frame',color:0x1c1a18,roughness:.55,metalness:.2});
  const face=new T.MeshBasicMaterial({name:'Ship_log_face',map:texture,toneMapped:false});
  const boards=BOARDS.map(b=>{
-  const [x,y,z]=b.wall,f=new T.Vector3(...b.facing),group=new T.Group();group.name='Ship_log_'+b.name;
+  const [x,y,z]=placedV1('board/'+b.name),f=new T.Vector3(...b.facing),group=new T.Group();group.name='Ship_log_'+b.name;
   // Its origin on the floor, so main.js files it with that deck's band.
   group.position.set(x,b.floor,z);group.rotation.y=Math.atan2(f.x,f.z);
   const back=new T.Mesh(new T.BoxGeometry(SIZE[0]+.16,SIZE[1]+.16,.06),frame);back.name='Ship_log_frame';back.position.set(0,y-b.floor,.03);group.add(back);
   const screen=new T.Mesh(new T.PlaneGeometry(...SIZE),face);screen.name='Ship_log_screen';screen.position.set(0,y-b.floor,.065);group.add(screen);
-  return {group,centre:new T.Vector3(x,y,z),facing:f,floor:b.floor};
+  placeObject(group,'board/'+b.name);return {group,centre:new T.Vector3(...placed('board/'+b.name)),facing:new T.Vector3(...placedFacing('board/'+b.name,b.facing)),floor:b.floor};
  });
 
  // The board full size, over the walk.
@@ -294,7 +295,7 @@ export function createChangesBoards({hearts,onOpen=()=>{},onClose=()=>{},onGo=()
  function nearby(p){return log.filter(e=>spotsOf.get(e.id).some(s=>Math.abs(p.y-s.at[1])<NEAR.up&&Math.hypot(p.x-s.at[0],p.z-s.at[2])<NEAR.across));}
 
  return {
-  groups:boards.map(b=>b.group),
+  groups:boards.map(b=>b.group),targets:boards.map(b=>({at:b.centre,facing:b.facing})),
   get isOpen(){return open;},
   open:show,close:hide,nearby,
   // The use prompt for a walker standing in front of a board.

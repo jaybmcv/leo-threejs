@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {roomObject,deltaMatrix,hasFrameOverride,moverOrientation} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {LOUNGE} from '../hydro-nip-lounge.js';
 import {createLoungeSky} from './lounge-sky.js';
@@ -25,9 +26,9 @@ const boxTriangles=([w,h,d])=>{const out=[],c=i=>[(i&4?1:-1)*w/2,(i&2?1:-1)*h/2,
  for(const f of [[0,1,3],[0,3,2],[4,6,7],[4,7,5],[0,4,5],[0,5,1],[2,3,7],[2,7,6],[0,2,6],[0,6,4],[1,5,7],[1,7,3]])for(const i of f)out.push(...c(i));return out;};
 
 export function createLounge(ship,colliders,light=null){
- const root=ship.root.getObjectByName('Hydro_Nip_Lounge');if(!root)return null;
+ const root=roomObject(ship,'Hydro_Nip_Lounge');if(!root)return null;
  root.updateMatrixWorld(true);
- const frame=root.matrixWorld,toWorld=(x,y,z)=>new T.Vector3(x,y,z).applyMatrix4(frame);
+ const frame=root.matrixWorld,inverse=frame.clone().invert(),toWorld=(x,y,z)=>new T.Vector3(x,y,z).applyMatrix4(frame);
  // Everything drawn here is placed at the lounge floor's height, so main.js files it with that floor's deck band.
  const floorY=toWorld(0,LOUNGE.FLOOR,0).y,drawn=[];
  const place=(g,mat,name)=>{g.translate(0,-floorY,0);const o=new T.Mesh(g,mat);o.name=name;o.position.y=floorY;o.frustumCulled=false;drawn.push(o);return o;};
@@ -39,7 +40,7 @@ export function createLounge(ship,colliders,light=null){
  for(const leaf of leaves.values()){
   const pane=leaf.meshes[0],u=pane.userData,at=pane.getWorldPosition(new T.Vector3());
   leaf.at=at;leaf.door=u.door;leaf.slide=toWorld(...u.slide).sub(toWorld(0,0,0));
-  leaf.mover=colliders.addMover('lounge-door',boxTriangles(u.size),new T.Matrix4().makeTranslation(at.x,at.y,at.z));
+  leaf.mover=colliders.addMover('lounge-door',boxTriangles(u.size),moverOrientation('commons-1',new T.Matrix4().makeTranslation(at.x,at.y,at.z)));
   const d=doors[u.door]||(doors[u.door]={leaves:[],centre:new T.Vector3(),open:0});d.leaves.push(leaf);
  }
  for(const d of doors){d.centre.set(0,0,0);for(const l of d.leaves)d.centre.add(l.at);d.centre.divideScalar(d.leaves.length);d.centre.y=floorY;}
@@ -55,7 +56,7 @@ export function createLounge(ship,colliders,light=null){
    for(const r of ranges){const d=doors[r.leaf.door].open,ox=r.leaf.slide.x*d,oy=r.leaf.slide.y*d,oz=r.leaf.slide.z*d;
     for(let i=r.start*3,e=(r.start+r.count)*3;i<e;i+=3){a[i]=base[i]+ox;a[i+1]=base[i+1]+oy;a[i+2]=base[i+2]+oz;}}
    p.needsUpdate=true;mesh.geometry.computeBoundingSphere();}
-  for(const leaf of leaves.values()){const o=doors[leaf.door].open,p=leaf.at.clone().addScaledVector(leaf.slide,o);leaf.mover.place(new T.Matrix4().makeTranslation(p.x,p.y,p.z));}
+  for(const leaf of leaves.values()){const o=doors[leaf.door].open,p=leaf.at.clone().addScaledVector(leaf.slide,o);leaf.mover.place(moverOrientation('commons-1',new T.Matrix4().makeTranslation(p.x,p.y,p.z)));}
  }
 
  // Hammocks: one mesh, each vertex swung about its own hammock's long axis (through its rim's middle).
@@ -82,7 +83,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  function swingOf(mesh){const s=swing.find(h=>h.mesh===mesh);if(!s)return null;return {pivot:s.pivot,axis:s.axis,angle:SWAY.amp*Math.sin(time()*SWAY.rate+s.phase)};}
 
  // The maze tower, in the world, for the mist and the haze.
- const {MAZE,LEVELS}=LOUNGE,tower=new T.Box3().setFromPoints([toWorld(MAZE.x0,LOUNGE.FLOOR,MAZE.z0),toWorld(MAZE.x1,MAZE.top,MAZE.z1)]);
+ const {MAZE,LEVELS}=LOUNGE,tower=new T.Box3().setFromPoints([new T.Vector3(MAZE.x0,LOUNGE.FLOOR,MAZE.z0),new T.Vector3(MAZE.x1,MAZE.top,MAZE.z1)]);
  // The maze's mist, taken whole (the walk would split it by deck band, a draw for each).
  const mists=[];let mist=1,haze=0,tint=null;
  root.traverse(o=>{if(o.isMesh&&o.material?.name==='Lounge_maze_mist')mists.push(o);});
@@ -93,7 +94,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
 
  // The mood. The commons' ceiling panels (Circadian_light) go, and a glass roof open to space goes in under the ceiling
  // (lounge-sky.js), drawn with the floor's band so it shows from inside the dome too, where the ceiling's band is culled.
- const {ROOM}=LOUNGE,room=new T.Box3().setFromPoints([toWorld(ROOM.x0,LOUNGE.FLOOR,ROOM.z0),toWorld(ROOM.x1,LOUNGE.CEILING,ROOM.z1)]);
+ const {ROOM}=LOUNGE,room=new T.Box3().setFromPoints([new T.Vector3(ROOM.x0,LOUNGE.FLOOR,ROOM.z0),new T.Vector3(ROOM.x1,LOUNGE.CEILING,ROOM.z1)]);
  const panels=[];root.parent?.parent?.traverse(o=>{if(o.isMesh&&o.name==='Circadian_light')panels.push(o);});for(const o of panels)o.removeFromParent();
  {const sky=createLoungeSky(frame,ROOM,LOUNGE.CEILING-.16,uniforms.uTime);place(sky.geometry,sky.material,'Walk_lounge_glass_roof');}
  const glows=[];root.traverse(o=>{if(o.isMesh&&/^Lounge_(neon_glow|additive_glow)$/.test(o.material?.name)&&!glows.some(g=>g.m===o.material))glows.push({m:o.material,k:o.material.name==='Lounge_neon_glow'?MOOD.neon:MOOD.glow});});
@@ -115,10 +116,10 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
    for(const d of doors){const near=bodies.some(b=>Math.abs(b.y-d.centre.y)<DOOR.rise&&Math.hypot(b.x-d.centre.x,b.z-d.centre.z)<DOOR.reach);
     const o=T.MathUtils.clamp(d.open+(near?1:-1)*dt/DOOR.time,0,1);if(o!==d.open){d.open=o;doorsMoved=true;}}
    if(doorsMoved){doorsMoved=false;slideDoors();}
-   const inside=tower.containsPoint(eye),k=1-Math.exp(-4*dt);
+   const inside=tower.containsPoint(eye.clone().applyMatrix4(inverse)),k=1-Math.exp(-4*dt);
    mist+=((inside?.12:1)-mist)*k;for(const o of mists)o.material.opacity=o.material.userData.full*mist;
    haze+=((inside?(eye.y<LEVELS[0]?.34:eye.y<LEVELS[1]?.16:0):0)-haze)*k;if(tint)tint.style.opacity=haze.toFixed(3);
-   mood+=((room.containsPoint(eye)?1:0)-mood)*k;if(Math.abs(mood-shown)>.002||(mood<.002&&shown)){shown=mood<.002?0:mood;setMood(shown);}
+   mood+=((room.containsPoint(eye.clone().applyMatrix4(inverse))?1:0)-mood)*k;if(Math.abs(mood-shown)>.002||(mood<.002&&shown)){shown=mood<.002?0:mood;setMood(shown);}
   },
   swingOf,
  };

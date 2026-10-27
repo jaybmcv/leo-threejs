@@ -1,3 +1,4 @@
+import {anchorArea} from './plan/anchor-area.js';
 import * as T from 'three';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
@@ -27,7 +28,7 @@ const glassWall=(box,shell)=>(name,size,pos,glass)=>box(name,size,pos,glass?visi
 // The world x spans along the Deck 14-15 service passage where the rooms' entry walls face it.
 const SUPPORT_GLASS=[[-261,-207],[-203,-181]];
 export {kit as serviceKit,M as SERVICE_M,glassWall};
-export function createSupportArea(area){
+function buildcreateSupportArea(area){
  const root=new T.Group();root.name='Area_'+area.id;root.userData={...area,units:'metres',stage:'Fitted neighborhood service area'};
  const k=kit(root,area.center),{fit,shell,box,text}=k,s=area.side,accent=area.deck===14?M.blue:M.amber;
  box('Finished_floor',[80,.02,20],[0,-.01,0],M.floor);
@@ -120,3 +121,5 @@ export function createSupportCirculation(deck){
  finishCirculation(root,shell,'Neighborhood service passage',deck);
  return {root,shell};
 }
+
+export function createSupportArea(area){return anchorArea(buildcreateSupportArea(area),area.id);}

@@ -40,7 +40,7 @@ export async function writeWalkPage(out,{cosmo,manifest}){
  const result=await build({entryPoints:['src/walk/main.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2022',legalComments:'eof',define:{__COSMO_SCRIPT__:JSON.stringify(cosmo),__EMOTES_URL__:JSON.stringify(emoteName),__MAP_URL__:JSON.stringify(mapName),__HAT_URL__:JSON.stringify(hatName),__ART_URLS__:JSON.stringify(art),__REEL_URL__:JSON.stringify(reelName),__LIVE_URL__:JSON.stringify(process.env.LEO_LIVE_URL||''),__CREAMERY_URL__:JSON.stringify(process.env.LEO_CREAMERY_URL||'https://creamery.marscatsvoyage.com'),__WALK_DEBUG__:'false'},plugins:[partitions]});
  const code=result.outputFiles[0].text;
  if(code.includes('createDLCat('))throw new Error('The walk script must load Cosmo from its own file');
- if(code.includes('__walk'))throw new Error('The walk debug hook must not ship');
+ if(code.includes('__walk')||code.includes('anchorTest'))throw new Error('The walk debug hook must not ship');
  const name=hashed('walk','js',code);await fs.writeFile(path.join(out,name),code);
  let html=(await fs.readFile('src/walk/walk.html','utf8')).replace('<script>/* BUNDLE */</script>',()=>`<script>LEO_WALK_BOOT("${name}")</script>`);
  if(html.includes('/* BUNDLE */'))throw new Error('walk.html lost its bundle placeholder');

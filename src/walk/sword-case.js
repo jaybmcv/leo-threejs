@@ -1,4 +1,7 @@
+import {roomObject} from '../plan/rooms.js';
+import {walkCanvas} from './canvas.js';
 import * as T from 'three';
+import {placedV1,placeObject} from '../plan/placements.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 // The Deck 20 Captain's office on foot: a gold sword case stands in front of Orange Haze #15 (paintings.js), centred on
@@ -9,13 +12,13 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 // on the outboard wall (z 32.76) from x 48.9 to 57.1. The meeting table and its chairs end at x 51.6 and z 27, the two
 // loose chairs stand at x 60-64, so the case at z 30.7 leaves 1.6 m to walk behind it and the room open in front.
 const ROOM='Area_d20-captain-7';
-const FLOOR=36.3,CEILING=39.6,AT={x:53,z:30.7};
+const [ax,FLOOR,az]=placedV1('sword-case'),CEILING=39.6,AT={x:ax,z:az};
 // The plinth's top, the velvet's top, the glass cover's top; the case's footprint.
 const PLINTH=.78,BED=.87,GLASS=1.14,L=1.6,D=.6;
 
 // A soft warm oval: where the spotlight falls on the velvet.
 function pool(){
- const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d'),r=g.createRadialGradient(64,64,0,64,64,64);
+ const c=walkCanvas();c.width=c.height=128;const g=c.getContext('2d'),r=g.createRadialGradient(64,64,0,64,64,64);
  r.addColorStop(0,'rgba(255,214,150,.3)');r.addColorStop(.6,'rgba(255,190,120,.1)');r.addColorStop(1,'rgba(255,180,110,0)');g.fillStyle=r;g.fillRect(0,0,128,128);
  const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;return t;
 }
@@ -41,7 +44,7 @@ function sword(gold){
 }
 
 export function createSwordCase(ship){
- if(!ship.root.getObjectByName(ROOM))return null;
+ if(!roomObject(ship,ROOM))return null;
  const gold=new T.MeshStandardMaterial({name:'Sword_case_gold',color:0xd4a33a,roughness:.3,metalness:.9});
  const lacquer=new T.MeshStandardMaterial({name:'Sword_case_lacquer',color:0x16110f,roughness:.35,metalness:.1});
  const velvet=new T.MeshStandardMaterial({name:'Sword_case_velvet',color:0x5e0812,emissive:0x2a0308,emissiveIntensity:.6,roughness:1});
@@ -79,7 +82,7 @@ export function createSwordCase(ship){
  {const len=top-.352-GLASS,beam=new T.CylinderGeometry(.03,.3,len,32,1,true);beam.scale(2.5,1,1);
   add('Sword_case_lamp_beam',beam,new T.MeshBasicMaterial({name:'Sword_case_lamp_beam',color:0xffdc9a,transparent:true,opacity:.06,depthWrite:false,side:T.DoubleSide,toneMapped:false}),[0,GLASS+len/2,0]);}
  // Solid as one plain box, too tall to step onto.
- const solid=new T.Group();solid.name='Sword_case_colliders';
- {const o=new T.Mesh(new T.BoxGeometry(L+.02,GLASS+.02,D+.02));o.position.set(AT.x,FLOOR+(GLASS+.02)/2,AT.z);solid.add(o);}
+ placeObject(group,'sword-case');const solid=new T.Group();solid.name='Sword_case_colliders';
+ {const o=new T.Mesh(new T.BoxGeometry(L+.02,GLASS+.02,D+.02));o.position.set(AT.x,FLOOR+(GLASS+.02)/2,AT.z);solid.add(o);}placeObject(solid,'sword-case');
  return {group,solid};
 }

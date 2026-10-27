@@ -1,4 +1,7 @@
+import {roomObject} from '../plan/rooms.js';
+import {walkCanvas} from './canvas.js';
 import * as T from 'three';
+import {placedV1,placeObject} from '../plan/placements.js';
 
 // Deck 20's Mission control on foot: a round holographic table stands in the open floor between the two rows of flight
 // consoles. Above its glass top a green hologram plots Leo's transfer from Earth to Mars round a small sun, with the
@@ -7,7 +10,7 @@ import * as T from 'three';
 // Room (Area_d20-mission-2, ship frame): x -5..23, z -33..-9, floor y 36.3; the consoles stand at x 1/9/17, z -27/-16
 // with their chairs on the +z side, which leaves z -25.4..-16.5 clear down the middle.
 const ROOM='Area_d20-mission-2';
-const FLOOR=36.3,AT={x:9,z:-21},R=1.3,TOP=.9,HOLO=1.22,NEAR=30;
+const [ax,FLOOR,az]=placedV1('mission-holo'),AT={x:ax,z:az},R=1.3,TOP=.9,HOLO=1.22,NEAR=30;
 const GREEN=0x1fe86f,TEAL=0x5fd4e6,FONT='"JetBrains Mono", ui-monospace, monospace';
 // Normal blending, not additive: in the room's bright light an additive glow washes every colour out to white.
 // The plot in table metres: Earth's and Mars's orbits, and the half-ellipse transfer between them.
@@ -32,9 +35,9 @@ function paintFace(c){
 }
 
 function label(text,color){
- const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');
+ const c=walkCanvas();c.width=256;c.height=64;const x=c.getContext('2d');
  const draw=()=>{x.clearRect(0,0,256,64);x.font=`600 30px ${FONT}`;x.textAlign='center';x.textBaseline='middle';x.lineWidth=7;x.strokeStyle='rgba(4,24,18,.85)';x.strokeText(text,128,32);x.fillStyle=color;x.fillText(text,128,32);map.needsUpdate=true;};
- const map=new T.CanvasTexture(c);map.colorSpace=T.SRGBColorSpace;draw();document.fonts?.ready.then(draw);
+ const map=new T.CanvasTexture(c);map.colorSpace=T.SRGBColorSpace;draw();globalThis.document?.fonts?.ready.then(draw);
  const s=new T.Sprite(new T.SpriteMaterial({map,transparent:true,opacity:.9,depthWrite:false,toneMapped:false}));s.scale.set(.42,.105,1);return s;
 }
 
@@ -46,7 +49,7 @@ function planet(r,color,{wire=color}={}){
 }
 
 export function createMissionHolo(ship,{anisotropy=8,still=false}={}){
- if(!ship.root.getObjectByName(ROOM))return null;
+ if(!roomObject(ship,ROOM))return null;
  // The group stands at floor height so it joins Deck 20's band; its pieces are placed relative to the table's foot.
  const group=new T.Group();group.name='Mission_holo_table';group.position.set(AT.x,FLOOR,AT.z);
  const metal=new T.MeshStandardMaterial({color:0x26343c,roughness:.45,metalness:.6}),trim=new T.MeshStandardMaterial({color:0x8fa3ab,roughness:.35,metalness:.8});
@@ -58,8 +61,8 @@ export function createMissionHolo(ship,{anisotropy=8,still=false}={}){
  add(new T.TorusGeometry(R-.06,.014,8,96),glow(GREEN,.9),TOP+.012).rotation.x=Math.PI/2;
  add(new T.TorusGeometry(.95,.02,8,72),glow(TEAL,.7),.3).rotation.x=Math.PI/2;
  // The emitter face, lit from within under a smoked glass top.
- {const canvas=document.createElement('canvas');canvas.width=canvas.height=1024;const map=new T.CanvasTexture(canvas);map.colorSpace=T.SRGBColorSpace;map.anisotropy=anisotropy;
-  const draw=()=>{paintFace(canvas.getContext('2d'));map.needsUpdate=true;};draw();document.fonts?.ready.then(draw);
+ {const canvas=walkCanvas();canvas.width=canvas.height=1024;const map=new T.CanvasTexture(canvas);map.colorSpace=T.SRGBColorSpace;map.anisotropy=anisotropy;
+  const draw=()=>{paintFace(canvas.getContext('2d'));map.needsUpdate=true;};draw();globalThis.document?.fonts?.ready.then(draw);
   add(new T.CircleGeometry(R-.07,96),new T.MeshBasicMaterial({map,transparent:true,depthWrite:false,toneMapped:false}),TOP+.006).rotation.x=-Math.PI/2;
   add(new T.CircleGeometry(R-.04,96),new T.MeshStandardMaterial({color:0x0b1a1c,transparent:true,opacity:.35,roughness:.05,metalness:.3,depthWrite:false}),TOP+.014).rotation.x=-Math.PI/2;}
  // A faint beam rising from the glass to the plot.
@@ -102,9 +105,9 @@ export function createMissionHolo(ship,{anisotropy=8,still=false}={}){
  // Rings of light scan up from the glass now and then.
  const scans=[0,.5].map(s=>{const o=new T.Mesh(new T.TorusGeometry(R-.12,.006,6,96),glow(GREEN,.6));o.rotation.x=Math.PI/2;group.add(o);return {o,s};});
 
- const solid=new T.Group();solid.name='Mission_holo_colliders';
- {const o=new T.Mesh(new T.CylinderGeometry(R,R,TOP,16));o.position.set(AT.x,FLOOR+TOP/2,AT.z);solid.add(o);}
- let clock=0,leoT=0;const here=new T.Vector3(AT.x,FLOOR+1,AT.z),p=new T.Vector3(),q=new T.Vector3();
+ placeObject(group,'mission-holo');const solid=new T.Group();solid.name='Mission_holo_colliders';
+ {const o=new T.Mesh(new T.CylinderGeometry(R,R,TOP,16));o.position.set(AT.x,FLOOR+TOP/2,AT.z);solid.add(o);}placeObject(solid,'mission-holo');
+ let clock=0,leoT=0;const here=group.localToWorld(new T.Vector3(0,1,0)),p=new T.Vector3(),q=new T.Vector3();
  const place=()=>{
   const t=leoT%1;leo.position.copy(course(t));q.copy(course(Math.min(t+.01,1))).sub(course(Math.max(t-.01,0))).normalize();
   leo.rotation.set(0,Math.atan2(-q.z,q.x),0);

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {anchorObject,anchoredPoint} from '../plan/rooms.js';
 import {CROWN} from '../fin-crown.js';
 import {shapePoint} from '../concept-shape.js';
 
@@ -19,7 +20,7 @@ export const COMICS=[
  {name:'The_Outpost',title:'The Outpost',where:'Crown lounge',pages:['the-outpost-1.jpg','the-outpost-2.jpg','the-outpost-3.jpg'],size:[1073,1600],at:[-214.05,CROWN.floor+.72,8.5],top:[.2,0,1],reach:1.1},
  // One Last Rodeo, a 26 cm comic stood face out on the middle shelf of the Deck 17 reading bookcase (observation-finish.js),
  // its foot at the shelf's front edge so it leans back against the book spines.
- {name:'One_Last_Rodeo',title:'One Last Rodeo',where:'Deck 17 reading shelves',pages:['one-last-rodeo-1.jpg','one-last-rodeo-2.jpg','one-last-rodeo-3.jpg'],size:[1073,1600],floor:26.3,height:.26,at:[171.27,26.3+.8925,24.6],face:[1,0,0]},
+ {room:'observation-lounge',name:'One_Last_Rodeo',title:'One Last Rodeo',where:'Deck 17 reading shelves',pages:['one-last-rodeo-1.jpg','one-last-rodeo-2.jpg','one-last-rodeo-3.jpg'],size:[1073,1600],floor:26.3,height:.26,at:[171.27,26.3+.8925,24.6],face:[1,0,0]},
 ];
 const NEAR=30,REACH=1.7,BOOK={height:.32,thick:.012},LEAN=.08;
 
@@ -39,10 +40,10 @@ export function createComics({urls={},anisotropy=1}={}){
   }else{book.position.y=y-floor+BOOK.thick/2;book.rotation.y=Math.atan2(-c.top[0],-c.top[2]);}
   // Its origin on the floor, so main.js files it with that deck's band.
   const group=new T.Group();group.name='Comic_book_'+c.name;group.position.set(x,floor,z);group.add(book);
-  return {c,group,cover,floor,spot:new T.Vector3(x,y,z),url:urls[c.pages[0]],loading:false};
+  if(c.room)anchorObject(group,c.room);return {c,group,cover,floor,spot:new T.Vector3(...(c.room?anchoredPoint(c.room,[x,y,z]):[x,y,z])),url:urls[c.pages[0]],loading:false};
  });
  return {
-  groups:books.map(b=>b.group),
+  groups:books.map(b=>b.group),targets:books.map(b=>({name:b.c.name,at:b.spot,room:b.c.room||'crown'})),
   // Called with the walker's position a few times a second: start loading any cover now near.
   update(at){
    for(const b of books){

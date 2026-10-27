@@ -1,4 +1,6 @@
 import * as T from 'three';
+import {placedV1} from '../plan/placements.js';
+import {toWorld,toLocal,anchoredPoint,hasFrameOverride,deltaMatrix} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
@@ -49,7 +51,7 @@ const GARDEN_BEDS=[[-9,-7],[0,-7],[-9,7],[0,7]];
 // dressing: no walker stops on them (nor jumps into the sign).
 const DRESSING=new Set(['Atrium_pillow','Cat_tree_branch','Atrium_garden_branch','Atrium_shelf_bracket','Atrium_basket','Atrium_trellis','Atrium_hanging_sign']);
 // Where the room frame's origin is in the ship (the hall's floor; the garden's is 4 m up).
-const ROOM={x:-115,y:-35.7,z:-38};
+const [rx,ry,rz]=placedV1('arrival-room'),ROOM={x:rx,y:ry,z:rz};
 
 // A seeded random sequence, so the planting is the same on every visit.
 function random(seed){let s=seed>>>0;return ()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
@@ -65,11 +67,11 @@ const platformAt=([t,y])=>[TREE.x+Math.cos(t)*TREE.reach,y,TREE.z+Math.sin(t)*TR
 // bridge), and where the balustrade runs, as points `step` apart.
 export function openingPlan(step=.25){
  const {x:cx,a,b,rail}=ATRIUM,[px,,pz]=platformAt(TREE.platforms.at(-1)),n=Math.ceil(2*Math.PI*Math.max(a,b)/step),rails=[];
- for(let i=0;i<n;i++){const [x,z]=edgeAt(i/n*Math.PI*2,rail);if(!inGap(x,z))rails.push([ROOM.x+x,ROOM.z+z]);}
+ for(let i=0;i<n;i++){const [x,z]=edgeAt(i/n*Math.PI*2,rail);if(!inGap(x,z))rails.push((([x,,z])=>[x,z])(toWorld('arrival-assembly',[x,UPPER,z])));}
  return {deck:3,rail:rails,
-  open:(x,z)=>((x-ROOM.x-cx)/a)**2+((z-ROOM.z)/b)**2<1,
-  footing:(x,z)=>{x-=ROOM.x;z-=ROOM.z;return Math.hypot(x-px,z-pz)<TREE.radius||Math.abs(x-TREE.x)<.6&&z>pz;},
-  bounds:[ROOM.x+cx-a,ROOM.x+cx+a,ROOM.z-b,ROOM.z+b]};
+  open:(x,z)=>{const [u,,v]=toLocal('arrival-assembly',[x,ROOM.y+UPPER,z]);return ((u-cx)/a)**2+(v/b)**2<1;},
+  footing:(x,z)=>{[x,,z]=toLocal('arrival-assembly',[x,ROOM.y+UPPER,z]);return Math.hypot(x-px,z-pz)<TREE.radius||Math.abs(x-TREE.x)<.6&&z>pz;},
+  bounds:hasFrameOverride('arrival-assembly')?(()=>{const p=[[-a,-b],[a,-b],[a,b],[-a,b]].map(([x,z])=>toWorld('arrival-assembly',[cx+x,UPPER,z]));return [Math.min(...p.map(q=>q[0])),Math.max(...p.map(q=>q[0])),Math.min(...p.map(q=>q[2])),Math.max(...p.map(q=>q[2]))];})():[ROOM.x+cx-a,ROOM.x+cx+a,ROOM.z-b,ROOM.z+b]};
 }
 
 export function openArrivalAtrium(ship){
@@ -105,6 +107,7 @@ export function openArrivalAtrium(ship){
  // way to the grow-light panel.
  hall.updateWorldMatrix(true,false);const O=new T.Vector3().setFromMatrixPosition(hall.matrixWorld);
  const {x:cx,a,b,margin,rail}=ATRIUM,A=a+margin,B=b+margin;
+ const slabs=[];if(hasFrameOverride('arrival-assembly'))ship.inside.traverse(o=>{if(o.name==='Deck_slab')slabs.push([o,o.geometry]);});
  const region=(y0,y1)=>new T.Box3(new T.Vector3(O.x+cx-A,O.y+y0,O.z-B),new T.Vector3(O.x+cx+A,O.y+y1,O.z+B));
  cutOut(ship.inside,region(CEILING-.2,UPPER+.1));
  cutOut(ship.inside,region(TOP-.1,TOP-.005),o=>o.name==='Ceiling_light');
@@ -332,6 +335,7 @@ export function openArrivalAtrium(ship){
 
  for(const {name,material,list} of parts.values()){const o=own(name,material,mergeGeometries(list));if(DRESSING.has(name))o.userData.noCollide=true;}
  for(const [where,list] of Object.entries(greenery))if(list.length)own('Atrium_foliage_'+where,M.foliage,mergeGeometries(list));
+ if(slabs.length){for(const [o,g] of slabs)o.geometry=g;cutOut(ship.inside,region(CEILING-.2,UPPER+.1),o=>o.name==='Deck_slab',deltaMatrix('arrival-assembly').invert());}
  return true;
 }
 

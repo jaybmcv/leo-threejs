@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {anchorObject} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {serviceRoutes} from '../service-circulation.js';
 import {DECKS,CABINS} from '../model.js';
@@ -96,7 +97,7 @@ export function corridorTrim(parent,{inside,partitions=[]}={}){
  const draw=(lists,y)=>{for(const [list,material] of lists){
   if(!list.length)continue;
   const o=new T.Mesh(mergeGeometries(list),material);o.name=material.name;o.position.y=y;o.receiveShadow=true;
-  list.forEach(g=>g.dispose());parent.add(o);
+  list.forEach(g=>g.dispose());anchorObject(o,'circulation-'+(Math.round((y+39.7)/4)+1));parent.add(o);
  }};
  const kitLists=kit=>Object.entries(kit).map(([m,list])=>[list,KIT_MATERIALS[m]]);
  for(let deck=1;deck<=20;deck++){

@@ -1,11 +1,12 @@
 import * as T from 'three';
+import {toWorld} from '../plan/rooms.js';
 import {BODY} from './collision.js';
 
 // Big neon balls of yarn to push about: the pink one in a corner of the Deck 2 arrival hall, and one of another neon
 // colour in each of six common areas. Walking into one shoves it ahead of the walker; it rolls, slows on the floor,
 // bounces off walls and furniture and drops down stairs. Lost below the decks, or on a respawn, it goes back home.
 // Each visitor has their own; Leo live does not share them.
-export const YARN={home:[-139.9,-35.7,-22.1],color:0xff3fb4,radius:.55,kick:1.15,roll:1.6,bounce:.4,gravity:22};
+export const YARN={home:toWorld('d02-arrival-1',[-24.9,0,15.9]),color:0xff3fb4,radius:.55,kick:1.15,roll:1.6,bounce:.4,gravity:22};
 // The others sit a few metres in from where the "Go to" menu lands (places.js), by place name.
 export const YARN_SPOTS=[
  {place:'Voyage library',offset:[4,0,5],color:0x7dff3f},

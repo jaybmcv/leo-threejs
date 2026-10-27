@@ -1,4 +1,6 @@
+import {roomObject} from '../plan/rooms.js';
 import * as T from 'three';
+import {walkCanvas} from './canvas.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
 // The Deck 16 community theatre as a cinema (first stage): purple drapes round the walls under a pelmet with a blue
@@ -48,7 +50,7 @@ function strip([a,b,n],y0,y1,out,deep){
  return g;
 }
 function canvasTexture(w,h,paint,repeat){
- const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;paint(canvas.getContext('2d'),w,h);
+ const canvas=walkCanvas();canvas.width=w;canvas.height=h;paint(canvas.getContext('2d'),w,h);
  const t=new T.CanvasTexture(canvas);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;
  if(repeat){t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(...repeat);}
  return t;
@@ -89,14 +91,14 @@ function plane(flip,y,material,uv){
 // The room's attendant serves at the concession stand (concession.js): inside the L, between the popcorn case and the
 // corner, facing the room over the counter. Called before the colliders are built, so it is solid where it stands.
 export function placeAttendant(ship){
- const room=ship.root.getObjectByName(ROOM),cat=room?.getObjectByName('Resident_scale_1_75m');if(!cat)return;
+ const room=roomObject(ship,ROOM),cat=room?.getObjectByName('Resident_scale_1_75m');if(!cat)return;
  cat.position.set(...SERVER);cat.rotation.y=Math.PI/2;cat.updateMatrix();cat.updateMatrixWorld(true);
 }
 
 // Dress the theatre in `ship` before it is baked for walking. Returns the room group (draw it with its deck band) and an
 // update to call a few times a second with the walker's position, which starts and stops the film.
 export function createTheatre(ship,{url,anisotropy=1}={}){
- const room=ship.root.getObjectByName(ROOM);if(!room)return null;
+ const room=roomObject(ship,ROOM);if(!room)return null;
  // The blue backdrop panel (and its painted-on graphics, the room's only ones) and the plain ceiling strips and aisle lines give way to the cinema's own.
  const title=[];
  room.traverse(o=>{
