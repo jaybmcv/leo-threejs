@@ -90,6 +90,13 @@ export function spotIndex(spots){
    }
    return best;
   },
+  // The hammock a body lying at p is in (main.js settle puts it half a body from the spot, toward the feet), or null.
+  // Others aboard are only sent that they lie, so this is how their page knows a hammock from a bed (remotes.js).
+  hammockAt(p,reach=1.2){
+   for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)for(const s of grid.get(`${Math.floor(p.x/3)+i},${Math.floor(p.z/3)+j}`)||[])
+    if(s.hammock&&Math.abs(s.height+.13-p.y)<.4&&Math.hypot(s.point.x-p.x,s.point.z-p.z)<reach)return s;
+   return null;
+  },
   count:spots.length,
  };
 }
