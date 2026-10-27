@@ -51,7 +51,7 @@ import {createConcession} from './concession.js';
 import {stripProvisions,createProvisions} from './provisions.js';
 import {createKittens,KITTEN_POSE_NAMES} from './kittens.js';
 import {createAtriumKittens} from './arrival-atrium.js';
-import {stripBlossomBed,createBlossomGarden} from './blossom.js';
+import {prepareBlossomBed,createBlossomGarden} from './blossom.js';
 import {createDiningRobots} from './dining-robots.js';
 import {createFinCasing} from './fin-casing.js';
 import {createInvasion} from './invasion/game.js';
@@ -182,8 +182,9 @@ async function buildShip(){
  prepareExteriorForWalking(ship);
  // Refrigerated provisions loses its shared locker cabinets before the colliders see them (provisions.js).
  stripProvisions(ship);
- // The Deck 17 commons' aft planter loses its green tree and shrubs for the cherry blossom garden (blossom.js).
- stripBlossomBed(ship);
+ // The Deck 17 commons' aft planter loses its green tree and shrubs for the cherry blossom garden, and a corner for its
+ // pond, and gains the bench under the tree (blossom.js).
+ prepareBlossomBed(ship);
  // The theatre's attendant moves behind the concession counter (theatre.js) before the walls are fitted.
  placeAttendant(ship);
  // The Deck 16 training room's briefing furniture gives way to the gaming lounge's (gaming-lounge.js), solid and sittable.
@@ -211,7 +212,7 @@ async function buildShip(){
  kittens=createKittens(ship,cosmoKit);if(kittens)colliders.addStatic(kittens.solid,()=>true);
  // Communal dining's three serving robots (dining-robots.js): solid as plain boxes.
  diningRobots=createDiningRobots(ship);if(diningRobots)colliders.addStatic(diningRobots.solid,()=>true);
- // The cherry blossom garden (blossom.js): its trunk solid.
+ // The cherry blossom garden (blossom.js): its trunk, bridge and pond edges solid.
  blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
  // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
  jaguarGate=createJaguarGate();colliders.addStatic(jaguarGate.solid,()=>true);
@@ -567,7 +568,7 @@ renderer.setAnimationLoop(()=>{
  halloween?.update(dt,camera.getWorldPosition(eye),ambience.on);
  gaming?.update(dt,camera.getWorldPosition(eye),p);
  provisions?.update(dt,bodies);
- blossom?.update(dt,p);
+ blossom?.update(dt,p,ambience.on);
  missionHolo?.update(dt,p);
  marks?.update(camera,p,now);
  if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);
