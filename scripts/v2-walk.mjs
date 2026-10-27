@@ -1,3 +1,5 @@
+import {walkBuildIdentity,WALK_REPORT_VERSION} from './v2-walk-identity.mjs';
+import {classifyRoomDrops} from './v2-walk-policy.mjs';
 import phase2Baseline from '../src/plan/phase2-walk-baseline.json' with {type:'json'};
 import fs from 'node:fs/promises';
 import * as T from 'three';
@@ -7,7 +9,7 @@ const SHIP_AREAS=[...layout.rooms,...layout.fixedRooms].filter(r=>!r.aggregate);
 import {cabinPlacements} from '../src/walk/world.js';
 import {BODY,bandOf} from '../src/walk/collision.js';
 import {LIFTS,carTriangles} from '../src/walk/lifts.js';
-import {toWorld} from '../src/plan/rooms.js';
+import {toWorld,objectRoom} from '../src/plan/rooms.js';
 import {contains} from '../src/plan/geometry-v2.js';
 import {findRestSpots,solidSpots} from '../src/walk/rest.js';
 import {preparedV2} from './v2-world.mjs';
@@ -17,6 +19,7 @@ import {preparedV2} from './v2-world.mjs';
 // lift (a car waits at each stop), and off every edge it can walk over (a fall lands wherever the floor below is).
 // Then check that every room, cabin, lift stop, seat and bed is reachable and that
 // no walkable spot is open to space. About ten minutes; `npm run check:walk`.
+const buildIdentity=await walkBuildIdentity();
 const t0=Date.now(),log=(...a)=>console.log(((Date.now()-t0)/1000).toFixed(0)+'s',...a);
 const {ship,prepared,plan,image}=await preparedV2({map:!!process.env.REPLAN});if(process.env.REPLAN){plan.shells=layout.rooms.filter(r=>!r.aggregate).map(r=>({id:r.id,deck:r.deck,polygon:r.polygon,door:r.door,fittingDoor:r.fittingDoor}));await fs.writeFile('output/leo-interior-v02/walk-plan.json',JSON.stringify(plan));await fs.writeFile('output/leo-interior-v02/walk-map.png',image);}
 // The partitions, railings and colliders exactly as the page has them (scripts/walk-plan.mjs).
@@ -116,7 +119,10 @@ const rampReach=[132,136,140,146,150,160,170,180,190].map(x=>{const y=24.3+Math.
 const fallBreakdown={byHeight:Object.fromEntries([['.4-1m',.4,1],['1-4m',1,4],['4-12m',4,12],['12m+',12,Infinity]].map(([k,a,b])=>[k,fallEvents.filter(f=>f.drop>a&&f.drop<=b).length])),byCategory:Object.fromEntries(['atrium/void-edge','terrace/bridge','stair-side','ramp','room-feature','other'].map(k=>[k,{attempts:fallEvents.filter(f=>f.category===k).length,over1m:fallEvents.filter(f=>f.category===k&&f.drop>1).length}]))};
 const safeCabins=CABINS.filter(c=>reached(c.x,c.y,c.z,.7,.6,.6,true)).length,safeRooms=rooms.filter(r=>r.safeReached>0).length;let safeStops=0;for(const l of LIFTS)for(const s of l.stops){const d=s.door||l.door,f=d.axis==='z'?[0,d.sign]:[d.sign,0],h=(d.axis==='z'?l.car.depth:l.car.width)/2;if(reached(l.car.x+f[0]*(h+1),s.y,l.car.z+f[1]*(h+1),.8,.3,.3,true))safeStops++;}if(safeStops!==stopCount)problems.push('lift stops without falling: '+safeStops+'/'+stopCount);if(safeRooms!==rooms.length)problems.push('rooms without falling: '+safeRooms+'/'+rooms.length);
 const guardGaps=fallEvents.filter(f=>f.drop>1&&['atrium/void-edge','terrace/bridge','stair-side','ramp'].includes(f.category));if(guardGaps.length&&!process.env.FALL_BASELINE)problems.push(guardGaps.length+' unguarded drops over 1 m');if(safeCabins!==CABINS.length)problems.push('cabins reachable without falling: '+safeCabins);
-const report={phase2Baseline,fallMetrics:{landings:falls,transitions:fallEvents.length,guardTransitionsOver1m:guardGaps.length,method:"All reachable step-off transitions; no-fall flood first, then fall-only positions. Phase 2 reference retains its original landing counter."},fallBreakdown,fallEvents,guardGaps,safeReach:{positions:safeCount,cabins:safeCabins,rooms:safeRooms,liftStops:safeStops},rampReach,status:problems.length?'FAIL':'PASS',walker:{height:H,width:2*R,step:STEP},positions:X.length,falls,voidFalls,voids,railings:{count:rails.length,metres:Math.round(rails.reduce((s,r)=>s+r[3]-r[2],0))},walkableM2ByDeck:Object.fromEntries([...area].sort((a,b)=>a[0]-b[0]).map(([b,a])=>[b,Math.round(a)])),
+const supports=[];ship.inside.updateMatrixWorld(true);ship.inside.traverse(o=>{if(!o.isMesh||!['Soft_back','Garden_bench_back'].includes(o.name))return;const room=objectRoom(o);if(!['observation-lounge','commons-10'].includes(room))return;const b=new T.Box3().setFromObject(o,true);supports.push({room,name:o.name,top:b.max.y,min:b.min.toArray(),max:b.max.toArray()});});
+const {roomFeatureDrops,roomFeatureViolations}=classifyRoomDrops(fallEvents,layout,{supports});if(roomFeatureViolations.length)problems.push(roomFeatureViolations.length+' unapproved room-feature drops over 1 m');
+if((await walkBuildIdentity()).hash!==buildIdentity.hash)problems.push('Build changed during walk check; rerun check:walk');
+const report={reportVersion:WALK_REPORT_VERSION,buildIdentity,roomFeatureDrops,roomFeatureViolations,phase2Baseline,fallMetrics:{landings:falls,transitions:fallEvents.length,guardTransitionsOver1m:guardGaps.length,method:"All reachable step-off transitions; no-fall flood first, then fall-only positions. Phase 2 reference retains its original landing counter."},fallBreakdown,fallEvents,guardGaps,safeReach:{positions:safeCount,cabins:safeCabins,rooms:safeRooms,liftStops:safeStops},rampReach,status:problems.length?'FAIL':'PASS',walker:{height:H,width:2*R,step:STEP},positions:X.length,falls,voidFalls,voids,railings:{count:rails.length,metres:Math.round(rails.reduce((s,r)=>s+r[3]-r[2],0))},walkableM2ByDeck:Object.fromEntries([...area].sort((a,b)=>a[0]-b[0]).map(([b,a])=>[b,Math.round(a)])),
  rooms:{total:rooms.length,below80:rooms.filter(r=>!r.samples||r.reached/r.samples<.8).length},cabins:`${cabins}/${CABINS.length}`,missedCabins:missedCabins.slice(0,20),liftStops:`${stops}/${stopCount}`,
  cabinChairs:{total:cabinChairs.length,usable:usableCabinChairs},berths:{total:berthSpots.length,usable:usableBerths},seatsAndBeds:{spots:spots.length,usable,seats:spots.filter(s=>s.kind==='sit').length,beds:spots.filter(s=>s.kind==='lie').length,unusable:[...unusable].slice(0,40)},openToSpace:open,openAt:openAt.slice(0,20),problems};
 await fs.writeFile('output/leo-interior-v02/walk-report.json',JSON.stringify(report,null,2));

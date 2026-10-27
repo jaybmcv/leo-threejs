@@ -1,3 +1,4 @@
+import {buildGardenGuards,galleryHoles} from './garden-guards.js';
 import {LIFTS} from '../walk/lifts.js';
 import {cutOut} from '../cut-out.js';
 import {rectangle} from '../plan/geometry-v2.js';
@@ -52,13 +53,13 @@ export function fitV2Structure(ship){
    for(const [aa,bb] of segments)wall(g,aa,bb,r.y+s.rise,s.height,r.outer||r.kind==='garden'?glass:lining);
    for(const d of doors)if(entrySegments(a,b,d.center,d.width).length!==1&&d.center[1]+2.5<r.y+s.rise+s.height){const upper=Math.max(r.y+s.rise,d.center[1]+2.5);const len=Math.hypot(b[0]-a[0],b[1]-a[1]),u=(b[0]-a[0])/len,v=(b[1]-a[1])/len;wall(g,[d.center[0]-u*d.width/2,d.center[2]-v*d.width/2],[d.center[0]+u*d.width/2,d.center[2]+v*d.width/2],upper,r.y+s.rise+s.height-upper,glass);}
   }
-  if(r.components){for(const o of [...(r.components.galleries||[]),...(r.components.links||[]),...(r.components.landings||[])]){const holes=(r.components.stairs||[]).filter(t=>t.center[1]<=o.center[1]+.02&&t.center[1]>o.center[1]-2.4).map(t=>[[t.center[0]-t.size[0]/2-.08,t.center[2]-t.size[2]/2-.08],[t.center[0]+t.size[0]/2+.08,t.center[2]-t.size[2]/2-.08],[t.center[0]+t.size[0]/2+.08,t.center[2]+t.size[2]/2+.08],[t.center[0]-t.size[0]/2-.08,t.center[2]+t.size[2]/2+.08]]);mesh(g,'V2_garden_gallery',polygonGeometry(o.polygon,holes,o.center[1],o.size[1]),floor);}
+  if(r.components){for(const o of [...(r.components.galleries||[]),...(r.components.links||[]),...(r.components.landings||[])]){const holes=galleryHoles(r,o);mesh(g,'V2_garden_gallery',polygonGeometry(o.polygon,holes,o.center[1],o.size[1]),floor);}
    // The plan's stair center.y is its finished tread elevation.
-   for(const o of r.components.stairs||[])box(g,'Gallery_stair',o.size,[o.center[0],o.center[1]-o.size[1]/2,o.center[2]],lining);
+   for(const o of r.components.stairs||[])box(g,'Gallery_stair',o.size,[o.center[0],o.center[1]-o.size[1]/2,o.center[2]],lining);buildGardenGuards(g,r,layout);
   }
  }
  const holeBounds=layout.decks.map(d=>d.slab.holes.map(h=>({...h,box:bounds(h.polygon)})));
- for(const c of layout.circulation.corridors){for(let i=1;i<c.points.length;i++){const a=c.points[i-1],b=c.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<.001)continue;const poly=rectangle((a[0]+b[0])/2,(a[1]+b[1])/2,len,c.width,-Math.atan2(b[1]-a[1],b[0]-a[0])),bb=bounds(poly),holes=holeBounds[c.deck-1].filter(h=>h.box.x0<bb.x1&&h.box.x1>bb.x0&&h.box.z0<bb.z1&&h.box.z1>bb.z0).map(h=>h.polygon);if(holes.length)mesh(structure,'V2_corridor_floor',polygonGeometry(poly,holes,layout.decks[c.deck-1].y+.008,.06),floor);else strip(structure,'V2_corridor_floor',a,b,layout.decks[c.deck-1].y+.008,c.width,.06,floor);}}
+ for(const c of layout.circulation.corridors){for(let i=1;i<c.points.length;i++){const a=c.points[i-1],b=c.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<.001)continue;const poly=rectangle((a[0]+b[0])/2,(a[1]+b[1])/2,len,c.width,-Math.atan2(b[1]-a[1],b[0]-a[0])),bb=bounds(poly),holes=[...layout.rooms.filter(r=>!r.aggregate&&Math.abs(r.y-layout.decks[c.deck-1].y)<.1&&r.polygon.length).map(r=>({polygon:r.polygon,box:bounds(r.polygon)})),...holeBounds[c.deck-1]].filter(h=>h.box.x0<bb.x1&&h.box.x1>bb.x0&&h.box.z0<bb.z1&&h.box.z1>bb.z0).map(h=>h.polygon);if(holes.length)mesh(structure,'V2_corridor_floor',polygonGeometry(poly,holes,layout.decks[c.deck-1].y+.008,.06),floor);else strip(structure,'V2_corridor_floor',a,b,layout.decks[c.deck-1].y+.008,c.width,.06,floor);}}
  for(const b of layout.circulation.bridges)mesh(structure,'V2_tower_bridge_floor',polygonGeometry(b.polygon,[],layout.decks[b.deck-1].y,.24),floor);
  for(const t of layout.circulation.towers)mesh(structure,'V2_tower_landing_floor',polygonGeometry(t.polygon,layout.decks[t.deck-1].openings.filter(o=>o.x0>120).map(o=>o.polygon),layout.decks[t.deck-1].y,.24),floor);
  for(const s of layout.circulation.stairs.filter(s=>s.wing!==undefined&&s.deck<15)){

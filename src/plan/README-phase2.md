@@ -5,8 +5,8 @@ The default is still layout 1. In PowerShell:
     $env:LEO_LAYOUT='2'
     npm run build
     npm run build:public
-    npm run check
     npm run check:walk
+    npm run check
     node scripts/serve-v2.mjs
 
 Review http://127.0.0.1:4182/ and walk.html locally. Remove the LEO_LAYOUT environment variable to return to v1. Selection is a build input; URL parameters cannot select the other world. Models are in output/leo-interior-v02 and public assets in dist-v2. Nothing is deployed.
@@ -43,8 +43,15 @@ The local GPU harness expects a dedicated Chrome debugging session on port 9333 
 
 ## Adapter cutover checklist
 
-Every selected build preflights these adapters. `node scripts/check-v2-adapters.mjs` also deletes every target in turn and tests aggregate diagnostics. All 45 targets must match; a missing target fails the build with its file and text. Line endings are normalized before matching. Fold each adapter into selected source at cutover:
+Every operation checks its source anchor; preflight accumulates every mismatch. Removed-target regressions cover all 59 adapters. Fold each line into selected source at cutover:
 
+- `src/hydro-nip-lounge.js` — prepend anchor: `import * as T from 'three';`.
+- `src/hydro-nip-lounge.js` — replace: `MAZE={x0:114,x1:120.5,z0:19,z1:33,top:35.2}`.
+- `src/hydro-nip-lounge.js` — replace: `CELLS={x0:114.1,z0:19.1`.
+- `src/hydro-nip-lounge.js` — replace: `TUBES=[{x:119.4,level:LEVELS[0],from:MAZE.z0,to:12},{x:118,level:LEVELS[1],from:MAZE.z1,to:42}]`.
+- `src/hydro-nip-lounge.js` — replace: `[[118.1,23.6,3.4,4.4,LEVELS[0]],[117.4,29.9,4.6,4.4,LEVELS[1]]])`.
+- `src/hydro-nip-lounge.js` — replace: `[[117,23.2,LEVELS[0]],[117,25.4,LEVELS[0]],[116.2,31.2,LEVELS[1]],[119.4,31.6,LEVELS[1]]].forEach`.
+- `src/hydro-nip-lounge.js` — replace: `at:[116.6,FLOOR+3.15,z0-.1]`.
 - `src/walk/collision.js` — replace: `function bvhOf(positions){`.
 - `src/walk/railings.js` — replace: `return rows.filter(r=>r[3]-r[2]>=.5);`.
 - `src/plan/rooms.js` — prepend anchor: `import * as T from 'three';`.
@@ -76,9 +83,13 @@ Every selected build preflights these adapters. `node scripts/check-v2-adapters.
 - `src/walk/main.js` — replace: `  if(t.kind==='call')`.
 - `src/walk/main.js` — replace: ` const b=booth.near(p)||comics.near(p);`.
 - `src/walk/main.js` — replace: `globalThis.__walk={registry,restSpots,`.
+- `src/walk/link.js` — prepend anchor: `// A link to a spot on the walk: walk.html?at=x,y,z&yaw=90&pitch=-10&view=first (ship metres, degrees). The page drops`.
+- `src/walk/link.js` — replace: `const room=spot.room||roomAt(spot.at,{legacy:true});`.
 - `src/walk/link.js` — replace: `LAYOUT_VERSION,roomAt,anchoredPoint,anchoredYaw`.
 - `src/walk/link.js` — replace: `at:room?anchoredPoint(room,spot.at):spot.at`.
 - `src/walk/link.js` — append anchor: `// A link to a spot on the walk: walk.html?at=x,y,z&yaw=90&pitch=-10&view=first (ship metres, degrees). The page drops`.
+- `src/walk/places.js` — prepend anchor: `import * as T from 'three';`.
+- `src/walk/places.js` — replace: `const y=hit.point.y;seg.start.set`.
 - `src/walk/places.js` — replace: `const room=anyFrameOverrides()?SHIP_AREAS.find(a=>a.id===roomAt(p.toArray()))`.
 - `src/walk/places.js` — prepend anchor: `import * as T from 'three';`.
 - `src/walk/places.js` — replace: `export const PLACES=`.
@@ -86,10 +97,14 @@ Every selected build preflights these adapters. `node scripts/check-v2-adapters.
 - `src/walk/hex-floor.js` — prepend anchor: `import * as T from 'three';`.
 - `src/walk/hex-floor.js` — splice start: `function hallways(){`.
 - `src/walk/hex-floor.js` — splice end: `export function createHexFloor`.
+- `src/walk/lounge-floor.js` — prepend anchor: `import * as T from 'three';`.
+- `src/walk/lounge-floor.js` — splice start: `// The promenade in front of the lounge, laid just over its own floor.`.
+- `src/walk/lounge-floor.js` — splice end: ` return {material,floors:found.length};`.
 - `src/walk/lounge-floor.js` — replace: `const FLOORS=/^(`.
 - `src/walk/lounge-floor.js` — replaceAll: `objectRoom(o)==='commons-1'`.
 - `src/walk/commons-hall.js` — replace: `export function openCommonsHall(ship){`.
 - `src/walk/windows.js` — replace: `/export function openWindows\(([^)]*)\)\{/`.
+
 ## Phase 3 cabin slice
 
 Cabins now use the v1 oak, navy felt, warm linen, brass, softened fixtures, seams and bezel style. Furniture is merged per template/material before instancing; collisions and rest spots use the unmerged authoring template through the same registry transforms. Twin/single, door side and space/atrium view select the template. The clear finished faces are 3.18 by 7.4 m. The 1.2 m split-glass entry opens automatically on approach; a 12 cm manifestation strip is centred at 1.25 m. Party walls are shared across the 3.3 m pitch. Space windows retain their 2.2 by 1.3 m aperture markers; hull cutting remains Phase 5. Atrium cabins have full-height glass and a glass Juliet guard.
@@ -101,3 +116,21 @@ The layout carries cabinIdMap and each cabin carries legacyIds. Nearest unused e
 Export-only exact geometry/material sharing and GPU instancing of repeated v2 boxes reduce the full-ship payload. Native walk culling still uses deck bands and nearest cabin instances. The public overview can load the furnished Deck 15 GLB, including its GPU instances. `v2-cabin-check.mjs` checks actual cushion support, full capsule aisles and wet-pod approaches, clear sight lanes and mapping completeness. Phase 3 evidence and the final report are under output/phase3.
 
 The current guard planner retains quarter-metre corner segments and requires a barrier at guard height before suppressing a pane. Wing-core reservations do not cut their own deck; only incoming return flights do. Fixed stair edges, the fin shaft and fin terrace ends are glazed too. V2 collision BVHs discard zero-area triangles, which otherwise act as invisible point obstacles. The full 2 m by 0.7 m flood keeps all thresholds and requires every cabin, berth and chair. The exact committed Phase 2 landing breakdown is pinned in phase2-walk-baseline.json; the new no-fall-first audit also inventories all step-off transitions.
+
+
+## Round 2 safety and report contracts
+
+The walk report is versioned and binds SHA-256 hashes of layout.json, walk-plan.json, all 11 GLBs, procedural plan/walk/v2 sources and the checker policy. Check rejects missing, old-format and other-build reports with an explicit instruction to run `LEO_LAYOUT=2 npm run check:walk`. Run build, build:public, check:walk, then check. `scripts/check-v2-round2.mjs` injects cabin/corridor/stair overlaps, stale reports and forbidden room falls and proves they are rejected. Cabin clear footprints must not overlap any cabin, corridor or stair; every door must meet its planned corridor threshold. All 5,000 v1 cabin links use cabinIdMap and land on the target cabin centre aisle, including the 80 shared targets.
+
+Room-feature falls over 1 m fail unless they match a named, measured support and land on that same room floor. No gallery, slab, guard, terrace or stair exception exists. Allow-list (unchanged v1 furniture only):
+
+- `observation-lounge / Soft_back`: at most 1.15 m drop and 1.2 m above that room floor; rounded chair backs in `src/lounge.js`, climbed via their cushions.
+- `commons-10 / Garden_bench_back`: at most 1.10 m drop and 1.1 m above that room floor; unchanged cherry-blossom bench back in `src/walk/blossom.js`.
+
+The broad garden holes retain glass guards around the actual union of gallery, link and landing floors, with side glass at each stair tread height. Old automatic guard rows inside gardens are replaced, preventing stair access to incorrectly crossing cap tops. Static view bands follow the camera rays again; cabin interiors keep their own narrow deck band and nearest-cabin ranking. The distant haze pass includes the atrium roof, so the main camera far plane does not expose stars. Wing labels are Port/Starboard Aster, Birch, Cedar, Dogwood and Elm, in aft-to-forward order.
+
+Round 2 also recesses the enclosed wet pod 0.4 m behind the glass entry, with an opaque bedroom-side automatic hinged door. The checker walks each of the 5,028 entry paths on the actual 0.35 m flood grid, with the unchanged capsule. Retained Haze Maze platforms/tube floors join the gallery guard union so community seating approaches stay clear. Safe go-to placement rejects exterior hull and guard caps, choosing actual interior floors instead. Native walk yaw 0 faces +Z; N05-124 is entered looking -Z at yaw 180 degrees.
+
+The retained Haze Maze now uses its scheduled rigid fitting position (0.25 m aft and 7 m inboard from its old v1 placement); the complete cell grid, shelf stairs, platforms, rugs, cushions, glass, mist, doors and sign move together. Its two tube floors end on the scheduled front/rear galleries. Source dimensions and community credit remain intact; the new checked source adapters derive the position/endpoints from the selected layout. This removes the old upper platform from the sloping pressure glazing and restores both upper cushion approaches.
+
+The v1 neon promenade finish is also re-anchored to the selected garden front and clipped against the actual slab holes. It is a visual finish, never a replacement floor/collider across the atrium. Three checker rays prove it remains on the promenade, stops at the room and leaves the atrium opening empty. The reported soft white stripe itself is a specular reflection in the unchanged acrylic material; the frozen baseline and final floor rays both show no corridor overlay at that location.
