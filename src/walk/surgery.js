@@ -50,7 +50,7 @@ function bed(fit,x,z,panel){
  const rbox=(w,h,d,r)=>new RoundedBoxGeometry(w,h,d,3,r);
  // The pedestal: a wide foot plate with its glow line, and a narrower column under the shell.
  add('Surgery_bed_plinth',rbox(.95,.08,1.7,.03),M.dark,[0,.04,0]);
- add('Surgery_bed_plinth_glow',new T.BoxGeometry(.97,.015,1.72),M.glow,[0,.088,0]).castShadow=false;
+ add('Surgery_bed_plinth_glow',new T.BoxGeometry(.97,.015,1.72),M.glow,[0,.03,0]).castShadow=false;
  add('Surgery_bed_column',rbox(.5,.34,1.1,.08),M.dark,[0,.25,0]);
  // The shell: a deep rounded tub, a glow band along each side and round the foot, raised a little at the head.
  add('Surgery_bed_shell',rbox(1.12,.22,2.24,.1),M.shell,[0,.52,0]);
