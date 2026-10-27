@@ -37,6 +37,12 @@ export const PAINTINGS=[
  // doorway (z -40 to -36) and centred on it, from near the floor (-23.7) to near the ceiling (-20.4). The corridor's end
  // wall at z -40 sets its width; it stands 17 cm out, in front of the wall's pipes, handrail and hatch.
  {name:'Orange_Haze_10',file:'orange-haze-10.jpg',size:[1600,1202],wall:[-148,-22.05,-38],facing:[1,0,0],fit:[3.62,3],floor:-23.7,off:.17},
+ // Orange Haze #15, by M.V. Orange Haze, in three parts: the outboard wall of the Deck 20 Captain's office (z 32.84),
+ // part 1 to part 3 from left to right as you face it, from just over the floor (36.3) to just under the ceiling (39.6).
+ // The middle part is centred on the wall (x 53); 20 cm of wall shows between the frames.
+ {name:'Orange_Haze_15_1',file:'orange-haze-15-1.jpg',size:[1250,1600],wall:[55.783,37.95,32.84],facing:[0,0,-1],fit:[2.4,2.95],floor:36.3},
+ {name:'Orange_Haze_15_2',file:'orange-haze-15-2.jpg',size:[1248,1600],wall:[53,37.95,32.84],facing:[0,0,-1],fit:[2.4,2.95],floor:36.3},
+ {name:'Orange_Haze_15_3',file:'orange-haze-15-3.jpg',size:[1245,1600],wall:[50.222,37.95,32.84],facing:[0,0,-1],fit:[2.4,2.95],floor:36.3},
 ];
 export const NEAR=45,FRAME={width:.14,depth:.08};
 // A painting's hung width and height: as large as its fit box allows at the image's proportions.
