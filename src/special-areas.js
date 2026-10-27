@@ -42,10 +42,9 @@ function kit(area){
       for(const side of [-1,1])box('Room_end_wall',[.16,h-.2,d],[x+side*(w/2-.08),y+(h-.2)/2,z],'lining',shell);
       box('Outboard_wall',[w,h-.2,.16],[x,y+(h-.2)/2,z-s*(d/2-.08)],'lining',shell);
       // Deck 7's engineering rooms stand right on the aft spine (x -273 to -132, special-circulation.js), so their entry
-      // walls are its side walls too: vision glass along them, except where Engineering control's status wall hangs on it.
-      // Deck 20's rooms sit back behind link corridors and stay solid.
+      // walls are its side walls too: vision glass along them. Deck 20's rooms sit back behind link corridors and stay solid.
       const wall=(name,size,p,glass)=>box(name,size,p,glass?'vision':'lining',shell),len=(w-4)/2;
-      for(const side of [-1,1]){const cx=x+side*(w+4)/4;glazedWall(wall,'Entry_wall',[len,h-.2,.16],[cx,y+(h-.2)/2,z+s*(d/2-.08)],area.deck===7&&area.kind!=='enginecontrol'?glassSpan(cx-len/2,cx+len/2,-273,-132):null);}
+      for(const side of [-1,1]){const cx=x+side*(w+4)/4;glazedWall(wall,'Entry_wall',[len,h-.2,.16],[cx,y+(h-.2)/2,z+s*(d/2-.08)],area.deck===7?glassSpan(cx-len/2,cx+len/2,-273,-132):null);}
       box('Entry_header',[4,h-2.6,.16],[x,y+2.6+(h-2.6)/2,z+s*(d/2-.08)],'navy',shell);
     }else{
       for(const side of [-1,1])box('Side_wall',[w,h-.2,.16],[x,y+(h-.2)/2,z+side*(d/2-.08)],'lining',shell);
@@ -227,8 +226,9 @@ function engineering(area,k){
     }
     for(const dz of [-11,11])pipe('Drive_feed_header',[x-15,y+1,z+dz],[x+15,y+1,z+dz],.35,'screen');
   }else if(area.kind==='enginecontrol'){
-    for(const dx of [-10,-3,4,11])for(const dz of [-6,6])console(x+dx,y,z+dz);
-    box('Propulsion_status_wall',[27,1.3,.12],[x,y+2,z-13.7],'screen');
+    // The status wall hangs on the outboard wall, so the spine looks in through the glass past the crew to it.
+    for(const dx of [-10,-3,4,11])for(const dz of [-6,6])console(x+dx,y,z+dz,Math.PI);
+    box('Propulsion_status_wall',[27,1.3,.12],[x,y+2,z+13.7],'screen');
   }else if(area.kind==='engineworkshop'){
     for(const dx of [-10,0,10])for(const dz of [-7,7]){
       round('Engine_workbench',[7,.95,1.8],[x+dx,y+.475,z+dz],'wood');
