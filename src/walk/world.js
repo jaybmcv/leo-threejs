@@ -6,6 +6,7 @@ import {LIFTS} from './lifts.js';
 import {cutOut} from '../cut-out.js';
 import {openCommonsHall} from './commons-hall.js';
 import {openArrivalAtrium} from './arrival-atrium.js';
+import {dressHydroponics} from './hydroponics.js';
 export {cutOut};
 
 // Leo's whole walkable interior, built into `ship` (createShip): every deck's fitted rooms and corridors, the ten
@@ -113,6 +114,8 @@ export function prepareExteriorForWalking(ship){
  openCommonsHall(ship);
  // The Deck 2 arrival hall becomes a garden atrium, open to the Deck 3 garden above (arrival-atrium.js).
  openArrivalAtrium(ship);
+ // The garden above it gets crops, trays, grow strips, feed lines and crop tabs (hydroponics.js), round its remaining racks.
+ dressHydroponics(ship);
  return dropped;
 }
 export function buildColliders(ship,{extra=[],filter=solid,into=new Colliders()}={}){
