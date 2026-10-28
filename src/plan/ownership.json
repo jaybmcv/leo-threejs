@@ -7441,7 +7441,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 64,
-      "signature": "54f0eea391e09c0614a530db94979b27fba38d79bb715500bd7f409441b9e5f4"
+      "signature": "0517b6cd42d31741c4821bb43c0ea36a604528eb80c3fb11e1c1d9912298893c"
     },
     {
       "source": "src/walk/sword-case.js",
