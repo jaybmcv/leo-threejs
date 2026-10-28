@@ -186,6 +186,8 @@ export function createPawPool({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
  function drawHud(now){
   const w=view.w;
   text('PAW POOL',18,16,22,C.orange,'left',800,FONT.display);text(screen==='play'||screen==='done'?'PRACTICE':'THE RECREATION HALL',18,44,11,C.dim);
+  // A visitor who is not signed in can still play, so say while playing that the time will not be kept.
+  if((screen==='play'||screen==='done')&&board.status==='guest')text('NOT SIGNED IN: TIMES NOT SAVED',18,62,10,C.orange);
   if(game&&screen!=='title'){text(clock(game.t*1000),w/2,12,30,C.text,'center',700);text(`${15-left(game)} OF 15 · ${game.shots} KICK${game.shots===1?'':'S'}`,w/2,48,11,C.dim,'center');}
   // The fifteen: full while on the table, faint once potted.
   if(game&&w>=980){const x0=w-84-15*20;for(let n=1;n<=15;n++){const b=game.balls[n];g2.save();g2.translate(x0+n*20,30);g2.scale(20/(2*R)*.8,20/(2*R)*.8);g2.globalAlpha=b.potted?.22:1;drawBall(0,0,n,0,0);g2.restore();}}
@@ -220,8 +222,8 @@ export function createPawPool({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
   text('RACK CLEARED',view.w/2,y+16,30,C.orange,'center',800,FONT.display);
   text(clock(game.t*1000),view.w/2,y+56,40,C.text,'center');text(`${game.shots} KICK${game.shots===1?'':'S'}`,view.w/2,y+102,12,C.dim,'center');
   const line=!result?'SAVING…':result.ok?(result.newBest?`NEW BEST! RANK ${result.rank||'-'}`:`YOUR BEST ${clock(result.best)} · RANK ${result.rank||'-'}`):
-   result.why==='sign-in'?'SIGN IN WITH DISCORD TO POST TIMES':result.why==='offline'?'OFFLINE: TIME NOT SAVED':'TIME NOT ACCEPTED';
-  text(line,view.w/2,y+122,13,result?.ok?C.teal:C.dim,'center');
+   result.why==='sign-in'?'NOT SAVED: SIGN IN WITH DISCORD':result.why==='offline'?'OFFLINE: TIME NOT SAVED':'TIME NOT ACCEPTED';
+  text(line,view.w/2,y+122,13,result?.ok?C.teal:result?C.orange:C.dim,'center');
   text('TOP 10 · SIGNED-IN PLAYERS',view.w/2,y+150,11,C.bronze,'center');boardLines(x+28,y+170,8,x+w-28);
   if((now/600|0)%2===0)text(touch?'TAP TO PLAY AGAIN':'SPACE OR CLICK TO PLAY AGAIN',view.w/2,y+h-28,14,C.orange,'center');
  }
