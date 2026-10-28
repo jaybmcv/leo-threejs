@@ -6723,7 +6723,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "a31902fc4111f793121e366996d916210915293b1090401f8d53c422008b7f5b"
+      "signature": "5870f9ded077aba6683e789771d545e065759e1482fe36b2ddd72e24b98afd8c"
     },
     {
       "source": "src/walk/hex-floor.js",
@@ -7100,8 +7100,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 34,
-      "signature": "25e97f4d98f2c94947081a5a89ff25daf2975ec0da0086a2f37f542028771429"
+      "placements": 35,
+      "signature": "744865beab8ca1658cc6f1430444f159893a1004f652db50ed198f8c206e8da8"
     },
     {
       "source": "src/walk/marks.js",
@@ -7533,6 +7533,22 @@
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 37,
       "signature": "ed25d19e90872a00e077a9b5d9c90fb7a36ef185ac4249253fcfe81eca70e004"
+    },
+    {
+      "source": "src/walk/transporter.js",
+      "rooms": [
+        "d01-logistics-6"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "MCT_",
+        "MCT_bays"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 39,
+      "signature": "d34868476f38aed7e269b5b914a8f1de0f63d8c3c355ee7a540929a8394e3822"
     },
     {
       "source": "src/walk/trim.js",

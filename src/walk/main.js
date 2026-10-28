@@ -71,6 +71,7 @@ import {createCommsDisplays} from './comms-displays.js';
 import {createHalloween} from './halloween.js';
 import {createHexFloor} from './hex-floor.js';
 import {createLoungeCompass} from './lounge-compass.js';
+import {createTransporters} from './transporter.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 import {createHelp} from './help.js';
 
@@ -252,6 +253,8 @@ async function buildShip(){
  if(swordCase)toBand(swordCase.group);
  if(halloween)toBand(halloween.group);
  toBand(hexFloor.group);
+ // Six Mars Cat Transporters parked in Deck 1's Freight control, to drive or ride in (transporter.js), drawn with Deck 1's band.
+ mct=createTransporters({colliders,lifts});for(const g of mct.groups)toBand(g);
  // The forward observation lounge's Mars-viewing compass, a flush inlay on its floor (lounge-compass.js), drawn with its band.
  {const compass=createLoungeCompass();if(compass)toBand(compass);}
  // The shared graffiti wall on the casing's main face (graffiti.js), drawn with Deck 19's band.
@@ -270,7 +273,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,lullaby=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,lullaby=null,mct=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -325,6 +328,7 @@ const actions={
   else if(t.kind==='packs'){closePanels();const w=$('mudwater-wordmark');if(mudwater.wordmark&&!w.src){w.src=mudwater.wordmark;w.hidden=false;}giveaway.open();$('mudwater-sheet').hidden=false;input.enabled=false;}
   else if(t.kind==='ball')enterBall();
   else if(t.kind==='ball-out')leaveBall();
+  else if(t.kind==='mct')boardCart(t);
   else if(t.kind==='graffiti'){closePanels();graffiti.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
  },
@@ -409,6 +413,13 @@ ball.mesh.position.copy(ballHome);scene.add(ball.mesh);
 function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());}
 // Out of the ball, Cosmo stands where it was and steps clear of it; it stays parked there.
 function leaveBall(){if(!inBall)return;inBall=false;controller.body=BODY;controller.stance='stand';ball.mesh.position.copy(controller.position);}
+// The Deck 1 transporters (transporter.js): into a cart's driver's seat, once Leo live agrees nobody else has it, or one of
+// its rear seats, with the camera turned the way the seat faces. A seat granted after a walk away is given back.
+function boardCart(t){if(t.seat==='driver'&&!mct.take(t.cart))return;intoSeat(t.cart,t.seat);}
+function intoSeat(c,seat){const s=mct.spot(c,seat);settle(s);follow.yaw=Math.atan2(s.facing.x,s.facing.z);}
+mct.granted=c=>{if(!resting&&!run&&Math.hypot(controller.position.x-c.pos.x,controller.position.z-c.pos.z)<4)intoSeat(c,'driver');else mct.park(c);};
+// Someone else has our cart now (Leo live gave it away while we were cut off): out of its seat.
+mct.lost=c=>{if(resting?.spot.mct?.cart===c&&resting.spot.mct.seat==='driver')standUp();};
 document.body.dataset.ready='1';
 let heading=follow.yaw;const safe=controller.position.clone(),finSafe=new T.Vector3(0,-1e3,0);
 // On the floor of one of the crown lift's fin landings (the gallery and the inspection platforms), inside the fin.
@@ -440,12 +451,12 @@ if(LIVE_URL){
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
   status:s=>{liveStatus=s;showAboard();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
-  welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();
+  welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();mct.apply(msg.mcts);
    // A server from before chat sends no chat: it stays hidden.
    chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);},
   // A line of chat: in the corner, and over the speaker's head.
   chat:line=>{chat.add(line);if(line.id!==live.id&&!chat.quiet)remotes.say(line.id,line.text);},said:r=>chat.refused(r.why),
-  poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();},
+  poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();mct.offline();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
   board:b=>(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
@@ -458,9 +469,12 @@ if(LIVE_URL){
   wall:w=>graffiti?.wall(w),stroke:s=>graffiti?.stroke(s),painted:r=>graffiti?.painted(r),
   // Paws Off's gym round on the treadmills: its countdown, start, runners out and results.
   gym:msg=>pawsOff?.round(msg),
+  // The Deck 1 transporters: who drives each cart, and where each is parked.
+  mcts:list=>mct.apply(list),
  },{pass:()=>me.pass?bestPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
+ mct.link({send:msg=>live.mct(msg),id:()=>live.id});
  $('ping').hidden=false;$('help-ping').hidden=false;
 }
 // The pose others see. Resting, the body is where the bed or seat put it, not where the controller stands.
@@ -480,7 +494,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,mudwater,changeLog,comics,paintings,missionHolo,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get gaming(){return gaming;},get provisions(){return provisions;},get blossom(){return blossom;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,mudwater,changeLog,comics,paintings,missionHolo,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get gaming(){return gaming;},get provisions(){return provisions;},get blossom(){return blossom;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -513,8 +527,11 @@ renderer.setAnimationLoop(()=>{
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
  if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
  if(emote&&(wish.lengthSq()>.01||k.jump))emote=null;
- // Moving off a seat or bed stands you up.
- if(resting&&resting.phase==='in'&&resting.t===1&&wish.lengthSq()>.1)standUp();
+ // Moving off a seat or bed stands you up; in a transporter's driver's seat the keys drive it instead (transporter.js),
+ // and the camera swings round behind it while it moves.
+ const cart=resting?.spot.mct,driving=cart?.seat==='driver'&&resting.phase==='in'&&resting.t===1;
+ if(driving){mct.drive(dt,k.y,k.x);if(Math.abs(cart.cart.speed)>.3&&!k.look.x)follow.yaw=dampAngle(follow.yaw,cart.cart.yaw,1.2,dt);}
+ else if(resting&&resting.phase==='in'&&resting.t===1&&wish.lengthSq()>.1)standUp();
  lifts.update(dt,controller);
  // A Paws Off run holds the walker on the treadmill (paws-off/game.js); the belts of others playing run too.
  run=pawsOff?.update(dt,remotes?[...remotes.remotes.values()].filter(r=>r.tgt?.playing).map(r=>r.cur):[])||null;
@@ -529,6 +546,8 @@ renderer.setAnimationLoop(()=>{
  // The parked ball is solid to walk into.
  if(!inBall&&!resting&&!run&&Math.abs(p.y-ball.mesh.position.y)<1.2){const b=ball.mesh.position,dx=p.x-b.x,dz=p.z-b.z,d=Math.hypot(dx,dz),reach=BALL.radius+BODY.radius;
   if(d<1e-4)p.x+=reach;else if(d<reach){p.x+=dx/d*(reach-d);p.z+=dz/d*(reach-d);}}
+ // So are the transporters, parked or moving.
+ if(!resting&&!run)mct.push(p,controller.body.radius);
  // Neither safety net keeps a lift car's floor to return to: the car may have gone by the time it is needed, leaving
  // only the shaft.
  const inCar=lifts.lifts.some(l=>lifts.inside(l,p));
@@ -547,6 +566,7 @@ renderer.setAnimationLoop(()=>{
  if(dt>0){turnRate=T.MathUtils.damp(turnRate,Math.atan2(Math.sin(heading-lastHeading),Math.cos(heading-lastHeading))/dt,10,dt);accel=T.MathUtils.damp(accel,(controller.speed-lastSpeed)/dt,10,dt);}
  lastHeading=heading;lastSpeed=controller.speed;
  let pose=null;
+ if(cart)followSeat(resting);
  if(resting)pose=restPose(dt);
  else if(run){heading=run.yaw;walker.holder.position.copy(run.pos);walker.holder.rotation.set(0,run.yaw,0);
   // Off the back: over onto his back, head first the way the belt carried him.
@@ -557,13 +577,16 @@ renderer.setAnimationLoop(()=>{
  walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
   turnRate,accel,rise:controller.velocity.y,emote,rest:pose});
  live?.pose(myPose(riding),now);
- follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:WALKER.height);
+ // In a transporter the camera rides higher, over the heads of the others aboard.
+ follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:cart&&follow.mode==='third'?WALKER.height+.7:WALKER.height);
  // Spraying the graffiti wall, the view squares up to it (graffiti.js), and its paint catches up.
  graffiti?.update(camera,now);
  // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle), or is off at the wall.
  walker.holder.visible=follow.mode!=='first'&&follow.current>.75&&!graffiti?.active;
  cull(p);
  remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
+ // Carts others drive go where their drivers sit; ours is where we drove it.
+ mct.update(dt,remotes,walker.hipHeight);
  // The lounge's doors open, and the cold room's strip curtain parts, for anyone near them.
  bodies.length=0;bodies.push(p);if(remotes)for(const r of remotes.remotes.values())bodies.push(r.cur);
  if(lounge)lounge.update(dt,bodies,camera.getWorldPosition(eye));
@@ -626,6 +649,8 @@ function target(){
  // In the hamster ball: no seats, beds or treadmills; with nothing else to use, E climbs out.
  if(inBall)return {kind:'ball-out',label:'Get out of the ball'};
  const parked=ball.mesh.position;if(Math.abs(p.y-parked.y)<1.2&&Math.hypot(p.x-parked.x,p.z-parked.z)<BALL.radius+1)return {kind:'ball',label:'Get in the ball'};
+ // A transporter's driver's seat or rear seats (transporter.js).
+ const m=mct.near(p,remotes);if(m)return m;
  const s=rest.pick(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));
  return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':'Sit down'}:null;
 }
@@ -636,7 +661,7 @@ function hud(p){
  const near=changeLog.nearby(p).length,chip=$('changes-here');
  if(chip.dataset.count!==String(near)){chip.dataset.count=String(near);chip.hidden=!near;chip.querySelector('b').textContent=String(near);
   chip.querySelector('span').textContent=near===1?' change here':' changes here';chip.setAttribute('aria-label',`${near} change${near===1?'':'s'} made around here: open the ship log`);}
- const t=run||graffiti?.active?null:resting?{label:resting.lie?'Get up':'Stand up'}:target();
+ const t=run||graffiti?.active?null:resting?{label:resting.spot.mct?'Get out':resting.lie?'Get up':'Stand up'}:target();
  const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=!show||touch;
  // Waiting for a called lift there's nothing to press: the prompt just says where the car is.
  const waiting=t?.kind==='waiting';prompt.classList.toggle('waiting',waiting);$('use').disabled=waiting;
@@ -672,7 +697,19 @@ function startRun(m){
 function endRun({at,yaw}){
  run=null;controller.place(at);heading=yaw;follow.mode=runView;walker.body.rotation.set(0,0,0);input.enabled=true;input.down.clear();
 }
-function standUp(){if(resting&&resting.phase==='in')resting.phase='out';}
+function standUp(){
+ if(!resting||resting.phase!=='in')return;
+ // Out of a transporter: beside it, or behind a rear seat; a driver leaves it parked where it stopped.
+ const m=resting.spot.mct;if(m){const out=mct.exit(m.cart,m.seat);resting.from.pos.copy(out.pos);resting.from.heading=out.heading;if(m.seat==='driver')mct.park(m.cart);}
+ resting.phase='out';
+}
+// In a transporter's seat the seat moves with the cart: the body, its facing and the camera's pivot follow it, and so does
+// the walker's own position (the map, the drawn decks and where it says you are).
+function followSeat(r){
+ const s=mct.spot(r.spot.mct.cart,r.spot.mct.seat);
+ r.to.pos.copy(s.point).addScaledVector(s.facing,.04).setY(s.height+.06-walker.hipHeight);r.to.yaw=Math.atan2(s.facing.x,s.facing.z);r.view.set(s.point.x,s.height-.55,s.point.z);
+ if(r.phase==='in')controller.position.set(r.to.pos.x,r.spot.mct.cart.pos.y,r.to.pos.z);
+}
 function restPose(dt){
  const r=resting;r.t=T.MathUtils.clamp(r.t+(r.phase==='in'?1:-1)*dt/.7,0,1);
  const e=r.t*r.t*(3-2*r.t),h=walker.holder;
@@ -714,7 +751,9 @@ function toggleEmotes(){
  EMOTES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';const label=name.replace(/_/g,' ');b.textContent=`${(i+1)%10} · ${label[0].toUpperCase()}${label.slice(1)}`;b.onclick=()=>{closePanels();actions.emote(i);};list.appendChild(b);});
  panel.hidden=false;input.enabled=false;list.querySelector('button')?.focus();
 }
-function goTo(place){place=remapSpot(place);const q=findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();resting=null;
+function goTo(place){place=remapSpot(place);const q=findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();
+ // Going elsewhere from a transporter's driver's seat leaves it parked where it is.
+ if(resting?.spot.mct?.seat==='driver')mct.park(resting.spot.mct.cart);resting=null;
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.

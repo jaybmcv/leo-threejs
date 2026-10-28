@@ -8,12 +8,13 @@ import {LIFTS,carTriangles} from '../src/walk/lifts.js';
 import {toWorld} from '../src/plan/rooms.js';
 import {findRestSpots,solidSpots} from '../src/walk/rest.js';
 import {loadWalkShip,fitForWalking} from './walk-plan.mjs';
+import {homes as mctHomes,createCart,driveCart,cartFits,cartBlocked,cartPoint} from '../src/walk/transporter.js';
 
 // Walk the whole ship as a 2 m tall, 0.7 m wide walker (Voyager's Reach's capsule, floating 0.4 m over the floor),
 // from the Deck 2 arrival hall, through every opening a body that size fits, up and down the stairs and in every
 // lift (a car waits at each stop), and off every edge it can walk over (a fall lands wherever the floor below is).
 // Then check that every room, cabin, lift stop, seat and bed is reachable and that
-// no walkable spot is open to space. About ten minutes; `npm run check:walk`.
+// no walkable spot is open to space, and drive a Deck 1 transporter about. About ten minutes; `npm run check:walk`.
 const t0=Date.now(),log=(...a)=>console.log(((Date.now()-t0)/1000).toFixed(0)+'s',...a);
 const ship=await loadWalkShip();
 // The partitions, railings and colliders exactly as the page has them (scripts/walk-plan.mjs).
@@ -107,10 +108,34 @@ const restRatio=usable/spots.length;if(restRatio<.995)problems.push(`seats and b
 let open=0;const openAt=[];for(let i=0;i<X.length;i+=13){ray.origin.set(X[i],Y[i]+1,Z[i]);ray.direction.set(0,1,0);if(!col.raycast(ray,200)){open++;openAt.push([X[i],Y[i],Z[i]].map(v=>+v.toFixed(1)));}}
 if(open)problems.push(`${open} sampled positions open to space`);
 if(voidFalls)problems.push(`${voidFalls} edges fall out of the ship`);
+// The Deck 1 transporters (transporter.js): each parked clear of the walls and its neighbours, with somewhere to stand
+// beside its driver's seat and its rear seats; MCT-01 driven out of Freight control, through the door, along the cross
+// corridor and the spine to the aft corridor, stops in Cargo maintenance's doorway (fenced off for now); a wall, a lift's
+// alcove and a parked cart each stop a cart.
+const mct={drive:null};
+{const list=mctHomes(),carts=list.map((h,i)=>createCart(i,h)),world={colliders:col,lifts:{lifts:LIFTS.map(spec=>({spec,stops:spec.stops}))},others:carts};
+ const sideReached=(c,lz)=>[1.25,-1.25].some(lx=>{const q=cartPoint(c,[lx,0,lz]);return reached(q.x,q.y,q.z,.5,.3,.3);});
+ carts.forEach((c,i)=>{if(!cartFits(c,world)||cartBlocked(c,world))problems.push(`MCT-0${i+1}: its bay is not clear`);
+  if(!sideReached(c,0)||!sideReached(c,-1.35))problems.push(`MCT-0${i+1}: nowhere reached to board it`);});
+ // Steer at waypoints, throttle on, until each is passed (or the cart stops for 3 s).
+ const route=(c,points,limit=200)=>{let k=0,t=0,still=0;while(k<points.length&&t<limit){const [px,pz]=points[k],dx=px-c.pos.x,dz=pz-c.pos.z;if(Math.hypot(dx,dz)<1.2){k++;continue;}
+  const err=Math.atan2(dx,dz)-c.yaw,was=c.pos.clone();driveCart(c,1/30,1,T.MathUtils.clamp(-Math.atan2(Math.sin(err),Math.cos(err))*3,-1,1),world);t+=1/30;
+  if(c.pos.distanceTo(was)<1e-4){still+=1/30;if(still>3)break;}else still=0;}return k;};
+ const c=carts[0],way=[[-49.25,44],[-50,41],[-56,38.3],[-66,38.2],[-72,38.2],[-76,34],[-75.5,12],[-77,3],[-90,.5],[-125,-1.5],[-141,-2],[-142,1],[-144.5,6],[-144.5,30],[-143.5,35]];
+ const passed=route(c,way);mct.drive={passed,of:way.length,at:[+c.pos.x.toFixed(2),+c.pos.z.toFixed(2)]};
+ if(passed<way.length)problems.push(`MCT-01: stuck on its way from Freight control to Cargo maintenance at ${mct.drive.at} (${passed}/${way.length} waypoints)`);
+ route(c,[[-136,37]],20);const nose=cartPoint(c,[0,0,1.3]);mct.doorway=+nose.x.toFixed(2);
+ if(nose.x>-140.2||nose.x<-142)problems.push(`MCT-01: should stop with its nose in Cargo maintenance's doorway, not at x=${nose.x.toFixed(2)}`);
+ const stops=(at,yaw)=>{const x=createCart(9,{at,yaw}),w={...world,others:[...carts,x]};for(let t=0;t<6;t+=1/30)driveCart(x,1/30,1,0,w);return x;};
+ const wall=stops([-100,-39.7,0],Math.PI),lift=stops([-132,-39.7,-1],0),bay=stops([-46.75,-39.7,46],0);
+ mct.stops={wall:+wall.pos.z.toFixed(2),lift:+lift.pos.z.toFixed(2),cart:+bay.pos.z.toFixed(2)};
+ if(wall.pos.z<-3.3||!cartFits(wall,world))problems.push(`MCT: drove into the spine's wall (z ${wall.pos.z.toFixed(2)})`);
+ if(lift.pos.z>3.2)problems.push(`MCT: drove into the aft lift's alcove (z ${lift.pos.z.toFixed(2)})`);
+ if(bay.pos.z>50.3)problems.push(`MCT: drove into a parked cart (z ${bay.pos.z.toFixed(2)})`);}
 
 const report={status:problems.length?'FAIL':'PASS',walker:{height:H,width:2*R,step:STEP},positions:X.length,falls,voidFalls,voids,railings:{count:rails.length,metres:Math.round(rails.reduce((s,r)=>s+r[3]-r[2],0))},walkableM2ByDeck:Object.fromEntries([...area].sort((a,b)=>a[0]-b[0]).map(([b,a])=>[b,Math.round(a)])),
  rooms:{total:rooms.length,below80:rooms.filter(r=>!r.samples||r.reached/r.samples<.8).length},cabins:`${cabins}/${CABINS.length}`,missedCabins:missedCabins.slice(0,20),liftStops:`${stops}/${stopCount}`,
- seatsAndBeds:{spots:spots.length,usable,seats:spots.filter(s=>s.kind==='sit').length,beds:spots.filter(s=>s.kind==='lie').length,unusable:[...unusable].slice(0,40)},openToSpace:open,openAt:openAt.slice(0,20),problems};
+ seatsAndBeds:{spots:spots.length,usable,seats:spots.filter(s=>s.kind==='sit').length,beds:spots.filter(s=>s.kind==='lie').length,unusable:[...unusable].slice(0,40)},openToSpace:open,openAt:openAt.slice(0,20),transporters:mct,problems};
 await fs.writeFile('output/leo-interior-v01/walk-report.json',JSON.stringify(report,null,2));
 console.log(JSON.stringify({...report,seatsAndBeds:{...report.seatsAndBeds,unusable:report.seatsAndBeds.unusable.slice(0,12)}},null,1));
 log(report.status);if(problems.length)process.exitCode=1;

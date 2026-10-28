@@ -13,7 +13,7 @@ export const savedName=()=>storage('leo-live-name')||'';
 export function saveName(name){try{localStorage.setItem('leo-live-name',name);}catch{}}
 
 // on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n), board(b), scored(r), hearts(h), hearted(r), selfie(id,ms),
-// giveaway(g), claimed(r), clown(r), chat(line), said(r), wall(w), stroke(s), painted(r), gym(msg)}; status
+// giveaway(g), claimed(r), clown(r), chat(line), said(r), wall(w), stroke(s), painted(r), gym(msg), mcts(carts)}; status
 // is 'connecting', 'live',
 // 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). opts.pass(): a Leo pass for this
 // (re)connection or null (connect.js); opts.refused(): the server would not take it; opts.invite: the invite code the
@@ -65,6 +65,8 @@ export function connectLive(url,on,opts={}){
     case 'painted':on.painted?.(msg);break;
     // Paws Off's gym round on the treadmills (server/gym.mjs): its countdown, its start, someone out, the results.
     case 'gym':if(typeof msg.e==='string')on.gym?.(msg);break;
+    // The Deck 1 transporters (walk/transporter.js): who drives each cart and where each is parked.
+    case 'mcts':if(Array.isArray(msg.carts))on.mcts?.(msg.carts);break;
     case 'full':stopped=true;status('full');break;
     case 'replaced':stopped=true;status('replaced');break;
     case 'reload':stopped=true;status('offline');break;
@@ -116,6 +118,8 @@ export function connectLive(url,on,opts={}){
   paint(stroke){if(!live())return false;ws.send(JSON.stringify({m:'paint',...stroke}));return true;},
   // Paws Off's gym round: stepped on ('in'), fell, stepped off; false when there is no connection to send it on.
   gym(msg){if(!live())return false;ws.send(JSON.stringify({...msg,m:'gym'}));return true;},
+  // The Deck 1 transporters: take a driver's seat, say where the cart is, park it; false when there is no connection.
+  mct(msg){if(!live())return false;ws.send(JSON.stringify({...msg,m:'mct'}));return true;},
   rename(next){name=next;saveName(next);if(live())ws.send(JSON.stringify({m:'name',name:next}));},
   get live(){return !!live();},
   // How the server has this visitor: {name, verified}.
