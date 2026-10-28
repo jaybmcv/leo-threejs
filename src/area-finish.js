@@ -1,6 +1,9 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {FontLoader} from 'three/addons/loaders/FontLoader.js';
+import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
+import fontData from './assets/helvetiker-bold.json' with {type:'json'};
 import {polishInterior} from './interior-polish.js';
 const mat=(name,color,roughness=.65,metalness=0)=>new T.MeshStandardMaterial({name:'Finish_'+name,color,roughness,metalness});
 export const FINISH_M={dark:mat('graphite',0x263d49),steel:mat('alloy',0x97aaa9,.35,.65),oak:mat('oak',0xa98762),linen:mat('linen',0xdedaca,.95),sage:mat('sage',0x668477,1),amber:mat('amber',0xd9b272),champagne:mat('champagne',0xaea35d,.35,.6),blue:mat('clinical_blue',0x89b8c4),ink:mat('display',0xb9e2dc),green:mat('leaf',0x58825f,.95)};
@@ -65,6 +68,25 @@ function buffet(k,top,b,c,s,stations){
  for(let j=0;j<=posts;j++)k.add(top,new T.CylinderGeometry(.015,.015,gy,8).translate(b.min.x+.1+j*(s.x-.2)/posts,y0+gy/2,zg),M.steel,f);
  k.box(top,[s.x-.2,.012,.38],[c.x,y0+gy,zg-front*.17],FOOD.glass,f+'_glass');k.box(top,[s.x-.2,gy*.5,.012],[c.x,y0+gy*.72,zg],FOOD.glass,f+'_glass');
 }
+// Three illuminated menu boards on the back wall above the buffet: charcoal frames with a teal edge and cream faces that
+// glow from within. Each shows a coral soup bowl and fruit on a teal tray, beside a few menu lines. They hang above the
+// sneeze guard, clear of the dining sightline, and their glow is emissive colour, so the room adds no lights.
+const MENU={frame:mat('menu_board_frame',0x2a2f36,.4,.3),edge:new T.MeshStandardMaterial({name:'Finish_menu_board_edge',color:0x1d7f78,emissive:0x2fd6c8,emissiveIntensity:1.4,roughness:.3}),
+ face:new T.MeshStandardMaterial({name:'Finish_menu_board_face',color:0xfff1dc,emissive:0xffe9c8,emissiveIntensity:.55,roughness:.7}),coral:mat('menu_coral',0xf0664f,.5),teal:mat('menu_teal',0x2fa89c,.5),ink:mat('menu_ink',0x3a3d45,.8)};
+function menuBoards(k,top){
+ // Room coordinates, converted to the countertop's own frame. The boards hang on the wall behind the counter.
+ const at=(x,y,z)=>[x-top.position.x,y-top.position.y,z-top.position.z],f='menu_boards',W=2.3,H=.6,D=.1,Y=2.05,Z=16.76,zF=Z-D/2,zI=zF-.03;
+ const box=(size,p,m)=>k.box(top,size,at(...p),m,f),add=(g,p,m)=>k.add(top,g.translate(...at(...p)),m,f);
+ for(const x of [-3,0,3]){
+  // Charcoal frame, teal edge, then the cream face in front.
+  box([W+.14,H+.14,D],[x,Y,Z],MENU.frame);box([W+.04,H+.04,.012],[x,Y,zF-.006],MENU.edge);box([W,H,.01],[x,Y,zF-.017],MENU.face);
+  // Soup in a coral bowl, fruit on a teal tray, and menu lines under a teal header.
+  box([.36,.1,.02],[x-.78,Y-.16,zI],MENU.coral);add(new T.SphereGeometry(.16,12,8).scale(1,.3,.25),[x-.78,Y-.11,zI],MENU.teal);
+  add(new T.SphereGeometry(.065,10,7).scale(1,1,.4),[x-.42,Y-.16,zI],MENU.teal);add(new T.SphereGeometry(.065,10,7).scale(1,1,.4),[x-.3,Y-.14,zI],MENU.coral);add(new T.SphereGeometry(.06,10,7).scale(1,1,.4),[x-.36,Y-.04,zI],MENU.coral);
+  box([.84,.035,.03],[x-.5,Y-.23,zI],MENU.teal);box([.8,.05,.012],[x+.5,Y+.2,zI],MENU.teal);
+  for(const [w,v] of [[.8,.07],[.6,-.03],[.7,-.13],[.5,-.23]])box([w,.035,.01],[x+.1+w/2,Y+v,zI],MENU.ink);
+ }
+}
 // Communal Dining set for a formal dinner: red cloths with a candle on every table, china, silver and a wine glass at
 // each seat, ivory chairs with a brass crest rail, and three red glass pendants per table, hung 40, 60 and 50 cm
 // below the ceiling. Every glow is emissive colour, so the room adds no lights.
@@ -116,6 +138,29 @@ function diningChair(k,o,n){
  k.box(o,[p.width+.04,.05,p.depth+.04],[0,h/2+.02,0],DINE.brass,'dining_chairs');
  for(const [x,y] of [[-.18,.2],[0,.2],[.18,.2],[-.09,0],[.09,0],[-.18,-.2],[0,-.2],[.18,-.2]])k.add(o,new T.SphereGeometry(.014,6,4).translate(x,y,p.depth/2),DINE.brass,'dining_chairs');
 }
+// Section plaques for the library's bookcase runs: one slim plaque on the open -x end of each run, at eye level, in its
+// section's colour, with a small pictogram and the section name. Built in the shelf's own frame, so it moves with the run.
+const SECTIONS=[['VOYAGES','starship',0x2fd6c5],['WORLDS','planet',0xf85800],['LIFE ABOARD','leaf',0x8fd694],["SHIP'S LOG",'book',0xd8cf8f]];
+const sectionFont=new FontLoader().parse(fontData);
+const sectionEnamel=new T.MeshStandardMaterial({name:'Finish_section_enamel',color:0x1b2830,roughness:.55,metalness:.1});
+const sectionLettering=new T.MeshStandardMaterial({name:'Finish_section_lettering',color:0xf4f0e8,roughness:.6});
+const sectionAccents=SECTIONS.map(([,,hex],i)=>new T.MeshStandardMaterial({name:'Finish_section_'+i,color:hex,roughness:.5,emissive:hex,emissiveIntensity:.2}));
+const SECTION_ICONS={
+ starship:()=>[new T.ConeGeometry(.012,.05,8).scale(.3,1,1),new T.BoxGeometry(.004,.006,.04).translate(0,-.012,0)],
+ planet:()=>[new T.SphereGeometry(.018,12,8).scale(.3,1,1),new T.TorusGeometry(.032,.0025,4,20).rotateY(Math.PI/2)],
+ leaf:()=>[new T.SphereGeometry(.024,10,8).scale(.25,1.3,.65)],
+ book:()=>[new T.BoxGeometry(.004,.02,.016).rotateX(.35).translate(0,.007,-.009),new T.BoxGeometry(.004,.02,.016).rotateX(-.35).translate(0,.007,.009)],
+};
+// One plaque on the -x end of a bookcase run (its middle shelf), centred at eye level, facing the entrance side.
+function sectionPlaque(k,o,c,s,index){
+ const [label,icon]=SECTIONS[index],accent=sectionAccents[index],x0=c.x-s.x/2-.02,y=1.45-o.position.y,z=c.z;
+ const part=(g,m,dx=0,dy=0,dz=0)=>k.add(o,g.translate(x0+dx,y+dy,z+dz),m,'library_sections');
+ part(new T.BoxGeometry(.02,.3,.2),sectionEnamel,.01,0,0);
+ part(new T.BoxGeometry(.004,.012,.16),accent,0,-.1,0);
+ for(const g of SECTION_ICONS[icon]())part(g,accent,0,.07,0);
+ const t=new TextGeometry(label,{font:sectionFont,size:.022,depth:.002,curveSegments:2});t.computeBoundingBox();const b=t.boundingBox;
+ t.translate(-(b.min.x+b.max.x)/2,-(b.min.y+b.max.y)/2,0).rotateY(-Math.PI/2);part(t,sectionLettering,0,-.03,0);
+}
 export const AREA_TREATMENTS={cargo:'cargo_restraints',stores:'inventory_labels',cold:'cabinet_hardware',pharmacy:'inventory_labels',workshop:'tool_storage',community:'tool_storage',logistics:'display_graphics',control:'display_graphics',arrival:'upholstery',security:'screening_equipment',airlock:'locker_hardware',baggage:'conveyor_detail',farm:'grow_lighting',nursery:'grow_lighting',harvest:'wash_station',kitchen:'cookware',air:'machine_grilles',thermal:'machine_grilles',water:'vessel_instruments',recycle:'machine_grilles',power:'cabinet_hardware',ward:'patient_services',isolation:'patient_services',surgery:'patient_services',clinic:'patient_services',imaging:'diagnostic_detail',counseling:'upholstery',shelter:'upholstery',arena:'games',library:'inventory_labels',gym:'fitness_equipment',recreation:'games',theater:'upholstery',childcare:'play_furniture',dining:'table_settings',navigation:'display_graphics',mission:'display_graphics',communications:'display_graphics',crew:'table_settings',briefing:'table_settings',data:'rack_hardware',captain:'table_settings',securityops:'display_graphics',bridge:'display_graphics',reactor:'module_instruments',drivefeed:'pump_detail',enginecontrol:'display_graphics',engineworkshop:'workbench_detail',engineaccess:'hatch_detail',hangar:'shuttle_detail',lifeboats:'lifeboat_detail'};
 export function finishShipArea(area,{root,shell,fit}){
  const k=detailKit(fit,area.name),lining=detailKit(shell,area.name+' lining');
@@ -143,8 +188,10 @@ export function finishShipArea(area,{root,shell,fit}){
   else if(/^(Shared_table|Meeting_table|Crew_lounge_table)$/.test(n)&&['dining','crew','briefing','captain'].includes(area.kind))for(const dx of [-.25,.25]){
    k.box(o,[Math.min(.65,s.x*.2),.018,Math.min(.4,s.z*.3)],[c.x+dx*s.x,b.max.y+.013,c.z],M.linen,'table_settings');k.add(o,new T.CylinderGeometry(.065,.065,.11,12).translate(c.x+dx*s.x,b.max.y+.072,c.z+.11),M.steel,'table_settings');
   }
-  if(n==='Countertop'&&area.kind==='dining')buffet(k,o,b,c,s,sources.filter(m=>m.name==='Meal_service_station'));
+  if(n==='Countertop'&&area.kind==='dining'){buffet(k,o,b,c,s,sources.filter(m=>m.name==='Meal_service_station'));menuBoards(k,o);}
   if(n==='Shelf'&&area.kind==='library')for(const side of [-1,1])for(const dx of [-1.6,0,1.6])k.box(o,[.32,.06,.006],[c.x+dx,c.y,c.z+side*(s.z/2+.004)],M.linen,'inventory_labels');
+  // One plaque per bookcase run, on its middle shelf; the four sections repeat across the five runs in each row.
+  if(n==='Shelf'&&area.kind==='library'&&Math.abs(o.position.y-1.18)<.01)sectionPlaque(k,o,c,s,Math.round((o.position.x+18)/9)%SECTIONS.length);
   if(/^(Secured_cargo_container|Supply_crate)$/.test(n)){
    const f=k.face(o,1),type=n==='Secured_cargo_container'?'cargo_restraints':'inventory_labels';f.panel(-f.w*.2,0,f.w*.24,f.h*.26,M.linen,type);
    for(let j=0;j<5;j++)f.panel(f.w*(-.29+j*.043),0,f.w*.018,f.h*.17,M.dark,type);

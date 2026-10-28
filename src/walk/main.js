@@ -34,12 +34,14 @@ import {openWindows,clearGlass} from './windows.js';
 import {createHaze} from './haze.js';
 import {createStarDrift} from './star-drift.js';
 import {createAmbience} from './ambience.js';
+import {createLullaby} from './lullaby.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.js';
 import {corridorTrim} from './trim.js';
 import {connectLive,savedName} from './net/live.js';
 import {identify,currentPass,bestPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
-import {glossLoungeFloor} from './lounge-floor.js';
+import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.js';
+import {tileLiftFloor} from './lift-tile-floor.js';
 import {createRecoveryMood} from './recovery.js';
 import {Marks} from './marks.js';
 import {createChat} from './chat.js';
@@ -55,6 +57,7 @@ import {createSurgeryArms} from './surgery.js';
 import {createFinCasing} from './fin-casing.js';
 import {createInvasion} from './invasion/game.js';
 import {createPawPool} from './pool/game.js';
+import {openOutside,closeOutside} from './outside-game.js';
 import {createPawsOff} from './paws-off/game.js';
 import {createMudwater} from './mudwater.js';
 import {createGiveaway} from './mudwater-giveaway.js';
@@ -66,6 +69,7 @@ import {createGamingLounge} from './gaming-lounge.js';
 import {createCommsDisplays} from './comms-displays.js';
 import {createHalloween} from './halloween.js';
 import {createHexFloor} from './hex-floor.js';
+import {createLoungeCompass} from './lounge-compass.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 import {createHelp} from './help.js';
 
@@ -137,7 +141,7 @@ const camera=new T.PerspectiveCamera(phone?70:62,1,.05,150);
 const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCamera(60,1,camera.far-5,1500);
 const hemi=new T.HemisphereLight(0xfff6e6,0x5d6b75,1.05);scene.add(hemi);
 const fill=new T.DirectionalLight(0xfff1dc,.55);fill.position.set(.3,1,.2);scene.add(fill);
-loadEnvironment(renderer).then(t=>{scene.environment=t;}).catch(()=>{});
+loadEnvironment(renderer).then(t=>{scene.environment=t;quietFloorReflections(scene,t);}).catch(()=>{});
 function resize(){const w=innerWidth,h=innerHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
 
@@ -179,9 +183,11 @@ async function buildShip(){
  const w0=performance.now(),opened=openWindows(ship,walkPlan.windows);clearGlass(ship.root);timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
  lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);corridorTrim(lifts.signs,{inside:ship.inside,partitions:walkPlan.walls});
  },afterRest(state){
- restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;
+ restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;lullaby=lounge?createLullaby(lounge.dome):null;
  // Its floor, galleries and the promenade in front: glossy acrylic with neon swirls (lounge-floor.js).
- glossLoungeFloor(ship);
+ glossLoungeFloor(ship);quietFloorReflections(scene,scene.environment);
+ // Deck 19's lift lobby and promenade up to the lounge: black ceramic tile (lift-tile-floor.js).
+ tileLiftFloor(ship);
  // The crew recovery lounge's pod side dims the lights (recovery.js).
  recovery=createRecoveryMood(ship,{hemi,fill,scene});
  }});
@@ -224,7 +230,10 @@ async function buildShip(){
  surgeryArms=createSurgeryArms(ship,{still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(surgeryArms)toBand(surgeryArms.group);
  if(blossom)toBand(blossom.group);
  toBand(jaguarGate.group);
+ for(const g of prepared.entranceSigns.groups)toBand(g);
  if(lounge)for(const o of lounge.drawn)toBand(o);
+ // Its synthwave wall (lounge-mural.js) spans three decks' bands, like a painting.
+ if(lounge?.mural){baked.bands.set(lounge.mural.name,lounge.mural);scene.add(lounge.mural);}
  // The paintings (paintings.js) span several bands each: they draw while any of them is in view.
  // The ship log boards (changes-board.js) in the crown lounge and the arrival hall.
  for(const g of changeLog.groups)toBand(g);
@@ -241,6 +250,8 @@ async function buildShip(){
  if(swordCase)toBand(swordCase.group);
  if(halloween)toBand(halloween.group);
  toBand(hexFloor.group);
+ // The forward observation lounge's Mars-viewing compass, a flush inlay on its floor (lounge-compass.js), drawn with its band.
+ {const compass=createLoungeCompass();if(compass)toBand(compass);}
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
@@ -253,7 +264,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,lullaby=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -302,6 +313,7 @@ const actions={
   else if(t.kind==='play')arcade.open();
   else if(t.kind==='log')changeLog.open({near:controller.position});
   else if(t.kind==='pool')pool.open();
+  else if(t.kind==='outside'){closePanels();emote=null;input.enabled=false;input.down.clear();openOutside($('outside-sheet'),$('outside-frame'));}
   else if(t.kind==='treadmill')pawsOff.start(t.mill);
   else if(t.kind==='mudwater'){mudwater.play();live?.arena('play');}
   else if(t.kind==='packs'){closePanels();const w=$('mudwater-wordmark');if(mudwater.wordmark&&!w.src){w.src=mudwater.wordmark;w.hidden=false;}giveaway.open();$('mudwater-sheet').hidden=false;input.enabled=false;}
@@ -385,7 +397,7 @@ for(const y of yarns)scene.add(y.mesh);
 // The hamster ball (hamster-ball.js), parked in the Deck 17 gardens until someone climbs in.
 const ballHome=findStand(colliders,BALL.home,{radius:4})||new T.Vector3(...BALL.home),ball=createBallMesh();let inBall=false;
 ball.mesh.position.copy(ballHome);scene.add(ball.mesh);
-function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());controller.stance='crouch';}
+function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());}
 // Out of the ball, Cosmo stands where it was and steps clear of it; it stays parked there.
 function leaveBall(){if(!inBall)return;inBall=false;controller.body=BODY;controller.stance='stand';ball.mesh.position.copy(controller.position);}
 document.body.dataset.ready='1';
@@ -443,14 +455,15 @@ if(LIVE_URL){
 function myPose(riding=false){
  const h=walker.holder,held=resting||run,at=held?h.position:controller.position;
  return {pos:[at.x,at.y,at.z],yaw:held?h.rotation.y:heading,g:controller.grounded||riding||!!held,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||!!run,b:inBall};
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||!$('outside-sheet').hidden||!!run,b:inBall};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
 if(live)setInterval(()=>{if(document.hidden||performance.now()-last>1000)live.pose(myPose());},1000);
 function showAboard(){
  const b=$('aboard');b.hidden=!live;if(!live)return;
- const text={live:aboard===1?'Just you aboard':`${aboard} aboard`,connecting:'Joining…',offline:'Solo · reconnecting',full:'Solo · Leo is full',replaced:'Solo · open in another tab'}[liveStatus]||'';
+ const text=(matchMedia('(max-width:560px)').matches?{live:aboard===1?'Just you':`${aboard} aboard`,connecting:'Joining…',offline:'Solo',full:'Solo · full',replaced:'Solo · 2 tabs'}
+  :{live:aboard===1?'Just you aboard':`${aboard} aboard`,connecting:'Joining…',offline:'Solo · reconnecting',full:'Solo · Leo is full',replaced:'Solo · open in another tab'})[liveStatus]||'';
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
@@ -496,8 +509,8 @@ renderer.setAnimationLoop(()=>{
  // Riding a moving car, the car carries the walker; it passes slab edges and the hull skin, which must not push.
  const riding=lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
- // In the ball there is no jumping.
- if(!resting&&!riding&&!run){acc+=dt;let pressed=k.jump&&!inBall;while(acc>=STEP){controller.step(STEP,wish,pressed||(k.held&&!inBall));pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ // In the ball the jump is one low hop (BALL.body.jump).
+ if(!resting&&!riding&&!run){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
  const p=controller.position;
  // The parked ball is solid to walk into.
@@ -527,7 +540,7 @@ renderer.setAnimationLoop(()=>{
   walker.body.rotation.set((-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(run.tumble,.25,1),0,0);
   if(run.tumble>0)pose={kind:'lie',weight:run.tumble,seatHeight:walker.hipHeight};}
  if(!resting&&!run){walker.holder.position.copy(p);walker.holder.rotation.set(0,heading,0);walker.body.rotation.set(0,0,0);}
- if(inBall){controller.stance='crouch';ball.mesh.position.copy(p);ball.roll(dt,controller.velocity.x,controller.velocity.z);}
+ if(inBall){ball.mesh.position.copy(p);if(controller.grounded)ball.roll(dt,controller.velocity.x,controller.velocity.z);}
  walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
   turnRate,accel,rise:controller.velocity.y,emote,rest:pose});
  live?.pose(myPose(riding),now);
@@ -545,6 +558,7 @@ renderer.setAnimationLoop(()=>{
  gaming?.update(dt,camera.getWorldPosition(eye),p);
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on);
+ lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
  surgeryArms?.update(dt,p);
  marks?.update(camera,p,now);
@@ -688,7 +702,7 @@ function goTo(place){place=remapSpot(place);const q=findStand(colliders,place.at
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','clown-sheet','help-sheet'])$(id).hidden=true;chat.close();input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));chat.close();input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
@@ -706,6 +720,12 @@ $('help').addEventListener('click',()=>actions.help());
 // The ship log from the toolbar, the "changes here" chip or L.
 for(const id of ['log','changes-here'])$(id).addEventListener('click',()=>{if(ready())openLog();});
 $('view').addEventListener('click',()=>actions.view());
+// On a phone View, Sound and Res sit behind More; it closes on View or a tap anywhere else.
+const toolBar=document.querySelector('.tools'),moreButton=$('tools-more');
+const setMore=open=>{toolBar.classList.toggle('more-open',open);moreButton.setAttribute('aria-expanded',String(open));};
+moreButton.addEventListener('click',()=>setMore(!toolBar.classList.contains('more-open')));
+$('view').addEventListener('click',()=>setMore(false));
+document.addEventListener('pointerdown',e=>{if(!toolBar.contains(e.target))setMore(false);});
 // The ship's hum and chimes (ambience.js), off until asked for.
 const ambience=createAmbience(),sound=$('sound');sound.setAttribute('aria-pressed',String(ambience.on));
 // Alien Cat Invasion at the lounge telescope (invasion/game.js): the walk stands still behind it, its sound follows the

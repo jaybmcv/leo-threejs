@@ -78,7 +78,7 @@ const art=()=>{if(!carArt){const stars=starTexture();mats.wall.map=mats.wall.emi
  carArt=new T.ShaderMaterial({name:'Lift_mars',uniforms:{map:{value:marsSurface()}},vertexShader:MARS_VERTEX,fragmentShader:MARS_FRAGMENT});}return carArt;};
 const deckName=n=>DECKS.find(d=>d.number===n)?.name;
 // A deck's headline room follows its theme (signs.js FEATURED), so the lift's buttons point to it.
-export const stopLabel=s=>s.deck?`Deck ${s.deck} · ${deckName(s.deck)}${FEATURED[s.deck]?` · ${FEATURED[s.deck]}`:''}`:s.label;
+export const stopLabel=s=>{if(!s.deck)return s.label;const title=s.title||FEATURED[s.deck];return `Deck ${s.deck} · ${deckName(s.deck)}${title?` · ${title}`:''}`;};
 
 function boxMesh(name,[w,h,d],[x,y,z],m,parent){const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.name=name;o.position.set(x,y,z);parent.add(o);return o;}
 const boxTris=(w,h,d)=>{const g=new T.BoxGeometry(w,h,d).toNonIndexed();g.translate(0,h/2,0);return Array.from(g.attributes.position.array);};
@@ -147,7 +147,7 @@ export function createLifts(scene,colliders){
   const display=liftDisplay();
   const landings=spec.stops.map(stop=>{
    const d=stop.door||spec.door,frontOf=d.axis==='z'?new T.Vector3(0,0,d.sign):new T.Vector3(d.sign,0,0),along=d.axis==='z'?new T.Vector3(1,0,0):new T.Vector3(0,0,1);
-   const half=(d.axis==='z'?c.depth:c.width)/2,base=new T.Vector3(c.x,stop.y,c.z).addScaledVector(frontOf,half+.14),at={base,front:frontOf,along,width:d.width};
+   const half=(d.axis==='z'?c.depth:c.width)/2,base=new T.Vector3(c.x,stop.y,c.z).addScaledVector(frontOf,half+.14),at={base,front:frontOf,along,width:d.width,jamb:d.jamb};
    landingSigns(signs,colliders,stop,at);liftDisplayMount(signs,colliders,display.material,at);
    return {d,frontOf,along,base,light:callLight(signs,colliders,at)};
   });

@@ -1,14 +1,15 @@
 import * as T from 'three';
 import {toWorld} from '../plan/rooms.js';
 
-// A clear hamster ball for Cosmo. One stands parked in the Deck 17 gardens; E climbs in, and Cosmo, crouched inside,
-// rolls it about the ship: through doors, into lifts and up to their buttons, which E still presses. With nothing to
+// A clear hamster ball for Cosmo. One stands parked in the Deck 17 gardens; E climbs in, and Cosmo, standing upright
+// inside, rolls it about the ship at twice a walker's pace, with a low hop on the jump key: through doors, into lifts and up to their buttons, which E still presses. With nothing to
 // use in front of the ball, E climbs out and leaves it there. Each visitor has their own ball; others aboard see
 // whoever is riding one in a ball of their own (net/wire.js BALL).
-// The ball's collision is a sphere of `body.radius` on the controller's floating capsule (controller.js), a little
-// inside the glass, so the doors a walker fits through still let it pass.
-export const BALL={home:toWorld('commons-10',[5.4,0,-5.3]),radius:.72,speed:4,run:6,eye:1.25,
- body:{radius:.55,height:1.5,step:.4,maxSlope:50}};
+// The ball is 2.2 m across, so Cosmo (1.75 m, hat and all) stands in it. Its collision is a sphere of `body.radius` on
+// the controller's floating capsule (controller.js), inside the glass so it still passes the lift doors (2.2 m wide).
+// `jump` is the take-off speed of one hop: v squared over twice gravity (22) is about 0.6 m, and it has no second hop.
+export const BALL={home:toWorld('commons-10',[5.4,0,-5.3]),radius:1.1,speed:8,run:12,eye:1.6,
+ body:{radius:.8,height:2,step:.4,maxSlope:50,jump:5,jumps:1}};
 
 const glass=new T.MeshPhysicalMaterial({name:'Walk_hamster_ball',color:0xe8f6ff,roughness:.05,metalness:0,transmission:0,transparent:true,opacity:.2,
  depthWrite:false,side:T.DoubleSide,clearcoat:1,clearcoatRoughness:.05,envMapIntensity:1.4});

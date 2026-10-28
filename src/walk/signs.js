@@ -36,14 +36,14 @@ function fit(c,text,font,size,max){let s=size;do{c.font=font.replace('SIZE',s+'p
 
 // Deck plaque: "DECK", the number, the deck's name. Fin stops get their own wording.
 function plaqueLabel(stop){
- if(stop.deck)return {eyebrow:'Deck',big:String(stop.deck),name:FEATURED[stop.deck]||deckName(stop.deck),featured:!!FEATURED[stop.deck]};
+ if(stop.deck){const title=stop.title||FEATURED[stop.deck];return {eyebrow:'Deck',big:String(stop.deck),name:title||deckName(stop.deck),featured:!!title};}
  const fin=/^Fin platform (\d+)/.exec(stop.label);if(fin)return {eyebrow:'Fin',big:fin[1],name:'Inspection platform'};
  if(/Crown/.test(stop.label))return {eyebrow:'Crown',big:'C',name:'Panoramic lounge'};
  return {eyebrow:'Fin',big:'G',name:stop.label};
 }
 const plaques=new Map();
 function plaqueMaterial(stop){
- const l=plaqueLabel(stop),key=l.eyebrow+l.big;let m=plaques.get(key);if(m)return m;
+ const l=plaqueLabel(stop),key=l.eyebrow+l.big+l.name;let m=plaques.get(key);if(m)return m;
  const {texture}=canvasTexture(256,320,(c,w,h)=>{
   panel(c,w,h);c.textAlign='center';c.textBaseline='alphabetic';
   c.fillStyle=TEAL;c.font=`500 26px ${FONT.mono}`;c.letterSpacing='6px';c.fillText(l.eyebrow.toUpperCase(),w/2,62);c.letterSpacing='0px';
@@ -97,8 +97,9 @@ function mount(parent,material,[w,h],hit){
 
 // A spot on the wall beside a lift landing's doors: `base` is the door line's centre on the floor, `front` points into
 // the lobby, `along` across the doors; `side` is which side (the call panel's is +1), `out` how far from the doors' edge.
-function besideDoors(colliders,{base,front,along,width},side,out,height){
- const at=base.clone().addScaledVector(along,side*(width/2+out)).addScaledVector(front,1.2).setY(base.y+height);
+// A landing with a gate (`jamb`: its width, fin-gate.js) puts its signs on the middle of the jamb's face.
+function besideDoors(colliders,{base,front,along,width,jamb},side,out,height){
+ const at=base.clone().addScaledVector(along,side*(jamb?(width+jamb)/2:width/2+out)).addScaledVector(front,1.2).setY(base.y+height);
  return wallAt(colliders,at,front.clone().negate(),1.6);
 }
 // The deck plaque, on the side away from the call panel.

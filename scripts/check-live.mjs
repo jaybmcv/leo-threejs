@@ -39,8 +39,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  check('wire: a still walking pose is 14 bytes',encodeRecord(1,poses[0]).length===14);
  const playing=decodeFrame(assembleFrame([],[encodeRecord(1,{...poses[0],playing:true}),encodeRecord(2,poses[0])]));
  check('wire: a pose says when its visitor is playing Alien Cat Invasion',playing?.poses[0].pose.playing===true&&playing.poses[1].pose.playing===false);
- const rolling=decodeFrame(assembleFrame([],[encodeRecord(1,{...poses[0],ball:true,stance:'crouch'}),encodeRecord(2,poses[0])]));
- check('wire: a pose says when its visitor is rolling in a hamster ball',rolling?.poses[0].pose.ball===true&&rolling.poses[0].pose.stance==='crouch'&&rolling.poses[1].pose.ball===false);
+ const rolling=decodeFrame(assembleFrame([],[encodeRecord(1,{...poses[0],ball:true,stance:'stand'}),encodeRecord(2,poses[0])]));
+ check('wire: a pose says when its visitor is rolling in a hamster ball',rolling?.poses[0].pose.ball===true&&rolling.poses[0].pose.stance==='stand'&&rolling.poses[1].pose.ball===false);
  const torn=[frame.slice(0,frame.length-1),Uint8Array.of(0x4c,9,0,0,0,0),randomBytes(40)];
  check('wire: torn, foreign and random frames are dropped',torn.every(f=>decodeFrame(f)===null));
  let threw=0;for(const bad of [{...poses[0],pos:[NaN,0,0]},{...poses[0],pos:[1e6,0,0]},{...poses[0],stance:'fly'},{...poses[0],jumpCount:9}])try{encodeRecord(1,bad);}catch{threw++;}
@@ -186,10 +186,14 @@ try{
   a.pose([off.x-.6,t.floor,off.z]);await sleep(300);
   check('paws off: stepped off the arcade treadmill, they are no longer playing',b.poses.get(a.id)?.playing===false&&!b.poses.get(a.id)?.rest);}
  // The hamster ball in the Deck 17 gardens (src/walk/hamster-ball.js): one visitor climbs in and rolls off; another
- // standing nearby sees them in the ball, crouched, where it rolled; climbed out, no longer in one.
- b.pose([135,24.3,20]);a.pose([137.4,24.3,21.7],{st:'crouch',b:true});await sleep(250);a.pose([139.2,24.3,23.1],{yaw:.9,st:'crouch',b:true});await sleep(300);
+ // standing nearby sees them in the ball, upright, where it rolled, and the hop they take in it; climbed out, no longer in one.
+ b.pose([135,24.3,20]);a.pose([137.4,24.3,21.7],{b:true});await sleep(250);a.pose([139.2,24.3,23.1],{yaw:.9,b:true});await sleep(300);
  const rolled=b.poses.get(a.id);
- check('hamster ball: a visitor rolling in the ball is seen in it, crouched, where it rolled',rolled?.ball===true&&rolled.stance==='crouch'&&Math.abs(rolled.pos[0]-139.2)<.01&&Math.abs(rolled.pos[2]-23.1)<.01,JSON.stringify(rolled&&{pos:rolled.pos,ball:rolled.ball,stance:rolled.stance}));
+ check('hamster ball: a visitor rolling in the ball is seen in it, upright, where it rolled',rolled?.ball===true&&rolled.stance==='stand'&&Math.abs(rolled.pos[0]-139.2)<.01&&Math.abs(rolled.pos[2]-23.1)<.01,JSON.stringify(rolled&&{pos:rolled.pos,ball:rolled.ball,stance:rolled.stance}));
+ // The hop: one jump of about half a metre, seen by the other visitor in the air, still in the ball.
+ a.pose([139.2,24.75,23.1],{yaw:.9,b:true,g:false,jc:1,js:.2,r:1.5});await sleep(300);
+ const hop=b.poses.get(a.id);
+ check('hamster ball: a visitor hopping in the ball is seen in the air in it',hop?.ball===true&&hop.grounded===false&&hop.jumpCount===1&&Math.abs(hop.pos[1]-24.75)<.01&&hop.stance==='stand',JSON.stringify(hop&&{pos:hop.pos,ball:hop.ball,grounded:hop.grounded,jc:hop.jumpCount}));
  a.pose([139.2,24.3,23.1],{yaw:.9});await sleep(300);
  check('hamster ball: climbed out, they are no longer seen in a ball',b.poses.get(a.id)?.ball===false&&b.poses.get(a.id)?.stance==='stand');
  const junk=new Bot(PORT,{name:'Junk'});await junk.welcomed();junk.pose([136,24.3,20],{b:'yes'});await sleep(300);
@@ -227,6 +231,23 @@ try{
  check('lifts: the car comes to the landing that called it',!!arrived&&!arrived.s.calls.includes(stop),arrived?`after ${(b.lifts.indexOf(arrived))} updates`:'never');
  tab.send({m:'call',lift:'forward-port',stop:999});tab.send({m:'call',lift:'nowhere',stop:1});await sleep(200);
  check('lifts: calls to stops that do not exist are ignored',tab.closed===null);
+ // The crown lift at fin platform 1 (40 m, FIN_PLATFORMS in fin-crown.js): called from the landing there, the server's car
+ // comes and stops level with its floor, and a second call from the landing, after the car has gone, brings it back.
+ // Another visitor hears both. (A server still running the old 32 m stop left the car 8 m below the floor.)
+ {
+  const crown=LIFTS.find(l=>l.id==='crown'),p1=crown.stops.findIndex(s=>s.label==='Fin platform 1');
+  const wait=async(who,from,test)=>{let got=null;for(let i=0;i<250&&!got;i++){got=who.lifts.slice(from).find(l=>l.id==='crown'&&test(l.s));if(!got)await sleep(100);}return got;};
+  check('lifts: the crown lift stops at fin platform 1, 40 m up',p1>0&&Math.abs(crown.stops[p1].y-40)<1e-6,`stop ${p1} at ${crown.stops[p1]?.y}`);
+  const ask=async()=>{const from=b.lifts.length;tab.send({m:'call',lift:'crown',stop:p1});
+   const told=await wait(b,from,s=>s.calls.includes(p1)),level=await wait(b,from,s=>s.at===p1&&s.phase==='opening');return {told,level};};
+  const first=await ask();
+  check('lifts: a call from fin platform 1 reaches everyone aboard',!!first.told);
+  check('lifts: the crown lift stops level with fin platform 1, for the other visitor too',!!first.level&&Math.abs(first.level.s.y-40)<.001,first.level?`stopped at ${first.level.s.y} m`:'never came');
+  const from=b.lifts.length;tab.send({m:'call',lift:'crown',stop:0,now:true});
+  const gone=await wait(b,from,s=>s.at===0&&s.phase==='opening');
+  const second=gone&&await ask();
+  check('lifts: the call from fin platform 1 brings the crown lift back after it has left',!!second?.level&&Math.abs(second.level.s.y-40)<.001,second?.level?`stopped at ${second.level.s.y} m`:'never came back');
+ }
  // A ride as the rider's page sees it: the rider chooses Deck 1 in the car, the page steps its own car every frame and
  // hears the server 60-200 ms late (a real connection's lag, which comes and goes). The car must go one way all the way
  // down, never hopping back up.

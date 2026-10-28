@@ -38,6 +38,11 @@ export const PAINTINGS=[
  // doorway (z -40 to -36) and centred on it, from near the floor (-23.7) to near the ceiling (-20.4). The corridor's end
  // wall at z -40 sets its width; it stands 17 cm out, in front of the wall's pipes, handrail and hatch.
  {name:'Orange_Haze_10',file:'orange-haze-10.jpg',size:[1600,1202],room:'circulation-5',wall:placed('painting/Orange_Haze_10'),facing:[1,0,0],fit:[3.62,3],floor:-23.7,off:.17},
+ // Orange Haze #14, by M.V. Orange Haze, on both side walls (z +3.94 and -3.94) of Deck 19's aft lift lobby, just past the
+ // lift niches (x -130.2), so a rider from either lift sees it as they step out. The wall runs 15.8 m to the doorways at
+ // x -114.4, so the height sets the size: floor (32.3) to ceiling (36) less its frame, at the picture's 2:1 proportions.
+ {name:'Orange_Haze_14_1',file:'orange-haze-14.jpg',size:[1600,800],room:'circulation-19',wall:placed('painting/Orange_Haze_14_1'),facing:[0,0,-1],fit:[12,3.3],floor:32.3},
+ {name:'Orange_Haze_14_2',file:'orange-haze-14.jpg',size:[1600,800],room:'circulation-19',wall:placed('painting/Orange_Haze_14_2'),facing:[0,0,1],fit:[12,3.3],floor:32.3},
  // Orange Haze #15, by M.V. Orange Haze, in three parts: the outboard wall of the Deck 20 Captain's office (z 32.84),
  // part 1 to part 3 from left to right as you face it, from just over the floor (36.3) to just under the ceiling (39.6).
  // The middle part is centred on the wall (x 53); 20 cm of wall shows between the frames.

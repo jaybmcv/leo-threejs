@@ -17,6 +17,7 @@ import {createCargoTrolley} from './cargo-trolley.js';
 import {dressSurgery} from './surgery.js';
 import {createMudwater} from './mudwater.js';
 import {createJaguarGate} from './jaguar-gate.js';
+import {createLoungeEntranceSigns} from './lounge-entrance-signs.js';
 import {createArcade} from './arcade.js';
 import {placeAttendant} from './theatre.js';
 import {dressGamingLounge} from './gaming-lounge.js';
@@ -61,6 +62,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
  // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
  const jaguarGate=createJaguarGate();colliders.addStatic(jaguarGate.solid,()=>true);
+ // The marquee signs over the lounge's Deck 19 and 18 entrances (lounge-entrance-signs.js): dressing only, nothing solid.
+ const entranceSigns=createLoungeEntranceSigns();
  // The arcade row on the Hydro-Nip Lounge's forward wall, Paws Off's treadmill at its far end (arcade.js): solid as plain
  // boxes.
  const arcadeRow=createArcade();if(arcadeRow)colliders.addStatic(arcadeRow.solid,()=>true);
@@ -71,5 +74,5 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,provisions,pipework,kittens,diningRobots,hydration,trolley,blossom,jaguarGate,arcadeRow,missionHolo,swordCase,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,provisions,pipework,kittens,diningRobots,hydration,trolley,blossom,jaguarGate,entranceSigns,arcadeRow,missionHolo,swordCase,mudwater};
 }
