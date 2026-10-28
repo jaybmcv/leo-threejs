@@ -10,12 +10,12 @@ import {MAZE_START,X0,inMaze,inFront} from './layout.js';
 const BEST_KEY='leo-maze-best';
 const clock=ms=>{const s=ms/1000,m=Math.floor(s/60);return `${m}:${(s-m*60).toFixed(1).padStart(4,'0')}`;};
 const CSS=`
-#maze-clock{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--orange);border-radius:999px;padding:7px 8px 7px 16px;font:400 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+#maze-clock{position:fixed;left:50%;top:108px;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--orange);border-radius:999px;padding:7px 8px 7px 16px;font:400 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
 #maze-clock[hidden],#maze-toast[hidden]{display:none}
 #maze-clock b{font:500 20px/1 var(--mono);letter-spacing:.02em;color:var(--text);min-width:76px;text-align:right}
 #maze-clock button{background:none;border:1px solid var(--hairline);border-radius:999px;padding:7px 11px;font:400 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase}
 #maze-clock button:hover{border-color:var(--orange)}
-#maze-toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:6;background:var(--surface);border:1px solid var(--hairline);border-radius:999px;padding:10px 16px;font:400 11px/1 var(--mono);letter-spacing:.06em;pointer-events:none}
+#maze-toast{position:fixed;left:50%;top:108px;transform:translateX(-50%);z-index:6;background:var(--surface);border:1px solid var(--hairline);border-radius:999px;padding:10px 16px;font:400 11px/1 var(--mono);letter-spacing:.06em;pointer-events:none}
 #maze-sheet .time{font:500 44px/1 var(--mono);letter-spacing:-.02em;margin:4px 0 8px;color:var(--text)}
 #maze-sheet .note{margin:0 0 12px;font:400 13px/1.45 var(--sans);color:var(--body)}#maze-sheet .note b{color:var(--teal);font-weight:500}
 #maze-sheet h3{font:400 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin:14px 0 8px}

@@ -7019,7 +7019,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 1,
-      "signature": "d30df1b794d66a444c4842ed8759b74b5e1ed3d9e8f6cdc5c1ac6255bb51769a"
+      "signature": "72396855dcfb506473b9efbe248e0af8e601f42caf3b956651bc89a525f4fc6c"
     },
     {
       "source": "src/walk/minimap.js",
