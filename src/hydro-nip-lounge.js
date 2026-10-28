@@ -176,6 +176,7 @@ export function createHydroNipLounge({mirror=1}={}){
   dark:paint('sheen',0x272131),board:paint('sheen',0x16111f),metal:paint('sheen',0xb9c2cc),strut:neon(0x7a5cff),
   wood:paint('matte',0x4a2f22),sisal:paint('matte',0xcdb18a),purple:paint('matte',0x6a3fa3),magenta:paint('matte',0xb03a86),teal:paint('matte',0x23857f),
   leaf:paint('leaf',0x4f9a55),flower:paint('leaf',0xd5c4f2),pot:paint('matte',0xb5653d),
+  copper:paint('sheen',0xc0703f),china:paint('matte',0xf1ece2),
  };
  // Geometry, merged per material at the end. Everything is made in the template frame.
  const lists=new Map();
@@ -441,10 +442,16 @@ export function createHydroNipLounge({mirror=1}={}){
    else{put(M.glass,flask.clone().translate(x,y,fz));put(neon(liquids[k]),new T.ConeGeometry(.095,.12,8).translate(x,y+.06,fz));}}
   // Tasting flights on the bar top: little glasses of blend on a board.
   for(let x=x0+1;x<x1-.5;x+=1.8){box(M.wood,[.7,.03,.3],[x,FLOOR+1.095,bz-.15]);for(let i=0;i<4;i++){cyl(M.glass,.03,.025,.09,[x-.24+i*.16,FLOOR+1.155,bz-.15],8,true);cyl(neon(liquids[(i+x|0)%5]),.026,.022,.04,[x-.24+i*.16,FLOOR+1.13,bz-.15],8);}}
-  // A distillery as the centrepiece: a still, its coil and a receiving flask.
-  ball(M.metal,.3,[cx,FLOOR+1.45,bz+.05],1);cyl(M.metal,.05,.05,.5,[cx,FLOOR+1.85,bz+.05],8);
-  put(M.metal,new T.TorusGeometry(.12,.018,4,16,Math.PI*6).rotateX(Math.PI/2).translate(cx+.5,FLOOR+1.55,bz+.05));
-  ball(M.glass,.14,[cx+.75,FLOOR+1.22,bz+.05],1);ball(neon(GREEN),.1,[cx+.75,FLOOR+1.2,bz+.05],0);
+  // A catnip tea service as the centrepiece (it was a still, which read as smoking gear): a copper urn with its tap
+  // towards the stools, a lidded jar of dried catnip and two cups of green catnip tea on saucers.
+  {const y=FLOOR+1.08,z=bz+.25;
+   put(M.copper,new T.LatheGeometry([[0,0],[.16,0],[.16,.04],[.1,.08],[.2,.18],[.23,.34],[.2,.5],[.12,.58],[.13,.62],[.06,.66],[.03,.72],[0,.72]].map(([r,h])=>new T.Vector2(r,h)),16).translate(cx,y,z));
+   for(const s of [-1,1])put(M.copper,new T.TorusGeometry(.07,.012,4,10,Math.PI).rotateZ(-s*Math.PI/2).translate(cx+s*.22,y+.38,z));
+   put(M.copper,new T.CylinderGeometry(.022,.022,.16,8).rotateX(Math.PI/2).translate(cx,y+.2,z-.28));box(M.copper,[.05,.03,.02],[cx,y+.24,z-.33]);
+   ball(neon(GREEN),.015,[cx,y+.46,z-.21],0);
+   cyl(M.glass,.09,.09,.26,[cx+.55,y+.13,z],12,true);cyl(M.copper,.095,.095,.03,[cx+.55,y+.275,z],12);cyl(M.leaf,.08,.08,.16,[cx+.55,y+.08,z],10);
+   for(const x of [cx-.45,cx-.72]){cyl(M.china,.07,.07,.01,[x,y+.005,z-.1],14);cyl(M.china,.045,.035,.06,[x,y+.04,z-.1],12);
+    cyl(neon(GREEN),.04,.04,.005,[x,y+.066,z-.1],12);put(M.china,new T.TorusGeometry(.018,.005,4,8).translate(x+.055,y+.04,z-.1));}}
   for(let i=0;i<6;i++){const x=x0+1+i*1.4,z=bz-1.2;
    seat('Seat',new T.CylinderGeometry(.22,.22,.08,14),M.purple,[x,FLOOR+.76,z]);
    cyl(M.dark,.035,.035,.72,[x,FLOOR+.36,z],6);put(M.dark,new T.TorusGeometry(.18,.015,4,16).rotateX(Math.PI/2).translate(x,FLOOR+.3,z));cyl(M.dark,.2,.2,.03,[x,FLOOR+.015,z],12);}

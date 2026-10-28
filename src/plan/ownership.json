@@ -5254,32 +5254,6 @@
         -38
       ]
     },
-    "painting/Orange_Haze_14_1": {
-      "room": "circulation-19",
-      "local": [
-        -125.5,
-        1.85,
-        3.94
-      ],
-      "v1": [
-        -125.5,
-        34.15,
-        3.94
-      ]
-    },
-    "painting/Orange_Haze_14_2": {
-      "room": "circulation-19",
-      "local": [
-        -125.5,
-        1.85,
-        -3.94
-      ],
-      "v1": [
-        -125.5,
-        34.15,
-        -3.94
-      ]
-    },
     "painting/Orange_Haze_15_1": {
       "room": "d20-captain-7",
       "local": [
@@ -5819,8 +5793,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 124,
-      "signature": "90679027890dcd15b41344d016d06926afb5db3e353eaa82eea006ef9635126f"
+      "placements": 128,
+      "signature": "56b43829031b5725acfe43a05be73dd4d089a1abe003172503ddb894b6a54555"
     },
     {
       "source": "src/interior-polish.js",
@@ -7451,7 +7425,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "c68175bb5356e87a1d214aca3f70f7ddfcb5540f40b168e938fa5f70f6b99bc9"
+      "signature": "a4248186f92ef1fccb38597aa1b49f6eead78dc2a0ec5f049f3e06d83fa2cb2b"
     },
     {
       "source": "src/walk/partitions.js",

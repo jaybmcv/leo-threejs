@@ -38,7 +38,7 @@ Open floor for the lounge: x 113.5–148, z 12–42. The entrance side is z ≈ 
 - **Hammock dome:** a two-frequency geodesic of neon struts over sealed glass, with a catnip ring planter round the base, a sealed door toward the entrance, a soft purple glow on the floor and nine hammocks hung at staggered heights.
 - **Hydro-Nip sign:** on the dome's crown; neon lettering on a dark board, framed in cyan, with two catnip leaves.
 - **Haze Maze:** a framed glass tower with two inner platforms, a zigzag of cat shelves, cushions, trailing vines and green catnip mist. It has a sealed door and a "HAZE MAZE" sign, and two glass tubes ringed in green arc over the room to the front and rear galleries.
-- **Terpene Tasting Deck:** an oak bar with green neon trim, a back bar of flasks holding glowing blends, tasting flights, a still with its coil, six stools and a sign facing the room.
+- **Terpene Tasting Deck:** an oak bar with green neon trim, a back bar of flasks holding glowing blends, tasting flights, a catnip tea service (a copper urn, a jar of dried catnip and two cups; it replaced a still on 2026-10-28, which read as smoking gear), six stools and a sign facing the room.
 - **Cosmic Munchies Converger:** a metal counter with four candy dispensers and a glowing pad. The machine hangs from the ceiling (ring lights, three claws, an emitter), and a blue beam with two snacks caught in it runs down to the pad. Three stools; the sign hangs from the ceiling.
 - **Seating and play:** three patterned rugs, seven beanbags, six floor cushions, two low tables with catnip bowls, toy balls, and three cat trees.
 - **Galleries:** string lights in catenaries under both galleries' edges, and hanging pots of trailing catnip between them.
