@@ -37,6 +37,7 @@ import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
 import {createArena} from './arena.mjs';
 import {createGraffiti} from './graffiti.mjs';
 import {createGym} from './gym.mjs';
+import {createMazeBoard} from './maze.mjs';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||150);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -61,6 +62,8 @@ const arena=createArena({log});
 const graffiti=createGraffiti({send:(v,msg)=>send(v.ws,msg),log});
 // Paws Off's gym rounds on the treadmills (gym.mjs), in memory only.
 const gym=createGym({log,send});BUDGETS.gym=[2,6];
+// The Container Maze's best times (maze.mjs): its own file, its own message.
+const maze=createMazeBoard({log,send});
 
 function send(ws,msg){if(ws.readyState===1)ws.send(typeof msg==='string'||msg instanceof Uint8Array?msg:JSON.stringify(msg));}
 function broadcast(msg,except){const text=JSON.stringify(msg);for(const v of visitors)if(v.ready&&v!==except)send(v.ws,text);}
@@ -256,6 +259,8 @@ function onMessage(v,data,binary){
   case 'giveaway':if(allowed(v,'giveaway'))send(v.ws,arena.statusFor(v));break;
   case 'claim':if(allowed(v,'claim'))send(v.ws,arena.claim(v,msg));break;
   case 'arena':if(allowed(v,'arena'))arena.event(v,msg.e);break;
+  // The Container Maze (maze.mjs): a run starts, a run ends at the button, the board.
+  case 'maze':maze.message(v,msg);break;
   // A line of chat, for everyone aboard.
   case 'chat':chat(v,msg);break;
   // A knock on the Halloween clown's glass (walk/halloween.js): its badge code, if there is one yet.

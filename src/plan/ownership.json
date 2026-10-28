@@ -6557,7 +6557,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "9064e37cf8fa725103a90165e2a707e35248cd86e4dba16463166e3a7c8252ea"
+      "signature": "a32a4aa8f08cf8fc93bea6ab73e00517113a167faea616c7bce7da10ce3fefc8"
     },
     {
       "source": "src/walk/dining-robots.js",
@@ -7142,7 +7142,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "a48e7ef7361c64a25e4e9c9ec01223b37b3510c848f98828214f48a7f4b7757e"
+      "signature": "f8980590f1a1cc550b095b410a41da4fb169845957c6761e91bc4811ca3d1cad"
     },
     {
       "source": "src/walk/marks.js",
@@ -7155,6 +7155,55 @@
       "interactionTargets": null,
       "placements": 2,
       "signature": "09c23253343db009ed2da163de8fb4bb0bf57a98013ea25678d4226ac142b668"
+    },
+    {
+      "source": "src/walk/maze/hold.js",
+      "rooms": [
+        "d01-cargo-1"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Container_maze",
+        "Container_maze_colliders",
+        "Container_maze_start_header",
+        "Container_maze_sign",
+        "Container_maze_finish_floor",
+        "Container_maze_console",
+        "Container_maze_finish_sign"
+      ],
+      "colliders": [
+        "Container_maze_colliders"
+      ],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 33,
+      "signature": "1ee66944044453670830409137352c42426665942f11360b807c1a875e77d56f"
+    },
+    {
+      "source": "src/walk/maze/layout.js",
+      "rooms": [
+        "d01-cargo-1"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 5,
+      "signature": "bd4a96406398cddc98a8654b8b6956848f413da1aca19cc2b1a6ac2e19042a06"
+    },
+    {
+      "source": "src/walk/maze/run.js",
+      "rooms": [
+        "d01-cargo-1"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 1,
+      "signature": "72396855dcfb506473b9efbe248e0af8e601f42caf3b956651bc89a525f4fc6c"
     },
     {
       "source": "src/walk/minimap.js",
@@ -7373,7 +7422,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "ed212fd05cbf43f00c097f3f1a30580da533d765ffdb9d7d9d6b17fc45ee7270"
+      "signature": "f6070000052f9134fa894fda9849d6c4e0fe871fe4c1d317e6cf7ba6e4001573"
     },
     {
       "source": "src/walk/provisions.js",
