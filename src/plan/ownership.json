@@ -7288,8 +7288,20 @@
       "features": [],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 11,
-      "signature": "b719e97f793a46f0810bf487cba4be3d48c67846a2983421f861aef6efae76c4"
+      "placements": 14,
+      "signature": "5d2e0e3b8e3690a03ffe024213becf3a39639d8895113431f5fab82472131791"
+    },
+    {
+      "source": "src/walk/pool/rules.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 2,
+      "signature": "242fd6a2f4df9533c66b6aae8f84e626f3b46e163a521aaef14bbeb536afeebf"
     },
     {
       "source": "src/walk/pool/table.js",
