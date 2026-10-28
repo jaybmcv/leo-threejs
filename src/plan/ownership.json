@@ -6604,7 +6604,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 3,
-      "signature": "b2fc1ec0696c54e812cbb000c6714064d49de6a2efaedb1e2944ee00475b7c59"
+      "signature": "ba9afb6f5fba84ffee4c0ef60e1859f58fc96d654c5dc80ae4c2d807dc0ded85"
     },
     {
       "source": "src/walk/halloween.js",
