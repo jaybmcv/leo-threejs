@@ -235,6 +235,8 @@ async function buildShip(){
  if(lounge)for(const o of lounge.drawn)toBand(o);
  // Its synthwave wall (lounge-mural.js) spans three decks' bands, like a painting.
  if(lounge?.mural){baked.bands.set(lounge.mural.name,lounge.mural);scene.add(lounge.mural);}
+ // Its aquarium (lounge-aquarium.js) fills the front wall over the same three decks.
+ if(lounge?.aquarium){baked.bands.set(lounge.aquarium.name,lounge.aquarium);scene.add(lounge.aquarium);}
  // The paintings (paintings.js) span several bands each: they draw while any of them is in view.
  // The ship log boards (changes-board.js) in the crown lounge and the arrival hall.
  for(const g of changeLog.groups)toBand(g);

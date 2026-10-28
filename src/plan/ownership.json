@@ -6996,6 +6996,24 @@
       "signature": "4a246f122a0f43af402eb69be4fbe17639a7b036efce5f07dbf442afef9e3a3c"
     },
     {
+      "source": "src/walk/lounge-aquarium.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Lounge_aquarium_solid",
+        "Walk_lounge_aquarium"
+      ],
+      "colliders": [
+        "Lounge_aquarium_solid"
+      ],
+      "interactionTargets": null,
+      "placements": 47,
+      "signature": "c7f295dc252222b974eee999e1b721f568198e27222184afd4c4e4282699ce1a"
+    },
+    {
       "source": "src/walk/lounge-compass.js",
       "rooms": [
         "observation-lounge"
@@ -7081,7 +7099,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "35fbed48a082f492a58c2e6a98bc806b03dc97f5407904b39caab602b738031a"
+      "signature": "4058420a4b9173625e46d2283b7246d31ec3a2472d0418ea38dc145efff9f135"
     },
     {
       "source": "src/walk/main.js",
@@ -7100,8 +7118,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 34,
-      "signature": "25e97f4d98f2c94947081a5a89ff25daf2975ec0da0086a2f37f542028771429"
+      "placements": 35,
+      "signature": "91f33bfe40c3921208f1aabd1a5e915da0d8199d1e9236c1ab485dd22caf5e5e"
     },
     {
       "source": "src/walk/marks.js",
@@ -7243,7 +7261,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "abc08a652934ee3caffeec34019fa6f92e7f0901a0ae5e54614f05a45a04b6f6"
+      "signature": "834873f5393566c210e8b5a69f706ffc10e4575431b0a886e22fa1db672664ba"
     },
     {
       "source": "src/walk/paws-off/game.js",
