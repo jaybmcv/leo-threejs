@@ -253,9 +253,9 @@ export function createFreightGate(ship,{still=false}={}){
   const p=new T.Mesh(mergeGeometries(posters),new T.MeshStandardMaterial({name:'Freight_gate_posters',map:sheet,roughness:.7}));p.name='Freight_gate_posters';group.add(p);
   // The console's screens, on short stands at the desk's far edge, facing the chair.
   const scr=canvasTexture(1200,300,consoleScreens),screens=[];
-  for(let i=0;i<3;i++){const dz=(i-1)*.66,turn=(1-i)*.22;
+  for(let i=0;i<3;i++){const dz=(i-1)*.72,turn=(1-i)*.22;
    screens.push(plane(.62,.36,[i/3,(i+1)/3,0,1]).rotateX(-.08).rotateY(Math.PI/2+turn).translate(CONSOLE.x-.18,1.08,CONSOLE.z-dz));
-   box(M.dark,[.04,.42,.66],[CONSOLE.x-.225,1.08,CONSOLE.z-dz],turn);box(M.dark,[.05,.2,.05],[CONSOLE.x-.26,.88,CONSOLE.z-dz]);}
+   box(M.dark,[.04,.42,.65],[CONSOLE.x-.225,1.08,CONSOLE.z-dz],turn);box(M.dark,[.05,.2,.05],[CONSOLE.x-.26,.88,CONSOLE.z-dz]);}
   const sc=new T.Mesh(mergeGeometries(screens),new T.MeshBasicMaterial({name:'Freight_gate_console_screens',map:scr,toneMapped:false}));sc.name='Freight_gate_console_screens';group.add(sc);
  }
 
