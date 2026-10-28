@@ -1,5 +1,6 @@
 // Leo live: the multiplayer server for walk mode (src/walk/walk.html). One process is one shuttle: everyone connected
-// walks the same Leo. It passes poses and pings on and runs the lifts, nothing else; the ship itself is static and every visitor
+// walks the same Leo. It passes poses and pings on and runs the lifts (and keeps a few shared things: scores, hearts, chat,
+// the graffiti wall, gym rounds and the Deck 1 transporters); the ship itself is static and every visitor
 // builds it in their own browser. Modelled on Voyager's Reach's authority (packages/server: pose fan-out by distance,
 // poses as bytes, the visitor's id proved by a key their browser keeps), cut down to what a walk needs.
 //
@@ -14,6 +15,16 @@
 //   LEO_LIVE_CHAT_LOG=...             where the last 100 chat lines are kept (default ../leo-live-chat.json, beside the checkout)
 //   LEO_LIVE_HALLOWEEN=...            the Halloween clown's badge code as {"code":"..."} (default ../leo-live-halloween.json, beside
 //                                     the checkout), read at each ask: with no file the clown has no code yet
+//   LEO_LIVE_GRAFFITI=...             where the Deck 19 graffiti wall's paint is kept (default ../leo-live-graffiti.json)
+//   LEO_LIVE_GRAFFITI_CLEAR=...       the file that, once created, clears the wall (default ../leo-live-graffiti-clear;
+//                                     node scripts/graffiti-clear.mjs): graffiti.mjs
+//   LEO_LIVE_MCT_RESET_HOUR=4         the hour (this machine's local time) the Deck 1 transporters nobody is driving go home
+//                                     each day: transporters.mjs
+//   LEO_LIVE_TV=...                   the folder the Crown lounge TV's video is kept in (default ../leo-live-tv): tv.mjs
+//   LEO_LIVE_TV_OWNERS=...            Discord ids, comma separated, who get a Take down button at the TV
+//   LEO_LIVE_TV_CLEAR=...             the file that, once created, takes the TV's video down (default ../leo-live-tv-clear;
+//                                     node scripts/tv-clear.mjs)
+//   LEO_LIVE_TV_MAX_MB=40, LEO_LIVE_TV_MAX_S=120   the largest and longest video the TV takes
 //
 // Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
 // server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
@@ -32,6 +43,11 @@ import {encodeRecord,encodeIdentity,assembleFrame,actorIdOf,cleanName,cleanChat,
 import {keySet,verifyPass,REMEMBER_S} from '../src/walk/net/pass.js';
 import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
 import {createArena} from './arena.mjs';
+import {createGraffiti} from './graffiti.mjs';
+import {createGym} from './gym.mjs';
+import {createMazeBoard} from './maze.mjs';
+import {createTransporters} from './transporters.mjs';
+import {createTv} from './tv.mjs';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||150);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -45,13 +61,24 @@ const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
 // name, scores and hearts count, but a giveaway claim wants a fresh one (arena.mjs).
 const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',lapsed:REMEMBER_S,
  key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
-const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6],chat:[.5,5],clown:[.2,3]};
+const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6],chat:[.5,5],clown:[.2,3],wall:[.5,3],paint:[12,24],tv:[.5,3],'tv-ticket':[.5,5],'tv-down':[.2,2]};
 
 const visitors=new Set();
 const slots=new Map();let nextSlot=1;
 const lifts=LIFTS.map(spec=>({spec,stops:spec.stops,state:liftState(spec),sent:''}));
 const log=(...a)=>console.log(new Date().toISOString(),...a);
 const arena=createArena({log});
+// The graffiti wall on Deck 19's fin root casing (graffiti.mjs): its paint, kept in a file, and who painted it.
+const graffiti=createGraffiti({send:(v,msg)=>send(v.ws,msg),log});
+// Paws Off's gym rounds on the treadmills (gym.mjs), in memory only.
+const gym=createGym({log,send});BUDGETS.gym=[2,6];
+// The Container Maze's best times (maze.mjs): its own file, its own message.
+const maze=createMazeBoard({log,send});
+// The Mars Cat Transporters on Deck 1 (transporters.mjs): who drives each, and where each is parked, in memory only.
+const mct=createTransporters({log,broadcast:msg=>broadcast(msg),send:(v,msg)=>send(v.ws,msg)});BUDGETS.mct=[3,8];
+setInterval(()=>mct.tick(),10000);
+// The Crown lounge TV (tv.mjs): the video everyone sees, uploaded over plain HTTP by a signed-in visitor with a ticket.
+const tv=createTv({send:(v,msg)=>send(v.ws,msg),log,everyone:()=>visitors,allowed:origin=>ORIGINS.some(o=>o.test(origin))});
 
 function send(ws,msg){if(ws.readyState===1)ws.send(typeof msg==='string'||msg instanceof Uint8Array?msg:JSON.stringify(msg));}
 function broadcast(msg,except){const text=JSON.stringify(msg);for(const v of visitors)if(v.ready&&v!==except)send(v.ws,text);}
@@ -70,7 +97,7 @@ function readPose(v,p){
   jumpS:finite(p.js,-1,60)?p.js:-1,rise:finite(p.r,-100,100)?p.r:0,emote:typeof p.e==='string'&&/^[a-z0-9_]{1,32}$/.test(p.e)?p.e:null,rest:p.rest==='sit'||p.rest==='lie'?p.rest:null,
   playing:p.pl===true,ball:p.b===true};
  try{v.record=encodeRecord(v.slot,pose);}catch{return false;}
- v.pos=pose.pos;v.version++;return true;
+ v.pos=pose.pos;v.playing=pose.playing;v.version++;return true;
 }
 
 // Alien Cat Invasion's leaderboard (walk/invasion): one best score per Discord-verified player, kept in a file beside
@@ -205,13 +232,17 @@ async function hello(v,msg){
  v.slot=takeSlot();if(!v.slot){v.ws.close(4003,'full');return;}
  // A tester (the page holds a tester invite) wears the captain's hat. Taken on the page's word: it is a hat.
  Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);
- send(v.ws,{m:'welcome',id,aboard:aboard(),you:{name:v.name,verified:!!who},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said}});
+ send(v.ws,{m:'welcome',id,aboard:aboard(),you:{name:v.name,verified:!!who},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state()});
  countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`discord:${who.discordId}${who.lapsed?' (remembered)':''}`:msg.pass?'(pass refused)':'');
  if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
 }
 function leave(v){
  if(!visitors.delete(v))return;
  if(v.slot)slots.delete(v.slot);
+ graffiti.leave(v);
+ gym.left(v);
+ mct.left(v);
+ tv.leave(v);
  if(v.ready){broadcast({m:'gone',id:v.id});countChanged=true;log('aboard',aboard(),'-',v.id);}
 }
 const aboard=()=>{let n=0;for(const v of visitors)if(v.ready)n++;return n;};
@@ -245,10 +276,22 @@ function onMessage(v,data,binary){
   case 'giveaway':if(allowed(v,'giveaway'))send(v.ws,arena.statusFor(v));break;
   case 'claim':if(allowed(v,'claim'))send(v.ws,arena.claim(v,msg));break;
   case 'arena':if(allowed(v,'arena'))arena.event(v,msg.e);break;
+  // The Container Maze (maze.mjs): a run starts, a run ends at the button, the board.
+  case 'maze':maze.message(v,msg);break;
   // A line of chat, for everyone aboard.
   case 'chat':chat(v,msg);break;
   // A knock on the Halloween clown's glass (walk/halloween.js): its badge code, if there is one yet.
   case 'clown':if(allowed(v,'clown'))clown(v);break;
+  // The Deck 19 graffiti wall (graffiti.mjs): the whole wall for a visitor come to look, and a stroke of spray paint.
+  // A stroke over the limit is refused, and the painter told, so their page can take the wall back as it is.
+  case 'wall':if(allowed(v,'wall'))graffiti.look(v);break;
+  case 'paint':graffiti.paint(v,msg,{slow:!allowed(v,'paint')});break;
+  // Paws Off (walk/paws-off): stepping onto a treadmill, a fall, stepping off, for the gym round (gym.mjs).
+  case 'gym':if(allowed(v,'gym'))gym.message(v,msg);break;
+  // The Deck 1 transporters (transporters.mjs): a driver's seat taken, where a cart is, a cart parked.
+  case 'mct':if(allowed(v,'mct'))mct.message(v,msg);break;
+  // The Crown lounge TV (tv.mjs): what is on it, a ticket to upload a video, and an owner taking it down.
+  case 'tv':case 'tv-ticket':case 'tv-down':if(allowed(v,msg.m))tv.message(v,msg);break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;
@@ -293,6 +336,8 @@ setInterval(flush,FLUSH_MS);
 const server=http.createServer((req,res)=>{
  // Mudwater Arena's daily counts, totals only (arena.mjs).
  if(req.url==='/arena'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify(arena.report()));return;}
+ // The Crown lounge TV: its video, and uploads to it (tv.mjs).
+ if(tv.http(req,res))return;
  if(req.url==='/health'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify({ok:true,aboard:aboard(),max:MAX}));return;}
  res.writeHead(200,{'Content-Type':'text/plain'});res.end('Leo live: the multiplayer server for Walk around Leo.\n');
 });
@@ -312,5 +357,5 @@ wss.on('connection',ws=>{
 });
 // Behind a tunnel an idle socket is cut after a couple of minutes; a ping keeps it open, and one never answered ends it.
 setInterval(()=>{for(const v of visitors){if(!v.alive){v.ws.terminate();leave(v);continue;}v.alive=false;v.ws.ping();}},PING_MS);
-server.listen(PORT,()=>log(`Leo live on :${PORT} (/live, /health, /arena), up to ${MAX} aboard`));
+server.listen(PORT,()=>log(`Leo live on :${PORT} (/live, /health, /arena, /tv), up to ${MAX} aboard`));
 export {server};

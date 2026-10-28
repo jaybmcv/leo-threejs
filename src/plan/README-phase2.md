@@ -77,11 +77,11 @@ Every operation checks its source anchor; preflight accumulates every mismatch. 
 - `src/walk/main.js` — replace: `q.name==='Remaining_499_furnished_cabins'`.
 - `src/walk/main.js` — replace: `q.name==='Repeated_cabin_walls'`.
 - `src/walk/main.js` — replace: `||o.count!==499`.
-- `src/walk/main.js` — replace: `}\nlet baked=null`.
+- `src/walk/main.js` — replace: `}\nlet imagingScans=null;\nlet baked=null`.
 - `src/walk/main.js` — replace: `o.count=order.length;o.instanceMatrix.needsUpdate=true;`.
 - `src/walk/main.js` — replace: `const [low,high]=span(p,now);`.
 - `src/walk/main.js` — replace: `  if(t.kind==='call')`.
-- `src/walk/main.js` — replace: ` const b=booth.near(p)||comics.near(p);`.
+- `src/walk/main.js` — replace: ` const b=booth.near(p)||comics.near(p)||chinampa?.near(p);`.
 - `src/walk/main.js` — replace: `globalThis.__walk={registry,restSpots,`.
 - `src/walk/link.js` — prepend anchor: `// A link to a spot on the walk: walk.html?at=x,y,z&yaw=90&pitch=-10&view=first (ship metres, degrees). The page drops`.
 - `src/walk/link.js` — replace: `const room=spot.room||roomAt(spot.at,{legacy:true});`.

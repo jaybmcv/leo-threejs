@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-22",
+  "date": "2026-10-28",
   "threeRevision": "186",
   "native": {
     "triangles": 198982,
@@ -41,18 +41,22 @@
       ]
     }
   },
-  "glbBytes": 4049668,
-  "glbSHA256": "f96178fce8b3ba819a8dc6ba8ce53a9476d78e8aef1be5ad683fc33ce9e3262f",
-  "sourceSHA256": "df4f294f323f14fcc480ad23ead5b29026146356c90e94c9eacc9c73f5005562",
+  "glbBytes": 4049664,
+  "glbSHA256": "ecd9af08e5f668c3551dd33143f87299436fc3841b88d28dc0c14ade2a6b6be8",
+  "sourceSHA256": "04e8b90611d26758bd6200ab2b6988a1e56eb28b78331302b86b63d9c38332f0",
   "sourceFiles": {
     "src/CaptainsHat.js": "6e3b1b84222018f2d3048a0c4b09165d4a0b9604fddc30b2e783d207e6311071",
     "src/CrownSurface.js": "5cf6a03600597d2af9266f3fef1ec890f5d5d69ac6effb66386e1b0d4c1c6f30",
-    "src/CatHelmetBadge.js": "3bd2fe57831b34e38e4b748bca49379d4fcecccaf7bcb8a363f5b10cc3c4cc3d"
+    "src/CatHelmetBadge.js": "3bd2fe57831b34e38e4b748bca49379d4fcecccaf7bcb8a363f5b10cc3c4cc3d",
+    "CrownSurface": "c630a4814d48bae71672021a5cd2dcd12a029ea6f6f875905bf8911502184fc1"
   },
   "validator": {
     "errors": 0,
     "warnings": 0,
     "infos": 0
   },
-  "scope": "Native procedural static hat and GLB roundtrip. Browser visual checks recorded separately. No rig, avatar integration, or target-world deployment."
+  "scope": "Native procedural static hat and GLB roundtrip. Browser visual checks recorded separately. No rig, avatar integration, or target-world deployment.",
+  "sourceSHA256Method": "sha256 of the three LF-normalised source files concatenated in the order of sourceFiles",
+  "handoffSourceSHA256": "df4f294f323f14fcc480ad23ead5b29026146356c90e94c9eacc9c73f5005562",
+  "leoRevision": "2026-10-28 (report #144): CROWN_SHAPE.lowTuck .40 -> .10 in CrownSurface.js, so the low edge on the hat left (-X) side no longer hangs below the band bottom. The cloth crown, its inner shell and turned hem move (up to 0.26 units at that edge); every other part moves by under 1e-5 units. Re-exported with THREE.GLTFExporter r186; validator 0 errors, 0 warnings, 0 infos."
 }

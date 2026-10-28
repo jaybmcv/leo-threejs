@@ -39,11 +39,14 @@ export function newGame(seed=Date.now()){
 export const left=g=>g.balls.filter(b=>b.n&&!b.potted).length;
 const moving=b=>!b.potted&&(b.vx||b.vy);
 
-// Kick the cue ball: `angle` in radians (0 along +x), `power` 0-1. Only while everything is still.
+// Kick the cue ball: `angle` in radians (0 along +x), `power` 0-1. Only while everything is still. The shot keeps
+// what 8-ball needs to judge it (eightball.js): the first ball the cue ball meets, whether any ball reached a cushion
+// after that, and where this shot's pots start in g.potted.
 export function kick(g,angle,power){
  const cue=g.balls[0];if(g.phase!=='aim'||cue.potted)return false;
  const speed=MAX_SPEED*Math.min(1,Math.max(.04,power))**1.25;
- cue.vx=Math.cos(angle)*speed;cue.vy=Math.sin(angle)*speed;g.phase='roll';g.shots++;g.events.push('kick');return true;
+ cue.vx=Math.cos(angle)*speed;cue.vy=Math.sin(angle)*speed;g.phase='roll';g.shots++;g.events.push('kick');
+ g.shot={first:null,rail:false,from:g.potted.length};return true;
 }
 
 // Where the shot lined up at `angle` first meets something: the cue ball's centre there (the ghost ball), the ball it
@@ -67,11 +70,13 @@ export function aim(g,angle){
 }
 
 // Put the cue ball back on the head spot after it dropped, or as near behind it as is free.
-function respot(g){
+export function respot(g){
  const cue=g.balls[0];cue.potted=false;cue.vx=cue.vy=0;
  for(let x=HEAD.x;x>-HALF_W+R;x-=R/2){if(g.balls.every(b=>b===cue||b.potted||Math.hypot(b.x-x,b.y-HEAD.y)>=2*R+.01)){cue.x=x;cue.y=HEAD.y;return;}}
  cue.x=HEAD.x;cue.y=HEAD.y;
 }
+// A ball meeting a cushion after the cue ball has met a ball.
+const rail=g=>{if(g.shot&&g.shot.first!==null)g.shot.rail=true;};
 function drop(g,b){
  b.potted=true;b.vx=b.vy=0;
  if(b.n){g.potted.push(b.n);g.events.push('pot');}else g.events.push('scratch');
@@ -95,6 +100,7 @@ export function step(g){
  // Balls meeting: equal masses, a little energy lost, pushed apart so they never sit inside one another.
  for(let i=0;i<live.length;i++)for(let j=i+1;j<live.length;j++){
   const a=live[i],b=live[j],dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy;if(d2>=4*R*R||d2===0)continue;
+  if(g.shot&&g.shot.first===null&&!a.n)g.shot.first=b.n;
   const d=Math.sqrt(d2),nx=dx/d,ny=dy/d,push=(2*R-d)/2;a.x-=nx*push;a.y-=ny*push;b.x+=nx*push;b.y+=ny*push;
   const closing=(a.vx-b.vx)*nx+(a.vy-b.vy)*ny;if(closing<=0)continue;
   const j2=closing*(1+BOUNCE)/2;a.vx-=j2*nx;a.vy-=j2*ny;b.vx+=j2*nx;b.vy+=j2*ny;
@@ -105,11 +111,13 @@ export function step(g){
   if(b.potted)continue;
   if(POCKETS.some(p=>Math.hypot(b.x-p.x,b.y-p.y)<p.r)||Math.abs(b.x)>HALF_W||Math.abs(b.y)>HALF_H){drop(g,b);continue;}
   const inMouthX=Math.abs(b.y)>HALF_H-MOUTH.corner,inMouthY=Math.abs(b.x)>HALF_W-MOUTH.corner||Math.abs(b.x)<MOUTH.side;
-  if(Math.abs(b.x)>HALF_W-R&&!inMouthX){const s=Math.sign(b.x);b.x=s*(HALF_W-R);if(b.vx*s>0){if(Math.abs(b.vx)>.3)g.events.push('cushion');b.vx*=-CUSHION;b.vy*=.96;}}
-  if(Math.abs(b.y)>HALF_H-R&&!inMouthY){const s=Math.sign(b.y);b.y=s*(HALF_H-R);if(b.vy*s>0){if(Math.abs(b.vy)>.3)g.events.push('cushion');b.vy*=-CUSHION;b.vx*=.96;}}
+  if(Math.abs(b.x)>HALF_W-R&&!inMouthX){const s=Math.sign(b.x);b.x=s*(HALF_W-R);if(b.vx*s>0){if(Math.abs(b.vx)>.3)g.events.push('cushion');b.vx*=-CUSHION;b.vy*=.96;rail(g);}}
+  if(Math.abs(b.y)>HALF_H-R&&!inMouthY){const s=Math.sign(b.y);b.y=s*(HALF_H-R);if(b.vy*s>0){if(Math.abs(b.vy)>.3)g.events.push('cushion');b.vy*=-CUSHION;b.vx*=.96;rail(g);}}
  }
- // Everything still: the cue ball comes back if it dropped, and the rack is cleared or it is the next shot.
+ // Everything still: the cue ball comes back if it dropped, and the rack is cleared or it is the next shot. In a
+ // 2-player game (g.versus) eightball.js judges the shot on 'still' instead: ball in hand, whose turn, the winner.
  if(!g.balls.some(moving)){
+  if(g.versus){g.phase='aim';g.events.push('still');return g.events.splice(0);}
   if(g.balls[0].potted)respot(g);
   if(!left(g)){g.phase='done';g.events.push('clear');}else{g.phase='aim';g.events.push('still');}
  }

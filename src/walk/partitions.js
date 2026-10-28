@@ -4,6 +4,7 @@ import {floorY,TRANSIT_CORES} from '../transit.js';
 import {STAIRWELL} from '../interior-polish.js';
 import {LIFTS} from './lifts.js';
 import {HALL,inHall} from './commons-hall.js';
+import {aquariumFront} from './lounge-aquarium.js';
 
 // Between Leo's fitted rooms and corridors each deck plate is bare: unfitted volume the cutaway views leave open. On
 // foot that reads as an empty hangar with black gaps along the hull. Walk mode encloses the fitted spaces instead:
@@ -96,7 +97,19 @@ export function planPartitions(ship,decks=rasterDecks(ship)){
    if(run>=0&&h!==y1){const x=X0+(i+1)*CELL;walls.push({deck:d.number,x0:x-PARTITION.thickness/2,x1:x+PARTITION.thickness/2,z0:Z0+run*CELL,z1:Z0+j*CELL,y0:d.y,y1});run=-1;}
    if(h&&run<0){run=j;y1=h;}}}
  });
- return walls;
+ // The Hydro-Nip Lounge's aquarium (lounge-aquarium.js) stands behind its front galleries: its glass takes the place of the
+ // partition along their back edge.
+ return openWalls(walls,aquariumFront());
+}
+// Take the stretch `o` ({x0,x1,z0,z1,y0,y1}) out of the walls that run along x through it.
+function openWalls(walls,o){
+ const out=[];
+ for(const w of walls){
+  if(w.x1-w.x0<=w.z1-w.z0||w.z1<=o.z0||w.z0>=o.z1||w.y1<=o.y0||w.y0>=o.y1||w.x1<=o.x0||w.x0>=o.x1){out.push(w);continue;}
+  if(o.x0-w.x0>.01)out.push({...w,x1:o.x0});
+  if(w.x1-o.x1>.01)out.push({...w,x0:o.x1});
+ }
+ return out;
 }
 // Morphological closing (dilate then erode by r cells, square window): seams and thresholds between neighbouring
 // floors count as floor. Separable running counts keep it linear in the grid size.

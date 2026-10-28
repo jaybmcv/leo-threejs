@@ -1,8 +1,11 @@
 // Paw Pool's rules (src/walk/pool/rules.js), played headless: the rack, a kick, balls meeting, cushions, pockets, the
 // cue ball coming back after it drops, the aim line, a bot clearing whole racks against the clock, and the same seed
 // and the same kicks playing the same game. The bot's fastest clear sets the server's floor for a believable time.
+// Then 8-ball for two players (src/walk/pool/eightball.js): each rule on a shot set up by hand, ball in hand, and
+// two bots playing whole matches to a winner.
 import {newGame,step,kick,aim,rack,left,TABLE,R,STEP,POCKETS,HEAD,FOOT,MAX_SPEED} from '../src/walk/pool/rules.js';
 import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
+import {newMatch,judge,legal,place,onEight,GROUPS} from '../src/walk/pool/eightball.js';
 
 const problems=[],log=(...a)=>console.log(...a);
 const expect=(ok,what)=>{if(!ok)problems.push(what);log(ok?'ok  ':'FAIL',what);};
@@ -58,9 +61,9 @@ function clearPath(g,ax,ay,bx,by,skip){
  const dx=bx-ax,dy=by-ay,l=Math.hypot(dx,dy);
  return g.balls.every(o=>{if(o.potted||skip.includes(o))return true;const t=Math.max(0,Math.min(l,((o.x-ax)*dx+(o.y-ay)*dy)/l));return Math.hypot(ax+dx*t/l-o.x,ay+dy*t/l-o.y)>=2*R;});
 }
-function bot(g){
+function bot(g,ok=()=>true){
  const cue=g.balls[0];let best=null;
- for(const b of g.balls){if(!b.n||b.potted)continue;
+ for(const b of g.balls){if(!b.n||b.potted||!ok(b.n))continue;
   for(const p of POCKETS){
    const px=p.x-b.x,py=p.y-b.y,pl=Math.hypot(px,py),gx=b.x-px/pl*2*R,gy=b.y-py/pl*2*R;
    const sx=gx-cue.x,sy=gy-cue.y,sl=Math.hypot(sx,sy),cut=Math.acos(Math.max(-1,Math.min(1,(sx*px+sy*py)/(sl*pl))));
@@ -68,7 +71,7 @@ function bot(g){
    const score=cut*3+sl/4+pl/4;if(!best||score<best.score)best={score,angle:Math.atan2(sy,sx),power:Math.min(1,.35+(sl+pl)/(14*Math.cos(cut)+1))};
   }}
  if(best)return best;
- const near=g.balls.filter(b=>b.n&&!b.potted).sort((a,b)=>Math.hypot(a.x-cue.x,a.y-cue.y)-Math.hypot(b.x-cue.x,b.y-cue.y))[0];
+ const near=g.balls.filter(b=>b.n&&!b.potted&&ok(b.n)).sort((a,b)=>Math.hypot(a.x-cue.x,a.y-cue.y)-Math.hypot(b.x-cue.x,b.y-cue.y))[0];
  return {angle:Math.atan2(near.y-cue.y,near.x-cue.x),power:.8};
 }
 function play(seed,limit=40*60){
@@ -92,6 +95,90 @@ log('     fastest bot clear',fastest,'s; the server refuses clears under',POOL_F
 expect(POOL_FASTEST_S<=fastest*.6,'the server\'s floor sits well under the bot\'s fastest clear');
 expect(JSON.stringify(play(21))===JSON.stringify(play(21)),'the same seed and kicks play the same game');
 expect(MAX_SPEED>0&&TABLE.w===14&&TABLE.h===8,'the table is 14 x 8 m inside its rails');
+
+// 8-ball. A shot set up by hand: what the cue ball struck first, whether a ball then reached a cushion, which balls
+// dropped and whether the cue ball did; then the judge's verdict.
+function shot(m,{first=null,rail=true,down=[],scratch=false}){
+ const g=m.g;g.shot={first,rail,from:g.potted.length};
+ for(const n of down){g.balls[n].potted=true;g.potted.push(n);}
+ if(scratch)g.balls[0].potted=true;g.phase='aim';return judge(m);
+}
+const assigned=(m,p,group)=>{m.broken=true;m.groups[p]=group;m.groups[1-p]=group==='solids'?'stripes':'solids';m.inHand=null;m.turn=p;return m;};
+const clearGroup=(m,group)=>{for(const n of GROUPS[group]){m.g.balls[n].potted=true;m.g.potted.push(n);}return m;};
+{const m=newMatch(1);
+ expect(m.turn===0&&m.inHand==='kitchen'&&!m.broken&&!m.g.shot,'8-ball: player 1 breaks, with ball in hand behind the head string');
+ const r=shot(m,{first:1,down:[3]});
+ expect(!r.foul&&r.keep&&m.turn===0&&!m.groups[0]&&!m.inHand,'a ball potted on the break: the breaker goes on, the table stays open');}
+{const m=newMatch(2),r=shot(m,{first:1,scratch:true});
+ const cue=m.g.balls[0];
+ expect(r.foul==='scratch'&&m.turn===1&&m.inHand==='kitchen'&&!cue.potted&&cue.x<=HEAD.x,'a scratch on the break: player 2 has ball in hand behind the head string');}
+{const m=newMatch(3),r=shot(m,{first:1,down:[8]}),eight=m.g.balls[8];
+ expect(r.win===null&&r.keep&&m.turn===0&&!eight.potted&&Math.abs(eight.y)<1e-9&&eight.x>=FOOT.x&&!m.g.potted.includes(8),'the 8 potted on the break comes back to the foot spot and the breaker goes on');}
+{const m=newMatch(4);shot(m,{first:1});
+ expect(m.turn===1&&!m.inHand,'a break that pots nothing passes the turn, no foul');
+ const r=shot(m,{first:2,down:[11]});
+ expect(!r.foul&&r.assigned==='stripes'&&m.groups[1]==='stripes'&&m.groups[0]==='solids'&&r.keep&&m.turn===1,'on an open table, the first legal pot sets the groups (a solid struck first, a stripe down)');}
+{const m=newMatch(5);shot(m,{first:1});const r=shot(m,{first:8});
+ expect(r.foul==='wrong-ball'&&m.turn===0&&m.inHand==='table'&&!m.groups[0]&&!m.groups[1],'on an open table, the 8 struck first is a foul: ball in hand anywhere');}
+{const m=assigned(newMatch(6),0,'stripes'),r=shot(m,{first:3,down:[12]});
+ expect(r.foul==='wrong-ball'&&m.turn===1&&m.inHand==='table'&&m.g.balls[12].potted,'striking the other group first is a foul, and a ball potted on a foul stays down');}
+{const m=assigned(newMatch(7),0,'stripes'),r=shot(m,{first:10,down:[2]});
+ expect(!r.foul&&!r.keep&&m.turn===1&&!m.inHand,"potting only the other group's ball passes the turn, no foul");}
+{const m=assigned(newMatch(8),0,'stripes'),r=shot(m,{first:10,rail:false});
+ expect(r.foul==='no-rail'&&m.turn===1&&m.inHand==='table','nothing potted and no cushion after contact is a foul');
+ const r2=shot(m,{});expect(r2.foul==='no-hit'&&m.turn===0,'striking no ball is a foul');}
+{const m=assigned(newMatch(9),0,'stripes'),r=shot(m,{first:10,down:[10,8]});
+ expect(r.win===1&&m.winner===1&&m.why==='eight-early'&&m.g.phase==='done','the 8 down before the group is cleared loses the game');}
+{const m=clearGroup(assigned(newMatch(10),0,'stripes'),'stripes');
+ expect(onEight(m,0)&&legal(m,8,0)&&!legal(m,1,0)&&!onEight(m,1),'with the group cleared, the 8 is the only ball to strike first');
+ const r=shot(m,{first:3,down:[8]});expect(r.win===1&&m.why==='foul-on-eight','the 8 down after striking another ball first loses');}
+{const m=clearGroup(assigned(newMatch(11),0,'stripes'),'stripes'),r=shot(m,{first:8,down:[8],scratch:true});
+ expect(r.win===1&&m.why==='scratch-on-eight','the 8 down with the cue ball loses');}
+{const m=clearGroup(assigned(newMatch(12),1,'solids'),'solids'),r=shot(m,{first:8,down:[8]});
+ expect(r.win===1&&m.winner===1&&m.why==='eight'&&m.g.phase==='done','the 8 down cleanly after the whole group wins');}
+{const m=assigned(newMatch(13),0,'stripes');for(const n of [9,10,11,12,13,14]){m.g.balls[n].potted=true;m.g.potted.push(n);}
+ const r=shot(m,{first:15,down:[15,8]});expect(r.win===1&&m.why==='eight-early','the last of the group and the 8 on the same kick loses');}
+// Ball in hand: kept inside the cushions and behind the head string after a break scratch, never on another ball.
+{const m=newMatch(14),cue=m.g.balls[0];
+ expect(place(m,-5,2)&&cue.x===-5&&cue.y===2,'ball in hand moves the cue ball behind the head string');
+ expect(place(m,3,0)&&cue.x===HEAD.x,'behind the head string it stops at the line');
+ const one=m.g.balls[1];m.inHand='table';const was=[cue.x,cue.y];
+ expect(!place(m,one.x,one.y)&&cue.x===was[0]&&cue.y===was[1],"it can't be put on another ball");
+ expect(place(m,99,0)&&cue.x===TABLE.w/2-R,'it stays inside the cushions');
+ expect(!place(m,TABLE.w/2-R,TABLE.h/2-R),"it can't be put in a pocket's mouth");
+ m.inHand=null;expect(!place(m,-5,0),'without ball in hand it stays put');}
+// The real thing: a straight break records the 1 as the first ball struck and a cushion after it.
+{const m=newMatch(15);kick(m.g,0,1);m.inHand=null;let ev=[];for(let i=0;i<60/STEP&&!ev.includes('still');i++)ev=step(m.g);
+ expect(m.g.shot.first===1&&m.g.shot.rail&&m.g.phase==='aim'&&ev.includes('still'),'a break records the 1 struck first and a cushion after it, then waits to be judged');
+ const r=judge(m);expect(m.broken&&!m.g.balls[0].potted&&(r.keep?m.turn===0:m.turn===1),'the break is judged');}
+// Two bots play whole matches: each kicks at a ball it may strike first, as the practice bot does, and leaves the
+// cue ball where it is with ball in hand. Every match must end with a winner and keep the rules' bookkeeping straight.
+function match(seed,limit=400){
+ const m=newMatch(seed,seed%2);let bad=null,kicks=0;
+ kick(m.g,(seed%7-3)*.004,1);m.inHand=null;
+ while(m.winner===null&&kicks<limit){
+  const ev=step(m.g);
+  if(ev.includes('still')){
+   const r=judge(m);
+   if(m.groups[0]&&m.groups[0]===m.groups[1])bad='both players on one group';
+   if(r.foul&&m.winner===null&&!m.inHand)bad='a foul without ball in hand';
+   if(m.g.balls[0].potted)bad='the cue ball left off the table';
+   if(m.winner===null){const s=bot(m.g,n=>legal(m,n));kick(m.g,s.angle,s.power);m.inHand=null;kicks++;}
+  }
+  if(!m.g.balls.every(onTable))bad='a ball left the table';
+  if(bad)break;
+ }
+ const g=m.g;
+ if(m.why==='eight'&&!GROUPS[m.groups[m.winner]].every(n=>g.balls[n].potted))bad='a win with the group still up';
+ return {seed,winner:m.winner,why:m.why,kicks:m.kicks,fouls:m.fouls,bad};
+}
+const matches=[31,32,33,34,35,36,37,38,39,40,41,42].map(s=>match(s));
+matches.forEach(r=>log('     8-ball match',JSON.stringify(r)));
+expect(matches.every(r=>!r.bad),"8-ball matches: the rules' bookkeeping holds and no ball leaves the table");
+expect(matches.every(r=>r.winner!==null),`every 8-ball match ends with a winner (${matches.filter(r=>r.winner!==null).length} of ${matches.length})`);
+expect(matches.filter(r=>r.why==='eight').length>=matches.length/2,`most matches are won by potting the 8 (${matches.filter(r=>r.why==='eight').length} of ${matches.length})`);
+expect(new Set(matches.map(r=>r.winner)).size===2,'both players win some');
+expect(JSON.stringify(match(41))===JSON.stringify(match(41)),'the same seed and kicks play the same match');
 
 console.log(problems.length?`FAIL: ${problems.length} problem(s)`:'PASS');
 process.exitCode=problems.length?1:0;

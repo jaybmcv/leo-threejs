@@ -2,8 +2,9 @@
 // checks the pose wire, joining, poses reaching others near and far, names, the shared lifts, pings, leaving, a second tab,
 // bad input, the cap on visitors, Leo passes (Discord identity from The Creamery, net/pass.js: here signed by a
 // stand-in key served as a local JWKS), Alien Cat Invasion's leaderboard, Paw Pool's fastest clears, the ship log
-// boards' hearts, the selfie booth's shared countdown, chat aboard and, last, sixty visitors walking at once (bytes sent per visitor
-// per second). Each server keeps its scores and hearts in temporary files, never the real ones.
+// boards' hearts, the selfie booth's shared countdown, chat aboard, the Deck 19 graffiti wall, Paws Off's gym rounds, the Deck 1
+// transporters, the Crown lounge TV and, last, sixty visitors walking at once (bytes sent per visitor per second). Each server
+// keeps its scores, hearts, chat, graffiti and TV video in temporary files, never the real ones.
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import WebSocket from 'ws';
@@ -16,11 +17,17 @@ import os from 'node:os';
 import path from 'node:path';
 import {keySet,verifyPass,readPass,REMEMBER_S} from '../src/walk/net/pass.js';
 import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
+import {MAZE_ROOM,MAZE_START,MAZE_BUTTON,MAZE_FASTEST_S} from '../src/walk/maze/layout.js';
+import {toWorld} from '../src/plan/rooms.js';
 import * as T from 'three';
 import {createHydroNipLounge} from '../src/hydro-nip-lounge.js';
 import {findRestSpots,spotIndex} from '../src/walk/rest.js';
+import {inLounge} from '../src/walk/lounge.js';
 import {COSMO_HEIGHT} from '../src/cosmo-pose.js';
 import {arcadeTreadmill} from '../src/walk/arcade.js';
+import {WALL,paintStroke,wallFromText} from '../src/walk/graffiti-wall.js';
+import {createTransporters as transporterServer,CARTS} from '../server/transporters.mjs';
+import {homes as mctHomes} from '../src/walk/transporter.js';
 
 const results=[];let failed=0;
 const check=(what,ok,detail='')=>{results.push(`${ok?'PASS':'FAIL'} ${what}${detail?' · '+detail:''}`);if(!ok)failed++;};
@@ -55,6 +62,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 // the hammock from where the body is (rest.js hammockAt), to draw its pose (avatar.js: hands behind the head, eyes shut).
 const commons=new T.Group();commons.position.x=-224;commons.scale.z=-1;commons.add(createHydroNipLounge({mirror:-1}));
 const hammockSpots=findRestSpots(commons).filter(s=>s.hammock),hammocks=spotIndex(hammockSpots);
+// Who wears the lounge's catnip face (lounge.js inLounge): worked out from where each body is.
+commons.updateMatrixWorld(true);const inTheLounge=inLounge(commons.children[0].matrixWorld),posOf=p=>({x:p.pos[0],y:p.pos[1],z:p.pos[2]});
 const lyingIn=s=>{const head=s.head.clone().normalize(),at=s.point.clone().addScaledVector(head,-COSMO_HEIGHT/2);return {spot:s,pos:[at.x,s.height+.13,at.z],yaw:Math.atan2(-head.x,-head.z)};};
 {
  const own=hammockSpots.filter(s=>{const {pos:[x,y,z]}=lyingIn(s);return hammocks.hammockAt({x,y,z})===s;}).length;
@@ -106,9 +115,13 @@ await new Promise(r=>jwksServer.listen(0,'127.0.0.1',r));
 const PASS_ENV={LEO_PASS_JWKS_URL:`http://127.0.0.1:${jwksServer.address().port}/keys.json`,LEO_PASS_ISS:ISS};
 
 // ---- a server and some visitors -----------------------------------------------------------------------------------
+const graffitiFile=port=>path.join(os.tmpdir(),`leo-live-graffiti-check-${port}.json`),graffitiClear=port=>path.join(os.tmpdir(),`leo-live-graffiti-clear-check-${port}`);
+const tvDir=port=>path.join(os.tmpdir(),`leo-live-tv-check-${port}`),tvClear=port=>path.join(os.tmpdir(),`leo-live-tv-clear-check-${port}`);
 const scoresFile=port=>path.join(os.tmpdir(),`leo-live-scores-check-${port}.json`),heartsFile=port=>path.join(os.tmpdir(),`leo-live-hearts-check-${port}.json`),chatFile=port=>path.join(os.tmpdir(),`leo-live-chat-check-${port}.json`);
+const started=new Set();
 function startServer(port,env={}){
- const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...PASS_ENV,LEO_LIVE_SCORES:scoresFile(port),LEO_LIVE_HEARTS:heartsFile(port),LEO_LIVE_CHAT_LOG:chatFile(port),...env},stdio:['ignore','pipe','pipe']});
+ started.add(port);
+ const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...PASS_ENV,LEO_LIVE_SCORES:scoresFile(port),LEO_LIVE_HEARTS:heartsFile(port),LEO_LIVE_CHAT_LOG:chatFile(port),LEO_LIVE_GRAFFITI:graffitiFile(port),LEO_LIVE_GRAFFITI_CLEAR:graffitiClear(port),LEO_LIVE_TV:tvDir(port),LEO_LIVE_TV_CLEAR:tvClear(port),...env},stdio:['ignore','pipe','pipe']});
  child.log='';child.stdout.on('data',d=>{child.log+=d;});
  return new Promise((resolve,reject)=>{child.stdout.on('data',d=>{if(/Leo live on/.test(d))resolve(child);});child.on('exit',c=>reject(new Error('server exited '+c)));setTimeout(()=>reject(new Error('server did not start')),10000);});
 }
@@ -162,6 +175,18 @@ try{
  {const lay=lyingIn(hammockSpots[4]);b.pose([-90,24.3,-25]);a.pose(lay.pos,{yaw:lay.yaw,rest:'lie'});await sleep(300);
   const swung=b.poses.get(a.id),found=swung&&hammocks.hammockAt({x:swung.pos[0],y:swung.pos[1],z:swung.pos[2]});
   check('rest: a visitor lying in a lounge hammock is seen lying in that hammock',swung?.rest==='lie'&&found===lay.spot,JSON.stringify(swung&&{pos:swung.pos.map(v=>+v.toFixed(3)),rest:swung.rest,hammock:!!found}));}
+ // Standing in a healing capsule in the Deck 5 surgical suite (the walk's surgery.js): seen standing on its floor,
+ // 0.24 m up, not sitting or lying; then out again, back on the suite's floor.
+ b.pose([-63.3,-23.7,-42]);a.pose([-63.3,-23.46,-47],{yaw:0});await sleep(300);
+ const capsuled=b.poses.get(a.id);
+ check('rest: a visitor in a surgical suite healing capsule is seen standing in it',!!capsuled&&!capsuled.rest&&Math.abs(capsuled.pos[0]+63.3)<.01&&Math.abs(capsuled.pos[1]+23.46)<.01&&Math.abs(capsuled.pos[2]+47)<.01,JSON.stringify(capsuled&&{pos:capsuled.pos,rest:capsuled.rest}));
+ a.pose([-63.3,-23.7,-45.6]);await sleep(300);
+ check('rest: out of the capsule, they are seen back on the floor',Math.abs(b.poses.get(a.id)?.pos[1]+23.7)<.01);
+ // In the Hydro-Nip Lounge, on its upper gallery, a visitor wears its catnip face for a visitor in the dome below; out
+ // in the hall, no longer. The face is drawn from the pose's position, which is what this checks arrives.
+ {b.pose([-90,24.3,-25]);a.pose([-92,32.3,-44]);await sleep(300);const lounging=b.poses.get(a.id);
+  a.pose([-92,24.3,-4]);await sleep(300);const left=b.poses.get(a.id);
+  check('catnip face: a visitor in the lounge is seen wearing it, and not once out in the hall',!!lounging&&inTheLounge(posOf(lounging))&&!!left&&!inTheLounge(posOf(left)),JSON.stringify({in:lounging?.pos,out:left?.pos}));}
  // Paws Off on a Deck 16 exercise studio treadmill (src/walk/paws-off): a runner on the belt is seen there, playing; after
  // a fall, on their back behind it, still playing; stepped off, no longer playing.
  b.pose([5,20.3,-44]);a.pose([7,20.56,-47.79],{yaw:Math.PI,pl:true});await sleep(300);
@@ -198,6 +223,46 @@ try{
  check('hamster ball: climbed out, they are no longer seen in a ball',b.poses.get(a.id)?.ball===false&&b.poses.get(a.id)?.stance==='stand');
  const junk=new Bot(PORT,{name:'Junk'});await junk.welcomed();junk.pose([136,24.3,20],{b:'yes'});await sleep(300);
  check('hamster ball: anything but true is not a ball',b.poses.get(junk.id)?.ball===false);junk.close();
+ // The Deck 1 transporters (src/walk/transporter.js, server/transporters.mjs). The welcome lists the six carts, all at home.
+ // One visitor takes MCT-03's driver's seat and the other hears it is taken, and can't take it themselves; the driver is
+ // seen seated wherever they drive it (each page draws the cart under its seated driver); parked, it stays where they left
+ // it for everyone, a newcomer included. A driver who leaves the ship mid-drive leaves it where they last said it was.
+ {
+  const carts=x=>{for(let i=x.msgs.length-1;i>=0;i--){const m=x.msgs[i];if(m.m==='mcts')return m.carts;if(m.m==='welcome')return m.mcts;}return null;};
+  const heard=(x,n)=>x.msgs.slice(n).filter(m=>m.m==='mcts').length;
+  const atHome=carts(b);
+  check('transporters: the welcome lists six carts, none driven, all at home',atHome?.length===CARTS&&CARTS===6&&atHome.every(c=>c.d===null&&c.at===null),JSON.stringify(atHome));
+  const home=mctHomes()[2],seat=[home.at[0],home.at[1]+.22,home.at[2]];
+  b.pose([home.at[0]-3,home.at[1],home.at[2]-6]);a.pose(seat,{yaw:home.yaw});await sleep(150);
+  const nb=b.msgs.length;a.send({m:'mct',e:'take',i:2});await sleep(250);
+  check('transporters: a visitor takes MCT-03\'s driver\'s seat and the other visitor hears who has it',carts(b)?.[2].d===a.id&&carts(a)?.[2].d===a.id&&heard(b,nb)===1,JSON.stringify(carts(b)?.[2]));
+  const na=a.msgs.length,nb2=b.msgs.length;b.send({m:'mct',e:'take',i:2});await sleep(250);
+  check('transporters: while one visitor drives a cart, another can\'t take its seat (only they hear so)',carts(b)?.[2].d===a.id&&heard(b,nb2)===1&&heard(a,na)===0);
+  // Driving: seated, at walking pace, out of the bay and round toward the door. The other visitor sees them there.
+  const path=[[0,-1.2],[0,-2.4],[-.4,-3.5],[-1.4,-4.4],[-2.6,-4.9]];
+  for(const [dx,dz] of path){a.pose([seat[0]+dx,seat[1],seat[2]+dz],{yaw:Math.PI+Math.atan2(-dx,-dz)*.5,rest:'sit'});await sleep(120);}
+  a.send({m:'mct',e:'at',i:2,at:[home.at[0]-2.6,home.at[1],home.at[2]-4.9],yaw:4.2});await sleep(250);
+  const seen=b.poses.get(a.id);
+  check('transporters: the driver is seen seated where they have driven the cart',seen?.rest==='sit'&&Math.abs(seen.pos[0]-(seat[0]-2.6))<.01&&Math.abs(seen.pos[2]-(seat[2]-4.9))<.01,JSON.stringify(seen&&{pos:seen.pos,rest:seen.rest}));
+  const parkAt=[+(home.at[0]-3.1).toFixed(2),home.at[1],+(home.at[2]-5.6).toFixed(2)];
+  a.send({m:'mct',e:'park',i:2,at:parkAt,yaw:4.4});a.pose([parkAt[0]+1.3,home.at[1],parkAt[2]]);await sleep(250);
+  const parked=carts(b)?.[2];
+  check('transporters: parked, the cart is free and stays where its driver left it, for the other visitor',parked?.d===null&&JSON.stringify(parked.at)===JSON.stringify(parkAt)&&parked.yaw===4.4,JSON.stringify(parked));
+  const late=new Bot(PORT,{name:'Late'});await late.welcomed();
+  check('transporters: a newcomer is handed the cart where it was parked',JSON.stringify(carts(late)?.[2])===JSON.stringify(parked)&&carts(late)?.[0].at===null);late.close();
+  // Bad input changes nothing: another visitor parking a cart they don't drive, a cart that isn't there, a spot off Deck 1.
+  const nb3=b.msgs.length;a.send({m:'mct',e:'park',i:0,at:[0,-39.7,0],yaw:0});a.send({m:'mct',e:'take',i:9});a.send({m:'mct',e:'take',i:'1'});await sleep(250);
+  check('transporters: parking a cart nobody gave you, and carts that don\'t exist, are ignored',heard(b,nb3)===0&&carts(b)?.[0].at===null);
+  // Someone else drives it off, then leaves the ship mid-drive: it stays where they last were.
+  const dee=new Bot(PORT,{name:'Dee'});await dee.welcomed();
+  const nb4=b.msgs.length;dee.send({m:'mct',e:'take',i:2});await sleep(200);const took=carts(b)?.[2].d===dee.id;
+  dee.send({m:'mct',e:'at',i:2,at:[parkAt[0],20.3,parkAt[2]],yaw:1});await sleep(100);
+  dee.send({m:'mct',e:'at',i:2,at:[parkAt[0]-6,home.at[1],parkAt[2]],yaw:4.71});await sleep(150);
+  dee.close();await sleep(300);
+  const left=carts(b)?.[2];
+  check('transporters: a driver who leaves the ship mid-drive leaves the cart free where they last said it was (a spot off Deck 1 is ignored)',
+   took&&heard(b,nb4)===2&&left?.d===null&&left.at[0]===+(parkAt[0]-6).toFixed(2)&&left.at[1]===home.at[1]&&left.yaw===4.71,JSON.stringify(left));
+ }
  // Near and far: a visitor 200 m off hears about a moving one twice a second, a near one ten times.
  const far=new Bot(PORT,{name:'Far'});await far.welcomed();far.pose([-100,-3.7,0]);b.got.clear();far.got.clear();
  for(let i=0;i<30;i++){a.pose([100+i*.3,-3.7,0]);b.pose([104,-3.7,0]);far.pose([-100,-3.7,0]);await sleep(100);}
@@ -464,6 +529,55 @@ try{
  }finally{srv.kill();fs.rmSync(scoresFile(port),{force:true});}
 }
 
+// ---- the Container Maze's best times (server/maze.mjs), in a file of their own, on a server of its own ---------------
+// Real time: no run is believed under MAZE_FASTEST_S, so the runners here wait that long. A run starts at the way in
+// and ends at the red button, so each runner's pose is put there first.
+{
+ const port=PORT+23,file=path.join(os.tmpdir(),`leo-live-maze-check-${port}.json`);fs.rmSync(file,{force:true});
+ let srv=await startServer(port,{LEO_LIVE_MAZE:file});
+ const ask=async(bot,msg,op)=>{const n=bot.msgs.length;bot.send({m:'maze',...msg});for(let i=0;i<40&&!bot.msgs.slice(n).some(x=>x.m==='maze'&&x.op===op);i++)await sleep(25);return bot.msgs.slice(n).find(x=>x.m==='maze'&&x.op===op);};
+ const start=toWorld(MAZE_ROOM,[MAZE_START[0]+.4,0,MAZE_START[2]]),button=toWorld(MAZE_ROOM,[MAZE_BUTTON[0],0,MAZE_BUTTON[2]-.6]),away=toWorld('d02-arrival-1',[-20,0,0]);
+ const floor=MAZE_FASTEST_S*1000;
+ try{
+  const guest=new Bot(port,{name:'Guest'}),bea=new Bot(port,{pass:await creamery.sign(claimsFor('744444444444444444','Bea Cat'))}),
+   cal=new Bot(port,{pass:await creamery.sign(claimsFor('755555555555555555','Cal Cat'))}),dee=new Bot(port,{pass:await creamery.sign(claimsFor('766666666666666666','Dee Cat'))}),
+   eve=new Bot(port,{pass:await creamery.sign(claimsFor('777777777777777777','Eve Cat'))});
+  for(const b of [guest,bea,cal,dee,eve])await b.welcomed();
+  const empty=await ask(cal,{op:'board'},'board');
+  check('maze: the board starts empty, and says the visitor is signed in',empty?.verified===true&&empty.top.length===0&&empty.you===null,JSON.stringify(empty));
+  const t0=Date.now();
+  for(const b of [guest,bea,dee,eve]){b.pose(start);b.send({m:'maze',op:'start'});}
+  cal.pose(away);cal.send({m:'maze',op:'start'});
+  eve.pose(button);
+  check('maze: a run faster than the way can be run is refused',(await ask(eve,{op:'finish',ms:floor+200},'result'))?.why==='rejected');
+  await sleep(floor+1200-(Date.now()-t0));
+  guest.pose(button);
+  check("maze: a guest's run is not kept, and they are told to sign in",(await ask(guest,{op:'finish',ms:floor+1000},'result'))?.why==='sign-in');
+  cal.pose(button);
+  check('maze: a run that never started at the way in is refused',(await ask(cal,{op:'finish',ms:floor+1000},'result'))?.why==='rejected'&&/maze run refused discord:755555555555555555 .*\(no start\)/.test(srv.log));
+  dee.pose(away);
+  check('maze: a run that ends away from the red button is refused',(await ask(dee,{op:'finish',ms:floor+1000},'result'))?.why==='rejected'&&/maze run refused discord:766666666666666666 .*\(not at the button\)/.test(srv.log));
+  bea.pose(button);
+  const first=await ask(bea,{op:'finish',ms:floor+1000},'result');
+  check("maze: a signed-in runner's time is kept as their fastest",first?.ok===true&&first.newBest&&first.best===floor+1000&&first.rank===1,JSON.stringify(first));
+  // Bea runs again from the start, slower: her best stays.
+  bea.pose(start);bea.send({m:'maze',op:'start'});await sleep(floor+2500);bea.pose(button);
+  const slower=await ask(bea,{op:'finish',ms:floor+2400},'result');
+  check('maze: a slower run leaves the best time as it was',slower?.ok===true&&!slower.newBest&&slower.best===floor+1000,JSON.stringify(slower));
+  // Another visitor, who has run nothing, sees Bea's time on the board.
+  const board=await ask(cal,{op:'board'},'board');
+  check("maze: another visitor sees a runner's time on the board",board?.top.length===1&&board.top[0].name==='Bea Cat'&&board.top[0].ms===floor+1000&&board.you===null,JSON.stringify(board));
+  const gb=await ask(guest,{op:'board'},'board');
+  check('maze: a guest can read the board, marked not signed in',gb?.verified===false&&gb.top.length===1);
+  check('maze: kept and refused runs are logged',srv.log.includes(`maze run discord:744444444444444444 Bea Cat ${((floor+1000)/1000).toFixed(1)}s (best)`)&&srv.log.includes('maze run refused discord:777777777777777777'));
+  [guest,bea,cal,dee,eve].forEach(b=>b.close());
+  await sleep(1300);srv.kill();srv=await startServer(port,{LEO_LIVE_MAZE:file});
+  const back=new Bot(port,{name:'Later'});await back.welcomed();const kept=await ask(back,{op:'board'},'board');
+  check('maze: the best times are still there after the server restarts',kept?.top.length===1&&kept.top[0].name==='Bea Cat',JSON.stringify(kept));
+  back.close();
+ }finally{srv.kill();fs.rmSync(file,{force:true});}
+}
+
 // ---- chat as it starts (Discord-verified visitors only), and chat turned off, on servers of their own --------------
 {
  const port=PORT+7,only=await startServer(port);
@@ -536,6 +650,185 @@ try{
  }finally{spooky.kill();fs.rmSync(file,{force:true});}
 }
 
+// ---- the Deck 19 graffiti wall (graffiti.mjs), on a server of its own ----------------------------------------------
+// One signed-in visitor sprays; another, looking at the wall, hears the stroke and lays it into their own copy, which then
+// matches the wall the server hands a newcomer. Guests may look but not paint; strokes are checked and rate-limited; who
+// painted is logged; the paint is kept through a restart in a file that never grows; only the admin clear wipes it.
+{
+ const port=PORT+12;for(const f of [graffitiFile(port),graffitiClear(port)])fs.rmSync(f,{force:true});let srv=await startServer(port);
+ const wait=async(bot,n,test,ms=1000)=>{for(let i=0;i<ms/25;i++){const got=bot.msgs.slice(n).find(test);if(got)return got;await sleep(25);}return null;};
+ const look=async bot=>{const n=bot.msgs.length;bot.send({m:'wall'});return wait(bot,n,x=>x.m==='wall');};
+ const same=(a,b)=>!!a&&!!b&&a.length===b.length&&a.every((x,i)=>x===b[i]);
+ try{
+  const guest=new Bot(port,{name:'Guest'}),bea=new Bot(port,{pass:await creamery.sign(claimsFor('912121212121212121','Bea Cat'))}),
+   cal=new Bot(port,{pass:await creamery.sign(claimsFor('913131313131313131','Cal Cat'))}),away=new Bot(port,{name:'Away'});
+  for(const b of [guest,bea,cal,away])await b.welcomed();
+  const bare=await look(guest),calWall=await look(cal);await look(bea);
+  check('graffiti: anyone can look at the wall, a guest marked not signed in',bare?.w===WALL.w&&bare.h===WALL.h&&bare.verified===false&&wallFromText(bare.cells)?.every(c=>c===0)&&calWall?.verified===true);
+  let n=cal.msgs.length;guest.send({m:'paint',c:3,s:1,p:[10,10,20,20]});
+  check("graffiti: a guest's stroke is refused, they are told to sign in, and it reaches nobody",(await wait(guest,0,x=>x.m==='painted'))?.why==='sign-in'&&!await wait(cal,n,x=>x.m==='stroke',300));
+  // Bea sprays a line; Cal, looking at the wall, sees it and lays it into his copy.
+  const mine=wallFromText(calWall.cells),stroke={c:4,s:1,p:[10,20,30,40,50,40]};
+  n=cal.msgs.length;const na=away.msgs.length,nb=bea.msgs.length;bea.send({m:'paint',...stroke});
+  const heard=await wait(cal,n,x=>x.m==='stroke');
+  check("graffiti: a signed-in visitor's stroke reaches another visitor looking at the wall, as sprayed",heard?.id===bea.id&&heard.c===4&&heard.s===1&&JSON.stringify(heard.p)===JSON.stringify(stroke.p),JSON.stringify(heard));
+  check('graffiti: the painter is not sent their own stroke, nor is a visitor who never came to look',!await wait(bea,nb,x=>x.m==='stroke',200)&&!away.msgs.slice(na).some(x=>x.m==='stroke'));
+  if(heard)paintStroke(mine,heard);
+  // Cal sprays over part of it in blue: colours overlap, the later one on top.
+  n=bea.msgs.length;const over={c:9,s:2,p:[30,40]};cal.send({m:'paint',...over});const beaHeard=await wait(bea,n,x=>x.m==='stroke');paintStroke(mine,over);
+  const late=new Bot(port,{name:'Late'});await late.welcomed();const lateWall=wallFromText((await look(late))?.cells);
+  check('graffiti: what another visitor saw sprayed matches the wall a newcomer is handed',!!beaHeard&&same(lateWall,mine)&&mine.filter(c=>c===4).length>50,`${mine.filter(c=>c===4).length} orange cells, ${mine.filter(c=>c===9).length} blue`);
+  check('graffiti: painting over paint leaves the later colour on top',lateWall?.[40*WALL.w+30]===9&&lateWall?.[20*WALL.w+10]===4);
+  n=cal.msgs.length;
+  for(const bad of [{c:0,s:1,p:[1,1]},{c:13,s:1,p:[1,1]},{c:2,s:5,p:[1,1]},{c:2,s:1,p:[WALL.w,1]},{c:2,s:1,p:[1,-1]},{c:2,s:1,p:[1,2,3]},{c:2,s:1,p:Array(60).fill(5)},{c:2,s:1.5,p:[1,1]},{c:'2',s:1,p:[1,1]},{c:2,s:1,p:'here'}])bea.send({m:'paint',...bad});
+  check('graffiti: malformed strokes are ignored',!await wait(cal,n,x=>x.m==='stroke',400)&&bea.closed===null);
+  await sleep(2100);n=cal.msgs.length;const nb2=bea.msgs.length;
+  for(let i=0;i<60;i++)bea.send({m:'paint',c:6,s:0,p:[100,200+(i%20)]});await sleep(400);
+  const passed=cal.msgs.slice(n).filter(x=>x.m==='stroke').length;
+  check('graffiti: a flood of strokes is rate-limited and the painter told',passed<=30&&passed>=20&&bea.msgs.slice(nb2).some(x=>x.m==='painted'&&x.why==='slow')&&bea.closed===null,`${passed} of 60 passed on`);
+  check('graffiti: who starts painting is logged at once',/graffiti painting discord:912121212121212121 "Bea Cat"/.test(srv.log));
+  bea.close();await sleep(300);
+  check('graffiti: when they stop, how much they painted, in which colours and where is logged',/graffiti painted discord:912121212121212121 "Bea Cat" \d+ strokes \d+ cells colours 4,6 across 10-100 down 20-219/.test(srv.log),(srv.log.match(/graffiti painted .*/)||[''])[0]);
+  const before=wallFromText((await look(late))?.cells);[guest,cal,away,late].forEach(b=>b.close());
+  await sleep(1300);const size=fs.statSync(graffitiFile(port)).size;srv.kill();srv=await startServer(port);
+  const back=new Bot(port,{name:'Back'});await back.welcomed();const kept=wallFromText((await look(back))?.cells);
+  check('graffiti: the paint is still there after the server restarts',same(kept,before)&&kept.some(c=>c===6),`file ${size} bytes`);
+  // More paint, and the file is the same size: the wall is a fixed grid, not a growing list.
+  const dee=new Bot(port,{pass:await creamery.sign(claimsFor('914141414141414141','Dee Cat'))});await dee.welcomed();
+  for(let i=0;i<20;i++){dee.send({m:'paint',c:1+i%12,s:2,p:[i*5,i*10,119-i*5,223-i*10]});await sleep(90);}
+  await sleep(1300);const grown=fs.statSync(graffitiFile(port)).size;
+  check('graffiti: the stored wall stays the same size however much is painted',grown===size&&size<40000,`${size} bytes, then ${grown}`);
+  // The admin clear: the clear file appears, the wall goes bare for everyone looking, it is logged, the file is removed.
+  n=back.msgs.length;fs.writeFileSync(graffitiClear(port),'check-live\n');
+  const cleared=await wait(back,n,x=>x.m==='wall'&&x.cleared,4000);
+  check('graffiti: the admin clear wipes the wall for everyone looking, and is logged',!!cleared&&wallFromText(cleared.cells)?.every(c=>c===0)&&/graffiti wall cleared \(admin: "check-live"\)/.test(srv.log)&&!fs.existsSync(graffitiClear(port)));
+  back.close();dee.close();await sleep(300);srv.kill();srv=await startServer(port);
+  const after=new Bot(port,{name:'After'});await after.welcomed();
+  check('graffiti: a cleared wall stays clear after a restart',wallFromText((await look(after))?.cells)?.every(c=>c===0));
+  after.close();
+ }finally{srv.kill();for(const f of [graffitiFile(port),graffitiClear(port)])fs.rmSync(f,{force:true});}
+}
+
+// ---- the Crown lounge TV (tv.mjs), on a server of its own -----------------------------------------------------------
+// A signed-in visitor gets a ticket and uploads an mp4 over HTTP; another visitor, who asked nothing, hears that it is on
+// and who shared it, and can fetch the very same file (whole, or a range of it). Guests may watch but not upload; files
+// that aren't H.264 mp4, too long, too big or from another site are refused; a ticket works once; the video survives a
+// restart; only an owner (or the admin clear file) takes it down, which blanks it for everyone and deletes the file.
+{
+ const port=PORT+24,dir=tvDir(port);fs.rmSync(dir,{recursive:true,force:true});fs.rmSync(tvClear(port),{force:true});
+ const env={LEO_LIVE_TV_OWNERS:'914141414141414141',LEO_LIVE_TV_MAX_MB:'3'};let srv=await startServer(port,env);
+ const wait=async(bot,n,test,ms=1500)=>{for(let i=0;i<ms/25;i++){const got=bot.msgs.slice(n).find(test);if(got)return got;await sleep(25);}return null;};
+ const ask=async(bot,m)=>{const n=bot.msgs.length;bot.send({m});return wait(bot,n,x=>x.m===(m==='tv-down'?'tv-ticket':m));};
+ // A request to the server's web side: {status, headers, body (a Buffer), json}.
+ const request=(method,pathname,{body,headers={}}={})=>new Promise((resolve,reject)=>{
+  const q=http.request({host:'127.0.0.1',port,method,path:pathname,headers:{...(body?{'Content-Length':String(body.length)}:{}),...headers}},res=>{
+   const parts=[];res.on('data',c=>parts.push(c));res.on('end',()=>{const b=Buffer.concat(parts);let json=null;try{json=JSON.parse(b);}catch{}resolve({status:res.statusCode,headers:res.headers,body:b,json});});});
+  q.on('error',e=>resolve({status:0,headers:{},body:Buffer.alloc(0),json:null,error:e.message}));if(body)q.end(body);else q.end();});
+ const upload=(bot,body,ticket,{origin='http://localhost:4180',type='video/mp4'}={})=>request('POST','/tv/upload',{body,headers:{Origin:origin,'Content-Type':type,'X-Leo-Tv-Ticket':ticket||''}});
+ const ticketOf=async bot=>(await ask(bot,'tv-ticket'))?.ticket;
+ const clip=fs.readFileSync('src/walk/art/theatre-loop.mp4');
+ // The same clip made five minutes long (its mvhd duration), and re-labelled HEVC (its first sample entry).
+ const longer=Buffer.from(clip),mv=longer.indexOf('mvhd'),scale=longer.readUInt32BE(mv+16);longer.writeUInt32BE(scale*300,mv+20);
+ const hevc=Buffer.from(clip);hevc.write('hvc1',hevc.indexOf('avc1',hevc.indexOf('stsd')),'latin1');
+ try{
+  const guest=new Bot(port,{name:'Guest'}),bea=new Bot(port,{pass:await creamery.sign(claimsFor('912121212121212121','Bea Cat'))}),
+   cal=new Bot(port,{pass:await creamery.sign(claimsFor('913131313131313131','Cal Cat'))}),jay=new Bot(port,{pass:await creamery.sign(claimsFor('914141414141414141','Jay Owner'))});
+  for(const b of [guest,bea,cal,jay])await b.welcomed();
+  const first=await ask(guest,'tv'),calFirst=await ask(cal,'tv'),jayFirst=await ask(jay,'tv');
+  check('tv: anyone can ask what is on; nothing yet, and only the owner is marked owner',first?.video===null&&first.verified===false&&first.owner===false&&calFirst?.verified===true&&calFirst.owner===false&&jayFirst?.owner===true&&first.max?.mb===3,JSON.stringify(first));
+  check('tv: a guest asking to upload is told to sign in',(await ask(guest,'tv-ticket'))?.why==='sign-in');
+  const t1=await ticketOf(bea);
+  check('tv: a signed-in visitor gets a one-time upload ticket',/^[0-9a-f]{48}$/.test(t1||''));
+  const nc=cal.msgs.length,ng=guest.msgs.length,up=await upload(bea,clip,t1);
+  check('tv: an H.264 mp4 within the limits is taken',up.status===200&&up.json?.ok===true&&/^[0-9a-f]{16}$/.test(up.json.video?.id)&&up.headers['access-control-allow-origin']==='http://localhost:4180',`${up.status} ${up.body.toString().slice(0,160)}`);
+  const heard=await wait(cal,nc,x=>x.m==='tv'&&x.video),heardGuest=await wait(guest,ng,x=>x.m==='tv'&&x.video);
+  check('tv: another visitor hears the new video and who shared it, without asking',heard?.video?.id===up.json?.video?.id&&heard.video.name==='Bea Cat'&&heard.video.src===`/tv/${heard.video.id}.mp4`&&Math.abs(heard.video.seconds-34.3)<.2&&heard.video.width===960,JSON.stringify(heard?.video));
+  check('tv: a guest hears it too, still marked not signed in',heardGuest?.video?.id===heard?.video?.id&&heardGuest.verified===false);
+  const got=await request('GET',heard?.video?.src||'/tv/none'),part=await request('GET',heard?.video?.src||'/tv/none',{headers:{Range:'bytes=100-299'}});
+  check('tv: the other visitor can fetch the very same file, as video/mp4, from any page',got.status===200&&got.body.equals(clip)&&got.headers['content-type']==='video/mp4'&&got.headers['access-control-allow-origin']==='*',`${got.status} ${got.body.length} bytes`);
+  check('tv: a range of it comes back as asked, so a browser can seek',part.status===206&&part.body.equals(clip.subarray(100,300))&&part.headers['content-range']===`bytes 100-299/${clip.length}`);
+  check('tv: a ticket works once',(await upload(bea,clip,t1)).json?.why==='ticket');
+  check('tv: one upload a minute per account',(await ask(bea,'tv-ticket'))?.why==='slow');
+  const refusals={};
+  for(const [what,body,opts] of [['not-mp4',Buffer.from('this is not a video at all, just some text'.repeat(20))],['codec',hevc],['long',longer],['origin',clip,{origin:'https://evil.example'}],['big',Buffer.concat([clip,Buffer.alloc(1024*1024)])]])
+   refusals[what]=(await upload(cal,body,await ticketOf(cal),opts)).json?.why;
+  check('tv: text, HEVC, a five-minute video, another site and an oversized file are each refused, with why',Object.entries(refusals).every(([k,v])=>v===k),JSON.stringify(refusals));
+  check('tv: refusals leave the video as it was',(await ask(guest,'tv'))?.video?.id===heard?.video?.id);
+  check('tv: who uploaded what is logged',new RegExp(`tv video ${heard?.video?.id} discord:912121212121212121 "Bea Cat" ${clip.length} bytes 34.3s 960x540`).test(srv.log),(srv.log.match(/tv video .*/)||[''])[0]);
+  // A restart keeps it.
+  for(const b of [guest,bea,cal,jay])b.close();srv.kill();await sleep(300);srv=await startServer(port,env);
+  const dot=new Bot(port,{name:'Dot'}),cal2=new Bot(port,{pass:await creamery.sign(claimsFor('913131313131313131','Cal Cat'))}),jay2=new Bot(port,{pass:await creamery.sign(claimsFor('914141414141414141','Jay Owner'))});
+  for(const b of [dot,cal2,jay2])await b.welcomed();
+  const kept=await ask(dot,'tv');
+  check('tv: the video is still on after the server restarts',kept?.video?.id===heard?.video?.id&&kept.video.name==='Bea Cat'&&(await request('GET',kept.video.src)).body.equals(clip));
+  check('tv: a visitor who is not an owner cannot take it down',(await ask(cal2,'tv-down'))?.why==='not-owner'&&(await ask(dot,'tv'))?.video?.id===heard?.video?.id);
+  let n=dot.msgs.length;jay2.send({m:'tv-down'});
+  const down=await wait(dot,n,x=>x.m==='tv'&&x.video===null);
+  check('tv: an owner takes it down, and every visitor sees the screen go blank',!!down&&down.down===true&&(await request('GET',heard?.video?.src||'/tv/none')).status===404&&!fs.existsSync(path.join(dir,`${heard?.video?.id}.mp4`))&&/tv taken down \S+ discord:912121212121212121 "Bea Cat" \(owner discord:914141414141414141 "Jay Owner"\)/.test(srv.log),(srv.log.match(/tv taken down .*/)||[''])[0]);
+  const again=await upload(cal2,clip,await ticketOf(cal2));
+  n=dot.msgs.length;fs.writeFileSync(tvClear(port),'check-live\n');
+  const cleared=await wait(dot,n,x=>x.m==='tv'&&x.video===null,4000);
+  check('tv: the admin clear file takes a video down for everyone, and is logged',again.json?.ok===true&&!!cleared&&/tv taken down \S+ discord:913131313131313131 "Cal Cat" \(admin: "check-live"\)/.test(srv.log)&&!fs.existsSync(tvClear(port))&&fs.readdirSync(dir).filter(f=>f.endsWith('.mp4')).length===0);
+  for(const b of [dot,cal2,jay2])b.close();
+ }finally{srv.kill();}
+}
+
+// ---- Paws Off's gym rounds (server/gym.mjs), on a server of its own ----------------------------------------------------
+// One runner on a Deck 16 treadmill and one on the arcade's step on; a third, standing by, asks too. When the countdown
+// ends, the two on treadmills run on one seed and the third is told to run alone. One falls, and the other hears it; once
+// both are off, both hear the same ranked results. Then a round someone leaves mid-run, and a countdown given up.
+{
+ const port=PORT+23,srv=await startServer(port);
+ try{
+  const gymOf=(x,e)=>x.msgs.filter(m=>m.m==='gym'&&(!e||m.e===e)),t=arcadeTreadmill(),arcadeOn=t.centre.clone().addScaledVector(t.front,-t.length*.08).toArray();
+  const a=new Bot(port,{name:'Ann'}),b=new Bot(port,{name:'Bea'}),c=new Bot(port,{name:'Cal'});await a.welcomed();await b.welcomed();await c.welcomed();
+  a.pose([7,20.56,-47.79],{yaw:Math.PI,pl:true});b.pose(arcadeOn,{pl:true});c.pose([10,20.3,-44]);await sleep(200);
+  a.send({m:'gym',e:'in'});await sleep(1000);b.send({m:'gym',e:'in'});c.send({m:'gym',e:'in'});await sleep(300);
+  const wa=gymOf(a,'wait').at(-1),wb=gymOf(b,'wait').at(-1);
+  check('gym: stepping on opens a short countdown that others on a treadmill join',!!wa&&wa.round===wb?.round&&wa.n===3&&wb.ms>3500&&wb.ms<5200,JSON.stringify({wa,wb}));
+  await sleep(5200);
+  const ga=gymOf(a,'go')[0],gb=gymOf(b,'go')[0];
+  check('gym: when the countdown ends, those on a treadmill (Deck 16 and the arcade) run on one seed',!!ga&&ga.round===wa.round&&gb?.seed===ga.seed&&Number.isInteger(ga.seed)&&JSON.stringify(ga.runners.map(r=>r.id).sort())===JSON.stringify([a.id,b.id].sort())&&ga.runners.find(r=>r.id===b.id)?.name==='Bea',JSON.stringify(ga));
+  check('gym: someone who asked but is not on a treadmill is told to run alone',gymOf(c,'cancel').length===1&&!gymOf(c,'go').length);
+  await sleep(1500);b.send({m:'gym',e:'fell',round:ga.round,t:1.4,cleared:2});await sleep(300);
+  const heard=gymOf(a,'out').at(-1);
+  check("gym: one runner's fall reaches the other, with how many are still running",heard?.id===b.id&&heard.how==='fell'&&heard.t===1.4&&heard.running===1,JSON.stringify(heard));
+  check('gym: no results while someone is still running',!gymOf(a,'results').length&&!gymOf(b,'results').length);
+  await sleep(1000);a.send({m:'gym',e:'fell',round:ga.round,t:999,cleared:9});await sleep(300);
+  const ra=gymOf(a,'results')[0],rb=gymOf(b,'results')[0];
+  check('gym: once all are off, every runner hears the same ranked results with their place',!!ra&&JSON.stringify(ra)===JSON.stringify(rb)&&ra.ranks[0].id===a.id&&ra.ranks[0].place===1&&ra.ranks[1].id===b.id&&ra.ranks[1].place===2&&ra.ranks[1].t===1.4,JSON.stringify(ra));
+  check('gym: a time longer than the round has run is cut to what it ran',ra?.ranks[0].t>2&&ra.ranks[0].t<4.5,JSON.stringify(ra?.ranks[0]));
+  // Leaving mid-round: out at once, listed after those who fell.
+  const d=new Bot(port,{name:'Dot'});await d.welcomed();d.pose([15,20.56,-47.79],{yaw:Math.PI,pl:true});await sleep(200);
+  a.send({m:'gym',e:'in'});d.send({m:'gym',e:'in'});await sleep(6300);
+  const g2=gymOf(a,'go').at(-1);
+  check('gym: a new round after the last, with a new seed',g2&&g2.round!==ga.round&&g2.seed!==ga.seed&&g2.runners.length===2,JSON.stringify(g2));
+  await sleep(1500);d.close();await sleep(300);
+  const left=gymOf(a,'out').at(-1);
+  check('gym: someone leaving the ship mid-round is out of it at once, and the other hears it',left?.id===d.id&&left.how==='left'&&left.running===1&&left.round===g2?.round,JSON.stringify(left));
+  a.send({m:'gym',e:'fell',round:g2?.round,t:.8,cleared:1});await sleep(300);
+  const r2=gymOf(a,'results').at(-1);
+  check('gym: those who left are ranked after those who fell',r2?.round===g2?.round&&r2.ranks[0].id===a.id&&r2.ranks[0].how==='fell'&&r2.ranks[1].id===d.id&&r2.ranks[1].how==='left',JSON.stringify(r2));
+  // Stepping off during the countdown: no round for them.
+  const before=gymOf(a,'go').length;a.send({m:'gym',e:'in'});await sleep(300);a.send({m:'gym',e:'off'});await sleep(6300);
+  check('gym: stepping off in the countdown leaves no round',gymOf(a,'go').length===before&&!/gym round 3 /.test(srv.log));
+  check('gym: rounds are logged as they start and end',(srv.log.match(/ gym results /g)||[]).length===2);
+  for(const x of [a,b,c])x.close();
+ }finally{srv.kill();}
+}
+
+// ---- the Deck 1 transporters' daily reset (server/transporters.mjs), with a stand-in clock ------------------------------
+{
+ let clock=new Date(2026,9,28,15,0),said=[];const v={id:'voyager-a',name:'A'},w={id:'voyager-b',name:'B'};
+ const t=transporterServer({log(){},broadcast:m=>said.push(m),send(){},now:()=>clock,resetHour:4});
+ t.message(v,{e:'take',i:0});t.message(v,{e:'park',i:0,at:[-60,-39.7,40],yaw:1});t.message(w,{e:'take',i:1});t.message(w,{e:'at',i:1,at:[-70,-39.7,38],yaw:2});
+ clock=new Date(2026,9,29,3,59);t.tick();const before=t.state();
+ clock=new Date(2026,9,29,4,1);said=[];t.tick();const after=t.state();
+ check('transporters: at the daily reset, a parked cart goes home; one being driven stays with its driver',before[0].at?.[0]===-60&&after[0].at===null&&after[1].d==='voyager-b'&&after[1].at?.[0]===-70&&said.length===1,JSON.stringify(after.slice(0,2)));
+ said=[];t.tick();clock=new Date(2026,9,29,23,0);t.tick();
+ check('transporters: only once a day',said.length===0);
+}
+
 // ---- sixty visitors at once -----------------------------------------------------------------------------------------
 {
  const port=PORT+2,busy=await startServer(port),N=60;
@@ -556,6 +849,7 @@ try{
 }
 
 jwksServer.close();
+await sleep(300);for(const port of started){fs.rmSync(tvDir(port),{recursive:true,force:true});fs.rmSync(tvClear(port),{force:true});}
 console.log(results.join('\n'));
 console.log(failed?`${failed} FAILED`:'All Leo live checks passed');
 process.exit(failed?1:0);
