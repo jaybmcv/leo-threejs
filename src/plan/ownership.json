@@ -5254,6 +5254,32 @@
         -38
       ]
     },
+    "painting/Orange_Haze_14_1": {
+      "room": "circulation-19",
+      "local": [
+        -125.5,
+        1.85,
+        3.94
+      ],
+      "v1": [
+        -125.5,
+        34.15,
+        3.94
+      ]
+    },
+    "painting/Orange_Haze_14_2": {
+      "room": "circulation-19",
+      "local": [
+        -125.5,
+        1.85,
+        -3.94
+      ],
+      "v1": [
+        -125.5,
+        34.15,
+        -3.94
+      ]
+    },
     "painting/Orange_Haze_15_1": {
       "room": "d20-captain-7",
       "local": [
@@ -6598,7 +6624,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 43,
-      "signature": "ffb8f127047cb67e800b0b17d245914668c566f24fad0578bb295b69ae14197a"
+      "signature": "ba6b91640160b0c441e594e87b713eca2a492c9ee672a3360054fa1b8cbca549"
     },
     {
       "source": "src/walk/hamster-ball.js",
@@ -6852,6 +6878,19 @@
       "signature": "8962b5f288ad196aa5fa5ced2ad3dabdaf4123f8aa2067b4a7857298fe9cfeb0"
     },
     {
+      "source": "src/walk/lift-tile-floor.js",
+      "rooms": [
+        "circulation-19"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 4,
+      "signature": "c137d9b9252f6472a1b306b740f8bc50e9dceedd3da11070385b87ea5f3d7427"
+    },
+    {
       "source": "src/walk/lifts.js",
       "rooms": [
         "circulation-1",
@@ -6958,7 +6997,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 32,
-      "signature": "4fecf9c0795a3a480ad479ed36ed7883de42924bb4c0f83ae5e5c53f5c8820dc"
+      "signature": "33630dfae4d948eadc35b59bc0b89846ac62d5b3addd50d706604acc32d17652"
     },
     {
       "source": "src/walk/marks.js",
@@ -7053,6 +7092,7 @@
         "circulation-15",
         "d02-arrival-1",
         "circulation-5",
+        "circulation-19",
         "d20-captain-7"
       ],
       "via": "frame boundary",
@@ -7064,7 +7104,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "a4248186f92ef1fccb38597aa1b49f6eead78dc2a0ec5f049f3e06d83fa2cb2b"
+      "signature": "c68175bb5356e87a1d214aca3f70f7ddfcb5540f40b168e938fa5f70f6b99bc9"
     },
     {
       "source": "src/walk/partitions.js",
