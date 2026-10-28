@@ -1,11 +1,13 @@
 import * as T from 'three';
 import {BODY} from '../src/walk/collision.js';
 import {LOUNGE} from '../src/hydro-nip-lounge.js';
+import {AQUARIUM} from '../src/walk/lounge-aquarium.js';
 import {loadWalkShip,fitForWalking} from './walk-plan.mjs';
 
 // The Hydro-Nip Lounge on foot (HYDRO_NIP_LOUNGE.md, phases 2-3), as check-walk's 2 m walker in the walk's own world.
 // From the commons entrance: the maze's platforms, both tubes and the galleries they land on, the dome and every
-// hammock. Then from just inside the maze's door, kept inside the tower: the maze alone leads up to both platforms.
+// hammock. Then from just inside the maze's door, kept inside the tower: the maze alone leads up to both platforms. And
+// the aquarium on the front wall: the jaguar's throat leads through it from the promenade, and nobody gets into the tank.
 // `npm run check:lounge`, a couple of minutes.
 const t0=Date.now(),log=(...a)=>console.log(((Date.now()-t0)/1000).toFixed(0)+'s',...a);
 const ship=await loadWalkShip();
@@ -43,7 +45,9 @@ function flood(from,box){
   push(nx,fy,nz);
  }
  const reached=([x,y,z],r=.5)=>{const [wx,wy,wz]=W([x,y,z]);for(let i=0;i<X.length;i++)if(Math.abs(Y[i]-wy)<.35&&Math.hypot(X[i]-wx,Z[i]-wz)<=r)return true;return false;};
- return {count:X.length,reached};
+ // Whether any position reached passes test([x,y,z]) in the template frame (W is its own inverse but for the 224 m).
+ const some=test=>{for(let i=0;i<X.length;i++)if(test([X[i]+224,Y[i],-Z[i]]))return true;return false;};
+ return {count:X.length,reached,some};
 }
 const worldBox=(a,b)=>{const p=W(a),q=W(b);return new T.Box3(new T.Vector3(Math.min(p[0],q[0]),Math.min(p[1],q[1]),Math.min(p[2],q[2])),new T.Vector3(Math.max(p[0],q[0]),Math.max(p[1],q[1]),Math.max(p[2],q[2])));};
 
@@ -66,6 +70,15 @@ log('maze flood:',maze.count,'positions');
 expect('maze: way through the ground floor',maze.reached([115,FLOOR,32.2]));
 expect('maze: lower platform from inside',maze.reached([119.4,LEVELS[0],20]));
 expect('maze: upper platform from inside',maze.reached([TUBES[1].x,LEVELS[1],MAZE.z1-.6]));
+// The aquarium (lounge-aquarium.js): from the promenade, kept to a strip round the jaguar's throat, the walker comes out
+// under the front gallery; and no walker, from the promenade or anywhere in the commons, stands inside the tank.
+{const Q=AQUARIUM,U=Q.tunnel,cx=(U.x0+U.x1)/2;
+ const inTank=([x,y,z])=>x>Q.x0+.1&&x<Q.x1-.1&&z>Q.back+.1&&z<Q.glass-.05&&!(x>U.x0&&x<U.x1&&y<U.top);
+ const throat=flood([cx,FLOOR,1.5],worldBox([U.x0-1.2,FLOOR-1,0],[U.x1+1.2,FLOOR+3,12]));
+ const wide=flood([cx,FLOOR,1.5],worldBox([100,FLOOR-1,-2],[160,LEVELS[1]+3,48]));
+ log('aquarium floods:',throat.count,wide.count,'positions');
+ expect('aquarium: through the throat into the lounge',throat.reached([cx,FLOOR,10]));
+ expect('aquarium: nobody inside the tank',!room.some(inTank)&&!wide.some(inTank));}
 // 3. Every hammock can be lain in: a spot on its cloth, with somewhere to stand within reach.
 // The rest spots the page uses: found before the lounge takes the hammocks into its swinging mesh (prepare.js).
 const spots=prepared.seats.filter(s=>s.hammock);
