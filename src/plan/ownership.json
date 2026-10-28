@@ -5433,8 +5433,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 68,
-      "signature": "7bf83c3e4b81fd36a9e6b16cca54c7f55c0dc0f0d9bfe6c4ba400a784e39338d"
+      "placements": 73,
+      "signature": "b7dacfee466ae48f882d29326a386f8c83c654d3d98d9152b0ec535554a607de"
     },
     {
       "source": "src/areas.js",
@@ -6598,7 +6598,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 43,
-      "signature": "ffb8f127047cb67e800b0b17d245914668c566f24fad0578bb295b69ae14197a"
+      "signature": "ba6b91640160b0c441e594e87b713eca2a492c9ee672a3360054fa1b8cbca549"
     },
     {
       "source": "src/walk/hamster-ball.js",
