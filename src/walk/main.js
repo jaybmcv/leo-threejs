@@ -450,7 +450,8 @@ function myPose(riding=false){
 if(live)setInterval(()=>{if(document.hidden||performance.now()-last>1000)live.pose(myPose());},1000);
 function showAboard(){
  const b=$('aboard');b.hidden=!live;if(!live)return;
- const text={live:aboard===1?'Just you aboard':`${aboard} aboard`,connecting:'Joining…',offline:'Solo · reconnecting',full:'Solo · Leo is full',replaced:'Solo · open in another tab'}[liveStatus]||'';
+ const text=(matchMedia('(max-width:560px)').matches?{live:aboard===1?'Just you':`${aboard} aboard`,connecting:'Joining…',offline:'Solo',full:'Solo · full',replaced:'Solo · 2 tabs'}
+  :{live:aboard===1?'Just you aboard':`${aboard} aboard`,connecting:'Joining…',offline:'Solo · reconnecting',full:'Solo · Leo is full',replaced:'Solo · open in another tab'})[liveStatus]||'';
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
@@ -706,6 +707,12 @@ $('help').addEventListener('click',()=>actions.help());
 // The ship log from the toolbar, the "changes here" chip or L.
 for(const id of ['log','changes-here'])$(id).addEventListener('click',()=>{if(ready())openLog();});
 $('view').addEventListener('click',()=>actions.view());
+// On a phone View, Sound and Res sit behind More; it closes on View or a tap anywhere else.
+const toolBar=document.querySelector('.tools'),moreButton=$('tools-more');
+const setMore=open=>{toolBar.classList.toggle('more-open',open);moreButton.setAttribute('aria-expanded',String(open));};
+moreButton.addEventListener('click',()=>setMore(!toolBar.classList.contains('more-open')));
+$('view').addEventListener('click',()=>setMore(false));
+document.addEventListener('pointerdown',e=>{if(!toolBar.contains(e.target))setMore(false);});
 // The ship's hum and chimes (ambience.js), off until asked for.
 const ambience=createAmbience(),sound=$('sound');sound.setAttribute('aria-pressed',String(ambience.on));
 // Alien Cat Invasion at the lounge telescope (invasion/game.js): the walk stands still behind it, its sound follows the
