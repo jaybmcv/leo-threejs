@@ -206,13 +206,23 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 @media (max-width:560px){#aboard{padding:9px 11px}#changes-here{padding:9px 11px}#changes-here span{display:none}#log .long{display:none}}
 @media (pointer:coarse){#joystick{display:block}.help{display:none}.corner{bottom:174px}#chat-open kbd{display:none}#chat:not(.open) #chat-lines li:not(:nth-last-child(-n+4)){display:none}.touch{display:flex}.tools .respawn{display:none}#minimap-button{width:124px;height:124px}}
 @media (max-width:560px){#minimap-button{top:58px;width:112px;height:112px}.tools{gap:6px}.tools button{padding:9px 8px}#help{min-width:30px}#help .long{display:none}#help .short{display:inline}.top{top:58px;right:140px}.pill{max-width:100%;min-width:0}#where{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+/* Phones, upright: fewer buttons on screen (View, Sound and Res sit behind More), the action buttons in a tidy block clear of the joystick, and the top row kept out from under the mini-map */
+#tools-extra{display:contents}#tools-more{display:none}
+@media (pointer:coarse) and (max-width:560px){
+#tools-more{display:block}#tools-more[aria-expanded="true"]{border-color:var(--orange)}
+#tools-extra{display:none;position:absolute;top:calc(100% + 6px);right:0;flex-direction:column;gap:6px;align-items:stretch}.tools.more-open #tools-extra{display:flex}
+#tools-extra button{padding:11px 14px;text-align:left;min-width:96px}
+.top{gap:8px;right:132px}.pill{flex:none;padding:10px 12px}.pill a{white-space:nowrap}#where{display:none}
+#aboard{min-width:0;gap:6px;padding:9px 8px;letter-spacing:0;font-size:10px}#aboard span{overflow:hidden;text-overflow:ellipsis}
+.touch .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:min(176px,calc(100vw - 168px))}.touch .row button{height:42px;padding:0 4px;text-align:center}
+}
 </style>
 </head>
 <body>
 <div id="viewport"></div>
 <div class="top"><div class="pill"><a href="./">← Leo</a><span id="where"></span></div><button id="changes-here" type="button" hidden><i aria-hidden="true">✦</i><b>0</b><span> changes here</span></button><button id="aboard" type="button" hidden aria-label="Others aboard; set your name"><i></i><span></span></button></div>
 <div id="names" aria-hidden="true"></div>
-<div class="tools"><button id="go" type="button">Go to</button><button id="log" type="button" aria-label="Ship log: every change to Leo, before and after (L)"><span class="long">Ship </span>log</button><button id="view" type="button" aria-label="Switch first or third person">View</button><button id="sound" type="button" aria-pressed="false" aria-label="Ship sound">Sound</button><button id="resolution" type="button" aria-label="Render resolution: lower runs smoother on slower devices">Res High</button><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button><button id="help" type="button" aria-label="Help: how to play (H)"><span class="long">Help</span><span class="short">?</span></button></div>
+<div class="tools"><button id="go" type="button">Go to</button><button id="log" type="button" aria-label="Ship log: every change to Leo, before and after (L)"><span class="long">Ship </span>log</button><div id="tools-extra"><button id="view" type="button" aria-label="Switch first or third person">View</button><button id="sound" type="button" aria-pressed="false" aria-label="Ship sound">Sound</button><button id="resolution" type="button" aria-label="Render resolution: lower runs smoother on slower devices">Res High</button></div><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button><button id="help" type="button" aria-label="Help: how to play (H)"><span class="long">Help</span><span class="short">?</span></button><button id="tools-more" type="button" aria-expanded="false" aria-controls="tools-extra" aria-label="More buttons: view, sound, resolution">More</button></div>
 <button id="minimap-button" type="button" aria-label="Open the ship map" hidden><canvas id="minimap"></canvas><span id="minimap-deck"></span></button>
 <div class="corner"><div id="chat" hidden><ol id="chat-lines" aria-live="polite" aria-label="Chat aboard"></ol><form id="chat-form" autocomplete="off"><input id="chat-input" enterkeyhint="send" aria-label="Chat message"><button id="chat-send" type="submit">Send</button></form><div class="chat-buttons"><button id="chat-open" type="button" aria-label="Chat with everyone aboard (T)"><kbd>T</kbd>Chat<span id="chat-unread" hidden></span></button><button id="chat-hide" type="button" aria-pressed="false">Hide</button></div></div>
 <div class="help"><b>WASD</b> move · <b>Shift</b> run · <b>Space</b> jump · <b>Drag</b> look · <b>E</b> use · <b>M</b> go to · <b>L</b> ship log<span id="help-ping" hidden> · <b>T</b> chat</span> · <b>H</b> help, every control</div></div>
