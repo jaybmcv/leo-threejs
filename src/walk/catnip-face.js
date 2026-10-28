@@ -10,7 +10,7 @@ const KEYS=6,LIFT=.0025,COLS=24,ROWS=7;
 // In the bind pose (metres, Cosmo facing +z, his left +x): the heights searched for the eyes, how far the lid starts
 // above an eye's top, how much of the eye it covers at the middle (a little lower at the outer corner, where a drowsy
 // lid droops), the thickness of its dark line, then the mouth and the cheeks.
-const LID={top:1.4,bottom:1.22,over:.003,shut:.45,droop:.01,line:.004},MOUTH={y:1.221,half:.042,dip:.009,lift:.018,width:.0032};
+const LID={top:1.4,bottom:1.22,over:.003,shut:.45,droop:.01,line:.004},MOUTH={y:1.221,half:.045,dip:.009,lift:.018,width:.0048};
 const CHEEK={x:.122,y:1.214,r:.019};
 let shape=null;
 
