@@ -7095,7 +7095,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "f8e6e051df5f698e2fe1d89ec7b7427aa0918a436cb17bd13a913b7ab7f22513"
+      "signature": "6aef9ab9a8fdd4f0a2aa333bf0c1a0d521df836d5be3e29c6450d9cc1121527b"
     },
     {
       "source": "src/walk/main.js",
