@@ -167,6 +167,10 @@ export function buildLayoutV2(){
  return {cabinIdMap,fixedRooms,version:2,option:'C',units:'metres',coordinates:'X forward; Y up; Z starboard; yaw is Three.js rotation.y',hull:h.provenance,decks,cabins,rooms,assemblies,shuttles,windows,circulation,summary};
 }
 
+// Rooms whose door moves along its wall from the middle (m, world x). Container hold A's maze (src/walk/maze) fills the
+// hold from 9.8 m inside its aft end, so the door opens onto that open aft strip rather than into the maze.
+const DOOR_ALONG={'d01-cargo-1':-21};
+
 const NEW_PROGRAM={
  1:['Dockside crew mess','Rover & suit workshop','Quartermaster & supply office','Crew lounge','Container hold C','Spare-parts racks','Cold stores B'],
  2:['Arrival food hall','Welcome desk & lockers','Airlock stores','Shuttle crew ready room','Baggage handling','Emergency stores','Shuttle spares'],
@@ -212,7 +216,7 @@ function placeRooms({h,decks,rooms,shuttles,circulation,issues}){
    }if(found)break;
   }if(found)break;}if(found)break;}
   if(!found){found=makeRoom(a,preferX,a.center?.[2]??0,0,{outer,side:preferSide,status:'unfitted',reason:'No collision-free full-height rigid fit found in the deterministic search.'});issues.push({kind:'room-unfitted',id:a.id,deck:a.deck,width:a.width,depth:a.depth,height:a.height});}
-  const b=bounds(found.polygon);addDoor(found,[found.x,found.side<0?b.z1:b.z0],[0,-found.side]);rooms.push(found);return found;
+  const b=bounds(found.polygon),along=DOOR_ALONG[a.id]??0;if(along&&found.yaw!==0)throw new Error(a.id+': DOOR_ALONG assumes the room lies along x');addDoor(found,[found.x+along,found.side<0?b.z1:b.z0],[0,-found.side]);rooms.push(found);return found;
  }
  // Fixed-size bow and aft fitted rooms precede the flexible band packing.
  for(const a of sourceRooms.filter(a=>a.deck<=5&&!a.id.includes('lifeboats')&&!rooms.some(r=>r.id===a.id)).sort((a,b)=>Number(/bow|hangar|aft/.test(b.id))-Number(/bow|hangar|aft/.test(a.id))||Number(INNER.test(a.kind))-Number(INNER.test(b.kind)))){

@@ -126,6 +126,7 @@ Room-feature falls over 1 m fail unless they match a named, measured support and
 
 - `observation-lounge / Soft_back`: at most 1.15 m drop and 1.2 m above that room floor; rounded chair backs in `src/lounge.js`, climbed via their cushions.
 - `commons-10 / Garden_bench_back`: at most 1.10 m drop and 1.1 m above that room floor; unchanged cherry-blossom bench back in `src/walk/blossom.js`.
+- `d16-childcare-6 / Kitten_step_tower_pad`: at most 1.10 m drop and 1.15 m above that room floor; the Young explorers kitten step towers in `src/walk/kittens.js` (main 06605a9), climbable on purpose in 0.35 m steps to a 1.05 m top pad.
 
 The broad garden holes retain glass guards around the actual union of gallery, link and landing floors, with side glass at each stair tread height. Old automatic guard rows inside gardens are replaced, preventing stair access to incorrectly crossing cap tops. Static view bands follow the camera rays again; cabin interiors keep their own narrow deck band and nearest-cabin ranking. The distant haze pass includes the atrium roof, so the main camera far plane does not expose stars. Wing labels are Port/Starboard Aster, Birch, Cedar, Dogwood and Elm, in aft-to-forward order.
 

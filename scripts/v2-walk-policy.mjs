@@ -2,7 +2,8 @@
 import {contains} from '../src/plan/geometry-v2.js';
 export const ROOM_DROP_ALLOWLIST=[
  {room:'observation-lounge',name:'Soft_back',maxDrop:1.15,maxAboveFloor:1.2,reason:'Unchanged v1 rounded lounge-chair backs; a person can climb from the cushion onto a 1.12 m furniture back. No floor or guard edge is exempt.',source:'src/lounge.js'},
- {room:'commons-10',name:'Garden_bench_back',maxDrop:1.1,maxAboveFloor:1.1,reason:'Unchanged v1 cherry-blossom bench back; a 1.06 m furniture drop to its own ground floor, with no lower deck beneath.',source:'src/walk/blossom.js'}
+ {room:'commons-10',name:'Garden_bench_back',maxDrop:1.1,maxAboveFloor:1.1,reason:'Unchanged v1 cherry-blossom bench back; a 1.06 m furniture drop to its own ground floor, with no lower deck beneath.',source:'src/walk/blossom.js'},
+ {room:'d16-childcare-6',name:'Kitten_step_tower_pad',maxDrop:1.1,maxAboveFloor:1.15,reason:'Young explorers kitten step tower, climbable on purpose (tester feedback, main 06605a9): pads step up 0.35 m to a 1.05 m top pad, and the only drop is from that pad to its own room floor.',source:'src/walk/kittens.js'}
 ];
 export function requireRoomDropPolicy(events,layout,options){const r=classifyRoomDrops(events,layout,options);if(r.roomFeatureViolations.length)throw Error('Unapproved room-feature drops over 1 m: '+r.roomFeatureViolations.length);return r;}
 export function classifyRoomDrops(events,layout,{supports=[]}={}){

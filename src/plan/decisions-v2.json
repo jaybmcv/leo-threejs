@@ -1,0 +1,17 @@
+{
+  "about": "Jay's design decisions for the v2 layout that later phases must build. Recorded here so the producers and checks can read them; see src/plan/README-v2.md.",
+  "decisions": [
+    {"id": "atrium-floor", "date": "2026-10-27", "phase": 6, "decision": "The Deck 6 atrium floor is a zoned mix of park, lake, food hall, stage and lobby."},
+    {"id": "atrium-ceiling", "date": "2026-10-27", "phase": 6, "decision": "A lit sky panel under Deck 20's roof, with no roof glazing; the exterior roof stays as it is."},
+    {"id": "atrium-centre-clear", "date": "2026-10-28", "phase": "3 round 3", "decision": "Nothing walkable or solid crosses the atrium above Deck 16 except the forward glass lift tower and its bridges, so the view up to the sky panel stays clear. The three-level centre walkway from Deck 17 is removed."},
+    {"id": "forward-lifts", "date": "2026-10-27", "phase": 6, "decision": "Keep the glass lift tower in the atrium, with a bridge each side on every deck."},
+    {"id": "bow-cafes", "date": "2026-10-27", "phase": 6, "decision": "Each neighborhood deck's nose café is a small coffee bar with window seats, and each looks a bit different (finish, counter, seating, plants or lighting), so no two decks repeat."},
+    {"id": "skywalk-crew-only", "date": "2026-10-27", "phase": "3 round 3", "decision": "The Deck 20 skywalk is crew-only: signed Crew only and not offered as a public destination. It is not locked, since the walk has no crew role."},
+    {"id": "halloween-in-v2", "date": "2026-10-27", "phase": "3 round 3", "decision": "Carry the Deck 15 Halloween dressing into v2, ending at the same END date as the live ship."},
+    {"id": "hull-lettering", "date": "2026-10-27", "phase": "3b", "decision": "Cabin windows cut straight through the hull lettering (Mars Cats Voyage logo, LEO, MCV / 01), like airliner livery; the lettering is not moved or printed over the glass."}
+  ],
+  "targets": [
+    {"id": "atrium-speed", "phase": 6, "target": "Before the atrium dressing goes in, the Deck 6 atrium and Deck 20 views are back near 10 ms CPU submission and under 1,500 draws with the sky-garden walls still drawn. Round 2 doubled them (Deck 6 atrium 8.6 to 16.8 ms, 977 to 2,518 draws, 2.83M to 6.55M triangles; Deck 20 6.3 to 17.5 ms)."},
+    {"id": "walk-startup", "phase": "every", "target": "The public v2 walk reaches ready no slower than the 179d813 build on the same machine, with no main-thread task over 5 s and peak JS heap within 10% (check:startup)."}
+  ]
+}
