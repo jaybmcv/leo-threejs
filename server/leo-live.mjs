@@ -32,6 +32,7 @@ import {encodeRecord,encodeIdentity,assembleFrame,actorIdOf,cleanName,cleanChat,
 import {keySet,verifyPass,REMEMBER_S} from '../src/walk/net/pass.js';
 import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
 import {createArena} from './arena.mjs';
+import {createGym} from './gym.mjs';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||150);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -52,6 +53,8 @@ const slots=new Map();let nextSlot=1;
 const lifts=LIFTS.map(spec=>({spec,stops:spec.stops,state:liftState(spec),sent:''}));
 const log=(...a)=>console.log(new Date().toISOString(),...a);
 const arena=createArena({log});
+// Paws Off's gym rounds on the treadmills (gym.mjs), in memory only.
+const gym=createGym({log,send});BUDGETS.gym=[2,6];
 
 function send(ws,msg){if(ws.readyState===1)ws.send(typeof msg==='string'||msg instanceof Uint8Array?msg:JSON.stringify(msg));}
 function broadcast(msg,except){const text=JSON.stringify(msg);for(const v of visitors)if(v.ready&&v!==except)send(v.ws,text);}
@@ -70,7 +73,7 @@ function readPose(v,p){
   jumpS:finite(p.js,-1,60)?p.js:-1,rise:finite(p.r,-100,100)?p.r:0,emote:typeof p.e==='string'&&/^[a-z0-9_]{1,32}$/.test(p.e)?p.e:null,rest:p.rest==='sit'||p.rest==='lie'?p.rest:null,
   playing:p.pl===true,ball:p.b===true};
  try{v.record=encodeRecord(v.slot,pose);}catch{return false;}
- v.pos=pose.pos;v.version++;return true;
+ v.pos=pose.pos;v.playing=pose.playing;v.version++;return true;
 }
 
 // Alien Cat Invasion's leaderboard (walk/invasion): one best score per Discord-verified player, kept in a file beside
@@ -212,6 +215,7 @@ async function hello(v,msg){
 function leave(v){
  if(!visitors.delete(v))return;
  if(v.slot)slots.delete(v.slot);
+ gym.left(v);
  if(v.ready){broadcast({m:'gone',id:v.id});countChanged=true;log('aboard',aboard(),'-',v.id);}
 }
 const aboard=()=>{let n=0;for(const v of visitors)if(v.ready)n++;return n;};
@@ -249,6 +253,8 @@ function onMessage(v,data,binary){
   case 'chat':chat(v,msg);break;
   // A knock on the Halloween clown's glass (walk/halloween.js): its badge code, if there is one yet.
   case 'clown':if(allowed(v,'clown'))clown(v);break;
+  // Paws Off (walk/paws-off): stepping onto a treadmill, a fall, stepping off, for the gym round (gym.mjs).
+  case 'gym':if(allowed(v,'gym'))gym.message(v,msg);break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;

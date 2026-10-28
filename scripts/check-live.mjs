@@ -2,7 +2,7 @@
 // checks the pose wire, joining, poses reaching others near and far, names, the shared lifts, pings, leaving, a second tab,
 // bad input, the cap on visitors, Leo passes (Discord identity from The Creamery, net/pass.js: here signed by a
 // stand-in key served as a local JWKS), Alien Cat Invasion's leaderboard, Paw Pool's fastest clears, the ship log
-// boards' hearts, the selfie booth's shared countdown, chat aboard and, last, sixty visitors walking at once (bytes sent per visitor
+// boards' hearts, the selfie booth's shared countdown, chat aboard, Paws Off's gym rounds and, last, sixty visitors walking at once (bytes sent per visitor
 // per second). Each server keeps its scores and hearts in temporary files, never the real ones.
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
@@ -513,6 +513,50 @@ try{
   check('clown: each knock is logged',(spooky.log.match(/ clown /g)||[]).length===3);
   a.close();b.close();
  }finally{spooky.kill();fs.rmSync(file,{force:true});}
+}
+
+// ---- Paws Off's gym rounds (server/gym.mjs), on a server of its own ----------------------------------------------------
+// One runner on a Deck 16 treadmill and one on the arcade's step on; a third, standing by, asks too. When the countdown
+// ends, the two on treadmills run on one seed and the third is told to run alone. One falls, and the other hears it; once
+// both are off, both hear the same ranked results. Then a round someone leaves mid-run, and a countdown given up.
+{
+ const port=PORT+23,srv=await startServer(port);
+ try{
+  const gymOf=(x,e)=>x.msgs.filter(m=>m.m==='gym'&&(!e||m.e===e)),t=arcadeTreadmill(),arcadeOn=t.centre.clone().addScaledVector(t.front,-t.length*.08).toArray();
+  const a=new Bot(port,{name:'Ann'}),b=new Bot(port,{name:'Bea'}),c=new Bot(port,{name:'Cal'});await a.welcomed();await b.welcomed();await c.welcomed();
+  a.pose([7,20.56,-47.79],{yaw:Math.PI,pl:true});b.pose(arcadeOn,{pl:true});c.pose([10,20.3,-44]);await sleep(200);
+  a.send({m:'gym',e:'in'});await sleep(1000);b.send({m:'gym',e:'in'});c.send({m:'gym',e:'in'});await sleep(300);
+  const wa=gymOf(a,'wait').at(-1),wb=gymOf(b,'wait').at(-1);
+  check('gym: stepping on opens a short countdown that others on a treadmill join',!!wa&&wa.round===wb?.round&&wa.n===3&&wb.ms>3500&&wb.ms<5200,JSON.stringify({wa,wb}));
+  await sleep(5200);
+  const ga=gymOf(a,'go')[0],gb=gymOf(b,'go')[0];
+  check('gym: when the countdown ends, those on a treadmill (Deck 16 and the arcade) run on one seed',!!ga&&ga.round===wa.round&&gb?.seed===ga.seed&&Number.isInteger(ga.seed)&&JSON.stringify(ga.runners.map(r=>r.id).sort())===JSON.stringify([a.id,b.id].sort())&&ga.runners.find(r=>r.id===b.id)?.name==='Bea',JSON.stringify(ga));
+  check('gym: someone who asked but is not on a treadmill is told to run alone',gymOf(c,'cancel').length===1&&!gymOf(c,'go').length);
+  await sleep(1500);b.send({m:'gym',e:'fell',round:ga.round,t:1.4,cleared:2});await sleep(300);
+  const heard=gymOf(a,'out').at(-1);
+  check("gym: one runner's fall reaches the other, with how many are still running",heard?.id===b.id&&heard.how==='fell'&&heard.t===1.4&&heard.running===1,JSON.stringify(heard));
+  check('gym: no results while someone is still running',!gymOf(a,'results').length&&!gymOf(b,'results').length);
+  await sleep(1000);a.send({m:'gym',e:'fell',round:ga.round,t:999,cleared:9});await sleep(300);
+  const ra=gymOf(a,'results')[0],rb=gymOf(b,'results')[0];
+  check('gym: once all are off, every runner hears the same ranked results with their place',!!ra&&JSON.stringify(ra)===JSON.stringify(rb)&&ra.ranks[0].id===a.id&&ra.ranks[0].place===1&&ra.ranks[1].id===b.id&&ra.ranks[1].place===2&&ra.ranks[1].t===1.4,JSON.stringify(ra));
+  check('gym: a time longer than the round has run is cut to what it ran',ra?.ranks[0].t>2&&ra.ranks[0].t<4.5,JSON.stringify(ra?.ranks[0]));
+  // Leaving mid-round: out at once, listed after those who fell.
+  const d=new Bot(port,{name:'Dot'});await d.welcomed();d.pose([15,20.56,-47.79],{yaw:Math.PI,pl:true});await sleep(200);
+  a.send({m:'gym',e:'in'});d.send({m:'gym',e:'in'});await sleep(6300);
+  const g2=gymOf(a,'go').at(-1);
+  check('gym: a new round after the last, with a new seed',g2&&g2.round!==ga.round&&g2.seed!==ga.seed&&g2.runners.length===2,JSON.stringify(g2));
+  await sleep(1500);d.close();await sleep(300);
+  const left=gymOf(a,'out').at(-1);
+  check('gym: someone leaving the ship mid-round is out of it at once, and the other hears it',left?.id===d.id&&left.how==='left'&&left.running===1&&left.round===g2?.round,JSON.stringify(left));
+  a.send({m:'gym',e:'fell',round:g2?.round,t:.8,cleared:1});await sleep(300);
+  const r2=gymOf(a,'results').at(-1);
+  check('gym: those who left are ranked after those who fell',r2?.round===g2?.round&&r2.ranks[0].id===a.id&&r2.ranks[0].how==='fell'&&r2.ranks[1].id===d.id&&r2.ranks[1].how==='left',JSON.stringify(r2));
+  // Stepping off during the countdown: no round for them.
+  const before=gymOf(a,'go').length;a.send({m:'gym',e:'in'});await sleep(300);a.send({m:'gym',e:'off'});await sleep(6300);
+  check('gym: stepping off in the countdown leaves no round',gymOf(a,'go').length===before&&!/gym round 3 /.test(srv.log));
+  check('gym: rounds are logged as they start and end',(srv.log.match(/ gym results /g)||[]).length===2);
+  for(const x of [a,b,c])x.close();
+ }finally{srv.kill();}
 }
 
 // ---- sixty visitors at once -----------------------------------------------------------------------------------------
