@@ -101,6 +101,11 @@ expect('falls: floor between the pond and the stair',room.reached([145.5,FLOOR,4
 const bench=falls?prepared.seats.filter(s=>s.point.distanceTo(falls.bench)<1.6):[];
 expect(`falls: bench seats (${bench.length})`,bench.length>=3);
 expect('falls: bench faces the falls',bench.length>0&&bench.every(s=>s.facing&&s.facing.z>.9));
+// 4. The catnip face (src/walk/catnip-face.js) is worn by anyone whose feet are in the room, galleries and hammocks
+// included, and by no one in the hall outside or in another neighborhood's commons (the template's own, Neighborhood 10).
+const inside=([x,y,z],world=false)=>prepared.lounge.inside(new T.Vector3(...(world?[x,y,z]:W([x,y,z]))));
+expect('catnip face: dome, maze top, both galleries, a hammock',inside([DOME.x,FLOOR,DOME.z])&&inside([117.5,LEVELS[1],30])&&inside([TUBES[0].x,TUBES[0].level,10])&&inside([TUBES[1].x,TUBES[1].level,44])&&inside([spots[0].point.x,spots[0].height,spots[0].point.z],true));
+expect('catnip face: not in the hall outside or in Neighborhood 10',!inside([132,FLOOR,4])&&!inside([132,FLOOR,25],true));
 const report={status:problems.length?'FAIL':'PASS',results,problems,hammockHeights:spots.map(s=>+s.height.toFixed(2))};
 console.log(JSON.stringify(report,null,1));
 log(report.status);if(problems.length)process.exitCode=1;

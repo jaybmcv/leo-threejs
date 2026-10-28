@@ -6319,7 +6319,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "b17f88617d50a69c9bfec5b60e323939e5232eb3c326369fa24a7103d8fa6078"
+      "signature": "8ea8ad2e526483408d65fbfa9a0445d19c6258b21b1da68c76d56fa1ca5384d4"
     },
     {
       "source": "src/walk/blossom.js",
@@ -6385,6 +6385,20 @@
       "interactionTargets": null,
       "placements": 18,
       "signature": "ec1db21c9d5f137a90f3d0e25af2b7fbde90a3dad445219dfbc052174af49242"
+    },
+    {
+      "source": "src/walk/catnip-face.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [
+        "Catnip_face"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 1,
+      "signature": "c4590c922e7543da702bb372c7b81367b7bc2ab18a87e13d5d0e98a9ad15d41b"
     },
     {
       "source": "src/walk/changes-board.js",
@@ -7184,7 +7198,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "4058420a4b9173625e46d2283b7246d31ec3a2472d0418ea38dc145efff9f135"
+      "signature": "2f12daf8c1341d2f11cb0b69428a1ff41773bc8d3dac1872aa30429d09a39669"
     },
     {
       "source": "src/walk/main.js",
@@ -7204,7 +7218,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 36,
-      "signature": "6c9fccfd44c2f712a41ebdf77a7f5d1f597f876a6f695f1c2ce6149d70d241c0"
+      "signature": "fd3b89bba7f697f698de5bb54d733d21db1fcc7b4d3452d75adbe3ff815b3a7d"
     },
     {
       "source": "src/walk/marks.js",
@@ -7637,7 +7651,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "a59cc1d44107dbd4416bdcb8e7254efd94c30a0e2bc87bda5c350997590929eb"
+      "signature": "74f23ce060dd1d8a0498327f9d4baceb1c8e9c81b0768658c4689fa55b27c0af"
     },
     {
       "source": "src/walk/render-bake.js",

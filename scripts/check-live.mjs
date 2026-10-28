@@ -22,6 +22,7 @@ import {toWorld} from '../src/plan/rooms.js';
 import * as T from 'three';
 import {createHydroNipLounge} from '../src/hydro-nip-lounge.js';
 import {findRestSpots,spotIndex} from '../src/walk/rest.js';
+import {inLounge} from '../src/walk/lounge.js';
 import {COSMO_HEIGHT} from '../src/cosmo-pose.js';
 import {arcadeTreadmill} from '../src/walk/arcade.js';
 import {WALL,paintStroke,wallFromText} from '../src/walk/graffiti-wall.js';
@@ -61,6 +62,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 // the hammock from where the body is (rest.js hammockAt), to draw its pose (avatar.js: hands behind the head, eyes shut).
 const commons=new T.Group();commons.position.x=-224;commons.scale.z=-1;commons.add(createHydroNipLounge({mirror:-1}));
 const hammockSpots=findRestSpots(commons).filter(s=>s.hammock),hammocks=spotIndex(hammockSpots);
+// Who wears the lounge's catnip face (lounge.js inLounge): worked out from where each body is.
+commons.updateMatrixWorld(true);const inTheLounge=inLounge(commons.children[0].matrixWorld),posOf=p=>({x:p.pos[0],y:p.pos[1],z:p.pos[2]});
 const lyingIn=s=>{const head=s.head.clone().normalize(),at=s.point.clone().addScaledVector(head,-COSMO_HEIGHT/2);return {spot:s,pos:[at.x,s.height+.13,at.z],yaw:Math.atan2(-head.x,-head.z)};};
 {
  const own=hammockSpots.filter(s=>{const {pos:[x,y,z]}=lyingIn(s);return hammocks.hammockAt({x,y,z})===s;}).length;
@@ -176,6 +179,11 @@ try{
  check('rest: a visitor in a surgical suite healing capsule is seen standing in it',!!capsuled&&!capsuled.rest&&Math.abs(capsuled.pos[0]+63.3)<.01&&Math.abs(capsuled.pos[1]+23.46)<.01&&Math.abs(capsuled.pos[2]+47)<.01,JSON.stringify(capsuled&&{pos:capsuled.pos,rest:capsuled.rest}));
  a.pose([-63.3,-23.7,-45.6]);await sleep(300);
  check('rest: out of the capsule, they are seen back on the floor',Math.abs(b.poses.get(a.id)?.pos[1]+23.7)<.01);
+ // In the Hydro-Nip Lounge, on its upper gallery, a visitor wears its catnip face for a visitor in the dome below; out
+ // in the hall, no longer. The face is drawn from the pose's position, which is what this checks arrives.
+ {b.pose([-90,24.3,-25]);a.pose([-92,32.3,-44]);await sleep(300);const lounging=b.poses.get(a.id);
+  a.pose([-92,24.3,-4]);await sleep(300);const left=b.poses.get(a.id);
+  check('catnip face: a visitor in the lounge is seen wearing it, and not once out in the hall',!!lounging&&inTheLounge(posOf(lounging))&&!!left&&!inTheLounge(posOf(left)),JSON.stringify({in:lounging?.pos,out:left?.pos}));}
  // Paws Off on a Deck 16 exercise studio treadmill (src/walk/paws-off): a runner on the belt is seen there, playing; after
  // a fall, on their back behind it, still playing; stepped off, no longer playing.
  b.pose([5,20.3,-44]);a.pose([7,20.56,-47.79],{yaw:Math.PI,pl:true});await sleep(300);
