@@ -17,6 +17,7 @@ import {createHydrationNook} from './hydration-nook.js';
 import {createCargoTrolley} from './cargo-trolley.js';
 import {dressSurgery} from './surgery.js';
 import {createMudwater} from './mudwater.js';
+import {dressImaging} from './imaging.js';
 import {createJaguarGate} from './jaguar-gate.js';
 import {createLoungeEntranceSigns} from './lounge-entrance-signs.js';
 import {createArcade} from './arcade.js';
@@ -43,6 +44,9 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  dressGamingLounge(ship);
  // The Deck 5 surgical suite's beds give way to sculpted medical beds (surgery.js), solid and lie-on-able.
  dressSurgery(ship);
+ // Deck 5's Diagnostics & imaging: sculpted scanners and glass dividers in place of its rings, benches and
+ // partitions (imaging.js), solid, the beds lie-on-able.
+ dressImaging(ship);
  resolveRoomFrames(ship.root);
  const colliders=buildColliders(ship,{extra:[ship.exterior],filter:o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name),...(into?{into}:{})});
  afterBase?.(colliders);

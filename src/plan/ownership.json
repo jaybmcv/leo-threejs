@@ -6794,6 +6794,26 @@
       "signature": "6a0280a1bf1333448d68bdab906e6243734151c58b946b6cbc213b17740a6bc4"
     },
     {
+      "source": "src/walk/imaging.js",
+      "rooms": [
+        "d05-imaging-6"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Imaging_scanner",
+        "Imaging_glass_divider",
+        "Imaging_scans",
+        "Imaging_scan_graphics",
+        "Imaging_scan_line_graphics",
+        "Imaging_scan_beam_graphics"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 33,
+      "signature": "db8b23364e5050da65c7fa22c66e91c183a3f0231d6b3951cbfb7789e1320670"
+    },
+    {
       "source": "src/walk/input.js",
       "rooms": [],
       "via": "frame boundary",
@@ -7122,7 +7142,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "40163f32614e41b6ddd16f010912d830bae521122990ee73e5acc71f03c3c90f"
+      "signature": "a48e7ef7361c64a25e4e9c9ec01223b37b3510c848f98828214f48a7f4b7757e"
     },
     {
       "source": "src/walk/marks.js",
@@ -7353,7 +7373,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "03cda778554f2ba0d85800f26818b5c7454e07f830663b1df0a4f828738d03fd"
+      "signature": "ed212fd05cbf43f00c097f3f1a30580da533d765ffdb9d7d9d6b17fc45ee7270"
     },
     {
       "source": "src/walk/provisions.js",
