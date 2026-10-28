@@ -217,6 +217,12 @@
     ],
     "via": null
   },
+  "src/walk/imaging.js": {
+    "owners": [
+      "d05-imaging-6"
+    ],
+    "via": null
+  },
   "src/walk/jaguar-gate.js": {
     "owners": [
       "commons-1"

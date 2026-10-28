@@ -54,6 +54,7 @@ import {readSpot,spotLink,remapSpot} from './link.js';
 import {KITTEN_POSE_NAMES} from './kittens.js';
 import {createAtriumKittens} from './arrival-atrium.js';
 import {createSurgeryArms} from './surgery.js';
+import {createImagingScans} from './imaging.js';
 import {createFinCasing} from './fin-casing.js';
 import {createInvasion} from './invasion/game.js';
 import {createPawPool} from './pool/game.js';
@@ -228,6 +229,8 @@ async function buildShip(){
  if(trolley)toBand(trolley.group);
  // The surgical suite's ceiling robot arms (surgery.js), dressing only.
  surgeryArms=createSurgeryArms(ship,{still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(surgeryArms)toBand(surgeryArms.group);
+ // The diagnostics room's holographic cat scans and scan beams (imaging.js), dressing only.
+ imagingScans=createImagingScans(ship,{still:matchMedia('(prefers-reduced-motion: reduce)').matches,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(imagingScans)toBand(imagingScans.group);
  if(blossom)toBand(blossom.group);
  toBand(jaguarGate.group);
  for(const g of prepared.entranceSigns.groups)toBand(g);
@@ -264,6 +267,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
+let imagingScans=null;
 let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,lullaby=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
@@ -561,6 +565,7 @@ renderer.setAnimationLoop(()=>{
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
  surgeryArms?.update(dt,p);
+ imagingScans?.update(dt,p);
  marks?.update(camera,p,now);
  if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);
   // Walking into Mudwater Arena counts as a visit (server/arena.mjs).
