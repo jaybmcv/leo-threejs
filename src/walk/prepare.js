@@ -14,6 +14,7 @@ import {prepareBlossomBed,createBlossomGarden} from './blossom.js';
 import {createDiningRobots} from './dining-robots.js';
 import {createHydrationNook} from './hydration-nook.js';
 import {createCargoTrolley} from './cargo-trolley.js';
+import {stripCargoMaintenance,createMctBay} from './mct-bay.js';
 import {dressSurgery} from './surgery.js';
 import {createMudwater} from './mudwater.js';
 import {createJaguarGate} from './jaguar-gate.js';
@@ -28,6 +29,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const dropped=exteriorPrepared?0:prepareExteriorForWalking(ship);
  // Refrigerated provisions loses its shared locker cabinets before the colliders see them (provisions.js).
  stripProvisions(ship);
+ // Cargo maintenance loses its repair benches to the MCT charging and service bays (mct-bay.js).
+ stripCargoMaintenance(ship);
  // The Deck 17 commons' aft planter loses its green tree and shrubs for the cherry blossom garden, and a corner for its
  // pond, and gains the bench under the tree (blossom.js).
  prepareBlossomBed(ship);
@@ -62,6 +65,9 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const hydration=createHydrationNook(ship);if(hydration)colliders.addStatic(hydration.solid,()=>true);
  // Container hold A's parked hand trolley (cargo-trolley.js): solid as one plain box, clear of the aisle.
  const trolley=createCargoTrolley(ship);if(trolley)colliders.addStatic(trolley.solid,()=>true);
+ // Cargo maintenance's MCT charging and service bays (mct-bay.js): the vehicles, power units, tool trolley and lift
+ // pump solid as plain boxes; the cables, signs and floor markings dressing.
+ const mctBay=createMctBay(ship);if(mctBay)colliders.addStatic(mctBay.solid,()=>true);
  // The cherry blossom garden (blossom.js): its trunk, bridge and pond edges solid.
  const blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
  // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
@@ -78,5 +84,5 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,blossom,jaguarGate,entranceSigns,arcadeRow,missionHolo,swordCase,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,mctBay,blossom,jaguarGate,entranceSigns,arcadeRow,missionHolo,swordCase,mudwater};
 }

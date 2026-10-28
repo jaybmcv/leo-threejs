@@ -193,7 +193,7 @@ async function buildShip(){
  recovery=createRecoveryMood(ship,{hemi,fill,scene});
  }});
  ({booth,poolTable,concession,provisions,kittens,diningRobots,hydration,blossom,jaguarGate,arcadeRow,missionHolo,mudwater}=prepared);
- const {pipework,trolley,swordCase,theatreCast}=prepared;
+ const {pipework,trolley,mctBay,swordCase,theatreCast}=prepared;
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged; and
  // on the arcade's treadmill. With Leo live, a run joins the gym round (server/gym.mjs).
  pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),more:arcadeRow?[arcadeRow.treadmill]:[],gym:msg=>!!live?.gym(msg),me:()=>live?.id,onStart:startRun,onEnd:endRun});
@@ -227,6 +227,7 @@ async function buildShip(){
  if(diningRobots)toBand(diningRobots.group);
  if(hydration)toBand(hydration.group);
  if(trolley)toBand(trolley.group);
+ if(mctBay)toBand(mctBay.group);
  // The surgical suite's ceiling robot arms (surgery.js), dressing only.
  surgeryArms=createSurgeryArms(ship,{still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(surgeryArms)toBand(surgeryArms.group);
  if(blossom)toBand(blossom.group);
