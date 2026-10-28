@@ -8,6 +8,7 @@ export function interactionTargets(w){const out=[],add=(kind,name,at,room=null,e
  for(const [i,s] of (w.mudwater?.spots||[]).entries())add(s.kind,'Mudwater:'+i,s.at,'d16-arena-1');
  for(const [i,s] of (w.changeLog?.targets||[]).entries())add('board','ship-log:'+i,s.at,i?'d02-arrival-1':'crown',{facing:s.facing.toArray()});
  for(const s of w.comics?.targets||[])add('comic',s.name,s.at,s.room);
+ for(const s of w.chinampa?.targets||[])add('sign',s.name,s.at,'d03-farm-1');
  for(const s of w.paintings?.targets||[])add('painting',s.name,s.at,s.room);
  add('hologram','Mission control',w.missionHolo?.group?.position,'d20-mission-2');
  for(const p of w.places)add('go-to',p.name,p.at,p.room,{yaw:p.yaw});return out;

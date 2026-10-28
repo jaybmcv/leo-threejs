@@ -67,6 +67,7 @@ import {createMudwater} from './mudwater.js';
 import {createGiveaway} from './mudwater-giveaway.js';
 import {createPaintings} from './paintings.js';
 import {createComics,createComicReader} from './comics.js';
+import {showInfo} from './chinampa.js';
 import {createChangesBoards} from './changes-board.js';
 import {createTheatre,ACTOR_POSE_NAMES} from './theatre.js';
 import {createGamingLounge} from './gaming-lounge.js';
@@ -197,7 +198,7 @@ async function buildShip(){
  // The crew recovery lounge's pod side dims the lights (recovery.js).
  recovery=createRecoveryMood(ship,{hemi,fill,scene});
  }});
- ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater}=prepared);
+ ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
  const {pipework,trolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;
@@ -272,6 +273,8 @@ async function buildShip(){
  {const comms=createCommsDisplays(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy()});if(comms)toBand(comms.group);}
  if(missionHolo)toBand(missionHolo.group);
  if(swordCase)toBand(swordCase.group);
+ // Hydroponic garden A's chinampa tank (chinampa.js), drawn with Deck 3's band.
+ if(chinampa)toBand(chinampa.group);
  if(halloween)toBand(halloween.group);
  toBand(hexFloor.group);
  toBand(leverPanel.group);
@@ -297,7 +300,7 @@ async function buildShip(){
 }
 let imagingScans=null;
 let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,lullaby=null,mct=null;
-let mazeHold=null,maze=null,leverPanel=null;
+let mazeHold=null,maze=null,leverPanel=null,chinampa=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -343,6 +346,7 @@ const actions={
   else if(t.kind==='sit'||t.kind==='lie'||t.kind==='stand')settle(t.spot);
   else if(t.kind==='selfie'){if(!booth.counting)live?.selfie();booth.start();}
   else if(t.kind==='comic'){closePanels();reader.open(t.comic);input.enabled=false;}
+  else if(t.kind==='read'){closePanels();showInfo($('info-sheet'),t.info);input.enabled=false;}
   else if(t.kind==='play')arcade.open();
   else if(t.kind==='log')changeLog.open({near:controller.position});
   else if(t.kind==='pool')pool.open();
@@ -386,7 +390,7 @@ const actions={
   const open=id=>!$(id).hidden;
   // E puts the spray can down again.
   if(graffiti?.active&&code==='KeyE'){closePanels();return;}
-  if((code==='KeyB'&&open('emotes'))||(code==='KeyN'&&open('map-sheet'))||(code==='KeyM'&&open('places'))||(code==='KeyH'&&open('help-sheet'))){closePanels();return;}
+  if((code==='KeyE'&&open('info-sheet'))||(code==='KeyB'&&open('emotes'))||(code==='KeyN'&&open('map-sheet'))||(code==='KeyM'&&open('places'))||(code==='KeyH'&&open('help-sheet'))){closePanels();return;}
   if(open('emotes')&&/^Digit[0-9]$/.test(code)){closePanels();actions.emote((+code.slice(5)+9)%10);}
   if(open('comic-sheet'))reader.key(code);
  },
@@ -531,7 +535,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -646,6 +650,7 @@ renderer.setAnimationLoop(()=>{
  // The Container Maze's clock starts at its way in and drops if the walker leaves (maze/run.js).
  maze?.update(p,now);
  freightGate?.update(dt,p);
+ chinampa?.update(dt,p);
  marks?.update(camera,p,now);
  if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);graffiti?.load(p);
   // Walking into Mudwater Arena counts as a visit (server/arena.mjs).
@@ -689,7 +694,7 @@ function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a)
 function target(){
  const p=controller.position,l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
  const w=graffiti?.near(p);if(w)return w;
- const b=booth.near(p)||comics.near(p);if(b)return b;
+ const b=booth.near(p)||comics.near(p)||chinampa?.near(p);if(b)return b;
  const v=inBall?null:vault?.near(p);if(v)return v;
  const g=changeLog.near(p);if(g)return g;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
@@ -813,7 +818,7 @@ function goTo(place){place=remapSpot(place);const q=findStand(colliders,place.at
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();chat.close();graffiti?.close();input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();chat.close();graffiti?.close();input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.

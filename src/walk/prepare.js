@@ -30,6 +30,7 @@ import {placeAttendant,dressTheatre,createTheatreCast} from './theatre.js';
 import {dressGamingLounge} from './gaming-lounge.js';
 import {createMissionHolo} from './mission-holo.js';
 import {createSwordCase} from './sword-case.js';
+import {createChinampa} from './chinampa.js';
 // Room edits and proxy colliders must be identical in the page and the Node checker.
 export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=null,afterRest=null,light=null,kit=null,anisotropy=1,still=false,urls={},hat=''}={}){
  const dropped=exteriorPrepared?0:prepareExteriorForWalking(ship);
@@ -112,8 +113,11 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const missionHolo=createMissionHolo(ship,{anisotropy,still});if(missionHolo)colliders.addStatic(missionHolo.solid,()=>true);
  // The Captain's office's gold sword case under its spotlight (sword-case.js): solid as a plain box.
  const swordCase=createSwordCase(ship);if(swordCase)colliders.addStatic(swordCase.solid,()=>true);
+ // Hydroponic garden A's chinampa tank, its water plant and its two reading signs (chinampa.js): solid as plain boxes,
+ // the hoses on the floor dressing.
+ const chinampa=createChinampa(ship,{still});if(chinampa)colliders.addStatic(chinampa.solid,()=>true);
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,missionHolo,swordCase,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,missionHolo,swordCase,chinampa,mudwater};
 }

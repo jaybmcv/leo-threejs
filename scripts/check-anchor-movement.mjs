@@ -9,6 +9,7 @@ import {openArrivalAtrium} from '../src/walk/arrival-atrium.js';
 import {dressHydroponics} from '../src/walk/hydroponics.js';
 import {createMissionHolo} from '../src/walk/mission-holo.js';
 import {createSwordCase} from '../src/walk/sword-case.js';
+import {createChinampa} from '../src/walk/chinampa.js';
 import {createConcession} from '../src/walk/concession.js';
 import {createTheatre,placeAttendant,dressTheatre,createTheatreCast} from '../src/walk/theatre.js';
 import {prepareBlossomBed,createBlossomGarden} from '../src/walk/blossom.js';
@@ -28,6 +29,7 @@ function build(id,ids){deferRoomFrames();const root=new T.Group(),inside=new T.G
  resolveRoomFrames(root);const extra=[],put=o=>{if(!o)return;if(o.isObject3D){extra.push(o);return;}for(const k of ['group','solid'])if(o[k]&&!o[k].parent)extra.push(o[k]);};
  if(id==='d20-mission-2')put(createMissionHolo(ship));
  if(id==='d20-captain-7')put(createSwordCase(ship));
+ if(id==='arrival-assembly')put(createChinampa(ship,{still:true}));
  if(id==='d16-theater-5'){put(createConcession(ship));put(createTheatre(ship,{url:''}));put(createTheatreCast(ship));}
  if(id==='commons-1'){put(createBlossomGarden(ship));put(createLoungeFalls(ship));put(createArcade());put(createJaguarGate());}
  if(extra.length)root.add(...extra);root.updateMatrixWorld(true);const untouched=createShipArea(SHIP_AREAS.find(a=>a.id==='d16-library-2')).root;return {root,inside,untouched};
