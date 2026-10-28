@@ -66,6 +66,7 @@ import {createGamingLounge} from './gaming-lounge.js';
 import {createCommsDisplays} from './comms-displays.js';
 import {createHalloween} from './halloween.js';
 import {createHexFloor} from './hex-floor.js';
+import {createLoungeCompass} from './lounge-compass.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 import {createHelp} from './help.js';
 
@@ -241,6 +242,8 @@ async function buildShip(){
  if(swordCase)toBand(swordCase.group);
  if(halloween)toBand(halloween.group);
  toBand(hexFloor.group);
+ // The forward observation lounge's Mars-viewing compass, a flush inlay on its floor (lounge-compass.js), drawn with its band.
+ {const compass=createLoungeCompass();if(compass)toBand(compass);}
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
