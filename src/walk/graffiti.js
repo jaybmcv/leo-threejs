@@ -53,7 +53,7 @@ export function createGraffiti(face,matrix,els,{live,connect,onOpen,onClose}){
  }
 
  // Spraying: the pointer's points on the wall, in cells; laid down here at once, sent in short strokes.
- const ray=new T.Raycaster(),ndc=new T.Vector2();let camera=null,held=null,pending=[],lastSent=null,sentAt=0;
+ const ray=new T.Raycaster(),ndc=new T.Vector2(),aim=new T.Vector3();let camera=null,held=null,pending=[],lastSent=null,sentAt=0;
  function cellAt(e){
   if(!camera)return null;const r=els.surface.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);
   ray.setFromCamera(ndc,camera);const hit=ray.intersectObject(mesh,false)[0];if(!hit?.uv)return null;
@@ -109,8 +109,10 @@ export function createGraffiti(face,matrix,els,{live,connect,onOpen,onClose}){
   update(view,now=performance.now()){
    flushTexture();if(held!==null&&now-sentAt>=SEND_MS)send();
    if(!active)return;camera=view;
-   const v=T.MathUtils.degToRad(view.fov)/2,need=Math.max(height*1.12/2/Math.tan(v),width*1.25/2/(Math.tan(v)*view.aspect));
-   view.position.copy(centre).addScaledVector(normal,Math.min(4.2,need));view.lookAt(centre);view.updateMatrixWorld();
+   // The bar covers the bottom of the view: the wall fits in the part above it, its middle aimed at that part's middle.
+   const v=T.MathUtils.degToRad(view.fov)/2,t=Math.tan(v),f=Math.min(.45,(els.bar.offsetHeight+24)/Math.max(1,innerHeight));
+   const d=Math.min(4.2,Math.max(height*1.1/2/((1-f)*t),width*1.25/2/(t*view.aspect)));
+   view.position.copy(centre).addScaledVector(normal,d);aim.copy(centre);aim.y-=f*d*t;view.lookAt(aim);view.updateMatrixWorld();
   },
  };
 }
