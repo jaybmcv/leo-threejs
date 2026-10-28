@@ -136,7 +136,9 @@ export function createVault(ship){
  const inSwing=q=>q.z<0&&Math.hypot(q.x-HINGE,q.z+THICK)<2*RD+.45;
  const show=mode=>pad?.userData.draw(mode);
  const place=()=>{pivot.rotation.y=OPEN_ANGLE*T.MathUtils.smootherstep(swing,0,1);for(const w of wheels)w.rotation.z=spin*Math.PI*3;
-  pivot.updateMatrixWorld(true);mover?.place(pivot.matrixWorld);};
+  pivot.updateMatrixWorld(true);if(!mover)return;mover.place(pivot.matrixWorld);
+  // Solid while shut and once wide open; while it swings it passes through a walker rather than shoving them aside.
+  mover.enabled=swing===0||swing===1;};
  const start=w=>{state='opening';why=w;wait=WAIT;show('open');};
  return {
   group,solid,

@@ -366,7 +366,9 @@ let emote=null,pinged=-Infinity;const PING_GAP_MS=4000;
 // The clubhouse vault behind the arcade (vault.js): its door, and the password sheet it asks with.
 let vault=null;
 const VAULT_ASK='This door opens only for the clubhouse password.';
-function openVault(){closePanels();emote=null;input.enabled=false;input.down.clear();$('vault-note').textContent=VAULT_ASK;$('vault-code').value='';$('vault-sheet').hidden=false;$('vault-code').focus();}
+function openVault(){closePanels();emote=null;input.enabled=false;input.down.clear();$('vault-note').textContent=VAULT_ASK;$('vault-code').value='';$('vault-sheet').hidden=false;
+ // (After the key that opened it, so the E isn't typed into the field.)
+ setTimeout(()=>$('vault-code').focus());}
 const ready=()=>document.body.dataset.ready==='1';
 // The ship log boards (changes-board.js): the walk stands still while one is open; its hearts are Leo live's.
 // Go there in a change's details drops the walker where its pictures were taken, looking as they do.
