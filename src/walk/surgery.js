@@ -145,9 +145,9 @@ function capsule(fit,x,z,face,i){
  add('Healing_capsule_crown_band',new T.CylinderGeometry(.765,.765,.05,36,1,true),M.shell,[0,TOP+.08,0]);
  add('Healing_capsule_lamp',new T.CircleGeometry(.5,28),C.fluid,[0,TOP-.005,0],[Math.PI/2,0,0]);
  [-.5,-.2,.2,.5].forEach((a,k)=>add('Healing_capsule_status_light',new T.SphereGeometry(.03,10,8),k%2?C.green:C.red,[Math.sin(a)*.77,TOP+.2,Math.cos(a)*.77]));
- // Hoses from the crown to where a body stands: shoulders, chest and back.
+ // Hoses from the crown to where a body stands: shoulders, sides and back, none across the face (the first person view).
  const tube=(name,pts,r,m)=>add(name,new T.TubeGeometry(new T.CatmullRomCurve3(pts.map(p=>new T.Vector3(...p))),24,r,8),m,[0,0,0]);
- for(const [a,y,d] of [[.6,1.25,.2],[-.6,1.25,.2],[0,1.05,.17],[Math.PI,1.15,.2],[Math.PI*.7,1.0,.2]]){
+ for(const [a,y,d] of [[1.1,1.25,.2],[-1.1,1.25,.2],[Math.PI,1.15,.2],[2.3,1.0,.2],[-2.3,1.05,.2]]){
   const s=Math.sin(a),c=Math.cos(a),top=[s*.38,TOP,c*.38],end=[s*d,CAPSULE_FLOOR+y,c*d];
   tube('Healing_capsule_hose',[top,[s*.42,TOP-.45,c*.42],[s*(d+.12),end[1]+.35,c*(d+.12)],end],.018,C.hose);
   add('Healing_capsule_hose_tip_glow',new T.SphereGeometry(.03,10,8),M.glow,end);
