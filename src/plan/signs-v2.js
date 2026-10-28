@@ -8,7 +8,8 @@ export const legacySignPlace=(layout,s)=>{const [x,z]=centroid(s.polygon);return
 export function signPlace(layout,s){
  if(s.wing===undefined)return legacySignPlace(layout,s);
  const d=layout.decks[s.deck-1],c=centroid(s.polygon);let best=null;
- for(const r of d.corridors.filter(r=>r.kind==='wing'))for(let i=0;i<r.points.length-1;i++){const n=segNear(c,r.points[i],r.points[i+1]);if(!best||n.d<best.n.d)best={n,r};}
+ // Corridors from layout.circulation: the walk's v2-layout drops each deck's own corridor list.
+ for(const r of layout.circulation.corridors.filter(r=>r.kind==='wing'&&r.deck===s.deck))for(let i=0;i<r.points.length-1;i++){const n=segNear(c,r.points[i],r.points[i+1]);if(!best||n.d<best.n.d)best={n,r};}
  if(!best)throw new Error(`No wing corridor beside ${s.id} on deck ${s.deck}`);
  const [dx,dz]=best.n.dir,len=Math.hypot(dx,dz);
  return {at:[best.n.q[0],d.y+2.6,best.n.q[1]],yaw:Math.atan2(dx/len,dz/len),width:Math.min(2.5,best.r.width-.6),faces:2,corridor:best.r.id};

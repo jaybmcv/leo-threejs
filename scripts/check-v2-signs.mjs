@@ -4,7 +4,9 @@
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {signPlaces,legacySignPlace} from '../src/plan/signs-v2.js';
-const layout=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8'));
+import {runtimeLayout} from './v2-plugin.mjs';
+// Placed from the plan as the walk receives it (v2-layout), since that's what src/v2/signs.js reads.
+const full=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8')),layout=runtimeLayout(full);
 const inside=(p,poly)=>{let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const [xi,zi]=poly[i],[xj,zj]=poly[j];if((zi>p[1])!==(zj>p[1])&&p[0]<(xj-xi)*(p[1]-zi)/(zj-zi)+xi)c=!c;}return c;};
 const byDeck=list=>{const m=new Map();for(const o of list)if(o.polygon)(m.get(o.deck)||m.set(o.deck,[]).get(o.deck)).push(o);return m;};
 const cabins=byDeck(layout.cabins),rooms=byDeck(layout.rooms);
@@ -18,7 +20,7 @@ const places=signPlaces(layout),bad=intrusions(places);
 assert.deepEqual(bad,[],'Wayfinding signs inside cabins or rooms:\n'+bad.join('\n'));
 const segDist=(p,a,b)=>{const dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dz)/(dx*dx+dz*dz||1)));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dz);};
 const wing=places.filter(p=>p.s.wing!==undefined);
-for(const p of wing){const r=layout.decks[p.s.deck-1].corridors.find(r=>r.id===p.corridor),d=Math.min(...r.points.slice(1).map((b,i)=>segDist([p.at[0],p.at[2]],r.points[i],b)));
+for(const p of wing){const r=layout.circulation.corridors.find(r=>r.id===p.corridor),d=Math.min(...r.points.slice(1).map((b,i)=>segDist([p.at[0],p.at[2]],r.points[i],b)));
  assert.ok(d<.01&&p.width<=r.width-.5,`${p.s.id}: sign not centred across ${r.id} (${d.toFixed(3)} m off, ${p.width} m wide in ${r.width} m)`);}
 // The old placement must fail, on exactly the 50 port-side wing stairs.
 const legacy=intrusions(places.map(p=>({s:p.s,...legacySignPlace(layout,p.s)})));
