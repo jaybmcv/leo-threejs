@@ -7100,8 +7100,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 33,
-      "signature": "269cc42247be1ed9bd2bb9233e25ca871a5ed8a8a0ea31ccb9f5de389ea02b9c"
+      "placements": 34,
+      "signature": "6a38e8cb24f1b101ed8b522c81d1faab03cf89c3427af043ed4fece60e9fac82"
     },
     {
       "source": "src/walk/marks.js",
@@ -7259,8 +7259,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 3,
-      "signature": "22adaca583b9b9492721f1bd93a7eaf156238180dca643c551853f076fa0be58"
+      "placements": 5,
+      "signature": "63db8da1dcb7a32cb4cabc36cdbef74d52183bdbe5974624acc7b43fc3ff0240"
     },
     {
       "source": "src/walk/places.js",

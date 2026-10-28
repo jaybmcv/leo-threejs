@@ -195,8 +195,8 @@ async function buildShip(){
  ({booth,poolTable,concession,provisions,kittens,diningRobots,hydration,blossom,jaguarGate,arcadeRow,missionHolo,mudwater}=prepared);
  const {pipework,trolley,swordCase}=prepared;
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged; and
- // on the arcade's treadmill.
- pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),more:arcadeRow?[arcadeRow.treadmill]:[],onStart:startRun,onEnd:endRun});
+ // on the arcade's treadmill. With Leo live, a run joins the gym round (server/gym.mjs).
+ pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),more:arcadeRow?[arcadeRow.treadmill]:[],gym:msg=>!!live?.gym(msg),me:()=>live?.id,onStart:startRun,onEnd:endRun});
  // The forward observation lounge's telescope plays Alien Cat Invasion (invasion/game.js): where it stands, on its floor.
  {const base=ship.root.getObjectByName('Shared_telescope_base');if(base){base.updateWorldMatrix(true,false);scope=base.getWorldPosition(new T.Vector3());scope.y-=.325;}}
  // The Deck 16 theatre's cinema dressing (theatre.js), before baking so the pieces it hides stay out.
@@ -444,7 +444,7 @@ if(LIVE_URL){
    chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);},
   // A line of chat: in the corner, and over the speaker's head.
   chat:line=>{chat.add(line);if(line.id!==live.id&&!chat.quiet)remotes.say(line.id,line.text);},said:r=>chat.refused(r.why),
-  poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();},
+  poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
   board:b=>(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
@@ -455,6 +455,8 @@ if(LIVE_URL){
   giveaway:g=>giveaway.status(g),claimed:r=>giveaway.claimed(r),clown:r=>halloween?.got(r.code),
   // The Deck 19 graffiti wall (graffiti.js): the wall as it is, others' strokes as they spray, and ours refused.
   wall:w=>graffiti?.wall(w),stroke:s=>graffiti?.stroke(s),painted:r=>graffiti?.painted(r),
+  // Paws Off's gym round on the treadmills: its countdown, start, runners out and results.
+  gym:msg=>pawsOff?.round(msg),
  },{pass:()=>me.pass?bestPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
