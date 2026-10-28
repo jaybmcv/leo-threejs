@@ -6925,7 +6925,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 7,
-      "signature": "f8e541b873aab478707bd03cc6a74dce46ee1d9655900a2d0db700caa1272b4a"
+      "signature": "edb149f0963f407a359cb472bdfbeeddf7718cb516a8db998620b3730179b0ab"
     },
     {
       "source": "src/walk/lounge-sky.js",

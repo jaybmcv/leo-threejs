@@ -56,7 +56,7 @@ export function paintSynthwave(g,w,h,s0){
  const ground=(X,d)=>{
   const ax=Math.abs(X),rise=smooth(ROAD,ROAD+7+d*.12,ax);if(rise<=0)return 0;
   const ridge=1-Math.abs(noise(X*.17+40,d*.11)*2-1),bump=noise(X*.45,d*.3);
-  return rise*(.9+.17*d)*(.2+.8*(ridge*ridge*.75+bump*.25));
+  return rise*(1+.45*smooth(22,60,Math.abs(X*F/d)))*(.9+.17*d)*(.2+.8*(ridge*ridge*.75+bump*.25));
  };
  const proj=(X,d,y)=>[sx(SUN_S+X*F/d),sy(HORIZON+(y-EYE)*F/d)];
  const rows=[];for(let d=D0;d<D1;d+=Math.max(.3,d*.03))rows.push(d);rows.push(D1);
