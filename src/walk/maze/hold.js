@@ -30,7 +30,7 @@ const canvasTexture=(w,h,draw,repeat=false)=>{const c=walkCanvas();if(!c)return 
 // Corrugated steel: ridges every 0.3 m (the texture spans two), shaded light to dark, multiplied by each colour.
 const corrugation=()=>canvasTexture(128,32,(g,w,h)=>{for(let x=0;x<w;x++){const s=.5+.5*Math.cos(x/w*Math.PI*4);g.fillStyle=`rgb(${Math.round(150+105*s)},${Math.round(150+105*s)},${Math.round(150+105*s)})`;g.fillRect(x,0,1,h);}
  g.fillStyle='rgba(0,0,0,.18)';g.fillRect(0,0,w,2);g.fillRect(0,h-2,w,2);},true);
-const hazard=()=>canvasTexture(128,128,(g,w,h)=>{g.fillStyle='#f2c230';g.fillRect(0,0,w,h);g.fillStyle='#1a1c1f';for(let k=-4;k<4;k++){g.beginPath();g.moveTo(k*32,h);g.lineTo(k*32+32,h);g.lineTo(k*32+32+h,0);g.lineTo(k*32+h,0);g.fill();}},true);
+const hazard=()=>canvasTexture(128,128,(g,w,h)=>{g.fillStyle='#f2c230';g.fillRect(0,0,w,h);g.fillStyle='#1a1c1f';for(let k=-3;k<2;k++){const x=k*64;g.beginPath();g.moveTo(x,h);g.lineTo(x+32,h);g.lineTo(x+32+h,0);g.lineTo(x+h,0);g.fill();}},true);
 const checker=()=>canvasTexture(64,64,(g,w,h)=>{for(let i=0;i<4;i++)for(let j=0;j<4;j++){g.fillStyle=(i+j)%2?'#1a1c1f':'#ece8de';g.fillRect(i*16,j*16,16,16);}},true);
 // A sign: lines of [text, size, colour] on a dark panel with an orange rule down its left.
 function signTexture(w,h,lines,{rule=true}={}){
