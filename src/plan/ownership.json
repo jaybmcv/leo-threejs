@@ -6478,7 +6478,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "94c33f91717c54963fc3c8c924bf5aad661af3a1ca13399294121236436668a0"
+      "signature": "4d47b78fb5b7e3ddea53f79e65ce1dbfcd3aca598c1e7a566d5d5a77ae46f3f2"
     },
     {
       "source": "src/walk/comms-displays.js",
@@ -7009,6 +7009,21 @@
       "signature": "7352c7870ece660ac3a1353a6011a43846b357b32d70279c249c864e3b6211f6"
     },
     {
+      "source": "src/walk/lounge-mural.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Walk_lounge_mural"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 7,
+      "signature": "edb149f0963f407a359cb472bdfbeeddf7718cb516a8db998620b3730179b0ab"
+    },
+    {
       "source": "src/walk/lounge-sky.js",
       "rooms": [
         "commons-1"
@@ -7034,7 +7049,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "94752a0bd8a675fd7d49db58d6a680da695c8c75b2db4e7ac0c0af137f36daac"
+      "signature": "35fbed48a082f492a58c2e6a98bc806b03dc97f5407904b39caab602b738031a"
     },
     {
       "source": "src/walk/main.js",
@@ -7053,8 +7068,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 32,
-      "signature": "a769d84ca5ebe7c389eefadf2cbe2f051b630b8e216ddefea543f3009edcd098"
+      "placements": 33,
+      "signature": "21959b885b7a7d03f43297b596e23836a7ea5e43ca561c1698eab9af141d3a58"
     },
     {
       "source": "src/walk/marks.js",
