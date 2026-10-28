@@ -33,6 +33,9 @@ const PINK=0xff4fd8,CYAN=0x45e3ff,GREEN=0x6dff7a,PURPLE=0xa77bff,AMBER=0xffc266,
 // The commons' broad stair (model.js): two flights of 24 treads, 0.3 m deep and 1/6 m high. Each flight's sides in x,
 // the floor it starts from, the z of its foot and the way it climbs in z, and where its handrail starts past the foot.
 const FLIGHTS=[{xs:[150.3,153.3],base:FLOOR,foot:34.85,dir:1,rail:0},{xs:[147,150],base:LEVELS[0],foot:42.05,dir:-1,rail:-.15}];
+// Under each flight a slab this deep (straight down from the nose line) is all that stays solid, so the underside runs
+// parallel to the slope. The step glow is the purple of the stair's reference, shown on every riser.
+const SLAB=.34,STEP_GLOW=0x9b4dff;
 const font=new FontLoader().parse(fontData);
 
 // The garden parts the lounge replaces: planters and trees, the cafe, and the commons' cat figures.
@@ -81,10 +84,10 @@ function glassRails(root){
   for(let i=0;i<14;i++){g.strokeStyle=`rgba(${150+r()*40|0},${145+r()*40|0},${140+r()*40|0},${.15+r()*.3})`;g.lineWidth=.6+r()*2.2;g.beginPath();let x=r()*w,y=r()*h;g.moveTo(x,y);
    for(let k=0;k<8;k++){x+=(r()-.3)*90;y+=(r()-.5)*70;g.lineTo(x,y);}g.stroke();}});
  const marble=new T.MeshStandardMaterial({name:'Lounge_marble_tread',color:0xffffff,map:veins||null,roughness:.2,metalness:0});
- const inv=root.matrixWorld.clone().invert(),glass=[],strips=[];
+ const inv=root.matrixWorld.clone().invert(),glass=[],strips=[],treads=[];
  root.traverse(o=>{
   if(!o.isMesh)return;
-  if(o.name==='Gallery_stair')o.material=marble;
+  if(o.name==='Gallery_stair'){o.material=marble;treads.push(o);}
   else if(/^(Handrail|Handrail_bend|Stair_handrail)$/.test(o.name))o.material=neon;
   else if(/^(Baluster|Handrail_post)$/.test(o.name))o.material=post;
   // A level gallery handrail, 1.1 m over its floor: glass under it, the line at its foot.
@@ -94,11 +97,32 @@ function glassRails(root){
   glass.push(new T.BoxGeometry(along?s.x:.02,.96,along?.02:s.z).translate(c.x,y+.55,c.z));
   strips.push(new T.BoxGeometry(along?s.x:.03,.03,along?.03:s.z).translate(c.x,y+.07,c.z));
  });
+ slimStair(root,treads);
  if(!glass.length)return;
  const pane=new T.Mesh(mergeGeometries(glass),new T.MeshStandardMaterial({name:'Lounge_rail_glass',color:0xcfeeff,transparent:true,opacity:.15,roughness:.05,metalness:.1,depthWrite:false,side:T.DoubleSide}));
  pane.name='Lounge_rail_glass';root.add(pane);
  const line=new T.Mesh(mergeGeometries(strips),new T.MeshBasicMaterial({name:'Lounge_rail_glow',color:ORANGE,toneMapped:false}));line.name='Lounge_rail_glow';root.add(line);
  [...glass,...strips].forEach(g=>g.dispose());
+}
+
+// The commons' stair is built as solid blocks, each tread down to the floor, so every flight hangs as a boxy mass. Each
+// tread keeps only a SLAB under its nose, its underside following the slope, and a purple strip lights its riser.
+function slimStair(root,treads){
+ const glow=[];
+ for(const o of treads){
+  const g=o.geometry,{height:h,depth:d,width:w}=g.parameters||{};if(!h)continue;
+  const f=FLIGHTS.find(f=>Math.abs(o.position.x-(f.xs[0]+f.xs[1])/2)<.1);if(!f)continue;
+  const pos=g.attributes.position;
+  for(let i=0;i<pos.count;i++)if(pos.getY(i)<0)pos.setY(i,Math.max(-h/2,h/2-SLAB+(Math.sign(pos.getZ(i))===-f.dir?0:1/6)));
+  g.computeVertexNormals();
+  // A plain geometry (no box parameters): the walk then collides with the sloped underside, not the box round it.
+  const slab=new T.BufferGeometry();slab.setIndex(g.index);for(const k of Object.keys(g.attributes))slab.setAttribute(k,g.attributes[k]);
+  slab.computeBoundingBox();slab.computeBoundingSphere();o.geometry=slab;
+  glow.push(new T.BoxGeometry(w-.3,.04,.012).translate(o.position.x,o.position.y+h/2-.06,o.position.z-f.dir*(d/2+.006)));
+ }
+ if(!glow.length)return;
+ const lights=new T.Mesh(mergeGeometries(glow),new T.MeshBasicMaterial({name:'Lounge_step_glow',color:STEP_GLOW,toneMapped:false}));
+ lights.name='Lounge_step_glow';root.add(lights);glow.forEach(g=>g.dispose());
 }
 
 export function createHydroNipLounge({mirror=1}={}){
@@ -360,9 +384,10 @@ export function createHydroNipLounge({mirror=1}={}){
    // (s, y) in the flight's side to the template frame at side x, for an outward face that way.
    const side=(x,out)=>new T.Matrix4().makeBasis(new T.Vector3(0,0,dir),new T.Vector3(0,1,0),new T.Vector3(1,0,0)).setPosition(x+(out<0?-.06:0),0,foot);
    const s0=f.base===FLOOR?-.9:0,sHead=(cap-.05-base-1/6)*1.8;
+   // A thin plate: the nose line and a parallel one SLAB below it, down to the floor at the foot.
    const shape=new T.Shape();shape.moveTo(s0,base);
    if(s0<0)shape.quadraticCurveTo(-.1,base,.3,nose(.3)+.05);else shape.lineTo(0,nose(0)+.05);
-   shape.lineTo(sHead,cap);shape.lineTo(7.2,cap);shape.lineTo(7.2,base);shape.closePath();
+   shape.lineTo(sHead,cap);shape.lineTo(7.2,cap);shape.lineTo(7.2,nose(7.2)-SLAB);shape.lineTo((SLAB-1/6)*1.8,base);shape.closePath();
    f.xs.forEach((x,k)=>{const out=k?1:-1,m=side(x,out);
     put(marble,mirrored(new T.ExtrudeGeometry(shape,{depth:.06,bevelEnabled:false,curveSegments:10}).applyMatrix4(m),m));
     // The glass, from just over the stringer to just under the handrail, and the neon along its foot.

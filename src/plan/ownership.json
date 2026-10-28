@@ -5748,13 +5748,14 @@
         "Baluster",
         "Lounge_rail_glass",
         "Lounge_rail_glow",
+        "Lounge_step_glow",
         "Hydro_Nip_Lounge",
         "Hammock"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 122,
-      "signature": "28913ae59a82f4b2817236a69973b6036142f1753012825dceeb4127ca0fdc3d"
+      "placements": 124,
+      "signature": "90679027890dcd15b41344d016d06926afb5db3e353eaa82eea006ef9635126f"
     },
     {
       "source": "src/interior-polish.js",
