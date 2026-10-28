@@ -6910,7 +6910,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "9fdb8a8048df6dc43164e70d23bee59a606e7950dc85864b0706825fa962094a"
+      "signature": "7352c7870ece660ac3a1353a6011a43846b357b32d70279c249c864e3b6211f6"
     },
     {
       "source": "src/walk/lounge-sky.js",
@@ -6958,7 +6958,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 32,
-      "signature": "4fecf9c0795a3a480ad479ed36ed7883de42924bb4c0f83ae5e5c53f5c8820dc"
+      "signature": "3f8f9452cd6966cf01d42abc6f9b662c9be7359344f8cd36a773fd32b0fb33f5"
     },
     {
       "source": "src/walk/marks.js",
