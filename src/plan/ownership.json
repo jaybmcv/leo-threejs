@@ -5598,7 +5598,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "b8622de201e89e7e6b3da83fdcf9d80193364f960cbd53edecc0e3a49e389efa"
+      "signature": "942dd8cd72874bb5e699e353fd40a8f3df9c4e6f2d19c414c2c1ef9eb119195d"
     },
     {
       "source": "src/engineering-dressing.js",
@@ -7101,7 +7101,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "6a38e8cb24f1b101ed8b522c81d1faab03cf89c3427af043ed4fece60e9fac82"
+      "signature": "25e97f4d98f2c94947081a5a89ff25daf2975ec0da0086a2f37f542028771429"
     },
     {
       "source": "src/walk/marks.js",
@@ -7332,7 +7332,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "b5ed1d3a0dc3c59d7d77858492c163815e10510e25531990d9971a7c653c9b1f"
+      "signature": "f6083e51fb71001bac1ab3af3cc9aa588d476adadeee2f7f4f5d3133a8e3a50b"
     },
     {
       "source": "src/walk/provisions.js",
@@ -7511,16 +7511,28 @@
       "via": "frame boundary",
       "fixed": false,
       "features": [
+        "Theatre_seats",
+        "Theatre_crown",
+        "Theatre_crown_jewels",
+        "Theatre_ruff",
+        "Theatre_cape",
+        "Theatre_cast",
+        "Theatre_cast_colliders",
+        "Theatre_stage_spot",
+        "Theatre_actor_",
+        "Theatre_actor_head",
         "Walk_theatre",
         "Theatre_star_ceiling",
         "Theatre_carpet",
         "Theatre_sconces",
         "Theatre_sconce_glow"
       ],
-      "colliders": [],
-      "interactionTargets": null,
-      "placements": 17,
-      "signature": "9ed1aaafd0581fef03574b167eb56c923ef1724818704538b6e5f0530796c8bb"
+      "colliders": [
+        "Theatre_cast_colliders"
+      ],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 37,
+      "signature": "ed25d19e90872a00e077a9b5d9c90fb7a36ef185ac4249253fcfe81eca70e004"
     },
     {
       "source": "src/walk/trim.js",
