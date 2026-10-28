@@ -1,0 +1,4 @@
+import * as T from 'three';
+// A vertex owner index survives Meshopt vertex/triangle reordering. Authoring ranges remain useful before export.
+export function attachEnvelopeOwners(mesh,ranges){const values=new Uint16Array(mesh.geometry.attributes.position.count),table=[null,null];for(let i=0;i<ranges.length;i++){const r=ranges[i],id=i+2;if(id>65535)throw Error('Envelope owner table exceeds uint16');values.fill(id,r.start,r.start+r.count);table.push({room:r.room,component:r.component||r.room});}mesh.geometry.setAttribute('_leo_owner',new T.BufferAttribute(values,1,false));mesh.userData.ownerTable=table;return mesh;}
+export function envelopeTriangleOwner(mesh,faceIndex){const a=mesh.geometry.getAttribute('_leo_owner');if(!a)return null;const vertex=mesh.geometry.index?.getX(faceIndex*3)??faceIndex*3;return mesh.userData.ownerTable?.[a.getX(vertex)]||null;}

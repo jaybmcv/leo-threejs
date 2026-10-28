@@ -16,7 +16,7 @@ for(const kind of ['cabin','corridor','stair']){
  expect('Injected '+kind+' overlap rejected',()=>requireCabinFootprints(p),/footprint overlaps/);
 }
 assert(!plannedStanding(layout,12.7,28.628734,61.5),'Outboard hull ledge must not be a go-to landing');assert(!plannedStanding(layout,12.7,29.425,52.48),'Guard caps must not be go-to floors');assert(plannedStanding(layout,12.7,28.3,54.3),'Garden gallery is an interior landing');checks.push('Outboard hull and guard-top landings rejected; real garden gallery accepted');
-const identity={hash:'current'},valid={reportVersion:WALK_REPORT_VERSION,buildIdentity:identity,status:'PASS',guardGaps:[],roomFeatureDrops:[],roomFeatureViolations:[],safeReach:{},berths:{},cabinChairs:{}};
+const identity={hash:'current'},valid={reportVersion:WALK_REPORT_VERSION,buildIdentity:identity,status:'PASS',guardGaps:[],roomFeatureDrops:[],roomFeatureViolations:[],safeReach:{},berths:{},cabinChairs:{},loungeSeats:{},hullInterfaces:{}};
 requireCurrentWalkReport(valid,identity);
 expect('Missing walk report rejected',()=>requireCurrentWalkReport(null,identity),/npm run check:walk/);
 expect('Old-format walk report rejected',()=>requireCurrentWalkReport({status:'PASS'},identity),/old-format.*npm run check:walk/);

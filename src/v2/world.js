@@ -1,11 +1,13 @@
+import {groundFor,installGround,groundMesh,exteriorGround} from './ground.js';
 import layout from 'v2-layout';
 import {applyPrototypeExterior,fitPrototypeStructure} from './hull-prototypes.js';
 import * as T from 'three';
 import {buildSteps as originalSteps,prepareExteriorForWalking as originalExterior,outsideOnly,cutOut,RESIDENTIAL} from '../walk/world.js?legacy';
 import {Colliders,solid,meshTriangles} from '../walk/collision.js';
 import {fitV2Structure} from './model.js';
-import {placements,cabinKey,template} from './cabins.js';
+import {placements,cabinKey,template,cabinDetails,loungeCollisionTemplate} from './cabins.js';
 export {outsideOnly,cutOut,RESIDENTIAL};
+const progress=message=>{if(typeof process!=='undefined'&&process.versions?.node)console.log('v2 '+message);};
 export function* buildSteps(ship,options){yield* originalSteps(ship,options);}
 export function buildAll(ship,options){for(const step of buildSteps(ship,options));}
 export const cabinPlacements=placements;
@@ -13,12 +15,14 @@ export const cabinTemplate=()=>{const out=[];const g=template('twin--1');g.updat
 export function prepareExteriorForWalking(ship){
  // Accepted room dressing/cuts run in its authoring frame before world-space v2 shells.
  // Saved generated guards are restored unchanged, matching Node's after-preparation guard stage.
- const generated=ship.inside.children.filter(o=>o.name==='Walk_railings'||o.name==='Walk_partitions');for(const o of generated)o.removeFromParent();const dropped=originalExterior(ship);applyPrototypeExterior(ship.exterior,layout);clearWingIntrusions(ship);fitV2Structure(ship);fitPrototypeStructure(ship,layout);for(const o of generated)ship.inside.add(o);return dropped;
+ const generated=ship.inside.children.filter(o=>o.name==='Walk_railings'||o.name==='Walk_partitions');for(const o of generated)o.removeFromParent();progress('preparing exterior and room finishes');const dropped=originalExterior(ship);progress('legacy room dressing complete');applyPrototypeExterior(ship.exterior,layout);clearWingIntrusions(ship);progress('wing intrusions trimmed');fitV2Structure(ship);progress('structural floors and corridors complete');fitPrototypeStructure(ship,layout);progress('owned hull envelopes fitted');for(const o of generated)ship.inside.add(o);return dropped;
 }
 export function buildColliders(ship,{extra=[],filter=solid,into=new Colliders()}={}){
- const col=into;ship.root.updateMatrixWorld(true);col.addStatic(ship.inside,filter);for(const root of extra)col.addStatic(root,o=>filter(o)&&!outsideOnly(o));col.commit();
- const all=placements();for(const key of new Set(all.map(cabinKey))){const g=template(key),tris=[];g.updateMatrixWorld(true);g.traverse(o=>{if(solid(o))meshTriangles(o,tris);});col.addInstances('v2-cabins-'+key,tris,all.filter(c=>cabinKey(c)===key).map(c=>c.matrix));}
- return col;
+ progress('building static collision bands');const col=into,ground=groundFor(col);ship.root.updateMatrixWorld(true);col.addStatic(ship.inside,o=>o.userData.batchedEnvelope||filter(o));ground.addStatic(ship.inside,o=>(o.userData.batchedEnvelope||filter(o))&&groundMesh(o));for(const root of extra){col.addStatic(root,o=>filter(o)&&!outsideOnly(o));ground.addStatic(root,o=>filter(o)&&!outsideOnly(o)&&exteriorGround(o));}col.commit();ground.commit();progress('static collision bands complete');
+ // Variable shells are already deck/material static batches. The furnishing core keeps one shared BVH per base type.
+ const all=placements(),baseKey=c=>cabinKey(c).split('|')[0],collect=(g,predicate)=>{const tris=[];g.updateMatrixWorld(true);g.traverse(o=>{if(solid(o)&&predicate(o))meshTriangles(o,tris);});return tris;};for(const key of new Set(all.map(baseKey))){const cs=all.filter(c=>baseKey(c)===key),base=template(key),core=collect(base,o=>!o.userData.shell);if(core.length)col.addInstances('v2-core-'+key,core,cs.map(c=>c.matrix));const groundCore=collect(base,o=>!o.userData.shell&&groundMesh(o));if(groundCore.length)ground.addInstances('v2-core-'+key,groundCore,cs.map(c=>c.matrix));const unchanged=cs.filter(c=>!c.hullPrototype),shell=collect(base,o=>!!o.userData.shell);if(unchanged.length&&shell.length)col.addInstances('v2-shell-'+key,shell,unchanged.map(c=>c.matrix));const floor=collect(base,o=>!!o.userData.shell&&groundMesh(o));if(unchanged.length&&floor.length)ground.addInstances('v2-shell-'+key,floor,unchanged.map(c=>c.matrix));}const classes=new Map();for(const c of all.filter(c=>c.hullPrototype)){const cls=cabinDetails(c).loungeClass,g=loungeCollisionTemplate(c);if(cls===undefined)continue;const key=baseKey(c)+'|'+cls;let batch=classes.get(key);if(!batch)classes.set(key,batch={g,cs:[]});batch.cs.push(c);}for(const [key,{g,cs}]of classes){const tris=collect(g,o=>!!o.userData.windowLounge);if(tris.length){col.addInstances('v2-lounge-'+key,tris,cs.map(c=>c.matrix));const floor=collect(g,o=>!!o.userData.windowLounge&&groundMesh(o));if(floor.length)ground.addInstances('v2-lounge-'+key,floor,cs.map(c=>c.matrix));}}
+
+ progress('shared furnishing collision classes complete');return installGround(col,ground);
 }
 
 function clearWingIntrusions(ship){

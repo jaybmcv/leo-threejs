@@ -1,0 +1,60 @@
+{
+  "source": "Unchanged v1 model inputs pinned for the hull rollout at 03cc1c2",
+  "models": [
+    {
+      "name": "leo-aft-systems.glb",
+      "bytes": 33973220,
+      "sha256": "5958516b580055215bff314ed7ca5ab4cc31c599e8f4c810a38828eeb8737fe7"
+    },
+    {
+      "name": "leo-exterior-phone.glb",
+      "bytes": 11780304,
+      "sha256": "722201adc1296736448fe3fdb65495b3efdc659708f7ea18c4b27466586b949a"
+    },
+    {
+      "name": "leo-exterior-refined.glb",
+      "bytes": 69111672,
+      "sha256": "a80d549cda4463531481d13868737cbe0d9e44b98053c4b78c4ec31fc3866237"
+    },
+    {
+      "name": "leo-exterior-web.glb",
+      "bytes": 15358020,
+      "sha256": "35624499ad3c5a45f0fc06b936fd593adb0c9445fb2ce95b0138d8a6c6890ff2"
+    },
+    {
+      "name": "leo-exterior.glb",
+      "bytes": 27046128,
+      "sha256": "8971e14e0e72951880811b8a7e4f3e57310a733a9d990ba3a2ae2eec4ebabfee"
+    },
+    {
+      "name": "leo-full-ship.glb",
+      "bytes": 573082224,
+      "sha256": "8fc3e48d463c427150844ab4a5e0cf20e3ffa7fe60f405a83351358705dc4f84"
+    },
+    {
+      "name": "leo-garden-commons.glb",
+      "bytes": 22996336,
+      "sha256": "0e8b5abd12ceba7d3e373c7e8ae8b8b43c784970628e80ae9ef14ae3fb9365d3"
+    },
+    {
+      "name": "leo-neighborhood.glb",
+      "bytes": 36592344,
+      "sha256": "8194430da3994b23f4594402327b7f8e1374eeb8ec961cccb6abff862b10e9a6"
+    },
+    {
+      "name": "leo-residential-decks.glb",
+      "bytes": 46310116,
+      "sha256": "b40ae0eb2099e4be879a77d4fb29679459b589813f2aa3ffbcb0ca582ecf6917"
+    },
+    {
+      "name": "leo-service-areas.glb",
+      "bytes": 368021652,
+      "sha256": "5f0c505d25c105bed033f80250d581fa94e2739911076ad649c82f8618c2d2a8"
+    },
+    {
+      "name": "leo-transit.glb",
+      "bytes": 23630992,
+      "sha256": "0696fac94170ca4d16acca46773b9056086ce83e3f2150703f71f893a394ac03"
+    }
+  ]
+}

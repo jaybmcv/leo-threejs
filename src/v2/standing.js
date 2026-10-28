@@ -4,6 +4,7 @@ import {contains} from '../plan/geometry-v2.js';
 export function plannedStanding(layout,x,y,z,radius=.35){
  if(x<-170||y>layout.decks.at(-1).y+3.5)return true; // Retained aft/fin/crown use their original detailed circulation.
  const inside=p=>contains(p,[x,z]),near=h=>Math.abs(y-h)<.13;
+ for(const p of layout.hullPrototypes?.prototypes||[])if(near(p.chart.origin[1])&&inside(p.polygon)&&!p.floorHoles?.some(h=>inside(h.polygon)))return true;
  for(const c of layout.cabins)if(near(c.y)&&inside(c.polygon))return true;
  for(const r of layout.rooms){if(r.aggregate)continue;if(near(r.y)&&inside(r.polygon))return true;
   for(const o of [...(r.components?.galleries||[]),...(r.components?.links||[]),...(r.components?.landings||[])])if(near(o.center[1])&&inside(o.polygon))return true;

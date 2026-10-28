@@ -1,3 +1,5 @@
+import {entrySegments,entryHeader} from './room-entries.js';
+import {ownerFootprint} from '../plan/envelope-ownership-v2.js';import {worldPoint} from '../plan/hull-skin-v2.js';
 import {buildGardenGuards,galleryHoles} from './garden-guards.js';
 import {LIFTS} from '../walk/lifts.js';
 import {cutOut} from '../cut-out.js';
@@ -6,13 +8,13 @@ import {wingFlight} from '../plan/structure-v2.js';
 import * as T from 'three';
 import layout from 'v2-layout';
 import {buildCabins} from './cabins.js';
-import {polygonGeometry,mesh,box,wall,strip,glass,lining,floor,bounds} from './geometry.js';
+import {polygonGeometry,mesh,box,wall,strip,removeBottomCap,removePanelEndCaps,removeGeometryCaps,glass,lining,floor,bounds} from './geometry.js';
 import {roomObject,toWorld} from '../plan/rooms.js';
 export function configureV2Ship(ship){
  ship.layout=layout;ship.root.userData={...ship.root.userData,layoutVersion:2,cabins:layout.cabins.length,berths:layout.summary.berths,cabinsPerNeighborhood:layout.summary.perDeck.filter(d=>d.cabins).map(d=>d.cabins),berthsPerCabin:'1 or 2',cabinEnvelope:[3.42,3.5,7.64],cabinInternal:[3.18,3.4,7.4]};
  // Force only the inexpensive deck skeleton, then discard the v1 reservations.
  for(const d of ship.decks){for(const o of [...d.children]){d.remove(o);}const p=layout.decks[d.userData.number-1];d.userData.y=p.y-.3;
-  const holes=p.slab.holes.map(h=>h.polygon);const slab=mesh(d,'Deck_slab',polygonGeometry(p.slab.outline,holes,p.y),floor);
+  const holes=p.slab.holes.map(h=>h.polygon);if(layout.hullPrototypes?.rollout)for(const c of layout.cabins.filter(c=>c.deck===p.number))holes.push(c.hullPrototype?c.hullPrototype.polygon:rectangle(c.x,c.z,3.18,7.4,c.yaw));if(layout.hullPrototypes?.rollout)for(const envelope of layout.hullPrototypes.prototypes.filter(e=>e.deck===p.number&&e.kind!=='cabin'))holes.push(envelope.polygon);if(layout.hullPrototypes?.rollout)for(const shuttle of layout.shuttles.filter(s=>s.deck===p.number))holes.push(shuttle.polygon);const slab=mesh(d,'Deck_slab',polygonGeometry(p.slab.outline,holes,p.y),floor);
   const xs=[...new Set(p.slab.outline.map(v=>v[0]))].sort((a,b)=>a-b);slab.userData.outline=xs.map(x=>[x,Math.max(...p.slab.outline.filter(v=>v[0]===x).map(v=>Math.abs(v[1])))]);slab.userData.v2Holes=holes;
  }
  for(const o of [...ship.shared.children])ship.shared.remove(o);
@@ -20,17 +22,15 @@ export function configureV2Ship(ship){
  const service=ship.ensureServiceDeck.bind(ship);ship.ensureServiceDeck=number=>{const parts=service(number);const d=ship.decks[number-1];for(const o of [...d.children])if(!o.name.startsWith('Area_')&&o.name!=='Deck_slab'&&o.name!=='V2_cabin_instances')d.remove(o);return parts;};
  return ship;
 }
-function entrySegments(a,b,door,width){const dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz),t=((door[0]-a[0])*dx+(door[2]-a[1])*dz)/(len*len),dist=Math.abs((door[0]-a[0])*dz-(door[2]-a[1])*dx)/len;
- if(dist>.3||t<0||t>1)return [[a,b]];const lo=Math.max(0,t-width/(2*len)),hi=Math.min(1,t+width/(2*len)),at=t=>[a[0]+t*dx,a[1]+t*dz];return [[a,at(lo)],[at(hi),b]].filter(([a,b])=>Math.hypot(b[0]-a[0],b[1]-a[1])>.01);}
 export function fitV2Structure(ship){
  if(ship.v2Fitted)return;ship.v2Fitted=true;const structure=new T.Group();structure.name='V2_structure';ship.inside.add(structure);
  // The faired hull is kept intact. A continuous interior pressure lining prevents
  // bare distribution slabs from opening onto walkable exterior hull triangles.
- for(const d of layout.decks){const next=layout.decks[d.number];for(let i=0;i<d.slab.outline.length;i++)wall(structure,d.slab.outline[i],d.slab.outline[(i+1)%d.slab.outline.length],d.y,3.7,glass,'V2_pressure_lining');mesh(structure,'V2_distribution_ceiling',polygonGeometry(d.slab.outline,next?next.slab.holes.map(h=>h.polygon):[],d.y+3.72,.08),lining);}
+ for(const d of layout.decks){const next=layout.decks[d.number];for(let i=0;i<d.slab.outline.length;i++)removePanelEndCaps(wall(structure,d.slab.outline[i],d.slab.outline[(i+1)%d.slab.outline.length],d.y,3.7,glass,'V2_pressure_lining'));mesh(structure,'V2_distribution_ceiling',polygonGeometry(d.slab.outline,next?next.slab.holes.map(h=>h.polygon):[],d.y+3.72,.08),lining);}
  for(const r of layout.circulation.ramps){const g=polygonGeometry(r.polygon,[],0,.18),p=g.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,p.getY(i)+r.points[0][1]+(p.getX(i)-r.points[0][0])/r.run*r.rise);g.computeVertexNormals();mesh(structure,'V2_access_ramp',g,floor);}
  // Shells are rebuilt in world plan coordinates. Source fittings remain unscaled under their registered roots.
  for(const r of layout.rooms.filter(r=>r.aggregate)){roomObject(ship,r.id)?.removeFromParent();}
- for(const shuttle of layout.shuttles){const g=new T.Group();g.name='V2_escape_shuttle_placeholder_'+shuttle.id;g.userData={schedule:shuttle.id,seats:100,placeholder:true};structure.add(g);mesh(g,'V2_shuttle_floor',polygonGeometry(shuttle.polygon,[],shuttle.y,.18),floor);for(let i=0;i<4;i++){const a=shuttle.polygon[i],b=shuttle.polygon[(i+1)%4];if(i!==0)wall(g,a,b,shuttle.y,3.2,glass);}mesh(g,'V2_shuttle_ceiling',polygonGeometry(shuttle.polygon,[],shuttle.y+3.2,.12),lining);}
+ for(const shuttle of layout.shuttles){const g=new T.Group();g.name='V2_escape_shuttle_placeholder_'+shuttle.id;g.userData={schedule:shuttle.id,hullFacadeOwner:shuttle.roomId,component:shuttle.id,seats:100,placeholder:true};structure.add(g);mesh(g,'V2_shuttle_floor',polygonGeometry(shuttle.polygon,[],shuttle.y,.18),floor);for(let i=0;i<4;i++){const a=shuttle.polygon[i],b=shuttle.polygon[(i+1)%4];if(i===0)continue;if(i===3&&shuttle.hullEnvelope){const door=[(a[0]+b[0])/2,shuttle.y,(a[1]+b[1])/2];g.userData.bayEntry={center:door,width:1.8,height:3.2};for(const [aa,bb] of entrySegments(a,b,door,1.8))removeBottomCap(wall(g,aa,bb,shuttle.y,3.2,glass));}else removeBottomCap(wall(g,a,b,shuttle.y,3.2,glass));}mesh(g,'V2_shuttle_ceiling',polygonGeometry(shuttle.polygon,[],shuttle.y+3.2,.12),lining);}
  for(const r of layout.rooms.filter(r=>!r.aggregate)){
   const source=roomObject(ship,r.id);
   if(source){
@@ -43,23 +43,25 @@ export function fitV2Structure(ship){
   }
   if(r.id==='d03-cold-6')r.fittingDoor={center:toWorld(r.id,[-26,0,0]),width:4};
   const g=new T.Group();g.name='V2_shell_'+r.id;g.userData.room=r.id;structure.add(g);
+  const replacements=layout.hullPrototypes?.rollout?layout.hullPrototypes.prototypes.filter(p=>p.kind!=='cabin'&&(p.ownerId===r.id||p.parentRoomId===r.id)):[];
   const holes=r.assembly==='arrival-garden'&&r.deck===3?layout.decks[2].slab.holes.filter(h=>h.assembly==='arrival-garden').map(h=>h.polygon):[];
-  mesh(g,'V2_room_floor',polygonGeometry(r.polygon,holes,r.y+.006,.12),floor);
-  const top=r.envelope?.at(-1)?.polygon??r.polygon;mesh(g,'V2_room_ceiling',polygonGeometry(top,[],r.y+r.height,.10),lining);
+  if(!(r.kind==='garden'&&r.hullPrototype)){mesh(g,'V2_room_floor',polygonGeometry(r.polygon,[...holes,...replacements.map(p=>p.polygon)],r.y+.006,.12),floor);
+  const top=r.envelope?.at(-1)?.polygon??r.polygon;mesh(g,'V2_room_ceiling',polygonGeometry(top,replacements.map(p=>ownerFootprint(p,p.rect[3]).map(q=>{const w=worldPoint(p.chart,q);return [w[0],w[2]];})),r.y+r.height,.10),lining);
   // Sectioned facade steps follow the supplied full-height envelope without scaling the fitted room.
   const sections=r.envelope||[{rise:0,height:r.height,polygon:r.polygon}];
-  for(const s of sections)for(let i=0;i<s.polygon.length;i++){const a=s.polygon[i],b=s.polygon[(i+1)%s.polygon.length],doors=[r.door,r.fittingDoor,...(r.galleryDoors||[])].filter(Boolean).filter(d=>d.center[1]<r.y+s.rise+s.height&&d.center[1]+2.5>r.y+s.rise);
+  for(const s of sections)for(let i=0;i<s.polygon.length;i++){const a=s.polygon[i],b=s.polygon[(i+1)%s.polygon.length],doors=[r.door,r.fittingDoor,...(r.galleryDoors||[]),...(r.bayAccessDoors||[])].filter(Boolean).filter(d=>d.center[1]<r.y+s.rise+s.height&&d.center[1]+2.5>r.y+s.rise);
    let segments=[[a,b]];for(const d of doors)segments=segments.flatMap(([a,b])=>entrySegments(a,b,d.center,d.width));
-   for(const [aa,bb] of segments)wall(g,aa,bb,r.y+s.rise,s.height,r.outer||r.kind==='garden'?glass:lining);
-   for(const d of doors)if(entrySegments(a,b,d.center,d.width).length!==1&&d.center[1]+2.5<r.y+s.rise+s.height){const upper=Math.max(r.y+s.rise,d.center[1]+2.5);const len=Math.hypot(b[0]-a[0],b[1]-a[1]),u=(b[0]-a[0])/len,v=(b[1]-a[1])/len;wall(g,[d.center[0]-u*d.width/2,d.center[2]-v*d.width/2],[d.center[0]+u*d.width/2,d.center[2]+v*d.width/2],upper,r.y+s.rise+s.height-upper,glass);}
+   for(const [aa,bb] of segments){const o=wall(g,aa,bb,r.y+s.rise,s.height,r.outer||r.kind==='garden'?glass:lining);removePanelEndCaps(o);}
+   for(const d of doors){const header=entryHeader(a,b,d.center,d.width);if(header&&d.center[1]+2.5<r.y+s.rise+s.height){const upper=Math.max(r.y+s.rise,d.center[1]+2.5),o=wall(g,header[0],header[1],upper,r.y+s.rise+s.height-upper,glass);removeGeometryCaps(o.geometry,0);}}
+  }
   }
   if(r.components){for(const o of [...(r.components.galleries||[]),...(r.components.links||[]),...(r.components.landings||[])]){const holes=galleryHoles(r,o);mesh(g,'V2_garden_gallery',polygonGeometry(o.polygon,holes,o.center[1],o.size[1]),floor);}
    // The plan's stair center.y is its finished tread elevation.
    for(const o of r.components.stairs||[])box(g,'Gallery_stair',o.size,[o.center[0],o.center[1]-o.size[1]/2,o.center[2]],lining);buildGardenGuards(g,r,layout);
   }
  }
- const holeBounds=layout.decks.map(d=>d.slab.holes.map(h=>({...h,box:bounds(h.polygon)})));
- for(const c of layout.circulation.corridors){for(let i=1;i<c.points.length;i++){const a=c.points[i-1],b=c.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<.001)continue;const poly=rectangle((a[0]+b[0])/2,(a[1]+b[1])/2,len,c.width,-Math.atan2(b[1]-a[1],b[0]-a[0])),bb=bounds(poly),holes=[...layout.rooms.filter(r=>!r.aggregate&&Math.abs(r.y-layout.decks[c.deck-1].y)<.1&&r.polygon.length).map(r=>({polygon:r.polygon,box:bounds(r.polygon)})),...holeBounds[c.deck-1]].filter(h=>h.box.x0<bb.x1&&h.box.x1>bb.x0&&h.box.z0<bb.z1&&h.box.z1>bb.z0).map(h=>h.polygon);if(holes.length)mesh(structure,'V2_corridor_floor',polygonGeometry(poly,holes,layout.decks[c.deck-1].y+.008,.06),floor);else strip(structure,'V2_corridor_floor',a,b,layout.decks[c.deck-1].y+.008,c.width,.06,floor);}}
+ const holeBounds=layout.decks.map(d=>d.slab.holes.map(h=>({...h,box:bounds(h.polygon)}))),roomHoles=layout.decks.map(d=>layout.rooms.filter(r=>!r.aggregate&&Math.abs(r.y-d.y)<.1&&r.polygon.length).map(r=>({polygon:r.polygon,box:bounds(r.polygon)})));
+ for(const c of layout.circulation.corridors){for(let i=1;i<c.points.length;i++){const a=c.points[i-1],b=c.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<.001)continue;const poly=rectangle((a[0]+b[0])/2,(a[1]+b[1])/2,len,c.width,-Math.atan2(b[1]-a[1],b[0]-a[0])),bb=bounds(poly),holes=[...roomHoles[c.deck-1],...holeBounds[c.deck-1]].filter(h=>h.box.x0<bb.x1&&h.box.x1>bb.x0&&h.box.z0<bb.z1&&h.box.z1>bb.z0).map(h=>h.polygon);if(holes.length)mesh(structure,'V2_corridor_floor',polygonGeometry(poly,holes,layout.decks[c.deck-1].y+.008,.06),floor);else strip(structure,'V2_corridor_floor',a,b,layout.decks[c.deck-1].y+.008,c.width,.06,floor);}}
  for(const b of layout.circulation.bridges)mesh(structure,'V2_tower_bridge_floor',polygonGeometry(b.polygon,[],layout.decks[b.deck-1].y,.24),floor);
  for(const t of layout.circulation.towers)mesh(structure,'V2_tower_landing_floor',polygonGeometry(t.polygon,layout.decks[t.deck-1].openings.filter(o=>o.x0>120).map(o=>o.polygon),layout.decks[t.deck-1].y,.24),floor);
  for(const s of layout.circulation.stairs.filter(s=>s.wing!==undefined&&s.deck<15)){

@@ -21,7 +21,7 @@ import {loadMedia} from './ship-log-media.mjs';
 const WALK_SCRIPT=/^walk(-emotes|-map|-hat|-art-[a-z0-9-]+|-reel)?\.[0-9a-f]{10}\.(js|json|png|glb|jpg|mp4)$/;
 const hashed=(stem,ext,data)=>`${stem}.${createHash('sha256').update(data).digest('hex').slice(0,10)}.${ext}`;
 export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverride=null,walkOverride=null,sourceRef=null,sourceAdapters=undefined}){
- for(const name of await fs.readdir(out))if(WALK_SCRIPT.test(name))await fs.rm(path.join(out,name));
+ for(const name of await fs.readdir(out))if(WALK_SCRIPT.test(name)||v2&&/^layout\.[0-9a-f]{16}\.\d+\.bin$/.test(name))await fs.rm(path.join(out,name));
  const emotes=await fs.readFile('src/walk/assets/cosmo-emotes.json'),emoteName=hashed('walk-emotes','json',emotes);
  await fs.writeFile(path.join(out,emoteName),emotes);
  // The captain's hat that testers wear (src/walk/hat.js, src/vendor/captain-hat), fetched the first time one is wanted.
@@ -39,7 +39,7 @@ export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverri
  console.log(`ship log: ${log.length} changes, ${log.filter(e=>e.shots).length} with before-and-after pictures (from ${from})`);
  const data={'walk-partitions':plan,'walk-changes':JSON.stringify(log)};
  const partitions={name:'walk-data',setup(b){b.onResolve({filter:/^walk-(partitions|changes)$/},a=>({path:a.path,namespace:'walk'}));b.onLoad({filter:/.*/,namespace:'walk'},a=>({contents:data[a.path],loader:'json'}));}};
- const result=await build({entryPoints:['src/walk/main.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2022',legalComments:'eof',define:{__COSMO_SCRIPT__:JSON.stringify(cosmo),__EMOTES_URL__:JSON.stringify(emoteName),__MAP_URL__:JSON.stringify(mapName),__HAT_URL__:JSON.stringify(hatName),__ART_URLS__:JSON.stringify(art),__REEL_URL__:JSON.stringify(reelName),__LIVE_URL__:JSON.stringify(v2?'':process.env.LEO_LIVE_URL||''),__CREAMERY_URL__:JSON.stringify(process.env.LEO_CREAMERY_URL||'https://creamery.marscatsvoyage.com'),__WALK_DEBUG__:String(debug)},plugins:[partitions,...(v2?[v2Plugin(layoutOverride||JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8')),{sourceRef,...(sourceAdapters?{sourceAdapters}:{})})]:[])]});
+ const result=await build({entryPoints:['src/walk/main.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2022',legalComments:'eof',define:{__COSMO_SCRIPT__:JSON.stringify(cosmo),__EMOTES_URL__:JSON.stringify(emoteName),__MAP_URL__:JSON.stringify(mapName),__HAT_URL__:JSON.stringify(hatName),__ART_URLS__:JSON.stringify(art),__REEL_URL__:JSON.stringify(reelName),__LIVE_URL__:JSON.stringify(v2?'':process.env.LEO_LIVE_URL||''),__CREAMERY_URL__:JSON.stringify(process.env.LEO_CREAMERY_URL||'https://creamery.marscatsvoyage.com'),__WALK_DEBUG__:String(debug)},plugins:[partitions,...(v2?[v2Plugin(layoutOverride||JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8')),{sourceRef,...(sourceAdapters?{sourceAdapters}:{}),dataDirectory:out})]:[])]});
  const code=result.outputFiles[0].text;
  if(code.includes('createDLCat('))throw new Error('The walk script must load Cosmo from its own file');
  if(!debug&&(code.includes('__walk')||code.includes('anchorTest')))throw new Error('The walk debug hook must not ship');

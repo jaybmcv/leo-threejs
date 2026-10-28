@@ -15,7 +15,7 @@ import {planMap,MAP} from '../src/walk/deck-map.js';
 installWalkCanvas(createCanvas);
 globalThis.FileReader??=class{readAsArrayBuffer(b){b.arrayBuffer().then(result=>{this.result=result;this.onloadend?.();});}};
 export async function loadV2(){
- await MeshoptDecoder.ready;const data=await fs.readFile('output/leo-interior-v02/leo-exterior-web.glb');const gltf=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');
+ await MeshoptDecoder.ready;const data=await fs.readFile(process.env.LEO_V2_EXTERIOR||'output/leo-interior-v02/leo-exterior-web.glb');const gltf=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');
  gltf.scene.traverse(o=>{const a=gltf.parser.associations.get(o);if(a?.nodes!==undefined)o.name=gltf.parser.json.nodes[a.nodes].name||o.name;else if(o.isMesh&&a?.meshes!==undefined)o.name=o.parent.name;});
  const exterior=gltf.scene.getObjectByName('01_EXTERIOR_REFINED_V31');deferRoomFrames();const ship=createShip({deferExterior:true,lazyInterior:true});ship.root.remove(ship.exterior);ship.root.add(exterior);ship.exterior=exterior;buildAll(ship);
  ship.root.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});return ship;
