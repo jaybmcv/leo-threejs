@@ -420,6 +420,12 @@
     ],
     "via": null
   },
+  "src/walk/crown-tv.js": {
+    "owners": [
+      "crown"
+    ],
+    "via": null
+  },
   "src/walk/places.js": {
     "owners": [
       "@areas",

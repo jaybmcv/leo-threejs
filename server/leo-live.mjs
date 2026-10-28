@@ -20,6 +20,11 @@
 //                                     node scripts/graffiti-clear.mjs): graffiti.mjs
 //   LEO_LIVE_MCT_RESET_HOUR=4         the hour (this machine's local time) the Deck 1 transporters nobody is driving go home
 //                                     each day: transporters.mjs
+//   LEO_LIVE_TV=...                   the folder the Crown lounge TV's video is kept in (default ../leo-live-tv): tv.mjs
+//   LEO_LIVE_TV_OWNERS=...            Discord ids, comma separated, who get a Take down button at the TV
+//   LEO_LIVE_TV_CLEAR=...             the file that, once created, takes the TV's video down (default ../leo-live-tv-clear;
+//                                     node scripts/tv-clear.mjs)
+//   LEO_LIVE_TV_MAX_MB=40, LEO_LIVE_TV_MAX_S=120   the largest and longest video the TV takes
 //
 // Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
 // server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
@@ -42,6 +47,7 @@ import {createGraffiti} from './graffiti.mjs';
 import {createGym} from './gym.mjs';
 import {createMazeBoard} from './maze.mjs';
 import {createTransporters} from './transporters.mjs';
+import {createTv} from './tv.mjs';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||150);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -55,7 +61,7 @@ const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
 // name, scores and hearts count, but a giveaway claim wants a fresh one (arena.mjs).
 const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',lapsed:REMEMBER_S,
  key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
-const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6],chat:[.5,5],clown:[.2,3],wall:[.5,3],paint:[12,24]};
+const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6],chat:[.5,5],clown:[.2,3],wall:[.5,3],paint:[12,24],tv:[.5,3],'tv-ticket':[.5,5],'tv-down':[.2,2]};
 
 const visitors=new Set();
 const slots=new Map();let nextSlot=1;
@@ -71,6 +77,8 @@ const maze=createMazeBoard({log,send});
 // The Mars Cat Transporters on Deck 1 (transporters.mjs): who drives each, and where each is parked, in memory only.
 const mct=createTransporters({log,broadcast:msg=>broadcast(msg),send:(v,msg)=>send(v.ws,msg)});BUDGETS.mct=[3,8];
 setInterval(()=>mct.tick(),10000);
+// The Crown lounge TV (tv.mjs): the video everyone sees, uploaded over plain HTTP by a signed-in visitor with a ticket.
+const tv=createTv({send:(v,msg)=>send(v.ws,msg),log,everyone:()=>visitors,allowed:origin=>ORIGINS.some(o=>o.test(origin))});
 
 function send(ws,msg){if(ws.readyState===1)ws.send(typeof msg==='string'||msg instanceof Uint8Array?msg:JSON.stringify(msg));}
 function broadcast(msg,except){const text=JSON.stringify(msg);for(const v of visitors)if(v.ready&&v!==except)send(v.ws,text);}
@@ -234,6 +242,7 @@ function leave(v){
  graffiti.leave(v);
  gym.left(v);
  mct.left(v);
+ tv.leave(v);
  if(v.ready){broadcast({m:'gone',id:v.id});countChanged=true;log('aboard',aboard(),'-',v.id);}
 }
 const aboard=()=>{let n=0;for(const v of visitors)if(v.ready)n++;return n;};
@@ -281,6 +290,8 @@ function onMessage(v,data,binary){
   case 'gym':if(allowed(v,'gym'))gym.message(v,msg);break;
   // The Deck 1 transporters (transporters.mjs): a driver's seat taken, where a cart is, a cart parked.
   case 'mct':if(allowed(v,'mct'))mct.message(v,msg);break;
+  // The Crown lounge TV (tv.mjs): what is on it, a ticket to upload a video, and an owner taking it down.
+  case 'tv':case 'tv-ticket':case 'tv-down':if(allowed(v,msg.m))tv.message(v,msg);break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;
@@ -325,6 +336,8 @@ setInterval(flush,FLUSH_MS);
 const server=http.createServer((req,res)=>{
  // Mudwater Arena's daily counts, totals only (arena.mjs).
  if(req.url==='/arena'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify(arena.report()));return;}
+ // The Crown lounge TV: its video, and uploads to it (tv.mjs).
+ if(tv.http(req,res))return;
  if(req.url==='/health'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify({ok:true,aboard:aboard(),max:MAX}));return;}
  res.writeHead(200,{'Content-Type':'text/plain'});res.end('Leo live: the multiplayer server for Walk around Leo.\n');
 });
@@ -344,5 +357,5 @@ wss.on('connection',ws=>{
 });
 // Behind a tunnel an idle socket is cut after a couple of minutes; a ping keeps it open, and one never answered ends it.
 setInterval(()=>{for(const v of visitors){if(!v.alive){v.ws.terminate();leave(v);continue;}v.alive=false;v.ws.ping();}},PING_MS);
-server.listen(PORT,()=>log(`Leo live on :${PORT} (/live, /health, /arena), up to ${MAX} aboard`));
+server.listen(PORT,()=>log(`Leo live on :${PORT} (/live, /health, /arena, /tv), up to ${MAX} aboard`));
 export {server};
