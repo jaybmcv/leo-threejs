@@ -37,7 +37,7 @@ import {createAmbience} from './ambience.js';
 import {createLullaby} from './lullaby.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.js';
 import {corridorTrim} from './trim.js';
-import {connectLive,savedName} from './net/live.js';
+import {connectLive,savedName,httpBase} from './net/live.js';
 import {identify,currentPass,bestPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
 import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.js';
@@ -56,6 +56,7 @@ import {createAtriumKittens} from './arrival-atrium.js';
 import {createSurgeryArms} from './surgery.js';
 import {createFinCasing} from './fin-casing.js';
 import {createGraffiti} from './graffiti.js';
+import {createCrownTv} from './crown-tv.js';
 import {createInvasion} from './invasion/game.js';
 import {createPawPool} from './pool/game.js';
 import {openOutside,closeOutside} from './outside-game.js';
@@ -258,6 +259,11 @@ async function buildShip(){
  graffiti=createGraffiti(casing.userData.paintFace,casingFrame,{bar:$('spray'),colours:$('spray-colours'),nozzles:$('spray-nozzles'),note:$('spray-note'),connect:$('spray-connect'),done:$('spray-done'),surface:$('viewport')},
   {live:()=>live,connect,onOpen(){emote=null;input.enabled=false;input.down.clear();},onClose(){input.enabled=true;input.down.clear();}});
  toBand(graffiti.mesh);
+ // The Crown lounge TV on the crown lift's aft face (crown-tv.js): the video someone shared through Leo live.
+ crownTv=createCrownTv({live:()=>live,base:LIVE_URL?httpBase(LIVE_URL):'',connect,
+  els:{sheet:$('tv-sheet'),now:$('tv-now'),status:$('tv-status'),sound:$('tv-sound'),pick:$('tv-pick'),connect:$('tv-connect'),down:$('tv-down'),limits:$('tv-limits'),file:$('tv-file')},
+  onOpen(){emote=null;input.enabled=false;input.down.clear();}});
+ toBand(crownTv.group);
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
@@ -270,7 +276,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,lullaby=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -326,6 +332,7 @@ const actions={
   else if(t.kind==='ball')enterBall();
   else if(t.kind==='ball-out')leaveBall();
   else if(t.kind==='graffiti'){closePanels();graffiti.open();}
+  else if(t.kind==='tv'){closePanels();crownTv.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
  },
  escape(){closePanels();},
@@ -440,7 +447,7 @@ if(LIVE_URL){
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
   status:s=>{liveStatus=s;showAboard();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
-  welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();
+  welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();live.tv();
    // A server from before chat sends no chat: it stays hidden.
    chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);},
   // A line of chat: in the corner, and over the speaker's head.
@@ -458,6 +465,8 @@ if(LIVE_URL){
   wall:w=>graffiti?.wall(w),stroke:s=>graffiti?.stroke(s),painted:r=>graffiti?.painted(r),
   // Paws Off's gym round on the treadmills: its countdown, start, runners out and results.
   gym:msg=>pawsOff?.round(msg),
+  // The Crown lounge TV (crown-tv.js): what is on it, and a ticket to share a video.
+  tv:t=>crownTv?.tv(t),tvTicket:r=>crownTv?.ticket(r),
  },{pass:()=>me.pass?bestPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
@@ -480,7 +489,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,mudwater,changeLog,comics,paintings,missionHolo,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get gaming(){return gaming;},get provisions(){return provisions;},get blossom(){return blossom;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,mudwater,changeLog,comics,paintings,missionHolo,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get blossom(){return blossom;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -577,7 +586,7 @@ renderer.setAnimationLoop(()=>{
  missionHolo?.update(dt,p);
  surgeryArms?.update(dt,p);
  marks?.update(camera,p,now);
- if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);graffiti?.load(p);
+ if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);graffiti?.load(p);crownTv?.update(p);
   // Walking into Mudwater Arena counts as a visit (server/arena.mjs).
   const inArena=!!mudwater?.contains(p);if(inArena&&!wasInArena)live?.arena('enter');wasInArena=inArena;}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
@@ -618,7 +627,7 @@ function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a)
 // a ship log board, the telescope or an arcade cabinet, then a seat or bed.
 function target(){
  const p=controller.position,l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
- const w=graffiti?.near(p);if(w)return w;
+ const w=graffiti?.near(p)||crownTv?.near(p);if(w)return w;
  const b=booth.near(p)||comics.near(p);if(b)return b;
  const g=changeLog.near(p);if(g)return g;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
@@ -718,7 +727,7 @@ function goTo(place){place=remapSpot(place);const q=findStand(colliders,place.at
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));chat.close();graffiti?.close();input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.

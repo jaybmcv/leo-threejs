@@ -5345,6 +5345,19 @@
         0
       ]
     },
+    "tv/Crown_lounge": {
+      "room": "crown",
+      "local": [
+        -2.180000000000007,
+        1.75,
+        0
+      ],
+      "v1": [
+        -249.18,
+        122.05,
+        0
+      ]
+    },
     "mission-holo": {
       "room": "d20-mission-2",
       "local": [
@@ -6527,6 +6540,26 @@
       "signature": "bf5dbff1761beff801fd379654f774a323aab02058addda1659e023a34b7aaba"
     },
     {
+      "source": "src/walk/crown-tv.js",
+      "rooms": [
+        "crown"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Crown_tv",
+        "Crown_tv_bezel",
+        "Crown_tv_glass",
+        "Crown_tv_picture",
+        "Crown_tv_plate",
+        "Crown_tv_label"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 8,
+      "signature": "bd5330c2f0d11a02e474d5d2ffdcfafee9236f9ace78f39da9b335b06bdc539d"
+    },
+    {
       "source": "src/walk/deck-map.js",
       "rooms": [
         "circulation-1",
@@ -7101,7 +7134,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "25e97f4d98f2c94947081a5a89ff25daf2975ec0da0086a2f37f542028771429"
+      "signature": "73ea3b09f3edd3be82b17c942a2d0760044b06cfd0e0a716ae85d922afa9be17"
     },
     {
       "source": "src/walk/marks.js",

@@ -2,8 +2,9 @@
 // checks the pose wire, joining, poses reaching others near and far, names, the shared lifts, pings, leaving, a second tab,
 // bad input, the cap on visitors, Leo passes (Discord identity from The Creamery, net/pass.js: here signed by a
 // stand-in key served as a local JWKS), Alien Cat Invasion's leaderboard, Paw Pool's fastest clears, the ship log
-// boards' hearts, the selfie booth's shared countdown, chat aboard, the Deck 19 graffiti wall, Paws Off's gym rounds and, last, sixty visitors walking at once (bytes sent per visitor
-// per second). Each server keeps its scores, hearts, chat and graffiti in temporary files, never the real ones.
+// boards' hearts, the selfie booth's shared countdown, chat aboard, the Deck 19 graffiti wall, Paws Off's gym rounds, the
+// Crown lounge TV and, last, sixty visitors walking at once (bytes sent per visitor per second). Each server keeps its
+// scores, hearts, chat, graffiti and TV video in temporary files, never the real ones.
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import WebSocket from 'ws';
@@ -108,9 +109,12 @@ const PASS_ENV={LEO_PASS_JWKS_URL:`http://127.0.0.1:${jwksServer.address().port}
 
 // ---- a server and some visitors -----------------------------------------------------------------------------------
 const graffitiFile=port=>path.join(os.tmpdir(),`leo-live-graffiti-check-${port}.json`),graffitiClear=port=>path.join(os.tmpdir(),`leo-live-graffiti-clear-check-${port}`);
+const tvDir=port=>path.join(os.tmpdir(),`leo-live-tv-check-${port}`),tvClear=port=>path.join(os.tmpdir(),`leo-live-tv-clear-check-${port}`);
 const scoresFile=port=>path.join(os.tmpdir(),`leo-live-scores-check-${port}.json`),heartsFile=port=>path.join(os.tmpdir(),`leo-live-hearts-check-${port}.json`),chatFile=port=>path.join(os.tmpdir(),`leo-live-chat-check-${port}.json`);
+const started=new Set();
 function startServer(port,env={}){
- const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...PASS_ENV,LEO_LIVE_SCORES:scoresFile(port),LEO_LIVE_HEARTS:heartsFile(port),LEO_LIVE_CHAT_LOG:chatFile(port),LEO_LIVE_GRAFFITI:graffitiFile(port),LEO_LIVE_GRAFFITI_CLEAR:graffitiClear(port),...env},stdio:['ignore','pipe','pipe']});
+ started.add(port);
+ const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...PASS_ENV,LEO_LIVE_SCORES:scoresFile(port),LEO_LIVE_HEARTS:heartsFile(port),LEO_LIVE_CHAT_LOG:chatFile(port),LEO_LIVE_GRAFFITI:graffitiFile(port),LEO_LIVE_GRAFFITI_CLEAR:graffitiClear(port),LEO_LIVE_TV:tvDir(port),LEO_LIVE_TV_CLEAR:tvClear(port),...env},stdio:['ignore','pipe','pipe']});
  child.log='';child.stdout.on('data',d=>{child.log+=d;});
  return new Promise((resolve,reject)=>{child.stdout.on('data',d=>{if(/Leo live on/.test(d))resolve(child);});child.on('exit',c=>reject(new Error('server exited '+c)));setTimeout(()=>reject(new Error('server did not start')),10000);});
 }
@@ -597,6 +601,70 @@ try{
  }finally{srv.kill();for(const f of [graffitiFile(port),graffitiClear(port)])fs.rmSync(f,{force:true});}
 }
 
+// ---- the Crown lounge TV (tv.mjs), on a server of its own -----------------------------------------------------------
+// A signed-in visitor gets a ticket and uploads an mp4 over HTTP; another visitor, who asked nothing, hears that it is on
+// and who shared it, and can fetch the very same file (whole, or a range of it). Guests may watch but not upload; files
+// that aren't H.264 mp4, too long, too big or from another site are refused; a ticket works once; the video survives a
+// restart; only an owner (or the admin clear file) takes it down, which blanks it for everyone and deletes the file.
+{
+ const port=PORT+24,dir=tvDir(port);fs.rmSync(dir,{recursive:true,force:true});fs.rmSync(tvClear(port),{force:true});
+ const env={LEO_LIVE_TV_OWNERS:'914141414141414141',LEO_LIVE_TV_MAX_MB:'3'};let srv=await startServer(port,env);
+ const wait=async(bot,n,test,ms=1500)=>{for(let i=0;i<ms/25;i++){const got=bot.msgs.slice(n).find(test);if(got)return got;await sleep(25);}return null;};
+ const ask=async(bot,m)=>{const n=bot.msgs.length;bot.send({m});return wait(bot,n,x=>x.m===(m==='tv-down'?'tv-ticket':m));};
+ // A request to the server's web side: {status, headers, body (a Buffer), json}.
+ const request=(method,pathname,{body,headers={}}={})=>new Promise((resolve,reject)=>{
+  const q=http.request({host:'127.0.0.1',port,method,path:pathname,headers:{...(body?{'Content-Length':String(body.length)}:{}),...headers}},res=>{
+   const parts=[];res.on('data',c=>parts.push(c));res.on('end',()=>{const b=Buffer.concat(parts);let json=null;try{json=JSON.parse(b);}catch{}resolve({status:res.statusCode,headers:res.headers,body:b,json});});});
+  q.on('error',e=>resolve({status:0,headers:{},body:Buffer.alloc(0),json:null,error:e.message}));if(body)q.end(body);else q.end();});
+ const upload=(bot,body,ticket,{origin='http://localhost:4180',type='video/mp4'}={})=>request('POST','/tv/upload',{body,headers:{Origin:origin,'Content-Type':type,'X-Leo-Tv-Ticket':ticket||''}});
+ const ticketOf=async bot=>(await ask(bot,'tv-ticket'))?.ticket;
+ const clip=fs.readFileSync('src/walk/art/theatre-loop.mp4');
+ // The same clip made five minutes long (its mvhd duration), and re-labelled HEVC (its first sample entry).
+ const longer=Buffer.from(clip),mv=longer.indexOf('mvhd'),scale=longer.readUInt32BE(mv+16);longer.writeUInt32BE(scale*300,mv+20);
+ const hevc=Buffer.from(clip);hevc.write('hvc1',hevc.indexOf('avc1',hevc.indexOf('stsd')),'latin1');
+ try{
+  const guest=new Bot(port,{name:'Guest'}),bea=new Bot(port,{pass:await creamery.sign(claimsFor('912121212121212121','Bea Cat'))}),
+   cal=new Bot(port,{pass:await creamery.sign(claimsFor('913131313131313131','Cal Cat'))}),jay=new Bot(port,{pass:await creamery.sign(claimsFor('914141414141414141','Jay Owner'))});
+  for(const b of [guest,bea,cal,jay])await b.welcomed();
+  const first=await ask(guest,'tv'),calFirst=await ask(cal,'tv'),jayFirst=await ask(jay,'tv');
+  check('tv: anyone can ask what is on; nothing yet, and only the owner is marked owner',first?.video===null&&first.verified===false&&first.owner===false&&calFirst?.verified===true&&calFirst.owner===false&&jayFirst?.owner===true&&first.max?.mb===3,JSON.stringify(first));
+  check('tv: a guest asking to upload is told to sign in',(await ask(guest,'tv-ticket'))?.why==='sign-in');
+  const t1=await ticketOf(bea);
+  check('tv: a signed-in visitor gets a one-time upload ticket',/^[0-9a-f]{48}$/.test(t1||''));
+  const nc=cal.msgs.length,ng=guest.msgs.length,up=await upload(bea,clip,t1);
+  check('tv: an H.264 mp4 within the limits is taken',up.status===200&&up.json?.ok===true&&/^[0-9a-f]{16}$/.test(up.json.video?.id)&&up.headers['access-control-allow-origin']==='http://localhost:4180',`${up.status} ${up.body.toString().slice(0,160)}`);
+  const heard=await wait(cal,nc,x=>x.m==='tv'&&x.video),heardGuest=await wait(guest,ng,x=>x.m==='tv'&&x.video);
+  check('tv: another visitor hears the new video and who shared it, without asking',heard?.video?.id===up.json?.video?.id&&heard.video.name==='Bea Cat'&&heard.video.src===`/tv/${heard.video.id}.mp4`&&Math.abs(heard.video.seconds-34.3)<.2&&heard.video.width===960,JSON.stringify(heard?.video));
+  check('tv: a guest hears it too, still marked not signed in',heardGuest?.video?.id===heard?.video?.id&&heardGuest.verified===false);
+  const got=await request('GET',heard?.video?.src||'/tv/none'),part=await request('GET',heard?.video?.src||'/tv/none',{headers:{Range:'bytes=100-299'}});
+  check('tv: the other visitor can fetch the very same file, as video/mp4, from any page',got.status===200&&got.body.equals(clip)&&got.headers['content-type']==='video/mp4'&&got.headers['access-control-allow-origin']==='*',`${got.status} ${got.body.length} bytes`);
+  check('tv: a range of it comes back as asked, so a browser can seek',part.status===206&&part.body.equals(clip.subarray(100,300))&&part.headers['content-range']===`bytes 100-299/${clip.length}`);
+  check('tv: a ticket works once',(await upload(bea,clip,t1)).json?.why==='ticket');
+  check('tv: one upload a minute per account',(await ask(bea,'tv-ticket'))?.why==='slow');
+  const refusals={};
+  for(const [what,body,opts] of [['not-mp4',Buffer.from('this is not a video at all, just some text'.repeat(20))],['codec',hevc],['long',longer],['origin',clip,{origin:'https://evil.example'}],['big',Buffer.concat([clip,Buffer.alloc(1024*1024)])]])
+   refusals[what]=(await upload(cal,body,await ticketOf(cal),opts)).json?.why;
+  check('tv: text, HEVC, a five-minute video, another site and an oversized file are each refused, with why',Object.entries(refusals).every(([k,v])=>v===k),JSON.stringify(refusals));
+  check('tv: refusals leave the video as it was',(await ask(guest,'tv'))?.video?.id===heard?.video?.id);
+  check('tv: who uploaded what is logged',new RegExp(`tv video ${heard?.video?.id} discord:912121212121212121 "Bea Cat" ${clip.length} bytes 34.3s 960x540`).test(srv.log),(srv.log.match(/tv video .*/)||[''])[0]);
+  // A restart keeps it.
+  for(const b of [guest,bea,cal,jay])b.close();srv.kill();await sleep(300);srv=await startServer(port,env);
+  const dot=new Bot(port,{name:'Dot'}),cal2=new Bot(port,{pass:await creamery.sign(claimsFor('913131313131313131','Cal Cat'))}),jay2=new Bot(port,{pass:await creamery.sign(claimsFor('914141414141414141','Jay Owner'))});
+  for(const b of [dot,cal2,jay2])await b.welcomed();
+  const kept=await ask(dot,'tv');
+  check('tv: the video is still on after the server restarts',kept?.video?.id===heard?.video?.id&&kept.video.name==='Bea Cat'&&(await request('GET',kept.video.src)).body.equals(clip));
+  check('tv: a visitor who is not an owner cannot take it down',(await ask(cal2,'tv-down'))?.why==='not-owner'&&(await ask(dot,'tv'))?.video?.id===heard?.video?.id);
+  let n=dot.msgs.length;jay2.send({m:'tv-down'});
+  const down=await wait(dot,n,x=>x.m==='tv'&&x.video===null);
+  check('tv: an owner takes it down, and every visitor sees the screen go blank',!!down&&down.down===true&&(await request('GET',heard?.video?.src||'/tv/none')).status===404&&!fs.existsSync(path.join(dir,`${heard?.video?.id}.mp4`))&&/tv taken down \S+ discord:912121212121212121 "Bea Cat" \(owner discord:914141414141414141 "Jay Owner"\)/.test(srv.log),(srv.log.match(/tv taken down .*/)||[''])[0]);
+  const again=await upload(cal2,clip,await ticketOf(cal2));
+  n=dot.msgs.length;fs.writeFileSync(tvClear(port),'check-live\n');
+  const cleared=await wait(dot,n,x=>x.m==='tv'&&x.video===null,4000);
+  check('tv: the admin clear file takes a video down for everyone, and is logged',again.json?.ok===true&&!!cleared&&/tv taken down \S+ discord:913131313131313131 "Cal Cat" \(admin: "check-live"\)/.test(srv.log)&&!fs.existsSync(tvClear(port))&&fs.readdirSync(dir).filter(f=>f.endsWith('.mp4')).length===0);
+  for(const b of [dot,cal2,jay2])b.close();
+ }finally{srv.kill();}
+}
+
 // ---- Paws Off's gym rounds (server/gym.mjs), on a server of its own ----------------------------------------------------
 // One runner on a Deck 16 treadmill and one on the arcade's step on; a third, standing by, asks too. When the countdown
 // ends, the two on treadmills run on one seed and the third is told to run alone. One falls, and the other hears it; once
@@ -661,6 +729,7 @@ try{
 }
 
 jwksServer.close();
+await sleep(300);for(const port of started){fs.rmSync(tvDir(port),{recursive:true,force:true});fs.rmSync(tvClear(port),{force:true});}
 console.log(results.join('\n'));
 console.log(failed?`${failed} FAILED`:'All Leo live checks passed');
 process.exit(failed?1:0);
