@@ -5370,6 +5370,32 @@
         -35.7,
         -38
       ]
+    },
+    "lounge-entrance-sign-19": {
+      "room": "commons-1",
+      "local": [
+        -20.5,
+        8,
+        -23
+      ],
+      "v1": [
+        -112.5,
+        32.3,
+        -4
+      ]
+    },
+    "lounge-entrance-sign-18": {
+      "room": "commons-1",
+      "local": [
+        -20.5,
+        4,
+        -23
+      ],
+      "v1": [
+        -112.5,
+        28.3,
+        -4
+      ]
     }
   },
   "modules": [
@@ -6598,7 +6624,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 43,
-      "signature": "ffb8f127047cb67e800b0b17d245914668c566f24fad0578bb295b69ae14197a"
+      "signature": "ba6b91640160b0c441e594e87b713eca2a492c9ee672a3360054fa1b8cbca549"
     },
     {
       "source": "src/walk/hamster-ball.js",
@@ -6897,6 +6923,19 @@
       "signature": "4a246f122a0f43af402eb69be4fbe17639a7b036efce5f07dbf442afef9e3a3c"
     },
     {
+      "source": "src/walk/lounge-entrance-signs.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 20,
+      "signature": "76cd8842bdba49e6c32de9e3d26da8316d0ae8cd32612d88bbfcfefbfe5e7fc8"
+    },
+    {
       "source": "src/walk/lounge-floor.js",
       "rooms": [
         "commons-1",
@@ -6958,7 +6997,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 32,
-      "signature": "4fecf9c0795a3a480ad479ed36ed7883de42924bb4c0f83ae5e5c53f5c8820dc"
+      "signature": "6ce9b3e474af0fa1e11eb4a90a5fac6a89ff3cb94839af4772be4f6ebd3c6133"
     },
     {
       "source": "src/walk/marks.js",
@@ -7176,7 +7215,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "8f0c8af8734738b364fd6a84993f2c789ca60532d32fd36a965b5a37c74a2d46"
+      "signature": "b5ed1d3a0dc3c59d7d77858492c163815e10510e25531990d9971a7c653c9b1f"
     },
     {
       "source": "src/walk/provisions.js",
