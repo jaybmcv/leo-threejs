@@ -6598,7 +6598,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 43,
-      "signature": "ffb8f127047cb67e800b0b17d245914668c566f24fad0578bb295b69ae14197a"
+      "signature": "ba6b91640160b0c441e594e87b713eca2a492c9ee672a3360054fa1b8cbca549"
     },
     {
       "source": "src/walk/hamster-ball.js",
@@ -6754,14 +6754,15 @@
       "features": [
         "Jaguar_gate",
         "Jaguar_gate_solid",
-        "Jaguar_head"
+        "Jaguar_head",
+        "Jaguar_exit_arch"
       ],
       "colliders": [
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 39,
-      "signature": "dbb4a87ff831a7c54638fe2c7df452d168fde95abecbac8b0fea15eafa09ea50"
+      "placements": 38,
+      "signature": "08d8a88c54833887982476aa7a5045150e7c11c07bb486a0c53460e09b80cd9e"
     },
     {
       "source": "src/walk/kittens.js",
