@@ -5380,7 +5380,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [],
       "colliders": [],
       "interactionTargets": null,
@@ -5394,7 +5394,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Aft_access_finish_shell",
         "Fin_access_finish_shell"
@@ -5411,7 +5411,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "AFT_SYSTEMS_BLOCKOUT",
         "Aft_"
@@ -5555,7 +5555,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Engineering_sign",
         "Heat_shield_plating",
@@ -5656,7 +5656,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Fin_panorama_lounge",
         "Crown_exterior",
@@ -6504,7 +6504,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "9064e37cf8fa725103a90165e2a707e35248cd86e4dba16463166e3a7c8252ea"
+      "signature": "9ebfc4ec3cacb2adddb99d19865a8eaeda923da4bb4fb625bae86a637cfbf79c"
     },
     {
       "source": "src/walk/dining-robots.js",
@@ -6532,7 +6532,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Walk_fin_root_casing",
         "Fin_root_casing_corner",
@@ -6783,6 +6783,24 @@
       "signature": "1e13bb9620f70b8861003d7b619d14c30e4f5b80e58090fbd1f5a821b4a7f874"
     },
     {
+      "source": "src/walk/lever-panel.js",
+      "rooms": [
+        "aft-machinery"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
+      "features": [
+        "Lever_panel",
+        "Lever_panel_lamp",
+        "Lever_panel_grip"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 16,
+      "signature": "e3cdffd756cfcab9b73d63845af60824a032728e42cdb9e445badd09109de69a"
+    },
+    {
       "source": "src/walk/life-support-pipes.js",
       "rooms": [
         "d04-control-8"
@@ -6958,7 +6976,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 32,
-      "signature": "4fecf9c0795a3a480ad479ed36ed7883de42924bb4c0f83ae5e5c53f5c8820dc"
+      "signature": "99929028deeb99044679fa36b691e50763a648182f5f0b4c3ff300adeafc5754"
     },
     {
       "source": "src/walk/marks.js",

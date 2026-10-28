@@ -2,6 +2,7 @@ import * as T from 'three';
 import {GRID,eachTriangle} from './partitions.js';
 import {LIFTS} from './lifts.js';
 import {openingPlan} from './arrival-atrium.js';
+import {SEAL} from './lever-panel.js';
 
 // The ship map: each deck as a 0.5 m plan, worked out at build time from the partition grid (the floors) and the
 // interior's walls, then saved as one image, a deck to a band (scripts/walk-plan.mjs). Pixel values are classes, which
@@ -38,6 +39,8 @@ export function planMap(ship,decks,rails){
    for(const [n,d] of decks.entries()){if(hi<d.y+1.4||lo>d.y+.6)continue;const data=out[n].data;line(data,a,b);line(data,b,c);line(data,c,a);}
   });
  });
+ // Deck 4's tank bay doorway is behind a lever panel the walk adds (lever-panel.js): the map shows it shut.
+ {const d=out.find(o=>o.number===SEAL.deck);if(d)line(d.data,{x:SEAL.x,z:SEAL.z0},{x:SEAL.x,z:SEAL.z1});}
  for(const [deck,axis,a0,a1,pos] of rails){const d=out.find(o=>o.number===deck);if(!d)continue;
   for(let a=a0;a<=a1;a+=cell*.5){const k=axis?at(pos,a):at(a,pos);if(k>=0)d.data[k]=MAP_CLASS.rail;}}
  // Lift cars, at every deck they stop at.
