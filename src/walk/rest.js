@@ -10,6 +10,8 @@ const SEAT_BASE=/^(Seat_base|Garden_bench|Passenger_bench_seat)$/;
 const BACK=/(^|_)(Back|back)$|_back_|Seat_back|Bench_back|banquette_back/;
 const BED=/^(Repeated_)?(Single_mattress|Mattress|Hammock)$/;
 const PILLOW=/^(Repeated_)?Pillow$/;
+// The floor of a healing capsule (the walk's surgery.js): somewhere to stand inside, facing out of the tube.
+const CAPSULE=/^Healing_capsule_floor$/;
 export const SPACING=.65;
 const worldVisible=o=>{for(let p=o;p;p=p.parent)if(!p.visible&&!p.userData.baked)return false;return true;};
 
@@ -23,10 +25,10 @@ function topFace(o,matrix){
 
 export function findRestSpots(root){
  root.updateMatrixWorld(true);
- const seats=[],bases=[],backs=[],beds=[],pillows=[];
+ const seats=[],bases=[],backs=[],beds=[],pillows=[],capsules=[];
  root.traverse(o=>{
   if(!o.isMesh||!worldVisible(o))return;
-  const list=SEAT.test(o.name)?seats:SEAT_BASE.test(o.name)?bases:BED.test(o.name)?beds:PILLOW.test(o.name)?pillows:BACK.test(o.name)?backs:null;if(!list)return;
+  const list=CAPSULE.test(o.name)?capsules:SEAT.test(o.name)?seats:SEAT_BASE.test(o.name)?bases:BED.test(o.name)?beds:PILLOW.test(o.name)?pillows:BACK.test(o.name)?backs:null;if(!list)return;
   for(let i=0;i<(o.isInstancedMesh?o.count:1);i++){const owner=o.isInstancedMesh?instanceRoom(o,i):objectRoom(o),m=baselineMatrix(o,o.isInstancedMesh?i:null);list.push({o,owner,face:topFace(o,m),m});}
  });
  // Backs and pillows by plan position, for facing.
@@ -72,6 +74,8 @@ export function findRestSpots(root){
    spots.push({room:it.owner,kind:'lie',point:low,head,length:long.length()*2,height:low.y,hammock:it.o});continue;}
   spots.push({room:it.owner,kind:'lie',point:c.clone(),head,length:long.length()*2,height:c.y});
  }
+ for(const it of capsules){const facing=new T.Vector3(...(it.o.userData.facing||[0,0,1])).transformDirection(it.m);facing.y=0;facing.normalize();
+  spots.push({room:it.owner,kind:'stand',point:it.face.c.clone(),facing,height:it.face.c.y});}
  for(const s of spots)if(s.room&&hasFrameOverride(s.room)){const m=deltaMatrix(s.room);s.point.applyMatrix4(m);if(s.facing)s.facing=s.facing.clone().transformDirection(m);if(s.head)s.head=s.head.clone().transformDirection(m);s.height=s.point.y;}
  return spots;
 }

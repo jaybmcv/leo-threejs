@@ -107,6 +107,9 @@ const restRatio=usable/spots.length;if(restRatio<.995)problems.push(`seats and b
 // somewhere to stand beside each.
 {const scans=spots.filter(s=>s.kind==='lie'&&Math.abs(s.point.x+39.75)<.6&&Math.abs(s.height+22.945)<.1&&[28,48].some(z=>Math.abs(s.point.z-z)<.5));
  if(scans.length!==2||scans.some(s=>!reached(s.point.x,s.height-.2,s.point.z,1.6,1.3,.25)))problems.push(`diagnostics scanner beds: ${scans.length}/2 beds to lie down on`);}
+// The Deck 5 surgical suite's six healing capsules (surgery.js): somewhere to stand in each, reachable from its bay.
+{const caps=spots.filter(s=>s.kind==='stand'&&s.point.x>-71&&s.point.x<-19&&s.point.z>-55&&s.point.z<-21);
+ if(caps.length!==6||caps.some(s=>Math.abs(s.height+23.46)>.05||!reached(s.point.x,s.height-.2,s.point.z,1.6,1.3,.25)))problems.push(`surgical suite capsules: ${caps.length}/6 to stand in`);}
 // Space: a reached spot with nothing overhead is outside the ship.
 let open=0;const openAt=[];for(let i=0;i<X.length;i+=13){ray.origin.set(X[i],Y[i]+1,Z[i]);ray.direction.set(0,1,0);if(!col.raycast(ray,200)){open++;openAt.push([X[i],Y[i],Z[i]].map(v=>+v.toFixed(1)));}}
 if(open)problems.push(`${open} sampled positions open to space`);

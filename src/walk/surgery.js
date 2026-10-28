@@ -19,7 +19,7 @@ const BATCHED=/^(Refined_patient_services|Refined_display_graphics|Polish_tailor
 const inBay=(x,y,z)=>y>.02&&y<CEILING-.1&&BAYS.some(([bx,bz])=>x>bx-1&&x<bx+1.3&&Math.abs(z-bz)<1.2);
 
 function canvasTexture(w,h,paint){
- const canvas=walkCanvas();canvas.width=w;canvas.height=h;paint(canvas.getContext('2d'),w,h);
+ const canvas=walkCanvas();if(!canvas)return null;canvas.width=w;canvas.height=h;paint(canvas.getContext('2d'),w,h);
  const t=new T.CanvasTexture(canvas);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return t;
 }
 // Concept graphics for the floating panel: a heart trace, a ring gauge and a few bars, cyan on a faint blue glass.
@@ -95,7 +95,75 @@ export function dressSurgery(ship){
  }
  const panel=new T.MeshBasicMaterial({name:'Surgery_vitals',map:canvasTexture(512,320,vitals),transparent:true,depthWrite:false,side:T.DoubleSide,toneMapped:false});
  for(const [x,z] of BAYS)bed(fit,x,z,panel);
+ CAPSULES.forEach(([x,z,face],i)=>capsule(fit,x,z,face,i));
  return true;
+}
+
+// A healing capsule in each bay (from tester feedback), between the bed and the bay's partition: a glass tube of
+// glowing blue fluid on a dark pedestal, hoses hanging from its crown to where a body stands, and a life-support unit
+// beside it, piped in, its screen showing that bay's body readings. Its floor is a place to stand (rest.js): stepping
+// in holds the walker there until they leave (main.js). The glass, fluid, crown and hoses are not solid, so the
+// camera can follow a walker inside; the pedestal and the unit are. Each faces the suite's middle aisle.
+// [x, z, the way the capsule faces along z] in the room frame.
+export const CAPSULES=BAYS.map(([x,z])=>[x-3.3,z,-Math.sign(z)]);
+export const CAPSULE_FLOOR=.24;
+const C={
+ glass:new T.MeshStandardMaterial({name:'Capsule_glass',color:0xc8f0ff,roughness:.05,metalness:.1,transparent:true,opacity:.16,depthWrite:false,side:T.DoubleSide}),
+ fluid:new T.MeshBasicMaterial({name:'Capsule_fluid_glow',color:0x2a8cff,transparent:true,opacity:.32,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}),
+ hose:mat('hose',0x1d2329,{roughness:.55}),
+ red:new T.MeshBasicMaterial({name:'Capsule_red_glow',color:0xff3040,toneMapped:false}),
+ green:new T.MeshBasicMaterial({name:'Capsule_green_glow',color:0x30ff70,toneMapped:false}),
+};
+// Body readings for one capsule's screen, a little different in every bay: heart, oxygen, temperature, healing.
+function readings(g,w,h,seed){
+ const r=k=>((Math.sin(seed*12.9898+k*78.233)*43758.5453)%1+1)%1;
+ g.fillStyle='#04121c';g.fillRect(0,0,w,h);g.strokeStyle='rgba(95,212,255,.8)';g.lineWidth=3;g.strokeRect(5,5,w-10,h-10);
+ g.font='600 22px monospace';g.fillStyle='#8fe6ff';g.fillText('PATIENT '+(seed+1).toString().padStart(2,'0'),18,38);
+ const rows=[['HEART',Math.round(68+r(1)*40)+' bpm','#ff6070'],['O2 SAT',Math.round(95+r(2)*4)+' %','#7dffa8'],['TEMP',(38.1+r(3)*.9).toFixed(1)+' C','#ffd36a'],['HEALING',Math.round(20+r(4)*75)+' %','#8fe6ff']];
+ rows.forEach(([k,v,c],i)=>{const y=86+i*84;g.font='500 17px monospace';g.fillStyle='rgba(143,230,255,.7)';g.fillText(k,18,y);g.font='700 30px monospace';g.fillStyle=c;g.fillText(v,18,y+32);
+  // A trace beside each reading.
+  g.strokeStyle=c;g.lineWidth=2.5;g.beginPath();for(let x=0;x<100;x+=4){const t=(x+r(i+5)*60)%50,yy=y+10-(i===0?(t>22&&t<26?22:t>26&&t<29?-10:0):Math.sin((x+r(i+7)*40)*.12)*8);x?g.lineTo(w-120+x,yy):g.moveTo(w-120+x,yy);}g.stroke();});
+ // The healing bar.
+ g.fillStyle='rgba(143,230,255,.2)';g.fillRect(18,h-34,w-36,14);g.fillStyle='#5fd4ff';g.fillRect(18,h-34,(w-36)*(.2+r(4)*.75),14);
+}
+function capsule(fit,x,z,face,i){
+ const g=new T.Group();g.name='Healing_capsule';g.position.set(x,0,z);if(face<0)g.rotation.y=Math.PI;fit.add(g);
+ const add=(name,geo,m,at,rot,solid=false)=>{const o=new T.Mesh(geo,m);o.name=name;o.position.set(...at);if(rot)o.rotation.set(...rot);o.castShadow=solid;o.receiveShadow=true;if(!solid)o.userData.noCollide=true;g.add(o);return o;};
+ const R=.6,TOP=2.45;
+ // The pedestal with its glow ring, and the round floor plate stood on inside.
+ add('Healing_capsule_base',new T.CylinderGeometry(.74,.8,.22,36),M.dark,[0,.11,0],null,true);
+ add('Healing_capsule_base_glow',new T.TorusGeometry(.75,.018,6,40),M.glow,[0,.2,0],[Math.PI/2,0,0]);
+ const floor=add('Healing_capsule_floor',new T.CylinderGeometry(.56,.56,.04,32),M.steel,[0,CAPSULE_FLOOR-.02,0],null,true);
+ floor.userData.facing=[0,0,1];
+ // The tube: clear glass, the glowing fluid inside it, and three ribs at the back holding up the crown.
+ add('Healing_capsule_glass',new T.CylinderGeometry(R,R,TOP-CAPSULE_FLOOR,40,1,true),C.glass,[0,(TOP+CAPSULE_FLOOR)/2,0]);
+ add('Healing_capsule_fluid',new T.CylinderGeometry(R-.04,R-.04,TOP-CAPSULE_FLOOR-.05,40,1,true),C.fluid,[0,(TOP+CAPSULE_FLOOR)/2,0]);
+ for(const a of [Math.PI*.75,Math.PI,Math.PI*1.25])add('Healing_capsule_rib',new T.CylinderGeometry(.03,.03,TOP-CAPSULE_FLOOR,8),M.steel,[Math.sin(a)*(R+.03),(TOP+CAPSULE_FLOOR)/2,Math.cos(a)*(R+.03)]);
+ for(const y of [CAPSULE_FLOOR+.03,TOP-.03])add('Healing_capsule_ring_glow',new T.TorusGeometry(R+.01,.022,6,40),M.glow,[0,y,0],[Math.PI/2,0,0]);
+ // The crown: a dark cap with a lamp under it and red and green status lights round its rim.
+ add('Healing_capsule_crown',new T.CylinderGeometry(.66,.76,.3,36),M.dark,[0,TOP+.15,0]);
+ add('Healing_capsule_crown_band',new T.CylinderGeometry(.765,.765,.05,36,1,true),M.shell,[0,TOP+.08,0]);
+ add('Healing_capsule_lamp',new T.CircleGeometry(.5,28),C.fluid,[0,TOP-.005,0],[Math.PI/2,0,0]);
+ [-.5,-.2,.2,.5].forEach((a,k)=>add('Healing_capsule_status_light',new T.SphereGeometry(.03,10,8),k%2?C.green:C.red,[Math.sin(a)*.77,TOP+.2,Math.cos(a)*.77]));
+ // Hoses from the crown to where a body stands: shoulders, sides and back, none across the face (the first person view).
+ const tube=(name,pts,r,m)=>add(name,new T.TubeGeometry(new T.CatmullRomCurve3(pts.map(p=>new T.Vector3(...p))),24,r,8),m,[0,0,0]);
+ for(const [a,y,d] of [[1.1,1.25,.2],[-1.1,1.25,.2],[Math.PI,1.15,.2],[2.3,1.0,.2],[-2.3,1.05,.2]]){
+  const s=Math.sin(a),c=Math.cos(a),top=[s*.38,TOP,c*.38],end=[s*d,CAPSULE_FLOOR+y,c*d];
+  tube('Healing_capsule_hose',[top,[s*.42,TOP-.45,c*.42],[s*(d+.12),end[1]+.35,c*(d+.12)],end],.018,C.hose);
+  add('Healing_capsule_hose_tip_glow',new T.SphereGeometry(.03,10,8),M.glow,end);
+ }
+ // The life-support unit on the partition side of the capsule, its readings screen facing the aisle, piped into the
+ // pedestal and crown. The capsule turns to face the aisle, so its sides swap: s keeps the unit toward the partition.
+ const s=face,ux=-1.45*s;
+ add('Healing_capsule_unit',new RoundedBoxGeometry(.7,1.5,.8,3,.06),M.shell,[ux,.75,0],null,true);
+ add('Healing_capsule_unit_plinth',new T.BoxGeometry(.72,.08,.82),M.dark,[ux,.04,0],null,true);
+ add('Healing_capsule_unit_bezel',new T.BoxGeometry(.6,.78,.02),M.screen,[ux,1.02,.405]);
+ const tex=canvasTexture(256,384,(c,w,h)=>readings(c,w,h,i));
+ add('Healing_capsule_readings_graphics',new T.PlaneGeometry(.54,.72),tex?new T.MeshBasicMaterial({name:'Capsule_readings',map:tex,toneMapped:false}):M.glow,[ux,1.02,.417]);
+ for(let k=0;k<3;k++)add('Healing_capsule_unit_glow',new T.BoxGeometry(.5,.015,.012),M.glow,[ux,.28+k*.1,.405]);
+ tube('Healing_capsule_hose',[[ux+.36*s,.5,.15],[ux+.62*s,.3,.25],[-.82*s,.14,.2],[-.74*s,.14,.08]],.035,C.hose);
+ tube('Healing_capsule_hose',[[ux+.36*s,.75,-.15],[ux+.66*s,.5,-.3],[-.82*s,.16,-.25],[-.72*s,.16,-.15]],.035,C.hose);
+ tube('Healing_capsule_hose',[[ux,1.5,-.2],[ux+.1*s,2.4,-.25],[-.85*s,2.75,-.2],[-.7*s,TOP+.18,-.1]],.03,C.hose);
 }
 
 // One ceiling arm, hung at the origin of its frame: a turning mount, a shoulder, two links and a lit tool head.
