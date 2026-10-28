@@ -117,8 +117,8 @@ export function createPawsOff(ship,{ground,more=[],gym=()=>false,me=()=>null,onS
   m.floor??=ground(m.stand.clone().addScaledVector(m.front,-(m.length/2+.6)))?.y??m.top-.22;
   mill=m;game=null;phase='ready';clock=0;paused=false;shown='';
   $('.eyebrow').textContent=`Paws Off · ${m.place}`;
-  hud.hidden=false;card.hidden=true;note.hidden=true;keysEl.hidden=true;timerEl.hidden=true;padEl.hidden=true;who.hidden=true;
-  round=gym({e:'in'})?{state:'join',asked:performance.now()}:null;
+  hud.hidden=false;card.hidden=true;note.hidden=true;keysEl.hidden=true;timerEl.hidden=true;padEl.hidden=true;
+  round=gym({e:'in'})?{state:'join',asked:performance.now()}:null;showWho();
  }
  // The run starts: alone from a random seed, or in a round from the round's.
  function go(seed=(Math.random()*2**31)|0){
@@ -183,7 +183,12 @@ export function createPawsOff(ship,{ground,more=[],gym=()=>false,me=()=>null,onS
   }
   const left=game.left/game.limit;timerEl.firstChild.style.transform=`scaleX(${Math.max(0,left)})`;timerEl.classList.toggle('low',left<.35);
   $('.time').textContent=`${game.t.toFixed(1)} s`;$('.belt').textContent=`Belt ${beltAt(game.t).toFixed(1)} m/s`;
-  who.hidden=!round?.runners||round.runners.length<2;if(!who.hidden)who.textContent=`${round.running} of ${round.runners.length} running`;
+  showWho();
+ }
+ // In a round, the bar counts who is still running in place of the belt's speed.
+ function showWho(){
+  who.hidden=!round?.runners||round.runners.length<2;$('.belt').hidden=!who.hidden;
+  if(!who.hidden)who.textContent=`${round.running} of ${round.runners.length} running`;
  }
 
  // Keys while a run is on are the game's alone: caught before the walk's own listener sees them.
@@ -217,7 +222,7 @@ export function createPawsOff(ship,{ground,more=[],gym=()=>false,me=()=>null,onS
     big.hidden=false;big.textContent='Run!';
     if(msg.runners.length>1)say(`Gym round · ${msg.runners.length} runners, the same prompts for all`);
    }else if(msg.e==='out'&&mine&&round.runners){
-    round.running=msg.running;
+    round.running=msg.running;showWho();
     if(msg.id!==me()&&phase==='run')say(`${nameOf(msg.id)} ${msg.how==='left'?'stepped off':'fell'} at ${msg.t.toFixed(1)} s`);
     ranked();
    }else if(msg.e==='results'&&mine&&Array.isArray(msg.ranks)){round.state='done';round.ranks=msg.ranks;ranked();}

@@ -7116,7 +7116,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 5,
-      "signature": "3217e3ccf342c00f1be22a2f5e177dcb9277fd7ae248b57d13088c4b88918a8a"
+      "signature": "63db8da1dcb7a32cb4cabc36cdbef74d52183bdbe5974624acc7b43fc3ff0240"
     },
     {
       "source": "src/walk/places.js",
