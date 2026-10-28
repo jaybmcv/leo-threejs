@@ -6910,9 +6910,9 @@
       "colliders": [
         "Young_explorers_kitten_colliders"
       ],
-      "interactionTargets": null,
-      "placements": 25,
-      "signature": "1e13bb9620f70b8861003d7b619d14c30e4f5b80e58090fbd1f5a821b4a7f874"
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 48,
+      "signature": "a2c3481e65acdbda90eb6276cdc56301c7c879fe6e3b05ff74c0e33340ff6cb7"
     },
     {
       "source": "src/walk/lever-panel.js",
@@ -7502,7 +7502,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "165b626a031d89e233b5e3a899ccb33e58cdbbd1a629b73ee9ede20e65fb0a04"
+      "signature": "201c11a8569d2ec0db3d8a3754304fc3e7e627c0fa29f9594ee7b4f8df43ef76"
     },
     {
       "source": "src/walk/provisions.js",
