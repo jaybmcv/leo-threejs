@@ -6850,7 +6850,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 14,
-      "signature": "190d4b48c04e21752ff4f98cb67c96ea1b7d34357cc5adb1f3df0fd20a8ece2b"
+      "signature": "cf4dc77faaf28484ebaa38c91713146ac32734a067763713155c0ae21aca7720"
     },
     {
       "source": "src/walk/lifts.js",
@@ -6883,7 +6883,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "26f131e33c0fc5487f399f1e383e15df579eaab40abc8aba88dab96a3c496649"
+      "signature": "26f4a3731f9190a5963a2373397508a63b2dd61edc35d26044782969f35a25c0"
     },
     {
       "source": "src/walk/link.js",
@@ -7326,7 +7326,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 25,
-      "signature": "ce6bbcd6319cb5b14cfe3dced2492b2bd2ef348165c648a94b98b73fbcf2d31e"
+      "signature": "42e1fd09df671442e0465d8134e51adb3baf4f6da26c2d02c8d84cee538884e2"
     },
     {
       "source": "src/walk/surgery.js",

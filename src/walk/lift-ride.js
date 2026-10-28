@@ -78,7 +78,7 @@ const art=()=>{if(!carArt){const stars=starTexture();mats.wall.map=mats.wall.emi
  carArt=new T.ShaderMaterial({name:'Lift_mars',uniforms:{map:{value:marsSurface()}},vertexShader:MARS_VERTEX,fragmentShader:MARS_FRAGMENT});}return carArt;};
 const deckName=n=>DECKS.find(d=>d.number===n)?.name;
 // A deck's headline room follows its theme (signs.js FEATURED), so the lift's buttons point to it.
-export const stopLabel=s=>s.deck?`Deck ${s.deck} · ${deckName(s.deck)}${FEATURED[s.deck]?` · ${FEATURED[s.deck]}`:''}`:s.label;
+export const stopLabel=s=>{if(!s.deck)return s.label;const title=s.title||FEATURED[s.deck];return `Deck ${s.deck} · ${deckName(s.deck)}${title?` · ${title}`:''}`;};
 
 function boxMesh(name,[w,h,d],[x,y,z],m,parent){const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.name=name;o.position.set(x,y,z);parent.add(o);return o;}
 const boxTris=(w,h,d)=>{const g=new T.BoxGeometry(w,h,d).toNonIndexed();g.translate(0,h/2,0);return Array.from(g.attributes.position.array);};

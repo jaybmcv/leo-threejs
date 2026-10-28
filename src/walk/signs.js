@@ -36,14 +36,14 @@ function fit(c,text,font,size,max){let s=size;do{c.font=font.replace('SIZE',s+'p
 
 // Deck plaque: "DECK", the number, the deck's name. Fin stops get their own wording.
 function plaqueLabel(stop){
- if(stop.deck)return {eyebrow:'Deck',big:String(stop.deck),name:FEATURED[stop.deck]||deckName(stop.deck),featured:!!FEATURED[stop.deck]};
+ if(stop.deck){const title=stop.title||FEATURED[stop.deck];return {eyebrow:'Deck',big:String(stop.deck),name:title||deckName(stop.deck),featured:!!title};}
  const fin=/^Fin platform (\d+)/.exec(stop.label);if(fin)return {eyebrow:'Fin',big:fin[1],name:'Inspection platform'};
  if(/Crown/.test(stop.label))return {eyebrow:'Crown',big:'C',name:'Panoramic lounge'};
  return {eyebrow:'Fin',big:'G',name:stop.label};
 }
 const plaques=new Map();
 function plaqueMaterial(stop){
- const l=plaqueLabel(stop),key=l.eyebrow+l.big;let m=plaques.get(key);if(m)return m;
+ const l=plaqueLabel(stop),key=l.eyebrow+l.big+l.name;let m=plaques.get(key);if(m)return m;
  const {texture}=canvasTexture(256,320,(c,w,h)=>{
   panel(c,w,h);c.textAlign='center';c.textBaseline='alphabetic';
   c.fillStyle=TEAL;c.font=`500 26px ${FONT.mono}`;c.letterSpacing='6px';c.fillText(l.eyebrow.toUpperCase(),w/2,62);c.letterSpacing='0px';
