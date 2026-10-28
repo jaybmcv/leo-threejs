@@ -5254,6 +5254,32 @@
         -38
       ]
     },
+    "painting/Orange_Haze_14_1": {
+      "room": "circulation-19",
+      "local": [
+        -125.5,
+        1.85,
+        3.94
+      ],
+      "v1": [
+        -125.5,
+        34.15,
+        3.94
+      ]
+    },
+    "painting/Orange_Haze_14_2": {
+      "room": "circulation-19",
+      "local": [
+        -125.5,
+        1.85,
+        -3.94
+      ],
+      "v1": [
+        -125.5,
+        34.15,
+        -3.94
+      ]
+    },
     "painting/Orange_Haze_15_1": {
       "room": "d20-captain-7",
       "local": [
@@ -6854,6 +6880,19 @@
       "signature": "cf4dc77faaf28484ebaa38c91713146ac32734a067763713155c0ae21aca7720"
     },
     {
+      "source": "src/walk/lift-tile-floor.js",
+      "rooms": [
+        "circulation-19"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 4,
+      "signature": "789ca54c9cdfe447170f4d2e8ea750a2d4146b06be4c43d14fdece9ee9915a74"
+    },
+    {
       "source": "src/walk/lifts.js",
       "rooms": [
         "circulation-1",
@@ -6976,7 +7015,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 32,
-      "signature": "26394e2f55422949a008a4cb19e33a9bf451ed45ceadbc3dc71875fa62813c0f"
+      "signature": "ccb7b35c4eefe517e75faae207d2687e7b96d1e88a731d050d5004b495872efd"
     },
     {
       "source": "src/walk/marks.js",
@@ -7071,6 +7110,7 @@
         "circulation-15",
         "d02-arrival-1",
         "circulation-5",
+        "circulation-19",
         "d20-captain-7"
       ],
       "via": "frame boundary",
@@ -7082,7 +7122,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "a4248186f92ef1fccb38597aa1b49f6eead78dc2a0ec5f049f3e06d83fa2cb2b"
+      "signature": "c68175bb5356e87a1d214aca3f70f7ddfcb5540f40b168e938fa5f70f6b99bc9"
     },
     {
       "source": "src/walk/partitions.js",

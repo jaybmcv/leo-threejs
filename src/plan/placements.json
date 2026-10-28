@@ -116,6 +116,32 @@
       -38
     ]
   },
+  "painting/Orange_Haze_14_1": {
+    "room": "circulation-19",
+    "local": [
+      -125.5,
+      1.85,
+      3.94
+    ],
+    "v1": [
+      -125.5,
+      34.15,
+      3.94
+    ]
+  },
+  "painting/Orange_Haze_14_2": {
+    "room": "circulation-19",
+    "local": [
+      -125.5,
+      1.85,
+      -3.94
+    ],
+    "v1": [
+      -125.5,
+      34.15,
+      -3.94
+    ]
+  },
   "painting/Orange_Haze_15_1": {
     "room": "d20-captain-7",
     "local": [

@@ -41,6 +41,7 @@ import {connectLive,savedName} from './net/live.js';
 import {identify,currentPass,bestPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
 import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.js';
+import {tileLiftFloor} from './lift-tile-floor.js';
 import {createRecoveryMood} from './recovery.js';
 import {Marks} from './marks.js';
 import {createChat} from './chat.js';
@@ -185,6 +186,8 @@ async function buildShip(){
  restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;lullaby=lounge?createLullaby(lounge.dome):null;
  // Its floor, galleries and the promenade in front: glossy acrylic with neon swirls (lounge-floor.js).
  glossLoungeFloor(ship);quietFloorReflections(scene,scene.environment);
+ // Deck 19's lift lobby and promenade up to the lounge: black ceramic tile (lift-tile-floor.js).
+ tileLiftFloor(ship);
  // The crew recovery lounge's pod side dims the lights (recovery.js).
  recovery=createRecoveryMood(ship,{hemi,fill,scene});
  }});

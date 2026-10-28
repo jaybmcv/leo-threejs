@@ -241,6 +241,12 @@
     ],
     "via": null
   },
+  "src/walk/lift-tile-floor.js": {
+    "owners": [
+      "circulation-19"
+    ],
+    "via": null
+  },
   "src/walk/lounge-floor.js": {
     "owners": [
       "commons-1",
@@ -317,6 +323,7 @@
       "circulation-15",
       "d02-arrival-1",
       "circulation-5",
+      "circulation-19",
       "d20-captain-7"
     ],
     "via": null
