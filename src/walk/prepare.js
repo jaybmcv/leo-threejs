@@ -3,6 +3,7 @@ import {createLounge} from './lounge.js';
 import {createConcession} from './concession.js';
 import {createSelfieBooth} from './selfie.js';
 import {createPoolTable} from './pool/table.js';
+import {createPinballMachine} from './pinball/machine.js';
 import {buildColliders,prepareExteriorForWalking} from './world.js';
 import {resolveRoomFrames} from '../plan/rooms.js';
 import {solid} from './collision.js';
@@ -65,6 +66,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const restSpots=findRestSpots(ship.inside),seats=solidSpots(restSpots,colliders),lounge=createLounge(ship,colliders,light);afterRest?.({restSpots,seats,lounge});
  const booth=createSelfieBooth();colliders.addStatic(booth.group);
  const carpet=ship.root.getObjectByName('Activity_floor'),poolTable=carpet?createPoolTable(carpet):null;if(poolTable)colliders.addStatic(poolTable.group);
+ // The same hall's pinball machine at its end wall (pinball/machine.js): solid as one plain box.
+ const pinball=createPinballMachine(ship);if(pinball)colliders.addStatic(pinball.solid,()=>true);
  // The Deck 16 theatre's concession stand (concession.js): solid too.
  const concession=createConcession(ship);if(concession)colliders.addStatic(concession);
  // The theatre's seats as drawn and its actors on the stage (theatre.js): the actors solid as plain boxes.
@@ -112,5 +115,5 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,missionHolo,swordCase,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,missionHolo,swordCase,mudwater};
 }
