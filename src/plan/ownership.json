@@ -6438,7 +6438,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 57,
-      "signature": "26dff98f4d6ceeb4f5dd728b4b52900f8e39f268d6c860c294b03bd649064feb"
+      "signature": "dc551d28913f6f608076b205a34307952760378d0620f8c77c94da069cb9d7c2"
     },
     {
       "source": "src/walk/collision.js",

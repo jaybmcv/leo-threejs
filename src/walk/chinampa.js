@@ -59,7 +59,7 @@ function signFace(eyebrow,title,sub,motif){
   g.fillStyle='#123036';g.beginPath();g.roundRect(0,0,w,h,22);g.fill();
   g.strokeStyle='#2fd6c5';g.lineWidth=5;g.beginPath();g.roundRect(10,10,w-20,h-20,15);g.stroke();
   g.textAlign='left';g.textBaseline='alphabetic';g.fillStyle='#f8a35c';g.font=`600 22px ${MONO}`;g.letterSpacing='4px';g.fillText(eyebrow,40,70);
-  g.fillStyle='#f4f0e8';g.font=`700 50px ${FONT}`;g.letterSpacing='0px';g.fillText(title,40,135);
+  g.fillStyle='#f4f0e8';g.letterSpacing='0px';let size=50;do{g.font=`700 ${size}px ${FONT}`;}while(g.measureText(title).width>w-80&&--size>24);g.fillText(title,40,135);
   g.fillStyle='#c9e4df';g.font=`500 28px ${FONT}`;g.fillText(sub,40,182);
   motif(g,w,h);
   g.fillStyle='#2fd6c5';g.font=`600 20px ${MONO}`;g.letterSpacing='3px';g.fillText('STEP UP TO READ',40,h-42);g.letterSpacing='0px';
@@ -143,7 +143,7 @@ export function createChinampa(ship,{still=false}={}){
   glass:std('glass',0xe6f4f6,{roughness:.05,metalness:.1,transparent:true,opacity:.14,depthWrite:false}),
   water:std('water',0x6fb9c4,{roughness:.1,transparent:true,opacity:.3,depthWrite:false}),
   bubble:new T.MeshBasicMaterial({name:'Chinampa_bubbles',color:0xeefaff,transparent:true,opacity:.6,depthWrite:false}),
-  beam:new T.MeshBasicMaterial({name:'Chinampa_light_beam',color:0xfff1d6,alphaMap:fade(),transparent:true,opacity:.16,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending,toneMapped:false}),
+  beam:new T.MeshBasicMaterial({name:'Chinampa_light_beam',color:0xfff1d6,alphaMap:fade(),transparent:true,opacity:.06,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending,toneMapped:false}),
   screen:new T.MeshBasicMaterial({name:'Chinampa_screen',map:screenFace(),toneMapped:false}),
   plants:new T.MeshStandardMaterial({name:'Chinampa_plants',color:0xffffff,vertexColors:true,flatShading:true,side:T.DoubleSide,roughness:.75})};
  const parts=new Map(),piece=(m,g)=>{(parts.get(m)||parts.set(m,[]).get(m)).push(g.index?g.toNonIndexed():g);};
