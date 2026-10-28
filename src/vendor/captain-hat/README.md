@@ -2,6 +2,8 @@
 
 Approved visual direction: revision 6, 2026-10-22. This is the latest cat-face refinement with the shallow badge retained. Do not replace it with an earlier rounded crown or deeper logo.
 
+Leo revision, 2026-10-28 (tester report #144): the crown's low edge on the hat's left side (-X, `CROWN_SHAPE.lowTuck` in `CrownSurface.js`) is raised from .40 to .10, so it no longer hangs below the band. Nothing else in the design changed (see `asset-manifest.json`, `leoRevision`).
+
 ## Files to give the integrating agent
 
 - `src/CaptainsHat.js`, `src/CrownSurface.js`, `src/CatHelmetBadge.js`: editable native Three.js geometry. Copy all three together; the factory has relative imports.
@@ -66,9 +68,9 @@ Default: 198,982 triangles, ten material groups. Low detail: 157,222; high: 244,
 
 ## Verified asset identity
 
-GLB SHA256: `f96178fce8b3ba819a8dc6ba8ce53a9476d78e8aef1be5ad683fc33ce9e3262f`.
+GLB SHA256: `ecd9af08e5f668c3551dd33143f87299436fc3841b88d28dc0c14ade2a6b6be8` (2026-10-28 revision; the 2026-10-22 handoff GLB was `f96178fce8b3ba819a8dc6ba8ce53a9476d78e8aef1be5ad683fc33ce9e3262f`).
 
-Combined model-source SHA256: `df4f294f323f14fcc480ad23ead5b29026146356c90e94c9eacc9c73f5005562`.
+Combined model-source SHA256: `04e8b90611d26758bd6200ab2b6988a1e56eb28b78331302b86b63d9c38332f0` (2026-10-28; the handoff value `df4f294f323f14fcc480ad23ead5b29026146356c90e94c9eacc9c73f5005562` is kept in the manifest).
 
 The supplied geometry/GLB was exported, reimported and inspected in the local viewer; glTF validation has zero errors/warnings/infos. Integration into the destination avatar remains the integrating agent's work.
 
