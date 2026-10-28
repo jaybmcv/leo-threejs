@@ -7284,7 +7284,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "95fe4177ac5f0e0087b4db713b264463c830310d6815ca0cbf0e95873f9798b3"
+      "signature": "969878441ee6f083875006a6f3bb634849aadb7295f89cf2968b8615f525979c"
     },
     {
       "source": "src/walk/pinball/machine.js",
