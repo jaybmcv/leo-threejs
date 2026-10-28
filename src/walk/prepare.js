@@ -16,6 +16,7 @@ import {createDiningRobots} from './dining-robots.js';
 import {createHydrationNook} from './hydration-nook.js';
 import {createCargoTrolley} from './cargo-trolley.js';
 import {stripHold,createMazeHold} from './maze/hold.js';
+import {stripCargoMaintenance,createMctBay} from './mct-bay.js';
 import {dressSurgery} from './surgery.js';
 import {createMudwater} from './mudwater.js';
 import {dressImaging} from './imaging.js';
@@ -33,6 +34,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  stripProvisions(ship);
  // Container hold A loses its container stacks and aisle lines for the Container Maze (maze/hold.js).
  stripHold(ship);
+ // Cargo maintenance loses its repair benches to the MCT charging and service bays (mct-bay.js).
+ stripCargoMaintenance(ship);
  // The Deck 17 commons' aft planter loses its green tree and shrubs for the cherry blossom garden, and a corner for its
  // pond, and gains the bench under the tree (blossom.js).
  prepareBlossomBed(ship);
@@ -73,6 +76,9 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const hydration=createHydrationNook(ship);if(hydration)colliders.addStatic(hydration.solid,()=>true);
  // Container hold A's parked hand trolley (cargo-trolley.js): solid as one plain box, clear of the aisle.
  const trolley=createCargoTrolley(ship);if(trolley)colliders.addStatic(trolley.solid,()=>true);
+ // Cargo maintenance's MCT charging and service bays (mct-bay.js): the vehicles, power units, tool trolley and lift
+ // pump solid as plain boxes; the cables, signs and floor markings dressing.
+ const mctBay=createMctBay(ship);if(mctBay)colliders.addStatic(mctBay.solid,()=>true);
  // The Container Maze in the same hold (maze/hold.js): its container walls and walk-through containers solid as plain
  // boxes, the red button's console too.
  const maze=createMazeHold(ship);if(maze)colliders.addStatic(maze.solid,()=>true);
@@ -94,5 +100,5 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,missionHolo,swordCase,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,mctBay,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,missionHolo,swordCase,mudwater};
 }

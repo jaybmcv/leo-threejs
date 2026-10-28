@@ -187,6 +187,12 @@
     ],
     "via": "inherited"
   },
+  "src/walk/mct-bay.js": {
+    "owners": [
+      "d01-workshop-5"
+    ],
+    "via": null
+  },
   "src/walk/comms-displays.js": {
     "owners": [
       "d20-communications-3"

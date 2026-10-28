@@ -196,7 +196,7 @@ async function buildShip(){
  recovery=createRecoveryMood(ship,{hemi,fill,scene});
  }});
  ({booth,poolTable,concession,provisions,kittens,diningRobots,hydration,blossom,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater}=prepared);
- const {pipework,trolley,swordCase,theatreCast}=prepared;
+ const {pipework,trolley,mctBay,swordCase,theatreCast}=prepared;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged; and
@@ -235,6 +235,7 @@ async function buildShip(){
  if(hydration)toBand(hydration.group);
  if(trolley)toBand(trolley.group);
  if(mazeHold)toBand(mazeHold.group);
+ if(mctBay)toBand(mctBay.group);
  // The surgical suite's ceiling robot arms (surgery.js), dressing only.
  surgeryArms=createSurgeryArms(ship,{still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(surgeryArms)toBand(surgeryArms.group);
  // The diagnostics room's holographic cat scans and scan beams (imaging.js), dressing only.

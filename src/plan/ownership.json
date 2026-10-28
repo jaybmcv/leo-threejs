@@ -7178,7 +7178,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 35,
-      "signature": "9943b54941585ecdfc036a3fb1f3c26a7da9ad3a91e14715606709035267fb41"
+      "signature": "b77971965f8f7505a3d7547b73c3a843a9a1cf8bf92232ca4627ab9f00f6926d"
     },
     {
       "source": "src/walk/marks.js",
@@ -7240,6 +7240,24 @@
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 1,
       "signature": "72396855dcfb506473b9efbe248e0af8e601f42caf3b956651bc89a525f4fc6c"
+    },
+    {
+      "source": "src/walk/mct-bay.js",
+      "rooms": [
+        "d01-workshop-5"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Cargo_maintenance_MCT_bay",
+        "Cargo_maintenance_MCT_bay_colliders"
+      ],
+      "colliders": [
+        "Cargo_maintenance_MCT_bay_colliders"
+      ],
+      "interactionTargets": null,
+      "placements": 72,
+      "signature": "12930c7d66e093e59150cd1a5a53eff7cfb53e3f79ee26b2fd0404d686637d7a"
     },
     {
       "source": "src/walk/minimap.js",
@@ -7458,7 +7476,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "f6070000052f9134fa894fda9849d6c4e0fe871fe4c1d317e6cf7ba6e4001573"
+      "signature": "8dded0f77165347648cfd021b4350630d0d1a508183afbfe9a7e9969c1446ef1"
     },
     {
       "source": "src/walk/provisions.js",
