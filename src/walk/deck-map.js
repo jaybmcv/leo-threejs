@@ -4,6 +4,7 @@ import {LIFTS} from './lifts.js';
 import {openingPlan} from './arrival-atrium.js';
 import {toWorld} from '../plan/rooms.js';
 import {MAZE_ROOM,X0 as MAZE_X0,END as MAZE_END,SIDE as MAZE_SIDE} from './maze/layout.js';
+import {SEAL} from './lever-panel.js';
 
 // The ship map: each deck as a 0.5 m plan, worked out at build time from the partition grid (the floors) and the
 // interior's walls, then saved as one image, a deck to a band (scripts/walk-plan.mjs). Pixel values are classes, which
@@ -44,6 +45,8 @@ export function planMap(ship,decks,rails){
  // finding, not for reading off the map: the hold shows as open floor inside its walls.
  {const d=out.find(o=>o.number===1),[x0,,z0]=toWorld(MAZE_ROOM,[MAZE_X0-6,0,-MAZE_SIDE+.8]),[x1,,z1]=toWorld(MAZE_ROOM,[MAZE_END-.8,0,MAZE_SIDE-.8]);
   if(d)for(let z=Math.min(z0,z1);z<=Math.max(z0,z1);z+=cell)for(let x=Math.min(x0,x1);x<=Math.max(x0,x1);x+=cell){const k=at(x,z);if(k>=0&&d.data[k]===MAP_CLASS.wall)d.data[k]=MAP_CLASS.floor;}}
+ // Deck 4's tank bay doorway is behind a lever panel the walk adds (lever-panel.js): the map shows it shut.
+ {const d=out.find(o=>o.number===SEAL.deck);if(d)line(d.data,{x:SEAL.x,z:SEAL.z0},{x:SEAL.x,z:SEAL.z1});}
  for(const [deck,axis,a0,a1,pos] of rails){const d=out.find(o=>o.number===deck);if(!d)continue;
   for(let a=a0;a<=a1;a+=cell*.5){const k=axis?at(pos,a):at(a,pos);if(k>=0)d.data[k]=MAP_CLASS.rail;}}
  // Lift cars, at every deck they stop at.

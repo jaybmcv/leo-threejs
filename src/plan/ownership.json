@@ -5432,7 +5432,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [],
       "colliders": [],
       "interactionTargets": null,
@@ -5446,7 +5446,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Aft_access_finish_shell",
         "Fin_access_finish_shell"
@@ -5463,7 +5463,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "AFT_SYSTEMS_BLOCKOUT",
         "Aft_"
@@ -5607,7 +5607,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Engineering_sign",
         "Heat_shield_plating",
@@ -5708,7 +5708,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Fin_panorama_lounge",
         "Crown_exterior",
@@ -6557,7 +6557,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "a32a4aa8f08cf8fc93bea6ab73e00517113a167faea616c7bce7da10ce3fefc8"
+      "signature": "623c6181f773310dae12a4c954c12dd730c18dd758dd29729dba315eee3154d3"
     },
     {
       "source": "src/walk/dining-robots.js",
@@ -6585,7 +6585,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Walk_fin_root_casing",
         "Fin_root_casing_corner",
@@ -6636,7 +6636,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [],
       "colliders": [],
       "interactionTargets": null,
@@ -6650,7 +6650,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Walk_graffiti_wall"
       ],
@@ -6887,6 +6887,24 @@
       "interactionTargets": null,
       "placements": 25,
       "signature": "1e13bb9620f70b8861003d7b619d14c30e4f5b80e58090fbd1f5a821b4a7f874"
+    },
+    {
+      "source": "src/walk/lever-panel.js",
+      "rooms": [
+        "aft-machinery"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
+      "features": [
+        "Lever_panel",
+        "Lever_panel_lamp",
+        "Lever_panel_grip"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 16,
+      "signature": "e3cdffd756cfcab9b73d63845af60824a032728e42cdb9e445badd09109de69a"
     },
     {
       "source": "src/walk/life-support-pipes.js",
@@ -7142,7 +7160,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "f8980590f1a1cc550b095b410a41da4fb169845957c6761e91bc4811ca3d1cad"
+      "signature": "ab51cb80239826df5d74ae27ab45aa707dcb7c02f3ff50fb51d89cf985e12316"
     },
     {
       "source": "src/walk/marks.js",
