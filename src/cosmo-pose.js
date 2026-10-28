@@ -83,3 +83,17 @@ export const KITTEN_POSES={
   for(const [i,deg] of [[1,25],[2,20],[3,15]])turn(bone('Tail_springBone_'+i),X,deg);
   cat.root.updateMatrixWorld(true);},
 };
+
+// Actor poses for the Deck 16 theatre's stage (src/walk/theatre.js), each built on the relaxed stand, feet on the floor.
+export const ACTOR_POSES={
+ // Declaiming: the right arm flung up and out to the house, the left hand on the heart, chin up.
+ declaim(cat){const bone=kittenBones(cat);
+  limbs(bone,ARMS,'R',[.6,.55,.55],[.35,.8,.5]);limbs(bone,ARMS,'L',[.3,-.75,.45],[-.85,.3,.45]);
+  turn(bone('spine.003'),X,-4);turn(bone('spine.006'),X,-10);turn(bone('spine.006'),Y,-8);
+  cat.root.updateMatrixWorld(true);},
+ // Taking a bow: bent at the waist, the right arm swept across the middle, the left out to the side behind.
+ bow(cat){const bone=kittenBones(cat);
+  turn(bone('spine.001'),X,20);turn(bone('spine.003'),X,12);turn(bone('spine.006'),X,8);
+  limbs(bone,ARMS,'R',[.05,-.55,.8],[-.8,-.15,.55]);limbs(bone,ARMS,'L',[.85,-.4,-.3],[.75,-.35,-.4]);
+  cat.root.updateMatrixWorld(true);},
+};

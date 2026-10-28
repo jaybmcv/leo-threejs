@@ -61,7 +61,7 @@ import {createGiveaway} from './mudwater-giveaway.js';
 import {createPaintings} from './paintings.js';
 import {createComics,createComicReader} from './comics.js';
 import {createChangesBoards} from './changes-board.js';
-import {createTheatre} from './theatre.js';
+import {createTheatre,ACTOR_POSE_NAMES} from './theatre.js';
 import {createGamingLounge} from './gaming-lounge.js';
 import {createCommsDisplays} from './comms-displays.js';
 import {createHalloween} from './halloween.js';
@@ -174,7 +174,7 @@ async function buildShip(){
  const shaftGlass=new T.MeshStandardMaterial({name:'Walk_shaft_glass',color:0xb4c8d2,roughness:.45,transparent:true,opacity:.5,depthWrite:false,side:T.DoubleSide});
  ship.inside.traverse(o=>{if(/^Lift_(back|side)_enclosure$/.test(o.name))o.material=shaftGlass;});
  status('Fitting the walls…');await idle();
- const prepared=prepareWalkWorld(ship,{into:colliders,kit:cosmoKit,anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches,urls:artUrls,light:{hemi,fill,scene},afterBase(){
+ const prepared=prepareWalkWorld(ship,{into:colliders,kit:cosmoKit,anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches,urls:artUrls,hat:__HAT_URL__,light:{hemi,fill,scene},afterBase(){
  // The hull behind the glass goes for drawing only, after the colliders have it.
  const w0=performance.now(),opened=openWindows(ship,walkPlan.windows);clearGlass(ship.root);timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
  lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);corridorTrim(lifts.signs,{inside:ship.inside,partitions:walkPlan.walls});
@@ -186,7 +186,7 @@ async function buildShip(){
  recovery=createRecoveryMood(ship,{hemi,fill,scene});
  }});
  ({booth,poolTable,concession,provisions,kittens,diningRobots,hydration,blossom,jaguarGate,arcadeRow,missionHolo,mudwater}=prepared);
- const {pipework,trolley,swordCase}=prepared;
+ const {pipework,trolley,swordCase,theatreCast}=prepared;
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged; and
  // on the arcade's treadmill.
  pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),more:arcadeRow?[arcadeRow.treadmill]:[],onStart:startRun,onEnd:endRun});
@@ -234,6 +234,7 @@ async function buildShip(){
  comics=createComics({urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});for(const g of comics.groups)toBand(g);
  if(cosmoKit)toBand(createHostess(cosmoKit));
  if(theatre)toBand(theatre.group);
+ if(theatreCast)toBand(theatreCast.group);
  if(gaming)toBand(gaming.group);
  // Communications' wraparound star map and station screens (comms-displays.js), drawn with Deck 20's band.
  {const comms=createCommsDisplays(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy()});if(comms)toBand(comms.group);}
@@ -362,7 +363,7 @@ async function loadCosmo(){
  globalThis.LEO_THREE=T;globalThis.LEO_COSMO_EMOTES=__EMOTES_URL__;
  await new Promise((resolve,reject)=>{const s=Object.assign(document.createElement('script'),{src:__COSMO_SCRIPT__,async:true});s.onload=resolve;s.onerror=()=>reject(new Error('Cosmo could not load'));document.head.appendChild(s);});
  walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion);scene.add(walker.holder);
- cosmoKit=await globalThis.LeoCosmo.createCosmoKit({poses:KITTEN_POSE_NAMES});
+ cosmoKit=await globalThis.LeoCosmo.createCosmoKit({poses:[...KITTEN_POSE_NAMES,...ACTOR_POSE_NAMES]});
 }
 
 // The arrival hall on Deck 2, where travellers come aboard.

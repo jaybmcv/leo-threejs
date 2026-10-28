@@ -18,12 +18,12 @@ import {dressSurgery} from './surgery.js';
 import {createMudwater} from './mudwater.js';
 import {createJaguarGate} from './jaguar-gate.js';
 import {createArcade} from './arcade.js';
-import {placeAttendant} from './theatre.js';
+import {placeAttendant,dressTheatre,createTheatreCast} from './theatre.js';
 import {dressGamingLounge} from './gaming-lounge.js';
 import {createMissionHolo} from './mission-holo.js';
 import {createSwordCase} from './sword-case.js';
 // Room edits and proxy colliders must be identical in the page and the Node checker.
-export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=null,afterRest=null,light=null,kit=null,anisotropy=1,still=false,urls={}}={}){
+export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=null,afterRest=null,light=null,kit=null,anisotropy=1,still=false,urls={},hat=''}={}){
  const dropped=exteriorPrepared?0:prepareExteriorForWalking(ship);
  // Refrigerated provisions loses its shared locker cabinets before the colliders see them (provisions.js).
  stripProvisions(ship);
@@ -32,6 +32,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  prepareBlossomBed(ship);
  // The theatre's attendant moves behind the concession counter (theatre.js) before the walls are fitted.
  placeAttendant(ship);
+ // Its old chairs give way to rows of cinema seats (theatre.js), solid and sittable.
+ dressTheatre(ship);
  // The Deck 16 training room's briefing furniture gives way to the gaming lounge's (gaming-lounge.js), solid and sittable.
  dressGamingLounge(ship);
  // The Deck 5 surgical suite's beds give way to sculpted medical beds (surgery.js), solid and lie-on-able.
@@ -44,6 +46,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const carpet=ship.root.getObjectByName('Activity_floor'),poolTable=carpet?createPoolTable(carpet):null;if(poolTable)colliders.addStatic(poolTable.group);
  // The Deck 16 theatre's concession stand (concession.js): solid too.
  const concession=createConcession(ship);if(concession)colliders.addStatic(concession);
+ // The theatre's seats as drawn and its actors on the stage (theatre.js): the actors solid as plain boxes.
+ const theatreCast=createTheatreCast(ship,kit,{hat});if(theatreCast)colliders.addStatic(theatreCast.solid,()=>true);
  // Refrigerated provisions' fridges, shelving and strip curtain (provisions.js): solid as plain boxes, the curtain not.
  const provisions=createProvisions(ship);if(provisions)colliders.addStatic(provisions.solid,()=>true);
  // Life-support control's colour-coded service pipework (life-support-pipes.js): its regulator boxes and supply
@@ -71,5 +75,5 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,provisions,pipework,kittens,diningRobots,hydration,trolley,blossom,jaguarGate,arcadeRow,missionHolo,swordCase,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,blossom,jaguarGate,arcadeRow,missionHolo,swordCase,mudwater};
 }
