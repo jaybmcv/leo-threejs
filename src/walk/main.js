@@ -39,7 +39,7 @@ import {corridorTrim} from './trim.js';
 import {connectLive,savedName} from './net/live.js';
 import {identify,currentPass,bestPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
-import {glossLoungeFloor} from './lounge-floor.js';
+import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.js';
 import {createRecoveryMood} from './recovery.js';
 import {Marks} from './marks.js';
 import {createChat} from './chat.js';
@@ -139,7 +139,7 @@ const camera=new T.PerspectiveCamera(phone?70:62,1,.05,150);
 const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCamera(60,1,camera.far-5,1500);
 const hemi=new T.HemisphereLight(0xfff6e6,0x5d6b75,1.05);scene.add(hemi);
 const fill=new T.DirectionalLight(0xfff1dc,.55);fill.position.set(.3,1,.2);scene.add(fill);
-loadEnvironment(renderer).then(t=>{scene.environment=t;}).catch(()=>{});
+loadEnvironment(renderer).then(t=>{scene.environment=t;quietFloorReflections(scene,t);}).catch(()=>{});
 function resize(){const w=innerWidth,h=innerHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
 
@@ -183,7 +183,7 @@ async function buildShip(){
  },afterRest(state){
  restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;
  // Its floor, galleries and the promenade in front: glossy acrylic with neon swirls (lounge-floor.js).
- glossLoungeFloor(ship);
+ glossLoungeFloor(ship);quietFloorReflections(scene,scene.environment);
  // The crew recovery lounge's pod side dims the lights (recovery.js).
  recovery=createRecoveryMood(ship,{hemi,fill,scene});
  }});
