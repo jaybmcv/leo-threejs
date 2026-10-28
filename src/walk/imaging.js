@@ -179,7 +179,7 @@ function skeleton(g,P,s,view){
 // cyan on faint blue glass. `seed` varies the readouts between panels.
 export function paintScan(g,w,h,seed){
  g.clearRect(0,0,w,h);
- const grad=g.createLinearGradient(0,0,0,h);grad.addColorStop(0,'rgba(30,110,170,.30)');grad.addColorStop(1,'rgba(20,80,140,.18)');g.fillStyle=grad;g.fillRect(0,0,w,h);
+ const grad=g.createLinearGradient(0,0,0,h);grad.addColorStop(0,'rgba(18,70,120,.55)');grad.addColorStop(1,'rgba(12,50,95,.42)');g.fillStyle=grad;g.fillRect(0,0,w,h);
  g.strokeStyle='rgba(130,220,255,.85)';g.lineWidth=3;g.strokeRect(5,5,w-10,h-10);
  g.fillStyle='rgba(130,220,255,.9)';g.fillRect(5,5,w-10,40);
  g.fillStyle='rgba(8,30,50,.95)';g.font='bold 24px sans-serif';g.textBaseline='middle';g.fillText('FELINE SKELETAL SCAN',22,26);
@@ -210,7 +210,7 @@ function canvasTexture(w,h,paint,anisotropy){
  const t=new T.CanvasTexture(canvas);t.colorSpace=T.SRGBColorSpace;t.anisotropy=anisotropy;return t;
 }
 
-// The scans on the dividers, the scan lines sweeping them and a band of light passing along each bed, drawn with their
+// The scans on the dividers, the scan lines sweeping them and a line of light passing along each bed's pad, drawn with their
 // deck band. update() moves them only while the walker is on Deck 5 near the room, and keeps them still for reduced
 // motion.
 export function createImagingScans(ship,{still=false,anisotropy=4}={}){
@@ -219,8 +219,8 @@ export function createImagingScans(ship,{still=false,anisotropy=4}={}){
  const group=new T.Group();group.name='Imaging_scans';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);
  const panels=[0,1].map(seed=>new T.MeshBasicMaterial({name:'Imaging_scan',map:canvasTexture(1024,640,(g,w,h)=>paintScan(g,w,h,seed),anisotropy),transparent:true,depthWrite:false,toneMapped:false}));
- const sweep=new T.MeshBasicMaterial({name:'Imaging_sweep',color:0x9feaff,transparent:true,opacity:.7,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false});
- const beam=new T.MeshBasicMaterial({name:'Imaging_beam',color:0x6fdcff,transparent:true,opacity:.28,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,toneMapped:false});
+ const sweep=new T.MeshBasicMaterial({name:'Imaging_sweep',color:0x5fd4ff,transparent:true,opacity:.85,depthWrite:false,toneMapped:false});
+ const beam=new T.MeshBasicMaterial({name:'Imaging_beam',color:0x5fd4ff,toneMapped:false});
  const PW=3.2,PH=2,PY=1.3,lines=[],beams=[];
  DIVIDERS.forEach((d,i)=>{
   const bay=BAYS.indexOf(Math.sign(d.z)*10);
@@ -231,7 +231,7 @@ export function createImagingScans(ship,{still=false,anisotropy=4}={}){
   }
  });
  for(const [i,z] of BAYS.entries()){
-  const b=new T.Mesh(new T.PlaneGeometry(.9,.6),beam);b.name='Imaging_scan_beam_graphics';b.rotation.y=Math.PI/2;b.position.set(5,1.05,z);b.renderOrder=3;group.add(b);beams.push({b,phase:i*2.1});
+  const b=new T.Mesh(new T.BoxGeometry(.03,.012,.66),beam);b.name='Imaging_scan_beam_graphics';b.position.set(5,.762,z);b.renderOrder=3;group.add(b);beams.push({b,phase:i*2.1});
  }
  const centre=room.getWorldPosition(new T.Vector3());
  const pose=t=>{

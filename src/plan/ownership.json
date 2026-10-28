@@ -6781,7 +6781,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 33,
-      "signature": "97e02bc3f04d176f247be901ee282d79342dec689612a9c9c1b5fb24bebba92b"
+      "signature": "db8b23364e5050da65c7fa22c66e91c183a3f0231d6b3951cbfb7789e1320670"
     },
     {
       "source": "src/walk/input.js",
