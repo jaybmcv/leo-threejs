@@ -1,6 +1,6 @@
 // Paw Pool's sound, synthesized like Alien Cat Invasion's: the kick, balls clicking (louder for harder hits), the
-// cushion, a ball dropping, the cue ball dropping, a fresh rack and the cleared table. Nothing is loaded. `muted()`
-// follows the walk's Sound toggle.
+// cushion, a ball dropping, the cue ball dropping, a fresh rack, an 8-ball foul and the cleared table (or an 8-ball
+// win). Nothing is loaded. `muted()` follows the walk's Sound toggle.
 export function createSound(muted=()=>false){
  let ctx=null,master=null,lastClick=0;
  const ready=()=>{
@@ -29,6 +29,7 @@ export function createSound(muted=()=>false){
     else if(e==='cushion')tone('sine',[180,90],.12,.25);
     else if(e==='pot'){tone('sine',[320,120],.25,.35);noise(.25,.2,1200,150,.05);}
     else if(e==='scratch')[330,262].forEach((f,i)=>tone('square',f,.16,.18,i*.14));
+    else if(e==='foul')[196,147].forEach((f,i)=>tone('sawtooth',f,.22,.12,i*.18));
     else if(e==='clear')[523,659,784,1046,1318].forEach((f,i)=>tone('triangle',f,.16,.32,i*.09));
    }
   },
