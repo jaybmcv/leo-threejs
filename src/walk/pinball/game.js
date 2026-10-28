@@ -69,7 +69,9 @@ export function createPinball({onOpen=()=>{},onClose=()=>{},muted=()=>false}={})
  });
  for(const ev of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(ev,e=>pointers.delete(e.pointerId));
  close.addEventListener('click',()=>hide());
- function fit(){const room=touch?100:20,k=Math.min((innerWidth-24)/VW,(innerHeight-room)/VH);canvas.style.width=VW*k+'px';canvas.style.height=VH*k+'px';}
+ // On a narrow screen the table starts under the close button.
+ function fit(){const k0=Math.min((innerWidth-24)/VW,(innerHeight-(touch?100:20))/VH),under=innerWidth-VW*k0<130?56:0,room=(touch?100:20)+under,
+  k=Math.min((innerWidth-24)/VW,(innerHeight-room)/VH);canvas.style.width=VW*k+'px';canvas.style.height=VH*k+'px';canvas.style.marginTop=under+'px';}
  addEventListener('resize',()=>{if(open)fit();});
 
  function loop(now){
