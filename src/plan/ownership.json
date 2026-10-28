@@ -6888,7 +6888,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "c137d9b9252f6472a1b306b740f8bc50e9dceedd3da11070385b87ea5f3d7427"
+      "signature": "789ca54c9cdfe447170f4d2e8ea750a2d4146b06be4c43d14fdece9ee9915a74"
     },
     {
       "source": "src/walk/lifts.js",
