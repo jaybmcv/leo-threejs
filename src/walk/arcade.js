@@ -10,7 +10,8 @@ import {newGame as newRun,step,press,beltAt} from './paws-off/rules.js';
 // The arcade row in Neighborhood 1's commons (the Hydro-Nip Lounge, Deck 17), from tester feedback: eight cabinets
 // along the forward wall, between the lounge's front gallery and the foot of its stair. The first two play the ship's
 // games: Alien Cat Invasion (as the telescope does) and Paw Pool (as the Recreation Hall's table does), each dressed in
-// its game's own art. The rest are grey "coming soon" cabinets, kept for games still to come. Shapes and neon vary
+// its game's own art; the third, Neon Arena Survival, opens a game from outside Leo in a window over the walk (outside-game.js).
+// The rest are grey "coming soon" cabinets, kept for games still to come. Shapes and neon vary
 // cabinet to cabinet. Past the row's far end from the stair, a second Paws Off station: an arcade treadmill, nose to the
 // wall under a cabinet-style screen and marquee (Paws Off itself, paws-off/game.js, lays the belt and runs the game).
 // Neon is glowing materials and soft additive glows on the wall; no real lights.
@@ -32,7 +33,7 @@ const SHAPES={
 const ROW=[
  {game:'invasion',label:'Play Alien Cat Invasion',shape:'upright',body:0x3a1d5a,side:0x4d2a78,neon:[ORANGE,GREEN]},
  {game:'pool',label:'Play Paw Pool',shape:'wide',body:0x24405a,side:0x2f5370,neon:[CYAN,ORANGE]},
- {shape:'tall',body:0x9a9fa7,side:0x80858d,neon:[PINK,PINK]},
+ {game:'neon',kind:'outside',label:'Play Neon Arena Survival',shape:'tall',body:0x2b1850,side:0x3b2470,neon:[PINK,PINK]},
  {shape:'low',body:0xa4a9b0,side:0x8a8f96,neon:[CYAN,CYAN]},
  {shape:'upright',body:0x959aa2,side:0x7b8088,neon:[AMBER,AMBER]},
  {shape:'wide',body:0x9fa4ab,side:0x858a92,neon:[GREEN,GREEN]},
@@ -119,6 +120,21 @@ const ART={
    glowText(g,a,x,h/2+4,'#f85800',22);glowText(g,'OFF',x+wa,h/2+4,'#2fd6c5',22);paw(g,62,84,28,'#f85800');paw(g,w-62,84,28,'#2fd6c5');}),
   side:()=>canvas(128,128,(g)=>paw(g,64,72,44,'#f85800')),
  },
+ // Neon Arena Survival (a game hosted outside Leo, opened in a window: outside-game.js): a lone dot in a ring, chased.
+ neon:{
+  screen:()=>canvas(288,256,(g,w,h)=>{g.fillStyle='#050816';g.fillRect(0,0,w,h);
+   g.strokeStyle='#2a8bff';g.shadowColor='#2a8bff';g.shadowBlur=14;g.lineWidth=4;g.beginPath();g.arc(w/2,h/2-6,92,0,Math.PI*2);g.stroke();g.shadowBlur=0;
+   for(const [a,r] of [[.4,70],[1.5,78],[2.4,56],[3.5,74],[4.4,60],[5.4,80]]){g.fillStyle='#ff4fd8';g.beginPath();g.arc(w/2+Math.cos(a)*r,h/2-6+Math.sin(a)*r,7,0,Math.PI*2);g.fill();}
+   g.fillStyle='#f4f0e8';g.beginPath();g.arc(w/2,h/2-6,9,0,Math.PI*2);g.fill();
+   g.textAlign='center';g.textBaseline='middle';g.font=font(700,14);g.fillStyle='#9fd0ff';g.fillText('NEON ARENA SURVIVAL',w/2,h-12);}),
+  marquee:()=>canvas(512,192,(g,w,h)=>{g.fillStyle='#0a0f24';g.fillRect(0,0,w,h);
+   for(const x of [38,w-38]){g.fillStyle='#2a8bff';g.shadowColor='#2a8bff';g.shadowBlur=18;g.beginPath();g.arc(x,h/2,28,0,Math.PI*2);g.fill();g.shadowBlur=0;g.fillStyle='#bfe0ff';g.beginPath();g.arc(x,h/2,10,0,Math.PI*2);g.fill();}
+   g.textAlign='center';g.textBaseline='middle';
+   // Each line as large as fits between the circles.
+   const line=(text,y,color,size)=>{g.font=font(800,size);const fit=Math.min(size,size*340/g.measureText(text).width);g.font=font(800,fit);glowText(g,text,w/2,y,color,20);};
+   line('NEON ARENA',64,'#ff4fd8',70);line('SURVIVAL',132,'#45e3ff',70);}),
+  side:()=>canvas(128,128,(g,w,h)=>{g.fillStyle='#2a8bff';g.beginPath();g.arc(w/2,h/2,48,0,Math.PI*2);g.fill();g.fillStyle='#050816';g.beginPath();g.arc(w/2,h/2,30,0,Math.PI*2);g.fill();g.fillStyle='#f4f0e8';g.beginPath();g.arc(w/2,h/2,9,0,Math.PI*2);g.fill();}),
+ },
  soon:{
   screen:()=>canvas(256,256,(g,w,h)=>{g.fillStyle='#030406';g.fillRect(0,0,w,h);g.textAlign='center';g.textBaseline='middle';
    g.font=font(800,36);glowText(g,'COMING',w/2,h/2-22,'#c9ccd2',10);glowText(g,'SOON',w/2,h/2+22,'#c9ccd2',10);}),
@@ -198,7 +214,7 @@ export function createArcade(){
  }
  let x=START;
  for(const cab of ROW){const {w,d,po}=SHAPES[cab.shape];cabinet(cab,x+w/2);
-  if(cab.game)spots.push({kind:cab.game==='pool'?'pool':'play',label:cab.label,at:new T.Vector3(x+w/2,0,d+po+.35)});
+  if(cab.game)spots.push({kind:cab.kind||(cab.game==='pool'?'pool':'play'),label:cab.label,at:new T.Vector3(x+w/2,0,d+po+.35)});
   x+=w+GAP;}
  // Paws Off's treadmill: the screen tower, then the deck in front of it. The deck's top is dark round the belt Paws Off
  // lays on it, with neon strips either side; a motor hood at its nose, uprights to a dash, and handrails.
@@ -232,7 +248,7 @@ export function createArcade(){
  group.updateMatrixWorld(true);solid.updateMatrixWorld(true);
  for(const s of spots)group.localToWorld(s.at);
  return {group,solid,spots,treadmill:arcadeTreadmill(group),
-  // E in front of a playing cabinet: Invasion opens the telescope's game, Pool the Recreation Hall's.
+  // E in front of a playing cabinet: Invasion opens the telescope's game, Pool the Recreation Hall's, Neon Arena Survival its outside window.
   near(p){if(Math.abs(p.y-FLOOR)>1.5)return null;for(const s of spots)if(Math.hypot(p.x-s.at.x,p.z-s.at.z)<REACH)return {kind:s.kind,label:s.label};return null;},
  };
 }

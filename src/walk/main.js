@@ -55,6 +55,7 @@ import {createSurgeryArms} from './surgery.js';
 import {createFinCasing} from './fin-casing.js';
 import {createInvasion} from './invasion/game.js';
 import {createPawPool} from './pool/game.js';
+import {openOutside,closeOutside} from './outside-game.js';
 import {createPawsOff} from './paws-off/game.js';
 import {createMudwater} from './mudwater.js';
 import {createGiveaway} from './mudwater-giveaway.js';
@@ -302,6 +303,7 @@ const actions={
   else if(t.kind==='play')arcade.open();
   else if(t.kind==='log')changeLog.open({near:controller.position});
   else if(t.kind==='pool')pool.open();
+  else if(t.kind==='outside'){closePanels();emote=null;input.enabled=false;input.down.clear();openOutside($('outside-sheet'),$('outside-frame'));}
   else if(t.kind==='treadmill')pawsOff.start(t.mill);
   else if(t.kind==='mudwater'){mudwater.play();live?.arena('play');}
   else if(t.kind==='packs'){closePanels();const w=$('mudwater-wordmark');if(mudwater.wordmark&&!w.src){w.src=mudwater.wordmark;w.hidden=false;}giveaway.open();$('mudwater-sheet').hidden=false;input.enabled=false;}
@@ -443,7 +445,7 @@ if(LIVE_URL){
 function myPose(riding=false){
  const h=walker.holder,held=resting||run,at=held?h.position:controller.position;
  return {pos:[at.x,at.y,at.z],yaw:held?h.rotation.y:heading,g:controller.grounded||riding||!!held,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||!!run,b:inBall};
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||!$('outside-sheet').hidden||!!run,b:inBall};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
@@ -688,7 +690,7 @@ function goTo(place){place=remapSpot(place);const q=findStand(colliders,place.at
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','clown-sheet','help-sheet'])$(id).hidden=true;chat.close();input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));chat.close();input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
