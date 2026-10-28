@@ -6478,7 +6478,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "4d47b78fb5b7e3ddea53f79e65ce1dbfcd3aca598c1e7a566d5d5a77ae46f3f2"
+      "signature": "1f03c66295f696c2986d0daae2296701138e36e0dc262ce3e027d86d0f7a6c63"
     },
     {
       "source": "src/walk/comms-displays.js",
