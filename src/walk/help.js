@@ -43,6 +43,7 @@ const FIND=[
  ['Paw Pool','The Recreation hall’s table on Deck 16, and the same arcade'],
  ['Paws Off','A typing run on the Deck 16 exercise studio’s treadmills'],
  ['Hamster ball','Parked in the Deck 17 gardens: climb in and roll it round the ship, fast, with a hop on Space'],
+ ['MCT transporters','Six three-seat carts in Deck 1’s Freight control: E at the front to drive one (WASD), E at the back to ride'],
  ['Group photo','The crown lounge camera counts down five seconds: get in the shot'],
  ['Comics and yarn','Comic books lying about to read, and neon balls of yarn to push'],
 ];

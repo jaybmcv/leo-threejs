@@ -1,5 +1,6 @@
 // Leo live: the multiplayer server for walk mode (src/walk/walk.html). One process is one shuttle: everyone connected
-// walks the same Leo. It passes poses and pings on and runs the lifts, nothing else; the ship itself is static and every visitor
+// walks the same Leo. It passes poses and pings on and runs the lifts (and keeps a few shared things: scores, hearts, chat,
+// the graffiti wall, gym rounds and the Deck 1 transporters); the ship itself is static and every visitor
 // builds it in their own browser. Modelled on Voyager's Reach's authority (packages/server: pose fan-out by distance,
 // poses as bytes, the visitor's id proved by a key their browser keeps), cut down to what a walk needs.
 //
@@ -17,6 +18,8 @@
 //   LEO_LIVE_GRAFFITI=...             where the Deck 19 graffiti wall's paint is kept (default ../leo-live-graffiti.json)
 //   LEO_LIVE_GRAFFITI_CLEAR=...       the file that, once created, clears the wall (default ../leo-live-graffiti-clear;
 //                                     node scripts/graffiti-clear.mjs): graffiti.mjs
+//   LEO_LIVE_MCT_RESET_HOUR=4         the hour (this machine's local time) the Deck 1 transporters nobody is driving go home
+//                                     each day: transporters.mjs
 //
 // Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
 // server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
@@ -38,6 +41,7 @@ import {createArena} from './arena.mjs';
 import {createGraffiti} from './graffiti.mjs';
 import {createGym} from './gym.mjs';
 import {createMazeBoard} from './maze.mjs';
+import {createTransporters} from './transporters.mjs';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||150);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -64,6 +68,9 @@ const graffiti=createGraffiti({send:(v,msg)=>send(v.ws,msg),log});
 const gym=createGym({log,send});BUDGETS.gym=[2,6];
 // The Container Maze's best times (maze.mjs): its own file, its own message.
 const maze=createMazeBoard({log,send});
+// The Mars Cat Transporters on Deck 1 (transporters.mjs): who drives each, and where each is parked, in memory only.
+const mct=createTransporters({log,broadcast:msg=>broadcast(msg),send:(v,msg)=>send(v.ws,msg)});BUDGETS.mct=[3,8];
+setInterval(()=>mct.tick(),10000);
 
 function send(ws,msg){if(ws.readyState===1)ws.send(typeof msg==='string'||msg instanceof Uint8Array?msg:JSON.stringify(msg));}
 function broadcast(msg,except){const text=JSON.stringify(msg);for(const v of visitors)if(v.ready&&v!==except)send(v.ws,text);}
@@ -217,7 +224,7 @@ async function hello(v,msg){
  v.slot=takeSlot();if(!v.slot){v.ws.close(4003,'full');return;}
  // A tester (the page holds a tester invite) wears the captain's hat. Taken on the page's word: it is a hat.
  Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);
- send(v.ws,{m:'welcome',id,aboard:aboard(),you:{name:v.name,verified:!!who},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said}});
+ send(v.ws,{m:'welcome',id,aboard:aboard(),you:{name:v.name,verified:!!who},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state()});
  countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`discord:${who.discordId}${who.lapsed?' (remembered)':''}`:msg.pass?'(pass refused)':'');
  if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
 }
@@ -226,6 +233,7 @@ function leave(v){
  if(v.slot)slots.delete(v.slot);
  graffiti.leave(v);
  gym.left(v);
+ mct.left(v);
  if(v.ready){broadcast({m:'gone',id:v.id});countChanged=true;log('aboard',aboard(),'-',v.id);}
 }
 const aboard=()=>{let n=0;for(const v of visitors)if(v.ready)n++;return n;};
@@ -271,6 +279,8 @@ function onMessage(v,data,binary){
   case 'paint':graffiti.paint(v,msg,{slow:!allowed(v,'paint')});break;
   // Paws Off (walk/paws-off): stepping onto a treadmill, a fall, stepping off, for the gym round (gym.mjs).
   case 'gym':if(allowed(v,'gym'))gym.message(v,msg);break;
+  // The Deck 1 transporters (transporters.mjs): a driver's seat taken, where a cart is, a cart parked.
+  case 'mct':if(allowed(v,'mct'))mct.message(v,msg);break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;

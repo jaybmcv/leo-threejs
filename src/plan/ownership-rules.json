@@ -235,6 +235,12 @@
     ],
     "via": null
   },
+  "src/walk/transporter.js": {
+    "owners": [
+      "d01-logistics-6"
+    ],
+    "via": null
+  },
   "src/walk/help.js": {
     "owners": [
       "d16-theater-5"

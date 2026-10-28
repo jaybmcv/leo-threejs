@@ -2,7 +2,8 @@
 // checks the pose wire, joining, poses reaching others near and far, names, the shared lifts, pings, leaving, a second tab,
 // bad input, the cap on visitors, Leo passes (Discord identity from The Creamery, net/pass.js: here signed by a
 // stand-in key served as a local JWKS), Alien Cat Invasion's leaderboard, Paw Pool's fastest clears, the ship log
-// boards' hearts, the selfie booth's shared countdown, chat aboard, the Deck 19 graffiti wall, Paws Off's gym rounds and, last, sixty visitors walking at once (bytes sent per visitor
+// boards' hearts, the selfie booth's shared countdown, chat aboard, the Deck 19 graffiti wall, Paws Off's gym rounds, the Deck 1
+// transporters and, last, sixty visitors walking at once (bytes sent per visitor
 // per second). Each server keeps its scores, hearts, chat and graffiti in temporary files, never the real ones.
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
@@ -24,6 +25,8 @@ import {findRestSpots,spotIndex} from '../src/walk/rest.js';
 import {COSMO_HEIGHT} from '../src/cosmo-pose.js';
 import {arcadeTreadmill} from '../src/walk/arcade.js';
 import {WALL,paintStroke,wallFromText} from '../src/walk/graffiti-wall.js';
+import {createTransporters as transporterServer,CARTS} from '../server/transporters.mjs';
+import {homes as mctHomes} from '../src/walk/transporter.js';
 
 const results=[];let failed=0;
 const check=(what,ok,detail='')=>{results.push(`${ok?'PASS':'FAIL'} ${what}${detail?' · '+detail:''}`);if(!ok)failed++;};
@@ -209,6 +212,46 @@ try{
  check('hamster ball: climbed out, they are no longer seen in a ball',b.poses.get(a.id)?.ball===false&&b.poses.get(a.id)?.stance==='stand');
  const junk=new Bot(PORT,{name:'Junk'});await junk.welcomed();junk.pose([136,24.3,20],{b:'yes'});await sleep(300);
  check('hamster ball: anything but true is not a ball',b.poses.get(junk.id)?.ball===false);junk.close();
+ // The Deck 1 transporters (src/walk/transporter.js, server/transporters.mjs). The welcome lists the six carts, all at home.
+ // One visitor takes MCT-03's driver's seat and the other hears it is taken, and can't take it themselves; the driver is
+ // seen seated wherever they drive it (each page draws the cart under its seated driver); parked, it stays where they left
+ // it for everyone, a newcomer included. A driver who leaves the ship mid-drive leaves it where they last said it was.
+ {
+  const carts=x=>{for(let i=x.msgs.length-1;i>=0;i--){const m=x.msgs[i];if(m.m==='mcts')return m.carts;if(m.m==='welcome')return m.mcts;}return null;};
+  const heard=(x,n)=>x.msgs.slice(n).filter(m=>m.m==='mcts').length;
+  const atHome=carts(b);
+  check('transporters: the welcome lists six carts, none driven, all at home',atHome?.length===CARTS&&CARTS===6&&atHome.every(c=>c.d===null&&c.at===null),JSON.stringify(atHome));
+  const home=mctHomes()[2],seat=[home.at[0],home.at[1]+.22,home.at[2]];
+  b.pose([home.at[0]-3,home.at[1],home.at[2]-6]);a.pose(seat,{yaw:home.yaw});await sleep(150);
+  const nb=b.msgs.length;a.send({m:'mct',e:'take',i:2});await sleep(250);
+  check('transporters: a visitor takes MCT-03\'s driver\'s seat and the other visitor hears who has it',carts(b)?.[2].d===a.id&&carts(a)?.[2].d===a.id&&heard(b,nb)===1,JSON.stringify(carts(b)?.[2]));
+  const na=a.msgs.length,nb2=b.msgs.length;b.send({m:'mct',e:'take',i:2});await sleep(250);
+  check('transporters: while one visitor drives a cart, another can\'t take its seat (only they hear so)',carts(b)?.[2].d===a.id&&heard(b,nb2)===1&&heard(a,na)===0);
+  // Driving: seated, at walking pace, out of the bay and round toward the door. The other visitor sees them there.
+  const path=[[0,-1.2],[0,-2.4],[-.4,-3.5],[-1.4,-4.4],[-2.6,-4.9]];
+  for(const [dx,dz] of path){a.pose([seat[0]+dx,seat[1],seat[2]+dz],{yaw:Math.PI+Math.atan2(-dx,-dz)*.5,rest:'sit'});await sleep(120);}
+  a.send({m:'mct',e:'at',i:2,at:[home.at[0]-2.6,home.at[1],home.at[2]-4.9],yaw:4.2});await sleep(250);
+  const seen=b.poses.get(a.id);
+  check('transporters: the driver is seen seated where they have driven the cart',seen?.rest==='sit'&&Math.abs(seen.pos[0]-(seat[0]-2.6))<.01&&Math.abs(seen.pos[2]-(seat[2]-4.9))<.01,JSON.stringify(seen&&{pos:seen.pos,rest:seen.rest}));
+  const parkAt=[+(home.at[0]-3.1).toFixed(2),home.at[1],+(home.at[2]-5.6).toFixed(2)];
+  a.send({m:'mct',e:'park',i:2,at:parkAt,yaw:4.4});a.pose([parkAt[0]+1.3,home.at[1],parkAt[2]]);await sleep(250);
+  const parked=carts(b)?.[2];
+  check('transporters: parked, the cart is free and stays where its driver left it, for the other visitor',parked?.d===null&&JSON.stringify(parked.at)===JSON.stringify(parkAt)&&parked.yaw===4.4,JSON.stringify(parked));
+  const late=new Bot(PORT,{name:'Late'});await late.welcomed();
+  check('transporters: a newcomer is handed the cart where it was parked',JSON.stringify(carts(late)?.[2])===JSON.stringify(parked)&&carts(late)?.[0].at===null);late.close();
+  // Bad input changes nothing: another visitor parking a cart they don't drive, a cart that isn't there, a spot off Deck 1.
+  const nb3=b.msgs.length;a.send({m:'mct',e:'park',i:0,at:[0,-39.7,0],yaw:0});a.send({m:'mct',e:'take',i:9});a.send({m:'mct',e:'take',i:'1'});await sleep(250);
+  check('transporters: parking a cart nobody gave you, and carts that don\'t exist, are ignored',heard(b,nb3)===0&&carts(b)?.[0].at===null);
+  // Someone else drives it off, then leaves the ship mid-drive: it stays where they last were.
+  const dee=new Bot(PORT,{name:'Dee'});await dee.welcomed();
+  const nb4=b.msgs.length;dee.send({m:'mct',e:'take',i:2});await sleep(200);const took=carts(b)?.[2].d===dee.id;
+  dee.send({m:'mct',e:'at',i:2,at:[parkAt[0],20.3,parkAt[2]],yaw:1});await sleep(100);
+  dee.send({m:'mct',e:'at',i:2,at:[parkAt[0]-6,home.at[1],parkAt[2]],yaw:4.71});await sleep(150);
+  dee.close();await sleep(300);
+  const left=carts(b)?.[2];
+  check('transporters: a driver who leaves the ship mid-drive leaves the cart free where they last said it was (a spot off Deck 1 is ignored)',
+   took&&heard(b,nb4)===2&&left?.d===null&&left.at[0]===+(parkAt[0]-6).toFixed(2)&&left.at[1]===home.at[1]&&left.yaw===4.71,JSON.stringify(left));
+ }
  // Near and far: a visitor 200 m off hears about a moving one twice a second, a near one ten times.
  const far=new Bot(PORT,{name:'Far'});await far.welcomed();far.pose([-100,-3.7,0]);b.got.clear();far.got.clear();
  for(let i=0;i<30;i++){a.pose([100+i*.3,-3.7,0]);b.pose([104,-3.7,0]);far.pose([-100,-3.7,0]);await sleep(100);}
@@ -697,6 +740,18 @@ try{
   check('gym: rounds are logged as they start and end',(srv.log.match(/ gym results /g)||[]).length===2);
   for(const x of [a,b,c])x.close();
  }finally{srv.kill();}
+}
+
+// ---- the Deck 1 transporters' daily reset (server/transporters.mjs), with a stand-in clock ------------------------------
+{
+ let clock=new Date(2026,9,28,15,0),said=[];const v={id:'voyager-a',name:'A'},w={id:'voyager-b',name:'B'};
+ const t=transporterServer({log(){},broadcast:m=>said.push(m),send(){},now:()=>clock,resetHour:4});
+ t.message(v,{e:'take',i:0});t.message(v,{e:'park',i:0,at:[-60,-39.7,40],yaw:1});t.message(w,{e:'take',i:1});t.message(w,{e:'at',i:1,at:[-70,-39.7,38],yaw:2});
+ clock=new Date(2026,9,29,3,59);t.tick();const before=t.state();
+ clock=new Date(2026,9,29,4,1);said=[];t.tick();const after=t.state();
+ check('transporters: at the daily reset, a parked cart goes home; one being driven stays with its driver',before[0].at?.[0]===-60&&after[0].at===null&&after[1].d==='voyager-b'&&after[1].at?.[0]===-70&&said.length===1,JSON.stringify(after.slice(0,2)));
+ said=[];t.tick();clock=new Date(2026,9,29,23,0);t.tick();
+ check('transporters: only once a day',said.length===0);
 }
 
 // ---- sixty visitors at once -----------------------------------------------------------------------------------------
