@@ -6762,7 +6762,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 38,
-      "signature": "08d8a88c54833887982476aa7a5045150e7c11c07bb486a0c53460e09b80cd9e"
+      "signature": "f719f67c9e254f2895a3d1ad3755064e2883981860a690dd795fced4dcb4615e"
     },
     {
       "source": "src/walk/kittens.js",
