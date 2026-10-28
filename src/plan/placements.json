@@ -116,6 +116,32 @@
       -38
     ]
   },
+  "painting/Orange_Haze_14_1": {
+    "room": "circulation-19",
+    "local": [
+      -125.5,
+      1.85,
+      3.94
+    ],
+    "v1": [
+      -125.5,
+      34.15,
+      3.94
+    ]
+  },
+  "painting/Orange_Haze_14_2": {
+    "room": "circulation-19",
+    "local": [
+      -125.5,
+      1.85,
+      -3.94
+    ],
+    "v1": [
+      -125.5,
+      34.15,
+      -3.94
+    ]
+  },
   "painting/Orange_Haze_15_1": {
     "room": "d20-captain-7",
     "local": [
@@ -231,6 +257,32 @@
       -115,
       -35.7,
       -38
+    ]
+  },
+  "lounge-entrance-sign-19": {
+    "room": "commons-1",
+    "local": [
+      -20.5,
+      8,
+      -23
+    ],
+    "v1": [
+      -112.5,
+      32.3,
+      -4
+    ]
+  },
+  "lounge-entrance-sign-18": {
+    "room": "commons-1",
+    "local": [
+      -20.5,
+      4,
+      -23
+    ],
+    "v1": [
+      -112.5,
+      28.3,
+      -4
     ]
   }
 }

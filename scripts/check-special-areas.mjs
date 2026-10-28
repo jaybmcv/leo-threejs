@@ -35,10 +35,11 @@ for(const area of SPECIAL_AREAS){
     for(let i=0;i<count;i++){
       const m=new Matrix4();if(inst)o.getMatrixAt(i,m);m.premultiply(o.matrixWorld);
       if(inst&&area.kind==='lifeboats'){
-        const boat=Math.floor(i/100),cx=-112.5+(boat%10)*25,cz=boat<10?-65.5:65.5,cy=area.center[1],occupied=b.clone().applyMatrix4(m);
+        // The craft an instance belongs to is the one it stands in (seating and the repeated fit-out alike).
+        const occupied=b.clone().applyMatrix4(m),at=occupied.getCenter(new Vector3()),cx=-112.5+Math.round((at.x+112.5)/25)*25,cz=Math.sign(at.z)*65.5,cy=area.center[1];
         const crossAisle=new Box3(new Vector3(cx-.65,cy,cz-3.5),new Vector3(cx+.65,cy+2.1,cz+3.5));
         const longAisle=new Box3(new Vector3(cx-8.6,cy,cz-.9),new Vector3(cx+8.6,cy+2.1,cz));
-        assert.ok(!occupied.intersectsBox(crossAisle)&&!occupied.intersectsBox(longAisle),`${area.id}: seating obstructs a boarding aisle`);
+        assert.ok(!occupied.intersectsBox(crossAisle)&&!occupied.intersectsBox(longAisle),`${area.id}: ${o.name} obstructs a boarding aisle at ${at.toArray()}`);
       }
       for(const x of [b.min.x,b.max.x])for(const y of [b.min.y,b.max.y])for(const z of [b.min.z,b.max.z])checkPoint(new Vector3(x,y,z).applyMatrix4(m),area.id+' '+o.name);
     }
