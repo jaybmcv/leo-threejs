@@ -31,7 +31,7 @@ export function finishCirculation(root,shell,label,deck){
   if(/(?:Room_entry_header|Entry_header|Lift_landing_header|Aft_lift_header|Crown_lift_platform_header)$/.test(o.name)){
    let d=deck;for(let p=o;p;p=p.parent)if(p.userData.deck)d=p.userData.deck;
    const z=o.getWorldPosition(new T.Vector3()).z;
-   const text=o.name==='Crown_lift_platform_header'?Math.round(o.position.y-2.85)+' M':d?'DECK '+String(d).padStart(2,'0'):'LIFT';
+   const text=o.name==='Crown_lift_platform_header'?Math.round(o.userData.level)+' M':d?'DECK '+String(d).padStart(2,'0'):'LIFT';
    fixtureText(k,o,text,o.name==='Crown_lift_platform_header'?1:z>0?-1:1);
   }
   if(/^(Closed_lift_landing_door|Aft_lift_landing_door|Crown_lift_platform_door)$/.test(o.name)){

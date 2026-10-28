@@ -147,7 +147,7 @@ export function createLifts(scene,colliders){
   const display=liftDisplay();
   const landings=spec.stops.map(stop=>{
    const d=stop.door||spec.door,frontOf=d.axis==='z'?new T.Vector3(0,0,d.sign):new T.Vector3(d.sign,0,0),along=d.axis==='z'?new T.Vector3(1,0,0):new T.Vector3(0,0,1);
-   const half=(d.axis==='z'?c.depth:c.width)/2,base=new T.Vector3(c.x,stop.y,c.z).addScaledVector(frontOf,half+.14),at={base,front:frontOf,along,width:d.width};
+   const half=(d.axis==='z'?c.depth:c.width)/2,base=new T.Vector3(c.x,stop.y,c.z).addScaledVector(frontOf,half+.14),at={base,front:frontOf,along,width:d.width,jamb:d.jamb};
    landingSigns(signs,colliders,stop,at);liftDisplayMount(signs,colliders,display.material,at);
    return {d,frontOf,along,base,light:callLight(signs,colliders,at)};
   });
