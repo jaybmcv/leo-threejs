@@ -6598,7 +6598,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 43,
-      "signature": "ffb8f127047cb67e800b0b17d245914668c566f24fad0578bb295b69ae14197a"
+      "signature": "ba6b91640160b0c441e594e87b713eca2a492c9ee672a3360054fa1b8cbca549"
     },
     {
       "source": "src/walk/hamster-ball.js",
