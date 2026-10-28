@@ -65,6 +65,25 @@ function buffet(k,top,b,c,s,stations){
  for(let j=0;j<=posts;j++)k.add(top,new T.CylinderGeometry(.015,.015,gy,8).translate(b.min.x+.1+j*(s.x-.2)/posts,y0+gy/2,zg),M.steel,f);
  k.box(top,[s.x-.2,.012,.38],[c.x,y0+gy,zg-front*.17],FOOD.glass,f+'_glass');k.box(top,[s.x-.2,gy*.5,.012],[c.x,y0+gy*.72,zg],FOOD.glass,f+'_glass');
 }
+// Three illuminated menu boards on the back wall above the buffet: charcoal frames with a teal edge and cream faces that
+// glow from within. Each shows a coral soup bowl and fruit on a teal tray, beside a few menu lines. They hang above the
+// sneeze guard, clear of the dining sightline, and their glow is emissive colour, so the room adds no lights.
+const MENU={frame:mat('menu_board_frame',0x2a2f36,.4,.3),edge:new T.MeshStandardMaterial({name:'Finish_menu_board_edge',color:0x1d7f78,emissive:0x2fd6c8,emissiveIntensity:1.4,roughness:.3}),
+ face:new T.MeshStandardMaterial({name:'Finish_menu_board_face',color:0xfff1dc,emissive:0xffe9c8,emissiveIntensity:.55,roughness:.7}),coral:mat('menu_coral',0xf0664f,.5),teal:mat('menu_teal',0x2fa89c,.5),ink:mat('menu_ink',0x3a3d45,.8)};
+function menuBoards(k,top){
+ // Room coordinates, converted to the countertop's own frame. The boards hang on the wall behind the counter.
+ const at=(x,y,z)=>[x-top.position.x,y-top.position.y,z-top.position.z],f='menu_boards',W=2.3,H=.6,D=.1,Y=2.05,Z=16.76,zF=Z-D/2,zI=zF-.03;
+ const box=(size,p,m)=>k.box(top,size,at(...p),m,f),add=(g,p,m)=>k.add(top,g.translate(...at(...p)),m,f);
+ for(const x of [-3,0,3]){
+  // Charcoal frame, teal edge, then the cream face in front.
+  box([W+.14,H+.14,D],[x,Y,Z],MENU.frame);box([W+.04,H+.04,.012],[x,Y,zF-.006],MENU.edge);box([W,H,.01],[x,Y,zF-.017],MENU.face);
+  // Soup in a coral bowl, fruit on a teal tray, and menu lines under a teal header.
+  box([.36,.1,.02],[x-.78,Y-.16,zI],MENU.coral);add(new T.SphereGeometry(.16,12,8).scale(1,.3,.25),[x-.78,Y-.11,zI],MENU.teal);
+  add(new T.SphereGeometry(.065,10,7).scale(1,1,.4),[x-.42,Y-.16,zI],MENU.teal);add(new T.SphereGeometry(.065,10,7).scale(1,1,.4),[x-.3,Y-.14,zI],MENU.coral);add(new T.SphereGeometry(.06,10,7).scale(1,1,.4),[x-.36,Y-.04,zI],MENU.coral);
+  box([.84,.035,.03],[x-.5,Y-.23,zI],MENU.teal);box([.8,.05,.012],[x+.5,Y+.2,zI],MENU.teal);
+  for(const [w,v] of [[.8,.07],[.6,-.03],[.7,-.13],[.5,-.23]])box([w,.035,.01],[x+.1+w/2,Y+v,zI],MENU.ink);
+ }
+}
 // Communal Dining set for a formal dinner: red cloths with a candle on every table, china, silver and a wine glass at
 // each seat, ivory chairs with a brass crest rail, and three red glass pendants per table, hung 40, 60 and 50 cm
 // below the ceiling. Every glow is emissive colour, so the room adds no lights.
@@ -143,7 +162,7 @@ export function finishShipArea(area,{root,shell,fit}){
   else if(/^(Shared_table|Meeting_table|Crew_lounge_table)$/.test(n)&&['dining','crew','briefing','captain'].includes(area.kind))for(const dx of [-.25,.25]){
    k.box(o,[Math.min(.65,s.x*.2),.018,Math.min(.4,s.z*.3)],[c.x+dx*s.x,b.max.y+.013,c.z],M.linen,'table_settings');k.add(o,new T.CylinderGeometry(.065,.065,.11,12).translate(c.x+dx*s.x,b.max.y+.072,c.z+.11),M.steel,'table_settings');
   }
-  if(n==='Countertop'&&area.kind==='dining')buffet(k,o,b,c,s,sources.filter(m=>m.name==='Meal_service_station'));
+  if(n==='Countertop'&&area.kind==='dining'){buffet(k,o,b,c,s,sources.filter(m=>m.name==='Meal_service_station'));menuBoards(k,o);}
   if(n==='Shelf'&&area.kind==='library')for(const side of [-1,1])for(const dx of [-1.6,0,1.6])k.box(o,[.32,.06,.006],[c.x+dx,c.y,c.z+side*(s.z/2+.004)],M.linen,'inventory_labels');
   if(/^(Secured_cargo_container|Supply_crate)$/.test(n)){
    const f=k.face(o,1),type=n==='Secured_cargo_container'?'cargo_restraints':'inventory_labels';f.panel(-f.w*.2,0,f.w*.24,f.h*.26,M.linen,type);
