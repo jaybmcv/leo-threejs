@@ -6864,9 +6864,9 @@
       "colliders": [
         "Young_explorers_kitten_colliders"
       ],
-      "interactionTargets": null,
-      "placements": 25,
-      "signature": "1e13bb9620f70b8861003d7b619d14c30e4f5b80e58090fbd1f5a821b4a7f874"
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 48,
+      "signature": "a2c3481e65acdbda90eb6276cdc56301c7c879fe6e3b05ff74c0e33340ff6cb7"
     },
     {
       "source": "src/walk/life-support-pipes.js",
@@ -7332,7 +7332,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "f6083e51fb71001bac1ab3af3cc9aa588d476adadeee2f7f4f5d3133a8e3a50b"
+      "signature": "eb75add481da945eebd96ddaa2abfc8769cc619f17537ba90e136aef86418e94"
     },
     {
       "source": "src/walk/provisions.js",

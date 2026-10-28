@@ -9,7 +9,7 @@ import {solid} from './collision.js';
 import {STATIC_LIFT_PARTS} from './lifts.js';
 import {stripProvisions,createProvisions} from './provisions.js';
 import {createLifeSupportPipes} from './life-support-pipes.js';
-import {createKittens} from './kittens.js';
+import {stripPlayFurniture,createKittens} from './kittens.js';
 import {prepareBlossomBed,createBlossomGarden} from './blossom.js';
 import {createDiningRobots} from './dining-robots.js';
 import {createHydrationNook} from './hydration-nook.js';
@@ -37,6 +37,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  dressTheatre(ship);
  // The Deck 16 training room's briefing furniture gives way to the gaming lounge's (gaming-lounge.js), solid and sittable.
  dressGamingLounge(ship);
+ // Young explorers' green play furniture gives way to the kitten habitats (kittens.js).
+ stripPlayFurniture(ship);
  // The Deck 5 surgical suite's beds give way to sculpted medical beds (surgery.js), solid and lie-on-able.
  dressSurgery(ship);
  resolveRoomFrames(ship.root);
@@ -54,7 +56,7 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Life-support control's colour-coded service pipework (life-support-pipes.js): its regulator boxes and supply
  // cabinets solid as plain boxes, the pipes overhead dressing.
  const pipework=createLifeSupportPipes(ship);if(pipework)colliders.addStatic(pipework.solid,()=>true);
- // Young explorers' kitten habitats (kittens.js): the climbing tree, tunnel, den and kittens solid as plain boxes.
+ // Young explorers' kitten habitats (kittens.js): the climbing trees, step towers, toys and kittens solid as plain boxes.
  const kittens=createKittens(ship,kit);if(kittens)colliders.addStatic(kittens.solid,()=>true);
  // Communal dining's three serving robots (dining-robots.js): solid as plain boxes.
  const diningRobots=createDiningRobots(ship);if(diningRobots)colliders.addStatic(diningRobots.solid,()=>true);
