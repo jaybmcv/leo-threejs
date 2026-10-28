@@ -11,6 +11,7 @@ import {stripProvisions,createProvisions} from './provisions.js';
 import {createLifeSupportPipes} from './life-support-pipes.js';
 import {createKittens} from './kittens.js';
 import {prepareBlossomBed,createBlossomGarden} from './blossom.js';
+import {prepareLoungeFalls,createLoungeFalls} from './lounge-falls.js';
 import {createDiningRobots} from './dining-robots.js';
 import {createHydrationNook} from './hydration-nook.js';
 import {createCargoTrolley} from './cargo-trolley.js';
@@ -31,6 +32,9 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // The Deck 17 commons' aft planter loses its green tree and shrubs for the cherry blossom garden, and a corner for its
  // pond, and gains the bench under the tree (blossom.js).
  prepareBlossomBed(ship);
+ // The Hydro-Nip Lounge's kitchen island and its chairs give way to the waterfall pond, and the bench behind the falls
+ // joins the lounge (lounge-falls.js).
+ prepareLoungeFalls(ship);
  // The theatre's attendant moves behind the concession counter (theatre.js) before the walls are fitted.
  placeAttendant(ship);
  // Its old chairs give way to rows of cinema seats (theatre.js), solid and sittable.
@@ -64,6 +68,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const trolley=createCargoTrolley(ship);if(trolley)colliders.addStatic(trolley.solid,()=>true);
  // The cherry blossom garden (blossom.js): its trunk, bridge and pond edges solid.
  const blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
+ // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js): its rim, bed, causeway, landing and rope rails solid.
+ const loungeFalls=createLoungeFalls(ship);if(loungeFalls)colliders.addStatic(loungeFalls.solid,()=>true);
  // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
  const jaguarGate=createJaguarGate();colliders.addStatic(jaguarGate.solid,()=>true);
  // The marquee signs over the lounge's Deck 19 and 18 entrances (lounge-entrance-signs.js): dressing only, nothing solid.
@@ -78,5 +84,5 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,blossom,jaguarGate,entranceSigns,arcadeRow,missionHolo,swordCase,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,missionHolo,swordCase,mudwater};
 }

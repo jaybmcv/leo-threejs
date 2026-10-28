@@ -74,6 +74,20 @@ const standsNear=s=>{for(let a=0;a<16;a++)for(const r of [.9,1.2,1.45]){const x=
 const usable=spots.filter(standsNear).length;
 expect(`hammocks: 9 found (${spots.length})`,spots.length===9);
 expect(`hammocks: all usable (${usable}/${spots.length})`,usable===spots.length&&spots.length>0);
+// 4. The waterfall pond (src/walk/lounge-falls.js, from tester feedback): the causeway leads through the falls to the
+// landing, whose bench seats three facing the falls; the water off the causeway is out of reach; and the floor either
+// side of the pond, by the tasting deck and by the stair, stays open.
+const STONE=FLOOR+.36,falls=prepared.loungeFalls;
+expect('falls: built',!!falls);
+expect('falls: causeway mid-pond',room.reached([137,STONE,38]));
+expect('falls: landing behind the falls',room.reached([137,STONE,44.6]));
+const wet=[[133,38],[141,38],[134.5,36],[139.5,41],[132,40]].filter(([x,z])=>room.reached([x,FLOOR+.11,z],.45));
+expect(`falls: water off the causeway out of reach (${wet.length} wet spots reached)`,wet.length===0);
+expect('falls: floor between the tasting deck and the pond',room.reached([129,FLOOR,40]));
+expect('falls: floor between the pond and the stair',room.reached([145.5,FLOOR,40]));
+const bench=falls?prepared.seats.filter(s=>s.point.distanceTo(falls.bench)<1.6):[];
+expect(`falls: bench seats (${bench.length})`,bench.length>=3);
+expect('falls: bench faces the falls',bench.length>0&&bench.every(s=>s.facing&&s.facing.z>.9));
 const report={status:problems.length?'FAIL':'PASS',results,problems,hammockHeights:spots.map(s=>+s.height.toFixed(2))};
 console.log(JSON.stringify(report,null,1));
 log(report.status);if(problems.length)process.exitCode=1;
