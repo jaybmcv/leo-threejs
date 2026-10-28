@@ -3,6 +3,9 @@ import {roomObject,deltaMatrix,hasFrameOverride,moverOrientation} from '../plan/
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {LOUNGE} from '../hydro-nip-lounge.js';
 import {createLoungeSky} from './lounge-sky.js';
+import {createLoungeMural} from './lounge-mural.js';
+import {HEADER} from './commons-hall.js';
+import {bandOf} from './collision.js';
 
 // The Hydro-Nip Lounge on foot (HYDRO_NIP_LOUNGE.md, phases 2-3; the room itself is src/hydro-nip-lounge.js):
 // - the maze's and the dome's sliding doors open for anyone near them, other players included, and each leaf is a
@@ -13,7 +16,8 @@ import {createLoungeSky} from './lounge-sky.js';
 //   ground floor, light on the lower platform and gone on the top one;
 // - the room's mood (from tester feedback): its ceiling is clear glass open to the stars and a huge full moon
 //   (lounge-sky.js), and while the camera is in the commons the walk's lights (shared by the whole ship) ease down and warm, with a violet bounce from below, and the
-//   neon and its halos burn brighter.
+//   neon and its halos burn brighter;
+// - the synthwave sunset over wireframe mountains on its back wall, running on along the left wall (lounge-mural.js).
 // Made after the colliders and rest spots and before the walk merges the ship for drawing: the doors and hammocks
 // leave the ship for meshes of their own, drawn with the lounge floor's deck band (main.js).
 const DOOR={reach:2.6,rise:2.5,time:.6},SWAY={amp:.075,rate:1.45};
@@ -94,6 +98,9 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
 
  // The mood. The commons' ceiling panels (Circadian_light) go, and a glass roof open to space goes in under the ceiling
  // (lounge-sky.js), drawn with the floor's band so it shows from inside the dome too, where the ceiling's band is culled.
+ // The mural: the left wall stands only above Deck 17's opened hall (commons-hall.js), so it covers that header.
+ const mural=createLoungeMural(frame,{left:HEADER});
+ if(mural){mural.group.userData={band:bandOf(toWorld(0,mural.low,0).y),top:bandOf(toWorld(0,mural.top,0).y)};}
  const {ROOM}=LOUNGE,room=new T.Box3().setFromPoints([new T.Vector3(ROOM.x0,LOUNGE.FLOOR,ROOM.z0),new T.Vector3(ROOM.x1,LOUNGE.CEILING,ROOM.z1)]);
  const panels=[];root.parent?.parent?.traverse(o=>{if(o.isMesh&&o.name==='Circadian_light')panels.push(o);});for(const o of panels)o.removeFromParent();
  {const sky=createLoungeSky(frame,ROOM,LOUNGE.CEILING-.16,uniforms.uTime);place(sky.geometry,sky.material,'Walk_lounge_glass_roof');}
@@ -109,6 +116,8 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
 
  return {
   drawn,doors,
+  // The wall mural's group (null in Node), filed with the deck bands it spans by main.js.
+  mural:mural?.group||null,
   // After the merge for drawing: the maze's mist meshes (split by deck band) to thin out.
   // `bodies`: the walker's and every other player's positions; `eye`: the camera's.
   update(dt,bodies,eye){

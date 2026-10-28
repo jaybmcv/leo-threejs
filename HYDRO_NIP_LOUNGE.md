@@ -94,3 +94,7 @@ Open floor for the lounge: x 113.5–148, z 12–42. The entrance side is z ≈ 
 - **Platforms and tubes:** each platform has a purple rug with a teal border. The tube floors have green edge lines.
 
 **Cost.** Same entrance view and window (800 × 668, third person) in the dev walk: 406 calls and 669k triangles, against 399 and 667k on main. That's +7 calls and +2k triangles, inside the +10 / +15k budget. The new draws are the frosted glass, the doors (two, both doors' panes and both doors' frames), the hammocks and the maze mist. The mist at first went in as a glow the walk split by deck band (6 draws), and the platform rugs used the textured rug (2 more); both were changed.
+
+## Synthwave wall (from tester feedback)
+
+A neon sunset over wireframe mountains covers the back wall (template z 45.9, x 109.5-154.5, floor to ceiling), and the same mountains run on along the left wall (`Commons_end_wall`, x 109.6) without the sun, as one panorama unrolled round the corner. It is painted in code (`src/walk/lounge-mural.js`, `paintSynthwave`), so no picture is used; the sun sits at template x 143, beside the hammock dome. The left wall stands only above Deck 17's opened hall (`HEADER` in `src/walk/commons-hall.js`, 28.0 m), so the mural covers that header. It is walk-only (no canvas in the Node builds, so no mural there), two unlit planes 8 mm off the walls, drawn like a painting across the deck bands it spans. Cost: two draws and about 26 MB of texture.

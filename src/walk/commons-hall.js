@@ -8,7 +8,8 @@ import {cutOut} from '../cut-out.js';
 // bare deck plate between neighbouring commons, and between the corridor and the commons, counts as floor, so no
 // partitions stand there (partitions.js) and it is floored to match; each commons' end wall is cut back to the deck
 // above, where it stays as a header over the opening. The forward transit core (lifts and stairs) keeps its own walls.
-const DECK=17,Y=floorY(DECK),HEADER=floorY(DECK+1)-.3,CORRIDOR=4,CORE={x0:128,x1:147,z:8};
+const DECK=17,Y=floorY(DECK),CORRIDOR=4,CORE={x0:128,x1:147,z:8};
+export const HEADER=floorY(DECK+1)-.3;
 export const HALL={deck:DECK,x0:Math.min(...COMMONS.map(c=>c.x-c.width/2)),x1:Math.max(...COMMONS.map(c=>c.x+c.width/2)),z:Math.max(...COMMONS.map(c=>Math.abs(c.z)+c.depth/2))};
 // The commons on the side of z that spans x, if any.
 const commonsAt=(x,s)=>COMMONS.find(c=>Math.sign(c.z)===s&&Math.abs(x-c.x)<c.width/2);

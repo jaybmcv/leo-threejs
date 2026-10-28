@@ -6425,7 +6425,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "94c33f91717c54963fc3c8c924bf5aad661af3a1ca13399294121236436668a0"
+      "signature": "4d47b78fb5b7e3ddea53f79e65ce1dbfcd3aca598c1e7a566d5d5a77ae46f3f2"
     },
     {
       "source": "src/walk/comms-displays.js",
@@ -6598,7 +6598,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 43,
-      "signature": "ffb8f127047cb67e800b0b17d245914668c566f24fad0578bb295b69ae14197a"
+      "signature": "ba6b91640160b0c441e594e87b713eca2a492c9ee672a3360054fa1b8cbca549"
     },
     {
       "source": "src/walk/hamster-ball.js",
@@ -6913,6 +6913,21 @@
       "signature": "9fdb8a8048df6dc43164e70d23bee59a606e7950dc85864b0706825fa962094a"
     },
     {
+      "source": "src/walk/lounge-mural.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Walk_lounge_mural"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 7,
+      "signature": "f8e541b873aab478707bd03cc6a74dce46ee1d9655900a2d0db700caa1272b4a"
+    },
+    {
       "source": "src/walk/lounge-sky.js",
       "rooms": [
         "commons-1"
@@ -6938,7 +6953,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "fb3933c6e302f59e15a35f7e870913af37d80788090142cf1ab15acc8afab8f5"
+      "signature": "50cec8f2bc9c1cb5bb94648cdda8ebf712622044d341185867aec0faa418205f"
     },
     {
       "source": "src/walk/main.js",
@@ -6957,8 +6972,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 32,
-      "signature": "4fecf9c0795a3a480ad479ed36ed7883de42924bb4c0f83ae5e5c53f5c8820dc"
+      "placements": 33,
+      "signature": "0552908564244cac07842b0be9f4d33afd255af63b5ccf8b516ca1496db21747"
     },
     {
       "source": "src/walk/marks.js",

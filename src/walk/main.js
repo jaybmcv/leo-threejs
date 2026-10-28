@@ -225,6 +225,8 @@ async function buildShip(){
  if(blossom)toBand(blossom.group);
  toBand(jaguarGate.group);
  if(lounge)for(const o of lounge.drawn)toBand(o);
+ // Its synthwave wall (lounge-mural.js) spans three decks' bands, like a painting.
+ if(lounge?.mural){baked.bands.set(lounge.mural.name,lounge.mural);scene.add(lounge.mural);}
  // The paintings (paintings.js) span several bands each: they draw while any of them is in view.
  // The ship log boards (changes-board.js) in the crown lounge and the arrival hall.
  for(const g of changeLog.groups)toBand(g);
