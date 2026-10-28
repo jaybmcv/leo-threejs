@@ -7101,7 +7101,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "25e97f4d98f2c94947081a5a89ff25daf2975ec0da0086a2f37f542028771429"
+      "signature": "bfda8b6e50a59f38eac3c557123947a5b0bcb84608e4935ed09cd427740e4de6"
     },
     {
       "source": "src/walk/marks.js",
@@ -7263,6 +7263,60 @@
       "signature": "63db8da1dcb7a32cb4cabc36cdbef74d52183bdbe5974624acc7b43fc3ff0240"
     },
     {
+      "source": "src/walk/pinball/art.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "d4c0d57e4ebd3c5513ff3fe79eb45073dc3a9d7844c9d1d9492d2968dbdf0d76"
+    },
+    {
+      "source": "src/walk/pinball/game.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 2,
+      "signature": "95fe4177ac5f0e0087b4db713b264463c830310d6815ca0cbf0e95873f9798b3"
+    },
+    {
+      "source": "src/walk/pinball/machine.js",
+      "rooms": [
+        "d16-recreation-4"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Recreation_pinball",
+        "Recreation_pinball_collider"
+      ],
+      "colliders": [
+        "Recreation_pinball_collider"
+      ],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 17,
+      "signature": "d0fe8f2d3cdd221d99ed4490fd59a1f75dd82cc3de8addf86222d42a7b22abea"
+    },
+    {
+      "source": "src/walk/pinball/rules.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 7,
+      "signature": "c222eaa461661e106135f91a3bf35b0533a2b25d518c468f56b8799273fd9201"
+    },
+    {
       "source": "src/walk/places.js",
       "rooms": [
         "@areas",
@@ -7332,7 +7386,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "f6083e51fb71001bac1ab3af3cc9aa588d476adadeee2f7f4f5d3133a8e3a50b"
+      "signature": "59a7cd9080b949992fd192653d9f121ca3344be2c702d572a06c1ec677713dde"
     },
     {
       "source": "src/walk/provisions.js",

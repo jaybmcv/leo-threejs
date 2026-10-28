@@ -78,6 +78,10 @@
       "src/walk/invasion/*.js",
       "src/walk/pool/game.js",
       "src/walk/pool/rules.js",
+      "src/walk/pinball/rules.js",
+      "src/walk/pinball/game.js",
+      "src/walk/pinball/art.js",
+      "src/walk/pinball/sound.js",
       "src/walk/vr/*"
     ],
     "room": null,
