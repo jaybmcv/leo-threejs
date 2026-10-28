@@ -307,7 +307,7 @@ const actions={
   if(t.kind==='call')lifts.call(t.lift,t.stop);
   else if(t.kind==='inside')openLiftPanel(t.lift);
   else if(t.kind==='waiting')return;
-  else if(t.kind==='sit'||t.kind==='lie')settle(t.spot);
+  else if(t.kind==='sit'||t.kind==='lie'||t.kind==='stand')settle(t.spot);
   else if(t.kind==='selfie'){if(!booth.counting)live?.selfie();booth.start();}
   else if(t.kind==='comic'){closePanels();reader.open(t.comic);input.enabled=false;}
   else if(t.kind==='play')arcade.open();
@@ -455,7 +455,7 @@ if(LIVE_URL){
 function myPose(riding=false){
  const h=walker.holder,held=resting||run,at=held?h.position:controller.position;
  return {pos:[at.x,at.y,at.z],yaw:held?h.rotation.y:heading,g:controller.grounded||riding||!!held,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||!$('outside-sheet').hidden||!!run,b:inBall};
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting&&!resting.stand?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||!$('outside-sheet').hidden||!!run,b:inBall};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
@@ -500,8 +500,8 @@ renderer.setAnimationLoop(()=>{
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
  if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
  if(emote&&(wish.lengthSq()>.01||k.jump))emote=null;
- // Moving off a seat or bed stands you up.
- if(resting&&resting.phase==='in'&&resting.t===1&&wish.lengthSq()>.1)standUp();
+ // Moving off a seat or bed stands you up. A healing capsule holds you until you leave it (E or the button).
+ if(resting&&!resting.stand&&resting.phase==='in'&&resting.t===1&&wish.lengthSq()>.1)standUp();
  lifts.update(dt,controller);
  // A Paws Off run holds the walker on the treadmill (paws-off/game.js); the belts of others playing run too.
  run=pawsOff?.update(dt,remotes?[...remotes.remotes.values()].filter(r=>r.tgt?.playing).map(r=>r.cur):[])||null;
@@ -547,6 +547,7 @@ renderer.setAnimationLoop(()=>{
  follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:WALKER.height);
  // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle).
  walker.holder.visible=follow.mode!=='first'&&follow.current>.75;
+ capsuleView(!!resting?.stand&&resting.t===1&&follow.mode==='first');
  cull(p);
  remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
  // The lounge's doors open, and the cold room's strip curtain parts, for anyone near them.
@@ -611,7 +612,7 @@ function target(){
  if(inBall)return {kind:'ball-out',label:'Get out of the ball'};
  const parked=ball.mesh.position;if(Math.abs(p.y-parked.y)<1.2&&Math.hypot(p.x-parked.x,p.z-parked.z)<BALL.radius+1)return {kind:'ball',label:'Get in the ball'};
  const s=rest.pick(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));
- return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':'Sit down'}:null;
+ return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':s.kind==='stand'?'Enter the healing capsule':'Sit down'}:null;
 }
 const touch=matchMedia('(pointer:coarse)').matches;
 function hud(p){
@@ -620,7 +621,7 @@ function hud(p){
  const near=changeLog.nearby(p).length,chip=$('changes-here');
  if(chip.dataset.count!==String(near)){chip.dataset.count=String(near);chip.hidden=!near;chip.querySelector('b').textContent=String(near);
   chip.querySelector('span').textContent=near===1?' change here':' changes here';chip.setAttribute('aria-label',`${near} change${near===1?'':'s'} made around here: open the ship log`);}
- const t=run?null:resting?{label:resting.lie?'Get up':'Stand up'}:target();
+ const t=run?null:resting?{label:resting.stand?'Leave the capsule':resting.lie?'Get up':'Stand up'}:target();
  const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=!show||touch;
  // Waiting for a called lift there's nothing to press: the prompt just says where the car is.
  const waiting=t?.kind==='waiting';prompt.classList.toggle('waiting',waiting);$('use').disabled=waiting;
@@ -640,12 +641,16 @@ function settle(spot){
   pos=spot.point.clone().addScaledVector(head,-WALKER.height/2+.25);pos.y=spot.height+.13;
   // A hammock (lounge.js) has no pillow: the body lies centred along it, clear of the bars at both ends.
   if(spot.hammock)pos.copy(spot.point).addScaledVector(head,-WALKER.height/2).setY(spot.height+.13);
+ }else if(spot.kind==='stand'){
+  // A healing capsule (surgery.js): stood on its floor, facing out of the tube.
+  yaw=Math.atan2(spot.facing.x,spot.facing.z);pos=spot.point.clone();
  }else{
   const face=spot.facing?spot.facing.clone():new T.Vector3(p.x-spot.point.x,0,p.z-spot.point.z);
   if(face.lengthSq()<1e-6)face.set(Math.sin(heading),0,Math.cos(heading));face.normalize();
   yaw=Math.atan2(face.x,face.z);pos=spot.point.clone().addScaledVector(face,.04);pos.y=spot.height+.06-walker.hipHeight;
  }
- resting={spot,lie,from:{pos:p,heading},to:{pos,yaw},t:0,phase:'in',view:new T.Vector3(spot.point.x,spot.height-(lie?.35:.55),spot.point.z)};
+ const stand=spot.kind==='stand';
+ resting={spot,lie,stand,from:{pos:p,heading},to:{pos,yaw},t:0,phase:'in',view:new T.Vector3(spot.point.x,spot.height-(stand?0:lie?.35:.55),spot.point.z)};
 }
 const PILLOW_TILT=.12;
 // Paws Off: on the treadmill, the game has the keys and the camera goes behind Cosmo; off it, the walk has them back.
@@ -656,6 +661,8 @@ function startRun(m){
 function endRun({at,yaw}){
  run=null;controller.place(at);heading=yaw;follow.mode=runView;walker.body.rotation.set(0,0,0);input.enabled=true;input.down.clear();
 }
+// Seen from inside a healing capsule (first person): the view tinted blue and wavering, as through the fluid (walk.html).
+function capsuleView(on){if(document.body.classList.contains('capsule-view')!==on)document.body.classList.toggle('capsule-view',on);}
 function standUp(){if(resting&&resting.phase==='in')resting.phase='out';}
 function restPose(dt){
  const r=resting;r.t=T.MathUtils.clamp(r.t+(r.phase==='in'?1:-1)*dt/.7,0,1);
@@ -666,6 +673,8 @@ function restPose(dt){
  const swing=r.spot.hammock&&lounge?.swingOf(r.spot.hammock);
  if(swing){const q=new T.Quaternion().setFromAxisAngle(swing.axis,swing.angle*e);h.position.sub(swing.pivot).applyQuaternion(q).add(swing.pivot);h.quaternion.premultiply(q);}
  if(r.phase==='out'&&r.t===0){heading=r.from.heading;controller.place(r.from.pos);resting=null;return null;}
+ // In a healing capsule the body floats a little in the fluid, standing.
+ if(r.stand){h.position.y+=.04*e*(1-Math.cos(performance.now()/1100));return null;}
  return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight,hammock:!!r.spot.hammock};
 }
 function lerpAngle(a,b,t){return a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;}

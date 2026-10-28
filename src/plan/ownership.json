@@ -7071,7 +7071,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 33,
-      "signature": "98af2e95d005d03fa8d14b58edfbcd2118ddceb74444daee73bc8e25cc9d791f"
+      "signature": "db10a83675d87f740cb22c0a31e677f37a35ed97b42d37260e57f26e54db88f7"
     },
     {
       "source": "src/walk/marks.js",
@@ -7434,13 +7434,14 @@
       "fixed": false,
       "features": [
         "Surgery_bed",
+        "Healing_capsule",
         "Surgery_robot_arm",
         "Surgery_robot_arms"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 39,
-      "signature": "8b609c0e353fed6b767fc163812dd973cf6bc3ca6390cd588f4e6e592dd311dd"
+      "placements": 64,
+      "signature": "54f0eea391e09c0614a530db94979b27fba38d79bb715500bd7f409441b9e5f4"
     },
     {
       "source": "src/walk/sword-case.js",

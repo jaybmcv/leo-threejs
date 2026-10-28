@@ -162,6 +162,13 @@ try{
  {const lay=lyingIn(hammockSpots[4]);b.pose([-90,24.3,-25]);a.pose(lay.pos,{yaw:lay.yaw,rest:'lie'});await sleep(300);
   const swung=b.poses.get(a.id),found=swung&&hammocks.hammockAt({x:swung.pos[0],y:swung.pos[1],z:swung.pos[2]});
   check('rest: a visitor lying in a lounge hammock is seen lying in that hammock',swung?.rest==='lie'&&found===lay.spot,JSON.stringify(swung&&{pos:swung.pos.map(v=>+v.toFixed(3)),rest:swung.rest,hammock:!!found}));}
+ // Standing in a healing capsule in the Deck 5 surgical suite (the walk's surgery.js): seen standing on its floor,
+ // 0.24 m up, not sitting or lying; then out again, back on the suite's floor.
+ b.pose([-63.3,-23.7,-42]);a.pose([-63.3,-23.46,-47],{yaw:0});await sleep(300);
+ const capsuled=b.poses.get(a.id);
+ check('rest: a visitor in a surgical suite healing capsule is seen standing in it',!!capsuled&&!capsuled.rest&&Math.abs(capsuled.pos[0]+63.3)<.01&&Math.abs(capsuled.pos[1]+23.46)<.01&&Math.abs(capsuled.pos[2]+47)<.01,JSON.stringify(capsuled&&{pos:capsuled.pos,rest:capsuled.rest}));
+ a.pose([-63.3,-23.7,-45.6]);await sleep(300);
+ check('rest: out of the capsule, they are seen back on the floor',Math.abs(b.poses.get(a.id)?.pos[1]+23.7)<.01);
  // Paws Off on a Deck 16 exercise studio treadmill (src/walk/paws-off): a runner on the belt is seen there, playing; after
  // a fall, on their back behind it, still playing; stepped off, no longer playing.
  b.pose([5,20.3,-44]);a.pose([7,20.56,-47.79],{yaw:Math.PI,pl:true});await sleep(300);
