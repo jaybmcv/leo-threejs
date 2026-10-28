@@ -12,7 +12,7 @@ import {createAft} from '../src/aft.js';
 import {applyConceptDetail,hullSurface} from '../src/concept-detail.js';
 import {FIN_TOUR} from '../src/aft-tour.js';
 import {LIFTS} from '../src/walk/lifts.js';
-import {FIN_GATE} from '../src/fin-crown.js';
+import {FIN_GATE} from '../src/fin-gate.js';
 // The concept shape pass runs in the viewer on both the lossless and the streamed (quantized) exterior.
 const out='output/leo-interior-v01/';
 async function load(name){const b=await fs.readFile(out+name);const g=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');g.scene.traverse(o=>{const a=g.parser.associations.get(o);if(a?.nodes!==undefined)o.name=g.parser.json.nodes[a.nodes].name||o.name;else if(o.isMesh&&a?.meshes!==undefined)o.name=o.parent.name;});return g.scene.getObjectByName('01_EXTERIOR_REFINED_V31');}

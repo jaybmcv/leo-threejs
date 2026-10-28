@@ -1,6 +1,7 @@
 import {TRANSIT_CORES,floorY} from '../transit.js';
 import {shapePoint} from '../concept-shape.js';
-import {CROWN,FIN_PLATFORMS,FIN_GATE} from '../fin-crown.js';
+import {CROWN,FIN_PLATFORMS} from '../fin-crown.js';
+import {FIN_GATE} from '../fin-gate.js';
 
 // Every passenger and service lift aboard, as data for walk mode and its checks. `car` is the car's plan centre and
 // size, `door` the side of the car its doors face (axis and sign) and `stops` the floor heights it serves, after the

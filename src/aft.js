@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {finishAft} from './aft-finish.js';
-import {createFinCrown,CROWN,FIN_PLATFORMS,FIN_GATE} from './fin-crown.js';
-import {finDropSqueeze} from './concept-shape.js';
+import {createFinCrown,CROWN,FIN_PLATFORMS} from './fin-crown.js';
+import {FIN_GATE,finDropSqueeze} from './fin-gate.js';
 import {addAftEnclosures} from './aft-enclosures.js';
 import envelope from './assets/aft-envelope.json' with {type:'json'};
 import {unionRectangles,slabGeometry} from './floor-geometry.js';

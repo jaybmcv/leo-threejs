@@ -5419,7 +5419,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 27,
-      "signature": "fd5f6887575d2b585e21d6ec7e2698001479f610ae8505d3e6f1f2779b0e95a9"
+      "signature": "67125cc18d461248fd113f3763bc34999ee49e21186eaba04b76610743356d69"
     },
     {
       "source": "src/area-finish.js",
@@ -5531,7 +5531,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "d7f16574160750d0b1fcef4ebcbfe63ef2d20d9203fc4148227ce739f59e9e42"
+      "signature": "7f2c7834077c1d170d81bfdbf4457c12a4808a2fb46177f72407ae0fcf9bbb6b"
     },
     {
       "source": "src/cosmo.js",
@@ -5665,7 +5665,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 34,
-      "signature": "fc8523196b9e38c0431f1673ebf911778b44ffd504d9aadcc447253fc72a0316"
+      "signature": "9699dd3f24ae0eb86e9462675b3a38e6d7c5b2caefc8033a411625d8d2440d0a"
     },
     {
       "source": "src/forward-polish.js",
@@ -6882,7 +6882,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "478739fde91f6b06dab73536544ddec4e5420e6c25178e55cbe9222b1b50f5d0"
+      "signature": "26f131e33c0fc5487f399f1e383e15df579eaab40abc8aba88dab96a3c496649"
     },
     {
       "source": "src/walk/link.js",
@@ -7309,7 +7309,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 25,
-      "signature": "225428b90d354d36b1bb6b4308f10cf09cbba24bcea5c484ae5d41be8cfdbf88"
+      "signature": "ce6bbcd6319cb5b14cfe3dced2492b2bd2ef348165c648a94b98b73fbcf2d31e"
     },
     {
       "source": "src/walk/surgery.js",
