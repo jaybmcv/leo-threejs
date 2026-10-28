@@ -6398,7 +6398,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 1,
-      "signature": "a6190d0630fa27bdeacf9ea57df791636ec1bdedf36b508a1ea036947a621c00"
+      "signature": "c4590c922e7543da702bb372c7b81367b7bc2ab18a87e13d5d0e98a9ad15d41b"
     },
     {
       "source": "src/walk/changes-board.js",
