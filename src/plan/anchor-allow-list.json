@@ -4,7 +4,9 @@
       "src/aft*.js",
       "src/engineering-dressing.js",
       "src/fin-*.js",
-      "src/walk/fin-casing.js"
+      "src/walk/fin-casing.js",
+      "src/walk/graffiti.js",
+      "src/walk/graffiti-wall.js"
     ],
     "room": "aft-machinery",
     "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign."

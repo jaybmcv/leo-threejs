@@ -53,6 +53,7 @@ import {KITTEN_POSE_NAMES} from './kittens.js';
 import {createAtriumKittens} from './arrival-atrium.js';
 import {createSurgeryArms} from './surgery.js';
 import {createFinCasing} from './fin-casing.js';
+import {createGraffiti} from './graffiti.js';
 import {createInvasion} from './invasion/game.js';
 import {createPawPool} from './pool/game.js';
 import {createPawsOff} from './paws-off/game.js';
@@ -166,7 +167,7 @@ async function buildShip(){
  // Short railings where a floor drops away (railings.js; planned at build time too).
  ship.inside.add(railingMesh(walkPlan.rails));
  // The fin root comes down through Deck 19's aft lift lobby; a clad casing boxes it in (fin-casing.js).
- ship.inside.add(createFinCasing());
+ const casing=createFinCasing();ship.inside.add(casing);casing.updateWorldMatrix(true,false);const casingFrame=casing.matrixWorld.clone();
  // (The exterior model carries its own copy of the crown lounge, static car floor and all.)
  ship.root.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
  // The main lift shafts are walled in nearly clear glass, so with the car away the shaft read as an open drop at your
@@ -241,6 +242,10 @@ async function buildShip(){
  if(swordCase)toBand(swordCase.group);
  if(halloween)toBand(halloween.group);
  toBand(hexFloor.group);
+ // The shared graffiti wall on the casing's main face (graffiti.js), drawn with Deck 19's band.
+ graffiti=createGraffiti(casing.userData.paintFace,casingFrame,{bar:$('spray'),colours:$('spray-colours'),nozzles:$('spray-nozzles'),note:$('spray-note'),connect:$('spray-connect'),done:$('spray-done'),surface:$('viewport')},
+  {live:()=>live,connect,onOpen(){emote=null;input.enabled=false;input.down.clear();},onClose(){input.enabled=true;input.down.clear();}});
+ toBand(graffiti.mesh);
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
@@ -253,7 +258,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -307,6 +312,7 @@ const actions={
   else if(t.kind==='packs'){closePanels();const w=$('mudwater-wordmark');if(mudwater.wordmark&&!w.src){w.src=mudwater.wordmark;w.hidden=false;}giveaway.open();$('mudwater-sheet').hidden=false;input.enabled=false;}
   else if(t.kind==='ball')enterBall();
   else if(t.kind==='ball-out')leaveBall();
+  else if(t.kind==='graffiti'){closePanels();graffiti.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
  },
  escape(){closePanels();},
@@ -331,6 +337,8 @@ const actions={
  // A key pressed while a sheet is open: the key that opened it closes it, and the emote sheet takes 1-0.
  sheet(code){
   const open=id=>!$(id).hidden;
+  // E puts the spray can down again.
+  if(graffiti?.active&&code==='KeyE'){closePanels();return;}
   if((code==='KeyB'&&open('emotes'))||(code==='KeyN'&&open('map-sheet'))||(code==='KeyM'&&open('places'))||(code==='KeyH'&&open('help-sheet'))){closePanels();return;}
   if(open('emotes')&&/^Digit[0-9]$/.test(code)){closePanels();actions.emote((+code.slice(5)+9)%10);}
   if(open('comic-sheet'))reader.key(code);
@@ -424,7 +432,7 @@ if(LIVE_URL){
    chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);},
   // A line of chat: in the corner, and over the speaker's head.
   chat:line=>{chat.add(line);if(line.id!==live.id&&!chat.quiet)remotes.say(line.id,line.text);},said:r=>chat.refused(r.why),
-  poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();},
+  poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
   board:b=>(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
@@ -433,6 +441,8 @@ if(LIVE_URL){
   selfie:(id,ms)=>booth?.start(ms),
   // Mudwater Arena's giveaway card (mudwater-giveaway.js): its state, and a claim's answer.
   giveaway:g=>giveaway.status(g),claimed:r=>giveaway.claimed(r),clown:r=>halloween?.got(r.code),
+  // The Deck 19 graffiti wall (graffiti.js): the wall as it is, others' strokes as they spray, and ours refused.
+  wall:w=>graffiti?.wall(w),stroke:s=>graffiti?.stroke(s),painted:r=>graffiti?.painted(r),
  },{pass:()=>me.pass?bestPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
@@ -454,7 +464,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,mudwater,changeLog,comics,paintings,missionHolo,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get gaming(){return gaming;},get provisions(){return provisions;},get blossom(){return blossom;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,mudwater,changeLog,comics,paintings,missionHolo,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get gaming(){return gaming;},get provisions(){return provisions;},get blossom(){return blossom;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -532,8 +542,10 @@ renderer.setAnimationLoop(()=>{
   turnRate,accel,rise:controller.velocity.y,emote,rest:pose});
  live?.pose(myPose(riding),now);
  follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:WALKER.height);
- // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle).
- walker.holder.visible=follow.mode!=='first'&&follow.current>.75;
+ // Spraying the graffiti wall, the view squares up to it (graffiti.js), and its paint catches up.
+ graffiti?.update(camera,now);
+ // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle), or is off at the wall.
+ walker.holder.visible=follow.mode!=='first'&&follow.current>.75&&!graffiti?.active;
  cull(p);
  remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
  // The lounge's doors open, and the cold room's strip curtain parts, for anyone near them.
@@ -548,7 +560,7 @@ renderer.setAnimationLoop(()=>{
  missionHolo?.update(dt,p);
  surgeryArms?.update(dt,p);
  marks?.update(camera,p,now);
- if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);
+ if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);graffiti?.load(p);
   // Walking into Mudwater Arena counts as a visit (server/arena.mjs).
   const inArena=!!mudwater?.contains(p);if(inArena&&!wasInArena)live?.arena('enter');wasInArena=inArena;}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
@@ -585,10 +597,11 @@ function showPhoto(blob){
 }
 function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a));return a+d*(1-Math.exp(-lambda*dt));}
 
-// What's in front of the walker to use: a lift (call button or car panel) first, then the selfie camera, a comic book,
+// What's in front of the walker to use: a lift (call button or car panel) first, then the graffiti wall, the selfie camera, a comic book,
 // a ship log board, the telescope or an arcade cabinet, then a seat or bed.
 function target(){
  const p=controller.position,l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
+ const w=graffiti?.near(p);if(w)return w;
  const b=booth.near(p)||comics.near(p);if(b)return b;
  const g=changeLog.near(p);if(g)return g;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
@@ -606,7 +619,7 @@ function hud(p){
  const near=changeLog.nearby(p).length,chip=$('changes-here');
  if(chip.dataset.count!==String(near)){chip.dataset.count=String(near);chip.hidden=!near;chip.querySelector('b').textContent=String(near);
   chip.querySelector('span').textContent=near===1?' change here':' changes here';chip.setAttribute('aria-label',`${near} change${near===1?'':'s'} made around here: open the ship log`);}
- const t=run?null:resting?{label:resting.lie?'Get up':'Stand up'}:target();
+ const t=run||graffiti?.active?null:resting?{label:resting.lie?'Get up':'Stand up'}:target();
  const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=!show||touch;
  // Waiting for a called lift there's nothing to press: the prompt just says where the car is.
  const waiting=t?.kind==='waiting';prompt.classList.toggle('waiting',waiting);$('use').disabled=waiting;
@@ -688,7 +701,7 @@ function goTo(place){place=remapSpot(place);const q=findStand(colliders,place.at
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','clown-sheet','help-sheet'])$(id).hidden=true;chat.close();input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','clown-sheet','help-sheet'])$(id).hidden=true;chat.close();graffiti?.close();input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.

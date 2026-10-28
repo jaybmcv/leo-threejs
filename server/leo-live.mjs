@@ -14,6 +14,9 @@
 //   LEO_LIVE_CHAT_LOG=...             where the last 100 chat lines are kept (default ../leo-live-chat.json, beside the checkout)
 //   LEO_LIVE_HALLOWEEN=...            the Halloween clown's badge code as {"code":"..."} (default ../leo-live-halloween.json, beside
 //                                     the checkout), read at each ask: with no file the clown has no code yet
+//   LEO_LIVE_GRAFFITI=...             where the Deck 19 graffiti wall's paint is kept (default ../leo-live-graffiti.json)
+//   LEO_LIVE_GRAFFITI_CLEAR=...       the file that, once created, clears the wall (default ../leo-live-graffiti-clear;
+//                                     node scripts/graffiti-clear.mjs): graffiti.mjs
 //
 // Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
 // server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
@@ -32,6 +35,7 @@ import {encodeRecord,encodeIdentity,assembleFrame,actorIdOf,cleanName,cleanChat,
 import {keySet,verifyPass,REMEMBER_S} from '../src/walk/net/pass.js';
 import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
 import {createArena} from './arena.mjs';
+import {createGraffiti} from './graffiti.mjs';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||150);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -45,13 +49,15 @@ const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
 // name, scores and hearts count, but a giveaway claim wants a fresh one (arena.mjs).
 const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',lapsed:REMEMBER_S,
  key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
-const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6],chat:[.5,5],clown:[.2,3]};
+const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6],chat:[.5,5],clown:[.2,3],wall:[.5,3],paint:[12,24]};
 
 const visitors=new Set();
 const slots=new Map();let nextSlot=1;
 const lifts=LIFTS.map(spec=>({spec,stops:spec.stops,state:liftState(spec),sent:''}));
 const log=(...a)=>console.log(new Date().toISOString(),...a);
 const arena=createArena({log});
+// The graffiti wall on Deck 19's fin root casing (graffiti.mjs): its paint, kept in a file, and who painted it.
+const graffiti=createGraffiti({send:(v,msg)=>send(v.ws,msg),log});
 
 function send(ws,msg){if(ws.readyState===1)ws.send(typeof msg==='string'||msg instanceof Uint8Array?msg:JSON.stringify(msg));}
 function broadcast(msg,except){const text=JSON.stringify(msg);for(const v of visitors)if(v.ready&&v!==except)send(v.ws,text);}
@@ -212,6 +218,7 @@ async function hello(v,msg){
 function leave(v){
  if(!visitors.delete(v))return;
  if(v.slot)slots.delete(v.slot);
+ graffiti.leave(v);
  if(v.ready){broadcast({m:'gone',id:v.id});countChanged=true;log('aboard',aboard(),'-',v.id);}
 }
 const aboard=()=>{let n=0;for(const v of visitors)if(v.ready)n++;return n;};
@@ -249,6 +256,10 @@ function onMessage(v,data,binary){
   case 'chat':chat(v,msg);break;
   // A knock on the Halloween clown's glass (walk/halloween.js): its badge code, if there is one yet.
   case 'clown':if(allowed(v,'clown'))clown(v);break;
+  // The Deck 19 graffiti wall (graffiti.mjs): the whole wall for a visitor come to look, and a stroke of spray paint.
+  // A stroke over the limit is refused, and the painter told, so their page can take the wall back as it is.
+  case 'wall':if(allowed(v,'wall'))graffiti.look(v);break;
+  case 'paint':graffiti.paint(v,msg,{slow:!allowed(v,'paint')});break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;
