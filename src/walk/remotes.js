@@ -97,10 +97,10 @@ export class RemotePlayers{
   const e=r.rest*r.rest*(3-2*r.rest),lie=r.restKind==='lie';
   w.body.rotation.set(lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.rest,.25,1):0,0,0);
   const t=r.tgt,belt=t.playing&&!t.rest&&this.running?.(c);
-  // Rolling in a hamster ball (hamster-ball.js): crouched inside one of this page's own, rolled by their stride.
+  // Rolling in a hamster ball (hamster-ball.js): standing inside one of this page's own, rolled by their stride.
   if(t.ball&&!t.rest){if(!r.ball)r.ball=createBallMesh();if(!r.ball.mesh.parent)this.scene.add(r.ball.mesh);r.ball.mesh.position.set(c.x,c.y,c.z);
    r.ball.roll(dt,Math.sin(c.yaw)*r.speed,Math.cos(c.yaw)*r.speed);}else r.ball?.mesh.removeFromParent();
-  w.update(dt,{speed:r.rest?0:belt?RUN_ON_BELT:r.speed,grounded:t.grounded,stance:t.ball?'crouch':t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
+  w.update(dt,{speed:r.rest?0:belt?RUN_ON_BELT:r.speed,grounded:t.grounded,stance:t.ball?'stand':t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
    emote:t.emote,rest:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c)}:null});
   // A captain's hat is ~200k triangles: past HAT_M it is a few pixels, and not drawn.
   if(w.hat&&r.distance>HAT_M)w.hat.mount.visible=false;

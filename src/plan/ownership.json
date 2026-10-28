@@ -6524,7 +6524,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "5b48925358238057ab7bf295d342e222dd92d6115b92df0e7b5b9db499cda655"
+      "signature": "bf5dbff1761beff801fd379654f774a323aab02058addda1659e023a34b7aaba"
     },
     {
       "source": "src/walk/deck-map.js",
@@ -6666,7 +6666,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "699ad0ff7bfddeed8011d048aae4f91dc4d2fd37cebb2593379d55c509755e3b"
+      "signature": "128a292673408c115d0e9fc8c95a03d4cf86dc066497cc7f2de6d5295260480a"
     },
     {
       "source": "src/walk/hat.js",
@@ -6693,7 +6693,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "a5863b2056a24ef0bdb586af6908792a3fba282115f7a880d0cdab173b4997a7"
+      "signature": "a31902fc4111f793121e366996d916210915293b1090401f8d53c422008b7f5b"
     },
     {
       "source": "src/walk/hex-floor.js",
@@ -7069,7 +7069,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 33,
-      "signature": "21959b885b7a7d03f43297b596e23836a7ea5e43ca561c1698eab9af141d3a58"
+      "signature": "98af2e95d005d03fa8d14b58edfbcd2118ddceb74444daee73bc8e25cc9d791f"
     },
     {
       "source": "src/walk/marks.js",
@@ -7369,7 +7369,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "ad039053e18bdbe1348244ac1b82e03e8ba94307ad9b7ddc951f29db3b021f42"
+      "signature": "a59cc1d44107dbd4416bdcb8e7254efd94c30a0e2bc87bda5c350997590929eb"
     },
     {
       "source": "src/walk/render-bake.js",

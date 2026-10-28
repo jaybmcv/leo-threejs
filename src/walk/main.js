@@ -397,7 +397,7 @@ for(const y of yarns)scene.add(y.mesh);
 // The hamster ball (hamster-ball.js), parked in the Deck 17 gardens until someone climbs in.
 const ballHome=findStand(colliders,BALL.home,{radius:4})||new T.Vector3(...BALL.home),ball=createBallMesh();let inBall=false;
 ball.mesh.position.copy(ballHome);scene.add(ball.mesh);
-function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());controller.stance='crouch';}
+function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());}
 // Out of the ball, Cosmo stands where it was and steps clear of it; it stays parked there.
 function leaveBall(){if(!inBall)return;inBall=false;controller.body=BODY;controller.stance='stand';ball.mesh.position.copy(controller.position);}
 document.body.dataset.ready='1';
@@ -509,8 +509,8 @@ renderer.setAnimationLoop(()=>{
  // Riding a moving car, the car carries the walker; it passes slab edges and the hull skin, which must not push.
  const riding=lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
- // In the ball there is no jumping.
- if(!resting&&!riding&&!run){acc+=dt;let pressed=k.jump&&!inBall;while(acc>=STEP){controller.step(STEP,wish,pressed||(k.held&&!inBall));pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ // In the ball the jump is one low hop (BALL.body.jump).
+ if(!resting&&!riding&&!run){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
  const p=controller.position;
  // The parked ball is solid to walk into.
@@ -540,7 +540,7 @@ renderer.setAnimationLoop(()=>{
   walker.body.rotation.set((-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(run.tumble,.25,1),0,0);
   if(run.tumble>0)pose={kind:'lie',weight:run.tumble,seatHeight:walker.hipHeight};}
  if(!resting&&!run){walker.holder.position.copy(p);walker.holder.rotation.set(0,heading,0);walker.body.rotation.set(0,0,0);}
- if(inBall){controller.stance='crouch';ball.mesh.position.copy(p);ball.roll(dt,controller.velocity.x,controller.velocity.z);}
+ if(inBall){ball.mesh.position.copy(p);if(controller.grounded)ball.roll(dt,controller.velocity.x,controller.velocity.z);}
  walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
   turnRate,accel,rise:controller.velocity.y,emote,rest:pose});
  live?.pose(myPose(riding),now);
