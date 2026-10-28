@@ -42,7 +42,7 @@ const FIND=[
  ['Alien Cat Invasion','The telescope in the Deck 18 observation lounge, and the Hydro-Nip Lounge arcade on Deck 17'],
  ['Paw Pool','The Recreation hall’s table on Deck 16, and the same arcade'],
  ['Paws Off','A typing run on the Deck 16 exercise studio’s treadmills'],
- ['Hamster ball','Parked in the Deck 17 gardens: climb in and roll it round the ship'],
+ ['Hamster ball','Parked in the Deck 17 gardens: climb in and roll it round the ship, fast, with a hop on Space'],
  ['Group photo','The crown lounge camera counts down five seconds: get in the shot'],
  ['Comics and yarn','Comic books lying about to read, and neon balls of yarn to push'],
 ];

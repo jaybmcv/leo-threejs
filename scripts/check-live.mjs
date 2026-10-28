@@ -39,8 +39,8 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  check('wire: a still walking pose is 14 bytes',encodeRecord(1,poses[0]).length===14);
  const playing=decodeFrame(assembleFrame([],[encodeRecord(1,{...poses[0],playing:true}),encodeRecord(2,poses[0])]));
  check('wire: a pose says when its visitor is playing Alien Cat Invasion',playing?.poses[0].pose.playing===true&&playing.poses[1].pose.playing===false);
- const rolling=decodeFrame(assembleFrame([],[encodeRecord(1,{...poses[0],ball:true,stance:'crouch'}),encodeRecord(2,poses[0])]));
- check('wire: a pose says when its visitor is rolling in a hamster ball',rolling?.poses[0].pose.ball===true&&rolling.poses[0].pose.stance==='crouch'&&rolling.poses[1].pose.ball===false);
+ const rolling=decodeFrame(assembleFrame([],[encodeRecord(1,{...poses[0],ball:true,stance:'stand'}),encodeRecord(2,poses[0])]));
+ check('wire: a pose says when its visitor is rolling in a hamster ball',rolling?.poses[0].pose.ball===true&&rolling.poses[0].pose.stance==='stand'&&rolling.poses[1].pose.ball===false);
  const torn=[frame.slice(0,frame.length-1),Uint8Array.of(0x4c,9,0,0,0,0),randomBytes(40)];
  check('wire: torn, foreign and random frames are dropped',torn.every(f=>decodeFrame(f)===null));
  let threw=0;for(const bad of [{...poses[0],pos:[NaN,0,0]},{...poses[0],pos:[1e6,0,0]},{...poses[0],stance:'fly'},{...poses[0],jumpCount:9}])try{encodeRecord(1,bad);}catch{threw++;}
@@ -186,10 +186,14 @@ try{
   a.pose([off.x-.6,t.floor,off.z]);await sleep(300);
   check('paws off: stepped off the arcade treadmill, they are no longer playing',b.poses.get(a.id)?.playing===false&&!b.poses.get(a.id)?.rest);}
  // The hamster ball in the Deck 17 gardens (src/walk/hamster-ball.js): one visitor climbs in and rolls off; another
- // standing nearby sees them in the ball, crouched, where it rolled; climbed out, no longer in one.
- b.pose([135,24.3,20]);a.pose([137.4,24.3,21.7],{st:'crouch',b:true});await sleep(250);a.pose([139.2,24.3,23.1],{yaw:.9,st:'crouch',b:true});await sleep(300);
+ // standing nearby sees them in the ball, upright, where it rolled, and the hop they take in it; climbed out, no longer in one.
+ b.pose([135,24.3,20]);a.pose([137.4,24.3,21.7],{b:true});await sleep(250);a.pose([139.2,24.3,23.1],{yaw:.9,b:true});await sleep(300);
  const rolled=b.poses.get(a.id);
- check('hamster ball: a visitor rolling in the ball is seen in it, crouched, where it rolled',rolled?.ball===true&&rolled.stance==='crouch'&&Math.abs(rolled.pos[0]-139.2)<.01&&Math.abs(rolled.pos[2]-23.1)<.01,JSON.stringify(rolled&&{pos:rolled.pos,ball:rolled.ball,stance:rolled.stance}));
+ check('hamster ball: a visitor rolling in the ball is seen in it, upright, where it rolled',rolled?.ball===true&&rolled.stance==='stand'&&Math.abs(rolled.pos[0]-139.2)<.01&&Math.abs(rolled.pos[2]-23.1)<.01,JSON.stringify(rolled&&{pos:rolled.pos,ball:rolled.ball,stance:rolled.stance}));
+ // The hop: one jump of about half a metre, seen by the other visitor in the air, still in the ball.
+ a.pose([139.2,24.75,23.1],{yaw:.9,b:true,g:false,jc:1,js:.2,r:1.5});await sleep(300);
+ const hop=b.poses.get(a.id);
+ check('hamster ball: a visitor hopping in the ball is seen in the air in it',hop?.ball===true&&hop.grounded===false&&hop.jumpCount===1&&Math.abs(hop.pos[1]-24.75)<.01&&hop.stance==='stand',JSON.stringify(hop&&{pos:hop.pos,ball:hop.ball,grounded:hop.grounded,jc:hop.jumpCount}));
  a.pose([139.2,24.3,23.1],{yaw:.9});await sleep(300);
  check('hamster ball: climbed out, they are no longer seen in a ball',b.poses.get(a.id)?.ball===false&&b.poses.get(a.id)?.stance==='stand');
  const junk=new Bot(PORT,{name:'Junk'});await junk.welcomed();junk.pose([136,24.3,20],{b:'yes'});await sleep(300);

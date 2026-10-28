@@ -6471,7 +6471,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "5b48925358238057ab7bf295d342e222dd92d6115b92df0e7b5b9db499cda655"
+      "signature": "bf5dbff1761beff801fd379654f774a323aab02058addda1659e023a34b7aaba"
     },
     {
       "source": "src/walk/deck-map.js",
@@ -6598,7 +6598,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 43,
-      "signature": "ffb8f127047cb67e800b0b17d245914668c566f24fad0578bb295b69ae14197a"
+      "signature": "ba6b91640160b0c441e594e87b713eca2a492c9ee672a3360054fa1b8cbca549"
     },
     {
       "source": "src/walk/hamster-ball.js",
@@ -6613,7 +6613,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "699ad0ff7bfddeed8011d048aae4f91dc4d2fd37cebb2593379d55c509755e3b"
+      "signature": "128a292673408c115d0e9fc8c95a03d4cf86dc066497cc7f2de6d5295260480a"
     },
     {
       "source": "src/walk/hat.js",
@@ -6640,7 +6640,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "a5863b2056a24ef0bdb586af6908792a3fba282115f7a880d0cdab173b4997a7"
+      "signature": "a31902fc4111f793121e366996d916210915293b1090401f8d53c422008b7f5b"
     },
     {
       "source": "src/walk/hex-floor.js",
@@ -6958,7 +6958,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 32,
-      "signature": "4fecf9c0795a3a480ad479ed36ed7883de42924bb4c0f83ae5e5c53f5c8820dc"
+      "signature": "2e03a41f7baf32de466504ae699356456bb10abd82a505a119c4f9e3ec148a42"
     },
     {
       "source": "src/walk/marks.js",
@@ -7257,7 +7257,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "ad039053e18bdbe1348244ac1b82e03e8ba94307ad9b7ddc951f29db3b021f42"
+      "signature": "a59cc1d44107dbd4416bdcb8e7254efd94c30a0e2bc87bda5c350997590929eb"
     },
     {
       "source": "src/walk/render-bake.js",

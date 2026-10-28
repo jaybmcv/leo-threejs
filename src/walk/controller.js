@@ -4,6 +4,7 @@ import {BODY} from './collision.js';
 // A floating capsule, as in Ecctrl and Voyager's Reach: the capsule spans `step` to `height` above the feet, so kerbs,
 // thresholds and stair risers below the step pass under it, and the feet follow the ground found by short rays.
 // Positions are the feet (the walker's origin); speeds are metres per second.
+// A body may set its own take-off speed `jump` and how many jumps it has (`jumps`, default 2); the hamster ball hops once, low.
 // The feel is Voyager's Reach's (world-core/src/sim/movement.ts): speed is reached and given up over a few frames,
 // turns grip, the air keeps the run that set it up, and the jump buffers an early press, forgives a late one off a
 // ledge, cuts short when let go, and has one more push in the air.
@@ -82,9 +83,9 @@ export class Controller{
   if(this.jumpS>=0)this.jumpS+=dt;
   if(this.grounded)this.jumpCount=0;
   // Coyote time spends the ground jump; after it a ledge fall has only the air jump left.
-  const footing=this.grounded||(this.airTime<=MOVE.coyote&&this.jumpCount===0),air=!footing&&pressed&&this.jumpCount<2;
+  const footing=this.grounded||(this.airTime<=MOVE.coyote&&this.jumpCount===0),air=!footing&&pressed&&this.jumpCount<(this.body.jumps??2);
   if((footing&&this.jumpBuffer>0)||air){
-   this.stance='stand';this.slideS=0;this.jumpCount=footing?1:2;this.velocity.y=MOVE.jump;this.grounded=false;this.jumpBuffer=0;this.jumpS=0;
+   this.stance='stand';this.slideS=0;this.jumpCount=footing?1:2;this.velocity.y=this.body.jump??MOVE.jump;this.grounded=false;this.jumpBuffer=0;this.jumpS=0;
   }else if(this.jumpS>=MOVE.minJump&&!held&&this.velocity.y>0){this.velocity.y*=MOVE.cut;this.jumpS=-1;}
  }
  // Horizontal: the velocity approaches the wish at a limited rate, one rate for the pair so a diagonal turn takes as
