@@ -24,6 +24,7 @@ import {dressImaging} from './imaging.js';
 import {createJaguarGate} from './jaguar-gate.js';
 import {createLoungeEntranceSigns} from './lounge-entrance-signs.js';
 import {createArcade} from './arcade.js';
+import {createVault} from './vault.js';
 import {placeAttendant,dressTheatre,createTheatreCast} from './theatre.js';
 import {dressGamingLounge} from './gaming-lounge.js';
 import {createMissionHolo} from './mission-holo.js';
@@ -101,6 +102,9 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // The arcade row on the Hydro-Nip Lounge's forward wall, Paws Off's treadmill at its far end (arcade.js): solid as plain
  // boxes.
  const arcadeRow=createArcade();if(arcadeRow)colliders.addStatic(arcadeRow.solid,()=>true);
+ // Behind the arcade, the hidden clubhouse's walls and vault door frame (vault.js): solid as plain boxes, the way in
+ // left open (the page makes the door itself solid).
+ const vault=createVault(ship);colliders.addStatic(vault.solid,()=>true);
  // Mission control's holographic table (mission-holo.js): its pedestal and top solid as a plain cylinder.
  const missionHolo=createMissionHolo(ship,{anisotropy,still});if(missionHolo)colliders.addStatic(missionHolo.solid,()=>true);
  // The Captain's office's gold sword case under its spotlight (sword-case.js): solid as a plain box.
@@ -108,5 +112,5 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,missionHolo,swordCase,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,missionHolo,swordCase,mudwater};
 }

@@ -199,6 +199,8 @@ async function buildShip(){
  const {pipework,trolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;
+ // The hidden clubhouse's vault door behind the arcade (vault.js): solid here, as a movable collider of its own.
+ vault=prepared.vault;vault.attach(colliders);
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged; and
  // on the arcade's treadmill. With Leo live, a run joins the gym round (server/gym.mjs).
  pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),more:arcadeRow?[arcadeRow.treadmill]:[],gym:msg=>!!live?.gym(msg),me:()=>live?.id,onStart:startRun,onEnd:endRun});
@@ -226,6 +228,7 @@ async function buildShip(){
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
  for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pawsOff?pawsOff.groups:[]),...(mudwater?[mudwater.group]:[]),...(arcadeRow?[arcadeRow.group]:[])])toBand(o);
  if(concession)toBand(concession);
+ toBand(vault.group);
  if(provisions)toBand(provisions.group);
  if(pipework)toBand(pipework.group);
  if(kittens)toBand(kittens.group);
@@ -339,6 +342,8 @@ const actions={
   else if(t.kind==='play')arcade.open();
   else if(t.kind==='log')changeLog.open({near:controller.position});
   else if(t.kind==='pool')pool.open();
+  else if(t.kind==='vault')openVault();
+  else if(t.kind==='vault-exit')vault.release();
   else if(t.kind==='outside'){closePanels();emote=null;input.enabled=false;input.down.clear();openOutside($('outside-sheet'),$('outside-frame'));}
   else if(t.kind==='maze')maze.use(t);
   else if(t.kind==='treadmill')pawsOff.start(t.mill);
@@ -381,6 +386,12 @@ const actions={
  },
 };
 let emote=null,pinged=-Infinity;const PING_GAP_MS=4000;
+// The clubhouse vault behind the arcade (vault.js): its door, and the password sheet it asks with.
+let vault=null;
+const VAULT_ASK='This door opens only for the clubhouse password.';
+function openVault(){closePanels();emote=null;input.enabled=false;input.down.clear();$('vault-note').textContent=VAULT_ASK;$('vault-code').value='';$('vault-sheet').hidden=false;
+ // (After the key that opened it, so the E isn't typed into the field.)
+ setTimeout(()=>$('vault-code').focus());}
 const ready=()=>document.body.dataset.ready==='1';
 // The ship log boards (changes-board.js): the walk stands still while one is open; its hearts are Leo live's.
 // Go there in a change's details drops the walker where its pictures were taken, looking as they do.
@@ -508,6 +519,8 @@ if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={regist
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
+// (Debug: the vault, vault.js.)
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vault',{get:()=>vault});
 // The ship map: the corner mini-map, redrawn a few times a second, and the full map sheet.
 const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
 function sizeCanvas(c){const r=Math.min(devicePixelRatio||1,2),w=Math.round(c.clientWidth*r),h=Math.round(c.clientHeight*r);if(w&&h&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}}
@@ -543,6 +556,7 @@ renderer.setAnimationLoop(()=>{
  // A Paws Off run holds the walker on the treadmill (paws-off/game.js); the belts of others playing run too.
  run=pawsOff?.update(dt,remotes?[...remotes.remotes.values()].filter(r=>r.tgt?.playing).map(r=>r.cur):[])||null;
  mudwater?.update(dt);
+ vault?.update(dt,controller.position);
  // Riding a moving car, the car carries the walker; it passes slab edges and the hull skin, which must not push.
  const riding=lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
@@ -651,6 +665,7 @@ function target(){
  const p=controller.position,l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
  const w=graffiti?.near(p);if(w)return w;
  const b=booth.near(p)||comics.near(p);if(b)return b;
+ const v=inBall?null:vault?.near(p);if(v)return v;
  const g=changeLog.near(p);if(g)return g;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
  const q=poolTable?.near(p)||maze?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p)||leverPanel?.near(p);if(q&&!(inBall&&q.kind==='treadmill'))return q;
@@ -757,7 +772,7 @@ function goTo(place){place=remapSpot(place);const q=findStand(colliders,place.at
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();chat.close();graffiti?.close();input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();chat.close();graffiti?.close();input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
@@ -765,6 +780,9 @@ $('aboard').addEventListener('click',()=>{
  $('name-title').textContent=verified?`Aboard as ${live.you.name}`:'Your name';
  $('name-edit').value=savedName();$('name-sheet').hidden=false;input.enabled=false;if(!verified)$('name-edit').focus();});
 $('name-connect').addEventListener('click',connect);
+// The vault's password (vault.js): the right one opens the door; a wrong one says so and lets you try again.
+$('vault-form').addEventListener('submit',e=>{e.preventDefault();if(vault?.unlock($('vault-code').value)){closePanels();return;}
+ $('vault-note').textContent='That’s not the password. Try again.';$('vault-code').select();});
 $('name-form').addEventListener('submit',e=>{e.preventDefault();live?.rename($('name-edit').value.trim());closePanels();});
 for(const b of document.querySelectorAll('[data-close]'))b.addEventListener('click',closePanels);
 $('use').addEventListener('click',()=>actions.use());

@@ -149,6 +149,12 @@
     ],
     "via": null
   },
+  "src/walk/vault.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": null
+  },
   "src/walk/arrival-atrium.js": {
     "owners": [
       "arrival-assembly",
