@@ -14,6 +14,7 @@ import {prepareBlossomBed,createBlossomGarden} from './blossom.js';
 import {createDiningRobots} from './dining-robots.js';
 import {createHydrationNook} from './hydration-nook.js';
 import {createCargoTrolley} from './cargo-trolley.js';
+import {dressFreightGate,createFreightGate} from './freight-gate.js';
 import {dressSurgery} from './surgery.js';
 import {createMudwater} from './mudwater.js';
 import {createJaguarGate} from './jaguar-gate.js';
@@ -39,6 +40,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  dressGamingLounge(ship);
  // The Deck 5 surgical suite's beds give way to sculpted medical beds (surgery.js), solid and lie-on-able.
  dressSurgery(ship);
+ // Deck 1's aft spares room gains the freight gate's logistics console and its chair (freight-gate.js), solid and sittable.
+ dressFreightGate(ship);
  resolveRoomFrames(ship.root);
  const colliders=buildColliders(ship,{extra:[ship.exterior],filter:o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name),...(into?{into}:{})});
  afterBase?.(colliders);
@@ -62,6 +65,9 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const hydration=createHydrationNook(ship);if(hydration)colliders.addStatic(hydration.solid,()=>true);
  // Container hold A's parked hand trolley (cargo-trolley.js): solid as one plain box, clear of the aisle.
  const trolley=createCargoTrolley(ship);if(trolley)colliders.addStatic(trolley.solid,()=>true);
+ // The aft freight gate's iris, gantry, lanes and posters (freight-gate.js): its conveyors, transfer hatches and
+ // barricades solid as plain boxes, the iris and lane paint flush, the claw overhead dressing.
+ const freightGate=createFreightGate(ship,{still});if(freightGate)colliders.addStatic(freightGate.solid,()=>true);
  // The cherry blossom garden (blossom.js): its trunk, bridge and pond edges solid.
  const blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
  // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
@@ -78,5 +84,5 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,blossom,jaguarGate,entranceSigns,arcadeRow,missionHolo,swordCase,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,freightGate,blossom,jaguarGate,entranceSigns,arcadeRow,missionHolo,swordCase,mudwater};
 }

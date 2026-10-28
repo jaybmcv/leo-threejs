@@ -187,6 +187,12 @@
     ],
     "via": null
   },
+  "src/walk/freight-gate.js": {
+    "owners": [
+      "d01-spares-aft"
+    ],
+    "via": null
+  },
   "src/walk/gaming-lounge.js": {
     "owners": [
       "d16-training-aft"
