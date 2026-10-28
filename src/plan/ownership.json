@@ -6897,6 +6897,22 @@
       "signature": "4a246f122a0f43af402eb69be4fbe17639a7b036efce5f07dbf442afef9e3a3c"
     },
     {
+      "source": "src/walk/lounge-compass.js",
+      "rooms": [
+        "observation-lounge"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Observation_compass_inlay",
+        "Observation_compass"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "5d307ad53b8ada47487d4b976aef5db9bb759a94616cce966e1f71179cd49e56"
+    },
+    {
       "source": "src/walk/lounge-floor.js",
       "rooms": [
         "commons-1",
@@ -6958,7 +6974,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 32,
-      "signature": "e0dd41505b9dc8b6f1d8bf624ce575ed450a7ff905bcd9d581fc8d6d5a8d61c0"
+      "signature": "1bb1fc8116f79a777c5545a5eeee9baa9261d05a8c83495de6705ea89c35955c"
     },
     {
       "source": "src/walk/marks.js",

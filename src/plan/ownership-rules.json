@@ -357,6 +357,12 @@
     ],
     "via": null
   },
+  "src/walk/lounge-compass.js": {
+    "owners": [
+      "observation-lounge"
+    ],
+    "via": null
+  },
   "src/walk/hex-floor.js": {
     "owners": [
       "circulation-1"
