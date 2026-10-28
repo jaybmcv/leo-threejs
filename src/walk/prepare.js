@@ -17,6 +17,7 @@ import {createHydrationNook} from './hydration-nook.js';
 import {createCargoTrolley} from './cargo-trolley.js';
 import {stripHold,createMazeHold} from './maze/hold.js';
 import {stripCargoMaintenance,createMctBay} from './mct-bay.js';
+import {dressFreightGate,createFreightGate} from './freight-gate.js';
 import {dressSurgery} from './surgery.js';
 import {createMudwater} from './mudwater.js';
 import {dressImaging} from './imaging.js';
@@ -53,6 +54,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Deck 5's Diagnostics & imaging: sculpted scanners and glass dividers in place of its rings, benches and
  // partitions (imaging.js), solid, the beds lie-on-able.
  dressImaging(ship);
+ // Deck 1's aft spares room gains the freight gate's logistics console and its chair (freight-gate.js), solid and sittable.
+ dressFreightGate(ship);
  resolveRoomFrames(ship.root);
  const colliders=buildColliders(ship,{extra:[ship.exterior],filter:o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name),...(into?{into}:{})});
  afterBase?.(colliders);
@@ -82,6 +85,9 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // The Container Maze in the same hold (maze/hold.js): its container walls and walk-through containers solid as plain
  // boxes, the red button's console too.
  const maze=createMazeHold(ship);if(maze)colliders.addStatic(maze.solid,()=>true);
+ // The aft freight gate's iris, gantry, lanes and posters (freight-gate.js): its conveyors, transfer hatches and
+ // barricades solid as plain boxes, the iris and lane paint flush, the claw overhead dressing.
+ const freightGate=createFreightGate(ship,{still});if(freightGate)colliders.addStatic(freightGate.solid,()=>true);
  // The cherry blossom garden (blossom.js): its trunk, bridge and pond edges solid.
  const blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
  // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js): its rim, bed, causeway, landing and rope rails solid.
@@ -100,5 +106,5 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,mctBay,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,missionHolo,swordCase,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,missionHolo,swordCase,mudwater};
 }
