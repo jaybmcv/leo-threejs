@@ -227,6 +227,23 @@ try{
  check('lifts: the car comes to the landing that called it',!!arrived&&!arrived.s.calls.includes(stop),arrived?`after ${(b.lifts.indexOf(arrived))} updates`:'never');
  tab.send({m:'call',lift:'forward-port',stop:999});tab.send({m:'call',lift:'nowhere',stop:1});await sleep(200);
  check('lifts: calls to stops that do not exist are ignored',tab.closed===null);
+ // The crown lift at fin platform 1 (40 m, FIN_PLATFORMS in fin-crown.js): called from the landing there, the server's car
+ // comes and stops level with its floor, and a second call from the landing, after the car has gone, brings it back.
+ // Another visitor hears both. (A server still running the old 32 m stop left the car 8 m below the floor.)
+ {
+  const crown=LIFTS.find(l=>l.id==='crown'),p1=crown.stops.findIndex(s=>s.label==='Fin platform 1');
+  const wait=async(who,from,test)=>{let got=null;for(let i=0;i<250&&!got;i++){got=who.lifts.slice(from).find(l=>l.id==='crown'&&test(l.s));if(!got)await sleep(100);}return got;};
+  check('lifts: the crown lift stops at fin platform 1, 40 m up',p1>0&&Math.abs(crown.stops[p1].y-40)<1e-6,`stop ${p1} at ${crown.stops[p1]?.y}`);
+  const ask=async()=>{const from=b.lifts.length;tab.send({m:'call',lift:'crown',stop:p1});
+   const told=await wait(b,from,s=>s.calls.includes(p1)),level=await wait(b,from,s=>s.at===p1&&s.phase==='opening');return {told,level};};
+  const first=await ask();
+  check('lifts: a call from fin platform 1 reaches everyone aboard',!!first.told);
+  check('lifts: the crown lift stops level with fin platform 1, for the other visitor too',!!first.level&&Math.abs(first.level.s.y-40)<.001,first.level?`stopped at ${first.level.s.y} m`:'never came');
+  const from=b.lifts.length;tab.send({m:'call',lift:'crown',stop:0,now:true});
+  const gone=await wait(b,from,s=>s.at===0&&s.phase==='opening');
+  const second=gone&&await ask();
+  check('lifts: the call from fin platform 1 brings the crown lift back after it has left',!!second?.level&&Math.abs(second.level.s.y-40)<.001,second?.level?`stopped at ${second.level.s.y} m`:'never came back');
+ }
  // A ride as the rider's page sees it: the rider chooses Deck 1 in the car, the page steps its own car every frame and
  // hears the server 60-200 ms late (a real connection's lag, which comes and goes). The car must go one way all the way
  // down, never hopping back up.
