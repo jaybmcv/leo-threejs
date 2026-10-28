@@ -334,6 +334,12 @@
     ],
     "via": null
   },
+  "src/walk/chinampa.js": {
+    "owners": [
+      "d03-farm-1"
+    ],
+    "via": null
+  },
   "src/walk/comics.js": {
     "owners": [
       "crown",

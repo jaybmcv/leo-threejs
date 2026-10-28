@@ -6417,6 +6417,30 @@
       "signature": "9ec694913fb772f950a9421d4eacd0821809184465bc3a176a45c2dcdde05007"
     },
     {
+      "source": "src/walk/chinampa.js",
+      "rooms": [
+        "d03-farm-1"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Chinampa_tank",
+        "Chinampa_tank_colliders",
+        "Chinampa_light_beam",
+        "Chinampa_sign_back",
+        "Chinampa_sign_",
+        "Chinampa_tank_solid",
+        "Chinampa_bubbles"
+      ],
+      "colliders": [
+        "Chinampa_tank_colliders",
+        "Chinampa_tank_solid"
+      ],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 57,
+      "signature": "26dff98f4d6ceeb4f5dd728b4b52900f8e39f268d6c860c294b03bd649064feb"
+    },
+    {
       "source": "src/walk/collision.js",
       "rooms": [],
       "via": "frame boundary",
@@ -7101,7 +7125,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "25e97f4d98f2c94947081a5a89ff25daf2975ec0da0086a2f37f542028771429"
+      "signature": "0077761bebe4661589e4ac2d7e264f954d601975e2736eaaa9d4170a6692e2d1"
     },
     {
       "source": "src/walk/marks.js",
@@ -7332,7 +7356,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "f6083e51fb71001bac1ab3af3cc9aa588d476adadeee2f7f4f5d3133a8e3a50b"
+      "signature": "2aee72f2a1f1f7119e4a3744c6868204b8e5913bc8e2ce6f89a91307eec174ab"
     },
     {
       "source": "src/walk/provisions.js",
