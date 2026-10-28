@@ -71,6 +71,7 @@
       "src/walk/avatar.js",
       "src/walk/camera.js",
       "src/walk/hat.js",
+      "src/walk/catnip-face.js",
       "src/walk/marks.js",
       "src/walk/remotes.js",
       "src/walk/star-drift.js",

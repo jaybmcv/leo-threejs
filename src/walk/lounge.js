@@ -102,6 +102,8 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  const mural=createLoungeMural(frame,{left:HEADER});
  if(mural){mural.group.userData={band:bandOf(toWorld(0,mural.low,0).y),top:bandOf(toWorld(0,mural.top,0).y)};}
  const {ROOM}=LOUNGE,room=new T.Box3().setFromPoints([new T.Vector3(ROOM.x0,LOUNGE.FLOOR,ROOM.z0),new T.Vector3(ROOM.x1,LOUNGE.CEILING,ROOM.z1)]);
+ // The same room for bodies: their feet stand on its floor, so it reaches a little below.
+ const catnipRoom=room.clone().expandByVector(new T.Vector3(0,.3,0)),at=new T.Vector3();
  const panels=[];root.parent?.parent?.traverse(o=>{if(o.isMesh&&o.name==='Circadian_light')panels.push(o);});for(const o of panels)o.removeFromParent();
  {const sky=createLoungeSky(frame,ROOM,LOUNGE.CEILING-.16,uniforms.uTime);place(sky.geometry,sky.material,'Walk_lounge_glass_roof');}
  const glows=[];root.traverse(o=>{if(o.isMesh&&/^Lounge_(neon_glow|additive_glow)$/.test(o.material?.name)&&!glows.some(g=>g.m===o.material))glows.push({m:o.material,k:o.material.name==='Lounge_neon_glow'?MOOD.neon:MOOD.glow});});
@@ -133,5 +135,8 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
    mood+=((room.containsPoint(eye.clone().applyMatrix4(inverse))?1:0)-mood)*k;if(Math.abs(mood-shown)>.002||(mood<.002&&shown)){shown=mood<.002?0:mood;setMood(shown);}
   },
   swingOf,
+  // Whether a body's feet are in the room, galleries included: its catnip face (catnip-face.js) shows while they are.
+  // Every page works this out from each visitor's own position, so nothing more goes over Leo live.
+  inside:p=>catnipRoom.containsPoint(at.copy(p).applyMatrix4(inverse)),
  };
 }

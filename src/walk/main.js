@@ -435,7 +435,7 @@ let live=null,remotes=null,marks=null,aboard=0,liveStatus='',wasInArena=false;
 const giveaway=createGiveaway({$,live:()=>live,connect});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p)});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p)});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -555,7 +555,7 @@ renderer.setAnimationLoop(()=>{
  if(!resting&&!run){walker.holder.position.copy(p);walker.holder.rotation.set(0,heading,0);walker.body.rotation.set(0,0,0);}
  if(inBall){ball.mesh.position.copy(p);if(controller.grounded)ball.roll(dt,controller.velocity.x,controller.velocity.z);}
  walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
-  turnRate,accel,rise:controller.velocity.y,emote,rest:pose});
+  turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!!lounge?.inside(walker.holder.position)});
  live?.pose(myPose(riding),now);
  follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:WALKER.height);
  // Spraying the graffiti wall, the view squares up to it (graffiti.js), and its paint catches up.
