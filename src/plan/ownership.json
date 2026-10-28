@@ -7145,7 +7145,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 14,
-      "signature": "2b50dfd3c8335dc7da6d1aac878bc1ba60b9d250ead02e84b042970176c53983"
+      "signature": "91291191ede1ea931d2896c919ab504c0e704d780b91fbca2d8f35947b57d81b"
     },
     {
       "source": "src/walk/pool/rules.js",

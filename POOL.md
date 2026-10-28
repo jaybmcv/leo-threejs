@@ -11,7 +11,7 @@ A soccer-ball pool table on the Recreation Hall's blue activity floor (Deck 16),
   - Pot any ball in any order, against the clock. A result screen shows the clear time.
   - Mouse, touch and gamepad.
 - **Leaderboard (built):** fastest 1-player clear times, signed-in (verified Discord) players only. It is a second board in Invasion's store on the live server, not a new store. The server times the game and refuses impossibly fast clears.
-- **Stage 3 (later, after Jay sees stage 2):** 2-player 8-ball on the same computer, taking turns, with the usual rules and a winner screen. Online 2-player is parked.
+- **Stage 3, 2-player 8-ball (built):** two players on the same computer, taking turns, with the usual rules and a winner screen. Chosen on the title next to practice. Online 2-player against another visitor is parked.
 
 ## As built
 
@@ -19,18 +19,36 @@ A soccer-ball pool table on the Recreation Hall's blue activity floor (Deck 16),
 |---|---|---|
 | Rules | `src/walk/pool/rules.js` | Plain state and a fixed 240 Hz step, no drawing: the rack, the kick, rolling, balls meeting, cushions that open at each pocket's mouth, pockets, the cue ball coming back to the head spot after it drops, the clock, and the aim line's first contact |
 | Table | `src/walk/pool/table.js` | The 3D table, built in the walk only (the ship's models and exports are unchanged). It finds the hall's `Activity_floor` and sits on it. The playing area is 14 × 8 m inside 0.45 m rails, 0.45 m high, too high to step over. Turf with pitch markings (halfway line, centre circle, spots), navy rails with bronze inlays, six pockets with bronze rims, and the balls racked from the rules' own rack |
-| Screen | `src/walk/pool/game.js` | The overlay: title, play and result screens, the table from above (it stands up the long way on a tall screen), the aim line and ghost ball, Cosmo's leg, the power bar, the clock and the fifteen balls. Keys, mouse, touch and gamepad |
+| 8-ball | `src/walk/pool/eightball.js` | Plain state, no drawing: judges each 2-player shot once the balls stop (see "8-ball rules"), ball in hand, whose turn, the winner |
+| Screen | `src/walk/pool/game.js` | The overlay: title (practice or 8-ball), play and result screens, 8-ball's player cards, turn banner and winner screen, the table from above (it stands up the long way on a tall screen), the aim line and ghost ball, Cosmo's leg, the power bar, the clock and the fifteen balls. Keys, mouse, touch and gamepad |
 | Sound | `src/walk/pool/sound.js` | Synthesized kick, clicks, cushion, pocket and fanfare. It follows the walk's Sound toggle |
 | Walk | `src/walk/main.js` | E within 1.4 m of the table offers "Play Paw Pool". The walk stands still behind the game, and others see "· playing" under the name (the pose's existing playing flag) |
 | Leaderboard | `server/leo-live.mjs`, `src/walk/net/live.js` | Invasion's `play`, `score` and `board` messages with `game: 'pool'`. One fastest clear per verified player, kept in `leo-live-scores.json` beside Invasion's scores as entries marked `game: 'pool'` |
-| Checks | `scripts/check-pool.mjs` (in `npm run check`), `scripts/check-live.mjs` | The rules and a bot clearing whole racks; the server's pool board between two visitors |
+| Checks | `scripts/check-pool.mjs` (in `npm run check`), `scripts/check-live.mjs` | The rules and a bot clearing whole racks; each 8-ball rule on a shot set up by hand, ball in hand, and two bots playing whole matches to a winner; the server's pool board between two visitors |
 
 ## Controls
+
+On the title, click or tap a game, or pick one with ← → and rack it with Space (1 and 2 rack one directly). After a game, Space or a click plays again and M (or the MENU button, or Y on a gamepad) goes back to the title.
 
 - **Mouse:** point to aim. Hold the button to kick and let go at the power you want.
 - **Keys:** ← → (or A, D) turn the aim, and Shift turns it finer. Hold Space or Enter to kick. Esc returns to Leo.
 - **Touch:** drag on the table to aim, then hold the KICK button.
 - **Gamepad:** the left stick points the aim, the right stick or the d-pad turns it finely, and holding A kicks.
+- **Ball in hand (8-ball):** drag the cue ball with the mouse or a finger, or move it with W A S D (then only the arrows turn the aim) or the d-pad. Then aim and kick as usual.
+
+## 8-ball rules
+
+Two players take turns on one computer. Player 1 breaks the first rack, and the break alternates with each rematch. Nothing goes on the leaderboard.
+
+- **The break:** the breaker has ball in hand behind the head string (the dashed line). A ball potted on the break lets the breaker carry on, and the table stays open. The 8 potted on the break comes back to the foot spot.
+- **Groups:** the first player to pot a ball cleanly after the break takes that ball's group (solids 1-7 or stripes 9-15), by the first ball down if both kinds drop. Until then, on an open table, any ball but the 8 may be struck first.
+- **Turns:** a player carries on after potting one of their own without a foul. Otherwise the turn passes.
+- **Fouls:** the cue ball dropping, striking no ball, striking first a ball that isn't yours (the 8 once your group is down), or nothing dropping and no ball reaching a cushion after the cue ball meets one. The other player then has ball in hand anywhere (behind the head string after a scratch on the break). Balls potted on a foul stay down.
+- **The 8:** with your whole group down, pot the 8 cleanly to win. Potting it early, on the same kick as your last ball, with the cue ball or on a foul loses the game.
+- **Kept simple:** no called pockets (any pocket counts, the 8 too), and there is no rule on how many balls a break must drive to a cushion.
+
+The screen helps: a ring in the player's colour marks each ball they may strike first, the ghost ball turns orange when the shot as aimed would strike the wrong ball first, and a banner says who breaks, each foul, the groups and whose turn it is. The winner screen shows who won and how, and each player's group, kicks and fouls.
+
 
 ## The clock and the board
 

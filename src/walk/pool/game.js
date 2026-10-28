@@ -326,7 +326,8 @@ export function createPawPool({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
   // The banner: who breaks, a foul and ball in hand, groups taken, whose turn. It fades after two seconds.
   const age=banner?now-banner.at:Infinity;
   if(age<2400&&screen==='play'){
-   const bw=Math.min(440,w-40),bh=banner.sub?64:42,bx=(w-bw)/2,by=view.oy-(view.tall?OUTER[0]:OUTER[1])/2*view.k+14;
+   // Above the table where there's room (a tall screen), else across its top cushion.
+   const bw=Math.min(440,w-40),bh=banner.sub?64:42,bx=(w-bw)/2,top=view.oy-(view.tall?OUTER[0]:OUTER[1])/2*view.k,by=top-78>=bh+8?78+(top-78-bh)/2:top+14;
    g2.globalAlpha=Math.min(1,(2400-age)/400);g2.fillStyle='rgba(5,7,13,.86)';g2.fillRect(bx,by,bw,bh);g2.strokeStyle=banner.color;g2.lineWidth=2;g2.strokeRect(bx,by,bw,bh);
    text(banner.title,w/2,by+10,18,banner.color,'center',800,FONT.display);if(banner.sub)text(banner.sub,w/2,by+38,12,C.text,'center');
    g2.globalAlpha=1;
