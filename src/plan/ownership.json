@@ -5396,6 +5396,32 @@
         -35.7,
         -38
       ]
+    },
+    "lounge-entrance-sign-19": {
+      "room": "commons-1",
+      "local": [
+        -20.5,
+        8,
+        -23
+      ],
+      "v1": [
+        -112.5,
+        32.3,
+        -4
+      ]
+    },
+    "lounge-entrance-sign-18": {
+      "room": "commons-1",
+      "local": [
+        -20.5,
+        4,
+        -23
+      ],
+      "v1": [
+        -112.5,
+        28.3,
+        -4
+      ]
     }
   },
   "modules": [
@@ -6954,6 +6980,19 @@
       "signature": "5d307ad53b8ada47487d4b976aef5db9bb759a94616cce966e1f71179cd49e56"
     },
     {
+      "source": "src/walk/lounge-entrance-signs.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 20,
+      "signature": "76cd8842bdba49e6c32de9e3d26da8316d0ae8cd32612d88bbfcfefbfe5e7fc8"
+    },
+    {
       "source": "src/walk/lounge-floor.js",
       "rooms": [
         "commons-1",
@@ -7015,7 +7054,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 32,
-      "signature": "ccb7b35c4eefe517e75faae207d2687e7b96d1e88a731d050d5004b495872efd"
+      "signature": "a769d84ca5ebe7c389eefadf2cbe2f051b630b8e216ddefea543f3009edcd098"
     },
     {
       "source": "src/walk/marks.js",
@@ -7234,7 +7273,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "8f0c8af8734738b364fd6a84993f2c789ca60532d32fd36a965b5a37c74a2d46"
+      "signature": "b5ed1d3a0dc3c59d7d77858492c163815e10510e25531990d9971a7c653c9b1f"
     },
     {
       "source": "src/walk/provisions.js",

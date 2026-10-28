@@ -94,3 +94,9 @@ Open floor for the lounge: x 113.5–148, z 12–42. The entrance side is z ≈ 
 - **Platforms and tubes:** each platform has a purple rug with a teal border. The tube floors have green edge lines.
 
 **Cost.** Same entrance view and window (800 × 668, third person) in the dev walk: 406 calls and 669k triangles, against 399 and 667k on main. That's +7 calls and +2k triangles, inside the +10 / +15k budget. The new draws are the frosted glass, the doors (two, both doors' panes and both doors' frames), the hammocks and the maze mist. The mist at first went in as a glow the walk split by deck band (6 draws), and the platform rugs used the textured rug (2 more); both were changed.
+
+## Marquee entrance signs, Decks 19 and 18 (feedback-inbox #164)
+
+**Decision (Jay, 2026-10-27):** a catnip version, in keeping with the lounge: the glowing purple-LED entrance sign reads "Hydro-Nip Lounge", with no cannabis wording.
+
+The lounge's Deck 19 and Deck 18 entrances are the short necks (3.88 m wide, 4 m long) from the aft promenade into the end gallery. Each gets a theatre-marquee canopy (`src/walk/lounge-entrance-signs.js`, walk only): a dark fascia across the mouth with "HYDRO-NIP" over "LOUNGE" and two lit catnip sprigs inside a ring of pale and violet bulbs and a purple tube, a low soffit running back along the neck with four rows of bulbs and a tube down each side, and a matching plate facing the lounge. Purple light is washed down both walls and onto the floor. It sits wholly inside the neck (nothing sticks out into the promenade), its underside 2.56 m above the floor, and nothing in it is solid. Glow is emissive geometry and additive planes, no real lights: about 5.6k triangles in 7 meshes per sign, and the pair is 11k triangles.

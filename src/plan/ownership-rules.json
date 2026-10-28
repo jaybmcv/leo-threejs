@@ -419,5 +419,11 @@
       "commons-1"
     ],
     "via": "roomObject"
+  },
+  "src/walk/lounge-entrance-signs.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": null
   }
 }
