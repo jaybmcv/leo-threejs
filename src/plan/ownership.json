@@ -5748,13 +5748,14 @@
         "Baluster",
         "Lounge_rail_glass",
         "Lounge_rail_glow",
+        "Lounge_step_glow",
         "Hydro_Nip_Lounge",
         "Hammock"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 122,
-      "signature": "28913ae59a82f4b2817236a69973b6036142f1753012825dceeb4127ca0fdc3d"
+      "placements": 124,
+      "signature": "90679027890dcd15b41344d016d06926afb5db3e353eaa82eea006ef9635126f"
     },
     {
       "source": "src/interior-polish.js",
@@ -6598,7 +6599,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 43,
-      "signature": "ffb8f127047cb67e800b0b17d245914668c566f24fad0578bb295b69ae14197a"
+      "signature": "ba6b91640160b0c441e594e87b713eca2a492c9ee672a3360054fa1b8cbca549"
     },
     {
       "source": "src/walk/hamster-ball.js",
