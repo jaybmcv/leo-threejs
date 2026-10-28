@@ -312,25 +312,26 @@ export function createBlossomGarden(ship){
  }
  animate(0);
 
- // The falls' sound: looped noise shaped like falling water, made with Web Audio as the ship's hum is (ambience.js),
- // with now and then a drop plinking into the pond. It follows the Sound button and fades in as you come near.
+ // The falls' sound: looped noise shaped like a small creek, bright and light on low rumble, made with Web Audio as the
+ // ship's hum is (ambience.js), with small bubbles plinking into the water every so often. It follows the Sound button
+ // and fades in as you come near.
  let ctx=null,gain=null,plink=0;
  function sound(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();gain=ctx.createGain();gain.gain.value=0;gain.connect(ctx.destination);
   const n=ctx.sampleRate*3,fade=2048,buf=ctx.createBuffer(2,n,ctx.sampleRate);
-  for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);let b=0;for(let i=0;i<n;i++){const w=Math.random()*2-1;b=(b+.04*w)/1.04;d[i]=w*.3+b*2.4;}
+  for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);let b=0;for(let i=0;i<n;i++){const w=Math.random()*2-1;b=(b+.04*w)/1.04;d[i]=w*.4+b*1.6;}
    for(let i=0;i<fade;i++){const f=i/fade;d[i]=d[i]*f+d[n-fade+i]*(1-f);}}// the loop's ends cross-faded, so it has no seam
   const src=ctx.createBufferSource();src.buffer=buf;src.loop=true;src.loopEnd=(n-fade)/ctx.sampleRate;
-  const high=ctx.createBiquadFilter();high.type='highpass';high.frequency.value=280;
-  const low=ctx.createBiquadFilter();low.type='lowpass';low.frequency.value=2400;
-  const body=ctx.createBiquadFilter();body.type='peaking';body.frequency.value=850;body.gain.value=5;
+  const high=ctx.createBiquadFilter();high.type='highpass';high.frequency.value=400;
+  const low=ctx.createBiquadFilter();low.type='lowpass';low.frequency.value=3000;
+  const body=ctx.createBiquadFilter();body.type='peaking';body.frequency.value=1200;body.gain.value=2;
   // The splash brightens and dulls a little, unevenly, as falling water does.
-  for(const [rate,depth] of [[.21,450],[.53,250]]){const o=ctx.createOscillator();o.frequency.value=rate;const g=ctx.createGain();g.gain.value=depth;o.connect(g).connect(low.frequency);o.start();}
+  for(const [rate,depth] of [[.21,500],[.53,300]]){const o=ctx.createOscillator();o.frequency.value=rate;const g=ctx.createGain();g.gain.value=depth;o.connect(g).connect(low.frequency);o.start();}
   src.connect(high).connect(low).connect(body).connect(gain);src.start();
   document.addEventListener('visibilitychange',()=>{if(document.hidden)ctx.suspend();else ctx.resume();});
  }
  function drip(level){
-  const t=ctx.currentTime,o=ctx.createOscillator(),v=ctx.createGain(),f=700+Math.random()*900;
+  const t=ctx.currentTime,o=ctx.createOscillator(),v=ctx.createGain(),f=900+Math.random()*1100;
   o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*2.2,t+.06);
   v.gain.setValueAtTime(0,t);v.gain.linearRampToValueAtTime(.05*level,t+.005);v.gain.exponentialRampToValueAtTime(.0001,t+.09);
   o.connect(v).connect(ctx.destination);o.start(t);o.stop(t+.1);
@@ -343,7 +344,7 @@ export function createBlossomGarden(ship){
    if(level>0&&!ctx&&navigator.userActivation?.hasBeenActive!==false)sound();
    if(!ctx)return;
    gain.gain.setTargetAtTime(level*.55,ctx.currentTime,.4);
-   if(level>0&&ctx.state==='running'&&(plink-=dt)<=0){plink=.15+Math.random()*.6;drip(level);}
+   if(level>0&&ctx.state==='running'&&(plink-=dt)<=0){plink=.08+Math.random()*.4;drip(level);}
   },
   // Where the falls' sound comes from, for checks.
   falls,
