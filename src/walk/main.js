@@ -191,7 +191,7 @@ async function buildShip(){
  // The crew recovery lounge's pod side dims the lights (recovery.js).
  recovery=createRecoveryMood(ship,{hemi,fill,scene});
  }});
- ({booth,poolTable,concession,provisions,kittens,diningRobots,hydration,blossom,jaguarGate,arcadeRow,missionHolo,mudwater}=prepared);
+ ({booth,poolTable,concession,provisions,kittens,diningRobots,hydration,blossom,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater}=prepared);
  const {pipework,trolley,swordCase}=prepared;
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged; and
  // on the arcade's treadmill.
@@ -229,6 +229,8 @@ async function buildShip(){
  // The surgical suite's ceiling robot arms (surgery.js), dressing only.
  surgeryArms=createSurgeryArms(ship,{still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(surgeryArms)toBand(surgeryArms.group);
  if(blossom)toBand(blossom.group);
+ // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js).
+ if(loungeFalls)toBand(loungeFalls.group);
  toBand(jaguarGate.group);
  for(const g of prepared.entranceSigns.groups)toBand(g);
  if(lounge)for(const o of lounge.drawn)toBand(o);
@@ -264,7 +266,7 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
 }
-let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,lullaby=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,lullaby=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -467,7 +469,7 @@ function showAboard(){
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
 }
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,mudwater,changeLog,comics,paintings,missionHolo,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get gaming(){return gaming;},get provisions(){return provisions;},get blossom(){return blossom;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,mudwater,changeLog,comics,paintings,missionHolo,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get gaming(){return gaming;},get provisions(){return provisions;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -558,6 +560,7 @@ renderer.setAnimationLoop(()=>{
  gaming?.update(dt,camera.getWorldPosition(eye),p);
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on);
+ loungeFalls?.update(dt,p);
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
  surgeryArms?.update(dt,p);

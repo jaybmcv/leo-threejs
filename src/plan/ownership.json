@@ -6995,6 +6995,27 @@
       "signature": "76cd8842bdba49e6c32de9e3d26da8316d0ae8cd32612d88bbfcfefbfe5e7fc8"
     },
     {
+      "source": "src/walk/lounge-falls.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Lounge_falls_bench",
+        "Lounge_falls",
+        "Lounge_falls_colliders",
+        "Lounge_falls_pool",
+        "Lounge_falls_sheet"
+      ],
+      "colliders": [
+        "Lounge_falls_colliders"
+      ],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 28,
+      "signature": "6a97d8e3edf5d984afce91870c4b74845177ce9750bafe211dee0a0395ad328b"
+    },
+    {
       "source": "src/walk/lounge-floor.js",
       "rooms": [
         "commons-1",
@@ -7071,7 +7092,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 33,
-      "signature": "98af2e95d005d03fa8d14b58edfbcd2118ddceb74444daee73bc8e25cc9d791f"
+      "signature": "eb8135533ff7772d0fbe6cb9be0a0c66d9f17c8756e7efc82ebbe80aca83c5e3"
     },
     {
       "source": "src/walk/marks.js",
@@ -7290,7 +7311,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "b5ed1d3a0dc3c59d7d77858492c163815e10510e25531990d9971a7c653c9b1f"
+      "signature": "6c440d173f1363eb466fad83b78a4146cf4632f6c5f867dc77cb16c283f2a6eb"
     },
     {
       "source": "src/walk/provisions.js",
