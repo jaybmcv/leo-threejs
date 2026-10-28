@@ -6425,7 +6425,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "94c33f91717c54963fc3c8c924bf5aad661af3a1ca13399294121236436668a0"
+      "signature": "ef44a65c1f10d99c8321208a5ecd4bfa5d3382fbfa3972e57d0cfd3fa31aeac6"
     },
     {
       "source": "src/walk/comms-displays.js",
@@ -6598,7 +6598,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 43,
-      "signature": "ffb8f127047cb67e800b0b17d245914668c566f24fad0578bb295b69ae14197a"
+      "signature": "ba6b91640160b0c441e594e87b713eca2a492c9ee672a3360054fa1b8cbca549"
     },
     {
       "source": "src/walk/hamster-ball.js",
