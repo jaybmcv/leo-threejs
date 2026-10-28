@@ -216,6 +216,22 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 #aboard{min-width:0;gap:6px;padding:9px 8px;letter-spacing:0;font-size:10px}#aboard span{overflow:hidden;text-overflow:ellipsis}
 .touch .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:min(176px,calc(100vw - 168px))}.touch .row button{height:42px;padding:0 4px;text-align:center}
 }
+/* The Deck 19 graffiti wall's spray bar (graffiti.js): while it is up, the walk's own controls step aside */
+#spray{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:7;width:min(560px,calc(100vw - 32px));background:var(--card);border:1px solid var(--hairline);border-radius:14px;padding:12px 14px;display:grid;gap:10px}
+#spray[hidden]{display:none}
+#spray .spray-head{display:flex;align-items:center;justify-content:space-between;gap:10px}#spray .eyebrow{font:400 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
+#spray-colours{display:grid;grid-template-columns:repeat(12,1fr);gap:6px}
+#spray-colours button{aspect-ratio:1;min-width:0;border-radius:50%;border:2px solid rgba(255,255,255,.2);background:var(--paint);padding:0}
+#spray-colours button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 2px var(--orange)}
+#spray-nozzles{display:flex;gap:6px}#spray-nozzles button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--hairline);border-radius:10px;padding:9px 6px;font:400 11px/1 var(--mono);letter-spacing:.06em}
+#spray-nozzles button::before{content:"";width:var(--dot);height:var(--dot);border-radius:50%;background:currentColor}
+#spray-nozzles button[aria-pressed="true"]{border-color:var(--orange)}
+#spray button:disabled{opacity:.35;cursor:default}
+#spray-note{margin:0;font:400 12px/1.4 var(--sans);color:var(--body)}
+#spray .spray-row{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+#spray-connect{background:var(--orange);border:1px solid var(--orange);color:#fff;border-radius:10px;padding:9px 14px;font:500 11px/1 var(--mono);letter-spacing:.06em}#spray-connect[hidden]{display:none}
+#spray-done{background:none;border:1px solid var(--hairline);border-radius:10px;padding:9px 14px;font:400 11px/1 var(--mono)}
+body.spraying{-webkit-user-select:none;user-select:none}body.spraying #viewport{cursor:crosshair}body.spraying .touch,body.spraying #joystick,body.spraying .corner,body.spraying #prompt{display:none!important}
 </style>
 </head>
 <body>
@@ -240,6 +256,7 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 <div id="clown-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="clown-title"><div class="card"><div class="eyebrow">Deck 15 · Halloween</div><h2 id="clown-title">You found the clown</h2><p class="clown-text" aria-live="polite"></p><div class="clown-code" hidden></div><div class="row"><a class="clown-claim" href="https://oswiki.xyz/claim" target="_blank" rel="noopener" hidden>Claim the badge</a><button type="button" data-close>Close</button></div></div></div>
 <div id="emotes" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="emotes-title"><div class="card"><div class="eyebrow">Cosmo</div><h2 id="emotes-title">Emotes</h2><div class="stops"></div><button type="button" data-close>Close</button></div></div>
 <div id="help-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="help-title"><div class="card" tabindex="-1"><div class="help-head"><div><div class="eyebrow">Walk around Leo</div><h2 id="help-title">Help</h2></div><div class="help-tabs" role="tablist" aria-label="Help pages" hidden><button type="button" role="tab" data-tab="play">How to play</button><button type="button" role="tab" data-tab="ideas">Your ideas</button></div></div><div data-page="play"></div><div data-page="ideas" hidden></div><button type="button" data-close>Close</button></div></div>
+<div id="spray" hidden role="dialog" aria-labelledby="spray-title"><div class="spray-head"><div><div class="eyebrow">Deck 19 · Graffiti wall</div></div><div class="spray-row"><button id="spray-connect" type="button" hidden>Connect Discord</button><button id="spray-done" type="button">Done</button></div></div><h2 id="spray-title" hidden>Spray paint</h2><div id="spray-colours" role="group" aria-label="Spray colour"></div><div id="spray-nozzles" role="group" aria-label="Nozzle"></div><p id="spray-note" aria-live="polite"></p></div>
 <div id="joystick" aria-hidden="true"><div id="stick"></div></div>
 <div id="loading"><div class="card"><div class="eyebrow">Mars Cats Voyage</div><h1>Walk around Leo</h1><div id="loading-text">Loading…</div><div id="memory" hidden><p id="memory-note"></p><div class="who-buttons"><a id="memory-tour" href="./?walk=1">Take the guided tour</a><button id="memory-try" type="button">Try anyway</button></div></div><div id="who" hidden><div id="who-connected" hidden>Aboard as <b id="who-name"></b> · <span class="who-via">Discord</span> <button id="who-forget" type="button">Not you?</button></div><div id="who-ask" hidden><p id="who-note"></p><div class="who-buttons"><button id="who-connect" type="button">Connect Discord</button><button id="who-skip" type="button">Skip for now</button></div><p class="who-small">Through The Creamery, which shares your Discord name and verified wallets with Leo.</p></div><label id="name-field" hidden>Your name aboard<input id="name-input" maxlength="24" autocomplete="nickname" placeholder="Voyager"></label><button id="who-later" type="button" hidden>Connect Discord</button></div></div></div>
 <script>

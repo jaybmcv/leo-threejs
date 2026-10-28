@@ -2,8 +2,8 @@
 // checks the pose wire, joining, poses reaching others near and far, names, the shared lifts, pings, leaving, a second tab,
 // bad input, the cap on visitors, Leo passes (Discord identity from The Creamery, net/pass.js: here signed by a
 // stand-in key served as a local JWKS), Alien Cat Invasion's leaderboard, Paw Pool's fastest clears, the ship log
-// boards' hearts, the selfie booth's shared countdown, chat aboard and, last, sixty visitors walking at once (bytes sent per visitor
-// per second). Each server keeps its scores and hearts in temporary files, never the real ones.
+// boards' hearts, the selfie booth's shared countdown, chat aboard, the Deck 19 graffiti wall and, last, sixty visitors walking at once (bytes sent per visitor
+// per second). Each server keeps its scores, hearts, chat and graffiti in temporary files, never the real ones.
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import WebSocket from 'ws';
@@ -21,6 +21,7 @@ import {createHydroNipLounge} from '../src/hydro-nip-lounge.js';
 import {findRestSpots,spotIndex} from '../src/walk/rest.js';
 import {COSMO_HEIGHT} from '../src/cosmo-pose.js';
 import {arcadeTreadmill} from '../src/walk/arcade.js';
+import {WALL,paintStroke,wallFromText} from '../src/walk/graffiti-wall.js';
 
 const results=[];let failed=0;
 const check=(what,ok,detail='')=>{results.push(`${ok?'PASS':'FAIL'} ${what}${detail?' · '+detail:''}`);if(!ok)failed++;};
@@ -106,9 +107,10 @@ await new Promise(r=>jwksServer.listen(0,'127.0.0.1',r));
 const PASS_ENV={LEO_PASS_JWKS_URL:`http://127.0.0.1:${jwksServer.address().port}/keys.json`,LEO_PASS_ISS:ISS};
 
 // ---- a server and some visitors -----------------------------------------------------------------------------------
+const graffitiFile=port=>path.join(os.tmpdir(),`leo-live-graffiti-check-${port}.json`),graffitiClear=port=>path.join(os.tmpdir(),`leo-live-graffiti-clear-check-${port}`);
 const scoresFile=port=>path.join(os.tmpdir(),`leo-live-scores-check-${port}.json`),heartsFile=port=>path.join(os.tmpdir(),`leo-live-hearts-check-${port}.json`),chatFile=port=>path.join(os.tmpdir(),`leo-live-chat-check-${port}.json`);
 function startServer(port,env={}){
- const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...PASS_ENV,LEO_LIVE_SCORES:scoresFile(port),LEO_LIVE_HEARTS:heartsFile(port),LEO_LIVE_CHAT_LOG:chatFile(port),...env},stdio:['ignore','pipe','pipe']});
+ const child=spawn(process.execPath,['server/leo-live.mjs'],{env:{...process.env,PORT:String(port),...PASS_ENV,LEO_LIVE_SCORES:scoresFile(port),LEO_LIVE_HEARTS:heartsFile(port),LEO_LIVE_CHAT_LOG:chatFile(port),LEO_LIVE_GRAFFITI:graffitiFile(port),LEO_LIVE_GRAFFITI_CLEAR:graffitiClear(port),...env},stdio:['ignore','pipe','pipe']});
  child.log='';child.stdout.on('data',d=>{child.log+=d;});
  return new Promise((resolve,reject)=>{child.stdout.on('data',d=>{if(/Leo live on/.test(d))resolve(child);});child.on('exit',c=>reject(new Error('server exited '+c)));setTimeout(()=>reject(new Error('server did not start')),10000);});
 }
@@ -534,6 +536,65 @@ try{
   check('clown: each knock is logged',(spooky.log.match(/ clown /g)||[]).length===3);
   a.close();b.close();
  }finally{spooky.kill();fs.rmSync(file,{force:true});}
+}
+
+// ---- the Deck 19 graffiti wall (graffiti.mjs), on a server of its own ----------------------------------------------
+// One signed-in visitor sprays; another, looking at the wall, hears the stroke and lays it into their own copy, which then
+// matches the wall the server hands a newcomer. Guests may look but not paint; strokes are checked and rate-limited; who
+// painted is logged; the paint is kept through a restart in a file that never grows; only the admin clear wipes it.
+{
+ const port=PORT+12;for(const f of [graffitiFile(port),graffitiClear(port)])fs.rmSync(f,{force:true});let srv=await startServer(port);
+ const wait=async(bot,n,test,ms=1000)=>{for(let i=0;i<ms/25;i++){const got=bot.msgs.slice(n).find(test);if(got)return got;await sleep(25);}return null;};
+ const look=async bot=>{const n=bot.msgs.length;bot.send({m:'wall'});return wait(bot,n,x=>x.m==='wall');};
+ const same=(a,b)=>!!a&&!!b&&a.length===b.length&&a.every((x,i)=>x===b[i]);
+ try{
+  const guest=new Bot(port,{name:'Guest'}),bea=new Bot(port,{pass:await creamery.sign(claimsFor('912121212121212121','Bea Cat'))}),
+   cal=new Bot(port,{pass:await creamery.sign(claimsFor('913131313131313131','Cal Cat'))}),away=new Bot(port,{name:'Away'});
+  for(const b of [guest,bea,cal,away])await b.welcomed();
+  const bare=await look(guest),calWall=await look(cal);await look(bea);
+  check('graffiti: anyone can look at the wall, a guest marked not signed in',bare?.w===WALL.w&&bare.h===WALL.h&&bare.verified===false&&wallFromText(bare.cells)?.every(c=>c===0)&&calWall?.verified===true);
+  let n=cal.msgs.length;guest.send({m:'paint',c:3,s:1,p:[10,10,20,20]});
+  check("graffiti: a guest's stroke is refused, they are told to sign in, and it reaches nobody",(await wait(guest,0,x=>x.m==='painted'))?.why==='sign-in'&&!await wait(cal,n,x=>x.m==='stroke',300));
+  // Bea sprays a line; Cal, looking at the wall, sees it and lays it into his copy.
+  const mine=wallFromText(calWall.cells),stroke={c:4,s:1,p:[10,20,30,40,50,40]};
+  n=cal.msgs.length;const na=away.msgs.length,nb=bea.msgs.length;bea.send({m:'paint',...stroke});
+  const heard=await wait(cal,n,x=>x.m==='stroke');
+  check("graffiti: a signed-in visitor's stroke reaches another visitor looking at the wall, as sprayed",heard?.id===bea.id&&heard.c===4&&heard.s===1&&JSON.stringify(heard.p)===JSON.stringify(stroke.p),JSON.stringify(heard));
+  check('graffiti: the painter is not sent their own stroke, nor is a visitor who never came to look',!await wait(bea,nb,x=>x.m==='stroke',200)&&!away.msgs.slice(na).some(x=>x.m==='stroke'));
+  if(heard)paintStroke(mine,heard);
+  // Cal sprays over part of it in blue: colours overlap, the later one on top.
+  n=bea.msgs.length;const over={c:9,s:2,p:[30,40]};cal.send({m:'paint',...over});const beaHeard=await wait(bea,n,x=>x.m==='stroke');paintStroke(mine,over);
+  const late=new Bot(port,{name:'Late'});await late.welcomed();const lateWall=wallFromText((await look(late))?.cells);
+  check('graffiti: what another visitor saw sprayed matches the wall a newcomer is handed',!!beaHeard&&same(lateWall,mine)&&mine.filter(c=>c===4).length>50,`${mine.filter(c=>c===4).length} orange cells, ${mine.filter(c=>c===9).length} blue`);
+  check('graffiti: painting over paint leaves the later colour on top',lateWall?.[40*WALL.w+30]===9&&lateWall?.[20*WALL.w+10]===4);
+  n=cal.msgs.length;
+  for(const bad of [{c:0,s:1,p:[1,1]},{c:13,s:1,p:[1,1]},{c:2,s:5,p:[1,1]},{c:2,s:1,p:[WALL.w,1]},{c:2,s:1,p:[1,-1]},{c:2,s:1,p:[1,2,3]},{c:2,s:1,p:Array(60).fill(5)},{c:2,s:1.5,p:[1,1]},{c:'2',s:1,p:[1,1]},{c:2,s:1,p:'here'}])bea.send({m:'paint',...bad});
+  check('graffiti: malformed strokes are ignored',!await wait(cal,n,x=>x.m==='stroke',400)&&bea.closed===null);
+  await sleep(2100);n=cal.msgs.length;const nb2=bea.msgs.length;
+  for(let i=0;i<60;i++)bea.send({m:'paint',c:6,s:0,p:[100,200+(i%20)]});await sleep(400);
+  const passed=cal.msgs.slice(n).filter(x=>x.m==='stroke').length;
+  check('graffiti: a flood of strokes is rate-limited and the painter told',passed<=30&&passed>=20&&bea.msgs.slice(nb2).some(x=>x.m==='painted'&&x.why==='slow')&&bea.closed===null,`${passed} of 60 passed on`);
+  check('graffiti: who starts painting is logged at once',/graffiti painting discord:912121212121212121 "Bea Cat"/.test(srv.log));
+  bea.close();await sleep(300);
+  check('graffiti: when they stop, how much they painted, in which colours and where is logged',/graffiti painted discord:912121212121212121 "Bea Cat" \d+ strokes \d+ cells colours 4,6 across 10-100 down 20-219/.test(srv.log),(srv.log.match(/graffiti painted .*/)||[''])[0]);
+  const before=wallFromText((await look(late))?.cells);[guest,cal,away,late].forEach(b=>b.close());
+  await sleep(1300);const size=fs.statSync(graffitiFile(port)).size;srv.kill();srv=await startServer(port);
+  const back=new Bot(port,{name:'Back'});await back.welcomed();const kept=wallFromText((await look(back))?.cells);
+  check('graffiti: the paint is still there after the server restarts',same(kept,before)&&kept.some(c=>c===6),`file ${size} bytes`);
+  // More paint, and the file is the same size: the wall is a fixed grid, not a growing list.
+  const dee=new Bot(port,{pass:await creamery.sign(claimsFor('914141414141414141','Dee Cat'))});await dee.welcomed();
+  for(let i=0;i<20;i++){dee.send({m:'paint',c:1+i%12,s:2,p:[i*5,i*10,119-i*5,223-i*10]});await sleep(90);}
+  await sleep(1300);const grown=fs.statSync(graffitiFile(port)).size;
+  check('graffiti: the stored wall stays the same size however much is painted',grown===size&&size<40000,`${size} bytes, then ${grown}`);
+  // The admin clear: the clear file appears, the wall goes bare for everyone looking, it is logged, the file is removed.
+  n=back.msgs.length;fs.writeFileSync(graffitiClear(port),'check-live\n');
+  const cleared=await wait(back,n,x=>x.m==='wall'&&x.cleared,4000);
+  check('graffiti: the admin clear wipes the wall for everyone looking, and is logged',!!cleared&&wallFromText(cleared.cells)?.every(c=>c===0)&&/graffiti wall cleared \(admin: "check-live"\)/.test(srv.log)&&!fs.existsSync(graffitiClear(port)));
+  back.close();dee.close();await sleep(300);srv.kill();srv=await startServer(port);
+  const after=new Bot(port,{name:'After'});await after.welcomed();
+  check('graffiti: a cleared wall stays clear after a restart',wallFromText((await look(after))?.cells)?.every(c=>c===0));
+  after.close();
+ }finally{srv.kill();for(const f of [graffitiFile(port),graffitiClear(port)])fs.rmSync(f,{force:true});}
 }
 
 // ---- sixty visitors at once -----------------------------------------------------------------------------------------

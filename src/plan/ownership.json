@@ -6630,6 +6630,36 @@
       "signature": "de92ae257e263d038c7233f220a06a2a4165378c365d1bdca1f64574a01f7668"
     },
     {
+      "source": "src/walk/graffiti-wall.js",
+      "rooms": [
+        "aft-machinery"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "3a7e0ee04722ceaba30540c438862e769d891bc717dac72602f215a4c8dff588"
+    },
+    {
+      "source": "src/walk/graffiti.js",
+      "rooms": [
+        "aft-machinery"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "features": [
+        "Walk_graffiti_wall"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 3,
+      "signature": "ba9afb6f5fba84ffee4c0ef60e1859f58fc96d654c5dc80ae4c2d807dc0ded85"
+    },
+    {
       "source": "src/walk/halloween.js",
       "rooms": [
         "circulation-15"
@@ -7071,7 +7101,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 33,
-      "signature": "98af2e95d005d03fa8d14b58edfbcd2118ddceb74444daee73bc8e25cc9d791f"
+      "signature": "269cc42247be1ed9bd2bb9233e25ca871a5ed8a8a0ea31ccb9f5de389ea02b9c"
     },
     {
       "source": "src/walk/marks.js",

@@ -13,7 +13,7 @@ export const savedName=()=>storage('leo-live-name')||'';
 export function saveName(name){try{localStorage.setItem('leo-live-name',name);}catch{}}
 
 // on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n), board(b), scored(r), hearts(h), hearted(r), selfie(id,ms),
-// giveaway(g), claimed(r), clown(r), chat(line), said(r)}; status
+// giveaway(g), claimed(r), clown(r), chat(line), said(r), wall(w), stroke(s), painted(r)}; status
 // is 'connecting', 'live',
 // 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). opts.pass(): a Leo pass for this
 // (re)connection or null (connect.js); opts.refused(): the server would not take it; opts.invite: the invite code the
@@ -59,6 +59,10 @@ export function connectLive(url,on,opts={}){
     // Chat aboard (walk/chat.js): a line someone said (this visitor's own included), and a line of ours refused.
     case 'chat':if(typeof msg.text==='string'&&typeof msg.id==='string')on.chat?.(msg);break;
     case 'said':on.said?.(msg);break;
+    // The Deck 19 graffiti wall (walk/graffiti.js): the whole wall, someone else's stroke, and a stroke of ours refused.
+    case 'wall':if(typeof msg.cells==='string')on.wall?.(msg);break;
+    case 'stroke':on.stroke?.(msg);break;
+    case 'painted':on.painted?.(msg);break;
     case 'full':stopped=true;status('full');break;
     case 'replaced':stopped=true;status('replaced');break;
     case 'reload':stopped=true;status('offline');break;
@@ -105,6 +109,9 @@ export function connectLive(url,on,opts={}){
   clown(){if(!live())return false;ws.send(JSON.stringify({m:'clown'}));return true;},
   // A line of chat for everyone aboard; false when there is no connection to say it on.
   say(text){if(!live())return false;ws.send(JSON.stringify({m:'chat',text}));return true;},
+  // The graffiti wall: ask for it (and its strokes from then on), and spray one stroke {c, s, p}.
+  wall(){if(live())ws.send(JSON.stringify({m:'wall'}));},
+  paint(stroke){if(!live())return false;ws.send(JSON.stringify({m:'paint',...stroke}));return true;},
   rename(next){name=next;saveName(next);if(live())ws.send(JSON.stringify({m:'name',name:next}));},
   get live(){return !!live();},
   // How the server has this visitor: {name, verified}.
