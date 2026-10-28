@@ -47,6 +47,10 @@ expect(press==='button','from the nearest spot the walker can stand, E reaches t
 // front of the maze.
 const inWall=([i,j])=>MAZE.walls.some(r=>i*G>r.x0+.05&&i*G<r.x1-.05&&j*G>r.z0+.05&&j*G<r.z1-.05);
 expect(!queue.some(inWall),'no gap between containers lets the walker into a wall');
+// The whole-ship walk check counts every standable 2 m sample of a room's floor: a body inside a container must not
+// count as standing.
+const inside=MAZE.walls.filter(r=>{for(let x=r.x0+.4;x<=r.x1-.4;x+=.5)for(let z=r.z0+.4;z<=r.z1-.4;z+=.5)if(free(x,z)){log("  free inside",x.toFixed(2),z.toFixed(2),JSON.stringify(r));return true;}return false;});
+expect(!inside.length,`nobody can stand inside a container (${inside.length} wall runs let a body in)`);
 // The space in front: from the doorway to the front row, side to side, is open but for the desk's place and the trolley.
 const front=queue.filter(([i,j])=>i*G<X0).length*G*G;
 expect(front>(X0+25.84-1)*(2*SIDE-1)*.85,`the space in front of the maze is open (${front.toFixed(0)} m² reached)`);

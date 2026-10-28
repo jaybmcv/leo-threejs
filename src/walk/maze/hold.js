@@ -79,6 +79,11 @@ export function createMazeHold(ship){
  for(const r of MAZE.walls){
   const axis=r.along,[a0,a1]=axis==='x'?[r.x0,Math.min(r.x1,END-.1)]:[Math.max(r.z0,-SIDE+.05),Math.min(r.z1,SIDE-.05)],[c0,c1]=axis==='x'?[r.z0,r.z1]:[r.x0,r.x1];
   collider(along(axis,a0,a1,c0+.02,c1-.02,0,HEIGHT),'Container_maze_wall_solid');
+  // A net inside at waist height, so a body can never be taken to stand inside a container: a capsule wholly inside a
+  // box touches none of its faces, and is only found within its radius of a triangle's edge, so the net's squares are
+  // 0.5 m at most.
+  {const [x0,x1,z0,z1]=axis==='x'?[a0,a1,c0,c1]:[c0,c1,a0,a1];
+   collider(new T.PlaneGeometry(x1-x0-.1,z1-z0-.1,Math.ceil((x1-x0)/.5),Math.ceil((z1-z0)/.5)).rotateX(-Math.PI/2).translate((x0+x1)/2,1.2,(z0+z1)/2),'Container_maze_wall_solid');}
   const n=Math.max(1,Math.round((a1-a0)/3)),len=(a1-a0)/n;
   for(let k=0;k<n;k++){
    const b0=a0+k*len+(k?.03:0),b1=a0+(k+1)*len-(k<n-1?.03:0),m=paint[Math.floor(random()*paint.length)];

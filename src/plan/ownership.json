@@ -6992,8 +6992,8 @@
         "Container_maze_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 32,
-      "signature": "3100f68df12eb68b44c59a4641c4c6719c0d77fa7405d619d5dd2981031eda29"
+      "placements": 33,
+      "signature": "1d118a7ae1d20779cb8d3ef532d2c8dc560a63a39bf77cafd6fa48ab241645a3"
     },
     {
       "source": "src/walk/maze/layout.js",
