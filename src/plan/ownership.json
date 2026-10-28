@@ -5433,8 +5433,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 74,
-      "signature": "b21a77f6f2efeda226d10088fb931d75a3009aa8fd58b0c1fd74915985ad2eec"
+      "placements": 79,
+      "signature": "0a2d994bdb80a89324c6748e743237b517c5b69a994f594da9d18bf045bc2061"
     },
     {
       "source": "src/areas.js",
