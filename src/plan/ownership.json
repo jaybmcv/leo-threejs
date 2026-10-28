@@ -6839,15 +6839,17 @@
       "features": [
         "Jaguar_gate",
         "Jaguar_gate_solid",
+        "Jaguar_ears",
         "Jaguar_head",
+        "Jaguar_lower_teeth",
         "Jaguar_exit_arch"
       ],
       "colliders": [
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 38,
-      "signature": "f719f67c9e254f2895a3d1ad3755064e2883981860a690dd795fced4dcb4615e"
+      "placements": 25,
+      "signature": "9dbce1c54f43e360156021fe5976da04f2936d1314116157a38660ab70483c23"
     },
     {
       "source": "src/walk/kittens.js",
