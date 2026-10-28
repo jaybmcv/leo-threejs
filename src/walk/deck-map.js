@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {VAULT_PLAN} from './vault.js';
 import {GRID,eachTriangle} from './partitions.js';
 import {LIFTS} from './lifts.js';
 import {openingPlan} from './arrival-atrium.js';
@@ -43,5 +44,7 @@ export function planMap(ship,decks,rails){
  // Lift cars, at every deck they stop at.
  for(const lift of LIFTS)for(const stop of lift.stops){const d=out.find(o=>Math.abs(o.y-stop.y)<.3);if(!d)continue;const c=lift.car;
   for(let x=c.x-c.width/2+cell/2;x<c.x+c.width/2;x+=cell)for(let z=c.z-c.depth/2+cell/2;z<c.z+c.depth/2;z+=cell){const k=at(x,z);if(k>=0)d.data[k]=MAP_CLASS.lift;}}
+ // The clubhouse behind the Deck 17 arcade is walled by the walk (vault.js), its door shut.
+ {const d=out.find(o=>o.number===VAULT_PLAN.deck);if(d)for(const [a,b] of VAULT_PLAN.lines)line(d.data,a,b);}
  return out;
 }

@@ -6557,7 +6557,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "9064e37cf8fa725103a90165e2a707e35248cd86e4dba16463166e3a7c8252ea"
+      "signature": "8468ceb2efa8e618cfe00595cc334b24bb203b1efade5549e6447c1863008118"
     },
     {
       "source": "src/walk/dining-robots.js",
@@ -7101,7 +7101,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "25e97f4d98f2c94947081a5a89ff25daf2975ec0da0086a2f37f542028771429"
+      "signature": "758cde5528c2436c6830a6cfe1620302016a7c850b0d71471d16d13f15a36b06"
     },
     {
       "source": "src/walk/marks.js",
@@ -7332,7 +7332,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "f6083e51fb71001bac1ab3af3cc9aa588d476adadeee2f7f4f5d3133a8e3a50b"
+      "signature": "7fd555d3752beba3bf1f33c913fdd9e8e3a6d68f60ad0d3e38a692583d9d4ed4"
     },
     {
       "source": "src/walk/provisions.js",
@@ -7546,6 +7546,27 @@
       "interactionTargets": null,
       "placements": 10,
       "signature": "3e53561082589e48130ad4db1f64346154c47dd7220b57c2ec6b1f2fb27c78d0"
+    },
+    {
+      "source": "src/walk/vault.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Deck17_vault",
+        "Deck17_vault_colliders",
+        "Vault_keypad_screen",
+        "Vault_door",
+        "Vault_wheel"
+      ],
+      "colliders": [
+        "Deck17_vault_colliders"
+      ],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 22,
+      "signature": "f4fa77436ac3ba99c770bb80ca5bc34ca9f2d17296fd3e2b03799c5d393e2820"
     },
     {
       "source": "src/walk/wall-kit.js",
