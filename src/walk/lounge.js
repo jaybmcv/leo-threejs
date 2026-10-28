@@ -109,6 +109,8 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
 
  return {
   drawn,doors,
+  // The dome's centre on its floor and its radius in the world, for its lullaby (lullaby.js).
+  dome:{centre:toWorld(LOUNGE.DOME.x,LOUNGE.FLOOR,LOUNGE.DOME.z),r:LOUNGE.DOME.r},
   // After the merge for drawing: the maze's mist meshes (split by deck band) to thin out.
   // `bodies`: the walker's and every other player's positions; `eye`: the camera's.
   update(dt,bodies,eye){
