@@ -307,6 +307,10 @@ function hangar(area,k){
 
 function lifeboats(area,k){
   const {box,round,fit,shell}=k,y=area.center[1],centers=[];
+  // Fit-out repeated in every craft goes in one instanced mesh per part, like the seats: name, geometry, finish and
+  // one transform per copy.
+  const repeats=new Map(),repeat=(name,geometry,m,p,rot=[0,0,0])=>{let r=repeats.get(name);if(!r)repeats.set(name,r={geometry:geometry(),m,list:[]});r.list.push(new T.Matrix4().compose(new T.Vector3(...p),new T.Quaternion().setFromEuler(new T.Euler(...rot)),new T.Vector3(1,1,1)));};
+  const slab=size=>()=>new T.BoxGeometry(...size),soft=(size,r)=>()=>new RoundedBoxGeometry(...size,2,r),rod=(r,h)=>()=>new T.CylinderGeometry(r,r,h,12);
   for(const side of [-1,1]){
     box('Lifeboat_boarding_corridor',[249,.25,4],[0,y-.125,side*58.9],'floor');
     box('Boarding_corridor_ceiling',[249,.14,4],[0,y+3.37,side*58.9],'lining',shell);
@@ -343,10 +347,27 @@ function lifeboats(area,k){
       for(const s of [-1,1])box('Lifeboat_hatch_frame',[.14,2.35,.08],[x+s*1.57,y+1.175,face+out*.04],'rescue');
       box('Lifeboat_ready_lamp',[.6,.1,.05],[x,y+2.45,face+out*.11],'green');
       box('Boarding_light',[8,.03,.18],[x,y+3.24,side*58.9],'light',shell);
+      // Inside: a helm with a sloped flight display, two raised screens, twin control sticks and a forward view screen
+      // on the bow bulkhead; overhead stowage bins with orange latches and a reading-light strip along both long walls.
+      repeat('Helm_flight_display',slab([.62,.05,1.6]),'screen',[x+9.3,y+1.2,z],[0,0,.38]);
+      repeat('Helm_display_bezel',slab([.08,.56,1.72]),'dark',[x+9.84,y+1.4,z]);
+      for(const dz of [-.43,.43])repeat('Helm_raised_screen',slab([.03,.46,.78]),'screen',[x+9.79,y+1.42,z+dz]);
+      for(const dz of [-.92,.92]){repeat('Helm_control_stick',rod(.025,.26),'dark',[x+9.06,y+1.24,z+dz]);repeat('Helm_stick_grip',rod(.045,.09),'rescue',[x+9.06,y+1.4,z+dz]);}
+      repeat('Helm_status_lamps',slab([.04,.05,1.2]),'green',[x+8.88,y+.98,z]);
+      repeat('Bow_view_screen_frame',slab([.04,1.06,3.8]),'dark',[x+10.4,y+1.86,z]);
+      repeat('Bow_view_screen',slab([.02,.9,3.6]),'screen',[x+10.37,y+1.86,z]);
+      for(const wall of [-1,1])for(const half of [-1,1]){
+        const wz=z+wall*3.395;
+        for(let b=0;b<4;b++){const bx=x+half*(2.55+b*1.95);repeat('Overhead_stowage_bin',soft([1.9,.5,.55],.05),'lining',[bx,y+2.53,wz]);repeat('Stowage_bin_latch',slab([.32,.06,.02]),'rescue',[bx,y+2.36,wz-wall*.28]);}
+        repeat('Cabin_reading_light',slab([7.7,.025,.12]),'light',[x+half*5.48,y+2.27,z+wall*3.27]);
+      }
     }
   }
   const positions=[];
   for(const [x,z]of centers)for(let row=0;row<20;row++)for(const dz of [-2.2,-1.4,.5,1.3,2.1])positions.push([x+(row<10?-8.2+row*.8:1+(row-10)*.8),y,z+dz]);
+  // Each seat also gets a headrest, an orange shoulder harness and a chest buckle.
+  for(const p of positions){repeat('Evacuation_headrest',soft([.12,.22,.42],.05),'dark',[p[0]-.28,p[1]+1.38,p[2]]);for(const dz of [-.14,.14])repeat('Evacuation_harness_strap',slab([.02,.56,.06]),'rescue',[p[0]-.21,p[1]+.95,p[2]+dz]);repeat('Evacuation_harness_buckle',slab([.03,.09,.12]),'metal',[p[0]-.2,p[1]+.78,p[2]]);}
+  for(const [name,r]of repeats){const mesh=new T.InstancedMesh(r.geometry,materials[r.m],r.list.length);mesh.name=name;r.list.forEach((m,i)=>mesh.setMatrixAt(i,m));fit.add(mesh);}
   for(const [name,size,offset,material]of [['Evacuation_seat',[.62,.16,.6],[0,.48,0],'navy'],['Evacuation_seat_back',[.12,.73,.62],[-.28,.91,0],'navy'],['Evacuation_seat_base',[.08,.4,.45],[0,.2,0],'metal']]){
     const mesh=new T.InstancedMesh(new T.BoxGeometry(...size),materials[material],positions.length);mesh.name=name;
     positions.forEach((p,i)=>mesh.setMatrixAt(i,new T.Matrix4().makeTranslation(p[0]+offset[0],p[1]+offset[1],p[2]+offset[2])));fit.add(mesh);
