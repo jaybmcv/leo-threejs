@@ -6301,7 +6301,7 @@
       ],
       "interactionTargets": null,
       "placements": 55,
-      "signature": "190ae4db081a38c380ed1651d15c1e37a1476917b578365ce3c37176fbbb2271"
+      "signature": "a1ef7cbc9d6a5eef66f89e87620b60ff032dee0dd16dc20f85580356106270db"
     },
     {
       "source": "src/walk/camera.js",
