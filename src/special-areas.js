@@ -4,6 +4,7 @@ import {finishShipArea} from './area-finish.js';
 import {tintWorldWindow,tintBoxWindow} from './glazing-finish.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {cutOut} from './cut-out.js';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {glazedWall,glassSpan,visionGlass} from './room-glazing.js';
 import {frontPoint} from './hull-profile.js';
 import {bowHeight} from './diagonal-profile.js';
@@ -279,7 +280,9 @@ function hangar(area,k){
       cutOut(cabin,new T.Box3(new T.Vector3(wx-.28,2.23,side*3.1-.6),new T.Vector3(wx+.28,2.97,side*3.1+.6)));
     }
     g.add(cabin);
-    for(const [wx,side] of windows)box('Shuttle_cabin_window',[.6,.76,.04],[wx,2.6,side*3.42],'glass',g);
+    // A slim navy surround lines each opening through the shell, so it reads as a window inside and out.
+    const surround=()=>mergeGeometries([[.64,.06,0,.37],[.64,.06,0,-.37],[.06,.8,.29,0],[.06,.8,-.29,0]].map(([w,h,dx,dy])=>new T.BoxGeometry(w,h,.16).translate(dx,dy,0)));
+    for(const [wx,side] of windows){box('Shuttle_cabin_window',[.6,.76,.04],[wx,2.6,side*3.42],'glass',g);add('Shuttle_window_reveal',surround(),[wx,2.6,side*3.43],'navy',g);}
     round('Shuttle_glazing',[.2,1.1,5.6],[7.05,2.8,0],'glass',.1,g);
     box('Shuttle_cabin_floor',[12.4,.12,5.4],[-.1,1.56,0],'floor',g);
     box('Shuttle_aft_bulkhead',[.12,2.2,5.2],[-6.3,2.6,0],'lining',g);
