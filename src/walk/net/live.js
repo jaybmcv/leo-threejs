@@ -46,6 +46,8 @@ export function connectLive(url,on,opts={}){
     // best, and a game's result.
     case 'board':on.board?.(msg);break;
     case 'scored':on.scored?.(msg);break;
+    // The Container Maze's board and a run's result (server/maze.mjs).
+    case 'maze':on.maze?.(msg);break;
     // The ship log boards (walk/changes-board.js): every change's hearts (and this visitor's own), and a heart refused.
     case 'hearts':on.hearts?.(msg);break;
     case 'hearted':on.hearted?.(msg);break;
@@ -91,6 +93,8 @@ export function connectLive(url,on,opts={}){
   board(game){if(live())ws.send(JSON.stringify({m:'board',game}));},
   // Paw Pool: a rack cleared, in ms by the page's clock, and the kicks it took.
   cleared(ms,shots){if(live())ws.send(JSON.stringify({m:'score',game:'pool',ms,shots}));},
+  // The Container Maze: a run starts ('start'), ends at the button ('finish', {ms}), or the board is wanted ('board').
+  maze(op,extra={}){if(live())ws.send(JSON.stringify({m:'maze',op,...extra}));},
   // The ship log boards: ask for the hearts; give (on) or take back a heart for a change.
   hearts(){if(live())ws.send(JSON.stringify({m:'hearts'}));},
   heart(change,on){if(live())ws.send(JSON.stringify({m:'heart',change,on:!!on}));},

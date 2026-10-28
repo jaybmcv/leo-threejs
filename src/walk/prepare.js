@@ -14,6 +14,7 @@ import {prepareBlossomBed,createBlossomGarden} from './blossom.js';
 import {createDiningRobots} from './dining-robots.js';
 import {createHydrationNook} from './hydration-nook.js';
 import {createCargoTrolley} from './cargo-trolley.js';
+import {stripHold,createMazeHold} from './maze/hold.js';
 import {dressSurgery} from './surgery.js';
 import {createMudwater} from './mudwater.js';
 import {createJaguarGate} from './jaguar-gate.js';
@@ -27,6 +28,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const dropped=exteriorPrepared?0:prepareExteriorForWalking(ship);
  // Refrigerated provisions loses its shared locker cabinets before the colliders see them (provisions.js).
  stripProvisions(ship);
+ // Container hold A loses its container stacks and aisle lines for the Container Maze (maze/hold.js).
+ stripHold(ship);
  // The Deck 17 commons' aft planter loses its green tree and shrubs for the cherry blossom garden, and a corner for its
  // pond, and gains the bench under the tree (blossom.js).
  prepareBlossomBed(ship);
@@ -57,6 +60,9 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const hydration=createHydrationNook(ship);if(hydration)colliders.addStatic(hydration.solid,()=>true);
  // Container hold A's parked hand trolley (cargo-trolley.js): solid as one plain box, clear of the aisle.
  const trolley=createCargoTrolley(ship);if(trolley)colliders.addStatic(trolley.solid,()=>true);
+ // The Container Maze in the same hold (maze/hold.js): its container walls and walk-through containers solid as plain
+ // boxes, the red button's console too.
+ const maze=createMazeHold(ship);if(maze)colliders.addStatic(maze.solid,()=>true);
  // The cherry blossom garden (blossom.js): its trunk, bridge and pond edges solid.
  const blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
  // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
@@ -71,5 +77,5 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,provisions,pipework,kittens,diningRobots,hydration,trolley,blossom,jaguarGate,arcadeRow,missionHolo,swordCase,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,concession,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,blossom,jaguarGate,arcadeRow,missionHolo,swordCase,mudwater};
 }

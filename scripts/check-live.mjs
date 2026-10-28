@@ -16,6 +16,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {keySet,verifyPass,readPass,REMEMBER_S} from '../src/walk/net/pass.js';
 import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
+import {MAZE_ROOM,MAZE_START,MAZE_BUTTON,MAZE_FASTEST_S} from '../src/walk/maze/layout.js';
+import {toWorld} from '../src/plan/rooms.js';
 import * as T from 'three';
 import {createHydroNipLounge} from '../src/hydro-nip-lounge.js';
 import {findRestSpots,spotIndex} from '../src/walk/rest.js';
@@ -441,6 +443,55 @@ try{
   check('pool: both boards are still there after the server restarts',pool?.top?.length===2&&pool.top[0].name==='Bea Cat'&&inv?.top?.length===1,JSON.stringify({pool:pool?.top,invasion:inv?.top}));
   back.close();
  }finally{srv.kill();fs.rmSync(scoresFile(port),{force:true});}
+}
+
+// ---- the Container Maze's best times (server/maze.mjs), in a file of their own, on a server of its own ---------------
+// Real time: no run is believed under MAZE_FASTEST_S, so the runners here wait that long. A run starts at the way in
+// and ends at the red button, so each runner's pose is put there first.
+{
+ const port=PORT+23,file=path.join(os.tmpdir(),`leo-live-maze-check-${port}.json`);fs.rmSync(file,{force:true});
+ let srv=await startServer(port,{LEO_LIVE_MAZE:file});
+ const ask=async(bot,msg,op)=>{const n=bot.msgs.length;bot.send({m:'maze',...msg});for(let i=0;i<40&&!bot.msgs.slice(n).some(x=>x.m==='maze'&&x.op===op);i++)await sleep(25);return bot.msgs.slice(n).find(x=>x.m==='maze'&&x.op===op);};
+ const start=toWorld(MAZE_ROOM,[MAZE_START[0]+.4,0,MAZE_START[2]]),button=toWorld(MAZE_ROOM,[MAZE_BUTTON[0],0,MAZE_BUTTON[2]-.6]),away=toWorld('d02-arrival-1',[-20,0,0]);
+ const floor=MAZE_FASTEST_S*1000;
+ try{
+  const guest=new Bot(port,{name:'Guest'}),bea=new Bot(port,{pass:await creamery.sign(claimsFor('744444444444444444','Bea Cat'))}),
+   cal=new Bot(port,{pass:await creamery.sign(claimsFor('755555555555555555','Cal Cat'))}),dee=new Bot(port,{pass:await creamery.sign(claimsFor('766666666666666666','Dee Cat'))}),
+   eve=new Bot(port,{pass:await creamery.sign(claimsFor('777777777777777777','Eve Cat'))});
+  for(const b of [guest,bea,cal,dee,eve])await b.welcomed();
+  const empty=await ask(cal,{op:'board'},'board');
+  check('maze: the board starts empty, and says the visitor is signed in',empty?.verified===true&&empty.top.length===0&&empty.you===null,JSON.stringify(empty));
+  const t0=Date.now();
+  for(const b of [guest,bea,dee,eve]){b.pose(start);b.send({m:'maze',op:'start'});}
+  cal.pose(away);cal.send({m:'maze',op:'start'});
+  eve.pose(button);
+  check('maze: a run faster than the way can be run is refused',(await ask(eve,{op:'finish',ms:floor+200},'result'))?.why==='rejected');
+  await sleep(floor+1200-(Date.now()-t0));
+  guest.pose(button);
+  check("maze: a guest's run is not kept, and they are told to sign in",(await ask(guest,{op:'finish',ms:floor+1000},'result'))?.why==='sign-in');
+  cal.pose(button);
+  check('maze: a run that never started at the way in is refused',(await ask(cal,{op:'finish',ms:floor+1000},'result'))?.why==='rejected'&&/maze run refused discord:755555555555555555 .*\(no start\)/.test(srv.log));
+  dee.pose(away);
+  check('maze: a run that ends away from the red button is refused',(await ask(dee,{op:'finish',ms:floor+1000},'result'))?.why==='rejected'&&/maze run refused discord:766666666666666666 .*\(not at the button\)/.test(srv.log));
+  bea.pose(button);
+  const first=await ask(bea,{op:'finish',ms:floor+1000},'result');
+  check("maze: a signed-in runner's time is kept as their fastest",first?.ok===true&&first.newBest&&first.best===floor+1000&&first.rank===1,JSON.stringify(first));
+  // Bea runs again from the start, slower: her best stays.
+  bea.pose(start);bea.send({m:'maze',op:'start'});await sleep(floor+2500);bea.pose(button);
+  const slower=await ask(bea,{op:'finish',ms:floor+2400},'result');
+  check('maze: a slower run leaves the best time as it was',slower?.ok===true&&!slower.newBest&&slower.best===floor+1000,JSON.stringify(slower));
+  // Another visitor, who has run nothing, sees Bea's time on the board.
+  const board=await ask(cal,{op:'board'},'board');
+  check("maze: another visitor sees a runner's time on the board",board?.top.length===1&&board.top[0].name==='Bea Cat'&&board.top[0].ms===floor+1000&&board.you===null,JSON.stringify(board));
+  const gb=await ask(guest,{op:'board'},'board');
+  check('maze: a guest can read the board, marked not signed in',gb?.verified===false&&gb.top.length===1);
+  check('maze: kept and refused runs are logged',srv.log.includes(`maze run discord:744444444444444444 Bea Cat ${((floor+1000)/1000).toFixed(1)}s (best)`)&&srv.log.includes('maze run refused discord:777777777777777777'));
+  [guest,bea,cal,dee,eve].forEach(b=>b.close());
+  await sleep(1300);srv.kill();srv=await startServer(port,{LEO_LIVE_MAZE:file});
+  const back=new Bot(port,{name:'Later'});await back.welcomed();const kept=await ask(back,{op:'board'},'board');
+  check('maze: the best times are still there after the server restarts',kept?.top.length===1&&kept.top[0].name==='Bea Cat',JSON.stringify(kept));
+  back.close();
+ }finally{srv.kill();fs.rmSync(file,{force:true});}
 }
 
 // ---- chat as it starts (Discord-verified visitors only), and chat turned off, on servers of their own --------------

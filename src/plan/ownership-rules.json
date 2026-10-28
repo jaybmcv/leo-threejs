@@ -169,6 +169,24 @@
     ],
     "via": null
   },
+  "src/walk/maze/hold.js": {
+    "owners": [
+      "d01-cargo-1"
+    ],
+    "via": null
+  },
+  "src/walk/maze/layout.js": {
+    "owners": [
+      "d01-cargo-1"
+    ],
+    "via": "inherited"
+  },
+  "src/walk/maze/run.js": {
+    "owners": [
+      "d01-cargo-1"
+    ],
+    "via": "inherited"
+  },
   "src/walk/comms-displays.js": {
     "owners": [
       "d20-communications-3"
