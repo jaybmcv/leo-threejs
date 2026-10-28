@@ -270,7 +270,16 @@ function hangar(area,k){
     // then collides as its own curved surface), with a floor on the lower hull, seat rows and a two-seat flight deck.
     const cabin=round('Shuttle_cabin',[16,2.8,7],[-1,2.4,0],'lining',1.2,g);cabin.removeFromParent();
     const door=-sz*3.05;cutOut(cabin,new T.Box3(new T.Vector3(-1.05,1.45,door-.55),new T.Vector3(1.05,3.7,door+.55)));
-    cutOut(cabin,new T.Box3(new T.Vector3(6.2,2.3,-2.2),new T.Vector3(7.3,3,2.2)));g.add(cabin);
+    cutOut(cabin,new T.Box3(new T.Vector3(6.2,2.3,-2.2),new T.Vector3(7.3,3,2.2)));
+    // Cabin windows beside the seat rows, both sides, glazed just inside the shell. On the boarding side the door
+    // panel slides over the row by the doorway, so that side has no window there or in the doorway.
+    const windows=[];
+    for(const side of [-1,1])for(const wx of [-5.2,-3.7,-2.2,0,2.2,3.4]){
+      if(side===-sz&&wx>-3&&wx<1)continue;windows.push([wx,side]);
+      cutOut(cabin,new T.Box3(new T.Vector3(wx-.28,2.23,side*3.1-.6),new T.Vector3(wx+.28,2.97,side*3.1+.6)));
+    }
+    g.add(cabin);
+    for(const [wx,side] of windows)box('Shuttle_cabin_window',[.6,.76,.04],[wx,2.6,side*3.42],'glass',g);
     round('Shuttle_glazing',[.2,1.1,5.6],[7.05,2.8,0],'glass',.1,g);
     box('Shuttle_cabin_floor',[12.4,.12,5.4],[-.1,1.56,0],'floor',g);
     box('Shuttle_aft_bulkhead',[.12,2.2,5.2],[-6.3,2.6,0],'lining',g);
@@ -279,6 +288,18 @@ function hangar(area,k){
     box('Shuttle_flight_deck',[.8,.8,3.6],[5.6,2.02,0],'navy',g);
     const screen=box('Touchscreen',[.6,.05,3.2],[5.5,2.45,0],'screen',g);screen.rotation.z=.25;
     for(const dz of [-.9,.9])chair(4.5,1.62,dz,Math.PI/2,g);
+    // Flight deck instruments: a display in front of each pilot, a side console and stick outboard of each seat, a
+    // throttle pedestal between them and an overhead switch panel above the windscreen.
+    for(const s of [-1,1]){
+      const display=box('Raised_display',[.05,.3,.62],[5.17,2.17,s*.9],'screen',g);display.rotation.z=-.3;
+      round('Shuttle_side_console',[.7,.46,.24],[4.65,1.85,s*1.5],'navy',.04,g);
+      const stick=cyl('Side_stick',.025,.2,[4.75,2.18,s*1.5],'dark',g);stick.rotation.z=-.15;
+      box('Throttle_handle',[.04,.16,.04],[4.78,2.2,s*.07],'metal',g);box('Throttle_handle',[.07,.04,.1],[4.78,2.29,s*.07],'dark',g);
+    }
+    round('Shuttle_throttle_pedestal',[.8,.5,.34],[4.7,1.87,0],'navy',.04,g);
+    box('Pedestal_status',[.3,.012,.24],[4.5,2.126,0],'screen',g);
+    round('Shuttle_overhead_panel',[.9,.1,1.8],[5.5,3.69,0],'navy',.04,g);
+    for(const [dx,m] of [[-.25,'screen'],[0,'amber'],[.25,'green']])box('Overhead_switch_status',[.06,.016,1.5],[5.5+dx,3.632,0],m,g);
     for(const s of [-1,1]){round('Shuttle_engine',[6,1.8,2.2],[-6,1.8,s*5.1],'metal',.6,g);box('Shuttle_wing',[9,.22,3],[-3,1.5,s*3.9],'lining',g);}
     box('Shuttle_tail',[4,3,.3],[-8.5,3.2,0],'lining',g);
     for(const dx of [-7,7])for(const side of [-1,1])box('Docking_cradle',[1,.4,1],[dx,.2,side*3.2],'amber',g);
@@ -364,7 +385,7 @@ function buildcreateSpecialArea(area){
   else if(area.category==='Aft engineering')engineering(area,k);
   else commandRoom(area,k);
   finishShipArea(area,k);
-  k.root.traverse(o=>{if(!o.isMesh)return;if(o.name==='Bridge_glazing_upper_exterior_row')tintWorldWindow(o,p=>new T.Vector3(Math.max(1,p.x-160),.5,p.z));if(o.name==='Shuttle_glazing'||o.name==='Lifeboat_front_glazing')tintBoxWindow(o,'x',1);});
+  k.root.traverse(o=>{if(!o.isMesh)return;if(o.name==='Bridge_glazing_upper_exterior_row')tintWorldWindow(o,p=>new T.Vector3(Math.max(1,p.x-160),.5,p.z));if(o.name==='Shuttle_glazing'||o.name==='Lifeboat_front_glazing')tintBoxWindow(o,'x',1);if(o.name==='Shuttle_cabin_window')tintBoxWindow(o,'z',Math.sign(o.position.z));});
   const [x,y,z]=area.center;
   return {...k,area,overview:area.overview||{position:[x+area.width*.9,y+Math.max(area.width,area.depth)*.9,z+area.depth*1.1],target:[x,y+1,z]},inside:area.inside||{position:[x,y+1.7,z+(z>0?-1:1)*(area.depth/2-2)],target:[x+3,y+1.3,z]}};
 }
