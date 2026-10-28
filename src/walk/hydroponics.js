@@ -75,6 +75,28 @@ const PLANTS={
  },
 };
 
+// The scale figure by the balustrade (areas.js), a blockout cat, becomes a scarecrow guarding the crops (tester feedback
+// #171): a wooden pole with a cross arm, a sacking body on denim trousers, straw sleeves, a sacking head with a stitched
+// face and a straw hat. It stands where the figure stood, facing the crops, and its parts are solid, as the figure's were.
+function scarecrow(figure,mat){
+ const wood=mat('scarecrow_wood',0x8a6a45,{roughness:.8}),sack=mat('scarecrow_sacking',0xb9925a,{roughness:.95}),
+  head=mat('scarecrow_head',0xd9c08a,{roughness:.95}),straw=mat('scarecrow_straw',0xe6c86a,{roughness:.9}),
+  denim=mat('scarecrow_denim',0x3d5a80,{roughness:.8}),ink=mat('scarecrow_stitches',0x2a2a2a,{roughness:.9});
+ const s=new T.Group();s.name='Scarecrow';s.position.copy(figure.position);s.rotation.y=figure.rotation.y+Math.PI/2;
+ const part=(name,m,g,[x,y,z],rz=0)=>{const o=new T.Mesh(g.rotateZ(rz).translate(x,y,z),m);o.name='Scarecrow_'+name;o.castShadow=true;o.receiveShadow=true;s.add(o);};
+ part('pole',wood,new T.CylinderGeometry(.035,.035,1.95,8),[0,.975,0]);
+ part('cross_arm',wood,new T.BoxGeometry(1,.05,.05),[0,1.5,0]);
+ for(const x of [-.62,.62])part('straw_sleeve',straw,new T.CylinderGeometry(.065,.065,.34,8),[x,1.46,0],Math.PI/2);
+ part('sacking_body',sack,new T.BoxGeometry(.36,.56,.24),[0,1.22,0]);
+ for(const x of [-.08,.08])part('denim_leg',denim,new T.BoxGeometry(.13,.9,.16),[x,.48,0]);
+ part('sacking_head',head,new T.SphereGeometry(.14,14,10),[0,1.8,0]);
+ for(const x of [-.05,.05])part('stitched_eye',ink,new T.BoxGeometry(.035,.035,.01),[x,1.82,.14]);
+ part('stitched_mouth',ink,new T.BoxGeometry(.1,.012,.01),[0,1.755,.14]);
+ part('hat_crown',straw,new T.CylinderGeometry(.12,.14,.16,12),[0,2,0]);
+ part('hat_brim',straw,new T.CylinderGeometry(.27,.27,.025,16),[0,1.93,0]);
+ figure.parent.add(s);figure.removeFromParent();
+}
+
 export function dressHydroponics(ship){
  const room=roomObject(ship,ROOM),fit=room?.getObjectByName('Room_fittings');if(!fit)return false;
  const racks=[];fit.traverse(o=>{if(o.name==='Hydroponic_rack')racks.push(o);});if(!racks.length)return false;
@@ -89,6 +111,8 @@ export function dressHydroponics(ship){
   glow:new T.MeshBasicMaterial({name:'Hydro_grow_light',color:0xffe6c0,toneMapped:false}),
   status:new T.MeshBasicMaterial({name:'Hydro_status_light',color:0x4fe3cf,toneMapped:false}),
   crops:new T.MeshStandardMaterial({name:'Hydro_crops',color:0xffffff,vertexColors:true,flatShading:true,side:T.DoubleSide,roughness:.75})};
+ // The scale figure by the balustrade becomes a scarecrow. This runs before the colliders are built, so walkers go round it.
+ const figure=room.getObjectByName('Resident_scale_1_75m');if(figure)scarecrow(figure,mat);
  const group=new T.Group();group.name='Hydroponic_garden_dressing';fit.add(group);
  const parts=new Map();
  const put=(name,material,g)=>{const k=name+'|'+material.name;let p=parts.get(k);if(!p)parts.set(k,p={name,material,list:[]});

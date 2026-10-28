@@ -6700,13 +6700,15 @@
       "via": "frame boundary",
       "fixed": false,
       "features": [
+        "Scarecrow",
+        "Scarecrow_",
         "Hydroponic_garden_dressing",
         "Hydro_crop_"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 19,
-      "signature": "a943bad336e1f439d30f8f015995ee318df97aad7b55b2fe8289b1e30df23b53"
+      "placements": 22,
+      "signature": "6a0280a1bf1333448d68bdab906e6243734151c58b946b6cbc213b17740a6bc4"
     },
     {
       "source": "src/walk/input.js",
