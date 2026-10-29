@@ -7327,12 +7327,13 @@
       "via": "frame boundary",
       "fixed": false,
       "features": [
+        "Walk_aft_shaft_back_glass",
         "Walk_band_"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 37,
-      "signature": "e9b723ea08cd33f9b7a74bb195fe81e60b7eef5b66ec80b111c2f822ea54cf55"
+      "signature": "7a9d98e389186279c688c741a7677b2d278018b7f368919c8a91f437b17b3061"
     },
     {
       "source": "src/walk/marks.js",
@@ -7541,7 +7542,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "834873f5393566c210e8b5a69f706ffc10e4575431b0a886e22fa1db672664ba"
+      "signature": "f96118588d7a38471a4d464e9ea4d6a1870374c5a8bcf0ebc2564ed166c1411b"
     },
     {
       "source": "src/walk/paws-off/game.js",

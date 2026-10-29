@@ -185,7 +185,10 @@ async function buildShip(){
  // The main lift shafts are walled in nearly clear glass, so with the car away the shaft read as an open drop at your
  // feet. Frost it on foot so it reads as the wall it is.
  const shaftGlass=new T.MeshStandardMaterial({name:'Walk_shaft_glass',color:0xb4c8d2,roughness:.45,transparent:true,opacity:.5,depthWrite:false,side:T.DoubleSide});
- ship.inside.traverse(o=>{if(/^Lift_(back|side)_enclosure$/.test(o.name))o.material=shaftGlass;});
+ // The aft back faces have another glazed partition behind them: keep the combined view through to the stairs clear.
+ const aftBackGlass=shaftGlass.clone();aftBackGlass.name='Walk_aft_shaft_back_glass';aftBackGlass.opacity=.18;
+ const aftX=LIFTS.find(l=>l.id==='aft-starboard').car.x;
+ ship.inside.traverse(o=>{if(/^Lift_(back|side)_enclosure$/.test(o.name))o.material=o.name==='Lift_back_enclosure'&&Math.abs(o.position.x-aftX)<.01?aftBackGlass:shaftGlass;});
  status('Fitting the walls…');await idle();
  const prepared=prepareWalkWorld(ship,{into:colliders,kit:cosmoKit,anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches,urls:artUrls,hat:__HAT_URL__,light:{hemi,fill,scene},afterBase(){
  // The hull behind the glass goes for drawing only, after the colliders have it.
