@@ -6,9 +6,9 @@ import {findStand} from './places.js';
 
 // Mars Cat Transporters (from tester feedback): six three-seat carts parked side by side along the outer wall of Deck 1's
 // Freight control, numbered MCT-01 to MCT-06. E at the front takes the centred driver's seat (one driver per cart; with
-// Leo live the server says who has it: server/transporters.mjs); W and S drive at walking pace, A and D steer the front
-// wheels, and E gets out, leaving the cart parked where it stopped. E at the back takes one of the two rear seats, which
-// face backwards, and rides along. The carts stay on Deck 1's floor and out of the lifts, and this first step keeps
+// Leo live the server says who has it: server/transporters.mjs). W and S drive at walking pace; hold Shift to run.
+// A and D steer the front wheels. E gets out, leaving the cart parked where it stopped. E at the back takes a rear seat.
+// It faces backwards and rides along. The carts stay on Deck 1's floor and out of the lifts, and this first step keeps
 // them out of Container hold A, Cargo maintenance and Aft spares, which other changes are fitting out (their noses stop
 // in the doorway). Each visitor drives their own copy without Leo live; with it, others see the driver seated and the
 // cart moving under them, and a cart parked where its driver left it, until the daily reset sends it home.
@@ -22,8 +22,8 @@ const HOME_X=[-4.25,-1.75,3.75,6.25,11.75,14.25],HOME_Z=14.75,HOME_YAW=Math.PI;
 // Rooms this step keeps the carts out of (their own changes are in progress).
 const FENCED=['d01-cargo-1','d01-workshop-5','d01-spares-aft'];
 export const MCT={
- // A walker's pace forward (avatar.js WALKER.walk), slower back; m/s, m/s^2, radians and radians a second.
- speed:2.25,reverse:1.2,accel:2.2,brake:5,steer:.6,steerRate:2.2,
+ // Walking pace forward and slower back; m/s. Run is a multiplier; accel and brake are m/s^2. Steering uses radians.
+ speed:2.25,reverse:1.2,runMultiplier:1.5,accel:2.2,brake:5,steer:.6,steerRate:2.2,
  wheelbase:2,rearAxle:-1.15,frontAxle:.85,wheel:.29,track:.64,
  // The plan: half its width, its rear and front ends; the collision circles' centres along it and their radius.
  half:.75,rear:-2,front:1.3,circles:[.55,-.35,-1.25],radius:.75,
@@ -87,8 +87,8 @@ export function cartBlocked(c,{colliders,others}){
 }
 // One step of driving: throttle and steering in [-1,1] (W/S and D/A). The front wheels steer and the cart turns about
 // its rear axle (a bicycle model); a wall stops it rather than sliding it far, and anywhere it may not go turns it back.
-export function driveCart(c,dt,throttle,steering,world){
- const want=throttle>0?throttle*MCT.speed:throttle*MCT.reverse;
+export function driveCart(c,dt,throttle,steering,world,running=false){
+ const pace=running?MCT.runMultiplier:1,want=throttle>0?throttle*MCT.speed*pace:throttle*MCT.reverse*pace;
  const slowing=Math.abs(want)<Math.abs(c.speed)||(want*c.speed<0);
  c.speed+=T.MathUtils.clamp(want-c.speed,-(slowing?MCT.brake:MCT.accel)*dt,(slowing?MCT.brake:MCT.accel)*dt);
  c.steer+=T.MathUtils.clamp(-steering*MCT.steer-c.steer,-MCT.steerRate*dt,MCT.steerRate*dt);
@@ -253,9 +253,9 @@ export function createTransporters({colliders,lifts}){
     if(q&&carts.every(o=>!outOfCart(o,q,.3)))return {pos:q,heading:c.yaw+(seat==='driver'?0:Math.PI)};}
    return {pos:cartPoint(c,[1.3,0,-.1]),heading:c.yaw};
   },
-  // Driving the cart this visitor has: throttle and steering in [-1,1].
-  drive(dt,throttle,steering){
-   if(!mine)return;for(let left=dt;left>1e-6;left-=.05)driveCart(mine,Math.min(.05,left),throttle,steering,world);
+  // Driving the cart this visitor has: throttle and steering in [-1,1], plus run.
+  drive(dt,throttle,steering,running=false){
+   if(!mine)return;for(let left=dt;left>1e-6;left-=.05)driveCart(mine,Math.min(.05,left),throttle,steering,world,running);
    const now=performance.now();if(linked&&now-sentAt>1000){sentAt=now;link.send({e:'at',i:mine.i,at:mine.pos.toArray().map(v=>Math.round(v*100)/100),yaw:Math.round(mine.yaw*1000)/1000});}
   },
   // Keep a walker (plan point p, body radius r) out of every cart.
