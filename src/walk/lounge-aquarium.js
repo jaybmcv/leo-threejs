@@ -9,8 +9,8 @@ import {COMMONS} from '../model.js';
 // promenade), from the floor to the ceiling, three storeys in one. Glowing coral, kelp and an octopus sit on its rocks,
 // schools of glowing fish swim loops through it, kelp sways and bubbles rise. The jaguar's glass throat (jaguar-gate.js)
 // runs through it as the way in, so you walk in with the tank either side and over you. The galleries stay as they were,
-// with their rails in front of the glass. Walk only: the glass, the tank's back on Deck 17, its ends and the throat's
-// sides are solid; inside, everything is the walk's own drawing (unlit colours, no real lights).
+// with their rails in front of the glass. Walk only: both glass faces, the ends and the throat's sides are solid;
+// inside, everything is the walk's own drawing (unlit colours, no real lights).
 // Built in the commons template's own frame (HYDRO_NIP_LOUNGE.md): x along the wall, z from the promenade side (4) to the
 // lounge (8), y up from the Deck 17 floor (24.3). The throat is the jaguar gate's: 4 m wide at x 137.25, 3.68 m high.
 export const AQUARIUM={x0:113.7,x1:154.3,back:4.07,glass:7.82,front:7.9,floor:24.3,bed:24.62,top:35.5,deck18:28,tunnel:{x0:135.25,x1:139.25,top:28.04}};
@@ -29,11 +29,10 @@ export function aquariumFront(){
  return {x0:x(A.x0),x1:x(A.x1),z0:Math.min(za,zb),z1:Math.max(za,zb),y0:A.floor,y1:A.top+.6};
 }
 
-// Solid parts, as boxes [x0,x1,y0,y1,z0,z1]: the glass (above the throat too), the back on Deck 17 (on the decks above,
-// the promenade's own walls), both ends, and the throat's sides and roof.
+// Solid parts, as boxes [x0,x1,y0,y1,z0,z1]: both glass faces (above the throat too), both ends, and the throat's sides and roof.
 const SOLIDS=[
  [A.x0,TUN.x0,A.floor,A.top,A.glass,A.front],[TUN.x1,A.x1,A.floor,A.top,A.glass,A.front],[TUN.x0,TUN.x1,TUN.top-.06,A.top,A.glass,A.front],
- [A.x0,TUN.x0,A.floor,A.deck18,3.97,A.back],[TUN.x1,A.x1,A.floor,A.deck18,3.97,A.back],
+ [A.x0,TUN.x0,A.floor,A.top,3.97,A.back],[TUN.x1,A.x1,A.floor,A.top,3.97,A.back],[TUN.x0,TUN.x1,TUN.top,A.top,3.97,A.back],
  [A.x0-.1,A.x0,A.floor,A.top,3.97,A.front],[A.x1,A.x1+.1,A.floor,A.top,3.97,A.front],
  [TUN.x0,TUN.x0+.05,A.floor,TUN.top,A.back,A.glass],[TUN.x1-.05,TUN.x1,A.floor,TUN.top,A.back,A.glass],[TUN.x0,TUN.x1,TUN.top-.06,TUN.top,A.back,A.glass],
 ];
@@ -152,13 +151,12 @@ export function createLoungeAquarium(ship,frame,colliders){
  // commons' columns stay, as the glass's posts.
  {const box=new T.Box3().setFromPoints([new T.Vector3(A.x0+.05,A.floor+.05,A.back+.03),new T.Vector3(A.x1-.05,A.top-.05,A.glass-.02)].map(p=>p.applyMatrix4(frame)));
   cutOut(ship.inside,box,o=>o.name!=='Commons_column');}
+ // Open the promenade partitions for drawing after their collision has been built.
+ cutOut(ship.inside,new T.Box3(new T.Vector3(A.x0,A.floor,3.7),new T.Vector3(A.x1,A.top,4.2)),o=>o.name==='Partition_wall',frame.clone().invert());
 
  const L=lists(),put=L.put,rnd=seeded(125),r=(a,b)=>a+(b-a)*rnd(),pick=a=>a[Math.floor(rnd()*a.length)];
  const flat=c=>()=>c;
- // The water: a deep backdrop lit from above, a dark lid, and the sand bed either side of the throat.
- const back=(x0,x1,y0)=>{const g=new T.PlaneGeometry(x1-x0,A.top-y0,1,10).translate((x0+x1)/2,(y0+A.top)/2,A.back+.06);
-  put('life',g,new T.Matrix4(),(p)=>{const t=(p.y-A.floor)/(A.top-A.floor);return C(0x020c22).lerp(C(0x0a4f86),Math.pow(t,1.3)).lerp(C(0x2aa7d6),clamp((t-.9)*10,0,1)*.6);});};
- back(A.x0,TUN.x0,A.floor);back(TUN.x1,A.x1,A.floor);back(TUN.x0,TUN.x1,TUN.top);
+ // The water has a dark lid and a sand bed either side of the throat.
  put('life',new T.PlaneGeometry(A.x1-A.x0,A.glass-A.back).rotateX(Math.PI/2).translate((A.x0+A.x1)/2,A.top-.02,(A.back+A.glass)/2),new T.Matrix4(),flat(C(0x0c3b63)));
  for(const [x0,x1] of [[A.x0,TUN.x0],[TUN.x1,A.x1]]){
   const g=new T.PlaneGeometry(x1-x0,A.glass-A.back,Math.round((x1-x0)*2),6).rotateX(-Math.PI/2),p=g.attributes.position;
@@ -251,8 +249,7 @@ export function createLoungeAquarium(ship,frame,colliders){
  const steelBoxes=[[A.x0,TUN.x0,A.floor,A.bed,A.glass-.04,A.front+.06],[TUN.x1,A.x1,A.floor,A.bed,A.glass-.04,A.front+.06],[A.x0,A.x1,A.top-.2,A.top,A.front,A.front+.08],
   [A.x0-.12,A.x0+.12,A.floor,A.top,A.glass-.1,A.front+.08],[A.x1-.12,A.x1+.12,A.floor,A.top,A.glass-.1,A.front+.08],
   ...[121,132,143,154].map(x=>[x-.26,x+.26,A.bed,A.top,7.7,8.3]),
-  [A.x0-.1,A.x0,A.floor,A.top,A.back,A.glass],[A.x1,A.x1+.1,A.floor,A.top,A.back,A.glass],
-  [A.x0,TUN.x0,A.floor,A.deck18,3.97,A.back],[TUN.x1,A.x1,A.floor,A.deck18,3.97,A.back]];
+  [A.x0-.1,A.x0,A.floor,A.top,A.back,A.glass],[A.x1,A.x1+.1,A.floor,A.top,A.back,A.glass]];
  const steel=steelBoxes.map(b=>boxGeometry(b).toNonIndexed());
  const lineBoxes=[[A.x0,TUN.x0,A.bed-.05,A.bed-.01,A.front+.06,A.front+.08],[TUN.x1,A.x1,A.bed-.05,A.bed-.01,A.front+.06,A.front+.08],[A.x0,A.x1,A.top-.24,A.top-.2,A.front+.05,A.front+.08],
   // and two along its back on the promenade side, one low and one high.
@@ -300,7 +297,7 @@ vec3 transformed=vec3(aBubble.x+sin(uTime*2.3+aBubble.z*40.)*.06,${A.bed.toFixed
  // Halos: their UVs were dropped by put(), so give the merged quads theirs back (each quad six vertices, in PlaneGeometry's order).
  {const o=mesh('Walk_aquarium_glow',L.halos,mats.halos,1);if(o){const n=o.geometry.attributes.position.count,uv=new Float32Array(n*2),q=[0,1,0,0,1,1,0,0,1,0,1,1];for(let i=0;i<n;i++){uv[i*2]=q[(i%6)*2];uv[i*2+1]=q[(i%6)*2+1];}o.geometry.setAttribute('uv',new T.BufferAttribute(uv,2));}}
  mesh('Walk_aquarium_shafts',L.rays,mats.rays,1);
- const panes=[[A.x0,TUN.x0,A.bed],[TUN.x1,A.x1,A.bed],[TUN.x0,TUN.x1,TUN.top]].map(([x0,x1,y0])=>new T.PlaneGeometry(x1-x0,A.top-.2-y0).translate((x0+x1)/2,(y0+A.top-.2)/2,A.front));
+ const panes=[A.front,A.back].flatMap(z=>[[A.x0,TUN.x0,A.bed],[TUN.x1,A.x1,A.bed],[TUN.x0,TUN.x1,TUN.top]].map(([x0,x1,y0])=>new T.PlaneGeometry(x1-x0,A.top-.2-y0).translate((x0+x1)/2,(y0+A.top-.2)/2,z)));
  for(const g of panes){g.deleteAttribute('uv');}
  mesh('Walk_aquarium_glass',panes,mats.glass,2);
  // Seen from inside the throat, the water tints whatever is beyond it: a pane of it against each side and over the roof.
