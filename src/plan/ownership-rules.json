@@ -504,6 +504,12 @@
     ],
     "via": "roomObject"
   },
+  "src/walk/baggage.js": {
+    "owners": [
+      "d02-baggage-5"
+    ],
+    "via": "roomObject"
+  },
   "src/walk/lounge-entrance-signs.js": {
     "owners": [
       "commons-1"

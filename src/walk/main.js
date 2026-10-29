@@ -200,7 +200,7 @@ async function buildShip(){
  recovery=createRecoveryMood(ship,{hemi,fill,scene});
  }});
  ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
- const {pipework,trolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;
+ const {pipework,trolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;
  // The hidden clubhouse's vault door behind the arcade (vault.js): solid here, as a movable collider of its own.
@@ -276,6 +276,7 @@ async function buildShip(){
  if(swordCase)toBand(swordCase.group);
  // Hydroponic garden A's chinampa tank (chinampa.js), drawn with Deck 3's band.
  if(chinampa)toBand(chinampa.group);
+ if(baggage)toBand(baggage.group);
  if(halloween)toBand(halloween.group);
  toBand(hexFloor.group);
  toBand(leverPanel.group);
@@ -306,7 +307,7 @@ async function buildShip(){
 }
 let imagingScans=null;
 let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,mct=null;
-let mazeHold=null,maze=null,leverPanel=null,chinampa=null;
+let mazeHold=null,maze=null,leverPanel=null,chinampa=null,baggage=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -660,6 +661,7 @@ renderer.setAnimationLoop(()=>{
  maze?.update(p,now);
  freightGate?.update(dt,p);
  chinampa?.update(dt,p);
+ baggage?.update(dt,p);
  marks?.update(camera,p,now);
  if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);graffiti?.load(p);crownTv?.update(p);
   // Walking into Mudwater Arena counts as a visit (server/arena.mjs).

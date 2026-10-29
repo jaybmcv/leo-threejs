@@ -31,11 +31,14 @@ import {dressGamingLounge} from './gaming-lounge.js';
 import {createMissionHolo} from './mission-holo.js';
 import {createSwordCase} from './sword-case.js';
 import {createChinampa} from './chinampa.js';
+import {stripBaggage,createBaggage} from './baggage.js';
 // Room edits and proxy colliders must be identical in the page and the Node checker.
 export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=null,afterRest=null,light=null,kit=null,anisotropy=1,still=false,urls={},hat=''}={}){
  const dropped=exteriorPrepared?0:prepareExteriorForWalking(ship);
  // Refrigerated provisions loses its shared locker cabinets before the colliders see them (provisions.js).
  stripProvisions(ship);
+ // Baggage reclaim's straight belts and counter give way to four corner carousels (baggage.js).
+ stripBaggage(ship);
  // Container hold A loses its container stacks and aisle lines for the Container Maze (maze/hold.js).
  stripHold(ship);
  // Cargo maintenance loses its repair benches to the MCT charging and service bays (mct-bay.js).
@@ -116,8 +119,9 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Hydroponic garden A's chinampa tank, its water plant and its two reading signs (chinampa.js): solid as plain boxes,
  // the hoses on the floor dressing.
  const chinampa=createChinampa(ship,{still});if(chinampa)colliders.addStatic(chinampa.solid,()=>true);
+ const baggage=createBaggage(ship,{still});if(baggage)colliders.addStatic(baggage.solid,()=>true);
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,missionHolo,swordCase,chinampa,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,missionHolo,swordCase,chinampa,baggage,mudwater};
 }
