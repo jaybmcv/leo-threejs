@@ -1,3 +1,4 @@
+import './v2-output.mjs';
 import{ceilingCoverageFaces}from'./ceiling-coverage-v2.mjs';
 import fs from'node:fs/promises';import assert from'node:assert/strict';import *as T from'three';import{MeshBVH}from'three-mesh-bvh';import{roomFinishFaces,roomCoreFinishFaces,coplanarOverlaps,COPLANAR_EXCEPTIONS}from'../src/plan/coplanar-v2.js';
 export async function checkPreparedFinishes(root,layout,artifact,{reportPath='output/phase3b/prepared-finish-geometry.json'}={}){

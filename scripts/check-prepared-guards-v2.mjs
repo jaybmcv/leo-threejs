@@ -1,3 +1,4 @@
+import './v2-output.mjs';
 import{createHash}from'node:crypto';
 import{checkRoomSlabVoids}from'./check-room-slab-voids-v2.mjs';
 import fs from'node:fs/promises';import assert from'node:assert/strict';import{actualGuardGround}from'../src/v2/hull-guards.js';import{contains}from'../src/plan/geometry-v2.js';import{ownerFootprint}from'../src/plan/envelope-ownership-v2.js';import{worldPoint}from'../src/plan/hull-skin-v2.js';import{auditGuardSupport}from'./guard-support-audit-v2.mjs';

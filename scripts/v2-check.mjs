@@ -1,3 +1,4 @@
+import './v2-output.mjs';
 import {preparedDiskFiles} from './prepared-public-v2.mjs';
 import {checkPublicSkins} from './check-public-skins-v2.mjs';import {readCurrentWalkReport,walkBuildIdentity} from './v2-walk-identity.mjs';
 import {createCanvas} from '@napi-rs/canvas';

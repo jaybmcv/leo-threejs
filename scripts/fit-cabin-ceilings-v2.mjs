@@ -1,3 +1,4 @@
+import './v2-output.mjs';
 import fs from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import * as T from 'three';

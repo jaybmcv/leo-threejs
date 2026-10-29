@@ -1,5 +1,5 @@
 {
-  "source": "Main 6a2d28a own build after build:public; merge-main-1027/glb-main-after-public.txt",
+  "source": "Main 79c4a6f own build; redesign-verify/merge-main-1028/glb-main.txt",
   "models": [
     {
       "name": "leo-aft-systems.glb",
@@ -28,8 +28,8 @@
     },
     {
       "name": "leo-full-ship.glb",
-      "bytes": 576191708,
-      "sha256": "08d02bf02179dffb78378c09222e2cb4f810c62dba9a5727fb8d9f6939df0956"
+      "bytes": 577218192,
+      "sha256": "f0f688962768df851c40b3a0a5961f7d8759c3c5985e819c85ad8a972e998512"
     },
     {
       "name": "leo-garden-commons.glb",
@@ -48,8 +48,8 @@
     },
     {
       "name": "leo-service-areas.glb",
-      "bytes": 371086108,
-      "sha256": "0246b59a87ebdd410abe038d3a5c5179fc452357a779931d83f13043f5e705de"
+      "bytes": 372112580,
+      "sha256": "d8384c6073d41f17bf80bc8d6438a822cb4d688498d95c63786f7485fcebade8"
     },
     {
       "name": "leo-transit.glb",

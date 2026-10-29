@@ -1,3 +1,4 @@
+import {memoGeometry} from './build-cache.js';
 import {finishedSkinAuthority} from './skin-authority.js';
 import * as T from 'three';
 import {isFinishedSkin,meshOwner} from '../plan/skin-clearance-v2.js';
@@ -8,7 +9,8 @@ import {windowReservationCuts} from '../plan/window-reservation-v2.js';
 export {windowReservationCuts};
 // Old rectangular backing and decorative perimeter work are clipped to the actual loaded skin.
 // Source furnishings and their instance transforms are retained. Only a newly generated geometry is attached.
-export function trimMeshToSkin(o,authority,{maxPasses=6,onPass=null,...settings}={}){
+export function trimMeshToSkin(o,authority,options={}){if(options.onPass)return trimMeshToSkinUncached(o,authority,options);return memoGeometry(o,'skin',{skin:globalThis.__LEOBuildGeometryCache?.skin,options},()=>trimMeshToSkinUncached(o,authority,options));}
+function trimMeshToSkinUncached(o,authority,{maxPasses=6,onPass=null,...settings}={}){
  if(!Number.isInteger(maxPasses)||maxPasses<1||maxPasses>16)throw Error('Invalid skin clip closure limit');
  const rows=[];for(let pass=0;pass<=maxPasses;pass++){
   const row=trimSkinPass(o,authority,settings);onPass?.(row,o,pass);

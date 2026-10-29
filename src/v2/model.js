@@ -1,3 +1,4 @@
+import {buildCrewGallery} from './crew-gallery.js';
 import {entrySegments,entryHeader} from './room-entries.js';
 import {ownerFootprint} from '../plan/envelope-ownership-v2.js';import {worldPoint} from '../plan/hull-skin-v2.js';
 import {buildGardenGuards,galleryHoles} from './garden-guards.js';
@@ -32,20 +33,15 @@ export function fitV2Structure(ship){
  // The faired hull is kept intact. A continuous interior pressure lining prevents
  // bare distribution slabs from opening onto walkable exterior hull triangles.
  for(const d of layout.decks){const next=layout.decks[d.number];for(let i=0;i<d.slab.outline.length;i++)removePanelEndCaps(wall(structure,d.slab.outline[i],d.slab.outline[(i+1)%d.slab.outline.length],d.y,3.7,glass,'V2_pressure_lining'));mesh(structure,'V2_distribution_ceiling',polygonGeometry(d.slab.outline,[...(next?next.slab.holes.map(h=>h.polygon):[]),...loungeVoidMasks(d.y+3.72,.08)],d.y+3.72,.08),lining);}
+ for(const b of layout.circulation.balconies||[]){const d=layout.decks[b.deck-1],xs=b.polygon.map(q=>q[0]),zs=b.polygon.map(q=>q[1]),x0=Math.min(...xs),x1=Math.max(...xs),z0=Math.min(...zs),z1=Math.max(...zs),rect=(a,b,c,e)=>rectangle((a+b)/2,(c+e)/2,b-a,e-c),masks=[rect(-1000,x0,-1000,1000),rect(x1,1000,-1000,1000),rect(-1000,1000,-1000,z0),rect(-1000,1000,z1,1000),...d.slab.holes.filter(h=>h.id!=='atrium').map(h=>h.polygon)];const o=mesh(structure,'V2_lounge_balcony_floor',polygonGeometry(d.atrium.outline,masks,d.y,.24),floor);o.userData={v2Deck:b.deck,balcony:b.id,role:'floor'};}
+ buildCrewGallery(structure,layout);
  for(const r of layout.circulation.ramps){const g=polygonGeometry(r.polygon,[],0,.18),p=g.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,p.getY(i)+r.points[0][1]+(p.getX(i)-r.points[0][0])/r.run*r.rise);g.computeVertexNormals();mesh(structure,'V2_access_ramp',g,floor);}
  // Shells are rebuilt in world plan coordinates. Source fittings remain unscaled under their registered roots.
  for(const r of layout.rooms.filter(r=>r.aggregate)){roomObject(ship,r.id)?.removeFromParent();}
  for(const shuttle of layout.shuttles){const g=new T.Group();g.name='V2_escape_shuttle_placeholder_'+shuttle.id;g.userData={schedule:shuttle.id,hullFacadeOwner:shuttle.roomId,component:shuttle.id,seats:100,placeholder:true};structure.add(g);mesh(g,'V2_shuttle_floor',polygonGeometry(shuttle.polygon,[],shuttle.y,.18),floor);for(let i=0;i<4;i++){const a=shuttle.polygon[i],b=shuttle.polygon[(i+1)%4];if(i===0)continue;if(i===3&&shuttle.hullEnvelope){const door=[(a[0]+b[0])/2,shuttle.y,(a[1]+b[1])/2];g.userData.bayEntry={center:door,width:1.8,height:3.2};for(const [aa,bb] of entrySegments(a,b,door,1.8))removeBottomCap(wall(g,aa,bb,shuttle.y,3.2,glass));}else removeBottomCap(wall(g,a,b,shuttle.y,3.2,glass));}mesh(g,'V2_shuttle_ceiling',polygonGeometry(shuttle.polygon,[],shuttle.y+3.2,.12),lining);}
  for(const r of layout.rooms.filter(r=>!r.aggregate)){
   const source=roomObject(ship,r.id);
-  if(source){
-   // Wall-mounted art, projections, signs and lighting are fittings too. Keep them
-   // under the moving room when the accepted shell gives way to its v2 envelope.
-   const hung=[];source.traverse(o=>{if(o.isMesh&&/(art|mural|print|poster|painting|sconce|light|sign|display|projection|hanger|shade)/i.test(o.name)){for(let p=o.parent;p&&p!==source;p=p.parent)if(ship.cutaway.has(p)){hung.push(o);break;}}});for(const o of hung)source.attach(o);
-   const retired=[];source.traverse(o=>{if(/^(Walls_and_ceiling|Garden_walls_and_ceiling|Observation_walls_and_ceiling|.*_shell)$/.test(o.name)){ship.cutaway.delete(o);o.visible=false;o.userData.v2RemovedShell=true;}if(o.isMesh&&/^(Commons_column|Bridge_window_mullion|Viewport_structural_mullion|Continuous_window_ledge|Panoramic_viewing_rail|Viewing_rail_post|Finished_floor|Commons_floor|Commons_ceiling|Commons_rear_wall|Commons_end_wall|Rear_gallery|End_gallery|Front_gallery|Gallery_stair|Upper_stair_landing|Upper_gallery_connection|Stair_handrail|Gallery_door|Handrail|Baluster|Handrail_bend|Handrail_post|Lounge_rail_glass|Lounge_rail_glow|Curved_lounge_floor|Lounge_access_ramp|Ramp_floor_edge|Promenade_level_floor|Commons_to_promenade|Ramp_handrail|Ramp_rail_post)$/.test(o.name)){o.visible=false;if(o.name!=='Finished_floor')retired.push(o);}});for(const o of retired)o.removeFromParent();
-   // Every declared shell root is detached, so the v1 cutaway toggles cannot bring it back.
-   for(const o of [...ship.cutaway])if(o===source||isChild(o,source)){o.removeFromParent();ship.cutaway.delete(o);}
-  }
+  if(source)retireV2RoomShell(source,ship.cutaway);
   if(r.id==='d03-cold-6')r.fittingDoor={center:toWorld(r.id,[-26,0,0]),width:4};
   const g=new T.Group();g.name='V2_shell_'+r.id;g.userData.room=r.id;structure.add(g);
   const replacements=layout.hullPrototypes?.rollout?layout.hullPrototypes.prototypes.filter(p=>p.kind!=='cabin'&&(p.ownerId===r.id||p.parentRoomId===r.id)):[];
@@ -93,3 +89,13 @@ export function fitV2Structure(ship){
  // Tower shafts and all exterior/hull geometry retain their fixed transit frames.
 }
 function isChild(o,root){for(let p=o.parent;p;p=p.parent)if(p===root)return true;return false;}
+
+export function retireV2RoomShell(source,cutaway){
+   // Wall-mounted art, projections, signs and lighting are fittings too. Keep them
+   // under the moving room when the accepted shell gives way to its v2 envelope.
+   const hung=[];source.traverse(o=>{if(o.isMesh&&/(art|mural|print|poster|painting|sconce|light|sign|display|projection|hanger|shade)/i.test(o.name)){for(let p=o.parent;p&&p!==source;p=p.parent)if(cutaway.has(p)){hung.push(o);break;}}});for(const o of hung)source.attach(o);
+   const retired=[];source.traverse(o=>{if(/^(Walls_and_ceiling|Garden_walls_and_ceiling|Observation_walls_and_ceiling|.*_shell)$/.test(o.name)){cutaway.delete(o);o.visible=false;o.userData.v2RemovedShell=true;}if(o.isMesh&&/^(Commons_column|Bridge_window_mullion|Viewport_structural_mullion|Continuous_window_ledge|Panoramic_viewing_rail|Viewing_rail_post|Finished_floor|Commons_floor|Commons_ceiling|Commons_rear_wall|Commons_end_wall|Rear_gallery|End_gallery|Front_gallery|Gallery_stair|Upper_stair_landing|Upper_gallery_connection|Stair_handrail|Gallery_door|Handrail|Baluster|Handrail_bend|Handrail_post|Lounge_rail_glass|Lounge_rail_glow|Curved_lounge_floor|Lounge_access_ramp|Ramp_floor_edge|Promenade_level_floor|Commons_to_promenade|Ramp_handrail|Ramp_rail_post)$/.test(o.name)){o.visible=false;if(o.name!=='Finished_floor')retired.push(o);}});for(const o of retired)o.removeFromParent();
+   // Every declared shell root is detached, so the v1 cutaway toggles cannot bring it back.
+   for(const o of [...cutaway])if(o===source||isChild(o,source)){o.removeFromParent();cutaway.delete(o);}
+
+}

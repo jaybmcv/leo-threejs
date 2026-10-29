@@ -1,3 +1,4 @@
+import './v2-output.mjs';
 // check-plan consumes the exact prepared public render proof, not another procedural reconstruction.
 import './check-prepared-walk-v2.mjs';
 import fs from 'node:fs/promises';import assert from 'node:assert/strict';import{createHash}from'node:crypto';import{parseExterior}from'./exterior-io-v2.mjs';import{hydrateHullLayout}from'../src/plan/envelope-data-v2.js';import{hullPlanChecks}from'../src/plan/hull-plan-check-v2.js';import{envelopeContact}from'../src/plan/envelope-contact-v2.js';import{invalidateSkinCache}from'../src/plan/finished-skin-v2.js';import{walkBuildIdentity}from'./v2-walk-identity.mjs';

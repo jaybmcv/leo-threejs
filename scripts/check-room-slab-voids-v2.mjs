@@ -1,3 +1,4 @@
+import './v2-output.mjs';
 import * as T from 'three';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';

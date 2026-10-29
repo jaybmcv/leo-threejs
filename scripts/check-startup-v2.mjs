@@ -1,3 +1,4 @@
+import './v2-output.mjs';
 import{startupPublicIdentity}from'./startup-public-identity-v2.mjs';
 import fs from 'node:fs/promises';import {createHash} from 'node:crypto';import {startupServer} from './startup-server-v2.mjs';import {measurePublicStartup} from './startup-probe-v2.mjs';
 if(process.env.LEO_LAYOUT!=='2')throw Error('check:startup requires LEO_LAYOUT=2');const args=process.argv.slice(2),profile=args.includes('--profile'),tag=args.find(a=>a.startsWith('--tag='))?.slice(6)||'current',directory='output/phase3b/startup';await fs.mkdir(directory,{recursive:true});const site=await startupServer();let baseline,candidate,publicIdentity;

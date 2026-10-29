@@ -1,3 +1,4 @@
+import{ensureV1Public}from'./v2-baseline-inputs.mjs';import{writeV2Cosmo}from'./v2-cosmo.mjs';
 import {sharedModelTransport} from './shared-model-transport-v2.mjs';
 import {copyPreparedWalk} from './prepared-public-v2.mjs';
 import {publicV2Export} from './v2-public-export.mjs';
@@ -10,13 +11,13 @@ import {createHash} from 'node:crypto';
 import {writeWalkPage} from './walk-page.mjs';
 import {build} from 'esbuild';
 import {v2Plugin} from './v2-plugin.mjs';
-const source='output/leo-interior-v02',out='dist-v2',sha=b=>createHash('sha256').update(b).digest('hex');await fs.mkdir(out+'/models',{recursive:true});
+await ensureV1Public();const source='output/leo-interior-v02',out='dist-v2',sha=b=>createHash('sha256').update(b).digest('hex');await fs.mkdir(out+'/models',{recursive:true});
 const modelDir=path.resolve(out,'models');if(!modelDir.startsWith(process.cwd()+path.sep))throw Error('Model cleanup outside workspace');for(const name of await fs.readdir(modelDir))if(/(?:\.glb\.\d+|^(?:pool|recipe)\.[0-9a-f]+)\.bin$/.test(name))await fs.unlink(path.join(modelDir,name));
 for(const name of await fs.readdir(out))if(/^(viewer|cosmo)\.[0-9a-f]{10}\.js$/.test(name)||/^layout\.[0-9a-f]+\.\d+\.bin$/.test(name))await fs.rm(out+'/'+name);
 const cache=source+'/public-cache';await fs.mkdir(cache,{recursive:true});const packingHash=sha(Buffer.concat(await Promise.all(['scripts/v2-public-export.mjs','scripts/exact-exterior-compression-v2.mjs','package-lock.json'].map(f=>fs.readFile(f))))).slice(0,12);// All non-phone public exteriors use the finished web asset. The phone retains its own bounded skin.
 const webBytes=await fs.readFile(source+'/leo-exterior-web.glb'),models=new Map(),byInput=new Map();for(const name of(await fs.readdir(source)).filter(n=>n.endsWith('.glb')).sort()){const raw=await fs.readFile(source+'/'+name),sourceSha256=sha(raw),input=name.startsWith('leo-exterior')&&!name.includes('phone')?webBytes:raw,inputHash=sha(input);let packed=byInput.get(inputHash);if(!packed){const file=cache+'/'+inputHash+'-'+packingHash+'.glb';try{packed=await fs.readFile(file)}catch{packed=await publicV2Export(input,{exactPositions:name.startsWith('leo-exterior')});await fs.writeFile(file,packed)}byInput.set(inputHash,packed)}models.set(name,{packed,rawBytes:raw.length,sourceSha256})}const manifest=await sharedModelTransport(models,out);
 await fs.writeFile(out+'/asset-manifest.json',JSON.stringify(manifest,null,2));
-const cosmo=(await fs.readdir('dist')).find(n=>/^cosmo\.[0-9a-f]{10}\.js$/.test(n));if(!cosmo)throw new Error('Existing local Cosmo bundle missing');await fs.copyFile('dist/'+cosmo,out+'/'+cosmo);
+const cosmo=await writeV2Cosmo(out);
 for(const file of ['THREE-LICENSE.txt'])await fs.copyFile(source+'/'+file,out+'/'+file).catch(()=>{});
 await fs.cp('dist/brand',out+'/brand',{recursive:true});
 const layout=JSON.parse(await fs.readFile(source+'/layout.json','utf8'));

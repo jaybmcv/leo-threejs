@@ -4,3 +4,5 @@ if(process.env.LEO_LAYOUT&&!['1','2'].includes(process.env.LEO_LAYOUT))throw new
 export const v2=layoutVersion===2;
 export const modelOutput=v2?'output/leo-interior-v02':'output/leo-interior-v01';
 export const publicOutput=v2?'dist-v2':'dist';
+
+if(v2)await (await import('./v2-output.mjs')).ensureV2Output();
