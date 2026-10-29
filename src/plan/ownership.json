@@ -6724,7 +6724,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 63,
-      "signature": "de92ae257e263d038c7233f220a06a2a4165378c365d1bdca1f64574a01f7668"
+      "signature": "68db8b08f9a7bbd44efec9465a688f88b7395a3b4f4bb30e905039b3cce2b7e0"
     },
     {
       "source": "src/walk/graffiti-wall.js",
@@ -7277,7 +7277,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 36,
-      "signature": "01f35498bbbba3e63fe37afe4ffeb7cedb952be0a7bb277c7cf23a659c4ba3d7"
+      "signature": "279b8a57abea504923427e0b4d033ccfa2eaaa438f2f538d142fb5f25b3c9294"
     },
     {
       "source": "src/walk/marks.js",
