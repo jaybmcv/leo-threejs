@@ -92,7 +92,8 @@ export const ACTOR_POSES={
    limbs(bone,LEGS,s,[.06,-1,0],[.02,-1,.04]);limbs(bone,ARMS,s,[.2,-1,.04],[.12,-1,.28]);
    turn(bone('foot.'+s),X,30);
   }
-  turn(bone('spine.006'),X,-8);
+  // Lift only the head onto the pillow; the back stays flat on the mattress.
+  turn(bone('spine.006'),X,11);
   // The tail rests alongside the legs instead of hanging below the mattress.
   for(let i=1;i<=5;i++)aim(bone('Tail_springBone_'+i),bone(i===5?'Tail_springBone_end':'Tail_springBone_'+(i+1)),v(.28,-1,.12));
   cat.root.updateMatrixWorld(true);},

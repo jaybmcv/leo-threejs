@@ -224,7 +224,7 @@ export function createImagingScans(ship,{still=false,anisotropy=4,kit=null}={}){
  if(kit)for(const z of BAYS){
   const patient=kit.figure('scanPatient');patient.name='Imaging_patient';
   // Head toward the pillow and gantry, back on the pad. Shared baked meshes need no animated rig.
-  patient.rotation.set(0,-Math.PI/2,0);const body=new T.Group();body.rotation.x=-Math.PI/2+.12;
+  patient.rotation.set(0,-Math.PI/2,0);const body=new T.Group();body.rotation.x=-Math.PI/2;
   body.add(...patient.children.slice());patient.add(body);
   patient.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(patient,true);
   patient.position.set(6.7-bounds.max.x,.755-bounds.min.y,z-(bounds.min.z+bounds.max.z)/2);
