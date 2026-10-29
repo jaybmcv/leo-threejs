@@ -150,7 +150,7 @@ export function partitionMesh(walls){
  const box=w=>[w.x0,w.x1,w.y0,w.y1,w.z0,w.z1],well=opaque.filter(inStairwell);
  merged(opaque.filter(w=>!inStairwell(w)).map(box),'Partition_wall',new T.MeshStandardMaterial({name:'Walk_partition_lining',color:0xd8dcd5,roughness:.82,metalness:.04}));
  merged(well.map(box),'Partition_wall',STAIRWELL.metal);
- merged(glazed.map(box),'Partition_wall',new T.MeshStandardMaterial({name:'Walk_stair_view_glass',color:0x9cc8dc,roughness:.16,metalness:.1,transparent:true,opacity:.16,depthWrite:false,side:T.DoubleSide}));
+ merged(glazed.map(box),'Partition_wall',new T.MeshStandardMaterial({name:'Walk_stair_view_glass',color:0x9cc8dc,roughness:.16,metalness:.1,transparent:true,opacity:.08,depthWrite:false,side:T.FrontSide}));
  // On both faces of a stairwell partition: a light line low down and a row of panes (flush dressing: no collision).
  const glow=[],panes=[];
  for(const w of well){
@@ -164,13 +164,17 @@ export function partitionMesh(walls){
  }
  merged(glow,'Partition_glow',STAIRWELL.glow);merged(panes,'Partition_glass_inlay',STAIRWELL.glass);
  // Finish the otherwise bare strip visible through the glass. These surfaces are dressing, outside the walking path.
- const lining=[],lights=[];
+ const lining=[],lights=[],sidePanes=[];
  for(const deck of [1,2,3,4,5,16,17,18,19])for(const s of [-1,1]){
   const y=floorY(deck),z0=Math.min(s*7.81,s*10.94),z1=Math.max(s*7.81,s*10.94);
   lining.push([x0,x1,y+.006,y+.026,z0,z1],[x0,x1,y+3.62,y+3.64,z0,z1]);
   for(const x of [x0,x1])lining.push([x-.025,x+.025,y+.02,y+3.62,z0,z1]);
+  for(const x of [x0+.03,x1-.03]){
+   lights.push([x-.004,x+.004,y+.76,y+.835,z0+.08,z1-.08]);
+   for(let i=0;i<2;i++)sidePanes.push([x-.004,x+.004,y+1.2,y+2.9,z0+.12+i*(z1-z0)/2,z0+(i+1)*(z1-z0)/2-.12]);
+  }
   for(const x of [x0+.12,x1-.12])lights.push([x-.025,x+.025,y+.03,y+.04,z0+.08,z1-.08]);
  }
- merged(lining,'Stair_view_inlay',STAIRWELL.metal);merged(lights,'Stair_view_glow',STAIRWELL.glow);
+ merged(lining,'Stair_view_inlay',STAIRWELL.metal);merged(sidePanes,'Stair_view_glass_inlay',STAIRWELL.glass);merged(lights,'Stair_view_glow',STAIRWELL.glow);
  return group;
 }
