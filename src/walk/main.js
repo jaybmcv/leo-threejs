@@ -667,7 +667,7 @@ renderer.setAnimationLoop(()=>{
  imagingScans?.update(dt,p,resting,remotes?.remotes);
  // The Container Maze's clock starts at its way in and drops if the walker leaves (maze/run.js).
  maze?.update(p,now);
- freightGate?.update(dt,p);
+ freightGate?.update(dt,p,bodies);
  chinampa?.update(dt,p);
  marks?.update(camera,p,now);
  if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);graffiti?.load(p);crownTv?.update(p);

@@ -153,8 +153,8 @@ export function dressFreightGate(ship){
 }
 
 // The moving and painted parts, in ship coordinates: `group` draws (with its deck band), `solid` holds plain boxes for
-// the colliders (conveyors, transfer hatches and barricades), and update() runs the gantry and the iris.
-export function createFreightGate(ship,{still=false}={}){
+// the colliders (conveyors, transfer hatches and barricades), and update() runs the gantry, iris and entrance door.
+export function createFreightGate(ship,{still=false,colliders=null}={}){
  const room=roomObject(ship,ROOM);if(!room)return null;
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Freight_gate';
@@ -291,6 +291,7 @@ export function createFreightGate(ship,{still=false}={}){
   return c;};
  const cargoIn=crate(M.in),cargoOut=crate(M.out);
 
+ const door=createFreightDoor(room,group,solid,M,colliders);
  const centre=room.localToWorld(new T.Vector3(GX,0,0));
  function pose(t){
   const z=BRIDGE(t),y=GRIP(t),open=OPEN(t),iris=IRIS_OPEN(t),ch=CRATE[1]/2;
@@ -310,9 +311,54 @@ export function createFreightGate(ship,{still=false}={}){
   M.beacon.color.setHex(moving&&flash?LED:0x3a1c06);
  }
  pose(18);
- function update(dt,p){
+ function update(dt,p,bodies=[p]){
+  door.update(dt,bodies);
   if(still||Math.abs(p.y-centre.y)>4||Math.abs(p.x-centre.x)>40||Math.abs(p.z-centre.z)>30)return;
   pose(Date.now()/1000%CYCLE);
  }
- return {group,solid,update,pose};
+ return {group,solid,update,pose,door};
+}
+
+// A split steel airlock door inside the existing entrance. Its leaves slide behind the walls, keeping the six-metre
+// opening clear. Like the lounge doors, it opens from either side for local and remote walkers.
+function createFreightDoor(room,group,solid,M,colliders){
+ const X=21.68,H=2.68,W=3,TRAVEL=3.08,TIME=.65,REACH=3.4;
+ const inverse=room.matrixWorld.clone().invert(),local=new T.Vector3(),leaves=[];
+ const status=new T.MeshBasicMaterial({name:'Freight_gate_airlock_status',color:LED,toneMapped:false});
+ const add=(parent,name,size,at,mat)=>{const o=new T.Mesh(new T.BoxGeometry(...size),mat);o.name='Freight_gate_airlock_'+name;o.position.set(...at);parent.add(o);return o;};
+ const fixed=(size,at)=>{add(group,'frame',size,at,M.dark);add(solid,'frame',size,at,M.dark);};
+ for(const s of [-1,1])fixed([.24,2.7,.14],[X,1.35,s*3.07]);
+ fixed([.24,.14,6.28],[X,2.77,0]);
+ for(const s of [-1,1]){
+  const leaf=new T.Group();leaf.name='Freight_gate_airlock_leaf';leaf.position.set(X,1.35,s*W/2);group.add(leaf);
+  add(leaf,'panel',[.16,H,W],[0,0,0],M.steel);
+  for(const face of [-1,1]){
+   add(leaf,'inset',[.012,1.8,W-.28],[face*.086,.1,0],M.dark);
+   add(leaf,'seal',[.02,H,.055],[face*.095,0,-s*(W/2-.04)],M.ink);
+   add(leaf,'light',[.022,1.7,.035],[face*.105,.1,-s*(W/2-.18)],status);
+   for(let i=0;i<12;i++)add(leaf,'hazard',[.014,.14,W/12],[face*.1,-1.12,-W/2+W/24+i*W/12],i%2?M.ink:M.yellow);
+  }
+  // Batch each leaf by material; its trim and stripes move together.
+  const parts=new Map();
+  for(const o of [...leaf.children]){o.updateMatrix();o.geometry.applyMatrix4(o.matrix);(parts.get(o.material)||parts.set(o.material,[]).get(o.material)).push(o.geometry);o.removeFromParent();}
+  for(const [mat,gs] of parts){const mesh=new T.Mesh(mergeGeometries(gs),mat);mesh.name='Freight_gate_airlock_panel';mesh.castShadow=true;leaf.add(mesh);gs.forEach(g=>g.dispose());}
+  group.updateMatrixWorld(true);
+  const shape=new T.BoxGeometry(.22,H,W).toNonIndexed();
+  const mover=colliders?.addMover('freight-airlock',shape.attributes.position.array,leaf.matrixWorld);shape.dispose();
+  leaves.push({leaf,mover,s});
+ }
+ // Both faces have the same small header, readable on entry and exit.
+ if(hasWalkCanvas()){
+  const map=canvasTexture(1024,96,(g,w,h)=>{g.fillStyle='#182126';g.fillRect(0,0,w,h);g.fillStyle='#ff8a1e';g.textAlign='center';g.textBaseline='middle';g.font=font(800,48);g.fillText('AIRLOCK  /  AUTO DOOR',w/2,h/2);});
+  const mat=new T.MeshBasicMaterial({name:'Freight_gate_airlock_sign',map,toneMapped:false});
+  for(const s of [-1,1]){const sign=new T.Mesh(new T.PlaneGeometry(3.7,.34),mat);sign.name='Freight_gate_airlock_sign';sign.rotation.y=s*Math.PI/2;sign.position.set(X+(s>0?.34:-.14),3.04,0);group.add(sign);}
+ }
+ const centre=room.localToWorld(new T.Vector3(X,0,0));let open=0,hold=0;
+ return {centre,get open(){return open;},update(dt,bodies){
+  const near=bodies.some(p=>{local.copy(p).applyMatrix4(inverse);return local.y>-.5&&local.y<2.8&&Math.abs(local.x-X)<REACH&&Math.abs(local.z)<3.8;});
+  dt=Math.max(0,dt);hold=near ? .8 : Math.max(0,hold-dt);
+  const next=T.MathUtils.clamp(open+(near||hold>0?1:-1)*dt/TIME,0,1);if(next===open)return;open=next;
+  for(const {leaf,mover,s} of leaves){leaf.position.z=s*(W/2+TRAVEL*open);leaf.updateWorldMatrix(true,false);mover?.place(leaf.matrixWorld);}
+  status.color.setHex(open===1?IN:LED);
+ }};
 }
