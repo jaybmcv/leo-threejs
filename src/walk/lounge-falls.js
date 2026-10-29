@@ -245,5 +245,6 @@ export function createLoungeFalls(ship){
   update(dt,walker){if(walker.distanceTo(here.copy(centre))<NEAR)time.value+=Math.min(dt,.1);},
   // For checks: the pond's middle and the bench, in the ship's coordinates.
   centre,bench:new T.Vector3(BENCH.x,LANDING.top,BENCH.z).applyMatrix4(lounge.matrixWorld),
+  soundLine:{a:new T.Vector3(FALL.x0,FLOOR,FALL.z).applyMatrix4(lounge.matrixWorld),b:new T.Vector3(FALL.x1,FLOOR,FALL.z).applyMatrix4(lounge.matrixWorld)},
  };
 }

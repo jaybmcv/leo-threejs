@@ -5,6 +5,7 @@ import {DEFAULT_DLCAT_TUNING} from './vr/dlCatTuning.ts';
 import {COSMO_EMOTES} from './vr/cosmoEmotes.ts';
 import {WALK_SPEED,RUN_SPEED} from './vr/worldCore.ts';
 import {catnipFace} from './catnip-face.js';
+import {createSwimSuit} from './aquarium-treasure/suit.js';
 
 // Cosmo as the walker, animated by Voyager's Reach's own figure (vr/dlCatFigure.ts): the authored Ecctrl walk and jog,
 // the reference sprint, take-off, air and landing, the turning lean, the tail spring, the idle, crouch, slide and
@@ -65,17 +66,19 @@ export async function createWalker(createDLCat,motion){
  const tail=bone('Tail_springBone_1'),TAIL_DROP=-.55,tq=new T.Quaternion(),axis=new T.Vector3();let tailDrop=0;
  // The hips' height above the feet's origin, standing.
  const hipHeight=bone('spine').getWorldPosition(new T.Vector3()).y-figure.root.getWorldPosition(new T.Vector3()).y;
+ let suit=null;
  return {
   holder,body,figure,hipHeight,
   // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock},
   //  catnip: in the Hydro-Nip Lounge}
   update(dt,s){
    const r=s.rest,seated=r?.kind==='sit'&&r.weight>.35;
-   figure.apply({pos:[0,0,0],yaw:0,dt,speedMs:r?0:s.speed,grounded:r?true:s.grounded,swimming:false,submerged:false,stance:r?'stand':s.stance||'stand',
+   figure.apply({pos:[0,0,0],yaw:0,dt,speedMs:r?0:s.speed,grounded:r?true:s.grounded,swimming:!!s.swimming,submerged:!!s.swimming,stance:r?'stand':s.stance||'stand',
     jumpCount:s.jumpCount||1,jumpS:s.jumpS,turnRate:r?0:s.turnRate||0,accelMs2:r?0:s.accel||0,riseMs:r?0:s.rise||0,emote:r?null:s.emote||null,
     seated,seatedVariant:'passenger',seatHeight:seated?r.seatHeight:undefined,seatForward:0},dt);
    // Lying down, in a bed or playing dead, the hat comes off: on his back it would sink into the floor or the pillow.
-   if(this.hat)this.hat.mount.visible=!(r?.kind==='lie'&&r.weight>.3)&&s.emote!=='play_dead';
+   if(this.hat)this.hat.mount.visible=!s.swimming&&!(r?.kind==='lie'&&r.weight>.3)&&s.emote!=='play_dead';
+   if(s.swimming&&!suit)suit=createSwimSuit(figure,body);suit?.update(!!s.swimming);
    tailDrop=T.MathUtils.damp(tailDrop,this.hat&&!r&&s.stance==='prone'?1:0,8,dt);
    if(tailDrop>.001){
     // About the walker's own right axis, in the tail base's parent frame.
@@ -90,6 +93,6 @@ export async function createWalker(createDLCat,motion){
     figure.root.updateMatrixWorld(true);
    }
   },
-  dispose(){figure.dispose();holder.removeFromParent();}
+  dispose(){suit?.dispose();figure.dispose();holder.removeFromParent();}
  };
 }

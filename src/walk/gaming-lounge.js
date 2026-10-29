@@ -25,7 +25,7 @@ const ACCENTS=[0xff3b5c,0x2fd8ff,0xff4fd8,0x7dff5a,0xffa53a,0x9d6bff];
 const COUCH={x:21.6,r0:3.35,r1:4.05,r2:4.3,half:.9};
 // While the camera is in the room: the lights' share of their usual strength, and their colours.
 const MOOD={hemi:.42,fill:.22,env:.3,sky:0x9aa8ff,ground:0x3a2458};
-const TRAIL=8;
+const TRAIL=8,REMOTE_TRAILS=3,MARKS=TRAIL*(1+REMOTE_TRAILS);
 
 const canvas=(w,h,draw)=>{const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
  const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return t;};
@@ -77,7 +77,7 @@ void main(){
 const FLOOR=`#include <common>
 #include <logdepthbuf_pars_fragment>
 ${COMMON}
-uniform float uTime,uSize;uniform vec4 uTrail[${TRAIL}];uniform vec4 uRoom;varying vec3 vWorld;
+uniform float uTime,uSize;uniform vec4 uTrail[${MARKS}];uniform vec4 uRoom;varying vec3 vWorld;
 const vec2 S=vec2(1.,1.7320508);
 vec4 cell(vec2 p){vec4 c=floor(vec4(p,p-vec2(.5,1.))/S.xyxy)+.5;vec4 h=vec4(p-c.xy*S,p-(c.zw+.5)*S);
  return dot(h.xy,h.xy)<dot(h.zw,h.zw)?vec4(h.xy,c.xy):vec4(h.zw,c.zw+.5);}
@@ -85,7 +85,7 @@ void main(){
 #include <logdepthbuf_fragment>
  vec4 h=cell(vWorld.xz/uSize);vec2 q=abs(h.xy);float e=max(dot(q,S*.5),q.x);
  vec2 centre=vWorld.xz-h.xy*uSize;
- float glow=0.;for(int i=0;i<${TRAIL};i++){vec4 t=uTrail[i];glow+=t.w*(1.-smoothstep(.12,.7,distance(centre,t.xz)));}
+ float glow=0.;for(int i=0;i<${MARKS};i++){vec4 t=uTrail[i];glow+=t.w*(1.-smoothstep(.12,.7,distance(centre,t.xz)));}
  glow=min(glow,1.);
  float wall=min(min(vWorld.x-uRoom.x,uRoom.z-vWorld.x),min(vWorld.z-uRoom.y,uRoom.w-vWorld.z));
  vec3 c=vec3(.003,.0035,.005)+.004*hash(h.zw)+vec3(.02,.024,.03)*(1.-smoothstep(0.,1.4,wall));
@@ -272,7 +272,7 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
  piece(M.keys,new T.BoxGeometry(.03,.02,2.2).translate(END-.48,.03,0));
  for(const [m,list] of parts){const o=new T.Mesh(mergeGeometries(list),m);o.name=m.name;group.add(o);}
  // The floor: black glass hexagons over the room's own floor; the ceiling of stars under its own.
- const uRoom={value:new T.Vector4(origin.x-END,origin.z-SIDE,origin.x+END,origin.z+SIDE)},trail=Array.from({length:TRAIL},()=>new T.Vector4());
+ const uRoom={value:new T.Vector4(origin.x-END,origin.z-SIDE,origin.x+END,origin.z+SIDE)},trail=Array.from({length:MARKS},()=>new T.Vector4(0,0,0,0));
  const floor=new T.Mesh(new T.PlaneGeometry(END*2,SIDE*2).rotateX(-Math.PI/2).translate(0,.01,0),new T.ShaderMaterial({name:'Gaming_hex_floor',vertexShader:VERTEX,fragmentShader:FLOOR,
   uniforms:{uTime:time,uSize:{value:HEX},uTrail:{value:trail},uRoom}}));
  floor.name='Gaming_hex_floor';group.add(floor);
@@ -288,16 +288,25 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
   setMood=t=>{const f=(a,b)=>a+(b-a)*t;hemi.intensity=f(base.hemi,base.hemi*MOOD.hemi);fill.intensity=f(base.fill,base.fill*MOOD.fill);
    scene.environmentIntensity=f(base.env,base.env*MOOD.env);hemi.color.lerpColors(base.sky,skyC,t);hemi.groundColor.lerpColors(base.ground,groundC,t);};
  }
- // The floor's trail: where the walker has stood lately, each mark fading over a second and a half.
- let head=0;const last=new T.Vector3(1e9,0,0);
+ // Each walker has its own trail. The nearest remote walkers in the room share a small fixed budget.
+ const sources=Array.from({length:1+REMOTE_TRAILS},()=>({id:null,head:0,last:new T.Vector3(1e9,0,0)}));
+ const onFloor=p=>inside.containsPoint(p)&&Math.abs(p.y-origin.y)<.6;
+ const mark=(source,p,index)=>{
+  if(Math.hypot(p.x-source.last.x,p.y-source.last.y,p.z-source.last.z)>.18){source.head=(source.head+1)%TRAIL;source.last.set(p.x,p.y,p.z);}
+  trail[index*TRAIL+source.head].set(p.x,p.y,p.z,1);
+ };
  return {
   group,
-  update(dt,eye,p){
+  update(dt,eye,p,remotes=[]){
    if(!still)time.value+=dt;
    for(const t of trail)t.w=Math.max(0,t.w-dt/1.5);
-   if(inside.containsPoint(p)&&Math.abs(p.y-origin.y)<.6){
-    if(p.distanceTo(last)>.18){head=(head+1)%TRAIL;last.copy(p);}
-    trail[head].set(p.x,p.y,p.z,1);
+   if(onFloor(p))mark(sources[0],p,0);
+   const near=remotes.filter(r=>onFloor(r.cur)).sort((a,b)=>Math.hypot(a.cur.x-eye.x,a.cur.z-eye.z)-Math.hypot(b.cur.x-eye.x,b.cur.z-eye.z)).slice(0,REMOTE_TRAILS);
+   for(let i=1;i<sources.length;i++)if(sources[i].id&&!near.some(r=>r.id===sources[i].id))sources[i].id=null;
+   for(const r of near){
+    let i=sources.findIndex((s,n)=>n>0&&s.id===r.id);
+    if(i<0){i=sources.findIndex((s,n)=>n>0&&!s.id);const s=sources[i];s.id=r.id;s.head=0;s.last.set(1e9,0,0);for(let j=0;j<TRAIL;j++)trail[i*TRAIL+j].w=0;}
+    mark(sources[i],r.cur,i);
    }
    if(!setMood)return;
    mood+=((inside.containsPoint(eye)?1:0)-mood)*(1-Math.exp(-4*dt));

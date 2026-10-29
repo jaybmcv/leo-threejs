@@ -35,6 +35,7 @@ import {createHaze} from './haze.js';
 import {createStarDrift} from './star-drift.js';
 import {createAmbience} from './ambience.js';
 import {createLullaby} from './lullaby.js';
+import {createLoungeSound} from './lounge-sound.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.js';
 import {corridorTrim} from './trim.js';
 import {connectLive,savedName,httpBase} from './net/live.js';
@@ -63,6 +64,7 @@ import {createPawPool} from './pool/game.js';
 import {createPinball} from './pinball/game.js';
 import {openOutside,closeOutside} from './outside-game.js';
 import {createMazeGame} from './maze/run.js';
+import {createTreasureGame} from './aquarium-treasure/game.js';
 import {createPawsOff} from './paws-off/game.js';
 import {createMudwater} from './mudwater.js';
 import {createGiveaway} from './mudwater-giveaway.js';
@@ -184,7 +186,10 @@ async function buildShip(){
  // The main lift shafts are walled in nearly clear glass, so with the car away the shaft read as an open drop at your
  // feet. Frost it on foot so it reads as the wall it is.
  const shaftGlass=new T.MeshStandardMaterial({name:'Walk_shaft_glass',color:0xb4c8d2,roughness:.45,transparent:true,opacity:.5,depthWrite:false,side:T.DoubleSide});
- ship.inside.traverse(o=>{if(/^Lift_(back|side)_enclosure$/.test(o.name))o.material=shaftGlass;});
+ // The aft back faces have another glazed partition behind them: keep the combined view through to the stairs clear.
+ const aftBackGlass=shaftGlass.clone();aftBackGlass.name='Walk_aft_shaft_back_glass';aftBackGlass.opacity=.18;
+ const aftX=LIFTS.find(l=>l.id==='aft-starboard').car.x;
+ ship.inside.traverse(o=>{if(/^Lift_(back|side)_enclosure$/.test(o.name))o.material=o.name==='Lift_back_enclosure'&&Math.abs(o.position.x-aftX)<.01?aftBackGlass:shaftGlass;});
  status('Fitting the walls…');await idle();
  const prepared=prepareWalkWorld(ship,{into:colliders,kit:cosmoKit,anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches,urls:artUrls,hat:__HAT_URL__,light:{hemi,fill,scene},afterBase(){
  // The hull behind the glass goes for drawing only, after the colliders have it.
@@ -200,11 +205,13 @@ async function buildShip(){
  recovery=createRecoveryMood(ship,{hemi,fill,scene});
  }});
  ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
- const {pipework,trolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;
+ loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;
+ const {pipework,trolley,wardTrolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;
  // The hidden clubhouse's vault door behind the arcade (vault.js): solid here, as a movable collider of its own.
  vault=prepared.vault;vault.attach(colliders);
+ vaultLift=prepared.vaultLift;scene.add(vaultLift.group);
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged; and
  // on the arcade's treadmill. With Leo live, a run joins the gym round (server/gym.mjs).
  pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),more:arcadeRow?[arcadeRow.treadmill]:[],gym:msg=>!!live?.gym(msg),me:()=>live?.id,onStart:startRun,onEnd:endRun});
@@ -241,14 +248,15 @@ async function buildShip(){
  if(diningRobots)toBand(diningRobots.group);
  if(hydration)toBand(hydration.group);
  if(trolley)toBand(trolley.group);
+ if(wardTrolley)toBand(wardTrolley.group);
  if(mazeHold)toBand(mazeHold.group);
  if(mctBay)toBand(mctBay.group);
  // The aft freight gate (freight-gate.js): its iris, gantry, lanes and posters.
  if(freightGate)toBand(freightGate.group);
  // The surgical suite's ceiling robot arms (surgery.js), dressing only.
  surgeryArms=createSurgeryArms(ship,{still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(surgeryArms)toBand(surgeryArms.group);
- // The diagnostics room's holographic cat scans and scan beams (imaging.js), dressing only.
- imagingScans=createImagingScans(ship,{still:matchMedia('(prefers-reduced-motion: reduce)').matches,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(imagingScans)toBand(imagingScans.group);
+ // The diagnostics room's resting patients, holographic scans and scan beams (imaging.js), dressing only.
+ imagingScans=createImagingScans(ship,{kit:cosmoKit,still:matchMedia('(prefers-reduced-motion: reduce)').matches,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(imagingScans)toBand(imagingScans.group);
  if(blossom)toBand(blossom.group);
  // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js).
  if(loungeFalls)toBand(loungeFalls.group);
@@ -276,10 +284,11 @@ async function buildShip(){
  if(swordCase)toBand(swordCase.group);
  // Hydroponic garden A's chinampa tank (chinampa.js), drawn with Deck 3's band.
  if(chinampa)toBand(chinampa.group);
+ if(baggage)toBand(baggage.group);
  if(halloween)toBand(halloween.group);
  toBand(hexFloor.group);
  toBand(leverPanel.group);
- // Six Mars Cat Transporters parked in Deck 1's Freight control, to drive or ride in (transporter.js), drawn with Deck 1's band.
+ // Six Mars Cat Transporters in Cargo maintenance's charging bays, to drive or ride in (transporter.js), drawn with Deck 1's band.
  mct=createTransporters({colliders,lifts});for(const g of mct.groups)toBand(g);
  // The forward observation lounge's Mars-viewing compass, a flush inlay on its floor (lounge-compass.js), drawn with its band.
  {const compass=createLoungeCompass();if(compass)toBand(compass);}
@@ -305,8 +314,8 @@ async function buildShip(){
  }
 }
 let imagingScans=null;
-let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,mct=null;
-let mazeHold=null,maze=null,leverPanel=null,chinampa=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
+let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
@@ -358,9 +367,12 @@ const actions={
   else if(t.kind==='pool')pool.open();
   else if(t.kind==='vault')openVault();
   else if(t.kind==='vault-exit')vault.release();
+  else if(t.kind==='clubhouse-call')vaultLift.call(t.lift,t.stop);
+  else if(t.kind==='clubhouse-inside')openLiftPanel(t.lift,vaultLift);
   else if(t.kind==='pinball')pinballGame.open();
   else if(t.kind==='outside'){closePanels();emote=null;input.enabled=false;input.down.clear();openOutside($('outside-sheet'),$('outside-frame'));}
   else if(t.kind==='maze')maze.use(t);
+  else if(t.kind==='treasure')treasure.use(t);
   else if(t.kind==='treadmill')pawsOff.start(t.mill);
   else if(t.kind==='mudwater'){mudwater.play();live?.arena('play');}
   else if(t.kind==='packs'){closePanels();const w=$('mudwater-wordmark');if(mudwater.wordmark&&!w.src){w.src=mudwater.wordmark;w.hidden=false;}giveaway.open();$('mudwater-sheet').hidden=false;input.enabled=false;}
@@ -377,8 +389,8 @@ const actions={
  // (Nothing below until the walk is ready.)
  places(){if(ready())togglePlaces();},
  map(){if(ready())toggleMap();},
- crouch(){if(ready()&&!resting&&!inBall){controller.toggle('crouch');emote=null;}},
- prone(){if(ready()&&!resting&&!inBall){controller.toggle('prone');emote=null;}},
+ crouch(){if(ready()&&!resting&&!inBall&&!treasure?.active){controller.toggle('crouch');emote=null;}},
+ prone(){if(ready()&&!resting&&!inBall&&!treasure?.active){controller.toggle('prone');emote=null;}},
  emotes(){if(ready())toggleEmotes();},
  // The ship log from anywhere aboard, starting on the changes made around the walker (changes-board.js).
  log(){if(ready())openLog();},
@@ -391,7 +403,7 @@ const actions={
  // How to play, and the tester guide (help.js).
  help(){if(ready())toggleHelp();},
  // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
- emote(i){if(ready()&&!resting&&!inBall&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
+ emote(i){if(ready()&&!resting&&!inBall&&!treasure?.active&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
  // A key pressed while a sheet is open: the key that opened it closes it, and the emote sheet takes 1-0.
  sheet(code){
   const open=id=>!$(id).hidden;
@@ -404,7 +416,7 @@ const actions={
 };
 let emote=null,pinged=-Infinity;const PING_GAP_MS=4000;
 // The clubhouse vault behind the arcade (vault.js): its door, and the password sheet it asks with.
-let vault=null;
+let vault=null,vaultLift=null;
 const VAULT_ASK='This door opens only for the clubhouse password.';
 function openVault(){closePanels();emote=null;input.enabled=false;input.down.clear();$('vault-note').textContent=VAULT_ASK;$('vault-code').value='';$('vault-sheet').hidden=false;
  // (After the key that opened it, so the E isn't typed into the field.)
@@ -434,7 +446,7 @@ async function loadCosmo(){
  globalThis.LEO_THREE=T;globalThis.LEO_COSMO_EMOTES=__EMOTES_URL__;
  await new Promise((resolve,reject)=>{const s=Object.assign(document.createElement('script'),{src:__COSMO_SCRIPT__,async:true});s.onload=resolve;s.onerror=()=>reject(new Error('Cosmo could not load'));document.head.appendChild(s);});
  walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion);scene.add(walker.holder);
- cosmoKit=await globalThis.LeoCosmo.createCosmoKit({poses:[...KITTEN_POSE_NAMES,...ACTOR_POSE_NAMES]});
+ cosmoKit=await globalThis.LeoCosmo.createCosmoKit({poses:[...KITTEN_POSE_NAMES,...ACTOR_POSE_NAMES,'scanPatient']});
 }
 
 // The arrival hall on Deck 2, where travellers come aboard.
@@ -493,7 +505,7 @@ let live=null,remotes=null,marks=null,aboard=0,liveStatus='',wasInArena=false;
 const giveaway=createGiveaway({$,live:()=>live,connect});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p)});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p)});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -507,6 +519,7 @@ if(LIVE_URL){
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
   maze:msg=>maze?.fromServer(msg),
+  treasure:msg=>treasure?.fromServer(msg),
   board:b=>(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
   hearts:h=>changeLog.setHearts(h),hearted:r=>changeLog.refused(r.why),
   // A group photo: someone pressed the selfie camera, and this page takes the photo at the same moment as theirs.
@@ -550,6 +563,7 @@ if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={regist
 
 // (Debug: the vault, vault.js.)
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vault',{get:()=>vault});
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vaultLift',{get:()=>vaultLift});
 // The ship map: the corner mini-map, redrawn a few times a second, and the full map sheet.
 const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
 function sizeCanvas(c){const r=Math.min(devicePixelRatio||1,2),w=Math.round(c.clientWidth*r),h=Math.round(c.clientHeight*r);if(w&&h&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}}
@@ -582,18 +596,20 @@ renderer.setAnimationLoop(()=>{
  // Moving off a seat or bed stands you up; in a transporter's driver's seat the keys drive it instead (transporter.js),
  // and the camera swings round behind it while it moves. A healing capsule holds you until you leave it (E or the button).
  const cart=resting?.spot.mct,driving=cart?.seat==='driver'&&resting.phase==='in'&&resting.t===1;
- if(driving){mct.drive(dt,k.y,k.x);if(Math.abs(cart.cart.speed)>.3&&!k.look.x)follow.yaw=dampAngle(follow.yaw,cart.cart.yaw,1.2,dt);}
+ if(driving){mct.drive(dt,k.y,k.x,k.run);if(Math.abs(cart.cart.speed)>.3&&!k.look.x)follow.yaw=dampAngle(follow.yaw,cart.cart.yaw,1.2,dt);}
  else if(resting&&!resting.stand&&resting.phase==='in'&&resting.t===1&&wish.lengthSq()>.1)standUp();
  lifts.update(dt,controller);
+ vaultLift?.update(dt,controller);
  // A Paws Off run holds the walker on the treadmill (paws-off/game.js); the belts of others playing run too.
  run=pawsOff?.update(dt,remotes?[...remotes.remotes.values()].filter(r=>r.tgt?.playing).map(r=>r.cur):[])||null;
  mudwater?.update(dt);
  vault?.update(dt,controller.position);
  // Riding a moving car, the car carries the walker; it passes slab edges and the hull skin, which must not push.
- const riding=lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
+ const riding=vaultLift?.riding||lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
  // In the ball the jump is one low hop (BALL.body.jump).
- if(!resting&&!riding&&!run){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ if(!resting&&!riding&&!run&&!treasure?.active){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ treasure?.step(dt,k);
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
  const p=controller.position;
  // The parked ball is solid to walk into.
@@ -603,7 +619,7 @@ renderer.setAnimationLoop(()=>{
  if(!resting&&!run)mct.push(p,controller.body.radius);
  // Neither safety net keeps a lift car's floor to return to: the car may have gone by the time it is needed, leaving
  // only the shaft.
- const inCar=lifts.lifts.some(l=>lifts.inside(l,p));
+ const inCar=vaultLift?.inside(p)||lifts.lifts.some(l=>lifts.inside(l,p));
  // A fall over a fin platform's railing ends on the fin's skin with no way out: unless it came down on another
  // landing of the crown lift, it goes back to the platform it left (its last ground may be a rail or spar above it).
  const onLanding=controller.grounded&&!riding&&!inCar&&controller.ground.normal.y>.98&&onFinPlatform(p);
@@ -628,10 +644,10 @@ renderer.setAnimationLoop(()=>{
  if(!resting&&!run){walker.holder.position.copy(p);walker.holder.rotation.set(0,heading,0);walker.body.rotation.set(0,0,0);}
  if(inBall){ball.mesh.position.copy(p);if(controller.grounded)ball.roll(dt,controller.velocity.x,controller.velocity.z);}
  walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
-  turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!!lounge?.inside(walker.holder.position)});
+  turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!!lounge?.inside(walker.holder.position),swimming:!!treasure?.active});
  live?.pose(myPose(riding),now);
  // In a transporter the camera rides higher, over the heads of the others aboard.
- follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:cart&&follow.mode==='third'?WALKER.height+.7:WALKER.height);
+ if(treasure?.active)treasure.updateCamera(dt);else follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:cart&&follow.mode==='third'?WALKER.height+.7:WALKER.height);
  // Spraying the graffiti wall, the view squares up to it (graffiti.js), and its paint catches up.
  graffiti?.update(camera,now);
  // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle), or is off at the wall.
@@ -648,18 +664,20 @@ renderer.setAnimationLoop(()=>{
  halloween?.update(dt,camera.getWorldPosition(eye),ambience.on);
  hexFloor?.update(dt,camera.getWorldPosition(eye),p,heading);
  leverPanel?.update(dt,p);
- gaming?.update(dt,camera.getWorldPosition(eye),p);
+ gaming?.update(dt,camera.getWorldPosition(eye),p,remotes?[...remotes.remotes.values()]:[]);
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on);
  loungeFalls?.update(dt,p);
+ loungeSound?.update(p,ambience.on);
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
  surgeryArms?.update(dt,p);
- imagingScans?.update(dt,p);
+ imagingScans?.update(dt,p,resting,remotes?.remotes);
  // The Container Maze's clock starts at its way in and drops if the walker leaves (maze/run.js).
  maze?.update(p,now);
- freightGate?.update(dt,p);
+ freightGate?.update(dt,p,bodies);
  chinampa?.update(dt,p);
+ baggage?.update(dt,p);
  marks?.update(camera,p,now);
  if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);graffiti?.load(p);crownTv?.update(p);
   // Walking into Mudwater Arena counts as a visit (server/arena.mjs).
@@ -701,10 +719,13 @@ function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a)
 // What's in front of the walker to use: a lift (call button or car panel) first, then the graffiti wall, the selfie camera, a comic book,
 // a ship log board, the telescope or an arcade cabinet, then a seat or bed.
 function target(){
- const p=controller.position,l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
+ const p=controller.position;if(treasure?.active)return treasure.near(p);
+ const t=inBall?null:treasure?.near(p);if(t)return t;
+ const l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
  const w=graffiti?.near(p)||crownTv?.near(p);if(w)return w;
  const b=booth.near(p)||comics.near(p)||chinampa?.near(p);if(b)return b;
  const v=inBall?null:vault?.near(p);if(v)return v;
+ const tube=inBall?null:vaultLift?.nearest(p);if(tube)return tube.kind==='riding'?null:tube;
  const g=changeLog.near(p);if(g)return g;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
  const q=poolTable?.near(p)||maze?.near(p)||pinballMachine?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p)||leverPanel?.near(p);if(q&&!(inBall&&q.kind==='treadmill'))return q;
@@ -794,11 +815,11 @@ function restPose(dt){
 function lerpAngle(a,b,t){return a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;}
 
 // The lift panel: one button per stop.
-function openLiftPanel(l){
+function openLiftPanel(l,rides=lifts){
  const panel=$('lift-panel'),list=panel.querySelector('.stops');list.textContent='';
  panel.querySelector('h2').textContent=l.spec.name;
- for(const s of lifts.stopsOf(l)){const b=document.createElement('button');b.type='button';b.textContent=s.label+(s.here?' · here':'');b.disabled=s.here;
-  b.onclick=()=>{lifts.call(l,s.index,{now:true});closePanels();};list.appendChild(b);}
+ for(const s of rides.stopsOf(l)){const b=document.createElement('button');b.type='button';b.textContent=s.label+(s.here?' · here':'');b.disabled=s.here;
+  b.onclick=()=>{rides.call(l,s.index,{now:true});closePanels();};list.appendChild(b);}
  panel.hidden=false;input.enabled=false;list.querySelector('button:not([disabled])')?.focus();
 }
 function togglePlaces(){
@@ -822,12 +843,13 @@ function toggleEmotes(){
  panel.hidden=false;input.enabled=false;list.querySelector('button')?.focus();
 }
 function goTo(place){place=remapSpot(place);const q=findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();
+ treasure?.leave(false);
  // Going elsewhere from a transporter's driver's seat leaves it parked where it is.
  if(resting?.spot.mct?.seat==='driver')mct.park(resting.spot.mct.cart);resting=null;
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
+function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
@@ -883,6 +905,12 @@ const pool=createPawPool({
 maze=createMazeGame({hold:mazeHold,live:()=>live,muted:()=>!ambience.on,
  goTo(at,yaw){closePanels();emote=null;goTo({at:at.toArray(),yaw,resolved:true});},
  onOpen(){closePanels();emote=null;input.enabled=false;},
+ onClose(){input.enabled=true;input.down.clear();},
+});
+// The upper gallery's aquarium door: a separate swim mode, with its own clock and Leo live board.
+treasure=createTreasureGame({tank:lounge?.aquarium,controller,follow,camera,input,live:()=>live,
+ onEnter(){closePanels();emote=null;},onExit(){emote=null;},
+ onOpen(){closePanels();input.enabled=false;input.down.clear();},
  onClose(){input.enabled=true;input.down.clear();},
 });
 // Leo Pinball at the Recreation Hall's end wall (pinball/game.js), the same way; its best score stays in this browser.

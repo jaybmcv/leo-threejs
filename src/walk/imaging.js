@@ -9,7 +9,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 // with a glowing bore, under an arched scanner head. The plain control partitions become glass, and a glass screen
 // stands between each bay and the main aisle; every divider carries a holographic scan of a patient cat on both faces,
 // its skeleton drawn to Cosmo's own proportions (the walk's avatar) from the front and the side, with a scan line
-// sweeping over it. The bed stays a bed you can lie on.
+// sweeping over it. A resting patient gives way to visitors who lie on the bed.
 // Room frame (Area_d05-imaging-6): the entry at x -26, the main aisle along z -2..2, the bays at z ±10 with the ring at
 // x 8 and the bench at x 5, an operator desk at x -5 and the control partition at x -12 (z 5..15 or -15..-5).
 const ROOM='Area_d05-imaging-6';
@@ -177,7 +177,7 @@ function skeleton(g,P,s,view){
 }
 // The scan panel: a front and a side view of the patient cat inside reticles, with a heart trace, gauges and bars,
 // cyan on faint blue glass. `seed` varies the readouts between panels.
-export function paintScan(g,w,h,seed){
+export function paintScan(g,w,h,seed,occupied=false){
  g.clearRect(0,0,w,h);
  const grad=g.createLinearGradient(0,0,0,h);grad.addColorStop(0,'rgba(18,70,120,.55)');grad.addColorStop(1,'rgba(12,50,95,.42)');g.fillStyle=grad;g.fillRect(0,0,w,h);
  g.strokeStyle='rgba(130,220,255,.85)';g.lineWidth=3;g.strokeRect(5,5,w-10,h-10);
@@ -203,6 +203,8 @@ export function paintScan(g,w,h,seed){
  g.shadowBlur=0;g.fillStyle='rgba(143,230,255,.8)';
  for(let i=0;i<6;i++){const bh=18+rand()*70;g.fillRect(x0+i*20,400-bh,13,bh);}
  for(let i=0;i<6;i++)g.fillRect(x0,430+i*26,40+rand()*80,8);
+ g.font='bold 18px sans-serif';g.fillText(occupied?'VISITOR ON BED':'PATIENT PREVIEW',22,h-17);
+ g.textAlign='right';g.fillText('ILLUSTRATIVE SCAN',w-22,h-17);g.textAlign='left';
 }
 
 function canvasTexture(w,h,paint,anisotropy){
@@ -213,11 +215,21 @@ function canvasTexture(w,h,paint,anisotropy){
 // The scans on the dividers, the scan lines sweeping them and a line of light passing along each bed's pad, drawn with their
 // deck band. update() moves them only while the walker is on Deck 5 near the room, and keeps them still for reduced
 // motion.
-export function createImagingScans(ship,{still=false,anisotropy=4}={}){
+export function createImagingScans(ship,{still=false,anisotropy=4,kit=null}={}){
  const room=roomObject(ship,ROOM);if(!room||!hasWalkCanvas())return null;
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Imaging_scans';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);
+ const toRoom=room.matrixWorld.clone().invert(),local=new T.Vector3(),patients=[];
+ if(kit)for(const z of BAYS){
+  const patient=kit.figure('scanPatient');patient.name='Imaging_patient';
+  // Head toward the pillow and gantry, back on the pad. Shared baked meshes need no animated rig.
+  patient.rotation.set(0,-Math.PI/2,0);const body=new T.Group();body.rotation.x=-Math.PI/2;
+  body.add(...patient.children.slice());patient.add(body);
+  patient.updateMatrixWorld(true);const bounds=new T.Box3().setFromObject(patient,true);
+  patient.position.set(6.7-bounds.max.x,.755-bounds.min.y,z-(bounds.min.z+bounds.max.z)/2);
+  group.add(patient);patients.push(patient);
+ }
  const panels=[0,1].map(seed=>new T.MeshBasicMaterial({name:'Imaging_scan',map:canvasTexture(1024,640,(g,w,h)=>paintScan(g,w,h,seed),anisotropy),transparent:true,depthWrite:false,toneMapped:false}));
  const sweep=new T.MeshBasicMaterial({name:'Imaging_sweep',color:0x5fd4ff,transparent:true,opacity:.85,depthWrite:false,toneMapped:false});
  const beam=new T.MeshBasicMaterial({name:'Imaging_beam',color:0x5fd4ff,toneMapped:false});
@@ -226,7 +238,7 @@ export function createImagingScans(ship,{still=false,anisotropy=4}={}){
   const bay=BAYS.indexOf(Math.sign(d.z)*10);
   for(const f of d.faces){
    const holder=new T.Group();holder.position.set(d.x+(d.alongX?0:f*.06),0,d.z+(d.alongX?f*.06:0));holder.rotation.y=d.alongX?(f>0?0:Math.PI):(f>0?Math.PI/2:-Math.PI/2);group.add(holder);
-   const p=new T.Mesh(new T.PlaneGeometry(PW,PH),panels[(bay+i)%2]);p.name='Imaging_scan_graphics';p.position.y=PY;p.renderOrder=2;holder.add(p);
+   const p=new T.Mesh(new T.PlaneGeometry(PW,PH),panels[bay]);p.name='Imaging_scan_graphics';p.position.y=PY;p.renderOrder=2;holder.add(p);
    const l=new T.Mesh(new T.PlaneGeometry(PW*.83,.025),sweep);l.name='Imaging_scan_line_graphics';l.position.set(-PW*.06,PY,.005);l.renderOrder=3;holder.add(l);lines.push({l,phase:i*1.3+f});
   }
  });
@@ -240,8 +252,17 @@ export function createImagingScans(ship,{still=false,anisotropy=4}={}){
   for(const {b,phase} of beams)b.position.x=5.2+1.5*Math.sin(t*.5+phase);
  };
  pose(0);
- function update(dt,p){
-  if(still||Math.abs(p.y-centre.y)>4||Math.abs(p.x-centre.x)>40||Math.abs(p.z-centre.z)>30)return;
+ const occupied=BAYS.map(()=>false);
+ function update(dt,p,resting=null,remotes=null){
+  if(Math.abs(p.y-centre.y)>4||Math.abs(p.x-centre.x)>40||Math.abs(p.z-centre.z)>30)return;
+  for(const [i,z] of BAYS.entries()){
+   const atBed=point=>{local.copy(point).applyMatrix4(toRoom);return Math.abs(local.y-.885)<.5&&local.x>3.8&&local.x<6.2&&Math.abs(local.z-z)<.6;};
+   let used=!!(resting?.lie&&atBed(resting.to.pos));
+   if(!used&&remotes)for(const r of remotes.values())if(r.restKind==='lie'&&r.rest>0&&atBed(r.cur)){used=true;break;}
+   if(patients[i])patients[i].visible=!used;
+   if(used!==occupied[i]){occupied[i]=used;const t=panels[i].map,c=t.image;paintScan(c.getContext('2d'),c.width,c.height,i,used);t.needsUpdate=true;}
+  }
+  if(still)return;
   pose(performance.now()/1000);
  }
  return {group,update};

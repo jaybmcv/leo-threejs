@@ -46,6 +46,7 @@ import {createArena} from './arena.mjs';
 import {createGraffiti} from './graffiti.mjs';
 import {createGym} from './gym.mjs';
 import {createMazeBoard} from './maze.mjs';
+import {createTreasureBoard} from './aquarium-treasure.mjs';
 import {createTransporters} from './transporters.mjs';
 import {createTv} from './tv.mjs';
 
@@ -74,6 +75,7 @@ const graffiti=createGraffiti({send:(v,msg)=>send(v.ws,msg),log});
 const gym=createGym({log,send});BUDGETS.gym=[2,6];
 // The Container Maze's best times (maze.mjs): its own file, its own message.
 const maze=createMazeBoard({log,send});
+const treasure=createTreasureBoard({log,send});
 // The Mars Cat Transporters on Deck 1 (transporters.mjs): who drives each, and where each is parked, in memory only.
 const mct=createTransporters({log,broadcast:msg=>broadcast(msg),send:(v,msg)=>send(v.ws,msg)});BUDGETS.mct=[3,8];
 setInterval(()=>mct.tick(),10000);
@@ -97,7 +99,7 @@ function readPose(v,p){
   jumpS:finite(p.js,-1,60)?p.js:-1,rise:finite(p.r,-100,100)?p.r:0,emote:typeof p.e==='string'&&/^[a-z0-9_]{1,32}$/.test(p.e)?p.e:null,rest:p.rest==='sit'||p.rest==='lie'?p.rest:null,
   playing:p.pl===true,ball:p.b===true};
  try{v.record=encodeRecord(v.slot,pose);}catch{return false;}
- v.pos=pose.pos;v.playing=pose.playing;v.version++;return true;
+ v.pos=pose.pos;v.playing=pose.playing;v.version++;treasure.observe(v);return true;
 }
 
 // Alien Cat Invasion's leaderboard (walk/invasion): one best score per Discord-verified player, kept in a file beside
@@ -278,6 +280,7 @@ function onMessage(v,data,binary){
   case 'arena':if(allowed(v,'arena'))arena.event(v,msg.e);break;
   // The Container Maze (maze.mjs): a run starts, a run ends at the button, the board.
   case 'maze':maze.message(v,msg);break;
+  case 'treasure':treasure.message(v,msg);break;
   // A line of chat, for everyone aboard.
   case 'chat':chat(v,msg);break;
   // A knock on the Halloween clown's glass (walk/halloween.js): its badge code, if there is one yet.

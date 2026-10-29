@@ -1,4 +1,10 @@
 {
+  "src/walk/recreation-hall.js": {
+    "owners": [
+      "d16-recreation-4"
+    ],
+    "via": "inherited"
+  },
   "src/model.js": {
     "owners": [
       "@cabins",
@@ -175,6 +181,12 @@
     ],
     "via": null
   },
+  "src/walk/ward-trolley.js": {
+    "owners": [
+      "d05-ward-1"
+    ],
+    "via": null
+  },
   "src/walk/maze/hold.js": {
     "owners": [
       "d01-cargo-1"
@@ -237,7 +249,7 @@
   },
   "src/walk/transporter.js": {
     "owners": [
-      "d01-logistics-6"
+      "d01-workshop-5"
     ],
     "via": null
   },
@@ -268,6 +280,12 @@
   "src/walk/imaging.js": {
     "owners": [
       "d05-imaging-6"
+    ],
+    "via": null
+  },
+  "src/walk/vault-lift.js": {
+    "owners": [
+      "commons-1"
     ],
     "via": null
   },
@@ -330,6 +348,10 @@
     "owners": [
       "commons-1"
     ],
+    "via": "inherited"
+  },
+  "src/walk/aquarium-treasure/game.js": {
+    "owners": ["commons-1"],
     "via": "inherited"
   },
   "src/walk/mission-holo.js": {
@@ -501,6 +523,12 @@
     "owners": [
       "d16-gym-3",
       "commons-1"
+    ],
+    "via": "roomObject"
+  },
+  "src/walk/baggage.js": {
+    "owners": [
+      "d02-baggage-5"
     ],
     "via": "roomObject"
   },
