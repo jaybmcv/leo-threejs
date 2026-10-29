@@ -7306,8 +7306,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 36,
-      "signature": "50633fc90bd91d24f83bc6fea5626f848b6aa9c6f8af36bce3f405eebe616f2e"
+      "placements": 37,
+      "signature": "8a106ad80e368135fef259d145aad93e46efe2e905904a532dd10a172c9c5037"
     },
     {
       "source": "src/walk/marks.js",
@@ -7659,7 +7659,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "baadcfa2e80ac62945601cc2f03408b16cd38c7dd409a2b5c7ab14bd3fee21bf"
+      "signature": "79597f3a8a8c1e8f4db78026e56863992923ab4b7137662ae981cc388498b33f"
     },
     {
       "source": "src/walk/provisions.js",
@@ -7891,6 +7891,26 @@
       "signature": "3e53561082589e48130ad4db1f64346154c47dd7220b57c2ec6b1f2fb27c78d0"
     },
     {
+      "source": "src/walk/vault-lift.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Clubhouse_tube_lift",
+        "Clubhouse_tube_colliders",
+        "Clubhouse_lift_gate",
+        "Clubhouse_lift_platform"
+      ],
+      "colliders": [
+        "Clubhouse_tube_colliders"
+      ],
+      "interactionTargets": null,
+      "placements": 29,
+      "signature": "c2af57f9497e445995adee21eb7edcbaaac48fa8e65806ebce24265ed425834c"
+    },
+    {
       "source": "src/walk/vault.js",
       "rooms": [
         "commons-1"
@@ -7909,7 +7929,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 22,
-      "signature": "77fedf2a158fffa67c7e2c007600e1140aeee59b922afe4b91478dc6399a2230"
+      "signature": "1b833f27fd113b2d3f75da54a328797d3d66c8dad49cb18c1df5bb91e0c5f3f3"
     },
     {
       "source": "src/walk/wall-kit.js",

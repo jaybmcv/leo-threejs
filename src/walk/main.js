@@ -206,6 +206,7 @@ async function buildShip(){
  mazeHold=prepared.maze;
  // The hidden clubhouse's vault door behind the arcade (vault.js): solid here, as a movable collider of its own.
  vault=prepared.vault;vault.attach(colliders);
+ vaultLift=prepared.vaultLift;scene.add(vaultLift.group);
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged; and
  // on the arcade's treadmill. With Leo live, a run joins the gym round (server/gym.mjs).
  pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),more:arcadeRow?[arcadeRow.treadmill]:[],gym:msg=>!!live?.gym(msg),me:()=>live?.id,onStart:startRun,onEnd:endRun});
@@ -359,6 +360,8 @@ const actions={
   else if(t.kind==='pool')pool.open();
   else if(t.kind==='vault')openVault();
   else if(t.kind==='vault-exit')vault.release();
+  else if(t.kind==='clubhouse-call')vaultLift.call(t.lift,t.stop);
+  else if(t.kind==='clubhouse-inside')openLiftPanel(t.lift,vaultLift);
   else if(t.kind==='pinball')pinballGame.open();
   else if(t.kind==='outside'){closePanels();emote=null;input.enabled=false;input.down.clear();openOutside($('outside-sheet'),$('outside-frame'));}
   else if(t.kind==='maze')maze.use(t);
@@ -406,7 +409,7 @@ const actions={
 };
 let emote=null,pinged=-Infinity;const PING_GAP_MS=4000;
 // The clubhouse vault behind the arcade (vault.js): its door, and the password sheet it asks with.
-let vault=null;
+let vault=null,vaultLift=null;
 const VAULT_ASK='This door opens only for the clubhouse password.';
 function openVault(){closePanels();emote=null;input.enabled=false;input.down.clear();$('vault-note').textContent=VAULT_ASK;$('vault-code').value='';$('vault-sheet').hidden=false;
  // (After the key that opened it, so the E isn't typed into the field.)
@@ -553,6 +556,7 @@ if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={regist
 
 // (Debug: the vault, vault.js.)
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vault',{get:()=>vault});
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vaultLift',{get:()=>vaultLift});
 // The ship map: the corner mini-map, redrawn a few times a second, and the full map sheet.
 const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
 function sizeCanvas(c){const r=Math.min(devicePixelRatio||1,2),w=Math.round(c.clientWidth*r),h=Math.round(c.clientHeight*r);if(w&&h&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}}
@@ -588,12 +592,13 @@ renderer.setAnimationLoop(()=>{
  if(driving){mct.drive(dt,k.y,k.x);if(Math.abs(cart.cart.speed)>.3&&!k.look.x)follow.yaw=dampAngle(follow.yaw,cart.cart.yaw,1.2,dt);}
  else if(resting&&!resting.stand&&resting.phase==='in'&&resting.t===1&&wish.lengthSq()>.1)standUp();
  lifts.update(dt,controller);
+ vaultLift?.update(dt,controller);
  // A Paws Off run holds the walker on the treadmill (paws-off/game.js); the belts of others playing run too.
  run=pawsOff?.update(dt,remotes?[...remotes.remotes.values()].filter(r=>r.tgt?.playing).map(r=>r.cur):[])||null;
  mudwater?.update(dt);
  vault?.update(dt,controller.position);
  // Riding a moving car, the car carries the walker; it passes slab edges and the hull skin, which must not push.
- const riding=lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
+ const riding=vaultLift?.riding||lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
  // In the ball the jump is one low hop (BALL.body.jump).
  if(!resting&&!riding&&!run&&!treasure?.active){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
@@ -607,7 +612,7 @@ renderer.setAnimationLoop(()=>{
  if(!resting&&!run)mct.push(p,controller.body.radius);
  // Neither safety net keeps a lift car's floor to return to: the car may have gone by the time it is needed, leaving
  // only the shaft.
- const inCar=lifts.lifts.some(l=>lifts.inside(l,p));
+ const inCar=vaultLift?.inside(p)||lifts.lifts.some(l=>lifts.inside(l,p));
  // A fall over a fin platform's railing ends on the fin's skin with no way out: unless it came down on another
  // landing of the crown lift, it goes back to the platform it left (its last ground may be a rail or spar above it).
  const onLanding=controller.grounded&&!riding&&!inCar&&controller.ground.normal.y>.98&&onFinPlatform(p);
@@ -711,6 +716,7 @@ function target(){
  const w=graffiti?.near(p)||crownTv?.near(p);if(w)return w;
  const b=booth.near(p)||comics.near(p)||chinampa?.near(p);if(b)return b;
  const v=inBall?null:vault?.near(p);if(v)return v;
+ const tube=inBall?null:vaultLift?.nearest(p);if(tube)return tube.kind==='riding'?null:tube;
  const g=changeLog.near(p);if(g)return g;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
  const q=poolTable?.near(p)||maze?.near(p)||pinballMachine?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p)||leverPanel?.near(p);if(q&&!(inBall&&q.kind==='treadmill'))return q;
@@ -800,11 +806,11 @@ function restPose(dt){
 function lerpAngle(a,b,t){return a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;}
 
 // The lift panel: one button per stop.
-function openLiftPanel(l){
+function openLiftPanel(l,rides=lifts){
  const panel=$('lift-panel'),list=panel.querySelector('.stops');list.textContent='';
  panel.querySelector('h2').textContent=l.spec.name;
- for(const s of lifts.stopsOf(l)){const b=document.createElement('button');b.type='button';b.textContent=s.label+(s.here?' · here':'');b.disabled=s.here;
-  b.onclick=()=>{lifts.call(l,s.index,{now:true});closePanels();};list.appendChild(b);}
+ for(const s of rides.stopsOf(l)){const b=document.createElement('button');b.type='button';b.textContent=s.label+(s.here?' · here':'');b.disabled=s.here;
+  b.onclick=()=>{rides.call(l,s.index,{now:true});closePanels();};list.appendChild(b);}
  panel.hidden=false;input.enabled=false;list.querySelector('button:not([disabled])')?.focus();
 }
 function togglePlaces(){
