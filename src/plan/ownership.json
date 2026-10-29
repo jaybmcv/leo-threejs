@@ -6364,6 +6364,27 @@
       "signature": "1d6cd101700180718e397fde3f8f3207015b5626d1db32bb44c10e3746376522"
     },
     {
+      "source": "src/walk/baggage.js",
+      "rooms": [
+        "d02-baggage-5"
+      ],
+      "via": "roomObject",
+      "fixed": false,
+      "features": [
+        "Baggage_carousels",
+        "Baggage_colliders",
+        "Baggage_fittings",
+        "Baggage_moving_slats",
+        "Baggage_suit_packs"
+      ],
+      "colliders": [
+        "Baggage_colliders"
+      ],
+      "interactionTargets": null,
+      "placements": 30,
+      "signature": "e1d6ea39cb9999c8ff926f5963cc0f075ac95306248a769f30a8d26cf00e208e"
+    },
+    {
       "source": "src/walk/blossom.js",
       "rooms": [
         "commons-1"
@@ -7311,7 +7332,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 37,
-      "signature": "60f1c763fada926126e917ef3c58df6f13189de54474cca679bc43a6027acb87"
+      "signature": "e9b723ea08cd33f9b7a74bb195fe81e60b7eef5b66ec80b111c2f822ea54cf55"
     },
     {
       "source": "src/walk/marks.js",
@@ -7663,7 +7684,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "3098240517244b18c98551b43a1412c3d7166a884f4b8a8e98ff14de967e3a65"
+      "signature": "2c4c6d82606a8b90d43264e7660c9c42ebe856d5c5cdd9996e185e44a238f1e6"
     },
     {
       "source": "src/walk/provisions.js",
