@@ -7202,8 +7202,8 @@
         "Lounge_aquarium_solid"
       ],
       "interactionTargets": null,
-      "placements": 47,
-      "signature": "c7f295dc252222b974eee999e1b721f568198e27222184afd4c4e4282699ce1a"
+      "placements": 45,
+      "signature": "5e1584e18571b73afbf722691dede1610796dff8912bc443ee8ef6a26c481748"
     },
     {
       "source": "src/walk/lounge-compass.js",
