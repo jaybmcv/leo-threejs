@@ -29,6 +29,16 @@ for(const change of [{},{dx:7,dz:-3,yawDeg:37,mirror:true}]){
 const tank=new T.Group(),controller={position:new T.Vector3(...swimWorld(SWIM.door)),velocity:new T.Vector3(),place(p){this.position.copy(p);this.velocity.set(0,0,0);this.grounded=true;}};
 const input={enabled:true,down:new Set()},follow={yaw:0,pitch:0,mode:'third',distance:3.4,current:3.4},camera=new T.PerspectiveCamera();
 const game=createTreasureGame({tank,controller,follow,camera,input,live:()=>null,onOpen(){input.enabled=false;},onClose(){input.enabled=true;}});
+// Project the wording's left and right edges from the gallery, in either handedness of the room.
+for(const mirror of [false,true]){
+ const root=new T.Group();root.scale.z=mirror?-1:1;
+ const g=createTreasureGame({tank:root,controller,follow,camera,input,live:()=>null}),sign=g.group.children.find(o=>o.material?.map);
+ root.updateMatrixWorld(true);const pos=sign.geometry.attributes.position,uv=sign.geometry.attributes.uv;
+ const centre=sign.getWorldPosition(new T.Vector3()),view=new T.PerspectiveCamera(60,1,.1,20);
+ view.position.copy(centre).add(new T.Vector3(0,0,mirror?-3:3));view.lookAt(centre);view.updateMatrixWorld(true);
+ const edge=u=>{const i=Array.from({length:uv.count},(_,k)=>k).find(k=>uv.getX(k)===u&&uv.getY(k)===0);return new T.Vector3().fromBufferAttribute(pos,i).applyMatrix4(sign.matrixWorld).project(view).x;};
+ assert(edge(0)<edge(1),'Aquarium door lettering is mirrored from the gallery');
+}
 assert.equal(game.near(controller.position)?.op,'enter');game.use({op:'enter'});
 assert(game.active);assert(game.contains(controller.position));assert.equal(game.found,0);
 game.use({op:'finish'});assert(!game.done,'The chest cannot finish a run before the gems');

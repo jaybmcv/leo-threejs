@@ -6297,7 +6297,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 19,
-      "signature": "5101a0f1933058792bf15cc0cd66d03ff53b7dd3e2da6992a7bfe1a0f09bfab8"
+      "signature": "4ed75bf44dde487f5c62f9743d5ae76189f5592a0f088fea6a8108d135af4548"
     },
     {
       "source": "src/walk/aquarium-treasure/suit.js",

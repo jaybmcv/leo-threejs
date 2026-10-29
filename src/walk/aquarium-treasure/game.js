@@ -25,7 +25,10 @@ export function createTreasureGame({tank,controller,follow,camera,input,live,onO
  add(new T.PlaneGeometry(1.75,2.65),new T.MeshBasicMaterial({color:0x66ddff,transparent:true,opacity:.12,side:T.DoubleSide,depthWrite:false}),[door[0],dy,dz]);
  add(new T.BoxGeometry(.06,.3,.1),gold,[door[0]+.62,dy,dz+.08]);
  const label=canvasTexture(768,192,(g,w,h)=>{g.fillStyle='#0a1928';g.fillRect(0,0,w,h);g.textAlign='center';g.fillStyle='#72edff';g.font='bold 44px sans-serif';g.fillText('AQUARIUM TREASURE',w/2,70);g.fillStyle='#ffffff';g.font='30px sans-serif';g.fillText('ENTER · SWIM · FIND 7 GEMS',w/2,133);});
- add(new T.PlaneGeometry(2.8,.7),new T.MeshBasicMaterial({map:label,side:T.DoubleSide,toneMapped:false}),[door[0],door[1]+2.75,dz+.03]);
+ const face=new T.PlaneGeometry(2.8,.7);tank.updateWorldMatrix(true,false);
+ // Keep the wording readable from the gallery when the lounge's frame is mirrored.
+ if(tank.matrixWorld.determinant()<0){const uv=face.attributes.uv;for(let i=0;i<uv.count;i++)uv.setX(i,1-uv.getX(i));}
+ add(face,new T.MeshBasicMaterial({map:label,side:T.DoubleSide,toneMapped:false}),[door[0],door[1]+2.75,dz+.03]);
  const gems=SWIM.gems.map((p,i)=>{const o=add(new T.OctahedronGeometry(.28),new T.MeshBasicMaterial({color:SWIM.colors[i],toneMapped:false}),p);o.scale.y=1.4;return o;});
  const chest=new T.Group();chest.position.fromArray(SWIM.chest);group.add(chest);
  add(new T.BoxGeometry(1.25,.55,.7),steel,[0,0,0],chest);
