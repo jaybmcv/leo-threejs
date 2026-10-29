@@ -7033,14 +7033,15 @@
       "features": [
         "Kitten_",
         "Young_explorers_kittens",
-        "Young_explorers_kitten_colliders"
+        "Young_explorers_kitten_colliders",
+        "Kitten_wall_shelf"
       ],
       "colliders": [
         "Young_explorers_kitten_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 48,
-      "signature": "a2c3481e65acdbda90eb6276cdc56301c7c879fe6e3b05ff74c0e33340ff6cb7"
+      "placements": 52,
+      "signature": "c728b535624c6fb374d92665b40ccc9106b9d11015f823cb049dfab2ceb3e674"
     },
     {
       "source": "src/walk/lever-panel.js",
