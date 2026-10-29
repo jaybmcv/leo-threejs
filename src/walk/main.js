@@ -279,7 +279,7 @@ async function buildShip(){
  if(halloween)toBand(halloween.group);
  toBand(hexFloor.group);
  toBand(leverPanel.group);
- // Six Mars Cat Transporters parked in Deck 1's Freight control, to drive or ride in (transporter.js), drawn with Deck 1's band.
+ // Six Mars Cat Transporters in Cargo maintenance's charging bays, to drive or ride in (transporter.js), drawn with Deck 1's band.
  mct=createTransporters({colliders,lifts});for(const g of mct.groups)toBand(g);
  // The forward observation lounge's Mars-viewing compass, a flush inlay on its floor (lounge-compass.js), drawn with its band.
  {const compass=createLoungeCompass();if(compass)toBand(compass);}

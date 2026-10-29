@@ -8,7 +8,7 @@ import {LIFTS,carTriangles} from '../src/walk/lifts.js';
 import {toWorld} from '../src/plan/rooms.js';
 import {findRestSpots,solidSpots} from '../src/walk/rest.js';
 import {loadWalkShip,fitForWalking} from './walk-plan.mjs';
-import {homes as mctHomes,createCart,driveCart,cartFits,cartBlocked,cartPoint} from '../src/walk/transporter.js';
+import {homes as mctHomes,createCart,driveCart,cartFits,cartBlocked,cartPoint,cartLocal,outOfCart,MCT} from '../src/walk/transporter.js';
 
 // Walk the whole ship as a 2 m tall, 0.7 m wide walker (Voyager's Reach's capsule, floating 0.4 m over the floor),
 // from the Deck 2 arrival hall, through every opening a body that size fits, up and down the stairs and in every
@@ -116,29 +116,31 @@ let open=0;const openAt=[];for(let i=0;i<X.length;i+=13){ray.origin.set(X[i],Y[i
 if(open)problems.push(`${open} sampled positions open to space`);
 if(voidFalls)problems.push(`${voidFalls} edges fall out of the ship`);
 // The Deck 1 transporters (transporter.js): each parked clear of the walls and its neighbours, with somewhere to stand
-// beside its driver's seat and its rear seats; MCT-01 driven out of Freight control, through the door, along the cross
-// corridor and the spine to the aft corridor, stops in Cargo maintenance's doorway (fenced off for now); a wall, a lift's
-// alcove and a parked cart each stop a cart.
+// beside its driver's seat and its rear seats. All six drive out of their charging bays; MCT-01 drives to Freight control
+// and back through Cargo maintenance's doorway. A wall, a lift's alcove and a parked cart each stop a cart.
 const mct={drive:null};
 {const list=mctHomes(),carts=list.map((h,i)=>createCart(i,h)),world={colliders:col,lifts:{lifts:LIFTS.map(spec=>({spec,stops:spec.stops}))},others:carts};
  const sideReached=(c,lz)=>[1.25,-1.25].some(lx=>{const q=cartPoint(c,[lx,0,lz]);return reached(q.x,q.y,q.z,.5,.3,.3);});
  carts.forEach((c,i)=>{if(!cartFits(c,world)||cartBlocked(c,world))problems.push(`MCT-0${i+1}: its bay is not clear`);
-  if(!sideReached(c,0)||!sideReached(c,-1.35))problems.push(`MCT-0${i+1}: nowhere reached to board it`);});
+  if(!sideReached(c,0)||!sideReached(c,-1.35))problems.push(`MCT-0${i+1}: nowhere reached to board it`);
+  const trial=createCart(i,c.home);for(let t=0;t<5;t+=1/30)driveCart(trial,1/30,1,0,{...world,others:carts.filter(o=>o!==c)});
+  if(trial.pos.z>42.5||!cartFits(trial,world))problems.push(`MCT-0${i+1}: cannot drive out of its charging bay`);});
  // Steer at waypoints, throttle on, until each is passed (or the cart stops for 3 s).
  const route=(c,points,limit=200)=>{let k=0,t=0,still=0;while(k<points.length&&t<limit){const [px,pz]=points[k],dx=px-c.pos.x,dz=pz-c.pos.z;if(Math.hypot(dx,dz)<1.2){k++;continue;}
   const err=Math.atan2(dx,dz)-c.yaw,was=c.pos.clone();driveCart(c,1/30,1,T.MathUtils.clamp(-Math.atan2(Math.sin(err),Math.cos(err))*3,-1,1),world);t+=1/30;
   if(c.pos.distanceTo(was)<1e-4){still+=1/30;if(still>3)break;}else still=0;}return k;};
- const c=carts[0],way=[[-49.25,44],[-50,41],[-56,38.3],[-66,38.2],[-72,38.2],[-76,34],[-75.5,12],[-77,3],[-90,.5],[-125,-1.5],[-141,-2],[-142,1],[-144.5,6],[-144.5,30],[-143.5,35]];
+ const c=carts[0],way=[[-117.25,44],[-119,40],[-124,38.2],[-136,38.2],[-140,38.2],[-144.5,35],[-144.5,12],[-143,3],[-137,0],[-90,.5],[-77,3],[-75.5,12],[-76,34],[-72,38.2],[-66,38.2],[-56,38.3],[-50,41],[-49.25,44]];
  const passed=route(c,way);mct.drive={passed,of:way.length,at:[+c.pos.x.toFixed(2),+c.pos.z.toFixed(2)]};
- if(passed<way.length)problems.push(`MCT-01: stuck on its way from Freight control to Cargo maintenance at ${mct.drive.at} (${passed}/${way.length} waypoints)`);
- route(c,[[-136,37]],20);const nose=cartPoint(c,[0,0,1.3]);mct.doorway=+nose.x.toFixed(2);
- if(nose.x>-140.2||nose.x<-142)problems.push(`MCT-01: should stop with its nose in Cargo maintenance's doorway, not at x=${nose.x.toFixed(2)}`);
+ if(passed<way.length)problems.push(`MCT-01: stuck on its way from Cargo maintenance to Freight control at ${mct.drive.at} (${passed}/${way.length} waypoints)`);
+ const back=[[-49,48],[-53,50],[-57,47],[-57,42],[-61,38.2],[-72,38.2],[-76,34],[-75.5,12],[-77,3],[-90,.5],[-125,-1.5],[-141,-2],[-142,1],[-144.5,6],[-144.5,30],[-143.5,35],[-136,38],[-125,38]];
+ const returned=route(c,back);mct.return={passed:returned,of:back.length,at:[+c.pos.x.toFixed(2),+c.pos.z.toFixed(2)]};
+ if(returned<back.length)problems.push(`MCT-01: cannot return through Cargo maintenance's doorway at ${mct.return.at} (${returned}/${back.length} waypoints)`);
  const stops=(at,yaw)=>{const x=createCart(9,{at,yaw}),w={...world,others:[...carts,x]};for(let t=0;t<6;t+=1/30)driveCart(x,1/30,1,0,w);return x;};
- const wall=stops([-100,-39.7,0],Math.PI),lift=stops([-132,-39.7,-1],0),bay=stops([-46.75,-39.7,46],0);
+ const wall=stops([-100,-39.7,0],Math.PI),lift=stops([-132,-39.7,-1],0),bay=stops(cartPoint(carts[1],[0,0,5.5]).toArray(),carts[1].yaw+Math.PI);
  mct.stops={wall:+wall.pos.z.toFixed(2),lift:+lift.pos.z.toFixed(2),cart:+bay.pos.z.toFixed(2)};
  if(wall.pos.z<-3.3||!cartFits(wall,world))problems.push(`MCT: drove into the spine's wall (z ${wall.pos.z.toFixed(2)})`);
  if(lift.pos.z>3.2)problems.push(`MCT: drove into the aft lift's alcove (z ${lift.pos.z.toFixed(2)})`);
- if(bay.pos.z>50.3)problems.push(`MCT: drove into a parked cart (z ${bay.pos.z.toFixed(2)})`);}
+ if(cartLocal(carts[1],bay.pos)[1]>5||MCT.circles.some(z=>{const p=outOfCart(carts[1],cartPoint(bay,[0,0,z]),MCT.radius);return p&&Math.hypot(p.x,p.z)>1e-4;}))problems.push(`MCT: did not stop against a parked cart (z ${bay.pos.z.toFixed(2)})`);}
 
 const report={status:problems.length?'FAIL':'PASS',walker:{height:H,width:2*R,step:STEP},positions:X.length,falls,voidFalls,voids,railings:{count:rails.length,metres:Math.round(rails.reduce((s,r)=>s+r[3]-r[2],0))},walkableM2ByDeck:Object.fromEntries([...area].sort((a,b)=>a[0]-b[0]).map(([b,a])=>[b,Math.round(a)])),
  rooms:{total:rooms.length,below80:rooms.filter(r=>!r.samples||r.reached/r.samples<.8).length},cabins:`${cabins}/${CABINS.length}`,missedCabins:missedCabins.slice(0,20),liftStops:`${stops}/${stopCount}`,

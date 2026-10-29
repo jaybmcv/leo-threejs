@@ -6,8 +6,8 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 // Deck 1's Cargo maintenance becomes the depot for the ship's Mars Cat Transporters (MCTs), small grey utility
 // vehicles (from tester feedback). Six charging bays line the outboard wall, each with a wall-mounted power unit, its
 // heavy charging cable and an orange coolant umbilical, a wheel stop and a lit sign, MCT-01 CHARGING to MCT-06
-// CHARGING. Four are charging; the two empty bays' cables hang coiled on their units. Two service bays sit in front of
-// the tool cabinets, MCT-01 SERVICE and MCT-02 SERVICE: in the first an MCT stands raised on yellow jack stands beside
+// CHARGING. The six drivable carts use these bays (transporter.js); cables hang coiled on their units. Two service bays
+// sit in front of the tool cabinets, MCT-01 SERVICE and MCT-02 SERVICE: in the first an MCT stands raised on yellow jack stands beside
 // a mechanic's tool trolley (an open drawer, torque wrenches and two diagnostic tablets with telemetry); in the second
 // one stands on low hydraulic lift pads. Road markings on the floor (a dashed centre line, lane legends at the
 // entrance, dashed lead-in curves and painted bay numbers) guide vehicles from the doorway into their bays. The old
@@ -23,8 +23,8 @@ const OLD=/^(Service_counter|Countertop|Tool|Tool_board|Refined_tool_storage)$/;
 export const CHARGE_BAYS=[-2.5,1.2,4.9,8.6,12.3,16];
 export const SERVICE_BAYS=[-11.5,-4.5];
 const BAY_W=3.7,MOUTH=10.7,SERVICE={w:6.2,z0:-14.2,z1:-6.8};
-// Which vehicle stands where: four charging, MCT-03 and MCT-06 in the service bays.
-const CHARGING={0:1,1:2,3:4,4:5},IN_SERVICE=[3,6];
+// The service displays stay on their stands and lift pads.
+const IN_SERVICE=[3,6];
 // The vehicle: length along its own z (nose toward +z), width along x, and how far the service bays raise it.
 const MCT={L:3.24,W:1.6,H:1.66,wheel:.36,axle:1.05,track:.78};
 const FONT='"Archivo", "Sora", sans-serif',MONO='"JetBrains Mono", ui-monospace, monospace';
@@ -68,16 +68,14 @@ function floorAtlas(){
 function numberAtlas(){
  return atlas(512,128,6,(g,r,w,h)=>{g.fillStyle='#f1f3f2';g.textAlign='center';g.textBaseline='middle';g.font=`700 96px ${FONT}`;g.fillText(`MCT-0${r+1}`,w/2,h/2+4);});
 }
-// The power units' screens: the bay, what it is doing and the charge.
+// The power units are ready, with their cables stowed. Battery charging is not simulated.
 function unitAtlas(){
- const charge=[82,47,0,96,64,0];
  return atlas(256,192,6,(g,r,w,h)=>{
-  const on=charge[r]>0;g.fillStyle='#071419';g.fillRect(0,0,w,h);
+  g.fillStyle='#071419';g.fillRect(0,0,w,h);
   g.fillStyle='#7fe3ff';g.font=`700 26px ${MONO}`;g.textAlign='left';g.textBaseline='top';g.fillText(`BAY 0${r+1}`,16,14);
-  g.fillStyle=on?'#3ee08a':'#f2b631';g.font=`700 24px ${MONO}`;g.fillText(on?'CHARGING':'READY',16,50);
+  g.fillStyle='#f2b631';g.font=`700 24px ${MONO}`;g.fillText('READY',16,50);
   g.strokeStyle='#7fe3ff';g.lineWidth=3;g.strokeRect(16,94,190,46);g.fillRect(206,108,8,18);
-  if(on){g.fillStyle='#3ee08a';g.fillRect(21,99,180*charge[r]/100,36);g.fillStyle='#e8fbff';g.font=`700 26px ${MONO}`;g.fillText(charge[r]+'%',20,150);g.fillText('48 kW',130,150);}
-  else{g.fillStyle='#8aa3ad';g.font=`600 20px ${MONO}`;g.fillText('IN SERVICE BAY',16,152);}
+  g.fillStyle='#8aa3ad';g.font=`600 20px ${MONO}`;g.fillText('CABLE STOWED',16,152);
  });
 }
 // The diagnostic tablets: a battery-cell grid with one warm cell and a motor trace, and a wheel-nut torque log.
@@ -187,15 +185,14 @@ export function createMctBay(ship){
  const vehicleBlock=(x,z,ry,lift=0)=>block([MCT.W+.32,MCT.H+lift,MCT.L+.3],[x,(MCT.H+lift)/2,z],ry);
 
  // --- The charging bays, along the outboard wall.
- const zv=WALL-.3-.25-MCT.L/2;
  for(const [i,xc] of CHARGE_BAYS.entries()){
-  const n=CHARGING[i],xu=xc-1.35,xv=xc+.25,zf=WALL-.15;
+  const xu=xc-1.35,xv=xc+.25,zf=WALL-.15;
   // The wall-mounted power unit: its cabinet, conduit to the ceiling, the bay's screen and status strip.
   box(M.unit,[.7,1.5,.3],[xu,1.25,zf]);
   box(M.dark,[.6,.05,.02],[xu,1.98,zf-.155]);
   rod(M.steel,[xu,2,WALL-.08],[xu,CEIL,WALL-.08],.05);
   plane(M.screen,[.44,.33],[xu,1.62,zf-.152],Math.PI,false,i,units);
-  box(n?M.green:M.amber,[.44,.035,.01],[xu,1.38,zf-.155]);
+  box(M.amber,[.44,.035,.01],[xu,1.38,zf-.155]);
   box(M.dark,[.18,.12,.08],[xu,.6,zf-.18]);
   // The bay's sign over the vehicle, the wheel stop, the divider lines and its painted number.
   box(M.dark,[2.28,.5,.04],[xv,2.62,WALL-.02]);plane(M.sign,[2.2,.42],[xv,2.62,WALL-.045],Math.PI,false,i,signs);
@@ -203,25 +200,11 @@ export function createMctBay(ship){
   for(const s of [-1,1])if(s<0||i===CHARGE_BAYS.length-1)box(M.line,[.1,.004,WALL-.1-MOUTH],[xc+s*BAY_W/2,.004,(WALL-.1+MOUTH)/2]);
   plane(M.legend,[2.4,.6],[xv,.007,MOUTH+.75],Math.PI,true,2+i,floor);
   block([.78,1.6,.38],[xu,1.25,zf-.02]);
-  if(n){
-   // A vehicle on charge: the heavy cable from the unit's outlet along the floor to its port, the coolant umbilical
-   // arcing from the unit's top to its roof coupler.
-   within(xv,0,zv,0,()=>vehicle(n));vehicleBlock(xv,zv,0);
-   const port=[xv-MCT.W/2-.03,.46+.56,zv+.58];
-   tube(M.cable,[[xu,.6,zf-.24],[xu+.05,.12,zf-.45],[xu+.15,.045,zf-.9],[port[0]-.25,.045,port[2]+.2],[port[0]-.2,.5,port[2]+.02],[port[0]-.04,port[1],port[2]]],.045,40);
-   box(M.dark,[.1,.14,.12],[port[0]-.04,port[1],port[2]]);
-   const top=[xv-.45,.46+MCT.H-.42,zv+1.1],hose=[[xu+.36,1.8,zf-.05],[xu+.62,2.12,zf-.2],[top[0]-.3,2.15,top[2]+.35],[top[0],top[1]+.18,top[2]+.06],top];
-   tube(M.hose,hose,.035,40);
-   const curve=new T.CatmullRomCurve3(hose.map(p=>new T.Vector3(...p)));
-   for(let t=.04;t<.97;t+=.045){const p=curve.getPointAt(t),d=curve.getTangentAt(t),g=new T.TorusGeometry(.038,.008,5,10);g.lookAt(d);put(M.hose,g.translate(p.x,p.y,p.z));}
-   cyl(M.steel,.05,.1,top);
-  }else{
-   // An empty bay: the cable and hose hang coiled on the unit's hooks.
-   box(M.steel,[.06,.06,.12],[xu,1.12,zf-.2]);
-   put(M.cable,new T.TorusGeometry(.2,.04,8,24).translate(xu,.92,zf-.26));
-   put(M.hose,new T.TorusGeometry(.15,.035,8,20).translate(xu+.42,1.45,zf-.12));
-   box(M.dark,[.1,.14,.12],[xu-.12,.72,zf-.27]);
-  }
+  // The cable and hose stay on their hooks when a cart drives away.
+  box(M.steel,[.06,.06,.12],[xu,1.12,zf-.2]);
+  put(M.cable,new T.TorusGeometry(.2,.04,8,24).translate(xu,.92,zf-.26));
+  put(M.hose,new T.TorusGeometry(.15,.035,8,20).translate(xu+.42,1.45,zf-.12));
+  box(M.dark,[.1,.14,.12],[xu-.12,.72,zf-.27]);
  }
  // Lead-in curves from the roadway to each charging bay: yellow dashes on a quarter bend.
  const dashes=(x0,z0,x1,z1,cx,cz)=>{const c=new T.QuadraticBezierCurve(new T.Vector2(x0,z0),new T.Vector2(cx,cz),new T.Vector2(x1,z1)),n=Math.round(c.getLength()/.6);
