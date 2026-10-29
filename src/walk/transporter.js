@@ -3,24 +3,23 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {toWorld,toLocal,yawToWorld,frame} from '../plan/rooms.js';
 import {walkCanvas} from './canvas.js';
 import {findStand} from './places.js';
+import {CHARGE_BAYS} from './mct-bay.js';
 
-// Mars Cat Transporters (from tester feedback): six three-seat carts parked side by side along the outer wall of Deck 1's
-// Freight control, numbered MCT-01 to MCT-06. E at the front takes the centred driver's seat (one driver per cart; with
+// Mars Cat Transporters (from tester feedback): six three-seat carts parked in Deck 1's Cargo maintenance charging
+// bays, numbered MCT-01 to MCT-06. E at the front takes the centred driver's seat (one driver per cart; with
 // Leo live the server says who has it: server/transporters.mjs); W and S drive at walking pace, A and D steer the front
 // wheels, and E gets out, leaving the cart parked where it stopped. E at the back takes one of the two rear seats, which
-// face backwards, and rides along. The carts stay on Deck 1's floor and out of the lifts, and this first step keeps
-// them out of Container hold A, Cargo maintenance and Aft spares, which other changes are fitting out (their noses stop
-// in the doorway). Each visitor drives their own copy without Leo live; with it, others see the driver seated and the
-// cart moving under them, and a cart parked where its driver left it, until the daily reset sends it home.
+// face backwards, and rides along. The carts stay on Deck 1's floor and out of the lifts, Container hold A and Aft
+// spares (their noses stop in the doorway). Each visitor drives their own copy without Leo live; with it, others see
+// the driver seated and the cart moving under them, and a cart parked where its driver left it, until the daily reset sends it home.
 //
 // A cart's frame: the origin is on the floor under the driver's hips, +z is forward, +x the driver's left. It is solid
 // to walkers as its plan rectangle; driving, it collides with the ship as three circles along its length.
-const HOME_ROOM='d01-logistics-6';
-// Room-local homes, noses toward the middle of the room (yaw pi in the room's frame): three pairs, each facing a gap
-// between the desks, so a cart drives straight out to the aisle.
-const HOME_X=[-4.25,-1.75,3.75,6.25,11.75,14.25],HOME_Z=14.75,HOME_YAW=Math.PI;
-// Rooms this step keeps the carts out of (their own changes are in progress).
-const FENCED=['d01-cargo-1','d01-workshop-5','d01-spares-aft'];
+const HOME_ROOM='d01-workshop-5';
+// The charging bays' centres, noses toward the aisle, with room behind the rear seats to board and get out.
+const HOME_Z=13.7,HOME_YAW=Math.PI;
+// These rooms keep their existing cart restrictions.
+const FENCED=['d01-cargo-1','d01-spares-aft'];
 export const MCT={
  // A walker's pace forward (avatar.js WALKER.walk), slower back; m/s, m/s^2, radians and radians a second.
  speed:2.25,reverse:1.2,accel:2.2,brake:5,steer:.6,steerRate:2.2,
@@ -33,7 +32,7 @@ export const MCT={
  reach:1.1};
 
 // Homes in ship coordinates: [{at:[x,y,z],yaw}].
-export function homes(){return HOME_X.map(x=>({at:toWorld(HOME_ROOM,[x,0,HOME_Z]),yaw:yawToWorld(HOME_ROOM,HOME_YAW)}));}
+export function homes(){return CHARGE_BAYS.map(x=>({at:toWorld(HOME_ROOM,[x+.25,0,HOME_Z]),yaw:yawToWorld(HOME_ROOM,HOME_YAW)}));}
 
 // A point in a cart's frame, in ship coordinates, and back (plan only).
 export function cartPoint(c,l,out=new T.Vector3()){const s=Math.sin(c.yaw),k=Math.cos(c.yaw);return out.set(c.pos.x+l[0]*k+l[2]*s,c.pos.y+l[1],c.pos.z-l[0]*s+l[2]*k);}
@@ -179,18 +178,6 @@ export function createCartMesh(n){
  }
  return {group,pose(steer,roll){for(const w of wheels){if(w.front)w.pivot.rotation.y=steer;w.spin.rotation.x=roll;}}};
 }
-// Painted bays under the homes: a thin outline 8 mm over the floor, drawn only.
-export function createBays(list=homes()){
- const g=new T.Group();g.name='MCT_bays';g.position.y=list[0].at[1]+.008;
- const paint=new T.MeshStandardMaterial({name:'MCT_bay_paint',color:0xf0b429,roughness:.7,polygonOffset:true,polygonOffsetFactor:-2});
- const w=MCT.half*2+.5,front=MCT.front+.3,rear=MCT.rear-.15,len=front-rear;
- for(const h of list){const bay=new T.Group();bay.position.set(h.at[0],h.at[1]-list[0].at[1],h.at[2]);bay.rotation.y=h.yaw;
-  for(const s of [-1,1]){const m=new T.Mesh(new T.PlaneGeometry(.08,len).rotateX(-Math.PI/2),paint);m.position.set(s*w/2,0,(front+rear)/2);bay.add(m);}
-  const end=new T.Mesh(new T.PlaneGeometry(w+.08,.08).rotateX(-Math.PI/2),paint);end.position.z=rear;bay.add(end);
-  g.add(bay);}
- return g;
-}
-
 // ---- the six carts aboard --------------------------------------------------------------------------------------------
 // Who drives each: nobody (null), this visitor, or another visitor's id, as Leo live says. A cart someone else drives
 // sits under their seated body (their pose is the driver's seat), so it moves as smoothly as they do; one nobody drives
@@ -198,7 +185,7 @@ export function createBays(list=homes()){
 // `groups` are to draw (all on Deck 1's band); main.js seats the walker (rest-style) through spot() and exit().
 export function createTransporters({colliders,lifts}){
  const list=homes(),carts=list.map((h,i)=>Object.assign(createCart(i,h),{mesh:createCartMesh(i+1),parked:{at:h.at,yaw:h.yaw},view:null}));
- const groups=[createBays(list),...carts.map(c=>c.mesh.group)],world={colliders,lifts,others:carts};
+ const groups=carts.map(c=>c.mesh.group),world={colliders,lifts,others:carts};
  let link=null,linked=false,mine=null,pending=null,sentAt=0,askedAt=0;
  const name=c=>'MCT-0'+(c.i+1);
  const me=()=>link?.id?.()||null;
