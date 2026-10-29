@@ -6,8 +6,8 @@ import {walkCanvas} from './canvas.js';
 
 // Four corner carousels leave the entrance and the middle of Baggage reclaim open. The wall-side hoods cover a
 // section of each return belt, so packs emerge from a dispenser and pass back through it on every lap.
-const ROOM='Area_d02-baggage-5',HALF=5.8,RADIUS=2.5,WIDTH=1.5,LAP=4*HALF+2*Math.PI*RADIUS;
-const BAYS=[[-16,-12.5],[16,-12.5],[-16,12.5],[16,12.5]],SLATS=128,BAGS=8,SPEED=.36;
+const ROOM='Area_d02-baggage-5',HALF=2.8,RADIUS=2.5,WIDTH=1.5,LAP=4*HALF+2*Math.PI*RADIUS;
+const BAYS=[[-19,-12.5],[19,-12.5],[-19,12.5],[19,12.5]],SLATS=128,BAGS=8,SPEED=.36;
 const OLD=/^(Baggage_conveyor|Luggage|Service_counter|Countertop|Refined_conveyor_detail|Refined_counter_hardware)$/;
 
 export function stripBaggage(ship){
@@ -76,10 +76,11 @@ export function createBaggage(ship,{still=false}={}){
   piece(M.belt,shell(RADIUS+WIDTH/2-.12,RADIUS-WIDTH/2+.1,.05,.75).translate(x,0,z));
   piece(M.steel,shell(RADIUS-WIDTH/2,0,.09,.74).translate(x,0,z));
   for(const sx of [-1,1])for(const sz of [-1,1]){
-   box(M.dark,[.45,.18,.45],[x+sx*6.4,.09,z+sz*2.4]);
-   box(M.led,[.75,.06,.025],[x+sx*5,.4,z+sz*(RADIUS+WIDTH/2+.012)]);
+   box(M.dark,[.45,.18,.45],[x+sx*3.8,.09,z+sz*2.4]);
+   box(M.led,[.75,.06,.025],[x+sx*2,.4,z+sz*(RADIUS+WIDTH/2+.012)]);
   }
-  block([2*(HALF+RADIUS+WIDTH/2),.83,2*RADIUS+WIDTH],[x,.415,z]);
+  // Compact loops leave more floor to walk on; curved colliders keep their end clearances usable too.
+  const body=new T.Mesh(shell(RADIUS+WIDTH/2,0,.83,0));body.position.set(x,0,z);solid.add(body);
   // The dispenser backs onto the side wall; its open ends let the belt run through beneath the hood.
   box(M.steel,[3.6,.18,3.5],[x,2.18,side*15]);
   for(const edge of [-1,1])box(M.navy,[3.6,1.38,.12],[x,1.4,side*15+edge*1.69]);
