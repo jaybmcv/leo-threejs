@@ -589,7 +589,7 @@ renderer.setAnimationLoop(()=>{
  // Moving off a seat or bed stands you up; in a transporter's driver's seat the keys drive it instead (transporter.js),
  // and the camera swings round behind it while it moves. A healing capsule holds you until you leave it (E or the button).
  const cart=resting?.spot.mct,driving=cart?.seat==='driver'&&resting.phase==='in'&&resting.t===1;
- if(driving){mct.drive(dt,k.y,k.x);if(Math.abs(cart.cart.speed)>.3&&!k.look.x)follow.yaw=dampAngle(follow.yaw,cart.cart.yaw,1.2,dt);}
+ if(driving){mct.drive(dt,k.y,k.x,k.run);if(Math.abs(cart.cart.speed)>.3&&!k.look.x)follow.yaw=dampAngle(follow.yaw,cart.cart.yaw,1.2,dt);}
  else if(resting&&!resting.stand&&resting.phase==='in'&&resting.t===1&&wish.lengthSq()>.1)standUp();
  lifts.update(dt,controller);
  vaultLift?.update(dt,controller);
