@@ -70,6 +70,7 @@
       "src/viewer.js",
       "src/annotation-review.html",
       "src/walk/avatar.js",
+      "src/walk/aquarium-treasure/suit.js",
       "src/walk/camera.js",
       "src/walk/hat.js",
       "src/walk/catnip-face.js",
