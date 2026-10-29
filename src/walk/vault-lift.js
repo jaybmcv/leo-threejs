@@ -41,10 +41,10 @@ export function createVaultLift(colliders){
    proxy(new T.BoxGeometry(2.4,.12,END-FRONT).translate(0,y-.06,(END+FRONT)/2));
    for(const [w,h,d,x,dy,z] of [[.08,H,END-FRONT,-1.2,H/2,(END+FRONT)/2],[.08,H,END-FRONT,1.2,H/2,(END+FRONT)/2],[2.4,H,.08,0,H/2,END],[2.4,.08,END-FRONT,0,H,(END+FRONT)/2]]){
     box('Clubhouse_lift_landing_glass',w,h,d,x,y+dy,z,glass);proxy(new T.BoxGeometry(w,h,d).translate(x,y+dy,z));}
-   // Close the cut plate's square corners around the circular shaft.
+   // Close the cut plate's square corners on top, underneath and along the shaft's rim.
    const shape=new T.Shape([new T.Vector2(-R-.1,-R-.1),new T.Vector2(R+.1,-R-.1),new T.Vector2(R+.1,R+.1),new T.Vector2(-R-.1,R+.1)]);
    shape.holes.push(new T.Path().absarc(0,0,R,0,Math.PI*2,true));
-   const collar=new T.ShapeGeometry(shape).rotateX(-Math.PI/2).translate(0,y,0);mesh('Clubhouse_lift_collar',collar,metal);proxy(collar.clone());
+   const collar=new T.ExtrudeGeometry(shape,{depth:.3,bevelEnabled:false,curveSegments:32}).rotateX(-Math.PI/2).translate(0,y-.3,0);mesh('Clubhouse_lift_collar',collar,metal);proxy(collar.clone());
   }
  }
  for(const a of [.8,Math.PI,Math.PI*2-.8])box('Clubhouse_lift_glow',.035,TOP,.035,Math.sin(a)*(R+.02),TOP/2,Math.cos(a)*(R+.02),blue);
