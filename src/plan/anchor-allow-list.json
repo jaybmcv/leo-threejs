@@ -4,10 +4,13 @@
       "src/aft*.js",
       "src/engineering-dressing.js",
       "src/fin-*.js",
-      "src/walk/fin-casing.js"
+      "src/walk/fin-casing.js",
+      "src/walk/graffiti.js",
+      "src/walk/graffiti-wall.js",
+      "src/walk/lever-panel.js"
     ],
     "room": "aft-machinery",
-    "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign."
+    "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway."
   },
   {
     "paths": [
@@ -69,6 +72,7 @@
       "src/walk/avatar.js",
       "src/walk/camera.js",
       "src/walk/hat.js",
+      "src/walk/catnip-face.js",
       "src/walk/marks.js",
       "src/walk/remotes.js",
       "src/walk/star-drift.js",
@@ -76,6 +80,10 @@
       "src/walk/invasion/*.js",
       "src/walk/pool/game.js",
       "src/walk/pool/rules.js",
+      "src/walk/pinball/rules.js",
+      "src/walk/pinball/game.js",
+      "src/walk/pinball/art.js",
+      "src/walk/pinball/sound.js",
       "src/walk/vr/*"
     ],
     "room": null,

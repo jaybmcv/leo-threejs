@@ -84,13 +84,13 @@ export function restoreRoomAnchors(root,rows){if(!Array.isArray(rows))throw Erro
    s.replace('const b0=performance.now();baked=bakeForWalking(ship.root', 'ship.v2Haze=createHaze(ship);attachFacade(ship,scene);const b0=performance.now();baked=bakeForWalking(ship.root');
    s.replace('haze.add(createHaze(ship));','haze.add(ship.v2Haze);cabinGlass=createCabinGlass(ship,scene);');
    s.replace("q.name==='Remaining_499_furnished_cabins'","q.name==='V2_cabin_instances'").replace("q.name==='Repeated_cabin_walls'","q.name==='V2_cabin_shells'").replace('||o.count!==499','');
-   s.replace('}\nlet baked=null',' isolateStaticWorld(ship,scene);\n}\nlet baked=null');
+   s.replace('}\nlet imagingScans=null;\nlet baked=null',' isolateStaticWorld(ship,scene);\n}\nlet imagingScans=null;\nlet baked=null');
    s.replace('o.count=order.length;o.instanceMatrix.needsUpdate=true;', 'o.userData.currentCabinIds=order.map(i=>o.userData.cabinIds[i]);o.count=order.length;o.instanceMatrix.needsUpdate=true;');
    s.replace('const [low,high]=span(p,now);','cabinGlass?.update(p);const [low,high]=span(p,now);');
   }
   if(file==='src/walk/main.js'){
    s.replace("  if(t.kind==='call')", "  if(t.kind==='cabin-glass'){cabinGlass.toggle(t.cabin);return;}\n  if(t.kind==='call')");
-   s.replace(' const b=booth.near(p)||comics.near(p);'," const privacy=cabinGlass?.near(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));if(privacy)return privacy;\n const b=booth.near(p)||comics.near(p);");
+   s.replace(' const b=booth.near(p)||comics.near(p)||chinampa?.near(p);'," const privacy=cabinGlass?.near(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));if(privacy)return privacy;\n const b=booth.near(p)||comics.near(p)||chinampa?.near(p);");
    s.replace('globalThis.__walk={registry,restSpots,','globalThis.__walk={registry,get cabinGlass(){return cabinGlass;},restSpots,');
   }
   if(file==='src/walk/link.js'){s.prepend("import layout from 'v2-layout';\n").replace('const room=spot.room||roomAt(spot.at,{legacy:true});',"const room=spot.room||roomAt(spot.at,{legacy:true});if(layout.cabinIdMap[room]){const id=layout.cabinIdMap[room],a=v1Frame(room),f=frame(id);return {...spot,room:id,at:toWorld(id,[0,0,0]),yaw:f.yaw+(spot.yaw??a.yaw)-a.yaw,lv:2,resolved:true};}");s.replace('LAYOUT_VERSION,roomAt,anchoredPoint,anchoredYaw','LAYOUT_VERSION,roomAt,anchoredPoint,anchoredYaw,frame,v1Frame,toLocal,toWorld').replace('at:room?anchoredPoint(room,spot.at):spot.at','at:room?fitLegacySpot(room,anchoredPoint(room,spot.at)):spot.at');s.append("\nfunction fitLegacySpot(id,p){const a=v1Frame(id),f=frame(id),l=toLocal(id,p);let changed=false;for(const k of [0,2]){const a0=a.bounds?.[0][k]??-a.size[k]/2,a1=a.bounds?.[1][k]??a.size[k]/2,b0=f.bounds?.[0][k]??-f.size[k]/2,b1=f.bounds?.[1][k]??f.size[k]/2;if(b1-b0<a1-a0){l[k]=Math.max(b0+.6,Math.min(b1-.6,l[k]));changed=true;}}return changed?toWorld(id,l):p;}\n");}

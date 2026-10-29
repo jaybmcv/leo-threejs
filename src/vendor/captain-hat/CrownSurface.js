@@ -5,7 +5,7 @@ import * as THREE from 'three';
  * a travels around the head, with a=0 at the front. The off-center crest,
  * broad roof and individual folds are geometry, so they survive GLB export.
  */
-export const CROWN_SHAPE={bodyTwist:.13,roofLift:-.056,frontRise:.43,sideRise:.070,shoulderLift:-.12,roofEdgeLift:-.008,lowTuck:.40,width:.96,depth:.96,height:.85};
+export const CROWN_SHAPE={bodyTwist:.13,roofLift:-.056,frontRise:.43,sideRise:.070,shoulderLift:-.12,roofEdgeLift:-.008,lowTuck:.10,width:.96,depth:.96,height:.85};
 
 export function createCrownSurface({ foldStrength=1, lean=1, shape={} }={}) {
   const sculpt={...CROWN_SHAPE,...shape};

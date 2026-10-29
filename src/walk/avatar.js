@@ -4,6 +4,7 @@ import {DLCatFigure} from './vr/dlCatFigure.ts';
 import {DEFAULT_DLCAT_TUNING} from './vr/dlCatTuning.ts';
 import {COSMO_EMOTES} from './vr/cosmoEmotes.ts';
 import {WALK_SPEED,RUN_SPEED} from './vr/worldCore.ts';
+import {catnipFace} from './catnip-face.js';
 
 // Cosmo as the walker, animated by Voyager's Reach's own figure (vr/dlCatFigure.ts): the authored Ecctrl walk and jog,
 // the reference sprint, take-off, air and landing, the turning lean, the tail spring, the idle, crouch, slide and
@@ -12,6 +13,8 @@ import {WALK_SPEED,RUN_SPEED} from './vr/worldCore.ts';
 const X=new T.Vector3(1,0,0);
 export const WALKER={height:COSMO_HEIGHT,walk:WALK_SPEED,run:RUN_SPEED,crouch:2,prone:1.1};
 export const EMOTES=Object.keys(COSMO_EMOTES);
+// Seconds the catnip face takes to come on or wear off.
+const CATNIP_S=1.2;
 
 function liePose(bone){
  for(const side of ['L','R']){
@@ -55,6 +58,8 @@ export async function createWalker(createDLCat,motion){
  {eyes.geometry.computeBoundingBox();const c=eyes.geometry.boundingBox.getCenter(new T.Vector3()),p=skin.geometry.attributes.position,v=new T.Vector3();let best=Infinity;
   for(let i=0;i<p.count;i++){const d=v.fromBufferAttribute(p,i).distanceToSquared(c);if(d<best){best=d;fur.fromBufferAttribute(skin.geometry.attributes.uv,i);}}
   for(let i=0;i<shut.count;i++)shut.setXY(i,fur.x,fur.y);}
+ // In the Hydro-Nip Lounge (catnip-face.js): dreamy half-shut lids, a blush and a content smile, eased in and out.
+ const face=catnipFace(figure.asset,fur);let catnip=0;
  // A hat wearer (hat.js) on all fours: the tail's arc would carry its tip up through the back of the crown, so its base
  // tips down a little more, eased in and out.
  const tail=bone('Tail_springBone_1'),TAIL_DROP=-.55,tq=new T.Quaternion(),axis=new T.Vector3();let tailDrop=0;
@@ -62,7 +67,8 @@ export async function createWalker(createDLCat,motion){
  const hipHeight=bone('spine').getWorldPosition(new T.Vector3()).y-figure.root.getWorldPosition(new T.Vector3()).y;
  return {
   holder,body,figure,hipHeight,
-  // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock}}
+  // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock},
+  //  catnip: in the Hydro-Nip Lounge}
   update(dt,s){
    const r=s.rest,seated=r?.kind==='sit'&&r.weight>.35;
    figure.apply({pos:[0,0,0],yaw:0,dt,speedMs:r?0:s.speed,grounded:r?true:s.grounded,swimming:false,submerged:false,stance:r?'stand':s.stance||'stand',
@@ -76,6 +82,7 @@ export async function createWalker(createDLCat,motion){
     axis.set(1,0,0).applyQuaternion(holder.getWorldQuaternion(tq)).applyQuaternion(tail.parent.getWorldQuaternion(tq).invert());
     tail.quaternion.premultiply(tq.setFromAxisAngle(axis,TAIL_DROP*tailDrop));
    }
+   catnip=T.MathUtils.clamp(catnip+(s.catnip?1:-1)*dt/CATNIP_S,0,1);face.set(catnip*catnip*(3-2*catnip));
    const closed=r?.kind==='lie'&&r.hammock&&r.weight>.6?shut:open;if(eyes.geometry.attributes.uv!==closed)eyes.geometry.setAttribute('uv',closed);
    if(r?.kind==='lie'&&r.weight>0){
     const pose=r.hammock?hammock:lie;bones.forEach((b,i)=>b.quaternion.slerp(pose[i],r.weight));

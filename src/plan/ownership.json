@@ -5345,6 +5345,19 @@
         0
       ]
     },
+    "tv/Crown_lounge": {
+      "room": "crown",
+      "local": [
+        -2.180000000000007,
+        1.75,
+        0
+      ],
+      "v1": [
+        -249.18,
+        122.05,
+        0
+      ]
+    },
     "mission-holo": {
       "room": "d20-mission-2",
       "local": [
@@ -5432,7 +5445,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [],
       "colliders": [],
       "interactionTargets": null,
@@ -5446,7 +5459,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Aft_access_finish_shell",
         "Fin_access_finish_shell"
@@ -5463,7 +5476,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "AFT_SYSTEMS_BLOCKOUT",
         "Aft_"
@@ -5598,7 +5611,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "b8622de201e89e7e6b3da83fdcf9d80193364f960cbd53edecc0e3a49e389efa"
+      "signature": "942dd8cd72874bb5e699e353fd40a8f3df9c4e6f2d19c414c2c1ef9eb119195d"
     },
     {
       "source": "src/engineering-dressing.js",
@@ -5607,7 +5620,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Engineering_sign",
         "Heat_shield_plating",
@@ -5708,7 +5721,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Fin_panorama_lounge",
         "Crown_exterior",
@@ -6092,8 +6105,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 179,
-      "signature": "2fc83e82680666d3b320e3fd02cb4c85b05b317f021d45f85b4b34e978d0fdeb"
+      "placements": 189,
+      "signature": "cac05bf04acc70c5d8414dddd988dee474a5f16e215766cdf63eb3cfba854308"
     },
     {
       "source": "src/special-circulation.js",
@@ -6319,7 +6332,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "b17f88617d50a69c9bfec5b60e323939e5232eb3c326369fa24a7103d8fa6078"
+      "signature": "8ea8ad2e526483408d65fbfa9a0445d19c6258b21b1da68c76d56fa1ca5384d4"
     },
     {
       "source": "src/walk/blossom.js",
@@ -6387,6 +6400,20 @@
       "signature": "ec1db21c9d5f137a90f3d0e25af2b7fbde90a3dad445219dfbc052174af49242"
     },
     {
+      "source": "src/walk/catnip-face.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [
+        "Catnip_face"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 1,
+      "signature": "c4590c922e7543da702bb372c7b81367b7bc2ab18a87e13d5d0e98a9ad15d41b"
+    },
+    {
       "source": "src/walk/changes-board.js",
       "rooms": [
         "crown",
@@ -6415,6 +6442,30 @@
       "interactionTargets": null,
       "placements": 2,
       "signature": "9ec694913fb772f950a9421d4eacd0821809184465bc3a176a45c2dcdde05007"
+    },
+    {
+      "source": "src/walk/chinampa.js",
+      "rooms": [
+        "d03-farm-1"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Chinampa_tank",
+        "Chinampa_tank_colliders",
+        "Chinampa_light_beam",
+        "Chinampa_sign_back",
+        "Chinampa_sign_",
+        "Chinampa_tank_solid",
+        "Chinampa_bubbles"
+      ],
+      "colliders": [
+        "Chinampa_tank_colliders",
+        "Chinampa_tank_solid"
+      ],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 57,
+      "signature": "dc551d28913f6f608076b205a34307952760378d0620f8c77c94da069cb9d7c2"
     },
     {
       "source": "src/walk/collision.js",
@@ -6527,6 +6578,26 @@
       "signature": "bf5dbff1761beff801fd379654f774a323aab02058addda1659e023a34b7aaba"
     },
     {
+      "source": "src/walk/crown-tv.js",
+      "rooms": [
+        "crown"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Crown_tv",
+        "Crown_tv_bezel",
+        "Crown_tv_glass",
+        "Crown_tv_picture",
+        "Crown_tv_plate",
+        "Crown_tv_label"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 8,
+      "signature": "bd5330c2f0d11a02e474d5d2ffdcfafee9236f9ace78f39da9b335b06bdc539d"
+    },
+    {
       "source": "src/walk/deck-map.js",
       "rooms": [
         "circulation-1",
@@ -6557,7 +6628,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "9064e37cf8fa725103a90165e2a707e35248cd86e4dba16463166e3a7c8252ea"
+      "signature": "938698954c87f648dd5ca1a30bcd33c41de4c58e14ea670888e856038caa369c"
     },
     {
       "source": "src/walk/dining-robots.js",
@@ -6585,7 +6656,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign.",
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Walk_fin_root_casing",
         "Fin_root_casing_corner",
@@ -6609,6 +6680,32 @@
       "signature": "9f310ca690f1353919ed62e7a664ffe376d4ff3c18630ced41506c67b603e73f"
     },
     {
+      "source": "src/walk/freight-gate.js",
+      "rooms": [
+        "d01-spares-aft"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Logistics_console_chair",
+        "Freight_gate",
+        "Freight_gate_colliders",
+        "Freight_gate_",
+        "Freight_gate_iris_led",
+        "Freight_gate_iris_blade",
+        "Freight_gate_lane_signs",
+        "Freight_gate_posters",
+        "Freight_gate_console_screens",
+        "Freight_gate_bridge"
+      ],
+      "colliders": [
+        "Freight_gate_colliders"
+      ],
+      "interactionTargets": null,
+      "placements": 66,
+      "signature": "f9b2ed25efe6ae387f8de56feea8b755063997adfacab7214293dad4295ff247"
+    },
+    {
       "source": "src/walk/gaming-lounge.js",
       "rooms": [
         "d16-training-aft"
@@ -6628,6 +6725,36 @@
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 63,
       "signature": "de92ae257e263d038c7233f220a06a2a4165378c365d1bdca1f64574a01f7668"
+    },
+    {
+      "source": "src/walk/graffiti-wall.js",
+      "rooms": [
+        "aft-machinery"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "3a7e0ee04722ceaba30540c438862e769d891bc717dac72602f215a4c8dff588"
+    },
+    {
+      "source": "src/walk/graffiti.js",
+      "rooms": [
+        "aft-machinery"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
+      "features": [
+        "Walk_graffiti_wall"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 3,
+      "signature": "ba9afb6f5fba84ffee4c0ef60e1859f58fc96d654c5dc80ae4c2d807dc0ded85"
     },
     {
       "source": "src/walk/halloween.js",
@@ -6693,7 +6820,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "a31902fc4111f793121e366996d916210915293b1090401f8d53c422008b7f5b"
+      "signature": "5870f9ded077aba6683e789771d545e065759e1482fe36b2ddd72e24b98afd8c"
     },
     {
       "source": "src/walk/hex-floor.js",
@@ -6764,6 +6891,26 @@
       "signature": "6a0280a1bf1333448d68bdab906e6243734151c58b946b6cbc213b17740a6bc4"
     },
     {
+      "source": "src/walk/imaging.js",
+      "rooms": [
+        "d05-imaging-6"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Imaging_scanner",
+        "Imaging_glass_divider",
+        "Imaging_scans",
+        "Imaging_scan_graphics",
+        "Imaging_scan_line_graphics",
+        "Imaging_scan_beam_graphics"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 33,
+      "signature": "db8b23364e5050da65c7fa22c66e91c183a3f0231d6b3951cbfb7789e1320670"
+    },
+    {
       "source": "src/walk/input.js",
       "rooms": [],
       "via": "frame boundary",
@@ -6809,15 +6956,17 @@
       "features": [
         "Jaguar_gate",
         "Jaguar_gate_solid",
+        "Jaguar_ears",
         "Jaguar_head",
+        "Jaguar_lower_teeth",
         "Jaguar_exit_arch"
       ],
       "colliders": [
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 38,
-      "signature": "f719f67c9e254f2895a3d1ad3755064e2883981860a690dd795fced4dcb4615e"
+      "placements": 25,
+      "signature": "9dbce1c54f43e360156021fe5976da04f2936d1314116157a38660ab70483c23"
     },
     {
       "source": "src/walk/kittens.js",
@@ -6834,9 +6983,27 @@
       "colliders": [
         "Young_explorers_kitten_colliders"
       ],
-      "interactionTargets": null,
-      "placements": 25,
-      "signature": "1e13bb9620f70b8861003d7b619d14c30e4f5b80e58090fbd1f5a821b4a7f874"
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 48,
+      "signature": "a2c3481e65acdbda90eb6276cdc56301c7c879fe6e3b05ff74c0e33340ff6cb7"
+    },
+    {
+      "source": "src/walk/lever-panel.js",
+      "rooms": [
+        "aft-machinery"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
+      "features": [
+        "Lever_panel",
+        "Lever_panel_lamp",
+        "Lever_panel_grip"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 16,
+      "signature": "e3cdffd756cfcab9b73d63845af60824a032728e42cdb9e445badd09109de69a"
     },
     {
       "source": "src/walk/life-support-pipes.js",
@@ -6966,6 +7133,24 @@
       "signature": "4a246f122a0f43af402eb69be4fbe17639a7b036efce5f07dbf442afef9e3a3c"
     },
     {
+      "source": "src/walk/lounge-aquarium.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Lounge_aquarium_solid",
+        "Walk_lounge_aquarium"
+      ],
+      "colliders": [
+        "Lounge_aquarium_solid"
+      ],
+      "interactionTargets": null,
+      "placements": 47,
+      "signature": "c7f295dc252222b974eee999e1b721f568198e27222184afd4c4e4282699ce1a"
+    },
+    {
       "source": "src/walk/lounge-compass.js",
       "rooms": [
         "observation-lounge"
@@ -6993,6 +7178,27 @@
       "interactionTargets": null,
       "placements": 20,
       "signature": "76cd8842bdba49e6c32de9e3d26da8316d0ae8cd32612d88bbfcfefbfe5e7fc8"
+    },
+    {
+      "source": "src/walk/lounge-falls.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Lounge_falls_bench",
+        "Lounge_falls",
+        "Lounge_falls_colliders",
+        "Lounge_falls_pool",
+        "Lounge_falls_sheet"
+      ],
+      "colliders": [
+        "Lounge_falls_colliders"
+      ],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 28,
+      "signature": "6a97d8e3edf5d984afce91870c4b74845177ce9750bafe211dee0a0395ad328b"
     },
     {
       "source": "src/walk/lounge-floor.js",
@@ -7051,7 +7257,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "35fbed48a082f492a58c2e6a98bc806b03dc97f5407904b39caab602b738031a"
+      "signature": "2f12daf8c1341d2f11cb0b69428a1ff41773bc8d3dac1872aa30429d09a39669"
     },
     {
       "source": "src/walk/main.js",
@@ -7070,8 +7276,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 33,
-      "signature": "98af2e95d005d03fa8d14b58edfbcd2118ddceb74444daee73bc8e25cc9d791f"
+      "placements": 36,
+      "signature": "01f35498bbbba3e63fe37afe4ffeb7cedb952be0a7bb277c7cf23a659c4ba3d7"
     },
     {
       "source": "src/walk/marks.js",
@@ -7084,6 +7290,73 @@
       "interactionTargets": null,
       "placements": 2,
       "signature": "09c23253343db009ed2da163de8fb4bb0bf57a98013ea25678d4226ac142b668"
+    },
+    {
+      "source": "src/walk/maze/hold.js",
+      "rooms": [
+        "d01-cargo-1"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Container_maze",
+        "Container_maze_colliders",
+        "Container_maze_start_header",
+        "Container_maze_sign",
+        "Container_maze_finish_floor",
+        "Container_maze_console",
+        "Container_maze_finish_sign"
+      ],
+      "colliders": [
+        "Container_maze_colliders"
+      ],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 33,
+      "signature": "1ee66944044453670830409137352c42426665942f11360b807c1a875e77d56f"
+    },
+    {
+      "source": "src/walk/maze/layout.js",
+      "rooms": [
+        "d01-cargo-1"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 5,
+      "signature": "bd4a96406398cddc98a8654b8b6956848f413da1aca19cc2b1a6ac2e19042a06"
+    },
+    {
+      "source": "src/walk/maze/run.js",
+      "rooms": [
+        "d01-cargo-1"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 1,
+      "signature": "72396855dcfb506473b9efbe248e0af8e601f42caf3b956651bc89a525f4fc6c"
+    },
+    {
+      "source": "src/walk/mct-bay.js",
+      "rooms": [
+        "d01-workshop-5"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Cargo_maintenance_MCT_bay",
+        "Cargo_maintenance_MCT_bay_colliders"
+      ],
+      "colliders": [
+        "Cargo_maintenance_MCT_bay_colliders"
+      ],
+      "interactionTargets": null,
+      "placements": 72,
+      "signature": "12930c7d66e093e59150cd1a5a53eff7cfb53e3f79ee26b2fd0404d686637d7a"
     },
     {
       "source": "src/walk/minimap.js",
@@ -7213,7 +7486,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "abc08a652934ee3caffeec34019fa6f92e7f0901a0ae5e54614f05a45a04b6f6"
+      "signature": "834873f5393566c210e8b5a69f706ffc10e4575431b0a886e22fa1db672664ba"
     },
     {
       "source": "src/walk/paws-off/game.js",
@@ -7229,8 +7502,62 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 3,
-      "signature": "22adaca583b9b9492721f1bd93a7eaf156238180dca643c551853f076fa0be58"
+      "placements": 5,
+      "signature": "63db8da1dcb7a32cb4cabc36cdbef74d52183bdbe5974624acc7b43fc3ff0240"
+    },
+    {
+      "source": "src/walk/pinball/art.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "d4c0d57e4ebd3c5513ff3fe79eb45073dc3a9d7844c9d1d9492d2968dbdf0d76"
+    },
+    {
+      "source": "src/walk/pinball/game.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 2,
+      "signature": "969878441ee6f083875006a6f3bb634849aadb7295f89cf2968b8615f525979c"
+    },
+    {
+      "source": "src/walk/pinball/machine.js",
+      "rooms": [
+        "d16-recreation-4"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Recreation_pinball",
+        "Recreation_pinball_collider"
+      ],
+      "colliders": [
+        "Recreation_pinball_collider"
+      ],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 17,
+      "signature": "d0fe8f2d3cdd221d99ed4490fd59a1f75dd82cc3de8addf86222d42a7b22abea"
+    },
+    {
+      "source": "src/walk/pinball/rules.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 7,
+      "signature": "c222eaa461661e106135f91a3bf35b0533a2b25d518c468f56b8799273fd9201"
     },
     {
       "source": "src/walk/places.js",
@@ -7258,8 +7585,20 @@
       "features": [],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 11,
-      "signature": "b719e97f793a46f0810bf487cba4be3d48c67846a2983421f861aef6efae76c4"
+      "placements": 14,
+      "signature": "5d2e0e3b8e3690a03ffe024213becf3a39639d8895113431f5fab82472131791"
+    },
+    {
+      "source": "src/walk/pool/rules.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 2,
+      "signature": "242fd6a2f4df9533c66b6aae8f84e626f3b46e163a521aaef14bbeb536afeebf"
     },
     {
       "source": "src/walk/pool/table.js",
@@ -7290,7 +7629,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "b5ed1d3a0dc3c59d7d77858492c163815e10510e25531990d9971a7c653c9b1f"
+      "signature": "baadcfa2e80ac62945601cc2f03408b16cd38c7dd409a2b5c7ab14bd3fee21bf"
     },
     {
       "source": "src/walk/provisions.js",
@@ -7371,7 +7710,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "a59cc1d44107dbd4416bdcb8e7254efd94c30a0e2bc87bda5c350997590929eb"
+      "signature": "74f23ce060dd1d8a0498327f9d4baceb1c8e9c81b0768658c4689fa55b27c0af"
     },
     {
       "source": "src/walk/render-bake.js",
@@ -7434,13 +7773,14 @@
       "fixed": false,
       "features": [
         "Surgery_bed",
+        "Healing_capsule",
         "Surgery_robot_arm",
         "Surgery_robot_arms"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 39,
-      "signature": "8b609c0e353fed6b767fc163812dd973cf6bc3ca6390cd588f4e6e592dd311dd"
+      "placements": 64,
+      "signature": "adef36d6f7dd652266201ab8e1735b4ecf23cb8f30f6883c508a2f09bfa67090"
     },
     {
       "source": "src/walk/sword-case.js",
@@ -7469,16 +7809,44 @@
       "via": "frame boundary",
       "fixed": false,
       "features": [
+        "Theatre_seats",
+        "Theatre_crown",
+        "Theatre_crown_jewels",
+        "Theatre_ruff",
+        "Theatre_cape",
+        "Theatre_cast",
+        "Theatre_cast_colliders",
+        "Theatre_stage_spot",
+        "Theatre_actor_",
+        "Theatre_actor_head",
         "Walk_theatre",
         "Theatre_star_ceiling",
         "Theatre_carpet",
         "Theatre_sconces",
         "Theatre_sconce_glow"
       ],
+      "colliders": [
+        "Theatre_cast_colliders"
+      ],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 37,
+      "signature": "ed25d19e90872a00e077a9b5d9c90fb7a36ef185ac4249253fcfe81eca70e004"
+    },
+    {
+      "source": "src/walk/transporter.js",
+      "rooms": [
+        "d01-logistics-6"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "MCT_",
+        "MCT_bays"
+      ],
       "colliders": [],
-      "interactionTargets": null,
-      "placements": 17,
-      "signature": "9ed1aaafd0581fef03574b167eb56c923ef1724818704538b6e5f0530796c8bb"
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 39,
+      "signature": "d34868476f38aed7e269b5b914a8f1de0f63d8c3c355ee7a540929a8394e3822"
     },
     {
       "source": "src/walk/trim.js",
@@ -7492,6 +7860,27 @@
       "interactionTargets": null,
       "placements": 10,
       "signature": "3e53561082589e48130ad4db1f64346154c47dd7220b57c2ec6b1f2fb27c78d0"
+    },
+    {
+      "source": "src/walk/vault.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Deck17_vault",
+        "Deck17_vault_colliders",
+        "Vault_keypad_screen",
+        "Vault_door",
+        "Vault_wheel"
+      ],
+      "colliders": [
+        "Deck17_vault_colliders"
+      ],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 22,
+      "signature": "77fedf2a158fffa67c7e2c007600e1140aeee59b922afe4b91478dc6399a2230"
     },
     {
       "source": "src/walk/wall-kit.js",

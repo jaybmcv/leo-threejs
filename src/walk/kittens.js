@@ -2,15 +2,25 @@ import {roomObject} from '../plan/rooms.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
-// Young explorers on Deck 16 gets three of its green play rugs dressed as kitten habitats, with four Cosmo kittens at
-// play: a carpeted climbing tree where two kittens bat at each other, a crinkle tunnel with a kitten crouched to pounce
-// on a ball, and a cushion den with a teepee where one sits with a ball of yarn. The kittens are the Cosmo kit's baked
-// kitten poses (cosmo-pose.js KITTEN_POSES) at a third of his size, sharing their meshes; each gets its own fur and
-// hoodie colour. Everything stays on the rugs, clear of the activity table, its benches and blocks, and the aisles.
-// Room frame (Area_d16-childcare-6): rugs 9 x 8 m centred at x -16, -3, 10 and z -9, 9; on each, the table and benches
-// fill |x|<1.6, |z|<1.9 and the play blocks x -3.3..-0.3 at z 2.4..3, so the free floor is the -z strip and the sides.
+// Young explorers on Deck 16 as a kitten playroom. Its green play furniture (activity tables, low benches and play blocks)
+// goes, and all six play rugs become kitten habitats: carpeted climbing trees, step towers a visitor can climb too, a
+// crinkle tunnel, cushion dens with teepees, cardboard boxes and ball-track toys, with fifteen Cosmo kittens at play
+// among balls, toy mice, yarn and feather wands. The kittens are the Cosmo kit's baked kitten poses (cosmo-pose.js
+// KITTEN_POSES) at a third of his size, sharing their meshes; each gets its own fur and hoodie colour.
+// Room frame (Area_d16-childcare-6): rugs 9 x 8 m centred at x -16, -3, 10 and z -9, 9; the entrance at x -26 (|z|<2),
+// the service counter at x 18..24, z 10.4..11.6, the ceiling at 3.3 m. Everything stays on the rugs, clear of the aisles.
 const ROOM='Area_d16-childcare-6',FLOOR=.035,KITTEN=.3;
 export const KITTEN_POSE_NAMES=['sit','pounce','bat'];
+const OLD=/^(Activity_table|Low_bench|Play_block)$/;
+
+// Take the room's green play furniture out before the colliders and rest spots are found. Returns false if the room is
+// missing.
+export function stripPlayFurniture(ship){
+ const room=roomObject(ship,ROOM);if(!room)return false;
+ const old=[];room.traverse(o=>{if(o.isMesh&&OLD.test(o.name))old.push(o);});
+ for(const o of old){o.removeFromParent();o.geometry.dispose();}
+ return true;
+}
 
 // Fur is the body texture's flat blue; the hoodie is near black and the shorts orange in the clothes texture.
 function recolour(material,name,code){
@@ -24,7 +34,7 @@ const fur=c=>`{vec3 c=diffuseColor.rgb;float f=smoothstep(.08,.2,c.b-max(c.r,c.g
 const hoodie=c=>`{vec3 c=diffuseColor.rgb;float shorts=step(.12,c.r-c.b);diffuseColor.rgb=mix(${glsl(c)}*(.75+c.g*2.),c,shorts);}`;
 
 // The kittens' looks, fur and hoodie colours (the first is Cosmo's own); each look's recoloured materials are shared.
-const LOOKS=[[null,null],[0xd8873f,0x7ad6b0],[0x8c8f99,0xf29ac0],[0xeadcc0,0x8a6ad8]];
+const LOOKS=[[null,null],[0xd8873f,0x7ad6b0],[0x8c8f99,0xf29ac0],[0xeadcc0,0x8a6ad8],[0x3b3a42,0xf6c945],[0xf4efe6,0x3d8be0]];
 const dressed=LOOKS.map(([f,h],i)=>{const body=new Map();return o=>{
  if(f===null)return o.material;
  const key=o.material.name;if(!body.has(key))body.set(key,key==='body'?recolour(o.material,'Kitten_fur_'+i,fur(f)):key==='clothes'?recolour(o.material,'Kitten_hoodie_'+i,hoodie(h)):o.material);
@@ -49,7 +59,8 @@ export function createKittens(ship,kit){
   tunnel:mat('tunnel',0x6a4fb0,{roughness:.55,side:T.DoubleSide}),rim:mat('tunnel_rim',0xf2c14e,{roughness:.6}),cushion:mat('cushion',0x4fa3a5,{roughness:.95}),
   cushion2:mat('cushion_coral',0xf08a6c,{roughness:.95}),canvas:mat('teepee',0xf1e6cf,{roughness:.9}),pole:mat('teepee_pole',0x8a6a45),
   red:mat('ball_red',0xe8473c,{roughness:.45}),yellow:mat('ball_yellow',0xf6c945,{roughness:.45}),blue:mat('ball_blue',0x3d8be0,{roughness:.45}),
-  yarn:mat('yarn',0xff6fb0,{roughness:1}),mouse:mat('toy_mouse',0x9a9aa2,{roughness:.9}),feather:mat('feather',0x5ad1c9,{roughness:.8})};
+  yarn:mat('yarn',0xff6fb0,{roughness:1}),yarn2:mat('yarn_lime',0xb6e05a,{roughness:1}),card:mat('cardboard',0xb88a55,{roughness:.9}),
+  carpet3:mat('carpet_teal',0x8fc4bf,{roughness:1}),track:mat('ball_track',0xf2efe6,{roughness:.5}),mouse:mat('toy_mouse',0x9a9aa2,{roughness:.9}),feather:mat('feather',0x5ad1c9,{roughness:.8})};
  const parts=new Map();
  const piece=(m,g)=>{(parts.get(m)||parts.set(m,[]).get(m)).push(g.index?g.toNonIndexed():g);};
  const at=(g,x,y,z,ry=0)=>g.rotateY(ry).translate(x,y,z);
@@ -88,11 +99,62 @@ export function createKittens(ship,kit){
   piece(M.pole,at(new T.CylinderGeometry(.004,.004,.14,4).rotateX(Math.PI/2).translate(0,.01,-.14),x,FLOOR+.01,z,ry));
  }
 
+ // A step tower: a sisal trunk with a perch on top and three carpeted pads round it, stepping up 0.35 m at a time so a
+ // visitor can climb it too. `a` turns the first, lowest pad; the rest follow a quarter turn apart, touching. Returns
+ // the perch's top.
+ function climber(x,z,a=0){
+  const TRUNK=1.7,R=.7,PAD=.5,pads=[M.carpet,M.carpet2,M.carpet3];
+  piece(M.post,new T.CylinderGeometry(.1,.12,TRUNK,14).translate(x,FLOOR+TRUNK/2,z));
+  piece(M.carpet2,new T.CylinderGeometry(.3,.3,.06,20).translate(x,FLOOR+TRUNK+.03,z));
+  block([.22,TRUNK,.22],[x,FLOOR+TRUNK/2,z]);
+  for(let i=0;i<3;i++){
+   const t=a+i*Math.PI/2,px=x+Math.cos(t)*R,pz=z+Math.sin(t)*R,top=.35*(i+1);
+   piece(pads[i],new T.CylinderGeometry(PAD,PAD,.08,24).translate(px,FLOOR+top-.04,pz));
+   piece(M.post,new T.CylinderGeometry(.05,.05,top-.08,10).translate(px,FLOOR+(top-.08)/2,pz));
+   block([1,top,1],[px,FLOOR+top/2,pz],-t);
+  }
+  // A ball on a cord hanging from the perch over the open quarter, for batting.
+  const hx=x+Math.cos(a-Math.PI/2)*.28,hz=z+Math.sin(a-Math.PI/2)*.28;
+  piece(M.pole,new T.CylinderGeometry(.006,.006,.6,4).translate(hx,FLOOR+TRUNK-.3,hz));
+  piece(M.red,new T.SphereGeometry(.05,12,8).translate(hx,FLOOR+TRUNK-.65,hz));
+  return [x,FLOOR+TRUNK+.06,z];
+ }
+ // A ball-track toy: three stacked ring tracks round a post, a ball in each.
+ function track(x,z){
+  piece(M.track,new T.CylinderGeometry(.34,.36,.05,24).translate(x,FLOOR+.025,z));
+  piece(M.track,new T.CylinderGeometry(.03,.03,.36,8).translate(x,FLOOR+.18,z));
+  [M.red,M.yellow,M.blue].forEach((m,i)=>{const y=FLOOR+.09+i*.11,t=i*2.1,r=.26-i*.04;
+   piece(M.track,new T.TorusGeometry(r,.035,8,28).rotateX(Math.PI/2).translate(x,y,z));
+   piece(m,new T.SphereGeometry(.03,10,8).translate(x+Math.cos(t)*r,y+.02,z+Math.sin(t)*r));});
+  block([.72,.36,.72],[x,FLOOR+.18,z]);
+ }
+ // An open cardboard box with its flaps folded out; a kitten often sits in it.
+ function carton(x,z,ry=0){
+  const W=.62,D=.48,H=.36,t=.015,g=[new T.BoxGeometry(W,t,D).translate(0,t/2,0)];
+  for(const s of [-1,1]){g.push(new T.BoxGeometry(W,H,t).translate(0,H/2,s*D/2),new T.BoxGeometry(t,H,D).translate(s*W/2,H/2,0),
+   new T.BoxGeometry(W,t,.22).translate(0,0,s*.11).rotateX(s*.5).translate(0,H,s*D/2));}
+  for(const b of g)piece(M.card,at(b,x,FLOOR,z,ry));
+  block([W+.1,H+.1,D+.1],[x,FLOOR+H/2,z],ry);
+ }
+ // A feather wand lying on the rug: a stick, a cord and the feather.
+ function wand(x,z,ry){
+  piece(M.pole,at(new T.CylinderGeometry(.008,.008,.7,6).rotateZ(Math.PI/2),x,FLOOR+.008,z,ry));
+  piece(M.pole,at(new T.CylinderGeometry(.003,.003,.4,4).rotateZ(Math.PI/2).translate(.55,0,0),x,FLOOR+.004,z,ry));
+  piece(M.feather,at(new T.ConeGeometry(.035,.14,8).rotateZ(Math.PI/2).translate(.82,0,0),x,FLOOR+.03,z,ry));
+ }
+ // A ball of yarn with a loose loop of thread.
+ function yarn(m,x,z){
+  piece(m,new T.SphereGeometry(.07,14,10).translate(x,FLOOR+.07,z));
+  piece(m,new T.TorusGeometry(.12,.006,4,24,4).rotateX(Math.PI/2).translate(x-.12,FLOOR+.006,z-.2));
+ }
+
  function kitten(pose,look,x,z,face,y=FLOOR){
   const g=kittenFigure(kit,pose,look);g.position.set(x,y,z);g.rotation.y=face;
   group.add(g);block([.3,.45,.3],[x,y+.22,z]);
   return g;
  }
+ // A kitten sitting on a step tower's perch: dressing only, so it never blocks a climber.
+ function perched(look,[x,y,z],face){const g=kittenFigure(kit,'sit',look);g.position.set(x,y,z);g.rotation.y=face;group.add(g);}
 
  // Rug A (-16,-9): the climbing tree on the +x side, two kittens squaring up to play-fight in the -z strip.
  tree(-16+3.1,-9+.6);
@@ -107,6 +169,33 @@ export function createKittens(ship,kit){
  piece(M.yarn,new T.SphereGeometry(.07,14,10).translate(-16+.52,FLOOR+.07,9-2.95));
  piece(M.yarn,new T.TorusGeometry(.12,.006,4,24,4).rotateX(Math.PI/2).translate(-16+.4,FLOOR+.006,9-3.15));
  mouse(-16-.8,9-3.2,2.2);
+
+ // The rugs' freed middles: a step tower on every rug, a kitten on each perch looking toward the aisle.
+ perched(4,climber(-16-1.6,-9+1.2,Math.PI*.5),0);
+ perched(5,climber(-3+.4,-9+1,Math.PI),0);
+ perched(1,climber(-16-1.5,9-.6,-Math.PI*.5),Math.PI);
+ perched(2,climber(10+1.4,-9+.9,0),0);
+ perched(3,climber(-3+.3,9-.4,Math.PI*.5),Math.PI);
+ perched(0,climber(10-1.2,9-.4,-Math.PI),Math.PI);
+ // Rug A: a ball track by the tower.
+ track(-16+1.2,-9+2.8);
+ // Rug B: a second climbing tree at -x, a kitten batting at a mouse beside it, and a feather wand.
+ tree(-3-3.1,-9+.6);
+ kitten('bat',4,-3-3.2,-9-1.1,0);mouse(-3-3.25,-9-.7,1.4);wand(-3+2.2,-9+2.6,.4);
+ // Rug C: a ball track on the aisle side and a lime ball of yarn.
+ track(-16-3.3,9-2.6);yarn(M.yarn2,-16+2,9-3.1);
+ // Rug D: a climbing tree at +x, a kitten in a cardboard box, and two more squaring up over a ball.
+ tree(10+3.1,-9-.4);
+ carton(10-2.6,-9-2.4,.3);kitten('sit',5,10-2.6,-9-2.4,Math.PI*.15);
+ kitten('bat',2,10-.5,-9-2.9,Math.PI/2);kitten('bat',3,10+.25,-9-2.9,-Math.PI/2);ball(M.yellow,.06,10-.12,-9-3.4);
+ mouse(10-3.4,-9+2.6,-.8);wand(10-1,-9+3,2.6);
+ // Rug E: a tunnel along the wall side with a kitten crouched at its mouth, and a cushion den at +x.
+ tunnel(-3-1.6,9+2.9);kitten('pounce',1,-3+1.15,9+2.9,-Math.PI/2);ball(M.blue,.06,-3+.25,9+2.95);
+ den(-3+3.1,9+.6);yarn(M.yarn,-3-3,9-2.8);
+ // Rug F: a climbing tree at +x, a box, a ball track with a kitten crouched at it, and a toy mouse.
+ tree(10+3.1,9+.8);
+ carton(10-3.2,9+2.6,-.4);track(10+1.6,9-2.7);kitten('pounce',4,10+.5,9-2.9,Math.PI/2);
+ mouse(10-3,9-3,2.6);ball(M.red,.07,10+2.9,9-2.4);
 
  for(const [m,list] of parts){const o=new T.Mesh(mergeGeometries(list),m);o.name=m.name;o.castShadow=true;o.receiveShadow=true;group.add(o);}
  return {group,solid};

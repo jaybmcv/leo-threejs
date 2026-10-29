@@ -149,6 +149,12 @@
     ],
     "via": null
   },
+  "src/walk/vault.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": null
+  },
   "src/walk/arrival-atrium.js": {
     "owners": [
       "arrival-assembly",
@@ -166,6 +172,30 @@
   "src/walk/cargo-trolley.js": {
     "owners": [
       "d01-cargo-1"
+    ],
+    "via": null
+  },
+  "src/walk/maze/hold.js": {
+    "owners": [
+      "d01-cargo-1"
+    ],
+    "via": null
+  },
+  "src/walk/maze/layout.js": {
+    "owners": [
+      "d01-cargo-1"
+    ],
+    "via": "inherited"
+  },
+  "src/walk/maze/run.js": {
+    "owners": [
+      "d01-cargo-1"
+    ],
+    "via": "inherited"
+  },
+  "src/walk/mct-bay.js": {
+    "owners": [
+      "d01-workshop-5"
     ],
     "via": null
   },
@@ -187,6 +217,12 @@
     ],
     "via": null
   },
+  "src/walk/freight-gate.js": {
+    "owners": [
+      "d01-spares-aft"
+    ],
+    "via": null
+  },
   "src/walk/gaming-lounge.js": {
     "owners": [
       "d16-training-aft"
@@ -199,9 +235,21 @@
     ],
     "via": null
   },
+  "src/walk/transporter.js": {
+    "owners": [
+      "d01-logistics-6"
+    ],
+    "via": null
+  },
   "src/walk/help.js": {
     "owners": [
       "d16-theater-5"
+    ],
+    "via": null
+  },
+  "src/walk/pinball/machine.js": {
+    "owners": [
+      "d16-recreation-4"
     ],
     "via": null
   },
@@ -214,6 +262,12 @@
   "src/walk/hydroponics.js": {
     "owners": [
       "d03-farm-1"
+    ],
+    "via": null
+  },
+  "src/walk/imaging.js": {
+    "owners": [
+      "d05-imaging-6"
     ],
     "via": null
   },
@@ -254,6 +308,12 @@
     ],
     "via": null
   },
+  "src/walk/lounge-falls.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": null
+  },
   "src/walk/lounge-sky.js": {
     "owners": [
       "commons-1"
@@ -261,6 +321,12 @@
     "via": "inherited"
   },
   "src/walk/lounge-mural.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": "inherited"
+  },
+  "src/walk/lounge-aquarium.js": {
     "owners": [
       "commons-1"
     ],
@@ -334,6 +400,12 @@
     ],
     "via": null
   },
+  "src/walk/chinampa.js": {
+    "owners": [
+      "d03-farm-1"
+    ],
+    "via": null
+  },
   "src/walk/comics.js": {
     "owners": [
       "crown",
@@ -345,6 +417,12 @@
     "owners": [
       "crown",
       "d02-arrival-1"
+    ],
+    "via": null
+  },
+  "src/walk/crown-tv.js": {
+    "owners": [
+      "crown"
     ],
     "via": null
   },
