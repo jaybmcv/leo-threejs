@@ -271,6 +271,12 @@
     ],
     "via": null
   },
+  "src/walk/vault-lift.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": null
+  },
   "src/walk/jaguar-gate.js": {
     "owners": [
       "commons-1"

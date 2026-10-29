@@ -26,6 +26,7 @@ import {createJaguarGate} from './jaguar-gate.js';
 import {createLoungeEntranceSigns} from './lounge-entrance-signs.js';
 import {createArcade} from './arcade.js';
 import {createVault} from './vault.js';
+import {prepareVaultLift,createVaultLift} from './vault-lift.js';
 import {placeAttendant,dressTheatre,createTheatreCast} from './theatre.js';
 import {dressGamingLounge} from './gaming-lounge.js';
 import {createMissionHolo} from './mission-holo.js';
@@ -62,6 +63,7 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Deck 1's aft spares room gains the freight gate's logistics console and its chair (freight-gate.js), solid and sittable.
  dressFreightGate(ship);
  resolveRoomFrames(ship.root);
+ prepareVaultLift(ship);
  const colliders=buildColliders(ship,{extra:[ship.exterior],filter:o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name),...(into?{into}:{})});
  afterBase?.(colliders);
  const restSpots=findRestSpots(ship.inside),seats=solidSpots(restSpots,colliders),lounge=createLounge(ship,colliders,light);afterRest?.({restSpots,seats,lounge});
@@ -109,6 +111,7 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Behind the arcade, the hidden clubhouse's walls and vault door frame (vault.js): solid as plain boxes, the way in
  // left open (the page makes the door itself solid).
  const vault=createVault(ship);colliders.addStatic(vault.solid,()=>true);
+ const vaultLift=createVaultLift(colliders);colliders.addStatic(vaultLift.solid,()=>true);
  // Mission control's holographic table (mission-holo.js): its pedestal and top solid as a plain cylinder.
  const missionHolo=createMissionHolo(ship,{anisotropy,still});if(missionHolo)colliders.addStatic(missionHolo.solid,()=>true);
  // The Captain's office's gold sword case under its spotlight (sword-case.js): solid as a plain box.
@@ -119,5 +122,5 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,missionHolo,swordCase,chinampa,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,vaultLift,missionHolo,swordCase,chinampa,mudwater};
 }

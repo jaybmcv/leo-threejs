@@ -12,7 +12,7 @@ import {HEADER} from './commons-hall.js';
 // back, one on the corridor side and one outboard. In the arcade wall, past the Paws Off treadmill, is a round vault door
 // of black metal with a gold wheel, in a black frame ringed with gold. E at the door (or at the keypad beside it) asks
 // for the password; the right one turns the wheel and swings the door in. Once the walker is inside and clear of it,
-// the door shuts behind them; from inside, E at the door opens it to let them out. The room is empty for now.
+// the door shuts behind them; from inside, E at the door opens it to let them out. The tube lift is in vault-lift.js.
 // Walk only, and each visitor's own: the door's state is not shared through Leo live.
 // Built in the arcade row's frame (arcade.js): x along the wall toward the corridor (world +z), y up from the floor,
 // z out from the wall into the lounge (world -x), so the room behind lies at negative z.
@@ -33,6 +33,8 @@ const CODE='9lives';
 // The room's walls on the ship map (deck-map.js), in world coordinates.
 const world=(x,z)=>({x:C.x+WALL-z,z:C.z+x});
 export const VAULT_PLAN={deck:17,lines:[[world(XA,0),world(XB,0)],[world(XA,ZF),world(XB,ZF)],[world(XA,0),world(XA,ZF)],[world(XB,0),world(XB,ZF)]]};
+// The next step's tube sits at the outboard end, clear of all four walls and the vault door.
+export const VAULT_LIFT={...world(XA+3.7,ZF/2),y:FLOOR,stops:[17,18,19].map(deck=>({deck,y:floorY(deck),label:`Deck ${deck}`}))};
 
 const FONT='"Archivo", system-ui, sans-serif',MONO='"JetBrains Mono", ui-monospace, monospace';
 // The keypad's face: a small screen over twelve keys. `mode` is 'locked', 'denied' or 'open'.
