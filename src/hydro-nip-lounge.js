@@ -15,6 +15,7 @@ import {canvasTexture,seeded} from './polish-kit.js';
 // seats, hammocks and doors stay separate meshes, named as the walk expects.
 const FLOOR=24.3,CEILING=35.65,LEVELS=[28.3,32.3],ROOM={x0:109.5,x1:154.5,z0:8,z1:46};
 const DOME={x:134,z:25,r:6.5},MAZE={x0:114,x1:120.5,z0:19,z1:33,top:35.2},MUNCH={x:145.5,z:25};
+const MAIN_LOGO_URL=typeof __HYDRO_NIP_MAIN_LOGO__==='undefined'?null:__HYDRO_NIP_MAIN_LOGO__;
 // The maze inside: a ground floor of 3 x 6 roomy cells, walled to chest height so you and the camera see over the
 // partitions (behind the last row, z 31.5-32.9, the first stair's foot), the lower platform in front of SPLIT and the
 // upper one behind it, each at its gallery's height, so a level glass tube runs from each to its gallery: the lower to
@@ -231,6 +232,24 @@ export function createHydroNipLounge({mirror=1}={}){
   if(leaves)for(const s of [-1,1])local.push([neon(GREEN),new T.TubeGeometry(leafCurve(s*(width/2-.42),0,.34,.04),56,.022,4,true)],[neon(GREEN),new T.CylinderGeometry(.015,.015,.5,4).translate(s*(width/2-.42),-.2,.04)]);
   for(const [mat,g] of local)put(mat,mirrored(g.applyMatrix4(m),m));
  }
+ function mainLogoSign({at,normal,diameter=4.5}){
+  const group=new T.Group();group.name='Hydro_Nip_Main_Sign';group.userData.assetId='hydro-nip-main-logo';group.applyMatrix4(placing(at,normal));
+  const radius=diameter/2,depth=.16,body=new T.Mesh(new T.CylinderGeometry(radius,radius,depth,96).rotateX(Math.PI/2),new T.MeshStandardMaterial({name:'Hydro_Nip_Main_Sign_Body',color:0x131127,roughness:.4,metalness:.4}));
+  body.name='Hydro_Nip_Main_Sign_Body';group.add(body);
+  const rimMaterial=new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Sign_Rim',color:CYAN,toneMapped:false}),rimGeometry=new T.TorusGeometry(radius-.025,.035,8,128);
+  for(const side of [1,-1]){const rim=new T.Mesh(rimGeometry,rimMaterial);rim.position.z=side*(depth/2+.006);if(side<0)rim.rotation.y=Math.PI;rim.name='Hydro_Nip_Main_Sign_Rim';group.add(rim);}
+  if(typeof document!=='undefined'&&MAIN_LOGO_URL){
+   // Crop the photo border so only the circular badge reaches the panel edge.
+   const map=new T.TextureLoader().load(MAIN_LOGO_URL);map.colorSpace=T.SRGBColorSpace;map.anisotropy=8;map.offset.set(.02,.018);map.repeat.set(.96,.964);
+   const material=new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Logo',map,toneMapped:false}),geometry=new T.CircleGeometry(radius-.06,96);
+   for(const side of [1,-1]){const face=new T.Mesh(geometry.clone(),material);if(side<0)face.geometry.rotateY(Math.PI);face.position.z=side*(depth/2+.01);face.name=side>0?'Hydro_Nip_Main_Logo_Front':'Hydro_Nip_Main_Logo_Back';face.userData.assetId='hydro-nip-main-logo';group.add(face);}
+  }else{
+   for(const side of [1,-1]){const face=new T.Group();face.position.z=side*(depth/2+.01);if(side<0)face.rotation.y=Math.PI;
+    for(const [text,size,y,color] of [['HYDRO-NIP',.48,.16,0xf36bdc],['LOUNGE',.29,-.38,0x55e5ff]]){const geometry=new TextGeometry(text,{font,size,depth:.012,curveSegments:2});geometry.computeBoundingBox();const bounds=geometry.boundingBox;geometry.translate(-(bounds.max.x+bounds.min.x)/2,y,0);face.add(new T.Mesh(geometry,new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Sign_Fallback',color,toneMapped:false})));}
+    group.add(face);}
+  }
+  root.add(group);
+ }
  // A placement that mirrors turns every triangle inside out; swap two corners of each to turn it back.
  function mirrored(g,m){
   if(m.determinant()>0)return g;const n=g.index?g.toNonIndexed():g;
@@ -298,10 +317,9 @@ export function createHydroNipLounge({mirror=1}={}){
     rod(loose(M.dark),[o.x+ux*r,FLOOR+HAMMOCK.bar+HAMMOCK.hang,o.z+uz*r],[o.x+ux*to,FLOOR+top,o.z+uz*to],.012,3);}
   }
  }
- // The sign on the dome's crown, facing the entrance.
- for(const s of [-1,1])rod(M.dark,[DOME.x+s*3.2,FLOOR+DOME.r-.8,DOME.z],[DOME.x+s*3.2,FLOOR+DOME.r+.7,DOME.z],.05,6);
- sign({at:[DOME.x,FLOOR+DOME.r+2.1,DOME.z],normal:[0,0,-1],width:10.6,height:2.9,color:PINK,frame:CYAN,leaves:true,
-  lines:[{text:'THE',size:.32,color:CYAN},{text:'HYDRO-NIP',size:.95},{text:'LOUNGE',size:.5,color:CYAN}]});
+ // The approved Hydro-Nip main logo replaces the banner, with a readable face on each side.
+ for(const s of [-1,1])rod(M.dark,[DOME.x+s*2,FLOOR+DOME.r-.8,DOME.z],[DOME.x+s*2,FLOOR+DOME.r+.7,DOME.z],.05,6);
+ mainLogoSign({at:[DOME.x,FLOOR+DOME.r+2.1,DOME.z],normal:[0,0,-1]});
 
  // The Haze Maze: a three-storey glass tower full of green catnip mist. You walk in at the front into a maze of
  // partitions, find the cat-shelf stair at the back up to the lower platform, then climb the second stair to the upper

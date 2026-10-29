@@ -5815,12 +5815,15 @@
         "Lounge_rail_glow",
         "Lounge_step_glow",
         "Hydro_Nip_Lounge",
+        "Hydro_Nip_Main_Sign",
+        "Hydro_Nip_Main_Sign_Body",
+        "Hydro_Nip_Main_Sign_Rim",
         "Hammock"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 124,
-      "signature": "90679027890dcd15b41344d016d06926afb5db3e353eaa82eea006ef9635126f"
+      "placements": 131,
+      "signature": "98012a5d7c1abf57cf85275d8bd314103e947104054834ef1cc843c25c3476b1"
     },
     {
       "source": "src/interior-polish.js",
@@ -7033,14 +7036,15 @@
       "features": [
         "Kitten_",
         "Young_explorers_kittens",
-        "Young_explorers_kitten_colliders"
+        "Young_explorers_kitten_colliders",
+        "Kitten_wall_shelf"
       ],
       "colliders": [
         "Young_explorers_kitten_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 48,
-      "signature": "a2c3481e65acdbda90eb6276cdc56301c7c879fe6e3b05ff74c0e33340ff6cb7"
+      "placements": 52,
+      "signature": "c728b535624c6fb374d92665b40ccc9106b9d11015f823cb049dfab2ceb3e674"
     },
     {
       "source": "src/walk/lever-panel.js",

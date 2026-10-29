@@ -8,11 +8,14 @@ import {buildCosmo} from './build-cosmo.mjs';
 // stays small and the scripts can be cached for a year (a change always gets a new name).
 const hashed=(name,text)=>`${name}.${createHash('sha256').update(text).digest('hex').slice(0,10)}.js`;
 const HASHED_SCRIPT=/^(viewer|cosmo)\.[0-9a-f]{10}\.js$/;
+const HASHED_LOGO=/^hydro-nip-main-logo\.[0-9a-f]{10}\.jpg$/;
 
 export async function writeViewerPage(out){
- for(const name of await fs.readdir(out))if(HASHED_SCRIPT.test(name)||name==='cosmo.js')await fs.rm(path.join(out,name));
+ for(const name of await fs.readdir(out))if(HASHED_SCRIPT.test(name)||HASHED_LOGO.test(name)||name==='cosmo.js')await fs.rm(path.join(out,name));
  const cosmo=await buildCosmo(),cosmoName=hashed('cosmo',cosmo);await fs.writeFile(path.join(out,cosmoName),cosmo);
- const result=await build({entryPoints:['src/viewer.js'],bundle:true,minify:true,format:'iife',write:false,target:'es2022',legalComments:'eof',define:{__COSMO_SCRIPT__:JSON.stringify(cosmoName)}});
+ const logo=await fs.readFile('src/walk/assets/hydro-nip-main-logo.jpg'),logoName=`hydro-nip-main-logo.${createHash('sha256').update(logo).digest('hex').slice(0,10)}.jpg`;
+ await fs.writeFile(path.join(out,logoName),logo);
+ const result=await build({entryPoints:['src/viewer.js'],bundle:true,minify:true,format:'iife',write:false,target:'es2022',legalComments:'eof',define:{__COSMO_SCRIPT__:JSON.stringify(cosmoName),__HYDRO_NIP_MAIN_LOGO__:JSON.stringify(logoName)}});
  const viewer=result.outputFiles[0].text,viewerName=hashed('viewer',viewer);await fs.writeFile(path.join(out,viewerName),viewer);
  const html=(await fs.readFile('src/viewer.html','utf8')).replace('<script>/* BUNDLE */</script>',()=>`<script>LEO_BOOT("${viewerName}")</script>`);
  if(html.includes('/* BUNDLE */'))throw new Error('viewer.html lost its bundle placeholder');
