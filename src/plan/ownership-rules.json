@@ -332,6 +332,10 @@
     ],
     "via": "inherited"
   },
+  "src/walk/aquarium-treasure/game.js": {
+    "owners": ["commons-1"],
+    "via": "inherited"
+  },
   "src/walk/mission-holo.js": {
     "owners": [
       "d20-mission-2"

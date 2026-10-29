@@ -6285,6 +6285,35 @@
       "signature": "d2a87fe5dcc38a4305f4f527f106ea21f7afae3ff7332681b339c68b29e3e43b"
     },
     {
+      "source": "src/walk/aquarium-treasure/game.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Aquarium_treasure"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 19,
+      "signature": "5101a0f1933058792bf15cc0cd66d03ff53b7dd3e2da6992a7bfe1a0f09bfab8"
+    },
+    {
+      "source": "src/walk/aquarium-treasure/suit.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [
+        "Aquarium_spacesuit"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 12,
+      "signature": "3da921a81cb3dbbb2f3fec6a36c2026634b4f832efdd229fbce01d3286175a49"
+    },
+    {
       "source": "src/walk/arcade.js",
       "rooms": [
         "commons-1"
@@ -6332,7 +6361,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "8ea8ad2e526483408d65fbfa9a0445d19c6258b21b1da68c76d56fa1ca5384d4"
+      "signature": "1d6cd101700180718e397fde3f8f3207015b5626d1db32bb44c10e3746376522"
     },
     {
       "source": "src/walk/blossom.js",
@@ -7277,7 +7306,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 36,
-      "signature": "01f35498bbbba3e63fe37afe4ffeb7cedb952be0a7bb277c7cf23a659c4ba3d7"
+      "signature": "07bc39d5a3dc9ed159b80914c34847ab341f4a557068e6df6d877094a59ee869"
     },
     {
       "source": "src/walk/marks.js",
@@ -7710,7 +7739,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "74f23ce060dd1d8a0498327f9d4baceb1c8e9c81b0768658c4689fa55b27c0af"
+      "signature": "cd1d994246a80f7c9adf4851e19f3b27c45062466ff8c0cab6039f2ba28c8cfc"
     },
     {
       "source": "src/walk/render-bake.js",
