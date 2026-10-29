@@ -70,7 +70,8 @@ export function createBaggage(ship,{still=false}={}){
  const block=(s,p)=>{const o=new T.Mesh(new T.BoxGeometry(...s));o.position.set(...p);solid.add(o);};
  BAYS.forEach(([x,z],i)=>{
   const side=Math.sign(z),back=z+side*RADIUS;
-  piece(M.navy,shell(RADIUS+WIDTH/2,0,.62,.12).translate(x,0,z));
+  // The skirt ends where the silver rim begins, so their outer faces never overlap.
+  piece(M.navy,shell(RADIUS+WIDTH/2,0,.53,.12).translate(x,0,z));
   piece(M.steel,shell(RADIUS+WIDTH/2,RADIUS+WIDTH/2-.12,.18,.65).translate(x,0,z));
   piece(M.steel,shell(RADIUS-WIDTH/2+.1,RADIUS-WIDTH/2,.18,.65).translate(x,0,z));
   piece(M.belt,shell(RADIUS+WIDTH/2-.12,RADIUS-WIDTH/2+.1,.05,.75).translate(x,0,z));
