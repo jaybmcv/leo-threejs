@@ -7486,7 +7486,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "834873f5393566c210e8b5a69f706ffc10e4575431b0a886e22fa1db672664ba"
+      "signature": "0c399585820e82f778fe290a1ef6c6087c3f5ee5508790a2e8912480492607f3"
     },
     {
       "source": "src/walk/paws-off/game.js",
