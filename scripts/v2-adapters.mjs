@@ -1,6 +1,10 @@
 // These temporary adapters must be folded into selected source at cutover.
 import fs from 'node:fs/promises';
 export const adapterAnchors={
+ "src/walk/render-bake.js":"import * as T from 'three';",
+ "src/walk/lounge.js":"import * as T from 'three';",
+ "src/walk/lounge-mural.js":"import * as T from 'three';",
+ "src/garden-finish.js":"import * as T from 'three';",
  "src/mudwater-arena.js":"import * as T from 'three';",
  "src/walk/controller.js":"import * as T from 'three';",
  "src/walk/world.js":"import * as T from 'three';",
@@ -29,6 +33,11 @@ class Source {
 export function applyV2Adapters(file,text,{issues=[],adapters=[],collect=false}={}){const s=new Source(file,text,issues,adapters);
   if(file==='src/plan/rooms.js'){
    s.prepend("import layout from 'v2-layout';\nimport {hullOwnerAt} from '../v2/ownership.js';\n").replace('LAYOUT_VERSION=1','LAYOUT_VERSION=2').replace('export function roomAt(','function legacyRoomAt(').append("\nexport function roomAt(point,options={}){return (!options.legacy&&hullOwnerAt(point))||legacyRoomAt(point,options); }\n");
+   s.append(`
+// Prepared worlds restore registry identity without applying room transforms twice.
+export function captureRoomAnchors(root){const rows=[];root.traverse(o=>{const a=objects.get(o);if(a)rows.push({uuid:o.uuid,id:a.id,applied:a.applied,base:a.base?.toArray()});});return rows;}
+export function restoreRoomAnchors(root,rows){if(!Array.isArray(rows))throw Error('Missing prepared room anchors');const nodes=new Map();root.traverse(o=>nodes.set(o.uuid,o));for(const r of rows){const o=nodes.get(r.uuid);if(!o)throw Error('Missing prepared room anchor '+r.id);objects.set(o,{id:r.id,applied:true,...(r.base?{base:new T.Matrix4().fromArray(r.base)}:{})});}deferred=false;}
+`);
    const at='export const registry=';
    const init=`// Production frames are the selected plan, rather than a debug override.\nfor(const r of [...layout.rooms,...layout.fixedRooms,...layout.cabins]){if(r.aggregate)continue;if(!entries.has(r.id))add({id:r.id,name:r.name||r.id,origin:r.frame?.origin||[r.x,r.y,r.z],size:r.size||[r.width,r.height,r.depth],deck:r.deck,yaw:r.yaw||0,mirror:!!r.mirror});const owner=entries.get(r.id).parent||r.id;if(owner!==r.id)continue;overrides.set(owner,{origin:r.fittingFrame?.origin||r.frame?.origin||[r.x,r.y,r.z],yaw:r.fittingFrame?.yaw??r.frame?.yaw??r.yaw??0,mirror:!!r.mirror,deck:r.deck,size:r.size||[r.width,r.height,r.depth],bounds:r.fittingFrame?.bounds||null});}\nfor(const r of layout.rooms.filter(r=>/^nose-commons-/.test(r.id))){const id='nose-commons-'+Number(r.id.split('-').at(-1));if(entries.has(id))overrides.set(id,{origin:r.frame.origin,yaw:r.frame.yaw,mirror:false,size:r.size,bounds:null});}\nconst arrival=layout.rooms.find(r=>r.id==='d02-arrival-1');overrides.set('arrival-assembly',{origin:arrival.frame.origin,yaw:arrival.frame.yaw,mirror:false});\n`;
    s.replace('export function instanceRoom(o,i){','export function instanceRoom(o,i){if(o.userData.cabinIds)return (o.userData.currentCabinIds||o.userData.cabinIds)[i];');
@@ -49,9 +58,22 @@ export function applyV2Adapters(file,text,{issues=[],adapters=[],collect=false}=
    s.replace('at:[116.6,FLOOR+3.15,z0-.1]', 'at:[116.6+v2MazeFit.dx,FLOOR+3.15,z0-.1]');
   }
   if(file==='src/mudwater-arena.js'){s.prepend("import {removeGeometryCaps} from './v2/geometry.js';\n").replaceAll('[w,.012,t]','[w+t,.012,t]').replace('[t,.012,dz]','[t,.012,dz-(dz/2<10.3?t:0)]').replace('const g=new T.BoxGeometry(...size);if(ry)',"const g=new T.BoxGeometry(...size);if(name==='Arena_floor_inlay'&&size[2]>size[0]&&size[2]/2<10.3)removeGeometryCaps(g,2);if(ry)");}
+
+  if(file==='src/walk/render-bake.js'){
+   // Exact hull/window cuts and owned room finishes resolve overlaps at production time.
+   // Moving those edges later can put a floor or guard back into a window reveal.
+   s.replace('const bands=new Map(),normal=new T.Matrix3(),xyz=[0,0,0],nudges=coplanarNudges(taken);','const bands=new Map(),normal=new T.Matrix3(),xyz=[0,0,0],nudges=coplanarNudges(taken.filter(o=>o.name!=="Deck_slab"&&o.name!=="V2_glass_wall"&&!o.userData.batchedEnvelope&&!o.userData.hullEnvelopeBatch&&!o.userData.hullSkinSurface&&!/^Smooth_pressure_envelope/.test(o.name)&&!o.userData.v2SkinClipped&&!o.userData.v2WindowClipped));');
+   s.replace("const I=b.vertices>65535?","const preparedRanges=[];const recordRange=(o,vertex,start)=>{const owner=o.geometry.attributes._leo_owner,finish=o.geometry.attributes._leo_finish,own=owner?o.userData.ownerTable?.[owner.getX(vertex)]:null,name=finish?o.userData.finishNames?.[finish.getX(vertex)]:null,previous=preparedRanges.at(-1);if(previous&&previous.source===o.uuid&&previous.owner===own&&previous.finish===name&&previous.start+previous.count===start){previous.count++;return;}preparedRanges.push({source:o.uuid,name:o.name,owner:own,finish:name,start,count:1,userData:Object.fromEntries(['room','interface','component','batchedEnvelope','hullEnvelopeBatch','hullSkinSurface','collisionOnly','role','noCollide','envelopeKind'].filter(k=>o.userData[k]!==undefined).map(k=>[k,o.userData[k]]))});};const I=b.vertices>65535?");
+   s.replace('I[io++]=f(0)+vo;','recordRange(o,f(0),io/3);I[io++]=f(0)+vo;');
+   s.replace('I[io++]=vo;I[io++]=vo+a;','recordRange(o,idx?idx[t]:t,io/3);I[io++]=vo;I[io++]=vo+a;');
+   s.replace('geo.setIndex(new T.BufferAttribute(I,1));','geo.userData.preparedRanges=preparedRanges;geo.setIndex(new T.BufferAttribute(I,1));');
+  }
   if(file==='src/walk/controller.js')s.replace('this.colliders.raycast(this.ray,up+down)','(this.colliders.raycastGround||this.colliders.raycast).call(this.colliders,this.ray,up+down)');
   if(file==='src/walk/world.js')s.replace('if(SURFACE.test(o.name))return;','if(SURFACE.test(o.name)||o.userData.hullEnvelopeBatch||o.userData.hullSkinSurface)return;');
-  if(file==='src/model.js')s.prepend("import {configureV2Ship} from './v2/model.js';\n").replace('  return ship;','  return configureV2Ship(ship);');
+  if(file==='src/walk/lounge.js')s.prepend("import layout from 'v2-layout';\nimport {fitNativeLounge} from '../v2/skin-retirement.js';\n").replace(' return {\n  drawn,doors,',' fitNativeLounge(ship,layout,drawn,mural);\n return {\n  drawn,doors,');
+  if(file==='src/walk/lounge-mural.js')s.replace("if(typeof document==='undefined')return null;","const geometryOnly=typeof document==='undefined';").replace('map.wrapS=map.wrapT=T.ClampToEdgeWrapping;map.anisotropy=8;','if(map){map.wrapS=map.wrapT=T.ClampToEdgeWrapping;map.anisotropy=8;}').replace('const backMap=canvasTexture(','const backMap=geometryOnly?null:canvasTexture(').replace('const leftMap=canvasTexture(','const leftMap=geometryOnly?null:canvasTexture(').replaceAll('ROOM_Z1-.1-lift','ROOM_Z0+.1+lift');
+  if(file==='src/garden-finish.js'){s.replace('[141.5,26.2,45.8],Math.PI','[141.5,26.2,8.2],0').replace('[x,y,45.8],Math.PI','[x,y,8.2],0').replace('24.61+level*.6,44.5','24.61+level*.6,39.5').replace('[43.53,45.47]','[38.53,40.47]').replace('43.8+i*.22','38.8+i*.22');}
+  if(file==='src/model.js')s.prepend("import {configureV2Ship} from './v2/model.js';\n").replace('  return ship;','  return configureV2Ship(ship);').replace('[xx,25.45,44.5]','[xx,25.45,39.5]');
   if(file==='src/walk/main.js'){
    s.prepend("import {v2Signs} from '../v2/signs.js';\nimport {attachFacade,isolateStaticWorld} from '../v2/facade.js';\nimport {createCabinGlass} from '../v2/cabin-glass.js';\nlet cabinGlass=null;\n");
    s.replace('shapeInterior(ship.exterior,ship.inside);','// v2 slabs use the finished hull oracle; do not fair a second time.');
@@ -59,7 +81,8 @@ export function applyV2Adapters(file,text,{issues=[],adapters=[],collect=false}=
    s.replace('stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);','');
    s.replace('halloween=createHalloween(ship,','halloween=null;/* v1 seasonal lanes are intentionally retired. */ false&&createHalloween(ship,');
    
-   s.replace('haze.add(createHaze(ship));','haze.add(createHaze(ship));attachFacade(ship,scene);cabinGlass=createCabinGlass(ship,scene);');
+   s.replace('const b0=performance.now();baked=bakeForWalking(ship.root', 'ship.v2Haze=createHaze(ship);attachFacade(ship,scene);const b0=performance.now();baked=bakeForWalking(ship.root');
+   s.replace('haze.add(createHaze(ship));','haze.add(ship.v2Haze);cabinGlass=createCabinGlass(ship,scene);');
    s.replace("q.name==='Remaining_499_furnished_cabins'","q.name==='V2_cabin_instances'").replace("q.name==='Repeated_cabin_walls'","q.name==='V2_cabin_shells'").replace('||o.count!==499','');
    s.replace('}\nlet baked=null',' isolateStaticWorld(ship,scene);\n}\nlet baked=null');
    s.replace('o.count=order.length;o.instanceMatrix.needsUpdate=true;', 'o.userData.currentCabinIds=order.map(i=>o.userData.cabinIds[i]);o.count=order.length;o.instanceMatrix.needsUpdate=true;');
@@ -75,8 +98,19 @@ export function applyV2Adapters(file,text,{issues=[],adapters=[],collect=false}=
   if(file==='src/walk/hex-floor.js'){s.prepend("import layout from 'v2-layout';\n");s.splice('function hallways(){','export function createHexFloor',"function hallways(){const rects=[];for(const c of layout.circulation.corridors.filter(c=>c.deck===1))for(let i=1;i<c.points.length;i++){const a=c.points[i-1],b=c.points[i],w=c.width/2;rects.push([Math.min(a[0],b[0])-w,Math.max(a[0],b[0])+w,Math.min(a[1],b[1])-w,Math.max(a[1],b[1])+w]);}return {y:layout.decks[0].y,rects};}\n\n");}
   if(file==='src/walk/lounge-floor.js')s.prepend("import layout from 'v2-layout';\nimport {polygonGeometry} from '../v2/geometry.js';\n").splice('// The promenade in front of the lounge, laid just over its own floor.',' return {material,floors:found.length};',"// Finish follows the new promenade and never bridges an atrium void.\n const r=layout.rooms.find(r=>r.id==='commons-1'),deck=layout.decks[r.deck-1],xs=r.polygon.map(p=>p[0]),inner=Math.min(...r.polygon.map(p=>Math.abs(p[1]))),x0=Math.min(...xs),x1=Math.max(...xs),side=r.side,poly=[[x0,side*inner],[x1,side*inner],[x1,side*(inner-2*PROMENADE)],[x0,side*(inner-2*PROMENADE)]],promenade=new T.Mesh(polygonGeometry(poly,deck.slab.holes.map(h=>h.polygon),Y+.006,.002),material),g=new T.Group();g.name='V2_lounge_promenade_finish';g.userData.room='commons-1';promenade.name='Lounge_promenade_floor';promenade.userData.noCollide=true;g.add(promenade);ship.inside.add(g);planar(promenade);\n").replace('const FLOORS=/^(','const owner=o=>objectRoom(o)||o.parent?.userData.room;\nconst FLOORS=/^(V2_room_floor|V2_garden_gallery|').replaceAll("objectRoom(o)==='commons-1'","owner(o)==='commons-1'");
   if(file==='src/walk/commons-hall.js')s.replace('export function openCommonsHall(ship){','export function openCommonsHall(ship){return 0;');
-  if(file==='src/walk/collision.js')s.replace('function bvhOf(positions){', 'function bvhOf(positions){\n const clean=new Float32Array(positions.length);let kept=0;for(let i=0;i<positions.length;i+=9){const ax=positions[i+3]-positions[i],ay=positions[i+4]-positions[i+1],az=positions[i+5]-positions[i+2],bx=positions[i+6]-positions[i],by=positions[i+7]-positions[i+1],bz=positions[i+8]-positions[i+2],nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx;if(nx*nx+ny*ny+nz*nz>1e-16)for(let k=0;k<9;k++)clean[kept++]=positions[i+k];}positions=clean.subarray(0,kept);');
-  if(file==='src/walk/railings.js')s.replace('return rows.filter(r=>r[3]-r[2]>=.5);','return rows.filter(r=>r[3]-r[2]>=.1);');
+  if(file==='src/walk/collision.js'){s.replace('n+=b.geometry.attributes.position.count/3','n+=(b.geometry.index?.count??b.geometry.attributes.position.count)/3');s.replace('function bvhOf(positions){', 'function bvhOf(positions){\n const clean=new Float32Array(positions.length);let kept=0;for(let i=0;i<positions.length;i+=9){const ax=positions[i+3]-positions[i],ay=positions[i+4]-positions[i+1],az=positions[i+5]-positions[i+2],bx=positions[i+6]-positions[i],by=positions[i+7]-positions[i+1],bz=positions[i+8]-positions[i+2],nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx;if(nx*nx+ny*ny+nz*nz>1e-16)for(let k=0;k<9;k++)clean[kept++]=positions[i+k];}positions=clean.subarray(0,kept);');}
+  if(file==='src/walk/deck-map.js')s.replace('for(const [deck,axis,a0,a1,pos] of rails){','for(const [deck,axis,a0,a1,pos,y,z1] of rails){if(axis===2){const d=out.find(o=>o.number===deck);if(d){const n=Math.max(1,Math.ceil(Math.hypot(a1-a0,z1-pos)/(cell*.5)));for(let i=0;i<=n;i++){const k=at(a0+(a1-a0)*i/n,pos+(z1-pos)*i/n);if(k>=0)d.data[k]=MAP_CLASS.rail;}}continue;}');
+  if(file==='src/walk/railings.js')s.replace('return rows.filter(r=>r[3]-r[2]>=.5);','return rows.filter(r=>r[3]-r[2]>=.1);').replace('||d.designed[n]&&!(d.height[n]===d.height[n])','');
+
+  if(file==='src/walk/collision.js'){
+   s.replace("constructor(){this.array=new Float32Array(4096);this.length=0;}","constructor(){this.array=new Float32Array(4096);this.length=0;this.flags=new Uint8Array(4096);this.flagLength=0;}");
+   s.replace(" push9(src,at){"," pushFlag(flag){if(this.flagLength===this.flags.length){const a=new Uint8Array(this.flags.length*2);a.set(this.flags);this.flags=a;}this.flags[this.flagLength++]=flag;}\n push9(src,at){");
+   s.replace("scratch.length=0;meshTriangles(o,scratch);","scratch.length=0;meshTriangles(o,scratch);const sightIgnored=!!o.userData.collisionOnly||!!o.userData.hullEnvelopeBatch&&[].concat(o.material).every(m=>m.transparent);");
+   s.replace("for(let i=0;i<scratch.length;i+=9){\n    const y0=","for(let i=0;i<scratch.length;i+=9){\n    const p=Array.from({length:9},(_,k)=>Math.fround(scratch[i+k])),ax=p[3]-p[0],ay=p[4]-p[1],az=p[5]-p[2],bx=p[6]-p[0],by=p[7]-p[1],bz=p[8]-p[2],nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx;if(!(nx*nx+ny*ny+nz*nz>1e-16))continue;\n    const y0=");
+   s.replace("list.push9(scratch,i);","list.push9(scratch,i);list.pushFlag(sightIgnored?1:0);");
+   s.replace("const bvh=bvhOf(all);this.bands.set(b,{bvh,geometry:bvh.geometry,band:b});","const bvh=bvhOf(all),flags=new Uint8Array((old?.windowFlags?.length||0)+list.flagLength);if(old?.windowFlags)flags.set(old.windowFlags);flags.set(list.flags.subarray(0,list.flagLength),old?.windowFlags?.length||0);if(flags.length!==bvh.geometry.attributes.position.count/3)throw Error('Prepared collision visibility flags do not match triangles');bvh.leoWindowFlags=flags;this.bands.set(b,{bvh,geometry:bvh.geometry,band:b,windowFlags:flags});");
+   s.replace(" get triangles(){"," raycastSight(ray,far=1e4,near=0){const box=new T.Box3().setFromPoints([ray.origin,ray.at(far,new T.Vector3())]).expandByScalar(.01),local=new T.Ray();let best=null;for(const [bvh,inverse,matrix]of this.near(box,ray)){local.copy(ray);if(inverse)local.applyMatrix4(inverse);for(const hit of bvh.raycast(local,T.DoubleSide,near,far)){if(bvh.leoWindowFlags?.[hit.faceIndex])continue;if(hit.distance<=far&&(!best||hit.distance<best.distance)){const normal=hit.face.normal.clone();if(matrix)normal.transformDirection(matrix);if(normal.dot(ray.direction)>0)normal.negate();best={distance:hit.distance,point:ray.at(hit.distance,new T.Vector3()),normal};}}}return best;}\n get triangles(){");
+  }
   if(file==='src/walk/windows.js')s.replace(/export function openWindows\(([^)]*)\)\{/,'export function openWindows($1){return 0;');
  if(issues.length&&!collect)throw new Error('V2 source adapters failed:\n'+issues.join('\n'));return s.text;
 }

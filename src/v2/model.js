@@ -10,11 +10,16 @@ import layout from 'v2-layout';
 import {buildCabins} from './cabins.js';
 import {polygonGeometry,mesh,box,wall,strip,removeBottomCap,removePanelEndCaps,removeGeometryCaps,glass,lining,floor,bounds} from './geometry.js';
 import {roomObject,toWorld} from '../plan/rooms.js';
+// The raised lounge is one continuous room. Old Deck 18/19 masks followed
+// the inset wall line and left tiny slab islands outside that line but inside
+// the finished room. Reserve the full floor projection through its height;
+// the native approach ramp and explicit stairs remain separate meshes.
+function loungeVoidMasks(y,depth=.24){const r=layout.rooms.find(r=>r.id==='observation-lounge');return r&&y>r.y+.4&&y-depth<r.y+r.height-.2?[r.polygon]:[];}
 export function configureV2Ship(ship){
  ship.layout=layout;ship.root.userData={...ship.root.userData,layoutVersion:2,cabins:layout.cabins.length,berths:layout.summary.berths,cabinsPerNeighborhood:layout.summary.perDeck.filter(d=>d.cabins).map(d=>d.cabins),berthsPerCabin:'1 or 2',cabinEnvelope:[3.42,3.5,7.64],cabinInternal:[3.18,3.4,7.4]};
  // Force only the inexpensive deck skeleton, then discard the v1 reservations.
  for(const d of ship.decks){for(const o of [...d.children]){d.remove(o);}const p=layout.decks[d.userData.number-1];d.userData.y=p.y-.3;
-  const holes=p.slab.holes.map(h=>h.polygon);if(layout.hullPrototypes?.rollout)for(const c of layout.cabins.filter(c=>c.deck===p.number))holes.push(c.hullPrototype?c.hullPrototype.polygon:rectangle(c.x,c.z,3.18,7.4,c.yaw));if(layout.hullPrototypes?.rollout)for(const envelope of layout.hullPrototypes.prototypes.filter(e=>e.deck===p.number&&e.kind!=='cabin'))holes.push(envelope.polygon);if(layout.hullPrototypes?.rollout)for(const shuttle of layout.shuttles.filter(s=>s.deck===p.number))holes.push(shuttle.polygon);const slab=mesh(d,'Deck_slab',polygonGeometry(p.slab.outline,holes,p.y),floor);
+  const holes=[...p.slab.holes.map(h=>h.polygon),...loungeVoidMasks(p.y)];if(layout.hullPrototypes?.rollout)for(const c of layout.cabins.filter(c=>c.deck===p.number))holes.push(c.hullPrototype?c.hullPrototype.polygon:rectangle(c.x,c.z,3.18,7.4,c.yaw));if(layout.hullPrototypes?.rollout)for(const envelope of layout.hullPrototypes.prototypes.filter(e=>e.deck===p.number&&e.kind!=='cabin'))holes.push(envelope.polygon);if(layout.hullPrototypes?.rollout)for(const shuttle of layout.shuttles.filter(s=>s.deck===p.number))holes.push(shuttle.polygon);const slab=mesh(d,'Deck_slab',polygonGeometry(p.slab.outline,holes,p.y),floor);
   const xs=[...new Set(p.slab.outline.map(v=>v[0]))].sort((a,b)=>a-b);slab.userData.outline=xs.map(x=>[x,Math.max(...p.slab.outline.filter(v=>v[0]===x).map(v=>Math.abs(v[1])))]);slab.userData.v2Holes=holes;
  }
  for(const o of [...ship.shared.children])ship.shared.remove(o);
@@ -26,7 +31,7 @@ export function fitV2Structure(ship){
  if(ship.v2Fitted)return;ship.v2Fitted=true;const structure=new T.Group();structure.name='V2_structure';ship.inside.add(structure);
  // The faired hull is kept intact. A continuous interior pressure lining prevents
  // bare distribution slabs from opening onto walkable exterior hull triangles.
- for(const d of layout.decks){const next=layout.decks[d.number];for(let i=0;i<d.slab.outline.length;i++)removePanelEndCaps(wall(structure,d.slab.outline[i],d.slab.outline[(i+1)%d.slab.outline.length],d.y,3.7,glass,'V2_pressure_lining'));mesh(structure,'V2_distribution_ceiling',polygonGeometry(d.slab.outline,next?next.slab.holes.map(h=>h.polygon):[],d.y+3.72,.08),lining);}
+ for(const d of layout.decks){const next=layout.decks[d.number];for(let i=0;i<d.slab.outline.length;i++)removePanelEndCaps(wall(structure,d.slab.outline[i],d.slab.outline[(i+1)%d.slab.outline.length],d.y,3.7,glass,'V2_pressure_lining'));mesh(structure,'V2_distribution_ceiling',polygonGeometry(d.slab.outline,[...(next?next.slab.holes.map(h=>h.polygon):[]),...loungeVoidMasks(d.y+3.72,.08)],d.y+3.72,.08),lining);}
  for(const r of layout.circulation.ramps){const g=polygonGeometry(r.polygon,[],0,.18),p=g.attributes.position;for(let i=0;i<p.count;i++)p.setY(i,p.getY(i)+r.points[0][1]+(p.getX(i)-r.points[0][0])/r.run*r.rise);g.computeVertexNormals();mesh(structure,'V2_access_ramp',g,floor);}
  // Shells are rebuilt in world plan coordinates. Source fittings remain unscaled under their registered roots.
  for(const r of layout.rooms.filter(r=>r.aggregate)){roomObject(ship,r.id)?.removeFromParent();}
@@ -37,7 +42,7 @@ export function fitV2Structure(ship){
    // Wall-mounted art, projections, signs and lighting are fittings too. Keep them
    // under the moving room when the accepted shell gives way to its v2 envelope.
    const hung=[];source.traverse(o=>{if(o.isMesh&&/(art|mural|print|poster|painting|sconce|light|sign|display|projection|hanger|shade)/i.test(o.name)){for(let p=o.parent;p&&p!==source;p=p.parent)if(ship.cutaway.has(p)){hung.push(o);break;}}});for(const o of hung)source.attach(o);
-   const retired=[];source.traverse(o=>{if(/^(Walls_and_ceiling|Garden_walls_and_ceiling|Observation_walls_and_ceiling|.*_shell)$/.test(o.name)){ship.cutaway.delete(o);o.visible=false;o.userData.v2RemovedShell=true;}if(o.isMesh&&/^(Finished_floor|Commons_floor|Commons_ceiling|Commons_rear_wall|Commons_end_wall|Rear_gallery|End_gallery|Front_gallery|Gallery_stair|Upper_stair_landing|Upper_gallery_connection|Stair_handrail|Gallery_door|Handrail|Baluster|Handrail_bend|Handrail_post|Lounge_rail_glass|Lounge_rail_glow|Curved_lounge_floor|Lounge_access_ramp|Ramp_floor_edge|Promenade_level_floor|Commons_to_promenade|Ramp_handrail|Ramp_rail_post)$/.test(o.name)){o.visible=false;if(o.name!=='Finished_floor')retired.push(o);}});for(const o of retired)o.removeFromParent();
+   const retired=[];source.traverse(o=>{if(/^(Walls_and_ceiling|Garden_walls_and_ceiling|Observation_walls_and_ceiling|.*_shell)$/.test(o.name)){ship.cutaway.delete(o);o.visible=false;o.userData.v2RemovedShell=true;}if(o.isMesh&&/^(Commons_column|Bridge_window_mullion|Viewport_structural_mullion|Continuous_window_ledge|Panoramic_viewing_rail|Viewing_rail_post|Finished_floor|Commons_floor|Commons_ceiling|Commons_rear_wall|Commons_end_wall|Rear_gallery|End_gallery|Front_gallery|Gallery_stair|Upper_stair_landing|Upper_gallery_connection|Stair_handrail|Gallery_door|Handrail|Baluster|Handrail_bend|Handrail_post|Lounge_rail_glass|Lounge_rail_glow|Curved_lounge_floor|Lounge_access_ramp|Ramp_floor_edge|Promenade_level_floor|Commons_to_promenade|Ramp_handrail|Ramp_rail_post)$/.test(o.name)){o.visible=false;if(o.name!=='Finished_floor')retired.push(o);}});for(const o of retired)o.removeFromParent();
    // Every declared shell root is detached, so the v1 cutaway toggles cannot bring it back.
    for(const o of [...ship.cutaway])if(o===source||isChild(o,source)){o.removeFromParent();ship.cutaway.delete(o);}
   }

@@ -1,3 +1,4 @@
+import {finishedSkinAuthorityProof} from '../src/v2/skin-authority.js';
 import {writeV2DeckCosts} from './v2-deck-costs.mjs';
 import {indexedV2Export} from './v2-indexed-export.mjs';
 import {shareExportGeometry} from './v2-export.mjs';
@@ -8,7 +9,9 @@ import {preparedV2} from './v2-world.mjs';
 import layout from 'v2-layout';
 const out='output/leo-interior-v02';const {ship,prepared,plan,image}=await preparedV2({map:true});
 for(const item of Object.values(prepared))if(item?.group&&!item.group.parent)ship.inside.add(item.group);
-plan.bayAccesses=layout.bayAccesses;plan.windows=layout.windows;plan.shells=layout.rooms.filter(r=>!r.aggregate).map(r=>({id:r.id,deck:r.deck,polygon:r.polygon,door:r.door,fittingDoor:r.fittingDoor}));await fs.writeFile(out+'/walk-plan.json',JSON.stringify(plan));await fs.writeFile(out+'/walk-map.png',image);
+plan.skinAuthority=await finishedSkinAuthorityProof(ship);plan.bayAccesses=layout.bayAccesses;plan.windows=layout.windows;plan.shells=layout.rooms.filter(r=>!r.aggregate).map(r=>({id:r.id,deck:r.deck,polygon:r.polygon,door:r.door,fittingDoor:r.fittingDoor}));await fs.writeFile(out+'/walk-plan.json',JSON.stringify(plan));await fs.writeFile(out+'/walk-map.png',image);
+await fs.mkdir('output/phase3b',{recursive:true});
+await fs.writeFile('output/phase3b/perimeter-retirement.json',JSON.stringify(ship.v2Retirements,null,2));
 const {createCanvas,ImageData}=await import('@napi-rs/canvas');globalThis.ImageData=ImageData;globalThis.HTMLCanvasElement=createCanvas(1,1).constructor;globalThis.document={createElement(){const c=createCanvas(1,1);c.toBlob=(cb,type='image/png')=>cb(new Blob([c.toBuffer(type)],{type}));return c;}};
 const exporter=new GLTFExporter();
 const structure=ship.inside.getObjectByName('V2_structure').children,rooms=new Map(layout.rooms.map(r=>[r.id,r])),serviceRoots=[...ship.serviceDecks.values()].flat().filter(r=>r.root.parent).map(r=>r.root);

@@ -1,10 +1,10 @@
 {
-  "source": "Unchanged v1 model inputs pinned for the hull rollout at 03cc1c2",
+  "source": "Main 6a2d28a own build after build:public; merge-main-1027/glb-main-after-public.txt",
   "models": [
     {
       "name": "leo-aft-systems.glb",
-      "bytes": 33973220,
-      "sha256": "5958516b580055215bff314ed7ca5ab4cc31c599e8f4c810a38828eeb8737fe7"
+      "bytes": 33973632,
+      "sha256": "218223a9acdf5fd19f09bde1e379d2dd3dbb2c6207e9a77b9205af1f17b07b41"
     },
     {
       "name": "leo-exterior-phone.glb",
@@ -28,13 +28,13 @@
     },
     {
       "name": "leo-full-ship.glb",
-      "bytes": 573082224,
-      "sha256": "8fc3e48d463c427150844ab4a5e0cf20e3ffa7fe60f405a83351358705dc4f84"
+      "bytes": 576191708,
+      "sha256": "08d02bf02179dffb78378c09222e2cb4f810c62dba9a5727fb8d9f6939df0956"
     },
     {
       "name": "leo-garden-commons.glb",
-      "bytes": 22996336,
-      "sha256": "0e8b5abd12ceba7d3e373c7e8ae8b8b43c784970628e80ae9ef14ae3fb9365d3"
+      "bytes": 23040908,
+      "sha256": "db5de59ca1f0db4e87e8cdc9c39fb3a6566cc7fad86b1a14c2f6da89ececf942"
     },
     {
       "name": "leo-neighborhood.glb",
@@ -48,8 +48,8 @@
     },
     {
       "name": "leo-service-areas.glb",
-      "bytes": 368021652,
-      "sha256": "5f0c505d25c105bed033f80250d581fa94e2739911076ad649c82f8618c2d2a8"
+      "bytes": 371086108,
+      "sha256": "0246b59a87ebdd410abe038d3a5c5179fc452357a779931d83f13043f5e705de"
     },
     {
       "name": "leo-transit.glb",
