@@ -5815,12 +5815,15 @@
         "Lounge_rail_glow",
         "Lounge_step_glow",
         "Hydro_Nip_Lounge",
+        "Hydro_Nip_Main_Sign",
+        "Hydro_Nip_Main_Sign_Body",
+        "Hydro_Nip_Main_Sign_Rim",
         "Hammock"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 124,
-      "signature": "90679027890dcd15b41344d016d06926afb5db3e353eaa82eea006ef9635126f"
+      "placements": 131,
+      "signature": "98012a5d7c1abf57cf85275d8bd314103e947104054834ef1cc843c25c3476b1"
     },
     {
       "source": "src/interior-polish.js",
