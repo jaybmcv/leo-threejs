@@ -206,7 +206,7 @@ async function buildShip(){
  }});
  ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
  loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;
- const {pipework,trolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;
+ const {pipework,trolley,wardTrolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;
  // The hidden clubhouse's vault door behind the arcade (vault.js): solid here, as a movable collider of its own.
@@ -248,6 +248,7 @@ async function buildShip(){
  if(diningRobots)toBand(diningRobots.group);
  if(hydration)toBand(hydration.group);
  if(trolley)toBand(trolley.group);
+ if(wardTrolley)toBand(wardTrolley.group);
  if(mazeHold)toBand(mazeHold.group);
  if(mctBay)toBand(mctBay.group);
  // The aft freight gate (freight-gate.js): its iris, gantry, lanes and posters.

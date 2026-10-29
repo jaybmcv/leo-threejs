@@ -181,6 +181,12 @@
     ],
     "via": null
   },
+  "src/walk/ward-trolley.js": {
+    "owners": [
+      "d05-ward-1"
+    ],
+    "via": null
+  },
   "src/walk/maze/hold.js": {
     "owners": [
       "d01-cargo-1"

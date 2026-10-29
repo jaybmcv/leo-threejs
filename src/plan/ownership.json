@@ -7333,7 +7333,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 37,
-      "signature": "53dd804a5f3f0030f4eb55207cd585d3c817cb4d649ba52178317a58bd752dd4"
+      "signature": "a3872916adb8b20a4ac94b1967acbcd6cb3ea06c76348d7b15790f087b757eb9"
     },
     {
       "source": "src/walk/marks.js",
@@ -7685,7 +7685,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "2c4c6d82606a8b90d43264e7660c9c42ebe856d5c5cdd9996e185e44a238f1e6"
+      "signature": "f29b758f9c84a6c2690ca0a12925f69b091d2ea6de30585b1306889236e7bdce"
     },
     {
       "source": "src/walk/provisions.js",
@@ -7984,6 +7984,27 @@
       "interactionTargets": null,
       "placements": 9,
       "signature": "1f1bca4204bbd21b583e374856a126c29d7aff605ffe4c1c6942e4271e055c01"
+    },
+    {
+      "source": "src/walk/ward-trolley.js",
+      "rooms": [
+        "d05-ward-1"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Ward_supply_trolley",
+        "Ward_supply_trolley_world",
+        "Ward_supply_trolley_collider",
+        "Ward_supply_trolley_solid"
+      ],
+      "colliders": [
+        "Ward_supply_trolley_collider",
+        "Ward_supply_trolley_solid"
+      ],
+      "interactionTargets": null,
+      "placements": 21,
+      "signature": "5cfed1bfeac6ed3900fbfa1ba0e3cefb77f5c55a361700a1c2ac887e94c3a39c"
     },
     {
       "source": "src/walk/windows.js",
