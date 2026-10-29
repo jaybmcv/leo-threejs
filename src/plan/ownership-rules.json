@@ -1,4 +1,10 @@
 {
+  "src/walk/recreation-hall.js": {
+    "owners": [
+      "d16-recreation-4"
+    ],
+    "via": "inherited"
+  },
   "src/model.js": {
     "owners": [
       "@cabins",
