@@ -138,9 +138,19 @@ export function partitionMesh(walls){
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(P,3));geo.setAttribute('normal',new T.BufferAttribute(N,3));geo.setAttribute('uv',new T.BufferAttribute(new Float32Array(size*2),2));
   const mesh=new T.Mesh(geo,material);mesh.name=name;mesh.userData.boxes=boxes;group.add(mesh);
  };
- const box=w=>[w.x0,w.x1,w.y0,w.y1,w.z0,w.z1],well=walls.filter(inStairwell);
- merged(walls.filter(w=>!inStairwell(w)).map(box),'Partition_wall',new T.MeshStandardMaterial({name:'Walk_partition_lining',color:0xd8dcd5,roughness:.82,metalness:.04}));
+ // Glaze the shaft back and the matching stair face on decks with an unfitted strip between them. The boxes still
+ // make the same solid boundaries; only the middle of each run changes material.
+ const opaque=[],glazed=[],x0=AFT.x-1.75,x1=AFT.x+1.75;
+ for(const w of walls){
+  const z=Math.abs((w.z0+w.z1)/2),face=w.x1-w.x0>w.z1-w.z0&&((Math.abs(z-7.75)<.02)||(Math.abs(z-11)<.02));
+  if((w.deck>5&&w.deck<16)||w.deck>19||!face||w.x1<=x0||w.x0>=x1){opaque.push(w);continue;}
+  const a=Math.max(w.x0,x0),b=Math.min(w.x1,x1);
+  if(w.x0<a)opaque.push({...w,x1:a});glazed.push({...w,x0:a,x1:b});if(b<w.x1)opaque.push({...w,x0:b});
+ }
+ const box=w=>[w.x0,w.x1,w.y0,w.y1,w.z0,w.z1],well=opaque.filter(inStairwell);
+ merged(opaque.filter(w=>!inStairwell(w)).map(box),'Partition_wall',new T.MeshStandardMaterial({name:'Walk_partition_lining',color:0xd8dcd5,roughness:.82,metalness:.04}));
  merged(well.map(box),'Partition_wall',STAIRWELL.metal);
+ merged(glazed.map(box),'Partition_wall',new T.MeshStandardMaterial({name:'Walk_stair_view_glass',color:0x9cc8dc,roughness:.16,metalness:.1,transparent:true,opacity:.16,depthWrite:false,side:T.DoubleSide}));
  // On both faces of a stairwell partition: a light line low down and a row of panes (flush dressing: no collision).
  const glow=[],panes=[];
  for(const w of well){
@@ -153,5 +163,14 @@ export function partitionMesh(walls){
   }
  }
  merged(glow,'Partition_glow',STAIRWELL.glow);merged(panes,'Partition_glass_inlay',STAIRWELL.glass);
+ // Finish the otherwise bare strip visible through the glass. These surfaces are dressing, outside the walking path.
+ const lining=[],lights=[];
+ for(const deck of [1,2,3,4,5,16,17,18,19])for(const s of [-1,1]){
+  const y=floorY(deck),z0=Math.min(s*7.81,s*10.94),z1=Math.max(s*7.81,s*10.94);
+  lining.push([x0,x1,y+.006,y+.026,z0,z1],[x0,x1,y+3.62,y+3.64,z0,z1]);
+  for(const x of [x0,x1])lining.push([x-.025,x+.025,y+.02,y+3.62,z0,z1]);
+  for(const x of [x0+.12,x1-.12])lights.push([x-.025,x+.025,y+.03,y+.04,z0+.08,z1-.08]);
+ }
+ merged(lining,'Stair_view_inlay',STAIRWELL.metal);merged(lights,'Stair_view_glow',STAIRWELL.glow);
  return group;
 }
