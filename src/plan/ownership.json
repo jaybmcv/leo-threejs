@@ -7253,7 +7253,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 28,
-      "signature": "6a97d8e3edf5d984afce91870c4b74845177ce9750bafe211dee0a0395ad328b"
+      "signature": "8f0fb26e5adf9320b6037f2d327fd85587e7a656497db71de9fb287ea6a07fce"
     },
     {
       "source": "src/walk/lounge-floor.js",
@@ -7333,7 +7333,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 37,
-      "signature": "7a9d98e389186279c688c741a7677b2d278018b7f368919c8a91f437b17b3061"
+      "signature": "53dd804a5f3f0030f4eb55207cd585d3c817cb4d649ba52178317a58bd752dd4"
     },
     {
       "source": "src/walk/marks.js",

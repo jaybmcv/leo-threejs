@@ -35,6 +35,7 @@ import {createHaze} from './haze.js';
 import {createStarDrift} from './star-drift.js';
 import {createAmbience} from './ambience.js';
 import {createLullaby} from './lullaby.js';
+import {createLoungeSound} from './lounge-sound.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.js';
 import {corridorTrim} from './trim.js';
 import {connectLive,savedName,httpBase} from './net/live.js';
@@ -204,6 +205,7 @@ async function buildShip(){
  recovery=createRecoveryMood(ship,{hemi,fill,scene});
  }});
  ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
+ loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;
  const {pipework,trolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;
@@ -311,7 +313,7 @@ async function buildShip(){
  }
 }
 let imagingScans=null;
-let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,mct=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
 let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
@@ -665,6 +667,7 @@ renderer.setAnimationLoop(()=>{
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on);
  loungeFalls?.update(dt,p);
+ loungeSound?.update(p,ambience.on);
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
  surgeryArms?.update(dt,p);
