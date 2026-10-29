@@ -6901,14 +6901,15 @@
         "Imaging_scanner",
         "Imaging_glass_divider",
         "Imaging_scans",
+        "Imaging_patient",
         "Imaging_scan_graphics",
         "Imaging_scan_line_graphics",
         "Imaging_scan_beam_graphics"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 33,
-      "signature": "db8b23364e5050da65c7fa22c66e91c183a3f0231d6b3951cbfb7789e1320670"
+      "placements": 36,
+      "signature": "5ee6f9206894172200e0b03b6eddfdbf99a5b69fd6ef46d0554d61ee0df5e40c"
     },
     {
       "source": "src/walk/input.js",
@@ -7277,7 +7278,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 36,
-      "signature": "01f35498bbbba3e63fe37afe4ffeb7cedb952be0a7bb277c7cf23a659c4ba3d7"
+      "signature": "cf27e351bb52b5a2795441cee7b73e6a767b4a4782273b9f5eb197880bc52807"
     },
     {
       "source": "src/walk/marks.js",

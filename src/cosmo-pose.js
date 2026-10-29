@@ -84,8 +84,18 @@ export const KITTEN_POSES={
   cat.root.updateMatrixWorld(true);},
 };
 
-// Actor poses for the Deck 16 theatre's stage (src/walk/theatre.js), each built on the relaxed stand, feet on the floor.
+// Static crew poses, built on the relaxed stand and baked with their feet on the floor.
 export const ACTOR_POSES={
+ // Resting in a diagnostic scanner, arms alongside the body and feet relaxed.
+ scanPatient(cat){const bone=kittenBones(cat);
+  for(const s of ['L','R']){
+   limbs(bone,LEGS,s,[.06,-1,0],[.02,-1,.04]);limbs(bone,ARMS,s,[.2,-1,.04],[.12,-1,.28]);
+   turn(bone('foot.'+s),X,30);
+  }
+  turn(bone('spine.006'),X,-8);
+  // The tail rests alongside the legs instead of hanging below the mattress.
+  for(let i=1;i<=5;i++)aim(bone('Tail_springBone_'+i),bone(i===5?'Tail_springBone_end':'Tail_springBone_'+(i+1)),v(.28,-1,.12));
+  cat.root.updateMatrixWorld(true);},
  // Declaiming: the right arm flung up and out to the house, the left hand on the heart, chin up.
  declaim(cat){const bone=kittenBones(cat);
   limbs(bone,ARMS,'R',[.6,.55,.55],[.35,.8,.5]);limbs(bone,ARMS,'L',[.3,-.75,.45],[-.85,.3,.45]);

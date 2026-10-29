@@ -247,8 +247,8 @@ async function buildShip(){
  if(freightGate)toBand(freightGate.group);
  // The surgical suite's ceiling robot arms (surgery.js), dressing only.
  surgeryArms=createSurgeryArms(ship,{still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(surgeryArms)toBand(surgeryArms.group);
- // The diagnostics room's holographic cat scans and scan beams (imaging.js), dressing only.
- imagingScans=createImagingScans(ship,{still:matchMedia('(prefers-reduced-motion: reduce)').matches,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(imagingScans)toBand(imagingScans.group);
+ // The diagnostics room's resting patients, holographic scans and scan beams (imaging.js), dressing only.
+ imagingScans=createImagingScans(ship,{kit:cosmoKit,still:matchMedia('(prefers-reduced-motion: reduce)').matches,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(imagingScans)toBand(imagingScans.group);
  if(blossom)toBand(blossom.group);
  // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js).
  if(loungeFalls)toBand(loungeFalls.group);
@@ -434,7 +434,7 @@ async function loadCosmo(){
  globalThis.LEO_THREE=T;globalThis.LEO_COSMO_EMOTES=__EMOTES_URL__;
  await new Promise((resolve,reject)=>{const s=Object.assign(document.createElement('script'),{src:__COSMO_SCRIPT__,async:true});s.onload=resolve;s.onerror=()=>reject(new Error('Cosmo could not load'));document.head.appendChild(s);});
  walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion);scene.add(walker.holder);
- cosmoKit=await globalThis.LeoCosmo.createCosmoKit({poses:[...KITTEN_POSE_NAMES,...ACTOR_POSE_NAMES]});
+ cosmoKit=await globalThis.LeoCosmo.createCosmoKit({poses:[...KITTEN_POSE_NAMES,...ACTOR_POSE_NAMES,'scanPatient']});
 }
 
 // The arrival hall on Deck 2, where travellers come aboard.
@@ -655,7 +655,7 @@ renderer.setAnimationLoop(()=>{
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
  surgeryArms?.update(dt,p);
- imagingScans?.update(dt,p);
+ imagingScans?.update(dt,p,resting,remotes?.remotes);
  // The Container Maze's clock starts at its way in and drops if the walker leaves (maze/run.js).
  maze?.update(p,now);
  freightGate?.update(dt,p);
