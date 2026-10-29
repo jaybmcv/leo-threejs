@@ -657,7 +657,7 @@ renderer.setAnimationLoop(()=>{
  halloween?.update(dt,camera.getWorldPosition(eye),ambience.on);
  hexFloor?.update(dt,camera.getWorldPosition(eye),p,heading);
  leverPanel?.update(dt,p);
- gaming?.update(dt,camera.getWorldPosition(eye),p);
+ gaming?.update(dt,camera.getWorldPosition(eye),p,remotes?[...remotes.remotes.values()]:[]);
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on);
  loungeFalls?.update(dt,p);
