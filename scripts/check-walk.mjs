@@ -21,6 +21,8 @@ const ship=await loadWalkShip();
 const {colliders:col,dropped,walls,rails,prepared}=fitForWalking(ship);
 // Automatic lounge doors open on approach in the page; the static reachability flood holds them open.
 if(prepared.lounge)prepared.lounge.update(.6,prepared.lounge.doors.map(d=>d.centre),new T.Vector3());
+// The freight airlock also opens on approach; hold it open for the static flood.
+if(prepared.freightGate)prepared.freightGate.door.update(1,[prepared.freightGate.door.centre]);
 log('exterior triangles inside the decks, dropped:',dropped,'; partitions',walls.length,'; railings',rails.length,`(${Math.round(rails.reduce((s,r)=>s+r[3]-r[2],0))} m)`);
 for(const lift of LIFTS)for(const stop of lift.stops)col.addMover(lift.id,carTriangles(lift,[stop.door||lift.door]),new T.Matrix4().makeTranslation(lift.car.x,stop.y,lift.car.z));
 log('world built:',col.triangles,'static triangles');

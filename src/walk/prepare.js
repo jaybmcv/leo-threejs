@@ -93,8 +93,9 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // boxes, the red button's console too.
  const maze=createMazeHold(ship);if(maze)colliders.addStatic(maze.solid,()=>true);
  // The aft freight gate's iris, gantry, lanes and posters (freight-gate.js): its conveyors, transfer hatches and
- // barricades solid as plain boxes, the iris and lane paint flush, the claw overhead dressing.
- const freightGate=createFreightGate(ship,{still});if(freightGate)colliders.addStatic(freightGate.solid,()=>true);
+ // barricades solid as plain boxes, the iris and lane paint flush, the claw overhead dressing. Its entrance door slides
+ // as two movable colliders, opening for anyone near it.
+ const freightGate=createFreightGate(ship,{still,colliders});if(freightGate)colliders.addStatic(freightGate.solid,()=>true);
  // The cherry blossom garden (blossom.js): its trunk, bridge and pond edges solid.
  const blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
  // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js): its rim, bed, causeway, landing and rope rails solid.

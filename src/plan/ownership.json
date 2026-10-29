@@ -6696,14 +6696,18 @@
         "Freight_gate_lane_signs",
         "Freight_gate_posters",
         "Freight_gate_console_screens",
-        "Freight_gate_bridge"
+        "Freight_gate_bridge",
+        "Freight_gate_airlock_",
+        "Freight_gate_airlock_leaf",
+        "Freight_gate_airlock_panel",
+        "Freight_gate_airlock_sign"
       ],
       "colliders": [
         "Freight_gate_colliders"
       ],
       "interactionTargets": null,
-      "placements": 66,
-      "signature": "f9b2ed25efe6ae387f8de56feea8b755063997adfacab7214293dad4295ff247"
+      "placements": 77,
+      "signature": "d003e7b5c54c44f0b4eb17402f33c8ac7364e85bea76173cc4aef8036a053464"
     },
     {
       "source": "src/walk/gaming-lounge.js",
@@ -7277,7 +7281,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 36,
-      "signature": "01f35498bbbba3e63fe37afe4ffeb7cedb952be0a7bb277c7cf23a659c4ba3d7"
+      "signature": "d7ca54e47a90a67f8a0487e127a9c4e2b69a0f122cbe46fce00d98a9da87d984"
     },
     {
       "source": "src/walk/marks.js",
@@ -7629,7 +7633,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "baadcfa2e80ac62945601cc2f03408b16cd38c7dd409a2b5c7ab14bd3fee21bf"
+      "signature": "8420aeff781d0810574a1cda561bb642da1fb93218f60699e010b63a38f1419c"
     },
     {
       "source": "src/walk/provisions.js",
