@@ -29,6 +29,7 @@ import {createVault} from './vault.js';
 import {prepareVaultLift,createVaultLift} from './vault-lift.js';
 import {placeAttendant,dressTheatre,createTheatreCast} from './theatre.js';
 import {dressGamingLounge} from './gaming-lounge.js';
+import {dressRecreationHall} from './recreation-hall.js';
 import {createMissionHolo} from './mission-holo.js';
 import {createSwordCase} from './sword-case.js';
 import {createChinampa} from './chinampa.js';
@@ -53,6 +54,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  dressTheatre(ship);
  // The Deck 16 training room's briefing furniture gives way to the gaming lounge's (gaming-lounge.js), solid and sittable.
  dressGamingLounge(ship);
+ // Recreation hall gains table games and TV couches before collision and sitting spots are gathered.
+ dressRecreationHall(ship);
  // Young explorers' green play furniture gives way to the kitten habitats (kittens.js).
  stripPlayFurniture(ship);
  // The Deck 5 surgical suite's beds give way to sculpted medical beds (surgery.js), solid and lie-on-able.

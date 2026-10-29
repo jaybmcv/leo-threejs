@@ -7657,9 +7657,9 @@
       "fixed": false,
       "features": [],
       "colliders": [],
-      "interactionTargets": null,
+      "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "79597f3a8a8c1e8f4db78026e56863992923ab4b7137662ae981cc388498b33f"
+      "signature": "83cd41c97bb27a59f90cbc0eca17a332412502780ffd9a275b2e897698ce2f7f"
     },
     {
       "source": "src/walk/provisions.js",
@@ -7729,6 +7729,22 @@
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
       "signature": "a062495dc804b7424674094b16dba1c6c0d22d013d19b0e38eb5d30aff8a1a3c"
+    },
+    {
+      "source": "src/walk/recreation-hall.js",
+      "rooms": [
+        "d16-recreation-4"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Recreation_furnishings",
+        "Chair"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 43,
+      "signature": "4fce81cec3905d87ae6bc490e4e4806ae380f95d768bf1296b5b40b691bb595a"
     },
     {
       "source": "src/walk/remotes.js",
