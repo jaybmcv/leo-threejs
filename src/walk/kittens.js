@@ -8,7 +8,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 // among balls, toy mice, yarn and feather wands. The kittens are the Cosmo kit's baked kitten poses (cosmo-pose.js
 // KITTEN_POSES) at a third of his size, sharing their meshes; each gets its own fur and hoodie colour.
 // Room frame (Area_d16-childcare-6): rugs 9 x 8 m centred at x -16, -3, 10 and z -9, 9; the entrance at x -26 (|z|<2),
-// the service counter at x 18..24, z 10.4..11.6, the ceiling at 3.3 m. Everything stays on the rugs, clear of the aisles.
+// the service counter at x 18..24, z 10.4..11.6, the ceiling at 3.3 m. Wall shelves sit beyond the rugs, clear of the aisles.
 const ROOM='Area_d16-childcare-6',FLOOR=.035,KITTEN=.3;
 export const KITTEN_POSE_NAMES=['sit','pounce','bat'];
 const OLD=/^(Activity_table|Low_bench|Play_block)$/;
@@ -60,7 +60,8 @@ export function createKittens(ship,kit){
   cushion2:mat('cushion_coral',0xf08a6c,{roughness:.95}),canvas:mat('teepee',0xf1e6cf,{roughness:.9}),pole:mat('teepee_pole',0x8a6a45),
   red:mat('ball_red',0xe8473c,{roughness:.45}),yellow:mat('ball_yellow',0xf6c945,{roughness:.45}),blue:mat('ball_blue',0x3d8be0,{roughness:.45}),
   yarn:mat('yarn',0xff6fb0,{roughness:1}),yarn2:mat('yarn_lime',0xb6e05a,{roughness:1}),card:mat('cardboard',0xb88a55,{roughness:.9}),
-  carpet3:mat('carpet_teal',0x8fc4bf,{roughness:1}),track:mat('ball_track',0xf2efe6,{roughness:.5}),mouse:mat('toy_mouse',0x9a9aa2,{roughness:.9}),feather:mat('feather',0x5ad1c9,{roughness:.8})};
+  carpet3:mat('carpet_teal',0x8fc4bf,{roughness:1}),track:mat('ball_track',0xf2efe6,{roughness:.5}),mouse:mat('toy_mouse',0x9a9aa2,{roughness:.9}),feather:mat('feather',0x5ad1c9,{roughness:.8}),
+  wood:mat('shelf_wood',0xc48b52,{roughness:.65}),bracket:mat('shelf_bracket',0x54565d,{metalness:.5,roughness:.45})};
  const parts=new Map();
  const piece=(m,g)=>{(parts.get(m)||parts.set(m,[]).get(m)).push(g.index?g.toNonIndexed():g);};
  const at=(g,x,y,z,ry=0)=>g.rotateY(ry).translate(x,y,z);
@@ -148,6 +149,23 @@ export function createKittens(ship,kit){
   piece(m,new T.TorusGeometry(.12,.006,4,24,4).rotateX(Math.PI/2).translate(x-.12,FLOOR+.006,z-.2));
  }
 
+ // Five wall-mounted steps rise and fall in 0.35 m increments. Their 1.2 m depth fits the walker's whole footprint;
+ // the highest carpet is at 1.085 m, leaving a standing 2 m visitor clear of the unchanged 3.3 m ceiling.
+ function shelves(x,side){
+  const z=side*16.24,pads=[M.carpet2,M.carpet,M.carpet3,M.carpet,M.carpet2];
+  for(let i=0;i<5;i++){
+   const px=x+(i-2)*1.6,top=FLOOR+.35*(3-Math.abs(i-2));
+   piece(M.wood,new T.BoxGeometry(1.8,.08,1.2).translate(px,top-.065,z));
+   piece(pads[i],new T.BoxGeometry(1.76,.025,1.16).translate(px,top-.0125,z));
+   for(const dx of [-.6,.6]){
+    piece(M.bracket,new T.BoxGeometry(.08,.28,.04).translate(px+dx,top-.22,side*16.82));
+    piece(M.bracket,new T.BoxGeometry(.08,.04,.95).translate(px+dx,top-.125,side*16.345));
+   }
+   block([1.8,.105,1.2],[px,top-.0525,z]);
+   solid.children.at(-1).name='Kitten_wall_shelf';
+  }
+ }
+
  function kitten(pose,look,x,z,face,y=FLOOR){
   const g=kittenFigure(kit,pose,look);g.position.set(x,y,z);g.rotation.y=face;
   group.add(g);block([.3,.45,.3],[x,y+.22,z]);
@@ -196,6 +214,9 @@ export function createKittens(ship,kit){
  tree(10+3.1,9+.8);
  carton(10-3.2,9+2.6,-.4);track(10+1.6,9-2.7);kitten('pounce',4,10+.5,9-2.9,Math.PI/2);
  mouse(10-3,9-3,2.6);ball(M.red,.07,10+2.9,9-2.4);
+
+ // Three runs on each side wall, behind the six habitats and away from the entrance and service counter.
+ for(const side of [-1,1])for(const x of [-16,-3,10])shelves(x,side);
 
  for(const [m,list] of parts){const o=new T.Mesh(mergeGeometries(list),m);o.name=m.name;o.castShadow=true;o.receiveShadow=true;group.add(o);}
  return {group,solid};
