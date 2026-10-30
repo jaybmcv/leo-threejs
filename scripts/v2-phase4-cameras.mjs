@@ -1,0 +1,48 @@
+import fs from'node:fs/promises';import *as T from'three';import {v1Frame,anchoredPoint,anchoredDirection}from'../src/plan/rooms.js';import{COMICS}from'../src/walk/comics.js';import{shapePoint}from'../src/concept-shape.js';import{CROWN}from'../src/fin-crown.js';import{PAINTINGS}from'../src/walk/paintings.js';import{placedV1}from'../src/plan/placements.js';import{phase4LegacySpot,phase4PaintingPoint}from'../src/v2/phase4-community.js';
+const supplied=JSON.parse(await fs.readFile('output/phase4/supplied-spots.json')),cameras=supplied.map(s=>({id:s.name,label:s.name,track:'supplied ship-log approach',legacy:true,v1:{at:s.at.split(',').map(Number),yaw:(s.yaw||0)*Math.PI/180,pitch:(s.pitch||0)*Math.PI/180,view:s.view||'third'}}));
+const point=(id,p)=>{const f=v1Frame(id),m=new T.Matrix4().makeTranslation(...f.origin).multiply(new T.Matrix4().makeRotationY(f.yaw)).multiply(new T.Matrix4().makeScale(1,1,f.mirror?-1:1));return new T.Vector3(...p).applyMatrix4(m).toArray();};
+function add(id,label,room,at,target,note=''){const A=point(room,at),B=point(room,target),A2=anchoredPoint(room,A),B2=anchoredPoint(room,B),pose=(a,b)=>({at:a,yaw:Math.atan2(b[0]-a[0],b[2]-a[2]),pitch:Math.atan2(b[1]-a[1]-1.65,Math.hypot(b[0]-a[0],b[2]-a[2])),view:'first',resolved:true,lv:2});cameras.push({id,label,room,note,track:'additional owner-frame approach',v1:pose(A,B),v2:pose(A2,B2)});}
+add('paws-off','Paws Off exercise treadmills','d16-gym-3',[-18,0,-6],[-18,1.2,-11]);
+add('hydro-overall','Hydro-Nip Lounge from the entry','commons-1',[-8,0,-12],[4,2,4]);
+add('jaguar-approach','Jaguar head and glass throat','commons-1',[5.25,0,-25.5],[5.25,1.5,-19]);
+add('aquarium-front','Aquarium, viewed from the public approach','commons-1',[-4,0,-25.5],[-4,4,-17]);
+add('hydro-mural','Synthwave sunset and continuous mountains','commons-1',[2,0,-10],[11,7,18.8]);
+add('hydro-dome','Hammock dome and lullaby location','commons-1',[2,0,-9],[2,2,-2]);
+add('haze-maze','Haze Maze entrance','commons-1',[-14.85,0,-11],[-14.85,1,-6]);
+add('waterfall','Waterfall, pond, causeway and moved bench','commons-1',[5,0,5],[5,4,16]);
+add('arcade-invasion','Alien Cat Invasion arcade cabinet','commons-1',[18,0,3.8],[22,1.35,3.8]);
+add('arcade-pool','Arcade Paw Pool and neighbouring cabinets','commons-1',[18,0,1],[22,1.35,1]);
+add('arcade-treadmill','Paws Off arcade treadmill','commons-1',[17,0,-11],[22,1.5,-11]);
+add('hydro-main-logo','Hydro-Nip main logo','commons-1',[2,0,-11],[2,8.6,2]);
+add('hydro-sign18','Deck 18 entrance sign','commons-1',[-20.5,4,-25],[-20.5,6,-23]);
+add('hydro-sign19','Deck 19 entrance sign','commons-1',[-20.5,8,-25],[-20.5,10,-23]);
+add('blossom','Blossom garden, bridge, waterfall and bench','commons-10',[2,0,2],[9,1.2,5]);
+add('hamster-ball','2.2 m hamster ball','commons-10',[1,0,-5.3],[5.4,1.1,-5.3]);
+add('hydroponics','Hydroponics additions and crop racks','d03-farm-1',[-15,0,-9],[6,1.4,-9]);
+add('scarecrow','Scarecrow at the garden balustrade','d03-farm-1',[-9,0,-2.6],[-12,1.2,-2.6]);
+add('chinampa','Chinampa tank and reading lecterns','d03-farm-1',[14,0,0],[18.5,1,0]);
+add('mission-holo','Mission holographic table','d20-mission-2',[-4,0,0],[0,1,0]);
+add('sword-case','Captain’s sword case','d20-captain-7',[0,0,6],[0,1.6,9.7]);
+add('recovery','Crew recovery lounge pods and coffee','d20-recovery-aft',[9,0,0],[20,1,0]);
+add('mudwater','Mudwater Arena entrance and counter','d16-arena-1',[-20,0,0],[5,1.3,0]);
+add('recreation','Recreation hall and pool eight-ball','d16-recreation-4',[-8,0,0],[5,1,0]);
+add('pinball','Recreation hall pinball','d16-recreation-4',[22,0,0],[25,1.2,0]);
+add('transporter','Transporters and service bay','d01-workshop-5',[-15,0,0],[0,1,0]);
+add('container-maze','Container maze start and freight aisle','d01-cargo-1',[-22,0,0],[-7,1,0]);
+add('freight-airlock','Aft freight airlock and logistics console','d01-spares-aft',[18,0,0],[24,1,0]);
+add('ward-trolley','Ward trolley and medical ward','d05-ward-1',[-21.5,0,1.5],[-19.9,.7,3.42]);
+add('theatre','Theatre, concession and original stair-notch area','d16-theater-5',[-20,0,-5.8],[20,1.5,0]);
+add('gaming','Gaming lounge floor, PC stations and couches','d16-training-aft',[-12,0,0],[8,1,0]);
+add('kittens','Young Explorers towers and climbable shelves','d16-childcare-6',[-15,0,0],[8,1,0]);
+add('comms-displays','Communications displays','d20-communications-3',[-9,0,0],[6,1.3,0]);
+add('command-bridge','Command room consoles and new entry side','d20-bridge-9',[-15,0,0],[7,1.4,0]);
+add('surgery','Surgery beds and robot arms','d05-surgery-2',[-15,0,0],[5,1,0]);
+add('imaging','Diagnostics scanners and dividers','d05-imaging-6',[-15,0,0],[5,1,0]);
+add('provisions','Cold provisions and strip curtain','d03-cold-6',[-20,0,0],[8,1.2,0]);
+add('baggage','Baggage carousels','d02-baggage-5',[-15,0,0],[5,1,0]);
+add('yarn','Arrival yarn ball and nearby route','d02-arrival-1',[-22,0,12],[-24.9,.6,15.9]);
+add('observation-compass','Observation lounge compass and fitting frame','observation-lounge',[12,0,0],[22,.05,0]);
+for(const p of PAINTINGS){const wall=placedV1('painting/'+p.name),a=wall.map((n,i)=>n+(i===1?0:p.facing[i]*4.3));a[1]=p.floor;const b=wall,A2=anchoredPoint(p.room,a),B2=phase4PaintingPoint(p.name,anchoredPoint(p.room,b)),dir=anchoredDirection(p.room,p.facing);if(p.name==='Orange_Haze_5'){A2.splice(0,3,...B2.map((x,i)=>i===1?p.floor:x+dir[i]*3.25));}const pose=(a,b)=>({at:a,yaw:Math.atan2(b[0]-a[0],b[2]-a[2]),pitch:Math.atan2(b[1]-a[1]-1.65,Math.hypot(b[0]-a[0],b[2]-a[2])),view:'first',resolved:true,lv:2});cameras.push({id:'art-'+p.name,label:p.name,room:p.room,track:'individual artwork',v1:pose(a,b),v2:pose(A2,B2)});}
+for(const c of COMICS){const room=c.room||'crown',b=shapePoint(c.at),floor=shapePoint([c.at[0],c.floor??CROWN.floor,c.at[2]])[1],a=[b[0]+(c.face?.[0]||0)*1.15,floor,b[2]+(c.face?.[2]||1)*1.15],A=anchoredPoint(room,a),B=anchoredPoint(room,b),pose=(x,y)=>({at:x,yaw:Math.atan2(y[0]-x[0],y[2]-x[2]),pitch:Math.atan2(y[1]-x[1]-1.65,Math.hypot(y[0]-x[0],y[2]-x[2])),view:'first',resolved:true,lv:2});cameras.push({id:'comic-'+c.name,label:c.title,room,track:'individual comic interaction approach',v1:pose(a,b),v2:pose(A,B)});}
+const hp=phase4LegacySpot({at:[40,16.3,26],yaw:Math.PI,pitch:0,lv:1});cameras.push({id:'halloween-feature',label:'Halloween lane — first-person sign inspection',track:'supplement to supplied usual approach',v1:{at:[40,16.3,26],yaw:Math.PI,pitch:0,view:'first',lv:1,resolved:true},v2:{...hp,view:'first',lv:2,resolved:true}});
+await fs.writeFile('output/phase4/community-cameras.json',JSON.stringify(cameras,null,2));console.log('Saved',cameras.length,'paired community approaches');

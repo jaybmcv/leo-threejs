@@ -1,3 +1,4 @@
+import {escapeSeatPlan} from './shuttle-seats-v2.js';
 import {mapCabins} from './cabin-map-v2.js';
 import {addStructuralOpenings} from './structure-v2.js';
 import {completeProgramme} from './programme-v2.js';
@@ -205,7 +206,7 @@ function placeRooms({h,decks,rooms,shuttles,circulation,issues}){
   if(!chosen){issues.push({kind:'shuttle-packing',deck,side,bay});continue;}
   for(let k=0;k<2;k++){
    const c=chosen.craft[k],id='d'+deck+'-escape-'+(side<0?'p':'s')+'-'+(bay*2+k+1),bayId='d'+deck+'-bay-'+side+'-'+bay;
-   const seats=[];for(let row=0;row<20;row++)for(let col=0;col<5;col++){const u=-9.5+row*.95,v=-2.5+col*1.25,cs=Math.cos(c.yaw),sn=Math.sin(c.yaw);seats.push({id:id+'-seat-'+(row*5+col+1),row:row+1,column:col+1,local:[u,.45,v],center:[c.x+cs*u+sn*v,c.y+.45,c.z-sn*u+cs*v],yaw:c.yaw});}
+   const seats=escapeSeatPlan(c,id);
    const door={id:id+'-hull-door',deck,craft:id,width:8.8,height:3.4,center:[c.x,c.y+1.7,side*h.skin(c.x,c.y+1.7,side)],side,corners:[[-4.4,0],[4.4,0],[4.4,3.4],[-4.4,3.4]].map(([dx,dy])=>[c.x+dx,c.y+dy,side*h.skin(c.x+dx,c.y+dy,side)])};
    shuttles.push({id,roomId:'d0'+deck+'-lifeboats-10',deck,bay:bayId,bayCenter:chosen.bx,originalBayCenter:original,movedReason:chosen.bx===original?null:'Packing clears rigid arrival assembly and neighbouring craft/shafts.',...c,center:[c.x,c.y,c.z],length:22,beam:8,height:3.2,seats,door,launch:{direction:[0,0,side],width:8.8,polygon:rectangle(c.x,side*(Math.abs(c.z)+11+h.skin(c.x,c.y,side))/2,8.8,Math.max(1,h.skin(c.x,c.y,side)-Math.abs(c.z)-11))}});
   }
