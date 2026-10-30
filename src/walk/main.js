@@ -39,7 +39,7 @@ import {createLoungeSound} from './lounge-sound.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.js';
 import {corridorTrim} from './trim.js';
 import {connectLive,savedName,httpBase} from './net/live.js';
-import {identify,currentPass,bestPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
+import {identify,currentPass,bestPass,connect,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
 import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.js';
 import {tileLiftFloor} from './lift-tile-floor.js';
@@ -99,17 +99,19 @@ const status=text=>{$('loading-text').textContent=text;timings.push([text,Math.r
 const LIVE_URL=(()=>{const asked=new URLSearchParams(location.search).get('live');
  if(asked&&/^wss?:\/\/(localhost|127\.0\.0\.1|[a-z0-9-]+\.marscatsvoyage\.com)(:\d+)?\//.test(asked))return asked;
  return typeof __LIVE_URL__!=='undefined'?__LIVE_URL__:'';})();
-// Who is walking: their Discord account, through The Creamery (net/connect.js), or nobody in particular. Asked on the
-// loading card, while the ship is still to build, so going off to connect Discord costs no waiting. A tester's invite
-// link (?invite=, the same code that turns on tester feedback: feedback/feedback.js), or one this browser kept from an
-// earlier visit to Leo, always asks, so Leo live can note who used it and their reports can name them. Someone who
-// connected before is remembered in this browser for 30 days, so isn't asked again; "Not you?" forgets them.
+// Who is walking: a name of their own, or their Discord account through The Creamery (net/connect.js), which is
+// optional. Asked on the loading card, while the ship is still to build, so nobody waits to answer. The card stays
+// until they come aboard. A tester's invite link (?invite=, the same code that turns on tester feedback:
+// feedback/feedback.js), or one this browser kept from an earlier visit to Leo, asks for Discord first, so Leo live can
+// note who used it and their reports can name them. Someone who connected before is remembered in this browser for 30
+// days and goes straight aboard; "Not you?" forgets them.
 const tester=invite||testerInvite();
-let me={pass:null,name:null,error:null};
+let me={pass:null,name:null,error:null},board;
+const boarded=new Promise(r=>{board=r;});
 const identity=LIVE_URL?identify().then(r=>{me=r;showWho();return r;}):Promise.resolve(me);
-function showWho(asking=!me.pass&&(tester||!skippedRecently())){
+function showWho(asking=!me.pass&&(!!tester||!!me.error)){
  $('who').hidden=false;$('who-connected').hidden=!me.pass;$('who-ask').hidden=!asking;
- $('name-field').hidden=!!me.pass||asking;$('who-later').hidden=!!me.pass||asking;
+ $('who-guest').hidden=!!me.pass||asking;
  if(me.pass){$('who-name').textContent=me.name||'Voyager';return;}
  $('name-input').value||=savedName();
  $('who-note').textContent=me.error?(me.error==='cancelled'?'Discord sign-in was cancelled. Try again, or skip for now.':'Discord sign-in didn’t work. Try again, or skip for now.')
@@ -117,8 +119,9 @@ function showWho(asking=!me.pass&&(tester||!skippedRecently())){
 }
 if(LIVE_URL){
  $('who-connect').addEventListener('click',connect);$('who-later').addEventListener('click',connect);
- $('who-skip').addEventListener('click',()=>{if(!tester)skip();showWho(false);$('name-input').focus();});
+ $('who-skip').addEventListener('click',()=>{showWho(false);$('name-input').focus();});
  $('who-forget').addEventListener('click',()=>{forget();me={pass:null,name:null,error:null};showWho();});
+ $('who-guest').addEventListener('submit',e=>{e.preventDefault();$('name-input').blur();$('who').hidden=true;board();});
 }
 const renderer=new T.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true,powerPreference:'high-performance'});
 const phone=matchMedia('(pointer:coarse)').matches;
@@ -479,6 +482,8 @@ function intoSeat(c,seat){const s=mct.spot(c,seat);settle(s);follow.yaw=Math.ata
 mct.granted=c=>{if(!resting&&!run&&Math.hypot(controller.position.x-c.pos.x,controller.position.z-c.pos.z)<4)intoSeat(c,'driver');else mct.park(c);};
 // Someone else has our cart now (Leo live gave it away while we were cut off): out of its seat.
 mct.lost=c=>{if(resting?.spot.mct?.cart===c&&resting.spot.mct.seat==='driver')standUp();};
+// Someone not connected stays on the card until they come aboard, however soon the ship is ready.
+if(LIVE_URL){await identity;if(!me.pass){status('Ready when you are');await boarded;}}
 document.body.dataset.ready='1';
 let heading=follow.yaw;const safe=controller.position.clone(),finSafe=new T.Vector3(0,-1e3,0);
 // On the floor of one of the crown lift's fin landings (the gallery and the inspection platforms), inside the fin.
@@ -555,7 +560,12 @@ function showAboard(){
  const text=(matchMedia('(max-width:560px)').matches?{live:aboard===1?'Just you':`${aboard} aboard`,connecting:'Joining…',offline:'Solo',full:'Solo · full',replaced:'Solo · 2 tabs'}
   :{live:aboard===1?'Just you aboard':`${aboard} aboard`,connecting:'Joining…',offline:'Solo · reconnecting',full:'Solo · Leo is full',replaced:'Solo · open in another tab'})[liveStatus]||'';
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
+ // Beside it: logged in with Discord says so; anyone else is offered it. Leo live has the last word once it has answered.
+ const d=$('discord-chip'),small=matchMedia('(max-width:560px)').matches;d.hidden=false;
+ d.dataset.in=(liveStatus==='live'?live.you?.verified:me.pass)?'1':'';
+ d.textContent=d.dataset.in?(small?'':'Logged in · ')+(live.you?.name||me.name||'Voyager'):small?'Discord':'Log in with Discord';
 }
+$('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)$('aboard').click();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
