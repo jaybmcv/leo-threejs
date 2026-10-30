@@ -6,6 +6,7 @@ import {bandOf} from './collision.js';
 // shows only the bands around the walker. Instanced meshes (the repeated cabins) and anything under a
 // userData.keepLive group (lift cars, doors) stay as they are.
 const CELL=40,WHITE=new T.Color(1,1,1);
+const SETTLED=()=>{};
 // The hull's skin is the backdrop to every opening, so it draws a band early either way: over the upper service
 // gallery the walker sees past the end of Deck 18 to the hull top, a band above any the view rays reach.
 const SKIN=/^Smooth_pressure_envelope/;
@@ -194,6 +195,12 @@ export function bakeForWalking(root,{skip=()=>false,release=false}={}){
  }
  // The originals stay in the scene graph (colliders and seats were read from them) but no longer render.
  for(const o of taken){o.visible=false;o.userData.baked=true;}
+ // Their matrices never change again, so each frame's matrix update skips them and any group holding only them: walking
+ // some 50,000 of them was nearly half the script time of drawing a frame. (The scene forces that update down the whole
+ // tree, past matrixWorldAutoUpdate, so it's the method that goes.) Empty groups stay live: something may fill them yet.
+ root.updateMatrixWorld(true);
+ const settle=o=>{let still=o.isMesh?o.userData.baked===true:(o.type==='Group'||o.type==='Object3D')&&o.children.length>0;for(const c of o.children)if(!settle(c))still=false;if(still)o.updateMatrixWorld=SETTLED;return still;};
+ for(const c of root.children)settle(c);
  return {bands,meshes:buckets.size,sources:taken.length};
 }
 

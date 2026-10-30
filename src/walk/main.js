@@ -39,7 +39,7 @@ import {createLoungeSound} from './lounge-sound.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.js';
 import {corridorTrim} from './trim.js';
 import {connectLive,savedName,httpBase} from './net/live.js';
-import {identify,currentPass,bestPass,connect,skip,skippedRecently,forget,invite} from './net/connect.js';
+import {identify,currentPass,bestPass,connect,forget,invite} from './net/connect.js';
 import {RemotePlayers} from './remotes.js';
 import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.js';
 import {tileLiftFloor} from './lift-tile-floor.js';
@@ -85,7 +85,7 @@ import {createHelp} from './help.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
 const $=id=>document.getElementById(id);
-// Building the walk takes about 1 GB at its largest, more than a phone with 4 GB or less can give one tab. walk.html
+// Building the walk takes about 2 GB at its largest, more than a phone with 4 GB or less can give one tab. walk.html
 // asks such phones first, and any browser whose last start never finished (its tab was closed under it), before this
 // script loads. The note is set from here until the walk is ready, and cleared on leaving the page, so only a start
 // that was cut off leaves it behind.
@@ -93,23 +93,27 @@ const STARTING='leo-walk-building';
 try{localStorage.setItem(STARTING,String(Date.now()));}catch{}
 addEventListener('pagehide',()=>{try{localStorage.removeItem(STARTING);}catch{}});
 const timings=[],t0=performance.now();
-const status=text=>{$('loading-text').textContent=text;timings.push([text,Math.round(performance.now()-t0)]);};
+// Still building after 20 s means an older machine, with stages ahead that hold the page for a minute at a time: say so,
+// or the browser's "page not responding" prompt looks like the walk has failed.
+const status=text=>{$('loading-text').textContent=text;timings.push([text,Math.round(performance.now()-t0)]);if(performance.now()-t0>20000)$('loading-slow').hidden=false;};
 // Leo live, the multiplayer server (server/leo-live.mjs): its address comes with the build (LEO_LIVE_URL); without one
 // the walk is solo, as before. ?live= points a page at another Leo live server on localhost or marscatsvoyage.com.
 const LIVE_URL=(()=>{const asked=new URLSearchParams(location.search).get('live');
  if(asked&&/^wss?:\/\/(localhost|127\.0\.0\.1|[a-z0-9-]+\.marscatsvoyage\.com)(:\d+)?\//.test(asked))return asked;
  return typeof __LIVE_URL__!=='undefined'?__LIVE_URL__:'';})();
-// Who is walking: their Discord account, through The Creamery (net/connect.js), or nobody in particular. Asked on the
-// loading card, while the ship is still to build, so going off to connect Discord costs no waiting. A tester's invite
-// link (?invite=, the same code that turns on tester feedback: feedback/feedback.js), or one this browser kept from an
-// earlier visit to Leo, always asks, so Leo live can note who used it and their reports can name them. Someone who
-// connected before is remembered in this browser for 30 days, so isn't asked again; "Not you?" forgets them.
+// Who is walking: a name of their own, or their Discord account through The Creamery (net/connect.js), which is
+// optional. Asked on the loading card, while the ship is still to build, so nobody waits to answer. The card stays
+// until they come aboard. A tester's invite link (?invite=, the same code that turns on tester feedback:
+// feedback/feedback.js), or one this browser kept from an earlier visit to Leo, asks for Discord first, so Leo live can
+// note who used it and their reports can name them. Someone who connected before is remembered in this browser for 30
+// days and goes straight aboard; "Not you?" forgets them.
 const tester=invite||testerInvite();
-let me={pass:null,name:null,error:null};
+let me={pass:null,name:null,error:null},board;
+const boarded=new Promise(r=>{board=r;});
 const identity=LIVE_URL?identify().then(r=>{me=r;showWho();return r;}):Promise.resolve(me);
-function showWho(asking=!me.pass&&(tester||!skippedRecently())){
+function showWho(asking=!me.pass&&(!!tester||!!me.error)){
  $('who').hidden=false;$('who-connected').hidden=!me.pass;$('who-ask').hidden=!asking;
- $('name-field').hidden=!!me.pass||asking;$('who-later').hidden=!!me.pass||asking;
+ $('who-guest').hidden=!!me.pass||asking;
  if(me.pass){$('who-name').textContent=me.name||'Voyager';return;}
  $('name-input').value||=savedName();
  $('who-note').textContent=me.error?(me.error==='cancelled'?'Discord sign-in was cancelled. Try again, or skip for now.':'Discord sign-in didn’t work. Try again, or skip for now.')
@@ -117,15 +121,27 @@ function showWho(asking=!me.pass&&(tester||!skippedRecently())){
 }
 if(LIVE_URL){
  $('who-connect').addEventListener('click',connect);$('who-later').addEventListener('click',connect);
- $('who-skip').addEventListener('click',()=>{if(!tester)skip();showWho(false);$('name-input').focus();});
+ $('who-skip').addEventListener('click',()=>{showWho(false);$('name-input').focus();});
  $('who-forget').addEventListener('click',()=>{forget();me={pass:null,name:null,error:null};showWho();});
+ $('who-guest').addEventListener('submit',e=>{e.preventDefault();$('name-input').blur();$('who').hidden=true;board();});
 }
 const renderer=new T.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true,powerPreference:'high-performance'});
 const phone=matchMedia('(pointer:coarse)').matches;
 // Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
 // The Res button steps through them and the choice is remembered for the next visit.
 const RES=['High','Med','Low'],RES_SCALE=[1,.75,.5],RES_KEY='leo-walk-resolution',maxRatio=Math.min(devicePixelRatio,phone?1.25:1.75);
-let res=Math.max(0,RES.indexOf((()=>{try{return localStorage.getItem(RES_KEY);}catch{return null;}})()));
+const savedRes=(()=>{try{return localStorage.getItem(RES_KEY);}catch{return null;}})();
+let res=Math.max(0,RES.indexOf(savedRes)),resChosen=savedRes!==null,resFrames=[],resFrom=0;
+const setRes=i=>{res=i;renderer.setPixelRatio(maxRatio*RES_SCALE[res]);$('resolution').textContent=`Res ${RES[res]}`;};
+// Until the visitor picks a resolution, four seconds under 20 frames a second steps it down a level, for this visit only
+// (nothing is saved). Older laptops start on High otherwise and many never find the button. Not under automation, so
+// captures keep their sharpness; a stall or a hidden tab doesn't count.
+function watchFrames(ms,now){
+ if(resChosen||res===RES.length-1||navigator.webdriver||document.hidden||ms>1000)return;
+ if(!resFrom)resFrom=now;resFrames.push(ms);if(now-resFrom<4000)return;
+ const median=resFrames.sort((a,b)=>a-b)[resFrames.length>>1],enough=resFrames.length>=8;resFrames=[];resFrom=now;
+ if(enough&&median>50)setRes(res+1);
+}
 renderer.setPixelRatio(maxRatio*RES_SCALE[res]);renderer.outputColorSpace=T.SRGBColorSpace;
 renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
 // Lift door shutter blades are clipped to their doorway as they open (lift-ride.js).
@@ -304,11 +320,11 @@ async function buildShip(){
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
-  const box=o.boundingBox.clone().applyMatrix4(o.matrixWorld);let cabins=false,walls=false;for(let q=o;q;q=q.parent){if(q.name==='Remaining_499_furnished_cabins')cabins=true;if(q.name==='Repeated_cabin_walls')walls=true;}
-  o.userData.span=[box.min.y,box.max.y];o.userData.cabins=cabins;o.userData.cabinWalls=walls;instanced.push(o);});
+  const box=o.boundingBox.clone().applyMatrix4(o.matrixWorld);let cabins=false,walls=false,boat=false;for(let q=o;q;q=q.parent){if(q.name==='Remaining_499_furnished_cabins')cabins=true;if(q.name==='Repeated_cabin_walls')walls=true;if(/^Area_d\d+-lifeboats-/.test(q.name))boat=true;}
+  o.userData.span=[box.min.y,box.max.y];o.userData.cabins=cabins;o.userData.cabinWalls=walls;o.userData.boat=boat;instanced.push(o);});
  // Furniture in the repeated cabins draws only for the cabins nearest the walker; their walls and doors always draw.
  for(const o of instanced){
-  if(!o.userData.cabins||o.userData.cabinWalls||o.count!==499)continue;
+  if(!o.userData.boat&&(!o.userData.cabins||o.userData.cabinWalls||o.count!==499))continue;
   const all=Array.from({length:o.count},(_,i)=>{const m=new T.Matrix4();o.getMatrixAt(i,m);return m;});
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
@@ -317,7 +333,9 @@ let imagingScans=null;
 let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
 let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
-const NEAR_CABINS=40,nearFrom=new T.Vector3(1e9,0,0);
+// Lifeboat fittings (2,000 seats a deck with their headrests and harnesses, seen only through a hatch or from inside a
+// craft) draw only near the walker: drawn whole, they were most of the triangles in any view on the lower decks.
+const NEAR_CABINS=40,BOAT_REACH=45,nearFrom=new T.Vector3(1e9,0,0);
 // The deck bands to draw: the walker's own and its neighbours, stretched to whatever the camera's centre and corner rays
 // reach, so a tall hall, an atrium or a stairwell shows its full height. The rays skip the first 0.6 m: pressed into a
 // corner, the camera can sit inside a column, and every ray then stopped on its back faces (a garden's roof was culled).
@@ -340,6 +358,7 @@ function cull(p,now=performance.now()){
  // Every part of a cabin shares its instance index, so one ranking per deck serves all of that deck's parts.
  const ranks=new Map();
  for(const o of instanced){const near=o.userData.near;if(!near||!o.visible)continue;
+  if(o.userData.boat){let k=0;near.centres.forEach((c,i)=>{if(c.distanceToSquared(p)<BOAT_REACH*BOAT_REACH)o.setMatrixAt(k++,near.all[i]);});o.count=k;o.instanceMatrix.needsUpdate=true;o.computeBoundingSphere();continue;}
   let order=ranks.get(o.parent);if(!order)ranks.set(o.parent,order=near.centres.map((c,i)=>[c.distanceToSquared(p),i]).sort((a,b)=>a[0]-b[0]).slice(0,NEAR_CABINS).map(e=>e[1]));
   order.forEach((i,k)=>o.setMatrixAt(k,near.all[i]));o.count=order.length;o.instanceMatrix.needsUpdate=true;o.computeBoundingSphere();
  }
@@ -479,6 +498,8 @@ function intoSeat(c,seat){const s=mct.spot(c,seat);settle(s);follow.yaw=Math.ata
 mct.granted=c=>{if(!resting&&!run&&Math.hypot(controller.position.x-c.pos.x,controller.position.z-c.pos.z)<4)intoSeat(c,'driver');else mct.park(c);};
 // Someone else has our cart now (Leo live gave it away while we were cut off): out of its seat.
 mct.lost=c=>{if(resting?.spot.mct?.cart===c&&resting.spot.mct.seat==='driver')standUp();};
+// Someone not connected stays on the card until they come aboard, however soon the ship is ready.
+if(LIVE_URL){await identity;if(!me.pass){status('Ready when you are');$('loading-slow').hidden=true;await boarded;}}
 document.body.dataset.ready='1';
 let heading=follow.yaw;const safe=controller.position.clone(),finSafe=new T.Vector3(0,-1e3,0);
 // On the floor of one of the crown lift's fin landings (the gallery and the inspection platforms), inside the fin.
@@ -555,7 +576,12 @@ function showAboard(){
  const text=(matchMedia('(max-width:560px)').matches?{live:aboard===1?'Just you':`${aboard} aboard`,connecting:'Joining…',offline:'Solo',full:'Solo · full',replaced:'Solo · 2 tabs'}
   :{live:aboard===1?'Just you aboard':`${aboard} aboard`,connecting:'Joining…',offline:'Solo · reconnecting',full:'Solo · Leo is full',replaced:'Solo · open in another tab'})[liveStatus]||'';
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
+ // Beside it: logged in with Discord says so; anyone else is offered it. Leo live has the last word once it has answered.
+ const d=$('discord-chip'),small=matchMedia('(max-width:560px)').matches;d.hidden=false;
+ d.dataset.in=(liveStatus==='live'?live.you?.verified:me.pass)?'1':'';
+ d.textContent=d.dataset.in?(small?'':'Logged in · ')+(live.you?.name||me.name||'Voyager'):small?'Discord':'Log in with Discord';
 }
+$('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)$('aboard').click();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
@@ -587,7 +613,7 @@ let last=performance.now(),acc=0,lastHud=0,lastHeading=heading,lastSpeed=0,turnR
 const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WALKER.prone};
 renderer.setAnimationLoop(()=>{
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
- const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));last=now;
+ const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);last=now;
  const k=input.read();follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
  const fwd=follow.forward(),right=new T.Vector3(-fwd.z,0,fwd.x);
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
@@ -921,9 +947,8 @@ const pinballGame=createPinball({
 });
 sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambience.toggle())));
 // Render resolution, set up with the renderer: each press steps High, Med, Low and round again.
-const resButton=$('resolution'),showRes=()=>{resButton.textContent=`Res ${RES[res]}`;};showRes();
-resButton.addEventListener('click',()=>{res=(res+1)%RES.length;try{localStorage.setItem(RES_KEY,RES[res]);}catch{}
- renderer.setPixelRatio(maxRatio*RES_SCALE[res]);showRes();});
+const resButton=$('resolution');setRes(res);
+resButton.addEventListener('click',()=>{resChosen=true;setRes((res+1)%RES.length);try{localStorage.setItem(RES_KEY,RES[res]);}catch{}});
 // Held for a higher jump, as Space is.
 $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;input.jumpHeld=true;$('jump').setPointerCapture(e.pointerId);});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('jump').addEventListener(type,()=>{input.jumpHeld=false;});

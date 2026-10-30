@@ -14,7 +14,7 @@ export const CREAMERY=(()=>{
  if(asked&&/^(localhost|127\.0\.0\.1)$/.test(location.hostname)&&/^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(asked))return asked;
  return typeof __CREAMERY_URL__!=='undefined'?__CREAMERY_URL__:'https://creamery.marscatsvoyage.com';
 })();
-const KEPT='leo-pass',SKIPPED='leo-connect-skipped',SKIP_DAYS=7;
+const KEPT='leo-pass';
 const local={get(k){try{return localStorage.getItem(k);}catch{return null;}},set(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v);}catch{}}};
 
 // The invite code this page was opened with, if any: a tester's invite (feedback/feedback.js reads the same code, and
@@ -34,7 +34,8 @@ const nameOf=claims=>claims?.discord?.global_name||claims?.discord?.username||nu
 // A pass Creamery gives without asking anything: the visitor is already signed in there.
 async function silent(){
  try{
-  const res=await fetch(CREAMERY+'/api/leo/pass',{credentials:'include',cache:'no-store'});
+  // The login card waits on this: a Creamery that doesn't answer mustn't hold anyone up.
+  const res=await fetch(CREAMERY+'/api/leo/pass',{credentials:'include',cache:'no-store',signal:AbortSignal.timeout(8000)});
   if(!res.ok)return null;const body=await res.json();return typeof body.pass==='string'?body.pass:null;
  }catch{return null;}
 }
@@ -67,8 +68,5 @@ export async function bestPass(){
 // Off to Creamery to connect Discord, and back to this very page (its ?invite= too).
 export const connectUrl=()=>`${CREAMERY}/leo/connect?return=${encodeURIComponent(location.origin+location.pathname+location.search)}`;
 export function connect(){location.assign(connectUrl());}
-// "Skip for now": not asked again in this browser for a week.
-export const skippedRecently=()=>{const t=Number(local.get(SKIPPED));return t&&Date.now()-t<SKIP_DAYS*864e5;};
-export function skip(){local.set(SKIPPED,String(Date.now()));}
 // "Not you?", or a pass Leo live refused: forget the pass in this browser (Creamery's own sign-in is Creamery's).
 export function forget(){local.set(KEPT,null);}
