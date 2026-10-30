@@ -16,12 +16,15 @@ for(const kind of ['cabin','corridor','stair']){
  expect('Injected '+kind+' overlap rejected',()=>requireCabinFootprints(p),/footprint overlaps/);
 }
 assert(!plannedStanding(layout,12.7,28.628734,61.5),'Outboard hull ledge must not be a go-to landing');assert(!plannedStanding(layout,12.7,29.425,52.48),'Guard caps must not be go-to floors');assert(plannedStanding(layout,12.7,28.3,54.3),'Garden gallery is an interior landing');checks.push('Outboard hull and guard-top landings rejected; real garden gallery accepted');
-const identity={hash:'current'},valid={reportVersion:WALK_REPORT_VERSION,buildIdentity:identity,status:'PASS',guardGaps:[],roomFeatureDrops:[],roomFeatureViolations:[],safeReach:{},berths:{},cabinChairs:{},loungeSeats:{},hullInterfaces:{}};
+const identity={hash:'current'},valid={reportVersion:WALK_REPORT_VERSION,buildIdentity:identity,status:'PASS',privateLiftStops:[17,18,19].map(deck=>({deck,reached:true})),privateLiftsRidden:['clubhouse-tube-lift'],guardGaps:[],roomFeatureDrops:[],roomFeatureViolations:[],safeReach:{},berths:{},cabinChairs:{},loungeSeats:{},hullInterfaces:{}};
 requireCurrentWalkReport(valid,identity);
 expect('Missing walk report rejected',()=>requireCurrentWalkReport(null,identity),/npm run check:walk/);
 expect('Old-format walk report rejected',()=>requireCurrentWalkReport({status:'PASS'},identity),/old-format.*npm run check:walk/);
 expect('Stale build identity rejected',()=>requireCurrentWalkReport({...valid,buildIdentity:{hash:'stale'}},identity),/another build.*npm run check:walk/);
 expect('Removed guard array rejected',()=>requireCurrentWalkReport({...valid,guardGaps:undefined},identity),/old-format.*npm run check:walk/);
+expect('Missing private lift landings rejected',()=>requireCurrentWalkReport({...valid,privateLiftStops:[]},identity),/old-format/);
+expect('Unreached private lift landing rejected',()=>requireCurrentWalkReport({...valid,privateLiftStops:valid.privateLiftStops.map((s,i)=>({...s,reached:i!==1}))},identity),/old-format/);
+expect('Unridden private lift rejected',()=>requireCurrentWalkReport({...valid,privateLiftsRidden:[]},identity),/old-format/);
 const bad={from:[12.7,29.425,52.5],to:[13.05,24.306,52.5],drop:5.119,category:'room-feature'};
 expect('Original sky-garden 5.119 m step-off rejected',()=>requireRoomDropPolicy([bad],layout),/Unapproved room-feature drops/);
 const r=layout.rooms.find(r=>r.id==='observation-lounge'),fixture={from:[182.8,r.y+1.12,16],to:[183.15,r.y+.033,16],drop:1.087,category:'room-feature'},supports=[{room:r.id,name:'Soft_back',top:r.y+1.12,min:[182,r.y,15],max:[184,r.y+1.12,17]}];

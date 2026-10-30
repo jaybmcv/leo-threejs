@@ -2,12 +2,26 @@ export function preparedWalkAdapters(file,text,{authoring=false,prepared=false}=
  let s=text;
  const replace=(a,b)=>{if(!s.includes(a))throw Error('Prepared walk adapter anchor missing: '+file+' '+a);s=s.replace(a,b);};
  if(authoring){
+  if(file==='src/v2/skin-retirement.js'){
+   s="import {rememberSample} from './bounded-samples.js';\n"+s;
+   replace('cache.set(key,d);','rememberSample(cache,key,d);');
+   replace('const moved=actors?fitGardenActors(ship,layout,authority):[]',"const moved=actors?(globalThis.__leoAuthoringWork?.('garden-actors-start'),fitGardenActors(ship,layout,authority)):[]");
+   replace("for(const [index,o]of meshes.entries()){","for(const [index,o]of meshes.entries()){globalThis.__leoAuthoringWork?.('retire-mesh',{index,total:meshes.length,name:o.name,vertices:o.geometry.attributes.position.count});");
+  }
+  if(file==='src/v2/build-cache.js'){
+   replace("const before=o.geometry,input=JSON.stringify(","if(o.geometry.attributes.position.count>50000)globalThis.__leoAuthoringWork?.('geometry-cache-key',{name:o.name,kind,vertices:o.geometry.attributes.position.count});const before=o.geometry,input=JSON.stringify(");
+   replace("const a=positions instanceof Float32Array?positions:new Float64Array(positions),input=", "if(positions.length>500000)globalThis.__leoAuthoringWork?.('bvh-cache-key',{coordinates:positions.length});const a=positions instanceof Float32Array?positions:new Float64Array(positions),input=");
+   replace("const bvh=compute(),r=MeshBVH.serialize(bvh", "if(positions.length>500000)globalThis.__leoAuthoringWork?.('bvh-cache-miss',{coordinates:positions.length});const bvh=compute(),r=MeshBVH.serialize(bvh");
+  }
+  if(file==='src/walk/collision.js')replace('for(const [b,list] of this.pending){',"for(const [b,list] of this.pending){globalThis.__leoAuthoringWork?.('collision-band',{band:b,coordinates:list.length});");
   if(file==='src/v2/world.js')replace('const progress=message=>{','const progress=message=>{console.log(new Date().toISOString(),message);');
-  if(file==='src/walk/prepare.js'){s="import {checkpointPreparedWalk} from '../v2/prepared-authoring.js';\n"+s;replace('afterBase?.(colliders);','afterBase?.(colliders);checkpointPreparedWalk(ship);');}
+  if(file==='src/walk/prepare.js'){s=s.split('\n').map(line=>/^ (strip|prepare|placeAttendant|dress|resolveRoomFrames)/.test(line)&&line.includes('(')?' globalThis.__leoAuthoringWork?.(\"prepare-step\",{step:'+JSON.stringify(line.trim())+'});\n'+line:line).join('\n');s="import {checkpointPreparedWalk} from '../v2/prepared-authoring.js';\n"+s;replace('afterBase?.(colliders);','afterBase?.(colliders);checkpointPreparedWalk(ship);');}
   if(file==='src/walk/main.js'){replace('halloween=createHalloween(ship,','halloween=null;false&&createHalloween(ship,');s="import {initBrowserBuildCache} from '../v2/build-cache.js';await initBrowserBuildCache();\nimport {savePreparedWalk} from '../v2/prepared-authoring.js';\n"+s;replace('v2Signs(lifts.signs);','const signsBefore=new Set(lifts.signs.children);v2Signs(lifts.signs);ship.v2PreparedSigns=new T.Group();ship.v2PreparedSigns.name=\"Prepared_v2_signs\";for(const o of lifts.signs.children)if(!signsBefore.has(o))ship.v2PreparedSigns.add(o.clone(true));');replace(" isolateStaticWorld(ship,scene);"," await savePreparedWalk(ship,{colliders,baked,haze:ship.v2Haze,lounge,restSpots,seats:prepared.seats});\n await new Promise(()=>{});\n isolateStaticWorld(ship,scene);");}
  }
  if(prepared){
   if(file==='src/walk/main.js'){
+   replace('if(wardTrolley)toBand(wardTrolley.group);','if(typeof __WALK_DEBUG__!=="undefined"&&__WALK_DEBUG__)ship.v2RuntimeFeatures={wardTrolley,baggage,freightGate};if(wardTrolley)toBand(wardTrolley.group);');
+   s+="\nif(typeof __WALK_DEBUG__!==\"undefined\"&&__WALK_DEBUG__)Object.defineProperties(globalThis.__walk,{treasure:{get:()=>treasure},baggage:{get:()=>baggage},featureDiagnostics:{get:()=>ship.v2RuntimeFeatures}});\n";
    s="import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns} from '../v2/prepared-runtime.js';\n"+s;
    replace("import {attachFacade,isolateStaticWorld} from '../v2/facade.js';","import {isolateStaticWorld} from '../v2/facade.js';");
    replace("import {createCabinGlass} from '../v2/cabin-glass.js';","import {createCabinGlass} from '../v2/prepared-cabin-glass.js';");

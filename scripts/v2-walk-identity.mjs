@@ -1,7 +1,7 @@
 
 import fs from 'node:fs/promises';
 import {createHash} from 'node:crypto';
-export const WALK_REPORT_VERSION=4;
+export const WALK_REPORT_VERSION=5;
 const hint='Run LEO_LAYOUT=2 npm run check:walk, then LEO_LAYOUT=2 npm run check.';
 export async function walkBuildIdentity(out='output/leo-interior-v02'){
  const files={};for(const name of ['layout.json','walk-plan.json',...(await fs.readdir(out)).filter(n=>n.endsWith('.glb')).sort()])files[name]=createHash('sha256').update(await fs.readFile(out+'/'+name)).digest('hex');
@@ -13,12 +13,18 @@ export async function walkBuildIdentity(out='output/leo-interior-v02'){
  return {hash:createHash('sha256').update(JSON.stringify(files)).digest('hex'),files};
 }
 export function requireCurrentWalkReport(report,identity){
- if(!report||report.reportVersion!==WALK_REPORT_VERSION||!Array.isArray(report.guardGaps)||!Array.isArray(report.roomFeatureDrops)||!Array.isArray(report.roomFeatureViolations)||!report.safeReach||!report.berths||!report.cabinChairs||!report.loungeSeats||!report.hullInterfaces)throw Error('Missing or old-format v2 walk report. '+hint);
+ if(!report||report.reportVersion!==WALK_REPORT_VERSION||!Array.isArray(report.guardGaps)||!Array.isArray(report.roomFeatureDrops)||!Array.isArray(report.roomFeatureViolations)||!Array.isArray(report.privateLiftStops)||report.privateLiftStops.length!==3||report.privateLiftStops.some(s=>!s.reached)||!report.privateLiftsRidden?.includes('clubhouse-tube-lift')||!report.safeReach||!report.berths||!report.cabinChairs||!report.loungeSeats||!report.hullInterfaces)throw Error('Missing or old-format v2 walk report. '+hint);
  if(report.buildIdentity?.hash!==identity.hash)throw Error('V2 walk report belongs to another build. '+hint);
  if(report.status!=='PASS'||report.guardGaps.length||report.roomFeatureViolations.length)throw Error('V2 walk report failed. '+hint);
  return report;
 }
 export async function readCurrentWalkReport(out='output/leo-interior-v02'){
- let report;try{report=JSON.parse(await fs.readFile(out+'/walk-report.json','utf8'));}catch{throw Error('Missing or unreadable v2 walk report. '+hint);}
- return requireCurrentWalkReport(report,await walkBuildIdentity(out));
+ const identity=await walkBuildIdentity(out),until=Number(process.env.LEO_WAIT_FOR_WALK_UNTIL||0);let lastWait=0;
+ for(;;){let report;try{report=JSON.parse(await fs.readFile(out+'/walk-report.json','utf8'));}catch{}
+  // A concurrent validation may wait for its own flood, never accept another build's report.
+  if(report?.buildIdentity?.hash===identity.hash)return requireCurrentWalkReport(report,identity);
+  if(Date.now()<until){if(Date.now()-lastWait>60000){console.log('Waiting for the full walk report of current build '+identity.hash.slice(0,16));lastWait=Date.now();}await new Promise(r=>setTimeout(r,500));continue;}
+  if(!report)throw Error('Missing or unreadable v2 walk report. '+hint);
+  return requireCurrentWalkReport(report,identity);
+ }
 }
