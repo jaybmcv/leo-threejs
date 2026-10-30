@@ -1,3 +1,4 @@
+import {gardenGalleryDoors} from './gallery-entries-v2.js';
 import {escapeSeatPlan} from './shuttle-seats-v2.js';
 import {mapCabins} from './cabin-map-v2.js';
 import {addStructuralOpenings} from './structure-v2.js';
@@ -123,7 +124,7 @@ function gardenPieces(r,h){
  if(r.neighborhood===1){const maze=r.components.pieces.find(p=>p.name==='Haze Maze tower'),rear=r.components.galleries.find(g=>g.id.includes('-rear-8'));const q=rear.polygon.filter(p=>Math.abs(p[0]-maze.center[0])<1),to=q.length?q.reduce((a,p)=>a+Math.abs(p[1]),0)/q.length:44;r.components.mazeTubes=[{id:r.id+'-maze-front-tube',rise:4,x:maze.center[0]+2.15,from:s*28,to:s*26,radius:1.35},{id:r.id+'-maze-rear-tube',rise:8,x:maze.center[0]+.75,from:s*42,to:s*to,radius:1.35}];}
  r.components.links=[4,8].map((rise,i)=>({id:r.id+'-gallery-link-'+rise,center:[x1-4-i*3.3,r.y+rise,s*(inner+(i===0?16:13))],size:[3.2,.28,i===0?29:23],polygon:rectangle(x1-4-i*3.3,s*(inner+(i===0?16:13)),3.2,i===0?29:23)}));
  r.components.landings=[{id:r.id+'-stair-turn',center:[x1-5.65,r.y+4,s*(inner+29.9)],size:[6.5,.28,2],polygon:rectangle(x1-5.65,s*(inner+29.9),6.5,2)}];
- r.galleryDoors=[4,8].map(rise=>({id:r.id+'-gallery-door-'+rise,deck:17+rise/4,center:[x,r.y+rise,s*24],width:2,outward:[0,-s]}));
+ r.galleryDoors=gardenGalleryDoors(r,x0,s);
  r.contentContract={source:'src/model.js:createGardenCommons; src/garden-finish.js',canonicalFrame:[132,24.3,27],scale:[1,1,1],retain:'All source fittings, shared kitchen, laundry, reading nook, lighting, rails and gallery services remain in the assembly.',exceptions:[],pieceMoves:r.components.pieces.map(p=>({name:p.name,center:p.center,scale:[1,1,1]}))};
  if(r.neighborhood===1)r.contentContract.source+='; src/hydro-nip-lounge.js:createHydroNipLounge; src/walk/arcade.js; src/walk/jaguar-gate.js';if(r.neighborhood===10)r.contentContract.source+='; src/walk/blossom.js:createBlossomGarden';
  r.movedPieces=r.components.pieces.map(p=>p.name).concat(['front/rear/end galleries on both levels','two broad stair flights and gallery links']);

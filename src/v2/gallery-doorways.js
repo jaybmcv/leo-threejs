@@ -1,0 +1,1 @@
+export function sideGalleryDoorCuts(room){return (room.galleryDoors||[]).filter(d=>Math.abs(d.outward[0])>.5).map(d=>({p:{chart:{origin:d.center,u:[d.outward[1],0,-d.outward[0]],v:[d.outward[0],0,d.outward[1]]}},rect:[-d.width/2-.02,d.width/2+.02,-.02,2.52],v0:-.35,v1:.35,ignoreOwner:true}));}
