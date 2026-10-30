@@ -160,6 +160,8 @@ export function buildLayoutV2(){
  addStructuralOpenings({decks,circulation,rooms});
  scheduleWindows({h,decks,rooms,cabins,windows,issues});
  const lounge=rooms.find(r=>r.id==='commons-1');lounge.door.center[0]=lounge.x+5.25;lounge.door.label='Jaguar throat';circulation.balconies=[{id:'hydro-nip-promenade-balcony',owner:'commons-1',deck:17,polygon:rectangle(lounge.x,-18.5,53,3),width:3,reason:'Jay round 3: guarded garden-edge approach to the unchanged aquarium and jaguar throat; no centre crossing.'}];
+ /* Main's automatic freight airlock is on the forward bulkhead. Keep the aft planned access and reserve its full existing six-metre opening in the rebuilt shell too. */
+ const freight=rooms.find(r=>r.id==='d01-spares-aft');freight.fittingDoor={id:'aft-freight-airlock',center:[freight.x+freight.width/2,freight.y,freight.z],width:6,height:2.5,reason:'Main eb079b7 automatic freight airlock; leaves and movers stay unchanged.'};
  connectCirculation({h,decks,rooms,cabins,shuttles,circulation,issues});
  for(const c of circulation.corridors.filter(c=>c.deck===20))Object.assign(c,{access:'crew',label:'Crew service circulation'});for(const b of circulation.bridges.filter(b=>b.deck===20))Object.assign(b,{access:'crew',name:'Crew service gallery'});
  completeProgramme({decks,rooms,cabins,shuttles,circulation});

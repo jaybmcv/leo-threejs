@@ -1,3 +1,4 @@
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import * as T from 'three';
 import layout from 'v2-layout';
 import {signPlace} from '../plan/signs-v2.js';
@@ -9,7 +10,8 @@ export function v2Signs(parent){
   if(place.faces===1){const o=new T.Mesh(geometry,new T.MeshBasicMaterial({map:texture,side:T.DoubleSide}));o.name='V2_wayfinding';o.userData.label=label;o.position.set(...place.at);parent.add(o);continue;}
   // Hung across a wing corridor: a face each way, since one double-sided plane reads mirrored from behind.
   const material=new T.MeshBasicMaterial({map:texture}),o=new T.Group();o.name='V2_wayfinding';o.userData.label=label;o.position.set(...place.at);o.rotation.y=place.yaw;
-  for(const turn of [0,Math.PI]){const f=new T.Mesh(geometry,material);f.name='V2_wayfinding_face';f.rotation.y=turn;f.position.z=turn?-.01:.01;o.add(f);}
+  const front=geometry.clone().translate(0,0,.01),back=geometry.clone().rotateY(Math.PI).translate(0,0,-.01),both=mergeGeometries([front,back]);front.dispose();back.dispose();geometry.dispose();
+  const f=new T.Mesh(both,material);f.name='V2_wayfinding_faces';f.userData.readableFaces=2;o.add(f);
   parent.add(o);
  }
 }
