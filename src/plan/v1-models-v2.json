@@ -1,5 +1,5 @@
 {
-  "source": "Main c067d7a own build; redesign-verify/r3-final/glb-main.txt",
+  "source": "Main 3a768bc own build; redesign-verify/p4s2-final/glb-main.txt",
   "models": [
     {
       "name": "leo-aft-systems.glb",
@@ -28,13 +28,13 @@
     },
     {
       "name": "leo-full-ship.glb",
-      "bytes": 577218192,
-      "sha256": "f0f688962768df851c40b3a0a5961f7d8759c3c5985e819c85ad8a972e998512"
+      "bytes": 577094932,
+      "sha256": "0ea506d544c77c134e418f00ca2fc902b88555f19a04506b9778f8700be1dab5"
     },
     {
       "name": "leo-garden-commons.glb",
-      "bytes": 23040908,
-      "sha256": "db5de59ca1f0db4e87e8cdc9c39fb3a6566cc7fad86b1a14c2f6da89ececf942"
+      "bytes": 22917552,
+      "sha256": "3c69d795f5e1f32cb200ae5b75a64f0fef0c9e8b21d908a65f666e9450335f0a"
     },
     {
       "name": "leo-neighborhood.glb",
