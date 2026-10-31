@@ -51,20 +51,20 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
  const grab=()=>new Promise(resolve=>{pending={resolve,queued:false};setTimeout(()=>{if(pending?.resolve===resolve){pending=null;resolve(null);}},1500);});
  const fps=()=>{const now=performance.now(),recent=frames.filter(t=>now-t<2000);return recent.length>1?Math.round((recent.length-1)/((recent[recent.length-1]-recent[0])/1000)):null;};
 
- const ui=buildPanel(css);let report=null,recorder=null,timer=0,check=null,token=null,checkFailed=false,waiting=false;
+ const ui=buildPanel(css);let report=null,recorder=null,timer=0,check=null,token=null,checkFailed=false,waiting=false,leaving=0;
  const place=()=>{const m=typeof mount==='function'?mount():mount;if(m?.contains(ui.button))return;
   ui.button.className='fb-button'+(m?' fb-mounted':'')+(m&&look==='link'?' fb-link':'');if(m)m.prepend(ui.button);else document.body.append(ui.button);};
  place();if(typeof mount==='function')addEventListener('resize',place);
  // The human check's script loads while the tester is still looking around, so the check can start the moment the
  // panel opens.
  if(sending())(window.requestIdleCallback||setTimeout)(()=>loadTurnstile().catch(()=>{}),{timeout:2000});
- const close=()=>{stopVoice();ui.sheet.hidden=true;report=null;waiting=false;ui.send.disabled=false;ui.send.textContent='Send';onClose();};
+ const close=()=>{clearTimeout(leaving);ui.sent.hidden=true;stopVoice();ui.sheet.hidden=true;report=null;waiting=false;ui.send.disabled=false;ui.send.textContent='Send';onClose();};
  async function open(){
   if(!ui.sheet.hidden)return;
   // The screenshot first, before the panel covers the view.
   const shot=await grab();
   report={page,shot,voice:null,images:[],context:{...context(),build:build(),device:device(renderer),fps:fps(),errors:[...errors],time:new Date().toISOString()}};
-  ui.text.value='';ui.error.textContent='';ui.saveInstead.hidden=true;showShot();showVoice();showImages();showAttached();
+  ui.hub.hidden=!sending();ui.text.value='';ui.error.textContent='';ui.saveInstead.hidden=true;showShot();showVoice();showImages();showAttached();
   ui.sheet.hidden=false;onOpen();ui.text.focus();
   if(sending()){humanCheck();identity?.()?.renew?.().catch(()=>{});}
  }
@@ -135,14 +135,19 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
    catch{throw new Error('The report could not be sent.');}
    const reply=await r.json().catch(()=>({}));
    if(!r.ok)throw new Error(reply.error||`The report could not be sent (${r.status}).`);
-   done(`Sent. Thank you! Reference ${reply.id}.`);
+   done(`Sent. Thank you! Reference ${reply.id}.`,reply.id);
   }catch(e){
    // Nothing is lost: the tester can keep the report as a file and pass it on.
    ui.error.textContent=`${e.message} You can save it as a file instead.`;offerFile(out);
-  }finally{ui.send.disabled=false;ui.send.textContent='Send';if(check!==null)window.turnstile.reset(check);}
+  }finally{ui.send.disabled=!ui.sent.hidden;ui.send.textContent='Send';if(check!==null)window.turnstile.reset(check);}
  }
  function offerFile(out){ui.saveInstead.hidden=false;ui.saveInstead.onclick=()=>{save(out);done('Saved. Thank you!');};}
- function done(message){ui.sent.textContent=message;ui.sent.hidden=false;setTimeout(()=>{ui.sent.hidden=true;close();},2200);}
+ // A sent report stays up a little longer, with the way to follow it.
+ function done(message,sentId=null){
+  ui.sent.textContent=message;ui.sent.hidden=false;
+  if(sentId)ui.sent.append(' ',Object.assign(document.createElement('a'),{href:`hub.html?r=${encodeURIComponent(sentId)}`,target:'_blank',rel:'noopener',textContent:'Track it'}));
+  leaving=setTimeout(close,sentId?7000:2200);
+ }
  ui.button.addEventListener('click',open);
  ui.dropShot.addEventListener('click',()=>{report.shot=null;showShot();});
  ui.record.addEventListener('click',startVoice);
@@ -216,7 +221,8 @@ const CSS=`
 .fb-list div{display:grid;grid-template-columns:92px 1fr;gap:8px}.fb-list b{font-weight:500;color:#f4f0e8}.fb-list span{white-space:pre-wrap;word-break:break-all;color:#a6a5b4}
 .fb-actions{display:flex;gap:8px;justify-content:flex-end}
 .fb-actions .fb-send{background:#f85800;border-color:#f85800;color:#fff}
-.fb-sent{color:#2fd6c5;font-size:12px;margin-top:8px}
+.fb-sent{color:#2fd6c5;font-size:12px;margin-top:8px}.fb-sent a{color:inherit;font-weight:500;padding:6px 0;display:inline-block}
+.fb-card{position:relative}.fb-hub{position:absolute;top:6px;right:10px;padding:12px 6px;font:400 11px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.06em;color:#2fd6c5;text-decoration:none}.fb-hub:hover{color:#f4f0e8}
 .fb-check{margin:4px 0 8px;min-height:65px}
 .fb-intro{color:#c9c3b8;margin:-4px 0 12px}
 .fb-label{font:400 10px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:#a6a5b4;margin:0 0 6px}
@@ -238,13 +244,14 @@ function buildPanel(css){
  const record=el('button',{type:'button',textContent:'Record a voice note'}),dropVoice=el('button',{type:'button',textContent:'Remove voice note'}),audio=el('audio',{controls:true});
  const list=el('div',{className:'fb-list'}),error=el('div',{className:'fb-error',role:'alert'});
  const send=el('button',{type:'button',className:'fb-send',textContent:'Send'}),cancel=el('button',{type:'button',textContent:'Cancel'}),saveInstead=el('button',{type:'button',textContent:'Save as a file',hidden:true});
+ const hub=el('a',{className:'fb-hub',href:'hub.html',target:'_blank',rel:'noopener',textContent:'My ideas →',hidden:true});
  const check=el('div',{className:'fb-check',hidden:true});
  const sent=el('div',{className:'fb-sent',textContent:'Saved. Thank you!',hidden:true});
- const card=el('div',{className:'fb-card'},el('div',{className:'fb-eyebrow',textContent:'Feedback'}),el('h2',{id:'fb-title',textContent:'What would you change?'}),
+ const card=el('div',{className:'fb-card'},hub,el('div',{className:'fb-eyebrow',textContent:'Feedback'}),el('h2',{id:'fb-title',textContent:'What would you change?'}),
   el('p',{className:'fb-intro',textContent:'Spotted a bug? Want a room, prop or detail added or changed? Tell us, and add a picture or a link of what you have in mind.'}),
   shot,noShot,text,el('div',{className:'fb-row'},record,dropVoice,addImages,picker),audio,images,
   el('details',{},el('summary',{textContent:'What gets attached'}),list),check,error,el('div',{className:'fb-actions'},cancel,saveInstead,send),sent);
  const sheet=el('div',{className:'fb-sheet',hidden:true,role:'dialog'},card);sheet.setAttribute('aria-modal','true');sheet.setAttribute('aria-labelledby','fb-title');
  document.body.append(sheet);
- return {button,sheet,card,img,shot,noShot,dropShot,text,record,dropVoice,addImages,picker,images,audio,list,check,error,send,cancel,saveInstead,sent};
+ return {button,hub,sheet,card,img,shot,noShot,dropShot,text,record,dropVoice,addImages,picker,images,audio,list,check,error,send,cancel,saveInstead,sent};
 }
