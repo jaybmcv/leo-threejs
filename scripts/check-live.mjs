@@ -152,6 +152,7 @@ try{
  check('join: a visitor\'s id is proved by their key',a.id===await actorIdOf(a.key)&&/^voyager-[0-9a-f]{20}$/.test(a.id));
  const health=await (await fetch(`http://127.0.0.1:${PORT}/health`)).json();
  check('join: /health counts those aboard',health.aboard===2,JSON.stringify(health));
+ check('/health names the commit the server runs, or none for changed files',health.revision===null||/^[0-9a-f]{40}$/.test(health.revision),String(health.revision));
  const evil=new Bot(PORT,{origin:'https://evil.example'});let refused=false;await evil.opened.catch(()=>{refused=true;});
  check('join: a page from another site is turned away',refused);
  const stale=new Bot(PORT,{v:PROTOCOL+1});await stale.opened;await sleep(300);
