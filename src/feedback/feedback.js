@@ -222,7 +222,7 @@ const CSS=`
 .fb-actions{display:flex;gap:8px;justify-content:flex-end}
 .fb-actions .fb-send{background:#f85800;border-color:#f85800;color:#fff}
 .fb-sent{color:#2fd6c5;font-size:12px;margin-top:8px}.fb-sent a{color:inherit;font-weight:500;padding:6px 0;display:inline-block}
-.fb-card{position:relative}.fb-hub{position:absolute;top:6px;right:10px;padding:12px 6px;font:400 11px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.06em;color:#2fd6c5;text-decoration:none}.fb-hub:hover{color:#f4f0e8}
+.fb-card{position:relative;box-sizing:border-box}.fb-hub{position:absolute;top:6px;right:10px;padding:12px 6px;font:400 11px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.06em;color:#2fd6c5;text-decoration:none}.fb-hub:hover{color:#f4f0e8}
 .fb-check{margin:4px 0 8px;min-height:65px}
 .fb-intro{color:#c9c3b8;margin:-4px 0 12px}
 .fb-label{font:400 10px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:#a6a5b4;margin:0 0 6px}
