@@ -81,5 +81,8 @@ export function legacyFeatureSpot(spot){
  // One historical fin-root photo is below any retained floor. Use the first
  // inspection platform, also used by that entry's existing Go-there link.
  if(spot&&!spot.resolved&&(spot.lv===undefined||spot.lv===1)&&spot.at.every((v,i)=>Math.abs(v-[-229.36,35.32,-2.24][i])<.055))return {...spot,at:[-229.36,46.86,0],yaw:Math.PI/2,lv:2,resolved:true,feature:'fin-inspection-approach'};
+ // Hydro-Nip wall and sign photos taken about 5 m up, over the open floor. Nothing is walkable
+ // up there in v2, so stand on the lounge floor beneath the same spot (commons-1 moved -22.5,-16).
+ if(spot&&!spot.resolved&&(spot.lv===undefined||spot.lv===1)&&spot.at[1]>28.9&&spot.at[1]<31&&spot.at[0]>-101&&spot.at[0]<-88.5&&spot.at[2]>-41&&spot.at[2]<-20)return {...spot,at:[spot.at[0]-22.5,24.3,spot.at[2]-16],lv:2,resolved:true,feature:'hydro-nip-high-shot'};
  return null;
 }
