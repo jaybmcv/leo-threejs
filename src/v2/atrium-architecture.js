@@ -11,7 +11,7 @@ export function addPhase6Architecture(ship,root,layout){
   if(o.isInstancedMesh&&/^P4_p6_terrace_(glass|rail)$/.test(o.name)){for(let i=0;i<o.count;i++){const q=new T.Mesh(o.geometry,o.material),m=new T.Matrix4();o.getMatrixAt(i,m);q.name='P6_terrace_guard_actual';q.matrixWorld.copy(o.matrixWorld).multiply(m);selected.push({o:q,kind:'tower'});}o.userData.phase6ArchitectureSource=true;o.visible=false;return;}
   if(!o.isMesh||o.isInstancedMesh||!o.geometry?.attributes.position?.count||Array.isArray(o.material))return;
   for(let q=o;q;q=q.parent)if(!q.visible||q.userData.keepLive)return;
-  if(o.name==='P6_sky_ceiling'||o.name==='P6_lake_water'||o.name==='Deck_slab'&&o.parent.userData.number===6){selected.push({o,kind:o.name==='Deck_slab'?'floor':o.name==='P6_lake_water'?'water':'sky'});return;}
+  if(o.userData.phase6SkyTip||o.name==='P6_sky_ceiling'||o.name==='P6_lake_water'||o.name==='Deck_slab'&&o.parent.userData.number===6){selected.push({o,kind:o.name==='Deck_slab'?'floor':o.name==='P6_lake_water'?'water':'sky'});return;}
   const b=new T.Box3().setFromObject(o,true);
   if((b.min.x>=126&&b.max.x<=138&&Math.max(Math.abs(b.min.z),Math.abs(b.max.z))<=10.2||b.min.x>=-141&&b.max.x<=-122&&Math.max(Math.abs(b.min.z),Math.abs(b.max.z))<=19)&&b.min.y>=-40.8&&b.max.y<=40.3||/^(V2_tower_(bridge|landing)_floor|V2_lounge_balcony_floor)$/.test(o.name))selected.push({o,kind:'tower'});
  });

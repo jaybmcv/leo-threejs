@@ -31,7 +31,8 @@ export function skyMaterial(){
  const texture=new T.CanvasTexture(c);texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=2;
  sky=new T.MeshBasicMaterial({name:'P6_sky_ceiling',map:texture,color:0xffffff,fog:false});return sky;
 }
-export function skyCeilingGeometry(layout){const d=layout.decks[19],g=polygonGeometry(cleanRing(d.atrium.outline),[],d.y+3.72,.08),p=g.attributes.position,uv=new Float32Array(p.count*2),xs=d.atrium.outline.map(q=>q[0]),lo=Math.min(...xs),hi=Math.max(...xs);for(let i=0;i<p.count;i++){uv[i*2]=(p.getX(i)-lo)/(hi-lo);uv[i*2+1]=(p.getZ(i)+14)/28;}g.setAttribute('uv',new T.BufferAttribute(uv,2));return g;}
+export function skyUV(g,layout){const d=layout.decks[19],p=g.attributes.position,uv=new Float32Array(p.count*2),xs=d.atrium.outline.map(q=>q[0]),lo=Math.min(...xs),hi=Math.max(...xs);for(let i=0;i<p.count;i++){uv[i*2]=(p.getX(i)-lo)/(hi-lo);uv[i*2+1]=(p.getZ(i)+14)/28;}g.setAttribute('uv',new T.BufferAttribute(uv,2));return g;}
+export function skyCeilingGeometry(layout){const d=layout.decks[19];return skyUV(polygonGeometry(cleanRing(d.atrium.outline),[],d.y+3.72,.08),layout);}
 export function buildPhase6Water(ship,layout){
  const parent=ship.inside.getObjectByName('V2_structure'),y=layout.decks[5].y;
  const zone=ATRIUM_ZONES.find(z=>z.id==='atrium6-lake'),water=keepFaces(polygonGeometry(phase6LakePolygon(layout.decks[5].atrium.outline),[],y-.01,0),ny=>ny>.5);

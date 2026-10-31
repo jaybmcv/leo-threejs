@@ -1,3 +1,4 @@
+import {finishSkyTip} from './sky-tip.js';
 import {finishAtriumFloor} from './atrium-floor-finish.js';
 import {buildPhase6Water} from './atrium-surfaces.js';
 import {applyLoungeFloorFinish} from './lounge-floor-material.js';
@@ -35,7 +36,7 @@ export function buildColliders(ship,{extra=[],filter=solid,into=new Colliders()}
  // Variable shells are already deck/material static batches. The furnishing core keeps one shared BVH per base type.
  const all=placements(),baseKey=c=>cabinKey(c).split('|')[0],collect=(g,predicate)=>{const tris=[];g.updateMatrixWorld(true);g.traverse(o=>{if(solid(o)&&predicate(o))meshTriangles(o,tris);});return tris;};for(const key of new Set(all.map(baseKey))){const cs=all.filter(c=>baseKey(c)===key),base=template(key),core=collect(base,o=>!o.userData.shell);if(core.length)col.addInstances('v2-core-'+key,core,cs.map(c=>c.matrix));const groundCore=collect(base,o=>!o.userData.shell&&groundMesh(o));if(groundCore.length)ground.addInstances('v2-core-'+key,groundCore,cs.map(c=>c.matrix));const unchanged=cs.filter(c=>!c.hullPrototype),shell=collect(base,o=>!!o.userData.shell);if(unchanged.length&&shell.length)col.addInstances('v2-shell-'+key,shell,unchanged.map(c=>c.matrix));const floor=collect(base,o=>!!o.userData.shell&&groundMesh(o));if(unchanged.length&&floor.length)ground.addInstances('v2-shell-'+key,floor,unchanged.map(c=>c.matrix));}const classes=new Map();for(const c of all.filter(c=>c.hullPrototype)){const cls=cabinDetails(c).loungeClass,g=loungeCollisionTemplate(c);if(cls===undefined)continue;const key=baseKey(c)+'|'+cls;let batch=classes.get(key);if(!batch)classes.set(key,batch={g,cs:[]});batch.cs.push(c);}for(const [key,{g,cs}]of classes){const tris=collect(g,o=>!!o.userData.windowLounge);if(tris.length){col.addInstances('v2-lounge-'+key,tris,cs.map(c=>c.matrix));const floor=collect(g,o=>!!o.userData.windowLounge&&groundMesh(o));if(floor.length)ground.addInstances('v2-lounge-'+key,floor,cs.map(c=>c.matrix));}}
 
- addPhase4Colliders(ship,col,ground);progress('shared furnishing collision classes complete');return installGround(col,ground);
+ addPhase4Colliders(ship,col,ground);finishSkyTip(ship,layout);progress('shared furnishing collision classes complete');return installGround(col,ground);
 }
 
 function clearWingIntrusions(ship){
