@@ -129,15 +129,25 @@ async function loadMine(asked){
   $('mine').replaceChildren(panel('We can’t reach the Hub right now','Your ideas are safe. Please try again in a moment.',again));
  }
 }
+// What's on screen stays, with word that it may be out of date and a way back in.
+function signInRanOut(){
+ $('who').textContent='';
+ if($('sign-in-ran-out'))return;
+ const button=el('button',{type:'button',className:'link',textContent:'Connect Discord'});button.addEventListener('click',()=>connect());
+ $('mine').prepend(el('div',{className:'strip',id:'sign-in-ran-out'},el('b',{textContent:'Your sign-in ran out.'}),' This may not be the latest. ',button));
+}
 // A look without any fuss: nothing on screen changes unless the answer did, so an open slider or section stays as it is,
 // and a failed look just leaves things as they were.
 async function refreshMine(asked){
  if(!lastAnswer)return null;
  lastCheck=Date.now();
  try{
-  const pass=await currentPass();if(!pass)return null;
-  const r=await fetch(`${SERVICE}/mine`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({pass})});if(!r.ok)return null;
+  const pass=await currentPass();if(!pass){signInRanOut();return null;}
+  const r=await fetch(`${SERVICE}/mine`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({pass})});
+  if(r.status===401){forget();signInRanOut();return null;}
+  if(!r.ok)return null;
   const text=await r.text(),data=JSON.parse(text);
+  $('sign-in-ran-out')?.remove();
   if(text!==lastAnswer){lastAnswer=text;showMine(data,asked);}
   return data;
  }catch{return null;}
