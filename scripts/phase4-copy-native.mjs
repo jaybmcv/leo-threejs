@@ -1,0 +1,5 @@
+import fs from 'node:fs/promises';
+const out='output/phase4/native-main',validation=JSON.parse(await fs.readFile('output/phase4/final/validation.json')),since=Date.parse(validation.started),copied=[];await fs.mkdir(out,{recursive:true});
+for(const name of['native-features.json','main-features-followup.json']){await fs.copyFile('output/phase3/'+name,out+'/'+name);copied.push(name);}
+for(const folder of['features','halloween']){await fs.mkdir(out+'/'+folder,{recursive:true});for(const file of await fs.readdir('output/phase3/'+folder)){if(!file.endsWith('.png'))continue;const from='output/phase3/'+folder+'/'+file,stat=await fs.stat(from);if(stat.mtimeMs<since)continue;await fs.copyFile(from,out+'/'+folder+'/'+file);copied.push(folder+'/'+file);}}
+await fs.writeFile(out+'/files.json',JSON.stringify({at:new Date().toISOString(),files:copied,method:'Only native reports and PNGs written during this final validation, copied from the normal Phase 3 regression harness. Public identity remains in each report.'},null,2));console.log('Copied',copied.length,'fresh native evidence files');

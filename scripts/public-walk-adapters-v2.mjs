@@ -1,0 +1,3 @@
+import{applyV2Adapters}from'./v2-adapters.mjs';
+// Public prepared pages reuse this saved anchor; their removed authoring block declared these locals.
+export function publicPreparedAdapters(file,text){let source=applyV2Adapters(file,text);if(file==='src/walk/main.js'){const anchor=' graffiti=createGraffiti(casing.userData.paintFace,casingFrame,';if(!source.includes(anchor))throw Error('Prepared public graffiti anchor changed');source=source.replace(anchor," const casing=ship.inside.getObjectByName('Walk_fin_root_casing');if(!casing?.userData.paintFace)throw Error('Prepared fin casing paint anchor missing');casing.updateWorldMatrix(true,false);const casingFrame=casing.matrixWorld.clone();\n"+anchor);}return source;}

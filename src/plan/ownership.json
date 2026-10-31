@@ -5596,7 +5596,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "7f2c7834077c1d170d81bfdbf4457c12a4808a2fb46177f72407ae0fcf9bbb6b"
+      "signature": "7d38c423305812cc7ff03595a101b712a01fbe86b09e7d2e91515becea9f3c68"
     },
     {
       "source": "src/cosmo.js",
@@ -5696,7 +5696,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 6,
-      "signature": "89a5ccb277f7fb1ad7500d1920d604caf893ceff4c4f7249846377916df5e75d"
+      "signature": "34977b1c64d7e80af6f02470a5b12950ce1898c714e18fa2896c295358db80ee"
     },
     {
       "source": "src/exterior.js",

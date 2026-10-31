@@ -1,0 +1,2 @@
+// Five 0.48 m cushions with four continuous 1.07 m aisles in the 7.5 m cabin.
+export function escapeSeatPlan(c,id){const out=[],cs=Math.cos(c.yaw),sn=Math.sin(c.yaw);for(let row=0;row<20;row++)for(let col=0;col<5;col++){const u=-9.5+row*.95,v=(col-2)*1.55;out.push({id:id+'-seat-'+(row*5+col+1),row:row+1,column:col+1,local:[u,.45,v],center:[c.x+cs*u+sn*v,c.y+.45,c.z-sn*u+cs*v],yaw:c.yaw});}return out;}

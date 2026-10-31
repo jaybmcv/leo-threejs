@@ -1,3 +1,5 @@
+import {v2 as useV2} from './layout-selector.mjs';
+if(useV2){const {runV2}=await import('./run-v2.mjs');await runV2('walk');process.exit(0);}
 import fs from 'node:fs/promises';
 import * as T from 'three';
 import {CABINS,SAMPLE} from '../src/model.js';
