@@ -11,6 +11,8 @@ for(const [name,entry] of Object.entries(manifest)){
  assert.equal(createHash('sha256').update(Buffer.from(bytes)).digest('hex'),entry.sha256,name);
  for(const part of entry.parts)assert.ok((await fs.stat('dist/'+part.split('?')[0])).size<=16*1048576);
 }
+// The Builder's Hub reads which commit the site was built from: a full commit, or null when the build was of changed files.
+const info=JSON.parse(await fs.readFile('dist/build.json','utf8'));assert.ok(info.sha===null||/^[0-9a-f]{40}$/.test(info.sha),'build.json names a commit');
 const html=await fs.readFile('dist/index.html','utf8');
 assert.ok(html.includes('id="share-view"'));
 const viewerScript=html.match(/<script>LEO_BOOT\("(viewer\.[0-9a-f]{10}\.js)"\)<\/script>/)?.[1];assert.ok(viewerScript,'index.html loads the hashed viewer script');

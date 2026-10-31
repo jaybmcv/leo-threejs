@@ -6877,7 +6877,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "b631815638ad97a922bc1efe478f1cae8f6e32d89adfca1a2cc8a8be1d27edc6"
+      "signature": "8bdceb5a12361715556498c92bc60602e16dec45048b753d01fe2ebd11530f37"
     },
     {
       "source": "src/walk/hex-floor.js",

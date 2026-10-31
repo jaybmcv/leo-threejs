@@ -1,3 +1,5 @@
+import {writeBuildInfo} from './build-info.mjs';
+import {writeHubPage} from './hub-page.mjs';
 import{v2ShipLogMedia}from'./v2-ship-log-media.mjs';
 import {writeViewerLounge,VIEWER_LOUNGE} from './viewer-tour-assets-v2.mjs';
 import {publicPreparedAdapters} from './public-walk-adapters-v2.mjs';
@@ -29,3 +31,6 @@ manifest['walk-prepared']=await copyPreparedWalk(out);const logMedia=await v2Shi
 // Local verifier page; the public walk still strips its debug hook.
 const debug='output/leo-interior-v02/review';await fs.mkdir(debug,{recursive:true});const debugManifest=Object.fromEntries(Object.entries(manifest).map(([k,v])=>[k,{...v,parts:v.parts.map(p=>'/base/'+p),...(v.recipePart?{recipePart:'/base/'+v.recipePart}:{})}]));await fs.copyFile(out+'/'+cosmo,debug+'/'+cosmo);await fs.cp(out+'/brand',debug+'/brand',{recursive:true});await writeWalkPage(debug,{cosmo,manifest:debugManifest,debug:true,preparedWalk:true,sourceAdapters:publicPreparedAdapters,logMedia});
 console.log('v2 public assets built locally in '+out);
+
+const hub=await writeHubPage(out);console.log(`Builder's Hub: ${hub.script}, ${(hub.bytes/1024).toFixed(0)} KB.`);
+await writeBuildInfo(out);
