@@ -29,6 +29,7 @@ export function v2Plugin(layout,{node=false,sourceRef=null,sourceAdapters=applyV
   const legacy=a.path.endsWith('?legacy');if(legacy)a={...a,path:a.path.slice(0,-7)};
   let p=a.path==='three'?path.join(root,'node_modules/three/build/three.module.js'):a.path.startsWith('.')?path.resolve(a.resolveDir||root,a.path):path.isAbsolute(a.path)?a.path:require.resolve(a.path);
   if(p===path.join(root,'src/public-assets.js'))p=path.join(root,'src/v2/public-assets.js');
+  if(!legacy&&!sourceRef&&p.endsWith(path.join('walk','render-bake.js')))p=path.join(root,'src/v2/render-bake.js');
   if(!legacy&&p.endsWith(path.join('walk','railings.js')))p=path.join(root,'src/v2/railings.js');
   if(!legacy&&p.endsWith(path.join('walk','world.js')))p=path.join(root,'src/v2/world.js');
   if(p.endsWith(path.join('walk','rest.js'))&&!a.importer.endsWith(path.join('v2','rest.js')))p=path.join(root,'src/v2/rest.js');
@@ -39,6 +40,7 @@ export function v2Plugin(layout,{node=false,sourceRef=null,sourceAdapters=applyV
   let actual=a.path,s;try{s=await fs.readFile(actual,'utf8');}catch(e){if(!actual.endsWith('.js'))throw e;actual=actual.slice(0,-3)+'.ts';s=await fs.readFile(actual,'utf8');}const file=path.relative(root,actual).replaceAll('\\','/');
   if(sourceRef&&!file.startsWith('node_modules/')&&!file.startsWith('scripts/phase3b-')&&!['src/plan/envelope-data-v2.js','src/plan/hull-skin-v2.js','src/plan/finished-skin-v2.js','src/plan/coplanar-v2.js','src/v2/hull-prototypes.js'].includes(file)){try{s=(await promisify(execFile)('git',['--no-optional-locks','show',sourceRef+':'+file],{cwd:root,maxBuffer:32*1024*1024})).stdout;}catch(e){throw Error('Baseline source unavailable: '+sourceRef+':'+file+' '+e.message);}}
   s=geometryAdapters(file,preparedWalkAdapters(file,sourceAdapters(file,s),{authoring:authoringWalk,prepared:preparedWalk}),{authoring:authoringWalk,prepared:preparedWalk});
+  if(!sourceRef&&file==='src/walk/main.js'){const marker='function span(p,now){';if(!s.includes(marker))throw Error('Atrium span source hook moved');s="import {fastAtriumSpan} from '../v2/atrium-visibility.js';\n"+s.replace(marker,marker+'\n const atrium=fastAtriumSpan(p);if(atrium)return atrium;\n');}
   return {contents:s,loader:actual.endsWith('.json')?'json':actual.endsWith('.ts')?'ts':'js',resolveDir:path.dirname(a.path)};
  });
 }};}
