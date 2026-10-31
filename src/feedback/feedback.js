@@ -119,10 +119,13 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
  function stopVoice(){if(recorder&&recorder.state!=='inactive')recorder.stop();}
  async function send(){
   if(recorder){ui.error.textContent='Stop the recording first.';return;}
+  // The panel can close and open on a new report while this one is on its way; its answer then has no business here.
+  const mine=report,current=()=>report===mine;
   const text=ui.text.value.trim();
   if(!text&&!report.voice){ui.error.textContent='Say or type what you would like first.';ui.text.focus();return;}
-  const out={kind:'leo-feedback',version:1,page:report.page,text,context:report.context,screenshot:report.shot,
-   voice:report.voice?{type:report.voice.blob.type,data:await dataURL(report.voice.blob)}:null,images:report.images.map(im=>({name:im.name.slice(0,80),data:im.data}))};
+  const out={kind:'leo-feedback',version:1,page:mine.page,text,context:mine.context,screenshot:mine.shot,
+   voice:mine.voice?{type:mine.voice.blob.type,data:await dataURL(mine.voice.blob)}:null,images:mine.images.map(im=>({name:im.name.slice(0,80),data:im.data}))};
+  if(!current())return;
   if(!sending()){save(out);done('Saved. Thank you!');return;}
   if(!token&&checkFailed){waiting=false;ui.send.disabled=false;ui.send.textContent='Send';ui.error.textContent='The human check could not run here. You can save the report as a file instead.';offerFile(out);return;}
   if(!token){waiting=true;ui.send.disabled=true;ui.send.textContent='Sending after the human check…';return;}
@@ -135,11 +138,12 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
    catch{throw new Error('The report could not be sent.');}
    const reply=await r.json().catch(()=>({}));
    if(!r.ok)throw new Error(reply.error||`The report could not be sent (${r.status}).`);
-   done(`Sent. Thank you! Reference ${reply.id}.`,reply.id);
+   if(current())done(`Sent. Thank you! Reference ${reply.id}.`,reply.id);
   }catch(e){
    // Nothing is lost: the tester can keep the report as a file and pass it on.
-   ui.error.textContent=`${e.message} You can save it as a file instead.`;offerFile(out);
-  }finally{ui.send.disabled=!ui.sent.hidden;ui.send.textContent='Send';if(check!==null)window.turnstile.reset(check);}
+   if(current())ui.error.textContent=`${e.message} You can save it as a file instead.`;
+   if(current())offerFile(out);
+  }finally{if(current()){ui.send.disabled=!ui.sent.hidden;ui.send.textContent='Send';if(check!==null)window.turnstile.reset(check);}}
  }
  function offerFile(out){ui.saveInstead.hidden=false;ui.saveInstead.onclick=()=>{save(out);done('Saved. Thank you!');};}
  // A sent report stays up a little longer, with the way to follow it.

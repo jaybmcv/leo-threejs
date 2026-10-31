@@ -35,7 +35,7 @@
 // and limits how often anyone may send. Lifts are the server's: a call goes to the server, which steps every car
 // (lift-motion.js) and tells everyone when a car's plans change.
 import http from 'node:http';
-import {execFileSync} from 'node:child_process';
+import {buildInfo} from '../scripts/build-info.mjs';
 import fs from 'node:fs';
 import {WebSocketServer} from 'ws';
 import {LIFTS} from '../src/walk/lifts.js';
@@ -338,7 +338,8 @@ function flush(){
 setInterval(flush,FLUSH_MS);
 
 // The commit this server runs, read as it starts, so the Builder's Hub knows when a server change has really gone live.
-const REVISION=(()=>{try{return execFileSync('git',['rev-parse','HEAD'],{cwd:new URL('..',import.meta.url),encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim();}catch{return null;}})();
+// None when its files have changes: then it isn't running that commit.
+const REVISION=buildInfo(new URL('..',import.meta.url)).sha;
 const server=http.createServer((req,res)=>{
  // Mudwater Arena's daily counts, totals only (arena.mjs).
  if(req.url==='/arena'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify(arena.report()));return;}

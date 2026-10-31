@@ -11,7 +11,7 @@ const SERVICE=(()=>{
  return 'https://mcv-feedback-hub.mcv-feedback.workers.dev';
 })();
 const MEDIA='https://raw.githubusercontent.com/jaybmcv/leo-threejs/pr-media/';
-const LIVE_SHOWN=6;
+const LIVE_SHOWN=6,POLL_MS=30e3,POLLS=10,STALE_MS=60e3;
 const $=id=>document.getElementById(id);
 function el(tag,props={},...kids){
  const {attrs,...rest}=props,e=Object.assign(document.createElement(tag),rest);
@@ -82,6 +82,7 @@ function panel(title,text,...kids){
 }
 const skeleton=()=>el('div',{className:'skeleton',attrs:{'aria-hidden':'true'}},el('div',{}),el('div',{}),el('div',{}));
 
+let scrolled=false,lastAnswer='',lastCheck=0,polling=0;
 // My ideas. asked: a report's id from a link right after sending it; it may not have arrived yet.
 function showMine(data,asked){
  const box=$('mine'),{cards}=data;
@@ -99,10 +100,10 @@ function showMine(data,asked){
   more?.addEventListener('click',()=>{list.append(...g.cards.slice(shown.length).map(c=>cardOf(c)));more.remove();},{once:true});
   out.push(el('section',{className:'group'},el('h2',{className:'group-title',textContent:g.title},el('span',{textContent:String(g.cards.length)})),list,more));
  }
- if(data.updated)out.push(el('p',{className:'foot',textContent:`Checked ${shortDate(data.updated)}. Other testers can’t see your ideas here.`}));
- else out.push(el('p',{className:'foot',textContent:'Other testers can’t see your ideas here.'}));
+ out.push(el('p',{className:'foot',textContent:'Other testers can’t see your ideas here.'}));
  box.replaceChildren(...out);
- if(asked)box.querySelector(`[data-report="${CSS.escape(asked)}"]`)?.scrollIntoView({block:'center'});
+ const here=asked&&box.querySelector(`[data-report="${CSS.escape(asked)}"]`);
+ if(here&&!scrolled){scrolled=true;here.scrollIntoView({block:'center'});}
 }
 function askToConnect(me){
  $('who').textContent='';$('hero-stats').replaceChildren();
@@ -120,11 +121,35 @@ async function loadMine(asked){
   // The service didn't take this pass, so it isn't worth keeping.
   if(r.status===401){forget();askToConnect(null);return;}
   if(!r.ok)throw new Error(String(r.status));
-  showMine(await r.json(),asked);
+  lastAnswer=await r.text();lastCheck=Date.now();
+  const data=JSON.parse(lastAnswer);showMine(data,asked);
+  if(asked&&!data.cards.some(c=>c.id===asked))waitFor(asked);
  }catch{
   const again=el('button',{type:'button',className:'go',textContent:'Try again'});again.addEventListener('click',()=>loadMine(asked));
   $('mine').replaceChildren(panel('We can’t reach the Hub right now','Your ideas are safe. Please try again in a moment.',again));
  }
+}
+// A look without any fuss: nothing on screen changes unless the answer did, so an open slider or section stays as it is,
+// and a failed look just leaves things as they were.
+async function refreshMine(asked){
+ if(!lastAnswer)return null;
+ lastCheck=Date.now();
+ try{
+  const pass=await currentPass();if(!pass)return null;
+  const r=await fetch(`${SERVICE}/mine`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({pass})});if(!r.ok)return null;
+  const text=await r.text(),data=JSON.parse(text);
+  if(text!==lastAnswer){lastAnswer=text;showMine(data,asked);}
+  return data;
+ }catch{return null;}
+}
+// A report just sent takes a moment to reach the Hub, so keep looking for a while.
+function waitFor(asked){
+ clearInterval(polling);let left=POLLS;
+ polling=setInterval(async()=>{
+  if(document.hidden)return;
+  const data=await refreshMine(asked);
+  if(--left<=0||data?.cards.some(c=>c.id===asked))clearInterval(polling);
+ },POLL_MS);
 }
 // Just went live: from the public ship log, the same for everyone.
 let liveLoaded=false;
@@ -158,3 +183,5 @@ $('tabs').addEventListener('keydown',e=>{
 });
 pick(query.get('tab')==='live'?'live':'mine');
 loadMine(asked);
+// Back on this tab after a while: things may have moved.
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastCheck>STALE_MS)refreshMine(asked);});
