@@ -40,8 +40,8 @@ export function preparedWalkAdapters(file,text,{authoring=false,prepared=false}=
    replace('for(const g of baked.bands.values())scene.add(g);','for(const g of baked.bands.values())scene.add(g);quietFloorReflections(scene,scene.environment);');
    replace('const prepared=prepareWalkWorld(ship,','const prepared=await prepareWalkWorld(ship,');
    s=s.split('\n').map(line=>/^(pawsOff|theatre|gaming|hexFloor)=/.test(line.trim())?line+'\n await idle();':line).join('\n');
-   replace('for(const o of instanced){\n  if(!o.userData.cabins','const sharedNear=new Map();for(const o of instanced){\n  if(!o.userData.cabins');
-   replace('const all=Array.from({length:o.count}',"const key=o.parent.uuid+'|'+o.userData.cabinIds.join(',');if(sharedNear.has(key)){o.userData.near=sharedNear.get(key);continue;}const all=Array.from({length:o.count}");
+   replace('for(const o of instanced){\n  if(!o.userData.boat&&(!o.userData.cabins','const sharedNear=new Map();for(const o of instanced){\n  if(!o.userData.boat&&(!o.userData.cabins');
+   replace('const all=Array.from({length:o.count}',"const key=o.parent.uuid+'|'+(o.userData.cabinIds||[o.uuid]).join(',');if(sharedNear.has(key)){o.userData.near=sharedNear.get(key);continue;}const all=Array.from({length:o.count}");
    replace('o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};','o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};sharedNear.set(key,o.userData.near);');
   }
   if(file==='src/walk/prepare.js'){
