@@ -1,3 +1,4 @@
+import {trackNodeStage} from './node-stage-profile-v2.mjs';trackNodeStage('packing');
 import {dictionaryPreparedTuples} from './prepared-tuple-codec.mjs';
 import {packPreparedCollision} from './prepared-collision-pack.mjs';
 import {poolPreparedVertices,compactPreparedArrays} from './prepared-vertex-pool.mjs';

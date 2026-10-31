@@ -1,0 +1,1 @@
+import fs from 'node:fs/promises';export async function publicDirectoryBytes(root='dist-v2'){let bytes=0,files=0;async function visit(dir){for(const e of await fs.readdir(dir,{withFileTypes:true})){const p=dir+'/'+e.name;if(e.isDirectory())await visit(p);else{bytes+=(await fs.stat(p)).size;files++;}}}await visit(root);return {bytes,files};}

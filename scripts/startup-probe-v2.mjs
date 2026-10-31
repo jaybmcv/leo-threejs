@@ -19,8 +19,8 @@ const probeCode='('+function(){
  Object.defineProperty(Node.prototype,'textContent',{...desc,set(value){if(this.nodeType===1&&this.id==='loading-text'){const at=performance.now();if(probe.firstStatusMs===null)probe.firstStatusMs=at;const row={at,text:String(value)};probe.statuses.push(row);emit('status',row);}return desc.set.call(this,value);}});
  const initialStatus=()=>{const e=document.getElementById('loading-text');if(probe.firstStatusMs===null&&e?.textContent){const at=performance.now();probe.firstStatusMs=at;const row={at,text:e.textContent};probe.statuses.push(row);emit('status',row);}};new MutationObserver(initialStatus).observe(document,{subtree:true,childList:true});initialStatus();
  new PerformanceObserver(list=>{for(const e of list.getEntries()){const row={at:e.startTime,duration:e.duration};probe.longTasks.push(row);emit('longtask',row);}}).observe({type:'longtask',buffered:true});
- const check=()=>{if(probe.readyMs===null&&document.body?.dataset.ready==='1'){probe.readyMs=performance.now();emit('ready',{at:probe.readyMs});}};
- new MutationObserver(check).observe(document,{subtree:true,attributes:true,attributeFilter:['data-ready']});
+ let previewRejected=false;const check=()=>{if(document.documentElement?.dataset.leoVisualPreview){if(!previewRejected){previewRejected=true;emit('error',{message:'Visual preview cannot be used for acceptance'});}return;}if(probe.readyMs===null&&document.body?.dataset.ready==='1'){probe.readyMs=performance.now();emit('ready',{at:probe.readyMs});}};
+ new MutationObserver(check).observe(document,{subtree:true,attributes:true,attributeFilter:['data-ready','data-leo-visual-preview']});
  setInterval(()=>{check();if(performance.memory){const used=performance.memory.usedJSHeapSize;probe.heapPeak=Math.max(probe.heapPeak,used);emit('heap',{at:performance.now(),used});}},250);
  addEventListener('error',e=>{probe.errors.push(String(e.message));emit('error',{message:String(e.message)});});
 }.toString()+')()';
