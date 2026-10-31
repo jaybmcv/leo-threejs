@@ -1,2 +1,2 @@
 // The finished v2 pressure skin and current room-owned apertures replace this old facade.
-export const RETIRED_MAIN_HULL_FACADE=['V33_passenger_glazing','V33_passenger_window_frames','V33_passenger_window_reveals','Individual_glazing_seals','Individual_glazing_frames','Forward_observation_panes','Bow_horizontal_panel_reveal','Bow_cheek_panel_joint','Bow_reveal_line'];
+export const RETIRED_MAIN_HULL_FACADE=['V33_passenger_glazing','V33_passenger_window_frames','V33_passenger_window_reveals','Individual_glazing_seals','Individual_glazing_frames','Forward_observation_panes','Bow_horizontal_panel_reveal','Bow_cheek_panel_joint','Bow_reveal_line','Lifeboat_bay_frame','Lifeboat_bay_recess','Lifeboat_shutter_rib','Bay_amber_marker'];
