@@ -5,6 +5,7 @@ import {createHash} from 'node:crypto';
 import {copyBrandAssets} from './brand-assets.mjs';
 import {buildWebExterior} from './build-web-exterior.mjs';
 import {writeWalkPage} from './walk-page.mjs';
+import {writeBuildInfo} from './build-info.mjs';
 const source='output/leo-interior-v01',out='dist';
 await fs.mkdir(out+'/models',{recursive:true});
 await buildWebExterior(source+'/leo-exterior-refined.glb',source+'/leo-exterior-web.glb',source+'/leo-exterior-phone.glb');
@@ -42,4 +43,5 @@ for(const name of await fs.readdir(source))if(HASHED_SCRIPT.test(name))await fs.
 // Walk around Leo (src/walk): its own page and script, sharing the viewer's Cosmo and models.
 const cosmoName=(await fs.readdir(out)).find(n=>/^cosmo\.[0-9a-f]{10}\.js$/.test(n));
 const walk=await writeWalkPage(out,{cosmo:cosmoName,manifest});console.log(`Walk page: ${walk.walk}, ${(walk.bytes/1048576).toFixed(1)} MB.`);
+await writeBuildInfo(out);
 console.log('Public viewer ready. All compressed models verified losslessly.');
