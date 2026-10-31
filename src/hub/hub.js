@@ -11,7 +11,7 @@ const SERVICE=(()=>{
  return 'https://mcv-feedback-hub.mcv-feedback.workers.dev';
 })();
 const MEDIA='https://raw.githubusercontent.com/jaybmcv/leo-threejs/pr-media/';
-const LIVE_SHOWN=6,POLL_MS=30e3,POLLS=10,STALE_MS=60e3;
+const LIVE_SHOWN=6,POLL_MS=30e3,POLLS=10,STALE_MS=60e3,OPEN_LOOK_MS=15*60e3,LIVE_STALE_MS=5*60e3;
 const $=id=>document.getElementById(id);
 function el(tag,props={},...kids){
  const {attrs,...rest}=props,e=Object.assign(document.createElement(tag),rest);
@@ -152,17 +152,19 @@ function waitFor(asked){
  },POLL_MS);
 }
 // Just went live: from the public ship log, the same for everyone.
-let liveLoaded=false;
+let liveAt=0,liveAnswer='';
 async function loadLive(){
- if(liveLoaded)return;
- const box=$('live');box.replaceChildren(skeleton());
+ if(Date.now()-liveAt<LIVE_STALE_MS)return;
+ const box=$('live'),first=!liveAnswer;if(first)box.replaceChildren(skeleton());
  try{
   const r=await fetch(`${SERVICE}/live`);if(!r.ok)throw new Error(String(r.status));
-  const {items}=await r.json();liveLoaded=true;
+  const text=await r.text();liveAt=Date.now();if(text===liveAnswer)return;liveAnswer=text;
+  const {items}=JSON.parse(text);
   if(!items.length){box.replaceChildren(panel('Nothing new just yet','The latest changes aboard will show up here.'));return;}
   box.replaceChildren(el('div',{className:'gallery'},...items.map(i=>el('article',{className:'tile'},slider(i.shots[0],i.name),
    el('div',{className:'tile-text'},el('h3',{textContent:i.name}),el('span',{className:'tile-date',textContent:shortDate(i.date+'T12:00:00')}),goButton(i.go))))));
  }catch{
+  if(!first)return;
   const again=el('button',{type:'button',className:'go',textContent:'Try again'});again.addEventListener('click',loadLive);
   box.replaceChildren(panel('We can’t reach the Hub right now','Please try again in a moment.',again));
  }
@@ -185,3 +187,5 @@ pick(query.get('tab')==='live'?'live':'mine');
 loadMine(asked);
 // Back on this tab after a while: things may have moved.
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastCheck>STALE_MS)refreshMine(asked);});
+// Left open and in view, it still looks now and then.
+setInterval(()=>{if(!document.hidden)refreshMine(asked);},OPEN_LOOK_MS);
