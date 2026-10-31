@@ -29,6 +29,8 @@ import {WALL,paintStroke,wallFromText} from '../src/walk/graffiti-wall.js';
 import {createTransporters as transporterServer,CARTS} from '../server/transporters.mjs';
 import {homes as mctHomes} from '../src/walk/transporter.js';
 
+if(process.env.LEO_LAYOUT==='2'){await import('./check-live-goto-v2.mjs');process.exit(process.exitCode||0);}
+
 const results=[];let failed=0;
 const check=(what,ok,detail='')=>{results.push(`${ok?'PASS':'FAIL'} ${what}${detail?' · '+detail:''}`);if(!ok)failed++;};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));

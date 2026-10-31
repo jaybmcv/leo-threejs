@@ -1,5 +1,21 @@
 # LEO — Life aboard, interior study 01
 
+## Layout 2 — takes effect at cutover
+
+Until cutover, the canonical live site and the historical build notes below describe layout 1. Layout 2 is selected with `LEO_LAYOUT=2` at build time and writes only `output/leo-interior-v02` and `dist-v2`; URL parameters cannot switch worlds. These v2 sections take precedence for the redesigned ship after cutover. This work does not deploy or approve a release.
+
+The accepted source of truth is [the v2 plan](src/plan/README-v2.md), [the selected walk](src/plan/README-phase2.md) and [recorded decisions](src/plan/decisions-v2.json).
+
+The redesigned schedule has **5,028 cabins: 4,972 twins and 56 singles, exactly 10,000 berths**. Singles are on Deck 15. Legacy cabin links use the explicit id map; the earlier residential hierarchy proposal is superseded by this accepted schedule.
+
+The open atrium starts on Deck 6, with park, lake, food hall, stage and lobby zones. Neighborhoods occupy Decks 6–15, each with its own small bow coffee bar and window seats. Ten sky gardens retain galleries on Decks 17–19. The forward observation lounge keeps its raised floor at Y=26.3 and its 24 m access ramp from Deck 17. Above Deck 16 the atrium stays clear apart from the forward glass lift tower and its bridges. Deck 20 has a lit sky panel below the permanent roof; its crew service gallery is signed Crew only and is absent from public Go to.
+
+New public spaces include the Deck 2 arrival food hall, Deck 3 farm-to-table restaurant and Deck 5 wellness & spa. Escape shuttles replace the old public safety-craft wording: twenty 100-seat craft on each of Decks 1–5, 100 craft total. The spatial model does not certify evacuation or endurance.
+
+In the v2 walk, **M / Go to** opens searchable groups for twenty decks plus fin/crown, with rooms, services, activity highlights and escape shuttles. **H / Help**, the location readout, corridor guides and lift deck lists use the selected plan names. The safe-floor check rejects missing support, voids, insufficient walker clearance and invalid coordinates. See [the goto handoff](output/phase7/REPORT-goto.md) for targeted checks and outstanding combined validation.
+
+## Layout 1 reference and history
+
 **[Open the interactive website](https://leo.marscatsvoyage.com/)**. It is served by the Vercel project for leo.marscatsvoyage.com. The earlier `chatgpt.site` addresses are legacy and not the canonical site.
 
 The next residential redesign is documented in [Residential hierarchy proposal](RESIDENTIAL_HIERARCHY.md): ten accommodation tiers, 5,214 rooms and 10,000 residents. This is a proposal; the current model retains its existing 5,000 twin cabins.
