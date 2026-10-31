@@ -21,7 +21,7 @@ import {loadMedia} from './ship-log-media.mjs';
 const WALK_SCRIPT=/^walk(-emotes|-map|-hat|-art-[a-z0-9-]+|-reel)?\.[0-9a-f]{10}\.(js|json|png|glb|jpg|mp4)$/;
 const WALK_LOGO=/^hydro-nip-main-logo\.[0-9a-f]{10}\.jpg$/;
 const hashed=(stem,ext,data)=>`${stem}.${createHash('sha256').update(data).digest('hex').slice(0,10)}.${ext}`;
-export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverride=null,walkOverride=null,sourceRef=null,sourceAdapters=undefined,profileMap=false,authoringWalk=false,preparedWalk=false}){
+export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverride=null,walkOverride=null,sourceRef=null,sourceAdapters=undefined,profileMap=false,authoringWalk=false,preparedWalk=false,logMedia=undefined}){
  for(const name of await fs.readdir(out))if(WALK_SCRIPT.test(name)||WALK_LOGO.test(name)||v2&&/^layout\.[0-9a-f]{16}\.\d+\.bin$/.test(name))await fs.rm(path.join(out,name));
  const logo=await fs.readFile('src/walk/assets/hydro-nip-main-logo.jpg'),logoName=hashed('hydro-nip-main-logo','jpg',logo);
  await fs.writeFile(path.join(out,logoName),logo);
@@ -38,7 +38,8 @@ export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverri
  const walk=walkOverride||(v2?{plan:JSON.parse(await fs.readFile('output/leo-interior-v02/walk-plan.json','utf8')),map:await fs.readFile('output/leo-interior-v02/walk-map.png')}:await planWalk()),plan=JSON.stringify(walk.plan),mapName=hashed('walk-map','png',walk.map);
  await fs.writeFile(path.join(out,mapName),walk.map);
  // The ship log boards' list of changes (src/walk/changes-board.js), from git: scripts/ship-log.mjs.
- const {media,from}=loadMedia(),log=shipLog(process.cwd(),media);
+ const suppliedMedia=logMedia||(v2?await(await import('./v2-ship-log-media.mjs')).v2ShipLogMedia():undefined);
+ const {media,from}=suppliedMedia||loadMedia(),log=shipLog(process.cwd(),media);
  console.log(`ship log: ${log.length} changes, ${log.filter(e=>e.shots).length} with before-and-after pictures (from ${from})`);
  const data={'walk-partitions':plan,'walk-changes':JSON.stringify(log)};
  const partitions={name:'walk-data',setup(b){b.onResolve({filter:/^walk-(partitions|changes)$/},a=>({path:a.path,namespace:'walk'}));b.onLoad({filter:/.*/,namespace:'walk'},a=>({contents:data[a.path],loader:'json'}));}};
@@ -51,5 +52,5 @@ export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverri
  if(html.includes('/* BUNDLE */'))throw new Error('walk.html lost its bundle placeholder');
  html=html.replace('<body>',()=>`<body><script>window.LEO_PUBLIC_ASSETS=${JSON.stringify(manifest)};</script>`);
  await fs.writeFile(path.join(out,'walk.html'),html);
- return {walk:name,emotes:emoteName,map:mapName,bytes:code.length};
+ return {walk:name,emotes:emoteName,map:mapName,bytes:code.length,...(v2?{corpus:{from,mediaSha256:createHash('sha256').update(JSON.stringify(media)).digest('hex'),mediaPRs:Object.keys(media).length,entries:log.length,queries:log.reduce((n,e)=>n+(e.go?1:0)+(e.shots||[]).filter(s=>s.at).length,0),provenance:suppliedMedia?.provenance||null}}:{})};
 }

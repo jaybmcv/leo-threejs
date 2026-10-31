@@ -4,8 +4,13 @@ for(const r of[...layout.cabins,...layout.rooms.filter(r=>!r.aggregate),...(layo
  if(!r.polygon)continue;const box=bounds(r.polygon),y=r.y,height=r.height||3.4;
  for(const d of layout.decks)if(d.y>=y-.1&&d.y<y+height){let list=owners.get(d.number);if(!list)owners.set(d.number,list=[]);list.push({polygon:r.polygon,box,y,height});}
 }
-export function registerAtriumArchitecture(root){root?.traverse(o=>{if(o.name==='P6_bow_cafe_fronts'&&o.isInstancedMesh&&!architecture.some(a=>a.o===o))architecture.push({o,all:o.instanceMatrix.array.slice(),centres:Array.from({length:o.count},(_,i)=>new(o.position.constructor)(o.instanceMatrix.array[i*16+12],o.instanceMatrix.array[i*16+13],o.instanceMatrix.array[i*16+14]))});});}
-export function setAtriumView(p){if(position&&(position.x-p.x)**2+(position.y-p.y)**2+(position.z-p.z)**2<1e-8)return;position={x:p.x,y:p.y,z:p.z};classified=undefined;for(const a of architecture){let n=0;for(let i=0;i<a.centres.length;i++){const c=a.centres[i];if((c.x-p.x)**2+(c.y-p.y)**2+(c.z-p.z)**2<=900)continue;a.o.instanceMatrix.array.set(a.all.subarray(i*16,i*16+16),n++*16);}a.o.count=n;a.o.instanceMatrix.needsUpdate=true;}}
+let proxyY=null,fogClassified;const fogs=[];
+export function registerAtriumFog(fog){if(!fogs.some(r=>r.fog===fog))fogs.push({fog,near:fog.near,far:fog.far});applyAtriumFog();}
+function inAtriumFog(){if(fogClassified!==undefined)return fogClassified;const p=position;if(!p||p.y<layout.decks[5].y-.3||p.y>39.94)return fogClassified=false;let d=layout.decks[5];for(const q of layout.decks)if(q.y<=p.y+.2)d=q;if(d.number<6||!d.atrium?.outline)return fogClassified=false;const ring=d.atrium.outline,v=[p.x,p.z];if(!contains(ring,v)&&!ring.some((a,i)=>distanceToSegment(v,a,ring[(i+1)%ring.length])<=3.5))return fogClassified=false;return fogClassified=!(owners.get(d.number)||[]).some(r=>p.y>=r.y-.1&&p.y<r.y+r.height&&p.x>=r.box.x0&&p.x<=r.box.x1&&p.z>=r.box.z0&&p.z<=r.box.z1&&contains(r.polygon,v));}
+function applyAtriumFog(){if(!fogs.length)return;const on=inAtriumFog();for(const r of fogs){r.fog.near=r.near;r.fog.far=on?ATRIUM_PROTOTYPE.fogFar:r.far;}}
+export function registerAtriumArchitecture(root){root?.traverse(o=>{if(o.isInstancedMesh&&o.userData.proxySpans&&!architecture.some(a=>a.o===o))architecture.push({o,all:o.instanceMatrix.array.slice(),spans:o.userData.proxySpans});});updateProxies();}
+function updateProxies(){for(const a of architecture){let n=0;for(let i=0;i<a.spans.length;i++){const[lo,hi]=a.spans[i];if(!a.o.userData.distantProxy&&proxyY!==null&&lo<proxyY+3.5&&hi>proxyY-.5)continue;a.o.instanceMatrix.array.set(a.all.subarray(i*16,i*16+16),n++*16);}a.o.count=n;a.o.visible=n>0;a.o.instanceMatrix.needsUpdate=true;}}
+export function setAtriumView(p){const changed=!position||(position.x-p.x)**2+(position.y-p.y)**2+(position.z-p.z)**2>=1e-8;if(changed){position={x:p.x,y:p.y,z:p.z};classified=undefined;fogClassified=undefined;if(proxyY!==p.y){proxyY=p.y;updateProxies();}}applyAtriumFog();}
 function classify(){if(classified!==undefined)return classified;const p=position;if(!p)return null;const d=layout.decks.reduce((a,b)=>Math.abs(a.y-p.y)<Math.abs(b.y-p.y)?a:b);
  if(d.number<6||!d.atrium?.outline)return classified=null;
  const q=[p.x,p.z],ring=d.atrium.outline;
@@ -15,4 +20,4 @@ function classify(){if(classified!==undefined)return classified;const p=position
 }
 export function fastAtriumSpan(p){setAtriumView(p);return classify();}
 export function atriumSpan(low,high){const span=classify();return span?[Math.max(low,span[0]),Math.min(high,span[1])]:[low,high];}
-export function onePassAtriumGlass(root){root.traverse(o=>{for(const m of[].concat(o.material||[]))if(m.transparent&&m.side===2&&/V2_(smart_glass|prototype_hull_glass)|P4_atrium_glass|V2_facade/.test(m.name))m.forceSinglePass=true;});}
+export function onePassAtriumGlass(root){if(root.isScene&&root.fog)registerAtriumFog(root.fog);root.traverse(o=>{for(const m of[].concat(o.material||[]))if(m.transparent&&m.side===2&&/V2_(smart_glass|prototype_hull_glass)|P4_atrium_glass|V2_facade/.test(m.name))m.forceSinglePass=true;});}

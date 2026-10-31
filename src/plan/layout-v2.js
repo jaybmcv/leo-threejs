@@ -1,3 +1,4 @@
+import {ATRIUM_TERRACES} from './atrium-v2.js';
 import {gardenGalleryDoors} from './gallery-entries-v2.js';
 import {escapeSeatPlan} from './shuttle-seats-v2.js';
 import {mapCabins} from './cabin-map-v2.js';
@@ -162,6 +163,8 @@ export function buildLayoutV2(){
  addStructuralOpenings({decks,circulation,rooms});
  scheduleWindows({h,decks,rooms,cabins,windows,issues});
  const lounge=rooms.find(r=>r.id==='commons-1');lounge.door.center[0]=lounge.x+5.25;lounge.door.label='Jaguar throat';circulation.balconies=[{id:'hydro-nip-promenade-balcony',owner:'commons-1',deck:17,polygon:rectangle(lounge.x,-18.5,53,3),width:3,reason:'Jay round 3: guarded garden-edge approach to the unchanged aquarium and jaguar throat; no centre crossing.'}];
+ // Phase6: short aft-edge aprons, with a second room-owned entry into the aft lobby.
+ for(const t of ATRIUM_TERRACES){const owner='neighborhood-'+(t.deck-5)+(t.side<0?'-dining':'-cafe'),r=rooms.find(r=>r.id===owner),door={id:owner+'-terrace-entry',deck:t.deck,center:[-144.5,r.y,t.side*18],width:2.4,outward:[0,-t.side],label:'Dining terrace via aft lobby'};r.galleryDoors=[...(r.galleryDoors||[]),door];circulation.balconies.push({...t,owner,width:2.2,kind:'dining-apron',reason:'Phase6 accepted short aft-edge apron; no cabin changes or centre crossing. Three owned continuous guards; rear joins the existing aft core.'});}
  /* Main's automatic freight airlock is on the forward bulkhead. Keep the aft planned access and reserve its full existing six-metre opening in the rebuilt shell too. */
  const freight=rooms.find(r=>r.id==='d01-spares-aft');freight.fittingDoor={id:'aft-freight-airlock',center:[freight.x+freight.width/2,freight.y,freight.z],width:6,height:2.5,reason:'Main eb079b7 automatic freight airlock; leaves and movers stay unchanged.'};
  connectCirculation({h,decks,rooms,cabins,shuttles,circulation,issues});

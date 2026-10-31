@@ -27,8 +27,10 @@ export function describeV2(layout,point,{crownFloor=120.3}={}){
  const deck=layout.decks.reduce((a,b)=>Math.abs(b.y-y)<Math.abs(a.y-y)?b:a);
  if(deck.number===20&&x>127&&x<138&&Math.abs(z)<18)return 'Deck 20 · Crew service gallery · Crew only';
  const room=[...layout.rooms,...(layout.fixedRooms||[])].find(r=>!r.aggregate&&y>=r.y-.2&&y<r.y+r.height-.2&&contains(r.polygon,[x,z]));
- const shuttle=layout.shuttles.find(s=>Math.abs(s.y-y)<.3&&contains(s.polygon,[x,z]));
- const name=shuttle?'Escape shuttle':room?.name||(deck.number===6&&Math.abs(z)<20&&x>-120&&x<120?'Open atrium':deck.name);
+ const shuttle=layout.shuttles.find(s=>{if(y<s.y-.1||y>s.y+3.2)return false;const dx=x-s.x,dz=z-s.z,c=Math.cos(s.yaw),n=Math.sin(s.yaw),u=c*dx-n*dz,v=n*dx+c*dz;return Math.abs(u)<10.68&&Math.abs(v)<3.63;});
+ const coreBay=layout.shuttles.some(s=>Math.abs(s.y-y)<.4&&contains(s.polygon,[x,z]));
+ const bay=coreBay||(layout.hullPrototypes?.prototypes||[]).some(p=>p.kind==='bay'&&p.deck===deck.number&&y>=p.chart.origin[1]-.2&&y<p.chart.origin[1]+p.rect[3]&&contains(p.polygon,[x,z]));
+ const name=shuttle?'Escape shuttle':bay||room?.kind==='escape-bay'?'Escape shuttle bay':room?.name||(deck.number===6&&Math.abs(z)<20&&x>-120&&x<120?'Open atrium':deck.name);
  // The observation floor is raised 2 m above its Deck 17 approach.
  return 'Deck '+(room?.id==='observation-lounge'?room.deck:deck.number)+' · '+name;
 }

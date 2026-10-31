@@ -8,7 +8,7 @@ import {attachEnvelopeOwners} from '../plan/envelope-mesh-v2.js';
 export const HATCH_OFFSET=.008;
 const material=new T.MeshStandardMaterial({name:'V2_shuttle_hatch_seam',color:0x8b9da6,roughness:.55,metalness:.3,side:T.DoubleSide});
 // Match the established inner-lining finish bucket; colour remains in the vertices.
-const interiorMaterial=new T.MeshStandardMaterial({name:'V2_shuttle_hatch_seam',color:0x8b9da6,roughness:.8,metalness:0,side:T.DoubleSide});
+const interiorMaterial=new T.MeshStandardMaterial({name:'V2_shuttle_hatch_seam',color:0x52666c,roughness:.8,metalness:0,side:T.DoubleSide});
 export function hatchMarks(p){const [a,b,c,d]=p.rect,w=.045,e=.045,x0=a+e,x1=b-e,y0=c+e,y1=d-e;const marks=[[x0,x0+w,y0,y1],[x1-w,x1,y0,y1],[x0+w,x1-w,y0,y0+w],[x0+w,x1-w,y1-w,y1]];for(const y of [.55,1.7,2.85]){marks.push([x0+.12,x0+.28,y-.13,y+.13]);marks.push([x1-.28,x1-.12,y-.13,y+.13]);}return marks;}
 function clipRect(t,r){let q=t;for(const[a,b,s]of [[0,r[0],1],[0,r[1],-1],[1,r[2],1],[1,r[3],-1]])q=clipPolygon(q,a,b,s);return triangulate(q);}
 export function hatchGeometry(p,{surface=p.surface,interior=false}={}){const positions=[],normals=[];for(const r of hatchMarks(p))for(const t of surface)for(const face of clipRect(t,r)){const a=face.map(q=>worldPoint(p.chart,[q[0],q[1],q[2]+(interior?-HATCH_OFFSET:HATCH_OFFSET)])),normal=new T.Triangle(...a.map(q=>new T.Vector3(...q))).getNormal(new T.Vector3());for(let i=0;i<3;i++){positions.push(...a[i]);normals.push(...normal.toArray());}}const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setAttribute('normal',new T.Float32BufferAttribute(normals,3));g.computeBoundingBox();return g;}

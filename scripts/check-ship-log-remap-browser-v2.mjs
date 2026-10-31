@@ -16,6 +16,7 @@ const layout=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json',
 const table=JSON.parse(await fs.readFile('output/phase7/remap-table.json','utf8'));
 const html=await fs.readFile(path.join(directory,'walk.html'),'utf8'),script=html.match(/LEO_WALK_BOOT\("([^" ]+)"\)/)?.[1];assert(script,'Public walk script missing');
 const original=await fs.readFile(path.join(directory,script),'utf8'),hooks=remapBrowserHooks(original);
+if(!frozenMode){const corpus=JSON.parse(await fs.readFile('output/phase7/ship-log-corpus-public.json','utf8'));assert(/^GitHub/.test(corpus.from),'Release remap gate needs a live GitHub corpus: rebuild public with authenticated gh or the fresh read-only connector bridge');assert.equal(corpus.bundle,script,'Stale public ship-log corpus receipt');assert.equal(corpus.bundleSha256,createHash('sha256').update(original).digest('hex'),'Public corpus receipt must bind the exact tested bundle');}
 let patched=original,harnessModule=null;
 if(frozenMode){
  const anchor=/let ([$\w]+)=([$\w]+)\.room\|\|([$\w]+)\(\2\.at,\{legacy:!0\}\);if\(([$\w]+)\.cabinIdMap\[\1\]\)/.exec(original);assert(anchor,'Frozen pre-remap signature changed');
