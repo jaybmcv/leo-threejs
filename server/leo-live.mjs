@@ -35,6 +35,7 @@
 // and limits how often anyone may send. Lifts are the server's: a call goes to the server, which steps every car
 // (lift-motion.js) and tells everyone when a car's plans change.
 import http from 'node:http';
+import {buildInfo} from '../scripts/build-info.mjs';
 import fs from 'node:fs';
 import {WebSocketServer} from 'ws';
 import {LIFTS} from '../src/walk/lifts.js';
@@ -336,12 +337,15 @@ function flush(){
 }
 setInterval(flush,FLUSH_MS);
 
+// The commit this server runs, read as it starts, so the Builder's Hub knows when a server change has really gone live.
+// None when its files have changes: then it isn't running that commit.
+const REVISION=buildInfo(new URL('..',import.meta.url)).sha;
 const server=http.createServer((req,res)=>{
  // Mudwater Arena's daily counts, totals only (arena.mjs).
  if(req.url==='/arena'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify(arena.report()));return;}
  // The Crown lounge TV: its video, and uploads to it (tv.mjs).
  if(tv.http(req,res))return;
- if(req.url==='/health'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify({ok:true,aboard:aboard(),max:MAX}));return;}
+ if(req.url==='/health'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify({ok:true,aboard:aboard(),max:MAX,revision:REVISION}));return;}
  res.writeHead(200,{'Content-Type':'text/plain'});res.end('Leo live: the multiplayer server for Walk around Leo.\n');
 });
 const wss=new WebSocketServer({noServer:true,maxPayload:4096,perMessageDeflate:false});

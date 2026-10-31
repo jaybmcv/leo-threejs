@@ -90,6 +90,7 @@ export function createHelp(sheet,{touch=()=>false,tester=()=>false,live=()=>fals
     el('div',{className:'guide-step'},el('header',{},el('h4',{textContent:title}),el('span',{className:'when',textContent:when})),body));
   }));
   const log=el('button',{type:'button',className:'guide-link',textContent:'Open the ship log'});log.onclick=onLog;
+  const hub=el('a',{className:'guide-link',href:'hub.html',target:'_blank',rel:'noopener',textContent:'Follow your ideas'});
   const see=el('button',{type:'button',className:'guide-link',textContent:'See it aboard'});see.onclick=()=>onGo(EXAMPLE.go);
   const shot=(kind,path,alt)=>el('figure',{className:kind},el('img',{src:MEDIA+path,alt,loading:'lazy',decoding:'async'}),el('figcaption',{textContent:kind}));
   const send=el('button',{type:'button',className:'guide-send',textContent:'Send feedback'});send.onclick=onFeedback;
@@ -97,7 +98,7 @@ export function createHelp(sheet,{touch=()=>false,tester=()=>false,live=()=>fals
    el('div',{className:'eyebrow guide-eyebrow'},el('span',{textContent:'Tester guide'}),el('span',{textContent:'Feedback → ship'})),
    el('h3',{className:'guide-title'},'From your idea to ',el('em',{textContent:'the ship'})),
    el('p',{className:'guide-lead',textContent:'A real person reads every report, and the team decides what gets built.'}),
-   steps,el('div',{className:'guide-after'},el('span',{textContent:'Not showing yet? Refresh the page.'}),log),
+   steps,el('div',{className:'guide-after'},el('span',{textContent:'Not showing yet? Refresh the page.'}),log,hub),
    el('div',{className:'eyebrow guide-eyebrow'},el('span',{textContent:'Writing a good report'})),
    el('h3',{className:'guide-title small',textContent:'Plain words work'}),
    el('p',{className:'guide-lead',textContent:'Write it like you’d text a friend, and add a picture. This real report got built:'}),
