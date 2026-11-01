@@ -13,6 +13,7 @@ for(const [name,entry] of Object.entries(manifest)){
 }
 // The Builder's Hub reads which commit the site was built from: a full commit, or null when the build was of changed files.
 const info=JSON.parse(await fs.readFile('dist/build.json','utf8'));assert.ok(info.sha===null||/^[0-9a-f]{40}$/.test(info.sha),'build.json names a commit');
+const hubReturn=(await fs.readFile('dist/walk.html','utf8')).indexOf('LEO_TO_HUB');assert.ok(hubReturn>0&&hubReturn<800,'walk.html sends a Hub sign-in on before anything else');
 const html=await fs.readFile('dist/index.html','utf8');
 assert.ok(html.includes('id="share-view"'));
 const viewerScript=html.match(/<script>LEO_BOOT\("(viewer\.[0-9a-f]{10}\.js)"\)<\/script>/)?.[1];assert.ok(viewerScript,'index.html loads the hashed viewer script');
