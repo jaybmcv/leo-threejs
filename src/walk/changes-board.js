@@ -1,3 +1,4 @@
+import {inOtherside} from './net/otherside.js';
 import * as T from 'three';
 import {placed,placedV1,placedFacing,placeObject} from '../plan/placements.js';
 import log from 'walk-changes';
@@ -310,7 +311,7 @@ export function createChangesBoards({hearts,onOpen=()=>{},onClose=()=>{},onGo=()
    if(Array.isArray(h.mine))mine=new Set(h.mine);if(typeof h.verified==='boolean')verified=h.verified;
    paint();showHeart();
   },
-  refused(why){say(why==='sign-in'?'SIGN IN WITH DISCORD TO GIVE HEARTS':'THAT HEART WASN’T SAVED');},
+  refused(why){say(why==='sign-in'?(inOtherside?'HEARTS AREN’T AVAILABLE FROM OTHERSIDE YET':'SIGN IN WITH DISCORD TO GIVE HEARTS'):'THAT HEART WASN’T SAVED');},
   // For checks: what the board holds.
   get state(){return {log,rows,counts,mine,verified,status,selected,top,favorites:favorites(),detail,shot,split};},
  };

@@ -1,3 +1,4 @@
+import {inOtherside} from '../net/otherside.js';
 import {SPRITES,COLORS,spriteCanvas} from './sprites.js';
 import {newGame,step,alive,alienBox,W,H,STEP,PLAYER,SHIELDS,GROUND,MOTHERSHIP} from './rules.js';
 import {createSound} from './sound.js';
@@ -106,7 +107,7 @@ export function createInvasion({onOpen=()=>{},onClose=()=>{},muted=()=>false,sco
    const y=114+i*16;g2.drawImage(art[k][0],x*S,y*S);text(label,84,y+1,8,COLORS.text);});
   panel(28,182,184,58);text('TOP SCORES · SIGNED-IN',120,186,7,COLORS.ground,'center');
   boardLines(36,198,3,204);
-  text(board.you?`YOUR BEST  ${pad(board.you.score)}`:board.status==='guest'?'SIGN IN WITH DISCORD TO POST':board.status==='offline'?'OFFLINE: SCORES NOT SAVED':'',120,230,6.5,COLORS.dim,'center');
+  text(board.you?`YOUR BEST  ${pad(board.you.score)}`:board.status==='guest'?(inOtherside?'':'SIGN IN WITH DISCORD TO POST'):board.status==='offline'?'OFFLINE: SCORES NOT SAVED':'',120,230,6.5,COLORS.dim,'center');
   g2.fillStyle='rgba(5,7,13,.78)';g2.fillRect(0,245*S,W*S,25*S);
   if((now/600|0)%2===0)text(touch?'TAP TO PLAY':'SPACE OR TAP TO PLAY',120,250,8,COLORS.accent,'center');
   text(touch?'TAP × TO RETURN TO LEO':'ESC RETURNS TO LEO',120,261,6,COLORS.dim,'center');
@@ -139,7 +140,7 @@ export function createInvasion({onOpen=()=>{},onClose=()=>{},muted=()=>false,sco
   g2.fillStyle='rgba(5,7,13,.82)';g2.fillRect(0,0,W*S,H*S);
   text('GAME OVER',120,36,20,COLORS.accent,'center');text(`SCORE ${pad(game.score)} · WAVE ${game.wave}`,120,62,8,COLORS.text,'center');
   const line=!result?'SAVING…':result.ok?(result.newBest?`NEW BEST! RANK ${result.rank||'-'}`:`YOUR BEST ${pad(result.best)} · RANK ${result.rank||'-'}`):
-   result.why==='sign-in'?'SIGN IN WITH DISCORD TO POST SCORES':result.why==='offline'?'OFFLINE: SCORE NOT SAVED':'SCORE NOT ACCEPTED';
+   result.why==='sign-in'?(inOtherside?'SCORE NOT SAVED':'SIGN IN WITH DISCORD TO POST SCORES'):result.why==='offline'?'OFFLINE: SCORE NOT SAVED':'SCORE NOT ACCEPTED';
   text(line,120,76,7,result?.ok?COLORS.ground:COLORS.dim,'center');
   panel(28,92,184,124);text('TOP 10 · SIGNED-IN PLAYERS',120,96,7,COLORS.ground,'center');boardLines(36,108,10,204);
   if((now/600|0)%2===0)text(touch?'TAP TO PLAY AGAIN':'SPACE TO PLAY AGAIN',120,228,8,COLORS.accent,'center');

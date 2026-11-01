@@ -126,10 +126,10 @@ function startServer(port,env={}){
  return new Promise((resolve,reject)=>{child.stdout.on('data',d=>{if(/Leo live on/.test(d))resolve(child);});child.on('exit',c=>reject(new Error('server exited '+c)));setTimeout(()=>reject(new Error('server did not start')),10000);});
 }
 class Bot{
- constructor(port,{name='',key=randomBytes(32).toString('hex'),origin='http://localhost:4180',v=PROTOCOL,pass,invite,hat}={}){
+ constructor(port,{name='',key=randomBytes(32).toString('hex'),origin='http://localhost:4180',v=PROTOCOL,pass,invite,hat,glyph}={}){
   Object.assign(this,{key,name,poses:new Map(),frames:0,bytes:0,msgs:[],gone:[],lifts:[],closed:null,reader:new WireReader(),got:new Map()});
   this.ws=new WebSocket(`ws://127.0.0.1:${port}/live`,{origin});
-  this.opened=new Promise((resolve,reject)=>{this.ws.on('open',()=>{this.ws.send(JSON.stringify({m:'hello',v,key,name,pass,invite,hat}));resolve();});this.ws.on('error',reject);this.ws.on('unexpected-response',(q,res)=>reject(new Error('HTTP '+res.statusCode)));});
+  this.opened=new Promise((resolve,reject)=>{this.ws.on('open',()=>{this.ws.send(JSON.stringify({m:'hello',v,key,name,pass,invite,hat,glyph}));resolve();});this.ws.on('error',reject);this.ws.on('unexpected-response',(q,res)=>reject(new Error('HTTP '+res.statusCode)));});
   this.ws.on('message',(data,binary)=>{
    if(binary){this.frames++;this.bytes+=data.length;for(const p of this.reader.read(data)){this.poses.set(p.id,p);this.got.set(p.id,(this.got.get(p.id)||0)+1);}return;}
    const msg=JSON.parse(data);this.msgs.push(msg);if(msg.m==='welcome')this.id=msg.id;if(msg.m==='gone')this.gone.push(msg.id);if(msg.m==='lift')this.lifts.push(msg);
@@ -418,6 +418,24 @@ try{
   check('identity: a remembered visitor is aboard under their Discord name, verified',kept.msgs.find(m=>m.m==='welcome')?.you?.verified===true&&watch.poses.get(kept.id)?.name==='Kit Cat'&&/discord:343434343434343434 \(remembered\)/.test(srv.log));
   const old=new Bot(port,{name:'Old',pass:await creamery.sign(claimsFor('353535353535353535','Old Cat',{iat:nowS()-40*86400-600,exp:nowS()-40*86400}))});await old.welcomed();
   check('identity: a pass kept longer than visitors are remembered leaves them anonymous',old.msgs.find(m=>m.m==='welcome')?.you?.verified===false);
+  // A player from Otherside: everything a Discord account gets, on the page's word, and so no verified dot.
+  const WALLET='0xAbCdEf0123456789aBcDeF0123456789AbCdEf01';
+  const gale=new Bot(port,{name:'typed',glyph:{wallet:WALLET,username:'Gale Cat'}});await gale.welcomed();
+  check('glyph: a wallet from Otherside gets full access, under its Glyph name',gale.msgs.find(m=>m.m==='welcome')?.you?.verified===true&&gale.msgs.find(m=>m.m==='welcome')?.you?.name==='Gale Cat'&&srv.log.includes('glyph:'+WALLET.toLowerCase()));
+  gale.send({m:'chat',text:'Hello from Otherside'});await sleep(250);
+  const galeLine=watch.msgs.find(m=>m.m==='chat'&&m.text==='Hello from Otherside');
+  check('glyph: they can chat, and their line has no verified dot',galeLine?.name==='Gale Cat'&&galeLine.verified===false,JSON.stringify(galeLine));
+  gale.send({m:'play'});await sleep(400);gale.send({m:'score',score:100,wave:1});await sleep(250);
+  check('glyph: their scores are kept',gale.msgs.some(m=>m.m==='scored'&&m.ok===true));
+  for(let i=0;i<3;i++){gale.pose([14,-3.7,0]);watch.pose([11,-3.7,0]);await sleep(100);}await sleep(200);
+  check('glyph: others see their name without the dot',watch.poses.get(gale.id)?.name==='Gale Cat'&&!watch.poses.get(gale.id)?.verified);
+  const unnamed=new Bot(port,{glyph:{wallet:'0x1111111111111111111111111111111111111111'}});await unnamed.welcomed();
+  check('glyph: no username goes by the short wallet',unnamed.msgs.find(m=>m.m==='welcome')?.you?.name==='0x1111…1111'&&unnamed.msgs.find(m=>m.m==='welcome')?.you?.verified===true);
+  const noWallet=[new Bot(port,{name:'Bad',glyph:{wallet:'0x12',username:'Bad'}}),new Bot(port,{name:'None',glyph:{username:'None'}}),new Bot(port,{name:'Odd',glyph:'nope'})];
+  for(const b of noWallet)await b.welcomed();
+  check('glyph: without a usable wallet they stay a guest',noWallet.every(b=>b.msgs.find(m=>m.m==='welcome')?.you?.verified===false));
+  const gale2=new Bot(port,{glyph:{wallet:WALLET.toLowerCase(),username:'Gale Cat'}});await gale2.welcomed();await sleep(250);
+  check('glyph: the same wallet elsewhere takes over, whatever its letter case',gale.msgs.some(m=>m.m==='replaced')&&!!gale2.id);
   [watch,forged,bea2,kept,old].forEach(b=>b.close());
  }finally{srv.kill();}
 }

@@ -1,3 +1,4 @@
+import {inOtherside} from './net/otherside.js';
 import * as T from 'three';
 import {placed,placedV1,placedFacing,placeObject} from '../plan/placements.js';
 
@@ -11,7 +12,7 @@ const KEY='tv/Crown_lounge',FLOOR=120.3,SCREEN=[3.2,1.8],BEZEL=.06,REACH=5,LOAD_
 const INK='#07090d',TEXT='#f4f0e8',DIM='#a6b4bb',ORANGE='#f85800',TEAL='#2fd6c5';
 const FONT={display:'"Archivo", "Sora", sans-serif',mono:'"JetBrains Mono", ui-monospace, monospace'};
 const WHY={
- 'sign-in':'Connect Discord to share a video. Everyone aboard can watch.',
+ 'sign-in':inOtherside?'Everyone aboard can watch. Sharing a video isn’t available from Otherside yet.':'Connect Discord to share a video. Everyone aboard can watch.',
  slow:'One video a minute each: try again in a moment.',
  busy:'Someone else is uploading right now: try again in a moment.',
  big:'That file is too big.',long:'That video is too long.',
@@ -64,7 +65,7 @@ export function createCrownTv({live,base,connect,els,onOpen,onClose}){
   c.fillStyle=TEXT;c.font=`600 112px ${FONT.display}`;c.fillText('Crown TV',90,370);
   c.fillStyle=DIM;c.font=`400 34px ${FONT.mono}`;
   const lines=state==='tuning'?['Tuning in…']:state==='broken'?['This video won’t play in this browser.']
-   :!base?['Nothing on.']:['Nothing on yet.','Signed in with Discord? Press E here','to put a video on for everyone aboard.'];
+   :!base?['Nothing on.']:inOtherside?['Nothing on yet.']:['Nothing on yet.','Signed in with Discord? Press E here','to put a video on for everyone aboard.'];
   lines.forEach((t,i)=>c.fillText(t,96,450+i*52));
   cardTexture.needsUpdate=true;
  }
@@ -110,7 +111,7 @@ export function createCrownTv({live,base,connect,els,onOpen,onClose}){
   els.now.textContent=info?`Now showing: shared by ${info.name||'Voyager'}${info.at?' '+ago(info.at):''}${info.seconds?` · ${Math.round(info.seconds)} s`:''}.`:'Nothing on the TV yet.';
   els.sound.hidden=!info;els.sound.textContent=sound?'Mute':'Unmute';
   els.pick.hidden=!online||!verified;els.pick.disabled=busy;els.pick.textContent=info?'Share a video instead':'Share a video';
-  els.connect.hidden=!online||verified;
+  els.connect.hidden=!online||verified||inOtherside;
   els.down.hidden=!online||!owner||!info;els.down.textContent=sure?'Sure? Take it down':'Take it down';
   els.limits.textContent=`MP4 (H.264), up to ${minutes(max.seconds)} and ${max.mb} MB, 1080p at most. It plays for everyone aboard until someone shares the next one, so keep it friendly: it can be taken down.`;
   els.status.textContent=note||(!online?WHY.offline:!verified?WHY['sign-in']:'');

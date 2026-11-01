@@ -1,3 +1,4 @@
+import {inOtherside} from '../net/otherside.js';
 import {MAZE_START,X0,inMaze,inFront} from './layout.js';
 
 // The Container Maze's clock and best times (CONTAINER_MAZE.md). Walking in through the way in starts the clock; the
@@ -54,13 +55,13 @@ export function createMazeGame({hold,live,goTo,onOpen,onClose,muted=()=>false}){
   if(ran===null)note.append('Find the red button in the middle of the hold. The clock starts as you walk in through START and stops when you press it.');
   else if(!r)note.append('Saving your time…');
   else if(r.ok)note.append(...(r.newBest?[el('b',{textContent:'A new best'}),` · rank ${r.rank} on the board.`]:[`Your best is ${clock(r.best)}, rank ${r.rank}.`]));
-  else note.append({'sign-in':'Connect Discord to put your times on the board.',offline:r.kept?'A new best in this browser. Not connected to Leo live, so it isn’t on the board.':'Not connected to Leo live: this time isn’t on the board.',
+  else note.append({'sign-in':inOtherside?'Times from Otherside can’t go on the board yet.':'Connect Discord to put your times on the board.',offline:r.kept?'A new best in this browser. Not connected to Leo live, so it isn’t on the board.':'Not connected to Leo live: this time isn’t on the board.',
    rejected:'This time wasn’t accepted for the board.'}[r.why]||'');
   list.textContent='';
   if(!board.top.length)list.append(el('li',{className:'empty',textContent:board.status==='offline'?'The board is offline.':board.status==='loading'?'Loading…':'No times yet: be the first.'}));
   board.top.forEach((e,n)=>list.append(el('li',{},el('span',{textContent:String(n+1)}),el('span',{textContent:e.name}),el('span',{textContent:clock(e.ms)}))));
   const here=best();
-  mine.textContent=[board.you?`Your best on the board: ${clock(board.you.ms)} · rank ${board.you.rank}`:board.status==='guest'?'Connect Discord to post times.':'',here?`Your best in this browser: ${clock(here)}`:''].filter(Boolean).join(' · ');
+  mine.textContent=[board.you?`Your best on the board: ${clock(board.you.ms)} · rank ${board.you.rank}`:board.status==='guest'&&!inOtherside?'Connect Discord to post times.':'',here?`Your best in this browser: ${clock(here)}`:''].filter(Boolean).join(' · ');
   back.hidden=!(state==='done');
  }
  function open(){

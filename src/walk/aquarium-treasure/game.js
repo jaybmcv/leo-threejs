@@ -1,3 +1,4 @@
+import {inOtherside} from '../net/otherside.js';
 import * as T from 'three';
 import {canvasTexture} from '../../polish-kit.js';
 import {AQUARIUM as A} from '../lounge-aquarium.js';
@@ -62,7 +63,7 @@ export function createTreasureGame({tank,controller,follow,camera,input,live,onO
  function showBoard(){
   title.textContent='Treasure recovered · '+clock(ran);list.textContent='';
   note.textContent=awaiting?'Checking your swim with Leo live…':result?.ok?`${result.newBest?'A new best! ':''}Your best: ${clock(result.best)} · rank ${result.rank}.`:
-   result?.why==='sign-in'?'Connect Discord to post times. Your browser best is saved.':result?.why==='rejected'?'This swim was not accepted for the shared board. Your browser best is saved.':'Your browser best is saved. The shared board is offline.';
+   result?.why==='sign-in'?inOtherside?'Your browser best is saved.':'Connect Discord to post times. Your browser best is saved.':result?.why==='rejected'?'This swim was not accepted for the shared board. Your browser best is saved.':'Your browser best is saved. The shared board is offline.';
   if(!board?.top?.length)list.append(el('li',{textContent:board?'No times yet.':'Shared board unavailable.'}));
   for(const [i,e] of (board?.top||[]).entries())list.append(el('li',{textContent:`${i+1}. ${e.name} · ${clock(e.ms)}`}));
   mine.textContent=best()?`Best in this browser: ${clock(best())}`:'';
