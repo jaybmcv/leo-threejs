@@ -10,7 +10,7 @@ const arg=process.argv.find(a=>a.startsWith('--base=')),folder=arg?path.join(arg
 const full=JSON.parse(await fs.readFile(path.join(folder,'layout.json'),'utf8')),walk=JSON.parse(await fs.readFile(path.join(folder,'walk-plan.json'),'utf8'));
 const trimmed=runtimeLayout(full);assert(trimmed.decks.every(d=>!('corridors'in d)),'fixture must use walk runtime shape');
 const selected=selectViewerLayout(trimmed),routes=viewerRoutes(selected),samples=checkViewerRoutes(trimmed,routes,{shells:walk.shells});assert(samples>1000);assert.equal(checkViewerRoutes(selected,routes,{shells:walk.shells}),samples);
-assert.deepEqual(viewerStats(full),{cabins:5028,berths:10000,shuttles:100,rooms:285,decks:20,gardens:10});
+assert.deepEqual(viewerStats(full),{cabins:5028,berths:10000,shuttles:100,rooms:450,decks:20,gardens:10});
 assert.equal(selected.stats.rooms,selected.rooms.length);assert(!selected.rooms.some(r=>r.aggregate));assert(selected.rooms.some(r=>r.id==='d02-new-1'));assert.equal(selected.rooms.filter(r=>r.kind==='garden').length,10);assert.equal(selected.shuttles.length,100);assert(selected.shuttles.every(s=>s.polygon.length>=3));
 // Every exact slab hole and per-deck object survives projection. No legacy full-deck room replaces real bays.
 for(const d of selected.decks){const source=full.decks.find(a=>a.number===d.number);assert.deepEqual(d.slab.holes.map(h=>h.id),source.slab.holes.map(h=>h.id));for(const h of d.slab.holes){const original=source.slab.holes.find(a=>a.id===h.id).polygon;assert(h.polygon.every(p=>edgeDistance(original,p)<1e-6));}assert.equal(selected.cabins.filter(c=>c.deck===d.number).length,full.cabins.filter(c=>c.deck===d.number).length);}
@@ -27,7 +27,7 @@ const fakeShell={...walk.shells.find(s=>s.id===first.room),polygon:[[first.from[
 assert.equal(walkYaw([0,0,0],[0,0,1]),0);assert.equal(walkYaw([0,0,0],[1,0,0]),Math.PI/2);
 for(let angle=0;angle<Math.PI*2;angle+=.05)assert(Math.abs(Math.hypot(...exteriorFlightOffset(angle,500))-500)<1e-8,'Exterior flight radius must not drift inward');
 const source=await fs.readFile('src/v2/viewer.js','utf8');assert(source.includes("lite?'leo-exterior-phone.glb':'leo-exterior-web.glb'"));assert(!source.includes("from '../viewer")&&!source.includes("from '../model")&&!source.includes("from 'v2-layout'"));assert(source.includes('fetch(window.LEO_VIEWER_LAYOUT)'));
-console.log('PASS v2 viewer: '+samples+' tour samples; exact deck holes, 285 current room labels, 100 bays, counts, runtime trimming and 7 negative controls.');
+console.log('PASS v2 viewer: '+samples+' tour samples; exact deck holes, 450 current room labels, 100 bays, counts, runtime trimming and 7 negative controls.');
 
 }
 await check();

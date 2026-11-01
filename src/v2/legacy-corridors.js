@@ -1,4 +1,5 @@
-import {bounds,contains,distanceToSegment} from '../plan/geometry-v2.js';
+import {bounds,contains,distanceToSegment,rectangle} from '../plan/geometry-v2.js';
+import {TRANSIT_CORES} from '../plan/v1.js';
 
 // Legacy circulation frames overlap at deck boundaries; determine the floor from Y,
 // never from circulation-N's registry id. Yaw here is walk yaw: 0 = +Z, PI/2 = +X.
@@ -20,6 +21,9 @@ export function createLegacyCorridorRemapper(layout,legacyCabins){
  function index(deck){
   if(indexed.has(deck.number))return indexed.get(deck.number);
   const solids=[...layout.cabins,...layout.rooms.filter(r=>!r.aggregate)].filter(r=>r.y<deck.y+2&&r.y+r.height>deck.y+.4).map(r=>({...bounded(r.polygon),id:r.id}));
+  // Match the forward stair's actual outer walls, including its landing width.
+  const core=TRANSIT_CORES.find(c=>c.id==='forward');
+  if(deck.number<=core.lastDeck)for(const side of[-1,1]){const gallery=deck.number>=17&&deck.number<=19;solids.push({...bounded(rectangle(core.stairX+(gallery?1:0),side*(core.stairZ+2.57),gallery?7:9,.14)),id:'forward-stair-outer-wall-'+side});}
   const holes=deck.slab.holes.map(h=>bounded(h.polygon));
   const supports=[...layout.circulation.bridges,...layout.circulation.towers,...(layout.circulation.balconies||[])].filter(r=>r.deck===deck.number).map(r=>bounded(r.polygon));
   const segments=[];

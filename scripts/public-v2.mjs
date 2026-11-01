@@ -32,5 +32,5 @@ manifest['walk-prepared']=await copyPreparedWalk(out);const logMedia=await v2Shi
 const debug='output/leo-interior-v02/review';await fs.mkdir(debug,{recursive:true});const debugManifest=Object.fromEntries(Object.entries(manifest).map(([k,v])=>[k,{...v,parts:v.parts.map(p=>'/base/'+p),...(v.recipePart?{recipePart:'/base/'+v.recipePart}:{})}]));await fs.copyFile(out+'/'+cosmo,debug+'/'+cosmo);await fs.cp(out+'/brand',debug+'/brand',{recursive:true});await writeWalkPage(debug,{cosmo,manifest:debugManifest,debug:true,preparedWalk:true,sourceAdapters:publicPreparedAdapters,logMedia});
 console.log('v2 public assets built locally in '+out);
 
-const hub=await writeHubPage(out);console.log(`Builder's Hub: ${hub.script}, ${(hub.bytes/1024).toFixed(0)} KB.`);
+const hub=await writeHubPage(out,{workspaceLocal:true});console.log(`Builder's Hub: ${hub.script}, ${(hub.bytes/1024).toFixed(0)} KB.`);
 await writeBuildInfo(out);

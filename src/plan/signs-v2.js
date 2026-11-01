@@ -6,7 +6,7 @@ const segNear=(p,a,b)=>{const dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,
 export const centroid=poly=>[poly.reduce((v,p)=>v+p[0],0)/poly.length,poly.reduce((v,p)=>v+p[1],0)/poly.length];
 export const legacySignPlace=(layout,s)=>{const [x,z]=centroid(s.polygon);return {at:[x,layout.decks[s.deck-1].y+2.6,z+3.5],yaw:0,width:2.5,faces:1};};
 export function signPlace(layout,s){
- if(s.wing===undefined)return legacySignPlace(layout,s);
+ if(s.wing===undefined){const place=legacySignPlace(layout,s);if(s.id==='forward_lift_1'&&s.deck===5)place.at[2]=8.4;return place;}
  const d=layout.decks[s.deck-1],c=centroid(s.polygon);let best=null;
  // Corridors from layout.circulation: the walk's v2-layout drops each deck's own corridor list.
  for(const r of layout.circulation.corridors.filter(r=>r.kind==='wing'&&r.deck===s.deck))for(let i=0;i<r.points.length-1;i++){const n=segNear(c,r.points[i],r.points[i+1]);if(!best||n.d<best.n.d)best={n,r};}

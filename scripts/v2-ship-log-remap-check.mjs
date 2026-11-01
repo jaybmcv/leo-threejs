@@ -16,6 +16,7 @@ const mapping=createLegacyCorridorRemapper(layout,CABINS),rows=[];
 for(const q of queries){
  const original=readSpot('?'+q.query);assert(original,'Invalid source '+q.id);
  const oldRoom=roomAt(original.at,{legacy:true}),current=remapSpot(original);
+ if(q.id==='pr90')assert.equal(oldRoom,'circulation-16','A newly added v2 room must not claim a legacy circulation point');
  assert(current&&current.resolved,q.id+' did not resolve');assert(current.at.every(Number.isFinite),q.id+' nonfinite position');
  assert.equal(remapSpot(current),current,q.id+' remapped twice');
  const v2=remapSpot({...original,lv:2});assert.deepEqual(v2.at,original.at,q.id+' lv=2 moved');assert.equal(v2.yaw,original.yaw);

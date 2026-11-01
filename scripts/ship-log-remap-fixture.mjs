@@ -27,4 +27,5 @@ const cabin=structuredClone(tiny);cabin.cabins=[{id:'blocked',y:0,height:3.5,pol
 const narrow=structuredClone(tiny);narrow.circulation.corridors[0].width=.6;assert.equal(createLegacyCorridorRemapper(narrow,[]).remap(spot,'circulation-1'),null);
 assert.equal(map.remap({...spot,lv:2},'circulation-1'),null);assert.equal(map.remap({...spot,resolved:true},'circulation-1'),null);assert.equal(map.remap(spot,'room'),null);
 assert.equal(legacyFeatureSpot({at:[-229.36,35.32,-2.24],lv:2}),null);
+const physicalMap=createLegacyCorridorRemapper(layout,[]),deck2=layout.decks[1];assert(physicalMap.safe(deck2,[138,6.7]));assert(!physicalMap.safe(deck2,[138,7.6]),'Forward stair outer wall blocks the full capsule');const oldStairPhoto=physicalMap.remap({at:[140.6,-36.4,6.7],yaw:Math.PI/2,lv:1},'stairs-forward-1-d1');assert.deepEqual(oldStairPhoto.at,[138,-35.7,6.7]);assert.equal(oldStairPhoto.yaw,Math.PI,'Saved photo faces the clear side of the same landing');
 console.log('Phase 7 remap negative fixtures: old fallback, wrong deck/range/yaw, void, wall, missing floor, capsule, nearby, trimmed selection PASS');

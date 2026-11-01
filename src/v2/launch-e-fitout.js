@@ -40,6 +40,6 @@ export function launchEFitout(layout,phase6){
  return{parts,rests,rooms};
 }
 
-export function forumTerraces(){return Array.from({length:5},(_,tier)=>{const start=tier*4,end=Math.min(17,start+3),inner=[9.9+start*1.75,14+start*1.35],outer=[12+end*1.75,16+end*1.35],arc=(r,reverse)=>Array.from({length:81},(_,i)=>{const a=-1.30+2.60*(reverse?80-i:i)/80;return[158+r[0]*Math.cos(a),r[1]*Math.sin(a)];});return{polygon:[...arc(outer,false),...arc(inner,true)],rise:tier*.06};}).filter(t=>t.rise>0);}
+export function forumTerraces(){return Array.from({length:5},(_,tier)=>{const start=tier*4,end=Math.min(17,start+3),inner=[9.9+start*1.75,14+start*1.35],outer=tier<4?[9.9+(tier+1)*4*1.75,14+(tier+1)*4*1.35]:[12+end*1.75,16+end*1.35],arc=(r,reverse)=>Array.from({length:81},(_,i)=>{const a=-1.30+2.60*(reverse?80-i:i)/80;return[158+r[0]*Math.cos(a),r[1]*Math.sin(a)];});return{polygon:[...arc(outer,false),...arc(inner,true)],rise:tier*.06,tier};}).filter(t=>t.rise>0);}
 
 export function forumUpperPlan(layout,room){const e=room.ceilingExtension,ramp=layout.circulation.ramps.find(r=>r.id==='observation-lounge-ramp'),b=bounds(e.polygon),clearance=2.2,cut=Math.max(b.x0,ramp.points[0][0]+(e.y+e.height-ramp.points[0][1]-clearance)*ramp.run/ramp.rise),width=ramp.width+.6;return{ceilingHoles:cut<b.x1?[ [[cut,-width/2],[b.x1,-width/2],[b.x1,width/2],[cut,width/2]] ]:[],portals:[b.x0,b.x1].map(x=>({center:[x,e.y,0],width})),rampHeadroom:clearance};}

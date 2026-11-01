@@ -24,6 +24,7 @@ for(const p of wing){const r=layout.circulation.corridors.find(r=>r.id===p.corri
  assert.ok(d<.01&&p.width<=r.width-.5,`${p.s.id}: sign not centred across ${r.id} (${d.toFixed(3)} m off, ${p.width} m wide in ${r.width} m)`);}
 // The old placement must fail, on exactly the 50 port-side wing stairs.
 const legacy=intrusions(places.map(p=>({s:p.s,...legacySignPlace(layout,p.s)})));
-assert.equal(legacy.length,50,'expected the old sign placement to put 50 signs inside cabins, got '+legacy.length);
-assert.ok(legacy.every(l=>/wing-stair-.*--1 /.test(l)),'old placement failures should all be port-side wing stairs');
+assert.equal(legacy.length,51,'expected 50 original wing conflicts and the new Deck 5 waiting-room conflict');
+assert.equal(legacy.filter(l=>/wing-stair-.*--1 /.test(l)).length,50,'all 50 original port-side wing conflicts remain rejected');
+assert.deepEqual(legacy.filter(l=>!/wing-stair-.*--1 /.test(l)),['forward_lift_1 (deck 5) inside d05-launch-d-28']);
 console.log(`Wayfinding signs: ${places.length} placed, none inside a cabin or room; ${wing.length} wing stair signs hang across their wing corridors; the old placement is rejected (${legacy.length} inside cabins)`);
