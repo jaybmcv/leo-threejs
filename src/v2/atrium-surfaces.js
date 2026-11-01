@@ -1,6 +1,8 @@
+import {finishedSkinAuthority} from './skin-authority.js';
+import {applyPublicFinishKit,finishGardenStairRails} from './finish-kit.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {ATRIUM_ZONES,ATRIUM_PROTOTYPE,phase6LakePolygon} from '../plan/atrium-v2.js';
+import {ATRIUM_ZONES,ATRIUM_PROTOTYPE,phase6LakePolygon,phase6GardenPolygons,phase6LakeIslands} from '../plan/atrium-v2.js';
 import {polygonGeometry} from './geometry.js';
 import {walkCanvas} from '../walk/canvas.js';
 const rect=(x0,x1,z0,z1)=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]];
@@ -15,10 +17,12 @@ export function atriumFloorGeometry(outline,holes,y,atriumOutline=outline){
  // no duplicated internal vertical faces, coplanar finish sheets or buried slabs.
  const g=[colourGeometry(keepFaces(polygonGeometry(outline,holes,y),(ny,i,p)=>ny<.5&&![0,1,2].every(k=>Math.abs(p.getY(i+k)-y)<1e-4)),0xd9d3c4),
  colourGeometry(keepFaces(polygonGeometry(outline,[...holes,...zones.map(z=>z.polygon)],y,0),ny=>ny>.5),0xd9d3c4)];
+ const gardenPolys=phase6GardenPolygons(),islands=phase6LakeIslands();
  const indexed=holes.map(p=>({p,x0:Math.min(...p.map(q=>q[0])),x1:Math.max(...p.map(q=>q[0])),z0:Math.min(...p.map(q=>q[1])),z1:Math.max(...p.map(q=>q[1]))}));
- for(const z of zones){const[x0,x1,z0,z1]=z.bounds,cuts=indexed.filter(h=>h.x0<x1&&h.x1>x0&&h.z0<z1&&h.z1>z0).map(h=>h.p),top=y-(z.id.endsWith('lake')?ATRIUM_PROTOTYPE.waterDepth:0);
+ for(const z of zones){const[x0,x1,z0,z1]=z.bounds,cuts=indexed.filter(h=>h.x0<x1&&h.x1>x0&&h.z0<z1&&h.z1>z0).map(h=>h.p);cuts.push(...gardenPolys,...islands.slice(1));const top=y-(z.id.endsWith('lake')?ATRIUM_PROTOTYPE.waterDepth:0);
  g.push(colourGeometry(keepFaces((z.id.endsWith('lake')?polygonGeometry(z.polygon,cuts,top,0):polygonGeometry(outline,[...cuts,...outsideRect(z.bounds)],top,0)),ny=>ny>.5),z.colour));
  if(z.id.endsWith('lake')){const wall=keepFaces(polygonGeometry(z.polygon,cuts,y,ATRIUM_PROTOTYPE.waterDepth),(ny)=>Math.abs(ny)<.5);g.push(colourGeometry(wall,0xd9d3c4));}}
+ for(const poly of [...gardenPolys,...islands.slice(1)])g.push(colourGeometry(keepFaces(polygonGeometry(poly,holes,y,0),ny=>ny>.5),0x93a487));
  const result=mergeGeometries(g);g.forEach(x=>x.dispose());return result;
 }
 let sky;
@@ -34,8 +38,9 @@ export function skyMaterial(){
 export function skyUV(g,layout){const d=layout.decks[19],p=g.attributes.position,uv=new Float32Array(p.count*2),xs=d.atrium.outline.map(q=>q[0]),lo=Math.min(...xs),hi=Math.max(...xs);for(let i=0;i<p.count;i++){uv[i*2]=(p.getX(i)-lo)/(hi-lo);uv[i*2+1]=(p.getZ(i)+14)/28;}g.setAttribute('uv',new T.BufferAttribute(uv,2));return g;}
 export function skyCeilingGeometry(layout){const d=layout.decks[19];return skyUV(polygonGeometry(cleanRing(d.atrium.outline),[],d.y+3.72,.08),layout);}
 export function buildPhase6Water(ship,layout){
+ applyPublicFinishKit(ship,layout,{authority:finishedSkinAuthority(ship)});finishGardenStairRails(ship,layout);
  const parent=ship.inside.getObjectByName('V2_structure'),y=layout.decks[5].y;
- const zone=ATRIUM_ZONES.find(z=>z.id==='atrium6-lake'),water=keepFaces(polygonGeometry(phase6LakePolygon(layout.decks[5].atrium.outline),[],y-.01,0),ny=>ny>.5);
+ const zone=ATRIUM_ZONES.find(z=>z.id==='atrium6-lake'),water=keepFaces(polygonGeometry(phase6LakePolygon(layout.decks[5].atrium.outline),phase6LakeIslands(),y-.01,0),ny=>ny>.5);
  const o=new T.Mesh(water,new T.MeshStandardMaterial({name:'P6_lake_water',color:0x4f99a4,roughness:.18,metalness:.1,transparent:true,opacity:.76,side:T.DoubleSide,forceSinglePass:true}));
  o.name='P6_lake_water';o.userData={noCollide:true,v2Deck:6,room:'atrium6-lake',phase6:true,shallowDepth:.15};parent.add(o);return o;
 }

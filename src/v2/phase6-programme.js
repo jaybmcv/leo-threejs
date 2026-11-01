@@ -1,5 +1,5 @@
 import {hydrateHullLayout} from '../plan/envelope-data-v2.js';
-import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon} from '../plan/atrium-v2.js';
+import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS} from '../plan/atrium-v2.js';
 import {patchDepth,worldPoint} from '../plan/hull-skin-v2.js';
 import {contains,distanceToSegment,bounds} from '../plan/geometry-v2.js';
 export function phase6Programme(layout){
@@ -20,25 +20,49 @@ export function phase6Programme(layout){
  const plant=(room,x,z,floor=y,deck=6)=>{add(room,'plant_pot',[.52,.48,.52],[x,floor+.24,z],'cream',{deck});add(room,'plant_foliage',[.72,.95,.65],[x,floor+.94,z],'green',{round:true,noCollide:true,deck});};
  const sign=(room,text,x,z,w=6,floor=y,deck=6,yaw=0)=>add(room,'sign',[w,.65,.04],[x,floor+2.6,z],'navy',{text,deck,yaw,noCollide:true});
  const bench=(room,x,z,yaw=0,floor=y,deck=6)=>{for(const dx of[-.4,.4])seat(room,x+Math.cos(yaw)*dx,z-Math.sin(yaw)*dx,yaw,floor,deck,'sage');add(room,'sofa_plinth',[1.8,.30,.78],[x,floor+.21,z],'oak',{yaw,deck});};
- // Dense islands are selected against the actual notched floor. Axial z=0
- // boulevard, x=-94/0/62 cross routes and the 2.4m edge route stay clear.
- const tree=(x,z)=>{add('atrium6-park','p6_tree_trunk',[.44,2.8,.44],[x,y+1.4,z],'oak');for(const[ox,oz,dy]of[[-.9,0,0],[.8,.45,.35],[0,-.7,1]])add('atrium6-park','p6_tree_crown',[3.4,2.8,3.5],[x+ox,y+3.1+dy,z+oz],'green',{noCollide:true});};
- for(const x of[-84,-73,-62,-51,-40,-29,-18,-8])for(const z of[-49,-37,-25,-13]){const dx=((Math.round(x)+Math.round(z))%3)*.7;if(!fits(x+dx,z,7.2,7.2))continue;tree(x+dx,z);if(fits(x+dx+3.8,z,2,1.2))bench('atrium6-park',x+dx+3.8,z,Math.PI/2);if(x<=-18&&z<=-17&&Math.abs(x+z)%2===0&&fits(x+dx+3.8,z+3,7.2,7.2)){tree(x+dx+3.8,z+3);if(fits(x+dx+7.6,z+3,2,1.2))bench('atrium6-park',x+dx+7.6,z+3,Math.PI/2);}}
- sign('atrium6-park','VOYAGER PARK',-84,-8.8,5);for(const x of[-86,-82])add('atrium6-park','p6_sign_post',[.08,2.8,.08],[x,y+1.4,-8.8],'metal');
- for(const x of[...Array.from({length:14},(_,i)=>-84+i*6),...Array.from({length:9},(_,i)=>6+i*6)])for(const z of[11,17,23,28,40,46,52])if(fits(x,z,5,5))table('atrium6-food',x,z);
- for(const x of[-76,-37,8,47]){const z=33;if(!fits(x,z+1.6,9.2,5.3))continue;
-  add('atrium6-food','counter_body',[8,.88,1],[x,y+.44,z],'cream');add('atrium6-food','counter_top',[8.12,.09,1.12],[x,y+.925,z]);
-  add('atrium6-food','kitchen_base',[8,.85,.8],[x,y+.425,z+1.6],'metal');add('atrium6-food','kitchen_worktop',[8.08,.08,.86],[x,y+.89,z+1.6],'metal');
-  for(const dx of[-2,0,2]){add('atrium6-food','hob',[.7,.035,.55],[x+dx,y+.95,z+1.6],'navy');add('atrium6-food','kitchen_hood',[1,.25,.8],[x+dx,y+2.6,z+1.6],'metal',{noCollide:true});add('atrium6-food','p6_hood_stem',[.035,.245,.035],[x+dx,y+2.8475,z+1.6],'metal',{noCollide:true});}
-  for(const dx of[-4.3,4.3])add('atrium6-food','p6_stall_post',[.12,3,.12],[x+dx,y+1.5,z+1.6],'metal');
-  add('atrium6-food','p6_stall_canopy',[8.8,.16,2.4],[x,y+3.05,z+1.6],'cream',{noCollide:true});add('atrium6-food','reading_light',[8,.025,.12],[x,y+2.96,z+.6],'light',{noCollide:true});
-  sign('atrium6-food',['BAKERY','GREENS','FRESH MEALS','COFFEE'][[-76,-37,8,47].indexOf(x)],x,z+.5,6);
+ // Six planted pockets sit between the real wing approaches. Keep 2.4 m
+ // around their full footprint and reserve the z=0 boulevard throughout.
+ const gardenPockets=ATRIUM_GARDEN_POCKETS.filter(p=>fits(p.x,p.z,p.width,p.depth));
+ const inPocket=(x,z,w=0,d=0)=>gardenPockets.some(p=>Math.abs(x-p.x)<p.width/2+w/2+2.4&&Math.abs(z-p.z)<p.depth/2+d/2+2.4);
+ const tree=(room,x,z,h=4.4)=>{add(room,'p6_tree_trunk',[.44,2.8,.44],[x,y+1.4,z],'oak');for(const[ox,oz,dy]of[[-.65,0,0],[.65,.35,.25],[0,-.45,.6]])add(room,'p6_tree_crown',[2.8,2.2,2.8],[x+ox,y+h-1.7+dy,z+oz],'green',{noCollide:true});};
+ for(const p of gardenPockets){
+  const room=p.z<0&&p.x>0?'atrium6-lake':p.z<0?'atrium6-park':'atrium6-food';
+  for(const dx of[-3.5,0])tree(room,p.x+dx,p.z-1.1,p.canopyHeight);
+  for(const dx of[-4.5,-1.5,1.5,4.5])for(const dz of[-3.1,3.1]){if(p.x>0&&p.z<0&&dz<0&&Math.abs(dx)<3)continue;add(room,'garden_planter',[2.4,.32,1.1],[p.x+dx,y+.16,p.z+dz],'cream');add(room,'recovery_planting',[2.1,.85,1],[p.x+dx,y+.74,p.z+dz],'green',{round:true,noCollide:true});}
+  for(const dz of[-1.5,1.5])bench(room,p.x+3.8,p.z+dz,-Math.PI/2);
+ }
+ // Retain a looser park grove between the garden pockets and the boulevard.
+ for(const x of[-82,-66,-50,-34,-18])for(const z of[-27,-14])if(fits(x,z,6,6)&&!inPocket(x,z,6,6)){tree('atrium6-park',x,z);if(fits(x+3.8,z,2,1.2))bench('atrium6-park',x+3.8,z,Math.PI/2);}
+ sign('atrium6-park','VOYAGER GARDENS',-84,-8.8,6);for(const x of[-86,-82])add('atrium6-park','p6_sign_post',[.08,2.8,.08],[x,y+1.4,-8.8],'metal');
+ // Existing table design, redistributed into courts. 8 m table pitch gives
+ // over 4 m clear between occupied seats; 4 m aisles flank every stall row.
+ for(const x of[-84,-76,-68,-60,-52,-44,-36,-28,-20,-12,8,16,24,32,40,48,56])for(const z of[22,40,52])if(fits(x,z,3.6,3.1)&&!inPocket(x,z,3.6,3.1))table('atrium6-food',x,z);
+ const stallNames=['BAKERY','GREENS','NOODLES','FRUIT','TEA','PANTRY','FLOWERS','COFFEE','SOUP','FRESH MEALS','SPICES','JUICE','BREAD','SEED EXCHANGE'];
+ let stallIndex=0;
+ for(const z of[14,30])for(const x of[-84,-72,-60,-48,-36,-24,-12]){
+  if(!fits(x,z,4,3))continue;
+  add('atrium6-food','counter_body',[4,.88,.8],[x,y+.44,z-1.1],'cream');add('atrium6-food','counter_top',[4,.09,.9],[x,y+.925,z-1.1]);
+  add('atrium6-food','kitchen_base',[4,.85,.6],[x,y+.425,z+1.2],'metal');add('atrium6-food','kitchen_worktop',[4,.08,.7],[x,y+.89,z+1.2],'metal');
+  for(const dx of[-1.9,1.9])add('atrium6-food','p6_stall_post',[.10,2.8,.10],[x+dx,y+1.4,z+1.4],'metal');
+  add('atrium6-food','p6_stall_canopy',[4,.12,3],[x,y+2.86,z],'cream',{noCollide:true});add('atrium6-food','reading_light',[3.6,.025,.12],[x,y+2.78,z-.9],'light',{noCollide:true});
+  sign('atrium6-food',stallNames[stallIndex++],x,z-1.3,3.6,y-.125);
+ }
+ // Destination beyond the stage; the central 12 m boulevard remains open.
+ if(fits(162,0,24,36)){
+  add('atrium6-commons','community_table',[12,.10,2],[162,y+.76,10],'oak');
+  for(const dx of[-4.8,0,4.8])add('atrium6-commons','table_pedestal',[.4,.71,1.4],[162+dx,y+.355,10],'metal');
+  for(const dx of[-4.8,-3.2,-1.6,0,1.6,3.2,4.8]){seat('atrium6-commons',162+dx,8.3,0);seat('atrium6-commons',162+dx,11.7,Math.PI);}
+  for(const x of[153,162,171]){add('atrium6-commons','p6_exhibition_plinth',[3,.45,1],[x,y+.225,-12],'cream');add('atrium6-commons','p6_exhibition_panel',[3,1.6,.10],[x,y+1.45,-12],'teal');sign('atrium6-commons',['VOYAGE COMMONS','CREW EXHIBITION','SHARE YOUR NEXT IDEA'][[153,162,171].indexOf(x)],x,-11.92,2.8,y-1.15);}
+  for(const x of[152,172])plant('atrium6-commons',x,15);
  }
  const lake=phase6LakePolygon(outline);
  // Lake has a 16cm shallow bed throughout, so no hidden deep-water drop.
  {const b=ATRIUM_LAKE_BRIDGE,[x0,x1,z0,z1]=b.bounds;add('atrium6-lake','p6_lake_bridge',[x1-x0,b.rise,z1-z0],[(x0+x1)/2,y+b.rise/2,(z0+z1)/2],'oak');}
  for(const z of[-53,-45,-37,-29,-21,-13])add('atrium6-lake','p6_bridge_pier',[2.2,.16,.4],[60,y-.08,z],'metal');
- for(const x of[11,21,53,69,93,105,115])for(const z of[-52,-9])if(fits(x,z,2.4,1.8)){const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,.42,1.1],[x,bed+.21,z],'cream');for(const dx of[-.75,0,.75])add('atrium6-lake','recovery_planting',[.6,.85,.6],[x+dx,bed+.845,z],'green',{round:true,noCollide:true});}
+ for(const x of[11,21,53,69,93,105,115])for(const z of[-52,-9])if(fits(x,z,2.4,1.8)&&!(x===11&&z===-52)){ // Keep the dry garden approach open.
+const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,.42,1.1],[x,bed+.21,z],'cream');for(const dx of[-.75,0,.75])add('atrium6-lake','recovery_planting',[.6,.85,.6],[x+dx,bed+.845,z],'green',{round:true,noCollide:true});}
+ // Reeds follow the notched lake edge, with gaps at the crossing and dry garden.
+ for(let x=22;x<118;x+=6){if(Math.abs(x-60)<4)continue;const edge=lake.filter(q=>Math.abs(q[0]-x)<.26&&q[1]<-10).reduce((z,q)=>Math.max(z,q[1]),-56);for(const z of[edge+1.25,-8.2])if(fits(x,z,2.4,1.1)){add('atrium6-lake','recovery_planting',[2.1,.85,1],[x,y+.35,z],'green',{round:true,noCollide:true});}}
  sign('atrium6-lake','REFLECTION LAKE / SHALLOW EDGE',17,-8,8);for(const x of[14,20])add('atrium6-lake','p6_lake_sign_post',[.08,2.96,.08],[x,y+1.32,-8],'metal');
  add('atrium6-stage','p6_stage_platform',[14,.36,32],[113,y+.18,30],'oak');add('atrium6-stage','p6_stage_backdrop',[.16,3.1,29],[119.8,y+1.91,30],'navy',{noCollide:true});
  for(const x of Array.from({length:10},(_,i)=>70+i*3.5))for(const z of Array.from({length:20},(_,i)=>11+i*2))if(fits(x,z,1,1))seat('atrium6-stage',x,z,Math.PI/2);
