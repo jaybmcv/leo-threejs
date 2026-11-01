@@ -1,4 +1,4 @@
-import {identify,currentPass,connect,forget} from '../walk/net/connect.js';
+import {identify,currentPass,forget,CREAMERY} from '../walk/net/connect.js';
 import {TRACK,pill,note,hasTrack,isMoving,trackNodes,groups,stats,feature,shortDate} from './model.js';
 
 // The Builder's Hub: where testers follow the ideas they sent. Nothing about anyone is in this page or this public
@@ -27,6 +27,12 @@ function icon(d,size=13){
  return s;
 }
 const walkLink=go=>`walk.html?${go}`;
+// Discord sign-in at The Creamery, which only returns visitors to the walk page; that page sends them straight back here
+// (src/walk/walk.html), keeping this page's query.
+function connect(){
+ const back=new URL('walk.html',location.href);back.search=location.search;back.searchParams.set('to','hub');back.hash='';
+ location.assign(`${CREAMERY}/leo/connect?return=${encodeURIComponent(back.href)}`);
+}
 
 // Before and after: the after picture underneath, the before clipped over it, and a range input over both, so it drags,
 // swipes and takes arrow keys. A picture that won't load takes the whole slider away.

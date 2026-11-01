@@ -1,6 +1,10 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Walk around Leo · Mars Cats Voyage</title><link rel="icon" href="brand/mark.png"><meta name="theme-color" content="#000000"><meta name="description" content="Walk around Leo, the Mars Cats Voyage shuttle, as Cosmo: all 20 decks, lifts, cabins, gardens and the crown lounge.">
+<head><script>
+// The Creamery only returns visitors to this page, so a Discord sign-in from the Builder's Hub comes back here as ?to=hub
+// (src/hub/hub.js) and goes straight on, with its pass, before any of the walk starts.
+(function(){var q=new URLSearchParams(location.search);if(q.get('to')!=='hub')return;q.delete('to');window.LEO_TO_HUB=true;var s=q.toString();location.replace('hub.html'+(s?'?'+s:'')+location.hash);})();
+</script><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Walk around Leo · Mars Cats Voyage</title><link rel="icon" href="brand/mark.png"><meta name="theme-color" content="#000000"><meta name="description" content="Walk around Leo, the Mars Cats Voyage shuttle, as Cosmo: all 20 decks, lifts, cabins, gardens and the crown lounge.">
 <style>
 @font-face{font-family:"Archivo";src:url("brand/archivo.woff2") format("woff2");font-weight:100 900;font-display:swap}
 @font-face{font-family:"JetBrains Mono";src:url("brand/jetbrains.woff2") format("woff2");font-weight:100 800;font-display:swap}
@@ -280,6 +284,7 @@ body.spraying{-webkit-user-select:none;user-select:none}body.spraying #viewport{
 // or any browser whose last start never finished (src/walk/main.js keeps that note), is asked first, before the
 // script, its models or WebGL load at all: a Galaxy S9 closed the whole browser while the walk was still loading.
 window.LEO_WALK_BOOT=function(src){
+ if(window.LEO_TO_HUB)return;
  var run=function(){var s=document.createElement('script');s.type='module';s.src=src;document.body.appendChild(s);},stuck=false;
  try{var t=Number(localStorage.getItem('leo-walk-building'));stuck=t>0&&Date.now()-t<7*864e5;}catch(e){}
  var small=matchMedia('(pointer:coarse)').matches&&navigator.deviceMemory>0&&navigator.deviceMemory<=4;
