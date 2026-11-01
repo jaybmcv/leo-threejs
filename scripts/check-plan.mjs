@@ -1,3 +1,5 @@
+import {checkGeneratedRoomWindows} from './window-contract-v2.mjs';
+import './check-window-contract-v2.mjs';
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {ShapeUtils,Vector2} from 'three';
@@ -6,7 +8,9 @@ import {CABINS} from '../src/model.js';
 import {hullV2} from '../src/plan/hull-v2.js';
 import {area,bounds,contains,overlaps,rectangle,distanceToSegment} from '../src/plan/geometry-v2.js';
 
-const failures=[],checks={},h=hullV2();
+// The base L fixture predates the extended hull; pin approved glazing on the generated envelope plan too.
+const generatedPlan=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8'));
+const failures=checkGeneratedRoomWindows(generatedPlan),checks={},h=hullV2();
 const check=(kind,condition,detail)=>{checks[kind]=(checks[kind]||0)+1;if(!condition)failures.push({kind,detail});};
 const triCache=new WeakMap();
 function triangles(p){if(!triCache.has(p)){const v=p.map(p=>new Vector2(...p));triCache.set(p,ShapeUtils.triangulateShape(v,[]).map(ix=>ix.map(i=>p[i])));}return triCache.get(p);}

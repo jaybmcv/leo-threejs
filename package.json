@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-all.mjs",
-    "check": "node scripts/check-all.mjs",
+    "check": "node --max-old-space-size=11000 scripts/check-all.mjs",
     "build:public": "node scripts/build-public.mjs",
     "start": "node scripts/serve.mjs",
     "build:reference": "node scripts/build-reference.mjs",
