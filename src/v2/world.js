@@ -1,3 +1,4 @@
+import {openForumUpperCeiling} from './launch-e-ceiling.js';
 import {finishSkyTip} from './sky-tip.js';
 import {finishAtriumFloor} from './atrium-floor-finish.js';
 import {buildPhase6Water} from './atrium-surfaces.js';
@@ -26,7 +27,7 @@ export function prepareExteriorForWalking(ship){
  const canonicalSkin=captureFinishedSkinAuthority(ship);progress('captured untouched finished web skin: '+canonicalSkin.components.find(c=>c.name==='pressure').geometry.attributes.position.count/3+' pressure triangles');
  // Accepted room dressing/cuts run in its authoring frame before world-space v2 shells.
  // Saved generated guards are restored unchanged, matching Node's after-preparation guard stage.
- const generated=ship.inside.children.filter(o=>o.name==='Walk_railings'||o.name==='Walk_partitions');for(const o of generated)o.removeFromParent();progress('preparing exterior and room finishes');const dropped=originalExterior(ship);progress('legacy room dressing complete');applyPrototypeExterior(ship.exterior,layout);clearWingIntrusions(ship);progress('wing intrusions trimmed');fitV2Structure(ship);progress('structural floors and corridors complete');applyLoungeFloorFinish(ship);finishMudwaterShell(ship);fitPrototypeStructure(ship,layout);progress('owned hull envelopes fitted');buildPhase4Fitout(ship,layout);buildPhase6Water(ship,layout);progress('Phase 4 rooms, escape craft and Phase 6 atrium prototypes furnished');for(const o of generated)ship.inside.add(o);return dropped;
+ const generated=ship.inside.children.filter(o=>o.name==='Walk_railings'||o.name==='Walk_partitions');for(const o of generated)o.removeFromParent();progress('preparing exterior and room finishes');const dropped=originalExterior(ship);progress('legacy room dressing complete');applyPrototypeExterior(ship.exterior,layout);clearWingIntrusions(ship);progress('wing intrusions trimmed');fitV2Structure(ship);progress('structural floors and corridors complete');applyLoungeFloorFinish(ship);finishMudwaterShell(ship);fitPrototypeStructure(ship,layout);openForumUpperCeiling(ship,layout);progress('owned hull envelopes fitted');buildPhase4Fitout(ship,layout);buildPhase6Water(ship,layout);progress('Phase 4 rooms, escape craft and Phase 6 atrium prototypes furnished');for(const o of generated)ship.inside.add(o);return dropped;
 }
 export function buildColliders(ship,{extra=[],filter=solid,into=new Colliders()}={}){
  // The legacy room roots remain in authoring coordinates until prepareWalkWorld resolves their frames.

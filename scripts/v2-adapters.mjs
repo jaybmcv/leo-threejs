@@ -114,8 +114,11 @@ export function restoreRoomAnchors(root,rows){if(!Array.isArray(rows))throw Erro
    
    s.replace('const b0=performance.now();baked=bakeForWalking(ship.root', 'ship.v2Haze=createHaze(ship);attachFacade(ship,scene);const b0=performance.now();baked=bakeForWalking(ship.root');
    s.replace('haze.add(createHaze(ship));','haze.add(ship.v2Haze);cabinGlass=createCabinGlass(ship,scene);crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);');
-   s.replace('haze.add(ship.v2Haze);','haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze);');
+   s.replace('haze.add(ship.v2Haze);','haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});');
    s.replace('camera.far-5,1500','140,1500');
+   s.replace("document.body.dataset.ready='1';", "let firstViewReady=false;status('Preparing first view…');");
+   s.replace("await buildShip();\ntry{localStorage.removeItem(STARTING);}catch{}","await buildShip();");
+   s.replace('if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen)draw(camera);',"if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';try{localStorage.removeItem(STARTING);}catch{}}}");
    s.replace('if(now-lastSpan<150)return viewSpan;lastSpan=now;','if(now-lastSpan<150)return viewSpan;lastSpan=now;if(!spanChanged(camera,p,0,0,colliders))return viewSpan;const spanStart=performance.now();');
    s.replace('return viewSpan=[low,high];','renderMetrics.span.push(performance.now()-spanStart);if(renderMetrics.span.length>600)renderMetrics.span.shift();return viewSpan=[low,high];');
    s.replace('const hit=colliders.raycast(ray.ray,90,.6)','const hit=(spanQuery??=createVisibilityQuery(colliders)).raycast(ray.ray,90,.6)');

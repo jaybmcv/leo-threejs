@@ -50,7 +50,7 @@ export function phase6Programme(layout){
  add('atrium6-lobby','sign',[5,1.25,.12],[-109,y+2.25,7],'navy',{text:'DECK 6 / ATRIUM\nFORWARD: PARK / LAKE / FOOD / STAGE\nAFT: LIFTS + STAIRS / MEET HERE',yaw:Math.PI,noCollide:true});
  for(const z of[-27,29])plant('atrium6-lobby',-103,z);
  const cafes=[];
- for(const r of layout.rooms.filter(r=>r.id.startsWith('nose-commons-'))){const p=layout.hullPrototypes.prototypes.find(p=>p.id===r.id),floor=r.y,deck=r.deck,k=deck-6,b=bounds(r.polygon),x=b.x0,accent=['teal','sage','clay'][k%3];
+ for(const r of layout.rooms.filter(r=>r.id.startsWith('nose-commons-'))){const p=layout.hullPrototypes.prototypes.find(p=>p.id===r.id),floor=r.y,deck=r.deck,k=deck-6,b=bounds(r.polygon),x=r.launchE?.legacyX0??b.x0,accent=['teal','sage','clay'][k%3];
   if(!Array.isArray(p.inner))hydrateHullLayout({hullPrototypes:{prototypes:[p]},cabins:[],rooms:[],windows:[]});
   const ca=(part,size,at,mat='oak',opts={})=>add(r.id,part,size,at,mat,{deck,...opts});
   const counterZ=[3.9,-3.9,3.9,3.9,3.9,-3.9,3.9,3.9,3.9,3.9][k],counterX=x+3.5;

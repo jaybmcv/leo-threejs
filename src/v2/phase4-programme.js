@@ -1,3 +1,4 @@
+import {launchEFitout} from './launch-e-fitout.js';
 import {launchDFitout} from './launch-d-fitout.js';
 import {phase6Programme} from './phase6-programme.js';
 import{contains}from'../plan/geometry-v2.js';
@@ -98,5 +99,5 @@ export function phase4Programme(layout){
  rooms.push({id:s.id,deck:s.deck,name:'Escape shuttle',rests:100});
  }
  const launchD=launchDFitout(layout);parts.push(...launchD.parts);rests.push(...launchD.rests);rooms.push(...launchD.rooms);
- const phase6=phase6Programme(layout);parts.push(...phase6.parts);rests.push(...phase6.rests);return{parts,rests,rooms,phase6:phase6.owners};
+ const phase6=phase6Programme(layout);parts.push(...phase6.parts);rests.push(...phase6.rests);const launchE=launchEFitout(layout,phase6);parts.push(...launchE.parts);rests.push(...launchE.rests);rooms.push(...launchE.rooms);return{parts,rests,rooms,phase6:phase6.owners};
 }

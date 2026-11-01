@@ -1,14 +1,16 @@
+import {lightDistantPreset,installPhoneDistant} from './phone-distant.js';
 import * as T from 'three';
 
 // Select actual finished-bake triangles. Door/window/atrium cuts remain cuts;
 // never close a room using a box inferred from its footprint.
-const STRUCTURE=/^(Deck_slab|V2_(room_ceiling|outer_room_(wall|floor|ceiling)|distribution_ceiling|pressure_lining|lower_hull_wall_return|shuttle_ceiling)|Stair_(outer_wall|end_wall|gallery_wall|top_ceiling|lobby_partition)|Refined_corridor_lining|Room_end_wall|Outboard_wall|Wall_(sill|header|pier|mullion)|Side_wall|Entry_wall|Closed_end_wall|End_wall|Ceiling|Atrium_ceiling|Truss_ceiling_plate|Crown_roof|Roof_mission)$/;
+const STRUCTURE=/^(Deck_slab|V2_(forum_upper_wall|room_ceiling|outer_room_(wall|floor|ceiling)|distribution_ceiling|pressure_lining|lower_hull_wall_return|shuttle_ceiling)|Stair_(outer_wall|end_wall|gallery_wall|top_ceiling|lobby_partition)|Refined_corridor_lining|Room_end_wall|Outboard_wall|Wall_(sill|header|pier|mullion)|Side_wall|Entry_wall|Closed_end_wall|End_wall|Ceiling|Atrium_ceiling|Truss_ceiling_plate|Crown_roof|Roof_mission)$/;
 export function structuralRange(r){
  return !r.userData?.collisionOnly && (r.userData?.hullSkinSurface ||
  r.userData?.batchedEnvelope || r.userData?.hullEnvelopeBatch ||
  /^Smooth_pressure_envelope/.test(r.name) || STRUCTURE.test(r.name));
 }
-export async function installDistantArchitecture(ship,baked,haze){
+export async function installDistantArchitecture(ship,baked,haze,options={}){
+ if(!globalThis.__leoPreparedBuild&&lightDistantPreset(options))return installPhoneDistant(ship,haze);
  const yieldWork=()=>new Promise(resolve=>setTimeout(resolve,0));let checkpoint=performance.now(),processed=0;
  const root=new T.Group();root.name='V2_distant_architecture';
  root.userData={noCollide:true,independentOfBands:true,apertures:'finished-bake-triangles'};

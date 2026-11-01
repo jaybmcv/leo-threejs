@@ -150,6 +150,7 @@ export function buildLayoutV2(){
  // These routines also produce failure records; unplaced programme is never silently dropped.
  placeRooms({h,decks,rooms,shuttles,circulation,issues});
  growOuterRooms({h,rooms,shuttles});
+ const forum=rooms.find(r=>r.id==='d16-voyage-forum-bow');forum.launchE={kind:'oval-forum',seating:[178,0,44,80],stage:[158,0]};forum.ceilingExtension={y:23.8,height:4,polygon:rectangle(160,0,16,92)};decks[16].slab.holes.push({id:'forum-stage-upper-void',polygon:forum.ceilingExtension.polygon});forum.reason+=' Launch E: only x152..168 / z-46..46 rises to y27.8; remaining seating keeps its y23.8 ceiling.';
  finishAtrium({h,decks,rooms,cabins,circulation,issues});
  for(const r of rooms.filter(r=>!r.aggregate)){
   r.area=area(r.polygon);
@@ -264,7 +265,7 @@ function placeRooms({h,decks,rooms,shuttles,circulation,issues}){
   for(const deck of [18,19])decks[deck-1].slab.holes.push({id:r.id+'-assembly-opening',assembly:r.assembly,polygon:r.envelope.find(s=>s.rise===4*(deck-17)).polygon});
  }
  const loungeEdge=Array.from({length:73},(_,i)=>loungeFacade(31,-.81+1.62*i/72,1.4)),oldOutline=[[170,loungeEdge[0][2]],...loungeEdge.map(p=>[p[0],p[2]]),[170,loungeEdge.at(-1)[2]]],bb=bounds(oldOutline),lounge={id:'observation-lounge',name:'Forward observation lounge',deck:17,kind:'lounge',center:[190,26.3,0],width:bb.x1-bb.x0,depth:bb.z1-bb.z0,height:7.5};
- const lr=bowRoom(h,lounge,170,190,7.5);lr.v1.area=area(oldOutline);addDoor(lr,[170,0],[-1,0]);rooms.push(lr);
+ const lr=bowRoom(h,lounge,170,190,7.5);lr.v1.area=area(oldOutline);lr.glazingProfile={sill:.45,height:lr.height-.85,ceilingGap:.4};addDoor(lr,[170,0],[-1,0]);rooms.push(lr);
  for(const [d,names]of Object.entries(NEW_PROGRAM))for(let i=0;i<names.length;i++){
   const name=names[i],outer=!/stores|racks|hold|prep|services|handling|spares|gas|rooms$/.test(name),a={id:'d'+String(d).padStart(2,'0')+'-new-'+(i+1),name,deck:+d,kind:'new',width:outer?20:18,depth:outer?16:14,height:3.5};
   place(a,{outer,preferX:-120+i*40,preferSide:i%2?-1:1});
@@ -282,9 +283,9 @@ function placeRooms({h,decks,rooms,shuttles,circulation,issues}){
  }
  // A small nose cafe replaces the former residential nose commons programme.
  for(const a of NOSE_COMMONS){
-  const H=hullPath(h,floorY(a.deck),3.5),x=H.tip-12,room={id:'nose-commons-'+String(a.number).padStart(2,'0'),name:a.name+' · bow café',deck:a.deck,kind:'cafe',width:16,depth:12,height:3.5,center:[x,floorY(a.deck),0]};
+  const H=hullPath(h,floorY(a.deck),3.5),legacyX=H.tip-12,width=56+(15-a.deck)*.9,x=legacyX-(width-16)/2,room={id:'nose-commons-'+String(a.number).padStart(2,'0'),name:a.name+' · bow café',deck:a.deck,kind:'cafe',width,depth:12,height:3.5,center:[x,floorY(a.deck),0]};
   const r=makeRoom(room,x,0,0,{outer:true,side:1,replaces:'Nose_commons_'+String(a.number).padStart(2,'0'),reason:'Option C replaces the nose commons with a small bow cafe; former fittings require Phase 4 curation.'});
-  if(!h.fits(r.polygon,r.y,r.height)){r.status='unfitted';issues.push({kind:'bow-cafe-unfitted',id:r.id});}addDoor(r,[x-8,0],[-1,0]);rooms.push(r);
+  if(!h.fits(r.polygon,r.y,r.height)){r.status='unfitted';issues.push({kind:'bow-cafe-unfitted',id:r.id});}r.launchE={legacyX0:legacyX-8,growth:'aft',sourceArea:192};addDoor(r,[x-width/2,0],[-1,0]);rooms.push(r);
  }
 }
 function allocateBerths(cabins,rooms,issues){
@@ -337,7 +338,7 @@ function scheduleWindows({h,decks,rooms,cabins,windows,issues}){
  }
  const at=(poly,x,side)=>{const z=[];for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length];if(x<Math.min(a[0],b[0])-1e-8||x>Math.max(a[0],b[0])+1e-8)continue;if(Math.abs(a[0]-b[0])<1e-8)z.push(side*a[1],side*b[1]);else z.push(side*(a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0])));}return side*Math.max(...z);};
  for(const r of rooms.filter(r=>r.outer&&!r.aggregate)){
-  const b=bounds(r.polygon),working=r.deck<=5&&!/arrival|ward|clinic|counseling|isolation|restaurant|café|canteen|mess|lounge|food|maternity|spa/i.test(r.kind+' '+r.name),kind=r.kind==='garden'?'garden':working?'working':'public',height=kind==='garden'?r.height:working?1.4:2.2,sill=kind==='garden'?0:working?.9:.5;
+  const b=bounds(r.launchE?.legacyX0!==undefined?rectangle(r.launchE.legacyX0+8,0,16,12):r.polygon),working=r.deck<=5&&!/arrival|ward|clinic|counseling|isolation|restaurant|café|canteen|mess|lounge|food|maternity|spa/i.test(r.kind+' '+r.name),kind=r.kind==='garden'?'garden':working?'working':'public',height=kind==='garden'?r.height:working?1.4:2.2,sill=kind==='garden'?0:working?.9:.5;
   r.windows=[];
   for(const side of b.z0<0&&b.z1>0?[-1,1]:[r.side||Math.sign(r.z)||1]){
    const y=r.y+sill+height/2,profile=[];for(let x=b.x0;x<b.x1;x+=.02)profile.push([x,side*h.skin(x,y,side)]);profile.push([b.x1,side*h.skin(b.x1,y,side)]);
@@ -4753,7 +4754,7 @@ const LAUNCH_D_STREETS=[
  }
 ];
 function addLaunchDPlan({h,decks,rooms,circulation}){
- for(const spec of LAUNCH_D_ROOMS){const[a,b,c,e]=spec.rect,r=makeRoom({id:spec.id,name:spec.name,deck:spec.deck,kind:'new',width:b-a,depth:e-c,height:3.5},(a+b)/2,(c+e)/2,0,{outer:false,publicFront:true,openPlan:spec.deck>=18,launchD:{kind:spec.kind,variant:spec.variant},reason:'Launch D: a fitted public service room or supported garden overlook; 3 m internal access aisle, clear street frontage and a registered door.'});
+ for(const original of LAUNCH_D_ROOMS){const spec=structuredClone(original);if(spec.deck===17){const side=spec.rect[2]<0?-1:1;if(/-0[12]$/.test(spec.id)){spec.rect=side<0?[133.1,149.1,-37,-24.1]:[133.1,149.1,24.1,37];spec.door.center=[141.1,side*24.1];}else{spec.rect=side<0?[133.1,149.1,-51.8,-39.8]:[133.1,149.1,39.8,51.8];spec.door={center:[149.1,side*45.8],outward:[1,0],width:3.2};}}const[a,b,c,e]=spec.rect,r=makeRoom({id:spec.id,name:spec.name,deck:spec.deck,kind:'new',width:b-a,depth:e-c,height:3.5},(a+b)/2,(c+e)/2,0,{outer:false,publicFront:true,openPlan:spec.deck>=18,launchD:{kind:spec.kind,variant:spec.variant},reason:'Launch D: a fitted public service room or supported garden overlook; 3 m internal access aisle, clear street frontage and a registered door.'});
   if(!h.fits(r.polygon,r.y,r.height))throw Error('Launch D full-height hull fit: '+r.id);
   r.door={id:r.id+'-door',center:[spec.door.center[0],r.y,spec.door.center[1]],outward:spec.door.outward.slice(),width:spec.door.width};r.area=area(r.polygon);rooms.push(r);
  }

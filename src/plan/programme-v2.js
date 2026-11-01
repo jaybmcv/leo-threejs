@@ -12,7 +12,7 @@ export function completeProgramme({decks,rooms,cabins,shuttles,circulation}){
   const zones=[];
   if(d.number>=13&&d.number<=15){
    const lo=d.atrium.samples,hi=d.residentialFront,names=['Neighbourhood café and dining','Quiet lounge and reading','Family play and games','Planting and walking garden','Social lounge and work tables'];
-   for(let k=0;k<5;k++)for(const side of [-1,1]){const x0=-126+k*77.2,x1=x0+77.2,points=lo.map((p,i)=>[p[0],p[1],hi[i][1]]).filter(p=>p[0]>=x0&&p[0]<=x1),polygon=[...points.map(p=>[p[0],side*p[1]]),...points.slice().reverse().map(p=>[p[0],side*p[2]])];if(area(polygon)>.1)zones.push({id:'d'+d.number+'-terrace-'+side+'-'+k,category:'terrace',name:names[k],polygon,fittings:['seating clusters','planters','accessible clear route'],excludes:'reservations'});}
+   for(let k=0;k<5;k++)for(const side of [-1,1]){const end=Math.max(...lo.filter((p,i)=>p[0]>=-126&&hi[i][1]-p[1]>.01).map(p=>p[0])),span=(end+126)/5,x0=-126+k*span,x1=x0+span,points=lo.map((p,i)=>[p[0],p[1],hi[i][1]]).filter(p=>p[0]>=x0&&p[0]<=x1),polygon=[...points.map(p=>[p[0],side*p[1]]),...points.slice().reverse().map(p=>[p[0],side*p[2]])];if(area(polygon)>.1)zones.push({id:'d'+d.number+'-terrace-'+side+'-'+k,category:'terrace',name:names[k],polygon,fittings:['seating clusters','planters','accessible clear route'],excludes:'reservations'});}
   }
   if(d.number===6)zones.push({id:'atrium-floor',category:'terrace',name:'Atrium community garden, event floor and walking circuit',polygon:d.atrium.outline,excludes:'reservations'});
   if(d.number<=5)zones.push({id:'d'+d.number+'-spine',category:'corridor',name:'Central distribution spine',polygon:rectangle(-20,0,560,8),excludes:'reservations'});
