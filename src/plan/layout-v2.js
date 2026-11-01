@@ -1,3 +1,4 @@
+import {applyCafeBays} from './launch-f-cafes.js';
 import {prepareLaunchBPlan,FREIGHT_LIFT} from './launch-b-v2.js';
 import {ATRIUM_TERRACES} from './atrium-v2.js';
 import {gardenGalleryDoors} from './gallery-entries-v2.js';
@@ -281,11 +282,11 @@ function placeRooms({h,decks,rooms,shuttles,circulation,issues}){
   for(const side of [-1,1]){const a={id:'neighborhood-'+(d-5)+(side<0?'-dining':'-cafe'),name:side<0?'Neighborhood dining terrace':'Neighborhood café & bar',deck:d,kind:'dining',width:9,depth:edge-18,height:3.5};const r=makeRoom(a,-145,side*(edge+18)/2,0,{outer:false,view:'atrium',neighborhood:d-5});addDoor(r,[-140.5,r.z],[1,0]);rooms.push(r);}
   for(const [name,z]of [['Laundry',-6],['Linen',0],['Parcels',6]]){const a={id:'neighborhood-'+(d-5)+'-'+name.toLowerCase(),name,deck:d,kind:'service',width:8,depth:4,height:3.5},r=makeRoom(a,-145,z,0,{outer:false,neighborhood:d-5});addDoor(r,[-141,z],[1,0]);rooms.push(r);}
  }
- // A small nose cafe replaces the former residential nose commons programme.
+ // Bow cafes retain the original fitting frame and atrium threshold; Stream F supplies measured side bays.
  for(const a of NOSE_COMMONS){
-  const H=hullPath(h,floorY(a.deck),3.5),legacyX=H.tip-12,width=56+(15-a.deck)*.9,x=legacyX-(width-16)/2,room={id:'nose-commons-'+String(a.number).padStart(2,'0'),name:a.name+' · bow café',deck:a.deck,kind:'cafe',width,depth:12,height:3.5,center:[x,floorY(a.deck),0]};
+  const H=hullPath(h,floorY(a.deck),3.5),legacyX=H.tip-12,width=16,x=legacyX-(width-16)/2,room={id:'nose-commons-'+String(a.number).padStart(2,'0'),name:a.name+' · bow café',deck:a.deck,kind:'cafe',width,depth:12,height:3.5,center:[x,floorY(a.deck),0]};
   const r=makeRoom(room,x,0,0,{outer:true,side:1,replaces:'Nose_commons_'+String(a.number).padStart(2,'0'),reason:'Option C replaces the nose commons with a small bow cafe; former fittings require Phase 4 curation.'});
-  if(!h.fits(r.polygon,r.y,r.height)){r.status='unfitted';issues.push({kind:'bow-cafe-unfitted',id:r.id});}r.launchE={legacyX0:legacyX-8,growth:'aft',sourceArea:192};addDoor(r,[x-width/2,0],[-1,0]);rooms.push(r);
+  if(!h.fits(r.polygon,r.y,r.height)){r.status='unfitted';issues.push({kind:'bow-cafe-unfitted',id:r.id});}r.launchE={legacyX0:legacyX-8,growth:'side-and-forward',sourceArea:192};addDoor(r,[x-width/2,0],[-1,0]);applyCafeBays(r);rooms.push(r);
  }
 }
 function allocateBerths(cabins,rooms,issues){
@@ -304,7 +305,7 @@ function finishAtrium({h,decks,rooms,cabins,circulation,issues}){
  for(const d of decks.filter(d=>d.number>=6)){
   const occupying=[...circulation.corridors.filter(c=>c.deck===d.number&&c.kind==='wing').map(c=>({polygon:rectangle(c.points[0][0],(c.points[0][1]+c.points[1][1])/2,17.4,Math.abs(c.points[0][1]-c.points[1][1]))})),...cabins.filter(c=>c.deck===d.number),...rooms.filter(r=>!r.aggregate&&r.y<=d.y+.01&&r.y+r.height>d.y)];
   const samples=[];for(let x=-126;x<=260;x+=.5){let edge=d.number<=15?h.roomHalf(x,d.y,3.5)-17.6:x>148?0:d.number===20?14:20;
-   for(const r of occupying){const p=r.envelope?.find(s=>d.y-r.y>=s.rise-1e-8&&d.y-r.y<s.rise+s.height)?.polygon??r.polygon,bb=bounds(p),guard=d.number>=16?4:.55,z=x>=bb.x0-guard&&x<=bb.x1+guard?cross(p,Math.max(bb.x0,Math.min(bb.x1,x))):[];if(!z.length)continue;const lo=Math.min(...z),hi=Math.max(...z);if(lo<=0&&hi>=0)edge=0;else edge=Math.min(edge,(d.number<=15?Math.min(Math.abs(bb.z0),Math.abs(bb.z1)):Math.min(Math.abs(lo),Math.abs(hi)))-(d.number>=16?4:.08));}
+   for(const r of occupying){const p=r.atriumPolygon??r.envelope?.find(s=>d.y-r.y>=s.rise-1e-8&&d.y-r.y<s.rise+s.height)?.polygon??r.polygon,bb=bounds(p),guard=d.number>=16?4:.55,z=x>=bb.x0-guard&&x<=bb.x1+guard?cross(p,Math.max(bb.x0,Math.min(bb.x1,x))):[];if(!z.length)continue;const lo=Math.min(...z),hi=Math.max(...z);if(lo<=0&&hi>=0)edge=0;else edge=Math.min(edge,(d.number<=15?Math.min(Math.abs(bb.z0),Math.abs(bb.z1)):Math.min(Math.abs(lo),Math.abs(hi)))-(d.number>=16?4:.08));}
    samples.push([x,Math.max(0,edge)]);
   }natural.set(d.number,samples);d.residentialFront=samples.map(p=>p.slice());
  }

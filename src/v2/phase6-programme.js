@@ -77,9 +77,9 @@ const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,
  for(const r of layout.rooms.filter(r=>r.id.startsWith('nose-commons-'))){const p=layout.hullPrototypes.prototypes.find(p=>p.id===r.id),floor=r.y,deck=r.deck,k=deck-6,b=bounds(r.polygon),x=r.launchE?.legacyX0??b.x0,accent=['teal','sage','clay'][k%3];
   if(!Array.isArray(p.inner))hydrateHullLayout({hullPrototypes:{prototypes:[p]},cabins:[],rooms:[],windows:[]});
   const ca=(part,size,at,mat='oak',opts={})=>add(r.id,part,size,at,mat,{deck,...opts});
-  const counterZ=[3.9,-3.9,3.9,3.9,3.9,-3.9,3.9,3.9,3.9,3.9][k],counterX=x+3.5;
-  ca('counter_body',[4,.88,1],[counterX,floor+.44,counterZ],'cream');ca('counter_top',[4.12,.09,1.12],[counterX,floor+.925,counterZ]);
-  ca('kitchen_base',[4,.85,.8],[counterX,floor+.425,counterZ+Math.sign(counterZ)*1.35],'metal');ca('kitchen_worktop',[4.08,.08,.86],[counterX,floor+.89,counterZ+Math.sign(counterZ)*1.35],'metal');
+  const counterSide=[1,-1,1,1,1,-1,1,1,1,1][k],counterZ=counterSide*(r.launchF?(deck===6?5:9.4):3.9),counterX=x+(r.launchF?3:3.5),counterLength=r.launchF?5.6:4;
+  ca('counter_body',[counterLength,.88,1],[counterX,floor+.44,counterZ],'cream');ca('counter_top',[counterLength+.12,.09,1.12],[counterX,floor+.925,counterZ]);
+  ca('kitchen_base',[counterLength,.85,.8],[counterX,floor+.425,counterZ+Math.sign(counterZ)*(r.launchF?2:1.35)],'metal');ca('kitchen_worktop',[counterLength+.08,.08,.86],[counterX,floor+.89,counterZ+Math.sign(counterZ)*(r.launchF?2:1.35)],'metal');
   ca('espresso_machine',[1.15,.65,.70],[counterX,floor+1.295,counterZ],'metal');
   const layouts=[[[9,-2.6],[9,2.6]],[[10,-2.6],[10,2.6]],[[9,-2.6],[12,2.6]],[[7,-2.5],[12,2.5]],[[9.5,-2.6],[9.5,2.6]],[[9.5,-2.5],[12,2.5]],[[9,0]],[[11,0]],[],[[10,-2.6],[13,2.5]]];
   for(const[a,z]of layouts[k])table(r.id,x+a,z,floor,deck,accent);
@@ -93,7 +93,7 @@ const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,
   if(k===8){ca('community_table',[6,.08,1.2],[x+8.5,floor+.76,0]);for(const dx of[-2.4,2.4])ca('table_pedestal',[.35,.72,.8],[x+8.5+dx,floor+.36,0],'metal');for(const a of[6.1,7.7,9.3,10.9]){seat(r.id,x+a,-1.2,0,floor,deck,accent);seat(r.id,x+a,1.2,Math.PI,floor,deck,accent);}}
   const windowStart=rests.filter(s=>s.room===r.id).length;
   for(const o of p.openings){const u=(o[0]+o[1])/2,v=Math.min(...[.2,.8,1.7].map(h=>patchDepth(p.inner,u,h)))-1.35,at=worldPoint(p.chart,[u,0,v]);seat(r.id,at[0],at[2],Math.PI/2,floor,deck,accent);}
-  plant(r.id,x+1.1,counterZ>0?-4.6:4.6,floor,deck);if(k!==9)plant(r.id,x+13.5,4.5,floor,deck);else for(const z of[-4.7,0,4.7])plant(r.id,x+13.5,z,floor,deck);
+  plant(r.id,x+1.1,counterSide>0?-4.6:4.6,floor,deck);if(k!==9)plant(r.id,x+13.5,4.5,floor,deck);else for(const z of[-4.7,0,4.7])plant(r.id,x+13.5,z,floor,deck);
   sign(r.id,r.name.toUpperCase(),counterX,counterZ-Math.sign(counterZ)*.3,5.4,floor,deck,counterZ>0?0:Math.PI);
   for(const dx of[-1.7,1.7])ca('p6_menu_stem',[.035,1.43,.035],[counterX+dx,floor+1.685,counterZ-Math.sign(counterZ)*.3],'metal',{noCollide:true});
   cafes.push({id:r.id,deck,theme:BOW_CAFE_THEMES[k],windowStart,windowSeats:p.openings.length,seats:rests.filter(s=>s.room===r.id).length});

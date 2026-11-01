@@ -1,3 +1,4 @@
+import {launchFCafeFitout} from './launch-f-fitout.js';
 import {contains,bounds,distanceToSegment} from '../plan/geometry-v2.js';
 // Stream E uses the existing Phase 4 instancing, collision and registered-seat protocol.
 export function launchEFitout(layout,phase6){
@@ -8,15 +9,7 @@ export function launchEFitout(layout,phase6){
  rests.push({id,room:r.id,kind:'sit',point:[x,y+.57,z],facing:[Math.sin(yaw),0,Math.cos(yaw)],height:y+.57,instanced:true,phase4:true,launchE:true});};
  const table=(r,x,z,accent='teal')=>{add(r,'table_top',[1.25,.08,1],[x,r.y+.76,z]);add(r,'table_pedestal',[.35,.72,.35],[x,r.y+.36,z],'metal');seat(r,x,z-1.02,0,0,accent);seat(r,x,z+1.02,Math.PI,0,accent);seat(r,x-1.15,z,Math.PI/2,0,accent);seat(r,x+1.15,z,-Math.PI/2,0,accent);};
  const sign=(r,text,x,z,w=5)=>add(r,'sign',[w,.6,.04],[x,r.y+2.7,z],'navy',{text,noCollide:true});
- for(const r of layout.rooms.filter(r=>r.launchE?.legacyX0!==undefined)){
-  const before=phase6.rests.filter(s=>s.room===r.id).length,accent=['teal','sage','clay'][(r.deck-6)%3],x=r.launchE.legacyX0;
-  // Alternate paired dining islands, an axial table and quiet-side booths. Retain each old theme at the bow.
-  let wanted=Math.max(0,28-before),i=0;const positions=(r.deck%3===0?[[x-9,-2.6],[x-9,2.6],[x-18,0],[x-28,-2.6],[x-28,2.6]]:r.deck%3===1?[[x-8,0],[x-17,-2.6],[x-17,2.6],[x-28,0],[x-34,2.6]]:[[x-8,-2.6],[x-17,2.6],[x-26,-2.6],[x-34,2.6],[x-26,2.6]]);
-  while(wanted>=4&&i<positions.length){table(r,...positions[i++],accent);wanted-=4;}
-  for(let j=0;j<wanted;j++)seat(r,x-5-j*1.3,-4.6,0,0,accent);
-  sign(r,'BOW CAFÉ / '+r.name.split(' · ')[0],bounds(r.polygon).x0+3,4.9,5.2);
-  rooms.push({id:r.id,seats:before+rests.filter(s=>s.room===r.id).length});
- }
+ const cafes=launchFCafeFitout(layout,phase6);parts.push(...cafes.parts);rests.push(...cafes.rests);rooms.push(...cafes.rooms);
  const forum=layout.rooms.find(r=>r.id==='d16-voyage-forum-bow');
  if(forum){const r=forum;
   add(r,'e_stage_platform',[6,.24,20],[158,r.y+.12,0]);add(r,'e_stage_screen',[.12,3.3,13],[154.2,r.y+2.3,0],'navy',{noCollide:true});add(r,'e_lectern',[.8,1.05,.8],[159.5,r.y+.765,-6],'oak');add(r,'sign',[8,1,.04],[154.3,r.y+2.1,0],'navy',{text:'VOYAGE FORUM',yaw:Math.PI/2,noCollide:true});
