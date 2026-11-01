@@ -6,7 +6,8 @@
 // "open": false, the counter's card says details are coming. The file:
 //   {"open":true, "mode":"codes", "title":"Booster pack giveaway", "note":"One pack per Voyager while they last.",
 //    "limit":100, "codes":["…"], "formUrl":"https://…"}
-// Modes, each one claim per Discord-verified visitor (a Leo pass from The Creamery):
+// Modes, each one claim per Discord-verified visitor (a Leo pass from The Creamery; a wallet from Otherside isn't enough,
+// since nothing proves it's theirs and made-up ones would drain the giveaway):
 //   codes   hands out the next unused code from "codes", and shows it to them again whenever they come back
 //   wallet  records one of the wallets The Creamery has verified for them, for packs to be sent to
 //   list    records their name, for packs to be arranged some other way
@@ -24,6 +25,7 @@ import fs from 'node:fs';
 const here=name=>new URL('../../'+name,import.meta.url);
 const MODES=['codes','wallet','list','form'],EVENTS={enter:'visits',play:'plays',card:'cards'};
 const WALLET=/^(0x[0-9a-fA-F]{40}|[1-9A-HJ-NP-Za-km-z]{32,44})$/;
+const discordOf=v=>v.discord&&!v.discord.glyph?v.discord:null;
 
 function readJson(file,fallback){try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return fallback;}}
 // One write at a time, a second after the last change.
@@ -58,24 +60,24 @@ export function createArena({log=()=>{},files={},today=()=>new Date().toISOStrin
  const left=()=>{const g=giveaway;let n=g.limit?g.limit-claims.size:Infinity;if(g.mode==='codes'){const u=used();n=Math.min(n,g.codes.filter(c=>!u.has(c)).length);}return n;};
  // What a visitor's card shows: the giveaway's state and, for the signed-in, their own claim and verified wallets.
  function statusFor(v){
-  const g=giveaway,mine=v.discord?claims.get(v.discord.discordId):null;
+  const g=giveaway,d=discordOf(v),mine=d?claims.get(d.discordId):null;
   if(!g.open)return {m:'giveaway',open:false};
   return {m:'giveaway',open:true,mode:g.mode,title:g.title,note:g.note,formUrl:g.mode==='form'?g.formUrl:undefined,
    // A remembered visitor (a lapsed pass: leo-live.mjs) is asked to connect again: claims want fresh wallets.
-   verified:!!v.discord&&!v.discord.lapsed,remembered:!!v.discord?.lapsed,wallets:v.discord&&!v.discord.lapsed?(v.discord.wallets||[]).filter(w=>WALLET.test(w)).slice(0,6):[],
+   verified:!!d&&!d.lapsed,remembered:!!d?.lapsed,wallets:d&&!d.lapsed?(d.wallets||[]).filter(w=>WALLET.test(w)).slice(0,6):[],
    claim:mine?{code:mine.code,wallet:mine.wallet,at:mine.at}:null,soldOut:g.mode!=='form'&&!mine&&left()<=0};
  }
  function claim(v,msg){
-  const g=giveaway,reply=r=>({m:'claimed',...r});
+  const g=giveaway,d=discordOf(v),reply=r=>({m:'claimed',...r});
   if(!g.open||g.mode==='form')return reply({ok:false,why:'closed'});
-  if(!v.discord||v.discord.lapsed)return reply({ok:false,why:'sign-in'});
-  const id=v.discord.discordId,had=claims.get(id);
+  if(!d||d.lapsed)return reply({ok:false,why:'sign-in'});
+  const id=d.discordId,had=claims.get(id);
   if(had)return reply({ok:true,again:true,code:had.code,wallet:had.wallet});
   if(left()<=0)return reply({ok:false,why:'sold-out'});
-  const entry={name:v.name||'',username:v.discord.username||'',at:new Date().toISOString()};
+  const entry={name:v.name||'',username:d.username||'',at:new Date().toISOString()};
   if(g.mode==='codes'){const u=used();entry.code=g.codes.find(c=>!u.has(c));}
   if(g.mode==='wallet'){
-   const wallets=(v.discord.wallets||[]).filter(w=>WALLET.test(w)),want=typeof msg.wallet==='string'?msg.wallet:wallets[0];
+   const wallets=(d.wallets||[]).filter(w=>WALLET.test(w)),want=typeof msg.wallet==='string'?msg.wallet:wallets[0];
    if(!wallets.length)return reply({ok:false,why:'no-wallet'});
    if(!wallets.includes(want))return reply({ok:false,why:'wallet'});
    entry.wallet=want;

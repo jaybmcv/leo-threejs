@@ -1,6 +1,21 @@
 <!doctype html>
 <html lang="en">
 <head><script>
+// Otherside's glyph:ready (net/otherside.js) comes as soon as the page does: kept here until the bundle has loaded.
+(function(){var q=window.LEO_HEARD=[];function hear(m){if(window.LEO_HEAR)window.LEO_HEAR(m);else if(q.length<40)q.push(m);}
+addEventListener('message',function(e){hear({origin:e.origin,data:e.data});});
+addEventListener('glyph:ready',function(e){hear({origin:'event',data:{type:'glyph:ready',payload:e.detail}});});})();
+</script><script>
+// The small Discord window from the giveaway (net/connect.js) comes back here: hand the pass to the page that opened it
+// and close, before any of the walk starts. A browser with no real windows may have opened it in place, leaving no page
+// to hand it to: then this just goes on as an ordinary return from Discord, and they walk from here, connected.
+(function(){var q=new URLSearchParams(location.search);if(q.get('leo-popup')!=='1')return;q.delete('leo-popup');
+var s=q.toString(),h=new URLSearchParams(location.hash.slice(1)),pass=h.get('leo-pass');
+history.replaceState(null,'',location.pathname+(s?'?'+s:'')+location.hash);
+try{if(pass)localStorage.setItem('leo-pass',pass);}catch(e){}
+if(!window.opener)return;window.LEO_PASS_BACK=true;
+try{window.opener.postMessage({leoPassBack:true,pass:pass,error:h.get('leo-pass-error')},location.origin);}catch(e){}window.close();})();
+</script><script>
 // The Creamery only returns visitors to this page, so a Discord sign-in from the Builder's Hub comes back here as ?to=hub
 // (src/hub/hub.js) and goes straight on, with its pass, before any of the walk starts.
 (function(){var q=new URLSearchParams(location.search);if(q.get('to')!=='hub')return;q.delete('to');window.LEO_TO_HUB=true;var s=q.toString();location.replace('hub.html'+(s?'?'+s:'')+location.hash);})();
@@ -278,13 +293,14 @@ body.spraying{-webkit-user-select:none;user-select:none}body.spraying #viewport{
 <div id="help-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="help-title"><div class="card" tabindex="-1"><div class="help-head"><div><div class="eyebrow">Walk around Leo</div><h2 id="help-title">Help</h2></div><div class="help-tabs" role="tablist" aria-label="Help pages" hidden><button type="button" role="tab" data-tab="play">How to play</button><button type="button" role="tab" data-tab="ideas">Your ideas</button></div></div><div data-page="play"></div><div data-page="ideas" hidden></div><button type="button" data-close>Close</button></div></div>
 <div id="spray" hidden role="dialog" aria-labelledby="spray-title"><div class="spray-head"><div><div class="eyebrow">Deck 19 · Graffiti wall</div></div><div class="spray-row"><button id="spray-connect" type="button" hidden>Connect Discord</button><button id="spray-done" type="button">Done</button></div></div><h2 id="spray-title" hidden>Spray paint</h2><div id="spray-colours" role="group" aria-label="Spray colour"></div><div id="spray-nozzles" role="group" aria-label="Nozzle"></div><p id="spray-note" aria-live="polite"></p></div>
 <div id="joystick" aria-hidden="true"><div id="stick"></div></div>
-<div id="loading"><div class="card"><div class="eyebrow">Mars Cats Voyage</div><h1>Walk around Leo</h1><div id="loading-text">Loading…</div><p id="loading-slow" hidden>This computer will take a few minutes: the whole ship is built here, using a few GB of memory. Keep this tab open, and if your browser says the page isn’t responding, choose Wait. Closing other tabs helps.</p><div id="memory" hidden><p id="memory-note"></p><div class="who-buttons"><a id="memory-tour" href="./?walk=1">Take the guided tour</a><button id="memory-try" type="button">Try anyway</button></div></div><div id="who" hidden><div id="who-connected" hidden>Aboard as <b id="who-name"></b> · <span class="who-via">Discord</span> <button id="who-forget" type="button">Not you?</button></div><div id="who-ask" hidden><p id="who-note"></p><div class="who-buttons"><button id="who-connect" type="button">Connect Discord</button><button id="who-skip" type="button">Skip for now</button></div><p class="who-small">Through The Creamery, which shares your Discord name and verified wallets with Leo.</p></div><form id="who-guest" hidden><label id="name-field">Your name aboard<input id="name-input" maxlength="24" autocomplete="nickname" placeholder="Voyager"></label><button id="who-board" type="submit">Come aboard</button><button id="who-later" type="button">Log in with Discord</button><p class="who-small">Optional, for chat, scores and more. Through The Creamery, which shares your Discord name and verified wallets with Leo.</p></form></div></div></div>
+<div id="loading"><div class="card"><div class="eyebrow">Mars Cats Voyage</div><h1>Walk around Leo</h1><div id="loading-text">Loading…</div><p id="loading-slow" hidden>This computer will take a few minutes: the whole ship is built here, using a few GB of memory. Keep this tab open, and if your browser says the page isn’t responding, choose Wait. Closing other tabs helps.</p><div id="memory" hidden><p id="memory-note"></p><div class="who-buttons"><a id="memory-tour" href="./?walk=1">Take the guided tour</a><button id="memory-try" type="button">Try anyway</button></div></div><div id="who" hidden><div id="who-connected" hidden>Aboard as <b id="who-name"></b> · <span class="who-via">Discord</span> <button id="who-forget" type="button">Not you?</button></div><div id="who-ask" hidden><p id="who-note"></p><div class="who-buttons"><button id="who-connect" type="button">Connect Discord</button><button id="who-skip" type="button">Skip for now</button></div><p class="who-small">Through The Creamery, which shares your Discord name and verified wallets with Leo.</p></div><form id="who-guest" hidden><label id="name-field">Your name aboard<input id="name-input" maxlength="24" autocomplete="nickname" placeholder="Voyager"></label><button id="who-board" type="submit">Come aboard</button><button id="who-later" type="button">Log in with Discord</button><p class="who-small" id="who-small">Optional, for chat, scores and more. Through The Creamery, which shares your Discord name and verified wallets with Leo.</p></form></div></div></div>
 <script>
 // The walk script is started from here (LEO_WALK_BOOT, called below with its hashed name). A phone with 4 GB or less,
 // or any browser whose last start never finished (src/walk/main.js keeps that note), is asked first, before the
 // script, its models or WebGL load at all: a Galaxy S9 closed the whole browser while the walk was still loading.
 window.LEO_WALK_BOOT=function(src){
  if(window.LEO_TO_HUB)return;
+ if(window.LEO_PASS_BACK){document.getElementById('loading-text').textContent='Discord is connected. You can close this window.';return;}
  var run=function(){var s=document.createElement('script');s.type='module';s.src=src;document.body.appendChild(s);},stuck=false;
  try{var t=Number(localStorage.getItem('leo-walk-building'));stuck=t>0&&Date.now()-t<7*864e5;}catch(e){}
  var small=matchMedia('(pointer:coarse)').matches&&navigator.deviceMemory>0&&navigator.deviceMemory<=4;

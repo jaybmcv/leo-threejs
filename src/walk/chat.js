@@ -1,3 +1,4 @@
+import {inOtherside} from './net/otherside.js';
 import {CHAT_CHARS} from './net/wire.js';
 
 // Chat aboard: everyone on Leo live (server/leo-live.mjs) shares one channel. T (or the Chat button) opens the field
@@ -12,7 +13,7 @@ import {CHAT_CHARS} from './net/wire.js';
 // The server decides who may chat (LEO_LIVE_CHAT: all, verified or off); the page only reflects it.
 const MAX_LINES=100,QUIET_KEY='leo-chat-hidden';
 const REFUSED={slow:'Slow down a moment: a few lines every few seconds.',link:'Links can’t be posted in chat.',again:'You just said that.',
- 'sign-in':'Connect Discord to chat aboard.',off:'Chat is off right now.',offline:'Not connected: chat comes back with Leo live.'};
+ 'sign-in':inOtherside?'Chat isn’t available from Otherside yet.':'Connect Discord to chat aboard.',off:'Chat is off right now.',offline:'Not connected: chat comes back with Leo live.'};
 
 function remembered(){try{return localStorage.getItem(QUIET_KEY)==='1';}catch{return false;}}
 function remember(quiet){try{if(quiet)localStorage.setItem(QUIET_KEY,'1');else localStorage.removeItem(QUIET_KEY);}catch{}}
@@ -34,8 +35,8 @@ export function createChat({box,lines,form,field,send,opener,hider,unread},{say,
  function show(){
   box.hidden=!live||mode==='off';
   if(box.hidden&&open)close();
-  field.disabled=!allowed();send.textContent=allowed()?'Send':'Connect';
-  field.placeholder=allowed()?'Say something to everyone aboard':'Connect Discord to chat';
+  field.disabled=!allowed();send.textContent=allowed()?'Send':'Connect';send.hidden=!allowed()&&inOtherside;
+  field.placeholder=allowed()?'Say something to everyone aboard':inOtherside?'Chat isn’t available from Otherside yet':'Connect Discord to chat';
  }
  function showQuiet(){
   box.classList.toggle('quiet',quiet);

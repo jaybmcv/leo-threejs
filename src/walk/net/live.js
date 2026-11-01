@@ -29,7 +29,7 @@ export function connectLive(url,on,opts={}){
   const pass=opts.pass?opts.pass().catch(()=>null):Promise.resolve(null);
   try{ws=new WebSocket(url);}catch{retry();return;}
   ws.binaryType='arraybuffer';
-  ws.onopen=async()=>{const p=await pass;sentPass=!!p;if(ws.readyState===1)ws.send(JSON.stringify({m:'hello',v:PROTOCOL,key,name,hat:!!opts.hat?.(),...(p?{pass:p,invite:opts.invite||undefined}:{})}));};
+  ws.onopen=async()=>{const p=await pass;sentPass=!!p;if(ws.readyState===1)ws.send(JSON.stringify({m:'hello',v:PROTOCOL,key,name,hat:!!opts.hat?.(),...(p?{pass:p,invite:opts.invite||undefined}:opts.glyph?.()?{glyph:opts.glyph()}:{})}));};
   ws.onmessage=e=>{
    if(e.data instanceof ArrayBuffer){const poses=reader.read(e.data);if(poses.length)on.poses?.(poses.filter(p=>p.id!==id));return;}
    let msg;try{msg=JSON.parse(e.data);}catch{return;}
@@ -139,6 +139,8 @@ export function connectLive(url,on,opts={}){
   get live(){return !!live();},
   // How the server has this visitor: {name, verified}.
   get you(){return you;},
+  // Say hello again, when who this visitor is has changed.
+  rejoin(){ws?.close();},
   close(){stopped=true;ws?.close();},
  };
 }

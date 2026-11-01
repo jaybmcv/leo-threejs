@@ -1,3 +1,4 @@
+import {inOtherside} from './net/otherside.js';
 import * as T from 'three';
 import {WALL,PALETTE,NOZZLES,STROKE_POINTS,paintStroke,wallFromText} from './graffiti-wall.js';
 
@@ -11,7 +12,7 @@ import {WALL,PALETTE,NOZZLES,STROKE_POINTS,paintStroke,wallFromText} from './gra
 // The paint is one transparent layer a few millimetres proud of the face, its texture a pixel per wall cell, so the
 // colours run soft at their edges like spray.
 const SEND_MS=100,LOOK_M=40;
-const REFUSED={'sign-in':'Connect Discord to spray paint. Everyone aboard can look.',slow:'Easy on the nozzle: a moment, then spray again.',
+const REFUSED={'sign-in':inOtherside?'Everyone aboard can look. Spraying isn’t available from Otherside yet.':'Connect Discord to spray paint. Everyone aboard can look.',slow:'Easy on the nozzle: a moment, then spray again.',
  offline:'The wall paints through Leo live, which isn’t connected right now.',waiting:'Fetching the wall…',closed:'The wall isn’t open for painting yet.'};
 
 // face: the casing's userData.paintFace {x, z0, z1, y0, y1}, in the casing's frame; matrix: the casing's world matrix.
@@ -49,7 +50,7 @@ export function createGraffiti(face,matrix,els,{live,connect,onOpen,onClose}){
   swatches.forEach((b,i)=>{b.setAttribute('aria-pressed',String(colour===i+1));b.disabled=!!why;});
   nozzles.forEach((b,i)=>{b.setAttribute('aria-pressed',String(nozzle===i));b.disabled=!!why;});
   els.note.textContent=note||REFUSED[why]||'Hold and drag to spray. Paint goes over whatever is there.';
-  els.connect.hidden=why!=='sign-in';
+  els.connect.hidden=why!=='sign-in'||inOtherside;
  }
 
  // Spraying: the pointer's points on the wall, in cells; laid down here at once, sent in short strokes.
