@@ -5,7 +5,6 @@ import {gotoAdapters,gotoAdapterAnchors} from './goto-adapters-v2.mjs';
 export const adapterAnchors={
  'src/walk/paws-off/game.js':"import * as T from 'three';",
  'src/areas.js':"import * as T from 'three';",
- 'src/walk/aquarium-treasure/game.js':"const KEY='leo-aquarium-best'",
  'src/walk/arcade.js':"import {walkCanvas,hasWalkCanvas} from './canvas.js';",
  'src/walk/net/live.js':"import {WireReader,PROTOCOL} from './wire.js';",
  "src/v2/cabin-privacy.js":"child.geometry.clone().applyMatrix4(child.matrix)",
@@ -55,7 +54,6 @@ class Source {
 export function applyV2Adapters(file,text,{issues=[],adapters=[],collect=false}={}){const s=new Source(file,text,issues,adapters);
  if(file==='src/walk/paws-off/game.js'){s.prepend("import {treadmillNear} from '../../v2/activity-layout.js';\n");s.replace("    if(Math.abs(p.y-m.top)>1.2)continue;\n    const dx=p.x-m.centre.x,dz=p.z-m.centre.z,a=dx*m.front.x+dz*m.front.z,s=-dx*m.front.z+dz*m.front.x;\n    if(Math.abs(a)<m.length/2+REACH&&Math.abs(s)<m.width/2+REACH)return {kind:'treadmill',label:'Play Paws Off',mill:m};","    if(treadmillNear(p,m))return {kind:'treadmill',label:'Play Paws Off',mill:m};");}
  if(file==='src/areas.js'){s.prepend("import {GYM_TREADMILL,ACTIVITY_FLOOR} from './v2/activity-layout.js';\n");s.replace("grid([-18,-10,-2,6,14,22],[-10],","grid(GYM_TREADMILL.xs,[GYM_TREADMILL.z],");s.replace("box('Treadmill',[1.3,.22,2.6],[x,.15,z],navy)","box('Treadmill',GYM_TREADMILL.size,[x,GYM_TREADMILL.centerY,z],navy)");s.replace("box('Activity_floor',[15,.03,9],[0,.025,0],navy)","box('Activity_floor',ACTIVITY_FLOOR.size,ACTIVITY_FLOOR.center,navy)");}
- if(file==='src/walk/aquarium-treasure/game.js'){s.replace("for(const [i,e] of (board?.top||[]).entries())list.append(el('li',{textContent:`${i+1}. ${e.name} · ${clock(e.ms)}`}));","for(const [i,e] of (board?.top||[]).entries())list.append(el('li',{textContent:`${i+1}. ${e.name} · ${clock(e.ms)}`}));\n  if(board?.previousCourse?.top?.length){list.append(el('li',{textContent:'Original course · retained times (separate course)'}));for(const [i,e] of board.previousCourse.top.entries())list.append(el('li',{textContent:`${i+1}. ${e.name} · ${clock(e.ms)}`}));}");s.replace("const KEY='leo-aquarium-best'","const KEY='leo-aquarium-best-v2'");s.replace("mine.textContent=best()?`Best in this browser: ${clock(best())}`:'';","mine.textContent=(best()?`Course 2 best in this browser: ${clock(best())}`:'')+(board?.previousCourse?.you?` · Original course best: ${clock(board.previousCourse.you)} (different course, retained)`: '');");}
  if(file==='src/walk/main.js'){s.replace("full:'Solo · full'","layout:'Solo · reload ship',full:'Solo · full'");s.replace("full:'Solo · Leo is full'","layout:'Solo · reload to match ship',full:'Solo · Leo is full'");}
  if(file==='src/walk/arcade.js')s.append("\nexport function liveArcadeStations(){const g=frame(),out={};let x=START;for(const c of ROW){const sh=SHAPES[c.shape];if(c.game)out[c.game]=g.localToWorld(new T.Vector3(x+sh.w/2,0,sh.d+sh.po+.35)).toArray();x+=sh.w+GAP;}return out;}\n");
  if(file==='src/walk/net/live.js'){

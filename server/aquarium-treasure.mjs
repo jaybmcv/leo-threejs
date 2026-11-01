@@ -3,15 +3,18 @@ import {SWIM,swimLocal,distance,limitSwim,gemNear} from '../src/walk/aquarium-tr
 
 // A best swim per signed-in visitor, in a file of its own like the Container Maze's board.
 // Poses must visit all seven gems, stay inside the water and travel at swimming speed before the chest can finish.
-export function createTreasureBoard({send,log,file=process.env.LEO_LIVE_TREASURE||new URL('../../leo-live-treasure.json',import.meta.url),now=Date.now,course=1}){
+export function createTreasureBoard({send,log,file=process.env.LEO_LIVE_TREASURE||new URL('../../leo-live-treasure.json',import.meta.url),now=Date.now}){
  const best=new Map(),runs=new WeakMap(),buckets=new WeakMap();let saving=null;
- try{for(const e of JSON.parse(fs.readFileSync(file,'utf8')))if(e&&typeof e.id==='string'&&typeof e.name==='string'&&typeof e.at==='string'&&Number.isInteger(e.ms)&&e.ms>0)best.set((e.course??1)+':'+e.id,e);}catch{}
- const key=id=>course+':'+id;
- const ranked=(which=course)=>[...best.values()].filter(e=>(e.course??1)===which).sort((a,b)=>a.ms-b.ms||a.at.localeCompare(b.at));
+ try{for(const e of JSON.parse(fs.readFileSync(file,'utf8')))if(e&&typeof e.id==='string'&&typeof e.name==='string'&&typeof e.at==='string'&&Number.isInteger(e.ms)&&e.ms>0){
+  // Ignore obsolete local-test course tags; retain the fastest record if an id appears twice.
+  const {course:ignored,...record}=e,had=best.get(e.id);
+  if(!had||e.ms<had.ms||(e.ms===had.ms&&e.at<had.at))best.set(e.id,record);
+ }}catch{}
+ const ranked=()=>[...best.values()].sort((a,b)=>a.ms-b.ms||a.at.localeCompare(b.at));
  function save(){if(saving)return;saving=setTimeout(()=>{saving=null;fs.writeFile(file,JSON.stringify([...best.values()],null,1),e=>{if(e)log('aquarium times not saved',e.message);});},1000);}
  function reply(v,msg){send(v.ws,{m:'treasure',...msg});}
- function board(v){const all=ranked(),mine=v.discord?best.get(key(v.discord.discordId)):null;
-  reply(v,{op:'board',verified:!!v.discord,top:all.slice(0,10).map(e=>({name:e.name,ms:e.ms})),you:mine?{ms:mine.ms,rank:all.indexOf(mine)+1}:null,...(course===2?{course,previousCourse:{course:1,top:ranked(1).slice(0,10).map(e=>({name:e.name,ms:e.ms})),you:v.discord?best.get('1:'+v.discord.discordId)?.ms??null:null}}:{})});}
+ function board(v){const all=ranked(),mine=v.discord?best.get(v.discord.discordId):null;
+  reply(v,{op:'board',verified:!!v.discord,top:all.slice(0,10).map(e=>({name:e.name,ms:e.ms})),you:mine?{ms:mine.ms,rank:all.indexOf(mine)+1}:null});}
  function observe(v){
   const run=runs.get(v);if(!run||!v.pos)return;
   const at=now(),q=swimLocal(v.pos),dt=Math.max(0,at-run.lastAt)/1000,d=distance(q,run.last);
@@ -33,10 +36,10 @@ export function createTreasureBoard({send,log,file=process.env.LEO_LIVE_TREASURE
   const elapsed=run?now()-run.at:0,ms=msg.ms;
   if(!run||run.found.size!==7||!Number.isInteger(ms)||ms<1000||ms>elapsed+2000||ms<elapsed-3000||!v.pos||distance(swimLocal(v.pos),SWIM.chest)>2.4){
    reply(v,{op:'result',ok:false,why:'rejected'});return;}
-  const id=v.discord.discordId,had=best.get(key(id)),newBest=!had||ms<had.ms;
-  if(newBest){best.set(key(id),{id,name:v.name||'Voyager',ms,at:new Date(now()).toISOString(),...(course===2?{course:2}:{})});save();}
+  const id=v.discord.discordId,had=best.get(id),newBest=!had||ms<had.ms;
+  if(newBest){best.set(id,{id,name:v.name||'Voyager',ms,at:new Date(now()).toISOString()});save();}
   else if(v.name&&had.name!==v.name){had.name=v.name;save();}
-  const mine=best.get(key(id));log('aquarium swim',`discord:${id}`,(ms/1000).toFixed(1)+'s',newBest?'(best)':'');
+  const mine=best.get(id);log('aquarium swim',`discord:${id}`,(ms/1000).toFixed(1)+'s',newBest?'(best)':'');
   reply(v,{op:'result',ok:true,ms,best:mine.ms,rank:ranked().indexOf(mine)+1,newBest});
  }
  return {observe,

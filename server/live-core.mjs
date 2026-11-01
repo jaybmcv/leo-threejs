@@ -77,7 +77,7 @@ const graffiti=createGraffiti({send:(v,msg)=>send(v.ws,msg),log});
 const gym=createGym({log,send,canPlay:policy.canGym});BUDGETS.gym=[2,6];
 // The Container Maze's best times (maze.mjs): its own file, its own message.
 const maze=createMazeBoard({log,send});
-const treasure=createTreasureBoard({log,send,course:policy.version});
+const treasure=createTreasureBoard({log,send});
 // The Mars Cat Transporters on Deck 1 (transporters.mjs): who drives each, and where each is parked, in memory only.
 const mct=createTransporters({log,broadcast:msg=>broadcast(msg),send:(v,msg)=>send(v.ws,msg)});BUDGETS.mct=[3,8];
 setInterval(()=>mct.tick(),10000);
