@@ -4,7 +4,7 @@ export function planVoidGuards(layout,col,{step=.2,existing=[]}={}){
  const rows=[],ray=new T.Ray(),ground=col.raycastGround||col.raycast;
  const supported=(x,y,z)=>{ray.origin.set(x,y+.45,z);ray.direction.set(0,-1,0);const h=ground.call(col,ray,1.45);return !!h&&h.normal.y>.64&&Math.abs(h.point.y-y)<.42;};
  const blocked=(p,y,n)=>[.95,1.55].every(h=>{ray.origin.set(p[0]-n[0]*.3,y+h,p[1]-n[1]*.3);ray.direction.set(n[0],0,n[1]);return !!col.raycast(ray,.6);});
- for(const d of layout.decks)for(const hole of d.slab.holes.filter(h=>!/(lift|stairs|aft-opening)/i.test(h.id))){
+ for(const d of layout.decks)for(const hole of d.slab.holes.filter(h=>h.kind!=='lift'&&h.kind!=='stairs'&&!layout.circulation?.lifts?.some(l=>l.deck===d.number&&l.id===h.id)&&!/(lift|stairs|aft-opening)/i.test(h.id))){
   let ring=hole.polygon.filter((p,i,a)=>!i||Math.hypot(p[0]-a[i-1][0],p[1]-a[i-1][1])>1e-7),changed=true;
   while(changed&&ring.length>3){changed=false;ring=ring.filter((b,i,a)=>{const p=a[(i+a.length-1)%a.length],q=a[(i+1)%a.length],u=[b[0]-p[0],b[1]-p[1]],v=[q[0]-b[0],q[1]-b[1]],keep=Math.abs(u[0]*v[1]-u[1]*v[0])>1e-7||u[0]*v[0]+u[1]*v[1]<0;if(!keep)changed=true;return keep;});}
   for(let i=0;i<ring.length;i++){const a=ring[i],b=ring[(i+1)%ring.length],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);if(len<.04)continue;const n=[-dz/len,dx/len],count=Math.ceil(len/step),point=t=>[a[0]+dx*t,a[1]+dz*t];let start=null,side=0;

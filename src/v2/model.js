@@ -44,17 +44,16 @@ export function fitV2Structure(ship){
  for(const r of layout.rooms.filter(r=>!r.aggregate)){
   const source=roomObject(ship,r.id);
   if(source)retireV2RoomShell(source,ship.cutaway);
-  if(r.id==='d03-cold-6')r.fittingDoor={center:toWorld(r.id,[-26,0,0]),width:4};
   const g=new T.Group();g.name='V2_shell_'+r.id;g.userData.room=r.id;structure.add(g);
   const replacements=layout.hullPrototypes?.rollout?layout.hullPrototypes.prototypes.filter(p=>p.kind!=='cabin'&&(p.ownerId===r.id||p.parentRoomId===r.id)):[];
   const holes=r.assembly==='arrival-garden'&&r.deck===3?layout.decks[2].slab.holes.filter(h=>h.assembly==='arrival-garden').map(h=>h.polygon):[];
   if(!(r.kind==='garden'&&r.hullPrototype)){mesh(g,'V2_room_floor',polygonGeometry(r.polygon,[...holes,...replacements.map(p=>p.polygon)],r.y+.006,.12),floor);
-  const top=r.envelope?.at(-1)?.polygon??r.polygon;mesh(g,'V2_room_ceiling',polygonGeometry(top,replacements.map(p=>ownerFootprint(p,p.rect[3]).map(q=>{const w=worldPoint(p.chart,q);return [w[0],w[2]];})),r.y+r.height,.10),lining);
+  const top=r.envelope?.at(-1)?.polygon??r.polygon;mesh(g,'V2_room_ceiling',polygonGeometry(top,[...(r.id==='d02-arrival-1'?layout.decks[2].slab.holes.filter(h=>h.id==='arrival-garden-opening').map(h=>h.polygon):[]),...replacements.map(p=>ownerFootprint(p,p.rect[3]).map(q=>{const w=worldPoint(p.chart,q);return [w[0],w[2]];}))],r.y+r.height,.10),lining);
   // Sectioned facade steps follow the supplied full-height envelope without scaling the fitted room.
   const sections=r.envelope||[{rise:0,height:r.height,polygon:r.polygon}];
   for(const s of sections)for(let i=0;i<s.polygon.length;i++){const a=s.polygon[i],b=s.polygon[(i+1)%s.polygon.length],doors=[r.door,r.fittingDoor,...(r.galleryDoors||[]),...(r.bayAccessDoors||[])].filter(Boolean).filter(d=>d.center[1]<r.y+s.rise+s.height&&d.center[1]+2.5>r.y+s.rise);
    let segments=[[a,b]];for(const d of doors)segments=segments.flatMap(([a,b])=>entrySegments(a,b,d.center,d.width));
-   for(const [aa,bb] of segments){const o=wall(g,aa,bb,r.y+s.rise,s.height,r.outer||r.kind==='garden'?glass:lining);removePanelEndCaps(o);}
+   for(const [aa,bb] of segments){const o=wall(g,aa,bb,r.y+s.rise,s.height,r.outer||r.kind==='garden'||r.id==='d05-aquarium-gallery'&&(Math.abs(aa[0]-98)<.01&&Math.abs(bb[0]-98)<.01||Math.abs(aa[1]+34)<.01&&Math.abs(bb[1]+34)<.01)?glass:lining);removePanelEndCaps(o);}
    for(const d of doors){const header=entryHeader(a,b,d.center,d.width);if(header&&d.center[1]+2.5<r.y+s.rise+s.height){const upper=Math.max(r.y+s.rise,d.center[1]+2.5),o=wall(g,header[0],header[1],upper,r.y+s.rise+s.height-upper,glass);removeGeometryCaps(o.geometry,0);}}
   }
   }

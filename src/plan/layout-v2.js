@@ -1,3 +1,4 @@
+import {prepareLaunchBPlan,FREIGHT_LIFT} from './launch-b-v2.js';
 import {ATRIUM_TERRACES} from './atrium-v2.js';
 import {gardenGalleryDoors} from './gallery-entries-v2.js';
 import {escapeSeatPlan} from './shuttle-seats-v2.js';
@@ -135,7 +136,7 @@ export function buildLayoutV2(){
  const h=hullV2(),decks=[],cabins=[],rooms=[],shuttles=[],windows=[],circulation={corridors:[],stairs:[],bridges:[],towers:[],lifts:[],ramps:[],nodes:[],edges:[]},issues=[];
  for(const d of DECKS){
   const y=floorY(d.number),H=hullPath(h,y,3.5),openings=transitOpenings(d.number).map(o=>({...o,deck:d.number,kind:o.id.includes('stairs')?'stairs':'lift',polygon:rectPoly(o)}));
-  if(d.number>=4&&d.number<=17)openings.push({id:'aft-service',deck:d.number,kind:'lift',polygon:rectangle(-156,8,4,4)});
+  if(d.number>=4&&d.number<=17)openings.push({id:'aft-service',deck:d.number,kind:'lift',polygon:rectangle(FREIGHT_LIFT.x,FREIGHT_LIFT.z,FREIGHT_LIFT.shaftWidth,FREIGHT_LIFT.shaftDepth)});
   if(d.number>4&&d.number<=17)openings.push({id:'aft-service-stair',deck:d.number,kind:'stairs',polygon:rectangle(-166,-10,7,5)});
   if(d.number===1)openings.push(...transitOpenings(2).filter(o=>o.id.includes('stairs')).map(o=>({...o,deck:1,kind:'stairs',ground:true,polygon:rectPoly(o)})));
   const deck={number:d.number,name:d.name,y,roomLine:{height:3.5,outline:floorOutline(h,y),policy:'Deck-level section; room envelopes check the sloped line over their full height.'},slab:{outline:floorOutline(h,y),holes:[...openings.filter(o=>!o.ground).map(o=>({id:o.id,polygon:o.polygon})),...aftOpenings(d.number).map((r,i)=>({id:'aft-opening-'+i,polygon:rectPoly(r)}))]},openings,corridors:[],atrium:null};
@@ -167,13 +168,14 @@ export function buildLayoutV2(){
  for(const t of ATRIUM_TERRACES){const owner='neighborhood-'+(t.deck-5)+(t.side<0?'-dining':'-cafe'),r=rooms.find(r=>r.id===owner),door={id:owner+'-terrace-entry',deck:t.deck,center:[-144.5,r.y,t.side*18],width:2.4,outward:[0,-t.side],label:'Dining terrace via aft lobby'};r.galleryDoors=[...(r.galleryDoors||[]),door];circulation.balconies.push({...t,owner,width:2.2,kind:'dining-apron',reason:'Phase6 accepted short aft-edge apron; no cabin changes or centre crossing. Three owned continuous guards; rear joins the existing aft core.'});}
  /* Main's automatic freight airlock is on the forward bulkhead. Keep the aft planned access and reserve its full existing six-metre opening in the rebuilt shell too. */
  const freight=rooms.find(r=>r.id==='d01-spares-aft');freight.fittingDoor={id:'aft-freight-airlock',center:[freight.x+freight.width/2,freight.y,freight.z],width:6,height:2.5,reason:'Main eb079b7 automatic freight airlock; leaves and movers stay unchanged.'};
+ const aquariumGallery=prepareLaunchBPlan({decks,rooms,circulation});
  connectCirculation({h,decks,rooms,cabins,shuttles,circulation,issues});
- for(const c of circulation.corridors.filter(c=>c.deck===20))Object.assign(c,{access:'crew',label:'Crew service circulation'});for(const b of circulation.bridges.filter(b=>b.deck===20))Object.assign(b,{access:'crew',name:'Crew service gallery'});
+ for(const c of circulation.corridors.filter(c=>c.deck===20))Object.assign(c,{access:'public',label:'Deck 20 public circulation'});for(const b of circulation.bridges.filter(b=>b.deck===20))Object.assign(b,{access:'crew',name:'Crew service gallery'});
  completeProgramme({decks,rooms,cabins,shuttles,circulation});
  const summary={allocation:{slots:cabins.length,twins:cabins.filter(c=>c.type==='twin').length,singles:cabins.filter(c=>c.type==='single').length,unused:0},areaExceptions:rooms.filter(r=>r.areaException).map(r=>({id:r.id,reason:r.areaException})),perDeck:decks.map(d=>({deck:d.number,cabins:cabins.filter(c=>c.deck===d.number).length,twins:cabins.filter(c=>c.deck===d.number&&c.type==='twin').length,singles:cabins.filter(c=>c.deck===d.number&&c.type==='single').length,berths:cabins.filter(c=>c.deck===d.number).reduce((s,c)=>s+c.berths,0),rooms:rooms.filter(r=>r.deck===d.number).length,atriumWidth:d.atrium?.widthMid??0})),cabins:cabins.length,berths:cabins.reduce((s,c)=>s+c.berths,0),shuttles:shuttles.length,seats:shuttles.reduce((s,c)=>s+c.seats.length,0),windows:windows.length,windowsByKind:Object.fromEntries([...new Set(windows.map(w=>w.kind))].map(k=>[k,windows.filter(w=>w.kind===k).length])),issues};
  const assemblies=[{id:'arrival-garden',frame:rooms.find(r=>r.id==='d02-arrival-1').frame,members:['d02-arrival-1','d03-farm-1'],opening:{localCenter:[-4,4,0],halfAxes:[10.1,4.7],deck:3}},...rooms.filter(r=>r.kind==='garden').map(r=>({id:r.assembly,neighborhood:r.neighborhood,frame:{...r.frame,mirror:r.mirror},members:[r.id],components:r.components}))];
  const fixedRooms=SHIP_AREAS.filter(a=>!rooms.some(r=>r.id===a.id)).map(a=>makeRoom(a,a.center[0],a.center[2],0,{fixed:true,reason:'Retained aft engineering/support room; selected v2 frame is unchanged.'}));
- return {cabinIdMap,fixedRooms,version:2,option:'C',units:'metres',coordinates:'X forward; Y up; Z starboard; yaw is Three.js rotation.y',hull:h.provenance,decks,cabins,rooms,assemblies,shuttles,windows,circulation,summary};
+ return {aquariumGallery,cabinIdMap,fixedRooms,version:2,option:'C',units:'metres',coordinates:'X forward; Y up; Z starboard; yaw is Three.js rotation.y',hull:h.provenance,decks,cabins,rooms,assemblies,shuttles,windows,circulation,summary};
 }
 
 // Rooms whose door moves along its wall from the middle (m, world x). Container hold A's maze (src/walk/maze) fills the

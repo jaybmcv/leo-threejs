@@ -1,3 +1,4 @@
+import {HANGAR_MAINTENANCE_PLATFORMS} from '../plan/launch-b-v2.js';
 import{ATRIUM_LAKE_BRIDGE}from'../plan/atrium-v2.js';
 import {ARENA_ID,STAGE} from '../mudwater-arena.js';
 import {toLocal} from '../plan/rooms.js';
@@ -7,6 +8,7 @@ import {contains} from '../plan/geometry-v2.js';
 export function plannedStanding(layout,x,y,z,radius=.35){
  if(x<-170||y>layout.decks.at(-1).y+3.5)return true; // Retained aft/fin/crown use their original detailed circulation.
  const inside=p=>contains(p,[x,z]),near=h=>Math.abs(y-h)<.13;
+ for(const p of HANGAR_MAINTENANCE_PLATFORMS)if(near(p.y)&&[[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius]].every(([dx,dz])=>contains(p.polygon,[x+dx,z+dz])))return true;
  const b=ATRIUM_LAKE_BRIDGE;if(near(layout.decks[b.deck-1].y+b.rise)&&x>=b.bounds[0]+radius&&x<=b.bounds[1]-radius&&z>=b.bounds[2]+radius&&z<=b.bounds[3]-radius)return true;
  // Main's existing low stage/board and its two end steps are real interior floors. Keep the same height tolerance and a whole-capsule footprint.
  if(layout.rooms.some(r=>r.id===ARENA_ID)){const p=toLocal(ARENA_ID,[x,y,z]),onStage=p[0]>=STAGE.x0+radius&&p[0]<=STAGE.x1-radius&&Math.abs(p[2])<=STAGE.z-radius&&Math.abs(p[1]-STAGE.h)<.13,onStep=[STAGE.x0-.5,STAGE.x1+.5].some(cx=>Math.abs(p[0]-cx)<=.5-radius&&Math.abs(p[2])<=3-radius)&&Math.abs(p[1]-.22)<.13;if(onStage||onStep)return true;}

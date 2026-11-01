@@ -2,7 +2,7 @@ import*as T from'three';
 import{communityArtMounts}from'./community-displays.js';
 import layout from 'v2-layout';
 const same=(a,b)=>a.length===b.length&&a.every((v,i)=>Math.abs(v-b[i])<.055);
-export function arrivalArtWall(){const r=layout.rooms.find(r=>r.id==='d02-arrival-1');return[r.door.center[0]-1.75,r.y+1.665,r.door.center[2]];}
+export function arrivalArtWall(){const r=layout.rooms.find(r=>r.id==='d02-arrival-1');return[r.door.center[0]+.25,r.y+1.665,r.door.center[2]-7];}
 const mounts=new Map(communityArtMounts(layout).map(m=>[m.name,m]));
 export function phase4PaintingPoint(name,fallback){return name==='Orange_Haze_5'?arrivalArtWall():mounts.get(name)?.at||fallback;}
 export function fitPhase4Painting(group,p){const m=mounts.get(p.name);if(m){const canvas=group.getObjectByName('Painting_art_'+p.name),g=canvas.geometry;g.computeBoundingBox();const size=g.boundingBox.getSize(new T.Vector3()),scale=Math.min(m.width/size.x,m.height/size.y),cy=canvas.position.y;group.scale.setScalar(scale);group.rotation.set(0,Math.atan2(m.normal[0],m.normal[2]),0);group.position.set(m.at[0]-m.normal[0]*canvas.position.z*scale,m.at[1]-cy*scale,m.at[2]-m.normal[2]*canvas.position.z*scale);group.userData.phase4Fit=m.name;group.userData.room=m.room;p.room=m.room;return;}if(p.name!=='Orange_Haze_5')return;const at=arrivalArtWall();group.position.set(at[0],layout.decks[1].y,at[2]);group.rotation.y=Math.PI/2;group.userData.phase4Fit='arrival-branch-wall';}

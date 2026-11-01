@@ -10,6 +10,7 @@ import * as T from 'three';
 import {preparedV2} from './v2-world.mjs';
 import layout from 'v2-layout';
 const out=process.env.LEO_SCOPED_OUTPUT||'output/leo-interior-v02';const {ship,prepared,plan,image}=await preparedV2({map:true});
+await fs.writeFile(out+'/launch-b-proof.json',JSON.stringify({version:1,...ship.v2LaunchB},null,2));
 for(const item of Object.values(prepared))if(item?.group&&!item.group.parent)ship.inside.add(item.group);
 plan.skinAuthority=await finishedSkinAuthorityProof(ship);await fs.writeFile(out+"/raw-skin-origin.json",JSON.stringify({exteriorSha256:ship.v2SourceExteriorSha256,orientedAuthority:plan.skinAuthority.signature},null,2));plan.bayAccesses=layout.bayAccesses;plan.windows=layout.windows;plan.shells=layout.rooms.filter(r=>!r.aggregate).map(r=>({id:r.id,deck:r.deck,polygon:r.polygon,door:r.door,fittingDoor:r.fittingDoor}));await fs.writeFile(out+'/walk-plan.json',JSON.stringify(plan));await fs.writeFile(out+'/walk-map.png',image);
 await fs.mkdir('output/phase3b',{recursive:true});

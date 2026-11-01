@@ -6,6 +6,7 @@ import {pathToFileURL} from 'node:url';
 import {runtimeLayout} from './v2-plugin.mjs';
 import {applyV2Adapters,checkV2Adapters} from './v2-adapters.mjs';
 import {gotoAdapters} from './goto-adapters-v2.mjs';
+import {contains} from '../src/plan/geometry-v2.js';
 import {buildGotoPlaces,groupPlaces,describeV2,deckDirectory,isCrewGallery} from '../src/v2/wayfinding-data.js';
 import {featurePlaces} from '../src/v2/goto-features.js';
 import {guideSchedule,lobbySchedule} from '../src/v2/wayfinding-guide-data.js';
@@ -19,7 +20,7 @@ for(const r of [...layout.rooms,...layout.fixedRooms].filter(r=>!r.aggregate&&!i
 for(const s of layout.shuttles)assert(ids.has(s.id),'Escape shuttle missing from Go-to '+s.id);
 for(const id of ['d02-new-1','d03-new-1','d05-new-4','atrium-floor','haze-maze','container-maze','pinball','selfie-camera','telescope','aquarium-treasure','chinampa','lever-panel','arcade-treadmill','neon-arena','fin-platform-6','fin-service-gallery'])assert(ids.has(id),'Highlight missing '+id);
 assert(!places.some(isCrewGallery),'Crew gallery must not be public');
-assert(!places.some(p=>p.deck===20&&p.at[0]>127&&p.at[0]<138&&Math.abs(p.at[2])<18),'A public shortcut must not land in the crew gallery');
+assert(!places.some(p=>p.deck===20&&layout.circulation.bridges.some(b=>b.deck===20&&b.access==='crew'&&contains(b.polygon,[p.at[0],p.at[2]]))),'A public shortcut must not land in a closed crew bridge');for(const r of layout.rooms.filter(r=>r.closed))assert(!places.some(p=>p.id===r.id||p.room===r.id),'Closed crew room in public Go-to '+r.id);assert(!/Crew only/.test(describeV2(layout,[132,36.3,0])),'Public lift-tower floor must not be labelled crew-only');
 assert(!places.some(p=>/lifeboat|skywalk/i.test(p.name+' '+p.detail)),'Retired public wording');
 assert.equal(groupPlaces(layout,places).length,21,'Twenty decks plus fin/crown');
 assert.equal(deckDirectory(layout).length,20);
@@ -35,7 +36,7 @@ assert.match(describeV2(layout,places.find(p=>p.id==='fin-platform-6').at),/Fin 
 assert.equal(describeV2(layout,places.find(p=>p.id==='crown-lounge').at),'Crown lounge');
 assert.equal(describeV2(layout,[132,36.3,12]),'Deck 20 · Crew service gallery · Crew only');
 // Render the actual guide module with the same trimmed field availability.
-const guideLayout={decks:layout.decks.map(({number,name,y})=>({number,name,y})),rooms:layout.rooms.map(({id,name,deck,kind,x,y,z,depth,height,aggregate,door,frame,fittingFrame,galleryDoors,components})=>({id,name,deck,kind,x,y,z,depth,height,aggregate,door,frame,fittingFrame,galleryDoors,components})),fixedRooms:layout.fixedRooms,cabins:layout.cabins.map(({id,deck,x,y,z,yaw,berths,neighborhood})=>({id,deck,x,y,z,yaw,berths,neighborhood})),shuttles:layout.shuttles.map(({id,roomId,deck,x,y,z,yaw})=>({id,roomId,deck,x,y,z,yaw})),circulation:{corridors:layout.circulation.corridors.map(({id})=>({id}))}};
+const guideLayout={decks:layout.decks.map(({number,name,y})=>({number,name,y})),rooms:layout.rooms.map(({id,name,deck,kind,x,y,z,depth,height,aggregate,door,frame,fittingFrame,galleryDoors,components,closed,access,polygon})=>({id,name,deck,kind,x,y,z,depth,height,aggregate,door,frame,fittingFrame,galleryDoors,components,closed,access,polygon})),fixedRooms:layout.fixedRooms,cabins:layout.cabins.map(({id,deck,x,y,z,yaw,berths,neighborhood})=>({id,deck,x,y,z,yaw,berths,neighborhood})),shuttles:layout.shuttles.map(({id,roomId,deck,x,y,z,yaw})=>({id,roomId,deck,x,y,z,yaw})),circulation:{corridors:layout.circulation.corridors.map(({id})=>({id}))}};
 const guideBundle=await build({absWorkingDir:process.cwd(),tsconfigRaw:{},entryPoints:['scripts/goto-guide-render-fixture-v2.mjs'],bundle:true,platform:'node',packages:'external',format:'esm',write:false,plugins:[{name:'goto-guide-fixture',setup(b){b.onResolve({filter:/^v2-layout$/},()=>({path:'layout',namespace:'goto-fixture'}));b.onLoad({filter:/.*/,namespace:'goto-fixture'},()=>({contents:'export default '+JSON.stringify(guideLayout),loader:'js'}));b.onResolve({filter:/.*/},a=>a.kind!=='entry-point'&&!a.path.startsWith('.')&&!path.isAbsolute(a.path)?{path:a.path,external:true}:{path:path.resolve(a.resolveDir||process.cwd(),a.path),namespace:'goto-source'});b.onLoad({filter:/.*/,namespace:'goto-source'},async a=>({contents:await fs.readFile(a.path,'utf8'),loader:a.path.endsWith('.json')?'json':'js',resolveDir:path.dirname(a.path)}));}}]});
 await fs.mkdir('output/phase7',{recursive:true});const guideFile=path.resolve('output/phase7/goto-guide-render-fixture.mjs');await fs.writeFile(guideFile,guideBundle.outputFiles[0].contents);const guideModule=await import(pathToFileURL(guideFile).href+'?run='+Date.now()),guideRender=guideModule.checkGuideRendering();const sameCatalog=candidate=>JSON.stringify(candidate)===JSON.stringify(places);assert(sameCatalog(guideModule.runtimePlaces),'Production Go-to export differs from the validated catalog');assert(!sameCatalog([...guideModule.runtimePlaces,{id:'injected-outside-catalog',at:[999,0,999]}]),'An extra production Go-to entry escaped the binding check');
 const report=await checkV2Adapters();assert.equal(report.issues.length,0,'Adapter source anchors changed');

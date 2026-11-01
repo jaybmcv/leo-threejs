@@ -15,7 +15,7 @@ export function roomPlaces(layout){return [...layout.rooms,...(layout.fixedRooms
 });}
 export function shuttlePlaces(layout){return layout.shuttles.map(s=>{const c=Math.cos(s.yaw),n=Math.sin(s.yaw),u=-9.5,v=.775;return {id:s.id,room:s.roomId,component:s.id,name:'Escape shuttle '+s.id.split('-').slice(-2).join('').toUpperCase(),deck:s.deck,section:'Escape shuttles',detail:'Deck '+s.deck+' · '+sideName(s.z)+' · 100 seats',at:[s.x+c*u+n*v,s.y+.126,s.z-n*u+c*v],yaw:s.yaw+Math.PI/2,lv:2,resolved:true};});}
 export function buildGotoPlaces(layout,features=[]){
- const places=[...roomPlaces(layout),...shuttlePlaces(layout),...features].filter(p=>!isCrewGallery(p));
+ const places=[...roomPlaces(layout),...shuttlePlaces(layout),...features].filter(p=>!isCrewGallery(p)&&!layout.rooms.some(r=>r.closed&&(r.id===p.room||p.at&&p.at[1]>=r.y-.2&&p.at[1]<r.y+r.height&&contains(r.polygon,[p.at[0],p.at[2]]))));
  const seen=new Set();for(const p of places){if(!p.id||seen.has(p.id))throw Error('Duplicate Go-to id');seen.add(p.id);if(!p.at?.every(Number.isFinite)||!Number.isFinite(p.yaw))throw Error('Invalid Go-to pose '+p.id);}
  return places.sort((a,b)=>(a.deck??21)-(b.deck??21)||a.section.localeCompare(b.section)||a.name.localeCompare(b.name,undefined,{numeric:true})||a.id.localeCompare(b.id));
 }
@@ -25,7 +25,7 @@ export function describeV2(layout,point,{crownFloor=120.3}={}){
  if(y>layout.decks.at(-1).y+3.5)return y>=crownFloor-.3?'Crown lounge':'Fin inspection platforms';
  if(x<-230&&Math.abs(z)<4&&Math.abs(y-layout.decks[16].y)<.3)return 'Deck 17 · Fin lift service gallery';
  const deck=layout.decks.reduce((a,b)=>Math.abs(b.y-y)<Math.abs(a.y-y)?b:a);
- if(deck.number===20&&x>127&&x<138&&Math.abs(z)<18)return 'Deck 20 · Crew service gallery · Crew only';
+ if(deck.number===20&&layout.circulation.bridges.some(b=>b.deck===20&&b.access==='crew'&&contains(b.polygon,[x,z])))return 'Deck 20 · Crew service gallery · Crew only';
  const room=[...layout.rooms,...(layout.fixedRooms||[])].find(r=>!r.aggregate&&y>=r.y-.2&&y<r.y+r.height-.2&&contains(r.polygon,[x,z]));
  const shuttle=layout.shuttles.find(s=>{if(y<s.y-.1||y>s.y+3.2)return false;const dx=x-s.x,dz=z-s.z,c=Math.cos(s.yaw),n=Math.sin(s.yaw),u=c*dx-n*dz,v=n*dx+c*dz;return Math.abs(u)<10.68&&Math.abs(v)<3.63;});
  const coreBay=layout.shuttles.some(s=>Math.abs(s.y-y)<.4&&contains(s.polygon,[x,z]));
@@ -34,4 +34,4 @@ export function describeV2(layout,point,{crownFloor=120.3}={}){
  // The observation floor is raised 2 m above its Deck 17 approach.
  return 'Deck '+(room?.id==='observation-lounge'?room.deck:deck.number)+' · '+name;
 }
-export function deckDirectory(layout){return layout.decks.map(d=>({deck:d.number,title:'Deck '+d.number+' · '+d.name,highlights:[...new Set(layout.rooms.filter(r=>r.deck===d.number&&!r.aggregate&&!r.id.includes('-housekeeping-')).map(r=>r.name))],crew:d.number===20?'Crew service gallery · Crew only':''}));}
+export function deckDirectory(layout){return layout.decks.map(d=>({deck:d.number,title:'Deck '+d.number+' · '+d.name,highlights:[...new Set(layout.rooms.filter(r=>r.deck===d.number&&!r.aggregate&&!r.closed&&!r.id.includes('-housekeeping-')).map(r=>r.name))],crew:d.number===20?'Public deck · Crew only: skywalk gallery, Captain’s bridge, Crew ready room, Flight security':''}));}
