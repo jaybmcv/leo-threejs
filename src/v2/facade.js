@@ -31,3 +31,48 @@ export function attachFacade(ship,scene,{authority=null}={}){
 
 // Retain source objects for inspection without traversing 250k hidden authoring meshes every frame.
 export function isolateStaticWorld(ship,scene){ship.root.updateMatrixWorld(true);const live=[],visible=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};ship.root.traverse(o=>{if((o.isMesh&&!o.userData.baked||o.isLight)&&visible(o))live.push({o,parent:o.parent});});const root=new T.Group();root.name='V2_live_source_draws';scene.add(root);const groups=new Map();for(const {o,parent} of live){let g=groups.get(parent);if(!g){g=new T.Group();g.name=parent.name;root.add(g);groups.set(parent,g);}g.attach(o);}ship.root.removeFromParent();ship.liveDraws=root;return root;}
+
+// Low-deck architecture has many 40 m chunks sharing exactly one finish.
+// Multi-draw keeps each chunk's frustum test and each band's visibility while
+// submitting compatible opaque chunks together. Source meshes stay available
+// for inspection; collisions and transparent sorting are unchanged.
+export function compactRenderGeometry(source){
+ const ids=source.index?Array.from(new Set(source.index.array)):Array.from({length:source.attributes.position.count},(_,i)=>i),remap=new Map(ids.map((id,i)=>[id,i])),g=new T.BufferGeometry();
+ for(const[name,a]of Object.entries(source.attributes)){const values=new a.array.constructor(ids.length*a.itemSize);for(let i=0;i<ids.length;i++)for(let k=0;k<a.itemSize;k++)values[i*a.itemSize+k]=a.array[ids[i]*a.itemSize+k];g.setAttribute(name,new T.BufferAttribute(values,a.itemSize,a.normalized));}
+ if(source.index)g.setIndex(Array.from(source.index.array,i=>remap.get(i)));g.computeBoundingBox();g.computeBoundingSphere();return g;
+}
+export async function batchLowDeckDraws(baked,renderer){
+ const yieldWork=()=>new Promise(resolve=>setTimeout(resolve,0));
+ const proof={enabled:renderer.extensions.has('WEBGL_multi_draw'),batches:0,sources:0,vertices:0,triangles:0};
+ if(!proof.enabled)return proof;
+ for(const group of baked.bands.values()){
+  const {band,top=band}=group.userData;if(band< -1||top>4)continue;
+  const buckets=new Map();
+  for(const o of [...group.children]){
+   const m=o.material,g=o.geometry;
+   if(!o.isMesh||o.isInstancedMesh||o.isBatchedMesh||!g?.attributes.position||Array.isArray(m)||m.transparent||m.opacity<1||m.isShaderMaterial||m.name.startsWith('P4_menu_deck_'))continue;
+   const attributes=Object.entries(g.attributes).map(([k,a])=>k+':'+a.itemSize+':'+a.normalized).sort().join(',');
+   const key=m.uuid+'|'+o.renderOrder+'|'+attributes;let list=buckets.get(key);if(!list)buckets.set(key,list=[]);list.push(o);
+  }
+  for(const list of buckets.values()){
+   if(list.length<3)continue;
+   const compact=[];for(const o of list){compact.push(compactRenderGeometry(o.geometry));await yieldWork();}const vertices=compact.reduce((s,g)=>s+g.attributes.position.count,0),indices=compact.reduce((s,g)=>s+(g.index?.count||g.attributes.position.count),0);
+   const batch=new T.BatchedMesh(list.length,vertices,indices,list[0].material);batch.name='V2_low_deck_batch_'+list[0].material.name;batch.sortObjects=false;batch.perObjectFrustumCulled=true;batch.renderOrder=list[0].renderOrder;
+   batch.userData={noCollide:true,renderOnly:true,sources:list.map(o=>o.uuid)};
+   for(let i=0;i<list.length;i++){const o=list[i],g=batch.addGeometry(compact[i]),id=batch.addInstance(g);batch.setMatrixAt(id,o.matrix);o.visible=false;compact[i].dispose();}
+   batch.computeBoundingBox();batch.computeBoundingSphere();group.add(batch);
+   proof.batches++;proof.sources+=list.length;proof.vertices+=vertices;proof.triangles+=indices/3;await yieldWork();
+  }
+ }
+ return proof;
+}
+
+// The atrium paving and the native tower/transit slabs share y=-19.7.
+// A small visual-only separation is robust with logarithmic fragment depth,
+// unlike polygonOffset. Physical support and the 5 cm hull rule are unchanged.
+export function separateAtriumPaving(ship){
+ const paving=ship.facade?.getObjectByName('P6_atrium_floor_actual');
+ if(!paving||paving.userData.renderSeparation)return;
+ paving.applyMatrix4(new T.Matrix4().makeTranslation(0,.006,0));
+ paving.userData.renderSeparation=.006;paving.updateWorldMatrix(true,false);
+}

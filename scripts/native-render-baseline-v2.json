@@ -336,6 +336,37 @@
         }
       ],
       "bands": 37
+    },
+    {
+      "rate": 1,
+      "name": "deck2-arrival",
+      "at": [
+        -135,
+        -35.7,
+        -52.5175106
+      ],
+      "yaw": 1.5707963267948966,
+      "pitch": 0,
+      "frameMs": {
+        "samples": 146,
+        "median": 10.300000011920929,
+        "p95": 17.80000001192093,
+        "mean": 10.76917808227343
+      },
+      "submitMs": null,
+      "gpuMs": null,
+      "draws": {
+        "calls": 560,
+        "triangles": 1878783
+      },
+      "size": [
+        1280,
+        720
+      ],
+      "pixelRatio": 1,
+      "fov": 62,
+      "method": "Unmodified SHA-verified 179d813 public bundle. Native V key switched default entry from third-person to first-person; 45 warm frames, 150 sampled frames at 1280x720, DPR 1. Main pass counters only for ordinary gate.",
+      "evidence": "output/launch-a/179d813/arrival-first.json"
     }
   ]
 }
