@@ -20,6 +20,10 @@ export function preparedWalkAdapters(file,text,{authoring=false,prepared=false}=
  }
  if(prepared){
   if(file==='src/walk/main.js'){
+   replace("status('Preparing the walk…');await idle();","status('Preparing the walk · 1/4 · placing the ship…');await idle();");
+   replace('const toBand=o=>{',"status('Preparing the walk · 2/4 · placing activities…');await idle();\n const toBand=o=>{");
+   replace('mct=createTransporters({colliders,lifts});',"status('Preparing the walk · 3/4 · connecting transport and displays…');await idle();\n mct=createTransporters({colliders,lifts});");
+   replace('phase4Visibility=phase4Culling(ship.inside,colliders);',"status('Preparing the walk · 4/4 · setting nearby details…');await idle();\n phase4Visibility=phase4Culling(ship.inside,colliders);");
    replace('if(wardTrolley)toBand(wardTrolley.group);','if(typeof __WALK_DEBUG__!=="undefined"&&__WALK_DEBUG__)ship.v2RuntimeFeatures={wardTrolley,baggage,freightGate};if(wardTrolley)toBand(wardTrolley.group);');
    s+="\nif(typeof __WALK_DEBUG__!==\"undefined\"&&__WALK_DEBUG__)Object.defineProperties(globalThis.__walk,{treasure:{get:()=>treasure},baggage:{get:()=>baggage},featureDiagnostics:{get:()=>ship.v2RuntimeFeatures}});\n";
    s="import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns} from '../v2/prepared-runtime.js';\n"+s;

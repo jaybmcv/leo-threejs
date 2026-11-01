@@ -49,6 +49,7 @@ export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverri
  if(!debug&&(code.includes('__walk')||code.includes('anchorTest')))throw new Error('The walk debug hook must not ship');
  const name=hashed('walk','js',code);if(profileMap){await fs.mkdir('output/phase3b/startup/maps',{recursive:true});await fs.writeFile('output/phase3b/startup/maps/'+name+'.map',result.outputFiles.find(f=>f.path.endsWith('.map')).contents);}await fs.writeFile(path.join(out,name),code);
  let html=(await fs.readFile('src/walk/walk.html','utf8')).replace('<script>/* BUNDLE */</script>',()=>`<script>LEO_WALK_BOOT("${name}")</script>`);
+ if(v2&&preparedWalk)html=html.replace('This computer will take a few minutes: the whole ship is built here, using a few GB of memory. Keep this tab open, and if your browser says the page isn’t responding, choose Wait. Closing other tabs helps.','Loading the prepared ship and setting up the walk on this device. This can take longer on a slower connection or device. Keep this tab open; closing other tabs may help if memory is low.');
  if(html.includes('/* BUNDLE */'))throw new Error('walk.html lost its bundle placeholder');
  html=html.replace('<body>',()=>`<body><script>window.LEO_PUBLIC_ASSETS=${JSON.stringify(manifest)};</script>`);
  await fs.writeFile(path.join(out,'walk.html'),html);
