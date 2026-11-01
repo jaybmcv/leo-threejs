@@ -169,6 +169,7 @@ export function buildLayoutV2(){
  /* Main's automatic freight airlock is on the forward bulkhead. Keep the aft planned access and reserve its full existing six-metre opening in the rebuilt shell too. */
  const freight=rooms.find(r=>r.id==='d01-spares-aft');freight.fittingDoor={id:'aft-freight-airlock',center:[freight.x+freight.width/2,freight.y,freight.z],width:6,height:2.5,reason:'Main eb079b7 automatic freight airlock; leaves and movers stay unchanged.'};
  const aquariumGallery=prepareLaunchBPlan({decks,rooms,circulation});
+ addLaunchDPlan({h,decks,rooms,circulation});
  connectCirculation({h,decks,rooms,cabins,shuttles,circulation,issues});
  for(const c of circulation.corridors.filter(c=>c.deck===20))Object.assign(c,{access:'public',label:'Deck 20 public circulation'});for(const b of circulation.bridges.filter(b=>b.deck===20))Object.assign(b,{access:'crew',name:'Crew service gallery'});
  completeProgramme({decks,rooms,cabins,shuttles,circulation});
@@ -350,6 +351,4413 @@ function scheduleWindows({h,decks,rooms,cabins,windows,issues}){
    }
   }
  }
+}
+
+
+// Launch D: measured fixed footprints; generated against the launch A+B room,
+// shuttle, full-height hull, shaft, door-approach and aquarium reservations.
+// publicFront means clear street-facing glazing; finish-kit panels must leave it clear.
+const LAUNCH_D_ROOMS=[
+ {
+  "id": "d01-launch-d-01",
+  "deck": 1,
+  "name": "Freight consolidation",
+  "kind": "cargo",
+  "rect": [
+   112.1,
+   175.9,
+   -71.9,
+   -40.1
+  ],
+  "door": {
+   "center": [
+    128.05,
+    -40.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d01-launch-d-02",
+  "deck": 1,
+  "name": "Returnable cargo and packaging",
+  "kind": "marshalling",
+  "rect": [
+   161.1,
+   218.9,
+   31.1,
+   59.9
+  ],
+  "door": {
+   "center": [
+    161.1,
+    38.3
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d01-launch-d-03",
+  "deck": 1,
+  "name": "Equipment dispatch",
+  "kind": "cargo",
+  "rect": [
+   -53.9,
+   -2.1,
+   19.1,
+   50.9
+  ],
+  "door": {
+   "center": [
+    -53.9,
+    35
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d01-launch-d-04",
+  "deck": 1,
+  "name": "Tool issue and repair",
+  "kind": "workshop",
+  "rect": [
+   -67.9,
+   -30.1,
+   -72.9,
+   -41.1
+  ],
+  "door": {
+   "center": [
+    -67.9,
+    -49.050000000000004
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d01-launch-d-05",
+  "deck": 1,
+  "name": "Expedition packing",
+  "kind": "cargo",
+  "rect": [
+   48.1,
+   85.9,
+   41.1,
+   72.9
+  ],
+  "door": {
+   "center": [
+    57.550000000000004,
+    41.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d01-launch-d-06",
+  "deck": 1,
+  "name": "Stores inventory office",
+  "kind": "assistance",
+  "rect": [
+   178.1,
+   218.9,
+   -59.9,
+   -31.1
+  ],
+  "door": {
+   "center": [
+    178.1,
+    -38.3
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d01-launch-d-07",
+  "deck": 1,
+  "name": "Reusable pallet store",
+  "kind": "marshalling",
+  "rect": [
+   64.1,
+   85.9,
+   -72.9,
+   -41.1
+  ],
+  "door": {
+   "center": [
+    64.1,
+    -49.050000000000004
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d01-launch-d-08",
+  "deck": 1,
+  "name": "Parcel sorting",
+  "kind": "cargo",
+  "rect": [
+   -78.9,
+   -58.1,
+   5.1,
+   36.9
+  ],
+  "door": {
+   "center": [
+    -68.5,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d01-launch-d-09",
+  "deck": 1,
+  "name": "Spare-parts inspection",
+  "kind": "inspection",
+  "rect": [
+   229.1,
+   248.9,
+   -24.9,
+   6.9
+  ],
+  "door": {
+   "center": [
+    234.05,
+    6.9
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d01-launch-d-10",
+  "deck": 1,
+  "name": "Cargo sorting",
+  "kind": "cargo",
+  "rect": [
+   -110.9,
+   -87.1,
+   5.1,
+   30.9
+  ],
+  "door": {
+   "center": [
+    -99,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d01-launch-d-11",
+  "deck": 1,
+  "name": "Cargo crew briefing",
+  "kind": "study",
+  "rect": [
+   142.1,
+   162.9,
+   -37.9,
+   -9.1
+  ],
+  "door": {
+   "center": [
+    152.5,
+    -9.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d01-launch-d-12",
+  "deck": 1,
+  "name": "Freight consolidation 2",
+  "kind": "cargo",
+  "rect": [
+   138.1,
+   158.9,
+   9.1,
+   37.9
+  ],
+  "door": {
+   "center": [
+    138.1,
+    23.5
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d01-launch-d-13",
+  "deck": 1,
+  "name": "Returnable cargo and packaging 2",
+  "kind": "marshalling",
+  "rect": [
+   4.1,
+   55.9,
+   -50.9,
+   -41.1
+  ],
+  "door": {
+   "center": [
+    30,
+    -41.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d01-launch-d-14",
+  "deck": 1,
+  "name": "Equipment dispatch 2",
+  "kind": "cargo",
+  "rect": [
+   -17.9,
+   -2.1,
+   -50.9,
+   -19.1
+  ],
+  "door": {
+   "center": [
+    -2.1,
+    -42.95
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d01-launch-d-15",
+  "deck": 1,
+  "name": "Tool issue and repair 2",
+  "kind": "workshop",
+  "rect": [
+   -127.9,
+   -111.1,
+   -68.9,
+   -39.1
+  ],
+  "door": {
+   "center": [
+    -111.1,
+    -54
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d01-launch-d-16",
+  "deck": 1,
+  "name": "Repair-parts counter",
+  "kind": "workshop",
+  "rect": [
+   13.1,
+   27.9,
+   41.1,
+   72.9
+  ],
+  "door": {
+   "center": [
+    20.5,
+    41.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d01-launch-d-17",
+  "deck": 1,
+  "name": "Pallet marshalling",
+  "kind": "marshalling",
+  "rect": [
+   -53.9,
+   -22.1,
+   5.1,
+   16.9
+  ],
+  "door": {
+   "center": [
+    -38,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d01-launch-d-18",
+  "deck": 1,
+  "name": "Expedition packing 2",
+  "kind": "cargo",
+  "rect": [
+   229.1,
+   244.9,
+   9.1,
+   32.9
+  ],
+  "door": {
+   "center": [
+    233.05,
+    9.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d01-launch-d-19",
+  "deck": 1,
+  "name": "Stores inventory office 2",
+  "kind": "assistance",
+  "rect": [
+   13.1,
+   27.9,
+   -72.9,
+   -53.1
+  ],
+  "door": {
+   "center": [
+    20.5,
+    -53.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d01-launch-d-20",
+  "deck": 1,
+  "name": "Reusable pallet store 2",
+  "kind": "marshalling",
+  "rect": [
+   -44.9,
+   -30.1,
+   53.1,
+   72.9
+  ],
+  "door": {
+   "center": [
+    -41.2,
+    53.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d01-launch-d-21",
+  "deck": 1,
+  "name": "Parcel sorting 2",
+  "kind": "cargo",
+  "rect": [
+   161.1,
+   194.9,
+   62.1,
+   69.9
+  ],
+  "door": {
+   "center": [
+    169.55,
+    62.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d01-launch-d-22",
+  "deck": 1,
+  "name": "Spare-parts inspection 2",
+  "kind": "inspection",
+  "rect": [
+   88.1,
+   109.9,
+   -50.9,
+   -39.1
+  ],
+  "door": {
+   "center": [
+    88.1,
+    -45
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d01-launch-d-23",
+  "deck": 1,
+  "name": "Cargo crew briefing 2",
+  "kind": "study",
+  "rect": [
+   107.1,
+   129.9,
+   27.1,
+   37.9
+  ],
+  "door": {
+   "center": [
+    129.9,
+    32.5
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d01-launch-d-24",
+  "deck": 1,
+  "name": "Freight consolidation 3",
+  "kind": "cargo",
+  "rect": [
+   48.1,
+   61.9,
+   -72.9,
+   -55.1
+  ],
+  "door": {
+   "center": [
+    58.45,
+    -55.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d01-launch-d-25",
+  "deck": 1,
+  "name": "Returnable cargo and packaging 3",
+  "kind": "marshalling",
+  "rect": [
+   -97.9,
+   -70.1,
+   -49.9,
+   -41.1
+  ],
+  "door": {
+   "center": [
+    -84,
+    -41.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d01-launch-d-26",
+  "deck": 1,
+  "name": "Equipment dispatch 3",
+  "kind": "cargo",
+  "rect": [
+   -77.9,
+   -58.1,
+   39.1,
+   50.9
+  ],
+  "door": {
+   "center": [
+    -58.1,
+    45
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d01-launch-d-27",
+  "deck": 1,
+  "name": "Tool issue and repair 3",
+  "kind": "workshop",
+  "rect": [
+   -126.9,
+   -117.1,
+   5.1,
+   26.9
+  ],
+  "door": {
+   "center": [
+    -122,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d01-launch-d-28",
+  "deck": 1,
+  "name": "Expedition packing 3",
+  "kind": "cargo",
+  "rect": [
+   221.1,
+   234.9,
+   -45.9,
+   -31.1
+  ],
+  "door": {
+   "center": [
+    221.1,
+    -34.8
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d01-launch-d-29",
+  "deck": 1,
+  "name": "Stores inventory office 3",
+  "kind": "assistance",
+  "rect": [
+   88.1,
+   106.9,
+   40.1,
+   50.9
+  ],
+  "door": {
+   "center": [
+    102.2,
+    40.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d01-launch-d-30",
+  "deck": 1,
+  "name": "Reusable pallet store 3",
+  "kind": "marshalling",
+  "rect": [
+   122.1,
+   139.9,
+   -37.9,
+   -27.1
+  ],
+  "door": {
+   "center": [
+    139.9,
+    -29.8
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d01-launch-d-31",
+  "deck": 1,
+  "name": "Parcel sorting 3",
+  "kind": "cargo",
+  "rect": [
+   -17.9,
+   -2.1,
+   -16.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    -10,
+    -5.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d01-launch-d-32",
+  "deck": 1,
+  "name": "Spare-parts inspection 3",
+  "kind": "inspection",
+  "rect": [
+   30.1,
+   45.9,
+   41.1,
+   50.9
+  ],
+  "door": {
+   "center": [
+    38,
+    41.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d01-launch-d-33",
+  "deck": 1,
+  "name": "Cargo crew briefing 3",
+  "kind": "study",
+  "rect": [
+   221.1,
+   233.9,
+   35.1,
+   46.9
+  ],
+  "door": {
+   "center": [
+    224.3,
+    35.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d01-launch-d-34",
+  "deck": 1,
+  "name": "Freight consolidation 4",
+  "kind": "cargo",
+  "rect": [
+   178.1,
+   198.9,
+   -68.9,
+   -62.1
+  ],
+  "door": {
+   "center": [
+    183.3,
+    -62.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d01-launch-d-35",
+  "deck": 1,
+  "name": "Returnable cargo and packaging 4",
+  "kind": "marshalling",
+  "rect": [
+   -27.9,
+   -20.1,
+   -50.9,
+   -39.1
+  ],
+  "door": {
+   "center": [
+    -20.1,
+    -45
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d02-launch-d-01",
+  "deck": 2,
+  "name": "Accessible transfer lounge",
+  "kind": "waiting",
+  "rect": [
+   87.6,
+   145.4,
+   29.1,
+   53.9
+  ],
+  "door": {
+   "center": [
+    116.5,
+    29.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d02-launch-d-02",
+  "deck": 2,
+  "name": "Passenger assistance",
+  "kind": "assistance",
+  "rect": [
+   -126.9,
+   -89.1,
+   -33.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    -108,
+    -5.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d02-launch-d-03",
+  "deck": 2,
+  "name": "Passenger orientation",
+  "kind": "assistance",
+  "rect": [
+   86.1,
+   115.9,
+   -53.9,
+   -22.1
+  ],
+  "door": {
+   "center": [
+    115.9,
+    -38
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d02-launch-d-04",
+  "deck": 2,
+  "name": "Transfer waiting",
+  "kind": "waiting",
+  "rect": [
+   -43.9,
+   5.9,
+   -23.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    -19,
+    -5.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d02-launch-d-05",
+  "deck": 2,
+  "name": "Group departure waiting",
+  "kind": "waiting",
+  "rect": [
+   14.1,
+   63.9,
+   -23.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    39,
+    -5.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d02-launch-d-07",
+  "deck": 2,
+  "name": "Hangar inspection",
+  "kind": "inspection",
+  "rect": [
+   120.1,
+   146.9,
+   -55.9,
+   -24.1
+  ],
+  "door": {
+   "center": [
+    120.1,
+    -40
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d02-launch-d-09",
+  "deck": 2,
+  "name": "Shuttle turnaround workshop",
+  "kind": "workshop",
+  "rect": [
+   106.1,
+   146.9,
+   56.1,
+   75.9
+  ],
+  "door": {
+   "center": [
+    126.5,
+    56.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d02-launch-d-10",
+  "deck": 2,
+  "name": "Transit supplies",
+  "kind": "cargo",
+  "rect": [
+   72.1,
+   109.9,
+   5.1,
+   23.9
+  ],
+  "door": {
+   "center": [
+    91,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d02-launch-d-11",
+  "deck": 2,
+  "name": "Stroller and mobility parking",
+  "kind": "marshalling",
+  "rect": [
+   28.1,
+   49.9,
+   19.1,
+   50.9
+  ],
+  "door": {
+   "center": [
+    44.45,
+    50.9
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d02-launch-d-12",
+  "deck": 2,
+  "name": "Family waiting",
+  "kind": "waiting",
+  "rect": [
+   -111.9,
+   -89.1,
+   5.1,
+   33.9
+  ],
+  "door": {
+   "center": [
+    -100.5,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d02-launch-d-13",
+  "deck": 2,
+  "name": "Family travel lounge",
+  "kind": "waiting",
+  "rect": [
+   -27.9,
+   -10.1,
+   -53.9,
+   -26.1
+  ],
+  "door": {
+   "center": [
+    -19,
+    -26.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d02-launch-d-14",
+  "deck": 2,
+  "name": "Crew check-in",
+  "kind": "assistance",
+  "rect": [
+   30.1,
+   47.9,
+   -53.9,
+   -26.1
+  ],
+  "door": {
+   "center": [
+    39,
+    -26.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d02-launch-d-15",
+  "deck": 2,
+  "name": "Orientation and check-in",
+  "kind": "assistance",
+  "rect": [
+   -80.9,
+   -52.1,
+   -23.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    -66.5,
+    -5.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d02-launch-d-16",
+  "deck": 2,
+  "name": "Accessible transfer lounge 2",
+  "kind": "waiting",
+  "rect": [
+   -44.9,
+   -30.1,
+   41.1,
+   72.9
+  ],
+  "door": {
+   "center": [
+    -37.5,
+    41.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d02-launch-d-17",
+  "deck": 2,
+  "name": "Passenger orientation 2",
+  "kind": "assistance",
+  "rect": [
+   -88.9,
+   -58.1,
+   39.1,
+   53.9
+  ],
+  "door": {
+   "center": [
+    -58.1,
+    46.5
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d02-launch-d-18",
+  "deck": 2,
+  "name": "Group departure waiting 2",
+  "kind": "waiting",
+  "rect": [
+   -80.9,
+   -66.1,
+   -53.9,
+   -26.1
+  ],
+  "door": {
+   "center": [
+    -80.9,
+    -40
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d02-launch-d-19",
+  "deck": 2,
+  "name": "Lost property and baggage help 2",
+  "kind": "assistance",
+  "rect": [
+   90.1,
+   115.9,
+   -19.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    115.9,
+    -12.5
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d02-launch-d-20",
+  "deck": 2,
+  "name": "Travel document support 2",
+  "kind": "assistance",
+  "rect": [
+   129.1,
+   146.9,
+   -75.9,
+   -58.1
+  ],
+  "door": {
+   "center": [
+    133.55,
+    -58.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d02-launch-d-21",
+  "deck": 2,
+  "name": "Shuttle turnaround workshop 2",
+  "kind": "workshop",
+  "rect": [
+   -10.9,
+   5.9,
+   5.1,
+   23.9
+  ],
+  "door": {
+   "center": [
+    -2.5,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d02-launch-d-22",
+  "deck": 2,
+  "name": "Transit supplies 2",
+  "kind": "cargo",
+  "rect": [
+   120.1,
+   142.9,
+   -21.9,
+   -9.1
+  ],
+  "door": {
+   "center": [
+    120.1,
+    -15.5
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d02-launch-d-23",
+  "deck": 2,
+  "name": "Stroller and mobility parking 2",
+  "kind": "marshalling",
+  "rect": [
+   -27.9,
+   -19.1,
+   19.1,
+   50.9
+  ],
+  "door": {
+   "center": [
+    -19.1,
+    35
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d02-launch-d-25",
+  "deck": 2,
+  "name": "Crew check-in 2",
+  "kind": "assistance",
+  "rect": [
+   130.1,
+   146.9,
+   11.1,
+   24.9
+  ],
+  "door": {
+   "center": [
+    138.5,
+    11.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d02-launch-d-26",
+  "deck": 2,
+  "name": "Accessible transfer lounge 3",
+  "kind": "waiting",
+  "rect": [
+   14.1,
+   25.9,
+   5.1,
+   23.9
+  ],
+  "door": {
+   "center": [
+    20,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d02-launch-d-27",
+  "deck": 2,
+  "name": "Passenger orientation 3",
+  "kind": "assistance",
+  "rect": [
+   52.1,
+   63.9,
+   5.1,
+   23.9
+  ],
+  "door": {
+   "center": [
+    58,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d02-launch-d-28",
+  "deck": 2,
+  "name": "Group departure waiting 3",
+  "kind": "waiting",
+  "rect": [
+   -126.9,
+   -118.1,
+   5.1,
+   29.9
+  ],
+  "door": {
+   "center": [
+    -122.5,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d02-launch-d-30",
+  "deck": 2,
+  "name": "Travel document support 3",
+  "kind": "assistance",
+  "rect": [
+   -53.9,
+   -47.1,
+   41.1,
+   55.9
+  ],
+  "door": {
+   "center": [
+    -50.5,
+    41.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d03-launch-d-01",
+  "deck": 3,
+  "name": "Produce distribution",
+  "kind": "cargo",
+  "rect": [
+   86.1,
+   146.9,
+   11.1,
+   42.9
+  ],
+  "door": {
+   "center": [
+    116.5,
+    11.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d03-launch-d-02",
+  "deck": 3,
+  "name": "Microgreens cultivation",
+  "kind": "cultivation",
+  "rect": [
+   106.1,
+   146.9,
+   45.1,
+   76.9
+  ],
+  "door": {
+   "center": [
+    136.7,
+    45.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d03-launch-d-03",
+  "deck": 3,
+  "name": "Mushroom cultivation",
+  "kind": "mushrooms",
+  "rect": [
+   -126.9,
+   -89.1,
+   -33.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    -108,
+    -5.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d03-launch-d-04",
+  "deck": 3,
+  "name": "Food packing and dispatch",
+  "kind": "cargo",
+  "rect": [
+   -110.9,
+   -76.1,
+   5.1,
+   35.9
+  ],
+  "door": {
+   "center": [
+    -93.5,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d03-launch-d-05",
+  "deck": 3,
+  "name": "Nutrient preparation",
+  "kind": "cultivation",
+  "rect": [
+   -43.9,
+   5.9,
+   -24.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    -19,
+    -5.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d03-launch-d-06",
+  "deck": 3,
+  "name": "Crop research laboratory",
+  "kind": "lab",
+  "rect": [
+   14.1,
+   63.9,
+   -24.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    39,
+    -5.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d03-launch-d-07",
+  "deck": 3,
+  "name": "Harvest wash and preparation",
+  "kind": "workshop",
+  "rect": [
+   86.1,
+   115.9,
+   -54.9,
+   -23.1
+  ],
+  "door": {
+   "center": [
+    115.9,
+    -39
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d03-launch-d-10",
+  "deck": 3,
+  "name": "Nutrient mixing",
+  "kind": "cultivation",
+  "rect": [
+   120.1,
+   146.9,
+   -56.9,
+   -25.1
+  ],
+  "door": {
+   "center": [
+    120.1,
+    -41
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d03-launch-d-11",
+  "deck": 3,
+  "name": "Reusable produce-crate store",
+  "kind": "cargo",
+  "rect": [
+   4.1,
+   49.9,
+   41.1,
+   54.9
+  ],
+  "door": {
+   "center": [
+    27,
+    41.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d03-launch-d-12",
+  "deck": 3,
+  "name": "Food distribution office",
+  "kind": "assistance",
+  "rect": [
+   -29.9,
+   -8.1,
+   -54.9,
+   -27.1
+  ],
+  "door": {
+   "center": [
+    -13.549999999999999,
+    -27.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d03-launch-d-13",
+  "deck": 3,
+  "name": "Crop-training room",
+  "kind": "study",
+  "rect": [
+   28.1,
+   49.9,
+   -54.9,
+   -27.1
+  ],
+  "door": {
+   "center": [
+    44.45,
+    -27.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d03-launch-d-14",
+  "deck": 3,
+  "name": "Food-quality laboratory",
+  "kind": "lab",
+  "rect": [
+   -80.9,
+   -52.1,
+   -24.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    -66.5,
+    -5.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d03-launch-d-15",
+  "deck": 3,
+  "name": "Microgreens cultivation 2",
+  "kind": "cultivation",
+  "rect": [
+   -53.9,
+   -19.1,
+   41.1,
+   54.9
+  ],
+  "door": {
+   "center": [
+    -36.5,
+    41.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d03-launch-d-16",
+  "deck": 3,
+  "name": "Food packing and dispatch 2",
+  "kind": "cargo",
+  "rect": [
+   -87.9,
+   -58.1,
+   39.1,
+   54.9
+  ],
+  "door": {
+   "center": [
+    -58.1,
+    47
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d03-launch-d-17",
+  "deck": 3,
+  "name": "Crop research laboratory 2",
+  "kind": "lab",
+  "rect": [
+   -80.9,
+   -66.1,
+   -54.9,
+   -27.1
+  ],
+  "door": {
+   "center": [
+    -80.9,
+    -41
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d03-launch-d-18",
+  "deck": 3,
+  "name": "Harvest wash and preparation 2",
+  "kind": "workshop",
+  "rect": [
+   90.1,
+   115.9,
+   -20.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    115.9,
+    -13
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d03-launch-d-19",
+  "deck": 3,
+  "name": "Seed bank and crop records 2",
+  "kind": "cultivation",
+  "rect": [
+   129.1,
+   146.9,
+   -77.9,
+   -59.1
+  ],
+  "door": {
+   "center": [
+    133.55,
+    -59.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d03-launch-d-20",
+  "deck": 3,
+  "name": "Mushroom fruiting room 2",
+  "kind": "mushrooms",
+  "rect": [
+   120.1,
+   146.9,
+   -22.9,
+   -11.1
+  ],
+  "door": {
+   "center": [
+    120.1,
+    -17
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d03-launch-d-21",
+  "deck": 3,
+  "name": "Nutrient mixing 2",
+  "kind": "cultivation",
+  "rect": [
+   -44.9,
+   -30.1,
+   57.1,
+   77.9
+  ],
+  "door": {
+   "center": [
+    -41.2,
+    57.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d03-launch-d-22",
+  "deck": 3,
+  "name": "Reusable produce-crate store 2",
+  "kind": "cargo",
+  "rect": [
+   13.1,
+   27.9,
+   57.1,
+   77.9
+  ],
+  "door": {
+   "center": [
+    16.8,
+    57.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d03-launch-d-24",
+  "deck": 3,
+  "name": "Crop-training room 2",
+  "kind": "study",
+  "rect": [
+   -126.9,
+   -117.1,
+   5.1,
+   31.9
+  ],
+  "door": {
+   "center": [
+    -122,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d03-launch-d-26",
+  "deck": 3,
+  "name": "Food packing and dispatch 3",
+  "kind": "cargo",
+  "rect": [
+   72.1,
+   83.9,
+   5.1,
+   24.9
+  ],
+  "door": {
+   "center": [
+    78,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d03-launch-d-27",
+  "deck": 3,
+  "name": "Crop research laboratory 3",
+  "kind": "lab",
+  "rect": [
+   -10.9,
+   -5.1,
+   5.1,
+   36.9
+  ],
+  "door": {
+   "center": [
+    -8,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d03-launch-d-28",
+  "deck": 3,
+  "name": "Harvest wash and preparation 3",
+  "kind": "workshop",
+  "rect": [
+   86.1,
+   103.9,
+   45.1,
+   54.9
+  ],
+  "door": {
+   "center": [
+    90.55,
+    45.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d03-launch-d-29",
+  "deck": 3,
+  "name": "Seed bank and crop records 3",
+  "kind": "cultivation",
+  "rect": [
+   -9.9,
+   -0.1,
+   39.1,
+   56.9
+  ],
+  "door": {
+   "center": [
+    -0.1,
+    48
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d04-launch-d-01",
+  "deck": 4,
+  "name": "Laundry and linen processing",
+  "kind": "laundry",
+  "rect": [
+   63.1,
+   126.9,
+   5.1,
+   36.9
+  ],
+  "door": {
+   "center": [
+    95,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d04-launch-d-02",
+  "deck": 4,
+  "name": "Linen sorting and folding",
+  "kind": "laundry",
+  "rect": [
+   -13.9,
+   49.9,
+   19.1,
+   50.9
+  ],
+  "door": {
+   "center": [
+    -13.9,
+    35
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d04-launch-d-03",
+  "deck": 4,
+  "name": "Repair-parts staging",
+  "kind": "marshalling",
+  "rect": [
+   106.1,
+   162.9,
+   -77.9,
+   -46.1
+  ],
+  "door": {
+   "center": [
+    120.3,
+    -46.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d04-launch-d-04",
+  "deck": 4,
+  "name": "Maintenance staging",
+  "kind": "marshalling",
+  "rect": [
+   -67.9,
+   -30.1,
+   -77.9,
+   -46.1
+  ],
+  "door": {
+   "center": [
+    -58.45,
+    -46.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d04-launch-d-05",
+  "deck": 4,
+  "name": "Electrical repair",
+  "kind": "workshop",
+  "rect": [
+   -9.9,
+   27.9,
+   -77.9,
+   -46.1
+  ],
+  "door": {
+   "center": [
+    -9.9,
+    -54.050000000000004
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d04-launch-d-06",
+  "deck": 4,
+  "name": "Reusable materials sorting",
+  "kind": "cargo",
+  "rect": [
+   -111.9,
+   -48.1,
+   41.1,
+   55.9
+  ],
+  "door": {
+   "center": [
+    -80,
+    41.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d04-launch-d-07",
+  "deck": 4,
+  "name": "Mechanical repair",
+  "kind": "workshop",
+  "rect": [
+   -9.9,
+   27.9,
+   53.1,
+   77.9
+  ],
+  "door": {
+   "center": [
+    -0.45000000000000107,
+    53.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d04-launch-d-08",
+  "deck": 4,
+  "name": "Uniform repair and issue",
+  "kind": "laundry",
+  "rect": [
+   48.1,
+   85.9,
+   55.1,
+   77.9
+  ],
+  "door": {
+   "center": [
+    57.550000000000004,
+    55.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d04-launch-d-09",
+  "deck": 4,
+  "name": "Filter servicing",
+  "kind": "workshop",
+  "rect": [
+   30.1,
+   71.9,
+   -55.9,
+   -39.1
+  ],
+  "door": {
+   "center": [
+    71.9,
+    -47.5
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d04-launch-d-10",
+  "deck": 4,
+  "name": "Maintenance planning",
+  "kind": "study",
+  "rect": [
+   142.1,
+   162.9,
+   -43.9,
+   -12.1
+  ],
+  "door": {
+   "center": [
+    147.3,
+    -12.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d04-launch-d-11",
+  "deck": 4,
+  "name": "Repaired equipment dispatch",
+  "kind": "cargo",
+  "rect": [
+   138.1,
+   158.9,
+   11.1,
+   42.9
+  ],
+  "door": {
+   "center": [
+    148.5,
+    11.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d04-launch-d-12",
+  "deck": 4,
+  "name": "Tools and calibration",
+  "kind": "inspection",
+  "rect": [
+   61.1,
+   106.9,
+   39.1,
+   52.9
+  ],
+  "door": {
+   "center": [
+    61.1,
+    46
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d04-launch-d-15",
+  "deck": 4,
+  "name": "Repair and reuse workshop",
+  "kind": "workshop",
+  "rect": [
+   -15.9,
+   29.9,
+   5.1,
+   16.9
+  ],
+  "door": {
+   "center": [
+    6.999999999999998,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d04-launch-d-16",
+  "deck": 4,
+  "name": "Electrical repair 2",
+  "kind": "workshop",
+  "rect": [
+   -127.9,
+   -111.1,
+   -73.9,
+   -42.1
+  ],
+  "door": {
+   "center": [
+    -111.1,
+    -58
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d04-launch-d-17",
+  "deck": 4,
+  "name": "Reusable materials sorting 2",
+  "kind": "cargo",
+  "rect": [
+   52.1,
+   67.9,
+   -36.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    60,
+    -5.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d04-launch-d-18",
+  "deck": 4,
+  "name": "Mechanical repair 2",
+  "kind": "workshop",
+  "rect": [
+   -97.9,
+   -70.1,
+   -55.9,
+   -41.1
+  ],
+  "door": {
+   "center": [
+    -84,
+    -41.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d04-launch-d-19",
+  "deck": 4,
+  "name": "Uniform repair and issue 2",
+  "kind": "laundry",
+  "rect": [
+   76.1,
+   103.9,
+   -55.9,
+   -41.1
+  ],
+  "door": {
+   "center": [
+    90,
+    -41.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d04-launch-d-20",
+  "deck": 4,
+  "name": "Filter servicing 2",
+  "kind": "workshop",
+  "rect": [
+   -108.9,
+   -88.1,
+   58.1,
+   77.9
+  ],
+  "door": {
+   "center": [
+    -103.7,
+    58.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d04-launch-d-21",
+  "deck": 4,
+  "name": "Maintenance planning 2",
+  "kind": "study",
+  "rect": [
+   -39.9,
+   -16.1,
+   41.1,
+   55.9
+  ],
+  "door": {
+   "center": [
+    -28,
+    41.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d04-launch-d-22",
+  "deck": 4,
+  "name": "Repaired equipment dispatch 2",
+  "kind": "cargo",
+  "rect": [
+   48.1,
+   62.9,
+   -77.9,
+   -58.1
+  ],
+  "door": {
+   "center": [
+    59.2,
+    -58.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d04-launch-d-23",
+  "deck": 4,
+  "name": "Tools and calibration 2",
+  "kind": "inspection",
+  "rect": [
+   -67.9,
+   -53.1,
+   58.1,
+   77.9
+  ],
+  "door": {
+   "center": [
+    -56.800000000000004,
+    58.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d04-launch-d-24",
+  "deck": 4,
+  "name": "Linen sorting and folding 3",
+  "kind": "laundry",
+  "rect": [
+   -10.9,
+   -2.1,
+   -43.9,
+   -12.1
+  ],
+  "door": {
+   "center": [
+    -10.9,
+    -28
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d04-launch-d-25",
+  "deck": 4,
+  "name": "Repair-parts staging 3",
+  "kind": "marshalling",
+  "rect": [
+   124.1,
+   139.9,
+   -43.9,
+   -27.1
+  ],
+  "door": {
+   "center": [
+    124.1,
+    -35.5
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d04-launch-d-27",
+  "deck": 4,
+  "name": "Reusable materials sorting 3",
+  "kind": "cargo",
+  "rect": [
+   -27.9,
+   -19.1,
+   -55.9,
+   -39.1
+  ],
+  "door": {
+   "center": [
+    -19.1,
+    -47.5
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d04-launch-d-28",
+  "deck": 4,
+  "name": "Mechanical repair 3",
+  "kind": "workshop",
+  "rect": [
+   -108.9,
+   -102.1,
+   -56.9,
+   -39.1
+  ],
+  "door": {
+   "center": [
+    -102.1,
+    -48
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d04-launch-d-29",
+  "deck": 4,
+  "name": "Uniform repair and issue 3",
+  "kind": "laundry",
+  "rect": [
+   147.1,
+   158.9,
+   -9.9,
+   -0.1
+  ],
+  "door": {
+   "center": [
+    153,
+    -0.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d05-launch-d-01",
+  "deck": 5,
+  "name": "Outpatient waiting",
+  "kind": "waiting",
+  "rect": [
+   4.1,
+   52.9,
+   19.1,
+   50.9
+  ],
+  "door": {
+   "center": [
+    4.1,
+    35
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d05-launch-d-02",
+  "deck": 5,
+  "name": "Therapy consultation",
+  "kind": "consultation",
+  "rect": [
+   -110.9,
+   -72.1,
+   -36.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    -91.5,
+    -5.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d05-launch-d-03",
+  "deck": 5,
+  "name": "Mobility fitting and repair",
+  "kind": "workshop",
+  "rect": [
+   -110.9,
+   -72.1,
+   5.1,
+   36.9
+  ],
+  "door": {
+   "center": [
+    -91.5,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d05-launch-d-04",
+  "deck": 5,
+  "name": "Care-team consultation",
+  "kind": "consultation",
+  "rect": [
+   48.1,
+   85.9,
+   -77.9,
+   -46.1
+  ],
+  "door": {
+   "center": [
+    57.550000000000004,
+    -46.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d05-launch-d-05",
+  "deck": 5,
+  "name": "Family support waiting",
+  "kind": "waiting",
+  "rect": [
+   136.1,
+   162.9,
+   9.1,
+   39.9
+  ],
+  "door": {
+   "center": [
+    136.1,
+    24.5
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d05-launch-d-06",
+  "deck": 5,
+  "name": "Clinical skills and training",
+  "kind": "study",
+  "rect": [
+   54.1,
+   86.9,
+   -43.9,
+   -19.1
+  ],
+  "door": {
+   "center": [
+    54.1,
+    -31.5
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d05-launch-d-07",
+  "deck": 5,
+  "name": "Care supplies and linen",
+  "kind": "laundry",
+  "rect": [
+   -53.9,
+   -0.1,
+   41.1,
+   55.9
+  ],
+  "door": {
+   "center": [
+    -27,
+    41.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d05-launch-d-10",
+  "deck": 5,
+  "name": "Accessible rest lounge",
+  "kind": "waiting",
+  "rect": [
+   4.1,
+   45.9,
+   -55.9,
+   -41.1
+  ],
+  "door": {
+   "center": [
+    25,
+    -41.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d05-launch-d-11",
+  "deck": 5,
+  "name": "Outpatient waiting 2",
+  "kind": "waiting",
+  "rect": [
+   -53.9,
+   -19.1,
+   -55.9,
+   -41.1
+  ],
+  "door": {
+   "center": [
+    -36.5,
+    -41.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d05-launch-d-12",
+  "deck": 5,
+  "name": "Mobility-aid workshop",
+  "kind": "workshop",
+  "rect": [
+   -15.9,
+   -0.1,
+   5.1,
+   36.9
+  ],
+  "door": {
+   "center": [
+    -8,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d05-launch-d-13",
+  "deck": 5,
+  "name": "Therapy consultation 2",
+  "kind": "consultation",
+  "rect": [
+   -87.9,
+   -58.1,
+   -55.9,
+   -39.1
+  ],
+  "door": {
+   "center": [
+    -58.1,
+    -47.5
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d05-launch-d-14",
+  "deck": 5,
+  "name": "Mobility fitting and repair 2",
+  "kind": "workshop",
+  "rect": [
+   -87.9,
+   -58.1,
+   39.1,
+   55.9
+  ],
+  "door": {
+   "center": [
+    -58.1,
+    47.5
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d05-launch-d-15",
+  "deck": 5,
+  "name": "Care-team consultation 2",
+  "kind": "consultation",
+  "rect": [
+   76.1,
+   106.9,
+   41.1,
+   55.9
+  ],
+  "door": {
+   "center": [
+    91.5,
+    41.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d05-launch-d-16",
+  "deck": 5,
+  "name": "Family support waiting 2",
+  "kind": "waiting",
+  "rect": [
+   138.1,
+   162.9,
+   -43.9,
+   -27.1
+  ],
+  "door": {
+   "center": [
+    138.1,
+    -35.5
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d05-launch-d-17",
+  "deck": 5,
+  "name": "Clinical skills and training 2",
+  "kind": "study",
+  "rect": [
+   13.1,
+   27.9,
+   53.1,
+   77.9
+  ],
+  "door": {
+   "center": [
+    13.1,
+    59.300000000000004
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d05-launch-d-18",
+  "deck": 5,
+  "name": "Care supplies and linen 2",
+  "kind": "laundry",
+  "rect": [
+   48.1,
+   62.9,
+   55.1,
+   77.9
+  ],
+  "door": {
+   "center": [
+    55.5,
+    55.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d05-launch-d-19",
+  "deck": 5,
+  "name": "Medical equipment service 2",
+  "kind": "workshop",
+  "rect": [
+   119.1,
+   131.9,
+   -32.9,
+   -9.1
+  ],
+  "door": {
+   "center": [
+    131.9,
+    -21
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d05-launch-d-20",
+  "deck": 5,
+  "name": "Recovery education 2",
+  "kind": "study",
+  "rect": [
+   4.1,
+   29.9,
+   5.1,
+   16.9
+  ],
+  "door": {
+   "center": [
+    17,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d05-launch-d-21",
+  "deck": 5,
+  "name": "Accessible rest lounge 2",
+  "kind": "waiting",
+  "rect": [
+   -44.9,
+   -30.1,
+   -77.9,
+   -58.1
+  ],
+  "door": {
+   "center": [
+    -41.2,
+    -58.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d05-launch-d-22",
+  "deck": 5,
+  "name": "Outpatient waiting 3",
+  "kind": "waiting",
+  "rect": [
+   13.1,
+   27.9,
+   -77.9,
+   -58.1
+  ],
+  "door": {
+   "center": [
+    16.799999999999997,
+    -58.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d05-launch-d-23",
+  "deck": 5,
+  "name": "Therapy consultation 3",
+  "kind": "consultation",
+  "rect": [
+   -44.9,
+   -30.1,
+   58.1,
+   77.9
+  ],
+  "door": {
+   "center": [
+    -41.2,
+    58.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d05-launch-d-24",
+  "deck": 5,
+  "name": "Mobility fitting and repair 3",
+  "kind": "workshop",
+  "rect": [
+   -10.9,
+   -2.1,
+   -55.9,
+   -24.1
+  ],
+  "door": {
+   "center": [
+    -10.9,
+    -40
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d05-launch-d-25",
+  "deck": 5,
+  "name": "Clinical waiting and triage",
+  "kind": "waiting",
+  "rect": [
+   -126.9,
+   -117.1,
+   -32.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    -117.1,
+    -19
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d05-launch-d-26",
+  "deck": 5,
+  "name": "Rehabilitation consultation",
+  "kind": "consultation",
+  "rect": [
+   -126.9,
+   -117.1,
+   5.1,
+   32.9
+  ],
+  "door": {
+   "center": [
+    -122,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d05-launch-d-28",
+  "deck": 5,
+  "name": "Family support waiting 3",
+  "kind": "waiting",
+  "rect": [
+   124.1,
+   131.9,
+   9.1,
+   39.9
+  ],
+  "door": {
+   "center": [
+    131.9,
+    24.5
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d05-launch-d-29",
+  "deck": 5,
+  "name": "Clinical skills and training 3",
+  "kind": "study",
+  "rect": [
+   89.1,
+   106.9,
+   -55.9,
+   -43.1
+  ],
+  "door": {
+   "center": [
+    89.1,
+    -46.3
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d05-launch-d-30",
+  "deck": 5,
+  "name": "Care supplies and linen 3",
+  "kind": "laundry",
+  "rect": [
+   61.1,
+   67.9,
+   5.1,
+   36.9
+  ],
+  "door": {
+   "center": [
+    64.5,
+    5.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d05-launch-d-31",
+  "deck": 5,
+  "name": "Medical equipment service 3",
+  "kind": "workshop",
+  "rect": [
+   54.1,
+   69.9,
+   -16.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    54.1,
+    -11
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d05-launch-d-32",
+  "deck": 5,
+  "name": "Recovery education 3",
+  "kind": "study",
+  "rect": [
+   61.1,
+   71.9,
+   39.1,
+   52.9
+  ],
+  "door": {
+   "center": [
+    71.9,
+    46
+   ],
+   "outward": [
+    1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d05-launch-d-33",
+  "deck": 5,
+  "name": "Accessible rest lounge 3",
+  "kind": "waiting",
+  "rect": [
+   -10.9,
+   -2.1,
+   -21.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    -6.5,
+    -5.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d05-launch-d-35",
+  "deck": 5,
+  "name": "Therapy consultation 4",
+  "kind": "consultation",
+  "rect": [
+   99.1,
+   116.9,
+   -10.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    108,
+    -5.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d05-launch-d-36",
+  "deck": 5,
+  "name": "Mobility fitting and repair 4",
+  "kind": "workshop",
+  "rect": [
+   136.1,
+   141.9,
+   -24.9,
+   -9.1
+  ],
+  "door": {
+   "center": [
+    136.1,
+    -17
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d16-launch-d-01",
+  "deck": 16,
+  "name": "Peer learning studio",
+  "kind": "study",
+  "rect": [
+   122.1,
+   150.9,
+   -57.9,
+   -26.1
+  ],
+  "door": {
+   "center": [
+    136.5,
+    -26.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d16-launch-d-02",
+  "deck": 16,
+  "name": "Learning commons",
+  "kind": "study",
+  "rect": [
+   122.1,
+   150.9,
+   24.1,
+   55.9
+  ],
+  "door": {
+   "center": [
+    136.5,
+    24.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d16-launch-d-03",
+  "deck": 16,
+  "name": "Practice studio",
+  "kind": "studio",
+  "rect": [
+   -87.9,
+   -72.1,
+   -60.9,
+   -29.1
+  ],
+  "door": {
+   "center": [
+    -80,
+    -29.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d16-launch-d-04",
+  "deck": 16,
+  "name": "Creative practice room",
+  "kind": "studio",
+  "rect": [
+   -17.9,
+   -2.1,
+   -60.9,
+   -29.1
+  ],
+  "door": {
+   "center": [
+    -10,
+    -29.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d16-launch-d-05",
+  "deck": 16,
+  "name": "Exhibition and workshop annex",
+  "kind": "exhibition",
+  "rect": [
+   52.1,
+   67.9,
+   -60.9,
+   -29.1
+  ],
+  "door": {
+   "center": [
+    60,
+    -29.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d16-launch-d-06",
+  "deck": 16,
+  "name": "Student exhibition gallery",
+  "kind": "exhibition",
+  "rect": [
+   -87.9,
+   -72.1,
+   24.1,
+   55.9
+  ],
+  "door": {
+   "center": [
+    -80,
+    24.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d16-launch-d-07",
+  "deck": 16,
+  "name": "Tutoring and learning rooms",
+  "kind": "study",
+  "rect": [
+   -17.9,
+   -2.1,
+   24.1,
+   55.9
+  ],
+  "door": {
+   "center": [
+    -10,
+    24.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d16-launch-d-08",
+  "deck": 16,
+  "name": "Reading and project room",
+  "kind": "reading",
+  "rect": [
+   52.1,
+   67.9,
+   24.1,
+   55.9
+  ],
+  "door": {
+   "center": [
+    60,
+    24.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d17-launch-d-01",
+  "deck": 17,
+  "name": "Seed exchange and garden information",
+  "kind": "cultivation",
+  "rect": [
+   133.1,
+   167.9,
+   -47.9,
+   -24.1
+  ],
+  "door": {
+   "center": [
+    141.8,
+    -24.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d17-launch-d-02",
+  "deck": 17,
+  "name": "Garden reading room",
+  "kind": "reading",
+  "rect": [
+   133.1,
+   167.9,
+   24.1,
+   47.9
+  ],
+  "door": {
+   "center": [
+    141.8,
+    24.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d17-launch-d-03",
+  "deck": 17,
+  "name": "Garden interpretation room",
+  "kind": "exhibition",
+  "rect": [
+   149.1,
+   168.9,
+   -21.9,
+   -4.1
+  ],
+  "door": {
+   "center": [
+    149.1,
+    -17.449999999999996
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d17-launch-d-04",
+  "deck": 17,
+  "name": "Quiet reading annex",
+  "kind": "reading",
+  "rect": [
+   149.1,
+   168.9,
+   4.1,
+   21.9
+  ],
+  "door": {
+   "center": [
+    149.1,
+    17.45
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d18-launch-d-01",
+  "deck": 18,
+  "name": "Port garden overlook",
+  "kind": "overlook",
+  "rect": [
+   133.1,
+   167.9,
+   -42.9,
+   -24.1
+  ],
+  "door": {
+   "center": [
+    141.8,
+    -24.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d18-launch-d-02",
+  "deck": 18,
+  "name": "Starboard garden overlook",
+  "kind": "overlook",
+  "rect": [
+   133.1,
+   167.9,
+   24.1,
+   42.9
+  ],
+  "door": {
+   "center": [
+    141.8,
+    24.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d18-launch-d-03",
+  "deck": 18,
+  "name": "Garden promenade seating",
+  "kind": "overlook",
+  "rect": [
+   149.1,
+   168.9,
+   -21.9,
+   -4.1
+  ],
+  "door": {
+   "center": [
+    149.1,
+    -17.449999999999996
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d18-launch-d-04",
+  "deck": 18,
+  "name": "Forward garden-view seating",
+  "kind": "overlook",
+  "rect": [
+   149.1,
+   168.9,
+   4.1,
+   21.9
+  ],
+  "door": {
+   "center": [
+    149.1,
+    17.45
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d19-launch-d-01",
+  "deck": 19,
+  "name": "Port quiet garden overlook",
+  "kind": "overlook",
+  "rect": [
+   149.1,
+   168.9,
+   -36.9,
+   -5.1
+  ],
+  "door": {
+   "center": [
+    149.1,
+    -21
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ },
+ {
+  "id": "d19-launch-d-02",
+  "deck": 19,
+  "name": "Starboard quiet garden overlook",
+  "kind": "overlook",
+  "rect": [
+   149.1,
+   168.9,
+   4.1,
+   35.9
+  ],
+  "door": {
+   "center": [
+    149.1,
+    12.05
+   ],
+   "outward": [
+    -1,
+    0
+   ],
+   "width": 3.2
+  },
+  "variant": 1
+ },
+ {
+  "id": "d19-launch-d-03",
+  "deck": 19,
+  "name": "Upper promenade seating",
+  "kind": "overlook",
+  "rect": [
+   133.1,
+   146.9,
+   -43.9,
+   -24.1
+  ],
+  "door": {
+   "center": [
+    140,
+    -24.1
+   ],
+   "outward": [
+    0,
+    1
+   ],
+   "width": 3.2
+  },
+  "variant": 2
+ },
+ {
+  "id": "d19-launch-d-04",
+  "deck": 19,
+  "name": "Forward quiet seating",
+  "kind": "overlook",
+  "rect": [
+   133.1,
+   146.9,
+   24.1,
+   43.9
+  ],
+  "door": {
+   "center": [
+    140,
+    24.1
+   ],
+   "outward": [
+    0,
+    -1
+   ],
+   "width": 3.2
+  },
+  "variant": 0
+ }
+];
+const LAUNCH_D_STREETS=[
+ {
+  "id": "d1-launch-d-street-0",
+  "deck": 1,
+  "kind": "public-street",
+  "name": "Central Service Street",
+  "width": 7.7,
+  "points": [
+   [
+    -126,
+    0
+   ],
+   [
+    126,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "d1-launch-d-street-1",
+  "deck": 1,
+  "kind": "public-street",
+  "name": "Cross Street",
+  "width": 5.4,
+  "points": [
+   [
+    -83,
+    0
+   ],
+   [
+    -83,
+    49.5
+   ]
+  ]
+ },
+ {
+  "id": "d1-launch-d-street-2",
+  "deck": 1,
+  "kind": "public-street",
+  "name": "Cross Street",
+  "width": 5.4,
+  "points": [
+   [
+    60,
+    -54
+   ],
+   [
+    60,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "d2-launch-d-street-0",
+  "deck": 2,
+  "kind": "public-street",
+  "name": "Central Service Street",
+  "width": 7.7,
+  "points": [
+   [
+    -126,
+    0
+   ],
+   [
+    126,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "d2-launch-d-street-1",
+  "deck": 2,
+  "kind": "public-street",
+  "name": "Cross Street",
+  "width": 5.4,
+  "points": [
+   [
+    -85,
+    -54
+   ],
+   [
+    -85,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "d2-launch-d-street-2",
+  "deck": 2,
+  "kind": "public-street",
+  "name": "Cross Street",
+  "width": 5.4,
+  "points": [
+   [
+    -15,
+    20
+   ],
+   [
+    -15,
+    54
+   ]
+  ]
+ },
+ {
+  "id": "d3-launch-d-street-0",
+  "deck": 3,
+  "kind": "public-street",
+  "name": "Central Service Street",
+  "width": 7.7,
+  "points": [
+   [
+    -126,
+    0
+   ],
+   [
+    126,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "d3-launch-d-street-1",
+  "deck": 3,
+  "kind": "public-street",
+  "name": "Cross Street",
+  "width": 5.4,
+  "points": [
+   [
+    -85,
+    -54
+   ],
+   [
+    -85,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "d3-launch-d-street-2",
+  "deck": 3,
+  "kind": "public-street",
+  "name": "Cross Street",
+  "width": 5.4,
+  "points": [
+   [
+    -15,
+    20
+   ],
+   [
+    -15,
+    54
+   ]
+  ]
+ },
+ {
+  "id": "d4-launch-d-street-0",
+  "deck": 4,
+  "kind": "public-street",
+  "name": "Central Service Street",
+  "width": 7.7,
+  "points": [
+   [
+    -126,
+    0
+   ],
+   [
+    126,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "d4-launch-d-street-1",
+  "deck": 4,
+  "kind": "public-street",
+  "name": "Cross Street",
+  "width": 5.4,
+  "points": [
+   [
+    -15,
+    -54
+   ],
+   [
+    -15,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "d4-launch-d-street-2",
+  "deck": 4,
+  "kind": "public-street",
+  "name": "Cross Street",
+  "width": 5.4,
+  "points": [
+   [
+    57,
+    0
+   ],
+   [
+    57,
+    54
+   ]
+  ]
+ },
+ {
+  "id": "d5-launch-d-street-0",
+  "deck": 5,
+  "kind": "public-street",
+  "name": "Central Service Street",
+  "width": 7.7,
+  "points": [
+   [
+    -126,
+    0
+   ],
+   [
+    126,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "d5-launch-d-street-1",
+  "deck": 5,
+  "kind": "public-street",
+  "name": "Cross Street",
+  "width": 5.4,
+  "points": [
+   [
+    -15,
+    -54
+   ],
+   [
+    -15,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "d5-launch-d-street-2",
+  "deck": 5,
+  "kind": "public-street",
+  "name": "Cross Street",
+  "width": 5.4,
+  "points": [
+   [
+    57,
+    0
+   ],
+   [
+    57,
+    54
+   ]
+  ]
+ },
+ {
+  "id": "d16-garden-promenade--1",
+  "deck": 16,
+  "kind": "public-street",
+  "name": "Garden Promenade Port",
+  "width": 2.6,
+  "points": [
+   [
+    -126,
+    -19.4
+   ],
+   [
+    -86,
+    -19.4
+   ],
+   [
+    -86,
+    -21.55
+   ],
+   [
+    148,
+    -21.55
+   ]
+  ]
+ },
+ {
+  "id": "d16-garden-promenade-1",
+  "deck": 16,
+  "kind": "public-street",
+  "name": "Garden Promenade Starboard",
+  "width": 2.6,
+  "points": [
+   [
+    -126,
+    19.4
+   ],
+   [
+    -86,
+    19.4
+   ],
+   [
+    -86,
+    21.55
+   ],
+   [
+    148,
+    21.55
+   ]
+  ]
+ },
+ {
+  "id": "d17-garden-promenade--1",
+  "deck": 17,
+  "kind": "public-street",
+  "name": "Garden Promenade Port",
+  "width": 2.6,
+  "points": [
+   [
+    -126,
+    -19.4
+   ],
+   [
+    -86,
+    -19.4
+   ],
+   [
+    -86,
+    -21.55
+   ],
+   [
+    148,
+    -21.55
+   ]
+  ]
+ },
+ {
+  "id": "d17-garden-promenade-1",
+  "deck": 17,
+  "kind": "public-street",
+  "name": "Garden Promenade Starboard",
+  "width": 2.6,
+  "points": [
+   [
+    -126,
+    19.4
+   ],
+   [
+    -86,
+    19.4
+   ],
+   [
+    -86,
+    21.55
+   ],
+   [
+    148,
+    21.55
+   ]
+  ]
+ },
+ {
+  "id": "d18-garden-promenade--1",
+  "deck": 18,
+  "kind": "public-street",
+  "name": "Garden Promenade Port",
+  "width": 2.6,
+  "points": [
+   [
+    -126,
+    -19.4
+   ],
+   [
+    -86,
+    -19.4
+   ],
+   [
+    -86,
+    -21.55
+   ],
+   [
+    148,
+    -21.55
+   ]
+  ]
+ },
+ {
+  "id": "d18-garden-promenade-1",
+  "deck": 18,
+  "kind": "public-street",
+  "name": "Garden Promenade Starboard",
+  "width": 2.6,
+  "points": [
+   [
+    -126,
+    19.4
+   ],
+   [
+    -86,
+    19.4
+   ],
+   [
+    -86,
+    21.55
+   ],
+   [
+    148,
+    21.55
+   ]
+  ]
+ },
+ {
+  "id": "d19-garden-promenade--1",
+  "deck": 19,
+  "kind": "public-street",
+  "name": "Garden Promenade Port",
+  "width": 2.6,
+  "points": [
+   [
+    -126,
+    -19.4
+   ],
+   [
+    -86,
+    -19.4
+   ],
+   [
+    -86,
+    -21.55
+   ],
+   [
+    148,
+    -21.55
+   ]
+  ]
+ },
+ {
+  "id": "d19-garden-promenade-1",
+  "deck": 19,
+  "kind": "public-street",
+  "name": "Garden Promenade Starboard",
+  "width": 2.6,
+  "points": [
+   [
+    -126,
+    19.4
+   ],
+   [
+    -86,
+    19.4
+   ],
+   [
+    -86,
+    21.55
+   ],
+   [
+    148,
+    21.55
+   ]
+  ]
+ }
+];
+function addLaunchDPlan({h,decks,rooms,circulation}){
+ for(const spec of LAUNCH_D_ROOMS){const[a,b,c,e]=spec.rect,r=makeRoom({id:spec.id,name:spec.name,deck:spec.deck,kind:'new',width:b-a,depth:e-c,height:3.5},(a+b)/2,(c+e)/2,0,{outer:false,publicFront:true,openPlan:spec.deck>=18,launchD:{kind:spec.kind,variant:spec.variant},reason:'Launch D: a fitted public service room or supported garden overlook; 3 m internal access aisle, clear street frontage and a registered door.'});
+  if(!h.fits(r.polygon,r.y,r.height))throw Error('Launch D full-height hull fit: '+r.id);
+  r.door={id:r.id+'-door',center:[spec.door.center[0],r.y,spec.door.center[1]],outward:spec.door.outward.slice(),width:spec.door.width};r.area=area(r.polygon);rooms.push(r);
+ }
+ for(const s of LAUNCH_D_STREETS)for(let i=1;i<s.points.length;i++){const a=s.points[i-1],b=s.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<.01)continue;const c={...s,id:s.id+'-'+i,points:[a,b],polygon:rectangle((a[0]+b[0])/2,(a[1]+b[1])/2,len,s.width,-Math.atan2(b[1]-a[1],b[0]-a[0])),label:s.name,launchD:true};circulation.corridors.push(c);decks[s.deck-1].corridors.push(c);}
 }
 
 export const LAYOUT_V2=buildLayoutV2();

@@ -1,3 +1,4 @@
+import {readPublicPreparedFile} from './prepared-public-v2.mjs';
 // Collision-only reader for focused fixtures. Restores the saved BVHs; builds no
 // meshes or BVHs and never starts the walk flood or any model producer.
 import fs from 'node:fs/promises';
@@ -11,14 +12,14 @@ import {Colliders} from '../src/walk/collision.js';
 const types={Float32Array,Float64Array,Int8Array,Uint8Array,Uint8ClampedArray,Int16Array,Uint16Array,Int32Array,Uint32Array};
 export async function readGotoColliders(directory){
  let base=path.resolve(directory);const exists=async f=>!!await fs.stat(f).catch(()=>null);
- if(!await exists(path.join(base,'world.bin'))&&!await exists(path.join(base,'world.json.gz'))){
+ if(!await exists(path.join(base,'world.bin'))&&!await exists(path.join(base,'world.json.gz'))&&!await exists(path.join(base,'world.parts.json'))){
   const dirs=await fs.readdir(base,{withFileTypes:true}),found=[];
-  for(const d of dirs)if(d.isDirectory()&&await exists(path.join(base,d.name,'world.bin')))found.push(d.name);
+  for(const d of dirs)if(d.isDirectory()&&(await exists(path.join(base,d.name,'world.bin'))||await exists(path.join(base,d.name,'world.parts.json'))))found.push(d.name);
   if(found.length!==1)throw Error('Specify one prepared-walk directory containing world.bin');base=path.join(base,found[0]);
  }
  const zstd=new ZSTDDecoder();await zstd.init();await MeshoptDecoder.ready;
  const inflate=b=>b[0]===0x28&&b[1]===0xb5?zstd.decode(b):gunzipSync(b);
- const metadata=await fs.readFile(path.join(base,await exists(path.join(base,'world.bin'))?'world.bin':'world.json.gz'));
+ const split=await exists(path.join(base,'world.parts.json'));const metadata=split?await readPublicPreparedFile(base,'world.bin','world.parts.json'):await fs.readFile(path.join(base,await exists(path.join(base,'world.bin'))?'world.bin':'world.json.gz'));
  const manifest=JSON.parse(new TextDecoder().decode(inflate(metadata))),arrays=new Map(),geometries=new Map(),bvhs=new Map();let partIndex=-1,part=null;
  const bytes=async r=>{const out=new Uint8Array(r.bytes);let at=0,start=r.start;while(at<out.length){const i=Math.floor(start/8388608);if(partIndex!==i){part=inflate(await fs.readFile(path.join(base,manifest.parts[i].name)));partIndex=i;}const offset=start-i*8388608,n=Math.min(out.length-at,part.length-offset);out.set(part.subarray(offset,offset+n),at);at+=n;start+=n;}return out;};
  const array=async id=>{
