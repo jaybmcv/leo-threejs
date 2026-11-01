@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import {listenForHub} from '../src/walk/hub-link.js';
+import {walkLink} from '../src/hub/walk-link.js';
 import {pill,note,hasTrack,isMoving,trackNodes,groups,stats,feature,shortDate} from '../src/hub/model.js';
 
 // What the Builder's Hub says for each kind of card, and that the built page stays light and holds nobody's data.
@@ -52,6 +54,25 @@ check('dates read short',()=>{
  assert.equal(shortDate('2026-10-31T10:00:00',now),'Today');assert.equal(shortDate('2026-10-27T10:00:00',now),'Oct 27');
  assert.equal(shortDate('2025-10-27T10:00:00',now),'Oct 27, 2025');assert.equal(shortDate(null,now),'');assert.equal(shortDate('nonsense',now),'');
 });
+// The Hub and an open walk, over a real BroadcastChannel.
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+{
+ const hub=walkLink();await pause(30);
+ let c=hub.isOpen();assert.equal(c,false,'no walk: nothing open');
+ assert.equal(await hub.check(),false,'no walk: nothing answers');
+ assert.deepEqual(await hub.go('at=1,2,3'),{sent:false},'no walk: nothing sent');
+ const moved=[],side=listenForHub();await pause(30);
+ assert.equal(hub.isOpen(),true,'a walk still building counts as open');
+ assert.equal(await hub.check(),true,'and needs no answer while it builds');
+ let r=await hub.go('at=1,2,3');assert.deepEqual([r.sent,r.loading],[true,true],'told it is still loading');assert.equal(moved.length,0);
+ side.ready(s=>{moved.push(s);return s!=='bad';});await pause(30);
+ assert.deepEqual(moved,['at=1,2,3'],'the waiting move happens once ready');
+ r=await hub.go('at=4,5,6');assert.deepEqual([r.sent,r.ok,r.loading],[true,true,false]);assert.deepEqual(moved.at(-1),'at=4,5,6');
+ r=await hub.go('bad');assert.deepEqual([r.sent,r.ok],[true,false],'a spot it cannot reach says so');
+ assert.equal(await hub.check(),true,'an open walk answers');
+ side.close();assert.equal(await hub.check(),false,'a closed walk does not');
+ hub.close();passed++;console.log('PASS the Hub finds and moves an open walk, and copes with none');
+}
 try{
  const html=await fs.readFile('dist/hub.html','utf8'),script=/<script type="module" src="(hub\.[0-9a-f]{10}\.js)"/.exec(html)?.[1];
  const code=await fs.readFile('dist/'+script,'utf8');
