@@ -1,17 +1,19 @@
 import {identify,currentPass,forget,CREAMERY} from '../walk/net/connect.js';
+import {FEEDBACK_CONFIG} from '../feedback/config.js';
 import {TRACK,pill,note,hasTrack,isMoving,trackNodes,groups,stats,feature,shortDate} from './model.js';
 
 // The Builder's Hub: where testers follow the ideas they sent. Nothing about anyone is in this page or this public
 // repository: a tester's cards come at runtime from the Hub service (feedback-inbox hub/), which checks a fresh Leo pass
 // and returns only theirs. Everything from the service goes in as text, never as markup.
-const SERVICE=(()=>{
- // A local service for development, from a page on localhost only.
+// A local service for development, from a page on localhost only.
+const LOCAL=(()=>{
  const asked=new URLSearchParams(location.search).get('hub');
- if(asked&&/^(localhost|127\.0\.0\.1)$/.test(location.hostname))return asked.replace(/\/$/,'');
- return 'https://mcv-feedback-hub.mcv-feedback.workers.dev';
+ return asked&&/^(localhost|127\.0\.0\.1)$/.test(location.hostname)?asked.replace(/\/$/,''):null;
 })();
+const SERVICE=LOCAL||'https://mcv-feedback-hub.mcv-feedback.workers.dev',REPLIES=(LOCAL||FEEDBACK_CONFIG.endpoint.replace(/\/$/,''))+'/replies';
+const HUMAN_KEY=LOCAL?'1x00000000000000000000AA':FEEDBACK_CONFIG.turnstileSiteKey;
 const MEDIA='https://raw.githubusercontent.com/jaybmcv/leo-threejs/pr-media/';
-const LIVE_SHOWN=6,POLL_MS=30e3,POLLS=10,STALE_MS=60e3,OPEN_LOOK_MS=15*60e3,LIVE_STALE_MS=5*60e3;
+const MAX_IMAGES=3,MAX_SHOT=1600,MAX_TEXT=2000,LIVE_SHOWN=6,POLL_MS=30e3,POLLS=10,STALE_MS=60e3,OPEN_LOOK_MS=15*60e3,LIVE_STALE_MS=5*60e3;
 const $=id=>document.getElementById(id);
 function el(tag,props={},...kids){
  const {attrs,...rest}=props,e=Object.assign(document.createElement(tag),rest);
@@ -61,6 +63,95 @@ function stepsOf(c){
  return el('ol',{className:'steps',attrs:{'aria-label':'Steps'}},...c.steps.map(s=>el('li',{className:`step step-${s.status==='live'?'live':s.status==='planned'?'todo':'now'}`},
   el('span',{className:'step-n',textContent:String(s.number)}),el('span',{textContent:s.title||`Step ${s.number}`}))));
 }
+// Their own words, fetched the first time they open them.
+function wordsOf(c){
+ if(!c.number||!c.id)return null;
+ const text=el('p',{textContent:'Loading…'}),box=el('details',{className:'words'},el('summary',{textContent:'What you said'}),text);
+ box.addEventListener('toggle',async()=>{
+  if(!box.open||box.dataset.read)return;box.dataset.read='1';
+  try{
+   const pass=await currentPass(),r=pass&&await fetch(`${SERVICE}/words`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({pass,number:c.number})});
+   if(!r?.ok)throw new Error('no answer');
+   text.textContent=(await r.json()).words||'You sent a voice note or pictures, with no words.';
+  }catch{delete box.dataset.read;box.open=false;text.textContent='Loading…';}
+ });
+ return box;
+}
+function loadHumanCheck(){
+ if(window.turnstile)return Promise.resolve();
+ return new Promise((resolve,reject)=>{const s=el('script',{src:'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit',async:true});s.onload=resolve;s.onerror=()=>reject(new Error('The human check could not load.'));document.head.append(s);});
+}
+// Pictures are scaled down and re-encoded here, so only pixels leave the page.
+async function shrink(file){
+ const bitmap=await createImageBitmap(file),s=Math.min(1,MAX_SHOT/Math.max(bitmap.width,bitmap.height));
+ const c=el('canvas',{width:Math.round(bitmap.width*s),height:Math.round(bitmap.height*s)}),g=c.getContext('2d');
+ g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(bitmap,0,0,c.width,c.height);bitmap.close();
+ return c.toDataURL('image/jpeg',.85);
+}
+// More words and pictures for an idea that is waiting on its owner. What goes in stays through a background refresh.
+function addMore(c){
+ const asked=c.status==='more-info';
+ const open=el('button',{type:'button',className:'link',textContent:'Add more to this idea'});
+ const text=el('textarea',{className:'add-text',maxLength:MAX_TEXT,placeholder:asked?'Tell us what you can…':'What else should we know?',attrs:{'aria-label':'Add more to this idea'}});
+ const picker=el('input',{type:'file',accept:'image/*',multiple:true,hidden:true}),addPics=el('button',{type:'button',className:'more',textContent:'Add pictures'}),pics=el('div',{className:'add-pics'});
+ const check=el('div',{className:'add-check'}),error=el('p',{className:'add-error',attrs:{role:'alert'}}),send=el('button',{type:'button',className:'go',textContent:'Send'});
+ const form=el('div',{className:'add-form',hidden:!asked},text,el('div',{className:'actions'},addPics,picker,el('span',{className:'add-hint',textContent:`Up to ${MAX_IMAGES} pictures`})),pics,check,error,el('div',{className:'actions'},send));
+ const box=el('div',{className:'add'},asked?null:open,form);
+ let images=[],token=null,widget=null,sending=false,waiting=false;
+ const fail=message=>{error.textContent=message;sending=false;waiting=false;send.disabled=false;send.textContent='Send';};
+ const showPics=()=>{
+  pics.replaceChildren(...images.map((im,i)=>{const drop=el('button',{type:'button',textContent:'×',attrs:{'aria-label':`Remove picture ${i+1}`}});drop.addEventListener('click',()=>{images.splice(i,1);showPics();});return el('figure',{},el('img',{src:im,alt:`Picture ${i+1} to add`}),drop);}));
+  addPics.hidden=images.length>=MAX_IMAGES;
+ };
+ async function addFiles(files){
+  error.textContent='';
+  const picked=[...files].filter(f=>f.type.startsWith('image/'));
+  if(files.length&&!picked.length){error.textContent='Only pictures can be added.';return;}
+  for(const f of picked){
+   if(images.length>=MAX_IMAGES){error.textContent=`Up to ${MAX_IMAGES} pictures.`;break;}
+   try{images.push(await shrink(f));}catch{error.textContent=`${f.name||'That picture'} could not be read.`;}
+  }
+  showPics();startCheck();
+ }
+ async function startCheck(){
+  if(widget!==null)return;
+  try{
+   await loadHumanCheck();
+   if(widget===null)widget=window.turnstile.render(check,{sitekey:HUMAN_KEY,theme:'dark',size:'flexible',
+    callback:t=>{token=t;if(waiting)submit();},'expired-callback':()=>{token=null;},'error-callback':()=>{token=null;fail('The human check could not run here. Please try again.');}});
+  }catch(e){fail(e.message);}
+ }
+ async function submit(){
+  const words=text.value.trim();
+  if(!words&&!images.length){fail('Add some words or a picture first.');return;}
+  error.textContent='';send.disabled=true;
+  if(!token){waiting=true;send.textContent='Sending after the human check…';startCheck();return;}
+  if(sending)return;
+  sending=true;waiting=false;send.textContent='Sending…';
+  const human=token;token=null;
+  try{
+   const pass=await currentPass();
+   if(!pass){signInRanOut();fail('Your sign-in ran out. Connect Discord, then send this again.');return;}
+   const r=await fetch(REPLIES,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({number:c.number,turnstile:human,pass,text:words,images:images.map(data=>({data}))})});
+   const reply=await r.json().catch(()=>({}));
+   if(!r.ok){fail(reply.error||'That could not be sent. Please try again.');return;}
+   open.remove();form.remove();box.append(el('p',{className:'note',textContent:'Thanks, that’s with us now.'}));box.dataset.done='1';
+  }catch{fail('That could not be sent. Please try again.');}
+  finally{if(widget!==null&&box.isConnected&&!box.dataset.done)window.turnstile.reset(widget);}
+ }
+ open.addEventListener('click',()=>{open.remove();form.hidden=false;text.focus();startCheck();});
+ text.addEventListener('focus',startCheck);text.addEventListener('input',()=>{error.textContent='';});
+ addPics.addEventListener('click',()=>picker.click());
+ picker.addEventListener('change',()=>{addFiles(picker.files);picker.value='';});
+ form.addEventListener('paste',e=>{if(e.clipboardData?.files.length){e.preventDefault();addFiles(e.clipboardData.files);}});
+ form.addEventListener('dragover',e=>e.preventDefault());
+ form.addEventListener('drop',e=>{e.preventDefault();addFiles(e.dataTransfer.files);});
+ send.addEventListener('click',submit);
+ box.inUse=()=>!box.dataset.done&&(sending||waiting||!!text.value.trim()||images.length>0||(form.contains(document.activeElement)));
+ return box;
+}
+// Something being written mustn't vanish because the page looked for news.
+const writing=()=>[...document.querySelectorAll('.add')].some(b=>b.inUse?.());
 function cardOf(c,{highlight=false}={}){
  const p=pill(c),text=note(c),title=c.title||'Your idea';
  const compare=c.shots?.length?el('button',{type:'button',className:'link',textContent:'See before and after'}):null;
@@ -69,7 +160,9 @@ function cardOf(c,{highlight=false}={}){
   el('div',{className:'card-head'},el('h3',{textContent:title}),el('span',{className:`pill pill-${p.tone}`,textContent:p.text})),
   stepsOf(c),hasTrack(c)?trackOf(c):null,
   text?el('p',{className:'note',textContent:text}):null,
-  c.words?el('details',{className:'words'},el('summary',{textContent:'What you said'}),el('p',{textContent:c.words})):null,
+  c.repliedAt?el('p',{className:'added-note',textContent:`You added more on ${shortDate(c.repliedAt)}. Thanks, it’s with us.`}):null,
+  wordsOf(c),
+  c.canAdd&&c.number?addMore(c):null,
   actions);
  if(compare)compare.addEventListener('click',()=>{actions.after(slider(c.shots[0],title));compare.remove();},{once:true});
  return card;
@@ -154,7 +247,7 @@ async function refreshMine(asked){
   if(!r.ok)return null;
   const text=await r.text(),data=JSON.parse(text);
   $('sign-in-ran-out')?.remove();
-  if(text!==lastAnswer){lastAnswer=text;showMine(data,asked);}
+  if(text!==lastAnswer&&!writing()){lastAnswer=text;showMine(data,asked);}
   return data;
  }catch{return null;}
 }

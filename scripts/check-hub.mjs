@@ -55,7 +55,7 @@ check('dates read short',()=>{
 try{
  const html=await fs.readFile('dist/hub.html','utf8'),script=/<script type="module" src="(hub\.[0-9a-f]{10}\.js)"/.exec(html)?.[1];
  const code=await fs.readFile('dist/'+script,'utf8');
- check('the built page is light and carries no Three.js',()=>{assert.ok(code.length<40*1024,`${code.length} bytes`);assert.ok(!code.includes('WebGLRenderer'));});
+ check('the built page is light and carries no Three.js',()=>{assert.ok(code.length<60*1024,`${code.length} bytes`);assert.ok(!code.includes('WebGLRenderer'));});
  check('the built page uses only text for what the service sends',()=>assert.ok(!/innerHTML|insertAdjacentHTML|document\.write/.test(code)));
  check('the built page names the service, and holds no report data',()=>{assert.ok(code.includes('mcv-feedback-hub.'));assert.ok(!/discord:\d|\b\d{17,20}\b/.test(code+html));});
 }catch(e){if(e.code!=='ENOENT')throw e;console.log('dist/hub.html not built; skipped the page checks');}
