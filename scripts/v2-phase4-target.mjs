@@ -12,7 +12,7 @@ import {contains,bounds} from '../src/plan/geometry-v2.js';import {phase4LegacyS
 installWalkCanvas(createCanvas);
 const layout=structuredClone(layout0);for(const s of layout.shuttles)s.seats=escapeSeatPlan(s,s.id);
 const root=new T.Group(),structure=new T.Group();structure.name='V2_structure';root.add(structure);const ship={root,inside:root};
-const regions=[...layout.rooms.filter(r=>PHASE4_ROOMS.includes(r.id)),...layout.shuttles];
+const regions=[...layout.rooms.filter(r=>PHASE4_ROOMS.includes(r.id)||r.launchD),...layout.shuttles];
 for(const r of regions){const g=new T.Group();g.name='V2_shell_'+r.id;structure.add(g);const floor=new T.Mesh(polygonGeometry(r.polygon,[],r.y+(r.seats?0:.006),.12));floor.name='P4_target_floor';g.add(floor);const ceiling=new T.Mesh(polygonGeometry(r.polygon,[],r.y+(r.height||3.5),.10));ceiling.name='P4_target_ceiling';g.add(ceiling);}
 const data=buildPhase4Fitout(ship,layout),col=new Colliders(),ground=new Colliders();col.addStatic(root);ground.addStatic(root,o=>solid(o)&&groundMesh(o));col.commit();ground.commit();addPhase4Colliders(ship,col,ground);
 data.rests=data.rests.filter(s=>!s.phase6);

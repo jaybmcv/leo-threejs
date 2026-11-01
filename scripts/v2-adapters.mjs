@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import {launchBAdapters,launchBAnchors} from './launch-b-adapters.mjs';
 import {gotoAdapters,gotoAdapterAnchors} from './goto-adapters-v2.mjs';
 export const adapterAnchors={
+ "src/v2/cabin-privacy.js":"child.geometry.clone().applyMatrix4(child.matrix)",
  ...launchBAnchors,
  ...gotoAdapterAnchors,
  "src/walk/paintings.js":"import * as T from 'three';",/*cache-input-adapter:start*/
@@ -47,6 +48,7 @@ class Source {
  splice(from,to,value){const a=this.text.indexOf(from),b=this.text.indexOf(to,Math.max(0,a));const ok=this.require(from,'splice start')&this.require(to,'splice end');if(ok&&b>a)this.text=this.text.slice(0,a)+value+this.text.slice(b);else if(ok)this.issues.push(this.file+': splice end precedes start '+JSON.stringify(to));return this;}
 }
 export function applyV2Adapters(file,text,{issues=[],adapters=[],collect=false}={}){const s=new Source(file,text,issues,adapters);
+ if(file==='src/v2/cabin-privacy.js'){s.prepend("import {compactRenderGeometry} from './facade.js';\n").replace('child.geometry.clone().applyMatrix4(child.matrix)','compactRenderGeometry(child.geometry).applyMatrix4(child.matrix)');}
 /*cache-input-adapter:start*/
   if(file==='src/walk/kittens.js'){s.prepend("import {recordKittenSupports} from '../v2/room-feature-supports.js';\n");s.replace(' return {group,solid};',' recordKittenSupports(ship,solid);return {group,solid};');}
   if(file==='src/walk/lounge-falls.js'){s.prepend("import {fittedLoungeFalls} from '../v2/lounge-falls-fit.js';\n");s.replace('export function createLoungeFalls(ship){','function createUnfittedLoungeFalls(ship){');s.append("\nexport function createLoungeFalls(ship){return fittedLoungeFalls(ship,createUnfittedLoungeFalls); }\n");}
@@ -104,7 +106,7 @@ export function restoreRoomAnchors(root,rows){if(!Array.isArray(rows))throw Erro
   if(file==='src/garden-finish.js'){s.replace('[141.5,26.2,45.8],Math.PI','[141.5,26.2,8.2],0').replace('[x,y,45.8],Math.PI','[x,y,8.2],0').replace('24.61+level*.6,44.5','24.61+level*.6,39.5').replace('[43.53,45.47]','[38.53,40.47]').replace('43.8+i*.22','38.8+i*.22');}
   if(file==='src/model.js')s.prepend("import {configureV2Ship} from './v2/model.js';\n").replace('  return ship;','  return configureV2Ship(ship);').replace('[xx,25.45,44.5]','[xx,25.45,39.5]');
   if(file==='src/walk/main.js'){
-   s.prepend("import {phase4Culling} from '../v2/phase4-culling.js';\nlet phase4Visibility=null;\nimport {v2Signs} from '../v2/signs.js';\nimport {attachFacade,isolateStaticWorld} from '../v2/facade.js';\nimport {createCabinGlass} from '../v2/cabin-glass.js';\nimport {crewGalleryController} from '../v2/crew-gallery.js';\nlet cabinGlass=null,crewGallery=null;\n");
+   s.prepend("import {visibilityState} from '../v2/visibility-state.js';\nconst spanChanged=visibilityState(),renderMetrics={span:[]};let spanQuery=null;\nimport {createVisibilityQuery} from '../v2/visibility-query.js';\nimport {installDistantArchitecture} from '../v2/distant-architecture.js';\nimport {batchLowDeckDraws,separateAtriumPaving} from '../v2/facade.js';\nimport {phase4Culling} from '../v2/phase4-culling.js';\nlet phase4Visibility=null;\nimport {v2Signs} from '../v2/signs.js';\nimport {attachFacade,isolateStaticWorld} from '../v2/facade.js';\nimport {createCabinGlass} from '../v2/cabin-glass.js';\nimport {crewGalleryController} from '../v2/crew-gallery.js';\nlet cabinGlass=null,crewGallery=null;\n");
    s.replace('shapeInterior(ship.exterior,ship.inside);','// v2 slabs use the finished hull oracle; do not fair a second time.');
    s.replace('corridorTrim(lifts.signs,{inside:ship.inside,partitions:walkPlan.walls});','v2Signs(lifts.signs);');
    s.replace('stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);','');
@@ -112,8 +114,14 @@ export function restoreRoomAnchors(root,rows){if(!Array.isArray(rows))throw Erro
    
    s.replace('const b0=performance.now();baked=bakeForWalking(ship.root', 'ship.v2Haze=createHaze(ship);attachFacade(ship,scene);const b0=performance.now();baked=bakeForWalking(ship.root');
    s.replace('haze.add(createHaze(ship));','haze.add(ship.v2Haze);cabinGlass=createCabinGlass(ship,scene);crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);');
+   s.replace('haze.add(ship.v2Haze);','haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze);');
+   s.replace('camera.far-5,1500','140,1500');
+   s.replace('if(now-lastSpan<150)return viewSpan;lastSpan=now;','if(now-lastSpan<150)return viewSpan;lastSpan=now;if(!spanChanged(camera,p,0,0,colliders))return viewSpan;const spanStart=performance.now();');
+   s.replace('return viewSpan=[low,high];','renderMetrics.span.push(performance.now()-spanStart);if(renderMetrics.span.length>600)renderMetrics.span.shift();return viewSpan=[low,high];');
+   s.replace('const hit=colliders.raycast(ray.ray,90,.6)','const hit=(spanQuery??=createVisibilityQuery(colliders)).raycast(ray.ray,90,.6)');
+   s.replace('const h=colliders.raycast(probe,12)','const h=(spanQuery??=createVisibilityQuery(colliders)).raycast(probe,12)');
    s.replace("q.name==='Remaining_499_furnished_cabins'","q.name==='V2_cabin_instances'").replace("q.name==='Repeated_cabin_walls'","q.name==='V2_cabin_shells'").replace('||o.count!==499','');
-   s.replace('}\nlet imagingScans=null;\nlet baked=null',' isolateStaticWorld(ship,scene);\n}\nlet imagingScans=null;\nlet baked=null');
+   s.replace('}\nlet imagingScans=null;\nlet baked=null',' isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);\n}\nlet imagingScans=null;\nlet baked=null');
    s.replace('o.count=order.length;o.instanceMatrix.needsUpdate=true;', 'o.userData.currentCabinIds=order.map(i=>o.userData.cabinIds[i]);o.count=order.length;o.instanceMatrix.needsUpdate=true;');
    s.replace('const [low,high]=span(p,now);','cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now);');
    s.replace("ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;","phase4Visibility=phase4Culling(ship.inside,colliders);ship.inside.traverse(o=>{if(!o.isInstancedMesh||o.userData.phase4)return;");
@@ -121,7 +129,7 @@ export function restoreRoomAnchors(root,rows){if(!Array.isArray(rows))throw Erro
   if(file==='src/walk/main.js'){
    s.replace("  if(t.kind==='call')", "  if(t.kind==='launch-ladder'){goTo({at:t.at,yaw:heading,lv:2,resolved:true});return;}\n  if(t.kind==='cabin-glass'){cabinGlass.toggle(t.cabin);return;}\n  if(t.kind==='call')");
    s.replace(' const b=booth.near(p)||comics.near(p)||chinampa?.near(p);'," const ladder=hangarDoor?.near(p);if(ladder)return ladder;\n const privacy=cabinGlass?.near(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));if(privacy)return privacy;\n const b=booth.near(p)||comics.near(p)||chinampa?.near(p);");
-   s.replace('globalThis.__walk={registry,restSpots,','globalThis.__walk={registry,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,');
+   s.replace('globalThis.__walk={registry,restSpots,','globalThis.__walk={registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,');
    s.replace('get live(){return live;}', 'get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;}');
   }
   if(file==='src/walk/link.js'){s.prepend("import {phase4LegacySpot} from '../v2/phase4-community.js';\nimport {remapLegacyCorridor} from '../v2/ship-log-remap.js';\nimport layout from 'v2-layout';\n").replace('const room=spot.room||roomAt(spot.at,{legacy:true});','const feature=phase4LegacySpot(spot);if(feature)return feature;const room=spot.room||roomAt(spot.at,{legacy:true});').replace('const room=spot.room||roomAt(spot.at,{legacy:true});',"const room=spot.room||roomAt(spot.at,{legacy:true});const corridor=remapLegacyCorridor(spot,room);if(corridor)return corridor;if(layout.cabinIdMap[room]){const id=layout.cabinIdMap[room],a=v1Frame(room),f=frame(id);return {...spot,room:id,at:toWorld(id,[0,0,0]),yaw:f.yaw+(spot.yaw??a.yaw)-a.yaw,lv:2,resolved:true};}");s.replace('LAYOUT_VERSION,roomAt,anchoredPoint,anchoredYaw','LAYOUT_VERSION,roomAt,anchoredPoint,anchoredYaw,frame,v1Frame,toLocal,toWorld').replace('at:room?anchoredPoint(room,spot.at):spot.at','at:room?fitLegacySpot(room,anchoredPoint(room,spot.at)):spot.at');s.append("\nfunction fitLegacySpot(id,p){const a=v1Frame(id),f=frame(id),l=toLocal(id,p);let changed=false;for(const k of [0,2]){const a0=a.bounds?.[0][k]??-a.size[k]/2,a1=a.bounds?.[1][k]??a.size[k]/2,b0=f.bounds?.[0][k]??-f.size[k]/2,b1=f.bounds?.[1][k]??f.size[k]/2;if(b1-b0<a1-a0){l[k]=Math.max(b0+.6,Math.min(b1-.6,l[k]));changed=true;}}return changed?toWorld(id,l):p;}\n");}
