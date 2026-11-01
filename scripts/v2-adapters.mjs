@@ -113,8 +113,7 @@ export function restoreRoomAnchors(root,rows){if(!Array.isArray(rows))throw Erro
 
    
    s.replace('const b0=performance.now();baked=bakeForWalking(ship.root', 'ship.v2Haze=createHaze(ship);attachFacade(ship,scene);const b0=performance.now();baked=bakeForWalking(ship.root');
-   s.replace('haze.add(createHaze(ship));','haze.add(ship.v2Haze);cabinGlass=createCabinGlass(ship,scene);crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);');
-   s.replace('haze.add(ship.v2Haze);','haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});');
+   s.replace('haze.add(createHaze(ship));','haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});cabinGlass=createCabinGlass(ship,scene);crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);');
    s.replace('camera.far-5,1500','140,1500');
    s.replace("document.body.dataset.ready='1';", "let firstViewReady=false;status('Preparing first view…');");
    s.replace("await buildShip();\ntry{localStorage.removeItem(STARTING);}catch{}","await buildShip();");
