@@ -88,6 +88,8 @@ async function shrink(file){
  g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(bitmap,0,0,c.width,c.height);bitmap.close();
  return c.toDataURL('image/jpeg',.85);
 }
+// What's being written, by report, kept apart from the cards so a refresh can redraw them.
+const drafts=new Map();
 // More words and pictures for an idea that is waiting on its owner. What goes in stays through a background refresh.
 function addMore(c){
  const asked=c.status==='more-info';
@@ -100,7 +102,13 @@ function addMore(c){
  let images=[],token=null,widget=null,sending=false,waiting=false;
  // What's being written survives going off to reconnect Discord, in this tab only.
  const key=`leo-hub-draft-${c.number}`;
- const keep=()=>{try{const words=text.value.trim();if(words||images.length)sessionStorage.setItem(key,JSON.stringify({words:text.value,images}));else sessionStorage.removeItem(key);}catch{try{sessionStorage.setItem(key,JSON.stringify({words:text.value,images:[]}));}catch{}}};
+ let picturesKept=true;
+ const keep=()=>{
+  const empty=!text.value.trim()&&!images.length;picturesKept=true;
+  if(empty)drafts.delete(c.number);else drafts.set(c.number,{words:text.value,images});
+  try{if(empty)sessionStorage.removeItem(key);else sessionStorage.setItem(key,JSON.stringify({words:text.value,images}));}
+  catch{picturesKept=!images.length;try{sessionStorage.setItem(key,JSON.stringify({words:text.value,images:[]}));}catch{}}
+ };
  const fail=message=>{error.textContent=message;sending=false;waiting=false;send.disabled=false;send.textContent='Send';};
  const showPics=()=>{
   pics.replaceChildren(...images.map((im,i)=>{const drop=el('button',{type:'button',textContent:'×',attrs:{'aria-label':`Remove picture ${i+1}`}});drop.addEventListener('click',()=>{images.splice(i,1);showPics();});return el('figure',{},el('img',{src:im,alt:`Picture ${i+1} to add`}),drop);}));
@@ -134,11 +142,11 @@ function addMore(c){
   const human=token;token=null;
   try{
    const pass=await currentPass();
-   if(!pass){keep();signInRanOut();fail('Your sign-in ran out. Connect Discord above, and what you wrote will be here when you’re back.');return;}
+   if(!pass){keep();signInRanOut();fail(picturesKept?'Your sign-in ran out. Connect Discord above, and what you added will be here when you’re back.':'Your sign-in ran out. Connect Discord above. Your words will be here when you’re back, but you’ll need to add your pictures again.');return;}
    const r=await fetch(REPLIES,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({number:c.number,turnstile:human,pass,text:words,images:images.map(data=>({data}))})});
    const reply=await r.json().catch(()=>({}));
    if(!r.ok){fail(reply.error||'That could not be sent. Please try again.');return;}
-   try{sessionStorage.removeItem(key);}catch{}
+   drafts.delete(c.number);try{sessionStorage.removeItem(key);}catch{}
    open.remove();form.remove();box.append(el('p',{className:'note',textContent:'Thanks, that’s with us now.'}));box.dataset.done='1';
   }catch{fail('That could not be sent. Please try again.');}
   finally{if(widget!==null&&box.isConnected&&!box.dataset.done)window.turnstile.reset(widget);}
@@ -152,13 +160,13 @@ function addMore(c){
  form.addEventListener('drop',e=>{e.preventDefault();addFiles(e.dataTransfer.files);});
  send.addEventListener('click',submit);
  try{
-  const kept=JSON.parse(sessionStorage.getItem(key)||'null');
+  const kept=drafts.get(c.number)||JSON.parse(sessionStorage.getItem(key)||'null');
   if(kept){text.value=kept.words||'';images=Array.isArray(kept.images)?kept.images.slice(0,MAX_IMAGES):[];open.remove();form.hidden=false;showPics();}
  }catch{}
- box.inUse=()=>!box.dataset.done&&(sending||waiting||!!text.value.trim()||images.length>0||(form.contains(document.activeElement)));
+ box.inUse=()=>!box.dataset.done&&(sending||waiting||form.contains(document.activeElement));
  return box;
 }
-// Something being written mustn't vanish because the page looked for news.
+// Only hold a redraw while someone is typing or sending; anything else they wrote comes back from its draft.
 const writing=()=>[...document.querySelectorAll('.add')].some(b=>b.inUse?.());
 function cardOf(c,{highlight=false}={}){
  const p=pill(c),text=note(c),title=c.title||'Your idea';
