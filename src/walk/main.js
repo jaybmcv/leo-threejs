@@ -1,4 +1,4 @@
-import {fastAtriumSpan} from '../v2/atrium-visibility.js';
+import {fastAtriumSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
 import {gotoStand as v2GotoStand,yarnPlace} from '../v2/wayfinding.js';
 import {addWayfindingGuides} from '../v2/wayfinding-guides.js';
@@ -983,3 +983,5 @@ $('crouch').addEventListener('click',()=>actions.crouch());
 $('emote-button').addEventListener('click',()=>actions.emotes());
 $('ping').addEventListener('click',()=>actions.ping());
 for(const b of document.querySelectorAll('.respawn'))b.addEventListener('click',()=>actions.respawn());
+// Include the ball and aquarium entrance created later in startup, before the first frame.
+for(const root of [scene,haze,sky])onePassAtriumGlass(root);

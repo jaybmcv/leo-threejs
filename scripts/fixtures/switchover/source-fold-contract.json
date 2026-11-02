@@ -1553,7 +1553,7 @@
     "file": "src/v2/atrium-visibility.js",
     "original": "src/v2/atrium-visibility.js",
     "mode": "raw",
-    "bodySha256": "4a183274072a741fc6a04a1370502218cab9ae6895b8df2dd8e0b01ba56157a0",
+    "bodySha256": "efd420ec505c436b8621c673d3c5c98823a0c0cceb6fbc34be39231060ce5695",
     "imports": [
       "../plan/selected-layout.js",
       "../plan/geometry-v2.js",
@@ -2093,7 +2093,7 @@
     "file": "src/v2/map-labels.js",
     "original": "src/v2/map-labels.js",
     "mode": "raw",
-    "bodySha256": "3c384e355b0ad1664cf1037f4a81fb3866b08d0b71a54cd1027c2051a44fbba2",
+    "bodySha256": "e14414c2242156f3e16657743ee800a442859fb8fe680a1ecb8e1c1c72c7ebd5",
     "imports": [
       "../plan/selected-layout.js",
       "../plan/geometry-v2.js"
@@ -2321,8 +2321,9 @@
     "file": "src/v2/prepared-runtime.js",
     "original": "src/v2/prepared-runtime.js",
     "mode": "raw",
-    "bodySha256": "dab70011a9f1eff36127a4c473c86fc7f2455d27ccbfe0f9fe5c653eb054cfc9",
+    "bodySha256": "68566db29899bd4d22b10608b7a4df477579402ad26499ebbfaa20ff6aef2262",
     "imports": [
+      "./prepared-static.js",
       "./atrium-visibility.js",
       "../plan/rooms.js",
       "./prepared-resource.js",
@@ -2864,7 +2865,7 @@
     "file": "src/walk/aquarium-treasure/suit.js",
     "original": "src/walk/aquarium-treasure/suit.js",
     "mode": "raw",
-    "bodySha256": "947ee440c3f64454f1d4d6c92a4d3bfb117c7bea5a03b2a030a7d64c90aa3a0d",
+    "bodySha256": "7095166d910b59742cfc92f20c6c17f495a8abc6b35102af2c58d8729d3e61c7",
     "imports": [
       "three"
     ],
@@ -3638,7 +3639,7 @@
     "file": "src/walk/main.js",
     "original": "src/walk/main.js",
     "mode": "raw",
-    "bodySha256": "8967b8749ecee329113be643fec7b80d6399c0dbf8584b06c637662159c99ce3",
+    "bodySha256": "071c8aeaa191867afa3fb1492a317dd3f89a8da5afc680638fb4225f2e4388e8",
     "imports": [
       "../v2/atrium-visibility.js",
       "../v2/goto-menu.js",
@@ -5231,8 +5232,9 @@
     "file": "src/v2/prepared-runtime.authoring.js",
     "original": "src/v2/prepared-runtime.js",
     "mode": "authoring",
-    "bodySha256": "dab70011a9f1eff36127a4c473c86fc7f2455d27ccbfe0f9fe5c653eb054cfc9",
+    "bodySha256": "68566db29899bd4d22b10608b7a4df477579402ad26499ebbfaa20ff6aef2262",
     "imports": [
+      "./prepared-static.js",
       "./atrium-visibility.js",
       "../plan/rooms.js",
       "./prepared-resource.authoring.js",
@@ -6200,7 +6202,7 @@
     "file": "src/walk/main.authoring.js",
     "original": "src/walk/main.js",
     "mode": "authoring",
-    "bodySha256": "0f078082e0f1a52867a3728240c02c7eaec39223a1fe34f43a600a572a674375",
+    "bodySha256": "13f9885d9c97c6a224fdea438d2efedd201360209f7d074a383b9f1e31f0f54c",
     "imports": [
       "../v2/atrium-visibility.js",
       "../v2/build-cache.authoring.js",
@@ -7545,8 +7547,9 @@
     "file": "src/walk/main.prepared.js",
     "original": "src/walk/main.js",
     "mode": "prepared",
-    "bodySha256": "7dcd96498a5f31f6d942408f308d03373e46d57689e8fdcdce64ab58432ac26d",
+    "bodySha256": "20ead7bd371ad65401b3e3fe7b21f587636af23ddf1763ba83590c2385298cf2",
     "imports": [
+      "../v2/prepared-static.js",
       "../v2/atrium-visibility.js",
       "../v2/prepared-runtime.js",
       "../v2/goto-menu.js",
@@ -8164,8 +8167,9 @@
     "file": "src/v2/prepared-runtime.public.js",
     "original": "src/v2/prepared-runtime.js",
     "mode": "public",
-    "bodySha256": "dab70011a9f1eff36127a4c473c86fc7f2455d27ccbfe0f9fe5c653eb054cfc9",
+    "bodySha256": "68566db29899bd4d22b10608b7a4df477579402ad26499ebbfaa20ff6aef2262",
     "imports": [
+      "./prepared-static.js",
       "./atrium-visibility.js",
       "../plan/rooms.js",
       "./prepared-resource.public.js",
@@ -8824,8 +8828,9 @@
     "file": "src/walk/main.public.js",
     "original": "src/walk/main.js",
     "mode": "public",
-    "bodySha256": "b697c2e05f92ab6bd313c54c4a4e365e4a37ac54216d32ee5c419fa8f5e1e566",
+    "bodySha256": "c7cdb2e442d7d407e5f2f85da85ca001f988df0ccafc4e14f0b6bd250fbed455",
     "imports": [
+      "../v2/prepared-static.js",
       "../v2/atrium-visibility.js",
       "../v2/prepared-runtime.public.js",
       "../v2/goto-menu.js",
@@ -9336,6 +9341,14 @@
       "./arrival-atrium.public.js",
       "./hydroponics.js"
     ],
+    "geometryCalls": []
+  },
+  {
+    "file": "src/v2/prepared-static.js",
+    "original": "src/v2/prepared-static.js",
+    "mode": "raw",
+    "bodySha256": "b4e8628660c587b5358804be05b011a751cc9790236f816d2ddcbb80cfbcde7c",
+    "imports": [],
     "geometryCalls": []
   }
 ]
