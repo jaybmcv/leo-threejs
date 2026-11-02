@@ -1,3 +1,4 @@
+import {inOtherside} from './otherside.js';
 import {readPass,REMEMBER_S} from './pass.js';
 
 // Connecting Discord on the walk page, through The Creamery (creamery.marscatsvoyage.com), which already holds each
@@ -67,6 +68,25 @@ export async function bestPass(){
 }
 // Off to Creamery to connect Discord, and back to this very page (its ?invite= too).
 export const connectUrl=()=>`${CREAMERY}/leo/connect?return=${encodeURIComponent(location.origin+location.pathname+location.search)}`;
-export function connect(){location.assign(connectUrl());}
+export function connect(){if(!inOtherside)location.assign(connectUrl());}
+// The same in a small window, so the visitor stays where they are in the walk, and the only way from inside Otherside's
+// frame. Creamery brings the window back to this page with ?leo-popup=1, where walk.html's first script hands what came
+// back to this page and closes it. Resolves to {pass, name} or {error: 'blocked'|'cancelled'|'failed'}.
+export function connectPopup(){
+ const back=new URL(location.origin+location.pathname+location.search);back.searchParams.set('leo-popup','1');
+ const win=open(`${CREAMERY}/leo/connect?return=${encodeURIComponent(back.href)}`,'leo-discord','popup,width=520,height=720');
+ if(!win)return Promise.resolve({error:'blocked'});
+ const known=local.get(KEPT);
+ return new Promise(done=>{
+  const finish=(pass,error)=>{
+   removeEventListener('message',heard);clearInterval(watch);
+   if(pass&&fresh(pass)){local.set(KEPT,pass);done({pass,name:nameOf(readPass(pass))});}else done({error:error||'failed'});
+  };
+  const heard=e=>{if(e.origin===location.origin&&e.source===win&&e.data?.leoPassBack)finish(e.data.pass,e.data.error);};
+  // Closed with no word: it may have lost its link to this page on the way, and kept the pass where this page can see it.
+  const watch=setInterval(()=>{if(!win.closed)return;const kept=local.get(KEPT);finish(kept!==known?kept:null,'cancelled');},500);
+  addEventListener('message',heard);
+ });
+}
 // "Not you?", or a pass Leo live refused: forget the pass in this browser (Creamery's own sign-in is Creamery's).
 export function forget(){local.set(KEPT,null);}

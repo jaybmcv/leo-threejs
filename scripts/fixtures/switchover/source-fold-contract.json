@@ -14,7 +14,7 @@
     "file": "server/arena.mjs",
     "original": "server/arena.mjs",
     "mode": "raw",
-    "bodySha256": "1dcfb3dbd09c4ca57d3cfbaf50d04f6dee2d06699446b7c19c48d280486b05e4",
+    "bodySha256": "e973020aecf1aeb554916500ee6b97042aa17cd3765f32befa5f61263eb69265",
     "imports": [
       "codes",
       "node:fs"
@@ -52,7 +52,7 @@
     "file": "server/live-core.mjs",
     "original": "server/live-core.mjs",
     "mode": "raw",
-    "bodySha256": "3ba8afe194241cd2768c3844da202dff14e00f8e5e48c6a49315741688178b7b",
+    "bodySha256": "e4a8c4044ed4a3f771b50a193ca006b3e03be9a28931e7b8c9b98f790e34ef4a",
     "imports": [
       "node:http",
       "../src/v2/live-spatial.js",
@@ -3257,8 +3257,9 @@
     "file": "src/walk/help.js",
     "original": "src/walk/help.js",
     "mode": "raw",
-    "bodySha256": "8f7678b97d0edacbd1875d83ce6b80212513896b26cea6dc300ced3ae55e3f5b",
+    "bodySha256": "ff9c824755068e2e94457b697dbb09d275984dba6689dc25c6d7b9d290249016",
     "imports": [
+      "./net/otherside.js",
       "../v2/help-wayfinding.js",
       "../plan/rooms.js"
     ],
@@ -3639,7 +3640,7 @@
     "file": "src/walk/main.js",
     "original": "src/walk/main.js",
     "mode": "raw",
-    "bodySha256": "071c8aeaa191867afa3fb1492a317dd3f89a8da5afc680638fb4225f2e4388e8",
+    "bodySha256": "e238fdc9ef3717bfee6c1e951aaca18675784486f806fdd37fc9ba36c6f4fa2f",
     "imports": [
       "../v2/atrium-visibility.js",
       "../v2/goto-menu.js",
@@ -3697,6 +3698,7 @@
       "./trim.js",
       "./net/live.js",
       "./net/connect.js",
+      "./net/otherside.js",
       "./remotes.js",
       "./lounge-floor.js",
       "./lift-tile-floor.js",
@@ -3831,8 +3833,10 @@
     "file": "src/walk/mudwater-giveaway.js",
     "original": "src/walk/mudwater-giveaway.js",
     "mode": "raw",
-    "bodySha256": "b51b68214100070af08a26dff61f926a52c13c162a82a93ed3ebd113c69c2128",
-    "imports": [],
+    "bodySha256": "10ccbe27a7e0e71547fe89179a3de5a81256d2538328b5687f46a154318a1eee",
+    "imports": [
+      "./net/otherside.js"
+    ],
     "geometryCalls": []
   },
   {
@@ -3852,8 +3856,9 @@
     "file": "src/walk/net/connect.js",
     "original": "src/walk/net/connect.js",
     "mode": "raw",
-    "bodySha256": "6b789a17882e036c35941821fdab1beade8114d06fc013f77556cf437e27dfb2",
+    "bodySha256": "cb106da50cab5c119c489ab38685481f14244daf1f37477d59b7acd664685489",
     "imports": [
+      "./otherside.js",
       "./pass.js"
     ],
     "geometryCalls": []
@@ -3862,7 +3867,7 @@
     "file": "src/walk/net/live.js",
     "original": "src/walk/net/live.js",
     "mode": "raw",
-    "bodySha256": "623443297dddb280ee2500719b6ee352a56578448579760dd5d8dd017ee1f1b1",
+    "bodySha256": "08f74ab6963d0bce53a4bc40e8b8e71cebcf663bf765fb4519fc0a0b883bdd12",
     "imports": [
       "../../v2/live-identity.js",
       "./wire.js"
@@ -4663,7 +4668,7 @@
     "file": "server/live-core.authoring.mjs",
     "original": "server/live-core.mjs",
     "mode": "authoring",
-    "bodySha256": "3ba8afe194241cd2768c3844da202dff14e00f8e5e48c6a49315741688178b7b",
+    "bodySha256": "e4a8c4044ed4a3f771b50a193ca006b3e03be9a28931e7b8c9b98f790e34ef4a",
     "imports": [
       "node:http",
       "../src/v2/live-spatial.authoring.js",
@@ -6202,7 +6207,7 @@
     "file": "src/walk/main.authoring.js",
     "original": "src/walk/main.js",
     "mode": "authoring",
-    "bodySha256": "13f9885d9c97c6a224fdea438d2efedd201360209f7d074a383b9f1e31f0f54c",
+    "bodySha256": "79b145424e3effa87dec16bcba5153d294a60c09217c171c8b3112c21c15800a",
     "imports": [
       "../v2/atrium-visibility.js",
       "../v2/build-cache.authoring.js",
@@ -6263,6 +6268,7 @@
       "./trim.authoring.js",
       "./net/live.js",
       "./net/connect.js",
+      "./net/otherside.js",
       "./remotes.authoring.js",
       "./lounge-floor.authoring.js",
       "./lift-tile-floor.authoring.js",
@@ -6856,7 +6862,7 @@
     "file": "server/live-core.prepared.mjs",
     "original": "server/live-core.mjs",
     "mode": "prepared",
-    "bodySha256": "3ba8afe194241cd2768c3844da202dff14e00f8e5e48c6a49315741688178b7b",
+    "bodySha256": "e4a8c4044ed4a3f771b50a193ca006b3e03be9a28931e7b8c9b98f790e34ef4a",
     "imports": [
       "node:http",
       "../src/v2/live-spatial.prepared.js",
@@ -7547,7 +7553,7 @@
     "file": "src/walk/main.prepared.js",
     "original": "src/walk/main.js",
     "mode": "prepared",
-    "bodySha256": "20ead7bd371ad65401b3e3fe7b21f587636af23ddf1763ba83590c2385298cf2",
+    "bodySha256": "513af2f0a95ba66d73a63b67ba56bbac979f3ba8e255d41604d13633beb6fb86",
     "imports": [
       "../v2/prepared-static.js",
       "../v2/atrium-visibility.js",
@@ -7605,6 +7611,7 @@
       "./trim.prepared.js",
       "./net/live.js",
       "./net/connect.js",
+      "./net/otherside.js",
       "./remotes.js",
       "./lounge-floor.js",
       "./lift-tile-floor.js",
@@ -8066,7 +8073,7 @@
     "file": "server/live-core.public.mjs",
     "original": "server/live-core.mjs",
     "mode": "public",
-    "bodySha256": "3ba8afe194241cd2768c3844da202dff14e00f8e5e48c6a49315741688178b7b",
+    "bodySha256": "e4a8c4044ed4a3f771b50a193ca006b3e03be9a28931e7b8c9b98f790e34ef4a",
     "imports": [
       "node:http",
       "../src/v2/live-spatial.public.js",
@@ -8828,7 +8835,7 @@
     "file": "src/walk/main.public.js",
     "original": "src/walk/main.js",
     "mode": "public",
-    "bodySha256": "c7cdb2e442d7d407e5f2f85da85ca001f988df0ccafc4e14f0b6bd250fbed455",
+    "bodySha256": "68632664b5dcdf4e14663d4d4349be47a607a05539d145abe6b03b72166cfba6",
     "imports": [
       "../v2/prepared-static.js",
       "../v2/atrium-visibility.js",
@@ -8886,6 +8893,7 @@
       "./trim.public.js",
       "./net/live.js",
       "./net/connect.js",
+      "./net/otherside.js",
       "./remotes.js",
       "./lounge-floor.js",
       "./lift-tile-floor.js",
