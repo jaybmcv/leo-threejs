@@ -2,5 +2,45 @@
   "server/leo-live.mjs": {
     "sha256": "2b9c96aca273cd914f25057561738116e22001d7458978c82f92537cd98fa4d8",
     "reason": "Stage 3 selects the explicit rollback entry and folded v2 server; verified by both live suites."
+  },
+  "src/v2/atrium-visibility.js": {
+    "sha256": "e72253566c3178a89e460e4a95f90c4c796e13d5c64affffc8be1163f41d8ecc",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/v2/map-labels.js": {
+    "sha256": "5a1aeaea47795d8b0e7096825ebf36a88493bd3486eae78dea249c10c8666abe",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/v2/prepared-runtime.js": {
+    "sha256": "ddc77c8e8a6116e12937baa8d5932f3ad8296cac3e4bcde284a6ac193836ea75",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/walk/aquarium-treasure/suit.js": {
+    "sha256": "7bb58a689bbbe1d7442c7907a5e7d78a0e8fb4aa71aa868b1150213e8fea0f2b",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/walk/main.js": {
+    "sha256": "06a9f3240e01affacd43a2eac8365231bed0a336d532caad9cce6822e954279d",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/v2/prepared-runtime.authoring.js": {
+    "sha256": "d8864d5f105bd42c01926e0f248d30042eed6e2b35c3bdb4b29babb1d8f9a6de",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/walk/main.authoring.js": {
+    "sha256": "e0f12952f5b91400b24d089159b1157d913566962a7aedfb5899f755b04b3e93",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/walk/main.prepared.js": {
+    "sha256": "bb6d05a75bc4e54175753e5d7c81a198f8f062efc908274bbd018a4713b0a3cf",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/v2/prepared-runtime.public.js": {
+    "sha256": "9f58b8c6670df96f25fd31e35f43b8329b125a955e0f47fdd5a5e13385178aae",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/walk/main.public.js": {
+    "sha256": "dad57abed633f57e94474ef98166867bf804eb3e939eb3838f3d47e93033c88a",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
   }
 }
