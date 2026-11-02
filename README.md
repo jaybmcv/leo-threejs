@@ -1,11 +1,13 @@
 # LEO — redesigned ship
 
 The home page retains the original full model inspector, including the Explode
-dial, camera views, deck/room views and `?studio=1` model downloads. Its model is
-the retained layout 1 study. `walk.html` and the Builder's Hub use the current
-layout 2 ship. The layout 2 inspection page remains at `layout2.html`.
+dial, camera views, deck/room views and `?studio=1` model downloads. It loads the
+current layout 2 published exterior and furnished ship, with the same manifest
+as `walk.html`. Room and cabin owners drive the exploded view, including batched
+shells and instanced furnishings. The simpler overview remains at `layout2.html`.
 `scripts/restore-classic-home.mjs` composes these pages after the public build,
-preserving the walk's manifest and prepared assets and rejecting asset collisions.
+preserving the walk's manifest and prepared assets. `viewer-version.json` records
+the exact model hashes and current cabin/berth counts.
 
 ## Layout 2 — default in this checkout
 
