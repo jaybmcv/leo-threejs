@@ -1,0 +1,463 @@
+[
+  {
+    "file": "output/leo-interior-v01/leo-aft-systems.glb",
+    "bytes": 33973632,
+    "sha256": "218223a9acdf5fd19f09bde1e379d2dd3dbb2c6207e9a77b9205af1f17b07b41"
+  },
+  {
+    "file": "output/leo-interior-v01/leo-exterior-phone.glb",
+    "bytes": 11780304,
+    "sha256": "722201adc1296736448fe3fdb65495b3efdc659708f7ea18c4b27466586b949a"
+  },
+  {
+    "file": "output/leo-interior-v01/leo-exterior-refined.glb",
+    "bytes": 69111672,
+    "sha256": "a80d549cda4463531481d13868737cbe0d9e44b98053c4b78c4ec31fc3866237"
+  },
+  {
+    "file": "output/leo-interior-v01/leo-exterior-web.glb",
+    "bytes": 15358020,
+    "sha256": "35624499ad3c5a45f0fc06b936fd593adb0c9445fb2ce95b0138d8a6c6890ff2"
+  },
+  {
+    "file": "output/leo-interior-v01/leo-exterior.glb",
+    "bytes": 27046128,
+    "sha256": "8971e14e0e72951880811b8a7e4f3e57310a733a9d990ba3a2ae2eec4ebabfee"
+  },
+  {
+    "file": "output/leo-interior-v01/leo-full-ship.glb",
+    "bytes": 577094932,
+    "sha256": "0ea506d544c77c134e418f00ca2fc902b88555f19a04506b9778f8700be1dab5"
+  },
+  {
+    "file": "output/leo-interior-v01/leo-garden-commons.glb",
+    "bytes": 22917552,
+    "sha256": "3c69d795f5e1f32cb200ae5b75a64f0fef0c9e8b21d908a65f666e9450335f0a"
+  },
+  {
+    "file": "output/leo-interior-v01/leo-neighborhood.glb",
+    "bytes": 36592344,
+    "sha256": "8194430da3994b23f4594402327b7f8e1374eeb8ec961cccb6abff862b10e9a6"
+  },
+  {
+    "file": "output/leo-interior-v01/leo-residential-decks.glb",
+    "bytes": 46310116,
+    "sha256": "b40ae0eb2099e4be879a77d4fb29679459b589813f2aa3ffbcb0ca582ecf6917"
+  },
+  {
+    "file": "output/leo-interior-v01/leo-service-areas.glb",
+    "bytes": 372112580,
+    "sha256": "d8384c6073d41f17bf80bc8d6438a822cb4d688498d95c63786f7485fcebade8"
+  },
+  {
+    "file": "output/leo-interior-v01/leo-transit.glb",
+    "bytes": 23630992,
+    "sha256": "0696fac94170ca4d16acca46773b9056086ce83e3f2150703f71f893a394ac03"
+  },
+  {
+    "file": "output/leo-interior-v02/leo-aft-systems.glb",
+    "bytes": 8259628,
+    "sha256": "30796b4d27557b8dd1aa13de1108f45e7a96dcf930f9ece0e0c769307fd24155",
+    "finalizationFingerprint": "534cc4520ab248df15ec4b45e0e33dc901231e9c98277686330e28c1a73bb28e"
+  },
+  {
+    "file": "output/leo-interior-v02/leo-exterior-phone.glb",
+    "bytes": 11253896,
+    "sha256": "1f66384d354288957efffb7fd63b231a90da3c0a3e3ffa65a768a170be9386a6",
+    "finalizationFingerprint": "3b3dd6d56d77953305734009c2d86b3a0c83f73ceff005b4c95ddf7fcbb253ee"
+  },
+  {
+    "file": "output/leo-interior-v02/leo-exterior-refined.glb",
+    "bytes": 83504944,
+    "sha256": "cd6d341d3006a35981d8388e62159aee95f717387e428e0db357bbb6799cf3d8",
+    "finalizationFingerprint": "3b3dd6d56d77953305734009c2d86b3a0c83f73ceff005b4c95ddf7fcbb253ee"
+  },
+  {
+    "file": "output/leo-interior-v02/leo-exterior-web.glb",
+    "bytes": 31258804,
+    "sha256": "033a983f7f1ba088127aa6dc0d41878ec8d21831be9cccbfa6853496cd0ff7d2",
+    "finalizationFingerprint": "3b3dd6d56d77953305734009c2d86b3a0c83f73ceff005b4c95ddf7fcbb253ee"
+  },
+  {
+    "file": "output/leo-interior-v02/leo-exterior.glb",
+    "bytes": 83504944,
+    "sha256": "cd6d341d3006a35981d8388e62159aee95f717387e428e0db357bbb6799cf3d8",
+    "finalizationFingerprint": "3b3dd6d56d77953305734009c2d86b3a0c83f73ceff005b4c95ddf7fcbb253ee"
+  },
+  {
+    "file": "output/leo-interior-v02/leo-full-ship.glb",
+    "bytes": 544113536,
+    "sha256": "fd2d4001f89028a7361475f698deb86e8abcfe18f1c0d106edd771cf1d16e221",
+    "finalizationFingerprint": "534cc4520ab248df15ec4b45e0e33dc901231e9c98277686330e28c1a73bb28e"
+  },
+  {
+    "file": "output/leo-interior-v02/leo-garden-commons.glb",
+    "bytes": 20530096,
+    "sha256": "af911d9fa945b7557a93375f46ea046ef062a4840cbf3a92681c4159b7b5b555",
+    "finalizationFingerprint": "534cc4520ab248df15ec4b45e0e33dc901231e9c98277686330e28c1a73bb28e"
+  },
+  {
+    "file": "output/leo-interior-v02/leo-neighborhood.glb",
+    "bytes": 33512328,
+    "sha256": "461e2e42baa6cf3f819ac710477f78ed47d04eeca8102551a74e80b3b6f7e154",
+    "finalizationFingerprint": "534cc4520ab248df15ec4b45e0e33dc901231e9c98277686330e28c1a73bb28e"
+  },
+  {
+    "file": "output/leo-interior-v02/leo-residential-decks.glb",
+    "bytes": 286383856,
+    "sha256": "8e148c99d473e5bf3a762ce4abb1e0843ec75726c67996c8545f97501c67d49e",
+    "finalizationFingerprint": "534cc4520ab248df15ec4b45e0e33dc901231e9c98277686330e28c1a73bb28e"
+  },
+  {
+    "file": "output/leo-interior-v02/leo-service-areas.glb",
+    "bytes": 143036116,
+    "sha256": "fdce6752908e04ad1d1dea362f8e65cf9dceca59daeca4ffc327091f99d87688",
+    "finalizationFingerprint": "534cc4520ab248df15ec4b45e0e33dc901231e9c98277686330e28c1a73bb28e"
+  },
+  {
+    "file": "output/leo-interior-v02/leo-transit.glb",
+    "bytes": 9888700,
+    "sha256": "84c3c2a68e800d99f6add80926ef7b39f2739e6175a23cf3404dad7ca38864c0",
+    "finalizationFingerprint": "534cc4520ab248df15ec4b45e0e33dc901231e9c98277686330e28c1a73bb28e"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/complete.json",
+    "bytes": 1490,
+    "sha256": "1f95b5dbf197769c61b5cd4a1e24657a897e3774650d246d5f74757128824395"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-0.bin",
+    "bytes": 1408118,
+    "sha256": "5c95730862f24b018cf8a9d395499704b186190330634b8beda27a344aabfe90"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-1.bin",
+    "bytes": 3817214,
+    "sha256": "0a806d85ace37c99f3700c2f3ac8d2211adcba6717f331e189f0a0d166a1b81f"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-10.bin",
+    "bytes": 859494,
+    "sha256": "344b0ae122e73b4ea1071ad794072d81846bc6ae7a7759283d5e004096b5672c"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-11.bin",
+    "bytes": 541779,
+    "sha256": "a2acdff4c077fe6b3d8c5438bad80d593335b8956e38ed8ef0aa4fcdeb4fc14e"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-12.bin",
+    "bytes": 503939,
+    "sha256": "6fd5acd256a54ff8ba79cc8a29cf10614d6aa00d763a2beded35a4865a013e74"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-13.bin",
+    "bytes": 1170559,
+    "sha256": "88709fcd2e004dd9b0821c807bd982c74fd2965c82696d2089f12f4d1f05579b"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-14.bin",
+    "bytes": 1783401,
+    "sha256": "7cb2f08091c14648119bc1b6e17a2b9fc4260a2145150b24c2a876b2c1ec9f97"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-15.bin",
+    "bytes": 812179,
+    "sha256": "9b894d3553792e23f0cfbd4bacae78d222ec5702611755c6e254ec878e0ee748"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-16.bin",
+    "bytes": 1149390,
+    "sha256": "2235f3683404f2b3924da00f121c0b5a6e5a2732b433b3aa19a12ccbe7cafed5"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-17.bin",
+    "bytes": 3166222,
+    "sha256": "e55104c1c34519a6cc60e54dfece1ba4a6f6af3def04498a5fe5ccf40ae9214c"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-18.bin",
+    "bytes": 4760032,
+    "sha256": "abd4b2b5acc3c4557e05067c2475fa6ac21355bb151074404335cc8cf5bc0fbc"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-19.bin",
+    "bytes": 5070768,
+    "sha256": "0eb98000b32f278508c1d4ebc0aeb5360f5a912dfe1769ef31627a1b51b0d5df"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-2.bin",
+    "bytes": 7199040,
+    "sha256": "c639530739026c3818a7ae70dc6f3ae4d1c70fe1a29a9b3d7f555a3366dcb1dd"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-20.bin",
+    "bytes": 5142855,
+    "sha256": "f1565e498f2bf4def9d3dd9152e7c08510e27e2460017f688dbb54a99d985fbc"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-21.bin",
+    "bytes": 4533531,
+    "sha256": "4fd7bb984e859eacbc787fccf756005839b99ba06d1a0c613dc41f0efca1fb1f"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-22.bin",
+    "bytes": 4240468,
+    "sha256": "56512796f48d7be6c68dd9e6cef148e3dc1a2a5eb9b21181230b7872ae60a367"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-23.bin",
+    "bytes": 5409199,
+    "sha256": "e0455d01ac7d9bd3f43c369e9717002822dfbfd1d18691d334a78bf7459c3040"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-24.bin",
+    "bytes": 3221083,
+    "sha256": "ff01ef7d7bcb1a482429b01c1bf113d3a79fece344078d62e6eb5a9c758c9101"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-25.bin",
+    "bytes": 3200343,
+    "sha256": "2961c0d947e94f84db5deea328559c7f381e3b1a65c3d95675b5df221b6e8931"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-26.bin",
+    "bytes": 4637675,
+    "sha256": "6f9916aab415d7b4c9c183406416f26556ae6117dedecd3d1f408621e94d5b81"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-27.bin",
+    "bytes": 5166475,
+    "sha256": "8a4346095e8e789c3b2a30de7c102295a11ff4962db6485e0768bfd93f4fe261"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-28.bin",
+    "bytes": 3571499,
+    "sha256": "f11fca5a6c9e458039d3d6566b9df3e3eed660311f9e1b5e07a9cfb8f0f9d8ba"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-29.bin",
+    "bytes": 6269030,
+    "sha256": "17c726678cc823f8c0385f5f02bb055492acc5ae62aa800dc1be5beeb3143a92"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-3.bin",
+    "bytes": 7140107,
+    "sha256": "5337952c11e9c756764b5ffdbe5f2c76b2f5d3de82b0d8def6408f4fcb06ad3e"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-4.bin",
+    "bytes": 1180687,
+    "sha256": "6c0cc960152a8737249e4081d934b5b287193ad4ad2ef239606a08c4e9410994"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-5.bin",
+    "bytes": 1313136,
+    "sha256": "61f253e3414b74441307860886c9663526e3f8e97d5430ebd38a594ffba78dec"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-6.bin",
+    "bytes": 868217,
+    "sha256": "ac28b7b8f1aaaa11c2775ca9d4d2166c112cb0662660c4c20461861799900252"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-7.bin",
+    "bytes": 1571472,
+    "sha256": "b832fa34c46b603d96a12a26eb132ceead98cdbf874382c8f3a65699cbb4934d"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-8.bin",
+    "bytes": 2131786,
+    "sha256": "abe78eb5cbb0cbbbe86d0351efa1d2e76457904f052ea783073ec93af3b8cc71"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/geometry-9.bin",
+    "bytes": 2972072,
+    "sha256": "23187b295e8c7d5e7238d5d19b47a61f90602c550350fb0db8c7dbadf8a2aeb1"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/integrity.json",
+    "bytes": 44301,
+    "sha256": "84b710fbf2f601a81e3958effd4e2a952540c30ad54ed3beb2e9765b82a42128"
+  },
+  {
+    "file": "output/leo-interior-v02/prepared-walk/world.bin",
+    "bytes": 18562175,
+    "sha256": "12cb78ef5e1d21b41b7a149dc1e08464e99db029968492e1b38d9eee846db70c"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-0.bin",
+    "bytes": 1408118,
+    "sha256": "5c95730862f24b018cf8a9d395499704b186190330634b8beda27a344aabfe90"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-1.bin",
+    "bytes": 3817214,
+    "sha256": "0a806d85ace37c99f3700c2f3ac8d2211adcba6717f331e189f0a0d166a1b81f"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-10.bin",
+    "bytes": 859494,
+    "sha256": "344b0ae122e73b4ea1071ad794072d81846bc6ae7a7759283d5e004096b5672c"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-11.bin",
+    "bytes": 541779,
+    "sha256": "a2acdff4c077fe6b3d8c5438bad80d593335b8956e38ed8ef0aa4fcdeb4fc14e"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-12.bin",
+    "bytes": 503939,
+    "sha256": "6fd5acd256a54ff8ba79cc8a29cf10614d6aa00d763a2beded35a4865a013e74"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-13.bin",
+    "bytes": 1170559,
+    "sha256": "88709fcd2e004dd9b0821c807bd982c74fd2965c82696d2089f12f4d1f05579b"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-14.bin",
+    "bytes": 1783401,
+    "sha256": "7cb2f08091c14648119bc1b6e17a2b9fc4260a2145150b24c2a876b2c1ec9f97"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-15.bin",
+    "bytes": 812179,
+    "sha256": "9b894d3553792e23f0cfbd4bacae78d222ec5702611755c6e254ec878e0ee748"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-16.bin",
+    "bytes": 1149390,
+    "sha256": "2235f3683404f2b3924da00f121c0b5a6e5a2732b433b3aa19a12ccbe7cafed5"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-17.bin",
+    "bytes": 3166222,
+    "sha256": "e55104c1c34519a6cc60e54dfece1ba4a6f6af3def04498a5fe5ccf40ae9214c"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-18.bin",
+    "bytes": 4760032,
+    "sha256": "abd4b2b5acc3c4557e05067c2475fa6ac21355bb151074404335cc8cf5bc0fbc"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-19.bin",
+    "bytes": 5070768,
+    "sha256": "0eb98000b32f278508c1d4ebc0aeb5360f5a912dfe1769ef31627a1b51b0d5df"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-2.bin",
+    "bytes": 7199040,
+    "sha256": "c639530739026c3818a7ae70dc6f3ae4d1c70fe1a29a9b3d7f555a3366dcb1dd"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-20.bin",
+    "bytes": 5142855,
+    "sha256": "f1565e498f2bf4def9d3dd9152e7c08510e27e2460017f688dbb54a99d985fbc"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-21.bin",
+    "bytes": 4533531,
+    "sha256": "4fd7bb984e859eacbc787fccf756005839b99ba06d1a0c613dc41f0efca1fb1f"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-22.bin",
+    "bytes": 4240468,
+    "sha256": "56512796f48d7be6c68dd9e6cef148e3dc1a2a5eb9b21181230b7872ae60a367"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-23.bin",
+    "bytes": 5409199,
+    "sha256": "e0455d01ac7d9bd3f43c369e9717002822dfbfd1d18691d334a78bf7459c3040"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-24.bin",
+    "bytes": 3221083,
+    "sha256": "ff01ef7d7bcb1a482429b01c1bf113d3a79fece344078d62e6eb5a9c758c9101"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-25.bin",
+    "bytes": 3200343,
+    "sha256": "2961c0d947e94f84db5deea328559c7f381e3b1a65c3d95675b5df221b6e8931"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-26.bin",
+    "bytes": 4637675,
+    "sha256": "6f9916aab415d7b4c9c183406416f26556ae6117dedecd3d1f408621e94d5b81"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-27.bin",
+    "bytes": 5166475,
+    "sha256": "8a4346095e8e789c3b2a30de7c102295a11ff4962db6485e0768bfd93f4fe261"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-28.bin",
+    "bytes": 3571499,
+    "sha256": "f11fca5a6c9e458039d3d6566b9df3e3eed660311f9e1b5e07a9cfb8f0f9d8ba"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-29.bin",
+    "bytes": 6269030,
+    "sha256": "17c726678cc823f8c0385f5f02bb055492acc5ae62aa800dc1be5beeb3143a92"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-3.bin",
+    "bytes": 7140107,
+    "sha256": "5337952c11e9c756764b5ffdbe5f2c76b2f5d3de82b0d8def6408f4fcb06ad3e"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-4.bin",
+    "bytes": 1180687,
+    "sha256": "6c0cc960152a8737249e4081d934b5b287193ad4ad2ef239606a08c4e9410994"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-5.bin",
+    "bytes": 1313136,
+    "sha256": "61f253e3414b74441307860886c9663526e3f8e97d5430ebd38a594ffba78dec"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-6.bin",
+    "bytes": 868217,
+    "sha256": "ac28b7b8f1aaaa11c2775ca9d4d2166c112cb0662660c4c20461861799900252"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-7.bin",
+    "bytes": 1571472,
+    "sha256": "b832fa34c46b603d96a12a26eb132ceead98cdbf874382c8f3a65699cbb4934d"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-8.bin",
+    "bytes": 2131786,
+    "sha256": "abe78eb5cbb0cbbbe86d0351efa1d2e76457904f052ea783073ec93af3b8cc71"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/geometry-9.bin",
+    "bytes": 2972072,
+    "sha256": "23187b295e8c7d5e7238d5d19b47a61f90602c550350fb0db8c7dbadf8a2aeb1"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/integrity.json",
+    "bytes": 44301,
+    "sha256": "84b710fbf2f601a81e3958effd4e2a952540c30ad54ed3beb2e9765b82a42128"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/world-meta-0.bin",
+    "bytes": 8388608,
+    "sha256": "cd948ab3f469a862e9b9dbb14c7f0ab308ca6aca1d8f7e4141b50b7bfe26a2d1"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/world-meta-1.bin",
+    "bytes": 8388608,
+    "sha256": "8f28c2646796773d497d06111c18067644278d59c5134269565edffc68ad5d91"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/world-meta-2.bin",
+    "bytes": 1784959,
+    "sha256": "8d66281217386fd420e7120c9dd8bd7b7fdbf9accdc9cfe19351ea1d195e5004"
+  },
+  {
+    "file": "dist-v2/prepared-walk/188d1e48a8a0a8940e8a/world.parts.json",
+    "bytes": 506,
+    "sha256": "6ba00ecb4a7619a7c4febf6cddd6a8f19f7e8a4cb6ce62be96fdbf3b287d9bc2"
+  }
+]

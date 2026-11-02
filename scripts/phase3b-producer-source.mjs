@@ -1,0 +1,1 @@
+import {closedWebSource} from './hull-source-v2.mjs';const s=await closedWebSource();console.log(JSON.stringify({key:s.key,file:s.file,uncutFile:s.uncutFile}));

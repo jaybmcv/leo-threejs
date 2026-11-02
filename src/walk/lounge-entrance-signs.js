@@ -1,3 +1,4 @@
+import {fitLoungeEntrance} from '../v2/community-routes.js';
 import * as T from 'three';
 import {placedV1,placeObject} from '../plan/placements.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -88,7 +89,7 @@ function createSign(deck,key,mats){
  add(mats.pool,at(new T.PlaneGeometry(NECK.half*2-.1,sl),0,.03,-len/2,-Math.PI/2));
 
  for(const [m,list] of parts){const o=new T.Mesh(mergeGeometries(list.map(g=>g.index?g.toNonIndexed():g)),m);o.name=m.name;o.userData.noCollide=true;group.add(o);}
- group.updateMatrixWorld(true);placeObject(group,key);return group;
+ group.updateMatrixWorld(true);placeObject(group,key);fitLoungeEntrance(group,deck);return group;
 }
 
 export function createLoungeEntranceSigns(){

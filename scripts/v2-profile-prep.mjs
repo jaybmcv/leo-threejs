@@ -1,0 +1,1 @@
+import {loadV2} from './v2-world.mjs';import {prepareExteriorForWalking} from '../src/v2/world.js';const start=Date.now(),ship=await loadV2();console.log('Profile loaded',Date.now()-start);prepareExteriorForWalking(ship);console.log('Profile exterior and structure prepared',Date.now()-start);

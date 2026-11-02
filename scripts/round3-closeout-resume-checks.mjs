@@ -1,0 +1,14 @@
+import fs from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {walkBuildIdentity,readCurrentWalkReport} from './v2-walk-identity.mjs';
+import {startupPublicIdentity} from './startup-public-identity-v2.mjs';
+const out='output/phase3/closeout/final',file=out+'/validation.json',prior=JSON.parse(await fs.readFile(file)),identity=await walkBuildIdentity(),pub=await startupPublicIdentity('dist-v2');
+await readCurrentWalkReport();
+for(const name of ['public','default-check','v1-identity','full-flood','native','main-native','five-views','atrium-public','deck-costs','rooms','exterior'])assert(prior.results.some(r=>r.name===name&&r.exitCode===0),'Missing completed stage '+name);
+for(const f of ['output/phase3/native-features.json','output/phase3/main-features-followup.json'])assert.deepEqual(JSON.parse(await fs.readFile(f)).publicIdentity,pub,'Stale public evidence '+f);
+assert.equal(JSON.parse(await fs.readFile('output/phase3b/render-rollout.json')).buildIdentity,identity.hash);
+await fs.copyFile(file,out+'/validation-before-fixture-repair.json');await fs.copyFile(out+'/v2-check.log',out+'/v2-check-before-fixture-repair.log');
+const results=prior.results.filter(r=>!['v2-check','summary'].includes(r.name)),resumed=new Date().toISOString();
+async function stage(name,script){console.log(new Date().toISOString(),'START',name);const f=await fs.open(out+'/'+name+'.log','w'),p=spawn(process.execPath,['--max-old-space-size=11000','scripts/'+script+'.mjs'],{windowsHide:true,stdio:['ignore',f.fd,f.fd],env:{...process.env,LEO_LAYOUT:'2',LEO_STARTUP_IDLE_BARRIER:out+'/startup-idle.flag'}});const exitCode=await new Promise((r,j)=>{p.once('exit',r);p.once('error',j)});await f.close();results.push({name,exitCode,at:new Date().toISOString()});console.log(new Date().toISOString(),'END',name,exitCode);return exitCode;}
+try{if(await stage('v2-check','check-all')===0)await stage('summary','round3-evidence-summary');}catch(e){console.error(e.stack);results.push({name:'orchestration',exitCode:1,error:String(e.stack)})}finally{assert.equal((await walkBuildIdentity()).hash,identity.hash,'Geometry changed during checks');await fs.writeFile(file,JSON.stringify({...prior,status:results.length===13&&results.every(r=>r.exitCode===0)?'PASS':'FAIL',resumed,finished:new Date().toISOString(),buildIdentity:identity.hash,method:prior.method+' The fixture-only import repair reruns the normal check and summary; all eleven completed geometry/native stages retain the identical prepared/public artifact.',supersededAttempts:[{file:'validation-before-fixture-repair.json',reason:'Collision visibility fixture relative import resolved from its generated output directory.'}],results},null,2));}if(results.length!==13||results.some(r=>r.exitCode!==0))process.exitCode=1;

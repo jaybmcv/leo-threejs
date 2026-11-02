@@ -144,7 +144,7 @@ export function bakeForWalking(root,{skip=()=>false,release=false}={}){
   }
   for(const [b,list] of split){b.parts.push({o,tris:list});b.vertices+=list.length*3;b.indices+=list.length*3;}
  });
- const bands=new Map(),normal=new T.Matrix3(),xyz=[0,0,0],nudges=coplanarNudges(taken);
+ const bands=new Map(),normal=new T.Matrix3(),xyz=[0,0,0],nudges=coplanarNudges(taken.filter(o=>o.name!=="Deck_slab"&&o.name!=="V2_glass_wall"&&!o.userData.batchedEnvelope&&!o.userData.hullEnvelopeBatch&&!o.userData.hullSkinSurface&&!/^Smooth_pressure_envelope/.test(o.name)&&!o.userData.v2SkinClipped&&!o.userData.v2WindowClipped));
  // How many buckets still read each source geometry, and the geometries something left live also draws with.
  const pending=new Map(),users=new Map(),shared=new Set(),bakedSet=new Set(taken);
  if(release){
@@ -159,7 +159,7 @@ export function bakeForWalking(root,{skip=()=>false,release=false}={}){
  };
  for(const b of buckets.values()){
   const P=new Float32Array(b.vertices*3),N=new Int16Array(b.vertices*3),U=textured(b.material)?new Float32Array(b.vertices*2):null,C=b.colors?new Uint16Array(b.vertices*3):null;
-  const I=b.vertices>65535?new Uint32Array(b.indices):new Uint16Array(b.indices);let vo=0,io=0;
+  const preparedRanges=[];const recordRange=(o,vertex,start)=>{const owner=o.geometry.attributes._leo_owner,finish=o.geometry.attributes._leo_finish,own=owner?o.userData.ownerTable?.[owner.getX(vertex)]:null,name=finish?o.userData.finishNames?.[finish.getX(vertex)]:null,previous=preparedRanges.at(-1);if(previous&&previous.source===o.uuid&&previous.owner===own&&previous.finish===name&&previous.start+previous.count===start){previous.count++;return;}preparedRanges.push({source:o.uuid,name:o.name,owner:own,finish:name,start,count:1,userData:Object.fromEntries(['room','interface','component','batchedEnvelope','hullEnvelopeBatch','hullSkinSurface','collisionOnly','role','noCollide','envelopeKind'].filter(k=>o.userData[k]!==undefined).map(k=>[k,o.userData[k]]))});};const I=b.vertices>65535?new Uint32Array(b.indices):new Uint16Array(b.indices);let vo=0,io=0;
   const put=(g,i,at)=>{
    const pos=g.attributes.position,nor=g.attributes.normal,uv=g.attributes.uv,col=g.attributes.color;
    v.fromBufferAttribute(pos,i).applyMatrix4(put.m);
@@ -178,16 +178,16 @@ export function bakeForWalking(root,{skip=()=>false,release=false}={}){
    const flip=o.matrixWorld.determinant()<0,a=flip?2:1,z=flip?1:2;
    if(!tris){
     for(let i=0;i<pos.count;i++)put(g,i,vo+i);
-    const n=idx?idx.length:pos.count;for(let i=0;i<n;i+=3){const f=k=>idx?idx[i+k]:i+k;I[io++]=f(0)+vo;I[io++]=f(a)+vo;I[io++]=f(z)+vo;}
+    const n=idx?idx.length:pos.count;for(let i=0;i<n;i+=3){const f=k=>idx?idx[i+k]:i+k;recordRange(o,f(0),io/3);I[io++]=f(0)+vo;I[io++]=f(a)+vo;I[io++]=f(z)+vo;}
     vo+=pos.count;
    }else{
-    for(const t of tris){for(let k=0;k<3;k++)put(g,idx?idx[t+k]:t+k,vo+k);I[io++]=vo;I[io++]=vo+a;I[io++]=vo+z;vo+=3;}
+    for(const t of tris){for(let k=0;k<3;k++)put(g,idx?idx[t+k]:t+k,vo+k);recordRange(o,idx?idx[t]:t,io/3);I[io++]=vo;I[io++]=vo+a;I[io++]=vo+z;vo+=3;}
    }
   }
   if(release)for(const {o} of b.parts)done(o.geometry);
   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.BufferAttribute(P,3));geo.setAttribute('normal',new T.BufferAttribute(N,3,true));if(U)geo.setAttribute('uv',new T.BufferAttribute(U,2));
   if(C)geo.setAttribute('color',new T.BufferAttribute(C,3,true));
-  geo.setIndex(new T.BufferAttribute(I,1));geo.computeBoundingSphere();geo.computeBoundingBox();
+  geo.userData.preparedRanges=preparedRanges;geo.setIndex(new T.BufferAttribute(I,1));geo.computeBoundingSphere();geo.computeBoundingBox();
   const mesh=new T.Mesh(geo,b.material);mesh.name='Walk_merged_'+(b.material.name||'material');mesh.matrixAutoUpdate=false;
   const id=b.top>b.band?`${b.band}-${b.top}`:b.band;
   let group=bands.get(id);if(!group){group=new T.Group();group.name='Walk_band_'+id;group.userData.band=b.band;group.userData.top=b.top;bands.set(id,group);}

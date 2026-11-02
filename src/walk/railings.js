@@ -34,7 +34,7 @@ export function planRails(decks,colliders){
     const i1=i+dx,j1=j+dz,i2=i+2*dx,j2=j+2*dz;if(i2<0||i2>=NX||j2<0||j2>=NZ)continue;
     const n=j1*NX+i1;
     // The floor goes on (or steps down less than the drop), or this is a lift's footprint.
-    if(d.height[n]>y-RAIL.drop||d.designed[n]&&!(d.height[n]===d.height[n]))continue;
+    if(d.height[n]>y-RAIL.drop)continue;
     const bx=x+dx*CELL,bz=z+dz*CELL;if(inShaft(bx,bz))continue;
     if(caught(bx,bz,y)||caught(bx+dx*CELL,bz+dz*CELL,y))continue;
     // Something already stands at the edge: a wall, a partition, a balustrade, glass.
@@ -53,7 +53,7 @@ export function planRails(decks,colliders){
   }
  }
  // Runs shorter than half a metre are seams, not edges.
- return rows.filter(r=>r[3]-r[2]>=.5);
+ return rows.filter(r=>r[3]-r[2]>=.1);
 }
 
 // One merged mesh of railings: posts, a top rail and a mid rail, in the brushed steel of Leo's balustrades.

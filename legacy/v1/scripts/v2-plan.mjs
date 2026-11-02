@@ -1,0 +1,2 @@
+import fs from 'node:fs/promises';import {preparedV2} from './v2-world.mjs';import layout from 'v2-layout';
+const {plan,image}=await preparedV2({map:true});plan.shells=layout.rooms.filter(r=>!r.aggregate).map(r=>({id:r.id,deck:r.deck,polygon:r.polygon,door:r.door,fittingDoor:r.fittingDoor}));await fs.writeFile('output/leo-interior-v02/walk-plan.json',JSON.stringify(plan));await fs.writeFile('output/leo-interior-v02/walk-map.png',image);console.log('v2 partitions/shells, guards and map regenerated');

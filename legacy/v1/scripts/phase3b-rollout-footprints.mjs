@@ -1,0 +1,1 @@
+import fs from 'node:fs/promises';import {requireCabinFootprints} from '../src/plan/cabin-footprints-v2.js';const L=JSON.parse(await fs.readFile('output/phase3b/all-cabin-layout.json'));console.log(JSON.stringify(requireCabinFootprints(L)));

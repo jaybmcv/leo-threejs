@@ -1,3 +1,4 @@
+import {recordKittenSupports} from '../v2/room-feature-supports.js';
 import {roomObject} from '../plan/rooms.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -219,5 +220,5 @@ export function createKittens(ship,kit){
  for(const side of [-1,1])for(const x of [-16,-3,10])shelves(x,side);
 
  for(const [m,list] of parts){const o=new T.Mesh(mergeGeometries(list),m);o.name=m.name;o.castShadow=true;o.receiveShadow=true;group.add(o);}
- return {group,solid};
+ recordKittenSupports(ship,solid);return {group,solid};
 }

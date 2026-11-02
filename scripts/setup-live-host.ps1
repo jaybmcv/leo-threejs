@@ -29,7 +29,8 @@
 param(
   [string]$Tunnel = "mcv-voyagers-reach",
   [string]$Hostname = "leo-live.marscatsvoyage.com",
-  [int]$Port = 8090
+  [int]$Port = 8090,
+  [ValidateSet(1,2)][int]$Layout = 2
 )
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -49,7 +50,7 @@ foreach ($p in @(Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Whe
 }
 # "call" keeps cmd's /c line from opening with "" (the quoted node path): conhost mangles that and exits 0 without
 # ever starting node
-$run = "--headless cmd.exe /d /c `"call `"$node`" server\leo-live.mjs >> `"$log`" 2>&1`""
+$run = "--headless cmd.exe /d /c `"set LEO_LAYOUT=$Layout&& set PORT=$Port&& call `"$node`" server\leo-live.mjs >> `"$log`" 2>&1`""
 $action = New-ScheduledTaskAction -Execute (Join-Path $env:WINDIR "System32\conhost.exe") -Argument $run -WorkingDirectory $repo
 $atLogon = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $everyMinute = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)

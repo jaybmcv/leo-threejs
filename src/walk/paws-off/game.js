@@ -1,3 +1,4 @@
+import {treadmillNear} from '../../v2/activity-layout.js';
 import * as T from 'three';
 import {roomObject} from '../../plan/rooms.js';
 import {newGame,step,press,pad,beltAt} from './rules.js';
@@ -236,9 +237,7 @@ export function createPawsOff(ship,{ground,more=[],gym=()=>false,me=()=>null,onS
   // The use prompt, standing at a treadmill (or on it).
   near(p){
    for(const m of mills){
-    if(Math.abs(p.y-m.top)>1.2)continue;
-    const dx=p.x-m.centre.x,dz=p.z-m.centre.z,a=dx*m.front.x+dz*m.front.z,s=-dx*m.front.z+dz*m.front.x;
-    if(Math.abs(a)<m.length/2+REACH&&Math.abs(s)<m.width/2+REACH)return {kind:'treadmill',label:'Play Paws Off',mill:m};
+    if(treadmillNear(p,m))return {kind:'treadmill',label:'Play Paws Off',mill:m};
    }
    return null;
   },

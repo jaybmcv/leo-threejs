@@ -1,3 +1,4 @@
+import layout from '../plan/selected-layout.js';
 import * as T from 'three';
 import {anchorObject} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -59,12 +60,7 @@ void main(){
 
 // The hallway floors as rectangles [x0,x1,z0,z1]: the spine (on through the forward lift lobby, which transit.js lays
 // 8 m forward of the core) and each side corridor either side of it.
-function hallways(){
- const plan=serviceRoutes(DECK),{x0,x1,width}=plan.spine,lobby=TRANSIT_CORES.find(c=>c.id==='forward').x+8,w=width/2;
- const rects=[[x0,Math.max(x1,lobby),-w,w]];
- for(const b of plan.branches)rects.push([b.x0,b.x1,w,b.extent],[b.x0,b.x1,-b.extent,-w]);
- return {y:plan.y,rects};
-}
+function hallways(){const rects=[];for(const c of layout.circulation.corridors.filter(c=>c.deck===1))for(let i=1;i<c.points.length;i++){const a=c.points[i-1],b=c.points[i],w=c.width/2;rects.push([Math.min(a[0],b[0])-w,Math.max(a[0],b[0])+w,Math.min(a[1],b[1])-w,Math.max(a[1],b[1])+w]);}return {y:layout.decks[0].y,rects};}
 
 export function createHexFloor(){
  const {y,rects}=hallways();
