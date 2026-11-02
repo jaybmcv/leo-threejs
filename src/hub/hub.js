@@ -1,5 +1,6 @@
 import {identify,currentPass,forget,CREAMERY} from '../walk/net/connect.js';
 import {FEEDBACK_CONFIG} from '../feedback/config.js';
+import {walkLink as openWalk} from './walk-link.js';
 import {TRACK,pill,note,hasTrack,isMoving,trackNodes,groups,stats,feature,shortDate} from './model.js';
 
 // The Builder's Hub: where testers follow the ideas they sent. Nothing about anyone is in this page or this public
@@ -48,7 +49,37 @@ function slider(shot,name){
  for(const img of [before,after])img.addEventListener('error',()=>box.remove(),{once:true});
  return box;
 }
-const goButton=go=>go?el('a',{className:'go',href:walkLink(go),target:'_blank',rel:'noopener',textContent:'Go see it on Leo'}):null;
+const walk=openWalk();
+// A short message at the foot of the screen, with an optional link.
+let toastTimer=0;
+function toast(text,link=null){
+ document.querySelector('.toast')?.remove();clearTimeout(toastTimer);
+ const t=el('div',{className:'toast',attrs:{role:'status'}},text,link?' ':null,link);
+ document.body.append(t);toastTimer=setTimeout(()=>t.remove(),9000);
+}
+// With a walk open, this moves it and leaves the ship built. Without one, it's an ordinary link to a new tab.
+function goButton(go){
+ if(!go)return null;
+ const link=el('a',{className:'go',href:walkLink(go),target:'_blank',rel:'noopener',textContent:'Go see it on Leo'});
+ link.addEventListener('click',async e=>{
+  if(!walk.isOpen())return;
+  e.preventDefault();
+  const r=await walk.go(go);
+  if(!r.sent){toast('Your Leo tab isn’t answering.',el('a',{href:walkLink(go),target:'_blank',rel:'noopener',textContent:'Open Leo there in a new tab'}));return;}
+  if(r.loading)toast('Your Leo tab is still loading. It’ll go there when it’s ready.');
+  else if(r.ok)toast('Done. Your Leo tab has moved there, so switch back to it.');
+  else toast('Your Leo tab couldn’t get there.',el('a',{href:walkLink(go),target:'_blank',rel:'noopener',textContent:'Open Leo there in a new tab'}));
+ });
+ return link;
+}
+// Back to the walk: to the one already open if there is one, closing this tab when the browser lets it.
+document.querySelector('.home').addEventListener('click',async e=>{
+ if(e.ctrlKey||e.metaKey||e.shiftKey)return;
+ e.preventDefault();
+ if(!await walk.check()){location.assign('walk.html');return;}
+ walk.front();window.close();
+ setTimeout(()=>toast('Your walk is still open in your other tab, so switch back to it.',el('a',{href:'walk.html',textContent:'Start a new one here'})),200);
+});
 
 function trackOf(c){
  const nodes=trackNodes(c),spoken=`Progress: ${nodes.filter(n=>n.reached||n.state==='now').at(-1)?.label||TRACK[0][1]}`;
@@ -311,6 +342,10 @@ $('tabs').addEventListener('keydown',e=>{
 pick(query.get('tab')==='live'?'live':'mine');
 loadMine(asked);
 // Back on this tab after a while: things may have moved.
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastCheck>STALE_MS)refreshMine(asked);});
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden)return;
+ walk.ask();
+ if(Date.now()-lastCheck>STALE_MS)refreshMine(asked);
+});
 // Left open and in view, it still looks now and then.
 setInterval(()=>{if(!document.hidden)refreshMine(asked);},OPEN_LOOK_MS);

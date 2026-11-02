@@ -82,6 +82,7 @@ import {createLeverPanel} from './lever-panel.js';
 import {createTransporters} from './transporter.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 import {createHelp} from './help.js';
+import {listenForHub} from './hub-link.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
 const $=id=>document.getElementById(id);
@@ -92,6 +93,8 @@ const $=id=>document.getElementById(id);
 const STARTING='leo-walk-building';
 try{localStorage.setItem(STARTING,String(Date.now()));}catch{}
 addEventListener('pagehide',()=>{try{localStorage.removeItem(STARTING);}catch{}});
+// From the first moment, so the Builder's Hub knows a walk is on its way and doesn't start a second one.
+const hubLink=listenForHub();
 const timings=[],t0=performance.now();
 // Still building after 20 s means an older machine, with stages ahead that hold the page for a minute at a time: say so,
 // or the browser's "page not responding" prompt looks like the walk has failed.
@@ -501,6 +504,7 @@ mct.lost=c=>{if(resting?.spot.mct?.cart===c&&resting.spot.mct.seat==='driver')st
 // Someone not connected stays on the card until they come aboard, however soon the ship is ready.
 if(LIVE_URL){await identity;if(!me.pass){status('Ready when you are');$('loading-slow').hidden=true;await boarded;}}
 document.body.dataset.ready='1';
+hubLink.ready(search=>{const spot=readSpot(search);if(!spot)return false;closePanels();return goToSpot(spot);});
 let heading=follow.yaw;const safe=controller.position.clone(),finSafe=new T.Vector3(0,-1e3,0);
 // On the floor of one of the crown lift's fin landings (the gallery and the inspection platforms), inside the fin.
 const FIN_STOPS=LIFTS.find(l=>l.id==='crown').stops.filter(s=>!/Crown/.test(s.label)).map(s=>s.y);
