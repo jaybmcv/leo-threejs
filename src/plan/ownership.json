@@ -6877,7 +6877,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "8bdceb5a12361715556498c92bc60602e16dec45048b753d01fe2ebd11530f37"
+      "signature": "a1ac940fee1022b056df111cbb656f590cb963b1d0c5b3cfabf9f218d78942bf"
     },
     {
       "source": "src/walk/hex-floor.js",
@@ -7337,7 +7337,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 38,
-      "signature": "2e0962dff9341df8f7989ac6e257422c5a513a341459cff9fe43e404f97dd18a"
+      "signature": "67453c9afa93835db515e86eeef9d65c10b5996bcc0fd679a1a2b09a53f0608a"
     },
     {
       "source": "src/walk/marks.js",

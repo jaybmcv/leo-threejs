@@ -33,6 +33,7 @@ const walkLink=go=>`walk.html?${go}`;
 // Discord sign-in at The Creamery, which only returns visitors to the walk page; that page sends them straight back here
 // (src/walk/walk.html), keeping this page's query.
 function connect(){
+ if(EMBEDDED){toWalk({kind:'hub-connect'});return;}
  const back=new URL('walk.html',location.href);back.search=location.search;back.searchParams.set('to','hub');back.hash='';
  location.assign(`${CREAMERY}/leo/connect?return=${encodeURIComponent(back.href)}`);
 }
@@ -48,6 +49,19 @@ function slider(shot,name){
  const box=el('div',{className:'cmp'},after,before,line,knob,el('span',{className:'cmp-tag cmp-tag-l',textContent:'BEFORE'}),el('span',{className:'cmp-tag cmp-tag-r',textContent:'AFTER'}),range);
  for(const img of [before,after])img.addEventListener('error',()=>box.remove(),{once:true});
  return box;
+}
+// Inside the walk (walk/hub-panel.js): the walk is right here, so every way back to it just asks it. Never a walk in a frame.
+const EMBEDDED=new URLSearchParams(location.search).has('embed')&&window.parent!==window;
+const toWalk=message=>window.parent.postMessage(message,location.origin);
+if(EMBEDDED){
+ document.documentElement.classList.add('embedded');
+ document.addEventListener('click',e=>{
+  const link=e.target.closest?.('a[href^="walk.html"]');if(!link)return;
+  e.preventDefault();e.stopImmediatePropagation();
+  const search=new URL(link.href).search.slice(1);
+  toWalk(search?{kind:'hub-go',search}:{kind:'hub-close'});
+ },true);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')toWalk({kind:'hub-close'});});
 }
 const walk=openWalk();
 // A short message at the foot of the screen, with an optional link.
@@ -74,7 +88,7 @@ function goButton(go){
 }
 // Back to the walk: to the one already open if there is one, closing this tab when the browser lets it.
 document.querySelector('.home').addEventListener('click',async e=>{
- if(e.ctrlKey||e.metaKey||e.shiftKey)return;
+ if(EMBEDDED||e.ctrlKey||e.metaKey||e.shiftKey)return;
  e.preventDefault();
  if(!await walk.check()){location.assign('walk.html');return;}
  walk.front();window.close();

@@ -35,8 +35,9 @@ function remember(message){errors.push(`${new Date().toISOString().slice(11,19)}
 // own placement rules. onOpen/onClose: pause and resume the page's own keys while the panel is up. identity(): on a page
 // that knows who the tester is, null or {name, pass(), renew()}: their Discord name, a promise of the Leo pass
 // (walk/net/connect.js) that goes with the report, so the capture service can check whose report it is (an expired
-// one when it could not be renewed: the issue says "pass lapsed"), and renew(), called as the panel opens.
-export function installFeedback({renderer,page,context,mount=null,look='pill',css='',identity=null,onOpen=()=>{},onClose=()=>{}}){
+// one when it could not be renewed: the issue says "pass lapsed"), and renew(), called as the panel opens. openHub(report):
+// a page that shows the Builder's Hub itself; without it, its links open a new tab.
+export function installFeedback({renderer,page,context,mount=null,look='pill',css='',identity=null,openHub=null,onOpen=()=>{},onClose=()=>{}}){
  if(!feedbackEnabled())return null;
  addEventListener('error',e=>remember(e.message||'Script error'));
  addEventListener('unhandledrejection',e=>remember(e.reason?.message||e.reason||'Unhandled rejection'));
@@ -149,9 +150,14 @@ export function installFeedback({renderer,page,context,mount=null,look='pill',cs
  // A sent report stays up a little longer, with the way to follow it.
  function done(message,sentId=null){
   ui.sent.textContent=message;ui.sent.hidden=false;
-  if(sentId)ui.sent.append(' ',Object.assign(document.createElement('a'),{href:`hub.html?r=${encodeURIComponent(sentId)}`,target:'_blank',rel:'noopener',textContent:'Track it'}));
+  if(sentId){
+   const track=Object.assign(document.createElement('a'),{href:`hub.html?r=${encodeURIComponent(sentId)}`,target:'_blank',rel:'noopener',textContent:'Track it'});
+   if(openHub)track.addEventListener('click',e=>{e.preventDefault();openHub(sentId);});
+   ui.sent.append(' ',track);
+  }
   leaving=setTimeout(close,sentId?7000:2200);
  }
+ if(openHub)ui.hub.addEventListener('click',e=>{e.preventDefault();openHub(null);});
  ui.button.addEventListener('click',open);
  ui.dropShot.addEventListener('click',()=>{report.shot=null;showShot();});
  ui.record.addEventListener('click',startVoice);

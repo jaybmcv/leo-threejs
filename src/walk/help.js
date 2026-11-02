@@ -63,7 +63,7 @@ const el=(tag,props={},...kids)=>{const e=Object.assign(document.createElement(t
 // sheet: the #help-sheet dialog. touch(): show the on-screen controls (asked at each opening). tester(): the tester
 // guide is there. live(): Leo live is there. onLog(), onFeedback(): open those (Help closes first). onGo(search): go to a
 // spot link's spot.
-export function createHelp(sheet,{touch=()=>false,tester=()=>false,live=()=>false,onLog=()=>{},onFeedback=()=>{},onGo=()=>{}}={}){
+export function createHelp(sheet,{touch=()=>false,tester=()=>false,live=()=>false,onLog=()=>{},onFeedback=()=>{},onHub=null,onGo=()=>{}}={}){
  const tabs=sheet.querySelector('.help-tabs'),pages={play:sheet.querySelector('[data-page="play"]'),ideas:sheet.querySelector('[data-page="ideas"]')};
  let sections=[],playFor=null;
  function buildPlay(touch){
@@ -90,7 +90,7 @@ export function createHelp(sheet,{touch=()=>false,tester=()=>false,live=()=>fals
     el('div',{className:'guide-step'},el('header',{},el('h4',{textContent:title}),el('span',{className:'when',textContent:when})),body));
   }));
   const log=el('button',{type:'button',className:'guide-link',textContent:'Open the ship log'});log.onclick=onLog;
-  const hub=el('a',{className:'guide-link',href:'hub.html',target:'_blank',rel:'noopener',textContent:'Follow your ideas'});
+  const hub=el('a',{className:'guide-link',href:'hub.html',target:'_blank',rel:'noopener',textContent:'Follow your ideas'});if(onHub)hub.addEventListener('click',e=>{e.preventDefault();onHub();});
   const see=el('button',{type:'button',className:'guide-link',textContent:'See it aboard'});see.onclick=()=>onGo(EXAMPLE.go);
   const shot=(kind,path,alt)=>el('figure',{className:kind},el('img',{src:MEDIA+path,alt,loading:'lazy',decoding:'async'}),el('figcaption',{textContent:kind}));
   const send=el('button',{type:'button',className:'guide-send',textContent:'Send feedback'});send.onclick=onFeedback;
