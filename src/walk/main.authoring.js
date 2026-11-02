@@ -59,7 +59,8 @@ import {createLoungeSound} from './lounge-sound.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.authoring.js';
 import {corridorTrim} from './trim.authoring.js';
 import {connectLive,savedName,httpBase} from './net/live.js';
-import {identify,currentPass,bestPass,connect,forget,invite} from './net/connect.js';
+import {identify,currentPass,bestPass,connect,connectPopup,forget,invite} from './net/connect.js';
+import {inOtherside,onGlyph} from './net/otherside.js';
 import {RemotePlayers} from './remotes.authoring.js';
 import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.authoring.js';
 import {tileLiftFloor} from './lift-tile-floor.authoring.js';
@@ -129,12 +130,16 @@ const LIVE_URL=(()=>{const asked=new URLSearchParams(location.search).get('live'
 // until they come aboard. A tester's invite link (?invite=, the same code that turns on tester feedback:
 // feedback/feedback.js), or one this browser kept from an earlier visit to Leo, asks for Discord first, so Leo live can
 // note who used it and their reports can name them. Someone who connected before is remembered in this browser for 30
-// days and goes straight aboard; "Not you?" forgets them.
+// days and goes straight aboard; "Not you?" forgets them. In Otherside (net/otherside.js) there's no login at all:
+// they type a name, or glyph:ready names them and they come straight aboard, with what Discord would give them
+// (server/live-core.mjs), and Discord isn't offered.
 const tester=invite||testerInvite();
-let me={pass:null,name:null,error:null},board;
+let me={pass:null,name:null,error:null},board,glyphed=false,glyph=null,live=null;
 const boarded=new Promise(r=>{board=r;});
-const identity=LIVE_URL?identify().then(r=>{me=r;showWho();return r;}):Promise.resolve(me);
-function showWho(asking=!me.pass&&(!!tester||!!me.error)){
+const identity=LIVE_URL?(inOtherside?Promise.resolve(me):identify()).then(r=>{me=r;showWho();return r;}):Promise.resolve(me);
+function comeAboard(){$('name-input').blur();$('who').hidden=true;board();}
+function showWho(asking=!inOtherside&&!me.pass&&(!!tester||!!me.error)){
+ if(glyphed){comeAboard();return;}
  $('who').hidden=false;$('who-connected').hidden=!me.pass;$('who-ask').hidden=!asking;
  $('who-guest').hidden=!!me.pass||asking;
  if(me.pass){$('who-name').textContent=me.name||'Voyager';return;}
@@ -146,7 +151,9 @@ if(LIVE_URL){
  $('who-connect').addEventListener('click',connect);$('who-later').addEventListener('click',connect);
  $('who-skip').addEventListener('click',()=>{showWho(false);$('name-input').focus();});
  $('who-forget').addEventListener('click',()=>{forget();me={pass:null,name:null,error:null};showWho();});
- $('who-guest').addEventListener('submit',e=>{e.preventDefault();$('name-input').blur();$('who').hidden=true;board();});
+ $('who-guest').addEventListener('submit',e=>{e.preventDefault();comeAboard();});
+ if(inOtherside){$('who-later').hidden=true;$('who-small').hidden=true;$('name-connect').hidden=true;document.querySelector('#name-sheet .verified-note').textContent='Your name aboard is your Glyph name.';}
+ onGlyph(g=>{glyphed=true;glyph=g;if(g.username)$('name-input').value=g.username;if(!me.pass){if(g.wallet)live?.rejoin();else if(g.username)live?.rename(g.username);}comeAboard();});
 }
 const renderer=new T.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true,powerPreference:'high-performance'});
 const phone=matchMedia('(pointer:coarse)').matches;
@@ -551,9 +558,21 @@ const help=createHelp($('help-sheet'),{touch:()=>matchMedia('(pointer:coarse)').
 // A tester (this browser holds a tester invite) wears the captain's hat (hat.js).
 if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 // Others aboard: their poses in, ours out, the lifts as the server runs them.
-let live=null,remotes=null,marks=null,aboard=0,liveStatus='',wasInArena=false;
+let remotes=null,marks=null,aboard=0,liveStatus='',wasInArena=false;
 // The giveaway card at Mudwater Arena's counter, which claims through Leo live.
-const giveaway=createGiveaway({$,live:()=>live,connect});
+// Claiming takes a Discord account: its small window leaves them standing at the counter, and they carry on under their
+// Discord account from there. Not offered inside Otherside, where pop-ups can't open (mudwater-giveaway.js).
+async function connectToClaim(){
+ const got=await connectPopup();
+ if(got.pass){
+  me={pass:got.pass,name:got.name,error:null};
+  document.querySelector('#name-sheet .verified-note').textContent='Your name aboard is your Discord name, with a teal dot so others know it’s really you.';
+  live?.rejoin();return '';
+ }
+ if(got.error==='blocked'){connect();return '';}
+ return got.error==='cancelled'?'Discord sign-in was cancelled. Try again when you’re ready.':'Discord sign-in didn’t work. Try again in a moment.';
+}
+const giveaway=createGiveaway({$,live:()=>live,connect:connectToClaim});
 if(LIVE_URL){
  marks=new Marks($('names'));
  remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p)});
@@ -563,7 +582,9 @@ if(LIVE_URL){
   status:s=>{liveStatus=s;showAboard();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
   welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();mct.apply(msg.mcts);live.tv();
    // A server from before chat sends no chat: it stays hidden.
-   chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);},
+   chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);
+   // Just connected Discord at the giveaway's counter: its card shows what they can claim now.
+   if(!$('mudwater-sheet').hidden)live.giveaway();},
   // A line of chat: in the corner, and over the speaker's head.
   chat:line=>{chat.add(line);if(line.id!==live.id&&!chat.quiet)remotes.say(line.id,line.text);},said:r=>chat.refused(r.why),
   poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();mct.offline();},
@@ -585,7 +606,7 @@ if(LIVE_URL){
   mcts:list=>mct.apply(list),
   // The Crown lounge TV (crown-tv.js): what is on it, and a ticket to share a video.
   tv:t=>crownTv?.tv(t),tvTicket:r=>crownTv?.ticket(r),
- },{pass:()=>me.pass?bestPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite});
+ },{pass:()=>me.pass?bestPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite,glyph:()=>glyph?.wallet?{wallet:glyph.wallet,username:glyph.username}:null,otherside:inOtherside});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
  mct.link({send:msg=>live.mct(msg),id:()=>live.id});
@@ -607,7 +628,7 @@ function showAboard(){
   :{live:aboard===1?'Just you aboard':`${aboard} aboard`,connecting:'Joining…',offline:'Solo · reconnecting',layout:'Solo · reload to match ship',full:'Solo · Leo is full',replaced:'Solo · open in another tab'})[liveStatus]||'';
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
  // Beside it: logged in with Discord says so; anyone else is offered it. Leo live has the last word once it has answered.
- const d=$('discord-chip'),small=matchMedia('(max-width:560px)').matches;d.hidden=false;
+ const d=$('discord-chip'),small=matchMedia('(max-width:560px)').matches;d.hidden=inOtherside;
  d.dataset.in=(liveStatus==='live'?live.you?.verified:me.pass)?'1':'';
  d.textContent=d.dataset.in?(small?'':'Logged in · ')+(live.you?.name||me.name||'Voyager'):small?'Discord':'Log in with Discord';
 }
@@ -910,7 +931,7 @@ function closePanels(){for(const id of ['lift-panel','places','emotes','map-shee
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
- const verified=!!live?.you?.verified;$('name-sheet').dataset.verified=verified?'1':'';
+ const verified=!!live?.you?.verified&&!live.you.typed;$('name-sheet').dataset.verified=verified?'1':'';
  $('name-title').textContent=verified?`Aboard as ${live.you.name}`:'Your name';
  $('name-edit').value=savedName();$('name-sheet').hidden=false;input.enabled=false;if(!verified)$('name-edit').focus();});
 $('name-connect').addEventListener('click',connect);

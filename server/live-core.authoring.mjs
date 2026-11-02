@@ -219,26 +219,37 @@ function chat(v,msg){
  // The same line again at once is a stutter, or a flood.
  if(text===v.lastSaid&&Date.now()-v.lastSaidAt<10000)return no('again');
  v.lastSaid=text;v.lastSaidAt=Date.now();
- const line={id:v.id,name:v.name,verified:!!v.discord,text,at:Date.now()};
+ const line={id:v.id,name:v.name,verified:vouched(v),text,at:Date.now()};
  said.push(line);if(said.length>CHAT_KEEP)said.shift();saveChat();
  log('chat',v.id,v.discord?`discord:${v.discord.discordId}`:'',JSON.stringify(v.name||''),JSON.stringify(text));
  broadcast({m:'chat',...line});
 }
 
+// A player from Otherside (src/walk/net/otherside.js) has everything a Discord account has, except giveaway claims
+// (arena.mjs). With a wallet from glyph:ready, that wallet is their account and their Glyph username their name; without
+// one, their browser's id is their account and they type a name (typed). Taken on the page's word: nothing here is signed,
+// and anyone can claim any wallet. That's why their name gets no verified dot.
+function typedVisitor(id,name){return {discordId:'otherside:'+id,username:null,name:cleanName(name)||'Voyager '+id.slice(-4),avatar:null,wallets:[],exp:null,jti:null,lapsed:false,glyph:true,typed:true};}
+function glyphVisitor(g){
+ if(!g||typeof g!=='object'||typeof g.wallet!=='string'||!/^0x[0-9a-fA-F]{40}$/.test(g.wallet))return null;
+ const wallet=g.wallet.toLowerCase(),username=typeof g.username==='string'?g.username:'';
+ return {discordId:'glyph:'+wallet,username:username.slice(0,40)||null,name:cleanName(username)||wallet.slice(0,6)+'…'+wallet.slice(-4),avatar:null,wallets:[wallet],exp:null,jti:null,lapsed:false,glyph:true};
+}
+const vouched=v=>!!v.discord&&!v.discord.glyph;
 async function hello(v,msg){
  if((msg.layout??1)!==policy.version||(policy.version===2&&msg.layoutIdentity!==policy.identity)){send(v.ws,{m:'reload',why:'layout',layout:policy.version});v.ws.close(4004,'layout mismatch');return;}
  if(msg.v!==PROTOCOL){send(v.ws,{m:'reload'});v.ws.close(4000,'old page');return;}
  const id=await actorIdOf(typeof msg.key==='string'?msg.key:'');
  if(!id){v.ws.close(4001,'no key');return;}
- const who=msg.pass?await verifyPass(msg.pass,PASS).catch(()=>null):null;
+ const who=msg.pass?await verifyPass(msg.pass,PASS).catch(()=>null):glyphVisitor(msg.glyph)||(msg.otherside===true?typedVisitor(id,msg.name):null);
  // One body per visitor: the same browser in a second tab, or the same Discord account elsewhere, takes over.
  for(const o of visitors)if(o!==v&&(o.id===id||(who&&o.discord?.discordId===who.discordId))){send(o.ws,{m:'replaced'});o.ws.close(4002,'replaced');leave(o);}
  if([...visitors].filter(o=>o.ready).length>=MAX){send(v.ws,{m:'full'});v.ws.close(4003,'full');return;}
  v.slot=takeSlot();if(!v.slot){v.ws.close(4003,'full');return;}
  // A tester (the page holds a tester invite) wears the captain's hat. Taken on the page's word: it is a hat.
  Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);
- send(v.ws,{m:'welcome',...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{}),id,aboard:aboard(),you:{name:v.name,verified:!!who},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state()});
- countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`discord:${who.discordId}${who.lapsed?' (remembered)':''}`:msg.pass?'(pass refused)':'');
+ send(v.ws,{m:'welcome',...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{}),id,aboard:aboard(),you:{name:v.name,verified:!!who,typed:!!who?.typed},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state()});
+ countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`${who.glyph?'':'discord:'}${who.discordId}${who.lapsed?' (remembered)':''}`:msg.pass?'(pass refused)':'');
  if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
 }
 function leave(v){
@@ -261,7 +272,7 @@ function onMessage(v,data,binary){
  switch(msg.m){
   case 'pose':if(allowed(v,'pose'))readPose(v,msg.p);break;
   // A verified visitor's name is their Discord name.
-  case 'name':if(allowed(v,'name')&&!v.discord){v.name=cleanName(msg.name)||null;v.nameVersion=(v.nameVersion||0)+1;}break;
+  case 'name':if(allowed(v,'name')&&(!v.discord||v.discord.typed)){v.name=cleanName(msg.name)||(v.discord?v.discord.name:null);v.nameVersion=(v.nameVersion||0)+1;}break;
   case 'call':{
    if(!allowed(v,'call'))break;
    const l=lifts.find(l=>l.spec.id===msg.lift);if(!l||!Number.isInteger(msg.stop)||msg.stop<0||msg.stop>=l.stops.length||!policy.canCall(v.pos,l.spec,msg.stop))break;
@@ -331,7 +342,7 @@ function flush(){
    const fresh=!seen||seen.id!==o.id;
    const due=fresh||(seen.version!==o.version&&(near||now-seen.at>=FAR_MS))||now-seen.at>=KEEPALIVE_MS;
    if(!due)continue;
-   if(fresh||seen.nameVersion!==(o.nameVersion||0))identities.push(encodeIdentity(o.slot,o.id,o.name,!!o.discord,o.hat));
+   if(fresh||seen.nameVersion!==(o.nameVersion||0))identities.push(encodeIdentity(o.slot,o.id,o.name,vouched(o),o.hat));
    records.push(o.record);r.seen.set(o.slot,{id:o.id,version:o.version,at:now,nameVersion:o.nameVersion||0});
   }
   if(records.length)send(r.ws,assembleFrame(identities,records));

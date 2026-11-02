@@ -1,3 +1,4 @@
+import {inOtherside} from './net/otherside.js';
 import {V2_FIND,V2_EXAMPLE_GO} from '../v2/help-wayfinding.js';
 import {toWorld,anchoredYaw} from '../plan/rooms.js';
 // Help (H, or Help in the toolbar): how to play on foot, and, for testers (feedback is on in this browser), the tester
@@ -34,7 +35,7 @@ const PLAY=[
   [['Esc'],null,'Close any panel'],
  ]},
  {title:'With others aboard',live:true,rows:[
-  [['T'],'Chat','Chat with everyone aboard (connect Discord if it asks)'],
+  [['T'],'Chat',inOtherside?'Chat with everyone aboard':'Chat with everyone aboard (connect Discord if it asks)'],
   [['P'],'Ping','Ping where you stand, so others can find you'],
   [['Aboard'],'Aboard','Click the aboard count to set the name over your head; a teal dot marks a Discord-verified name','Tap the aboard count to set the name over your head; a teal dot marks a Discord-verified name'],
  ]},
