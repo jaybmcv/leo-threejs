@@ -4,7 +4,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {publicAsset} from '../src/v2/public-assets.js';
-const out='dist-v2',manifest=JSON.parse(await fs.readFile(out+'/asset-manifest.json'));
+const out=process.argv[2]||'dist-v2',manifest=JSON.parse(await fs.readFile(out+'/asset-manifest.json'));
 globalThis.window={LEO_PUBLIC_ASSETS:manifest};const nativeFetch=globalThis.fetch;globalThis.fetch=async name=>String(name).startsWith('data:')?nativeFetch(name):new Response(await fs.readFile(path.join(out,name.split('?')[0])));
 let assets=0,parts=0;for(const [name,entry] of Object.entries(manifest)){
  for(const part of entry.parts||[]){assert((await fs.stat(path.join(out,part.split('?')[0]))).size<=16*1048576,'Transport too large: '+part);parts++;}
@@ -14,6 +14,11 @@ const home=await fs.readFile(out+'/index.html','utf8');
 assert(home.includes('id="explode-dial"'),'Full classic inspector is the home page');
 assert(home.includes('href="walk.html"'),'Classic inspector links to the current walk');
 const classicScript=home.match(/LEO_BOOT\("([^" ]+)"\)/)?.[1];assert(classicScript);await fs.access(out+'/'+classicScript);
+const homeManifest=JSON.parse(home.match(/window.LEO_PUBLIC_ASSETS=([^;]+);window.LEO_VIEWER_LAYOUT=/)[1]);
+assert.deepEqual(homeManifest,manifest,'Inspector must load the current published models');
+const viewerInfo=JSON.parse(await fs.readFile(out+'/viewer-version.json'));
+assert.equal(viewerInfo.layout,2);assert.equal(viewerInfo.modelSha256,manifest['leo-full-ship.glb'].sha256);
+assert.equal(viewerInfo.exteriorSha256,manifest['leo-exterior-web.glb'].sha256);
 const html=await fs.readFile(out+'/layout2.html','utf8'),walk=await fs.readFile(out+'/walk.html','utf8'),hub=await fs.readFile(out+'/hub.html','utf8');
 for(const id of ['share-view','save-picture','toggle-panels','walk-link','ship-stamp','build-stamp','safe-start'])assert(html.includes('id="'+id+'"'),id);
 assert(html.includes('hub.html'));const script=html.match(/LEO_V2_BOOT\('([^']+)'\)/)?.[1];assert(script,'Hashed v2 viewer entry');assert(/^viewer\.[0-9a-f]{10}\.js$/.test(script));const code=await fs.readFile(out+'/'+script,'utf8');assert(code.includes('leo-feedback'),'Tester feedback bundled');
@@ -22,7 +27,6 @@ assert(walk.includes('LEO_TO_HUB')&&walk.indexOf('LEO_TO_HUB')<2000);assert(walk
 const hubScript=hub.match(/src="(hub\.[0-9a-f]{10}\.js)"/)?.[1];assert(hubScript);await fs.access(out+'/'+hubScript);
 const info=JSON.parse(await fs.readFile(out+'/build.json'));assert(info.sha===null||/^[0-9a-f]{40}$/.test(info.sha));assert(!(info.dirty&&info.sha),'Dirty build must not claim a commit');
 for(const doc of [html,walk,hub])for(const m of doc.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)){const target=m[1].split('?')[0].split('#')[0];if(!target||/^(https?:|#)/.test(target)||manifest[target])continue;await fs.access(path.join(out,target));}
-// The retained classic inspector adds its own lossless GLB downloads (~142 MB).
-// These are not loaded by the redesigned walk; allow 200 MB for that archive.
-const size=async dir=>(await Promise.all((await fs.readdir(dir,{withFileTypes:true})).map(e=>e.isDirectory()?size(path.join(dir,e.name)):fs.stat(path.join(dir,e.name)).then(s=>s.size)))).reduce((a,b)=>a+b,0);const bytes=await size(out);assert(bytes<=450000000,'Combined public folder exceeds 450 MB');
+// The full inspector shares the v2 assets; no duplicate legacy model archive.
+const size=async dir=>(await Promise.all((await fs.readdir(dir,{withFileTypes:true})).map(e=>e.isDirectory()?size(path.join(dir,e.name)):fs.stat(path.join(dir,e.name)).then(s=>s.size)))).reduce((a,b)=>a+b,0);const bytes=await size(out);assert(bytes<=250000000,'Public folder exceeds 250 MB');
 console.log(JSON.stringify({status:'PASS',assets,parts,publicBytes:bytes,viewer:script,walk:walkScript,hub:hubScript,build:info}));
