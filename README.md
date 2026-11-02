@@ -1,5 +1,12 @@
 # LEO — redesigned ship
 
+The home page retains the original full model inspector, including the Explode
+dial, camera views, deck/room views and `?studio=1` model downloads. Its model is
+the retained layout 1 study. `walk.html` and the Builder's Hub use the current
+layout 2 ship. The layout 2 inspection page remains at `layout2.html`.
+`scripts/restore-classic-home.mjs` composes these pages after the public build,
+preserving the walk's manifest and prepared assets and rejecting asset collisions.
+
 ## Layout 2 — default in this checkout
 
 With `LEO_LAYOUT` unset, build, public build, checks and the live server select layout 2. Models use `output/leo-interior-v02`; the deployable site is `dist-v2`. Set `LEO_LAYOUT=1` for the pinned rollback source under `legacy/v1`, with models in `output/leo-interior-v01` and public files in `dist`. This branch is preparation only: it has not been merged, deployed or connected to production. See [the exact cutover and rollback runbook](output/launch-g/SWITCHOVER.md).

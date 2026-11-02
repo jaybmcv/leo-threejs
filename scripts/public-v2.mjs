@@ -33,3 +33,5 @@ console.log('v2 public assets built locally in '+out);
 
 const hub=await writeHubPage(out,{workspaceLocal:true});console.log(`Builder's Hub: ${hub.script}, ${(hub.bytes/1024).toFixed(0)} KB.`);
 await writeBuildInfo(out);
+// Keep the full inspector (including Explode) at the canonical home page.
+await (await import('./restore-classic-home.mjs')).restoreClassicHome(out);
