@@ -7,7 +7,7 @@
 //   {"open":true, "mode":"codes", "title":"Booster pack giveaway", "note":"One pack per Voyager while they last.",
 //    "limit":100, "codes":["…"], "formUrl":"https://…"}
 // Modes, each one claim per Discord-verified visitor (a Leo pass from The Creamery; a wallet from Otherside isn't enough,
-// since nothing proves it's theirs and made-up ones would drain the giveaway):
+// since nothing proves it's theirs and made-up ones would drain the giveaway; the card there says to use the website):
 //   codes   hands out the next unused code from "codes", and shows it to them again whenever they come back
 //   wallet  records one of the wallets The Creamery has verified for them, for packs to be sent to
 //   list    records their name, for packs to be arranged some other way

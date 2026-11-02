@@ -134,8 +134,7 @@ const LIVE_URL=(()=>{const asked=new URLSearchParams(location.search).get('live'
 const tester=invite||testerInvite();
 let me={pass:null,name:null,error:null},board,glyphed=false,glyph=null;
 const boarded=new Promise(r=>{board=r;});
-// (A pass in the address is Discord coming back in place, in a browser with no real pop-up windows: connectToClaim.)
-const identity=LIVE_URL?(inOtherside&&!location.hash.includes('leo-pass')?Promise.resolve(me):identify()).then(r=>{me=r;showWho();return r;}):Promise.resolve(me);
+const identity=LIVE_URL?(inOtherside?Promise.resolve(me):identify()).then(r=>{me=r;showWho();return r;}):Promise.resolve(me);
 function comeAboard(){$('name-input').blur();$('who').hidden=true;board();}
 function showWho(asking=!inOtherside&&!me.pass&&(!!tester||!!me.error)){
  if(glyphed){comeAboard();return;}
@@ -557,8 +556,8 @@ if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 // Others aboard: their poses in, ours out, the lifts as the server runs them.
 let live=null,remotes=null,marks=null,aboard=0,liveStatus='',wasInArena=false;
 // The giveaway card at Mudwater Arena's counter, which claims through Leo live.
-// Claiming takes a Discord account, even for a player from Otherside: its small window leaves them standing at the
-// counter, and they carry on under their Discord account from there.
+// Claiming takes a Discord account: its small window leaves them standing at the counter, and they carry on under their
+// Discord account from there. Not offered inside Otherside, where pop-ups can't open (mudwater-giveaway.js).
 async function connectToClaim(){
  const got=await connectPopup();
  if(got.pass){
@@ -566,8 +565,8 @@ async function connectToClaim(){
   document.querySelector('#name-sheet .verified-note').textContent='Your name aboard is your Discord name, with a teal dot so others know it’s really you.';
   live?.rejoin();return '';
  }
- if(got.error==='blocked'&&!inOtherside){connect();return '';}
- return got.error==='blocked'?'The Discord window was blocked. Allow pop-ups and try again.':got.error==='cancelled'?'Discord sign-in was cancelled. Try again when you’re ready.':'Discord sign-in didn’t work. Try again in a moment.';
+ if(got.error==='blocked'){connect();return '';}
+ return got.error==='cancelled'?'Discord sign-in was cancelled. Try again when you’re ready.':'Discord sign-in didn’t work. Try again in a moment.';
 }
 const giveaway=createGiveaway({$,live:()=>live,connect:connectToClaim});
 if(LIVE_URL){
@@ -603,7 +602,7 @@ if(LIVE_URL){
   mcts:list=>mct.apply(list),
   // The Crown lounge TV (crown-tv.js): what is on it, and a ticket to share a video.
   tv:t=>crownTv?.tv(t),tvTicket:r=>crownTv?.ticket(r),
- },{pass:()=>me.pass?bestPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite,glyph:()=>glyph?.wallet?{wallet:glyph.wallet,username:glyph.username}:null});
+ },{pass:()=>me.pass?bestPass():Promise.resolve(null),refused:forget,invite:tester,hat:hasTesterInvite,glyph:()=>glyph?.wallet?{wallet:glyph.wallet,username:glyph.username}:null,otherside:inOtherside});
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
  mct.link({send:msg=>live.mct(msg),id:()=>live.id});
@@ -928,7 +927,7 @@ function closePanels(){for(const id of ['lift-panel','places','emotes','map-shee
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
- const verified=!!live?.you?.verified;$('name-sheet').dataset.verified=verified?'1':'';
+ const verified=!!live?.you?.verified&&!live.you.typed;$('name-sheet').dataset.verified=verified?'1':'';
  $('name-title').textContent=verified?`Aboard as ${live.you.name}`:'Your name';
  $('name-edit').value=savedName();$('name-sheet').hidden=false;input.enabled=false;if(!verified)$('name-edit').focus();});
 $('name-connect').addEventListener('click',connect);

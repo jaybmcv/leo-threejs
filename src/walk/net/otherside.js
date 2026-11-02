@@ -1,9 +1,10 @@
-// The walk loaded inside Otherside. Otherside shares its Glyph session with a game: it sends glyph:ready, unasked and
-// as soon as the game loads, with the player's wallet address, chain ID, username and profile picture, from
-// otherside.xyz. So there's no login there: the player comes aboard under their Glyph name, and Discord isn't offered.
-// The wallet goes to Leo live, which gives them what a Discord account gets. Nothing in glyph:ready is signed, so the
-// server can't check it (glyphVisitor in server/live-core.mjs). An inline script in walk.html listens from the first
-// moment (LEO_HEARD), before this bundle has loaded.
+// The walk loaded inside Otherside: walkotherside.html (scripts/walk-page.mjs writes it, with LEO_OTHERSIDE set), or
+// walk.html in a frame of Otherside's. There's no login there and Discord isn't offered: the player types a name, and
+// Leo live gives them what a Discord account gets (glyphVisitor in server/live-core.mjs). If Otherside sends
+// glyph:ready (unasked, from otherside.xyz, with the wallet address, chain ID, username and profile picture), they come
+// straight aboard under their Glyph name instead, with the wallet as their account. None of this is signed, so the
+// server can't check it. An inline script in walk.html listens from the first moment (LEO_HEARD), before this bundle
+// has loaded.
 // Otherside has published no example of the message, so readGlyph takes the likely shapes; ?glyphdebug=1 lists whatever
 // actually arrives, to check inside ODK.
 const ORIGINS=['https://otherside.xyz','https://www.otherside.xyz'];
@@ -32,7 +33,7 @@ export function readGlyph(data){
 // Loaded in a frame of Otherside's, or already told so. Chromium names the pages this one is framed by.
 export const inOtherside=(()=>{
  const ancestors=page?.ancestorOrigins?[...page.ancestorOrigins]:[];
- return ancestors.some(o=>allowed.includes(o))||heard.some(m=>fromOtherside(m)&&readGlyph(m.data));
+ return typeof window!=='undefined'&&window.LEO_OTHERSIDE===true||ancestors.some(o=>allowed.includes(o))||heard.some(m=>fromOtherside(m)&&readGlyph(m.data));
 })();
 
 // Calls back with glyph:ready's contents, including if it came before this was called.

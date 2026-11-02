@@ -4,75 +4,55 @@
     "reason": "Stage 3 selects the explicit rollback entry and folded v2 server; verified by both live suites."
   },
   "server/arena.mjs": {
-    "sha256": "34ef053d814599b4238675fb74d5f3ef40066ac3e75e0fc3510e6aa57376153b",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "sha256": "216a08d84f1b5f354651e23789ac79cb01d9c8086dc14f2ec6ff07676818b35f",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "server/live-core.mjs": {
-    "sha256": "ca05acca2e2053551e72ef4e2c77c4ea7696779fa80081779bda128b867b4189",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
-  },
-  "src/walk/aquarium-treasure/game.js": {
-    "sha256": "42e6e3ebf3ca9d88783474a66209a10573fde5ee509d7d26f9e4ad7b6f38c671",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
-  },
-  "src/walk/changes-board.js": {
-    "sha256": "e8781cd7100d19ac4a759e742c54fe2dc17727397b36f71c23e20e03d7eb6bff",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
-  },
-  "src/walk/chat.js": {
-    "sha256": "f682ddb52c5b1d4ae97b21179d9ec906c4836af511ecc8a479ed7ce345a40399",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
-  },
-  "src/walk/crown-tv.js": {
-    "sha256": "aa5354e784bfd68746eef44d4f434e6daa44d112b2488619d785ae245933597f",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
-  },
-  "src/walk/graffiti.js": {
-    "sha256": "8f92b841944315c00072c7014b32be0864d78bca12c80a2c72d625401e63eb7b",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "sha256": "cacbb7009ad10dfd8fd1ac2d43226b9ce0d6ffc29639c705e3adf7e545ebed0b",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/help.js": {
-    "sha256": "3a2f6d2280d4c0d988ac61cf43784c28c539f5420062c73cfd43f3ce99ee6691",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
-  },
-  "src/walk/invasion/game.js": {
-    "sha256": "02898b6eef1e93ccc8986fb85074eb859393bcc8d8844db4356fa9795c606eee",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "sha256": "05d432890bfc484a9cef04a9dff3fb36f40a180c90ef0dfcc5e8bc7573e594d8",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/main.js": {
-    "sha256": "bab9d701db99d284226b4a19f147830894bfc77cc9f38b67a048ae993f8eba51",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
-  },
-  "src/walk/maze/run.js": {
-    "sha256": "476756db24ca84c3091fe3202ec4f377dd9059cc0a4630de896eaa13f5483f6e",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "sha256": "686180155ce6d6933fe781839b334450b158e80e819de3357457f62c5d8db34b",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/mudwater-giveaway.js": {
-    "sha256": "6f18fba71bdc877ea255e7293e01ad6e223dd10f02ba5757417af4ec11ac9c8b",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "sha256": "e61ed8e999b9a35940d83f4bd76dbf0d6c569682bbfe05eb2a0e3da7405e25be",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/net/connect.js": {
     "sha256": "1c9f96921f6aacfcd44a6151363f90a98d43e09c94351e1b9b9699addaf35c18",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/net/live.js": {
-    "sha256": "8ba80a37570ed47109e9584580b4cb8a3d55a49d32936730376fe12181172d06",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
-  },
-  "src/walk/pool/game.js": {
-    "sha256": "c3dfe1332e8fe1fe2f36bbb7e935ab2a6b0049e36449c07dbdfb23e7d52f7139",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "sha256": "00ec4956e7291523666b59ee9b1b25816ce187e4763abeb1dce9015258ead25b",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "server/live-core.authoring.mjs": {
-    "sha256": "b42b3aaac60b9d169b14c1f449a4218d3e45e141ed7a64608486b33d60f029d0",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "sha256": "ab5a1fd56fcd5a447f1d0a0dbcb689695e2c9fbaefb42035f6a3fe6534c7359b",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+  },
+  "src/walk/main.authoring.js": {
+    "sha256": "ef89d5a0970255f5bc7f85d894cb1179395e50464e8ce1923046ea8c66838157",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "server/live-core.prepared.mjs": {
-    "sha256": "3ae76497e44984fcb06923c7c791458e1accda3d457fd33b91652b892605a048",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "sha256": "1e794edf5e24c76846dbc4a0b3c6e17c74aae5afe37aaa26e287ddb903e66bd0",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+  },
+  "src/walk/main.prepared.js": {
+    "sha256": "d8344cfe4e378a47c823fe440b1bebc44e08cf323359552f311082ec4bc8b8f9",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "server/live-core.public.mjs": {
-    "sha256": "dfde4e5bc417b307fe553b089e07082a8be24b8331b4780eeba9e04afa1b8c09",
-    "reason": "Otherside entry: Glyph identity from glyph:ready, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "sha256": "e067dcf53defd6343f3e1fc4072432b5ce4b77319e0b2e284d2a99b5afa4c107",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+  },
+  "src/walk/main.public.js": {
+    "sha256": "7b4010529eb3fd5bda7e749839fe68ac64b5807227bc41e08c0f1759477458e7",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   }
 }

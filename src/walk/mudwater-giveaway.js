@@ -1,8 +1,10 @@
+import {inOtherside} from './net/otherside.js';
 // The booster pack giveaway card at Mudwater Arena's counter (walk.html's #mudwater-sheet; server/arena.mjs). Until the
 // giveaway is switched on, or with no Leo live, it says details are coming. Once on, it shows the giveaway's own title
 // and note and, by its mode: a button to claim a pack (one per Discord-verified visitor, to a chosen verified wallet in
 // wallet mode), the code or wallet already claimed, a link to the claim form, or that the packs are gone. Anyone not
-// signed in with Discord, including players from Otherside, is offered it first, in a small window (net/connect.js).
+// signed in with Discord is offered it first, in a small window (net/connect.js). Inside Otherside the page is embedded
+// and pop-ups and outside links don't work, so the card only says to claim on the website.
 const COMING='Booster packs of Mudwater: Swamp Origins will be given away here. Details are coming soon.';
 const NOTES={codes:'One pack per Voyager while they last. Claim yours for a code to redeem.',wallet:'One pack per Voyager while they last, sent to your verified wallet.',
  list:'One pack per Voyager while they last. Claim to get on the list.',form:'Fill in the claim form to get yours.'};
@@ -20,6 +22,7 @@ export function createGiveaway({$,live,connect}){
   box.replaceChildren();const g=state;
   if(!g?.open){title.textContent='Booster pack giveaway';note.textContent=COMING;box.hidden=true;return;}
   title.textContent=g.title;note.textContent=g.note||NOTES[g.mode]||'';box.hidden=false;
+  if(inOtherside){box.append(el('p',{className:'why',textContent:'Claiming isn’t available inside Otherside. To claim, walk Leo at leo.marscatsvoyage.com.'}));return;}
   if(g.mode==='form'){box.append(el('a',{className:'go',href:g.formUrl,target:'_blank',rel:'noopener',textContent:'Open the claim form'}));return;}
   if(g.claim){
    if(g.claim.code)box.append(el('p',{className:'got'},'Your code ',el('code',{textContent:g.claim.code})),el('button',{type:'button',className:'go',textContent:'Copy code',
