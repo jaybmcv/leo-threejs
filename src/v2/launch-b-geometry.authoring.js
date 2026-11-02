@@ -1,3 +1,4 @@
+import {finishArrivalDesign} from './arrival-design.js';
 import * as T from 'three';
 import {fitGardenArt} from './garden-art.js';
 import {finishedSkinAuthority} from './skin-authority.js';
@@ -14,7 +15,7 @@ export function removeGardenSlabCaps(root,layout){const room=layout.rooms.find(r
 export function finishLaunchBGeometry(ship,layout,{authority=finishedSkinAuthority(ship)}={}){
  if(ship.v2LaunchB)return ship.v2LaunchB;ship.root.updateMatrixWorld(true);const result={arrival:[],hangar:[]},opening=layout.decks[2].slab.holes.find(h=>h.id==='arrival-garden-opening'),xs=opening.polygon.map(p=>p[0]),zs=opening.polygon.map(p=>p[1]),region=new T.Box3(new T.Vector3(Math.min(...xs),layout.decks[1].y+3.05,Math.min(...zs)),new T.Vector3(Math.max(...xs),layout.decks[2].y+.12,Math.max(...zs)));
  cutOut(ship.inside,region,o=>{const yes=/V2_.*(ceiling|floor)|Deck_slab|Atrium_ceiling_seam|Ceiling_light/i.test(o.name)&&!o.isInstancedMesh;if(yes)result.arrival.push(o.name);return yes;});
- result.gardenArt=fitGardenArt(ship,layout);result.gardenSlabCaps=removeGardenSlabCaps(ship.inside,layout);
+ result.arrivalDesign=finishArrivalDesign(ship);result.gardenArt=fitGardenArt(ship,layout);result.gardenSlabCaps=removeGardenSlabCaps(ship.inside,layout);
  const routeCuts=[];for(const c of layout.circulation.corridors.filter(c=>c.deck<=5||c.deck>=16))for(let i=1;i<c.points.length;i++){const a=c.points[i-1],b=c.points[i],w=c.width/2+.08,y=layout.decks[c.deck-1].y;routeCuts.push({p:{chart:{origin:[0,0,0],u:[1,0,0],v:[0,0,1]}},rect:[Math.min(a[0],b[0])-w,Math.max(a[0],b[0])+w,y-.02,y+3.7],v0:Math.min(a[1],b[1])-w,v1:Math.max(a[1],b[1])+w,ignoreOwner:true});}result.routePartitions=[];ship.inside.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh&&/^Partition_wall/.test(o.name)){const n=cutChartMany(o,routeCuts);if(n)result.routePartitions.push({name:o.name,faces:n});}});
  // Retain the exterior fairing, including a 2.5 cm buried collar at its join. The finished pressure lining hides that collar.
  const exteriorOfPressure={insidePressure:q=>!authority.insidePressure(q),distance:q=>-authority.distance(q,{componentName:'pressure'})};result.aftIntrusions=[];ship.exterior.traverse(o=>{if(o.isMesh&&/^(Fin_root_fillet|Tail_root_dorsal_fairing)$/.test(o.name)){o.geometry=explicitVertexAttributes(o.geometry.clone());const row=trimMeshToSkin(o,exteriorOfPressure,{margin:-.025});if(row)result.aftIntrusions.push({...row,scope:'Only fairing triangles inside the finished pressure shell; exterior retained'});}});

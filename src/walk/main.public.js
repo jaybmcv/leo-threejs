@@ -65,6 +65,7 @@ import {RemotePlayers} from './remotes.js';
 import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.js';
 import {tileLiftFloor} from './lift-tile-floor.js';
 import {createRecoveryMood} from './recovery.js';
+import {createArrivalMood} from './arrival-mood.js';
 import {Marks} from './marks.public.js';
 import {createChat} from './chat.js';
 import {createHostess} from './hostess.public.js';
@@ -222,7 +223,7 @@ async function buildShip(){
  // Deck 19's lift lobby and promenade up to the lounge: black ceramic tile (lift-tile-floor.js).
  // The floor finish is in the prepared render bands.
  // The crew recovery lounge's pod side dims the lights (recovery.js).
- recovery=createRecoveryMood(ship,{hemi,fill,scene});
+ recovery=createRecoveryMood(ship,{hemi,fill,scene});arrivalMood=createArrivalMood(ship,{hemi,fill,scene});
  }});
  ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
  loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;
@@ -343,7 +344,7 @@ async function buildShip(){
  isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);settlePreparedStatic(ship);
 }
 let imagingScans=null;
-let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
 let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 // Lifeboat fittings (2,000 seats a deck with their headrests and harnesses, seen only through a hatch or from inside a
@@ -716,12 +717,14 @@ renderer.setAnimationLoop(()=>{
  mct.update(dt,remotes,walker.hipHeight);
  // The lounge's doors open, and the cold room's strip curtain parts, for anyone near them.
  bodies.length=0;bodies.push(p);if(remotes)for(const r of remotes.remotes.values())bodies.push(r.cur);
+ if(arrivalMood)arrivalMood.update(dt,camera.getWorldPosition(eye));
  if(lounge)lounge.update(dt,bodies,camera.getWorldPosition(eye));
  if(recovery)recovery.update(dt,camera.getWorldPosition(eye));
  halloween?.update(dt,camera.getWorldPosition(eye),ambience.on);
  hexFloor?.update(dt,camera.getWorldPosition(eye),p,heading);
  leverPanel?.update(dt,p);
  gaming?.update(dt,camera.getWorldPosition(eye),p,remotes?[...remotes.remotes.values()]:[]);
+ arrivalMood?.apply();
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on);
  loungeFalls?.update(dt,p);
