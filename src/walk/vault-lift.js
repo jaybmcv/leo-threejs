@@ -39,7 +39,7 @@ export function createVaultLift(colliders){
   if(y){
    box('Clubhouse_lift_landing',2.4,.12,END-FRONT,0,y-.06,(END+FRONT)/2);
    proxy(new T.BoxGeometry(2.4,.12,END-FRONT).translate(0,y-.06,(END+FRONT)/2));
-   for(const [w,h,d,x,dy,z] of [[.08,H,END-FRONT,-1.2,H/2,(END+FRONT)/2],[.08,H,END-FRONT,1.2,H/2,(END+FRONT)/2],[2.4,H,.08,0,H/2,END],[2.4,.08,END-FRONT,0,H,(END+FRONT)/2]]){
+   for(const [w,h,d,x,dy,z] of [[.08,H,.58,-1.2,H/2,FRONT+.29],[.08,H,.38,-1.2,H/2,END-.19],[.08,.25,1.44,-1.2,H-.125,2.6],[.08,H,END-FRONT,1.2,H/2,(END+FRONT)/2],[2.4,H,.08,0,H/2,END],[2.4,.08,END-FRONT,0,H,(END+FRONT)/2]]){
     box('Clubhouse_lift_landing_glass',w,h,d,x,y+dy,z,glass);proxy(new T.BoxGeometry(w,h,d).translate(x,y+dy,z));}
    // Close the cut plate's square corners on top, underneath and along the shaft's rim.
    const shape=new T.Shape([new T.Vector2(-R-.1,-R-.1),new T.Vector2(R+.1,-R-.1),new T.Vector2(R+.1,R+.1),new T.Vector2(-R-.1,R+.1)]);

@@ -11,7 +11,7 @@ import {cutOut} from '../cut-out.js';
 import {rectangle} from '../plan/geometry-v2.js';
 import {wingFlight} from '../plan/structure-v2.js';
 import * as T from 'three';
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 import {buildCabins} from './cabins.js';
 import {polygonGeometry,mesh,box,wall,strip,removeBottomCap,removePanelEndCaps,removeGeometryCaps,glass,lining,floor,bounds} from './geometry.js';
 import {roomObject,toWorld} from '../plan/rooms.js';

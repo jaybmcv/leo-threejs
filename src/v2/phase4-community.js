@@ -1,6 +1,6 @@
 import*as T from'three';
 import{communityArtMounts}from'./community-displays.js';
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 const same=(a,b)=>a.length===b.length&&a.every((v,i)=>Math.abs(v-b[i])<.055);
 export function arrivalArtWall(){const r=layout.rooms.find(r=>r.id==='d02-arrival-1');return[r.door.center[0]+.25,r.y+1.665,r.door.center[2]-7];}
 const mounts=new Map(communityArtMounts(layout).map(m=>[m.name,m]));

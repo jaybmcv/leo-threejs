@@ -1,4 +1,4 @@
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 import {groupPlaces} from './wayfinding-data.js';
 const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;return e;};
 export function renderGotoMenu(list,places,{go,close,currentDeck}={}){

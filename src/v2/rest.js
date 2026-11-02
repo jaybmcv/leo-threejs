@@ -1,6 +1,6 @@
 import {phase4Programme} from './phase4-programme.js';
 import * as T from 'three';
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 import {worldPoint,patchDepth} from '../plan/hull-skin-v2.js';
 import {findRestSpots as original,solidSpots,spotIndex,SPACING} from '../walk/rest.js';
 import {cabinRestSpots} from './cabins.js';

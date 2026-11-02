@@ -8,7 +8,7 @@ import {Box3,Vector3} from 'three';
 import {SHIP_AREAS,createShipArea} from '../src/areas.js';
 import {ARENA_ID,STAGE,BOARD,TABLES,TRIGGERS,STANDEE,STANDEES,TRUSS_SPOTS} from '../src/mudwater-arena.js';
 import {GAME_URL,MUDWATER_ART} from '../src/walk/mudwater.js';
-import {findRestSpots} from '../src/walk/rest.js';
+import {findRestSpots} from '../src/v2/rest.js';
 import {BODY,solid,meshTriangles} from '../src/walk/collision.js';
 
 const problems=[],log=(...a)=>console.log(...a);

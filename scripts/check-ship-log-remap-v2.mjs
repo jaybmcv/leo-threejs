@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
-import {applyV2Adapters} from './v2-adapters.mjs';
+import {applyV2Adapters} from './source-contract.mjs';
 import path from 'node:path';
 import {build} from 'esbuild';
 import {spawnSync} from 'node:child_process';

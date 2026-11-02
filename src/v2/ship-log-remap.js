@@ -1,4 +1,4 @@
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 import {CABINS} from '../plan/v1.js';
 import {createLegacyCorridorRemapper,legacyFeatureSpot} from './legacy-corridors.js';
 const corridors=createLegacyCorridorRemapper(layout,CABINS);

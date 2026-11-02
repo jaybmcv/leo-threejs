@@ -1,0 +1,357 @@
+[
+  {
+    "file": "scripts/check-anchor-movement.mjs",
+    "bodySha256": "b874b18d519bcd2df93ec8f8484028190995771e020c7dc8788ea0bd78267b4d",
+    "imports": [
+      "node:assert/strict",
+      "three",
+      "@napi-rs/canvas",
+      "../src/areas.js",
+      "../src/model.js",
+      "../src/plan/rooms.js",
+      "../src/walk/canvas.js",
+      "../src/walk/arrival-atrium.js",
+      "../src/walk/hydroponics.js",
+      "../src/walk/mission-holo.js",
+      "../src/walk/sword-case.js",
+      "../src/walk/chinampa.js",
+      "../src/walk/concession.js",
+      "../src/walk/theatre.js",
+      "../src/walk/blossom.js",
+      "../src/walk/lounge-falls.js",
+      "../src/walk/arcade.js",
+      "../src/walk/jaguar-gate.js",
+      "../src/v2/rest.js",
+      "../src/plan/v1.js",
+      "../src/walk/collision.js",
+      "../src/walk/lounge.js",
+      "../src/walk/collision.js"
+    ]
+  },
+  {
+    "file": "scripts/check-anchor-preparation.mjs",
+    "bodySha256": "cfa6b1ba487e18251229c3d88d75d2315e66b79bd9c71a282d73a225065a77ee",
+    "imports": [
+      "node:assert/strict",
+      "./walk-plan.mjs",
+      "../src/v2/rest.js"
+    ]
+  },
+  {
+    "file": "scripts/check-mudwater.mjs",
+    "bodySha256": "6f0a163732eb03efa9e1a2eef6bf0f1fadf96669ba4035377e038da330780b8b",
+    "imports": [
+      "node:fs",
+      "three",
+      "../src/areas.js",
+      "../src/mudwater-arena.js",
+      "../src/walk/mudwater.js",
+      "../src/v2/rest.js",
+      "../src/walk/collision.js"
+    ]
+  },
+  {
+    "file": "scripts/v2-launch-b-walk-target.mjs",
+    "bodySha256": "0432b324ac93db1dd75fb38b99b38c2b3b0170ca22324931303b9be0bc781d2e",
+    "imports": [
+      "../src/v2/rest.js",
+      "node:fs/promises",
+      "three",
+      "v2-layout",
+      "./v2-world.mjs",
+      "./flood-spatial-index-v2.mjs",
+      "../src/walk/collision.js",
+      "../src/walk/arrival-atrium.js",
+      "../src/plan/rooms.js",
+      "../src/walk/lifts.js"
+    ]
+  },
+  {
+    "file": "scripts/v2-phase6-rollout-target.mjs",
+    "bodySha256": "59cfdfc5619b1792608fca1875b6c14eb531ab425e0d879372643e0721d31767",
+    "imports": [
+      "../src/v2/standing.js",
+      "../src/plan/atrium-v2.js",
+      "./v2-walk-policy.mjs",
+      "../src/plan/rooms.js",
+      "../src/plan/hull-skin-v2.js",
+      "./atrium-void-v2.mjs",
+      "../src/walk/lifts.js",
+      "node:fs/promises",
+      "node:assert/strict",
+      "three",
+      "v2-layout",
+      "./v2-world.mjs",
+      "./flood-spatial-index-v2.mjs",
+      "../src/walk/collision.js",
+      "../src/plan/geometry-v2.js",
+      "../src/v2/rest.js",
+      "../src/v2/phase6-programme.js"
+    ]
+  },
+  {
+    "file": "scripts/v2-phase6-target.mjs",
+    "bodySha256": "83e1a84ae0c1a05ef3029883f676d500d13d9e164149eb0200e4e9224f52a059",
+    "imports": [
+      "../src/plan/hull-skin-v2.js",
+      "./atrium-void-v2.mjs",
+      "../src/walk/lifts.js",
+      "node:fs/promises",
+      "node:assert/strict",
+      "three",
+      "v2-layout",
+      "./v2-world.mjs",
+      "./flood-spatial-index-v2.mjs",
+      "../src/walk/collision.js",
+      "../src/plan/geometry-v2.js",
+      "../src/v2/rest.js",
+      "../src/v2/phase6-programme.js"
+    ]
+  },
+  {
+    "file": "scripts/v2-round3-targets.mjs",
+    "bodySha256": "919ccb9779635960beb7f00b8689d6b09b2e212d990a71780cee1a7a691ef10a",
+    "imports": [
+      "../src/walk/lounge-falls.js",
+      "../src/v2/lounge-falls-fit.js",
+      "node:fs/promises",
+      "node:assert/strict",
+      "three",
+      "@napi-rs/canvas",
+      "../src/model.js",
+      "../src/v2/model.js",
+      "../src/v2/garden-guards.js",
+      "../src/plan/layout-v2.js",
+      "../src/plan/rooms.js",
+      "../src/walk/jaguar-gate.js",
+      "../src/walk/lounge-aquarium.js",
+      "../src/transit.js",
+      "../src/walk/collision.js",
+      "../src/walk/controller.js",
+      "../src/v2/rest.js",
+      "../src/v2/geometry.js",
+      "../src/v2/room-entries.js",
+      "./atrium-void-v2.mjs",
+      "../src/v2/facade.js"
+    ]
+  },
+  {
+    "file": "scripts/v2-slab-bake-fixture.mjs",
+    "bodySha256": "e929c1a977d409753ad9ce3a71c90212054c5da0dd1d02316bfde16828582652",
+    "imports": [
+      "node:assert/strict",
+      "three",
+      "../src/v2/geometry.js",
+      "../src/v2/render-bake.js",
+      "node:fs/promises",
+      "node:url"
+    ]
+  },
+  {
+    "file": "scripts/v2-walk.mjs",
+    "bodySha256": "9f17a3781db20a660a31bc12499f4f91f46a6fa81e165650c707d9f94a4dc316",
+    "imports": [
+      "../src/plan/launch-b-v2.js",
+      "../src/plan/budgets-v2.js",
+      "./flood-spatial-index-v2.mjs",
+      "./room-floor-samples-v2.mjs",
+      "./v2-walk-identity.mjs",
+      "./v2-walk-policy.mjs",
+      "../src/plan/phase2-walk-baseline.json",
+      "node:fs/promises",
+      "three",
+      "v2-layout",
+      "../src/plan/hull-skin-v2.js",
+      "../src/v2/cabins.js",
+      "../src/v2/world.js",
+      "../src/walk/collision.js",
+      "../src/walk/lifts.js",
+      "../src/plan/rooms.js",
+      "../src/plan/geometry-v2.js",
+      "../src/v2/rest.js",
+      "./v2-world.mjs"
+    ]
+  },
+  {
+    "file": "scripts/v2-window-probes.mjs",
+    "bodySha256": "e2089659c30e92e5af6506854f0a20d9250784b6522546b4753baea10fcf5279",
+    "imports": [
+      "node:fs/promises",
+      "three",
+      "v2-layout",
+      "./v2-world.mjs",
+      "../src/walk/collision.js",
+      "../src/v2/world.js",
+      "../src/plan/geometry-v2.js",
+      "../src/plan/hull-skin-v2.js"
+    ]
+  },
+  {
+    "file": "scripts/v2-world.mjs",
+    "bodySha256": "2311f1d0bd9f1f7a7658f26ddd843bbb77aa83e43ce3ea2d81a54aa6fcae6af2",
+    "imports": [
+      "../src/walk/vault.js",
+      "node:crypto",
+      "./prepared-identity-v2.mjs",
+      "../src/v2/prepared-codec.js",
+      "node:fs/promises",
+      "v2-layout",
+      "three",
+      "@napi-rs/canvas",
+      "../src/walk/canvas.js",
+      "three/addons/loaders/GLTFLoader.js",
+      "three/addons/libs/meshopt_decoder.module.js",
+      "../src/model.js",
+      "../src/plan/rooms.js",
+      "../src/v2/world.js",
+      "../src/walk/prepare.js",
+      "../src/walk/lifts.js",
+      "../src/walk/partitions.js",
+      "../src/v2/railings.js",
+      "../src/walk/deck-map.js"
+    ]
+  },
+  {
+    "file": "scripts/walk-plan.mjs",
+    "bodySha256": "cfd34f4ee44707a55ebebd8fd185cddad4dee02198167256d8d7c01655d1c60f",
+    "imports": [
+      "node:fs/promises",
+      "@napi-rs/canvas",
+      "../src/walk/canvas.js",
+      "../src/walk/prepare.js",
+      "node:zlib",
+      "three/addons/loaders/GLTFLoader.js",
+      "three/addons/libs/meshopt_decoder.module.js",
+      "../src/model.js",
+      "../src/plan/rooms.js",
+      "../src/concept-shape.js",
+      "../src/v2/world.js",
+      "../src/walk/collision.js",
+      "../src/walk/lifts.js",
+      "../src/walk/partitions.js",
+      "../src/v2/railings.js",
+      "../src/walk/deck-map.js",
+      "../src/walk/windows.js",
+      "../src/walk/fin-casing.js"
+    ]
+  },
+  {
+    "file": "scripts/v2-launch-d-deck-flood.mjs",
+    "bodySha256": "2dcd86691cb5b0865c971cefbc99b2febbe15bdcf7017da278468b9fdc6df9bc",
+    "imports": [
+      "../src/v2/goto-floor.js",
+      "node:fs/promises",
+      "three",
+      "v2-layout",
+      "./v2-world.mjs",
+      "./flood-spatial-index-v2.mjs",
+      "../src/walk/collision.js",
+      "../src/walk/rest.js",
+      "../src/plan/geometry-v2.js"
+    ]
+  },
+  {
+    "file": "scripts/v2-launch-e-deck-flood.mjs",
+    "bodySha256": "8fe060a0a217e74565d054d0d3ce8fb2d21d6896cb56ae9d8f878c7dfa180a4a",
+    "imports": [
+      "../src/v2/goto-floor.js",
+      "node:fs/promises",
+      "three",
+      "v2-layout",
+      "./v2-world.mjs",
+      "./flood-spatial-index-v2.mjs",
+      "../src/walk/collision.js",
+      "../src/walk/rest.js",
+      "../src/plan/geometry-v2.js"
+    ]
+  },
+  {
+    "file": "scripts/v2-launch-f-deck-flood.mjs",
+    "bodySha256": "e87b48fb0be0ed2236e19fd23f0ed1a53b108df9754a70ba5fd7253954821ab0",
+    "imports": [
+      "../src/v2/goto-floor.js",
+      "node:fs/promises",
+      "three",
+      "v2-layout",
+      "./v2-world.mjs",
+      "./flood-spatial-index-v2.mjs",
+      "../src/walk/collision.js",
+      "../src/walk/rest.js",
+      "../src/plan/geometry-v2.js"
+    ]
+  },
+  {
+    "file": "scripts/v2-launch-f-seat-diagnostic.mjs",
+    "bodySha256": "edd3d201e20263eedbf08c6edd1f314d61af0f9ab1237c6b05f05d3ae73e1a9d",
+    "imports": [
+      "../src/v2/goto-floor.js",
+      "node:fs/promises",
+      "three",
+      "v2-layout",
+      "./v2-world.mjs",
+      "./flood-spatial-index-v2.mjs",
+      "../src/walk/collision.js",
+      "../src/walk/rest.js",
+      "../src/plan/geometry-v2.js"
+    ]
+  },
+  {
+    "file": "scripts/v2-phase4-prepared-target.mjs",
+    "bodySha256": "2c0ffdb43d4b5a458644ca13fa99e933cdf79fe959667c61c220c91599596728",
+    "imports": [
+      "node:fs/promises",
+      "node:assert/strict",
+      "three",
+      "../src/walk/collision.js",
+      "../src/walk/rest.js",
+      "../src/plan/geometry-v2.js",
+      "v2-layout",
+      "../src/v2/phase4-programme.js",
+      "./v2-world.mjs"
+    ]
+  },
+  {
+    "file": "scripts/v2-phase4-target.mjs",
+    "bodySha256": "b7b3f78304c3dd27421a710fdaa3cdb05b0b4c2004451d8174b83bd3ad0e901a",
+    "imports": [
+      "../src/walk/canvas.js",
+      "../src/walk/rest.js",
+      "../src/plan/coplanar-v2.js",
+      "node:fs/promises",
+      "node:assert/strict",
+      "three",
+      "@napi-rs/canvas",
+      "v2-layout",
+      "../src/v2/phase4-programme.js",
+      "../src/plan/shuttle-seats-v2.js",
+      "../src/v2/phase4-fitout.js",
+      "../src/walk/collision.js",
+      "../src/v2/geometry.js",
+      "../src/v2/ground.js",
+      "../src/plan/geometry-v2.js",
+      "../src/v2/phase4-community.js",
+      "three/addons/exporters/GLTFExporter.js",
+      "@napi-rs/canvas"
+    ]
+  },
+  {
+    "file": "scripts/v2-phase6-local.mjs",
+    "bodySha256": "9afe2829783431fac2b947653756d6a751100fb029d293bf2c08f813a6ae811b",
+    "imports": [
+      "../src/v2/standing.js",
+      "node:fs/promises",
+      "node:assert/strict",
+      "three",
+      "@napi-rs/canvas",
+      "../src/walk/canvas.js",
+      "v2-layout",
+      "../src/v2/phase4-fitout.js",
+      "../src/v2/atrium-surfaces.js",
+      "../src/v2/geometry.js",
+      "../src/walk/collision.js",
+      "../src/v2/ground.js",
+      "../src/walk/rest.js",
+      "./flood-spatial-index-v2.mjs"
+    ]
+  }
+]

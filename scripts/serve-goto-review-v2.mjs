@@ -5,7 +5,7 @@ import path from 'node:path';
 import http from 'node:http';
 import {build} from 'esbuild';
 import {v2Plugin} from './v2-plugin.mjs';
-import {publicPreparedAdapters} from './public-walk-adapters-v2.mjs';
+import {publicPreparedAdapters} from './source-contract.mjs';
 const base=path.resolve(process.argv.find(a=>a.startsWith('--base='))?.slice(7)||'C:/Users/henri/code/redesign-verify/p7-base/dist-v2');
 const out=path.resolve('output/phase7/goto-review'),files=await fs.readdir(base),manifest=JSON.parse(await fs.readFile(path.join(base,'asset-manifest.json'),'utf8'));
 const first=pattern=>{const name=files.find(f=>pattern.test(f));if(!name)throw Error('Missing frozen review asset');return name;};

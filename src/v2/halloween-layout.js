@@ -1,4 +1,4 @@
-import*as T from'three';import layout from'v2-layout';import{placements,doorSide}from'./cabins.js';
+import*as T from'three';import layout from'../plan/selected-layout.js';import{placements,doorSide}from'./cabins.js';
 // The prepared corridor underside is 3.64 m (deck pitch minus the 0.36 m slab/plenum); the original seasonal module uses 3.42 m.
 const ceilingLift=layout.decks[15].y-layout.decks[14].y-.36-3.42;
 const corridors=layout.circulation.corridors.filter(c=>c.deck===15&&['ring','wing','cross-band'].includes(c.kind)),paths=new Map();let n=0;for(const c of corridors){const lengths=[0];for(let i=1;i<c.points.length;i++)lengths.push(lengths.at(-1)+Math.hypot(c.points[i][0]-c.points[i-1][0],c.points[i][1]-c.points[i-1][1]));if(lengths.at(-1)>3)paths.set(++n*1000,{...c,lengths,length:lengths.at(-1)});}export const halloweenLanes=[...paths.keys()];export const laneRange=mid=>{const p=paths.get(mid);return[-p.length/2+1,p.length/2-1]};

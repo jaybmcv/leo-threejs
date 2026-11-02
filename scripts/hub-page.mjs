@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {build} from 'esbuild';
+import {build} from './workspace-build.mjs';
 
 // Writes the Builder's Hub (hub.html, src/hub) and its content-hashed script next to the other pages. It shares the
 // walk's Discord connection and nothing heavier: no Three.js, no models.

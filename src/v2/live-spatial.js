@@ -9,7 +9,7 @@ import {homes} from '../walk/transporter.js';
 import {BALL} from '../walk/hamster-ball.js';
 import {GYM_TREADMILL as GYM,ACTIVITY_FLOOR,treadmillNear} from './activity-layout.js';
 import {TABLE} from '../walk/pool/rules.js';
-import {LIVE_IDENTITY} from 'v2-live-identity';
+import {LIVE_IDENTITY} from './live-identity.js';
 const mill=arcadeTreadmill(),arcade=liveArcadeStations();
 const gymSpecs=GYM.xs.map(x=>{const centre=toWorld('d16-gym-3',[x,GYM.centerY+GYM.size[1]/2,GYM.z]),ahead=toWorld('d16-gym-3',[x,GYM.centerY+GYM.size[1]/2,GYM.z-1]);return {centre,front:ahead.map((n,i)=>n-centre[i]),top:centre[1],length:GYM.size[2],width:GYM.size[0]};});gymSpecs.push({centre:mill.centre.toArray(),front:mill.front.toArray(),top:mill.top,length:mill.length,width:mill.width});
 export const spatial={version:LAYOUT_VERSION,identity:LIVE_IDENTITY,lifts:LIFTS,

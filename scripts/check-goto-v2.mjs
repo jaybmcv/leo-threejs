@@ -4,8 +4,8 @@ import {build,transform} from 'esbuild';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {runtimeLayout} from './v2-plugin.mjs';
-import {applyV2Adapters,checkV2Adapters} from './v2-adapters.mjs';
-import {gotoAdapters} from './goto-adapters-v2.mjs';
+import {applyV2Adapters,checkV2Adapters} from './source-contract.mjs';
+import {gotoAdapters} from '../legacy/v1/scripts/goto-adapters-v2.mjs';
 import {contains} from '../src/plan/geometry-v2.js';
 import {buildGotoPlaces,groupPlaces,describeV2,deckDirectory,isCrewGallery} from '../src/v2/wayfinding-data.js';
 import {featurePlaces} from '../src/v2/goto-features.js';
@@ -37,7 +37,7 @@ assert.equal(describeV2(layout,places.find(p=>p.id==='crown-lounge').at),'Crown 
 assert.equal(describeV2(layout,[132,36.3,12]),'Deck 20 · Crew service gallery · Crew only');
 // Render the actual guide module with the same trimmed field availability.
 const guideLayout={decks:layout.decks.map(({number,name,y})=>({number,name,y})),rooms:layout.rooms.map(({id,name,deck,kind,x,y,z,depth,height,aggregate,door,frame,fittingFrame,galleryDoors,components,closed,access,polygon})=>({id,name,deck,kind,x,y,z,depth,height,aggregate,door,frame,fittingFrame,galleryDoors,components,closed,access,polygon})),fixedRooms:layout.fixedRooms,cabins:layout.cabins.map(({id,deck,x,y,z,yaw,berths,neighborhood})=>({id,deck,x,y,z,yaw,berths,neighborhood})),shuttles:layout.shuttles.map(({id,roomId,deck,x,y,z,yaw})=>({id,roomId,deck,x,y,z,yaw})),circulation:{corridors:layout.circulation.corridors.map(({id})=>({id}))}};
-const guideBundle=await build({absWorkingDir:process.cwd(),tsconfigRaw:{},entryPoints:['scripts/goto-guide-render-fixture-v2.mjs'],bundle:true,platform:'node',packages:'external',format:'esm',write:false,plugins:[{name:'goto-guide-fixture',setup(b){b.onResolve({filter:/^v2-layout$/},()=>({path:'layout',namespace:'goto-fixture'}));b.onLoad({filter:/.*/,namespace:'goto-fixture'},()=>({contents:'export default '+JSON.stringify(guideLayout),loader:'js'}));b.onResolve({filter:/.*/},a=>a.kind!=='entry-point'&&!a.path.startsWith('.')&&!path.isAbsolute(a.path)?{path:a.path,external:true}:{path:path.resolve(a.resolveDir||process.cwd(),a.path),namespace:'goto-source'});b.onLoad({filter:/.*/,namespace:'goto-source'},async a=>({contents:await fs.readFile(a.path,'utf8'),loader:a.path.endsWith('.json')?'json':'js',resolveDir:path.dirname(a.path)}));}}]});
+const guideBundle=await build({absWorkingDir:process.cwd(),tsconfigRaw:{},entryPoints:['scripts/goto-guide-render-fixture-v2.mjs'],bundle:true,platform:'node',packages:'external',format:'esm',write:false,plugins:[{name:'goto-guide-fixture',setup(b){b.onResolve({filter:/(?:^v2-layout$|[\\/]selected-layout[.]js$)/},()=>({path:'layout',namespace:'goto-fixture'}));b.onLoad({filter:/.*/,namespace:'goto-fixture'},()=>({contents:'export default '+JSON.stringify(guideLayout),loader:'js'}));b.onResolve({filter:/.*/},a=>a.kind!=='entry-point'&&!a.path.startsWith('.')&&!path.isAbsolute(a.path)?{path:a.path,external:true}:{path:path.resolve(a.resolveDir||process.cwd(),a.path),namespace:'goto-source'});b.onLoad({filter:/.*/,namespace:'goto-source'},async a=>({contents:await fs.readFile(a.path,'utf8'),loader:a.path.endsWith('.json')?'json':'js',resolveDir:path.dirname(a.path)}));}}]});
 await fs.mkdir('output/phase7',{recursive:true});const guideFile=path.resolve('output/phase7/goto-guide-render-fixture.mjs');await fs.writeFile(guideFile,guideBundle.outputFiles[0].contents);const guideModule=await import(pathToFileURL(guideFile).href+'?run='+Date.now()),guideRender=guideModule.checkGuideRendering();const sameCatalog=candidate=>JSON.stringify(candidate)===JSON.stringify(places);assert(sameCatalog(guideModule.runtimePlaces),'Production Go-to export differs from the validated catalog');assert(!sameCatalog([...guideModule.runtimePlaces,{id:'injected-outside-catalog',at:[999,0,999]}]),'An extra production Go-to entry escaped the binding check');
 const report=await checkV2Adapters();assert.equal(report.issues.length,0,'Adapter source anchors changed');
 // Each goto operation's removed anchor must fail. Use the same Source protocol
@@ -45,12 +45,12 @@ const report=await checkV2Adapters();assert.equal(report.issues.length,0,'Adapte
 const ops=[];class Probe{constructor(file,text){this.file=file;this.text=text;this.original=text;}require(a){ops.push({file:this.file,target:a});return this;}prepend(v){this.text=v+this.text;return this;}replace(a,b){this.require(a);this.text=this.text.replace(a,b);return this;}splice(a,b,v){this.require(a);this.require(b);const i=this.text.indexOf(a),j=this.text.indexOf(b,i);this.text=this.text.slice(0,i)+v+this.text.slice(j);return this;}}
 for(const file of ['src/walk/places.js','src/walk/main.js','src/walk/help.js','src/walk/signs.js','src/walk/lift-ride.js']){
  const source=(await fs.readFile(file,'utf8')).replaceAll('\r\n','\n'),adapted=applyV2Adapters(file,source);await transform(adapted,{loader:'js'});
- const probe=new Probe(file,source);gotoAdapters(file,probe);
+ const probe=new Probe(file,(await fs.readFile('legacy/v1/'+file,'utf8')).replaceAll('\r\n','\n'));gotoAdapters(file,probe);
  if(file.endsWith('/places.js'))assert(adapted.includes('export const PLACES=V2_PLACES;'),'Walk must consume the production v2 catalog');
  if(file.endsWith('/help.js')){assert(adapted.includes('const FIND=V2_FIND'));assert(adapted.includes('go:V2_EXAMPLE_GO'));}
  if(file.endsWith('/main.js')){assert(adapted.includes('renderGotoMenu(list,PLACES'));assert(adapted.includes('v2GotoStand(colliders,place.at)'));assert(adapted.includes('lifts=createLifts(scene,colliders);addWayfindingGuides(lifts.signs);'));}
 }
-for(const {file,target}of ops){let source=(await fs.readFile(file,'utf8')).replaceAll('\r\n','\n');source=target instanceof RegExp?source.replace(target,'MISSING_GOTO_ANCHOR'):source.replaceAll(target,'MISSING_GOTO_ANCHOR');const issues=[];applyV2Adapters(file,source,{issues,collect:true});assert(issues.length,'Removed goto source anchor accepted');}
+for(const {file,target}of ops){let source=(await fs.readFile('legacy/v1/'+file,'utf8')).replaceAll('\r\n','\n');source=target instanceof RegExp?source.replace(target,'MISSING_GOTO_ANCHOR'):source.replaceAll(target,'MISSING_GOTO_ANCHOR');const issues=[];(await import('../legacy/v1/scripts/v2-adapters.mjs')).applyV2Adapters(file,source,{issues,collect:true});assert(issues.length,'Removed goto source anchor accepted');}
 assert.throws(()=>buildGotoPlaces(layout,[featurePlaces(layout)[0],featurePlaces(layout)[0]]),/Duplicate/);
 const arg=process.argv.find(a=>a.startsWith('--prepared='))?.slice(11),prepared=await readGotoColliders(arg||process.env.LEO_GOTO_PREPARED||'output/leo-interior-v02/prepared-walk');
 for(const board of lobbies)assert(gotoFloor(prepared.colliders,[board.at[0],layout.decks[board.deck-1].y,board.at[2]]).ok,'Lobby directory outside real floor '+board.id);

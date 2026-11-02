@@ -29,7 +29,7 @@ export function createTransit({minimumDeck=1,maximumDeck=20,coreIds=['forward','
   const floors=[];
   function box(name,size,p,m='wall',parent=structure){const o=new T.Mesh(new T.BoxGeometry(...size),materials[m]);o.name=name;o.position.set(...p);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
   function rail(a,b,parent,m='metal'){const va=new T.Vector3(...a),vb=new T.Vector3(...b),o=new T.Mesh(new T.CylinderGeometry(.035,.035,va.distanceTo(vb),8),materials[m]);o.name='Transit_handrail';o.position.copy(va.clone().add(vb).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),vb.sub(va).normalize());parent.add(o);}
-  function floor(deck,x0,x1,z0,z1,name){
+  function floor(deck,x0,x1,z0,z1,name){if(deck>=16&&/^(Garden_central_promenade|Garden_entry_bridge|Stair_to_garden_bridge)$/.test(name))return null;
     const rect={deck,x0,x1,z0,z1,name};floors.push(rect);
     const o=box(name,[x1-x0,.24,z1-z0],[(x0+x1)/2,floorY(deck)-.12,(z0+z1)/2],'floor',decks.get(deck));o.userData={transitFloor:true,...rect};return o;
   }
@@ -131,7 +131,7 @@ export function createTransit({minimumDeck=1,maximumDeck=20,coreIds=['forward','
   for(let d=1;d<=19;d++)edge(`aft_lobby_1_d${d}`,`forward_lobby_1_d${d}`,'central corridor');
   for(const c of TRANSIT_CORES)for(let d=1;d<=c.lastDeck;d++)edge(`${c.id}_lobby_-1_d${d}`,`${c.id}_lobby_1_d${d}`,'lobby');
   const ids=new Set(graph.nodes.map(n=>n.id));graph.edges=graph.edges.filter(e=>ids.has(e.a)&&ids.has(e.b));
-  root.userData.graph=graph;
+  graph.nodes=graph.nodes.filter(n=>!/^garden_/.test(n.id));const valid=new Set(graph.nodes.map(n=>n.id));graph.edges=graph.edges.filter(e=>valid.has(e.a)&&valid.has(e.b)&&!(e.type==='central corridor'&&Number(e.a.match(/_d(\d+)$/)?.[1])>=16));root.userData.graph=graph;
   for(const [d,g]of decks){
     const rects=floors.filter(r=>r.deck===d&&r.name!=='Lift_car_floor');
     for(const o of [...g.children])if(o.userData.transitFloor&&o.name!=='Lift_car_floor'){g.remove(o);o.geometry.dispose();}

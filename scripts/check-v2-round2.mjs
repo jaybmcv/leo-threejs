@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {requireCabinFootprints} from '../src/plan/cabin-footprints-v2.js';
 import {requireCurrentWalkReport,WALK_REPORT_VERSION} from './v2-walk-identity.mjs';
 import {requireRoomDropPolicy,ROOM_DROP_ALLOWLIST} from './v2-walk-policy.mjs';
-import {checkV2Adapters} from './v2-adapters.mjs';
+import {checkV2Adapters} from './source-contract.mjs';
 const layout=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8')),checks=[],expect=(name,fn,regex)=>{assert.throws(fn,regex,name);checks.push(name);};
 checks.push('All '+requireCabinFootprints(layout).cabins+' cabin footprints and corridor thresholds pass');
 for(const kind of ['cabin','corridor','stair']){

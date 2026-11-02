@@ -8,7 +8,7 @@ export const AFT_VIEWS={
  crown:{name:'Fin crown panorama & bar',location:'Fin crown / 132.3 m elevation',description:'An expansive glazed observation deck with wraparound views, a central island bar, window seating and a passenger lift from the upper service gallery.',position:[-309,190,82],target:[-235,132,0],eye:[-241,134,8],look:[-230,133.7,0]},
 };
 export function aftOpenings(deck){const holes=[];
- if(deck>=4&&deck<=17){holes.push({x0:-158,x1:-154,z0:6,z1:10});if(deck>4)holes.push({x0:-169.5,x1:-162.5,z0:-12.5,z1:-7.5});}
+ if(deck>=4&&deck<=17){holes.push({x0:-159.8,x1:-152.2,z0:6,z1:10});if(deck>4)holes.push({x0:-169.5,x1:-162.5,z0:-12.5,z1:-7.5});}
  if(deck===5||deck===6)holes.push({x0:-244,x1:-176,z0:-28,z1:28});
  if(deck>=9&&deck<=13)holes.push({x0:-286,x1:-178,z0:-24,z1:24});
  if(deck>=18)holes.push({x0:-249.2,x1:-244.8,z0:-2.2,z1:2.2});

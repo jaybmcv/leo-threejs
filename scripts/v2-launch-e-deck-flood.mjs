@@ -5,7 +5,7 @@ import layout from 'v2-layout';
 import {preparedV2} from './v2-world.mjs';
 import {installFloodIndex} from './flood-spatial-index-v2.mjs';
 import {BODY} from '../src/walk/collision.js';
-import {solidSpots,spotIndex} from '../src/walk/rest.js?legacy';
+import {solidSpots,spotIndex} from '../src/walk/rest.js';
 import {bounds,contains} from '../src/plan/geometry-v2.js';
 const expectedSeats=JSON.parse(await fs.readFile('output/launch-e/fitout.json','utf8')).seats;
 const {prepared,artifact}=await preparedV2({artifact:true}),col=prepared.colliders;

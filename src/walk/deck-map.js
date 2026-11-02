@@ -48,7 +48,7 @@ export function planMap(ship,decks,rails){
   if(d)for(let z=Math.min(z0,z1);z<=Math.max(z0,z1);z+=cell)for(let x=Math.min(x0,x1);x<=Math.max(x0,x1);x+=cell){const k=at(x,z);if(k>=0&&d.data[k]===MAP_CLASS.wall)d.data[k]=MAP_CLASS.floor;}}
  // Deck 4's tank bay doorway is behind a lever panel the walk adds (lever-panel.js): the map shows it shut.
  {const d=out.find(o=>o.number===SEAL.deck);if(d)line(d.data,{x:SEAL.x,z:SEAL.z0},{x:SEAL.x,z:SEAL.z1});}
- for(const [deck,axis,a0,a1,pos] of rails){const d=out.find(o=>o.number===deck);if(!d)continue;
+ for(const [deck,axis,a0,a1,pos,y,z1] of rails){if(axis===2){const d=out.find(o=>o.number===deck);if(d){const n=Math.max(1,Math.ceil(Math.hypot(a1-a0,z1-pos)/(cell*.5)));for(let i=0;i<=n;i++){const k=at(a0+(a1-a0)*i/n,pos+(z1-pos)*i/n);if(k>=0)d.data[k]=MAP_CLASS.rail;}}continue;}const d=out.find(o=>o.number===deck);if(!d)continue;
   for(let a=a0;a<=a1;a+=cell*.5){const k=axis?at(pos,a):at(a,pos);if(k>=0)d.data[k]=MAP_CLASS.rail;}}
  // Lift cars, at every deck they stop at.
  for(const lift of LIFTS)for(const stop of lift.stops){const d=out.find(o=>Math.abs(o.y-stop.y)<.3);if(!d)continue;const c=lift.car;

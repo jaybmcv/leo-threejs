@@ -1,0 +1,1023 @@
+import {createThrusterEffects} from './thruster-effects.js';
+import {installFeedback} from './feedback/feedback.js';
+import {createSpaceBackdrop,aftScreenFlow} from './space-backdrop.js';
+import * as T from 'three';
+import {createNoseCommons,NOSE_COMMONS} from './nose-commons.authoring.js';
+import {applyContextOpacity} from './glazing-finish.js';
+import {publicAsset,enablePublicDownloads} from './v2/public-assets.js';
+import {refineExterior} from './exterior-finish.js';
+import {applyConceptPaint} from './concept-paint.js';
+import {applyConceptShape,shapeAft,shapeView,shapeInterior} from './concept-shape.js';
+import {applyConceptDetail} from './concept-detail.js';
+import {createEscortShuttle} from './escort-shuttle.js';
+import {createAft} from './aft.js';
+import {AFT_TOUR,FIN_TOUR} from './aft-tour.authoring.js';
+import {attachFinCrown,prepareCrownExterior} from './fin-crown.js';
+import {AFT_VIEWS as AFT_LAYOUT} from './aft-layout.js';
+import {createSpecialCirculation} from './special-circulation.authoring.js';
+import {createTransit,TRANSIT_CORES,floorY} from './transit.authoring.js';
+import {polishTourDeck} from './tour-polish.js';
+import {createMars} from './mars.js';
+import {loadEnvironment,bakeEnvironmentPNG} from './environment.js';
+import {polishCrown,loadTourArt} from './forward-polish.js';
+import {encloseAftTour,encloseResidentialConnection} from './tour-enclosures.js';
+import {SHIP_AREAS,createShipArea} from './areas.js';
+import {createExplode,explodeStage,ROOM_GROUPS,ROOM_COUNTS,STOPS} from './explode.authoring.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { createShip,createResidentialDeck,createGardenCommons,DECKS,ROUTE,LOUNGE_TOUR,SAMPLE,COMMONS } from './model.authoring.js';
+
+const $=id=>document.getElementById(id);
+// Visitors get the ship; ?studio=1 restores downloads, render exports and review notes for the build team.
+const studioTools=new URLSearchParams(location.search).get('studio')==='1';document.body.classList.toggle('studio-tools',studioTools);
+const CHAPTERS={exterior:'Exterior',layout:'Deck layout',areas:'Ship areas',neighborhood:'Neighborhood',aft:'Aft systems',transit:'Connections',walk:'Tour'};
+// The last word of each view title carries the accent, as on marscatsvoyage.com.
+function setTitle(text){const el=$('view-title'),i=text.lastIndexOf(' '),em=document.createElement('em');em.textContent=i>0?text.slice(i+1):text;el.replaceChildren(...(i>0?[text.slice(0,i+1)]:[]),em);}
+enablePublicDownloads();
+document.getElementById('share-view')?.addEventListener('click',async()=>{
+ const button=document.getElementById('share-view');
+ try{await navigator.clipboard.writeText(location.href);button.textContent='Link copied';setTimeout(()=>button.textContent='Copy view link',2500);}
+ catch{window.prompt('Copy this view link',location.href);}
+});
+// An error before the first frame stops the view; once it runs, a stray error elsewhere (a late warm-up, the feedback
+// button) only logs, instead of covering a working ship with "could not start".
+let viewStarted=false;
+window.addEventListener('error',e=>{if(viewStarted)console.warn('Leo viewer:',e.message);else showError(e.message);});
+function showError(message){$('error').hidden=false;$('error').textContent=`The 3D view could not start: ${message}. The GLB files remain available from the links below.`;$('loading').hidden=true;}
+let renderer;
+// Phones: 1.25x pixels (1x while touching) and a half-size starfield redrawn at 30 fps. MSAA stays on: 1.25x alone leaves jagged hull edges.
+// The phone layout's media query (viewer.html): upright phones, and phones on their side.
+const PHONE_LAYOUT='(max-width:680px),(max-height:500px) and (orientation:landscape) and (max-width:1000px)';
+// Phone framing (the ship raised and closer, for a tall screen) is for the phone layout less phones on their side (short
+// and wider than tall), which frame as the wider landscape screens do.
+const upright=(w,h)=>w<=680&&!(h<=500&&w>h);
+const touchScreen=matchMedia('(pointer: coarse)').matches;
+// Light mode, on touch screens: the hull simplified for phones (leo-exterior-phone.glb, ~520k triangles instead of
+// 1.42M), no shadow pass (which drew the hull a second time), 1x pixels, and no background build of every interior view
+// (~150 MB and ~90 shader programs before anyone opens one; each view is built when it is first opened instead). A
+// Galaxy S9 closed the whole browser under the full scene. ?lite=0 or ?lite=1 picks either mode on any device, and
+// viewer.html's safe start sets LEO_LITE when a phone retries after a start that never finished.
+const liteParam=new URLSearchParams(location.search).get('lite');
+const lite=window.LEO_LITE===true||(liteParam===null?touchScreen:liteParam==='1');
+const baseRatio=Math.min(devicePixelRatio,lite?1:touchScreen?1.25:1.75);
+// Until the ship has been on screen for a while, a note says a start is under way (viewer.html reads it next time).
+const STARTING='leo-viewer-starting';
+try{localStorage.setItem(STARTING,String(Date.now()));}catch{}
+addEventListener('pagehide',()=>{try{localStorage.removeItem(STARTING);}catch{}});
+try{renderer=new T.WebGLRenderer({antialias:true,alpha:true,logarithmicDepthBuffer:true});}catch(e){showError(e.message);throw e;}
+renderer.setPixelRatio(baseRatio);renderer.setClearColor(0xbac8cd);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.86;
+renderer.shadowMap.enabled=!lite;renderer.shadowMap.type=T.PCFShadowMap;renderer.shadowMap.autoUpdate=false;
+$('viewport').appendChild(renderer.domElement);
+// A phone short of graphics memory drops the WebGL context: say so rather than leave a frozen or black view.
+renderer.domElement.addEventListener('webglcontextlost',()=>{$('error').hidden=false;$('error').textContent='The 3D view stopped: this device ran short of graphics memory. Reload the page to start it again.';});
+renderer.domElement.addEventListener('webglcontextrestored',()=>{$('error').hidden=true;});
+// Tester feedback (?feedback=1): the view link already holds the exact view. An orange-edged button leading the public
+// page's footer row (always on screen, unlike the top bar, which scrolls on laptops); on phones, which have no footer, a
+// button above the controls handle that steps aside while the controls are open.
+installFeedback({renderer,page:'viewer',mount:()=>matchMedia(PHONE_LAYOUT).matches?null:document.querySelector('.foot-links'),
+ css:`.fb-button:not(.fb-mounted){left:auto;right:16px;bottom:84px;border-color:#f85800;color:#ff8a3d}body:has(#m-handle[aria-expanded="true"]) .fb-button:not(.fb-mounted){display:none}
+.foot-links:has(.fb-button){align-items:center}.foot-links .fb-button{border-color:#f85800;color:#ff8a3d;padding:7px 12px;white-space:nowrap}.foot-links .fb-button:hover{background:#f85800;color:#050507}`,
+ context:()=>({link:location.href,where:`${$('eyebrow').textContent} · ${$('view-title').textContent}`})});
+const spaceBackdrop=createSpaceBackdrop(touchScreen?{scale:.5,fps:30,pixels:true}:{});
+const scene=new T.Scene();scene.background=new T.Color(0xbac8cd);
+// Reflection lighting: baked, decoded on the GPU while the models download (src/environment.js).
+scene.environmentIntensity=.4;const environmentReady=loadEnvironment(renderer).then(texture=>{scene.environment=texture;});
+const hemi=new T.HemisphereLight(0xf3f4eb,0x657481,.7);scene.add(hemi);
+const key=new T.DirectionalLight(0xfff4dc,1.8);key.position.set(160,420,250);key.castShadow=true;key.shadow.mapSize.set(2048,2048);Object.assign(key.shadow.camera,{left:-380,right:380,top:270,bottom:-270,near:1,far:1200});key.shadow.bias=-.0003;key.shadow.normalBias=.15;scene.add(key);
+const fill=new T.DirectionalLight(0xd7ebff,.55);fill.position.set(-260,200,-180);scene.add(fill);
+const rim=new T.DirectionalLight(0xffffff,.65);rim.position.set(200,60,-300);scene.add(rim);
+let camera=new T.PerspectiveCamera(42,1,1,6000);
+const persp=camera,ortho=new T.OrthographicCamera(-400,400,240,-240,.1,6000);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.09;controls.minDistance=1;controls.maxDistance=2200;controls.maxPolarAngle=Math.PI*.96;
+// The interior (deck plates, the neighborhood template) is built after the first frames, in the idle warm-up (warmViews).
+// The deck plates are fitted to the faired hull (shapeInterior) once both exist, whichever comes first.
+const ship=createShip({deferExterior:true,lazyInterior:true,onDecks:()=>{if(exteriorReady)shapeInterior(ship.exterior,ship.inside);}});scene.add(ship.root);
+// The fin and its crown sit lower than in the saved model (concept-shape.js); interiors, stops and views follow.
+const ensureSavedAft=ship.ensureAft;ship.ensureAft=()=>{const first=!ship.aftShaped,aft=ensureSavedAft();if(first){shapeAft(aft.root);ship.aftShaped=true;}return aft;};
+const AFT_VIEWS=Object.fromEntries(Object.entries(AFT_LAYOUT).map(([key,view])=>[key,shapeView(view)]));let tourExtras=null;const ensureTourExtras=()=>{if(!tourExtras){tourExtras=polishTourDeck(ship.detail.root);tourExtras.visible=mode==='walk';}return tourExtras;};
+let activeDistrict=10,residenceInside=false;const districtViews=new Map();
+const noseScene=new T.Group(),noseViews=new Map();scene.add(noseScene);noseScene.visible=false;
+function noseView(){
+ if(!noseViews.has(activeDistrict)){const v=createNoseCommons(activeDistrict);noseViews.set(activeDistrict,v);noseScene.add(v.root);}
+ for(const [n,v] of noseViews)v.root.visible=n===activeDistrict;
+ const v=noseViews.get(activeDistrict);v.shell.visible=$('detail-walls').checked;return v;
+}
+function viewLink(values){if(location.protocol!=='file:'){const params=new URLSearchParams(values);if($('clean-branding')?.checked)params.set('clean','1');else params.delete('clean');history.replaceState(null,'','?'+params);}}
+function districtView(){
+  if(activeDistrict===10)return null;
+  if(!districtViews.has(activeDistrict)){
+    const residence=createResidentialDeck(activeDistrict,ship.detail),garden=createGardenCommons(activeDistrict,ship.detail),root=new T.Group();
+    root.add(residence.root,garden.root);root.visible=false;scene.add(root);districtViews.set(activeDistrict,{root,residence,garden});
+  }
+  return districtViews.get(activeDistrict);
+}
+for(let n=1;n<=10;n++){const o=document.createElement('option');o.value=n;o.textContent='Deck '+(n+5)+' · '+NOSE_COMMONS[n-1].name;o.selected=n===10;$('neighborhood-select').append(o);}
+  $('neighborhood-select').addEventListener('change',async()=>{const focus=document.querySelector('[data-focus][aria-pressed="true"]')?.dataset.focus||'all';activeDistrict=Number($('neighborhood-select').value);await setMode('neighborhood');focusDetail(focus);});
+const areasRoot=new T.Group();areasRoot.visible=false;scene.add(areasRoot);const areaCache=new Map();let activeArea=SHIP_AREAS.find(a=>a.kind==='farm'),areaView='overview';
+$('area-count').textContent=SHIP_AREAS.length;
+for(const deck of [...new Set(SHIP_AREAS.map(a=>a.deck))].sort((a,b)=>a-b)){const group=document.createElement('optgroup');group.label='Deck '+deck;for(const a of SHIP_AREAS.filter(a=>a.deck===deck)){const option=document.createElement('option');option.value=a.id;option.textContent=a.name;group.append(option);}$('area-select').append(group);}
+function ensureArea(area){if(!areaCache.has(area.id)){const room=createShipArea(area);areaCache.set(area.id,room);areasRoot.add(room.root);}return areaCache.get(area.id);}
+function showArea(id=activeArea.id,view=areaView){
+  activeArea=SHIP_AREAS.find(a=>a.id===id)||activeArea;areaView=view;
+  ensureArea(activeArea);
+  for(const [key,room] of areaCache)room.root.visible=key===activeArea.id;
+  const room=areaCache.get(activeArea.id);room.shell.visible=view==='inside';$('area-select').value=activeArea.id;$('area-deck').textContent=activeArea.deck;$('area-description').textContent=activeArea.description;
+  setTitle(activeArea.name);$('view-description').textContent=activeArea.category+' · Deck '+activeArea.deck;$('status').textContent=activeArea.name+' · '+(view==='inside'?'1.7 m eye level':activeArea.width+' × '+activeArea.depth+' m concept area');
+  document.querySelectorAll('[data-area-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.areaView===view));persp.fov=view==='inside'?65:42;persp.near=.05;
+  const pose=room[view];setCamera('persp',pose.position,pose.target,0);
+  const bridgeSky=activeArea.kind==='bridge'&&view==='inside';mars.visible=bridgeSky;stars.visible=bridgeSky;scene.background.set(bridgeSky?0x0a1422:0xbac8cd);
+  viewLink({area:activeArea.id,view:areaView});
+}
+$('locate-area').addEventListener('click',async()=>{ $('deck-select').value=activeArea.deck-1; $('isolate').checked=true; $('shell-context').checked=false; await setMode('layout'); setCamera('ortho',[0,600,.01],[0,0,0],0); });
+$('area-select').addEventListener('change',()=>showArea($('area-select').value));document.querySelectorAll('[data-area-view]').forEach(b=>b.addEventListener('click',()=>showArea(activeArea.id,b.dataset.areaView)));
+let transitView=null,transitKey='',transitDeck=17,transitCore='forward',transitPose='overview',previewTransit=null;
+// The forward core shown inside the neighborhood and on the home tour (it carries lights, so the warm-up builds it too).
+function ensurePreviewTransit(){if(!previewTransit){previewTransit=createTransit({minimumDeck:15,maximumDeck:19,coreIds:['forward']});ship.detail.root.add(previewTransit.root);}return previewTransit;}
+const transitScene=new T.Group();scene.add(transitScene);transitScene.visible=false;
+for(let d=1;d<=20;d++){const o=document.createElement('option');o.value=d;o.textContent='Deck '+d+' · '+DECKS[d-1].name;$('transit-deck').append(o);}
+// Builds the three-deck transit cutaway for the current core and deck, replacing the previous one.
+function ensureTransitView(core=TRANSIT_CORES.find(c=>c.id===transitCore)){
+  const nextKey=transitCore+'-'+transitDeck;if(nextKey===transitKey)return;
+  transitView?.root.traverse(o=>{if(o.isMesh&&o.geometry)o.geometry.dispose();});transitScene.clear();transitKey=nextKey;
+  transitView=createTransit({minimumDeck:transitDeck>=17&&transitDeck<=19?17:Math.max(1,transitDeck-1),maximumDeck:transitDeck>=17&&transitDeck<=19?19:Math.min(core.lastDeck,transitDeck+1),coreIds:[transitCore]});transitScene.add(transitView.root);transitView.shell.visible=transitPose==='inside';
+  if(transitDeck>=17){for(const number of (transitCore==='forward'?[9,10]:[1,2])){const g=createGardenCommons(number,ship.detail);g.walls.visible=transitPose==='inside';transitScene.add(g.root);}}
+}
+function showTransit(){
+  const core=TRANSIT_CORES.find(c=>c.id===transitCore);transitDeck=Math.min(transitDeck,core.lastDeck);
+  ensureTransitView(core);
+  transitView.shell.visible=transitPose!=='overview';transitScene.traverse(o=>{if(o.name==='Garden_walls_and_ceiling')o.visible=transitPose!=='overview';});
+  document.body.dataset.eye=transitPose==='overview'?'0':'1';
+  $('transit-deck').value=transitDeck;$('transit-core').value=transitCore;
+  $('transit-description').textContent=(transitCore==='forward'?'Forward core · Decks 1–20':'Aft core · Decks 1–19')+' · paired lifts, two switchback stairs and deck landings.';
+  setTitle(transitCore==='forward'?'The forward connection.':'The aft connection.');$('view-description').textContent='Deck '+transitDeck+' · '+DECKS[transitDeck-1].name;
+  $('status').textContent='Deck '+transitDeck+' · '+(transitPose!=='overview'?'1.7 m eye level':'Three-deck cutaway');
+  document.querySelectorAll('[data-transit-view]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.transitView===transitPose));
+  const y=floorY(transitDeck);persp.near=.05;persp.fov=transitPose!=='overview'?65:42;
+  if(transitPose==='inside')setCamera('persp',[core.x-4,y+1.7,0],[core.x,y+1.5,6],0);
+  else if(transitPose==='stairs')setCamera('persp',[core.stairX-3.5,y+1.7,core.stairZ-1.4],[core.stairX+2.5,y+3,core.stairZ-1.4],0);
+  else setCamera('persp',transitDeck>=17&&transitDeck<=19?[core.x+60,y+65,105]:[core.x+28,y+27,42],[core.x,y+3,0],0);
+  viewLink({transit:transitCore,deck:transitDeck,view:transitPose});
+}
+$('transit-deck').addEventListener('change',()=>{transitDeck=Number($('transit-deck').value);showTransit();});
+$('transit-core').addEventListener('change',()=>{transitCore=$('transit-core').value;showTransit();});
+document.querySelectorAll('[data-transit-view]').forEach(b=>b.addEventListener('click',()=>{transitPose=b.dataset.transitView;showTransit();}));
+const aftScene=new T.Group();scene.add(aftScene);aftScene.visible=false;
+// Cosmo, the crew cat, loads as its own file once the ship is up. The blockout cats stay until it is ready, so a
+// failed load degrades to the old figures. New scene parts are dressed on the next frame; a 1 s sweep of what is
+// visible catches anything built deeper inside an existing group.
+let cosmoKit=null,cosmoSweep=0;const cosmoPending=new Set();
+function loadCosmo(){
+ if(loadCosmo.started)return;loadCosmo.started=true;globalThis.LEO_THREE=T;
+ const script=Object.assign(document.createElement('script'),{src:__COSMO_SCRIPT__,async:true});// the build's hashed cosmo.<hash>.js
+ script.onload=()=>globalThis.LeoCosmo.createCosmoKit().then(kit=>{cosmoKit=kit;cosmoPending.add(scene);}).catch(err=>console.warn('Cosmo could not load; keeping the blockout figures.',err));
+ script.onerror=()=>console.warn('cosmo.js is missing; keeping the blockout figures.');
+ document.head.appendChild(script);
+}
+// The ship and key light never move, so the 2048 px shadow map is redrawn only after something changes (input,
+// new scene parts, Cosmo, resize) plus a 1 s safety refresh, instead of re-rendering the whole ship every frame.
+let shadowFrames=3,shadowClock=0;const refreshShadows=()=>{shadowFrames=3;};
+for(const type of ['click','change','input'])document.addEventListener(type,refreshShadows,true);addEventListener('resize',refreshShadows);
+function tickShadows(now){if(shadowFrames>0){shadowFrames--;renderer.shadowMap.needsUpdate=interiorMoved=true;}else if(now-shadowClock>1000){shadowClock=now;renderer.shadowMap.needsUpdate=interiorMoved=true;}}
+// With its decks built the interior is ~50,000 objects, and three.js re-derives every object's matrices each frame
+// (~10 ms on a fast desktop, assembled or not). They only change when something is built, dressed or moved, which
+// all schedule a shadow refresh, so the interior re-derives its matrices on the shadow map's schedule instead.
+// While things move only the visible objects are updated (exploded, the detail culling leaves ~3,500 of ~50,000 shown):
+// a frame renders exactly the objects visible when it starts, so those are all it needs. The first frame after the
+// moves stop brings the hidden ones up to date, for whatever shows them next.
+let interiorMoved=true,hiddenStale=false;const interiorPlace=new T.Matrix4(),IDENTITY=new T.Matrix4(),updateObject=T.Object3D.prototype.updateMatrixWorld;
+// Updates the world matrices of parent's visible descendants (parent's own is current); true if it skipped any.
+function updateVisible(parent){
+ let skipped=false;
+ for(const o of parent.children){
+  if(!o.visible){skipped=true;continue;}
+  if(o.updateMatrixWorld!==updateObject){o.updateMatrixWorld(true);continue;}// the interior, cameras, skinned meshes and the like keep their own update
+  if(o.matrixAutoUpdate)o.updateMatrix();
+  if(o.matrixWorldAutoUpdate)o.matrixWorld.multiplyMatrices(parent.matrixWorld,o.matrix);
+  o.matrixWorldNeedsUpdate=false;if(updateVisible(o))skipped=true;
+ }
+ return skipped;
+}
+ship.inside.updateMatrixWorld=function(force){
+ if(this.matrixAutoUpdate)this.updateMatrix();
+ this.matrixWorld.multiplyMatrices(this.parent?this.parent.matrixWorld:IDENTITY,this.matrix);
+ if(interiorMoved||!this.matrixWorld.equals(interiorPlace)){interiorMoved=false;interiorPlace.copy(this.matrixWorld);if(!this.visible||updateVisible(this))hiddenStale=true;}
+ else if(hiddenStale){hiddenStale=false;updateObject.call(this,true);}
+ this.matrixWorldNeedsUpdate=false;
+};
+for(const container of [scene,noseScene,areasRoot,transitScene,aftScene])container.addEventListener('childadded',()=>{refreshShadows();if(cosmoKit)cosmoPending.add(container);});
+function dressCosmo(now){
+ if(!cosmoKit)return;
+ for(const root of cosmoPending)if(globalThis.LeoCosmo.dressCats(root,cosmoKit))refreshShadows();cosmoPending.clear();
+ if(now-cosmoSweep>1000){cosmoSweep=now;if(globalThis.LeoCosmo.dressCats(scene,cosmoKit,true))refreshShadows();}
+}let aftModel=null,aftGhost=null,aftSection='overview',aftEye=false;
+// The upper aft rooms are cutaways in the aft systems view; tours walk through them, so their walls and ceilings show.
+const upperAftShells=[];const showUpperAftShells=on=>upperAftShells.forEach(o=>{o.visible=on;});
+for(const [key,v]of Object.entries(AFT_VIEWS)){const o=document.createElement('option');o.value=key;o.textContent=v.name;$('aft-section').append(o);}
+// Builds the aft model once (the aft systems view, the engineering and fin tours, and the idle warm-up use it).
+function ensureAftModel(){
+ if(!aftModel){aftModel=createAft();aftScene.add(aftModel.root);polishCrown(aftModel.root);shapeAft(aftModel.root);const rooms=new T.Group();rooms.name='Existing_aft_engineering';
+  for(const area of SHIP_AREAS.filter(a=>a.category==='Aft engineering')){const r=createShipArea(area);r.shell.visible=false;rooms.add(r.root);}const c=createSpecialCirculation(7);c.shell.visible=false;rooms.add(c.root);aftScene.add(rooms);
+  const upper=new T.Group();upper.name='Upper_aft_commons';for(const a of SHIP_AREAS.filter(a=>a.upperAft)){const r=createShipArea(a);r.shell.visible=false;upperAftShells.push(r.shell);upper.add(r.root);}for(const d of [16,17]){const r=createSpecialCirculation(d);r.shell.visible=false;upperAftShells.push(r.shell);upper.add(r.root);}aftScene.add(upper);
+  aftGhost=assembled(()=>ship.exterior.clone(true));aftGhost.name='Aft_shell_context';aftGhost.traverse(o=>{if(o.isMesh){const ms=(Array.isArray(o.material)?o.material:[o.material]).map(m=>{const n=m.clone();n.transparent=true;n.opacity=.1;n.depthWrite=false;n.clippingPlanes=[new T.Plane(new T.Vector3(-1,0,0),-132)];return n;});o.material=Array.isArray(o.material)?ms:ms[0];o.castShadow=false;}});aftGhost.traverse(o=>o.visible=true);aftGhost.getObjectByName('Fin_panorama_lounge')?.removeFromParent();aftScene.add(aftGhost);renderer.localClippingEnabled=true;
+ }
+}
+function showAft(){
+ ensureAftModel();
+ const v=AFT_VIEWS[aftSection];if(!v.eye)aftEye=false;
+ const crownSky=aftSection==='crown'&&aftEye;stars.visible=crownSky;mars.visible=crownSky;scene.background.set(crownSky?0x0a1422:0xbac8cd);
+ for(const [key,g]of Object.entries(aftModel.parts))g.visible=aftSection==='overview'||key===aftSection||(aftSection==='pods'&&key==='access');
+ aftScene.getObjectByName('Existing_aft_engineering').visible=aftSection==='overview';
+ aftScene.getObjectByName('Upper_aft_commons').visible=['overview','access','fin'].includes(aftSection);
+ aftModel.shells.forEach(o=>o.visible=aftEye);aftModel.crown.roofs.forEach(o=>o.visible=aftEye);aftGhost.visible=$('aft-shell').checked&&!aftEye&&aftSection!=='crown';
+ $('aft-shell').disabled=aftEye||aftSection==='crown';
+ $('aft-section').value=aftSection;$('aft-eye').disabled=!v.eye;$('aft-eye').setAttribute('aria-pressed',String(aftEye));$('aft-overview').setAttribute('aria-pressed',String(!aftEye));
+ setTitle(v.name);$('view-description').textContent=v.location;$('aft-description').textContent=v.description;$('status').textContent=v.location+' · '+(aftEye?'1.7 m inspection view':'structural blockout');
+ document.body.dataset.eye=aftEye?'1':'0';persp.near=.05;persp.fov=aftEye?65:42;setCamera('persp',aftEye?v.eye:v.position,aftEye?v.look:v.target,0);
+ viewLink({aft:aftSection,view:aftEye?'inside':'overview'});
+}
+$('aft-section').addEventListener('change',()=>{aftSection=$('aft-section').value;showAft();});$('aft-shell').addEventListener('change',showAft);
+$('aft-eye').addEventListener('click',()=>{aftEye=true;showAft();});$('aft-overview').addEventListener('click',()=>{aftEye=false;showAft();});
+const shapeParts=/^(Fin_cap_retained_white_underside$|Crown_|Smooth_pressure_envelope_|Upper_engine_housing_|Sculpted_nacelle_shell$|Nacelle_exhaust_bulkhead$|Nacelle_chamfered_nose_face$|Engine_shroud$|Engine_bell$|Engine_nozzle_lip$|Engine_throat$|Blended_double_delta$|Wing_thermal_edge$|Wing_stabilizer_fence$|Swept_cat_tail$|Fin_root_fillet$|Swept_tail_cap$|Tail_root_dorsal_fairing$|Contoured_aft_pressure_frame$|Forward_observation_panes$|Individual_glazing_frames$|Individual_glazing_seals$|Bridge_roof_brow$|Forward_side_vent_)/;
+const brandingParts=/^(LEO_wordmark|Mission_identifier|Mission_brand|Crest_|Tail_registry|Roof_mission|V33_authentic_Mars_Cats_Voyage_logo)$/;
+const exteriorMeshes=[];ship.exterior.traverse(o=>{if(o.isMesh)exteriorMeshes.push({mesh:o,visible:o.visible});});
+function brandingMesh(o){return o.isMesh&&brandingParts.test(o.name);}
+function applyBrandingView(){const clean=$('clean-branding')?.checked===true;document.body.classList.toggle('clean-branding',clean);document.title=clean?'Life aboard':'LEO — Life aboard';scene.traverse(o=>{if(brandingMesh(o))o.visible=!clean;});}
+function applyShapeView(){const simple=mode==='exterior'&&$('shape-only').checked,clean=$('clean-branding')?.checked===true;for(const {mesh,visible} of exteriorMeshes)mesh.visible=visible&&(!simple||shapeParts.test(mesh.name))&&(!clean||!brandingMesh(mesh));}
+$('shape-only').addEventListener('change',applyShapeView);
+$('clean-branding').addEventListener('change',()=>{const clean=$('clean-branding').checked;try{localStorage.setItem('leo-clean-branding',clean?'1':'0');}catch{}applyBrandingView();applyShapeView();const params=new URLSearchParams(location.search);if(clean)params.set('clean','1');else params.delete('clean');if(location.protocol!=='file:')history.replaceState(null,'','?'+params);});
+function exteriorStage(){if(mode!=='exterior')return;const studio=$('studio-stage').checked;document.body.dataset.studio=studio?'1':'0';grid.visible=!studio;pad.visible=!studio;scene.background.set(studio?0x344554:0xbac8cd);scene.environmentIntensity=.55;key.intensity=1.45;hemi.intensity=.65;}
+$('studio-stage').addEventListener('change',exteriorStage);
+const grid=new T.GridHelper(1100,44,0x8d9fa7,0xaab9bf);grid.position.y=-59;grid.material.transparent=true;grid.material.opacity=.48;scene.add(grid);
+const pad=new T.Mesh(new T.PlaneGeometry(2400,2400),new T.MeshStandardMaterial({color:0xa9b9c0,roughness:1}));pad.rotation.x=-Math.PI/2;pad.position.y=-59.1;pad.receiveShadow=true;scene.add(pad);
+const dimensions=new T.Group();dimensions.name='Viewer_dimensions';scene.add(dimensions);
+function label(text,pos){const c=document.createElement('canvas');c.width=512;c.height=96;const ctx=c.getContext('2d');ctx.font='500 35px Segoe UI';ctx.textAlign='center';ctx.fillStyle='#304957';ctx.fillText(text,256,62);const tx=new T.CanvasTexture(c);const sp=new T.Sprite(new T.SpriteMaterial({map:tx,depthTest:false,transparent:true}));sp.position.set(...pos);sp.scale.set(90,17,1);dimensions.add(sp);}
+function line(points,color=0x718996){const geo=new T.BufferGeometry().setFromPoints(points.map(p=>new T.Vector3(...p)));dimensions.add(new T.Line(geo,new T.LineBasicMaterial({color,transparent:true,opacity:.75,depthTest:false})));}
+line([[-300,-45,190],[264,-45,190]]);for(let x of [-300,264])line([[x,-45,181],[x,-45,199]]);label('564 m', [-18,-43,205]);
+line([[-330,-45,-150],[-330,-45,150]]);for(let z of [-150,150])line([[-339,-45,z],[-321,-45,z]]);label('300 m',[-353,-42,0]);
+// Stylized, procedural Mars backdrop; no remote assets are needed.
+const mars=createMars();mars.position.set(1800,90,-100);mars.visible=false;scene.add(mars);
+const starsGeometry=new T.BufferGeometry(),starPositions=[];let starSeed=731;
+function starRandom(){starSeed=(Math.imul(starSeed,1664525)+1013904223)>>>0;return starSeed/4294967296;}
+for(let i=0;i<1500;i++){const y=starRandom()*2-1,a=starRandom()*Math.PI*2,r=Math.sqrt(1-y*y);starPositions.push(3800*r*Math.cos(a),3800*y,3800*r*Math.sin(a));}
+starsGeometry.setAttribute('position',new T.Float32BufferAttribute(starPositions,3));
+const stars=new T.Points(starsGeometry,new T.PointsMaterial({color:0xd5e2eb,size:1.25,sizeAttenuation:false,transparent:true,opacity:.65}));stars.visible=false;scene.add(stars);
+// The guided tours. Home and lounge stay in Neighborhood 10 and glide where the path is clear; aft and fin cut between
+// decks through the aft spaces.
+const TOURS={
+ home:{stops:ROUTE,neighborhood:true,title:'From cabin to the stars.',view:'Follow a short route through Neighborhood 10.',status:'Guided neighborhood route',description:'Follow a resident from a twin cabin through the garden to the forward observation lounge.'},
+ lounge:{stops:LOUNGE_TOUR,neighborhood:true,title:'To the observation lounge.',view:'From the garden commons into the forward observation lounge.',status:'Neighborhood 10 / observation lounge',description:'Walk from the Neighborhood 10 garden up the promenade and into the forward observation lounge: the telescope, the seating islands, a reading corner and the view of Mars.'},
+ aft:{stops:AFT_TOUR,title:'From home to engineering.',view:'A journey through the working ship.',status:'Residential / engineering',description:'Travel from Neighborhood 10 through the aft residential connection to the drive, the reservoir bay and the engine pods. Deck and lift transfers use scene cuts.'},
+ fin:{stops:FIN_TOUR.map(shapeView),title:'From home to the fin crown.',view:'Up to Deck 17, aft to the fin, and up to the panorama bar.',status:'Residential / fin / panorama',description:'Rise from Neighborhood 10 to the commons level, walk aft to the fin lounge and gallery, then ride the lift to the crown bar. Deck and lift transfers use scene cuts.'},
+};
+let routeKey='home',tourResidence=null,tourTransit=null,aftTourShell=null;const routeStops=()=>TOURS[routeKey].stops,neighborhoodTour=()=>Boolean(TOURS[routeKey].neighborhood);
+let mode='exterior',transition=null,tourPlaying=false,stop=0,tourTimer=null,lookDrag=null,lastFrameScale=1,exporting=false;
+let turntable=false,lastFrameTime=0;
+function stopTurntable(){turntable=false;controls.autoRotate=false;$('turntable').textContent='Start turntable';$('turntable').setAttribute('aria-pressed','false');}
+$('turntable').addEventListener('click',()=>{
+ if(turntable){stopTurntable();return;}
+ if(mode==='walk')return;
+ if(controls.getPolarAngle()<.1){const t=controls.target.clone(),r=camera.position.distanceTo(t);setCamera('persp',t.clone().add(new T.Vector3(r*.7,r*.55,r*.7)).toArray(),t.toArray(),0);}
+ transition=null;turntable=true;controls.autoRotate=true;controls.autoRotateSpeed=.6;
+ $('turntable').textContent='Pause turntable';$('turntable').setAttribute('aria-pressed','true');
+});
+controls.addEventListener('start',stopTurntable);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopTurntable();});
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+$('speed-lines').checked=!reduced;
+function setCamera(type,position,target,duration=850){
+  stopTurntable();
+  camera=type==='ortho'?ortho:persp;controls.object=camera;controls.enabled=mode!=='walk';resize();
+  if(mode!=='walk'&&type!=='ortho')position=new T.Vector3(...position).sub(new T.Vector3(...target)).multiplyScalar(lastFrameScale).add(new T.Vector3(...target)).toArray();
+  if(duration===0||reduced){camera.position.set(...position);controls.target.set(...target);camera.lookAt(controls.target);if(mode!=='walk')controls.update();transition=null;return;}
+  transition={start:performance.now(),duration,from:camera.position.clone(),to:new T.Vector3(...position),fromTarget:controls.target.clone(),toTarget:new T.Vector3(...target)};
+}
+function resize(){
+  const r=$('viewport').getBoundingClientRect();if(!r.width||!r.height)return; // hidden or collapsed: wait for a real size
+  renderer.setSize(r.width,r.height);persp.aspect=r.width/r.height;spaceBackdrop.resize(persp.aspect);
+  const frameScale=Math.max(1,1.5/persp.aspect),ratio=frameScale/lastFrameScale;
+  if(mode!=='walk'&&camera===persp&&ratio!==1){
+    camera.position.sub(controls.target).multiplyScalar(ratio).add(controls.target);
+    if(transition){transition.from.sub(transition.fromTarget).multiplyScalar(ratio).add(transition.fromTarget);transition.to.sub(transition.toTarget).multiplyScalar(ratio).add(transition.toTarget);}
+  }
+  lastFrameScale=frameScale;const shift=r.width>1000?110:!upright(r.width,r.height)?80:0,shiftY=upright(r.width,r.height)&&mode!=='walk'?-40:0;
+  persp.setViewOffset(r.width,r.height,shift,shiftY,r.width,r.height);persp.updateProjectionMatrix();
+  const h=230*frameScale;ortho.left=-h*r.width/r.height;ortho.right=h*r.width/r.height;ortho.top=h;ortho.bottom=-h;ortho.setViewOffset(r.width,r.height,shift,shiftY,r.width,r.height);ortho.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe($('viewport'));
+function contextOpacity(value){[ship.port,ship.starboard].forEach(g=>applyContextOpacity(g,value));}
+let exteriorReady=false,exteriorLoad=null,modeRequest=0,thrusters=null,escort=null;
+async function loadExterior(){
+  if(exteriorReady)return;
+  if(!exteriorLoad)exteriorLoad=(async()=>{
+    if(location.protocol==='file:'){
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));ship.ensureExterior();
+    }else{
+      // Stream the meshopt web copy when the public build has one; downloads keep the lossless refined GLB.
+      const assets=window.LEO_PUBLIC_ASSETS,exteriorName=lite&&assets?.['leo-exterior-phone.glb']?'leo-exterior-phone.glb':assets?.['leo-exterior-web.glb']?'leo-exterior-web.glb':'leo-exterior-refined.glb';
+      const bytes=await publicAsset(exteriorName,p=>{$('loading').textContent=`Loading Leo… ${p}%`;});
+      const loader=new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+      const gltf=bytes?await loader.parseAsync(bytes,''):await loader.loadAsync('leo-exterior-refined.glb');
+      gltf.scene.traverse(o=>{const a=gltf.parser.associations.get(o);if(a?.nodes!==undefined)o.name=gltf.parser.json.nodes[a.nodes].name||o.name;else if(o.isMesh&&a?.meshes!==undefined)o.name=o.parent.name;});
+      const exterior=gltf.scene.getObjectByName('01_EXTERIOR_REFINED_V31');
+      if(!exterior)throw new Error('The saved exterior is missing its root');
+      ship.root.remove(ship.exterior);exterior.visible=false;ship.root.add(exterior);
+      Object.assign(ship,{exterior,fixed:exterior.getObjectByName('Wings_engines_tail'),port:exterior.getObjectByName('Port_shell'),starboard:exterior.getObjectByName('Starboard_shell')});
+    }
+    if(location.protocol==='file:'){prepareCrownExterior(ship.exterior);refineExterior(ship.exterior);attachFinCrown(ship.exterior);}
+    // The concept passes take ~0.1 s each; yielding between them keeps the loading screen from freezing for their sum.
+    // A message-channel task, unlike a timer, isn't throttled when the tab is in the background.
+    const yieldTask=()=>new Promise(resolve=>{const channel=new MessageChannel();channel.port1.onmessage=()=>resolve();channel.port2.postMessage(0);});
+    // The public build bakes the shape and detail passes into the streamed exterior (scripts/bake-concept.mjs).
+    if(!ship.exterior.userData.conceptBaked){applyConceptShape(ship.exterior);await yieldTask();applyConceptDetail(ship.exterior);await yieldTask();}
+    applyConceptPaint(ship.exterior);if(ship.decksBuilt)shapeInterior(ship.exterior,ship.inside);
+    ship.exterior.traverse(o=>{if(o.isMesh){const glazing=(Array.isArray(o.material)?o.material:[o.material]).some(m=>m.name.startsWith('LEO_glass_'));o.castShadow=!glazing;o.receiveShadow=!glazing;exteriorMeshes.push({mesh:o,visible:o.visible});}});thrusters=createThrusterEffects(ship.exterior);escort=createEscortShuttle();ship.root.add(escort.root);scene.add(thrusters.root);exteriorReady=true;if(!window.LEO_ARRIVAL)loadCosmo();applyBrandingView();applyShapeView();
+  })().catch(e=>{exteriorLoad=null;throw e;});
+  await exteriorLoad;
+}
+  async function setMode(next){
+    stopTurntable();$('turntable').disabled=next==='walk';
+    if(next!=='exterior'){stopExplodePlay();if(explodeValue>0)setExplode(0,{reframe:false});}// other views use the assembled ship
+    if(next!=='exterior')loadCosmo(); // held back during the arrival; any view inside the ship wants him now
+    noseScene.visible=false;
+  const request=++modeRequest;
+  if((next==='exterior'||next==='layout'||next==='aft'||(next==='walk'&&!neighborhoodTour()))&&!exteriorReady){
+    $('loading').textContent='Loading exterior model…';$('loading').hidden=false;
+    try{await loadExterior();}catch(e){showError(e.message);return;}
+    if(request!==modeRequest)return;
+  }
+  $('loading').hidden=true;
+  stopTour();if(tourResidence)tourResidence.visible=false;if(tourTransit)tourTransit.visible=false;mode=next;document.body.dataset.eye='0';applyShapeView();document.body.dataset.mode=mode;persp.fov=mode==='walk'?65:42;persp.near=mode==='walk'?.05:mode==='neighborhood'?.1:1;persp.far=6000;transition=null;contextOpacity(1);
+  document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===mode));
+  for(let m of ['exterior','layout','neighborhood','walk','areas','transit','aft'])$(`${m}-controls`).hidden=m!==mode;
+  ship.exterior.visible=mode==='exterior'||mode==='layout';ship.port.visible=true;ship.starboard.visible=true;
+  aftScene.visible=mode==='aft';transitScene.visible=mode==='transit';areasRoot.visible=mode==='areas';ship.inside.visible=mode==='layout';{const shown=(mode==='neighborhood'&&activeDistrict===10)||mode==='walk';if(shown||ship.detailBuilt)ship.detail.root.visible=shown;}
+  if(mode==='neighborhood')districtView();for(const [number,v]of districtViews)v.root.visible=mode==='neighborhood'&&number===activeDistrict;
+  dimensions.visible=mode==='exterior'&&$('dimensions').checked;grid.visible=mode==='exterior'||mode==='layout';pad.visible=grid.visible;
+  stars.visible=mode==='walk';mars.visible=mode==='walk'||mode==='neighborhood';if(tourExtras||mode==='walk')ensureTourExtras().visible=mode==='walk';if(mode==='walk')loadTourArt();if(aftTourShell)aftTourShell.visible=mode==='walk';showUpperAftShells(mode==='walk');controls.enabled=mode!=='walk';controls.enablePan=true;controls.minDistance=(['neighborhood','walk','areas','transit','aft'].includes(mode))?1:50;controls.maxDistance=mode==='neighborhood'?400:2200;
+  $('save-interior').hidden=!['walk','neighborhood','areas','transit','aft'].includes(mode);$('interior-render-status').textContent='';$('route').hidden=mode!=='walk';$('walk-help').hidden=mode!=='walk';$('stamp').hidden=mode==='walk';
+  $('stamp').lastChild.textContent=['neighborhood','areas','transit','aft'].includes(mode)?'INTERIOR STUDY · 01':studioTools?'EXTERIOR FINISH · V35':'564 m · 20 decks · 10,000 aboard';
+  $('foot-note').textContent=mode==='walk'?'Drag to look · follow the route':'Drag to orbit · scroll to zoom · right-drag to pan';
+  const texts={aft:['07 / AFT SYSTEMS','Inside the tail.','Aft machinery and maintenance structure.','AFT SYSTEMS'],transit:['06 / CONNECTIONS','Moving through Leo.','Lifts, stairs and garden promenades.','DECK CONNECTIONS'],areas:['05 / SHIP AREAS','Spaces for the voyage.','Explore the facilities that support life aboard Leo.','SHIP DIRECTORY'],exterior:['01 / EXTERIOR REFINEMENT','A home between planets.','Leo’s familiar silhouette, resolved at the scale of a traveling community.','DESIGN BASELINE'],layout:['02 / SPATIAL ALLOCATION','Room for the voyage.','Inspect the deck stack and the placement of every twin cabin.','DECK INSPECTOR'],neighborhood:['03 / HUMAN-SCALE STUDY','A neighborhood aboard Leo.','500 twin cabins, a shared garden and a panoramic lounge, connected at full scale.','NEIGHBORHOOD 10'],walk:['04 / GUIDED WALKTHROUGH','From cabin to the stars.','Follow a short route through Neighborhood 10.','LIFE ABOARD']};
+  [$('eyebrow'),$('view-title'),$('view-description'),$('panel-title')].forEach((el,i)=>el.textContent=texts[mode][i]);setTitle(texts[mode][1]);
+  if(mode==='exterior'&&!studioTools)$('eyebrow').textContent='WELCOME ABOARD';$('counter').textContent=texts[mode][0].split(' / ')[0]+' / '+CHAPTERS[mode];
+  $('m-view-label').textContent=CHAPTERS[mode];$('m-handle-title').textContent=texts[mode][3];$('m-handle-meta').textContent=mode==='exterior'?' · 564 m · 20 decks':'';
+  document.querySelectorAll('#m-menu button,#m-steps-bar button').forEach(b=>b.classList.toggle('on',b.dataset.mode===mode));
+  $('m-steps-count').firstChild.textContent=String(STEP_ORDER.indexOf(mode)+1).padStart(2,'0');
+  scene.background.set(mode==='walk'?0x0a1422:0xbac8cd);scene.environmentIntensity=mode==='walk'?.65:.4;hemi.intensity=mode==='walk'?.65:.7;key.intensity=mode==='walk'?.7:1.8;fill.intensity=mode==='walk'?.25:.55;rim.intensity=mode==='walk'?.25:.65;
+  if(mode==='exterior'){viewCamera(studioTools?'perspective':'boarding');$('status').textContent=exteriorStatus();controls.maxDistance=2200*explodeScale();}
+  if(mode==='layout'){updateDeck();setCamera('persp',[420,360,460],[0,-5,0]);}
+  if(mode==='areas')showArea();
+  if(mode==='transit')showTransit();
+  if(mode==='aft')showAft();if(mode==='exterior')exteriorStage();
+  if(mode==='neighborhood'||mode==='walk'){ensurePreviewTransit();previewTransit.shell.visible=mode==='walk'||$('detail-walls').checked;}
+  if(mode==='neighborhood'){
+    const v=districtView(),enclosed=$('detail-walls').checked;
+    ship.detail.walls.visible=enclosed;ship.detail.districtWalls.visible=enclosed;
+    if(v){v.residence.walls.visible=enclosed;v.residence.districtWalls.visible=enclosed;v.garden.walls.visible=enclosed;}
+    $('panel-title').textContent='NEIGHBORHOOD '+activeDistrict;
+    $('view-description').textContent='500 furnished twin cabins on Deck '+(activeDistrict+5)+', with a garden commons on the upper levels.';
+    focusDetail('all');$('status').textContent='Neighborhood '+activeDistrict+' · 1,000 residents · 500 furnished twin cabins';
+  }
+  if(mode==='walk'){ship.detail.walls.visible=true;ship.detail.districtWalls.visible=true;ship.detail.district.visible=true;stop=0;goStop(0,0);$('status').textContent='Guided route · artificial gravity assumed';}
+}
+// The website's "Step inside Leo" turns the ship to show its port quarter from behind and above, fin toward you. The
+// viewer opens on the same side. With the intro card and panel beside it, the orbit centre sits off the hull so Leo
+// lands in the open space between them (aft on desktops, forward and higher on tablets); phones centre on the hull.
+const BOARDING_OFFSET=[-160,320,880],BOARDING_TARGET={phone:[-40,40,0],tablet:[20,120,0],desktop:[-150,140,0]};
+// Opening the plain address, as the website's "Step inside Leo" link does, finishes the website's turn: Leo arrives from a
+// little farther off, still turning and tilted the way the site leaves him, and settles level into the boarding view.
+const ARRIVAL_MS=2400,ARRIVAL_TURN=.26,ARRIVAL_CLOSER=1.12,LEVEL=new T.Vector3(0,1,0),ARRIVAL_UP=new T.Vector3(.24,.97,-.09).normalize();
+function playArrival(){
+  // The whole rig turns about the hull, so Leo stays in place on screen while the view swings round to the boarding side.
+  const {position,target}=boardingCamera($('viewport').clientWidth,$('viewport').clientHeight),toTarget=new T.Vector3(...target);
+  const to=new T.Vector3(...position).sub(toTarget).multiplyScalar(lastFrameScale).add(toTarget);
+  const turned=v=>v.clone().sub(SHIP_CENTER).applyAxisAngle(LEVEL,ARRIVAL_TURN).multiplyScalar(ARRIVAL_CLOSER).add(SHIP_CENTER);
+  transition={start:performance.now(),duration:ARRIVAL_MS,from:turned(to),to,fromTarget:turned(toTarget),toTarget,upFrom:ARRIVAL_UP};
+}
+// The concept angle keeps the sheet's direction but sits Leo low and back enough that the fin clears the intro card. Short
+// desktop and tablet screens give the card more of the height, so they step a little further back again.
+const CONCEPT_OFFSET=[340,435,650],CONCEPT_FRAME={tall:{target:[0,180,0],scale:1.22},short:{target:[0,235,0],scale:1.42}};
+function conceptCamera(width,height){const {target,scale}=CONCEPT_FRAME[!upright(width,height)&&height<880?'short':'tall'];return {position:target.map((v,i)=>v+CONCEPT_OFFSET[i]*scale),target};}
+function boardingCamera(width,height){const target=BOARDING_TARGET[upright(width,height)?'phone':width<1200?'tablet':'desktop'];return {position:target.map((v,i)=>v+BOARDING_OFFSET[i]),target};}
+function viewCamera(view){if(DETAIL_CAMERAS.includes(view)&&explodeValue>0){stopExplodePlay();setExplode(0,{reframe:false});}if(mode==='exterior')exteriorLink(view);const go=(type,position,target)=>setCamera(type,...explodedPose(type,position,target));document.querySelectorAll('[data-camera]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.camera===view));
+  persp.fov=view==='concept'?37:42;persp.updateProjectionMatrix();
+  if(view==='concept'){const {position,target}=conceptCamera($('viewport').clientWidth,$('viewport').clientHeight);go('persp',position,target);}
+  if(view==='boarding'){const {position,target}=boardingCamera($('viewport').clientWidth,$('viewport').clientHeight);go('persp',position,target);}
+  if(view==='perspective')go('persp',[460,300,500],[0,15,0]);
+  if(view==='top')go('ortho',[0,1000,.01],[0,0,0]);
+  if(view==='side')go('ortho',[0,30,1000],[0,30,0]);
+  if(view==='front')go('ortho',[1000,20,0],[0,20,0]);
+  if(view==='aft')go('persp',[-470,290,460],[-30,15,0]);
+  if(view==='bow')go('persp',[430,112,245],[211,14,0]);
+  if(view==='enginewindows')go('persp',[-362,39,302],[-228,-9,79]);
+  if(view==='aftwindows')go('persp',[-300,150,340],[-206,55,0]);
+  if(view==='windows')go('persp',[0,32,195],[-10,13,65]);
+  if(view==='engine')go('persp',[-405,22,187],[-268,-16,122]);
+}
+// Exploded view (src/explode.js). The dial in the exterior panel takes Leo apart. The first turn builds the cabins,
+// nose commons and gardens (about half a second); fitted ship areas take up to a second per deck, so any deck the
+// deck layout or the idle warm-up has not built yet shows its massing until unpackDecks fills it in. Overview cameras
+// frame the exploded ship; close-up cameras put it back together first, since their subject has moved.
+const DETAIL_CAMERAS=['bow','windows','aftwindows','enginewindows','engine'];
+let explodeKit=null,explodeValue=0,explodePlay=0,explodeTagsShown=false,dialDragging=false,builtDecks=-1;const explodeTags=[];
+// While the dial turns, the rest of the scene also updates only what is visible: the other views' ~10,000 hidden
+// objects are left until it stops, when every frame goes back to updating everything.
+scene.updateMatrixWorld=function(force){
+ if(!dialDragging&&!explodePlay)return updateObject.call(this,force);
+ if(this.matrixAutoUpdate)this.updateMatrix();
+ this.matrixWorld.copy(this.matrix);this.matrixWorldNeedsUpdate=false;updateVisible(this);
+};
+const exteriorStatus=()=>explodeValue>0?'Exploded view · '+explodeStage(explodeValue):studioTools?'Exterior V35 / refined surfaces':'Exterior · refined surfaces';
+const explodeScale=()=>explodeKit?explodeKit.frame(explodeValue).radius/SHIP_RADIUS:1;
+// Phones frame the exploded ship tighter than its full extent (the parts at the edges run off the sides), so the
+// decks and rooms stay large enough to read on a narrow screen.
+const PHONE_FRAME=.15,viewFrame=v=>{const f=explodeKit.frame(v);if(upright($('viewport').clientWidth,$('viewport').clientHeight))f.radius=SHIP_RADIUS+(f.radius-SHIP_RADIUS)*PHONE_FRAME;return f;};
+function exteriorLink(view=document.querySelector('[data-camera][aria-pressed="true"]')?.dataset.camera||'boarding'){viewLink({camera:view,...(explodeValue>0?{explode:Math.round(explodeValue*100)}:{})});}
+function ensureExplodeKit(){
+ if(explodeKit)return explodeKit;
+ for(const deck of DECKS)ship.ensureResidentialDeck(deck.number);ship.ensureGardens();ship.ensureObservation();
+ // No outline pattern: the see-through hull ghost stays off, as on the live viewer.
+ explodeKit=createExplode({ship,transit:ship.ensureTransit(),aft:ship.ensureAft(),thrusters});
+ for(const mesh of explodeKit.added)exteriorMeshes.push({mesh,visible:mesh.visible});
+ for(const label of explodeKit.labels){const tag=document.createElement('div'),text=document.createElement('b'),detail=document.createElement('span');tag.className='explode-tag';tag.hidden=true;detail.textContent=label.detail;text.append(label.text+' · ',detail);tag.append(text);$('explode-labels').append(tag);explodeTags.push({tag,label});}
+ return explodeKit;
+}
+// The first turn builds the interior a piece per frame, with progress on the stage line, then measures its meshes a
+// few milliseconds per frame (the detail culling sizes every mesh) and compiles its shaders in parallel, so nothing
+// holds the page for long. The dial follows the pointer once it is done.
+const nextFrame=()=>new Promise(r=>document.hidden?setTimeout(r,50):requestAnimationFrame(()=>r()));// a hidden tab runs no frames
+let preparing=null;
+function prepareExplode(){
+ if(explodeKit)return Promise.resolve(true);if(!exteriorReady)return Promise.resolve(false);
+ return preparing||=(async()=>{
+  // The deck plates and the neighborhood template come first, as their own steps, when the idle warm-up hasn't built them.
+  const steps=[()=>ship.decks,()=>ship.detail,...DECKS.filter(d=>d.number>=6&&d.number<=15).map(d=>()=>ship.ensureResidentialDeck(d.number)),()=>ship.ensureGardens(),()=>ship.ensureObservation(),()=>ship.ensureTransit(),()=>ship.ensureAft()],progress=p=>{$('explode-stage').textContent=`Unpacking Leo… ${Math.round(p*100)}%`;};
+  try{
+   for(let i=0;i<steps.length;i++){progress(i/steps.length*.6);await nextFrame();steps[i]();}
+   const meshes=[];ship.inside.traverse(o=>{if(o.isMesh&&!o.geometry.boundingSphere)meshes.push(o);});
+   for(let i=0;i<meshes.length;){progress(.6+i/meshes.length*.3);await nextFrame();for(const end=performance.now()+8;i<meshes.length&&performance.now()<end;i++)meshes[i].geometry.computeBoundingSphere();}
+   progress(.9);await nextFrame();ensureExplodeKit();
+   progress(.95);await nextFrame();await prepareShaders([ship.inside]);return true;
+  }catch(e){console.warn('The exploded view could not be built.',e);$('explode-stage').textContent=explodeStage(explodeValue);return false;}
+  finally{preparing=null;}
+ })();
+}
+// Compiles the shaders hidden parts of the scene will need (in parallel, off the main thread where the browser has
+// KHR_parallel_shader_compile) and uploads their textures a frame at a time, so the frame that first shows them does
+// not stall. three's compile visits every mesh, but a shader depends only on the material, the kind of mesh and the
+// geometry's attributes, so one sample of each is enough (the interior's ~25,000 meshes need a few hundred).
+const SHADER_WAIT_MS=4000;
+// A stand-in for `roots` that three's compile walks: their lights, and one mesh per distinct shader.
+function shaderSamples(roots){
+ const samples=new Set(),seen=new Set(),textures=new Set();
+ for(const root of roots)root.traverse(o=>{
+  if(!o.isMesh)return;const g=o.geometry,kind=`${o.isInstancedMesh&&1}${o.isInstancedMesh&&!!o.instanceColor}${o.isSkinnedMesh&&1}|${Object.keys(g.attributes)}|${g.attributes.color?.itemSize}|${Object.keys(g.morphAttributes)}`;
+  for(const m of Array.isArray(o.material)?o.material:[o.material]){
+   if(!seen.has(m.uuid+kind)){seen.add(m.uuid+kind);samples.add(o);}
+   for(const v of Object.values(m))if(v?.isTexture)textures.add(v);
+  }
+ });
+ return {traverse:fn=>samples.forEach(fn),traverseVisible:fn=>roots.forEach(r=>r.traverseVisible(fn)),textures};
+}
+async function prepareShaders(roots){
+ const sampled=shaderSamples(roots);
+ const compiled=Promise.race([renderer.compileAsync(sampled,camera,scene),new Promise(r=>setTimeout(r,SHADER_WAIT_MS))]).catch(e=>console.warn('Shader warm-up skipped.',e));
+ for(const t of sampled.textures)if(renderer.properties.get(t).__version!==t.version){renderer.initTexture(t);await nextFrame();}
+ return compiled;
+}
+// The exploded ship shows the whole exterior and the complete interior layout, with nothing cut away for a deck.
+function explodeVisibility(on){
+ ship.inside.visible=on;if(!on)return;
+ showShuttleBayUnder(19,false);ship.decks.forEach(g=>g.visible=true);ship.vertical.visible=false;ship.shared.visible=true;ship.ensureObservation().root.visible=true;
+ const aft=ship.ensureAft();aft.root.visible=true;for(const [key,g] of Object.entries(aft.parts))g.visible=key!=='crown';aft.shells.forEach(o=>o.visible=false);
+ const tr=ship.ensureTransit();tr.root.visible=true;tr.shell.visible=false;tr.structure.visible=true;for(const g of tr.decks.values())g.visible=true;
+}
+// Keeps the view's composition as the ship grows or shrinks: the camera and its target scale about the framed centre,
+// and the camera rises by up to EXPLODE_TILT to look down into the spread decks (never past 20° from overhead).
+const EXPLODE_TILT=T.MathUtils.degToRad(16),tiltAxis=new T.Vector3();
+function tiltAbout(position,target,angle){
+ const offset=position.clone().sub(target),polar=Math.acos(T.MathUtils.clamp(offset.y/offset.length(),-1,1)),limit=T.MathUtils.degToRad(20);
+ angle=Math.max(Math.min(angle,polar-limit),polar-Math.PI/2);if(Math.abs(angle)<1e-6||offset.x**2+offset.z**2<1e-6)return;
+ tiltAxis.set(offset.z,0,-offset.x).normalize();position.copy(target).add(offset.applyAxisAngle(tiltAxis,-angle));
+}
+function reframeCamera(a,b){
+ const k=b.radius/a.radius,map=v=>v.sub(a.center).multiplyScalar(k).add(b.center),tilt=(b.tilt-a.tilt)*EXPLODE_TILT;
+ const moves=transition?[[camera.position,controls.target],[transition.from,transition.fromTarget],[transition.to,transition.toTarget]]:[[camera.position,controls.target]];
+ if(camera.isOrthographicCamera){camera.zoom/=k;camera.updateProjectionMatrix();for(const pair of moves)for(const v of pair)v.add(b.center).sub(a.center);return;}
+ for(const [position,target] of moves){map(position);map(target);tiltAbout(position,target,tilt);}
+}
+// An overview camera preset, framed for the current amount of explode.
+function explodedPose(type,position,target){
+ if(!explodeKit||explodeValue<=0)return [position,target];
+ const a=viewFrame(0),b=viewFrame(explodeValue),k=b.radius/a.radius;
+ if(type==='ortho'){ortho.zoom=1/k;ortho.updateProjectionMatrix();const shift=v=>new T.Vector3(...v).add(b.center).sub(a.center).toArray();return [shift(position),shift(target)];}
+ const map=v=>new T.Vector3(...v).sub(a.center).multiplyScalar(k).add(b.center),from=map(position),to=map(target);
+ tiltAbout(from,to,(b.tilt-a.tilt)*EXPLODE_TILT);return [from.toArray(),to.toArray()];
+}
+function setExplode(value,{reframe=true}={}){
+ value=Math.min(1,Math.max(0,value));if(value>0&&!exteriorReady)return;
+ const kit=value>0?ensureExplodeKit():explodeKit,before=kit&&viewFrame(explodeValue);explodeValue=value;
+ if(kit){
+  // Decks built by the deck layout since the last explode join the detail culling.
+  if(value>0&&builtDecks!==ship.serviceDecks.size){builtDecks=ship.serviceDecks.size;kit.refresh();}
+  kit.apply(value);explodeVisibility(value>0);if(value===0){kit.setDetail(0);detailRadius=0;}
+  if(reframe&&mode==='exterior')reframeCamera(before,viewFrame(value));
+  const r=explodeScale();Object.assign(key.shadow.camera,{left:-380*r,right:380*r,top:270*r,bottom:-270*r,far:1200*r});key.shadow.camera.updateProjectionMatrix();refreshShadows();
+  if(mode==='exterior')controls.maxDistance=2200*r;
+ }
+ const percent=Math.round(value*100),dial=$('explode-dial');
+ dial.setAttribute('aria-valuenow',percent);dial.setAttribute('aria-valuetext',percent+'%, '+explodeStage(value));
+ $('explode-fill').style.strokeDasharray=`${(179.07*value).toFixed(2)} 238.76`;$('explode-knob').setAttribute('transform',`rotate(${(-135+270*value).toFixed(1)} 50 50)`);
+ $('explode-value').firstChild.textContent=percent;$('explode-stage').textContent=explodeStage(value);
+ $('explode-play').textContent=value>=.5?'Put Leo back together':'Explode Leo';
+ document.querySelectorAll('#explode-stops button').forEach(b=>b.setAttribute('aria-pressed',String(Math.abs(Number(b.dataset.value)-value)<.005)));
+ hidePick();// the rooms have moved from under the label
+ $('explode-legend').hidden=value<.68;$('explode-legend').style.opacity=Math.min(1,(value-.68)/.15).toFixed(2);
+ if(mode==='exterior')$('status').textContent=exteriorStatus();
+ unpackDecks();
+}
+// While exploded, meshes under about DETAIL_PX across on screen are hidden (setDetail in src/explode.js). The limit
+// follows the camera distance, so zooming in on a deck brings its furniture back.
+const DETAIL_PX=touchScreen?10:6;let detailRadius=0;
+function explodeDetail(){
+ const h=renderer.domElement.clientHeight||1,pxPerMetre=camera.isOrthographicCamera?h*camera.zoom/(camera.top-camera.bottom):h/(2*camera.position.distanceTo(controls.target)*Math.tan(T.MathUtils.degToRad(camera.fov/2)));
+ const radius=2**(Math.round(4*Math.log2(DETAIL_PX/2/pxPerMetre))/4);// quarter-octave steps, so small camera moves change nothing
+ if(radius!==detailRadius){detailRadius=radius;explodeKit.setDetail(radius);refreshShadows();}
+}
+// Fills in the remaining decks' fitted areas while the viewer is left alone: one area per frame, and only once
+// there has been no dragging, scrolling or typing for UNPACK_QUIET_MS, so a build never lands mid-move. A
+// finished deck's shaders compile in the background before it appears.
+const UNPACK_QUIET_MS=1500,unpackFailed=new Set();let lastInput=0,unpacking=false;
+for(const type of ['pointerdown','pointermove','wheel','keydown'])addEventListener(type,e=>{if(type!=='pointermove'||e.buttons)lastInput=performance.now();},{capture:true,passive:true});// hovering doesn't count: exploring the scattered rooms with the pointer used to keep the decks from ever filling in
+// Resolves once input has been still for UNPACK_QUIET_MS, for one background job per rendered frame (the deck unpacking
+// and the view warm-up take turns rather than stacking into one long frame).
+let quietFrame=-1;
+async function quiet(){
+ for(;;){
+  await nextFrame();const wait=lastInput+UNPACK_QUIET_MS-performance.now();
+  if(wait<=0&&!explodePlay&&!dialDragging&&!transition&&!preparing){const frame=renderer.info.render.frame;if(frame!==quietFrame){quietFrame=frame;return;}continue;}
+  await new Promise(r=>setTimeout(r,Math.max(wait,250)));
+ }
+}
+function unpackDecks(){
+ if(unpacking||!explodeKit||explodeValue<=0||mode!=='exterior')return;
+ const next=DECKS.find(d=>!ship.serviceDecks.has(d.number)&&!unpackFailed.has(d.number)&&SHIP_AREAS.some(a=>a.deck===d.number));if(!next)return;
+ unpacking=true;
+ (async()=>{
+  const steps=ship.buildServiceDeck(next.number);
+  for(;;){
+   await quiet();
+   if(explodeValue<=0||mode!=='exterior')return;// resumes from the same step next time
+   if(ship.serviceDecks.has(next.number))break;// finished elsewhere meanwhile
+   const step=steps.next();if(step.done)break;
+   if(Array.isArray(step.value))await prepareShaders(step.value);
+  }
+  explodeRoomsAdded();
+ })().catch(e=>{unpackFailed.add(next.number);console.warn('A deck could not be unpacked.',e);}).finally(()=>{unpacking=false;unpackDecks();});
+}
+function explodeRoomsAdded(){if(!explodeKit)return;explodeKit.refresh();if(explodeValue>0&&mode==='exterior')explodeVisibility(true);refreshShadows();}
+function stopExplodePlay(){cancelAnimationFrame(explodePlay);explodePlay=0;}
+// Places the call-outs over the exploded parts; they fade in over the last part of the dial.
+function placeExplodeTags(){
+ const show=mode==='exterior'&&explodeValue>.5;
+ if(!show){if(explodeTagsShown){explodeTags.forEach(t=>t.tag.hidden=true);explodeTagsShown=false;}return;}
+ explodeTagsShown=true;const alpha=Math.min(1,(explodeValue-.5)/.2).toFixed(2),view=renderer.domElement.getBoundingClientRect();
+ // A call-out that would sit under the intro card or the controls, or across one already placed, is left out rather
+ // than half covered. Earlier call-outs in the list take precedence.
+ const taken=[...document.querySelectorAll('.intro,.panel')].map(el=>el.getBoundingClientRect()).filter(r=>r.width).map(r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom}));
+ for(const item of explodeTags){
+  const {tag,label}=item,v=label.at(explodeValue).project(camera),x=(v.x+1)/2*view.width-3,y=(1-v.y)/2*view.height,box={left:view.left+x,right:view.left+x+(item.width||220),top:view.top+y-12,bottom:view.top+y+12};
+  tag.hidden=v.z>1||box.left<view.left||box.right>view.right-8||box.top<view.top||box.bottom>view.bottom||taken.some(r=>box.left<r.right&&box.right>r.left&&box.top<r.bottom&&box.bottom>r.top);if(tag.hidden)continue;
+  taken.push(box);tag.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translateY(-50%)`;tag.style.opacity=alpha;if(!item.width)item.width=tag.offsetWidth;
+ }
+}
+// Room labels. Once the rooms scatter, hovering one names it and outlines it in orange, and clicking opens it in its
+// own view (a ship area, nose commons, garden, cabin or the lounge). On a touch screen a tap pins the label, with an
+// Open button. Picking tests box shapes in src/explode.js, not the rooms' meshes.
+const pickRay=new T.Raycaster(),pickNdc=new T.Vector2(),pickOutline=new T.Box3Helper(new T.Box3(),0xf85800);
+Object.assign(pickOutline.material,{depthTest:false,transparent:true});pickOutline.renderOrder=10;pickOutline.visible=false;scene.add(pickOutline);
+let picked=null,pickPinned=false,pickFrame=0,pickPress=null;
+const pickable=()=>mode==='exterior'&&explodeKit&&explodeValue>=.7;
+function pickAt(x,y){const r=renderer.domElement.getBoundingClientRect();pickNdc.set((x-r.left)/r.width*2-1,1-(y-r.top)/r.height*2);pickRay.setFromCamera(pickNdc,camera);return explodeKit.pick(pickRay.ray.origin,pickRay.ray.direction);}
+function describeRoom({info,group}){
+ const use=ROOM_GROUPS.find(g=>g.key===group)?.name||'';
+ if(info.type==='area')return [info.name,(/Deck d/.test(info.name)?'':'Deck '+info.deck+' · ')+use];
+ if(info.type==='nose')return [NOSE_COMMONS[info.neighborhood-1].name,'Deck '+(info.neighborhood+5)+' · Nose commons'];
+ if(info.type==='garden')return ['Garden commons','Neighborhood '+info.neighborhood+' · Decks 17–19'];
+ if(info.type==='cabin')return ['Twin cabin '+info.id,'Deck '+info.deck+' · Neighborhood '+info.neighborhood];
+ return ['Observation lounge','Shared · upper bow'];
+}
+function showPick(result,x,y,pinned=false){
+ picked=result;pickPinned=pinned;const [name,detail]=describeRoom(result),tip=$('explode-pick'),view=$('viewport').getBoundingClientRect();
+ $('explode-pick-name').textContent=name;$('explode-pick-detail').textContent=detail+(pinned?'':' · click to open');
+ $('explode-pick-swatch').style.setProperty('--swatch','#'+(ROOM_GROUPS.find(g=>g.key===result.group)?.color??0xffffff).toString(16).padStart(6,'0'));
+ tip.classList.toggle('pinned',pinned);tip.hidden=false;
+ const left=Math.min(x-view.left+16,view.width-tip.offsetWidth-12),top=Math.min(y-view.top+16,view.height-tip.offsetHeight-12);
+ tip.style.transform=`translate(${Math.max(12,left).toFixed(0)}px,${Math.max(12,top).toFixed(0)}px)`;
+ pickOutline.box.copy(result.box);pickOutline.visible=true;document.body.classList.add('explode-hover');
+}
+function hidePick(){if(!picked&&$('explode-pick').hidden)return;picked=null;pickPinned=false;$('explode-pick').hidden=true;pickOutline.visible=false;document.body.classList.remove('explode-hover');}
+async function openRoom(info){
+ hidePick();
+ if(info.type==='area'){activeArea=SHIP_AREAS.find(a=>a.id===info.id)||activeArea;areaView='overview';await setMode('areas');return;}
+ activeDistrict=info.neighborhood||10;$('neighborhood-select').value=activeDistrict;await setMode('neighborhood');focusDetail(info.type==='cabin'?'cabin':info.type);
+}
+{const canvas=renderer.domElement;
+ canvas.addEventListener('pointermove',e=>{
+  if(e.pointerType!=='mouse'||pickPinned)return;
+  if(!pickable()||e.buttons){hidePick();return;}
+  if(pickFrame)return;pickFrame=requestAnimationFrame(()=>{pickFrame=0;const result=pickable()&&pickAt(e.clientX,e.clientY);if(result)showPick(result,e.clientX,e.clientY);else hidePick();});
+ });
+ canvas.addEventListener('pointerleave',()=>{if(!pickPinned)hidePick();});
+ canvas.addEventListener('pointerdown',e=>{pickPress={x:e.clientX,y:e.clientY,t:performance.now()};});
+ // A click (not a drag to orbit) opens the room under a mouse; a tap pins its label, and a second tap opens it.
+ canvas.addEventListener('pointerup',e=>{
+  const press=pickPress;pickPress=null;if(!press||!pickable()||Math.hypot(e.clientX-press.x,e.clientY-press.y)>6||performance.now()-press.t>500)return;
+  const result=pickAt(e.clientX,e.clientY);if(!result){hidePick();return;}
+  if(e.pointerType==='mouse'||pickPinned&&picked&&describeRoom(picked)[0]===describeRoom(result)[0])openRoom(result.info);else showPick(result,e.clientX,e.clientY,true);
+ });
+ $('explode-pick-open').addEventListener('click',()=>{if(picked)openRoom(picked.info);});
+}
+// Anything that copies the exterior (the aft systems' context shell) copies the assembled ship.
+function assembled(fn){if(!explodeKit||explodeValue<=0)return fn();explodeKit.apply(0);try{return fn();}finally{explodeKit.apply(explodeValue);}}
+{const dial=$('explode-dial'),svg='http://www.w3.org/2000/svg';
+ for(const g of ROOM_GROUPS){const chip=document.createElement('span');chip.textContent=g.name+' · '+ROOM_COUNTS[g.key].toLocaleString('en');chip.style.setProperty('--swatch','#'+g.color.toString(16).padStart(6,'0'));$('explode-legend').append(chip);}
+ for(let i=0;i<=20;i++){const a=(-135+13.5*i)*Math.PI/180,major=i%5===0,line=document.createElementNS(svg,'line');
+  for(const [n,r] of [['1',major?42.5:44.5],['2',48]]){line.setAttribute('x'+n,(50+r*Math.sin(a)).toFixed(2));line.setAttribute('y'+n,(50-r*Math.cos(a)).toFixed(2));}
+  line.setAttribute('class','dial-tick'+(major?' major':''));$('explode-ticks').append(line);}
+ // The named stops get their own orange ticks on the ring and a button each.
+ for(const stop of STOPS){const a=(-135+270*stop.value)*Math.PI/180,line=document.createElementNS(svg,'line');for(const [n,r] of [['1',41],['2',49]]){line.setAttribute('x'+n,(50+r*Math.sin(a)).toFixed(2));line.setAttribute('y'+n,(50-r*Math.cos(a)).toFixed(2));}line.setAttribute('class','dial-tick stop');$('explode-ticks').append(line);}
+ for(const stop of [{value:0,name:'Ship'},...STOPS]){const b=document.createElement('button');b.type='button';b.dataset.value=stop.value;b.textContent=stop.name;b.setAttribute('aria-pressed',String(stop.value===0));
+  b.addEventListener('click',async()=>{stopExplodePlay();if(stop.value>0&&!await prepareExplode())return;runExplode(stop.value,{orbit:true});});$('explode-stops').append(b);}
+ // The knob turns through 270°, from 7:30 round to 4:30. Dragging across the gap at the bottom stops at the near end.
+ // The first turn waits for the interior to build; wherever the pointer has got to by then (even if released) applies.
+ let lastPointer=null;
+ const valueAt=(e,drag)=>{const r=dial.getBoundingClientRect(),dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2;if(dx*dx+dy*dy<64)return explodeValue;
+  const a=Math.atan2(dx,-dy)*180/Math.PI,end=explodeValue>.5?1:0;if(Math.abs(a)>135)return end;const v=(a+135)/270;return drag&&Math.abs(v-explodeValue)>.5?end:v;};
+ dial.addEventListener('pointerdown',e=>{if(!exteriorReady||e.button>0)return;e.preventDefault();dial.focus({preventScroll:true});dial.setPointerCapture(e.pointerId);dialDragging=true;dial.classList.add('dragging');stopExplodePlay();
+  lastPointer=e;const first=!explodeKit;prepareExplode().then(ok=>{if(!ok)return;setExplode(valueAt(lastPointer,false));if(first&&!dialDragging)exteriorLink();});});
+ dial.addEventListener('pointermove',e=>{if(!dialDragging)return;lastPointer=e;if(explodeKit&&!preparing)setExplode(valueAt(e,true));});
+ // Released close to a stop (or to either end), the dial eases onto it.
+ const release=()=>{if(!dialDragging)return;dialDragging=false;dial.classList.remove('dragging');
+  const stop=[0,...STOPS.map(s=>s.value)].find(v=>Math.abs(v-explodeValue)<.05&&v!==explodeValue);if(stop!==undefined&&explodeKit)runExplode(stop,{ms:260});else exteriorLink();};
+ dial.addEventListener('pointerup',release);dial.addEventListener('pointercancel',release);dial.addEventListener('lostpointercapture',release);
+ dial.addEventListener('keydown',e=>{
+  const step={ArrowRight:.05,ArrowUp:.05,ArrowLeft:-.05,ArrowDown:-.05,PageUp:.25,PageDown:-.25}[e.key],to=e.key==='Home'?0:e.key==='End'?1:step===undefined?null:explodeValue+step;
+  if(to===null)return;e.preventDefault();stopExplodePlay();prepareExplode().then(ok=>{if(ok){setExplode(to);exteriorLink();}});});
+ // The button runs the whole explode (or puts Leo back together) in about three seconds, orbiting slowly as it goes.
+ $('explode-play').addEventListener('click',async()=>{stopExplodePlay();if(!await prepareExplode())return;runExplode(explodeValue>=.5?0:1,{orbit:true});});
+}
+// Animates the dial to `to`; a full turn takes three seconds. With orbit, the camera circles the ship by up to
+// EXPLODE_ORBIT over a full explode (back again when assembling), so the move reads as one shot.
+const EXPLODE_ORBIT=T.MathUtils.degToRad(40);
+function orbitCamera(angle){
+ const pairs=transition?[[camera.position,controls.target],[transition.from,transition.fromTarget],[transition.to,transition.toTarget]]:[[camera.position,controls.target]];
+ for(const [position,target] of pairs)position.sub(target).applyAxisAngle(LEVEL,angle).add(target);
+}
+function runExplode(to,{ms=3000*Math.abs(to-explodeValue),orbit=false}={}){
+ stopExplodePlay();const from=explodeValue;
+ if(reduced||ms<50){setExplode(to);exteriorLink();return;}
+ const start=performance.now();let last=from;
+ const step=now=>{
+  if(mode!=='exterior'){explodePlay=0;return;}
+  const t=Math.min(1,(now-start)/ms),v=from+(to-from)*t;
+  if(orbit&&!camera.isOrthographicCamera)orbitCamera((v-last)*EXPLODE_ORBIT);last=v;
+  setExplode(v);if(t<1)explodePlay=requestAnimationFrame(step);else{explodePlay=0;exteriorLink();}
+ };
+ explodePlay=requestAnimationFrame(step);
+}
+// Builds the decks the layout view shows for the selected deck (also run by the idle warm-up).
+function ensureLayoutDecks(selected=Number($('deck-select').value),isolate=$('isolate').checked){
+  for(const deck of DECKS)if(isolate?deck.index===selected:deck.index<=selected){ship.ensureServiceDeck(deck.number);ship.ensureResidentialDeck(deck.number);}
+  ship.ensureAft();ship.ensureTransit();ship.ensureObservation();if(selected>=16&&selected<=18)ship.ensureGardens();
+}
+// Deck 2's shuttle handling bay is two decks tall, so Deck 3's floor is open above it. Isolating Deck 3 would leave that
+// opening looking onto empty space; show the bay underneath (and nothing else of Deck 2) instead.
+const SHUTTLE_BAY='Area_d02-hangar-9';let bayOnlySaved=null;
+function showShuttleBayUnder(selected,isolate){
+  const deck=ship.decks[1];
+  if(!(isolate&&selected===2)){if(bayOnlySaved){for(const [o,v] of bayOnlySaved)o.visible=v;bayOnlySaved=null;}return;}
+  ship.ensureServiceDeck(2);
+  if(!bayOnlySaved)bayOnlySaved=deck.children.map(o=>[o,o.visible]);
+  for(const o of deck.children)o.visible=o.name===SHUTTLE_BAY;
+  deck.visible=true;
+}
+// The layout view's 3D state for a deck selection: which decks, aft parts and cores show, and the faded port hull.
+function applyDeckView(selected=Number($('deck-select').value),isolate=$('isolate').checked){
+  ensureLayoutDecks(selected,isolate);
+  ship.decks.forEach((g,i)=>g.visible=isolate?i===selected:i<=selected);
+  showShuttleBayUnder(selected,isolate);
+  const aft=ship.ensureAft();aft.root.visible=true;for(const [key,g]of Object.entries(aft.parts))g.visible=({drive:selected>=7&&selected<=13,tanks:selected>=3&&selected<=6,pods:selected===5,access:selected>=3&&selected<=16,fin:selected>=16})[key];aft.shells.forEach(o=>o.visible=false);
+  ship.vertical.visible=false;const tr=ship.ensureTransit();tr.root.visible=true;tr.shell.visible=false;tr.structure.visible=!isolate;for(const [n,g]of tr.decks)g.visible=isolate?n===selected+1:n<=selected+1;ship.ensureObservation().root.visible=selected>=16&&selected<=18;ship.shared.visible=selected>=16&&selected<=18;if(ship.shared.visible)ship.ensureGardens();
+  ship.exterior.visible=$('shell-context').checked;ship.starboard.visible=false;ship.port.visible=true;contextOpacity(.14);
+}
+function updateDeck(){const selected=Number($('deck-select').value),isolate=$('isolate').checked,d=DECKS[selected];
+  applyDeckView(selected,isolate);viewLink({deck:selected+1});
+  $('deck-cabins').textContent=d.residential?'500':'—';$('deck-berths').textContent=d.residential?'1,000':'—';
+  $('deck-description').textContent=d.residential?'500 furnished twin cabins with two beds, desks, storage and compact ensuites, arranged along five 4 m corridors. Four transverse breaks connect the rows.':d.index>=16&&d.index<=18?'Ten shared commons occupy this upper zone, with openings through two gallery decks.':`${d.name}: space reserved for the next design pass. Equipment and occupancy are not yet sized.`;
+  if(SHIP_AREAS.some(a=>a.deck===d.number))$('deck-description').textContent=(d.residential?'500 furnished cabins plus ':'')+SHIP_AREAS.filter(a=>a.deck===d.number).length+' fitted ship areas, including '+SHIP_AREAS.filter(a=>a.deck===d.number).map(a=>a.category).filter((c,i,list)=>list.indexOf(c)===i).join(' and ').toLowerCase()+'. Use Ship areas to inspect each space.';
+  if(d.residential)$('deck-description').textContent+=' Forward: '+NOSE_COMMONS[d.number-6].name+'. Explore it under Neighborhood → Nose commons.';
+    $('status').textContent=`Deck ${d.number} / 20 · ${d.name} · floor ${d.y>0?'+':''}${d.y} m`;
+}
+  function focusDetail(focus){document.querySelectorAll('[data-focus]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.focus===focus));
+    noseScene.visible=focus==='nose'||focus==='all';
+    if(noseScene.visible)noseView();
+    ship.detail.root.visible=activeDistrict===10&&focus!=='nose';
+    for(const [number,v] of districtViews)v.root.visible=number===activeDistrict&&focus!=='nose';
+    setTitle(focus==='nose'?NOSE_COMMONS[activeDistrict-1].name:'A neighborhood aboard Leo.');
+    residenceInside=false;viewLink({district:activeDistrict,space:focus});
+    if(focus==='nose'){
+      const v=noseView(),a=NOSE_COMMONS[activeDistrict-1];
+      $('view-description').textContent='Deck '+a.deck+' · '+a.description;
+      $('status').textContent='Neighborhood '+activeDistrict+' · nose commons · '+a.name;
+      persp.fov=42;persp.near=.05;setCamera('persp',v.overview.position,v.overview.target);return;
+    }
+  $('view-description').textContent=focus==='garden'?'Garden commons · Decks 17–19 · Neighborhood '+activeDistrict:focus==='cabin'?'Twin cabin · Deck '+(activeDistrict+5)+' · Neighborhood '+activeDistrict:focus==='observation'?'Shared observation lounge · upper bow · floor +26.3 m':'500 furnished twin cabins on Deck '+(activeDistrict+5)+' and an upper garden commons.';
+  if(activeDistrict!==10){
+    if(focus==='observation'){activeDistrict=10;$('neighborhood-select').value=10;setMode('neighborhood');focusDetail('observation');return;}
+    const v=districtView();v.residence.root.visible=focus!=='garden';v.garden.root.visible=focus==='all'||focus==='garden';
+    v.residence.district.visible=focus==='all';
+    if(focus==='all')setCamera('persp',[90,245,285],[30,10,0]);
+    if(focus==='cabin'){const dy=(activeDistrict-10)*4;setCamera('persp',[SAMPLE.x+8,23+dy,-8],[SAMPLE.x,17.6+dy,5.2]);}
+    if(focus==='garden')setCamera('persp',v.garden.overview.position,v.garden.overview.target);
+    return;
+  }
+  ship.detail.district.visible=focus==='all';
+  const views={all:[[90,245,285],[30,21,0]],cabin:[[SAMPLE.x+8,23,-8],[SAMPLE.x,17.6,5.2]],garden:[[174,58,77],[132,28,28]],observation:[[232,67,64],[190,28,0]]};
+  setCamera('persp',...views[focus]);
+}
+function stopTour(){tourPlaying=false;clearTimeout(tourTimer);$('play-tour').textContent='Play route';}
+function renderRouteDots(){
+ $('route-dots').replaceChildren();routeStops().forEach((r,i)=>{const b=document.createElement('button');b.dataset.stop=i;b.setAttribute('aria-label',r.name);b.addEventListener('click',()=>{stopTour();goStop(i);});$('route-dots').appendChild(b);});
+ $('tour-select').value=routeKey;
+ $('tour-description').textContent=TOURS[routeKey].description;
+}
+function showTourSpace(r){
+ if(tourResidence)tourResidence.visible=false;if(tourTransit)tourTransit.visible=false;
+ ship.detail.root.visible=!r.section&&r.space!=='residential';aftScene.visible=Boolean(r.section);
+ if(r.space==='residential'){
+  if(!tourResidence){tourResidence=createResidentialDeck(10,ship.detail).root;scene.add(tourResidence);tourTransit=createTransit({minimumDeck:14,maximumDeck:16,coreIds:['aft']}).root;scene.add(tourTransit);tourResidence.add(encloseResidentialConnection(tourTransit));}
+  tourResidence.visible=true;tourTransit.visible=true;
+ }
+ if(r.section){aftSection=r.section;aftEye=true;showAft();if(r.also)aftModel.parts[r.also].visible=true;
+  // Walk-only walls close the engineering stops, which are cutaways in the aft systems view.
+  if(!aftTourShell){aftTourShell=encloseAftTour(aftScene);aftScene.add(aftTourShell);}aftTourShell.visible=true;showUpperAftShells(true);}
+ else {stars.visible=neighborhoodTour();mars.visible=neighborhoodTour()&&Boolean(r.mars);/* Mars belongs to the promenade and lounge windows */scene.background.set(neighborhoodTour()?0x0a1422:0xbac8cd);}
+}
+// Tour moves glide only when the straight line between the stops is clear; otherwise (lifts, doorways) the camera
+// cuts and the view fades in, instead of flying through walls into open space.
+const tourRay=new T.Raycaster();
+// Tour pacing: Play route glides for TOUR_GLIDE_MS and moves on every TOUR_STOP_MS; the arrows glide for TOUR_STEP_MS.
+const TOUR_GLIDE_MS=1500,TOUR_STOP_MS=4300,TOUR_STEP_MS=1000,TOUR_FADE_MS=300,TOUR_START_MS=3000;
+// While Play route runs, the eye looks around at each stop, so the walk never holds a frozen frame. A stop names its
+// gesture as look:[yaw,pitch,shape] in radians (+yaw turns left, +pitch looks up): 'glance' turns, holds and comes back;
+// 'sweep' looks one way, then the other; 'drift' eases out and back in one slow arc. Stops without one take the next
+// of LOOK_DEFAULTS, so neighbouring stops never repeat a move. Every gesture starts and ends on the stop's own view at
+// rest. Pausing eases back to that view; a drag takes over from whatever is on screen.
+const smoothstep=x=>{x=Math.min(1,Math.max(0,x));return x*x*(3-2*x);},hold=u=>smoothstep(u/.4)*(1-smoothstep((u-.6)/.4)),arc=u=>Math.sin(Math.PI*u)**2;
+const LOOK_SHAPES={glance:u=>[hold(u),hold(u)],sweep:u=>[Math.sin(2*Math.PI*u)*Math.sin(Math.PI*u)/.77,arc(u)],drift:u=>[arc(u),arc(u)]};
+const LOOK_DEFAULTS=[[.22,.05,'sweep'],[-.26,.03,'glance'],[.08,.14,'drift'],[.24,-.04,'glance'],[-.18,.08,'drift']];
+const LOOK_SETTLE=5,lookDirection=new T.Vector3(),lookRight=new T.Vector3();
+let lookStart=0,lookSpan=TOUR_STOP_MS,lookYaw=0,lookPitch=0;
+function lookAround(now,delta){
+ if(mode!=='walk'||reduced){lookYaw=lookPitch=0;return;}
+ if(tourPlaying){
+  const [yaw,pitch,shape]=routeStops()[stop]?.look||LOOK_DEFAULTS[stop%LOOK_DEFAULTS.length],[fy,fp]=LOOK_SHAPES[shape](Math.min(1,(now-lookStart)/lookSpan));
+  lookYaw=yaw*fy;lookPitch=pitch*fp;
+ }
+ else {const k=Math.exp(-delta*LOOK_SETTLE);lookYaw*=k;lookPitch*=k;}
+ if(Math.abs(lookYaw)+Math.abs(lookPitch)<1e-4){lookYaw=lookPitch=0;return;}
+ lookDirection.subVectors(controls.target,camera.position).applyAxisAngle(LEVEL,lookYaw);
+ lookRight.crossVectors(lookDirection,LEVEL).normalize();lookDirection.applyAxisAngle(lookRight,lookPitch);
+ camera.lookAt(lookDirection.add(camera.position));
+}
+function keepLook(){if(!lookYaw&&!lookPitch)return;const d=controls.target.distanceTo(camera.position);controls.target.copy(camera.position).addScaledVector(camera.getWorldDirection(lookDirection),d);lookYaw=lookPitch=0;}
+function tourPathBlocked(to){
+ const from=camera.position,dir=new T.Vector3(...to).sub(from),distance=dir.length();if(distance<.5)return false;
+ const meshes=[];scene.traverseVisible(o=>{if(o.isMesh)meshes.push(o);});tourRay.set(from,dir.normalize());tourRay.far=distance;
+ return tourRay.intersectObjects(meshes,false).length>0;
+}
+function fadeIn(){renderer.domElement.animate([{opacity:0},{opacity:1}],{duration:TOUR_FADE_MS,easing:'ease-out'});}
+function goStop(index,duration=TOUR_STEP_MS){const list=routeStops();stop=Math.max(0,Math.min(list.length-1,Number.isFinite(index)?index:0));const r=list[stop];
+ if(mode==='walk')showTourSpace(r);viewLink({walk:1,tour:routeKey,stop});
+ const cut=mode==='walk'&&duration>0&&(!neighborhoodTour()||tourPathBlocked(r.position));
+ setCamera('persp',r.position,r.target,cut||!neighborhoodTour()?0:duration);if(cut)fadeIn();
+ setTitle(TOURS[routeKey].title);$('view-description').textContent=TOURS[routeKey].view;
+ $('status').textContent=TOURS[routeKey].status;
+ $('route-name').textContent=r.name;$('route-detail').textContent=r.detail;$('stop-count').textContent=`${String(stop+1).padStart(2,'0')} / ${String(list.length).padStart(2,'0')}`;$('previous-stop').disabled=stop===0;$('next-stop').disabled=stop===list.length-1;document.querySelectorAll('[data-stop]').forEach(b=>b.setAttribute('aria-current',Number(b.dataset.stop)===stop));
+}
+function advanceTour(){if(!tourPlaying)return;if(stop===routeStops().length-1){stopTour();return;}goStop(stop+1,TOUR_GLIDE_MS);lookStart=performance.now();lookSpan=TOUR_STOP_MS;tourTimer=setTimeout(advanceTour,TOUR_STOP_MS);}
+$('tour-select').addEventListener('change',async()=>{routeKey=$('tour-select').value;renderRouteDots();await setMode('walk');});
+
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+document.querySelectorAll('[data-camera]').forEach(b=>b.addEventListener('click',()=>viewCamera(b.dataset.camera)));
+document.querySelectorAll('[data-focus]').forEach(b=>b.addEventListener('click',()=>focusDetail(b.dataset.focus)));
+$('dimensions').addEventListener('change',()=>dimensions.visible=$('dimensions').checked);
+DECKS.forEach(d=>{const o=document.createElement('option');o.value=d.index;o.textContent=`${String(d.number).padStart(2,'0')} · ${d.name}`;o.selected=d.index===14;$('deck-select').appendChild(o);});
+['deck-select','isolate','shell-context'].forEach(id=>$(id).addEventListener('change',updateDeck));
+// Phone chrome: a view menu stands in for the tab row, and the controls panel is a sheet opened from its handle
+// (tap, or swipe up/down). The tabs stay the single source of truth; the menu just clicks them.
+const CHAPTER_NUMBERS={exterior:'01',layout:'02',neighborhood:'03',areas:'05',transit:'06',aft:'07'};
+const STEP_ORDER=['exterior','layout','neighborhood','walk','areas','transit','aft'];
+{const menu=$('m-menu'),sheet=document.querySelector('.panel'),tab=m=>document.querySelector(`.tabs button[data-mode="${m}"]`);
+ const closeMenu=()=>{menu.hidden=true;$('m-view').setAttribute('aria-expanded','false');};
+ for(const [m,n] of Object.entries(CHAPTER_NUMBERS)){const b=document.createElement('button');b.type='button';b.dataset.mode=m;b.append(tab(m).textContent);const num=document.createElement('small');num.textContent=n;b.append(num);b.addEventListener('click',()=>{closeMenu();tab(m).click();});menu.append(b);}
+ // The desktop bar's Hide UI, reachable on phones; the top bar stays, so the menu can bring the UI back.
+ const ui=document.createElement('button');ui.type='button';ui.className='m-ui';ui.addEventListener('click',()=>{closeMenu();$('toggle-panels').click();});menu.append(ui);
+ const uiLabel=()=>{ui.textContent=$('toggle-panels').textContent;};uiLabel();
+ // Walk around Leo is its own page (walk.html).
+ menu.append(Object.assign(document.createElement('a'),{href:'walk.html',className:'m-walk',textContent:'Walk around Leo →'}));
+ $('m-view').addEventListener('click',()=>{const open=menu.hidden;if(open)uiLabel();menu.hidden=!open;$('m-view').setAttribute('aria-expanded',String(open));});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();});renderer.domElement.addEventListener('pointerdown',closeMenu);
+ $('m-tour').addEventListener('click',()=>{closeMenu();tab('walk').click();});
+ const setSheet=open=>{sheet.classList.toggle('open',open);$('m-handle').setAttribute('aria-expanded',String(open));};
+ let startY=null,swiped=false;
+ $('m-handle').addEventListener('pointerdown',e=>{startY=e.clientY;swiped=false;});
+ $('m-handle').addEventListener('pointerup',e=>{const dy=startY===null?0:e.clientY-startY;startY=null;if(Math.abs(dy)>24){swiped=true;setSheet(dy<0);}});
+ $('m-handle').addEventListener('click',()=>{if(swiped){swiped=false;return;}setSheet(!sheet.classList.contains('open'));});
+ // The share link lives in the footer, which the phone layout hides: it moves into the sheet while that layout applies
+ // (and back when a window leaves it).
+ const share=$('share-view'),home=share&&{parent:share.parentNode,next:share.nextSibling},phoneQuery=matchMedia(PHONE_LAYOUT),placeShare=()=>{if(!share)return;if(phoneQuery.matches)sheet.append(share);else home.parent.insertBefore(share,home.next);};
+ placeShare();phoneQuery.addEventListener('change',placeShare);
+ // The slider: tap a segment, or swipe across the strip for the next or previous view.
+ for(const m of STEP_ORDER){const b=document.createElement('button');b.type='button';b.dataset.mode=m;b.setAttribute('aria-label',m==='walk'?'Tour':tab(m).textContent);b.addEventListener('click',()=>{closeMenu();tab(m).click();});$('m-steps-bar').append(b);}
+ let stepX=null;$('m-steps').addEventListener('pointerdown',e=>{stepX=e.clientX;});
+ $('m-steps').addEventListener('pointerup',e=>{const dx=stepX===null?0:e.clientX-stepX;stepX=null;if(Math.abs(dx)<40)return;const i=STEP_ORDER.indexOf(mode)+(dx<0?1:-1);if(i>=0&&i<STEP_ORDER.length)tab(STEP_ORDER[i]).click();});}
+$('toggle-panels').addEventListener('click',()=>{const hidden=document.body.classList.toggle('panels-hidden');$('toggle-panels').textContent=hidden?'Show UI':'Hide UI';$('toggle-panels').setAttribute('aria-pressed',String(hidden));});
+  $('enter-space').addEventListener('click',()=>{
+    const focus=document.querySelector('[data-focus][aria-pressed="true"]')?.dataset.focus;
+    if(focus==='nose'){
+      const v=noseView();$('detail-walls').checked=true;v.shell.visible=true;persp.fov=65;persp.near=.05;
+      setCamera('persp',v.inside.position,v.inside.target,0);residenceInside=true;
+      viewLink({district:activeDistrict,space:'nose',eye:1});$('status').textContent=NOSE_COMMONS[activeDistrict-1].name+' · 1.7 m eye level';return;
+    }
+  if(activeDistrict!==10){
+    const v=districtView(),garden=focus==='garden';focusDetail(garden?'garden':'cabin');
+    $('detail-walls').checked=true;v.residence.walls.visible=true;v.residence.districtWalls.visible=true;v.garden.walls.visible=true;
+    const pose=(garden?v.garden:v.residence).inside;persp.fov=65;persp.near=.05;setCamera('persp',pose.position,pose.target,0);
+    residenceInside=true;viewLink({district:activeDistrict,space:garden?'garden':'cabin',eye:1});
+    $('status').textContent='Neighborhood '+activeDistrict+' · '+(garden?'Garden commons':'Twin cabin')+' · 1.7 m eye level';return;
+  }
+  routeKey='home';renderRouteDots();setMode('walk');goStop(({cabin:0,garden:3,observation:5})[focus]??0,0);
+});
+$('detail-walls').addEventListener('change',()=>{const enclosed=$('detail-walls').checked;if(noseScene.visible)noseView().shell.visible=enclosed;ship.detail.walls.visible=enclosed;ship.detail.districtWalls.visible=enclosed;const v=districtView();if(v){v.residence.walls.visible=enclosed;v.residence.districtWalls.visible=enclosed;v.garden.walls.visible=enclosed;}});
+renderRouteDots();
+$('next-stop').addEventListener('click',()=>{stopTour();goStop(stop+1);});$('previous-stop').addEventListener('click',()=>{stopTour();goStop(stop-1);});$('restart-tour').addEventListener('click',()=>{stopTour();goStop(0);});
+$('play-tour').addEventListener('click',()=>{if(tourPlaying){stopTour();return;}tourPlaying=true;$('play-tour').textContent='Pause';if(stop===routeStops().length-1)goStop(0);lookStart=performance.now();lookSpan=TOUR_START_MS;tourTimer=setTimeout(advanceTour,TOUR_START_MS);});
+renderer.domElement.addEventListener('pointerdown',e=>{if(mode!=='walk')return;keepLook();stopTour();transition=null;lookDrag={x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture(e.pointerId);});
+renderer.domElement.addEventListener('pointermove',e=>{if(!lookDrag||mode!=='walk')return;const euler=new T.Euler().setFromQuaternion(camera.quaternion,'YXZ');euler.y-=(e.clientX-lookDrag.x)*.004;euler.x=T.MathUtils.clamp(euler.x-(e.clientY-lookDrag.y)*.004,-1.4,1.4);camera.quaternion.setFromEuler(euler);const dir=new T.Vector3(0,0,-1).applyQuaternion(camera.quaternion);controls.target.copy(camera.position).addScaledVector(dir,10);lookDrag={x:e.clientX,y:e.clientY};});
+renderer.domElement.addEventListener('pointerup',()=>lookDrag=null);
+renderer.domElement.addEventListener('pointercancel',()=>lookDrag=null);
+renderer.domElement.addEventListener('pointerdown',()=>{if(mode!=='walk')transition=null;});
+// On phones, drop to 1x pixels while a finger is on the scene (or a pinch/scroll is under way) and sharpen 250 ms after.
+if(touchScreen){let settle=0;const setRatio=r=>{if(renderer.getPixelRatio()!==r){renderer.setPixelRatio(r);resize();refreshShadows();}};
+ const busy=()=>{clearTimeout(settle);setRatio(1);},idle=()=>{clearTimeout(settle);settle=setTimeout(()=>setRatio(baseRatio),250);};
+ renderer.domElement.addEventListener('pointerdown',busy);renderer.domElement.addEventListener('wheel',()=>{busy();idle();},{passive:true});
+ for(const type of ['pointerup','pointercancel'])renderer.domElement.addEventListener(type,idle);}
+// Exterior and deck views show only the ship, which fits within 380 m of (-18, 41, 0) (bbox -300..264, -55..138, -150..150).
+// Hugging it with near/far every frame instead of 1..6000 m multiplies depth precision, which phones need: with less
+// depth precision than desktops, belly panels a few cm apart otherwise flicker as the ship is flipped.
+const SHIP_CENTER=new T.Vector3(-18,41,0),SHIP_RADIUS=380;
+function fitShipDepth(){const {center,radius}=explodeKit&&mode==='exterior'?explodeKit.frame(explodeValue):{center:SHIP_CENTER,radius:SHIP_RADIUS},d=camera.position.distanceTo(center),near=Math.max(camera.isOrthographicCamera?.1:1,d-radius),far=d+radius;if(Math.abs(camera.near-near)>.5||Math.abs(camera.far-far)>.5){camera.near=near;camera.far=far;camera.updateProjectionMatrix();}}
+// First visits to a tab used to stall 1–3.5 s while shaders compiled and textures uploaded on the spot. Once the page
+// is idle, build the lazily created views (hidden) and compile each view's materials in parallel under that view's own
+// lighting (each view carries its own lights, which are part of a shader's key), then upload textures a few at a time.
+const idle=()=>new Promise(r=>(globalThis.requestIdleCallback||(f=>setTimeout(f,200)))(()=>r(),{timeout:3000}));
+const WARM_WAIT_MS=12000;
+const WARM_VIEWS=[
+ {root:()=>ship.inside,exterior:true,layout:true},{root:()=>ship.exterior,exterior:true,layout:true},// deck layout: decks and the faded hull
+ {root:()=>ship.detail.root},// neighborhood
+ {root:()=>areasRoot},{root:()=>transitScene},{root:()=>aftModel&&aftScene},
+ {root:()=>ship.detail.root,walk:true},// home tour
+ {root:()=>aftModel&&aftScene,walk:true},// engineering and fin tours
+];
+// Show the scene as one view does (the other views hidden) for the duration of `run`, then put everything back.
+// Synchronous, so no on-screen frame ever sees the borrowed state.
+function asView({root,exterior=false,walk=false,layout=false},run){
+ const node=root();if(!node)return null;if(walk)ensureTourExtras();const saved=[ship.exterior,ship.inside,ship.detail.root,aftScene,areasRoot,transitScene,tourExtras,thrusters?.root].filter(Boolean).map(o=>[o,o.visible]);
+ ship.exterior.visible=exterior;ship.inside.visible=false;ship.detail.root.visible=false;aftScene.visible=false;areasRoot.visible=false;transitScene.visible=false;if(tourExtras)tourExtras.visible=walk;node.visible=true;
+ // The thruster glow carries three lights and shows only with the exterior (see animate).
+ if(thrusters)thrusters.root.visible=exterior&&$('thruster-glow').checked;
+ // The layout view shows only the port half of the hull, faded to 14 % (transparent variants of its materials).
+ // Afterwards the hull goes back to the current view's fade (14 % while the layout view is open).
+ const starboard=ship.starboard.visible;if(layout)applyDeckView();
+ try{return run(node);}finally{for(const [o,v] of saved)o.visible=v;if(layout){ship.starboard.visible=starboard;contextOpacity(mode==='layout'?.14:1);if(mode==='exterior'&&explodeValue>0)explodeVisibility(true);}}
+}
+// Compile a view's materials in parallel (KHR_parallel_shader_compile), with the view briefly detached so its own
+// lights are counted once.
+const compileView=view=>asView(view,node=>{const parent=node.parent;parent.remove(node);try{return renderer.compileAsync(shaderSamples([node]),persp,scene);}finally{parent.add(node);}});
+let warmStarted=false;
+async function warmViews(){
+ if(warmStarted)return;warmStarted=true;
+ const t0=performance.now();
+ // The deck plates and the neighborhood template need neither the exterior nor Cosmo: built while those still load.
+ for(const build of [()=>ship.decks,()=>ship.detail]){await quiet();try{build();}catch(e){console.warn('Warm-up skipped the interior.',e);}}
+ while((!exteriorReady&&exteriorLoad||!cosmoKit)&&performance.now()-t0<WARM_WAIT_MS)await idle();
+ // The interior built late (createShip lazyInterior) missed Cosmo's first full dressing, and later sweeps dress only what
+ // is visible: queue it, so its cats are Cosmo (and compiled below) before anyone opens those views.
+ const dressLate=root=>{if(cosmoKit)cosmoPending.add(root);};
+ const builders=[()=>dressLate(ship.detail.root),()=>dressLate(ensureTourExtras()),()=>{if(exteriorReady)ensureAftModel();},()=>{if(exteriorReady){ensureLayoutDecks();explodeRoomsAdded();}},()=>ensureArea(activeArea),()=>ensureTransitView(),()=>ensurePreviewTransit()];
+ // Each piece waits until the pointer, wheel and keys have been still for a moment (quiet), so none lands mid-move.
+ for(const build of builders){await quiet();try{build();}catch(e){console.warn('Warm-up skipped a view.',e);}}
+ for(const view of WARM_VIEWS){await quiet();try{await compileView(view);}catch(e){console.warn('Shader warm-up stopped.',e);return;}}
+}
+// The first frame used to freeze ~1.7 s compiling its shaders on the spot. Compile what it will show in parallel
+// (KHR_parallel_shader_compile) while the loading screen is up, capped so a slow driver never holds the page.
+const FIRST_FRAME_WAIT_MS=6000;
+function firstFrameReady(){
+ // compileAsync walks `scene.traverse`; this stand-in walks only what is visible, so hidden views are left to warmViews.
+ const visibleOnly={traverse:fn=>scene.traverseVisible(fn),traverseVisible(){}};
+ return Promise.race([renderer.compileAsync(visibleOnly,camera,scene),new Promise(r=>setTimeout(r,FIRST_FRAME_WAIT_MS))]).catch(e=>console.warn('First-frame compile skipped.',e));
+}
+function animate(now){requestAnimationFrame(animate);dressCosmo(now);tickShadows(now);const delta=Math.min(.05,Math.max(0,(now-(lastFrameTime||now))/1000));lastFrameTime=now;if(exporting)return;if(transition){const t=Math.min(1,(now-transition.start)/transition.duration),s=t*t*(3-2*t);camera.position.lerpVectors(transition.from,transition.to,s);controls.target.lerpVectors(transition.fromTarget,transition.toTarget,s);if(transition.upFrom)camera.up.lerpVectors(transition.upFrom,LEVEL,s).normalize();camera.lookAt(controls.target);if(t===1)transition=null;}if(!transition&&!persp.up.equals(LEVEL))persp.up.copy(LEVEL);lookAround(now,delta);if(mode!=='walk')controls.update(delta);if(mode==='exterior'||mode==='layout')fitShipDepth();if(thrusters){thrusters.root.visible=$('thruster-glow').checked&&((mode==='exterior'&&!$('shape-only').checked)||mode==='layout');thrusters.update(now/1000,!reduced);}
+  // The escort shuttle keeps station in the plain exterior view only.
+  if(escort){escort.root.visible=mode==='exterior'&&!$('shape-only').checked&&explodeValue===0;if(escort.root.visible)escort.update(now/1000,!reduced);}spaceBackdrop.update(delta,$('speed-lines').checked&&!document.hidden,aftScreenFlow(camera,controls.target,spaceBackdrop.width));if(explodeKit&&explodeValue>0&&mode==='exterior'){explodeDetail();explodeKit.sync();}placeExplodeTags();const backdrop=scene.background,g=grid.visible,p=pad.visible;scene.background=spaceBackdrop.texture;grid.visible=false;pad.visible=false;renderer.render(scene,camera);scene.background=backdrop;grid.visible=g;pad.visible=p;}
+$('save-render').addEventListener('click',async()=>{
+  if(exporting)return;exporting=true;$('save-render').disabled=true;$('render-status').textContent='Rendering exterior…';
+  const view=document.querySelector('[data-camera][aria-pressed="true"]').dataset.camera,shapeOnly=$('shape-only').checked;
+  const width=3200,height=2000,oldRatio=renderer.getPixelRatio(),oldBackground=scene.background.clone();
+  const visibility=[grid,pad,dimensions,ship.inside,ship.detail.root,escort?.root].filter(Boolean).map(o=>[o,o.visible]);
+  try{
+    visibility.forEach(([o])=>o.visible=false);scene.background.set(0x344554);renderer.setPixelRatio(1);renderer.setSize(width,height,false);
+    let renderCamera;
+    if(['boarding','perspective','concept','aft','bow','engine','windows','aftwindows','enginewindows'].includes(view)){
+      renderCamera=new T.PerspectiveCamera(42,width/height,1,6000);
+      renderCamera.position.set(...(view==='aft'?[-512,299,512]:[405,265,445]));renderCamera.lookAt(0,20,0);
+      if(view==='boarding'){const {position,target}=boardingCamera(0,1);renderCamera.position.set(...position);renderCamera.lookAt(...target);}
+      if(view==='concept'){renderCamera.position.set(340,455,650);renderCamera.lookAt(0,20,0);renderCamera.fov=37;renderCamera.updateProjectionMatrix();}
+      if(view==='bow'){renderCamera.position.set(430,112,245);renderCamera.lookAt(211,14,0);renderCamera.far=500;renderCamera.updateProjectionMatrix();}
+      if(view==='enginewindows'){renderCamera.position.set(-362,39,302);renderCamera.lookAt(-228,-9,79);}
+      if(view==='aftwindows'){renderCamera.position.set(-300,150,340);renderCamera.lookAt(-206,55,0);}
+      if(view==='windows'){renderCamera.position.set(0,32,195);renderCamera.lookAt(-10,13,65);}
+      if(view==='engine'){renderCamera.position.set(-405,22,187);renderCamera.lookAt(-268,-16,122);renderCamera.far=330;renderCamera.updateProjectionMatrix();}
+    }else{
+      renderCamera=new T.OrthographicCamera(-330,330,206.25,-206.25,.1,6000);
+      renderCamera.position.set(...(view==='top'?[0,1000,.01]:view==='side'?[0,25,1000]:[1000,25,0]));renderCamera.lookAt(0,25,0);
+    }
+    renderer.render(scene,renderCamera);
+    const poster=document.createElement('canvas');poster.width=width;poster.height=height;const ctx=poster.getContext('2d');ctx.drawImage(renderer.domElement,0,0);
+    const cleanBranding=$('clean-branding').checked;ctx.textAlign=view==='engine'?'right':'left';
+    if(!cleanBranding){ctx.fillStyle='#eef2f4';ctx.font='600 90px Segoe UI';ctx.fillText('LEO',view==='engine'?3100:100,150);ctx.font='24px Segoe UI';ctx.fillStyle='#b7c8d2';ctx.fillText('MARS CATS VOYAGE  /  EXTERIOR FINISH 35',view==='engine'?3100:104,198);}ctx.textAlign='left';
+    ctx.strokeStyle='#8397a4';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(100,1840);ctx.lineTo(3100,1840);ctx.stroke();
+    ctx.font='25px Segoe UI';ctx.fillStyle='#dbe4e9';ctx.fillText(`${view.toUpperCase()}  /  ${shapeOnly?'SHAPE STUDY':'MODEL RENDER'}`,100,1905);ctx.textAlign='right';ctx.fillText('564 m LENGTH   ·   300 m NOMINAL SPAN   ·   10,000 OCCUPANTS',3100,1905);
+    const blob=await new Promise(resolve=>poster.toBlob(resolve,'image/png'));if(!blob)throw new Error('PNG encoder unavailable');
+    const filename=`exterior-refined-${view}${shapeOnly?'-shape':''}.png`;
+    if(location.protocol==='http:'&&['127.0.0.1','localhost'].includes(location.hostname)){
+      const response=await fetch(`/renders/${filename}`,{method:'PUT',headers:{'Content-Type':'image/png'},body:blob});if(!response.ok)throw new Error('Could not save PNG');
+      if(view==='top'&&shapeOnly){
+        scene.background=null;renderer.setClearColor(0,0);renderer.render(scene,renderCamera);
+        const frame=Object.assign(document.createElement('canvas'),{width:renderer.domElement.width,height:renderer.domElement.height});frame.getContext('2d').drawImage(renderer.domElement,0,0);
+        const overlay=await new Promise(resolve=>frame.toBlob(resolve,'image/png'));
+        const saved=await fetch('/renders/exterior-top-overlay.png',{method:'PUT',headers:{'Content-Type':'image/png'},body:overlay});
+        if(!saved.ok)throw new Error('Could not save transparent top overlay');
+      }
+      $('render-status').replaceChildren();const a=document.createElement('a');a.href=`renders/${filename}`;a.textContent='PNG saved — open image';a.style.color='#ebbd83';a.target='_blank';$('render-status').append(a);
+    }else{
+      const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);$('render-status').textContent='PNG exported';
+    }
+  }catch(e){$('render-status').textContent=`Export failed: ${e.message}`;}
+  finally{scene.background=oldBackground;renderer.setClearColor(oldBackground,1);visibility.forEach(([o,v])=>o.visible=v);renderer.setPixelRatio(oldRatio);resize();exporting=false;$('save-render').disabled=false;}
+});
+
+$('save-interior').addEventListener('click',async()=>{
+  if(exporting)return;exporting=true;$('save-interior').disabled=true;
+  const ratio=renderer.getPixelRatio(),width=2400,height=1500;
+  try{
+    if(transition){camera.position.copy(transition.to);controls.target.copy(transition.toTarget);camera.lookAt(controls.target);transition=null;}
+    const c=camera.clone();c.clearViewOffset();c.aspect=width/height;c.updateProjectionMatrix();
+    renderer.setPixelRatio(1);renderer.setSize(width,height,false);renderer.render(scene,c);
+    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.drawImage(renderer.domElement,0,0);
+    const focus=mode==='aft'?'aft-'+aftSection+'-'+(aftEye?'inside':'overview'):mode==='transit'?'transit-'+transitCore+'-d'+transitDeck+'-'+transitPose:mode==='areas'?'area-'+activeArea.id+'-'+areaView:mode==='walk'?(routeKey==='home'?'walk-':'journey-'+routeKey+'-')+(stop+1):(document.querySelector('[data-focus][aria-pressed="true"]')?.dataset.focus||'all');
+    ctx.fillStyle='#122b3ae6';ctx.fillRect(0,height-90,width,90);ctx.fillStyle='#eef0e7';ctx.font='32px Segoe UI';ctx.fillText($('clean-branding').checked?'LIFE ABOARD':'LEO / LIFE ABOARD',55,height-34);ctx.textAlign='right';ctx.font='24px Segoe UI';ctx.fillText(mode==='aft'?AFT_VIEWS[aftSection].name:mode==='transit'?transitCore.toUpperCase()+' CONNECTION / DECK '+transitDeck:mode==='areas'?activeArea.name+' / DECK '+activeArea.deck:mode==='walk'?routeStops()[stop].name:focus==='all'?'NEIGHBORHOOD '+activeDistrict+' / 1,000 RESIDENTS':focus.toUpperCase(),width-55,height-34);
+    const blob=await new Promise(r=>canvas.toBlob(r,'image/png')),filename='interior-'+(mode==='neighborhood'?'n'+activeDistrict+'-':'')+focus+(mode==='neighborhood'&&residenceInside?'-inside':'')+'.png';
+    if(location.protocol==='http:'&&['127.0.0.1','localhost'].includes(location.hostname)){
+      const res=await fetch('/renders/'+filename,{method:'PUT',headers:{'Content-Type':'image/png'},body:blob});if(!res.ok)throw new Error('Could not save image');
+      $('interior-render-status').replaceChildren();const a=document.createElement('a');a.href='renders/'+filename;a.textContent='PNG saved — open image';a.target='_blank';a.style.color='#ebbd83';$('interior-render-status').append(a);
+    }else{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);$('interior-render-status').textContent='PNG exported';}
+  }catch(e){$('interior-render-status').textContent=e.message;}finally{renderer.setPixelRatio(ratio);resize();exporting=false;$('save-interior').disabled=false;}
+});
+
+(async()=>{
+ resize();const params=new URLSearchParams(location.search);let cleanBranding=params.get('clean')==='1';if(params.get('clean')===null){try{cleanBranding=localStorage.getItem('leo-clean-branding')==='1';}catch{}}$('clean-branding').checked=cleanBranding;applyBrandingView();routeKey=(TOURS[params.get('tour')]?params.get('tour'):'home');renderRouteDots();const initial=params.get('space'),areaId=params.get('area');
+ const district=Number(params.get('district'));if(Number.isInteger(district)&&district>=1&&district<=10){activeDistrict=district;$('neighborhood-select').value=district;}
+ const deck=Number(params.get('deck'));if(deck>=1&&deck<=20)$('deck-select').value=deck-1;
+ if(params.has('transit')){transitCore=params.get('transit')==='aft'?'aft':'forward';transitDeck=deck>=1&&deck<=20?deck:17;transitPose=['inside','stairs'].includes(params.get('view'))?params.get('view'):'overview';}
+ if(params.has('aft')){aftSection=AFT_VIEWS[params.get('aft')]?params.get('aft'):'overview';aftEye=params.get('view')==='inside';}
+ await setMode(params.has('aft')?'aft':params.has('transit')?'transit':areaId?'areas':initial?'neighborhood':deck>=1&&deck<=20?'layout':params.get('walk')==='1'?'walk':'exterior');
+ if(areaId)showArea(areaId,params.get('view')==='inside'?'inside':'overview');
+ else if(initial)focusDetail(['cabin','garden','observation','nose','all'].includes(initial)?initial:'observation');
+ else if(mode==='exterior'){const view=params.get('camera'),explode=Number(params.get('explode'));if(explode>0&&!DETAIL_CAMERAS.includes(view))setExplode(Math.min(100,explode)/100,{reframe:false});viewCamera(['boarding','concept','perspective','top','side','front','aft','bow','engine','windows','aftwindows','enginewindows'].includes(view)?view:'top');}
+ if(!areaId&&params.get('walk')==='1'){setMode('walk');goStop(params.has('stop')?Number(params.get('stop')):(({cabin:0,garden:3,observation:5})[initial]??0),0);}
+ if(!areaId&&initial&&params.get('eye')==='1'&&(activeDistrict!==10||initial==='nose'))$('enter-space').click();
+ await environmentReady;await firstFrameReady();
+ if(window.LEO_ARRIVAL&&!reduced&&mode==='exterior')playArrival();
+ $('loading').hidden=true;viewStarted=true;requestAnimationFrame(animate);
+ if(studioTools&&params.get('bake')==='environment')bakeEnvironmentPNG(renderer).then(blob=>Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:'environment.png'}).click());
+ // Tour and room deep links never load the exterior, so Cosmo cannot wait for it. Building him stalls a frame or two, so
+ // the arrival goes first.
+ setTimeout(loadCosmo,window.LEO_ARRIVAL?ARRIVAL_MS+300:1500);
+ if(!lite)setTimeout(warmViews,3000);
+ // Ten seconds of frames: this start made it.
+ setTimeout(()=>{try{localStorage.removeItem(STARTING);}catch{}},10000);
+})().catch(e=>showError(e.message));

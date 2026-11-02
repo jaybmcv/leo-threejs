@@ -2,7 +2,7 @@ import {registerAtriumArchitecture} from './atrium-visibility.js';
 import {restoreRoomAnchors} from '../plan/rooms.js';
 import {preparedResource} from './prepared-resource.js';
 import * as T from 'three';
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 import {readPreparedWorld} from './prepared-codec.js';
 let prepared=null;const cabinPlanById=new Map(layout.cabins.map(c=>[c.id,c]));
 export const preparedDecks=layout.decks;

@@ -1,6 +1,6 @@
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import * as T from 'three';
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 import {signPlace} from '../plan/signs-v2.js';
 export const wingName=s=>(s.side<0?'Port':'Starboard')+' '+(['Aster','Birch','Cedar','Dogwood','Elm'][[-104,-58,-12,34,80].indexOf(s.wing)]||'transit')+' wing';
 export function v2Signs(parent){

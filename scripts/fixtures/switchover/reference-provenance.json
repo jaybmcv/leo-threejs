@@ -1,0 +1,12 @@
+{
+  "requestedRevision": "164c57f88c04e0152faf9dbaf76f10e927dbdd2b",
+  "worktree": "C:/Users/henri/code/leo-redesign-plan",
+  "worktreeHead": "164c57f88c04e0152faf9dbaf76f10e927dbdd2b\n",
+  "preparedSha256": "188d1e48a8a0a8940e8a5e73d72104095fc4520b46407d12d4dc9b1b6260c3aa",
+  "fitoutSourceSHA": "2ead535ffc73be88325803247d532bba5f6aa75d8ab875a0d839ee0bfca4ed60",
+  "entryPreparedSha256": "45e288bfec0da50d9b19d157074d6dc55cd09e09dfa462a93f11644c30ba808e",
+  "reason": "Entry artifacts predate the 164c57f cafe relocation; authoritative reference is the preserved successful validation worktree. No reference bytes were generated from the folded source.",
+  "entryFitoutSourceSHA": "5078cc4ba973ff8a04e761b1dfab73cfc4aee05d83595aff0024ae3a9c077810",
+  "entryFitoutMatches": "d619de6 (LF source bytes)",
+  "validatedFitoutMatches": "164c57f (CRLF source bytes in validation worktree)"
+}

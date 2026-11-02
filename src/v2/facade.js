@@ -5,7 +5,7 @@ import {ownerFootprint} from '../plan/envelope-ownership-v2.js';
 import {worldPoint} from '../plan/hull-skin-v2.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import * as T from 'three';
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 import {distanceToSegment} from '../plan/geometry-v2.js';
 import {placements,cabinKey} from './cabins.js';
 import {mergeBoxes,metal,glass,lining,floor,polygonGeometry} from './geometry.js';

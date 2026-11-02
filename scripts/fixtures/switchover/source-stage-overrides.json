@@ -1,0 +1,6 @@
+{
+  "server/leo-live.mjs": {
+    "sha256": "2b9c96aca273cd914f25057561738116e22001d7458978c82f92537cd98fa4d8",
+    "reason": "Stage 3 selects the explicit rollback entry and folded v2 server; verified by both live suites."
+  }
+}

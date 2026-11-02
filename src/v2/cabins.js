@@ -3,7 +3,7 @@ import {prototypeCabinTemplate} from './hull-prototypes.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {polishInterior} from '../interior-polish.js';
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 import {frame} from '../plan/rooms.js';
 import {box,lining,metal} from './geometry.js';
 const mat=(name,color,extra={})=>new T.MeshStandardMaterial({name,color,roughness:.7,...extra});

@@ -1,4 +1,4 @@
-import layout from'v2-layout';import{contains,distanceToSegment,bounds}from'../plan/geometry-v2.js';import{ATRIUM_PROTOTYPE}from'../plan/atrium-v2.js';
+import layout from'../plan/selected-layout.js';import{contains,distanceToSegment,bounds}from'../plan/geometry-v2.js';import{ATRIUM_PROTOTYPE}from'../plan/atrium-v2.js';
 let position=null,classified;const architecture=[],owners=new Map();
 for(const r of[...layout.cabins,...layout.rooms.filter(r=>!r.aggregate),...(layout.hullPrototypes?.prototypes||[]).map(p=>({polygon:p.polygon,y:p.chart.origin[1],height:p.rect[3],deck:p.deck}))]){
  if(!r.polygon)continue;const box=bounds(r.polygon),y=r.y,height=r.height||3.4;

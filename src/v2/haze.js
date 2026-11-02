@@ -1,6 +1,6 @@
 import {skyCeilingGeometry,skyMaterial} from './atrium-surfaces.js';
 import * as T from 'three';
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 import {polygonGeometry} from './geometry.js';
 import {rectangle} from '../plan/geometry-v2.js';
 import {facadeVolumeMasks} from './facade.js';

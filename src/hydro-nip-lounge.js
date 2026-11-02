@@ -1,3 +1,5 @@
+import layout from './plan/selected-layout.js';
+const v2MazeFit=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1'),p=r.components.pieces.find(p=>p.name==='Haze Maze tower'),t=r.components.mazeTubes,toLocal=z=>27+r.side*(z-r.z);return {dx:p.center[0]-r.x+132-117.25,dz:toLocal(p.center[2])-26,front:toLocal(t[0].to),rear:toLocal(t[1].to)};})();
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
@@ -13,15 +15,15 @@ import {canvasTexture,seeded} from './polish-kit.js';
 // lets you lie in the hammocks (the walk's side is src/walk/lounge.js).
 // Neon, glass, mist and light are merged per material here (the walk leaves glowing and see-through meshes unmerged);
 // seats, hammocks and doors stay separate meshes, named as the walk expects.
-const FLOOR=24.3,CEILING=35.65,LEVELS=[28.3,32.3],ROOM={x0:109.5,x1:154.5,z0:8,z1:46};
-const DOME={x:134,z:25,r:6.5},MAZE={x0:114,x1:120.5,z0:19,z1:33,top:35.2},MUNCH={x:145.5,z:25};
+const FLOOR=24.3,CEILING=35.65,LEVELS=[28.3,32.3],ROOM={x0:109.5,x1:154.5,z0:14,z1:46};
+const DOME={x:134,z:25,r:6.5},MAZE={x0:114+v2MazeFit.dx,x1:120.5+v2MazeFit.dx,z0:19+v2MazeFit.dz,z1:33+v2MazeFit.dz,top:35.2},MUNCH={x:145.5,z:25};
 const MAIN_LOGO_URL=typeof __HYDRO_NIP_MAIN_LOGO__==='undefined'?null:__HYDRO_NIP_MAIN_LOGO__;
 // The maze inside: a ground floor of 3 x 6 roomy cells, walled to chest height so you and the camera see over the
 // partitions (behind the last row, z 31.5-32.9, the first stair's foot), the lower platform in front of SPLIT and the
 // upper one behind it, each at its gallery's height, so a level glass tube runs from each to its gallery: the lower to
 // the front gallery, the upper to the rear one.
-const CELLS={x0:114.1,z0:19.1,w:2.1,d:12.4/6,cols:3,rows:6},SPLIT=CELLS.z0+4*CELLS.d;
-const TUBES=[{x:119.4,level:LEVELS[0],from:MAZE.z0,to:12},{x:118,level:LEVELS[1],from:MAZE.z1,to:42}],TUBE={r:1.35,floor:1,half:.95};
+const CELLS={x0:114.1+v2MazeFit.dx,z0:19.1+v2MazeFit.dz,w:2.1,d:12.4/6,cols:3,rows:6},SPLIT=CELLS.z0+4*CELLS.d;
+const TUBES=[{x:119.4+v2MazeFit.dx,level:LEVELS[0],from:MAZE.z0,to:v2MazeFit.front},{x:118+v2MazeFit.dx,level:LEVELS[1],from:MAZE.z1,to:v2MazeFit.rear}],TUBE={r:1.35,floor:1,half:.95};
 // The ground floor's one way through (cells [col,row]; row 0 at the door, which opens on cell 1).
 const PASSAGES=[[[1,0],[2,0]],[[2,0],[2,1]],[[2,1],[2,2]],[[2,2],[2,3]],[[2,3],[1,3]],[[1,3],[1,4]],[[1,4],[0,4]],[[0,4],[0,5]],[[0,5],[1,5]],
  // and its dead end
@@ -367,13 +369,13 @@ export function createHydroNipLounge({mirror=1}={}){
   box(M.wood,[x1-x0-.1,.12,SPLIT-z0-.05],[cx,LEVELS[0]-.06,(z0+SPLIT)/2]);box(M.wood,[x1-x0-.1,.12,z1-SPLIT-.05],[cx,LEVELS[1]-.06,(SPLIT+z1)/2]);
   // A rug on each, clear of the stairs and the ways to the tubes.
   // (Plain colour with a border: the patterned rug's texture keeps it out of the walk's merge, a draw per deck band.)
-  for(const [x,z,w,d,y] of [[118.1,23.6,3.4,4.4,LEVELS[0]],[117.4,29.9,4.6,4.4,LEVELS[1]]]){box(M.purple,[w,.02,d],[x,y+.01,z]);
+  for(const [x,z,w,d,y] of [[118.1,23.6,3.4,4.4,LEVELS[0]],[117.4,29.9,4.6,4.4,LEVELS[1]]].map(([x,z,...rest])=>[x+v2MazeFit.dx,z+v2MazeFit.dz,...rest])){box(M.purple,[w,.02,d],[x,y+.01,z]);
    for(const s of [-1,1]){box(M.teal,[w,.022,.14],[x,y+.011,z+s*(d/2-.2)]);box(M.teal,[.14,.022,d],[x+s*(w/2-.2),y+.011,z]);}}
   const guard=(x,z,w,d,base,height)=>{put(M.mazeGlass,new T.BoxGeometry(w,height,d).translate(x,base+height/2,z));put(neon(GREEN),new T.BoxGeometry(w+.04,.04,d+.04).translate(x,base+height,z));};
   guard((west+east)/2,SPLIT,east-west,.04,LEVELS[0],1);guard((west+x1)/2,SPLIT,x1-west,.04,LEVELS[1],1);
   guard(east,(SPLIT+foot)/2,.04,foot-SPLIT,FLOOR,LEVELS[0]+1-FLOOR);guard(west,(front0+SPLIT)/2,.04,SPLIT-front0,LEVELS[0],LEVELS[1]+1-LEVELS[0]);
   // Cushions to curl up on, on both platforms.
-  [[117,23.2,LEVELS[0]],[117,25.4,LEVELS[0]],[116.2,31.2,LEVELS[1]],[119.4,31.6,LEVELS[1]]].forEach(([x,z,y],i)=>
+  [[117,23.2,LEVELS[0]],[117,25.4,LEVELS[0]],[116.2,31.2,LEVELS[1]],[119.4,31.6,LEVELS[1]]].map(([x,z,y])=>[x+v2MazeFit.dx,z+v2MazeFit.dz,y]).forEach(([x,z,y],i)=>
    seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),[M.magenta,M.teal][i%2],[x,y+.095,z]));
   // Catnip mist: crossed soft planes, thick on the ground floor and thinning as you climb.
   for(let i=0;i<12;i++){const up=i<6?0:i<10?1:2,y=[FLOOR,...LEVELS][up]+1.2+rnd()*.6,[za,zb]=[[z0+1,z1-2],[z0+1,SPLIT-1],[SPLIT+1,z1-1]][up];
@@ -382,7 +384,7 @@ export function createHydroNipLounge({mirror=1}={}){
   // Vines trailing from the roof inside.
   for(let i=0;i<14;i++){const x=x0+.4+rnd()*(x1-x0-.8),z=z0+.4+rnd()*(z1-z0-.8),n=3+Math.floor(rnd()*4);
    for(let k=0;k<n;k++)put(M.leaf,new T.OctahedronGeometry(.09,0).scale(1,.45,1.3).rotateY(rnd()*3).translate(x+Math.sin(k*1.7)*.08,top-.15-k*.2,z));}
-  sign({at:[116.6,FLOOR+3.15,z0-.1],normal:[0,0,-1],width:3.2,height:1.2,color:GREEN,lines:[{text:'HAZE MAZE',size:.42}]});
+  sign({at:[116.6+v2MazeFit.dx,FLOOR+3.15,z0-.1],normal:[0,0,-1],width:3.2,height:1.2,color:GREEN,lines:[{text:'HAZE MAZE',size:.42}]});
   // The tubes: glass, ringed in green, with a floor level with the platform and the gallery at either end.
   for(const t of TUBES){const len=Math.abs(t.to-t.from),zc=(t.to+t.from)/2,yc=t.level+TUBE.floor,n=Math.round(len/1.2);
    put(M.glass,new T.CylinderGeometry(TUBE.r,TUBE.r,len,18,1,true).rotateX(Math.PI/2).translate(t.x,yc,zc));
@@ -496,14 +498,14 @@ export function createHydroNipLounge({mirror=1}={}){
  }
 
  // Lounge seating toward the entrance: patterned rugs, beanbags, floor cushions, low tables and cat toys.
- for(const [x,z,w,d] of [[127,15,7,4],[137,15,7,4],[144,16,4,3]])box(M.rug,[w,.02,d],[x,FLOOR+.01,z]);
- [[124.6,14.2,'magenta'],[127.6,16.4,'teal'],[129.6,14,'purple'],[134.8,14.1,'teal'],[138.2,16.5,'magenta'],[140.2,14.3,'purple'],[144.6,16.1,'magenta']].forEach(([x,z,c])=>
+ for(const [x,z,w,d] of [[127,15,7,4],[137,15,7,4],[144,16,4,3]].map(([x,z,...rest])=>[x,z+1.5,...rest]))box(M.rug,[w,.02,d],[x,FLOOR+.01,z]);
+ [[124.6,14.2,'magenta'],[127.6,16.4,'teal'],[129.6,14,'purple'],[134.8,14.1,'teal'],[138.2,16.5,'magenta'],[140.2,14.3,'purple'],[144.6,16.1,'magenta']].map(([x,z,...rest])=>[x,z+1.5,...rest]).forEach(([x,z,c])=>
   seat('Soft_seat',new T.SphereGeometry(.58,16,10).scale(1,.62,1),M[c],[x,FLOOR+.36,z]));
- [[126.4,13.4],[131,16.2],[133.6,16],[136.2,13.4],[142.7,14.9],[145.6,17.2]].forEach(([x,z],i)=>
+ [[126.4,13.4],[131,16.2],[133.6,16],[136.2,13.4],[142.7,14.9],[145.6,17.2]].map(([x,z,...rest])=>[x,z+1.5,...rest]).forEach(([x,z],i)=>
   seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),[M.purple,M.teal,M.magenta][i%3],[x,FLOOR+.095,z]));
- for(const [x,z] of [[127.2,15],[137.2,15]]){cyl(M.wood,.5,.5,.05,[x,FLOOR+.4,z],18);cyl(M.dark,.08,.12,.38,[x,FLOOR+.19,z],8);
+ for(const [x,z] of [[127.2,15],[137.2,15]].map(([x,z,...rest])=>[x,z+1.5,...rest])){cyl(M.wood,.5,.5,.05,[x,FLOOR+.4,z],18);cyl(M.dark,.08,.12,.38,[x,FLOOR+.19,z],8);
   cyl(M.board,.18,.12,.08,[x,FLOOR+.465,z],12);put(M.leaf,new T.SphereGeometry(.15,8,5,0,Math.PI*2,0,Math.PI/2).translate(x,FLOOR+.49,z));}
- [[125.8,15.8,PINK],[131.6,13.6,AMBER],[136,16.8,GREEN],[139.6,15.6,PURPLE],[143.4,17.4,CYAN],[128.8,13.1,AMBER]].forEach(([x,z,c])=>put(neon(c),new T.IcosahedronGeometry(.09,1).translate(x,FLOOR+.11,z)));
+ [[125.8,15.8,PINK],[131.6,13.6,AMBER],[136,16.8,GREEN],[139.6,15.6,PURPLE],[143.4,17.4,CYAN],[128.8,13.1,AMBER]].map(([x,z,...rest])=>[x,z+1.5,...rest]).forEach(([x,z,c])=>put(neon(c),new T.IcosahedronGeometry(.09,1).translate(x,FLOOR+.11,z)));
  // Cat trees: sisal posts, platforms and a bed on top.
  for(const [x,z,h] of [[124.6,22.5,2.6],[147,18.6,2.2],[112.6,35.8,1.8]]){
   cyl(M.sisal,.09,.09,h,[x,FLOOR+h/2,z],8);cyl(M.sisal,.07,.07,h*.6,[x+.45,FLOOR+h*.3,z+.2],8);
@@ -544,7 +546,7 @@ export function createHydroNipLounge({mirror=1}={}){
    for(const z of ends)sconce(ROOM.x0+.1,y+up,z,[1,0,0]);}}
 
  // The credit plaque by the entrance.
- {const at=[117.5,FLOOR,12.6];cyl(M.dark,.05,.05,1.1,[at[0],FLOOR+.55,at[2]+.08],8);box(M.dark,[.5,.03,.5],[at[0],FLOOR+.015,at[2]+.08]);
+ {const at=[140.8,FLOOR,10.6];cyl(M.dark,.05,.05,1.1,[at[0],FLOOR+.55,at[2]+.08],8);box(M.dark,[.5,.03,.5],[at[0],FLOOR+.015,at[2]+.08]);
   sign({at:[at[0],FLOOR+1.32,at[2]],normal:[0,0,-1],width:1.25,height:.62,color:AMBER,lines:[{text:'HYDRO-NIP LOUNGE',size:.085},{text:'Concept by Tochtli',size:.075,color:0xf3e6c4}]});}
 
  // One mesh per material.

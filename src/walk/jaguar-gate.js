@@ -1,3 +1,4 @@
+import {toWorld as launchRoomPoint} from '../plan/rooms.js';
 import * as T from 'three';
 import {placedV1,placeObject} from '../plan/placements.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -212,5 +213,5 @@ export function createJaguarGate(){
 
  for(const [m,list] of parts){const o=new T.Mesh(mergeGeometries(list.map(g=>g.index?g.toNonIndexed():g)),m);o.name=m.name;o.userData.noCollide=true;group.add(o);}
  group.updateMatrixWorld(true);
- placeObject(group,'jaguar-gate');return {group,solid};
+ placeObject(group,'jaguar-gate');group.position.add(new T.Vector3(...launchRoomPoint('commons-1',[0,0,6])).sub(new T.Vector3(...launchRoomPoint('commons-1',[0,0,0]))));group.updateMatrixWorld(true);return {group,solid};
 }

@@ -1,0 +1,2 @@
+import assert from 'node:assert/strict';import {build} from './workspace-build.mjs';
+const r=await build({entryPoints:['scripts/layout-v2-data.mjs'],bundle:true,platform:'node',format:'esm',write:false,metafile:true,packages:'external'});const recursive=Object.keys(r.metafile.inputs).filter(f=>/selected-layout|[\\/]rooms[.]js|[\\/]model[.]js/.test(f));assert.deepEqual(recursive,[],'Layout generation must not read the active walk or an existing generated layout');console.log('PASS clean layout producer has no generated-layout dependency');

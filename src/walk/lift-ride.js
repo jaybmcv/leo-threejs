@@ -1,5 +1,6 @@
+import layout from '../plan/selected-layout.js';
 import * as T from 'three';
-import {DECKS} from '../model.js';
+const DECKS=layout.decks;
 import {marsSurface} from '../mars.js';
 import {LIFTS,carTriangles} from './lifts.js';
 import {liftState,callLift,stepLift,followLift} from './lift-motion.js';

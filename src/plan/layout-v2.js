@@ -7,12 +7,12 @@ import {mapCabins} from './cabin-map-v2.js';
 import {addStructuralOpenings} from './structure-v2.js';
 import {completeProgramme} from './programme-v2.js';
 import {connectPlan as connectCirculation} from './navigation-v2.js';
-import {DECKS,CABINS,COMMONS} from '../model.js';
-import {SHIP_AREAS} from '../areas.js';
-import {loungeFacade} from '../lounge.js';
-import {NOSE_COMMONS} from '../nose-commons.js';
-import {aftOpenings} from '../aft-layout.js';
-import {transitOpenings,floorY} from '../transit.js';
+import {DECKS,CABINS,COMMONS} from './layout-inputs-v1.js';
+import {SHIP_AREAS} from './layout-inputs-v1.js';
+import {loungeFacade} from './layout-inputs-v1.js';
+import {NOSE_COMMONS} from './layout-inputs-v1.js';
+import {aftOpenings} from './layout-inputs-v1.js';
+import {transitOpenings,floorY} from './layout-inputs-v1.js';
 import {hullV2} from './hull-v2.js';
 import {rectangle,rectPoly,bounds,overlaps,area,pathLength,pathAt} from './geometry-v2.js';
 

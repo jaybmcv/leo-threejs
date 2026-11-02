@@ -1,5 +1,5 @@
 import * as T from 'three';
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 import {plannedStanding} from './standing.js';
 import {buildGotoPlaces,describeV2} from './wayfinding-data.js';
 import {featurePlaces} from './goto-features.js';

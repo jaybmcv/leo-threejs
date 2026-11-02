@@ -16,7 +16,7 @@ import {prepareBlossomBed,createBlossomGarden} from '../src/walk/blossom.js';
 import {prepareLoungeFalls,createLoungeFalls} from '../src/walk/lounge-falls.js';
 import {createArcade} from '../src/walk/arcade.js';
 import {createJaguarGate} from '../src/walk/jaguar-gate.js';
-import {findRestSpots} from '../src/walk/rest.js';
+import {findRestSpots} from '../src/v2/rest.js';
 import {CABINS} from '../src/plan/v1.js';
 import {solid,meshTriangles} from '../src/walk/collision.js';
 installWalkCanvas(createCanvas);

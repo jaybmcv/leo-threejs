@@ -5,7 +5,7 @@ import{objectRoom}from'../src/plan/rooms.js';
 import{worldPoint,patchDepth}from'../src/plan/hull-skin-v2.js';
 import{auditAtriumVoid}from'./atrium-void-v2.mjs';
 import{LIFTS,carTriangles}from'../src/walk/lifts.js';
-import fs from'node:fs/promises';import assert from'node:assert/strict';import * as T from'three';import layout from'v2-layout';import{preparedV2}from'./v2-world.mjs';import{installFloodIndex,proveFloodIndex}from'./flood-spatial-index-v2.mjs';import{BODY}from'../src/walk/collision.js';import{contains}from'../src/plan/geometry-v2.js';import{spotIndex}from'../src/walk/rest.js';import{phase6Programme}from'../src/v2/phase6-programme.js';
+import fs from'node:fs/promises';import assert from'node:assert/strict';import * as T from'three';import layout from'v2-layout';import{preparedV2}from'./v2-world.mjs';import{installFloodIndex,proveFloodIndex}from'./flood-spatial-index-v2.mjs';import{BODY}from'../src/walk/collision.js';import{contains}from'../src/plan/geometry-v2.js';import{spotIndex}from'../src/v2/rest.js';import{phase6Programme}from'../src/v2/phase6-programme.js';
 const start=Date.now(),log=(...a)=>console.log(Math.round((Date.now()-start)/1000)+'s',...a),{ship,prepared,artifact}=await preparedV2({artifact:true}),col=prepared.colliders;
 for(const lift of LIFTS)for(const stop of lift.stops)if(true)col.addMover(lift.id,carTriangles(lift,[stop.door||lift.door]),new T.Matrix4().makeTranslation(lift.car.x,stop.y,lift.car.z));
 const proof={};for(const[n,c]of[['body',col],['ground',col.v2Ground]]){const i=installFloodIndex(c);proof[n]=proveFloodIndex(c,i.original);}log('Prepared collision candidate parity',proof);

@@ -91,7 +91,7 @@ export function prepareExteriorForWalking(ship){
  ship.exterior.traverse(o=>{
   if(!o.isMesh)return;
   for(const m of Array.isArray(o.material)?o.material:[o.material])m.side=T.DoubleSide;
-  if(SURFACE.test(o.name))return;
+  if(SURFACE.test(o.name)||o.userData.hullEnvelopeBatch||o.userData.hullSkinSurface)return;
   const g=o.geometry,pos=g.attributes.position,idx=g.index?g.index.array:null,n=idx?idx.length:pos.count,keep=[];
   if(!g.boundingBox)g.computeBoundingBox();const upper=g.boundingBox.clone().applyMatrix4(o.matrixWorld).max.y>22,test=upper?underHullTop:inside;
   // The fin's skin, root fairing and fillet close off at the bottom right over the service gallery and the crown lift's

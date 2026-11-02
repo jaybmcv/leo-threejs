@@ -257,7 +257,13 @@
     "owners": [
       "d16-theater-5"
     ],
-    "via": null
+    "via": "inherited",
+    "boundary": {
+      "module": "../v2/help-wayfinding.js",
+      "symbol": "V2_EXAMPLE_GO",
+      "reason": "Direct-source v2 delegates to the selected-layout owner; frozen v1 boundary remains independently checked.",
+      "use": "go:V2_EXAMPLE_GO"
+    }
   },
   "src/walk/pinball/machine.js": {
     "owners": [
@@ -324,7 +330,13 @@
       "commons-1",
       "circulation-17"
     ],
-    "via": null
+    "via": "inherited",
+    "boundary": {
+      "module": "../v2/lounge-floor-material.js",
+      "symbol": "applyLoungeFloorFinish",
+      "reason": "Direct-source v2 delegates to the selected-layout owner; frozen v1 boundary remains independently checked.",
+      "use": "return applyLoungeFloorFinish(ship)"
+    }
   },
   "src/walk/lounge-falls.js": {
     "owners": [
@@ -351,7 +363,9 @@
     "via": "inherited"
   },
   "src/walk/aquarium-treasure/game.js": {
-    "owners": ["commons-1"],
+    "owners": [
+      "commons-1"
+    ],
     "via": "inherited"
   },
   "src/walk/mission-holo.js": {
@@ -456,7 +470,13 @@
       "crown",
       "@cabins"
     ],
-    "via": null
+    "via": "inherited",
+    "boundary": {
+      "module": "../v2/wayfinding.js",
+      "symbol": "V2_PLACES",
+      "reason": "Direct-source v2 delegates to the selected-layout owner; frozen v1 boundary remains independently checked.",
+      "use": "PLACES=V2_PLACES"
+    }
   },
   "src/walk/signs.js": {
     "owners": [

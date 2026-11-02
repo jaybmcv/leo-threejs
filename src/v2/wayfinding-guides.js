@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 import {guideSchedule,lobbySchedule} from './wayfinding-guide-data.js';
 // Additional information only. The existing 283 v2 stair/lift sign placements,
 // signPlace(), lift doors, collision geometry and prepared sign cache stay intact.

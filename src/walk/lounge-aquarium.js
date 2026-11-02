@@ -13,7 +13,7 @@ import {COMMONS} from '../model.js';
 // inside, everything is the walk's own drawing (unlit colours, no real lights).
 // Built in the commons template's own frame (HYDRO_NIP_LOUNGE.md): x along the wall, z from the promenade side (4) to the
 // lounge (8), y up from the Deck 17 floor (24.3). The throat is the jaguar gate's: 4 m wide at x 137.25, 3.68 m high.
-export const AQUARIUM={x0:113.7,x1:154.3,back:4.07,glass:7.82,front:7.9,floor:24.3,bed:24.62,top:35.5,deck18:28,tunnel:{x0:135.25,x1:139.25,top:28.04}};
+export const AQUARIUM={x0:121.2,x1:154.3,back:4.07,glass:7.82,front:7.9,floor:24.3,bed:24.62,top:35.5,deck18:28,tunnel:{x0:135.25,x1:139.25,top:28.04}};
 const A=AQUARIUM,TUN=A.tunnel,WATER=new T.Color(0x05203f);
 const C=hex=>new T.Color(hex);
 const NEON=[0xff3fd0,0xff7a3d,0x8dff5a,0x3df0ff,0xa66bff,0xffe44d,0xff4f7a,0x4dffc3].map(C);
@@ -25,7 +25,7 @@ const inTunnel=(x,pad=0)=>x>TUN.x0-pad&&x<TUN.x1+pad;
 // The front wall's partitions that the glass replaces (the walk plan's, partitions.js), in the world: Neighborhood 1's
 // commons is the template moved aft and mirrored across the centreline (model.js createGardenCommons).
 export function aquariumFront(){
- const c=COMMONS[0],s=c.z<0?-1:1,x=v=>v+c.x-132,z=v=>c.z-27*s+s*v,za=z(A.glass-.15),zb=z(8.15);
+ const c=COMMONS[0],s=c.z<0?-1:1,x=v=>v+c.x-132,z=v=>c.z-27*s+s*v,za=z(A.glass+6-.15),zb=z(14.15);
  return {x0:x(A.x0),x1:x(A.x1),z0:Math.min(za,zb),z1:Math.max(za,zb),y0:A.floor,y1:A.top+.6};
 }
 
@@ -141,7 +141,7 @@ function fishShape(sp){
  return mergeGeometries(parts);
 }
 
-export function createLoungeAquarium(ship,frame,colliders){
+export function createLoungeAquarium(ship,frame,colliders){frame=frame.clone().multiply(new T.Matrix4().makeTranslation(0,0,6));
  // The solid parts, in the world.
  const solid=new T.Group();solid.name='Lounge_aquarium_solid';
  for(const b of SOLIDS)solid.add(new T.Mesh(boxGeometry(b).applyMatrix4(frame)));
@@ -150,9 +150,9 @@ export function createLoungeAquarium(ship,frame,colliders){
  // What the tank now holds (the deck plates and floors through it, railings planned round them) goes from drawing; the
  // commons' columns stay, as the glass's posts.
  {const box=new T.Box3().setFromPoints([new T.Vector3(A.x0+.05,A.floor+.05,A.back+.03),new T.Vector3(A.x1-.05,A.top-.05,A.glass-.02)].map(p=>p.applyMatrix4(frame)));
-  cutOut(ship.inside,box,o=>o.name!=='Commons_column');}
+  if(!ship.v2Prepared)cutOut(ship.inside,box,o=>o.name!=='Commons_column');}
  // Open the promenade partitions for drawing after their collision has been built.
- cutOut(ship.inside,new T.Box3(new T.Vector3(A.x0,A.floor,3.7),new T.Vector3(A.x1,A.top,4.2)),o=>o.name==='Partition_wall',frame.clone().invert());
+ if(!ship.v2Prepared)cutOut(ship.inside,new T.Box3(new T.Vector3(A.x0,A.floor,3.7),new T.Vector3(A.x1,A.top,4.2)),o=>o.name==='Partition_wall',frame.clone().invert());
 
  const L=lists(),put=L.put,rnd=seeded(125),r=(a,b)=>a+(b-a)*rnd(),pick=a=>a[Math.floor(rnd()*a.length)];
  const flat=c=>()=>c;
@@ -174,7 +174,7 @@ export function createLoungeAquarium(ship,frame,colliders){
   put('life',rockShape(s,seed),at(x,y,clamp(z,A.back+.08+e,A.glass-.08-e),rnd()*6),rockColour);};
  for(let i=0;i<60;i++){const s=r(.18,.55);rock(bedX(.5),A.bed-.08,r(A.back+.4,A.glass-.4),[s*r(1,1.6),s*r(.6,1),s]);}
  // Rock pinnacles rising to the galleries' heights, so each storey has a reef at eye level; the octopus sits on one.
- const PINNACLES=[[117.4,29.1,5.1],[126.5,33.0,5.0],[131.2,27.4,5.4],[144.6,29.2,5.7],[150.6,33.2,4.9]],tops=[];
+ const PINNACLES=[[117.4,29.1,5.1],[126.5,33.0,5.0],[131.2,27.4,5.4],[144.6,29.2,5.7],[150.6,33.2,4.9]].filter(([x])=>x>=A.x0&&x<=A.x1),tops=[];
  for(const [x,h,z] of PINNACLES){let y=A.bed-.1,s=1.05;while(y<h-.2){rock(x+r(-.25,.25),y,z+r(-.15,.15),[s*r(1,1.2),s*.8,s*.8]);y+=s*1.05;s=Math.max(.42,s*.9);}tops.push([x,y,z]);}
  // Over the throat: a rock lintel along each edge, clear in the middle to look up through.
  for(const z of [A.back+.35,A.glass-.35])for(let x=TUN.x0+r(.2,.5);x<TUN.x1-.1;x+=r(.55,1.1))rock(x,TUN.top-.05,z,[r(.2,.42),r(.14,.32),r(.18,.32)]);
@@ -232,7 +232,7 @@ export function createLoungeAquarium(ship,frame,colliders){
  }
  // Bubbles: streams from vents in the bed, rising to the top and starting again.
  const bubble=new T.IcosahedronGeometry(1,0);bubble.deleteAttribute('uv');bubble.deleteAttribute('normal');
- for(const vx of [116.2,122.8,129.4,133.6,141.6,147.2,152.6]){const vz=r(A.back+.6,A.glass-.8);
+ for(const vx of [116.2,122.8,129.4,133.6,141.6,147.2,152.6].filter(x=>x>=A.x0&&x<=A.x1)){const vz=r(A.back+.6,A.glass-.8);
   for(let k=0;k<26;k++){const g=bubble.clone(),n=g.attributes.position.count,s=r(.025,.06);g.scale(s,s,s);
    g.setAttribute('aBubble',new T.Float32BufferAttribute(Array(n).fill([vx+r(-.12,.12),vz+r(-.12,.12),rnd(),r(.5,.95)]).flat(),4));L.bubbles.push(g);}
   put('life',new T.CylinderGeometry(.12,.18,.12,8),at(vx,A.bed,vz),flat(C(0x1b2440)));
@@ -248,7 +248,7 @@ export function createLoungeAquarium(ship,frame,colliders){
  // the commons' columns, with a cyan line along the plinth and the header.
  const steelBoxes=[[A.x0,TUN.x0,A.floor,A.bed,A.glass-.04,A.front+.06],[TUN.x1,A.x1,A.floor,A.bed,A.glass-.04,A.front+.06],[A.x0,A.x1,A.top-.2,A.top,A.front,A.front+.08],
   [A.x0-.12,A.x0+.12,A.floor,A.top,A.glass-.1,A.front+.08],[A.x1-.12,A.x1+.12,A.floor,A.top,A.glass-.1,A.front+.08],
-  ...[121,132,143,154].map(x=>[x-.26,x+.26,A.bed,A.top,7.7,8.3]),
+  ...[121,132,143,154].filter(x=>x>A.x0&&x<A.x1).map(x=>[x-.26,x+.26,A.bed,A.top,7.7,8.3]),
   [A.x0-.1,A.x0,A.floor,A.top,A.back,A.glass],[A.x1,A.x1+.1,A.floor,A.top,A.back,A.glass]];
  const steel=steelBoxes.map(b=>boxGeometry(b).toNonIndexed());
  const lineBoxes=[[A.x0,TUN.x0,A.bed-.05,A.bed-.01,A.front+.06,A.front+.08],[TUN.x1,A.x1,A.bed-.05,A.bed-.01,A.front+.06,A.front+.08],[A.x0,A.x1,A.top-.24,A.top-.2,A.front+.05,A.front+.08],

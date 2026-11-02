@@ -1,3 +1,4 @@
+import {halloweenLanes,laneRange,lanePoint,laneYaw,laneWalls,warpHalloweenDecor,mappedClownCabins,clownPose,clownLocal,clownNear,clownFacing} from '../v2/halloween-layout.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {canvasTexture,seeded} from '../polish-kit.js';
@@ -23,7 +24,7 @@ export function halloweenOn(now=Date.now(),search=globalThis.location?.search||'
 
 // The deck (model.js createNeighborhood): five lanes along x, 26 m apart and 4 m wide, cabin fronts 2 m off each lane's
 // centre with a 1.4 m door in each 4.4 m cabin; the ceiling's underside is 3.42 m up. The group sits on the floor.
-const DECK=15,FLOOR=floorY(DECK),CEILING=3.42,LANES=[-52,-26,0,26,52],FACE=2;
+const DECK=15,FLOOR=floorY(DECK),CEILING=3.42,LANES=halloweenLanes,FACE=1.3;
 // The goo's colour. Alien green, not blood: one value to change.
 const GOO='#7dff3c',RED=0xff2a1a;
 // The lights' share of their usual strength on the deck, their colours, and the haze.
@@ -38,7 +39,7 @@ const CABLE=.25,TUBE=1.1;
 // (server/leo-live.mjs reads it from a file on the server), so it is never in this public code.
 export const CLOWN_CABINS=['N10-163','N10-334','N10-456'],CLAIM_URL='https://oswiki.xyz/claim';
 // In a cabin's own frame (model.js: the door toward -z): the shower tray's centre and top, and the glass screen's line.
-const TRAY=[1.62,.08,-2.48],GLASS=-1.32;
+const TRAY=[1.07,.08,-2.83],GLASS=-1.48;
 const CODE=/^[\w-]{3,64}$/;
 
 const paint=(geo,hex)=>{const c=new T.Color(hex),n=geo.attributes.position.count,a=new Float32Array(n*3);for(let i=0;i<n;i++)c.toArray(a,i*3);
@@ -113,11 +114,7 @@ const signTexture=()=>canvasTexture(1024,384,(g,w,h)=>{
 
 // The cabins' fronts on one side of a lane: the middle of each stretch of wall between two neighbours' doors. Neighbours
 // stand 0.2 m apart; a wider gap is a cross corridor.
-function walls(mid,s){
- const row=CABINS.filter(c=>c.deck===DECK&&Math.abs(c.z-(mid+s*5.2))<.1).sort((a,b)=>a.x-b.x),out=[];
- for(let i=1;i<row.length;i++){const a=row[i-1],b=row[i],x0=a.x+a.width/2,x1=b.x-b.width/2;if(x1-x0<.5&&x1<118)out.push((x0+x1)/2);}
- return out;
-}
+function walls(mid,s){return laneWalls(mid,s); }
 // A flat quad on a lane wall, facing into the lane, just in front of the lining's panels (2.2 cm proud, wall-kit.js),
 // or on the floor. Lights and glows ignore the deck's black haze, as a lamp in a dark corridor would.
 const onWall=(mid,s,x,y,w,h)=>{const g=new T.PlaneGeometry(w,h);if(s>0)g.rotateY(Math.PI);return g.translate(x,y,mid+s*(FACE-.035));};
@@ -135,9 +132,9 @@ export function createHalloween(ship,light,{still=false,sheet=null}={}){
 
  // Hanging tubes where some of the diffusers were, each swinging a little on its last cable.
  const lamps=[];
- for(const mid of LANES)for(let x=-117;x<=123;x+=9.2){if(r()>.48)continue;
+ for(const mid of LANES)for(let x=laneRange(mid)[0];x<=laneRange(mid)[1];x+=9.2){if(r()>.48)continue;
   let k=0,pick=r();while(pick>KINDS[k][1]&&k<KINDS.length-1){pick-=KINDS[k][1];k++;}
-  lamps.push({kind:k,at:new T.Vector3(x+(r()-.5)*.6,CEILING-.02,mid+(r()-.5)*.8),heading:(r()<.5?0:Math.PI)+(r()-.5)*.6,lean:.3+r()*.4,phase:r()*7,rate:.5+r()*.5});}
+  lamps.push({kind:k,at:lanePoint(mid,x+(r()-.5)*.6,CEILING-.02,(r()-.5)*.8),heading:laneYaw(mid,x)+(r()<.5?0:Math.PI)+(r()-.5)*.6,lean:.3+r()*.4,phase:r()*7,rate:.5+r()*.5});}
  const tubeGeo=new T.CylinderGeometry(.045,.045,TUBE,8).translate(0,-CABLE-TUBE/2,0);
  const darkGeo=mergeGeometries([new T.CylinderGeometry(.008,.008,CABLE,4).translate(0,-CABLE/2,0),
   new T.BoxGeometry(.08,.06,.08).translate(0,-CABLE,0),new T.BoxGeometry(.08,.06,.08).translate(0,-CABLE-TUBE,0)]);
@@ -174,7 +171,7 @@ export function createHalloween(ship,light,{still=false,sheet=null}={}){
 
  // Red emergency beacons on the walls between doors, about every 22 m, each washing the wall round it.
  const beacons=[];
- for(const mid of LANES)[-1,1].forEach(s=>{let last=-200+(s>0?11:0);for(const x of walls(mid,s))if(x-last>=22){last=x;beacons.push({mid,s,x});}});
+ for(const mid of LANES)[-1,1].forEach(s=>{let last=laneRange(mid)[0]-22+(s>0?11:0);for(const x of walls(mid,s))if(x-last>=22){last=x;beacons.push({mid,s,x});}});
  const redMat=new T.MeshBasicMaterial({name:'Walk_halloween_beacon',color:RED,toneMapped:false,fog:false});
  const washMat=new T.MeshBasicMaterial({name:'Walk_halloween_wash',map:glow,color:RED,transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,fog:false,polygonOffset:true,polygonOffsetFactor:-2});
  const lamp=mergeGeometries(beacons.map(b=>new T.BoxGeometry(.26,.12,.08).translate(b.x,2.72,b.mid+b.s*(FACE-.04))));
@@ -186,8 +183,8 @@ export function createHalloween(ship,light,{still=false,sheet=null}={}){
  const floor=[],splash=[],claws=[],signs=[],taken=new Set();
  for(const mid of LANES){
   // Floor splashes stay clear of the walls, so none runs under a wall into a cabin.
-  for(let x=-120;x<=120;x+=6)if(r()<.42){const size=.8+r()*1.6;floor.push(onFloor(x+(r()-.5)*4,mid+(r()-.5)*2*Math.max(0,FACE-.1-size/2),size,r()*6));}
-  [-1,1].forEach(s=>{let lastSign=-200+(s>0?20:0);
+  for(let x=laneRange(mid)[0];x<=laneRange(mid)[1];x+=6)if(r()<.42){const size=.8+r()*1.6;floor.push(onFloor(x+(r()-.5)*4,mid+(r()-.5)*2*Math.max(0,FACE-.1-size/2),size,r()*6));}
+  [-1,1].forEach(s=>{let lastSign=laneRange(mid)[0]-40+(s>0?20:0);
    for(const x of walls(mid,s)){
     if(x-lastSign>40&&r()<.5){lastSign=x;signs.push(onWall(mid,s,x,1.75,2.4,.9));taken.add(`${mid}:${s}:${x}`);continue;}
     const roll=r();
@@ -218,9 +215,9 @@ export function createHalloween(ship,light,{still=false,sheet=null}={}){
  const parts=clownParts(),clownMats={
   suit:new T.MeshBasicMaterial({name:'Walk_clown_suit',map:stripeTexture()}),body:new T.MeshBasicMaterial({name:'Walk_clown',vertexColors:true}),
   face:new T.MeshBasicMaterial({name:'Walk_clown_face',map:faceTexture()}),eyes:new T.MeshBasicMaterial({name:'Walk_clown_eyes',color:0xff2010,toneMapped:false})};
- const clowns=CLOWN_CABINS.map(id=>CABINS.find(c=>c.id===id)).filter(Boolean).map(c=>{
+ const clowns=mappedClownCabins(CLOWN_CABINS).map(c=>{
   const k=Math.sign(c.z-Math.round(c.z/26)*26)||1,g=new T.Group(),head=new T.Group();g.name='Halloween_clown';
-  g.position.set(c.x+k*TRAY[0],TRAY[1],c.z+k*TRAY[2]);g.rotation.y=k>0?0:Math.PI;
+  const pose=clownPose(c);g.position.set(...pose.position);g.rotation.y=pose.yaw;g.userData.cabin=c.id;
   g.add(new T.Mesh(parts.suit,clownMats.suit),new T.Mesh(parts.body,clownMats.body));
   head.position.y=HEAD;head.add(new T.Mesh(parts.face,clownMats.face),new T.Mesh(parts.head,clownMats.body),new T.Mesh(parts.eyes,clownMats.eyes));
   g.add(head);group.add(g);
@@ -232,7 +229,7 @@ export function createHalloween(ship,light,{still=false,sheet=null}={}){
  showerLight.name='Halloween_clown_light';showerLight.frustumCulled=false;group.add(showerLight);
  const flicker={level:.6,next:1};
  // Where a visitor stands, in a clown's cabin frame; null outside that cabin.
- const inCabin=(c,p)=>{const dx=(p.x-c.cabin.x)*c.k,dz=(p.z-c.cabin.z)*c.k;return p.y>FLOOR-.5&&p.y<FLOOR+3.4&&Math.abs(dx)<2&&dz>-3&&dz<3.1?{dx,dz}:null;};
+ const inCabin=(c,p)=>clownLocal(c.cabin,p);
 
  // The clown's card: the code from Leo live, or word that it isn't out yet.
  const text=sheet?.querySelector('.clown-text'),codeEl=sheet?.querySelector('.clown-code'),claim=sheet?.querySelector('.clown-claim');
@@ -244,6 +241,7 @@ export function createHalloween(ship,light,{still=false,sheet=null}={}){
   codeEl.textContent=ok?code:'';codeEl.hidden=!ok;claim.hidden=!ok;claim.href=CLAIM_URL;
  }
 
+ warpHalloweenDecor(group);
  // The deck's sound: a low drone, two close high tones beating against each other, and now and then a heartbeat.
  let ctx=null,master=null,lastSound=false;
  function sound(){
@@ -307,7 +305,7 @@ export function createHalloween(ship,light,{still=false,sheet=null}={}){
    const lit=still?.55:flicker.level;let flare=0;
    for(const m of [clownMats.suit,clownMats.body,clownMats.face])m.color.setScalar(lit);showerLight.material.opacity=lit*.9;
    for(const c of clowns){
-    const at=inCabin(c,eye),yaw=at?Math.max(-1.1,Math.min(1.1,Math.atan2(at.dx-TRAY[0],at.dz-TRAY[2]))):still?0:Math.sin(t*.3+c.phase)*.25;
+    const at=inCabin(c,eye),yaw=at?Math.max(-1.1,Math.min(1.1,Math.atan2((at.dx-TRAY[0])*clownFacing(c.cabin),at.dz-TRAY[2]))):still?0:Math.sin(t*.3+c.phase)*.25;
     c.yaw+=(yaw-c.yaw)*(1-Math.exp(-(c.flare>0?12:2)*dt));c.flare=Math.max(0,c.flare-dt*.5);flare=Math.max(flare,c.flare);
     c.head.rotation.set((still?0:.1*Math.sin(t*.5+c.phase))+c.flare*.2,c.yaw,0);
    }
@@ -315,7 +313,7 @@ export function createHalloween(ship,light,{still=false,sheet=null}={}){
   },
   // E at the glass of a clown's shower knocks.
   near(p){
-   for(const [i,c] of clowns.entries()){const at=inCabin(c,p);if(at&&at.dz>GLASS&&Math.hypot(at.dx-1.45,at.dz-GLASS-.45)<1.3)return {kind:'clown',clown:i,label:'Knock on the glass'};}
+   for(const [i,c] of clowns.entries()){const at=inCabin(c,p);if(at&&clownNear(c.cabin,p))return {kind:'clown',clown:i,label:'Knock on the glass'};}
    return null;
   },
   // The knock: the clown flares and laughs, and its card opens to wait for the code `ask` sends for (false when there's

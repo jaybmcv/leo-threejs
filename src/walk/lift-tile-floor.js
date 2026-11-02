@@ -48,8 +48,8 @@ export function tileLiftFloor(ship){
   g.setAttribute('uv',new T.BufferAttribute(uv,2));
   const m=new T.Mesh(g,material);m.name=name;anchorObject(m,'circulation-19');ship.inside.add(m);return m;
  };
- piece(X0,X1,-HALF,HALF,'Lift_lobby_tile_floor');
+ piece(X0,Math.min(X1,-122),-HALF,HALF,'Lift_lobby_tile_floor');
  // The doorway bridge into the lounge, on the Neighborhood 1 (-z) side.
- piece(BRIDGE[0],BRIDGE[1],BRIDGE[2],-HALF,'Lift_lobby_tile_bridge');
+ /* Removed centre-route bridge finish; the original aft lobby tile remains. */
  return {material};
 }

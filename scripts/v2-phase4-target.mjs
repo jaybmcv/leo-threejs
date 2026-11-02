@@ -1,5 +1,5 @@
 import {installWalkCanvas} from '../src/walk/canvas.js';
-import {spotIndex} from '../src/walk/rest.js?legacy';
+import {spotIndex} from '../src/walk/rest.js';
 import {roomCoreFinishFaces,coplanarOverlaps} from '../src/plan/coplanar-v2.js';
 import fs from 'node:fs/promises';import assert from 'node:assert/strict';import * as T from 'three';
 import {createCanvas} from '@napi-rs/canvas';import layout0 from 'v2-layout';

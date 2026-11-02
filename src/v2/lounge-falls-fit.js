@@ -1,5 +1,5 @@
 import * as T from 'three';
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 import {chartPoint,patchDepth} from '../plan/hull-skin-v2.js';
 const fitted=new WeakMap();
 function removeGlassWallWash(group){let removed=0;group.traverse(o=>{if(!o.isMesh||o.name!=='Lounge_falls_halo')return;const old=o.geometry,p=old.attributes.position,ix=old.index,keep=[];for(let i=0;i<(ix?.count??p.count);i+=3){const ids=[0,1,2].map(k=>ix?ix.getX(i+k):i+k),a=new T.Vector3().fromBufferAttribute(p,ids[0]),b=new T.Vector3().fromBufferAttribute(p,ids[1]),c=new T.Vector3().fromBufferAttribute(p,ids[2]),n=b.sub(a).cross(c.sub(a)).normalize();if(Math.abs(n.z)>.9){removed++;continue;}keep.push(...ids);}const g=new T.BufferGeometry();for(const[name,attr]of Object.entries(old.attributes)){const a=new attr.array.constructor(keep.length*attr.itemSize);keep.forEach((id,i)=>{for(let k=0;k<attr.itemSize;k++)a[i*attr.itemSize+k]=attr.getComponent(id,k)});g.setAttribute(name,new T.BufferAttribute(a,attr.itemSize,attr.normalized));}g.computeBoundingBox();g.computeBoundingSphere();o.geometry=g;});return removed;}

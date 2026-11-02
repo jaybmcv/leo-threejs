@@ -4,7 +4,7 @@ import {finishedSkinAuthority} from './skin-authority.js';
 import {uploadSkinProof} from './authoring-skin-proof.js';
 import {releaseEnvelopeProfiles} from './bounded-samples.js';
 import {captureRoomAnchors} from '../plan/rooms.js';
-import layout from 'v2-layout';
+import layout from '../plan/selected-layout.js';
 import {geometryRecords} from './prepared-geometry-record.js';
 import * as T from 'three';
 import {PreparedWriter} from './prepared-codec.js';

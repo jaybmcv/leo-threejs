@@ -12,12 +12,12 @@ import {worldPoint,patchDepth} from '../src/plan/hull-skin-v2.js';
 import {cabinRestSpots} from '../src/v2/cabins.js';
 const CABINS=layout.cabins,CLOSED_CREW_IDS=new Set(CLOSED_COMMAND_ROOMS);
 const SHIP_AREAS=[...layout.rooms,...layout.fixedRooms].filter(r=>!r.aggregate&&!CLOSED_CREW_IDS.has(r.id));
-import {cabinPlacements,outsideOnly} from '../src/walk/world.js';
+import {cabinPlacements,outsideOnly} from '../src/v2/world.js';
 import {BODY,bandOf,Colliders,solid} from '../src/walk/collision.js';
 import {LIFTS,carTriangles} from '../src/walk/lifts.js';
 import {toWorld,objectRoom} from '../src/plan/rooms.js';
 import {contains} from '../src/plan/geometry-v2.js';
-import {findRestSpots,solidSpots} from '../src/walk/rest.js';
+import {findRestSpots,solidSpots} from '../src/v2/rest.js';
 import {preparedV2} from './v2-world.mjs';
 
 // Walk the whole ship as a 2 m tall, 0.7 m wide walker (Voyager's Reach's capsule, floating 0.4 m over the floor),

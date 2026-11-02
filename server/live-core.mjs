@@ -35,7 +35,7 @@
 // and limits how often anyone may send. Lifts are the server's: a call goes to the server, which steps every car
 // (lift-motion.js) and tells everyone when a car's plans change.
 import http from 'node:http';
-import {policy} from './layout-policy.mjs';
+import {policy} from '../src/v2/live-spatial.js';
 import {buildInfo} from '../scripts/build-info.mjs';
 import fs from 'node:fs';
 import {WebSocketServer} from 'ws';

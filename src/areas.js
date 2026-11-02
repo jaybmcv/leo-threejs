@@ -1,3 +1,4 @@
+import {GYM_TREADMILL,ACTIVITY_FLOOR} from './v2/activity-layout.js';
 import {anchorArea} from './plan/anchor-area.js';
 import {COMMAND_AFT_AREAS,createCommandAft,polishCommandRoom} from './command-deck.js';
 import * as T from 'three';
@@ -151,8 +152,8 @@ function buildcreateShipArea(area){
     case 'shelter':for(const x of [-18,-10,-2,6,14,22])for(const z of [-12,-8,8,12])box('Shelter_bench',[5,.45,1],[x,.225,z],navy);grid([-20,-12,-4,4,12,20],[-15],cabinet);counter(-19,4,7);break;
     case 'arena':fitMudwaterArena({box,add,mat,text,fit,shell});break;
     case 'library':grid([-18,-9,0,9,18],[-12,-7],(x,z)=>rack(x,z,'books'));grid([-16,-4,8,20],[8,13],(x,z)=>{table(x,z);tableBooks(x,z);});break;
-    case 'gym':grid([-18,-10,-2,6,14,22],[-10],(x,z)=>{box('Treadmill',[1.3,.22,2.6],[x,.15,z],navy);tube('Treadmill_handle',[x-.5,.3,z-1],[x-.5,1.35,z-1]);tube('Treadmill_handle',[x+.5,.3,z-1],[x+.5,1.35,z-1]);box('Fitness_display',[1,.4,.16],[x,1.4,z-1],blue);});grid([-17,-7,3,13],[8,12],(x,z)=>box('Stretching_mat',[6,.05,2.6],[x,.04,z],green));grid([-20,-14,-8,-2,4,10,16,22],[-15],cabinet);break;
-    case 'recreation':grid([-15,0,15],[-9,9],(x,z)=>{table(x,z);box('Game_board',[1.3,.025,1],[x,.86,z],green);});box('Activity_floor',[15,.03,9],[0,.025,0],navy);break;
+    case 'gym':grid(GYM_TREADMILL.xs,[GYM_TREADMILL.z],(x,z)=>{box('Treadmill',GYM_TREADMILL.size,[x,GYM_TREADMILL.centerY,z],navy);tube('Treadmill_handle',[x-.5,.3,z-1],[x-.5,1.35,z-1]);tube('Treadmill_handle',[x+.5,.3,z-1],[x+.5,1.35,z-1]);box('Fitness_display',[1,.4,.16],[x,1.4,z-1],blue);});grid([-17,-7,3,13],[8,12],(x,z)=>box('Stretching_mat',[6,.05,2.6],[x,.04,z],green));grid([-20,-14,-8,-2,4,10,16,22],[-15],cabinet);break;
+    case 'recreation':grid([-15,0,15],[-9,9],(x,z)=>{table(x,z);box('Game_board',[1.3,.025,1],[x,.86,z],green);});box('Activity_floor',ACTIVITY_FLOOR.size,ACTIVITY_FLOOR.center,navy);break;
     case 'theater':box('Stage',[7,.3,22],[21,.15,0],wood);box('Projection_screen',[.1,2.4,16],[25.75,1.5,0],blue);for(let x=-19;x<=12;x+=3.8)for(const z of [-12,-9,-6,6,9,12])chair(x,z,Math.PI/2);break;
     case 'childcare':grid([-16,-3,10],[-9,9],(x,z)=>{box('Play_rug',[9,.03,8],[x,.02,z],green);box('Activity_table',[3,.55,1.7],[x,.275,z],wood);for(const s of [-1,1])box('Low_bench',[3,.3,.6],[x,.15,z+s*1.5],navy);for(let i=0;i<4;i++)box('Play_block',[.65,.65,.65],[x-3+i*.8,.34,z+2.7],i%2?amber:linen);});counter(21,11,6);break;
     case 'dining':grid([-17,-6,5,16],[-10,-5,5,10],(x,z)=>table(x,z,4));counter(0,15,39);for(const x of [-15,-5,5,15])box('Meal_service_station',[2,.5,.85],[x,1.2,15],silver);break;

@@ -5,7 +5,7 @@ import path from 'node:path';
 import http from 'node:http';
 import {build} from 'esbuild';
 import {v2Plugin} from './v2-plugin.mjs';
-import {publicPreparedAdapters} from './public-walk-adapters-v2.mjs';
+import {publicPreparedAdapters} from './source-contract.mjs';
 import {execFileSync} from 'node:child_process';
 const publicMode=process.argv.includes('--public');
 const before=process.argv.includes('--before'),tag=process.argv.find(a=>a.startsWith('--tag='))?.slice(6)||(before?'before':'candidate');
