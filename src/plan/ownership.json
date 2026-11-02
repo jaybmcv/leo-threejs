@@ -2354,7 +2354,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "9ff827043d7cd8692eb8bc776dafd29ac57e31744131002fe7e879ce9f580d01"
+      "signature": "84ccbe0ad9fe7338bd0a381db97ce530f6ec576c843d294954a3daf3c273907f"
     },
     {
       "source": "src/walk/hex-floor.authoring.js",
@@ -3579,7 +3579,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 39,
-      "signature": "785586b14f6684a04a5975d71567040bd9700307da6bd827d46852d5a89046a5"
+      "signature": "ea32ca975da32cdc5a8faa645abf92152e851c70b04e65c7451b0c8f75d6c67f"
     },
     {
       "source": "src/walk/main.prepared.js",
