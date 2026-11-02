@@ -31,9 +31,25 @@ export function addFlowingCabinRibs(parent,doorSign){
   }
 }
 
+// Distant architectural frames retain the exact front contour but no hidden
+// reveal depth. Physical nearby cabin templates keep FLOWING_RIB_PARTS above.
+let facadeParts;
+function flowingFacadeParts(){
+  if(facadeParts)return facadeParts;
+  const source=reveal,p=source.attributes.position,n=source.attributes.normal,ix=source.index,positions=[];
+  for(let i=0;i<(ix?.count||p.count);i+=3){
+    const ids=[0,1,2].map(k=>ix?ix.getX(i+k):i+k);
+    if(ids.every(id=>n.getZ(id)>.99))for(const id of ids)positions.push(p.getX(id),p.getY(id),0);
+  }
+  const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));geometry.computeVertexNormals();
+  const material=ivory.clone();material.name='Flowing_rib_ivory_facade';material.side=T.DoubleSide;
+  facadeParts=[{...FLOWING_RIB_PARTS[0],geometry,material,depth:3.82},FLOWING_RIB_PARTS[1]];
+  return facadeParts;
+}
+
 export function addFlowingAtriumRibs(root,cabins){
   const list=cabins.filter(c=>c.view==='atrium');
-  for(const part of FLOWING_RIB_PARTS){
+  for(const part of flowingFacadeParts()){
     const o=new T.InstancedMesh(part.geometry,part.material,list.length);
     o.name='P6_'+part.name;o.frustumCulled=false;
     o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4A',roomOwners:list.map(c=>c.id),proxySpans:list.map(c=>[c.y-.14,c.y+3.5])};
@@ -43,5 +59,5 @@ export function addFlowingAtriumRibs(root,cabins){
     });
     o.computeBoundingBox();o.computeBoundingSphere();root.add(o);
   }
-  return {windows:list.length,draws:FLOWING_RIB_PARTS.length,trianglesPerWindow:FLOWING_RIB_PARTS.reduce((n,p)=>n+(p.geometry.index?.count||p.geometry.attributes.position.count)/3,0)};
+  return {windows:list.length,draws:FLOWING_RIB_PARTS.length,trianglesPerWindow:flowingFacadeParts().reduce((n,p)=>n+(p.geometry.index?.count||p.geometry.attributes.position.count)/3,0)};
 }

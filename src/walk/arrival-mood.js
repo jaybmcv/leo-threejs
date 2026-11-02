@@ -1,10 +1,13 @@
 import * as T from 'three';
-import {toLocal,toWorld} from '../plan/rooms.js';
+import {toWorld} from '../plan/rooms.js';
+import layout from '../plan/selected-layout.js';
+import {contains as polygonContains} from '../plan/geometry-v2.js';
 
 // This room's practical lamps have short ranges and are off outside Arrival.
 // Update before the other room controllers run; apply active Arrival last so
 // another room's outgoing fade cannot overwrite the arrival transition.
 export function createArrivalMood(ship,{hemi,fill,scene}){
+ const room=layout.rooms.find(r=>r.id==='d02-arrival-1');if(!room)return null;
  const base={hemi:hemi.intensity,fill:fill.intensity,env:scene.environmentIntensity,sky:hemi.color.clone(),ground:hemi.groundColor.clone()};
  const sky=new T.Color(0x9cb5d5),ground=new T.Color(0x635447),lamps=new T.Group();lamps.name='Arrival_practical_lights';scene.add(lamps);
  for(const [x,y,z,power,range]of[[-2.5,2.7,2.2,19,8],[-10.3,1.6,-7.9,10,6],[10.3,1.6,-7.9,10,6],[-9.8,1.6,7.9,10,6],[10.8,1.6,7.9,10,6]]){
@@ -12,7 +15,11 @@ export function createArrivalMood(ship,{hemi,fill,scene}){
  }
  lamps.visible=false;let amount=0,active=false;
  const restore=()=>{hemi.intensity=base.hemi;fill.intensity=base.fill;scene.environmentIntensity=base.env;hemi.color.copy(base.sky);hemi.groundColor.copy(base.ground);};
- const contains=eye=>{const [x,y,z]=toLocal('d02-arrival-1',eye.toArray());return Math.abs(x)<25.8&&Math.abs(z)<16.8&&y>.05&&y<3.3;};
+ const contains=eye=>{
+  const y=eye.y-room.y;if(y<=0||y>=room.height)return false;
+  const section=room.envelope?.find(s=>y>=s.rise&&y<s.rise+s.height);
+  return polygonContains(section?.polygon||room.polygon,[eye.x,eye.z]);
+ };
  const releaseOutside=eye=>{if(contains(eye))return;if(active)restore();active=false;amount=0;lamps.visible=false;};
  const apply=()=>{
   if(!active)return;

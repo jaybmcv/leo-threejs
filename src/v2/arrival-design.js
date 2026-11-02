@@ -34,24 +34,39 @@ function finishes(){
  };
 }
 
+let selectedFinishes;
+const arrivalFinishes=()=>selectedFinishes??=finishes();
+const sideVariants=new WeakMap();
+function matchingSide(material,side){
+ if(material.side===side)return material;
+ let variants=sideVariants.get(material);if(!variants)sideVariants.set(material,variants=new Map());
+ if(!variants.has(side)){const copy=material.clone();copy.name=material.name+'_side_'+side;copy.side=side;variants.set(side,copy);}
+ return variants.get(side);
+}
+function planarUV(geometry,scale=2){
+ const p=geometry.attributes.position,uv=new Float32Array(p.count*2);
+ for(let i=0;i<p.count;i++){uv[i*2]=p.getX(i)/scale;uv[i*2+1]=p.getZ(i)/scale;}
+ geometry.setAttribute('uv',new T.BufferAttribute(uv,2));
+}
+
+// Hull extensions are batched across rooms before the late dressing pass.
+// Finish only this freshly generated owner's parts, before those batches form.
+// Position/index/normal/ownership data stay untouched; only floor UVs are added.
+export function arrivalEnvelopeMaterial(room,kind,geometry,original){
+ if(room!=='d02-arrival-1')return original;
+ const key=kind==='floor'?'terrazzo':kind==='ceiling'?'ceiling':['side_walls','hull_wall','entry_returns'].includes(kind)?'porcelain':null;
+ if(!key)return original;
+ if(kind==='floor')planarUV(geometry);
+ return matchingSide(arrivalFinishes()[key],original.side);
+}
+
 // Called after v2 shell replacement and room-frame resolution, before collision
 // collection and the prepared-world bake. Only visual trim is added.
 export function finishArrivalDesign(ship){
  const hall=ship.inside.getObjectByName('Area_d02-arrival-1');
  const shell=ship.inside.getObjectByName('V2_shell_d02-arrival-1');
  if(!hall||hall.userData.retroVoyage)return null;
- const M=finishes(),report={materials:0,trimMeshes:0,scope:'d02-arrival-1'},sided=new Map();
- const matchingSide=(material,side)=>{
-  if(material.side===side)return material;
-  const key=material.name+'|'+side;
-  if(!sided.has(key)){const copy=material.clone();copy.name=material.name+'_side_'+side;copy.side=side;sided.set(key,copy);}
-  return sided.get(key);
- };
- const planarUV=(o,scale=1)=>{
-  const g=o.geometry=o.geometry.clone(),p=g.attributes.position,uv=new Float32Array(p.count*2);
-  for(let i=0;i<p.count;i++){uv[i*2]=p.getX(i)/scale;uv[i*2+1]=p.getZ(i)/scale;}
-  g.setAttribute('uv',new T.BufferAttribute(uv,2));
- };
+ const M=arrivalFinishes(),report={materials:0,trimMeshes:0,scope:'d02-arrival-1'};
  hall.traverse(o=>{
   if(!o.isMesh)return;
   const old=o.material?.name||'';let material;
@@ -65,15 +80,15 @@ export function finishArrivalDesign(ship){
   else if(old==='Atrium_rug_cream')material=M.porcelain;
   else if(/Atrium_(light_strip|cove_glow|lamp_glow)$/.test(old))material=M.amber;
   else if(old==='Atrium_skylight_glow')material=M.sky;
-  else if(old==='Atrium_floor'){material=M.terrazzo;planarUV(o,2);}
+  else if(old==='Atrium_floor'){material=M.terrazzo;planarUV(o.geometry=o.geometry.clone());}
   else if(old==='Atrium_floor_seam')material=M.seam;
   if(material){o.material=matchingSide(material,o.material.side);report.materials++;}
  });
  shell?.traverse(o=>{
   if(!o.isMesh)return;
-  if(o.name==='V2_room_floor'){o.material=M.terrazzo;planarUV(o,2);report.materials++;}
-  else if(o.name==='V2_room_ceiling'){o.material=M.ceiling;report.materials++;}
-  else if(o.material?.name==='V2_lining'){o.material=M.porcelain;report.materials++;}
+  if(o.name==='V2_room_floor'){o.material=matchingSide(M.terrazzo,o.material.side);planarUV(o.geometry=o.geometry.clone());report.materials++;}
+  else if(o.name==='V2_room_ceiling'){o.material=matchingSide(M.ceiling,o.material.side);report.materials++;}
+  else if(o.material?.name==='V2_lining'){o.material=matchingSide(M.porcelain,o.material.side);report.materials++;}
  });
  const trim=new T.Group();trim.name='Arrival_Retro_visual_trim';trim.userData={noCollide:true,room:'d02-arrival-1'};hall.add(trim);
  const batches=new Map(),box=(name,material,size,at)=>{
