@@ -425,7 +425,7 @@
     "file": "src/feedback/feedback.js",
     "original": "src/feedback/feedback.js",
     "mode": "raw",
-    "bodySha256": "3691a5d86c3a894f9fdd3ec9547d12fb9e1a3cb3e83f7630270fd8ffcc55e345",
+    "bodySha256": "5c1edc73c6f4ce8a59c9f1c265f45d0d55eaea155434b9fd3d2f61fafbaac0e1",
     "imports": [
       "./config.js"
     ],
@@ -518,7 +518,7 @@
     "file": "src/hub/hub.js",
     "original": "src/hub/hub.js",
     "mode": "raw",
-    "bodySha256": "4d5365065dd616e27471869d6f7755f5eb1e87ef34c5250b1469baeb5fb50a4a",
+    "bodySha256": "45875f83060bf13972ff10fdd7b3bdae038a03ad5b4d0ffbc672464b0d44779a",
     "imports": [
       "../walk/net/connect.js",
       "../feedback/config.js",
@@ -3257,7 +3257,7 @@
     "file": "src/walk/help.js",
     "original": "src/walk/help.js",
     "mode": "raw",
-    "bodySha256": "ff9c824755068e2e94457b697dbb09d275984dba6689dc25c6d7b9d290249016",
+    "bodySha256": "a9b0e0227d011c509b257f48ee68d0a9d8ffba74b64525e9c31feeaabb918db1",
     "imports": [
       "./net/otherside.js",
       "../v2/help-wayfinding.js",
@@ -3640,7 +3640,7 @@
     "file": "src/walk/main.js",
     "original": "src/walk/main.js",
     "mode": "raw",
-    "bodySha256": "e238fdc9ef3717bfee6c1e951aaca18675784486f806fdd37fc9ba36c6f4fa2f",
+    "bodySha256": "c590d8e4752756f85f4d6f58dc3d0d871b921fa4c8683178559088f7e45b83a7",
     "imports": [
       "../v2/atrium-visibility.js",
       "../v2/goto-menu.js",
@@ -3741,7 +3741,8 @@
       "./transporter.js",
       "../feedback/feedback.js",
       "./help.js",
-      "./hub-link.js"
+      "./hub-link.js",
+      "./hub-panel.js"
     ],
     "geometryCalls": []
   },
