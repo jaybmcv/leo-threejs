@@ -1,0 +1,372 @@
+{
+  "revision": "179d813",
+  "method": "150 normal requestAnimationFrame intervals; WebGL disjoint timer over all three render passes; first five samples discarded; 45-frame warmup and compileAsync per camera.",
+  "views": [
+    {
+      "rate": 1,
+      "name": "deck6-atrium",
+      "at": [
+        0,
+        -19.7,
+        0
+      ],
+      "yaw": 1.5707963267948966,
+      "pitch": 0.45,
+      "frameMs": {
+        "samples": 145,
+        "median": 29,
+        "p95": 37.5,
+        "mean": 27.759
+      },
+      "submitMs": {
+        "samples": 145,
+        "median": 24.8,
+        "p95": 26.2,
+        "mean": 24.605
+      },
+      "gpuMs": null,
+      "draws": {
+        "calls": 2518,
+        "triangles": 6550523
+      },
+      "walker": [
+        0,
+        -19.700000762939453,
+        0
+      ],
+      "camera": [
+        0.11999999999999998,
+        -18.072500762939452,
+        7.347880794884118e-18
+      ],
+      "size": [
+        1280,
+        720
+      ],
+      "pixelRatio": 1,
+      "fov": 62,
+      "facade": [
+        {
+          "name": "V2_facade_balconies",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_piers",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_glass",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_terraces_and_atrium_roof",
+          "visible": true
+        },
+        {
+          "name": "V2_upper_atrium_fronts",
+          "visible": true
+        }
+      ],
+      "bands": 86
+    },
+    {
+      "rate": 1,
+      "name": "deck20-skywalk",
+      "at": [
+        128.3,
+        36.3,
+        12.5
+      ],
+      "yaw": -1.5707963267948966,
+      "pitch": -0.35,
+      "frameMs": {
+        "samples": 145,
+        "median": 29.2,
+        "p95": 37.5,
+        "mean": 29.598
+      },
+      "submitMs": {
+        "samples": 145,
+        "median": 27.1,
+        "p95": 28.2,
+        "mean": 26.26
+      },
+      "gpuMs": null,
+      "draws": {
+        "calls": 2486,
+        "triangles": 6531400
+      },
+      "walker": [
+        128.3,
+        36.29999923706055,
+        12.5
+      ],
+      "camera": [
+        128.18,
+        37.927499237060545,
+        12.5
+      ],
+      "size": [
+        1280,
+        720
+      ],
+      "pixelRatio": 1,
+      "fov": 62,
+      "facade": [
+        {
+          "name": "V2_facade_balconies",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_piers",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_glass",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_terraces_and_atrium_roof",
+          "visible": true
+        },
+        {
+          "name": "V2_upper_atrium_fronts",
+          "visible": true
+        }
+      ],
+      "bands": 103
+    },
+    {
+      "rate": 1,
+      "name": "deck10-inner",
+      "at": [
+        0.4450878787434488,
+        -3.7,
+        -64.11326098553248
+      ],
+      "yaw": -0.0017306554683130377,
+      "pitch": 0,
+      "frameMs": {
+        "samples": 145,
+        "median": 12.5,
+        "p95": 20.8,
+        "mean": 12.414
+      },
+      "submitMs": {
+        "samples": 145,
+        "median": 10.6,
+        "p95": 11.1,
+        "mean": 10.291
+      },
+      "gpuMs": null,
+      "draws": {
+        "calls": 786,
+        "triangles": 2692255
+      },
+      "walker": [
+        0.4450878787434488,
+        -3.6999999997019772,
+        -64.11326098553248
+      ],
+      "camera": [
+        0.4448802001909233,
+        -2.072499999701977,
+        -63.99326116524254
+      ],
+      "size": [
+        1280,
+        720
+      ],
+      "pixelRatio": 1,
+      "fov": 62,
+      "facade": [
+        {
+          "name": "V2_facade_balconies",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_piers",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_glass",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_terraces_and_atrium_roof",
+          "visible": true
+        },
+        {
+          "name": "V2_upper_atrium_fronts",
+          "visible": true
+        }
+      ],
+      "bands": 37
+    },
+    {
+      "rate": 1,
+      "name": "cabin",
+      "at": [
+        -7.389617789741436,
+        -19.7,
+        77.19569868484716
+      ],
+      "yaw": -3.1415926535897882,
+      "pitch": -0.3,
+      "frameMs": {
+        "samples": 145,
+        "median": 12.5,
+        "p95": 20.9,
+        "mean": 13.879
+      },
+      "submitMs": {
+        "samples": 145,
+        "median": 11.9,
+        "p95": 12.5,
+        "mean": 11.672
+      },
+      "gpuMs": null,
+      "draws": {
+        "calls": 1091,
+        "triangles": 3225403
+      },
+      "walker": [
+        -7.389617789741436,
+        -19.699999999701976,
+        77.19569868484716
+      ],
+      "camera": [
+        -7.389617789741437,
+        -18.072499999701975,
+        77.07569868484715
+      ],
+      "size": [
+        1280,
+        720
+      ],
+      "pixelRatio": 1,
+      "fov": 62,
+      "facade": [
+        {
+          "name": "V2_facade_balconies",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_piers",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_glass",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_terraces_and_atrium_roof",
+          "visible": true
+        },
+        {
+          "name": "V2_upper_atrium_fronts",
+          "visible": true
+        }
+      ],
+      "bands": 34
+    },
+    {
+      "rate": 1,
+      "name": "deck10-glass-row",
+      "at": [
+        -9.342688370976624,
+        -3.7,
+        69.42667001336194
+      ],
+      "yaw": -1.5698636699087176,
+      "pitch": 0,
+      "frameMs": {
+        "samples": 145,
+        "median": 12.5,
+        "p95": 20.8,
+        "mean": 13.65
+      },
+      "submitMs": {
+        "samples": 145,
+        "median": 11.3,
+        "p95": 12.4,
+        "mean": 11.315
+      },
+      "gpuMs": null,
+      "draws": {
+        "calls": 1071,
+        "triangles": 2429740
+      },
+      "walker": [
+        -9.342688370976624,
+        -3.691999912261963,
+        69.42667001336194
+      ],
+      "camera": [
+        -9.462688318785696,
+        -2.0644999122619625,
+        69.42678193217206
+      ],
+      "size": [
+        1280,
+        720
+      ],
+      "pixelRatio": 1,
+      "fov": 62,
+      "facade": [
+        {
+          "name": "V2_facade_balconies",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_piers",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_glass",
+          "visible": true
+        },
+        {
+          "name": "V2_facade_terraces_and_atrium_roof",
+          "visible": true
+        },
+        {
+          "name": "V2_upper_atrium_fronts",
+          "visible": true
+        }
+      ],
+      "bands": 37
+    },
+    {
+      "rate": 1,
+      "name": "deck2-arrival",
+      "at": [
+        -135,
+        -35.7,
+        -52.5175106
+      ],
+      "yaw": 1.5707963267948966,
+      "pitch": 0,
+      "frameMs": {
+        "samples": 146,
+        "median": 10.300000011920929,
+        "p95": 17.80000001192093,
+        "mean": 10.76917808227343
+      },
+      "submitMs": null,
+      "gpuMs": null,
+      "draws": {
+        "calls": 560,
+        "triangles": 1878783
+      },
+      "size": [
+        1280,
+        720
+      ],
+      "pixelRatio": 1,
+      "fov": 62,
+      "method": "Unmodified SHA-verified 179d813 public bundle. Native V key switched default entry from third-person to first-person; 45 warm frames, 150 sampled frames at 1280x720, DPR 1. Main pass counters only for ordinary gate.",
+      "evidence": "output/launch-a/179d813/arrival-first.json"
+    }
+  ]
+}

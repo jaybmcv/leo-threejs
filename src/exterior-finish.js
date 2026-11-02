@@ -15,7 +15,7 @@ export function surfaceIndex(meshes,axis,extreme='max'){
  return (u,w)=>{let height=extreme==='min'?Infinity:-Infinity;for(const id of bins.get(Math.floor(u/cell)+','+Math.floor(w/cell))||[]){const {q:[a,b,c],den}=triangles[id],aa=((b[1]-c[1])*(u-c[0])+(c[0]-b[0])*(w-c[1]))/den,bb=((c[1]-a[1])*(u-c[0])+(a[0]-c[0])*(w-c[1]))/den,cc=1-aa-bb;if(Math.min(aa,bb,cc)>=-1e-6)height=Math[extreme](height,aa*a[2]+bb*b[2]+cc*c[2]);}return height;};
 }
 
-export function refineExterior(exterior){
+export function refineExterior(exterior,{skipApertures=false}={}){
  exterior.updateMatrixWorld(true);const hull=[];exterior.traverse(o=>{if(o.isMesh&&(/^Smooth_pressure_envelope_/.test(o.name)||/^Smooth_pressure_envelope_/.test(o.parent?.name)))hull.push(o);});
  if(!hull.length)throw new Error('Saved exterior hull was not identified');
  const side=surfaceIndex(hull,'z'),top=surfaceIndex(hull,'y'),stats={projectedVertices:0,projectedMeshes:0,unresolved:0,unresolvedMeshes:{}};
@@ -82,9 +82,9 @@ export function refineExterior(exterior){
  }
  // Separate the nozzle liners from their structural collars and heat shields.
  exterior.traverse(o=>{if(!o.isMesh)return;if(o.name==='Engine_bell'){o.material=o.material.clone();o.material.color.setHex(0x172733);o.material.roughness=.32;o.material.metalness=.8;}if(o.name==='Nozzle_internal_cooling_ring'){o.material=o.material.clone();o.material.color.setHex(0x826c56);o.material.roughness=.4;}if(o.name==='Engine_nozzle_lip'){o.material=o.material.clone();o.material.color.setHex(0xa2adb3);o.material.roughness=.24;}if(o.name==='Aft_service_louver'){o.material=o.material.clone();o.material.color.setHex(0x7b8991);o.material.metalness=.75;}});
- stats.passengerWindows=addPassengerWindows(exterior,hull,side,surfaceIndex);
+ stats.passengerWindows=skipApertures?{sourceOnly:true}:addPassengerWindows(exterior,hull,side,surfaceIndex);
  const observationPanes=[],backing=[];exterior.traverse(o=>{if(!o.isMesh)return;if(['Forward_observation_panes','Forward_side_vent_glass'].includes(o.name)&&new T.Box3().setFromObject(o).max.z>0)observationPanes.push(o);if(o.name==='Individual_glazing_seals')backing.push(o);});
- const observationPlan=bowAperturePlan(observationPanes);stats.observationOpenings={chartTriangles:observationPlan,operations:0};for(const o of [...hull,...backing])stats.observationOpenings.operations+=cutBowApertures(o,observationPlan);
+ const observationPlan=bowAperturePlan(observationPanes);stats.observationOpenings={chartTriangles:observationPlan,operations:0};if(!skipApertures)for(const o of [...hull,...backing])stats.observationOpenings.operations+=cutBowApertures(o,observationPlan);
  exterior.traverse(o=>{if(o.isMesh&&['Forward_observation_panes','Forward_side_vent_glass','Forward_navigation_sensor_glass'].includes(o.name))tintWorldWindow(o,p=>new T.Vector3(Math.max(0,p.x-125),55,p.z));});
  exterior.userData={...exterior.userData,revision:'36',scope:'Retained silhouette; projected markings and seams, glazing trim, satin ceramic and thermal finishes, nozzle detailing',surfaceRefinement:stats};exterior.updateMatrixWorld(true);return stats;
 }

@@ -1,0 +1,1 @@
+import {runPreparedAuthoring} from './prepared-authoring-lock-v2.mjs';import {spawnSync} from 'node:child_process';await runPreparedAuthoring();const p=spawnSync(process.execPath,['--max-old-space-size=10000','scripts/encode-prepared-walk-v2.mjs'],{stdio:'inherit',windowsHide:true});if(p.status!==0)process.exitCode=p.status||1;

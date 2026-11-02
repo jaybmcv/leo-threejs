@@ -4,6 +4,7 @@ import {listenForHub} from '../src/walk/hub-link.js';
 import {walkLink} from '../src/hub/walk-link.js';
 import {pill,note,hasTrack,isMoving,trackNodes,groups,stats,feature,shortDate} from '../src/hub/model.js';
 
+const output=process.env.LEO_PUBLIC_DIR||'dist';
 // What the Builder's Hub says for each kind of card, and that the built page stays light and holds nobody's data.
 let passed=0;const check=(name,fn)=>{fn();passed++;console.log('PASS',name);};
 const card=(over={})=>({id:'20261027-010b8b80',stage:'submitted',status:'submitted',dates:{submitted:'2026-10-27T00:00:00Z'},steps:null,stepTotal:null,shots:[],...over});
@@ -74,10 +75,10 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
  hub.close();passed++;console.log('PASS the Hub finds and moves an open walk, and copes with none');
 }
 try{
- const html=await fs.readFile('dist/hub.html','utf8'),script=/<script type="module" src="(hub\.[0-9a-f]{10}\.js)"/.exec(html)?.[1];
- const code=await fs.readFile('dist/'+script,'utf8');
+ const html=await fs.readFile(output+'/hub.html','utf8'),script=/<script type="module" src="(hub\.[0-9a-f]{10}\.js)"/.exec(html)?.[1];
+ const code=await fs.readFile(output+'/'+script,'utf8');
  check('the built page is light and carries no Three.js',()=>{assert.ok(code.length<60*1024,`${code.length} bytes`);assert.ok(!code.includes('WebGLRenderer'));});
  check('the built page uses only text for what the service sends',()=>assert.ok(!/innerHTML|insertAdjacentHTML|document\.write/.test(code)));
  check('the built page names the service, and holds no report data',()=>{assert.ok(code.includes('mcv-feedback-hub.'));assert.ok(!/discord:\d|\b\d{17,20}\b/.test(code+html));});
-}catch(e){if(e.code!=='ENOENT')throw e;console.log('dist/hub.html not built; skipped the page checks');}
+}catch(e){if(e.code!=='ENOENT'||process.env.LEO_PUBLIC_DIR)throw e;console.log('dist/hub.html not built; skipped the page checks');}
 console.log(`All Builder's Hub checks passed (${passed}).`);

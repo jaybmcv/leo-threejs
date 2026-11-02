@@ -1,0 +1,1 @@
+import * as T from 'three';import {cabinPrivacy} from './cabin-privacy.js';export function createCabinGlass(ship,scene){const templates=new Map(ship.v2PreparedFrost.children.map(g=>[g.name,g])),all=ship.v2PreparedPrivacy.map(c=>({...c,matrix:new T.Matrix4().fromArray(c.matrix)}));return cabinPrivacy(ship,scene,all,c=>templates.get(c.key));}

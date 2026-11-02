@@ -5,7 +5,11 @@ import {SWIM,swimLocal,distance,limitSwim,gemNear} from '../src/walk/aquarium-tr
 // Poses must visit all seven gems, stay inside the water and travel at swimming speed before the chest can finish.
 export function createTreasureBoard({send,log,file=process.env.LEO_LIVE_TREASURE||new URL('../../leo-live-treasure.json',import.meta.url),now=Date.now}){
  const best=new Map(),runs=new WeakMap(),buckets=new WeakMap();let saving=null;
- try{for(const e of JSON.parse(fs.readFileSync(file,'utf8')))if(e&&typeof e.id==='string'&&typeof e.name==='string'&&typeof e.at==='string'&&Number.isInteger(e.ms)&&e.ms>0)best.set(e.id,e);}catch{}
+ try{for(const e of JSON.parse(fs.readFileSync(file,'utf8')))if(e&&typeof e.id==='string'&&typeof e.name==='string'&&typeof e.at==='string'&&Number.isInteger(e.ms)&&e.ms>0){
+  // Ignore obsolete local-test course tags; retain the fastest record if an id appears twice.
+  const {course:ignored,...record}=e,had=best.get(e.id);
+  if(!had||e.ms<had.ms||(e.ms===had.ms&&e.at<had.at))best.set(e.id,record);
+ }}catch{}
  const ranked=()=>[...best.values()].sort((a,b)=>a.ms-b.ms||a.at.localeCompare(b.at));
  function save(){if(saving)return;saving=setTimeout(()=>{saving=null;fs.writeFile(file,JSON.stringify([...best.values()],null,1),e=>{if(e)log('aquarium times not saved',e.message);});},1000);}
  function reply(v,msg){send(v.ws,{m:'treasure',...msg});}

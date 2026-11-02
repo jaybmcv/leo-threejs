@@ -7,7 +7,9 @@ import {buildWebExterior} from './build-web-exterior.mjs';
 import {writeWalkPage} from './walk-page.mjs';
 import {writeBuildInfo} from './build-info.mjs';
 import {writeHubPage} from './hub-page.mjs';
-const source='output/leo-interior-v01',out='dist';
+import {v2,modelOutput,publicOutput} from './layout-selector.mjs';
+if(v2){await import('./public-v2.mjs');process.exit(0);}
+const source=modelOutput,out=publicOutput;
 await fs.mkdir(out+'/models',{recursive:true});
 await buildWebExterior(source+'/leo-exterior-refined.glb',source+'/leo-exterior-web.glb',source+'/leo-exterior-phone.glb');
 const names=['leo-exterior-refined.glb','leo-exterior-web.glb','leo-exterior-phone.glb','leo-residential-decks.glb','leo-garden-commons.glb','leo-service-areas.glb','leo-aft-systems.glb','leo-transit.glb','leo-full-ship.glb','leo-neighborhood.glb'];
