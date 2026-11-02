@@ -22,6 +22,19 @@ export function launchFCafeFitout(layout,phase6){
   add('sign',[5.2,.6,.04],[x0+1,r.y+2.7,4.9],'navy',{text:r.name.split(' · ')[0].toUpperCase(),noCollide:true});
   rooms.push({id:r.id,queue,counterLength:5.6,staffClearWidth:1.1,seats:phase6.rests.filter(s=>s.room===r.id).length+rests.filter(s=>s.room===r.id).length});
  }
+ // Keep complete table groups clear of the original 4m cafe door approaches.
+ // The Deck 11 group also needs room behind its aft chair on the full-ship grid.
+ const relocations=[
+  ["nose-commons-04",235,-4.4,[28,29],0.7],
+  ["nose-commons-06",232.1,-9.5,[6,7,8,9],0.75],
+  ["nose-commons-07",218.7,-4.4,[26,27],0.7],
+  ["nose-commons-07",221.5,-4.4,[28,29],0.7],
+  ["nose-commons-08",213.7,-4.4,[20,21],0.7],
+  ["nose-commons-08",216.5,-4.4,[22,23],0.7],
+  ["nose-commons-09",208.7,-4.4,[20,21],0.7],
+  ["nose-commons-09",211.5,-4.4,[22,23],0.7],
+ ];
+ for(const [room,x,z,indices,dz]of relocations){const ids=new Set(indices.map(i=>'f-'+room+'-'+i));for(const s of rests)if(ids.has(s.id))s.point[2]+=dz;for(const p of parts)if(ids.has(p.restId)||(p.room===room&&['table_top','table_pedestal'].includes(p.part)&&Math.abs(p.at[0]-x)<.01&&Math.abs(p.at[2]-z)<.01))p.at[2]+=dz;}
  // The prepared 2m-capsule flood found these ten chairs had no safe approach.
  // Keep the bay floors and three-sided tables; remove empty two-seat tables too.
  const blocked=new Set(['f-nose-commons-03-24','f-nose-commons-03-28','f-nose-commons-03-29','f-nose-commons-04-6','f-nose-commons-04-24','f-nose-commons-04-25','f-nose-commons-04-26','f-nose-commons-04-27','f-nose-commons-07-22','f-nose-commons-07-23']);
