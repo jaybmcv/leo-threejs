@@ -102,7 +102,9 @@
       "src/walk/controller.js",
       "src/walk/rest.js",
       "src/walk/foliage.js",
-      "src/walk/wall-kit.js"
+      "src/walk/wall-kit.js",
+      "src/walk/instance-matrix.js",
+      "src/walk/collision-cells.js"
     ],
     "room": "inherit",
     "reason": "Geometry/math helper: positions are supplied by a caller whose room ownership is checked separately."

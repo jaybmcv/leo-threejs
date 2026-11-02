@@ -1626,8 +1626,9 @@
     "file": "src/v2/cabin-privacy.js",
     "original": "src/v2/cabin-privacy.js",
     "mode": "raw",
-    "bodySha256": "0972085c554183a995a2f491980f1a1f905154784347d50fc64390993993beb1",
+    "bodySha256": "96f27fcff997da6fe94407e67c2bba8d7ab224ae6ed1b6b89c98574d136335c7",
     "imports": [
+      "../walk/instance-matrix.js",
       "./facade.js",
       "three",
       "three/addons/utils/BufferGeometryUtils.js",
@@ -1736,7 +1737,7 @@
     "file": "src/v2/facade.js",
     "original": "src/v2/facade.js",
     "mode": "raw",
-    "bodySha256": "125776ffefdf8de247fa36618cd8268139011a1780e97c418ed7d0d3fe037863",
+    "bodySha256": "fc6eb5794c3ee1f7e48a3d820071a21ea4718232f66352463e8d397a3a60f804",
     "imports": [
       "./atrium-architecture.js",
       "./atrium-visibility.js",
@@ -2156,9 +2157,10 @@
     "file": "src/v2/phase4-culling.js",
     "original": "src/v2/phase4-culling.js",
     "mode": "raw",
-    "bodySha256": "1254ffaa86670d90335ca6d5d887cc98b10b807bb20185df4ebeab18d66b5830",
+    "bodySha256": "f9167842f662109e9ed2a5cafa23dabee6ac6c5caf814e9c7b4ac32d9722ce85",
     "imports": [
       "./visibility-state.js",
+      "./opaque-ray.js",
       "./atrium-visibility.js",
       "../plan/atrium-v2.js",
       "./visibility-query.js",
@@ -3034,10 +3036,11 @@
     "file": "src/walk/collision.js",
     "original": "src/walk/collision.js",
     "mode": "raw",
-    "bodySha256": "cd2544370e5b828914572884f3c964b4e0044768893fbd4cc22b83d48999ea35",
+    "bodySha256": "056dfaeb851c6ab009691d5d504830cf72a80035a3e024e9e7396133b746d999",
     "imports": [
       "../v2/room-owner.js",
       "../v2/build-cache.js",
+      "./collision-cells.js",
       "three",
       "three-mesh-bvh"
     ],
@@ -4893,8 +4896,9 @@
     "file": "src/v2/cabin-privacy.authoring.js",
     "original": "src/v2/cabin-privacy.js",
     "mode": "authoring",
-    "bodySha256": "0972085c554183a995a2f491980f1a1f905154784347d50fc64390993993beb1",
+    "bodySha256": "96f27fcff997da6fe94407e67c2bba8d7ab224ae6ed1b6b89c98574d136335c7",
     "imports": [
+      "../walk/instance-matrix.js",
       "./facade.authoring.js",
       "three",
       "three/addons/utils/BufferGeometryUtils.js",
@@ -4923,7 +4927,7 @@
     "file": "src/v2/facade.authoring.js",
     "original": "src/v2/facade.js",
     "mode": "authoring",
-    "bodySha256": "125776ffefdf8de247fa36618cd8268139011a1780e97c418ed7d0d3fe037863",
+    "bodySha256": "fc6eb5794c3ee1f7e48a3d820071a21ea4718232f66352463e8d397a3a60f804",
     "imports": [
       "./atrium-architecture.authoring.js",
       "./atrium-visibility.js",
@@ -5144,9 +5148,10 @@
     "file": "src/v2/phase4-culling.authoring.js",
     "original": "src/v2/phase4-culling.js",
     "mode": "authoring",
-    "bodySha256": "1254ffaa86670d90335ca6d5d887cc98b10b807bb20185df4ebeab18d66b5830",
+    "bodySha256": "f9167842f662109e9ed2a5cafa23dabee6ac6c5caf814e9c7b4ac32d9722ce85",
     "imports": [
       "./visibility-state.js",
+      "./opaque-ray.js",
       "./atrium-visibility.js",
       "../plan/atrium-v2.js",
       "./visibility-query.authoring.js",
@@ -5637,10 +5642,11 @@
     "file": "src/walk/collision.authoring.js",
     "original": "src/walk/collision.js",
     "mode": "authoring",
-    "bodySha256": "ea78bcd42f56efb1e31977a6354372e4a920c12b76ae282c8e69ca51a6b1b581",
+    "bodySha256": "8f929ce3f347ec196b9c8243c557339eac47660a16a188eb8c7cd51428c6b4e5",
     "imports": [
       "../v2/room-owner.js",
       "../v2/build-cache.authoring.js",
+      "./collision-cells.js",
       "three",
       "three-mesh-bvh"
     ],

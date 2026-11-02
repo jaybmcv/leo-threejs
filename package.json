@@ -15,7 +15,8 @@
     "check:live": "node scripts/check-live.mjs",
     "check:invasion": "node scripts/check-invasion.mjs",
     "check:lounge": "node --max-old-space-size=8000 scripts/check-lounge.mjs",
-    "check:startup": "node scripts/check-startup-v2.mjs"
+    "check:startup": "node scripts/check-startup-v2.mjs",
+    "check:walk-performance": "node scripts/check-walk-performance.mjs"
   },
   "dependencies": {
     "three": "0.185.1",
