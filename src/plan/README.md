@@ -15,3 +15,9 @@ check-anchors checks documented room boundaries, inventories authoring sites and
 Additional checks: check-anchor-movement.mjs tests the six specified assemblies, unaffected library geometry, individual cabin instances, rest facing and automatic door collider orientation. check-anchor-preparation.mjs checks shared feature availability and rest-filter parity. check-anchor-bundle.mjs bundles both variants and checks public debug stripping; its workspace-only resolver avoids native esbuild's ancestor-directory access failure in this managed sandbox.
 
 Full frozen-time browser hashes, generated-plan comparison and the 63 reference captures remain the verifier's acceptance gate. No publication or deployment is implied.
+
+## Phase 8 source ownership
+
+The active source tree is layout 2. `legacy/v1` pins the rollback implementation. Mode variants inherit the original module room boundary; `src/v2/source-modes.json` records their exact membership. Edit the needed mode explicitly and keep shared behavior in ordinary imports. `check-anchors` runs the frozen v1 boundary and frame round trips, then verifies the active v2 ownership fingerprints and delegated boundaries. Regenerate `ownership.json` only after reviewing those boundaries.
+
+Phase 8 scope: ownership.json and check-anchors retain the root feature-builder and src/walk boundary audit, now including their explicit mode variants. Procedural src/v2 shells/fitout keep their existing per-object ownership through src/v2/ownership.js and the v2 geometry/clearance gates. The source-modes entry records the corresponding original module for every mode variant. The fold does not replace those two ownership mechanisms with a new one.

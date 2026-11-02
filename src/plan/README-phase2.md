@@ -1,19 +1,19 @@
 # Phase 2 selected walk world
 
-The default is still layout 1. In PowerShell:
+Layout 2 is now the default. In PowerShell:
 
-    $env:LEO_LAYOUT='2'
+    Remove-Item Env:LEO_LAYOUT -ErrorAction SilentlyContinue
     npm run build
     npm run build:public
     npm run check:walk
     npm run check
     node scripts/serve-v2.mjs
 
-Review http://127.0.0.1:4182/ and walk.html locally. Remove the LEO_LAYOUT environment variable to return to v1. Selection is a build input; URL parameters cannot select the other world. Models are in output/leo-interior-v02 and public assets in dist-v2. Nothing is deployed.
+Review http://127.0.0.1:4182/ and walk.html locally. Set LEO_LAYOUT=1 to reproduce the pinned v1 source and output. Selection is a build input; URL parameters cannot select the other world. Models are in output/leo-interior-v02 and public assets in dist-v2. Nothing is deployed.
 
 ## Isolation and frames
 
-The v1 model and walk source are untouched. scripts/v2-plugin.mjs supplies the selected layout as a virtual import and applies explicit opt-in adapters while bundling the v2 Node/browser world. Its registry adapter installs production frames in a separate selectedFrames map before any feature module evaluates. Temporary debug adjustments compose over that plan; clearing them cannot restore v1. The immutable v1 frames still decode legacy links and facing. The observation lounge explicitly supplies a fittingFrame at its accepted entry X170 while its plan centre remains X190, preventing the contents and overhead promenade sign from shifting into the ramp. Resized legacy links are clamped into their target room; lv=2 positions are already current. Retained aft rooms receive explicit unchanged v2 slots.
+The v1 source is pinned in legacy/v1. Active source contains the former v2 substitutions directly; explicit .authoring.js, .prepared.js and .public.js modules contain build-mode variants and retain the original geometry replay IDs. scripts/v2-plugin.mjs now serializes selected-layout data and the client/server identity, with no runtime string rewriting or special-case resolver redirects. The registry installs production frames in a separate selectedFrames map before any feature module evaluates. Temporary debug adjustments compose over that plan; clearing them cannot restore v1. The immutable v1 frames still decode legacy links and facing. The observation lounge explicitly supplies a fittingFrame at its accepted entry X170 while its plan centre remains X190, preventing the contents and overhead promenade sign from shifting into the ramp. Resized legacy links are clamped into their target room; lv=2 positions are already current. Retained aft rooms receive explicit unchanged v2 slots.
 
 src/v2/model.js builds the v2 slabs, room shells, structural circulation and placeholders. Original room authoring edits run before frame resolution and shell replacement. Wall-mounted art, lighting, signs and projections stay with their source room. The new Hydro-Nip floors/galleries receive the original glossy neon material, and regenerated lounge guards retain orange neon caps and foot strips. The gallery stair schedule stores the finished tread elevation in center.y; the builder converts that into the box centre. Cabin templates are grouped by type and door side, with one matrix per registry frame. Collision instances and 10,000 berth rest spots use those same matrices.
 
@@ -41,7 +41,9 @@ Evidence: output/leo-interior-v02/check-report.json, walk-report.json, stair-rep
 
 The local GPU harness expects a dedicated Chrome debugging session on port 9333 (headless=new, no-sandbox, disable-gpu-sandbox, use-angle=d3d11, a workspace-owned user-data-dir). With serve-v2 running, use node scripts/v2-browser.mjs --reload, then node scripts/v2-smoke.mjs, node scripts/v2-ownership.mjs and node scripts/measure-v2.mjs sequentially. Keep other build/check processes idle during measurement. No external service is contacted.
 
-## Adapter cutover checklist
+## Historical adapter cutover checklist
+
+The checklist below records the pre-Phase-8 architecture. The adapters have now been folded into source; use [the current cutover runbook](../../output/launch-g/SWITCHOVER.md) for release and rollback steps.
 
 Every operation checks its source anchor; preflight accumulates every mismatch. Removed-target regressions cover all 59 adapters. Fold each line into selected source at cutover:
 
@@ -136,9 +138,9 @@ The retained Haze Maze now uses its scheduled rigid fitting position (0.25 m aft
 
 The v1 neon promenade finish is also re-anchored to the selected garden front and clipped against the actual slab holes. It is a visual finish, never a replacement floor/collider across the atrium. Three checker rays prove it remains on the promenade, stops at the room and leaves the atrium opening empty. The reported soft white stripe itself is a specular reflection in the unchanged acrylic material; the frozen baseline and final floor rays both show no corridor overlay at that location.
 
-## Phase 7 wayfinding — takes effect at cutover
+## Phase 7 wayfinding — active in the default layout
 
-The earlier adapter inventory above is historical. The current goto hooks live in `scripts/goto-adapters-v2.mjs`; the shared adapter registry delegates to it. The selected walk replaces the inherited destinations with current room, service, escape-shuttle and activity entries, grouped by deck and searchable by name. The Deck 20 crew gallery has no public shortcut. Help, location text and lift deck lists use the v2 plan. The original 283 stair/lift sign placements remain intact; separate room/floor guides and lobby directories are added at runtime.
+The earlier adapter inventory above is historical. Phase 8 folded the goto hooks directly into the walk, help, places, signs and lift source modules. The retired adapters are retained only in the pinned legacy/v1 snapshot for rollback and regression evidence. The selected walk replaces the inherited destinations with current room, service, escape-shuttle and activity entries, grouped by deck and searchable by name. The Deck 20 crew gallery has no public shortcut. Help, location text and lift deck lists use the v2 plan. The original 283 stair/lift sign placements remain intact; separate room/floor guides and lobby directories are added at runtime.
 
 `node scripts/check-goto-v2.mjs` is part of the v2 check sequence. It uses prepared collision BVHs, exact floor/footprint/headroom probes, removed-anchor regressions and deliberately unsafe destinations. It exercises `runtimeLayout`, whose decks have no corridor list. `scripts/live-poses-v2.mjs` provides physical floor points and eye-height camera positions for the v2 branch of the live smoke test; the v1 test body stays unchanged.
 

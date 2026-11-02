@@ -1,8 +1,10 @@
-# LEO — Life aboard, interior study 01
+# LEO — redesigned ship
 
-## Layout 2 — takes effect at cutover
+## Layout 2 — default in this checkout
 
-Until cutover, the canonical live site and the historical build notes below describe layout 1. Layout 2 is selected with `LEO_LAYOUT=2` at build time and writes only `output/leo-interior-v02` and `dist-v2`; URL parameters cannot switch worlds. These v2 sections take precedence for the redesigned ship after cutover. This work does not deploy or approve a release.
+With `LEO_LAYOUT` unset, build, public build, checks and the live server select layout 2. Models use `output/leo-interior-v02`; the deployable site is `dist-v2`. Set `LEO_LAYOUT=1` for the pinned rollback source under `legacy/v1`, with models in `output/leo-interior-v01` and public files in `dist`. This branch is preparation only: it has not been merged, deployed or connected to production. See [the exact cutover and rollback runbook](output/launch-g/SWITCHOVER.md).
+
+Build and preview locally with `npm ci`, `npm run build`, `npm run build:public`, then `npm start` (http://127.0.0.1:4173). For full validation, run `npm run check:walk` before `npm run check`. The cutover runbook keeps production actions separate from local preparation.
 
 The accepted source of truth is [the v2 plan](src/plan/README-v2.md), [the selected walk](src/plan/README-phase2.md) and [recorded decisions](src/plan/decisions-v2.json).
 
@@ -12,9 +14,11 @@ The open atrium starts on Deck 6, with park, lake, food hall, stage and lobby zo
 
 New public spaces include the Deck 2 arrival food hall, Deck 3 farm-to-table restaurant and Deck 5 wellness & spa. Escape shuttles replace the old public safety-craft wording: twenty 100-seat craft on each of Decks 1–5, 100 craft total. The spatial model does not certify evacuation or endurance.
 
-In the v2 walk, **M / Go to** opens searchable groups for twenty decks plus fin/crown, with rooms, services, activity highlights and escape shuttles. **H / Help**, the location readout, corridor guides and lift deck lists use the selected plan names. The safe-floor check rejects missing support, voids, insufficient walker clearance and invalid coordinates. See [the goto handoff](output/phase7/REPORT-goto.md) for targeted checks and outstanding combined validation.
+In the v2 walk, **M / Go to** opens searchable groups for twenty decks plus fin/crown, with rooms, services, activity highlights and escape shuttles. **H / Help**, the location readout, corridor guides and lift deck lists use the selected plan names. The safe-floor check rejects missing support, voids, insufficient walker clearance and invalid coordinates. See [the switchover verification report](output/switchover/REPORT.md) for targeted checks and outstanding combined validation.
 
 ## Layout 1 reference and history
+
+Everything below this heading is historical v1 documentation. It does not override the current defaults, cabin schedule or release procedure above.
 
 **[Open the interactive website](https://leo.marscatsvoyage.com/)**. It is served by the Vercel project for leo.marscatsvoyage.com. The earlier `chatgpt.site` addresses are legacy and not the canonical site.
 
