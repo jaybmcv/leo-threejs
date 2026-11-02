@@ -1,0 +1,3 @@
+import * as T from 'three';
+// Corridor panes are unchanged across hull depths. Never rebuild a unique outer shell for frosting.
+export function capturePreparedPrivacy(cabins,{cabinKey,template,doorSide}){const root=new T.Group(),keys=new Set();root.name='Prepared_corridor_glass';const privacy=cabins.map(c=>{const key=cabinKey(c).split('|')[0];if(!keys.has(key)){keys.add(key);const group=new T.Group();group.name=key;for(const o of template(key).children.filter(o=>o.userData.corridorGlass&&!o.name.includes('manifestation')))group.add(o.clone(true));root.add(group);}return{id:c.id,key,y:c.y,side:doorSide(c),matrix:c.matrix.toArray(),polygon:c.hullPrototype?.polygon||null};});return{root,privacy};}

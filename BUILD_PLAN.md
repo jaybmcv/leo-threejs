@@ -1,5 +1,19 @@
 # LEO — whole-ship build plan
 
+## Layout 2 — takes effect at cutover
+
+Until cutover, the canonical live site and the historical build notes below describe layout 1. Layout 2 is selected with `LEO_LAYOUT=2` at build time and writes only `output/leo-interior-v02` and `dist-v2`; URL parameters cannot switch worlds. These v2 sections take precedence for the redesigned ship after cutover. This work does not deploy or approve a release.
+
+The accepted source of truth is [the v2 plan](src/plan/README-v2.md), [the selected walk](src/plan/README-phase2.md) and [recorded decisions](src/plan/decisions-v2.json).
+
+V2 acceptance follows the selected plan rather than the completed v1 boxes below: 5,028 cabins / 10,000 berths, 100 escape shuttles, the Deck 6 atrium programme, distinct small bow cafés, and the crew-only Deck 20 gallery. Keep v1 model and walk source bytes intact; adapt inherited modules through the v2 plugin until cutover folds the adapters into selected source.
+
+Wayfinding has its own modules under `src/v2/goto-*` and `src/v2/wayfinding*`, with small source hooks in `scripts/goto-adapters-v2.mjs`. The new `scripts/check-goto-v2.mjs` is wired into the v2 check sequence. It checks every destination against prepared collisions and includes mutations that must fail. It reads the same trimmed layout shape as the browser, using `layout.circulation.corridors`.
+
+The Phase 7 goto scope uses focused fixtures and an immutable prepared build. A passing targeted check does not replace the final combined model build, full walk validation, startup/performance validation or release review. Exterior and shuttle-door implementation are separate workstreams.
+
+## Layout 1 reference and history
+
 Goal: build every ship area as an explorable 3D concept, retaining the accepted V31 exterior and 5,000 twin cabins / 10,000 berths. Engineering certification is outside this concept-art/modeling task; a furnished room is not evidence that its equipment can sustain 10,000 people.
 
 ## Main-room build gates

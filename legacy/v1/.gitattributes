@@ -1,0 +1,2 @@
+# Preserve the byte-pinned rollback source, including original line endings.
+* -text

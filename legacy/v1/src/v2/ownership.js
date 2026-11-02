@@ -1,0 +1,4 @@
+import layout from 'v2-layout';import {contains,bounds} from '../plan/geometry-v2.js';
+// Floor ownership also covers each hull extension; fitting bounds alone cannot describe a shaped end cabin.
+const cells=new Map(),step=8;for(const p of layout.hullPrototypes?.prototypes||[]){const b=bounds(p.polygon);for(let x=Math.floor(b.x0/step);x<=Math.floor(b.x1/step);x++)for(let z=Math.floor(b.z0/step);z<=Math.floor(b.z1/step);z++){const key=x+','+z;(cells.get(key)||cells.set(key,[]).get(key)).push(p);}}
+export function hullOwnerAt(point){const [x,y,z]=point;for(const p of cells.get(Math.floor(x/step)+','+Math.floor(z/step))||[])if(y>=p.chart.origin[1]-.05&&y<=p.chart.origin[1]+p.rect[3]+.05&&contains(p.polygon,[x,z])&&!p.floorHoles?.some(h=>contains(h.polygon,[x,z])))return p.ownerId||p.id;return null;}

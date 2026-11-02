@@ -1,3 +1,6 @@
-import {spawnSync} from 'node:child_process';
-import './restore-baseline.mjs';
-for(const script of ['build-exterior-finish','build-interior','build-residences','build-gardens','build-areas','build-aft','build-assembly']){const p=spawnSync(process.execPath,['scripts/'+script+'.mjs'],{stdio:'inherit'});if(p.status!==0)process.exit(p.status||1);}
+import {requireBuildSpace} from './build-storage.mjs';
+import {v2} from './layout-selector.mjs';
+await requireBuildSpace();
+if(!v2)(await import('./run-legacy.mjs')).runLegacy('scripts/build-all.mjs',process.argv.slice(2));
+await (await import('./cache-transport-pack-v2.mjs')).preparePackedCacheTransport();
+await import('./build-v2.mjs');

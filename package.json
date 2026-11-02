@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-all.mjs",
-    "check": "node scripts/check-all.mjs",
+    "check": "node --max-old-space-size=11000 scripts/check-all.mjs",
     "build:public": "node scripts/build-public.mjs",
     "start": "node scripts/serve.mjs",
     "build:reference": "node scripts/build-reference.mjs",
@@ -14,7 +14,8 @@
     "live": "node server/leo-live.mjs",
     "check:live": "node scripts/check-live.mjs",
     "check:invasion": "node scripts/check-invasion.mjs",
-    "check:lounge": "node --max-old-space-size=8000 scripts/check-lounge.mjs"
+    "check:lounge": "node --max-old-space-size=8000 scripts/check-lounge.mjs",
+    "check:startup": "node scripts/check-startup-v2.mjs"
   },
   "dependencies": {
     "three": "0.185.1",

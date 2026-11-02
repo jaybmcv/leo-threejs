@@ -1,3 +1,21 @@
+import {fastAtriumSpan} from '../v2/atrium-visibility.js';
+import {renderGotoMenu} from '../v2/goto-menu.js';
+import {gotoStand as v2GotoStand,yarnPlace} from '../v2/wayfinding.js';
+import {addWayfindingGuides} from '../v2/wayfinding-guides.js';
+import {createHangarDoor} from '../v2/hangar-door.js';
+let hangarDoor=null;
+import {visibilityState} from '../v2/visibility-state.js';
+const spanChanged=visibilityState(),renderMetrics={span:[]};let spanQuery=null;
+import {createVisibilityQuery} from '../v2/visibility-query.js';
+import {installDistantArchitecture} from '../v2/distant-architecture.js';
+import {batchLowDeckDraws,separateAtriumPaving} from '../v2/facade.js';
+import {phase4Culling} from '../v2/phase4-culling.js';
+let phase4Visibility=null;
+import {v2Signs} from '../v2/signs.js';
+import {attachFacade,isolateStaticWorld} from '../v2/facade.js';
+import {createCabinGlass} from '../v2/cabin-glass.js';
+import {crewGalleryController} from '../v2/crew-gallery.js';
+let cabinGlass=null,crewGallery=null;
 import '../plan/debug.js';
 import {interactionTargets} from '../plan/debug-targets.js';
 import {prepareWalkWorld} from './prepare.js';
@@ -9,29 +27,29 @@ import {createShip} from '../model.js';
 import {shapeInterior} from '../concept-shape.js';
 import {applyConceptPaint} from '../concept-paint.js';
 import {loadEnvironment} from '../environment.js';
-import {publicAsset} from '../public-assets.js';
+import {publicAsset} from '../v2/public-assets.js';
 import {createMars} from '../mars.js';
 import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
-import {buildSteps,cabinPlacements,outsideOnly} from './world.js';
+import {buildSteps,cabinPlacements,outsideOnly} from '../v2/world.js';
 import {Colliders,BODY} from './collision.js';
 import {STATIC_LIFT_PARTS,LIFTS} from './lifts.js';
 import {Controller} from './controller.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
 import {createWalker,WALKER,EMOTES} from './avatar.js';
-import {bakeForWalking,showBands} from './render-bake.js';
+import {bakeForWalking,showBands} from '../v2/render-bake.js';
 import {bandOf} from './collision.js';
 import {partitionMesh} from './partitions.js';
 import walkPlan from 'walk-partitions';
-import {railingMesh} from './railings.js';
+import {railingMesh} from '../v2/railings.js';
 import {ShipMap,drawMiniMap,drawFullMap,deckOf} from './minimap.js';
 import {DECKS} from '../model.js';
 import {floorY} from '../transit.js';
 import {createLifts} from './lift-ride.js';
-import {spotIndex} from './rest.js';
+import {spotIndex} from '../v2/rest.js';
 import {PLACES,findStand,describe} from './places.js';
 import {openWindows,clearGlass} from './windows.js';
-import {createHaze} from './haze.js';
+import {createHaze} from '../v2/haze.js';
 import {createStarDrift} from './star-drift.js';
 import {createAmbience} from './ambience.js';
 import {createLullaby} from './lullaby.js';
@@ -83,6 +101,7 @@ import {createLeverPanel} from './lever-panel.js';
 import {createTransporters} from './transporter.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 import {createHelp} from './help.js';
+import {listenForHub} from './hub-link.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
 const $=id=>document.getElementById(id);
@@ -93,6 +112,8 @@ const $=id=>document.getElementById(id);
 const STARTING='leo-walk-building';
 try{localStorage.setItem(STARTING,String(Date.now()));}catch{}
 addEventListener('pagehide',()=>{try{localStorage.removeItem(STARTING);}catch{}});
+// From the first moment, so the Builder's Hub knows a walk is on its way and doesn't start a second one.
+const hubLink=listenForHub();
 const timings=[],t0=performance.now();
 // Still building after 20 s means an older machine, with stages ahead that hold the page for a minute at a time: say so,
 // or the browser's "page not responding" prompt looks like the walk has failed.
@@ -108,7 +129,7 @@ const LIVE_URL=(()=>{const asked=new URLSearchParams(location.search).get('live'
 // feedback/feedback.js), or one this browser kept from an earlier visit to Leo, asks for Discord first, so Leo live can
 // note who used it and their reports can name them. Someone who connected before is remembered in this browser for 30
 // days and goes straight aboard; "Not you?" forgets them. In Otherside (net/otherside.js) there's no login at all:
-// glyph:ready names them and they come straight aboard, with everything Discord would give them (server/leo-live.mjs),
+// glyph:ready names them and they come straight aboard, with everything Discord would give them (server/live-core.mjs),
 // and Discord isn't offered.
 const tester=invite||testerInvite();
 let me={pass:null,name:null,error:null},board,glyphed=false,glyph=null;
@@ -172,7 +193,7 @@ renderer.autoClear=false;
 scene.fog=new T.Fog(0xd9dcd6,70,148);
 const camera=new T.PerspectiveCamera(phone?70:62,1,.05,150);
 // Past the far plane, the ship in haze rather than open space (haze.js); drawn between the sky and the ship.
-const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCamera(60,1,camera.far-5,1500);
+const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCamera(60,1,140,1500);
 const hemi=new T.HemisphereLight(0xfff6e6,0x5d6b75,1.05);scene.add(hemi);
 const fill=new T.DirectionalLight(0xfff1dc,.55);fill.position.set(.3,1,.2);scene.add(fill);
 loadEnvironment(renderer).then(t=>{scene.environment=t;quietFloorReflections(scene,t);}).catch(()=>{});
@@ -198,7 +219,7 @@ const idle=()=>new Promise(r=>(window.requestIdleCallback||setTimeout)(()=>r(),{
 async function buildShip(){
  let done=0;const total=26;
  for(const label of buildSteps(ship)){done++;status(`Building the interior… ${Math.min(99,Math.round(done/total*100))}%`);await idle();}
- shapeInterior(ship.exterior,ship.inside);
+ // v2 slabs use the finished hull oracle; do not fair a second time.
  // Lined partitions close the fitted spaces off from the bare deck plate (partitions.js; planned at build time).
  ship.inside.add(partitionMesh(walkPlan.walls.map(([deck,x0,x1,z0,z1,y0,y1])=>({deck,x0,x1,z0,z1,y0,y1}))));
  // Short railings where a floor drops away (railings.js; planned at build time too).
@@ -218,7 +239,7 @@ async function buildShip(){
  const prepared=prepareWalkWorld(ship,{into:colliders,kit:cosmoKit,anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches,urls:artUrls,hat:__HAT_URL__,light:{hemi,fill,scene},afterBase(){
  // The hull behind the glass goes for drawing only, after the colliders have it.
  const w0=performance.now(),opened=openWindows(ship,walkPlan.windows);clearGlass(ship.root);timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
- lifts=createLifts(scene,colliders);stairSigns(lifts.signs,colliders);corridorSigns(lifts.signs);floorGuides(lifts.signs);corridorTrim(lifts.signs,{inside:ship.inside,partitions:walkPlan.walls});
+ lifts=createLifts(scene,colliders);addWayfindingGuides(lifts.signs);v2Signs(lifts.signs);
  },afterRest(state){
  restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;lullaby=lounge?createLullaby(lounge.dome):null;
  // Its floor, galleries and the promenade in front: glossy acrylic with neon swirls (lounge-floor.js).
@@ -257,8 +278,8 @@ async function buildShip(){
  status('Preparing the walk…');await idle();
  // Decals and seams only matter from outside.
  ship.exterior.traverse(o=>{if(o.isMesh&&outsideOnly(o))o.visible=false;});
- const b0=performance.now();baked=bakeForWalking(ship.root,{release:true});for(const g of baked.bands.values())scene.add(g);timings.push([`${baked.sources} meshes merged into ${baked.meshes} in ${Math.round(performance.now()-b0)} ms`,Math.round(performance.now()-t0)]);
- haze.add(createHaze(ship));
+ ship.v2Haze=createHaze(ship);attachFacade(ship,scene);const b0=performance.now();baked=bakeForWalking(ship.root,{release:true});for(const g of baked.bands.values())scene.add(g);timings.push([`${baked.sources} meshes merged into ${baked.meshes} in ${Math.round(performance.now()-b0)} ms`,Math.round(performance.now()-t0)]);
+ haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});cabinGlass=createCabinGlass(ship,scene);crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
  for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pinballMachine?[pinballMachine.group]:[]),...(pawsOff?pawsOff.groups:[]),...(mudwater?[mudwater.group]:[]),...(arcadeRow?[arcadeRow.group]:[])])toBand(o);
@@ -327,15 +348,16 @@ async function buildShip(){
  toBand(crownTv.group);
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
- ship.inside.traverse(o=>{if(!o.isInstancedMesh)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
-  const box=o.boundingBox.clone().applyMatrix4(o.matrixWorld);let cabins=false,walls=false,boat=false;for(let q=o;q;q=q.parent){if(q.name==='Remaining_499_furnished_cabins')cabins=true;if(q.name==='Repeated_cabin_walls')walls=true;if(/^Area_d\d+-lifeboats-/.test(q.name))boat=true;}
+ phase4Visibility=phase4Culling(ship.inside,colliders);ship.inside.traverse(o=>{if(!o.isInstancedMesh||o.userData.phase4)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
+  const box=o.boundingBox.clone().applyMatrix4(o.matrixWorld);let cabins=false,walls=false,boat=false;for(let q=o;q;q=q.parent){if(q.name==='V2_cabin_instances')cabins=true;if(q.name==='V2_cabin_shells')walls=true;if(/^Area_d\d+-lifeboats-/.test(q.name))boat=true;}
   o.userData.span=[box.min.y,box.max.y];o.userData.cabins=cabins;o.userData.cabinWalls=walls;o.userData.boat=boat;instanced.push(o);});
  // Furniture in the repeated cabins draws only for the cabins nearest the walker; their walls and doors always draw.
  for(const o of instanced){
-  if(!o.userData.boat&&(!o.userData.cabins||o.userData.cabinWalls||o.count!==499))continue;
+  if(!o.userData.boat&&(!o.userData.cabins||o.userData.cabinWalls))continue;
   const all=Array.from({length:o.count},(_,i)=>{const m=new T.Matrix4();o.getMatrixAt(i,m);return m;});
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
+ isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);
 }
 let imagingScans=null;
 let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
@@ -351,15 +373,17 @@ const NEAR_CABINS=40,BOAT_REACH=45,nearFrom=new T.Vector3(1e9,0,0);
 // view with no ray landing on it, so each ray also looks straight up and down from partway along for the space it crosses.
 const VIEW_RAYS=[];for(const x of [-.96,-.5,0,.5,.96])for(const y of [-.96,-.5,0,.5,.96])VIEW_RAYS.push([x,y]);let viewSpan=[0,0],lastSpan=0;
 function span(p,now){
- if(now-lastSpan<150)return viewSpan;lastSpan=now;
+ const atrium=fastAtriumSpan(p);if(atrium)return atrium;
+
+ if(now-lastSpan<150)return viewSpan;lastSpan=now;if(!spanChanged(camera,p,0,0,colliders))return viewSpan;const spanStart=performance.now();
  let low=p.y-3,high=p.y+4;const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();
  const reach=y=>{low=Math.min(low,y-1);high=Math.max(high,y+1);};
- for(const [x,y] of VIEW_RAYS){ndc.set(x,y);ray.setFromCamera(ndc,camera);const hit=colliders.raycast(ray.ray,90,.6),d=hit?hit.distance:90;reach(ray.ray.at(d,probe.origin).y);
-  for(const f of [1/3,2/3])for(const s of [1,-1]){ray.ray.at(d*f,probe.origin);probe.direction.set(0,s,0);const h=colliders.raycast(probe,12);if(h)reach(h.point.y);}}
- return viewSpan=[low,high];
+ for(const [x,y] of VIEW_RAYS){ndc.set(x,y);ray.setFromCamera(ndc,camera);const hit=(spanQuery??=createVisibilityQuery(colliders)).raycast(ray.ray,90,.6),d=hit?hit.distance:90;reach(ray.ray.at(d,probe.origin).y);
+  for(const f of [1/3,2/3])for(const s of [1,-1]){ray.ray.at(d*f,probe.origin);probe.direction.set(0,s,0);const h=(spanQuery??=createVisibilityQuery(colliders)).raycast(probe,12);if(h)reach(h.point.y);}}
+ renderMetrics.span.push(performance.now()-spanStart);if(renderMetrics.span.length>600)renderMetrics.span.shift();return viewSpan=[low,high];
 }
 function cull(p,now=performance.now()){
- const [low,high]=span(p,now);showBands(baked.bands,low,high);let shown=false;
+ cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now);showBands(baked.bands,low,high);let shown=false;
  for(const o of instanced){const [a,b]=o.userData.span,v=o.userData.cabins?a<p.y+3.5&&b>p.y-.5:a<high&&b>low;if(v&&!o.visible)shown=true;o.visible=v;}
  // Re-rank after 3 m of walking, or at once when another deck's cabins come into view.
  if(!shown&&nearFrom.distanceToSquared(p)<9)return;nearFrom.copy(p);
@@ -368,7 +392,7 @@ function cull(p,now=performance.now()){
  for(const o of instanced){const near=o.userData.near;if(!near||!o.visible)continue;
   if(o.userData.boat){let k=0;near.centres.forEach((c,i)=>{if(c.distanceToSquared(p)<BOAT_REACH*BOAT_REACH)o.setMatrixAt(k++,near.all[i]);});o.count=k;o.instanceMatrix.needsUpdate=true;o.computeBoundingSphere();continue;}
   let order=ranks.get(o.parent);if(!order)ranks.set(o.parent,order=near.centres.map((c,i)=>[c.distanceToSquared(p),i]).sort((a,b)=>a[0]-b[0]).slice(0,NEAR_CABINS).map(e=>e[1]));
-  order.forEach((i,k)=>o.setMatrixAt(k,near.all[i]));o.count=order.length;o.instanceMatrix.needsUpdate=true;o.computeBoundingSphere();
+  order.forEach((i,k)=>o.setMatrixAt(k,near.all[i]));o.userData.currentCabinIds=order.map(i=>o.userData.cabinIds[i]);o.count=order.length;o.instanceMatrix.needsUpdate=true;o.computeBoundingSphere();
  }
 }
 
@@ -382,6 +406,8 @@ const actions={
   if(!lifts)return;// still loading
   if(resting){standUp();return;}
   const t=target();if(!t)return;
+  if(t.kind==='launch-ladder'){goTo({at:t.at,yaw:heading,lv:2,resolved:true});return;}
+  if(t.kind==='cabin-glass'){cabinGlass.toggle(t.cabin);return;}
   if(t.kind==='call')lifts.call(t.lift,t.stop);
   else if(t.kind==='inside')openLiftPanel(t.lift);
   else if(t.kind==='waiting')return;
@@ -482,7 +508,6 @@ const START={position:new T.Vector3(...toWorld('d02-arrival-1',[-20,0,0])),yaw:a
 const BELOW_SHIP=floorY(1)-3;
 await Promise.all([loadExterior(),loadCosmo()]).catch(e=>{status(e.message);throw e;});
 await buildShip();
-try{localStorage.removeItem(STARTING);}catch{}
 // A walk link (link.js) starts wherever it was taken; otherwise the arrival hall.
 const spot=remapSpot(readSpot()),stand=spot&&findStand(colliders,spot.at);
 controller.place(stand||findStand(colliders,START.position.toArray())||START.position);
@@ -490,7 +515,7 @@ follow.yaw=stand?spot.yaw:START.yaw;if(stand){follow.pitch=spot.pitch;follow.loo
 walker.holder.position.copy(controller.position);
 // Balls of yarn to push about: the arrival hall's, and one in each of six common areas (yarn.js).
 const yarn=createYarn(colliders),yarns=[yarn];
-for(const s of YARN_SPOTS){const place=PLACES.find(p=>p.name===s.place);if(!place)continue;
+for(const s of YARN_SPOTS){const place=yarnPlace(PLACES,s.place);if(!place)continue;
  const at=findStand(colliders,place.at.map((v,i)=>v+(place.room?anchoredOffset(place.room,s.offset):s.offset)[i]),{radius:4});if(at)yarns.push(createYarn(colliders,{at:at.toArray(),color:s.color}));}
 for(const y of yarns)scene.add(y.mesh);
 // The hamster ball (hamster-ball.js), parked in the Deck 17 gardens until someone climbs in.
@@ -508,7 +533,8 @@ mct.granted=c=>{if(!resting&&!run&&Math.hypot(controller.position.x-c.pos.x,cont
 mct.lost=c=>{if(resting?.spot.mct?.cart===c&&resting.spot.mct.seat==='driver')standUp();};
 // Someone not connected stays on the card until they come aboard, however soon the ship is ready.
 if(LIVE_URL){await identity;if(!me.pass){status('Ready when you are');$('loading-slow').hidden=true;await boarded;}}
-document.body.dataset.ready='1';
+let firstViewReady=false;status('Preparing first view…');
+hubLink.ready(search=>{const spot=readSpot(search);if(!spot)return false;closePanels();return goToSpot(spot);});
 let heading=follow.yaw;const safe=controller.position.clone(),finSafe=new T.Vector3(0,-1e3,0);
 // On the floor of one of the crown lift's fin landings (the gallery and the inspection platforms), inside the fin.
 const FIN_STOPS=LIFTS.find(l=>l.id==='crown').stops.filter(s=>!/Crown/.test(s.label)).map(s=>s.y);
@@ -595,8 +621,8 @@ function myPose(riding=false){
 if(live)setInterval(()=>{if(document.hidden||performance.now()-last>1000)live.pose(myPose());},1000);
 function showAboard(){
  const b=$('aboard');b.hidden=!live;if(!live)return;
- const text=(matchMedia('(max-width:560px)').matches?{live:aboard===1?'Just you':`${aboard} aboard`,connecting:'Joining…',offline:'Solo',full:'Solo · full',replaced:'Solo · 2 tabs'}
-  :{live:aboard===1?'Just you aboard':`${aboard} aboard`,connecting:'Joining…',offline:'Solo · reconnecting',full:'Solo · Leo is full',replaced:'Solo · open in another tab'})[liveStatus]||'';
+ const text=(matchMedia('(max-width:560px)').matches?{live:aboard===1?'Just you':`${aboard} aboard`,connecting:'Joining…',offline:'Solo',layout:'Solo · reload ship',full:'Solo · full',replaced:'Solo · 2 tabs'}
+  :{live:aboard===1?'Just you aboard':`${aboard} aboard`,connecting:'Joining…',offline:'Solo · reconnecting',layout:'Solo · reload to match ship',full:'Solo · Leo is full',replaced:'Solo · open in another tab'})[liveStatus]||'';
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
  // Beside it: logged in with Discord says so; anyone else is offered it. Leo live has the last word once it has answered.
  const d=$('discord-chip'),small=matchMedia('(max-width:560px)').matches;d.hidden=inOtherside;
@@ -605,7 +631,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)$('aboard').click();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -723,7 +749,7 @@ renderer.setAnimationLoop(()=>{
  imagingScans?.update(dt,p,resting,remotes?.remotes);
  // The Container Maze's clock starts at its way in and drops if the walker leaves (maze/run.js).
  maze?.update(p,now);
- freightGate?.update(dt,p,bodies);
+ freightGate?.update(dt,p,bodies);hangarDoor?.update(dt,p);
  chinampa?.update(dt,p);
  baggage?.update(dt,p);
  marks?.update(camera,p,now);
@@ -733,7 +759,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen)draw(camera);
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';try{localStorage.removeItem(STARTING);}catch{}}}
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
@@ -771,6 +797,8 @@ function target(){
  const t=inBall?null:treasure?.near(p);if(t)return t;
  const l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
  const w=graffiti?.near(p)||crownTv?.near(p);if(w)return w;
+ const ladder=hangarDoor?.near(p);if(ladder)return ladder;
+ const privacy=cabinGlass?.near(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));if(privacy)return privacy;
  const b=booth.near(p)||comics.near(p)||chinampa?.near(p);if(b)return b;
  const v=inBall?null:vault?.near(p);if(v)return v;
  const tube=inBall?null:vaultLift?.nearest(p);if(tube)return tube.kind==='riding'?null:tube;
@@ -877,8 +905,7 @@ function togglePlaces(){
  const log=document.createElement('button');log.type='button';log.className='log';
  log.append(Object.assign(document.createElement('b'),{textContent:'Ship log'}),Object.assign(document.createElement('span'),{textContent:'Every change to Leo, before and after, and a way there'}));
  log.onclick=()=>{closePanels();openLog();};list.appendChild(log);
- for(const place of PLACES){const b=document.createElement('button');b.type='button';b.append(Object.assign(document.createElement('b'),{textContent:place.name}),Object.assign(document.createElement('span'),{textContent:place.detail}));
-  b.onclick=()=>{goTo(place);closePanels();};list.appendChild(b);}
+  renderGotoMenu(list,PLACES,{go:goTo,close:closePanels,currentDeck:deckOf(controller.position.y)?.number});
  panel.hidden=false;input.enabled=false;
 }
 // Help: H or the toolbar's Help opens it, and H, Esc or Close shut it.
@@ -890,7 +917,7 @@ function toggleEmotes(){
  EMOTES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';const label=name.replace(/_/g,' ');b.textContent=`${(i+1)%10} · ${label[0].toUpperCase()}${label.slice(1)}`;b.onclick=()=>{closePanels();actions.emote(i);};list.appendChild(b);});
  panel.hidden=false;input.enabled=false;list.querySelector('button')?.focus();
 }
-function goTo(place){place=remapSpot(place);const q=findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();
+function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(colliders,place.at):findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();
  treasure?.leave(false);
  // Going elsewhere from a transporter's driver's seat leaves it parked where it is.
  if(resting?.spot.mct?.seat==='driver')mct.park(resting.spot.mct.cart);resting=null;

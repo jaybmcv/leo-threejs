@@ -190,10 +190,11 @@ export function openArrivalAtrium(ship){
   if(i<3)lantern(x+c*.5,y,z+s*.5,.8);
  });
  // The bridge: the top platform out to the opening's edge, flush with the garden floor (2 mm under it where they meet).
- {const [,y]=TREE.platforms.at(-1),z0=TREE.z+TREE.reach+.45,x=Math.min(Math.abs(TREE.x-cx-.6),Math.abs(TREE.x-cx+.6)),z1=b*Math.sqrt(1-x*x/(a*a))+.03;
+ {const [,y]=TREE.platforms.at(-1),z0=TREE.z+TREE.reach,x=Math.min(Math.abs(TREE.x-cx-.6),Math.abs(TREE.x-cx+.6)),z1=b*Math.sqrt(1-x*x/(a*a))+.03;
   put('Cat_tree_bridge',M.wood,box(1.2,.08,z1-z0,TREE.x,y-.042,(z0+z1)/2));
   for(const dx of [-.3,0,.3])put('Cat_tree_bridge_seam',M.dark,box(.015,.004,z1-z0,TREE.x+dx,y-.001,(z0+z1)/2));
   branch([TREE.x,y-1.2,TREE.z+.3],[TREE.x,y-.5,z0],[TREE.x,y-.12,(z0+z1)/2],.08);}
+ {const [px,py,pz]=platformAt(TREE.platforms.at(-1)),radius=TREE.radius+.02,angle=Math.asin(.6/radius),arc=2*Math.PI-2*angle;put('Cat_tree_top_guard_glass',M.glass,new T.CylinderGeometry(radius,radius,1.1,32,1,true,angle,arc).translate(px,py+.55,pz));const points=Array.from({length:41},(_,i)=>{const t=angle+arc*i/40;return new T.Vector3(px+Math.sin(t)*radius,py+1.1,pz+Math.cos(t)*radius)});put('Cat_tree_top_guard_rail',M.trim,new T.TubeGeometry(new T.CatmullRomCurve3(points),20,.025,4,false));const reach=Math.min(Math.abs(TREE.x-cx-.6),Math.abs(TREE.x-cx+.6)),end=b*Math.sqrt(1-reach*reach/(a*a))+.03;for(const side of[-1,1]){put('Cat_tree_top_guard_glass',M.glass,box(.05,1.1,end-pz,px+side*.6,py+.55,(pz+end)/2));put('Cat_tree_top_guard_rail',M.trim,box(.05,.05,end-pz,px+side*.6,py+1.1,(pz+end)/2));}}
  // The canopy: limbs spreading at the garden's head height, clumps of foliage along them and fans of leaves spilling out.
  {const r=random(7),out=greenery.garden;
   for(let i=0;i<6;i++){const t=i/6*Math.PI*2+.4,d=1.4+r()*.6,ex=TREE.x+Math.cos(t)*d,ez=TREE.z+Math.sin(t)*d,ey=6.3+r()*.5;

@@ -1,6 +1,7 @@
 import {DECKS} from '../model.js';
 import {floorY} from '../transit.js';
-import {SHIP_AREAS} from '../areas.js';
+import {mapRooms as SHIP_AREAS,currentMapPlaces} from '../v2/map-labels.js';
+import {contains} from '../plan/geometry-v2.js';
 import {MAP,MAP_CLASS} from './deck-map.js';
 import {FIN_PLATFORMS} from '../fin-crown.js';
 
@@ -47,7 +48,7 @@ export function drawMiniMap(canvas,map,{x,y,z,yaw,places=[]}){
   g.save();g.translate(w/2,h/2);g.rotate(turn);g.scale(scale,scale);g.imageSmoothingEnabled=false;
   g.drawImage(plan,-mx,-mz);
   g.fillStyle='#f4f0e8';
-  for(const p of places){if(deckOf(p.at[1])!==deck)continue;const [px,pz]=toMap(p.at[0],p.at[2]);g.beginPath();g.arc(px-mx,pz-mz,3*dpr/scale,0,Math.PI*2);g.fill();}
+  for(const p of currentMapPlaces(places)){if(deckOf(p.at[1])!==deck)continue;const [px,pz]=toMap(p.at[0],p.at[2]);g.beginPath();g.arc(px-mx,pz-mz,3*dpr/scale,0,Math.PI*2);g.fill();}
   g.restore();
   miniNames(g,{w,h,dpr,x,z,turn,y:floorY(deck.number)});
  }
@@ -64,7 +65,7 @@ function miniNames(g,{w,h,dpr,x,z,turn,y}){
  const m=3.2*dpr,c=Math.cos(turn),s=Math.sin(turn),px=Math.round(9*dpr),boxes=[{x0:w/2-14*dpr,x1:w/2+14*dpr,y0:h/2-14*dpr,y1:h/2+14*dpr}];
  const screen=(ax,az)=>{const dx=(ax-x)*m,dz=(az-z)*m;return [w/2+dx*c-dz*s,h/2+dx*s+dz*c];};
  const world=(sx,sy)=>{const u=sx-w/2,v=sy-h/2;return [x+(u*c+v*s)/m,z+(v*c-u*s)/m];};
- const inside=(a,[ax,az],e=0)=>Math.abs(ax-a.center[0])<=a.width/2-e&&Math.abs(az-a.center[2])<=a.depth/2-e;
+ const inside=(a,[ax,az],e=0)=>a.polygon?contains(a.polygon,[ax,az]):Math.abs(ax-a.center[0])<=a.width/2-e&&Math.abs(az-a.center[2])<=a.depth/2-e;
  // Where the name of the walker's own room may go, in screen px: its centre held inside the map, then that point
  // moved just above or below the arrow.
  const own=(a,tw,th)=>{const [cx,cy]=screen(a.center[0],a.center[2]),sx=clamp(cx,4*dpr+tw/2+2*dpr,w-4*dpr-tw/2-2*dpr),sy=clamp(cy,4*dpr+th/2+dpr,h-18*dpr-th/2-dpr),off=14*dpr+th/2+2*dpr;
@@ -105,11 +106,12 @@ export function drawFullMap(canvas,map,number,{walker,places=[]}){
  const at=(x,z)=>{const [mx,mz]=toMap(x,z);return [ox+mx*scale,oz+mz*scale];};
  // Room names, where a room is big enough on screen to hold one.
  g.textAlign='center';g.textBaseline='middle';
- const y=floorY(number),here=places.filter(p=>deckOf(p.at[1])?.number===number);
+ const y=floorY(number),here=currentMapPlaces(places).filter(p=>deckOf(p.at[1])?.number===number);
  // (A room with a place marker in it is named by the marker.)
  for(const a of SHIP_AREAS){if(Math.abs(a.center[1]-y)>2.2||a.kind==='lifeboats')continue;
   if(here.some(p=>Math.abs(p.at[0]-a.center[0])<=a.width/2&&Math.abs(p.at[2]-a.center[2])<=a.depth/2))continue;const [cx,cz]=at(a.center[0],a.center[2]),size=Math.min(a.width,a.depth)/MAP.cell*scale;if(size<26*dpr)continue;
   const px=Math.round(Math.min(12,size/7)*dpr);g.font=`500 ${px}px "Sora",sans-serif`;g.fillStyle='rgba(20,24,30,.78)';wrap(g,a.name,cx,cz,a.width/MAP.cell*scale*.85,px*1.15);}
+ if(number===20){for(const z of[-12.5,12.5]){const[cx,cz]=at(132,z);g.font='bold '+(10*dpr)+'px sans-serif';g.fillStyle='#f4c68c';g.strokeStyle='#121b24';g.lineWidth=3*dpr;for(const[label,dy]of[['Crew gallery',-7],['Crew only',7]]){g.strokeText(label,cx,cz+dy*dpr);g.fillText(label,cx,cz+dy*dpr);}}}
  const shown=[];
  for(const p of here){const [px,pz]=at(p.at[0],p.at[2]);
   g.fillStyle='#2fd6c5';g.strokeStyle='#050507';g.lineWidth=2*dpr;g.beginPath();g.arc(px,pz,6*dpr,0,Math.PI*2);g.fill();g.stroke();

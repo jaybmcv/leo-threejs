@@ -96,11 +96,11 @@ export function finishGarden({fittings,walls,parts,wallParts,material}){
  for(const x of [124,135])for(let k=0;k<5;k++)box('Acoustic_ceiling_baffle',[.13,.32,22],[x+k*.4,35.16,27],oak,ceiling);
  // Reading shelves gain books, arranged behind the existing seating.
  for(const x of [117,120,123]){
-  for(const z of [43.53,45.47])box('Library_end_panel',[.3,2.3,.06],[x,25.45,z],oak);
-  for(let level=0;level<4;level++)box('Library_shelf',[.3,.06,1.9],[x,24.61+level*.6,44.5],oak);
+  for(const z of [38.53,40.47])box('Library_end_panel',[.3,2.3,.06],[x,25.45,z],oak);
+  for(let level=0;level<4;level++)box('Library_shelf',[.3,.06,1.9],[x,24.61+level*.6,39.5],oak);
   for(let level=0;level<3;level++)for(let i=0;i<6;i++){
    const h=.29+(i%3)*.04;
-   box('Library_book',[.23,h,.12],[x+.035,24.64+level*.6+h/2,43.8+i*.22],i%2?clay:sage);
+   box('Library_book',[.23,h,.12],[x+.035,24.64+level*.6+h/2,38.8+i*.22],i%2?clay:sage);
   }
  }
  // Framed abstract prints hang on bare wall runs: the end wall under the gallery and between the gallery doors.
@@ -110,7 +110,7 @@ export function finishGarden({fittings,walls,parts,wallParts,material}){
  const art={frame:[],linen:[],ink:inks.map(()=>[])};
  const print=(seed,w,h,pos,yaw)=>{
   const rnd=seeded(seed),m=new T.Matrix4().makeRotationY(yaw).setPosition(...pos),bar=.07;
-  const put=(list,g)=>list.push(g.applyMatrix4(m));
+  const put=(list,g)=>{g.setAttribute('_leo_print',new T.Float32BufferAttribute(new Float32Array(g.attributes.position.count).fill(seed),1));list.push(g.applyMatrix4(m));};
   for(const [sx,sy,x,y] of [[w+bar*2,bar,0,(h+bar)/2],[w+bar*2,bar,0,-(h+bar)/2],[bar,h,(w+bar)/2,0],[bar,h,-(w+bar)/2,0]])put(art.frame,new T.BoxGeometry(sx,sy,.06).translate(x,y,.03));
   put(art.linen,new T.BoxGeometry(w,h,.02).translate(0,0,.02));
   for(let k=0,n=3+Math.floor(rnd()*3);k<n;k++){
@@ -120,8 +120,8 @@ export function finishGarden({fittings,walls,parts,wallParts,material}){
   }
  };
  [22,28,34].forEach((z,i)=>print(70+i,1.6,1.2,[109.6,26.1,z],Math.PI/2));
- print(73,2.2,1.4,[141.5,26.2,45.8],Math.PI);
- [29.9,33.85].forEach((y,j)=>[121.5,130.5,139.5].forEach((x,i)=>print(80+j*3+i,1.4,1,[x,y,45.8],Math.PI)));
+ print(73,2.2,1.4,[141.5,26.2,8.2],0);
+ [29.9,33.85].forEach((y,j)=>[121.5,130.5,139.5].forEach((x,i)=>print(80+j*3+i,1.4,1,[x,y,8.2],0)));
  add('Commons_art_frame',mergeGeometries(art.frame),dark,[0,0,0]);
  add('Commons_art_canvas',mergeGeometries(art.linen),linen,[0,0,0]);
  art.ink.forEach((gs,i)=>{if(gs.length)add('Commons_art_print',mergeGeometries(gs),inks[i],[0,0,0]);});

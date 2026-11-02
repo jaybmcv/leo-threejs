@@ -1,0 +1,1 @@
+import{spawnSync}from'node:child_process';if(process.env.LEO_LAYOUT!=='2')throw Error('v2 only');const r=spawnSync(process.execPath,['--max-old-space-size=11000','scripts/build-exterior-v2.mjs','--phone-only'],{stdio:'inherit',windowsHide:true});process.exitCode=r.status??1;

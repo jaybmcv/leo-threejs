@@ -79,16 +79,16 @@ export function createAft(){
  }
  // A service lift and one switchback stair connect all fourteen aft levels.
  const top=floorY(17)+3.1,bottom=floorY(4),shaftX=-156,shaftZ=8;
- for(const dx of [-2,2])for(const dz of [-2,2])beam('Aft_lift_guide',[shaftX+dx,bottom,shaftZ+dz],[shaftX+dx,top,shaftZ+dz],.12,'frame',parts.access);
- floor('Aft_lift_car_floor',[rect(-157.8,-154.2,6.2,9.8)],-11.7,parts.access);
- floor('Aft_lift_car_threshold',[rect(-157.3,-154.7,5.9,6.3)],-11.7,parts.access);
- box('Aft_lift_car_roof',[3.6,.13,3.6],[-156,-8.85,8],'frame',parts.access);
- for(const x of [-157.8,-154.2])box('Aft_lift_car_side',[.08,2.7,3.6],[x,-10.35,8],'metal',parts.access);
- for(let d=4;d<=17;d++){const y=floorY(d),rects=[rect(-174,-132,-4,4),rect(-174,-169.5,-12.5,0),rect(-158,-154,4,6),rect(-171.5,-169.5,-12.5,-7.5)];
+ for(const dx of [-3.8,3.8])for(const dz of [-2,2])beam('Aft_lift_guide',[shaftX+dx,bottom,shaftZ+dz],[shaftX+dx,top,shaftZ+dz],.12,'frame',parts.access);
+ floor('Aft_lift_car_floor',[rect(-159.6,-152.4,6.2,9.8)],-11.7,parts.access);
+ floor('Aft_lift_car_threshold',[rect(-158.9,-153.1,5.9,6.3)],-11.7,parts.access);
+ box('Aft_lift_car_roof',[7.2,.13,3.6],[-156,-8.85,8],'frame',parts.access);
+ for(const x of [-159.6,-152.4])box('Aft_lift_car_side',[.08,2.7,3.6],[x,-10.35,8],'metal',parts.access);
+ for(let d=4;d<=17;d++){const y=floorY(d),rects=[rect(-174,-132,-4,4),rect(-174,-169.5,-12.5,0),rect(-159.8,-152.2,4,6),rect(-171.5,-169.5,-12.5,-7.5)];
   floor('Aft_level_landing',rects,y-.006,parts.access,aftOpenings(d));
-  for(const dx of [-1.6,1.6])box('Aft_lift_jamb',[.6,2.7,.15],[-156+dx,y+1.35,6],'frame',parts.access);
-  box('Aft_lift_header',[4,.4,.15],[-156,y+2.9,6],'frame',parts.access);
-  if(d!==8)box('Aft_lift_landing_door',[2.6,2.7,.08],[-156,y+1.35,6],'metal',parts.access);
+  for(const dx of [-3.2,3.2])box('Aft_lift_jamb',[.6,2.7,.15],[-156+dx,y+1.35,6],'frame',parts.access);
+  box('Aft_lift_header',[7.6,.4,.15],[-156,y+2.9,6],'frame',parts.access);
+  if(d!==8)box('Aft_lift_landing_door',[5.8,2.7,.08],[-156,y+1.35,6],'metal',parts.access);
   if(d<17){floor('Aft_stair_half_landing',[rect(-164.5,-162.5,-12.5,-7.5)],y+2,parts.access);
    for(let i=0;i<12;i++){const run=5/12,h=(i+1)/6;box('Aft_stair_up',[run,.14,2.2],[-169.5+(i+.5)*run,y+h-.07,-11.4],'floor',parts.access);box('Aft_stair_return',[run,.14,2.2],[-164.5-(i+.5)*run,y+2+h-.07,-8.6],'floor',parts.access);}
    for(const z of [-12.4,-10.4])beam('Aft_stair_rail',[-169.5,y+1.1,z],[-164.5,y+3.1,z],.04,'amber',parts.access);

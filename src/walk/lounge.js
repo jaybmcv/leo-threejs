@@ -1,3 +1,5 @@
+import layout from '../plan/selected-layout.js';
+import {fitNativeLounge} from '../v2/skin-retirement.js';
 import * as T from 'three';
 import {roomObject,deltaMatrix,hasFrameOverride,moverOrientation} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -120,6 +122,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
   for(const {m,k} of glows)m.color.setScalar(1+(k-1)*t);
  }
 
+ fitNativeLounge(ship,layout,drawn,mural);
  return {
   drawn,doors,
   // The dome's centre on its floor and its radius in the world, for its lullaby (lullaby.js).

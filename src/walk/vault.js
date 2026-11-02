@@ -1,3 +1,4 @@
+import {fitV2VaultLiftSpec} from '../v2/vault-lift-fit.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {walkCanvas,hasWalkCanvas} from './canvas.js';
@@ -34,7 +35,7 @@ const CODE='9lives';
 const world=(x,z)=>({x:C.x+WALL-z,z:C.z+x});
 export const VAULT_PLAN={deck:17,lines:[[world(XA,0),world(XB,0)],[world(XA,ZF),world(XB,ZF)],[world(XA,0),world(XA,ZF)],[world(XB,0),world(XB,ZF)]]};
 // The next step's tube sits at the outboard end, clear of all four walls and the vault door.
-export const VAULT_LIFT={...world(XA+3.7,ZF/2),y:FLOOR,stops:[17,18,19].map(deck=>({deck,y:floorY(deck),label:`Deck ${deck}`}))};
+export const VAULT_LIFT=fitV2VaultLiftSpec({...world(XA+3.7,ZF/2),y:FLOOR,stops:[17,18,19].map(deck=>({deck,y:floorY(deck),label:`Deck ${deck}`}))});
 
 const FONT='"Archivo", system-ui, sans-serif',MONO='"JetBrains Mono", ui-monospace, monospace';
 // The keypad's face: a small screen over twelve keys. `mode` is 'locked', 'denied' or 'open'.

@@ -2,7 +2,7 @@
 // as soon as the game loads, with the player's wallet address, chain ID, username and profile picture, from
 // otherside.xyz. So there's no login there: the player comes aboard under their Glyph name, and Discord isn't offered.
 // The wallet goes to Leo live, which gives them what a Discord account gets. Nothing in glyph:ready is signed, so the
-// server can't check it (glyphVisitor in server/leo-live.mjs). An inline script in walk.html listens from the first
+// server can't check it (glyphVisitor in server/live-core.mjs). An inline script in walk.html listens from the first
 // moment (LEO_HEARD), before this bundle has loaded.
 // Otherside has published no example of the message, so readGlyph takes the likely shapes; ?glyphdebug=1 lists whatever
 // actually arrives, to check inside ODK.

@@ -1,0 +1,23 @@
+{
+  "sourceCommit": "d0f7918",
+  "algorithm": "Original Phase 2 flood; newly discovered fall landings",
+  "falls": 3692,
+  "fallBreakdown": {
+    "byHeight": {
+      ".4-1m": 3164,
+      "1-4m": 404,
+      "4-12m": 86,
+      "12m+": 38
+    },
+    "byCategory": {
+      "atrium/void-edge": 175,
+      "terrace/bridge": 0,
+      "stair-side": 609,
+      "ramp": 0,
+      "room-feature": 171,
+      "other": 2737
+    }
+  },
+  "v1ReferenceFalls": 353,
+  "instrumentedGuardTransitionsBefore": 5345
+}

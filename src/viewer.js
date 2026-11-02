@@ -4,7 +4,7 @@ import {createSpaceBackdrop,aftScreenFlow} from './space-backdrop.js';
 import * as T from 'three';
 import {createNoseCommons,NOSE_COMMONS} from './nose-commons.js';
 import {applyContextOpacity} from './glazing-finish.js';
-import {publicAsset,enablePublicDownloads} from './public-assets.js';
+import {publicAsset,enablePublicDownloads} from './v2/public-assets.js';
 import {refineExterior} from './exterior-finish.js';
 import {applyConceptPaint} from './concept-paint.js';
 import {applyConceptShape,shapeAft,shapeView,shapeInterior} from './concept-shape.js';

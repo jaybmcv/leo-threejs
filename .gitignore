@@ -10,3 +10,7 @@ output/leo-interior-v01/*
 !output/leo-interior-v01/assets/
 *.tar.gz
 .env*
+
+# Isolated Phase 2 build products
+dist-v2/
+scripts/.v2-*.mjs

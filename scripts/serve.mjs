@@ -1,7 +1,8 @@
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-const root=path.resolve('output/leo-interior-v01');
+import {publicOutput} from './layout-selector.mjs';
+const root=path.resolve(publicOutput);
 const port=Number(process.argv[2]||4173);
 const mime={'.html':'text/html; charset=utf-8','.glb':'model/gltf-binary','.json':'application/json','.csv':'text/csv','.md':'text/plain; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.mp4':'video/mp4','.woff2':'font/woff2','.js':'text/javascript; charset=utf-8'};
 http.createServer(async(req,res)=>{

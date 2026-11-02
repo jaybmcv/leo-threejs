@@ -16,7 +16,7 @@ export const LIFTS=[
   car:{x:c.x,z:s*6,width:3.3,depth:3.3,height:2.8},door:{axis:'z',sign:-s,width:2.2},
   stops:deckStops(1,c.lastDeck,c.id==='aft'?AFT_TITLES:{}),parked:c.id==='forward'?15:1,
  }))),
- {id:'aft-service',name:'Aft service lift',car:{x:-156,z:8,width:3.6,depth:3.6,height:2.7},door:{axis:'z',sign:-1,width:2.6},
+ {id:'aft-service',name:'Aft freight lift',car:{x:-156,z:8,width:7.2,depth:3.6,height:2.7},door:{axis:'z',sign:-1,width:5.8},
   stops:deckStops(4,17),parked:8},
  {id:'crown',name:'Crown lift',car:{x:-247,z:0,width:4.2,depth:4.2,height:2.8},door:{axis:'x',sign:1,width:FIN_GATE.width,jamb:FIN_GATE.jamb},
   // The top platform (128 m before the fin drop) sits a metre under the crown's underfloor: no landing for anyone.

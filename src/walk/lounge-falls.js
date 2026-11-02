@@ -1,3 +1,4 @@
+import {fittedLoungeFalls} from '../v2/lounge-falls-fit.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {roomObject} from '../plan/rooms.js';
@@ -116,7 +117,7 @@ void main(){
 // The pond, in ship coordinates. `group` draws (with the lounge floor's deck band), `solid` holds the rim, the bed, the
 // causeway, the landing and the rope rails for the colliders, and update() lets the water run while the walker is
 // within NEAR metres.
-export function createLoungeFalls(ship){
+function createUnfittedLoungeFalls(ship){
  const lounge=roomObject(ship,'Hydro_Nip_Lounge');if(!lounge)return null;
  lounge.updateWorldMatrix(true,false);
  const rnd=seeded(121),centre=new T.Vector3(POND.x,FLOOR,POND.z).applyMatrix4(lounge.matrixWorld);
@@ -248,3 +249,5 @@ export function createLoungeFalls(ship){
   soundLine:{a:new T.Vector3(FALL.x0,FLOOR,FALL.z).applyMatrix4(lounge.matrixWorld),b:new T.Vector3(FALL.x1,FLOOR,FALL.z).applyMatrix4(lounge.matrixWorld)},
  };
 }
+
+export function createLoungeFalls(ship){return fittedLoungeFalls(ship,createUnfittedLoungeFalls); }
