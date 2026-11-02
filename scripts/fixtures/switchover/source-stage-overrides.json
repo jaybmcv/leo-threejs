@@ -16,8 +16,8 @@
     "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/main.js": {
-    "sha256": "437e3c47aa1c2f8e69dd876e8a6397009fd7b6a9a206c49f3eb4dc18f8a6dacb",
-    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "sha256": "46e920cc35ad3ad8968bab913afac30491236dd0a8ba1a7cea80880aa5c44c4e",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2. Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
   },
   "src/walk/mudwater-giveaway.js": {
     "sha256": "e61ed8e999b9a35940d83f4bd76dbf0d6c569682bbfe05eb2a0e3da7405e25be",
@@ -36,23 +36,47 @@
     "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/main.authoring.js": {
-    "sha256": "03f3db35a690e5c608b41c6501c0998cd407e72e6f2ea10c81b3ef5eade7e63e",
-    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "sha256": "68f2eed3084fdf421a73c920d733ad008d94f6f2f6269a794e68c0da3aee61f3",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2. Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
   },
   "server/live-core.prepared.mjs": {
     "sha256": "1e794edf5e24c76846dbc4a0b3c6e17c74aae5afe37aaa26e287ddb903e66bd0",
     "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/main.prepared.js": {
-    "sha256": "c22a20a7c072fc17760e0f7988692de6df69d376a527a17b30dad3b02c3145af",
-    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "sha256": "200a3d4e3404b932373659da74bea0cb0323c58d09699523143c9655709c72c4",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2. Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
   },
   "server/live-core.public.mjs": {
     "sha256": "e067dcf53defd6343f3e1fc4072432b5ce4b77319e0b2e284d2a99b5afa4c107",
     "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/main.public.js": {
-    "sha256": "94a8442716f7c00e2de338f8d815e27bf28f6e2217d0317a9dd84feefa9fefe6",
-    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
+    "sha256": "d61e06287ce129d86b59c238868f0bf2bdc7c07addd18e03d606e922e053c676",
+    "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2. Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/v2/atrium-visibility.js": {
+    "sha256": "e72253566c3178a89e460e4a95f90c4c796e13d5c64affffc8be1163f41d8ecc",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/v2/map-labels.js": {
+    "sha256": "5a1aeaea47795d8b0e7096825ebf36a88493bd3486eae78dea249c10c8666abe",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/v2/prepared-runtime.js": {
+    "sha256": "ddc77c8e8a6116e12937baa8d5932f3ad8296cac3e4bcde284a6ac193836ea75",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/walk/aquarium-treasure/suit.js": {
+    "sha256": "7bb58a689bbbe1d7442c7907a5e7d78a0e8fb4aa71aa868b1150213e8fea0f2b",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/v2/prepared-runtime.authoring.js": {
+    "sha256": "d8864d5f105bd42c01926e0f248d30042eed6e2b35c3bdb4b29babb1d8f9a6de",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/v2/prepared-runtime.public.js": {
+    "sha256": "9f58b8c6670df96f25fd31e35f43b8329b125a955e0f47fdd5a5e13385178aae",
+    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
   }
 }

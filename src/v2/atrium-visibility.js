@@ -20,4 +20,4 @@ function classify(){if(classified!==undefined)return classified;const p=position
 }
 export function fastAtriumSpan(p){setAtriumView(p);return classify();}
 export function atriumSpan(low,high){const span=classify();return span?[Math.max(low,span[0]),Math.min(high,span[1])]:[low,high];}
-export function onePassAtriumGlass(root){if(root.isScene&&root.fog)registerAtriumFog(root.fog);root.traverse(o=>{for(const m of[].concat(o.material||[]))if(m.transparent&&m.side===2&&/V2_(smart_glass|prototype_hull_glass)|P4_atrium_glass|V2_facade/.test(m.name))m.forceSinglePass=true;});}
+export function onePassAtriumGlass(root){if(root.isScene&&root.fog)registerAtriumFog(root.fog);root.traverse(o=>{for(const m of[].concat(o.material||[]))if(m.transparent&&m.side===2)m.forceSinglePass=true;});}

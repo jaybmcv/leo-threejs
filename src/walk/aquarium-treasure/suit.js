@@ -5,7 +5,7 @@ export function createSwimSuit(figure,body){
  const group=new T.Group();group.name='Aquarium_spacesuit';group.visible=false;body.add(group);
  const white=new T.MeshStandardMaterial({color:0xe4ecf1,roughness:.65}),dark=new T.MeshStandardMaterial({color:0x202e40,roughness:.55});
  const orange=new T.MeshBasicMaterial({color:0xff8c42,toneMapped:false});
- const shell=new T.MeshPhysicalMaterial({color:0x98eaff,transparent:true,opacity:.16,depthWrite:false,roughness:.08,side:T.DoubleSide});
+ const shell=new T.MeshPhysicalMaterial({color:0x98eaff,transparent:true,opacity:.16,depthWrite:false,roughness:.08,side:T.DoubleSide,forceSinglePass:true});
  const sphere=new T.SphereGeometry(1,16,10),cylinder=new T.CylinderGeometry(1,1,1,10);
  const add=(g,m)=>{const o=new T.Mesh(g,m);group.add(o);return o;};
  const limb=(a,b,r)=>({a,b,r,mesh:add(cylinder,white),joint:add(sphere,dark)}),parts=[];

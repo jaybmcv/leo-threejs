@@ -38,6 +38,9 @@ try{
  await page.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
  const initial=table.rows.find(r=>r.id==='pr99');
  await page.goto('http://127.0.0.1:'+port+'/walk.html?offline=1&'+initial.query,{waitUntil:'domcontentloaded',timeout:240000});
+ // A multiplayer build holds startup at the arrival card until the visitor comes aboard; a solo build has no card.
+ await page.waitForFunction(()=>!!globalThis.__p7RemapTest||/ready when you are/i.test(document.querySelector('#loading')?.innerText||''),{},{timeout:240000});
+ if(!await page.evaluate(()=>!!globalThis.__p7RemapTest))await page.getByRole('button',{name:'Come aboard'}).click();
  await page.waitForFunction(()=>!!globalThis.__p7RemapTest,{},{timeout:240000});
  report.initial=await page.evaluate(query=>{const a=globalThis.__p7RemapTest;return {actual:a.position(),expected:a.remapSpot(a.readSpot('?'+query)).at}},initial.query);
  assert(Math.hypot(...report.initial.actual.map((v,i)=>v-report.initial.expected[i]))<.2,'Legacy URL startup fell back or moved');
