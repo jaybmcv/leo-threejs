@@ -53,5 +53,8 @@ export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverri
  if(html.includes('/* BUNDLE */'))throw new Error('walk.html lost its bundle placeholder');
  html=html.replace('<body>',()=>`<body><script>window.LEO_PUBLIC_ASSETS=${JSON.stringify(manifest)};</script>`);
  await fs.writeFile(path.join(out,'walk.html'),html);
+ // The same walk for Otherside to load: no Discord, no login (src/walk/net/otherside.js).
+ if(!html.includes('<head><script>'))throw new Error('walk.html lost its opening script');
+ await fs.writeFile(path.join(out,'walkotherside.html'),html.replace('<head><script>',()=>'<head><script>window.LEO_OTHERSIDE=true;</script><script>'));
  return {walk:name,emotes:emoteName,map:mapName,bytes:code.length,...(v2?{corpus:{from,mediaSha256:createHash('sha256').update(JSON.stringify(media)).digest('hex'),mediaPRs:Object.keys(media).length,entries:log.length,queries:log.reduce((n,e)=>n+(e.go?1:0)+(e.shots||[]).filter(s=>s.at).length,0),provenance:suppliedMedia?.provenance||null}}:{})};
 }

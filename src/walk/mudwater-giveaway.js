@@ -1,8 +1,10 @@
+import {inOtherside} from './net/otherside.js';
 // The booster pack giveaway card at Mudwater Arena's counter (walk.html's #mudwater-sheet; server/arena.mjs). Until the
 // giveaway is switched on, or with no Leo live, it says details are coming. Once on, it shows the giveaway's own title
 // and note and, by its mode: a button to claim a pack (one per Discord-verified visitor, to a chosen verified wallet in
-// wallet mode), the code or wallet already claimed, a link to the claim form, or that the packs are gone. A visitor not
-// signed in is offered Discord through The Creamery first.
+// wallet mode), the code or wallet already claimed, a link to the claim form, or that the packs are gone. Anyone not
+// signed in with Discord is offered it first, in a small window (net/connect.js). Inside Otherside the page is embedded
+// and pop-ups and outside links don't work, so the card only says to claim on the website.
 const COMING='Booster packs of Mudwater: Swamp Origins will be given away here. Details are coming soon.';
 const NOTES={codes:'One pack per Voyager while they last. Claim yours for a code to redeem.',wallet:'One pack per Voyager while they last, sent to your verified wallet.',
  list:'One pack per Voyager while they last. Claim to get on the list.',form:'Fill in the claim form to get yours.'};
@@ -10,15 +12,17 @@ const WHY={'sold-out':'All the packs have been claimed.','sign-in':'Connect Disc
  wallet:'That wallet isn’t one The Creamery has verified for you.',closed:'The giveaway isn’t open right now.'};
 const short=w=>w.length>14?`${w.slice(0,6)}…${w.slice(-4)}`:w;
 
-// `$`: the page's getElementById; `live()`: Leo live's link or null; `connect()`: Discord through The Creamery.
+// `$`: the page's getElementById; `live()`: Leo live's link or null; `connect()`: Discord through The Creamery, which
+// resolves to a line to show if it didn't work.
 export function createGiveaway({$,live,connect}){
  const title=$('mudwater-title'),note=$('mudwater-note'),box=$('mudwater-claim');
- let state=null,waiting=false,message='';
+ let state=null,waiting=false,connecting=false,message='';
  const el=(tag,props={},...kids)=>{const e=Object.assign(document.createElement(tag),props);e.append(...kids);return e;};
  function render(){
   box.replaceChildren();const g=state;
   if(!g?.open){title.textContent='Booster pack giveaway';note.textContent=COMING;box.hidden=true;return;}
   title.textContent=g.title;note.textContent=g.note||NOTES[g.mode]||'';box.hidden=false;
+  if(inOtherside){box.append(el('p',{className:'why',textContent:'Claiming isn’t available inside Otherside. To claim, walk Leo at leo.marscatsvoyage.com.'}));return;}
   if(g.mode==='form'){box.append(el('a',{className:'go',href:g.formUrl,target:'_blank',rel:'noopener',textContent:'Open the claim form'}));return;}
   if(g.claim){
    if(g.claim.code)box.append(el('p',{className:'got'},'Your code ',el('code',{textContent:g.claim.code})),el('button',{type:'button',className:'go',textContent:'Copy code',
@@ -28,7 +32,8 @@ export function createGiveaway({$,live,connect}){
    return;
   }
   if(g.soldOut){box.append(el('p',{className:'got',textContent:WHY['sold-out']}));return;}
-  if(!g.verified){box.append(el('p',{className:'why',textContent:g.remembered?'Connect Discord again to claim, so The Creamery can check your wallets: one pack each.':'Claiming is for Voyagers signed in with Discord: one pack each.'}),el('button',{type:'button',className:'go',textContent:'Connect Discord',onclick:connect}));return;}
+  if(!g.verified){box.append(el('p',{className:'why',textContent:g.remembered?'Connect Discord again to claim, so The Creamery can check your wallets: one pack each.':'Claiming is for Voyagers signed in with Discord: one pack each.'}),...(message?[el('p',{className:'why',textContent:message})]:[]),el('button',{type:'button',className:'go',textContent:connecting?'Connecting…':'Connect Discord',disabled:connecting,
+   onclick:async()=>{connecting=true;message='';const shown=connect();render();message=await shown||'';connecting=false;render();}}));return;}
   if(g.mode==='wallet'&&!g.wallets.length){box.append(el('p',{className:'why',textContent:WHY['no-wallet']}));return;}
   let pick=null;
   if(g.mode==='wallet'&&g.wallets.length>1){pick=el('select',{ariaLabel:'Wallet'},...g.wallets.map(w=>el('option',{value:w,textContent:short(w)})));box.append(el('label',{className:'why',textContent:'Send it to '},pick));}
