@@ -6208,7 +6208,7 @@
     "file": "src/walk/main.authoring.js",
     "original": "src/walk/main.js",
     "mode": "authoring",
-    "bodySha256": "79b145424e3effa87dec16bcba5153d294a60c09217c171c8b3112c21c15800a",
+    "bodySha256": "8d6f87f0bbfae586c6ce6efe56d38fbc83741db65fbf1a9ad05291cf2530c554",
     "imports": [
       "../v2/atrium-visibility.js",
       "../v2/build-cache.authoring.js",
@@ -6312,7 +6312,8 @@
       "./transporter.authoring.js",
       "../feedback/feedback.js",
       "./help.authoring.js",
-      "./hub-link.js"
+      "./hub-link.js",
+      "./hub-panel.js"
     ],
     "geometryCalls": []
   },
@@ -7554,7 +7555,7 @@
     "file": "src/walk/main.prepared.js",
     "original": "src/walk/main.js",
     "mode": "prepared",
-    "bodySha256": "513af2f0a95ba66d73a63b67ba56bbac979f3ba8e255d41604d13633beb6fb86",
+    "bodySha256": "b4081c66e6ea72c351fe9d5d1e5436ce87bc67faf92c532faded03bbd70a5e0f",
     "imports": [
       "../v2/prepared-static.js",
       "../v2/atrium-visibility.js",
@@ -7655,7 +7656,8 @@
       "./transporter.js",
       "../feedback/feedback.js",
       "./help.js",
-      "./hub-link.js"
+      "./hub-link.js",
+      "./hub-panel.js"
     ],
     "geometryCalls": []
   },
@@ -8836,7 +8838,7 @@
     "file": "src/walk/main.public.js",
     "original": "src/walk/main.js",
     "mode": "public",
-    "bodySha256": "68632664b5dcdf4e14663d4d4349be47a607a05539d145abe6b03b72166cfba6",
+    "bodySha256": "7169ff1941721ee8873014fd51bbb61a9c4eb24206215df1e0842a0106678d39",
     "imports": [
       "../v2/prepared-static.js",
       "../v2/atrium-visibility.js",
@@ -8937,7 +8939,8 @@
       "./transporter.js",
       "../feedback/feedback.js",
       "./help.js",
-      "./hub-link.js"
+      "./hub-link.js",
+      "./hub-panel.js"
     ],
     "geometryCalls": []
   },
