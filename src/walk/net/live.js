@@ -29,8 +29,8 @@ export function connectLive(url,on,opts={}){
   if(stopped)return;status('connecting');
   const pass=opts.pass?opts.pass().catch(()=>null):Promise.resolve(null);
   try{ws=new WebSocket(url);}catch{retry();return;}
-  ws.binaryType='arraybuffer';
-  ws.onopen=async()=>{const p=await pass;sentPass=!!p;if(ws.readyState===1)ws.send(JSON.stringify({m:'hello',v:PROTOCOL,layout:2,layoutIdentity:LIVE_IDENTITY,key,name,hat:!!opts.hat?.(),...(p?{pass:p,invite:opts.invite||undefined}:opts.glyph?.()?{glyph:opts.glyph()}:opts.otherside?{otherside:true}:{})}));};
+  const socket=ws;ws.binaryType='arraybuffer';
+  ws.onopen=async()=>{const p=await pass;if(socket!==ws)return;sentPass=!!p;if(ws.readyState===1)ws.send(JSON.stringify({m:'hello',v:PROTOCOL,layout:2,layoutIdentity:LIVE_IDENTITY,key,name,hat:!!opts.hat?.(),...(p?{pass:p,invite:opts.invite||undefined}:opts.glyph?.()?{glyph:opts.glyph()}:opts.otherside?{otherside:true}:{})}));};
   ws.onmessage=e=>{
    if(e.data instanceof ArrayBuffer){const poses=reader.read(e.data);if(poses.length)on.poses?.(poses.filter(p=>p.id!==id));return;}
    let msg;try{msg=JSON.parse(e.data);}catch{return;}

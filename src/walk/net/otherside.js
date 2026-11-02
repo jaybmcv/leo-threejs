@@ -36,11 +36,17 @@ export const inOtherside=(()=>{
  return typeof window!=='undefined'&&window.LEO_OTHERSIDE===true||ancestors.some(o=>allowed.includes(o))||heard.some(m=>fromOtherside(m)&&readGlyph(m.data));
 })();
 
-// Calls back with glyph:ready's contents, including if it came before this was called.
+// Calls back with glyph:ready's contents, including if it came before this was called, once it names a wallet or a
+// username: an empty or unreadable one leaves the player on the name card, and a later one still counts. Done once a
+// wallet has come.
 export function onGlyph(call){
  if(typeof window==='undefined')return;
- let got=false;
- const take=m=>{debug(m);if(got||!fromOtherside(m))return;const g=readGlyph(m.data);if(g){got=true;call(g);}};
+ let done=false,named=null;
+ const take=m=>{
+  debug(m);if(done||!fromOtherside(m))return;
+  const g=readGlyph(m.data);if(!g||(!g.wallet&&(!g.username||g.username===named)))return;
+  named=g.username;done=!!g.wallet;call(g);
+ };
  window.LEO_HEAR=take;heard.splice(0).forEach(take);
 }
 

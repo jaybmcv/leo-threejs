@@ -133,7 +133,7 @@ const LIVE_URL=(()=>{const asked=new URLSearchParams(location.search).get('live'
 // they type a name, or glyph:ready names them and they come straight aboard, with what Discord would give them
 // (server/live-core.mjs), and Discord isn't offered.
 const tester=invite||testerInvite();
-let me={pass:null,name:null,error:null},board,glyphed=false,glyph=null;
+let me={pass:null,name:null,error:null},board,glyphed=false,glyph=null,live=null;
 const boarded=new Promise(r=>{board=r;});
 const identity=LIVE_URL?(inOtherside?Promise.resolve(me):identify()).then(r=>{me=r;showWho();return r;}):Promise.resolve(me);
 function comeAboard(){$('name-input').blur();$('who').hidden=true;board();}
@@ -537,7 +537,7 @@ const help=createHelp($('help-sheet'),{touch:()=>matchMedia('(pointer:coarse)').
 // A tester (this browser holds a tester invite) wears the captain's hat (hat.js).
 if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 // Others aboard: their poses in, ours out, the lifts as the server runs them.
-let live=null,remotes=null,marks=null,aboard=0,liveStatus='',wasInArena=false;
+let remotes=null,marks=null,aboard=0,liveStatus='',wasInArena=false;
 // The giveaway card at Mudwater Arena's counter, which claims through Leo live.
 // Claiming takes a Discord account: its small window leaves them standing at the counter, and they carry on under their
 // Discord account from there. Not offered inside Otherside, where pop-ups can't open (mudwater-giveaway.js).
