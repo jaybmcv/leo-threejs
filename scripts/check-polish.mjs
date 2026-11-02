@@ -1,3 +1,5 @@
+import {v2 as exteriorV2} from './layout-selector.mjs';
+if(exteriorV2){await import('./check-exterior-v2.mjs');process.exit(process.exitCode||0);}
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import * as T from 'three';

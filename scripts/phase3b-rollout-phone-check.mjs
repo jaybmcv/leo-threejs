@@ -1,0 +1,1 @@
+import fs from 'node:fs/promises';import {checkPhoneEnvelopes} from './check-phone-envelopes-v2.mjs';const report=await checkPhoneEnvelopes();await fs.writeFile('output/phase3b/rollout-phone-contact.json',JSON.stringify(report,null,2));

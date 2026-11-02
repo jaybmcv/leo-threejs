@@ -1,0 +1,12 @@
+import fs from 'node:fs/promises';
+process.env.LEO_LAYOUT='2';
+const {writeViewerPageV2}=await import('./viewer-page-v2.mjs');
+const {writeWalkPage}=await import('./walk-page.mjs');
+const {publicPreparedAdapters}=await import('./public-walk-adapters-v2.mjs');
+const {writeHubPage}=await import('./hub-page.mjs');
+const {writeBuildInfo}=await import('./build-info.mjs');
+const out='dist-v2',manifest=JSON.parse(await fs.readFile(out+'/asset-manifest.json')),layout=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json'));
+console.log(await writeViewerPageV2(out,{layout,manifest}));
+const cosmo=(await fs.readdir(out)).find(f=>/^cosmo/.test(f));
+console.log(await writeWalkPage(out,{cosmo,manifest,preparedWalk:true,sourceAdapters:publicPreparedAdapters}));
+console.log(await writeHubPage(out,{workspaceLocal:true}));await writeBuildInfo(out);

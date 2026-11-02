@@ -1,3 +1,4 @@
+import {removeGeometryCaps} from './v2/geometry.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -59,7 +60,7 @@ export function fitMudwaterArena({box,add,mat,text,fit,shell}){
  // the material passed to flush, or what it picks for the name.
  const bins=new Map();
  const geo=(name,g,m=null)=>{const k=name+'|'+(m?.name||'');if(!bins.has(k))bins.set(k,{name,m,gs:[]});bins.get(k).gs.push(g);};
- const put=(name,size,p,ry=0,m=null)=>{const g=new T.BoxGeometry(...size);if(ry)g.rotateY(ry);geo(name,g.translate(...p),m);};
+ const put=(name,size,p,ry=0,m=null)=>{const g=new T.BoxGeometry(...size);if(name==='Arena_floor_inlay'&&size[2]>size[0]&&size[2]/2<10.3)removeGeometryCaps(g,2);if(ry)g.rotateY(ry);geo(name,g.translate(...p),m);};
  const flush=(pick)=>{for(const {name,m,gs} of bins.values()){const o=add(name,mergeGeometries(gs),m||(typeof pick==='function'?pick(name):pick));o.castShadow=false;gs.forEach(g=>g.dispose());}bins.clear();};
 
  // The shell goes dark: Bayou walls, an olive-black floor and ceiling, a Bog identity panel and Champagne aisle lines.
@@ -81,8 +82,8 @@ export function fitMudwaterArena({box,add,mat,text,fit,shell}){
  const {x0,x1,z:sz,h}=STAGE,mid=(x0+x1)/2,len=x1-x0;
  // The floor: concentric Champagne rings around the stage like ripples on dark water, and Fog rugs under the tables.
  for(const [i,d] of [[0,1.2],[1,2.3],[2,3.6]]){const w=len+2*d,dz=sz*2+2*d,t=.05-i*.012;
-  if(dz/2<10.3){put('Arena_floor_inlay',[w,.012,t],[mid,.006,dz/2]);put('Arena_floor_inlay',[w,.012,t],[mid,.006,-dz/2]);}
-  for(const x of [x0-d,x1+d])put('Arena_floor_inlay',[t,.012,dz],[x,.006,0]);}
+  if(dz/2<10.3){put('Arena_floor_inlay',[w+t,.012,t],[mid,.006,dz/2]);put('Arena_floor_inlay',[w+t,.012,t],[mid,.006,-dz/2]);}
+  for(const x of [x0-d,x1+d])put('Arena_floor_inlay',[t,.012,dz-(dz/2<10.3?t:0)],[x,.006,0]);}
  flush(M.gold);
  for(const [x,z] of TABLES)box('Table_rug',[3.4,.015,2.3],[x,.008,z],M.rug);
 

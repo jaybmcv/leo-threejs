@@ -1,8 +1,10 @@
+import layout from './selected-layout.js';
+import {hullOwnerAt} from '../v2/ownership.js';
 import * as T from 'three';
 import {AREAS,CABINS,COMMONS,TRANSIT_CORES} from './v1.js';
 
-export const LAYOUT_VERSION=1;
-const entries=new Map(),overrides=new Map(),objects=new WeakMap(),cabinRoots=new WeakMap(),instanceBases=new WeakMap(),cabinIds=new Map(),mergedObjects=new WeakMap();let deferred=false;
+export const LAYOUT_VERSION=2;
+const selectedFrames=new Map(),entries=new Map(),overrides=new Map(),objects=new WeakMap(),cabinRoots=new WeakMap(),instanceBases=new WeakMap(),cabinIds=new Map(),mergedObjects=new WeakMap();let deferred=false;
 const add=a=>{const f={yaw:0,mirror:false,...a};f.origin=Object.freeze([...f.origin]);f.size=Object.freeze([...f.size]);if(f.bounds)f.bounds=Object.freeze(f.bounds.map(p=>Object.freeze([...p])));entries.set(f.id,Object.freeze(f));};
 add({id:'arrival-assembly',name:'Arrival garden atrium',origin:[-115,-35.7,-38],size:[52,7.5,34],deck:2,assembly:true});
 for(const a of AREAS)add({...a,parent:['d02-arrival-1','d03-farm-1'].includes(a.id)?'arrival-assembly':null,...(a.id==='d16-voyage-forum-bow'?{bounds:[[-42,-.35,-24.1],[26.1,3.5,24.1]]}:{})});
@@ -12,13 +14,18 @@ add({id:'observation-lounge',name:'Forward observation lounge and ramp',origin:[
 for(let n=1;n<=10;n++)add({id:'nose-commons-'+n,name:'Nose commons '+n,origin:[186,-39.7+(n+4)*4,0],size:[104,3.5,112],deck:n+5});
 for(let d=1;d<=20;d++)add({id:'circulation-'+d,name:'Deck '+d+' fixed circulation',origin:[0,-39.7+(d-1)*4,0],size:[640,4,300],deck:d,fixed:true,lowest:true});
 for(let deck=1;deck<=20;deck++)for(const c of TRANSIT_CORES)if(deck<=c.lastDeck)for(const s of [-1,1]){const y=-39.7+(deck-1)*4;add({id:'lift-'+c.id+'-'+s+'-d'+deck,name:'Fixed lift landing',origin:[c.x,y,s*6],size:[3.8,3.5,3.8],deck,fixed:true});add({id:'stairs-'+c.id+'-'+s+'-d'+deck,name:'Fixed stair core',origin:[c.stairX+1,y,s*c.stairZ],size:[7,3.5,5],deck,fixed:true});}
-for(let deck=4;deck<=17;deck++)add({id:'service-lift-d'+deck,name:'Fixed service lift',origin:[-156,-39.7+(deck-1)*4,8],size:[4,3.5,4],deck,fixed:true});
+for(let deck=4;deck<=17;deck++)add({id:'service-lift-d'+deck,name:'Fixed freight lift',origin:[-156,-39.7+(deck-1)*4,8],size:[7.6,3.5,4],deck,fixed:true});
 for(const a of [{id:'crown',origin:[-247,120.3,0],size:[100,10,40]},{id:'fin',origin:[-247,24.3,0],size:[100,96,30]},{id:'aft-machinery',origin:[-240,-20,0],size:[150,70,300]},{id:'exterior',origin:[0,0,0],size:[640,300,300]}])add({...a,name:a.id,fixed:true,lowest:true});
+// Production frames are the selected plan, rather than a debug override.
+const legacyRoomIds=new Set(entries.keys());
+for(const r of [...layout.rooms,...layout.fixedRooms,...layout.cabins]){if(r.aggregate)continue;if(!entries.has(r.id))add({id:r.id,name:r.name||r.id,origin:r.frame?.origin||[r.x,r.y,r.z],size:r.size||[r.width,r.height,r.depth],deck:r.deck,yaw:r.yaw||0,mirror:!!r.mirror});const owner=entries.get(r.id).parent||r.id;if(owner!==r.id)continue;selectedFrames.set(owner,{origin:r.fittingFrame?.origin||r.frame?.origin||[r.x,r.y,r.z],yaw:r.fittingFrame?.yaw??r.frame?.yaw??r.yaw??0,mirror:!!r.mirror,deck:r.deck,size:r.size||[r.width,r.height,r.depth],bounds:r.fittingFrame?.bounds||null});}
+for(const r of layout.rooms.filter(r=>/^nose-commons-/.test(r.id))){const id='nose-commons-'+Number(r.id.split('-').at(-1));if(entries.has(id))selectedFrames.set(id,{origin:r.frame.origin,yaw:r.frame.yaw,mirror:false,size:r.size,bounds:null});}
+const arrival=layout.rooms.find(r=>r.id==='d02-arrival-1');selectedFrames.set('arrival-assembly',{origin:arrival.frame.origin,yaw:arrival.frame.yaw,mirror:false});
 export const registry=()=>[...entries.values()].map(a=>frame(a.id));
 export const v1Frame=id=>{const f=entries.get(id);if(!f)throw new Error('Unknown room '+id);return f;};
 export const motionOwner=id=>v1Frame(id).parent||id;
 const matrix=f=>new T.Matrix4().makeTranslation(...f.origin).multiply(new T.Matrix4().makeRotationY(f.yaw)).multiply(new T.Matrix4().makeScale(1,1,f.mirror?-1:1));
-export function frame(id){const a=v1Frame(id),owner=motionOwner(id),o=overrides.get(owner);if(!o)return a;
+export function frame(id){const a=v1Frame(id),owner=motionOwner(id),selected=selectedFrames.get(owner),debug=overrides.get(owner),o=selected||debug?{...selected,...debug}:null;if(!o)return a;
  if(owner===id)return {...a,...o};
  const m=matrix({...v1Frame(owner),...o}).multiply(matrix(v1Frame(owner)).invert()).multiply(matrix(a)),p=new T.Vector3(),q=new T.Quaternion(),s=new T.Vector3();m.decompose(p,q,s);
  // Read facing from the matrix; decompose puts a reflection in x rather than our local z.
@@ -29,20 +36,20 @@ export function toWorld(id,p,{legacy=false}={}){return new T.Vector3(...p).apply
 export function toLocal(id,p){return new T.Vector3(...p).applyMatrix4(matrix(frame(id)).invert()).toArray();}
 export function yawToWorld(id,yaw){const f=frame(id);return f.yaw+(f.mirror?Math.PI-yaw:yaw);}
 export function yawToLocal(id,yaw){const f=frame(id);return f.mirror?Math.PI-(yaw-f.yaw):yaw-f.yaw;}
-export function roomAt(p,{legacy=false}={}){let best=null,rank=Infinity;for(const a of entries.values()){
- const f=legacy?a:frame(a.id),[w,h,d]=a.size,lo=a.bounds?.[0]||[-w/2,-.35,-d/2],hi=a.bounds?.[1]||[w/2,h,d/2],dy=p[1]-f.origin[1];if(dy<lo[1]||dy>hi[1])continue;
+function legacyRoomAt(p,{legacy=false}={}){let best=null,rank=Infinity;for(const a of entries.values()){if(legacy&&!legacyRoomIds.has(a.id))continue;
+ const f=legacy?a:frame(a.id),[w,h,d]=f.size,lo=f.bounds?.[0]||[-w/2,-.35,-d/2],hi=f.bounds?.[1]||[w/2,h,d/2],dy=p[1]-f.origin[1];if(dy<lo[1]||dy>hi[1])continue;
  const dx=p[0]-f.origin[0],dz=p[2]-f.origin[2],c=Math.cos(f.yaw),s=Math.sin(f.yaw);
  const u=c*dx-s*dz,v=(s*dx+c*dz)*(f.mirror?-1:1);if(u<lo[0]||u>hi[0]||v<lo[2]||v>hi[2])continue;
  const r=(a.lowest?1e12:0)+w*h*d;if(r<rank){best=a.id;rank=r;}}
  return best;
 }
-export function setFrameOverride(id,{dx=0,dz=0,yawDeg=0,mirror=false}={}){id=motionOwner(id);const a=v1Frame(id);if(a.fixed)throw new Error('Fixed frame '+id);
+export function setFrameOverride(id,{dx=0,dz=0,yawDeg=0,mirror=false}={}){id=motionOwner(id);const a={...v1Frame(id),...selectedFrames.get(id)};if(a.fixed)throw new Error('Fixed frame '+id);
  if(![dx,dz,yawDeg].every(Number.isFinite))throw new Error('Invalid anchor override');
  overrides.set(id,{origin:[a.origin[0]+dx,a.origin[1],a.origin[2]+dz],yaw:a.yaw+yawDeg*Math.PI/180,mirror:!!a.mirror!==!!mirror});return frame(id);
 }
 export function clearFrameOverrides(){overrides.clear();}
-export const anyFrameOverrides=()=>overrides.size>0;
-export const hasFrameOverride=id=>overrides.has(motionOwner(id));
+export const anyFrameOverrides=()=>selectedFrames.size>0||overrides.size>0;
+export const hasFrameOverride=id=>selectedFrames.has(motionOwner(id))||overrides.has(motionOwner(id));
 export function deltaMatrix(id){return matrix(frame(id)).multiply(matrix(v1Frame(id)).invert());}
 // Exact identity path preserves the accepted v1 transforms and exports, including rounding in old builders.
 export function anchoredPoint(id,p){return hasFrameOverride(id)?new T.Vector3(...p).applyMatrix4(deltaMatrix(id)).toArray():[...p];}
@@ -73,8 +80,8 @@ export function anchoredOffset(id,p){if(!hasFrameOverride(id))return [...p];cons
 export function unanchorPoint(id,p){return hasFrameOverride(id)?new T.Vector3(...p).applyMatrix4(deltaMatrix(id).invert()).toArray():[...p];}
 export function moverOrientation(id,m){if(hasFrameOverride(id)){const r=deltaMatrix(id);r.setPosition(0,0,0);m.multiply(r);}return m;}
 
-export function instanceRoom(o,i){for(let r=o;r;r=r.parent){const n=cabinRoots.get(r);if(!n)continue;if(o.count!==499)return objectRoom(o);if(!cabinIds.has(n)){const sample=CABINS.find(c=>c.neighborhood===10&&c.x>120&&c.z===5.2).id.replace('N10','N'+String(n).padStart(2,'0'));cabinIds.set(n,CABINS.filter(c=>c.neighborhood===n&&c.id!==sample).map(c=>c.id));}return cabinIds.get(n)[i];}return objectRoom(o);}
-export function baselineMatrix(o,i=null){const saved=i===null?null:instanceBases.get(o)?.get(i);if(saved)return saved;
+export function instanceRoom(o,i){if(o.userData.cabinIds)return (o.userData.currentCabinIds||o.userData.cabinIds)[i];for(let r=o;r;r=r.parent){const n=cabinRoots.get(r);if(!n)continue;if(o.count!==499)return objectRoom(o);if(!cabinIds.has(n)){const sample=CABINS.find(c=>c.neighborhood===10&&c.x>120&&c.z===5.2).id.replace('N10','N'+String(n).padStart(2,'0'));cabinIds.set(n,CABINS.filter(c=>c.neighborhood===n&&c.id!==sample).map(c=>c.id));}return cabinIds.get(n)[i];}return objectRoom(o);}
+export function baselineMatrix(o,i=null){if(i!==null&&o.userData.cabinIds){const m=new T.Matrix4();o.getMatrixAt(i,m);m.premultiply(o.matrixWorld);const id=instanceRoom(o,i);return hasFrameOverride(id)?deltaMatrix(id).invert().multiply(m):m;}const saved=i===null?null:instanceBases.get(o)?.get(i);if(saved)return saved;
  const chain=[];let result=null;for(let p=o;p;p=p.parent){const a=objects.get(p);if(a?.base){result=a.base.clone();for(let k=chain.length-1;k>=0;k--)result.multiply(chain[k]);break;}chain.push(p.matrix);}
  result||=o.matrixWorld;if(i!==null){const m=new T.Matrix4();o.getMatrixAt(i,m);result=result.clone().multiply(m);}return result;
 }
@@ -87,3 +94,9 @@ function resolveMerged(o){const a=mergedObjects.get(o);if(!a||a.applied||!a.owne
   if(m.determinant()<0&&g.index)for(let k=i*36;k<(i+1)*36;k+=3){const b=g.index.getX(k+1);g.index.setX(k+1,g.index.getX(k+2));g.index.setX(k+2,b);}
  });g.computeBoundingBox();g.computeBoundingSphere();a.applied=true;
 }
+
+export function roomAt(point,options={}){return (!options.legacy&&hullOwnerAt(point))||legacyRoomAt(point,options); }
+
+// Prepared worlds restore registry identity without applying room transforms twice.
+export function captureRoomAnchors(root){const rows=[];root.traverse(o=>{const a=objects.get(o);if(a)rows.push({uuid:o.uuid,id:a.id,applied:a.applied,base:a.base?.toArray()});});return rows;}
+export function restoreRoomAnchors(root,rows){if(!Array.isArray(rows))throw Error('Missing prepared room anchors');const nodes=new Map();root.traverse(o=>nodes.set(o.uuid,o));for(const r of rows){const o=nodes.get(r.uuid);if(!o)throw Error('Missing prepared room anchor '+r.id);objects.set(o,{id:r.id,applied:true,...(r.base?{base:new T.Matrix4().fromArray(r.base)}:{})});}deferred=false;}

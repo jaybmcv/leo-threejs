@@ -1,3 +1,4 @@
+import {LIVE_IDENTITY} from '../../v2/live-identity.js';
 import {WireReader,PROTOCOL} from './wire.js';
 
 // The page's link to Leo live (server/leo-live.mjs). It says hello with this browser's key and name, sends the
@@ -29,12 +30,13 @@ export function connectLive(url,on,opts={}){
   const pass=opts.pass?opts.pass().catch(()=>null):Promise.resolve(null);
   try{ws=new WebSocket(url);}catch{retry();return;}
   ws.binaryType='arraybuffer';
-  ws.onopen=async()=>{const p=await pass;sentPass=!!p;if(ws.readyState===1)ws.send(JSON.stringify({m:'hello',v:PROTOCOL,key,name,hat:!!opts.hat?.(),...(p?{pass:p,invite:opts.invite||undefined}:{})}));};
+  ws.onopen=async()=>{const p=await pass;sentPass=!!p;if(ws.readyState===1)ws.send(JSON.stringify({m:'hello',v:PROTOCOL,layout:2,layoutIdentity:LIVE_IDENTITY,key,name,hat:!!opts.hat?.(),...(p?{pass:p,invite:opts.invite||undefined}:{})}));};
   ws.onmessage=e=>{
    if(e.data instanceof ArrayBuffer){const poses=reader.read(e.data);if(poses.length)on.poses?.(poses.filter(p=>p.id!==id));return;}
    let msg;try{msg=JSON.parse(e.data);}catch{return;}
    switch(msg.m){
     case 'welcome':
+     if(msg.layout!==2||msg.layoutIdentity!==LIVE_IDENTITY){stopped=true;status('layout');ws.close(4004,'layout mismatch');return;}
      tries=0;id=msg.id;last='';you=msg.you||null;status('live');on.welcome?.(msg);on.aboard?.(msg.aboard);
      // A pass the server would not take (an old key, or one from another Creamery): drop it and come back once with
      // a fresh one.
@@ -77,7 +79,7 @@ export function connectLive(url,on,opts={}){
     case 'tv-ticket':on.tvTicket?.(msg);break;
     case 'full':stopped=true;status('full');break;
     case 'replaced':stopped=true;status('replaced');break;
-    case 'reload':stopped=true;status('offline');break;
+    case 'reload':stopped=true;status(msg.why==='layout'?'layout':'offline');break;
    }
   };
   ws.onclose=()=>{reader.reset();id=null;on.reset?.();if(!stopped)retry();};

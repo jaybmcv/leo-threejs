@@ -1,0 +1,1 @@
+import './launch-b-freight-finalize-fixture.mjs';import './v2-output.mjs';import './launch-b-plan-fixture.mjs';import './launch-b-privacy-fixture.mjs';import './launch-b-garden-art-fixture.mjs';import './check-launch-b-generated.mjs';import {runV2} from './run-v2.mjs';await runV2('launch-b-art-target');

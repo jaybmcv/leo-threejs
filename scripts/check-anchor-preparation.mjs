@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {loadWalkShip,fitForWalking} from './walk-plan.mjs';
-import {solidSpots} from '../src/walk/rest.js';
+import {solidSpots} from '../src/v2/rest.js';
 const ship=await loadWalkShip(),{prepared,colliders}=fitForWalking(ship);
 const after=solidSpots(prepared.restSpots,colliders);assert.equal(after.length,prepared.seats.length,'feature proxies changed accepted rest filtering');
 for(let i=0;i<after.length;i++)assert.deepEqual(after[i].point.toArray(),prepared.seats[i].point.toArray());

@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head><script>
+// The Creamery only returns visitors to this page, so a Discord sign-in from the Builder's Hub comes back here as ?to=hub
+// (src/hub/hub.js) and goes straight on, with its pass, before any of the walk starts.
+(function(){var q=new URLSearchParams(location.search);if(q.get('to')!=='hub')return;q.delete('to');window.LEO_TO_HUB=true;var s=q.toString();location.replace('hub.html'+(s?'?'+s:'')+location.hash);})();
+</script><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Walk around Leo · Mars Cats Voyage</title><link rel="icon" href="brand/mark.png"><meta name="theme-color" content="#000000"><meta name="description" content="Walk around Leo, the Mars Cats Voyage shuttle, as Cosmo: all 20 decks, lifts, cabins, gardens and the crown lounge.">
+<style>
+@font-face{font-family:"Archivo";src:url("brand/archivo.woff2") format("woff2");font-weight:100 900;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url("brand/jetbrains.woff2") format("woff2");font-weight:100 800;font-display:swap}
+@font-face{font-family:"Sora";src:url("brand/sora.woff2") format("woff2");font-weight:100 800;font-display:swap}
+:root{--surface:rgba(5,5,7,.82);--card:rgba(11,11,16,.94);--text:#f4f0e8;--body:#c9c3b8;--dim:#a6a5b4;--orange:#f85800;--teal:#2fd6c5;--hairline:rgba(255,255,255,.125);--display:"Archivo",sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace;--sans:"Sora",ui-sans-serif,system-ui,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden;overscroll-behavior:none}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}button:focus-visible,a:focus-visible{outline:2px solid var(--orange);outline-offset:3px}
+#viewport{position:fixed;inset:0;touch-action:none}#viewport canvas{display:block;width:100%;height:100%;outline:none}
+/* Inside a healing capsule in first person (main.js capsuleView): the view through blue fluid, wavering slowly. */
+#viewport::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .6s;background:radial-gradient(ellipse at 50% 45%,rgba(40,150,255,.28) 0%,rgba(20,110,230,.42) 60%,rgba(5,40,110,.75) 100%)}
+.capsule-view #viewport::after{opacity:1}
+.capsule-view #viewport canvas{animation:capsule-waver 5s ease-in-out infinite alternate}
+@keyframes capsule-waver{from{transform:scale(1.03,1.06)}to{transform:scale(1.07,1.03)}}
+@media (prefers-reduced-motion:reduce){.capsule-view #viewport canvas{animation:none;transform:scale(1.04)}}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:#000;z-index:20;transition:opacity .5s}
+#loading .card{text-align:center;max-width:420px;padding:0 24px}
+#loading .eyebrow{font:400 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--orange);margin-bottom:18px}
+#loading h1{font:500 44px/1 var(--display);letter-spacing:-.04em;margin:0 0 16px}
+#loading-text{font:400 11px/1.4 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+body[data-ready="1"] #loading{opacity:0;pointer-events:none}
+.top{position:fixed;left:16px;right:16px;top:14px;display:flex;align-items:center;gap:12px;z-index:5;pointer-events:none}
+.pill{pointer-events:auto;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:10px 14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.pill a{color:var(--text);text-decoration:none;font:400 11px/1 var(--mono)}
+#where{font:400 11px/1.2 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+/* The bottom-left corner: chat above the key help (on touch screens, above the joystick) */
+.corner{position:fixed;left:16px;bottom:14px;z-index:5;display:flex;flex-direction:column;align-items:flex-start;gap:10px;max-width:calc(100vw - 32px);pointer-events:none}
+.corner>*{pointer-events:auto}
+.help{font:400 10px/1.7 var(--mono);letter-spacing:.06em;color:var(--dim);background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:10px 14px}
+.help b{color:var(--text);font-weight:500}
+#joystick{display:none;position:fixed;left:22px;bottom:30px;width:128px;height:128px;border-radius:50%;border:1px solid var(--hairline);background:rgba(10,12,16,.45);z-index:6;touch-action:none}
+#stick{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(244,240,232,.85)}
+#prompt{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--hairline);border-radius:999px;padding:9px 16px 9px 9px;font:400 12px/1 var(--mono);letter-spacing:.06em;pointer-events:none}
+#prompt[hidden]{display:none}
+#prompt .key{display:grid;place-items:center;min-width:26px;height:26px;border-radius:7px;background:var(--orange);color:#fff;font-weight:600}
+#prompt.waiting{padding-left:16px;border-color:var(--orange)}#prompt.waiting .key{display:none}#prompt.waiting .label::before{content:"";display:inline-block;width:8px;height:8px;margin-right:10px;border-radius:50%;background:var(--orange);vertical-align:1px;animation:pulse 1s ease-in-out infinite alternate}
+@keyframes pulse{from{opacity:.35}to{opacity:1}}
+.touch #use:disabled{background:var(--surface);border-color:var(--orange);color:var(--text)}
+.tools{position:fixed;right:16px;top:14px;z-index:6;display:flex;gap:8px}
+.tools button,.touch button{background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:10px 14px;font:400 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.tools button:hover{border-color:var(--orange)}
+#sound[aria-pressed="true"]{border-color:var(--teal);color:var(--teal)}
+#log{color:var(--teal)}.tools #log:hover{border-color:var(--teal)}
+.touch{display:none;position:fixed;right:18px;bottom:30px;z-index:6;flex-direction:column;align-items:flex-end;gap:12px}
+.touch #use{background:var(--orange);border-color:var(--orange);color:#fff;border-radius:999px;padding:14px 18px}
+.touch #use[hidden]{display:none}
+.touch #jump{width:64px;height:64px;border-radius:50%;padding:0}
+.sheet{position:fixed;inset:0;z-index:15;display:grid;place-items:center;background:rgba(0,0,0,.45)}
+.sheet[hidden]{display:none}
+.sheet .card{width:min(420px,calc(100vw - 32px));max-height:calc(100vh - 64px);overflow:auto;background:var(--card);border:1px solid var(--hairline);border-radius:14px;padding:20px}
+.sheet h2{font:500 26px/1 var(--display);letter-spacing:-.03em;margin:0 0 6px}
+.sheet .eyebrow{font:400 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--orange);margin-bottom:12px}
+.sheet .stops{display:grid;gap:6px;margin:14px 0}
+.sheet .stops button{text-align:left;background:rgba(255,255,255,.04);border:1px solid var(--hairline);border-radius:10px;padding:11px 13px;font:400 13px/1.3 var(--sans)}
+.sheet .stops button:hover:not(:disabled){border-color:var(--orange)}
+.sheet .stops button:disabled{opacity:.5}
+.sheet .stops b{display:block;font-weight:500}.sheet .stops span{font:400 10px/1.4 var(--mono);letter-spacing:.06em;color:var(--dim)}
+.sheet [data-close]{background:none;border:1px solid var(--hairline);border-radius:10px;padding:10px 14px;font:400 11px/1 var(--mono)}
+#minimap-button{position:fixed;right:16px;top:62px;z-index:5;width:172px;height:172px;padding:0;border-radius:14px;overflow:hidden;background:var(--surface);border:1px solid var(--hairline);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#minimap-button:hover{border-color:var(--orange)}#minimap-button[hidden]{display:none}
+#minimap{display:block;width:100%;height:100%}
+#minimap-deck{position:absolute;left:8px;bottom:7px;font:400 9px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text);text-shadow:0 0 4px #000}
+.sheet.wide .card{width:min(1180px,calc(100vw - 32px))}
+/* The window for a game hosted outside Leo (outside-game.js): nearly the whole screen, with Back to Leo always in reach. */
+#outside-sheet .outside{display:flex;flex-direction:column;gap:10px;width:min(1280px,calc(100vw - 24px));height:calc(100vh - 24px);height:calc(100dvh - 24px);background:var(--card);border:1px solid var(--hairline);border-radius:14px;padding:12px 14px 14px}
+#outside-sheet .bar{display:flex;align-items:center;gap:12px}#outside-sheet .bar>div{flex:1;min-width:0}#outside-sheet h2{font-size:20px;margin:0}#outside-sheet .eyebrow{margin-bottom:6px}
+#outside-sheet .back{background:var(--orange);border:1px solid var(--orange);border-radius:10px;padding:12px 16px;font:500 12px/1 var(--mono);letter-spacing:.06em;color:#fff;white-space:nowrap}
+#outside-sheet .frame{position:relative;flex:1;min-height:0;border-radius:8px;overflow:hidden;background:#000}#outside-sheet iframe{display:block;width:100%;height:100%;border:0;background:#000}
+#outside-sheet .wait{position:absolute;inset:0;display:none;place-items:center;font:400 12px/1 var(--mono);letter-spacing:.1em;color:var(--dim);pointer-events:none}#outside-sheet.loading .wait{display:grid}
+#outside-sheet .note{margin:0;font:400 11px/1.4 var(--mono);color:var(--dim)}#outside-sheet .note a{color:var(--teal)}
+#countdown{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:7;font:500 132px/1 var(--display);color:#fff;text-shadow:0 0 28px rgba(0,0,0,.6);pointer-events:none}#countdown[hidden]{display:none}
+#photo-flash{position:fixed;inset:0;z-index:14;background:#fff;opacity:0;pointer-events:none}#photo-flash[hidden]{display:none}
+/* The comic reader: a portrait page as tall as the screen allows. */
+#comic-sheet .card{width:min(680px,calc(100vw - 32px),calc((100vh - 210px)*.67 + 40px));padding:16px 20px}.comic-page{display:block;width:100%;background:#0b0b10;border-radius:6px;margin:10px 0 12px}
+#comic-sheet .row{align-items:center;margin-top:0}.comic-count{flex:1;text-align:center;font:400 11px/1 var(--mono);color:var(--dim)}#comic-sheet .comic-next{background:var(--orange);border:1px solid var(--orange);border-radius:10px;padding:10px 14px;font:500 11px/1 var(--mono);color:#fff}#comic-sheet .comic-back{background:none;border:1px solid var(--hairline);border-radius:10px;padding:10px 14px;font:400 11px/1 var(--mono)}#comic-sheet .comic-back:disabled{opacity:.4}
+#photo-sheet .card{width:min(760px,calc(100vw - 32px))}#photo-image{display:block;width:100%;border-radius:8px;margin:12px 0 14px}
+#mudwater-wordmark{display:block;width:min(240px,70%);margin:2px 0 12px}#mudwater-wordmark[hidden]{display:none}#mudwater-claim[hidden]{display:none}#mudwater-claim{display:grid;gap:10px;margin:4px 0 2px}#mudwater-claim .why,#mudwater-claim .got{margin:0;font:400 13px/1.45 var(--sans);color:var(--body)}#mudwater-claim .got{color:var(--text)}#mudwater-claim code{font:600 15px/1 var(--mono);color:var(--teal);letter-spacing:.06em;user-select:all}#mudwater-claim select{margin-left:6px;background:var(--card);color:var(--text);border:1px solid var(--hairline);border-radius:8px;padding:6px 8px;font:400 12px/1 var(--mono)}#mudwater-claim .go{justify-self:start;background:var(--orange);border:1px solid var(--orange);border-radius:10px;padding:10px 14px;font:500 12px/1 var(--mono);letter-spacing:.06em;color:#fff;text-decoration:none}#mudwater-claim .go:disabled{opacity:.6}#photo-sheet .row,#mudwater-sheet .row{display:flex;flex-wrap:wrap;gap:8px}#mudwater-sheet .row a,#photo-sheet .row a,#photo-sheet .row button:not([data-close]){background:var(--orange);border:1px solid var(--orange);border-radius:10px;padding:10px 14px;font:400 11px/1 var(--mono);color:#fff;text-decoration:none}#photo-sheet [hidden]{display:none}
+#info-sheet .card{width:min(560px,calc(100vw - 32px))}#info-sheet .info-body p{margin:8px 0 12px;font:400 14px/1.5 var(--sans);color:var(--body)}#info-sheet dl{margin:0}#info-sheet dt{font:500 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin:14px 0 5px}#info-sheet dd{margin:0;font:400 14px/1.5 var(--sans);color:var(--body)}#info-sheet .info-note{margin-top:16px;padding-top:12px;border-top:1px solid var(--hairline);font-size:13px;color:var(--dim)}
+#tv-sheet .tv-now{margin:0;font:400 14px/1.45 var(--sans);color:var(--text)}#tv-sheet .note{margin:10px 0 0}#tv-sheet .tv-status{min-height:1.4em;color:var(--teal)}#tv-sheet .row{flex-wrap:wrap}#tv-sheet .row button:not([data-close]){background:var(--orange);border:1px solid var(--orange);color:#fff;border-radius:10px;padding:10px 14px;font:500 12px/1 var(--mono);letter-spacing:.04em}#tv-sheet .row button:disabled{opacity:.6}#tv-sheet #tv-sound{background:none;color:var(--text);border-color:var(--hairline)}#tv-sheet #tv-down{background:none;color:#ff8a3d;border-color:#ff8a3d}#tv-sheet [hidden]{display:none!important}
+#clown-sheet .clown-text{margin:0;font:400 14px/1.45 var(--sans);color:var(--body)}#clown-sheet .clown-code{margin:14px 0 2px;padding:12px;border:1px dashed var(--orange);border-radius:10px;text-align:center;font:500 22px/1 var(--mono);letter-spacing:.12em;user-select:all}#clown-sheet .clown-code[hidden],#clown-sheet .clown-claim[hidden]{display:none}#clown-sheet .clown-claim{background:var(--orange);border:1px solid var(--orange);color:#fff;border-radius:10px;padding:10px 16px;font:500 12px/1 var(--mono);letter-spacing:.06em;text-decoration:none}
+.map-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.map-decks{display:flex;align-items:center;gap:6px}
+.map-decks button,.map-decks select{background:rgba(255,255,255,.04);border:1px solid var(--hairline);border-radius:10px;padding:9px 12px;font:400 11px/1 var(--mono);color:var(--text)}
+.map-decks select{appearance:none;-webkit-appearance:none;padding-right:12px}
+#map-canvas{display:block;width:100%;aspect-ratio:2.4;margin:14px 0 10px;border-radius:10px;background:rgba(255,255,255,.03);cursor:pointer;touch-action:manipulation}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font:400 10px/1.4 var(--mono);letter-spacing:.06em;color:var(--dim);margin-bottom:14px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.touch .row{display:flex;gap:8px}
+/* Help (help.js): how to play, and for testers the tester guide */
+#help .short{display:none}
+#help-sheet .card{width:min(760px,calc(100vw - 32px))}#help-sheet .card:focus{outline:none}
+.help-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.help-tabs{display:flex;gap:6px}.help-tabs[hidden]{display:none}
+.help-tabs button{background:rgba(255,255,255,.04);border:1px solid var(--hairline);border-radius:10px;padding:9px 12px;font:400 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.help-tabs button:hover{border-color:var(--orange)}.help-tabs [aria-selected="true"]{border-color:var(--orange);background:rgba(248,88,0,.14);color:var(--text)}
+.help-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px 26px}.help-grid section[hidden]{display:none}
+#help-sheet h3{font:400 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--teal);margin:0 0 6px}
+.help-row{display:grid;grid-template-columns:104px 1fr;gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid rgba(255,255,255,.07);font:400 13px/1.4 var(--sans);color:var(--body)}
+.help-keys{display:flex;flex-wrap:wrap;gap:3px}
+.help-keys kbd{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:6px;background:rgba(255,255,255,.08);border:1px solid var(--hairline);font:500 10px/1 var(--mono);color:var(--text)}
+.help-keys i{font:400 10px/1.3 var(--mono);font-style:normal;letter-spacing:.08em;text-transform:uppercase;color:var(--text)}
+#help-sheet .help-find-title{margin-top:22px}
+.help-find{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.help-find li{background:rgba(255,255,255,.04);border:1px solid var(--hairline);border-radius:10px;padding:10px 12px;font:400 12px/1.4 var(--sans);color:var(--body)}
+.help-find b{display:block;font:500 13px/1.3 var(--sans);color:var(--text);margin-bottom:3px}
+.help-small{font:400 10px/1.4 var(--mono);letter-spacing:.08em;color:var(--dim);margin:14px 0}
+.guide-eyebrow{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px}.guide-eyebrow span:last-child{color:var(--dim)}
+#help-sheet .guide-title{font:600 36px/1 var(--display);letter-spacing:-.04em;text-transform:none;color:var(--text);margin:0 0 10px}
+#help-sheet .guide-title.small{font-size:28px}.guide-title em{font-style:normal;color:var(--orange)}
+.guide-lead{font:400 14px/1.45 var(--sans);color:var(--body);margin:0 0 16px;max-width:460px}
+.guide-steps{list-style:none;margin:0;padding:0;display:grid;gap:8px;position:relative}
+.guide-steps::before{content:"";position:absolute;left:18px;top:24px;bottom:24px;width:1px;background:rgba(47,214,197,.4)}
+.guide-steps li{display:grid;grid-template-columns:38px 1fr;gap:12px;align-items:center}
+.guide-steps .n{position:relative;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;border:1px solid var(--teal);background:var(--card);font:500 12px/1 var(--mono);color:var(--teal)}
+.guide-step{background:rgba(255,255,255,.04);border:1px solid var(--hairline);border-radius:12px;padding:12px 14px}
+.guide-step header{display:flex;align-items:baseline;justify-content:space-between;gap:4px 12px;flex-wrap:wrap}
+.guide-step h4{margin:0;font:600 18px/1.2 var(--display);letter-spacing:-.02em}
+.guide-step .when{font:500 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+.guide-step p{margin:5px 0 0;font:400 13px/1.4 var(--sans);color:var(--body)}.guide-step p b{color:var(--text);font-weight:600}
+.guide-steps li.live .n{background:var(--orange);border-color:var(--orange);color:#050507}
+.guide-steps li.live .guide-step{background:var(--orange);border-color:var(--orange)}
+.guide-steps li.live h4,.guide-steps li.live p,.guide-steps li.live p b,.guide-steps li.live .when{color:#050507}
+.guide-decisions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.guide-decisions span{display:flex;align-items:center;gap:8px;border:1px solid var(--hairline);border-radius:8px;padding:8px 10px;font:500 12px/1.2 var(--sans)}
+.guide-decisions i{display:grid;place-items:center;width:16px;height:16px;border-radius:50%;border:1px solid currentColor;font:600 9px/1 var(--mono);font-style:normal;color:var(--dim)}
+.guide-decisions .build{border-color:var(--orange);background:rgba(248,88,0,.14)}.guide-decisions .build i{color:var(--orange)}
+.guide-decisions .plan{border-color:var(--teal)}.guide-decisions .plan i{color:var(--teal)}
+.guide-after{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;margin:12px 0 28px 50px;font:400 10px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.guide-link{text-decoration:none;background:none;border:1px solid rgba(47,214,197,.45);border-radius:10px;padding:8px 12px;font:400 11px/1 var(--mono);letter-spacing:.06em;color:var(--teal)}.guide-link:hover{border-color:var(--teal);background:rgba(47,214,197,.12)}
+.guide-quote{background:rgba(255,255,255,.04);border:1px solid var(--hairline);border-radius:14px;padding:16px}
+.guide-quote blockquote{display:grid;grid-template-columns:30px 1fr;margin:0 0 14px;font:400 16px/1.4 var(--sans);color:var(--text)}
+.guide-quote blockquote::before{content:"\201C";font:700 44px/.8 var(--display);color:var(--orange)}
+.guide-shots{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+/* The pictures are whole-window captures: zoomed in past the walk's own toolbar, map and key strip at their edges. */
+.guide-shots figure{position:relative;margin:0;overflow:hidden;border-radius:8px;background:#0b0b10}.guide-shots img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;transform:scale(1.25)}
+.guide-shots figcaption{position:absolute;left:8px;top:8px;padding:4px 7px;border-radius:5px;background:#050507;font:500 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.guide-shots .after figcaption{background:var(--orange);color:#050507}
+.guide-built{display:flex;align-items:center;justify-content:space-between;gap:8px 12px;flex-wrap:wrap;margin-top:12px;font:500 10px/1.3 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+.guide-tips{list-style:none;margin:10px 0 18px;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.guide-tips li{background:rgba(255,255,255,.04);border:1px solid var(--hairline);border-radius:12px;padding:12px;font:400 13px/1.35 var(--sans);color:var(--body)}
+.guide-tips b{display:block;margin-bottom:8px;font:600 20px/1 var(--display);color:var(--orange)}
+.guide-cta{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;border:1px solid var(--orange);border-radius:14px;padding:14px 16px;margin-bottom:16px}
+.guide-cta .eyebrow{margin-bottom:6px}.guide-cta h4{margin:0;font:600 18px/1.2 var(--display);letter-spacing:-.02em}
+.guide-send{background:var(--orange);border:1px solid var(--orange);border-radius:10px;padding:11px 16px;font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#050507}
+@media (max-width:560px){#help-sheet .card{padding:16px}.help-row{grid-template-columns:92px 1fr}#help-sheet .guide-title{font-size:30px}.guide-tips li{padding:10px;font-size:12px}}
+/* Chat aboard (chat.js): the newest lines stay up in the corner (six; four on touch screens) unless hidden, the field
+   and its history when open, bubbles over heads */
+#chat{display:flex;flex-direction:column;align-items:flex-start;gap:8px;width:min(380px,calc(100vw - 32px));pointer-events:none}#chat[hidden]{display:none}
+#chat-lines{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;width:100%;max-height:min(38vh,320px);overflow-y:auto;overscroll-behavior:contain}
+#chat-lines li{align-self:flex-start;max-width:100%;padding:6px 10px;border-radius:10px;background:rgba(5,5,7,.66);font:400 13px/1.35 var(--sans);color:var(--text);overflow-wrap:anywhere}
+#chat-lines li b{font-weight:600;margin-right:7px}#chat-lines li.me b{color:var(--orange)}
+#chat-lines li.verified b::after{content:"";display:inline-block;width:6px;height:6px;margin-left:5px;border-radius:50%;background:var(--teal);vertical-align:1px}
+#chat-lines time{display:none;margin-left:8px;font:400 10px/1 var(--mono);letter-spacing:.04em;color:var(--dim);white-space:nowrap}#chat.open #chat-lines time{display:inline}
+#chat-lines li.note{font:400 11px/1.4 var(--mono);letter-spacing:.04em;color:var(--dim)}
+#chat:not(.open) #chat-lines li:not(:nth-last-child(-n+6)){display:none}#chat.quiet:not(.open) #chat-lines{display:none}
+#chat.open{pointer-events:auto}#chat.open #chat-lines{background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:8px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#chat.open #chat-lines:empty{display:none}#chat.open #chat-lines li{background:none;padding:3px 4px}
+#chat-form{display:none;gap:8px;width:100%}#chat.open #chat-form{display:flex}.chat-buttons{display:flex;gap:6px}#chat.open .chat-buttons{display:none}
+#chat-input{flex:1;min-width:0;font:400 14px/1.2 var(--sans);color:var(--text);background:var(--card);border:1px solid var(--hairline);border-radius:10px;padding:10px 12px}
+#chat-input:focus{outline:2px solid var(--orange);outline-offset:1px}#chat-input:disabled{opacity:.7}
+#chat-send{background:var(--orange);border:1px solid var(--orange);color:#fff;border-radius:10px;padding:10px 14px;font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase}
+#chat-open{pointer-events:auto;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:9px 12px;font:400 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#chat-open:hover,#chat-hide:hover{border-color:var(--orange)}#chat-unread{min-width:18px;padding:3px 5px;border-radius:999px;background:var(--orange);color:#fff;font:600 10px/1 var(--mono);letter-spacing:0;text-align:center}#chat-unread[hidden]{display:none}
+#chat-hide{pointer-events:auto;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:9px 12px;font:400 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}#chat-open kbd{display:grid;place-items:center;min-width:20px;height:20px;border-radius:5px;background:rgba(255,255,255,.1);font:500 10px/1 var(--mono)}
+.remote-say{position:absolute;left:0;top:0;max-width:240px;padding:7px 11px;border-radius:12px;background:rgba(244,240,232,.94);color:#111;font:400 12px/1.35 var(--sans);overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.remote-say[hidden]{display:none}
+/* Leo live: the aboard count, the name sheet and the names over others' heads */
+#aboard{pointer-events:auto;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:10px 14px;font:400 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);white-space:nowrap}
+#aboard[hidden]{display:none}
+/* Changes made around the walker: opens the ship log on them (changes-board.js) */
+#changes-here{pointer-events:auto;display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid rgba(47,214,197,.45);border-radius:12px;padding:10px 14px;font:400 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--teal);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);white-space:nowrap}
+#changes-here[hidden]{display:none}#changes-here:hover{border-color:var(--teal);background:rgba(47,214,197,.12)}#changes-here i{font-style:normal}#changes-here b{font-weight:600;color:var(--text)}
+.sheet .stops button.log{border-color:rgba(47,214,197,.45)}.sheet .stops button.log b{color:var(--teal)}#aboard:hover{border-color:var(--orange)}
+#aboard i{width:8px;height:8px;border-radius:50%;background:var(--dim)}#aboard[data-status="live"] i{background:var(--teal)}#aboard[data-status="connecting"] i{background:var(--orange)}
+#names{position:fixed;inset:0;pointer-events:none;z-index:4;overflow:hidden}
+.remote-name{position:absolute;left:0;top:0;padding:4px 9px;border-radius:999px;background:rgba(5,5,7,.62);color:var(--text);font:500 11px/1.2 var(--sans);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.remote-name[hidden]{display:none}
+.ping-mark{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 10px 6px;border-radius:10px;background:rgba(5,5,7,.72);border:1px solid var(--orange);color:var(--text);font:500 11px/1.2 var(--sans);white-space:nowrap}
+.ping-mark b{font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis}.ping-mark span{font:400 10px/1.2 var(--mono);letter-spacing:.06em;color:var(--dim)}
+.ping-mark::after{content:"";position:absolute;left:50%;bottom:-7px;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 3px rgba(248,88,0,.3)}
+.ping-mark.edge{opacity:.85}.ping-mark.fresh::after{animation:ping-pulse 1.2s ease-out 3}
+@keyframes ping-pulse{from{box-shadow:0 0 0 0 rgba(248,88,0,.7)}to{box-shadow:0 0 0 18px rgba(248,88,0,0)}}
+@media (prefers-reduced-motion:reduce){.ping-mark.fresh::after{animation:none}}
+.remote-name.verified::after{content:"";display:inline-block;width:6px;height:6px;margin-left:6px;border-radius:50%;background:var(--teal);vertical-align:1px}
+/* Who is walking: a name of their own, or Discord (through The Creamery) if they like, on the loading card */
+#who{margin:24px auto 0;max-width:300px}#who[hidden],#who [hidden]{display:none!important}
+#discord-chip{pointer-events:auto;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:var(--surface);border:1px solid #5865f2;border-radius:12px;padding:10px 14px;font:400 11px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}#discord-chip[hidden]{display:none}
+#discord-chip[data-in="1"]{border-color:var(--hairline);color:var(--teal);text-transform:none;letter-spacing:.02em}
+@media (max-width:560px){#discord-chip{padding:9px 11px;max-width:96px}}
+#who-board{display:block;margin:12px auto 0;border-radius:999px;padding:12px 24px;font:500 12px/1 var(--mono);letter-spacing:.06em;border:1px solid var(--orange);background:var(--orange);color:#000}
+#who-connected{font:400 12px/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}#who-connected b{color:var(--text);font-weight:500;text-transform:none;letter-spacing:0;font-family:var(--sans);font-size:14px}
+#who-connected .who-via{color:var(--teal)}
+#who-forget{background:none;border:0;padding:0 0 0 6px;font:inherit;letter-spacing:inherit;text-transform:none;color:var(--dim);text-decoration:underline;cursor:pointer}#who-forget:hover{color:var(--text)}
+#who-note{font:400 14px/1.45 var(--sans);color:var(--body);margin:0 0 14px}
+.who-buttons{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.who-buttons button{border-radius:999px;padding:11px 18px;font:500 12px/1 var(--mono);letter-spacing:.06em;border:1px solid var(--hairline);background:rgba(255,255,255,.04)}
+.who-buttons #who-connect{background:#5865f2;border-color:#5865f2;color:#fff}
+.who-small{font:400 11px/1.5 var(--sans);color:var(--dim);margin:12px 0 0}
+/* Phones short of memory are asked before the ship is built (main.js) */
+#loading-slow{margin:16px auto 0;max-width:320px;font:400 13px/1.45 var(--sans);color:var(--body)}#loading-slow[hidden]{display:none}
+#memory{margin:24px auto 0;max-width:320px}#memory[hidden]{display:none}#memory-note{font:400 14px/1.45 var(--sans);color:var(--body);margin:0 0 14px}
+#memory .who-buttons a{border-radius:999px;padding:11px 18px;font:500 12px/1 var(--mono);letter-spacing:.06em;border:1px solid var(--orange);background:var(--orange);color:#000;text-decoration:none}
+#who-later{margin-top:10px;background:none;border:0;padding:4px;font:400 11px/1 var(--mono);letter-spacing:.06em;color:var(--dim);text-decoration:underline}
+#name-sheet[data-verified="1"] #name-edit,#name-sheet[data-verified="1"] button[type=submit],#name-sheet[data-verified="1"] .note:not(.verified-note),#name-sheet[data-verified="1"] #name-connect{display:none}
+#name-sheet:not([data-verified="1"]) .verified-note{display:none}
+#name-connect{background:none;border:0;padding:4px 0;margin-top:10px;font:400 12px/1.3 var(--sans);color:var(--teal);text-decoration:underline}
+#name-field{display:grid;gap:8px;margin:14px auto 0;max-width:260px;text-align:left;font:400 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+#name-field[hidden]{display:none}
+#name-field input,#name-edit,#vault-code{font:400 15px/1.2 var(--sans);color:var(--text);background:rgba(255,255,255,.06);border:1px solid var(--hairline);border-radius:10px;padding:11px 13px;width:100%;letter-spacing:0;text-transform:none}
+#name-field input:focus,#name-edit:focus,#vault-code:focus{outline:2px solid var(--orange);outline-offset:1px}
+.sheet .note{font:400 13px/1.45 var(--sans);color:var(--body);margin:0 0 14px}
+.sheet .row{display:flex;gap:8px;margin-top:14px}
+.sheet .row button[type=submit]{background:var(--orange);border:1px solid var(--orange);color:#fff;border-radius:10px;padding:10px 16px;font:500 12px/1 var(--mono);letter-spacing:.06em}
+/* Medium screens: short toolbar labels, and the place row under the toolbar beside the mini-map, so the two never overlap */
+@media (max-width:1180px){#log .long{display:none}#changes-here span{display:none}#changes-here{padding:10px 11px}.tools button{padding:10px 11px}}
+@media (min-width:561px) and (max-width:1400px){.top{top:58px;right:204px}.pill{min-width:0}#where{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+@media (max-width:560px){#aboard{padding:9px 11px}#changes-here{padding:9px 11px}#changes-here span{display:none}#log .long{display:none}}
+@media (pointer:coarse){#joystick{display:block}.help{display:none}.corner{bottom:174px}#chat-open kbd{display:none}#chat:not(.open) #chat-lines li:not(:nth-last-child(-n+4)){display:none}.touch{display:flex}.tools .respawn{display:none}#minimap-button{width:124px;height:124px}}
+@media (max-width:560px){#minimap-button{top:58px;width:112px;height:112px}.tools{gap:6px}.tools button{padding:9px 8px}#help{min-width:30px}#help .long{display:none}#help .short{display:inline}.top{top:58px;right:140px}.pill{max-width:100%;min-width:0}#where{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+/* Phones, upright: fewer buttons on screen (View, Sound and Res sit behind More), the action buttons in a tidy block clear of the joystick, and the top row kept out from under the mini-map */
+#tools-extra{display:contents}#tools-more{display:none}
+@media (pointer:coarse) and (max-width:560px){
+#tools-more{display:block}#tools-more[aria-expanded="true"]{border-color:var(--orange)}
+#tools-extra{display:none;position:absolute;top:calc(100% + 6px);right:0;flex-direction:column;gap:6px;align-items:stretch}.tools.more-open #tools-extra{display:flex}
+#tools-extra button{padding:11px 14px;text-align:left;min-width:96px}
+.top{gap:8px;right:132px}.pill{flex:none;padding:10px 12px}.pill a{white-space:nowrap}#where{display:none}
+#aboard{min-width:0;gap:6px;padding:9px 8px;letter-spacing:0;font-size:10px}#aboard span{overflow:hidden;text-overflow:ellipsis}
+.touch .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:min(176px,calc(100vw - 168px))}.touch .row button{height:42px;padding:0 4px;text-align:center}
+}
+/* The Deck 19 graffiti wall's spray bar (graffiti.js): while it is up, the walk's own controls step aside */
+#spray{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:7;width:min(560px,calc(100vw - 32px));background:var(--card);border:1px solid var(--hairline);border-radius:14px;padding:12px 14px;display:grid;gap:10px}
+#spray[hidden]{display:none}
+#spray .spray-head{display:flex;align-items:center;justify-content:space-between;gap:10px}#spray .eyebrow{font:400 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--orange)}
+#spray-colours{display:grid;grid-template-columns:repeat(12,1fr);gap:6px}
+#spray-colours button{aspect-ratio:1;min-width:0;border-radius:50%;border:2px solid rgba(255,255,255,.2);background:var(--paint);padding:0}
+#spray-colours button[aria-pressed="true"]{border-color:#fff;box-shadow:0 0 0 2px var(--orange)}
+#spray-nozzles{display:flex;gap:6px}#spray-nozzles button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--hairline);border-radius:10px;padding:9px 6px;font:400 11px/1 var(--mono);letter-spacing:.06em}
+#spray-nozzles button::before{content:"";width:var(--dot);height:var(--dot);border-radius:50%;background:currentColor}
+#spray-nozzles button[aria-pressed="true"]{border-color:var(--orange)}
+#spray button:disabled{opacity:.35;cursor:default}
+#spray-note{margin:0;font:400 12px/1.4 var(--sans);color:var(--body)}
+#spray .spray-row{display:flex;gap:8px;align-items:center;justify-content:flex-end}
+#spray-connect{background:var(--orange);border:1px solid var(--orange);color:#fff;border-radius:10px;padding:9px 14px;font:500 11px/1 var(--mono);letter-spacing:.06em}#spray-connect[hidden]{display:none}
+#spray-done{background:none;border:1px solid var(--hairline);border-radius:10px;padding:9px 14px;font:400 11px/1 var(--mono)}
+body.spraying{-webkit-user-select:none;user-select:none}body.spraying #viewport{cursor:crosshair}body.spraying .touch,body.spraying #joystick,body.spraying .corner,body.spraying #prompt{display:none!important}
+</style>
+</head>
+<body>
+<div id="viewport"></div>
+<div class="top"><div class="pill"><a href="./">← Leo</a><span id="where"></span></div><button id="changes-here" type="button" hidden><i aria-hidden="true">✦</i><b>0</b><span> changes here</span></button><button id="aboard" type="button" hidden aria-label="Others aboard; set your name"><i></i><span></span></button><button id="discord-chip" type="button" hidden></button></div>
+<div id="names" aria-hidden="true"></div>
+<div class="tools"><button id="go" type="button">Go to</button><button id="log" type="button" aria-label="Ship log: every change to Leo, before and after (L)"><span class="long">Ship </span>log</button><div id="tools-extra"><button id="view" type="button" aria-label="Switch first or third person">View</button><button id="sound" type="button" aria-pressed="false" aria-label="Ship sound">Sound</button><button id="resolution" type="button" aria-label="Render resolution: lower runs smoother on slower devices">Res High</button></div><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button><button id="help" type="button" aria-label="Help: how to play (H)"><span class="long">Help</span><span class="short">?</span></button><button id="tools-more" type="button" aria-expanded="false" aria-controls="tools-extra" aria-label="More buttons: view, sound, resolution">More</button></div>
+<button id="minimap-button" type="button" aria-label="Open the ship map" hidden><canvas id="minimap"></canvas><span id="minimap-deck"></span></button>
+<div class="corner"><div id="chat" hidden><ol id="chat-lines" aria-live="polite" aria-label="Chat aboard"></ol><form id="chat-form" autocomplete="off"><input id="chat-input" enterkeyhint="send" aria-label="Chat message"><button id="chat-send" type="submit">Send</button></form><div class="chat-buttons"><button id="chat-open" type="button" aria-label="Chat with everyone aboard (T)"><kbd>T</kbd>Chat<span id="chat-unread" hidden></span></button><button id="chat-hide" type="button" aria-pressed="false">Hide</button></div></div>
+<div class="help"><b>WASD</b> move · <b>Shift</b> run · <b>Space</b> jump · <b>Drag</b> look · <b>E</b> use · <b>M</b> go to · <b>L</b> ship log<span id="help-ping" hidden> · <b>T</b> chat</span> · <b>H</b> help, every control</div></div>
+<div id="prompt" hidden><span class="key">E</span><span class="label"></span></div>
+<div class="touch"><button id="use" type="button" hidden></button><div class="row"><button id="emote-button" type="button">Emote</button><button id="crouch" type="button">Crouch</button><button id="ping" type="button" hidden aria-label="Ping where you are for others aboard">Ping</button><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button></div><button id="jump" type="button" aria-label="Jump">Jump</button></div>
+<div id="lift-panel" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="lift-title"><div class="card"><div class="eyebrow">Lift</div><h2 id="lift-title"></h2><div class="stops"></div><button type="button" data-close>Close</button></div></div>
+<div id="places" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="places-title"><div class="card"><div class="eyebrow">Walk around Leo</div><h2 id="places-title">Go to</h2><div class="stops"></div><button type="button" data-close>Close</button></div></div>
+<div id="map-sheet" class="sheet wide" hidden role="dialog" aria-modal="true" aria-labelledby="map-title"><div class="card"><div class="map-head"><div><div class="eyebrow">Ship map</div><h2 id="map-title"></h2></div><div class="map-decks"><button type="button" data-deck="1" aria-label="Deck above">▲</button><select id="map-deck" aria-label="Deck"></select><button type="button" data-deck="-1" aria-label="Deck below">▼</button></div></div><canvas id="map-canvas"></canvas><div class="legend"><span><i style="background:#f85800"></i>You · railings</span><span><i style="background:#2fd6c5"></i>Lifts · places to go</span><span><i style="background:#92aaba"></i>Stairs and raised floors</span><span><i style="background:#3a3f48"></i>Walls</span></div><button type="button" data-close>Close</button></div></div>
+<div id="name-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="name-title"><form class="card" id="name-form"><div class="eyebrow">Leo live</div><h2 id="name-title">Your name</h2><p class="note">Others aboard see it over your head. Leave it empty to go by Voyager and a number.</p><p class="note verified-note">Your name aboard is your Discord name, with a teal dot so others know it’s really you.</p><input id="name-edit" maxlength="24" autocomplete="nickname" placeholder="Voyager" aria-label="Your name"><button id="name-connect" type="button">Connect Discord instead</button><div class="row"><button type="submit">Save</button><button type="button" data-close>Close</button></div></form></div>
+<div id="vault-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="vault-title"><form class="card" id="vault-form" autocomplete="off"><div class="eyebrow">Vault door</div><h2 id="vault-title">Password</h2><p class="note" id="vault-note" aria-live="polite"></p><input id="vault-code" maxlength="32" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Vault password"><div class="row"><button type="submit">Open</button><button type="button" data-close>Close</button></div></form></div>
+<div id="countdown" hidden></div><div id="photo-flash" hidden></div>
+<div id="photo-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="photo-title"><div class="card"><div class="eyebrow">Crown lounge</div><h2 id="photo-title">Group photo</h2><img id="photo-image" alt="The group photo from the crown lounge camera"><div class="row"><a id="photo-save" href="#">Save photo</a><button id="photo-share" type="button" hidden>Share</button><button type="button" data-close>Close</button></div></div></div>
+<div id="comic-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="comic-title"><div class="card"><div class="eyebrow comic-where"></div><h2 id="comic-title" class="comic-title"></h2><img class="comic-page" alt=""><div class="row"><button class="comic-back" type="button">Back</button><span class="comic-count"></span><button class="comic-next" type="button">Next page</button><button type="button" data-close>Close</button></div></div></div>
+<div id="info-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="info-title"><div class="card"><div class="eyebrow info-where"></div><h2 id="info-title" class="info-title"></h2><div class="info-body"></div><div class="row"><button type="button" data-close>Close</button></div></div></div>
+<div id="mudwater-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="mudwater-title"><div class="card"><div class="eyebrow">Mudwater Arena</div><img id="mudwater-wordmark" alt="Mudwater: Swamp Origins" hidden><h2 id="mudwater-title">Booster pack giveaway</h2><p class="note" id="mudwater-note">Booster packs of Mudwater: Swamp Origins will be given away here. Details are coming soon.</p><div id="mudwater-claim" hidden></div><div class="row"><a href="https://mudwater.bayc.com/" target="_blank" rel="noopener">Visit Mudwater</a><button type="button" data-close>Close</button></div></div></div>
+<div id="outside-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="outside-title"><div class="outside"><div class="bar"><div><div class="eyebrow">Deck 17 arcade</div><h2 id="outside-title">Neon Arena Survival</h2></div><button type="button" class="back" data-close>Back to Leo</button></div><div class="frame"><iframe id="outside-frame" title="Neon Arena Survival" sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-modals" allow="fullscreen; gamepad; autoplay" referrerpolicy="no-referrer"></iframe><div class="wait">Loading the game…</div></div><p class="note">A game from outside Leo, shown in this window. Back to Leo returns you to the arcade. Not showing? The game’s site may not allow being shown here; <a href="https://neonarenasurvival.grok.me/" target="_blank" rel="noopener noreferrer">open it in a new tab</a>.</p></div></div>
+<div id="tv-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="tv-title"><div class="card"><div class="eyebrow">Crown lounge</div><h2 id="tv-title">Crown TV</h2><p class="tv-now" id="tv-now"></p><p class="note tv-status" id="tv-status" aria-live="polite"></p><div class="row"><button id="tv-sound" type="button">Unmute</button><button id="tv-pick" type="button">Share a video</button><button id="tv-connect" type="button">Connect Discord to share</button><button id="tv-down" type="button">Take it down</button><button type="button" data-close>Close</button></div><p class="note" id="tv-limits"></p><input id="tv-file" type="file" accept="video/mp4,.mp4" hidden></div></div>
+<div id="clown-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="clown-title"><div class="card"><div class="eyebrow">Deck 15 · Halloween</div><h2 id="clown-title">You found the clown</h2><p class="clown-text" aria-live="polite"></p><div class="clown-code" hidden></div><div class="row"><a class="clown-claim" href="https://oswiki.xyz/claim" target="_blank" rel="noopener" hidden>Claim the badge</a><button type="button" data-close>Close</button></div></div></div>
+<div id="emotes" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="emotes-title"><div class="card"><div class="eyebrow">Cosmo</div><h2 id="emotes-title">Emotes</h2><div class="stops"></div><button type="button" data-close>Close</button></div></div>
+<div id="help-sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="help-title"><div class="card" tabindex="-1"><div class="help-head"><div><div class="eyebrow">Walk around Leo</div><h2 id="help-title">Help</h2></div><div class="help-tabs" role="tablist" aria-label="Help pages" hidden><button type="button" role="tab" data-tab="play">How to play</button><button type="button" role="tab" data-tab="ideas">Your ideas</button></div></div><div data-page="play"></div><div data-page="ideas" hidden></div><button type="button" data-close>Close</button></div></div>
+<div id="spray" hidden role="dialog" aria-labelledby="spray-title"><div class="spray-head"><div><div class="eyebrow">Deck 19 · Graffiti wall</div></div><div class="spray-row"><button id="spray-connect" type="button" hidden>Connect Discord</button><button id="spray-done" type="button">Done</button></div></div><h2 id="spray-title" hidden>Spray paint</h2><div id="spray-colours" role="group" aria-label="Spray colour"></div><div id="spray-nozzles" role="group" aria-label="Nozzle"></div><p id="spray-note" aria-live="polite"></p></div>
+<div id="joystick" aria-hidden="true"><div id="stick"></div></div>
+<div id="loading"><div class="card"><div class="eyebrow">Mars Cats Voyage</div><h1>Walk around Leo</h1><div id="loading-text">Loading…</div><p id="loading-slow" hidden>This computer will take a few minutes: the whole ship is built here, using a few GB of memory. Keep this tab open, and if your browser says the page isn’t responding, choose Wait. Closing other tabs helps.</p><div id="memory" hidden><p id="memory-note"></p><div class="who-buttons"><a id="memory-tour" href="./?walk=1">Take the guided tour</a><button id="memory-try" type="button">Try anyway</button></div></div><div id="who" hidden><div id="who-connected" hidden>Aboard as <b id="who-name"></b> · <span class="who-via">Discord</span> <button id="who-forget" type="button">Not you?</button></div><div id="who-ask" hidden><p id="who-note"></p><div class="who-buttons"><button id="who-connect" type="button">Connect Discord</button><button id="who-skip" type="button">Skip for now</button></div><p class="who-small">Through The Creamery, which shares your Discord name and verified wallets with Leo.</p></div><form id="who-guest" hidden><label id="name-field">Your name aboard<input id="name-input" maxlength="24" autocomplete="nickname" placeholder="Voyager"></label><button id="who-board" type="submit">Come aboard</button><button id="who-later" type="button">Log in with Discord</button><p class="who-small">Optional, for chat, scores and more. Through The Creamery, which shares your Discord name and verified wallets with Leo.</p></form></div></div></div>
+<script>
+// The walk script is started from here (LEO_WALK_BOOT, called below with its hashed name). A phone with 4 GB or less,
+// or any browser whose last start never finished (src/walk/main.js keeps that note), is asked first, before the
+// script, its models or WebGL load at all: a Galaxy S9 closed the whole browser while the walk was still loading.
+window.LEO_WALK_BOOT=function(src){
+ if(window.LEO_TO_HUB)return;
+ var run=function(){var s=document.createElement('script');s.type='module';s.src=src;document.body.appendChild(s);},stuck=false;
+ try{var t=Number(localStorage.getItem('leo-walk-building'));stuck=t>0&&Date.now()-t<7*864e5;}catch(e){}
+ var small=matchMedia('(pointer:coarse)').matches&&navigator.deviceMemory>0&&navigator.deviceMemory<=4;
+ if(!stuck&&!small)return run();
+ var text=document.getElementById('loading-text'),label=text.textContent;text.textContent='';
+ document.getElementById('memory').hidden=false;
+ document.getElementById('memory-note').textContent=stuck?'Last time, the walk closed before it finished loading: this device likely ran out of memory. The guided tour shows Leo’s rooms with far less.'
+  :'Walking Leo builds the whole ship and needs more memory than most phones with 4 GB or less can spare. The guided tour shows the rooms with far less.';
+ document.getElementById('memory-try').onclick=function(){document.getElementById('memory').hidden=true;text.textContent=label;run();};
+};
+</script>
+<script>/* BUNDLE */</script>
+</body>
+</html>

@@ -1,3 +1,4 @@
+import {V2_FIND,V2_EXAMPLE_GO} from '../v2/help-wayfinding.js';
 import {toWorld,anchoredYaw} from '../plan/rooms.js';
 // Help (H, or Help in the toolbar): how to play on foot, and, for testers (feedback is on in this browser), the tester
 // guide: how a report becomes a change aboard, with a real report's before and after (the concession stand, ship log
@@ -6,7 +7,7 @@ import {toWorld,anchoredYaw} from '../plan/rooms.js';
 const MEDIA='https://raw.githubusercontent.com/jaybmcv/leo-threejs/pr-media/';
 const EXAMPLE={quote:'Can you add an L-shaped concession stand here that looks super fancy like this?',
  before:'feedback-issue-81/74ffeb1/tester-view-before.jpg',after:'feedback-issue-81/74ffeb1/tester-view-after.jpg',
- go:'?lv=1&at='+toWorld('d16-theater-5',[-20.29,0,-.42],{legacy:true}).join(',')+'&yaw='+209+'&pitch=-9&view=first'};
+ go:V2_EXAMPLE_GO};
 
 // Each row: the keys, then the touch control (null: none on that kind of screen), then what it does, and on a touch
 // screen what it does there when that differs.
@@ -38,15 +39,7 @@ const PLAY=[
   [['Aboard'],'Aboard','Click the aboard count to set the name over your head; a teal dot marks a Discord-verified name','Tap the aboard count to set the name over your head; a teal dot marks a Discord-verified name'],
  ]},
 ];
-const FIND=[
- ['Alien Cat Invasion','The telescope in the Deck 18 observation lounge, and the Hydro-Nip Lounge arcade on Deck 17'],
- ['Paw Pool','The Recreation hall’s table on Deck 16, and the same arcade'],
- ['Paws Off','A typing run on the Deck 16 exercise studio’s treadmills'],
- ['Hamster ball','Parked in the Deck 17 gardens: climb in and roll it round the ship, fast, with a hop on Space'],
- ['MCT transporters','Six three-seat carts in Deck 1’s Freight control: E at the front to drive one (WASD; hold Shift to run), E at the back to ride'],
- ['Group photo','The crown lounge camera counts down five seconds: get in the shot'],
- ['Comics and yarn','Comic books lying about to read, and neon balls of yarn to push'],
-];
+const FIND=V2_FIND;
 // The tester guide, as the printed one (minus its QR code: you're already aboard).
 const STEPS=[
  ['You send it','1 minute','Press <b>Feedback</b>, then type it or say it.'],
@@ -101,7 +94,7 @@ export function createHelp(sheet,{touch=()=>false,tester=()=>false,live=()=>fals
    steps,el('div',{className:'guide-after'},el('span',{textContent:'Not showing yet? Refresh the page.'}),log,hub),
    el('div',{className:'eyebrow guide-eyebrow'},el('span',{textContent:'Writing a good report'})),
    el('h3',{className:'guide-title small',textContent:'Plain words work'}),
-   el('p',{className:'guide-lead',textContent:'Write it like you’d text a friend, and add a picture. This real report got built:'}),
+   el('p',{className:'guide-lead',textContent:'Write it like you’d text a friend, and add a picture. This report was built in the earlier layout. Its pictures are historical; See it aboard visits the current concession stand:'}),
    el('div',{className:'guide-quote'},el('blockquote',{textContent:EXAMPLE.quote}),
     el('div',{className:'guide-shots'},shot('before',EXAMPLE.before,'The Deck 16 theatre corner before: bare walls and floor'),shot('after',EXAMPLE.after,'The same corner after: a gold-fronted L-shaped concession stand with a lit menu')),
     el('div',{className:'guide-built'},el('span',{textContent:'✓ Built from one sentence and one picture'}),see)),

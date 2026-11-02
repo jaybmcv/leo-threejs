@@ -1,7 +1,8 @@
+import layout from '../plan/selected-layout.js';
 import * as T from 'three';
 import {anchorObject} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {DECKS} from '../model.js';
+const DECKS=layout.decks;
 import {TRANSIT_CORES,floorY} from '../transit.js';
 import {SHIP_AREAS} from '../areas.js';
 import {serviceRoutes} from '../service-circulation.js';
@@ -13,7 +14,7 @@ const INK='#0d1419',PANEL='#1b2830',TEXT='#f4f0e8',DIM='#a6b4bb',ORANGE='#f85800
 const FONT={display:'"Archivo", "Sora", sans-serif',mono:'"JetBrains Mono", ui-monospace, monospace',sans:'"Sora", sans-serif'};
 const deckName=n=>DECKS.find(d=>d.number===n)?.name||'';
 // A deck's headline room, named on its lift landings' plaques (in gold, in place of the deck's theme) and stair signs.
-export const FEATURED={16:'Mudwater Arena'};const GOLD='#d8cf8f';
+export const FEATURED={16:layout.rooms.find(r=>r.id==='d16-arena-1').name};const GOLD='#d8cf8f';
 const drawn=[];
 
 function canvasTexture(width,height,draw){

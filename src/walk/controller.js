@@ -31,7 +31,7 @@ export class Controller{
   let best=null;
   for(const [dx,dz] of FEET){
    this.ray.origin.set(p.x+dx,p.y+up,p.z+dz);this.ray.direction.set(0,-1,0);
-   const hit=this.colliders.raycast(this.ray,up+down);
+   const hit=(this.colliders.raycastGround||this.colliders.raycast).call(this.colliders,this.ray,up+down);
    if(hit&&hit.normal.y>=MIN_NY&&(!best||hit.point.y>best.point.y))best=hit;
   }
   return best;

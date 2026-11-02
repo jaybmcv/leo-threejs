@@ -1,5 +1,21 @@
 # LEO Three.js source handoff
 
+## Layout 2 — takes effect at cutover
+
+Until cutover, the canonical live site and the historical build notes below describe layout 1. Layout 2 is selected with `LEO_LAYOUT=2` at build time and writes only `output/leo-interior-v02` and `dist-v2`; URL parameters cannot switch worlds. These v2 sections take precedence for the redesigned ship after cutover. This work does not deploy or approve a release.
+
+The accepted source of truth is [the v2 plan](src/plan/README-v2.md), [the selected walk](src/plan/README-phase2.md) and [recorded decisions](src/plan/decisions-v2.json).
+
+For v2 work, read the selected plan and adapters first. Coordinates are ship metres: X forward, Y up, Z starboard. **Walk yaw 0 faces +Z and 90 degrees faces +X**. Keep the live v1 models and walk source unchanged. The 283 existing v2 stair/lift signs keep their planned placement in `src/plan/signs-v2.js`.
+
+The v2 Go-to catalog covers every nonaggregate selected room, retained fixed room, escape shuttle and named activity approach. It groups twenty decks plus fin/crown, searches current names, uses real floor points, and omits the Deck 20 crew gallery as a public destination. Runtime code must use the trimmed layout shape: per-deck corridor lists are absent; use `layout.circulation.corridors`.
+
+`node scripts/check-goto-v2.mjs` uses this checkout’s prepared walk by default; `--prepared=<directory>` selects a frozen prepared-walk folder for targeted review. `LEO_LAYOUT=2 node scripts/check-live.mjs` selects the v2 camera/walker pose smoke. The default v1 live test body is retained. The focused v2 pose smoke checks floor support and network pose delivery; it does not substitute for the full feature/server interaction suite at combined validation.
+
+Use [REPORT-goto.md](output/phase7/REPORT-goto.md) for exact PowerShell commands, browser-review setup and checks still requiring the final combined build. Cutover must point hosting at the validated v2 public output; no deployment occurs as part of this handoff.
+
+## Layout 1 reference and history
+
 This is the complete procedural source for the LEO interactive ship study, including the latest five Captain's bridge refinement passes (September 12, 2026). Start here; the main README also contains historical build notes.
 
 The canonical visual reference is `src/reference-shuttle/assets/full-reference.png`, updated from the current V35 website perspective export on 2026-09-14. The older concept is retained at `src/reference-shuttle/assets/full-reference-concept.png` for comparison only.

@@ -1,3 +1,4 @@
+import {configureV2Ship} from './v2/model.js';
 import * as T from 'three';
 import {CABINS,COMMONS} from './plan/v1.js';
 import {anchorObject,anchorCabins,anchorMerged,anchoredPoint,hasFrameOverride} from './plan/rooms.js';
@@ -189,7 +190,7 @@ export function createShip({deferExterior=false,lazyInterior=false,onDecks=null}
       ship.exterior.scale.x=.94;ship.exterior.position.x=-18;
       deferExterior=false;return true;
     }};
-  return ship;
+  return configureV2Ship(ship);
 }
 
 function catFigure(parent,x,y,z,rotation=0) {
@@ -338,7 +339,7 @@ export function createNeighborhood() {
   for(let xx of [128,131,134])box('Induction_hob',[.8,.04,.6],[xx,25.37,39],navy,services);
   box('Kitchen_sink',[1.1,.1,.7],[133.5,25.4,39],white,services);
   for(let i=0;i<4;i++)chair(services,128+i*2,24.3,37,Math.PI);
-  for(let xx of [117,120,123]){box('Reading_shelf',[.3,2.3,2],[xx,25.45,44.5],wood,services);chair(services,xx+1,24.3,40,Math.PI/2);}
+  for(let xx of [117,120,123]){box('Reading_shelf',[.3,2.3,2],[xx,25.45,39.5],wood,services);chair(services,xx+1,24.3,40,Math.PI/2);}
   // Continuous handrails support both stair flights and gallery landings.
   for(let level=0;level<2;level++)for(const xx of [150.3-level*3.3,153.3-level*3.3])tube('Stair_handrail',[[xx,25.4+4*level,level===0?34.85:42.2],[xx,29.4+4*level,level===0?42.2:34.85]],.05,wood,fittings);
   for(const xx of [119,140]){const l=new T.PointLight(0xffe6c2,45,38,2);l.position.set(xx,32,27);root.add(l);}

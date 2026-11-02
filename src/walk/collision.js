@@ -1,3 +1,4 @@
+import {memoBVH} from '../v2/build-cache.js';
 import * as T from 'three';
 import {MeshBVH} from 'three-mesh-bvh';
 
@@ -39,7 +40,9 @@ export function meshTriangles(o,out,matrix=o.matrixWorld){
 }
 export const solid=o=>o.isMesh&&!o.isInstancedMesh&&!o.isSkinnedMesh&&!SKIP.test(o.name)&&!o.userData.noCollide&&worldVisible(o);
 
-function bvhOf(positions){
+function bvhOf(positions){return memoBVH(positions,()=>uncachedBvhOf(positions));}
+function uncachedBvhOf(positions){
+ const clean=new Float32Array(positions.length);let kept=0;for(let i=0;i<positions.length;i+=9){const ax=positions[i+3]-positions[i],ay=positions[i+4]-positions[i+1],az=positions[i+5]-positions[i+2],bx=positions[i+6]-positions[i],by=positions[i+7]-positions[i+1],bz=positions[i+8]-positions[i+2],nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx;if(nx*nx+ny*ny+nz*nz>1e-16)for(let k=0;k<9;k++)clean[kept++]=positions[i+k];}positions=clean.subarray(0,kept);
  const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(positions instanceof Float32Array?positions:new Float32Array(positions),3));
  return new MeshBVH(g,{targetLeafSize:8,indirect:true});
 }
@@ -47,7 +50,8 @@ function bvhOf(positions){
 // A growing list of floats. The pending soups used to be plain arrays, 8 bytes a number: ~200 MB for the whole ship
 // on top of the meshes they were read from, while the walk page was at its largest.
 class Floats{
- constructor(){this.array=new Float32Array(4096);this.length=0;}
+ constructor(){this.array=new Float32Array(4096);this.length=0;this.flags=new Uint8Array(4096);this.flagLength=0;}
+ pushFlag(flag){if(this.flagLength===this.flags.length){const a=new Uint8Array(this.flags.length*2);a.set(this.flags);this.flags=a;}this.flags[this.flagLength++]=flag;}
  push9(src,at){
   if(this.length+9>this.array.length){const grown=new Float32Array(this.array.length*2);grown.set(this.array);this.array=grown;}
   for(let k=0;k<9;k++)this.array[this.length++]=src[at+k];
@@ -61,10 +65,11 @@ export class Colliders{
  addStatic(root,filter=solid){
   root.updateMatrixWorld(true);let tris=0;const scratch=[];
   root.traverse(o=>{
-   if(!filter(o))return;scratch.length=0;meshTriangles(o,scratch);
+   if(!filter(o))return;scratch.length=0;meshTriangles(o,scratch);const sightIgnored=!!o.userData.collisionOnly||[].concat(o.material).every(m=>m?.transparent&&m.opacity<.6);
    for(let i=0;i<scratch.length;i+=9){
+    const p=Array.from({length:9},(_,k)=>Math.fround(scratch[i+k])),ax=p[3]-p[0],ay=p[4]-p[1],az=p[5]-p[2],bx=p[6]-p[0],by=p[7]-p[1],bz=p[8]-p[2],nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx;if(!(nx*nx+ny*ny+nz*nz>1e-16))continue;
     const y0=Math.min(scratch[i+1],scratch[i+4],scratch[i+7]),y1=Math.max(scratch[i+1],scratch[i+4],scratch[i+7]);
-    for(let b=bandOf(y0);b<=bandOf(y1);b++){let list=this.pending.get(b);if(!list)this.pending.set(b,list=new Floats());list.push9(scratch,i);}
+    for(let b=bandOf(y0);b<=bandOf(y1);b++){let list=this.pending.get(b);if(!list)this.pending.set(b,list=new Floats());list.push9(scratch,i);list.pushFlag(sightIgnored?1:0);}
     tris++;
    }
   });
@@ -75,7 +80,7 @@ export class Colliders{
   for(const [b,list] of this.pending){
    const old=this.bands.get(b),prev=old?old.geometry.attributes.position.array:null;
    const all=new Float32Array((prev?prev.length:0)+list.length);if(prev)all.set(prev);all.set(list.values,prev?prev.length:0);
-   const bvh=bvhOf(all);this.bands.set(b,{bvh,geometry:bvh.geometry,band:b});
+   const bvh=bvhOf(all),flags=new Uint8Array((old?.windowFlags?.length||0)+list.flagLength);if(old?.windowFlags)flags.set(old.windowFlags);flags.set(list.flags.subarray(0,list.flagLength),old?.windowFlags?.length||0);if(flags.length!==bvh.geometry.attributes.position.count/3)throw Error('Prepared collision visibility flags do not match triangles');bvh.leoWindowFlags=flags;this.bands.set(b,{bvh,geometry:bvh.geometry,band:b,windowFlags:flags});
   }
   this.pending.clear();
  }
@@ -150,7 +155,8 @@ export class Colliders{
   }
   return best;
  }
- get triangles(){let n=0;for(const b of this.bands.values())n+=b.geometry.attributes.position.count/3;return n;}
+ raycastSight(ray,far=1e4,near=0){const box=new T.Box3().setFromPoints([ray.origin,ray.at(far,new T.Vector3())]).expandByScalar(.01),local=new T.Ray();let best=null;for(const [bvh,inverse,matrix]of this.near(box,ray)){local.copy(ray);if(inverse)local.applyMatrix4(inverse);for(const hit of bvh.raycast(local,T.DoubleSide,near,far)){if(bvh.leoWindowFlags?.[hit.faceIndex])continue;if(hit.distance<=far&&(!best||hit.distance<best.distance)){const normal=hit.face.normal.clone();if(matrix)normal.transformDirection(matrix);if(normal.dot(ray.direction)>0)normal.negate();best={distance:hit.distance,point:ray.at(hit.distance,new T.Vector3()),normal};}}}return best;}
+ get triangles(){let n=0;for(const b of this.bands.values())n+=(b.geometry.index?.count??b.geometry.attributes.position.count)/3;return n;}
 }
 
 const CELL=8;

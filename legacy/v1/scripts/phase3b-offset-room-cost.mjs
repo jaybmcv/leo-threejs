@@ -1,0 +1,1 @@
+import fs from 'node:fs/promises';const L=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json'));console.log(L.rooms.filter(r=>r.outer&&!r.aggregate&&Math.abs(r.y-L.decks[r.deck-1].y)>.1).map(r=>({id:r.id,y:r.y,deck:r.deck,dy:r.y-L.decks[r.deck-1].y,sections:r.envelope?.length,vertices:(r.envelope||[{polygon:r.polygon}]).reduce((s,p)=>s+p.polygon.length,0)})));

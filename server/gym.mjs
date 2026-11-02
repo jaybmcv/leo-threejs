@@ -21,7 +21,7 @@
 //   results, round, ranks    everyone is out: [{id, name, t, how, place}], best first
 const LOBBY_MS=6000,READY_MS=3000,LONGEST_MS=12000,ROUND_MS=180000,MOST=12;
 
-export function createGym({log,send,now=Date.now}){
+export function createGym({log,send,now=Date.now,canPlay=()=>true}){
  let lobby=null,next=1;
  const rounds=new Map();
  const nameOf=v=>v.name||null;
@@ -42,7 +42,7 @@ export function createGym({log,send,now=Date.now}){
  // The countdown ends: those on a treadmill run, with one seed.
  function start(r){
   if(lobby!==r)return;lobby=null;
-  for(const v of [...r.runners.keys()])if(!v.ready||!v.playing){r.runners.delete(v);if(v.gym===r)v.gym=null;if(v.ready)send(v.ws,{m:'gym',e:'cancel'});}
+  for(const v of [...r.runners.keys()])if(!v.ready||!v.playing||!canPlay(v.pos)){r.runners.delete(v);if(v.gym===r)v.gym=null;if(v.ready)send(v.ws,{m:'gym',e:'cancel'});}
   if(!r.runners.size)return;
   Object.assign(r,{seed:(Math.random()*2**31)|0,at:now(),running:true});rounds.set(r.id,r);
   const runners=[...r.runners.values()].map(({id,name})=>({id,name}));

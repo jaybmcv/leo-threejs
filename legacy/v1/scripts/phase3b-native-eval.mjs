@@ -1,0 +1,1 @@
+import fs from 'node:fs/promises';import {pageAt} from './phase3b-cdp.mjs';const page=await pageAt('http://127.0.0.1:4183/normal/walk.html'),source=await fs.readFile(process.argv[2],'utf8');console.log(JSON.stringify(await page.ev(source),null,2));page.socket.close();

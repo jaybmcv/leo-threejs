@@ -1,0 +1,31 @@
+import fs from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import {auditCorridorLanding,auditNativeLanding} from './ship-log-remap-audit.mjs';
+import {createLegacyCorridorRemapper,legacyFeatureSpot} from '../src/v2/legacy-corridors.js';
+const layout=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8'));
+const table=JSON.parse(await fs.readFile('output/phase7/remap-table.json','utf8'));
+const good=table.rows.find(r=>r.id==='pr50');auditCorridorLanding(layout,good);
+const breakPose=(label,fn)=>{const row=structuredClone(good);fn(row);assert.throws(()=>auditCorridorLanding(layout,row),undefined,label+' must be rejected');};
+breakPose('old unremapped position',r=>r.current={...r.original,resolved:true});
+breakPose('arrival fallback',r=>r.current.at=[-115,-35.7,-38]);
+breakPose('wrong deck',r=>r.current.at[1]-=4);
+breakPose('wall-facing yaw',r=>r.current.yaw+=Math.PI/2);
+breakPose('atrium void',r=>r.current.at=[0,20.3,0]);
+breakPose('cabin interior',r=>r.current.at=[...layout.rooms.find(c=>c.id==='d16-library-2').center]);
+breakPose('stale route id',r=>r.current.corridor='removed-corridor');
+const row=table.rows.find(r=>r.id==='d10-lane'),changed=structuredClone(row);changed.current.legacyCorridor.cabin='N05-001';assert.throws(()=>auditCorridorLanding(layout,changed),undefined,'wrong cabin range must fail');
+const native={id:'fixture',source:'ship-log',spot:{at:[0,0,0],legacyCorridor:{deck:1}},at:[0,0,0],exact:[0,0,0],ahead:[.9,0,0],details:{floor:{at:[0,0,0],normal:[0,1,0]},overlap:false},inLog:true,nearby:true};auditNativeLanding(native);
+for(const [label,patch] of [['no landing',{at:null}],['spiral escaped',{exact:null}],['no floor',{details:{floor:null,overlap:false}}],['capsule collision',{details:{...native.details,overlap:true}}],['wrong floor height',{details:{floor:{at:[0,-4,0],normal:[0,1,0]},overlap:false}}],['forward obstruction',{ahead:null}],['nearby omitted',{nearby:false}]])assert.throws(()=>auditNativeLanding({...native,...patch}),undefined,label+' must fail');
+// A small synthetic trimmed world proves selection, rather than only the auditor,
+// refuses a hole, a cabin and a too-narrow corridor.
+const rect=(x0,z0,x1,z1)=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]];
+const d={number:1,y:0,slab:{outline:rect(-10,-10,10,10),holes:[]}},route={id:'lane',deck:1,width:2.6,points:[[-8,0],[8,0]]};
+const tiny={decks:[d],cabins:[],rooms:[],cabinIdMap:{},circulation:{corridors:[route],bridges:[],towers:[],stairs:[]}};
+const spot={at:[0,0,0],yaw:Math.PI/2};let map=createLegacyCorridorRemapper(tiny,[]);assert(map.remap(spot,'circulation-1'));
+const hole=structuredClone(tiny);hole.decks[0].slab.holes=[{polygon:rect(-10,-2,10,2)}];assert.equal(createLegacyCorridorRemapper(hole,[]).remap(spot,'circulation-1'),null);
+const cabin=structuredClone(tiny);cabin.cabins=[{id:'blocked',y:0,height:3.5,polygon:rect(-10,-2,10,2)}];assert.equal(createLegacyCorridorRemapper(cabin,[]).remap(spot,'circulation-1'),null);
+const narrow=structuredClone(tiny);narrow.circulation.corridors[0].width=.6;assert.equal(createLegacyCorridorRemapper(narrow,[]).remap(spot,'circulation-1'),null);
+assert.equal(map.remap({...spot,lv:2},'circulation-1'),null);assert.equal(map.remap({...spot,resolved:true},'circulation-1'),null);assert.equal(map.remap(spot,'room'),null);
+assert.equal(legacyFeatureSpot({at:[-229.36,35.32,-2.24],lv:2}),null);
+const physicalMap=createLegacyCorridorRemapper(layout,[]),deck2=layout.decks[1];assert(physicalMap.safe(deck2,[138,6.7]));assert(!physicalMap.safe(deck2,[138,7.6]),'Forward stair outer wall blocks the full capsule');const oldStairPhoto=physicalMap.remap({at:[140.6,-36.4,6.7],yaw:Math.PI/2,lv:1},'stairs-forward-1-d1');assert.deepEqual(oldStairPhoto.at,[138,-35.7,6.7]);assert.equal(oldStairPhoto.yaw,Math.PI,'Saved photo faces the clear side of the same landing');
+console.log('Phase 7 remap negative fixtures: old fallback, wrong deck/range/yaw, void, wall, missing floor, capsule, nearby, trimmed selection PASS');

@@ -9,7 +9,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 // Room frame (Area_d03-cold-6): the title end at +x, the entrance at x=-25.92 (doorway |z|<2, 2.8 m high), side walls'
 // faces at |z|=16.84, the pickup counter at x -23.5..-16.5, z 3.4..4.6, the main aisle between the amber lines at |z|<2.
 const ROOM='Area_d03-cold-6';
-const SIDE=16.84,BACK=25.84,ENTRY=-25.84,DOOR=2,RAIL=2.78;
+const SIDE=16.84,BACK=25.84,ENTRY=-25.84,DOOR=2.5,RAIL=2.78;
 const OLD=/^(Insulated_storage|Cabinet_door|Status_display|Refined_cabinet_hardware|Refined_display_graphics|Polish_instrument_bezel)$/;
 
 function rng(seed){return ()=>(seed=(seed*16807)%2147483647)/2147483647;}

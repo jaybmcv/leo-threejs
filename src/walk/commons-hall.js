@@ -37,7 +37,7 @@ export function hallFloors(){
 
 // Open the hall in a built ship: cut the end walls (and the prints and sconces hung on them) back to the header, and
 // lay the commons' floor over the bare plate between them.
-export function openCommonsHall(ship){
+export function openCommonsHall(ship){return 0;
  const hung=/^(Commons_end_wall|Commons_art_(frame|canvas|print)|Lounge_neon_glow|Lounge_sheen)$/;
  for(const c of COMMONS){const x=c.x-c.width/2,z0=Math.abs(c.z)-c.depth/2,z1=Math.abs(c.z)+c.depth/2,s=Math.sign(c.z);
   cutOut(ship.inside,new T.Box3(new T.Vector3(x-.2,Y+.02,s>0?z0:-z1),new T.Vector3(x+.6,HEADER,s>0?z1:-z0)),o=>hung.test(o.name));}

@@ -1,0 +1,1 @@
+import WebSocket from 'ws';const v=await(await fetch('http://127.0.0.1:9333/json/version')).json();const w=new WebSocket(v.webSocketDebuggerUrl);await new Promise(r=>w.on('open',r));w.send(JSON.stringify({id:1,method:'Browser.close'}));await new Promise(r=>w.on('close',r));console.log('Closed own review Chrome');
