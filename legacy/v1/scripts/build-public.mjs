@@ -1,0 +1,51 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {gzipSync,gunzipSync} from 'node:zlib';
+import {createHash} from 'node:crypto';
+import {copyBrandAssets} from './brand-assets.mjs';
+import {buildWebExterior} from './build-web-exterior.mjs';
+import {writeWalkPage} from './walk-page.mjs';
+import {writeBuildInfo} from './build-info.mjs';
+import {writeHubPage} from './hub-page.mjs';
+import {v2,modelOutput,publicOutput} from './layout-selector.mjs';
+if(v2){await import('./public-v2.mjs');process.exit(0);}
+const source=modelOutput,out=publicOutput;
+await fs.mkdir(out+'/models',{recursive:true});
+await buildWebExterior(source+'/leo-exterior-refined.glb',source+'/leo-exterior-web.glb',source+'/leo-exterior-phone.glb');
+const names=['leo-exterior-refined.glb','leo-exterior-web.glb','leo-exterior-phone.glb','leo-residential-decks.glb','leo-garden-commons.glb','leo-service-areas.glb','leo-aft-systems.glb','leo-transit.glb','leo-full-ship.glb','leo-neighborhood.glb'];
+const manifest={};
+const hash=b=>createHash('sha256').update(b).digest('hex');
+for(const name of names){
+ const b=await fs.readFile(path.join(source,name)),gz=gzipSync(b,{level:9});
+ if(hash(gunzipSync(gz))!==hash(b))throw new Error('Model transport changed '+name);
+ const parts=[];
+ for(let i=0;i<gz.length;i+=16*1024*1024){const part=`models/${name}.${i/(16*1024*1024)}.bin`;await fs.writeFile(path.join(out,part),gz.subarray(i,i+16*1024*1024));parts.push(part);}
+ // Part URLs carry the model's hash, so a changed model never meets a stale cached part (hosts cache models/ for a day).
+ manifest[name]={parts:parts.map(p=>`${p}?v=${hash(b).slice(0,12)}`),bytes:b.length,compressedBytes:gz.length,sha256:hash(b)};
+ console.log(`${name}: ${(b.length/1048576).toFixed(1)} → ${(gz.length/1048576).toFixed(1)} MB, ${parts.length} part(s)`);
+}
+let html=await fs.readFile(source+'/index.html','utf8');
+html=html.replace('<head>','<head><meta name="description" content="Explore Leo, the Mars Cats Voyage shuttle: 20 decks, 10 neighborhoods, and room for 10,000 travelers. Orbit the ship, inspect rooms, and take an interior tour.">');
+// Retain the entire interactive viewer; archive-comparison pages remain local.
+html=html.replace(/<a[^>]*href="(?:top-plan-review|comparison)\.html"[^>]*>.*?<\/a>(?:<br>)?/g,'');
+html=html.replace('Narrow crown, rounded diamond shoulder, straight side planes. Use the opacity overlay to compare the complete top surfaces.','Explore the exterior, select a deck, or take a guided walk through life aboard Leo.');
+html=html.replace('<div class="foot-links">','<div class="foot-links"><button id="share-view" type="button">Copy view link</button>');
+html=html.replace('</style>','\n#share-view{font:inherit;color:#ebbd83;background:none;border:0;padding:0;cursor:pointer} @media(max-width:1000px){.tabs{overflow-x:auto;justify-content:flex-start;scrollbar-width:thin}.tabs button{flex-shrink:0}} @media(max-width:680px){.foot-links a{display:none}.foot-links #share-view{display:block}}\n</style>');
+html=html.replace('<body>',`<body><script>window.LEO_PUBLIC_ASSETS=${JSON.stringify(manifest)};window.LEO_ARRIVAL=!location.search;if(!location.search)history.replaceState(null,'','?camera=boarding');</script>`);
+await fs.writeFile(out+'/index.html',html);
+await fs.writeFile(out+'/asset-manifest.json',JSON.stringify(manifest,null,2));
+await fs.writeFile(out+'/README.md',`# LEO · Mars Cats Voyage\n\nAn interactive concept model of a 564 m shuttle for 10,000 travelers.\n\nUse Exterior to orbit the ship; Deck layout to inspect the 20 decks; Neighborhood to explore twin cabins and gardens; Ship areas for shared facilities; Aft systems for engineering and the panoramic fin lounge. Walkthrough follows curated interior routes.\n\nDrag to orbit or look, scroll to zoom, and use Copy view link to share the current scene. Model downloads preserve the complete geometry. Larger models take longer to prepare.\n\nThe interior refinement pass covers all 78 named rooms, service corridors, lifts and stairs, and five aft engineering sections, alongside the furnished cabins, gardens and observation lounges. The second polish pass refines furniture, joinery, instruments and circulation finishes throughout. Decks 6–15 now each have a distinct nose commons: cafe, library, art studio, family commons, music lounge, games club, wellness room, maker studio, communal kitchen and quiet grove. Open Neighborhood → Nose commons and change the deck selector to explore them. They are included in the residential and complete-ship downloads. The rear of Deck 14 contains laundry and parcel collection; Deck 15 adds a repair studio and shared-equipment storage. Deck 16 also has aft training and briefing, and Deck 17 has an arrival lounge connected to the fin lift gallery. The lower bow contains expedition stores on Deck 1, fresh-food cultivation on Deck 4, and rehabilitation on Deck 5. The forward part of Deck 16 now contains a voyage forum with 120 modeled audience seats, a low stage and ramp, and gathering space. Find them under Ship areas, including room and eye-level views. The fin lounge retains its curved white underside. Passenger and panoramic windows have dark exterior tint and clearer interior faces; view changes preserve the tint.\n\nThis is a spatial design concept, not an engineered spacecraft or a certified occupancy plan.\n\n© Mars Cats Voyage. Three.js license: [THREE-LICENSE.txt](THREE-LICENSE.txt).\n`);
+await fs.copyFile(source+'/THREE-LICENSE.txt',out+'/THREE-LICENSE.txt');
+// A GPU check for phones the 3D views fail on (src/gl-check.html; self-contained).
+await fs.copyFile('src/gl-check.html',out+'/gl-check.html');
+await copyBrandAssets(out);
+// The viewer script and Cosmo are content-hashed (scripts/viewer-page.mjs); replace any from an earlier build.
+const HASHED_SCRIPT=/^(viewer|cosmo)\.[0-9a-f]{10}\.js$/;
+for(const name of await fs.readdir(out))if(HASHED_SCRIPT.test(name)||name==='cosmo.js')await fs.rm(path.join(out,name));
+for(const name of await fs.readdir(source))if(HASHED_SCRIPT.test(name))await fs.copyFile(path.join(source,name),path.join(out,name));
+// Walk around Leo (src/walk): its own page and script, sharing the viewer's Cosmo and models.
+const cosmoName=(await fs.readdir(out)).find(n=>/^cosmo\.[0-9a-f]{10}\.js$/.test(n));
+const walk=await writeWalkPage(out,{cosmo:cosmoName,manifest});console.log(`Walk page: ${walk.walk}, ${(walk.bytes/1048576).toFixed(1)} MB.`);
+const hub=await writeHubPage(out);console.log(`Builder's Hub: ${hub.script}, ${(hub.bytes/1024).toFixed(0)} KB.`);
+await writeBuildInfo(out);
+console.log('Public viewer ready. All compressed models verified losslessly.');

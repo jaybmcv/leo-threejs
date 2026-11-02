@@ -1,0 +1,6 @@
+import {Colliders,solid} from '../walk/collision.js';
+const walkSurface=/floor|tread|stair_(up|return)|ramp|landing|threshold|platform|gallery|walkway|stage|dais/i,barrier=/wall|ceiling|roof|lining|glass|pressure|window|guard|rail|hull|canopy/i;
+export function groundMesh(o){if(o.userData.collisionOnly)return false;if(o.userData.batchedEnvelope)return o.userData.role==='floor'||o.name==='V2_outer_room_floor';if(/wall|ceiling|roof|guard|rail/i.test(o.name))return false;return walkSurface.test(o.name)||!barrier.test(o.name);}
+export const exteriorGround=o=>walkSurface.test(o.name)&&!barrier.test(o.name);
+export function groundFor(col){return col.v2Ground||new Colliders();}
+export function installGround(col,ground){if(col.v2Ground)return col;ground.movers=col.movers;col.v2Ground=ground;col.raycastGround=(...args)=>ground.raycast(...args);const add=col.addStatic.bind(col),commit=col.commit.bind(col),instances=col.addInstances.bind(col);col.addStatic=(root,filter)=>{const n=add(root,filter);ground.addStatic(root,o=>(filter||solid)(o)&&groundMesh(o));return n;};col.addInstances=(name,triangles,matrices)=>{const out=instances(name,triangles,matrices);if(!barrier.test(name))ground.addInstances(name,triangles,matrices);return out;};col.commit=()=>{commit();ground.commit();};ground.commit();return col;}
