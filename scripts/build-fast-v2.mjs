@@ -14,7 +14,11 @@ try{
   await timer.stage('wider geometry build',()=>runNode('scripts/build-all.mjs',plan.decks.length?['--decks='+plan.decks.join(',')]:[]));
  }else if(plan.lane==='B'){
   for(const name of ['layout.json','walk-plan.json','walk-map.png','exterior-envelopes.json'])await fs.copyFile(baseline+'/'+name,output+'/'+name);
-  details=await (await import('./fast-room-patch-v2.mjs')).patchRooms(plan,timer);
+  // A patch the writer can't take (an older room whose arrays are too large for one patch part) falls back to the wider
+  // build rather than failing the deploy.
+  try{details=await (await import('./fast-room-patch-v2.mjs')).patchRooms(plan,timer);}
+  catch(e){if(!/wider build/.test(e.message))throw e;console.log('Fast patch declined: '+e.message.split(String.fromCharCode(10))[0]+'; taking the wider build');
+   await timer.stage('wider geometry build',()=>runNode('scripts/build-all.mjs',plan.decks?.length?['--decks='+plan.decks.join(',')]:[]));plan.lane='whole';}
  }else if(plan.reuse!=='active'){
   const current=await preparedSourceIdentity();
    await fs.cp(baseline+'/prepared-walk',output+'/prepared-walk',{recursive:true});
