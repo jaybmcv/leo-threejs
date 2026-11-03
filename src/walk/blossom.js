@@ -206,6 +206,13 @@ export function createBlossomGarden(ship){
  const rim=(x,z)=>{const r=.16+rnd()*.07;rocks.push(tinted(new T.IcosahedronGeometry(r,1).scale(1.2,.85,1.1).rotateY(rnd()*6).translate(x,rimTop-r*.85,z),stoneTint()));};
  for(let z=P.z0+.08;z<P.z1;z+=.27+rnd()*.08)if(!gap(z))rim(P.x0+.14,z);
  for(let x=P.x0+.3;x<P.x1-.05;x+=.27+rnd()*.08)rim(x,P.z1-.14);
+ // A low stone course closes the floor-level gap beneath the pond rim, clear of the bridge landing.
+ const lowColors=[0x77756b,0x898679,0x9b9385,0x807d73];
+ const lowRim=(x,z,i)=>{const r=.17+(i%3)*.012;rocks.push(tinted(
+  new T.IcosahedronGeometry(r,1)
+  .scale(1.2,.85,1.1).rotateY(i*.43).translate(x,FLOOR+r*.85,z),lowColors[i%lowColors.length]));};
+ for(let i=0,z=P.z0+.18;z<P.z1-.1;i++,z+=.22)if(!gap(z))lowRim(P.x0+.14,z,i);
+ for(let i=0,x=P.x0+.2;x<P.x1-.02;i++,x+=.22)lowRim(x,P.z1-.14,i+16);
  block(pw,.15,pd,(P.x0+P.x1)/2,FLOOR+.075,(P.z0+P.z1)/2);
  for(const [z0,z1] of [[P.z0,BRIDGE.z-BRIDGE.half-.02],[BRIDGE.z+BRIDGE.half+.02,P.z1]])block(.3,.48,z1-z0,P.x0+.14,FLOOR+.24,(z0+z1)/2);
  block(pw,.48,.3,(P.x0+P.x1)/2,FLOOR+.24,P.z1-.14);
