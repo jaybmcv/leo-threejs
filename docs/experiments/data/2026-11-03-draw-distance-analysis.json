@@ -1,0 +1,6593 @@
+[
+  {
+    "file": "distance-1793715999369-6uol7q.jsonl",
+    "meta": {
+      "timestamp": "2026-11-03T14:26:39.518Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+      "hardwareConcurrency": 16,
+      "deviceMemory": 32,
+      "dpr": 1,
+      "pixelRatio": 1,
+      "drawingBuffer": {
+        "width": 1280,
+        "height": 720
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "requested": {
+        "width": 1280,
+        "height": 720
+      },
+      "gpu": {
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3090 (0x00002204) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (NVIDIA)",
+        "timerSupported": true,
+        "timerExtension": "EXT_disjoint_timer_query_webgl2",
+        "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+      },
+      "visibility": "visible",
+      "profiles": [
+        {
+          "id": "current",
+          "far": 150,
+          "rayFar": 90,
+          "verticalProbe": 12,
+          "cabins": 40,
+          "fogNear": 70,
+          "fogFar": 650,
+          "forceAtrium": false,
+          "label": "Current"
+        },
+        {
+          "id": "long300",
+          "label": "Long 300m",
+          "far": 300,
+          "rayFar": 300,
+          "verticalProbe": 64,
+          "cabins": 40,
+          "fogNear": 100,
+          "fogFar": 800,
+          "forceAtrium": false
+        },
+        {
+          "id": "whole450",
+          "label": "Whole atrium 450m",
+          "far": 450,
+          "rayFar": 450,
+          "verticalProbe": 80,
+          "cabins": 40,
+          "fogNear": 120,
+          "fogFar": 1100,
+          "forceAtrium": false
+        },
+        {
+          "id": "detail450",
+          "label": "Whole atrium + cabin detail",
+          "far": 450,
+          "rayFar": 450,
+          "verticalProbe": 80,
+          "cabins": 5000,
+          "fogNear": 120,
+          "fogFar": 1100,
+          "forceAtrium": true
+        }
+      ],
+      "views": [
+        {
+          "id": "west",
+          "label": "Deck 6 west",
+          "at": [
+            -100,
+            -19.700000762939453,
+            0
+          ],
+          "lookAt": [
+            132,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "centre",
+          "label": "Deck 6 centre",
+          "at": [
+            30,
+            -19.700000762939453,
+            -3
+          ],
+          "lookAt": [
+            -60,
+            5,
+            -45
+          ]
+        },
+        {
+          "id": "bridge",
+          "label": "Deck 7 port bridge",
+          "at": [
+            132,
+            -15.699999809265137,
+            -12
+          ],
+          "lookAt": [
+            -120,
+            0,
+            -15
+          ]
+        }
+      ],
+      "protocol": {
+        "rounds": 2,
+        "warmupMs": 3000,
+        "sampleMs": 6000,
+        "segments": 48,
+        "motions": [
+          "still",
+          "look"
+        ],
+        "lookAmplitudeRadians": 0.25,
+        "lookPeriodMs": 6000,
+        "units": {
+          "cpu": "ms",
+          "gpu": "ms",
+          "frame": "ms",
+          "span": "ms",
+          "phase4": "ms"
+        },
+        "gpu": "Sum elapsed GPU time over all renderer.render calls per sampled frame. Disjoint/failed/unavailable results are excluded, never replaced with CPU time.",
+        "profileIds": [
+          "current",
+          "long300",
+          "whole450",
+          "detail450"
+        ]
+      },
+      "runId": "distance-1793715999369-6uol7q",
+      "started": "2026-11-03T14:26:39.519Z"
+    },
+    "segments": 48,
+    "expectedSegments": 48,
+    "profiles": {
+      "current": {
+        "segments": 12,
+        "valid": true,
+        "hiddenFrames": 0,
+        "gpuIssued": 3459,
+        "gpuInvalid": 0,
+        "events": [],
+        "metrics": {
+          "cpu": {
+            "n": 3459,
+            "mean": 18.31882046865707,
+            "p50": 14.599999964237213,
+            "p95": 41.12000002264975,
+            "p99": 80.34599999189386,
+            "equalSegmentMean": 19.437206527541353
+          },
+          "gpu": {
+            "n": 3459,
+            "mean": 12.356499483087594,
+            "p50": 11.40736,
+            "p95": 20.274380799999996,
+            "p99": 29.364797440000014,
+            "equalSegmentMean": 12.793051775165262
+          },
+          "frame": {
+            "n": 3459,
+            "mean": 20.82069962417228,
+            "p50": 16.80000001192093,
+            "p95": 42.51999999880789,
+            "p99": 80.56600002884882,
+            "equalSegmentMean": 21.673801884929848
+          },
+          "drawCalls": {
+            "n": 3459,
+            "mean": 2434.6487424111015,
+            "p50": 2583,
+            "p95": 3582,
+            "p99": 3834,
+            "equalSegmentMean": 2535.6600833144335
+          },
+          "triangles": {
+            "n": 3459,
+            "mean": 10894851.917028043,
+            "p50": 11326882,
+            "p95": 12610595,
+            "p99": 12626999.74,
+            "equalSegmentMean": 11066172.58838777
+          },
+          "span": {
+            "n": 207,
+            "mean": 10.859420290315784,
+            "p50": 10.300000011920929,
+            "p95": 13.600000005960464,
+            "p99": 17.456000021696084,
+            "equalSegmentMean": 10.777077960377312
+          },
+          "phase4": {
+            "n": 156,
+            "mean": 50.21474358630486,
+            "p50": 45.45000001788139,
+            "p95": 87.69999997317791,
+            "p99": 97.39500000774855,
+            "equalSegmentMean": 50.036270651744864
+          }
+        }
+      },
+      "long300": {
+        "segments": 12,
+        "valid": true,
+        "hiddenFrames": 0,
+        "gpuIssued": 1933,
+        "gpuInvalid": 0,
+        "events": [],
+        "metrics": {
+          "cpu": {
+            "n": 1933,
+            "mean": 36.509777547532394,
+            "p50": 24,
+            "p95": 125.61999999284734,
+            "p99": 221.61600000858346,
+            "equalSegmentMean": 56.13603465141046
+          },
+          "gpu": {
+            "n": 1933,
+            "mean": 21.365694841179508,
+            "p50": 19.958783999999998,
+            "p95": 34.0064256,
+            "p99": 40.52176896000001,
+            "equalSegmentMean": 23.38708879780361
+          },
+          "frame": {
+            "n": 1933,
+            "mean": 37.250232798721406,
+            "p50": 24.700000047683716,
+            "p95": 126.67999995946882,
+            "p99": 215.24400000810644,
+            "equalSegmentMean": 56.834972534725495
+          },
+          "drawCalls": {
+            "n": 1933,
+            "mean": 4687.705121572685,
+            "p50": 4728,
+            "p95": 5175,
+            "p99": 5253,
+            "equalSegmentMean": 4743.792007797313
+          },
+          "triangles": {
+            "n": 1933,
+            "mean": 13508753.941024315,
+            "p50": 13493952,
+            "p95": 14302602,
+            "p99": 14547503.28,
+            "equalSegmentMean": 13583223.30705083
+          },
+          "span": {
+            "n": 151,
+            "mean": 25.083443710740827,
+            "p50": 23.399999976158142,
+            "p95": 32.45000001788139,
+            "p99": 54.94999998807907,
+            "equalSegmentMean": 25.131354702944176
+          },
+          "phase4": {
+            "n": 150,
+            "mean": 124.80799999634425,
+            "p50": 110.55000001192093,
+            "p95": 183.47499998807905,
+            "p99": 199.89999997615814,
+            "equalSegmentMean": 125.67615597922067
+          }
+        }
+      },
+      "whole450": {
+        "segments": 12,
+        "valid": true,
+        "hiddenFrames": 0,
+        "gpuIssued": 1091,
+        "gpuInvalid": 0,
+        "events": [],
+        "metrics": {
+          "cpu": {
+            "n": 1091,
+            "mean": 63.99835013796931,
+            "p50": 32.60000002384186,
+            "p95": 243.34999999403954,
+            "p99": 394.25000001787987,
+            "equalSegmentMean": 131.73866895059618
+          },
+          "gpu": {
+            "n": 1091,
+            "mean": 30.616951288725964,
+            "p50": 21.986304,
+            "p95": 65.657344,
+            "p99": 101.01207039999959,
+            "equalSegmentMean": 37.18531019370337
+          },
+          "frame": {
+            "n": 1091,
+            "mean": 66.05829514214798,
+            "p50": 33.59999996423721,
+            "p95": 245.55000001192093,
+            "p99": 398.21999998688557,
+            "equalSegmentMean": 136.58404360809251
+          },
+          "drawCalls": {
+            "n": 1091,
+            "mean": 4958.501374885426,
+            "p50": 4638,
+            "p95": 5750,
+            "p99": 5754.1,
+            "equalSegmentMean": 5000.457224014363
+          },
+          "triangles": {
+            "n": 1091,
+            "mean": 9259548.406049496,
+            "p50": 8894625,
+            "p95": 10265148,
+            "p99": 10269843.999999998,
+            "equalSegmentMean": 9279185.083332062
+          },
+          "span": {
+            "n": 125,
+            "mean": 42.086400003433226,
+            "p50": 28.69999998807907,
+            "p95": 96.92000000476835,
+            "p99": 193.3959999966625,
+            "equalSegmentMean": 46.75758901937243
+          },
+          "phase4": {
+            "n": 125,
+            "mean": 161.27920000076293,
+            "p50": 165.9000000357628,
+            "p95": 274.1800000190735,
+            "p99": 303.7639999818803,
+            "equalSegmentMean": 170.4037375082032
+          }
+        }
+      },
+      "detail450": {
+        "segments": 12,
+        "valid": true,
+        "hiddenFrames": 0,
+        "gpuIssued": 1917,
+        "gpuInvalid": 0,
+        "events": [],
+        "metrics": {
+          "cpu": {
+            "n": 1917,
+            "mean": 36.75352112632527,
+            "p50": 24.399999976158142,
+            "p95": 121.1200000286102,
+            "p99": 237.1519999861717,
+            "equalSegmentMean": 67.19732403814258
+          },
+          "gpu": {
+            "n": 1917,
+            "mean": 18.85977022430877,
+            "p50": 18.089983999999998,
+            "p95": 26.77166079999998,
+            "p99": 32.38047743999999,
+            "equalSegmentMean": 20.725512511225084
+          },
+          "frame": {
+            "n": 1917,
+            "mean": 37.41768388105795,
+            "p50": 25.19999998807907,
+            "p95": 121.52000000476835,
+            "p99": 238.0519999718666,
+            "equalSegmentMean": 67.87816142132486
+          },
+          "drawCalls": {
+            "n": 1917,
+            "mean": 4902.609285341679,
+            "p50": 4711,
+            "p95": 5750,
+            "p99": 5754,
+            "equalSegmentMean": 5003.431661334144
+          },
+          "triangles": {
+            "n": 1917,
+            "mean": 13311097.549295774,
+            "p50": 13088949,
+            "p95": 14304012,
+            "p99": 14306030,
+            "equalSegmentMean": 13426061.303799765
+          },
+          "span": {
+            "n": 152,
+            "mean": 26.59078947258623,
+            "p50": 26.299999982118607,
+            "p95": 32.63500000536442,
+            "p99": 34.54899998247623,
+            "equalSegmentMean": 26.62191239199068
+          },
+          "phase4": {
+            "n": 153,
+            "mean": 122.38039215873269,
+            "p50": 106.89999997615814,
+            "p95": 182.4399999856949,
+            "p99": 189.42400001764295,
+            "equalSegmentMean": 123.39917948906366
+          }
+        }
+      }
+    },
+    "comparisons": {
+      "long300": {
+        "cpu": {
+          "pairs": 12,
+          "deltaMean": 36.69882812386911,
+          "meanPercentChange": 216.24302463274805,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 23.576470589186965,
+              "candidate": 22.738521398273424,
+              "delta": -0.837949190913541
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 21.968965518520253,
+              "candidate": 46.884799997806546,
+              "delta": 24.915834479286293
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 19.86232876553111,
+              "candidate": 25.36608695750651,
+              "delta": 5.5037581919754
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 30.591752577688275,
+              "candidate": 60.97319587235598,
+              "delta": 30.381443294667704
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 10.951944445239173,
+              "candidate": 25.85486725684816,
+              "delta": 14.902922811608986
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 16.204901960355784,
+              "candidate": 129.16739130538443,
+              "delta": 112.96248934502864
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 14.567966574247833,
+              "candidate": 22.259541986097815,
+              "delta": 7.691575411849982
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 20.614079421392848,
+              "candidate": 58.73861386398278,
+              "delta": 38.12453444258993
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 19.77755102170568,
+              "candidate": 23.707287447413936,
+              "delta": 3.9297364257082563
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 28.826600985574018,
+              "candidate": 59.193000002503396,
+              "delta": 30.36639901692938
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 10.820055711070143,
+              "candidate": 28.137681159708237,
+              "delta": 17.317625448638093
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 15.483860759984088,
+              "candidate": 170.6114285690444,
+              "delta": 155.1275678090603
+            }
+          ]
+        },
+        "gpu": {
+          "pairs": 12,
+          "deltaMean": 10.594037022638348,
+          "meanPercentChange": 104.41828605615412,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 18.452695126050426,
+              "candidate": 18.572594801556427,
+              "delta": 0.11989967550600156
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 12.179279448275866,
+              "candidate": 19.63372544,
+              "delta": 7.454445991724134
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 16.320476931506846,
+              "candidate": 21.2884791652174,
+              "delta": 4.968002233710553
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 15.615488000000003,
+              "candidate": 21.840452618556693,
+              "delta": 6.22496461855669
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 8.729480533333328,
+              "candidate": 22.73104651327434,
+              "delta": 14.001565979941011
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9.12047351633987,
+              "candidate": 35.037829565217386,
+              "delta": 25.917356048877515
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11.965435543175488,
+              "candidate": 18.189456610687028,
+              "delta": 6.22402106751154
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11.534624346570396,
+              "candidate": 21.115092910891086,
+              "delta": 9.58046856432069
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 16.23360783673468,
+              "candidate": 19.85732093927126,
+              "delta": 3.6237131025365805
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 15.453723743842373,
+              "candidate": 21.264127999999992,
+              "delta": 5.81040425615762
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 8.876402807799453,
+              "candidate": 24.652493294685996,
+              "delta": 15.776090486886543
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9.034933468354426,
+              "candidate": 36.462445714285714,
+              "delta": 27.42751224593129
+            }
+          ]
+        },
+        "frame": {
+          "pairs": 12,
+          "deltaMean": 35.16117064979565,
+          "meanPercentChange": 171.1425708297268,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 25.282352941126383,
+              "candidate": 23.410505836575876,
+              "delta": -1.8718471045505076
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 22.865900383141764,
+              "candidate": 48.43919999980927,
+              "delta": 25.573299616667505
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 20.53082191780822,
+              "candidate": 26.064782608851143,
+              "delta": 5.533960691042925
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 30.992783505277536,
+              "candidate": 61.97835051583261,
+              "delta": 30.985567010555073
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 16.666944444345102,
+              "candidate": 26.5278761059837,
+              "delta": 9.860931661638599
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 19.568954248443927,
+              "candidate": 129.1652173905269,
+              "delta": 109.59626314208296
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 16.713649025036432,
+              "candidate": 22.91030534351145,
+              "delta": 6.196656318475018
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 21.675451263623977,
+              "candidate": 59.61782178194216,
+              "delta": 37.942370518318185
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 20.436394557863675,
+              "candidate": 24.37854251012146,
+              "delta": 3.942147952257784
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 29.600000000058724,
+              "candidate": 60.01800000011921,
+              "delta": 30.418000000060484
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 16.712813370407126,
+              "candidate": 28.834782608465297,
+              "delta": 12.12196923805817
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 19.039556962025316,
+              "candidate": 170.6742857149669,
+              "delta": 151.6347287529416
+            }
+          ]
+        },
+        "calls": {
+          "pairs": 12,
+          "deltaMean": 2208.1319244828783,
+          "meanPercentChange": 115.75085741009532,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 2583,
+              "candidate": 4311,
+              "delta": 1728
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 2612.4789272030653,
+              "candidate": 4346.352,
+              "delta": 1733.8730727969346
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 3582,
+              "candidate": 4728,
+              "delta": 1146
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 3447.041237113402,
+              "candidate": 4689.20618556701,
+              "delta": 1242.1649484536078
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 1492,
+              "candidate": 5175,
+              "delta": 3683
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 1507.4607843137255,
+              "candidate": 5216.652173913043,
+              "delta": 3709.1913895993175
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 2583,
+              "candidate": 4311,
+              "delta": 1728
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 2612.884476534296,
+              "candidate": 4349.19801980198,
+              "delta": 1736.313543267684
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 3582,
+              "candidate": 4728,
+              "delta": 1146
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 3426.5270935960593,
+              "candidate": 4679.21,
+              "delta": 1252.6829064039407
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 1492,
+              "candidate": 5175,
+              "delta": 3683
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 1507.5284810126582,
+              "candidate": 5216.885714285714,
+              "delta": 3709.357233273056
+            }
+          ]
+        },
+        "triangles": {
+          "pairs": 12,
+          "deltaMean": 2517050.7186630606,
+          "meanPercentChange": 25.433285050328873,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11326882,
+              "candidate": 13493952,
+              "delta": 2167070
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11410780.413793104,
+              "candidate": 13528947.44,
+              "delta": 2118167.0262068957
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 12610595,
+              "candidate": 12918920,
+              "delta": 308325
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 12510474.463917525,
+              "candidate": 12836783.092783505,
+              "delta": 326308.6288659796
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 9241623,
+              "candidate": 14302602,
+              "delta": 5060979
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9297881.156862745,
+              "candidate": 14419701.93478261,
+              "delta": 5121820.777919864
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11326882,
+              "candidate": 13493952,
+              "delta": 2167070
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11412225.620938629,
+              "candidate": 13531743.00990099,
+              "delta": 2119517.388962362
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 12610595,
+              "candidate": 12918920,
+              "delta": 308325
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 12506196.61083744,
+              "candidate": 12825239.75,
+              "delta": 319043.1391625609
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 9241623,
+              "candidate": 14302602,
+              "delta": 5060979
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9298312.794303797,
+              "candidate": 14425316.457142858,
+              "delta": 5127003.662839061
+            }
+          ]
+        }
+      },
+      "whole450": {
+        "cpu": {
+          "pairs": 12,
+          "deltaMean": 112.30146242305482,
+          "meanPercentChange": 603.5685476659617,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 23.576470589186965,
+              "candidate": 23.36465863626166,
+              "delta": -0.21181195292530575
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 21.968965518520253,
+              "candidate": 45.4643410869347,
+              "delta": 23.49537556841445
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 19.86232876553111,
+              "candidate": 67.33333334292489,
+              "delta": 47.47100457739378
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 30.591752577688275,
+              "candidate": 288.61500000059607,
+              "delta": 258.0232474229078
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 10.951944445239173,
+              "candidate": 47.320967741070255,
+              "delta": 36.369023295831084
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 16.204901960355784,
+              "candidate": 259.9478260900663,
+              "delta": 243.74292412971053
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 14.567966574247833,
+              "candidate": 54.918999999165536,
+              "delta": 40.3510334249177
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 20.614079421392848,
+              "candidate": 294.32499999403956,
+              "delta": 273.7109205726467
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 19.77755102170568,
+              "candidate": 88.28571428476818,
+              "delta": 68.5081632630625
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 28.826600985574018,
+              "candidate": 63.25744680457927,
+              "delta": 34.43084581900525
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 10.820055711070143,
+              "candidate": 35.85705521245676,
+              "delta": 25.036999501386614
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 15.483860759984088,
+              "candidate": 312.1736842142908,
+              "delta": 296.6898234543067
+            }
+          ]
+        },
+        "gpu": {
+          "pairs": 12,
+          "deltaMean": 24.39225841853811,
+          "meanPercentChange": 206.16562572251868,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 18.452695126050426,
+              "candidate": 16.902592257028104,
+              "delta": -1.5501028690223215
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 12.179279448275866,
+              "candidate": 16.475405891472864,
+              "delta": 4.296126443196998
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 16.320476931506846,
+              "candidate": 48.195440919540225,
+              "delta": 31.87496398803338
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 15.615488000000003,
+              "candidate": 47.16784639999999,
+              "delta": 31.552358399999985
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 8.729480533333328,
+              "candidate": 36.006804645161296,
+              "delta": 27.277324111827966
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9.12047351633987,
+              "candidate": 31.27852521739131,
+              "delta": 22.15805170105144
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11.965435543175488,
+              "candidate": 41.5139328,
+              "delta": 29.54849725682451
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11.534624346570396,
+              "candidate": 51.7670912,
+              "delta": 40.23246685342961
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 16.23360783673468,
+              "candidate": 70.74679466666667,
+              "delta": 54.513186829931996
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 15.453723743842373,
+              "candidate": 20.948915744680846,
+              "delta": 5.495192000838474
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 8.876402807799453,
+              "candidate": 27.057239950920245,
+              "delta": 18.18083714312079
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9.034933468354426,
+              "candidate": 38.163132631578954,
+              "delta": 29.12819916322453
+            }
+          ]
+        },
+        "frame": {
+          "pairs": 12,
+          "deltaMean": 114.91024172316271,
+          "meanPercentChange": 530.6643101106935,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 25.282352941126383,
+              "candidate": 24.041767068177343,
+              "delta": -1.2405858729490404
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 22.865900383141764,
+              "candidate": 46.042635658914726,
+              "delta": 23.176735275772963
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 20.53082191780822,
+              "candidate": 66.49425287356321,
+              "delta": 45.963430955754994
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 30.992783505277536,
+              "candidate": 337.8200000017881,
+              "delta": 306.8272164965106
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 16.666944444345102,
+              "candidate": 48.24032258026062,
+              "delta": 31.573378135915515
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 19.568954248443927,
+              "candidate": 266.63478260973227,
+              "delta": 247.06582836128834
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 16.713649025036432,
+              "candidate": 60.09100000023842,
+              "delta": 43.377350975201985
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 21.675451263623977,
+              "candidate": 273.95,
+              "delta": 252.274548736376
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 20.436394557863675,
+              "candidate": 95.40952380971304,
+              "delta": 74.97312925184936
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 29.600000000058724,
+              "candidate": 63.342553191996636,
+              "delta": 33.742553191937915
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 16.712813370407126,
+              "candidate": 36.47852760736196,
+              "delta": 19.765714236954835
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 19.039556962025316,
+              "candidate": 320.46315789536425,
+              "delta": 301.42360093333895
+            }
+          ]
+        },
+        "calls": {
+          "pairs": 12,
+          "deltaMean": 2464.7971406999295,
+          "meanPercentChange": 130.86951722575932,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 2583,
+              "candidate": 4579,
+              "delta": 1996
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 2612.4789272030653,
+              "candidate": 4576.767441860465,
+              "delta": 1964.2885146573994
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 3582,
+              "candidate": 4711,
+              "delta": 1129
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 3447.041237113402,
+              "candidate": 4620.45,
+              "delta": 1173.4087628865977
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 1492,
+              "candidate": 5750,
+              "delta": 4258
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 1507.4607843137255,
+              "candidate": 5736.478260869565,
+              "delta": 4229.0174765558395
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 2583,
+              "candidate": 4579,
+              "delta": 1996
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 2612.884476534296,
+              "candidate": 4579.45,
+              "delta": 1966.5655234657038
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 3582,
+              "candidate": 4711,
+              "delta": 1129
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 3426.5270935960593,
+              "candidate": 4674.393617021276,
+              "delta": 1247.866523425217
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 1492,
+              "candidate": 5750,
+              "delta": 4258
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 1507.5284810126582,
+              "candidate": 5737.9473684210525,
+              "delta": 4230.418887408394
+            }
+          ]
+        },
+        "triangles": {
+          "pairs": 12,
+          "deltaMean": -1786987.5050557076,
+          "meanPercentChange": -13.973643767288804,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11326882,
+              "candidate": 8894625,
+              "delta": -2432257
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11410780.413793104,
+              "candidate": 8904268.403100776,
+              "delta": -2506512.010692328
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 12610595,
+              "candidate": 8728483,
+              "delta": -3882112
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 12510474.463917525,
+              "candidate": 8573898.25,
+              "delta": -3936576.2139175255
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 9241623,
+              "candidate": 10265148,
+              "delta": 1023525
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9297881.156862745,
+              "candidate": 10271689.695652174,
+              "delta": 973808.5387894288
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11326882,
+              "candidate": 8894625,
+              "delta": -2432257
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11412225.620938629,
+              "candidate": 8903673.85,
+              "delta": -2508551.7709386293
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 12610595,
+              "candidate": 8728483,
+              "delta": -3882112
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 12506196.61083744,
+              "candidate": 8648519.117021276,
+              "delta": -3857677.4938161634
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 9241623,
+              "candidate": 10265148,
+              "delta": 1023525
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9298312.794303797,
+              "candidate": 10271659.684210526,
+              "delta": 973346.8899067286
+            }
+          ]
+        }
+      },
+      "detail450": {
+        "cpu": {
+          "pairs": 12,
+          "deltaMean": 47.76011751060125,
+          "meanPercentChange": 289.1263593024769,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 23.576470589186965,
+              "candidate": 22.368076922114078,
+              "delta": -1.2083936670728868
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 21.968965518520253,
+              "candidate": 49.42521008323221,
+              "delta": 27.456244564711955
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 19.86232876553111,
+              "candidate": 24.040329217420194,
+              "delta": 4.178000451889083
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 30.591752577688275,
+              "candidate": 56.357547173522555,
+              "delta": 25.76579459583428
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 10.951944445239173,
+              "candidate": 28.547804880142213,
+              "delta": 17.595860434903038
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 16.204901960355784,
+              "candidate": 237.71599999666213,
+              "delta": 221.51109803630635
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 14.567966574247833,
+              "candidate": 22.177480916030536,
+              "delta": 7.6095143417827025
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 20.614079421392848,
+              "candidate": 50.580341879119224,
+              "delta": 29.966262457726376
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 19.77755102170568,
+              "candidate": 24.144813276178116,
+              "delta": 4.367262254472436
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 28.826600985574018,
+              "candidate": 54.50275229204685,
+              "delta": 25.676151306472832
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 10.820055711070143,
+              "candidate": 28.953960394800298,
+              "delta": 18.133904683730155
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 15.483860759984088,
+              "candidate": 207.5535714264427,
+              "delta": 192.0697106664586
+            }
+          ]
+        },
+        "gpu": {
+          "pairs": 12,
+          "deltaMean": 7.932460736059821,
+          "meanPercentChange": 81.86098816320508,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 18.452695126050426,
+              "candidate": 16.382361353846157,
+              "delta": -2.0703337722042683
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 12.179279448275866,
+              "candidate": 17.45479421848739,
+              "delta": 5.275514770211524
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 16.320476931506846,
+              "candidate": 18.395148641975304,
+              "delta": 2.0746717104684578
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 15.615488000000003,
+              "candidate": 18.426599849056604,
+              "delta": 2.8111118490566014
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 8.729480533333328,
+              "candidate": 21.78975094634146,
+              "delta": 13.060270413008132
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9.12047351633987,
+              "candidate": 31.896207359999995,
+              "delta": 22.775733843660127
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11.965435543175488,
+              "candidate": 16.304428946564887,
+              "delta": 4.338993403389399
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11.534624346570396,
+              "candidate": 18.00928054700856,
+              "delta": 6.474656200438165
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 16.23360783673468,
+              "candidate": 18.361199535269712,
+              "delta": 2.1275916985350314
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 15.453723743842373,
+              "candidate": 18.081745027522942,
+              "delta": 2.628021283680569
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 8.876402807799453,
+              "candidate": 22.151522851485144,
+              "delta": 13.27512004368569
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9.034933468354426,
+              "candidate": 31.453110857142853,
+              "delta": 22.41817738878843
+            }
+          ]
+        },
+        "frame": {
+          "pairs": 12,
+          "deltaMean": 46.20435953639501,
+          "meanPercentChange": 230.1283520757507,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 25.282352941126383,
+              "candidate": 23.02423076904737,
+              "delta": -2.2581221720790126
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 22.865900383141764,
+              "candidate": 50.29747899139629,
+              "delta": 27.431578608254526
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 20.53082191780822,
+              "candidate": 24.738271604840158,
+              "delta": 4.207449687031939
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 30.992783505277536,
+              "candidate": 57.09905660377358,
+              "delta": 26.106273098496047
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 16.666944444345102,
+              "candidate": 29.257073170673557,
+              "delta": 12.590128726328455
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 19.568954248443927,
+              "candidate": 238.86800000190735,
+              "delta": 219.29904575346342
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 16.713649025036432,
+              "candidate": 22.848091603235435,
+              "delta": 6.134442578199003
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 21.675451263623977,
+              "candidate": 51.42991452950697,
+              "delta": 29.754463265882997
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 20.436394557863675,
+              "candidate": 24.830705394141408,
+              "delta": 4.394310836277732
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 29.600000000058724,
+              "candidate": 54.40275229390608,
+              "delta": 24.80275229384736
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 16.712813370407126,
+              "candidate": 29.599504950613078,
+              "delta": 12.886691580205952
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 19.039556962025316,
+              "candidate": 208.14285714285714,
+              "delta": 189.1033001808318
+            }
+          ]
+        },
+        "calls": {
+          "pairs": 12,
+          "deltaMean": 2467.771578019711,
+          "meanPercentChange": 130.9486086360723,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 2583,
+              "candidate": 4579,
+              "delta": 1996
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 2612.4789272030653,
+              "candidate": 4576.882352941177,
+              "delta": 1964.4034257381113
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 3582,
+              "candidate": 4711,
+              "delta": 1129
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 3447.041237113402,
+              "candidate": 4659.773584905661,
+              "delta": 1212.7323477922587
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 1492,
+              "candidate": 5750,
+              "delta": 4258
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 1507.4607843137255,
+              "candidate": 5735.04,
+              "delta": 4227.579215686274
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 2583,
+              "candidate": 4579,
+              "delta": 1996
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 2612.884476534296,
+              "candidate": 4577.316239316239,
+              "delta": 1964.4317627819432
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 3582,
+              "candidate": 4711,
+              "delta": 1129
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 3426.5270935960593,
+              "candidate": 4674.59633027523,
+              "delta": 1248.0692366791704
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 1492,
+              "candidate": 5750,
+              "delta": 4258
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 1507.5284810126582,
+              "candidate": 5737.571428571428,
+              "delta": 4230.04294755877
+            }
+          ]
+        },
+        "triangles": {
+          "pairs": 12,
+          "deltaMean": 2359888.715411995,
+          "meanPercentChange": 24.014251543556096,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11326882,
+              "candidate": 13088949,
+              "delta": 1762067
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11410780.413793104,
+              "candidate": 13098342.974789916,
+              "delta": 1687562.5609968118
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 12610595,
+              "candidate": 12922807,
+              "delta": 312212
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 12510474.463917525,
+              "candidate": 12822205.679245284,
+              "delta": 311731.21532775834
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 9241623,
+              "candidate": 14304012,
+              "delta": 5062389
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9297881.156862745,
+              "candidate": 14309553.88,
+              "delta": 5011672.723137256
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11326882,
+              "candidate": 13088949,
+              "delta": 1762067
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11412225.620938629,
+              "candidate": 13099189.948717948,
+              "delta": 1686964.3277793191
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 12610595,
+              "candidate": 12922807,
+              "delta": 312212
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 12506196.61083744,
+              "candidate": 12840951.412844036,
+              "delta": 334754.8020065967
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 9241623,
+              "candidate": 14304012,
+              "delta": 5062389
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9298312.794303797,
+              "candidate": 14310955.75,
+              "delta": 5012642.955696203
+            }
+          ]
+        }
+      }
+    },
+    "byView": {
+      "west/still": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 19.0722185817174,
+            "p95": 29.657500003278255,
+            "repeatMeans": [
+              23.576470589186965,
+              14.567966574247833
+            ]
+          },
+          "gpu": {
+            "mean": 15.209065334612957,
+            "p95": 25.62618879999999,
+            "repeatMeans": [
+              18.452695126050426,
+              11.965435543175488
+            ]
+          },
+          "frame": {
+            "mean": 20.998000983081408,
+            "p95": 31.125000022351735,
+            "repeatMeans": [
+              25.282352941126383,
+              16.713649025036432
+            ]
+          },
+          "calls": {
+            "mean": 2583,
+            "p95": 2583,
+            "repeatMeans": [
+              2583,
+              2583
+            ]
+          },
+          "triangles": {
+            "mean": 11326882,
+            "p95": 11326882,
+            "repeatMeans": [
+              11326882,
+              11326882
+            ]
+          }
+        },
+        "long300": {
+          "segments": 2,
+          "cpu": {
+            "mean": 22.499031692185618,
+            "p95": 29.32249998450279,
+            "repeatMeans": [
+              22.738521398273424,
+              22.259541986097815
+            ]
+          },
+          "gpu": {
+            "mean": 18.381025706121726,
+            "p95": 24.764544,
+            "repeatMeans": [
+              18.572594801556427,
+              18.189456610687028
+            ]
+          },
+          "frame": {
+            "mean": 23.160405590043663,
+            "p95": 30.38499999642372,
+            "repeatMeans": [
+              23.410505836575876,
+              22.91030534351145
+            ]
+          },
+          "calls": {
+            "mean": 4311,
+            "p95": 4311,
+            "repeatMeans": [
+              4311,
+              4311
+            ]
+          },
+          "triangles": {
+            "mean": 13493952,
+            "p95": 13493952,
+            "repeatMeans": [
+              13493952,
+              13493952
+            ]
+          }
+        },
+        "whole450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 39.1418293177136,
+            "p95": 67.9000000014901,
+            "repeatMeans": [
+              23.36465863626166,
+              54.918999999165536
+            ]
+          },
+          "gpu": {
+            "mean": 29.20826252851405,
+            "p95": 51.16467199999998,
+            "repeatMeans": [
+              16.902592257028104,
+              41.5139328
+            ]
+          },
+          "frame": {
+            "mean": 42.06638353420788,
+            "p95": 78.47999998331069,
+            "repeatMeans": [
+              24.041767068177343,
+              60.09100000023842
+            ]
+          },
+          "calls": {
+            "mean": 4579,
+            "p95": 4579,
+            "repeatMeans": [
+              4579,
+              4579
+            ]
+          },
+          "triangles": {
+            "mean": 8894625,
+            "p95": 8894625,
+            "repeatMeans": [
+              8894625,
+              8894625
+            ]
+          }
+        },
+        "detail450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 22.27277891907231,
+            "p95": 27.157500006258484,
+            "repeatMeans": [
+              22.368076922114078,
+              22.177480916030536
+            ]
+          },
+          "gpu": {
+            "mean": 16.343395150205524,
+            "p95": 20.678272,
+            "repeatMeans": [
+              16.382361353846157,
+              16.304428946564887
+            ]
+          },
+          "frame": {
+            "mean": 22.936161186141405,
+            "p95": 28.244999970495698,
+            "repeatMeans": [
+              23.02423076904737,
+              22.848091603235435
+            ]
+          },
+          "calls": {
+            "mean": 4579,
+            "p95": 4579,
+            "repeatMeans": [
+              4579,
+              4579
+            ]
+          },
+          "triangles": {
+            "mean": 13088949,
+            "p95": 13088949,
+            "repeatMeans": [
+              13088949,
+              13088949
+            ]
+          }
+        }
+      },
+      "west/look": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 21.29152246995655,
+            "p95": 62.20000000596046,
+            "repeatMeans": [
+              21.968965518520253,
+              20.614079421392848
+            ]
+          },
+          "gpu": {
+            "mean": 11.85695189742313,
+            "p95": 16.095027199999997,
+            "repeatMeans": [
+              12.179279448275866,
+              11.534624346570396
+            ]
+          },
+          "frame": {
+            "mean": 22.27067582338287,
+            "p95": 63.01000000238419,
+            "repeatMeans": [
+              22.865900383141764,
+              21.675451263623977
+            ]
+          },
+          "calls": {
+            "mean": 2612.6817018686806,
+            "p95": 2632.6,
+            "repeatMeans": [
+              2612.4789272030653,
+              2612.884476534296
+            ]
+          },
+          "triangles": {
+            "mean": 11411503.017365865,
+            "p95": 11500719.2,
+            "repeatMeans": [
+              11410780.413793104,
+              11412225.620938629
+            ]
+          }
+        },
+        "long300": {
+          "segments": 2,
+          "cpu": {
+            "mean": 52.81170693089466,
+            "p95": 147.63000000715255,
+            "repeatMeans": [
+              46.884799997806546,
+              58.73861386398278
+            ]
+          },
+          "gpu": {
+            "mean": 20.374409175445543,
+            "p95": 34.991616,
+            "repeatMeans": [
+              19.63372544,
+              21.115092910891086
+            ]
+          },
+          "frame": {
+            "mean": 54.028510890875715,
+            "p95": 149.31999999284744,
+            "repeatMeans": [
+              48.43919999980927,
+              59.61782178194216
+            ]
+          },
+          "calls": {
+            "mean": 4347.77500990099,
+            "p95": 4373.9,
+            "repeatMeans": [
+              4346.352,
+              4349.19801980198
+            ]
+          },
+          "triangles": {
+            "mean": 13530345.224950496,
+            "p95": 13566342,
+            "repeatMeans": [
+              13528947.44,
+              13531743.00990099
+            ]
+          }
+        },
+        "whole450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 169.89467054048714,
+            "p95": 355.2775000035763,
+            "repeatMeans": [
+              45.4643410869347,
+              294.32499999403956
+            ]
+          },
+          "gpu": {
+            "mean": 34.121248545736435,
+            "p95": 58.261555200000004,
+            "repeatMeans": [
+              16.475405891472864,
+              51.7670912
+            ]
+          },
+          "frame": {
+            "mean": 159.99631782945735,
+            "p95": 299.8950000107289,
+            "repeatMeans": [
+              46.042635658914726,
+              273.95
+            ]
+          },
+          "calls": {
+            "mean": 4578.108720930232,
+            "p95": 4593.55,
+            "repeatMeans": [
+              4576.767441860465,
+              4579.45
+            ]
+          },
+          "triangles": {
+            "mean": 8903971.126550388,
+            "p95": 8921356.625,
+            "repeatMeans": [
+              8904268.403100776,
+              8903673.85
+            ]
+          }
+        },
+        "detail450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 50.002775981175716,
+            "p95": 116.18000000119208,
+            "repeatMeans": [
+              49.42521008323221,
+              50.580341879119224
+            ]
+          },
+          "gpu": {
+            "mean": 17.732037382747976,
+            "p95": 21.137407999999994,
+            "repeatMeans": [
+              17.45479421848739,
+              18.00928054700856
+            ]
+          },
+          "frame": {
+            "mean": 50.86369676045163,
+            "p95": 117.27999998033047,
+            "repeatMeans": [
+              50.29747899139629,
+              51.42991452950697
+            ]
+          },
+          "calls": {
+            "mean": 4577.099296128708,
+            "p95": 4596,
+            "repeatMeans": [
+              4576.882352941177,
+              4577.316239316239
+            ]
+          },
+          "triangles": {
+            "mean": 13098766.46175393,
+            "p95": 13116666.05,
+            "repeatMeans": [
+              13098342.974789916,
+              13099189.948717948
+            ]
+          }
+        }
+      },
+      "centre/still": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 19.819939893618397,
+            "p95": 23.929999971389755,
+            "repeatMeans": [
+              19.86232876553111,
+              19.77755102170568
+            ]
+          },
+          "gpu": {
+            "mean": 16.27704238412076,
+            "p95": 20.774963200000002,
+            "repeatMeans": [
+              16.320476931506846,
+              16.23360783673468
+            ]
+          },
+          "frame": {
+            "mean": 20.483608237835945,
+            "p95": 24.737500005960456,
+            "repeatMeans": [
+              20.53082191780822,
+              20.436394557863675
+            ]
+          },
+          "calls": {
+            "mean": 3582,
+            "p95": 3582,
+            "repeatMeans": [
+              3582,
+              3582
+            ]
+          },
+          "triangles": {
+            "mean": 12610595,
+            "p95": 12610595,
+            "repeatMeans": [
+              12610595,
+              12610595
+            ]
+          }
+        },
+        "long300": {
+          "segments": 2,
+          "cpu": {
+            "mean": 24.53668720246022,
+            "p95": 32.60000002384186,
+            "repeatMeans": [
+              25.36608695750651,
+              23.707287447413936
+            ]
+          },
+          "gpu": {
+            "mean": 20.57290005224433,
+            "p95": 28.755404799999987,
+            "repeatMeans": [
+              21.2884791652174,
+              19.85732093927126
+            ]
+          },
+          "frame": {
+            "mean": 25.2216625594863,
+            "p95": 33.267500017583366,
+            "repeatMeans": [
+              26.064782608851143,
+              24.37854251012146
+            ]
+          },
+          "calls": {
+            "mean": 4728,
+            "p95": 4728,
+            "repeatMeans": [
+              4728,
+              4728
+            ]
+          },
+          "triangles": {
+            "mean": 12918920,
+            "p95": 12918920,
+            "repeatMeans": [
+              12918920,
+              12918920
+            ]
+          }
+        },
+        "whole450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 77.80952381384654,
+            "p95": 151.35999999046334,
+            "repeatMeans": [
+              67.33333334292489,
+              88.28571428476818
+            ]
+          },
+          "gpu": {
+            "mean": 59.471117793103446,
+            "p95": 99.5920384,
+            "repeatMeans": [
+              48.195440919540225,
+              70.74679466666667
+            ]
+          },
+          "frame": {
+            "mean": 80.95188834163812,
+            "p95": 138.51000000834466,
+            "repeatMeans": [
+              66.49425287356321,
+              95.40952380971304
+            ]
+          },
+          "calls": {
+            "mean": 4711,
+            "p95": 4711,
+            "repeatMeans": [
+              4711,
+              4711
+            ]
+          },
+          "triangles": {
+            "mean": 8728483,
+            "p95": 8728483,
+            "repeatMeans": [
+              8728483,
+              8728483
+            ]
+          }
+        },
+        "detail450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 24.092571246799153,
+            "p95": 29.049999982118607,
+            "repeatMeans": [
+              24.040329217420194,
+              24.144813276178116
+            ]
+          },
+          "gpu": {
+            "mean": 18.378174088622508,
+            "p95": 23.184281600000002,
+            "repeatMeans": [
+              18.395148641975304,
+              18.361199535269712
+            ]
+          },
+          "frame": {
+            "mean": 24.784488499490784,
+            "p95": 29.74500000178814,
+            "repeatMeans": [
+              24.738271604840158,
+              24.830705394141408
+            ]
+          },
+          "calls": {
+            "mean": 4711,
+            "p95": 4711,
+            "repeatMeans": [
+              4711,
+              4711
+            ]
+          },
+          "triangles": {
+            "mean": 12922807,
+            "p95": 12922807,
+            "repeatMeans": [
+              12922807,
+              12922807
+            ]
+          }
+        }
+      },
+      "centre/look": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 29.709176781631147,
+            "p95": 92.40000001788138,
+            "repeatMeans": [
+              30.591752577688275,
+              28.826600985574018
+            ]
+          },
+          "gpu": {
+            "mean": 15.534605871921187,
+            "p95": 21.1744256,
+            "repeatMeans": [
+              15.615488000000003,
+              15.453723743842373
+            ]
+          },
+          "frame": {
+            "mean": 30.29639175266813,
+            "p95": 93.34750002473592,
+            "repeatMeans": [
+              30.992783505277536,
+              29.600000000058724
+            ]
+          },
+          "calls": {
+            "mean": 3436.7841653547307,
+            "p95": 3838.175,
+            "repeatMeans": [
+              3447.041237113402,
+              3426.5270935960593
+            ]
+          },
+          "triangles": {
+            "mean": 12508335.537377482,
+            "p95": 12650404.475000001,
+            "repeatMeans": [
+              12510474.463917525,
+              12506196.61083744
+            ]
+          }
+        },
+        "long300": {
+          "segments": 2,
+          "cpu": {
+            "mean": 60.083097937429685,
+            "p95": 140.21749996542928,
+            "repeatMeans": [
+              60.97319587235598,
+              59.193000002503396
+            ]
+          },
+          "gpu": {
+            "mean": 21.55229030927834,
+            "p95": 29.875225599999993,
+            "repeatMeans": [
+              21.840452618556693,
+              21.264127999999992
+            ]
+          },
+          "frame": {
+            "mean": 60.99817525797591,
+            "p95": 141.09499996900556,
+            "repeatMeans": [
+              61.97835051583261,
+              60.01800000011921
+            ]
+          },
+          "calls": {
+            "mean": 4684.208092783505,
+            "p95": 4789.075,
+            "repeatMeans": [
+              4689.20618556701,
+              4679.21
+            ]
+          },
+          "triangles": {
+            "mean": 12831011.421391752,
+            "p95": 12970239.625,
+            "repeatMeans": [
+              12836783.092783505,
+              12825239.75
+            ]
+          }
+        },
+        "whole450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 175.93622340258767,
+            "p95": 363.1750000044704,
+            "repeatMeans": [
+              288.61500000059607,
+              63.25744680457927
+            ]
+          },
+          "gpu": {
+            "mean": 34.05838107234042,
+            "p95": 56.604544,
+            "repeatMeans": [
+              47.16784639999999,
+              20.948915744680846
+            ]
+          },
+          "frame": {
+            "mean": 200.58127659689237,
+            "p95": 419.63250000774883,
+            "repeatMeans": [
+              337.8200000017881,
+              63.342553191996636
+            ]
+          },
+          "calls": {
+            "mean": 4647.421808510639,
+            "p95": 4780.75,
+            "repeatMeans": [
+              4620.45,
+              4674.393617021276
+            ]
+          },
+          "triangles": {
+            "mean": 8611208.683510639,
+            "p95": 8778206.399999999,
+            "repeatMeans": [
+              8573898.25,
+              8648519.117021276
+            ]
+          }
+        },
+        "detail450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 55.4301497327847,
+            "p95": 135.70750000178813,
+            "repeatMeans": [
+              56.357547173522555,
+              54.50275229204685
+            ]
+          },
+          "gpu": {
+            "mean": 18.25417243828977,
+            "p95": 23.334476799999997,
+            "repeatMeans": [
+              18.426599849056604,
+              18.081745027522942
+            ]
+          },
+          "frame": {
+            "mean": 55.75090444883983,
+            "p95": 135.6500000089407,
+            "repeatMeans": [
+              57.09905660377358,
+              54.40275229390608
+            ]
+          },
+          "calls": {
+            "mean": 4667.184957590445,
+            "p95": 4783.3,
+            "repeatMeans": [
+              4659.773584905661,
+              4674.59633027523
+            ]
+          },
+          "triangles": {
+            "mean": 12831578.546044659,
+            "p95": 12974909.4,
+            "repeatMeans": [
+              12822205.679245284,
+              12840951.412844036
+            ]
+          }
+        }
+      },
+      "bridge/still": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 10.886000078154659,
+            "p95": 12.927499978244295,
+            "repeatMeans": [
+              10.951944445239173,
+              10.820055711070143
+            ]
+          },
+          "gpu": {
+            "mean": 8.80294167056639,
+            "p95": 12.092159999999996,
+            "repeatMeans": [
+              8.729480533333328,
+              8.876402807799453
+            ]
+          },
+          "frame": {
+            "mean": 16.689878907376112,
+            "p95": 16.899999976158142,
+            "repeatMeans": [
+              16.666944444345102,
+              16.712813370407126
+            ]
+          },
+          "calls": {
+            "mean": 1492,
+            "p95": 1492,
+            "repeatMeans": [
+              1492,
+              1492
+            ]
+          },
+          "triangles": {
+            "mean": 9241623,
+            "p95": 9241623,
+            "repeatMeans": [
+              9241623,
+              9241623
+            ]
+          }
+        },
+        "long300": {
+          "segments": 2,
+          "cpu": {
+            "mean": 26.996274208278198,
+            "p95": 37.90250000655651,
+            "repeatMeans": [
+              25.85486725684816,
+              28.137681159708237
+            ]
+          },
+          "gpu": {
+            "mean": 23.691769903980166,
+            "p95": 33.529011199999985,
+            "repeatMeans": [
+              22.73104651327434,
+              24.652493294685996
+            ]
+          },
+          "frame": {
+            "mean": 27.6813293572245,
+            "p95": 38.830000007152556,
+            "repeatMeans": [
+              26.5278761059837,
+              28.834782608465297
+            ]
+          },
+          "calls": {
+            "mean": 5175,
+            "p95": 5175,
+            "repeatMeans": [
+              5175,
+              5175
+            ]
+          },
+          "triangles": {
+            "mean": 14302602,
+            "p95": 14302602,
+            "repeatMeans": [
+              14302602,
+              14302602
+            ]
+          }
+        },
+        "whole450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 41.5890114767635,
+            "p95": 74.37249998748302,
+            "repeatMeans": [
+              47.320967741070255,
+              35.85705521245676
+            ]
+          },
+          "gpu": {
+            "mean": 31.532022298040772,
+            "p95": 57.303116800000005,
+            "repeatMeans": [
+              36.006804645161296,
+              27.057239950920245
+            ]
+          },
+          "frame": {
+            "mean": 42.35942509381129,
+            "p95": 76.15250000208616,
+            "repeatMeans": [
+              48.24032258026062,
+              36.47852760736196
+            ]
+          },
+          "calls": {
+            "mean": 5750,
+            "p95": 5750,
+            "repeatMeans": [
+              5750,
+              5750
+            ]
+          },
+          "triangles": {
+            "mean": 10265148,
+            "p95": 10265148,
+            "repeatMeans": [
+              10265148,
+              10265148
+            ]
+          }
+        },
+        "detail450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 28.750882637471257,
+            "p95": 35.27499998360872,
+            "repeatMeans": [
+              28.547804880142213,
+              28.953960394800298
+            ]
+          },
+          "gpu": {
+            "mean": 21.970636898913302,
+            "p95": 28.0330752,
+            "repeatMeans": [
+              21.78975094634146,
+              22.151522851485144
+            ]
+          },
+          "frame": {
+            "mean": 29.428289060643316,
+            "p95": 36.19249998778105,
+            "repeatMeans": [
+              29.257073170673557,
+              29.599504950613078
+            ]
+          },
+          "calls": {
+            "mean": 5750,
+            "p95": 5750,
+            "repeatMeans": [
+              5750,
+              5750
+            ]
+          },
+          "triangles": {
+            "mean": 14304012,
+            "p95": 14304012,
+            "repeatMeans": [
+              14304012,
+              14304012
+            ]
+          }
+        }
+      },
+      "bridge/look": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 15.844381360169937,
+            "p95": 47.31250000745058,
+            "repeatMeans": [
+              16.204901960355784,
+              15.483860759984088
+            ]
+          },
+          "gpu": {
+            "mean": 9.077703492347148,
+            "p95": 12.371967999999999,
+            "repeatMeans": [
+              9.12047351633987,
+              9.034933468354426
+            ]
+          },
+          "frame": {
+            "mean": 19.304255605234623,
+            "p95": 47.86250001192093,
+            "repeatMeans": [
+              19.568954248443927,
+              19.039556962025316
+            ]
+          },
+          "calls": {
+            "mean": 1507.4946326631919,
+            "p95": 1531,
+            "repeatMeans": [
+              1507.4607843137255,
+              1507.5284810126582
+            ]
+          },
+          "triangles": {
+            "mean": 9298096.97558327,
+            "p95": 9369686.5,
+            "repeatMeans": [
+              9297881.156862745,
+              9298312.794303797
+            ]
+          }
+        },
+        "long300": {
+          "segments": 2,
+          "cpu": {
+            "mean": 149.8894099372144,
+            "p95": 235.4700000181794,
+            "repeatMeans": [
+              129.16739130538443,
+              170.6114285690444
+            ]
+          },
+          "gpu": {
+            "mean": 35.75013763975155,
+            "p95": 39.981081599999996,
+            "repeatMeans": [
+              35.037829565217386,
+              36.462445714285714
+            ]
+          },
+          "frame": {
+            "mean": 149.9197515527469,
+            "p95": 230.7425000026822,
+            "repeatMeans": [
+              129.1652173905269,
+              170.6742857149669
+            ]
+          },
+          "calls": {
+            "mean": 5216.768944099378,
+            "p95": 5264,
+            "repeatMeans": [
+              5216.652173913043,
+              5216.885714285714
+            ]
+          },
+          "triangles": {
+            "mean": 14422509.195962735,
+            "p95": 14555442.825,
+            "repeatMeans": [
+              14419701.93478261,
+              14425316.457142858
+            ]
+          }
+        },
+        "whole450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 286.06075515217856,
+            "p95": 369.33499996960154,
+            "repeatMeans": [
+              259.9478260900663,
+              312.1736842142908
+            ]
+          },
+          "gpu": {
+            "mean": 34.72082892448513,
+            "p95": 48.20147199999999,
+            "repeatMeans": [
+              31.27852521739131,
+              38.163132631578954
+            ]
+          },
+          "frame": {
+            "mean": 293.54897025254826,
+            "p95": 379.1499999821186,
+            "repeatMeans": [
+              266.63478260973227,
+              320.46315789536425
+            ]
+          },
+          "calls": {
+            "mean": 5737.212814645309,
+            "p95": 5756,
+            "repeatMeans": [
+              5736.478260869565,
+              5737.9473684210525
+            ]
+          },
+          "triangles": {
+            "mean": 10271674.68993135,
+            "p95": 10307714,
+            "repeatMeans": [
+              10271689.695652174,
+              10271659.684210526
+            ]
+          }
+        },
+        "detail450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 222.6347857115524,
+            "p95": 249.6074999809265,
+            "repeatMeans": [
+              237.71599999666213,
+              207.5535714264427
+            ]
+          },
+          "gpu": {
+            "mean": 31.674659108571426,
+            "p95": 35.1054848,
+            "repeatMeans": [
+              31.896207359999995,
+              31.453110857142853
+            ]
+          },
+          "frame": {
+            "mean": 223.50542857238224,
+            "p95": 250.72750001549718,
+            "repeatMeans": [
+              238.86800000190735,
+              208.14285714285714
+            ]
+          },
+          "calls": {
+            "mean": 5736.305714285714,
+            "p95": 5756,
+            "repeatMeans": [
+              5735.04,
+              5737.571428571428
+            ]
+          },
+          "triangles": {
+            "mean": 14310254.815000001,
+            "p95": 14346578,
+            "repeatMeans": [
+              14309553.88,
+              14310955.75
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "file": "distance-1793716918060-frkxv7.jsonl",
+    "meta": {
+      "timestamp": "2026-11-03T14:41:58.103Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+      "hardwareConcurrency": 16,
+      "deviceMemory": 32,
+      "dpr": 1,
+      "pixelRatio": 1,
+      "drawingBuffer": {
+        "width": 1920,
+        "height": 1080
+      },
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "requested": {
+        "width": 1920,
+        "height": 1080
+      },
+      "gpu": {
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3090 (0x00002204) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (NVIDIA)",
+        "timerSupported": true,
+        "timerExtension": "EXT_disjoint_timer_query_webgl2",
+        "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+      },
+      "visibility": "visible",
+      "profiles": [
+        {
+          "fixedAtrium": false,
+          "roomReach": null,
+          "id": "current",
+          "far": 150,
+          "rayFar": 90,
+          "verticalProbe": 12,
+          "cabins": 40,
+          "fogNear": 70,
+          "fogFar": 650,
+          "forceAtrium": false,
+          "label": "Current"
+        },
+        {
+          "fixedAtrium": false,
+          "roomReach": null,
+          "id": "long300",
+          "label": "Long 300m",
+          "far": 300,
+          "rayFar": 300,
+          "verticalProbe": 64,
+          "cabins": 40,
+          "fogNear": 100,
+          "fogFar": 800,
+          "forceAtrium": false
+        },
+        {
+          "fixedAtrium": false,
+          "roomReach": null,
+          "id": "whole450",
+          "label": "Whole atrium 450m",
+          "far": 450,
+          "rayFar": 450,
+          "verticalProbe": 80,
+          "cabins": 40,
+          "fogNear": 120,
+          "fogFar": 1100,
+          "forceAtrium": false
+        },
+        {
+          "fixedAtrium": false,
+          "roomReach": null,
+          "id": "detail450",
+          "label": "Whole atrium + cabin detail",
+          "far": 450,
+          "rayFar": 450,
+          "verticalProbe": 80,
+          "cabins": 5000,
+          "fogNear": 120,
+          "fogFar": 1100,
+          "forceAtrium": true
+        },
+        {
+          "fixedAtrium": false,
+          "roomReach": null,
+          "id": "camera450",
+          "label": "450m camera, existing visibility checks",
+          "far": 450,
+          "rayFar": 90,
+          "verticalProbe": 12,
+          "cabins": 40,
+          "fogNear": 120,
+          "fogFar": 1100,
+          "forceAtrium": false
+        },
+        {
+          "fixedAtrium": true,
+          "roomReach": 90,
+          "id": "atrium450",
+          "label": "450m public atrium, nearby room interiors",
+          "far": 450,
+          "rayFar": 90,
+          "verticalProbe": 12,
+          "cabins": 40,
+          "fogNear": 120,
+          "fogFar": 1100,
+          "forceAtrium": true
+        }
+      ],
+      "views": [
+        {
+          "id": "west",
+          "label": "Deck 6 west",
+          "at": [
+            -100,
+            -19.700000762939453,
+            0
+          ],
+          "lookAt": [
+            132,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "centre",
+          "label": "Deck 6 centre",
+          "at": [
+            30,
+            -19.700000762939453,
+            -3
+          ],
+          "lookAt": [
+            -60,
+            5,
+            -45
+          ]
+        },
+        {
+          "id": "bridge",
+          "label": "Deck 7 port bridge",
+          "at": [
+            132,
+            -15.699999809265137,
+            -12
+          ],
+          "lookAt": [
+            -120,
+            0,
+            -15
+          ]
+        }
+      ],
+      "protocol": {
+        "rounds": 2,
+        "warmupMs": 3000,
+        "sampleMs": 6000,
+        "segments": 36,
+        "motions": [
+          "still",
+          "look"
+        ],
+        "lookAmplitudeRadians": 0.25,
+        "lookPeriodMs": 6000,
+        "units": {
+          "cpu": "ms",
+          "gpu": "ms",
+          "frame": "ms",
+          "span": "ms",
+          "phase4": "ms"
+        },
+        "gpu": "Sum elapsed GPU time over all renderer.render calls per sampled frame. Disjoint/failed/unavailable results are excluded, never replaced with CPU time.",
+        "profileIds": [
+          "current",
+          "camera450",
+          "atrium450"
+        ]
+      },
+      "runId": "distance-1793716918060-frkxv7",
+      "started": "2026-11-03T14:41:58.104Z"
+    },
+    "segments": 36,
+    "expectedSegments": 36,
+    "profiles": {
+      "current": {
+        "segments": 12,
+        "valid": true,
+        "hiddenFrames": 0,
+        "gpuIssued": 2280,
+        "gpuInvalid": 0,
+        "events": [],
+        "metrics": {
+          "cpu": {
+            "n": 2280,
+            "mean": 29.94618421100211,
+            "p50": 20.900000035762787,
+            "p95": 79.50499999821183,
+            "p99": 169.79400000751025,
+            "equalSegmentMean": 39.40666980555129
+          },
+          "gpu": {
+            "n": 2280,
+            "mean": 18.588695031578936,
+            "p50": 15.06048,
+            "p95": 36.22072319999997,
+            "p99": 65.22978304000007,
+            "equalSegmentMean": 21.872299502519166
+          },
+          "frame": {
+            "n": 2280,
+            "mean": 31.57192982453526,
+            "p50": 21.950000017881393,
+            "p95": 81.4149999767541,
+            "p99": 171.4309999930859,
+            "equalSegmentMean": 41.06825416852116
+          },
+          "drawCalls": {
+            "n": 2280,
+            "mean": 2302.1780701754387,
+            "p50": 2583,
+            "p95": 3582,
+            "p99": 3673.3100000000004,
+            "equalSegmentMean": 2533.2649630700175
+          },
+          "triangles": {
+            "n": 2280,
+            "mean": 10688444.862719297,
+            "p50": 11326882,
+            "p95": 12610595,
+            "p99": 12616153.27,
+            "equalSegmentMean": 11068392.70812287
+          },
+          "span": {
+            "n": 180,
+            "mean": 17.21611111064752,
+            "p50": 15.400000005960464,
+            "p95": 27.10500002503395,
+            "p99": 59.4769999855757,
+            "equalSegmentMean": 17.243486660561157
+          },
+          "phase4": {
+            "n": 146,
+            "mean": 79.35890410901749,
+            "p50": 61.55000001192093,
+            "p95": 178.52499997615814,
+            "p99": 250.20499999225183,
+            "equalSegmentMean": 81.00481410204546
+          }
+        }
+      },
+      "camera450": {
+        "segments": 12,
+        "valid": true,
+        "hiddenFrames": 0,
+        "gpuIssued": 1790,
+        "gpuInvalid": 0,
+        "events": [],
+        "metrics": {
+          "cpu": {
+            "n": 1790,
+            "mean": 39.29005586544895,
+            "p50": 25.80000001192093,
+            "p95": 138.2550000011921,
+            "p99": 206.9290000039335,
+            "equalSegmentMean": 54.15636283429915
+          },
+          "gpu": {
+            "n": 1790,
+            "mean": 21.095679124022315,
+            "p50": 18.7136,
+            "p95": 35.345100800000004,
+            "p99": 41.34368255999997,
+            "equalSegmentMean": 22.689805834705226
+          },
+          "frame": {
+            "n": 1790,
+            "mean": 40.26932960891857,
+            "p50": 26.600000023841858,
+            "p95": 139,
+            "p99": 211.25499998807902,
+            "equalSegmentMean": 55.25414351045811
+          },
+          "drawCalls": {
+            "n": 1790,
+            "mean": 4181.72625698324,
+            "p50": 4172,
+            "p95": 4632,
+            "p99": 4703.11,
+            "equalSegmentMean": 4190.756364646798
+          },
+          "triangles": {
+            "n": 1790,
+            "mean": 7556413.996089386,
+            "p50": 8092368,
+            "p95": 8659871,
+            "p99": 8711256.44,
+            "equalSegmentMean": 7540569.712933653
+          },
+          "span": {
+            "n": 153,
+            "mean": 11.38954248381596,
+            "p50": 10.699999988079071,
+            "p95": 15.519999980926515,
+            "p99": 21.147999975681305,
+            "equalSegmentMean": 11.431038461681615
+          },
+          "phase4": {
+            "n": 152,
+            "mean": 127.28092105216102,
+            "p50": 122.14999997615814,
+            "p95": 185.65500000119206,
+            "p99": 212.75200000047707,
+            "equalSegmentMean": 127.93089316197187
+          }
+        }
+      },
+      "atrium450": {
+        "segments": 12,
+        "valid": true,
+        "hiddenFrames": 0,
+        "gpuIssued": 2974,
+        "gpuInvalid": 0,
+        "events": [],
+        "metrics": {
+          "cpu": {
+            "n": 2974,
+            "mean": 23.513416274069296,
+            "p50": 22.299999952316284,
+            "p95": 31.69999998807907,
+            "p99": 44.599999980330466,
+            "equalSegmentMean": 23.915798201286666
+          },
+          "gpu": {
+            "n": 2974,
+            "mean": 17.47008210894419,
+            "p50": 16.519168,
+            "p95": 24.304895999999992,
+            "p99": 33.9272704,
+            "equalSegmentMean": 17.794821054853
+          },
+          "frame": {
+            "n": 2974,
+            "mean": 24.199361129803552,
+            "p50": 22.899999976158142,
+            "p95": 32.40000003576279,
+            "p99": 46,
+            "equalSegmentMean": 24.604998671729504
+          },
+          "drawCalls": {
+            "n": 2974,
+            "mean": 4818.5954942837925,
+            "p50": 4643,
+            "p95": 5599.35,
+            "p99": 5603,
+            "equalSegmentMean": 4878.173246968111
+          },
+          "triangles": {
+            "n": 2974,
+            "mean": 8625163.410894418,
+            "p50": 8255817,
+            "p95": 9645240,
+            "p99": 9685978,
+            "equalSegmentMean": 8698964.86070364
+          },
+          "span": {
+            "n": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null,
+            "p99": null,
+            "equalSegmentMean": null
+          },
+          "phase4": {
+            "n": 155,
+            "mean": 1.4425806441614706,
+            "p50": 1,
+            "p95": 3.2000000059604643,
+            "p99": 4.100000023841858,
+            "equalSegmentMean": 1.4500256400077773
+          }
+        }
+      }
+    },
+    "comparisons": {
+      "camera450": {
+        "cpu": {
+          "pairs": 12,
+          "deltaMean": 14.749693028747862,
+          "meanPercentChange": 61.55584886900102,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 14.738095237594358,
+              "candidate": 24.656355933112614,
+              "delta": 9.918260695518256
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 34.134463280271,
+              "candidate": 45.28615384422816,
+              "delta": 11.15169056395716
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 36.72101910744503,
+              "candidate": 25.47947598258481,
+              "delta": -11.241543124860222
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 109.20566038253172,
+              "candidate": 55.45094339352734,
+              "delta": -53.75471698900438
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 17.61225165732649,
+              "candidate": 20.88381294681014,
+              "delta": 3.2715612894836497
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 32.30170454694466,
+              "candidate": 72.56829268321758,
+              "delta": 40.266588136272915
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 33.84529411652509,
+              "candidate": 29.088999998569488,
+              "delta": -4.756294117955601
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 48.00163934905021,
+              "candidate": 47.11587301511613,
+              "delta": -0.8857663339340789
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 37.00512820176589,
+              "candidate": 42.35474452528641,
+              "delta": 5.3496163235205145
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 63.40434782595738,
+              "candidate": 105.79464286140033,
+              "delta": 42.39029503544295
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 17.109433963051384,
+              "candidate": 34.03705882535261,
+              "delta": 16.927624862301226
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 28.800999998152257,
+              "candidate": 147.16000000238418,
+              "delta": 118.35900000423192
+            }
+          ]
+        },
+        "gpu": {
+          "pairs": 12,
+          "deltaMean": 0.81750633218606,
+          "meanPercentChange": 17.562189709775293,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11.853680582633046,
+              "candidate": 18.02528542372882,
+              "delta": 6.171604841095775
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 17.253135367231632,
+              "candidate": 17.975705600000005,
+              "delta": 0.7225702327683727
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 27.496800203821664,
+              "candidate": 19.52256000000001,
+              "delta": -7.974240203821655
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 41.656591094339625,
+              "candidate": 20.70874807547171,
+              "delta": -20.947843018867914
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 13.580582993377483,
+              "candidate": 15.885286215827334,
+              "delta": 2.3047032224498505
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 16.998021818181822,
+              "candidate": 18.26166634146342,
+              "delta": 1.2636445232815987
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 26.646679152941182,
+              "candidate": 21.587972960000002,
+              "delta": -5.05870619294118
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 22.22607108196722,
+              "candidate": 18.71123504761905,
+              "delta": -3.5148360343481713
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 31.130341743589735,
+              "candidate": 33.284611737226285,
+              "delta": 2.15426999363655
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 26.604343304347825,
+              "candidate": 31.68257828571429,
+              "delta": 5.078234981366464
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 12.958919647798743,
+              "candidate": 25.51068912941177,
+              "delta": 12.551769481613027
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 14.062427040000003,
+              "candidate": 31.121331200000007,
+              "delta": 17.058904160000004
+            }
+          ]
+        },
+        "frame": {
+          "pairs": 12,
+          "deltaMean": 14.185889341936951,
+          "meanPercentChange": 56.08521128072838,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 16.865826330598995,
+              "candidate": 25.412711864305756,
+              "delta": 8.54688553370676
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 33.747457627185995,
+              "candidate": 46.20384615384615,
+              "delta": 12.456388526660156
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 38.12356687882903,
+              "candidate": 26.20349344962549,
+              "delta": -11.92007342920354
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 113.15660377380983,
+              "candidate": 57.33301886803699,
+              "delta": -55.82358490577285
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 19.8334437085698,
+              "candidate": 21.580575539696987,
+              "delta": 1.747131831127188
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 34.21534090895545,
+              "candidate": 73.5536585362946,
+              "delta": 39.33831762733916
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 35.37470588228282,
+              "candidate": 30.044500000178815,
+              "delta": -5.3302058821040035
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 49.453278688622305,
+              "candidate": 47.62142857152318,
+              "delta": -1.8318501170991226
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 38.324999999923584,
+              "candidate": 43.648905109315024,
+              "delta": 5.32390510939144
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 64.84456521726173,
+              "candidate": 108.15714285629136,
+              "delta": 43.31257763902963
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 18.881761006214333,
+              "candidate": 35.322941176680956,
+              "delta": 16.441180170466623
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 29.9975,
+              "candidate": 147.96749999970197,
+              "delta": 117.96999999970197
+            }
+          ]
+        },
+        "calls": {
+          "pairs": 12,
+          "deltaMean": 1657.4914015767808,
+          "meanPercentChange": 81.66748394703936,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 2583,
+              "candidate": 4172,
+              "delta": 1589
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 2614.502824858757,
+              "candidate": 4171.446153846154,
+              "delta": 1556.9433289873969
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 3582,
+              "candidate": 4632,
+              "delta": 1050
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 3493.754716981132,
+              "candidate": 4583.8490566037735,
+              "delta": 1090.0943396226417
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 1492,
+              "candidate": 3789,
+              "delta": 2297
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 1506.221590909091,
+              "candidate": 3785.9756097560976,
+              "delta": 2279.7540188470066
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 2583,
+              "candidate": 4172,
+              "delta": 1589
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 2614.9180327868853,
+              "candidate": 4171.841269841269,
+              "delta": 1556.9232370543841
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 3582,
+              "candidate": 4632,
+              "delta": 1050
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 3348.967391304348,
+              "candidate": 4602.339285714285,
+              "delta": 1253.3718944099373
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 1492,
+              "candidate": 3789,
+              "delta": 2297
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 1506.815,
+              "candidate": 3787.625,
+              "delta": 2280.81
+            }
+          ]
+        },
+        "triangles": {
+          "pairs": 12,
+          "deltaMean": -3527822.995189216,
+          "meanPercentChange": -32.15993545428281,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11326882,
+              "candidate": 8092368,
+              "delta": -3234514
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11418364.305084746,
+              "candidate": 8101876.7,
+              "delta": -3316487.605084746
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 12610595,
+              "candidate": 8659871,
+              "delta": -3950724
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 12539072.358490566,
+              "candidate": 8558825.311320756,
+              "delta": -3980247.04716981
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 9241623,
+              "candidate": 5903182,
+              "delta": -3338441
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9295169.715909092,
+              "candidate": 5909841.609756097,
+              "delta": -3385328.1061529946
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11326882,
+              "candidate": 8092368,
+              "delta": -3234514
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11421517.090163935,
+              "candidate": 8102329.484126984,
+              "delta": -3319187.606036951
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 12610595,
+              "candidate": 8659871,
+              "delta": -3950724
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 12492676.847826088,
+              "candidate": 8591590.25,
+              "delta": -3901086.597826088
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 9241623,
+              "candidate": 5903182,
+              "delta": -3338441
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9295712.18,
+              "candidate": 5911531.2,
+              "delta": -3384180.9799999995
+            }
+          ]
+        }
+      },
+      "atrium450": {
+        "cpu": {
+          "pairs": 12,
+          "deltaMean": -15.490871604264617,
+          "meanPercentChange": -17.091747079192547,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 14.738095237594358,
+              "candidate": 21.382720587227276,
+              "delta": 6.644625349632918
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 34.134463280271,
+              "candidate": 20.563957598521096,
+              "delta": -13.570505681749903
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 36.72101910744503,
+              "candidate": 23.856967212723905,
+              "delta": -12.864051894721126
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 109.20566038253172,
+              "candidate": 22.354230769780965,
+              "delta": -86.85142961275075
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 17.61225165732649,
+              "candidate": 25.68281938325991,
+              "delta": 8.070567725933422
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 32.30170454694466,
+              "candidate": 28.303864733032558,
+              "delta": -3.9978398139121047
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 33.84529411652509,
+              "candidate": 20.90000000038593,
+              "delta": -12.94529411613916
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 48.00163934905021,
+              "candidate": 20.254703831174233,
+              "delta": -27.746935517875976
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 37.00512820176589,
+              "candidate": 23.209561752845566,
+              "delta": -13.795566448920326
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 63.40434782595738,
+              "candidate": 22.10189393885208,
+              "delta": -41.3024538871053
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 17.109433963051384,
+              "candidate": 28.012019229336428,
+              "delta": 10.902585266285044
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 28.800999998152257,
+              "candidate": 30.36683937830011,
+              "delta": 1.5658393801478532
+            }
+          ]
+        },
+        "gpu": {
+          "pairs": 12,
+          "deltaMean": -4.0774784476661665,
+          "meanPercentChange": -3.5669994236486193,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11.853680582633046,
+              "candidate": 15.37665882352942,
+              "delta": 3.5229782408963732
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 17.253135367231632,
+              "candidate": 15.075545102473498,
+              "delta": -2.177590264758134
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 27.496800203821664,
+              "candidate": 17.884381901639347,
+              "delta": -9.612418302182316
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 41.656591094339625,
+              "candidate": 16.85684381538462,
+              "delta": -24.799747278955003
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 13.580582993377483,
+              "candidate": 19.69419954185022,
+              "delta": 6.113616548472738
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 16.998021818181822,
+              "candidate": 20.934235516908213,
+              "delta": 3.936213698726391
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 26.646679152941182,
+              "candidate": 15.203272748201435,
+              "delta": -11.443406404739747
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 22.22607108196722,
+              "candidate": 14.646457533101056,
+              "delta": -7.579613548866163
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 31.130341743589735,
+              "candidate": 17.306175235059758,
+              "delta": -13.824166508529977
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 26.604343304347825,
+              "candidate": 16.582714181818176,
+              "delta": -10.02162912252965
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 12.958919647798743,
+              "candidate": 21.152891076923076,
+              "delta": 8.193971429124334
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 14.062427040000003,
+              "candidate": 22.824477181347163,
+              "delta": 8.76205014134716
+            }
+          ]
+        },
+        "frame": {
+          "pairs": 12,
+          "deltaMean": -16.46325549679165,
+          "meanPercentChange": -20.62060383123107,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 16.865826330598995,
+              "candidate": 22.034558823441756,
+              "delta": 5.168732492842761
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 33.747457627185995,
+              "candidate": 21.20530035344114,
+              "delta": -12.542157273744856
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 38.12356687882903,
+              "candidate": 24.604508196721312,
+              "delta": -13.519058682107719
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 113.15660377380983,
+              "candidate": 23.04230769230769,
+              "delta": -90.11429608150215
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 19.8334437085698,
+              "candidate": 26.400881057268723,
+              "delta": 6.567437348698924
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 34.21534090895545,
+              "candidate": 29.056521739072846,
+              "delta": -5.158819169882602
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 35.37470588228282,
+              "candidate": 21.588489208504452,
+              "delta": -13.786216673778366
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 49.453278688622305,
+              "candidate": 20.89581881541408,
+              "delta": -28.557459873208224
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 38.324999999923584,
+              "candidate": 23.90597609576001,
+              "delta": -14.419023904163573
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 64.84456521726173,
+              "candidate": 22.767045454545453,
+              "delta": -42.07751976271628
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 18.881761006214333,
+              "candidate": 28.61298076923077,
+              "delta": 9.731219763016437
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 29.9975,
+              "candidate": 31.145595855045812,
+              "delta": 1.1480958550458134
+            }
+          ]
+        },
+        "calls": {
+          "pairs": 12,
+          "deltaMean": 2344.9082838980935,
+          "meanPercentChange": 125.03165605849301,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 2583,
+              "candidate": 4420,
+              "delta": 1837
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 2614.502824858757,
+              "candidate": 4424.52296819788,
+              "delta": 1810.020143339123
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 3582,
+              "candidate": 4643,
+              "delta": 1061
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 3493.754716981132,
+              "candidate": 4603.157692307693,
+              "delta": 1109.4029753265609
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 1492,
+              "candidate": 5597,
+              "delta": 4105
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 1506.221590909091,
+              "candidate": 5583.314009661835,
+              "delta": 4077.0924187527444
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 2583,
+              "candidate": 4420,
+              "delta": 1837
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 2614.9180327868853,
+              "candidate": 4424.202090592335,
+              "delta": 1809.2840578054493
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 3582,
+              "candidate": 4643,
+              "delta": 1061
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 3348.967391304348,
+              "candidate": 4602.44696969697,
+              "delta": 1253.479578392622
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 1492,
+              "candidate": 5597,
+              "delta": 4105
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 1506.815,
+              "candidate": 5580.4352331606215,
+              "delta": 4073.6202331606214
+            }
+          ]
+        },
+        "triangles": {
+          "pairs": 12,
+          "deltaMean": -2369427.8474192303,
+          "meanPercentChange": -19.368312263517,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11326882,
+              "candidate": 8255817,
+              "delta": -3071065
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11418364.305084746,
+              "candidate": 8266210.1590106,
+              "delta": -3152154.146074146
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 12610595,
+              "candidate": 8231835,
+              "delta": -4378760
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 12539072.358490566,
+              "candidate": 8150819.169230769,
+              "delta": -4388253.189259796
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 9241623,
+              "candidate": 9642188,
+              "delta": 400565
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9295169.715909092,
+              "candidate": 9649464.985507246,
+              "delta": 354295.26959815435
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11326882,
+              "candidate": 8255817,
+              "delta": -3071065
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11421517.090163935,
+              "candidate": 8265717.867595819,
+              "delta": -3155799.222568116
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 12610595,
+              "candidate": 8231835,
+              "delta": -4378760
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 12492676.847826088,
+              "candidate": 8149413.571969697,
+              "delta": -4343263.275856391
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 9241623,
+              "candidate": 9642188,
+              "delta": 400565
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9295712.18,
+              "candidate": 9646272.575129533,
+              "delta": 350560.3951295335
+            }
+          ]
+        }
+      }
+    },
+    "byView": {
+      "west/still": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 24.291694677059724,
+            "p95": 30.73000001311302,
+            "repeatMeans": [
+              14.738095237594358,
+              33.84529411652509
+            ]
+          },
+          "gpu": {
+            "mean": 19.250179867787114,
+            "p95": 25.926067199999995,
+            "repeatMeans": [
+              11.853680582633046,
+              26.646679152941182
+            ]
+          },
+          "frame": {
+            "mean": 26.12026610644091,
+            "p95": 32.35750001370907,
+            "repeatMeans": [
+              16.865826330598995,
+              35.37470588228282
+            ]
+          },
+          "calls": {
+            "mean": 2583,
+            "p95": 2583,
+            "repeatMeans": [
+              2583,
+              2583
+            ]
+          },
+          "triangles": {
+            "mean": 11326882,
+            "p95": 11326882,
+            "repeatMeans": [
+              11326882,
+              11326882
+            ]
+          }
+        },
+        "camera450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 26.87267796584105,
+            "p95": 38.715000019967555,
+            "repeatMeans": [
+              24.656355933112614,
+              29.088999998569488
+            ]
+          },
+          "gpu": {
+            "mean": 19.80662919186441,
+            "p95": 28.9056256,
+            "repeatMeans": [
+              18.02528542372882,
+              21.587972960000002
+            ]
+          },
+          "frame": {
+            "mean": 27.728605932242285,
+            "p95": 39.9325000077486,
+            "repeatMeans": [
+              25.412711864305756,
+              30.044500000178815
+            ]
+          },
+          "calls": {
+            "mean": 4172,
+            "p95": 4172,
+            "repeatMeans": [
+              4172,
+              4172
+            ]
+          },
+          "triangles": {
+            "mean": 8092368,
+            "p95": 8092368,
+            "repeatMeans": [
+              8092368,
+              8092368
+            ]
+          }
+        },
+        "atrium450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 21.141360293806603,
+            "p95": 25.852499981224533,
+            "repeatMeans": [
+              21.382720587227276,
+              20.90000000038593
+            ]
+          },
+          "gpu": {
+            "mean": 15.289965785865427,
+            "p95": 19.313100799999997,
+            "repeatMeans": [
+              15.37665882352942,
+              15.203272748201435
+            ]
+          },
+          "frame": {
+            "mean": 21.811524015973106,
+            "p95": 26.594999983906742,
+            "repeatMeans": [
+              22.034558823441756,
+              21.588489208504452
+            ]
+          },
+          "calls": {
+            "mean": 4420,
+            "p95": 4420,
+            "repeatMeans": [
+              4420,
+              4420
+            ]
+          },
+          "triangles": {
+            "mean": 8255817,
+            "p95": 8255817,
+            "repeatMeans": [
+              8255817,
+              8255817
+            ]
+          }
+        }
+      },
+      "west/look": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 41.06805131466061,
+            "p95": 101.95500000715248,
+            "repeatMeans": [
+              34.134463280271,
+              48.00163934905021
+            ]
+          },
+          "gpu": {
+            "mean": 19.739603224599428,
+            "p95": 28.04853759999999,
+            "repeatMeans": [
+              17.253135367231632,
+              22.22607108196722
+            ]
+          },
+          "frame": {
+            "mean": 41.60036815790415,
+            "p95": 99.28749999999995,
+            "repeatMeans": [
+              33.747457627185995,
+              49.453278688622305
+            ]
+          },
+          "calls": {
+            "mean": 2614.710428822821,
+            "p95": 2635,
+            "repeatMeans": [
+              2614.502824858757,
+              2614.9180327868853
+            ]
+          },
+          "triangles": {
+            "mean": 11419940.69762434,
+            "p95": 11501847,
+            "repeatMeans": [
+              11418364.305084746,
+              11421517.090163935
+            ]
+          }
+        },
+        "camera450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 46.201013429672145,
+            "p95": 121.10999998003244,
+            "repeatMeans": [
+              45.28615384422816,
+              47.11587301511613
+            ]
+          },
+          "gpu": {
+            "mean": 18.343470323809527,
+            "p95": 24.7989248,
+            "repeatMeans": [
+              17.975705600000005,
+              18.71123504761905
+            ]
+          },
+          "frame": {
+            "mean": 46.91263736268466,
+            "p95": 121.70499998927116,
+            "repeatMeans": [
+              46.20384615384615,
+              47.62142857152318
+            ]
+          },
+          "calls": {
+            "mean": 4171.643711843712,
+            "p95": 4190,
+            "repeatMeans": [
+              4171.446153846154,
+              4171.841269841269
+            ]
+          },
+          "triangles": {
+            "mean": 8102103.092063492,
+            "p95": 8121026,
+            "repeatMeans": [
+              8101876.7,
+              8102329.484126984
+            ]
+          }
+        },
+        "atrium450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 20.409330714847663,
+            "p95": 25.12999997437,
+            "repeatMeans": [
+              20.563957598521096,
+              20.254703831174233
+            ]
+          },
+          "gpu": {
+            "mean": 14.861001317787277,
+            "p95": 18.534604799999997,
+            "repeatMeans": [
+              15.075545102473498,
+              14.646457533101056
+            ]
+          },
+          "frame": {
+            "mean": 21.05055958442761,
+            "p95": 26.019999977946277,
+            "repeatMeans": [
+              21.20530035344114,
+              20.89581881541408
+            ]
+          },
+          "calls": {
+            "mean": 4424.362529395107,
+            "p95": 4439,
+            "repeatMeans": [
+              4424.52296819788,
+              4424.202090592335
+            ]
+          },
+          "triangles": {
+            "mean": 8265964.013303209,
+            "p95": 8285467.95,
+            "repeatMeans": [
+              8266210.1590106,
+              8265717.867595819
+            ]
+          }
+        }
+      },
+      "centre/still": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 36.86307365460546,
+            "p95": 64.70499999970195,
+            "repeatMeans": [
+              36.72101910744503,
+              37.00512820176589
+            ]
+          },
+          "gpu": {
+            "mean": 29.3135709737057,
+            "p95": 56.170854399999996,
+            "repeatMeans": [
+              27.496800203821664,
+              31.130341743589735
+            ]
+          },
+          "frame": {
+            "mean": 38.22428343937631,
+            "p95": 69.36250000894069,
+            "repeatMeans": [
+              38.12356687882903,
+              38.324999999923584
+            ]
+          },
+          "calls": {
+            "mean": 3582,
+            "p95": 3582,
+            "repeatMeans": [
+              3582,
+              3582
+            ]
+          },
+          "triangles": {
+            "mean": 12610595,
+            "p95": 12610595,
+            "repeatMeans": [
+              12610595,
+              12610595
+            ]
+          }
+        },
+        "camera450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 33.917110253935604,
+            "p95": 44.729999995231616,
+            "repeatMeans": [
+              25.47947598258481,
+              42.35474452528641
+            ]
+          },
+          "gpu": {
+            "mean": 26.40358586861315,
+            "p95": 35.6941824,
+            "repeatMeans": [
+              19.52256000000001,
+              33.284611737226285
+            ]
+          },
+          "frame": {
+            "mean": 34.926199279470254,
+            "p95": 46.18999999761581,
+            "repeatMeans": [
+              26.20349344962549,
+              43.648905109315024
+            ]
+          },
+          "calls": {
+            "mean": 4632,
+            "p95": 4632,
+            "repeatMeans": [
+              4632,
+              4632
+            ]
+          },
+          "triangles": {
+            "mean": 8659871,
+            "p95": 8659871,
+            "repeatMeans": [
+              8659871,
+              8659871
+            ]
+          }
+        },
+        "atrium450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 23.533264482784737,
+            "p95": 30.737500005960463,
+            "repeatMeans": [
+              23.856967212723905,
+              23.209561752845566
+            ]
+          },
+          "gpu": {
+            "mean": 17.595278568349553,
+            "p95": 23.5107072,
+            "repeatMeans": [
+              17.884381901639347,
+              17.306175235059758
+            ]
+          },
+          "frame": {
+            "mean": 24.25524214624066,
+            "p95": 31.890000016987322,
+            "repeatMeans": [
+              24.604508196721312,
+              23.90597609576001
+            ]
+          },
+          "calls": {
+            "mean": 4643,
+            "p95": 4643,
+            "repeatMeans": [
+              4643,
+              4643
+            ]
+          },
+          "triangles": {
+            "mean": 8231835,
+            "p95": 8231835,
+            "repeatMeans": [
+              8231835,
+              8231835
+            ]
+          }
+        }
+      },
+      "centre/look": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 86.30500410424455,
+            "p95": 245.94750000536445,
+            "repeatMeans": [
+              109.20566038253172,
+              63.40434782595738
+            ]
+          },
+          "gpu": {
+            "mean": 34.13046719934373,
+            "p95": 61.21374719999999,
+            "repeatMeans": [
+              41.656591094339625,
+              26.604343304347825
+            ]
+          },
+          "frame": {
+            "mean": 89.00058449553578,
+            "p95": 248.46749998480084,
+            "repeatMeans": [
+              113.15660377380983,
+              64.84456521726173
+            ]
+          },
+          "calls": {
+            "mean": 3421.3610541427397,
+            "p95": 3825.425,
+            "repeatMeans": [
+              3493.754716981132,
+              3348.967391304348
+            ]
+          },
+          "triangles": {
+            "mean": 12515874.603158327,
+            "p95": 12627324.375,
+            "repeatMeans": [
+              12539072.358490566,
+              12492676.847826088
+            ]
+          }
+        },
+        "camera450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 80.62279312746384,
+            "p95": 181.53750001639128,
+            "repeatMeans": [
+              55.45094339352734,
+              105.79464286140033
+            ]
+          },
+          "gpu": {
+            "mean": 26.195663180593,
+            "p95": 33.934848,
+            "repeatMeans": [
+              20.70874807547171,
+              31.68257828571429
+            ]
+          },
+          "frame": {
+            "mean": 82.74508086216417,
+            "p95": 184.02500000596046,
+            "repeatMeans": [
+              57.33301886803699,
+              108.15714285629136
+            ]
+          },
+          "calls": {
+            "mean": 4593.094171159029,
+            "p95": 4706.125,
+            "repeatMeans": [
+              4583.8490566037735,
+              4602.339285714285
+            ]
+          },
+          "triangles": {
+            "mean": 8575207.780660378,
+            "p95": 8713492.25,
+            "repeatMeans": [
+              8558825.311320756,
+              8591590.25
+            ]
+          }
+        },
+        "atrium450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 22.22806235431652,
+            "p95": 27.382500015199184,
+            "repeatMeans": [
+              22.354230769780965,
+              22.10189393885208
+            ]
+          },
+          "gpu": {
+            "mean": 16.7197789986014,
+            "p95": 21.103232,
+            "repeatMeans": [
+              16.85684381538462,
+              16.582714181818176
+            ]
+          },
+          "frame": {
+            "mean": 22.90467657342657,
+            "p95": 27.852500019967557,
+            "repeatMeans": [
+              23.04230769230769,
+              22.767045454545453
+            ]
+          },
+          "calls": {
+            "mean": 4602.802331002331,
+            "p95": 4705.55,
+            "repeatMeans": [
+              4603.157692307693,
+              4602.44696969697
+            ]
+          },
+          "triangles": {
+            "mean": 8150116.370600233,
+            "p95": 8280346.1,
+            "repeatMeans": [
+              8150819.169230769,
+              8149413.571969697
+            ]
+          }
+        }
+      },
+      "bridge/still": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 17.360842810188934,
+            "p95": 26.75500002503395,
+            "repeatMeans": [
+              17.61225165732649,
+              17.109433963051384
+            ]
+          },
+          "gpu": {
+            "mean": 13.269751320588114,
+            "p95": 21.971584,
+            "repeatMeans": [
+              13.580582993377483,
+              12.958919647798743
+            ]
+          },
+          "frame": {
+            "mean": 19.357602357392068,
+            "p95": 28.30750000923872,
+            "repeatMeans": [
+              19.8334437085698,
+              18.881761006214333
+            ]
+          },
+          "calls": {
+            "mean": 1492,
+            "p95": 1492,
+            "repeatMeans": [
+              1492,
+              1492
+            ]
+          },
+          "triangles": {
+            "mean": 9241623,
+            "p95": 9241623,
+            "repeatMeans": [
+              9241623,
+              9241623
+            ]
+          }
+        },
+        "camera450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 27.460435886081374,
+            "p95": 37.48249999284744,
+            "repeatMeans": [
+              20.88381294681014,
+              34.03705882535261
+            ]
+          },
+          "gpu": {
+            "mean": 20.69798767261955,
+            "p95": 28.295244799999992,
+            "repeatMeans": [
+              15.885286215827334,
+              25.51068912941177
+            ]
+          },
+          "frame": {
+            "mean": 28.45175835818897,
+            "p95": 38.6900000244379,
+            "repeatMeans": [
+              21.580575539696987,
+              35.322941176680956
+            ]
+          },
+          "calls": {
+            "mean": 3789,
+            "p95": 3789,
+            "repeatMeans": [
+              3789,
+              3789
+            ]
+          },
+          "triangles": {
+            "mean": 5903182,
+            "p95": 5903182,
+            "repeatMeans": [
+              5903182,
+              5903182
+            ]
+          }
+        },
+        "atrium450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 26.84741930629817,
+            "p95": 38.627499978244295,
+            "repeatMeans": [
+              25.68281938325991,
+              28.012019229336428
+            ]
+          },
+          "gpu": {
+            "mean": 20.423545309386647,
+            "p95": 29.227801599999992,
+            "repeatMeans": [
+              19.69419954185022,
+              21.152891076923076
+            ]
+          },
+          "frame": {
+            "mean": 27.506930913249747,
+            "p95": 39.769999983906736,
+            "repeatMeans": [
+              26.400881057268723,
+              28.61298076923077
+            ]
+          },
+          "calls": {
+            "mean": 5597,
+            "p95": 5597,
+            "repeatMeans": [
+              5597,
+              5597
+            ]
+          },
+          "triangles": {
+            "mean": 9642188,
+            "p95": 9642188,
+            "repeatMeans": [
+              9642188,
+              9642188
+            ]
+          }
+        }
+      },
+      "bridge/look": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 30.55135227254846,
+            "p95": 81.56999998688696,
+            "repeatMeans": [
+              32.30170454694466,
+              28.800999998152257
+            ]
+          },
+          "gpu": {
+            "mean": 15.530224429090913,
+            "p95": 24.667647999999993,
+            "repeatMeans": [
+              16.998021818181822,
+              14.062427040000003
+            ]
+          },
+          "frame": {
+            "mean": 32.10642045447772,
+            "p95": 82.78999999463556,
+            "repeatMeans": [
+              34.21534090895545,
+              29.9975
+            ]
+          },
+          "calls": {
+            "mean": 1506.5182954545455,
+            "p95": 1527.625,
+            "repeatMeans": [
+              1506.221590909091,
+              1506.815
+            ]
+          },
+          "triangles": {
+            "mean": 9295440.947954547,
+            "p95": 9365730.1,
+            "repeatMeans": [
+              9295169.715909092,
+              9295712.18
+            ]
+          }
+        },
+        "camera450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 109.86414634280088,
+            "p95": 220.7000000119209,
+            "repeatMeans": [
+              72.56829268321758,
+              147.16000000238418
+            ]
+          },
+          "gpu": {
+            "mean": 24.691498770731712,
+            "p95": 28.3716352,
+            "repeatMeans": [
+              18.26166634146342,
+              31.121331200000007
+            ]
+          },
+          "frame": {
+            "mean": 110.76057926799828,
+            "p95": 222.01749999374147,
+            "repeatMeans": [
+              73.5536585362946,
+              147.96749999970197
+            ]
+          },
+          "calls": {
+            "mean": 3786.800304878049,
+            "p95": 3797,
+            "repeatMeans": [
+              3785.9756097560976,
+              3787.625
+            ]
+          },
+          "triangles": {
+            "mean": 5910686.404878048,
+            "p95": 5945104,
+            "repeatMeans": [
+              5909841.609756097,
+              5911531.2
+            ]
+          }
+        },
+        "atrium450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 29.335352055666334,
+            "p95": 41.98499999046324,
+            "repeatMeans": [
+              28.303864733032558,
+              30.36683937830011
+            ]
+          },
+          "gpu": {
+            "mean": 21.87935634912769,
+            "p95": 31.92970239999999,
+            "repeatMeans": [
+              20.934235516908213,
+              22.824477181347163
+            ]
+          },
+          "frame": {
+            "mean": 30.10105879705933,
+            "p95": 43.11000002622603,
+            "repeatMeans": [
+              29.056521739072846,
+              31.145595855045812
+            ]
+          },
+          "calls": {
+            "mean": 5581.874621411229,
+            "p95": 5603,
+            "repeatMeans": [
+              5583.314009661835,
+              5580.4352331606215
+            ]
+          },
+          "triangles": {
+            "mean": 9647868.78031839,
+            "p95": 9685978,
+            "repeatMeans": [
+              9649464.985507246,
+              9646272.575129533
+            ]
+          }
+        }
+      }
+    }
+  },
+  {
+    "file": "distance-1793717572610-qlawxl.jsonl",
+    "meta": {
+      "timestamp": "2026-11-03T14:52:52.641Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+      "hardwareConcurrency": 16,
+      "deviceMemory": 32,
+      "dpr": 1,
+      "pixelRatio": 1,
+      "drawingBuffer": {
+        "width": 1920,
+        "height": 1080
+      },
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "requested": {
+        "width": 1920,
+        "height": 1080
+      },
+      "gpu": {
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3090 (0x00002204) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (NVIDIA)",
+        "timerSupported": true,
+        "timerExtension": "EXT_disjoint_timer_query_webgl2",
+        "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+      },
+      "visibility": "visible",
+      "profiles": [
+        {
+          "fixedAtrium": false,
+          "roomReach": null,
+          "id": "current",
+          "far": 150,
+          "rayFar": 90,
+          "verticalProbe": 12,
+          "cabins": 40,
+          "fogNear": 70,
+          "fogFar": 650,
+          "forceAtrium": false,
+          "label": "Current"
+        },
+        {
+          "fixedAtrium": false,
+          "roomReach": null,
+          "id": "long300",
+          "label": "Long 300m",
+          "far": 300,
+          "rayFar": 300,
+          "verticalProbe": 64,
+          "cabins": 40,
+          "fogNear": 100,
+          "fogFar": 800,
+          "forceAtrium": false
+        },
+        {
+          "fixedAtrium": false,
+          "roomReach": null,
+          "id": "whole450",
+          "label": "Whole atrium 450m",
+          "far": 450,
+          "rayFar": 450,
+          "verticalProbe": 80,
+          "cabins": 40,
+          "fogNear": 120,
+          "fogFar": 1100,
+          "forceAtrium": false
+        },
+        {
+          "fixedAtrium": false,
+          "roomReach": null,
+          "id": "detail450",
+          "label": "Whole atrium + cabin detail",
+          "far": 450,
+          "rayFar": 450,
+          "verticalProbe": 80,
+          "cabins": 5000,
+          "fogNear": 120,
+          "fogFar": 1100,
+          "forceAtrium": true
+        },
+        {
+          "fixedAtrium": false,
+          "roomReach": null,
+          "id": "camera450",
+          "label": "450m camera, existing visibility checks",
+          "far": 450,
+          "rayFar": 90,
+          "verticalProbe": 12,
+          "cabins": 40,
+          "fogNear": 120,
+          "fogFar": 1100,
+          "forceAtrium": false
+        },
+        {
+          "fixedAtrium": true,
+          "roomReach": 90,
+          "id": "atrium450",
+          "label": "450m public atrium, nearby room interiors",
+          "far": 450,
+          "rayFar": 90,
+          "verticalProbe": 12,
+          "cabins": 40,
+          "fogNear": 120,
+          "fogFar": 1100,
+          "forceAtrium": true
+        }
+      ],
+      "views": [
+        {
+          "id": "west",
+          "label": "Deck 6 west",
+          "at": [
+            -100,
+            -19.700000762939453,
+            0
+          ],
+          "lookAt": [
+            132,
+            0,
+            0
+          ]
+        },
+        {
+          "id": "centre",
+          "label": "Deck 6 centre",
+          "at": [
+            30,
+            -19.700000762939453,
+            -3
+          ],
+          "lookAt": [
+            -60,
+            5,
+            -45
+          ]
+        },
+        {
+          "id": "bridge",
+          "label": "Deck 7 port bridge",
+          "at": [
+            132,
+            -15.699999809265137,
+            -12
+          ],
+          "lookAt": [
+            -120,
+            0,
+            -15
+          ]
+        }
+      ],
+      "protocol": {
+        "rounds": 2,
+        "warmupMs": 3000,
+        "sampleMs": 6000,
+        "segments": 24,
+        "motions": [
+          "still",
+          "look"
+        ],
+        "lookAmplitudeRadians": 0.25,
+        "lookPeriodMs": 6000,
+        "units": {
+          "cpu": "ms",
+          "gpu": "ms",
+          "frame": "ms",
+          "span": "ms",
+          "phase4": "ms"
+        },
+        "gpu": "Sum elapsed GPU time over all renderer.render calls per sampled frame. Disjoint/failed/unavailable results are excluded, never replaced with CPU time.",
+        "profileIds": [
+          "current",
+          "atrium450"
+        ],
+        "order": "paired-by-view-and-motion"
+      },
+      "runId": "distance-1793717572610-qlawxl",
+      "started": "2026-11-03T14:52:52.642Z"
+    },
+    "segments": 24,
+    "expectedSegments": 24,
+    "profiles": {
+      "current": {
+        "segments": 12,
+        "valid": true,
+        "hiddenFrames": 0,
+        "gpuIssued": 3134,
+        "gpuInvalid": 0,
+        "events": [],
+        "metrics": {
+          "cpu": {
+            "n": 3134,
+            "mean": 21.338449266014695,
+            "p50": 17.5,
+            "p95": 46.639999991655316,
+            "p99": 91.50300001978881,
+            "equalSegmentMean": 23.177561327148464
+          },
+          "gpu": {
+            "n": 3134,
+            "mean": 13.99356186343332,
+            "p50": 12.97664,
+            "p95": 23.2221184,
+            "p99": 29.849774080000003,
+            "equalSegmentMean": 14.681062460940225
+          },
+          "frame": {
+            "n": 3134,
+            "mean": 22.99990427570124,
+            "p50": 18.399999976158142,
+            "p95": 48.33499999940395,
+            "p99": 91.3030000120402,
+            "equalSegmentMean": 24.65706719978624
+          },
+          "drawCalls": {
+            "n": 3134,
+            "mean": 2393.319719208679,
+            "p50": 2583,
+            "p95": 3582,
+            "p99": 3832.67,
+            "equalSegmentMean": 2538.0720990029463
+          },
+          "triangles": {
+            "n": 3134,
+            "mean": 10829408.988832163,
+            "p50": 11326882,
+            "p95": 12610595,
+            "p99": 12628005.38,
+            "equalSegmentMean": 11066125.174085394
+          },
+          "span": {
+            "n": 199,
+            "mean": 11.905527638131051,
+            "p50": 11.200000047683716,
+            "p95": 16.519999998807904,
+            "p99": 21.530000000000015,
+            "equalSegmentMean": 11.822780637915265
+          },
+          "phase4": {
+            "n": 155,
+            "mean": 53.04580645292036,
+            "p50": 46.89999997615814,
+            "p95": 93.0000000476837,
+            "p99": 100.45199999809266,
+            "equalSegmentMean": 52.96351282185469
+          }
+        }
+      },
+      "atrium450": {
+        "segments": 12,
+        "valid": true,
+        "hiddenFrames": 0,
+        "gpuIssued": 2524,
+        "gpuInvalid": 0,
+        "events": [],
+        "metrics": {
+          "cpu": {
+            "n": 2524,
+            "mean": 27.64948494522205,
+            "p50": 26.400000005960464,
+            "p95": 38.48500000536441,
+            "p99": 46.700000033974646,
+            "equalSegmentMean": 28.033489514579326
+          },
+          "gpu": {
+            "n": 2524,
+            "mean": 20.199645096671976,
+            "p50": 19.262976000000002,
+            "p95": 28.811007999999998,
+            "p99": 35.298703360000005,
+            "equalSegmentMean": 20.517611562007534
+          },
+          "frame": {
+            "n": 2524,
+            "mean": 28.533755942966593,
+            "p50": 27.19999998807907,
+            "p95": 39.60000002384186,
+            "p99": 48.25399996876716,
+            "equalSegmentMean": 28.925214700257545
+          },
+          "drawCalls": {
+            "n": 2524,
+            "mean": 4825.502773375594,
+            "p50": 4643,
+            "p95": 5600,
+            "p99": 5603,
+            "equalSegmentMean": 4878.178851132666
+          },
+          "triangles": {
+            "n": 2524,
+            "mean": 8630945.5,
+            "p50": 8255817,
+            "p95": 9645243.4,
+            "p99": 9685978,
+            "equalSegmentMean": 8699157.675101576
+          },
+          "span": {
+            "n": 0,
+            "mean": null,
+            "p50": null,
+            "p95": null,
+            "p99": null,
+            "equalSegmentMean": null
+          },
+          "phase4": {
+            "n": 152,
+            "mean": 1.0848684189350981,
+            "p50": 0.7999999523162842,
+            "p95": 2,
+            "p99": 2.4980000007152574,
+            "equalSegmentMean": 1.0897179465874647
+          }
+        }
+      }
+    },
+    "comparisons": {
+      "atrium450": {
+        "cpu": {
+          "pairs": 12,
+          "deltaMean": 4.8559281874308615,
+          "meanPercentChange": 37.03269198849014,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 18.582142858923255,
+              "candidate": 24.144398341535037,
+              "delta": 5.562255482611782
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 25.568722466802807,
+              "candidate": 25.31004367020453,
+              "delta": -0.25867879659827864
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 24.531779659249015,
+              "candidate": 25.60308370086065,
+              "delta": 1.0713040416116364
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 39.49395973170364,
+              "candidate": 25.63788546155728,
+              "delta": -13.856074270146362
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 12.976553670598962,
+              "candidate": 32.411666666136846,
+              "delta": 19.435112995537885
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 20.347777778793265,
+              "candidate": 33.30057142700468,
+              "delta": 12.952793648211411
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 18.03962264233415,
+              "candidate": 27.415639810370042,
+              "delta": 9.37601716803589
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 24.826923075394753,
+              "candidate": 24.570042194193427,
+              "delta": -0.2568808812013259
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 23.579674796360294,
+              "candidate": 28.556157637699485,
+              "delta": 4.976482841339191
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 36.12530864094511,
+              "candidate": 25.402620090407577,
+              "delta": -10.72268855053753
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 13.314404430481865,
+              "candidate": 30.346875000745058,
+              "delta": 17.032470570263193
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 20.743866174194448,
+              "candidate": 33.70289017423729,
+              "delta": 12.959024000042842
+            }
+          ]
+        },
+        "gpu": {
+          "pairs": 12,
+          "deltaMean": 5.836549101067309,
+          "meanPercentChange": 52.20048703543015,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 14.258405506493514,
+              "candidate": 16.954907618257256,
+              "delta": 2.696502111763742
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 13.823887224669603,
+              "candidate": 18.162397344978157,
+              "delta": 4.338510120308554
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 19.780208813559323,
+              "candidate": 18.626054766519818,
+              "delta": -1.1541540470395049
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 20.41301390604026,
+              "candidate": 18.909657515418495,
+              "delta": -1.5033563906217644
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 10.108577988700569,
+              "candidate": 24.295116799999995,
+              "delta": 14.186538811299426
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 10.8959744,
+              "candidate": 24.75851776000002,
+              "delta": 13.862543360000021
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 13.896758742138374,
+              "candidate": 19.571634350710898,
+              "delta": 5.674875608572524
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 13.273547487179485,
+              "candidate": 17.484666059071724,
+              "delta": 4.211118571892239
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 19.325335934959348,
+              "candidate": 21.21306798029558,
+              "delta": 1.8877320453362323
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 18.776512790123462,
+              "candidate": 18.62604129257642,
+              "delta": -0.15047149754704137
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 10.426790648199445,
+              "candidate": 22.66380266666667,
+              "delta": 12.237012018467224
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 11.193736089219337,
+              "candidate": 24.945474589595385,
+              "delta": 13.751738500376048
+            }
+          ]
+        },
+        "frame": {
+          "pairs": 12,
+          "deltaMean": 4.268147500471309,
+          "meanPercentChange": 27.561207968391333,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 19.528246753208048,
+              "candidate": 24.97966804989146,
+              "delta": 5.45142129668341
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 26.639647577039995,
+              "candidate": 26.176855895196507,
+              "delta": -0.4627916818434876
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 25.39364406794815,
+              "candidate": 26.404845814872942,
+              "delta": 1.0112017469247938
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 40.0818791949509,
+              "candidate": 26.474008810677716,
+              "delta": -13.607870384273184
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 16.94971751409062,
+              "candidate": 33.358888889021344,
+              "delta": 16.409171374930725
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 22.285185185185185,
+              "candidate": 34.278285714217596,
+              "delta": 11.99310052903241
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 18.87798742134616,
+              "candidate": 28.350236966994135,
+              "delta": 9.472249545647976
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 25.686324786426674,
+              "candidate": 25.40717299578059,
+              "delta": -0.27915179064608253
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 24.3873983740322,
+              "candidate": 29.514778325123153,
+              "delta": 5.127379951090955
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 37.0703703702232,
+              "candidate": 26.176855895196507,
+              "delta": -10.893514475026695
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 16.654293628775843,
+              "candidate": 31.246874999875825,
+              "delta": 14.592581371099982
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 22.330111524207883,
+              "candidate": 34.73410404624278,
+              "delta": 12.403992522034894
+            }
+          ]
+        },
+        "calls": {
+          "pairs": 12,
+          "deltaMean": 2340.106752129719,
+          "meanPercentChange": 124.79202795375636,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 2583,
+              "candidate": 4420,
+              "delta": 1837
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 2612.6607929515417,
+              "candidate": 4424.711790393013,
+              "delta": 1812.0509974414713
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 3582,
+              "candidate": 4643,
+              "delta": 1061
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 3450.3422818791946,
+              "candidate": 4601.79295154185,
+              "delta": 1151.4506696626554
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 1492,
+              "candidate": 5597,
+              "delta": 4105
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 1507.4666666666667,
+              "candidate": 5581.428571428572,
+              "delta": 4073.961904761905
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 2583,
+              "candidate": 4420,
+              "delta": 1837
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 2611.9957264957266,
+              "candidate": 4424.354430379747,
+              "delta": 1812.3587038840205
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 3582,
+              "candidate": 4643,
+              "delta": 1061
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 3451.8086419753085,
+              "candidate": 4603.812227074236,
+              "delta": 1152.0035850989275
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 1492,
+              "candidate": 5597,
+              "delta": 4105
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 1508.5910780669144,
+              "candidate": 5582.046242774566,
+              "delta": 4073.4551647076514
+            }
+          ]
+        },
+        "triangles": {
+          "pairs": 12,
+          "deltaMean": -2366967.498983818,
+          "meanPercentChange": -19.357279348231877,
+          "deltas": [
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11326882,
+              "candidate": 8255817,
+              "delta": -3071065
+            },
+            {
+              "round": 1,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11411579.925110132,
+              "candidate": 8266397.868995633,
+              "delta": -3145182.0561144985
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 12610595,
+              "candidate": 8231835,
+              "delta": -4378760
+            },
+            {
+              "round": 1,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 12503032.006711408,
+              "candidate": 8148043.700440529,
+              "delta": -4354988.30627088
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 9241623,
+              "candidate": 9642188,
+              "delta": 400565
+            },
+            {
+              "round": 1,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9297633.533333333,
+              "candidate": 9648555.394285714,
+              "delta": 350921.86095238104
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "still",
+              "baseline": 11326882,
+              "candidate": 8255817,
+              "delta": -3071065
+            },
+            {
+              "round": 2,
+              "view": "west",
+              "motion": "look",
+              "baseline": 11408970.944444444,
+              "candidate": 8265883.742616034,
+              "delta": -3143087.20182841
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "still",
+              "baseline": 12610595,
+              "candidate": 8231835,
+              "delta": -4378760
+            },
+            {
+              "round": 2,
+              "view": "centre",
+              "motion": "look",
+              "baseline": 12511750.567901235,
+              "candidate": 8152520.851528385,
+              "delta": -4359229.71637285
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "still",
+              "baseline": 9241623,
+              "candidate": 9642188,
+              "delta": 400565
+            },
+            {
+              "round": 2,
+              "view": "bridge",
+              "motion": "look",
+              "baseline": 9302335.111524163,
+              "candidate": 9648810.543352602,
+              "delta": 346475.43182843924
+            }
+          ]
+        }
+      }
+    },
+    "byView": {
+      "west/still": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 18.310882750628704,
+            "p95": 26.285000009834757,
+            "repeatMeans": [
+              18.582142858923255,
+              18.03962264233415
+            ]
+          },
+          "gpu": {
+            "mean": 14.077582124315944,
+            "p95": 21.022950399999996,
+            "repeatMeans": [
+              14.258405506493514,
+              13.896758742138374
+            ]
+          },
+          "frame": {
+            "mean": 19.203117087277104,
+            "p95": 27.677500009536736,
+            "repeatMeans": [
+              19.528246753208048,
+              18.87798742134616
+            ]
+          },
+          "calls": {
+            "mean": 2583,
+            "p95": 2583,
+            "repeatMeans": [
+              2583,
+              2583
+            ]
+          },
+          "triangles": {
+            "mean": 11326882,
+            "p95": 11326882,
+            "repeatMeans": [
+              11326882,
+              11326882
+            ]
+          }
+        },
+        "atrium450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 25.780019075952538,
+            "p95": 35.6000000089407,
+            "repeatMeans": [
+              24.144398341535037,
+              27.415639810370042
+            ]
+          },
+          "gpu": {
+            "mean": 18.263270984484077,
+            "p95": 25.652736,
+            "repeatMeans": [
+              16.954907618257256,
+              19.571634350710898
+            ]
+          },
+          "frame": {
+            "mean": 26.664952508442795,
+            "p95": 36.94999998807907,
+            "repeatMeans": [
+              24.97966804989146,
+              28.350236966994135
+            ]
+          },
+          "calls": {
+            "mean": 4420,
+            "p95": 4420,
+            "repeatMeans": [
+              4420,
+              4420
+            ]
+          },
+          "triangles": {
+            "mean": 8255817,
+            "p95": 8255817,
+            "repeatMeans": [
+              8255817,
+              8255817
+            ]
+          }
+        }
+      },
+      "west/look": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 25.197822771098778,
+            "p95": 68.31749997735022,
+            "repeatMeans": [
+              25.568722466802807,
+              24.826923075394753
+            ]
+          },
+          "gpu": {
+            "mean": 13.548717355924545,
+            "p95": 19.311999999999998,
+            "repeatMeans": [
+              13.823887224669603,
+              13.273547487179485
+            ]
+          },
+          "frame": {
+            "mean": 26.162986181733334,
+            "p95": 69.18499999940394,
+            "repeatMeans": [
+              26.639647577039995,
+              25.686324786426674
+            ]
+          },
+          "calls": {
+            "mean": 2612.328259723634,
+            "p95": 2633.0249999999996,
+            "repeatMeans": [
+              2612.6607929515417,
+              2611.9957264957266
+            ]
+          },
+          "triangles": {
+            "mean": 11410275.434777288,
+            "p95": 11501023.925,
+            "repeatMeans": [
+              11411579.925110132,
+              11408970.944444444
+            ]
+          }
+        },
+        "atrium450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 24.940042932198978,
+            "p95": 33.059999990463254,
+            "repeatMeans": [
+              25.31004367020453,
+              24.570042194193427
+            ]
+          },
+          "gpu": {
+            "mean": 17.82353170202494,
+            "p95": 24.052735999999996,
+            "repeatMeans": [
+              18.162397344978157,
+              17.484666059071724
+            ]
+          },
+          "frame": {
+            "mean": 25.792014445488547,
+            "p95": 34.360000014305115,
+            "repeatMeans": [
+              26.176855895196507,
+              25.40717299578059
+            ]
+          },
+          "calls": {
+            "mean": 4424.53311038638,
+            "p95": 4439,
+            "repeatMeans": [
+              4424.711790393013,
+              4424.354430379747
+            ]
+          },
+          "triangles": {
+            "mean": 8266140.805805834,
+            "p95": 8285490,
+            "repeatMeans": [
+              8266397.868995633,
+              8265883.742616034
+            ]
+          }
+        }
+      },
+      "centre/still": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 24.055727227804653,
+            "p95": 31.737499974668026,
+            "repeatMeans": [
+              24.531779659249015,
+              23.579674796360294
+            ]
+          },
+          "gpu": {
+            "mean": 19.552772374259334,
+            "p95": 28.370303999999997,
+            "repeatMeans": [
+              19.780208813559323,
+              19.325335934959348
+            ]
+          },
+          "frame": {
+            "mean": 24.890521220990173,
+            "p95": 33.20000001043081,
+            "repeatMeans": [
+              25.39364406794815,
+              24.3873983740322
+            ]
+          },
+          "calls": {
+            "mean": 3582,
+            "p95": 3582,
+            "repeatMeans": [
+              3582,
+              3582
+            ]
+          },
+          "triangles": {
+            "mean": 12610595,
+            "p95": 12610595,
+            "repeatMeans": [
+              12610595,
+              12610595
+            ]
+          }
+        },
+        "atrium450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 27.079620669280068,
+            "p95": 36.135000023245794,
+            "repeatMeans": [
+              25.60308370086065,
+              28.556157637699485
+            ]
+          },
+          "gpu": {
+            "mean": 19.9195613734077,
+            "p95": 27.90220799999998,
+            "repeatMeans": [
+              18.626054766519818,
+              21.21306798029558
+            ]
+          },
+          "frame": {
+            "mean": 27.959812069998048,
+            "p95": 37.119999989867196,
+            "repeatMeans": [
+              26.404845814872942,
+              29.514778325123153
+            ]
+          },
+          "calls": {
+            "mean": 4643,
+            "p95": 4643,
+            "repeatMeans": [
+              4643,
+              4643
+            ]
+          },
+          "triangles": {
+            "mean": 8231835,
+            "p95": 8231835,
+            "repeatMeans": [
+              8231835,
+              8231835
+            ]
+          }
+        }
+      },
+      "centre/look": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 37.809634186324374,
+            "p95": 107.52999998331069,
+            "repeatMeans": [
+              39.49395973170364,
+              36.12530864094511
+            ]
+          },
+          "gpu": {
+            "mean": 19.594763348081862,
+            "p95": 28.959359999999997,
+            "repeatMeans": [
+              20.41301390604026,
+              18.776512790123462
+            ]
+          },
+          "frame": {
+            "mean": 38.57612478258705,
+            "p95": 108.28499999791383,
+            "repeatMeans": [
+              40.0818791949509,
+              37.0703703702232
+            ]
+          },
+          "calls": {
+            "mean": 3451.0754619272516,
+            "p95": 3837.2,
+            "repeatMeans": [
+              3450.3422818791946,
+              3451.8086419753085
+            ]
+          },
+          "triangles": {
+            "mean": 12507391.287306322,
+            "p95": 12650187.45,
+            "repeatMeans": [
+              12503032.006711408,
+              12511750.567901235
+            ]
+          }
+        },
+        "atrium450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 25.520252775982428,
+            "p95": 32.86000002622604,
+            "repeatMeans": [
+              25.63788546155728,
+              25.402620090407577
+            ]
+          },
+          "gpu": {
+            "mean": 18.76784940399746,
+            "p95": 24.753049599999997,
+            "repeatMeans": [
+              18.909657515418495,
+              18.62604129257642
+            ]
+          },
+          "frame": {
+            "mean": 26.325432352937113,
+            "p95": 33.66500001847744,
+            "repeatMeans": [
+              26.474008810677716,
+              26.176855895196507
+            ]
+          },
+          "calls": {
+            "mean": 4602.802589308043,
+            "p95": 4706.5,
+            "repeatMeans": [
+              4601.79295154185,
+              4603.812227074236
+            ]
+          },
+          "triangles": {
+            "mean": 8150282.275984457,
+            "p95": 8281186.6,
+            "repeatMeans": [
+              8148043.700440529,
+              8152520.851528385
+            ]
+          }
+        }
+      },
+      "bridge/still": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 13.145479050540413,
+            "p95": 18.15500000566243,
+            "repeatMeans": [
+              12.976553670598962,
+              13.314404430481865
+            ]
+          },
+          "gpu": {
+            "mean": 10.267684318450007,
+            "p95": 14.476057599999997,
+            "repeatMeans": [
+              10.108577988700569,
+              10.426790648199445
+            ]
+          },
+          "frame": {
+            "mean": 16.80200557143323,
+            "p95": 19.31750000566244,
+            "repeatMeans": [
+              16.94971751409062,
+              16.654293628775843
+            ]
+          },
+          "calls": {
+            "mean": 1492,
+            "p95": 1492,
+            "repeatMeans": [
+              1492,
+              1492
+            ]
+          },
+          "triangles": {
+            "mean": 9241623,
+            "p95": 9241623,
+            "repeatMeans": [
+              9241623,
+              9241623
+            ]
+          }
+        },
+        "atrium450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 31.379270833440952,
+            "p95": 41.29000000506639,
+            "repeatMeans": [
+              32.411666666136846,
+              30.346875000745058
+            ]
+          },
+          "gpu": {
+            "mean": 23.479459733333332,
+            "p95": 31.210419199999997,
+            "repeatMeans": [
+              24.295116799999995,
+              22.66380266666667
+            ]
+          },
+          "frame": {
+            "mean": 32.302881944448586,
+            "p95": 42.842499993741505,
+            "repeatMeans": [
+              33.358888889021344,
+              31.246874999875825
+            ]
+          },
+          "calls": {
+            "mean": 5597,
+            "p95": 5597,
+            "repeatMeans": [
+              5597,
+              5597
+            ]
+          },
+          "triangles": {
+            "mean": 9642188,
+            "p95": 9642188,
+            "repeatMeans": [
+              9642188,
+              9642188
+            ]
+          }
+        }
+      },
+      "bridge/look": {
+        "current": {
+          "segments": 2,
+          "cpu": {
+            "mean": 20.545821976493855,
+            "p95": 57.44500001370906,
+            "repeatMeans": [
+              20.347777778793265,
+              20.743866174194448
+            ]
+          },
+          "gpu": {
+            "mean": 11.044855244609668,
+            "p95": 17.030527999999993,
+            "repeatMeans": [
+              10.8959744,
+              11.193736089219337
+            ]
+          },
+          "frame": {
+            "mean": 22.307648354696532,
+            "p95": 58.340000015497196,
+            "repeatMeans": [
+              22.285185185185185,
+              22.330111524207883
+            ]
+          },
+          "calls": {
+            "mean": 1508.0288723667904,
+            "p95": 1529.775,
+            "repeatMeans": [
+              1507.4666666666667,
+              1508.5910780669144
+            ]
+          },
+          "triangles": {
+            "mean": 9299984.322428748,
+            "p95": 9368366.65,
+            "repeatMeans": [
+              9297633.533333333,
+              9302335.111524163
+            ]
+          }
+        },
+        "atrium450": {
+          "segments": 2,
+          "cpu": {
+            "mean": 33.50173080062098,
+            "p95": 44.270000013709065,
+            "repeatMeans": [
+              33.30057142700468,
+              33.70289017423729
+            ]
+          },
+          "gpu": {
+            "mean": 24.851996174797705,
+            "p95": 32.7121408,
+            "repeatMeans": [
+              24.75851776000002,
+              24.945474589595385
+            ]
+          },
+          "frame": {
+            "mean": 34.50619488023018,
+            "p95": 45.510000014305106,
+            "repeatMeans": [
+              34.278285714217596,
+              34.73410404624278
+            ]
+          },
+          "calls": {
+            "mean": 5581.737407101569,
+            "p95": 5603,
+            "repeatMeans": [
+              5581.428571428572,
+              5582.046242774566
+            ]
+          },
+          "triangles": {
+            "mean": 9648682.968819158,
+            "p95": 9685978,
+            "repeatMeans": [
+              9648555.394285714,
+              9648810.543352602
+            ]
+          }
+        }
+      }
+    }
+  }
+]
