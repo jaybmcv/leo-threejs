@@ -438,7 +438,7 @@ const actions={
   else if(t.kind==='tv'){closePanels();crownTv.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
  },
- escape(){closePanels();},
+ escape(){if(treasure?.active){treasure.leave();return;}closePanels();},
  // (Nothing below until the walk is ready.)
  places(){if(ready())togglePlaces();},
  map(){if(ready())toggleMap();},
