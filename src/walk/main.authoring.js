@@ -1,5 +1,6 @@
 import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
-import {setAtriumView,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
+import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
+import {createAtriumSight} from '../v2/atrium-sight.js';
 import {initBrowserBuildCache} from '../v2/build-cache.authoring.js';import {installAuthoringWorkers} from '../v2/authoring-workers.authoring.js';await initBrowserBuildCache();await installAuthoringWorkers();
 import {savePreparedWalk} from '../v2/prepared-authoring.authoring.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
@@ -376,23 +377,30 @@ const NEAR_CABINS=40,BOAT_REACH=45,nearFrom=new T.Vector3(1e9,0,0);
 // corner, the camera can sit inside a column, and every ray then stopped on its back faces (a garden's roof was culled).
 // Seen through an opening from under a lower ceiling (the lounge from its access ramp), a taller room's ceiling can be in
 // view with no ray landing on it, so each ray also looks straight up and down from partway along for the space it crosses.
-const VIEW_RAYS=[];for(const x of [-.96,-.5,0,.5,.96])for(const y of [-.96,-.5,0,.5,.96])VIEW_RAYS.push([x,y]);let viewSpan=[0,0],lastSpan=0,atriumSpanActive=false;
+const VIEW_RAYS=[];for(const x of [-.96,-.5,0,.5,.96])for(const y of [-.96,-.5,0,.5,.96])VIEW_RAYS.push([x,y]);let viewSpan=[0,0],localViewSpan=[0,0],lastSpan=-Infinity,atriumSpanActive=false,atriumSight=null;
 function span(p,now){
- // Open-atrium sightlines cover every gallery; enclosed spaces retain traced visibility.
+ // Sight through an adjoining doorway keeps the whole atrium, even outside its footprint.
  setAtriumView(p);
- const atriumBand=atriumViewSpan();if(atriumBand){atriumSpanActive=true;return viewSpan=atriumBand;}
+ const inside=inOpenAtrium();
+ setAtriumSight(ATRIUM_VIEW.fullHeight&&(inside||(atriumSight??=createAtriumSight(colliders)).update(camera,p,now)));
+ const atriumBand=atriumViewSpan();if(inside&&atriumBand){atriumSpanActive=true;return viewSpan=atriumBand;}
  // Returning indoors must recompute even at the same pose as the last indoor query.
  if(atriumSpanActive){atriumSpanActive=false;lastSpan=-Infinity;spanChanged(camera,p,NaN,NaN,colliders);}
 
- if(now-lastSpan<150)return viewSpan;lastSpan=now;if(!spanChanged(camera,p,0,0,colliders))return viewSpan;const spanStart=performance.now();
+ if(now-lastSpan>=150){lastSpan=now;if(spanChanged(camera,p,0,0,colliders)){
+ const spanStart=performance.now();
  let low=p.y-3,high=p.y+4;const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();
  const reach=y=>{low=Math.min(low,y-1);high=Math.max(high,y+1);};
  for(const [x,y] of VIEW_RAYS){ndc.set(x,y);ray.setFromCamera(ndc,camera);const hit=(spanQuery??=createVisibilityQuery(colliders)).raycast(ray.ray,90,.6),d=hit?hit.distance:90;reach(ray.ray.at(d,probe.origin).y);
   for(const f of [1/3,2/3])for(const s of [1,-1]){ray.ray.at(d*f,probe.origin);probe.direction.set(0,s,0);const h=(spanQuery??=createVisibilityQuery(colliders)).raycast(probe,12);if(h)reach(h.point.y);}}
- renderMetrics.span.push(performance.now()-spanStart);if(renderMetrics.span.length>600)renderMetrics.span.shift();return viewSpan=[low,high];
+ renderMetrics.span.push(performance.now()-spanStart);if(renderMetrics.span.length>600)renderMetrics.span.shift();localViewSpan=[low,high];
+ }}
+ // Preserve the observer's local floor/ceiling, including views from below Deck 6.
+ return viewSpan=atriumBand?[Math.min(localViewSpan[0],atriumBand[0]),Math.max(localViewSpan[1],atriumBand[1])]:localViewSpan;
 }
 function cull(p,now=performance.now()){
- cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now);showBands(baked.bands,low,high);let shown=false;
+ camera.updateMatrixWorld(true);
+ cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);let shown=false;
  for(const o of instanced){const [a,b]=o.userData.span,v=o.userData.cabins?a<p.y+3.5&&b>p.y-.5:a<high&&b>low;if(v&&!o.visible)shown=true;o.visible=v;}
  // Re-rank after 3 m of walking, or at once when another deck's cabins come into view.
  if(!shown&&nearFrom.distanceToSquared(p)<9)return;nearFrom.copy(p);

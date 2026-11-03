@@ -7,13 +7,17 @@ const profiles=[
  {id:'detail450',label:'Whole atrium + cabin detail',far:450,rayFar:450,verticalProbe:80,cabins:5000,fogNear:120,fogFar:1100,forceAtrium:true},
  {id:'camera450',label:'450m camera, existing visibility checks',far:450,rayFar:90,verticalProbe:12,cabins:40,fogNear:120,fogFar:1100,forceAtrium:false},
  {id:'atrium450',label:'450m public atrium, nearby room interiors',far:450,rayFar:90,verticalProbe:12,cabins:40,fogNear:120,fogFar:1100,forceAtrium:true,fixedAtrium:true,roomReach:90},
-].map(p=>({fixedAtrium:false,roomReach:null,...p}));
+ {id:'boundary450',label:'450m camera-visible atrium + subpixel LOD',far:450,rayFar:90,verticalProbe:12,cabins:40,fogNear:120,fogFar:1100,forceAtrium:true,fixedAtrium:true,roomReach:90,cameraSight:true,detailLOD:true},
+ {id:'boundaryNoLOD',label:'Camera-visible atrium without subpixel LOD',far:450,rayFar:90,verticalProbe:12,cabins:40,fogNear:120,fogFar:1100,forceAtrium:true,fixedAtrium:true,roomReach:90,cameraSight:true,detailLOD:false},
+].map(p=>({fixedAtrium:false,roomReach:null,cameraSight:false,detailLOD:false,...p}));
 const views=[
+ {id:'entrance',label:'Deck 6 neighborhood approach',at:[-132,-19.700000762939453,0],lookAt:[100,6,0]},
+ {id:'linen',label:'Deck 6 through linen doorway',at:[-143,-19.700000762939453,0],lookAt:[100,6,0]},
  {id:'west',label:'Deck 6 west',at:[-100,-19.700000762939453,0],lookAt:[132,0,0]},
  {id:'centre',label:'Deck 6 centre',at:[30,-19.700000762939453,-3],lookAt:[-60,5,-45]},
  {id:'bridge',label:'Deck 7 port bridge',at:[132,-15.699999809265137,-12],lookAt:[-120,0,-15]},
 ];
-let lastMetadata=null;
+let lastMetadata=null,lastDiagnostic=0,lastSightUpdate=0,captureNext=false;
 let api=null,gl=null,timer=null,paused=false,pauseStarted=0,lastFrame=null,currentFrame=null,active=null,run=null,ready=false,viewId='centre',lastDisjoint=false;
 const pending=[],events=[],hooked=new WeakSet();
 const now=()=>performance.now();
@@ -64,6 +68,7 @@ function resume(){if(!paused)return;const duration=now()-pauseStarted;paused=fal
 export function wrapDistanceFrame(fn){return function(...args){
  if(paused)return;
  if(!api)return fn.apply(this,args);
+ if(!run&&now()-lastDiagnostic>500){lastDiagnostic=now();send('view',{diagnostic:{position:vector(api.controller.position),...api.visibility(),sight:api.sight()?.stats,detailCulled:api.phase4()?.stats.detailCulled,offscreenCulled:api.phase4()?.stats.offscreenCulled,visibleInstances:api.phase4()?.stats.visibleInstances}});}
  pollGpu();hookMetrics();const start=now(),interval=lastFrame===null?null:start-lastFrame;lastFrame=start;
  const segment=active;
  if(segment){const elapsed=start-segment.started-segment.pausedMs;segment.sampling=elapsed>=3000&&elapsed<9000;clearInput();api.follow.mode='first';api.follow.yaw=segment.yaw+(segment.motion==='look'?.25*Math.sin(2*Math.PI*elapsed/6000):0);api.follow.pitch=segment.pitch;
@@ -73,6 +78,9 @@ export function wrapDistanceFrame(fn){return function(...args){
  const row=segment?.sampling?segment:null,frame={row,calls:0,triangles:0,passes:0,queries:[],invalid:lastDisjoint?'disjoint':null};currentFrame=frame;
  let thrown=null;try{fn.apply(this,args);}catch(e){thrown=e;note('frame-error',errorText(e));}finally{
   const cpu=now()-start;currentFrame=null;
+  if(captureNext){captureNext=false;send('capture',{capture:{url:api.renderer.domElement.toDataURL('image/png'),profile:distanceProfile.id,view:viewId,position:vector(api.controller.position),visibility:api.visibility()}});}
+  const sight=api.sight()?.stats,sightUpdated=sight&&sight.updates!==lastSightUpdate;if(sight)lastSightUpdate=sight.updates;
+  if(row){if(sightUpdated)row.raw.atriumSight.push(sight.lastMs);row.raw.detailCulled.push(api.phase4()?.stats.detailCulled||0);row.raw.offscreenCulled.push(api.phase4()?.stats.offscreenCulled||0);row.raw.visibleInstances.push(api.phase4()?.stats.visibleInstances||0);}
   if(row){row.raw.cpu.push(cpu);if(interval!==null&&interval>0)row.raw.frame.push(interval);row.raw.drawCalls.push(frame.calls);row.raw.triangles.push(frame.triangles);row.raw.renderPasses.push(frame.passes);if(document.hidden)row.hiddenFrames++;
    if(timer){row.gpuIssued++;if(frame.invalid||!frame.queries.length||frame.queries.length!==frame.passes){frame.invalid??='incomplete-pass-queries';for(const q of frame.queries)removeQuery(q);row.gpuInvalid++;row.gpuReasons[frame.invalid]=(row.gpuReasons[frame.invalid]||0)+1;}else pending.push({row,queries:frame.queries,created:now()});}
   }else for(const q of frame.queries)removeQuery(q);
@@ -87,7 +95,7 @@ async function saveRow(meta,row){const body=JSON.stringify({runId:run.id,meta,ro
 async function measure(spec){
  while(paused)await new Promise(resolve=>setTimeout(resolve,100));
  setProfile(spec.profile);const {yaw,pitch}=setView(spec.view);hookMetrics();
- const row={...spec,profileSettings:{...distanceProfile},started:now(),pausedMs:0,lastProgress:0,yaw,pitch,sampling:false,sampleStarted:null,sampleEnded:null,positions:{start:vector(api.controller.position)},events:[],hiddenAtStart:document.hidden,hiddenFrames:0,gpuIssued:0,gpuInvalid:0,gpuReasons:{},raw:{cpu:[],gpu:[],frame:[],drawCalls:[],triangles:[],renderPasses:[],span:[],phase4:[]}};
+ const row={...spec,profileSettings:{...distanceProfile},started:now(),pausedMs:0,lastProgress:0,yaw,pitch,sampling:false,sampleStarted:null,sampleEnded:null,positions:{start:vector(api.controller.position)},events:[],hiddenAtStart:document.hidden,hiddenFrames:0,gpuIssued:0,gpuInvalid:0,gpuReasons:{},raw:{cpu:[],gpu:[],frame:[],drawCalls:[],triangles:[],renderPasses:[],span:[],phase4:[],atriumSight:[],detailCulled:[],offscreenCulled:[],visibleInstances:[]}};
  await new Promise((resolve,reject)=>{Object.assign(row,{resolve,reject});active=row;updateProgress(row,'warming');});
  const until=now()+2100;while(pending.some(f=>f.row===row)&&now()<until){pollGpu();await new Promise(resolve=>setTimeout(resolve,16));}
  for(let i=pending.length-1;i>=0;i--)if(pending[i].row===row){for(const q of pending[i].queries)removeQuery(q);pending.splice(i,1);row.gpuInvalid++;row.gpuReasons.timeout=(row.gpuReasons.timeout||0)+1;}
@@ -98,12 +106,13 @@ async function measure(spec){
 }
 async function benchmark(message){
  if(run){send('busy');return;}if(!ready){send('not-ready');return;}
+ const chosenViews=Array.isArray(message.views)?views.filter(v=>message.views.includes(v.id)):views.filter(v=>['west','centre','bridge'].includes(v.id));
  const chosen=Array.isArray(message.profiles)?profiles.filter(p=>message.profiles.includes(p.id)):profiles,rounds=Number.isInteger(message.rounds)?Math.max(1,Math.min(4,message.rounds)):2;if(!chosen.length){send('command-error',{meta:{error:'No valid benchmark profiles'}});return;}
  if(paused)resume();const inputEnabled=api.input.enabled,previousMode=api.follow.mode;api.input.enabled=false;clearInput();
- run={id:'distance-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),rows:[],events:[],meta:null,total:rounds*chosen.length*views.length*2};send('running',{progress:{runId:run.id,completed:0,total:run.total,phase:'settling viewport'}});
+ run={id:'distance-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),rows:[],events:[],meta:null,total:rounds*chosen.length*chosenViews.length*2};send('running',{progress:{runId:run.id,completed:0,total:run.total,phase:'settling viewport'}});
  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
- run.meta=getMetadata({width:message.width??1280,height:message.height??720});Object.assign(run.meta.protocol,{rounds,segments:run.total,profileIds:chosen.map(p=>p.id),order:message.order==='paired'?'paired-by-view-and-motion':'profile-major'});run.meta.runId=run.id;run.meta.started=new Date().toISOString();send('running',{meta:run.meta,rows:[],progress:{runId:run.id,completed:0,total:run.total}});
- try{for(let round=1;round<=rounds;round++){const order=round%2===1?chosen:[...chosen].reverse();const specs=message.order==='paired'?views.flatMap(view=>['still','look'].flatMap(motion=>order.map(p=>({round,profile:p.id,view:view.id,motion})))):order.flatMap(p=>views.flatMap(view=>['still','look'].map(motion=>({round,profile:p.id,view:view.id,motion}))));for(const spec of specs)await measure(spec);}
+ run.meta=getMetadata({width:message.width??1280,height:message.height??720});Object.assign(run.meta.protocol,{rounds,segments:run.total,profileIds:chosen.map(p=>p.id),order:message.order==='paired'?'paired-by-view-and-motion':'profile-major',viewIds:chosenViews.map(v=>v.id)});run.meta.runId=run.id;run.meta.started=new Date().toISOString();send('running',{meta:run.meta,rows:[],progress:{runId:run.id,completed:0,total:run.total}});
+ try{for(let round=1;round<=rounds;round++){const order=round%2===1?chosen:[...chosen].reverse();const specs=message.order==='paired'?chosenViews.flatMap(view=>['still','look'].flatMap(motion=>order.map(p=>({round,profile:p.id,view:view.id,motion})))):order.flatMap(p=>chosenViews.flatMap(view=>['still','look'].map(motion=>({round,profile:p.id,view:view.id,motion}))));for(const spec of specs)await measure(spec);}
   send('complete',{meta:{...run.meta,ended:new Date().toISOString(),events:run.events},rows:summaryRows(),progress:{runId:run.id,completed:run.rows.length,total:run.total}});
  }catch(e){note('run-error',errorText(e));send('failed',{meta:{...run.meta,error:errorText(e),events:run.events},rows:summaryRows()});}
  finally{active=null;api.input.enabled=inputEnabled;clearInput();api.follow.mode=previousMode;run=null;}
@@ -111,7 +120,7 @@ async function benchmark(message){
 export function installDistanceLab(value){
  if(api)throw Error('Distance lab already installed');api=value;api.renderer.setPixelRatio(1);api.renderer.setSize(innerWidth,innerHeight);gl=api.renderer.getContext();timer=typeof gl.createQuery==='function'?gl.getExtension('EXT_disjoint_timer_query_webgl2'):null;installRenderMeter();hookMetrics();
  window.addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==window.parent||event.data?.type!=='leo-distance-command')return;const m=event.data;try{
-  if(m.action==='pause')pause();else if(m.action==='resume')resume();else if(m.action==='run')void benchmark(m);else if(run)send('busy');else if(m.action==='profile')setProfile(m.id);else if(m.action==='view'){setView(m.id);send('view',{views});}
+  if(m.action==='capture')captureNext=true;else if(m.action==='pause')pause();else if(m.action==='resume')resume();else if(m.action==='run')void benchmark(m);else if(run)send('busy');else if(m.action==='profile')setProfile(m.id);else if(m.action==='view'){setView(m.id);send('view',{views});}
  }catch(e){note('command-error',errorText(e));}});
  window.addEventListener('error',event=>note('error',event.error||event.message));window.addEventListener('unhandledrejection',event=>note('unhandled-rejection',errorText(event.reason)));
  document.addEventListener('visibilitychange',()=>note(document.hidden?'hidden':'visible',document.visibilityState));

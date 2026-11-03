@@ -33,7 +33,7 @@ const result=await build({
  }}],
 });
 const api=await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));
-const {ATRIUM_VIEW,isAtriumPublicOwner,setAtriumView,atriumViewSpan,registerAtriumFog,phase4Culling,showBands,bandOf}=api;
+const {ATRIUM_VIEW,isAtriumPublicOwner,setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,registerAtriumFog,phase4Culling,showBands,bandOf}=api;
 const checks=[];
 const check=(name,fn)=>{fn();checks.push(name);};
 check('measured camera/fog/private-query budget',()=>assert.deepEqual(ATRIUM_VIEW,{far:450,fogNear:120,fogFar:1100,fullHeight:true,roomReach:90}));
@@ -67,6 +67,11 @@ for(const [id,y,z] of [...fixture.rooms.map(r=>[r.id,r.y+1.5,r.polygon[0][1]+2])
  o.setMatrixAt(0,new T.Matrix4().makeTranslation(0,y,z));
  o.userData={phase4:true,ownerRuns:[{component:id,start:0,count:1}]};root.add(o);meshes.set(id,o);
 }
+const lodMesh=new T.InstancedMesh(new T.BoxGeometry(.02,.02,.02),new T.MeshBasicMaterial(),2);
+lodMesh.setMatrixAt(0,new T.Matrix4().makeTranslation(0,ground+1.5,100));
+lodMesh.setMatrixAt(1,new T.Matrix4().compose(new T.Vector3(0,ground+1.5,100),new T.Quaternion(),new T.Vector3(100,100,100)));
+lodMesh.userData={phase4:true,ownerRuns:[{component:'nose-commons-01',start:0,count:2}]};root.add(lodMesh);
+const lodOriginal=lodMesh.instanceMatrix.array.slice(),lodOwnerRuns=structuredClone(lodMesh.userData.ownerRuns);
 root.updateMatrixWorld(true);
 const col={bands:new Map(),groups:[],movers:[],*near(){}};
 const camera=new T.PerspectiveCamera(90,16/9,.05,ATRIUM_VIEW.far);
@@ -104,18 +109,47 @@ for(const suffix of ['', '.authoring', '.prepared', '.public']){
   assert.match(source,/PerspectiveCamera\(60,1,ATRIUM_VIEW\.far-10,1500\)/);
   assert.match(source,/NEAR_CABINS=40/);
   assert.match(span,/raycast\(ray\.ray,90,\.6\)/);assert.match(span,/raycast\(probe,12\)/);
-  assert(span.indexOf('atriumViewSpan()')<span.indexOf('now-lastSpan<150'),'full-height classification precedes trace throttle');
+  assert(span.indexOf('atriumViewSpan()')<span.indexOf('now-lastSpan>=150'),'full-height classification precedes trace throttle');
  });
  check(`${file}: immediate exit retraces even at identical previous indoor pose`,()=>{
   const executable=source.slice(source.indexOf('const VIEW_RAYS=[];'),source.indexOf('\nfunction cull('));
   let queries=0;const metrics={span:[]};
   const createQuery=()=>({raycast(ray){queries++;return {distance:1,point:ray.at(1,new T.Vector3())};}});
   const run=Function('T','setAtriumView','atriumViewSpan','spanChanged','camera','colliders','renderMetrics','createVisibilityQuery',
-   'let spanQuery=null;'+executable+';return span;')(T,setAtriumView,atriumViewSpan,visibilityState(),camera,col,metrics,createQuery);
+   'ATRIUM_VIEW','inOpenAtrium','setAtriumSight','createAtriumSight',
+   'let spanQuery=null;'+executable+';return span;')(T,setAtriumView,atriumViewSpan,visibilityState(),camera,col,metrics,createQuery,ATRIUM_VIEW,inOpenAtrium,setAtriumSight,()=>({update:()=>false}));
   const indoor=run(inside,1000),before=queries;
   assert(before>0);assert.notDeepEqual(indoor,full);
   assert.deepEqual(run(open,1050),full);assert.equal(queries,before,'atrium shortcut must not trace');
   assert.deepEqual(run(inside,1100),indoor);assert(queries>before,'exit must invalidate both timer and identical-pose cache');
  });
 }
+check('camera sight keeps distant public owners and fog across a room boundary',()=>{
+ setAtriumView(inside);setAtriumSight(true);update(inside,1);
+ assert.deepEqual(atriumViewSpan(),full);assert.equal(fog.far,1100);assert(shown('front-gallery'));
+ setAtriumSight(false);update(inside,1);assert.equal(atriumViewSpan(),null);assert.equal(fog.far,148);assert(!shown('front-gallery'));
+});
+for(const suffix of ['', '.authoring', '.prepared', '.public']){
+ const source=await fs.readFile(`src/walk/main${suffix}.js`,'utf8');
+ check(`main${suffix}: camera-visible atrium unions local floor and clears without stale span`,()=>{
+  const executable=source.slice(source.indexOf('const VIEW_RAYS=[];'),source.indexOf('\nfunction cull('));
+  let seen=true;const p={x:210,y:ground-12,z:0},metrics={span:[]};
+  const query=()=>({raycast(ray){return {distance:1,point:ray.at(1,new T.Vector3())};}});
+  const run=Function('T','setAtriumView','atriumViewSpan','spanChanged','camera','colliders','renderMetrics','createVisibilityQuery','ATRIUM_VIEW','inOpenAtrium','setAtriumSight','createAtriumSight',
+   'let spanQuery=null;'+executable+';return span;')(T,setAtriumView,atriumViewSpan,visibilityState(),camera,col,metrics,query,ATRIUM_VIEW,inOpenAtrium,setAtriumSight,()=>({update:()=>seen}));
+  const combined=run(p,1000);assert(combined[0]<=p.y-3);assert.equal(combined[1],full[1]);
+  seen=false;const local=run(p,1001);assert(local[0]<=p.y-3);assert(local[1]<full[1]);
+  seen=true;assert.deepEqual(run(p,1002),combined);
+ });
+}
+
+check('phase4 compacts subpixel props and restores original matrices when resolution grows',()=>{
+ update(open);assert.equal(lodMesh.count,1);assert.deepEqual(lodMesh.instanceMatrix.array.slice(0,16),lodOriginal.slice(16,32));
+ culling.update(camera,open,...full,clock+=1,4320);assert.equal(lodMesh.count,2);assert.deepEqual(lodMesh.instanceMatrix.array,lodOriginal);
+ assert.deepEqual(lodMesh.userData.ownerRuns,lodOwnerRuns);
+ const compacted=culling.stats.compactions;culling.update(camera,open,...full,clock+=1000,4320);assert.equal(culling.stats.compactions,compacted);
+ culling.update(camera,open,...full,clock+=1,360);assert.equal(lodMesh.count,1);
+});
+const runtimeCulling=await fs.readFile('src/v2/phase4-culling.js','utf8'),authoringCulling=await fs.readFile('src/v2/phase4-culling.authoring.js','utf8');
+check('authoring and runtime retain identical visibility and LOD behavior',()=>assert.equal(authoringCulling.replace("from './visibility-query.authoring.js'","from './visibility-query.js'"),runtimeCulling));
 console.log(JSON.stringify({status:'PASS',checks:checks.length,details:checks,phase4:culling.stats},null,2));

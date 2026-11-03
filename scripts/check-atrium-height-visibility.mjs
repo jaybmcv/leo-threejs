@@ -35,6 +35,6 @@ for(const suffix of ['', '.authoring', '.prepared', '.public']){
  assert.match(span,/setAtriumView\(p\)/,`${file}: fog/proxy updates retained`);
  assert.doesNotMatch(source,/fastAtriumSpan/,`${file}: grounded shortcut must not precede camera visibility`);
  assert.match(span,/for\(const \[x,y\] of VIEW_RAYS\)/,`${file}: camera ray visibility retained`);
- assert.match(span,/now-lastSpan<150/,`${file}: visibility query throttling retained`);
+ assert.match(span,/now-lastSpan>=150/,`${file}: visibility query throttling retained`);
 }
 console.log(JSON.stringify({status:'PASS',cases:cases.length,mainVariants:4,assertion:'Camera-selected upper decks remain visible through ground/jump/landing; narrow camera spans and non-atrium culling remain bounded.',details:cases},null,2));
