@@ -10,6 +10,8 @@ import {ARENA_ID,STAGE,BOARD,TABLES,TRIGGERS,STANDEE,STANDEES,TRUSS_SPOTS} from 
 import {GAME_URL,MUDWATER_ART} from '../src/walk/mudwater.js';
 import {findRestSpots} from '../src/v2/rest.js';
 import {BODY,solid,meshTriangles} from '../src/walk/collision.js';
+import {deltaMatrix} from '../src/plan/rooms.js';
+import {contains} from '../src/plan/geometry-v2.js';
 
 const problems=[],log=(...a)=>console.log(...a);
 const expect=(ok,what)=>{if(!ok)problems.push(what);log(ok?'ok  ':'FAIL',what);};
@@ -22,9 +24,14 @@ const named=n=>{const out=[];root.traverse(o=>{if(o.name===n)out.push(o);});retu
 const counts=Object.fromEntries(['Mudwater_stage','Mudwater_podium','Mudwater_hologram','Match_table','Mudwater_pack_counter','Mudwater_pack_vault','Mudwater_match_screen','Card_frame','Bench_cushion'].map(n=>[n,named(n).length]));
 expect(counts.Mudwater_stage===1&&counts.Mudwater_podium===2&&counts.Mudwater_hologram===5&&counts.Match_table===TABLES.length&&counts.Mudwater_pack_counter===1&&counts.Mudwater_pack_vault===1&&counts.Mudwater_match_screen===1&&counts.Card_frame===1&&counts.Bench_cushion===6,`the arena's pieces are all there (${JSON.stringify(counts)})`);
 
-// Under the ceiling (3.37 m above the floor) and inside the footprint.
-const [cx,cy,cz]=area.center,b=new Box3().setFromObject(root);
-expect(b.max.y<=cy+3.5+1e-6&&b.min.x>=cx-26.01&&b.max.x<=cx+26.01&&b.min.z>=cz-17.01&&b.max.z<=cz+17.01,'the arena stays inside its room');
+// Under the ceiling (3.37 m above the floor) and inside the footprint. The arena is built in its v1 hall's frame and
+// placed in the v2 room by its frame change (src/plan/rooms.js); the v2 room's outline is the plan's (layout.json), and
+// its hull side curves, so the furniture may reach half a metre past the outline's straight-edged bounds, as the
+// vault against the windows does. The v1 hall's own walls, ceiling and floor give way to the v2 room's shell.
+const [cx,cy,cz]=area.center,toV2=deltaMatrix(ARENA_ID),plan=JSON.parse(fs.readFileSync('output/leo-interior-v02/layout.json','utf8')).rooms.find(r=>r.id===ARENA_ID);
+expect(!!plan,'the v2 plan has the arena room');
+const xs=plan.polygon.map(p=>p[0]),zs=plan.polygon.map(p=>p[1]),b=new Box3();root.traverse(o=>{if(o.isMesh&&o.parent?.name!=='Walls_and_ceiling'&&o.name!=='Finished_floor')b.union(new Box3().setFromObject(o));});b.applyMatrix4(toV2);
+expect(b.max.y<=plan.y+plan.height+1e-6&&b.min.x>=Math.min(...xs)-.5&&b.max.x<=Math.max(...xs)+.5&&b.min.z>=Math.min(...zs)-.5&&b.max.z<=Math.max(...zs)+.5,'the arena stays inside its room');
 let high=0;root.traverse(o=>{if(!o.isMesh||/^(Ceiling|Ceiling_light|Side_wall|End_wall|Entry_wall|Entry_header|Stair_lobby|Polish_|Refined_)/.test(o.name)||o.parent?.name==='Walls_and_ceiling')return;const t=new Box3().setFromObject(o).max.y-cy;if(t>3.37+1e-6)high++;});
 expect(high===0,`no fitting pokes through the ceiling (${high})`);
 
@@ -54,7 +61,8 @@ const tris=[];root.traverse(o=>{if(solid(o))meshTriangles(o,tris);});
 for(const t of TRIGGERS){const p=root.localToWorld(new Vector3(...t.at)),r=BODY.radius;
  const cap=new Box3(new Vector3(p.x-r,p.y+BODY.step,p.z-r),new Vector3(p.x+r,p.y+BODY.height,p.z+r)),tb=new Box3();let hit=0;
  for(let i=0;i<tris.length;i+=9){tb.makeEmpty();for(let k=0;k<9;k+=3)tb.expandByPoint(new Vector3(tris[i+k],tris[i+k+1],tris[i+k+2]));if(tb.intersectsBox(cap))hit++;}
- expect(hit===0&&Math.abs(p.x-cx)<25.5&&Math.abs(p.z-cz)<16.5,`the ${t.kind} trigger at ${t.at} stands clear inside the room (${hit} triangles in the way)`);}
+ const q=p.clone().applyMatrix4(toV2);
+ expect(hit===0&&contains(plan.polygon,[q.x,q.z]),`the ${t.kind} trigger at ${t.at} stands clear inside the room (${hit} triangles in the way)`);}
 expect(GAME_URL==='https://mudwater.bayc.com/game/','Play Mudwater opens the game page');
 
 // The brand art: every file the walk asks for exists, as a PNG (with its transparency) or the pack's JPEG, and none is
