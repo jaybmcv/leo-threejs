@@ -2,19 +2,16 @@ import {visibilityState} from './visibility-state.js';
 import {setAtriumView,onePassAtriumGlass} from './atrium-visibility.js';
 import {phase6Owners} from '../plan/atrium-v2.js';
 import {createVisibilityQuery} from './visibility-query.js';
+import {opaqueRayHit} from './opaque-ray.js';
 import*as T from'three';import layout from'../plan/selected-layout.js';import{contains}from'../plan/geometry-v2.js';
 
-// Exact boolean sight query: the first opaque hit suffices. A first glass
-// triangle requires checking the remaining hits in that BVH, not ignoring it.
+// Exact boolean sight query: ignore glass and stop at the first opaque triangle.
 export function opaqueBlocked(query,ray,far,scratch){
  const {box,point,local,stats}=scratch;
  stats.rays++;box.setFromPoints([ray.origin,ray.at(far,point)]).expandByScalar(.01);
  for(const[bvh,inverse]of query.near(box,ray)){
   local.copy(ray);if(inverse)local.applyMatrix4(inverse);
-  const first=bvh.raycastFirst(local,T.DoubleSide,.05,far);if(!first)continue;
-  if(!bvh.leoWindowFlags?.[first.faceIndex]){stats.firstHits++;return true;}
-  stats.windowFallbacks++;
-  if(bvh.raycast(local,T.DoubleSide,.05,far).some(h=>!bvh.leoWindowFlags?.[h.faceIndex]))return true;
+  if(opaqueRayHit(bvh,local,.05,far,scratch.hit??=new T.Vector3())){stats.firstHits++;return true;}
  }
  return false;
 }

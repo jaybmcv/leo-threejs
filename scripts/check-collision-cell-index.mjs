@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {collisionCellGroups,invalidateCollisionCells} from '../src/walk/collision-cells.js';
+const g=(...keys)=>({cells:new Map(keys.map(k=>[k,[]]))});
+const groups=[g('a','b'),g('b'),g('c'),g('a')];
+assert.deepEqual(collisionCellGroups(groups,['b','a','b']),[groups[0],groups[1],groups[3]]);
+assert.deepEqual(collisionCellGroups(groups,['absent']),[]);
+groups.push(g('a'));
+assert.deepEqual(collisionCellGroups(groups,['a']),[groups[0],groups[3],groups[4]]);
+groups[0]=g('c');
+assert.deepEqual(collisionCellGroups(groups,['a']),[groups[3],groups[4]]);
+groups[0].cells.set('a',[]);
+assert.deepEqual(collisionCellGroups(groups,['a']),[groups[0],groups[3],groups[4]]);
+groups[3].cells=new Map([['z',[]]]);
+assert.deepEqual(collisionCellGroups(groups,['a']),[groups[0],groups[4]]);
+groups.reverse();
+assert.deepEqual(collisionCellGroups(groups,['a']),[groups[0],groups[4]]);
+// Explicit invalidation supports callers that replace keys without changing size.
+groups[0].cells.delete('a');groups[0].cells.set('q',[]);invalidateCollisionCells(groups);
+assert.deepEqual(collisionCellGroups(groups,['a']),[groups[4]]);
+console.log('PASS collision cell index: ordered union, empty cells, append, replacement, mutation and invalidation');

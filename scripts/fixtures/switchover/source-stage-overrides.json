@@ -128,12 +128,12 @@
     "reason": "Fast deploy round 2: per-band owner records avoid shared BVH metadata and retain the existing gates."
   },
   "src/walk/collision.authoring.js": {
-    "sha256": "c419aaf95a99c4540feab37be87b40a5fa5d87184d7b8b7a9fa1d45f8b9159d1",
-    "reason": "Fast deploy round 2: per-band owner records avoid shared BVH metadata and retain the existing gates."
+    "sha256": "18bccb915e713c385f6b9ffea09509aa234f1f70724c06149a044d2a95affdff",
+    "reason": "Reviewed performance rebase: preserve fast-deploy collision owner spans and exact ordered lookup, opaque-ray parity, matrix uploads and existing batch policy."
   },
   "src/walk/collision.js": {
-    "sha256": "8e7935e80b6212006e77fc186fab3af232b4c1ba5e41f17c6e80708f04f6b84b",
-    "reason": "Fast deploy round 2: per-band owner records avoid shared BVH metadata and retain the existing gates."
+    "sha256": "b066dd5b7c687400f12b4541d3de306331951fc8076e39d08cfa5c7a97c15d46",
+    "reason": "Reviewed performance rebase: preserve fast-deploy collision owner spans and exact ordered lookup, opaque-ray parity, matrix uploads and existing batch policy."
   },
   "src/walk/render-bake.authoring.js": {
     "sha256": "da1f6283253fb445f9c07e117d8e500483dd6b7f0ef2f8edd155a33143aff0ab",
@@ -150,5 +150,29 @@
   "src/v2/prepared-codec.public.js": {
     "sha256": "93726d5c3e0b5685aea95dd93c603dda45d5a4d5386a8fc4a5ed1e3db1e72d39",
     "reason": "Carry forward the two remaining round-1 fast-deploy source rows from de275fc; existing gates retained."
+  },
+  "src/v2/phase4-culling.js": {
+    "sha256": "3614907b232efd458231f847eba348e207c80501c66c947c0bb12ca269af7885",
+    "reason": "Move the performance helper import away from the concurrent atrium-visibility import edit; runtime behavior and geometry IDs unchanged."
+  },
+  "src/v2/phase4-culling.authoring.js": {
+    "sha256": "5cd1a09ba4e98c5012889d157e78f81ca7906df377245cf626ad23a898f57817",
+    "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
+  },
+  "src/v2/cabin-privacy.js": {
+    "sha256": "18d616ecfb4035f907d9f99f2afe2a0b864e31f0874d50ed6937576ccf1dc690",
+    "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
+  },
+  "src/v2/cabin-privacy.authoring.js": {
+    "sha256": "7f623ea521c0f5960ac734abf56c10242e01a97add2c482c9c4fb8ec85fd4963",
+    "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
+  },
+  "src/v2/facade.js": {
+    "sha256": "ff24a8a51d47f4b2c244a5407502fadc7b2c00b4985f6200cd039ed1c47d7c4d",
+    "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
+  },
+  "src/v2/facade.authoring.js": {
+    "sha256": "f18efaee42bcad153cbbe6a40bb96ef2d8b515a836a263a1d0c1aec4752b0aad",
+    "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
   }
 }

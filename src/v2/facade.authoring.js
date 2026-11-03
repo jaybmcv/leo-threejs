@@ -33,8 +33,9 @@ export function attachFacade(ship,scene,{authority=null}={}){
 export function isolateStaticWorld(ship,scene){ship.root.updateMatrixWorld(true);const live=[],visible=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};ship.root.traverse(o=>{if((o.isMesh&&!o.userData.baked||o.isLight)&&visible(o))live.push({o,parent:o.parent});});const root=new T.Group();root.name='V2_live_source_draws';scene.add(root);const groups=new Map();for(const {o,parent} of live){let g=groups.get(parent);if(!g){g=new T.Group();g.name=parent.name;root.add(g);groups.set(parent,g);}g.attach(o);}ship.root.removeFromParent();ship.liveDraws=root;return root;}
 
 // Low-deck architecture has many 40 m chunks sharing exactly one finish.
-// Multi-draw keeps each chunk's frustum test and each band's visibility while
-// submitting compatible opaque chunks together. Source meshes stay available
+// Cache opaque multi-draw lists within each band. Batch bounds and band visibility
+// stay active; the GPU clips offscreen chunks without rebuilding indirect data
+// every frame. Source meshes stay available
 // for inspection; collisions and transparent sorting are unchanged.
 export function compactRenderGeometry(source){
  const ids=source.index?Array.from(new Set(source.index.array)):Array.from({length:source.attributes.position.count},(_,i)=>i),remap=new Map(ids.map((id,i)=>[id,i])),g=new T.BufferGeometry();
@@ -60,7 +61,7 @@ export async function batchLowDeckDraws(baked,renderer){
    if(list.length<3)continue;
    const compact=[];for(const o of list){compact.push(compactRenderGeometry(o.geometry));await yieldWork();}const vertices=compact.reduce((s,g)=>s+g.attributes.position.count,0),indices=compact.reduce((s,g)=>s+(g.index?.count||g.attributes.position.count),0);
    if(proof.fallback){for(let i=0;i<compact.length;i++)compact[i].applyMatrix4(list[i].matrix);const merged=mergeGeometries(compact),mesh=new T.Mesh(merged,list[0].material);mesh.name='V2_low_deck_merged_'+list[0].material.name;mesh.renderOrder=list[0].renderOrder;mesh.userData={noCollide:true,renderOnly:true,sources:list.map(o=>o.uuid)};for(const o of list)o.visible=false;group.add(mesh);compact.forEach(g=>g.dispose());proof.batches++;proof.sources+=list.length;proof.vertices+=vertices;proof.triangles+=indices/3;await yieldWork();continue;}
-   const batch=new T.BatchedMesh(list.length,vertices,indices,list[0].material);batch.name='V2_low_deck_batch_'+list[0].material.name;batch.sortObjects=false;batch.perObjectFrustumCulled=true;batch.renderOrder=list[0].renderOrder;
+   const batch=new T.BatchedMesh(list.length,vertices,indices,list[0].material);batch.name='V2_low_deck_batch_'+list[0].material.name;batch.sortObjects=false;batch.perObjectFrustumCulled=false;batch.renderOrder=list[0].renderOrder;
    batch.userData={noCollide:true,renderOnly:true,sources:list.map(o=>o.uuid)};
    for(let i=0;i<list.length;i++){const o=list[i],g=batch.addGeometry(compact[i]),id=batch.addInstance(g);batch.setMatrixAt(id,o.matrix);o.visible=false;compact[i].dispose();}
    batch.computeBoundingBox();batch.computeBoundingSphere();group.add(batch);

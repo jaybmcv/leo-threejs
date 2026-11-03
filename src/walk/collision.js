@@ -1,5 +1,6 @@
 import {roomPatchOwner} from '../v2/room-owner.js';
 import {memoBVH} from '../v2/build-cache.js';
+import {collisionCellGroups,occupiedCollisionCellKeys} from './collision-cells.js';
 import * as T from 'three';
 import {MeshBVH} from 'three-mesh-bvh';
 
@@ -105,7 +106,8 @@ export class Colliders{
  *near(box,ray=null){
   for(let b=bandOf(box.min.y);b<=bandOf(box.max.y);b++){const band=this.bands.get(b);if(band)yield [band.bvh,null,null];}
   // A long ray's box spans many cells; test the copies against the ray itself.
-  for(const g of this.groups){const seen=new Set();for(const key of cellKeys(box))for(const item of g.cells.get(key)||[])if(!seen.has(item)){seen.add(item);if(item.box.intersectsBox(box)&&(!ray||ray.intersectsBox(item.box)))yield [g.bvh,item.inverse,item.matrix];}}
+  const extent=16*CELL,keys=box.max.x-box.min.x<=extent&&box.max.y-box.min.y<=extent&&box.max.z-box.min.z<=extent?[...cellKeys(box)]:null;
+  for(const g of (keys?collisionCellGroups(this.groups,keys):this.groups)){const seen=new Set();for(const key of keys||occupiedCollisionCellKeys(g.cells,box,CELL))for(const item of g.cells.get(key)||[])if(!seen.has(item)){seen.add(item);if(item.box.intersectsBox(box)&&(!ray||ray.intersectsBox(item.box)))yield [g.bvh,item.inverse,item.matrix];}}
   for(const m of this.movers)if(m.enabled&&m.box.intersectsBox(box))yield [m.bvh,m.inverse,m.matrix];
  }
  // Capsule overlap: does any solid come within `radius` of the segment? (A standing test.)

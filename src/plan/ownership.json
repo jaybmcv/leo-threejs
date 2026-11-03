@@ -1543,6 +1543,18 @@
       "signature": "dc551d28913f6f608076b205a34307952760378d0620f8c77c94da069cb9d7c2"
     },
     {
+      "source": "src/walk/collision-cells.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Geometry/math helper: positions are supplied by a caller whose room ownership is checked separately.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 1,
+      "signature": "8fd1c4c8343f17ff5712d1882030a5398d325ea9307e3dbbcf7a754293f47d5c"
+    },
+    {
       "source": "src/walk/collision.authoring.js",
       "rooms": [],
       "via": "frame boundary",
@@ -1552,7 +1564,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "c419aaf95a99c4540feab37be87b40a5fa5d87184d7b8b7a9fa1d45f8b9159d1"
+      "signature": "18bccb915e713c385f6b9ffea09509aa234f1f70724c06149a044d2a95affdff"
     },
     {
       "source": "src/walk/collision.js",
@@ -1564,7 +1576,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "8e7935e80b6212006e77fc186fab3af232b4c1ba5e41f17c6e80708f04f6b84b"
+      "signature": "b066dd5b7c687400f12b4541d3de306331951fc8076e39d08cfa5c7a97c15d46"
     },
     {
       "source": "src/walk/comics.authoring.js",
@@ -2606,6 +2618,18 @@
       "interactionTargets": null,
       "placements": 1,
       "signature": "fcb48c25877fc9b90803f76092882ddaef3bf75f6c2d59695e329d3cbb7f171d"
+    },
+    {
+      "source": "src/walk/instance-matrix.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Geometry/math helper: positions are supplied by a caller whose room ownership is checked separately.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "279373c2ecee7897a6dc62c88fc81a0e5c1160d759e4f95cdd7ce5b86a412cab"
     },
     {
       "source": "src/walk/invasion/game.js",
