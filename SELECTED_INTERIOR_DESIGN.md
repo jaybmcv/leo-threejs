@@ -169,12 +169,71 @@ reproduced decks 6-7 grounded versus decks 6-12 jumping for the same upward view
 
 The four walk entries now update atrium fog/proxies and use the existing cached,
 150 ms camera-ray span. Both render-band wrappers pass that span through without
-the extra cap. Nearby cabin limits, room culling, geometry and collisions are
-unchanged. This draws more visible detail at ground level; physical-device
-performance remains unmeasured. The normal build must finish before replacing
-the prior public preview. The runtime preflight visibly shows upper gallery
-rails while standing on Deck 6.
+the extra cap. Nearby cabin limits and room culling are retained; no geometry
+or collision code changed. This draws more visible detail at ground level;
+physical-device performance remains unmeasured. The runtime preflight visibly
+shows upper gallery rails while standing on Deck 6.
 
 `node scripts/check-atrium-height-visibility.mjs` passes 16 cases, covering
 ground, jump, landing, Deck 7, upward/downward views, narrow spans and non-atrium
 positions. It is also included in `npm run check:design` when the layout exists.
+
+The normal full build passed at 12:38 UTC November 3, taking approximately
+85 minutes: 37 minutes before browser preparation and 48 minutes preparing and
+encoding the browser world. New prepared artifact SHA-256:
+`51f2878d0e5da865c38f7622ed48f5ec07f3f373f358d39701fe9638612a18d7`.
+
+The strict physical-data comparison returned FAIL and is retained as such.
+A separate diagnosis checked all 656 colliders: every decoded vertex attribute,
+triangle index, BVH buffer and geometry group matches the prior artifact.
+Only 36 geometry bounding boxes differ, by at most 0.000030517578125 m
+(0.0305 mm), with the new boxes contained inside the old ones. The cause was
+reproduced: a cold BVH construction stores conservative rounded bounds, while
+cache restoration recomputes tighter vertex bounds. Static collision queries
+use the unchanged BVH nodes, not those geometry bounds; instance/mover bounds
+and transforms match. Rest records, seats, cabin placements, room anchors and
+feature supports also match. A fresh full navigation run against the new saved
+artifact passed in 648 seconds using `LEO_LAYOUT=2 node scripts/run-v2.mjs walk`:
+5,713,073 positions, all 34,940 usable solid seats/beds, zero openings to space,
+and no reported problems. The public build and separate budget gate passed:
+215,322,198 public bytes, with 34,677,802 bytes of headroom.
+
+The normal preview at port 4192 was refreshed and checked while standing on
+Deck 6, jumping and landing. Upper glass gallery rails remained visible in all
+three states; no browser errors or warnings were recorded. Final evidence is
+`../../outputs/leo-atrium-ground-fixed.png` and
+`../../outputs/leo-atrium-landed-fixed.png`; the separate bounds diagnosis and
+unchanged strict-comparison result are saved alongside them. The design-review
+page includes the final screenshot and a draft tester-feedback question.
+
+When rebasing the concurrent performance work, retain its collision-query and
+draw-upload improvements while keeping both grounded-only caps removed. The
+legacy classifier exports remain for existing diagnostic fixtures; rendering
+must not call them to narrow a camera-selected view. Include a grounded Deck 6
+upward view and jump/landing in future visual/performance comparison routes.
+
+### Why a small rendering edit triggered a long rebuild on this branch
+
+`scripts/prepared-identity-v2.mjs` fingerprints every JS/JSON/TS file under
+`src`, plus the listed build scripts. That shared source hash participates in
+both the ceiling-profile cache key and the prepared-world freshness check.
+Changing the walk visibility code therefore invalidated those stages even
+though the change did not alter geometry. The runtime-scoped build reused the
+layout and exterior, but still ran ceiling fitting, scene assembly, map and
+guardrail preparation, and browser-world preparation. Its raw geometry cache
+reported 155,013 hits and zero misses; five scoped raw models were reused.
+Those hits save individual computations, not the entire assembly/export pass.
+The browser phase also reported oversized pressure-lining, haze and facade
+meshes processed serially; haze alone took about seven minutes in this run.
+This describes the isolated design branch; it does not establish the state or
+results of separate build-speed work. The local runtime-performance branch
+`b783283` leaves both source-fingerprint and ceiling-cache scripts unchanged.
+
+The full build was used for this follow-up. The existing
+`scripts/phase6-prepared-refresh.mjs` can bypass raw export for runtime-only
+changes while retaining normal prepared authoring and encoding. It would have
+avoided the raw-stage cost for this visibility edit; the full run was more
+validation than this edit alone required. It additionally exercised the earlier
+Arrival export adapter through the normal producer, whose texture/UV/ownership
+check passed without manual GLB repair. Browser preparation would still be
+invalidated under the broad source fingerprint on this branch.
