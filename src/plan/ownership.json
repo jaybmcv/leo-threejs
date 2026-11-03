@@ -1552,7 +1552,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "8980a1a790ff11272681e1768e37581aa4ebcf2a686f586bb31590e6f615dcfc"
+      "signature": "c419aaf95a99c4540feab37be87b40a5fa5d87184d7b8b7a9fa1d45f8b9159d1"
     },
     {
       "source": "src/walk/collision.js",
@@ -1564,7 +1564,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "0adbb588cc096335298f65bd14d4e1125ce65d29714d79359de755175734f855"
+      "signature": "8e7935e80b6212006e77fc186fab3af232b4c1ba5e41f17c6e80708f04f6b84b"
     },
     {
       "source": "src/walk/comics.authoring.js",
@@ -4660,7 +4660,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 15,
-      "signature": "e4f6eb9e1c4224808ecb825a22327e258eb01badf3b8ba65f64a8ace6153ef4c"
+      "signature": "da1f6283253fb445f9c07e117d8e500483dd6b7f0ef2f8edd155a33143aff0ab"
     },
     {
       "source": "src/walk/render-bake.js",
@@ -4675,7 +4675,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 15,
-      "signature": "72662e10c1aac856fd458a59c6629b943d496fc2c88344aebb83b494cd4eecb5"
+      "signature": "a247fbf1ae48d50338e87495c634ce4e7ebef71a886637f68b2d590109d440ac"
     },
     {
       "source": "src/walk/selfie.authoring.js",

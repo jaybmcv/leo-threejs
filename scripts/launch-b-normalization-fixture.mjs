@@ -15,7 +15,7 @@ const pkg=JSON.parse(await fs.readFile('package.json','utf8')),entry=await fs.re
 assert.equal(pkg.scripts.build,'node scripts/build-all.mjs');
 assert(entry.includes("await import('./build-v2.mjs')"),'Normal npm entry must run the tested v2 producer');
 const build=await fs.readFile('scripts/build-v2.mjs','utf8');
-assert(build.indexOf('normalizeExteriorBeforeRooms()')<build.indexOf("await runV2('build')"));
+assert(build.indexOf('normalizeExteriorBeforeRooms()')<build.indexOf("runV2('build')"));
 await normalizeExteriorBeforeRooms({out,evidence:out+'/evidence'});
 await assert.rejects(fs.access(out+'/walk-plan.json'));
 const full=spawnSync(process.execPath,['scripts/retire-obsolete-facades-v2.mjs'],{encoding:'utf8',windowsHide:true,env:{...process.env,LEO_SCOPED_OUTPUT:out,LEO_SCOPED_EVIDENCE:out+'/evidence'}});
