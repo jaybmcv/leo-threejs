@@ -17,4 +17,10 @@ export function settlePreparedStatic(ship){
  for(const root of roots)root.updateWorldMatrix(true,true);
  const settle=(o,live=false)=>{live||=!!o.userData.keepLive;let still=fixed.has(o)&&!live&&!o.isSkinnedMesh;for(const c of o.children)if(!settle(c,live))still=false;if(still)o.updateMatrixWorld=SETTLED;return still;};
  for(const root of roots)settle(root);pending.delete(ship);
+ // The branches that stay live are mostly hidden at any moment (culled instances, other decks' bands). A hidden branch
+ // skips its matrix update; its first update once shown again is forced, so a parent that moved meanwhile is caught up
+ // before it draws. Skinned figures and their bones keep the normal update.
+ const skip=o=>{if(o.updateMatrixWorld===SETTLED||o.isBone||o.isSkinnedMesh)return;const base=o.updateMatrixWorld;let stale=false;
+  o.updateMatrixWorld=Object.assign(function(force){if(!this.visible){stale=true;return;}const catchUp=stale;stale=false;base.call(this,force||catchUp);},{liveWhenShown:true});};
+ for(const root of roots)root.traverse(skip);
 }
