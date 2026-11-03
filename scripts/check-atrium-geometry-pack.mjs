@@ -68,6 +68,17 @@ rejects('invalid late LOD indices roll back allocated geometry without changing 
 rejects('duplicate entry ownership fails safely',(_f,m)=>{m.entries.at(-1).sources=[m.entries[0].sources[0]];});
 rejects('invalid packed bounds fail safely',(_f,m)=>{m.entries[0].full.box[0][0]=Infinity;});
 const empty=fixture(),zero=await buildAtriumGeometryPack(empty.baked,{sourceArtifact:artifact,memoryBudgetBytes:0});const noOp=hydrateAtriumGeometryPack(empty.baked,zero,{expectedSourceArtifact:artifact});assert.equal(noOp.stats.sources,0);noOp.dispose();assert(empty.originals.every(o=>o.visible));pass('empty budget produces a valid no-op pack');
+for(const kind of ['zero index','zero draw range','exhausted draw range']){
+ const patched=fixture(),originals=patched.originals.map(o=>o.geometry);
+ for(const g of originals){if(kind==='zero index')g.setIndex([]);else g.setDrawRange(kind==='zero draw range'?0:g.index.count,kind==='zero draw range'?0:Infinity);}
+ const pack=await buildAtriumGeometryPack(patched.baked,{sourceArtifact:artifact,memoryBudgetBytes:8*1024*1024}),hydrated=hydrateAtriumGeometryPack(patched.baked,pack,{expectedSourceArtifact:artifact});
+ assert.equal(pack.manifest.entries.length,0);assert.equal(pack.binary.length,0);assert.equal(hydrated.stats.sources,0);hydrated.dispose();assert.equal(patched.group.children.length,3);assert(patched.originals.every((o,i)=>o.visible&&o.geometry===originals[i]));pass(kind+' retained after a room patch does not produce invalid packed geometry');
+}
+const duplicateMaterials=()=>{const f=fixture(),first=f.originals[0].material,second=first.clone();second.uuid=first.uuid;second.color.setHex(0xff0000);f.originals[1].material=second;return f;};
+const duplicateSource=duplicateMaterials(),duplicatePack=await buildAtriumGeometryPack(duplicateSource.baked,{sourceArtifact:artifact,memoryBudgetBytes:8*1024*1024});
+assert.equal(duplicatePack.manifest.stats.batches,0);assert.equal(duplicatePack.manifest.entries.length,3);
+const duplicateTarget=duplicateMaterials(),materials=duplicateTarget.originals.map(o=>o.material),duplicateController=hydrateAtriumGeometryPack(duplicateTarget.baked,duplicatePack,{expectedSourceArtifact:artifact,getQuality:()=> 'performance'});
+duplicateController.update(camera,1080);assert(duplicateController.stats.lodInstances>0);assert(duplicateTarget.originals.every((o,i)=>o.material===materials[i]));assert.equal(duplicateTarget.originals[1].material.color.getHex(),0xff0000);assert.notEqual(materials[0],materials[1]);assert.equal(materials[0].uuid,materials[1].uuid);duplicateController.dispose();pass('distinct room material objects with duplicate UUIDs stay separate and retain their own finish through LOD');
 const sliced=fixture(),slicedOriginals=sliced.originals.map(o=>o.geometry);let yields=0;
 const slicedController=await hydrateAtriumGeometryPackAsync(sliced.baked,{manifest,binary},{expectedSourceArtifact:artifact,yieldBudgetMs:0,yieldControl:async()=>{
  yields++;assert.equal(sliced.group.children.length,3);assert(sliced.originals.every((o,i)=>o.visible&&o.geometry===slicedOriginals[i]));sliced.group.visible=false;

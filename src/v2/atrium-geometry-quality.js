@@ -54,6 +54,9 @@ export function compactAtriumGeometry(source,indices=null){
 export function eligibleAtriumMesh(o){
  const g=o.geometry,m=o.material;
  if(!o.visible||!o.isMesh||o.isInstancedMesh||o.isBatchedMesh||o.isSkinnedMesh||!g?.attributes.position?.count||Array.isArray(m)||!m||m.transparent||m.opacity<1||m.isShaderMaterial||m.name.startsWith('P4_menu_deck_'))return false;
+ // Fast room patches retain empty source chunks so existing child bindings stay
+ // stable. Those chunks own pooled vertices, but have no renderable triangles.
+ if(!(drawnTriangles(g)>0))return false;
  if(Object.keys(g.morphAttributes||{}).length||g.attributes.skinIndex||g.attributes.skinWeight||o.onBeforeRender!==T.Object3D.prototype.onBeforeRender||o.onAfterRender!==T.Object3D.prototype.onAfterRender)return false;
  for(let p=o;p;p=p.parent)if(p.userData.keepLive)return false;
  o.updateWorldMatrix(true,false);const determinant=o.matrixWorld.determinant();if(!Number.isFinite(determinant)||determinant<=0)return false;
@@ -102,7 +105,9 @@ export async function optimizeAtriumGeometry(baked,renderer,{getQuality=()=> 'ba
    const box=(o.geometry.boundingBox||new T.Box3().setFromBufferAttribute(o.geometry.attributes.position)).clone().applyMatrix4(o.matrix),center=box.getCenter(new T.Vector3());
    const row={o,original:o.geometry,visible:o.visible,matrix:o.matrix.clone(),group,bandKey,childIndex,used:false};candidates.push(row);
    if(!Number.isFinite(center.x)||!Number.isFinite(center.z))continue;
-   const key=[o.material.uuid,o.renderOrder,o.layers.mask,o.castShadow,o.receiveShadow,o.frustumCulled,signature(o.geometry),Math.floor(center.x/80),Math.floor(center.z/80)].join('|');
+   // Independent room material tables can retain the same serialized UUID.
+   // Only the actual shared material object is safe to merge.
+   const key=[o.material.id,o.renderOrder,o.layers.mask,o.castShadow,o.receiveShadow,o.frustumCulled,signature(o.geometry),Math.floor(center.x/80),Math.floor(center.z/80)].join('|');
    let list=buckets.get(key);if(!list)buckets.set(key,list=[]);list.push(row);
   }
   for(const list of buckets.values())if(list.length>=2){
