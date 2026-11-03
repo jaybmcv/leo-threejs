@@ -66,8 +66,6 @@ For bridge-only changes, rebuild these in sequence:
 node scripts/build-areas.mjs
 node scripts/build-interior.mjs
 node scripts/build-assembly.mjs
-node scripts/check-command-deck.mjs
-node scripts/validate-glb.mjs
 ```
 
 Run the full build first on a fresh clone. `npm run check` runs the broader project checks. Inspect both eye-level and overview views after changes.
