@@ -4,7 +4,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {serviceRoutes} from '../service-circulation.js';
 import {DECKS,CABINS} from '../model.authoring.js';
 import {floorY} from '../transit.authoring.js';
-import {wallKit,homeKit,KIT_MATERIALS} from './wall-kit.js';
+import {wallKit,homeKit,KIT_MATERIALS,lifeSupportTransfer} from './wall-kit.js';
 import {PAINTINGS,FRAME,hangSize} from './paintings.authoring.js';
 import {PARTITION} from './partitions.authoring.js';
 
@@ -104,17 +104,19 @@ export function corridorTrim(parent,{inside,partitions=[]}={}){
   if(DECKS[deck-1].residential){const kit={};for(const lane of lanes(deck))homeKit(kit,lane);draw(kitLists(kit),floorY(deck));continue;}
   const plan=serviceRoutes(deck);if(!plan)continue;
   const {x0,x1,width}=plan.spine,frames=[],coves=[],accents=[],kit={};
+  const pipeScale=deck===4?1.15:1;
   // The spine's walls open to each side corridor and the lift lobbies, as in service-circulation.js.
   const spineGaps=[...plan.branches.map(b=>[b.x0,b.x1]),[136.8,146],[-137.5,-130.1],[130.1,133.9]];
   const spine={axis:'x',lo:x0,hi:x1,mid:0,width,sides:[-1,1].map(s=>[s,walls(x0,x1,spineGaps)]),start:x0+SPACING};
-  corridor(frames,coves,accents,spine);wallKit(kit,{...spine,sides:bare(spine,plan.y),spacing:SPACING},SERVICE_LEVEL);
+  corridor(frames,coves,accents,spine);wallKit(kit,{...spine,sides:bare(spine,plan.y),spacing:SPACING,pipeScale},SERVICE_LEVEL);
   for(const b of plan.branches){
    const e=b.extent,w=b.x1-b.x0;
    // The aft wall opens only to the spine; the forward wall to the spine, each room's entry and its vision glass.
    const sides=[[-1,walls(-e,e,[[-4,4]])],[1,walls(-e,e,[[-4,4],...b.entries.flatMap(n=>[[n.z-2,n.z+2],...n.glass])])]];
    const branch={axis:'z',lo:-e,hi:e,mid:(b.x0+b.x1)/2,width:w,sides,start:-e+SPACING};
-   corridor(frames,coves,accents,branch);wallKit(kit,{...branch,sides:bare(branch,plan.y),spacing:SPACING},SERVICE_LEVEL);
+   corridor(frames,coves,accents,branch);wallKit(kit,{...branch,sides:bare(branch,plan.y),spacing:SPACING,pipeScale},SERVICE_LEVEL);
   }
+  if(deck===4)lifeSupportTransfer(kit,plan,spineGaps);
   draw([[frames,frameMaterial],[coves,coveMaterial],[accents,accentMaterial],...kitLists(kit)],plan.y);
  }
  const byDeck=new Map();

@@ -58,7 +58,7 @@ export function homeKit(parts,{mid,width,fronts}){
 
 // Adds the kit for one corridor (as in trim.js: along `axis` from lo to hi, centred at `mid`, `width` wide, with the
 // wall stretches of each side, frames from `start` every `spacing`) to `parts`.
-export function wallKit(parts,{axis,lo,hi,mid,width,sides,start,spacing},level){
+export function wallKit(parts,{axis,lo,hi,mid,width,sides,start,spacing,pipeScale=1},level){
  const {put,flat,rod}=wallTools(parts,axis,mid,width);
  // Bays between the frames.
  const marks=[lo];for(let t=start;t<hi-RIB;t+=spacing)if(t>lo+RIB)marks.push(t);marks.push(hi);
@@ -94,8 +94,62 @@ export function wallKit(parts,{axis,lo,hi,mid,width,sides,start,spacing},level){
   // Pipes on brackets along one wall only (a side corridor's aft wall, the spine's port wall), the whole of each stretch.
   if(level>=2&&s<0)for(const [p,q] of runs){
    if(q-p<1)continue;
-   for(const [y,r,d] of PIPES)rod(r>.04?'pipe':'line',s,p+.05,q-.05,y,r,d);
+   for(const [y,r,d] of PIPES)rod(r>.04?'pipe':'line',s,p+.05,q-.05,y,r*pipeScale,d);
    for(let t=p+.4;t<q-.3;t+=BRACKET)put('dark',s,t,2.92,.07,.05,.26,.1);
+  }
+ }
+}
+
+// Deck 4's service run joins Atmosphere processing to Water treatment.
+export function lifeSupportTransfer(parts,plan,spineGaps){
+ if(plan.deck!==4)return;
+ const source=plan.branches.find(b=>b.entries.some(e=>e.id==='d04-air-1'));
+ const target=plan.branches.find(b=>b.entries.some(e=>e.id==='d04-water-2'));
+ if(!source||!target)return;
+ const sourceEntry=source.entries.find(e=>e.id==='d04-air-1'),targetEntry=target.entries.find(e=>e.id==='d04-water-2');
+ const add=(m,g)=>(parts[m]||(parts[m]=[])).push(g),scale=1.15,wall=-plan.spine.width/2;
+ const between=(m,r,a,b)=>{
+  const start=new T.Vector3(...a),end=new T.Vector3(...b),delta=end.clone().sub(start),len=delta.length();
+  if(len<.001)return;
+  const g=new T.CylinderGeometry(r,r,len,6);
+  g.applyQuaternion(new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize()));
+  g.translate(...start.add(end).multiplyScalar(.5).toArray());add(m,g);
+ };
+ const joint=(m,r,p)=>add(m,new T.SphereGeometry(r*1.3,12,8).translate(...p));
+ const path=(m,r,points)=>{
+  for(let i=0;i<points.length-1;i++)between(m,r,points[i],points[i+1]);
+  for(let i=1;i<points.length-1;i++){
+   const a=new T.Vector3(...points[i-1]).sub(new T.Vector3(...points[i])).normalize();
+   const b=new T.Vector3(...points[i+1]).sub(new T.Vector3(...points[i])).normalize();
+   if(new T.Vector3().crossVectors(a,b).length()>.01)joint(m,r,points[i]);
+  }
+ };
+ for(const [y,r,d] of PIPES){
+  const m=r>.04?'pipe':'line',size=r*scale,sx=source.x0+d,tx=target.x0+d;
+  // The room links cross each branch over its entry and turn onto the spine wall.
+  path(m,size,[[sx,y,sourceEntry.z],[source.x1+.2,y,sourceEntry.z]]);
+  joint(m,size,[sx,y,sourceEntry.z]);
+  joint(m,size,[source.x1+.2,y,sourceEntry.z]);
+  path(m,size,[[sx,y,wall],[sx,y,wall+d],[source.x1,y,wall+d]]);
+  joint(m,size,[sx,y,wall]);
+  joint(m,size,[source.x1,y,wall+d]);
+  path(m,size,[[target.x0,y,wall+d],[tx,y,wall+d],[tx,y,wall]]);
+  joint(m,size,[tx,y,wall]);
+  joint(m,size,[target.x0,y,wall+d]);
+  path(m,size,[[tx,y,targetEntry.z],[target.x1+.2,y,targetEntry.z]]);
+  joint(m,size,[tx,y,targetEntry.z]);
+  joint(m,size,[target.x1+.2,y,targetEntry.z]);
+
+  for(const [a,b] of spineGaps){
+   if(a<source.x1||b>target.x0)continue;
+   const branchGap=plan.branches.some(v=>v.x0===a&&v.x1===b);
+   if(branchGap||m==='pipe'){
+    between(m,size,[a,y,wall+d],[b,y,wall+d]);joint(m,size,[a,y,wall+d]);joint(m,size,[b,y,wall+d]);continue;
+   }
+   // The thinner line lifts over the aft lift opening, clear of the passage below.
+   const liftY=3.06,inset=.3,inside=wall+d+.3;
+   path(m,size,[[a,y,wall+d],[a+inset,y,wall+d],[a+inset,liftY,inside],[b-inset,liftY,inside],[b-inset,y,inside],[b,y,wall+d]]);
+   joint(m,size,[a,y,wall+d]);joint(m,size,[b,y,wall+d]);
   }
  }
 }
