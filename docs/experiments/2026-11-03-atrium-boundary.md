@@ -69,7 +69,14 @@ matches the physical ray hits and distances exactly and does not modify the
 physical collider. The canonical prepared refresh completed successfully. All 30
 geometry transport parts are byte-identical to the prior artifact. The decoded
 physical signature is unchanged: 656 BVHs, 35,270 rest records, 34,974 seats and
-5,028 placements. Final public checks and regular-browser verification follow.
+5,028 placements. Public build and size gates pass at 215,332,013 bytes, with
+34,667,987 bytes of headroom. The regular walkthrough loaded runtime
+`walk.b6f7676944.js` from clean source commit `7ddfea437bbf01454942e3b55941569f86144af6`.
+A native five-second backward walk from the Deck 6 threshold retained distant
+galleries through the opening and the local floor/ceiling. Browser warnings and
+errors were empty. Exact post-movement coordinates were not read. The canonical
+prepared refresh took about 56 minutes despite identical geometry; its legacy
+source coupling and oversized serial cuts remain build-time costs in this branch.
 
 Hydro-Nip Lounge and exterior artwork were not edited. Main is untouched. The
 parallel performance/build work has not been merged or rebased into this branch.
