@@ -1,4 +1,4 @@
-import{build}from'esbuild';import path from'node:path';
+import{build}from'./native-bundle.mjs';import path from'node:path';
 import fs from'node:fs/promises';import{createHash}from'node:crypto';import{spawnSync}from'node:child_process';
 const out='output/leo-interior-v02',stateFile=out+'/scoped-stages.json',sha=b=>createHash('sha256').update(b).digest('hex');
 async function filesIn(dir){const out=[];for(const e of await fs.readdir(dir,{withFileTypes:true})){const p=dir+'/'+e.name;if(e.isDirectory())out.push(...await filesIn(p));else if(/\.(js|json|mjs|ts)$/.test(p))out.push(p);}return out;}
