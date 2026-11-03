@@ -12,7 +12,7 @@ import {readSpot,remapSpot} from './link.js';
 // Open, a row shows its whole name on hover, and a click (or Enter) opens the change's details: its name in full, its
 // before-and-after pictures where its pull request has them (a slider between the two, scripts/ship-log-media.mjs) and
 // Go there, which takes the walker to the spot the pictures were taken from (onGo). The log also opens anywhere aboard
-// (L, or the "changes here" chip, main.js), showing first the changes made near the walker (nearby()).
+// (L, or the "changes here" chip, main.js), showing every change, with Near you for those made near the walker (nearby()).
 //   hearts.request()      ask for the counts and this visitor's own hearts; they arrive through setHearts
 //   hearts.toggle(id,on)  give (on) or take back a heart
 // setHearts({counts:[[id,n]], mine:[id]|undefined, verified}) · setStatus('live'|'offline') · refused(why)
