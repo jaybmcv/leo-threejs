@@ -26,7 +26,7 @@ const adapters=(file,source)=>{
   s=replace(s,'inside||(atriumSight??=','inside||distanceProfile.cameraSight&&(atriumSight??=');
   s=replace(s,'renderer.setAnimationLoop(()=>{','renderer.setAnimationLoop(wrapDistanceFrame(()=>{');
   s=replace(s,'});\n// One frame of the ship','}));\n// One frame of the ship');
-  s+=`\ninstallDistanceLab({T,renderer,scene,camera,hazeCamera,controller,follow,input,renderMetrics,phase4:()=>phase4Visibility,sight:()=>atriumSight,visibility:()=>({physical:inOpenAtrium(),band:atriumViewSpan(),span:viewSpan}),teleport:(...a)=>globalThis.__walk.teleport(...a),reset:()=>{nearFrom.set(1e9,0,0);lastSpan=-Infinity;spanChanged(camera,controller.position,NaN,NaN,colliders);distanceProfile.revision=(distanceProfile.revision||0)+1;}});\n`;
+  s+=`\ninstallDistanceLab({T,renderer,scene,camera,hazeCamera,controller,follow,input,renderMetrics,phase4:()=>phase4Visibility,geometry:()=>atriumGeometry,sight:()=>atriumSight,visibility:()=>({physical:inOpenAtrium(),band:atriumViewSpan(),span:viewSpan}),teleport:(...a)=>globalThis.__walk.teleport(...a),reset:()=>{nearFrom.set(1e9,0,0);lastSpan=-Infinity;spanChanged(camera,controller.position,NaN,NaN,colliders);distanceProfile.revision=(distanceProfile.revision||0)+1;}});\n`;
  }
  if(file==='src/v2/atrium-render-policy.js'){
   s=`import {distanceProfile} from ${JSON.stringify(client)};\n`+s;

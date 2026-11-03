@@ -1,4 +1,5 @@
 // QA client only. The parent owns profile source adapters, the iframe and result storage.
+import {setAtriumQuality} from '../../src/v2/atrium-quality.js';
 export const distanceProfile={id:'current',far:150,rayFar:90,verticalProbe:12,cabins:40,fogNear:70,fogFar:650,forceAtrium:false,fixedAtrium:false,roomReach:null};
 const profiles=[
  {...distanceProfile,label:'Previous 150m'},
@@ -9,7 +10,8 @@ const profiles=[
  {id:'atrium450',label:'450m public atrium, nearby room interiors',far:450,rayFar:90,verticalProbe:12,cabins:40,fogNear:120,fogFar:1100,forceAtrium:true,fixedAtrium:true,roomReach:90},
  {id:'boundary450',label:'450m camera-visible atrium + subpixel LOD',far:450,rayFar:90,verticalProbe:12,cabins:40,fogNear:120,fogFar:1100,forceAtrium:true,fixedAtrium:true,roomReach:90,cameraSight:true,detailLOD:true},
  {id:'boundaryNoLOD',label:'Camera-visible atrium without subpixel LOD',far:450,rayFar:90,verticalProbe:12,cabins:40,fogNear:120,fogFar:1100,forceAtrium:true,fixedAtrium:true,roomReach:90,cameraSight:true,detailLOD:false},
-].map(p=>({fixedAtrium:false,roomReach:null,cameraSight:false,detailLOD:false,...p}));
+ ...['high','balanced','performance'].map(quality=>({id:'geometry'+quality[0].toUpperCase()+quality.slice(1),label:'Whole atrium · '+quality,far:450,rayFar:90,verticalProbe:12,cabins:40,fogNear:120,fogFar:1100,forceAtrium:true,fixedAtrium:true,roomReach:90,cameraSight:true,detailLOD:true,geometry:true,quality})),
+].map(p=>({fixedAtrium:false,roomReach:null,cameraSight:false,detailLOD:false,geometry:false,quality:'high',...p}));
 const views=[
  {id:'entrance',label:'Deck 6 neighborhood approach',at:[-132,-19.700000762939453,0],lookAt:[100,6,0]},
  {id:'linen',label:'Deck 6 through linen doorway',at:[-143,-19.700000762939453,0],lookAt:[100,6,0]},
@@ -30,7 +32,7 @@ function getMetadata(requested=null){
  const debug=gl?.getExtension('WEBGL_debug_renderer_info'),size=api.renderer.getDrawingBufferSize(new api.T.Vector2());
  return lastMetadata={timestamp:new Date().toISOString(),userAgent:navigator.userAgent,hardwareConcurrency:navigator.hardwareConcurrency??null,deviceMemory:navigator.deviceMemory??null,dpr:devicePixelRatio,pixelRatio:api.renderer.getPixelRatio(),drawingBuffer:{width:size.x,height:size.y},viewport:{width:innerWidth,height:innerHeight},requested,
   gpu:{renderer:debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):gl?.getParameter(gl.RENDERER),vendor:debug?gl.getParameter(debug.UNMASKED_VENDOR_WEBGL):gl?.getParameter(gl.VENDOR),timerSupported:!!timer,timerExtension:timer?'EXT_disjoint_timer_query_webgl2':null,version:gl?.getParameter(gl.VERSION)},
-  visibility:document.visibilityState,profiles,views,protocol:{rounds:2,warmupMs:3000,sampleMs:6000,segments:profiles.length*views.length*4,motions:['still','look'],lookAmplitudeRadians:.25,lookPeriodMs:6000,units:{cpu:'ms',gpu:'ms',frame:'ms',span:'ms',phase4:'ms'},gpu:'Sum elapsed GPU time over all renderer.render calls per sampled frame. Disjoint/failed/unavailable results are excluded, never replaced with CPU time.'}};
+  visibility:document.visibilityState,geometryBuild:{...api.geometry()?.stats},profiles,views,protocol:{rounds:2,warmupMs:3000,sampleMs:6000,segments:profiles.length*views.length*4,motions:['still','look'],lookAmplitudeRadians:.25,lookPeriodMs:6000,units:{cpu:'ms',gpu:'ms',frame:'ms',span:'ms',phase4:'ms'},gpu:'Sum elapsed GPU time over all renderer.render calls per sampled frame. Disjoint/failed/unavailable results are excluded, never replaced with CPU time.'}};
 }
 function hookSamples(array,key){if(!array||hooked.has(array))return;hooked.add(array);const original=array.push;Object.defineProperty(array,'push',{configurable:true,writable:true,value:function(...values){if(active?.sampling&&!paused)for(const v of values)if(Number.isFinite(v))active.raw[key].push(v);return original.apply(this,values);}});}
 function hookMetrics(){hookSamples(api?.renderMetrics?.span,'span');hookSamples(api?.phase4?.()?.stats?.samples,'phase4');}
@@ -58,7 +60,7 @@ function installRenderMeter(){
   }
  };
 }
-function setProfile(id){const p=profiles.find(p=>p.id===id);if(!p)throw Error('Unknown profile '+id);Object.assign(distanceProfile,p);api.camera.far=p.far;api.camera.updateProjectionMatrix();api.hazeCamera.near=p.far-10;api.hazeCamera.updateProjectionMatrix();if(api.scene.fog){api.scene.fog.near=p.fogNear;api.scene.fog.far=p.fogFar;}api.reset();send(run?'running':'profile',{profiles});}
+function setProfile(id){const p=profiles.find(p=>p.id===id);if(!p)throw Error('Unknown profile '+id);Object.assign(distanceProfile,p);api.geometry()?.setEnabled(p.geometry);setAtriumQuality(p.quality,{persist:false});api.camera.far=p.far;api.camera.updateProjectionMatrix();api.hazeCamera.near=p.far-10;api.hazeCamera.updateProjectionMatrix();if(api.scene.fog){api.scene.fog.near=p.fogNear;api.scene.fog.far=p.fogFar;}api.reset();send(run?'running':'profile',{profiles});}
 function clearInput(){api.input.down?.clear();api.input.jumpQueued=false;api.input.jumpHeld=false;api.input.zoom=0;api.input.runLatched=false;if(api.input.look){api.input.look.x=0;api.input.look.y=0;}if(api.input.stickVec){api.input.stickVec.x=0;api.input.stickVec.y=0;}}
 function setView(id){const view=views.find(v=>v.id===id);if(!view)throw Error('Unknown view '+id);viewId=id;const dx=view.lookAt[0]-view.at[0],dz=view.lookAt[2]-view.at[2],yaw=Math.atan2(dx,dz),pitch=Math.atan2(view.lookAt[1]-(view.at[1]+1.7),Math.hypot(dx,dz));api.teleport(...view.at,yaw,pitch);api.follow.mode='first';api.follow.yaw=yaw;api.follow.pitch=pitch;clearInput();api.reset();lastFrame=null;return {view,yaw,pitch};}
 function summaryRows(){return run?.rows.map(({raw,...row})=>row)||[];}
@@ -68,7 +70,7 @@ function resume(){if(!paused)return;const duration=now()-pauseStarted;paused=fal
 export function wrapDistanceFrame(fn){return function(...args){
  if(paused)return;
  if(!api)return fn.apply(this,args);
- if(!run&&now()-lastDiagnostic>500){lastDiagnostic=now();send('view',{diagnostic:{position:vector(api.controller.position),...api.visibility(),sight:api.sight()?.stats,detailCulled:api.phase4()?.stats.detailCulled,offscreenCulled:api.phase4()?.stats.offscreenCulled,visibleInstances:api.phase4()?.stats.visibleInstances}});}
+ if(!run&&now()-lastDiagnostic>500){lastDiagnostic=now();send('view',{diagnostic:{position:vector(api.controller.position),...api.visibility(),sight:api.sight()?.stats,geometry:api.geometry()?.stats,detailCulled:api.phase4()?.stats.detailCulled,offscreenCulled:api.phase4()?.stats.offscreenCulled,visibleInstances:api.phase4()?.stats.visibleInstances}});}
  pollGpu();hookMetrics();const start=now(),interval=lastFrame===null?null:start-lastFrame;lastFrame=start;
  const segment=active;
  if(segment){const elapsed=start-segment.started-segment.pausedMs;segment.sampling=elapsed>=3000&&elapsed<9000;clearInput();api.follow.mode='first';api.follow.yaw=segment.yaw+(segment.motion==='look'?.25*Math.sin(2*Math.PI*elapsed/6000):0);api.follow.pitch=segment.pitch;
@@ -100,7 +102,7 @@ async function measure(spec){
  const until=now()+2100;while(pending.some(f=>f.row===row)&&now()<until){pollGpu();await new Promise(resolve=>setTimeout(resolve,16));}
  for(let i=pending.length-1;i>=0;i--)if(pending[i].row===row){for(const q of pending[i].queries)removeQuery(q);pending.splice(i,1);row.gpuInvalid++;row.gpuReasons.timeout=(row.gpuReasons.timeout||0)+1;}
  delete row.resolve;delete row.reject;delete row.sampling;delete row.lastProgress;
- row.summary=Object.fromEntries(Object.entries(row.raw).map(([k,v])=>[k,statistics(v)]));Object.assign(row,{cpu:row.summary.cpu,gpu:row.summary.gpu,frame:row.summary.frame,calls:row.summary.drawCalls,triangles:row.summary.triangles,span:row.summary.span,phase4:row.summary.phase4});row.totalDrawCalls=row.raw.drawCalls.reduce((a,b)=>a+b,0);row.totalTriangles=row.raw.triangles.reduce((a,b)=>a+b,0);row.gpuSupported=!!timer;row.elapsedMs=row.sampleEnded-row.started-row.pausedMs;
+ row.geometry={...api.geometry()?.stats};row.summary=Object.fromEntries(Object.entries(row.raw).map(([k,v])=>[k,statistics(v)]));Object.assign(row,{cpu:row.summary.cpu,gpu:row.summary.gpu,frame:row.summary.frame,calls:row.summary.drawCalls,triangles:row.summary.triangles,span:row.summary.span,phase4:row.summary.phase4});row.totalDrawCalls=row.raw.drawCalls.reduce((a,b)=>a+b,0);row.totalTriangles=row.raw.triangles.reduce((a,b)=>a+b,0);row.gpuSupported=!!timer;row.elapsedMs=row.sampleEnded-row.started-row.pausedMs;
  row.valid=row.raw.cpu.length>0&&!row.hiddenAtStart&&!row.hiddenFrames&&!row.events.some(e=>['hidden','context-lost','frame-error','error','unhandled-rejection'].includes(e.kind));
  await saveRow(run.meta,row);run.rows.push(row);send('running',{meta:run.meta,rows:summaryRows(),progress:{runId:run.id,completed:run.rows.length,total:run.total,phase:'segment complete'}});
 }

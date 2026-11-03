@@ -1,3 +1,7 @@
+import {optimizeAtriumGeometry} from '../v2/atrium-geometry-quality.js';
+import {getAtriumQuality} from '../v2/atrium-quality.js';
+import {mountGraphicsSettings} from './graphics-settings.js';
+let atriumGeometry=null,graphicsSettings=null;
 import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
 import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
 import {createAtriumSight} from '../v2/atrium-sight.js';
@@ -359,7 +363,7 @@ async function buildShip(){
   const all=Array.from({length:o.count},(_,i)=>{const m=new T.Matrix4();o.getMatrixAt(i,m);return m;});
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};
  }
- isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);
+ isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=await optimizeAtriumGeometry(baked,renderer,{getQuality:getAtriumQuality});
 }
 let imagingScans=null;
 let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
@@ -675,7 +679,7 @@ const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WA
 renderer.setAnimationLoop(()=>{
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
  const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);last=now;
- const k=input.read();follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
+ const k=input.read();if(graphicsSettings?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
  const fwd=follow.forward(),right=new T.Vector3(-fwd.z,0,fwd.x);
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
  if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
@@ -780,6 +784,7 @@ renderer.setAnimationLoop(()=>{
 });
 // One frame of the ship from `view`: the sky, the haze past the far plane, then the ship.
 function draw(view){
+ view.updateMatrixWorld(true);atriumGeometry?.update(view,renderer.domElement.height);
  for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,view);
 }
@@ -939,7 +944,7 @@ function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(collide
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
+function closePanels(){graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
@@ -1012,6 +1017,7 @@ const pinballGame=createPinball({
 sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambience.toggle())));
 // Render resolution, set up with the renderer: each press steps High, Med, Low and round again.
 const resButton=$('resolution');setRes(res);
+graphicsSettings=mountGraphicsSettings({onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
 resButton.addEventListener('click',()=>{resChosen=true;setRes((res+1)%RES.length);try{localStorage.setItem(RES_KEY,RES[res]);}catch{}});
 // Held for a higher jump, as Space is.
 $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;input.jumpHeld=true;$('jump').setPointerCapture(e.pointerId);});
