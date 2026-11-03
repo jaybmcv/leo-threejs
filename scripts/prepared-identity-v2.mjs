@@ -1,4 +1,23 @@
-import fs from 'node:fs/promises';import{createHash}from'node:crypto';
-const hash=b=>createHash('sha256').update(b).digest('hex');
-export async function preparedSourceIdentity(){const files=[];const visit=async dir=>{for(const e of(await fs.readdir(dir,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))){const f=dir+'/'+e.name;if(e.isDirectory())await visit(f);else if(/\.(js|json|ts)$/.test(e.name))files.push(f)}};await visit('src');files.push('package-lock.json',...['v2-output','v2-baseline-inputs','v2-export-metadata','retire-obsolete-facades-v2','freight-threshold-retirement-v2','v2-indexed-export','layout-selector','v2-cosmo','build-cache-v2','install-build-cache-v2','scoped-stages-v2','scoped-models-v2','source-contract','v2-plugin','walk-page','prepared-identity-v2','build-prepared-walk-v2','authoring-observer-v2','authoring-stage-profile-v2','node-stage-profile-v2','authoring-cache-transport-v2','authoring-skin-proof-v2','authoring-metadata-v2','encode-prepared-walk-v2','prepared-collision-pack','prepared-tuple-codec','prepared-vertex-pool','v2-public-export','retirement-worker-v2','retirement-pool-v2','exact-exterior-compression-v2','fit-cabin-ceilings-v2','ceiling-coverage-v2'].map(n=>'scripts/'+n+'.mjs'));const entries={};for(const f of files.sort())entries[f]=hash(await fs.readFile(f));return{hash:hash(JSON.stringify(entries)),files:entries}}
-export async function requirePreparedFresh(base='output/leo-interior-v02/prepared-walk'){const i=JSON.parse(await fs.readFile(base+'/integrity.json','utf8'));if(!i.sourceInputs?.sources)throw Error('Prepared walk lacks a source fingerprint; run LEO_LAYOUT=2 npm run build');const current=await preparedSourceIdentity();if(current.hash!==i.sourceInputs.sources.hash)throw Error('Prepared walk source changed; run LEO_LAYOUT=2 npm run build');for(const[name,file]of Object.entries({skin:'leo-exterior-web.glb',layout:'layout.json',plan:'walk-plan.json'})){if(hash(await fs.readFile('output/leo-interior-v02/'+file))!==i.sourceInputs[name])throw Error('Prepared walk input changed: '+file+'; rebuild')}return i}
+﻿import fs from 'node:fs/promises';
+import {geometryIdentity,sha} from './fast-dependencies-v2.mjs';
+
+export const preparedSourceIdentity=geometryIdentity;
+export async function compatiblePreparedSources(previous,current){
+ if(previous?.hash===current.hash)return true;
+ if(previous?.version>=2)return false;
+ // Upgrade only the exact non-geometric migration from the old all-src hash.
+ let migration={};try{migration=JSON.parse(await fs.readFile('scripts/fast-deploy-migration.json','utf8'));}catch{}
+ for(const [file,value]of Object.entries(current.files)){
+  if(previous?.files?.[file]===value)continue;
+  const pair=migration[file];if(!pair||pair.before!==previous?.files?.[file]||pair.after!==value)return false;
+ }
+ return !!previous?.files;
+}
+export async function requirePreparedFresh(base='output/leo-interior-v02/prepared-walk'){
+ const i=JSON.parse(await fs.readFile(base+'/integrity.json','utf8'));
+ if(!i.sourceInputs?.sources)throw Error('Prepared walk lacks geometry provenance; run npm run build');
+ const current=await preparedSourceIdentity();
+ if(!await compatiblePreparedSources(i.sourceInputs.sources,current))throw Error('Prepared geometry changed; run node scripts/build-fast-v2.mjs (or npm run build for a full rebuild)');
+ for(const [name,file]of Object.entries({skin:'leo-exterior-web.glb',layout:'layout.json',plan:'walk-plan.json'}))if(sha(await fs.readFile('output/leo-interior-v02/'+file))!==i.sourceInputs[name])throw Error('Prepared walk input changed: '+file+'; rebuild geometry');
+ return i;
+}

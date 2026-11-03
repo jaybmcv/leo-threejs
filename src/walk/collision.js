@@ -1,3 +1,4 @@
+import {roomPatchOwner} from '../v2/room-owner.js';
 import {memoBVH} from '../v2/build-cache.js';
 import * as T from 'three';
 import {MeshBVH} from 'three-mesh-bvh';
@@ -50,7 +51,8 @@ function uncachedBvhOf(positions){
 // A growing list of floats. The pending soups used to be plain arrays, 8 bytes a number: ~200 MB for the whole ship
 // on top of the meshes they were read from, while the walk page was at its largest.
 class Floats{
- constructor(){this.array=new Float32Array(4096);this.length=0;this.flags=new Uint8Array(4096);this.flagLength=0;}
+ constructor(){this.array=new Float32Array(4096);this.length=0;this.flags=new Uint8Array(4096);this.flagLength=0;this.ownerSpans=[];}
+ pushOwner(owner){const previous=this.ownerSpans.at(-1),start=this.length/9;if(previous&&previous.owner===owner&&previous.start+previous.count===start)previous.count++;else this.ownerSpans.push({owner,start,count:1});}
  pushFlag(flag){if(this.flagLength===this.flags.length){const a=new Uint8Array(this.flags.length*2);a.set(this.flags);this.flags=a;}this.flags[this.flagLength++]=flag;}
  push9(src,at){
   if(this.length+9>this.array.length){const grown=new Float32Array(this.array.length*2);grown.set(this.array);this.array=grown;}
@@ -65,11 +67,11 @@ export class Colliders{
  addStatic(root,filter=solid){
   root.updateMatrixWorld(true);let tris=0;const scratch=[];
   root.traverse(o=>{
-   if(!filter(o))return;scratch.length=0;meshTriangles(o,scratch);const sightIgnored=!!o.userData.collisionOnly||[].concat(o.material).every(m=>m?.transparent&&m.opacity<.6);
+   if(!filter(o))return;scratch.length=0;meshTriangles(o,scratch);const patchOwner=roomPatchOwner(o),sightIgnored=!!o.userData.collisionOnly||[].concat(o.material).every(m=>m?.transparent&&m.opacity<.6);
    for(let i=0;i<scratch.length;i+=9){
     const p=Array.from({length:9},(_,k)=>Math.fround(scratch[i+k])),ax=p[3]-p[0],ay=p[4]-p[1],az=p[5]-p[2],bx=p[6]-p[0],by=p[7]-p[1],bz=p[8]-p[2],nx=ay*bz-az*by,ny=az*bx-ax*bz,nz=ax*by-ay*bx;if(!(nx*nx+ny*ny+nz*nz>1e-16))continue;
     const y0=Math.min(scratch[i+1],scratch[i+4],scratch[i+7]),y1=Math.max(scratch[i+1],scratch[i+4],scratch[i+7]);
-    for(let b=bandOf(y0);b<=bandOf(y1);b++){let list=this.pending.get(b);if(!list)this.pending.set(b,list=new Floats());list.push9(scratch,i);list.pushFlag(sightIgnored?1:0);}
+    for(let b=bandOf(y0);b<=bandOf(y1);b++){let list=this.pending.get(b);if(!list)this.pending.set(b,list=new Floats());list.pushOwner(patchOwner);list.push9(scratch,i);list.pushFlag(sightIgnored?1:0);}
     tris++;
    }
   });
@@ -80,7 +82,7 @@ export class Colliders{
   for(const [b,list] of this.pending){
    const old=this.bands.get(b),prev=old?old.geometry.attributes.position.array:null;
    const all=new Float32Array((prev?prev.length:0)+list.length);if(prev)all.set(prev);all.set(list.values,prev?prev.length:0);
-   const bvh=bvhOf(all),flags=new Uint8Array((old?.windowFlags?.length||0)+list.flagLength);if(old?.windowFlags)flags.set(old.windowFlags);flags.set(list.flags.subarray(0,list.flagLength),old?.windowFlags?.length||0);if(flags.length!==bvh.geometry.attributes.position.count/3)throw Error('Prepared collision visibility flags do not match triangles');bvh.leoWindowFlags=flags;this.bands.set(b,{bvh,geometry:bvh.geometry,band:b,windowFlags:flags});
+   const bvh=bvhOf(all),flags=new Uint8Array((old?.windowFlags?.length||0)+list.flagLength);if(old?.windowFlags)flags.set(old.windowFlags);flags.set(list.flags.subarray(0,list.flagLength),old?.windowFlags?.length||0);if(flags.length!==bvh.geometry.attributes.position.count/3)throw Error('Prepared collision visibility flags do not match triangles');bvh.leoWindowFlags=flags;const offset=(prev?.length||0)/9;const ownerSpans=[...(old?.ownerSpans||[]),...list.ownerSpans.map(r=>({...r,start:r.start+offset}))];this.bands.set(b,{bvh,geometry:bvh.geometry,band:b,windowFlags:flags,ownerSpans});
   }
   this.pending.clear();
  }

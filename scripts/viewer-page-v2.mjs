@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {build} from 'esbuild';
+import {build} from './native-bundle.mjs';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 // Read source explicitly, so bundling also works in restricted worktrees with linked dependencies.

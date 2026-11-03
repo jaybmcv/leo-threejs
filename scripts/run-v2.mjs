@@ -2,7 +2,7 @@ import {v2 as selectedV2} from './layout-selector.mjs';
 if(!selectedV2)throw new Error('This producer requires LEO_LAYOUT=2');
 import fs from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
-import {build} from 'esbuild';
+import {build} from './native-bundle.mjs';
 import {v2Plugin} from './v2-plugin.mjs';
 export async function runV2(task){
  let layout;try{layout=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8'));}catch{const p=spawnSync(process.execPath,['scripts/layout-v2-data.mjs'],{stdio:'inherit'});if(p.status)throw new Error('v2 layout failed');layout=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8'));}

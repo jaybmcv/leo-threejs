@@ -47,7 +47,7 @@ The original curved white fin-cap underside is retained below the panoramic loun
 
 All 1,382 passenger windows and the bridge, observation and fin-crown glazing use opposed single-sided surfaces: exterior opacity 0.88 and interior opacity 0.12. This is an art-directed visualization treatment, not a physically reciprocal optical coating. The dual surfaces survive GLB export and remain tinted after changing viewer modes. Forward observation bands now have actual apertures through their previously opaque shell and seal backing. Existing window floor alignment is preserved; enclosed cabins away from the hull do not gain private exterior views.
 
-`node scripts/check-polish.mjs` audits the saved complete ship, including every named area, both glazing faces, clear bow sightlines and the retained lower cap against the accepted source. Historical sections and renders below describe their labeled earlier passes.
+The v1 ship's own geometry checks (`check-polish`, `check-areas` and the rest) were removed on 2026-11-02 with the v1 rollback; `legacy/v1` keeps copies. Historical sections and renders below describe their labeled earlier passes.
 
 ## Engine maintenance windows — V35
 

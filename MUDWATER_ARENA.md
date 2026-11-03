@@ -99,7 +99,7 @@ Leo live counts, per day (UTC), how many times walkers came into the arena (`vis
 | Page build | `scripts/walk-page.mjs` | Hashes `MUDWATER_ART` with the paintings and comics, keeping each file's own extension (PNG for transparency) |
 | Signs and places | `src/walk/signs.js`, `src/walk/lift-ride.js`, `src/walk/places.js` | A cards icon on the corridor signs; Mudwater Arena on the Deck 16 plaques, stair signs and lift buttons; and in Go to |
 | Giveaway and counts | `server/arena.mjs`, `server/leo-live.mjs`, `src/walk/net/live.js`, `src/walk/mudwater-giveaway.js` | The `giveaway`, `claim` and `arena` messages (no protocol change: an older server just never answers, and the card stays on "coming soon"), and `GET /arena` |
-| Checks | `scripts/check-mudwater.mjs` and `scripts/check-giveaway.mjs` (both in `npm run check`), `scripts/check-areas.mjs` | See below; the giveaway check runs every mode, refusal and limit on temporary files |
+| Checks | `scripts/check-giveaway.mjs` (in `npm run check`); `scripts/check-mudwater.mjs` still checks the v1 hall and is off the nightly until it checks the v2 room | See below; the giveaway check runs every mode, refusal and limit on temporary files |
 
 The `scripts/check-mudwater.mjs` check covers:
 

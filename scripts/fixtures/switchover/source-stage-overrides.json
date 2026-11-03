@@ -78,5 +78,69 @@
   "src/v2/prepared-runtime.public.js": {
     "sha256": "9f58b8c6670df96f25fd31e35f43b8329b125a955e0f47fdd5a5e13385178aae",
     "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+  },
+  "src/v2/hull-prototypes.authoring.js": {
+    "sha256": "3e8a16648d72175fa36c50bc0ee7dda4e790badd54f5aa19fde247596d49c058",
+    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+  },
+  "src/v2/hull-prototypes.js": {
+    "sha256": "07ff6f8d0967c117f7c97430556a83f5eb588a82901353f6a43c83cce3adb481",
+    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+  },
+  "src/v2/model.authoring.js": {
+    "sha256": "c372bb706a8b3a43925a77bd4769cd4a5255b0a9029247cccb52177e33022fbf",
+    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+  },
+  "src/v2/model.js": {
+    "sha256": "ad2a3aafa37b97c532c97bcc9f384a934ce201c307de0918b568e96608ef8105",
+    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+  },
+  "src/v2/phase4-fitout.authoring.js": {
+    "sha256": "f106588f87c3d55fc0eeb4368fdb7b95297ff643f391dd308522ce45201bea6e",
+    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+  },
+  "src/v2/phase4-fitout.js": {
+    "sha256": "44e1bd7e1134a33cfbf9b6ee3949fb2432a09d83ebe666dd72c0d3b5ef200722",
+    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+  },
+  "src/v2/prepared-authoring.authoring.js": {
+    "sha256": "025a34b68c57cfda831fe7380ad7082bb0046fa4614b93bceece704412902b09",
+    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+  },
+  "src/v2/prepared-authoring.js": {
+    "sha256": "f5931b90869838c7629c5a2641aa4cb4599d7df57e57c8d0c3f09ed7f0f6b067",
+    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+  },
+  "src/v2/prepared-codec.authoring.js": {
+    "sha256": "c8527af69eecd9e44d3af6123f2f95ba25b2d15ad42695f8c6924f029ed2e08f",
+    "reason": "Fast deploy round 2: per-band owner records avoid shared BVH metadata and retain the existing gates."
+  },
+  "src/v2/prepared-codec.js": {
+    "sha256": "0be0b8a53d81cfac215d59329aa47b150217bc40207314666c61b8bb0876a869",
+    "reason": "Fast deploy round 2: per-band owner records avoid shared BVH metadata and retain the existing gates."
+  },
+  "src/walk/collision.authoring.js": {
+    "sha256": "c419aaf95a99c4540feab37be87b40a5fa5d87184d7b8b7a9fa1d45f8b9159d1",
+    "reason": "Fast deploy round 2: per-band owner records avoid shared BVH metadata and retain the existing gates."
+  },
+  "src/walk/collision.js": {
+    "sha256": "8e7935e80b6212006e77fc186fab3af232b4c1ba5e41f17c6e80708f04f6b84b",
+    "reason": "Fast deploy round 2: per-band owner records avoid shared BVH metadata and retain the existing gates."
+  },
+  "src/walk/render-bake.authoring.js": {
+    "sha256": "da1f6283253fb445f9c07e117d8e500483dd6b7f0ef2f8edd155a33143aff0ab",
+    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+  },
+  "src/walk/render-bake.js": {
+    "sha256": "a247fbf1ae48d50338e87495c634ce4e7ebef71a886637f68b2d590109d440ac",
+    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+  },
+  "src/v2/phase4-programme.js": {
+    "sha256": "506247f26341b46297fe44ba5a9e4d29eaf44bebaefecd0a1fc20a712e03233f",
+    "reason": "Carry forward the two remaining round-1 fast-deploy source rows from de275fc; existing gates retained."
+  },
+  "src/v2/prepared-codec.public.js": {
+    "sha256": "93726d5c3e0b5685aea95dd93c603dda45d5a4d5386a8fc4a5ed1e3db1e72d39",
+    "reason": "Carry forward the two remaining round-1 fast-deploy source rows from de275fc; existing gates retained."
   }
 }

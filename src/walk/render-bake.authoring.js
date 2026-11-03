@@ -1,3 +1,4 @@
+import {roomPatchOwner} from '../v2/room-owner.js';
 import * as T from 'three';
 import {bandOf} from './collision.authoring.js';
 
@@ -159,7 +160,7 @@ export function bakeForWalking(root,{skip=()=>false,release=false}={}){
  };
  for(const b of buckets.values()){
   const P=new Float32Array(b.vertices*3),N=new Int16Array(b.vertices*3),U=textured(b.material)?new Float32Array(b.vertices*2):null,C=b.colors?new Uint16Array(b.vertices*3):null;
-  const preparedRanges=[];const recordRange=(o,vertex,start)=>{const owner=o.geometry.attributes._leo_owner,finish=o.geometry.attributes._leo_finish,own=owner?o.userData.ownerTable?.[owner.getX(vertex)]:null,name=finish?o.userData.finishNames?.[finish.getX(vertex)]:null,previous=preparedRanges.at(-1);if(previous&&previous.source===o.uuid&&previous.owner===own&&previous.finish===name&&previous.start+previous.count===start){previous.count++;return;}preparedRanges.push({source:o.uuid,name:o.name,owner:own,finish:name,start,count:1,userData:Object.fromEntries(['room','interface','component','batchedEnvelope','hullEnvelopeBatch','hullSkinSurface','collisionOnly','role','noCollide','envelopeKind'].filter(k=>o.userData[k]!==undefined).map(k=>[k,o.userData[k]]))});};const I=b.vertices>65535?new Uint32Array(b.indices):new Uint16Array(b.indices);let vo=0,io=0;
+  const preparedRanges=[];const recordRange=(o,vertex,start)=>{const owner=o.geometry.attributes._leo_owner,finish=o.geometry.attributes._leo_finish,own=owner?o.userData.ownerTable?.[owner.getX(vertex)]:null,name=finish?o.userData.finishNames?.[finish.getX(vertex)]:null,previous=preparedRanges.at(-1);if(previous&&previous.source===o.uuid&&previous.owner===own&&previous.finish===name&&previous.start+previous.count===start){previous.count++;return;}preparedRanges.push({source:o.uuid,name:o.name,owner:own,patchOwner:roomPatchOwner(o),finish:name,start,count:1,userData:Object.fromEntries(['room','interface','component','batchedEnvelope','hullEnvelopeBatch','hullSkinSurface','collisionOnly','role','noCollide','envelopeKind'].filter(k=>o.userData[k]!==undefined).map(k=>[k,o.userData[k]]))});};const I=b.vertices>65535?new Uint32Array(b.indices):new Uint16Array(b.indices);let vo=0,io=0;
   const put=(g,i,at)=>{
    const pos=g.attributes.position,nor=g.attributes.normal,uv=g.attributes.uv,col=g.attributes.color;
    v.fromBufferAttribute(pos,i).applyMatrix4(put.m);
