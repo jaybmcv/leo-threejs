@@ -14,30 +14,27 @@ const replace=(s,from,to)=>{if(s.split(from).length!==2)throw Error('Expected on
 const adapters=(file,source)=>{
  let s=source.replaceAll('\r\n','\n');
  if(file==='src/walk/main.js'){
-  s=`import {distanceProfile,wrapDistanceFrame,installDistanceLab} from ${JSON.stringify(client)};\nimport {distanceAtriumBand} from '../v2/atrium-visibility.js';\n`+s;
+  s=`import {distanceProfile,wrapDistanceFrame,installDistanceLab} from ${JSON.stringify(client)};\n`+s;
   s=replace(s,'maxRatio=Math.min(devicePixelRatio,phone?1.25:1.75)','maxRatio=1');
   s=replace(s,'let res=Math.max(0,RES.indexOf(savedRes)),resChosen=savedRes!==null','let res=0,resChosen=true');
   s=replace(s,'const NEAR_CABINS=40,BOAT_REACH=45','const BOAT_REACH=45');
   s=replace(s,'.slice(0,NEAR_CABINS)','.slice(0,distanceProfile.cabins)');
   s=replace(s,'.raycast(ray.ray,90,.6),d=hit?hit.distance:90','.raycast(ray.ray,distanceProfile.rayFar,.6),d=hit?hit.distance:distanceProfile.rayFar');
   s=replace(s,'.raycast(probe,12)','.raycast(probe,distanceProfile.verticalProbe)');
-  s=replace(s,'setAtriumView(p);\n\n if(now-lastSpan','setAtriumView(p);\n const atriumBand=distanceProfile.fixedAtrium?distanceAtriumBand():null;distanceProfile.insideAtrium=!!atriumBand;if(atriumBand)return viewSpan=atriumBand;\n\n if(now-lastSpan');
+  s=replace(s,'const atriumBand=atriumViewSpan();if(atriumBand)','const atriumBand=atriumViewSpan();distanceProfile.insideAtrium=!!atriumBand;if(atriumBand)');
   s=replace(s,'renderer.setAnimationLoop(()=>{','renderer.setAnimationLoop(wrapDistanceFrame(()=>{');
   s=replace(s,'});\n// One frame of the ship','}));\n// One frame of the ship');
   s+=`\ninstallDistanceLab({T,renderer,scene,camera,hazeCamera,controller,follow,input,renderMetrics,phase4:()=>phase4Visibility,teleport:(...a)=>globalThis.__walk.teleport(...a),reset:()=>{nearFrom.set(1e9,0,0);lastSpan=-Infinity;spanChanged(camera,controller.position,NaN,NaN,colliders);distanceProfile.revision=(distanceProfile.revision||0)+1;}});\n`;
  }
- if(file==='src/v2/atrium-visibility.js'){
+ if(file==='src/v2/atrium-render-policy.js'){
   s=`import {distanceProfile} from ${JSON.stringify(client)};\n`+s;
-  s=replace(s,'r.fog.near=r.near;r.fog.far=on?ATRIUM_PROTOTYPE.fogFar:r.far;','r.fog.near=on?distanceProfile.fogNear:r.near;r.fog.far=on?distanceProfile.fogFar:r.far;');
-  s+='\nexport function distanceAtriumBand(){return inAtriumFog()?[layout.decks[5].y-.3,ATRIUM_PROTOTYPE.skyY+.1]:null;}\n';
+  s=replace(s,'export const ATRIUM_VIEW = {\n far:450,\n fogNear:120,\n fogFar:1100,\n fullHeight:true,\n roomReach:90,\n};',`export const ATRIUM_VIEW={get far(){return distanceProfile.far},get fogNear(){return distanceProfile.fogNear},get fogFar(){return distanceProfile.fogFar},get fullHeight(){return distanceProfile.fixedAtrium},get roomReach(){return distanceProfile.roomReach??Infinity}};`);
  }
  if(file==='src/v2/phase4-culling.js'){
   s=`import {distanceProfile} from ${JSON.stringify(client)};\n`+s;
-  s=replace(s,'export function phase4Culling(root,col){',`export function phase4Culling(root,col){let distanceRevision=-1;const distancePublicOwner=(id,r)=>!!(r?.phase6Atrium||r?.showFromBelow||r?.publicFront||r?.kind==='garden'||/^nose-commons-/.test(id)||/^neighborhood-\\d+-(dining|cafe)$/.test(id)||['d16-new-1','d16-new-2','d16-voyage-forum-bow','observation-lounge'].includes(id)||/^circulation-(?:[6-9]|1\\d|20)$/.test(id));`);
-  s=replace(s,'if(!changed(camera,p,low,high,col))return;','const cameraChanged=changed(camera,p,low,high,col),distanceChanged=distanceRevision!==distanceProfile.revision;distanceRevision=distanceProfile.revision;if(!cameraChanged&&!distanceChanged)return;');
-  s=replace(s,'const box=a.box,r=a.r;if(r?.launchD&&Math.abs(p.y-r.y)>2.0)continue;','const box=a.box,r=a.r,publicAtrium=distanceProfile.insideAtrium&&distancePublicOwner(id,r);if(r?.launchD&&Math.abs(p.y-r.y)>2.0&&!publicAtrium)continue;');
-  s=replace(s,'if(r?.showFromBelow){','if(publicAtrium||distanceProfile.forceAtrium&&r?.phase6Atrium){visible.add(id);continue;}if(r?.showFromBelow){');
-  s=replace(s,'if(r&&p.y>=box.min.y-.5','if(distanceProfile.insideAtrium&&r&&!publicAtrium&&distanceProfile.roomReach&&box.distanceToPoint(eye)>distanceProfile.roomReach)continue;if(r&&p.y>=box.min.y-.5');
+  s=replace(s,'export function phase4Culling(root,col){','export function phase4Culling(root,col){let distanceRevision=-1;');
+  s=replace(s,'if(!changed(camera,p,low,high,col)&&!atriumChanged)return;','const cameraChanged=changed(camera,p,low,high,col),distanceChanged=distanceRevision!==distanceProfile.revision;distanceRevision=distanceProfile.revision;if(!cameraChanged&&!atriumChanged&&!distanceChanged)return;');
+  s=replace(s,'if(publicAtrium||r?.showFromBelow){','if(publicAtrium||distanceProfile.forceAtrium&&r?.phase6Atrium||r?.showFromBelow){');
  }
  return s;
 };
@@ -48,6 +45,7 @@ await fs.copyFile(path.join(base,cosmo),path.join(out,cosmo));await fs.cp(path.j
 const result=await writeWalkPage(out,{cosmo,manifest,debug:true,preparedWalk:true,sourceAdapters:adapters});
 await fs.copyFile('scripts/draw-distance-lab/index.html',path.join(out,'index.html'));
 await fs.writeFile(path.join(out,'provenance.json'),JSON.stringify({status:'RUNTIME_EXPERIMENT',source:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),prepared:m['walk-prepared'],runtime:result.walk,note:'Identical verified geometry. Runtime-only adapters compare drawing limits; no geometry regeneration or production source edits. Resolution fixed per run; all profiles share the instrumentation.'},null,2));
+if(process.argv.includes('--build-only'))process.exit(0);
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript','.json':'application/json','.png':'image/png','.jpg':'image/jpeg','.glb':'model/gltf-binary','.mp4':'video/mp4'};
 http.createServer(async(req,res)=>{try{
  const url=new URL(req.url,'http://localhost');

@@ -1,7 +1,7 @@
 // QA client only. The parent owns profile source adapters, the iframe and result storage.
 export const distanceProfile={id:'current',far:150,rayFar:90,verticalProbe:12,cabins:40,fogNear:70,fogFar:650,forceAtrium:false,fixedAtrium:false,roomReach:null};
 const profiles=[
- {...distanceProfile,label:'Current'},
+ {...distanceProfile,label:'Previous 150m'},
  {id:'long300',label:'Long 300m',far:300,rayFar:300,verticalProbe:64,cabins:40,fogNear:100,fogFar:800,forceAtrium:false},
  {id:'whole450',label:'Whole atrium 450m',far:450,rayFar:450,verticalProbe:80,cabins:40,fogNear:120,fogFar:1100,forceAtrium:false},
  {id:'detail450',label:'Whole atrium + cabin detail',far:450,rayFar:450,verticalProbe:80,cabins:5000,fogNear:120,fogFar:1100,forceAtrium:true},

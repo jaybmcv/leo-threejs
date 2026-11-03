@@ -1,4 +1,5 @@
-import {setAtriumView,onePassAtriumGlass} from '../v2/atrium-visibility.js';
+import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
+import {setAtriumView,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
 import {gotoStand as v2GotoStand,yarnPlace} from '../v2/wayfinding.js';
 import {addWayfindingGuides} from '../v2/wayfinding-guides.js';
@@ -191,9 +192,9 @@ const drift=createStarDrift({count:phone?320:520,still:matchMedia('(prefers-redu
 renderer.autoClear=false;
 // A light haze down the long corridors lets the far plane stop at 150 m.
 scene.fog=new T.Fog(0xd9dcd6,70,148);
-const camera=new T.PerspectiveCamera(phone?70:62,1,.05,150);
+const camera=new T.PerspectiveCamera(phone?70:62,1,.05,ATRIUM_VIEW.far);
 // Past the far plane, the ship in haze rather than open space (haze.js); drawn between the sky and the ship.
-const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCamera(60,1,140,1500);
+const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCamera(60,1,ATRIUM_VIEW.far-10,1500);
 const hemi=new T.HemisphereLight(0xfff6e6,0x5d6b75,1.05);scene.add(hemi);
 const fill=new T.DirectionalLight(0xfff1dc,.55);fill.position.set(.3,1,.2);scene.add(fill);
 loadEnvironment(renderer).then(t=>{scene.environment=t;quietFloorReflections(scene,t);}).catch(()=>{});
@@ -371,10 +372,13 @@ const NEAR_CABINS=40,BOAT_REACH=45,nearFrom=new T.Vector3(1e9,0,0);
 // corner, the camera can sit inside a column, and every ray then stopped on its back faces (a garden's roof was culled).
 // Seen through an opening from under a lower ceiling (the lounge from its access ramp), a taller room's ceiling can be in
 // view with no ray landing on it, so each ray also looks straight up and down from partway along for the space it crosses.
-const VIEW_RAYS=[];for(const x of [-.96,-.5,0,.5,.96])for(const y of [-.96,-.5,0,.5,.96])VIEW_RAYS.push([x,y]);let viewSpan=[0,0],lastSpan=0;
+const VIEW_RAYS=[];for(const x of [-.96,-.5,0,.5,.96])for(const y of [-.96,-.5,0,.5,.96])VIEW_RAYS.push([x,y]);let viewSpan=[0,0],lastSpan=0,atriumSpanActive=false;
 function span(p,now){
- // Keep atrium fog/proxies current; the camera rays below decide visible floors.
+ // Open-atrium sightlines cover every gallery; enclosed spaces retain traced visibility.
  setAtriumView(p);
+ const atriumBand=atriumViewSpan();if(atriumBand){atriumSpanActive=true;return viewSpan=atriumBand;}
+ // Returning indoors must recompute even at the same pose as the last indoor query.
+ if(atriumSpanActive){atriumSpanActive=false;lastSpan=-Infinity;spanChanged(camera,p,NaN,NaN,colliders);}
 
  if(now-lastSpan<150)return viewSpan;lastSpan=now;if(!spanChanged(camera,p,0,0,colliders))return viewSpan;const spanStart=performance.now();
  let low=p.y-3,high=p.y+4;const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();
