@@ -152,8 +152,8 @@
     "reason": "Carry forward the two remaining round-1 fast-deploy source rows from de275fc; existing gates retained."
   },
   "src/v2/phase4-culling.js": {
-    "sha256": "dd574327cbd445de3a35f86eedb9c4a8a23d8011b295553021b4513a18b0ccb7",
-    "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
+    "sha256": "3614907b232efd458231f847eba348e207c80501c66c947c0bb12ca269af7885",
+    "reason": "Move the performance helper import away from the concurrent atrium-visibility import edit; runtime behavior and geometry IDs unchanged."
   },
   "src/v2/phase4-culling.authoring.js": {
     "sha256": "5cd1a09ba4e98c5012889d157e78f81ca7906df377245cf626ad23a898f57817",
