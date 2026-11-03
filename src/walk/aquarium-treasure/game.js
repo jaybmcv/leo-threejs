@@ -17,12 +17,16 @@ export function createTreasureGame({tank,controller,follow,camera,input,live,onO
  if(!tank)return null;
  const group=new T.Group();group.name='Aquarium_treasure';tank.add(group);
  const steel=new T.MeshStandardMaterial({color:0x263b4e,metalness:.5,roughness:.4}),gold=new T.MeshBasicMaterial({color:0xffca55,toneMapped:false});
- const cyan=new T.MeshBasicMaterial({color:0x45e5ff,toneMapped:false});
+ const cyan=new T.MeshBasicMaterial({color:0x9af6ff,toneMapped:false});
  const add=(geo,mat,p,parent=group)=>{const o=new T.Mesh(geo,mat);o.position.fromArray(p);parent.add(o);return o;};
  const door=SWIM.door,dy=door[1]+1.35,dz=A.front+.06;
- for(const x of [door[0]-.9,door[0]+.9])add(new T.BoxGeometry(.055,2.7,.055),cyan,[x,dy,dz]);
- for(const y of [door[1]+.03,door[1]+2.7])add(new T.BoxGeometry(1.85,.055,.055),cyan,[door[0],y,dz]);
- add(new T.PlaneGeometry(1.75,2.65),new T.MeshBasicMaterial({color:0x66ddff,transparent:true,opacity:.12,side:T.DoubleSide,depthWrite:false}),[door[0],dy,dz]);
+ for(const x of [door[0]-.9,door[0]+.9])add(new T.BoxGeometry(.1,2.7,.08),cyan,[x,dy,dz]);
+ for(const y of [door[1]+.03,door[1]+2.7])add(new T.BoxGeometry(1.9,.1,.08),cyan,[door[0],y,dz]);
+ add(new T.PlaneGeometry(1.75,2.65),new T.MeshBasicMaterial({color:0x9af6ff,transparent:true,opacity:.18,side:T.DoubleSide,depthWrite:false}),[door[0],dy,dz]);
+ // A low, see-through pad points toward the door and keeps the reef visible.
+ const pad=add(new T.PlaneGeometry(1.65,.68),new T.MeshBasicMaterial({color:0x45e5ff,transparent:true,opacity:.28,side:T.DoubleSide,depthWrite:false,toneMapped:false}),[door[0],door[1]+.06,dz+.38]);pad.rotation.x=-Math.PI/2;
+ const arrow=new T.Shape();arrow.moveTo(-.19,-.22);arrow.lineTo(.19,-.22);arrow.lineTo(0,.22);arrow.closePath();
+ const mark=add(new T.ShapeGeometry(arrow),gold,[door[0],door[1]+.08,dz+.38]);mark.rotation.x=-Math.PI/2;
  add(new T.BoxGeometry(.06,.3,.1),gold,[door[0]+.62,dy,dz+.08]);
  const label=canvasTexture(768,192,(g,w,h)=>{g.fillStyle='#0a1928';g.fillRect(0,0,w,h);g.textAlign='center';g.fillStyle='#72edff';g.font='bold 44px sans-serif';g.fillText('AQUARIUM TREASURE',w/2,70);g.fillStyle='#ffffff';g.font='30px sans-serif';g.fillText('ENTER · SWIM · FIND 7 GEMS',w/2,133);});
  const face=new T.PlaneGeometry(2.8,.7);tank.updateWorldMatrix(true,false);
