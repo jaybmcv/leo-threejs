@@ -491,7 +491,8 @@ const chat=createChat({box:$('chat'),lines:$('chat-lines'),form:$('chat-form'),f
  // Hidden, the bubbles over heads go too.
  onQuiet(quiet){if(quiet)remotes?.hush();},
 });
-function openLog(){const p=controller.position;changeLog.open({near:p,nearFirst:changeLog.nearby(p).length>0});}
+// The log always opens on every change (Jay, 2026-11-03); Near you is one press away.
+function openLog(){changeLog.open({near:controller.position});}
 // A spot (link.js's readSpot form), looking as it says; true if it could be reached.
 function goToSpot(spot){spot=remapSpot(spot);if(!goTo({at:spot.at,yaw:spot.yaw,resolved:true}))return false;emote=null;follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;return true;}
 
