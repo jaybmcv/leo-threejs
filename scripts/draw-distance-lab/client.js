@@ -110,6 +110,7 @@ async function benchmark(message){
  if(run){send('busy');return;}if(!ready){send('not-ready');return;}
  const chosenViews=Array.isArray(message.views)?views.filter(v=>message.views.includes(v.id)):views.filter(v=>['west','centre','bridge'].includes(v.id));
  const chosen=Array.isArray(message.profiles)?profiles.filter(p=>message.profiles.includes(p.id)):profiles,rounds=Number.isInteger(message.rounds)?Math.max(1,Math.min(4,message.rounds)):2;if(!chosen.length){send('command-error',{meta:{error:'No valid benchmark profiles'}});return;}
+ if(chosen.some(p=>p.geometry)&&!api.geometry()?.stats.ready){send('Waiting for prepared geometry pack');return;}
  if(paused)resume();const inputEnabled=api.input.enabled,previousMode=api.follow.mode;api.input.enabled=false;clearInput();
  run={id:'distance-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),rows:[],events:[],meta:null,total:rounds*chosen.length*chosenViews.length*2};send('running',{progress:{runId:run.id,completed:0,total:run.total,phase:'settling viewport'}});
  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));

@@ -42,3 +42,7 @@ Raw runs remain under `.qa/draw-distance-results/`; summarized evidence is in th
 Runtime-only building uses the separately documented [freshness backport](2026-11-03-runtime-freshness-backport.md), preserving artifact `51f2878d0e5da865c38f7622ed48f5ec07f3f373f358d39701fe9638612a18d7`. No main merge, public deployment, lounge artwork or exterior artwork change is included.
 
 Further substantial savings will need broader precomputed LOD coverage and fewer remaining submissions; these results do not establish a 60 FPS target or physical-phone performance.
+
+## Superseding startup and settings update
+
+The automatic choice and precomputed render-pack work in [the render-pack note](2026-11-03-atrium-render-packs.md) supersedes this experiment's manual-only default and 5.6-second visitor-side generation. Existing measurements above remain historical, not new results for the precomputed packs.

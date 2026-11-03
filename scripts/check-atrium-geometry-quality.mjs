@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {MeshoptSimplifier} from 'meshoptimizer/simplifier';
-import {atriumScaleBound,compactAtriumGeometry,simplifyAtriumGeometry,eligibleAtriumMesh,optimizeAtriumGeometry} from '../src/v2/atrium-geometry-quality.js';
-await MeshoptSimplifier.ready;
+import {initializeAtriumSimplifier,atriumScaleBound,compactAtriumGeometry,simplifyAtriumGeometry,eligibleAtriumMesh,optimizeAtriumGeometry} from '../src/v2/atrium-geometry-quality.js';
+await initializeAtriumSimplifier();
 let checks=0;const pass=name=>{checks++;console.log('PASS '+name);};
 function ring(){
  const g=new T.PlaneGeometry(10,10,24,24),ix=[];

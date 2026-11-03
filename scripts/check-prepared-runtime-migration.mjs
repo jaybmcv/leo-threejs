@@ -9,7 +9,7 @@ const current=await geometryIdentity(),options={artifactSha256:artifact.sha256};
 let checks=0;const check=(condition,message)=>{assert(condition,message);checks++;};
 const changed=(key,value)=>{const next=structuredClone(current);if(value===undefined)delete next.files[key];else next.files[key]=value;next.hash=sha(JSON.stringify(next.files));return next;};
 check(await compatiblePreparedSources(previous,current,options),'Verified legacy artifact must accept the exact dependency-contract migration');
-for(const runtime of ['src/walk/main.js','src/walk/main.authoring.js','src/walk/main.prepared.js','src/walk/main.public.js','src/walk/graphics-settings.js','src/v2/atrium-quality.js'])
+for(const runtime of ['src/walk/main.js','src/walk/main.authoring.js','src/walk/main.prepared.js','src/walk/main.public.js','src/walk/graphics-settings.js','src/v2/atrium-quality.js','src/v2/atrium-geometry-quality.js','src/v2/atrium-geometry-runtime.js','src/v2/atrium-geometry-pack.js','src/v2/atrium-geometry-transport.js'])
  check(!(runtime in current.files),'Runtime edit must not enter geometry identity: '+runtime);
 for(const producer of ['src/model.js','src/plan/layout-v2.js','src/walk/prepare.authoring.js','package-lock.json','src/walk/assets/hydro-nip-main-logo.jpg']){
  check(producer in current.files,'Producer must remain tracked: '+producer);

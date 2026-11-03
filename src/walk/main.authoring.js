@@ -1,5 +1,5 @@
-import {optimizeAtriumGeometry} from '../v2/atrium-geometry-quality.js';
-import {getAtriumQuality} from '../v2/atrium-quality.js';
+import {createAtriumGeometryRuntime} from '../v2/atrium-geometry-runtime.js';
+import {getAtriumQuality,observeAtriumFrame} from '../v2/atrium-quality.js';
 import {mountGraphicsSettings} from './graphics-settings.js';
 let atriumGeometry=null,graphicsSettings=null;
 import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
@@ -367,7 +367,7 @@ async function buildShip(){
  }
  await savePreparedWalk(ship,{colliders,baked,haze:ship.v2Haze,lounge,restSpots,seats:prepared.seats});
  await new Promise(()=>{});
- isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=await optimizeAtriumGeometry(baked,renderer,{getQuality:getAtriumQuality});
+ isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});
 }
 let imagingScans=null;
 let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
@@ -682,7 +682,7 @@ let last=performance.now(),acc=0,lastHud=0,lastHeading=heading,lastSpeed=0,turnR
 const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WALKER.prone};
 renderer.setAnimationLoop(()=>{
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
- const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);last=now;
+ const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen});last=now;
  const k=input.read();if(graphicsSettings?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
  const fwd=follow.forward(),right=new T.Vector3(-fwd.z,0,fwd.x);
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);

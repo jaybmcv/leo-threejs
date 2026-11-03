@@ -1,6 +1,7 @@
-import {getAtriumQuality,setAtriumQuality,subscribeAtriumQuality} from '../v2/atrium-quality.js';
+import {getAtriumQuality,getAtriumQualitySelection,setAtriumQuality,subscribeAtriumQuality} from '../v2/atrium-quality.js';
 
 const choices=[
+ ['auto','Auto (recommended)','Choose for this device and adjust detail as you play.'],
  ['high','High','Keep the most geometry detail throughout the atrium.'],
  ['balanced','Balanced','Simplify distant geometry while keeping nearby details.'],
  ['performance','Performance','Simplify geometry sooner to reduce rendering work.'],
@@ -54,21 +55,24 @@ export function mountGraphicsSettings({onOpenChange=()=>{}}={}){
   radio.addEventListener('change',()=>{if(radio.checked)setAtriumQuality(value);});
  }
  const note=el('p',{className:'graphics-note',textContent:'Changes apply immediately and are remembered on this browser. The Res button controls image sharpness separately.'});
+ const autoStatus=el('p',{className:'graphics-note'});autoStatus.setAttribute('role','status');autoStatus.setAttribute('aria-live','polite');
  const actions=el('div',{className:'graphics-actions'}),done=el('button',{type:'button',textContent:'Done'});
- actions.append(done);dialog.append(title,description,fieldset,note,actions);
+ actions.append(done);dialog.append(title,description,fieldset,autoStatus,note,actions);
  document.head.append(style);document.body.append(dialog);mount.append(button);
  const more=document.getElementById('tools-more'),previousMoreLabel=more?.getAttribute('aria-label');
  if(more)more.setAttribute('aria-label','More buttons: view, sound, resolution, graphics detail');
  let opened=false,returnFocus=null,destroyed=false;
  const refresh=()=>{
-  const current=getAtriumQuality();for(const [value,radio]of radios)radio.checked=value===current;
-  button.setAttribute('aria-label','Graphics detail: '+choices.find(c=>c[0]===current)[1]);
+  const current=getAtriumQualitySelection(),effective=getAtriumQuality();for(const [value,radio]of radios)radio.checked=value===current;
+  const label=choices.find(c=>c[0]===effective)[1];
+  button.setAttribute('aria-label','Graphics detail: '+(current==='auto'?'Auto — '+label:label));
+  autoStatus.textContent=current==='auto'?'Currently using '+label+'. Manual choices stay fixed.':'Your chosen detail level stays fixed.';
  };
  const unsubscribe=subscribeAtriumQuality(refresh);refresh();
  function open(){
   if(opened||destroyed)return;
   returnFocus=document.activeElement;mount.closest('.tools')?.classList.remove('more-open');more?.setAttribute('aria-expanded','false');onOpenChange(true);
-  try{dialog.showModal();opened=true;refresh();radios.get(getAtriumQuality()).focus();}
+  try{dialog.showModal();opened=true;refresh();radios.get(getAtriumQualitySelection()).focus();}
   catch(error){onOpenChange(false);throw error;}
  }
  function closed(){

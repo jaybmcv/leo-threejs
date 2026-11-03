@@ -1,5 +1,4 @@
 import * as T from 'three';
-import {MeshoptSimplifier} from 'meshoptimizer/simplifier';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {createDetailViewGuard} from './detail-lod.js';
 
@@ -17,6 +16,15 @@ const bytesPerVertex=g=>Object.values(g.attributes).reduce((sum,a)=>sum+a.itemSi
 const memory=g=>g.attributes.position.count*bytesPerVertex(g)+(g.index?.count||0)*4;
 const inert=stats=>({update(){},setEnabled(){},dispose(){},stats});
 const sourceVertices=new WeakMap();
+const geometryStates=new WeakMap();
+let MeshoptSimplifier;
+// Generation is an authoring/build concern. Pack hydration never initializes WASM.
+export async function initializeAtriumSimplifier(){
+ if(!MeshoptSimplifier)({MeshoptSimplifier}=await import('meshoptimizer/simplifier'));
+ if(!MeshoptSimplifier.supported)return false;
+ await MeshoptSimplifier.ready;return true;
+}
+export const getAtriumGeometryState=controller=>geometryStates.get(controller);
 export function atriumScaleBound(matrix){
  const e=matrix.elements,frobenius=Math.hypot(e[0],e[1],e[2],e[4],e[5],e[6],e[8],e[9],e[10]);
  const norm1=Math.max(Math.abs(e[0])+Math.abs(e[1])+Math.abs(e[2]),Math.abs(e[4])+Math.abs(e[5])+Math.abs(e[6]),Math.abs(e[8])+Math.abs(e[9])+Math.abs(e[10]));
@@ -83,18 +91,18 @@ export async function optimizeAtriumGeometry(baked,renderer,{getQuality=()=> 'ba
  const stats={enabled:true,ready:false,fallback:false,strategy:'static-spatial-merge',extensionIndependent:true,batches:0,sources:0,mergedSources:0,unmergedLOD:0,lodGeometries:0,memoryBytes:0,budgetBytes:budget,fullTriangles:0,selectedTriangles:0,lodInstances:0,lodSwitches:0,skipped:0,buildMs:0,simplificationMs:0,quality:'balanced'};
  if(globalThis.__leoPreparedBuild){stats.skippedAuthoring=true;return inert(stats);}
  const started=performance.now(),clusters=[],candidates=[],entries=[],ownedFull=[];
- let checkpoint=started,enabled=true,disposed=false,last=-Infinity,lastQuality=null,lastHeight=null,force=true,viewGuard=createDetailViewGuard();
+ let checkpoint=started;
  const pause=async()=>{if(performance.now()-checkpoint>16){await yieldWork();checkpoint=performance.now();}};
- let simplifierReady=false;try{if(MeshoptSimplifier.supported){await MeshoptSimplifier.ready;simplifierReady=true;}}catch{/* Exact rendering remains available without WASM. */}
- for(const group of baked.bands.values()){
+ let simplifierReady=false;try{simplifierReady=await initializeAtriumSimplifier();}catch{/* Exact rendering remains available without WASM. */}
+ for(const[bandKey,group]of baked.bands){
   const {band,top=band}=group.userData;if(!Number.isFinite(band)||top<5)continue;
   const buckets=new Map();
-  for(const o of [...group.children]){
+  for(const[childIndex,o]of [...group.children].entries()){
    if(!eligibleAtriumMesh(o))continue;
    const box=(o.geometry.boundingBox||new T.Box3().setFromBufferAttribute(o.geometry.attributes.position)).clone().applyMatrix4(o.matrix),center=box.getCenter(new T.Vector3());
-   const row={o,original:o.geometry,visible:o.visible,matrix:o.matrix.clone(),group,used:false};candidates.push(row);
+   const row={o,original:o.geometry,visible:o.visible,matrix:o.matrix.clone(),group,bandKey,childIndex,used:false};candidates.push(row);
    if(!Number.isFinite(center.x)||!Number.isFinite(center.z))continue;
-   const key=[o.material.uuid,o.renderOrder,o.layers.mask,o.castShadow,o.receiveShadow,signature(o.geometry),Math.floor(center.x/80),Math.floor(center.z/80)].join('|');
+   const key=[o.material.uuid,o.renderOrder,o.layers.mask,o.castShadow,o.receiveShadow,o.frustumCulled,signature(o.geometry),Math.floor(center.x/80),Math.floor(center.z/80)].join('|');
    let list=buckets.get(key);if(!list)buckets.set(key,list=[]);list.push(row);
   }
   for(const list of buckets.values())if(list.length>=2){
@@ -112,9 +120,9 @@ export async function optimizeAtriumGeometry(baked,renderer,{getQuality=()=> 'ba
    merged=mergeGeometries(parts,false);if(!merged)throw Error('Incompatible static merge');merged.computeBoundingBox();merged.computeBoundingSphere();
    const bytes=memory(merged)+192;if(bytes>mergeBudget-stats.memoryBytes){merged.dispose();merged=null;continue;}
    const first=rows[0].o,mesh=new T.Mesh(merged,first.material);mesh.name='V2_atrium_merged_'+first.material.name;
-   mesh.matrixAutoUpdate=false;mesh.renderOrder=first.renderOrder;mesh.layers.mask=first.layers.mask;mesh.castShadow=first.castShadow;mesh.receiveShadow=first.receiveShadow;
+   mesh.matrixAutoUpdate=false;mesh.renderOrder=first.renderOrder;mesh.layers.mask=first.layers.mask;mesh.castShadow=first.castShadow;mesh.receiveShadow=first.receiveShadow;mesh.frustumCulled=first.frustumCulled;
    mesh.userData={noCollide:true,renderOnly:true,atriumGeometryQuality:true,sources:rows.map(r=>r.o.uuid)};
-   group.add(mesh);mesh.updateWorldMatrix(true,false);for(const r of rows){r.used=true;r.o.visible=false;}
+   group.add(mesh);mesh.updateWorldMatrix(true,false,true);for(const r of rows){r.used=true;r.o.visible=false;}
    entries.push({mesh,rows,full:merged,merged:true,levels:[{geometry:merged,error:0,triangles:triangles(merged)}],level:0});ownedFull.push(merged);stats.memoryBytes+=bytes;stats.batches++;stats.mergedSources+=rows.length;
   }catch{merged?.dispose();stats.skipped+=rows.length;}
   finally{for(const p of parts)p.dispose();}
@@ -144,12 +152,19 @@ export async function optimizeAtriumGeometry(baked,renderer,{getQuality=()=> 'ba
   }finally{if(analysis!==full)analysis.dispose();}
  }
  for(let i=entries.length-1;i>=0;i--)if(!entries[i].merged&&entries[i].levels.length===1)entries.splice(i,1);
+ stats.sources=entries.reduce((sum,e)=>sum+e.rows.length,0);stats.unmergedLOD=entries.filter(e=>!e.merged).length;stats.lodGeometries=entries.reduce((sum,e)=>sum+e.levels.length-1,0);stats.fullTriangles=entries.reduce((sum,e)=>sum+e.levels[0].triangles,0);stats.selectedTriangles=stats.fullTriangles;stats.buildMs=performance.now()-started;stats.ready=true;
+ return createAtriumGeometryController({baked,entries,ownedFull,stats},{getQuality});
+}
+
+// The lightweight controller is shared by offline-generated packs and authoring.
+export function createAtriumGeometryController(state,{getQuality=()=> 'balanced'}={}){
+ const{entries,ownedFull,stats}=state;
+ let enabled=true,disposed=false,last=-Infinity,lastQuality=null,lastHeight=null,force=true,viewGuard=createDetailViewGuard();
  for(const entry of entries){
   entry.mesh.updateWorldMatrix(true,false);entry.scale=atriumScaleBound(entry.mesh.matrixWorld);
   const local=entry.merged?entry.full.boundingSphere:entry.localSphere;
   entry.sphere=local.clone();entry.sphere.center.applyMatrix4(entry.mesh.matrixWorld);entry.sphere.radius*=entry.scale;
  }
- stats.sources=entries.reduce((sum,e)=>sum+e.rows.length,0);stats.unmergedLOD=entries.filter(e=>!e.merged).length;stats.lodGeometries=entries.reduce((sum,e)=>sum+e.levels.length-1,0);stats.fullTriangles=entries.reduce((sum,e)=>sum+e.levels[0].triangles,0);stats.selectedTriangles=stats.fullTriangles;stats.buildMs=performance.now()-started;stats.ready=true;
  const choose=(e,camera,height,quality)=>{
   if(quality==='high'||e.levels.length===1||!Number.isFinite(height)||height<=0)return 0;
   const m=camera.matrixWorldInverse.elements,c=e.sphere.center,depth=-(m[2]*c.x+m[6]*c.y+m[10]*c.z+m[14]),near=depth-e.sphere.radius;
@@ -160,7 +175,7 @@ export async function optimizeAtriumGeometry(baked,renderer,{getQuality=()=> 'ba
   for(let i=e.levels.length-1;i>0;i--)if(e.levels[i].error*e.scale*projection<=pixels*(i<=e.level?1.15:.85))return i;
   return 0;
  };
- return{
+ const controller={
   stats,
   update(camera,pixelHeight=720){
    if(disposed||!enabled)return;camera.updateMatrixWorld(true);const requested=getQuality(),quality=['high','balanced','performance'].includes(requested)?requested:'balanced',now=performance.now(),change=quality!==lastQuality||pixelHeight!==lastHeight;
@@ -176,5 +191,5 @@ export async function optimizeAtriumGeometry(baked,renderer,{getQuality=()=> 'ba
   dispose(){
    if(disposed)return;disposed=true;for(const e of entries){for(const r of e.rows){r.o.visible=r.visible;r.o.geometry=r.original;}if(e.merged)e.mesh.removeFromParent();for(const lod of e.levels.slice(1))disposeLOD(lod.geometry);}for(const g of ownedFull)g.dispose();stats.enabled=false;
   },
- };
+ };geometryStates.set(controller,state);return controller;
 }
