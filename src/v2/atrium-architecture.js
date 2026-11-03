@@ -1,4 +1,5 @@
 import {ATRIUM_PROTOTYPE} from '../plan/atrium-v2.js';
+import {addFlowingAtriumRibs} from './flowing-ribs.js';
 import {atriumFloorGeometry,atriumFloorMaterial,skyCeilingGeometry,skyMaterial} from './atrium-surfaces.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -32,6 +33,7 @@ export function addPhase6Architecture(ship,root,layout){
  // Open atrium-facing room carcasses only. Their glass front stays open;
  // the opaque sides/back/floor/ceiling describe the real room behind it.
  const cabins=placements().filter(c=>c.view==='atrium');
+ const flowingRibs=addFlowingAtriumRibs(root,cabins);
  for(const side of[-1,1]){const list=cabins.filter(c=>doorSide(c)===side),g=new T.BoxGeometry(3.18,3.4,7.4),p=g.attributes.position,keep=[];
   for(let i=0;i<g.index.count;i+=3){const ids=[0,1,2].map(k=>g.index.getX(i+k));if(!ids.every(j=>Math.abs(p.getZ(j)+side*3.7)<.0001))keep.push(...ids);}
   g.setIndex(keep);g.clearGroups();const o=new T.InstancedMesh(g,new T.MeshBasicMaterial({name:'P6_atrium_room_returns',color:0xded4bd,side:T.DoubleSide}),list.length);
@@ -45,7 +47,7 @@ export function addPhase6Architecture(ship,root,layout){
    if(t.every(q=>q.y< -20)||t.every(q=>q.y>40.1)||!t.some(q=>(q.x>145||q.x< -122)&&Math.abs(q.z)<30))continue;for(const q of t)endFaces.push(q.x,q.y,q.z);}
  });
  if(endFaces.length){const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(endFaces,3));g.computeBoundingBox();g.computeBoundingSphere();const o=new T.Mesh(g,new T.MeshBasicMaterial({name:'P6_distant_finished_end_skin',color:0xd9dcd6,side:T.DoubleSide}));o.name='P6_distant_finished_end_skin';o.frustumCulled=false;o.userData={noCollide:true,phase6Architecture:true,distantOnly:true,finishedWebTriangles:true};root.add(o);}
- root.userData.phase6Architecture={actualSources:selected.length,materialClasses:buckets.size,sourceNames:[...new Set(sourceNames)],atriumCabins:cabins.length,proxyClasses:2,endSkinTriangles:endFaces.length/9,interiorReach:ATRIUM_PROTOTYPE.interiorReach};
+ root.userData.phase6Architecture={actualSources:selected.length,materialClasses:buckets.size,sourceNames:[...new Set(sourceNames)],atriumCabins:cabins.length,proxyClasses:2,endSkinTriangles:endFaces.length/9,interiorReach:ATRIUM_PROTOTYPE.interiorReach,flowingRibs};
  for(const o of root.children)if(o.userData.distantOnly)o.visible=false;
  return root.userData.phase6Architecture;
 }

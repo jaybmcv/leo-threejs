@@ -2,7 +2,7 @@ import {ReplayGeometry,replayMerged} from "../v2/prepared-geometry-replay.public
 import * as T from 'three';
 import {roomObject} from '../plan/rooms.js';
 import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {plantClumps} from '../stylized-plants.js';
+import {createLayeredConservatory,preserveBlossomRandomSequence} from './layered-conservatory.js';
 import {seeded} from '../polish-kit.js';
 
 // The aft planter of the Deck 17 garden commons (Neighborhood 10, the commons the tour opens in) becomes a cherry
@@ -168,23 +168,8 @@ export function createBlossomGarden(ship){
  });
  {const o=new T.Mesh(replayMerged("src/walk/blossom.js",nativeMergeGeometries,stones),stoneMat);o.name='Blossom_stone_wall';o.castShadow=true;o.receiveShadow=true;frame.add(o);stones.forEach(g=>g.dispose());}
 
- // Green underplanting, then flowers of every kind through it, clear of the trunk and its roots, the pond and the bench.
- const open=(x,z)=>Math.hypot(x-BED.x,z-BED.z)>1.3&&!inPond(x,z,.45)&&!(x>139.6&&x<141.95&&z>33.85&&z<35.95);
- plantClumps(frame,[[136.6,145.4,27.6,32.75],[140.3,145.4,32.75,33.85],[141.95,145.4,33.85,36.4],[140.3,141.95,35.95,36.4]].map(([x0,x1,z0,z1])=>
-  new T.Box3(new T.Vector3(x0,0,z0),new T.Vector3(x1,SOIL,z1))),{seed:9518,density:.7,flowers:false});
- const spot=()=>{for(;;){const x=BED.x+(rnd()-.5)*8,z=BED.z+(rnd()-.5)*8;if(open(x,z))return [x,z];}};
- const daisy=replayMerged("src/walk/blossom.js",nativeMergeGeometries,[...Array.from({length:6},(_,i)=>tinted(new ReplayGeometry("src/walk/blossom.js:12",T.SphereGeometry,1,6,3).scale(.07,.014,.028).translate(.065,0,0).rotateY(i/6*Math.PI*2),0xffffff)),tinted(new ReplayGeometry("src/walk/blossom.js:13",T.SphereGeometry,.032,6,4),0xffc23a)]);
- const tulip=tinted(new ReplayGeometry("src/walk/blossom.js:14",T.LatheGeometry,[[0,0],[.05,.02],[.065,.07],[.05,.13]].map(([x,y])=>new T.Vector2(x,y)),6),0xffffff);
- const spike=replayMerged("src/walk/blossom.js",nativeMergeGeometries,Array.from({length:6},(_,i)=>tinted(new ReplayGeometry("src/walk/blossom.js:15",T.IcosahedronGeometry,.04-i*.004,0).translate(0,i*.05,0),0xffffff)));
- const kinds=[[daisy,[0xffffff,0xfff2a8,0xff8fc0,0xffb347,0xd27bff],110],[tulip,[0xe8323c,0xff5a8a,0xffd23f,0xff7a1a,0xb04ad8,0xffffff],95],[spike,[0x8a5cf0,0x5a7cf0,0xd65cc8,0xc9a6ff],70]];
- const stems=[],petalMat=white('Blossom_flower',{vertexColors:true,side:T.DoubleSide,roughness:.6});
- for(const [geometry,colors,count] of kinds){
-  frame.add(scatter('Blossom_flowers',geometry,petalMat,colors,count,rnd,()=>{
-   const [x,z]=spot(),h=.2+rnd()*.35;stems.push([x,z,h]);
-   return [new T.Vector3(x,SOIL+h,z),new T.Euler((rnd()-.5)*.4,rnd()*6,(rnd()-.5)*.4),new T.Vector3().setScalar(.85+rnd()*.5)];}));
- }
- frame.add(scatter('Blossom_flower_stems',new ReplayGeometry("src/walk/blossom.js:16",T.CylinderGeometry,.008,.011,1,4).translate(0,.5,0),white('Blossom_stem'),[0x4f7f45,0x5f9c46],stems.length,rnd,i=>
-  [new T.Vector3(stems[i][0],SOIL,stems[i][1]),new T.Euler(),new T.Vector3(1,stems[i][2],1)]));
+ // Selected 5B: grouped layered planting, scoped to this blossom garden only.
+ frame.add(createLayeredConservatory());preserveBlossomRandomSequence(rnd);
 
  // Fallen petals carpet the soil, float on the pond and spill onto the floor round the wall.
  const H=BED.half,petal=new ReplayGeometry("src/walk/blossom.js:17",T.CircleGeometry,.045,5).rotateX(-Math.PI/2).scale(1,1,.6),petalColour=white('Blossom_petal',{side:T.DoubleSide,roughness:.85});

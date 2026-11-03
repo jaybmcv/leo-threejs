@@ -1,0 +1,84 @@
+# Atrium draw-distance experiment
+
+Run from the repository root, with an existing verified `dist-v2` prepared build:
+
+```powershell
+node scripts/draw-distance-lab.mjs
+```
+
+Open `http://127.0.0.1:4195/`. The builder reuses the existing geometry and makes a separate instrumented runtime in `.qa/draw-distance-lab`. It does not regenerate geometry or change production source files. `provenance.json` records the source commit, prepared asset and generated runtime.
+
+Use the visible profile/view controls to inspect the result, then run a comparison. Keep this the only active LEO renderer. The iframe has a fixed rendering buffer even when its display is scaled to fit the panel. Device pixel ratio is one and automatic resolution changes are disabled for the experiment.
+
+| Profile | Camera | Visibility rays / vertical probes | Detail policy |
+| --- | ---: | ---: | --- |
+| Previous | 150 m | 90 / 12 m | Previous limits |
+| Long | 300 m | 300 / 64 m | Existing furniture limits |
+| Whole atrium | 450 m | 450 / 80 m | Existing furniture limits |
+| Extra detail | 450 m | 450 / 80 m | All current-deck cabin furniture; phase-6 atrium owners kept in frustum |
+| Camera only | 450 m | 90 / 12 m | Existing visibility selection |
+| Open atrium | 450 m | Full atrium height while in the open atrium; 90 / 12 m elsewhere | Public atrium owners kept in frustum; known remaining room owners beyond 90 m skipped while in the atrium |
+
+The long profiles also move the far-haze near plane to camera far minus 10 m and lighten atrium distance fog. Cabin privacy, the current-deck cabin gate, and the 45 m lifeboat-interior limit remain. The open-atrium profile keeps the 40-nearest-cabin limit.
+
+Open-atrium public owners include phase-6 zones and terraces, bow cafés, neighborhood cafés/dining, garden commons, public-front rooms, circulation, the voyage forum, observation lounge and the two deck-16 shared rooms. They bypass the launch-D nearby-deck gate when viewed from the open atrium. Unknown owners retain their normal visibility tests. Entering an enclosed café/garden can leave the open-atrium classification and return to the existing traced vertical selection.
+
+Each run uses two reversed-order rounds, three supported standing viewpoints, and still/turning-camera samples: 3 seconds of warmup and 6 seconds of sampling per segment. The 1080p button compares Previous, Camera only and Open atrium. The 720p button compares all eight available profiles from the original three viewpoints. The paired-confirmation button compares Previous and Open atrium at 1080p, switching profiles for each view/motion instead of grouping all views under one profile. This keeps the paired samples closer in time.
+
+Measurements include CPU animation-callback time, frame intervals, all-pass GPU timer queries, draw calls, triangles, span queries and phase-4 queries. GPU timers cover all three render passes and exclude unavailable/disjoint results. CPU and GPU times overlap and must not be added. GPU elapsed time can include command-feed stalls. Frame intervals include browser/display scheduling. Rendering instrumentation is shared by every profile.
+
+Raw arrays are saved after each segment to `.qa/draw-distance-results/*.jsonl`. Each row records validity, hidden frames, context/error events, actual hardware/backend/resolution and starting/ending position. The live table shows the average segment mean and the **worst segment p95**. Analyze saved runs with:
+
+```powershell
+node scripts/draw-distance-lab/analyze.mjs
+```
+
+`analysis.json` contains pooled percentiles, equal-weight segment means, paired deltas and per-view repeat results. Pooled p95 and worst-segment p95 answer different questions; label them explicitly in reports.
+
+The regular runtime uses the selective 450 m policy, now extended by the camera-visible boundary fix described below. This lab retains the previous 150 m setting for comparison; its `current` result ID is preserved for compatibility with the original measurements. The runtime adapters assert exact source matches so an incompatible upstream change fails clearly. Reassess the public-owner classification and rerun the comparison after integrating another branch's visibility/performance work. Desktop results do not establish physical-phone or older-laptop performance.
+
+The shared policy is in `src/v2/atrium-render-policy.js`. All four walk entry points use it. Entering the open atrium enables its full height immediately; leaving invalidates the prior traced-span cache, including when returning to an identical indoor pose. Phase-4 selection also bypasses its throttle on an atrium/room transition. Focused regression checks exercise the actual visibility modules and each entry point's span function:
+
+```powershell
+node scripts/check-atrium-draw-distance.mjs
+```
+
+Use `node scripts/draw-distance-lab.mjs --build-only` to refresh the comparison files while an existing lab server is running. Rebuild these files after refreshing `dist-v2` so the comparison points to its current prepared asset.
+
+## Camera-visible atrium boundary regression
+
+The additional `boundary450` profile enables camera-aware sight through adjoining
+openings and glass, and conservative per-instance frustum/subpixel culling.
+`boundaryNoLOD` enables the same sight detection without either detail cutoff.
+`atrium450` preserves the previous position-only switch for comparison.
+
+**Compare boundary fix · 1080p** runs these three profiles in two reversed,
+paired rounds from the neighborhood approach, linen doorway and west atrium.
+Each view has still and turning samples. Actual positions, full-height state,
+sight-query time, offscreen counts and subpixel counts are exposed in the lab.
+**Capture current game view** exports the actual rendered canvas into the page,
+with its profile, view and position. It contains the 3D view rather than the HUD.
+
+These adapters are a diagnostic reuse of verified geometry. They do not replace
+the normal prepared freshness check or authorize publishing a stale artifact.
+The production fix retains local traced bands outside the atrium and unions them
+with the visible atrium height. A bounded, glass-aware coverage test only hides
+the atrium when it can prove the visible entrance is covered; uncertain cases
+retain it. Camera matrices are refreshed before culling. Large camera changes
+bypass the normal query interval, and detail frusta have a motion margin.
+
+Regression checks:
+
+```powershell
+node scripts/check-atrium-sight.mjs
+node scripts/check-atrium-draw-distance.mjs
+node scripts/check-atrium-height-visibility.mjs
+node scripts/check-detail-lod.mjs
+```
+
+The small-detail cutoff is a render omission below a conservative projected
+diameter of 0.75 drawing-buffer pixels (0.54 while already visible). It is not
+mesh decimation. Existing structural distant rendering remains in use. The
+supplied prepared geometry bounds must be preserved because vertex arrays can
+be pooled across unrelated meshes. Original instance matrices, owner runs,
+collision data and seat identifiers remain complete.

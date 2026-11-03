@@ -1,4 +1,10 @@
-import {fastAtriumSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
+import {createAtriumGeometryRuntime} from '../v2/atrium-geometry-runtime.js';
+import {getAtriumQuality,observeAtriumFrame} from '../v2/atrium-quality.js';
+import {mountGraphicsSettings} from './graphics-settings.js';
+let atriumGeometry=null,graphicsSettings=null;
+import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
+import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
+import {createAtriumSight} from '../v2/atrium-sight.js';
 import {initBrowserBuildCache} from '../v2/build-cache.authoring.js';import {installAuthoringWorkers} from '../v2/authoring-workers.authoring.js';await initBrowserBuildCache();await installAuthoringWorkers();
 import {savePreparedWalk} from '../v2/prepared-authoring.authoring.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
@@ -65,6 +71,7 @@ import {RemotePlayers} from './remotes.authoring.js';
 import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.authoring.js';
 import {tileLiftFloor} from './lift-tile-floor.authoring.js';
 import {createRecoveryMood} from './recovery.js';
+import {createArrivalMood} from './arrival-mood.js';
 import {Marks} from './marks.authoring.js';
 import {createChat} from './chat.js';
 import {createHostess} from './hostess.authoring.js';
@@ -193,9 +200,9 @@ const drift=createStarDrift({count:phone?320:520,still:matchMedia('(prefers-redu
 renderer.autoClear=false;
 // A light haze down the long corridors lets the far plane stop at 150 m.
 scene.fog=new T.Fog(0xd9dcd6,70,148);
-const camera=new T.PerspectiveCamera(phone?70:62,1,.05,150);
+const camera=new T.PerspectiveCamera(phone?70:62,1,.05,ATRIUM_VIEW.far);
 // Past the far plane, the ship in haze rather than open space (haze.js); drawn between the sky and the ship.
-const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCamera(60,1,140,1500);
+const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCamera(60,1,ATRIUM_VIEW.far-10,1500);
 const hemi=new T.HemisphereLight(0xfff6e6,0x5d6b75,1.05);scene.add(hemi);
 const fill=new T.DirectionalLight(0xfff1dc,.55);fill.position.set(.3,1,.2);scene.add(fill);
 loadEnvironment(renderer).then(t=>{scene.environment=t;quietFloorReflections(scene,t);}).catch(()=>{});
@@ -249,7 +256,7 @@ async function buildShip(){
  // Deck 19's lift lobby and promenade up to the lounge: black ceramic tile (lift-tile-floor.js).
  tileLiftFloor(ship);
  // The crew recovery lounge's pod side dims the lights (recovery.js).
- recovery=createRecoveryMood(ship,{hemi,fill,scene});
+ recovery=createRecoveryMood(ship,{hemi,fill,scene});arrivalMood=createArrivalMood(ship,{hemi,fill,scene});
  }});
  ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
  loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;
@@ -361,10 +368,10 @@ async function buildShip(){
  }
  await savePreparedWalk(ship,{colliders,baked,haze:ship.v2Haze,lounge,restSpots,seats:prepared.seats});
  await new Promise(()=>{});
- isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);
+ isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});
 }
 let imagingScans=null;
-let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
 let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 // Lifeboat fittings (2,000 seats a deck with their headrests and harnesses, seen only through a hatch or from inside a
@@ -375,19 +382,30 @@ const NEAR_CABINS=40,BOAT_REACH=45,nearFrom=new T.Vector3(1e9,0,0);
 // corner, the camera can sit inside a column, and every ray then stopped on its back faces (a garden's roof was culled).
 // Seen through an opening from under a lower ceiling (the lounge from its access ramp), a taller room's ceiling can be in
 // view with no ray landing on it, so each ray also looks straight up and down from partway along for the space it crosses.
-const VIEW_RAYS=[];for(const x of [-.96,-.5,0,.5,.96])for(const y of [-.96,-.5,0,.5,.96])VIEW_RAYS.push([x,y]);let viewSpan=[0,0],lastSpan=0;
+const VIEW_RAYS=[];for(const x of [-.96,-.5,0,.5,.96])for(const y of [-.96,-.5,0,.5,.96])VIEW_RAYS.push([x,y]);let viewSpan=[0,0],localViewSpan=[0,0],lastSpan=-Infinity,atriumSpanActive=false,atriumSight=null;
 function span(p,now){
- const atrium=fastAtriumSpan(p);if(atrium)return atrium;
+ // Sight through an adjoining doorway keeps the whole atrium, even outside its footprint.
+ setAtriumView(p);
+ const inside=inOpenAtrium();
+ setAtriumSight(ATRIUM_VIEW.fullHeight&&(inside||(atriumSight??=createAtriumSight(colliders)).update(camera,p,now)));
+ const atriumBand=atriumViewSpan();if(inside&&atriumBand){atriumSpanActive=true;return viewSpan=atriumBand;}
+ // Returning indoors must recompute even at the same pose as the last indoor query.
+ if(atriumSpanActive){atriumSpanActive=false;lastSpan=-Infinity;spanChanged(camera,p,NaN,NaN,colliders);}
 
- if(now-lastSpan<150)return viewSpan;lastSpan=now;if(!spanChanged(camera,p,0,0,colliders))return viewSpan;const spanStart=performance.now();
+ if(now-lastSpan>=150){lastSpan=now;if(spanChanged(camera,p,0,0,colliders)){
+ const spanStart=performance.now();
  let low=p.y-3,high=p.y+4;const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();
  const reach=y=>{low=Math.min(low,y-1);high=Math.max(high,y+1);};
  for(const [x,y] of VIEW_RAYS){ndc.set(x,y);ray.setFromCamera(ndc,camera);const hit=(spanQuery??=createVisibilityQuery(colliders)).raycast(ray.ray,90,.6),d=hit?hit.distance:90;reach(ray.ray.at(d,probe.origin).y);
   for(const f of [1/3,2/3])for(const s of [1,-1]){ray.ray.at(d*f,probe.origin);probe.direction.set(0,s,0);const h=(spanQuery??=createVisibilityQuery(colliders)).raycast(probe,12);if(h)reach(h.point.y);}}
- renderMetrics.span.push(performance.now()-spanStart);if(renderMetrics.span.length>600)renderMetrics.span.shift();return viewSpan=[low,high];
+ renderMetrics.span.push(performance.now()-spanStart);if(renderMetrics.span.length>600)renderMetrics.span.shift();localViewSpan=[low,high];
+ }}
+ // Preserve the observer's local floor/ceiling, including views from below Deck 6.
+ return viewSpan=atriumBand?[Math.min(localViewSpan[0],atriumBand[0]),Math.max(localViewSpan[1],atriumBand[1])]:localViewSpan;
 }
 function cull(p,now=performance.now()){
- cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now);showBands(baked.bands,low,high);let shown=false;
+ camera.updateMatrixWorld(true);
+ cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);let shown=false;
  for(const o of instanced){const [a,b]=o.userData.span,v=o.userData.cabins?a<p.y+3.5&&b>p.y-.5:a<high&&b>low;if(v&&!o.visible)shown=true;o.visible=v;}
  // Re-rank after 3 m of walking, or at once when another deck's cabins come into view.
  if(!shown&&nearFrom.distanceToSquared(p)<9)return;nearFrom.copy(p);
@@ -675,8 +693,8 @@ renderer.setAnimationLoop(()=>{
  // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
  if(hubPanel.isOpen()&&firstViewReady)return;
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
- const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);last=now;
- const k=input.read();follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
+ const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen});last=now;
+ const k=input.read();if(graphicsSettings?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
  const fwd=follow.forward(),right=new T.Vector3(-fwd.z,0,fwd.x);
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
  if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
@@ -747,12 +765,14 @@ renderer.setAnimationLoop(()=>{
  mct.update(dt,remotes,walker.hipHeight);
  // The lounge's doors open, and the cold room's strip curtain parts, for anyone near them.
  bodies.length=0;bodies.push(p);if(remotes)for(const r of remotes.remotes.values())bodies.push(r.cur);
+ if(arrivalMood)arrivalMood.update(dt,camera.getWorldPosition(eye));
  if(lounge)lounge.update(dt,bodies,camera.getWorldPosition(eye));
  if(recovery)recovery.update(dt,camera.getWorldPosition(eye));
  halloween?.update(dt,camera.getWorldPosition(eye),ambience.on);
  hexFloor?.update(dt,camera.getWorldPosition(eye),p,heading);
  leverPanel?.update(dt,p);
  gaming?.update(dt,camera.getWorldPosition(eye),p,remotes?[...remotes.remotes.values()]:[]);
+ arrivalMood?.apply();
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on);
  loungeFalls?.update(dt,p);
@@ -779,6 +799,7 @@ renderer.setAnimationLoop(()=>{
 });
 // One frame of the ship from `view`: the sky, the haze past the far plane, then the ship.
 function draw(view){
+ view.updateMatrixWorld(true);atriumGeometry?.update(view,renderer.domElement.height);
  for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,view);
 }
@@ -938,7 +959,7 @@ function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(collide
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
+function closePanels(){graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
 // The name others see over your head.
 $('aboard').addEventListener('click',()=>{
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
@@ -1011,6 +1032,7 @@ const pinballGame=createPinball({
 sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambience.toggle())));
 // Render resolution, set up with the renderer: each press steps High, Med, Low and round again.
 const resButton=$('resolution');setRes(res);
+graphicsSettings=mountGraphicsSettings({onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
 resButton.addEventListener('click',()=>{resChosen=true;setRes((res+1)%RES.length);try{localStorage.setItem(RES_KEY,RES[res]);}catch{}});
 // Held for a higher jump, as Space is.
 $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;input.jumpHeld=true;$('jump').setPointerCapture(e.pointerId);});

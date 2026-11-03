@@ -1,3 +1,4 @@
+import {reflectionGeometry,reflectionMaterial} from './reflection-terraces.js';
 import{communityDisplayParts}from'./community-displays.js';
 import {fitoutGeometry,material,atriumGlass} from './phase4-mesh-kit.js';
 import {walkCanvas} from '../walk/canvas.js';
@@ -16,10 +17,10 @@ export function buildPhase4Fitout(ship,layout,{rooms=null}={}){
  const signs=new Map();for(const p of data.parts.filter(p=>p.text)){let a=signs.get(p.deck);if(!a)signs.set(p.deck,a=[]);a.push(p);}const signMaterials=new Map();for(const[deck,all]of signs)for(let first=0;first<all.length;first+=32){const list=all.slice(first,first+32),atlas=deck+':'+first,c=walkCanvas();c.width=1024;c.height=128*list.length;const ctx=c.getContext('2d');ctx.fillStyle='#142d39';ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle='#f6dfb7';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 40px sans-serif';list.forEach((p,i)=>{const lines=p.text.split('\n');ctx.font='bold '+(lines.length>1?26:40)+'px sans-serif';lines.forEach((line,j)=>ctx.fillText(line,512,i*128+64+(j-(lines.length-1)/2)*32,990));p.signRow=i;p.signRows=list.length;p.signAtlas=atlas;});if(typeof c.data==='function')Object.defineProperty(c,'data',{value:undefined});const tx=new T.CanvasTexture(c);tx.colorSpace=T.SRGBColorSpace;signMaterials.set(atlas,new T.MeshStandardMaterial({name:'P4_menu_deck_'+deck+'_'+first,map:tx,roughness:.7}));}
  for(const p of data.parts){
   if(p.text){const g=new T.BoxGeometry(...p.size),uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setY(i,1-(p.signRow+1)/p.signRows+uv.getY(i)/p.signRows);const o=new T.Mesh(g,signMaterials.get(p.signAtlas));o.name='P4_menu_sign';o.position.set(...p.at);o.rotation.y=p.yaw;o.userData={noCollide:true,room:p.room,v2Deck:p.deck,phase4:true};root.add(o);continue;}
-  const key=[p.deck,p.part,p.mat,p.size.join(','),!!p.round,!!p.noCollide].join('|');let b=batches.get(key);if(!b)batches.set(key,b={...p,list:[]});b.list.push(p);
+  const key=[p.deck,p.part,p.mat,p.size.join(','),!!p.round,!!p.noCollide,JSON.stringify(p.reflectionShape||null)].join('|');let b=batches.get(key);if(!b)batches.set(key,b={...p,list:[]});b.list.push(p);
  }
  for(const b of batches.values()){
-  const geo=fitoutGeometry(b),o=new T.InstancedMesh(geo,(b.mat==='glass'?atriumGlass:material(b.mat)),b.list.length);o.name='P4_'+b.part;
+  const geo=reflectionGeometry(b)||fitoutGeometry(b),o=new T.InstancedMesh(geo,(reflectionMaterial(b.mat)||(b.mat==='glass'?atriumGlass:material(b.mat))),b.list.length);o.name='P4_'+b.part;
   b.list.forEach((p,i)=>o.setMatrixAt(i,new T.Matrix4().compose(new T.Vector3(...p.at),new T.Quaternion().setFromEuler(new T.Euler(0,p.yaw,p.roll||0)),new T.Vector3(1,1,1))));o.computeBoundingBox();o.computeBoundingSphere();
   const ownerRuns=[];b.list.forEach((p,i)=>{const last=ownerRuns.at(-1),component=p.component||p.room;if(last&&last.room===p.room&&last.component===component)last.count++;else ownerRuns.push({start:i,count:1,room:p.room,component});});o.userData={phase4:true,v2Deck:b.deck,noCollide:!!b.noCollide,roomOwners:[...new Set(b.list.map(p=>p.room))],ownerRuns};root.add(o);
  }

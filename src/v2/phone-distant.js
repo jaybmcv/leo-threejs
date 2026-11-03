@@ -4,6 +4,12 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {publicAsset} from './public-assets.js';
 export const PHONE_DISTANT_LIMITS={bytes:32*1024*1024,draws:32,hullTriangles:750000};
 export function lightDistantPreset({phone=false,multiDraw=true}={}){return phone||multiDraw===false||(typeof window!=='undefined'&&typeof navigator!=='undefined'&&((navigator.deviceMemory||8)<=4||(navigator.hardwareConcurrency||8)<=4));}
+export function omitDecorativeDistantRibs(haze){
+ const decorative=[];haze?.traverse(o=>{if(o.isInstancedMesh&&o.userData.distantProxy&&/^P6_Flowing_atrium_window_(reveal|inlay)$/.test(o.name))decorative.push(o);});
+ const triangles=decorative.reduce((sum,o)=>sum+(o.geometry.index?.count||o.geometry.attributes.position.count)/3*o.count,0);
+ for(const o of decorative)o.removeFromParent();
+ return triangles;
+}
 export async function installPhoneDistant(ship,haze){
  const bytes=await publicAsset('leo-exterior-phone.glb')||await fetch(new URL('../leo-exterior-phone.glb',location.href)).then(r=>{if(!r.ok)throw Error('Phone hull unavailable');return r.arrayBuffer()});
  const loaded=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(bytes,''),parts=[];let count=0;loaded.scene.updateMatrixWorld(true);
@@ -17,6 +23,9 @@ export async function installPhoneDistant(ship,haze){
  let triangles=count/3;ship.facade?.traverse(o=>{if(!o.isMesh||!/^P6_(atrium_floor_actual|sky_ceiling|sky_tip|tower_architecture)$/.test(o.name)||o.material.transparent)return;o.updateWorldMatrix(true,false);const m=new T.MeshBasicMaterial({color:o.material.color||0xffffff,map:o.material.map||null,vertexColors:!!o.material.vertexColors,side:T.DoubleSide});const copy=new T.Mesh(o.geometry,m);copy.matrixAutoUpdate=false;copy.matrix.copy(o.matrixWorld);copy.userData.noCollide=true;root.add(copy);triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;});
  const proof={preset:'phone-hull',asset:'leo-exterior-phone.glb',hullTriangles:count/3,triangles,bytes:positions.byteLength+colors.byteLength,draws:root.children.length+1,limits:PHONE_DISTANT_LIMITS};
  if(proof.bytes>PHONE_DISTANT_LIMITS.bytes||proof.draws>PHONE_DISTANT_LIMITS.draws)throw Error('Phone distant memory/draw gate failed');
+ // Only decorative 4A frames are omitted from the old >140 m haze on the
+ // low-memory fallback. Near facade frames and all structural haze remain.
+ proof.omittedDecorativeProxyTriangles=omitDecorativeDistantRibs(ship.v2Haze);
  root.userData.proof=proof;haze.add(root);ship.v2DistantArchitecture=root;
  for(const o of parts)o.geometry.dispose();return root;
 }

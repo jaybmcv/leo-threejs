@@ -1,3 +1,4 @@
+import {addReflectionTerraces} from './reflection-terraces.js';
 import {hydrateHullLayout} from '../plan/envelope-data-v2.js';
 import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS} from '../plan/atrium-v2.js';
 import {patchDepth,worldPoint} from '../plan/hull-skin-v2.js';
@@ -108,5 +109,6 @@ const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,
  for(const r of layout.rooms.filter(r=>r.kind==='garden'&&r.id!=='commons-1')){const b=bounds(r.polygon),side=Math.sign((b.z0+b.z1)/2),z=side*27.1;for(const deck of[17,18,19]){const floor=layout.decks[deck-1].y;for(const x of[b.x0+8,b.x1-8]){bench(r.id,x,z,side<0?0:Math.PI,floor,deck);plant(r.id,x+2.4,z,floor,deck);}}}
  for(const side of[-1,1]){const z=side*12.5,floor=layout.decks[19].y;add('p6-crew-gallery','p6_service_cabinet',[.6,1.6,1.2],[135.3,floor+.8,z],'metal',{deck:20});add('p6-crew-gallery','p6_service_cabinet_seam',[.02,1.4,.015],[134.99,floor+.8,z],'navy',{deck:20,noCollide:true});for(const dz of[-.12,.12])add('p6-crew-gallery','p6_service_cabinet_handle',[.06,.16,.025],[134.97,floor+.85,z+dz],'metal',{deck:20,noCollide:true});}
  for(const side of[-1,1])for(const x of[128.3,135.7]){const z=side*12.5;add('p6-crew-gallery','p6_service_duct',[.20,.22,6],[x,layout.decks[19].y-.35,z],'metal',{deck:20,noCollide:true});add('p6-crew-gallery','p6_service_light',[.12,.025,5.8],[x,layout.decks[19].y-.4725,z],'light',{deck:20,noCollide:true});}
+ addReflectionTerraces({parts,rests,y});
  return{parts,rests,owners,prototypeCafe:'nose-commons-05',cafes,terraces:ATRIUM_TERRACES,zones:ATRIUM_ZONES};
 }
