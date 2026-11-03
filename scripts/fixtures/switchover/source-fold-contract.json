@@ -1940,7 +1940,7 @@
     "file": "src/v2/hull-prototypes.js",
     "original": "src/v2/hull-prototypes.js",
     "mode": "raw",
-    "bodySha256": "6a161bb8585d644233c649d801f804b5490e87c3d0dcec3f28ec0ba3532aa875",
+    "bodySha256": "ee5c04dad80695ebd11de07d6ba7958211111bc52589c1d8c939f5f99a81954e",
     "imports": [
       "./shuttle-hatches.js",
       "./gallery-doorways.js",
@@ -2104,8 +2104,10 @@
     "file": "src/v2/model.js",
     "original": "src/v2/model.js",
     "mode": "raw",
-    "bodySha256": "a1fae8ce81f3b0fafe3548885f019374132289e159f516b6d7001ba4e8dcb950",
+    "bodySha256": "6c3727974755f9856eed89df19204108631ef69489c3e6f8a286f2669130947f",
     "imports": [
+      "./room-shell.js",
+      "./room-shell.js",
       "./launch-e-fitout.js",
       "./forum-terrace-geometry.js",
       "./corridor-floor-union.js",
@@ -2170,14 +2172,13 @@
     "file": "src/v2/phase4-fitout.js",
     "original": "src/v2/phase4-fitout.js",
     "mode": "raw",
-    "bodySha256": "157502a777195f7b9fa3f7d47b0182b6e15d7eaeeb3fbd0e9459731e42d94afc",
+    "bodySha256": "7d2fce0f868703bc24e385f5bc2c2bbf71d103bafc557d2cc148d0c095a2c579",
     "imports": [
       "./community-displays.js",
-      "./geometry.js",
+      "./phase4-mesh-kit.js",
       "../walk/canvas.js",
       "./phase4-community.js",
       "three",
-      "three/addons/geometries/RoundedBoxGeometry.js",
       "./phase4-programme.js",
       "../walk/collision.js",
       "./ground.js"
@@ -2188,9 +2189,10 @@
     "file": "src/v2/phase4-programme.js",
     "original": "src/v2/phase4-programme.js",
     "mode": "raw",
-    "bodySha256": "ebbc4a579edd7107e6d3e2d1fa37f5b3aec4169e99ef9302a26bdd46d0a86b1f",
+    "bodySha256": "b7f36719258e39c0bc4f2fc66b54d25a2090e4f2a02e2d8a756de142a1330614",
     "imports": [
       "./launch-e-fitout.js",
+      "./room-fitout-overrides.js",
       "./launch-d-fitout.js",
       "./phase6-programme.js",
       "../plan/geometry-v2.js"
@@ -2227,7 +2229,7 @@
     "file": "src/v2/prepared-authoring.js",
     "original": "src/v2/prepared-authoring.js",
     "mode": "raw",
-    "bodySha256": "b7231e17520489300096c9d9f046f6fca59a8484d179eb06a08b186db7e797f6",
+    "bodySha256": "bba3b0bf015c34bf72733dde99107fbc1ee0e0a1156de90d4907e2fa93a03cc2",
     "imports": [
       "./streamed-metadata.js",
       "./prepared-privacy.js",
@@ -2258,7 +2260,7 @@
     "file": "src/v2/prepared-codec.js",
     "original": "src/v2/prepared-codec.js",
     "mode": "raw",
-    "bodySha256": "92057c388c8e080521e03ebe81cc2851eb19d515ba019daf39739aa89918b1a0",
+    "bodySha256": "38badcfb40a86c1624a14f6d5666d3468c89c1a930a91511289cecdcba418162",
     "imports": [
       "three/addons/libs/zstddec.module.js",
       "meshoptimizer/decoder",
@@ -3032,8 +3034,9 @@
     "file": "src/walk/collision.js",
     "original": "src/walk/collision.js",
     "mode": "raw",
-    "bodySha256": "a77382f9e95d177d8f3b1c38af87071989d3db22d37a233c2ace6eb898fa4280",
+    "bodySha256": "cd2544370e5b828914572884f3c964b4e0044768893fbd4cc22b83d48999ea35",
     "imports": [
+      "../v2/room-owner.js",
       "../v2/build-cache.js",
       "three",
       "three-mesh-bvh"
@@ -4196,8 +4199,9 @@
     "file": "src/walk/render-bake.js",
     "original": "src/walk/render-bake.js",
     "mode": "raw",
-    "bodySha256": "3373cae7ca7d954a8234d75faa93a09246c0bb33417f952d10b75a7a2c96449d",
+    "bodySha256": "3a6844a45df9c977b3b706ffbb16fcfac0d584ee05b910e4b62bf22c710a4a4b",
     "imports": [
+      "../v2/room-owner.js",
       "three",
       "./collision.js"
     ],
@@ -5023,7 +5027,7 @@
     "file": "src/v2/hull-prototypes.authoring.js",
     "original": "src/v2/hull-prototypes.js",
     "mode": "authoring",
-    "bodySha256": "6a161bb8585d644233c649d801f804b5490e87c3d0dcec3f28ec0ba3532aa875",
+    "bodySha256": "ee5c04dad80695ebd11de07d6ba7958211111bc52589c1d8c939f5f99a81954e",
     "imports": [
       "./shuttle-hatches.js",
       "./gallery-doorways.js",
@@ -5110,8 +5114,10 @@
     "file": "src/v2/model.authoring.js",
     "original": "src/v2/model.js",
     "mode": "authoring",
-    "bodySha256": "a1fae8ce81f3b0fafe3548885f019374132289e159f516b6d7001ba4e8dcb950",
+    "bodySha256": "6c3727974755f9856eed89df19204108631ef69489c3e6f8a286f2669130947f",
     "imports": [
+      "./room-shell.js",
+      "./room-shell.js",
       "./launch-e-fitout.js",
       "./forum-terrace-geometry.js",
       "./corridor-floor-union.js",
@@ -5153,14 +5159,13 @@
     "file": "src/v2/phase4-fitout.authoring.js",
     "original": "src/v2/phase4-fitout.js",
     "mode": "authoring",
-    "bodySha256": "157502a777195f7b9fa3f7d47b0182b6e15d7eaeeb3fbd0e9459731e42d94afc",
+    "bodySha256": "53b9896819f241ed6e9d91f085911e32467de40545fceb1608c96c2c2cc42f13",
     "imports": [
       "./community-displays.js",
-      "./geometry.js",
+      "./phase4-mesh-kit.js",
       "../walk/canvas.js",
       "./phase4-community.js",
       "three",
-      "three/addons/geometries/RoundedBoxGeometry.js",
       "./phase4-programme.js",
       "../walk/collision.authoring.js",
       "./ground.authoring.js"
@@ -5171,7 +5176,7 @@
     "file": "src/v2/prepared-authoring.authoring.js",
     "original": "src/v2/prepared-authoring.js",
     "mode": "authoring",
-    "bodySha256": "b7231e17520489300096c9d9f046f6fca59a8484d179eb06a08b186db7e797f6",
+    "bodySha256": "bba3b0bf015c34bf72733dde99107fbc1ee0e0a1156de90d4907e2fa93a03cc2",
     "imports": [
       "./streamed-metadata.js",
       "./prepared-privacy.js",
@@ -5202,7 +5207,7 @@
     "file": "src/v2/prepared-codec.authoring.js",
     "original": "src/v2/prepared-codec.js",
     "mode": "authoring",
-    "bodySha256": "92057c388c8e080521e03ebe81cc2851eb19d515ba019daf39739aa89918b1a0",
+    "bodySha256": "38badcfb40a86c1624a14f6d5666d3468c89c1a930a91511289cecdcba418162",
     "imports": [
       "three/addons/libs/zstddec.module.js",
       "meshoptimizer/decoder",
@@ -5631,8 +5636,9 @@
     "file": "src/walk/collision.authoring.js",
     "original": "src/walk/collision.js",
     "mode": "authoring",
-    "bodySha256": "c9b9f18cc0838ff868a31b7a872d89d33b5154293f856d2c8ffe88e8a7cd6ddc",
+    "bodySha256": "ea78bcd42f56efb1e31977a6354372e4a920c12b76ae282c8e69ca51a6b1b581",
     "imports": [
+      "../v2/room-owner.js",
       "../v2/build-cache.authoring.js",
       "three",
       "three-mesh-bvh"
@@ -6583,8 +6589,9 @@
     "file": "src/walk/render-bake.authoring.js",
     "original": "src/walk/render-bake.js",
     "mode": "authoring",
-    "bodySha256": "3373cae7ca7d954a8234d75faa93a09246c0bb33417f952d10b75a7a2c96449d",
+    "bodySha256": "3a6844a45df9c977b3b706ffbb16fcfac0d584ee05b910e4b62bf22c710a4a4b",
     "imports": [
+      "../v2/room-owner.js",
       "three",
       "./collision.authoring.js"
     ],
@@ -8139,7 +8146,7 @@
     "file": "src/v2/prepared-codec.public.js",
     "original": "src/v2/prepared-codec.js",
     "mode": "public",
-    "bodySha256": "55f8788a86492ddd8596effb75ce27eacc3f6c0d66894cb5bfe319722f94b1bf",
+    "bodySha256": "e31ab5f45eb8fd9edd4f76efba1dd37eee1ab1ec98f9afd98299bf80f7d26359",
     "imports": [
       "three/addons/libs/zstddec.module.js",
       "meshoptimizer/decoder",

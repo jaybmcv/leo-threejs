@@ -1,0 +1,12 @@
+import fs from 'node:fs/promises';
+import * as T from 'three';
+import {MeshoptDecoder} from 'meshoptimizer/decoder';
+await MeshoptDecoder.ready;
+const width={SCALAR:1,VEC2:2,VEC3:3,VEC4:4,MAT4:16},sizes={5120:1,5121:1,5122:2,5123:2,5125:4,5126:4};
+export async function load(file){
+ const bytes=await fs.readFile(file),j=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12))),bin=bytes.subarray(28+bytes.readUInt32LE(12)),views=new Map(),arrays=new Map();
+ const view=id=>{if(views.has(id))return views.get(id);const v=j.bufferViews[id],e=v.extensions?.EXT_meshopt_compression;let out;if(e){out=Buffer.alloc(e.count*e.byteStride);MeshoptDecoder.decodeGltfBuffer(out,e.count,e.byteStride,bin.subarray(e.byteOffset||0,(e.byteOffset||0)+e.byteLength),e.mode,e.filter);}else out=bin.subarray(v.byteOffset||0,(v.byteOffset||0)+v.byteLength);views.set(id,out);return out;};
+ const array=id=>{if(arrays.has(id))return arrays.get(id);const a=j.accessors[id],v=j.bufferViews[a.bufferView],data=view(a.bufferView),components=width[a.type],size=sizes[a.componentType],stride=v.byteStride||components*size,out=new Float64Array(a.count*components),method={5120:'readInt8',5121:'readUInt8',5122:'readInt16LE',5123:'readUInt16LE',5125:'readUInt32LE',5126:'readFloatLE'}[a.componentType];for(let i=0;i<a.count;i++)for(let k=0;k<components;k++){let n=data[method]((a.byteOffset||0)+i*stride+k*size);if(a.normalized)n=a.componentType===5120?Math.max(-1,n/127):a.componentType===5121?n/255:a.componentType===5122?Math.max(-1,n/32767):a.componentType===5123?n/65535:n;out[i*components+k]=n;}arrays.set(id,out);return out;};
+ const nodes=new Map(),visit=(id,parent,key,owner)=>{const n=j.nodes[id],local=n.matrix?new T.Matrix4().fromArray(n.matrix):new T.Matrix4().compose(new T.Vector3(...(n.translation||[0,0,0])),new T.Quaternion(...(n.rotation||[0,0,0,1])),new T.Vector3(...(n.scale||[1,1,1]))),world=parent.clone().multiply(local);owner=n.extras?.room||n.extras?.roomId||owner;if(n.mesh!==undefined)nodes.set(key,{n,world,owner});const counts=new Map();for(const child of n.children||[]){const name=j.nodes[child].name||'unnamed',count=counts.get(name)||0;counts.set(name,count+1);visit(child,world,key+'/'+name+'#'+count,owner);}};
+ const counts=new Map();for(const id of j.scenes[j.scene||0].nodes){const name=j.nodes[id].name||'unnamed',count=counts.get(name)||0;counts.set(name,count+1);visit(id,new T.Matrix4(),name+'#'+count,null);}return {j,array,nodes};
+}

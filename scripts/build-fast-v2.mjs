@@ -9,6 +9,7 @@ try{
  const plan=await timer.stage('classify changes',classifyFastChange);console.log(`Fast lane ${plan.lane}: ${plan.reason}`);
  await fs.mkdir('output/fast-deploy',{recursive:true});await fs.writeFile('output/fast-deploy/plan.json',JSON.stringify(plan,null,2));
  let details={};
+ if(plan.lane==='whole'&&process.env.LEO_FAST_NO_AUTHORING==='1')throw Error('Wider geometry required: '+plan.reason+'. A clean authoring run is required before this diagnostic can continue.');
  if(plan.lane==='whole'){
   await timer.stage('wider geometry build',()=>runNode('scripts/build-all.mjs',plan.decks.length?['--decks='+plan.decks.join(',')]:[]));
  }else if(plan.lane==='B'){

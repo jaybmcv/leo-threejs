@@ -1,16 +1,11 @@
 import{communityDisplayParts}from'./community-displays.js';
-import {removeGeometryCaps} from './geometry.js';
+import {fitoutGeometry,material,atriumGlass} from './phase4-mesh-kit.js';
 import {walkCanvas} from '../walk/canvas.js';
 import {arrivalArtWall} from './phase4-community.js';
 import * as T from 'three';
-import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {phase4Programme} from './phase4-programme.js';
 import {meshTriangles} from '../walk/collision.authoring.js';
 import {groundMesh} from './ground.authoring.js';
-function removeTopCap(g){g.computeBoundingBox();const p=g.attributes.position,ix=g.index,top=g.boundingBox.max.y,keep=[];for(let i=0;i<ix.count;i+=3){const ids=[0,1,2].map(k=>ix.getX(i+k));if(!ids.every(id=>Math.abs(p.getY(id)-top)<1e-7))keep.push(...ids);}g.setIndex(keep);g.clearGroups();}
-const colours={resident:0xbd826d,oak:0xb9966f,cream:0xe4e5de,teal:0x357b82,sage:0x637e64,clay:0x996954,navy:0x172e3b,metal:0x8d9da2,orange:0xe88032,green:0x507c50,light:0xffedca,screen:0x234b67,water:0x469ba7},mats=new Map();
-const atriumGlass=new T.MeshStandardMaterial({name:'P4_atrium_glass',color:0x9abcc6,transparent:true,opacity:.20,roughness:.3,side:T.DoubleSide});
-function material(name){if(!mats.has(name))mats.set(name,new T.MeshStandardMaterial({name:'P4_'+name,color:colours[name],roughness:name==='metal'?.42:.72,metalness:name==='metal'?.45:0,...(['light','screen'].includes(name)?{emissive:colours[name],emissiveIntensity:name==='light'?1:.45}:{})}));return mats.get(name);}
 export function buildPhase4Fitout(ship,layout){
  if(ship.v2Phase4)return ship.v2Phase4;
  const root=new T.Group();root.name='V2_phase4_fitouts';root.userData={stage:2};
@@ -21,7 +16,7 @@ export function buildPhase4Fitout(ship,layout){
   const key=[p.deck,p.part,p.mat,p.size.join(','),!!p.round,!!p.noCollide].join('|');let b=batches.get(key);if(!b)batches.set(key,b={...p,list:[]});b.list.push(p);
  }
  for(const b of batches.values()){
-  const geo=b.part==='p6_tree_crown'?new T.IcosahedronGeometry(1,1).scale(...b.size.map(x=>x/2)):b.part==='p6_tree_trunk'?new T.CylinderGeometry(.16,.22,b.size[1],7):b.round?new RoundedBoxGeometry(...b.size,1,Math.min(.08,...b.size.map(x=>x/4))):new T.BoxGeometry(...b.size),o=new T.InstancedMesh(geo,(b.mat==='glass'?atriumGlass:material(b.mat)),b.list.length);o.name='P4_'+b.part;if(/shuttle_(side_wall|bow_bulkhead|stern_wall)/.test(b.part))removeGeometryCaps(geo,1);if(b.part==='shuttle_side_wall')removeGeometryCaps(geo,0);if(/shuttle_.*wall_header/.test(b.part)){removeGeometryCaps(geo,2);removeTopCap(geo);}
+  const geo=fitoutGeometry(b),o=new T.InstancedMesh(geo,(b.mat==='glass'?atriumGlass:material(b.mat)),b.list.length);o.name='P4_'+b.part;
   b.list.forEach((p,i)=>o.setMatrixAt(i,new T.Matrix4().compose(new T.Vector3(...p.at),new T.Quaternion().setFromEuler(new T.Euler(0,p.yaw,p.roll||0)),new T.Vector3(1,1,1))));o.computeBoundingBox();o.computeBoundingSphere();
   const ownerRuns=[];b.list.forEach((p,i)=>{const last=ownerRuns.at(-1),component=p.component||p.room;if(last&&last.room===p.room&&last.component===component)last.count++;else ownerRuns.push({start:i,count:1,room:p.room,component});});o.userData={phase4:true,v2Deck:b.deck,noCollide:!!b.noCollide,roomOwners:[...new Set(b.list.map(p=>p.room))],ownerRuns};root.add(o);
  }

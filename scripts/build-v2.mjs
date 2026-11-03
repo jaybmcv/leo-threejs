@@ -14,6 +14,8 @@ try{
  for(const name of ['layout','exterior'])await timer.stage(name,()=>stages.run(name));
  await timer.stage('normalize exterior',async()=>{await(await import('./normalize-exterior-before-rooms-v2.mjs')).normalizeExteriorBeforeRooms();});
  await timer.stage('ceilings',()=>stages.run('ceilings'));
+ if(process.argv.includes('--stages-only'))await stages.save();
+ else{
  await fs.copyFile('output/leo-interior-v01/THREE-LICENSE.txt',out+'/THREE-LICENSE.txt');
  await timer.stage('models and walk plan',()=>runV2('build'));
  await timer.stage('model finalization',async()=>{await runNode('scripts/retire-obsolete-facades-v2.mjs');await(await import('./raw-skin-source-proof-v2.mjs')).publishRawSkinSource();});
@@ -21,7 +23,10 @@ try{
  const exported=JSON.parse(await fs.readFile(out+'/scoped-models.json'));
  for(const[name,r]of Object.entries(exported)){const bytes=await fs.readFile(out+'/'+name+'.glb');r.sha256=createHash('sha256').update(bytes).digest('hex');r.bytes=bytes.length;}
  await fs.writeFile(out+'/scoped-models.json',JSON.stringify(exported,null,2));
+ if(!process.argv.includes('--skip-prepared')){
  await timer.stage('prepared authoring',async()=>{await(await import('./prepared-authoring-lock-v2.mjs')).runPreparedAuthoring();});
  await timer.stage('prepared encoding',()=>runNode('scripts/encode-prepared-walk-v2.mjs'));
  await timer.stage('save clean baseline',async()=>{await(await import('./fast-state-v2.mjs')).captureFastBaseline();});
+ }
+ }
 }finally{await timer.finish();}

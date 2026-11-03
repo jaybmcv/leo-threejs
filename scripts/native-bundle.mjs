@@ -37,6 +37,7 @@ export function moduleSpecifiers(source){
 
 export async function nativeBuild(options){
  const dir=path.resolve('output/fast-deploy/native-bundle-'+randomUUID()),root=options.absWorkingDir||process.cwd();await fs.mkdir(dir,{recursive:true});
+ try{
  const resolveHooks=[],loadHooks=[],starts=[];
  const api={initialOptions:options,onResolve:(o,f)=>resolveHooks.push([o,f]),onLoad:(o,f)=>loadHooks.push([o,f]),onStart:f=>starts.push(f)};
  for(const plugin of options.plugins||[])await plugin.setup(api);
@@ -72,6 +73,10 @@ export async function nativeBuild(options){
  let metafile;if(options.metafile){metafile=JSON.parse(await fs.readFile(dir+'/meta.json'));const lookup=new Map([...nodes.values()].map(n=>[path.relative(root,n.file).replaceAll('\\','/'),n]));metafile.inputs=Object.fromEntries(Object.entries(metafile.inputs).map(([p,v])=>{const n=lookup.get(p);return[n?(n.namespace==='file'?path.relative(root,n.original).replaceAll('\\','/'):n.namespace+':'+n.original):p,v];}));}
  if(options.write!==false&&options.outfile)await fs.writeFile(options.outfile,outputFiles.find(f=>f.path.endsWith('.js')).contents);
  return {outputFiles,metafile,errors:[],warnings:[],nativeFallback:true};
+ }finally{
+  if(path.dirname(dir)!==path.resolve('output/fast-deploy')||!path.basename(dir).startsWith('native-bundle-'))throw Error('Invalid native bundle cleanup path');
+  await fs.rm(dir,{recursive:true,force:true});
+ }
 }
 
 let needsNative=process.env.LEO_NATIVE_BUNDLE==='1';

@@ -1,0 +1,13 @@
+import fs from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import {cachedRoom} from './fast-room-cache-v2.mjs';
+import {hash} from './prepared-patch-v2.mjs';
+const key='round2-cache-integrity-'+Date.now(),id='d01-new-2',dir='output/leo-interior-v02/fast-room-cache/'+hash(Buffer.from(key));
+const cold=await cachedRoom({id,key});assert.equal(cold.hit,false);assert(cold.rests.length>0);assert(cold.rests.every(s=>s.point.$vector3&&s.facing.$vector3));assert(cold.seatIndices.length>0);
+assert.equal((await cachedRoom({id,key})).hit,true);
+const record=JSON.parse(await fs.readFile(dir+'/record.json'));record.graphs[0].nodes[0].name='corrupted cache graph';await fs.writeFile(dir+'/record.json',JSON.stringify(record));
+const metadata=await cachedRoom({id,key});assert.equal(metadata.hit,false);assert.notEqual(metadata.graphs[0].nodes[0].name,'corrupted cache graph');
+await fs.appendFile(dir+'/room.glb',Buffer.from([0]));assert.equal((await cachedRoom({id,key})).hit,false);
+assert.equal((await cachedRoom({id,key})).hit,true);
+await fs.writeFile('output/fast-deploy/room-cache-integrity.json',JSON.stringify({status:'PASS',cold:true,warm:true,metadataCorruptionRebuilt:true,modelCorruptionRebuilt:true},null,2));
+console.log('PASS per-room cold/warm reuse and recovery from corrupted metadata/model bytes');

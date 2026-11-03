@@ -9,9 +9,9 @@ import {trimMeshToSkin} from '../src/v2/skin-retirement.js';
 import {shellParts} from '../src/v2/hull-prototypes.js';
 import {parseExterior} from './exterior-io-v2.mjs';
 import {ceilingCoverage} from './ceiling-coverage-v2.mjs';
-import {preparedSourceIdentity} from './prepared-identity-v2.mjs';
+import {producerSourceIdentity} from './fast-dependencies-v2.mjs';
 if(process.env.LEO_LAYOUT!=='2')throw Error('Cabin ceiling fitting requires LEO_LAYOUT=2');
-const out='output/leo-interior-v02',layoutBytes=await fs.readFile(out+'/layout.json'),skinBytes=await fs.readFile(out+'/leo-exterior-web.glb'),layout=hydrateHullLayout(JSON.parse(layoutBytes)),sha=b=>createHash('sha256').update(b).digest('hex'),sources=(await preparedSourceIdentity()).hash;for(const p of layout.hullPrototypes.prototypes)delete p.ceilingProfile;delete layout.hullPrototypes.ceilingProfiles;if(layout.hullPrototypes.reservations)delete layout.hullPrototypes.reservations.localCeilingSoffits;const key=sha(JSON.stringify({layout:sha(serializeHullLayout(layout,{packed:true})),skin:sha(skinBytes),sources})),cacheFile=out+'/ceiling-profile-cache.json';
+const out='output/leo-interior-v02',layoutBytes=await fs.readFile(out+'/layout.json'),skinBytes=await fs.readFile(out+'/leo-exterior-web.glb'),layout=hydrateHullLayout(JSON.parse(layoutBytes)),sha=b=>createHash('sha256').update(b).digest('hex'),sources=process.env.LEO_CEILING_SOURCE_KEY||await producerSourceIdentity('scripts/fit-cabin-ceilings-v2.mjs');for(const p of layout.hullPrototypes.prototypes)delete p.ceilingProfile;delete layout.hullPrototypes.ceilingProfiles;if(layout.hullPrototypes.reservations)delete layout.hullPrototypes.reservations.localCeilingSoffits;const key=sha(JSON.stringify({layout:sha(serializeHullLayout(layout,{packed:true})),skin:sha(skinBytes),sources})),cacheFile=out+'/ceiling-profile-cache.json';
 let cached;try{const c=JSON.parse(await fs.readFile(cacheFile));if(c.key===key&&c.status==='PASS')cached=c}catch{}
 let report=cached;
 if(!report){const A=createSkinAuthority(await parseExterior(skinBytes)),rows=[],selected=[];let checked=0;const unsafe=q=>{const w=worldPoint(q.p.chart,q.q);return !A.insidePressure(w)&&A.distance(w)>.04;};

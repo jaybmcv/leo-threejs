@@ -18,9 +18,9 @@ assert.deepEqual(moduleSpecifiers(text).map(r=>r.value),['./y.js','./z.js','./d.
 const dir='output/fast-deploy/codec-fixture';await fs.mkdir(dir,{recursive:true});
 const base=Float32Array.of(1,2,3),old=Buffer.from(base.buffer);await fs.writeFile(dir+'/geometry-0.bin',compress(old));
 const m={parts:[{name:'geometry-0.bin',bytes:old.length,zipped:(await fs.stat(dir+'/geometry-0.bin')).size}],arrays:[{type:'Float32Array',start:0,bytes:old.length}],geometries:[],materials:[],textures:[],images:[]};
-await fs.writeFile(dir+'/complete.json','{}');const patch=new PreparedPatch(m),next=Float32Array.of(4,5,6,7),index=patch.array(next);
+await fs.writeFile(dir+'/complete.json','{}');const patch=new PreparedPatch(m),next=Float32Array.of(4,5,6,7),index=patch.array(next),empty=patch.array(new Uint32Array());
 await patch.save(dir+'/patched',dir,{},{});const read=preparedArrayReader(await preparedManifest(dir+'/patched'),dir+'/patched');
-assert.deepEqual([...await read(0)],[...base]);assert.deepEqual([...await read(index)],[...next]);
+assert.deepEqual([...await read(0)],[...base]);assert.deepEqual([...await read(index)],[...next]);assert.deepEqual([...await read(empty)],[]);
 assert((await fs.readFile(dir+'/geometry-0.bin')).equals(await fs.readFile(dir+'/patched/geometry-0.bin')));
 const baseline=JSON.parse(await fs.readFile('src/plan/live-protocol-baseline-v2.json','utf8')),identity=await liveLayoutIdentity(layout);assert.equal(identity.layoutIdentity,baseline.layoutIdentity);
 const cosmetic=structuredClone(layout);cosmetic.rooms.find(r=>r.id==='d01-new-2').name+=' cosmetic test';assert.equal((await liveLayoutIdentity(cosmetic)).layoutIdentity,identity.layoutIdentity);

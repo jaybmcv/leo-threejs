@@ -50,7 +50,8 @@ export class PreparedPatch {
   // changing the baseline's final partial part or its global vertex pools.
   const first=this.manifest.parts.length;let fragments=[],length=0,partIndex=first;
   const flush=async()=>{if(!length)return;const data=Buffer.concat(fragments,length),bytes=compress(data),name='geometry-'+partIndex+'.bin';await fs.writeFile(destination+'/'+name,bytes);this.manifest.parts.push({name,bytes:data.length,zipped:bytes.length,codec:'zstd'});partIndex++;fragments=[];length=0;};
-  for(let i=0;i<this.parts.length;i++){const data=this.parts[i];if(data.length>8388608)throw Error('A patch array exceeds 8 MiB; use a wider build');if(length+data.length>8388608)await flush();const r=this.manifest.arrays[this.arrays[i]];r.part=partIndex;r.offset=length;fragments.push(data);length+=data.length;}await flush();
+  for(let i=0;i<this.parts.length;i++){const data=this.parts[i];if(data.length>8388608)throw Error('A patch array exceeds 8 MiB; use a wider build');if(length+data.length>8388608)await flush();const r=this.manifest.arrays[this.arrays[i]];if(!data.length){r.part=0;r.offset=0;continue;}r.part=partIndex;r.offset=length;fragments.push(data);length+=data.length;}await flush();
+  if(!this.manifest.parts.length&&this.arrays.length){const bytes=compress(Buffer.alloc(0));await fs.writeFile(destination+'/geometry-0.bin',bytes);this.manifest.parts.push({name:'geometry-0.bin',bytes:0,zipped:bytes.length,codec:'zstd'});}
   for(const p of this.manifest.parts.slice(0,first))await fs.copyFile(base+'/'+p.name,destination+'/'+p.name);
   this.manifest.fastPatch={version:1,...details,appendedArrays:this.arrays.length};
   const text=JSON.stringify(this.manifest),world=compress(Buffer.from(text));await fs.writeFile(destination+'/world.bin',world);
