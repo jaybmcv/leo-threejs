@@ -28,7 +28,7 @@ try{
   report.gates.bytes=size.bytes;report.gates.phoneTriangles=triangles;
  });
  await timer.stage('built site names real files',async()=>{
-  for(const page of ['index.html','walk.html','hub.html']){const text=await fs.readFile(out+'/'+page,'utf8'),files=[...text.matchAll(/(?:src|href)=["']([^"'#?]+)/g)].map(m=>m[1]);if(page==='walk.html')files.push(...[...text.matchAll(/LEO_WALK_BOOT\(["']([^"']+)/g)].map(m=>m[1]));for(const file of files)if(!/^(https?:|data:|mailto:|\/\/)/.test(file)&&!file.endsWith('/')){const name=file.replace(/^\.\//,'');if(manifest[name]?.parts?.length)continue;await fs.access(local(name));}}
+  for(const page of ['index.html','walk.html','hub.html']){const text=await fs.readFile(out+'/'+page,'utf8'),files=[...text.matchAll(/\s(?:src|href)=["']([^"'#?]+)/g)].map(m=>m[1]);if(page==='walk.html')files.push(...[...text.matchAll(/LEO_WALK_BOOT\(["']([^"']+)/g)].map(m=>m[1]));for(const file of files)if(!/^(https?:|data:|mailto:|\/\/)/.test(file)&&!file.endsWith('/')){const name=file.replace(/^\.\//,'');if(manifest[name]?.parts?.length)continue;await fs.access(local(name));}}
   const files=(await fs.readdir(out)).filter(n=>/^walk\.[a-f0-9]{10}\.js$/.test(n));assert.equal(files.length,1,'Expected exactly one current walk script');
   const code=await fs.readFile(out+'/'+files[0],'utf8');assert(code.includes('leo-live.marscatsvoyage.com'),'Public walk lacks multiplayer');assert(code.includes('mcv-feedback.mcv-feedback.workers.dev'),'Public walk lacks feedback');report.gates.walk=files[0];
  });
