@@ -19,6 +19,8 @@ try{
   const current=await preparedSourceIdentity();
    await fs.cp(baseline+'/prepared-walk',output+'/prepared-walk',{recursive:true});
    for(const name of (await fs.readdir(baseline)).filter(f=>f.endsWith('.glb')))await fs.copyFile(baseline+'/'+name,output+'/'+name);
+   // A model the baseline doesn't have is left from another build: drop it rather than ship it.
+   const kept=new Set((await fs.readdir(baseline)).filter(f=>f.endsWith('.glb')));for(const name of (await fs.readdir(output)).filter(f=>f.endsWith('.glb')&&!kept.has(f)))await fs.rm(output+'/'+name);
    const restored=JSON.parse(await fs.readFile(output+'/prepared-walk/integrity.json','utf8'));restored.sourceInputs.sources=current;await fs.writeFile(output+'/prepared-walk/integrity.json',JSON.stringify(restored,null,2));
   // A previous interrupted wider build may have written layout data before
   // the prepared artifact. Restore the matching baseline input as well.

@@ -42,18 +42,20 @@ export async function captureFastBaseline({bootstrap=false}={}){
   for(const [name,file]of Object.entries({skin:'leo-exterior-web.glb',layout:'layout.json',plan:'walk-plan.json'}))if(sha(await fs.readFile(output+'/'+file))!==i.sourceInputs[name])throw Error('Warm baseline input differs from prepared artifact: '+file);
   const models=await json(output+'/scoped-models.json');for(const[name,record]of Object.entries(models))if(sha(await fs.readFile(output+'/'+name+'.glb'))!==record.sha256)throw Error('Warm model differs from its completed export: '+name);
  }
- await fs.mkdir(baseline,{recursive:true});
- for(const e of await fs.readdir(output,{withFileTypes:true}))if(e.isFile()&&(/\.glb$/.test(e.name)||['layout.json','walk-plan.json','walk-map.png','exterior-envelopes.json','scoped-models.json'].includes(e.name)))await fs.copyFile(output+'/'+e.name,baseline+'/'+e.name);
- await fs.cp(output+'/prepared-walk',baseline+'/prepared-walk',{recursive:true});
+ // Built in an empty folder and swapped in whole, so a model the build no longer makes can't survive in the baseline.
+ const next=baseline+'.next',old=baseline+'.old';await fs.rm(next,{recursive:true,force:true});await fs.mkdir(next,{recursive:true});
+ for(const e of await fs.readdir(output,{withFileTypes:true}))if(e.isFile()&&(/\.glb$/.test(e.name)||['layout.json','walk-plan.json','walk-map.png','exterior-envelopes.json','scoped-models.json'].includes(e.name)))await fs.copyFile(output+'/'+e.name,next+'/'+e.name);
+ await fs.cp(output+'/prepared-walk',next+'/prepared-walk',{recursive:true});
  // Importing afresh is intentional: a full build and the next deploy run in
  // separate processes; no stale ESM module can hide a room edit.
  await runNode('scripts/fast-fitout-data-v2.mjs');
- await fs.copyFile('output/fast-deploy/fitout-current.json',baseline+'/fitout.json');
- await runNode('scripts/legacy-room-data-v2.mjs');await fs.copyFile('output/fast-deploy/legacy-current.json',baseline+'/legacy.json');
- await runNode('scripts/fast-fitout-mesh-data-v2.mjs');await fs.copyFile('output/fast-deploy/fitout-mesh-current.json',baseline+'/fitout-mesh.json');
- const files={};for(const name of (await fs.readdir(baseline)).filter(f=>f.endsWith('.glb')||['layout.json','walk-plan.json','walk-map.png','fitout.json','legacy.json','fitout-mesh.json'].includes(f)))files[name]=sha(await fs.readFile(baseline+'/'+name));
+ await fs.copyFile('output/fast-deploy/fitout-current.json',next+'/fitout.json');
+ await runNode('scripts/legacy-room-data-v2.mjs');await fs.copyFile('output/fast-deploy/legacy-current.json',next+'/legacy.json');
+ await runNode('scripts/fast-fitout-mesh-data-v2.mjs');await fs.copyFile('output/fast-deploy/fitout-mesh-current.json',next+'/fitout-mesh.json');
+ const files={};for(const name of (await fs.readdir(next)).filter(f=>f.endsWith('.glb')||['layout.json','walk-plan.json','walk-map.png','fitout.json','legacy.json','fitout-mesh.json'].includes(f)))files[name]=sha(await fs.readFile(next+'/'+name));
  const record={version:1,identity,prepared:i.sha256,files,captured:new Date().toISOString()};
- await fs.writeFile(baseline+'/state.json',JSON.stringify(record,null,2));
+ await fs.writeFile(next+'/state.json',JSON.stringify(record,null,2));
+ await fs.rm(old,{recursive:true,force:true});await fs.rename(baseline,old).catch(e=>{if(e.code!=='ENOENT')throw e;});await fs.rename(next,baseline);await fs.rm(old,{recursive:true,force:true});
  return record;
 }
 
