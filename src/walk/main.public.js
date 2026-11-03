@@ -1,5 +1,5 @@
 import {settlePreparedStatic} from '../v2/prepared-static.js';
-import {fastAtriumSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
+import {setAtriumView,onePassAtriumGlass} from '../v2/atrium-visibility.js';
 import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns} from '../v2/prepared-runtime.public.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
 import {gotoStand as v2GotoStand,yarnPlace} from '../v2/wayfinding.js';
@@ -357,7 +357,8 @@ const NEAR_CABINS=40,BOAT_REACH=45,nearFrom=new T.Vector3(1e9,0,0);
 // view with no ray landing on it, so each ray also looks straight up and down from partway along for the space it crosses.
 const VIEW_RAYS=[];for(const x of [-.96,-.5,0,.5,.96])for(const y of [-.96,-.5,0,.5,.96])VIEW_RAYS.push([x,y]);let viewSpan=[0,0],lastSpan=0;
 function span(p,now){
- const atrium=fastAtriumSpan(p);if(atrium)return atrium;
+ // Keep atrium fog/proxies current; the camera rays below decide visible floors.
+ setAtriumView(p);
 
  if(now-lastSpan<150)return viewSpan;lastSpan=now;if(!spanChanged(camera,p,0,0,colliders))return viewSpan;const spanStart=performance.now();
  let low=p.y-3,high=p.y+4;const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();

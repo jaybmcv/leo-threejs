@@ -158,3 +158,23 @@ legacy plank-seam mesh is a candidate follow-up, followed by grazing-angle
 review. Also inspect the thin legacy outer-extension floor overlay. No
 unverified geometry change was added after the final build; another complete
 rebuild would exceed this session's four-hour limit.
+
+## Follow-up: Deck 6 gallery visibility
+
+User reported upper balconies appearing only while jumping or on Deck 7.
+The grounded atrium shortcut returned a fixed +/-4 m range before camera rays
+ran; the v2 render-band wrapper independently applied the same cap. A jump
+more than 1.6 m from the nearest deck escaped that restriction. A regression
+reproduced decks 6-7 grounded versus decks 6-12 jumping for the same upward view.
+
+The four walk entries now update atrium fog/proxies and use the existing cached,
+150 ms camera-ray span. Both render-band wrappers pass that span through without
+the extra cap. Nearby cabin limits, room culling, geometry and collisions are
+unchanged. This draws more visible detail at ground level; physical-device
+performance remains unmeasured. The normal build must finish before replacing
+the prior public preview. The runtime preflight visibly shows upper gallery
+rails while standing on Deck 6.
+
+`node scripts/check-atrium-height-visibility.mjs` passes 16 cases, covering
+ground, jump, landing, Deck 7, upward/downward views, narrow spans and non-atrium
+positions. It is also included in `npm run check:design` when the layout exists.
