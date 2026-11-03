@@ -3,7 +3,7 @@ import {finishedSkinAuthority} from './skin-authority.js';
 import * as T from 'three';
 import {isFinishedSkin,meshOwner} from '../plan/skin-clearance-v2.js';
 import {clipPolygon,triangulate} from '../plan/hull-skin-v2.js';
-import {cutChartMany} from './hull-prototypes.js';
+import {cutChartMany} from './chart-cut.js';
 import {contains,bounds,distanceToSegment} from '../plan/geometry-v2.js';
 import {windowReservationCuts} from '../plan/window-reservation-v2.js';
 export {windowReservationCuts};
