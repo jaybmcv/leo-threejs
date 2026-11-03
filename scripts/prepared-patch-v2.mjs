@@ -16,7 +16,7 @@ export function preparedArrayReader(manifest,base){
  return async function read(id){
   if(arrays.has(id))return arrays.get(id);await MeshoptDecoder.ready;
   const r=manifest.arrays[id];let bytes;
-  if(r.part!==undefined)bytes=(await part(r.part)).subarray(r.offset,r.offset+r.bytes);
+  if(r.part!==undefined){bytes=Buffer.alloc(r.bytes);for(let i=r.part,offset=r.offset,n=0;n<r.bytes;i++,offset=0){if(i>=manifest.parts.length)throw Error('Prepared array range outside transport');const p=await part(i),count=Math.min(p.length-offset,r.bytes-n);if(count<=0)throw Error('Prepared array range outside transport');p.copy(bytes,n,offset,offset+count);n+=count;}}
   else {let i=Math.floor(r.start/8388608),offset=r.start%8388608;bytes=Buffer.alloc(r.bytes);for(let n=0;n<r.bytes;i++,offset=0){const p=await part(i),count=Math.min(p.length-offset,r.bytes-n);if(count<=0)throw Error('Prepared array range outside transport');p.copy(bytes,n,offset,offset+count);n+=count;}}
   if(r.encoding){const decoded=new Uint8Array(r.count*r.stride);if(r.count){if(r.encoding==='meshopt-sequence'||r.encoding==='meshopt-tuple')MeshoptDecoder.decodeIndexSequence(decoded,r.count,r.stride,bytes);else MeshoptDecoder.decodeVertexBuffer(decoded,r.count,r.stride,bytes);}
    if(r.encoding==='meshopt-tuple'){const d=await read(r.dictionary),words=new Uint32Array(d.buffer,d.byteOffset,d.byteLength/4),codes=new Uint32Array(decoded.buffer),out=new Uint32Array(r.decodedBytes/4);for(let i=0;i<codes.length;i++)for(let k=0;k<3;k++)out[i*3+k]=words[codes[i]*3+k];bytes=new Uint8Array(out.buffer);}
@@ -50,7 +50,9 @@ export class PreparedPatch {
   // changing the baseline's final partial part or its global vertex pools.
   const first=this.manifest.parts.length;let fragments=[],length=0,partIndex=first;
   const flush=async()=>{if(!length)return;const data=Buffer.concat(fragments,length),bytes=compress(data),name='geometry-'+partIndex+'.bin';await fs.writeFile(destination+'/'+name,bytes);this.manifest.parts.push({name,bytes:data.length,zipped:bytes.length,codec:'zstd'});partIndex++;fragments=[];length=0;};
-  for(let i=0;i<this.parts.length;i++){const data=this.parts[i];if(data.length>8388608)throw Error('A patch array exceeds 8 MiB; use a wider build');if(length+data.length>8388608)await flush();const r=this.manifest.arrays[this.arrays[i]];if(!data.length){r.part=0;r.offset=0;continue;}r.part=partIndex;r.offset=length;fragments.push(data);length+=data.length;}await flush();
+  for(let i=0;i<this.parts.length;i++){const data=this.parts[i];const r=this.manifest.arrays[this.arrays[i]];if(!data.length){r.part=0;r.offset=0;continue;}if(data.length<=8388608&&length+data.length>8388608)await flush();r.part=partIndex;r.offset=length;
+   // An array larger than a part (a big room's merged geometry) continues into the following parts.
+   for(let at=0;at<data.length;){const n=Math.min(data.length-at,8388608-length);fragments.push(data.subarray(at,at+n));length+=n;at+=n;if(length===8388608)await flush();}}await flush();
   if(!this.manifest.parts.length&&this.arrays.length){const bytes=compress(Buffer.alloc(0));await fs.writeFile(destination+'/geometry-0.bin',bytes);this.manifest.parts.push({name:'geometry-0.bin',bytes:0,zipped:bytes.length,codec:'zstd'});}
   for(const p of this.manifest.parts.slice(0,first))await fs.copyFile(base+'/'+p.name,destination+'/'+p.name);
   this.manifest.fastPatch={version:1,...details,appendedArrays:this.arrays.length};
