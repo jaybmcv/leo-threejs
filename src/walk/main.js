@@ -102,6 +102,7 @@ import {createTransporters} from './transporter.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 import {createHelp} from './help.js';
 import {listenForHub} from './hub-link.js';
+import {createHubPanel} from './hub-panel.js';
 
 // Walk around Leo: Cosmo on foot through the whole fitted interior, with collision, lifts, seats and beds.
 const $=id=>document.getElementById(id);
@@ -533,14 +534,19 @@ mct.lost=c=>{if(resting?.spot.mct?.cart===c&&resting.spot.mct.seat==='driver')st
 // Someone not connected stays on the card until they come aboard, however soon the ship is ready.
 if(LIVE_URL){await identity;if(!me.pass){status('Ready when you are');$('loading-slow').hidden=true;await boarded;}}
 let firstViewReady=false;status('Preparing first view…');
-hubLink.ready(search=>{const spot=readSpot(search);if(!spot)return false;closePanels();return goToSpot(spot);});
 let heading=follow.yaw;const safe=controller.position.clone(),finSafe=new T.Vector3(0,-1e3,0);
 // On the floor of one of the crown lift's fin landings (the gallery and the inspection platforms), inside the fin.
 const FIN_STOPS=LIFTS.find(l=>l.id==='crown').stops.filter(s=>!/Crown/.test(s.label)).map(s=>s.y);
 function onFinPlatform(p){return p.x<-170&&Math.abs(p.z)<3&&FIN_STOPS.some(y=>Math.abs(p.y-y)<.3);}
 // Feedback joins the top-right tools, orange-edged like the viewer's so testers spot it; a narrow phone has no room
 // there, so it sits under the mini-map instead.
-const feedback=installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-width:560px)').matches?null:document.querySelector('.tools'),
+// The Builder's Hub, on top of the walk (hub-panel.js).
+const hubPanel=createHubPanel({
+ onOpen(){closePanels();feedback?.close();emote=null;input.enabled=false;input.down.clear();},
+ onClose(){input.enabled=true;input.down.clear();},
+ onGo(search){const spot=readSpot(search);return spot?goToSpot(spot):false;},
+ onConnect:connect});
+const feedback=installFeedback({renderer,page:'walk',openHub:report=>hubPanel.open({report}),mount:()=>matchMedia('(max-width:560px)').matches?null:document.querySelector('.tools'),
  css:'.fb-button:not(.fb-mounted){left:auto;bottom:auto;right:16px;top:180px;z-index:5}.tools .fb-button,.fb-button:not(.fb-mounted){border-color:var(--orange,#f85800);color:#ff8a3d}.tools .fb-button:hover,.fb-button:not(.fb-mounted):hover{background:var(--orange,#f85800);color:#050507}',
  // The pass is renewed as the panel opens unless it was got in the last two minutes, so it is fresh by Send.
  identity:()=>me.pass?{name:me.name||'Voyager',pass:bestPass,renew:()=>currentPass(480)}:null,
@@ -549,8 +555,10 @@ const feedback=installFeedback({renderer,page:'walk',mount:()=>matchMedia('(max-
 // Help (help.js): how to play, and, where Feedback is on, the tester guide, which can open it, the ship log or the spot
 // its example report was built at.
 const help=createHelp($('help-sheet'),{touch:()=>matchMedia('(pointer:coarse)').matches,tester:()=>!!feedback,live:()=>!!live,
- onLog(){closePanels();openLog();},onFeedback(){closePanels();feedback?.open();},
+ onLog(){closePanels();openLog();},onFeedback(){closePanels();feedback?.open();},onHub(){hubPanel.open();},
  onGo(search){const spot=readSpot(search);closePanels();if(spot)goToSpot(spot);}});
+// Now the Builder's Hub can reach it all.
+hubLink.ready(search=>{const spot=readSpot(search);if(!spot)return false;hubPanel.close();closePanels();return goToSpot(spot);});
 // A tester (this browser holds a tester invite) wears the captain's hat (hat.js).
 if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 // Others aboard: their poses in, ours out, the lifts as the server runs them.
@@ -659,6 +667,8 @@ function toggleMap(){
 let last=performance.now(),acc=0,lastHud=0,lastHeading=heading,lastSpeed=0,turnRate=0,accel=0;const STEP=1/120,wish=new T.Vector3();
 const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WALKER.prone};
 renderer.setAnimationLoop(()=>{
+ // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
+ if(hubPanel.isOpen()&&firstViewReady)return;
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
  const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);last=now;
  const k=input.read();follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
@@ -758,7 +768,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';try{localStorage.removeItem(STARTING);}catch{}}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();try{localStorage.removeItem(STARTING);}catch{}}}
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
