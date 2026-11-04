@@ -43,7 +43,7 @@ function screen(){
   for(let x=0;x<w;x+=24){g.beginPath();g.moveTo(x,0);g.lineTo(x,h);g.stroke();}
   for(let y=0;y<h;y+=24){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke();}
   g.fillStyle=ink;g.textAlign='left';g.textBaseline='middle';g.font=`600 22px ${MONO}`;
-  g.fillText('SECTOR 4 ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· AFT',24,30);g.textAlign='right';g.fillText(open?'UNLOCKED':'LOCKED',w-24,30);
+  g.fillText('SECTOR 4 · AFT',24,30);g.textAlign='right';g.fillText(open?'UNLOCKED':'LOCKED',w-24,30);
   g.textAlign='center';g.font=`700 ${open?64:56}px ${FONT}`;g.fillText(open?'ACCESS GRANTED':'SEALED',w/2,h*.45);
   for(const [i,on] of levers.entries()){const x=w/2+(i-2)*70;g.strokeStyle=ink;g.lineWidth=3;g.strokeRect(x-22,h-92,44,44);if(on){g.fillStyle=ink;g.fillRect(x-14,h-84,28,28);}}
   // Scan lines over it all.
