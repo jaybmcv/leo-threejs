@@ -37,7 +37,9 @@ export class RemotePlayers{
   // Sparse twice running is a rate, not a hiccup: glide across it.
   const gap=now-r.prevMs,sparse=ms=>ms>=GLIDE_MIN_MS&&ms<=GLIDE_MAX_MS;
   r.glideMs=sparse(gap)&&sparse(r.gapMs)?gap:0;r.glideFrom=[r.cur.x,r.cur.y,r.cur.z];r.gapMs=gap;
-  r.prev=p;r.prevMs=now;r.tgt=p;r.seen=now;r.name=p.name||r.name;r.verified=!!p.verified;r.hat=!!p.hat;
+  r.prev=p;r.prevMs=now;r.tgt=p;r.seen=now;
+  // Anonymous visitors stay generic instead of showing an account-id suffix.
+  if(p.name)r.name=/^Voyager .{4}$/.test(p.name)?'Voyager':p.name;else r.name??='Voyager';r.verified=!!p.verified;r.hat=!!p.hat;
  }
  gone(id){const r=this.remotes.get(id);if(!r)return;this.release(r);r.label?.remove();r.bubble?.remove();this.remotes.delete(id);}
  // A line of chat (chat.js), shown over the speaker's head for SAY_MS.
@@ -112,11 +114,13 @@ export class RemotePlayers{
   for(const r of this.remotes.values())if(r.label&&!near.includes(r)){r.label.hidden=true;if(r.bubble)r.bubble.hidden=true;}
   for(const r of near){
    p.set(r.cur.x,r.cur.y+(r.rest&&r.restKind==='lie'?.8:2.15),r.cur.z);
-   if(now-r.clearAt>250){r.clearAt=now;const d=p.clone().sub(eye),len=d.length();this.ray.set(eye,d.divideScalar(len));const hit=this.colliders.raycast(this.ray,len);r.clear=!hit||hit.distance>len-.4;}
+   if(now-r.clearAt>250){r.clearAt=now;const d=p.clone().sub(eye),len=d.length();this.ray.set(eye,d.divideScalar(len));
+    // Aquarium glass stays solid to swimmers but should not hide their names.
+    const hit=this.swimming?.(r.cur)?this.colliders.raycastSight(this.ray,len):this.colliders.raycast(this.ray,len);r.clear=!hit||hit.distance>len-.4;}
    p.project(camera);
    if(!r.label){r.label=document.createElement('div');r.label.className='remote-name';this.labelLayer.appendChild(r.label);}
    // At the lounge telescope's game, the name says so.
-   const text=(r.name||'Voyager '+r.id.slice(-4))+(r.tgt?.playing?' · playing':'');if(r.label.textContent!==text)r.label.textContent=text;
+   const text=(r.name||'Voyager')+(r.tgt?.playing?' · playing':'');if(r.label.textContent!==text)r.label.textContent=text;
    // A teal dot: the name is their Discord name, vouched for by The Creamery.
    r.label.classList.toggle('verified',r.verified);
    r.label.hidden=!r.clear||p.z>1;

@@ -144,7 +144,7 @@ function fishShape(sp){
 export function createLoungeAquarium(ship,frame,colliders){frame=frame.clone().multiply(new T.Matrix4().makeTranslation(0,0,6));
  // The solid parts, in the world.
  const solid=new T.Group();solid.name='Lounge_aquarium_solid';
- for(const b of SOLIDS)solid.add(new T.Mesh(boxGeometry(b).applyMatrix4(frame)));
+ for(const b of SOLIDS){const o=new T.Mesh(boxGeometry(b).applyMatrix4(frame));o.userData.collisionOnly=true;solid.add(o);}
  colliders.addStatic(solid,()=>true);
  if(typeof document==='undefined')return null;
  // What the tank now holds (the deck plates and floors through it, railings planned round them) goes from drawing; the
