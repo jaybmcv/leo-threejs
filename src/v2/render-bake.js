@@ -1,4 +1,4 @@
 import {bakeForWalking as baseBake,showBands as baseShow} from '../walk/render-bake.js';
-import {atriumSpan,onePassAtriumGlass} from './atrium-visibility.js';
+import {onePassAtriumGlass} from './atrium-visibility.js';
 export function bakeForWalking(root,options){onePassAtriumGlass(root);return baseBake(root,options);}
-export function showBands(bands,low,high){baseShow(bands,...atriumSpan(low,high));}
+export function showBands(bands,low,high){baseShow(bands,low,high);}

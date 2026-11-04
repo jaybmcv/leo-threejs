@@ -38,7 +38,7 @@ export async function captureFastBaseline({bootstrap=false}={}){
  const i=await verifyPrepared(),identity=await geometryIdentity();
  if(bootstrap){
   const {compatiblePreparedSources}=await import('./prepared-identity-v2.mjs');
-  if(!await compatiblePreparedSources(i.sourceInputs?.sources,identity))throw Error('Warm baseline has changed geometry inputs; use a wider build');
+  if(!await compatiblePreparedSources(i.sourceInputs?.sources,identity,{artifactSha256:i.sha256}))throw Error('Warm baseline has changed geometry inputs; use a wider build');
   for(const [name,file]of Object.entries({skin:'leo-exterior-web.glb',layout:'layout.json',plan:'walk-plan.json'}))if(sha(await fs.readFile(output+'/'+file))!==i.sourceInputs[name])throw Error('Warm baseline input differs from prepared artifact: '+file);
   const models=await json(output+'/scoped-models.json');for(const[name,record]of Object.entries(models))if(sha(await fs.readFile(output+'/'+name+'.glb'))!==record.sha256)throw Error('Warm model differs from its completed export: '+name);
  }

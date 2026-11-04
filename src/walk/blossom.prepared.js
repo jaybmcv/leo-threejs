@@ -2,7 +2,7 @@ import {ReplayGeometry,replayMerged} from "../v2/prepared-geometry-replay.js";
 import * as T from 'three';
 import {roomObject} from '../plan/rooms.js';
 import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {plantClumps} from '../stylized-plants.js';
+import {createLayeredConservatory,preserveBlossomRandomSequence} from './layered-conservatory.js';
 import {seeded} from '../polish-kit.js';
 
 // The aft planter of the Deck 17 garden commons (Neighborhood 10, the commons the tour opens in) becomes a cherry
@@ -168,23 +168,8 @@ export function createBlossomGarden(ship){
  });
  {const o=new T.Mesh(replayMerged("src/walk/blossom.js",nativeMergeGeometries,stones),stoneMat);o.name='Blossom_stone_wall';o.castShadow=true;o.receiveShadow=true;frame.add(o);stones.forEach(g=>g.dispose());}
 
- // Green underplanting, then flowers of every kind through it, clear of the trunk and its roots, the pond and the bench.
- const open=(x,z)=>Math.hypot(x-BED.x,z-BED.z)>1.3&&!inPond(x,z,.45)&&!(x>139.6&&x<141.95&&z>33.85&&z<35.95);
- plantClumps(frame,[[136.6,145.4,27.6,32.75],[140.3,145.4,32.75,33.85],[141.95,145.4,33.85,36.4],[140.3,141.95,35.95,36.4]].map(([x0,x1,z0,z1])=>
-  new T.Box3(new T.Vector3(x0,0,z0),new T.Vector3(x1,SOIL,z1))),{seed:9518,density:.7,flowers:false});
- const spot=()=>{for(;;){const x=BED.x+(rnd()-.5)*8,z=BED.z+(rnd()-.5)*8;if(open(x,z))return [x,z];}};
- const daisy=replayMerged("src/walk/blossom.js",nativeMergeGeometries,[...Array.from({length:6},(_,i)=>tinted(new ReplayGeometry("src/walk/blossom.js:12",T.SphereGeometry,1,6,3).scale(.07,.014,.028).translate(.065,0,0).rotateY(i/6*Math.PI*2),0xffffff)),tinted(new ReplayGeometry("src/walk/blossom.js:13",T.SphereGeometry,.032,6,4),0xffc23a)]);
- const tulip=tinted(new ReplayGeometry("src/walk/blossom.js:14",T.LatheGeometry,[[0,0],[.05,.02],[.065,.07],[.05,.13]].map(([x,y])=>new T.Vector2(x,y)),6),0xffffff);
- const spike=replayMerged("src/walk/blossom.js",nativeMergeGeometries,Array.from({length:6},(_,i)=>tinted(new ReplayGeometry("src/walk/blossom.js:15",T.IcosahedronGeometry,.04-i*.004,0).translate(0,i*.05,0),0xffffff)));
- const kinds=[[daisy,[0xffffff,0xfff2a8,0xff8fc0,0xffb347,0xd27bff],110],[tulip,[0xe8323c,0xff5a8a,0xffd23f,0xff7a1a,0xb04ad8,0xffffff],95],[spike,[0x8a5cf0,0x5a7cf0,0xd65cc8,0xc9a6ff],70]];
- const stems=[],petalMat=white('Blossom_flower',{vertexColors:true,side:T.DoubleSide,roughness:.6});
- for(const [geometry,colors,count] of kinds){
-  frame.add(scatter('Blossom_flowers',geometry,petalMat,colors,count,rnd,()=>{
-   const [x,z]=spot(),h=.2+rnd()*.35;stems.push([x,z,h]);
-   return [new T.Vector3(x,SOIL+h,z),new T.Euler((rnd()-.5)*.4,rnd()*6,(rnd()-.5)*.4),new T.Vector3().setScalar(.85+rnd()*.5)];}));
- }
- frame.add(scatter('Blossom_flower_stems',new ReplayGeometry("src/walk/blossom.js:16",T.CylinderGeometry,.008,.011,1,4).translate(0,.5,0),white('Blossom_stem'),[0x4f7f45,0x5f9c46],stems.length,rnd,i=>
-  [new T.Vector3(stems[i][0],SOIL,stems[i][1]),new T.Euler(),new T.Vector3(1,stems[i][2],1)]));
+ // Selected 5B: grouped layered planting, scoped to this blossom garden only.
+ frame.add(createLayeredConservatory());preserveBlossomRandomSequence(rnd);
 
  // Fallen petals carpet the soil, float on the pond and spill onto the floor round the wall.
  const H=BED.half,petal=new ReplayGeometry("src/walk/blossom.js:17",T.CircleGeometry,.045,5).rotateX(-Math.PI/2).scale(1,1,.6),petalColour=white('Blossom_petal',{side:T.DoubleSide,roughness:.85});
@@ -207,6 +192,14 @@ export function createBlossomGarden(ship){
  const rim=(x,z)=>{const r=.16+rnd()*.07;rocks.push(tinted(new ReplayGeometry("src/walk/blossom.js:20",T.IcosahedronGeometry,r,1).scale(1.2,.85,1.1).rotateY(rnd()*6).translate(x,rimTop-r*.85,z),stoneTint()));};
  for(let z=P.z0+.08;z<P.z1;z+=.27+rnd()*.08)if(!gap(z))rim(P.x0+.14,z);
  for(let x=P.x0+.3;x<P.x1-.05;x+=.27+rnd()*.08)rim(x,P.z1-.14);
+ // A low stone course closes the floor-level gap beneath the pond rim, clear of the bridge landing.
+ const lowColors=[0x77756b,0x898679,0x9b9385,0x807d73];
+ const lowRows=lowColors.map(()=>[]),lowRim=(x,z,i)=>{const r=.17+(i%3)*.012,s=r/.05;lowRows[i%lowRows.length].push([x,FLOOR+r*.85,z,s*1.2,s*.85,s*1.1,i*.43]);};
+ for(let i=0,z=P.z0+.18;z<P.z1-.1;i++,z+=.22)if(!gap(z))lowRim(P.x0+.14,z,i);
+ for(let i=0,x=P.x0+.2;x<P.x1-.02;i++,x+=.22)lowRim(x,P.z1-.14,i+16);
+ lowRows.forEach((rows,k)=>{if(!rows.length)return;const mesh=new T.InstancedMesh(new ReplayGeometry("src/walk/blossom.js:19",T.IcosahedronGeometry,.05,0),new T.MeshStandardMaterial({name:'Blossom_pond_low_stone',color:lowColors[k],flatShading:true,roughness:.95}),rows.length),pose=new T.Object3D();
+  rows.forEach(([x,y,z,sx,sy,sz,turn],i)=>{pose.position.set(x,y,z);pose.rotation.set(0,turn,0);pose.scale.set(sx,sy,sz);pose.updateMatrix();mesh.setMatrixAt(i,pose.matrix);});
+  mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();mesh.name=`Blossom_pond_low_rim_${k}`;mesh.castShadow=true;mesh.receiveShadow=true;frame.add(mesh);});
  block(pw,.15,pd,(P.x0+P.x1)/2,FLOOR+.075,(P.z0+P.z1)/2);
  for(const [z0,z1] of [[P.z0,BRIDGE.z-BRIDGE.half-.02],[BRIDGE.z+BRIDGE.half+.02,P.z1]])block(.3,.48,z1-z0,P.x0+.14,FLOOR+.24,(z0+z1)/2);
  block(pw,.48,.3,(P.x0+P.x1)/2,FLOOR+.24,P.z1-.14);
