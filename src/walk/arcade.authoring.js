@@ -1,4 +1,5 @@
 import {RecordGeometry,recordMerged} from "../v2/prepared-geometry-record.js";
+import {LOUNGE_PLAN} from '../plan/lounge-layout-v2.js';
 import {walkCanvas,hasWalkCanvas} from './canvas.js';
 import * as T from 'three';
 import {anchorObject} from '../plan/rooms.js';
@@ -19,7 +20,7 @@ import {newGame as newRun,step,press,beltAt} from './paws-off/rules.js';
 // Everything is the walk's own: the ship's models and exports are unchanged. The row is built in its own frame: x along
 // the wall (toward the commons' entrance side), y up from the floor, z out from the wall into the room.
 // The wall's face is at template x 154.44 (the commons template, model.js); the stair's foot at template z 34.85.
-const FLOOR=24.3,WALL=22.44,REACH=1.3;
+const FLOOR=24.3,WALL=LOUNGE_PLAN.arcadeWall+114.5,REACH=1.3;
 const PINK=0xff4fd8,CYAN=0x45e3ff,GREEN=0x6dff7a,AMBER=0xffc266,ORANGE=0xf85800,PURPLE=0xa77bff;
 // Cabinet shapes: width, depth, control panel height and reach, screen (bottom, top, lean back), marquee overhang, top.
 const SHAPES={
@@ -41,7 +42,7 @@ const ROW=[
  {shape:'tall',body:0x989da5,side:0x7e838b,neon:[PURPLE,PURPLE]},
  {shape:'upright',body:0xa1a6ad,side:0x878c94,neon:[PINK,CYAN]},
 ];
-const GAP=.95,START=-4.25,ROW_END=ROW.reduce((x,c)=>x+SHAPES[c.shape].w+GAP,START)-GAP;
+const GAP=LOUNGE_PLAN.arcadeGap,START=LOUNGE_PLAN.arcadeStart+43,ROW_END=ROW.reduce((x,c)=>x+SHAPES[c.shape].w+GAP,START)-GAP;
 // Paws Off's arcade treadmill: its tower, a little further on than the cabinets are spaced, and its deck in front, as
 // long, wide and high as the Deck 16 treadmills' (areas.js), so a run here plays as one there does.
 const MILL={body:0x15303a,side:0x1d4552,neon:[ORANGE,CYAN],gap:1.3,deck:{w:1.3,l:2.6,h:.26,at:.55}};

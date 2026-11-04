@@ -16,18 +16,18 @@ export function featurePlaces(layout,{crownFloor=LIFTS.find(l=>l.id==='crown').s
  local('theatre-concession','Theater concession stand','d16-theater-5',[-18.5,0,-14.7],0);
  local('gaming-lounge','Gaming lounge','d16-training-aft',[-18,0,0],Math.PI/2);
  local('telescope','Alien Cat Invasion telescope','observation-lounge',[31.7,0,0],Math.PI/2,'Raised observation lounge via Deck 17 ramp');
- const garden=room('commons-1'),piece=name=>garden.components.pieces.find(p=>p.name===name),maze=piece('Haze Maze tower'),arcade=piece('arcade row with Paws Off treadmill'),dome=piece('geodesic hammock dome');
+ const garden=room('commons-1'),piece=name=>garden.components.pieces.find(p=>p.name===name),maze=piece('Haze Maze tower'),dome=piece('geodesic hammock dome');
  add('hydro-nip','Hydro-Nip Lounge',17,[garden.door.center[0],garden.y,garden.door.center[2]-1.4],Math.PI,garden.id);
- add('haze-maze','Haze Maze entrance',17,[maze.center[0],garden.y,maze.center[2]+maze.size[2]/2+1.8],Math.PI,garden.id);
- add('arcade','Hydro-Nip arcade',17,[garden.x+22.44-1.55,garden.y,garden.z-3.85],Math.PI/2,garden.id,'Alien Cat Invasion · Paw Pool · Neon Arena Survival · Paws Off');
- add('arcade-pool','Paw Pool arcade cabinet',17,[garden.x+22.44-1.55,garden.y,garden.z-1.925],Math.PI/2,garden.id);
- add('neon-arena','Neon Arena Survival',17,[garden.x+22.44-1.55,garden.y,garden.z-.04],Math.PI/2,garden.id);
- add('arcade-treadmill','Paws Off arcade treadmill',17,[garden.x+22.44-3.85,garden.y,garden.z+11.43],Math.PI/2,garden.id);
- add('aquarium-treasure','Aquarium Treasure entrance',19,point(garden,[-1.2,8,-17.8]),0,garden.id,'Upper Hydro-Nip gallery');
+ add('haze-maze','Haze Maze entrance',17,[maze.center[0],garden.y,maze.center[2]-maze.size[2]/2-1.8],0,garden.id);
+ add('arcade','Hydro-Nip arcade',17,[-89.55,garden.y,-43.5],Math.PI/2,garden.id,'Alien Cat Invasion · Paw Pool · Neon Arena Survival · Paws Off');
+ add('arcade-pool','Paw Pool arcade cabinet',17,[-89.55,garden.y,-41.725],Math.PI/2,garden.id);
+ add('neon-arena','Neon Arena Survival',17,[-89.55,garden.y,-39.99],Math.PI/2,garden.id);
+ add('arcade-treadmill','Paws Off arcade treadmill',17,[-91.85,garden.y,-29.27],Math.PI/2,garden.id);
+ add('aquarium-treasure','Aquarium Treasure entrance',19,point(garden,[-1.2,8,-14.23]),0,garden.id,'Upper Hydro-Nip gallery');
  local('chinampa','Chinampa & Three Sisters','d03-farm-1',[15.5,0,-.85],Math.PI/2);
  add('lever-panel','Tank-bay lever panel',4,[-173.9,layout.decks[3].y,0],-Math.PI/2);
  add('hammock-dome','Hammock dome',17,[dome.center[0],garden.y,dome.center[2]+dome.size[2]/2+.8],Math.PI,garden.id);
- add('clubhouse-door','Clubhouse entrance',17,[arcade.center[0]-1.8,garden.y,-27.5],Math.PI/2,garden.id,'Vault door beside the arcade');
+ add('clubhouse-door','Clubhouse entrance',17,[-89.3,garden.y,-45.8],Math.PI/2,garden.id,'Vault door beside the arcade');
  for(const r of layout.rooms.filter(r=>r.kind==='garden'))for(const door of r.galleryDoors||[]){if(door.deck===17)continue;const n=door.outward;add(r.id+'-gallery-'+door.deck,r.name+' · gallery',door.deck,[door.center[0]-n[0]*1.2,door.center[1],door.center[2]-n[1]*1.2],Math.atan2(-n[0],-n[1]),r.id);}
  const blossom=room('commons-10').components.pieces.find(p=>p.name==='blossom garden assembly');add('blossom','Blossom garden',17,[blossom.center[0]-5.5,blossom.center[1],blossom.center[2]],Math.PI/2,'commons-10');
  local('hamster-ball','Hamster ball','commons-10',[5.4,0,-7.3],0);

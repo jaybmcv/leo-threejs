@@ -1,5 +1,5 @@
 import layout from './plan/selected-layout.js';
-const v2MazeFit=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1'),p=r.components.pieces.find(p=>p.name==='Haze Maze tower'),t=r.components.mazeTubes,toLocal=z=>27+r.side*(z-r.z);return {dx:p.center[0]-r.x+132-117.25,dz:toLocal(p.center[2])-26,front:toLocal(t[0].to),rear:toLocal(t[1].to)};})();
+const v2MazeFit=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1'),p=r.components.pieces.find(p=>p.name==='Haze Maze tower'),toLocal=z=>27+r.side*(z-r.z);return {dx:p.center[0]-r.x+132-117.25,dz:toLocal(p.center[2])-26,tubes:r.components.mazeTubes.map(t=>({...t,from:t.from-r.x+132,to:t.to-r.x+132,z:toLocal(t.z),level:r.y+t.rise}))};})();
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {FontLoader} from 'three/addons/loaders/FontLoader.js';
@@ -23,7 +23,8 @@ const MAIN_LOGO_URL=typeof __HYDRO_NIP_MAIN_LOGO__==='undefined'?null:__HYDRO_NI
 // upper one behind it, each at its gallery's height, so a level glass tube runs from each to its gallery: the lower to
 // the front gallery, the upper to the rear one.
 const CELLS={x0:114.1+v2MazeFit.dx,z0:19.1+v2MazeFit.dz,w:2.1,d:12.4/6,cols:3,rows:6},SPLIT=CELLS.z0+4*CELLS.d;
-const TUBES=[{x:119.4+v2MazeFit.dx,level:LEVELS[0],from:MAZE.z0,to:v2MazeFit.front},{x:118+v2MazeFit.dx,level:LEVELS[1],from:MAZE.z1,to:v2MazeFit.rear}],TUBE={r:1.35,floor:1,half:.95};
+const TUBES=v2MazeFit.tubes,TUBE={r:1.35,floor:1,half:.95};
+export const mazePoint=([x,y,z])=>[MAZE.x0+MAZE.x1-x,y,MAZE.z0+MAZE.z1-z];
 // The ground floor's one way through (cells [col,row]; row 0 at the door, which opens on cell 1).
 const PASSAGES=[[[1,0],[2,0]],[[2,0],[2,1]],[[2,1],[2,2]],[[2,2],[2,3]],[[2,3],[1,3]],[[1,3],[1,4]],[[1,4],[0,4]],[[0,4],[0,5]],[[0,5],[1,5]],
  // and its dead end
@@ -57,22 +58,8 @@ export function clearGarden(root){
 // Each tube lands on a gallery through a gap in its railing (model.js rail(): a Handrail tube and Balusters): the
 // handrail is split round the gap and the balusters in it go.
 export function openRails(root){
- root.updateMatrixWorld(true);
- const gaps=TUBES.map(t=>({z:t.to,y:t.level,x0:t.x-TUBE.r-.05,x1:t.x+TUBE.r+.05})),gone=[],added=[];
- const hit=(g,b)=>Math.abs((b.min.z+b.max.z)/2-g.z)<.3&&b.max.x>g.x0&&b.min.x<g.x1;
- root.traverse(o=>{
-  if(!o.isMesh)return;
-  if(o.name==='Baluster'){const p=o.position;for(const g of gaps)if(Math.abs(p.z-g.z)<.3&&Math.abs(p.y-(g.y+.55))<.2&&p.x>g.x0-.1&&p.x<g.x1+.1)gone.push(o);}
-  if(o.name==='Handrail'){o.geometry.computeBoundingBox();const b=o.geometry.boundingBox.clone().applyMatrix4(o.matrix);
-   for(const g of gaps){if(!hit(g,b)||Math.abs(b.max.y-.045-(g.y+1.1))>.1)continue;gone.push(o);
-    for(const [xa,xb] of [[b.min.x,g.x0],[g.x1,b.max.x]])if(xb-xa>.1){
-     const piece=new T.Mesh(new T.TubeGeometry(new T.LineCurve3(new T.Vector3(xa,g.y+1.1,g.z),new T.Vector3(xb,g.y+1.1,g.z)),8,.045,6,false),o.material);
-     piece.name='Handrail';piece.castShadow=piece.receiveShadow=true;added.push([o.parent,piece]);
-     const post=new T.Mesh(new T.BoxGeometry(.06,1.1,.06),o.material);post.name='Baluster';post.position.set(xa===g.x1?xa:xb,g.y+.55,g.z);added.push([o.parent,post]);}}}
- });
- for(const o of gone)o.removeFromParent();for(const [p,o] of added)p.add(o);
- glassRails(root);
- return gone.length;
+ // The v2 gallery producer opens the new tube landings before drawing guards.
+ glassRails(root);return 0;
 }
 
 // The lounge's railings and stair (from tester feedback): the handrails glow orange, glass fills each gallery railing
@@ -188,7 +175,8 @@ export function createHydroNipLounge({mirror=1}={}){
   const c=new Float32Array(n.attributes.position.count*3);for(let i=0;i<c.length;i+=3){c[i]=color.r;c[i+1]=color.g;c[i+2]=color.b;}n.setAttribute('color',new T.BufferAttribute(c,3));
   if(uv){const a=n.attributes.uv;for(let i=0;i<a.count;i++){const [u,v]=uv(a.getX(i),a.getY(i));a.setXY(i,u,v);}}return n;};
  // (Loose paints merge apart, as Lounge_*_loose meshes the walk doesn't collide with.)
- const put=(p,g)=>{if(!p){g.dispose();return;}const key=p.loose?p.mat.name+'|loose':p.mat;(lists.get(key)||lists.set(key,{mat:p.mat,loose:!!p.loose,gs:[]}).get(key)).gs.push(tidy(g,p.color,p.uv));};
+ let turning=null;
+ const put=(p,g)=>{if(turning)g.applyMatrix4(turning);if(!p){g.dispose();return;}const key=p.loose?p.mat.name+'|loose':p.mat;(lists.get(key)||lists.set(key,{mat:p.mat,loose:!!p.loose,gs:[]}).get(key)).gs.push(tidy(g,p.color,p.uv));};
  const box=(m,[w,h,d],[x,y,z])=>put(m,new T.BoxGeometry(w,h,d).translate(x,y,z));
  const cyl=(m,rt,rb,h,[x,y,z],seg=12,open=false)=>put(m,new T.CylinderGeometry(rt,rb,h,seg,1,open).translate(x,y,z));
  const ball=(m,r,[x,y,z],detail=1)=>put(m,new T.IcosahedronGeometry(r,detail).translate(x,y,z));
@@ -327,20 +315,21 @@ export function createHydroNipLounge({mirror=1}={}){
  // partitions, find the cat-shelf stair at the back up to the lower platform, then climb the second stair to the upper
  // one. A glass tube runs level from each platform to its gallery: the lower to the front, the upper to the rear.
  {const {x0,x1,z0,z1,top}=MAZE,cx=(x0+x1)/2,cz=(z0+z1)/2,h=top-FLOOR,rise=(LEVELS[0]-FLOOR)/11,C=CELLS;
+  const firstChild=root.children.length,turn=new T.Matrix4().makeTranslation(2*cx,0,2*cz).multiply(new T.Matrix4().makeRotationY(Math.PI));turning=turn;
+  const ports=TUBES.map(t=>({x:2*cx-t.from,z:2*cz-t.z,y:t.level}));
   // The glass, with openings [x0,x1,y0,y1] for the door and the two tubes.
-  const tubeHole=t=>[t.x-TUBE.half,t.x+TUBE.half,t.level,t.level+2.45];
-  const front=[[cx-1,cx+1,FLOOR,FLOOR+2.5],tubeHole(TUBES[0])],back=[tubeHole(TUBES[1])];
+  const front=[[cx-1,cx+1,FLOOR,FLOOR+2.5]],back=[];
   // A wall across x at z, from xa to xb and FLOOR to the top, less its openings.
-  const holed=(z,xa,xb,holes)=>{const xs=[...new Set([xa,xb,...holes.flatMap(o=>[o[0],o[1]])])].sort((a,b)=>a-b);
+  const holed=(z,xa,xb,holes,side=false)=>{const xs=[...new Set([xa,xb,...holes.flatMap(o=>[o[0],o[1]])])].sort((a,b)=>a-b);
    for(let i=0;i<xs.length-1;i++){const a=xs[i],b=xs[i+1],m=(a+b)/2;let y=FLOOR;
-    for(const o of holes.filter(o=>o[0]<m&&o[1]>m).sort((p,q)=>p[2]-q[2])){if(o[2]>y)put(M.mazeGlass,new T.BoxGeometry(b-a,o[2]-y,.04).translate(m,(y+o[2])/2,z));y=o[3];}
-    if(top>y)put(M.mazeGlass,new T.BoxGeometry(b-a,top-y,.04).translate(m,(y+top)/2,z));}};
+    for(const o of holes.filter(o=>o[0]<m&&o[1]>m).sort((p,q)=>p[2]-q[2])){if(o[2]>y)put(M.mazeGlass,side?new T.BoxGeometry(.04,o[2]-y,b-a).translate(z,(y+o[2])/2,m):new T.BoxGeometry(b-a,o[2]-y,.04).translate(m,(y+o[2])/2,z));y=o[3];}
+    if(top>y)put(M.mazeGlass,side?new T.BoxGeometry(.04,top-y,b-a).translate(z,(y+top)/2,m):new T.BoxGeometry(b-a,top-y,.04).translate(m,(y+top)/2,z));}};
   holed(z0,x0,x1,front);holed(z1,x0,x1,back);
-  for(const x of [x0,x1])put(M.mazeGlass,new T.BoxGeometry(.04,h,z1-z0).translate(x,FLOOR+h/2,cz));put(M.mazeGlass,new T.BoxGeometry(x1-x0,.04,z1-z0).translate(cx,top,cz));
+  for(const x of [x0,x1])holed(x,z0,z1,ports.filter(t=>Math.abs(t.x-x)<.01).map(t=>[t.z-TUBE.half,t.z+TUBE.half,t.y,t.y+2.45]),true);put(M.mazeGlass,new T.BoxGeometry(x1-x0,.04,z1-z0).translate(cx,top,cz));
   // The frame: corner posts, posts down the long sides and beside each tube, and rails at every level.
   for(const x of [x0,x1])for(const z of [z0,z1])box(M.dark,[.14,h,.14],[x,FLOOR+h/2,z]);
-  for(let z=z0+2.33;z<z1-.1;z+=2.33)for(const x of [x0,x1])box(M.dark,[.08,h,.08],[x,FLOOR+h/2,z]);
-  for(const [z,o] of [[z0,front[1]],[z1,back[0]]])for(const x of [o[0],o[1]])box(M.dark,[.08,o[3]-o[2],.08],[x,(o[2]+o[3])/2,z]);
+  for(let z=z0+2.33;z<z1-.1;z+=2.33)for(const x of [x0,x1])if(!ports.some(t=>Math.abs(t.x-x)<.01&&Math.abs(t.z-z)<TUBE.half+.08))box(M.dark,[.08,h,.08],[x,FLOOR+h/2,z]);
+  for(const t of ports)for(const z of [t.z-TUBE.half,t.z+TUBE.half])box(M.dark,[.08,2.45,.08],[t.x,t.y+1.225,z]);
   for(const y of [FLOOR+.06,...LEVELS,top])for(const z of [z0,z1])box(M.dark,[x1-x0,.1,.1],[cx,y,z]);
   for(const y of [FLOOR+.06,...LEVELS,top])for(const x of [x0,x1])box(M.dark,[.1,.1,z1-z0],[x,y,cz]);
   door({x:cx,z:z0,width:1.9,height:2.45,face:-1,pocket:1});
@@ -362,7 +351,7 @@ export function createHydroNipLounge({mirror=1}={}){
   {const t=(foot-SPLIT)/8;for(let k=4;k<=11;k++)step(east,x1-.1,foot-(k-3)*t,foot-(k-4)*t,FLOOR,FLOOR+k*rise);}
   // The second: from beside the front tube, two shelves along the front wall, a landing, then back up column 0 to the
   // upper platform's front edge.
-  const lobby=TUBES[0].x-TUBE.half,front0=C.z0+1.4;
+  const lobby=119.4+v2MazeFit.dx-TUBE.half,front0=C.z0+1.4;
   step(lobby-1.45,lobby,C.z0,front0,LEVELS[0],LEVELS[0]+rise);step(west,lobby-1.45,C.z0,front0,LEVELS[0],LEVELS[0]+2*rise);step(C.x0,west,C.z0,front0,LEVELS[0],LEVELS[0]+3*rise);
   {const t=(SPLIT-front0)/8;for(let k=4;k<=11;k++)step(C.x0,west,front0+(k-4)*t,front0+(k-3)*t,LEVELS[0],LEVELS[0]+k*rise);}
   // The platforms, and glass guards with a green rail where they and the stairs drop away.
@@ -385,14 +374,14 @@ export function createHydroNipLounge({mirror=1}={}){
   for(let i=0;i<14;i++){const x=x0+.4+rnd()*(x1-x0-.8),z=z0+.4+rnd()*(z1-z0-.8),n=3+Math.floor(rnd()*4);
    for(let k=0;k<n;k++)put(M.leaf,new T.OctahedronGeometry(.09,0).scale(1,.45,1.3).rotateY(rnd()*3).translate(x+Math.sin(k*1.7)*.08,top-.15-k*.2,z));}
   sign({at:[116.6+v2MazeFit.dx,FLOOR+3.15,z0-.1],normal:[0,0,-1],width:3.2,height:1.2,color:GREEN,lines:[{text:'HAZE MAZE',size:.42}]});
-  // The tubes: glass, ringed in green, with a floor level with the platform and the gallery at either end.
-  for(const t of TUBES){const len=Math.abs(t.to-t.from),zc=(t.to+t.from)/2,yc=t.level+TUBE.floor,n=Math.round(len/1.2);
-   put(M.glass,new T.CylinderGeometry(TUBE.r,TUBE.r,len,18,1,true).rotateX(Math.PI/2).translate(t.x,yc,zc));
-   box(M.wood,[1.75,.1,len+.2],[t.x,t.level-.05,zc]);for(const s of [-1,1])box(neon(GREEN),[.03,.012,len],[t.x+s*.84,t.level+.006,zc]);
-   // Low glass along both edges of the floor, where the tube curves away below it: the walk's railing planner (and
-   // anyone) sees the edge is guarded, and no railing goes in down the tube.
-   for(const s of [-1,1])box(M.glass,[.03,.9,len],[t.x+s*.88,t.level+.45,zc]);
-   for(let i=0;i<=n;i++)put(neon(GREEN),new T.TorusGeometry(TUBE.r+.03,.025,4,24).translate(t.x,yc,Math.min(t.from,t.to)+i*len/n));}
+  // Rotate the complete maze, including its moving doors and cushion anchors.
+  turning=null;for(const o of root.children.slice(firstChild)){o.applyMatrix4(turn);if(o.userData.slide){const [x,y,z]=o.userData.slide;o.userData.slide=[-x,y,-z];}}
+  // Side exits join the aft gallery below and the new aquarium gallery above.
+  for(const t of TUBES){const len=Math.abs(t.to-t.from),xc=(t.to+t.from)/2,yc=t.level+TUBE.floor,n=Math.max(1,Math.round(len/1.2)),half=t.half||TUBE.r;
+   put(M.glass,new T.CylinderGeometry(TUBE.r,TUBE.r,len,18,1,true).scale(1,1,half/TUBE.r).rotateZ(Math.PI/2).translate(xc,yc,t.z));
+   box(M.wood,[len+.2,.1,1.75],[xc,t.level-.05,t.z]);for(const s of [-1,1])box(neon(GREEN),[len,.012,.03],[xc,t.level+.006,t.z+s*.84]);
+   for(const s of [-1,1])box(M.glass,[len,.9,.03],[xc,t.level+.45,t.z+s*.88]);
+   for(let i=0;i<=n;i++)put(neon(GREEN),new T.TorusGeometry(TUBE.r+.03,.025,4,24).scale(half/TUBE.r,1,1).rotateY(Math.PI/2).translate(Math.min(t.from,t.to)+i*len/n,yc,t.z));}
  }
 
  // The broad stair (from tester feedback): smooth white stringers down both sides of each flight, the lower one sweeping
@@ -518,7 +507,7 @@ export function createHydroNipLounge({mirror=1}={}){
  const edges=[[[114,12.05],[154,12.05]],[[114,41.95],[147.5,41.95]],[[113.55,12.6],[113.55,41.5]]];
  for(const level of LEVELS){const y=level-.32;
   // A tube landing on this edge: no lights where it meets its own level, and no pots hanging into it from either.
-  const tubeAt=(x,z,lvl,pad)=>TUBES.some(t=>Math.abs(z-t.to)<1&&Math.abs(x-t.x)<TUBE.r+pad&&(lvl===undefined||lvl===t.level));
+  const tubeAt=(x,z,lvl,pad)=>TUBES.some(t=>Math.abs(x-t.to)<1&&Math.abs(z-t.z)<(t.half||TUBE.r)+pad&&(lvl===undefined||lvl===t.level));
   for(const [a,b] of edges){const len=Math.hypot(b[0]-a[0],b[1]-a[1]),spans=Math.max(1,Math.round(len/4.5));
    for(let s=0;s<spans;s++){let prev=null;const n=8;
     for(let i=0;i<=n;i++){const t=(s+i/n)/spans,x=a[0]+(b[0]-a[0])*t,z=a[1]+(b[1]-a[1])*t,sag=.35*(1-(2*i/n-1)**2),p=[x,y-sag,z];

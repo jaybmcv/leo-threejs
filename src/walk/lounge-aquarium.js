@@ -4,16 +4,10 @@ import {canvasTexture,seeded} from '../polish-kit.js';
 import {cutOut} from '../cut-out.js';
 import {COMMONS} from '../model.js';
 
-// The Hydro-Nip Lounge's aquarium (from tester feedback): its front wall, the one the galleries run along and the jaguar
-// gate opens through, becomes a fish tank the depth of the strip behind it (between the lounge and the Deck 17-19
-// promenade), from the floor to the ceiling, three storeys in one. Glowing coral, kelp and an octopus sit on its rocks,
-// schools of glowing fish swim loops through it, kelp sways and bubbles rise. The jaguar's glass throat (jaguar-gate.js)
-// runs through it as the way in, so you walk in with the tank either side and over you. The galleries stay as they were,
-// with their rails in front of the glass. Walk only: both glass faces, the ends and the throat's sides are solid;
-// inside, everything is the walk's own drawing (unlit colours, no real lights).
-// Built in the commons template's own frame (HYDRO_NIP_LOUNGE.md): x along the wall, z from the promenade side (4) to the
-// lounge (8), y up from the Deck 17 floor (24.3). The throat is the jaguar gate's: 4 m wide at x 137.25, 3.68 m high.
-export const AQUARIUM={x0:121.2,x1:154.3,back:4.07,glass:7.82,front:7.9,floor:24.3,bed:24.62,top:35.5,deck18:28,tunnel:{x0:135.25,x1:139.25,top:28.04}};
+// One tank fills the room glass across three decks. The jaguar throat crosses it,
+// and the treasure entrance opens from the room-side Deck 19 gallery.
+// Coordinates use the lounge template, with the tank's six-metre frame offset.
+export const AQUARIUM={x0:105.7,x1:158.3,back:2.15,glass:5.90,front:5.98,floor:24.3,bed:24.62,top:35.5,deck18:28,tunnel:{x0:132,x1:136,top:28.04}};
 const A=AQUARIUM,TUN=A.tunnel,WATER=new T.Color(0x073c47);
 const C=hex=>new T.Color(hex);
 const NEON=[0xff3fd0,0xff7a3d,0x8dff5a,0x3df0ff,0xa66bff,0xffe44d,0xff4f7a,0x4dffc3].map(C);
@@ -32,8 +26,8 @@ export function aquariumFront(){
 // Solid parts, as boxes [x0,x1,y0,y1,z0,z1]: both glass faces (above the throat too), both ends, and the throat's sides and roof.
 const SOLIDS=[
  [A.x0,TUN.x0,A.floor,A.top,A.glass,A.front],[TUN.x1,A.x1,A.floor,A.top,A.glass,A.front],[TUN.x0,TUN.x1,TUN.top-.06,A.top,A.glass,A.front],
- [A.x0,TUN.x0,A.floor,A.top,3.97,A.back],[TUN.x1,A.x1,A.floor,A.top,3.97,A.back],[TUN.x0,TUN.x1,TUN.top,A.top,3.97,A.back],
- [A.x0-.1,A.x0,A.floor,A.top,3.97,A.front],[A.x1,A.x1+.1,A.floor,A.top,3.97,A.front],
+ [A.x0,TUN.x0,A.floor,A.top,A.back-.1,A.back],[TUN.x1,A.x1,A.floor,A.top,A.back-.1,A.back],[TUN.x0,TUN.x1,TUN.top,A.top,A.back-.1,A.back],
+ [A.x0-.1,A.x0,A.floor,A.top,A.back-.1,A.front],[A.x1,A.x1+.1,A.floor,A.top,A.back-.1,A.front],
  [TUN.x0,TUN.x0+.05,A.floor,TUN.top,A.back,A.glass],[TUN.x1-.05,TUN.x1,A.floor,TUN.top,A.back,A.glass],[TUN.x0,TUN.x1,TUN.top-.06,TUN.top,A.back,A.glass],
 ];
 const boxGeometry=([x0,x1,y0,y1,z0,z1])=>new T.BoxGeometry(x1-x0,y1-y0,z1-z0).translate((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);
@@ -152,7 +146,7 @@ export function createLoungeAquarium(ship,frame,colliders){frame=frame.clone().m
  {const box=new T.Box3().setFromPoints([new T.Vector3(A.x0+.05,A.floor+.05,A.back+.03),new T.Vector3(A.x1-.05,A.top-.05,A.glass-.02)].map(p=>p.applyMatrix4(frame)));
   if(!ship.v2Prepared)cutOut(ship.inside,box,o=>o.name!=='Commons_column');}
  // Open the promenade partitions for drawing after their collision has been built.
- if(!ship.v2Prepared)cutOut(ship.inside,new T.Box3(new T.Vector3(A.x0,A.floor,3.7),new T.Vector3(A.x1,A.top,4.2)),o=>o.name==='Partition_wall',frame.clone().invert());
+ if(!ship.v2Prepared)cutOut(ship.inside,new T.Box3(new T.Vector3(A.x0,A.floor,A.back-.37),new T.Vector3(A.x1,A.top,A.back+.13)),o=>o.name==='Partition_wall',frame.clone().invert());
 
  const L=lists(),put=L.put,rnd=seeded(125),r=(a,b)=>a+(b-a)*rnd(),pick=a=>a[Math.floor(rnd()*a.length)];
  const flat=c=>()=>c;
@@ -248,12 +242,12 @@ export function createLoungeAquarium(ship,frame,colliders){frame=frame.clone().m
  // the commons' columns, with a cyan line along the plinth and the header.
  const steelBoxes=[[A.x0,TUN.x0,A.floor,A.bed,A.glass-.04,A.front+.06],[TUN.x1,A.x1,A.floor,A.bed,A.glass-.04,A.front+.06],[A.x0,A.x1,A.top-.2,A.top,A.front,A.front+.08],
   [A.x0-.12,A.x0+.12,A.floor,A.top,A.glass-.1,A.front+.08],[A.x1-.12,A.x1+.12,A.floor,A.top,A.glass-.1,A.front+.08],
-  ...[121,132,143,154].filter(x=>x>A.x0&&x<A.x1).map(x=>[x-.26,x+.26,A.bed,A.top,7.7,8.3]),
+  ...[121,132,143,154].filter(x=>x>A.x0&&x<A.x1).map(x=>[x-.26,x+.26,A.bed,A.top,A.glass-.12,A.front+.4]),
   [A.x0-.1,A.x0,A.floor,A.top,A.back,A.glass],[A.x1,A.x1+.1,A.floor,A.top,A.back,A.glass]];
  const steel=steelBoxes.map(b=>boxGeometry(b).toNonIndexed());
  const lineBoxes=[[A.x0,TUN.x0,A.bed-.05,A.bed-.01,A.front+.06,A.front+.08],[TUN.x1,A.x1,A.bed-.05,A.bed-.01,A.front+.06,A.front+.08],[A.x0,A.x1,A.top-.24,A.top-.2,A.front+.05,A.front+.08],
   // and two along its back on the promenade side, one low and one high.
-  ...[[24.5,24.54],[27.7,27.74]].flatMap(([y0,y1])=>[[A.x0,TUN.x0-2.4,y0,y1,3.95,3.97],[TUN.x1+2.4,A.x1,y0,y1,3.95,3.97]])];
+  ...[[24.5,24.54],[27.7,27.74]].flatMap(([y0,y1])=>[[A.x0,TUN.x0-2.4,y0,y1,A.back-.12,A.back-.1],[TUN.x1+2.4,A.x1,y0,y1,A.back-.12,A.back-.1]])];
 
  // Materials and meshes. Everything sits in the template's frame, and the group carries it to the world.
  const uniforms={uTime:{value:0}},group=new T.Group();group.name='Walk_lounge_aquarium';group.matrixAutoUpdate=false;group.matrix.copy(frame);
