@@ -208,9 +208,9 @@ export function createBlossomGarden(ship){
  for(let x=P.x0+.3;x<P.x1-.05;x+=.27+rnd()*.08)rim(x,P.z1-.14);
  // A low stone course closes the floor-level gap beneath the pond rim, clear of the bridge landing.
  const lowColors=[0x77756b,0x898679,0x9b9385,0x807d73];
- const lowRim=(x,z,i)=>{const r=.17+(i%3)*.012;rocks.push(tinted(
-  new T.IcosahedronGeometry(r,1)
-  .scale(1.2,.85,1.1).rotateY(i*.43).translate(x,FLOOR+r*.85,z),lowColors[i%lowColors.length]));};
+ const lowRim=(x,z,i)=>{const r=.17+(i%3)*.012,s=r/.05;rocks.push(tinted(
+  new T.IcosahedronGeometry(.05,0)
+  .scale(s*1.2,s*.85,s*1.1).rotateY(i*.43).translate(x,FLOOR+r*.85,z),lowColors[i%lowColors.length]));};
  for(let i=0,z=P.z0+.18;z<P.z1-.1;i++,z+=.22)if(!gap(z))lowRim(P.x0+.14,z,i);
  for(let i=0,x=P.x0+.2;x<P.x1-.02;i++,x+=.22)lowRim(x,P.z1-.14,i+16);
  block(pw,.15,pd,(P.x0+P.x1)/2,FLOOR+.075,(P.z0+P.z1)/2);
