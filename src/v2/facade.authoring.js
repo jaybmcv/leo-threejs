@@ -32,6 +32,11 @@ export function attachFacade(ship,scene,{authority=null}={}){
 // Retain source objects for inspection without traversing 250k hidden authoring meshes every frame.
 export function isolateStaticWorld(ship,scene){ship.root.updateMatrixWorld(true);const live=[],visible=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};ship.root.traverse(o=>{if((o.isMesh&&!o.userData.baked||o.isLight)&&visible(o))live.push({o,parent:o.parent});});const root=new T.Group();root.name='V2_live_source_draws';scene.add(root);const groups=new Map();for(const {o,parent} of live){let g=groups.get(parent);if(!g){g=new T.Group();g.name=parent.name;root.add(g);groups.set(parent,g);}g.attach(o);}ship.root.removeFromParent();ship.liveDraws=root;return root;}
 
+// three r185 decides whether a batch needs a new shader by reading `colorTexture`, which BatchedMesh stores as
+// `_colorsTexture`; undefined is never null, so every batched draw rebuilt its shader parameters and cache key to
+// find the same program again (about 0.9 ms of CPU a frame in the arrival hall). Answer with the stored texture.
+if(!('colorTexture' in T.BatchedMesh.prototype))Object.defineProperty(T.BatchedMesh.prototype,'colorTexture',{configurable:true,get(){return this._colorsTexture;}});
+
 // Low-deck architecture has many 40 m chunks sharing exactly one finish.
 // Cache opaque multi-draw lists within each band. Batch bounds and band visibility
 // stay active; the GPU clips offscreen chunks without rebuilding indirect data
