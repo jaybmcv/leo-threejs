@@ -5,6 +5,9 @@ import {PANEL} from '../src/walk/net/panel-rules.js';
 import {createLeverPanel} from '../src/walk/lever-panel.js';
 import {installWalkCanvas} from '../src/walk/canvas.js';
 import {connectLive} from '../src/walk/net/live.js';
+import * as T from 'three';
+import {Colliders} from '../src/walk/collision.js';
+import {installPreparedColliders} from '../src/v2/prepared-codec.js';
 
 let now=0;const people=new Set(),messages=[];
 const panel=createSharedPanel({everyone:()=>people,broadcast:m=>messages.push(m),clock:()=>now});
@@ -23,7 +26,7 @@ pose(a,PANEL.face-2);step(.5);assert.equal(panel.state().down,0);assert.equal(pa
 panel.message(b,{op:'flip',i:2});assert.deepEqual(panel.state().levers,[0,0,0,0,0]);
 // The actual client meshes and admission colliders see the same snapshots, with no optimistic lever changes.
 installWalkCanvas(createCanvas);
-function client(id){const movers=[],sent=[],view=createLeverPanel({addMover(name){const m={name,enabled:true};movers.push(m);return m;}},{shared:true,id:()=>id,send:m=>sent.push(m)});return {view,movers,sent};}
+function client(id){const col=new Colliders(),sent=[],view=createLeverPanel(col,{shared:true,id:()=>id,send:m=>sent.push(m)});return {view,movers:col.movers,sent};}
 const ca=client('a'),cb=client('b');
 ca.view.apply(panel.state());ca.view.update(.05,{x:PANEL.face-2,y:PANEL.floor,z:0});
 assert.equal(ca.view.near({x:PANEL.face-2,y:PANEL.floor,z:0}).kind,'lever-exit');ca.view.release();assert.deepEqual(ca.sent,[{op:'exit'}]);
@@ -54,6 +57,18 @@ ca.view.release();for(let i=0;i<40;i++)ca.view.update(.05,{x:PANEL.face-2,y:PANE
 const solo=createLeverPanel();for(const i of [0,3,4])solo.flip(i);
 for(let i=0;i<40;i++)solo.update(.05,{x:PANEL.face+2,y:PANEL.floor,z:0});assert.equal(solo.down,1);
 solo.update(.05,{x:PANEL.face-2,y:PANEL.floor,z:0});assert.equal(solo.state,'sealed','the solo puzzle still closes after entry');
+// An existing fast-build artifact has only the original panel template. Keep its strict named-template lookup.
+const seed=new Colliders();createLeverPanel(seed);
+const cached=new Colliders();cached.v2PreparedMovers=new Map([['lever-panel',[{bvh:seed.movers[0].bvh}]]]);
+const prepared=installPreparedColliders(new Colliders(),cached);
+const pv=createLeverPanel(prepared,{shared:true,id:()=> 'prepared-visitor'});
+assert.equal(prepared.movers.length,2);assert.equal(prepared.movers[1].bvh,prepared.movers[0].bvh);
+assert.throws(()=>prepared.addMover('unbuilt',[]),/Missing prepared movable collision/);
+const ray=new T.Ray(new T.Vector3(PANEL.face+2,PANEL.floor+1,0),new T.Vector3(-1,0,0));
+pv.apply({...open,owner:'someone-else'});pv.update(.05,{x:PANEL.face+2,y:PANEL.floor,z:0});
+assert(Math.abs(prepared.raycast(ray,3).point.x-(PANEL.face+.8+PANEL.depth/2))<1e-4,'prepared gate holds a waiting visitor');
+pv.apply({...open,owner:'prepared-visitor'});pv.update(.05,{x:PANEL.face+2,y:PANEL.floor,z:0});
+assert.equal(prepared.raycast(ray,3),null,'prepared gate lets the admitted visitor through');
 // Exercise the actual client message routing without requiring generated ship data or a network connection.
 const previous={WebSocket:globalThis.WebSocket,localStorage:globalThis.localStorage};let socket;
 class Socket{constructor(){socket=this;this.readyState=1;this.sent=[];}send(s){this.sent.push(JSON.parse(s));}close(){this.readyState=3;this.onclose?.();}}

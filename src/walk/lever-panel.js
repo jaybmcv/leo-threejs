@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {walkCanvas} from './canvas.js';
+import {addPreparedMover} from '../v2/prepared-codec.js';
 import {PANEL,panelDoor} from './net/panel-rules.js';
 
 // Deck 4's lower tank bay behind a lever panel (from tester feedback). The doorway at the aft end of the Deck 4 access
@@ -95,8 +96,8 @@ export function createLeverPanel(colliders,{shared=false,send=()=>false,id=()=>n
  const half=[DEPTH/2,HEIGHT/2,2.2],corners=[];for(let i=0;i<8;i++)corners.push([(i&4?1:-1)*half[0],(i&2?1:-1)*half[1],(i&1?1:-1)*half[2]]);
  const tris=[];for(const f of [[0,1,3],[0,3,2],[4,6,7],[4,7,5],[0,4,5],[0,5,1],[2,3,7],[2,7,6],[0,2,6],[0,6,4],[1,5,7],[1,7,3]])for(const i of f)tris.push(...corners[i]);
  const mover=colliders?.addMover('lever-panel',tris,new T.Matrix4().makeTranslation(FACE-DEPTH/2,FLOOR+HEIGHT/2,0));
- // Hold waiting visitors clear of the moving panel while the first visitor goes through.
- const gate=shared?colliders?.addMover('lever-panel-admission',tris,new T.Matrix4().makeTranslation(FACE+.8,FLOOR+HEIGHT/2,0)):null;
+ // Reuse the panel's decoded shape; fast builds have no separate admission template.
+ const gate=shared&&mover?addPreparedMover(colliders,'lever-panel-admission',mover.bvh,new T.Matrix4().makeTranslation(FACE+.8,FLOOR+HEIGHT/2,0)):null;
  if(gate)gate.enabled=false;
  // 'sealed' (the levers work), 'open' (set right: sinking or down, waiting for someone to go in), 'exit' (lowered from
  // inside), and how far down the panel is, 0 to 1.

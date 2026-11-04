@@ -2839,7 +2839,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 16,
-      "signature": "a661f58b1a1bb8cdda1365c75a670d7c96cdc02c435a4a2a43323329900d58f6"
+      "signature": "08c64d9016ab99f56bf993a2c9842e1ddc99d005c00949f478a41118a6c8e4a3"
     },
     {
       "source": "src/walk/lever-panel.js",
@@ -2857,7 +2857,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 16,
-      "signature": "a661f58b1a1bb8cdda1365c75a670d7c96cdc02c435a4a2a43323329900d58f6"
+      "signature": "b6744701bd15b2d31a0dd3c6af256ce74e294b07cde17a62c0eae113f18833fc"
     },
     {
       "source": "src/walk/life-support-pipes.authoring.js",
