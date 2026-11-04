@@ -103,14 +103,15 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
 }else if(process.argv.includes('--patch')){
  // Everything but the dressing is the clean baseline's; the dressing is what compileDressing makes from today's source.
  const base=arg('base')||root+'/fast-base',patched=arg('patched')||root,{DRESSINGS,compileDressing}=await import('./fast-dressing-v2.mjs'),m=await preparedManifest(patched+'/prepared-walk'),ids=m.fastPatch?.dressings||[];assert(ids.length,'No dressing patch to compare');
- const owners=new Set(ids.map(id=>DRESSINGS[id].owner)),sites=ids.map(id=>DRESSINGS[id].site),skipTemplates=key=>sites.some(s=>key.startsWith(s));
+ const owners=new Set(ids.filter(id=>DRESSINGS[id].collision).map(id=>DRESSINGS[id].owner)),sites=ids.map(id=>DRESSINGS[id].site),skipTemplates=key=>sites.some(s=>key.startsWith(s));
  const before=await canonicalPrepared(base+'/prepared-walk',{skipOwners:owners,skipTemplates}),after=await canonicalPrepared(patched+'/prepared-walk',{skipOwners:owners,skipTemplates});
  const d=difference(after,before);assert(!d,'Dressing patch changed something else: '+d);
  const read=preparedArrayReader(m,patched+'/prepared-walk'),compiled=[];for(const id of ids)compiled.push(await compileDressing(id));
  const {ownedTriangles}=await import('./fast-dressing-v2.mjs'),key=r=>{const rows=[];for(let t=0;t<r.flags.length;t++)rows.push(Buffer.from(r.positions.buffer,r.positions.byteOffset+t*36,36).toString('hex')+'|'+r.flags[t]);return [r.band,rows.sort().join(',')];};
  for(const c of compiled){const d=DRESSINGS[c.id];
-  assert.deepEqual((await ownedTriangles(m,read,d.owner)).map(key),c.collision.map(key),c.id+' collision differs from a fresh compile');
-  assert.deepEqual((await ownedTriangles(m,read,d.owner,{ground:true})).map(key),c.groundCollision.map(key),c.id+' ground collision differs from a fresh compile');
+  if(d.collision){assert.deepEqual((await ownedTriangles(m,read,d.owner)).map(key),c.collision.map(key),c.id+' collision differs from a fresh compile');
+   assert.deepEqual((await ownedTriangles(m,read,d.owner,{ground:true})).map(key),c.groundCollision.map(key),c.id+' ground collision differs from a fresh compile');}
+  else assert(!c.collision.length&&!c.groundCollision.length&&!c.model,c.id+' is qualified as never solid and in no model');
   const templates=new Map(m.geometryTemplates.filter(([k])=>k.startsWith(d.site)));assert.deepEqual([...templates.keys()].sort(),c.templates.map(([k])=>k).sort(),c.id+' template keys');
   for(const [k,g]of c.templates){const r=m.geometries[templates.get(k)];for(const [name,a]of Object.entries(g.attributes))assert(bytesOf(await read(r.attributes[name].array)).equals(bytesOf(a.array)),c.id+' template '+k.slice(0,60)+' '+name);assert(bytesOf(await read(r.index)).equals(bytesOf(g.index.array)),c.id+' template index '+k.slice(0,60));}
  }
@@ -128,7 +129,7 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
 }else{
  // Classification: real source edits, restored afterwards; a clean baseline of this checkout is required.
  const {classifyFastChange}=await import('./fast-state-v2.mjs'),{classifyDressings}=await import('./fast-dressing-v2.mjs');
- const files=['src/walk/selfie.js','src/walk/selfie.authoring.js','src/walk/canvas.js','src/walk/prepare.js'],originals=new Map(await Promise.all(files.map(async f=>[f,await fs.readFile(f,'utf8')])));
+ const files=['src/walk/selfie.js','src/walk/selfie.authoring.js','src/walk/canvas.js','src/walk/prepare.js','src/walk/paintings.js','src/walk/paintings.authoring.js','src/v2/phase4-community.js','src/walk/main.authoring.js'],originals=new Map(await Promise.all(files.map(async f=>[f,await fs.readFile(f,'utf8')])));
  const restore=async()=>{for(const [f,t]of originals)await fs.writeFile(f,t);};
  const edit=async(f,from,to)=>{const t=originals.get(f);assert.equal(t.split(from).length,2,'Fixture anchor moved in '+f);await fs.writeFile(f,t.replace(from,to));};
  const camera="box('Selfie_camera',[.22,.2,.32]",bigger="box('Selfie_camera',[.24,.2,.32]",cases=[];
@@ -143,12 +144,25 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
   await expect('selfie gains an unqualified import','whole',()=>edit('src/walk/selfie.js',"import * as T from 'three';","import * as T from 'three';import {LIFTS} from './lifts.js';void LIFTS;"));
   await restore();await edit('src/walk/prepare.js','const booth=createSelfieBooth();colliders.addStatic(booth.group);','const booth=createSelfieBooth();if(booth)colliders.addStatic(booth.group);');
   assert.match((await classifyDressings(['src/walk/selfie.js'])).reason,/no longer placed by its one qualified line in src\/walk\/prepare\.js/);cases.push({name:'placement line changed',reason:'no longer placed'});
+  // The paintings: their frames take lane D, alone or with the booth; a shared input of theirs widens.
+  const deeper=async()=>{for(const f of files.slice(4,6))await edit(f,'FRAME={width:.14,depth:.08}','FRAME={width:.14,depth:.09}');};
+  assert.deepEqual((await expect('paintings frame edit','D',deeper)).dressings,['paintings']);
+  assert.deepEqual((await expect('paintings and selfie','D',async()=>{await deeper();for(const f of files.slice(0,2))await edit(f,camera,bigger);})).dressings,['selfie','paintings']);
+  await expect('paintings and their shared helper','whole',async()=>{await deeper();await fs.writeFile(files[6],originals.get(files[6])+'\n// fixture\n');});
+  // The authoring page lies outside the geometry identity, so its reach to the paintings is read on every lane D.
+  const page=async(from,to,pattern,name)=>{await restore();await edit(files[7],from,to);assert.match((await classifyDressings(['src/walk/paintings.authoring.js'])).reason,pattern);cases.push({name,reason:String(pattern)});};
+  await page('for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}','for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}colliders.addStatic(paintings.groups[0]);',/reaches the paintings dressing outside its qualified uses/,'authoring page makes a painting solid');
+  await page('for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}','for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}corridorTrim(ship.inside);',/reaches the paintings dressing outside its qualified uses: corridorTrim/,'authoring page calls the trim that reads PAINTINGS');
+  await page('paintings=createPaintings({urls:artUrls,','paintings=createPaintings({urls:artUrls,scale:2,',/no longer placed by its one qualified line in src\/walk\/main\.authoring\.js/,'paintings glue changed');
  }finally{await restore();}
  // Through every consumer, independent of the working tree: a second importer or a moved glue line widens.
  const graph=g=>({graph:g}),selfie=['src/walk/canvas.js','package:three','src/fin-crown.js','src/concept-shape.js'];
  assert.deepEqual(await classifyDressings(['src/walk/selfie.js'],graph({'src/walk/prepare.js':['src/walk/selfie.js'],'src/walk/selfie.js':selfie})),{dressings:['selfie']});
  assert.match((await classifyDressings(['src/walk/selfie.js'],graph({'src/walk/prepare.js':['src/walk/selfie.js'],'src/walk/lounge.js':['src/walk/selfie.js'],'src/walk/selfie.js':selfie}))).reason,/also used by src\/walk\/lounge\.js/);
  assert.equal(await classifyDressings(['src/walk/selfie.js','src/walk/prepare.js']),null);
+ const paintings=['package:three','src/v2/phase4-community.js','src/plan/placements.js','src/walk/collision.authoring.js','src/v2/prepared-geometry-record.js'],page={'src/walk/main.authoring.js':['src/walk/paintings.authoring.js','src/walk/trim.authoring.js'],'src/walk/trim.authoring.js':['src/walk/paintings.authoring.js'],'src/walk/paintings.authoring.js':paintings};
+ assert.deepEqual(await classifyDressings(['src/walk/paintings.authoring.js'],graph(page)),{dressings:['paintings']});
+ assert.match((await classifyDressings(['src/walk/paintings.authoring.js'],graph({...page,'src/walk/comics.authoring.js':['src/walk/trim.authoring.js']}))).reason,/trim\.authoring\.js, idle for the paintings dressing, is also imported by src\/walk\/comics\.authoring\.js/);
  Object.assign(report,{mode:'classification',cases,status:'PASS'});
 }
 if(import.meta.main){await fs.mkdir('output/fast-deploy',{recursive:true});await fs.writeFile('output/fast-deploy/'+tag+'-dressing-check.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));}

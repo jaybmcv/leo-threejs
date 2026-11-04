@@ -17,7 +17,9 @@ const roots=['src/model.js','src/walk/prepare.js','src/walk/prepare.authoring.js
  'src/v2/facade.authoring.js','src/v2/cabin-glass.authoring.js',
  'src/walk/signs.authoring.js','src/walk/comms-displays.authoring.js',
  'src/concept-paint.js','src/v2/signs.js','src/walk/fin-casing.js',
- 'src/walk/windows.js','src/walk/lounge-floor.authoring.js','src/walk/lift-tile-floor.authoring.js'];
+ 'src/walk/windows.js','src/walk/lounge-floor.authoring.js','src/walk/lift-tile-floor.authoring.js',
+ // The paintings' frames and canvases are prepared geometry templates recorded by the authoring page.
+ 'src/walk/paintings.authoring.js'];
 const producerScripts=['v2-build','v2-world','layout-v2-data','build-exterior-v2',
  'fit-cabin-ceilings-v2','ceiling-coverage-v2','v2-indexed-export','v2-export',
  'v2-export-metadata','retire-obsolete-facades-v2','freight-threshold-retirement-v2'];
