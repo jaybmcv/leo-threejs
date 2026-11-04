@@ -37,7 +37,9 @@ export class RemotePlayers{
   // Sparse twice running is a rate, not a hiccup: glide across it.
   const gap=now-r.prevMs,sparse=ms=>ms>=GLIDE_MIN_MS&&ms<=GLIDE_MAX_MS;
   r.glideMs=sparse(gap)&&sparse(r.gapMs)?gap:0;r.glideFrom=[r.cur.x,r.cur.y,r.cur.z];r.gapMs=gap;
-  r.prev=p;r.prevMs=now;r.tgt=p;r.seen=now;r.name=p.name||r.name;r.verified=!!p.verified;r.hat=!!p.hat;
+  r.prev=p;r.prevMs=now;r.tgt=p;r.seen=now;
+  // Anonymous visitors stay generic instead of showing an account-id suffix.
+  if(p.name)r.name=/^Voyager .{4}$/.test(p.name)?'Voyager':p.name;else r.name??='Voyager';r.verified=!!p.verified;r.hat=!!p.hat;
  }
  gone(id){const r=this.remotes.get(id);if(!r)return;this.release(r);r.label?.remove();r.bubble?.remove();this.remotes.delete(id);}
  // A line of chat (chat.js), shown over the speaker's head for SAY_MS.
@@ -97,12 +99,12 @@ export class RemotePlayers{
   if(dt>0)r.turnRate=T.MathUtils.damp(r.turnRate,turn/dt,10,dt);
   const e=r.rest*r.rest*(3-2*r.rest),lie=r.restKind==='lie';
   w.body.rotation.set(lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.rest,.25,1):0,0,0);
-  const t=r.tgt,belt=t.playing&&!t.rest&&this.running?.(c);
+  const t=r.tgt,floating=t.emote==='healing_capsule',belt=t.playing&&!t.rest&&this.running?.(c);
   // Rolling in a hamster ball (hamster-ball.js): standing inside one of this page's own, rolled by their stride.
   if(t.ball&&!t.rest){if(!r.ball)r.ball=createBallMesh();if(!r.ball.mesh.parent)this.scene.add(r.ball.mesh);r.ball.mesh.position.set(c.x,c.y,c.z);
    r.ball.roll(dt,Math.sin(c.yaw)*r.speed,Math.cos(c.yaw)*r.speed);}else r.ball?.mesh.removeFromParent();
   w.update(dt,{speed:r.rest?0:belt?RUN_ON_BELT:r.speed,grounded:t.grounded,stance:t.ball?'stand':t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
-   emote:t.emote,rest:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c)}:null,catnip:!!this.catnip?.(c),swimming:!t.rest&&!!this.swimming?.(c)});
+   emote:floating?null:t.emote,rest:floating?{kind:'float',weight:1,seatHeight:w.hipHeight}:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c)}:null,catnip:!!this.catnip?.(c),swimming:!t.rest&&!!this.swimming?.(c)});
   // A captain's hat is ~200k triangles: past HAT_M it is a few pixels, and not drawn.
   if(w.hat&&r.distance>HAT_M)w.hat.mount.visible=false;
  }
@@ -112,11 +114,13 @@ export class RemotePlayers{
   for(const r of this.remotes.values())if(r.label&&!near.includes(r)){r.label.hidden=true;if(r.bubble)r.bubble.hidden=true;}
   for(const r of near){
    p.set(r.cur.x,r.cur.y+(r.rest&&r.restKind==='lie'?.8:2.15),r.cur.z);
-   if(now-r.clearAt>250){r.clearAt=now;const d=p.clone().sub(eye),len=d.length();this.ray.set(eye,d.divideScalar(len));const hit=this.colliders.raycast(this.ray,len);r.clear=!hit||hit.distance>len-.4;}
+   if(now-r.clearAt>250){r.clearAt=now;const d=p.clone().sub(eye),len=d.length();this.ray.set(eye,d.divideScalar(len));
+    // Aquarium glass stays solid to swimmers but should not hide their names.
+    const hit=this.swimming?.(r.cur)?this.colliders.raycastSight(this.ray,len):this.colliders.raycast(this.ray,len);r.clear=!hit||hit.distance>len-.4;}
    p.project(camera);
    if(!r.label){r.label=document.createElement('div');r.label.className='remote-name';this.labelLayer.appendChild(r.label);}
    // At the lounge telescope's game, the name says so.
-   const text=(r.name||'Voyager '+r.id.slice(-4))+(r.tgt?.playing?' · playing':'');if(r.label.textContent!==text)r.label.textContent=text;
+   const text=(r.name||'Voyager')+(r.tgt?.playing?' · playing':'');if(r.label.textContent!==text)r.label.textContent=text;
    // A teal dot: the name is their Discord name, vouched for by The Creamery.
    r.label.classList.toggle('verified',r.verified);
    r.label.hidden=!r.clear||p.z>1;

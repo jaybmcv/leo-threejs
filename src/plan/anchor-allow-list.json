@@ -79,6 +79,7 @@
       "src/walk/star-drift.js",
       "src/walk/render-bake.js",
       "src/walk/invasion/*.js",
+      "src/walk/emergency-drill/game.js",
       "src/walk/pool/game.js",
       "src/walk/pool/rules.js",
       "src/walk/pinball/rules.js",

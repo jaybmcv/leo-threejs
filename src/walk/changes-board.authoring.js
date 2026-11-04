@@ -90,10 +90,10 @@ export function createChangesBoards({hearts,onOpen=()=>{},onClose=()=>{},onGo=()
  const canvas=document.createElement('canvas');canvas.width=PX[0];canvas.height=PX[1];
  const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=8;
  const c=canvas.getContext('2d');
- let counts=new Map(),mine=new Set(),verified=false,status='offline',note='',noteAt=0,top=0,selected=0,hover=-1,open=false;
- // rows: the list shown, every change or (filtered) those near where the log was opened; here: the latter.
+ let counts=new Map(),mine=new Set(),verified=false,status='offline',note='',noteAt=0,top=0,selected=0,hover=-1,open=false,nearOnly=false,query='';
+ // rows: the current log view, narrowed by nearOnly and query.
  let rows=log,here=[],detail=null;
- const filtered=()=>rows!==log;
+ const filtered=()=>nearOnly;
  const count=id=>counts.get(id)||0;
  const favorites=()=>log.filter(e=>count(e.id)>0).sort((a,b)=>count(b.id)-count(a.id)||b.date.localeCompare(a.date)||b.id-a.id).slice(0,FAVORITES);
  function paint(){
@@ -101,11 +101,13 @@ export function createChangesBoards({hearts,onOpen=()=>{},onClose=()=>{},onGo=()
   c.fillStyle=INK;c.beginPath();c.roundRect(0,0,w,h,22);c.fill();c.strokeStyle='rgba(255,255,255,.16)';c.lineWidth=5;c.stroke();
   c.textBaseline='alphabetic';c.textAlign='left';
   c.fillStyle=TEAL;c.font=`500 24px ${FONT.mono}`;c.letterSpacing='6px';c.fillText(filtered()?'SHIP LOG · NEAR YOU':'SHIP LOG',LIST.x,62);c.letterSpacing='0px';
-  c.fillStyle=TEXT;c.font=`600 52px ${FONT.display}`;c.fillText(filtered()?'Changes around here':'Changes to Leo',LIST.x,116);
-  c.fillStyle=DIM;c.font=`400 22px ${FONT.mono}`;c.textAlign='right';c.fillText(filtered()?`${rows.length} of ${log.length} changes`:`${log.length} changes · newest first`,LIST.x+LIST.w,116);c.textAlign='left';
+  c.fillStyle=TEXT;c.font=`600 52px ${FONT.display}`;c.fillText(filtered()?'Changes around here':query.trim()?'Search results':'Changes to Leo',LIST.x,116);
+  const total=nearOnly&&here.length?here.length:log.length;
+  c.fillStyle=DIM;c.font=`400 22px ${FONT.mono}`;c.textAlign='right';c.fillText(query.trim()?`${rows.length} of ${total} matches`:filtered()?`${rows.length} of ${total} changes`:`${log.length} changes · newest first`,LIST.x+LIST.w,116);c.textAlign='left';
   c.fillStyle=ORANGE;c.fillRect(LIST.x,132,90,5);
   // The list, a window of ROWS rows from `top`.
   if(!log.length){c.fillStyle=DIM;c.font=`400 28px ${FONT.sans}`;c.fillText('The ship log is not in this build.',LIST.x,LIST.y+60);}
+  else if(!rows.length){c.fillStyle=DIM;c.font=`400 25px ${FONT.sans}`;c.fillText(clip(c,`No changes match “${query.trim()}”.`,LIST.w-24),LIST.x,LIST.y+60);}
   for(let r=0;r<ROWS&&top+r<rows.length;r++){
    const i=top+r,e=rows[i],y=LIST.y+r*LIST.row,n=count(e.id),own=mine.has(e.id);
    if(open&&(i===selected||i===hover)){c.fillStyle=i===selected?SELECT:'rgba(255,255,255,.05)';c.beginPath();c.roundRect(LIST.x-14,y+4,LIST.w+10,LIST.row-6,10);c.fill();}
@@ -158,7 +160,14 @@ export function createChangesBoards({hearts,onOpen=()=>{},onClose=()=>{},onGo=()
  document.head.appendChild(Object.assign(document.createElement('style'),{textContent:CSS}));
  const root=document.createElement('div');root.className='ship-log';
  root.style.cssText='position:fixed;inset:0;z-index:60;background:rgba(5,7,13,.82);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;touch-action:none;user-select:none';
- canvas.style.cssText='display:block;max-width:calc(100vw - 24px);max-height:calc(100vh - 110px);width:1200px;height:auto;aspect-ratio:1600/920;border-radius:12px;cursor:pointer';
+ canvas.style.cssText='display:block;max-width:calc(100vw - 24px);max-height:calc(100vh - 176px);width:1200px;height:auto;aspect-ratio:1600/920;border-radius:12px;cursor:pointer';
+ const searchRow=document.createElement('div');searchRow.style.cssText='display:flex;align-items:center;gap:8px;width:min(1200px,calc(100vw - 24px));box-sizing:border-box;touch-action:auto';
+ const searchInput=document.createElement('input');searchInput.type='search';searchInput.placeholder='Search changes…';searchInput.setAttribute('aria-label','Search ship log changes');searchInput.autocomplete='off';
+ searchInput.style.cssText=`flex:1;min-width:0;height:52px;box-sizing:border-box;padding:0 14px;border-radius:12px;border:1px solid #3a4150;background:${INK};color:${TEXT};font:400 16px ${FONT.sans};touch-action:auto;user-select:text`;
+ const clearSearch=document.createElement('button');clearSearch.type='button';clearSearch.textContent='Clear';clearSearch.setAttribute('aria-label','Clear search');clearSearch.hidden=true;
+ clearSearch.style.cssText=`min-width:72px;height:52px;padding:0 14px;border-radius:12px;border:1px solid #3a4150;background:#151a24;color:${TEXT};font:500 15px ${FONT.mono};cursor:pointer;box-sizing:border-box`;
+ const searchStatus=document.createElement('span');searchStatus.setAttribute('role','status');searchStatus.setAttribute('aria-live','polite');searchStatus.style.cssText='position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0';
+ searchRow.append(searchInput,clearSearch,searchStatus);root.appendChild(searchRow);
  root.appendChild(canvas);
  const bar=document.createElement('div');bar.style.cssText='display:flex;gap:12px;flex-wrap:wrap;justify-content:center;padding:0 12px';
  const button=(label,aria,css='')=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.setAttribute('aria-label',aria);
@@ -172,11 +181,16 @@ export function createChangesBoards({hearts,onOpen=()=>{},onClose=()=>{},onGo=()
  function choose(i){selected=T.MathUtils.clamp(i,0,Math.max(0,rows.length-1));if(selected<top)top=selected;else if(selected>=top+ROWS)top=selected-ROWS+1;paint();if(detail)showDetail(rows[selected]);}
  function scroll(n){top=T.MathUtils.clamp(top+n,0,Math.max(0,rows.length-ROWS));paint();}
  // Every change, or only those near where the log was opened; the picked change stays picked where it can.
+ function updateRows(preferred=rows[selected]){
+  const source=nearOnly&&here.length?here:log,q=query.trim().toLowerCase();
+  rows=q?source.filter(e=>`${e.name} ${e.text||''}`.toLowerCase().includes(q)):source;
+  const i=preferred?rows.indexOf(preferred):-1;selected=0;top=0;choose(i<0?0:i);
+  clearSearch.hidden=!query;searchStatus.textContent=q?`${rows.length} of ${source.length} changes match ${query.trim()}.`:`${source.length} changes shown.`;
+  near.hidden=!here.length;near.textContent=nearOnly?'All changes':`Near you · ${here.length}`;
+  near.setAttribute('aria-label',nearOnly?'Show every change':'Show only the changes near you');
+ }
  function filter(on){
-  const e=rows[selected];rows=on&&here.length?here:log;
-  const i=rows.indexOf(e);selected=0;top=0;choose(i<0?0:i);
-  near.hidden=!here.length;near.textContent=filtered()?'All changes':`Near you · ${here.length}`;
-  near.setAttribute('aria-label',filtered()?'Show every change':'Show only the changes near you');
+  const e=rows[selected];nearOnly=!!(on&&here.length);updateRows(e);
  }
  function toggle(e=rows[selected]){
   if(!e)return;
@@ -210,11 +224,13 @@ export function createChangesBoards({hearts,onOpen=()=>{},onClose=()=>{},onGo=()
  canvas.addEventListener('wheel',ev=>{ev.preventDefault();scroll(Math.sign(ev.deltaY)*3);},{passive:false});
  up.addEventListener('click',()=>choose(selected-1));down.addEventListener('click',()=>choose(selected+1));give.addEventListener('click',()=>toggle());
  more.addEventListener('click',()=>showDetail(rows[selected]));near.addEventListener('click',()=>filter(!filtered()));done.addEventListener('click',()=>hide());
+ searchInput.addEventListener('input',()=>{query=searchInput.value;updateRows();});
+ clearSearch.addEventListener('click',()=>{searchInput.value='';query='';updateRows();searchInput.focus();});
 
  // A change's details, over the list: its name in full, its pictures, and the way there.
  let shot=0,split=50;
  function showDetail(e){
-  if(!e)return;const first=detail!==e;detail=e;ui.tip.hidden=true;
+  if(!e)return;const first=detail!==e;detail=e;ui.tip.hidden=true;searchRow.hidden=true;
   if(first){shot=0;split=50;ui.note.textContent='';}
   ui.eyebrow.textContent=`Change #${e.id} · ${day(e.date)}`;ui.title.textContent=e.name;
   ui.pull.href=PULL+e.id;
@@ -250,7 +266,7 @@ export function createChangesBoards({hearts,onOpen=()=>{},onClose=()=>{},onGo=()
  function setSplit(v){split=T.MathUtils.clamp(v,0,100);ui.after.style.clipPath=`inset(0 0 0 ${split}%)`;ui.line.style.left=split+'%';ui.compare.setAttribute('aria-valuenow',String(Math.round(split)));}
  function showHeart(){if(!detail)return;const own=mine.has(detail.id);ui.heart.textContent=`${own?'♥':'♡'} ${count(detail.id)}`;ui.heart.classList.toggle('mine',own);
   ui.heart.setAttribute('aria-label',`${count(detail.id)} hearts; ${own?'take back your heart':'give a heart'}`);}
- function closeDetail(){if(!detail)return;detail=null;ui.detail.hidden=true;bar.hidden=false;ui.before.removeAttribute('src');ui.after.removeAttribute('src');paint();}
+ function closeDetail(){if(!detail)return;detail=null;ui.detail.hidden=true;searchRow.hidden=false;bar.hidden=false;ui.before.removeAttribute('src');ui.after.removeAttribute('src');paint();}
  let dragging=null;
  ui.compare.addEventListener('pointerdown',ev=>{dragging=ev.pointerId;try{ui.compare.setPointerCapture(ev.pointerId);}catch{}drag(ev);});
  ui.compare.addEventListener('pointermove',ev=>{if(dragging===ev.pointerId)drag(ev);});
@@ -262,7 +278,13 @@ export function createChangesBoards({hearts,onOpen=()=>{},onClose=()=>{},onGo=()
 
  // Keys while open are the board's alone: caught before the walk's own listener sees them.
  function onKey(e){
-  if(!open||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(!open)return;
+  if(searchRow.contains(e.target)){
+   e.stopImmediatePropagation();if(e.type!=='keydown'||e.ctrlKey||e.metaKey||e.altKey)return;
+   if(e.target===searchInput&&e.code==='Escape'){e.preventDefault();if(query){searchInput.value='';query='';updateRows();}else hide();}
+   return;
+  }
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
   e.stopImmediatePropagation();if(e.type!=='keydown')return;
   const k=e.code;
   if(/^(Arrow|Space|Page|Home|End|Backspace)/.test(k))e.preventDefault();
@@ -291,7 +313,7 @@ export function createChangesBoards({hearts,onOpen=()=>{},onClose=()=>{},onGo=()
   if(open)return;open=true;root.style.display='flex';note='';hover=-1;
   here=p?nearby(p):[];filter(nearFirst);hearts?.request();onOpen();
  }
- function hide(){if(!open)return;closeDetail();filter(false);open=false;root.style.display='none';hover=-1;ui.tip.hidden=true;paint();onClose();}
+ function hide(){if(!open)return;closeDetail();searchInput.value='';query='';clearSearch.hidden=true;filter(false);open=false;root.style.display='none';hover=-1;ui.tip.hidden=true;paint();onClose();}
  // The changes with a spot near p, newest first.
  function nearby(p){return log.filter(e=>spotsOf.get(e.id).some(s=>Math.abs(p.y-s.at[1])<NEAR.up&&Math.hypot(p.x-s.at[0],p.z-s.at[2])<NEAR.across));}
 
@@ -313,7 +335,7 @@ export function createChangesBoards({hearts,onOpen=()=>{},onClose=()=>{},onGo=()
   },
   refused(why){say(why==='sign-in'?'SIGN IN WITH DISCORD TO GIVE HEARTS':'THAT HEART WASN’T SAVED');},
   // For checks: what the board holds.
-  get state(){return {log,rows,counts,mine,verified,status,selected,top,favorites:favorites(),detail,shot,split};},
+  get state(){return {log,rows,query,nearOnly,counts,mine,verified,status,selected,top,favorites:favorites(),detail,shot,split};},
  };
 }
 

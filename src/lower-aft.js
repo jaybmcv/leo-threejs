@@ -1,4 +1,5 @@
 import {anchorArea} from './plan/anchor-area.js';
+import fitoutOverrides from './plan/room-fitout-overrides-v2.json' with {type:'json'};
 import * as T from 'three';
 import {serviceKit,SERVICE_M as M} from './neighborhood-services.js';
 import {finishShipArea,detailKit,FINISH_M as F} from './area-finish.js';
@@ -53,6 +54,9 @@ function buildcreateLowerAftArea(area){
   box('Worktop',[5,.12,1.6],[w/2-10,.86,5],M.wood);for(const dx of [-2,2])box('Bench_support',[.15,.8,1.3],[w/2-10+dx,.4,5],M.metal);}
  if(area.deck===2)for(const s of [-1,1]){box('Equipment_cradle',[5,.3,2],[0,.15,s*6],M.dark);box('Removable_equipment',[3,.9,1.5],[0,.75,s*6],M.blue);}
  if(area.deck===3)for(const s of [-1,1]){box('Equipment_cabinet',[2,2.5,1.2],[-w/2+5,1.25,s*7],M.metal);box('Status_display',[.8,.4,.04],[-w/2+5,1.8,s*7+.63],M.dark);}
+ // These legacy fittings share the room override's part names.
+ const removed=new Set((fitoutOverrides[area.id]?.remove||[]).map(p=>p.part));
+ for(const o of [...fit.children])if(removed.has(o.name))o.removeFromParent();
  finishShipArea(area,{root,fit,shell});
  // A short enclosed approach joins the existing spine at x=-148. It is
  // owned by this room so no second circulation group overlaps the spine.
