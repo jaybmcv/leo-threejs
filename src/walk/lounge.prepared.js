@@ -7,7 +7,7 @@ import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/Buffe
 import {LOUNGE} from '../hydro-nip-lounge.js';
 import {createLoungeSky} from './lounge-sky.prepared.js';
 import {createLoungeMural} from './lounge-mural.prepared.js';
-import {createLoungeAquarium} from './lounge-aquarium.js';
+import {createLoungeAquarium,AQUARIUM} from './lounge-aquarium.js';
 import {HEADER} from './commons-hall.js';
 import {bandOf} from './collision.js';
 
@@ -115,7 +115,12 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  {const sky=createLoungeSky(frame,ROOM,LOUNGE.CEILING-.16,uniforms.uTime);place(sky.geometry,sky.material,'Walk_lounge_glass_roof');}
  const glows=[];root.traverse(o=>{if(o.isMesh&&/^Lounge_(neon_glow|additive_glow)$/.test(o.material?.name)&&!glows.some(g=>g.m===o.material))glows.push({m:o.material,k:o.material.name==='Lounge_neon_glow'?MOOD.neon:MOOD.glow});});
  const base=light&&{hemi:light.hemi.intensity,fill:light.fill.intensity,env:light.scene.environmentIntensity,sky:light.hemi.color.clone(),ground:light.hemi.groundColor.clone()};
- const sky=new T.Color(MOOD.sky),ground=new T.Color(MOOD.ground);let mood=0,shown=0;
+ const sky=new T.Color(MOOD.sky),ground=new T.Color(MOOD.ground);let mood=0,shown=0,waterMix=0;
+ const waterFrame=frame.clone().multiply(new T.Matrix4().makeTranslation(0,0,6)).invert(),waterPoint=new T.Vector3();
+ let waterTint=null;if(typeof document!=='undefined'){waterTint=document.createElement('div');
+  waterTint.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:1;opacity:0;background:rgba(0,130,145,.22)';document.body.appendChild(waterTint);}
+ function inWaterView(eye){const p=waterPoint.copy(eye).applyMatrix4(waterFrame),a=AQUARIUM,t=a.tunnel;
+  return p.x>a.x0&&p.x<a.x1&&p.y>a.bed&&p.y<a.top&&p.z>a.back&&p.z<a.glass&&!(p.x>t.x0&&p.x<t.x1&&p.y<t.top);}
  function setMood(t){
   if(base){const {hemi,fill,scene}=light,f=(a,b)=>a+(b-a)*t;
    hemi.intensity=f(base.hemi,base.hemi*MOOD.hemi);fill.intensity=f(base.fill,base.fill*MOOD.fill);scene.environmentIntensity=f(base.env,base.env*MOOD.env);
@@ -142,7 +147,8 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
    const inside=tower.containsPoint(eye.clone().applyMatrix4(inverse)),k=1-Math.exp(-4*dt);
    mist+=((inside?.12:1)-mist)*k;for(const o of mists)o.material.opacity=o.material.userData.full*mist;
    haze+=((inside?(eye.y<LEVELS[0]?.34:eye.y<LEVELS[1]?.16:0):0)-haze)*k;if(tint)tint.style.opacity=haze.toFixed(3);
-   mood+=((room.containsPoint(eye.clone().applyMatrix4(inverse))?1:0)-mood)*k;if(Math.abs(mood-shown)>.002||(mood<.002&&shown)){shown=mood<.002?0:mood;setMood(shown);}
+   const underwater=inWaterView(eye);waterMix+=((underwater?1:0)-waterMix)*k;if(waterTint)waterTint.style.opacity=waterMix.toFixed(3);
+   mood+=((underwater||room.containsPoint(eye.clone().applyMatrix4(inverse))?1:0)-mood)*k;if(Math.abs(mood-shown)>.002||(mood<.002&&shown)){shown=mood<.002?0:mood;setMood(shown);}
   },
   swingOf,
   // Whether a body is in the room (inLounge, below).
