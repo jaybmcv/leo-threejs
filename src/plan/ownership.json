@@ -2381,7 +2381,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "33ab3b3dc92b80fc5a0770d7671df19a88293141d8cb41c9435c4a35eb57a44c"
+      "signature": "d95144ebc05b4e4d9b4067962ca4054af35bdcf8cf8303478a6db8ba1d21b048"
     },
     {
       "source": "src/walk/hex-floor.authoring.js",
