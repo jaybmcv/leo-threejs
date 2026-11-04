@@ -1173,7 +1173,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "1d6cd101700180718e397fde3f8f3207015b5626d1db32bb44c10e3746376522"
+      "signature": "23cee1f495b26686a66fb603de42918c15ca327c37e8ab4afedf5859f55d705f"
     },
     {
       "source": "src/walk/baggage.js",
@@ -1343,6 +1343,21 @@
       "interactionTargets": null,
       "placements": 3,
       "signature": "ac2ebf37988f8dc68f1eeb84a3d6d78d72e9e255e6954f7f2a29d63a37927165"
+    },
+    {
+      "source": "src/walk/capsule-bubbles.js",
+      "rooms": [
+        "d05-surgery-2"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Healing_capsule_bubbles"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "7997ca90350af27ffe33835bc419fa1553e2b75b0567aa36b43dc0cf455324c7"
     },
     {
       "source": "src/walk/cargo-trolley.authoring.js",
@@ -4657,7 +4672,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "69d0487523a63eb2a2b2b59e69e9bd050744e37175c19f38b64a1dd76521f7c6"
+      "signature": "736dcc305ac69f0e73efaa5b0a8788c0347d1cb75e0e798d5d68476ed31d392f"
     },
     {
       "source": "src/walk/remotes.js",
@@ -4669,7 +4684,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "cd1d994246a80f7c9adf4851e19f3b27c45062466ff8c0cab6039f2ba28c8cfc"
+      "signature": "8ebe6612bfce70f26fb46b922253deb3a15f3c4fbd92c20da2bb61577c3dea41"
     },
     {
       "source": "src/walk/render-bake.authoring.js",
@@ -4864,8 +4879,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 64,
-      "signature": "e5580b033b892f52a305eef96516c2bc643fe56adf1d7d68395e3df06025993f"
+      "placements": 65,
+      "signature": "65b342d2b5eef78903d9795fae3b1b0559a27b1b8f671a4323bfc3256e5d4312"
     },
     {
       "source": "src/walk/surgery.js",
@@ -4882,8 +4897,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 64,
-      "signature": "adef36d6f7dd652266201ab8e1735b4ecf23cb8f30f6883c508a2f09bfa67090"
+      "placements": 65,
+      "signature": "9cf0e830d74b0797ff55d6ecf1214e1aee44bd72c4c8c5807c2cf91b347e2dfd"
     },
     {
       "source": "src/walk/surgery.prepared.js",
@@ -4900,8 +4915,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 64,
-      "signature": "9779c3bcfa10576bbffdc502e054ac56609fab1926c8910cb25ec903f2567020"
+      "placements": 65,
+      "signature": "86ea3df83441f995b5587e6014e114b083ff2e4726a6ac1a19def9a88b4f6a67"
     },
     {
       "source": "src/walk/surgery.public.js",
@@ -4918,8 +4933,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 64,
-      "signature": "d851cdde5c1ca686b8ae5fbffc11591769c3d4bd3404b24c7b254ef450a6213b"
+      "placements": 65,
+      "signature": "9022e195aa1b0d4afd9cbf7d9bc08832e1b22f2d52e434ddd513e20c5999a5cb"
     },
     {
       "source": "src/walk/sword-case.authoring.js",

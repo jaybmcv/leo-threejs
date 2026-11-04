@@ -416,7 +416,7 @@ const actions={
   else if(t.kind==='inside')openLiftPanel(t.lift);
   else if(t.kind==='waiting')return;
   else if(t.kind==='sit'||t.kind==='lie'||t.kind==='stand')settle(t.spot);
-  else if(t.kind==='selfie'){if(!booth.counting)live?.selfie();booth.start();}
+  else if(t.kind==='selfie'){closePanels();$('selfie-setup').hidden=false;previewBackdrop();input.enabled=false;$('selfie-backdrop').focus();}
   else if(t.kind==='comic'){closePanels();reader.open(t.comic);input.enabled=false;}
   else if(t.kind==='read'){closePanels();showInfo($('info-sheet'),t.info);input.enabled=false;}
   else if(t.kind==='play')arcade.open();
@@ -442,7 +442,7 @@ const actions={
   else if(t.kind==='tv'){closePanels();crownTv.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
  },
- escape(){closePanels();},
+ escape(){if(treasure?.active){treasure.leave();return;}closePanels();},
  // (Nothing below until the walk is ready.)
  places(){if(ready())togglePlaces();},
  map(){if(ready())toggleMap();},
@@ -629,7 +629,7 @@ if(LIVE_URL){
 function myPose(riding=false){
  const h=walker.holder,held=resting||run,at=held?h.position:controller.position;
  return {pos:[at.x,at.y,at.z],yaw:held?h.rotation.y:heading,g:controller.grounded||riding||!!held,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting&&!resting.stand?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||pinballGame.isOpen||!$('outside-sheet').hidden||!!run,b:inBall};
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:resting?.stand?'healing_capsule':emote,rest:resting&&!resting.stand?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||pinballGame.isOpen||!$('outside-sheet').hidden||!!run,b:inBall};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
@@ -825,6 +825,11 @@ function showPhoto(blob,open=false){
  share.hidden=!navigator.canShare?.({files:[file]});share.onclick=()=>navigator.share({files:[file],title:'Leo · Crown lounge'}).catch(()=>{});
  if(open){closePanels();$('photo-sheet').hidden=false;input.enabled=false;}
 }
+// Each visitor chooses the backdrop and angle for their own photo.
+function previewBackdrop(){const c=$('selfie-preview').getContext('2d');c.drawImage(booth.backdropCanvas,0,0,c.canvas.width,c.canvas.height);}
+$('selfie-backdrop').addEventListener('change',e=>{booth.setBackdrop(Number(e.target.value));previewBackdrop();});
+$('selfie-angle').addEventListener('change',e=>booth.setAngle(Number(e.target.value)));
+$('selfie-start').addEventListener('click',()=>{closePanels();if(!booth.counting){live?.selfie();booth.start();}});
 $('photo-names').addEventListener('change',()=>{if(photoSource)renderPhoto();});
 function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a));return a+d*(1-Math.exp(-lambda*dt));}
 
@@ -923,7 +928,7 @@ function restPose(dt){
  if(swing){const q=new T.Quaternion().setFromAxisAngle(swing.axis,swing.angle*e);h.position.sub(swing.pivot).applyQuaternion(q).add(swing.pivot);h.quaternion.premultiply(q);}
  if(r.phase==='out'&&r.t===0){heading=r.from.heading;controller.place(r.from.pos);resting=null;return null;}
  // In a healing capsule the body floats a little in the fluid, standing.
- if(r.stand){h.position.y+=.04*e*(1-Math.cos(performance.now()/1100));return null;}
+ if(r.stand){h.position.y+=(.20+.025*(1-Math.cos(performance.now()/1100)))*e;return {kind:'float',weight:e,seatHeight:walker.hipHeight};}
  return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight,hammock:!!r.spot.hammock};
 }
 function lerpAngle(a,b,t){return a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;}
@@ -962,7 +967,7 @@ function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(collide
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall(q);ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
+function closePanels(){controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
 // The list is a current server snapshot, including visitors who have not sent a pose yet.
 function showAboardList(){
  const list=$('aboard-list'),note=$('aboard-note');list.replaceChildren();
