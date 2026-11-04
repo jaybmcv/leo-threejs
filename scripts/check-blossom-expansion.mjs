@@ -5,12 +5,11 @@ import {pathToFileURL} from 'node:url';
 import {createHash} from 'node:crypto';
 import * as T from 'three';
 
-// Only room lookup and prepared-resource transport are substituted. The real factories run in all four modes.
+// Only room lookup and prepared-resource transport are substituted. No recorded geometry is supplied to replay.
 const dir=path.resolve('.qa/blossom-expansion');await fs.mkdir(dir,{recursive:true});
-const recordURL=pathToFileURL(path.resolve('src/v2/prepared-geometry-record.js')).href;
 const replayPath=path.join(dir,'replay.mjs');
 let replay=await fs.readFile('src/v2/prepared-geometry-replay.public.js','utf8');
-replay=replay.replace(/import \{preparedResource\} from .*?;/,`import {geometryRecords} from '${recordURL}';const preparedResource={geometryTemplates:geometryRecords()};`)
+replay=replay.replace(/import \{preparedResource\} from .*?;/,'const preparedResource={geometryTemplates:new Map()};')
  .replace("'./prepared-geometry-key.js'",JSON.stringify(pathToFileURL(path.resolve('src/v2/prepared-geometry-key.js')).href));
 await fs.writeFile(replayPath,replay);
 const factories=[];
@@ -27,7 +26,7 @@ function signature(root){const hash=createHash('sha256');root.updateMatrixWorld(
  });return hash.digest('hex');}
 const baseline=factories[0].createBlossomGarden(ship());
 for(const factory of factories.slice(1)){
- const actual=factory.createBlossomGarden(ship());assert.equal(signature(actual.group),signature(baseline.group),'render geometry agrees across modes');assert.equal(signature(actual.solid),signature(baseline.solid),'collision geometry agrees across modes');
+ const actual=factory.createBlossomGarden(ship());assert.equal(signature(actual.group),signature(baseline.group),'render geometry agrees across modes without recorded templates');assert.equal(signature(actual.solid),signature(baseline.solid),'collision geometry agrees across modes without recorded templates');
 }
 const garden=baseline,box=o=>new T.Box3().setFromObject(o,true);
 assert.equal(signature(garden.group.getObjectByName('Blossom_tree_trunk')),'dbb5d5c22d792909938887a87a6b1d6e4df2b578cc67e87fa6e50ca197e90322','original trunk retained');
@@ -53,8 +52,10 @@ assert.ok(bridge.min.x<136.5&&bridge.max.x>139.8,'original bridge still crosses 
 const solids=garden.solid.children.map(box);
 assert.ok(solids.some(b=>b.min.x<=136.51&&b.max.x>=139.79&&b.min.z<=33.21&&b.max.z>=39.49&&b.max.y<24.5),'pond floor covers extension');
 assert.ok(solids.some(b=>b.min.x<139.8&&b.max.x>=139.8&&b.min.z<=36.51&&b.max.z>=39.49),'new east rim is solid');
-const prepared=ship();for(const name of ['Garden_planter','Planting_bed']){const mesh=new T.Mesh(new T.BoxGeometry(9,.65,9));mesh.name=name;mesh.position.set(141,24.625,32);prepared.room.add(mesh);}
+function bedShip(){const prepared=ship();for(const name of ['Garden_planter','Planting_bed']){const mesh=new T.Mesh(new T.BoxGeometry(9,.65,9));mesh.name=name;mesh.position.set(141,24.625,32);prepared.room.add(mesh);}return prepared;}
+const prepared=bedShip();
 factories[0].prepareBlossomBed(prepared);const planter=box(prepared.root.getObjectByName('Garden_planter'));
+for(const factory of factories.slice(1)){const actual=bedShip();factory.prepareBlossomBed(actual);assert.equal(signature(actual.root),signature(prepared.root),'planter and bench agree across modes without recorded templates');}
 assert.ok(Math.abs(planter.max.x-148.5)<.001,'expanded planter and collision use actual new footprint');
 const bench=prepared.root.getObjectByName('Blossom_bench');assert.ok(bench,'original bench retained');
 const world=new T.Matrix4().makeTranslation(-26.5,0,16),worldPond=pond.clone().applyMatrix4(world);

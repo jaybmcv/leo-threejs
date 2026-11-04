@@ -32,14 +32,17 @@ at 160, butterflies at eight and koi at seven. Animation still stops beyond
 reference textures or logos are added.
 
 Both planter shaping and live garden geometry change in blossom.js and every
-authoring/prepared/public copy. The prepared ship must be regenerated before
+authoring/prepared/public copy. Each mode constructs this seeded garden's geometry
+directly. Its new tree primitives and changed pond/wall merges cannot rely on the
+exact template keys saved by a previous prepared artifact. Shared replay remains
+strict for other features. The prepared ship must be regenerated before
 public packaging; copying JavaScript alone leaves the old planter/collision.
 The ownership inventory also corrects the blossom owner to commons-10 and
 registers the existing conservatory and Arrival lighting modules, whose missing
 rules prevented inventory regeneration. No Arrival lighting behavior changes.
 
 Validation: `node scripts/check-blossom-expansion.mjs` checks all four factories,
-authoring/replay render and collision parity, original tree/bridge regression
+authoring/public render and collision parity with an empty recorded-template map, original tree/bridge regression
 signatures, whole tree bounds, LOD switching, extended pond support/rim and koi
 containment. JavaScript syntax and a public-entry bundle smoke pass. The smoke
 externalizes build-injected walk-partitions/walk-changes and node:fs; the actual

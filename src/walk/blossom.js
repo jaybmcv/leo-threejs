@@ -5,6 +5,9 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {createLayeredConservatory,preserveBlossomRandomSequence} from './layered-conservatory.js';
 import {seeded} from '../polish-kit.js';
 
+// This seeded garden builds its own geometry in every mode. Added trees and changed pond sizes must not depend
+// on the exact primitive and merge keys captured by an older prepared ship.
+
 // The aft planter of the Deck 17 garden commons (Neighborhood 10, the commons the tour opens in) becomes a cherry
 // blossom garden on foot: its green tree gives way to a pink bonsai-style cherry with a gnarled S-curved trunk, layered
 // blossom pads and surface roots; a bed of mixed flowers and a carpet of fallen petals fill the planter, petals spill

@@ -1244,7 +1244,7 @@
       ],
       "interactionTargets": null,
       "placements": 59,
-      "signature": "540591ee0bd29b38754446baef35392f1384015c2a6b7af326cf141973e31559"
+      "signature": "f1a597680ddbc5cd6d8493ebaa4e6952c423cce870062c59afb436bd686851fa"
     },
     {
       "source": "src/walk/blossom.js",
@@ -1279,7 +1279,7 @@
       ],
       "interactionTargets": null,
       "placements": 59,
-      "signature": "a77531701ae08d84ac5bb17726e8b149b89e9d2de40e592cae0490bd774affbe"
+      "signature": "f1a597680ddbc5cd6d8493ebaa4e6952c423cce870062c59afb436bd686851fa"
     },
     {
       "source": "src/walk/blossom.prepared.js",
@@ -1314,7 +1314,7 @@
       ],
       "interactionTargets": null,
       "placements": 59,
-      "signature": "30819db4021da0ed6168563221550fdf6c48230ea50c4a629f03b737494eca88"
+      "signature": "f1a597680ddbc5cd6d8493ebaa4e6952c423cce870062c59afb436bd686851fa"
     },
     {
       "source": "src/walk/blossom.public.js",
@@ -1349,7 +1349,7 @@
       ],
       "interactionTargets": null,
       "placements": 59,
-      "signature": "788702a763a320f27084afc593bae3c4ec4cdcb08085c999b2e14a70e81d2a0d"
+      "signature": "f1a597680ddbc5cd6d8493ebaa4e6952c423cce870062c59afb436bd686851fa"
     },
     {
       "source": "src/walk/camera.js",
