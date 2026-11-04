@@ -1,1 +1,14 @@
-{}
+{
+  "d02-maintenance-aft": {
+    "remove": [{"part":"Equipment_cradle"},{"part":"Removable_equipment"}],
+    "add": [
+      {"part":"mission_timer_rug","size":[3.8,0.018,9.2],"at":[0,0.016,0],"mat":"red","noCollide":true},
+      {"part":"mission_timer_plinth","size":[3.2,0.24,8.4],"at":[0,0.155,0],"mat":"navy","round":true},
+      {"part":"mission_timer_base","size":[2.8,0.42,7.7],"at":[0,0.485,0],"mat":"metal","round":true},
+      {"part":"mission_timer_emitter","size":[2.6,0.18,8.0],"at":[0,0.785,0],"mat":"navy","round":true},
+      {"part":"mission_timer_display","size":[0.32,1.45,7.4],"at":[-0.5,2.42,0],"mat":"navy","round":true},
+      {"part":"mission_timer_support","size":[0.34,2.48,0.22],"at":[-0.5,2.1,-3.84],"mat":"metal"},
+      {"part":"mission_timer_support","size":[0.34,2.48,0.22],"at":[-0.5,2.1,3.84],"mat":"metal"}
+    ]
+  }
+}

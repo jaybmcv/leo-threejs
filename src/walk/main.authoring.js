@@ -86,6 +86,7 @@ import {KITTEN_POSE_NAMES} from './kittens.authoring.js';
 import {createAtriumKittens} from './arrival-atrium.authoring.js';
 import {createSurgeryArms} from './surgery.authoring.js';
 import {createImagingScans} from './imaging.js';
+import {createMissionTimer} from './mission-timer.js';
 import {createFinCasing} from './fin-casing.js';
 import {createGraffiti} from './graffiti.js';
 import {createCrownTv} from './crown-tv.js';
@@ -336,6 +337,7 @@ async function buildShip(){
  if(gaming)toBand(gaming.group);
  // Communications' wraparound star map and station screens (comms-displays.js), drawn with Deck 20's band.
  {const comms=createCommsDisplays(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy()});if(comms)toBand(comms.group);}
+ missionTimer=createMissionTimer(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(missionTimer)toBand(missionTimer.group);
  if(missionHolo)toBand(missionHolo.group);
  if(swordCase)toBand(swordCase.group);
  // Hydroponic garden A's chinampa tank (chinampa.js), drawn with Deck 3's band.
@@ -372,7 +374,7 @@ async function buildShip(){
  await new Promise(()=>{});
  isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});
 }
-let imagingScans=null;
+let imagingScans=null,missionTimer=null;
 let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
 let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
@@ -781,6 +783,7 @@ renderer.setAnimationLoop(()=>{
  loungeSound?.update(p,ambience.on,camera);
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
+ missionTimer?.update(dt,p);
  surgeryArms?.update(dt,p,remotes?.remotes);
  imagingScans?.update(dt,p,resting,remotes?.remotes);
  // The Container Maze's clock starts at its way in and drops if the walker leaves (maze/run.js).
