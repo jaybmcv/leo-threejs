@@ -19,6 +19,13 @@ try{
   try{details=await (await import('./fast-room-patch-v2.mjs')).patchRooms(plan,timer);}
   catch(e){if(!/wider build/.test(e.message))throw e;console.log('Fast patch declined: '+e.message.split(String.fromCharCode(10))[0]+'; taking the wider build');
    await timer.stage('wider geometry build',()=>runNode('scripts/build-all.mjs',plan.decks?.length?['--decks='+plan.decks.join(',')]:[]));plan.lane='whole';}
+ }else if(plan.lane==='D'){
+  // A dressing above the decks leaves the layout, walk plan and map as built; only its own spans, templates and model
+  // nodes are replaced. Anything the patch can't prove (an untagged baseline, a reach into the rail probes) widens.
+  for(const name of ['layout.json','walk-plan.json','walk-map.png','exterior-envelopes.json'])await fs.copyFile(baseline+'/'+name,output+'/'+name);
+  try{details=await (await import('./fast-dressing-v2.mjs')).patchDressings(plan,timer,{baseDirectory:baseline,destination:output});}
+  catch(e){if(!/wider build/.test(e.message)||process.env.LEO_FAST_NO_AUTHORING==='1')throw e;console.log('Dressing patch declined: '+e.message.split(String.fromCharCode(10))[0]+'; taking the wider build');
+   await timer.stage('wider geometry build',()=>runNode('scripts/build-all.mjs'));plan.lane='whole';}
  }else if(plan.reuse!=='active'){
   const current=await preparedSourceIdentity();
    await fs.cp(baseline+'/prepared-walk',output+'/prepared-walk',{recursive:true});
