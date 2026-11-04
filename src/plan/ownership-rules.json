@@ -576,6 +576,12 @@
     ],
     "via": null
   },
+  "src/walk/atmosphere.js": {
+    "owners": [
+      "d04-air-1"
+    ],
+    "via": "roomObject"
+  },
   "src/walk/capsule-bubbles.js": {
     "owners": [
       "d05-surgery-2"
