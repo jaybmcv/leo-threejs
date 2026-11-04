@@ -56,7 +56,7 @@ function hammockArms(bone){
 export async function createWalker(createDLCat,motion){
  const cat=await createDLCat({height:COSMO_HEIGHT,castShadow:true,receiveShadow:true});
  const figure=new DLCatFigure(cat,()=>DEFAULT_DLCAT_TUNING,motion);figure.stylProportions=false;
- const setFur=await createFurColour(figure.asset);
+ const setFur=createFurColour(figure.asset);
  const holder=new T.Group();holder.name='Walker';const body=new T.Group();holder.add(body);body.add(figure.root);
  const bone=name=>{const b=figure.bones.get(name);if(!b)throw new Error('Cosmo rig is missing '+name);return b;};
  // The lying pose, built once from the bind pose the figure starts in.
