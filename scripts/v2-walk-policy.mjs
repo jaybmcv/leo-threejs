@@ -6,6 +6,12 @@ export const ROOM_DROP_ALLOWLIST=[
  {room:'d16-childcare-6',name:'Kitten_step_tower_pad',maxDrop:1.1,maxAboveFloor:1.15,reason:'Young explorers kitten step tower, climbable on purpose (tester feedback, main 06605a9): pads step up 0.35 m to a 1.05 m top pad, and the only drop is from that pad to its own room floor.',source:'src/walk/kittens.js'},
  {room:'d16-childcare-6',name:'Kitten_wall_shelf',maxDrop:1.1,maxAboveFloor:1.15,reason:'Main f892d19 intentionally climbable wall shelves: 0.35 m steps, highest support 1.085 m above its own room floor. Only this named support and a landing on its own floor are allowed.',source:'src/walk/kittens.js'}
 ];
+// A floor sample the walk misses drops out of its room's count only inside a sealed pocket under a lid (Jay,
+// 2026-11-04): both clearances measured, the lid no more than 2.8 m above the floor and at least 0.5 m under the
+// room's usual ceiling. A corner cut off by a partition keeps the room's ceiling; usable space under a higher
+// mezzanine or out of ray range keeps counting.
+export const POCKET_LID={gap:.5,max:2.8};
+export const enclosedPocket=(pocket,ceiling)=>!!pocket?.sealed&&Number.isFinite(pocket.lid)&&Number.isFinite(ceiling)&&pocket.lid<=POCKET_LID.max&&pocket.lid<=ceiling-POCKET_LID.gap;
 export function requireRoomDropPolicy(events,layout,options){const r=classifyRoomDrops(events,layout,options);if(r.roomFeatureViolations.length)throw Error('Unapproved room-feature drops over 1 m: '+r.roomFeatureViolations.length);return r;}
 export function classifyRoomDrops(events,layout,{supports=[]}={}){
  const roomFeatureDrops=events.filter(f=>f.category==='room-feature'&&f.drop>1).map(f=>{
