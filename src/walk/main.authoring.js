@@ -80,6 +80,7 @@ import {createHostess} from './hostess.authoring.js';
 import {wearHat,fit,FIT} from './hat.js';
 import {createYarn,YARN_SPOTS} from './yarn.authoring.js';
 import {BALL,createBallMesh} from './hamster-ball.js';
+import {ballBounce,ballDismount} from './ball-bounce.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink,remapSpot} from './link.js';
 import {KITTEN_POSE_NAMES} from './kittens.authoring.js';
@@ -552,8 +553,11 @@ for(const y of yarns)scene.add(y.mesh);
 const ballHome=findStand(colliders,BALL.home,{radius:4})||new T.Vector3(...BALL.home),ball=createBallMesh();let inBall=false;
 ball.mesh.position.copy(ballHome);scene.add(ball.mesh);
 function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());}
-// Out of the ball, Cosmo stands where it was and steps clear of it; it stays parked there.
-function leaveBall(){if(!inBall)return;inBall=false;controller.body=BODY;controller.stance='stand';ball.mesh.position.copy(controller.position);}
+// Stop before dismounting. In a tight spot the ball returns home so it cannot push Cosmo through a wall.
+function leaveBall(at=null){if(!inBall)return;
+ const parked=controller.position.clone(),out=at||ballDismount(parked,heading,BALL.radius+BODY.radius,q=>findStand(colliders,q,{radius:0}));
+ inBall=false;controller.body=BODY;controller.place(out||parked);ball.mesh.position.copy(out?parked:ballHome);
+}
 // The Deck 1 transporters (transporter.js): into a cart's driver's seat, once Leo live agrees nobody else has it, or one of
 // its rear seats, with the camera turned the way the seat faces. A seat granted after a walk away is given back.
 function boardCart(t){if(t.seat==='driver'&&!mct.take(t.cart))return;intoSeat(t.cart,t.seat);}
@@ -721,7 +725,7 @@ renderer.setAnimationLoop(()=>{
  const riding=vaultLift?.riding||lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
  // In the ball the jump is one low hop (BALL.body.jump).
- if(!resting&&!riding&&!run&&!treasure?.active){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ if(!resting&&!riding&&!run&&!treasure?.active){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number));pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  treasure?.step(dt,k);
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
  const p=controller.position;
@@ -991,7 +995,7 @@ function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(collide
  // Going elsewhere from a transporter's driver's seat leaves it parked where it is.
  if(resting?.spot.mct?.seat==='driver')mct.park(resting.spot.mct.cart);resting=null;
  // Going somewhere else leaves the ball behind, back in the gardens.
- if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
+ if(inBall){leaveBall(q);ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
 function closePanels(){controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
 // The list is a current server snapshot, including visitors who have not sent a pose yet.
