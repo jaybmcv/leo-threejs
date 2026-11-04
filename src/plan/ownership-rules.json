@@ -247,6 +247,12 @@
     ],
     "via": null
   },
+  "src/walk/transporter-mesh.js": {
+    "owners": [
+      "d01-workshop-5"
+    ],
+    "via": "inherited"
+  },
   "src/walk/transporter.js": {
     "owners": [
       "d01-workshop-5"

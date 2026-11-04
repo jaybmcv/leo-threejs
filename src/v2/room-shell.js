@@ -7,7 +7,7 @@ import {ownerFootprint} from '../plan/envelope-ownership-v2.js';
 import {worldPoint} from '../plan/hull-skin-v2.js';
 import {buildGardenGuards,galleryHoles} from './garden-guards.js';
 import {entrySegments,entryHeader} from './room-entries.js';
-import {polygonGeometry,mesh,box,wall,removePanelEndCaps,removeGeometryCaps,glass,lining,floor} from './geometry.js';
+import {polygonGeometry,mesh,box,wall,mergeBoxes,removePanelEndCaps,removeGeometryCaps,glass,lining,floor} from './geometry.js';
 
 export function buildRoomShell(ship,r,structure){
   const source=roomObject(ship,r.id);
@@ -28,7 +28,12 @@ export function buildRoomShell(ship,r,structure){
   }
   if(r.components){for(const o of [...(r.components.galleries||[]),...(r.components.links||[]),...(r.components.landings||[])]){const holes=galleryHoles(r,o);mesh(g,'V2_garden_gallery',polygonGeometry(o.polygon,holes,o.center[1],o.size[1]),floor);}
    // The plan's stair center.y is its finished tread elevation.
-   for(const o of r.components.stairs||[])box(g,'Gallery_stair',o.size,[o.center[0],o.center[1]-o.size[1]/2,o.center[2]],lining);buildGardenGuards(g,r,layout);
+   const stairs=r.components.stairs||[],lights=[];for(const o of stairs){const tread=box(g,'Gallery_stair',o.size,[o.center[0],o.center[1]-o.size[1]/2,o.center[2]],lining);if(r.id!=='commons-1')continue;
+    const flight=stairs.filter(t=>t.id.replace(/-\d+$/,'')===o.id.replace(/-\d+$/,'')).sort((a,b)=>a.center[1]-b.center[1]),dir=Math.sign(flight.at(-1).center[2]-flight[0].center[2]),rise=flight[1].center[1]-flight[0].center[1],geo=tread.geometry.clone(),p=geo.attributes.position,h=o.size[1];
+    for(let i=0;i<p.count;i++)if(p.getY(i)<0)p.setY(i,Math.max(-h/2,h/2-.34+(Math.sign(p.getZ(i))===-dir?0:rise)));geo.computeVertexNormals();geo.computeBoundingBox();geo.computeBoundingSphere();
+    const visible=mesh(g,'Lounge_slim_stair',geo,lining);visible.position.copy(tread.position);visible.userData.noCollide=true;tread.visible=false;tread.userData.baked=true;
+    lights.push([[o.size[0]-.3,.04,.012],[o.center[0],o.center[1]-.06,o.center[2]-dir*(o.size[2]/2+.006)]]);
+   }const stepGlow=mergeBoxes(g,'Lounge_step_glow',lights,new T.MeshBasicMaterial({name:'Lounge_step_glow',color:0x9b4dff,toneMapped:false}));if(stepGlow)stepGlow.userData.noCollide=true;buildGardenGuards(g,r,layout);
   }
 }
 
@@ -38,7 +43,7 @@ export function retireV2RoomShell(source,cutaway){
    // Wall-mounted art, projections, signs and lighting are fittings too. Keep them
    // under the moving room when the accepted shell gives way to its v2 envelope.
    const hung=[];source.traverse(o=>{if(o.isMesh&&/(art|mural|print|poster|painting|sconce|light|sign|display|projection|hanger|shade)/i.test(o.name)){for(let p=o.parent;p&&p!==source;p=p.parent)if(cutaway.has(p)){hung.push(o);break;}}});for(const o of hung)source.attach(o);
-   const retired=[];source.traverse(o=>{if(/^(Walls_and_ceiling|Garden_walls_and_ceiling|Observation_walls_and_ceiling|.*_shell)$/.test(o.name)){cutaway.delete(o);o.visible=false;o.userData.v2RemovedShell=true;}if(o.isMesh&&/^(Commons_column|Bridge_window_mullion|Viewport_structural_mullion|Continuous_window_ledge|Panoramic_viewing_rail|Viewing_rail_post|Finished_floor|Commons_floor|Commons_ceiling|Commons_rear_wall|Commons_end_wall|Rear_gallery|End_gallery|Front_gallery|Gallery_stair|Upper_stair_landing|Upper_gallery_connection|Stair_handrail|Gallery_door|Handrail|Baluster|Handrail_bend|Handrail_post|Lounge_rail_glass|Lounge_rail_glow|Curved_lounge_floor|Lounge_access_ramp|Ramp_floor_edge|Promenade_level_floor|Commons_to_promenade|Ramp_handrail|Ramp_rail_post)$/.test(o.name)){o.visible=false;if(o.name!=='Finished_floor')retired.push(o);}});for(const o of retired)o.removeFromParent();
+   const retired=[];source.traverse(o=>{if(/^(Walls_and_ceiling|Garden_walls_and_ceiling|Observation_walls_and_ceiling|.*_shell)$/.test(o.name)){cutaway.delete(o);o.visible=false;o.userData.v2RemovedShell=true;}if(o.isMesh&&/^(Commons_column|Bridge_window_mullion|Viewport_structural_mullion|Continuous_window_ledge|Panoramic_viewing_rail|Viewing_rail_post|Finished_floor|Commons_floor|Commons_ceiling|Commons_rear_wall|Commons_end_wall|Rear_gallery|End_gallery|Front_gallery|Gallery_stair|Upper_stair_landing|Upper_gallery_connection|Stair_handrail|Gallery_door|Handrail|Baluster|Handrail_bend|Handrail_post|Lounge_rail_glass|Lounge_rail_glow|Lounge_step_glow|Curved_lounge_floor|Lounge_access_ramp|Ramp_floor_edge|Promenade_level_floor|Commons_to_promenade|Ramp_handrail|Ramp_rail_post)$/.test(o.name)){o.visible=false;if(o.name!=='Finished_floor')retired.push(o);}});for(const o of retired)o.removeFromParent();
    // Every declared shell root is detached, so the v1 cutaway toggles cannot bring it back.
    for(const o of [...cutaway])if(o===source||isChild(o,source)){o.removeFromParent();cutaway.delete(o);}
 

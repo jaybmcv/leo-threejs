@@ -1,4 +1,5 @@
-﻿// Quiet water and an original melodic, half-time electronic loop for the lounge. Both follow the Sound button;
+import {createSpatial,updateSpatial} from './spatial-audio.js';
+// Quiet water and an original melodic, half-time electronic loop for the lounge. Both follow the Sound button;
 // the dome keeps its own lullaby and does not play the lounge music.
 const BEAT=60/140,LOOP=32;
 const MELODY=[[72,2],[75,1],[79,1],[82,2],[79,2],[77,2],[75,1],[72,1],[70,2],[72,2],
@@ -11,10 +12,10 @@ NOTES.sort((a,b)=>a.at-b.at);
 const pitch=m=>440*2**((m-69)/12);
 
 export function createLoungeSound(lounge,falls){
- let ctx=null,water=null,music=null,playing=false,start=0,index=0,loops=0,wanted=false;
+ let ctx=null,water=null,music=null,spatial=null,playing=false,start=0,index=0,loops=0,wanted=false;
  function build(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
-  water=ctx.createGain();water.gain.value=0;water.connect(ctx.destination);
+  water=ctx.createGain();water.gain.value=0;spatial=createSpatial(ctx);water.connect(spatial);
   music=ctx.createGain();music.gain.value=0;music.connect(ctx.destination);
   // A short, cross-faded noise loop gives the water a gentle, even rush.
   const n=ctx.sampleRate*3,fade=Math.min(2048,Math.floor(n/4)),buf=ctx.createBuffer(1,n,ctx.sampleRate),d=buf.getChannelData(0);let b=0;
@@ -42,7 +43,7 @@ export function createLoungeSound(lounge,falls){
    note(t,NOTES[index]);if(++index===NOTES.length){index=0;loops++;}
   }
  }
- return {update(walker,soundOn){
+ return {update(walker,soundOn,camera=null){
   const dome=lounge.dome,insideDome=Math.abs(walker.y-dome.centre.y)<dome.r&&Math.hypot(walker.x-dome.centre.x,walker.z-dome.centre.z)<dome.r;
   const dx=falls.a.x-falls.b.x,dz=falls.a.z-falls.b.z,len=dx*dx+dz*dz;
   const u=Math.max(0,Math.min(1,((walker.x-falls.b.x)*dx+(walker.z-falls.b.z)*dz)/len));
@@ -53,6 +54,7 @@ export function createLoungeSound(lounge,falls){
   if(wanted&&!ctx){if(navigator.userActivation?.hasBeenActive===false)return;build();}
   if(!ctx)return;
   if(wanted&&!document.hidden&&ctx.state==='suspended')ctx.resume().catch(()=>{});
+  updateSpatial(ctx,spatial,camera,{x:falls.b.x+u*dx,y:falls.a.y,z:falls.b.z+u*dz});
   water.gain.setTargetAtTime(waterLevel*.12,ctx.currentTime,.4);
   music.gain.setTargetAtTime(musicOn?.55:0,ctx.currentTime,musicOn?.7:.12);
   if(musicOn&&!playing){start=ctx.currentTime+.1;index=0;loops=0;}

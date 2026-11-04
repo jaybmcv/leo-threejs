@@ -1,5 +1,6 @@
 import {roomObject} from '../plan/rooms.js';
 import {walkCanvas} from './canvas.js';
+import {createCartMesh} from './transporter-mesh.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
@@ -25,8 +26,6 @@ export const SERVICE_BAYS=[-11.5,-4.5];
 const BAY_W=3.7,MOUTH=10.7,SERVICE={w:6.2,z0:-14.2,z1:-6.8};
 // The service displays stay on their stands and lift pads.
 const IN_SERVICE=[3,6];
-// The vehicle: length along its own z (nose toward +z), width along x, and how far the service bays raise it.
-const MCT={L:3.24,W:1.6,H:1.66,wheel:.36,axle:1.05,track:.78};
 const FONT='"Archivo", "Sora", sans-serif',MONO='"JetBrains Mono", ui-monospace, monospace';
 
 function canvasTexture(w,h,paint){
@@ -63,10 +62,6 @@ function floorAtlas(){
   // Wear: a scatter of small clear flecks.
   g.globalCompositeOperation='destination-out';let s=r*977+13;for(let i=0;i<260;i++){s=(s*16807)%2147483647;const x=s%w;s=(s*16807)%2147483647;const y=s%h;g.fillRect(x,y,3+(s%4),2+(s%3));}
  });
-}
-// The vehicles' unit numbers, white on clear, for their sides and tails.
-function numberAtlas(){
- return atlas(512,128,6,(g,r,w,h)=>{g.fillStyle='#f1f3f2';g.textAlign='center';g.textBaseline='middle';g.font=`700 96px ${FONT}`;g.fillText(`MCT-0${r+1}`,w/2,h/2+4);});
 }
 // The power units are ready, with their cables stowed. Battery charging is not simulated.
 function unitAtlas(){
@@ -121,7 +116,7 @@ export function createMctBay(ship){
  const std=(name,color,o={})=>new T.MeshStandardMaterial({name:'MCT_bay_'+name,color,roughness:.55,metalness:.15,...o});
  const lit=(name,color)=>new T.MeshBasicMaterial({name:'MCT_bay_'+name,color,toneMapped:false});
  const paint=(name,map,o={})=>std(name,0xffffff,{map,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2,metalness:0,roughness:.8,...o});
- const signs=signAtlas(),floor=floorAtlas(),numbers=numberAtlas(),units=unitAtlas(),stripes=stripeTexture();
+ const signs=signAtlas(),floor=floorAtlas(),units=unitAtlas(),stripes=stripeTexture();
  const M={body:std('body',0x77838c,{roughness:.5,metalness:.3}),panel:std('panel',0x5d6870,{roughness:.5,metalness:.3}),dark:std('dark',0x22292e,{roughness:.6}),
   tyre:std('tyre',0x191c1e,{roughness:.9,metalness:0}),hub:std('hub',0x9aa5ab,{metalness:.6,roughness:.35}),glass:std('glass',0x12212b,{roughness:.15,metalness:.4}),
   steel:std('steel',0xa9b4b8,{metalness:.7,roughness:.32}),yellow:std('yellow',0xf2b631,{roughness:.45,metalness:.2}),unit:std('power_unit',0x3c4a54,{roughness:.45,metalness:.35}),
@@ -130,7 +125,7 @@ export function createMctBay(ship){
   head:lit('headlight',0xfff3d6),tail:lit('taillight',0xff3b2f),beacon:lit('beacon',0xffa320),green:lit('status_green',0x3ee08a),amber:lit('status_amber',0xf2b631),
   stripe:std('hazard',0xffffff,{map:stripes,roughness:.5}),floorStripe:paint('floor_hazard',stripes,{transparent:false,depthWrite:true}),
   line:paint('floor_line',null,{color:0xf2b631,transparent:false,depthWrite:true}),white:paint('floor_white',null,{color:0xf4f1e6,transparent:false,depthWrite:true}),
-  legend:paint('floor_legend',floor.tex),numbers:std('numbers',0xffffff,{map:numbers.tex,transparent:true,depthWrite:false,metalness:0}),
+  legend:paint('floor_legend',floor.tex),
   sign:std('sign',0xffffff,{map:signs.tex,emissive:0xffffff,emissiveMap:signs.tex,emissiveIntensity:.55,metalness:0,roughness:.4}),
   screen:new T.MeshBasicMaterial({name:'MCT_bay_unit_screen',map:units.tex,toneMapped:false}),
   cells:new T.MeshBasicMaterial({name:'MCT_bay_tablet_cells',map:telemetry('cells'),toneMapped:false}),
@@ -150,39 +145,9 @@ export function createMctBay(ship){
  // A stripe-textured strip on the floor, its pattern repeating every 0.4 m.
  const hazard=(len,w,[x,z],ry)=>{const g=new T.PlaneGeometry(len,w),uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*len/.4,uv.getY(i)*w/.4);put(M.floorStripe,g.rotateX(-Math.PI/2).rotateY(ry).translate(x,.005,z));};
 
- // One MCT in its own frame: floor at y=0, nose toward +z, raised by `lift` (wheels hanging) in the service bays.
- function vehicle(n,lift=0){
-  const {L,W,H,wheel,axle,track}=MCT,b=.46+lift,h=y=>y+lift;
-  for(const sz of [-1,1])for(const sx of [-1,1]){cyl(M.tyre,wheel,.28,[sx*track,h(wheel),sz*axle],'x',18);cyl(M.hub,.17,.3,[sx*track,h(wheel),sz*axle],'x',12);cyl(M.dark,.07,.32,[sx*track,h(wheel),sz*axle],'x',8);}
-  box(M.dark,[1.2,.2,2.9],[0,h(.37),0]);
-  for(const sz of [-1,1])box(M.dark,[1.1,.08,.12],[0,h(.36),sz*axle]);
-  // The body from its side profile: a low rear box, a taller cab with a sloping nose.
-  const s=new T.Shape([[-L/2,0],[L/2,0],[L/2,.66],[L/2-.47,H-.46],[.05,H-.46],[.05,H-.64],[-L/2,H-.64]].map(([z,y])=>new T.Vector2(z,y)));
-  put(M.body,new T.ExtrudeGeometry(s,{depth:W,bevelEnabled:false}).translate(0,0,-W/2).rotateY(-Math.PI/2).translate(0,b,0));
-  // Wheel-arch flares, skirts, bumpers, grille and lights.
-  for(const sz of [-1,1])for(const sx of [-1,1])box(M.panel,[.34,.12,.86],[sx*(W/2+.05),b+.32,sz*axle]);
-  for(const sx of [-1,1])box(M.panel,[.06,.22,.9],[sx*(W/2+.02),b+.12,0]);
-  for(const sz of [-1,1])box(M.dark,[W+.1,.24,.16],[0,b+.08,sz*(L/2+.06)]);
-  box(M.dark,[.9,.22,.03],[0,b+.42,L/2+.012]);
-  for(let j=0;j<4;j++)box(M.steel,[.84,.018,.035],[0,b+.34+j*.05,L/2+.02]);
-  for(const sx of [-1,1]){box(M.head,[.24,.11,.03],[sx*.56,b+.44,L/2+.012]);box(M.tail,[.18,.1,.03],[sx*.6,b+.48,-L/2-.012]);}
-  for(let j=0;j<3;j++)for(const sx of [-1,1])box(M.yellow,[.08,.14,.02],[sx*(.18+j*.12),b+.57,L/2+.012],0,0,sx*.6);
-  // Windscreen on the sloping nose and side windows on the cab.
-  {const dz=.47,dy=H-.46-.66,a=Math.atan2(dz,dy);box(M.glass,[W-.2,Math.hypot(dz,dy)*.78,.02],[0,b+.66+dy/2+.006,L/2-dz/2+.01],-a);}
-  for(const sx of [-1,1])box(M.glass,[.02,.34,.9],[sx*(W/2+.006),b+H-.68,.72]);
-  // Hazard band on the rear box, the unit number on both sides and the tail, and the charge port (right side).
-  for(const sx of [-1,1]){box(M.stripe,[.012,.12,1.3],[sx*(W/2+.004),b+.86,-.82]);
-   const g=new T.PlaneGeometry(1.15,.29);numbers.uv(g,n-1);put(M.numbers,g.rotateY(sx*Math.PI/2).translate(sx*(W/2+.008),b+.62,-.82));}
-  {const g=new T.PlaneGeometry(.7,.175);numbers.uv(g,n-1);put(M.numbers,g.rotateY(Math.PI).translate(0,b+.74,-L/2-.006));}
-  box(M.dark,[.03,.22,.18],[-W/2-.01,b+.56,.58]);
-  box(M.panel,[.02,.2,.16],[-W/2-.09,b+.56,.72],0,-.9);
-  // Roof: an amber beacon on the cab, a rail and a service hatch on the rear box.
-  box(M.dark,[.3,.05,.14],[0,b+H-.435,.6]);box(M.beacon,[.22,.07,.1],[0,b+H-.385,.6]);
-  for(const sx of [-1,1])rod(M.steel,[sx*.6,b+H-.6,-1.45],[sx*.6,b+H-.6,-.15],.02);
-  box(M.panel,[.7,.04,.6],[0,b+H-.62,-.8]);
- }
- // The vehicle's collider, and its plain box, in the current frame.
- const vehicleBlock=(x,z,ry,lift=0)=>block([MCT.W+.32,MCT.H+lift,MCT.L+.3],[x,(MCT.H+lift)/2,z],ry);
+ // Static displays use the same model as the drivable carts.
+ const vehicle=(n,x,z,lift)=>{const cart=createCartMesh(n).group;cart.position.set(x,lift,z);cart.rotation.y=Math.PI;group.add(cart);};
+ const vehicleBlock=(x,z,lift)=>block([1.82,1.66+lift,3.6],[x,(1.66+lift)/2,z+.35],Math.PI);
 
  // --- The charging bays, along the outboard wall.
  for(const [i,xc] of CHARGE_BAYS.entries()){
@@ -227,17 +192,17 @@ export function createMctBay(ship){
  // Service bay 1: MCT-03 raised on four yellow jack stands, a side panel off and leaning on the cabinets, and the
  // mechanic's tool trolley at its right side.
  {const xc=SERVICE_BAYS[0],lift=.2;
+  vehicle(IN_SERVICE[0],xc,zs,lift);
   within(xc,0,zs,Math.PI,()=>{
-   vehicle(IN_SERVICE[0],lift);
    for(const sx of [-1,1])for(const sz of [-1,1]){
-    const x=sx*.5,z=sz*.62,top=.46+lift-.2;
+    const x=sx*.5,z=sz*.62,top=.14+lift;
     box(M.yellow,[.34,.03,.34],[x,.015,z]);
     for(const a of [0,1,2,3]){const dx=(a%2?1:-1)*.15,dz=(a<2?1:-1)*.15;rod(M.yellow,[x+dx,.03,z+dz],[x+dx*.25,top-.12,z+dz*.25],.018);}
     box(M.yellow,[.08,.2,.08],[x,top-.06,z]);box(M.dark,[.14,.04,.12],[x,top+.02,z]);
     rod(M.steel,[x,top-.18,z],[x+.12,top-.08,z],.008);
    }
   });
-  vehicleBlock(xc,zs,Math.PI,lift);
+  vehicleBlock(xc,zs,lift);
   // The removed side panel, leaning on the cabinets behind the nose.
   box(M.body,[1.1,.62,.03],[xc+.3,.315,-14.32],-.12);
   // The trolley: its drawers face the vehicle; the third is open with wrenches in its foam.
@@ -271,11 +236,11 @@ export function createMctBay(ship){
  }
  // Service bay 2: MCT-06 on four low hydraulic lift pads, their hoses to a small pump unit by the cabinets.
  {const xc=SERVICE_BAYS[1],lift=.1,pump=[xc+2.25,-13.5];
+  vehicle(IN_SERVICE[1],xc,zs,lift);
   within(xc,0,zs,Math.PI,()=>{
-   vehicle(IN_SERVICE[1],lift);
-   for(const sx of [-1,1])for(const sz of [-1,1]){const x=sx*.48,z=sz*.62;box(M.yellow,[.5,.07,.62],[x,.035,z]);box(M.dark,[.5,.012,.08],[x,.072,z-.2]);cyl(M.steel,.09,.2+lift,[x,.07+(.2+lift)/2,z]);box(M.dark,[.22,.03,.22],[x,.27+lift,z]);}
+   for(const sx of [-1,1])for(const sz of [-1,1]){const x=sx*.48,z=sz*.62;box(M.yellow,[.5,.07,.62],[x,.035,z]);box(M.dark,[.5,.012,.08],[x,.072,z-.2]);cyl(M.steel,.09,.09+lift,[x,.07+(.09+lift)/2,z]);box(M.dark,[.22,.03,.22],[x,.175+lift,z]);}
   });
-  vehicleBlock(xc,zs,Math.PI,lift);
+  vehicleBlock(xc,zs,lift);
   box(M.yellow,[.55,.62,.42],[pump[0],.31,pump[1]]);box(M.dark,[.4,.12,.02],[pump[0],.48,pump[1]+.22]);box(M.green,[.06,.03,.01],[pump[0]+.14,.5,pump[1]+.232]);
   block([.6,.66,.46],[pump[0],.33,pump[1]]);
   for(const sx of [-1,1])for(const sz of [-1,1]){const x=xc-sx*.48,z=zs-sz*.62;tube(M.cable,[[pump[0]-.2,.12,pump[1]+.2],[pump[0]-.5,.03,pump[1]+.6],[x+.32,.025,z],[x+.25,.04,z]],.016,24);}

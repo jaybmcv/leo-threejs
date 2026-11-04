@@ -15,7 +15,7 @@ export function fixtureText(k,o,label,sign=1){
 export function finishCirculation(root,shell,label,deck){
  const wallKit=detailKit(shell,label,true),k=detailKit(root,label,true),meshes=[];root.traverse(o=>{if(o.isMesh)meshes.push(o);});
  for(const o of meshes){
-  if(/wall/i.test(o.name)&&o.geometry.parameters.width){
+  if(/wall/i.test(o.name)&&o.geometry.parameters.width&&!o.userData.clearStair){
    for(const s of [-1,1]){
     const f=wallKit.face(o,s);if(f.w<1||f.h<1)continue;const clad=o.userData.clad===s;
     f.panel(0,-f.h*.3,f.w*.96,.075,clad?STAIRWELL.glow:M.oak,'corridor_lining');f.panel(0,-f.h*.43,f.w*.96,.08,M.dark,'corridor_lining');

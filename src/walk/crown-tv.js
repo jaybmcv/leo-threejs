@@ -1,3 +1,4 @@
+import {createSpatial,updateSpatial} from './spatial-audio.js';
 import * as T from 'three';
 import {placed,placedV1,placedFacing,placeObject} from '../plan/placements.js';
 
@@ -55,6 +56,12 @@ export function createCrownTv({live,base,connect,els,onOpen,onClose}){
 
  let info=null,verified=false,owner=false,max={mb:40,seconds:120},state='idle',sound=false,video=null,texture=null,retry=0,near=false,open=false,busy=false,note='',sure=false;
  const link=()=>live()?.live?live():null;
+ let audio=null,spatial=null,media=null,mediaGain=null,tvLevel=0;
+ function spatialize(){
+  if(!video)return;
+  if(media){audio.resume().catch(()=>{});return;}
+  try{audio||=new (window.AudioContext||window.webkitAudioContext)();spatial=createSpatial(audio);mediaGain=audio.createGain();mediaGain.gain.value=sound?tvLevel:0;mediaGain.connect(spatial);media=audio.createMediaElementSource(video);media.connect(mediaGain);audio.resume().catch(()=>{});}catch{if(media&&mediaGain){mediaGain.disconnect();mediaGain.connect(audio.destination);}else{mediaGain?.disconnect();mediaGain=null;}spatial?.disconnect();spatial=null;}
+ }
 
  function paintCard(){
   const c=card.getContext('2d'),w=card.width,h=card.height;
@@ -82,7 +89,7 @@ export function createCrownTv({live,base,connect,els,onOpen,onClose}){
  // The picture plane at the video's shape, inside the screen.
  function fit(aspect){const s=SCREEN[0]/SCREEN[1];picture.scale.set(aspect>s?1:aspect/s,aspect>s?s/aspect:1,1);}
  function showCard(next){state=next;if(texture){texture.dispose();texture=null;}picture.material.map=cardTexture;picture.material.needsUpdate=true;fit(SCREEN[0]/SCREEN[1]);paintCard();}
- function unload(){if(!video)return;video.pause();video.removeAttribute('src');video.load();video=null;}
+ function unload(){if(!video)return;if(media){media.disconnect();mediaGain?.disconnect();spatial?.disconnect();media=null;mediaGain=null;spatial=null;}video.pause();video.removeAttribute('src');video.load();video=null;}
  function load(){
   unload();const v=document.createElement('video');video=v;
   Object.assign(v,{muted:true,loop:true,playsInline:true,preload:'auto',crossOrigin:'anonymous'});v.setAttribute('playsinline','');v.dataset.id=info.id;
@@ -99,7 +106,7 @@ export function createCrownTv({live,base,connect,els,onOpen,onClose}){
  }
 
  // The card: what's on, sound, sharing a video, and (owners) taking it down.
- els.sound.addEventListener('click',()=>{sound=!sound;if(video){video.muted=!sound;video.play().catch(()=>{});}paintStrip();showSheet();});
+ els.sound.addEventListener('click',()=>{sound=!sound;if(video){if(sound)spatialize();if(mediaGain)mediaGain.gain.value=sound?tvLevel:0;video.muted=!sound;video.play().catch(()=>{});}paintStrip();showSheet();});
  els.pick.addEventListener('click',()=>{if(!busy)els.file.click();});
  els.connect.addEventListener('click',()=>connect());
  els.file.addEventListener('change',()=>{const file=els.file.files[0];els.file.value='';if(file)share(file);});
@@ -165,12 +172,16 @@ export function createCrownTv({live,base,connect,els,onOpen,onClose}){
    const v=msg.video;setVideo(v&&/^[0-9a-f]{16}$/.test(v.id)&&v.src===`/tv/${v.id}.mp4`?v:null);if(msg.down&&open)say('The video was taken down.');showSheet();},
   ticket(msg){ticketWait?.(msg);},
   // Every HUD tick: in the lounge, the video loads and plays; away from it, it stops.
-  update(p){
+  update(p,camera=null){
    const d=p.distanceTo(centre);near=Math.abs(p.y-FLOOR)<4&&d<LOAD_M;
    if(!info||!base){if(video)unload();return;}
    if(!near){if(video&&!video.paused)video.pause();return;}
    if(!video||video.dataset.id!==info.id)load();
-   video.muted=!sound;if(sound)video.volume=T.MathUtils.clamp(1-(d-LOUD_M)/(QUIET_M-LOUD_M),0,1);
+   if(sound&&!media)spatialize();
+   if(media&&spatial)updateSpatial(audio,spatial,camera,centre);
+   tvLevel=T.MathUtils.clamp(1-(d-LOUD_M)/(QUIET_M-LOUD_M),0,1);
+   if(mediaGain)mediaGain.gain.setTargetAtTime(sound?tvLevel:0,audio.currentTime,.05);
+   video.muted=!sound;video.volume=media?1:tvLevel;
    const now=performance.now();if(video.paused&&now>retry){retry=now+3000;video.play().catch(()=>{});}
   },
  };
