@@ -289,7 +289,7 @@ async function buildShip(){
  // (hex-floor.js); drawn only, after the colliders, so the floor walks as before.
  hexFloor=createHexFloor();
  // Deck 4's tank bay doorway behind a lever panel (lever-panel.js): drawn only, with a movable collider of its own.
- leverPanel=createLeverPanel(colliders);
+ leverPanel=createLeverPanel(colliders,{shared:!!LIVE_URL,send:msg=>live?.panel(msg),id:()=>live?.id});
  status('Dressing the crew…');await idle();
  if(cosmoKit)globalThis.LeoCosmo.dressCats(ship.inside,cosmoKit);
  status('Preparing the walk…');await idle();
@@ -621,8 +621,8 @@ if(LIVE_URL){
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
-  status:s=>{liveStatus=s;if(s!=='live')aboardNames=undefined;showAboard();showAboardList();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
-  welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();mct.apply(msg.mcts);live.tv();
+  status:s=>{liveStatus=s;if(s!=='live'){aboardNames=undefined;leverPanel?.lost();}showAboard();showAboardList();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
+  welcome:msg=>{leverPanel?.apply(msg.panel);for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();mct.apply(msg.mcts);live.tv();
    // A server from before chat sends no chat: it stays hidden.
    chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);
    // Just connected Discord at the giveaway's counter: its card shows what they can claim now.
@@ -634,6 +634,7 @@ if(LIVE_URL){
   lift:(id,s)=>lifts.apply(id,s),aboard:(n,names)=>{aboard=n;if(names!==undefined)aboardNames=names;showAboard();showAboardList();},
   maze:msg=>maze?.fromServer(msg),
   treasure:msg=>treasure?.fromServer(msg),
+  panel:msg=>leverPanel?.apply(msg),
   board:b=>(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
   hearts:h=>changeLog.setHearts(h),hearted:r=>changeLog.refused(r.why),
   // A group photo: someone pressed the selfie camera, and this page takes the photo at the same moment as theirs.
