@@ -1,7 +1,9 @@
 import {createAtriumGeometryRuntime} from '../v2/atrium-geometry-runtime.js';
 import {getAtriumQuality,observeAtriumFrame} from '../v2/atrium-quality.js';
 import {mountGraphicsSettings} from './graphics-settings.js';
-let atriumGeometry=null,graphicsSettings=null;
+import {mountControlsSettings} from './controls-settings.js';
+import {walkBindings,bindingLabel} from './bindings.js';
+let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
 import {settlePreparedStatic} from '../v2/prepared-static.js';
 import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
@@ -419,7 +421,7 @@ const actions={
   else if(t.kind==='inside')openLiftPanel(t.lift);
   else if(t.kind==='waiting')return;
   else if(t.kind==='sit'||t.kind==='lie'||t.kind==='stand')settle(t.spot);
-  else if(t.kind==='selfie'){if(!booth.counting)live?.selfie();booth.start();}
+  else if(t.kind==='selfie'){closePanels();$('selfie-setup').hidden=false;previewBackdrop();input.enabled=false;$('selfie-backdrop').focus();}
   else if(t.kind==='comic'){closePanels();reader.open(t.comic);input.enabled=false;}
   else if(t.kind==='read'){closePanels();showInfo($('info-sheet'),t.info);input.enabled=false;}
   else if(t.kind==='play')arcade.open();
@@ -445,7 +447,7 @@ const actions={
   else if(t.kind==='tv'){closePanels();crownTv.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
  },
- escape(){closePanels();arrivalTour?.close();},
+ escape(){if(treasure?.active){treasure.leave();return;}closePanels();arrivalTour?.close();},
  // (Nothing below until the walk is ready.)
  places(){if(ready())togglePlaces();},
  map(){if(ready())toggleMap();},
@@ -464,13 +466,13 @@ const actions={
  help(){if(ready())toggleHelp();},
  // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
  emote(i){if(ready()&&!resting&&!inBall&&!treasure?.active&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
- // A key pressed while a sheet is open: the key that opened it closes it, and the emote sheet takes 1-0.
+ // The emote sheet uses the same bindings as the walk.
  sheet(code){
   const open=id=>!$(id).hidden;
   // E puts the spray can down again.
   if(graffiti?.active&&code==='KeyE'){closePanels();return;}
-  if((code==='KeyE'&&open('info-sheet'))||(code==='KeyB'&&open('emotes'))||(code==='KeyN'&&open('map-sheet'))||(code==='KeyM'&&open('places'))||(code==='KeyH'&&open('help-sheet'))){closePanels();return;}
-  if(open('emotes')&&/^Digit[0-9]$/.test(code)){closePanels();actions.emote((+code.slice(5)+9)%10);}
+  if((code==='KeyE'&&open('info-sheet'))||(walkBindings.action(code)==='emotes'&&open('emotes'))||(code==='KeyN'&&open('map-sheet'))||(code==='KeyM'&&open('places'))||(code==='KeyH'&&open('help-sheet'))){closePanels();return;}
+  if(open('emotes')&&walkBindings.action(code)?.startsWith('emote:')){closePanels();actions.emote(+walkBindings.action(code).slice(6));}
   if(open('comic-sheet'))reader.key(code);
  },
 };
@@ -629,7 +631,7 @@ if(LIVE_URL){
 function myPose(riding=false){
  const h=walker.holder,held=resting||run,at=held?h.position:controller.position;
  return {pos:[at.x,at.y,at.z],yaw:held?h.rotation.y:heading,g:controller.grounded||riding||!!held,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting&&!resting.stand?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||pinballGame.isOpen||!$('outside-sheet').hidden||!!run,b:inBall};
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:resting?.stand?'healing_capsule':emote,rest:resting&&!resting.stand?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||pinballGame.isOpen||!$('outside-sheet').hidden||!!run,b:inBall};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
@@ -678,8 +680,8 @@ renderer.setAnimationLoop(()=>{
  // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
  if(hubPanel.isOpen()&&firstViewReady)return;
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
- const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen});last=now;
- const k=input.read();if(graphicsSettings?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
+ const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen&&!controlsSettings?.isOpen});last=now;
+ const k=input.read();if(graphicsSettings?.isOpen||controlsSettings?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
  const fwd=follow.forward(),right=new T.Vector3(-fwd.z,0,fwd.x);
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
  if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
@@ -778,7 +780,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();try{localStorage.removeItem(STARTING);}catch{}}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
@@ -825,6 +827,11 @@ function showPhoto(blob,open=false){
  share.hidden=!navigator.canShare?.({files:[file]});share.onclick=()=>navigator.share({files:[file],title:'Leo · Crown lounge'}).catch(()=>{});
  if(open){closePanels();$('photo-sheet').hidden=false;input.enabled=false;}
 }
+// Each visitor chooses the backdrop and angle for their own photo.
+function previewBackdrop(){const c=$('selfie-preview').getContext('2d');c.drawImage(booth.backdropCanvas,0,0,c.canvas.width,c.canvas.height);}
+$('selfie-backdrop').addEventListener('change',e=>{booth.setBackdrop(Number(e.target.value));previewBackdrop();});
+$('selfie-angle').addEventListener('change',e=>booth.setAngle(Number(e.target.value)));
+$('selfie-start').addEventListener('click',()=>{closePanels();if(!booth.counting){live?.selfie();booth.start();}});
 $('photo-names').addEventListener('change',()=>{if(photoSource)renderPhoto();});
 function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a));return a+d*(1-Math.exp(-lambda*dt));}
 
@@ -925,7 +932,7 @@ function restPose(dt){
  if(swing){const q=new T.Quaternion().setFromAxisAngle(swing.axis,swing.angle*e);h.position.sub(swing.pivot).applyQuaternion(q).add(swing.pivot);h.quaternion.premultiply(q);}
  if(r.phase==='out'&&r.t===0){heading=r.from.heading;controller.place(r.from.pos);resting=null;return null;}
  // In a healing capsule the body floats a little in the fluid, standing.
- if(r.stand){h.position.y+=.04*e*(1-Math.cos(performance.now()/1100));return null;}
+ if(r.stand){h.position.y+=(.20+.025*(1-Math.cos(performance.now()/1100)))*e;return {kind:'float',weight:e,seatHeight:walker.hipHeight};}
  return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight,hammock:!!r.spot.hammock};
 }
 function lerpAngle(a,b,t){return a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;}
@@ -952,11 +959,11 @@ function togglePlaces(){
 }
 // Help: H or the toolbar's Help opens it, and H, Esc or Close shut it.
 function toggleHelp(){const panel=$('help-sheet');if(!panel.hidden){closePanels();return;}closePanels();help.open();input.enabled=false;}
-// The emotes sheet: one button per emote (also keys 1-0).
+// The emotes sheet shows the current bindings beside each action.
 function toggleEmotes(){
  const panel=$('emotes');if(!panel)return;if(!panel.hidden){closePanels();return;}
  const list=panel.querySelector('.stops');list.textContent='';
- EMOTES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';const label=name.replace(/_/g,' ');b.textContent=`${(i+1)%10} · ${label[0].toUpperCase()}${label.slice(1)}`;b.onclick=()=>{closePanels();actions.emote(i);};list.appendChild(b);});
+ EMOTES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';const label=name.replace(/_/g,' ');b.textContent=`${bindingLabel(walkBindings.get('emote:'+i))} · ${label[0].toUpperCase()}${label.slice(1)}`;b.onclick=()=>{closePanels();actions.emote(i);};list.appendChild(b);});
  panel.hidden=false;input.enabled=false;list.querySelector('button')?.focus();
 }
 function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(colliders,place.at):findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();
@@ -966,7 +973,7 @@ function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(collide
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
+function closePanels(){controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
 // The list is a current server snapshot, including visitors who have not sent a pose yet.
 function showAboardList(){
  const list=$('aboard-list'),note=$('aboard-note');list.replaceChildren();
@@ -1048,6 +1055,7 @@ sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambi
 // Render resolution, set up with the renderer: each press steps High, Med, Low and round again.
 const resButton=$('resolution');setRes(res);
 graphicsSettings=mountGraphicsSettings({onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
+controlsSettings=mountControlsSettings({emotes:EMOTES,onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
 resButton.addEventListener('click',()=>{resChosen=true;setRes((res+1)%RES.length);try{localStorage.setItem(RES_KEY,RES[res]);}catch{}});
 // Held for a higher jump, as Space is.
 $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;input.jumpHeld=true;$('jump').setPointerCapture(e.pointerId);});

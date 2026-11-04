@@ -575,5 +575,11 @@
       "commons-1"
     ],
     "via": null
+  },
+  "src/walk/capsule-bubbles.js": {
+    "owners": [
+      "d05-surgery-2"
+    ],
+    "via": "inherited"
   }
 }

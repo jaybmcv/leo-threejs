@@ -3,6 +3,7 @@ export {buildRoomShell,retireV2RoomShell} from './room-shell.js';
 import {forumTerraces,forumUpperPlan} from './launch-e-fitout.js';
 import {forumTerraceGeometry} from './forum-terrace-geometry.js';
 import {buildCorridorFloors} from './corridor-floor-union.js';
+import {buildCommonsHallFinish} from './commons-hall-finish.js';
 import {atriumFloorGeometry,atriumFloorMaterial,skyCeilingGeometry,skyMaterial} from './atrium-surfaces.authoring.js';
 import {buildCrewGallery} from './crew-gallery.js';
 import {entrySegments,entryHeader} from './room-entries.js';
@@ -50,6 +51,7 @@ export function fitV2Structure(ship){
  for(const r of layout.rooms.filter(r=>!r.aggregate))buildRoomShell(ship,r,structure);
  const holeBounds=layout.decks.map(d=>d.slab.holes.map(h=>({...h,box:bounds(h.polygon)}))),roomHoles=layout.decks.map(d=>layout.rooms.filter(r=>!r.aggregate&&Math.abs(r.y-d.y)<.1&&r.polygon.length).map(r=>({polygon:r.polygon,box:bounds(r.polygon)})));
  buildCorridorFloors(structure,layout,roomHoles,holeBounds);
+ buildCommonsHallFinish(structure,layout);
  for(const b of layout.circulation.bridges)mesh(structure,'V2_tower_bridge_floor',polygonGeometry(b.polygon,[],layout.decks[b.deck-1].y,.24),b.deck===20?new T.MeshStandardMaterial({name:'P6_crew_service_floor',color:0x59666b,roughness:.8}):floor);
  for(const t of layout.circulation.towers)mesh(structure,'V2_tower_landing_floor',polygonGeometry(t.polygon,layout.decks[t.deck-1].openings.filter(o=>o.x0>120).map(o=>o.polygon),layout.decks[t.deck-1].y,.24),floor);
  for(const s of layout.circulation.stairs.filter(s=>s.wing!==undefined&&s.deck<15)){

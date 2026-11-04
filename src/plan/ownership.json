@@ -1203,7 +1203,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "1d6cd101700180718e397fde3f8f3207015b5626d1db32bb44c10e3746376522"
+      "signature": "23cee1f495b26686a66fb603de42918c15ca327c37e8ab4afedf5859f55d705f"
     },
     {
       "source": "src/walk/baggage.js",
@@ -1373,6 +1373,21 @@
       "interactionTargets": null,
       "placements": 3,
       "signature": "e9163e7543441ae7fdb6f19433ff9e4e5c442058f36cee81fe0e0e8a75672243"
+    },
+    {
+      "source": "src/walk/capsule-bubbles.js",
+      "rooms": [
+        "d05-surgery-2"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Healing_capsule_bubbles"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "7997ca90350af27ffe33835bc419fa1553e2b75b0567aa36b43dc0cf455324c7"
     },
     {
       "source": "src/walk/cargo-trolley.authoring.js",
@@ -2396,7 +2411,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "33ab3b3dc92b80fc5a0770d7671df19a88293141d8cb41c9435c4a35eb57a44c"
+      "signature": "d95144ebc05b4e4d9b4067962ca4054af35bdcf8cf8303478a6db8ba1d21b048"
     },
     {
       "source": "src/walk/hex-floor.authoring.js",
