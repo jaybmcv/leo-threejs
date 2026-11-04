@@ -272,7 +272,7 @@ async function buildShip(){
  hexFloor=createHexFloor();
  await idle();
  // Deck 4's tank bay doorway behind a lever panel (lever-panel.js): drawn only, with a movable collider of its own.
- leverPanel=createLeverPanel(colliders);
+ leverPanel=createLeverPanel(colliders,{shared:!!LIVE_URL,send:msg=>live?.panel(msg),id:()=>live?.id});
  status('Dressing the crew…');await idle();
  // Fixed crew are already dressed in the prepared render bands.
  status('Preparing the walk · 1/4 · placing the ship…');await idle();
@@ -570,7 +570,7 @@ const hubPanel=createHubPanel({
  onClose(){input.enabled=true;input.down.clear();},
  onGo(search){const spot=readSpot(search);return spot?goToSpot(spot):false;},
  onConnect:connect});
-const feedback=installFeedback({renderer,page:'walk',openHub:report=>hubPanel.open({report}),mount:()=>matchMedia('(max-width:560px)').matches?null:document.querySelector('.tools'),
+const feedback=installFeedback({renderer,page:'walk',openHub:report=>hubPanel.open({report}),mount:()=>matchMedia('(max-width:560px)').matches||document.documentElement.classList.contains('phone-hud')?null:document.querySelector('.tools'),
  css:'.fb-button:not(.fb-mounted){left:auto;bottom:auto;right:16px;top:180px;z-index:5}.tools .fb-button,.fb-button:not(.fb-mounted){border-color:var(--orange,#f85800);color:#ff8a3d}.tools .fb-button:hover,.fb-button:not(.fb-mounted):hover{background:var(--orange,#f85800);color:#050507}',
  // The pass is renewed as the panel opens unless it was got in the last two minutes, so it is fresh by Send.
  identity:()=>me.pass?{name:me.name||'Voyager',pass:bestPass,renew:()=>currentPass(480)}:null,
@@ -607,8 +607,8 @@ if(LIVE_URL){
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
-  status:s=>{liveStatus=s;if(s!=='live')aboardNames=undefined;showAboard();showAboardList();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
-  welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();mct.apply(msg.mcts);live.tv();
+  status:s=>{liveStatus=s;if(s!=='live'){aboardNames=undefined;leverPanel?.lost();}showAboard();showAboardList();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
+  welcome:msg=>{leverPanel?.apply(msg.panel);for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();mct.apply(msg.mcts);live.tv();
    // A server from before chat sends no chat: it stays hidden.
    chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);
    // Just connected Discord at the giveaway's counter: its card shows what they can claim now.
@@ -620,6 +620,7 @@ if(LIVE_URL){
   lift:(id,s)=>lifts.apply(id,s),aboard:(n,names)=>{aboard=n;if(names!==undefined)aboardNames=names;showAboard();showAboardList();},
   maze:msg=>maze?.fromServer(msg),
   treasure:msg=>treasure?.fromServer(msg),
+  panel:msg=>leverPanel?.apply(msg),
   board:b=>(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
   hearts:h=>changeLog.setHearts(h),hearted:r=>changeLog.refused(r.why),
   // A group photo: someone pressed the selfie camera, and this page takes the photo at the same moment as theirs.
@@ -652,11 +653,13 @@ function myPose(riding=false){
 if(live)setInterval(()=>{if(document.hidden||performance.now()-last>1000)live.pose(myPose());},1000);
 function showAboard(){
  const b=$('aboard');b.hidden=!live;if(!live)return;
- const text=(matchMedia('(max-width:560px)').matches?{live:aboard===1?'Just you':`${aboard} aboard`,connecting:'Joining…',offline:'Solo',layout:'Solo · reload ship',full:'Solo · full',replaced:'Solo · 2 tabs'}
+ // Short labels on a narrow screen, unless they are in a phone's More menu (walk.html), which has room for the long ones.
+ const small=matchMedia('(max-width:560px)').matches&&!document.documentElement.classList.contains('phone-hud');
+ const text=(small?{live:aboard===1?'Just you':`${aboard} aboard`,connecting:'Joining…',offline:'Solo',layout:'Solo · reload ship',full:'Solo · full',replaced:'Solo · 2 tabs'}
   :{live:aboard===1?'Just you aboard':`${aboard} aboard`,connecting:'Joining…',offline:'Solo · reconnecting',layout:'Solo · reload to match ship',full:'Solo · Leo is full',replaced:'Solo · open in another tab'})[liveStatus]||'';
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
  // Beside it: logged in with Discord says so; anyone else is offered it. Leo live has the last word once it has answered.
- const d=$('discord-chip'),small=matchMedia('(max-width:560px)').matches;d.hidden=inOtherside;
+ const d=$('discord-chip');d.hidden=inOtherside;
  d.dataset.in=(liveStatus==='live'?live.you?.verified:me.pass)?'1':'';
  d.textContent=d.dataset.in?(small?'':'Logged in · ')+(live.you?.name||me.name||'Voyager'):small?'Discord':'Log in with Discord';
 }
@@ -671,7 +674,8 @@ if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(glo
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vaultLift',{get:()=>vaultLift});
 // The ship map: the corner mini-map, redrawn a few times a second, and the full map sheet.
 const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
-function sizeCanvas(c){const r=Math.min(devicePixelRatio||1,2),w=Math.round(c.clientWidth*r),h=Math.round(c.clientHeight*r);if(w&&h&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}}
+// (A phone's small mini-map, html.phone-hud from walk.html, keeps up to 3× its pixels, so its names stay sharp.)
+function sizeCanvas(c){const r=Math.min(devicePixelRatio||1,c===mini&&document.documentElement.classList.contains('phone-hud')?3:2),w=Math.round(c.clientWidth*r),h=Math.round(c.clientHeight*r);if(w&&h&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}}
 function miniMap(p){sizeCanvas(mini);const d=drawMiniMap(mini,shipMap,{x:p.x,y:p.y,z:p.z,yaw:follow.yaw,places:PLACES});$('minimap-deck').textContent=d?`Deck ${d.number}`:p.y>100?'Crown lounge':'Fin';}
 function showMap(number){
  mapDeck=T.MathUtils.clamp(number,1,DECKS.length);const c=$('map-canvas');sizeCanvas(c);

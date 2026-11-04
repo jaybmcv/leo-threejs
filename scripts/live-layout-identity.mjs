@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 import {build} from './native-bundle.mjs';
 import {v2Plugin} from './v2-plugin.mjs';
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
-const logic=['src/v2/live-spatial.js','src/v2/activity-layout.js','src/walk/pool/rules.js',
+const logic=['src/walk/net/panel-rules.js','server/lever-panel.mjs','src/v2/live-spatial.js','src/v2/activity-layout.js','src/walk/pool/rules.js',
  'src/walk/maze/layout.js','src/walk/aquarium-treasure/layout.js',
  // These implement shared coordinate transforms and moving-game rules, not
  // merely their serialized start positions. A toLocal-only edit must differ.
