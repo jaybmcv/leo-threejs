@@ -4,7 +4,7 @@ import defaultOverrides from '../plan/room-fitout-overrides-v2.json' with {type:
 // Added parts use metres in the room's fitting frame; replacements retain the
 // original placement unless explicitly changed. Collision uses the same mesh.
 export function applyRoomFitoutOverrides(data,layout,overrides=defaultOverrides){
- const materials=new Set(['resident','oak','cream','teal','sage','clay','navy','metal','orange','red','green','light','screen','water','glass']);
+ const materials=new Set(['resident','oak','cream','teal','sage','clay','navy','metal','orange','green','light','screen','water','glass','red']);
  const matches=(part,filter)=>Object.entries(filter).every(([key,value])=>part[key]===value);
  const check=part=>{if(!part.part||!Array.isArray(part.size)||part.size.length!==3||!part.size.every(n=>Number.isFinite(n)&&n>0)||!Array.isArray(part.at)||part.at.length!==3||!part.at.every(Number.isFinite)||!materials.has(part.mat))throw Error('Invalid room fitout part in '+part.room);return part;};
  for(const [id,change]of Object.entries(overrides)){

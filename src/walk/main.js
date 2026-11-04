@@ -85,6 +85,7 @@ import {KITTEN_POSE_NAMES} from './kittens.js';
 import {createAtriumKittens} from './arrival-atrium.js';
 import {createSurgeryArms} from './surgery.js';
 import {createImagingScans} from './imaging.js';
+import {createMissionTimer} from './mission-timer.js';
 import {createFinCasing} from './fin-casing.js';
 import {createGraffiti} from './graffiti.js';
 import {createCrownTv} from './crown-tv.js';
@@ -267,7 +268,7 @@ async function buildShip(){
  }});
  ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
  loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;
- const {pipework,trolley,wardTrolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;
+ const {pipework,trolley,wardTrolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;atmosphere=prepared.atmosphere;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;
  // The hidden clubhouse's vault door behind the arcade (vault.js): solid here, as a movable collider of its own.
@@ -343,11 +344,13 @@ async function buildShip(){
  if(gaming)toBand(gaming.group);
  // Communications' wraparound star map and station screens (comms-displays.js), drawn with Deck 20's band.
  {const comms=createCommsDisplays(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy()});if(comms)toBand(comms.group);}
+ missionTimer=createMissionTimer(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(missionTimer)toBand(missionTimer.group);
  if(missionHolo)toBand(missionHolo.group);
  if(swordCase)toBand(swordCase.group);
  // Hydroponic garden A's chinampa tank (chinampa.js), drawn with Deck 3's band.
  if(chinampa)toBand(chinampa.group);
  if(baggage)toBand(baggage.group);
+ if(atmosphere)toBand(atmosphere.group);
  if(halloween)toBand(halloween.group);
  toBand(hexFloor.group);
  toBand(leverPanel.group);
@@ -377,9 +380,9 @@ async function buildShip(){
  }
  isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});
 }
-let imagingScans=null;
+let imagingScans=null,missionTimer=null;
 let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
-let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null;
+let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null,atmosphere=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 // Lifeboat fittings (2,000 seats a deck with their headrests and harnesses, seen only through a hatch or from inside a
 // craft) draw only near the walker: drawn whole, they were most of the triangles in any view on the lower decks.
@@ -791,6 +794,7 @@ renderer.setAnimationLoop(()=>{
  loungeSound?.update(p,ambience.on,camera);
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
+ missionTimer?.update(dt,p);
  surgeryArms?.update(dt,p,remotes?.remotes);
  imagingScans?.update(dt,p,resting,remotes?.remotes);
  // The Container Maze's clock starts at its way in and drops if the walker leaves (maze/run.js).
@@ -798,6 +802,7 @@ renderer.setAnimationLoop(()=>{
  freightGate?.update(dt,p,bodies);hangarDoor?.update(dt,p);
  chinampa?.update(dt,p);
  baggage?.update(dt,p);
+ atmosphere?.update(dt,p);
  marks?.update(camera,p,now);
  if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);graffiti?.load(p);crownTv?.update(p,camera);
   // Walking into Mudwater Arena counts as a visit (server/arena.mjs).

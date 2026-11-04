@@ -447,7 +447,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 28,
-      "signature": "51e407624cf6537b16272f5d75249548bf34baeda80f3fdcab843112964228f3"
+      "signature": "9e5f2b2a18f1d3c4b115c10680735f979fe45c16908aca1670fcfdff38c6ee8e"
     },
     {
       "source": "src/lower-bow.js",
@@ -1162,11 +1162,11 @@
       "signature": "4cc5d3d8aef5a8499a7f2b2991dcfe3fe9a39f364ff5819ebd3379e3fedcd8dd"
     },
     {
-      "source": "src/walk/arrival-mood.js",
+      "source": "src/walk/atmosphere.js",
       "rooms": [
-        "d02-arrival-1"
+        "d04-air-1"
       ],
-      "via": "toWorld",
+      "via": "roomObject",
       "fixed": false,
       "features": [
         "Arrival_practical_lights"
@@ -4012,6 +4012,21 @@
       "signature": "a1b1ae07131212cc4364c5a4d14bac1d8a358261049218a0da8ae82dc9a3b339"
     },
     {
+      "source": "src/walk/mission-timer.js",
+      "rooms": [
+        "d02-maintenance-aft"
+      ],
+      "via": "roomObject",
+      "fixed": false,
+      "features": [
+        "Mission_timer"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 14,
+      "signature": "19f7ac1bfc20e2553a1b5afaaa46a1fdda486e7c6e040e2db53260316e3b6507"
+    },
+    {
       "source": "src/walk/mudwater.authoring.js",
       "rooms": [
         "d16-arena-1"
@@ -4511,7 +4526,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "b6fba4348ea8400a68628f9975da50f9b1bc13ad46351e94d4d01e6e60988efb"
+      "signature": "aa4a5e255d357f57df46454f2e085deaad9324b9a0f527be2b8be6702935c8db"
     },
     {
       "source": "src/walk/provisions.authoring.js",

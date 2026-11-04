@@ -1,4 +1,34 @@
 {
+  "d04-air-1": {
+    "add": [
+      {"part":"atmosphere_intake","size":[8,2.5,6],"at":[-17,1.35,-12.2],"mat":"metal"},
+      {"part":"atmosphere_safe_path","size":[48,0.008,0.1],"at":[0,0.012,-7.6],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_humidity","size":[8,2.5,6],"at":[-6,1.35,-12.2],"mat":"metal"},
+      {"part":"atmosphere_co2","size":[8,2.5,6],"at":[5,1.35,-12.2],"mat":"metal"},
+      {"part":"atmosphere_hepa","size":[8,2.5,6],"at":[16,1.35,-12.2],"mat":"metal"},
+      {"part":"atmosphere_service_path","size":[48,0.008,0.1],"at":[0,0.012,-15.5],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_cross_path","size":[0.1,0.008,7.9],"at":[-23,0.012,-11.55],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_cross_path","size":[0.1,0.008,7.9],"at":[-11.5,0.012,-11.55],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_cross_path","size":[0.1,0.008,7.9],"at":[-0.5,0.012,-11.55],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_cross_path","size":[0.1,0.008,7.9],"at":[10.5,0.012,-11.55],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_cross_path","size":[0.1,0.008,7.9],"at":[21.5,0.012,-11.55],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_intake","size":[8,2.5,6],"at":[-17,1.35,12.2],"mat":"metal"},
+      {"part":"atmosphere_safe_path","size":[48,0.008,0.1],"at":[0,0.012,7.6],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_humidity","size":[8,2.5,6],"at":[-6,1.35,12.2],"mat":"metal"},
+      {"part":"atmosphere_co2","size":[8,2.5,6],"at":[5,1.35,12.2],"mat":"metal"},
+      {"part":"atmosphere_hepa","size":[8,2.5,6],"at":[16,1.35,12.2],"mat":"metal"},
+      {"part":"atmosphere_service_path","size":[48,0.008,0.1],"at":[0,0.012,15.5],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_cross_path","size":[0.1,0.008,7.9],"at":[-23,0.012,11.55],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_cross_path","size":[0.1,0.008,7.9],"at":[-11.5,0.012,11.55],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_cross_path","size":[0.1,0.008,7.9],"at":[-0.5,0.012,11.55],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_cross_path","size":[0.1,0.008,7.9],"at":[10.5,0.012,11.55],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_cross_path","size":[0.1,0.008,7.9],"at":[21.5,0.012,11.55],"mat":"orange","noCollide":true},
+      {"part":"atmosphere_terminal_base","size":[1.1,1.05,3.4],"at":[-17,0.525,0],"mat":"navy"},
+      {"part":"atmosphere_terminal_screen","size":[0.25,2.28,3.8],"at":[-16.65,1.93,0],"mat":"navy"},
+      {"part":"atmosphere_terminal_shelf","size":[1.5,0.1,3.8],"at":[-17.3,1.13,0],"mat":"metal"}
+    ],
+    "rests": []
+  },
   "d05-surgery-2": {
     "add": [
       {"part":"medical_monitor_unit","size":[0.52,1.12,0.48],"at":[-20,0.56,-10.4],"mat":"cream","round":true},
@@ -55,6 +85,18 @@
       {"part":"medical_hazard_mark_light","size":[0.045,0.15,0.014],"at":[10,0.4,-7.789],"mat":"light","noCollide":true},
       {"part":"medical_hazard_mark","size":[0.24,0.22,0.012],"at":[10,0.38,7.781],"mat":"navy","noCollide":true},
       {"part":"medical_hazard_mark_light","size":[0.045,0.15,0.014],"at":[10,0.4,7.789],"mat":"light","noCollide":true}
+    ]
+  },
+  "d02-maintenance-aft": {
+    "remove": [{"part":"Equipment_cradle"},{"part":"Removable_equipment"}],
+    "add": [
+      {"part":"mission_timer_rug","size":[3.8,0.018,9.2],"at":[0,0.016,0],"mat":"red","noCollide":true},
+      {"part":"mission_timer_plinth","size":[3.2,0.24,8.4],"at":[0,0.155,0],"mat":"navy","round":true},
+      {"part":"mission_timer_base","size":[2.8,0.42,7.7],"at":[0,0.485,0],"mat":"metal","round":true},
+      {"part":"mission_timer_emitter","size":[2.6,0.18,8.0],"at":[0,0.785,0],"mat":"navy","round":true},
+      {"part":"mission_timer_display","size":[0.32,1.45,7.4],"at":[-0.5,2.42,0],"mat":"navy","round":true},
+      {"part":"mission_timer_support","size":[0.34,2.48,0.22],"at":[-0.5,2.1,-3.84],"mat":"metal"},
+      {"part":"mission_timer_support","size":[0.34,2.48,0.22],"at":[-0.5,2.1,3.84],"mat":"metal"}
     ]
   },
   "d4-escape-s-9": {
