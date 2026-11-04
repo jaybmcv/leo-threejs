@@ -563,5 +563,11 @@
       "commons-1"
     ],
     "via": null
+  },
+  "src/walk/atmosphere.js": {
+    "owners": [
+      "d04-air-1"
+    ],
+    "via": "roomObject"
   }
 }
