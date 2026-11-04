@@ -1862,7 +1862,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "2942786fb13f8d4b26169723186b8d5feb3b209f67b3dfb8bec7f32a52b61d0e"
+      "signature": "3d9a5d78943f9da4e0b2a31de7069415135d6559da5696bb855b2fb7a88dfc48"
     },
     {
       "source": "src/walk/controller.js",
@@ -1874,7 +1874,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "2a7c7c24f1611c90978a7f2dc67fa73ccfa3abc6574f0336dd0fa5f6a4e16a18"
+      "signature": "e3642382ac54acfb7664d2d56790fc1b53f75393b4b7a503f82935b6601c86da"
     },
     {
       "source": "src/walk/crown-tv.js",
@@ -3582,7 +3582,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 42,
-      "signature": "4d6d2536da42f2f683fdec76017c461bb9f48b846d47f9e1fbb3d3e746abf9c8"
+      "signature": "8f4b534560f2c4a4a8f645f500043d7fe17f907a98d0244111aaaa7a010c2665"
     },
     {
       "source": "src/walk/main.js",
@@ -3603,7 +3603,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 41,
-      "signature": "4de90a2f32c33801174f2ab833d34508204ec01aadccda2f51ba2653fbefcd0e"
+      "signature": "01f3947739924ec0034070b1e86a55cac828ec741123f65dd6a8ed01014fc3d3"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -3623,7 +3623,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 36,
-      "signature": "097f0833438658f3626d62f57f848635a32aada2379656392d10e1ac37cbcabb"
+      "signature": "85f9d4bce44393bd3c0f1c173ffb9caa18e57a74833b966737829c0624d447eb"
     },
     {
       "source": "src/walk/main.public.js",
@@ -3643,7 +3643,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 36,
-      "signature": "edd2e9854c767426563c5eab64afa9f9d31286e77c7780e7796d78b278c67b4b"
+      "signature": "9cdab9db988422026d80e47df66842d7a6c5b8b0bcc52cafb10d7afb0e91d43c"
     },
     {
       "source": "src/walk/marks.authoring.js",
