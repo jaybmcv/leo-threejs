@@ -81,11 +81,26 @@ export function createSelfieBooth(){
   // Set the camera for a canvas of w×h so the 3:2 crop taken from it shows FOV degrees top to bottom.
   aim(w,h){const crop=Math.min(h,w/1.5);camera.aspect=w/h;camera.fov=2*Math.atan(Math.tan(FOV*Math.PI/360)*h/crop)*180/Math.PI;camera.updateProjectionMatrix();},
   // Right after the photo is drawn into `source`: crop it to 3:2 and frame it. Resolves to a canvas.
-  async frame(source){
+  async frame(source,names=[],showNames=true){
    const w=source.width,h=source.height,cw=Math.min(w,h*1.5),ch=cw/1.5;
    const pw=OUT.w-OUT.margin*2,ph=Math.round(pw/1.5),out=walkCanvas();out.width=OUT.w;out.height=OUT.margin+ph+OUT.band;
-   const c=out.getContext('2d');c.drawImage(source,(w-cw)/2,(h-ch)/2,cw,ch,OUT.margin,OUT.margin,pw,ph);
    const logo=await mark;await globalThis.document?.fonts?.ready;
+   const c=out.getContext('2d');c.drawImage(source,(w-cw)/2,(h-ch)/2,cw,ch,OUT.margin,OUT.margin,pw,ph);
+   if(showNames){
+    c.save();c.font=`500 24px ${FONT.display}`;c.textAlign='center';c.textBaseline='middle';
+    for(const name of [...names].sort((a,b)=>b.z-a.z)){
+     const sx=(name.x+1)*w/2-(w-cw)/2,sy=(1-name.y)*h/2-(h-ch)/2;
+     if(sx<0||sx>cw||sy<0||sy>ch)continue;
+     const raw=String(name.name||'').trim();let label=raw;if(!label)continue;
+     while(c.measureText(label+'…').width>300&&label.length>1)label=label.slice(0,-1);
+     if(label!==raw)label+='…';
+     const boxH=40,boxW=Math.min(328,c.measureText(label).width+28),x=OUT.margin+sx/cw*pw,y=OUT.margin+sy/ch*ph-boxH-6;
+     const left=Math.max(OUT.margin,Math.min(OUT.margin+pw-boxW,x-boxW/2)),top=Math.max(OUT.margin,Math.min(OUT.margin+ph-boxH,y));
+     c.fillStyle='rgba(5,5,7,.78)';c.beginPath();c.roundRect(left,top,boxW,boxH,boxH/2);c.fill();
+     c.fillStyle='#f4f0e8';c.fillText(label,left+boxW/2,top+boxH/2,300);
+    }
+    c.restore();
+   }
    c.globalCompositeOperation='destination-over';c.fillStyle='#0b0b10';c.fillRect(0,0,out.width,out.height);c.globalCompositeOperation='source-over';
    c.fillStyle=ORANGE;c.fillRect(OUT.margin,OUT.margin+ph,pw,4);
    const y=OUT.margin+ph+OUT.band/2+4;let x=OUT.margin;

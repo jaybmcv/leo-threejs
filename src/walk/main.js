@@ -801,24 +801,42 @@ function draw(view){
 }
 // The selfie booth's photo: drawn from its lens and copied off the canvas at once (the drawing buffer is not kept past
 // this frame), then the walker's own view drawn back over it.
-let photoUrl=null;
+let photoUrl=null,photoSource=null,photoNames=[],photoRender=0,photoFilename='';
 function takePhoto(){
  const canvas=renderer.domElement,shown=walker.holder.visible;walker.holder.visible=true;
  booth.aim(canvas.width,canvas.height);booth.camera.updateMatrixWorld();draw(booth.camera);
  const copy=document.createElement('canvas');copy.width=canvas.width;copy.height=canvas.height;copy.getContext('2d').drawImage(canvas,0,0);
+ photoSource=copy;photoNames=selfieNames();photoFilename=`leo-crown-lounge-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.jpg`;$('photo-names').checked=true;
  walker.holder.visible=shown;draw(camera);
  const flash=$('photo-flash');flash.hidden=false;flash.getAnimations?.().forEach(a=>a.cancel());flash.animate?.([{opacity:.85},{opacity:0}],{duration:450}).finished.then(()=>{flash.hidden=true;},()=>{});
- booth.frame(copy).then(out=>out.toBlob(blob=>{if(blob)showPhoto(blob);},'image/jpeg',.92));
+ renderPhoto(true);
 }
-function showPhoto(blob){
+// Name tags live in an HTML layer, so add their existing display names to the photo canvas here.
+function selfieNames(){
+ const names=[],ray=new T.Ray(),eye=booth.camera.getWorldPosition(new T.Vector3());
+ const add=(name,x,y,z)=>{
+  if(!name)return;const point=new T.Vector3(x,y,z),delta=point.clone().sub(eye),distance=delta.length();if(!distance)return;
+  ray.set(eye,delta.divideScalar(distance));const hit=colliders.raycast(ray,distance);if(hit&&hit.distance<distance-.4)return;
+  point.project(booth.camera);names.push({name,x:point.x,y:point.y,z:point.z});
+ };
+ for(const r of remotes?.remotes.values()||[])if(r.walker)add(r.name||'Voyager '+r.id.slice(-4),r.cur.x,r.cur.y+(r.rest&&r.restKind==='lie'?.8:2.15),r.cur.z);
+ const own=live?.you?.name||me.name||savedName(),p=walker.holder.position;if(own)add(own,p.x,p.y+(resting&&resting.lie ? .8 : 2.15),p.z);
+ return names;
+}
+function renderPhoto(open=false){
+ const serial=++photoRender;
+ booth.frame(photoSource,photoNames,$('photo-names').checked).then(out=>new Promise(resolve=>out.toBlob(resolve,'image/jpeg',.92))).then(blob=>{if(blob&&serial===photoRender)showPhoto(blob,open);});
+}
+function showPhoto(blob,open=false){
  if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=URL.createObjectURL(blob);
- const name=`leo-crown-lounge-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.jpg`;
+ const name=photoFilename||`leo-crown-lounge-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.jpg`;
  $('photo-image').src=photoUrl;Object.assign($('photo-save'),{href:photoUrl,download:name});
  // Where the browser can share files (most phones), sharing is the easy way to keep or send it.
  const file=new File([blob],name,{type:'image/jpeg'}),share=$('photo-share');
  share.hidden=!navigator.canShare?.({files:[file]});share.onclick=()=>navigator.share({files:[file],title:'Leo · Crown lounge'}).catch(()=>{});
- closePanels();$('photo-sheet').hidden=false;input.enabled=false;
+ if(open){closePanels();$('photo-sheet').hidden=false;input.enabled=false;}
 }
+$('photo-names').addEventListener('change',()=>{if(photoSource)renderPhoto();});
 function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a));return a+d*(1-Math.exp(-lambda*dt));}
 
 // What's in front of the walker to use: a lift (call button or car panel) first, then the graffiti wall, the selfie camera, a comic book,
