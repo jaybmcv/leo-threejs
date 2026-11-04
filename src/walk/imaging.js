@@ -240,7 +240,7 @@ export function createImagingScans(ship,{still=false,anisotropy=4,kit=null}={}){
  const PW=3.2,PH=2,PY=1.3,lines=[],beams=[],hearts=[];
  const heartShape=new T.Shape();
  heartShape.moveTo(0,-.15);heartShape.bezierCurveTo(-.04,-.11,-.15,-.02,-.15,.075);heartShape.bezierCurveTo(-.15,.19,-.02,.2,0,.105);heartShape.bezierCurveTo(.02,.2,.15,.19,.15,.075);heartShape.bezierCurveTo(.15,-.02,.04,-.11,0,-.15);heartShape.closePath();
- const heartGeometry=new T.ShapeGeometry(heartShape,16),heartMaterial=new T.MeshBasicMaterial({name:'Imaging_heartbeat',color:0x9beaff,transparent:true,opacity:.95,depthWrite:false,toneMapped:false,side:T.DoubleSide});
+ const heartGeometry=new T.ShapeGeometry(heartShape,16),heartMaterial=new T.MeshBasicMaterial({name:'Imaging_heartbeat',color:0x9beaff,transparent:true,opacity:.95,depthWrite:false,toneMapped:false,side:T.FrontSide});
  DIVIDERS.forEach((d,i)=>{
   const bay=BAYS.indexOf(Math.sign(d.z)*10);
   for(const f of d.faces){
