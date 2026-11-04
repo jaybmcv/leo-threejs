@@ -13,7 +13,7 @@ export function featurePlaces(layout,{crownFloor=LIFTS.find(l=>l.id==='crown').s
  local('paw-pool','Paw Pool','d16-recreation-4',[0,0,5.5],Math.PI);
  local('pinball','Leo Pinball','d16-recreation-4',[23.7,0,0],Math.PI/2);
  local('paws-off','Paws Off treadmills','d16-gym-3',[-18,0,-8],Math.PI);
- local('theatre-concession','Theater concession stand','d16-theater-5',[-20,0,-.4],Math.PI);
+ local('theatre-concession','Theater concession stand','d16-theater-5',[-18.5,0,-14.7],0);
  local('gaming-lounge','Gaming lounge','d16-training-aft',[-18,0,0],Math.PI/2);
  local('telescope','Alien Cat Invasion telescope','observation-lounge',[31.7,0,0],Math.PI/2,'Raised observation lounge via Deck 17 ramp');
  const garden=room('commons-1'),piece=name=>garden.components.pieces.find(p=>p.name===name),maze=piece('Haze Maze tower'),arcade=piece('arcade row with Paws Off treadmill'),dome=piece('geodesic hammock dome');

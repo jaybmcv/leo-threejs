@@ -10,22 +10,22 @@ import {wearHat} from './hat.js';
 // light line, a starry ceiling, plum carpet, warm wall sconces and a real screen above the stage. Everything is
 // unlit or baked colour, one mesh per material, so the room adds no lights. The room's own blue backdrop panel goes,
 // and its title moves onto the pelmet above the screen, where it can be read.
-// Room frame (Area_d16-theater-5): the stage end at +x, the entrance at -x, the stair lobby notch at x<-12, z<-9.
+// Room frame: stage at +x, foyer at x<-12, z<-9. The corridor door is at x=-18.5, z=-17.
 // The screen plays a short muted loop (src/walk/art/theatre-loop.mp4), fetched and played only while a walker is near.
 const ROOM='Area_d16-theater-5',NEAR=40;
-const BACK=25.84,SIDE=16.84,ENTRY=-25.84,NOTCH={x:-12,z:-9},DOOR=2.2,LIP=2.95,TOP=3.28,INSET=.16;
-const SCREEN={w:4,h:2.25,y:1.68},SERVER=[-23.65,0,-6.3];
+const BACK=25.84,SIDE=16.84,ENTRY=-25.84,NOTCH={x:-12,z:-9},INNER={x:-23.4,half:1.6},LIP=2.95,TOP=3.28,INSET=.16;
+const SCREEN={w:4,h:2.25,y:1.68},SERVER=[-17,0,-10];
 // Wall runs a drape hangs along: from, to, and the way into the room.
 const RUNS=[
  [[BACK,-SIDE],[BACK,-SCREEN.w/2],[-1,0]],[[BACK,SCREEN.w/2],[BACK,SIDE],[-1,0]],
  [[ENTRY,SIDE],[BACK,SIDE],[0,-1]],
  [[NOTCH.x,-SIDE],[BACK,-SIDE],[0,1]],
  [[NOTCH.x,-SIDE],[NOTCH.x,NOTCH.z],[1,0]],
- [[ENTRY,NOTCH.z],[NOTCH.x,NOTCH.z],[0,1]],
- [[ENTRY,NOTCH.z],[ENTRY,-DOOR],[1,0]],[[ENTRY,DOOR],[ENTRY,SIDE],[1,0]],
+ [[ENTRY,NOTCH.z],[INNER.x-INNER.half,NOTCH.z],[0,1]],[[INNER.x+INNER.half,NOTCH.z],[NOTCH.x,NOTCH.z],[0,1]],
+ [[ENTRY,NOTCH.z],[ENTRY,SIDE],[1,0]],
 ];
 // The pelmet runs unbroken round the room, over the screen and the doorway too.
-const PELMET=[[[BACK,-SIDE],[BACK,SIDE],[-1,0]],RUNS[2],RUNS[3],RUNS[4],RUNS[5],[[ENTRY,NOTCH.z],[ENTRY,SIDE],[1,0]]];
+const PELMET=[[[BACK,-SIDE],[BACK,SIDE],[-1,0]],RUNS[2],RUNS[3],RUNS[4],[[ENTRY,NOTCH.z],[NOTCH.x,NOTCH.z],[0,1]],[[ENTRY,NOTCH.z],[ENTRY,SIDE],[1,0]]];
 const PURPLE=new T.Color(0x5b2a9a),SHADOW=new T.Color(0x1e0b3a),GLOW=new T.Color(0x58c8ff);
 
 // A pleated drape along one run, its folds and the blue wash from the light line above baked into vertex colours.
@@ -79,9 +79,9 @@ function sconceGlow(g,w,h){
  const halo=g.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);halo.addColorStop(0,'rgba(255,200,140,.95)');halo.addColorStop(.25,'rgba(255,160,110,.45)');halo.addColorStop(1,'rgba(255,140,90,0)');
  g.fillStyle=halo;g.fillRect(0,0,w,h);
 }
-// The room's floor (and ceiling) outline, less the stair lobby notch, in the plane's x and y.
+// Matching carpet and stars now fill the foyer too, inside the glass frontage.
 function roomShape(flip){
- const p=[[ENTRY,NOTCH.z],[NOTCH.x,NOTCH.z],[NOTCH.x,-SIDE],[BACK,-SIDE],[BACK,SIDE],[ENTRY,SIDE]];
+ const p=[[ENTRY,-SIDE],[BACK,-SIDE],[BACK,SIDE],[ENTRY,SIDE]];
  return new T.Shape(p.map(([x,z])=>new T.Vector2(x,flip*z)));
 }
 function plane(flip,y,material,uv){
@@ -118,7 +118,7 @@ const CUSHION={size:[.45,.16,.62],at:[.025,.39]},BACKREST={size:[.1,.74,.62],at:
 // rest spots are found. Returns false if the room is missing.
 export function dressTheatre(ship){
  const room=roomObject(ship,ROOM),fit=room?.getObjectByName('Room_fittings');if(!fit)return false;
- const old=[];room.traverse(o=>{if(o.name==='Chair'||o.name==='Polish_tailored_seam')old.push(o);});
+ const old=[];room.traverse(o=>{if(/^(Chair|Polish_tailored_seam|Stair_lobby_partition|Stair_lobby_return_wall)$/.test(o.name))old.push(o);});
  for(const o of old)o.removeFromParent();
  // Hidden like the parts merged for drawing (render-bake.js), and solid and sittable as they are.
  const hidden=new T.MeshBasicMaterial({name:'Theatre_seat_proxy'}),cushion=new ReplayGeometry("src/walk/theatre.js:2",T.BoxGeometry,...CUSHION.size),back=new ReplayGeometry("src/walk/theatre.js:3",T.BoxGeometry,...BACKREST.size);
@@ -214,11 +214,10 @@ export function createTheatreCast(ship,kit,{hat}={}){
  return {group,solid};
 }
 
-// The room's attendant serves at the concession stand (concession.js): inside the L, between the popcorn case and the
-// corner, facing the room over the counter. Called before the colliders are built, so it is solid where it stands.
+// The attendant faces the foyer from behind the counter before colliders are built.
 export function placeAttendant(ship){
  const room=roomObject(ship,ROOM),cat=room?.getObjectByName('Resident_scale_1_75m');if(!cat)return;
- cat.position.set(...SERVER);cat.rotation.y=Math.PI/2;cat.updateMatrix();cat.updateMatrixWorld(true);
+ cat.position.set(...SERVER);cat.rotation.y=Math.PI;cat.updateMatrix();cat.updateMatrixWorld(true);
 }
 
 // Dress the theatre in `ship` before it is baked for walking. Returns the room group (draw it with its deck band) and an
@@ -263,6 +262,18 @@ export function createTheatre(ship,{url,anisotropy=1}={}){
  const screen=add('Theatre_screen',new ReplayGeometry("src/walk/theatre.js:16",T.PlaneGeometry,SCREEN.w,SCREEN.h),picture);screen.rotation.y=-Math.PI/2;screen.position.set(BACK-.11,SCREEN.y,0);
  // A blue step light along the stage front.
  add('Theatre_stage_light',new ReplayGeometry("src/walk/theatre.js:17",T.BoxGeometry,.04,.04,22).translate(17.47,.27,0),new T.MeshBasicMaterial({name:'Theatre_stage_light',color:0x6fd2ff}));
+ // Two gathered curtains frame the new inner opening, with a clear centre passage.
+ const fabric=new T.MeshBasicMaterial({name:'Theatre_entry_velvet',color:0x6733a0,side:T.DoubleSide});
+ for(const side of [-1,1]){
+  const edge=INNER.x+side*INNER.half,shape=new T.Shape();
+  shape.moveTo(edge-side*.3,2.8);shape.quadraticCurveTo(edge-side*.3,1.95,edge+side*.25,1.2);shape.lineTo(edge+side*.3,.04);shape.lineTo(edge-side*.15,.04);shape.quadraticCurveTo(edge-side*.2,1.3,edge-side*.3,2.8);
+  const curtain=add('Theatre_entry_curtain',new T.ShapeGeometry(shape),fabric);curtain.position.z=NOTCH.z-.1;
+  add('Theatre_entry_tie',new T.BoxGeometry(.42,.06,.09).translate(edge+side*.03,1.2,NOTCH.z-.14),new T.MeshBasicMaterial({name:'Theatre_entry_gold',color:0xffcf78}));
+ }
+ // Blue entry trim and warm ceiling strips stay above the walking route.
+ const foyerGlow=new T.MeshBasicMaterial({name:'Theatre_foyer_light',color:0xffd49b,toneMapped:false});
+ for(const x of [-23.4,-18.5,-13.8])add('Theatre_foyer_light',new T.BoxGeometry(.05,.025,4.4).translate(x,3.18,-13.1),foyerGlow);
+ add('Theatre_entry_light',new T.BoxGeometry(INNER.half*2+.3,.04,.06).translate(INNER.x,2.85,NOTCH.z-.2),new T.MeshBasicMaterial({name:'Theatre_entry_light',color:0x8fe0ff}));
  const centre=room.getWorldPosition(new T.Vector3());
  let video=null,retry=0;
  return {

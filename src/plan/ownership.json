@@ -1795,8 +1795,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 37,
-      "signature": "a7d056e3412dc57b67e811a6738532a8b04b3bbdc6af1823ddd1dba94046c020"
+      "placements": 38,
+      "signature": "ee26516a007c1caccf1a89fedcac9eddd186bacb39acaee0bb0753504f4bbd65"
     },
     {
       "source": "src/walk/concession.js",
@@ -1813,8 +1813,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 37,
-      "signature": "dc15cd2ab6c14e5885499828ec5942d451883dd096a015a083cba8b060264f7a"
+      "placements": 38,
+      "signature": "08ac68eb2d7e27fea9b967029fa38ffdd3cf0061216877e4de64c6e3e175093f"
     },
     {
       "source": "src/walk/concession.prepared.js",
@@ -1831,8 +1831,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 37,
-      "signature": "ff574da547a7d91d597e386609294c4b01cac2de2437d5f05d13bfe30ac9de17"
+      "placements": 38,
+      "signature": "ea40e28b74c6abcb07f8ff7731a315ba14341fc739a3d260086401d6551c218d"
     },
     {
       "source": "src/walk/concession.public.js",
@@ -1849,8 +1849,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 37,
-      "signature": "4442be415f5b1827a38282912cff2d9eb6831cfcdc014b77a8209430e525c6be"
+      "placements": 38,
+      "signature": "da4ccf24f8b8ff4c5b42d470a3abae06666d5f03cafa00744ecd9594663463f7"
     },
     {
       "source": "src/walk/controller.authoring.js",
@@ -5025,8 +5025,8 @@
         "Theatre_cast_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 37,
-      "signature": "22b5e035d5ef575d3965d204470bb64d7293bb555859cf5192a7c8177d8df6e3"
+      "placements": 41,
+      "signature": "c27cf97834cc3ac0d8f60110652fa2e45bfa55a7af561db5cb5625e22ed5f8ba"
     },
     {
       "source": "src/walk/theatre.js",
@@ -5056,8 +5056,8 @@
         "Theatre_cast_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 37,
-      "signature": "ed25d19e90872a00e077a9b5d9c90fb7a36ef185ac4249253fcfe81eca70e004"
+      "placements": 41,
+      "signature": "33b16a185eec91c814b5b3b8f2ec9164a5a6e4239ba68dec72717ba93f441196"
     },
     {
       "source": "src/walk/theatre.prepared.js",
@@ -5087,8 +5087,8 @@
         "Theatre_cast_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 37,
-      "signature": "d9aa887c2f25fa9f2478fe31d553faf118af54f2dca3f1e34ddfd111ef4f5578"
+      "placements": 41,
+      "signature": "04e2b2923da8fa3d194b6ce3c6f735676949205bac308dc6043f8e7b56ea863f"
     },
     {
       "source": "src/walk/theatre.public.js",
@@ -5118,8 +5118,8 @@
         "Theatre_cast_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 37,
-      "signature": "f99b79320b388c6c9aaa0c53b15a039f7dc616bad20cd78bc1ae7d461f47c05a"
+      "placements": 41,
+      "signature": "4b7fc2e87ba2e81733ffb72a4cc30a6702966e26df317871d0d3a1213c8d2b57"
     },
     {
       "source": "src/walk/transporter-mesh.js",

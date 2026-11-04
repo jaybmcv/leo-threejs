@@ -3,13 +3,11 @@ import {roomObject} from '../plan/rooms.js';
 import {walkCanvas} from './canvas.js';
 import * as T from 'three';
 
-// The Deck 16 community theatre's concession stand: an L-shaped counter in the entrance corner by the stair lobby, with
-// glowing gold fins, a popcorn case, a bulb-lit marquee, a menu board and two pendant lamps. The glow is baked into
-// unlit materials, so it adds no lights.
-// Room frame (Area_d16-theater-5): the stage end at +x, the entrance at x=-25.84 (doors at |z|<2.2), the stair lobby
-// notch at x<-12, z<-9. The stand keeps .35 m off the walls for drapes and 2.7 m clear of the doorway.
+// The theatre foyer counter: a long serving face and two short returns.
+// Built in its own frame, then turned toward the corridor. Warm signs and gold
+// trim use baked colour; no dynamic lights are added. See docs/theatre-refit.md.
 const ROOM='Area_d16-theater-5';
-const WALL={x:-25.49,z:-8.65},CORNER={x:-22.6,z:-4.9},H=1.08,D=.62;
+const WALL={x:0,z:0},CORNER={x:2.12,z:7.3},H=1.08,D=.62;
 
 function rng(seed){return ()=>(seed=(seed*16807)%2147483647)/2147483647;}
 function canvasTexture(w,h,paint){
@@ -68,23 +66,22 @@ export function createConcession(ship){
  const glass=new T.MeshStandardMaterial({name:'Concession_glass',color:0xfff4dc,roughness:.05,transparent:true,opacity:.3,depthWrite:false});
  const add=(name,geo,material,at=[0,0,0])=>{const o=new T.Mesh(geo,material);o.name=name;o.position.set(...at);group.add(o);return o;};
  const box=(name,[sx,sy,sz],[x,y,z],material)=>add(name,new ReplayGeometry("src/walk/concession.js:0",T.BoxGeometry,sx,sy,sz),material,[x,y,z]);
- // The L: one leg facing the room (+x), one facing the doorway (+z), meeting at CORNER.
- const a={x:CORNER.x-D/2,z0:WALL.z,z1:CORNER.z},b={z:CORNER.z-D/2,x0:WALL.x,x1:CORNER.x-D};
+ // Main face and both returns. The staff side remains open behind the counter.
+ const a={x:CORNER.x-D/2,z0:WALL.z,z1:CORNER.z},b={z:CORNER.z-D/2,x0:CORNER.x,x1:CORNER.x+1.5};
  const lenA=a.z1-a.z0,lenB=b.x1-b.x0;
  box('Concession_counter',[D,H-.05,lenA],[a.x,(H-.05)/2,(a.z0+a.z1)/2],walnut);
- box('Concession_counter',[lenB,H-.05,D],[(b.x0+b.x1)/2,(H-.05)/2,b.z],walnut);
- box('Concession_counter_top',[D+.08,.05,lenA+.08],[a.x+.04,H-.025,(a.z0+a.z1)/2+.04],top);
- box('Concession_counter_top',[lenB,.05,D+.08],[(b.x0+b.x1)/2,H-.025,b.z+.04],top);
- box('Concession_top_edge',[.03,.03,lenA+.08],[CORNER.x+.08,H-.04,(a.z0+a.z1)/2+.04],gold);
- box('Concession_top_edge',[lenB+.08+D,.03,.03],[(b.x0+CORNER.x+.08)/2,H-.04,CORNER.z+.08],gold);
- // The gold fin fronts and a glowing kick strip under each.
- const finsA=canvasTexture(1024,256,fins),finsB=finsA.clone();finsA.repeat.set(lenA/2.4,1);finsB.repeat.set((lenB+D)/2.4,1);
- for(const t of [finsA,finsB]){t.wrapS=T.RepeatWrapping;t.needsUpdate=true;}
- const front=t=>new T.MeshBasicMaterial({name:'Concession_fins',map:t,toneMapped:false});
- const fa=add('Concession_fins',new ReplayGeometry("src/walk/concession.js:1",T.PlaneGeometry,lenA,H-.2),front(finsA),[CORNER.x+.005,.12+(H-.2)/2,(a.z0+a.z1)/2]);fa.rotation.y=Math.PI/2;
- add('Concession_fins',new ReplayGeometry("src/walk/concession.js:2",T.PlaneGeometry,lenB+D,H-.2),front(finsB),[(b.x0+CORNER.x)/2,.12+(H-.2)/2,CORNER.z+.005]);
+ box('Concession_counter_top',[D+.08,.05,lenA+.08],[a.x,H-.025,(a.z0+a.z1)/2],top);
+ box('Concession_top_edge',[.03,.03,lenA+.08],[CORNER.x+.04,H-.04,(a.z0+a.z1)/2],gold);
+ const finsA=canvasTexture(1024,256,fins);finsA.wrapS=T.RepeatWrapping;finsA.repeat.set(lenA/2.4,1);
+ const front=new T.MeshBasicMaterial({name:'Concession_fins',map:finsA,toneMapped:false});
+ const fa=add('Concession_fins',new T.PlaneGeometry(lenA,H-.2),front,[CORNER.x+.005,H/2,(a.z0+a.z1)/2]);fa.rotation.y=Math.PI/2;
  box('Concession_kick_light',[.02,.03,lenA],[CORNER.x+.01,.05,(a.z0+a.z1)/2],glow);
- box('Concession_kick_light',[lenB+D,.03,.02],[(b.x0+CORNER.x)/2,.05,CORNER.z+.01],glow);
+ for(const z of [D/2,b.z]){
+  box('Concession_counter',[lenB,H-.05,D],[(b.x0+b.x1)/2,(H-.05)/2,z],walnut);
+  box('Concession_counter_top',[lenB+.08,.05,D+.08],[(b.x0+b.x1)/2,H-.025,z],top);
+  box('Concession_top_edge',[lenB,.03,.03],[(b.x0+b.x1)/2,H-.04,z+(z===b.z?1:-1)*(D/2+.02)],gold);
+  box('Concession_kick_light',[lenB,.03,.02],[(b.x0+b.x1)/2,.05,z+(z===b.z?1:-1)*(D/2+.01)],glow);
+ }
  // A popcorn case on the room leg: gold frame, glass, a heap of popcorn.
  const caseAt={x:a.x,z0:a.z0+.35,z1:a.z0+1.85,y:H,h:.5},cw=caseAt.z1-caseAt.z0;
  box('Concession_case_base',[.5,.06,cw],[caseAt.x,caseAt.y+.03,(caseAt.z0+caseAt.z1)/2],gold);
@@ -115,17 +112,23 @@ export function createConcession(ship){
  for(let i=0;i<120;i++){q.setFromEuler(e.set(r()*6,r()*6,r()*6));heap.setMatrixAt(i,m.compose(new T.Vector3(mx-.28+r()*.56,1.46+r()*r()*.24,WALL.z+.08+r()*.34),q,s.setScalar(.8+r()*.5)));}
  group.add(heap);
  for(let i=0;i<4;i++)add('Concession_cups',new ReplayGeometry("src/walk/concession.js:5",T.CylinderGeometry,.06,.045,.16,12),red,[WALL.x+1.6+i*.16,1.02,WALL.z+.25]);
- // The menu board on the entrance wall, facing the room, and the marquee over the doorway leg.
- const board=add('Concession_menu',new ReplayGeometry("src/walk/concession.js:6",T.PlaneGeometry,2.4,1.1),new T.MeshBasicMaterial({name:'Concession_menu',map:canvasTexture(1024,470,menu),toneMapped:false}),[WALL.x+.03,1.95,(WALL.z+CORNER.z)/2-.2]);board.rotation.y=Math.PI/2;
- box('Concession_menu_frame',[.04,1.18,2.48],[WALL.x,1.95,(WALL.z+CORNER.z)/2-.2],gold);
- add('Concession_marquee',new ReplayGeometry("src/walk/concession.js:7",T.PlaneGeometry,2.6,.62),new T.MeshBasicMaterial({name:'Concession_marquee',map:canvasTexture(1024,244,marquee),toneMapped:false}),[(b.x0+CORNER.x)/2,2.62,CORNER.z+.02]);
- box('Concession_marquee_back',[2.7,.7,.06],[(b.x0+CORNER.x)/2,2.62,CORNER.z-.02],walnut);
- for(const dx of [-1.1,1.1])box('Concession_marquee_rod',[.02,.36,.02],[(b.x0+CORNER.x)/2+dx,3.1,CORNER.z-.02],gold);
- // Two gold pendant lamps over the room leg.
- for(const z of [a.z0+.9,a.z1-.9]){
+ // A bulb-lit menu on the inner wall and two marquees facing the foyer.
+ const board=add('Concession_menu',new T.PlaneGeometry(2.4,1.1),new T.MeshBasicMaterial({name:'Concession_menu',map:canvasTexture(1024,470,menu),toneMapped:false}),[WALL.x+.03,1.95,3.6]);board.rotation.y=Math.PI/2;
+ box('Concession_menu_frame',[.04,1.18,2.48],[WALL.x,1.95,3.6],gold);
+ const sign=new T.MeshBasicMaterial({name:'Concession_marquee',map:canvasTexture(1024,244,marquee),toneMapped:false});
+ for(const z of [1.9,5.4]){
+  const marquee=add('Concession_marquee',new T.PlaneGeometry(2.8,.62),sign,[CORNER.x+.02,2.62,z]);marquee.rotation.y=Math.PI/2;
+  box('Concession_marquee_back',[.06,.7,2.9],[CORNER.x-.02,2.62,z],walnut);
+  for(const dz of [-1.1,1.1])box('Concession_marquee_rod',[.02,.36,.02],[CORNER.x-.02,3.1,z+dz],gold);
+ }
+ // Three gold pendant lamps over the serving face.
+ for(const z of [a.z0+.9,3.65,a.z1-.9]){
   box('Concession_pendant_cord',[.012,.62,.012],[a.x,2.97,z],top);
   add('Concession_pendant',new ReplayGeometry("src/walk/concession.js:8",T.CylinderGeometry,.06,.2,.2,20,1,true),shadeGold,[a.x,2.56,z]);
   add('Concession_pendant_bulb',new ReplayGeometry("src/walk/concession.js:9",T.CircleGeometry,.17,20),glow,[a.x,2.47,z]).rotation.x=Math.PI/2;
  }
+ // Turn the counter frame into theatre-local metres without changing its room anchor.
+ const fit=new T.Group();fit.rotation.y=Math.PI/2;fit.position.set(-20.5,0,-9.28);
+ for(const o of [...group.children])fit.add(o);group.add(fit);
  return group;
 }
