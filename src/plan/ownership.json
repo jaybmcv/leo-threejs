@@ -3757,8 +3757,8 @@
         "Cargo_maintenance_MCT_bay_colliders"
       ],
       "interactionTargets": null,
-      "placements": 67,
-      "signature": "0639357f11615b3c094f8c647cb7f045771d98d08eab87048ce8fef45f240b43"
+      "placements": 48,
+      "signature": "50882b35c33644b1a47d87606c1bb3b524b0e498c1d1aac248a13cde47e4858b"
     },
     {
       "source": "src/walk/minimap.authoring.js",
@@ -5122,19 +5122,32 @@
       "signature": "f99b79320b388c6c9aaa0c53b15a039f7dc616bad20cd78bc1ae7d461f47c05a"
     },
     {
+      "source": "src/walk/transporter-mesh.js",
+      "rooms": [
+        "d01-workshop-5"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "MCT_"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 30,
+      "signature": "642b0eed3360c127aac8da490f8f2db10e1df0075219b6dfde2f03ccc4bf21ba"
+    },
+    {
       "source": "src/walk/transporter.authoring.js",
       "rooms": [
         "d01-workshop-5"
       ],
       "via": "frame boundary",
       "fixed": false,
-      "features": [
-        "MCT_"
-      ],
+      "features": [],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 34,
-      "signature": "678adbe4a729ee0332c863c6b7a6df3dc28893778c868894da1c893c4c43d9b0"
+      "placements": 4,
+      "signature": "d6b7f9b393192a749a1f71dad32721e161686662b076ba1937bfe4d7c542f266"
     },
     {
       "source": "src/walk/transporter.js",
@@ -5143,13 +5156,11 @@
       ],
       "via": "frame boundary",
       "fixed": false,
-      "features": [
-        "MCT_"
-      ],
+      "features": [],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 34,
-      "signature": "71e489741bccbff7508336f0e90fc6b3598cd0a79245f185bbcb9a5301012880"
+      "placements": 4,
+      "signature": "20820bed88b7d4b642a48300421ed6bc78b0e3c5e02fd6521a2528a1baf188bf"
     },
     {
       "source": "src/walk/trim.authoring.js",
