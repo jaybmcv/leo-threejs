@@ -588,7 +588,7 @@ const hubPanel=createHubPanel({
  onClose(){input.enabled=true;input.down.clear();},
  onGo(search){const spot=readSpot(search);return spot?goToSpot(spot):false;},
  onConnect:connect});
-const feedback=installFeedback({renderer,page:'walk',openHub:report=>hubPanel.open({report}),mount:()=>matchMedia('(max-width:560px)').matches?null:document.querySelector('.tools'),
+const feedback=installFeedback({renderer,page:'walk',openHub:report=>hubPanel.open({report}),mount:()=>matchMedia('(max-width:560px)').matches||document.documentElement.classList.contains('phone-hud')?null:document.querySelector('.tools'),
  css:'.fb-button:not(.fb-mounted){left:auto;bottom:auto;right:16px;top:180px;z-index:5}.tools .fb-button,.fb-button:not(.fb-mounted){border-color:var(--orange,#f85800);color:#ff8a3d}.tools .fb-button:hover,.fb-button:not(.fb-mounted):hover{background:var(--orange,#f85800);color:#050507}',
  // The pass is renewed as the panel opens unless it was got in the last two minutes, so it is fresh by Send.
  identity:()=>me.pass?{name:me.name||'Voyager',pass:bestPass,renew:()=>currentPass(480)}:null,
@@ -671,11 +671,13 @@ function myPose(riding=false){
 if(live)setInterval(()=>{if(document.hidden||performance.now()-last>1000)live.pose(myPose());},1000);
 function showAboard(){
  const b=$('aboard');b.hidden=!live;if(!live)return;
- const text=(matchMedia('(max-width:560px)').matches?{live:aboard===1?'Just you':`${aboard} aboard`,connecting:'Joining…',offline:'Solo',layout:'Solo · reload ship',full:'Solo · full',replaced:'Solo · 2 tabs'}
+ // Short labels on a narrow screen, unless they are in a phone's More menu (walk.html), which has room for the long ones.
+ const small=matchMedia('(max-width:560px)').matches&&!document.documentElement.classList.contains('phone-hud');
+ const text=(small?{live:aboard===1?'Just you':`${aboard} aboard`,connecting:'Joining…',offline:'Solo',layout:'Solo · reload ship',full:'Solo · full',replaced:'Solo · 2 tabs'}
   :{live:aboard===1?'Just you aboard':`${aboard} aboard`,connecting:'Joining…',offline:'Solo · reconnecting',layout:'Solo · reload to match ship',full:'Solo · Leo is full',replaced:'Solo · open in another tab'})[liveStatus]||'';
  b.querySelector('span').textContent=text;b.dataset.status=liveStatus;
  // Beside it: logged in with Discord says so; anyone else is offered it. Leo live has the last word once it has answered.
- const d=$('discord-chip'),small=matchMedia('(max-width:560px)').matches;d.hidden=inOtherside;
+ const d=$('discord-chip');d.hidden=inOtherside;
  d.dataset.in=(liveStatus==='live'?live.you?.verified:me.pass)?'1':'';
  d.textContent=d.dataset.in?(small?'':'Logged in · ')+(live.you?.name||me.name||'Voyager'):small?'Discord':'Log in with Discord';
 }
@@ -690,7 +692,8 @@ if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(glo
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vaultLift',{get:()=>vaultLift});
 // The ship map: the corner mini-map, redrawn a few times a second, and the full map sheet.
 const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
-function sizeCanvas(c){const r=Math.min(devicePixelRatio||1,2),w=Math.round(c.clientWidth*r),h=Math.round(c.clientHeight*r);if(w&&h&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}}
+// (A phone's small mini-map, html.phone-hud from walk.html, keeps up to 3× its pixels, so its names stay sharp.)
+function sizeCanvas(c){const r=Math.min(devicePixelRatio||1,c===mini&&document.documentElement.classList.contains('phone-hud')?3:2),w=Math.round(c.clientWidth*r),h=Math.round(c.clientHeight*r);if(w&&h&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}}
 function miniMap(p){sizeCanvas(mini);const d=drawMiniMap(mini,shipMap,{x:p.x,y:p.y,z:p.z,yaw:follow.yaw,places:PLACES});$('minimap-deck').textContent=d?`Deck ${d.number}`:p.y>100?'Crown lounge':'Fin';}
 function showMap(number){
  mapDeck=T.MathUtils.clamp(number,1,DECKS.length);const c=$('map-canvas');sizeCanvas(c);
