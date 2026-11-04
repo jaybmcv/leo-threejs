@@ -1,7 +1,9 @@
 import {createAtriumGeometryRuntime} from '../v2/atrium-geometry-runtime.js';
 import {getAtriumQuality,observeAtriumFrame} from '../v2/atrium-quality.js';
 import {mountGraphicsSettings} from './graphics-settings.js';
-let atriumGeometry=null,graphicsSettings=null;
+import {mountControlsSettings} from './controls-settings.js';
+import {walkBindings,bindingLabel} from './bindings.js';
+let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
 import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
 import {createAtriumSight} from '../v2/atrium-sight.js';
@@ -78,16 +80,22 @@ import {createHostess} from './hostess.authoring.js';
 import {wearHat,fit,FIT} from './hat.js';
 import {createYarn,YARN_SPOTS} from './yarn.authoring.js';
 import {BALL,createBallMesh} from './hamster-ball.js';
+import {ballBounce,ballDismount} from './ball-bounce.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink,remapSpot} from './link.js';
 import {KITTEN_POSE_NAMES} from './kittens.authoring.js';
 import {createAtriumKittens} from './arrival-atrium.authoring.js';
 import {createSurgeryArms} from './surgery.authoring.js';
 import {createImagingScans} from './imaging.js';
+import {createMissionTimer} from './mission-timer.js';
 import {createFinCasing} from './fin-casing.js';
 import {createGraffiti} from './graffiti.js';
 import {createCrownTv} from './crown-tv.js';
 import {createInvasion} from './invasion/game.js';
+import {createEmergencyDrill} from './emergency-drill/game.js';
+import {drillStation} from './emergency-drill/station.js';
+import layout from '../plan/selected-layout.js';
+let emergencyDrill=null;const emergencyStation=drillStation(layout);
 import {createPawPool} from './pool/game.js';
 import {createPinball} from './pinball/game.js';
 import {openOutside,closeOutside} from './outside-game.js';
@@ -110,6 +118,8 @@ import {createLeverPanel} from './lever-panel.authoring.js';
 import {createTransporters} from './transporter.authoring.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 import {createHelp} from './help.authoring.js';
+import {createArrivalTour} from './arrival-tour.js';
+let arrivalTour=null;
 import {listenForHub} from './hub-link.js';
 import {createHubPanel} from './hub-panel.js';
 
@@ -329,11 +339,14 @@ async function buildShip(){
  // The comic books (comics.js) lie on counters and tables, drawn with their deck's band.
  comics=createComics({urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});for(const g of comics.groups)toBand(g);
  if(cosmoKit)toBand(createHostess(cosmoKit));
+ // The welcome guide stands beside the arrival aisle; the tour never moves the walker.
+ if(cosmoKit){arrivalTour=createArrivalTour(cosmoKit);toBand(arrivalTour.group);}
  if(theatre)toBand(theatre.group);
  if(theatreCast)toBand(theatreCast.group);
  if(gaming)toBand(gaming.group);
  // Communications' wraparound star map and station screens (comms-displays.js), drawn with Deck 20's band.
  {const comms=createCommsDisplays(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy()});if(comms)toBand(comms.group);}
+ missionTimer=createMissionTimer(ship,{anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(missionTimer)toBand(missionTimer.group);
  if(missionHolo)toBand(missionHolo.group);
  if(swordCase)toBand(swordCase.group);
  // Hydroponic garden A's chinampa tank (chinampa.js), drawn with Deck 3's band.
@@ -370,7 +383,7 @@ async function buildShip(){
  await new Promise(()=>{});
  isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});
 }
-let imagingScans=null;
+let imagingScans=null,missionTimer=null;
 let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
 let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
@@ -428,16 +441,18 @@ const actions={
   if(!lifts)return;// still loading
   if(resting){standUp();return;}
   const t=target();if(!t)return;
+  if(t.kind==='arrival-tour'){closePanels();arrivalTour.open();return;}
   if(t.kind==='launch-ladder'){goTo({at:t.at,yaw:heading,lv:2,resolved:true});return;}
   if(t.kind==='cabin-glass'){cabinGlass.toggle(t.cabin);return;}
   if(t.kind==='call')lifts.call(t.lift,t.stop);
   else if(t.kind==='inside')openLiftPanel(t.lift);
   else if(t.kind==='waiting')return;
   else if(t.kind==='sit'||t.kind==='lie'||t.kind==='stand')settle(t.spot);
-  else if(t.kind==='selfie'){if(!booth.counting)live?.selfie();booth.start();}
+  else if(t.kind==='selfie'){closePanels();$('selfie-setup').hidden=false;previewBackdrop();input.enabled=false;$('selfie-backdrop').focus();}
   else if(t.kind==='comic'){closePanels();reader.open(t.comic);input.enabled=false;}
   else if(t.kind==='read'){closePanels();showInfo($('info-sheet'),t.info);input.enabled=false;}
   else if(t.kind==='play')arcade.open();
+  else if(t.kind==='emergency-drill')emergencyDrill.open();
   else if(t.kind==='log')changeLog.open({near:controller.position});
   else if(t.kind==='pool')pool.open();
   else if(t.kind==='vault')openVault();
@@ -460,7 +475,7 @@ const actions={
   else if(t.kind==='tv'){closePanels();crownTv.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
  },
- escape(){closePanels();},
+ escape(){if(treasure?.active){treasure.leave();return;}closePanels();arrivalTour?.close();},
  // (Nothing below until the walk is ready.)
  places(){if(ready())togglePlaces();},
  map(){if(ready())toggleMap();},
@@ -479,13 +494,13 @@ const actions={
  help(){if(ready())toggleHelp();},
  // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
  emote(i){if(ready()&&!resting&&!inBall&&!treasure?.active&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
- // A key pressed while a sheet is open: the key that opened it closes it, and the emote sheet takes 1-0.
+ // The emote sheet uses the same bindings as the walk.
  sheet(code){
   const open=id=>!$(id).hidden;
   // E puts the spray can down again.
   if(graffiti?.active&&code==='KeyE'){closePanels();return;}
-  if((code==='KeyE'&&open('info-sheet'))||(code==='KeyB'&&open('emotes'))||(code==='KeyN'&&open('map-sheet'))||(code==='KeyM'&&open('places'))||(code==='KeyH'&&open('help-sheet'))){closePanels();return;}
-  if(open('emotes')&&/^Digit[0-9]$/.test(code)){closePanels();actions.emote((+code.slice(5)+9)%10);}
+  if((code==='KeyE'&&open('info-sheet'))||(walkBindings.action(code)==='emotes'&&open('emotes'))||(code==='KeyN'&&open('map-sheet'))||(code==='KeyM'&&open('places'))||(code==='KeyH'&&open('help-sheet'))){closePanels();return;}
+  if(open('emotes')&&walkBindings.action(code)?.startsWith('emote:')){closePanels();actions.emote(+walkBindings.action(code).slice(6));}
   if(open('comic-sheet'))reader.key(code);
  },
 };
@@ -545,8 +560,11 @@ for(const y of yarns)scene.add(y.mesh);
 const ballHome=findStand(colliders,BALL.home,{radius:4})||new T.Vector3(...BALL.home),ball=createBallMesh();let inBall=false;
 ball.mesh.position.copy(ballHome);scene.add(ball.mesh);
 function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());}
-// Out of the ball, Cosmo stands where it was and steps clear of it; it stays parked there.
-function leaveBall(){if(!inBall)return;inBall=false;controller.body=BODY;controller.stance='stand';ball.mesh.position.copy(controller.position);}
+// Stop before dismounting. In a tight spot the ball returns home so it cannot push Cosmo through a wall.
+function leaveBall(at=null){if(!inBall)return;
+ const parked=controller.position.clone(),out=at||ballDismount(parked,heading,BALL.radius+BODY.radius,q=>findStand(colliders,q,{radius:0}));
+ inBall=false;controller.body=BODY;controller.place(out||parked);ball.mesh.position.copy(out?parked:ballHome);
+}
 // The Deck 1 transporters (transporter.js): into a cart's driver's seat, once Leo live agrees nobody else has it, or one of
 // its rear seats, with the camera turned the way the seat faces. A seat granted after a walk away is given back.
 function boardCart(t){if(t.seat==='driver'&&!mct.take(t.cart))return;intoSeat(t.cart,t.seat);}
@@ -585,7 +603,7 @@ hubLink.ready(search=>{const spot=readSpot(search);if(!spot)return false;hubPane
 // A tester (this browser holds a tester invite) wears the captain's hat (hat.js).
 if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 // Others aboard: their poses in, ours out, the lifts as the server runs them.
-let remotes=null,marks=null,aboard=0,liveStatus='',wasInArena=false;
+let remotes=null,marks=null,aboard=0,aboardNames=undefined,liveStatus='',wasInArena=false;
 // The giveaway card at Mudwater Arena's counter, which claims through Leo live.
 // Claiming takes a Discord account: its small window leaves them standing at the counter, and they carry on under their
 // Discord account from there. Not offered inside Otherside, where pop-ups can't open (mudwater-giveaway.js).
@@ -606,7 +624,7 @@ if(LIVE_URL){
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
-  status:s=>{liveStatus=s;showAboard();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
+  status:s=>{liveStatus=s;if(s!=='live')aboardNames=undefined;showAboard();showAboardList();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
   welcome:msg=>{for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();mct.apply(msg.mcts);live.tv();
    // A server from before chat sends no chat: it stays hidden.
    chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);
@@ -616,7 +634,7 @@ if(LIVE_URL){
   chat:line=>{chat.add(line);if(line.id!==live.id&&!chat.quiet)remotes.say(line.id,line.text);},said:r=>chat.refused(r.why),
   poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();mct.offline();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
-  lift:(id,s)=>lifts.apply(id,s),aboard:n=>{aboard=n;showAboard();},
+  lift:(id,s)=>lifts.apply(id,s),aboard:(n,names)=>{aboard=n;if(names!==undefined)aboardNames=names;showAboard();showAboardList();},
   maze:msg=>maze?.fromServer(msg),
   treasure:msg=>treasure?.fromServer(msg),
   board:b=>(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
@@ -644,7 +662,7 @@ if(LIVE_URL){
 function myPose(riding=false){
  const h=walker.holder,held=resting||run,at=held?h.position:controller.position;
  return {pos:[at.x,at.y,at.z],yaw:held?h.rotation.y:heading,g:controller.grounded||riding||!!held,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:emote,rest:resting&&!resting.stand?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||pinballGame.isOpen||!$('outside-sheet').hidden||!!run,b:inBall};
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:resting?.stand?'healing_capsule':emote,rest:resting&&!resting.stand?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||pinballGame.isOpen||!!emergencyDrill?.isOpen||!$('outside-sheet').hidden||!!run,b:inBall};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
@@ -659,9 +677,9 @@ function showAboard(){
  d.dataset.in=(liveStatus==='live'?live.you?.verified:me.pass)?'1':'';
  d.textContent=d.dataset.in?(small?'':'Logged in · ')+(live.you?.name||me.name||'Voyager'):small?'Discord':'Log in with Discord';
 }
-$('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)$('aboard').click();else connect();});
+$('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -693,8 +711,8 @@ renderer.setAnimationLoop(()=>{
  // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
  if(hubPanel.isOpen()&&firstViewReady)return;
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
- const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen});last=now;
- const k=input.read();if(graphicsSettings?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
+ const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen&&!controlsSettings?.isOpen});last=now;
+ const k=input.read();if(graphicsSettings?.isOpen||controlsSettings?.isOpen||emergencyDrill?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
  const fwd=follow.forward(),right=new T.Vector3(-fwd.z,0,fwd.x);
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
  if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
@@ -714,7 +732,7 @@ renderer.setAnimationLoop(()=>{
  const riding=vaultLift?.riding||lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
  // In the ball the jump is one low hop (BALL.body.jump).
- if(!resting&&!riding&&!run&&!treasure?.active){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ if(!resting&&!riding&&!run&&!treasure?.active&&!emergencyDrill?.isOpen){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number));pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  treasure?.step(dt,k);
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
  const p=controller.position;
@@ -753,7 +771,7 @@ renderer.setAnimationLoop(()=>{
   turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!!lounge?.inside(walker.holder.position),swimming:!!treasure?.active});
  live?.pose(myPose(riding),now);
  // In a transporter the camera rides higher, over the heads of the others aboard.
- if(treasure?.active)treasure.updateCamera(dt);else follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:cart&&follow.mode==='third'?WALKER.height+.7:WALKER.height);
+ if(treasure?.active)treasure.updateCamera(dt);else follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:cart&&follow.mode==='third'?WALKER.height+.7:WALKER.height,resting||run||inBall?null:controller.grounded?controller.stance:'stand');
  // Spraying the graffiti wall, the view squares up to it (graffiti.js), and its paint catches up.
  graffiti?.update(camera,now);
  // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle), or is off at the wall.
@@ -779,6 +797,7 @@ renderer.setAnimationLoop(()=>{
  loungeSound?.update(p,ambience.on,camera);
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
+ missionTimer?.update(dt,p);
  surgeryArms?.update(dt,p,remotes?.remotes);
  imagingScans?.update(dt,p,resting,remotes?.remotes);
  // The Container Maze's clock starts at its way in and drops if the walker leaves (maze/run.js).
@@ -793,7 +812,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();try{localStorage.removeItem(STARTING);}catch{}}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
@@ -840,6 +859,11 @@ function showPhoto(blob,open=false){
  share.hidden=!navigator.canShare?.({files:[file]});share.onclick=()=>navigator.share({files:[file],title:'Leo · Crown lounge'}).catch(()=>{});
  if(open){closePanels();$('photo-sheet').hidden=false;input.enabled=false;}
 }
+// Each visitor chooses the backdrop and angle for their own photo.
+function previewBackdrop(){const c=$('selfie-preview').getContext('2d');c.drawImage(booth.backdropCanvas,0,0,c.canvas.width,c.canvas.height);}
+$('selfie-backdrop').addEventListener('change',e=>{booth.setBackdrop(Number(e.target.value));previewBackdrop();});
+$('selfie-angle').addEventListener('change',e=>booth.setAngle(Number(e.target.value)));
+$('selfie-start').addEventListener('click',()=>{closePanels();if(!booth.counting){live?.selfie();booth.start();}});
 $('photo-names').addEventListener('change',()=>{if(photoSource)renderPhoto();});
 function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a));return a+d*(1-Math.exp(-lambda*dt));}
 
@@ -856,7 +880,9 @@ function target(){
  const v=inBall?null:vault?.near(p);if(v)return v;
  const tube=inBall?null:vaultLift?.nearest(p);if(tube)return tube.kind==='riding'?null:tube;
  const g=changeLog.near(p);if(g)return g;
+ const welcome=inBall?null:arrivalTour?.near(p);if(welcome)return welcome;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
+ const drill=inBall?null:emergencyStation.near(p);if(drill)return drill;
  const q=poolTable?.near(p)||maze?.near(p)||pinballMachine?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p)||leverPanel?.near(p);if(q&&!(inBall&&q.kind==='treadmill'))return q;
  // In the hamster ball: no seats, beds or treadmills; with nothing else to use, E climbs out.
  if(inBall)return {kind:'ball-out',label:'Get out of the ball'};
@@ -868,6 +894,7 @@ function target(){
 }
 const touch=matchMedia('(pointer:coarse)').matches;
 function hud(p){
+ arrivalTour?.update(p,camera,ready()&&input.enabled&&!resting&&!run&&!inBall&&!treasure?.active);
  $('where').textContent=describe(p);
  // The changes made around here, for the ship log's chip.
  const near=changeLog.nearby(p).length,chip=$('changes-here');
@@ -938,7 +965,7 @@ function restPose(dt){
  if(swing){const q=new T.Quaternion().setFromAxisAngle(swing.axis,swing.angle*e);h.position.sub(swing.pivot).applyQuaternion(q).add(swing.pivot);h.quaternion.premultiply(q);}
  if(r.phase==='out'&&r.t===0){heading=r.from.heading;controller.place(r.from.pos);resting=null;return null;}
  // In a healing capsule the body floats a little in the fluid, standing.
- if(r.stand){h.position.y+=.04*e*(1-Math.cos(performance.now()/1100));return null;}
+ if(r.stand){h.position.y+=(.20+.025*(1-Math.cos(performance.now()/1100)))*e;return {kind:'float',weight:e,seatHeight:walker.hipHeight};}
  return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight,hammock:!!r.spot.hammock};
 }
 function lerpAngle(a,b,t){return a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;}
@@ -954,6 +981,8 @@ function openLiftPanel(l,rides=lifts){
 function togglePlaces(){
  const panel=$('places');if(!panel.hidden){closePanels();return;}
  const list=panel.querySelector('.stops');list.textContent='';
+ const tour=document.createElement('button');tour.type='button';tour.textContent='Arrival tour: welcome guide and five optional stops';
+ tour.onclick=()=>{closePanels();arrivalTour?.open();};list.appendChild(tour);
  // Every change made to Leo, with its before and after: the ship log, which the keyboard opens with L.
  const log=document.createElement('button');log.type='button';log.className='log';
  log.append(Object.assign(document.createElement('b'),{textContent:'Ship log'}),Object.assign(document.createElement('span'),{textContent:'Every change to Leo, before and after, and a way there'}));
@@ -963,11 +992,11 @@ function togglePlaces(){
 }
 // Help: H or the toolbar's Help opens it, and H, Esc or Close shut it.
 function toggleHelp(){const panel=$('help-sheet');if(!panel.hidden){closePanels();return;}closePanels();help.open();input.enabled=false;}
-// The emotes sheet: one button per emote (also keys 1-0).
+// The emotes sheet shows the current bindings beside each action.
 function toggleEmotes(){
  const panel=$('emotes');if(!panel)return;if(!panel.hidden){closePanels();return;}
  const list=panel.querySelector('.stops');list.textContent='';
- EMOTES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';const label=name.replace(/_/g,' ');b.textContent=`${(i+1)%10} · ${label[0].toUpperCase()}${label.slice(1)}`;b.onclick=()=>{closePanels();actions.emote(i);};list.appendChild(b);});
+ EMOTES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';const label=name.replace(/_/g,' ');b.textContent=`${bindingLabel(walkBindings.get('emote:'+i))} · ${label[0].toUpperCase()}${label.slice(1)}`;b.onclick=()=>{closePanels();actions.emote(i);};list.appendChild(b);});
  panel.hidden=false;input.enabled=false;list.querySelector('button')?.focus();
 }
 function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(colliders,place.at):findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();
@@ -975,15 +1004,23 @@ function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(collide
  // Going elsewhere from a transporter's driver's seat leaves it parked where it is.
  if(resting?.spot.mct?.seat==='driver')mct.park(resting.spot.mct.cart);resting=null;
  // Going somewhere else leaves the ball behind, back in the gardens.
- if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
+ if(inBall){leaveBall(q);ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','name-sheet','photo-sheet','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
+function closePanels(){emergencyDrill?.close();controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
+// The list is a current server snapshot, including visitors who have not sent a pose yet.
+function showAboardList(){
+ const list=$('aboard-list'),note=$('aboard-note');list.replaceChildren();
+ note.textContent=liveStatus!=='live'?'Not connected to Leo live.':aboardNames===undefined?'Waiting for the visitor list...':aboardNames===null?'Visitor list unavailable on this connection.':'';
+ if(liveStatus==='live'&&aboardNames)for(const name of aboardNames){const li=document.createElement('li');li.textContent=name;list.appendChild(li);}
+}
+$('aboard').addEventListener('click',()=>{if(!$('aboard-sheet').hidden){closePanels();return;}closePanels();showAboardList();$('aboard-sheet').hidden=false;input.enabled=false;input.down.clear();$('aboard-close').focus();});
+$('aboard-name').addEventListener('click',openName);
 // The name others see over your head.
-$('aboard').addEventListener('click',()=>{
+function openName(){closePanels();
  // Connected, the name aboard is the Discord name; otherwise one of your choosing, or connect Discord instead.
  const verified=!!live?.you?.verified&&!live.you.typed;$('name-sheet').dataset.verified=verified?'1':'';
  $('name-title').textContent=verified?`Aboard as ${live.you.name}`:'Your name';
- $('name-edit').value=savedName();$('name-sheet').hidden=false;input.enabled=false;if(!verified)$('name-edit').focus();});
+ $('name-edit').value=savedName();$('name-sheet').hidden=false;input.enabled=false;if(!verified)$('name-edit').focus();}
 $('name-connect').addEventListener('click',connect);
 // The vault's password (vault.js): the right one opens the door; a wrong one says so and lets you try again.
 $('vault-form').addEventListener('submit',e=>{e.preventDefault();if(vault?.unlock($('vault-code').value)){closePanels();return;}
@@ -1047,10 +1084,16 @@ const pinballGame=createPinball({
  onClose(){input.enabled=true;input.down.clear();},
  muted:()=>!ambience.on,
 });
+// One escape-shuttle practice flight. Its personal best stays in this browser.
+emergencyDrill=createEmergencyDrill({
+ onOpen(){closePanels();emote=null;input.enabled=false;input.down.clear();input.jumpQueued=input.jumpHeld=false;controller.velocity.set(0,0,0);},
+ onClose(){input.enabled=true;input.down.clear();input.jumpQueued=input.jumpHeld=false;},
+});
 sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambience.toggle())));
 // Render resolution, set up with the renderer: each press steps High, Med, Low and round again.
 const resButton=$('resolution');setRes(res);
 graphicsSettings=mountGraphicsSettings({onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
+controlsSettings=mountControlsSettings({emotes:EMOTES,onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
 resButton.addEventListener('click',()=>{resChosen=true;setRes((res+1)%RES.length);try{localStorage.setItem(RES_KEY,RES[res]);}catch{}});
 // Held for a higher jump, as Space is.
 $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;input.jumpHeld=true;$('jump').setPointerCapture(e.pointerId);});

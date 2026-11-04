@@ -3,6 +3,8 @@
 // the emotes (1-0 play them), E uses what is in front of you (a seat, a bed, a lift), V or F swaps first and third
 // person, M is Go to, N the ship map, L the ship log, H help, P pings where you are for others aboard, T chats with them and R respawns in the arrival hall. Dragging looks around; on touch screens the left thumb steers a joystick and
 // the right one looks.
+// Controls can change the emote and ping defaults.
+import {walkBindings} from './bindings.js';
 const KEYS={forward:['KeyW','ArrowUp'],back:['KeyS','ArrowDown'],left:['KeyA','ArrowLeft'],right:['KeyD','ArrowRight']};
 
 export class WalkInput{
@@ -17,6 +19,7 @@ export class WalkInput{
    if(!this.enabled){if(!e.repeat)this.onAction('sheet',e.code);return;}
    // A held key repeats; only movement keys may (they are read as held), never an action.
    if(e.repeat){if(e.code.startsWith('Arrow')||e.code==='Space')e.preventDefault();return;}
+   if(this.bound(e.code)){e.preventDefault();return;}
    if(e.code==='Space'){this.jumpQueued=true;e.preventDefault();}
    else if(e.code==='KeyE'||e.code==='Enter')this.onAction('use');
    else if(e.code==='KeyV'||e.code==='KeyF')this.onAction('view');
@@ -24,14 +27,11 @@ export class WalkInput{
    else if(e.code==='KeyN')this.onAction('map');
    else if(e.code==='KeyC')this.onAction('crouch');
    else if(e.code==='KeyX')this.onAction('prone');
-   else if(e.code==='KeyB')this.onAction('emotes');
    else if(e.code==='KeyR')this.onAction('respawn');
-   else if(e.code==='KeyP')this.onAction('ping');
    else if(e.code==='KeyL')this.onAction('log');
    else if(e.code==='KeyH')this.onAction('help');
    // Chat: the T must not land in the field it opens.
    else if(e.code==='KeyT'){e.preventDefault();this.onAction('chat');}
-   else if(/^Digit[0-9]$/.test(e.code))this.onAction('emote',(+e.code.slice(5)+9)%10);
    if(e.code.startsWith('Arrow'))e.preventDefault();
    this.down.add(e.code);
   });
@@ -40,18 +40,32 @@ export class WalkInput{
   // Look: drag with any pointer on the scene (or move with the pointer locked).
   let drag=null;
   surface.addEventListener('pointerdown',e=>{
+   if(e.pointerType==='mouse'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&this.bound('Mouse'+e.button)){e.preventDefault();drag=null;return;}
+   if(!this.enabled)return;
    if(e.pointerType==='touch'&&joystick&&e.clientX<innerWidth*.45)return;
    drag={id:e.pointerId,x:e.clientX,y:e.clientY};surface.setPointerCapture(e.pointerId);
   });
   surface.addEventListener('pointermove',e=>{
+   if(!this.enabled){drag=null;return;}
    if(document.pointerLockElement===surface){this.look.x+=e.movementX*.0022;this.look.y+=e.movementY*.0022;return;}
    if(!drag||drag.id!==e.pointerId)return;
    const k=e.pointerType==='touch'?.0055:.0042;this.look.x+=(e.clientX-drag.x)*k;this.look.y+=(e.clientY-drag.y)*k;drag.x=e.clientX;drag.y=e.clientY;
   });
   const end=e=>{if(drag&&drag.id===e.pointerId)drag=null;};
   surface.addEventListener('pointerup',end);surface.addEventListener('pointercancel',end);
+  // Only a remapped scene button consumes its context menu or browser navigation.
+  for(const type of ['mousedown','mouseup','auxclick','contextmenu'])surface.addEventListener(type,e=>{
+   if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&walkBindings.action('Mouse'+e.button))e.preventDefault();
+  });
   surface.addEventListener('wheel',e=>{this.zoom+=Math.sign(e.deltaY);e.preventDefault();},{passive:false});
   if(joystick&&stick)this.bindJoystick(joystick,stick);
+ }
+ bound(code){
+  const action=walkBindings.action(code);if(!action)return false;
+  if(!this.enabled)this.onAction('sheet',code);
+  else if(action.startsWith('emote:'))this.onAction('emote',+action.slice(6));
+  else this.onAction(action);
+  return true;
  }
  bindJoystick(base,stick){
   let id=null,cx=0,cy=0;const radius=()=>base.clientWidth/2;

@@ -1,6 +1,7 @@
 import*as T from'three';
 import{communityArtMounts}from'./community-displays.js';
 import layout from '../plan/selected-layout.js';
+import {drillStation} from '../walk/emergency-drill/station.js';
 const same=(a,b)=>a.length===b.length&&a.every((v,i)=>Math.abs(v-b[i])<.055);
 export function arrivalArtWall(){const r=layout.rooms.find(r=>r.id==='d02-arrival-1');return[r.door.center[0]+.25,r.y+1.665,r.door.center[2]-7];}
 const mounts=new Map(communityArtMounts(layout).map(m=>[m.name,m]));
@@ -15,6 +16,7 @@ export function phase4LegacySpot(spot){
  const linked=artLinks.find(([at])=>same(spot.at,at));if(linked){const m=mounts.get(linked[1]),distance=/Haze_[67]$/.test(m.name)?4.1:4.3,y=layout.decks[m.deck-1].y+(m.room==='observation-lounge'?2:0);return{...spot,at:[m.at[0]+m.normal[0]*distance,y,m.at[2]+m.normal[2]*distance],yaw:Math.atan2(-m.normal[0],-m.normal[2]),pitch:Math.atan2(m.at[1]-y-1.65,distance),view:'first',room:m.room,feature:'art-'+m.name,lv:2,resolved:true};}
 
  if(same(spot.at,[-139.8,-35.7,-38.15])){const r=layout.rooms.find(r=>r.id==='d02-arrival-1'),p=arrivalArtWall();patch={at:[p[0]+3.25,r.y,p[2]],yaw:-Math.PI/2,pitch:0,room:r.id,feature:'anniversary-art-approach'};}
+ else if(same(spot.at,[70.76,-27.70,65.38])){const d=drillStation(layout);patch={at:d.approach,yaw:d.yaw-Math.PI/3,pitch:-.3,room:'d04-lifeboats-10',component:d.craft,feature:'emergency-drill-helm'};}
  else if(same(spot.at,[167,-34.2,-21.6])){const r=layout.rooms.find(r=>r.id==='d02-hangar-9');patch={at:local(r,[-29,0,-9]),yaw:(r.frame.yaw||0)+Math.atan2(43,35),room:r.id,feature:'transfer-shuttle-approach'};}
  else if(same(spot.at,[-145.31,-39.7,32.93]))patch={...nearestLane(1,spot.at),feature:'deck1-hex-floor'};
  else if(same(spot.at,[40,16.3,26])){const a=layout.cabins.find(c=>c.id==='N10-271'),b=layout.cabins.find(c=>c.id==='N10-272'),n=a.door.outward;patch={at:[(a.door.center[0]+b.door.center[0])/2+n[0]*1.2,a.y,(a.door.center[2]+b.door.center[2])/2+n[1]*1.2],yaw:Math.atan2(-n[0],-n[1]),corridor:a.door.corridor,anchors:[a.id,b.id],feature:'halloween-lane'};}

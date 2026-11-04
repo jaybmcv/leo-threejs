@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import * as T from 'three';
+import {FollowCamera,VIEW} from '../src/walk/camera.js';
+import {BODY,Colliders} from '../src/walk/collision.js';
+import {Controller} from '../src/walk/controller.js';
+
+const scene=new T.Group();
+function box(size,at){const m=new T.Mesh(new T.BoxGeometry(...size),new T.MeshBasicMaterial());m.position.set(...at);scene.add(m);}
+box([20,.2,20],[0,-.1,0]);
+box([4,.3,4],[0,1.65,4]);
+const solids=new Colliders();solids.addStatic(scene);solids.commit();
+const player=new Controller(solids);player.place(new T.Vector3(0,0,0));player.toggle('crouch');
+const camera=new T.PerspectiveCamera(62,1,.05,100),follow=new FollowCamera(camera,solids);follow.mode='first';
+const height=1.75,eye=()=>camera.position.y-player.position.y;
+follow.update(0,player.position,height,player.stance);assert.ok(Math.abs(eye()-height*VIEW.eye)<1e-9);
+follow.update(VIEW.stanceDuration/2,player.position,height,player.stance);assert.ok(eye()<height*VIEW.eye&&eye()>height*VIEW.crouchEye);
+follow.update(VIEW.stanceDuration/2,player.position,height,player.stance);assert.ok(Math.abs(eye()-height*VIEW.crouchEye)<1e-9);
+for(let i=0;i<180;i++)player.step(1/60,new T.Vector3(0,0,2));
+assert.ok(player.position.z<2-BODY.radius+.02,'full-height capsule must not enter under a low ceiling');
+follow.update(0,player.position,height,player.stance);
+const point=new T.Line3(camera.position.clone(),camera.position.clone());
+assert.equal(solids.overlaps(point,.1),false,'crouched camera should stay clear of solid geometry');
+player.toggle('crouch');follow.update(VIEW.stanceDuration/2,player.position,height,player.stance);
+assert.ok(eye()>height*VIEW.crouchEye&&eye()<height*VIEW.eye);
+follow.update(VIEW.stanceDuration/2,player.position,height,player.stance);assert.ok(Math.abs(eye()-height*VIEW.eye)<1e-9);
+assert.equal(solids.overlaps(new T.Line3(camera.position.clone(),camera.position.clone()),.1),false,'standing camera should stay clear of solid geometry');
+follow.update(VIEW.stanceDuration,player.position,height,'crouch');follow.update(0,player.position,height,null);assert.ok(Math.abs(eye()-height*VIEW.eye)<1e-9);
+follow.mode='third';follow.update(VIEW.stanceDuration,player.position,height,'crouch');const third=camera.position.clone();
+follow.update(0,player.position,height,'stand');assert.ok(camera.position.distanceTo(third)<1e-9,'third-person framing must not change with stance');
+console.log('Crouch camera transitions, solid clearance, full-height ceiling collision and third-person framing pass.');
