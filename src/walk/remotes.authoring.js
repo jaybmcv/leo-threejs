@@ -99,6 +99,7 @@ export class RemotePlayers{
   if(dt>0)r.turnRate=T.MathUtils.damp(r.turnRate,turn/dt,10,dt);
   const e=r.rest*r.rest*(3-2*r.rest),lie=r.restKind==='lie';
   w.body.rotation.set(lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.rest,.25,1):0,0,0);
+  w.setFur(r.tgt.fur);
   const t=r.tgt,floating=t.emote==='healing_capsule',belt=t.playing&&!t.rest&&this.running?.(c);
   // Rolling in a hamster ball (hamster-ball.js): standing inside one of this page's own, rolled by their stride.
   if(t.ball&&!t.rest){if(!r.ball)r.ball=createBallMesh();if(!r.ball.mesh.parent)this.scene.add(r.ball.mesh);r.ball.mesh.position.set(c.x,c.y,c.z);

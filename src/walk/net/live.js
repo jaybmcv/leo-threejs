@@ -95,7 +95,7 @@ export function connectLive(url,on,opts={}){
    if(!live()||now-sentAt<SEND_MS)return;
    const text=JSON.stringify({m:'pose',p});
    // Unchanged to the centimetre and the degree: only a keepalive now and then.
-   const same=JSON.stringify([p.pos.map(v=>Math.round(v*100)),Math.round(p.yaw*57),p.g,p.st,p.jc,p.e,p.rest,p.pl]);
+   const same=JSON.stringify([p.pos.map(v=>Math.round(v*100)),Math.round(p.yaw*57),p.g,p.st,p.jc,p.e,p.rest,p.pl,p.f]);
    if(same===last&&now-lastAt<STILL_MS)return;
    last=same;lastAt=now;sentAt=now;ws.send(text);
   },

@@ -6,6 +6,7 @@ import {COSMO_EMOTES} from './vr/cosmoEmotes.ts';
 import {WALK_SPEED,RUN_SPEED} from './vr/worldCore.ts';
 import {catnipFace} from './catnip-face.js';
 import {createSwimSuit} from './aquarium-treasure/suit.js';
+import {createFurColour} from './fur.js';
 
 // Cosmo as the walker, animated by Voyager's Reach's own figure (vr/dlCatFigure.ts): the authored Ecctrl walk and jog,
 // the reference sprint, take-off, air and landing, the turning lean, the tail spring, the idle, crouch, slide and
@@ -55,6 +56,7 @@ function hammockArms(bone){
 export async function createWalker(createDLCat,motion){
  const cat=await createDLCat({height:COSMO_HEIGHT,castShadow:true,receiveShadow:true});
  const figure=new DLCatFigure(cat,()=>DEFAULT_DLCAT_TUNING,motion);figure.stylProportions=false;
+ const setFur=await createFurColour(figure.asset);
  const holder=new T.Group();holder.name='Walker';const body=new T.Group();holder.add(body);body.add(figure.root);
  const bone=name=>{const b=figure.bones.get(name);if(!b)throw new Error('Cosmo rig is missing '+name);return b;};
  // The lying pose, built once from the bind pose the figure starts in.
@@ -81,7 +83,7 @@ export async function createWalker(createDLCat,motion){
  const hipHeight=bone('spine').getWorldPosition(new T.Vector3()).y-figure.root.getWorldPosition(new T.Vector3()).y;
  let suit=null;
  return {
-  holder,body,figure,hipHeight,
+  holder,body,figure,hipHeight,setFur,
   // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock},
   //  catnip: in the Hydro-Nip Lounge}
   update(dt,s){

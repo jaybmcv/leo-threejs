@@ -34,6 +34,7 @@
 // Movement is trusted from the client, as in Reach: the server checks that a pose is well formed and inside the ship,
 // and limits how often anyone may send. Lifts are the server's: a call goes to the server, which steps every car
 // (lift-motion.js) and tells everyone when a car's plans change.
+import {cleanFur} from '../src/walk/fur-colours.js';
 import http from 'node:http';
 import {policy} from '../src/v2/live-spatial.authoring.js';
 import {buildInfo} from '../scripts/build-info.mjs';
@@ -99,7 +100,7 @@ function readPose(v,p){
  const [x,y,z]=p.pos;if(!finite(x,...BOUNDS.x)||!finite(y,...BOUNDS.y)||!finite(z,...BOUNDS.z)||!finite(p.yaw,-1e3,1e3))return false;
  const pose={pos:[x,y,z],yaw:p.yaw,grounded:!!p.g,stance:STANCES.includes(p.st)?p.st:'stand',jumpCount:finite(p.jc,0,3)?Math.round(p.jc):0,
   jumpS:finite(p.js,-1,60)?p.js:-1,rise:finite(p.r,-100,100)?p.r:0,emote:typeof p.e==='string'&&/^[a-z0-9_]{1,32}$/.test(p.e)?p.e:null,rest:p.rest==='sit'||p.rest==='lie'?p.rest:null,
-  playing:p.pl===true,ball:p.b===true};
+  playing:p.pl===true,ball:p.b===true,fur:cleanFur(p.f)};
  try{v.record=encodeRecord(v.slot,pose);}catch{return false;}
  v.pos=pose.pos;v.playing=pose.playing;v.version++;treasure.observe(v);return true;
 }
