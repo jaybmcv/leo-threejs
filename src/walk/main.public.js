@@ -733,7 +733,7 @@ renderer.setAnimationLoop(()=>{
   turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!!lounge?.inside(walker.holder.position),swimming:!!treasure?.active});
  live?.pose(myPose(riding),now);
  // In a transporter the camera rides higher, over the heads of the others aboard.
- if(treasure?.active)treasure.updateCamera(dt);else follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:cart&&follow.mode==='third'?WALKER.height+.7:WALKER.height);
+ if(treasure?.active)treasure.updateCamera(dt);else follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:cart&&follow.mode==='third'?WALKER.height+.7:WALKER.height,resting||run||inBall?null:controller.grounded?controller.stance:'stand');
  // Spraying the graffiti wall, the view squares up to it (graffiti.js), and its paint catches up.
  graffiti?.update(camera,now);
  // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle), or is off at the wall.
