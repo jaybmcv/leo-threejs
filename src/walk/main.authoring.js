@@ -779,7 +779,7 @@ renderer.setAnimationLoop(()=>{
  loungeSound?.update(p,ambience.on,camera);
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
- surgeryArms?.update(dt,p);
+ surgeryArms?.update(dt,p,remotes?.remotes);
  imagingScans?.update(dt,p,resting,remotes?.remotes);
  // The Container Maze's clock starts at its way in and drops if the walker leaves (maze/run.js).
  maze?.update(p,now);
