@@ -1,6 +1,6 @@
 // Frame-time study: compile this checkout's public walk (src/walk/main.public.js) against the assets of a deployed
 // public build, without authoring geometry. Usage:
-//   node scripts/walk-frame-build.mjs --tag=<name> [--debug] [--map] [--layout=<layout.json>]
+//   node scripts/walk-frame-build.mjs --tag=<name> [--debug] [--map] [--layout=<layout.json>] [--pvs=<atrium pvs.json>]
 // --map also writes <script>.map, which scripts/walk-frame-bench.mjs --profile uses to name functions.
 // The deployed walk.html and asset-manifest.json are read from output/perf-walk/mirror (scripts/walk-frame-serve.mjs
 // fetches them). Output goes to output/perf-walk/builds/<tag>/: walk.html, the walk script and its layout data parts.
@@ -31,20 +31,22 @@ const defines={
  __EMOTES_URL__:await local('src/walk/assets/cosmo-emotes.json','walk-emotes'),__MAP_URL__:named(/walk-map\.[0-9a-f]{10}\.png/),
  __HAT_URL__:await local('src/vendor/captain-hat/captains-hat.glb','walk-hat'),__ART_URLS__:art,
  __REEL_URL__:await local('src/walk/art/theatre-loop.mp4','walk-reel'),__LIVE_URL__:'',__CREAMERY_URL__:'https://creamery.marscatsvoyage.com'};
+// --pvs=<file> ships an atrium PVS (scripts/walk-atrium-pvs.mjs) beside the walk script; without it the sight rays run.
+const pvsFile=arg('pvs',null),pvsData=pvsFile&&await fs.readFile(pvsFile);defines.__ATRIUM_PVS_URL__=pvsData?hashed('atrium-pvs','json',pvsData):'';
 const define=Object.fromEntries(Object.entries(defines).map(([k,v])=>[k,JSON.stringify(v)]));define.__WALK_DEBUG__=String(debug);
 // The public entry imports the partition plan but no longer reads it, so the bundle does not depend on its contents.
 const data={'walk-partitions':'{}','walk-changes':JSON.stringify(shipLog(process.cwd(),loadMedia().media))};
 const walkData={name:'walk-data',setup(b){b.onResolve({filter:/^walk-(partitions|changes)$/},a=>({path:a.path,namespace:'walk'}));b.onLoad({filter:/.*/,namespace:'walk'},a=>({contents:data[a.path],loader:'json'}));}};
 await fs.rm(out,{recursive:true,force:true});await fs.mkdir(out,{recursive:true});
-const layout=JSON.parse(await fs.readFile(layoutFile,'utf8'));
+const layoutText=await fs.readFile(layoutFile,'utf8'),layout=JSON.parse(layoutText);
 const map=process.argv.includes('--map');
 const result=await build({...map?{sourcemap:'external',outfile:'walk.js'}:{},entryPoints:['src/walk/main.public.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2022',legalComments:'eof',define,plugins:[walkData,v2Plugin(layout,{preparedWalk:true,dataDirectory:out})]});
 const code=(result.outputFiles.find(f=>f.path.endsWith('.js'))||result.outputFiles[0]).text,name=hashed('walk','js',code);
-await fs.writeFile(path.join(out,name),code);if(map)await fs.writeFile(path.join(out,name+'.map'),result.outputFiles.find(f=>f.path.endsWith('.map')).contents);
+await fs.writeFile(path.join(out,name),code);if(pvsData)await fs.writeFile(path.join(out,defines.__ATRIUM_PVS_URL__),pvsData);if(map)await fs.writeFile(path.join(out,name+'.map'),result.outputFiles.find(f=>f.path.endsWith('.map')).contents);
 const layoutData=JSON.parse(await fs.readFile(path.join(out,'layout-data.json'),'utf8'));
 // Same page as deployed, with this script and this layout data in its manifest.
 const html=deployedHTML.replace(deployedScript,name).replace(/window\.LEO_PUBLIC_ASSETS=(\{.*?\});<\/script>/s,(_,json)=>{const m=JSON.parse(json);m['layout-data']=layoutData;return 'window.LEO_PUBLIC_ASSETS='+JSON.stringify(m)+';</script>';});
 if(html===deployedHTML)throw Error('Walk page was not rewritten');
 await fs.writeFile(path.join(out,'walk.html'),html);
-const summary={tag,debug,script:name,bytes:code.length,layoutData,deployedLayoutData:manifest['layout-data'],layoutMatchesDeployed:layoutData.sha256===manifest['layout-data'].sha256};
+const summary={tag,debug,script:name,bytes:code.length,layoutSource:{file:layoutFile,sha256:createHash('sha256').update(layoutText).digest('hex')},layoutData,deployedLayoutData:manifest['layout-data'],layoutMatchesDeployed:layoutData.sha256===manifest['layout-data'].sha256};
 await fs.writeFile(path.join(out,'build.json'),JSON.stringify(summary,null,2));console.log(summary);
