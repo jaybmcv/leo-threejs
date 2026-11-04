@@ -49,7 +49,8 @@ for(const excluded of ['Fitted_garden_commons_01','Hydro_Nip_Lounge','Exterior']
   assert.equal(signature(fixture.root),before,excluded+' is untouched');
 }
 const conservatory=createLayeredConservatory(),approach=new T.Box3(new T.Vector3(135,24.3,33.85),new T.Vector3(141.95,27.2,35.95));
-const galleryWalk=new T.Box3(new T.Vector3(114,28.3,42),new T.Vector3(150,35.8,46));
+// The v2 garden gallery walkways on Decks 18 and 19, in the legacy frame, plus walker headroom.
+const galleryWalks=[new T.Box3(new T.Vector3(110,28.3,35.65),new T.Vector3(150,30.3,40.32)),new T.Box3(new T.Vector3(110,32.3,30.96),new T.Vector3(150,34.3,35.64))];
 const matrix=new T.Matrix4(),bounds=new T.Box3(),point=new T.Vector3();let triangles=0;
 for(const mesh of conservatory.children){
   const position=mesh.geometry.attributes.position;triangles+=(mesh.geometry.index?.count??position.count)/3*mesh.count;
@@ -57,7 +58,7 @@ for(const mesh of conservatory.children){
     mesh.getMatrixAt(i,matrix);bounds.makeEmpty();
     for(let n=0;n<position.count;n++){point.fromBufferAttribute(position,n).applyMatrix4(matrix);assert.ok(point.toArray().every(Number.isFinite),'finite vertices');bounds.expandByPoint(point);}
     assert.ok(!bounds.intersectsBox(approach),mesh.name+' keeps bridge and bench approach clear');
-    assert.ok(!bounds.intersectsBox(galleryWalk),mesh.name+' stays outside gallery walking area');
+    assert.ok(!galleryWalks.some(walk=>bounds.intersectsBox(walk)),mesh.name+' stays outside gallery walking area');
   }
 }
 assert.equal(signature(conservatory),signature(createLayeredConservatory()),'deterministic planting');
