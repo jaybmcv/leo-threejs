@@ -1,4 +1,16 @@
 {
+  "src/walk/arrival-mood.js": {
+    "owners": ["d02-arrival-1"],
+    "via": "toWorld"
+  },
+  "src/walk/arrival-tour.js": {
+    "owners": ["d02-arrival-1"],
+    "via": "toWorld"
+  },
+  "src/walk/layered-conservatory.js": {
+    "owners": ["commons-10"],
+    "via": "inherited"
+  },
   "src/walk/recreation-hall.js": {
     "owners": [
       "d16-recreation-4"
@@ -575,5 +587,11 @@
       "commons-1"
     ],
     "via": null
+  },
+  "src/walk/capsule-bubbles.js": {
+    "owners": [
+      "d05-surgery-2"
+    ],
+    "via": "inherited"
   }
 }

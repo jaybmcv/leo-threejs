@@ -1,5 +1,6 @@
 import {RecordGeometry,recordMerged} from "../v2/prepared-geometry-record.js";
 import {roomObject} from '../plan/rooms.js';
+import {capsuleBubbles} from './capsule-bubbles.js';
 import {walkCanvas} from './canvas.js';
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -215,6 +216,7 @@ export function createSurgeryArms(ship,{still=false}={}){
  const group=new T.Group();group.name='Surgery_robot_arms';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);
  const arms=BAYS.map(([x,z],i)=>{const a=arm();a.root.position.set(x,CEILING,z+.15);a.phase=i*1.7;group.add(a.root);return a;});
+ const bubbles=capsuleBubbles(CAPSULES,still);group.add(bubbles.mesh);
  const effects=CAPSULES.map(([x,z,face])=>{const e=capsuleEffects();e.group.position.set(x,0,z);if(face<0)e.group.rotation.y=Math.PI;group.add(e.group);return e;});
  const toRoom=room.matrixWorld.clone().invert(),local=new T.Vector3();
  const centre=room.getWorldPosition(new T.Vector3());
@@ -225,7 +227,7 @@ export function createSurgeryArms(ship,{still=false}={}){
   a.wrist.rotation.z=-(a.shoulder.rotation.z+a.elbow.rotation.z);}};
  pose();
   function update(dt,p,remotes=null){
-  if(!still&&Math.abs(p.y-centre.y)<=4&&Math.abs(p.x-centre.x)<=40&&Math.abs(p.z-centre.z)<=30){t=performance.now()/1000;pose();}
+  if(!still&&Math.abs(p.y-centre.y)<=4&&Math.abs(p.x-centre.x)<=40&&Math.abs(p.z-centre.z)<=30){t=performance.now()/1000;pose();bubbles.update(t);}
   const occupied=CAPSULES.map(()=>false),mark=()=>CAPSULES.forEach(([x,z],i)=>{if(Math.abs(local.y-CAPSULE_FLOOR)<1.1&&Math.hypot(local.x-x,local.z-z)<.46)occupied[i]=true;});
   local.copy(p).applyMatrix4(toRoom);
   mark();
