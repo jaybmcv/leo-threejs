@@ -272,7 +272,7 @@ function onMessage(v,data,binary){
  switch(msg.m){
   case 'pose':if(allowed(v,'pose'))readPose(v,msg.p);break;
   // A verified visitor's name is their Discord name.
-  case 'name':if(allowed(v,'name')&&(!v.discord||v.discord.typed)){v.name=cleanName(msg.name)||(v.discord?v.discord.name:null);v.nameVersion=(v.nameVersion||0)+1;}break;
+  case 'name':if(allowed(v,'name')&&(!v.discord||v.discord.typed)){v.name=cleanName(msg.name)||(v.discord?v.discord.name:null);v.nameVersion=(v.nameVersion||0)+1;countChanged=true;}break;
   case 'call':{
    if(!allowed(v,'call'))break;
    const l=lifts.find(l=>l.spec.id===msg.lift);if(!l||!Number.isInteger(msg.stop)||msg.stop<0||msg.stop>=l.stops.length||!policy.canCall(v.pos,l.spec,msg.stop))break;
@@ -330,7 +330,7 @@ let last=Date.now();
 function flush(){
  const now=Date.now(),dt=Math.min(.25,(now-last)/1000);last=now;
  for(const l of lifts){stepLift(l.state,l.stops,dt);liftChanged(l,false);}
- if(countChanged){countChanged=false;broadcast({m:'aboard',n:aboard()});}
+ if(countChanged){countChanged=false;broadcast({m:'aboard',n:aboard(),names:[...visitors].filter(v=>v.ready).map(v=>v.name||'Voyager '+v.id.slice(-4))});}
  for(const r of visitors){
   if(!r.ready)continue;
   if(r.ws.bufferedAmount>SLOW_BYTES){if(!r.slowSince)r.slowSince=now;else if(now-r.slowSince>SLOW_MS){r.ws.close(4004,'too slow');leave(r);}continue;}

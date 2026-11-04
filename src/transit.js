@@ -72,9 +72,9 @@ export function createTransit({minimumDeck=1,maximumDeck=20,coreIds=['forward','
       }else for(let d=minimumDeck;d<=c.lastDeck;d++){
         // One storey per box: walk mode culls by height band, and a full-height face would only draw near mid-ship.
         const y0=d===minimumDeck?base:floorY(d),y1=d===c.lastDeck?top:floorY(d+1);
-        // `clad` names the face inside the stairwell, which circulation-finish.js clads in black metal and glass.
-        box('Stair_outer_wall',[9,y1-y0,.14],[x,(y0+y1)/2,zz+s*2.57],'wall',shell).userData.clad=-s;
-        for(const end of [-1,1])box('Stair_end_wall',[.14,y1-y0,5.14],[x+end*4.57,(y0+y1)/2,zz],'wall',shell).userData.clad=-end;
+        // Clear walls retain their collision boundaries on both stairwells.
+        box('Stair_outer_wall',[9,y1-y0,.14],[x,(y0+y1)/2,zz+s*2.57],'glass',shell).userData.clearStair=true;
+        for(const end of [-1,1])box('Stair_end_wall',[.14,y1-y0,5.14],[x+end*4.57,(y0+y1)/2,zz],'glass',shell).userData.clearStair=true;
       }
       box('Stair_top_ceiling',[9,.14,5],[x,top-.1,zz],'wall',shell);
       const look=c.id==='aft'?{tread:'holo',riser:'black',frame:'black',landing:'black'}:{tread:'floor',riser:'wall',frame:'metal',landing:'floor'};

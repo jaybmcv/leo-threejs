@@ -569,5 +569,11 @@
       "d04-air-1"
     ],
     "via": "roomObject"
+  },
+  "src/walk/capsule-bubbles.js": {
+    "owners": [
+      "d05-surgery-2"
+    ],
+    "via": "inherited"
   }
 }
