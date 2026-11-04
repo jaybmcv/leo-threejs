@@ -8,4 +8,4 @@ if(useV2){await import('./check-otherside.mjs');await import('./launch-b-normali
 import {spawnSync} from 'node:child_process';
 // The games' and features' own rules: quick, and independent of the ship's geometry. (The v1 ship's geometry checks
 // were removed with the v1 rollback, Jay 2026-11-02.)
-for(const script of ['check-hub','check-backdrop','check-invasion','check-paws-off','check-giveaway','check-pool','check-ship-log','check-lullaby','check-maze','check-pinball','check-treasure','check-mudwater']){const p=spawnSync(process.execPath,['scripts/'+script+'.mjs'],{stdio:'inherit'});if(p.status!==0)process.exit(p.status||1);}
+for(const script of ['check-hub','check-backdrop','check-invasion','check-emergency-drill','check-paws-off','check-giveaway','check-pool','check-ship-log','check-lullaby','check-maze','check-pinball','check-treasure','check-mudwater']){const p=spawnSync(process.execPath,['scripts/'+script+'.mjs'],{stdio:'inherit'});if(p.status!==0)process.exit(p.status||1);}
