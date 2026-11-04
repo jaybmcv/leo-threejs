@@ -16,7 +16,8 @@ import {indexedV2Export} from './v2-indexed-export.mjs';
 import {prepareArrivalCanvasExport} from './arrival-canvas-export-v2.mjs';
 import {PreparedWriter} from '../src/v2/prepared-codec.js';
 import {installWalkCanvas} from '../src/walk/canvas.js';
-import {Colliders} from '../src/walk/collision.js';
+import {Colliders,solid} from '../src/walk/collision.js';
+import {groundMesh} from '../src/v2/ground.js';
 
 // The dressing fast lane: an additive prop a preparation step creates after collision, from no ship state, with its own
 // render templates, collision spans and model nodes. Each entry is qualified by hand. `files` are the module's four
@@ -56,9 +57,9 @@ export async function classifyDressings(files,{graph=null}={}){
 async function railCeiling(){const {DECKS}=await import('../src/model.js'),{floorY}=await import('../src/transit.js');return floorY(DECKS.length)+6;}
 const minimumY=positions=>{let y=Infinity;for(let i=1;i<positions.length;i+=3)y=Math.min(y,positions[i]);return y;};
 
-// A dressing's triangles in each static band, in band order, from an encoded prepared walk (for the guard and checks).
-export async function ownedTriangles(manifest,read,owner){
- const out=[];for(const [band,record]of manifest.colliders.bands){const spans=(record.ownerSpans||[]).filter(r=>r.owner===owner);if(!spans.length)continue;
+// A dressing's triangles in each static band (or ground band), in band order, from an encoded prepared walk.
+export async function ownedTriangles(manifest,read,owner,{ground=false}={}){
+ const out=[];for(const [band,record]of (ground?manifest.colliders.ground:manifest.colliders).bands){const spans=(record.ownerSpans||[]).filter(r=>r.owner===owner);if(!spans.length)continue;
   const geometry=manifest.geometries[record.geometry],positions=await read(geometry.attributes.position.array),index=geometry.index==null?null:await read(geometry.index),flags=record.windowFlags==null?null:await read(record.windowFlags),p=[],f=[];
   for(const r of spans)for(let i=r.start;i<r.start+r.count;i++){for(let k=0;k<3;k++){const v=index?index[i*3+k]:i*3+k;p.push(positions[v*3],positions[v*3+1],positions[v*3+2]);}f.push(flags?.[i]||0);}
   out.push({band,positions:Float32Array.from(p),flags:Uint8Array.from(f)});}
@@ -80,8 +81,10 @@ export async function compileDressing(id){
  const d=DRESSINGS[id];shims();
  const {geometryRecords}=await import('../src/v2/prepared-geometry-record.js'),before=new Set(geometryRecords().keys());
  const authored=(await import('../'+d.authoring))[d.create](),group=authored.group;assert.equal(group.userData.fastDressing,id,'Dressing '+id+' lost its owner tag');
- const col=new Colliders();col.addStatic(group);
- const collision=[...col.pending].sort(([a],[b])=>a-b).map(([band,list])=>{for(const r of list.ownerSpans)assert.equal(r.owner,d.owner,'Dressing collision outside its owner');return {band,positions:list.values.slice(),flags:list.flags.slice(0,list.flagLength),spans:list.ownerSpans};});
+ // The glue's addStatic, after installGround (ground.js) has made it feed the walkable surfaces to the ground bands too.
+ const col=new Colliders(),ground=new Colliders();col.addStatic(group);ground.addStatic(group,o=>solid(o)&&groundMesh(o));
+ const pending=c=>[...c.pending].sort(([a],[b])=>a-b).map(([band,list])=>{for(const r of list.ownerSpans)assert.equal(r.owner,d.owner,'Dressing collision outside its owner');return {band,positions:list.values.slice(),flags:list.flags.slice(0,list.flagLength),spans:list.ownerSpans};});
+ const collision=pending(col),groundCollision=pending(ground);
  for(const key of geometryRecords().keys())assert(before.has(key)||key.startsWith(d.site),'Dressing '+id+' recorded another module\'s geometry: '+key.slice(0,80));
  const templates=[...geometryRecords()].filter(([key])=>key.startsWith(d.site));
  // The public variant must find every template it replays and rebuild the same meshes.
@@ -92,7 +95,7 @@ export async function compileDressing(id){
  // Model finalization (retire-obsolete-facades-v2.mjs) prunes the exported ship: Node's canvas textures export as
  // transparent black and fold into their material's colour factor.
  const io=new NodeIO().registerExtensions(ALL_EXTENSIONS),doc=await io.readBinary(new Uint8Array(await indexedV2Export(await new GLTFExporter().parseAsync(plain,{binary:true,onlyVisible:true}))));
- await doc.transform(prune());return {id,templates,collision,model:Buffer.from(await io.writeBinary(doc))};
+ await doc.transform(prune());return {id,templates,collision,groundCollision,model:Buffer.from(await io.writeBinary(doc))};
 }
 
 // Replace the dressing's nodes in the one model that holds them (leo-full-ship.glb) at the same place in its parent.
@@ -130,13 +133,13 @@ export async function patchDressings(plan,timer,{baseDirectory,destination}){
   if(!old.length||!m.geometryTemplates.some(([key])=>key.startsWith(d.site)))throw Error('The '+c.id+' dressing needs one clean full build with dressing owners; take the wider build');
   if([...old,...c.collision].some(r=>minimumY(r.positions)<=ceiling))throw Error('The '+c.id+' dressing reaches the deck rails\' probe range; take the wider build');
  }
- const additions=new Map();for(const c of compiled)for(const r of c.collision){const row=additions.get(r.band)||{positions:[],flags:[],spans:[]};row.spans.push(...r.spans.map(s=>({...s,start:s.start+row.flags.length})));row.positions.push(...r.positions);row.flags.push(...r.flags);additions.set(r.band,row);}
- const removedSpans=await timer.stage('replace owned collision spans',()=>removeOwnedSpans(m,patch,read,owners,additions));
+ const merge=field=>{const out=new Map();for(const c of compiled)for(const r of c[field]){const row=out.get(r.band)||{positions:[],flags:[],spans:[]};row.spans.push(...r.spans.map(s=>({...s,start:s.start+row.flags.length})));row.positions.push(...r.positions);row.flags.push(...r.flags);out.set(r.band,row);}return out;};
+ const removedSpans=await timer.stage('replace owned collision spans',()=>removeOwnedSpans(m,patch,read,owners,merge('collision'),merge('groundCollision')));
  assert.equal(removedSpans.renderTriangles,0,'Dressings own no baked render triangles');
  await timer.stage('replace dressing templates',async()=>{const sites=compiled.map(c=>DRESSINGS[c.id].site),writer=new PreparedWriter(),rows=compiled.flatMap(c=>c.templates.map(([key,g])=>[key,writer.geometry(g)])),first=m.geometries.length;patch.absorb(writer);
   m.geometryTemplates=[...m.geometryTemplates.filter(([key])=>!sites.some(s=>key.startsWith(s))),...rows.map(([key,id])=>[key,id+first])];});
  const models=await timer.stage('patch dressing models',()=>patchDressingModels({baseline:baseDirectory,destination,compiled}));
  const original=JSON.parse(await fs.readFile(base+'/integrity.json','utf8')),sourceInputs={...original.sourceInputs,sources:plan.identity};
  const prepared=await timer.stage('encode changed parts',()=>patch.save(destination+'/prepared-walk',base,sourceInputs,{rooms:[],decks:[],dressings:ids,base:original.sha256}));
- return {models,prepared,removedSpans,templates:compiled.map(c=>({id:c.id,templates:c.templates.length,bands:c.collision.map(r=>r.band),triangles:c.collision.reduce((n,r)=>n+r.flags.length,0)}))};
+ return {models,prepared,removedSpans,templates:compiled.map(c=>({id:c.id,templates:c.templates.length,bands:c.collision.map(r=>r.band),triangles:c.collision.reduce((n,r)=>n+r.flags.length,0),groundTriangles:c.groundCollision.reduce((n,r)=>n+r.flags.length,0)}))};
 }

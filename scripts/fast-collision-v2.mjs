@@ -39,11 +39,12 @@ export async function checkFastPatchCollision(base='output/leo-interior-v02/prep
  return result;
 }
 
-// A dressing patch rebuilds whole static bands: decode each band it owns triangles in and ray-test one of them per span.
+// A dressing patch rebuilds whole static and ground bands: decode each band it owns triangles in and ray-test one of
+// them per span.
 async function checkDressingCollision(manifest,base){
  const read=preparedArrayReader(manifest,base),owners=new Set(manifest.fastPatch.dressings.map(id=>'dressing:'+id)),result={status:'PASS',rooms:[],dressings:manifest.fastPatch.dressings,bands:0,probes:0};
- for(const [key,record]of manifest.colliders.bands){
-  const spans=(record.ownerSpans||[]).filter(r=>owners.has(r.owner));if(!spans.length)continue;result.bands++;
+ for(const [kind,col]of [['solid',manifest.colliders],['ground',manifest.colliders.ground]])for(const [band,record]of col.bands){
+  const key=kind+' '+band,spans=(record.ownerSpans||[]).filter(r=>owners.has(r.owner));if(!spans.length)continue;result.bands++;
   const spec=manifest.geometries[record.geometry],geometry=new T.BufferGeometry();
   for(const [name,a]of Object.entries(spec.attributes))geometry.setAttribute(name,new T.BufferAttribute(await read(a.array),a.itemSize,a.normalized));
   if(spec.index!==null)geometry.setIndex(new T.BufferAttribute(await read(spec.index),1));
