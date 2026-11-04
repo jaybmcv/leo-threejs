@@ -576,9 +576,9 @@
     ],
     "via": null
   },
-  "src/walk/mission-timer.js": {
+  "src/walk/atmosphere.js": {
     "owners": [
-      "d02-maintenance-aft"
+      "d04-air-1"
     ],
     "via": "roomObject"
   },
@@ -587,5 +587,11 @@
       "d05-surgery-2"
     ],
     "via": "inherited"
+  },
+  "src/walk/mission-timer.js": {
+    "owners": [
+      "d02-maintenance-aft"
+    ],
+    "via": "roomObject"
   }
 }

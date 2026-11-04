@@ -1,3 +1,4 @@
+import {stripAtmosphere,createAtmosphere} from './atmosphere.js';
 import {installPreparedColliders} from '../v2/prepared-codec.public.js';
 import {finishLaunchBGeometry} from '../v2/launch-b-geometry.js';
 import layout from '../plan/selected-layout.js';
@@ -126,11 +127,12 @@ export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBa
  // the hoses on the floor dressing.
  const chinampa=createChinampa(ship,{still});if(chinampa)colliders.addStatic(chinampa.solid,()=>true);
  await new Promise(r=>setTimeout(r,0));
+ const atmosphere=createAtmosphere(ship,{still});if(atmosphere)colliders.addStatic(atmosphere.solid,()=>true);
  const baggage=createBaggage(ship,{still});if(baggage)colliders.addStatic(baggage.solid,()=>true);
  await new Promise(r=>setTimeout(r,0));
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
  await new Promise(r=>setTimeout(r,0));
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,wardTrolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,vaultLift,missionHolo,swordCase,chinampa,baggage,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,wardTrolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,vaultLift,missionHolo,swordCase,chinampa,baggage,atmosphere,mudwater};
 }
