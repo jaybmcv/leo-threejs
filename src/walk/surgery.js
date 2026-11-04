@@ -1,4 +1,5 @@
 import {roomObject} from '../plan/rooms.js';
+import {capsuleBubbles} from './capsule-bubbles.js';
 import {walkCanvas} from './canvas.js';
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -198,6 +199,7 @@ export function createSurgeryArms(ship,{still=false}={}){
  const group=new T.Group();group.name='Surgery_robot_arms';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);
  const arms=BAYS.map(([x,z],i)=>{const a=arm();a.root.position.set(x,CEILING,z+.15);a.phase=i*1.7;group.add(a.root);return a;});
+ const bubbles=capsuleBubbles(CAPSULES,still);group.add(bubbles.mesh);
  const centre=room.getWorldPosition(new T.Vector3());
  let t=0;
  const pose=()=>{for(const a of arms){const k=t+a.phase;
@@ -207,7 +209,7 @@ export function createSurgeryArms(ship,{still=false}={}){
  pose();
  function update(dt,p){
   if(still||Math.abs(p.y-centre.y)>4||Math.abs(p.x-centre.x)>40||Math.abs(p.z-centre.z)>30)return;
-  t=performance.now()/1000;pose();
+  t=performance.now()/1000;pose();bubbles.update(t);
  }
  return {group,update};
 }
