@@ -1,22 +1,19 @@
 import * as T from 'three';
 import {walkCanvas} from './canvas.js';
-import {floorY} from '../transit.js';
+import {PANEL,panelDoor} from './net/panel-rules.js';
 
 // Deck 4's lower tank bay behind a lever panel (from tester feedback). The doorway at the aft end of the Deck 4 access
 // corridor is covered wall to wall by an engineering panel: a screen over five levers, each flipped up (on) or down
 // (off) with E. Set them right and the screen turns green and the whole panel sinks into the floor, clipped at the
 // deck, opening the way through. Once the walker is inside the bay it rises again quickly behind them and the levers
 // drop back to off; from inside, E at the doorway lowers it again to let them out. Nothing says what the setting is.
-// Walk only, and for now each visitor's own: the panel's state is not shared through Leo live.
+// Leo live owns the shared levers, admission and door. With no server configured it keeps its solo behavior.
 // World frame: the corridor ends at x=-175.37 (the stowed door leaves' faces) between its side walls at |z|=3.94; the
 // doorway itself is |z|<1.875, 3.06 m high, in the tank bay's bulkhead at x=-176. Facing the panel (looking aft, -x),
 // left is +z, so the levers run left to right from +z to -z.
-const FLOOR=floorY(4),FACE=-175.2,DEPTH=.16,HALF=3.94,HEIGHT=3.66,CODE=[1,0,0,1,1];
-const LEVERS=[.8,.4,0,-.4,-.8],LEVER_Y=1.18,TILT=.55,REACH=1.8;
-// Where a walker counts as inside the bay, back in the corridor, or in the doorway (where the panel never rises).
-const INSIDE_X=-176.15,OUTSIDE_X=-174.9,DOOR={x0:-176.3,x1:-174.6,z:2.1};
-// The panel takes a second to sink, a third of one to rise; it waits this long for someone to go through.
-const SINK=1.1,RISE=.35,WAIT=20;
+const {floor:FLOOR,face:FACE,depth:DEPTH,half:HALF,height:HEIGHT,code:CODE,levers:LEVERS,reach:REACH}=PANEL;
+const LEVER_Y=1.18,TILT=.55,INSIDE_X=PANEL.inside,OUTSIDE_X=PANEL.outside;
+const {sink:SINK,rise:RISE,wait:WAIT}=PANEL;
 // For the ship map (deck-map.js): the panel stands across the corridor's end, so the map shows no way in.
 export const SEAL={deck:4,x:FACE-DEPTH/2,z0:-HALF,z1:HALF};
 const FONT='"Archivo", "Sora", sans-serif',MONO='"JetBrains Mono", ui-monospace, monospace';
@@ -45,7 +42,7 @@ function screen(){
   for(let x=0;x<w;x+=24){g.beginPath();g.moveTo(x,0);g.lineTo(x,h);g.stroke();}
   for(let y=0;y<h;y+=24){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke();}
   g.fillStyle=ink;g.textAlign='left';g.textBaseline='middle';g.font=`600 22px ${MONO}`;
-  g.fillText('SECTOR 4 · AFT',24,30);g.textAlign='right';g.fillText(open?'UNLOCKED':'LOCKED',w-24,30);
+  g.fillText('SECTOR 4 ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· AFT',24,30);g.textAlign='right';g.fillText(open?'UNLOCKED':'LOCKED',w-24,30);
   g.textAlign='center';g.font=`700 ${open?64:56}px ${FONT}`;g.fillText(open?'ACCESS GRANTED':'SEALED',w/2,h*.45);
   for(const [i,on] of levers.entries()){const x=w/2+(i-2)*70;g.strokeStyle=ink;g.lineWidth=3;g.strokeRect(x-22,h-92,44,44);if(on){g.fillStyle=ink;g.fillRect(x-14,h-84,28,28);}}
   // Scan lines over it all.
@@ -54,7 +51,7 @@ function screen(){
 }
 
 // The panel, its collider and its state. `colliders` gets one movable collider across the doorway.
-export function createLeverPanel(colliders){
+export function createLeverPanel(colliders,{shared=false,send=()=>false,id=()=>null}={}){
  const group=new T.Group();group.name='Lever_panel';group.position.set(FACE,FLOOR,0);
  // Everything that sinks with the panel; below the deck it is clipped away.
  const panel=new T.Group();group.add(panel);
@@ -98,34 +95,55 @@ export function createLeverPanel(colliders){
  const half=[DEPTH/2,HEIGHT/2,2.2],corners=[];for(let i=0;i<8;i++)corners.push([(i&4?1:-1)*half[0],(i&2?1:-1)*half[1],(i&1?1:-1)*half[2]]);
  const tris=[];for(const f of [[0,1,3],[0,3,2],[4,6,7],[4,7,5],[0,4,5],[0,5,1],[2,3,7],[2,7,6],[0,2,6],[0,6,4],[1,5,7],[1,7,3]])for(const i of f)tris.push(...corners[i]);
  const mover=colliders?.addMover('lever-panel',tris,new T.Matrix4().makeTranslation(FACE-DEPTH/2,FLOOR+HEIGHT/2,0));
+ // Hold waiting visitors clear of the moving panel while the first visitor goes through.
+ const gate=shared?colliders?.addMover('lever-panel-admission',tris,new T.Matrix4().makeTranslation(FACE+.8,FLOOR+HEIGHT/2,0)):null;
+ if(gate)gate.enabled=false;
  // 'sealed' (the levers work), 'open' (set right: sinking or down, waiting for someone to go in), 'exit' (lowered from
  // inside), and how far down the panel is, 0 to 1.
- let state='sealed',down=0,wait=0,delay=0;
- const inDoor=p=>p.x>DOOR.x0&&p.x<DOOR.x1&&Math.abs(p.z)<DOOR.z;
+ let state='sealed',down=0,wait=0,delay=0,authority=null,fallback=false,exiting=false,lastInside=false;
+ const inDoor=p=>panelDoor([p.x,p.y,p.z]);
  const seal=()=>{state='sealed';for(const l of levers)l.on=0;repaint();};
  repaint();
  return {
   group,
+  apply(msg){
+   if(!msg||!['sealed','open','exit'].includes(msg.phase)||!Array.isArray(msg.levers)||msg.levers.length!==5||
+    !msg.levers.every(n=>n===0||n===1)||!Number.isFinite(msg.down)||msg.down<0||msg.down>1)return;
+   const changed=state!==msg.phase||levers.some((l,i)=>l.on!==msg.levers[i]);
+   authority=msg;fallback=false;state=msg.phase;levers.forEach((l,i)=>l.on=msg.levers[i]);if(changed)repaint();
+  },
+  lost(){if(!shared)return;authority=null;fallback=false;exiting=exiting||lastInside;state='sealed';for(const l of levers)l.on=0;repaint();},
   get state(){return state;},get down(){return down;},levers,
   // E in front of the console works the lever the walker stands before; from inside the bay, E at the doorway lowers
   // the panel.
   near(p){
    if(Math.abs(p.y-FLOOR)>1)return null;
-   if(state==='sealed'&&p.x>FACE&&p.x<FACE+REACH&&Math.abs(p.z)<1.3){
+   if(state==='sealed'&&down===0&&(!shared||(authority&&!authority.owner))&&p.x>FACE&&p.x<FACE+REACH&&Math.abs(p.z)<1.3){
     let i=0;for(let k=1;k<LEVERS.length;k++)if(Math.abs(p.z-LEVERS[k])<Math.abs(p.z-LEVERS[i]))i=k;
     return {kind:'lever',lever:i,label:`Lever ${i+1}: ${levers[i].on?'pull down':'push up'}`};
    }
-   if(down===0&&state==='sealed'&&p.x<FACE-DEPTH&&p.x>FACE-2.6&&Math.abs(p.z)<1.9)return {kind:'lever-exit',label:'Open the panel'};
+   if(state==='sealed'&&p.x<FACE-DEPTH&&p.x>FACE-2.6&&Math.abs(p.z)<1.9)return {kind:'lever-exit',label:'Open the panel'};
    return null;
   },
-  flip(i){if(state!=='sealed'||!levers[i])return;levers[i].on^=1;
+  flip(i){if(state!=='sealed'||!levers[i])return;
+   if(shared){if(authority&&!authority.owner)send({op:'flip',i});return;}
+   levers[i].on^=1;
    if(levers.every((l,k)=>l.on===CODE[k])){state='open';wait=WAIT;delay=.6;}
    repaint();},
-  release(){if(state!=='sealed')return;state='exit';wait=WAIT;delay=.2;repaint();},
+  release(){if(state!=='sealed')return;
+   exiting=true;
+   if(shared&&authority&&send({op:'exit'}))return;
+   fallback=shared;state='exit';wait=WAIT;delay=.2;repaint();},
   // Each frame, with the walker's position.
   update(dt,p){
+   lastInside=p.x<FACE+.45&&Math.abs(p.y-FLOOR)<1;
+   if(p.x<FACE-DEPTH&&Math.abs(p.y-FLOOR)<1)exiting=true;
    for(const l of levers){l.shown+=((l.on?1:-1)*TILT-l.shown)*(1-Math.exp(-14*dt));l.pivot.rotation.z=l.shown;}
-   if(state==='open'||state==='exit'){
+   if(shared&&!fallback){
+    const target=authority?.down||0;
+    // Local clearance covers the interval before our next pose reaches the server.
+    if(target>=down||!inDoor(p))down=target;
+   }else if(state==='open'||state==='exit'){
     if((delay-=dt)<=0)down=Math.min(1,down+dt/SINK);
     wait-=dt;
     // In: up again behind them at once. Out (lowered from inside): up once they are back in the corridor. Nobody
@@ -134,7 +152,11 @@ export function createLeverPanel(colliders){
     if(down>=1&&(through||wait<=0)&&!inDoor(p))seal();
    }else down=Math.max(0,down-dt/RISE);
    panel.position.y=-down*HEIGHT;panel.visible=down<1;
-   if(mover)mover.enabled=down<.85;
+   // Only the reserved visitor may cross from the corridor. The inside release always lets a stranded walker out.
+   if(p.x>FACE+1.8||Math.abs(p.y-FLOOR)>1)exiting=false;
+   const barred=shared&&!fallback&&!exiting&&p.x>FACE&&(!authority||state!=='open'||authority.owner!==id());
+   if(mover)mover.enabled=down<.85||barred;
+   if(gate)gate.enabled=barred;
   },
  };
 }
