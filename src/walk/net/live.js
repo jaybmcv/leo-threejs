@@ -45,7 +45,7 @@ export function connectLive(url,on,opts={}){
     case 'gone':on.gone?.(msg.id);break;
     case 'lift':on.lift?.(msg.id,msg.s);break;
     case 'mark':on.mark?.(msg.id,msg.at);break;
-    case 'aboard':on.aboard?.(msg.n);break;
+    case 'aboard':on.aboard?.(msg.n,Array.isArray(msg.names)?msg.names.filter(n=>typeof n==='string'):null);break;
     // The leaderboards (Alien Cat Invasion's, or Paw Pool's when game is 'pool'): the top ten and this visitor's
     // best, and a game's result.
     case 'board':on.board?.(msg);break;

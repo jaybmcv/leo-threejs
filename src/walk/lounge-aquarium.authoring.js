@@ -14,7 +14,7 @@ import {COMMONS} from '../model.authoring.js';
 // Built in the commons template's own frame (HYDRO_NIP_LOUNGE.md): x along the wall, z from the promenade side (4) to the
 // lounge (8), y up from the Deck 17 floor (24.3). The throat is the jaguar gate's: 4 m wide at x 137.25, 3.68 m high.
 export const AQUARIUM={x0:121.2,x1:154.3,back:4.07,glass:7.82,front:7.9,floor:24.3,bed:24.62,top:35.5,deck18:28,tunnel:{x0:135.25,x1:139.25,top:28.04}};
-const A=AQUARIUM,TUN=A.tunnel,WATER=new T.Color(0x05203f);
+const A=AQUARIUM,TUN=A.tunnel,WATER=new T.Color(0x073c47);
 const C=hex=>new T.Color(hex);
 const NEON=[0xff3fd0,0xff7a3d,0x8dff5a,0x3df0ff,0xa66bff,0xffe44d,0xff4f7a,0x4dffc3].map(C);
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
@@ -144,7 +144,7 @@ function fishShape(sp){
 export function createLoungeAquarium(ship,frame,colliders){frame=frame.clone().multiply(new T.Matrix4().makeTranslation(0,0,6));
  // The solid parts, in the world.
  const solid=new T.Group();solid.name='Lounge_aquarium_solid';
- for(const b of SOLIDS)solid.add(new T.Mesh(boxGeometry(b).applyMatrix4(frame)));
+ for(const b of SOLIDS){const o=new T.Mesh(boxGeometry(b).applyMatrix4(frame));o.userData.collisionOnly=true;solid.add(o);}
  colliders.addStatic(solid,()=>true);
  if(typeof document==='undefined')return null;
  // What the tank now holds (the deck plates and floors through it, railings planned round them) goes from drawing; the
@@ -157,7 +157,7 @@ export function createLoungeAquarium(ship,frame,colliders){frame=frame.clone().m
  const L=lists(),put=L.put,rnd=seeded(125),r=(a,b)=>a+(b-a)*rnd(),pick=a=>a[Math.floor(rnd()*a.length)];
  const flat=c=>()=>c;
  // The water has a dark lid and a sand bed either side of the throat.
- put('life',new T.PlaneGeometry(A.x1-A.x0,A.glass-A.back).rotateX(Math.PI/2).translate((A.x0+A.x1)/2,A.top-.02,(A.back+A.glass)/2),new T.Matrix4(),flat(C(0x0c3b63)));
+ put('life',new T.PlaneGeometry(A.x1-A.x0,A.glass-A.back).rotateX(Math.PI/2).translate((A.x0+A.x1)/2,A.top-.02,(A.back+A.glass)/2),new T.Matrix4(),flat(C(0x07545e)));
  for(const [x0,x1] of [[A.x0,TUN.x0],[TUN.x1,A.x1]]){
   const g=new T.PlaneGeometry(x1-x0,A.glass-A.back,Math.round((x1-x0)*2),6).rotateX(-Math.PI/2),p=g.attributes.position;
   for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setY(i,.08*Math.sin(x*1.3)*Math.sin(z*2.1)+.05*Math.sin(x*3.7+z));}
@@ -286,7 +286,7 @@ vec3 transformed=vec3(aBubble.x+sin(uTime*2.3+aBubble.z*40.)*.06,${A.bed.toFixed
  const mats={
   halos:new T.MeshBasicMaterial({name:'Aquarium_glow',map:halo,...add}),
   rays:new T.MeshBasicMaterial({name:'Aquarium_light_shafts',...add}),
-  glass:new T.MeshStandardMaterial({name:'Aquarium_glass',color:0x8fd8ff,roughness:.04,metalness:0,envMapIntensity:.7,transparent:true,opacity:.14,depthWrite:false,side:T.DoubleSide}),
+  glass:new T.MeshStandardMaterial({name:'Aquarium_glass',color:0x72e2db,roughness:.04,metalness:0,envMapIntensity:.7,transparent:true,opacity:.14,depthWrite:false,side:T.DoubleSide}),
   steel:new T.MeshStandardMaterial({name:'Aquarium_steel',color:0x1b2232,roughness:.38,metalness:.55}),
   line:new T.MeshBasicMaterial({name:'Aquarium_trim_glow',color:0x3df0ff,toneMapped:false}),
  };
@@ -304,7 +304,7 @@ vec3 transformed=vec3(aBubble.x+sin(uTime*2.3+aBubble.z*40.)*.06,${A.bed.toFixed
  const water=[TUN.x0-.02,TUN.x1+.02].map(x=>new T.PlaneGeometry(A.glass-A.back,TUN.top-A.floor).rotateY(Math.PI/2).translate(x,(A.floor+TUN.top)/2,(A.back+A.glass)/2));
  water.push(new T.PlaneGeometry(TUN.x1-TUN.x0,A.glass-A.back).rotateX(-Math.PI/2).translate((TUN.x0+TUN.x1)/2,TUN.top+.02,(A.back+A.glass)/2));
  for(const g of water){g.deleteAttribute('uv');g.deleteAttribute('normal');}
- mesh('Walk_aquarium_water',water,new T.MeshBasicMaterial({name:'Aquarium_water',color:0x0a4f86,transparent:true,opacity:.28,depthWrite:false,side:T.DoubleSide,toneMapped:false}),2);
+ mesh('Walk_aquarium_water',water,new T.MeshBasicMaterial({name:'Aquarium_water',color:0x087c80,transparent:true,opacity:.28,depthWrite:false,side:T.DoubleSide,toneMapped:false}),2);
  for(const g of steel)g.deleteAttribute('uv');
  mesh('Walk_aquarium_frame',steel,mats.steel);
  const lines=lineBoxes.map(b=>{const g=boxGeometry(b).toNonIndexed();g.deleteAttribute('uv');g.deleteAttribute('normal');return g;});

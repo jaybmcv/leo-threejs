@@ -61,11 +61,11 @@ export function createMudwater(ship,{urls={},anisotropy=1}={}){
 
  // The brand art. Each texture's panels are merged into one mesh, hidden until the texture arrives.
  const art=new Map(),pieces=[];
- const dress=(file,geos,{opaque=false,glow=false,cut=.04,metal=.35,rough=.42}={})=>{
+ const dress=(file,geos,{opaque=false,glow=false,cut=.04,metal=.35,rough=.42,renderOrder=0}={})=>{
   if(!urls[file])return false;
   const material=glow?new T.MeshBasicMaterial({name:'Mudwater_art_'+file,transparent:true,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,opacity:.85})
    :new T.MeshStandardMaterial({name:'Mudwater_art_'+file,transparent:!opaque,alphaTest:opaque?0:cut,roughness:opaque?.55:rough,metalness:opaque?.1:metal,polygonOffset:true,polygonOffsetFactor:-2});
-  const mesh=new T.Mesh(mergeGeometries(geos),material);mesh.name='Mudwater_brand_art';mesh.visible=false;group.add(mesh);
+  const mesh=new T.Mesh(mergeGeometries(geos),material);mesh.name='Mudwater_brand_art';mesh.renderOrder=renderOrder;mesh.visible=false;group.add(mesh);
   if(!art.has(file))art.set(file,[]);art.get(file).push(mesh);return true;
  };
  const hide=test=>room.traverse(o=>{if(o.isMesh&&test(o))o.visible=false;});
@@ -88,7 +88,8 @@ export function createMudwater(ship,{urls={},anisotropy=1}={}){
  // The gold coin set in the floor inside the door, upright to a walker coming in, and either side of the screen.
  const floorCoin=new T.PlaneGeometry(FLOOR_COIN.r*2,FLOOR_COIN.r*2).rotateX(-Math.PI/2).rotateY(-Math.PI/2).translate(FLOOR_COIN.x,.022,FLOOR_COIN.z);
  // (Matte: the coin's art is already shaded, and the floor one would mirror the bright ceiling.)
- dress('mudwater-coin-gold.png',[floorCoin,...WALL_COINS.map(z=>panel(1.5,1.5,[25.7,1.35,z],[-1,0,0]))],{metal:0,rough:1});
+ // Draw the wall coins before the transparent cards and beams. The floor coin shares this art mesh.
+ dress('mudwater-coin-gold.png',[floorCoin,...WALL_COINS.map(z=>panel(1.5,1.5,[25.7,1.35,z],[-1,0,0]))],{metal:0,rough:1,renderOrder:-1});
  // The rope frame round every gallery card, 7 cm out from it: the bake (render-bake.js) steps each of the card art's
  // merged colours out a few millimetres from the next, so the art can stand well proud of its nominal face. (The
  // frame's fine lines thin out as the texture shrinks, so it keeps more of their edge.)

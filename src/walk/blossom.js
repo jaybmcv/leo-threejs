@@ -1,3 +1,4 @@
+import {createSpatial,updateSpatial} from './spatial-audio.js';
 import * as T from 'three';
 import {roomObject} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -308,9 +309,9 @@ export function createBlossomGarden(ship){
  // The falls' sound: looped noise shaped like a small creek, bright and light on low rumble, made with Web Audio as the
  // ship's hum is (ambience.js), with small bubbles plinking into the water every so often. It follows the Sound button
  // and fades in as you come near.
- let ctx=null,gain=null,plink=0;
+ let ctx=null,gain=null,spatial=null,plink=0;
  function sound(){
-  ctx=new (window.AudioContext||window.webkitAudioContext)();gain=ctx.createGain();gain.gain.value=0;gain.connect(ctx.destination);
+  ctx=new (window.AudioContext||window.webkitAudioContext)();gain=ctx.createGain();gain.gain.value=0;spatial=createSpatial(ctx);gain.connect(spatial);
   const n=ctx.sampleRate*3,fade=2048,buf=ctx.createBuffer(2,n,ctx.sampleRate);
   for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);let b=0;for(let i=0;i<n;i++){const w=Math.random()*2-1;b=(b+.04*w)/1.04;d[i]=w*.4+b*1.6;}
    for(let i=0;i<fade;i++){const f=i/fade;d[i]=d[i]*f+d[n-fade+i]*(1-f);}}// the loop's ends cross-faded, so it has no seam
@@ -327,15 +328,16 @@ export function createBlossomGarden(ship){
   const t=ctx.currentTime,o=ctx.createOscillator(),v=ctx.createGain(),f=900+Math.random()*1100;
   o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*2.2,t+.06);
   v.gain.setValueAtTime(0,t);v.gain.linearRampToValueAtTime(.05*level,t+.005);v.gain.exponentialRampToValueAtTime(.0001,t+.09);
-  o.connect(v).connect(ctx.destination);o.start(t);o.stop(t+.1);
+  o.connect(v).connect(spatial);o.start(t);o.stop(t+.1);
  }
  const here=new T.Vector3(),falls=IMPACT.clone().applyMatrix4(root.matrixWorld);
  return {group,solid,
-  update(dt,walker,soundOn=false){
+  update(dt,walker,soundOn=false,camera=null){
    if(walker.distanceTo(here.copy(centre))<NEAR)animate(Math.min(dt,.1));
    const d=walker.distanceTo(falls),level=soundOn&&Math.abs(walker.y-falls.y)<4&&d<HEAR?(1-d/HEAR)**2:0;
    if(level>0&&!ctx&&navigator.userActivation?.hasBeenActive!==false)sound();
    if(!ctx)return;
+   updateSpatial(ctx,spatial,camera,falls);
    gain.gain.setTargetAtTime(level*.55,ctx.currentTime,.4);
    if(level>0&&ctx.state==='running'&&(plink-=dt)<=0){plink=.08+Math.random()*.4;drip(level);}
   },
