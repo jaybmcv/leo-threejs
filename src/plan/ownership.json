@@ -3705,6 +3705,7 @@
         "Container_maze_colliders",
         "Container_maze_start_header",
         "Container_maze_sign",
+        "Container_maze_board",
         "Container_maze_finish_floor",
         "Container_maze_console",
         "Container_maze_finish_sign"
@@ -3713,8 +3714,8 @@
         "Container_maze_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 33,
-      "signature": "1ee66944044453670830409137352c42426665942f11360b807c1a875e77d56f"
+      "placements": 40,
+      "signature": "6e7c801c50bf0a34b793cd7a1c165b7091fee2872eb9c283b2ffd26de36e852b"
     },
     {
       "source": "src/walk/maze/layout.js",
@@ -3740,7 +3741,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 1,
-      "signature": "72396855dcfb506473b9efbe248e0af8e601f42caf3b956651bc89a525f4fc6c"
+      "signature": "9ff568aa7c1c85743fb9709ac7f8dcf32c0e434c0a1bf47d7282c90270841c46"
     },
     {
       "source": "src/walk/mct-bay.js",

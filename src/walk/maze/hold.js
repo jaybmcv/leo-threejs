@@ -60,10 +60,15 @@ export function createMazeHold(ship){
   seam:new T.MeshStandardMaterial({name:'Container_maze_seam',color:0x1b2125,roughness:.8}),
   floor:new T.MeshStandardMaterial({name:'Container_maze_plywood',color:0x6b5038,roughness:.85}),
   label:new T.MeshStandardMaterial({name:'Container_maze_label',color:0xe9e4d6,roughness:.8}),
-  hazard:new T.MeshStandardMaterial({name:'Container_maze_hazard',color:0xffffff,map:stripes,roughness:.6})};
+  hazard:new T.MeshStandardMaterial({name:'Container_maze_hazard',color:0xffffff,map:stripes,roughness:.6}),
+  light:new T.MeshBasicMaterial({name:'Container_maze_light',color:0xffdb9b,toneMapped:false})};
  const parts=new Map(),put=(m,g)=>{if(!parts.has(m))parts.set(m,[]);parts.get(m).push(g);};
  const collider=(g,name)=>{const o=new T.Mesh(g);o.name=name;solid.add(o);};
  const random=rng(1151);
+ // Stable cargo IDs, shared by both ends of each container. They give landmarks without marking the solution.
+ const numbers=[];let cargoId=0;
+ const number=(axis,a,s,c,id,y=2.12)=>{const g=new T.PlaneGeometry(.92,.28);g.rotateY(axis==='x'?s*Math.PI/2:s<0?Math.PI:0);
+  g.translate(axis==='x'?a+s*.045:c,y,axis==='x'?c:a+s*.045);numbers.push({g,id});};
  // Door details on a container end at `a` (facing `s`, +1 or -1 along its axis), across c0..c1: the seam between the
  // two leaves, four locking bars and the header and sill.
  const doors=(axis,a,s,c0,c1)=>{const c=(c0+c1)/2,w=c1-c0,o=a+s*.012;
@@ -88,6 +93,7 @@ export function createMazeHold(ship){
   for(let k=0;k<n;k++){
    const b0=a0+k*len+(k?.03:0),b1=a0+(k+1)*len-(k<n-1?.03:0),m=paint[Math.floor(random()*paint.length)];
    put(m,along(axis,b0,b1,c0+.02,c1-.02,0,HEIGHT));doors(axis,b0,-1,c0+.02,c1-.02);doors(axis,b1,1,c0+.02,c1-.02);castings(axis,b0,b1,c0+.02,c1-.02);
+   const id=cargoId++;number(axis,b0,-1,(c0+c1)/2,id);number(axis,b1,1,(c0+c1)/2,id);
    // A white data plate on each long side.
    const at=b0+(b1-b0)*(.25+random()*.5);for(const c of [c0+.012,c1-.012])put(M.label,along(axis,at-.22,at+.22,c-.012,c+.012,1.5,1.82));
   }
@@ -97,15 +103,30 @@ export function createMazeHold(ship){
  const T_=.08,HALF=WALL/2;
  for(const h of MAZE.hollows){
   const axis=h.along,c0=h.c-HALF,c1=h.c+HALF,m=paint[Math.floor(random()*paint.length)];
+  const id=cargoId++;
   for(const [s0,s1] of [[c0,c0+T_],[c1-T_,c1]]){const g=along(axis,h.a0,h.a1,s0,s1,0,HEIGHT);put(m,g);collider(g.clone(),'Container_maze_hollow_solid');}
   {const g=along(axis,h.a0,h.a1,c0,c1,HEIGHT-T_,HEIGHT);put(m,g);collider(g.clone(),'Container_maze_hollow_solid');}
   put(M.floor,along(axis,h.a0+.02,h.a1-.02,c0+T_,c1-T_,0,.03));
   castings(axis,h.a0,h.a1,c0,c1);
+  // Warm diffusers under the roof, merged by material rather than adding a light to every container.
+  const lamps=Math.max(1,Math.ceil((h.a1-h.a0)/3.5));
+  for(let k=0;k<lamps;k++){const a=h.a0+(k+.5)*(h.a1-h.a0)/lamps;
+   put(M.steel,along(axis,a-.43,a+.43,h.c-.1,h.c+.1,HEIGHT-.17,HEIGHT-.08));
+   put(M.light,along(axis,a-.36,a+.36,h.c-.065,h.c+.065,HEIGHT-.18,HEIGHT-.165));}
   h.open.forEach((isOpen,e)=>{const a=e?h.a1:h.a0,s=e?1:-1;
-   if(!isOpen){const g=along(axis,a-s*T_,a,c0,c1,0,HEIGHT);put(m,g.clone());collider(g,'Container_maze_hollow_solid');doors(axis,a-s*T_,-s,c0+T_,c1-T_);return;}
+   if(!isOpen){const g=along(axis,a-s*T_,a,c0,c1,0,HEIGHT);put(m,g.clone());collider(g,'Container_maze_hollow_solid');doors(axis,a-s*T_,-s,c0+T_,c1-T_);number(axis,a-s*T_,-s,h.c,id);return;}
+   put(M.steel,along(axis,a-s*.02,a+s*.02,c0,c1,HEIGHT-.34,HEIGHT-.06));
+   number(axis,a,s,h.c,id,HEIGHT-.2);
    for(const side of [-1,1]){const hinge=side<0?c0:c1;put(m,along(axis,a+s*.02,a+s*.07,side<0?hinge-HALF:hinge,side<0?hinge:hinge+HALF,.05,HEIGHT-.05));}
   });
  }
+ // All number plates use one texture and one draw, including the open containers' headers.
+ const rows=Math.ceil(cargoId/8),numberMap=canvasTexture(1024,rows*64,(g)=>{g.fillStyle='#192126';g.fillRect(0,0,1024,rows*64);
+  g.fillStyle='#ece8dc';g.font='600 30px "Archivo", sans-serif';g.textAlign='center';g.textBaseline='middle';
+  for(let id=0;id<cargoId;id++)g.fillText('C-'+String(id+1).padStart(3,'0'),(id%8)*128+64,Math.floor(id/8)*64+32);});
+ const numberMat=new T.MeshBasicMaterial({name:'Container_maze_numbers',map:numberMap,color:0xffffff,toneMapped:false});
+ for(const {g,id} of numbers){const uv=g.attributes.uv,col=id%8,row=Math.floor(id/8);
+  for(let i=0;i<uv.count;i++)uv.setXY(i,(col+uv.getX(i))/8,1-(row+1-uv.getY(i))/rows);put(numberMat,g);}
  // The way in: a START header over the gap in the front row and a striped start line on the floor.
  const {z0:e0,z1:e1}=MAZE.entrance,ez=(e0+e1)/2;
  put(M.hazard,box(.32,.006,e1-e0,X0-.18,.003,ez));
@@ -121,6 +142,30 @@ export function createMazeHold(ship){
   map:signTexture(1040,580,[['CONTAINER MAZE',92,'#f85800',.35],['Find the red button in the middle.',46,'#f4f0e8',.45],['The clock starts as you step in,',46,'#f4f0e8',.25],
    ['and stops when you press it.',46,'#f4f0e8',.6],['Fastest times: press E here',38,'#2fd6c5',.3]]),roughness:.7}));
  sign.name='Container_maze_sign';sign.position.set(signAt.x,signAt.y,signAt.z);sign.rotation.y=-Math.PI/2;sign.userData.noCollide=true;group.add(sign);
+ // A flush screen beside the sign, facing the doorway. It never narrows the entrance or adds collision.
+ const screenAt={x:X0-.075,y:1.65,z:e1+6.5},screenCanvas=walkCanvas();
+ if(screenCanvas){screenCanvas.width=1024;screenCanvas.height=768;}
+ const screenMap=screenCanvas?new T.CanvasTexture(screenCanvas):null;if(screenMap){screenMap.colorSpace=T.SRGBColorSpace;screenMap.anisotropy=4;}
+ put(M.steel,box(.08,2.5,3.3,X0-.015,screenAt.y,screenAt.z));
+ const screen=new T.Mesh(new T.PlaneGeometry(3.2,2.4),new T.MeshBasicMaterial({name:'Container_maze_board',map:screenMap,color:0xffffff,toneMapped:false}));
+ screen.name='Container_maze_board';screen.position.set(screenAt.x,screenAt.y,screenAt.z);screen.rotation.y=-Math.PI/2;screen.userData.noCollide=true;group.add(screen);
+ const clock=ms=>{const s=ms/1000,m=Math.floor(s/60);return `${m}:${(s-m*60).toFixed(1).padStart(4,'0')}`;};
+ function setBoard(board){
+  if(!screenCanvas)return;const g=screenCanvas.getContext('2d');g.fillStyle='#10191e';g.fillRect(0,0,1024,768);
+  g.fillStyle='#f85800';g.fillRect(0,0,14,768);g.textAlign='left';g.textBaseline='top';g.font='600 60px "Archivo", sans-serif';g.fillText('FASTEST TIMES',64,40);
+  g.fillStyle='#b5cbc9';g.font='26px sans-serif';g.fillText('CONTAINER MAZE  /  FIXED COURSE',64,116);
+  const ready=board.status==='ok'||board.status==='guest';
+  if(ready&&board.top.length){board.top.slice(0,10).forEach((e,n)=>{const y=174+n*44;g.fillStyle=n%2?'#16252c':'#1b2d34';g.fillRect(48,y-3,928,41);
+   g.fillStyle='#65cbbd';g.font='26px monospace';g.textAlign='left';g.fillText(String(n+1).padStart(2,'0'),64,y);
+   g.fillStyle='#f4f0e8';g.font='28px sans-serif';g.fillText(String(e.name).slice(0,30),132,y,640);
+   g.font='28px monospace';g.textAlign='right';g.fillText(clock(e.ms),956,y);});}
+  else{g.fillStyle='#f4f0e8';g.font='32px sans-serif';g.textAlign='left';
+   g.fillText(ready?'No times yet. Find the red button.':board.status==='offline'?'Best-times board offline.':board.status==='unavailable'?'Best-times board unavailable.':'Loading best times...',64,220,900);}
+  g.textAlign='left';g.fillStyle='#65cbbd';g.font='26px sans-serif';
+  g.fillText(ready?'Shared times / refreshes every 15 seconds':board.status==='loading'?'Waiting for Leo live': 'Runs still keep a best in this browser.',64,668);
+  g.fillStyle='#b5cbc9';g.font='24px sans-serif';g.fillText('Connect Discord to post times. Press E for details.',64,714);screenMap.needsUpdate=true;
+ }
+ setBoard({status:'loading',top:[]});
  // The middle: a chequered floor, and the console with its red button against the cell's closed side.
  const [gx0,gz0]=[cellX0(GOAL.i),cellZ0(GOAL.j)],floorMat=new T.MeshStandardMaterial({name:'Container_maze_finish_floor',color:0xffffff,map:checker(),roughness:.8});
  if(floorMat.map)floorMat.map.repeat.set(CELL_X/1.2,CELL_Z/1.2);
@@ -146,6 +191,7 @@ export function createMazeHold(ship){
  let pressed=-1;
  return {
   group,solid,
+  setBoard,
   // A ship point in the room's frame, its y from the hold's floor.
   toLocal(p){return local.copy(p).applyMatrix4(toRoom);},
   // A room point in ship coordinates.
@@ -154,6 +200,7 @@ export function createMazeHold(ship){
   near(p){const q=this.toLocal(p);if(Math.abs(q.y)>1.5)return null;
    if(Math.hypot(q.x-b.x,q.z-b.z)<REACH)return 'button';
    if(Math.hypot(q.x-signAt.x,q.z-signAt.z)<SIGN_REACH&&q.x<X0)return 'sign';
+   if(Math.hypot(q.x-screenAt.x,q.z-screenAt.z)<SIGN_REACH&&q.x<X0)return 'sign';
    return null;},
   press(now){pressed=now;},
   // The button goes down and comes back up after a press.

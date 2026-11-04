@@ -8,6 +8,7 @@ import {MAZE_START,X0,inMaze,inFront} from './layout.js';
 //   hold: hold.js's maze;  live(): the Leo live link or null;  goTo(at,yaw): put the walker somewhere (ship coords);
 //   onOpen()/onClose(): the board sheet opened or closed (the walk stands still behind it);  muted(): Sound is off.
 const BEST_KEY='leo-maze-best';
+const BOARD_MS=15000,REPLY_MS=6000;
 const clock=ms=>{const s=ms/1000,m=Math.floor(s/60);return `${m}:${(s-m*60).toFixed(1).padStart(4,'0')}`;};
 const CSS=`
 #maze-clock{position:fixed;left:50%;top:108px;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--orange);border-radius:999px;padding:7px 8px 7px 16px;font:400 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
@@ -37,7 +38,8 @@ export function createMazeGame({hold,live,goTo,onOpen,onClose,muted=()=>false}){
  const sheet=el('div',{id:'maze-sheet',className:'sheet',hidden:true},el('div',{className:'card',role:'dialog'},el('div',{className:'eyebrow',textContent:'Container maze · Deck 1'}),
   title,big,note,el('h3',{textContent:'Fastest times'}),list,mine,el('div',{className:'row'},back,close)));
  document.body.append(bar,toast,sheet);
- let state='idle',t0=0,wasFront=false,ran=null,result=null,board={status:'loading',top:[],you:null},toastTimer=0,audio=null;
+ let state='idle',t0=0,wasFront=false,ran=null,result=null,board={status:'loading',top:[],you:null},toastTimer=0,audio=null,
+  boardDue=0,boardPending=0,resultPending=0,runKept=false;
  const best=()=>{try{const v=+localStorage.getItem(BEST_KEY);return v>0?v:null;}catch{return null;}};
  const keepBest=ms=>{const b=best();if(b&&b<=ms)return false;try{localStorage.setItem(BEST_KEY,String(ms));}catch{}return true;};
  // A short beep on starting, and three rising notes on stopping the clock.
@@ -55,16 +57,24 @@ export function createMazeGame({hold,live,goTo,onOpen,onClose,muted=()=>false}){
   else if(!r)note.append('Saving your time…');
   else if(r.ok)note.append(...(r.newBest?[el('b',{textContent:'A new best'}),` · rank ${r.rank} on the board.`]:[`Your best is ${clock(r.best)}, rank ${r.rank}.`]));
   else note.append({'sign-in':'Connect Discord to put your times on the board.',offline:r.kept?'A new best in this browser. Not connected to Leo live, so it isn’t on the board.':'Not connected to Leo live: this time isn’t on the board.',
-   rejected:'This time wasn’t accepted for the board.'}[r.why]||'');
+   unavailable:'The shared board did not answer. Your browser best is still kept.',rejected:'This time wasn’t accepted for the board.'}[r.why]||'');
   list.textContent='';
-  if(!board.top.length)list.append(el('li',{className:'empty',textContent:board.status==='offline'?'The board is offline.':board.status==='loading'?'Loading…':'No times yet: be the first.'}));
+  if(!board.top.length)list.append(el('li',{className:'empty',textContent:board.status==='offline'?'The board is offline.':board.status==='unavailable'?'The board did not answer. Please try again shortly.':board.status==='loading'?'Loading…':'No times yet: be the first.'}));
   board.top.forEach((e,n)=>list.append(el('li',{},el('span',{textContent:String(n+1)}),el('span',{textContent:e.name}),el('span',{textContent:clock(e.ms)}))));
   const here=best();
   mine.textContent=[board.you?`Your best on the board: ${clock(board.you.ms)} · rank ${board.you.rank}`:board.status==='guest'?'Connect Discord to post times.':'',here?`Your best in this browser: ${clock(here)}`:''].filter(Boolean).join(' · ');
   back.hidden=!(state==='done');
  }
+ function setBoard(next){board=next;hold.setBoard?.(board);if(!sheet.hidden)show();}
+ // Poll only in the entrance foyer or while reading the sheet. An old server may connect but never answer.
+ function requestBoard(now=performance.now()){
+  if(boardPending)return;boardDue=now+BOARD_MS;const link=live();
+  if(!link?.live){setBoard({status:'offline',top:[],you:null});return;}
+  if(board.status!=='ok'&&board.status!=='guest')setBoard({...board,status:'loading'});
+  boardPending=now+REPLY_MS;link.maze('board');
+ }
  function open(){
-  board={...board,status:'loading'};const link=live();if(link?.live)link.maze('board');else board={status:'offline',top:[],you:null};
+  requestBoard();
   show();if(sheet.hidden){onOpen?.();sheet.hidden=false;close.focus();}
  }
  function hide(){if(sheet.hidden)return;sheet.hidden=true;onClose?.();}
@@ -81,13 +91,22 @@ export function createMazeGame({hold,live,goTo,onOpen,onClose,muted=()=>false}){
    if(state!=='running'){ran=null;result=null;open();if(state==='idle')say('Walk in through START to time a run');return;}
    state='done';ran=Math.round(now-t0);result=null;bar.hidden=true;beep([[660,0,.12],[880,.12,.12],[1320,.24,.3]]);
    const kept=keepBest(ran),link=live();
-   if(link?.live)link.maze('finish',{ms:ran});else result={ok:false,why:'offline',kept};
+   runKept=kept;resultPending=0;
+   if(link?.live){resultPending=now+REPLY_MS;link.maze('finish',{ms:ran});}else result={ok:false,why:'offline',kept};
    open();
   },
   // Each frame: start, run or drop the clock from where the walker is.
   update(p,now=performance.now()){
    hold.update(now);
    const q=hold.toLocal(p),inside=inMaze(q.x,q.y,q.z),front=inFront(q.x,q.y,q.z);
+   const foyer=q.x<=X0&&q.x>X0-10&&Math.abs(q.z)<17&&Math.abs(q.y)<1.5;
+   if(!live()?.live){boardPending=0;boardDue=0;if(board.status!=='offline')setBoard({status:'offline',top:[],you:null});
+    if(resultPending){resultPending=0;result={ok:false,why:'offline',kept:runKept};if(!sheet.hidden)show();}}
+   else{
+    if(boardPending&&now>=boardPending){boardPending=0;setBoard({status:'unavailable',top:[],you:null});}
+    if((foyer||!sheet.hidden)&&now>=boardDue&&!boardPending)requestBoard(now);
+   }
+   if(resultPending&&now>=resultPending){resultPending=0;result={ok:false,why:'unavailable'};if(!sheet.hidden)show();}
    if(state==='idle'&&inside&&wasFront&&q.x<X0+2){state='running';t0=now;bar.hidden=false;toast.hidden=true;beep([[880,0,.15]]);live()?.maze('start');}
    else if(state!=='idle'&&!inside){if(state==='running')say('Run dropped: you left the maze');state='idle';bar.hidden=true;}
    if(state==='running')time.textContent=clock(now-t0);
@@ -95,8 +114,8 @@ export function createMazeGame({hold,live,goTo,onOpen,onClose,muted=()=>false}){
   },
   // Leo live's answers: the board, and a finished run's result.
   fromServer(msg){
-   if(msg.op==='board'){board={status:msg.verified?'ok':'guest',top:Array.isArray(msg.top)?msg.top:[],you:msg.you||null};if(!sheet.hidden)show();}
-   else if(msg.op==='result'){result=msg;if(msg.ok)live()?.maze('board');if(!sheet.hidden)show();}
+   if(msg.op==='board'){boardPending=0;setBoard({status:msg.verified?'ok':'guest',top:Array.isArray(msg.top)?msg.top.slice(0,10):[],you:msg.you||null});}
+   else if(msg.op==='result'){resultPending=0;result=msg;if(msg.ok)requestBoard();if(!sheet.hidden)show();}
   },
   close:hide,
  };
