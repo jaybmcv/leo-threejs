@@ -1,1 +1,10 @@
-{}
+{
+  "d4-escape-s-9": {
+    "add": [
+      {"part":"emergency_drill_stand","size":[0.14,1.02,0.14],"at":[9.48,0.64,1.5],"mat":"metal","noCollide":true},
+      {"part":"emergency_drill_mount","size":[0.13,0.86,0.82],"at":[9.48,1.57,1.5],"mat":"navy","noCollide":true},
+      {"part":"emergency_drill_button","size":[0.16,0.42,0.42],"at":[9.32,1.48,1.5],"mat":"red","noCollide":true},
+      {"part":"sign","text":"Emergency Drill","size":[0.78,0.2,0.025],"at":[9.4,1.88,1.5],"yaw":-1.5707963267948966,"mat":"navy","noCollide":true}
+    ]
+  }
+}
