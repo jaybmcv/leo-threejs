@@ -31,6 +31,9 @@ export const DRESSINGS={
   consumers:['src/walk/prepare.js','src/walk/prepare.authoring.js'],glue:'const booth=createSelfieBooth();colliders.addStatic(booth.group);',
   imports:['package:three','src/walk/canvas.js','src/fin-crown.js','src/concept-shape.js','src/v2/prepared-geometry-record.js']},
 };
+// An edit the patch can't carry (a lost tag, a new texture or instancing, a replay mismatch) takes the wider build
+// rather than failing the deploy; the full pipeline supports it.
+const decline=(ok,message)=>{if(!ok)throw Error(message+'; take the wider build');};
 export const dressingOwners=ids=>new Set(ids.map(id=>DRESSINGS[id].owner));
 
 // null: not a dressing-only change (the normal lanes decide). {reason}: a dressing file changed but it can't be
@@ -80,17 +83,17 @@ const shape=root=>{const rows=[];root.updateMatrixWorld(true);root.traverse(o=>{
 export async function compileDressing(id){
  const d=DRESSINGS[id];shims();
  const {geometryRecords}=await import('../src/v2/prepared-geometry-record.js'),before=new Set(geometryRecords().keys());
- const authored=(await import('../'+d.authoring))[d.create](),group=authored.group;assert.equal(group.userData.fastDressing,id,'Dressing '+id+' lost its owner tag');
+ const authored=(await import('../'+d.authoring))[d.create](),group=authored.group;decline(group.userData.fastDressing===id,'Dressing '+id+' lost its owner tag');
  // The glue's addStatic, after installGround (ground.js) has made it feed the walkable surfaces to the ground bands too.
  const col=new Colliders(),ground=new Colliders();col.addStatic(group);ground.addStatic(group,o=>solid(o)&&groundMesh(o));
  const pending=c=>[...c.pending].sort(([a],[b])=>a-b).map(([band,list])=>{for(const r of list.ownerSpans)assert.equal(r.owner,d.owner,'Dressing collision outside its owner');return {band,positions:list.values.slice(),flags:list.flags.slice(0,list.flagLength),spans:list.ownerSpans};});
  const collision=pending(col),groundCollision=pending(ground);
- for(const key of geometryRecords().keys())assert(before.has(key)||key.startsWith(d.site),'Dressing '+id+' recorded another module\'s geometry: '+key.slice(0,80));
+ for(const key of geometryRecords().keys())decline(before.has(key)||key.startsWith(d.site),'Dressing '+id+' recorded another module\'s geometry: '+key.slice(0,80));
  const templates=[...geometryRecords()].filter(([key])=>key.startsWith(d.site));
  // The public variant must find every template it replays and rebuild the same meshes.
  globalThis.__leoDressingTemplates=new Map(templates);const replayed=(await import('../'+d.public))[d.create]().group;
- assert.equal(shape(replayed),shape(group),'Public '+id+' replay differs from its authoring geometry');
- const plain=(await import('../'+d.source))[d.create]().group;assert.equal(plain.userData.fastDressing,id);
+ decline(shape(replayed)===shape(group),'Public '+id+' replay differs from its authoring geometry');
+ const plain=(await import('../'+d.source))[d.create]().group;decline(plain.userData.fastDressing===id,'Dressing '+id+' model lost its owner tag');
  prepareArrivalCanvasExport(plain);shareExportGeometry(plain);
  // Model finalization (retire-obsolete-facades-v2.mjs) prunes the exported ship: Node's canvas textures export as
  // transparent black and fold into their material's colour factor.
@@ -108,8 +111,10 @@ async function patchDressingModels({baseline,destination,compiled}){
   const fragments=[alignGlb(bin)];let length=fragments[0].length;const append=bytes=>{const offset=length,b=alignGlb(Buffer.from(bytes));fragments.push(b);length+=b.length;return offset;};
   const retire=i=>{const n=j.nodes[i];delete n.mesh;delete n.extensions;delete n.extras;for(const c of n.children||[])retire(c);};
   for(const c of mine){
-   const old=tagged.get(c.id),parent=j.nodes.findIndex(n=>n.children?.includes(old));assert(parent>=0,'Dressing '+c.id+' is not inside the ship model');found.set(c.id,file);
-   const {json:a,bin:abin}=parseGlb(c.model);assert(!a.images?.length&&!a.textures?.length&&!a.skins?.length&&!a.animations?.length&&a.scenes[a.scene||0].nodes.length===1,'Dressing model patch must be one static untextured root');
+   const old=tagged.get(c.id),parent=j.nodes.findIndex(n=>n.children?.includes(old));decline(parent>=0,'Dressing '+c.id+' is not inside the ship model');found.set(c.id,file);
+   const {json:a,bin:abin}=parseGlb(c.model);decline(!a.images?.length&&!a.textures?.length&&!a.skins?.length&&!a.animations?.length&&a.scenes[a.scene||0].nodes.length===1,'Dressing model patch must be one static untextured root');
+   // Only plain meshes are relocated: instancing, compression and morph targets hold indices this copy doesn't remap.
+   decline(!(a.extensionsUsed||[]).some(e=>!/^KHR_(materials_|texture_transform)/.test(e))&&!(a.nodes||[]).some(n=>n.extensions)&&!(a.meshes||[]).some(m=>m.extensions||m.primitives.some(p=>p.extensions||p.targets)),'Dressing model uses instancing, compression or morph targets');
    const viewOffset=j.bufferViews.length,accessorOffset=j.accessors.length,materialOffset=(j.materials||[]).length,meshOffset=j.meshes.length,nodeOffset=j.nodes.length,binOffset=append(abin);
    j.bufferViews.push(...a.bufferViews.map(v=>({...v,buffer:0,byteOffset:binOffset+(v.byteOffset||0)})));
    j.accessors.push(...a.accessors.map(x=>({...x,bufferView:x.bufferView+viewOffset})));j.materials??=[];j.materials.push(...(a.materials||[]));
