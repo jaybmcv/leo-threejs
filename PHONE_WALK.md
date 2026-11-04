@@ -45,12 +45,46 @@ Measured with `scripts/phone-working-set.mjs` on the prepared build in leo-deplo
 
 So step 3 has to be its own phone payload with its own buffers. It can't be a reader over today's files. Its view up the atrium has to come from a light stand-in, not the real upper decks.
 
+## The phone walk (step 3, 2026-11-04)
+
+`scripts/build-phone-walk.mjs` cuts the verified prepared build down to one connected area: the Deck 2 arrival hall and Hydroponic garden A over it (the hall's ceiling opens into the garden, and its cat tree climbs up to it), with 6 m around them. The output keeps the prepared-walk format, so `readPreparedWorld` reads it unchanged:
+
+- **The whole node graph, names and templates stay,** so the walk code finds everything it looks for.
+- **Render geometry whose world bounds meet the area** keeps its triangles. Any geometry that reads a shared vertex pool is copied out into buffers of its own; triangle order is kept, so index ranges still hold. Everything else keeps only its bounds, as the baked source meshes already do.
+- **Some meshes stay whole wherever they are, because the walk reads them at start:**
+  - live source meshes (doors, hammocks), which feed merges whose templates are keyed on their contents;
+  - geometry templates, copied byte for byte;
+  - cabin frost;
+  - the facade's tower, sky and atrium floor, from which the phone distant view is drawn. Together with the existing phone distant hull, these are the light stand-in for the view up the atrium.
+- **Collision keeps the triangles that meet the area,** and those bands' BVHs are rebuilt. Instance copies outside the area are dropped; movers are kept.
+- **Pictures only emptied meshes use** become a 1×1 pixel.
+
+It takes about 8 s from a built prepared walk. Views from six spots in the hall and two in the garden match the whole ship's; only views out of the area (through the passenger-transfer glass) show nothing beyond it. Desktops still load the whole ship. `scripts/public-v2.mjs` runs it on every public build (`scripts/phone-walk-public.mjs`) into `prepared-walk-phone/<hash>/`, listed as `walk-phone` in the asset manifest. None of these files are geometry inputs, so deploys stay in the fast lane.
+
+On the walk side:
+
+- walk.html sends phones and 4 GB touch devices straight to the phone walk (`LEO_WALK_PHONE`). `?ship=full` asks for the whole ship and its start card instead.
+- `prepared-resource.public.js` loads `walk-phone`.
+- `main.public.js` keeps the walker inside the area (a walker carried off it comes back to the start). It also says, for a few seconds, that the phone walk is the arrival hall when the edge or a Go to destination outside the hall stops them. It skips the atrium detail pack.
+
+In phone emulation on the gaming PC (390×844, DPR 3, Android user agent, cold cache), against a1663a2's whole ship:
+
+| | Whole ship | Phone walk |
+|---|---|---|
+| Download | 137.5 MB | 45.7 MB (the walk payload is 23 MB of it) |
+| Decoded geometry and collision | 1,090 MB | 107 MB |
+| Peak JS heap while loading | 1.69 GB | 496 MB |
+| JS heap after load and a GC | about 1.4 GB | 174 MB |
+| Walkable | 81 s | 25 s |
+
+Desktop Chrome collects garbage late, so its loading peak is mostly garbage a phone under memory pressure would collect sooner. Only a real phone will say what the peak is there.
+
 ## Steps
 
 0. **Stop the silent crashes** (this branch). walk.html sets the start note before the walk script loads, records how far loading got, and clears both once the walk is ready. Likely phones (coarse pointer and a small screen or mobile user agent; not tablets or touch laptops) see the guided-tour card first, with Try anyway; a phone that has finished loading before goes straight in. `scripts/check-phone-memory.mjs` reports download, peak heap and time to a walkable view in phone emulation. It reports only and blocks nothing.
 1. **Real phones, now.** Safari on a named iPhone; Chrome on a 4 GB and an 8 GB Android. Record where each stops: network, stalled decode, WebGL context loss or the tab closing. So far (2026-11-04): a Galaxy S20 Ultra (12 GB) stalled on the first try and loaded after a refresh. A Galaxy S9 (about 4 GB) never finished: the loading line flashed between "Loading prepared collisions…" and "Fitting the walls…", then the tab crashed and the phone overheated. No iPhone yet.
 2. **Measure one phone working set.** Done for the arrival spot (above). Not yet measured: a route away from arrival, and the overlap while moving between areas.
-3. **Build the smallest useful phone walk.** One connected area, simple collision, a light atrium and distant hull, loaded on its own rather than loaded and hidden. Step 2 ruled out reading only some of today's files (every band needs the main pool), so this is a separate phone payload with its own buffers: the arrival hall within about 40 m, its collision, the phone distant hull, and a stand-in for the view up the atrium.
+3. **Build the smallest useful phone walk.** Done in phone emulation (above): the arrival hall and the garden over it, from a payload of their own, with their collision, the phone distant hull and the facade's tower and sky for the view up the atrium. Next: the same real phones as step 1, starting with the Galaxy S9 that couldn't load the whole ship.
 4. **Keep phone changes quick to build.** Derive the phone payload from the verified prepared build without the full rebuild where the inputs allow, with its own integrity and publishing support.
 5. **Stream only if phones need more of the ship.** Prototype with two areas, one of them the atrium, before splitting the whole ship: explicit dependencies, a bounded resident set, waiting navigation, safe collision handoff, cancellation and recovery.
 6. **Agree acceptance from real phones** (Jay's call, since he retired the blocking limits on 2026-11-02). Measure a walkable view and the worst transitions, not the login card. Starting targets from the review: 10–15 MB to a walkable view, at most 350 MB peak JS heap including transitions, about 100 MB of decoded geometry and collision resident, time measured on a named phone. Narrow the step 0 card only once phones pass.

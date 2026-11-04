@@ -7,6 +7,8 @@ import layout from '../plan/selected-layout.js';
 import {readPreparedWorld} from './prepared-codec.public.js';
 let prepared=null;const cabinPlanById=new Map(layout.cabins.map(c=>[c.id,c]));
 export const preparedDecks=layout.decks;
+// The phone walk's area (the arrival hall and a margin), or null for the whole ship.
+export const preparedPhoneArea=preparedResource.phone?new T.Box3(new T.Vector3(...preparedResource.phone.area[0]),new T.Vector3(...preparedResource.phone.area[1])):null;
 export const preparedPlacements=()=>prepared?.manifest.privacy.map(c=>({...cabinPlanById.get(c.id),...c,matrix:new T.Matrix4().fromArray(c.matrix)}))||[];
 export async function loadPreparedShip(scene,status){const location=new URL(typeof __PREPARED_URL__!=='undefined'?__PREPARED_URL__:'./prepared-walk/',import.meta.url);const loaded=preparedResource;const {ship}=loaded;restoreRoomAnchors(ship.root,ship.v2RoomAnchors);ship.v2PreparedPrivacy=loaded.manifest.privacy;ship.v2PreparedFrost=loaded.frost;ship.layout=layout;prepared={ship,manifest:{privacy:ship.v2PreparedPrivacy}};return ship;}
 export function preparedBake(ship){rememberPreparedStatic(ship);ship.root.traverse(o=>{if(!o.isMesh||o.isInstancedMesh)return;for(let p=o;p;p=p.parent)if(p.userData.keepLive)return;o.visible=false;o.userData.baked=true;});return ship.v2PreparedBake;}

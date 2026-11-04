@@ -8,7 +8,7 @@ import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
 import {settlePreparedStatic} from '../v2/prepared-static.js';
 import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
 import {createAtriumSight} from '../v2/atrium-sight.js';
-import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns} from '../v2/prepared-runtime.public.js';
+import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns,preparedPhoneArea} from '../v2/prepared-runtime.public.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
 import {gotoStand as v2GotoStand,yarnPlace} from '../v2/wayfinding.js';
 import {addWayfindingGuides} from '../v2/wayfinding-guides.js';
@@ -362,7 +362,7 @@ async function buildShip(){
   const key=o.parent.uuid+'|'+(o.userData.cabinIds||[o.uuid]).join(',');if(sharedNear.has(key)){o.userData.near=sharedNear.get(key);continue;}const all=Array.from({length:o.count},(_,i)=>{const m=new T.Matrix4();o.getMatrixAt(i,m);return m;});
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};sharedNear.set(key,o.userData.near);
  }
- isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});settlePreparedStatic(ship);
+ isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=preparedPhoneArea?null:createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});settlePreparedStatic(ship);
 }
 let imagingScans=null,missionTimer=null;
 let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
@@ -525,6 +525,11 @@ async function loadCosmo(){
 const START={position:new T.Vector3(...toWorld('d02-arrival-1',[-20,0,0])),yaw:anchoredYaw('d02-arrival-1',Math.PI/2)};
 // Below this a walker has fallen out of the ship: 3 m under Deck 1's floor.
 const BELOW_SHIP=floorY(1)-3;
+// The phone walk has only the arrival hall (preparedPhoneArea, PHONE_WALK.md step 3). Its edge, 2 m inside the margin
+// that still has floor, holds the walker in, and a walker carried off the deck comes back to the start.
+const phoneFence=preparedPhoneArea?.clone().expandByVector(new T.Vector3(-2,0,-2));
+// Said for a few seconds when the edge or a place outside the hall stops a phone walker.
+let phoneLimitTimer=0;const phoneLimit=()=>{if(!phoneFence)return;$('phone-limit').hidden=false;clearTimeout(phoneLimitTimer);phoneLimitTimer=setTimeout(()=>{$('phone-limit').hidden=true;},5000);};
 await Promise.all([loadExterior(),loadCosmo()]).catch(e=>{status(e.message);throw e;});
 await buildShip();
 // A walk link (link.js) starts wherever it was taken; otherwise the arrival hall.
@@ -721,6 +726,8 @@ renderer.setAnimationLoop(()=>{
  treasure?.step(dt,k);
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
  const p=controller.position;
+ if(phoneFence){if(p.y<phoneFence.min.y||p.y>phoneFence.max.y){controller.place(findStand(colliders,START.position.toArray())||START.position);emote=null;}
+  else{const x=Math.min(Math.max(p.x,phoneFence.min.x),phoneFence.max.x),z=Math.min(Math.max(p.z,phoneFence.min.z),phoneFence.max.z);if(x!==p.x||z!==p.z){p.x=x;p.z=z;controller.velocity.x=controller.velocity.z=0;phoneLimit();}}}
  // The parked ball is solid to walk into.
  if(!inBall&&!resting&&!run&&Math.abs(p.y-ball.mesh.position.y)<1.2){const b=ball.mesh.position,dx=p.x-b.x,dz=p.z-b.z,d=Math.hypot(dx,dz),reach=BALL.radius+BODY.radius;
   if(d<1e-4)p.x+=reach;else if(d<reach){p.x+=dx/d*(reach-d);p.z+=dz/d*(reach-d);}}
@@ -985,7 +992,7 @@ function toggleEmotes(){
  EMOTES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';const label=name.replace(/_/g,' ');b.textContent=`${bindingLabel(walkBindings.get('emote:'+i))} · ${label[0].toUpperCase()}${label.slice(1)}`;b.onclick=()=>{closePanels();actions.emote(i);};list.appendChild(b);});
  panel.hidden=false;input.enabled=false;list.querySelector('button')?.focus();
 }
-function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(colliders,place.at):findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();
+function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(colliders,place.at):findStand(colliders,place.at);if(!q||phoneFence&&!phoneFence.containsPoint(q)){phoneLimit();return false;}if(pawsOff?.active)pawsOff.leave();
  treasure?.leave(false);
  // Going elsewhere from a transporter's driver's seat leaves it parked where it is.
  if(resting?.spot.mct?.seat==='driver')mct.park(resting.spot.mct.cart);resting=null;
