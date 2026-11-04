@@ -183,7 +183,7 @@ export function buildLayoutV2(){
 
 // Rooms whose door moves along its wall from the middle (m, world x). Container hold A's maze (src/walk/maze) fills the
 // hold from 9.8 m inside its aft end, so the door opens onto that open aft strip rather than into the maze.
-const DOOR_ALONG={'d01-cargo-1':-21};
+const DOOR_ALONG={'d01-cargo-1':-21,'d16-theater-5':-18.5};
 
 const NEW_PROGRAM={
  1:['Dockside crew mess','Rover & suit workshop','Quartermaster & supply office','Crew lounge','Container hold C','Spare-parts racks','Cold stores B'],

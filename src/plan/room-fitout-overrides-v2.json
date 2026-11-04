@@ -114,5 +114,12 @@
       {"part":"emergency_drill_button","size":[0.16,0.42,0.42],"at":[9.32,1.48,1.5],"mat":"alarm","noCollide":true},
       {"part":"sign","text":"Emergency Drill","size":[0.78,0.2,0.025],"at":[9.4,1.88,1.5],"yaw":-1.5707963267948966,"mat":"navy","noCollide":true}
     ]
+  },
+  "d16-theater-5": {
+    "add": [
+      {"part":"interior_wall","size":[0.84,2.8,0.12],"at":[-25.42,1.4,-9],"mat":"navy"},
+      {"part":"interior_wall","size":[9.8,2.8,0.12],"at":[-16.9,1.4,-9],"mat":"navy"},
+      {"part":"interior_wall","size":[0.12,2.8,8],"at":[-12,1.4,-13],"mat":"navy"}
+    ]
   }
 }
