@@ -5,13 +5,16 @@
 //                 (doors, gates, lift cars, shutters) are left out, so they count as open. The atrium void is drawn as
 //                 the prisms of each deck's atrium outline.
 //  columns(...)   walkable floors under a grid of (x, z) points.
-//  run(samples)   per eye sample, whether any void prism face survives the occluders' depth in a cube map around it.
+//  run(samples)   per eye sample, whether any void prism face survives the occluders' depth in a cube map around it,
+//                 or the nearest surface lies in the atrium span but outside the eye's own local span: the walk draws
+//                 that only while the atrium counts as seen (another deck through a glass stair, say).
 // Leaving geometry out only ever shows more of the void, so every simplification here errs towards "visible".
 (()=>{
  const w=globalThis.__walk,T=w.T,col=w.colliders,renderer=w.renderer;
- const CHUNK=24,MIN_AREA=.004,TILE=128,ATLAS=2048,PER_ROW=ATLAS/TILE,TILES=PER_ROW*PER_ROW;
+ // FAR: the whole ship's length, past the walk's own far camera (src/walk/main.public.js) at any eye.
+ const CHUNK=24,MIN_AREA=.004,TILE=128,ATLAS=2048,PER_ROW=ATLAS/TILE,TILES=PER_ROW*PER_ROW,FAR=600;
  const FACES=[[1,0,0,0,-1,0],[-1,0,0,0,-1,0],[0,1,0,0,0,1],[0,-1,0,0,0,-1],[0,0,1,0,-1,0],[0,0,-1,0,-1,0]];
- let occluders,prisms,voidBox,rt,cameras,pixels;
+ let occluders,prisms,voidBox,rt,cameras,pixels,atriumSpan,localSpan;
  function chunked(){
   const chunks=new Map(),t=new Float32Array(9),v=new T.Vector3();let kept=0,skipped=0;
   const add=key=>{let c=chunks.get(key);if(!c)chunks.set(key,c={values:new Float32Array(4096),length:0});if(c.length+9>c.values.length){const g=new Float32Array(c.values.length*2);g.set(c.values);c.values=g;}c.values.set(t,c.length);c.length+=9;};
@@ -24,10 +27,16 @@
   const each=(bvh,matrices)=>{const g=bvh.geometry,p=g.attributes.position.array,index=g.index?.array,flags=bvh.leoWindowFlags,n=(index?index.length:p.length/3)/3;for(const m of matrices)for(let f=0;f<n;f++)if(!flags?.[f])triangle(p,index,f,m);};
   for(const band of col.bands.values())each(band.bvh,[null]);
   for(const group of col.groups)each(group.bvh,group.items.map(item=>item.matrix));
-  const scene=new T.Scene(),material=new T.MeshBasicMaterial({side:T.DoubleSide,colorWrite:false});
+  // Each surface marks itself when it lies in the atrium span (band.xy) but outside the eye's local span (band.zw); the
+  // nearest one wins the depth test, so a marked pixel is such a surface in plain view.
+  const material=new T.ShaderMaterial({side:T.DoubleSide,uniforms:{band:{value:new T.Vector4()}},
+   // The walk's renderer keeps a logarithmic depth buffer; without its chunks this depth would not compare with the void's.
+   vertexShader:'#include <common>\n#include <logdepthbuf_pars_vertex>\nvarying float wy;\nvoid main(){vec4 w=modelMatrix*vec4(position,1.);wy=w.y;gl_Position=projectionMatrix*viewMatrix*w;\n#include <logdepthbuf_vertex>\n}',
+   fragmentShader:'#include <logdepthbuf_pars_fragment>\nuniform vec4 band;varying float wy;\nvoid main(){\n#include <logdepthbuf_fragment>\ngl_FragColor=vec4(wy>=band.x&&wy<=band.y&&(wy<band.z||wy>band.w)?1.:0.,0.,0.,1.);}'});
+  const scene=new T.Scene();
   for(const c of chunks.values()){const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(c.values.slice(0,c.length),3));g.computeBoundingSphere();const m=new T.Mesh(g,material);m.matrixAutoUpdate=false;scene.add(m);}
   scene.updateMatrixWorld(true);scene.matrixWorldAutoUpdate=false;
-  return {scene,chunks:chunks.size,kept,skipped};
+  return {scene,material,chunks:chunks.size,kept,skipped};
  }
  // `levels` [[outline [[x, z]...], y0, y1]...]: one closed prism per deck, caps included (a ray can enter the void
  // through the floor of a deck whose outline is wider than the one below).
@@ -44,8 +53,14 @@
   const scene=new T.Scene(),mesh=new T.Mesh(g,material);mesh.frustumCulled=false;scene.add(mesh);scene.updateMatrixWorld(true);
   return {scene,box};
  }
- function setup(levels){
-  const started=performance.now();occluders=chunked();prisms=prismScene(levels);voidBox=prisms.box;
+ // span: [low, high] the walk draws while the atrium is seen; local: [below, above] the walker's floor that its own
+ // span always covers; bands: {base, height} of the walk's bands, which show whole once a span reaches into them
+ // (showBands in src/walk/render-bake.js), so both spans widen to band edges.
+ let toBands;
+ function setup(levels,span,local,bands){
+  const started=performance.now();occluders=chunked();prisms=prismScene(levels);voidBox=prisms.box;localSpan=local;
+  const edge=(y,up)=>bands.base+(Math.floor((y-bands.base)/bands.height)+(up?1:0))*bands.height;toBands=([a,b])=>[edge(a,false),edge(b,true)];
+  atriumSpan=toBands(span);
   rt=new T.WebGLRenderTarget(ATLAS,ATLAS,{depthBuffer:true,stencilBuffer:false});rt.scissorTest=true;pixels=new Uint8Array(ATLAS*ATLAS*4);
   cameras=FACES.map(([x,y,z,ux,uy,uz])=>{const c=new T.PerspectiveCamera(90,1,.05,1000);c.up.set(ux,uy,uz);c.userData.dir=new T.Vector3(x,y,z);return c;});
   return {chunks:occluders.chunks,kept:occluders.kept,skipped:occluders.skipped,ms:Math.round(performance.now()-started),void:[voidBox.min.toArray(),voidBox.max.toArray()]};
@@ -66,9 +81,9 @@
   return out;
  }
  const frustum=new T.Frustum(),matrix=new T.Matrix4();
- // samples: flat [x, y, z, ...]. Returns one 0/1 per sample.
+ // samples: flat [x, y, z, walker floor y, ...]. Returns one 0/1 per sample.
  function run(samples){
-  const count=samples.length/3,result=new Uint8Array(count),tiles=[];let drawn=0;
+  const count=samples.length/4,result=new Uint8Array(count),tiles=[],band=occluders.material.uniforms.band.value;let drawn=0;
   const saved={target:renderer.getRenderTarget(),autoClear:renderer.autoClear,color:renderer.getClearColor(new T.Color()),alpha:renderer.getClearAlpha()};
   const flush=()=>{
    if(!tiles.length)return;
@@ -80,12 +95,13 @@
   renderer.autoClear=false;renderer.setClearColor(0x000000,0);
   try{
    for(let s=0;s<count;s++){
-    const eye=new T.Vector3(samples[s*3],samples[s*3+1],samples[s*3+2]);
-    let far=0;for(const a of ['x','y','z'])far+=Math.max(Math.abs(eye[a]-voidBox.min[a]),Math.abs(eye[a]-voidBox.max[a]))**2;far=Math.sqrt(far)+1;
+    const eye=new T.Vector3(samples[s*4],samples[s*4+1],samples[s*4+2]),floor=samples[s*4+3];
+    const [below,above]=toBands([floor+localSpan[0],floor+localSpan[1]]);band.set(atriumSpan[0],atriumSpan[1],below,above);
+    // Far enough for the void and for anything in the atrium span (which the walk draws out to its own far plane).
+    let far=0;for(const a of ['x','y','z'])far+=Math.max(Math.abs(eye[a]-voidBox.min[a]),Math.abs(eye[a]-voidBox.max[a]))**2;far=Math.max(Math.sqrt(far)+1,FAR);
     for(const c of cameras){
      c.position.copy(eye);c.far=far;c.updateProjectionMatrix();c.lookAt(eye.clone().add(c.userData.dir));c.updateMatrixWorld(true);
      frustum.setFromProjectionMatrix(matrix.multiplyMatrices(c.projectionMatrix,c.matrixWorldInverse));
-     if(!frustum.intersectsBox(voidBox))continue;
      if(tiles.length===TILES)flush();
      const tile=tiles.length,tx=(tile%PER_ROW)*TILE,ty=Math.floor(tile/PER_ROW)*TILE;
      rt.viewport.set(tx,ty,TILE,TILE);rt.scissor.set(tx,ty,TILE,TILE);renderer.setRenderTarget(rt);renderer.clear(true,true,false);

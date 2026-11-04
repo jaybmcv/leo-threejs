@@ -14,6 +14,7 @@ import layout from '../src/plan/selected-layout.js';
 import {PVS_GRID,encodeCells,decodeCells} from '../src/v2/atrium-pvs.js';
 import {atriumEnvelope} from '../src/v2/atrium-sight.js';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
+import {BAND} from '../src/walk/collision.js';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
 const tag=arg('tag','pvs-base'),port=Number(arg('cdp',9338)),site='http://127.0.0.1:'+arg('port',4211);
@@ -42,6 +43,11 @@ async function browser(){
 // picture there shows the atrium.
 const envelope=atriumEnvelope(),deck6=layout.decks.find(d=>d.number===6).y;
 const levels=[[envelope.envelope,deck6+.05,envelope.high]];
+// span() in src/walk/main.public.js draws [low, high] = envelope's height while the atrium is seen, and otherwise at least
+// 3 m below to 4 m above the walker's floor. A surface between the two is drawn only on the atrium's account, so seeing
+// one counts as seeing the atrium. (A group spanning several bands shows whole once either span reaches it; its parts
+// beyond the atrium's bands are not counted.)
+const ATRIUM_SPAN=[envelope.low,envelope.high],LOCAL_SPAN=[-3,4];
 // An eye inside the envelope the rays call visible unless a known room encloses it, and a cube map of the prism's
 // faces cannot tell that apart (from inside the void its faces may all lie behind walls the eye sees past). So every
 // cell that reaches into the envelope is left unknown, for the rays to answer as before.
@@ -76,22 +82,23 @@ try{
  await page.ev(await fs.readFile('scripts/walk-atrium-pvs.page.js','utf8'));
  const meta=await page.ev('(()=>{const m=window.LEO_PUBLIC_ASSETS||{};return {prepared:m["walk-prepared"]?.sha256||null,layout:m["layout-data"]?.sha256||null};})()');
  console.log('source',meta);
- console.log('setup',await page.ev(`__atriumPvs.setup(${JSON.stringify(levels)})`));
+ console.log('setup',await page.ev(`__atriumPvs.setup(${JSON.stringify(levels)},${JSON.stringify(ATRIUM_SPAN)},${JSON.stringify(LOCAL_SPAN)},${JSON.stringify(BAND)})`));
  if(process.argv.includes('--views')){
   const views=JSON.parse(await fs.readFile('scripts/walk-frame-views.json','utf8'));
-  for(const v of views){const eyes=[];for(const h of HEIGHTS)for(const dx of [-2,0,2])for(const dz of [-2,0,2])eyes.push(v.at[0]+dx,v.at[1]+h,v.at[2]+dz);const t=Date.now(),r=await page.ev(`__atriumPvs.run(${JSON.stringify(eyes)})`);console.log(v.name.padEnd(22),r.visible.join(''),'faces',r.faces,(Date.now()-t)+' ms');}
+  for(const v of views){const eyes=[];for(const h of HEIGHTS)for(const dx of [-2,0,2])for(const dz of [-2,0,2])eyes.push(v.at[0]+dx,v.at[1]+h,v.at[2]+dz,v.at[1]);const t=Date.now(),r=await page.ev(`__atriumPvs.run(${JSON.stringify(eyes)})`);console.log(v.name.padEnd(22),r.visible.join(''),'faces',r.faces,(Date.now()-t)+' ms');}
   process.exit(0);
  }
- // --eyes=x,y,z;x,y,z...: the verdict at exactly those eyes (debugging a pose).
- if(arg('eyes',null)){const eyes=arg('eyes').split(';').map(e=>e.split(',').map(Number));const r=await page.ev(`__atriumPvs.run(${JSON.stringify(eyes.flat())})`);eyes.forEach((e,i)=>console.log(JSON.stringify(e).padEnd(28),r.visible[i]?'visible':'hidden'));process.exit(0);}
+ // --eyes=x,y,z[,floor];...: the verdict at exactly those eyes (debugging a pose); the walker's floor defaults to a
+ // first-person eye's.
+ if(arg('eyes',null)){const eyes=arg('eyes').split(';').map(e=>e.split(',').map(Number)).map(([x,y,z,floor=y-1.62])=>[x,y,z,floor]);const r=await page.ev(`__atriumPvs.run(${JSON.stringify(eyes.flat())})`);eyes.forEach((e,i)=>console.log(JSON.stringify(e).padEnd(28),r.visible[i]?'visible':'hidden'));process.exit(0);}
  const {x0,z0,nx,nz,step,y0,ny}=PVS_GRID;
  const [ix0,ix1,iz0,iz1]=region.length?[Math.round((region[0]-x0)/step),Math.round((region[1]-x0)/step),Math.round((region[2]-z0)/step),Math.round((region[3]-z0)/step)]:[0,nx-1,0,nz-1];
- // Eye samples: [cell, x, y, z] over every floor found.
+ // Eye samples: [cell, x, y, z, floor] over every floor found.
  const samples=[];let t=Date.now();
  for(let i=ix0;i<=ix1;i+=8){
   const n=Math.min(8,ix1-i+1),cols=await page.ev(`__atriumPvs.columns(${x0+i*step},${z0+iz0*step},${n},${iz1-iz0+1},${step},${y0+ny*2+20},${y0-6},${HEADROOM})`);
   for(let c=0;c<cols.length;c+=3){const ci=i+cols[c],cj=iz0+cols[c+1],floors=cols[c+2];
-   for(let f=0;f<floors.length;f+=2)for(const h of HEIGHTS){if(h>floors[f+1]-.1)continue;const y=floors[f]+h,k=Math.floor((y-y0)/2);if(k<0||k>=ny)continue;samples.push([(k*nx+ci)*nz+cj,x0+ci*step,y,z0+cj*step]);}}
+   for(let f=0;f<floors.length;f+=2)for(const h of HEIGHTS){if(h>floors[f+1]-.1)continue;const y=floors[f]+h,k=Math.floor((y-y0)/2);if(k<0||k>=ny)continue;samples.push([(k*nx+ci)*nz+cj,x0+ci*step,y,z0+cj*step,floors[f]]);}}
  }
  console.log('samples',samples.length,'from columns in',((Date.now()-t)/1000).toFixed(0)+' s');
  const known=new Set(samples.map(s=>s[0])),seen=new Set();let faces=0;t=Date.now();
@@ -107,7 +114,7 @@ try{
   for(let dk=-1;dk<=1;dk++)for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){const kk=k+dk,ii=i+di,jj=j+dj;if(kk<0||kk>=ny||ii<0||ii>=nx||jj<0||jj>=nz)continue;const n=(kk*nx+ii)*nz+jj;if(cells[n])cells[n]=2;}}
  const envelopeUnknown=leaveEnvelope(cells);
  let hidden=0,visible=0;for(const v of cells){if(v===1)hidden++;else if(v===2)visible++;}
- const data={version:1,made:new Date().toISOString(),source:meta,grid:PVS_GRID,heights:HEIGHTS,known:known.size,hidden,visible,envelopeUnknown,cells:encodeCells(cells)};
+ const data={version:1,made:new Date().toISOString(),source:meta,grid:PVS_GRID,heights:HEIGHTS,atriumSpan:ATRIUM_SPAN,localSpan:LOCAL_SPAN,known:known.size,hidden,visible,envelopeUnknown,cells:encodeCells(cells)};
  const out=arg('out','output/perf-walk/atrium-pvs/'+tag+'.json');await fs.mkdir(path.dirname(out),{recursive:true});await fs.writeFile(out,JSON.stringify(data));
  console.log('wrote',out,{known:known.size,hidden,visible,bytes:data.cells.length,seconds:Math.round((Date.now()-t)/1000)});
 }finally{page.close();}
