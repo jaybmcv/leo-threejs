@@ -80,6 +80,7 @@ import {createHostess} from './hostess.prepared.js';
 import {wearHat,fit,FIT} from './hat.js';
 import {createYarn,YARN_SPOTS} from './yarn.js';
 import {BALL,createBallMesh} from './hamster-ball.js';
+import {ballBounce,ballDismount} from './ball-bounce.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink,remapSpot} from './link.js';
 import {KITTEN_POSE_NAMES} from './kittens.prepared.js';
@@ -112,6 +113,8 @@ import {createLeverPanel} from './lever-panel.js';
 import {createTransporters} from './transporter.js';
 import {installFeedback,hasTesterInvite,testerInvite} from '../feedback/feedback.js';
 import {createHelp} from './help.js';
+import {createArrivalTour} from './arrival-tour.js';
+let arrivalTour=null;
 import {listenForHub} from './hub-link.js';
 import {createHubPanel} from './hub-panel.js';
 
@@ -310,6 +313,8 @@ async function buildShip(){
  // The comic books (comics.js) lie on counters and tables, drawn with their deck's band.
  comics=createComics({urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});for(const g of comics.groups)toBand(g);
  if(cosmoKit)toBand(createHostess(cosmoKit));
+ // The welcome guide stands beside the arrival aisle; the tour never moves the walker.
+ if(cosmoKit){arrivalTour=createArrivalTour(cosmoKit);toBand(arrivalTour.group);}
  if(theatre)toBand(theatre.group);
  if(theatreCast)toBand(theatreCast.group);
  if(gaming)toBand(gaming.group);
@@ -410,6 +415,7 @@ const actions={
   if(!lifts)return;// still loading
   if(resting){standUp();return;}
   const t=target();if(!t)return;
+  if(t.kind==='arrival-tour'){closePanels();arrivalTour.open();return;}
   if(t.kind==='launch-ladder'){goTo({at:t.at,yaw:heading,lv:2,resolved:true});return;}
   if(t.kind==='cabin-glass'){cabinGlass.toggle(t.cabin);return;}
   if(t.kind==='call')lifts.call(t.lift,t.stop);
@@ -442,7 +448,7 @@ const actions={
   else if(t.kind==='tv'){closePanels();crownTv.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
  },
- escape(){if(treasure?.active){treasure.leave();return;}closePanels();},
+ escape(){if(treasure?.active){treasure.leave();return;}closePanels();arrivalTour?.close();},
  // (Nothing below until the walk is ready.)
  places(){if(ready())togglePlaces();},
  map(){if(ready())toggleMap();},
@@ -527,8 +533,11 @@ for(const y of yarns)scene.add(y.mesh);
 const ballHome=findStand(colliders,BALL.home,{radius:4})||new T.Vector3(...BALL.home),ball=createBallMesh();let inBall=false;
 ball.mesh.position.copy(ballHome);scene.add(ball.mesh);
 function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());}
-// Out of the ball, Cosmo stands where it was and steps clear of it; it stays parked there.
-function leaveBall(){if(!inBall)return;inBall=false;controller.body=BODY;controller.stance='stand';ball.mesh.position.copy(controller.position);}
+// Stop before dismounting. In a tight spot the ball returns home so it cannot push Cosmo through a wall.
+function leaveBall(at=null){if(!inBall)return;
+ const parked=controller.position.clone(),out=at||ballDismount(parked,heading,BALL.radius+BODY.radius,q=>findStand(colliders,q,{radius:0}));
+ inBall=false;controller.body=BODY;controller.place(out||parked);ball.mesh.position.copy(out?parked:ballHome);
+}
 // The Deck 1 transporters (transporter.js): into a cart's driver's seat, once Leo live agrees nobody else has it, or one of
 // its rear seats, with the camera turned the way the seat faces. A seat granted after a walk away is given back.
 function boardCart(t){if(t.seat==='driver'&&!mct.take(t.cart))return;intoSeat(t.cart,t.seat);}
@@ -696,7 +705,7 @@ renderer.setAnimationLoop(()=>{
  const riding=vaultLift?.riding||lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
  // In the ball the jump is one low hop (BALL.body.jump).
- if(!resting&&!riding&&!run&&!treasure?.active){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ if(!resting&&!riding&&!run&&!treasure?.active){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number));pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  treasure?.step(dt,k);
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
  const p=controller.position;
@@ -844,6 +853,7 @@ function target(){
  const v=inBall?null:vault?.near(p);if(v)return v;
  const tube=inBall?null:vaultLift?.nearest(p);if(tube)return tube.kind==='riding'?null:tube;
  const g=changeLog.near(p);if(g)return g;
+ const welcome=inBall?null:arrivalTour?.near(p);if(welcome)return welcome;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
  const q=poolTable?.near(p)||maze?.near(p)||pinballMachine?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p)||leverPanel?.near(p);if(q&&!(inBall&&q.kind==='treadmill'))return q;
  // In the hamster ball: no seats, beds or treadmills; with nothing else to use, E climbs out.
@@ -856,6 +866,7 @@ function target(){
 }
 const touch=matchMedia('(pointer:coarse)').matches;
 function hud(p){
+ arrivalTour?.update(p,camera,ready()&&input.enabled&&!resting&&!run&&!inBall&&!treasure?.active);
  $('where').textContent=describe(p);
  // The changes made around here, for the ship log's chip.
  const near=changeLog.nearby(p).length,chip=$('changes-here');
@@ -942,6 +953,8 @@ function openLiftPanel(l,rides=lifts){
 function togglePlaces(){
  const panel=$('places');if(!panel.hidden){closePanels();return;}
  const list=panel.querySelector('.stops');list.textContent='';
+ const tour=document.createElement('button');tour.type='button';tour.textContent='Arrival tour: welcome guide and five optional stops';
+ tour.onclick=()=>{closePanels();arrivalTour?.open();};list.appendChild(tour);
  // Every change made to Leo, with its before and after: the ship log, which the keyboard opens with L.
  const log=document.createElement('button');log.type='button';log.className='log';
  log.append(Object.assign(document.createElement('b'),{textContent:'Ship log'}),Object.assign(document.createElement('span'),{textContent:'Every change to Leo, before and after, and a way there'}));
@@ -963,7 +976,7 @@ function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(collide
  // Going elsewhere from a transporter's driver's seat leaves it parked where it is.
  if(resting?.spot.mct?.seat==='driver')mct.park(resting.spot.mct.cart);resting=null;
  // Going somewhere else leaves the ball behind, back in the gardens.
- if(inBall){leaveBall();ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
+ if(inBall){leaveBall(q);ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
 function closePanels(){controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
 // The list is a current server snapshot, including visitors who have not sent a pose yet.
