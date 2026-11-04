@@ -10,9 +10,12 @@ export const CONSERVATORY_ISLANDS = [
   [144.0,29.1,.8,'fern'],[137.9,31.3,.85,'cream'],[143.9,31.5,.9,'coral'],
   [143.9,33.5,.85,'broadleaf'],[143.5,35.3,.8,'fern'],[141.5,30.0,.65,'cream'],
 ];
+// Each row hangs just off the atrium-side rail of its v2 garden gallery: Deck 18's walkway starts at z 35.65 here and
+// Deck 19's at z 30.96 (this legacy frame is the ship's minus 26.5 in x and plus 16 in z). The v1 rows sat at z 41.75,
+// past both v2 walkways and, on Deck 19, out through the hull.
 export const CONSERVATORY_GALLERY = [
-  [126,28.3,41.75],[134,28.3,41.75],[142,28.3,41.75],
-  [122,32.3,41.75],[131,32.3,41.75],[140,32.3,41.75],
+  [126,28.3,35.3],[134,28.3,35.3],[142,28.3,35.3],
+  [122,32.3,30.61],[131,32.3,30.61],[140,32.3,30.61],
 ];
 
 // The former flower scatter shared its random stream with the pond, bridge plank

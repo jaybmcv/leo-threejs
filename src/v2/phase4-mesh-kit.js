@@ -2,7 +2,7 @@ import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {removeGeometryCaps} from './geometry.js';
 function removeTopCap(g){g.computeBoundingBox();const p=g.attributes.position,ix=g.index,top=g.boundingBox.max.y,keep=[];for(let i=0;i<ix.count;i+=3){const ids=[0,1,2].map(k=>ix.getX(i+k));if(!ids.every(id=>Math.abs(p.getY(id)-top)<1e-7))keep.push(...ids);}g.setIndex(keep);g.clearGroups();}
-const colours={resident:0xbd826d,oak:0xb9966f,cream:0xe4e5de,teal:0x357b82,sage:0x637e64,clay:0x996954,navy:0x172e3b,metal:0x8d9da2,orange:0xe88032,green:0x507c50,light:0xffedca,screen:0x234b67,water:0x469ba7,red:0x9d1631},mats=new Map();
+const colours={resident:0xbd826d,oak:0xb9966f,cream:0xe4e5de,teal:0x357b82,sage:0x637e64,clay:0x996954,navy:0x172e3b,metal:0x8d9da2,orange:0xe88032,green:0x507c50,light:0xffedca,screen:0x234b67,water:0x469ba7,red:0x9d1631,alarm:0xd92332},mats=new Map();
 export const atriumGlass=new T.MeshStandardMaterial({name:'P4_atrium_glass',color:0x9abcc6,transparent:true,opacity:.20,roughness:.3,side:T.DoubleSide});
 export function material(name){if(!mats.has(name))mats.set(name,new T.MeshStandardMaterial({name:'P4_'+name,color:colours[name],roughness:name==='metal'?.42:.72,metalness:name==='metal'?.45:0,...(['light','screen'].includes(name)?{emissive:colours[name],emissiveIntensity:name==='light'?1:.45}:{})}));return mats.get(name);}
 
