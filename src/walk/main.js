@@ -770,9 +770,9 @@ renderer.setAnimationLoop(()=>{
  gaming?.update(dt,camera.getWorldPosition(eye),p,remotes?[...remotes.remotes.values()]:[]);
  arrivalMood?.apply();
  provisions?.update(dt,bodies);
- blossom?.update(dt,p,ambience.on);
+ blossom?.update(dt,p,ambience.on,camera);
  loungeFalls?.update(dt,p);
- loungeSound?.update(p,ambience.on);
+ loungeSound?.update(p,ambience.on,camera);
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
  surgeryArms?.update(dt,p);
@@ -783,7 +783,7 @@ renderer.setAnimationLoop(()=>{
  chinampa?.update(dt,p);
  baggage?.update(dt,p);
  marks?.update(camera,p,now);
- if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);graffiti?.load(p);crownTv?.update(p);
+ if(now-lastHud>120){lastHud=now;hud(p);paintings.update(p);comics.update(p);mudwater?.load(p);theatre?.update(p);graffiti?.load(p);crownTv?.update(p,camera);
   // Walking into Mudwater Arena counts as a visit (server/arena.mjs).
   const inArena=!!mudwater?.contains(p);if(inArena&&!wasInArena)live?.arena('enter');wasInArena=inArena;}
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
