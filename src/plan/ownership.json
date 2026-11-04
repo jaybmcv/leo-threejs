@@ -1188,7 +1188,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "1d6cd101700180718e397fde3f8f3207015b5626d1db32bb44c10e3746376522"
+      "signature": "23cee1f495b26686a66fb603de42918c15ca327c37e8ab4afedf5859f55d705f"
     },
     {
       "source": "src/walk/baggage.js",
@@ -1877,7 +1877,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "2942786fb13f8d4b26169723186b8d5feb3b209f67b3dfb8bec7f32a52b61d0e"
+      "signature": "3d9a5d78943f9da4e0b2a31de7069415135d6559da5696bb855b2fb7a88dfc48"
     },
     {
       "source": "src/walk/controller.js",
@@ -1889,7 +1889,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "2a7c7c24f1611c90978a7f2dc67fa73ccfa3abc6574f0336dd0fa5f6a4e16a18"
+      "signature": "e3642382ac54acfb7664d2d56790fc1b53f75393b4b7a503f82935b6601c86da"
     },
     {
       "source": "src/walk/crown-tv.js",
@@ -3739,6 +3739,7 @@
         "Container_maze_colliders",
         "Container_maze_start_header",
         "Container_maze_sign",
+        "Container_maze_board",
         "Container_maze_finish_floor",
         "Container_maze_console",
         "Container_maze_finish_sign"
@@ -3747,8 +3748,8 @@
         "Container_maze_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 33,
-      "signature": "1ee66944044453670830409137352c42426665942f11360b807c1a875e77d56f"
+      "placements": 40,
+      "signature": "6e7c801c50bf0a34b793cd7a1c165b7091fee2872eb9c283b2ffd26de36e852b"
     },
     {
       "source": "src/walk/maze/layout.js",
@@ -3774,7 +3775,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 1,
-      "signature": "72396855dcfb506473b9efbe248e0af8e601f42caf3b956651bc89a525f4fc6c"
+      "signature": "9ff568aa7c1c85743fb9709ac7f8dcf32c0e434c0a1bf47d7282c90270841c46"
     },
     {
       "source": "src/walk/mct-bay.js",
