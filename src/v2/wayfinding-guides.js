@@ -2,6 +2,9 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import layout from '../plan/selected-layout.js';
 import {guideSchedule,lobbySchedule} from './wayfinding-guide-data.js';
+// The distribution ceiling's underside is 3.64 m above each deck.
+const DIRECTORY_WIDTH=3.6,DIRECTORY_HEIGHT=1.05,DIRECTORY_CEILING_HEIGHT=3.64;
+const directoryBacking=new T.MeshBasicMaterial({color:0x10252e,toneMapped:false}),directorySupport=new T.MeshStandardMaterial({color:0x586e7b,metalness:.55,roughness:.4});
 // Additional information only. The existing 283 v2 stair/lift sign placements,
 // signPlace(), lift doors, collision geometry and prepared sign cache stay intact.
 export function addWayfindingGuides(parent){
@@ -20,7 +23,12 @@ export function addWayfindingGuides(parent){
  }
  for(const row of lobbies){const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=300;const c=canvas.getContext('2d'),texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
   const draw=()=>{c.fillStyle='#10252e';c.fillRect(0,0,1024,300);c.fillStyle='#2fd6c5';fit(c,row.youAreHere,20,30,984,24);row.rows.forEach((text,i)=>{c.fillStyle=text.startsWith('Deck '+row.deck+' ·')?'#ffb578':'#f5ddba';fit(c,text,i<10?20:526,58+i%10*22,478,18);});c.fillStyle='#2fd6c5';fit(c,row.note,20,289,984,19);texture.needsUpdate=true;};draw();paint.push(draw);
-  const m=new T.Mesh(new T.PlaneGeometry(3.6,1.05),new T.MeshBasicMaterial({map:texture,toneMapped:false}));m.name='V2_lobby_deck_directory';m.position.set(row.at[0],row.at[1]-layout.decks[row.deck-1].y,row.at[2]);m.rotation.y=row.yaw;m.userData={...row,noCollide:true};roots.get(row.deck).add(m);
+  const deck=layout.decks[row.deck-1],top=DIRECTORY_HEIGHT/2,postHeight=DIRECTORY_CEILING_HEIGHT-(row.at[1]-deck.y)-top;
+  const board=new T.Group();board.name='V2_lobby_deck_directory';board.position.set(row.at[0],row.at[1]-deck.y,row.at[2]);board.rotation.y=row.yaw;board.userData={...row,noCollide:true,readableFaces:2};roots.get(row.deck).add(board);
+  const backing=new T.Mesh(new T.BoxGeometry(DIRECTORY_WIDTH,DIRECTORY_HEIGHT,.04),directoryBacking);backing.name='V2_lobby_deck_directory_backing';backing.userData.noCollide=true;board.add(backing);
+  const material=new T.MeshBasicMaterial({map:texture,toneMapped:false}),front=new T.PlaneGeometry(DIRECTORY_WIDTH,DIRECTORY_HEIGHT).translate(0,0,.021),back=new T.PlaneGeometry(DIRECTORY_WIDTH,DIRECTORY_HEIGHT).rotateY(Math.PI).translate(0,0,-.021),faces=mergeGeometries([front,back]);front.dispose();back.dispose();
+  const face=new T.Mesh(faces,material);face.name='V2_lobby_deck_directory_faces';face.userData={noCollide:true,readableFaces:2};board.add(face);
+  if(postHeight>0)for(const side of [-1,1]){const post=new T.Mesh(new T.CylinderGeometry(.022,.022,postHeight,6),directorySupport);post.name='V2_lobby_deck_directory_support';post.position.set(side*DIRECTORY_WIDTH/2,top+postHeight/2,0);post.userData.noCollide=true;board.add(post);}
  }
  globalThis.document.fonts?.ready.then(()=>{for(const draw of paint)draw();});return [...roots.values()];
 }
