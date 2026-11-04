@@ -2120,6 +2120,18 @@
       "signature": "7ead1cf392feef60b03effa09fb391daafd9294f2c13fd1fb6c7022d8d01d2bd"
     },
     {
+      "source": "src/walk/emergency-drill/game.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 5,
+      "signature": "9933a39f72acd92c8192b66a8fbb228bc25b41ba315bfbc07df781b4aed2b35a"
+    },
+    {
       "source": "src/walk/fin-casing.js",
       "rooms": [
         "aft-machinery"
@@ -2842,7 +2854,7 @@
     {
       "source": "src/walk/layered-conservatory.js",
       "rooms": [
-        "commons-10"
+        "commons-1"
       ],
       "via": "inherited",
       "fixed": false,
@@ -3616,7 +3628,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 42,
-      "signature": "58197bbe12011bb69ef487714682a215c167e853bcbe44a2d3bb04fef69e1b25"
+      "signature": "4cf4f59377f94f2bd2cbe9d2ec9237242ef2d4958fe105a9167ecfd73cc0ce48"
     },
     {
       "source": "src/walk/main.js",
@@ -3637,7 +3649,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 41,
-      "signature": "dbc8ebcd2c3dcdcf6be7c5b5eaa6bc47118c7fe9d36b1f0cecbd72c7424f45d9"
+      "signature": "b6a3199efd098a03f068479bd79a78540f42583b0ca43db46ad3ab5bad7cfa7c"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -3657,7 +3669,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 36,
-      "signature": "3a8e846924ed42a4f16ffa6ec263c44be5a579b21a4a2da404572805d7cf797a"
+      "signature": "aeab8ed03473a91ef7f2ef2731b8745c9260198bb2853ef1a7faacc05b23b951"
     },
     {
       "source": "src/walk/main.public.js",
@@ -3677,7 +3689,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 36,
-      "signature": "7813fb21d1331055922de5479e394e7aa91c108a0069bcc6a129bdabcb02cc06"
+      "signature": "3210d332ab6bbde9dd39646656d3735108b5f8c09d9d1c52a3520c5c18aa0200"
     },
     {
       "source": "src/walk/marks.authoring.js",

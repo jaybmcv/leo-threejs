@@ -570,6 +570,18 @@
     ],
     "via": "roomObject"
   },
+  "src/walk/arrival-mood.js": {
+    "owners": [
+      "d02-arrival-1"
+    ],
+    "via": "toWorld"
+  },
+  "src/walk/layered-conservatory.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": "inherited"
+  },
   "src/walk/lounge-entrance-signs.js": {
     "owners": [
       "commons-1"
