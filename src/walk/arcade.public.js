@@ -1,4 +1,4 @@
-import {ReplayGeometry,replayMerged} from "../v2/prepared-geometry-replay.public.js";
+import {ReplayGeometry} from "../v2/prepared-geometry-replay.public.js";
 import {LOUNGE_PLAN} from '../plan/lounge-layout-v2.js';
 import {walkCanvas,hasWalkCanvas} from './canvas.js';
 import * as T from 'three';
@@ -237,7 +237,8 @@ export function createArcade(){
   const b=new T.Mesh(new ReplayGeometry("src/walk/arcade.js:12",T.BoxGeometry,w,h,l));b.position.set(MX,h/2,cz);solid.add(b);}
  // Neon on the wall above the row and the treadmill: a pink and a cyan line the length of them, and the arcade's sign
  // over the middle.
- box('neon',PINK,[END-START+.6,.035,.02],[(START+END)/2,2.42,.02]);box('neon',CYAN,[END-START+.6,.035,.02],[(START+END)/2,2.52,.02]);
+ // These strips follow the current cabinet spacing rather than a prepared width.
+ for(const [color,y] of [[PINK,2.42],[CYAN,2.52]])put('neon',color,new T.BoxGeometry(END-START+.6,.035,.02).translate((START+END)/2,y,.02));
  for(const xx of [START-.3,END+.3])box('neon',PURPLE,[.035,2.52,.02],[xx,1.26,.02]);
  panel('sign',()=>canvas(1024,256,(g,w,h)=>{g.clearRect(0,0,w,h);g.textAlign='center';g.textBaseline='middle';g.font=font(800,150);
   g.lineWidth=10;g.shadowColor='#ff4fd8';g.shadowBlur=30;g.strokeStyle='#ff4fd8';g.strokeText('ARCADE',w/2,h/2+6);g.shadowBlur=0;g.fillStyle='#ffe3f8';g.fillText('ARCADE',w/2,h/2+6);}),
@@ -245,8 +246,9 @@ export function createArcade(){
  // (The sign writes no depth, so the glow behind it shows through round the letters.)
  Object.assign(panels.get('sign').material,{transparent:true,depthWrite:false});
  put('glow',PINK,new ReplayGeometry("src/walk/arcade.js:13",T.PlaneGeometry,6,2.2).translate((START+END)/2,3.25,.015));
- for(const [m,gs] of lists){const o=new T.Mesh(replayMerged("src/walk/arcade.js",nativeMergeGeometries,gs),mats[m]);o.name=mats[m].name;o.castShadow=m==='body'||m==='trim';o.receiveShadow=m!=='glow';gs.forEach(g=>g.dispose());group.add(o);}
- for(const {material,gs} of panels.values()){const o=new T.Mesh(replayMerged("src/walk/arcade.js",nativeMergeGeometries,gs),material);o.name=material.name;gs.forEach(g=>g.dispose());group.add(o);}
+ // Cabinet positions change the batches; retain only the fixed shape templates.
+ for(const [m,gs] of lists){const o=new T.Mesh(nativeMergeGeometries(gs),mats[m]);o.name=mats[m].name;o.castShadow=m==='body'||m==='trim';o.receiveShadow=m!=='glow';gs.forEach(g=>g.dispose());group.add(o);}
+ for(const {material,gs} of panels.values()){const o=new T.Mesh(nativeMergeGeometries(gs),material);o.name=material.name;gs.forEach(g=>g.dispose());group.add(o);}
  group.updateMatrixWorld(true);solid.updateMatrixWorld(true);
  for(const s of spots)group.localToWorld(s.at);
  return {group,solid,spots,treadmill:arcadeTreadmill(group),

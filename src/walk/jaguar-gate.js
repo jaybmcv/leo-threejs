@@ -188,6 +188,7 @@ export function createJaguarGate(){
  // Inside: clear glass on both sides and over the roof, held by black stone ribs, with the neon along the roof of the
  // mouth showing through it and the deck's own floor underfoot. Nothing in the throat is solid.
  // The glass starts a metre back, inside the head's rear, so its roof and neon don't show over the head from in front.
+ // The movable throat uses its current dimensions, independent of prepared templates.
  const inner=half-wall,THROAT=1,run=depth-THROAT,mid=THROAT+run/2;
  for(const sx of [-1,1])add(mat.glass,at(new T.PlaneGeometry(run,h),sx*(inner-.01),h/2,-mid,0,-sx*Math.PI/2));
  add(mat.glass,at(new T.PlaneGeometry(2*inner,run),0,h-.03,-mid,Math.PI/2));
@@ -211,6 +212,7 @@ export function createJaguarGate(){
  gate.translate(0,0,-depth-.2);
  const exit=new T.Mesh(gate,mat.stone);exit.name='Jaguar_exit_arch';solid.add(exit);
 
+ // Throat transforms change these material batches, so merge them locally.
  for(const [m,list] of parts){const o=new T.Mesh(mergeGeometries(list.map(g=>g.index?g.toNonIndexed():g)),m);o.name=m.name;o.userData.noCollide=true;group.add(o);}
  group.updateMatrixWorld(true);
  placeObject(group,'jaguar-gate');group.position.add(new T.Vector3(...launchRoomPoint('commons-1',[-3.25,0,6])).sub(new T.Vector3(...launchRoomPoint('commons-1',[0,0,0]))));group.updateMatrixWorld(true);return {group,solid};

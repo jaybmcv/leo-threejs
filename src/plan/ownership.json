@@ -1031,7 +1031,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "df4b2752aca17a340e5a0e4eb876ec7a637dc1d6e4227ebdc0d8e5c663cbfe34"
+      "signature": "8a667f57d2f8bf13ee93574a1f26001a5780587105bf4535297b4319e3e5f6bc"
     },
     {
       "source": "src/walk/arcade.js",
@@ -1049,7 +1049,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "e4feb7c2d2e1e7fd72e617f78a2f17a78778a9608f2ebda2f33717ee51956fac"
+      "signature": "5bbb8e59cf8fdd9f650674858e8854dc06351fd366c33ce641b7345b33f9f805"
     },
     {
       "source": "src/walk/arcade.prepared.js",
@@ -1067,7 +1067,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "46e421accf43ef99c01cacbfe6d3b48bff789e8a348f48622ea31e110b98d407"
+      "signature": "7db628407f5ba28f6d29f45b978210b3b3fe0d012de444d71b626d6300737f94"
     },
     {
       "source": "src/walk/arcade.public.js",
@@ -1085,7 +1085,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "726ce3b0e636dfa3e05c7aa3c9d7b239a2b74ca31e71e2025f7be62ed9a4fcab"
+      "signature": "468046c4ea8212dc7b7777d08d83e8e9872aad8a8c00100f8e93dfd9ab38a3ff"
     },
     {
       "source": "src/walk/arrival-atrium.authoring.js",
@@ -2755,7 +2755,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 26,
-      "signature": "d44631586cce37606a01fa0451a862edbdfd38eea5d0a3d534ecd61fcb4a1a41"
+      "signature": "3277bbc3d6588e6094522afc23b32659ed151c3d1e0c7bffeb6c92de13a098d3"
     },
     {
       "source": "src/walk/jaguar-gate.js",
@@ -2777,7 +2777,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 26,
-      "signature": "8b3deb4b354471adec63c61601cff13ecf645c9aeecb91f72fc5fec5bd37d346"
+      "signature": "ae53420638defa0b59dc84827c6aa387cb2c18b3dc1d83c71bd67e33d29debcb"
     },
     {
       "source": "src/walk/jaguar-gate.prepared.js",
@@ -2799,7 +2799,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 26,
-      "signature": "9c65351723ce6775d175bcca49fa5dbe1a33e3902c3f3ae9c712b49f3a0b561f"
+      "signature": "c869674751142dd8eb6256d1066e4f0c9d12adbc4df13a1266c9fbe329505573"
     },
     {
       "source": "src/walk/jaguar-gate.public.js",
@@ -2821,7 +2821,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 26,
-      "signature": "3a31f0494935c10e3f1fa457008fec7a285c490a7263e4101b9f71949c3054a0"
+      "signature": "482b6903ad2141d5c164bd41df6f0297d6dabb4106b2803c021d9307db38df43"
     },
     {
       "source": "src/walk/kittens.authoring.js",
