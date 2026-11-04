@@ -1162,11 +1162,11 @@
       "signature": "4cc5d3d8aef5a8499a7f2b2991dcfe3fe9a39f364ff5819ebd3379e3fedcd8dd"
     },
     {
-      "source": "src/walk/atmosphere.js",
+      "source": "src/walk/arrival-mood.js",
       "rooms": [
-        "d04-air-1"
+        "d02-arrival-1"
       ],
-      "via": "roomObject",
+      "via": "toWorld",
       "fixed": false,
       "features": [
         "Arrival_practical_lights"
@@ -4526,7 +4526,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "aa4a5e255d357f57df46454f2e085deaad9324b9a0f527be2b8be6702935c8db"
+      "signature": "b6fba4348ea8400a68628f9975da50f9b1bc13ad46351e94d4d01e6e60988efb"
     },
     {
       "source": "src/walk/provisions.authoring.js",
