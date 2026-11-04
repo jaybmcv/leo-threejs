@@ -167,6 +167,22 @@ function capsule(fit,x,z,face,i){
  tube('Healing_capsule_hose',[[ux,1.5,-.2],[ux+.1*s,2.4,-.25],[-.85*s,2.75,-.2],[-.7*s,TOP+.18,-.1]],.03,C.hose);
 }
 
+// These small effects stay outside the room bake so they can respond to the local walker.
+function capsuleEffects(){
+ const group=new T.Group();group.name='Healing_capsule_effects';group.visible=false;
+ const lights=[-.5,-.2,.2,.5].map((a,k)=>{
+  const material=new T.MeshBasicMaterial({color:k%2?0x30ff70:0xff3040,transparent:true,opacity:.18,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
+  const mesh=new T.Mesh(new T.SphereGeometry(.05,10,8),material);mesh.position.set(Math.sin(a)*.77,2.65,Math.cos(a)*.77);group.add(mesh);
+  return {mesh,material,phase:k*Math.PI/2};
+ });
+ const waves=Array.from({length:3},(_,i)=>{
+  const material=new T.MeshBasicMaterial({color:0x73e6ff,transparent:true,opacity:.18,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
+  const mesh=new T.Mesh(new T.TorusGeometry(.43,.012,4,32,Math.PI),material);mesh.rotation.x=-Math.PI/2;mesh.position.y=CAPSULE_FLOOR+.18+(i+.18)*.58;group.add(mesh);
+  return {mesh,material,phase:i/3};
+ });
+ return {group,lights,waves};
+}
+
 // One ceiling arm, hung at the origin of its frame: a turning mount, a shoulder, two links and a lit tool head.
 function arm(){
  const root=new T.Group();root.name='Surgery_robot_arm';
@@ -199,6 +215,8 @@ export function createSurgeryArms(ship,{still=false}={}){
  const group=new T.Group();group.name='Surgery_robot_arms';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);
  const arms=BAYS.map(([x,z],i)=>{const a=arm();a.root.position.set(x,CEILING,z+.15);a.phase=i*1.7;group.add(a.root);return a;});
+ const effects=CAPSULES.map(([x,z,face])=>{const e=capsuleEffects();e.group.position.set(x,0,z);if(face<0)e.group.rotation.y=Math.PI;group.add(e.group);return e;});
+ const toRoom=room.matrixWorld.clone().invert(),local=new T.Vector3();
  const centre=room.getWorldPosition(new T.Vector3());
  let t=0;
  const pose=()=>{for(const a of arms){const k=t+a.phase;
@@ -206,9 +224,17 @@ export function createSurgeryArms(ship,{still=false}={}){
   // The tool head stays pointing down at the bed.
   a.wrist.rotation.z=-(a.shoulder.rotation.z+a.elbow.rotation.z);}};
  pose();
- function update(dt,p){
-  if(still||Math.abs(p.y-centre.y)>4||Math.abs(p.x-centre.x)>40||Math.abs(p.z-centre.z)>30)return;
-  t=performance.now()/1000;pose();
+  function update(dt,p,remotes=null){
+  if(!still&&Math.abs(p.y-centre.y)<=4&&Math.abs(p.x-centre.x)<=40&&Math.abs(p.z-centre.z)<=30){t=performance.now()/1000;pose();}
+  const occupied=CAPSULES.map(()=>false),mark=()=>CAPSULES.forEach(([x,z],i)=>{if(Math.abs(local.y-CAPSULE_FLOOR)<1.1&&Math.hypot(local.x-x,local.z-z)<.46)occupied[i]=true;});
+  local.copy(p).applyMatrix4(toRoom);
+  mark();
+  if(remotes)for(const r of remotes.values())if(r.cur){local.set(r.cur.x,r.cur.y,r.cur.z).applyMatrix4(toRoom);mark();}
+  effects.forEach((e,i)=>{
+   e.group.visible=occupied[i];if(!occupied[i])return;
+   for(const l of e.lights){const pulse=still ? .5 : .5+.5*Math.sin(t*2.2+l.phase);l.material.opacity=still ? .18 : .14+.24*pulse;l.mesh.scale.setScalar(still?1:.92+.24*pulse);}
+   for(const w of e.waves){const progress=still?w.phase:(t*.3+w.phase)%1;w.mesh.position.y=CAPSULE_FLOOR+.18+progress*1.75;w.material.opacity=still ? .18 : .05+.34*Math.sin(progress*Math.PI);}
+  });
  }
  return {group,update};
 }
