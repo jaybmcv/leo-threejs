@@ -9,6 +9,7 @@ import {createMazeHold} from '../src/walk/maze/hold.js';
 import {Colliders,BODY} from '../src/walk/collision.js';
 import {TROLLEY_SPOT} from '../src/walk/cargo-trolley.js';
 import {v1Frame} from '../src/plan/rooms.js';
+import {createMazeGame} from '../src/walk/maze/run.js';
 
 const problems=[],log=(...a)=>console.log(...a);
 const expect=(ok,what)=>{if(!ok)problems.push(what);log(ok?'ok  ':'FAIL',what);};
@@ -57,6 +58,56 @@ expect(front>(X0+25.84-1)*(2*SIDE-1)*.85,`the space in front of the maze is open
 // The containers stand clear of the hold's name plate (on the end wall, 4 cm proud, 2.23-2.88 m up).
 expect(MAZE.walls.every(r=>Math.min(r.x1,END-.1)<=25.76)&&HEIGHT<3.3-.2,'the containers stay off the end wall\'s name plate and under the ceiling');
 expect(ENTRY_ROW===Math.floor(NZ/2)&&Math.abs(MAZE.entrance.z0+MAZE.entrance.z1)<1e-9,'the way in faces the doorway');
+expect(hold.group.children.some(o=>o.material?.name==='Container_maze_light'),'the open containers have warm overhead fixtures');
+expect(hold.group.children.filter(o=>o.material?.name==='Container_maze_numbers').length===1,'the cargo numbers share one draw');
+expect(!!hold.group.getObjectByName('Container_maze_board')&&hold.near(hold.toShip(X0-1,0,MAZE.entrance.z1+6.5))==='sign','the foyer screen is readable with E without entering the course');
+
+// Exercise the screen's real client flow with a small DOM stand-in, including an older server that never answers.
+// Browser review still checks the actual screen and lettering in the room.
+class Element{
+ constructor(){this.hidden=false;this.children=[];this.dataset={};this.listeners={};}
+ set textContent(v){this.text=String(v);this.children=[];}
+ get textContent(){return (this.text||'')+this.children.map(e=>typeof e==='string'?e:e.textContent).join('');}
+ append(...kids){this.children.push(...kids);}
+ addEventListener(type,fn){this.listeners[type]=fn;}
+ focus(){}
+}
+const elements=[],saved=new Map(),sent=[],screens=[],moves=[];let now=10000;
+const oldPerformance=Object.getOwnPropertyDescriptor(globalThis,'performance');
+Object.defineProperty(globalThis,'performance',{value:{now:()=>now},configurable:true});
+globalThis.document={head:new Element(),body:new Element(),createElement(){const e=new Element();elements.push(e);return e;}};
+globalThis.localStorage={getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)};
+const link={live:true,maze:(op,extra)=>sent.push({op,...extra})},foyer={x:X0-2,y:0,z:0};
+const game=createMazeGame({hold:{toLocal:p=>p,toShip:(...p)=>p,near:()=> 'button',press(){},update(){},setBoard:b=>screens.push(b)},
+ live:()=>link,goTo:p=>moves.push(p),muted:()=>true});
+const tick=ms=>{now+=ms;game.update(foyer,now);},requests=()=>sent.filter(m=>m.op==='board').length;
+game.update(foyer,now);game.update(foyer,now);
+expect(requests()===1,'entering the foyer fetches the board once, without opening a sheet');
+game.fromServer({op:'board',verified:false,top:[{name:'Runner',ms:9531}],you:null});
+expect(screens.at(-1).status==='guest'&&screens.at(-1).top[0].ms===9531,'a guest sees the existing shared times on the room screen');
+tick(14999);expect(requests()===1,'the room screen does not poll every frame');
+tick(1);expect(requests()===2,'the room screen refreshes after 15 seconds');
+tick(6001);expect(screens.at(-1).status==='unavailable'&&!screens.at(-1).top.length,'a connected server that ignores maze requests shows unavailable, without stale times');
+tick(9000);game.fromServer({op:'board',verified:true,top:[],you:null});
+expect(screens.at(-1).status==='ok','an empty board is distinct from a server that did not answer');
+link.live=false;tick(1);expect(screens.at(-1).status==='offline','a lost connection clears the shared screen');
+link.live=true;const before=requests();tick(1);
+expect(requests()===before+1,'reconnecting fetches the board again');
+game.fromServer({op:'board',verified:true,top:[{name:'Runner',ms:9531}],you:{ms:9531,rank:1}});
+game.update({x:X0+1,y:0,z:0},now);expect(game.running,'the existing entrance still starts the clock');
+now+=10000;game.use({at:'button'},now);
+expect(!game.running&&saved.get('leo-maze-best')==='10000'&&sent.some(m=>m.op==='finish'&&m.ms===10000),'the red button still stops the clock and keeps the browser best');
+tick(6001);
+const sheet=elements.find(e=>e.id==='maze-sheet');
+expect(sheet.textContent.includes('board did not answer')&&!sheet.textContent.includes('Saving your time'),'an unanswered finish stops waiting and keeps the browser best');
+game.fromServer({op:'result',ok:true,ms:10000,best:9531,rank:1,newBest:false});
+expect(sheet.textContent.includes('Your best is 0:09.5'),'a late server result still updates the result card');
+elements.find(e=>e.text==='Back to the start').listeners.click();
+expect(moves.length===1,'the result card still returns the walker to the start');
+game.update(foyer,now);game.update({x:X0+1,y:0,z:0},now);
+elements.find(e=>e.text==='Give up').listeners.click();
+expect(!game.running&&moves.length===2,'Give up still exits a run');
+Object.defineProperty(globalThis,'performance',oldPerformance);delete globalThis.document;delete globalThis.localStorage;
 
 if(problems.length){console.error(`\n${problems.length} problem(s)`);process.exit(1);}
 log('\nContainer maze checks pass.');
