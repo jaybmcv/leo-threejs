@@ -31,17 +31,18 @@ function signature(root){
   });return hash.digest('hex');
 }
 
-// Captured from unmodified db2882a, three@0.185.1. These signatures protect the
-// existing tree, red bridge (including plank colors), and collision surfaces.
+// Captured from unmodified db2882a, three@0.185.1. The original tree stays intact.
+// The approved garden expansion changes the pond collisions and scattered plank tones.
 const baseline={
-  colliders:'27061bafa325a58292004a6c3f1d1f7b23d0a0e800d3f18f81ca98219dcc30ef',
   Blossom_tree_trunk:'dbb5d5c22d792909938887a87a6b1d6e4df2b578cc67e87fa6e50ca197e90322',
   Blossom_tree_canopy:'2187c262b79db577f2e48f421381823d763af93bbd40c2c7f7a6cb913d03305c',
-  Blossom_bridge:'ccf6ae4a10c72bb3165156d9f9e57ffc47525f0aef70a4ca0d5e81f3bd478ea4',
 };
 const garden=createBlossomGarden(ship('Fitted_garden_commons_10'));
-assert.equal(signature(garden.solid),baseline.colliders,'existing collision surfaces');
-for(const name of Object.keys(baseline).filter(name=>name!=='colliders'))assert.equal(signature(garden.group.getObjectByName(name)),baseline[name],name);
+for(const name of Object.keys(baseline))assert.equal(signature(garden.group.getObjectByName(name)),baseline[name],name);
+const bridgeHash=createHash('sha256'),bridge=garden.group.getObjectByName('Blossom_bridge');
+for(const name of ['position','normal'])bridgeHash.update(Buffer.from(bridge.geometry.attributes[name].array.buffer));
+assert.equal(bridgeHash.digest('hex'),'1964d7af4524f55a79214a7bfbc4242f0b4b7434df47719c5472d10d66a98167','original bridge shape');
+await import('./check-blossom-expansion.mjs');
 for(const excluded of ['Fitted_garden_commons_01','Hydro_Nip_Lounge','Exterior']){
   const fixture=ship(excluded),before=signature(fixture.root);
   assert.equal(prepareBlossomBed(fixture),false,excluded+' is not prepared');
@@ -80,4 +81,4 @@ await build({stdin:{contents:"export {createBlossomGarden as author} from './src
 const {author,replay}=await import(pathToFileURL(replayFile)),authored=author(ship('Fitted_garden_commons_10')),replayed=replay(ship('Fitted_garden_commons_10'));
 assert.equal(signature(authored.group),signature(replayed.group),'public replay reproduces authoring geometry');
 assert.equal(signature(authored.solid),signature(replayed.solid),'public replay reproduces collision geometry');
-console.log(JSON.stringify({passed:true,protected:['tree','red bridge','colliders','Hydro-Nip Lounge','exterior','bridge and bench approach','gallery routes'],plantingDraws:conservatory.children.length,plantingTriangles:triangles,replacedTriangles:46844},null,2));
+console.log(JSON.stringify({passed:true,protected:['original tree','red bridge shape','expanded pond collision','Hydro-Nip Lounge','exterior','bridge and bench approach','gallery routes'],plantingDraws:conservatory.children.length,plantingTriangles:triangles,replacedTriangles:46844},null,2));

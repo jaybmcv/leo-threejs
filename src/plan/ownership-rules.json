@@ -171,7 +171,7 @@
   },
   "src/walk/blossom.js": {
     "owners": [
-      "commons-1"
+      "commons-10"
     ],
     "via": null
   },
@@ -563,5 +563,13 @@
       "commons-1"
     ],
     "via": null
+  },
+  "src/walk/layered-conservatory.js": {
+    "owners": ["commons-10"],
+    "via": "inherited"
+  },
+  "src/walk/arrival-mood.js": {
+    "owners": ["d02-arrival-1"],
+    "via": "toWorld"
   }
 }
