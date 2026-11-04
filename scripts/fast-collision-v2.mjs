@@ -8,6 +8,7 @@ import {preparedManifest,preparedArrayReader} from './prepared-patch-v2.mjs';
 // changed owners. Broad room clearance remains part of the full nightly run.
 export async function checkFastPatchCollision(base='output/leo-interior-v02/prepared-walk'){
  const manifest=await preparedManifest(base),rooms=new Set(manifest.fastPatch?.rooms||[]);
+ if(manifest.fastPatch?.dressings?.length)return checkDressingCollision(manifest,base);
  if(!rooms.size)return {status:'not applicable',rooms:[],items:0,probes:0};
  const read=preparedArrayReader(manifest,base),result={status:'PASS',rooms:[...rooms],items:0,probes:0};
  for(const [kind,record]of [['solid',manifest.colliders],['ground',manifest.colliders.ground]]){
@@ -36,4 +37,29 @@ export async function checkFastPatchCollision(base='output/leo-interior-v02/prep
   }
  }
  return result;
+}
+
+// A dressing patch rebuilds whole static and ground bands: decode each band it owns triangles in and ray-test one of
+// them per span.
+async function checkDressingCollision(manifest,base){
+ const read=preparedArrayReader(manifest,base),owners=new Set(manifest.fastPatch.dressings.map(id=>'dressing:'+id)),result={status:'PASS',rooms:[],dressings:manifest.fastPatch.dressings,bands:0,probes:0};
+ for(const [kind,col]of [['solid',manifest.colliders],['ground',manifest.colliders.ground]])for(const [band,record]of col.bands){
+  const key=kind+' '+band,spans=(record.ownerSpans||[]).filter(r=>owners.has(r.owner));if(!spans.length)continue;result.bands++;
+  const spec=manifest.geometries[record.geometry],geometry=new T.BufferGeometry();
+  for(const [name,a]of Object.entries(spec.attributes))geometry.setAttribute(name,new T.BufferAttribute(await read(a.array),a.itemSize,a.normalized));
+  if(spec.index!==null)geometry.setIndex(new T.BufferAttribute(await read(spec.index),1));
+  const positions=geometry.attributes.position;assert([...positions.array].every(Number.isFinite),'Dressing band '+key+' has nonfinite vertices');
+  const roots=await Promise.all(record.roots.map(async id=>{const a=await read(id);return a.buffer.slice(a.byteOffset,a.byteOffset+a.byteLength);}));
+  const bvh=MeshBVH.deserialize({version:record.version,roots,index:record.index===null?null:await read(record.index),indirectBuffer:record.indirect===null?null:await read(record.indirect)},geometry,{setIndex:false});
+  const triangles=(geometry.index?.count??positions.count)/3;assert.equal(record.windowFlags==null?triangles:(await read(record.windowFlags)).length,triangles,'Dressing band '+key+' flags do not match its triangles');
+  for(const span of spans){
+   assert(span.start+span.count<=triangles,'Dressing span outside band '+key);let probe=null;
+   for(let t=span.start;t<span.start+span.count&&!probe;t++){const p=[0,1,2].map(k=>new T.Vector3().fromBufferAttribute(positions,geometry.index?geometry.index.getX(t*3+k):t*3+k)),normal=new T.Vector3().subVectors(p[1],p[0]).cross(new T.Vector3().subVectors(p[2],p[0]));if(normal.lengthSq()>1e-16)probe={center:p[0].add(p[1]).add(p[2]).multiplyScalar(1/3),normal:normal.normalize()};}
+   assert(probe,'Dressing span has only degenerate triangles');
+   const hit=bvh.raycastFirst(new T.Ray(probe.center.clone().addScaledVector(probe.normal,.05),probe.normal.clone().negate()),T.DoubleSide,0,.11);
+   assert(hit&&Number.isFinite(hit.distance),'Encoded collision ray missed '+span.owner+' in band '+key);result.probes++;
+  }
+  geometry.dispose();
+ }
+ assert(result.probes>0,'Dressing patch has no encoded collision');return result;
 }

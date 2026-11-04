@@ -26,7 +26,9 @@ const producerScripts=['v2-build','v2-world','layout-v2-data','build-exterior-v2
 const bakedAssets=['src/walk/assets/hydro-nip-main-logo.jpg','src/plan/v1-models-v2.json'];
 const hullAssets=['leo-exterior.glb','leo-exterior-refined.glb','leo-exterior-web.glb','leo-exterior-phone.glb'];
 
-export async function producerDependencies(entries){
+export async function producerDependencies(entries){return Object.keys(await producerGraph(entries)).sort();}
+// The same trace with each file's imports, so a change can be classified through every consumer.
+export async function producerGraph(entries){
  let result;
  if(process.platform==='win32'){
   // In restricted Windows sessions inherited handles work even when anonymous
@@ -40,9 +42,10 @@ export async function producerDependencies(entries){
   result={metafile:JSON.parse(await fs.readFile(dir+'/inputs.json','utf8'))};
  }else result=await build({entryPoints:entries,bundle:true,write:false,outdir:'unused',
    platform:'node',format:'esm',packages:'external',external:['v2-layout','walk-partitions','walk-changes'],metafile:true,logLevel:'silent'});
- const inputs=Object.keys(result.metafile.inputs).filter(f=>f.startsWith('src/')||f.startsWith('scripts/'));
- return inputs.sort();
+ const ours=f=>f.startsWith('src/')||f.startsWith('scripts/');
+ return Object.fromEntries(Object.entries(result.metafile.inputs).filter(([f])=>ours(f)).map(([f,input])=>[f,input.imports.map(i=>i.external?'package:'+i.path:i.path)]));
 }
+export const geometryRoots=()=>[...roots,...producerScripts.map(n=>'scripts/'+n+'.mjs')];
 
 export async function producerSourceIdentity(entry){
  const files=await producerDependencies([entry]),h=createHash('sha256');for(const file of [...files,'package-lock.json'].sort())h.update(file).update(sourceHash(file,await fs.readFile(file)));return h.digest('hex');

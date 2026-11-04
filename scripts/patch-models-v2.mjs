@@ -49,3 +49,5 @@ export async function patchModels({baseline,destination,rooms,roots=[],legacyRoo
  }
  assert(rooms.every(id=>seen.has(id)),'No model contains a changed room owner; use a wider build');return rows;
 }
+// The dressing lane (fast-dressing-v2.mjs) patches the same GLB container.
+export {parse as parseGlb,pack as packGlb,align as alignGlb};
