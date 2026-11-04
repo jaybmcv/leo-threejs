@@ -28,6 +28,29 @@ try{
  const dir=path.join(tmp,'v2'),legacyId='880000000000000001',legacy=[{id:legacyId,name:'Earlier swimmer',ms:45678,at:'2026-10-01T00:00:00.000Z'}];await fs.mkdir(dir,{recursive:true});await fs.writeFile(path.join(dir,'treasure.json'),JSON.stringify(legacy));const historicScores=[{id:legacyId,name:'Earlier player',score:900,wave:3,at:'2026-10-01T00:00:00.000Z'},{game:'pool',id:legacyId,name:'Earlier player',ms:80000,shots:22,at:'2026-10-01T00:00:00.000Z'}],historicMaze=[{id:legacyId,name:'Earlier player',ms:12345,at:'2026-10-01T00:00:00.000Z'}];await fs.writeFile(path.join(dir,'scores.json'),JSON.stringify(historicScores));await fs.writeFile(path.join(dir,'maze.json'),JSON.stringify(historicMaze));const s=await start(2,dir);
  check('v2 health advertises matching layout identity',s.health.layout===2&&s.health.layoutIdentity===now.identity);
  const a=await bot(s,{id:legacyId}),observer=await bot(s);check('locally signed identities are verified',a.welcome?.you.verified&&observer.welcome?.you.verified&&jwksReads>0);
+ // The retained Deck 4 puzzle is shared even for guests, with one admitted visitor and a safe inside release.
+ {const finder=await bot(s,{signed:false}),follower=await bot(s,{signed:false}),y=-27.7,face=-175.2;
+  const latest=b=>b.msgs.filter(m=>m.m==='panel').at(-1)||b.welcome.panel;
+  check('new visitors receive the sealed panel',finder.welcome.panel.phase==='sealed'&&follower.welcome.panel.phase==='sealed');
+  for(const [i,z] of [[0,.8],[3,-.4],[4,-.8]]){
+   await finder.pose([face+1.2,y,z]);finder.send({m:'panel',op:'flip',i});
+   await until(()=>latest(follower).levers[i]===1,'shared lever '+i);
+  }
+  await until(()=>latest(follower).phase==='open'&&latest(follower).down===1,'shared panel opens');
+  await finder.pose([face+1.2,y,0]);await follower.pose([face+1.2,y,0]);
+  await until(()=>latest(follower).owner===finder.welcome.id,'first visitor reserves the panel');
+  check('simultaneous follower does not replace the first admission',latest(finder).owner===finder.welcome.id);
+  await finder.pose([face-.3,y,0]);await sleep(450);check('panel waits for a body to clear the doorway',latest(follower).down===1);
+  await finder.pose([face-2,y,0]);await until(()=>latest(follower).phase==='sealed'&&latest(follower).down===0,'panel closes behind first visitor');
+  const joined=await bot(s,{signed:false});check('late join receives the occupied sealed state',joined.welcome.panel.owner===finder.welcome.id&&joined.welcome.panel.phase==='sealed');
+  follower.send({m:'panel',op:'flip',i:2});await sleep(200);check('occupied room cannot be solved again outside',latest(follower).levers.every(n=>n===0));
+  finder.send({m:'panel',op:'exit'});await until(()=>latest(follower).phase==='exit'&&latest(follower).down===1,'inside release is shared');
+  await finder.pose([face+2,y,0]);await until(()=>latest(follower).owner===null&&latest(follower).down===0,'exit resets the puzzle');
+  for(const [i,z] of [[0,.8],[3,-.4],[4,-.8]]){await follower.pose([face+1.2,y,z]);follower.send({m:'panel',op:'flip',i});await until(()=>latest(finder).levers[i]===1,'next shared lever '+i);}
+  await until(()=>latest(finder).down===1,'next opening');await follower.pose([face+1.2,y,0]);await follower.pose([face-2,y,0]);
+  await until(()=>latest(finder).owner===follower.welcome.id,'second owner');follower.ws.close();
+  await until(()=>latest(finder).owner===null&&latest(finder).down===0,'disconnect resets the panel');
+  check('disconnect releases the room for the next visitor',true);finder.ws.close();joined.ws.close();}
  const reads=jwksReads;for(const opts of [{layout:null,identity:null},{layout:1,identity:null},{identity:'stale-layout'}]){const bad=await bot(s,{...opts,id:legacyId,key:a.key});await until(()=>bad.closed,'mismatch close');check('v2 rejects '+JSON.stringify(opts)+' before replacing identity',bad.closed===4004&&!bad.welcome&&a.closed===null);}
  check('mismatch is rejected before identity-provider access',jwksReads===reads);
  // A player from Otherside: everything a Discord account gets, on the page's word, and so no verified dot.

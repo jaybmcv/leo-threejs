@@ -52,8 +52,10 @@ function backdropTexture(){
  return {texture,canvas,set(index){if(Number.isInteger(index)&&index>=0&&index<5){selected=index;paint(loadedLogo);}}};
 }
 
+// Tagged as one dressing, so its collision, prepared templates and model nodes can be replaced alone
+// (scripts/fast-dressing-v2.mjs).
 export function createSelfieBooth(){
- const floor=shapePoint([BACK_X,CROWN.floor,0])[1],group=new T.Group();group.name='Selfie_booth';
+ const floor=shapePoint([BACK_X,CROWN.floor,0])[1],group=new T.Group();group.name='Selfie_booth';group.userData.fastDressing='selfie';
  const navy=new T.MeshStandardMaterial({name:'Selfie_navy',color:0x233b4b,roughness:.6});
  const bronze=new T.MeshStandardMaterial({name:'Selfie_bronze',color:0x9d7950,roughness:.4,metalness:.65});
  const black=new T.MeshStandardMaterial({name:'Selfie_camera_body',color:0x1a1c20,roughness:.45,metalness:.3});
