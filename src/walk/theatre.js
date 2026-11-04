@@ -83,6 +83,7 @@ function roomShape(flip){
  const p=[[ENTRY,-SIDE],[BACK,-SIDE],[BACK,SIDE],[ENTRY,SIDE]];
  return new T.Shape(p.map(([x,z])=>new T.Vector2(x,flip*z)));
 }
+// The refitted floor outline is independent of the previous prepared templates.
 function plane(flip,y,material,uv){
  const g=new T.ShapeGeometry(roomShape(flip)),pos=g.attributes.position,uvs=g.attributes.uv;
  for(let i=0;i<pos.count;i++)uvs.setXY(i,...uv(pos.getX(i),flip*pos.getY(i)));
@@ -235,6 +236,7 @@ export function createTheatre(ship,{url,anisotropy=1}={}){
  const group=new T.Group();group.name='Walk_theatre';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);
  const add=(name,geo,material)=>{const o=new T.Mesh(geo,material);o.name=name;group.add(o);return o;};
+ // Doorway edits change the drape merge; build it from the current runs.
  add('Theatre_drapes',mergeGeometries(RUNS.map(drape)),new T.MeshBasicMaterial({name:'Theatre_drape',vertexColors:true,side:T.DoubleSide}));
  add('Theatre_pelmet',mergeGeometries(PELMET.map(r=>strip(r,LIP,TOP,INSET+.16,.32))),new T.MeshBasicMaterial({name:'Theatre_pelmet',color:0x1a0c2c}));
  add('Theatre_light_line',mergeGeometries(PELMET.map(r=>strip(r,LIP-.03,LIP,INSET+.3,.06))),new T.MeshBasicMaterial({name:'Theatre_light_line',color:0x8fe0ff}));

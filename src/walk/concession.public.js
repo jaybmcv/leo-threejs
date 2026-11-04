@@ -65,7 +65,8 @@ export function createConcession(ship){
  const shadeGold=gold.clone();shadeGold.name='Concession_shade';shadeGold.side=T.DoubleSide;
  const glass=new T.MeshStandardMaterial({name:'Concession_glass',color:0xfff4dc,roughness:.05,transparent:true,opacity:.3,depthWrite:false});
  const add=(name,geo,material,at=[0,0,0])=>{const o=new T.Mesh(geo,material);o.name=name;o.position.set(...at);group.add(o);return o;};
- const box=(name,[sx,sy,sz],[x,y,z],material)=>add(name,new ReplayGeometry("src/walk/concession.js:0",T.BoxGeometry,sx,sy,sz),material,[x,y,z]);
+ // Counter dimensions can change while a fast build reuses its prepared templates.
+ const box=(name,[sx,sy,sz],[x,y,z],material)=>add(name,new T.BoxGeometry(sx,sy,sz),material,[x,y,z]);
  // Main face and both returns. The staff side remains open behind the counter.
  const a={x:CORNER.x-D/2,z0:WALL.z,z1:CORNER.z},b={z:CORNER.z-D/2,x0:CORNER.x,x1:CORNER.x+1.5};
  const lenA=a.z1-a.z0,lenB=b.x1-b.x0;
