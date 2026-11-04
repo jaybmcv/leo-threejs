@@ -8,7 +8,8 @@ import {checkFastPatchCollision} from './fast-collision-v2.mjs';
 // The dressing lane's proofs (fast-dressing-v2.mjs).
 //   node scripts/check-fast-dressing-v2.mjs              classifier: a selfie-only edit takes lane D; a shared helper,
 //                                                        prepare.js or a new import takes the whole build
-//   node scripts/check-fast-dressing-v2.mjs --patch      after lane D: output/ against fast-base, everything but the
+//   node scripts/check-fast-dressing-v2.mjs --patch [--base=DIR] [--patched=DIR]
+//                                                        after lane D: output/ against fast-base, everything but the
 //                                                        dressing unchanged and the dressing as freshly compiled
 //   node scripts/check-fast-dressing-v2.mjs --full=DIR [--patched=DIR] [--untagged]
 //                                                        a lane D output (default output/leo-interior-v02) against an
@@ -136,6 +137,8 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
   await expect('selfie and shared helper','whole',async()=>{await edit('src/walk/selfie.js',camera,bigger);await fs.writeFile('src/walk/canvas.js',originals.get('src/walk/canvas.js')+'\n// fixture\n');});
   await expect('prepare.js edit','whole',()=>edit('src/walk/prepare.js','const booth=createSelfieBooth();','const booth=createSelfieBooth();booth.group.position.x+=.1;'));
   await expect('selfie gains an unqualified import','whole',()=>edit('src/walk/selfie.js',"import * as T from 'three';","import * as T from 'three';import {LIFTS} from './lifts.js';void LIFTS;"));
+  await restore();await edit('src/walk/prepare.js','const booth=createSelfieBooth();colliders.addStatic(booth.group);','const booth=createSelfieBooth();if(booth)colliders.addStatic(booth.group);');
+  assert.match((await classifyDressings(['src/walk/selfie.js'])).reason,/no longer placed by its one qualified line in src\/walk\/prepare\.js/);cases.push({name:'placement line changed',reason:'no longer placed'});
  }finally{await restore();}
  // Through every consumer, independent of the working tree: a second importer or a moved glue line widens.
  const graph=g=>({graph:g}),selfie=['src/walk/canvas.js','package:three','src/fin-crown.js','src/concept-shape.js'];
