@@ -17,11 +17,11 @@ import {floorY} from '../transit.js';
 // roof, black ribs, the purple neon along its roof showing through) and the way out into the lounge is framed by a
 // black obsidian arch. Walk only.
 // In the group's frame x runs across the doorway (world x), y up from the floor, +z out into the promenade; the
-// passage runs from z 0 back to -4, where it meets the lounge. The head is about 4.6 m wide and stands from 1.6 m out
+// passage runs from z 0 back to -2.08, where it meets the lounge. The head is about 4.6 m wide and stands from 1.6 m out
 // in front of z 0 to 1.3 m behind it, its crown 3.64 m up under the 3.7 m ceiling. The head and its lower teeth are
 // solid. A walker fits through anywhere between the mouth's walls without touching a tooth: the hanging teeth end 1.95 m
 // up, above a captain's hat, and the lower teeth stand on the lip at the corners, in line with the walls.
-const [gx,,gz]=placedV1('jaguar-gate'),GATE={x:gx,z:gz,half:2,h:3.68,depth:4,wall:.06};
+const [gx,,gz]=placedV1('jaguar-gate'),GATE={x:gx,z:gz,half:2,h:3.68,depth:2.08,wall:.06};
 const GLOW=0xffcf3a,PURPLE=0xa04dff;
 // The mouth's outline: straight sides from the floor to `side`, then a nearly flat top with rounded corners at `top`.
 const MOUTH={foot:1.05,half:1.0,side:1.72,top:2.12},EDGE=.3;
@@ -189,18 +189,19 @@ export function createJaguarGate(){
  // Inside: clear glass on both sides and over the roof, held by black stone ribs, with the neon along the roof of the
  // mouth showing through it and the deck's own floor underfoot. Nothing in the throat is solid.
  // The glass starts a metre back, inside the head's rear, so its roof and neon don't show over the head from in front.
+ // The movable throat uses its current dimensions, independent of prepared templates.
  const inner=half-wall,THROAT=1,run=depth-THROAT,mid=THROAT+run/2;
- for(const sx of [-1,1])add(mat.glass,at(new ReplayGeometry("src/walk/jaguar-gate.js:10",T.PlaneGeometry,run,h),sx*(inner-.01),h/2,-mid,0,-sx*Math.PI/2));
- add(mat.glass,at(new ReplayGeometry("src/walk/jaguar-gate.js:11",T.PlaneGeometry,2*inner,run),0,h-.03,-mid,Math.PI/2));
+ for(const sx of [-1,1])add(mat.glass,at(new T.PlaneGeometry(run,h),sx*(inner-.01),h/2,-mid,0,-sx*Math.PI/2));
+ add(mat.glass,at(new T.PlaneGeometry(2*inner,run),0,h-.03,-mid,Math.PI/2));
  // Three ribs across the roof of the passage, just under the glass.
- for(const z of [-1.8,-2.6,-3.4])add(mat.stone,at(new ReplayGeometry("src/walk/jaguar-gate.js:12",T.BoxGeometry,2*inner,.07,.1),0,h-.04,z));
+ for(const z of [-THROAT-run*.2,-THROAT-run*.5,-THROAT-run*.8])add(mat.stone,at(new ReplayGeometry("src/walk/jaguar-gate.js:12",T.BoxGeometry,2*inner,.07,.1),0,h-.04,z));
 
  // The neon: three purple tubes along the roof of the mouth and one across its front, and their light falling down
  // the glass and onto the floor.
- for(const x of [-inner+.12,0,inner-.12])add(mat.neon,at(new ReplayGeometry("src/walk/jaguar-gate.js:13",T.CylinderGeometry,.035,.035,run-.1,8),x,h-.1,-mid,Math.PI/2));
+ for(const x of [-inner+.12,0,inner-.12])add(mat.neon,at(new T.CylinderGeometry(.035,.035,run-.1,8),x,h-.1,-mid,Math.PI/2));
  add(mat.neon,at(new ReplayGeometry("src/walk/jaguar-gate.js:14",T.CylinderGeometry,.035,.035,2*inner-.2,8),0,h-.1,-THROAT-.08,0,0,Math.PI/2));
- for(const sx of [-1,1])add(mat.wash,at(new ReplayGeometry("src/walk/jaguar-gate.js:15",T.PlaneGeometry,run,h*.85),sx*(inner-.03),h*.575,-mid,0,-sx*Math.PI/2));
- const pool=new ReplayGeometry("src/walk/jaguar-gate.js:16",T.PlaneGeometry,2*inner-.2,run-.2);add(new T.MeshBasicMaterial({name:'Jaguar_floor_glow',color:PURPLE,transparent:true,opacity:.18,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}),at(pool,0,.03,-mid,-Math.PI/2));
+ for(const sx of [-1,1])add(mat.wash,at(new T.PlaneGeometry(run,h*.85),sx*(inner-.03),h*.575,-mid,0,-sx*Math.PI/2));
+ const pool=new T.PlaneGeometry(2*inner-.2,run-.2);add(new T.MeshBasicMaterial({name:'Jaguar_floor_glow',color:PURPLE,transparent:true,opacity:.18,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}),at(pool,0,.03,-mid,-Math.PI/2));
 
  // The way out: a black obsidian arch where the passage meets the lounge, its jambs against the opening's edges and
  // its top corners rounded in (nothing under 2.9 m, so the way through is as wide and tall as before).
@@ -212,7 +213,8 @@ export function createJaguarGate(){
  gate.translate(0,0,-depth-.2);
  const exit=new T.Mesh(gate,mat.stone);exit.name='Jaguar_exit_arch';solid.add(exit);
 
- for(const [m,list] of parts){const o=new T.Mesh(replayMerged("src/walk/jaguar-gate.js",nativeMergeGeometries,list.map(g=>g.index?g.toNonIndexed():g)),m);o.name=m.name;o.userData.noCollide=true;group.add(o);}
+ // Throat transforms change these material batches, so merge them locally.
+ for(const [m,list] of parts){const o=new T.Mesh(nativeMergeGeometries(list.map(g=>g.index?g.toNonIndexed():g)),m);o.name=m.name;o.userData.noCollide=true;group.add(o);}
  group.updateMatrixWorld(true);
- placeObject(group,'jaguar-gate');group.position.add(new T.Vector3(...launchRoomPoint('commons-1',[0,0,6])).sub(new T.Vector3(...launchRoomPoint('commons-1',[0,0,0]))));group.updateMatrixWorld(true);return {group,solid};
+ placeObject(group,'jaguar-gate');group.position.add(new T.Vector3(...launchRoomPoint('commons-1',[-3.25,0,6])).sub(new T.Vector3(...launchRoomPoint('commons-1',[0,0,0]))));group.updateMatrixWorld(true);return {group,solid};
 }

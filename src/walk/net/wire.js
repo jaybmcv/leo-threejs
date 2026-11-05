@@ -1,7 +1,7 @@
 // Poses on the wire, in bytes. The same design as Voyager's Reach's pose wire (packages/world-core/src/poseWire.ts):
 // the server sends every visitor every nearby visitor's pose many times a second, so its upload grows as the square of
 // the crowd; a JSON pose is ~130 bytes, most of it the same keys and the same name again. So server -> client poses are
-// bytes: every visitor holds a small SLOT, who a slot is (id and name) is sent once, and after that a pose is 14 bytes.
+// bytes: every visitor holds a small SLOT, who a slot is (id and name) is sent once, and after that a pose is 15 bytes.
 // Client -> server stays JSON (one pose a tenth of a second each: N messages, not N squared).
 //
 // Leo's record carries what walk mode's Cosmo needs (avatar.js update): where, which way, on the ground or not, the
@@ -19,11 +19,13 @@
 //             walk/hamster-ball.js); bit 7 unused
 //   position: (metres + 2048) x 4096, an eighth of a millimetre
 //   heading:  a turn in 65,536 steps, read back in [-pi, pi)
+//   fur:      u8 index in walk/fur-colours.js, immediately after heading
 //   MOTION:   u8 stance | jumps << 2 · i16 rise x 300 · u16 (jumpS + 1) x 1000   (a body standing plainly sends none)
 //   EMOTE:    u8 bytes · utf-8
 // Encoding throws on anything out of range (a bug in the sender); decoding drops a frame that does not read cleanly.
 
-export const WIRE_TAG=0x4c,WIRE_VERSION=5;
+import {FUR_COLOURS} from '../fur-colours.js';
+export const WIRE_TAG=0x4c,WIRE_VERSION=6;
 export const STANCES=['stand','crouch','prone','slide'];
 export const RESTS=[null,'sit','lie'];
 const GROUNDED=0x04,MOTION=0x08,EMOTE=0x10,PLAYING=0x20,BALL=0x40,KNOWN=0x7f;
@@ -43,10 +45,11 @@ export function encodeRecord(slot,p){
  const rest=RESTS.indexOf(p.rest||null);if(rest<0)throw new RangeError(`pose wire: unknown rest ${p.rest}`);
  const moving=stance!==0||jumps!==0||rise!==0||jump!==0,clip=p.emote?encoder.encode(p.emote):null;
  if(clip&&clip.length>0xff)throw new RangeError('pose wire: emote too long');
- const bytes=new Uint8Array(14+(moving?5:0)+(clip?1+clip.length:0)),v=new DataView(bytes.buffer);
+ const fur=p.fur??0;range('fur',fur,0,FUR_COLOURS.length-1);if(!Number.isInteger(fur))throw new RangeError('pose wire: fur is not an index');
+ const bytes=new Uint8Array(15+(moving?5:0)+(clip?1+clip.length:0)),v=new DataView(bytes.buffer);
  v.setUint16(0,slot,true);v.setUint8(2,rest|(p.grounded?GROUNDED:0)|(moving?MOTION:0)|(clip?EMOTE:0)|(p.playing?PLAYING:0)|(p.ball?BALL:0));
  steps.forEach((s,k)=>{v.setUint16(3+k*3,s&0xffff,true);v.setUint8(5+k*3,s>>>16);});
- v.setUint16(12,yawStep(p.yaw),true);let o=14;
+ v.setUint16(12,yawStep(p.yaw),true);v.setUint8(14,fur);let o=15;
  if(moving){v.setUint8(o,stance|(jumps<<2));v.setInt16(o+1,rise,true);v.setUint16(o+3,jump,true);o+=5;}
  if(clip){v.setUint8(o,clip.length);bytes.set(clip,o+1);}
  return bytes;
@@ -82,12 +85,12 @@ export function decodeFrame(data){
  }
  if(!has(2))return null;const count=v.getUint16(o,true);o+=2;
  for(let i=0;i<count;i++){
-  if(!has(14))return null;
+  if(!has(15))return null;
   const slot=v.getUint16(o,true),head=v.getUint8(o+2);
   if(head&~KNOWN||(head&3)===3)return null;
   const pos=[0,1,2].map(k=>(v.getUint16(o+3+k*3,true)+v.getUint8(o+5+k*3)*0x10000)/STEPS+ORIGIN);
-  const turned=v.getUint16(o+12,true)/YAW_STEPS*TURN;o+=14;
-  const pose={pos,yaw:turned>=Math.PI?turned-TURN:turned,grounded:!!(head&GROUNDED),rest:RESTS[head&3],stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:!!(head&PLAYING),ball:!!(head&BALL)};
+  const turned=v.getUint16(o+12,true)/YAW_STEPS*TURN,fur=v.getUint8(o+14);if(fur>=FUR_COLOURS.length)return null;o+=15;
+  const pose={pos,yaw:turned>=Math.PI?turned-TURN:turned,grounded:!!(head&GROUNDED),rest:RESTS[head&3],stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:!!(head&PLAYING),ball:!!(head&BALL),fur};
   if(head&MOTION){
    if(!has(5))return null;const first=v.getUint8(o);if(first&0xf0)return null;
    Object.assign(pose,{stance:STANCES[first&3],jumpCount:first>>2,rise:v.getInt16(o+1,true)/300,jumpS:v.getUint16(o+3,true)/1000-1});o+=5;
@@ -139,5 +142,5 @@ const UNSEEN=new RegExp('[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u
 
 // 2: names can be Discord-verified (a Leo pass in the hello). 3: testers wear the captain's hat. 4: a pose says when its
 // visitor is playing Alien Cat Invasion, and the leaderboard's messages (play, score, board). 5: a pose says when its
-// visitor is rolling in a hamster ball.
-export const PROTOCOL=5;
+// visitor is rolling in a hamster ball. 6: each pose carries its fur colour after the heading.
+export const PROTOCOL=6;

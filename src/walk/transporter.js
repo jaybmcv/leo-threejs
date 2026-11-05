@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {toWorld,toLocal,yawToWorld,frame} from '../plan/rooms.js';
+import {toWorld,yawToWorld} from '../plan/rooms.js';
 import {findStand} from './places.js';
 import {CHARGE_BAYS} from './mct-bay.js';
 import {CART_WHEELS,createCartMesh} from './transporter-mesh.js';
@@ -9,8 +9,8 @@ export {createCartMesh} from './transporter-mesh.js';
 // bays, numbered MCT-01 to MCT-06. E at the front takes the centred driver's seat (one driver per cart; with
 // Leo live the server says who has it: server/transporters.mjs). W and S drive at walking pace; hold Shift to run.
 // A and D steer the front wheels. E gets out, leaving the cart parked where it stopped. E at the back takes a rear seat.
-// It faces backwards and rides along. The carts stay on Deck 1's floor and out of the lifts, Container hold A and Aft
-// spares (their noses stop in the doorway). Each visitor drives their own copy without Leo live; with it, others see
+// It faces backwards and rides along. The carts stay on Deck 1's floor and out of the lifts; room entry uses the
+// actual wall clearance, including Container hold A and Aft spares. Each visitor drives their own copy without Leo live; with it, others see
 // the driver seated and the cart moving under them, and a cart parked where its driver left it, until the daily reset sends it home.
 //
 // A cart's frame: the origin is on the floor under the driver's hips, +z is forward, +x the driver's left. It is solid
@@ -18,8 +18,6 @@ export {createCartMesh} from './transporter-mesh.js';
 const HOME_ROOM='d01-workshop-5';
 // The charging bays' centres, noses toward the aisle, with room behind the rear seats to board and get out.
 const HOME_Z=13.7,HOME_YAW=Math.PI;
-// These rooms keep their existing cart restrictions.
-const FENCED=['d01-cargo-1','d01-spares-aft'];
 export const MCT={
  // Walking pace forward and slower back; m/s. Run is a multiplier; accel and brake are m/s^2. Steering uses radians.
  speed:2.25,reverse:1.2,runMultiplier:1.5,accel:2.2,brake:5,steer:.6,steerRate:2.2,
@@ -50,13 +48,12 @@ export function outOfCart(c,p,r){
 export function createCart(i,home){return {i,home,pos:new T.Vector3(...home.at),yaw:home.yaw,speed:0,steer:0,roll:0,d:null};}
 
 const seg=new T.Line3(new T.Vector3(),new T.Vector3()),ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0)),q=new T.Vector3();
-// Can the cart stand here? On Deck 1's floor under every circle, out of every lift car and the fenced rooms.
+// Can the cart stand here? On Deck 1's floor under every circle and out of every lift car.
 export function cartFits(c,{colliders,lifts}){
  for(const z of MCT.circles){
   cartPoint(c,[0,0,z],q);
   ray.origin.set(q.x,c.pos.y+.45,q.z);ray.direction.set(0,-1,0);const hit=colliders.raycast(ray,.9);
   if(!hit||hit.normal.y<.7||Math.abs(hit.point.y-c.home.at[1])>.3)return false;
-  for(const id of FENCED){const f=frame(id),[x,,lz]=toLocal(id,[q.x,f.origin[1],q.z]);if(Math.abs(x)<f.size[0]/2+.2&&Math.abs(lz)<f.size[2]/2+.2)return false;}
   for(const l of lifts?.lifts||[]){const car=l.spec.car;if(l.stops.some(s=>Math.abs(s.y-c.home.at[1])<1)&&Math.abs(q.x-car.x)<car.width/2+MCT.radius&&Math.abs(q.z-car.z)<car.depth/2+MCT.radius)return false;}
  }
  return true;

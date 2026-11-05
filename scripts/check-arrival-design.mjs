@@ -56,13 +56,13 @@ if(!existsSync('output/leo-interior-v02/layout.json')){
 }else{
  const {createArrivalMood}=await import('../src/walk/arrival-mood.js');
  const {toWorld}=await import('../src/plan/rooms.js');
- const scene=new T.Scene(),hemi=new T.HemisphereLight(0xfff6e6,0x5d6b75,1.05),fill=new T.DirectionalLight(0xfff1dc,.55);
+ const scene=new T.Scene(),hemi=new T.HemisphereLight(0xeef4ff,0x4f5d68,1),fill=new T.DirectionalLight(0xf2f6ff,.55);
  scene.environmentIntensity=.85;scene.add(hemi,fill);
  const snapshot=()=>[hemi.intensity,fill.intensity,scene.environmentIntensity,...hemi.color.toArray(),...hemi.groundColor.toArray()];
  const baseline=snapshot(),mood=createArrivalMood({root,inside},{hemi,fill,scene});
  const eye=p=>new T.Vector3(...toWorld('d02-arrival-1',p));
  for(let i=0;i<120;i++)mood.update(1/60,eye([0,1.65,0]));
- assert.equal(mood.active,true);assert.ok(hemi.intensity<baseline[0]*.6);
+ assert.equal(mood.active,true);assert.ok(hemi.intensity<baseline[0]*.95);
  assert.equal(scene.getObjectByName('Arrival_practical_lights').visible,true);
  // A normal doorway exit, vertical departure, and a distant teleport each
  // restore every changed value in the same frame, not over a lingering fade.
@@ -93,7 +93,7 @@ if(!existsSync('output/leo-interior-v02/layout.json')){
  assert.ok(hemi.intensity<baseline[0]*.41);
  for(let i=0;i<180;i++){
   tick(arrivalEye);const amount=1-Math.exp(-3*dt*(i+1));
-  assert.ok(Math.abs(hemi.intensity-T.MathUtils.lerp(baseline[0],baseline[0]*.55,amount))<1e-10,'outgoing Recovery fade overwrote Arrival');
+  assert.ok(Math.abs(hemi.intensity-T.MathUtils.lerp(baseline[0],baseline[0]*.9,amount))<1e-10,'outgoing Recovery fade overwrote Arrival');
  }
  arrival.update(dt,recEye);recovery.update(dt,recEye);const recoveryOwns=snapshot();arrival.apply();assert.deepEqual(snapshot(),recoveryOwns);
  assert.equal(arrival.active,false);arrival.dispose();

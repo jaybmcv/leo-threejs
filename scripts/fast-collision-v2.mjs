@@ -41,8 +41,10 @@ export async function checkFastPatchCollision(base='output/leo-interior-v02/prep
 
 // A dressing patch rebuilds whole static and ground bands: decode each band it owns triangles in and ray-test one of
 // them per span.
+// A dressing that is never solid (the paintings) patches no band.
 async function checkDressingCollision(manifest,base){
- const read=preparedArrayReader(manifest,base),owners=new Set(manifest.fastPatch.dressings.map(id=>'dressing:'+id)),result={status:'PASS',rooms:[],dressings:manifest.fastPatch.dressings,bands:0,probes:0};
+ const solid=manifest.fastPatch.collisionDressings??manifest.fastPatch.dressings;if(!solid.length)return {status:'not applicable',rooms:[],dressings:manifest.fastPatch.dressings,bands:0,probes:0};
+ const read=preparedArrayReader(manifest,base),owners=new Set(solid.map(id=>'dressing:'+id)),result={status:'PASS',rooms:[],dressings:manifest.fastPatch.dressings,bands:0,probes:0};
  for(const [kind,col]of [['solid',manifest.colliders],['ground',manifest.colliders.ground]])for(const [band,record]of col.bands){
   const key=kind+' '+band,spans=(record.ownerSpans||[]).filter(r=>owners.has(r.owner));if(!spans.length)continue;result.bands++;
   const spec=manifest.geometries[record.geometry],geometry=new T.BufferGeometry();

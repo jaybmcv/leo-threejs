@@ -1,3 +1,4 @@
+import {LOUNGE_PLAN} from '../plan/lounge-layout-v2.js';
 import {walkCanvas,hasWalkCanvas} from './canvas.js';
 import * as T from 'three';
 import {anchorObject} from '../plan/rooms.js';
@@ -18,7 +19,7 @@ import {newGame as newRun,step,press,beltAt} from './paws-off/rules.js';
 // Everything is the walk's own: the ship's models and exports are unchanged. The row is built in its own frame: x along
 // the wall (toward the commons' entrance side), y up from the floor, z out from the wall into the room.
 // The wall's face is at template x 154.44 (the commons template, model.js); the stair's foot at template z 34.85.
-const FLOOR=24.3,WALL=22.44,REACH=1.3;
+const FLOOR=24.3,WALL=LOUNGE_PLAN.arcadeWall+114.5,REACH=1.3;
 const PINK=0xff4fd8,CYAN=0x45e3ff,GREEN=0x6dff7a,AMBER=0xffc266,ORANGE=0xf85800,PURPLE=0xa77bff;
 // Cabinet shapes: width, depth, control panel height and reach, screen (bottom, top, lean back), marquee overhang, top.
 const SHAPES={
@@ -40,7 +41,7 @@ const ROW=[
  {shape:'tall',body:0x989da5,side:0x7e838b,neon:[PURPLE,PURPLE]},
  {shape:'upright',body:0xa1a6ad,side:0x878c94,neon:[PINK,CYAN]},
 ];
-const GAP=.95,START=-4.25,ROW_END=ROW.reduce((x,c)=>x+SHAPES[c.shape].w+GAP,START)-GAP;
+const GAP=LOUNGE_PLAN.arcadeGap,START=LOUNGE_PLAN.arcadeStart+43,ROW_END=ROW.reduce((x,c)=>x+SHAPES[c.shape].w+GAP,START)-GAP;
 // Paws Off's arcade treadmill: its tower, a little further on than the cabinets are spaced, and its deck in front, as
 // long, wide and high as the Deck 16 treadmills' (areas.js), so a run here plays as one there does.
 const MILL={body:0x15303a,side:0x1d4552,neon:[ORANGE,CYAN],gap:1.3,deck:{w:1.3,l:2.6,h:.26,at:.55}};
@@ -235,7 +236,8 @@ export function createArcade(){
   const b=new T.Mesh(new T.BoxGeometry(w,h,l));b.position.set(MX,h/2,cz);solid.add(b);}
  // Neon on the wall above the row and the treadmill: a pink and a cyan line the length of them, and the arcade's sign
  // over the middle.
- box('neon',PINK,[END-START+.6,.035,.02],[(START+END)/2,2.42,.02]);box('neon',CYAN,[END-START+.6,.035,.02],[(START+END)/2,2.52,.02]);
+ // These strips follow the current cabinet spacing rather than a prepared width.
+ for(const [color,y] of [[PINK,2.42],[CYAN,2.52]])put('neon',color,new T.BoxGeometry(END-START+.6,.035,.02).translate((START+END)/2,y,.02));
  for(const xx of [START-.3,END+.3])box('neon',PURPLE,[.035,2.52,.02],[xx,1.26,.02]);
  panel('sign',()=>canvas(1024,256,(g,w,h)=>{g.clearRect(0,0,w,h);g.textAlign='center';g.textBaseline='middle';g.font=font(800,150);
   g.lineWidth=10;g.shadowColor='#ff4fd8';g.shadowBlur=30;g.strokeStyle='#ff4fd8';g.strokeText('ARCADE',w/2,h/2+6);g.shadowBlur=0;g.fillStyle='#ffe3f8';g.fillText('ARCADE',w/2,h/2+6);}),
@@ -243,6 +245,7 @@ export function createArcade(){
  // (The sign writes no depth, so the glow behind it shows through round the letters.)
  Object.assign(panels.get('sign').material,{transparent:true,depthWrite:false});
  put('glow',PINK,new T.PlaneGeometry(6,2.2).translate((START+END)/2,3.25,.015));
+ // Cabinet positions change the batches; retain only the fixed shape templates.
  for(const [m,gs] of lists){const o=new T.Mesh(mergeGeometries(gs),mats[m]);o.name=mats[m].name;o.castShadow=m==='body'||m==='trim';o.receiveShadow=m!=='glow';gs.forEach(g=>g.dispose());group.add(o);}
  for(const {material,gs} of panels.values()){const o=new T.Mesh(mergeGeometries(gs),material);o.name=material.name;gs.forEach(g=>g.dispose());group.add(o);}
  group.updateMatrixWorld(true);solid.updateMatrixWorld(true);

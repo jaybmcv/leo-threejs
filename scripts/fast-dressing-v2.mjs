@@ -19,36 +19,62 @@ import {installWalkCanvas} from '../src/walk/canvas.js';
 import {Colliders,solid} from '../src/walk/collision.js';
 import {groundMesh} from '../src/v2/ground.js';
 
-// The dressing fast lane: an additive prop a preparation step creates after collision, from no ship state, with its own
-// render templates, collision spans and model nodes. Each entry is qualified by hand. `files` are the module's four
-// mode variants, `consumers` the only modules allowed to import them, `imports` everything they may import and `glue`
-// the one preparation line that places it (prepare.js and prepare.authoring.js). The owner tag comes from the producer
-// (group.userData.fastDressing, roomPatchOwner in room-owner.js), never from a name.
+// The dressing fast lane: an additive prop made from no ship state, with its own render templates and, for some,
+// collision spans and model nodes. Each entry is qualified by hand:
+//  files      the module's four mode variants;
+//  consumers  the only modules that may import a changed file, in the geometry graph or the offline authoring page's
+//             (main.authoring.js), and imports everything a changed file may import;
+//  glue       [file, line]: each line that places it, exactly once in its file;
+//  uses       [file, token, allowed]: past the allowed snippets the token appears nowhere else in that file's code, so
+//             nothing but the glue reaches the prop (and a consumer that would read it stays idle);
+//  collision  it is made solid, owned by its producer's tag (group.userData.fastDressing, read by roomPatchOwner in
+//             room-owner.js, never a name); model: it is in leo-full-ship.glb (v2-build.mjs exports it).
 export const DRESSINGS={
- selfie:{owner:'dressing:selfie',create:'createSelfieBooth',site:'src/walk/selfie.js:',
+ selfie:{owner:'dressing:selfie',create:'createSelfieBooth',groups:r=>[r.group],site:'src/walk/selfie.js:',collision:true,model:true,
   files:['src/walk/selfie.js','src/walk/selfie.authoring.js','src/walk/selfie.prepared.js','src/walk/selfie.public.js'],
   source:'src/walk/selfie.js',authoring:'src/walk/selfie.authoring.js',public:'src/walk/selfie.public.js',
-  consumers:['src/walk/prepare.js','src/walk/prepare.authoring.js'],glue:'const booth=createSelfieBooth();colliders.addStatic(booth.group);',
+  consumers:['src/walk/prepare.js','src/walk/prepare.authoring.js'],glue:['src/walk/prepare.js','src/walk/prepare.authoring.js'].map(f=>[f,'const booth=createSelfieBooth();colliders.addStatic(booth.group);']),uses:[],
   imports:['package:three','src/walk/canvas.js','src/fin-crown.js','src/concept-shape.js','src/v2/prepared-geometry-record.js']},
+ // The paintings: only the authoring page hangs them, after collision and the bake, so their one prepared output is
+ // their geometry templates; never solid and in no model. trim.js reads PAINTINGS to keep corridor walls bare behind
+ // them, but the v2 walk imports corridorTrim without calling it, and the uses check keeps it that way.
+ paintings:{owner:null,create:'createPaintings',groups:r=>r.groups,site:'src/walk/paintings.js:',collision:false,model:false,
+  files:['src/walk/paintings.js','src/walk/paintings.authoring.js','src/walk/paintings.prepared.js','src/walk/paintings.public.js'],
+  source:null,authoring:'src/walk/paintings.authoring.js',public:'src/walk/paintings.public.js',
+  consumers:['src/walk/main.authoring.js','src/walk/trim.authoring.js'],
+  glue:[['src/walk/main.authoring.js','paintings=createPaintings({urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});']],
+  uses:[['src/walk/main.authoring.js',/\bpaintings\b|\bcreatePaintings\b/g,["import {createPaintings} from './paintings.authoring.js';",'paintings=createPaintings({urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});','for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}',',paintings=null,','paintings.update(p);',',paintings,']],
+   ['src/walk/main.authoring.js',/\bcorridorTrim\b/g,["import {corridorTrim} from './trim.authoring.js';"]]],
+  // [consumer, its only importers]: the idle consumer is reached only through the files the uses check reads.
+  idle:[['src/walk/trim.authoring.js',['src/walk/main.authoring.js']]],
+  imports:['package:three','src/v2/phase4-community.js','src/plan/placements.js','src/walk/collision.authoring.js','src/v2/prepared-geometry-record.js']},
 };
+// Consumers are looked for in both graphs: the geometry producers and the page that authors the prepared walk.
+const consumerRoots=()=>[...geometryRoots(),'src/walk/main.authoring.js'];
+// A file's code without its comment lines, for the uses check.
+const code=text=>text.replace(/\r\n/g,'\n').split('\n').map(l=>l.replace(/^\s*\/\/.*$/,'')).join('\n');
 // An edit the patch can't carry (a lost tag, a new texture or instancing, a replay mismatch) takes the wider build
 // rather than failing the deploy; the full pipeline supports it.
 const decline=(ok,message)=>{if(!ok)throw Error(message+'; take the wider build');};
-export const dressingOwners=ids=>new Set(ids.map(id=>DRESSINGS[id].owner));
+export const dressingOwners=ids=>new Set(ids.filter(id=>DRESSINGS[id].collision).map(id=>DRESSINGS[id].owner));
 
 // null: not a dressing-only change (the normal lanes decide). {reason}: a dressing file changed but it can't be
 // patched alone. {dressings}: every changed file belongs to qualified dressings and each is used only by its own glue.
 export async function classifyDressings(files,{graph=null}={}){
  const ids=Object.keys(DRESSINGS).filter(id=>files.some(f=>DRESSINGS[id].files.includes(f)));
  if(!ids.length||files.some(f=>!ids.some(id=>DRESSINGS[id].files.includes(f))))return null;
- graph??=await producerGraph(geometryRoots());const users=f=>Object.keys(graph).filter(g=>graph[g].includes(f));
+ graph??=await producerGraph(consumerRoots());const users=f=>Object.keys(graph).filter(g=>graph[g].includes(f));
  for(const id of ids){const d=DRESSINGS[id];
   for(const f of files.filter(f=>d.files.includes(f))){
    if(!graph[f])return {reason:'Dressing module '+f+' left the geometry graph'};
    const others=users(f).filter(u=>!d.consumers.includes(u));if(others.length||!users(f).length)return {reason:f+' is also used by '+(others.join(', ')||'nothing it was qualified for')};
    const extra=graph[f].filter(i=>!d.imports.includes(i));if(extra.length)return {reason:f+' imports '+extra.join(', ')+', outside its qualified dressing inputs'};
   }
-  for(const c of d.consumers)if((await fs.readFile(c,'utf8')).split(d.glue).length!==2)return {reason:'The '+id+' dressing is no longer placed by its one qualified line in '+c};
+  for(const [file,line]of d.glue)if((await fs.readFile(file,'utf8')).split(line).length!==2)return {reason:'The '+id+' dressing is no longer placed by its one qualified line in '+file};
+  for(const [file,token,allowed]of d.uses){let text=code(await fs.readFile(file,'utf8'));
+   for(const a of allowed){if(text.split(a).length!==2)return {reason:'The '+id+' dressing\'s use in '+file+' changed: '+a.slice(0,60)};text=text.replace(a,'');}
+   const rest=text.match(token);if(rest)return {reason:file+' reaches the '+id+' dressing outside its qualified uses: '+rest.slice(0,3).join(', ')};}
+  for(const [consumer,only]of d.idle||[]){const others=users(consumer).filter(u=>!only.includes(u));if(others.length)return {reason:consumer+', idle for the '+id+' dressing, is also imported by '+others.join(', ')};}
  }
  return {dressings:ids};
 }
@@ -83,16 +109,19 @@ const shape=root=>{const rows=[];root.updateMatrixWorld(true);root.traverse(o=>{
 export async function compileDressing(id){
  const d=DRESSINGS[id];shims();
  const {geometryRecords}=await import('../src/v2/prepared-geometry-record.js'),before=new Set(geometryRecords().keys());
- const authored=(await import('../'+d.authoring))[d.create](),group=authored.group;decline(group.userData.fastDressing===id,'Dressing '+id+' lost its owner tag');
- // The glue's addStatic, after installGround (ground.js) has made it feed the walkable surfaces to the ground bands too.
- const col=new Colliders(),ground=new Colliders();col.addStatic(group);ground.addStatic(group,o=>solid(o)&&groundMesh(o));
+ const authored=d.groups((await import('../'+d.authoring))[d.create]()),group=new T.Group();for(const g of authored)group.add(g);
+ const col=new Colliders(),ground=new Colliders();
+ if(d.collision){decline(authored.length===1&&authored[0].userData.fastDressing===id,'Dressing '+id+' lost its owner tag');
+  // The glue's addStatic, after installGround (ground.js) has made it feed the walkable surfaces to the ground bands too.
+  col.addStatic(authored[0]);ground.addStatic(authored[0],o=>solid(o)&&groundMesh(o));}
  const pending=c=>[...c.pending].sort(([a],[b])=>a-b).map(([band,list])=>{for(const r of list.ownerSpans)assert.equal(r.owner,d.owner,'Dressing collision outside its owner');return {band,positions:list.values.slice(),flags:list.flags.slice(0,list.flagLength),spans:list.ownerSpans};});
  const collision=pending(col),groundCollision=pending(ground);
  for(const key of geometryRecords().keys())decline(before.has(key)||key.startsWith(d.site),'Dressing '+id+' recorded another module\'s geometry: '+key.slice(0,80));
  const templates=[...geometryRecords()].filter(([key])=>key.startsWith(d.site));
  // The public variant must find every template it replays and rebuild the same meshes.
- globalThis.__leoDressingTemplates=new Map(templates);const replayed=(await import('../'+d.public))[d.create]().group;
+ globalThis.__leoDressingTemplates=new Map(templates);const replayed=new T.Group();for(const g of d.groups((await import('../'+d.public))[d.create]()))replayed.add(g);
  decline(shape(replayed)===shape(group),'Public '+id+' replay differs from its authoring geometry');
+ if(!d.model)return {id,templates,collision,groundCollision,model:null};
  const plain=(await import('../'+d.source))[d.create]().group;decline(plain.userData.fastDressing===id,'Dressing '+id+' model lost its owner tag');
  prepareArrivalCanvasExport(plain);shareExportGeometry(plain);
  // Model finalization (retire-obsolete-facades-v2.mjs) prunes the exported ship: Node's canvas textures export as
@@ -133,9 +162,10 @@ export async function patchDressings(plan,timer,{baseDirectory,destination}){
  const ids=plan.dressings,base=baseDirectory+'/prepared-walk',m=await preparedManifest(base),read=preparedArrayReader(m,base),patch=new PreparedPatch(m),owners=dressingOwners(ids);
  const compiled=await timer.stage('compile changed dressings',async()=>{const rows=[];for(const id of ids)rows.push(await compileDressing(id));return rows;});
  const ceiling=await railCeiling();
- for(const c of compiled){const d=DRESSINGS[c.id],old=await ownedTriangles(m,read,d.owner);
+ for(const c of compiled){const d=DRESSINGS[c.id],old=d.collision?await ownedTriangles(m,read,d.owner):[];
   // A baseline from before ownership tags can't say which triangles were the dressing's.
-  if(!old.length||!m.geometryTemplates.some(([key])=>key.startsWith(d.site)))throw Error('The '+c.id+' dressing needs one clean full build with dressing owners; take the wider build');
+  if(d.collision&&!old.length||!m.geometryTemplates.some(([key])=>key.startsWith(d.site)))throw Error('The '+c.id+' dressing needs one clean full build with dressing owners; take the wider build');
+  // Rails only see solid dressings; one that is never solid has no triangles for them to probe.
   if([...old,...c.collision].some(r=>minimumY(r.positions)<=ceiling))throw Error('The '+c.id+' dressing reaches the deck rails\' probe range; take the wider build');
  }
  const merge=field=>{const out=new Map();for(const c of compiled)for(const r of c[field]){const row=out.get(r.band)||{positions:[],flags:[],spans:[]};row.spans.push(...r.spans.map(s=>({...s,start:s.start+row.flags.length})));row.positions.push(...r.positions);row.flags.push(...r.flags);out.set(r.band,row);}return out;};
@@ -143,8 +173,8 @@ export async function patchDressings(plan,timer,{baseDirectory,destination}){
  assert.equal(removedSpans.renderTriangles,0,'Dressings own no baked render triangles');
  await timer.stage('replace dressing templates',async()=>{const sites=compiled.map(c=>DRESSINGS[c.id].site),writer=new PreparedWriter(),rows=compiled.flatMap(c=>c.templates.map(([key,g])=>[key,writer.geometry(g)])),first=m.geometries.length;patch.absorb(writer);
   m.geometryTemplates=[...m.geometryTemplates.filter(([key])=>!sites.some(s=>key.startsWith(s))),...rows.map(([key,id])=>[key,id+first])];});
- const models=await timer.stage('patch dressing models',()=>patchDressingModels({baseline:baseDirectory,destination,compiled}));
+ const models=await timer.stage('patch dressing models',()=>patchDressingModels({baseline:baseDirectory,destination,compiled:compiled.filter(c=>DRESSINGS[c.id].model)}));
  const original=JSON.parse(await fs.readFile(base+'/integrity.json','utf8')),sourceInputs={...original.sourceInputs,sources:plan.identity};
- const prepared=await timer.stage('encode changed parts',()=>patch.save(destination+'/prepared-walk',base,sourceInputs,{rooms:[],decks:[],dressings:ids,base:original.sha256}));
+ const prepared=await timer.stage('encode changed parts',()=>patch.save(destination+'/prepared-walk',base,sourceInputs,{rooms:[],decks:[],dressings:ids,collisionDressings:ids.filter(id=>DRESSINGS[id].collision),base:original.sha256}));
  return {models,prepared,removedSpans,templates:compiled.map(c=>({id:c.id,templates:c.templates.length,bands:c.collision.map(r=>r.band),triangles:c.collision.reduce((n,r)=>n+r.flags.length,0),groundTriangles:c.groundCollision.reduce((n,r)=>n+r.flags.length,0)}))};
 }

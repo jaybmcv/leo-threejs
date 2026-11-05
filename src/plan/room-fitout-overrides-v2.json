@@ -1,4 +1,10 @@
 {
+  "commons-1": {
+    "moveMeshes": [
+      {"names":["Laundry_counter","Laundry_machine","Laundry_drum"],"by":[-3,0,13]},
+      {"names":["Parcel_locker"],"by":[-2,0,22]}
+    ]
+  },
   "d04-air-1": {
     "add": [
       {"part":"atmosphere_intake","size":[8,2.5,6],"at":[-17,1.35,-12.2],"mat":"metal"},

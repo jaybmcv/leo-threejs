@@ -21,6 +21,7 @@ const PLAY=[
   [['X'],null,'Lie flat'],
   [['Drag'],'Right thumb','Look around; scroll to bring the camera in or out','Drag to look around'],
   [['V'],'View','First or third person'],
+  [['Fur'],'Fur','Choose your fur colour in the toolbar; saved on this browser and seen by others aboard'],
  ]},
  {title:'Do things',rows:[
   [['E'],'Use','Use what’s in front of you: the prompt at the bottom says what (sit, lie down, play, read, climb in)','The orange button near something to use says what it does (sit, lie down, play, read, climb in)'],
