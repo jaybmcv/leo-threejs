@@ -198,7 +198,7 @@ renderer.localClippingEnabled=true;
 $('viewport').appendChild(renderer.domElement);
 // A phone short of graphics memory drops the WebGL context: bring the card back with a reason, not a frozen view.
 renderer.domElement.addEventListener('webglcontextlost',()=>{document.body.dataset.ready='0';$('loading-text').textContent='The view stopped: this device ran short of graphics memory. Reload to walk again.';});
-const scene=new T.Scene();scene.environmentIntensity=.75;
+const scene=new T.Scene();scene.environmentIntensity=.65;
 // Space through the windows: stars and Mars in their own pass behind the ship, so the ship's far plane can stay short.
 const sky=new T.Scene();sky.background=new T.Color(0x05080d);const skyCamera=new T.PerspectiveCamera(60,1,10,5000);
 {let seed=731;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};const p=[];
@@ -214,8 +214,9 @@ scene.fog=new T.Fog(0xd9dcd6,70,148);
 const camera=new T.PerspectiveCamera(phone?70:62,1,.05,ATRIUM_VIEW.far);
 // Past the far plane, the ship in haze rather than open space (haze.js); drawn between the sky and the ship.
 const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCamera(60,1,ATRIUM_VIEW.far-10,1500);
-const hemi=new T.HemisphereLight(0xfff6e6,0x5d6b75,1.05);scene.add(hemi);
-const fill=new T.DirectionalLight(0xfff1dc,.55);fill.position.set(.3,1,.2);scene.add(fill);
+// Cool, crisp base light (2B): rooms with a mood of their own warm or dim it while you are inside.
+const hemi=new T.HemisphereLight(0xeef4ff,0x4f5d68,1);scene.add(hemi);
+const fill=new T.DirectionalLight(0xf2f6ff,.55);fill.position.set(.3,1,.2);scene.add(fill);
 loadEnvironment(renderer).then(t=>{scene.environment=t;quietFloorReflections(scene,t);}).catch(()=>{});
 function resize(){const w=innerWidth,h=innerHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
