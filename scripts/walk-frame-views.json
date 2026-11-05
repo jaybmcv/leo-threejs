@@ -1,0 +1,10 @@
+[
+ {"name":"arrival-hall","at":[-139.6,-35.7,-52.5],"yaw":90,"pitch":0},
+ {"name":"open-atrium","at":[0,-19.7,0],"yaw":90,"pitch":0},
+ {"name":"aquarium-gallery","at":[93.4,-23.7,-39],"yaw":0,"pitch":0},
+ {"name":"mudwater-arena","at":[-115,20.3,-23.2],"yaw":0,"pitch":0},
+ {"name":"hydro-nip-lounge","at":[-109.3,24.3,-25.4],"yaw":0,"pitch":0},
+ {"name":"blossom-garden","at":[109,24.3,46],"yaw":180,"pitch":0},
+ {"name":"sky-garden-gallery","at":[-4.5,28.3,-25.2],"yaw":90,"pitch":-10},
+ {"name":"observation-lounge","at":[171.4,26.3,0],"yaw":90,"pitch":0}
+]

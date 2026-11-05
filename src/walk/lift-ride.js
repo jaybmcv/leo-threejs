@@ -1,5 +1,6 @@
 import layout from '../plan/selected-layout.js';
 import * as T from 'three';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 const DECKS=layout.decks;
 import {marsSurface} from '../mars.js';
 import {LIFTS,carTriangles} from './lifts.js';
@@ -100,6 +101,10 @@ function shutter(parent,w,h){
   const geo=new T.ExtrudeGeometry(shape,{depth:BLADE_T,bevelEnabled:false});geo.translate(0,0,(i%2?.006:-.006)-BLADE_T/2);
   const mesh=new T.Mesh(geo,m[i%2]);mesh.name='Lift_door_blade';g.add(mesh);
   return {mesh,mid,out,travel:reach+Math.hypot(b[0]-a[0],b[1]-a[1])/2*Math.sin(TWIST)+.08};});
+ // Shut, the blades lie still in the doorway: one merged mesh per material draws them, two draws instead of six
+ // (a lift's shutters were over a hundred draws a frame). The blades themselves take over once it opens.
+ const shut=m.map((material,k)=>{const parts=blades.filter((b,i)=>i%2===k).map(b=>new T.BufferGeometry().copy(b.mesh.geometry).translate(b.mid[0],b.mid[1],0));
+  const mesh=new T.Mesh(mergeGeometries(parts),material);parts.forEach(p=>p.dispose());mesh.name='Lift_door_shut';g.add(mesh);return mesh;});
  const n=new T.Vector3(),q=new T.Vector3();
  return {group:g,
   // Lay the shutter on its doorway (sill middle `base`, `along` the doorway) and open it by `open`, 0 shut to 1 open.
@@ -109,6 +114,7 @@ function shutter(parent,w,h){
    clip[1].setFromNormalAndCoplanarPoint(n.copy(along).negate(),q.copy(base).addScaledVector(along,w/2));
    clip[2].setFromNormalAndCoplanarPoint(n.set(0,1,0),base);clip[3].setFromNormalAndCoplanarPoint(n.set(0,-1,0),q.copy(base).setY(base.y+h));
    for(const b of blades){b.mesh.position.set(b.mid[0]+b.out[0]*b.travel*open,b.mid[1]+b.out[1]*b.travel*open,0);b.mesh.rotation.z=TWIST*open;}
+   for(const b of blades)b.mesh.visible=open>0;for(const o of shut)o.visible=open<=0;
    g.visible=open<.999;
   }};
 }
