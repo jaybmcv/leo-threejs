@@ -8,4 +8,4 @@ let loaded=await readPreparedWorld(phone?new URL('./'+phone.directory,import.met
 export const preparedResource={ship:loaded.ship,geometryTemplates:loaded.geometryTemplates,manifest:{privacy:loaded.manifest.privacy},frost:await loaded.graph(loaded.manifest.frost),phone:loaded.manifest.phone||null};
 
 // Controllers keep the ship/templates/frost. Release transport metadata and the temporary graph factory.
-loaded=null;
+loaded.release();loaded=null;
