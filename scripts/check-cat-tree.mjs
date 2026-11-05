@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as T from 'three';
-import {createCatTree,TREE,PLATFORMS,RING,BRIDGES,rampY,rampAngle,rampIn,rampOut} from '../src/walk/cat-tree.js';
+import {createCatTree,TREE,PLATFORMS,RING,BRIDGES,DENS,FOOT_DEN,rampY,rampAngle,rampIn,rampOut,trunkR} from '../src/walk/cat-tree.js';
 import {Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {groundMesh} from '../src/v2/ground.js';
@@ -40,7 +40,7 @@ for(let i=0;i<queue.length;i++){const [x,y,z]=queue[i];
   if(!room(nx,ny,nz))continue;const p=[nx,ny,nz],k=key(p);if(!seen.has(k)){seen.set(k,p);queue.push(p);}}}
 console.log(`flood: ${queue.length.toLocaleString()} spots reached`);
 const reached=(x,y,z,r=1)=>queue.some(p=>Math.abs(p[1]-y)<.3&&Math.hypot(p[0]-x,p[2]-z)<r);
-const goals=[...PLATFORMS.map(p=>[`D${p.deck} platform`,p.x,p.y,p.z]),['D15 ring',TREE.x+Math.cos(RING.angle+Math.PI)*6.5,RING.y,TREE.z+Math.sin(RING.angle+Math.PI)*6.5],...BRIDGES.map(b=>[`D${b.deck} bridge end`,b.x1-.4,b.y,0])];
+const goals=[...PLATFORMS.map(p=>[`D${p.deck} platform`,p.x,p.y,p.z]),['D15 ring',TREE.x+Math.cos(RING.angle+Math.PI)*6.5,RING.y,TREE.z+Math.sin(RING.angle+Math.PI)*6.5],...BRIDGES.map(b=>[`D${b.deck} bridge end`,b.x1-.4,b.y,0]),...DENS.map(d=>[`D${d.deck} den`,TREE.x+Math.cos(d.a)*(d.front-1),d.y,TREE.z+Math.sin(d.a)*(d.front-1)]),['foot den',TREE.x+Math.cos(FOOT_DEN.a)*(trunkR(TREE.islandTop)+1.4),TREE.islandTop,TREE.z+Math.sin(FOOT_DEN.a)*(trunkR(TREE.islandTop)+1.4)]];
 let failed=0;for(const [name,x,y,z] of goals){const ok=reached(x,y,z);if(!ok)failed++;console.log(`${ok?'PASS':'FAIL'} ${name} (${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)})`);}
 const uniq=new Map();for(const d of drops)uniq.set(`${Math.round(d[0])},${Math.round(d[1])},${Math.round(d[2])}`,d);
 console.log(`unguarded drops over 1 m: ${uniq.size}`);for(const d of [...uniq.values()].slice(0,25))console.log('  drop at',d.slice(0,3).map(v=>v.toFixed(1)).join(', '),'height',d[3]);
@@ -58,5 +58,12 @@ if(climbed){settle();console.log(`PASS controller climbs the ramp to Deck 15 (y 
 for(const b of BRIDGES){const p=PLATFORMS.find(p=>p.deck===b.deck),from=p?new T.Vector3(p.x,p.y,p.z):new T.Vector3(TREE.x+6,b.y,0);ctl.position.copy(from).setY(b.y+.3);ctl.velocity.set(0,0,0);settle();
  const ok=go(new T.Vector3(b.x0+1,b.y,0))&&go(new T.Vector3(b.x1-.5,b.y,0));settle();const fine=ok&&Math.abs(ctl.position.y-b.y)<.15;if(!fine)climbed=false;
  console.log(`${fine?'PASS':'FAIL'} controller crosses the Deck ${b.deck} bridge to x ${ctl.position.x.toFixed(1)} at y ${ctl.position.y.toFixed(2)}`);}
+// and walks from each landing into its den, and from the island into the den at the foot
+for(const d of DENS){const out=new T.Vector3(Math.cos(d.a),0,Math.sin(d.a)),from=new T.Vector3(TREE.x,d.y,TREE.z).addScaledVector(out,rampIn(d.y)+1.35),to=new T.Vector3(TREE.x,d.y,TREE.z).addScaledVector(out,d.front-1);
+ ctl.position.copy(from).setY(d.y+.3);ctl.velocity.set(0,0,0);settle();const ok=go(to,.3)&&Math.abs(ctl.position.y-d.y)<.15;settle();if(!ok)climbed=false;
+ console.log(`${ok?'PASS':'FAIL'} controller walks into the Deck ${d.deck} den (${ctl.position.distanceTo(new T.Vector3(TREE.x,d.y,TREE.z)).toFixed(1)} m from the axis)`);}
+{const out=new T.Vector3(Math.cos(FOOT_DEN.a),0,Math.sin(FOOT_DEN.a)),base=new T.Vector3(TREE.x,TREE.islandTop,TREE.z),to=base.clone().addScaledVector(out,trunkR(TREE.islandTop)+1.4);
+ ctl.position.copy(base).addScaledVector(out,9.6).setY(TREE.islandTop+.3);ctl.velocity.set(0,0,0);settle();const ok=go(to,.3);if(!ok)climbed=false;
+ console.log(`${ok?'PASS':'FAIL'} controller walks into the den at the foot`,ok?'':'stopped at '+ctl.position.toArray().map(v=>v.toFixed(2))+' r '+Math.hypot(ctl.position.x-TREE.x,ctl.position.z-TREE.z).toFixed(2)+' target r '+Math.hypot(to.x-TREE.x,to.z-TREE.z).toFixed(2)+' start '+FOOT_DEN.u.toFixed(2));}
 assert(climbed,'controller walk failed');
 console.log('PASS cat tree');
