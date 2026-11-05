@@ -29,6 +29,8 @@ export const ATRIUM_SIGNATURE_TREES=[
  {id:'food-aft',x:-34,z:42.9,height:13.5,spread:6.4,seed:37},
  {id:'food-fore',x:12,z:42.9,height:12.5,spread:5.8,seed:41},
 ];
+// 4B waterfall: rocks and falling water against the lake's hull-side bank, centred on x (visual only).
+export const ATRIUM_WATERFALL={x:46,width:7};
 export function phase6GardenPolygons(){return ATRIUM_GARDEN_POCKETS.map(p=>rect(p.x-6,p.x+6,p.z-4,p.z+4));}
 // A dry 2.4 m garden approach crosses the shallow edge; no deep tank is built.
 export function phase6LakeIslands(){return [rect(6,18,-48,-40),rect(10.8,13.2,-56,-48)];}

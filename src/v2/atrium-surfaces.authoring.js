@@ -16,7 +16,7 @@ export const atriumFloorMaterial=new T.MeshStandardMaterial({name:'P6_atrium_pav
 function dappleFloorMaterial(){if(atriumFloorMaterial.map)return;const shade=walkCanvas(),glow=walkCanvas();if(shade&&glow){const tex=c=>{if(typeof c.data==='function')Object.defineProperty(c,'data',{value:undefined});const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.anisotropy=4;return t;};
  atriumFloorMaterial.map=tex(paintDapple(shade));atriumFloorMaterial.emissiveMap=tex(paintDapple(glow,0));atriumFloorMaterial.emissive.set(DAPPLE.glow);atriumFloorMaterial.emissiveIntensity=DAPPLE.glowIntensity;}}
 // 4B: sunlit lawns (park and garden beds) instead of the earlier muted sage.
-const LAWN=0x7ea95b,GARDEN_LAWN=0x8bb566;
+const LAWN=0x7ea95b,GARDEN_LAWN=0x8bb566,PAVING=0xdfd2bd; // and warm sand paving on the boulevards
 function keepFaces(g,test){const p=g.attributes.position,n=g.attributes.normal,out=[];for(let i=0;i<p.count;i+=3)if(test(n.getY(i),i,p))for(let k=0;k<3;k++)out.push(p.getX(i+k),p.getY(i+k),p.getZ(i+k));g.dispose();const result=new T.BufferGeometry();result.setAttribute('position',new T.Float32BufferAttribute(out,3));result.computeVertexNormals();return result;}
 export function atriumFloorGeometry(outline,holes,y,atriumOutline=outline){
  dappleFloorMaterial();
@@ -24,7 +24,7 @@ export function atriumFloorGeometry(outline,holes,y,atriumOutline=outline){
  // One underside and real perimeter. Coloured areas partition only the top face:
  // no duplicated internal vertical faces, coplanar finish sheets or buried slabs.
  const g=[colourGeometry(keepFaces(polygonGeometry(outline,holes,y),(ny,i,p)=>ny<.5&&![0,1,2].every(k=>Math.abs(p.getY(i+k)-y)<1e-4)),0xd9d3c4),
- colourGeometry(keepFaces(polygonGeometry(outline,[...holes,...zones.map(z=>z.polygon)],y,0),ny=>ny>.5),0xd9d3c4)];
+ colourGeometry(keepFaces(polygonGeometry(outline,[...holes,...zones.map(z=>z.polygon)],y,0),ny=>ny>.5),PAVING)];
  const gardenPolys=phase6GardenPolygons(),islands=phase6LakeIslands();
  const indexed=holes.map(p=>({p,x0:Math.min(...p.map(q=>q[0])),x1:Math.max(...p.map(q=>q[0])),z0:Math.min(...p.map(q=>q[1])),z1:Math.max(...p.map(q=>q[1]))}));
  for(const z of zones){const[x0,x1,z0,z1]=z.bounds,cuts=indexed.filter(h=>h.x0<x1&&h.x1>x0&&h.z0<z1&&h.z1>z0).map(h=>h.p);cuts.push(...gardenPolys,...islands.slice(1));const top=y-(z.id.endsWith('lake')?ATRIUM_PROTOTYPE.waterDepth:0);
