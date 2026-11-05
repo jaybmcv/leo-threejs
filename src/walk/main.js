@@ -205,7 +205,8 @@ const sky=new T.Scene();sky.background=new T.Color(0x05080d);const skyCamera=new
  for(let i=0;i<1500;i++){const y=random()*2-1,a=random()*Math.PI*2,r=Math.sqrt(1-y*y);p.push(3800*r*Math.cos(a),3800*y,3800*r*Math.sin(a));}
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));
  sky.add(new T.Points(g,new T.PointsMaterial({color:0xd5e2eb,size:1.25,sizeAttenuation:false,transparent:true,opacity:.65})));
- const mars=createMars();mars.position.set(1800,90,-100);sky.add(mars);}
+ // Mars sits dead ahead, centred in the lounge's nose row (1C).
+ const mars=createMars();mars.position.set(1800,90,0);sky.add(mars);}
 // Nearer stars drift slowly aft past the windows (star-drift.js).
 const drift=createStarDrift({count:phone?320:520,still:matchMedia('(prefers-reduced-motion: reduce)').matches});sky.add(drift.points);
 renderer.autoClear=false;

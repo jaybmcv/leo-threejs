@@ -266,7 +266,7 @@ function placeRooms({h,decks,rooms,shuttles,circulation,issues}){
   for(const deck of [18,19])decks[deck-1].slab.holes.push({id:r.id+'-assembly-opening',assembly:r.assembly,polygon:r.envelope.find(s=>s.rise===4*(deck-17)).polygon});
  }
  const loungeEdge=Array.from({length:73},(_,i)=>loungeFacade(31,-.81+1.62*i/72,1.4)),oldOutline=[[170,loungeEdge[0][2]],...loungeEdge.map(p=>[p[0],p[2]]),[170,loungeEdge.at(-1)[2]]],bb=bounds(oldOutline),lounge={id:'observation-lounge',name:'Forward observation lounge',deck:17,kind:'lounge',center:[190,26.3,0],width:bb.x1-bb.x0,depth:bb.z1-bb.z0,height:7.5};
- const lr=bowRoom(h,lounge,170,190,7.5);lr.v1.area=area(oldOutline);lr.glazingProfile={sill:.45,height:lr.height-.85,ceilingGap:.4};addDoor(lr,[170,0],[-1,0]);rooms.push(lr);
+ const lr=bowRoom(h,lounge,170,190,7.5);lr.v1.area=area(oldOutline);lr.glazingProfile={sill:.45,height:lr.height-.85,ceilingGap:.4,centred:true};addDoor(lr,[170,0],[-1,0]);rooms.push(lr);
  for(const [d,names]of Object.entries(NEW_PROGRAM))for(let i=0;i<names.length;i++){
   const name=names[i],outer=!/stores|racks|hold|prep|services|handling|spares|gas|rooms$/.test(name),a={id:'d'+String(d).padStart(2,'0')+'-new-'+(i+1),name,deck:+d,kind:'new',width:outer?20:18,depth:outer?16:14,height:3.5};
   place(a,{outer,preferX:-120+i*40,preferSide:i%2?-1:1});
