@@ -7,6 +7,10 @@ import {savedFur} from './fur-colours.js';
 let furColour=savedFur(),furSettings=null;
 import {walkBindings,bindingLabel} from './bindings.js';
 let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
+// Phone ship batching (src/v2/facade.js): every band, no per-chunk culling. Until the Galaxy S9 confirms it, ?phonebatch=
+// tries the others on a phone: cull (every band, culled: lettering jumped), low (decks -1 to 4 only, as before #345).
+const phoneBatching=(()=>{if(!preparedPhone)return {};const mode=new URLSearchParams(location.search).get('phonebatch');
+ return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:{allBands:true};})();
 import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
 import {settlePreparedStatic} from '../v2/prepared-static.js';
 import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
@@ -373,7 +377,7 @@ async function buildShip(){
   const key=o.parent.uuid+'|'+(o.userData.cabinIds||[o.uuid]).join(',');if(sharedNear.has(key)){o.userData.near=sharedNear.get(key);continue;}const all=Array.from({length:o.count},(_,i)=>{const m=new T.Matrix4();o.getMatrixAt(i,m);return m;});
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};sharedNear.set(key,o.userData.near);
  }
- isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{allBands:preparedPhone,hidden:preparedPhone?releaseBatchedSources(scene):null});atriumGeometry=preparedPhone?null:createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});settlePreparedStatic(ship);
+ isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...phoneBatching,hidden:preparedPhone?releaseBatchedSources(scene):null});atriumGeometry=preparedPhone?null:createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});settlePreparedStatic(ship);
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
