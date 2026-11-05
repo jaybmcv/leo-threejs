@@ -174,7 +174,8 @@ export function createCatTree(ship){
   };
  PLATFORMS.forEach((p,i)=>{
   const disc=new T.CylinderGeometry(p.r,p.r-.2,.8,48);at(disc,p.x,p.y-.4,p.z);grounds.platform.push(disc.clone());parts.push(sisal(disc,30));
-  const pad=new T.CylinderGeometry(p.r-.25,p.r-.25,.06,48);at(pad,p.x,p.y+.01,p.z);parts.push(paint(pad,C.carpet[i%4]));
+  // its top a soft cushion, domed 12 cm (feet settle into it)
+  const pad=new T.SphereGeometry(p.r-.2,40,5,0,Math.PI*2,0,Math.PI/2);pad.scale(1,.12/(p.r-.2),1);at(pad,p.x,p.y-.02,p.z);parts.push(paint(pad,C.carpet[i%4]));
   const rim=new T.TorusGeometry(p.r-.1,.5,8,48);rim.scale(1,1,.95);rim.rotateX(Math.PI/2);at(rim,p.x,p.y-.38,p.z);parts.push(paint(rim,C.carpet[i%4],.03,rnd));
   const piping=new T.TorusGeometry(p.r+.33,.07,3,48);piping.rotateX(Math.PI/2);at(piping,p.x,p.y-.38,p.z);parts.push(paint(piping,C.cream));
   parts.push(...stitches(p.x,p.y-.38,p.z,p.r+.41,true));
@@ -294,7 +295,7 @@ export function createCatTree(ship){
   for(const q of sprigs)for(let k=0;k<5;k++){const ang=k/5*Math.PI*2+rnd(),tan=new T.Vector3(Math.cos(ang),0,Math.sin(ang)),n=new T.Vector3(0,1,0).addScaledVector(tan,.5).normalize(),pos=q.clone().addScaledVector(tan,.9);
    if(!clear(pos.x,pos.y,pos.z,.8)||!inOpening(pos.x,pos.y,pos.z,pos.y+.5,.8))continue;X.copy(tan).sub(n.clone().multiplyScalar(tan.dot(n))).normalize();Z.crossVectors(X,n);slots.push({pos,X:X.clone(),Y:n,Z:Z.clone(),sc:1.9,c:C.leaf[k%3],v:.95});}
   slots.push(...sprigCards);
-  const map=leafTexture(),leafMat=felt(new T.MeshStandardMaterial({name:'Cat_tree_leaves',color:0xffffff,map,alphaTest:map?.5:0,side:T.DoubleSide,roughness:.95}),.6);
+  const tex=leafTexture(),map=tex?.map??null,leafMat=felt(new T.MeshStandardMaterial({name:'Cat_tree_leaves',color:0xffffff,map,normalMap:tex?.normal??null,normalScale:new T.Vector2(1.6,1.6),alphaTest:map?.5:0,side:T.DoubleSide,roughness:.95}),.6);
   const leaves=new T.InstancedMesh(leaf,leafMat,slots.length);leaves.name='Cat_tree_leaves';
   slots.forEach((p,i)=>{m.makeBasis(p.X,p.Y,p.Z).scale(new T.Vector3(p.sc,p.sc,p.sc)).setPosition(p.pos);leaves.setMatrixAt(i,m);leaves.setColorAt(i,col.set(p.c).multiplyScalar(p.v));});
   leaves.computeBoundingSphere();near.add(leaves);
@@ -341,17 +342,28 @@ function grooves(g){g=g.index?g.toNonIndexed():g;g.deleteAttribute('uv');const p
 // Thin a tube from radius r0 at its start to r1 at its end (TubeGeometry rings are laid out along the path).
 function taper(g,r0,r1){const p=g.attributes.position,n=g.parameters.tubularSegments,radial=g.parameters.radialSegments,path=g.parameters.path,v=new T.Vector3(),q=new T.Vector3();
  for(let i=0;i<=n;i++){const t=i/n,c=path.getPointAt(t),k=(r0+(r1-r0)*t)/r0;for(let j=0;j<=radial;j++){const idx=i*(radial+1)+j;v.fromBufferAttribute(p,idx);q.copy(v).sub(c).multiplyScalar(k).add(c);p.setXYZ(idx,q.x,q.y,q.z);}}g.computeVertexNormals();return g;}
-// Felt leaf card: a 1 m square bent into a shallow dome, the leaf's tip along +x, its face up (+y).
-function leafCard(){const g=new T.PlaneGeometry(1,1,2,2);g.rotateX(-Math.PI/2);const p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setY(i,-.16*(x*x+z*z)-.06*x);}g.computeVertexNormals();return g;}
-// The leaf's texture: a rounded three-lobed felt leaf, darker at its rim, a pale running stitch inside the edge and a
-// vein; white elsewhere so each cluster's tint shows. Only where a canvas exists (pages, not plain Node).
+// Felt leaf card: a 1 m square puffed into a dome, the leaf's tip along +x, its face up (+y).
+function leafCard(){const g=new T.PlaneGeometry(1,1,3,3);g.rotateX(-Math.PI/2);const p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setY(i,.05-.26*(x*x+z*z)-.05*x);}g.computeVertexNormals();return g;}
+// The leaf's textures: a rounded three-lobed felt leaf, darker at its rim, a pale running stitch inside the edge and a
+// vein, white elsewhere so each cluster's tint shows; and a normal map that puffs it like a stuffed cushion, rising from
+// its rim to its middle, with the stitch and the vein sunk in. Only where a canvas exists (pages, not plain Node).
 function leafTexture(){if(typeof document==='undefined')return null;const S=256,cv=document.createElement('canvas');cv.width=cv.height=S;const g=cv.getContext('2d');if(!g)return null;
- const lobes=[[.52,.5,.3],[.36,.36,.21],[.36,.64,.21],[.68,.33,.19],[.68,.67,.19],[.8,.5,.17]],shape=(inset)=>{g.beginPath();for(const [x,y,r] of lobes){g.moveTo(x*S+(r-inset)*S,y*S);g.arc(x*S,y*S,Math.max(1,(r-inset)*S),0,Math.PI*2);}};
- g.fillStyle='#a9b58c';shape(0);g.fill();g.fillStyle='#eef3e4';shape(.04);g.fill();
- g.strokeStyle='#ffe066';g.lineWidth=9;g.setLineDash([15,10]);for(const [x,y,r] of lobes){g.beginPath();g.arc(x*S,y*S,(r-.05)*S,0,Math.PI*2);g.stroke();}
- g.setLineDash([]);g.fillStyle='#eef3e4';shape(.075);g.fill();g.strokeStyle='#c5cfb3';g.lineWidth=6;g.beginPath();g.moveTo(.16*S,.5*S);g.lineTo(.9*S,.5*S);for(const t of [.4,.6,.75]){g.moveTo(t*S,.5*S);g.lineTo((t+.1)*S,.32*S);g.moveTo(t*S,.5*S);g.lineTo((t+.1)*S,.68*S);}g.stroke();
+ const lobes=[[.52,.5,.3],[.36,.36,.21],[.36,.64,.21],[.68,.33,.19],[.68,.67,.19],[.8,.5,.17]],shape=(c,inset)=>{c.beginPath();for(const [x,y,r] of lobes){c.moveTo(x*S+(r-inset)*S,y*S);c.arc(x*S,y*S,Math.max(1,(r-inset)*S),0,Math.PI*2);}};
+ const stitch=(c,w,dash)=>{c.lineWidth=w;c.setLineDash(dash);for(const [x,y,r] of lobes){c.beginPath();c.arc(x*S,y*S,(r-.05)*S,0,Math.PI*2);c.stroke();}c.setLineDash([]);};
+ const vein=(c,w)=>{c.lineWidth=w;c.beginPath();c.moveTo(.16*S,.5*S);c.lineTo(.9*S,.5*S);for(const t of [.4,.6,.75]){c.moveTo(t*S,.5*S);c.lineTo((t+.1)*S,.32*S);c.moveTo(t*S,.5*S);c.lineTo((t+.1)*S,.68*S);}c.stroke();};
+ g.fillStyle='#a9b58c';shape(g,0);g.fill();g.fillStyle='#eef3e4';shape(g,.04);g.fill();
+ g.strokeStyle='#ffe066';stitch(g,9,[15,10]);
+ g.fillStyle='#eef3e4';shape(g,.075);g.fill();g.strokeStyle='#c5cfb3';vein(g,6);
  g.fillStyle='#c9a46a';g.fillRect(0,.47*S,.2*S,.06*S);
- const t=new T.CanvasTexture(cv);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return t;}
+ const map=new T.CanvasTexture(cv);map.colorSpace=T.SRGBColorSpace;map.anisotropy=4;
+ // height: the leaf's outline blurred inward, so it rises from its rim, less a groove along the stitch and the vein
+ const hc=document.createElement('canvas');hc.width=hc.height=S;const h=hc.getContext('2d');let normal=null;
+ if(h&&'filter' in h){h.fillStyle='#000';h.fillRect(0,0,S,S);h.filter='blur(16px)';h.fillStyle='#fff';shape(h,.02);h.fill();h.filter='blur(2px)';h.strokeStyle='rgba(0,0,0,.45)';stitch(h,7,[]);h.strokeStyle='rgba(0,0,0,.35)';vein(h,7);h.filter='none';
+  const src=h.getImageData(0,0,S,S).data,H=new Float32Array(S*S);for(let i=0;i<S*S;i++)H[i]=Math.sqrt(src[i*4]/255);
+  const nc=document.createElement('canvas');nc.width=nc.height=S;const n=nc.getContext('2d'),img=n.createImageData(S,S),at=(x,y)=>H[Math.min(S-1,Math.max(0,y))*S+Math.min(S-1,Math.max(0,x))];
+  for(let y=0;y<S;y++)for(let x=0;x<S;x++){let nx=(at(x-1,y)-at(x+1,y))*6,ny=(at(x,y+1)-at(x,y-1))*6,nz=1;const l=Math.hypot(nx,ny,nz);const i=(y*S+x)*4;img.data[i]=(nx/l*.5+.5)*255;img.data[i+1]=(ny/l*.5+.5)*255;img.data[i+2]=(nz/l*.5+.5)*255;img.data[i+3]=255;}
+  n.putImageData(img,0,0);normal=new T.CanvasTexture(nc);normal.anisotropy=4;}
+ return {map,normal};}
 // Wicker: alternating light and dark weave bands round a basket, by height and angle.
 function woven(g,y0){g=paint(g,C.wicker);const p=g.attributes.position,c=g.attributes.color;for(let i=0;i<p.count;i++){const a=Math.atan2(p.getZ(i),p.getX(i)),k=.88+.12*Math.sign(Math.sin((p.getY(i)-y0)*9)*Math.sin(a*12));c.setXYZ(i,c.getX(i)*k,c.getY(i)*k,c.getZ(i)*k);}return g;}
 // Felt: a fibre grain in the colour (value noise in world space at two scales) and a soft bright rim where surfaces turn
@@ -380,8 +392,8 @@ function yarn(r,color,rnd,x,y,z){const g=paint(new T.SphereGeometry(r,12,8),colo
 // A stuffed felt fish, nose along +x: a squashed body, a tail and a darker eye.
 function fish(color){const body=new T.SphereGeometry(.5,12,8);body.scale(1.5,.8,.5);const tail=new T.ConeGeometry(.42,.6,4);tail.rotateZ(Math.PI/2);tail.scale(1,1,.35);tail.translate(-.95,0,0);
  const eye=new T.SphereGeometry(.09,6,4);eye.translate(.5,.12,.22);return merge([paint(body,color),paint(tail,0x4f86b8),paint(eye,C.ink)]);}
-// A pumpkin cushion: a squashed sphere with eight soft grooves, its base flat at y 0.
-function pumpkin(r,h){const g=new T.SphereGeometry(r,12,6);const p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),a=Math.atan2(z,x),k=1-.09*Math.pow(Math.abs(Math.cos(a*3)),.6);p.setXYZ(i,x*k,(y/r)*h/2+h/2,z*k);}g.computeVertexNormals();return g;}
+// A pumpkin cushion: a squashed sphere with six deep soft lobes and a button dimple on top, its base flat at y 0.
+function pumpkin(r,h){const g=new T.SphereGeometry(r,12,6);const p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),a=Math.atan2(z,x),k=1-.2*Math.pow(Math.abs(Math.sin(a*3)),2),d=Math.hypot(x,z)/r,ny=(y/r)*h/2+h/2-(y>0?h*.28*Math.exp(-d*d/.06):0);p.setXYZ(i,x*k,ny,z*k);}g.computeVertexNormals();return g;}
 // Round off a box's corners by pulling its vertices toward a rounded-rectangle shell of radius r.
 function roundBox(g,r){g.computeBoundingBox();const b=g.boundingBox,h=b.getSize(new T.Vector3()).multiplyScalar(.5),c=b.getCenter(new T.Vector3()),p=g.attributes.position,v=new T.Vector3(),q=new T.Vector3();
  const inner=h.clone().subScalar(r).max(new T.Vector3());for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).sub(c);q.copy(v).clamp(inner.clone().negate(),inner);const d=v.clone().sub(q);if(d.lengthSq()>1e-8)d.setLength(r);p.setXYZ(i,c.x+q.x+d.x,c.y+q.y+d.y,c.z+q.z+d.z);}
