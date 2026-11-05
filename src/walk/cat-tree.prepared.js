@@ -48,10 +48,11 @@ export const BRIDGES=[{deck:9,x1:224.8},{deck:12,x1:211.3},{deck:15,x1:197.3}].m
  const w=2.4,x0=p?p.x+Math.sqrt(p.r*p.r-(Math.abs(p.z)+w/2)**2)-.3:TREE.x+RING.outer-.3;return {...b,y,x0,width:w,disc:p};});
 // Canopy tiers [y0,y1,radius], and the openings above: leaves stay inside each slab's opening and under the Deck 16 slab.
 // The top tier is a low leafy roof over the Deck 15 ring, 2.2 m clear above it and under the Deck 16 slab.
-const CANOPY=[[0,7,18],[7,12.3,16],[12.3,16.3,11],[16.3,19,8]];
-// The leaf dome: a hemisphere of 18.6 m centred 20 m up the tree, its top 0.7 m under the Deck 16 slab. Where a slab's
+const CANOPY=[[2.5,7,14],[7,12.3,13],[12.3,16.3,10],[16.3,19,7]];
+// The leaf dome: a hemisphere of 15 m centred 23.6 m up the tree, its top 1 m under the Deck 16 slab, so the platforms
+// below Deck 12 stand out from under its rim. Where a slab's
 // opening cuts into it (Decks 13-15 step in toward the bow and sides), clusters are pulled in toward the trunk.
-const DOME={cy:.5,r:18.6};
+const DOME={cy:4.1,r:15};
 const OPENINGS=[{y:deckY(13),z:30,x:206},{y:deckY(14),z:20,x:201},{y:deckY(15),z:10,x:197},{y:deckY(16),z:0,x:148}];
 
 const C={felt:0xa36d45,feltDark:0x7a4c2c,sisal:0xe2c79a,rope:0xf1e2c2,carpet:[0xd2604a,0xe8b04a,0x9db783,0xf3e6cc],wood:0xc08a52,
@@ -118,7 +119,7 @@ export function createCatTree(ship){
  const glow=new T.MeshStandardMaterial({name:'Cat_tree_lantern',color:0xffb860,emissive:0xff9a30,emissiveIntensity:2,roughness:.6});
  const denGlow=new T.MeshStandardMaterial({name:'Cat_tree_den',color:0xffb060,emissive:0xff8a30,emissiveIntensity:.9,roughness:.8,side:T.DoubleSide});
  const hidden=new T.MeshBasicMaterial({visible:false});
- const parts=[],lights=[],dens=[],walls=[],grounds={island:[],ramp:[],platform:[],bridge:[],step:[],cushion:[]},addWall=(...g)=>walls.push(...g);
+ const parts=[],lights=[],dens=[],sprigs=[],walls=[],grounds={island:[],ramp:[],platform:[],bridge:[],step:[],cushion:[]},addWall=(...g)=>walls.push(...g);
  const clear=clearOf(),y0=TREE.floor;
 
  // Island: a felt-moss disc with a low rim, mounds and boulders round the edge.
@@ -182,7 +183,7 @@ export function createCatTree(ship){
   guardRing(p.deck,p.x,p.z,p.r-.12,p.y,(x,z)=>Math.hypot(x-TREE.x,z-TREE.z)<rampOut(p.y)+.25||bridgeAt(p.deck,x,z));
   // cushions on the far half, away from the ramp joint and the bridge
   const away=p.angle,count=5+(i%2);for(let k=0;k<count;k++){const a=away+(k-(count-1)/2)*.42,r=p.r-(k%2?2.9:1.75),x=p.x+Math.cos(a)*r,z=p.z+Math.sin(a)*r;if(bridgeAt(p.deck,x,z))continue;
-   const c=pumpkin(.8,.62);c.rotateY(-a);at(c,x,p.y,z);parts.push(paint(c.clone(),C.carpet[(i+k+2)%4]));const seat=new T.Mesh(c.clone(),hidden);seat.name='Meditation_cushion';seats.add(seat);grounds.cushion.push(c);}
+   const c=pumpkin(k%2?.85:1.05,k%2?.7:.95);c.rotateY(-a);at(c,x,p.y,z);parts.push(paint(c.clone(),C.carpet[(i+k+2)%4]));const seat=new T.Mesh(c.clone(),hidden);seat.name='Meditation_cushion';seats.add(seat);grounds.cushion.push(c);}
   if(i%2===0){const a=p.angle+1.25,r=p.r-1.9,x=p.x+Math.cos(a)*r,z=p.z+Math.sin(a)*r;if(!bridgeAt(p.deck,x,z)){
    const bowl=new T.SphereGeometry(1.05,16,8,0,Math.PI*2,Math.PI/2,Math.PI/2);bowl.scale(1,.8,1);at(bowl,x,p.y+.9,z);parts.push(woven(bowl,p.y+.9));{const lip=new T.TorusGeometry(1.03,.11,5,24);lip.rotateX(Math.PI/2);at(lip,x,p.y+.9,z);parts.push(paint(lip,C.wicker));}
    const bed=new T.CylinderGeometry(.85,.85,.12,16);at(bed,x,p.y+.56,z);parts.push(paint(bed.clone(),C.carpet[(i+3)%4]));const m=new T.Mesh(bed,hidden);m.name='Hammock';seats.add(m);
@@ -208,7 +209,7 @@ export function createCatTree(ship){
   for(let x=b.x0+.3;x<b.x1;x+=.6)parts.push(paint(at(new T.BoxGeometry(.06,.035,b.width-.4),x,b.y+.02,0),0xa8432f));
   for(const side of [-1,1]){const z=side*(b.width/2-.08),xs=b.disc?Math.max(b.x0,b.disc.x+Math.sqrt(Math.max(0,b.disc.r**2-(z-b.disc.z)**2))-.15):b.x0,run=[{x:xs,y:b.y,z},{x:b.x1,y:b.y,z}];walls.push(...wall(run,0,GUARD));
    parts.push(...fence(run));}
-  if(b.deck===9){const limbY=b.y+7.2,top=new T.Vector3(TREE.x+3.6,limbY,0),tip=new T.Vector3(b.x0+16,limbY-.6,0);parts.push(paint(tube([top,new T.Vector3(b.x0+6,limbY+.6,0),tip],.5,24,10),C.felt,.05,rnd));
+  if(b.deck===9){const limbY=b.y+7.2,top=new T.Vector3(TREE.x+3.6,limbY,0),tip=new T.Vector3(b.x0+16,limbY-.6,0);for(let t=.35;t<=1.001;t+=.13)sprigs.push(top.clone().lerp(tip,t).add(new T.Vector3(0,.7,0)));parts.push(paint(tube([top,new T.Vector3(b.x0+6,limbY+.6,0),tip],.5,24,10),C.felt,.05,rnd));
    for(let x=b.x0+4;x<b.x0+16;x+=3)for(const side of [-1,1])parts.push(paint(between(new T.Vector3(x,b.y+1.05,side*(b.width/2-.08)),new T.Vector3(x,limbY-.2-(x-b.x0)*.04,0),.03),C.rope));}
  }
  // Boardwalk from the island's edge to the ramp's foot, kitten step stumps beside it, the den at the foot of the trunk,
@@ -267,9 +268,9 @@ export function createCatTree(ship){
  {const leaf=leafCard(),slots=[],col=new T.Color(),m=new T.Matrix4(),X=new T.Vector3(),Z=new T.Vector3();
   const roof=y=>y>RING.y+1.8,ok=(x,y,z,sc)=>Math.hypot(x-TREE.x,z-TREE.z)>trunkR(y)+.4&&clear(x,y,z,sc*.45,roof(y)?.12:sc*.45)&&inOpening(x,y,z,y+(roof(y)?.12:sc*.3),roof(y)?.5:sc*.45);
   // the dome, then a low leafy roof over the Deck 15 ring that the dome's crown is too narrow to cover
-  for(let i=0,made=0;i<5000&&made<205;i++){const hat=made>=175;
+  for(let i=0,made=0;i<5000&&made<160;i++){const hat=made>=122;
    // even over the dome's surface, from a little below its rim to its top
-   const h=hat?1:-.1+rnd()*1.1,el=Math.asin(Math.min(1,h)),th=rnd()*Math.PI*2,k=.92+.08*rnd(),dir=new T.Vector3(Math.cos(th)*Math.cos(el),Math.sin(el),Math.sin(th)*Math.cos(el));
+   const h=hat?1:-.15+rnd()*1.15,el=Math.asin(Math.min(1,h)),th=rnd()*Math.PI*2,k=.92+.08*rnd(),dir=new T.Vector3(Math.cos(th)*Math.cos(el),Math.sin(el),Math.sin(th)*Math.cos(el));
    const cyy=hat?18.8+rnd()*.35:TREE.floor+20+DOME.cy-.5+dir.y*DOME.r*k,sc=(roof(cyy)?1.7:2.5)+rnd()*.7;let cx=0,cz=0,fit=false;
    if(hat){const a=rnd()*Math.PI*2,r=2.5+Math.sqrt(rnd())*7.5;cx=TREE.x+Math.cos(a)*r;cz=TREE.z+Math.sin(a)*r;dir.set(Math.cos(a)*.25,1,Math.sin(a)*.25).normalize();fit=ok(cx,cyy,cz,sc);}
    else for(let f=1;f>.5&&!fit;f-=.06){cx=TREE.x+dir.x*DOME.r*k*f;cz=TREE.z+dir.z*DOME.r*k*f;fit=ok(cx,cyy,cz,sc);}
@@ -281,6 +282,8 @@ export function createCatTree(ship){
     const pos=new T.Vector3(cx,cyy,cz).addScaledVector(tan,r1*sc*.62).addScaledVector(N,-r1*sc*.18);if(!ok(pos.x,pos.y,pos.z,sc))continue;
     const n=N.clone().addScaledVector(tan,r1?droop:0).normalize();X.copy(r1?tan:radial).sub(n.clone().multiplyScalar((r1?tan:radial).dot(n))).normalize();Z.crossVectors(X,n);
     slots.push({pos,X:X.clone(),Y:n,Z:Z.clone(),sc:sc*(r1?1:1.1),c:tint,v:.9+rnd()*.18});}}
+  for(const q of sprigs)for(let k=0;k<5;k++){const ang=k/5*Math.PI*2+rnd(),tan=new T.Vector3(Math.cos(ang),0,Math.sin(ang)),n=new T.Vector3(0,1,0).addScaledVector(tan,.5).normalize(),pos=q.clone().addScaledVector(tan,.9);
+   if(!clear(pos.x,pos.y,pos.z,.8)||!inOpening(pos.x,pos.y,pos.z,pos.y+.5,.8))continue;X.copy(tan).sub(n.clone().multiplyScalar(tan.dot(n))).normalize();Z.crossVectors(X,n);slots.push({pos,X:X.clone(),Y:n,Z:Z.clone(),sc:1.9,c:C.leaf[k%3],v:.95});}
   const map=leafTexture(),leafMat=felt(new T.MeshStandardMaterial({name:'Cat_tree_leaves',color:0xffffff,map,alphaTest:map?.5:0,side:T.DoubleSide,roughness:.95}),.6);
   const leaves=new T.InstancedMesh(leaf,leafMat,slots.length);leaves.name='Cat_tree_leaves';
   slots.forEach((p,i)=>{m.makeBasis(p.X,p.Y,p.Z).scale(new T.Vector3(p.sc,p.sc,p.sc)).setPosition(p.pos);leaves.setMatrixAt(i,m);leaves.setColorAt(i,col.set(p.c).multiplyScalar(p.v));});
@@ -299,7 +302,7 @@ export function createCatTree(ship){
    else if(t.kind===1){parts.push(paint(at(new T.CylinderGeometry(.06,.06,1.2,5),t.x,t.y-.6,t.z),C.wood));parts.push(paint(at(new T.SphereGeometry(.16,8,6),t.x,t.y-1.25,t.z),C.rope));for(let f=0;f<4;f++){const fe=new T.ConeGeometry(.3,1.7,6);fe.scale(1,1,.22);fe.rotateZ(Math.PI+(f-1.5)*.32);fe.rotateY(f*.5);at(fe,t.x+(f-1.5)*.16,t.y-2.1,t.z);parts.push(paint(fe,[0x3fa6a0,0xe2604e,0xf2b84b,0x5d8fd0][f]));}}
    else{const f=fish(C.toy[2]);at(f,t.x,t.y-.4,t.z);parts.push(f);}}
   // wicker baskets with red cushions hanging from the lowest tier, out over the void
-  let hung=0;for(let i=0;i<500&&hung<10;i++){const a=rnd()*Math.PI*2,r=9+rnd()*9,x=TREE.x+Math.cos(a)*r,z=TREE.z+Math.sin(a)*r,top=CANOPY[0][0]+.3,y=top-3-rnd()*3;
+  let hung=0;for(let i=0;i<500&&hung<10;i++){const a=rnd()*Math.PI*2,r=7+rnd()*7,x=TREE.x+Math.cos(a)*r,z=TREE.z+Math.sin(a)*r,top=CANOPY[0][0]+.3,y=top-3-rnd()*3;
    let ok=true;for(let h=y-1.2;h<=top;h+=.5)if(!clear(x,h,z,1.3)){ok=false;break;}if(!ok||!inOpening(x,y,z,top,1.5))continue;hung++;
    const bowl=new T.SphereGeometry(1.35,16,8,0,Math.PI*2,Math.PI/2,Math.PI/2);bowl.scale(1,1.05,1);at(bowl,x,y,z);parts.push(woven(bowl,y));
    const lip=new T.TorusGeometry(1.33,.14,5,24);lip.rotateX(Math.PI/2);at(lip,x,y,z);parts.push(paint(lip,C.wicker));const cu=pumpkin(1.05,.75);at(cu,x,y-.55,z);parts.push(paint(cu,C.carpet[0]));
