@@ -152,8 +152,8 @@
     "reason": "Carry forward the two remaining round-1 fast-deploy source rows from de275fc; existing gates retained."
   },
   "src/v2/phase4-culling.js": {
-    "sha256": "3614907b232efd458231f847eba348e207c80501c66c947c0bb12ca269af7885",
-    "reason": "Move the performance helper import away from the concurrent atrium-visibility import edit; runtime behavior and geometry IDs unchanged."
+    "sha256": "b20a7872c3284bb08ba9f17441007dd0c44c48f2c6194c541ab170c578623c46",
+    "reason": "Room culling: numeric cell codes in the visibility broad phase (same cells, same order; scripts/check-visibility-codes.mjs) and probes spread over frames within 3 ms, new owners counted as seen. Views match main pixel for pixel."
   },
   "src/v2/phase4-culling.authoring.js": {
     "sha256": "5cd1a09ba4e98c5012889d157e78f81ca7906df377245cf626ad23a898f57817",
@@ -202,5 +202,9 @@
   "src/v2/lounge-falls-fit.js": {
     "sha256": "143ee7ea84b4362037170d2508e3846f099f36548f9cb955f9a0a1be898cffe7",
     "reason": "authoring load speedup: indexed skin samples/owner profiles, edge-bucket floor sweeps; outputs byte-identical"
+  },
+  "src/v2/visibility-query.js": {
+    "sha256": "5cd11408fbb3dccb7ea006515709d6933fe7d0c12d7ef4b8c5aa84d8fa0b9161",
+    "reason": "Room culling: numeric cell codes in the visibility broad phase (same cells, same order; scripts/check-visibility-codes.mjs) and probes spread over frames within 3 ms, new owners counted as seen. Views match main pixel for pixel."
   }
 }
