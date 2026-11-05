@@ -53,7 +53,9 @@ export async function captureFastBaseline({bootstrap=false}={}){
  await runNode('scripts/legacy-room-data-v2.mjs');await fs.copyFile('output/fast-deploy/legacy-current.json',next+'/legacy.json');
  await runNode('scripts/fast-fitout-mesh-data-v2.mjs');await fs.copyFile('output/fast-deploy/fitout-mesh-current.json',next+'/fitout-mesh.json');
  const files={};for(const name of (await fs.readdir(next)).filter(f=>f.endsWith('.glb')||['layout.json','walk-plan.json','walk-map.png','fitout.json','legacy.json','fitout-mesh.json'].includes(f)))files[name]=sha(await fs.readFile(next+'/'+name));
- const record={version:1,identity,prepared:i.sha256,files,captured:new Date().toISOString()};
+ // The feature lane's strip and bed helpers as built (fast-dressing-v2.mjs featureHelperHashes).
+ const featureHelpers=(await import('./fast-dressing-v2.mjs')).featureHelperHashes();
+ const record={version:1,identity,prepared:i.sha256,files,featureHelpers,captured:new Date().toISOString()};
  await fs.writeFile(next+'/state.json',JSON.stringify(record,null,2));
  await fs.rm(old,{recursive:true,force:true});await fs.rename(baseline,old).catch(e=>{if(e.code!=='ENOENT')throw e;});await fs.rename(next,baseline);await fs.rm(old,{recursive:true,force:true});
  return record;
