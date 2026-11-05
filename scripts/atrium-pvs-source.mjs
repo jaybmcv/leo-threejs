@@ -33,12 +33,13 @@ export async function preparedDigest(dir){
  if(!metadataName)throw Error('No prepared walk metadata in '+dir);
  const integrity=await preparedIntegrity(dir);
  const code=sha(Buffer.concat(await Promise.all(['../src/v2/atrium-pvs-key.js','../src/v2/prepared-codec.public.js','../package-lock.json'].map(f=>fs.readFile(new URL(f,import.meta.url))))));
+ // A cached digest is whole runs of 32 hex digits joined by dots (written by rename, so a stopped write leaves none).
  const cache=path.join(PVS_BAKED_DIR,'digests',integrity+'-'+code.slice(0,16)+'.txt'),cached=integrity&&await fs.readFile(cache,'utf8').catch(()=>null);
- if(cached)return cached;
+ if(cached&&/^(?:[0-9a-f]{32})+(?:\.(?:[0-9a-f]{32})+)*$/.test(cached))return cached;
  const {readPreparedWorld}=await import('../src/v2/prepared-codec.public.js'),{colliderDigest}=await modules();
  const {ship}=await readPreparedWorld(pathToFileURL(path.resolve(dir)+path.sep),{skipImages:true,metadataName,fetchBytes:n=>fs.readFile(path.join(dir,n))});
  const digest=colliderDigest(ship.v2PreparedColliders);
- if(integrity){await fs.mkdir(path.dirname(cache),{recursive:true});await fs.writeFile(cache,digest);}
+ if(integrity){await fs.mkdir(path.dirname(cache),{recursive:true});await fs.writeFile(cache+'.part',digest);await fs.rename(cache+'.part',cache);}
  return digest;
 }
 export const preparedPvsKey=async(dir,layoutText)=>(await modules()).pvsKey(await preparedDigest(dir),await layoutPvsSetup(layoutText));

@@ -56,6 +56,24 @@ Current wider boundaries are room/frame/layout changes, hull-owned shell changes
 
 Cached room records include prepared arrays, render graphs, collision and a GLB addition, keyed by room output, clean baseline and patch-writer version. A changed room does not force previously edited rooms to be built again. Final assembly and public packaging still process the resulting whole artifact.
 
+## Room feature edits
+
+Each feature `prepare.js` and `prepare.authoring.js` create (the concession, the sword case, the jaguar gate, …) is wrapped in `feature()` (`src/v2/feature-owner.js`). That tags what it returns as its own and records, in the prepared manifest, whether the call left the rest of the ship untouched. An edit to one of these modules takes the dressing lane (`scripts/fast-dressing-v2.mjs`). The feature is rebuilt in Node against the baseline's own decoded ship, then its templates, collision spans and model nodes are swapped. Measured on a concession and sword-case edit: 36 s, against 30.5 min for the wider build, and the result equal by content to that full build.
+
+A feature qualifies only if:
+- its call takes nothing but the ship and the page's still and anisotropy;
+- its module has all four variants;
+- the authoring page uses its result only to draw it and update it.
+
+The arcade (its treadmill feeds Paws Off) and the vault (its door adds collision) stay with the wider build.
+
+The lane widens when:
+- a rebuild touches anything already in the ship;
+- old or new collision reaches a cell that the rail or void-guard planner asked about (`walk-plan.json` `railProbes`, recorded by `src/v2/rail-probes.js`);
+- templates appear on one side only.
+
+Removing an old in-place change from a feature isn't detected: it stays live until the nightly. Proofs: `node scripts/check-fast-dressing-v2.mjs --patch` and `--full=DIR`.
+
 
 ## Local measurement, without publishing
 

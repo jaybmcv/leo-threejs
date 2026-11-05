@@ -6,6 +6,7 @@ import {releaseEnvelopeProfiles} from './bounded-samples.js';
 import {captureRoomAnchors} from '../plan/rooms.js';
 import layout from '../plan/selected-layout.js';
 import {geometryRecords} from './prepared-geometry-record.js';
+import {featureLedger} from './feature-owner.js';
 import * as T from 'three';
 import {PreparedWriter} from './prepared-codec.js';
 import {placements,cabinKey,template,doorSide} from './cabins.js';
@@ -29,7 +30,7 @@ export async function savePreparedWalk(ship,{colliders,baked,haze,lounge,restSpo
  const idsByMatrix=new Map(placements().map(c=>[c.matrix.elements.join(','),c.id]));for(const g of colliders.groups)if(/^v2-(core|shell|lounge)-/.test(g.name))for(const item of g.items){item.owner=idsByMatrix.get(item.matrix.elements.join(','));if(!item.owner)throw Error('Missing prepared cabin collision owner '+g.name);}
 
  const skinAuthority=await uploadSkinProof(finishedSkinAuthority(ship));console.log(new Date().toISOString(),'Prepared finished-skin signature complete');
- const state={roomOwnershipVersion:1,roomFeatureSupports:writer.value(ship.v2RoomFeatureSupports||[]),skinAuthority,geometryTemplates:[...geometryRecords()].map(([key,g])=>[key,writer.geometry(g)]),source,ship:shipState,signs:writer.graph(ship.v2PreparedSigns),bands,haze:writer.graph(haze),facade:writer.graph(ship.facade),lounge:writer.graph(loungeRoot),frost:writer.graph(frostRoot),privacy,colliders:writer.colliders(colliders),rest:writer.value(restSpots),seats:seats.map(s=>restSpots.indexOf(s)),bake:{sources:baked.sources,meshes:baked.meshes},retirements:ship.v2Retirements};
+ const state={roomOwnershipVersion:1,roomFeatureSupports:writer.value(ship.v2RoomFeatureSupports||[]),skinAuthority,geometryTemplates:[...geometryRecords()].map(([key,g])=>[key,writer.geometry(g)]),source,ship:shipState,signs:writer.graph(ship.v2PreparedSigns),bands,haze:writer.graph(haze),facade:writer.graph(ship.facade),lounge:writer.graph(loungeRoot),frost:writer.graph(frostRoot),privacy,colliders:writer.colliders(colliders),rest:writer.value(restSpots),seats:seats.map(s=>restSpots.indexOf(s)),bake:{sources:baked.sources,meshes:baked.meshes},retirements:ship.v2Retirements,features:[...featureLedger()]};
 
  console.log(new Date().toISOString(),'Prepared state captured; serializing transport');
  const post=async(name,bytes)=>{const response=await fetch('/__prepared/'+name,{method:'POST',body:bytes});if(!response.ok)throw Error('Prepared asset write failed: '+name);};await globalThis.__LEOBuildGeometryCache?.flush();const result=await writer.save(post,state,{metadata:saveStreamedMetadata});await post('complete.json',JSON.stringify({status:'PASS',...result}));document.body.dataset.prepared='1';return result;

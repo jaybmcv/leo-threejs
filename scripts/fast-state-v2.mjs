@@ -11,7 +11,7 @@ const modelFiles=async directory=>(await fs.readdir(directory)).filter(f=>f.ends
 // descriptors are identical. It does not invalidate the clean full-build base.
 const patchProducerFiles=['scripts/build-fast-v2.mjs','scripts/fast-state-v2.mjs',
  'scripts/fast-room-patch-v2.mjs','scripts/prepared-patch-v2.mjs',
- 'scripts/patch-models-v2.mjs','scripts/fast-fitout-data-v2.mjs','scripts/fast-room-cache-v2.mjs','scripts/patch-owned-spans-v2.mjs','scripts/legacy-room-data-v2.mjs','scripts/fast-fitout-mesh-data-v2.mjs','src/v2/legacy-room.js','src/v2/room-owner.js','scripts/fast-dressing-v2.mjs'];
+ 'scripts/patch-models-v2.mjs','scripts/fast-fitout-data-v2.mjs','scripts/fast-room-cache-v2.mjs','scripts/patch-owned-spans-v2.mjs','scripts/legacy-room-data-v2.mjs','scripts/fast-fitout-mesh-data-v2.mjs','src/v2/legacy-room.js','src/v2/room-owner.js','scripts/fast-dressing-v2.mjs','src/v2/feature-owner.js'];
 export const patchProducerIdentity=async()=>sha(JSON.stringify(await Promise.all(patchProducerFiles.map(async f=>[f,sourceHash(f,await fs.readFile(f))]))));
 export async function captureActiveBuild(identity,{rooms=[],decks=[],smokeRooms=rooms}={}){
  const prepared=await verifyPrepared(),files={};for(const name of await modelFiles(output))files[name]=sha(await fs.readFile(output+'/'+name));

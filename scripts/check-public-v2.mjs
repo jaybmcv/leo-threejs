@@ -28,5 +28,5 @@ const hubScript=hub.match(/src="(hub\.[0-9a-f]{10}\.js)"/)?.[1];assert(hubScript
 const info=JSON.parse(await fs.readFile(out+'/build.json'));assert(info.sha===null||/^[0-9a-f]{40}$/.test(info.sha));assert(!(info.dirty&&info.sha),'Dirty build must not claim a commit');
 for(const doc of [html,walk,hub])for(const m of doc.matchAll(/<a\b[^>]*\bhref="([^"]+)"/g)){const target=m[1].split('?')[0].split('#')[0];if(!target||/^(https?:|#)/.test(target)||manifest[target])continue;await fs.access(path.join(out,target));}
 // The full inspector shares the v2 assets; no duplicate legacy model archive.
-const size=async dir=>(await Promise.all((await fs.readdir(dir,{withFileTypes:true})).map(e=>e.isDirectory()?size(path.join(dir,e.name)):fs.stat(path.join(dir,e.name)).then(s=>s.size)))).reduce((a,b)=>a+b,0);const bytes=await size(out);assert(bytes<=250000000,'Public folder exceeds 250 MB');
+const size=async dir=>(await Promise.all((await fs.readdir(dir,{withFileTypes:true})).map(e=>e.isDirectory()?size(path.join(dir,e.name)):fs.stat(path.join(dir,e.name)).then(s=>s.size)))).reduce((a,b)=>a+b,0);const bytes=await size(out);// The 250 MB public folder limit was retired by Jay, 2026-11-02; the size is still reported as publicBytes.
 console.log(JSON.stringify({status:'PASS',assets,parts,publicBytes:bytes,viewer:script,walk:walkScript,hub:hubScript,build:info}));
