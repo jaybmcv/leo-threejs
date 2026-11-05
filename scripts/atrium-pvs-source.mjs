@@ -62,7 +62,7 @@ export async function publishedPvs({prepared=PVS_PREPARED,layoutText,expectedSha
  }catch(e){return {key:null,text:null,reason:'atrium PVS key failed: '+e.message};}
 }
 
-if(import.meta.url===pathToFileURL(process.argv[1]).href){
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
  const dir=process.argv.slice(2).find(a=>!a.startsWith('--'))??PVS_PREPARED;
  const started=Date.now(),key=await preparedPvsKey(dir,await fs.readFile(arg('layout',PVS_LAYOUT),'utf8'));
