@@ -1,4 +1,5 @@
 import {RecordGeometry,recordMerged} from "../v2/prepared-geometry-record.js";
+import layout from '../plan/selected-layout.js';
 import {roomObject} from '../plan/rooms.js';
 import * as T from 'three';
 import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -31,6 +32,21 @@ const TRAIL=8,REMOTE_TRAILS=3,MARKS=TRAIL*(1+REMOTE_TRAILS);
 const canvas=(w,h,draw)=>{const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
  const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return t;};
 function rng(seed){return ()=>(seed=(seed*16807)%2147483647)/2147483647;}
+// The room's outline from the plan, which runs it out to the curved hull, well past the 16 m deep box the furniture is
+// laid out in (and the box itself if the plan has no outline). Points that lie within 3 cm of the line through their
+// neighbours drop out, since the hull curve comes in 0.5 m steps. Returns the corners in the room's frame (x, z) and in
+// ship x/z.
+function roomOutline(room){
+ const plan=layout.rooms?.find(r=>'Area_'+r.id===ROOM)?.polygon,toLocal=room.matrixWorld.clone().invert(),y=room.matrixWorld.elements[13];
+ let local=plan?.length>2?plan.map(([x,z])=>{const v=new T.Vector3(x,y,z).applyMatrix4(toLocal);return [v.x,v.z];}):[[-END,-SIDE],[END,-SIDE],[END,SIDE],[-END,SIDE]];
+ const keep=(a,b,from,to,out)=>{let worst=0,at=-1;const dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz)||1;
+  for(let i=from;i<to;i++){const p=local[i],d=Math.abs(dx*(p[1]-a[1])-dz*(p[0]-a[0]))/len;if(d>worst){worst=d;at=i;}}
+  if(worst>.03){keep(a,local[at],from,at,out);out.push(local[at]);keep(local[at],b,at+1,to,out);}};
+ let far=1;local.forEach((p,i)=>{if(Math.hypot(p[0]-local[0][0],p[1]-local[0][1])>Math.hypot(local[far][0]-local[0][0],local[far][1]-local[0][1]))far=i;});
+ const out=[local[0]];keep(local[0],local[far],1,far,out);out.push(local[far]);keep(local[far],local[0],far+1,local.length,out);local=out.length>2?out:local;
+ const world=local.map(([x,z])=>{const v=new T.Vector3(x,0,z).applyMatrix4(room.matrixWorld);return [v.x,v.z];});
+ return {local,world};
+}
 // Screen pictures: a space shooter for the PCs, a racer for the consoles and a four-way split screen for the couch.
 function shooter(g,w,h){
  const sky=g.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#0b0f2e');sky.addColorStop(.6,'#3a1658');sky.addColorStop(1,'#e2562f');g.fillStyle=sky;g.fillRect(0,0,w,h);
@@ -75,11 +91,13 @@ void main(){
  gl_FragColor=vec4(c*a,a);
 #include <colorspace_fragment>
 }`;
-const FLOOR=`#include <common>
+const FLOOR=edges=>`#include <common>
 #include <logdepthbuf_pars_fragment>
 ${COMMON}
-uniform float uTime,uSize;uniform vec4 uTrail[${MARKS}];uniform vec4 uRoom;varying vec3 vWorld;
+uniform float uTime,uSize;uniform vec4 uTrail[${MARKS}];uniform vec2 uEdge[${edges+1}];varying vec3 vWorld;
 const vec2 S=vec2(1.,1.7320508);
+// How far in from the room's outline (its corners in order, the first repeated at the end).
+float wallDistance(vec2 p){float d=1e9;for(int i=0;i<${edges};i++){vec2 a=uEdge[i],ba=uEdge[i+1]-a,pa=p-a;d=min(d,length(pa-ba*clamp(dot(pa,ba)/dot(ba,ba),0.,1.)));}return d;}
 vec4 cell(vec2 p){vec4 c=floor(vec4(p,p-vec2(.5,1.))/S.xyxy)+.5;vec4 h=vec4(p-c.xy*S,p-(c.zw+.5)*S);
  return dot(h.xy,h.xy)<dot(h.zw,h.zw)?vec4(h.xy,c.xy):vec4(h.zw,c.zw+.5);}
 void main(){
@@ -88,7 +106,7 @@ void main(){
  vec2 centre=vWorld.xz-h.xy*uSize;
  float glow=0.;for(int i=0;i<${MARKS};i++){vec4 t=uTrail[i];glow+=t.w*(1.-smoothstep(.12,.7,distance(centre,t.xz)));}
  glow=min(glow,1.);
- float wall=min(min(vWorld.x-uRoom.x,uRoom.z-vWorld.x),min(vWorld.z-uRoom.y,uRoom.w-vWorld.z));
+ float wall=wallDistance(vWorld.xz);
  vec3 c=vec3(.003,.0035,.005)+.004*hash(h.zw)+vec3(.02,.024,.03)*(1.-smoothstep(0.,1.4,wall));
  vec3 rgb=hue(uTime*.12+(centre.x+centre.y)*.35);
  c+=rgb*glow*(.3+.9*smoothstep(.22,.47,e));
@@ -273,14 +291,16 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
  piece(M.keys,new RecordGeometry("src/walk/gaming-lounge.js:25",T.BoxGeometry,.03,.02,2.2).translate(END-.48,.03,0));
  for(const [m,list] of parts){const o=new T.Mesh(recordMerged("src/walk/gaming-lounge.js",nativeMergeGeometries,list),m);o.name=m.name;group.add(o);}
  // The floor: black glass hexagons over the room's own floor; the ceiling of stars under its own.
- const uRoom={value:new T.Vector4(origin.x-END,origin.z-SIDE,origin.x+END,origin.z+SIDE)},trail=Array.from({length:MARKS},()=>new T.Vector4(0,0,0,0));
- const floor=new T.Mesh(new RecordGeometry("src/walk/gaming-lounge.js:26",T.PlaneGeometry,END*2,SIDE*2).rotateX(-Math.PI/2).translate(0,.01,0),new T.ShaderMaterial({name:'Gaming_hex_floor',vertexShader:VERTEX,fragmentShader:FLOOR,
-  uniforms:{uTime:time,uSize:{value:HEX},uTrail:{value:trail},uRoom}}));
+ const outline=roomOutline(room),flat=(flip)=>new T.ShapeGeometry(new T.Shape(outline.local.map(([x,z])=>new T.Vector2(x,flip*z))));
+ const uEdge={value:[...outline.world,outline.world[0]].map(([x,z])=>new T.Vector2(x,z))},trail=Array.from({length:MARKS},()=>new T.Vector4(0,0,0,0));
+ const floor=new T.Mesh(flat(-1).rotateX(-Math.PI/2).translate(0,.01,0),new T.ShaderMaterial({name:'Gaming_hex_floor',vertexShader:VERTEX,fragmentShader:FLOOR(outline.world.length),
+  uniforms:{uTime:time,uSize:{value:HEX},uTrail:{value:trail},uEdge}}));
  floor.name='Gaming_hex_floor';group.add(floor);
- const sky=new T.Mesh(new RecordGeometry("src/walk/gaming-lounge.js:27",T.PlaneGeometry,END*2,SIDE*2).rotateX(Math.PI/2).translate(0,TOP-.004,0),new T.ShaderMaterial({name:'Gaming_star_ceiling',vertexShader:VERTEX,fragmentShader:STARS,uniforms:{uTime:time}}));
+ const sky=new T.Mesh(flat(1).rotateX(Math.PI/2).translate(0,TOP-.004,0),new T.ShaderMaterial({name:'Gaming_star_ceiling',vertexShader:VERTEX,fragmentShader:STARS,uniforms:{uTime:time}}));
  sky.name='Gaming_star_ceiling';group.add(sky);
  // The room, in ship coordinates: where the floor lights and the mood holds.
- const inside=new T.Box3(new T.Vector3(origin.x-END,origin.y-.5,origin.z-SIDE),new T.Vector3(origin.x+END,origin.y+TOP,origin.z+SIDE));
+ const within=(x,z)=>{let c=false;const w=outline.world;for(let i=0,j=w.length-1;i<w.length;j=i++){const [xi,zi]=w[i],[xj,zj]=w[j];if((zi>z)!==(zj>z)&&x<(xj-xi)*(z-zi)/(zj-zi)+xi)c=!c;}return c;};
+ const inside={containsPoint:p=>p.y>=origin.y-.5&&p.y<=origin.y+TOP&&within(p.x,p.z)};
  // The mood: the walk's lights ease down and cool while the camera is in the room.
  let mood=0,shown=0,setMood=null;
  if(light){
