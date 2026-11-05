@@ -130,7 +130,7 @@ export function createCatTree(ship){
   const kerb=new T.CylinderGeometry(TREE.island+.7,TREE.island+.75,.32,96,1,true);at(kerb,TREE.x,y0+.16,TREE.z);parts.push(pavers(paint(kerb,C.stone)));
   const lip=new T.RingGeometry(TREE.island-.05,TREE.island+.7,96,1);lip.rotateX(-Math.PI/2);at(lip,TREE.x,y0+.32,TREE.z);parts.push(pavers(paint(lip,C.stone)));
   for(let i=0,made=0;i<120&&made<28;i++){const a=rnd()*Math.PI*2,r=TREE.island-1.1-rnd()*2.6,x=TREE.x+Math.cos(a)*r,z=TREE.z+Math.sin(a)*r;if(!clear(x,y0+.3,z,1)||!offWalk(x,z,2.2)||!offFootDoor(x,z,1.6))continue;made++;
-   const s=.9+rnd()*.55;for(let k=0;k<3;k++){const o=k===0?[0,0]:[(rnd()-.5)*1.6*s,(rnd()-.5)*1.6*s],r0=s*(k===0?1:.7+rnd()*.2),b=new T.SphereGeometry(r0,11,7);b.scale(1.1,.8,1.1);at(b,x+o[0],y0+.25+r0*.55,z+o[1]);parts.push(paint(b,[C.mossDark,C.moss,C.leaf[1]][k],.06,rnd));
+   const s=.9+rnd()*.55;for(let k=0;k<3;k++){const o=k===0?[0,0]:[(rnd()-.5)*1.6*s,(rnd()-.5)*1.6*s],r0=s*(k===0?1:.7+rnd()*.2),b=new T.SphereGeometry(r0,9,6);b.scale(1.1,.8,1.1);at(b,x+o[0],y0+.25+r0*.55,z+o[1]);parts.push(paint(b,[C.mossDark,C.moss,C.leaf[1]][k],.06,rnd));
     if(k===0)for(const m of [0,Math.PI/2])for(let q=1;q<10;q++){const t=q/10*Math.PI,d=new T.PlaneGeometry(.2,.05);d.rotateZ(Math.PI/2-t);d.rotateY(m);const cx=Math.cos(t)*r0*1.11,cy=Math.sin(t)*r0*.81;d.translate(Math.cos(m)*cx,cy,-Math.sin(m)*cx);parts.push(paint(at(d,x+o[0],y0+.25+r0*.55,z+o[1]),0xf2d67a));}}
    addWall(new T.CylinderGeometry(s*1.4,s*1.5,s*1.4,10).translate(x,y0+.25+s*.7,z));}
   for(let i=0,made=0;i<40&&made<5;i++){const a=rnd()*Math.PI*2,r=TREE.island-1-rnd()*3,x=TREE.x+Math.cos(a)*r,z=TREE.z+Math.sin(a)*r;if(!clear(x,y0+.3,z,.8)||!offWalk(x,z,1)||!offFootDoor(x,z,.8))continue;made++;
@@ -144,15 +144,15 @@ export function createCatTree(ship){
   // its collider runs out to the ramp's inner edge, over the grooves, so no gap opens between trunk and ramp
   const proxy=cutDoors(new T.LatheGeometry(prof.map((v,i,all)=>i===all.length-1?v:new T.Vector2(Math.max(v.x,rampIn(v.y-.2)-.02),v.y)),48).toNonIndexed());proxy.translate(TREE.x,0,TREE.z);addWall(proxy);
   for(let i=0;i<260;i++){const a=rnd()*Math.PI*2,y=y0+1.5+rnd()*35,r=trunkR(y)*1.05+.03;if(inDoor(a,y,r)||inDoor(a,y+.4,r))continue;const d=new T.PlaneGeometry(.07,.32);d.rotateY(Math.PI/2-a);parts.push(paint(at(d,TREE.x+Math.cos(a)*r,y,TREE.z+Math.sin(a)*r),0xf2c95a));}
-  for(let h=3;h<37;h+=4.6)for(let k=0;k<3;k++){const y=y0+h+k*.34,r=trunkR(y)+.2,d=DENS.find(d=>y>d.y-.3&&y<d.y+d.h+.3),gap=d?2*(d.w+.5)/r:0,band=new T.TorusGeometry(r,.17,4,44,Math.PI*2-gap);band.rotateX(Math.PI/2);if(d)band.rotateY(-(d.a+gap/2));at(band,TREE.x,y,TREE.z);parts.push(paint(band,k===1?0xd6b98a:C.sisal));}
+  for(let h=3;h<37;h+=4.6)for(let k=0;k<2;k++){const y=y0+h+k*.36,r=trunkR(y)+.2,d=DENS.find(d=>y>d.y-.3&&y<d.y+d.h+.3),gap=d?2*(d.w+.5)/r:0,band=new T.TorusGeometry(r,.17,4,44,Math.PI*2-gap);band.rotateX(Math.PI/2);if(d)band.rotateY(-(d.a+gap/2));at(band,TREE.x,y,TREE.z);parts.push(paint(band,k===1?0xd6b98a:C.sisal));}
   for(const [deg,len] of [[150,10],[176,11],[201,10],[226,11.5],[250,10]]){const a=deg*Math.PI/180,dir=new T.Vector3(Math.cos(a),0,Math.sin(a)),base=new T.Vector3(TREE.x,y0+.2,TREE.z);
    const root=tube([base.clone().addScaledVector(dir,3.4).setY(y0+5.2),base.clone().addScaledVector(dir,5.2).setY(y0+2.6),base.clone().addScaledVector(dir,len*.75).setY(y0+.8),base.clone().addScaledVector(dir,len).setY(y0+.2)],1.6,20,10);taper(root,1.6,.35);parts.push(paint(root,C.felt,.05,rnd));
    addWall(between(base.clone().addScaledVector(dir,4.4).setY(y0+.2),base.clone().addScaledVector(dir,len).setY(y0+.2),1.7,.4,6));}
  }
  // Ramp: carpet on top, sisal sides; guard posts and two ropes on the outer edge except where a platform joins it.
  {const f=t=>{const s=t*9,y=rampY(s);return {a:rampAngle(s),y,ri:rampIn(y),ro:rampOut(y)};};
-  const body=strip(9*48,f,.6);fixNormals(body);grounds.ramp.push(body.clone());parts.push(knit(paint(body,C.sisal)));
-  const top=strip(9*48,t=>{const o=f(t);return {...o,y:o.y+.03,ri:o.ri+.15,ro:o.ro-.15};},.03);fixNormals(top);parts.push(knit(paint(top,C.carpet[0])));
+  const body=strip(9*30,f,.6);fixNormals(body);grounds.ramp.push(body.clone());parts.push(knit(paint(body,C.sisal)));
+  const top=strip(9*30,t=>{const o=f(t);return {...o,y:o.y+.03,ri:o.ri+.15,ro:o.ro-.15};},.03);fixNormals(top);parts.push(knit(paint(top,C.carpet[0])));
   const joined=(s,r)=>{const y=rampY(s),a=rampAngle(s),x=TREE.x+Math.cos(a)*r,z=TREE.z+Math.sin(a)*r;
    if(PLATFORMS.some(p=>Math.abs(p.y-y)<.05&&Math.hypot(x-p.x,z-p.z)<p.r-.05))return true;return s>8.6&&Math.abs(y-RING.y)<.05;};
   let run=[];const flush=()=>{if(run.length>1){walls.push(...wall(run,0,GUARD));parts.push(...fence(run));}run=[];};
@@ -178,13 +178,13 @@ export function createCatTree(ship){
   const disc=new T.CylinderGeometry(p.r,p.r-.2,.8,48);at(disc,p.x,p.y-.4,p.z);grounds.platform.push(disc.clone());parts.push(sisal(disc,30));
   // its top a soft cushion, domed 12 cm (feet settle into it)
   const pad=new T.SphereGeometry(p.r-.2,40,5,0,Math.PI*2,0,Math.PI/2);pad.scale(1,.12/(p.r-.2),1);at(pad,p.x,p.y-.02,p.z);parts.push(knit(paint(pad,C.carpet[i%4])));
-  const rim=new T.TorusGeometry(p.r-.1,.5,8,48);rim.scale(1,1,.95);rim.rotateX(Math.PI/2);at(rim,p.x,p.y-.38,p.z);parts.push(knit(paint(rim,C.carpet[i%4],.03,rnd)));
+  const rim=new T.TorusGeometry(p.r-.1,.5,6,36);rim.scale(1,1,.95);rim.rotateX(Math.PI/2);at(rim,p.x,p.y-.38,p.z);parts.push(knit(paint(rim,C.carpet[i%4],.03,rnd)));
   const piping=new T.TorusGeometry(p.r+.33,.07,3,48);piping.rotateX(Math.PI/2);at(piping,p.x,p.y-.38,p.z);parts.push(paint(piping,C.cream));
   parts.push(...stitches(p.x,p.y-.38,p.z,p.r+.41,true));
   // a short rope-wrapped stem under the disc, which the limb from the trunk runs into
-  parts.push(paint(at(new T.CylinderGeometry(.85,.7,1.3,12,1,false),p.x,p.y-1.4,p.z),C.wood));for(let k=0;k<4;k++){const coil=new T.TorusGeometry(.86-k*.04,.13,4,20);coil.rotateX(Math.PI/2);parts.push(paint(at(coil,p.x,p.y-1.95+k*.27,p.z),k%2?0xd6b98a:C.sisal));}
+  parts.push(paint(at(new T.CylinderGeometry(.85,.7,1.3,12,1,false),p.x,p.y-1.4,p.z),C.wood));for(let k=0;k<4;k++){const coil=new T.TorusGeometry(.86-k*.04,.13,4,14);coil.rotateX(Math.PI/2);parts.push(paint(at(coil,p.x,p.y-1.95+k*.27,p.z),k%2?0xd6b98a:C.sisal));}
   const out=new T.Vector3(Math.cos(p.angle),0,Math.sin(p.angle)),base=new T.Vector3(TREE.x,p.y-3.8,TREE.z).addScaledVector(out,trunkR(p.y-3.8)-.4);
-  parts.push(paint(tube([base,base.clone().addScaledVector(out,3).setY(p.y-3.1),new T.Vector3(p.x,p.y-2.1,p.z)],.75,20,10),C.felt,.05,rnd));
+  parts.push(paint(tube([base,base.clone().addScaledVector(out,3).setY(p.y-3.1),new T.Vector3(p.x,p.y-2.1,p.z)],.75,14,8),C.felt,.05,rnd));
   guardRing(p.deck,p.x,p.z,p.r-.12,p.y,(x,z)=>Math.hypot(x-TREE.x,z-TREE.z)<rampOut(p.y)+.25||bridgeAt(p.deck,x,z));
   // cushions on the far half, away from the ramp joint and the bridge
   const away=p.angle,count=5+(i%2);for(let k=0;k<count;k++){const a=away+(k-(count-1)/2)*.42,r=p.r-(k%2?2.9:1.75),x=p.x+Math.cos(a)*r,z=p.z+Math.sin(a)*r;if(bridgeAt(p.deck,x,z))continue;
@@ -277,19 +277,19 @@ export function createCatTree(ship){
 
  // Canopy: one dome of stitched felt-leaf clusters lying like shingles over the platforms; never inside a walkway or
  // through a slab. Each leaf is a bent card cut out by a felt-leaf texture (where a canvas exists), tinted per cluster.
- {const leaf=leafCard(),slots=[],col=new T.Color(),m=new T.Matrix4(),X=new T.Vector3(),Z=new T.Vector3();
+ {const leaf=leafPillow(),slots=[],col=new T.Color(),m=new T.Matrix4(),X=new T.Vector3(),Z=new T.Vector3();
   const roof=y=>y>RING.y+1.8,ok=(x,y,z,sc)=>Math.hypot(x-TREE.x,z-TREE.z)>trunkR(y)+.4&&clear(x,y,z,sc*.45,roof(y)?.12:sc*.45)&&inOpening(x,y,z,y+(roof(y)?.12:sc*.3),roof(y)?.5:sc*.45);
   // the dome, then a low leafy roof over the Deck 15 ring that the dome's crown is too narrow to cover
-  for(let i=0,made=0;i<5000&&made<118;i++){const hat=made>=92;
+  for(let i=0,made=0;i<5000&&made<92;i++){const hat=made>=72;
    // even over the dome's surface, from a little below its rim to its top
    const h=hat?1:-.15+rnd()*1.15,el=Math.asin(Math.min(1,h)),th=rnd()*Math.PI*2,k=.92+.08*rnd(),dir=new T.Vector3(Math.cos(th)*Math.cos(el),Math.sin(el),Math.sin(th)*Math.cos(el));
-   const cyy=hat?18.8+rnd()*.35:TREE.floor+20+DOME.cy-.5+dir.y*DOME.r*k,sc=(roof(cyy)?2.1:3.6)+rnd()*.9;let cx=0,cz=0,fit=false;
+   const cyy=hat?18.8+rnd()*.35:TREE.floor+20+DOME.cy-.5+dir.y*DOME.r*k,sc=(roof(cyy)?2.3:4.1)+rnd()*.9;let cx=0,cz=0,fit=false;
    if(hat){const a=rnd()*Math.PI*2,r=2.5+Math.sqrt(rnd())*7.5;cx=TREE.x+Math.cos(a)*r;cz=TREE.z+Math.sin(a)*r;dir.set(Math.cos(a)*.25,1,Math.sin(a)*.25).normalize();fit=ok(cx,cyy,cz,sc);}
    else for(let f=1;f>.5&&!fit;f-=.06){cx=TREE.x+dir.x*DOME.r*k*f;cz=TREE.z+dir.z*DOME.r*k*f;fit=ok(cx,cyy,cz,sc);}
    if(!fit)continue;made++;
    const radial=new T.Vector3(cx-TREE.x,0,cz-TREE.z).normalize(),N=dir.clone().add(new T.Vector3(0,.55,0)).normalize(),tint=C.leaf[Math.floor(rnd()*3)];
    // one leaf on top, then a ring of eight drooping outward round it
-   const ring=[[0,0,0]];for(let q=0;q<7;q++)ring.push([q/7*Math.PI*2+rnd()*.3,1,.35+rnd()*.15]);
+   const ring=[[0,0,0]];for(let q=0;q<5;q++)ring.push([q/5*Math.PI*2+rnd()*.4,1,.3+rnd()*.15]);
    for(const [ang,r1,droop] of ring){const tan=new T.Vector3(Math.cos(ang),0,Math.sin(ang));tan.sub(N.clone().multiplyScalar(tan.dot(N))).normalize();
     const pos=new T.Vector3(cx,cyy,cz).addScaledVector(tan,r1*sc*.62).addScaledVector(N,-r1*sc*.18);if(!ok(pos.x,pos.y,pos.z,sc))continue;
     const n=N.clone().addScaledVector(tan,r1?droop:0).normalize();X.copy(r1?tan:radial).sub(n.clone().multiplyScalar((r1?tan:radial).dot(n))).normalize();Z.crossVectors(X,n);
@@ -297,7 +297,7 @@ export function createCatTree(ship){
   for(const q of sprigs)for(let k=0;k<5;k++){const ang=k/5*Math.PI*2+rnd(),tan=new T.Vector3(Math.cos(ang),0,Math.sin(ang)),n=new T.Vector3(0,1,0).addScaledVector(tan,.5).normalize(),pos=q.clone().addScaledVector(tan,.9);
    if(!clear(pos.x,pos.y,pos.z,.8)||!inOpening(pos.x,pos.y,pos.z,pos.y+.5,.8))continue;X.copy(tan).sub(n.clone().multiplyScalar(tan.dot(n))).normalize();Z.crossVectors(X,n);slots.push({pos,X:X.clone(),Y:n,Z:Z.clone(),sc:1.9,c:C.leaf[k%3],v:.95});}
   slots.push(...sprigCards);
-  const tex=leafTexture(),map=tex?.map??null,leafMat=felt(new T.MeshStandardMaterial({name:'Cat_tree_leaves',color:0xffffff,map,normalMap:tex?.normal??null,normalScale:new T.Vector2(1.6,1.6),alphaTest:map?.5:0,side:T.DoubleSide,roughness:.95}),.6);
+  const tex=leafTexture(),map=tex?.map??null,leafMat=felt(new T.MeshStandardMaterial({name:'Cat_tree_leaves',color:0xffffff,map,normalMap:tex?.normal??null,normalScale:new T.Vector2(.7,.7),roughness:.95}),.6);
   const leaves=new T.InstancedMesh(leaf,leafMat,slots.length);leaves.name='Cat_tree_leaves';
   slots.forEach((p,i)=>{m.makeBasis(p.X,p.Y,p.Z).scale(new T.Vector3(p.sc,p.sc,p.sc)).setPosition(p.pos);leaves.setMatrixAt(i,m);leaves.setColorAt(i,col.set(p.c).multiplyScalar(p.v));});
   leaves.computeBoundingSphere();near.add(leaves);
@@ -344,16 +344,27 @@ function grooves(g){g=g.index?g.toNonIndexed():g;g.deleteAttribute('uv');const p
 // Thin a tube from radius r0 at its start to r1 at its end (TubeGeometry rings are laid out along the path).
 function taper(g,r0,r1){const p=g.attributes.position,n=g.parameters.tubularSegments,radial=g.parameters.radialSegments,path=g.parameters.path,v=new T.Vector3(),q=new T.Vector3();
  for(let i=0;i<=n;i++){const t=i/n,c=path.getPointAt(t),k=(r0+(r1-r0)*t)/r0;for(let j=0;j<=radial;j++){const idx=i*(radial+1)+j;v.fromBufferAttribute(p,idx);q.copy(v).sub(c).multiplyScalar(k).add(c);p.setXYZ(idx,q.x,q.y,q.z);}}g.computeVertexNormals();return g;}
-// Felt leaf card: a 1 m square puffed into a dome, the leaf's tip along +x, its face up (+y).
-function leafCard(){const g=new T.PlaneGeometry(1,1,3,3);g.rotateX(-Math.PI/2);const p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);p.setY(i,.05-.26*(x*x+z*z)-.05*x);}g.computeVertexNormals();return g;}
+// Felt leaf: a solid flat cushion in the leaf's own lobed outline, about 1 m across before scaling, its tip along +x and
+// its face up (+y). The top rises from a rounded rim to a puffed middle, the underside bulges a little, and the whole
+// leaf bows into a shallow dome. UVs match leafTexture, so its stitch, vein and rim colour land on the shape.
+const LOBES=[[.52,.5,.3],[.36,.36,.21],[.36,.64,.21],[.68,.33,.19],[.68,.67,.19],[.8,.5,.17]];
+function leafPillow(N=16,h=.055){
+ const inside=(x,z)=>LOBES.some(([cx,cy,r])=>Math.hypot(x-(cx-.5),z-(cy-.5))<r),c0=[.05,0],rim=[];
+ for(let i=0;i<N;i++){const a=i/N*Math.PI*2,dx=Math.cos(a),dz=Math.sin(a);let t=0;for(let s=0;s<=.62;s+=.005)if(inside(c0[0]+dx*s,c0[1]+dz*s))t=s;rim.push([c0[0]+dx*t,c0[1]+dz*t]);}
+ const P=[],add=(x,y,z)=>(P.push(x,y,z),P.length/3-1);
+ const r0=rim.map(([x,z])=>add(x,0,z)),r1=rim.map(([x,z])=>add(c0[0]+(x-c0[0])*.78,h*.78,c0[1]+(z-c0[1])*.78)),top=add(c0[0],h,c0[1]),bottom=add(c0[0],-h*.35,c0[1]);
+ const I=[],v=k=>[P[k*3],P[k*3+1],P[k*3+2]],tri=(a,b,c,up)=>{const A=v(a),B=v(b),C=v(c),ny=(B[2]-A[2])*(C[0]-A[0])-(B[0]-A[0])*(C[2]-A[2]);(ny>0)===up?I.push(a,b,c):I.push(a,c,b);};
+ for(let i=0;i<N;i++){const j=(i+1)%N;tri(r0[i],r0[j],r1[j],true);tri(r0[i],r1[j],r1[i],true);tri(r1[i],r1[j],top,true);tri(r0[i],r0[j],bottom,false);}
+ const uv=[];for(let k=0;k<P.length;k+=3){uv.push(P[k]+.5,.5-P[k+2]);const x=P[k],z=P[k+2];P[k+1]+=.05-.26*(x*x+z*z)-.05*x;}
+ const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(I);g.computeVertexNormals();return g;}
 // The leaf's textures: a rounded three-lobed felt leaf, darker at its rim, a pale running stitch inside the edge and a
 // vein, white elsewhere so each cluster's tint shows; and a normal map that puffs it like a stuffed cushion, rising from
 // its rim to its middle, with the stitch and the vein sunk in. Only where a canvas exists (pages, not plain Node).
 function leafTexture(){if(typeof document==='undefined')return null;const S=256,cv=document.createElement('canvas');cv.width=cv.height=S;const g=cv.getContext('2d');if(!g)return null;
- const lobes=[[.52,.5,.3],[.36,.36,.21],[.36,.64,.21],[.68,.33,.19],[.68,.67,.19],[.8,.5,.17]],shape=(c,inset)=>{c.beginPath();for(const [x,y,r] of lobes){c.moveTo(x*S+(r-inset)*S,y*S);c.arc(x*S,y*S,Math.max(1,(r-inset)*S),0,Math.PI*2);}};
+ const lobes=LOBES,shape=(c,inset)=>{c.beginPath();for(const [x,y,r] of lobes){c.moveTo(x*S+(r-inset)*S,y*S);c.arc(x*S,y*S,Math.max(1,(r-inset)*S),0,Math.PI*2);}};
  const stitch=(c,w,dash)=>{c.lineWidth=w;c.setLineDash(dash);for(const [x,y,r] of lobes){c.beginPath();c.arc(x*S,y*S,(r-.05)*S,0,Math.PI*2);c.stroke();}c.setLineDash([]);};
  const vein=(c,w)=>{c.lineWidth=w;c.beginPath();c.moveTo(.16*S,.5*S);c.lineTo(.9*S,.5*S);for(const t of [.4,.6,.75]){c.moveTo(t*S,.5*S);c.lineTo((t+.1)*S,.32*S);c.moveTo(t*S,.5*S);c.lineTo((t+.1)*S,.68*S);}c.stroke();};
- g.fillStyle='#a9b58c';shape(g,0);g.fill();g.fillStyle='#eef3e4';shape(g,.04);g.fill();
+ g.fillStyle='#a9b58c';g.fillRect(0,0,S,S);g.fillStyle='#eef3e4';shape(g,.04);g.fill();
  g.strokeStyle='#ffe066';stitch(g,9,[15,10]);
  g.fillStyle='#eef3e4';shape(g,.075);g.fill();g.strokeStyle='#c5cfb3';vein(g,6);
  g.fillStyle='#c9a46a';g.fillRect(0,.47*S,.2*S,.06*S);
@@ -394,7 +405,7 @@ function cutDoors(g){g=g.index?g.toNonIndexed():g;const p=g.attributes.position,
 // Pavers: alternate tones round the island's kerb, a block every 0.9 m.
 function pavers(g){const p=g.attributes.position,c=g.attributes.color;for(let i=0;i<p.count;i+=3){let x=0,z=0;for(let k=0;k<3;k++){x+=p.getX(i+k)-TREE.x;z+=p.getZ(i+k)-TREE.z;}const a=Math.atan2(z,x),n=Math.floor((a+Math.PI)*(TREE.island+.4)/.9),k=n%2?.9:1.04;for(let j=0;j<3;j++)c.setXYZ(i+j,c.getX(i+j)*k,c.getY(i+j)*k,c.getZ(i+j)*k);}return g;}
 // A ball of yarn: a sphere banded by wraps in two directions, its centre at (x,y,z).
-function yarn(r,color,rnd,x,y,z){const g=paint(new T.SphereGeometry(r,12,8),color),p=g.attributes.position,c=g.attributes.color,u=new T.Vector3(rnd()-.5,rnd()-.5,rnd()-.5).normalize(),w=new T.Vector3(rnd()-.5,rnd()-.5,rnd()-.5).normalize(),v=new T.Vector3();
+function yarn(r,color,rnd,x,y,z){const g=paint(new T.SphereGeometry(r,10,6),color),p=g.attributes.position,c=g.attributes.color,u=new T.Vector3(rnd()-.5,rnd()-.5,rnd()-.5).normalize(),w=new T.Vector3(rnd()-.5,rnd()-.5,rnd()-.5).normalize(),v=new T.Vector3();
  for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).divideScalar(r);const k=.78+.22*Math.max(Math.abs(Math.sin(v.dot(u)*14)),Math.abs(Math.sin(v.dot(w)*14))*.8);c.setXYZ(i,c.getX(i)*k,c.getY(i)*k,c.getZ(i)*k);}
  return at(g,x,y,z);}
 // A stuffed felt fish, nose along +x: a squashed body, a tail and a darker eye.

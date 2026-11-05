@@ -1510,8 +1510,8 @@
         "Great_cat_tree_solid"
       ],
       "interactionTargets": null,
-      "placements": 47,
-      "signature": "a876c9e3f2360fe7311764c140c46bf3a9305a049cea8f9d55a32c6e75e9fc31"
+      "placements": 48,
+      "signature": "7fc02ed4eada9e35b26fadc2d756c61d57ba9907c579adc063e5d5594efefd6a"
     },
     {
       "source": "src/walk/cat-tree.js",
@@ -1536,8 +1536,8 @@
         "Great_cat_tree_solid"
       ],
       "interactionTargets": null,
-      "placements": 47,
-      "signature": "a876c9e3f2360fe7311764c140c46bf3a9305a049cea8f9d55a32c6e75e9fc31"
+      "placements": 48,
+      "signature": "7fc02ed4eada9e35b26fadc2d756c61d57ba9907c579adc063e5d5594efefd6a"
     },
     {
       "source": "src/walk/cat-tree.prepared.js",
@@ -1562,8 +1562,8 @@
         "Great_cat_tree_solid"
       ],
       "interactionTargets": null,
-      "placements": 47,
-      "signature": "a876c9e3f2360fe7311764c140c46bf3a9305a049cea8f9d55a32c6e75e9fc31"
+      "placements": 48,
+      "signature": "7fc02ed4eada9e35b26fadc2d756c61d57ba9907c579adc063e5d5594efefd6a"
     },
     {
       "source": "src/walk/cat-tree.public.js",
@@ -1588,8 +1588,8 @@
         "Great_cat_tree_solid"
       ],
       "interactionTargets": null,
-      "placements": 47,
-      "signature": "a876c9e3f2360fe7311764c140c46bf3a9305a049cea8f9d55a32c6e75e9fc31"
+      "placements": 48,
+      "signature": "7fc02ed4eada9e35b26fadc2d756c61d57ba9907c579adc063e5d5594efefd6a"
     },
     {
       "source": "src/walk/catnip-face.js",
