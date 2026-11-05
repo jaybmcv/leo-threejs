@@ -134,9 +134,10 @@ function shims(){if(shimmed)return;shimmed=true;installWalkCanvas(createCanvas);
  const canvas=()=>{const c=createCanvas(1,1);c.toBlob=(cb,type='image/png')=>cb(new Blob([c.toBuffer(type)],{type}));return Object.assign(c,{style:{},addEventListener(){},removeEventListener(){},setAttribute(){},focus(){},getBoundingClientRect:()=>({left:0,top:0,width:1,height:1})});};
  globalThis.document??={createElement:tag=>tag==='canvas'||tag===undefined?canvas():inert(),head:inert(),body:inert(),addEventListener(){},removeEventListener(){},getElementById:()=>inert(),querySelector:()=>inert()};
  globalThis.addEventListener??=()=>{};globalThis.removeEventListener??=()=>{};
- // The public replay reads templates from the prepared walk; here from the authoring records just made. The ship log
- // (walk-changes, from git at page build) only fills the boards' texture, so an empty one stands in.
- registerHooks({resolve(specifier,context,next){if(/prepared-resource\.public\.js$/.test(specifier))return {url:'data:text/javascript,export const preparedResource={geometryTemplates:globalThis.__leoDressingTemplates};',shortCircuit:true};
+ // The public replay reads templates from the prepared walk; here from the authoring records just made, read when each
+ // template is taken (the module is evaluated once, for the first dressing compiled). The ship log (walk-changes, from
+ // git at page build) only fills the boards' texture, so an empty one stands in.
+ registerHooks({resolve(specifier,context,next){if(/prepared-resource\.public\.js$/.test(specifier))return {url:'data:text/javascript,export const preparedResource={get geometryTemplates(){return globalThis.__leoDressingTemplates;}};',shortCircuit:true};
   if(specifier==='walk-changes')return {url:'data:text/javascript,export default [];',shortCircuit:true};return next(specifier,context);}});
 }
 const shape=root=>{const rows=[];root.updateMatrixWorld(true);root.traverse(o=>{if(!o.isMesh)return;const g=o.geometry,a=[];for(const [k,x]of Object.entries(g.attributes).sort())a.push(k,Array.from(x.array));rows.push([o.name,o.matrixWorld.elements,a,g.index?Array.from(g.index.array):null]);});return JSON.stringify(rows);};
@@ -211,7 +212,7 @@ export async function patchDressings(plan,timer,{baseDirectory,destination}){
  const merge=field=>{const out=new Map();for(const c of compiled)for(const r of c[field]){const row=out.get(r.band)||{positions:[],flags:[],spans:[]};row.spans.push(...r.spans.map(s=>({...s,start:s.start+row.flags.length})));row.positions.push(...r.positions);row.flags.push(...r.flags);out.set(r.band,row);}return out;};
  const removedSpans=await timer.stage('replace owned collision spans',()=>removeOwnedSpans(m,patch,read,owners,merge('collision'),merge('groundCollision')));
  assert.equal(removedSpans.renderTriangles,0,'Dressings own no baked render triangles');
- await timer.stage('replace dressing templates',async()=>{writer=new PreparedWriter(),rows=compiled.flatMap(c=>c.templates.map(([key,g])=>[key,writer.geometry(g)])),first=m.geometries.length;patch.absorb(writer);
+ await timer.stage('replace dressing templates',async()=>{const writer=new PreparedWriter(),rows=compiled.flatMap(c=>c.templates.map(([key,g])=>[key,writer.geometry(g)])),first=m.geometries.length;patch.absorb(writer);
   m.geometryTemplates=[...m.geometryTemplates.filter(([key])=>!compiled.some(c=>ownsTemplate(DRESSINGS[c.id],key))),...rows.map(([key,id])=>[key,id+first])];});
  const models=await timer.stage('patch dressing models',()=>patchDressingModels({baseline:baseDirectory,destination,compiled:compiled.filter(c=>DRESSINGS[c.id].model)}));
  const original=JSON.parse(await fs.readFile(base+'/integrity.json','utf8')),sourceInputs={...original.sourceInputs,sources:plan.identity};
