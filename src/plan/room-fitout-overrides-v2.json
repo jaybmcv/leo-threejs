@@ -124,7 +124,7 @@
   "d16-theater-5": {
     "add": [
       {"part":"interior_wall","size":[0.84,2.8,0.12],"at":[-25.42,1.4,-9],"mat":"navy"},
-      {"part":"interior_wall","size":[9.8,2.8,0.12],"at":[-16.9,1.4,-9],"mat":"navy"},
+      {"part":"interior_wall","size":[9.739,2.8,0.12],"at":[-16.9305,1.4,-9],"mat":"navy"},
       {"part":"interior_wall","size":[0.12,2.8,8],"at":[-12,1.4,-13],"mat":"navy"}
     ]
   }
