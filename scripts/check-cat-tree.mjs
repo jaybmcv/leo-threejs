@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as T from 'three';
-import {createCatTree,TREE,PLATFORMS,RING,BRIDGES} from '../src/walk/cat-tree.js';
+import {createCatTree,TREE,PLATFORMS,RING,BRIDGES,rampY,rampAngle,rampIn,rampOut} from '../src/walk/cat-tree.js';
 import {Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {groundMesh} from '../src/v2/ground.js';
@@ -28,8 +28,10 @@ const ground=new Colliders();tree.solid.updateMatrixWorld(true);ground.addStatic
 const ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0)),seg=new T.Line3();
 const floorAt=(x,y,z,up=.42,down=.9)=>{ray.origin.set(x,y+up,z);const h=ground.raycast(ray,up+down);return h&&h.normal.y>.6?h.point.y:null;};
 const room=(x,y,z)=>{seg.start.set(x,y+.75,z);seg.end.set(x,y+1.65,z);return !col.overlaps(seg,.35);};
-const near=(x,z)=>Math.hypot(x-TREE.x,z-TREE.z)<TREE.island+1||(Math.abs(z)<2&&x>TREE.x&&x<226);
-const start=[TREE.x-TREE.island-.5,TREE.floor,0],D=.25,seen=new Map(),queue=[start],drops=[];
+const near=(x,z)=>Math.hypot(x-TREE.x,z-TREE.z)<TREE.island+3||(Math.abs(z)<2&&x>TREE.x&&x<226);
+// start on the deck floor just off the island, where the boardwalk comes in
+const entry=(()=>{const y=rampY(0),a=rampAngle(0),r=(rampIn(y)+rampOut(y))/2,b=rampAngle(.02),m=new T.Vector3(TREE.x+Math.cos(a)*r,0,TREE.z+Math.sin(a)*r),n=new T.Vector3(TREE.x+Math.cos(b)*r,0,TREE.z+Math.sin(b)*r),t=n.sub(m).normalize();return m.addScaledVector(t,-(TREE.island+1.5));})();
+const start=[entry.x,TREE.floor,entry.z],D=.25,seen=new Map(),queue=[start],drops=[];
 const key=([x,y,z])=>`${Math.round(x/D)},${Math.round(y/.2)},${Math.round(z/D)}`;seen.set(key(start),start);
 for(let i=0;i<queue.length;i++){const [x,y,z]=queue[i];
  for(const [dx,dz] of [[D,0],[-D,0],[0,D],[0,-D]]){const nx=x+dx,nz=z+dz;if(!near(nx,nz))continue;
@@ -45,13 +47,11 @@ console.log(`unguarded drops over 1 m: ${uniq.size}`);for(const d of [...uniq.va
 assert.equal(failed,0,'unreached goals');assert.equal(uniq.size,0,'unguarded drops');
 
 // The walk's own controller climbs the ramp from the boardwalk to Deck 15, then crosses each bridge from its platform.
-const ctl=new Controller(col),STEP=Math.PI*.75,LAND=20/135,PHI0=-Math.PI*.375;
-const tR=y=>{const h=y-TREE.floor;return h<5?4.6:h<36?4.5-1.9*(h-5)/31:2.6-.6*Math.min(1,(h-36)/3.2);};
-const lv=k=>k===0?TREE.islandTop:TREE.floor+4*k,rY=s=>{const k=Math.min(8,Math.floor(s)),u=s-k;return lv(k)+(lv(k+1)-lv(k))*Math.min(1,Math.max(0,(u-LAND)/(1-2*LAND)));};
-const mid=s=>{const y=rY(s),a=PHI0+s*STEP,r=tR(y)+.05+1.35;return new T.Vector3(TREE.x+Math.cos(a)*r,y,TREE.z+Math.sin(a)*r);};
+const ctl=new Controller(col);
+const mid=s=>{const y=rampY(s),a=rampAngle(s),r=(rampIn(y)+rampOut(y))/2;return new T.Vector3(TREE.x+Math.cos(a)*r,y,TREE.z+Math.sin(a)*r);};
 const go=(t,tol=.45,max=900)=>{let i=0;for(;i<max;i++){const d=new T.Vector3(t.x-ctl.position.x,0,t.z-ctl.position.z);if(d.length()<tol)break;d.setLength(Math.min(3.2,d.length()*4+.5));ctl.step(1/60,d,false);}return i<max;};
 const settle=()=>{for(let i=0;i<40;i++)ctl.step(1/60,new T.Vector3(),false);};
-const m0=mid(0),tang=new T.Vector3(-Math.sin(PHI0),0,Math.cos(PHI0));ctl.position.copy(m0).addScaledVector(tang,-(TREE.island-2.2)).setY(TREE.islandTop+.3);ctl.velocity.set(0,0,0);settle();
+const m0=mid(0),tang=mid(.02).sub(m0).setY(0).normalize();ctl.position.copy(m0).addScaledVector(tang,-(TREE.island-2.2)).setY(TREE.islandTop+.3);ctl.velocity.set(0,0,0);settle();
 assert(Math.abs(ctl.position.y-TREE.islandTop)<.1,'walker not standing on the island: '+ctl.position.y);
 let climbed=true;go(m0);for(let s=.03;s<=9.0001;s+=.03){const t=mid(s);if(!go(t)||t.y-ctl.position.y>.6){climbed=false;console.log('FAIL ramp climb at s',s.toFixed(2),ctl.position.toArray().map(v=>v.toFixed(2)).join(','));break;}}
 if(climbed){settle();console.log(`PASS controller climbs the ramp to Deck 15 (y ${ctl.position.y.toFixed(2)})`);}
