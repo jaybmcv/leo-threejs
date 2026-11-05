@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {requireCabinFootprints} from '../src/plan/cabin-footprints-v2.js';
 import {requireCurrentWalkReport,WALK_REPORT_VERSION} from './v2-walk-identity.mjs';
-import {requireRoomDropPolicy,ROOM_DROP_ALLOWLIST} from './v2-walk-policy.mjs';
+import {requireRoomDropPolicy,ROOM_DROP_ALLOWLIST,enclosedPocket} from './v2-walk-policy.mjs';
 import {checkV2Adapters} from './source-contract.mjs';
 const layout=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8')),checks=[],expect=(name,fn,regex)=>{assert.throws(fn,regex,name);checks.push(name);};
 checks.push('All '+requireCabinFootprints(layout).cabins+' cabin footprints and corridor thresholds pass');
@@ -32,4 +32,5 @@ requireRoomDropPolicy([fixture],layout,{supports});checks.push('Named v1 furnitu
 expect('Guard cap cannot use furniture exception',()=>requireRoomDropPolicy([fixture],layout,{supports:[{...supports[0],name:'V2_guard_cap'}]}),/Unapproved/);
 expect('Deeper drop cannot use furniture exception',()=>requireRoomDropPolicy([{...fixture,drop:4,to:[183.15,r.y-3,16]}],layout,{supports}),/Unapproved/);
 const adapters=await checkV2Adapters();assert.equal(adapters.issues.length,0);
+assert.ok(enclosedPocket({sealed:true,lid:2.6},3.8),'Hollow cabinet under its 2.6 m top drops out');assert.ok(!enclosedPocket({sealed:true,lid:3.8},3.8),'Corner a partition cuts off keeps the ceiling and counts');assert.ok(!enclosedPocket({sealed:true,lid:Infinity},Infinity),'Nothing overhead in range counts');assert.ok(!enclosedPocket({sealed:true,lid:2.6},Infinity),'Unmeasured ceiling counts');assert.ok(!enclosedPocket({sealed:true,lid:3},5),'Space under a 3 m mezzanine counts');assert.ok(!enclosedPocket({sealed:false,lid:2.6},3.8),'Pocket with a way out counts');checks.push('Missed floor drops out only in a sealed pocket under a low lid');
 const report={status:'PASS',checks,allowList:ROOM_DROP_ALLOWLIST};await fs.mkdir('output/phase3/round2',{recursive:true});await fs.writeFile('output/phase3/round2/regressions.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));

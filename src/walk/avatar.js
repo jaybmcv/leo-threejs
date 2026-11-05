@@ -6,6 +6,7 @@ import {COSMO_EMOTES} from './vr/cosmoEmotes.ts';
 import {WALK_SPEED,RUN_SPEED} from './vr/worldCore.ts';
 import {catnipFace} from './catnip-face.js';
 import {createSwimSuit} from './aquarium-treasure/suit.js';
+import {createFurColour} from './fur.js';
 
 // Cosmo as the walker, animated by Voyager's Reach's own figure (vr/dlCatFigure.ts): the authored Ecctrl walk and jog,
 // the reference sprint, take-off, air and landing, the turning lean, the tail spring, the idle, crouch, slide and
@@ -30,6 +31,17 @@ function liePose(bone){
  turn(bone('spine.006'),X,-8);
  for(const [i,deg] of [[1,-90],[2,-10]])turn(bone('Tail_springBone_'+i),X,deg);
 }
+function floatPose(bone){
+ turn(bone('spine.003'),X,8);
+ for(const side of ['L','R']){
+  const out=side==='L'?1:-1;
+  aim(bone('thigh.'+side),bone('shin.'+side),new T.Vector3(out*.03,-1,0));
+  aim(bone('shin.'+side),bone('foot.'+side),new T.Vector3(0,-1,0));
+  aim(bone('upper_arm.'+side),bone('forearm.'+side),new T.Vector3(out*.06,-1,0));
+  aim(bone('forearm.'+side),bone('hand.'+side),new T.Vector3(0,-1,0));
+ }
+ turn(bone('spine.006'),X,-12);
+}
 // In a hammock (from tester feedback), on top of the lie: hands clasped behind the head, elbows out to the sides.
 function hammockArms(bone){
  for(const side of ['L','R']){
@@ -44,6 +56,7 @@ function hammockArms(bone){
 export async function createWalker(createDLCat,motion){
  const cat=await createDLCat({height:COSMO_HEIGHT,castShadow:true,receiveShadow:true});
  const figure=new DLCatFigure(cat,()=>DEFAULT_DLCAT_TUNING,motion);figure.stylProportions=false;
+ const setFur=createFurColour(figure.asset);
  const holder=new T.Group();holder.name='Walker';const body=new T.Group();holder.add(body);body.add(figure.root);
  const bone=name=>{const b=figure.bones.get(name);if(!b)throw new Error('Cosmo rig is missing '+name);return b;};
  // The lying pose, built once from the bind pose the figure starts in.
@@ -51,6 +64,8 @@ export async function createWalker(createDLCat,motion){
  const bones=[...figure.bones.values()],rest=bones.map(b=>b.quaternion.clone());
  liePose(bone);const lie=bones.map(b=>b.quaternion.clone());
  hammockArms(bone);const hammock=bones.map(b=>b.quaternion.clone());
+ bones.forEach((b,i)=>b.quaternion.copy(rest[i]));figure.root.updateMatrixWorld(true);
+ floatPose(bone);const floating=bones.map(b=>b.quaternion.clone());
  bones.forEach((b,i)=>b.quaternion.copy(rest[i]));figure.root.updateMatrixWorld(true);
  // Eyes shut in a hammock. The face has no lids or morphs, so the eyeballs take the fur's colour from Cosmo's own
  // texture (the body's vertex nearest them) and read as closed lids under the lash line.
@@ -68,7 +83,7 @@ export async function createWalker(createDLCat,motion){
  const hipHeight=bone('spine').getWorldPosition(new T.Vector3()).y-figure.root.getWorldPosition(new T.Vector3()).y;
  let suit=null;
  return {
-  holder,body,figure,hipHeight,
+  holder,body,figure,hipHeight,setFur,
   // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock},
   //  catnip: in the Hydro-Nip Lounge}
   update(dt,s){
@@ -87,8 +102,8 @@ export async function createWalker(createDLCat,motion){
    }
    catnip=T.MathUtils.clamp(catnip+(s.catnip?1:-1)*dt/CATNIP_S,0,1);face.set(catnip*catnip*(3-2*catnip));
    const closed=r?.kind==='lie'&&r.hammock&&r.weight>.6?shut:open;if(eyes.geometry.attributes.uv!==closed)eyes.geometry.setAttribute('uv',closed);
-   if(r?.kind==='lie'&&r.weight>0){
-    const pose=r.hammock?hammock:lie;bones.forEach((b,i)=>b.quaternion.slerp(pose[i],r.weight));
+   if((r?.kind==='lie'||r?.kind==='float')&&r.weight>0){
+    const pose=r.kind==='float'?floating:r.hammock?hammock:lie;bones.forEach((b,i)=>b.quaternion.slerp(pose[i],r.weight));
     figure.asset.root.position.y=T.MathUtils.lerp(figure.asset.root.position.y,figure.restOffset,r.weight);
     figure.root.updateMatrixWorld(true);
    }

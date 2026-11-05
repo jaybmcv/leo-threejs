@@ -1,3 +1,4 @@
+import {walkBindings,bindingLabel} from './bindings.js';
 import {inOtherside} from './net/otherside.js';
 import {V2_FIND,V2_EXAMPLE_GO} from '../v2/help-wayfinding.js';
 import {toWorld,anchoredYaw} from '../plan/rooms.js';
@@ -21,11 +22,12 @@ const PLAY=[
   [['X'],null,'Lie flat'],
   [['Drag'],'Right thumb','Look around; scroll to bring the camera in or out','Drag to look around'],
   [['V'],'View','First or third person'],
+  [['Fur'],'Fur','Choose your fur colour in the toolbar; saved on this browser and seen by others aboard'],
  ]},
  {title:'Do things',rows:[
   [['E'],'Use','Use what’s in front of you: the prompt at the bottom says what (sit, lie down, play, read, climb in)','The orange button near something to use says what it does (sit, lie down, play, read, climb in)'],
   [['E'],'Use','Lifts: call one at its door, then pick a deck inside'],
-  [['B'],'Emote','Emotes; 1 to 0 play one at once','Pick an emote to play'],
+  [['B'],'Emote','Open the emote menu; Controls changes the menu and individual emote bindings','Pick an emote to play'],
  ]},
  {title:'Get around',rows:[
   [['M'],'Go to','Go to: jump straight to a named place'],
@@ -59,19 +61,19 @@ const el=(tag,props={},...kids)=>{const e=Object.assign(document.createElement(t
 // spot link's spot.
 export function createHelp(sheet,{touch=()=>false,tester=()=>false,live=()=>false,onLog=()=>{},onFeedback=()=>{},onHub=null,onGo=()=>{}}={}){
  const tabs=sheet.querySelector('.help-tabs'),pages={play:sheet.querySelector('[data-page="play"]'),ideas:sheet.querySelector('[data-page="ideas"]')};
- let sections=[],playFor=null;
+ let sections=[];
  function buildPlay(touch){
-  playFor=touch;sections=[];pages.play.textContent='';
+  sections=[];pages.play.textContent='';
   const grid=el('div',{className:'help-grid'});
   for(const s of PLAY){
    const rows=s.rows.filter(r=>touch?r[1]:r[0]).map(([keys,control,text,touchText])=>el('div',{className:'help-row'},
-    el('span',{className:'help-keys'},...(touch?[el('i',{textContent:control})]:keys.map(k=>el('kbd',{textContent:k})))),
+    el('span',{className:'help-keys'},...(touch?[el('i',{textContent:control})]:keys.map(k=>el('kbd',{textContent:k==='B'?bindingLabel(walkBindings.get('emotes')):k==='P'?bindingLabel(walkBindings.get('ping')):k})))),
     el('span',{textContent:touch&&touchText||text})));
    const box=el('section',{},el('h3',{textContent:s.title}),...rows);if(s.live)sections.push(box);grid.append(box);
   }
   pages.play.append(grid,el('h3',{className:'help-find-title',textContent:'Things to find'}),
    el('ul',{className:'help-find'},...FIND.map(([name,where])=>el('li',{},el('b',{textContent:name}),el('span',{textContent:where})))),
-   ...touch?[]:[el('p',{className:'help-small',textContent:'H opens this again any time.'})]);
+   ...touch?[]:[el('p',{className:'help-small',textContent:'H opens this again any time. Controls in the toolbar remaps emotes and ping.'})]);
  }
 
  // The tester guide, built the first time it is shown (its pictures load then too).
@@ -113,7 +115,7 @@ export function createHelp(sheet,{touch=()=>false,tester=()=>false,live=()=>fals
  return {
   // Opens on the page last shown (the guide only while this browser is a tester's).
   open(){
-   const t=tester(),k=touch();if(k!==playFor)buildPlay(k);tabs.hidden=!t;for(const s of sections)s.hidden=!live();
+   const t=tester(),k=touch();buildPlay(k);tabs.hidden=!t;for(const s of sections)s.hidden=!live();
    // Focus on the card, so the arrow and page keys scroll it.
    show(t?page:'play');sheet.hidden=false;sheet.querySelector('.card').focus({preventScroll:true});
   },

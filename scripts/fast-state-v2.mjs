@@ -11,7 +11,7 @@ const modelFiles=async directory=>(await fs.readdir(directory)).filter(f=>f.ends
 // descriptors are identical. It does not invalidate the clean full-build base.
 const patchProducerFiles=['scripts/build-fast-v2.mjs','scripts/fast-state-v2.mjs',
  'scripts/fast-room-patch-v2.mjs','scripts/prepared-patch-v2.mjs',
- 'scripts/patch-models-v2.mjs','scripts/fast-fitout-data-v2.mjs','scripts/fast-room-cache-v2.mjs','scripts/patch-owned-spans-v2.mjs','scripts/legacy-room-data-v2.mjs','scripts/fast-fitout-mesh-data-v2.mjs','src/v2/legacy-room.js','src/v2/room-owner.js'];
+ 'scripts/patch-models-v2.mjs','scripts/fast-fitout-data-v2.mjs','scripts/fast-room-cache-v2.mjs','scripts/patch-owned-spans-v2.mjs','scripts/legacy-room-data-v2.mjs','scripts/fast-fitout-mesh-data-v2.mjs','src/v2/legacy-room.js','src/v2/room-owner.js','scripts/fast-dressing-v2.mjs'];
 export const patchProducerIdentity=async()=>sha(JSON.stringify(await Promise.all(patchProducerFiles.map(async f=>[f,sourceHash(f,await fs.readFile(f))]))));
 export async function captureActiveBuild(identity,{rooms=[],decks=[],smokeRooms=rooms}={}){
  const prepared=await verifyPrepared(),files={};for(const name of await modelFiles(output))files[name]=sha(await fs.readFile(output+'/'+name));
@@ -74,9 +74,14 @@ export async function classifyFastChange(){
  try{migration=await json('scripts/fast-owner-migration.json');if(migration.from===state.identity.hash)baselineIdentity=migration.to;else migration=null;}catch{}
  const baselineRecord=async name=>{if(state.files?.[name+'.json'])return json(baseline+'/'+name+'.json');if(migration?.baselines?.[name])return migration.baselines[name];throw Error('Clean baseline lacks '+name+' ownership data');};
  const files=changedInputs(baselineIdentity.files,identity.files);
+ const page=await (await import('./fast-dressing-v2.mjs')).authoringPageGuard();if(page)return {lane:'whole',reason:page,files,identity,rooms:[],decks:[]};
  if(!files.length)return {lane:'A',reason:'No geometry dependency changed',files,identity,rooms:[],decks:[]};
  const active=await activeBuildMatches(identity);
  if(active)return {lane:'A',reuse:'active',reason:'Geometry matches the verified previous room patch',files,identity,rooms:active.rooms||[],decks:active.decks||[],smokeRooms:active.smokeRooms||active.rooms||[]};
+ // Lane D: only a qualified dressing's own module changed, and nothing else imports it (fast-dressing-v2.mjs).
+ const dressing=await (await import('./fast-dressing-v2.mjs')).classifyDressings(files);
+ if(dressing?.reason)return {lane:'whole',reason:dressing.reason,files,identity,rooms:[],decks:[]};
+ if(dressing)return {lane:'D',reason:'Changed only an additive dressing ('+dressing.dressings.join(', ')+')',files,identity,rooms:[],decks:[],smokeRooms:[],dressings:dressing.dressings,basePrepared:state.prepared,patchProducer:await patchProducerIdentity()};
  const programmeInputs=new Set(['src/plan/room-fitout-overrides-v2.json','src/v2/phase4-programme.js','src/v2/phase6-programme.js','src/v2/launch-d-fitout.js']);
  const kitInputs=new Set(['src/v2/phase4-mesh-kit.js']);
  const legacyInputs=new Set(['src/special-areas.js','src/areas.js','src/area-finish.js','src/command-deck.js','src/neighborhood-services.js','src/lower-aft.js','src/lower-bow.js','src/upper-aft.js','src/voyage-forum.js','src/v2/room-shell.js']);

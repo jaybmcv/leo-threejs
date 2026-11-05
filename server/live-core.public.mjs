@@ -34,6 +34,7 @@
 // Movement is trusted from the client, as in Reach: the server checks that a pose is well formed and inside the ship,
 // and limits how often anyone may send. Lifts are the server's: a call goes to the server, which steps every car
 // (lift-motion.js) and tells everyone when a car's plans change.
+import {cleanFur} from '../src/walk/fur-colours.js';
 import http from 'node:http';
 import {policy} from '../src/v2/live-spatial.public.js';
 import {buildInfo} from '../scripts/build-info.mjs';
@@ -49,6 +50,7 @@ import {createGraffiti} from './graffiti.mjs';
 import {createGym} from './gym.mjs';
 import {createMazeBoard} from './maze.mjs';
 import {createTreasureBoard} from './aquarium-treasure.mjs';
+import {createSharedPanel} from './lever-panel.mjs';
 import {createTransporters} from './transporters.mjs';
 import {createTv} from './tv.mjs';
 
@@ -78,6 +80,7 @@ const gym=createGym({log,send,canPlay:policy.canGym});BUDGETS.gym=[2,6];
 // The Container Maze's best times (maze.mjs): its own file, its own message.
 const maze=createMazeBoard({log,send});
 const treasure=createTreasureBoard({log,send});
+const panel=createSharedPanel({everyone:()=>visitors,broadcast:msg=>broadcast(msg)});BUDGETS.panel=[4,8];
 // The Mars Cat Transporters on Deck 1 (transporters.mjs): who drives each, and where each is parked, in memory only.
 const mct=createTransporters({log,broadcast:msg=>broadcast(msg),send:(v,msg)=>send(v.ws,msg)});BUDGETS.mct=[3,8];
 setInterval(()=>mct.tick(),10000);
@@ -99,9 +102,9 @@ function readPose(v,p){
  const [x,y,z]=p.pos;if(!finite(x,...BOUNDS.x)||!finite(y,...BOUNDS.y)||!finite(z,...BOUNDS.z)||!finite(p.yaw,-1e3,1e3))return false;
  const pose={pos:[x,y,z],yaw:p.yaw,grounded:!!p.g,stance:STANCES.includes(p.st)?p.st:'stand',jumpCount:finite(p.jc,0,3)?Math.round(p.jc):0,
   jumpS:finite(p.js,-1,60)?p.js:-1,rise:finite(p.r,-100,100)?p.r:0,emote:typeof p.e==='string'&&/^[a-z0-9_]{1,32}$/.test(p.e)?p.e:null,rest:p.rest==='sit'||p.rest==='lie'?p.rest:null,
-  playing:p.pl===true,ball:p.b===true};
+  playing:p.pl===true,ball:p.b===true,fur:cleanFur(p.f)};
  try{v.record=encodeRecord(v.slot,pose);}catch{return false;}
- v.pos=pose.pos;v.playing=pose.playing;v.version++;treasure.observe(v);return true;
+ v.pos=pose.pos;v.playing=pose.playing;v.version++;treasure.observe(v);panel.observe(v);return true;
 }
 
 // Alien Cat Invasion's leaderboard (walk/invasion): one best score per Discord-verified player, kept in a file beside
@@ -248,7 +251,7 @@ async function hello(v,msg){
  v.slot=takeSlot();if(!v.slot){v.ws.close(4003,'full');return;}
  // A tester (the page holds a tester invite) wears the captain's hat. Taken on the page's word: it is a hat.
  Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);
- send(v.ws,{m:'welcome',...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{}),id,aboard:aboard(),you:{name:v.name,verified:!!who,typed:!!who?.typed},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state()});
+ send(v.ws,{m:'welcome',...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{}),id,aboard:aboard(),you:{name:v.name,verified:!!who,typed:!!who?.typed},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state(),panel:panel.state()});
  countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`${who.glyph?'':'discord:'}${who.discordId}${who.lapsed?' (remembered)':''}`:msg.pass?'(pass refused)':'');
  if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
 }
@@ -258,6 +261,7 @@ function leave(v){
  graffiti.leave(v);
  gym.left(v);
  mct.left(v);
+ panel.left(v);
  tv.leave(v);
  if(v.ready){broadcast({m:'gone',id:v.id});countChanged=true;log('aboard',aboard(),'-',v.id);}
 }
@@ -272,7 +276,7 @@ function onMessage(v,data,binary){
  switch(msg.m){
   case 'pose':if(allowed(v,'pose'))readPose(v,msg.p);break;
   // A verified visitor's name is their Discord name.
-  case 'name':if(allowed(v,'name')&&(!v.discord||v.discord.typed)){v.name=cleanName(msg.name)||(v.discord?v.discord.name:null);v.nameVersion=(v.nameVersion||0)+1;}break;
+  case 'name':if(allowed(v,'name')&&(!v.discord||v.discord.typed)){v.name=cleanName(msg.name)||(v.discord?v.discord.name:null);v.nameVersion=(v.nameVersion||0)+1;countChanged=true;}break;
   case 'call':{
    if(!allowed(v,'call'))break;
    const l=lifts.find(l=>l.spec.id===msg.lift);if(!l||!Number.isInteger(msg.stop)||msg.stop<0||msg.stop>=l.stops.length||!policy.canCall(v.pos,l.spec,msg.stop))break;
@@ -295,6 +299,7 @@ function onMessage(v,data,binary){
   // The Container Maze (maze.mjs): a run starts, a run ends at the button, the board.
   case 'maze':maze.message(v,msg);break;
   case 'treasure':treasure.message(v,msg);break;
+  case 'panel':if(allowed(v,'panel'))panel.message(v,msg);break;
   // A line of chat, for everyone aboard.
   case 'chat':chat(v,msg);break;
   // A knock on the Halloween clown's glass (walk/halloween.js): its badge code, if there is one yet.
@@ -329,8 +334,9 @@ function liftChanged(l,force){
 let last=Date.now();
 function flush(){
  const now=Date.now(),dt=Math.min(.25,(now-last)/1000);last=now;
+ panel.tick(dt);
  for(const l of lifts){stepLift(l.state,l.stops,dt);liftChanged(l,false);}
- if(countChanged){countChanged=false;broadcast({m:'aboard',n:aboard()});}
+ if(countChanged){countChanged=false;broadcast({m:'aboard',n:aboard(),names:[...visitors].filter(v=>v.ready).map(v=>v.name||'Voyager '+v.id.slice(-4))});}
  for(const r of visitors){
   if(!r.ready)continue;
   if(r.ws.bufferedAmount>SLOW_BYTES){if(!r.slowSince)r.slowSince=now;else if(now-r.slowSince>SLOW_MS){r.ws.close(4004,'too slow');leave(r);}continue;}

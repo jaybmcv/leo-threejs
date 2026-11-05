@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {canvasTexture} from '../../polish-kit.js';
 import {AQUARIUM as A} from '../lounge-aquarium.js';
 import {SWIM,swimWorld,swimLocal,distance,limitSwim,inWater,gemNear} from './layout.js';
@@ -17,24 +18,48 @@ export function createTreasureGame({tank,controller,follow,camera,input,live,onO
  if(!tank)return null;
  const group=new T.Group();group.name='Aquarium_treasure';tank.add(group);
  const steel=new T.MeshStandardMaterial({color:0x263b4e,metalness:.5,roughness:.4}),gold=new T.MeshBasicMaterial({color:0xffca55,toneMapped:false});
- const cyan=new T.MeshBasicMaterial({color:0x45e5ff,toneMapped:false});
+ const cyan=new T.MeshBasicMaterial({color:0x9af6ff,toneMapped:false});
  const add=(geo,mat,p,parent=group)=>{const o=new T.Mesh(geo,mat);o.position.fromArray(p);parent.add(o);return o;};
  const door=SWIM.door,dy=door[1]+1.35,dz=A.front+.06;
- for(const x of [door[0]-.9,door[0]+.9])add(new T.BoxGeometry(.055,2.7,.055),cyan,[x,dy,dz]);
- for(const y of [door[1]+.03,door[1]+2.7])add(new T.BoxGeometry(1.85,.055,.055),cyan,[door[0],y,dz]);
- add(new T.PlaneGeometry(1.75,2.65),new T.MeshBasicMaterial({color:0x66ddff,transparent:true,opacity:.12,side:T.DoubleSide,depthWrite:false}),[door[0],dy,dz]);
+ for(const x of [door[0]-.9,door[0]+.9])add(new T.BoxGeometry(.1,2.7,.08),cyan,[x,dy,dz]);
+ for(const y of [door[1]+.03,door[1]+2.7])add(new T.BoxGeometry(1.9,.1,.08),cyan,[door[0],y,dz]);
+ add(new T.PlaneGeometry(1.75,2.65),new T.MeshBasicMaterial({color:0x9af6ff,transparent:true,opacity:.18,side:T.DoubleSide,depthWrite:false}),[door[0],dy,dz]);
+ // A low, see-through pad points toward the door and keeps the reef visible.
+ const pad=add(new T.PlaneGeometry(1.65,.68),new T.MeshBasicMaterial({color:0x45e5ff,transparent:true,opacity:.28,side:T.DoubleSide,depthWrite:false,toneMapped:false}),[door[0],door[1]+.06,dz+.38]);pad.rotation.x=-Math.PI/2;
+ const arrow=new T.Shape();arrow.moveTo(-.19,-.22);arrow.lineTo(.19,-.22);arrow.lineTo(0,.22);arrow.closePath();
+ const mark=add(new T.ShapeGeometry(arrow),gold,[door[0],door[1]+.08,dz+.38]);mark.rotation.x=-Math.PI/2;
  add(new T.BoxGeometry(.06,.3,.1),gold,[door[0]+.62,dy,dz+.08]);
  const label=canvasTexture(768,192,(g,w,h)=>{g.fillStyle='#0a1928';g.fillRect(0,0,w,h);g.textAlign='center';g.fillStyle='#72edff';g.font='bold 44px sans-serif';g.fillText('AQUARIUM TREASURE',w/2,70);g.fillStyle='#ffffff';g.font='30px sans-serif';g.fillText('ENTER · SWIM · FIND 7 GEMS',w/2,133);});
  const face=new T.PlaneGeometry(2.8,.7);tank.updateWorldMatrix(true,false);
  // Keep the wording readable from the gallery when the lounge's frame is mirrored.
  if(tank.matrixWorld.determinant()<0){const uv=face.attributes.uv;for(let i=0;i<uv.count;i++)uv.setX(i,1-uv.getX(i));}
  add(face,new T.MeshBasicMaterial({map:label,side:T.DoubleSide,toneMapped:false}),[door[0],door[1]+2.75,dz+.03]);
- const gems=SWIM.gems.map((p,i)=>{const o=add(new T.OctahedronGeometry(.28),new T.MeshBasicMaterial({color:SWIM.colors[i],toneMapped:false}),p);o.scale.y=1.4;return o;});
+ // Each stone has a different cut. Flat face colours keep the gems luminous without extra lights.
+ const cuts=[[[0,-.38],[.27,.05],[.20,.22],[0,.22]],[[0,-.32],[.27,-.03],[.27,.13],[.17,.25],[0,.25]],[[0,-.38],[.23,-.04],[.19,.20],[0,.25]],[[0,-.34],[.28,0],[.22,.19],[0,.19]],[[0,-.40],[.22,-.06],[.25,.10],[.13,.23],[0,.23]],[[0,-.30],[.27,-.04],[.18,.22],[0,.22]],[[0,-.42],[.21,-.08],[.26,.10],[.17,.23],[0,.23]]];
+ const gemGlow=canvasTexture(64,64,(g,w,h)=>{const r=g.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);r.addColorStop(0,'rgba(255,255,255,.38)');r.addColorStop(.4,'rgba(255,255,255,.12)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,w,h);});
+ const gems=SWIM.gems.map((p,i)=>{const g=new T.LatheGeometry(cuts[i].map(v=>new T.Vector2(...v)),[7,8,6,4,10,5,9][i]).toNonIndexed();
+  const pos=g.attributes.position,col=[],a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3(),n=new T.Vector3(),base=new T.Color(SWIM.colors[i]);
+  for(let j=0;j<pos.count;j+=3){a.fromBufferAttribute(pos,j);b.fromBufferAttribute(pos,j+1);c.fromBufferAttribute(pos,j+2);n.crossVectors(b.sub(a),c.sub(a)).normalize();
+   const shade=.45+.55*Math.abs(n.dot(new T.Vector3(.35,.65,.68).normalize())),color=base.clone().multiplyScalar(shade);for(let k=0;k<3;k++)col.push(color.r,color.g,color.b);}
+  g.setAttribute('color',new T.Float32BufferAttribute(col,3));const o=add(g,new T.MeshBasicMaterial({vertexColors:true,toneMapped:false}),p);o.rotation.y=i*.37;
+  const halo=new T.Sprite(new T.SpriteMaterial({map:gemGlow,color:SWIM.colors[i],transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}));halo.scale.set(1.05,1.05,1);o.add(halo);return o;});
  const chest=new T.Group();chest.position.fromArray(SWIM.chest);group.add(chest);
- add(new T.BoxGeometry(1.25,.55,.7),steel,[0,0,0],chest);
- for(const x of [-.43,.43])add(new T.BoxGeometry(.08,.57,.73),gold,[x,0,0],chest);
+ // Merge the wood, fittings and rivets into one draw per moving part.
+ const wood=0x57321f,iron=0xb88236,bright=0xf4c65b;
+ const pieces=(parts)=>{const gs=parts.map(([g,color])=>{g=g.index?g.toNonIndexed():g;for(const a of Object.keys(g.attributes))if(a!=='position'&&a!=='normal')g.deleteAttribute(a);
+  const c=new T.Color(color),v=[];for(let i=0;i<g.attributes.position.count;i++)v.push(c.r,c.g,c.b);g.setAttribute('color',new T.Float32BufferAttribute(v,3));return g;});
+  return mergeGeometries(gs);};
+ const box=(w,h,d,x,y,z)=>new T.BoxGeometry(w,h,d).translate(x,y,z);
+ const baseParts=[[box(1.25,.55,.7,0,0,0),wood]];
+ for(const x of [-.43,.43])baseParts.push([box(.09,.57,.73,x,0,0),iron]);
+ for(const y of [-.14,.10])baseParts.push([box(1.23,.018,.012,0,y,.357),iron]);
+ baseParts.push([box(.22,.22,.035,0,.14,.375),bright],[box(.035,.075,.04,0,.14,.398),wood]);
+ for(const x of [-.43,.43])for(const y of [-.20,.19])baseParts.push([new T.SphereGeometry(.035,6,4).translate(x,y,.38),bright]);
+ const chestMat=new T.MeshBasicMaterial({vertexColors:true,toneMapped:false});add(pieces(baseParts),chestMat,[0,0,0],chest);
  const lid=new T.Group();lid.position.set(0,.28,-.35);chest.add(lid);
- add(new T.BoxGeometry(1.28,.18,.74),gold,[0,.09,.35],lid);
+ const arch=(radius,width,x)=>new T.CylinderGeometry(radius,radius,width,12,1,false,0,Math.PI).rotateZ(Math.PI/2).translate(x,0,.35);
+ const lidParts=[[arch(.35,1.25,0),wood]];for(const x of [-.43,.43])lidParts.push([arch(.362,.09,x),iron]);
+ lidParts.push([box(.22,.12,.035,0,.015,.713),bright]);add(pieces(lidParts),chestMat,[0,0,0],lid);
  const prize=add(new T.OctahedronGeometry(.25),cyan,[0,.42,0],chest);prize.visible=false;
  document.head.append(Object.assign(document.createElement('style'),{textContent:CSS}));
  const el=(tag,props={},...kids)=>{const o=Object.assign(document.createElement(tag),props);o.append(...kids);return o;};

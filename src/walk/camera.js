@@ -3,21 +3,24 @@ import * as T from 'three';
 // Third-person follow camera (Voyager's Reach chaseCamera.ts, tuned for rooms and corridors): it orbits a pivot at
 // the walker's shoulders, pulls in at once when a wall comes between and eases back out. View 'first' puts it at
 // the eyes. Yaw 0 looks along +z.
-export const VIEW={distance:3.4,shoulder:.32,pivot:.86,eye:.93,minPitch:-1.2,maxPitch:1.1,clearance:.22};
+export const VIEW={distance:3.4,shoulder:.32,pivot:.86,eye:.93,crouchEye:.68,stanceDuration:.35,minPitch:-1.2,maxPitch:1.1,clearance:.22};
 
 export class FollowCamera{
  constructor(camera,colliders){
   this.camera=camera;this.colliders=colliders;this.yaw=0;this.pitch=-.18;this.mode='third';this.distance=VIEW.distance;
-  this.current=VIEW.distance;this.ray=new T.Ray();this.pivot=new T.Vector3();
+  this.current=VIEW.distance;this.crouch=0;this.ray=new T.Ray();this.pivot=new T.Vector3();
  }
  look(dx,dy){this.yaw-=dx;this.pitch=T.MathUtils.clamp(this.pitch-dy,VIEW.minPitch,VIEW.maxPitch);}
  // The direction the camera faces on the ground plane, for camera-relative movement.
  forward(out=new T.Vector3()){return out.set(Math.sin(this.yaw),0,Math.cos(this.yaw));}
  // `feet` is the walker's origin, `height` its standing height.
- update(dt,feet,height){
+ update(dt,feet,height,stance=null){
+  // Match the crouch pose's transition; other activities keep their own camera height.
+  this.crouch=stance===null?0:T.MathUtils.clamp(this.crouch+(stance==='crouch'?1:-1)*dt/VIEW.stanceDuration,0,1);
   const cam=this.camera,dir=new T.Vector3(Math.sin(this.yaw)*Math.cos(this.pitch),Math.sin(this.pitch),Math.cos(this.yaw)*Math.cos(this.pitch));
   if(this.mode==='first'){
-   cam.position.set(feet.x,feet.y+height*VIEW.eye,feet.z).addScaledVector(new T.Vector3(dir.x,0,dir.z).normalize(),.12);
+   const eye=T.MathUtils.lerp(VIEW.eye,VIEW.crouchEye,T.MathUtils.smoothstep(this.crouch,0,1));
+   cam.position.set(feet.x,feet.y+height*eye,feet.z).addScaledVector(new T.Vector3(dir.x,0,dir.z).normalize(),.12);
    cam.lookAt(cam.position.clone().add(dir));return;
   }
   const right=new T.Vector3(-Math.cos(this.yaw),0,Math.sin(this.yaw));

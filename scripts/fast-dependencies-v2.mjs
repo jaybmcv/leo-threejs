@@ -17,7 +17,15 @@ const roots=['src/model.js','src/walk/prepare.js','src/walk/prepare.authoring.js
  'src/v2/facade.authoring.js','src/v2/cabin-glass.authoring.js',
  'src/walk/signs.authoring.js','src/walk/comms-displays.authoring.js',
  'src/concept-paint.js','src/v2/signs.js','src/walk/fin-casing.js',
- 'src/walk/windows.js','src/walk/lounge-floor.authoring.js','src/walk/lift-tile-floor.authoring.js'];
+ 'src/walk/windows.js','src/walk/lounge-floor.authoring.js','src/walk/lift-tile-floor.authoring.js',
+ // Prepared geometry templates the authoring page records: the paintings' frames and canvases, the ship log boards,
+ // the comic books, the hex floor and the lounge compass (each a template-only dressing, fast-dressing-v2.mjs).
+ 'src/walk/paintings.authoring.js','src/walk/changes-board.authoring.js','src/walk/comics.authoring.js',
+ 'src/walk/hex-floor.authoring.js','src/walk/lounge-compass.authoring.js',
+ // The rest of what only the authoring page (main.authoring.js) adds to the prepared walk. Lift cars, doors and gates
+ // and their signs (lift-ride.js) and the Deck 2 hangar door's leaves (hangar-door.js) are prepared movable collision; the hostess
+ // is built from the Cosmo kit and Paws Off's belts from the ship and its ground, so edits to them take a full build.
+ 'src/walk/lift-ride.authoring.js','src/v2/hangar-door.js','src/walk/hostess.authoring.js','src/walk/paws-off/game.authoring.js'];
 const producerScripts=['v2-build','v2-world','layout-v2-data','build-exterior-v2',
  'fit-cabin-ceilings-v2','ceiling-coverage-v2','v2-indexed-export','v2-export',
  'v2-export-metadata','retire-obsolete-facades-v2','freight-threshold-retirement-v2'];
@@ -26,7 +34,9 @@ const producerScripts=['v2-build','v2-world','layout-v2-data','build-exterior-v2
 const bakedAssets=['src/walk/assets/hydro-nip-main-logo.jpg','src/plan/v1-models-v2.json'];
 const hullAssets=['leo-exterior.glb','leo-exterior-refined.glb','leo-exterior-web.glb','leo-exterior-phone.glb'];
 
-export async function producerDependencies(entries){
+export async function producerDependencies(entries){return Object.keys(await producerGraph(entries)).sort();}
+// The same trace with each file's imports, so a change can be classified through every consumer.
+export async function producerGraph(entries){
  let result;
  if(process.platform==='win32'){
   // In restricted Windows sessions inherited handles work even when anonymous
@@ -40,9 +50,10 @@ export async function producerDependencies(entries){
   result={metafile:JSON.parse(await fs.readFile(dir+'/inputs.json','utf8'))};
  }else result=await build({entryPoints:entries,bundle:true,write:false,outdir:'unused',
    platform:'node',format:'esm',packages:'external',external:['v2-layout','walk-partitions','walk-changes'],metafile:true,logLevel:'silent'});
- const inputs=Object.keys(result.metafile.inputs).filter(f=>f.startsWith('src/')||f.startsWith('scripts/'));
- return inputs.sort();
+ const ours=f=>f.startsWith('src/')||f.startsWith('scripts/');
+ return Object.fromEntries(Object.entries(result.metafile.inputs).filter(([f])=>ours(f)).map(([f,input])=>[f,input.imports.map(i=>i.external?'package:'+i.path:i.path)]));
 }
+export const geometryRoots=()=>[...roots,...producerScripts.map(n=>'scripts/'+n+'.mjs')];
 
 export async function producerSourceIdentity(entry){
  const files=await producerDependencies([entry]),h=createHash('sha256');for(const file of [...files,'package-lock.json'].sort())h.update(file).update(sourceHash(file,await fs.readFile(file)));return h.digest('hex');

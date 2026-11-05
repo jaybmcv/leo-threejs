@@ -16,7 +16,7 @@ const FEET=[[0,0],[.18,0],[-.18,0],[0,.18],[0,-.18]];
 export class Controller{
  constructor(colliders,body=BODY){
   this.colliders=colliders;this.body=body;this.position=new T.Vector3();this.velocity=new T.Vector3();
-  this.grounded=false;this.ground=null;this.airTime=0;
+  this.grounded=false;this.ground=null;this.airTime=0;this.bounceS=0;
   // The highest the feet have been since the last ground, and how far the last landing dropped from it.
   this.top=0;this.fell=0;
   // The jump: time left on an early press, last step's key, seconds since take-off (-1 in a fall), jumps spent.
@@ -25,7 +25,7 @@ export class Controller{
   this.stance='stand';this.slideS=0;
   this.segment=new T.Line3(new T.Vector3(),new T.Vector3());this.ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0));
  }
- place(p){this.position.copy(p);this.top=p.y;this.fell=0;this.velocity.set(0,0,0);this.grounded=false;this.jumpS=-1;this.jumpCount=0;this.jumpBuffer=0;this.stance='stand';this.slideS=0;this.settle();}
+ place(p){this.position.copy(p);this.top=p.y;this.fell=0;this.velocity.set(0,0,0);this.bounceS=0;this.grounded=false;this.jumpS=-1;this.jumpCount=0;this.jumpBuffer=0;this.stance='stand';this.slideS=0;this.settle();}
  // Highest walkable ground under the feet within [y-down, y+up]; null over a gap.
  groundAt(p,up,down){
   let best=null;
@@ -47,11 +47,14 @@ export class Controller{
   }else if(stance==='prone')this.stance=this.stance==='prone'?'stand':'prone';
  }
  // One fixed step. `wish` is the desired horizontal velocity (m/s, world xz); `jump` is whether the key is held.
- step(dt,wish,jump=false){
+ step(dt,wish,jump=false,bounce=null){
   const v=this.velocity,b=this.body,{radius:r}=b;
   this.jumpJudge(dt,jump);
   if(this.stance==='slide'){this.slideS=Math.max(0,this.slideS-dt);if(this.slideS===0||!this.grounded)this.stance='crouch';}
-  this.drive(dt,wish);
+  // Give a ball's rebound a moment to fade before steering takes over again.
+  if(!bounce)this.bounceS=0;
+  if(this.bounceS>0){this.bounceS=Math.max(0,this.bounceS-dt);const drag=Math.exp(-bounce.drag*dt);v.x*=drag;v.z*=drag;}
+  else this.drive(dt,wish);
   if(!this.grounded)v.y=Math.max(-MOVE.maxFall,v.y-MOVE.gravity*dt);
   this.airTime=this.grounded?0:this.airTime+dt;
   // Move in short hops so a fast walker never skips a thin wall.
@@ -65,7 +68,15 @@ export class Controller{
     this.position.x+=push.x;this.position.z+=push.z;
     // A ceiling stops a rise; a wall takes the velocity into it.
     if(push.y<-1e-4&&v.y>0)v.y=0;
-    const n=new T.Vector3(push.x,0,push.z);if(n.lengthSq()>1e-8){n.normalize();const into=v.x*n.x+v.z*n.z;if(into<0){v.x-=n.x*into;v.z-=n.z*into;}}
+    const n=new T.Vector3(push.x,0,push.z),side=n.length();if(side>1e-4){n.divideScalar(side);const into=v.x*n.x+v.z*n.z;if(into<0){
+     v.x-=n.x*into;v.z-=n.z*into;
+     // Ground and ramp corrections keep their usual slide; only a firm side impact rebounds.
+     if(bounce&&Math.abs(push.y)<side*.5&&-into>=bounce.minSpeed){
+      const kick=Math.min(-into*bounce.restitution,bounce.maxSpeed);v.x+=n.x*kick;v.z+=n.z*kick;
+      const cap=Math.min(1,bounce.maxSpeed/Math.hypot(v.x,v.z));v.x*=cap;v.z*=cap;this.bounceS=bounce.seconds;
+     }
+    }}
+    if(bounce)travel.copy(v).multiplyScalar(dt/hops);
    }
   }
   // Ground: snap down while walking (stairs and ramps), land when falling onto it.

@@ -1,4 +1,16 @@
 {
+  "src/walk/arrival-mood.js": {
+    "owners": ["d02-arrival-1"],
+    "via": "toWorld"
+  },
+  "src/walk/arrival-tour.js": {
+    "owners": ["d02-arrival-1"],
+    "via": "toWorld"
+  },
+  "src/walk/layered-conservatory.js": {
+    "owners": ["commons-10"],
+    "via": "inherited"
+  },
   "src/walk/recreation-hall.js": {
     "owners": [
       "d16-recreation-4"
@@ -171,7 +183,7 @@
   },
   "src/walk/blossom.js": {
     "owners": [
-      "commons-1"
+      "commons-10"
     ],
     "via": null
   },
@@ -246,6 +258,12 @@
       "commons-10"
     ],
     "via": null
+  },
+  "src/walk/transporter-mesh.js": {
+    "owners": [
+      "d01-workshop-5"
+    ],
+    "via": "inherited"
   },
   "src/walk/transporter.js": {
     "owners": [
@@ -552,10 +570,44 @@
     ],
     "via": "roomObject"
   },
+  "src/walk/arrival-mood.js": {
+    "owners": [
+      "d02-arrival-1"
+    ],
+    "via": "toWorld"
+  },
+  "src/walk/layered-conservatory.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": "inherited"
+  },
   "src/walk/lounge-entrance-signs.js": {
     "owners": [
       "commons-1"
     ],
     "via": null
+  },
+  "src/walk/atmosphere.js": {
+    "owners": [
+      "d04-air-1"
+    ],
+    "via": "roomObject"
+  },
+  "src/walk/capsule-bubbles.js": {
+    "owners": [
+      "d05-surgery-2"
+    ],
+    "via": "inherited"
+  },
+  "src/walk/mission-timer.js": {
+    "owners": [
+      "d02-maintenance-aft"
+    ],
+    "via": "roomObject"
+  },
+  "src/walk/layered-conservatory.js": {
+    "owners": ["commons-10"],
+    "via": "inherited"
   }
 }

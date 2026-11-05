@@ -45,7 +45,7 @@ export function connectLive(url,on,opts={}){
     case 'gone':on.gone?.(msg.id);break;
     case 'lift':on.lift?.(msg.id,msg.s);break;
     case 'mark':on.mark?.(msg.id,msg.at);break;
-    case 'aboard':on.aboard?.(msg.n);break;
+    case 'aboard':on.aboard?.(msg.n,Array.isArray(msg.names)?msg.names.filter(n=>typeof n==='string'):null);break;
     // The leaderboards (Alien Cat Invasion's, or Paw Pool's when game is 'pool'): the top ten and this visitor's
     // best, and a game's result.
     case 'board':on.board?.(msg);break;
@@ -53,6 +53,7 @@ export function connectLive(url,on,opts={}){
     // The Container Maze's board and a run's result (server/maze.mjs).
     case 'maze':on.maze?.(msg);break;
     case 'treasure':on.treasure?.(msg);break;
+    case 'panel':on.panel?.(msg);break;
     // The ship log boards (walk/changes-board.js): every change's hearts (and this visitor's own), and a heart refused.
     case 'hearts':on.hearts?.(msg);break;
     case 'hearted':on.hearted?.(msg);break;
@@ -95,7 +96,7 @@ export function connectLive(url,on,opts={}){
    if(!live()||now-sentAt<SEND_MS)return;
    const text=JSON.stringify({m:'pose',p});
    // Unchanged to the centimetre and the degree: only a keepalive now and then.
-   const same=JSON.stringify([p.pos.map(v=>Math.round(v*100)),Math.round(p.yaw*57),p.g,p.st,p.jc,p.e,p.rest,p.pl]);
+   const same=JSON.stringify([p.pos.map(v=>Math.round(v*100)),Math.round(p.yaw*57),p.g,p.st,p.jc,p.e,p.rest,p.pl,p.f]);
    if(same===last&&now-lastAt<STILL_MS)return;
    last=same;lastAt=now;sentAt=now;ws.send(text);
   },
@@ -111,6 +112,7 @@ export function connectLive(url,on,opts={}){
   cleared(ms,shots){if(live())ws.send(JSON.stringify({m:'score',game:'pool',ms,shots}));},
   // The Container Maze: a run starts ('start'), ends at the button ('finish', {ms}), or the board is wanted ('board').
   maze(op,extra={}){if(live())ws.send(JSON.stringify({m:'maze',op,...extra}));},
+  panel(msg){if(!live())return false;ws.send(JSON.stringify({...msg,m:'panel'}));return true;},
   treasure(op,extra={}){if(live())ws.send(JSON.stringify({m:'treasure',op,...extra}));},
   // The ship log boards: ask for the hearts; give (on) or take back a heart for a change.
   hearts(){if(live())ws.send(JSON.stringify({m:'hearts'}));},

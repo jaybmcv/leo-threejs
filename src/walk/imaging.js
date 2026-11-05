@@ -14,6 +14,8 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 // x 8 and the bench at x 5, an operator desk at x -5 and the control partition at x -12 (z 5..15 or -15..-5).
 const ROOM='Area_d05-imaging-6';
 export const BAYS=[-10,10];
+// The heart is illustrative, paced to its displayed rate.
+const HEART_BPM=72,HEART_PERIOD=60/HEART_BPM;
 const OLD=/^(Diagnostic_scanner|Scanner_patient_table|Scanner_control_partition)$/;
 const BATCHED=/^(Refined_|Polish_)/;
 // Where each new divider stands: its centre, its length and whether it runs along x. The control partition's spot is
@@ -200,7 +202,9 @@ export function paintScan(g,w,h,seed,occupied=false){
  for(let x=x0;x<w-18;x+=3){const t=(x-x0+seed*30)%60,y=110-(t>24&&t<28?34:t>28&&t<32?-16:0)+Math.sin(x*.07)*2;x===x0?g.moveTo(x,y):g.lineTo(x,y);}g.stroke();
  g.lineWidth=9;g.strokeStyle='rgba(120,220,255,.3)';g.beginPath();g.arc(x0+60,215,42,0,Math.PI*2);g.stroke();
  g.strokeStyle='#8fe6ff';g.beginPath();g.arc(x0+60,215,42,-Math.PI/2,-Math.PI/2+Math.PI*2*(.55+rand()*.35));g.stroke();
- g.shadowBlur=0;g.fillStyle='rgba(143,230,255,.8)';
+  g.shadowBlur=0;g.fillStyle='rgba(143,230,255,.8)';
+  g.textAlign='center';g.font='bold 22px sans-serif';g.fillStyle='rgba(205,245,255,.98)';g.fillText(`${HEART_BPM} BPM`,x0+60,280);
+  g.font='12px sans-serif';g.fillStyle='rgba(143,230,255,.85)';g.fillText('HEART RATE',x0+60,302);g.textAlign='left';
  for(let i=0;i<6;i++){const bh=18+rand()*70;g.fillRect(x0+i*20,400-bh,13,bh);}
  for(let i=0;i<6;i++)g.fillRect(x0,430+i*26,40+rand()*80,8);
  g.font='bold 18px sans-serif';g.fillText(occupied?'VISITOR ON BED':'PATIENT PREVIEW',22,h-17);
@@ -233,12 +237,16 @@ export function createImagingScans(ship,{still=false,anisotropy=4,kit=null}={}){
  const panels=[0,1].map(seed=>new T.MeshBasicMaterial({name:'Imaging_scan',map:canvasTexture(1024,640,(g,w,h)=>paintScan(g,w,h,seed),anisotropy),transparent:true,depthWrite:false,toneMapped:false}));
  const sweep=new T.MeshBasicMaterial({name:'Imaging_sweep',color:0x5fd4ff,transparent:true,opacity:.85,depthWrite:false,toneMapped:false});
  const beam=new T.MeshBasicMaterial({name:'Imaging_beam',color:0x5fd4ff,toneMapped:false});
- const PW=3.2,PH=2,PY=1.3,lines=[],beams=[];
+ const PW=3.2,PH=2,PY=1.3,lines=[],beams=[],hearts=[];
+ const heartShape=new T.Shape();
+ heartShape.moveTo(0,-.15);heartShape.bezierCurveTo(-.04,-.11,-.15,-.02,-.15,.075);heartShape.bezierCurveTo(-.15,.19,-.02,.2,0,.105);heartShape.bezierCurveTo(.02,.2,.15,.19,.15,.075);heartShape.bezierCurveTo(.15,-.02,.04,-.11,0,-.15);heartShape.closePath();
+ const heartGeometry=new T.ShapeGeometry(heartShape,16),heartMaterial=new T.MeshBasicMaterial({name:'Imaging_heartbeat',color:0x9beaff,transparent:true,opacity:.95,depthWrite:false,toneMapped:false,side:T.FrontSide});
  DIVIDERS.forEach((d,i)=>{
   const bay=BAYS.indexOf(Math.sign(d.z)*10);
   for(const f of d.faces){
    const holder=new T.Group();holder.position.set(d.x+(d.alongX?0:f*.06),0,d.z+(d.alongX?f*.06:0));holder.rotation.y=d.alongX?(f>0?0:Math.PI):(f>0?Math.PI/2:-Math.PI/2);group.add(holder);
    const p=new T.Mesh(new T.PlaneGeometry(PW,PH),panels[bay]);p.name='Imaging_scan_graphics';p.position.y=PY;p.renderOrder=2;holder.add(p);
+   const heart=new T.Mesh(heartGeometry,heartMaterial);heart.name='Imaging_heartbeat';heart.position.set(-PW/2+950/1024*PW,PY+PH*(.5-215/640),.008);heart.scale.setScalar(.5);heart.renderOrder=4;holder.add(heart);hearts.push(heart);
    const l=new T.Mesh(new T.PlaneGeometry(PW*.83,.025),sweep);l.name='Imaging_scan_line_graphics';l.position.set(-PW*.06,PY,.005);l.renderOrder=3;holder.add(l);lines.push({l,phase:i*1.3+f});
   }
  });
@@ -246,6 +254,10 @@ export function createImagingScans(ship,{still=false,anisotropy=4,kit=null}={}){
   const b=new T.Mesh(new T.BoxGeometry(.03,.012,.66),beam);b.name='Imaging_scan_beam_graphics';b.position.set(5,.762,z);b.renderOrder=3;group.add(b);beams.push({b,phase:i*2.1});
  }
  const centre=room.getWorldPosition(new T.Vector3());
+ const pulseHeart=t=>{
+  const beat=((t%HEART_PERIOD)+HEART_PERIOD)%HEART_PERIOD/HEART_PERIOD,pulse=Math.max(0,1-beat/.2);
+  for(const heart of hearts)heart.scale.setScalar(.5*(1+.28*pulse));
+ };
  const pose=t=>{
   // The line climbs the figures from the feet to the ears and drops back; the beam travels the bed to the gantry and back.
   for(const {l,phase} of lines){const k=(t*.18+phase)%1;l.position.y=PY-PH*.44+PH*.69*(k<.85?k/.85:1-(k-.85)/.15);}
@@ -254,6 +266,7 @@ export function createImagingScans(ship,{still=false,anisotropy=4,kit=null}={}){
  pose(0);
  const occupied=BAYS.map(()=>false);
  function update(dt,p,resting=null,remotes=null){
+   const t=performance.now()/1000;if(!still)pulseHeart(t);
   if(Math.abs(p.y-centre.y)>4||Math.abs(p.x-centre.x)>40||Math.abs(p.z-centre.z)>30)return;
   for(const [i,z] of BAYS.entries()){
    const atBed=point=>{local.copy(point).applyMatrix4(toRoom);return Math.abs(local.y-.885)<.5&&local.x>3.8&&local.x<6.2&&Math.abs(local.z-z)<.6;};
@@ -263,7 +276,7 @@ export function createImagingScans(ship,{still=false,anisotropy=4,kit=null}={}){
    if(used!==occupied[i]){occupied[i]=used;const t=panels[i].map,c=t.image;paintScan(c.getContext('2d'),c.width,c.height,i,used);t.needsUpdate=true;}
   }
   if(still)return;
-  pose(performance.now()/1000);
+   pose(t);
  }
  return {group,update};
 }

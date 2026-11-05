@@ -3,7 +3,7 @@ import {V2_BUDGETS} from '../src/plan/budgets-v2.js';
 import {installFloodIndex,proveFloodIndex} from './flood-spatial-index-v2.mjs';
 import {sampleRoomFloor} from './room-floor-samples-v2.mjs';
 import {walkBuildIdentity,WALK_REPORT_VERSION} from './v2-walk-identity.mjs';
-import {classifyRoomDrops} from './v2-walk-policy.mjs';
+import {classifyRoomDrops,enclosedPocket} from './v2-walk-policy.mjs';
 import phase2Baseline from '../src/plan/phase2-walk-baseline.json' with {type:'json'};
 import fs from 'node:fs/promises';
 import * as T from 'three';
@@ -99,12 +99,40 @@ const reached=(x,y,z,r=.6,below=.6,above=.6,safeOnly=false)=>{for(let i=Math.flo
 const problems=[];
 if(blockedSteps.length)problems.push(`stairs: ${blockedSteps.length}/${flightSteps} steps blocked, first at ${blockedSteps.slice(0,5).join(' ')}`);
 const area=new Map();for(let i=0;i<X.length;i++){const b=bandOf(Y[i]+.2)+1;area.set(b,(area.get(b)||0)+G*G);}
-// Rooms: every standable 2 m sample on the room's floor should be reached.
+// A floor sample the flood missed is left out when it sits in a small sealed pocket under a lid, such as the inside
+// of a cabinet (Jay, 2026-11-04): walked out from with the flood's own moves, it never meets a reached spot, an edge
+// to fall from or a lift, and its lid passes enclosedPocket (v2-walk-policy.mjs). A pocket bigger than POCKET_LIMIT
+// positions (about 60 m²) still counts, so a room shut behind a blocked door fails as before.
+const POCKET_LIMIT=500,pocketOf=new Map();
+const overhead=(x,y,z)=>{ray.origin.set(x,y+1,z);ray.direction.set(0,1,0);const h=col.raycast(ray,40);return h?1+h.distance:Infinity;};
+const nearLift=(x,y,z)=>LIFTS.some(l=>Math.abs(x-l.car.x)<=l.car.width/2&&Math.abs(z-l.car.z)<=l.car.depth/2&&l.stops.some(s=>Math.abs(s.y-y)<.3))||(prepared.privateLifts||[]).some(l=>Math.hypot(x-l.centre[0],z-l.centre[2])<=l.radius&&l.stops.some(s=>Math.abs(s.y-y)<.3));
+const sealedPocket=(sx,sy,sz)=>{
+ const x0=snap(sx,S0.x),z0=snap(sz,S0.z),y0=floorAt(x0,sy,z0),open={sealed:false,lid:Infinity};if(y0===null||!stands(x0,y0,z0))return open;
+ const k0=key(x0,y0,z0);if(seen.has(k0))return open;if(pocketOf.has(k0))return pocketOf.get(k0);
+ const PX=[x0],PY=[y0],PZ=[z0],inside=new Set([k0]),walled=new Set();let sealed=true,lid=0;
+ for(let h=0;h<PX.length&&sealed;h++){
+  if(PX.length>POCKET_LIMIT||nearLift(PX[h],PY[h],PZ[h])){sealed=false;break;}
+  const x=PX[h],y=PY[h],z=PZ[h];lid=Math.max(lid,overhead(x,y,z));
+  for(const [dx,dz] of DIRS){
+   const nx=x+dx*G,nz=z+dz*G,fy=floorAt(nx,y,nz);
+   if(fy===null){if(!dx!==!dz&&stands(nx,y,nz)){sealed=false;break;}continue;}
+   if(Math.abs(fy-y)>STEP)continue;
+   const k=key(nx,fy,nz);if(inside.has(k)||walled.has(k)||blocked.has(k))continue;
+   if(seen.has(k)){sealed=false;break;}
+   if(!stands(nx,fy,nz)){walled.add(k);continue;}
+   inside.add(k);PX.push(nx);PY.push(fy);PZ.push(nz);
+  }
+ }
+ const pocket={sealed,lid};for(const k of inside)pocketOf.set(k,pocket);return pocket;
+};
+// Rooms: every standable 2 m sample on the room's floor should be reached, apart from sealed pockets.
 // (The lifeboat banks are one 249 x 139 m area spanning the whole deck, walled-off plate included; their boats are
 // checked through their seats below.)
-const rooms=SHIP_AREAS.filter(a=>a.kind!=='lifeboats').map(a=>{const [cx,cy,cz]=a.center;let ok=0,st=0,safe=0;
- for(let x=cx-a.width/2+1;x<=cx+a.width/2-1;x+=2)for(let z=cz-a.depth/2+1;z<=cz+a.depth/2-1;z+=2){const dx=x-cx,dz=z-cz,px=cx+Math.cos(a.yaw)*dx+Math.sin(a.yaw)*dz,pz=cz-Math.sin(a.yaw)*dx+Math.cos(a.yaw)*dz;if(a.polygon&&!contains(a.polygon,[px,pz]))continue;const fy=sampleRoomFloor(a,px,pz,floorAt);if(fy===null||!stands(px,fy,pz))continue;st++;if(reached(px,fy,pz))ok++;if(reached(px,fy,pz,.6,.6,.6,true))safe++;}
- return {id:a.id,name:a.name,deck:a.deck,samples:st,reached:ok,safeReached:safe};});
+const rooms=SHIP_AREAS.filter(a=>a.kind!=='lifeboats').map(a=>{const [cx,cy,cz]=a.center;let ok=0,st=0,safe=0,enclosed=0;const missed=[],ceilings=[];
+ for(let x=cx-a.width/2+1;x<=cx+a.width/2-1;x+=2)for(let z=cz-a.depth/2+1;z<=cz+a.depth/2-1;z+=2){const dx=x-cx,dz=z-cz,px=cx+Math.cos(a.yaw)*dx+Math.sin(a.yaw)*dz,pz=cz-Math.sin(a.yaw)*dx+Math.cos(a.yaw)*dz;if(a.polygon&&!contains(a.polygon,[px,pz]))continue;const fy=sampleRoomFloor(a,px,pz,floorAt);if(fy===null||!stands(px,fy,pz))continue;st++;if(reached(px,fy,pz)){ok++;ceilings.push(overhead(px,fy,pz));}else missed.push([px,fy,pz]);if(reached(px,fy,pz,.6,.6,.6,true))safe++;}
+ // The room's usual ceiling is the median overhead clearance over its reached samples.
+ if(ceilings.length){ceilings.sort((p,q)=>p-q);const ceiling=ceilings[ceilings.length>>1];for(const p of missed){const pocket=sealedPocket(...p);if(enclosedPocket(pocket,ceiling)){enclosed++;st--;}}}
+ return {id:a.id,name:a.name,deck:a.deck,samples:st,reached:ok,safeReached:safe,enclosed};});
 for(const r of rooms)if(!r.samples||r.reached/r.samples<.8)problems.push(`room ${r.id} (${r.name}): ${r.reached}/${r.samples} floor samples reached`);
 // Cabins: the floor between the berths of every one of the 5,000.
 let cabins=0;const missedCabins=[];for(const c of CABINS){if(reached(c.x,c.y,c.z,.7))cabins++;else missedCabins.push([c.id,c.x,c.y,c.z]);}if(cabins!==CABINS.length)problems.push('cabins: '+cabins+'/'+CABINS.length+' reached');
@@ -140,7 +168,7 @@ if(prepared.kittens){prepared.kittens.solid.updateMatrixWorld(true);prepared.kit
 const {roomFeatureDrops,roomFeatureViolations}=classifyRoomDrops(fallEvents,layout,{supports});if(roomFeatureViolations.length)problems.push(roomFeatureViolations.length+' unapproved room-feature drops over 1 m');
 if((await walkBuildIdentity()).hash!==buildIdentity.hash)problems.push('Build changed during walk check; rerun check:walk');
 const report={closedCrewRooms:closedCrewRooms.map(id=>({id,reason:'Jay: Captain bridge, Crew ready room and Flight security stay physically closed to visitors; only these rooms and their interior seats/windows are excluded from the public flood.'})),budgetLimits:V2_BUDGETS,collisionCandidateProof:indexProof,privateLiftStops,privateLiftsRidden:[...ridden].filter(id=>(prepared.privateLifts||[]).some(l=>l.id===id)),doorPolicy:'Static flood holds approach-operated doors open and places actual serialized public/private cars at each stop. Native checks exercise the real automatic leaves and moving private car.',preparedArtifact:JSON.parse(await fs.readFile('output/leo-interior-v02/prepared-walk/integrity.json')).sha256,collisionSource:'The same prebuilt bands, shared classes and movable templates loaded by public walk.html',reportVersion:WALK_REPORT_VERSION,buildIdentity,roomFeatureDrops,roomFeatureViolations,phase2Baseline,fallMetrics:{landings:falls,transitions:fallEvents.length,guardTransitionsOver1m:guardGaps.length,method:"All reachable step-off transitions; no-fall flood first, then fall-only positions. Phase 2 reference retains its original landing counter."},fallBreakdown,fallEvents,guardGaps,safeReach:{positions:safeCount,cabins:safeCabins,rooms:safeRooms,liftStops:safeStops},rampReach,status:problems.length?'FAIL':'PASS',walker:{height:H,width:2*R,step:STEP},positions:X.length,falls,voidFalls,voids,railings:{count:rails.length,metres:Math.round(rails.reduce((s,r)=>s+(r[1]===2?Math.hypot(r[3]-r[2],r[6]-r[4]):r[3]-r[2]),0))},walkableM2ByDeck:Object.fromEntries([...area].sort((a,b)=>a[0]-b[0]).map(([b,a])=>[b,Math.round(a)])),
- rooms:{total:rooms.length,below80:rooms.filter(r=>!r.samples||r.reached/r.samples<.8).length},cabins:`${cabins}/${CABINS.length}`,missedCabins:missedCabins.slice(0,20),liftStops:`${stops}/${stopCount}`,
+ rooms:{total:rooms.length,below80:rooms.filter(r=>!r.samples||r.reached/r.samples<.8).length,enclosedSamples:rooms.reduce((n,r)=>n+r.enclosed,0),enclosedByRoom:rooms.filter(r=>r.enclosed).map(r=>({id:r.id,enclosed:r.enclosed}))},cabins:`${cabins}/${CABINS.length}`,missedCabins:missedCabins.slice(0,20),liftStops:`${stops}/${stopCount}`,
  cabinChairs:{total:cabinChairs.length,usable:usableCabinChairs},loungeSeats:{total:expectedLoungeSeats.length,solid:loungeSeats.length,usable:usableLoungeSeats},hullInterfaces:{sightMethod:'Own hull glazing stays solid to walking and transparent to sight; opaque geometry and prior internal walls remain blockers',approachMethod:'Safe standing floor in the same original owner or its owned extension; full capsule clearance, no-fall reach and clear sight to the target pane',total:layout.hullPrototypes?.prototypes.length||0,windows:hullApproaches.length,usable:hullApproaches.length-inaccessibleHullWindows.length,missing:inaccessibleHullWindows},berths:{total:berthSpots.length,usable:usableBerths},seatsAndBeds:{rooms:[...roomRestCounts.values()],spots:spots.length,usable,seats:spots.filter(s=>s.kind==='sit').length,beds:spots.filter(s=>s.kind==='lie').length,unusable:[...unusable].slice(0,40)},openToSpace:open,openAt:openAt.slice(0,20),problems};
 await fs.writeFile('output/leo-interior-v02/walk-report.json',JSON.stringify(report,null,2));
 console.log(JSON.stringify({...report,fallEvents:report.fallEvents.slice(0,10),guardGaps:report.guardGaps.slice(0,10),seatsAndBeds:{...report.seatsAndBeds,unusable:report.seatsAndBeds.unusable.slice(0,12)}},null,1));

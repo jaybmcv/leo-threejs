@@ -10,8 +10,10 @@ export function roomOwner(object){
  return null;
 }
 
+// A dressing the fast lane can replace alone carries its producer's tag (scripts/fast-dressing-v2.mjs).
 export function roomPatchOwner(object){
  for(let p=object;p;p=p.parent){
+  if(p.userData?.fastDressing)return 'dressing:'+p.userData.fastDressing;
   if(p.userData?.batchedEnvelope)return null;
   if(!p.isMesh&&p.name?.startsWith('Area_'))return p.name.slice(5)+'|source';
   if(!p.isMesh&&p.name?.startsWith('V2_shell_'))return p.name.slice(9)+'|shell';
