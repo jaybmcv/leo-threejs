@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "layoutIdentity": "1619194b9135e92ffd297d0f8cd706a506743f88a46dc25dd446e3bbd4eba7f5",
-  "basis": "893e51e7d087e0eeb062635921473923a94ed2718abaa9d4a17a34894969065b",
+  "layoutIdentity": "f466742e1583c10092263b77fc9805802be176e1ad1146c133a7b1700850fbbb",
+  "basis": "43770136b6933a19032361a9dc12e10437e1d6c132ca4fb3dc6ab8ad9ce32471",
   "snapshot": {
     "data": {
       "version": 2,
@@ -1152,6 +1152,8 @@
       }
     },
     "functions": {
+      "src/walk/net/panel-rules.js": "e1df6f0839e77a9132d535ef0f11478aeb8c4df8e1fc874981f28927e950cb47",
+      "server/lever-panel.mjs": "c55179c299da84c903455705fd96e6883ba67cb2a07500ea5d37a6255654f044",
       "src/v2/live-spatial.js": "9ede999f52fc00dae922c076e5bd771263106c9d1aa4ef8a12a08ef59c2a6b12",
       "src/v2/activity-layout.js": "12ad69823e4d9f7d28affcb42007ba7e64c6d40ed741cdb64305b579f5a30c4e",
       "src/walk/pool/rules.js": "242fd6a2f4df9533c66b6aae8f84e626f3b46e163a521aaef14bbeb536afeebf",
