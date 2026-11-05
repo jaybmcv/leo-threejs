@@ -2157,8 +2157,10 @@
     "file": "src/v2/phase4-culling.js",
     "original": "src/v2/phase4-culling.js",
     "mode": "raw",
-    "bodySha256": "acdc33923fd7e80e37aed87f7f1b6ed32348ec66a0d9d1de50cdbfd4ecccaa88",
+    "bodySha256": "c6261f544c9efd40adeb04142d92117c208bb3841c2a50d83571bcc5ef28b97f",
     "imports": [
+      "./detail-lod.js",
+      "./atrium-render-policy.js",
       "./visibility-state.js",
       "./atrium-visibility.js",
       "../plan/atrium-v2.js",
@@ -2617,7 +2619,7 @@
     "file": "src/v2/visibility-query.js",
     "original": "src/v2/visibility-query.js",
     "mode": "raw",
-    "bodySha256": "238cdf7aa12d7d4d55aa8a5b87491dcdc19da221d30be6e5c9f03c13a2fe9258",
+    "bodySha256": "f20563e0e8306bcd6beac0f0cf9e32622c1ba8aacef432394202deadd50ae676",
     "imports": [
       "../walk/collision.js"
     ],
