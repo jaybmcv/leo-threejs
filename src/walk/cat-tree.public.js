@@ -177,9 +177,10 @@ export function createCatTree(ship){
   const rim=new T.TorusGeometry(p.r-.1,.5,8,48);rim.scale(1,1,.95);rim.rotateX(Math.PI/2);at(rim,p.x,p.y-.38,p.z);parts.push(paint(rim,C.carpet[i%4],.03,rnd));
   const piping=new T.TorusGeometry(p.r+.33,.07,3,48);piping.rotateX(Math.PI/2);at(piping,p.x,p.y-.38,p.z);parts.push(paint(piping,C.cream));
   parts.push(...stitches(p.x,p.y-.38,p.z,p.r+.41,true));
-  parts.push(paint(at(new T.CylinderGeometry(.8,.95,2.6,12,1,true),p.x,p.y-2.1,p.z),C.wood));for(let k=0;k<6;k++){const coil=new T.TorusGeometry(.92-k*.02,.13,4,20);coil.rotateX(Math.PI/2);parts.push(paint(at(coil,p.x,p.y-3.2+k*.24,p.z),k%2?0xd6b98a:C.sisal));}
+  // a short rope-wrapped stem under the disc, which the limb from the trunk runs into
+  parts.push(paint(at(new T.CylinderGeometry(.85,.7,1.3,12,1,false),p.x,p.y-1.4,p.z),C.wood));for(let k=0;k<4;k++){const coil=new T.TorusGeometry(.86-k*.04,.13,4,20);coil.rotateX(Math.PI/2);parts.push(paint(at(coil,p.x,p.y-1.95+k*.27,p.z),k%2?0xd6b98a:C.sisal));}
   const out=new T.Vector3(Math.cos(p.angle),0,Math.sin(p.angle)),base=new T.Vector3(TREE.x,p.y-3.8,TREE.z).addScaledVector(out,trunkR(p.y-3.8)-.4);
-  parts.push(paint(tube([base,base.clone().addScaledVector(out,3).setY(p.y-2.9),new T.Vector3(p.x,p.y-2.5,p.z)],.75,20,10),C.felt,.05,rnd));
+  parts.push(paint(tube([base,base.clone().addScaledVector(out,3).setY(p.y-3.1),new T.Vector3(p.x,p.y-2.1,p.z)],.75,20,10),C.felt,.05,rnd));
   guardRing(p.deck,p.x,p.z,p.r-.12,p.y,(x,z)=>Math.hypot(x-TREE.x,z-TREE.z)<rampOut(p.y)+.25||bridgeAt(p.deck,x,z));
   // cushions on the far half, away from the ramp joint and the bridge
   const away=p.angle,count=5+(i%2);for(let k=0;k<count;k++){const a=away+(k-(count-1)/2)*.42,r=p.r-(k%2?2.9:1.75),x=p.x+Math.cos(a)*r,z=p.z+Math.sin(a)*r;if(bridgeAt(p.deck,x,z))continue;
@@ -199,6 +200,9 @@ export function createCatTree(ship){
   const ring=strip(N,f,.5);fixNormals(ring);grounds.platform.push(ring.clone());parts.push(sisal(ring,30));
   const pad=strip(N,t=>{const o=f(t);return {...o,y:o.y+.04,ri:o.ri+.1,ro:o.ro-.25};},.04);fixNormals(pad);parts.push(paint(pad,C.carpet[3]));
   guardRing(15,TREE.x,TREE.z,RING.outer-.12,RING.y,(x,z)=>bridgeAt(15,x,z));
+  // and a lantern on a sisal post at its rail
+  {const a=RING.angle+Math.PI*.3,x=TREE.x+Math.cos(a)*7.2,z=TREE.z+Math.sin(a)*7.2,post=at(new T.CylinderGeometry(.15,.17,1.7,8),x,RING.y+.85,z);parts.push(sisal(post,24));addWall(post.clone());
+   lights.push(at(new T.BoxGeometry(.55,.68,.55),x,RING.y+2.05,z));parts.push(paint(at(new T.BoxGeometry(.68,.09,.68),x,RING.y+2.43,z),C.wood),paint(at(new T.BoxGeometry(.62,.07,.62),x,RING.y+1.68,z),C.wood));}
   for(let k=0;k<7;k++){const a=RING.angle+Math.PI*(.55+k*.19),r=k%2?6.6:5.5,x=TREE.x+Math.cos(a)*r,z=TREE.z+Math.sin(a)*r;if(bridgeAt(15,x,z)||Math.abs(z)<2.2&&x>TREE.x)continue;
    const c=pumpkin(k%2?.75:.95,k%2?.65:.85);c.rotateY(-a);at(c,x,RING.y,z);parts.push(paint(c.clone(),C.carpet[k%4]));const seat=new T.Mesh(c.clone(),hidden);seat.name='Meditation_cushion';seats.add(seat);grounds.cushion.push(c);}
   // over the opening while the ramp is more than 0.9 m below, and across its start
