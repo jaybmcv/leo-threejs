@@ -5,6 +5,7 @@ import {build} from 'esbuild';
 import * as T from 'three';
 import {MeshBVH} from 'three-mesh-bvh';
 import {visibilityState} from '../src/v2/visibility-state.js';
+import {PVS_LOCAL_SPAN} from '../src/v2/atrium-pvs-key.js';
 
 const rect=(x,z,w=4,d=4)=>[[x-w/2,z-d/2],[x+w/2,z-d/2],[x+w/2,z+d/2],[x-w/2,z+d/2]];
 const ground=-39.7+5*4;
@@ -123,8 +124,8 @@ for(const suffix of ['', '.authoring', '.prepared', '.public']){
   let queries=0;const metrics={span:[]};
   const createQuery=()=>({raycast(ray){queries++;return {distance:1,point:ray.at(1,new T.Vector3())};}});
   const run=Function('T','setAtriumView','atriumViewSpan','spanChanged','camera','colliders','renderMetrics','createVisibilityQuery',
-   'ATRIUM_VIEW','inOpenAtrium','setAtriumSight','createAtriumSight',
-   'let spanQuery=null;'+executable+';return span;')(T,setAtriumView,atriumViewSpan,visibilityState(),camera,col,metrics,createQuery,ATRIUM_VIEW,inOpenAtrium,setAtriumSight,()=>({update:()=>false}));
+   'ATRIUM_VIEW','inOpenAtrium','setAtriumSight','createAtriumSight','PVS_LOCAL_SPAN',
+   'let spanQuery=null;'+executable+';return span;')(T,setAtriumView,atriumViewSpan,visibilityState(),camera,col,metrics,createQuery,ATRIUM_VIEW,inOpenAtrium,setAtriumSight,()=>({update:()=>false}),PVS_LOCAL_SPAN);
   const indoor=run(inside,1000),before=queries;
   assert(before>0);assert.notDeepEqual(indoor,full);
   assert.deepEqual(run(open,1050),full);assert.equal(queries,before,'atrium shortcut must not trace');
@@ -142,8 +143,8 @@ for(const suffix of ['', '.authoring', '.prepared', '.public']){
   const executable=source.slice(source.indexOf('const VIEW_RAYS=[];'),source.indexOf('\nfunction cull('));
   let seen=true;const p={x:210,y:ground-12,z:0},metrics={span:[]};
   const query=()=>({raycast(ray){return {distance:1,point:ray.at(1,new T.Vector3())};}});
-  const run=Function('T','setAtriumView','atriumViewSpan','spanChanged','camera','colliders','renderMetrics','createVisibilityQuery','ATRIUM_VIEW','inOpenAtrium','setAtriumSight','createAtriumSight',
-   'let spanQuery=null;'+executable+';return span;')(T,setAtriumView,atriumViewSpan,visibilityState(),camera,col,metrics,query,ATRIUM_VIEW,inOpenAtrium,setAtriumSight,()=>({update:()=>seen}));
+  const run=Function('T','setAtriumView','atriumViewSpan','spanChanged','camera','colliders','renderMetrics','createVisibilityQuery','ATRIUM_VIEW','inOpenAtrium','setAtriumSight','createAtriumSight','PVS_LOCAL_SPAN',
+   'let spanQuery=null;'+executable+';return span;')(T,setAtriumView,atriumViewSpan,visibilityState(),camera,col,metrics,query,ATRIUM_VIEW,inOpenAtrium,setAtriumSight,()=>({update:()=>seen}),PVS_LOCAL_SPAN);
   const combined=run(p,1000);assert(combined[0]<=p.y-3);assert.equal(combined[1],full[1]);
   seen=false;const local=run(p,1001);assert(local[0]<=p.y-3);assert(local[1]<full[1]);
   seen=true;assert.deepEqual(run(p,1002),combined);
