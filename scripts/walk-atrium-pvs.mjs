@@ -19,7 +19,7 @@ import {PVS_GRID,encodeCells} from '../src/v2/atrium-pvs.js';
 import {pvsKey} from '../src/v2/atrium-pvs-key.js';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
 import {build as bundle} from './native-bundle.mjs';
-import {layoutPvsSetup,preparedDigest,PVS_LAYOUT,PVS_BAKED_DIR} from './atrium-pvs-source.mjs';
+import {layoutPvsSetup,preparedDigest,preparedIntegrity,PVS_LAYOUT,PVS_BAKED_DIR} from './atrium-pvs-source.mjs';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
 const tag=arg('tag','pvs-base'),prepared=arg('prepared',null),port=Number(arg('cdp',9338)),site='http://127.0.0.1:'+arg('port',4211);
@@ -98,7 +98,7 @@ try{
  await page.ev(digestScript);
  const digest=await preparedDigest(dir),walkDigest=await page.ev('__atriumPvsKey.colliderDigest(__walk.colliders)');
  if(walkDigest!==digest)throw Error(`The walk's colliders (${walkDigest}) are not those of the prepared walk in ${dir} (${digest})`);
- const integrity=JSON.parse(await fs.readFile(path.join(dir,'integrity.json'),'utf8')).sha256;
+ const integrity=await preparedIntegrity(dir)??await page.ev('window.LEO_PUBLIC_ASSETS?.["walk-prepared"]?.sha256??null')??path.basename(path.resolve(dir));
  const source={prepared:integrity,layout:createHash('sha256').update(layoutText).digest('hex'),key:pvsKey(digest,setup)};
  console.log('source',source);
  console.log('setup',await page.ev(`__atriumPvs.setup(${JSON.stringify(setup.levels)},${JSON.stringify(setup.atriumSpan)},${JSON.stringify(setup.localSpan)},${JSON.stringify(setup.band)})`));

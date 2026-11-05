@@ -22,12 +22,16 @@ export async function layoutPvsSetup(layoutText){
  return pvsSetup(layout,atriumEnvelope(layout));
 }
 
+/** The prepared walk's integrity hash, or null for a copy without integrity.json (a mirror that fetched only what the
+ * walk loads). */
+export const preparedIntegrity=dir=>fs.readFile(path.join(dir,'integrity.json'),'utf8').then(t=>JSON.parse(t).sha256||null,()=>null);
+
 /** colliderDigest of the prepared walk in `dir` (as authored, or as published with world.parts.json). Decoding takes
  * about 20 s, so the digest is kept by the walk's integrity hash and the decoding and hashing code's. */
 export async function preparedDigest(dir){
  const names=await fs.readdir(dir),metadataName=['world.parts.json','world.bin','world.json.gz'].find(n=>names.includes(n));
  if(!metadataName)throw Error('No prepared walk metadata in '+dir);
- const integrity=JSON.parse(await fs.readFile(path.join(dir,'integrity.json'),'utf8')).sha256;
+ const integrity=await preparedIntegrity(dir);
  const code=sha(Buffer.concat(await Promise.all(['../src/v2/atrium-pvs-key.js','../src/v2/prepared-codec.public.js','../package-lock.json'].map(f=>fs.readFile(new URL(f,import.meta.url))))));
  const cache=path.join(PVS_BAKED_DIR,'digests',integrity+'-'+code.slice(0,16)+'.txt'),cached=integrity&&await fs.readFile(cache,'utf8').catch(()=>null);
  if(cached)return cached;
@@ -51,7 +55,7 @@ export async function bakedPvs(key,{dir=PVS_BAKED_DIR,committed=PVS_COMMITTED}={
  * reason. A failure here never fails the build; it only costs the PVS. */
 export async function publishedPvs({prepared=PVS_PREPARED,layoutText,expectedSha256}){
  try{
-  const integrity=JSON.parse(await fs.readFile(path.join(prepared,'integrity.json'),'utf8')).sha256;
+  const integrity=await preparedIntegrity(prepared);
   if(expectedSha256&&integrity!==expectedSha256)return {key:null,text:null,reason:'prepared walk '+integrity+' is not the published '+expectedSha256};
   const key=await preparedPvsKey(prepared,layoutText);
   return {key,...await bakedPvs(key)};
