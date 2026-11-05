@@ -18,6 +18,8 @@ import {stripProvisions,createProvisions} from './provisions.authoring.js';
 import {createLifeSupportPipes} from './life-support-pipes.authoring.js';
 import {stripPlayFurniture,createKittens} from './kittens.authoring.js';
 import {prepareBlossomBed,createBlossomGarden} from './blossom.authoring.js';
+import {createCatTree} from './cat-tree.authoring.js';
+import {findRestSpots as treeRestSpots} from './rest.js';
 import {prepareLoungeFalls,createLoungeFalls} from './lounge-falls.js';
 import {createDiningRobots} from './dining-robots.authoring.js';
 import {createHydrationNook} from './hydration-nook.authoring.js';
@@ -133,6 +135,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const freightGate=createFreightGate(ship,{still,colliders});if(freightGate)colliders.addStatic(freightGate.solid,()=>true);
  // The cherry blossom garden (blossom.js): its trunk, bridge and pond edges solid.
  const blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
+ // The Great Cat Tree in the bow of the atrium (cat-tree.js): its island, trunk, ramp, platforms, bridges and guards solid.
+ const catTree=createCatTree(ship);if(catTree)colliders.addStatic(catTree.solid,()=>true);
  // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js): its rim, bed, causeway, landing and rope rails solid.
  const loungeFalls=createLoungeFalls(ship);if(loungeFalls)colliders.addStatic(loungeFalls.solid,()=>true);
  // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
@@ -158,5 +162,6 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,wardTrolley,maze,mctBay,freightGate,blossom,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,vaultLift,missionHolo,swordCase,chinampa,baggage,atmosphere,mudwater};
+ if(catTree){const spots=treeRestSpots(catTree.seats);restSpots.push(...spots);seats.push(...solidSpots(spots,colliders));}
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,wardTrolley,maze,mctBay,freightGate,blossom,catTree,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,vaultLift,missionHolo,swordCase,chinampa,baggage,atmosphere,mudwater};
 }
