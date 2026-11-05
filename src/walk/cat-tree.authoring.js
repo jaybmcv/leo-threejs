@@ -132,7 +132,7 @@ export function createCatTree(ship){
    addWall(new T.CylinderGeometry(s*1.4,s*1.5,s*1.4,10).translate(x,y0+.25+s*.7,z));}
   for(let i=0,made=0;i<40&&made<5;i++){const a=rnd()*Math.PI*2,r=TREE.island-1-rnd()*3,x=TREE.x+Math.cos(a)*r,z=TREE.z+Math.sin(a)*r;if(!clear(x,y0+.3,z,.8)||!offWalk(x,z,1)||!offFootDoor(x,z,.8))continue;made++;
    if(made===3){const f=fish(C.toy[2]);f.scale(1.3,1.3,1.3);f.rotateY(a);at(f,x,y0+.55,z);parts.push(f);continue;}
-   parts.push(yarn(.5,C.toy[made%2?0:3],rnd,x,y0+.75,z));addWall(new T.CylinderGeometry(.5,.5,1,8).translate(x,y0+.75,z));}
+   parts.push(yarn(.8,C.toy[made%2?0:3],rnd,x,y0+1.05,z));addWall(new T.CylinderGeometry(.8,.8,1.6,8).translate(x,y0+1.05,z));}
  }
  // Trunk: a felt lathe with rope bands, a broad buttress root at five places away from the ramp's foot.
  {const ys=[...Array.from({length:40},(_,h)=>y0+.2+h*(TREE.top-y0-.2)/39),...DENS.flatMap(d=>[d.y,d.y+d.h])].sort((a,b)=>a-b);
@@ -225,10 +225,10 @@ export function createCatTree(ship){
    parts.push(paint(at(new T.CylinderGeometry(.58,.58,.04,16),p.x,TREE.islandTop+h+.02,p.z),0xf0dcb0));{const ring=new T.TorusGeometry(.32,.025,3,20);ring.rotateX(Math.PI/2);parts.push(paint(at(ring,p.x,TREE.islandTop+h+.045,p.z),0xc8a06a));}});
   // the sign: a board on two posts by the boardwalk, facing out
   {const p=start.clone().addScaledVector(tangent,.5).addScaledVector(side,2.9),face=-Math.atan2(-tangent.z,-tangent.x);
-   const board=new T.CylinderGeometry(1,1,.2,40);board.rotateX(Math.PI/2);board.scale(1.75,.78,1);board.rotateY(face+Math.PI/2);at(board,p.x,TREE.islandTop+1.35,p.z);parts.push(paint(board,C.wood));
-   const edge=new T.TorusGeometry(1,.07,5,40);edge.scale(1.75,.78,1);edge.rotateY(face+Math.PI/2);at(edge,p.x,TREE.islandTop+1.35,p.z);parts.push(paint(edge,0x8a5a30));
-   for(const o of [-1.2,1.2]){const q=p.clone().add(new T.Vector3(0,0,o).applyAxisAngle(new T.Vector3(0,1,0),face));const post=at(new T.CylinderGeometry(.16,.18,1.2,8),q.x,TREE.islandTop+.6,q.z);parts.push(paint(post,0x8a5a30));addWall(post.clone());}
-   const label=signLabel();if(label){const m=new T.Mesh(new T.PlaneGeometry(3.3,1.4),label);m.name='Cat_tree_sign';m.rotation.y=face+Math.PI/2;m.position.set(p.x,TREE.islandTop+1.35,p.z).addScaledVector(new T.Vector3(-tangent.x,0,-tangent.z).normalize(),.1);
+   const board=new T.CylinderGeometry(1,1,.2,40);board.rotateX(Math.PI/2);board.scale(2.35,1.05,1);board.rotateY(face+Math.PI/2);at(board,p.x,TREE.islandTop+1.75,p.z);parts.push(paint(board,C.wood));
+   const edge=new T.TorusGeometry(1,.07,5,40);edge.scale(2.35,1.05,1);edge.rotateY(face+Math.PI/2);at(edge,p.x,TREE.islandTop+1.75,p.z);parts.push(paint(edge,0x8a5a30));
+   for(const o of [-1.6,1.6]){const q=p.clone().add(new T.Vector3(0,0,o).applyAxisAngle(new T.Vector3(0,1,0),face));const post=at(new T.CylinderGeometry(.18,.2,1.6,8),q.x,TREE.islandTop+.8,q.z);parts.push(paint(post,0x8a5a30));addWall(post.clone());}
+   const label=signLabel();if(label){const m=new T.Mesh(new T.PlaneGeometry(4.45,1.9),label);m.name='Cat_tree_sign';m.rotation.y=face+Math.PI/2;m.position.set(p.x,TREE.islandTop+1.75,p.z).addScaledVector(new T.Vector3(-tangent.x,0,-tangent.z).normalize(),.1);
     m.position.add(new T.Vector3(Math.cos(face),0,-Math.sin(face)).multiplyScalar(0));near.add(m);}}
   // the den: a felt dome against the trunk facing aft, with an arched way in
   {const da=FOOT_DEN.a,dir=new T.Vector3(Math.cos(da),0,Math.sin(da)),c=new T.Vector3(TREE.x,TREE.islandTop,TREE.z).addScaledVector(dir,trunkR(TREE.islandTop)+1.2);
@@ -270,16 +270,16 @@ export function createCatTree(ship){
  {const leaf=leafCard(),slots=[],col=new T.Color(),m=new T.Matrix4(),X=new T.Vector3(),Z=new T.Vector3();
   const roof=y=>y>RING.y+1.8,ok=(x,y,z,sc)=>Math.hypot(x-TREE.x,z-TREE.z)>trunkR(y)+.4&&clear(x,y,z,sc*.45,roof(y)?.12:sc*.45)&&inOpening(x,y,z,y+(roof(y)?.12:sc*.3),roof(y)?.5:sc*.45);
   // the dome, then a low leafy roof over the Deck 15 ring that the dome's crown is too narrow to cover
-  for(let i=0,made=0;i<5000&&made<160;i++){const hat=made>=122;
+  for(let i=0,made=0;i<5000&&made<118;i++){const hat=made>=92;
    // even over the dome's surface, from a little below its rim to its top
    const h=hat?1:-.15+rnd()*1.15,el=Math.asin(Math.min(1,h)),th=rnd()*Math.PI*2,k=.92+.08*rnd(),dir=new T.Vector3(Math.cos(th)*Math.cos(el),Math.sin(el),Math.sin(th)*Math.cos(el));
-   const cyy=hat?18.8+rnd()*.35:TREE.floor+20+DOME.cy-.5+dir.y*DOME.r*k,sc=(roof(cyy)?1.7:2.5)+rnd()*.7;let cx=0,cz=0,fit=false;
+   const cyy=hat?18.8+rnd()*.35:TREE.floor+20+DOME.cy-.5+dir.y*DOME.r*k,sc=(roof(cyy)?2.1:3.6)+rnd()*.9;let cx=0,cz=0,fit=false;
    if(hat){const a=rnd()*Math.PI*2,r=2.5+Math.sqrt(rnd())*7.5;cx=TREE.x+Math.cos(a)*r;cz=TREE.z+Math.sin(a)*r;dir.set(Math.cos(a)*.25,1,Math.sin(a)*.25).normalize();fit=ok(cx,cyy,cz,sc);}
    else for(let f=1;f>.5&&!fit;f-=.06){cx=TREE.x+dir.x*DOME.r*k*f;cz=TREE.z+dir.z*DOME.r*k*f;fit=ok(cx,cyy,cz,sc);}
    if(!fit)continue;made++;
    const radial=new T.Vector3(cx-TREE.x,0,cz-TREE.z).normalize(),N=dir.clone().add(new T.Vector3(0,.55,0)).normalize(),tint=C.leaf[Math.floor(rnd()*3)];
    // one leaf on top, then a ring of eight drooping outward round it
-   const ring=[[0,0,0]];for(let q=0;q<8;q++)ring.push([q/8*Math.PI*2+rnd()*.3,1,.55+rnd()*.25]);
+   const ring=[[0,0,0]];for(let q=0;q<7;q++)ring.push([q/7*Math.PI*2+rnd()*.3,1,.35+rnd()*.15]);
    for(const [ang,r1,droop] of ring){const tan=new T.Vector3(Math.cos(ang),0,Math.sin(ang));tan.sub(N.clone().multiplyScalar(tan.dot(N))).normalize();
     const pos=new T.Vector3(cx,cyy,cz).addScaledVector(tan,r1*sc*.62).addScaledVector(N,-r1*sc*.18);if(!ok(pos.x,pos.y,pos.z,sc))continue;
     const n=N.clone().addScaledVector(tan,r1?droop:0).normalize();X.copy(r1?tan:radial).sub(n.clone().multiplyScalar((r1?tan:radial).dot(n))).normalize();Z.crossVectors(X,n);
@@ -304,7 +304,7 @@ export function createCatTree(ship){
    else if(t.kind===1){parts.push(paint(at(new T.CylinderGeometry(.06,.06,1.2,5),t.x,t.y-.6,t.z),C.wood));parts.push(paint(at(new T.SphereGeometry(.16,8,6),t.x,t.y-1.25,t.z),C.rope));for(let f=0;f<4;f++){const fe=new T.ConeGeometry(.3,1.7,6);fe.scale(1,1,.22);fe.rotateZ(Math.PI+(f-1.5)*.32);fe.rotateY(f*.5);at(fe,t.x+(f-1.5)*.16,t.y-2.1,t.z);parts.push(paint(fe,[0x3fa6a0,0xe2604e,0xf2b84b,0x5d8fd0][f]));}}
    else{const f=fish(C.toy[2]);at(f,t.x,t.y-.4,t.z);parts.push(f);}}
   // wicker baskets with red cushions hanging from the lowest tier, out over the void
-  let hung=0;for(let i=0;i<500&&hung<10;i++){const a=rnd()*Math.PI*2,r=7+rnd()*7,x=TREE.x+Math.cos(a)*r,z=TREE.z+Math.sin(a)*r,top=CANOPY[0][0]+.3,y=top-3-rnd()*3;
+  let hung=0;for(let i=0;i<500&&hung<6;i++){const a=rnd()*Math.PI*2,r=7+rnd()*7,x=TREE.x+Math.cos(a)*r,z=TREE.z+Math.sin(a)*r,top=CANOPY[0][0]+.3,y=top-3-rnd()*3;
    let ok=true;for(let h=y-1.2;h<=top;h+=.5)if(!clear(x,h,z,1.3)){ok=false;break;}if(!ok||!inOpening(x,y,z,top,1.5))continue;hung++;
    const bowl=new T.SphereGeometry(1.35,16,8,0,Math.PI*2,Math.PI/2,Math.PI/2);bowl.scale(1,1.05,1);at(bowl,x,y,z);parts.push(woven(bowl,y));
    const lip=new T.TorusGeometry(1.33,.14,5,24);lip.rotateX(Math.PI/2);at(lip,x,y,z);parts.push(paint(lip,C.wicker));const cu=pumpkin(1.05,.75);at(cu,x,y-.55,z);parts.push(paint(cu,C.carpet[0]));
@@ -340,7 +340,7 @@ function leafCard(){const g=new T.PlaneGeometry(1,1,2,2);g.rotateX(-Math.PI/2);c
 function leafTexture(){if(typeof document==='undefined')return null;const S=256,cv=document.createElement('canvas');cv.width=cv.height=S;const g=cv.getContext('2d');if(!g)return null;
  const lobes=[[.52,.5,.3],[.36,.36,.21],[.36,.64,.21],[.68,.33,.19],[.68,.67,.19],[.8,.5,.17]],shape=(inset)=>{g.beginPath();for(const [x,y,r] of lobes){g.moveTo(x*S+(r-inset)*S,y*S);g.arc(x*S,y*S,Math.max(1,(r-inset)*S),0,Math.PI*2);}};
  g.fillStyle='#a9b58c';shape(0);g.fill();g.fillStyle='#eef3e4';shape(.04);g.fill();
- g.strokeStyle='#ffe98a';g.lineWidth=6;g.setLineDash([10,8]);for(const [x,y,r] of lobes){g.beginPath();g.arc(x*S,y*S,(r-.05)*S,0,Math.PI*2);g.stroke();}
+ g.strokeStyle='#ffe066';g.lineWidth=9;g.setLineDash([15,10]);for(const [x,y,r] of lobes){g.beginPath();g.arc(x*S,y*S,(r-.05)*S,0,Math.PI*2);g.stroke();}
  g.setLineDash([]);g.fillStyle='#eef3e4';shape(.075);g.fill();g.strokeStyle='#c5cfb3';g.lineWidth=6;g.beginPath();g.moveTo(.16*S,.5*S);g.lineTo(.9*S,.5*S);for(const t of [.4,.6,.75]){g.moveTo(t*S,.5*S);g.lineTo((t+.1)*S,.32*S);g.moveTo(t*S,.5*S);g.lineTo((t+.1)*S,.68*S);}g.stroke();
  g.fillStyle='#c9a46a';g.fillRect(0,.47*S,.2*S,.06*S);
  const t=new T.CanvasTexture(cv);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return t;}
