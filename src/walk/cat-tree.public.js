@@ -35,7 +35,10 @@ export const BRIDGES=[{deck:9,x1:224.8},{deck:12,x1:211.3},{deck:15,x1:197.3}].m
  const w=2.4,x0=p?p.x+Math.sqrt(p.r*p.r-(Math.abs(p.z)+w/2)**2)-.3:TREE.x+RING.outer-.3;return {...b,y,x0,width:w,disc:p};});
 // Canopy tiers [y0,y1,radius], and the openings above: leaves stay inside each slab's opening and under the Deck 16 slab.
 // The top tier is a low leafy roof over the Deck 15 ring, 2.2 m clear above it and under the Deck 16 slab.
-const CANOPY=[[1,8,20],[8,12.3,16],[12.3,16.3,11],[15.6,18.4,12],[18.6,19.6,9.5]];
+const CANOPY=[[0,7,18],[7,12.3,16],[12.3,16.3,11],[16.3,19,8]];
+// The leaf dome: a hemisphere of 18.6 m centred 20 m up the tree, its top 0.7 m under the Deck 16 slab. Where a slab's
+// opening cuts into it (Decks 13-15 step in toward the bow and sides), clusters are pulled in toward the trunk.
+const DOME={cy:.5,r:18.6};
 const OPENINGS=[{y:deckY(13),z:30,x:206},{y:deckY(14),z:20,x:201},{y:deckY(15),z:10,x:197},{y:deckY(16),z:0,x:148}];
 
 const C={felt:0xa36d45,feltDark:0x7a4c2c,sisal:0xe2c79a,rope:0xf1e2c2,carpet:[0xd2604a,0xe8b04a,0x9db783,0xf3e6cc],wood:0xc08a52,
@@ -233,22 +236,25 @@ export function createCatTree(ship){
   for(const k of [-1,1]){const j=new T.CylinderGeometry(.2,.2,1.4,6);j.translate(k*1.05,-.7,0);parts.push(sisal(f(j,.05),26));}
   const sill=new T.BoxGeometry(2.3,.18,.4);sill.translate(0,-1.45,.1);parts.push(paint(f(sill),C.wood));}
 
- // Canopy: domed clusters of stitched felt leaves in four tiers, like umbrellas; never inside a walkway or through a slab.
- // Each leaf is a bent card cut out by a felt-leaf texture (where a canvas exists), tinted per cluster.
- {const leaf=leafCard(),slots=[],tmp=new T.Object3D(),col=new T.Color(),m=new T.Matrix4(),X=new T.Vector3(),Y=new T.Vector3(),Z=new T.Vector3();
-  const total=CANOPY.reduce((t,c)=>t+c[2]*c[2],0);
-  const ok=(x,y,z,sc,hat)=>Math.hypot(x-TREE.x,z-TREE.z)>trunkR(y)+.4&&clear(x,y,z,sc*.45,hat?.12:sc*.45)&&inOpening(x,y,z,y+(hat?.1:sc*.3),hat?.5:sc*.45);
-  for(const [ya,yb,R] of CANOPY){const hat=ya>RING.y,cy=(ya+yb)/2,ry=hat?(yb-ya)/2:(yb-ya)/2+1,clusters=hat?30:Math.round(190*R*R/total),first=slots.length;
-   for(let i=0,made=0;i<clusters*14&&made<clusters;i++){const u=hat?rnd()*.6-.3:rnd()*1.6-.6,th=rnd()*Math.PI*2,k=hat?.25+.75*Math.sqrt(rnd()):.68+.32*Math.sqrt(rnd()),s=Math.sqrt(1-u*u);
-    const cx=TREE.x+Math.cos(th)*s*R*k,cz=TREE.z+Math.sin(th)*s*R*k,cyy=cy+u*ry*k,sc=hat?1.7+rnd()*.5:2.6+rnd()*.8;if(!ok(cx,cyy,cz,sc,hat))continue;made++;
-    const radial=new T.Vector3(cx-TREE.x,0,cz-TREE.z).normalize(),N=new T.Vector3().copy(radial).multiplyScalar(hat?.15:.55).add(new T.Vector3(0,1,0)).normalize(),tint=C.leaf[Math.floor(rnd()*3)];
-    // one leaf on top, then a ring of eight drooping outward round it
-    const ring=[[0,0,0]];for(let q=0;q<8;q++)ring.push([q/8*Math.PI*2+rnd()*.3,1,.55+rnd()*.25]);
-    for(const [ang,r1,droop] of ring){const tan=new T.Vector3(Math.cos(ang),0,Math.sin(ang));tan.sub(N.clone().multiplyScalar(tan.dot(N))).normalize();
-     const pos=new T.Vector3(cx,cyy,cz).addScaledVector(tan,r1*sc*.62).addScaledVector(N,-r1*sc*.18);if(!ok(pos.x,pos.y,pos.z,sc,hat))continue;
-     const n=N.clone().addScaledVector(tan,r1?droop:0).normalize();X.copy(r1?tan:radial).sub(n.clone().multiplyScalar((r1?tan:radial).dot(n))).normalize();Z.crossVectors(X,n);
-     slots.push({pos,X:X.clone(),Y:n,Z:Z.clone(),sc:sc*(r1?1:1.1),c:tint,v:.9+rnd()*.18});}}
-  }
+ // Canopy: one dome of stitched felt-leaf clusters lying like shingles over the platforms; never inside a walkway or
+ // through a slab. Each leaf is a bent card cut out by a felt-leaf texture (where a canvas exists), tinted per cluster.
+ {const leaf=leafCard(),slots=[],col=new T.Color(),m=new T.Matrix4(),X=new T.Vector3(),Z=new T.Vector3();
+  const roof=y=>y>RING.y+1.8,ok=(x,y,z,sc)=>Math.hypot(x-TREE.x,z-TREE.z)>trunkR(y)+.4&&clear(x,y,z,sc*.45,roof(y)?.12:sc*.45)&&inOpening(x,y,z,y+(roof(y)?.12:sc*.3),roof(y)?.5:sc*.45);
+  // the dome, then a low leafy roof over the Deck 15 ring that the dome's crown is too narrow to cover
+  for(let i=0,made=0;i<5000&&made<205;i++){const hat=made>=175;
+   // even over the dome's surface, from a little below its rim to its top
+   const h=hat?1:-.1+rnd()*1.1,el=Math.asin(Math.min(1,h)),th=rnd()*Math.PI*2,k=.92+.08*rnd(),dir=new T.Vector3(Math.cos(th)*Math.cos(el),Math.sin(el),Math.sin(th)*Math.cos(el));
+   const cyy=hat?18.8+rnd()*.35:TREE.floor+20+DOME.cy-.5+dir.y*DOME.r*k,sc=(roof(cyy)?1.7:2.5)+rnd()*.7;let cx=0,cz=0,fit=false;
+   if(hat){const a=rnd()*Math.PI*2,r=2.5+Math.sqrt(rnd())*7.5;cx=TREE.x+Math.cos(a)*r;cz=TREE.z+Math.sin(a)*r;dir.set(Math.cos(a)*.25,1,Math.sin(a)*.25).normalize();fit=ok(cx,cyy,cz,sc);}
+   else for(let f=1;f>.5&&!fit;f-=.06){cx=TREE.x+dir.x*DOME.r*k*f;cz=TREE.z+dir.z*DOME.r*k*f;fit=ok(cx,cyy,cz,sc);}
+   if(!fit)continue;made++;
+   const radial=new T.Vector3(cx-TREE.x,0,cz-TREE.z).normalize(),N=dir.clone().add(new T.Vector3(0,.55,0)).normalize(),tint=C.leaf[Math.floor(rnd()*3)];
+   // one leaf on top, then a ring of eight drooping outward round it
+   const ring=[[0,0,0]];for(let q=0;q<8;q++)ring.push([q/8*Math.PI*2+rnd()*.3,1,.55+rnd()*.25]);
+   for(const [ang,r1,droop] of ring){const tan=new T.Vector3(Math.cos(ang),0,Math.sin(ang));tan.sub(N.clone().multiplyScalar(tan.dot(N))).normalize();
+    const pos=new T.Vector3(cx,cyy,cz).addScaledVector(tan,r1*sc*.62).addScaledVector(N,-r1*sc*.18);if(!ok(pos.x,pos.y,pos.z,sc))continue;
+    const n=N.clone().addScaledVector(tan,r1?droop:0).normalize();X.copy(r1?tan:radial).sub(n.clone().multiplyScalar((r1?tan:radial).dot(n))).normalize();Z.crossVectors(X,n);
+    slots.push({pos,X:X.clone(),Y:n,Z:Z.clone(),sc:sc*(r1?1:1.1),c:tint,v:.9+rnd()*.18});}}
   const map=leafTexture(),leafMat=new T.MeshStandardMaterial({name:'Cat_tree_leaves',color:0xffffff,map,alphaTest:map?.5:0,side:T.DoubleSide,roughness:.95});
   const leaves=new T.InstancedMesh(leaf,leafMat,slots.length);leaves.name='Cat_tree_leaves';
   slots.forEach((p,i)=>{m.makeBasis(p.X,p.Y,p.Z).scale(new T.Vector3(p.sc,p.sc,p.sc)).setPosition(p.pos);leaves.setMatrixAt(i,m);leaves.setColorAt(i,col.set(p.c).multiplyScalar(p.v));});
@@ -302,7 +308,7 @@ function leafCard(){const g=new T.PlaneGeometry(1,1,2,2);g.rotateX(-Math.PI/2);c
 // vein; white elsewhere so each cluster's tint shows. Only where a canvas exists (pages, not plain Node).
 function leafTexture(){if(typeof document==='undefined')return null;const S=256,cv=document.createElement('canvas');cv.width=cv.height=S;const g=cv.getContext('2d');if(!g)return null;
  const lobes=[[.52,.5,.3],[.36,.36,.21],[.36,.64,.21],[.68,.33,.19],[.68,.67,.19],[.8,.5,.17]],shape=(inset)=>{g.beginPath();for(const [x,y,r] of lobes){g.moveTo(x*S+(r-inset)*S,y*S);g.arc(x*S,y*S,Math.max(1,(r-inset)*S),0,Math.PI*2);}};
- g.fillStyle='#98a67e';shape(0);g.fill();g.fillStyle='#eef3e4';shape(.04);g.fill();
+ g.fillStyle='#a9b58c';shape(0);g.fill();g.fillStyle='#eef3e4';shape(.04);g.fill();
  g.strokeStyle='#ffe98a';g.lineWidth=6;g.setLineDash([10,8]);for(const [x,y,r] of lobes){g.beginPath();g.arc(x*S,y*S,(r-.05)*S,0,Math.PI*2);g.stroke();}
  g.setLineDash([]);g.fillStyle='#eef3e4';shape(.075);g.fill();g.strokeStyle='#c5cfb3';g.lineWidth=6;g.beginPath();g.moveTo(.16*S,.5*S);g.lineTo(.9*S,.5*S);for(const t of [.4,.6,.75]){g.moveTo(t*S,.5*S);g.lineTo((t+.1)*S,.32*S);g.moveTo(t*S,.5*S);g.lineTo((t+.1)*S,.68*S);}g.stroke();
  g.fillStyle='#c9a46a';g.fillRect(0,.47*S,.2*S,.06*S);
