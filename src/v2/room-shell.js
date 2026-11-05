@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {moveRoomFitoutMeshes} from './room-fitout-overrides.js';
 import layout from '../plan/selected-layout.js';
 import {roomObject} from '../plan/rooms.js';
 import {forumTerraces,forumUpperPlan} from './launch-e-fitout.js';
@@ -11,7 +12,7 @@ import {polygonGeometry,mesh,box,wall,mergeBoxes,removePanelEndCaps,removeGeomet
 
 export function buildRoomShell(ship,r,structure){
   const source=roomObject(ship,r.id);
-  if(source){retireV2RoomShell(source,ship.cutaway);if(r.id==='d16-voyage-forum-bow')source.clear();if(r.id==='observation-lounge'){const keep=[];source.traverse(o=>{if(/Shared_telescope_base|Viewing_scope|Scope_column|Scope_optical_head/.test(o.name))keep.push(o);});for(const o of keep)source.attach(o);for(const o of [...source.children])if(!keep.includes(o))source.remove(o);}}
+  if(source){moveRoomFitoutMeshes(source,r.id);retireV2RoomShell(source,ship.cutaway);if(r.id==='d16-voyage-forum-bow')source.clear();if(r.id==='observation-lounge'){const keep=[];source.traverse(o=>{if(/Shared_telescope_base|Viewing_scope|Scope_column|Scope_optical_head/.test(o.name))keep.push(o);});for(const o of keep)source.attach(o);for(const o of [...source.children])if(!keep.includes(o))source.remove(o);}}
   const g=new T.Group();g.name='V2_shell_'+r.id;g.userData.room=r.id;structure.add(g);if(r.launchE?.kind==='oval-forum'){const [x,z,w,d]=r.launchE.seating,oval=Array.from({length:96},(_,i)=>[x+w/2*Math.cos(i*Math.PI/48),z+d/2*Math.sin(i*Math.PI/48)]),inlay=mesh(g,'Forum_oval_inlay',polygonGeometry(oval,[],r.y+.014,.002),new T.MeshStandardMaterial({name:'Forum_oval_textile',color:0x35545a,roughness:.95}));inlay.userData.noCollide=true;}if(r.launchE?.kind==='oval-forum')for(const t of forumTerraces())mesh(g,'Forum_terrace_floor',forumTerraceGeometry(t,r.y),floor);
   if(r.ceilingExtension){const e=r.ceilingExtension,upper=forumUpperPlan(layout,r);g.userData.forumUpper=upper;mesh(g,'V2_room_ceiling',polygonGeometry(e.polygon,upper.ceilingHoles,e.y+e.height,.10),lining);for(let i=0;i<e.polygon.length;i++){let segments=[[e.polygon[i],e.polygon[(i+1)%e.polygon.length]]];for(const d of upper.portals)segments=segments.flatMap(([a,b])=>entrySegments(a,b,d.center,d.width));for(const[a,b]of segments)removePanelEndCaps(wall(g,a,b,e.y,e.height,lining,'V2_forum_upper_wall'));}}
   const replacements=layout.hullPrototypes?.rollout?layout.hullPrototypes.prototypes.filter(p=>p.kind!=='cabin'&&(p.ownerId===r.id||p.parentRoomId===r.id)):[];
@@ -26,7 +27,10 @@ export function buildRoomShell(ship,r,structure){
    for(const d of doors){const header=entryHeader(a,b,d.center,d.width);if(header&&d.center[1]+2.5<r.y+s.rise+s.height){const upper=Math.max(r.y+s.rise,d.center[1]+2.5),o=wall(g,header[0],header[1],upper,r.y+s.rise+s.height-upper,glass);removeGeometryCaps(o.geometry,0);}}
   }
   }
-  if(r.components){for(const o of [...(r.components.galleries||[]),...(r.components.links||[]),...(r.components.landings||[])]){const holes=galleryHoles(r,o);mesh(g,'V2_garden_gallery',polygonGeometry(o.polygon,holes,o.center[1],o.size[1]),floor);}
+  if(r.components){const platforms=[...(r.components.galleries||[]),...(r.components.links||[]),...(r.components.landings||[])];for(const [i,o] of platforms.entries()){const holes=galleryHoles(r,o);
+   // Joined lounge routes share one floor surface instead of coplanar plates.
+   if(r.id==='commons-1')holes.push(...platforms.slice(0,i).filter(p=>Math.abs(p.center[1]-o.center[1])<.01).map(p=>p.polygon));
+   mesh(g,'V2_garden_gallery',polygonGeometry(o.polygon,holes,o.center[1],o.size[1]),floor);}
    // The plan's stair center.y is its finished tread elevation.
    const stairs=r.components.stairs||[],lights=[];for(const o of stairs){const tread=box(g,'Gallery_stair',o.size,[o.center[0],o.center[1]-o.size[1]/2,o.center[2]],lining);if(r.id!=='commons-1')continue;
     const flight=stairs.filter(t=>t.id.replace(/-\d+$/,'')===o.id.replace(/-\d+$/,'')).sort((a,b)=>a.center[1]-b.center[1]),dir=Math.sign(flight.at(-1).center[2]-flight[0].center[2]),rise=flight[1].center[1]-flight[0].center[1],geo=tread.geometry.clone(),p=geo.attributes.position,h=o.size[1];

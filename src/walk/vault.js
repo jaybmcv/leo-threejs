@@ -1,41 +1,35 @@
+import {LOUNGE_PLAN} from '../plan/lounge-layout-v2.js';
 import {fitV2VaultLiftSpec} from '../v2/vault-lift-fit.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {walkCanvas,hasWalkCanvas} from './canvas.js';
-import {anchorObject} from '../plan/rooms.js';
+import {anchorObject,anchoredPoint} from '../plan/rooms.js';
 import {COMMONS} from '../model.js';
 import {floorY} from '../transit.js';
 import {HEADER} from './commons-hall.js';
 
-// A hidden clubhouse behind the Deck 17 arcade (from tester feedback), first step: its ground floor. The bare plate
-// between Neighborhood 1's commons (the Hydro-Nip Lounge) and Neighborhood 3's, opened into the commons hall, is closed
-// off again by thin walls: one along the backs of the arcade cabinets, one where Neighborhood 3's end wall was cut
-// back, one on the corridor side and one outboard. In the arcade wall, past the Paws Off treadmill, is a round vault door
-// of black metal with a gold wheel, in a black frame ringed with gold. E at the door (or at the keypad beside it) asks
-// for the password; the right one turns the wheel and swings the door in. Once the walker is inside and clear of it,
-// the door shuts behind them; from inside, E at the door opens it to let them out. The tube lift is in vault-lift.js.
-// Walk only, and each visitor's own: the door's state is not shared through Leo live.
-// Built in the arcade row's frame (arcade.js): x along the wall toward the corridor (world +z), y up from the floor,
-// z out from the wall into the lounge (world -x), so the room behind lies at negative z.
-const C=COMMONS[0],NEXT=COMMONS[2],FLOOR=floorY(17),WALL=22.44,H=HEADER-FLOOR,THICK=.12;
-// The room: from just inside the lounge's rear wall line to the line of its corridor-side columns, and back to where
-// Neighborhood 3's end wall stood.
-const XA=-C.depth/2+.1,XB=C.depth/2,ZF=-(NEXT.x-NEXT.width/2-(C.x+WALL));
+// The password clubhouse occupies the two-metre inter-garden gap. The selected
+// garden walls enclose it, with short returns at either end. Its round door
+// swings outward into the lounge, leaving the existing lift approach clear.
+// Local x runs along world +Z; local z points into the lounge along world -X.
+const C=COMMONS[0],NEXT=COMMONS[2],FLOOR=floorY(17),WALL=LOUNGE_PLAN.arcadeWall+114.5,H=HEADER-FLOOR,THICK=.12;
+// Close only the existing inter-garden gap.
+const XA=-C.depth/2+.1,XB=C.depth/2,ZF=-2;
 // The door: its centre along the wall, the opening's radius and centre height, and the door's own radius (it closes
 // against the room side of the wall, hinged on its corridor side). The keypad stands to its right.
-const DX=15.5,R=1.25,CY=1.35,RD=1.36,DOOR_T=.34,HINGE=DX+RD,KX=DX+2.05;
+const DX=LOUNGE_PLAN.doorZ+43,R=1.25,CY=1.35,RD=1.36,DOOR_T=.34,HINGE=DX+RD,KX=DX+2.05;
 // The way through as the colliders see it: narrower and lower than the round opening, so a walker never brushes its rim.
 const GAP={half:.9,top:2.35};
-// The wheel takes a second to turn; the door swings in over 1.8 s, and shuts over 1.4.
-const SPIN=1,SWING=1.8,SHUT=1.4,OPEN_ANGLE=-100*Math.PI/180,WAIT=20,REACH=2.4;
+// The wheel turns before the door swings outward and closes behind the visitor.
+const SPIN=1,SWING=1.8,SHUT=1.4,OPEN_ANGLE=100*Math.PI/180,WAIT=20,REACH=2.4;
 // A game code, not a credential: anyone reading the page's script can find it.
 const CODE='9lives';
 
 // The room's walls on the ship map (deck-map.js), in world coordinates.
-const world=(x,z)=>({x:C.x+WALL-z,z:C.z+x});
+const world=(x,z)=>{const p=anchoredPoint('commons-1',[C.x+WALL-z,FLOOR,C.z+x]);return{x:p[0],z:p[2]};};
 export const VAULT_PLAN={deck:17,lines:[[world(XA,0),world(XB,0)],[world(XA,ZF),world(XB,ZF)],[world(XA,0),world(XA,ZF)],[world(XB,0),world(XB,ZF)]]};
-// The next step's tube sits at the outboard end, clear of all four walls and the vault door.
-export const VAULT_LIFT=fitV2VaultLiftSpec({...world(XA+3.7,ZF/2),y:FLOOR,stops:[17,18,19].map(deck=>({deck,y:floorY(deck),label:`Deck ${deck}`}))});
+// Keep the accepted tube position independent of the new enclosure.
+export const VAULT_LIFT=fitV2VaultLiftSpec({x:(C.x+22.44+NEXT.x-NEXT.width/2)/2,z:C.z+XA+3.7,y:FLOOR,stops:[17,18,19].map(deck=>({deck,y:floorY(deck),label:`Deck ${deck}`}))});
 
 const FONT='"Archivo", system-ui, sans-serif',MONO='"JetBrains Mono", ui-monospace, monospace';
 // The keypad's face: a small screen over twelve keys. `mode` is 'locked', 'denied' or 'open'.
@@ -81,15 +75,10 @@ export function createVault(ship){
  const holed=(x0,x1,y0,y1,depth)=>{const s=new T.Shape([new T.Vector2(x0,y0),new T.Vector2(x1,y0),new T.Vector2(x1,y1),new T.Vector2(x0,y1)]);
   const hole=new T.Path();hole.absarc(DX,CY,R,0,Math.PI*2,true);s.holes.push(hole);return new T.ExtrudeGeometry(s,{depth,bevelEnabled:false,curveSegments:48});};
 
- // The walls: the arcade wall (the cabinets' backs touch its face) with the round opening, the far wall where
- // Neighborhood 3's end wall was cut, the corridor side and the outboard end. All rise to the deck above's underside.
- piece(plaster,holed(XA,XB,0,H,THICK).translate(0,0,-THICK));
- slab(plaster,[XA,XB,0,H,ZF-.1,ZF+.1]);
- slab(plaster,[XB-THICK,XB,0,H,ZF+.1,-THICK]);
- slab(plaster,[XA,XA+THICK,0,H,ZF+.1,-THICK]);
- block('Vault_wall_solid',[XA,DX-GAP.half,0,H,-THICK,.1]);block('Vault_wall_solid',[DX+GAP.half,XB,0,H,-THICK,.1]);
- block('Vault_wall_solid',[DX-GAP.half,DX+GAP.half,GAP.top,H,-THICK,.1]);
- block('Vault_wall_solid',[XA,XB,0,H,ZF-.1,ZF+.1]);block('Vault_wall_solid',[XB-THICK,XB,0,H,ZF,0]);block('Vault_wall_solid',[XA,XA+THICK,0,H,ZF,0]);
+ // The selected garden walls close the gap; only the two short returns are new.
+ slab(plaster,[XB-THICK,XB,0,H,ZF,0]);
+ slab(plaster,[XA,XA+THICK,0,H,ZF,0]);
+ block('Vault_wall_solid',[XB-THICK,XB,0,H,ZF,0]);block('Vault_wall_solid',[XA,XA+THICK,0,H,ZF,0]);
  // The door's frame on the lounge side: a black plate round the opening, a gold ring and gold rivets, the opening
  // lined in dark steel, and a low sill to step over.
  piece(M.black,holed(DX-1.6,DX+1.6,0,3.1,.1));
@@ -127,7 +116,7 @@ export function createVault(ship){
  wheel(.44,1);wheel(.3,-1);
  group.updateMatrixWorld(true);solid.updateMatrixWorld(true);
 
- // 'locked'; 'opening' (the wheel turns, then the door swings in); 'open' (waiting for the walker to go through);
+ // 'locked'; 'opening' (the wheel turns, then the door swings out); 'open' (waiting for the walker to go through);
  // 'closing' (the door swings shut, then the wheel turns back). `why` is 'in' when opened with the password from the
  // lounge, 'out' when opened from inside.
  let state='locked',why='in',spin=0,swing=0,wait=0,denied=0,mover=null;
@@ -136,7 +125,7 @@ export function createVault(ship){
  const toLocal=p=>local.copy(p).applyMatrix4(inverse.copy(group.matrixWorld).invert());
  // In the opening, or where the door swings: the door never shuts on a walker there.
  const inDoor=q=>Math.abs(q.x-DX)<1.4&&q.z>-.8&&q.z<.7;
- const inSwing=q=>q.z<0&&Math.hypot(q.x-HINGE,q.z+THICK)<2*RD+.45;
+ const inSwing=q=>q.z>0&&Math.hypot(q.x-HINGE,q.z+THICK)<2*RD+.45;
  const show=mode=>pad?.userData.draw(mode);
  const place=()=>{pivot.rotation.y=OPEN_ANGLE*T.MathUtils.smootherstep(swing,0,1);for(const w of wheels)w.rotation.z=spin*Math.PI*3;
   pivot.updateMatrixWorld(true);if(!mover)return;mover.place(pivot.matrixWorld);

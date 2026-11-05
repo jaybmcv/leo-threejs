@@ -1,5 +1,13 @@
 import defaultOverrides from '../plan/room-fitout-overrides-v2.json' with {type:'json'};
 
+// Source furniture moves in its existing room template before geometry is baked.
+export function moveRoomFitoutMeshes(source,id,overrides=defaultOverrides){
+ for(const move of overrides[id]?.moveMeshes||[]){
+  if(!Array.isArray(move.names)||!Array.isArray(move.by)||move.by.length!==3||!move.by.every(Number.isFinite))throw Error('Invalid source furniture move in '+id);
+  source.traverse(o=>{if(o.isMesh&&move.names.includes(o.name)){if(o.userData.v2FitoutMoved)return;move.by.forEach((v,i)=>o.position.setComponent(i,o.position.getComponent(i)+v));o.userData.v2FitoutMoved=true;}});
+ }
+}
+
 // A small room edit is data shared by the clean build and the patch builder.
 // Added parts use metres in the room's fitting frame; replacements retain the
 // original placement unless explicitly changed. Collision uses the same mesh.
@@ -9,6 +17,7 @@ export function applyRoomFitoutOverrides(data,layout,overrides=defaultOverrides)
  const check=part=>{if(!part.part||!Array.isArray(part.size)||part.size.length!==3||!part.size.every(n=>Number.isFinite(n)&&n>0)||!Array.isArray(part.at)||part.at.length!==3||!part.at.every(Number.isFinite)||!materials.has(part.mat))throw Error('Invalid room fitout part in '+part.room);return part;};
  for(const [id,change]of Object.entries(overrides)){
   const craft=layout.shuttles?.find(s=>s.id===id),room=craft||layout.rooms.find(r=>r.id===id&&!r.aggregate);if(!room)throw Error('Unknown room fitout override '+id);
+  if(!change.add&&!change.replace&&!change.remove&&!change.rests)continue;
   const owner=craft?craft.roomId:id;
   const support=p=>/seat_cushion|mattress|lounger_cushion/.test(p.part),needsAnchors=()=>{if(!Array.isArray(change.rests))throw Error('Seat/bed geometry changed in '+id+'; supply the complete room rests array (or [] when removing all seats)');};
   if(craft&&(change.replace?.length||change.remove?.length||change.rests||(change.add||[]).some(support)))throw Error('Escape craft overrides support added non-seat fittings only');
