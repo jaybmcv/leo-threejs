@@ -17,7 +17,7 @@ import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import http from 'node:http';
 import WebSocket from 'ws';
-import {PVS_GRID,encodeCells} from '../src/v2/atrium-pvs.js';
+import {PVS_GRID,encodeCells,decodeCells} from '../src/v2/atrium-pvs.js';
 import {pvsKey} from '../src/v2/atrium-pvs-key.js';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
 import {build as bundle} from './native-bundle.mjs';
@@ -140,7 +140,24 @@ try{
   for(let dk=-1;dk<=1;dk++)for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){const kk=k+dk,ii=i+di,jj=j+dj;if(kk<0||kk>=ny||ii<0||ii>=nx||jj<0||jj>=nz)continue;const n=(kk*nx+ii)*nz+jj;if(cells[n])cells[n]=2;}}
  const envelopeUnknown=leaveEnvelope(cells);
  let hidden=0,visible=0;for(const v of cells){if(v===1)hidden++;else if(v===2)visible++;}
- const data={version:1,made:new Date().toISOString(),source,grid:PVS_GRID,heights:setup.heights,atriumSpan:setup.atriumSpan,localSpan:setup.localSpan,known:known.size,hidden,visible,envelopeUnknown,cells:encodeCells(cells)};
+ // The bake checks itself before it is kept, since the key proves only which geometry it was baked from: a GPU that drew
+ // nothing would call every cell hidden. At least a twentieth of the known cells must see the atrium, the cells must read
+ // back as written, and no cell may be hidden where eyes about the bench views (scripts/walk-frame-views.json) see it.
+ const cellAt=(x,y,z)=>{const i=Math.round((x-x0)/step),j=Math.round((z-z0)/step),k=Math.floor((y-y0)/2);return i<0||i>=nx||j<0||j>=nz||k<0||k>=ny?-1:(k*nx+i)*nz+j;};
+ let probes=0;const contradicted=new Set();
+ for(const v of JSON.parse(await fs.readFile('scripts/walk-frame-views.json','utf8'))){
+  const eyes=[];for(const h of setup.heights)for(const dx of [-2,0,2])for(const dz of [-2,0,2])eyes.push(v.at[0]+dx,v.at[1]+h,v.at[2]+dz,v.at[1]);
+  const r=await page.ev(`__atriumPvs.run(${JSON.stringify(eyes)})`);
+  r.visible.forEach((seen,e)=>{if(!seen)return;probes++;const c=cellAt(eyes[e*4],eyes[e*4+1],eyes[e*4+2]);if(c>=0&&cells[c]===1)contradicted.add(v.name);});
+ }
+ const encoded=encodeCells(cells),back=decodeCells(encoded,cells.length),problems=[];
+ if(visible<known.size/20)problems.push(`only ${visible} of ${known.size} known cells see the atrium`);
+ if(!probes)problems.push('no bench-view eye sees the atrium');
+ if(contradicted.size)problems.push('cells hidden where bench-view eyes see the atrium: '+[...contradicted].join(', '));
+ if(back.some((v,i)=>v!==cells[i]))problems.push('the cells do not read back as written');
+ console.log('check',{probes,contradicted:contradicted.size,visibleShare:+(visible/Math.max(1,known.size)).toFixed(3)});
+ if(problems.length)throw Error('The PVS failed its check, so it was not kept: '+problems.join('; '));
+ const data={version:1,made:new Date().toISOString(),source,grid:PVS_GRID,heights:setup.heights,atriumSpan:setup.atriumSpan,localSpan:setup.localSpan,known:known.size,hidden,visible,envelopeUnknown,cells:encoded};
  const out=arg('out',prepared?path.join(PVS_BAKED_DIR,source.key+'.json'):'output/perf-walk/atrium-pvs/'+tag+'.json');await fs.mkdir(path.dirname(out),{recursive:true});
  // Written whole, then renamed: a bake stopped part way (a deploy's time limit) leaves no half file under the key.
  await fs.writeFile(out+'.part',JSON.stringify(data));await fs.rename(out+'.part',out);
