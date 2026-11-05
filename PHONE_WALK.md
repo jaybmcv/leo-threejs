@@ -45,46 +45,47 @@ Measured with `scripts/phone-working-set.mjs` on the prepared build in leo-deplo
 
 So step 3 has to be its own phone payload with its own buffers. It can't be a reader over today's files. Its view up the atrium has to come from a light stand-in, not the real upper decks.
 
-## The phone walk (step 3, 2026-11-04)
+## The phone ship (step 3, 2026-11-05)
 
-`scripts/build-phone-walk.mjs` cuts the verified prepared build down to one connected area: the Deck 2 arrival hall and Hydroponic garden A over it (the hall's ceiling opens into the garden, and its cat tree climbs up to it), with 6 m around them. The output keeps the prepared-walk format, so `readPreparedWorld` reads it unchanged:
+A first version cut the ship down to the arrival hall (PR #329's first commit). Jay turned that down: phones should get the whole ship, made light. `scripts/build-phone-walk.mjs` now does that from the verified prepared build, without rebuilding the ship. The output keeps the prepared-walk format, so `readPreparedWorld` reads it unchanged:
 
-- **The whole node graph, names and templates stay,** so the walk code finds everything it looks for.
-- **Render geometry whose world bounds meet the area** keeps its triangles. Any geometry that reads a shared vertex pool is copied out into buffers of its own; triangle order is kept, so index ranges still hold. Everything else keeps only its bounds, as the baked source meshes already do.
-- **Some meshes stay whole wherever they are, because the walk reads them at start:**
-  - live source meshes (doors, hammocks), which feed merges whose templates are keyed on their contents;
-  - geometry templates, copied byte for byte;
-  - cabin frost;
-  - the facade's tower, sky and atrium floor, from which the phone distant view is drawn. Together with the existing phone distant hull, these are the light stand-in for the view up the atrium.
-- **Collision keeps the triangles that meet the area,** and those bands' BVHs are rebuilt. Instance copies outside the area are dropped; movers are kept.
-- **Pictures only emptied meshes use** become a 1×1 pixel.
+- **Render geometry is simplified** with meshoptimizer. Each connected part may move by at most 3% of its middle dimension and never more than 5 cm, so thin strips and floors of small parts (footprints) keep their shape. Lettering isn't simplified. Each material group and prepared range is simplified on its own, so their index ranges can be rewritten, and the vertices ranges share are locked so their seams can't open. Seam-crossing collapses (meshoptimizer's Permissive mode) would save another 80 MB, but they tore holes in curved trims, so they're off.
+- **Smaller vertices:** normals and colours become 8 bits, and indices 16 bits where a geometry has 65,535 vertices or fewer. Vertices that become identical are merged. The owner and finish ids, which only the inspector reads, are dropped.
+- **What the walk rebuilds from stays byte for byte:** geometry templates and live source meshes (its merged templates are keyed on their contents), cabin frost, the lounge, and the facade and haze meshes the phone distant view reads. Envelope batches carry room and finish ranges; they were merged from unindexed parts, so those ranges are rewritten like groups.
+- **Collision** is welded by position and simplified to 8 cm, glass and the rest each on its own. The BVHs are rebuilt with 32-triangle leaves and the index in BVH order, as the ship's are packed.
+- **Pictures are half size.** Arrays are meshopt-encoded.
 
-It takes about 8 s from a built prepared walk. Views from six spots in the hall and two in the garden match the whole ship's; only views out of the area (through the passenger-transfer glass) show nothing beyond it. Desktops still load the whole ship. `scripts/public-v2.mjs` runs it on every public build (`scripts/phone-walk-public.mjs`) into `prepared-walk-phone/<hash>/`, listed as `walk-phone` in the asset manifest. None of these files are geometry inputs, so deploys stay in the fast lane.
-
-On the walk side:
-
-- walk.html sends phones and 4 GB touch devices straight to the phone walk (`LEO_WALK_PHONE`). `?ship=full` asks for the whole ship and its start card instead.
-- `prepared-resource.public.js` loads `walk-phone`.
-- `main.public.js` keeps the walker inside the area (a walker carried off it comes back to the start). It also says, for a few seconds, that the phone walk is the arrival hall when the edge or a Go to destination outside the hall stops them. It skips the atrium detail pack.
-
-In phone emulation on the gaming PC (390×844, DPR 3, Android user agent, cold cache), against a1663a2's whole ship:
-
-| | Whole ship | Phone walk |
+| Prepared build 1722de76 | Whole ship | Phone ship |
 |---|---|---|
-| Download | 137.5 MB | 45.7 MB (the walk payload is 23 MB of it) |
-| Decoded geometry and collision | 1,090 MB | 107 MB |
-| Peak JS heap while loading | 1.69 GB | 496 MB |
-| JS heap after load and a GC | about 1.4 GB | 174 MB |
-| Walkable | 81 s | 25 s |
+| Render triangles (each geometry once) | 14.4M | 8.3M |
+| Collision triangles | 11.8M | 4.1M |
+| Decoded geometry and collision | 1,090 MB | 453 MB |
+| Payload download | 94 MB | 96 MB |
+| Pictures, decoded | 303 MB | 76 MB |
 
-Desktop Chrome collects garbage late, so its loading peak is mostly garbage a phone under memory pressure would collect sooner. Only a real phone will say what the peak is there.
+The build takes about 2 minutes. `scripts/public-v2.mjs` runs it on every public build through `scripts/phone-walk-public.mjs`, which writes it to `prepared-walk-phone/<hash>/` (listed as `walk-phone` in the asset manifest) and keeps it in `output/phone-walk-cache/`, keyed on the prepared walk and the builder. None of these files are geometry inputs, so deploys stay in the fast lane. Desktops still load the whole ship.
+
+On the walk side, walk.html sends phones and 4 GB touch devices straight to the phone ship (`LEO_WALK_PHONE`), with a line on the loading card saying it is a lighter copy. `?ship=full` asks for the full ship and its start card. `prepared-resource.public.js` loads `walk-phone`, and `main.public.js` skips the atrium detail pack.
+
+In phone emulation on the gaming PC (390×844, DPR 3, Android user agent, cold cache), on main 3bab5d7 with this branch:
+
+| | Full ship | Phone ship |
+|---|---|---|
+| Download | 144 MB | 118 MB |
+| Peak JS heap while loading | 1,678 MB | 889 MB |
+| JS heap once walkable | 1,473 MB | about 870 MB |
+| Walkable | 85 s | 85 s |
+
+Loading time is the walk's own setup on this PC (placing the ship and the first view take 40 s either way), not the payload. Views from six spots (arrival hall, library, sky garden lounge, observation lounge, a café, crew lounge) match the full ship. The window frames in the observation lounge still show a few faint marks.
+
+What is left of the heap, by a sampling heap profile: the geometry arrays, about 240 MB of objects (the scene graph, its matrices, the collision groups' boxes and the manifest), and copies the walk makes at start (the phone distant hull, low-deck batches). Desktop Chrome collects garbage late, so a phone's real peak is unknown until one loads it.
 
 ## Steps
 
 0. **Stop the silent crashes** (this branch). walk.html sets the start note before the walk script loads, records how far loading got, and clears both once the walk is ready. Likely phones (coarse pointer and a small screen or mobile user agent; not tablets or touch laptops) see the guided-tour card first, with Try anyway; a phone that has finished loading before goes straight in. `scripts/check-phone-memory.mjs` reports download, peak heap and time to a walkable view in phone emulation. It reports only and blocks nothing.
 1. **Real phones, now.** Safari on a named iPhone; Chrome on a 4 GB and an 8 GB Android. Record where each stops: network, stalled decode, WebGL context loss or the tab closing. So far (2026-11-04): a Galaxy S20 Ultra (12 GB) stalled on the first try and loaded after a refresh. A Galaxy S9 (about 4 GB) never finished: the loading line flashed between "Loading prepared collisions…" and "Fitting the walls…", then the tab crashed and the phone overheated. No iPhone yet.
 2. **Measure one phone working set.** Done for the arrival spot (above). Not yet measured: a route away from arrival, and the overlap while moving between areas.
-3. **Build the smallest useful phone walk.** Done in phone emulation (above): the arrival hall and the garden over it, from a payload of their own, with their collision, the phone distant hull and the facade's tower and sky for the view up the atrium. Next: the same real phones as step 1, starting with the Galaxy S9 that couldn't load the whole ship.
+3. **A phone payload of its own.** Done in phone emulation (above): the whole ship, made light. Next: the same real phones as step 1, starting with the Galaxy S9 that couldn't load the full ship. If it still runs short, the next savings are 16-bit positions (about 60 MB), reading the payload one part at a time (about 100 MB off the loading peak) and coarser collision.
 4. **Keep phone changes quick to build.** Derive the phone payload from the verified prepared build without the full rebuild where the inputs allow, with its own integrity and publishing support.
 5. **Stream only if phones need more of the ship.** Prototype with two areas, one of them the atrium, before splitting the whole ship: explicit dependencies, a bounded resident set, waiting navigation, safe collision handoff, cancellation and recovery.
 6. **Agree acceptance from real phones** (Jay's call, since he retired the blocking limits on 2026-11-02). Measure a walkable view and the worst transitions, not the login card. Starting targets from the review: 10–15 MB to a walkable view, at most 350 MB peak JS heap including transitions, about 100 MB of decoded geometry and collision resident, time measured on a named phone. Narrow the step 0 card only once phones pass.
