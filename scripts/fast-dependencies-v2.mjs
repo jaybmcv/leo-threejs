@@ -19,7 +19,11 @@ const roots=['src/model.js','src/walk/prepare.js','src/walk/prepare.authoring.js
  'src/concept-paint.js','src/v2/signs.js','src/walk/fin-casing.js',
  'src/walk/windows.js','src/walk/lounge-floor.authoring.js','src/walk/lift-tile-floor.authoring.js',
  // The paintings' frames and canvases are prepared geometry templates recorded by the authoring page.
- 'src/walk/paintings.authoring.js'];
+ 'src/walk/paintings.authoring.js',
+ // The rest of what only the authoring page (main.authoring.js) adds to the prepared walk. Lift cars, doors and gates
+ // and their signs (lift-ride.js) and the Deck 2 hangar door's leaves (hangar-door.js) are prepared movable collision; the hostess
+ // is built from the Cosmo kit and Paws Off's belts from the ship and its ground, so edits to them take a full build.
+ 'src/walk/lift-ride.authoring.js','src/v2/hangar-door.js','src/walk/hostess.authoring.js','src/walk/paws-off/game.authoring.js'];
 const producerScripts=['v2-build','v2-world','layout-v2-data','build-exterior-v2',
  'fit-cabin-ceilings-v2','ceiling-coverage-v2','v2-indexed-export','v2-export',
  'v2-export-metadata','retire-obsolete-facades-v2','freight-threshold-retirement-v2'];
