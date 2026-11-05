@@ -1,4 +1,4 @@
-// node --max-old-space-size=12000 scripts/build-phone-walk.mjs <prepared-walk dir> <out dir> [--error 0.05] [--relative 0.03] [--collision-error 0.08] [--textures 0.5] [--top N]
+// node --max-old-space-size=12000 scripts/build-phone-walk.mjs <prepared-walk dir> <out dir> [--error 0.05] [--relative 0.03] [--collision-error 0.025] [--textures 0.5] [--top N]
 // The phone ship (PHONE_WALK.md step 3): the whole verified prepared build made light enough for a phone, without
 // rebuilding the ship. Same file format as prepared-walk, so readPreparedWorld reads it unchanged:
 // - render geometry is simplified with meshoptimizer: each connected part to --relative of its middle dimension (so
@@ -9,7 +9,8 @@
 // - what the walk rebuilds from stays byte for byte: geometry templates and live source meshes (its merged templates
 //   are keyed on their contents), cabin frost, the lounge, the facade and haze meshes the phone distant view reads,
 //   and source meshes with vertex ranges;
-// - collision bands are welded and simplified to --collision-error (window glass on its own), and their BVHs rebuilt;
+// - collision bands are welded and simplified to --collision-error (window glass on its own), checked against the full
+//   collision on floors and walls and kept exact where they differ, and their BVHs rebuilt;
 // - pictures are scaled by --textures;
 // - arrays are meshopt-encoded, as the prepared walk's are.
 // --top N also lists the N largest geometries. scripts/phone-walk-public.mjs runs it for the public site.
@@ -18,14 +19,15 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import crypto from 'node:crypto';
 import * as T from 'three';
-import {MeshBVH} from 'three-mesh-bvh';
+import os from 'node:os';
+import {Worker} from 'node:worker_threads';
 import {MeshoptDecoder,MeshoptSimplifier} from 'meshoptimizer';
 import {MeshoptEncoder} from 'meshoptimizer/encoder';
 import sharp from 'sharp';
 
 const args=process.argv.slice(2),flag=n=>{const i=args.indexOf(n);if(i<0)return null;const v=args[i+1];args.splice(i,2);return v;};
-const top=Number(flag('--top')||0),maxError=Number(flag('--error')||0.05),relativeError=Number(flag('--relative')||0.03),collisionError=Number(flag('--collision-error')||0.08),textureScale=Number(flag('--textures')||0.5),[source,out]=args;
-if(!source||!out)throw Error('usage: build-phone-walk.mjs <prepared-walk dir> <out dir> [--error 0.05] [--relative 0.03] [--collision-error 0.08] [--textures 0.5]');
+const top=Number(flag('--top')||0),maxError=Number(flag('--error')||0.05),relativeError=Number(flag('--relative')||0.03),collisionError=Number(flag('--collision-error')||0.025),textureScale=Number(flag('--textures')||0.5),[source,out]=args;
+if(!source||!out)throw Error('usage: build-phone-walk.mjs <prepared-walk dir> <out dir> [--error 0.05] [--relative 0.03] [--collision-error 0.025] [--textures 0.5]');
 const PART=8388608,started=Date.now();
 const read=name=>fs.readFileSync(path.join(source,name));
 const inflate=b=>b[0]===0x28&&b[1]===0xb5?zlib.zstdDecompressSync(b):zlib.gunzipSync(b);
@@ -89,7 +91,11 @@ const light=gi=>{const g=m.geometries[gi],o=geometries[gi];if(done.has(gi))retur
  const I=Uint32Array.from(index,v=>local.get(v));
  const ranges=g.userData?.preparedRanges||[],end=x=>Number.isFinite(x.count)?x.start+x.count:n*3;
  const finishes=g.userData?.finishParts||[],owned=vertexRanges.get(gi)||[],cuts=new Set([0,n]);for(const x of [...g.groups||[],...finishes,...owned]){cuts.add(x.start/3);cuts.add(end(x)/3);}for(const r of ranges){cuts.add(r.start);cuts.add(r.start+r.count);}
- const edges=[...cuts].filter(x=>Number.isInteger(x)&&x>=0&&x<=n).sort((a,b)=>a-b),named=[...ranges].sort((a,b)=>a.start-b.start),moved=new Map(),pieces=[];let kept=0,r=0;
+ const edges=[...cuts].filter(x=>Number.isInteger(x)&&x>=0&&x<=n).sort((a,b)=>a-b),moved=new Map(),pieces=[];let kept=0;
+ // Lettering keeps every triangle: a piece is lettering when the mesh, or the prepared range or finish part it lies in, is
+ // named like it.
+ const lettering=LETTERING.test(owners.get(gi)||''),named=[...ranges.map(x=>[x.start,x.start+x.count,x.name]),...finishes.map(x=>[x.start/3,end(x)/3,x.name])].filter(([,,name])=>LETTERING.test(name||''));
+ const isLettering=t=>lettering||named.some(([a,b])=>t>=a&&t<b);
  // Welded by position: connected parts, each simplified to its own size (a floor of footprints is many small parts),
  // and the vertices pieces share, which are locked so their seams can't open.
  const weld=MeshoptSimplifier.generatePositionRemap(P,3),parent=new Int32Array(u).map((_,i)=>i),find=x=>{while(parent[x]!==x){parent[x]=parent[parent[x]];x=parent[x];}return x;};
@@ -98,12 +104,14 @@ const light=gi=>{const g=m.geometries[gi],o=geometries[gi];if(done.has(gi))retur
  const allowed=new Map();for(const [c,e] of extent){const size=[e[3]-e[0],e[4]-e[1],e[5]-e[2]].sort((x,y)=>x-y)[1],error=Math.min(maxError,size*relativeError);allowed.set(c,LEVELS.findLast(x=>x<=error)??0);}
  const piece=new Int32Array(u).fill(-1);for(let s=0;s+1<edges.length;s++)for(let t=edges[s]*3;t<edges[s+1]*3;t++){const w=weld[I[t]];piece[w]=piece[w]===-1||piece[w]===s?s:-2;}
  const lock=Uint8Array.from(weld,w=>piece[w]===-2?1:0),none=new Float32Array(0);
- for(let s=0;s+1<edges.length;s++){const a=edges[s],b=edges[s+1];moved.set(a,kept);while(r+1<named.length&&named[r+1].start<=a)r++;const name=named[r]?.start<=a?named[r].name:'';
-  const byLevel=new Map();for(let t=a;t<b;t++){const level=LETTERING.test(name)?0:allowed.get(find(weld[I[t*3]]));let list=byLevel.get(level);if(!list)byLevel.set(level,list=[]);list.push(t);}
+ for(let s=0;s+1<edges.length;s++){const a=edges[s],b=edges[s+1];moved.set(a,kept);const text=isLettering(a);
+  const byLevel=new Map();for(let t=a;t<b;t++){const level=text?0:allowed.get(find(weld[I[t*3]]));let list=byLevel.get(level);if(!list)byLevel.set(level,list=[]);list.push(t);}
   for(const [level,list] of byLevel){let part=new Uint32Array(list.length*3);list.forEach((t,i)=>{part[i*3]=I[t*3];part[i*3+1]=I[t*3+1];part[i*3+2]=I[t*3+2];});
    if(level>0&&list.length>=4)[part]=MeshoptSimplifier.simplifyWithAttributes(part,P,3,none,0,[],lock,0,level,['ErrorAbsolute','Sparse']);
    pieces.push(part);kept+=part.length/3;}}
  moved.set(n,kept);
+ // Every rewritten range ends on a cut; one that doesn't (a range off the triangles) stops the build.
+ const to3=x=>{const v=moved.get(x);if(v===undefined)throw Error(`Geometry ${gi} (${owners.get(gi)}): a range ends at ${x}, between cuts`);return v;};
  const used=new Uint8Array(u);for(const p of pieces)for(const q of p)used[q]=1;const keep=[],again=new Int32Array(u).fill(-1);for(let i=0;i<u;i++)if(used[i]){again[i]=keep.length;keep.push(i);}
  const idx=new Uint32Array(kept*3);let at=0;for(const p of pieces)for(const q of p)idx[at++]=again[q];
  const poolOrder=Uint32Array.from(keep,i=>verts[i]),light=[];
@@ -114,10 +122,10 @@ const light=gi=>{const g=m.geometries[gi],o=geometries[gi];if(done.has(gi))retur
  for(let i=0;i<idx.length;i++)idx[i]=to[idx[i]];
  o.index=write(first.length<=65535?Uint16Array.from(idx):idx,sequence);o.attributes={};
  for(const [k,d,record] of light){const size=record.itemSize,e=new d.constructor(first.length*size);first.forEach((i,n)=>{for(let j=0;j<size;j++)e[n*size+j]=d[i*size+j];});o.attributes[k]={...record,array:write(e,vertex({itemSize:size,constructor:e.constructor}))};}
- o.groups=(g.groups||[]).map(x=>({...x,start:moved.get(x.start/3)*3,count:(moved.get(end(x)/3)-moved.get(x.start/3))*3}));
- if(ranges.length)o.userData={...g.userData,preparedRanges:ranges.map(x=>({...x,start:moved.get(x.start),count:moved.get(x.start+x.count)-moved.get(x.start)}))};
- if(finishes.length)o.userData={...o.userData??g.userData,finishParts:finishes.map(x=>({...x,start:moved.get(x.start/3)*3,count:(moved.get(end(x)/3)-moved.get(x.start/3))*3}))};
- if(owned.length)movedBy.set(gi,moved);
+ o.groups=(g.groups||[]).map(x=>({...x,start:to3(x.start/3)*3,count:(to3(end(x)/3)-to3(x.start/3))*3}));
+ if(ranges.length)o.userData={...g.userData,preparedRanges:ranges.map(x=>({...x,start:to3(x.start),count:to3(x.start+x.count)-to3(x.start)}))};
+ if(finishes.length)o.userData={...o.userData??g.userData,finishParts:finishes.map(x=>({...x,start:to3(x.start/3)*3,count:(to3(end(x)/3)-to3(x.start/3))*3}))};
+ if(owned.length)movedBy.set(gi,to3);
  simplified.triangles+=n;simplified.kept+=kept;simplified.vertices+=u;simplified.keptVertices+=first.length;};
 
 // Which geometries stay byte for byte.
@@ -146,35 +154,31 @@ phase='render';for(let gi=0;gi<geometries.length;gi++){const g=m.geometries[gi];
 
 // Graph array references (instances, userData arrays) are copied as they are.
 const remapValue=v=>{if(v===null||typeof v!=='object')return v;if(v.$array!==undefined)return {$array:copy(v.$array)};if(Array.isArray(v))return v.map(remapValue);return Object.fromEntries(Object.entries(v).map(([k,x])=>[k,remapValue(x)]));};
-const ownerRanges=(n,u)=>{const moved=movedBy.get(n.geometry);if(!moved||!u?.ownerRanges)return u;return {...u,ownerRanges:u.ownerRanges.map(r=>({...r,start:moved.get(r.start/3)*3,count:(moved.get((r.start+r.count)/3)-moved.get(r.start/3))*3}))};};
+const ownerRanges=(n,u)=>{const to3=movedBy.get(n.geometry);if(!to3||!u?.ownerRanges)return u;return {...u,ownerRanges:u.ownerRanges.map(r=>({...r,start:to3(r.start/3)*3,count:(to3((r.start+r.count)/3)-to3(r.start/3))*3}))};};
 const graph=data=>data&&{...data,nodes:data.nodes.map(n=>({...n,...n.instanceMatrix!==undefined?{instanceMatrix:copy(n.instanceMatrix,{kind:'vertex',rawStride:64})}:{},...n.instanceColor!==undefined&&n.instanceColor!==null?{instanceColor:copy(n.instanceColor,{kind:'vertex',rawStride:3*types[m.arrays[n.instanceColor].type].BYTES_PER_ELEMENT})}:{},userData:remapValue(ownerRanges(n,n.userData))}))};
 for(const g of geometries)if(g.userData)g.userData=remapValue(g.userData);
 
-// Collision.
-const geometryRecord=(positions,index)=>{const id=geometries.length,b=new T.Box3().setFromArray(positions),s=b.getBoundingSphere(new T.Sphere());geometries.push({name:'',type:'BufferGeometry',attributes:{position:{array:write(positions,{kind:'vertex',rawStride:12}),itemSize:3,normalized:false,usage:35044,instanced:false,gpuType:1015}},index:write(index,sequence),groups:[],bounds:[b.min.toArray(),b.max.toArray()],sphere:[s.center.toArray(),s.radius],userData:{}});return id;};
+// Collision. A band's rebuilt geometry takes its old record's place, so nothing is left pointing at old arrays.
+const geometryRecord=(id,positions,index)=>{const b=new T.Box3().setFromArray(positions),s=b.getBoundingSphere(new T.Sphere());geometries[id]={name:'',type:'BufferGeometry',attributes:{position:{array:write(positions,{kind:'vertex',rawStride:12}),itemSize:3,normalized:false,usage:35044,instanced:false,gpuType:1015}},index:write(index,sequence),groups:[],bounds:[b.min.toArray(),b.max.toArray()],sphere:[s.center.toArray(),s.radius],userData:{}};done.add(id);return id;};
 // Group and mover BVHs stay as they are. Prepared BVHs are read with setIndex:false, so their index is the geometry's own.
 const sameBvh=r=>{exact(r.geometry);return {version:r.version,windowFlags:copy(r.windowFlags,{kind:'vertex',rawStride:1}),geometry:r.geometry,roots:r.roots.map(id=>copy(id,{kind:'vertex',rawStride:32})),index:geometries[r.geometry].index,indirect:copy(r.indirect,sequence)};};
-let collisionTriangles=0,collisionKept=0;
-// A band is welded by position and simplified, glass and the rest each on its own (windowFlags is per triangle), then its BVH
-// rebuilt.
-const lightBvh=r=>{const g=m.geometries[r.geometry],pool=decode(g.attributes.position.array),index=g.index!==null&&g.index!==undefined?decode(g.index):null,flags=r.windowFlags!==null&&r.windowFlags!==undefined?decode(r.windowFlags):null;
+let collisionTriangles=0,collisionKept=0;const walking={samples:0,differed:0,still:0,exactTriangles:0};
+// Bands are simplified and checked against the full collision in worker threads (scripts/phone-collision-band.mjs, which
+// says how), then written here in band order.
+const bandOptions={error:collisionError,floorTolerance:Number(flag('--floor-tolerance')||0.03),wallTolerance:Number(flag('--wall-tolerance')||0.05),near:Number(flag('--near')||0.4)};
+const bandOf=r=>{const g=m.geometries[r.geometry],pool=decode(g.attributes.position.array),index=g.index!==null&&g.index!==undefined?decode(g.index):null,flags=r.windowFlags!==null&&r.windowFlags!==undefined?decode(r.windowFlags):null;
  const count=(index?index.length:pool.length/3)/3,corner=i=>index?index[i]:i;
  const remap=new Map(),order=[],I=new Uint32Array(count*3);for(let i=0;i<count*3;i++){const p=corner(i);let q=remap.get(p);if(q===undefined){q=order.length;remap.set(p,q);order.push(p);}I[i]=q;}
  const P=new Float32Array(order.length*3);order.forEach((p,i)=>{P[i*3]=pool[p*3];P[i*3+1]=pool[p*3+1];P[i*3+2]=pool[p*3+2];});
- const weld=MeshoptSimplifier.generatePositionRemap(P,3);for(let i=0;i<I.length;i++)I[i]=weld[I[i]];
- const classes=new Map();for(let t=0;t<count;t++){const f=flags?flags[t]:0;let list=classes.get(f);if(!list)classes.set(f,list=[]);list.push(t);}
- const kept=[],keptFlags=[];for(const [f,list] of classes){const piece=new Uint32Array(list.length*3);list.forEach((t,i)=>{piece[i*3]=I[t*3];piece[i*3+1]=I[t*3+1];piece[i*3+2]=I[t*3+2];});
-  const [s]=MeshoptSimplifier.simplify(piece,P,3,0,collisionError,['ErrorAbsolute','Sparse']);kept.push(s);for(let i=0;i<s.length/3;i++)keptFlags.push(f);}
- const all=new Uint32Array(keptFlags.length*3);let at=0;for(const s of kept){all.set(s,at);at+=s.length;}
- const again=new Map(),verts=[],idx=new Uint32Array(all.length);for(let i=0;i<all.length;i++){let q=again.get(all[i]);if(q===undefined){q=verts.length;again.set(all[i],q);verts.push(all[i]);}idx[i]=q;}
- const positions=new Float32Array(verts.length*3);verts.forEach((p,i)=>{positions[i*3]=P[p*3];positions[i*3+1]=P[p*3+1];positions[i*3+2]=P[p*3+2];});
- collisionTriangles+=count;collisionKept+=keptFlags.length;
- // 32-triangle leaves with the index put in BVH order and no indirect buffer, as scripts/prepared-collision-pack.mjs
- // packs the ship's.
- const geom=new T.BufferGeometry();geom.setAttribute('position',new T.BufferAttribute(positions,3));geom.setIndex(new T.BufferAttribute(idx,1));
- const bvh=new MeshBVH(geom,{targetLeafSize:32,indirect:true}),s=MeshBVH.serialize(bvh,{cloneBuffers:false}),permutation=s.indirectBuffer,direct=new Uint32Array(idx.length),directFlags=new Uint8Array(permutation.length);
- for(let i=0;i<permutation.length;i++){const t=permutation[i];direct[i*3]=idx[t*3];direct[i*3+1]=idx[t*3+1];direct[i*3+2]=idx[t*3+2];directFlags[i]=keptFlags[t];}
- const id=geometryRecord(positions,direct);return {version:s.version,windowFlags:flags?write(directFlags,{kind:'vertex',rawStride:1}):null,geometry:id,roots:s.roots.map(x=>write(new Uint8Array(x),{kind:'vertex',rawStride:32})),index:geometries[id].index,indirect:null};};
+ const weld=MeshoptSimplifier.generatePositionRemap(P,3);for(let i=0;i<I.length;i++)I[i]=weld[I[i]];return {P,I,flags:flags?Uint8Array.from(flags):null};};
+const allBands=c=>[...c.bands.map(([,r])=>r),...c.ground?allBands(c.ground):[]],jobs=allBands(m.colliders),results=new Array(jobs.length);
+await new Promise((resolve,reject)=>{let next=0,finished=0;const size=Math.max(1,Math.min(jobs.length,os.availableParallelism()-2,12));if(!jobs.length)return resolve();
+ for(let w=0;w<size;w++){const worker=new Worker(new URL('./phone-collision-band.mjs',import.meta.url));
+  const give=()=>{if(next>=jobs.length){worker.terminate();return;}const id=next++,band=bandOf(jobs[id]);worker.postMessage({id,band,options:bandOptions},[band.P.buffer,band.I.buffer,...band.flags?[band.flags.buffer]:[]]);};
+  worker.on('message',({id,r,error})=>{if(error)return reject(Error('Collision band '+id+': '+error));results[id]=r;if(++finished===jobs.length)resolve();give();});worker.on('error',reject);give();}});
+let band=0;
+const lightBvh=r=>{const x=results[band++];for(const k of Object.keys(walking))walking[k]+=x.walking[k];collisionTriangles+=x.triangles;collisionKept+=x.kept;
+ const id=geometryRecord(r.geometry,x.positions,x.index);return {version:x.version,windowFlags:r.windowFlags!==null&&r.windowFlags!==undefined?write(x.flags,{kind:'vertex',rawStride:1}):null,geometry:id,roots:x.roots.map(b=>write(b,{kind:'vertex',rawStride:32})),index:geometries[id].index,indirect:null};};
 const colliders=col=>({bands:col.bands.map(([k,r])=>[k,lightBvh(r)]),groups:col.groups.map(g=>({...g,bvh:sameBvh(g.bvh)})),movers:col.movers.map(x=>({...x,bvh:sameBvh(x.bvh)})),ground:col.ground?colliders(col.ground):null});
 phase='collision';const phoneColliders=colliders(m.colliders);phase='graphs';
 
@@ -184,6 +188,22 @@ const images=await Promise.all(m.images.map(async i=>{const url=i.url;if(typeof 
  const data=Buffer.from(url.slice(url.indexOf(',')+1),'base64'),picture=sharp(data),{width,height,format}=await picture.metadata(),w=Math.max(16,Math.round(width*textureScale)),h=Math.max(16,Math.round(height*textureScale));
  if(w>=width&&h>=height)return i;const smaller=await picture.resize(w,h,{fit:'fill'})[format==='jpeg'?'jpeg':'png']().toBuffer();pictureBytes[0]+=width*height*4;pictureBytes[1]+=w*h*4;
  return {...i,url:'data:image/'+(format==='jpeg'?'jpeg':'png')+';base64,'+smaller.toString('base64')};}));
+
+// Checks that stop the build. Every geometry the walk will build reads only arrays written here, whole items of them,
+// and its index stays inside them; every BVH's index is its geometry's.
+const itemsOf=a=>{const r=records[a.array];return (r.decodedBytes??r.bytes)/(a.itemSize*types[r.type].BYTES_PER_ELEMENT);};
+for(let gi=0;gi<geometries.length;gi++){const g=geometries[gi],names=Object.keys(g.attributes);if(!names.length)continue;
+ const where=`Phone ship geometry ${gi} (${owners.get(gi)||'collision'})`;if(!done.has(gi))throw Error(where+' still reads the old arrays');
+ const counts=new Set(names.map(k=>{const a=g.attributes[k];if(!records[a.array])throw Error(where+': no array '+a.array);const n=itemsOf(a);if(!Number.isInteger(n))throw Error(where+': '+k+' is not whole items');return n;}));
+ if(counts.size!==1)throw Error(where+': attributes of different lengths');
+ if(g.index!==null&&g.index!==undefined){const r=records[g.index];if(!r||!/Uint(16|32)Array/.test(r.type)||((r.decodedBytes??r.bytes)/types[r.type].BYTES_PER_ELEMENT)%3)throw Error(where+': bad index');}}
+const bvhs=c=>[...c.bands.map(([,r])=>r),...c.groups.map(x=>x.bvh),...c.movers.map(x=>x.bvh),...c.ground?bvhs(c.ground):[]];
+for(const r of bvhs(phoneColliders))if(r.index!==geometries[r.geometry].index)throw Error('Phone ship BVH index is not its geometry index');
+// Low-deck batching (src/v2/facade.js) merges a band's meshes that share a material, render order and attribute sizes and
+// normalisation; their arrays must be of one type, or the merge fails on a phone without WEBGL_multi_draw.
+for(const [key,d] of m.bands){const buckets=new Map();for(const n of d.nodes){if(n.geometry===undefined||n.instanceMatrix!=null||Array.isArray(n.material))continue;const g=geometries[n.geometry];if(!g.attributes.position)continue;
+ const shape=Object.entries(g.attributes).map(([k,a])=>k+':'+a.itemSize+':'+a.normalized).sort().join(','),kinds=Object.entries(g.attributes).map(([k,a])=>k+':'+records[a.array].type).sort().join(','),bucket=n.material+'|'+(n.renderOrder||0)+'|'+shape;
+ const seen=buckets.get(bucket);if(seen===undefined)buckets.set(bucket,kinds);else if(seen!==kinds)throw Error(`Phone ship band ${key}: one batch mixes ${seen} and ${kinds}`);}}
 
 const manifest={...m,arrays:records,geometries,images,parts:[],source:graph(m.source),bands:m.bands.map(([k,d])=>[k,graph(d)]),haze:graph(m.haze),facade:graph(m.facade),lounge:graph(m.lounge),frost:graph(m.frost),signs:graph(m.signs),colliders:phoneColliders,
  ship:remapValue(m.ship),rest:remapValue(m.rest),seats:remapValue(m.seats),privacy:remapValue(m.privacy),roomFeatureSupports:remapValue(m.roomFeatureSupports),
@@ -197,7 +217,7 @@ const world=zlib.zstdCompressSync(Buffer.from(JSON.stringify(manifest)),{params:
 const hash=crypto.createHash('sha256');for(const name of [...files].sort()){hash.update(name);hash.update(fs.readFileSync(path.join(out,name)));}
 const mb=n=>+(n/1e6).toFixed(1);
 const report={sha256:hash.digest('hex'),files,source:manifest.phone.source,error:maxError,relativeError,collisionError,textureScale,decodedMB:mb(decodedTotal),downloadMB:mb(manifest.parts.reduce((n,p)=>n+p.zipped,0)+world.length),metadataMB:mb(world.length),
- render:{stats,triangles:simplified.triangles,kept:simplified.kept,vertices:simplified.vertices,keptVertices:simplified.keptVertices,whole:[...whole].length},collision:{triangles:collisionTriangles,kept:collisionKept,bands:phoneColliders.bands.length},
+ render:{stats,triangles:simplified.triangles,kept:simplified.kept,vertices:simplified.vertices,keptVertices:simplified.keptVertices,whole:[...whole].length},collision:{triangles:collisionTriangles,kept:collisionKept,bands:phoneColliders.bands.length,walking},
  pictures:{decodedMB:mb(pictureBytes[0]),scaledMB:mb(pictureBytes[1])},decodedMBBy:Object.fromEntries(Object.entries(bytesBy).map(([k,v])=>[k,mb(v)])),seconds:Math.round((Date.now()-started)/1000)};
 fs.writeFileSync(path.join(out,'integrity.json'),JSON.stringify(report,null,1));
 console.log(JSON.stringify(report,null,1));
