@@ -1511,7 +1511,7 @@
       ],
       "interactionTargets": null,
       "placements": 47,
-      "signature": "575ddc5a00d97a904f0e6ffb8fae58688112fa94f62ee5653ea4ee85c045d4cb"
+      "signature": "13bac5d8789369aa842208682dc20a527fb119b02400d79a69b1b23dc6cfbd09"
     },
     {
       "source": "src/walk/cat-tree.js",
@@ -1537,7 +1537,7 @@
       ],
       "interactionTargets": null,
       "placements": 47,
-      "signature": "575ddc5a00d97a904f0e6ffb8fae58688112fa94f62ee5653ea4ee85c045d4cb"
+      "signature": "13bac5d8789369aa842208682dc20a527fb119b02400d79a69b1b23dc6cfbd09"
     },
     {
       "source": "src/walk/cat-tree.prepared.js",
@@ -1563,7 +1563,7 @@
       ],
       "interactionTargets": null,
       "placements": 47,
-      "signature": "575ddc5a00d97a904f0e6ffb8fae58688112fa94f62ee5653ea4ee85c045d4cb"
+      "signature": "13bac5d8789369aa842208682dc20a527fb119b02400d79a69b1b23dc6cfbd09"
     },
     {
       "source": "src/walk/cat-tree.public.js",
@@ -1589,7 +1589,7 @@
       ],
       "interactionTargets": null,
       "placements": 47,
-      "signature": "575ddc5a00d97a904f0e6ffb8fae58688112fa94f62ee5653ea4ee85c045d4cb"
+      "signature": "13bac5d8789369aa842208682dc20a527fb119b02400d79a69b1b23dc6cfbd09"
     },
     {
       "source": "src/walk/catnip-face.js",

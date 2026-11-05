@@ -104,6 +104,7 @@ function clearOf(){
   for(const [px,py,pz] of ramp)if(Math.hypot(x-px,z-pz)<RAMP_W/2+pad+.4&&y>py-.6-pad&&y<py+2.8+pad)return false;
   for(const p of PLATFORMS)if(Math.hypot(x-p.x,z-p.z)<p.r+pad&&y>p.y-.7-vpad&&y<p.y+2.9+vpad)return false;
   {const r=Math.hypot(x-TREE.x,z-TREE.z);if(r<RING.outer+pad&&y>RING.y-.7-vpad&&y<RING.y+2.2+vpad)return false;}
+  for(const d of DENS){const dx=x-TREE.x,dz=z-TREE.z,u=dx*Math.cos(d.a)+dz*Math.sin(d.a),v=-dx*Math.sin(d.a)+dz*Math.cos(d.a);if(u>d.front-.2&&u<d.front+2.4+pad&&Math.abs(v)<d.w+.6+pad&&y>d.y-.3&&y<d.y+d.h+.6+pad)return false;}
   for(const b of BRIDGES)if(x>b.x0-pad&&x<b.x1+pad&&Math.abs(z)<b.width/2+pad+.3&&y>b.y-.6-pad&&y<b.y+2.8+pad)return false;
   return true;};
 }
@@ -119,7 +120,7 @@ export function createCatTree(ship){
  const glow=new T.MeshStandardMaterial({name:'Cat_tree_lantern',color:0xffb860,emissive:0xff9a30,emissiveIntensity:2,roughness:.6});
  const denGlow=new T.MeshStandardMaterial({name:'Cat_tree_den',color:0xffb060,emissive:0xff8a30,emissiveIntensity:.9,roughness:.8,side:T.DoubleSide});
  const hidden=new T.MeshBasicMaterial({visible:false});
- const parts=[],lights=[],dens=[],sprigs=[],walls=[],grounds={island:[],ramp:[],platform:[],bridge:[],step:[],cushion:[]},addWall=(...g)=>walls.push(...g);
+ const parts=[],lights=[],dens=[],sprigs=[],sprigCards=[],walls=[],grounds={island:[],ramp:[],platform:[],bridge:[],step:[],cushion:[]},addWall=(...g)=>walls.push(...g);
  const clear=clearOf(),y0=TREE.floor;
 
  // Island: a felt-moss disc with a low rim, mounds and boulders round the edge.
@@ -200,6 +201,8 @@ export function createCatTree(ship){
   const ring=strip(N,f,.5);fixNormals(ring);grounds.platform.push(ring.clone());parts.push(sisal(ring,30));
   const pad=strip(N,t=>{const o=f(t);return {...o,y:o.y+.04,ri:o.ri+.1,ro:o.ro-.25};},.04);fixNormals(pad);parts.push(paint(pad,C.carpet[3]));
   guardRing(15,TREE.x,TREE.z,RING.outer-.12,RING.y,(x,z)=>bridgeAt(15,x,z));
+  // a rosette of drooping felt leaves over the trunk's top, above the walkers' heads on the ring
+  for(let k=0;k<8;k++){const a=k/8*Math.PI*2,out=new T.Vector3(Math.cos(a),0,Math.sin(a)),n=new T.Vector3(0,1,0).addScaledVector(out,.7).normalize(),X=out.clone().sub(n.clone().multiplyScalar(out.dot(n))).normalize();sprigCards.push({pos:new T.Vector3(TREE.x,TREE.top+.15,TREE.z).addScaledVector(out,1.9),X,Y:n,Z:new T.Vector3().crossVectors(X,n),sc:3,c:C.leaf[k%3],v:.98});}
   // and a lantern on a sisal post at its rail
   {const a=RING.angle+Math.PI*.3,x=TREE.x+Math.cos(a)*7.2,z=TREE.z+Math.sin(a)*7.2,post=at(new T.CylinderGeometry(.15,.17,1.7,8),x,RING.y+.85,z);parts.push(sisal(post,24));addWall(post.clone());
    lights.push(at(new T.BoxGeometry(.55,.68,.55),x,RING.y+2.05,z));parts.push(paint(at(new T.BoxGeometry(.68,.09,.68),x,RING.y+2.43,z),C.wood),paint(at(new T.BoxGeometry(.62,.07,.62),x,RING.y+1.68,z),C.wood));}
@@ -290,13 +293,14 @@ export function createCatTree(ship){
     slots.push({pos,X:X.clone(),Y:n,Z:Z.clone(),sc:sc*(r1?1:1.1),c:tint,v:(.86+rnd()*.16)*(.92+.2*Math.max(0,Math.min(1,(pos.y-2)/16)))});}}
   for(const q of sprigs)for(let k=0;k<5;k++){const ang=k/5*Math.PI*2+rnd(),tan=new T.Vector3(Math.cos(ang),0,Math.sin(ang)),n=new T.Vector3(0,1,0).addScaledVector(tan,.5).normalize(),pos=q.clone().addScaledVector(tan,.9);
    if(!clear(pos.x,pos.y,pos.z,.8)||!inOpening(pos.x,pos.y,pos.z,pos.y+.5,.8))continue;X.copy(tan).sub(n.clone().multiplyScalar(tan.dot(n))).normalize();Z.crossVectors(X,n);slots.push({pos,X:X.clone(),Y:n,Z:Z.clone(),sc:1.9,c:C.leaf[k%3],v:.95});}
+  slots.push(...sprigCards);
   const map=leafTexture(),leafMat=felt(new T.MeshStandardMaterial({name:'Cat_tree_leaves',color:0xffffff,map,alphaTest:map?.5:0,side:T.DoubleSide,roughness:.95}),.6);
   const leaves=new T.InstancedMesh(leaf,leafMat,slots.length);leaves.name='Cat_tree_leaves';
   slots.forEach((p,i)=>{m.makeBasis(p.X,p.Y,p.Z).scale(new T.Vector3(p.sc,p.sc,p.sc)).setPosition(p.pos);leaves.setMatrixAt(i,m);leaves.setColorAt(i,col.set(p.c).multiplyScalar(p.v));});
   leaves.computeBoundingSphere();near.add(leaves);
   // limbs from the trunk out into each tier carry the canopy
-  for(const [ya,yb,R] of CANOPY)for(let k=0;k<5;k++){const a=k/5*Math.PI*2+ya,y=(ya+yb)/2-.5,base=new T.Vector3(TREE.x+Math.cos(a)*trunkR(y)*.8,y-1.5,TREE.z+Math.sin(a)*trunkR(y)*.8),tip=new T.Vector3(TREE.x+Math.cos(a)*R*.72,y+.8,TREE.z+Math.sin(a)*R*.72);
-   if(!clear((base.x+tip.x)/2,(base.y+tip.y)/2,(base.z+tip.z)/2,.6)||!clear(tip.x,tip.y,tip.z,.6)||!inOpening(tip.x,tip.y,tip.z,tip.y+.6,.8))continue;parts.push(paint(tube([base,base.clone().lerp(tip,.5).setY(y+.2),tip],.42,14,8),C.felt,.05,rnd));}
+  for(const [ya,yb,R] of CANOPY.slice(0,2))for(let k=0;k<4;k++){const a=k/4*Math.PI*2+ya*.7,y=(ya+yb)/2-.5,base=new T.Vector3(TREE.x+Math.cos(a)*trunkR(y)*.8,y-1.5,TREE.z+Math.sin(a)*trunkR(y)*.8),dc=TREE.floor+20+DOME.cy-.5,reach=Math.sqrt(Math.max(0,DOME.r**2-Math.max(0,y+.8-dc)**2))-1.2,tip=new T.Vector3(TREE.x+Math.cos(a)*reach,y+.8,TREE.z+Math.sin(a)*reach);
+   if(!clear((base.x+tip.x)/2,(base.y+tip.y)/2,(base.z+tip.z)/2,.6)||!clear(tip.x,tip.y,tip.z,.6)||!inOpening(tip.x,tip.y,tip.z,tip.y+.6,.8))continue;parts.push(paint(tube([base,base.clone().lerp(tip,.5).setY(y+.2),tip],.34,14,7),C.felt,.05,rnd));}
   // far: a few big felt blobs per tier
   for(const [ya,yb,R] of CANOPY)for(let k=0;k<7;k++){const a=k/7*Math.PI*2,r=R*.62,b=new T.SphereGeometry(R*.42,10,6);b.scale(1,.55,1);at(b,TREE.x+Math.cos(a)*r,(ya+yb)/2,TREE.z+Math.sin(a)*r);far.add(new T.Mesh(paint(b,C.leaf[k%3]),bulk));}
  }
