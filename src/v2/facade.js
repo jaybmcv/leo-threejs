@@ -47,9 +47,10 @@ export function compactRenderGeometry(source){
  for(const[name,a]of Object.entries(source.attributes)){const values=new a.array.constructor(ids.length*a.itemSize);for(let i=0;i<ids.length;i++)for(let k=0;k<a.itemSize;k++)values[i*a.itemSize+k]=a.array[ids[i]*a.itemSize+k];g.setAttribute(name,new T.BufferAttribute(values,a.itemSize,a.normalized));}
  if(source.index)g.setIndex(Array.from(source.index.array,i=>remap.get(i)));g.computeBoundingBox();g.computeBoundingSphere();return g;
 }
-// `allBands` (the phone ship) batches every band, not only the low decks, and culls each chunk, since a phone pays
-// more for a draw call than for the culling. `hidden` is called with each source once it is copied and hidden.
-export async function batchLowDeckDraws(baked,renderer,{allBands=false,hidden=null}={}){
+// `allBands` (the phone ship) batches every band, not only the low decks. `cull` culls each chunk: its draw list then
+// changes every frame, and on a Galaxy S9 lettering jumped about the screen (chunks drawn with another's matrix), so the
+// phone ship leaves it off. `hidden` is called with each source once it is copied and hidden.
+export async function batchLowDeckDraws(baked,renderer,{allBands=false,cull=false,hidden=null}={}){
  // Yields to the page about every 12 ms: a timer per chunk waited at least 4 ms each, 20 s over every band's chunks.
  let slice=performance.now();const yieldWork=async()=>{if(performance.now()-slice<12)return;await new Promise(resolve=>setTimeout(resolve,0));slice=performance.now();};
  const proof={enabled:renderer.extensions.has('WEBGL_multi_draw'),batches:0,sources:0,vertices:0,triangles:0};
@@ -72,7 +73,7 @@ export async function batchLowDeckDraws(baked,renderer,{allBands=false,hidden=nu
    if(list.length<3)continue;
    const compact=[];for(const o of list){compact.push(compactRenderGeometry(o.geometry));await yieldWork();}const vertices=compact.reduce((s,g)=>s+g.attributes.position.count,0),indices=compact.reduce((s,g)=>s+(g.index?.count||g.attributes.position.count),0);
    if(proof.fallback){for(let i=0;i<compact.length;i++)compact[i].applyMatrix4(list[i].matrix);const merged=mergeGeometries(compact),mesh=new T.Mesh(merged,list[0].material);mesh.name='V2_low_deck_merged_'+list[0].material.name;mesh.renderOrder=list[0].renderOrder;mesh.userData={noCollide:true,renderOnly:true,sources:list.map(o=>o.uuid)};for(const o of list){o.visible=false;hidden?.(o);}group.add(mesh);compact.forEach(g=>g.dispose());proof.batches++;proof.sources+=list.length;proof.vertices+=vertices;proof.triangles+=indices/3;await yieldWork();continue;}
-   const batch=new T.BatchedMesh(list.length,vertices,indices,batchMaterial(list[0].material));batch.name='V2_low_deck_batch_'+list[0].material.name;batch.sortObjects=false;batch.perObjectFrustumCulled=allBands;batch.renderOrder=list[0].renderOrder;
+   const batch=new T.BatchedMesh(list.length,vertices,indices,batchMaterial(list[0].material));batch.name='V2_low_deck_batch_'+list[0].material.name;batch.sortObjects=false;batch.perObjectFrustumCulled=cull;batch.renderOrder=list[0].renderOrder;
    batch.userData={noCollide:true,renderOnly:true,sources:list.map(o=>o.uuid)};
    for(let i=0;i<list.length;i++){const o=list[i],g=batch.addGeometry(compact[i]),id=batch.addInstance(g);batch.setMatrixAt(id,o.matrix);o.visible=false;hidden?.(o);compact[i].dispose();}
    batch.computeBoundingBox();batch.computeBoundingSphere();group.add(batch);

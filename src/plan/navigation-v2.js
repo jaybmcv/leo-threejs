@@ -29,8 +29,10 @@ export function connectPlan({h,decks,rooms,cabins,shuttles,circulation,issues}){
   while(head<tail){const i=queue[head++],x=i%W,z=Math.floor(i/W);for(const [dx,dz]of [[-1,0],[1,0],[0,-1],[0,1]]){
    if(x+dx<0||x+dx>=W||z+dz<0||z+dz>Z1-Z0)continue;const j=i+dx+dz*W;if(!free[j]||parent[j]!==-2||dx&&dz&&(!free[i+dx]||!free[i+dz*W]))continue;parent[j]=i;queue[tail++]=j;
   }}
+  // A gallery door marked offDeck opens onto a walk feature outside the deck's own plan (the cat tree's bridges), so it is
+  // no terminal of the deck's circulation.
   const terminals=[];
-  for(const r of [...rooms.filter(r=>r.deck===d.number&&!r.aggregate),...cabins.filter(c=>c.deck===d.number),...rooms.flatMap(r=>(r.galleryDoors??[]).filter(g=>g.deck===d.number).map(g=>({...r,y:d.y,door:g,row:'gallery'})))]){
+  for(const r of [...rooms.filter(r=>r.deck===d.number&&!r.aggregate),...cabins.filter(c=>c.deck===d.number),...rooms.flatMap(r=>(r.galleryDoors??[]).filter(g=>g.deck===d.number&&!g.offDeck).map(g=>({...r,y:d.y,door:g,row:'gallery'})))]){
    if(!r.door)continue;const p=[r.door.center[0],r.door.center[2]],vx=p[0]-r.x,vz=p[1]-r.z,len=Math.hypot(vx,vz)||1,out=r.door.outward??[vx/len,vz/len];r.door.outward=out;
    const ramp=ramps.find(s=>s.owner===r.id),base=ramp?.points[0];terminals.push({id:r.door.id,owner:r.id,kind:'door',room:r,ramp,at:p,approach:base?[base[0]-.8,base[2]]:[p[0]+out[0]*.8,p[1]+out[1]*.8],y:r.y});
   }
