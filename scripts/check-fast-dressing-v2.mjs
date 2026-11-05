@@ -102,8 +102,8 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
  Object.assign(report,{mode:untagged?'tagged against untagged full build':'lane D against full build',patched,full,prepared:{templates:a.geometryTemplates.length,collisionBands:a.colliders.bands.length,triangles:a.colliders.bands.reduce((n,[,x])=>n+x.triangles,0)},plain,models:await compareModels(patched,full,{dropTag:untagged}),seconds:(performance.now()-start)/1000,status:'PASS'});
 }else if(process.argv.includes('--patch')){
  // Everything but the dressing is the clean baseline's; the dressing is what compileDressing makes from today's source.
- const base=arg('base')||root+'/fast-base',patched=arg('patched')||root,{DRESSINGS,compileDressing}=await import('./fast-dressing-v2.mjs'),m=await preparedManifest(patched+'/prepared-walk'),ids=m.fastPatch?.dressings||[];assert(ids.length,'No dressing patch to compare');
- const owners=new Set(ids.filter(id=>DRESSINGS[id].collision).map(id=>DRESSINGS[id].owner)),sites=ids.map(id=>DRESSINGS[id].site),skipTemplates=key=>sites.some(s=>key.startsWith(s));
+ const base=arg('base')||root+'/fast-base',patched=arg('patched')||root,{DRESSINGS,compileDressing,ownsTemplate}=await import('./fast-dressing-v2.mjs'),m=await preparedManifest(patched+'/prepared-walk'),ids=m.fastPatch?.dressings||[];assert(ids.length,'No dressing patch to compare');
+ const owners=new Set(ids.filter(id=>DRESSINGS[id].collision).map(id=>DRESSINGS[id].owner)),skipTemplates=key=>ids.some(id=>ownsTemplate(DRESSINGS[id],key));
  const before=await canonicalPrepared(base+'/prepared-walk',{skipOwners:owners,skipTemplates}),after=await canonicalPrepared(patched+'/prepared-walk',{skipOwners:owners,skipTemplates});
  const d=difference(after,before);assert(!d,'Dressing patch changed something else: '+d);
  const read=preparedArrayReader(m,patched+'/prepared-walk'),compiled=[];for(const id of ids)compiled.push(await compileDressing(id));
@@ -112,7 +112,7 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
   if(d.collision){assert.deepEqual((await ownedTriangles(m,read,d.owner)).map(key),c.collision.map(key),c.id+' collision differs from a fresh compile');
    assert.deepEqual((await ownedTriangles(m,read,d.owner,{ground:true})).map(key),c.groundCollision.map(key),c.id+' ground collision differs from a fresh compile');}
   else assert(!c.collision.length&&!c.groundCollision.length&&!c.model,c.id+' is qualified as never solid and in no model');
-  const templates=new Map(m.geometryTemplates.filter(([k])=>k.startsWith(d.site)));assert.deepEqual([...templates.keys()].sort(),c.templates.map(([k])=>k).sort(),c.id+' template keys');
+  const templates=new Map(m.geometryTemplates.filter(([k])=>ownsTemplate(d,k)));assert.deepEqual([...templates.keys()].sort(),c.templates.map(([k])=>k).sort(),c.id+' template keys');
   for(const [k,g]of c.templates){const r=m.geometries[templates.get(k)];for(const [name,a]of Object.entries(g.attributes))assert(bytesOf(await read(r.attributes[name].array)).equals(bytesOf(a.array)),c.id+' template '+k.slice(0,60)+' '+name);assert(bytesOf(await read(r.index)).equals(bytesOf(g.index.array)),c.id+' template index '+k.slice(0,60));}
  }
  // The model: the full ship's dressing subtree is the fresh export and the rest of every model is the baseline's.
@@ -129,7 +129,9 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
 }else{
  // Classification: real source edits, restored afterwards; a clean baseline of this checkout is required.
  const {classifyFastChange}=await import('./fast-state-v2.mjs'),{classifyDressings}=await import('./fast-dressing-v2.mjs');
- const files=['src/walk/selfie.js','src/walk/selfie.authoring.js','src/walk/canvas.js','src/walk/prepare.js','src/walk/paintings.js','src/walk/paintings.authoring.js','src/v2/phase4-community.js','src/walk/main.authoring.js'],originals=new Map(await Promise.all(files.map(async f=>[f,await fs.readFile(f,'utf8')])));
+ const files=['src/walk/selfie.js','src/walk/selfie.authoring.js','src/walk/canvas.js','src/walk/prepare.js','src/walk/paintings.js','src/walk/paintings.authoring.js','src/v2/phase4-community.js','src/walk/main.authoring.js'],templates=['changes-board','comics','hex-floor','lounge-compass'],
+  roots=['src/walk/link.js','src/walk/lift-ride.authoring.js','src/v2/hangar-door.js','src/walk/hostess.authoring.js','src/walk/paws-off/game.authoring.js'];
+ files.push(...templates.map(id=>'src/walk/'+id+'.authoring.js'),...roots);const originals=new Map(await Promise.all(files.map(async f=>[f,await fs.readFile(f,'utf8')])));
  const restore=async()=>{for(const [f,t]of originals)await fs.writeFile(f,t);};
  const edit=async(f,from,to)=>{const t=originals.get(f);assert.equal(t.split(from).length,2,'Fixture anchor moved in '+f);await fs.writeFile(f,t.replace(from,to));};
  const camera="box('Selfie_camera',[.22,.2,.32]",bigger="box('Selfie_camera',[.24,.2,.32]",cases=[];
@@ -154,6 +156,17 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
   await page('for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}','for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}colliders.addStatic(paintings.groups[0]);',/reaches the paintings dressing outside its qualified uses/,'authoring page makes a painting solid');
   await page('for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}','for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}corridorTrim(ship.inside);',/reaches the paintings dressing outside its qualified uses: corridorTrim/,'authoring page calls the trim that reads PAINTINGS');
   await page('paintings=createPaintings({urls:artUrls,','paintings=createPaintings({urls:artUrls,scale:2,',/no longer placed by its one qualified line in src\/walk\/main\.authoring\.js/,'paintings glue changed');
+  // The authoring page's other template-only dressings: each takes lane D, all of them with the booth and paintings
+  // too. A helper of theirs, or a module made a geometry root instead (movers, the Cosmo kit, the ship), widens.
+  const touch=async f=>fs.writeFile(f,originals.get(f)+'\n// fixture\n');
+  for(const id of templates)assert.deepEqual((await expect(id+' edit','D',()=>touch('src/walk/'+id+'.authoring.js'))).dressings,[id]);
+  assert.deepEqual((await expect('every dressing at once','D',async()=>{await deeper();for(const f of files.slice(0,2))await edit(f,camera,bigger);for(const id of templates)await touch('src/walk/'+id+'.authoring.js');})).dressings,['selfie','paintings',...templates]);
+  for(const f of roots)await expect(f+' edit','whole',()=>touch(f));
+  const reach=async(id,from,to,pattern,name)=>{await restore();await edit(files[7],from,to);assert.match((await classifyDressings(['src/walk/'+id+'.authoring.js'])).reason,pattern);cases.push({name,reason:String(pattern)});};
+  await reach('hex-floor','toBand(hexFloor.group);','toBand(hexFloor.group);colliders.addStatic(hexFloor.group);',/reaches the hex-floor dressing outside its qualified uses/,'authoring page makes the hex floor solid');
+  await reach('changes-board','for(const g of changeLog.groups)toBand(g);','for(const g of changeLog.groups)toBand(g);ship.inside.add(changeLog.groups[0]);',/reaches the changes-board dressing outside its qualified uses/,'authoring page puts a ship log board in the ship');
+  await reach('comics','comics=createComics({urls:artUrls,','comics=createComics({urls:artUrls,count:2,',/no longer placed by its one qualified line/,'comics glue changed');
+  await reach('lounge-compass','{const compass=createLoungeCompass();if(compass)toBand(compass);}','{const compass=createLoungeCompass();if(compass)ship.inside.add(compass);}',/no longer placed by its one qualified line/,'compass moved into the ship before saving');
  }finally{await restore();}
  // Through every consumer, independent of the working tree: a second importer or a moved glue line widens.
  const graph=g=>({graph:g}),selfie=['src/walk/canvas.js','package:three','src/fin-crown.js','src/concept-shape.js'];

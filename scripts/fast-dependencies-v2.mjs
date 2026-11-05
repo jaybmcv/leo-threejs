@@ -18,8 +18,10 @@ const roots=['src/model.js','src/walk/prepare.js','src/walk/prepare.authoring.js
  'src/walk/signs.authoring.js','src/walk/comms-displays.authoring.js',
  'src/concept-paint.js','src/v2/signs.js','src/walk/fin-casing.js',
  'src/walk/windows.js','src/walk/lounge-floor.authoring.js','src/walk/lift-tile-floor.authoring.js',
- // The paintings' frames and canvases are prepared geometry templates recorded by the authoring page.
- 'src/walk/paintings.authoring.js',
+ // Prepared geometry templates the authoring page records: the paintings' frames and canvases, the ship log boards,
+ // the comic books, the hex floor and the lounge compass (each a template-only dressing, fast-dressing-v2.mjs).
+ 'src/walk/paintings.authoring.js','src/walk/changes-board.authoring.js','src/walk/comics.authoring.js',
+ 'src/walk/hex-floor.authoring.js','src/walk/lounge-compass.authoring.js',
  // The rest of what only the authoring page (main.authoring.js) adds to the prepared walk. Lift cars, doors and gates
  // and their signs (lift-ride.js) and the Deck 2 hangar door's leaves (hangar-door.js) are prepared movable collision; the hostess
  // is built from the Cosmo kit and Paws Off's belts from the ship and its ground, so edits to them take a full build.
