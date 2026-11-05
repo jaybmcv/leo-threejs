@@ -56,7 +56,7 @@ const DOME={cy:4.1,r:15};
 const OPENINGS=[{y:deckY(13),z:30,x:206},{y:deckY(14),z:20,x:201},{y:deckY(15),z:10,x:197},{y:deckY(16),z:0,x:148}];
 
 const C={felt:0xa36d45,feltDark:0x7a4c2c,sisal:0xe2c79a,rope:0xf1e2c2,carpet:[0xd2604a,0xe8b04a,0x9db783,0xf3e6cc],wood:0xc08a52,
- wicker:0xe9cc98,moss:0x86a446,mossDark:0x5f8a34,leaf:[0xb2cf52,0x94bc44,0x74a23a],toy:[0xec7a92,0xf2b84b,0x6fa8d6,0xe2604e,0xf08a4b],cream:0xf6ead2,ink:0x3a2a1e,stone:0xe6d3b0,den:0x5a3218};
+ wicker:0xe9cc98,moss:0x86a446,mossDark:0x5f8a34,leaf:[0xc6dd5e,0xa8ca4c,0x88b242],toy:[0xec7a92,0xf2b84b,0x6fa8d6,0xe2604e,0xf08a4b],cream:0xf6ead2,ink:0x3a2a1e,stone:0xe6d3b0,den:0x5a3218};
 
 // ---- geometry helpers: every part ends non-indexed with position, normal and colour, so one merge per material works
 function paint(g,color,vary=0,rnd=null){g=g.index?g.toNonIndexed():g;g.deleteAttribute('uv');const n=g.attributes.position.count,c=new Float32Array(n*3),base=new T.Color(color);
@@ -124,8 +124,8 @@ export function createCatTree(ship){
 
  // Island: a felt-moss disc with a low rim, mounds and boulders round the edge.
  {const disc=new T.CylinderGeometry(TREE.island,TREE.island+.3,.25,72);at(disc,TREE.x,y0+.125,TREE.z);parts.push(paint(disc,C.moss,.08,rnd));grounds.island.push(disc.clone());
-  const kerb=new T.CylinderGeometry(TREE.island+.7,TREE.island+.75,.32,96,1,true);at(kerb,TREE.x,y0+.16,TREE.z);parts.push(paint(kerb,C.stone));
-  const lip=new T.RingGeometry(TREE.island-.05,TREE.island+.7,96,1);lip.rotateX(-Math.PI/2);at(lip,TREE.x,y0+.32,TREE.z);parts.push(paint(lip,C.stone,.04,rnd));
+  const kerb=new T.CylinderGeometry(TREE.island+.7,TREE.island+.75,.32,96,1,true);at(kerb,TREE.x,y0+.16,TREE.z);parts.push(pavers(paint(kerb,C.stone)));
+  const lip=new T.RingGeometry(TREE.island-.05,TREE.island+.7,96,1);lip.rotateX(-Math.PI/2);at(lip,TREE.x,y0+.32,TREE.z);parts.push(pavers(paint(lip,C.stone)));
   for(let i=0,made=0;i<120&&made<28;i++){const a=rnd()*Math.PI*2,r=TREE.island-1.1-rnd()*2.6,x=TREE.x+Math.cos(a)*r,z=TREE.z+Math.sin(a)*r;if(!clear(x,y0+.3,z,1)||!offWalk(x,z,2.2)||!offFootDoor(x,z,1.6))continue;made++;
    const s=.9+rnd()*.55;for(let k=0;k<3;k++){const o=k===0?[0,0]:[(rnd()-.5)*1.6*s,(rnd()-.5)*1.6*s],r0=s*(k===0?1:.7+rnd()*.2),b=new T.SphereGeometry(r0,11,7);b.scale(1.1,.8,1.1);at(b,x+o[0],y0+.25+r0*.55,z+o[1]);parts.push(paint(b,[C.mossDark,C.moss,C.leaf[1]][k],.06,rnd));
     if(k===0)for(const m of [0,Math.PI/2])for(let q=1;q<10;q++){const t=q/10*Math.PI,d=new T.PlaneGeometry(.2,.05);d.rotateZ(Math.PI/2-t);d.rotateY(m);const cx=Math.cos(t)*r0*1.11,cy=Math.sin(t)*r0*.81;d.translate(Math.cos(m)*cx,cy,-Math.sin(m)*cx);parts.push(paint(at(d,x+o[0],y0+.25+r0*.55,z+o[1]),0xf2d67a));}}
@@ -177,7 +177,7 @@ export function createCatTree(ship){
   const rim=new T.TorusGeometry(p.r-.1,.5,8,48);rim.scale(1,1,.95);rim.rotateX(Math.PI/2);at(rim,p.x,p.y-.38,p.z);parts.push(paint(rim,C.carpet[i%4],.03,rnd));
   const piping=new T.TorusGeometry(p.r+.33,.07,3,48);piping.rotateX(Math.PI/2);at(piping,p.x,p.y-.38,p.z);parts.push(paint(piping,C.cream));
   parts.push(...stitches(p.x,p.y-.38,p.z,p.r+.41,true));
-  parts.push(sisal(at(new T.CylinderGeometry(.85,1,2.6,14,1,true),p.x,p.y-2.1,p.z),12));
+  parts.push(paint(at(new T.CylinderGeometry(.8,.95,2.6,12,1,true),p.x,p.y-2.1,p.z),C.wood));for(let k=0;k<6;k++){const coil=new T.TorusGeometry(.92-k*.02,.13,4,20);coil.rotateX(Math.PI/2);parts.push(paint(at(coil,p.x,p.y-3.2+k*.24,p.z),k%2?0xd6b98a:C.sisal));}
   const out=new T.Vector3(Math.cos(p.angle),0,Math.sin(p.angle)),base=new T.Vector3(TREE.x,p.y-3.8,TREE.z).addScaledVector(out,trunkR(p.y-3.8)-.4);
   parts.push(paint(tube([base,base.clone().addScaledVector(out,3).setY(p.y-2.9),new T.Vector3(p.x,p.y-2.5,p.z)],.75,20,10),C.felt,.05,rnd));
   guardRing(p.deck,p.x,p.z,p.r-.12,p.y,(x,z)=>Math.hypot(x-TREE.x,z-TREE.z)<rampOut(p.y)+.25||bridgeAt(p.deck,x,z));
@@ -189,7 +189,7 @@ export function createCatTree(ship){
    const bed=new T.CylinderGeometry(.85,.85,.12,16);at(bed,x,p.y+.56,z);parts.push(paint(bed.clone(),C.carpet[(i+3)%4]));const m=new T.Mesh(bed,hidden);m.name='Hammock';seats.add(m);
    addWall(new T.CylinderGeometry(1.05,.7,.62,12).translate(x,p.y+.31,z));
    for(let k=0;k<3;k++){const b=k/3*Math.PI*2;parts.push(paint(between(new T.Vector3(x+Math.cos(b)*.95,p.y+.62,z+Math.sin(b)*.95),new T.Vector3(x,p.y+3.6,z),.03),C.rope));}
-   parts.push(paint(between(new T.Vector3(x,p.y+3.6,z),new T.Vector3(TREE.x+Math.cos(p.angle)*trunkR(p.y+3.6),p.y+4.2,TREE.z+Math.sin(p.angle)*trunkR(p.y+3.6)),.22,.32,8),C.felt));}}
+   parts.push(paint(between(new T.Vector3(x,p.y+3.6,z),new T.Vector3(TREE.x+Math.cos(p.angle)*trunkR(p.y+3.6),p.y+4.2,TREE.z+Math.sin(p.angle)*trunkR(p.y+3.6)),.22,.32,8),C.felt));sprigs.push(new T.Vector3(x,p.y+4.2,z));}}
   {const a=p.angle-.55,r=p.r-1.3,x=p.x+Math.cos(a)*r,z=p.z+Math.sin(a)*r;if(!bridgeAt(p.deck,x,z)){if(i%2){const f=fish(C.toy[2]);f.scale(1.6,1.6,1.6);f.rotateZ(Math.PI/2);f.rotateY(-a);at(f,x,p.y+.42,z);parts.push(f);}else parts.push(yarn(.55,C.toy[(i+1)%5],rnd,x,p.y+.55,z));}}
   if(i%3===1){const a=p.angle-1.15,r=p.r-1.6,x=p.x+Math.cos(a)*r,z=p.z+Math.sin(a)*r;if(!bridgeAt(p.deck,x,z)){const box=new T.BoxGeometry(2,1.6,1.7,2,2,2);roundBox(box,.2);box.rotateY(-a);at(box,x,p.y+.8,z);parts.push(paint(box,C.carpet[1]));addWall(box.clone());
    const hole=new T.CircleGeometry(.5,20);hole.rotateY(-a-Math.PI/2);const o=new T.Vector3(Math.cos(a+Math.PI),0,Math.sin(a+Math.PI));at(hole,x+o.x*.87,p.y+.85,z+o.z*.87);parts.push(paint(hole,C.ink));}}
@@ -199,6 +199,8 @@ export function createCatTree(ship){
   const ring=strip(N,f,.5);fixNormals(ring);grounds.platform.push(ring.clone());parts.push(sisal(ring,30));
   const pad=strip(N,t=>{const o=f(t);return {...o,y:o.y+.04,ri:o.ri+.1,ro:o.ro-.25};},.04);fixNormals(pad);parts.push(paint(pad,C.carpet[3]));
   guardRing(15,TREE.x,TREE.z,RING.outer-.12,RING.y,(x,z)=>bridgeAt(15,x,z));
+  for(let k=0;k<7;k++){const a=RING.angle+Math.PI*(.55+k*.19),r=k%2?6.6:5.5,x=TREE.x+Math.cos(a)*r,z=TREE.z+Math.sin(a)*r;if(bridgeAt(15,x,z)||Math.abs(z)<2.2&&x>TREE.x)continue;
+   const c=pumpkin(k%2?.75:.95,k%2?.65:.85);c.rotateY(-a);at(c,x,RING.y,z);parts.push(paint(c.clone(),C.carpet[k%4]));const seat=new T.Mesh(c.clone(),hidden);seat.name='Meditation_cushion';seats.add(seat);grounds.cushion.push(c);}
   // over the opening while the ramp is more than 0.9 m below, and across its start
   const edge=[],r=rampOut(RING.y)+.15;for(let t=0;t<=Math.PI/2-.72;t+=.04){const a=APPROACH+SIDE*t;edge.push({x:TREE.x+Math.cos(a)*r,y:RING.y,z:TREE.z+Math.sin(a)*r});}
   const ri=RING.inner,a0=APPROACH;const radial=[{x:TREE.x+Math.cos(a0)*ri,z:TREE.z+Math.sin(a0)*ri,y:RING.y},{x:TREE.x+Math.cos(a0)*r,z:TREE.z+Math.sin(a0)*r,y:RING.y}];
@@ -244,7 +246,7 @@ export function createCatTree(ship){
  }
  // Paper lanterns under the platforms' rims, and dens in the trunk (a dark arch with a lamp) between landings.
  for(const p of PLATFORMS){for(let k=0;k<3;k++){const a=p.angle+(k-1)*1.1,x=p.x+Math.cos(a)*(p.r+.2),z=p.z+Math.sin(a)*(p.r+.2);if(!clear(x,p.y-1.2,z,0))continue;
-  parts.push(paint(between(new T.Vector3(x,p.y-1,z),new T.Vector3(x,p.y-.2,z),.02),C.rope));lights.push(at(new T.SphereGeometry(.32,10,8).scale(1,1.25,1),x,p.y-1.25,z));}}
+  parts.push(paint(between(new T.Vector3(x,p.y-1,z),new T.Vector3(x,p.y-.2,z),.02),C.rope));lights.push(at(new T.BoxGeometry(.5,.62,.5),x,p.y-1.3,z));parts.push(paint(at(new T.BoxGeometry(.62,.08,.62),x,p.y-.95,z),C.wood),paint(at(new T.BoxGeometry(.58,.06,.58),x,p.y-1.65,z),C.wood));}}
  for(const d of DENS){const n=new T.Vector3(Math.cos(d.a),0,Math.sin(d.a)),side=new T.Vector3(-n.z,0,n.x),depth=d.front-d.back;
   // the room: its own frame has x across the door, y up and z out of the trunk, the doorway at z 0
   const m=new T.Matrix4().makeBasis(side,new T.Vector3(0,1,0),n).setPosition(TREE.x+n.x*d.front,d.y,TREE.z+n.z*d.front),put=g=>g.applyMatrix4(m);
@@ -281,7 +283,7 @@ export function createCatTree(ship){
    for(const [ang,r1,droop] of ring){const tan=new T.Vector3(Math.cos(ang),0,Math.sin(ang));tan.sub(N.clone().multiplyScalar(tan.dot(N))).normalize();
     const pos=new T.Vector3(cx,cyy,cz).addScaledVector(tan,r1*sc*.62).addScaledVector(N,-r1*sc*.18);if(!ok(pos.x,pos.y,pos.z,sc))continue;
     const n=N.clone().addScaledVector(tan,r1?droop:0).normalize();X.copy(r1?tan:radial).sub(n.clone().multiplyScalar((r1?tan:radial).dot(n))).normalize();Z.crossVectors(X,n);
-    slots.push({pos,X:X.clone(),Y:n,Z:Z.clone(),sc:sc*(r1?1:1.1),c:tint,v:.9+rnd()*.18});}}
+    slots.push({pos,X:X.clone(),Y:n,Z:Z.clone(),sc:sc*(r1?1:1.1),c:tint,v:(.86+rnd()*.16)*(.92+.2*Math.max(0,Math.min(1,(pos.y-2)/16)))});}}
   for(const q of sprigs)for(let k=0;k<5;k++){const ang=k/5*Math.PI*2+rnd(),tan=new T.Vector3(Math.cos(ang),0,Math.sin(ang)),n=new T.Vector3(0,1,0).addScaledVector(tan,.5).normalize(),pos=q.clone().addScaledVector(tan,.9);
    if(!clear(pos.x,pos.y,pos.z,.8)||!inOpening(pos.x,pos.y,pos.z,pos.y+.5,.8))continue;X.copy(tan).sub(n.clone().multiplyScalar(tan.dot(n))).normalize();Z.crossVectors(X,n);slots.push({pos,X:X.clone(),Y:n,Z:Z.clone(),sc:1.9,c:C.leaf[k%3],v:.95});}
   const map=leafTexture(),leafMat=felt(new T.MeshStandardMaterial({name:'Cat_tree_leaves',color:0xffffff,map,alphaTest:map?.5:0,side:T.DoubleSide,roughness:.95}),.6);
@@ -361,6 +363,8 @@ function doorSurround(W,H,r,spring){const sh=new T.Shape();sh.moveTo(-W,0);sh.li
 // Remove the bark (or its collider) where it would close a den's doorway: triangles whose centre lies in an opening.
 function cutDoors(g){g=g.index?g.toNonIndexed():g;const p=g.attributes.position,keep=[];for(let t=0;t<p.count;t+=3){let x=0,y=0,z=0;for(let k=0;k<3;k++){x+=p.getX(t+k)/3;y+=p.getY(t+k)/3;z+=p.getZ(t+k)/3;}if(!inDoor(Math.atan2(z,x),y,Math.hypot(x,z)))keep.push(t);}
  const out=new T.BufferGeometry();for(const [k,a] of Object.entries(g.attributes)){const n=a.itemSize,arr=new a.array.constructor(keep.length*3*n);keep.forEach((t,i)=>{for(let v=0;v<3;v++)for(let c=0;c<n;c++)arr[(i*3+v)*n+c]=a.array[(t+v)*n+c];});out.setAttribute(k,new T.BufferAttribute(arr,n));}return out;}
+// Pavers: alternate tones round the island's kerb, a block every 0.9 m.
+function pavers(g){const p=g.attributes.position,c=g.attributes.color;for(let i=0;i<p.count;i+=3){let x=0,z=0;for(let k=0;k<3;k++){x+=p.getX(i+k)-TREE.x;z+=p.getZ(i+k)-TREE.z;}const a=Math.atan2(z,x),n=Math.floor((a+Math.PI)*(TREE.island+.4)/.9),k=n%2?.9:1.04;for(let j=0;j<3;j++)c.setXYZ(i+j,c.getX(i+j)*k,c.getY(i+j)*k,c.getZ(i+j)*k);}return g;}
 // A ball of yarn: a sphere banded by wraps in two directions, its centre at (x,y,z).
 function yarn(r,color,rnd,x,y,z){const g=paint(new T.SphereGeometry(r,12,8),color),p=g.attributes.position,c=g.attributes.color,u=new T.Vector3(rnd()-.5,rnd()-.5,rnd()-.5).normalize(),w=new T.Vector3(rnd()-.5,rnd()-.5,rnd()-.5).normalize(),v=new T.Vector3();
  for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).divideScalar(r);const k=.78+.22*Math.max(Math.abs(Math.sin(v.dot(u)*14)),Math.abs(Math.sin(v.dot(w)*14))*.8);c.setXYZ(i,c.getX(i)*k,c.getY(i)*k,c.getZ(i)*k);}
