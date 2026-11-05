@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import * as T from 'three';
 import {PVS_GRID,PVS_HIDDEN,PVS_UNKNOWN,PVS_VISIBLE,createAtriumPvs,decodeCells,encodeCells} from '../src/v2/atrium-pvs.js';
 import {createAtriumSight} from '../src/v2/atrium-sight.js';
+import {atriumPvsKey} from '../src/v2/atrium-pvs-key.js';
 
-const {nx,nz,ny,x0,z0,step,y0}=PVS_GRID,length=nx*nz*ny,source={prepared:'abc',layout:'def'};
+const {nx,nz,ny,x0,z0,step,y0}=PVS_GRID,length=nx*nz*ny,source={key:'2.abc'};
 const cellOf=(x,y,z)=>(Math.floor((y-y0)/2)*nx+Math.round((x-x0)/step))*nz+Math.round((z-z0)/step);
 function data(set={},from=source){const cells=new Uint8Array(length);for(const [c,v] of Object.entries(set))cells[c]=v;return {version:1,source:from,grid:PVS_GRID,cells:encodeCells(cells)};}
 function check(name,fn){fn();console.log('PASS '+name);}
@@ -14,11 +15,50 @@ check('cells survive a round trip, including runs past one varint byte',()=>{
 });
 check('a truncated grid is refused',()=>assert.throws(()=>decodeCells(encodeCells(new Uint8Array(10)),length)));
 check('a state this code does not know is refused rather than read as hidden',()=>{const cells=new Uint8Array(length);cells[7]=3;assert.throws(()=>decodeCells(encodeCells(cells),length));});
-check('data made from another prepared walk or layout is ignored',()=>{
- assert.equal(createAtriumPvs(data({},{prepared:'old',layout:'def'}),source),null);
- assert.equal(createAtriumPvs(data({},{prepared:'abc',layout:'old'}),source),null);
- assert.equal(createAtriumPvs(data(),{prepared:undefined,layout:'def'}),null);
+check('data baked from other geometry, or for no key, is ignored',()=>{
+ assert.equal(createAtriumPvs(data({},{key:'2.old'}),source),null);
+ assert.equal(createAtriumPvs(data({},{prepared:'abc',layout:'def'}),source),null);
+ assert.equal(createAtriumPvs(data(),{key:undefined}),null);
+ assert.equal(createAtriumPvs(data({},{}),{}),null);
  assert.equal(createAtriumPvs({...data(),grid:{...PVS_GRID,step:4}},source),null);
+});
+
+// The key: the colliders as the bake reads them, a band of loose triangles and an instanced group.
+const setup={version:2,grid:PVS_GRID,levels:[[[[0,0],[10,0],[10,10]],-19.65,40.12]]};
+function colliders(positions,{flags=null,index=null,matrices=[[1,0,0,0,0,1,0,0,0,0,1,0,5,0,5,1]]}={}){
+ const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(new Float32Array(positions),3));if(index)g.setIndex(index);
+ const box=new T.BufferGeometry();box.setAttribute('position',new T.BufferAttribute(new Float32Array([0,0,0,1,0,0,0,1,0]),3));
+ return {bands:new Map([[3,{bvh:{geometry:g,leoWindowFlags:flags}}]]),groups:[{bvh:{geometry:box,leoWindowFlags:null},items:matrices.map(m=>({matrix:new T.Matrix4().fromArray(m)}))}]};
+}
+const A=[0,0,0,1,0,0,0,1,0],B=[2,0,0,3,0,0,2,1,0],C=[5,5,5,6,5,5,5,6,5];
+check('the key ignores triangle order, vertex rotation, indexing and sub-millimetre noise',()=>{
+ const key=atriumPvsKey(colliders([...A,...B]),setup);
+ assert.equal(atriumPvsKey(colliders([...B,...A]),setup),key);
+ assert.equal(atriumPvsKey(colliders([...B,...A.slice(3),...A.slice(0,3)]),setup),key);
+ assert.equal(atriumPvsKey(colliders([0,0,0,1,0,0,0,1,0,2,0,0,3,0,0,2,1,0],{index:[3,4,5,0,1,2]}),setup),key);
+ assert.equal(atriumPvsKey(colliders([...A,...B].map(v=>v+.0002)),setup),key);
+});
+check('the key changes with a moved, added, removed or mirrored occluder, an instance or the setup',()=>{
+ const key=atriumPvsKey(colliders([...A,...B]),setup);
+ for(const other of [
+  atriumPvsKey(colliders([...A,...B.map((v,i)=>i===0?v+.002:v)]),setup),
+  atriumPvsKey(colliders([...A,...B,...C]),setup),
+  atriumPvsKey(colliders(A),setup),
+  atriumPvsKey(colliders([...A,2,0,0,2,1,0,3,0,0]),setup),
+  atriumPvsKey(colliders([...A,...B],{matrices:[[1,0,0,0,0,1,0,0,0,0,1,0,5,0,5.01,1]]}),setup),
+  atriumPvsKey(colliders([...A,...B],{matrices:[[1,0,0,0,0,1,0,0,0,0,1,0,5,0,5,1],[1,0,0,0,0,1,0,0,0,0,1,0,9,0,5,1]]}),setup),
+  atriumPvsKey(colliders([...A,...B]),{...setup,levels:[[[[0,0],[10,0],[10,10]],-19.6,40.12]]}),
+  atriumPvsKey(colliders([...A,...B]),{...setup,version:3})])assert.notEqual(other,key);
+});
+check('window and collision-only faces count apart from opaque ones: the bake sees through them but stands on them',()=>{
+ const opaque=atriumPvsKey(colliders([...A,...B,...C]),setup),flagged=atriumPvsKey(colliders([...A,...B,...C],{flags:new Uint8Array([0,0,1])}),setup);
+ assert.notEqual(flagged,opaque);assert.notEqual(flagged,atriumPvsKey(colliders([...A,...B]),setup));
+ assert.equal(atriumPvsKey(colliders([...C,...A,...B],{flags:new Uint8Array([1,0,0])}),setup),flagged);
+});
+check('a face with two vertices rounded together hashes alike from either of them',()=>{
+ const D=[0,0,0,0,0,.0001,1,0,0];
+ assert.equal(atriumPvsKey(colliders([...A,...D]),setup),atriumPvsKey(colliders([...A,...D.slice(3),...D.slice(0,3)]),setup));
+ assert.equal(atriumPvsKey(colliders([...A,...D]),setup),atriumPvsKey(colliders([...A,...D.slice(6),...D.slice(0,6)]),setup));
 });
 check('a point finds its own cell; outside the grid is unknown',()=>{
  const pvs=createAtriumPvs(data({[cellOf(10,-18.1,4)]:PVS_HIDDEN,[cellOf(10,-16.5,4)]:PVS_VISIBLE}),source);

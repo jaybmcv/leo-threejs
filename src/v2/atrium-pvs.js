@@ -20,10 +20,11 @@ export function decodeCells(text,length){
  return cells;
 }
 
-/** `data` as written by scripts/walk-atrium-pvs.mjs; `source` the prepared walk being shown. Returns null when the data
- * was made from other geometry, so a stale file can only cost speed, never hide the atrium. */
+/** `data` as written by scripts/walk-atrium-pvs.mjs; `source.key` the atrium PVS key (src/v2/atrium-pvs-key.js) of the
+ * walk being shown, which the public build works out from its prepared walk. Returns null when the data was baked from
+ * other geometry, so a stale file can only cost speed, never hide the atrium. */
 export function createAtriumPvs(data,source){
- if(data?.version!==1||!data.cells||!source?.prepared||data.source?.prepared!==source.prepared||data.source?.layout!==source.layout)return null;
+ if(data?.version!==1||!data.cells||!source?.key||data.source?.key!==source.key)return null;
  const g=data.grid;if(['x0','z0','nx','nz','step','y0','ny'].some(k=>g?.[k]!==PVS_GRID[k]))return null;
  const cells=decodeCells(data.cells,g.nx*g.nz*g.ny);
  return {cells,at(p){

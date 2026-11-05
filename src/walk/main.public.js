@@ -7,10 +7,11 @@ import {settlePreparedStatic} from '../v2/prepared-static.js';
 import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
 import {createAtriumSight} from '../v2/atrium-sight.js';
 import {createAtriumPvs} from '../v2/atrium-pvs.js';
-// Precomputed atrium sight (scripts/walk-atrium-pvs.mjs). Until it arrives, or if it was made from another prepared
-// walk, the sight rays answer as before.
+import {PVS_LOCAL_SPAN} from '../v2/atrium-pvs-key.js';
+// Precomputed atrium sight (scripts/walk-atrium-pvs.mjs), shipped by the build only for the colliders and atrium it was
+// baked from (__ATRIUM_PVS_KEY__). Until it arrives, or if it was baked from other geometry, the sight rays answer as before.
 let atriumPvs=null;
-if(typeof __ATRIUM_PVS_URL__!=='undefined'&&__ATRIUM_PVS_URL__)fetch(new URL(__ATRIUM_PVS_URL__,location.href)).then(r=>r.ok?r.json():null).then(data=>{const m=window.LEO_PUBLIC_ASSETS||{};atriumPvs=createAtriumPvs(data,{prepared:m['walk-prepared']?.sha256,layout:m['layout-data']?.sha256});}).catch(e=>console.warn('Atrium PVS not used:',e.message));
+if(typeof __ATRIUM_PVS_URL__!=='undefined'&&__ATRIUM_PVS_URL__)fetch(new URL(__ATRIUM_PVS_URL__,location.href)).then(r=>r.ok?r.json():null).then(data=>{atriumPvs=createAtriumPvs(data,{key:__ATRIUM_PVS_KEY__});}).catch(e=>console.warn('Atrium PVS not used:',e.message));
 import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns} from '../v2/prepared-runtime.public.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
 import {gotoStand as v2GotoStand,yarnPlace} from '../v2/wayfinding.js';
@@ -379,7 +380,7 @@ function span(p,now){
 
  if(now-lastSpan>=150){lastSpan=now;if(spanChanged(camera,p,0,0,colliders)){
  const spanStart=performance.now();
- let low=p.y-3,high=p.y+4;const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();
+ let low=p.y+PVS_LOCAL_SPAN[0],high=p.y+PVS_LOCAL_SPAN[1];const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();
  const reach=y=>{low=Math.min(low,y-1);high=Math.max(high,y+1);};
  for(const [x,y] of VIEW_RAYS){ndc.set(x,y);ray.setFromCamera(ndc,camera);const hit=(spanQuery??=createVisibilityQuery(colliders)).raycast(ray.ray,90,.6),d=hit?hit.distance:90;reach(ray.ray.at(d,probe.origin).y);
   for(const f of [1/3,2/3])for(const s of [1,-1]){ray.ray.at(d*f,probe.origin);probe.direction.set(0,s,0);const h=(spanQuery??=createVisibilityQuery(colliders)).raycast(probe,12);if(h)reach(h.point.y);}}

@@ -14,6 +14,7 @@ import {loadMedia} from './ship-log-media.mjs';
 import {PAINTINGS} from '../src/walk/paintings.js';
 import {COMICS} from '../src/walk/comics.js';
 import {MUDWATER_ART} from '../src/walk/mudwater.js';
+import {preparedPvsKey} from './atrium-pvs-source.mjs';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
 const tag=arg('tag','candidate'),debug=process.argv.includes('--debug'),mirror='output/perf-walk/mirror';
@@ -31,8 +32,11 @@ const defines={
  __EMOTES_URL__:await local('src/walk/assets/cosmo-emotes.json','walk-emotes'),__MAP_URL__:named(/walk-map\.[0-9a-f]{10}\.png/),
  __HAT_URL__:await local('src/vendor/captain-hat/captains-hat.glb','walk-hat'),__ART_URLS__:art,
  __REEL_URL__:await local('src/walk/art/theatre-loop.mp4','walk-reel'),__LIVE_URL__:'',__CREAMERY_URL__:'https://creamery.marscatsvoyage.com'};
-// --pvs=<file> ships an atrium PVS (scripts/walk-atrium-pvs.mjs) beside the walk script; without it the sight rays run.
+// --pvs=<file> ships an atrium PVS (scripts/walk-atrium-pvs.mjs) beside the walk script, keyed as the public build keys it
+// (scripts/atrium-pvs-source.mjs) from the deployed prepared walk and this layout; without it the sight rays run.
 const pvsFile=arg('pvs',null),pvsData=pvsFile&&await fs.readFile(pvsFile);defines.__ATRIUM_PVS_URL__=pvsData?hashed('atrium-pvs','json',pvsData):'';
+defines.__ATRIUM_PVS_KEY__=pvsData?await preparedPvsKey(path.join(mirror,manifest['walk-prepared'].directory),await fs.readFile(layoutFile,'utf8')):'';
+if(pvsData&&JSON.parse(pvsData).source?.key!==defines.__ATRIUM_PVS_KEY__)console.warn('The PVS was baked for other geometry; the walk will ignore it');
 const define=Object.fromEntries(Object.entries(defines).map(([k,v])=>[k,JSON.stringify(v)]));define.__WALK_DEBUG__=String(debug);
 // The public entry imports the partition plan but no longer reads it, so the bundle does not depend on its contents.
 const data={'walk-partitions':'{}','walk-changes':JSON.stringify(shipLog(process.cwd(),loadMedia().media))};

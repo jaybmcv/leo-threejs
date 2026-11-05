@@ -1,26 +1,30 @@
 // Atrium PVS: for each 2 m cell of the walk, whether any part of the open atrium can be seen from it (src/v2/atrium-pvs.js
 // reads the result in place of the per-frame sight rays). Runs scripts/walk-atrium-pvs.page.js in a debug walk build
 // (scripts/walk-frame-build.mjs --debug, served by scripts/walk-frame-serve.mjs) so it tests the walk's own colliders.
-//   node scripts/walk-atrium-pvs.mjs --tag=<debug build> [--out=<file>] [--views] [--eyes=x,y,z;...] [--region=x0,x1,z0,z1]
-//   node scripts/walk-atrium-pvs.mjs --mask=<pvs.json> [--out=<file>]
-// --views only prints the verdict at the eyes of scripts/walk-frame-views.json. The data names the prepared walk it was
-// made from; the runtime ignores it for any other.
+//   node scripts/walk-atrium-pvs.mjs --tag=<debug build> [--layout=<layout.json>] [--out=<file>] [--views] [--eyes=x,y,z;...] [--region=x0,x1,z0,z1]
+//   node scripts/walk-atrium-pvs.mjs --prepared=<prepared-walk dir> [--layout=<layout.json>] [--out=<file>] [...]
+// --prepared bakes straight from a prepared walk (as authored, or as published), with no walk built: Chrome loads only its
+// colliders (scripts/walk-atrium-pvs.entry.js). It writes output/leo-interior-v02/atrium-pvs/<key>.json by default.
+// --views only prints the verdict at the eyes of scripts/walk-frame-views.json. The data carries the key
+// (src/v2/atrium-pvs-key.js) of the colliders and atrium it was baked from; the public build ships it only to a walk with
+// the same key (scripts/atrium-pvs-source.mjs), so other rebuilds keep it. Copy it to src/walk/assets/atrium-pvs.json, or
+// to output/leo-interior-v02/atrium-pvs/<key>.json on the building machine.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
+import http from 'node:http';
 import WebSocket from 'ws';
-import layout from '../src/plan/selected-layout.js';
-import {PVS_GRID,encodeCells,decodeCells} from '../src/v2/atrium-pvs.js';
-import {atriumEnvelope} from '../src/v2/atrium-sight.js';
+import {PVS_GRID,encodeCells} from '../src/v2/atrium-pvs.js';
+import {pvsKey} from '../src/v2/atrium-pvs-key.js';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
-import {BAND} from '../src/walk/collision.js';
+import {build as bundle} from './native-bundle.mjs';
+import {layoutPvsSetup,preparedDigest,PVS_LAYOUT,PVS_BAKED_DIR} from './atrium-pvs-source.mjs';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
-const tag=arg('tag','pvs-base'),port=Number(arg('cdp',9338)),site='http://127.0.0.1:'+arg('port',4211);
+const tag=arg('tag','pvs-base'),prepared=arg('prepared',null),port=Number(arg('cdp',9338)),site='http://127.0.0.1:'+arg('port',4211);
 const CHROME=arg('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe'),region=arg('region','').split(',').filter(Boolean).map(Number);
-// Eye heights above each floor: the lower cell holds the first-person eye (1.62 m), the upper one a raised third-person camera.
-const HEIGHTS=[.35,1.65,3],HEADROOM=1.8,BATCH=400;
+const HEADROOM=1.8,BATCH=400;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 async function browser(){
@@ -37,23 +41,22 @@ async function browser(){
  return {ev,close(){socket.close();chrome.kill();}};
 }
 
-// The atrium as the sight rays bound it (src/v2/atrium-sight.js): one prism over their envelope, the convex hull of
-// every deck's outline, up to the sky. Its floor sits 5 cm above deck 6's, where the rays have it 0.3 m under: a floor
-// flush with or below the deck's would show through to the gallery beneath, by the prism's polygon offset, though no
-// picture there shows the atrium.
-const envelope=atriumEnvelope(),deck6=layout.decks.find(d=>d.number===6).y;
-const levels=[[envelope.envelope,deck6+.05,envelope.high]];
-// span() in src/walk/main.public.js draws [low, high] = envelope's height while the atrium is seen, and otherwise at least
-// 3 m below to 4 m above the walker's floor. A surface between the two is drawn only on the atrium's account, so seeing
-// one counts as seeing the atrium. (A group spanning several bands shows whole once either span reaches it; its parts
-// beyond the atrium's bands are not counted.)
-const ATRIUM_SPAN=[envelope.low,envelope.high],LOCAL_SPAN=[-3,4];
+// The setup (pvsSetup in src/v2/atrium-pvs-key.js) comes from the layout the build was made from: the void is one prism
+// over the sight rays' envelope, up to the sky. span() in src/walk/main.public.js draws the envelope's height while the
+// atrium is seen, and otherwise at least the local span about the walker's floor. A surface between the two is drawn only
+// on the atrium's account, so seeing one counts as seeing the atrium. (A group spanning several bands shows whole once
+// either span reaches it; its parts beyond the atrium's bands are not counted.)
+// A debug build names its layout; --layout may point at a copy of it.
+const built=prepared?null:JSON.parse(await fs.readFile(path.join('output/perf-walk/builds',tag,'build.json'),'utf8')).layoutSource;
+const layoutFile=arg('layout',built?.file??PVS_LAYOUT),layoutText=await fs.readFile(layoutFile,'utf8');
+if(built&&createHash('sha256').update(layoutText).digest('hex')!==built.sha256)throw Error(layoutFile+' is not the layout build '+tag+' was made from; pass --layout=<its copy>');
+const setup=await layoutPvsSetup(layoutText),[[ring]]=setup.levels;
 // An eye inside the envelope the rays call visible unless a known room encloses it, and a cube map of the prism's
 // faces cannot tell that apart (from inside the void its faces may all lie behind walls the eye sees past). So every
 // cell that reaches into the envelope is left unknown, for the rays to answer as before.
 function leaveEnvelope(cells){
- const {x0,z0,nx,nz,step,y0,ny}=PVS_GRID,ring=envelope.envelope,corner=step/Math.SQRT2+.01;let left=0;
- const k0=Math.max(0,Math.floor((envelope.low-y0)/2)),k1=Math.min(ny-1,Math.floor((envelope.high-y0)/2));
+ const {x0,z0,nx,nz,step,y0,ny}=PVS_GRID,corner=step/Math.SQRT2+.01;let left=0;
+ const k0=Math.max(0,Math.floor((setup.atriumSpan[0]-y0)/2)),k1=Math.min(ny-1,Math.floor((setup.atriumSpan[1]-y0)/2));
  for(let i=0;i<nx;i++)for(let j=0;j<nz;j++){
   const p=[x0+i*step,z0+j*step];
   if(!contains(ring,p)&&!ring.some((a,n)=>distanceToSegment(p,a,ring[(n+1)%ring.length])<corner))continue;
@@ -61,31 +64,47 @@ function leaveEnvelope(cells){
  }
  return left;
 }
+// The key's collider share, worked out in the page from the walk's own colliders: it must equal the one the public build
+// decodes from the prepared walk, or the build would key this data to other geometry.
+const digestScript=(await bundle({entryPoints:['src/v2/atrium-pvs-key.js'],bundle:true,format:'iife',globalName:'__atriumPvsKey',write:false,target:'es2022'})).outputFiles[0].text;
 
-// --mask=<pvs.json>: leave the envelope's cells unknown in data made before every run did so.
-if(arg('mask',null)){const {nx,nz,ny}=PVS_GRID,data=JSON.parse(await fs.readFile(arg('mask'),'utf8')),cells=decodeCells(data.cells,nx*nz*ny),envelopeUnknown=leaveEnvelope(cells);
- let hidden=0,visible=0;for(const v of cells){if(v===1)hidden++;else if(v===2)visible++;}
- const out=arg('out',arg('mask'));await fs.writeFile(out,JSON.stringify({...data,hidden,visible,envelopeUnknown,cells:encodeCells(cells)}));
- console.log('wrote',out,{envelopeUnknown,hidden,visible});process.exit(0);
+// --prepared: a local server for the colliders page and the prepared walk's files.
+async function servePrepared(dir){
+ const script=(await bundle({entryPoints:['scripts/walk-atrium-pvs.entry.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2022'})).outputFiles[0].text;
+ const server=http.createServer(async(req,res)=>{
+  const url=new URL(req.url,'http://x'),name=decodeURIComponent(url.pathname);
+  try{
+   if(name==='/')return res.writeHead(200,{'content-type':'text/html'}).end('<!doctype html><body><script type="module" src="bake.js"></script></body>');
+   if(name==='/bake.js')return res.writeHead(200,{'content-type':'text/javascript'}).end(script);
+   const file=/^\/prepared\/([\w.-]+)$/.exec(name)?.[1];if(!file)return res.writeHead(404).end();
+   res.writeHead(200,{'content-type':'application/octet-stream'}).end(await fs.readFile(path.join(dir,file)));
+  }catch{res.writeHead(404).end();}
+ });
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));
+ return {url:'http://127.0.0.1:'+server.address().port+'/',close:()=>server.close()};
 }
 
-// The envelope above comes from this checkout's layout; the build must have been made from the same one.
-const built=JSON.parse(await fs.readFile(path.join('output/perf-walk/builds',tag,'build.json'),'utf8')).layoutSource?.sha256;
-const own=createHash('sha256').update(await fs.readFile('output/leo-interior-v02/layout.json')).digest('hex');
-if(built!==own)throw Error('Build '+tag+' was made from another layout than this checkout ('+built+' vs '+own+'); rebuild it');
-
-const page=await browser();
+const served=prepared&&await servePrepared(prepared),page=await browser();
 try{
- await page.ev(`location.href=${JSON.stringify(site+'/'+tag+'/walk.html?lv=2&view=first&halloween=0')}`);
- for(let i=0;!await page.ev('document.body?.dataset.ready==="1"&&!!globalThis.__walk').catch(()=>false);i++){if(i>2400)throw Error('Walk did not load');await sleep(250);}
- await sleep(3000);
+ const names=prepared&&await fs.readdir(prepared),meta=prepared&&['world.parts.json','world.bin','world.json.gz'].find(n=>names.includes(n));
+ await page.ev(`location.href=${JSON.stringify(prepared?served.url+'?meta='+meta:site+'/'+tag+'/walk.html?lv=2&view=first&halloween=0')}`);
+ for(let i=0;!await page.ev('document.body?.dataset.ready==="1"&&!!globalThis.__walk').catch(()=>false);i++){
+  const failed=await page.ev('document.body?.dataset.failed').catch(()=>null);if(failed)throw Error('Colliders did not load: '+failed);
+  if(i>2400)throw Error('Walk did not load');await sleep(250);
+ }
+ if(!prepared)await sleep(3000);
  await page.ev(await fs.readFile('scripts/walk-atrium-pvs.page.js','utf8'));
- const meta=await page.ev('(()=>{const m=window.LEO_PUBLIC_ASSETS||{};return {prepared:m["walk-prepared"]?.sha256||null,layout:m["layout-data"]?.sha256||null};})()');
- console.log('source',meta);
- console.log('setup',await page.ev(`__atriumPvs.setup(${JSON.stringify(levels)},${JSON.stringify(ATRIUM_SPAN)},${JSON.stringify(LOCAL_SPAN)},${JSON.stringify(BAND)})`));
+ const dir=prepared||path.join('output/perf-walk/mirror',await page.ev('window.LEO_PUBLIC_ASSETS["walk-prepared"].directory'));
+ await page.ev(digestScript);
+ const digest=await preparedDigest(dir),walkDigest=await page.ev('__atriumPvsKey.colliderDigest(__walk.colliders)');
+ if(walkDigest!==digest)throw Error(`The walk's colliders (${walkDigest}) are not those of the prepared walk in ${dir} (${digest})`);
+ const integrity=JSON.parse(await fs.readFile(path.join(dir,'integrity.json'),'utf8')).sha256;
+ const source={prepared:integrity,layout:createHash('sha256').update(layoutText).digest('hex'),key:pvsKey(digest,setup)};
+ console.log('source',source);
+ console.log('setup',await page.ev(`__atriumPvs.setup(${JSON.stringify(setup.levels)},${JSON.stringify(setup.atriumSpan)},${JSON.stringify(setup.localSpan)},${JSON.stringify(setup.band)})`));
  if(process.argv.includes('--views')){
   const views=JSON.parse(await fs.readFile('scripts/walk-frame-views.json','utf8'));
-  for(const v of views){const eyes=[];for(const h of HEIGHTS)for(const dx of [-2,0,2])for(const dz of [-2,0,2])eyes.push(v.at[0]+dx,v.at[1]+h,v.at[2]+dz,v.at[1]);const t=Date.now(),r=await page.ev(`__atriumPvs.run(${JSON.stringify(eyes)})`);console.log(v.name.padEnd(22),r.visible.join(''),'faces',r.faces,(Date.now()-t)+' ms');}
+  for(const v of views){const eyes=[];for(const h of setup.heights)for(const dx of [-2,0,2])for(const dz of [-2,0,2])eyes.push(v.at[0]+dx,v.at[1]+h,v.at[2]+dz,v.at[1]);const t=Date.now(),r=await page.ev(`__atriumPvs.run(${JSON.stringify(eyes)})`);console.log(v.name.padEnd(22),r.visible.join(''),'faces',r.faces,(Date.now()-t)+' ms');}
   process.exit(0);
  }
  // --eyes=x,y,z[,floor];...: the verdict at exactly those eyes (debugging a pose); the walker's floor defaults to a
@@ -98,7 +117,7 @@ try{
  for(let i=ix0;i<=ix1;i+=8){
   const n=Math.min(8,ix1-i+1),cols=await page.ev(`__atriumPvs.columns(${x0+i*step},${z0+iz0*step},${n},${iz1-iz0+1},${step},${y0+ny*2+20},${y0-6},${HEADROOM})`);
   for(let c=0;c<cols.length;c+=3){const ci=i+cols[c],cj=iz0+cols[c+1],floors=cols[c+2];
-   for(let f=0;f<floors.length;f+=2)for(const h of HEIGHTS){if(h>floors[f+1]-.1)continue;const y=floors[f]+h,k=Math.floor((y-y0)/2);if(k<0||k>=ny)continue;samples.push([(k*nx+ci)*nz+cj,x0+ci*step,y,z0+cj*step,floors[f]]);}}
+   for(let f=0;f<floors.length;f+=2)for(const h of setup.heights){if(h>floors[f+1]-.1)continue;const y=floors[f]+h,k=Math.floor((y-y0)/2);if(k<0||k>=ny)continue;samples.push([(k*nx+ci)*nz+cj,x0+ci*step,y,z0+cj*step,floors[f]]);}}
  }
  console.log('samples',samples.length,'from columns in',((Date.now()-t)/1000).toFixed(0)+' s');
  const known=new Set(samples.map(s=>s[0])),seen=new Set();let faces=0;t=Date.now();
@@ -114,7 +133,7 @@ try{
   for(let dk=-1;dk<=1;dk++)for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){const kk=k+dk,ii=i+di,jj=j+dj;if(kk<0||kk>=ny||ii<0||ii>=nx||jj<0||jj>=nz)continue;const n=(kk*nx+ii)*nz+jj;if(cells[n])cells[n]=2;}}
  const envelopeUnknown=leaveEnvelope(cells);
  let hidden=0,visible=0;for(const v of cells){if(v===1)hidden++;else if(v===2)visible++;}
- const data={version:1,made:new Date().toISOString(),source:meta,grid:PVS_GRID,heights:HEIGHTS,atriumSpan:ATRIUM_SPAN,localSpan:LOCAL_SPAN,known:known.size,hidden,visible,envelopeUnknown,cells:encodeCells(cells)};
- const out=arg('out','output/perf-walk/atrium-pvs/'+tag+'.json');await fs.mkdir(path.dirname(out),{recursive:true});await fs.writeFile(out,JSON.stringify(data));
+ const data={version:1,made:new Date().toISOString(),source,grid:PVS_GRID,heights:setup.heights,atriumSpan:setup.atriumSpan,localSpan:setup.localSpan,known:known.size,hidden,visible,envelopeUnknown,cells:encodeCells(cells)};
+ const out=arg('out',prepared?path.join(PVS_BAKED_DIR,source.key+'.json'):'output/perf-walk/atrium-pvs/'+tag+'.json');await fs.mkdir(path.dirname(out),{recursive:true});await fs.writeFile(out,JSON.stringify(data));
  console.log('wrote',out,{known:known.size,hidden,visible,bytes:data.cells.length,seconds:Math.round((Date.now()-t)/1000)});
-}finally{page.close();}
+}finally{page.close();served?.close();}
