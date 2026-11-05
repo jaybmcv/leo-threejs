@@ -331,7 +331,7 @@ export function createCatTree(ship){
  named(near,'Cat_tree_body',parts.filter(g=>!g.userData.knit),bulk);named(near,'Cat_tree_knit',parts.filter(g=>g.userData.knit),felt(new T.MeshStandardMaterial({name:'Cat_tree_knit',vertexColors:true,roughness:1,metalness:0,side:T.DoubleSide}),1,{knit:true}));named(near,'Cat_tree_lanterns',lights,glow);named(near,'Cat_tree_dens',dens,denGlow);near.add(seats);
  // Colliders: walk surfaces named as floors, everything else as walls (src/v2/ground.js reads the names).
  named(solid,'Cat_tree_island_floor',grounds.island,hidden,['position']);named(solid,'Cat_tree_ramp',grounds.ramp,hidden,['position']);named(solid,'Cat_tree_platform',grounds.platform,hidden,['position']);
- named(solid,'Cat_tree_bridge_walkway',grounds.bridge,hidden,['position']);named(solid,'Cat_tree_step_platform',[...grounds.step,...grounds.cushion],hidden,['position']);named(solid,'Cat_tree_guard_wall',walls,hidden,['position']);
+ named(solid,'Cat_tree_bridge_walkway',grounds.bridge,hidden,['position']);named(solid,'Cat_tree_step_platform',[...grounds.step,...grounds.cushion].map(puck),hidden,['position']);named(solid,'Cat_tree_guard_wall',walls,hidden,['position']);
  for(const o of near.children)if(o.isMesh)o.userData.noCollide=true;
  group.updateMatrixWorld(true);solid.updateMatrixWorld(true);
  return {group,solid,seats,bounds:{y0:TREE.floor,y1:TREE.top+.5}};
@@ -413,6 +413,10 @@ function fish(color){const body=new T.SphereGeometry(.5,12,8);body.scale(1.5,.8,
  const eye=new T.SphereGeometry(.09,6,4);eye.translate(.5,.12,.22);return merge([paint(body,color),paint(tail,0x4f86b8),paint(eye,C.ink)]);}
 // A pumpkin cushion: a squashed sphere with six deep soft lobes and a button dimple on top, its base flat at y 0.
 function pumpkin(r,h){const g=new T.SphereGeometry(r,12,6);const p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),a=Math.atan2(z,x),k=1-.2*Math.pow(Math.abs(Math.sin(a*3)),2),d=Math.hypot(x,z)/r,ny=(y/r)*h/2+h/2-(y>0?h*.28*Math.exp(-d*d/.06):0);p.setXYZ(i,x*k,ny,z*k);}g.computeVertexNormals();return g;}
+// A soft shape's ground collider: a flat-topped, straight-sided puck over its footprint, as tall as the shape. Its
+// rounded flanks would be the first ground a walker stepping off its edge meets, too steep to stand on, and the walk
+// check (scripts/v2-walk.mjs) counts that as falling out of the ship.
+function puck(g){g.computeBoundingBox();const b=g.boundingBox,c=b.getCenter(new T.Vector3()),s=b.getSize(new T.Vector3()),r=Math.min(s.x,s.z)/2;return new T.CylinderGeometry(r,r,s.y,12).translate(c.x,c.y,c.z);}
 // Round off a box's corners by pulling its vertices toward a rounded-rectangle shell of radius r.
 function roundBox(g,r){g.computeBoundingBox();const b=g.boundingBox,h=b.getSize(new T.Vector3()).multiplyScalar(.5),c=b.getCenter(new T.Vector3()),p=g.attributes.position,v=new T.Vector3(),q=new T.Vector3();
  const inner=h.clone().subScalar(r).max(new T.Vector3());for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).sub(c);q.copy(v).clamp(inner.clone().negate(),inner);const d=v.clone().sub(q);if(d.lengthSq()>1e-8)d.setLength(r);p.setXYZ(i,c.x+q.x+d.x,c.y+q.y+d.y,c.z+q.z+d.z);}
