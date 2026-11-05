@@ -112,12 +112,12 @@
     "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
   },
   "src/v2/prepared-authoring.authoring.js": {
-    "sha256": "025a34b68c57cfda831fe7380ad7082bb0046fa4614b93bceece704412902b09",
-    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+    "sha256": "c1a0c1a882962304605c2e1bebd5f0de8cd8726fb00979298a132863b0ec6910",
+    "reason": "feature() owner tags and rail probe recording for the feature fast lane"
   },
   "src/v2/prepared-authoring.js": {
-    "sha256": "f5931b90869838c7629c5a2641aa4cb4599d7df57e57c8d0c3f09ed7f0f6b067",
-    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+    "sha256": "37a3c905f9d30e6b865f9110ce0c1a8192bdd14e65330c34f8b6c2e9b343ecf8",
+    "reason": "feature() owner tags and rail probe recording for the feature fast lane"
   },
   "src/v2/prepared-codec.authoring.js": {
     "sha256": "c8527af69eecd9e44d3af6123f2f95ba25b2d15ad42695f8c6924f029ed2e08f",
@@ -174,5 +174,21 @@
   "src/v2/facade.authoring.js": {
     "sha256": "f18efaee42bcad153cbbe6a40bb96ef2d8b515a836a263a1d0c1aec4752b0aad",
     "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
+  },
+  "src/walk/prepare.js": {
+    "sha256": "0946520a3eea3640b339031d8655936206b77398a3226a619fe869905d3b67f6",
+    "reason": "feature() owner tags and rail probe recording for the feature fast lane"
+  },
+  "src/walk/prepare.authoring.js": {
+    "sha256": "99fa333cee60af59c10ae105015ff9c92ebc2e4308996eb25da0476f679211fb",
+    "reason": "feature() owner tags and rail probe recording for the feature fast lane"
+  },
+  "src/v2/railings.js": {
+    "sha256": "4a3b5a4e106480e682de9384567adf5df68df81912dbc9840a5105520a66008f",
+    "reason": "feature() owner tags and rail probe recording for the feature fast lane"
+  },
+  "src/v2/railings.authoring.js": {
+    "sha256": "6dfd957f7953a897d8edb51eee7851158a941612e3c4e5444446e7af33fa4967",
+    "reason": "feature() owner tags and rail probe recording for the feature fast lane"
   }
 }
