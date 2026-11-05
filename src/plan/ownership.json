@@ -4835,7 +4835,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 12,
-      "signature": "08a64a20b58aa79e967c31c182db7aaf2b9f085157987f9a3c1a6dd451c33c93"
+      "signature": "dbd936bfcc9ae46e66c8b6e51f9cada3cd99c57f36547c720bd1eb85d5230696"
     },
     {
       "source": "src/walk/selfie.js",
@@ -4855,7 +4855,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 12,
-      "signature": "5570d4c772976a855691c40acecaa9c7e6843ea1f00ab80add7eeb9a66117d3f"
+      "signature": "e9a8de6d2c262b74860b3801360b58e8572119d6850d23d96354c4c4ffc7422a"
     },
     {
       "source": "src/walk/selfie.prepared.js",
@@ -4875,7 +4875,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 12,
-      "signature": "b0bcce3311a86256102406d602990ad540f835f652efba0c230c3b6dd9cc8b70"
+      "signature": "e52b4370ff546382ece7706483abcf7ef617180fbb7c286e5c247c103637eb7a"
     },
     {
       "source": "src/walk/selfie.public.js",
@@ -4895,7 +4895,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 12,
-      "signature": "5f8112604407f6344d5bfc4bb0ea736d8532a4318d895fa04567e8a41a2bbab9"
+      "signature": "7decbf984445f3d5a2cae0f36528d32d86f5a9d5340a077834fe0f8a1dc295dd"
     },
     {
       "source": "src/walk/signs.authoring.js",
@@ -5267,7 +5267,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 4,
-      "signature": "d6b7f9b393192a749a1f71dad32721e161686662b076ba1937bfe4d7c542f266"
+      "signature": "55549c2bb5439af3282e0d8c1c7c0ed02d8cf4f8bba127466df53af2a2515e52"
     },
     {
       "source": "src/walk/transporter.js",
@@ -5280,7 +5280,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 4,
-      "signature": "20820bed88b7d4b642a48300421ed6bc78b0e3c5e02fd6521a2528a1baf188bf"
+      "signature": "c6def6e40bfb364094e65c9179cfe93847a7afd30aaeecf7d388ac3861e0e700"
     },
     {
       "source": "src/walk/trim.authoring.js",
