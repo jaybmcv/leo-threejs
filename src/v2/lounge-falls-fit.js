@@ -1,6 +1,7 @@
 import * as T from 'three';
 import layout from '../plan/selected-layout.js';
-import {chartPoint,patchDepth} from '../plan/hull-skin-v2.js';
+import {chartPoint} from '../plan/hull-skin-v2.js';
+import {patchDepth} from './patch-sampler.js';
 const fitted=new WeakMap();
 function removeGlassWallWash(group){let removed=0;group.traverse(o=>{if(!o.isMesh||o.name!=='Lounge_falls_halo')return;const old=o.geometry,p=old.attributes.position,ix=old.index,keep=[];for(let i=0;i<(ix?.count??p.count);i+=3){const ids=[0,1,2].map(k=>ix?ix.getX(i+k):i+k),a=new T.Vector3().fromBufferAttribute(p,ids[0]),b=new T.Vector3().fromBufferAttribute(p,ids[1]),c=new T.Vector3().fromBufferAttribute(p,ids[2]),n=b.sub(a).cross(c.sub(a)).normalize();if(Math.abs(n.z)>.9){removed++;continue;}keep.push(...ids);}const g=new T.BufferGeometry();for(const[name,attr]of Object.entries(old.attributes)){const a=new attr.array.constructor(keep.length*attr.itemSize);keep.forEach((id,i)=>{for(let k=0;k<attr.itemSize;k++)a[i*attr.itemSize+k]=attr.getComponent(id,k)});g.setAttribute(name,new T.BufferAttribute(a,attr.itemSize,attr.normalized));}g.computeBoundingBox();g.computeBoundingSphere();o.geometry=g;});return removed;}
 function points(root){root.updateMatrixWorld(true);const out=[];root.traverse(o=>{if(!o.isMesh)return;const p=o.geometry.attributes.position,ix=o.geometry.index;for(let at=0;at<(ix?.count??p.count);at+=3){const t=[0,1,2].map(k=>new T.Vector3().fromBufferAttribute(p,ix?ix.getX(at+k):at+k).applyMatrix4(o.matrixWorld));out.push(...t);for(let k=0;k<3;k++)out.push(t[k].clone().add(t[(k+1)%3]).multiplyScalar(.5));out.push(t[0].clone().add(t[1]).add(t[2]).multiplyScalar(1/3));}});return out;}
