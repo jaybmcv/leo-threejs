@@ -21,6 +21,14 @@ export function phase6LakePolygon(ring){let cached=lakes.get(ring);if(cached)ret
 
 // Garden footprints are candidates until validated against the actual notched deck.
 export const ATRIUM_GARDEN_POCKETS=[-80,-34,12].flatMap((x,i)=>[-1,1].map(side=>({id:'atrium6-garden-'+i+'-'+(side<0?'port':'starboard'),x,z:side*44,width:12,depth:8,canopyHeight:[3.6,4.4,5.2][i]})));
+// 4B signature trees. Each stands on an existing planted trunk (park grove or garden pocket), so the walk keeps that
+// trunk as its collider; the small crown there gives way to the big canopy. Heights in metres above Deck 6.
+export const ATRIUM_SIGNATURE_TREES=[
+ {id:'park',x:-50,z:-27,height:13,spread:6.2,seed:11},
+ {id:'lake',x:12,z:-45.1,height:12,spread:5.6,seed:23},
+ {id:'food-aft',x:-34,z:42.9,height:13.5,spread:6.4,seed:37},
+ {id:'food-fore',x:12,z:42.9,height:12.5,spread:5.8,seed:41},
+];
 export function phase6GardenPolygons(){return ATRIUM_GARDEN_POCKETS.map(p=>rect(p.x-6,p.x+6,p.z-4,p.z+4));}
 // A dry 2.4 m garden approach crosses the shallow edge; no deep tank is built.
 export function phase6LakeIslands(){return [rect(6,18,-48,-40),rect(10.8,13.2,-56,-48)];}

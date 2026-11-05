@@ -1,6 +1,6 @@
 import {addReflectionTerraces} from './reflection-terraces.js';
 import {hydrateHullLayout} from '../plan/envelope-data-v2.js';
-import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS} from '../plan/atrium-v2.js';
+import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS,ATRIUM_SIGNATURE_TREES} from '../plan/atrium-v2.js';
 import {patchDepth,worldPoint} from '../plan/hull-skin-v2.js';
 import {contains,distanceToSegment,bounds} from '../plan/geometry-v2.js';
 export function phase6Programme(layout){
@@ -25,7 +25,8 @@ export function phase6Programme(layout){
  // around their full footprint and reserve the z=0 boulevard throughout.
  const gardenPockets=ATRIUM_GARDEN_POCKETS.filter(p=>fits(p.x,p.z,p.width,p.depth));
  const inPocket=(x,z,w=0,d=0)=>gardenPockets.some(p=>Math.abs(x-p.x)<p.width/2+w/2+2.4&&Math.abs(z-p.z)<p.depth/2+d/2+2.4);
- const tree=(room,x,z,h=4.4)=>{add(room,'p6_tree_trunk',[.44,2.8,.44],[x,y+1.4,z],'oak');for(const[ox,oz,dy]of[[-.65,0,0],[.65,.35,.25],[0,-.45,.6]])add(room,'p6_tree_crown',[2.8,2.2,2.8],[x+ox,y+h-1.7+dy,z+oz],'green',{noCollide:true});};
+ // A 4B signature tree keeps this trunk as its collider and draws its own canopy (atrium-gardens.js).
+ const tree=(room,x,z,h=4.4)=>{add(room,'p6_tree_trunk',[.44,2.8,.44],[x,y+1.4,z],'oak');if(ATRIUM_SIGNATURE_TREES.some(t=>Math.hypot(t.x-x,t.z-z)<.01))return;for(const[ox,oz,dy]of[[-.65,0,0],[.65,.35,.25],[0,-.45,.6]])add(room,'p6_tree_crown',[2.8,2.2,2.8],[x+ox,y+h-1.7+dy,z+oz],'green',{noCollide:true});};
  for(const p of gardenPockets){
   const room=p.z<0&&p.x>0?'atrium6-lake':p.z<0?'atrium6-park':'atrium6-food';
   for(const dx of[-3.5,0])tree(room,p.x+dx,p.z-1.1,p.canopyHeight);
