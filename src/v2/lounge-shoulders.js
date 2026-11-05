@@ -60,11 +60,37 @@ function panes(){
    // cut deeper there (only room-shell and hull-room walls get these cuts, so furniture and signs are untouched).
    const deepen=q=>q.map(r=>r===planes[2]?[0,1,0,-(B.y-DEEP_BAND)]:r===planes[4]?[m.x,m.y,m.z,DEEP-m.dot(c)]:r);
    const deep=[prism(deepen(planes)),...endDefs.map(e=>prism(deepen([[e.two[0][0],0,e.two[0][2],e.two[0][3]+e.flap],e.two[1],...slab]).map(r=>r===planes[3]?[0,-1,0,B.y-.03]:r)))];
-   out.push({side,k,a,b,ga,gb,ySill:A.y,yTop:B.y,nbA:k?null:nose,nbB:k+1<PANES?null:row,S0:S(k),P0:P(k),S1:S(k+1),P1:P(k+1),m,c,planes,box,ends,deep,cut:prism(cutPlanes)});
+   out.push({side,k,a,b,ga,gb,ySill:A.y,yTop:B.y,nbA:k?null:nose,nbB:k+1<PANES?null:row,S0:S(k),P0:P(k),S1:S(k+1),P1:P(k+1),m,c,planes,box,ends,deep,cut:prism(cutPlanes),head:headBand(cutPlanes[0],cutPlanes[1],m,c,B.y)});
   }
  }
  return out;
 }
+
+// Mars sits dead ahead, where the centred nose row put a mullion. The two middle nose windows become one 6.3 m pane: the
+// pier between them (and FRAME of each window's edge) is cut through and glazed like a shoulder pane, without a bar.
+const FRAME=.06;
+function centrePane(){
+ const nose=layout.windows.filter(w=>w.roomId===ROOM&&/--head$/.test(w.prototype));
+ // Only an even row has a mullion on the centreline; a window already spanning it needs nothing.
+ if(nose.some(w=>w.corners.some(q=>q[2]<0)&&w.corners.some(q=>q[2]>0)))return null;
+ const L=nose.filter(w=>w.center[2]<0).reduce((a,b)=>b.center[2]>a.center[2]?b:a,{center:[0,0,-1e9]}),R=nose.filter(w=>w.center[2]>0).reduce((a,b)=>b.center[2]<a.center[2]?b:a,{center:[0,0,1e9]});
+ if(!L.corners||!R.corners)return null;
+ // Each window's inner edge, moved FRAME into the window along its sill and head (corners run u0 sill, u1 sill, u1 top, u0 top).
+ const inset=(w,e,o)=>v3(w.corners[e]).lerp(v3(w.corners[o]),FRAME/w.width),S0=inset(L,1,0),P0=inset(L,2,3),S1=inset(R,0,1),P1=inset(R,3,2);
+ const across=S1.clone().sub(S0),divider=(S,P)=>{const e=P.clone().sub(S),n=new T.Vector3(-e.z,0,e.x).normalize();if(n.dot(across)<0)n.negate();return {n,d:-n.dot(S)};};
+ const a=divider(S0,P0),b=divider(S1,P1),corners=[S0,S1,P1,P0],c=corners.reduce((s,q)=>s.add(q),new T.Vector3()).multiplyScalar(.25);
+ const m=new T.Vector3().crossVectors(corners[2].clone().sub(corners[0]),corners[3].clone().sub(corners[1])).normalize();if(m.x*(c.x-CENTRE.x)+m.z*(c.z-CENTRE.z)<0)m.negate();
+ const planes=[[a.n.x,0,a.n.z,a.d+.005],[-b.n.x,0,-b.n.z,-b.d+.005],[0,1,0,-S0.y],[0,-1,0,P0.y],[m.x,m.y,m.z,INSIDE-m.dot(c)],[-m.x,-m.y,-m.z,OUTSIDE+m.dot(c)]];
+ // One sheet of glass spans both windows (their own glass is cut out), so no seam shows where two panes would meet.
+ const G=[v3(L.corners[0]),v3(R.corners[1]),v3(R.corners[2]),v3(L.corners[3])],ga=divider(G[0],G[3]),gb=divider(G[1],G[2]);
+ const sheet=prism([[ga.n.x,0,ga.n.z,ga.d+.01],[-gb.n.x,0,-gb.n.z,-gb.d+.01],[0,1,0,.01-S0.y],[0,-1,0,P0.y+.01],[m.x,m.y,m.z,.4-m.dot(c)],[-m.x,-m.y,-m.z,.4+m.dot(c)]]);
+ return {side:0,k:1,direct:true,a,b,ga:0,gb:0,ySill:S0.y,yTop:P0.y,S0,P0,S1,P1,G,m,c,planes,box:regionBox(planes),ends:[],deep:[],cut:prism(planes),head:headBand(planes[0],planes[1],m,c,P0.y),sheet};
+}
+
+// Above a pane's head the hull's underside slopes down into the room to meet the glass (it showed as a lavender band):
+// HEAD_BAND cuts it away between the head and just under the ceiling, out to HEAD_IN room-side, for the soffit to close.
+const HEAD_IN=2.5;
+function headBand(a,b,m,c,yTop){const r=layout.rooms.find(q=>q.id===ROOM);return prism([a,b,[0,1,0,-yTop],[0,-1,0,r.y+r.height-.11],[m.x,m.y,m.z,HEAD_IN-m.dot(c)],[-m.x,-m.y,-m.z,OUTSIDE+m.dot(c)]]);}
 
 function prism(planes){const box=regionBox(planes);return {p:{chart:CHART},rect:[box.min.x,box.max.x,box.min.y,box.max.y],v0:box.min.z,v1:box.max.z,chartPlanes:planes,ignoreOwner:true,box};}
 
@@ -78,7 +104,8 @@ function sliceAt(c,y){
  return poly;
 }
 // The shoulder panes' plan footprints between heights lo and hi, so the facade's deck plates (terraces between the room
-// and the hull) are holed where the glass now is, as they are for window prototypes.
+// and the hull) are holed where the glass now is, as they are for window prototypes. The centre pane is left out: its
+// 0.4 m strip only crosses the pier, and re-holing the terrace mesh runs the authoring renderer out of memory.
 let paneCache=null;
 export function loungeShoulderFootprints(lo,hi){
  if(!layout.rooms.some(r=>r.id===ROOM))return [];paneCache||=panes();const out=[];
@@ -132,18 +159,52 @@ function glaze(bvh,p){
  // Across a row, rays sweep from the left divider's ray to the right one's, so the ends stay on the divider planes.
  const sweep=(j,n)=>{const L=left[j],R=right[j];if(!L||!R)return Array(n+1).fill(null);
   return Array.from({length:n+1},(_,i)=>{const s=i/n;if(!i)return L;if(i===n)return R;return flat(wallAlong(bvh,L.origin.clone().lerp(R.origin,s),L.dir.clone().lerp(R.dir,s).normalize(),L.depth+(R.depth-L.depth)*s));});};
- strip(sweep(0,EDGE));strip(sweep(ROWS,EDGE));
+ const headRow=sweep(ROWS,EDGE);strip(sweep(0,EDGE));strip(headRow);
+ // The head reveal's room edge, divider to divider, for the soffit above it.
+ const head=[rayAt(p.a,0,1,p.S0,p.P0,ROWS),...headRow,rayAt(p.b,0,-1,p.S1,p.P1,ROWS)].filter(Boolean).map(h=>h.outer.clone().addScaledVector(h.dir,-SETBACK-.01));
  const grid=[];for(let j=0;j<=ROWS;j++)grid.push(sweep(j,COLS).map(h=>h?h.outer.clone().addScaledVector(h.dir,-SETBACK):null));
  for(let j=0;j<ROWS;j++)for(let i=0;i<COLS;i++){const q=[grid[j][i],grid[j][i+1],grid[j+1][i+1],grid[j+1][i]];if(q.every(Boolean))glass.push(q[0],q[1],q[2],q[0],q[2],q[3]);}
- return {reveal,glass,mullion,left,right};
+ return {reveal,glass,mullion,left,right,head};
+}
+
+// The centre pane spans two windows' open frames, where rays find no wall to sample: its glass is the corner quad, and
+// its sill and head reveals run REVEAL back toward the room, as deep as the windows' own.
+const REVEAL=.31;
+function glazeDirect(p){
+ const back=v=>v.clone().addScaledVector(v.clone().sub(CENTRE).setY(0).normalize(),-REVEAL),onGlass=v=>v.clone().addScaledVector(p.m,-SETBACK);
+ const [s0,s1,p1,p0]=[p.S0,p.S1,p.P1,p.P0].map(onGlass),g=p.G.map(onGlass),reveal=[],glass=[g[0],g[1],g[2],g[0],g[2],g[3]];
+ for(const [a,b] of [[s0,s1],[p0,p1]])reveal.push(a,b,back(b),a,back(b),back(a));
+ return {reveal,glass,mullion:[],left:[],right:[],head:[p0,p1]};
+}
+
+// Above a pane's head (with the head band cut away) a fascia rises on the glass line to just above the ceiling's
+// underside, and a ceiling infill runs SOFFIT room-side from it, hidden wherever the ceiling is.
+// HEAD_IN is measured along the leaning pane normal, which reaches ~HEAD_IN/0.6 across the floor plan.
+const SOFFIT=HEAD_IN/.6,OVERLAP=.5;
+function soffit(line,top){
+ // Neighbouring panes lie on slightly different planes, so each fascia runs OVERLAP past its ends to close the seams.
+ if(line.length>1){const ext=(a,b)=>a.clone().addScaledVector(a.clone().sub(b).normalize(),OVERLAP);line=[ext(line[0],line[1]),...line,ext(line.at(-1),line.at(-2))];}
+ const out=[],up=v=>v.clone().setY(top),inward=v=>up(v).addScaledVector(v.clone().sub(CENTRE).setY(0).normalize(),-SOFFIT),quad=(a,b,c,d)=>out.push(a,b,c,a,c,d);
+ for(let i=1;i<line.length;i++){const a=line[i-1],b=line[i];quad(a,b,up(b),up(a));quad(up(a),up(b),inward(b),inward(a));}
+ return out;
 }
 
 // A mullion between two panes: a closed bar from the sill to the head, its back on the two glass edges and its face
-// BAR metres room-side, so it no longer shows the old wall's steps. Its ends stay open: the sill and head strips close them.
+// BAR metres room-side, so it no longer shows the old wall's steps. The sill strip closes its foot.
 function mullionBar(L,R){
  const out=[],at=(h,deep)=>h.outer.clone().addScaledVector(h.dir,-SETBACK-deep),quad=(a,b,c,d)=>out.push(a,b,c,a,c,d);
  const ring=j=>L[j]&&R[j]?[at(L[j],0),at(L[j],BAR),at(R[j],BAR),at(R[j],0)]:null;
  for(let j=0;j<ROWS;j++){const a=ring(j),b=ring(j+1);if(!a||!b)continue;for(let e=0;e<4;e++)quad(a[e],a[(e+1)%4],b[(e+1)%4],b[e]);}
+ // A cap 2 mm above the head, clear of the head strip, so the bar's top never shows open.
+ const top=ring(ROWS);if(top)quad(...top.map(v=>v.clone().setY(v.y+.002)));
+ return out;
+}
+
+// Triangles (point triples) wound so each one's normal faces the target point.
+function facing(points,target){
+ const out=[],n=new T.Vector3(),e=new T.Vector3();
+ for(let i=0;i+2<points.length;i+=3){const [a,b,c]=[points[i],points[i+1],points[i+2]];n.subVectors(b,a).cross(e.subVectors(c,a));
+  out.push(...(n.dot(e.copy(target).sub(a))<0?[a,c,b]:[a,b,c]));}
  return out;
 }
 
@@ -160,21 +221,21 @@ function touches(o,boxes){
 }
 
 export function glazeLoungeShoulders(root){
- const t0=performance.now(),room=layout.rooms.find(r=>r.id===ROOM),list=room?panes():[];if(!list.length)return {panes:0};
+ const t0=performance.now(),room=layout.rooms.find(r=>r.id===ROOM),list=room?panes():[];if(!list.length)return {panes:0};const centre=centrePane(),all=centre?[...list,centre]:list;
 if(root.userData.loungeShouldersGlazed)return root.userData.loungeShouldersGlazed;
  root.updateMatrixWorld(true);const shell=root.getObjectByName('V2_shell_'+ROOM)||root,materials=new Map();
  root.traverse(o=>{if(o.isMesh)for(const m of [].concat(o.material))if(m&&!materials.has(m.name))materials.set(m.name,m);});
  const glassMat=materials.get('V2_prototype_hull_glass')||new T.MeshStandardMaterial({name:'V2_prototype_hull_glass',color:0x83b4c4,transparent:true,opacity:.18,depthWrite:false,roughness:.16,metalness:.12,side:T.DoubleSide});
  const rimMat=materials.get('V2_prototype_window_rim')||new T.MeshStandardMaterial({name:'V2_prototype_window_rim',color:0x586e7b,roughness:.35,metalness:.55,side:T.DoubleSide});
- const region=list.reduce((b,p)=>b.union(p.box),new T.Box3()).expandByScalar(1),bvh=wallField(root,region);
- const parts=list.map(p=>glaze(bvh,p)),cut=new Map(),cuts=list.flatMap(p=>[p.cut,...p.ends]),deepCuts=list.flatMap(p=>p.deep);
+ const region=all.reduce((b,p)=>b.union(p.box).union(p.head.box),new T.Box3()).expandByScalar(1),bvh=wallField(root,region);
+ const parts=list.map(p=>glaze(bvh,p)),middle=centre?[glazeDirect(centre)]:[],cut=new Map(),cuts=all.flatMap(p=>[p.cut,...p.ends,p.head]),deepCuts=list.flatMap(p=>p.deep);
  // The lounge's own step walls (glass, 25 cm sections in its top band, y+5.7 up) are retired aft of the entry wall at x 170.
  const steps=[{p:{chart:CHART},rect:[171,260,room.y+STEP_FROM,room.y+room.height+.03],v0:-80,v1:80,ignoreOwner:true}];
  // Only meshes with triangles inside a pane (or the step walls) are cut. Interleaved ones (loaded props) are left whole,
  // except one that reaches into a pane (deck 17's hull glass batch): it is de-interleaved first, or its facets stay.
  // The cuts bypass the build cache: packing the big hull meshes for it in the renderer runs out of memory, and the
  // few touched meshes cut in well under a second.
- const stepBox=new T.Box3(new T.Vector3(171,STEP_FROM+room.y,-80),new T.Vector3(260,room.y+room.height+.03,80)),boxes=list.flatMap(p=>[p.cut.box,...p.ends.map(e=>e.box)]);
+ const stepBox=new T.Box3(new T.Vector3(171,STEP_FROM+room.y,-80),new T.Vector3(260,room.y+room.height+.03,80)),boxes=all.flatMap(p=>[p.cut.box,p.head.box,...(p.sheet?[p.sheet.box]:[]),...p.ends.map(e=>e.box)]);
  const meshes=[],skipped=[],unpacked=[],mb=new T.Box3();root.traverse(o=>{if(!o.isMesh||o.userData.loungeShoulder)return;const big=large(o,mb),pane=big&&mb.intersectsBox(region);
   const step=[].concat(o.material).every(m=>m?.name==='V2_smart_glass')&&mb.intersectsBox(stepBox),deep=DEEP_NAMES.has(o.name)&&mb.intersectsBox(region);if(!pane&&!step&&!deep)return;
   if(Object.values(o.geometry.attributes).some(a=>a.isInterleavedBufferAttribute)){if(!pane||!touches(o,boxes)){skipped.push(o.name);return;}deinterleaveGeometry(o.geometry);unpacked.push(o.name);}meshes.push({o,pane,step,deep});});
@@ -183,14 +244,20 @@ if(root.userData.loungeShouldersGlazed)return root.userData.loungeShouldersGlaze
   let n=pane&&touches(o,boxes)?cutChartMany(o,cuts):0;
   if(step)n+=cutChartMany(o,steps);
   if(deep)n+=cutChartMany(o,deepCuts);
+  if(centre&&pane&&!o.userData.collisionOnly&&[].concat(o.material).every(q=>q?.transparent)&&touches(o,[centre.sheet.box]))n+=cutChartMany(o,[centre.sheet]);
   if(n)cut.set(o.name,(cut.get(o.name)||0)+n);
  }}finally{globalThis.__LEOBuildGeometryCache=cache;}
- const reveal=parts.flatMap(q=>q.reveal),glass=parts.flatMap(q=>q.glass);
+ // Reveal faces turn toward the room's middle (sill strips up, head strips down), so the head soffit takes the same
+ // shade as the side rows' window heads instead of the sky light an upward face catches.
+ const reveal=facing([...parts,...middle].flatMap(q=>q.reveal),new T.Vector3(CENTRE.x,room.y+room.height/2,CENTRE.z)),glass=[...parts,...middle].flatMap(q=>q.glass);
  if(reveal.length)meshOf(shell,'V2_lounge_shoulder_reveal',reveal,rimMat);
  const bars=list.flatMap((p,i)=>p.k?mullionBar(parts[i-1].right,parts[i].left):[]);
  const mullion=[...parts.flatMap(q=>q.mullion),...bars];// Two-sided: the pillar faces are wound by construction, not toward the room, and single-sided ones were culled.
- if(mullion.length){const lining=materials.get('V2_lining'),pillar=lining?lining.clone():rimMat.clone();pillar.side=T.DoubleSide;meshOf(shell,'V2_lounge_shoulder_mullion',mullion,pillar);}
+ const lining=materials.get('V2_lining'),pillar=lining?lining.clone():rimMat.clone();pillar.side=T.DoubleSide;
+ if(mullion.length)meshOf(shell,'V2_lounge_shoulder_mullion',mullion,pillar);
+ const fascia=facing([...parts,...middle].flatMap(q=>soffit(q.head,room.y+room.height-.08)),new T.Vector3(CENTRE.x,room.y+room.height/2,CENTRE.z));
+ if(fascia.length)meshOf(shell,'V2_lounge_shoulder_soffit',fascia,pillar);
  if(glass.length)meshOf(shell,'V2_lounge_shoulder_glass',glass,glassMat);
- const stats={panes:list.length,revealTriangles:reveal.length/3,glassTriangles:glass.length/3,barTriangles:bars.length/3,cut:Object.fromEntries(cut),skipped,unpacked,ms:Math.round(performance.now()-t0)};
+ const stats={panes:list.length,centrePane:!!centre,revealTriangles:reveal.length/3,glassTriangles:glass.length/3,barTriangles:bars.length/3,soffitTriangles:fascia.length/3,cut:Object.fromEntries(cut),skipped,unpacked,ms:Math.round(performance.now()-t0)};
  root.userData.loungeShouldersGlazed=stats;console.log('Lounge shoulders',JSON.stringify(stats));return stats;
 }
