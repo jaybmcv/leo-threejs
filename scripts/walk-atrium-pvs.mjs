@@ -2,9 +2,11 @@
 // reads the result in place of the per-frame sight rays). Runs scripts/walk-atrium-pvs.page.js in a debug walk build
 // (scripts/walk-frame-build.mjs --debug, served by scripts/walk-frame-serve.mjs) so it tests the walk's own colliders.
 //   node scripts/walk-atrium-pvs.mjs --tag=<debug build> [--layout=<layout.json>] [--out=<file>] [--views] [--eyes=x,y,z;...] [--region=x0,x1,z0,z1]
-//   node scripts/walk-atrium-pvs.mjs --prepared=<prepared-walk dir> [--layout=<layout.json>] [--out=<file>] [...]
+//   node scripts/walk-atrium-pvs.mjs --prepared=<prepared-walk dir> [--layout=<layout.json>] [--out=<file>] [--if-missing] [...]
 // --prepared bakes straight from a prepared walk (as authored, or as published), with no walk built: Chrome loads only its
 // colliders (scripts/walk-atrium-pvs.entry.js). It writes output/leo-interior-v02/atrium-pvs/<key>.json by default.
+// --if-missing skips the bake when one for the walk's key is already there or committed (scripts/atrium-pvs-source.mjs
+// bakedPvs), as on a deploy whose colliders and atrium did not change: the key takes about 20 s, a bake most of an hour.
 // --views only prints the verdict at the eyes of scripts/walk-frame-views.json. The data carries the key
 // (src/v2/atrium-pvs-key.js) of the colliders and atrium it was baked from; the public build ships it only to a walk with
 // the same key (scripts/atrium-pvs-source.mjs), so other rebuilds keep it. Copy it to src/walk/assets/atrium-pvs.json, or
@@ -19,7 +21,7 @@ import {PVS_GRID,encodeCells} from '../src/v2/atrium-pvs.js';
 import {pvsKey} from '../src/v2/atrium-pvs-key.js';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
 import {build as bundle} from './native-bundle.mjs';
-import {layoutPvsSetup,preparedDigest,preparedIntegrity,PVS_LAYOUT,PVS_BAKED_DIR} from './atrium-pvs-source.mjs';
+import {bakedPvs,layoutPvsSetup,preparedDigest,preparedIntegrity,PVS_LAYOUT,PVS_BAKED_DIR} from './atrium-pvs-source.mjs';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
 const tag=arg('tag','pvs-base'),prepared=arg('prepared',null),port=Number(arg('cdp',9338)),site='http://127.0.0.1:'+arg('port',4211);
@@ -84,6 +86,11 @@ async function servePrepared(dir){
  return {url:'http://127.0.0.1:'+server.address().port+'/',close:()=>server.close()};
 }
 
+if(prepared&&process.argv.includes('--if-missing')){
+ const key=pvsKey(await preparedDigest(prepared),setup);
+ if((await bakedPvs(key)).text){console.log('already baked',key);process.exit(0);}
+ console.log('baking',key);
+}
 const served=prepared&&await servePrepared(prepared),page=await browser();
 try{
  const names=prepared&&await fs.readdir(prepared),meta=prepared&&['world.parts.json','world.bin','world.json.gz'].find(n=>names.includes(n));
@@ -134,6 +141,8 @@ try{
  const envelopeUnknown=leaveEnvelope(cells);
  let hidden=0,visible=0;for(const v of cells){if(v===1)hidden++;else if(v===2)visible++;}
  const data={version:1,made:new Date().toISOString(),source,grid:PVS_GRID,heights:setup.heights,atriumSpan:setup.atriumSpan,localSpan:setup.localSpan,known:known.size,hidden,visible,envelopeUnknown,cells:encodeCells(cells)};
- const out=arg('out',prepared?path.join(PVS_BAKED_DIR,source.key+'.json'):'output/perf-walk/atrium-pvs/'+tag+'.json');await fs.mkdir(path.dirname(out),{recursive:true});await fs.writeFile(out,JSON.stringify(data));
+ const out=arg('out',prepared?path.join(PVS_BAKED_DIR,source.key+'.json'):'output/perf-walk/atrium-pvs/'+tag+'.json');await fs.mkdir(path.dirname(out),{recursive:true});
+ // Written whole, then renamed: a bake stopped part way (a deploy's time limit) leaves no half file under the key.
+ await fs.writeFile(out+'.part',JSON.stringify(data));await fs.rename(out+'.part',out);
  console.log('wrote',out,{known:known.size,hidden,visible,bytes:data.cells.length,seconds:Math.round((Date.now()-t)/1000)});
 }finally{page.close();served?.close();}
