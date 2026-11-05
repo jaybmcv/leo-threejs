@@ -13,9 +13,11 @@
 // if one did. patchProfile, often handed a fresh copy, uses a kept grid or builds one for that call only. A patch that
 // is small, not within 1e6 m or not worth a grid is scanned, as before.
 const grids=new WeakMap(),sums=[],LIMIT=1e6,bits=new Float64Array(1),words=new Uint32Array(bits.buffer);
-const checksum=patch=>{let h=patch.length|0;for(const t of patch){h=Math.imul(h^t.length,16777619);for(const p of t){h=Math.imul(h^p.length,16777619);for(const v of p){bits[0]=v;h=Math.imul(h^words[0],16777619);h=Math.imul(h^words[1],16777619);}}}return h;};
+// Two 32-bit lanes over every number's bits (a diagnostic for the contract, not a proof of it).
+const mix=(h,w,m)=>Math.imul(h^w,m),checksum=patch=>{let h=patch.length|0,k=~h;for(const t of patch){h=mix(h,t.length,16777619);k=mix(k,t.length,2246822519);for(const p of t){h=mix(h,p.length,16777619);k=mix(k,p.length,2246822519);for(const v of p){bits[0]=v;h=mix(mix(h,words[0],16777619),words[1],16777619);k=mix(mix(k,words[1],2246822519),words[0],2246822519)^k>>>13;}}}return h+':'+k;};
 export function verifyPatchGrids(){for(const [patch,sum]of sums)if(checksum(patch)!==sum)throw Error('A sampled skin patch changed after its grid was built');}
-const kept=patch=>{let g=grids.get(patch);if(!g){g=grid(patch);grids.set(patch,g);if(g.cell)sums.push([patch,checksum(patch)]);}return g;};
+const watched=new WeakSet(),watch=patch=>{if(!watched.has(patch)){watched.add(patch);sums.push([patch,checksum(patch)]);}};
+const kept=patch=>{let g=grids.get(patch);if(!g){g=grid(patch);grids.set(patch,g);if(g.cell)watch(patch);}return g;};
 function grid(patch){
  let u0=Infinity,u1=-Infinity,y0=Infinity,y1=-Infinity,within=true;
  for(const t of patch)for(const p of t){if(!(Math.abs(p[0])<=LIMIT&&Math.abs(p[1])<=LIMIT))within=false;if(p[0]<u0)u0=p[0];if(p[0]>u1)u1=p[0];if(p[1]<y0)y0=p[1];if(p[1]>y1)y1=p[1];}
@@ -56,3 +58,26 @@ const gridFor=patch=>patch.length<48?null:kept(patch);
 export function patchDepth(patch,u,y){const q=samplePatch(patch,u,y,gridFor(patch));if(!q)throw Error('No actual skin at chart '+[u,y]);return q[2];}
 export function patchNormal(patch,u,y){const q=samplePatch(patch,u,y,gridFor(patch));if(!q||q.length<6)return null;const n=q.slice(3,6),l=Math.hypot(...n);return n.map(v=>v/l);}
 export function patchProfile(patch,y,u0,u1,step=.15){const g=patch.length<48?null:grids.get(patch)||grid(patch),depth=(u,y)=>{const q=samplePatch(patch,u,y,g);if(!q)throw Error('No actual skin at chart '+[u,y]);return q[2];},us=[u0,u1];for(const t of patch)for(let i=0;i<3;i++){const a=t[i],b=t[(i+1)%3];if(Math.abs(a[1]-y)<1e-6)us.push(a[0]);if((a[1]-y)*(b[1]-y)<0)us.push(a[0]+(b[0]-a[0])*(y-a[1])/(b[1]-a[1]));}for(let u=u0;u<u1;u+=step)us.push(u);return [...new Set(us.filter(u=>u>=u0-1e-6&&u<=u1+1e-6).map(u=>Math.max(u0,Math.min(u1,u))))].sort((a,b)=>a-b).map(u=>[u,y,depth(u,y)]);}
+// envelopeProfile of plan/envelope-ownership-v2.js over a y index of p.inner. A triangle adds to the row at y only
+// when y lies strictly between two of its vertices' y or within 1e-6 of one, so the row's bucket (each triangle in
+// every bucket its y range grown by 1e-5 touches, in patch order) yields the same segments in the same order.
+const rows=new WeakMap();
+function rowIndex(patch){
+ let g=rows.get(patch);if(g)return g;g={};rows.set(patch,g);
+ let y0=Infinity,y1=-Infinity;for(const t of patch)for(const p of t){if(!(Math.abs(p[1])<=LIMIT))return g;if(p[1]<y0)y0=p[1];if(p[1]>y1)y1=p[1];}
+ const n=Math.max(1,Math.min(1024,Math.round(Math.sqrt(patch.length)))),s=(y1-y0)/n||1,at=v=>{const i=Math.floor((v-y0)/s);return i<0?0:i>n-1?n-1:i;},start=new Int32Array(n+1);
+ const span=t=>[at(Math.min(t[0][1],t[1][1],t[2][1])-1e-5),at(Math.max(t[0][1],t[1][1],t[2][1])+1e-5)];let members=0;
+ for(const t of patch){const [a,b]=span(t);members+=b-a+1;for(let i=a;i<=b;i++)start[i+1]++;}
+ if(members>8*patch.length+n)return g;
+ for(let i=0;i<n;i++)start[i+1]+=start[i];
+ const items=new Int32Array(start[n]),fill=start.slice(0,n);for(let k=0;k<patch.length;k++){const [a,b]=span(patch[k]);for(let i=a;i<=b;i++)items[fill[i]++]=k;}
+ watch(patch);return Object.assign(g,{at,start,items});
+}
+export function envelopeProfile(p,y){const segments=[],us=[],g=p.inner.length<48||!(Math.abs(y)<=LIMIT)?null:rowIndex(p.inner),visit=t=>{const points=[];for(let i=0;i<3;i++){const a=t[i],b=t[(i+1)%3];if(Math.abs(a[1]-y)<1e-6)points.push(a);if((a[1]-y)*(b[1]-y)<0){const f=(y-a[1])/(b[1]-a[1]);points.push(a.map((v,k)=>v+(b[k]-v)*f));}}if(points.length<2)return;points.sort((a,b)=>a[0]-b[0]);const a=points[0],b=points.at(-1);if(b[0]-a[0]<1e-10)return;segments.push([a,b]);us.push(a[0],b[0]);};
+ if(g?.items){const c=g.at(y);for(let i=g.start[c];i<g.start[c+1];i++)visit(p.inner[g.items[i]]);}else for(const t of p.inner)visit(t);
+ // Each breakpoint takes the lowest segment over it. Breakpoints rise, so a sweep keeps just the segments that have
+ // started and not yet ended, with the same bounds test; a minimum is the same in any order.
+ const U=[...new Set(us)].sort((a,b)=>a-b),depth=(u,v)=>{if(!Number.isFinite(v))throw Error('Uncovered owner profile '+p.id+' '+[u,y]);return [u,y,v];},at=(a,b,u)=>a[2]+(b[2]-a[2])*(u-a[0])/(b[0]-a[0]);
+ if(!U.every(Number.isFinite))return U.map(u=>{let v=Infinity;for(const [a,b]of segments)if(u>=a[0]-1e-9&&u<=b[0]+1e-9)v=Math.min(v,at(a,b,u));return depth(u,v);});
+ const spans=segments.map(([a,b])=>({a,b,lo:a[0]-1e-9,hi:b[0]+1e-9})).filter(q=>!Number.isNaN(q.lo)&&!Number.isNaN(q.hi)).sort((q,r)=>q.lo-r.lo);let next=0;const open=[];
+ return U.map(u=>{while(next<spans.length&&u>=spans[next].lo)open.push(spans[next++]);let live=0;for(const q of open)if(u<=q.hi)open[live++]=q;open.length=live;let v=Infinity;for(const q of open)v=Math.min(v,at(q.a,q.b,u));return depth(u,v);});}
