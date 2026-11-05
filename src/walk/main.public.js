@@ -14,6 +14,7 @@ import {createAtriumSight} from '../v2/atrium-sight.js';
 import {releaseBatchedSources,releasePhoneGeometry,shrinkPhonePictures} from '../v2/phone-memory.js';
 import {createAtriumPvs} from '../v2/atrium-pvs.js';
 import {PVS_LOCAL_SPAN} from '../v2/atrium-pvs-key.js';
+import {warmShaders,uploadTextures} from '../v2/shader-warmup.js';
 // Precomputed atrium sight (scripts/walk-atrium-pvs.mjs), shipped by the build only for the colliders and atrium it was
 // baked from (__ATRIUM_PVS_KEY__). Until it arrives, or if it was baked from other geometry, the sight rays answer as before.
 let atriumPvs=null;
@@ -506,6 +507,10 @@ function openVault(){closePanels();emote=null;input.enabled=false;input.down.cle
  // (After the key that opened it, so the E isn't typed into the field.)
  setTimeout(()=>$('vault-code').focus());}
 const ready=()=>document.body.dataset.ready==='1';
+// Every shader the walk can need compiles behind the loading card and the first view waits for it (at most WARM_WAIT_MS),
+// so a first look at another area does not freeze; on desktop every picture then uploads, one between frames
+// (src/v2/shader-warmup.js). Started at the end of this script, once everything is built.
+let shaderWarmup=null,warmed=false;
 // The ship log boards (changes-board.js): the walk stands still while one is open; its hearts are Leo live's.
 // Go there in a change's details drops the walker where its pictures were taken, looking as they do.
 const changeLog=createChangesBoards({
@@ -683,7 +688,7 @@ if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={regist
 // (Debug: the vault, vault.js.)
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vault',{get:()=>vault});
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vaultLift',{get:()=>vaultLift});
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperties(globalThis.__walk,{atriumSight:{get:()=>atriumSight},atriumPvs:{get:()=>atriumPvs},viewSpan:{get:()=>viewSpan}});
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperties(globalThis.__walk,{atriumSight:{get:()=>atriumSight},atriumPvs:{get:()=>atriumPvs},viewSpan:{get:()=>viewSpan},shaderWarmup:{get:()=>shaderWarmup}});
 // The ship map: the corner mini-map, redrawn a few times a second, and the full map sheet.
 const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
 // (A phone's small mini-map, html.phone-hud from walk.html, keeps up to 3× its pixels, so its names stay sharp.)
@@ -709,6 +714,7 @@ const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WA
 renderer.setAnimationLoop(()=>{
  // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
  if(hubPanel.isOpen()&&firstViewReady)return;
+ if(!warmed)return;
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
  const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen&&!controlsSettings?.isOpen&&!furSettings?.isOpen});last=now;
  const k=input.read();if(graphicsSettings?.isOpen||controlsSettings?.isOpen||furSettings?.isOpen||emergencyDrill?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
@@ -812,7 +818,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(!preparedPhone)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0))));}}
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
@@ -1107,3 +1113,6 @@ for(const b of document.querySelectorAll('.respawn'))b.addEventListener('click',
 if(typeof __WALK_DEBUG__!=="undefined"&&__WALK_DEBUG__)Object.defineProperties(globalThis.__walk,{treasure:{get:()=>treasure},baggage:{get:()=>baggage},featureDiagnostics:{get:()=>ship.v2RuntimeFeatures}});
 // Include the ball and aquarium entrance created later in startup, before the first frame.
 for(const root of [scene,haze,sky])onePassAtriumGlass(root);
+// The shader warm-up (see shaderWarmup): the walk's scene with the arrival hall's lamps both ways, then its sky and haze.
+Promise.all([warmShaders(renderer,scene,camera,{lights:[arrivalMood?.lamps].filter(Boolean)}),warmShaders(renderer,haze,hazeCamera),warmShaders(renderer,sky,skyCamera)])
+ .then(([main,...rest])=>{shaderWarmup={proof:main.proof,textures:new Set([main,...rest].flatMap(w=>[...w.textures])),uploaded:null};warmed=true;});
