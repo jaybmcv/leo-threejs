@@ -6,7 +6,7 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {GREENS,BLOOMS,SHAPES,paint,stem,clump,flower,blade,orient,fern,flowerBush} from '../walk/foliage.js';
-import {ATRIUM_SIGNATURE_TREES,ATRIUM_LAKE_BRIDGE,ATRIUM_WATERFALL,phase6LakePolygon,phase6LakeIslands} from '../plan/atrium-v2.js';
+import {ATRIUM_SIGNATURE_TREES,ATRIUM_LAKE_BRIDGE,ATRIUM_WATERFALL,ATRIUM_GARDEN_POCKETS,phase6LakePolygon,phase6LakeIslands} from '../plan/atrium-v2.js';
 import {phase6Programme} from './phase6-programme.js';
 import {contains,distanceToSegment} from '../plan/geometry-v2.js';
 
@@ -23,13 +23,13 @@ const CASCADE_DECKS=[7,15],SLOT=3.6;
 // these distances the leaves carry it), largest at the top.
 function vine(out,[x,y,z],length,r){
  const n=Math.max(3,Math.round(length/.5)),phase=r()*6;
- for(let i=1;i<=n;i++){const t=i/n,len=.34+.18*(1-t)+r()*.08,p=[x+Math.sin(phase+t*3)*.1*t,y-length*t,z-.08*t+Math.cos(phase+t*2.3)*.06*t];
+ for(let i=1;i<=n;i++){const t=i/n,len=.42+.2*(1-t)+r()*.08,p=[x+Math.sin(phase+t*3)*.1*t,y-length*t,z-.08*t+Math.cos(phase+t*2.3)*.06*t];
   out.push(orient(blade(len,len*.85,{segs:2,shape:SHAPES.heart,fold:.3,droop:.2,base:GREENS.mid,mid:i%3?GREENS.lime:GREENS.bright,tip:GREENS.bright}),p,phase+i*2.4,-.55-r()*.4,(r()-.5)*.6));}
 }
 function cascadeTemplate(variant){
  const r=random(9100+variant*77),out=[],trail=[1.3,2,2.8][variant];
  out.push(paint(new T.BoxGeometry(3.3,.42,.3).translate(0,-.06,-.17),0xe6dcc6));
- for(let k=0;k<4;k++)clump(out,[-1.2+k*.8+(r()-.5)*.25,.2,-.24],{r:.34+r()*.1,rnd:r,leaves:1,detail:0,squash:.75,palette:[GREENS.mid,GREENS.bright,GREENS.bright,GREENS.lime]});
+ for(let k=0;k<4;k++)clump(out,[-1.2+k*.8+(r()-.5)*.25,.22,-.28],{r:.46+r()*.1,rnd:r,leaves:1,detail:0,squash:.72,palette:[GREENS.mid,GREENS.bright,GREENS.bright,GREENS.lime]});
  for(let k=0;k<4;k++)vine(out,[-1.3+k*.87+(r()-.5)*.2,-.05,-.36],trail*(.55+r()*.5),r);
  for(let k=0;k<2;k++)flower(out,[-.9+k*1.8+(r()-.5)*.4,.48+r()*.08,-.3],{r:.13,color:BLOOMS[[0,1,0,3][(variant*2+k)%4]],yaw:OUT,tilt:.5});
  const g=mergeGeometries(out);out.forEach(x=>x.dispose());return g;
@@ -109,6 +109,20 @@ function signatureTree(out,t,y0,spread){
  for(let k=0;k<n;k++){const a=r()*Math.PI*2,d=spread*Math.sqrt(r())*.92,h=top-1.4-(d/spread)**2*2.2+r()*.6;
   clump(out,[t.x+Math.cos(a)*d,h,t.z+Math.sin(a)*d],{r:1.05+r()*.65,rnd:r,palette,squash:.6,leaves:1});}
 }
+// The park grove and garden-pocket trees: a small faceted canopy on each existing 2.8 m trunk (which stays the
+// collider), at the canopy height phase6-programme.js gives it (pocket trees by pocket, grove trees 4.4 m).
+export function addGroveTrees(out,layout){
+ const y0=layout.decks[5].y;let n=0;
+ for(const p of fitoutFootprints(layout)){
+  if(p.part!=='p6_tree_trunk'||ATRIUM_SIGNATURE_TREES.some(t=>Math.hypot(t.x-p.x,t.z-p.z)<.01))continue;
+  const pocket=ATRIUM_GARDEN_POCKETS.find(q=>Math.abs(q.z-1.1-p.z)<.01&&(Math.abs(q.x-p.x)<.01||Math.abs(q.x-3.5-p.x)<.01)),h=pocket?pocket.canopyHeight:4.4;
+  const r=random(Math.round(p.x*31+p.z*17)>>>0),top=y0+h,palette=[GREENS.mid,GREENS.bright,GREENS.bright,GREENS.lime];
+  for(let k=0;k<3;k++){const a=k/3*Math.PI*2+r(),c=Math.cos(a),s=Math.sin(a);out.push(stem([[p.x,y0+2.3,p.z],[p.x+c*.5,top-1.5,p.z+s*.5],[p.x+c*1.1,top-.9,p.z+s*1.1]],.08,0x6e4a31,4));}
+  for(let k=0;k<8;k++){const a=k/8*Math.PI*2+r()*.5,d=k?1+r()*.5:0,ht=top-.7-(d/1.6)**2*.6+r()*.3;clump(out,[p.x+Math.cos(a)*d,ht,p.z+Math.sin(a)*d],{r:.85+r()*.35,rnd:r,palette,squash:.62,leaves:1});}
+  n++;
+ }
+ return {groveTrees:n};
+}
 export function addSignatureTrees(out,layout){
  const y0=layout.decks[5].y,trees=[];
  for(const t of ATRIUM_SIGNATURE_TREES){let spread=t.spread;while(spread>3&&!canopyFits(layout,t,spread,y0))spread-=.25;
@@ -172,15 +186,16 @@ function waterSheet(out,x0,x1,top,bottom,z,lean){
 export function addWaterfall(out,layout){
  const y=layout.decks[5].y,r=random(4477),lake=phase6LakePolygon(layout.decks[5].atrium.outline),{x,width}=ATRIUM_WATERFALL,z0=lakeSouthEdge(lake,x)+.4;
  // Rocks: a back wall of big stones, a ledge, and loose boulders at the foot.
- for(let k=0;k<7;k++)stone(out,[x-width/2+.5+k*(width-1)/6,y+1.1+r()*.6,z0+.6],1.1+r()*.5,r);
- for(let k=0;k<5;k++)stone(out,[x-width/2+1+k*(width-2)/4,y+2.6+r()*.3,z0+.4],.9+r()*.35,r);
+ for(let k=0;k<7;k++)stone(out,[x-width/2+.5+k*(width-1)/6,y+1.4+r()*.6,z0+.6],1.5+r()*.5,r);
+ for(let k=0;k<5;k++)stone(out,[x-width/2+1+k*(width-2)/4,y+3.4+r()*.4,z0+.4],1.2+r()*.4,r);
+ for(let k=0;k<3;k++)stone(out,[x-width/2+2+k*(width-4)/2,y+4.6+r()*.3,z0+.3],.9+r()*.3,r);
  for(let k=0;k<6;k++)stone(out,[x-width/2+.8+k*(width-1.6)/5+(r()-.5)*.4,y+.2,z0+2.1+r()*.6],.55+r()*.35,r);
  // Water: an upper fall from the top lip to the ledge, then a wider fall to the pool.
- waterSheet(out,x-1.1,x+1.1,y+3.15,y+1.75,z0+1.15,.35);
- waterSheet(out,x-1.7,x+1.7,y+1.8,y-.01,z0+1.65,.55);
+ waterSheet(out,x-1.3,x+1.3,y+4.6,y+2.4,z0+1.2,.45);
+ waterSheet(out,x-2,x+2,y+2.45,y-.01,z0+1.75,.65);
  out.push(paint(new T.CircleGeometry(1.9,14).rotateX(-Math.PI/2).scale(1.3,1,.6).translate(x,y-.004,z0+2.35),0xeef8f8));
  // Ferns along the top and flowering shrubs at both ends.
- for(let k=0;k<4;k++)fern(out,[x-width/2+.8+k*(width-1.6)/3,y+3.2,z0+.4],{spread:.8,fronds:6,pairs:4,rnd:r,droop:1.1});
+ for(let k=0;k<4;k++)fern(out,[x-width/2+.8+k*(width-1.6)/3,y+4.7,z0+.4],{spread:.8,fronds:6,pairs:4,rnd:r,droop:1.1});
  for(const dx of[-width/2-.3,width/2+.3])flowerBush(out,[x+dx,y-.05,z0+1.6],{spread:.9,rnd:r,color:BLOOMS[0],blooms:10});
  return {x,z:z0,width};
 }
@@ -264,11 +279,11 @@ export function addAtriumGardens(root,layout){
  const inIsland=(x,z,m)=>islands.some(q=>x>q[0][0]-m&&x<q[1][0]+m&&z>q[0][1]-m&&z<q[2][1]+m);
  const clearWater=(x,z,m)=>!contains(lake,[x,z])||inIsland(x,z,m)||x>bx0-m-1&&x<bx1+m+1||nearWaterfall(layout,x,z,3)||parts.some(p=>Math.hypot(p.x-x,p.z-z)<p.r+m-.6);
  const clearGround=(x,z,m)=>parts.some(p=>p.part!=='p6_tree_trunk'&&Math.hypot(p.x-x,p.z-z)<p.r+m-.6)||ATRIUM_SIGNATURE_TREES.some(t=>Math.hypot(t.x-x,t.z-z)<1.1);
- const out=[],glow=[],trees=addSignatureTrees(out,layout),stones=addLakeStones(out,layout),decks=addTimberDecks(out,layout),waterfall=addWaterfall(out,layout),lily=addLilyPads(out,layout,clearWater),beds=addTreeBeds(out,layout,clearGround),lanterns=addDeckLanterns(out,glow,y+.03);
+ const out=[],glow=[],trees=addSignatureTrees(out,layout),grove=addGroveTrees(out,layout),stones=addLakeStones(out,layout),decks=addTimberDecks(out,layout),waterfall=addWaterfall(out,layout),lily=addLilyPads(out,layout,clearWater),beds=addTreeBeds(out,layout,clearGround),lanterns=addDeckLanterns(out,glow,y+.03);
  const g=mergeGeometries(out);out.forEach(x=>x.dispose());g.computeBoundingBox();g.computeBoundingSphere();
  const o=new T.Mesh(g,gardenMaterial);o.name='P6_atrium_gardens';o.frustumCulled=false;o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);
  const gg=mergeGeometries(glow.map(x=>x.toNonIndexed()));glow.forEach(x=>x.dispose());gg.computeBoundingBox();gg.computeBoundingSphere();
  const lo=new T.Mesh(gg,gardenGlowMaterial);lo.name='P6_atrium_lanterns';lo.frustumCulled=false;lo.userData={...o.userData};root.add(lo);
  const cascades=addHangingGardens(root,layout),downlights=addDownlights(root,layout),soffits=addSoffits(root,layout);
- return {trees,...stones,...decks,waterfall,...lily,...beds,lanterns,...downlights,...soffits,staticTriangles:g.attributes.position.count/3,cascades};
+ return {trees,...grove,...stones,...decks,waterfall,...lily,...beds,lanterns,...downlights,...soffits,staticTriangles:g.attributes.position.count/3,cascades};
 }
