@@ -4686,7 +4686,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "de9936a9f333151a2de9bee8de92db843b88ec116ae823125ac41f510e08ad7c"
+      "signature": "09bdda6f9667c1c72cbe86d723cafff54d66fb53338595deb7b886652a77e0d9"
     },
     {
       "source": "src/walk/provisions.authoring.js",

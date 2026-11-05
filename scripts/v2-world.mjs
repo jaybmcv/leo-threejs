@@ -16,6 +16,7 @@ import {prepareWalkWorld} from '../src/walk/prepare.js';
 import {STATIC_LIFT_PARTS} from '../src/walk/lifts.js';
 import {rasterDecks} from '../src/walk/partitions.js';
 import {planRails,railingMesh} from '../src/v2/railings.js';
+import {railProbeList} from '../src/v2/rail-probes.js';
 import {planMap,MAP} from '../src/walk/deck-map.js';
 installWalkCanvas(createCanvas);
 globalThis.FileReader??=class{readAsArrayBuffer(b){b.arrayBuffer().then(result=>{this.result=result;this.onloadend?.();});}};
@@ -29,7 +30,7 @@ export async function preparedV2({map=false,artifact=false}={}){
  if(artifact)return loadPreparedV2ForChecking();
  const ship=await loadV2();console.log('v2 geometry built');const prepared=prepareWalkWorld(ship);console.log('v2 prepared',prepared.colliders.triangles);let plan={walls:[],rails:[],windows:[]},image;
  if(!map){plan=JSON.parse(await fs.readFile('output/leo-interior-v02/walk-plan.json','utf8'));const rails=railingMesh(plan.rails);ship.inside.add(rails);prepared.colliders.addStatic(rails);prepared.colliders.commit();}
- if(map){const decks=rasterDecks(ship);for(const d of decks)for(let k=0;k<d.plate.length;k++)if(d.plate[k]&&!d.designed[k]){d.designed[k]=1;d.height[k]=d.y;}const rails=planRails(decks,prepared.colliders,ship);console.log('v2 rails',rails.length);const railings=railingMesh(rails);ship.inside.add(railings);prepared.colliders.addStatic(railings);prepared.colliders.commit();plan.rails=rails;plan.guardSupport=ship.v2GuardSupport;console.log('v2 raster guard support',JSON.stringify({inputRows:ship.v2GuardSupport.inputRows,removedRows:ship.v2GuardSupport.removed.length,removedMetres:ship.v2GuardSupport.removedMetres}));
+ if(map){const decks=rasterDecks(ship);for(const d of decks)for(let k=0;k<d.plate.length;k++)if(d.plate[k]&&!d.designed[k]){d.designed[k]=1;d.height[k]=d.y;}const rails=planRails(decks,prepared.colliders,ship);console.log('v2 rails',rails.length);const railings=railingMesh(rails);ship.inside.add(railings);prepared.colliders.addStatic(railings);prepared.colliders.commit();plan.rails=rails;plan.railProbes=railProbeList(ship.v2RailProbes);plan.guardSupport=ship.v2GuardSupport;console.log('v2 raster guard support',JSON.stringify({inputRows:ship.v2GuardSupport.inputRows,removedRows:ship.v2GuardSupport.removed.length,removedMetres:ship.v2GuardSupport.removedMetres}));
  const maps=planMap(ship,decks,rails),c=createCanvas(MAP.nx,MAP.nz*maps.length),ctx=c.getContext('2d'),pixels=ctx.createImageData(c.width,c.height);let i=0;for(const d of maps)for(const v of d.data){pixels.data[i++]=v*50;pixels.data[i++]=v*50;pixels.data[i++]=v*50;pixels.data[i++]=255;}ctx.putImageData(pixels,0,0);image=c.toBuffer('image/png');
  }return {ship,prepared,plan,image};
 }

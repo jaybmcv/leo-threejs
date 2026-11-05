@@ -1,4 +1,5 @@
 import {stripAtmosphere,createAtmosphere} from './atmosphere.js';
+import {feature} from '../v2/feature-owner.js';
 import {checkpointPreparedWalk} from '../v2/prepared-authoring.authoring.js';
 import {finishLaunchBGeometry} from '../v2/launch-b-geometry.authoring.js';
 import layout from '../plan/selected-layout.js';
@@ -103,65 +104,65 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const booth=createSelfieBooth();colliders.addStatic(booth.group);
  const carpet=ship.root.getObjectByName('Activity_floor'),poolTable=carpet?createPoolTable(carpet):null;if(poolTable)colliders.addStatic(poolTable.group);
  // The same hall's pinball machine at its end wall (pinball/machine.js): solid as one plain box.
- const pinball=createPinballMachine(ship);if(pinball)colliders.addStatic(pinball.solid,()=>true);
+ const pinball=feature('pinball/machine',ship,()=>createPinballMachine(ship));if(pinball)colliders.addStatic(pinball.solid,()=>true);
  // The Deck 16 theatre's concession stand (concession.js): solid too.
- const concession=createConcession(ship);if(concession)colliders.addStatic(concession);
+ const concession=feature('concession',ship,()=>createConcession(ship));if(concession)colliders.addStatic(concession);
  // The theatre's seats as drawn and its actors on the stage (theatre.js): the actors solid as plain boxes.
- const theatreCast=createTheatreCast(ship,kit,{hat});if(theatreCast)colliders.addStatic(theatreCast.solid,()=>true);
+ const theatreCast=feature('theatre',ship,()=>createTheatreCast(ship,kit,{hat}));if(theatreCast)colliders.addStatic(theatreCast.solid,()=>true);
  // Refrigerated provisions' fridges, shelving and strip curtain (provisions.js): solid as plain boxes, the curtain not.
- const provisions=createProvisions(ship);if(provisions)colliders.addStatic(provisions.solid,()=>true);
+ const provisions=feature('provisions',ship,()=>createProvisions(ship));if(provisions)colliders.addStatic(provisions.solid,()=>true);
  // Life-support control's colour-coded service pipework (life-support-pipes.js): its regulator boxes and supply
  // cabinets solid as plain boxes, the pipes overhead dressing.
- const pipework=createLifeSupportPipes(ship);if(pipework)colliders.addStatic(pipework.solid,()=>true);
+ const pipework=feature('life-support-pipes',ship,()=>createLifeSupportPipes(ship));if(pipework)colliders.addStatic(pipework.solid,()=>true);
  // Young explorers' kitten habitats (kittens.js): the climbing trees, step towers, toys and kittens solid as plain boxes.
- const kittens=createKittens(ship,kit);if(kittens)colliders.addStatic(kittens.solid,()=>true);
+ const kittens=feature('kittens',ship,()=>createKittens(ship,kit));if(kittens)colliders.addStatic(kittens.solid,()=>true);
  // Communal dining's three serving robots (dining-robots.js): solid as plain boxes.
- const diningRobots=createDiningRobots(ship);if(diningRobots)colliders.addStatic(diningRobots.solid,()=>true);
+ const diningRobots=feature('dining-robots',ship,()=>createDiningRobots(ship));if(diningRobots)colliders.addStatic(diningRobots.solid,()=>true);
  // The exercise studio's hydration and towel nook (hydration-nook.js): solid as one plain box.
- const hydration=createHydrationNook(ship);if(hydration)colliders.addStatic(hydration.solid,()=>true);
+ const hydration=feature('hydration-nook',ship,()=>createHydrationNook(ship));if(hydration)colliders.addStatic(hydration.solid,()=>true);
  // Container hold A's parked hand trolley (cargo-trolley.js): solid as one plain box, clear of the aisle.
- const trolley=createCargoTrolley(ship);if(trolley)colliders.addStatic(trolley.solid,()=>true);
+ const trolley=feature('cargo-trolley',ship,()=>createCargoTrolley(ship));if(trolley)colliders.addStatic(trolley.solid,()=>true);
  // The Medical ward's two-tier supply trolley stands outside the aisle line (ward-trolley.js).
- const wardTrolley=createWardTrolley(ship);if(wardTrolley)colliders.addStatic(wardTrolley.solid,()=>true);
+ const wardTrolley=feature('ward-trolley',ship,()=>createWardTrolley(ship));if(wardTrolley)colliders.addStatic(wardTrolley.solid,()=>true);
  // Cargo maintenance's MCT charging and service bays (mct-bay.js): the vehicles, power units, tool trolley and lift
  // pump solid as plain boxes; the cables, signs and floor markings dressing.
- const mctBay=createMctBay(ship);if(mctBay)colliders.addStatic(mctBay.solid,()=>true);
+ const mctBay=feature('mct-bay',ship,()=>createMctBay(ship));if(mctBay)colliders.addStatic(mctBay.solid,()=>true);
  // The Container Maze in the same hold (maze/hold.js): its container walls and walk-through containers solid as plain
  // boxes, the red button's console too.
- const maze=createMazeHold(ship);if(maze)colliders.addStatic(maze.solid,()=>true);
+ const maze=feature('maze/hold',ship,()=>createMazeHold(ship));if(maze)colliders.addStatic(maze.solid,()=>true);
  // The aft freight gate's iris, gantry, lanes and posters (freight-gate.js): its conveyors, transfer hatches and
  // barricades solid as plain boxes, the iris and lane paint flush, the claw overhead dressing. Its entrance door slides
  // as two movable colliders, opening for anyone near it.
  const freightGate=createFreightGate(ship,{still,colliders});if(freightGate)colliders.addStatic(freightGate.solid,()=>true);
  // The cherry blossom garden (blossom.js): its trunk, bridge and pond edges solid.
- const blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
+ const blossom=feature('blossom',ship,()=>createBlossomGarden(ship));if(blossom)colliders.addStatic(blossom.solid,()=>true);
  // The Great Cat Tree in the bow of the atrium (cat-tree.js): its island, trunk, ramp, platforms, bridges and guards solid.
- const catTree=createCatTree(ship);if(catTree)colliders.addStatic(catTree.solid,()=>true);
+ const catTree=feature('cat-tree',ship,()=>createCatTree(ship));if(catTree)colliders.addStatic(catTree.solid,()=>true);
  // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js): its rim, bed, causeway, landing and rope rails solid.
  const loungeFalls=createLoungeFalls(ship);if(loungeFalls)colliders.addStatic(loungeFalls.solid,()=>true);
  // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
- const jaguarGate=createJaguarGate();colliders.addStatic(jaguarGate.solid,()=>true);
+ const jaguarGate=feature('jaguar-gate',ship,()=>createJaguarGate());colliders.addStatic(jaguarGate.solid,()=>true);
  // The marquee signs over the lounge's Deck 19 and 18 entrances (lounge-entrance-signs.js): dressing only, nothing solid.
- const entranceSigns=createLoungeEntranceSigns();
+ const entranceSigns=feature('lounge-entrance-signs',ship,()=>createLoungeEntranceSigns());
  // The arcade row on the Hydro-Nip Lounge's forward wall, Paws Off's treadmill at its far end (arcade.js): solid as plain
  // boxes.
- const arcadeRow=createArcade();if(arcadeRow)colliders.addStatic(arcadeRow.solid,()=>true);
+ const arcadeRow=feature('arcade',ship,()=>createArcade());if(arcadeRow)colliders.addStatic(arcadeRow.solid,()=>true);
  // Behind the arcade, the hidden clubhouse's walls and vault door frame (vault.js): solid as plain boxes, the way in
  // left open (the page makes the door itself solid).
- const vault=createVault(ship);colliders.addStatic(vault.solid,()=>true);
+ const vault=feature('vault',ship,()=>createVault(ship));colliders.addStatic(vault.solid,()=>true);
  const vaultLift=createVaultLift(colliders);colliders.addStatic(vaultLift.solid,()=>true);
  // Mission control's holographic table (mission-holo.js): its pedestal and top solid as a plain cylinder.
- const missionHolo=createMissionHolo(ship,{anisotropy,still});if(missionHolo)colliders.addStatic(missionHolo.solid,()=>true);
+ const missionHolo=feature('mission-holo',ship,()=>createMissionHolo(ship,{anisotropy,still}));if(missionHolo)colliders.addStatic(missionHolo.solid,()=>true);
  // The Captain's office's gold sword case under its spotlight (sword-case.js): solid as a plain box.
- const swordCase=createSwordCase(ship);if(swordCase)colliders.addStatic(swordCase.solid,()=>true);
+ const swordCase=feature('sword-case',ship,()=>createSwordCase(ship));if(swordCase)colliders.addStatic(swordCase.solid,()=>true);
  // Hydroponic garden A's chinampa tank, its water plant and its two reading signs (chinampa.js): solid as plain boxes,
  // the hoses on the floor dressing.
- const chinampa=createChinampa(ship,{still});if(chinampa)colliders.addStatic(chinampa.solid,()=>true);
- const atmosphere=createAtmosphere(ship,{still});if(atmosphere)colliders.addStatic(atmosphere.solid,()=>true);
- const baggage=createBaggage(ship,{still});if(baggage)colliders.addStatic(baggage.solid,()=>true);
+ const chinampa=feature('chinampa',ship,()=>createChinampa(ship,{still}));if(chinampa)colliders.addStatic(chinampa.solid,()=>true);
+ const atmosphere=feature('atmosphere',ship,()=>createAtmosphere(ship,{still}));if(atmosphere)colliders.addStatic(atmosphere.solid,()=>true);
+ const baggage=feature('baggage',ship,()=>createBaggage(ship,{still}));if(baggage)colliders.addStatic(baggage.solid,()=>true);
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
- const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
+ const mudwater=feature('mudwater',ship,()=>createMudwater(ship,{urls,anisotropy}));if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
  if(catTree){const spots=treeRestSpots(catTree.seats);restSpots.push(...spots);seats.push(...solidSpots(spots,colliders));}
  return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,wardTrolley,maze,mctBay,freightGate,blossom,catTree,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,vaultLift,missionHolo,swordCase,chinampa,baggage,atmosphere,mudwater};
 }
