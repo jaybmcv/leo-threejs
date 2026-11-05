@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as T from 'three';
 import {createCatTree,TREE,PLATFORMS,RING,BRIDGES,DENS,FOOT_DEN,rampY,rampAngle,rampIn,rampOut,trunkR} from '../src/walk/cat-tree.js';
-import {Colliders} from '../src/walk/collision.js';
+import {BODY,Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {groundMesh} from '../src/v2/ground.js';
 
@@ -25,7 +25,7 @@ env.updateMatrixWorld(true);
 const col=new Colliders();col.addStatic(env,()=>true);col.addStatic(tree.solid,()=>true);col.commit();
 const ground=new Colliders();tree.solid.updateMatrixWorld(true);ground.addStatic(env,o=>o.isMesh&&groundMesh(o));ground.addStatic(tree.solid,o=>o.isMesh&&groundMesh(o));ground.commit();
 
-const ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0)),seg=new T.Line3();
+const ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0)),seg=new T.Line3(),MIN_NY=Math.cos(BODY.maxSlope*Math.PI/180);
 const floorAt=(x,y,z,up=.42,down=.9)=>{ray.origin.set(x,y+up,z);const h=ground.raycast(ray,up+down);return h&&h.normal.y>.6?h.point.y:null;};
 const room=(x,y,z)=>{seg.start.set(x,y+.75,z);seg.end.set(x,y+1.65,z);return !col.overlaps(seg,.35);};
 const near=(x,z)=>Math.hypot(x-TREE.x,z-TREE.z)<TREE.island+3||(Math.abs(z)<2&&x>TREE.x&&x<226);
@@ -36,7 +36,8 @@ const key=([x,y,z])=>`${Math.round(x/D)},${Math.round(y/.2)},${Math.round(z/D)}`
 for(let i=0;i<queue.length;i++){const [x,y,z]=queue[i];
  for(const [dx,dz] of [[D,0],[-D,0],[0,D],[0,-D]]){const nx=x+dx,nz=z+dz;if(!near(nx,nz))continue;
   const ny=floorAt(nx,y,nz);
-  if(ny===null){ray.origin.set(nx,y+.42,nz);const h=ground.raycast(ray,60);if(room(nx,y,nz)&&(!h||y-h.point.y>1))drops.push([nx,y,nz,h?+(y-h.point.y).toFixed(2):'∞']);continue;}
+  // stepping off an edge: as in scripts/v2-walk.mjs, the first ground below must be standable, or the walker falls out of the ship
+  if(ny===null){ray.origin.set(nx,y+.42,nz);let h=ground.raycast(ray,60);if(h&&h.normal.y<MIN_NY)h=null;if(room(nx,y,nz)&&(!h||y-h.point.y>1))drops.push([nx,y,nz,h?+(y-h.point.y).toFixed(2):'∞']);continue;}
   if(!room(nx,ny,nz))continue;const p=[nx,ny,nz],k=key(p);if(!seen.has(k)){seen.set(k,p);queue.push(p);}}}
 console.log(`flood: ${queue.length.toLocaleString()} spots reached`);
 const reached=(x,y,z,r=1)=>queue.some(p=>Math.abs(p[1]-y)<.3&&Math.hypot(p[0]-x,p[2]-z)<r);
