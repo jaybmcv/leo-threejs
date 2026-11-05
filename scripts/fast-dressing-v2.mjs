@@ -99,13 +99,24 @@ export async function classifyDressings(files,{graph=null}={}){
    const others=users(f).filter(u=>!d.consumers.includes(u));if(others.length||!users(f).length)return {reason:f+' is also used by '+(others.join(', ')||'nothing it was qualified for')};
    const extra=graph[f].filter(i=>!d.imports.includes(i));if(extra.length)return {reason:f+' imports '+extra.join(', ')+', outside its qualified dressing inputs'};
   }
-  for(const [file,line]of d.glue)if((await fs.readFile(file,'utf8')).split(line).length!==2)return {reason:'The '+id+' dressing is no longer placed by its one qualified line in '+file};
-  for(const [file,token,allowed]of d.uses){let text=code(await fs.readFile(file,'utf8'));
-   for(const a of allowed){if(text.split(a).length!==2)return {reason:'The '+id+' dressing\'s use in '+file+' changed: '+a.slice(0,60)};text=text.replace(a,'');}
-   const rest=text.match(token);if(rest)return {reason:file+' reaches the '+id+' dressing outside its qualified uses: '+rest.slice(0,3).join(', ')};}
-  for(const [consumer,only]of d.idle||[]){const others=users(consumer).filter(u=>!only.includes(u));if(others.length)return {reason:consumer+', idle for the '+id+' dressing, is also imported by '+others.join(', ')};}
+  const blocked=await pageGuard(id,users);if(blocked)return {reason:blocked};
  }
  return {dressings:ids};
+}
+// The lines that place a dressing and its uses past them, read on every deploy: main.authoring.js lies outside the
+// geometry identity, so an edit to it alone would otherwise take lane A with stale prepared data.
+async function pageGuard(id,users){const d=DRESSINGS[id];
+ for(const [file,line]of d.glue)if((await fs.readFile(file,'utf8')).split(line).length!==2)return 'The '+id+' dressing is no longer placed by its one qualified line in '+file;
+ for(const [file,token,allowed]of d.uses){let text=code(await fs.readFile(file,'utf8'));
+  for(const a of allowed){if(text.split(a).length!==2)return 'The '+id+' dressing\'s use in '+file+' changed: '+a.slice(0,60);text=text.replace(a,'');}
+  const rest=text.match(token);if(rest)return file+' reaches the '+id+' dressing outside its qualified uses: '+rest.slice(0,3).join(', ');}
+ for(const [consumer,only]of d.idle||[]){const others=users(consumer).filter(u=>!only.includes(u));if(others.length)return consumer+', idle for the '+id+' dressing, is also imported by '+others.join(', ');}
+ return null;
+}
+// Whatever changed: a page that now reaches a dressing's meshes (makes one solid, adds it to the ship) takes the whole build.
+export async function authoringPageGuard(){const graph=await producerGraph(consumerRoots()),users=f=>Object.keys(graph).filter(g=>graph[g].includes(f));
+ for(const id of Object.keys(DRESSINGS)){const blocked=await pageGuard(id,users);if(blocked)return blocked;}
+ return null;
 }
 
 // Rails are planned (railings.js) by probing the colliders at drop edges of the 20 deck rasters, up to a flight's
@@ -201,7 +212,7 @@ async function patchDressingModels({baseline,destination,compiled}){
 export async function patchDressings(plan,timer,{baseDirectory,destination}){
  const ids=plan.dressings,base=baseDirectory+'/prepared-walk',m=await preparedManifest(base),read=preparedArrayReader(m,base),patch=new PreparedPatch(m),owners=dressingOwners(ids);
  // A dressing that won't build in Node (its page stand-ins fall short) is the full build's to make.
- const compiled=await timer.stage('compile changed dressings',async()=>{const rows=[];for(const id of ids)try{rows.push(await compileDressing(id));}catch(e){if(/take the wider build/.test(e.message))throw e;decline(false,'The '+id+' dressing failed to build in Node: '+e.message.split('\n')[0]);}return rows;});
+ const compiled=await timer.stage('compile changed dressings',async()=>{const rows=[];for(const id of ids)try{rows.push(await compileDressing(id));}catch(e){const message=String(e?.message??e);if(/take the wider build/.test(message))throw e;decline(false,'The '+id+' dressing failed to build in Node: '+message.split('\n')[0]);}return rows;});
  const ceiling=await railCeiling();
  for(const c of compiled){const d=DRESSINGS[c.id],old=d.collision?await ownedTriangles(m,read,d.owner):[];
   // A baseline from before ownership tags can't say which triangles were the dressing's.

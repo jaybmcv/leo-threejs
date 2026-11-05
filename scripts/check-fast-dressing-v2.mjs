@@ -167,6 +167,9 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
   await reach('changes-board','for(const g of changeLog.groups)toBand(g);','for(const g of changeLog.groups)toBand(g);ship.inside.add(changeLog.groups[0]);',/reaches the changes-board dressing outside its qualified uses/,'authoring page puts a ship log board in the ship');
   await reach('comics','comics=createComics({urls:artUrls,','comics=createComics({urls:artUrls,count:2,',/no longer placed by its one qualified line/,'comics glue changed');
   await reach('lounge-compass','{const compass=createLoungeCompass();if(compass)toBand(compass);}','{const compass=createLoungeCompass();if(compass)ship.inside.add(compass);}',/no longer placed by its one qualified line/,'compass moved into the ship before saving');
+  // The page edited alone, with no dressing file changed, still meets the guard on the way to lane A.
+  const alone=await expect('authoring page alone makes the hex floor solid','whole',()=>edit(files[7],'toBand(hexFloor.group);','toBand(hexFloor.group);colliders.addStatic(hexFloor.group);'));assert.match(alone.reason,/reaches the hex-floor dressing/);
+  await expect('authoring page alone, unrelated edit','A',()=>edit(files[7],'toBand(hexFloor.group);','toBand(hexFloor.group);void 0;'));
  }finally{await restore();}
  // Through every consumer, independent of the working tree: a second importer or a moved glue line widens.
  const graph=g=>({graph:g}),selfie=['src/walk/canvas.js','package:three','src/fin-crown.js','src/concept-shape.js'];

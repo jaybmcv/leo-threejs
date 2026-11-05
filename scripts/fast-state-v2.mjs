@@ -74,6 +74,7 @@ export async function classifyFastChange(){
  try{migration=await json('scripts/fast-owner-migration.json');if(migration.from===state.identity.hash)baselineIdentity=migration.to;else migration=null;}catch{}
  const baselineRecord=async name=>{if(state.files?.[name+'.json'])return json(baseline+'/'+name+'.json');if(migration?.baselines?.[name])return migration.baselines[name];throw Error('Clean baseline lacks '+name+' ownership data');};
  const files=changedInputs(baselineIdentity.files,identity.files);
+ const page=await (await import('./fast-dressing-v2.mjs')).authoringPageGuard();if(page)return {lane:'whole',reason:page,files,identity,rooms:[],decks:[]};
  if(!files.length)return {lane:'A',reason:'No geometry dependency changed',files,identity,rooms:[],decks:[]};
  const active=await activeBuildMatches(identity);
  if(active)return {lane:'A',reuse:'active',reason:'Geometry matches the verified previous room patch',files,identity,rooms:active.rooms||[],decks:active.decks||[],smokeRooms:active.smokeRooms||active.rooms||[]};
