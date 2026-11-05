@@ -8864,7 +8864,7 @@
     "file": "src/walk/main.public.js",
     "original": "src/walk/main.js",
     "mode": "public",
-    "bodySha256": "31e7d31559cda75278d91687629bda5ae98134d1634cd9be4633c028ad919637",
+    "bodySha256": "5e2772f9d5da22969931de5fe1b5c421870b4dbab7ee4db572ef10ec59a51baa",
     "imports": [
       "../v2/atrium-geometry-runtime.js",
       "../v2/atrium-quality.js",

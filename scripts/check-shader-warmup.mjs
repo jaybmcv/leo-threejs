@@ -15,9 +15,9 @@ function world(){
  return {scene,lamps};
 }
 function renderer(){
- const r={info:{programs:[]},calls:[],uploaded:[],properties:{get:t=>({__version:t.uploadedVersion??0})},
+ const r={ready:true,info:{programs:[]},calls:[],uploaded:[],properties:{get:t=>({__version:t.uploadedVersion??0})},
   compileAsync(stand,camera,scene){const lights=[];scene.traverseVisible(o=>{if(o.isLight)lights.push(o);});const meshes=[];stand.traverse(o=>meshes.push(o));
-   r.calls.push({meshes:meshes.length,lights:lights.length});for(const o of meshes)r.info.programs.push(o.material.name+'|'+lights.length);return Promise.resolve();},
+   r.calls.push({meshes:meshes.length,lights:lights.length});for(const o of meshes)r.info.programs.push({name:o.material.name+'|'+lights.length,isReady:()=>r.ready});return Promise.resolve();},
   initTexture(t){r.uploaded.push(t);t.uploadedVersion=t.version;}};
  return r;
 }
@@ -36,8 +36,8 @@ await check('a failing compile is reported, not thrown',async()=>{
  const r=renderer();r.compileAsync=()=>{throw Error('lost context');};
  const warn=console.warn;console.warn=()=>{};try{const {proof}=await warmShaders(r,world().scene,new T.PerspectiveCamera());assert.equal(proof.ready,false);}finally{console.warn=warn;}
 });
-await check('a compile that never finishes stops waiting at waitMs',async()=>{
- const r=renderer();r.compileAsync=()=>new Promise(()=>{});
+await check('a program that never finishes stops the wait at waitMs',async()=>{
+ const r=renderer();r.ready=false;
  const {proof}=await warmShaders(r,world().scene,new T.PerspectiveCamera(),{waitMs:20});assert.equal(proof.ready,false);
 });
 await check('only pictures with data and not yet on the GPU are uploaded, one per wait',async()=>{

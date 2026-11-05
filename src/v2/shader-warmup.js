@@ -40,13 +40,16 @@ function* lightStates(groups){
  * is first (the rest go on compiling), with what was done and the textures for uploadTextures. Never rejects: a
  * failure only leaves those shaders to compile when first seen. */
 export async function warmShaders(renderer,scene,camera,{lights=[],waitMs=WARM_WAIT_MS}={}){
- const t0=performance.now(),before=count(renderer),{samples,textures}=shaderSamples(scene);
- const proof={samples:samples.length,programs:0,ready:false,ms:0};
+ const t0=performance.now(),before=count(renderer),proof={samples:0,programs:0,ready:false,ms:0};let textures=new Set();
  try{
+  const found=shaderSamples(scene);textures=found.textures;proof.samples=found.samples.length;
   // three's compile walks `traverse` for meshes and `traverseVisible` for lights: the scene's own lights count once.
-  const stand={traverse:fn=>samples.forEach(fn),traverseVisible(){}},pending=[];
-  for(const _ of lightStates(lights))pending.push(renderer.compileAsync(stand,camera,scene));
-  proof.ready=await Promise.race([Promise.all(pending).then(()=>true),new Promise(r=>setTimeout(r,waitMs,false))]);
+  const stand={traverse:fn=>found.samples.forEach(fn),traverseVisible(){}};
+  for(const _ of lightStates(lights))renderer.compileAsync(stand,camera,scene).catch(()=>{});
+  // compileAsync watches only each material's latest program, so the other light state's would go unwatched: wait on
+  // every program instead.
+  const programs=[...(renderer.info.programs||[])],end=performance.now()+waitMs;
+  proof.ready=await new Promise(resolve=>{const poll=()=>{if(programs.every(p=>p.isReady?.()??true))resolve(true);else if(performance.now()>end)resolve(false);else setTimeout(poll,10);};poll();});
  }catch(e){console.warn('Shader warm-up stopped.',e);}
  proof.programs=count(renderer)-before;proof.ms=Math.round(performance.now()-t0);
  return {proof,textures};

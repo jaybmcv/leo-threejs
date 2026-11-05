@@ -52,8 +52,8 @@
     "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/main.public.js": {
-    "sha256": "2b91904bb203b75e1b5037b7d832f4873b4fb543b1c83542209d7ac6fca560dd",
-    "reason": "Shader warm-up behind the loading card (src/v2/shader-warmup.js): the first view waits for every shader, both arrival lamp states; desktop pictures upload after it. Ten views match main pixel for pixel."
+    "sha256": "d691882f791c2936cbc441c697ea7f092990fc8a9480c8d196f2e4c52f58f9bf",
+    "reason": "Shader warm-up behind the loading card (src/v2/shader-warmup.js), with review fixes: waits for the environment and every program, never holds the first view. Views match main pixel for pixel."
   },
   "src/v2/atrium-visibility.js": {
     "sha256": "e72253566c3178a89e460e4a95f90c4c796e13d5c64affffc8be1163f41d8ecc",
