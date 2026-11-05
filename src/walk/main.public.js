@@ -11,6 +11,7 @@ import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
 import {settlePreparedStatic} from '../v2/prepared-static.js';
 import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
 import {createAtriumSight} from '../v2/atrium-sight.js';
+import {releaseBatchedSources,releasePhoneGeometry,shrinkPhonePictures} from '../v2/phone-memory.js';
 import {createAtriumPvs} from '../v2/atrium-pvs.js';
 import {PVS_LOCAL_SPAN} from '../v2/atrium-pvs-key.js';
 // Precomputed atrium sight (scripts/walk-atrium-pvs.mjs), shipped by the build only for the colliders and atrium it was
@@ -374,7 +375,9 @@ async function buildShip(){
   const key=o.parent.uuid+'|'+(o.userData.cabinIds||[o.uuid]).join(',');if(sharedNear.has(key)){o.userData.near=sharedNear.get(key);continue;}const all=Array.from({length:o.count},(_,i)=>{const m=new T.Matrix4();o.getMatrixAt(i,m);return m;});
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};sharedNear.set(key,o.userData.near);
  }
- isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=preparedPhone?null:createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});settlePreparedStatic(ship);
+ isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{allBands:preparedPhone,hidden:preparedPhone?releaseBatchedSources(scene):null});atriumGeometry=preparedPhone?null:createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});settlePreparedStatic(ship);
+ // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
+ if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
 let imagingScans=null,missionTimer=null;
 let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;

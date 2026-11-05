@@ -88,8 +88,8 @@
     "reason": "Builder's Hub panel on top of the walk: src/walk/hub-panel.js, its links in Feedback and the tester guide; verified by check-hub and check-walk."
   },
   "src/v2/hull-prototypes.authoring.js": {
-    "sha256": "3e8a16648d72175fa36c50bc0ee7dda4e790badd54f5aa19fde247596d49c058",
-    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+    "sha256": "f48355d36e0bad42630e557d03f7cc4c166e587a71f769acd426d5e3ab409171",
+    "reason": "authoring load speedup: indexed skin samples/owner profiles, edge-bucket floor sweeps; outputs byte-identical"
   },
   "src/v2/hull-prototypes.js": {
     "sha256": "07ff6f8d0967c117f7c97430556a83f5eb588a82901353f6a43c83cce3adb481",
@@ -112,8 +112,8 @@
     "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
   },
   "src/v2/prepared-authoring.authoring.js": {
-    "sha256": "c1a0c1a882962304605c2e1bebd5f0de8cd8726fb00979298a132863b0ec6910",
-    "reason": "feature() owner tags and rail probe recording for the feature fast lane"
+    "sha256": "18060a6773f49b07e7d592a39c3e50b39edce58c9f61911b3444a9509d1c23a1",
+    "reason": "authoring load speedup: indexed skin samples/owner profiles, edge-bucket floor sweeps; outputs byte-identical"
   },
   "src/v2/prepared-authoring.js": {
     "sha256": "37a3c905f9d30e6b865f9110ce0c1a8192bdd14e65330c34f8b6c2e9b343ecf8",
@@ -180,8 +180,8 @@
     "reason": "feature() owner tags and rail probe recording for the feature fast lane"
   },
   "src/walk/prepare.authoring.js": {
-    "sha256": "99fa333cee60af59c10ae105015ff9c92ebc2e4308996eb25da0476f679211fb",
-    "reason": "feature() owner tags and rail probe recording for the feature fast lane"
+    "sha256": "7d251ccddf5be713ed5d3373e6da3b8b213ebfe54e1df6184fbcd5f5f4912cfe",
+    "reason": "authoring load speedup: indexed skin samples/owner profiles, edge-bucket floor sweeps; outputs byte-identical"
   },
   "src/v2/railings.js": {
     "sha256": "4a3b5a4e106480e682de9384567adf5df68df81912dbc9840a5105520a66008f",
@@ -190,5 +190,17 @@
   "src/v2/railings.authoring.js": {
     "sha256": "6dfd957f7953a897d8edb51eee7851158a941612e3c4e5444446e7af33fa4967",
     "reason": "feature() owner tags and rail probe recording for the feature fast lane"
+  },
+  "src/v2/geometry.js": {
+    "sha256": "26be814615d7901c23ef48d903656a5994da06b3fd788186a5218fc809ac6cd8",
+    "reason": "authoring load speedup: indexed skin samples/owner profiles, edge-bucket floor sweeps; outputs byte-identical"
+  },
+  "src/v2/floor-boundary.js": {
+    "sha256": "ea73395c7038f8f4bd723f4f57ed1d9dd40be86c4030ce8bcb6eaada4ba35017",
+    "reason": "authoring load speedup: indexed skin samples/owner profiles, edge-bucket floor sweeps; outputs byte-identical"
+  },
+  "src/v2/lounge-falls-fit.js": {
+    "sha256": "143ee7ea84b4362037170d2508e3846f099f36548f9cb955f9a0a1be898cffe7",
+    "reason": "authoring load speedup: indexed skin samples/owner profiles, edge-bucket floor sweeps; outputs byte-identical"
   }
 }
