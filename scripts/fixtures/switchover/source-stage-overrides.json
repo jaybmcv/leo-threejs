@@ -52,8 +52,8 @@
     "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/main.public.js": {
-    "sha256": "3280d1466ff4df80ff80d176949b00c67da9474d0ac8ace0771213bdde7c42b8",
-    "reason": "Builder's Hub panel on top of the walk: src/walk/hub-panel.js, its links in Feedback and the tester guide; verified by check-hub and check-walk."
+    "sha256": "53fa521a18d20708090e14ccfda083253973eb5dee83eced290ac76b5730664b",
+    "reason": "Shader warm-up behind the loading card (src/v2/shader-warmup.js), merged with main (Great Cat Tree, phone batching). Views match main pixel for pixel."
   },
   "src/v2/atrium-visibility.js": {
     "sha256": "e72253566c3178a89e460e4a95f90c4c796e13d5c64affffc8be1163f41d8ecc",

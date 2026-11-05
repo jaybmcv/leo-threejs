@@ -37,5 +37,7 @@ export function createArrivalMood(ship,{hemi,fill,scene}){
   },
   dispose(){if(active)restore();lamps.removeFromParent();},
   get active(){return active;},
+  // Shown only inside Arrival: the shader warm-up (src/v2/shader-warmup.js) compiles for both states.
+  lamps,
  };
 }
