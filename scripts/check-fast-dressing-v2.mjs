@@ -15,6 +15,7 @@ import {checkFastPatchCollision} from './fast-collision-v2.mjs';
 //                                                        a lane D output (default output/leo-interior-v02) against an
 //                                                        independent full build of the same source; --untagged compares
 //                                                        a tagged build with one from before the owner tags
+const laneTag=n=>n.extras?.fastDressing??(n.extras?.fastFeature===undefined?undefined:'feature:'+n.extras.fastFeature);
 const sha=x=>createHash('sha256').update(x).digest('hex'),arg=name=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3);
 const root='output/leo-interior-v02',tag=process.env.LEO_FAST_TAG||'last',report={status:'FAIL'};
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -71,7 +72,7 @@ export async function canonicalGlb(bytes,{dropTag=false,only=null,skipTagged=fal
  const texture=i=>once('t'+i,()=>{const t=j.textures[i],img=j.images?.[t.source];return sha(JSON.stringify({...t,source:img&&{...img,bufferView:undefined,data:img.bufferView===undefined?img.uri:sha(view(img.bufferView))},sampler:j.samplers?.[t.sampler]}));});
  const material=i=>i===undefined?i:once('m'+i,()=>sha(JSON.stringify(textures(j.materials[i]))));
  const mesh=i=>i===undefined?i:once('mesh'+i,()=>sha(JSON.stringify({...j.meshes[i],primitives:j.meshes[i].primitives.map(p=>({...p,attributes:Object.fromEntries(Object.entries(p.attributes).sort().map(([k,v])=>[k,accessor(v)])),indices:accessor(p.indices),material:material(p.material),targets:p.targets?.map(t=>Object.fromEntries(Object.entries(t).map(([k,v])=>[k,accessor(v)])))}))})));
- const node=i=>{const n=j.nodes[i];if(skipTagged&&n.extras?.fastDressing)return {name:n.name,hash:'dressing:'+n.extras.fastDressing,children:[]};const extras=n.extras&&dropTag?Object.fromEntries(Object.entries(n.extras).filter(([k])=>k!=='fastDressing')):n.extras,ext=n.extensions?.EXT_mesh_gpu_instancing;
+ const node=i=>{const n=j.nodes[i];if(skipTagged&&laneTag(n))return {name:n.name,hash:'dressing:'+laneTag(n),children:[]};const extras=n.extras&&dropTag?Object.fromEntries(Object.entries(n.extras).filter(([k])=>k!=='fastDressing'&&k!=='fastFeature')):n.extras,ext=n.extensions?.EXT_mesh_gpu_instancing;
   const own={...n,children:undefined,extras:extras&&Object.keys(extras).length?extras:undefined,mesh:mesh(n.mesh),extensions:n.extensions&&{...n.extensions,...(ext?{EXT_mesh_gpu_instancing:{...ext,attributes:Object.fromEntries(Object.entries(ext.attributes).map(([k,v])=>[k,accessor(v)]))}}:{})}};
   const children=(n.children||[]).map(node);return {name:n.name,hash:sha(JSON.stringify(own)+children.map(c=>c.hash).join(',')),children};};
  const scene=j.scenes[j.scene||0];if(only!==null)return node(only);
@@ -106,14 +107,16 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
  const owners=new Set(ids.filter(id=>DRESSINGS[id].collision).map(id=>DRESSINGS[id].owner)),skipTemplates=key=>ids.some(id=>ownsTemplate(DRESSINGS[id],key));
  const before=await canonicalPrepared(base+'/prepared-walk',{skipOwners:owners,skipTemplates}),after=await canonicalPrepared(patched+'/prepared-walk',{skipOwners:owners,skipTemplates});
  const d=difference(after,before);assert(!d,'Dressing patch changed something else: '+d);
- const read=preparedArrayReader(m,patched+'/prepared-walk'),compiled=[];for(const id of ids)compiled.push(await compileDressing(id));
+ const read=preparedArrayReader(m,patched+'/prepared-walk'),compiled=[];for(const id of ids)compiled.push(await compileDressing(id,{base:base+'/prepared-walk'}));
  const {ownedTriangles}=await import('./fast-dressing-v2.mjs'),key=r=>{const rows=[];for(let t=0;t<r.flags.length;t++)rows.push(Buffer.from(r.positions.buffer,r.positions.byteOffset+t*36,36).toString('hex')+'|'+r.flags[t]);return [r.band,rows.sort().join(',')];};
+ // A feature solid across two bands lists them in either order.
+ const byBand=rows=>rows.map(key).sort((x,y)=>x[0]-y[0]);
  for(const c of compiled){const d=DRESSINGS[c.id];
-  if(d.collision){assert.deepEqual((await ownedTriangles(m,read,d.owner)).map(key),c.collision.map(key),c.id+' collision differs from a fresh compile');
-   assert.deepEqual((await ownedTriangles(m,read,d.owner,{ground:true})).map(key),c.groundCollision.map(key),c.id+' ground collision differs from a fresh compile');}
+  if(d.collision){assert.deepEqual(byBand(await ownedTriangles(m,read,d.owner)),byBand(c.collision),c.id+' collision differs from a fresh compile');
+   assert.deepEqual(byBand(await ownedTriangles(m,read,d.owner,{ground:true})),byBand(c.groundCollision),c.id+' ground collision differs from a fresh compile');}
   else assert(!c.collision.length&&!c.groundCollision.length&&!c.model,c.id+' is qualified as never solid and in no model');
   const templates=new Map(m.geometryTemplates.filter(([k])=>ownsTemplate(d,k)));assert.deepEqual([...templates.keys()].sort(),c.templates.map(([k])=>k).sort(),c.id+' template keys');
-  for(const [k,g]of c.templates){const r=m.geometries[templates.get(k)];for(const [name,a]of Object.entries(g.attributes))assert(bytesOf(await read(r.attributes[name].array)).equals(bytesOf(a.array)),c.id+' template '+k.slice(0,60)+' '+name);assert(bytesOf(await read(r.index)).equals(bytesOf(g.index.array)),c.id+' template index '+k.slice(0,60));}
+  for(const [k,g]of c.templates){const r=m.geometries[templates.get(k)];for(const [name,a]of Object.entries(g.attributes))assert(bytesOf(await read(r.attributes[name].array)).equals(bytesOf(a.array)),c.id+' template '+k.slice(0,60)+' '+name);if(g.index)assert(r.index!=null&&bytesOf(await read(r.index)).equals(bytesOf(g.index.array)),c.id+' template index '+k.slice(0,60));else assert(r.index==null,c.id+' template '+k.slice(0,60)+' gained an index');}
  }
  // The model: the full ship's dressing subtree is the fresh export and the rest of every model is the baseline's.
  const models=[];for(const file of (await fs.readdir(base)).filter(f=>f.endsWith('.glb')).sort()){
@@ -121,8 +124,13 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
   // Outside the dressings every node is the baseline's; each dressing subtree is the fresh export, in the same place.
   const x=await canonicalGlb(a,{skipTagged:true}),y=await canonicalGlb(b,{skipTagged:true});
   assert.equal(x.roots.length,y.roots.length,file+' scene roots differ');for(let i=0;i<x.roots.length;i++){const d=nodeDifference(x.roots[i],y.roots[i]);assert(!d,file+' changed outside its dressings: '+d);}
-  const tagged=x.json.nodes.flatMap((n,i)=>n.extras?.fastDressing?[[n.extras.fastDressing,i]]:[]);assert.deepEqual(tagged.map(([id])=>id).sort(),y.json.nodes.flatMap(n=>n.extras?.fastDressing?[n.extras.fastDressing]:[]).sort(),file+' dressing tags');
-  for(const [id,i]of tagged){const c=compiled.find(c=>c.id===id);assert(c,'Unexpected dressing '+id+' in '+file);const fresh=await canonicalGlb(c.model,{only:parseGlb(c.model).json.scenes[0].nodes[0]});assert.equal((await canonicalGlb(a,{only:i})).hash,fresh.hash,id+' model nodes differ from a fresh export');}
+  // The topmost node of each tag, as the patcher replaces them (the jaguar gate's solid is inside its group). A tag that
+  // wasn't patched is the baseline's subtree unchanged.
+  const tops=json=>{const parent=new Map();json.nodes.forEach((n,i)=>{for(const c of n.children||[])parent.set(c,i);});
+   return json.nodes.flatMap((n,i)=>{const id=laneTag(n);if(!id)return [];for(let p=parent.get(i);p!==undefined;p=parent.get(p))if(laneTag(json.nodes[p])===id)return [];return [[id,i]];});};
+  const tagged=tops(x.json),kept=tops(y.json);assert.deepEqual(tagged.map(([id])=>id).sort(),kept.map(([id])=>id).sort(),file+' dressing tags');
+  for(const [id,i]of tagged){const c=compiled.find(c=>c.id===id);
+   if(!c){const k=kept.find(([b])=>b===id);kept.splice(kept.indexOf(k),1);assert.equal((await canonicalGlb(a,{only:i})).hash,(await canonicalGlb(b,{only:k[1]})).hash,id+' changed although it was not patched');continue;}const fresh=await canonicalGlb(c.model,{only:parseGlb(c.model).json.scenes[0].nodes[0]});assert.equal((await canonicalGlb(a,{only:i})).hash,fresh.hash,id+' model nodes differ from a fresh export');}
   models.push({file,bytes:'differ',dressings:tagged.map(([id])=>id)});
  }
  Object.assign(report,{mode:'lane D against its baseline',dressings:ids,collision:await checkFastPatchCollision(patched+'/prepared-walk'),models,status:'PASS'});

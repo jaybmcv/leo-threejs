@@ -1,4 +1,7 @@
 import fs from 'node:fs/promises';
+import {readFileSync,existsSync} from 'node:fs';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
 import assert from 'node:assert/strict';
 import {registerHooks} from 'node:module';
 import * as T from 'three';
@@ -18,6 +21,7 @@ import {PreparedWriter} from '../src/v2/prepared-codec.js';
 import {installWalkCanvas} from '../src/walk/canvas.js';
 import {Colliders,solid} from '../src/walk/collision.js';
 import {groundMesh} from '../src/v2/ground.js';
+import {feature,featureLedger} from '../src/v2/feature-owner.js';
 
 // The dressing fast lane: an additive prop made from no ship state, with its own render templates and, for some,
 // collision spans and model nodes. Each entry is qualified by hand:
@@ -69,12 +73,66 @@ export const DRESSINGS={
    allowed:["import {createLoungeCompass} from './lounge-compass.authoring.js';"],
    imports:['src/v2/prepared-geometry-record.js','package:three','src/plan/rooms.js','src/polish-kit.js','src/lounge.js']}),
 };
+Object.assign(DRESSINGS,roomFeatures());
 // A template-only dressing the authoring page alone makes: src/walk/<name>.js and its variants, placed by `glue`.
 function template(name,create,groups,{glue,token,allowed,imports,preload=[]}){
  const file=v=>'src/walk/'+name+v+'.js';
  return {[name]:{owner:null,create,groups,site:file(''),collision:false,model:false,files:['','.authoring','.prepared','.public'].map(file),
   source:null,authoring:file('.authoring'),public:file('.public'),consumers:['src/walk/main.authoring.js'],
   glue:[['src/walk/main.authoring.js',glue]],uses:[['src/walk/main.authoring.js',token,[glue,...allowed]]],imports,preload}};
+}
+// Room features: every call prepare.js and prepare.authoring.js wrap in feature() (src/v2/feature-owner.js) is an entry,
+// keyed feature:<module>. Each is rebuilt in Node against the baseline's own decoded ship, so its glue is that line in both
+// files. Only calls whose arguments are the ship and the page's still and anisotropy qualify (the Cosmo kit, hat and art
+// urls aren't rebuilt here), and only modules prepare imports nothing but that create call from. Whether the call only
+// adds to the ship is the baseline's ledger and the compile's own; whether it can move a rail is the rail probes'.
+function roomFeatures(){
+ const out={},files=['src/walk/prepare.js','src/walk/prepare.authoring.js'],texts=files.map(f=>readFileSync(f,'utf8')),lines=texts.map(t=>t.split(/\r?\n/).map(l=>l.trim())),
+  page=readFileSync('src/walk/main.authoring.js','utf8').split(/\r?\n/).filter(l=>!/^\s*\/\//.test(l)).join('\n');
+ for(const line of lines[1]){const m=line.match(/^const ([A-Za-z]+)=feature\('([^']+)',ship,\(\)=>(create[A-Za-z]+)\(([^)]*)\)\);(.*)$/);if(!m)continue;
+  const [,name,id,create,args,rest]=m;if(!/^(ship(,\{(still|anisotropy)(,(still|anisotropy))?\})?)?$/.test(args))continue;
+  const imported=texts.map(t=>[...t.matchAll(/import \{([^}]*)\} from '\.\/([^']+)';/g)].filter(x=>x[2].replace(/(\.authoring)?\.js$/,'')===id).flatMap(x=>x[1].split(',').map(s=>s.trim())));
+  if(imported.some(names=>names.length!==1||names[0]!==create))continue;
+  const glue=lines.map((l,i)=>[files[i],l.find(x=>x.startsWith('const '+name+"=feature('"+id+"',"))]);if(glue.some(([,g])=>!g))continue;
+  // What the authoring page does with the result past prepare: draws it (group, groups) and calls it each frame (update,
+  // near). Any other use (the arcade's treadmill feeds Paws Off's templates; vault.attach adds the door's collision) is one
+  // the patch doesn't rebuild, so that feature stays with the full build.
+  const aliases=[name,...[...page.matchAll(new RegExp('\\b'+name+':([A-Za-z]+)','g'))].map(x=>x[1])];
+  if(aliases.some(a=>[...page.matchAll(new RegExp('\\b'+a+'\\??\\.([A-Za-z_$]+)','g'))].some(x=>!['group','groups','update','near'].includes(x[1]))))continue;
+  if(!['','.authoring','.prepared','.public'].every(v=>existsSync('src/walk/'+id+v+'.js')))continue;
+  const solidCall=rest.match(new RegExp('colliders\\.addStatic\\('+name+'(\\.solid)?(,\\(\\)=>true)?\\)')),file=v=>'src/walk/'+id+v+'.js';
+  out['feature:'+id]={feature:id,owner:'feature:'+id,create,args:ctx=>args?[ctx.ship,...(args.includes('{')?[{still:false,anisotropy:16}]:[])]:[],
+   groups:r=>r?.groups?[...r.groups]:[r?.isObject3D?r:r?.group].filter(Boolean),solidOf:solidCall?r=>solidCall[1]?r.solid:r:null,filter:solidCall?.[2]?()=>true:null,
+   site:file(''),collision:!!solidCall,model:true,files:['','.authoring','.prepared','.public'].map(file),source:file(''),authoring:file('.authoring'),public:file('.public'),
+   consumers:files,glue,uses:[],imports:null};
+ }
+ return out;
+}
+// The baseline's decoded ship, restored as the public walk restores it (prepared-runtime.js), for room features to build on.
+let shipContext=null;
+async function featureContext(base){
+ if(shipContext?.base===base)return shipContext;
+ // The ship models first, as the builds enter: transit and model import each other, and a feature that reaches transit
+ // alone (the jaguar gate's floorY) finds it half loaded.
+ await import('../src/model.authoring.js');await import('../src/model.js');
+ const {readPreparedWorld}=await import('../src/v2/prepared-codec.public.js'),names=await fs.readdir(base),metadataName=['world.parts.json','world.bin','world.json.gz'].find(n=>names.includes(n));
+ globalThis.requestAnimationFrame??=f=>setTimeout(f,0);
+ const {ship,manifest}=await readPreparedWorld(pathToFileURL(path.resolve(base)+path.sep),{skipImages:true,metadataName,fetchBytes:n=>fs.readFile(path.join(base,n))});
+ (await import('../src/plan/rooms.js')).restoreRoomAnchors(ship.root,ship.v2RoomAnchors);ship.layout=(await import('../src/plan/selected-layout.js')).default;
+ return shipContext={base,ship,ledger:new Map(manifest.features||[])};
+}
+// The cells every rail and void-guard question to the colliders reached (walk-plan.json railProbes, src/v2/rail-probes.js).
+async function railProbes(baseDirectory){
+ const p=JSON.parse(await fs.readFile(baseDirectory+'/walk-plan.json','utf8')).railProbes;if(!p||p.unbounded||!Array.isArray(p.cells))return null;
+ const cells=new Set();for(let i=0;i<p.cells.length;i+=3)cells.add(p.cells[i]+','+p.cells[i+1]+','+p.cells[i+2]);return {cell:p.cell,cells};
+}
+// Does any triangle's box (5 cm of slack) reach a cell a question reached?
+function nearProbe(positions,{cell,cells}){
+ const r=.05,f=v=>Math.floor(v/cell);for(let i=0;i<positions.length;i+=9){let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity,z0=Infinity,z1=-Infinity;
+  for(let k=0;k<9;k+=3){const x=positions[i+k],y=positions[i+k+1],z=positions[i+k+2];if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;if(z<z0)z0=z;if(z>z1)z1=z;}
+  for(let a=f(x0-r);a<=f(x1+r);a++)for(let b=f(y0-r);b<=f(y1+r);b++)for(let c=f(z0-r);c<=f(z1+r);c++)if(cells.has(a+','+b+','+c))return true;
+ }
+ return false;
 }
 // Consumers are looked for in both graphs: the geometry producers and the page that authors the prepared walk.
 const consumerRoots=()=>[...geometryRoots(),'src/walk/main.authoring.js'];
@@ -97,7 +155,7 @@ export async function classifyDressings(files,{graph=null}={}){
   for(const f of files.filter(f=>d.files.includes(f))){
    if(!graph[f])return {reason:'Dressing module '+f+' left the geometry graph'};
    const others=users(f).filter(u=>!d.consumers.includes(u));if(others.length||!users(f).length)return {reason:f+' is also used by '+(others.join(', ')||'nothing it was qualified for')};
-   const extra=graph[f].filter(i=>!d.imports.includes(i));if(extra.length)return {reason:f+' imports '+extra.join(', ')+', outside its qualified dressing inputs'};
+   const extra=d.imports?graph[f].filter(i=>!d.imports.includes(i)):[];if(extra.length)return {reason:f+' imports '+extra.join(', ')+', outside its qualified dressing inputs'};
   }
   const blocked=await pageGuard(id,users);if(blocked)return {reason:blocked};
  }
@@ -151,18 +209,25 @@ function shims(){if(shimmed)return;shimmed=true;installWalkCanvas(createCanvas);
  registerHooks({resolve(specifier,context,next){if(/prepared-resource\.public\.js$/.test(specifier))return {url:'data:text/javascript,export const preparedResource={get geometryTemplates(){return globalThis.__leoDressingTemplates;}};',shortCircuit:true};
   if(specifier==='walk-changes')return {url:'data:text/javascript,export default [];',shortCircuit:true};return next(specifier,context);}});
 }
-const shape=root=>{const rows=[];root.updateMatrixWorld(true);root.traverse(o=>{if(!o.isMesh)return;const g=o.geometry,a=[];for(const [k,x]of Object.entries(g.attributes).sort())a.push(k,Array.from(x.array));rows.push([o.name,o.matrixWorld.elements,a,g.index?Array.from(g.index.array):null]);});return JSON.stringify(rows);};
+const shape=root=>{const rows=[];root.updateMatrixWorld(true);root.traverse(o=>{if(!o.isMesh)return;const g=o.geometry,a=[];for(const [k,x]of Object.entries(g.attributes).sort())a.push(k,Array.from(x.array));rows.push([o.name,o.matrixWorld.elements,a,g.index?Array.from(g.index.array):null,o.count??null,o.instanceMatrix?Array.from(o.instanceMatrix.array):null]);});return JSON.stringify(rows);};
 
 // Each fresh process compiles a dressing exactly as a full build does: the authoring variant for the prepared walk's
 // templates and collision (the offline authoring page), the plain module for the full-ship model (v2-build.mjs).
-export async function compileDressing(id){
+export async function compileDressing(id,{base=null}={}){
  const d=DRESSINGS[id];shims();
+ // Each variant's call is checked on its own: it may only return its parts, never change the ship it reads.
+ const ctx=d.feature?await featureContext(base):null,make=mod=>{if(!d.feature)return mod[d.create]();const r=feature(d.feature,ctx.ship,()=>mod[d.create](...d.args(ctx)),{deep:true});
+  decline(featureLedger().get(d.feature).additive,'Feature '+d.feature+' changes the ship as well as returning its parts');return r;};
+ if(d.feature)decline(ctx.ledger.get(d.feature)?.additive===true,'Feature '+d.feature+" isn't an additive call in the baseline ledger");
  const {geometryRecords}=await import('../src/v2/prepared-geometry-record.js'),before=new Set(geometryRecords().keys());
  // Modules the page has loaded first, where a dressing reaches an import cycle (transit.js and lifts.js) mid-way.
  for(const p of d.preload||[])await import('../'+p);
- const authored=d.groups((await import('../'+d.authoring))[d.create]()),group=new T.Group();for(const g of authored)group.add(g);
+ const result=make(await import('../'+d.authoring)),authored=d.groups(result),group=new T.Group();
+for(const g of authored)group.add(g);
  const col=new Colliders(),ground=new Colliders();
- if(d.collision){decline(authored.length===1&&authored[0].userData.fastDressing===id,'Dressing '+id+' lost its owner tag');
+ if(d.collision&&d.feature){const root=d.solidOf(result);decline(root?.userData.fastFeature===d.feature,'Feature '+d.feature+' lost its owner tag');
+  col.addStatic(root,d.filter||undefined);ground.addStatic(root,o=>(d.filter||solid)(o)&&groundMesh(o));}
+ else if(d.collision){decline(authored.length===1&&authored[0].userData.fastDressing===id,'Dressing '+id+' lost its owner tag');
   // The glue's addStatic, after installGround (ground.js) has made it feed the walkable surfaces to the ground bands too.
   col.addStatic(authored[0]);ground.addStatic(authored[0],o=>solid(o)&&groundMesh(o));}
  const pending=c=>[...c.pending].sort(([a],[b])=>a-b).map(([band,list])=>{for(const r of list.ownerSpans)assert.equal(r.owner,d.owner,'Dressing collision outside its owner');return {band,positions:list.values.slice(),flags:list.flags.slice(0,list.flagLength),spans:list.ownerSpans};});
@@ -170,10 +235,13 @@ export async function compileDressing(id){
  for(const key of geometryRecords().keys())decline(before.has(key)||ownsTemplate(d,key),'Dressing '+id+' recorded another module\'s geometry: '+key.slice(0,80));
  const templates=[...geometryRecords()].filter(([key])=>ownsTemplate(d,key));
  // The public variant must find every template it replays and rebuild the same meshes.
- globalThis.__leoDressingTemplates=new Map(templates);const replayed=new T.Group();for(const g of d.groups((await import('../'+d.public))[d.create]()))replayed.add(g);
+ globalThis.__leoDressingTemplates=new Map(templates);const replayed=new T.Group();for(const g of d.groups(make(await import('../'+d.public))))replayed.add(g);
  decline(shape(replayed)===shape(group),'Public '+id+' replay differs from its authoring geometry');
  if(!d.model)return {id,templates,collision,groundCollision,model:null};
- const plain=(await import('../'+d.source))[d.create]().group;decline(plain.userData.fastDressing===id,'Dressing '+id+' model lost its owner tag');
+ const plain=make(await import('../'+d.source))?.group;
+ // A feature that returns no group isn't in leo-full-ship.glb (v2-build.mjs adds each prepared item's group).
+ if(d.feature&&!plain)return {id,templates,collision,groundCollision,model:null};
+ decline(d.feature?plain.userData.fastFeature===d.feature:plain.userData.fastDressing===id,'Dressing '+id+' model lost its owner tag');
  prepareArrivalCanvasExport(plain);shareExportGeometry(plain);
  // Model finalization (retire-obsolete-facades-v2.mjs) prunes the exported ship: Node's canvas textures export as
  // transparent black and fold into their material's colour factor.
@@ -186,7 +254,13 @@ async function patchDressingModels({baseline,destination,compiled}){
  const rows=[],found=new Map();
  for(const file of (await fs.readdir(baseline)).filter(f=>f.endsWith('.glb'))){
   const original=await fs.readFile(baseline+'/'+file),{json:j,bin}=parseGlb(original),tagged=new Map();
-  j.nodes.forEach((n,i)=>{const id=n.extras?.fastDressing;if(id!==undefined){assert(!tagged.has(id),'Model has two '+id+' dressings: '+file);tagged.set(id,i);}});
+  // A tagged node inside another with the same tag is part of it (the jaguar gate's solid is in its group). Two separate
+  // roots for one patched id can't be replaced as one.
+  const tagOf=n=>n.extras?.fastDressing??(n.extras?.fastFeature===undefined?undefined:'feature:'+n.extras.fastFeature),parentOf=new Map(),twice=new Set();
+  j.nodes.forEach((n,i)=>{for(const c of n.children||[])parentOf.set(c,i);});
+  const inside=(i,id)=>{for(let p=parentOf.get(i);p!==undefined;p=parentOf.get(p))if(tagOf(j.nodes[p])===id)return true;return false;};
+  j.nodes.forEach((n,i)=>{const id=tagOf(n);if(id===undefined||inside(i,id))return;if(tagged.has(id))twice.add(id);tagged.set(id,i);});
+  for(const c of compiled)decline(!twice.has(c.id),'Model has two '+c.id+' dressings: '+file);
   const mine=compiled.filter(c=>tagged.has(c.id));if(!mine.length){await fs.copyFile(baseline+'/'+file,destination+'/'+file);rows.push({file,reused:true});continue;}
   const fragments=[alignGlb(bin)];let length=fragments[0].length;const append=bytes=>{const offset=length,b=alignGlb(Buffer.from(bytes));fragments.push(b);length+=b.length;return offset;};
   const retire=i=>{const n=j.nodes[i];delete n.mesh;delete n.extensions;delete n.extras;for(const c of n.children||[])retire(c);};
@@ -205,27 +279,33 @@ async function patchDressingModels({baseline,destination,compiled}){
   }
   const bytes=packGlb(j,Buffer.concat(fragments,length));await fs.writeFile(destination+'/'+file,bytes);rows.push({file,reused:false,dressings:mine.map(c=>c.id),bytes:bytes.length});
  }
- for(const c of compiled)assert(found.has(c.id),'No model holds the '+c.id+' dressing; use a wider build');
+ for(const c of compiled)decline(found.has(c.id),'No model holds the '+c.id+' dressing');
  return rows;
 }
 
 export async function patchDressings(plan,timer,{baseDirectory,destination}){
  const ids=plan.dressings,base=baseDirectory+'/prepared-walk',m=await preparedManifest(base),read=preparedArrayReader(m,base),patch=new PreparedPatch(m),owners=dressingOwners(ids);
  // A dressing that won't build in Node (its page stand-ins fall short) is the full build's to make.
- const compiled=await timer.stage('compile changed dressings',async()=>{const rows=[];for(const id of ids)try{rows.push(await compileDressing(id));}catch(e){const message=String(e?.message??e);if(/take the wider build/.test(message))throw e;decline(false,'The '+id+' dressing failed to build in Node: '+message.split('\n')[0]);}return rows;});
- const ceiling=await railCeiling();
+ const compiled=await timer.stage('compile changed dressings',async()=>{const rows=[];for(const id of ids)try{rows.push(await compileDressing(id,{base}));}catch(e){const message=String(e?.message??e);if(/take the wider build/.test(message))throw e;decline(false,'The '+id+' dressing failed to build in Node: '+message.split('\n')[0]);}return rows;});
+ const ceiling=await railCeiling(),probes=ids.some(id=>DRESSINGS[id].feature)?await railProbes(baseDirectory):null;
  for(const c of compiled){const d=DRESSINGS[c.id],old=d.collision?await ownedTriangles(m,read,d.owner):[];
   // A baseline from before ownership tags can't say which triangles were the dressing's.
-  if(d.collision&&!old.length||!m.geometryTemplates.some(([key])=>ownsTemplate(d,key)))throw Error('The '+c.id+' dressing needs one clean full build with dressing owners; take the wider build');
+  // A room feature the public walk builds from its code (the vault, the blossom garden) has no templates on either side.
+  if(d.feature&&c.templates.length>0!==m.geometryTemplates.some(([key])=>ownsTemplate(d,key)))throw Error('The '+c.id+' feature changed whether it records templates; take the wider build');
+  if(d.collision&&!old.length||!d.feature&&!m.geometryTemplates.some(([key])=>ownsTemplate(d,key)))throw Error('The '+c.id+' dressing needs one clean full build with dressing owners; take the wider build');
   // Rails only see solid dressings; one that is never solid has no triangles for them to probe.
+  if(d.feature){if(!probes)throw Error('The '+c.id+' feature needs one clean full build with rail probes; take the wider build');
+   const oldGround=await ownedTriangles(m,read,d.owner,{ground:true});
+   if([...old,...oldGround,...c.collision,...c.groundCollision].some(r=>nearProbe(r.positions,probes)))throw Error('The '+c.id+' feature reaches a rail probe; take the wider build');
+   continue;}
   if([...old,...c.collision].some(r=>minimumY(r.positions)<=ceiling))throw Error('The '+c.id+' dressing reaches the deck rails\' probe range; take the wider build');
  }
  const merge=field=>{const out=new Map();for(const c of compiled)for(const r of c[field]){const row=out.get(r.band)||{positions:[],flags:[],spans:[]};row.spans.push(...r.spans.map(s=>({...s,start:s.start+row.flags.length})));row.positions.push(...r.positions);row.flags.push(...r.flags);out.set(r.band,row);}return out;};
  const removedSpans=await timer.stage('replace owned collision spans',()=>removeOwnedSpans(m,patch,read,owners,merge('collision'),merge('groundCollision')));
- assert.equal(removedSpans.renderTriangles,0,'Dressings own no baked render triangles');
+ decline(removedSpans.renderTriangles===0,'The patch would remove baked render triangles');
  await timer.stage('replace dressing templates',async()=>{const writer=new PreparedWriter(),rows=compiled.flatMap(c=>c.templates.map(([key,g])=>[key,writer.geometry(g)])),first=m.geometries.length;patch.absorb(writer);
   m.geometryTemplates=[...m.geometryTemplates.filter(([key])=>!compiled.some(c=>ownsTemplate(DRESSINGS[c.id],key))),...rows.map(([key,id])=>[key,id+first])];});
- const models=await timer.stage('patch dressing models',()=>patchDressingModels({baseline:baseDirectory,destination,compiled:compiled.filter(c=>DRESSINGS[c.id].model)}));
+ const models=await timer.stage('patch dressing models',()=>patchDressingModels({baseline:baseDirectory,destination,compiled:compiled.filter(c=>c.model)}));
  const original=JSON.parse(await fs.readFile(base+'/integrity.json','utf8')),sourceInputs={...original.sourceInputs,sources:plan.identity};
  const prepared=await timer.stage('encode changed parts',()=>patch.save(destination+'/prepared-walk',base,sourceInputs,{rooms:[],decks:[],dressings:ids,collisionDressings:ids.filter(id=>DRESSINGS[id].collision),base:original.sha256}));
  return {models,prepared,removedSpans,templates:compiled.map(c=>({id:c.id,templates:c.templates.length,bands:c.collision.map(r=>r.band),triangles:c.collision.reduce((n,r)=>n+r.flags.length,0),groundTriangles:c.groundCollision.reduce((n,r)=>n+r.flags.length,0)}))};
