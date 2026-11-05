@@ -85,6 +85,29 @@ An earlier build of this branch, with unchecked 8 cm collision, peaked at 889 MB
 
 What is left of the heap, by a sampling heap profile: the geometry arrays, about 240 MB of objects (the scene graph, its matrices, the collision groups' boxes and the manifest), and copies the walk makes at start (the phone distant hull, low-deck batches). Desktop Chrome collects garbage late, so a phone's real peak is unknown until one loads it.
 
+## Walking the phone ship (step 3b, 2026-11-05)
+
+On the Galaxy S9 the phone ship loaded but was slow, then crashed while walking. In S9 emulation (360×740, DPR 4) over a route of 12 places, the scenes' pictures took about 690 MB once uploaded. 460 MB of that was canvases the walk draws itself (room guides, signs, murals), up to 3,500 px across, on a canvas of 450×925 pixels. Every shape drawn stayed in the page as well as on the GPU. Deck 9 and 12 views issued about 4,100 draw calls a frame, about 1,900 of them separate 40 m chunks of one finish.
+
+On the phone ship only (`src/v2/phone-memory.js`):
+- **Pictures:** a picture over 1,024 px in an ordinary material's colour slots is swapped for a 1,024 px copy, before or soon after its first upload. The original is held weakly. A canvas drawn once is freed, and a module that redraws its canvas gets it back on `needsUpdate`. A global cap (`maxTextureSize`) was tried first and rejected: it also shrank a 768×2048 RGBE environment image that a shader decodes, and every view came out about 45% darker. Shader uniforms, the scene environment and data textures are left as they are.
+- **Shapes:** the prepared ship's arrays leave the page after their first upload. A batched chunk's arrays go as soon as it is copied into its batch, unless another mesh draws them. Templates, collision geometry, instance attributes and dynamic or morphing geometry keep theirs. Culling batches keep their index, and each chunk's bounds are worked out first, since three reads those every frame.
+- **Draw calls:** every band is batched (`batchLowDeckDraws`, `allBands`), with each chunk culled. Desktops still batch only decks −1 to 4.
+- `readPreparedWorld` (public) now has `release()`. Closures it makes (the colliders' triangle count, stand-in bounds) keep its scope alive, and with it every decoded array.
+- Batching yields about every 12 ms, not after every chunk. That saved about 20 s of timers once all bands were batched.
+
+| S9 emulation, 12-place route, heap after collection | Before | After |
+|---|---|---|
+| JS heap while walking | 955–979 MB | 752–876 MB |
+| Draw calls, Deck 9 housekeeping | 4,092 | 2,368 |
+| Draw calls, arrival hall | 4,851 | 3,053 |
+| Pictures in the scenes (uncompressed, with mipmaps) | 688 MB | 474 MB |
+| Walkable | 39 s | 32 s |
+
+Views at ten places match the build before (mean difference under 0.6 of 255, only the cat's tail differs). The loading peak in emulation is about the same or higher (1,096–1,115 MB against 1,032–1,108), because desktop Chrome under no memory pressure collects late. The released arrays are gone after a collection. Not measured: GPU memory on a phone, and whether a 4 GB phone now stays up.
+
+Next, if the S9 still struggles: about 320 draws a frame of smart glass and 140 of hull glass (transparent, so not batched), 4.8M triangles at the Deck 9 corridor, and the 1,024 px pictures (257 MB).
+
 ## Steps
 
 0. **Stop the silent crashes** (this branch). walk.html sets the start note before the walk script loads, records how far loading got, and clears both once the walk is ready. Likely phones (coarse pointer and a small screen or mobile user agent; not tablets or touch laptops) see the guided-tour card first, with Try anyway; a phone that has finished loading before goes straight in. `scripts/check-phone-memory.mjs` reports download, peak heap and time to a walkable view in phone emulation. It reports only and blocks nothing.
