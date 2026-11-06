@@ -16,7 +16,7 @@ export const atriumFloorMaterial=new T.MeshStandardMaterial({name:'P6_atrium_pav
 function dappleFloorMaterial(){if(atriumFloorMaterial.map)return;const shade=walkCanvas(),glow=walkCanvas();if(shade&&glow){const tex=c=>{if(typeof c.data==='function')Object.defineProperty(c,'data',{value:undefined});const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.anisotropy=4;return t;};
  atriumFloorMaterial.map=tex(paintDapple(shade));atriumFloorMaterial.emissiveMap=tex(paintDapple(glow,0));atriumFloorMaterial.emissive.set(DAPPLE.glow);atriumFloorMaterial.emissiveIntensity=DAPPLE.glowIntensity;}}
 // 4B: sunlit lawns (park and garden beds) instead of the earlier muted sage.
-const LAWN=0x7ea95b,GARDEN_LAWN=0x8bb566,PAVING=0xdfd2bd; // and warm sand paving on the boulevards
+const LAWN=0x7ea95b,GARDEN_LAWN=0x8bb566,PAVING=0xe2cdae; // and warm sand paving on the boulevards
 function keepFaces(g,test){const p=g.attributes.position,n=g.attributes.normal,out=[];for(let i=0;i<p.count;i+=3)if(test(n.getY(i),i,p))for(let k=0;k<3;k++)out.push(p.getX(i+k),p.getY(i+k),p.getZ(i+k));g.dispose();const result=new T.BufferGeometry();result.setAttribute('position',new T.Float32BufferAttribute(out,3));result.computeVertexNormals();return result;}
 export function atriumFloorGeometry(outline,holes,y,atriumOutline=outline){
  dappleFloorMaterial();

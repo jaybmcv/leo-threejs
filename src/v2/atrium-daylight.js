@@ -15,7 +15,7 @@ function puff(g,x,y,rx,ry,angle,alpha,colour='255,255,255'){
 export function paintDaylightSky(c){
  const W=2048,H=256;c.width=W;c.height=H;const g=c.getContext('2d'),rnd=seeded(4182);
  const across=g.createLinearGradient(0,0,0,H);
- for(const[at,col]of[[0,'#dfecf3'],[.22,'#a6cdee'],[.5,'#76addf'],[.78,'#a6cdee'],[1,'#dfecf3']])across.addColorStop(at,col);
+ for(const[at,col]of[[0,'#d3e6f3'],[.22,'#93c2ec'],[.5,'#5d9fdc'],[.78,'#93c2ec'],[1,'#d3e6f3']])across.addColorStop(at,col);
  g.fillStyle=across;g.fillRect(0,0,W,H);
  // A soft sunlit brightening toward the bow, so the panel is not one flat strip.
  const glow=g.createRadialGradient(W*.68,H*.42,0,W*.68,H*.42,W*.42);glow.addColorStop(0,'rgba(255,251,238,.22)');glow.addColorStop(1,'rgba(255,251,238,0)');
@@ -26,9 +26,13 @@ export function paintDaylightSky(c){
   for(let k=0;k<n;k++){const t=k/(n-1),a=angle+bend*(t-.5),x=x0+Math.cos(angle)*len*t,y=y0+Math.sin(angle)*len*t+Math.sin(t*Math.PI)*bend*28,taper=Math.sin(Math.PI*Math.min(1,.12+t*.88))**.7;
    puff(g,x,y,(18+rnd()*22)*(.5+taper),thick*(.55+taper*.6),a,alpha*(.55+taper*.6));}
  }
- // Fine cirrus streaks on top.
+ // Cumulus: clusters of bright rounded puffs, denser and whiter on top, softer at a flattened base.
+ for(let i=0;i<26;i++){const cx=rnd()*W,cy=H*(.18+rnd()*.64),size=26+rnd()*34,n=6+(rnd()*8|0);
+  for(let k=0;k<n;k++){const a=rnd()*Math.PI*2,d=size*Math.sqrt(rnd())*1.4,px=cx+Math.cos(a)*d*1.8,py=cy+Math.sin(a)*d*.55,rad=size*(.45+rnd()*.5);puff(g,px,py,rad*1.25,rad*.8,0,.42+rnd()*.3);}
+  puff(g,cx,cy-size*.15,size*1.6,size*.7,0,.35);}
+ // A few fine cirrus streaks on top.
  g.lineCap='round';
- for(let i=0;i<24;i++){const x=rnd()*W,y=H*(.1+rnd()*.8),len=40+rnd()*150,a=(rnd()-.5)*.3,lift=(rnd()-.5)*14;
+ for(let i=0;i<8;i++){const x=rnd()*W,y=H*(.1+rnd()*.8),len=40+rnd()*150,a=(rnd()-.5)*.3,lift=(rnd()-.5)*14;
   g.strokeStyle=`rgba(255,255,255,${.06+rnd()*.1})`;g.lineWidth=1+rnd()*2.4;g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+Math.cos(a)*len*.5,y+Math.sin(a)*len*.5+lift,x+Math.cos(a)*len,y+Math.sin(a)*len);g.stroke();}
  return c;
 }
@@ -36,7 +40,7 @@ export function paintDaylightSky(c){
 // Dappled floor light (light through a canopy), as two tileable maps painted from the same seed: a shade map (a soft
 // grey base, white sun flecks) multiplies the floor, and a glow map (black base, the same flecks) lights the flecks
 // through the material's warm emissive. Both are linear data. Material colours stay <= 1 so they serialize intact.
-export const DAPPLE={tile:13,turn:.37,shade:.88,glow:0xfff0d4,glowIntensity:.2};
+export const DAPPLE={tile:13,turn:.37,shade:.84,glow:0xffd9a3,glowIntensity:.32};
 export function paintDapple(c,base=DAPPLE.shade){
  const S=512;c.width=S;c.height=S;const g=c.getContext('2d'),rnd=seeded(77),v=Math.round(base*255);
  g.fillStyle=`rgb(${v},${v},${v})`;g.fillRect(0,0,S,S);

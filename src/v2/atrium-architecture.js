@@ -39,7 +39,7 @@ export function addPhase6Architecture(ship,root,layout){
  const gardens=addAtriumGardens(root,layout);
  for(const side of[-1,1]){const list=cabins.filter(c=>doorSide(c)===side),g=new T.BoxGeometry(3.18,3.4,7.4),p=g.attributes.position,keep=[];
   for(let i=0;i<g.index.count;i+=3){const ids=[0,1,2].map(k=>g.index.getX(i+k));if(!ids.every(j=>Math.abs(p.getZ(j)+side*3.7)<.0001))keep.push(...ids);}
-  g.setIndex(keep);g.clearGroups();const o=new T.InstancedMesh(g,new T.MeshBasicMaterial({name:'P6_atrium_room_returns',color:0xded4bd,side:T.DoubleSide}),list.length);
+  g.setIndex(keep);g.clearGroups();const o=new T.InstancedMesh(g,new T.MeshBasicMaterial({name:'P6_atrium_room_returns',color:0xe6d4b6,side:T.DoubleSide}) /* 4B: warmer cream */,list.length);
   o.name='P6_atrium_room_returns';o.frustumCulled=false;o.userData={noCollide:true,phase6Architecture:true,roomOwners:list.map(c=>c.id),proxySpans:list.map(c=>[c.y-.14,c.y+3.5])};
   list.forEach((c,i)=>o.setMatrixAt(i,c.matrix.clone().multiply(new T.Matrix4().makeTranslation(0,1.7,0))));o.computeBoundingBox();o.computeBoundingSphere();root.add(o);
  }
