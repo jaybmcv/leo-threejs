@@ -84,4 +84,10 @@ check('default envelope outside and offscreen',colliders(),false,defaults,outsid
 const upperLayout={...fixtureLayout,rooms:[],decks:[{number:6,y:0,atrium:{outline:[[-2,-2],[2,-2],[2,2],[-2,2]]}},{number:7,y:4,atrium:{outline:ring}}]},upperEye=camera(6,7,20);upperEye.lookAt(6,7,0);upperEye.updateMatrixWorld(true);
 check('default envelope includes changed upper-deck ring',colliders(),true,{...defaults,layout:upperLayout},upperEye);
 check('default envelope supports below-deck sightline',colliders(),true,defaults,camera(0,-3,15));
+// Below the atrium floor only a clear ray is sight: a ceiling of small opaque tiles that uses up the rays answers hidden,
+// and a gap in it is still seen through.
+const tiles=(hole=null)=>{const out=[];for(let x=-20;x<20;x++)for(let z=-20;z<20;z++){if(hole&&Math.abs(x+.5)<hole&&Math.abs(z+.5)<hole)continue;const t=new T.PlaneGeometry(1,1);t.rotateX(-Math.PI/2);t.translate(x+.5,-1,z+.5);out.push(t);}return out;};
+const underEye=camera(0,-3,.01);underEye.lookAt(0,5,0);underEye.updateMatrixWorld(true);
+check('below the atrium, rays used up under a tiled ceiling answer hidden',colliders(tiles()),false,{...defaults,maxRays:4},underEye);
+check('below the atrium, a gap in the ceiling is still sight',colliders(tiles(2)),true,{...defaults,maxRays:4},underEye);
 console.log('Atrium sight fixtures passed.');

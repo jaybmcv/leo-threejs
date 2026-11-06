@@ -126,6 +126,11 @@ export function createAtriumSight(colliders,options={}){
  }
  function detect(camera){
   camera.getWorldPosition(eye);
+  // Below the atrium floor (Decks 1-5), three or more deck slabs stand between the eye and the atrium. Their many small
+  // ceiling parts use up the rays before they prove it hidden, and the arrival hall on Deck 2 drew all 20 decks under
+  // atrium fog for that; it sees no atrium. So there only a clear ray counts as sight: running out of rays or
+  // fragments answers hidden.
+  const below=!!g&&eye.y<g.low;
   stats.portals=0;stats.owner=null;
   frustum.setFromProjectionMatrix(matrix.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
   let candidates=custom,preferred=[];
@@ -159,7 +164,7 @@ export function createAtriumSight(colliders,options={}){
   for(const candidate of possible){
    let polygon=candidate.polygon;for(const plane of frustum.planes){polygon=clip(polygon,plane);if(!polygon.length)break;}
    if(polygon.length)pieces.push(polygon);
-   if(pieces.length>maxFragments){stats.budgetFallbacks++;return true;}
+   if(pieces.length>maxFragments){stats.budgetFallbacks++;return !below;}
   }
   stats.portals=pieces.length;if(!pieces.length)return false;
   const cover=planes=>{const next=[];for(const polygon of pieces){next.push(...subtract(polygon,planes));if(next.length>maxFragments){stats.budgetFallbacks++;return false;}}pieces=next;return true;};
@@ -175,21 +180,21 @@ export function createAtriumSight(colliders,options={}){
     const hit=ray.intersectTriangle(polygon[0],polygon[i],polygon[i+1],false,new T.Vector3());
     if(hit&&hit.distanceToSquared(eye)<distance){target=hit;distance=hit.distanceToSquared(eye);}
    }
-   if(target){const hit=test(target);if(hit?.clear)return true;if(hit?.planes&&!cover(hit.planes))return true;}
+   if(target){const hit=test(target);if(hit?.clear)return true;if(hit?.planes&&!cover(hit.planes))return !below;}
    if(!pieces.length)return false;
   }
   for(const target of preferred){
    const hit=test(target);if(hit?.clear)return true;
-   if(hit?.planes&&!cover(hit.planes))return true;
+   if(hit?.planes&&!cover(hit.planes))return !below;
    if(!pieces.length)return false;
   }
   while(pieces.length&&remaining>0){
    const hit=test(center(pieces[0]));if(hit?.clear)return true;
    if(!hit?.planes)break;
-   const previous=pieces[0];if(!cover(hit.planes))return true;
+   const previous=pieces[0];if(!cover(hit.planes))return !below;
    if(pieces.length>maxFragments||pieces[0]===previous)break;
   }
-  if(pieces.length){stats.budgetFallbacks++;return true;}
+  if(pieces.length){stats.budgetFallbacks++;return !below;}
   return false;
  }
  const publish=now=>{if(result)lastSeen=now;return stats.visible=result||now-lastSeen<holdMs;};
