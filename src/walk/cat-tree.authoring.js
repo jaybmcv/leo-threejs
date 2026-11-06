@@ -431,7 +431,8 @@ export function createNosePark(ship){
   for(let k=0;k<9;k++){const t=(k+.5)/9,i=Math.floor(t*POND.length*.5),a=POND[i],b=POND[POND.length-1-i],x=a[0]+(b[0]-a[0])*.5+(rnd()-.5),z=a[1]+(b[1]-a[1])*.5+(rnd()-.5);if(!inside(x,z,POND)||Math.abs(x-PARK_BRIDGE.x)<2.5)continue;const st=new T.CylinderGeometry(.55,.62,.2,14);at(st,x,y0+.1,z);parts.push(paint(st,0xe6dcc8,.06,rnd));}
   // Felt koi: one instanced school, each fish circling its own loop inset from the bank (under the bridge too).
   const n=POND.length,inward=POND.map((p,i)=>{const a=POND[(i-1+n)%n],b=POND[(i+1)%n],tx=b[0]-a[0],tz=b[1]-a[1],l=Math.hypot(tx,tz)||1,nx=-tz/l,nz=tx/l;return inside(p[0]+nx*.6,p[1]+nz*.6,POND)?[nx,nz]:[-nx,-nz];});
-  const koiGeo=mergeGeometries([fish(0xffffff),paint(at(new T.SphereGeometry(.3,8,5).scale(1.2,.5,.85),.05,.2,0),0xf08a4b),paint(at(new T.SphereGeometry(.18,6,4).scale(1,.5,.8),-.55,.12,0),0xe2604e)]);koiGeo.scale(.8,.85,.8);
+  const koiTail=new T.ConeGeometry(.46,.75,6);koiTail.rotateZ(Math.PI/2);koiTail.scale(1,1,.25);koiTail.translate(-1,0,0);const koiBody=new T.SphereGeometry(.5,14,8);koiBody.scale(1.5,.7,.55);
+  const koiGeo=mergeGeometries([paint(koiBody,0xffffff),paint(koiTail,0xfff2dc),paint(at(new T.SphereGeometry(.07,6,4),.55,.1,.2),C.ink),paint(at(new T.SphereGeometry(.07,6,4),.55,.1,-.2),C.ink),paint(at(new T.SphereGeometry(.3,8,5).scale(1.2,.5,.85),.05,.2,0),0xf08a4b),paint(at(new T.SphereGeometry(.18,6,4).scale(1,.5,.8),-.55,.12,0),0xe2604e)]);koiGeo.scale(.8,.85,.8);
   const tints=[0xfff6e6,0xf6a050,0xfff6e6,0xe8604e,0xfff6e6,0xf2c060,0xfff6e6,0xf6a050,0xe8604e,0xfff6e6],koi=new T.InstancedMesh(koiGeo,bulk,tints.length);koi.name='Toybox_park_koi';
   school=tints.map((c,k)=>{koi.setColorAt(k,new T.Color(c));const d=1.6+(k%4)*.9,loop=POND.map((p,i)=>[p[0]+inward[i][0]*d,p[1]+inward[i][1]*d]).filter(([x,z])=>inside(x,z,POND)&&polyDist(x,z,POND,true)>1.1);let len=0;const acc=[0];for(let i=0;i<loop.length;i++){len+=Math.hypot(loop[(i+1)%loop.length][0]-loop[i][0],loop[(i+1)%loop.length][1]-loop[i][1]);acc.push(len);}
    return {loop,acc,len,s:rnd()*len,speed:(.45+rnd()*.5)*(k%3===1?-1:1),y:y0+.08+(k%2)*.025,phase:rnd()*6.28};});
@@ -471,7 +472,7 @@ export function createNosePark(ship){
 
  // Giant yarn balls with a loose strand trailing over the lawn; solid.
  for(const [x,z,r,c] of [[180,-25,2.1,C.carpet[0]],[196,-49,1.8,0x6fa8d6],[223,-13,2.2,C.carpet[1]],[217,25,1.7,C.cream],[168,-47,1.6,C.carpet[1]],[226,-24,1.5,0x6fa8d6]]){
-  if(!free(x,z,r,{path:.4})||!claim(x,z,r))continue;{const ball=new T.SphereGeometry(r,28,18);at(ball,x,y0+r*.95,z);parts.push(paint(ball,c,.03,rnd));const dark=new T.Color(c).multiplyScalar(.82).getHex();for(let k=0;k<7;k++){const band=new T.TorusGeometry(r*1.004,r*.045,4,48);band.rotateX(rnd()*Math.PI);band.rotateY(rnd()*Math.PI);band.rotateZ(rnd()*Math.PI);at(band,x,y0+r*.95,z);parts.push(paint(band,k%2?dark:c));}}walls.push(at(new T.SphereGeometry(r*.95,12,8),x,y0+r*.95,z));
+  if(!free(x,z,r,{path:.4})||!claim(x,z,r))continue;{const ball=new T.SphereGeometry(r,22,14);at(ball,x,y0+r*.95,z);parts.push(paint(ball,c,.03,rnd));const dark=new T.Color(c).multiplyScalar(.82).getHex();for(let k=0;k<7;k++){const band=new T.TorusGeometry(r*1.004,r*.045,3,36);band.rotateX(rnd()*Math.PI);band.rotateY(rnd()*Math.PI);band.rotateZ(rnd()*Math.PI);at(band,x,y0+r*.95,z);parts.push(paint(band,k%2?dark:c));}}walls.push(at(new T.SphereGeometry(r*.95,12,8),x,y0+r*.95,z));
   const a=rnd()*6.28,pts=[new T.Vector3(x+Math.cos(a)*r*.9,y0+.25,z+Math.sin(a)*r*.9)];for(let k=1;k<6;k++)pts.push(new T.Vector3(x+Math.cos(a+k*.35)*(r+k*1.1),y0+.06,z+Math.sin(a+k*.35)*(r+k*1.1)));parts.push(paint(tube(pts,.07,30,5),c));}
 
  // Picnic blankets (gingham) with round floor cushions to sit on.
