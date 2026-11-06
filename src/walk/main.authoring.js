@@ -113,6 +113,7 @@ import {showInfo} from './chinampa.js';
 import {createChangesBoards} from './changes-board.authoring.js';
 import {createTheatre,ACTOR_POSE_NAMES} from './theatre.authoring.js';
 import {createGamingLounge} from './gaming-lounge.authoring.js';
+import {feature} from '../v2/feature-owner.js';
 import {createCommsDisplays} from './comms-displays.authoring.js';
 import {createHalloween} from './halloween.authoring.js';
 import {createHexFloor} from './hex-floor.authoring.js';
@@ -288,7 +289,7 @@ async function buildShip(){
  // The Deck 16 theatre's cinema dressing (theatre.js), before baking so the pieces it hides stay out.
  theatre=createTheatre(ship,{url:typeof __REEL_URL__!=='undefined'?__REEL_URL__:'',anisotropy:renderer.capabilities.getMaxAnisotropy()});
  // The gaming lounge's lights, screens, glass floor and starry ceiling (gaming-lounge.js), drawn with its deck band.
- gaming=createGamingLounge(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches});
+ gaming=feature('room:gaming-lounge',ship,()=>createGamingLounge(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches}));
  // Deck 15 dressed for Halloween until November (halloween.js): its lanes' ceiling diffusers go dead before the merge.
  halloween=null;false&&createHalloween(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches,sheet:$('clown-sheet')});
  // Deck 1's hallways: hexagon tiles that light up round the walker, teal heading forward and orange heading aft
@@ -322,7 +323,7 @@ async function buildShip(){
  // The aft freight gate (freight-gate.js): its iris, gantry, lanes and posters.
  if(freightGate)toBand(freightGate.group);
  // The surgical suite's ceiling robot arms (surgery.js), dressing only.
- surgeryArms=createSurgeryArms(ship,{still:matchMedia('(prefers-reduced-motion: reduce)').matches});if(surgeryArms)toBand(surgeryArms.group);
+ surgeryArms=feature('room:surgery',ship,()=>createSurgeryArms(ship,{still:matchMedia('(prefers-reduced-motion: reduce)').matches}));if(surgeryArms)toBand(surgeryArms.group);
  // The diagnostics room's resting patients, holographic scans and scan beams (imaging.js), dressing only.
  imagingScans=createImagingScans(ship,{kit:cosmoKit,still:matchMedia('(prefers-reduced-motion: reduce)').matches,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(imagingScans)toBand(imagingScans.group);
  if(blossom)toBand(blossom.group);

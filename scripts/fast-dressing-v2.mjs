@@ -162,22 +162,104 @@ function topLevel(text){
    ...[...t.matchAll(/^(?:export\s+)?(?:const|let|var)\s+[{[]([^=]*)[}\]]\s*=/g)].flatMap(x=>x[1].split(',').map(s=>s.split(':').at(-1).trim()))].filter(Boolean):[];}
  return chunks;
 }
-const mentions=(text,n)=>new RegExp('(^|[^\\w$.])'+n.replace(/\$/g,'\\$')+'(?![\\w$])').test(text);
+// A bare name: not part of another, and not a property (one dot before it; a spread's three dots still count).
+const NAME='(?<![\\w$])(?<!(?:^|[^.])\\.)';
+const mentions=(text,n)=>new RegExp(NAME+n.replace(/\$/g,'\\$')+'(?![\\w$])').test(text);
 // A helper's code and everything it can reach in its module. Only a function declaration can be left out, and only when
 // nothing kept names it: a top-level const, let, var or class runs as the module loads and may change what the helper
 // sees (Object.assign on a pattern it tests), so every one is kept, with every import, every bare statement and what
 // they name. Matching names as text over-includes, which can only widen more often. An export list names everything, so
 // it is kept but not followed.
-export function helperHash(file,name){
+export function helperReach(file,name){
  const chunks=topLevel(readFileSync(file,'utf8')),keep=new Set(),queue=chunks.filter(c=>c.names.includes(name)||!c.declaration);
  if(!chunks.some(c=>c.names.includes(name)))throw Error('No top-level '+name+' in '+file);
  while(queue.length){const c=queue.pop();if(keep.has(c))continue;keep.add(c);if(c.list)continue;
   for(const d of chunks)if(!keep.has(d)&&d.names.some(n=>mentions(c.text,n)))queue.push(d);}
- return createHash('sha256').update(chunks.filter(c=>keep.has(c)).map(c=>c.text).join('\n')).digest('hex');
+ return chunks.filter(c=>keep.has(c)).map(c=>c.text);
 }
+export const helperHash=(file,name)=>createHash('sha256').update(helperReach(file,name).join('\n')).digest('hex');
 // Every qualified feature helper's hash, saved with the clean baseline (fast-state-v2.mjs).
 export const featureHelperHashes=()=>Object.fromEntries(Object.values(DRESSINGS).flatMap(d=>(d.helpers||[]).map(([f,n])=>[f+'#'+n,helperHash(f,n)])));
 Object.assign(DRESSINGS,roomFeatures());
+// Room dressings: a room whose fit-out pass (dressGamingLounge, …) every prepare file imports and runs before collision,
+// the rest spots and the bake, so its furniture and walls are baked with the room; and whose page-side create, called
+// only by the authoring page (main.authoring.js), returns a group that page draws (toBand) and updates and nothing else.
+// That group is never solid, in no model and not saved (bands keep only Walk_merged_), so the create's one prepared
+// output is its geometry templates, which the public walk replays. An edit to the create takes the lane: it is rebuilt
+// in Node against the baseline's decoded ship, must leave that ship untouched, and its templates are swapped. The dress
+// pass must be the baseline's in every variant (helperHash, as for a feature's strip). Templates are told apart by their
+// recording site: the labels the dress pass reaches stay the baseline's; every other label of the module is the create's.
+// The page wraps each create in feature() under its dressing id, so the clean baseline's ledger says whether that call
+// left the authoring ship untouched; the Node rebuild must say so too. The decoded ship lacks the room's baked leaf
+// meshes, so a create could change one unseen (the gaming lounge's runs before the bake): every line of the code only
+// the create reaches that names the ship, the room, the page's lights, the layout or a global must be one of `reads`,
+// as built (the ship only to find the room, the room only for its frame, the lights only in the mood block).
+// gaming-lounge and surgery only. The imaging room's create takes the Cosmo kit, which isn't rebuilt here; the aquarium
+// is out (lounge.js, partitions.js and the live identity read it).
+const ROOM_READS=['const room=roomObject(ship,ROOM);if(!room)return null;','room.updateWorldMatrix(true,false);','room.matrixWorld.decompose(group.position,group.quaternion,group.scale);'];
+function roomDressings(){
+ const out={},page=readFileSync('src/walk/main.authoring.js','utf8'),publicPage=readFileSync('src/walk/main.public.js','utf8'),texts=Object.entries(PREPARES).map(([,f])=>[f,readFileSync(f,'utf8')]);
+ const still="{still:matchMedia('(prefers-reduced-motion: reduce)').matches}";
+ const rooms={
+  // The page's lights stand in as fresh ones, so the mood block runs as it does on the page.
+  'gaming-lounge':{room:'d16-training-aft',dress:'dressGamingLounge',create:'createGamingLounge',binding:'gaming',
+   args:ctx=>[ctx.ship,{hemi:new T.HemisphereLight(0xffffff,0x444444,1),fill:new T.DirectionalLight(0xffffff,1),scene:new T.Scene()},{still:false}],
+   glue:"gaming=feature('room:gaming-lounge',ship,()=>createGamingLounge(ship,{hemi,fill,scene},"+still+"));",
+   allowed:['if(gaming)toBand(gaming.group);',',gaming=null,','get gaming(){return gaming;}'],
+   imports:['src/v2/prepared-geometry-record.js','src/plan/selected-layout.js','src/plan/rooms.js','package:three','package:three/addons/utils/BufferGeometryUtils.js'],
+   reads:['export function createGamingLounge(ship,light=null,{still=false}={}){',...ROOM_READS,'function roomOutline(room){',
+    "const plan=layout.rooms?.find(r=>'Area_'+r.id===ROOM)?.polygon,toLocal=room.matrixWorld.clone().invert(),y=room.matrixWorld.elements[13];",
+    'const world=local.map(([x,z])=>{const v=new T.Vector3(x,0,z).applyMatrix4(room.matrixWorld);return [v.x,v.z];});',
+    'const outline=roomOutline(room),flat=(flip)=>new T.ShapeGeometry(new T.Shape(outline.local.map(([x,z])=>new T.Vector2(x,flip*z))));',
+    'if(light){','const {hemi,fill,scene}=light,base={hemi:hemi.intensity,fill:fill.intensity,env:scene.environmentIntensity,sky:hemi.color.clone(),ground:hemi.groundColor.clone()};',
+    'setMood=t=>{const f=(a,b)=>a+(b-a)*t;hemi.intensity=f(base.hemi,base.hemi*MOOD.hemi);fill.intensity=f(base.fill,base.fill*MOOD.fill);',
+    'scene.environmentIntensity=f(base.env,base.env*MOOD.env);hemi.color.lerpColors(base.sky,skyC,t);hemi.groundColor.lerpColors(base.ground,groundC,t);};']},
+  // capsule-bubbles.js isn't the suite's to change here: its module code runs before the world is built, so an edit to it widens.
+  surgery:{room:'d05-surgery-2',dress:'dressSurgery',create:'createSurgeryArms',binding:'surgeryArms',args:ctx=>[ctx.ship,{still:false}],
+   glue:"surgeryArms=feature('room:surgery',ship,()=>createSurgeryArms(ship,"+still+"));if(surgeryArms)toBand(surgeryArms.group);",
+   allowed:[',surgeryArms=null,','get surgeryArms(){return surgeryArms;}'],
+   imports:['src/v2/prepared-geometry-record.js','src/plan/rooms.js','src/walk/capsule-bubbles.js','src/walk/canvas.js','package:three','package:three/addons/geometries/RoundedBoxGeometry.js'],
+   reads:['export function createSurgeryArms(ship,{still=false}={}){',...ROOM_READS,'const toRoom=room.matrixWorld.clone().invert(),local=new T.Vector3();','const centre=room.getWorldPosition(new T.Vector3());',
+    // arm()'s own parent group (parent, as a bare name, is also the page's window).
+    'const add=(parent,name,geo,m,at,rot)=>{const o=new T.Mesh(geo,m);o.name=name;o.position.set(...at);if(rot)o.rotation.set(...rot);o.castShadow=true;parent.add(o);return o;};']},
+ };
+ const variantImport=(text,id,names)=>{const rows=[...text.matchAll(/import \{([^}]*)\} from '\.\/([^']+)';/g)].filter(x=>variantOf(x[2])===id);
+  return rows.length===1&&JSON.stringify(rows[0][1].split(',').map(s=>s.trim()))===JSON.stringify(names)?'src/walk/'+rows[0][2]:null;};
+ for(const [id,r]of Object.entries(rooms)){
+  // Each prepare file imports the dress pass and nothing else from the module; each page, the create and nothing else.
+  const dressFrom=texts.map(([,t])=>variantImport(t,id,[r.dress])),authoring=variantImport(page,id,[r.create]),publicFile=variantImport(publicPage,id,[r.create]);
+  if(dressFrom.some(f=>!f)||!authoring||!publicFile)continue;
+  const variants=['','.authoring','.prepared','.public'].map(v=>'src/walk/'+id+v+'.js').filter(f=>existsSync(f)),site='src/walk/'+id+'.js',files=[...variants,...(r.privates||[])];
+  // The recording labels the dress pass reaches in any variant (what helperHash keeps): baked with the room, never the create's.
+  let dressSites=null;const sitesOfDress=()=>dressSites??=new Set([...new Set(dressFrom)].flatMap(f=>helperReach(f,r.dress)).flatMap(t=>[...t.matchAll(/(?:RecordGeometry|recordMerged|ReplayGeometry|replayMerged)\(\s*["']([^"']+)["']/g)].map(m=>m[1])));
+  // Past its glue and these, the page only calls binding?.update(…) each frame.
+  const token=new RegExp('\\b'+r.create+'\\b|'+NAME+r.binding+'(?![\\w$])(?!\\?\\.update\\()','g');
+  out['room:'+id]={room:r.room,owner:null,create:r.create,dress:r.dress,reads:r.reads,args:r.args,groups:x=>x?.group?[x.group]:[],site,dressSites:sitesOfDress,
+   owns:key=>{const s=key.slice(0,key.indexOf('|'));return (s===site||s.startsWith(site+':'))&&!sitesOfDress().has(s);},
+   collision:false,model:false,files,source:null,authoring,public:publicFile,
+   consumers:[PREPARES.source,PREPARES.authoring,'src/walk/main.authoring.js',...files],
+   glue:[['src/walk/main.authoring.js',r.glue]],
+   uses:[['src/walk/main.authoring.js',token,["import {"+r.create+"} from './"+authoring.slice('src/walk/'.length)+"';",r.glue,...r.allowed]]],
+   imports:[...r.imports,...(r.privates||[])],helpers:[...new Set(dressFrom)].map(f=>[f,r.dress])};
+ }
+ return out;
+}
+Object.assign(DRESSINGS,roomDressings());
+const labelsIn=t=>[...t.matchAll(/(?:RecordGeometry|recordMerged|ReplayGeometry|replayMerged)\(\s*["']([^"']+)["']/g)].map(m=>m[1]);
+// What only the create reaches (helperReach, less the dress pass's, whose code is the baseline's) may touch the ship,
+// the room, the page's lights, the layout or a global only in its `reads` lines, and may neither record a dress-pass
+// label nor call a dress-pass function that records one. The chunks both reach that record at load stay the dress's.
+// The names, the ways round them (arguments, a constructor's Function, prototypes, reflection) and the globals.
+const REACH=new RegExp(NAME+'(ship|room|light|hemi|fill|scene|layout|arguments|globalThis|window|self|top|parent|frames|document|eval|Function|require)(?![\\w$])|(?<![\\w$])(constructor|prototype|__proto__|Reflect|Proxy|defineProperty|defineProperties|setPrototypeOf)(?![\\w$])|\\bimport\\s*\\(');
+export function roomCreateGuard(id){const d=DRESSINGS[id],dress=helperReach(d.authoring,d.dress),own=new Set(dress),create=helperReach(d.authoring,d.create),labels=d.dressSites();
+ const only=create.filter(t=>!own.has(t));
+ for(const t of only)for(const line of t.split('\n').map(l=>l.trim()))if(REACH.test(line)&&!d.reads.includes(line))return 'The '+id+' create reaches past its room frame: '+line.slice(0,90);
+ const recorders=topLevel(readFileSync(d.authoring,'utf8')).filter(c=>own.has(c.text)&&labelsIn(c.text).length);
+ for(const c of recorders){if(!c.declaration&&create.includes(c.text))return 'The '+id+' module records geometry as it loads';
+  for(const n of c.names)if(only.some(t=>mentions(t,n)))return 'The '+id+' create calls '+n+', which records the dress pass\'s geometry';}
+ for(const t of only)for(const l of labelsIn(t))if(labels.has(l))return 'The '+id+' create records the dress pass\'s label '+l;
+ return null;
+}
 // The baseline's decoded ship, restored as the public walk restores it (prepared-runtime.js), for room features to build on.
 let shipContext=null;
 async function featureContext(base){
@@ -212,7 +294,8 @@ const code=text=>text.replace(/\r\n/g,'\n').split('\n').map(l=>l.replace(/^\s*\/
 // rather than failing the deploy; the full pipeline supports it.
 const decline=(ok,message)=>{if(!ok)throw Error(message+'; take the wider build');};
 // A template belongs to a dressing by its recording site: RecordGeometry keys site:n|args, recordMerged site|merge|...
-export const ownsTemplate=(d,key)=>(d.sites||[d.site]).some(s=>key.startsWith(s+':')||key.startsWith(s+'|'));
+// A room dressing owns its keys by exact label (owns).
+export const ownsTemplate=(d,key)=>d.owns?d.owns(key):(d.sites||[d.site]).some(s=>key.startsWith(s+':')||key.startsWith(s+'|'));
 export const dressingOwners=ids=>new Set(ids.filter(id=>DRESSINGS[id].collision).map(id=>DRESSINGS[id].owner));
 
 // null: not a dressing-only change (the normal lanes decide). {reason}: a dressing file changed but it can't be
@@ -277,7 +360,31 @@ function shims(){if(shimmed)return;shimmed=true;installWalkCanvas(createCanvas);
  // template is taken (the module is evaluated once, for the first dressing compiled). The ship log (walk-changes, from
  // git at page build) only fills the boards' texture, so an empty one stands in.
  registerHooks({resolve(specifier,context,next){if(/prepared-resource\.public\.js$/.test(specifier))return {url:'data:text/javascript,export const preparedResource={get geometryTemplates(){return globalThis.__leoDressingTemplates;}};',shortCircuit:true};
-  if(specifier==='walk-changes')return {url:'data:text/javascript,export default [];',shortCircuit:true};return next(specifier,context);}});
+  if(specifier==='walk-changes')return {url:'data:text/javascript,export default [];',shortCircuit:true};return next(specifier,context);},
+  // A room dressing's variants also hand out their top-level bindings (moduleState).
+  load(url,context,next){const r=next(url,context),file=Object.values(DRESSINGS).filter(d=>d.room).flatMap(d=>[d.authoring,d.public]).find(f=>url.endsWith('/'+f));if(!file||r.format!=='module')return r;
+   const names=[...new Set(topLevel(String(r.source)).filter(c=>!c.declaration&&!/^import\b/.test(c.text)).flatMap(c=>c.names))].filter(n=>/^[A-Za-z_$][\w$]*$/.test(n));
+   return {...r,source:String(r.source)+'\nexport const __leoTopLevel=()=>({'+names.map(n=>'...(typeof '+n+"!=='undefined'?{"+n+'}:{})').join(',')+'});\n',shortCircuit:true};}});
+}
+// What a room dressing's create could change besides the ship: its module's top-level values (the dress pass's
+// materials are shared with what it baked), three's exports and the globals. Data properties are followed (getters
+// are never run), functions and accessors are kept by identity, typed arrays by content. `ids` is shared by the
+// snapshots compared, so an object or function put in another's place reads as new.
+function moduleState(mod,ids){
+ const seen=new Set(),rows=[],id=v=>{if(!ids.has(v))ids.set(v,ids.size);return ids.get(v);};
+ const walk=v=>{if(v===null||typeof v!=='object'&&typeof v!=='function')return typeof v+':'+String(v);const i=id(v);if(seen.has(v))return '#'+i;seen.add(v);
+  if(seen.size>300000)throw Error('Room dressing state too large to compare; take the wider build');
+  if(typeof v==='function')return 'fn#'+i;
+  if(ArrayBuffer.isView(v))return v.constructor.name+':'+createHash('sha256').update(new Uint8Array(v.buffer,v.byteOffset,v.byteLength)).digest('hex');
+  const own=[];let names=[];try{names=Object.getOwnPropertyNames(v).sort();}catch{return 'opaque#'+i;}
+  for(const k of names){const p=Object.getOwnPropertyDescriptor(v,k);own.push(k+('value' in p?'='+walk(p.value):'@'+walk(p.get)+'/'+walk(p.set)));}
+  rows.push(i+':'+Object.getPrototypeOf(v)?.constructor?.name+'{'+own.join(',')+'}');return '#'+i;};
+ // Classes and the globals one level only: what each name holds, by identity.
+ const ref=x=>x!==null&&(typeof x==='object'||typeof x==='function')?'ref#'+id(x):typeof x+':'+String(x);
+ const shallow=v=>Object.getOwnPropertyNames(v).sort().map(k=>{const p=Object.getOwnPropertyDescriptor(v,k);return k+('value' in p?'='+ref(p.value):'@'+ref(p.get)+'/'+ref(p.set));}).join(',');
+ const top=Object.entries(mod.__leoTopLevel()).map(([k,v])=>k+'='+walk(v)).join(';');
+ const three=Object.entries(T).map(([k,v])=>k+'='+(typeof v==='function'?shallow(v)+'|'+(v.prototype?shallow(v.prototype):''):walk(v))).join(';');
+ return top+'\n'+three+'\n'+shallow(globalThis)+'\n'+rows.join('\n');
 }
 const shape=root=>{const rows=[];root.updateMatrixWorld(true);root.traverse(o=>{if(!o.isMesh)return;const g=o.geometry,a=[];for(const [k,x]of Object.entries(g.attributes).sort())a.push(k,Array.from(x.array));rows.push([o.name,o.matrixWorld.elements,a,g.index?Array.from(g.index.array):null,o.count??null,o.instanceMatrix?Array.from(o.instanceMatrix.array):null]);});return JSON.stringify(rows);};
 
@@ -286,16 +393,20 @@ const shape=root=>{const rows=[];root.updateMatrixWorld(true);root.traverse(o=>{
 export async function compileDressing(id,{base=null}={}){
  const d=DRESSINGS[id];shims();
  // Each variant's call is checked on its own: it may only return its parts, never change the ship it reads.
- const ctx=d.feature?await featureContext(base):null,make=mod=>{if(!d.feature)return mod[d.create]();const r=feature(d.feature,ctx.ship,()=>mod[d.create](...d.args(ctx)),{deep:true});
-  decline(featureLedger().get(d.feature).additive,'Feature '+d.feature+' changes the ship as well as returning its parts');return r;};
- if(d.feature)decline(ctx.ledger.get(d.feature)?.additive===true,'Feature '+d.feature+" isn't an additive call in the baseline ledger");
+ // A room dressing's create runs on the same decoded ship, under the same check, keyed by its dressing id.
+ // A room dressing's create must also leave its module's values, three and the globals as they were (moduleState).
+ const ctx=d.feature||d.room?await featureContext(base):null,checked=d.feature||(d.room&&id),make=mod=>{if(!checked)return mod[d.create]();const ids=new Map(),state=d.room?(decline(typeof mod.__leoTopLevel==='function','Room dressing '+id+' module state is not exposed'),moduleState(mod,ids)):null,r=feature(checked,ctx.ship,()=>mod[d.create](...d.args(ctx)),{deep:true});
+  if(d.room)decline(moduleState(mod,ids)===state,'Room dressing '+id+' changes its module\'s values, three or a global');
+  decline(featureLedger().get(checked).additive,(d.feature?'Feature ':'Room dressing ')+checked+' changes the ship as well as returning its parts');return r;};
+ if(checked)decline(ctx.ledger.get(checked)?.additive===true,(d.feature?'Feature ':'Room dressing ')+checked+" isn't an additive call in the baseline ledger");
+ if(d.room){const reason=roomCreateGuard(id);decline(!reason,reason);}
  // Its strip and bed helpers were baked with their rooms: each must be the baseline's (featureHelperHashes).
  if(d.helpers?.length){const saved=JSON.parse(await fs.readFile(path.join(path.dirname(base),'state.json'),'utf8')).featureHelpers||{};
-  for(const [f,n]of d.helpers)decline(saved[f+'#'+n]!==undefined&&saved[f+'#'+n]===helperHash(f,n),'Feature '+d.feature+' helper '+n+' ('+f+') is not the one the baseline was built with');}
+  for(const [f,n]of d.helpers)decline(saved[f+'#'+n]!==undefined&&saved[f+'#'+n]===helperHash(f,n),(d.feature?'Feature '+d.feature:'Room dressing '+id)+' helper '+n+' ('+f+') is not the one the baseline was built with');}
  const {geometryRecords}=await import('../src/v2/prepared-geometry-record.js'),before=new Set(geometryRecords().keys());
  // Modules the page has loaded first, where a dressing reaches an import cycle (transit.js and lifts.js) mid-way.
  for(const p of d.preload||[])await import('../'+p);
- const result=make(await import('../'+d.authoring)),authored=d.groups(result),group=new T.Group();
+ const result=make(await import('../'+d.authoring)),ledger=checked?{...featureLedger().get(checked)}:null,authored=d.groups(result),group=new T.Group();
 for(const g of authored)group.add(g);
  const col=new Colliders(),ground=new Colliders();
  if(d.collision&&d.feature){const root=d.solidOf(result);decline(root?.userData.fastFeature===d.feature,'Feature '+d.feature+' lost its owner tag');
@@ -310,16 +421,16 @@ for(const g of authored)group.add(g);
  // The public variant must find every template it replays and rebuild the same meshes.
  globalThis.__leoDressingTemplates=new Map(templates);const replayed=new T.Group();for(const g of d.groups(make(await import('../'+d.public))))replayed.add(g);
  decline(shape(replayed)===shape(group),'Public '+id+' replay differs from its authoring geometry');
- if(!d.model)return {id,templates,collision,groundCollision,model:null};
+ if(!d.model)return {id,templates,collision,groundCollision,ledger,model:null};
  const plain=make(await import('../'+d.source))?.group;
  // A feature that returns no group isn't in leo-full-ship.glb (v2-build.mjs adds each prepared item's group).
- if(d.feature&&!plain)return {id,templates,collision,groundCollision,model:null};
+ if(d.feature&&!plain)return {id,templates,collision,groundCollision,ledger,model:null};
  decline(d.feature?plain.userData.fastFeature===d.feature:plain.userData.fastDressing===id,'Dressing '+id+' model lost its owner tag');
  prepareArrivalCanvasExport(plain);shareExportGeometry(plain);
  // Model finalization (retire-obsolete-facades-v2.mjs) prunes the exported ship: Node's canvas textures export as
  // transparent black and fold into their material's colour factor.
  const io=new NodeIO().registerExtensions(ALL_EXTENSIONS),doc=await io.readBinary(new Uint8Array(await indexedV2Export(await new GLTFExporter().parseAsync(plain,{binary:true,onlyVisible:true}))));
- await doc.transform(prune());return {id,templates,collision,groundCollision,model:Buffer.from(await io.writeBinary(doc))};
+ await doc.transform(prune());return {id,templates,collision,groundCollision,ledger,model:Buffer.from(await io.writeBinary(doc))};
 }
 
 // Replace the dressing's nodes in the one model that holds them (leo-full-ship.glb) at the same place in its parent.
@@ -369,8 +480,9 @@ export async function patchDressings(plan,timer,{baseDirectory,destination}){
  for(const c of compiled){const d=DRESSINGS[c.id],old=d.collision?await ownedTriangles(m,read,d.owner):[];
   // A baseline from before ownership tags can't say which triangles were the dressing's.
   // A room feature the public walk builds from its code (the vault, the blossom garden) has no templates on either side.
-  if(d.feature&&c.templates.length>0!==m.geometryTemplates.some(([key])=>ownsTemplate(d,key)))throw Error('The '+c.id+' feature changed whether it records templates; take the wider build');
-  if(d.collision&&!old.length||!d.feature&&!m.geometryTemplates.some(([key])=>ownsTemplate(d,key)))throw Error('The '+c.id+' dressing needs one clean full build with dressing owners; take the wider build');
+  // A room dressing too (the imaging room's create records none on either side; its helpers need the new baseline).
+  if((d.feature||d.room)&&c.templates.length>0!==m.geometryTemplates.some(([key])=>ownsTemplate(d,key)))throw Error('The '+c.id+' '+(d.feature?'feature':'room dressing')+' changed whether it records templates; take the wider build');
+  if(d.collision&&!old.length||!d.feature&&!d.room&&!m.geometryTemplates.some(([key])=>ownsTemplate(d,key)))throw Error('The '+c.id+' dressing needs one clean full build with dressing owners; take the wider build');
   // Rails only see solid dressings; one that is never solid has no triangles for them to probe.
   if(d.feature){if(!probes)throw Error('The '+c.id+' feature needs one clean full build with rail probes; take the wider build');
    const oldGround=await ownedTriangles(m,read,d.owner,{ground:true});
@@ -383,6 +495,8 @@ export async function patchDressings(plan,timer,{baseDirectory,destination}){
  decline(removedSpans.renderTriangles===0,'The patch would remove baked render triangles');
  await timer.stage('replace dressing templates',async()=>{const writer=new PreparedWriter(),rows=compiled.flatMap(c=>c.templates.map(([key,g])=>[key,writer.geometry(g)])),first=m.geometries.length;patch.absorb(writer);
   m.geometryTemplates=[...m.geometryTemplates.filter(([key])=>!compiled.some(c=>ownsTemplate(DRESSINGS[c.id],key))),...rows.map(([key,id])=>[key,id+first])];});
+ // The ledger rows of the rebuilt calls are the compile's (a full build records the page's: equal for an additive call).
+ if(m.features)m.features=m.features.map(([k,v])=>{const c=compiled.find(c=>c.ledger&&(DRESSINGS[c.id].feature||c.id)===k);return c?[k,c.ledger]:[k,v];});
  const models=await timer.stage('patch dressing models',()=>patchDressingModels({baseline:baseDirectory,destination,compiled:compiled.filter(c=>c.model)}));
  const original=JSON.parse(await fs.readFile(base+'/integrity.json','utf8')),sourceInputs={...original.sourceInputs,sources:plan.identity};
  const prepared=await timer.stage('encode changed parts',()=>patch.save(destination+'/prepared-walk',base,sourceInputs,{rooms:[],decks:[],dressings:ids,collisionDressings:ids.filter(id=>DRESSINGS[id].collision),base:original.sha256}));

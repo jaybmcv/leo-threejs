@@ -23,7 +23,7 @@ const bytesOf=a=>Buffer.from(a.buffer,a.byteOffset,a.byteLength);
 
 // One prepared walk in a form two builds can be compared in: arrays and geometries by content, uuids by first use (a
 // full build's counter shifts when a dressing makes fewer objects), static collision bands as sorted triangle lists.
-export async function canonicalPrepared(directory,{owner=o=>o,skipOwners=new Set(),skipTemplates=()=>false}={}){
+export async function canonicalPrepared(directory,{owner=o=>o,skipOwners=new Set(),skipTemplates=()=>false,skipFeatures=new Set()}={}){
  const m=await preparedManifest(directory),read=preparedArrayReader(m,directory),uuids=new Map(),memo=new Map();
  const once=async(key,fn)=>{if(!memo.has(key))memo.set(key,await fn());return memo.get(key);};
  const array=id=>id==null?null:once('a'+id,async()=>{const a=await read(id);return a.constructor.name+':'+sha(bytesOf(a));});
@@ -52,6 +52,8 @@ export async function canonicalPrepared(directory,{owner=o=>o,skipOwners=new Set
  for(const k of ['haze','facade','lounge','frost'])out[k]=await graph(m[k]);
  for(const k of ['privacy','roomFeatureSupports','skinAuthority','retirements','bake'])out[k]=await deep(m[k]);
  out.colliders=await colliders(m.colliders);out.rest=await deep(m.rest);out.seats=m.seats;
+ // The room feature ledger: a patch rewrites the rows of the calls it rebuilt.
+ out.features=(m.features||[]).filter(([k])=>!skipFeatures.has(k));
  return out;
 }
 // The first difference between two canonical values, as a path.
@@ -104,8 +106,9 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
 }else if(process.argv.includes('--patch')){
  // Everything but the dressing is the clean baseline's; the dressing is what compileDressing makes from today's source.
  const base=arg('base')||root+'/fast-base',patched=arg('patched')||root,{DRESSINGS,compileDressing,ownsTemplate}=await import('./fast-dressing-v2.mjs'),m=await preparedManifest(patched+'/prepared-walk'),ids=m.fastPatch?.dressings||[];assert(ids.length,'No dressing patch to compare');
- const owners=new Set(ids.filter(id=>DRESSINGS[id].collision).map(id=>DRESSINGS[id].owner)),skipTemplates=key=>ids.some(id=>ownsTemplate(DRESSINGS[id],key));
- const before=await canonicalPrepared(base+'/prepared-walk',{skipOwners:owners,skipTemplates}),after=await canonicalPrepared(patched+'/prepared-walk',{skipOwners:owners,skipTemplates});
+ const owners=new Set(ids.filter(id=>DRESSINGS[id].collision).map(id=>DRESSINGS[id].owner)),skipTemplates=key=>ids.some(id=>ownsTemplate(DRESSINGS[id],key)),
+  skipFeatures=new Set(ids.map(id=>DRESSINGS[id].feature||(DRESSINGS[id].room?id:null)).filter(Boolean));
+ const before=await canonicalPrepared(base+'/prepared-walk',{skipOwners:owners,skipTemplates,skipFeatures}),after=await canonicalPrepared(patched+'/prepared-walk',{skipOwners:owners,skipTemplates,skipFeatures});
  const d=difference(after,before);assert(!d,'Dressing patch changed something else: '+d);
  const read=preparedArrayReader(m,patched+'/prepared-walk'),compiled=[];for(const id of ids)compiled.push(await compileDressing(id,{base:base+'/prepared-walk'}));
  const {ownedTriangles}=await import('./fast-dressing-v2.mjs'),key=r=>{const rows=[];for(let t=0;t<r.flags.length;t++)rows.push(Buffer.from(r.positions.buffer,r.positions.byteOffset+t*36,36).toString('hex')+'|'+r.flags[t]);return [r.band,rows.sort().join(',')];};
@@ -115,6 +118,7 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
   if(d.collision){assert.deepEqual(byBand(await ownedTriangles(m,read,d.owner)),byBand(c.collision),c.id+' collision differs from a fresh compile');
    assert.deepEqual(byBand(await ownedTriangles(m,read,d.owner,{ground:true})),byBand(c.groundCollision),c.id+' ground collision differs from a fresh compile');}
   else assert(!c.collision.length&&!c.groundCollision.length&&!c.model,c.id+' is qualified as never solid and in no model');
+  if(c.ledger)assert.deepEqual(new Map(m.features||[]).get(d.feature||c.id),c.ledger,c.id+' ledger row differs from a fresh compile');
   const templates=new Map(m.geometryTemplates.filter(([k])=>ownsTemplate(d,k)));assert.deepEqual([...templates.keys()].sort(),c.templates.map(([k])=>k).sort(),c.id+' template keys');
   for(const [k,g]of c.templates){const r=m.geometries[templates.get(k)];for(const [name,a]of Object.entries(g.attributes))assert(bytesOf(await read(r.attributes[name].array)).equals(bytesOf(a.array)),c.id+' template '+k.slice(0,60)+' '+name);if(g.index)assert(r.index!=null&&bytesOf(await read(r.index)).equals(bytesOf(g.index.array)),c.id+' template index '+k.slice(0,60));else assert(r.index==null,c.id+' template '+k.slice(0,60)+' gained an index');}
  }
@@ -139,7 +143,8 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
  const {classifyFastChange}=await import('./fast-state-v2.mjs'),{classifyDressings}=await import('./fast-dressing-v2.mjs');
  const files=['src/walk/selfie.js','src/walk/selfie.authoring.js','src/walk/canvas.js','src/walk/prepare.js','src/walk/paintings.js','src/walk/paintings.authoring.js','src/v2/phase4-community.js','src/walk/main.authoring.js'],templates=['changes-board','comics','hex-floor','lounge-compass'],
   roots=['src/walk/link.js','src/walk/lift-ride.authoring.js','src/v2/hangar-door.js','src/walk/hostess.authoring.js','src/walk/paws-off/game.authoring.js'];
- files.push(...templates.map(id=>'src/walk/'+id+'.authoring.js'),...roots);const originals=new Map(await Promise.all(files.map(async f=>[f,await fs.readFile(f,'utf8')])));
+ const lounge=['src/walk/gaming-lounge.js','src/walk/gaming-lounge.authoring.js'];
+ files.push(...templates.map(id=>'src/walk/'+id+'.authoring.js'),...roots,...lounge,'src/walk/capsule-bubbles.js');const originals=new Map(await Promise.all(files.map(async f=>[f,await fs.readFile(f,'utf8')])));
  const restore=async()=>{for(const [f,t]of originals)await fs.writeFile(f,t);};
  const edit=async(f,from,to)=>{const t=originals.get(f);assert.equal(t.split(from).length,2,'Fixture anchor moved in '+f);await fs.writeFile(f,t.replace(from,to));};
  const camera="box('Selfie_camera',[.22,.2,.32]",bigger="box('Selfie_camera',[.24,.2,.32]",cases=[];
@@ -178,6 +183,26 @@ if(!import.meta.main){}else if(process.argv.some(a=>a.startsWith('--full='))){
   // The page edited alone, with no dressing file changed, still meets the guard on the way to lane A.
   const alone=await expect('authoring page alone makes the hex floor solid','whole',()=>edit(files[7],'toBand(hexFloor.group);','toBand(hexFloor.group);colliders.addStatic(hexFloor.group);'));assert.match(alone.reason,/reaches the hex-floor dressing/);
   await expect('authoring page alone, unrelated edit','A',()=>edit(files[7],'toBand(hexFloor.group);','toBand(hexFloor.group);void 0;'));
+  // Room dressings: an edit to the gaming lounge's page-side create (or the capsules' bubbles) takes lane D; the page
+  // reaching the group any other way widens. Whether the dress pass is the baseline's is the compile's (helperHash).
+  const glow="const R=.2,cells=",brighter="const R=.21,cells=";
+  assert.deepEqual((await expect('gaming lounge create edit','D',async()=>{for(const f of lounge)await edit(f,glow,brighter);})).dressings,['room:gaming-lounge']);
+  await expect('capsule bubbles edit (module code runs before the world)','whole',()=>touch('src/walk/capsule-bubbles.js'));
+  await reach('gaming-lounge','if(gaming)toBand(gaming.group);','if(gaming)toBand(gaming.group);{const copy={...gaming};colliders.addStatic(copy.group);}',/reaches the room:gaming-lounge dressing outside its qualified uses/,'authoring page spreads the gaming lounge into a solid');
+  await reach('gaming-lounge','if(gaming)toBand(gaming.group);','if(gaming)toBand(gaming.group);colliders.addStatic(gaming.group);',/reaches the room:gaming-lounge dressing outside its qualified uses/,'authoring page makes the gaming lounge solid');
+  await reach('gaming-lounge',"()=>createGamingLounge(ship,{hemi,fill,scene},",'()=>createGamingLounge(ship,{hemi,fill,scene,colliders},',/no longer placed by its one qualified line/,'gaming lounge glue changed');
+  const {DRESSINGS,ownsTemplate,helperHash,roomCreateGuard}=await import('./fast-dressing-v2.mjs'),room=DRESSINGS['room:gaming-lounge'];
+  // The create's reach: the room only for its frame, the ship only to find it, no spread round either.
+  assert.equal(roomCreateGuard('room:gaming-lounge'),null);assert.equal(roomCreateGuard('room:surgery'),null);
+  for(const [name,from,to]of [['hides a desk','room.updateWorldMatrix(true,false);',"room.updateWorldMatrix(true,false);room.getObjectByName('Gaming_desk_top').visible=false;"],
+   ['spreads the ship',"const group=new T.Group();group.name='Walk_gaming_lounge';","const group=new T.Group();group.name='Walk_gaming_lounge';const {root:r}={...ship};"],
+   ['records a dress label','const hexes=[];','const hexes=[];new RecordGeometry("src/walk/gaming-lounge.js:0",T.BoxGeometry,1,1,1);'],
+   // A helper reached only through a spread is still the create's.
+   ['spreads a helper that reads a global','export function createGamingLounge(ship,light=null,{still=false}={}){','function peek(){return [document.title];}\nexport function createGamingLounge(ship,light=null,{still=false}={}){\n const peeked=[...peek()];']]){
+   await restore();await edit(lounge[1],from,to);assert(roomCreateGuard('room:gaming-lounge'),'create guard: '+name);cases.push({name:'gaming lounge create '+name,reason:roomCreateGuard('room:gaming-lounge')});}
+  assert(!ownsTemplate(room,'src/walk/gaming-lounge.js:0|[]')&&ownsTemplate(room,'src/walk/gaming-lounge.js:9|[]')&&ownsTemplate(room,'src/walk/gaming-lounge.js|merge|x'),'gaming lounge template ownership');
+  await restore();const before=helperHash(lounge[1],'dressGamingLounge');await edit(lounge[1],glow,brighter);assert.equal(helperHash(lounge[1],'dressGamingLounge'),before,'a create edit leaves the dress hash');
+  await restore();await edit(lounge[1],"const END=23.84,","const END=23.85,");assert.notEqual(helperHash(lounge[1],'dressGamingLounge'),before,'a room constant edit changes the dress hash');cases.push({name:'gaming lounge dress hash',reason:'create edit keeps it, room constant changes it'});
  }finally{await restore();}
  // Through every consumer, independent of the working tree: a second importer or a moved glue line widens.
  const graph=g=>({graph:g}),selfie=['src/walk/canvas.js','package:three','src/fin-crown.js','src/concept-shape.js'];
