@@ -388,7 +388,7 @@ export function createNosePark(ship){
  const hidden=new T.MeshBasicMaterial({visible:false});
  const base=[],baseKnit=[],parts=[],knits=[],lights=[],grounds=[],walls=[],cushions=[];
  // Props claim their footprint so none lands on another.
- let school=[],swim=null,clock=0;
+ let school=[],swim=null,clock=0;const balloons=[],balloonMeshes=[];
  const taken=[],free=(x,z,r,o)=>parkFree(x,z,r,o)&&!taken.some(([tx,tz,tr])=>Math.hypot(x-tx,z-tz)<r+tr+.4),claim=(x,z,r)=>{taken.push([x,z,r]);return true;};
  for(const [hx,hz,R] of HILLS)claim(hx,hz,R);
  // Every triangle of a walk surface must face up: the walk only stands on ground whose normal points up.
@@ -534,6 +534,19 @@ export function createNosePark(ship){
   parts.push(paint(put(new T.SphereGeometry(.22,10,7).scale(1.45,.8,1).translate(0,.17,0)),0xa9a39a),paint(put(new T.SphereGeometry(.08,6,4).translate(.33,.2,0)),0xec7a92));
   for(const k of [-1,1])parts.push(paint(put(new T.CircleGeometry(.09,10).translate(0,0,0).rotateY(Math.PI/2).translate(.2,.33,k*.1)),0xf3a6b8));
   parts.push(paint(put(tube([new T.Vector3(-.3,.12,0),new T.Vector3(-.55,.05,.12),new T.Vector3(-.8,.04,-.05)],.018,10,3)),0xec7a92));}
+ // Felt hot-air balloons hover over the meadow and the pond, between the Deck 7 and Deck 12 levels and well clear of
+ // the bridges, the tree's leaf dome and the narrower openings above Deck 13 (|z| under 30 there); they bob gently.
+ // Instanced: alternate gores in two meshes (each balloon its own two colours) and the baskets in a third.
+ {const prof=[];for(let k=0;k<=12;k++){const t=k/12,a=t*Math.PI;prof.push(new T.Vector2(Math.max(.05,Math.sin(a)*(1-.35*t*t)*3.2),-3.6*Math.cos(a)*(t<.5?1:.85)));}
+  const env=new T.LatheGeometry(prof,16).toNonIndexed(),q=env.attributes.position,gores=[[],[]];for(let t=0;t<q.count;t+=3){let a=0;for(let k=0;k<3;k++)a+=Math.atan2(q.getZ(t+k),q.getX(t+k));const g=Math.floor(((Math.atan2(q.getZ(t)+q.getZ(t+1)+q.getZ(t+2),q.getX(t)+q.getX(t+1)+q.getX(t+2))+Math.PI)/(Math.PI*2))*16)%2;for(let k=0;k<3;k++)gores[g].push(q.getX(t+k),q.getY(t+k),q.getZ(t+k));}
+  const gore=P=>{const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.computeVertexNormals();return paint(g,0xffffff);};
+  const ring=new T.TorusGeometry(1.1,.12,5,16);ring.rotateX(Math.PI/2);ring.translate(0,-3.85,0);const basket=new T.CylinderGeometry(.75,.6,.9,12);basket.translate(0,-5.6,0);
+  const ropes=[];for(let k=0;k<4;k++){const a=k/4*Math.PI*2+.4;ropes.push(paint(between(new T.Vector3(Math.cos(a)*1.05,-3.9,Math.sin(a)*1.05),new T.Vector3(Math.cos(a)*.65,-5.15,Math.sin(a)*.65),.03),C.rope));}
+  const list=[[168,-3,-38,C.carpet[0],C.cream],[201,2,-35,C.carpet[1],0xd2463c],[176,4,39,0x6fa8d6,C.cream],[207,-2,34,C.carpet[2],C.carpet[1]]];
+  const A=new T.InstancedMesh(gore(gores[0]),knitMat,list.length),B=new T.InstancedMesh(gore(gores[1]),knitMat,list.length),K=new T.InstancedMesh(mergeGeometries([paint(ring,C.rope),woven(basket,-6.05),...ropes]),bulk,list.length);
+  A.name=B.name='Toybox_park_balloon';K.name='Toybox_park_balloon_basket';
+  list.forEach(([x,y,z,c1,c2],k)=>{A.setColorAt(k,new T.Color(c1));B.setColorAt(k,new T.Color(c2));K.setColorAt(k,new T.Color(0xffffff));balloons.push({x,y,z,phase:x*.37});});
+  for(const m of [A,B,K]){m.instanceMatrix.setUsage(T.DynamicDrawUsage);m.frustumCulled=false;near.add(m);}balloonMeshes.push(A,B,K);}
  // Far: the lawn, paths and pond stay (always drawn); details give way to a few felt blobs (trees, above).
  named(group,'Toybox_park_ground',base,bulk);named(group,'Toybox_park_lawn',baseKnit,knitMat);
  named(near,'Toybox_park_body',parts,bulk);named(near,'Toybox_park_knit',knits,knitMat);named(near,'Toybox_park_lanterns',lights,glow);near.add(seats);
@@ -543,9 +556,9 @@ export function createNosePark(ship){
  // The koi glide round their loops with a slow tail sway, only while the park's near detail is drawn.
  const m=new T.Matrix4(),q=new T.Quaternion(),e=new T.Euler(),pos=new T.Vector3(),one=new T.Vector3(1,1,1);
  const update=dt=>{if(!swim||!near.visible)return;clock+=Math.min(dt,.1);school.forEach((f,k)=>{if(f.loop.length<3)return;f.s=((f.s+f.speed*Math.min(dt,.1))%f.len+f.len)%f.len;let i=0;while(i<f.loop.length-1&&f.acc[i+1]<f.s)i++;const a=f.loop[i],b=f.loop[(i+1)%f.loop.length],t=(f.s-f.acc[i])/((f.acc[i+1]-f.acc[i])||1);
-  pos.set(a[0]+(b[0]-a[0])*t,f.y,a[1]+(b[1]-a[1])*t);const dir=Math.sign(f.speed),hx=(b[0]-a[0])*dir,hz=(b[1]-a[1])*dir;e.set(0,Math.atan2(-hz,hx)+.18*Math.sin(clock*3+f.phase),0);m.compose(pos,q.setFromEuler(e),one);swim.setMatrixAt(k,m);});swim.instanceMatrix.needsUpdate=true;};
+  pos.set(a[0]+(b[0]-a[0])*t,f.y,a[1]+(b[1]-a[1])*t);const dir=Math.sign(f.speed),hx=(b[0]-a[0])*dir,hz=(b[1]-a[1])*dir;e.set(0,Math.atan2(-hz,hx)+.18*Math.sin(clock*3+f.phase),0);m.compose(pos,q.setFromEuler(e),one);swim.setMatrixAt(k,m);});swim.instanceMatrix.needsUpdate=true;balloons.forEach((b,k)=>{pos.set(b.x,b.y+.6*Math.sin(clock*.35+b.phase),b.z);e.set(0,.15*Math.sin(clock*.11+b.phase),0);m.compose(pos,q.setFromEuler(e),one);for(const mesh of balloonMeshes)mesh.setMatrixAt(k,m);});for(const mesh of balloonMeshes)mesh.instanceMatrix.needsUpdate=true;};
  update(0);near.visible=true;
- return {group,solid,seats,trees,update,bounds:{y0,y1:y0+6}};
+ return {group,solid,seats,trees,update,bounds:{y0,y1:8}};
 }
 
 // Felt bark: shallow vertical grooves round the lathe, darker in the grooves (the lathe is still centred on the axis).
