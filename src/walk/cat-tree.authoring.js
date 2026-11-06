@@ -510,6 +510,30 @@ export function createNosePark(ship){
  for(const [x,z] of [[172,-30],[210,-34],[196,-36],[158,-20],[224,-20],[222,22]]){if(!free(x,z,.4,{path:.2})||!claim(x,z,.6))continue;parts.push(paint(at(new T.CylinderGeometry(.09,.12,3.4,8),x,y0+1.7,z),C.wood));parts.push(paint(at(new T.BoxGeometry(.9,.1,.1),x+.4,y0+3.35,z),C.wood));parts.push(paint(between(new T.Vector3(x+.75,y0+3.3,z),new T.Vector3(x+.75,y0+2.95,z),.015),C.rope));
   lights.push(at(new T.BoxGeometry(.36,.44,.36),x+.75,y0+2.7,z));parts.push(paint(at(new T.ConeGeometry(.32,.2,4).rotateY(Math.PI/4),x+.75,y0+3.0,z),C.wood));walls.push(at(new T.CylinderGeometry(.2,.2,3.4,6),x,y0+1.7,z));}
 
+ // Topiary balls in woven planters round the Voyage Commons' two programme plants (phase6-programme.js), so they
+ // read as felt like everything round them.
+ for(const [x,z] of [[152,15],[172,15]]){claim(x,z,1.1);const pl=new T.CylinderGeometry(.98,.85,.82,18);at(pl,x,y0+.41,z);parts.push(woven(pl,y0));
+  const ball=new T.SphereGeometry(1.08,18,12);at(ball,x,y0+1.38,z);knits.push(paint(ball,C.leaf[1],.05,rnd));knits.push(paint(at(new T.SphereGeometry(.42,10,7),x,y0+2.5,z),C.leaf[0]));
+  for(let f=0;f<9;f++){const a=f/9*6.28,e=.35+.5*(f%3)/2;parts.push(paint(at(new T.SphereGeometry(.15,7,5),x+Math.cos(a)*Math.cos(e)*1.08,y0+1.38+Math.sin(e)*1.08,z+Math.sin(a)*Math.cos(e)*1.08),[0xec7a92,0xf6ead2,0xf2b84b][f%3]));}
+  walls.push(at(new T.CylinderGeometry(1,1,1.4,12),x,y0+.7,z));}
+ // The park's gateway over the tower path: two rope-wrapped posts, a felt arch with pom-poms and a stitched sign.
+ {const x=163.4,w=3.1,h=3.5;for(const k of [-1,1]){const post=new T.CylinderGeometry(.2,.24,h,12);at(post,x,y0+h/2,k*w);parts.push(sisal(post,26));walls.push(at(new T.CylinderGeometry(.26,.26,h,8),x,y0+h/2,k*w));
+   for(let b=0;b<4;b++){const band=new T.TorusGeometry(.23,.045,4,14);band.rotateX(Math.PI/2);at(band,x,y0+.5+b*.8,k*w);parts.push(paint(band,C.rope));}knits.push(paint(at(new T.SphereGeometry(.34,10,7),x,y0+h+.25,k*w),C.carpet[1]));}
+  const arc=[];for(let i=0;i<=16;i++){const t=i/16,z=-w+2*w*t;arc.push(new T.Vector3(x,y0+h+.05+Math.sin(Math.PI*t)*.85,z));}knits.push(paint(tube(arc,.22,32,8),C.carpet[0]));
+  for(let i=1;i<8;i++){const p=arc[i*2];knits.push(paint(at(new T.SphereGeometry(.16,7,5),p.x,p.y+.26,p.z),C.toy[i%5]));}
+  for(const k of [-1,1])parts.push(paint(between(new T.Vector3(x,y0+h+.1,k*1.75),new T.Vector3(x,y0+h-.62,k*1.75),.02),C.rope));
+  const label=parkLabel();if(label)for(const side of [0,1]){const plate=new T.Mesh(new T.PlaneGeometry(3.8,1.25),label);plate.rotation.y=side?-Math.PI/2:Math.PI/2;plate.position.set(x+(side?-.045:.045),y0+h-1.2,0);plate.name='Toybox_park_sign';near.add(plate);}
+  const board=new T.BoxGeometry(.06,1.35,3.95);at(board,x,y0+h-1.2,0);parts.push(paint(board,C.wood));}
+ // Benches on the pond's outer bank, facing the water; and felt toy mice by the yarn.
+ for(const [x,z,face] of [[178,38,Math.PI],[197,38.6,Math.PI],[168,35,Math.PI*1.08]]){if(!free(x,z,.5,{path:-.3,pond:.2})||!claim(x,z,1.1))continue;
+  const m=new T.Matrix4().makeRotationY(face).setPosition(x,y0,z),put=g=>g.applyMatrix4(m);for(const k of [-.85,.85])parts.push(paint(put(new T.BoxGeometry(.12,.42,.5).translate(k,.21,0)),C.wood));
+  const cush=put(new T.BoxGeometry(2.1,.12,.56).translate(0,.48,0));parts.push(paint(cush.clone(),C.carpet[2]));const seat=new T.Mesh(cush.clone(),hidden);seat.name='Garden_bench_cushion';seats.add(seat);
+  const back=put(new T.BoxGeometry(2.1,.5,.1).translate(0,.85,-.3));parts.push(paint(back.clone(),C.carpet[3]));const bk=new T.Mesh(back.clone(),hidden);bk.name='Bench_back';seats.add(bk);
+  walls.push(put(new T.BoxGeometry(2.1,.54,.56).translate(0,.27,0)),put(new T.BoxGeometry(2.1,1.1,.12).translate(0,.55,-.3)));}
+ for(const [x,z,a] of [[183,-21.6,.4],[199,-46.2,2.2],[220,-10.2,-1],[213,27.3,1.4],[166,-44.6,.2],[229,-21.5,3]]){if(!free(x,z,.3,{path:.1}))continue;const mo=new T.Matrix4().makeRotationY(a).setPosition(x,y0,z),put=g=>g.applyMatrix4(mo);
+  parts.push(paint(put(new T.SphereGeometry(.22,10,7).scale(1.45,.8,1).translate(0,.17,0)),0xa9a39a),paint(put(new T.SphereGeometry(.08,6,4).translate(.33,.2,0)),0xec7a92));
+  for(const k of [-1,1])parts.push(paint(put(new T.CircleGeometry(.09,10).translate(0,0,0).rotateY(Math.PI/2).translate(.2,.33,k*.1)),0xf3a6b8));
+  parts.push(paint(put(tube([new T.Vector3(-.3,.12,0),new T.Vector3(-.55,.05,.12),new T.Vector3(-.8,.04,-.05)],.018,10,3)),0xec7a92));}
  // Far: the lawn, paths and pond stay (always drawn); details give way to a few felt blobs (trees, above).
  named(group,'Toybox_park_ground',base,bulk);named(group,'Toybox_park_lawn',baseKnit,knitMat);
  named(near,'Toybox_park_body',parts,bulk);named(near,'Toybox_park_knit',knits,knitMat);named(near,'Toybox_park_lanterns',lights,glow);near.add(seats);
@@ -612,6 +636,11 @@ function roundBox(g,r){g.computeBoundingBox();const b=g.boundingBox,h=b.getSize(
 // Strip quads are wound so their faces point outward; recompute normals after any later reshaping.
 function fixNormals(g){g.computeVertexNormals();return g;}
 // The sign's face: cream letters on a dark stained board, with a paw. Only where a canvas exists (pages, not plain Node).
+// The Toybox Park's sign: cream felt with a red running stitch round it, the name and a paw print.
+function parkLabel(){if(typeof document==='undefined')return null;const cv=document.createElement('canvas');cv.width=1024;cv.height=336;const g=cv.getContext('2d');if(!g)return null;
+ g.fillStyle='#f6ead2';g.beginPath();g.roundRect(8,8,1008,320,70);g.fill();g.strokeStyle='#d2463c';g.lineWidth=9;g.setLineDash([34,22]);g.beginPath();g.roundRect(38,38,948,260,48);g.stroke();g.setLineDash([]);
+ g.fillStyle='#8a3a28';g.textAlign='center';g.textBaseline='middle';g.font='bold 128px "Trebuchet MS", Arial, sans-serif';g.fillText('TOYBOX PARK',512,174);
+ const t=new T.CanvasTexture(cv);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return new T.MeshStandardMaterial({map:t,roughness:.9,transparent:true,alphaTest:.5});}
 function signLabel(){if(typeof document==='undefined')return null;const cv=document.createElement('canvas');cv.width=1024;cv.height=434;const g=cv.getContext('2d');if(!g)return null;
  g.clearRect(0,0,1024,434);g.fillStyle='#e0b47a';g.beginPath();g.ellipse(512,217,500,210,0,0,Math.PI*2);g.fill();g.strokeStyle='#b8834e';g.lineWidth=10;g.beginPath();g.ellipse(512,217,470,184,0,0,Math.PI*2);g.stroke();
  g.fillStyle='#5a3418';g.textAlign='center';g.textBaseline='middle';g.font='bold 118px "Trebuchet MS", Arial, sans-serif';g.fillText('THE GREAT',512,150);g.fillText('CAT TREE',512,272);
