@@ -200,6 +200,10 @@ const phone=matchMedia('(pointer:coarse)').matches,phoneTest=new URLSearchParams
 // logarithmic depth buffer (its depth writes can keep a phone GPU from skipping hidden surfaces; the near plane moves
 // out to 0.2 m for precision). Neither is on by default.
 const phoneLinearDepth=phone&&phoneTest.get('phonedepth')==='linear';
+// ?phonehide=bands,glass,furnish,gardens,haze,cats hides those for a test on a device, to see what its GPU spends on.
+const PHONE_HIDE={bands:o=>/^V2_low_deck_merged_/.test(o.name)&&!o.material[0]?.transparent,glass:o=>[o.material].flat().some(m=>m?.transparent),
+ furnish:o=>o.isInstancedMesh&&o.userData.phase4,gardens:o=>[o.material].flat().some(m=>m?.name==='P6_atrium_gardens'),haze:o=>/haze/i.test(o.name),cats:o=>o.isSkinnedMesh};
+const phoneHide=(phoneTest.get('phonehide')||'').split(',').map(k=>PHONE_HIDE[k]).filter(Boolean);let phoneHidden=[],phoneHiddenAt=-Infinity;
 const renderer=new T.WebGLRenderer({antialias:!(phone&&phoneTest.get('phoneaa')==='0'),logarithmicDepthBuffer:!phoneLinearDepth,powerPreference:'high-performance'});
 const frameReadout=createFrameReadout(renderer);
 // Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
@@ -447,7 +451,8 @@ function span(p,now){
 }
 function cull(p,now=performance.now()){
  camera.updateMatrixWorld(true);
- cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);phoneBands?.update();let shown=false;
+ cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);phoneBands?.update();
+ if(phoneHide.length){if(now-phoneHiddenAt>5000){phoneHiddenAt=now;phoneHidden=[];scene.traverse(o=>{if(o.isMesh&&phoneHide.some(f=>f(o)))phoneHidden.push(o);});}for(const o of phoneHidden)o.visible=false;}let shown=false;
  for(const o of instanced){const [a,b]=o.userData.span,v=o.userData.cabins?a<p.y+3.5&&b>p.y-.5:a<high&&b>low;if(v&&!o.visible)shown=true;o.visible=v;}
  // Re-rank after 3 m of walking, or at once when another deck's cabins come into view.
  if(!shown&&nearFrom.distanceToSquared(p)<9)return;nearFrom.copy(p);
