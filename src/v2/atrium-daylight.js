@@ -1,6 +1,6 @@
-// 4B "Hanging gardens": the daylight the atrium's opaque sky panel paints, and the dappled light it throws on the
-// Deck 6 floor. Plain 2D-canvas drawing only (gradients and fills, no filters), so the browser and the authoring
-// canvas paint alike, and both maps survive the Basic-material swap of the distant and phone atrium copies.
+// 4B "Hanging gardens": the daylight the atrium's opaque sky panel paints, and the dappled shade under its trees.
+// Plain 2D-canvas drawing only (gradients and fills, no filters), so the browser and the authoring
+// canvas paint alike, and both survive the Basic-material swap of the distant and phone atrium copies.
 const seeded=seed=>()=>{seed=seed+0x6d2b79f5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 
 // One soft puff: a radial gradient squeezed into an ellipse.
@@ -37,23 +37,12 @@ export function paintDaylightSky(c){
  return c;
 }
 
-// Dappled floor light (light through a canopy), as two tileable maps painted from the same seed: a shade map (a soft
-// grey base, white sun flecks) multiplies the floor, and a glow map (black base, the same flecks) lights the flecks
-// through the material's warm emissive. Both are linear data. Material colours stay <= 1 so they serialize intact.
-export const DAPPLE={tile:13,turn:.37,shade:.84,glow:0xffd9a3,glowIntensity:.32};
-export function paintDapple(c,base=DAPPLE.shade){
- const S=512;c.width=S;c.height=S;const g=c.getContext('2d'),rnd=seeded(77),v=Math.round(base*255);
- g.fillStyle=`rgb(${v},${v},${v})`;g.fillRect(0,0,S,S);
- const wrap=(x,y,draw)=>{for(const dx of[-S,0,S])for(const dy of[-S,0,S])if(x+dx>-80&&x+dx<S+80&&y+dy>-80&&y+dy<S+80)draw(x+dx,y+dy);};
- // Broad, faint light pools, then clusters of crisp flecks.
- for(let i=0;i<14;i++){const x=rnd()*S,y=rnd()*S,r=40+rnd()*50,ry=r*(.6+rnd()*.4),a=.12+rnd()*.1,turn=rnd()*3;wrap(x,y,(px,py)=>puff(g,px,py,r,ry,turn,a));}
- for(let i=0;i<46;i++){const cx=rnd()*S,cy=rnd()*S,n=3+(rnd()*7|0);
-  for(let k=0;k<n;k++){const x=cx+(rnd()-.5)*46,y=cy+(rnd()-.5)*46,r=4+rnd()*11,ry=r*(.55+rnd()*.45),a=.5+rnd()*.45,turn=rnd()*3;wrap(x,y,(px,py)=>puff(g,px,py,r,ry,turn,a));}}
- return c;
-}
-// World-space floor UVs for the dapple map: a turned square tile, so it never lines up with the paving or the ship.
-export function dappleUV(g){
- const p=g.attributes.position,uv=new Float32Array(p.count*2),c=Math.cos(DAPPLE.turn),s=Math.sin(DAPPLE.turn);
- for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i);uv[i*2]=(x*c-z*s)/DAPPLE.tile;uv[i*2+1]=(x*s+z*c)/DAPPLE.tile;}
- return uv;
+// A tree's dappled shade (RGBA, for a transparent decal under its canopy): warm dark shadow, densest under the crown
+// and fading to nothing at the rim, with irregular sun flecks cut out of it.
+export function paintTreeShade(c,seed=1){
+ const S=256;c.width=S;c.height=S;const g=c.getContext('2d'),rnd=seeded(seed);g.clearRect(0,0,S,S);
+ const r=g.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);r.addColorStop(0,'rgba(58,44,26,1)');r.addColorStop(.6,'rgba(58,44,26,.85)');r.addColorStop(1,'rgba(58,44,26,0)');
+ g.fillStyle=r;g.fillRect(0,0,S,S);g.globalCompositeOperation='destination-out';
+ for(let i=0;i<34;i++){const cx=rnd()*S,cy=rnd()*S,n=2+(rnd()*5|0);for(let k=0;k<n;k++)puff(g,cx+(rnd()-.5)*24,cy+(rnd()-.5)*24,3+rnd()*8,3+rnd()*6,rnd()*3,.7+rnd()*.3);}
+ g.globalCompositeOperation='source-over';return c;
 }

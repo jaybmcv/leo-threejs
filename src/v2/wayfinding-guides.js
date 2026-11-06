@@ -26,7 +26,7 @@ export function addWayfindingGuides(parent){
   const deck=layout.decks[row.deck-1],top=DIRECTORY_HEIGHT/2,postHeight=DIRECTORY_CEILING_HEIGHT-(row.at[1]-deck.y)-top;
   const board=new T.Group();board.name='V2_lobby_deck_directory';board.position.set(row.at[0],row.at[1]-deck.y,row.at[2]);board.rotation.y=row.yaw;board.userData={...row,noCollide:true,readableFaces:2};roots.get(row.deck).add(board);
   const backing=new T.Mesh(new T.BoxGeometry(DIRECTORY_WIDTH,DIRECTORY_HEIGHT,.04),directoryBacking);backing.name='V2_lobby_deck_directory_backing';backing.userData.noCollide=true;board.add(backing);
-  const material=new T.MeshBasicMaterial({map:texture,toneMapped:false}),front=new T.PlaneGeometry(DIRECTORY_WIDTH,DIRECTORY_HEIGHT).translate(0,0,.021),back=new T.PlaneGeometry(DIRECTORY_WIDTH,DIRECTORY_HEIGHT).rotateY(Math.PI).translate(0,0,-.021),faces=mergeGeometries([front,back]);front.dispose();back.dispose();
+  const material=new T.MeshBasicMaterial({map:texture,toneMapped:false}),front=new T.PlaneGeometry(DIRECTORY_WIDTH,DIRECTORY_HEIGHT).translate(0,0,.026),back=new T.PlaneGeometry(DIRECTORY_WIDTH,DIRECTORY_HEIGHT).rotateY(Math.PI).translate(0,0,-.026),faces=mergeGeometries([front,back]);front.dispose();back.dispose();
   const face=new T.Mesh(faces,material);face.name='V2_lobby_deck_directory_faces';face.userData={noCollide:true,readableFaces:2};board.add(face);
   if(postHeight>0)for(const side of [-1,1]){const post=new T.Mesh(new T.CylinderGeometry(.022,.022,postHeight,6),directorySupport);post.name='V2_lobby_deck_directory_support';post.position.set(side*DIRECTORY_WIDTH/2,top+postHeight/2,0);post.userData.noCollide=true;board.add(post);}
  }

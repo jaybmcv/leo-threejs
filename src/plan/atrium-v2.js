@@ -15,9 +15,23 @@ export function phase6Owners(layout){return [...ATRIUM_ZONES.map(z=>({...z,deck:
 export const BOW_CAFE_THEMES=['Oak & cream','Sage reading nook','Clay & resident art','Family corner','Teal listening room','Board-game coffee','Tea & quiet','Workshop coffee','Community table','Botanical coffee'];
 
 const lakes=new WeakMap();
+// 4B: the lake's boulevard side is a rounded shoreline set back behind soft lawn banks (up to ~3.3 m), as in the
+// concept. It stays straight at z=-6 across the reflection-terrace bays (x 30, 46, 78, 94), the bridge (x 60) and
+// the lake's ends, so those keep their water edge. Sampled every 0.5 m, like the far bank.
+const BANK_CLEAR=[[22.5,37.5],[38.5,53.5],[55,65],[70.5,85.5],[86.5,101.5]];
+export function phase6LakeShore(x){
+ if(x<=7||x>=117)return -6;let m=Math.min(1,(x-7)/4,(117-x)/4);
+ for(const[a,b]of BANK_CLEAR){if(x>a-3&&x<b+3)m=Math.min(m,x<=a||x>=b?Math.min(1,Math.abs(x<=a?a-x:x-b)/3):0);}
+ const bank=1.4+1.3*(.5+.5*Math.sin(x/6.1+.7))+.6*Math.sin(x/2.7);return -6-Math.max(0,m*bank);
+}
+// The lawn banks between the boulevard (z=-6) and that shoreline, one polygon per run, sharing the shoreline's vertices.
+export function phase6LakeBanks(){const banks=[];let run=[];const flush=()=>{if(run.length>1){const a=run[0][0]-.5,b=run.at(-1)[0]+.5;banks.push([[a,-6],[b,-6],...run.slice().reverse()]);}run=[];};
+ for(let x=4.5;x<120;x+=.5){const z=phase6LakeShore(x);if(z<-6.001)run.push([x,z]);else flush();}flush();return banks;}
+// A winding 2.4 m stone path through the park lawn, from the lobby end of the grove to the crossing at x=-4.
+export function phase6ParkPath(){const c=x=>-20.5+3*Math.sin((x+6)/8.5),top=[],bottom=[];for(let x=-88;x<=-3.9999;x+=1){top.push([x,c(x)+1.2]);bottom.push([x,c(x)-1.2]);}return [...bottom,...top.reverse()];}
 // Keep a dry perimeter beside the inward wing notches as well as the main
 // boulevard. The three-metre square reservation is conservative at corners.
-export function phase6LakePolygon(ring){let cached=lakes.get(ring);if(cached)return cached;const border=x=>{let z=-1000;for(let i=0;i<ring.length;i++){const a=ring[i],b=ring[(i+1)%ring.length];if(Math.abs(b[0]-a[0])<1e-9||x<Math.min(a[0],b[0])-1e-7||x>Math.max(a[0],b[0])+1e-7)continue;const q=a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);if(q<0)z=Math.max(z,q);}return z;},lower=[];for(let x=4;x<=120.0001;x+=.5){const xs=[x-3.2,x+3.2,...ring.filter(p=>p[0]>=x-3.2&&p[0]<=x+3.2).map(p=>p[0])],z=Math.max(-56,...xs.map(border).map(z=>z+3.2));lower.push([x,z]);}cached=[...lower,[120,-6],[4,-6]];lakes.set(ring,cached);return cached;}
+export function phase6LakePolygon(ring){let cached=lakes.get(ring);if(cached)return cached;const border=x=>{let z=-1000;for(let i=0;i<ring.length;i++){const a=ring[i],b=ring[(i+1)%ring.length];if(Math.abs(b[0]-a[0])<1e-9||x<Math.min(a[0],b[0])-1e-7||x>Math.max(a[0],b[0])+1e-7)continue;const q=a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]);if(q<0)z=Math.max(z,q);}return z;},lower=[];for(let x=4;x<=120.0001;x+=.5){const xs=[x-3.2,x+3.2,...ring.filter(p=>p[0]>=x-3.2&&p[0]<=x+3.2).map(p=>p[0])],z=Math.max(-56,...xs.map(border).map(z=>z+3.2));lower.push([x,z]);}const top=[];for(let x=120;x>=4-1e-4;x-=.5)top.push([x,phase6LakeShore(x)]);cached=[...lower,...top];lakes.set(ring,cached);return cached;}
 
 // Garden footprints are candidates until validated against the actual notched deck.
 export const ATRIUM_GARDEN_POCKETS=[-80,-34,12].flatMap((x,i)=>[-1,1].map(side=>({id:'atrium6-garden-'+i+'-'+(side<0?'port':'starboard'),x,z:side*44,width:12,depth:8,canopyHeight:[3.6,4.4,5.2][i]})));
@@ -29,8 +43,10 @@ export const ATRIUM_SIGNATURE_TREES=[
  {id:'food-aft',x:-34,z:42.9,height:13.5,spread:6.4,seed:37},
  {id:'food-fore',x:12,z:42.9,height:12.5,spread:5.8,seed:41},
 ];
-// 4B waterfall: rocks and falling water against the lake's hull-side bank, centred on x (visual only).
+// 4B waterfalls (visual only): the big one against the lake's hull-side bank, centred on x; a mini waterfall pond in
+// the shallows at the lake's near (west) end, falling toward the boulevard so it is seen from it.
 export const ATRIUM_WATERFALL={x:46,width:9};
+export const ATRIUM_MINI_WATERFALL={x:11.5,width:4.6,scale:.55,setback:4.2};
 export function phase6GardenPolygons(){return ATRIUM_GARDEN_POCKETS.map(p=>rect(p.x-6,p.x+6,p.z-4,p.z+4));}
 // A dry 2.4 m garden approach crosses the shallow edge; no deep tank is built.
 export function phase6LakeIslands(){return [rect(6,18,-48,-40),rect(10.8,13.2,-56,-48)];}
