@@ -113,5 +113,8 @@ const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,
  for(const side of[-1,1]){const z=side*12.5,floor=layout.decks[19].y;add('p6-crew-gallery','p6_service_cabinet',[.6,1.6,1.2],[135.3,floor+.8,z],'metal',{deck:20});add('p6-crew-gallery','p6_service_cabinet_seam',[.02,1.4,.015],[134.99,floor+.8,z],'navy',{deck:20,noCollide:true});for(const dz of[-.12,.12])add('p6-crew-gallery','p6_service_cabinet_handle',[.06,.16,.025],[134.97,floor+.85,z+dz],'metal',{deck:20,noCollide:true});}
  for(const side of[-1,1])for(const x of[128.3,135.7]){const z=side*12.5;add('p6-crew-gallery','p6_service_duct',[.20,.22,6],[x,layout.decks[19].y-.35,z],'metal',{deck:20,noCollide:true});add('p6-crew-gallery','p6_service_light',[.12,.025,5.8],[x,layout.decks[19].y-.4725,z],'light',{deck:20,noCollide:true});}
  addReflectionTerraces({parts,rests,y});
- return{parts,rests,owners,prototypeCafe:'nose-commons-05',cafes,terraces:ATRIUM_TERRACES,zones:ATRIUM_ZONES};
+ // 4B: the atrium's planting blobs (planter fill and lake-edge reeds, all noCollide) become faceted beds drawn by
+ // atrium-gardens.js at the same places; the planters themselves stay. Taken after the reflection terraces clear theirs.
+ const beds=[];for(let i=parts.length-1;i>=0;i--){const p=parts[i];if(p.part==='recovery_planting'&&p.deck===6&&p.room.startsWith('atrium6-')){beds.push(p);parts.splice(i,1);}}
+ return{parts,rests,owners,beds,prototypeCafe:'nose-commons-05',cafes,terraces:ATRIUM_TERRACES,zones:ATRIUM_ZONES};
 }
