@@ -11,6 +11,8 @@
 // Leaving geometry out only ever shows more of the void, so every simplification here errs towards "visible".
 (()=>{
  const w=globalThis.__walk,T=w.T,col=w.colliders,renderer=w.renderer;
+ // A lost context draws nothing, so its samples would all read hidden: run() reports it (the driver starts again).
+ let lost=0;renderer.domElement.addEventListener('webglcontextlost',()=>{lost++;});
  // FAR: the whole ship's length, past the walk's own far camera (src/walk/main.public.js) at any eye.
  const CHUNK=24,MIN_AREA=.004,TILE=128,ATLAS=2048,PER_ROW=ATLAS/TILE,TILES=PER_ROW*PER_ROW,FAR=600;
  const FACES=[[1,0,0,0,-1,0],[-1,0,0,0,-1,0],[0,1,0,0,0,1],[0,-1,0,0,0,-1],[0,0,1,0,-1,0],[0,0,-1,0,-1,0]];
@@ -83,7 +85,7 @@
  const frustum=new T.Frustum(),matrix=new T.Matrix4();
  // samples: flat [x, y, z, walker floor y, ...]. Returns one 0/1 per sample.
  function run(samples){
-  const count=samples.length/4,result=new Uint8Array(count),tiles=[],band=occluders.material.uniforms.band.value;let drawn=0;
+  const count=samples.length/4,result=new Uint8Array(count),tiles=[],band=occluders.material.uniforms.band.value,lostBefore=lost;let drawn=0;
   const saved={target:renderer.getRenderTarget(),autoClear:renderer.autoClear,color:renderer.getClearColor(new T.Color()),alpha:renderer.getClearAlpha()};
   const flush=()=>{
    if(!tiles.length)return;
@@ -110,7 +112,7 @@
    }
    flush();
   }finally{renderer.setRenderTarget(saved.target);renderer.autoClear=saved.autoClear;renderer.setClearColor(saved.color,saved.alpha);}
-  return {visible:Array.from(result),faces:drawn};
+  return {visible:Array.from(result),faces:drawn,lost:lost>lostBefore||renderer.getContext().isContextLost()};
  }
  globalThis.__atriumPvs={setup,columns,run};
  return true;
