@@ -18,6 +18,9 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 // pallet stacks at x -11,-1,9 and z ±10, the packing bench at x 9.5..14.5, z 4.2..5.8, the amber aisle lines at z ±2.7,
 // the cross aisles at x -20 and 18 (±0.7), ceiling light strips at x -17,-9,-1,7,15 (4 m long) and z -11,0,11.
 const ROOM='Area_d01-spares-aft';
+// The deck's floor finish stands 6 mm above the room's floor plane: the iris, its paint and the lanes sit 8 mm up, clear of
+// it (they flickered level with or under the finish: tester report).
+const FLOOR=.008;
 const GX=-1,IRIS=1.25,PAD=6.5,BELT=.5,HIGH=2.38,LOW=-.12,ON_BELT=BELT+.55,CRATE=[.75,.55,.75];
 const RAIL_X=[-3.4,1.4],RAIL_Z=8.6,TROLLEY=2.8;
 const BELT_X=[-7.1,-.1],TUNNEL_X=[-7.4,-5.4],INSIDE=-6.4,CYCLE=56;
@@ -175,13 +178,13 @@ export function createFreightGate(ship,{still=false,colliders=null}={}){
  const piece=(m,g)=>{(parts.get(m)||parts.set(m,[]).get(m)).push(g.index?g.toNonIndexed():g);};
  const box=(m,[w,h,d],[x,y,z],ry=0)=>piece(m,new T.BoxGeometry(w,h,d).rotateY(ry).translate(x,y,z));
  const block=([w,h,d],[x,y,z])=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d));o.position.set(x,y,z);solid.add(o);};
- const decal=(name,geo,map,y=.006)=>{const o=new T.Mesh(geo,new T.MeshStandardMaterial({name:'Freight_gate_'+name,map,transparent:true,roughness:.6,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));o.name='Freight_gate_'+name;o.position.y=y;o.renderOrder=1;group.add(o);return o;};
+ const decal=(name,geo,map,y=FLOOR+.006)=>{const o=new T.Mesh(geo,new T.MeshStandardMaterial({name:'Freight_gate_'+name,map,transparent:true,roughness:.6,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));o.name='Freight_gate_'+name;o.position.y=y;o.renderOrder=1;group.add(o);return o;};
  const canPaint=hasWalkCanvas();
 
  // The iris: an octagonal well, its bezel bolted round it with an LED strip, and the hazard ring on the deck.
  const octagon=(r,path=new T.Shape())=>{for(let i=0;i<8;i++){const a=i*Math.PI/4;path[i?'lineTo':'moveTo'](Math.cos(a)*r,Math.sin(a)*r);}path.closePath();return path;};
  const ring=(r0,r1)=>{const s=octagon(r1);s.holes.push(octagon(r0,new T.Path()));return s;};
- piece(M.black,new T.CircleGeometry(IRIS,8).rotateX(-Math.PI/2).translate(GX,.003,0));
+ piece(M.black,new T.CircleGeometry(IRIS,8).rotateX(-Math.PI/2).translate(GX,FLOOR+.003,0));
  piece(M.steel,new T.ExtrudeGeometry(ring(IRIS-.06,1.75),{depth:.035,bevelEnabled:false}).rotateX(-Math.PI/2).translate(GX,0,0));
  const led=new T.Mesh(new T.ShapeGeometry(ring(1.3,1.37)).rotateX(-Math.PI/2).translate(GX,.037,0),M.led);led.name='Freight_gate_iris_led';group.add(led);
  for(let i=0;i<16;i++){const a=(i+.5)*Math.PI/8;piece(M.dark,new T.CylinderGeometry(.035,.035,.022,6).translate(GX+Math.cos(a)*1.52,.046,Math.sin(a)*1.52));}
@@ -190,7 +193,7 @@ export function createFreightGate(ship,{still=false,colliders=null}={}){
   const a0=i*Math.PI/4,a1=a0+Math.PI/4,am=a0+Math.PI/8,rm=IRIS*Math.cos(Math.PI/8),px=Math.cos(am)*rm,pz=Math.sin(am)*rm;
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute([-px,0,-pz,IRIS*Math.cos(a0)-px,0,IRIS*Math.sin(a0)-pz,IRIS*Math.cos(a1)-px,0,IRIS*Math.sin(a1)-pz],3));
   g.setAttribute('normal',new T.Float32BufferAttribute([0,1,0,0,1,0,0,1,0],3));
-  const o=new T.Mesh(g,i%2?M.blade2:M.blade);o.name='Freight_gate_iris_blade';o.position.set(GX+px,.006+(i%2)*.0025,pz);group.add(o);blades.push(o);
+  const o=new T.Mesh(g,i%2?M.blade2:M.blade);o.name='Freight_gate_iris_blade';o.position.set(GX+px,FLOOR+.006+(i%2)*.0025,pz);group.add(o);blades.push(o);
  }
  if(canPaint){
   const S=96,REPS=28,r0=1.85,r1=2.45,pos=[],uv=[],idx=[];
@@ -208,7 +211,7 @@ export function createFreightGate(ship,{still=false,colliders=null}={}){
  for(const s of [1,-1]){
   const {color,label,sub}=s>0?{color:IN,label:'IN-BOUND',sub:'LANE A · RECEIVING'}:{color:OUT,label:'OUT-BOUND',sub:'LANE B · DISPATCH'};
   if(canPaint)decal(s>0?'lane_in_paint':'lane_out_paint',new T.PlaneGeometry(lw,ll).rotateX(-Math.PI/2).rotateY(Math.PI/2).translate(lx,0,s*(LANE_Z[0]+LANE_Z[1])/2),
-   canvasTexture(512,848,(c,w,h)=>lanePaint(c,w,h,{color,label,sub,...(s>0?{arrowFrom:canvasX(LANE_Z[0]),arrowTo:canvasX(PAD-.9)}:{arrowFrom:canvasX(.9-PAD),arrowTo:canvasX(-LANE_Z[0])}),arrowY:canvasY(GX)})),.005);
+   canvasTexture(512,848,(c,w,h)=>lanePaint(c,w,h,{color,label,sub,...(s>0?{arrowFrom:canvasX(LANE_Z[0]),arrowTo:canvasX(PAD-.9)}:{arrowFrom:canvasX(.9-PAD),arrowTo:canvasX(-LANE_Z[0])}),arrowY:canvasY(GX)})),FLOOR+.005);
   // The roller conveyor from under the gantry aft into a covered transfer hatch, its side rails in the lane colour.
   const z=s*PAD,len=BELT_X[1]-BELT_X[0],bx=(BELT_X[0]+BELT_X[1])/2,lane=s>0?M.in:M.out;
   for(const e of [-1,1])box(lane,[len,.1,.06],[bx,BELT-.05,z+e*.5]);

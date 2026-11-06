@@ -18,6 +18,9 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 // at x=25.84 (|z|<7), the ceiling at y=3.3 with light strips at z=0, ±6 and ±12.
 const ROOM='Area_d01-workshop-5';
 const WALL=16.84,CEIL=3.3;
+// The deck's floor finish stands 6 mm above the room's floor plane, so floor paint is laid 8 mm up, clear of it (it
+// flickered level with the finish: tester report).
+const FLOOR=.008;
 // The old benches, their tools and tool boards, and the benches' merged board fittings.
 const OLD=/^(Service_counter|Countertop|Tool|Tool_board|Refined_tool_storage)$/;
 // Charging bays (x centres, 3.7 m apart, outboard side) and service bays (x centres, cabinet side).
@@ -143,7 +146,7 @@ export function createMctBay(ship){
  const plane=(m,[w,h],[x,y,z],ry=0,up=false,row=null,ref=null)=>{const g=new T.PlaneGeometry(w,h);if(ref&&row!==null)ref.uv(g,row);if(up)g.rotateX(-Math.PI/2);put(m,g.rotateY(ry).translate(x,y,z));};
  const block=([w,h,d],[x,y,z],ry=0)=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d));o.position.set(x,y,z);o.rotation.y=ry;solid.add(o);};
  // A stripe-textured strip on the floor, its pattern repeating every 0.4 m.
- const hazard=(len,w,[x,z],ry)=>{const g=new T.PlaneGeometry(len,w),uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*len/.4,uv.getY(i)*w/.4);put(M.floorStripe,g.rotateX(-Math.PI/2).rotateY(ry).translate(x,.005,z));};
+ const hazard=(len,w,[x,z],ry)=>{const g=new T.PlaneGeometry(len,w),uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*len/.4,uv.getY(i)*w/.4);put(M.floorStripe,g.rotateX(-Math.PI/2).rotateY(ry).translate(x,FLOOR+.005,z));};
 
  // Static displays use the same model as the drivable carts.
  const vehicle=(n,x,z,lift)=>{const cart=createCartMesh(n).group;cart.position.set(x,lift,z);cart.rotation.y=Math.PI;group.add(cart);};
@@ -162,8 +165,8 @@ export function createMctBay(ship){
   // The bay's sign over the vehicle, the wheel stop, the divider lines and its painted number.
   box(M.dark,[2.28,.5,.04],[xv,2.62,WALL-.02]);plane(M.sign,[2.2,.42],[xv,2.62,WALL-.045],Math.PI,false,i,signs);
   box(M.yellow,[1.4,.1,.14],[xv,.05,WALL-.67]);
-  for(const s of [-1,1])if(s<0||i===CHARGE_BAYS.length-1)box(M.line,[.1,.004,WALL-.1-MOUTH],[xc+s*BAY_W/2,.004,(WALL-.1+MOUTH)/2]);
-  plane(M.legend,[2.4,.6],[xv,.007,MOUTH+.75],Math.PI,true,2+i,floor);
+  for(const s of [-1,1])if(s<0||i===CHARGE_BAYS.length-1)box(M.line,[.1,.004,WALL-.1-MOUTH],[xc+s*BAY_W/2,FLOOR+.004,(WALL-.1+MOUTH)/2]);
+  plane(M.legend,[2.4,.6],[xv,FLOOR+.007,MOUTH+.75],Math.PI,true,2+i,floor);
   block([.78,1.6,.38],[xu,1.25,zf-.02]);
   // The cable and hose stay on their hooks when a cart drives away.
   box(M.steel,[.06,.06,.12],[xu,1.12,zf-.2]);
@@ -173,7 +176,7 @@ export function createMctBay(ship){
  }
  // Lead-in curves from the roadway to each charging bay: yellow dashes on a quarter bend.
  const dashes=(x0,z0,x1,z1,cx,cz)=>{const c=new T.QuadraticBezierCurve(new T.Vector2(x0,z0),new T.Vector2(cx,cz),new T.Vector2(x1,z1)),n=Math.round(c.getLength()/.6);
-  for(let k=0;k<n;k++){const p=c.getPointAt((k+.25)/n),d=c.getTangentAt((k+.25)/n);box(M.line,[.34,.004,.1],[p.x,.004,p.y],0,-Math.atan2(d.y,d.x));}};
+  for(let k=0;k<n;k++){const p=c.getPointAt((k+.25)/n),d=c.getTangentAt((k+.25)/n);box(M.line,[.34,.004,.1],[p.x,FLOOR+.004,p.y],0,-Math.atan2(d.y,d.x));}};
  for(const xc of CHARGE_BAYS)dashes(xc-2.6,2.35,xc+.25,MOUTH-.15,xc+.25,2.35);
 
  // --- The service bays, in front of the tool cabinets: hazard-striped edges, a hanging sign and the painted name.
@@ -185,7 +188,7 @@ export function createMctBay(ship){
   box(M.dark,[2.7,.5,.05],[xc,2.62,z1+.1]);
   plane(M.sign,[2.6,.44],[xc,2.62,z1+.13],0,false,CHARGE_BAYS.length+i,signs);
   plane(M.sign,[2.6,.44],[xc,2.62,z1+.07],Math.PI,false,CHARGE_BAYS.length+i,signs);
-  plane(M.legend,[2.6,.62],[xc,.007,z1-.75],0,true,2+CHARGE_BAYS.length+i,floor);
+  plane(M.legend,[2.6,.62],[xc,FLOOR+.007,z1-.75],0,true,2+CHARGE_BAYS.length+i,floor);
   dashes(xc-2.6,-2.35,xc,z1+.15,xc,-2.35);
  }
  const zs=-10.45;
@@ -247,11 +250,11 @@ export function createMctBay(ship){
  }
 
  // --- The roadway: a dashed white centre line down the aisle, chevrons, and the lane legends inside the doorway.
- for(let x=-23.6;x<23;x+=1.6)box(M.white,[.9,.004,.1],[x,.004,0]);
- const chevron=(x,zc)=>{for(const s of [-1,1]){const dx=.3,dz=s*.35;box(M.white,[Math.hypot(dx,dz),.004,.1],[x+dx/2,.004,zc+dz/2],0,-Math.atan2(-dz,dx));}};
+ for(let x=-23.6;x<23;x+=1.6)box(M.white,[.9,.004,.1],[x,FLOOR+.004,0]);
+ const chevron=(x,zc)=>{for(const s of [-1,1]){const dx=.3,dz=s*.35;box(M.white,[Math.hypot(dx,dz),.004,.1],[x+dx/2,FLOOR+.004,zc+dz/2],0,-Math.atan2(-dz,dx));}};
  for(const x of [-14,-2,10])for(const zc of [-1,1])chevron(x,zc);
- plane(M.legend,[1.7,1.1],[-21.2,.007,1],-Math.PI/2,true,0,floor);
- plane(M.legend,[1.7,1.1],[-21.2,.007,-1],-Math.PI/2,true,1,floor);
+ plane(M.legend,[1.7,1.1],[-21.2,FLOOR+.007,1],-Math.PI/2,true,0,floor);
+ plane(M.legend,[1.7,1.1],[-21.2,FLOOR+.007,-1],-Math.PI/2,true,1,floor);
 
  for(const [m,gs] of parts){const o=new T.Mesh(mergeGeometries(gs),m);o.name=m.name;o.castShadow=!m.transparent&&!m.polygonOffset;o.receiveShadow=true;group.add(o);gs.forEach(g=>g.dispose());}
  return {group,solid};
