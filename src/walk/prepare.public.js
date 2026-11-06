@@ -18,7 +18,7 @@ import {stripProvisions,createProvisions} from './provisions.public.js';
 import {createLifeSupportPipes} from './life-support-pipes.public.js';
 import {stripPlayFurniture,createKittens} from './kittens.public.js';
 import {prepareBlossomBed,createBlossomGarden} from './blossom.public.js';
-import {createCatTree} from './cat-tree.public.js';
+import {createCatTree,createNosePark} from './cat-tree.public.js';
 import {prepareLoungeFalls,createLoungeFalls} from './lounge-falls.js';
 import {createDiningRobots} from './dining-robots.public.js';
 import {createHydrationNook} from './hydration-nook.public.js';
@@ -100,6 +100,7 @@ export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBa
  const blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
  // The Great Cat Tree in the bow of the atrium (cat-tree.js): its island, trunk, ramp, platforms, bridges and guards solid.
  const catTree=createCatTree(ship);if(catTree)colliders.addStatic(catTree.solid,()=>true);
+ const nosePark=createNosePark(ship);if(nosePark)colliders.addStatic(nosePark.solid,()=>true);
  await new Promise(r=>setTimeout(r,0));
  // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js): its rim, bed, causeway, landing and rope rails solid.
  const loungeFalls=createLoungeFalls(ship);if(loungeFalls)colliders.addStatic(loungeFalls.solid,()=>true);
@@ -137,5 +138,5 @@ export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBa
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
  await new Promise(r=>setTimeout(r,0));
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,wardTrolley,maze,mctBay,freightGate,blossom,catTree,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,vaultLift,missionHolo,swordCase,chinampa,baggage,atmosphere,mudwater};
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,wardTrolley,maze,mctBay,freightGate,blossom,catTree,nosePark,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,vaultLift,missionHolo,swordCase,chinampa,baggage,atmosphere,mudwater};
 }
