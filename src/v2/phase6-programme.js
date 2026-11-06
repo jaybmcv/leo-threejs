@@ -1,6 +1,6 @@
 import {addReflectionTerraces} from './reflection-terraces.js';
 import {hydrateHullLayout} from '../plan/envelope-data-v2.js';
-import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS} from '../plan/atrium-v2.js';
+import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS,ATRIUM_WATERFALL} from '../plan/atrium-v2.js';
 import {patchDepth,worldPoint} from '../plan/hull-skin-v2.js';
 import {contains,distanceToSegment,bounds} from '../plan/geometry-v2.js';
 export function phase6Programme(layout){
@@ -25,7 +25,9 @@ export function phase6Programme(layout){
  // around their full footprint and reserve the z=0 boulevard throughout.
  const gardenPockets=ATRIUM_GARDEN_POCKETS.filter(p=>fits(p.x,p.z,p.width,p.depth));
  const inPocket=(x,z,w=0,d=0)=>gardenPockets.some(p=>Math.abs(x-p.x)<p.width/2+w/2+2.4&&Math.abs(z-p.z)<p.depth/2+d/2+2.4);
- const tree=(room,x,z,h=4.4)=>{add(room,'p6_tree_trunk',[.44,2.8,.44],[x,y+1.4,z],'oak');for(const[ox,oz,dy]of[[-.65,0,0],[.65,.35,.25],[0,-.45,.6]])add(room,'p6_tree_crown',[2.8,2.2,2.8],[x+ox,y+h-1.7+dy,z+oz],'green',{noCollide:true});};
+ // 4B: each tree keeps this collidable trunk; its faceted canopy (and the four signature trees) are drawn by
+ // atrium-gardens.js from the same positions and canopy heights.
+ const tree=(room,x,z,h=4.4)=>add(room,'p6_tree_trunk',[.44,2.8,.44],[x,y+1.4,z],'oak');
  for(const p of gardenPockets){
   const room=p.z<0&&p.x>0?'atrium6-lake':p.z<0?'atrium6-park':'atrium6-food';
   for(const dx of[-3.5,0])tree(room,p.x+dx,p.z-1.1,p.canopyHeight);
@@ -63,7 +65,8 @@ export function phase6Programme(layout){
  for(const x of[11,21,53,69,93,105,115])for(const z of[-52,-9])if(fits(x,z,2.4,1.8)&&!(x===11&&z===-52)){ // Keep the dry garden approach open.
 const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,.42,1.1],[x,bed+.21,z],'cream');for(const dx of[-.75,0,.75])add('atrium6-lake','recovery_planting',[.6,.85,.6],[x+dx,bed+.845,z],'green',{round:true,noCollide:true});}
  // Reeds follow the notched lake edge, with gaps at the crossing and dry garden.
- for(let x=22;x<118;x+=6){if(Math.abs(x-60)<4)continue;const edge=lake.filter(q=>Math.abs(q[0]-x)<.26&&q[1]<-10).reduce((z,q)=>Math.max(z,q[1]),-56);for(const z of[edge+1.25,-8.2])if(fits(x,z,2.4,1.1)){add('atrium6-lake','recovery_planting',[2.1,.85,1],[x,y+.35,z],'green',{round:true,noCollide:true});}}
+ for(let x=22;x<118;x+=6){if(Math.abs(x-60)<4)continue;const edge=lake.filter(q=>Math.abs(q[0]-x)<.26&&q[1]<-10).reduce((z,q)=>Math.max(z,q[1]),-56);for(const z of[edge+1.25,-8.2])if(fits(x,z,2.4,1.1)&&!(z<-20&&Math.abs(x-ATRIUM_WATERFALL.x)<ATRIUM_WATERFALL.width/2+2)){ // 4B: the waterfall replaces the far-bank reeds there
+ add('atrium6-lake','recovery_planting',[2.1,.85,1],[x,y+.35,z],'green',{round:true,noCollide:true});}}
  sign('atrium6-lake','REFLECTION LAKE / SHALLOW EDGE',17,-8,8);for(const x of[14,20])add('atrium6-lake','p6_lake_sign_post',[.08,2.96,.08],[x,y+1.32,-8],'metal');
  add('atrium6-stage','p6_stage_platform',[14,.36,32],[113,y+.18,30],'oak');add('atrium6-stage','p6_stage_backdrop',[.16,3.1,29],[119.8,y+1.91,30],'navy',{noCollide:true});
  for(const x of Array.from({length:10},(_,i)=>70+i*3.5))for(const z of Array.from({length:20},(_,i)=>11+i*2))if(fits(x,z,1,1))seat('atrium6-stage',x,z,Math.PI/2);
@@ -110,5 +113,8 @@ const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,
  for(const side of[-1,1]){const z=side*12.5,floor=layout.decks[19].y;add('p6-crew-gallery','p6_service_cabinet',[.6,1.6,1.2],[135.3,floor+.8,z],'metal',{deck:20});add('p6-crew-gallery','p6_service_cabinet_seam',[.02,1.4,.015],[134.99,floor+.8,z],'navy',{deck:20,noCollide:true});for(const dz of[-.12,.12])add('p6-crew-gallery','p6_service_cabinet_handle',[.06,.16,.025],[134.97,floor+.85,z+dz],'metal',{deck:20,noCollide:true});}
  for(const side of[-1,1])for(const x of[128.3,135.7]){const z=side*12.5;add('p6-crew-gallery','p6_service_duct',[.20,.22,6],[x,layout.decks[19].y-.35,z],'metal',{deck:20,noCollide:true});add('p6-crew-gallery','p6_service_light',[.12,.025,5.8],[x,layout.decks[19].y-.4725,z],'light',{deck:20,noCollide:true});}
  addReflectionTerraces({parts,rests,y});
- return{parts,rests,owners,prototypeCafe:'nose-commons-05',cafes,terraces:ATRIUM_TERRACES,zones:ATRIUM_ZONES};
+ // 4B: the atrium's planting blobs (planter fill and lake-edge reeds, all noCollide) become faceted beds drawn by
+ // atrium-gardens.js at the same places; the planters themselves stay. Taken after the reflection terraces clear theirs.
+ const beds=[];for(let i=parts.length-1;i>=0;i--){const p=parts[i];if(p.part==='recovery_planting'&&p.deck===6&&p.room.startsWith('atrium6-')){beds.push(p);parts.splice(i,1);}}
+ return{parts,rests,owners,beds,prototypeCafe:'nose-commons-05',cafes,terraces:ATRIUM_TERRACES,zones:ATRIUM_ZONES};
 }

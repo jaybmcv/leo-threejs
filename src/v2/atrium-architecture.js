@@ -1,5 +1,6 @@
 import {ATRIUM_PROTOTYPE} from '../plan/atrium-v2.js';
 import {addFlowingAtriumRibs} from './flowing-ribs.js';
+import {addAtriumGardens,simplifyDistantGardens} from './atrium-gardens.js';
 import {atriumFloorGeometry,atriumFloorMaterial,skyCeilingGeometry,skyMaterial} from './atrium-surfaces.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -34,9 +35,11 @@ export function addPhase6Architecture(ship,root,layout){
  // the opaque sides/back/floor/ceiling describe the real room behind it.
  const cabins=placements().filter(c=>c.view==='atrium');
  const flowingRibs=addFlowingAtriumRibs(root,cabins);
- for(const side of[-1,1]){const list=cabins.filter(c=>doorSide(c)===side),g=new T.BoxGeometry(3.18,3.4,7.4),p=g.attributes.position,keep=[];
+ // 4B hanging gardens: sill cascades, signature trees, lake stones and timber decks (visual only).
+ const gardens=addAtriumGardens(root,layout);
+ for(const side of[-1,1]){const list=cabins.filter(c=>doorSide(c)===side),g=new T.BoxGeometry(3.16,3.4,7.4),p=g.attributes.position,keep=[]; // 1 cm inside the piers: no coplanar sides
   for(let i=0;i<g.index.count;i+=3){const ids=[0,1,2].map(k=>g.index.getX(i+k));if(!ids.every(j=>Math.abs(p.getZ(j)+side*3.7)<.0001))keep.push(...ids);}
-  g.setIndex(keep);g.clearGroups();const o=new T.InstancedMesh(g,new T.MeshBasicMaterial({name:'P6_atrium_room_returns',color:0xded4bd,side:T.DoubleSide}),list.length);
+  g.setIndex(keep);g.clearGroups();const o=new T.InstancedMesh(g,new T.MeshBasicMaterial({name:'P6_atrium_room_returns',color:0xe6d4b6,side:T.DoubleSide}) /* 4B: warmer cream */,list.length);
   o.name='P6_atrium_room_returns';o.frustumCulled=false;o.userData={noCollide:true,phase6Architecture:true,roomOwners:list.map(c=>c.id),proxySpans:list.map(c=>[c.y-.14,c.y+3.5])};
   list.forEach((c,i)=>o.setMatrixAt(i,c.matrix.clone().multiply(new T.Matrix4().makeTranslation(0,1.7,0))));o.computeBoundingBox();o.computeBoundingSphere();root.add(o);
  }
@@ -47,12 +50,12 @@ export function addPhase6Architecture(ship,root,layout){
    if(t.every(q=>q.y< -20)||t.every(q=>q.y>40.1)||!t.some(q=>(q.x>145||q.x< -122)&&Math.abs(q.z)<30))continue;for(const q of t)endFaces.push(q.x,q.y,q.z);}
  });
  if(endFaces.length){const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(endFaces,3));g.computeBoundingBox();g.computeBoundingSphere();const o=new T.Mesh(g,new T.MeshBasicMaterial({name:'P6_distant_finished_end_skin',color:0xd9dcd6,side:T.DoubleSide}));o.name='P6_distant_finished_end_skin';o.frustumCulled=false;o.userData={noCollide:true,phase6Architecture:true,distantOnly:true,finishedWebTriangles:true};root.add(o);}
- root.userData.phase6Architecture={actualSources:selected.length,materialClasses:buckets.size,sourceNames:[...new Set(sourceNames)],atriumCabins:cabins.length,proxyClasses:2,endSkinTriangles:endFaces.length/9,interiorReach:ATRIUM_PROTOTYPE.interiorReach,flowingRibs};
+ root.userData.phase6Architecture={actualSources:selected.length,materialClasses:buckets.size,sourceNames:[...new Set(sourceNames)],atriumCabins:cabins.length,proxyClasses:2,endSkinTriangles:endFaces.length/9,gardens,interiorReach:ATRIUM_PROTOTYPE.interiorReach,flowingRibs};
  for(const o of root.children)if(o.userData.distantOnly)o.visible=false;
  return root.userData.phase6Architecture;
 }
 export function attachDistantArchitecture(ship,root){
  // Clone only after the finished-skin/room retirement has completed.
- if(ship.v2Haze){const distant=root.clone(true);distant.traverse(o=>{if(o.userData.distantOnly)o.visible=true;});distant.name='P6_distant_atrium_architecture';const materials=new Map();distant.traverse(o=>{if(!o.isMesh)return;let m=materials.get(o.material);if(!m){const source=o.material;m=new T.MeshBasicMaterial({name:'P6_distant_'+source.name,color:source.color||0xffffff,map:source.map||null,vertexColors:!!source.vertexColors,transparent:!!source.transparent,opacity:source.opacity,side:source.side,depthWrite:source.depthWrite,fog:source.fog});m.forceSinglePass=true;materials.set(source,m);}o.material=m;});distant.traverse(o=>{if(o.userData.proxySpans)o.userData.distantProxy=true;});ship.v2Haze.add(distant);}
+ if(ship.v2Haze){const distant=root.clone(true);distant.traverse(o=>{if(o.userData.distantOnly)o.visible=true;});distant.name='P6_distant_atrium_architecture';const materials=new Map();distant.traverse(o=>{if(!o.isMesh)return;let m=materials.get(o.material);if(!m){const source=o.material;m=new T.MeshBasicMaterial({name:'P6_distant_'+source.name,color:source.color||0xffffff,map:source.map||null,vertexColors:!!source.vertexColors,transparent:!!source.transparent,opacity:source.opacity,side:source.side,depthWrite:source.depthWrite,fog:source.fog});m.forceSinglePass=true;materials.set(source,m);}o.material=m;});distant.traverse(o=>{if(o.userData.proxySpans)o.userData.distantProxy=true;});simplifyDistantGardens(distant);ship.v2Haze.add(distant);}
  return root.userData.phase6Architecture;
 }
