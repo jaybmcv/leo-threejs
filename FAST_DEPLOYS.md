@@ -50,6 +50,8 @@ The exact, output-neutral implementation migration keeps existing UI and Phase 4
 
 Current wider boundaries are room/frame/layout changes, hull-owned shell changes, legacy rooms with later activity/world modifications, escape-craft assemblies, baked sign-atlas changes, and shared producers outside the isolated kit. These take the wider geometry route. The ordinary wider route reuses unchanged layout, exterior, ceiling and raw-model outputs after checking their dependencies and file hashes. `LEO_FULL_REBUILD=1` explicitly bypasses those stage/model caches. Nightly still runs its prepared authoring and all existing checks.
 
+Moving or resizing a room, or moving its door, always takes the wider route. [docs/room-move-lane.md](docs/room-move-lane.md) covers what such an edit reaches and the ownership work a per-room lane needs first.
+
 ## Shared kit edits
 
 `src/v2/phase4-mesh-kit.js` owns the Phase 4 mesh shapes and materials. Its actual per-owner mesh output is compared with the clean baseline; only changed owners are patched. A material unused by a room does not invalidate that room. Supported atrium owners receive a nearby room/deck browser smoke target; this is a page-load check, not a clearance test. Escape-craft or sign-atlas changes still widen.
