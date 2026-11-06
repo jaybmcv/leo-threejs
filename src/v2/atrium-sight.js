@@ -6,6 +6,7 @@ import {createVisibilityQuery} from './visibility-query.js';
 import {visibilityState} from './visibility-state.js';
 import {opaqueBlocked} from './opaque-visibility.js';
 import {createDetailViewGuard} from './detail-lod.js';
+import {PVS_UNKNOWN,PVS_VISIBLE} from './atrium-pvs.js';
 
 const EPS=1e-7;
 const center=polygon=>polygon.reduce((p,v)=>p.add(v),new T.Vector3()).multiplyScalar(1/polygon.length);
@@ -21,7 +22,7 @@ function clip(polygon,plane){
  return out.length>=3?out:[];
 }
 function portal(points){const polygon=points.map(p=>p.isVector3?p.clone():new T.Vector3(...p));return{polygon,box:new T.Box3().setFromPoints(polygon)};}
-function hull(points){
+export function hull(points){
  const sorted=[...new Map(points.map(p=>[p.join(','),p])).values()].sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
  const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
  const half=points=>{const out=[];for(const p of points){while(out.length>1&&cross(out.at(-2),out.at(-1),p)<=0)out.pop();out.push(p);}return out;};
@@ -49,6 +50,9 @@ function geometry(source=layout){
  const result={decks,low,high,envelope,outer,doors,ownersByLevel};
  if(source===layout)defaultGeometry=result;return result;
 }
+// The volume the rays bound the atrium by: the convex hull of every deck's outline (envelope) from low to high. An eye
+// inside it sees the atrium unless a known room encloses it.
+export function atriumEnvelope(source=layout){const {envelope,low,high}=geometry(source);return {envelope,low,high};}
 function ownerPortals(owner){
  if(owner.portals)return owner.portals;
  const ring=owner.room.polygon,low=owner.box.min.y,high=owner.box.max.y;
@@ -87,16 +91,17 @@ function subtract(polygon,planes){
 }
 
 /** Optional fixture geometry: {portals: Vector3[][], doors, maxRays, maxFragments,
- * intervalMs, holdMs, layout}. Layout injection exercises the default envelope
+ * intervalMs, holdMs, layout, pvs}. Layout injection exercises the default envelope
  * and enclosure path in fixtures. Geometry is shared with lazy owner portals.
- * Unresolved coverage always returns visible. */
+ * `pvs` returns the loaded atrium PVS (atrium-pvs.js) or null; its cells replace
+ * the rays wherever they have data. Unresolved coverage always returns visible. */
 export function createAtriumSight(colliders,options={}){
  const query=createVisibilityQuery(colliders),changed=visibilityState(),viewGuard=createDetailViewGuard(),custom=options.portals?.map(portal),g=custom?null:geometry(options.layout);
  const maxRays=options.maxRays??24,maxFragments=options.maxFragments??256,intervalMs=options.intervalMs??150,holdMs=options.holdMs??250;
- const stats={updates:0,rays:0,firstHits:0,windowFallbacks:0,coverageRays:0,budgetFallbacks:0,cacheHits:0,portals:0,owner:null,visible:false,lastMs:0};
+ const stats={updates:0,rays:0,firstHits:0,windowFallbacks:0,coverageRays:0,budgetFallbacks:0,cacheHits:0,pvsHits:0,pvs:PVS_UNKNOWN,portals:0,owner:null,visible:false,lastMs:0};
  const scratch={box:new T.Box3(),point:new T.Vector3(),local:new T.Ray(),stats};
  const eye=new T.Vector3(),ray=new T.Ray(),local=new T.Ray(),point=new T.Vector3(),matrix=new T.Matrix4(),frustum=new T.Frustum();
- let last=-Infinity,lastSeen=-Infinity,result=false,remaining=0;
+ let last=-Infinity,lastSeen=-Infinity,result=false,remaining=0,fromPvs=false;
  function test(target){
   if(remaining<=0)return null;
   point.copy(target).sub(eye);const far=point.length();if(far<.06)return{clear:true};
@@ -189,10 +194,15 @@ export function createAtriumSight(colliders,options={}){
  }
  const publish=now=>{if(result)lastSeen=now;return stats.visible=result||now-lastSeen<holdMs;};
  return{stats,update(camera,p,now){
+  // A precomputed cell answers at once, every frame; only cells without data pay for rays.
+  const cell=options.pvs?.()?.at(camera.getWorldPosition(eye))??PVS_UNKNOWN;stats.pvs=cell;
+  if(cell!==PVS_UNKNOWN){stats.pvsHits++;result=cell===PVS_VISIBLE;last=-Infinity;fromPvs=true;return publish(now);}
   // Snapshot collider/mover state only at the query interval, not every frame.
   if(now-last<intervalMs&&!viewGuard.changed(camera)){stats.cacheHits++;return publish(now);}
   last=now;viewGuard.commit(camera);const started=performance.now();
-  if(!changed(camera,p,0,0,colliders)){stats.cacheHits++;return publish(now);}
+  // Back at the very pose the rays last answered, `result` still holds the PVS cell's answer from in between.
+  const moved=changed(camera,p,0,0,colliders),cached=!moved&&!fromPvs;fromPvs=false;
+  if(cached){stats.cacheHits++;return publish(now);}
   remaining=maxRays;stats.updates++;result=detect(camera);
   stats.lastMs=performance.now()-started;return publish(now);
  }};

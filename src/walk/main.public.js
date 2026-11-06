@@ -7,11 +7,23 @@ import {savedFur} from './fur-colours.js';
 let furColour=savedFur(),furSettings=null;
 import {walkBindings,bindingLabel} from './bindings.js';
 let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
+// Phone ship batching (src/v2/facade.js): every band, no per-chunk culling. Until the Galaxy S9 confirms it, ?phonebatch=
+// tries the others on a phone: cull (every band, culled: lettering jumped), low (decks -1 to 4 only, as before #345).
+const phoneBatching=(()=>{if(!preparedPhone)return {};const mode=new URLSearchParams(location.search).get('phonebatch');
+ return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:{allBands:true};})();
 import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
 import {settlePreparedStatic} from '../v2/prepared-static.js';
 import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
 import {createAtriumSight} from '../v2/atrium-sight.js';
-import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns} from '../v2/prepared-runtime.public.js';
+import {releaseBatchedSources,releasePhoneGeometry,shrinkPhonePictures} from '../v2/phone-memory.js';
+import {createAtriumPvs} from '../v2/atrium-pvs.js';
+import {PVS_LOCAL_SPAN} from '../v2/atrium-pvs-key.js';
+import {warmShaders,uploadTextures,WARM_WAIT_MS} from '../v2/shader-warmup.js';
+// Precomputed atrium sight (scripts/walk-atrium-pvs.mjs), shipped by the build only for the colliders and atrium it was
+// baked from (__ATRIUM_PVS_KEY__). Until it arrives, or if it was baked from other geometry, the sight rays answer as before.
+let atriumPvs=null;
+if(typeof __ATRIUM_PVS_URL__!=='undefined'&&__ATRIUM_PVS_URL__)fetch(new URL(__ATRIUM_PVS_URL__,location.href)).then(r=>r.ok?r.json():null).then(data=>{atriumPvs=createAtriumPvs(data,{key:__ATRIUM_PVS_KEY__});}).catch(e=>console.warn('Atrium PVS not used:',e.message));
+import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns,preparedPhone} from '../v2/prepared-runtime.public.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
 import {gotoStand as v2GotoStand,yarnPlace} from '../v2/wayfinding.js';
 import {addWayfindingGuides} from '../v2/wayfinding-guides.js';
@@ -220,7 +232,8 @@ const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCa
 // Cool, crisp base light (2B): rooms with a mood of their own warm or dim it while you are inside.
 const hemi=new T.HemisphereLight(0xeef4ff,0x4f5d68,1);scene.add(hemi);
 const fill=new T.DirectionalLight(0xf2f6ff,.55);fill.position.set(.3,1,.2);scene.add(fill);
-loadEnvironment(renderer).then(t=>{scene.environment=t;quietFloorReflections(scene,t);}).catch(()=>{});
+// (The shader warm-up waits for it: an environment map is part of most materials' shaders.)
+const environmentReady=loadEnvironment(renderer).then(t=>{scene.environment=t;quietFloorReflections(scene,t);}).catch(()=>{});
 function resize(){const w=innerWidth,h=innerHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
 
@@ -247,7 +260,7 @@ async function buildShip(){
  // The crew recovery lounge's pod side dims the lights (recovery.js).
  recovery=createRecoveryMood(ship,{hemi,fill,scene});arrivalMood=createArrivalMood(ship,{hemi,fill,scene});
  }});
- ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
+ ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,catTree,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
  loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;
  const {pipework,trolley,wardTrolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;atmosphere=prepared.atmosphere;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
@@ -306,6 +319,8 @@ async function buildShip(){
  // The diagnostics room's resting patients, holographic scans and scan beams (imaging.js), dressing only.
  imagingScans=createImagingScans(ship,{kit:cosmoKit,still:matchMedia('(prefers-reduced-motion: reduce)').matches,anisotropy:renderer.capabilities.getMaxAnisotropy()});if(imagingScans)toBand(imagingScans.group);
  if(blossom)toBand(blossom.group);
+ // The Great Cat Tree (cat-tree.js) rises from Deck 6 to under Deck 16: it draws while any band it spans is in view.
+ if(catTree){const g=catTree.group;g.userData.band=bandOf(catTree.bounds.y0);g.userData.top=bandOf(catTree.bounds.y1);baked.bands.set(g.name,g);scene.add(g);}
  // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js).
  if(loungeFalls)toBand(loungeFalls.group);
  toBand(jaguarGate.group);
@@ -367,10 +382,12 @@ async function buildShip(){
   const key=o.parent.uuid+'|'+(o.userData.cabinIds||[o.uuid]).join(',');if(sharedNear.has(key)){o.userData.near=sharedNear.get(key);continue;}const all=Array.from({length:o.count},(_,i)=>{const m=new T.Matrix4();o.getMatrixAt(i,m);return m;});
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};sharedNear.set(key,o.userData.near);
  }
- isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});settlePreparedStatic(ship);
+ isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...phoneBatching,hidden:preparedPhone?releaseBatchedSources(scene):null});atriumGeometry=preparedPhone?null:createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});settlePreparedStatic(ship);
+ // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
+ if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
 let imagingScans=null,missionTimer=null;
-let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
+let baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
 let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null,atmosphere=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 // Lifeboat fittings (2,000 seats a deck with their headrests and harnesses, seen only through a hatch or from inside a
@@ -386,14 +403,14 @@ function span(p,now){
  // Sight through an adjoining doorway keeps the whole atrium, even outside its footprint.
  setAtriumView(p);
  const inside=inOpenAtrium();
- setAtriumSight(ATRIUM_VIEW.fullHeight&&(inside||(atriumSight??=createAtriumSight(colliders)).update(camera,p,now)));
+ setAtriumSight(ATRIUM_VIEW.fullHeight&&(inside||(atriumSight??=createAtriumSight(colliders,{pvs:()=>atriumPvs})).update(camera,p,now)));
  const atriumBand=atriumViewSpan();if(inside&&atriumBand){atriumSpanActive=true;return viewSpan=atriumBand;}
  // Returning indoors must recompute even at the same pose as the last indoor query.
  if(atriumSpanActive){atriumSpanActive=false;lastSpan=-Infinity;spanChanged(camera,p,NaN,NaN,colliders);}
 
  if(now-lastSpan>=150){lastSpan=now;if(spanChanged(camera,p,0,0,colliders)){
  const spanStart=performance.now();
- let low=p.y-3,high=p.y+4;const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();
+ let low=p.y+PVS_LOCAL_SPAN[0],high=p.y+PVS_LOCAL_SPAN[1];const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();
  const reach=y=>{low=Math.min(low,y-1);high=Math.max(high,y+1);};
  for(const [x,y] of VIEW_RAYS){ndc.set(x,y);ray.setFromCamera(ndc,camera);const hit=(spanQuery??=createVisibilityQuery(colliders)).raycast(ray.ray,90,.6),d=hit?hit.distance:90;reach(ray.ray.at(d,probe.origin).y);
   for(const f of [1/3,2/3])for(const s of [1,-1]){ray.ray.at(d*f,probe.origin);probe.direction.set(0,s,0);const h=(spanQuery??=createVisibilityQuery(colliders)).raycast(probe,12);if(h)reach(h.point.y);}}
@@ -498,6 +515,10 @@ function openVault(){closePanels();emote=null;input.enabled=false;input.down.cle
  // (After the key that opened it, so the E isn't typed into the field.)
  setTimeout(()=>$('vault-code').focus());}
 const ready=()=>document.body.dataset.ready==='1';
+// Every shader the walk can need compiles behind the loading card and the first view waits for it (at most WARM_WAIT_MS),
+// so a first look at another area does not freeze; on desktop every picture then uploads, one between frames
+// (src/v2/shader-warmup.js). Started at the end of this script, once everything is built.
+let shaderWarmup=null,warmed=false;
 // The ship log boards (changes-board.js): the walk stands still while one is open; its hearts are Leo live's.
 // Go there in a change's details drops the walker where its pictures were taken, looking as they do.
 const changeLog=createChangesBoards({
@@ -675,6 +696,7 @@ if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={regist
 // (Debug: the vault, vault.js.)
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vault',{get:()=>vault});
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vaultLift',{get:()=>vaultLift});
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperties(globalThis.__walk,{atriumSight:{get:()=>atriumSight},atriumPvs:{get:()=>atriumPvs},viewSpan:{get:()=>viewSpan},shaderWarmup:{get:()=>shaderWarmup}});
 // The ship map: the corner mini-map, redrawn a few times a second, and the full map sheet.
 const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
 // (A phone's small mini-map, html.phone-hud from walk.html, keeps up to 3× its pixels, so its names stay sharp.)
@@ -697,9 +719,12 @@ function toggleMap(){
  $('minimap-button').addEventListener('click',toggleMap);}
 let last=performance.now(),acc=0,lastHud=0,lastHeading=heading,lastSpeed=0,turnRate=0,accel=0;const STEP=1/120,wish=new T.Vector3();
 const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WALKER.prone};
+// Should anything stop the warm-up starting (it is the last thing this script does), the walk still draws.
+setTimeout(()=>{warmed=true;},3*WARM_WAIT_MS);
 renderer.setAnimationLoop(()=>{
  // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
  if(hubPanel.isOpen()&&firstViewReady)return;
+ if(!warmed)return;
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
  const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen&&!controlsSettings?.isOpen&&!furSettings?.isOpen});last=now;
  const k=input.read();if(graphicsSettings?.isOpen||controlsSettings?.isOpen||furSettings?.isOpen||emergencyDrill?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
@@ -803,7 +828,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
@@ -1098,3 +1123,9 @@ for(const b of document.querySelectorAll('.respawn'))b.addEventListener('click',
 if(typeof __WALK_DEBUG__!=="undefined"&&__WALK_DEBUG__)Object.defineProperties(globalThis.__walk,{treasure:{get:()=>treasure},baggage:{get:()=>baggage},featureDiagnostics:{get:()=>ship.v2RuntimeFeatures}});
 // Include the ball and aquarium entrance created later in startup, before the first frame.
 for(const root of [scene,haze,sky])onePassAtriumGlass(root);
+// The shader warm-up (see shaderWarmup): the walk's scene with the arrival hall's lamps both ways, then its sky and haze.
+// The phone ship uploads nothing ahead and keeps no list of pictures.
+Promise.race([environmentReady,new Promise(r=>setTimeout(r,WARM_WAIT_MS))])
+ .then(()=>Promise.all([warmShaders(renderer,scene,camera,{lights:[arrivalMood?.lamps].filter(Boolean)}),warmShaders(renderer,haze,hazeCamera),warmShaders(renderer,sky,skyCamera)]))
+ .then(([main,...rest])=>{shaderWarmup={proof:main.proof,textures:preparedPhone?null:new Set([main,...rest].flatMap(w=>[...w.textures])),uploaded:null};})
+ .catch(e=>console.warn('Shader warm-up skipped.',e)).finally(()=>{warmed=true;});

@@ -52,8 +52,8 @@
     "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/main.public.js": {
-    "sha256": "3280d1466ff4df80ff80d176949b00c67da9474d0ac8ace0771213bdde7c42b8",
-    "reason": "Builder's Hub panel on top of the walk: src/walk/hub-panel.js, its links in Feedback and the tester guide; verified by check-hub and check-walk."
+    "sha256": "53fa521a18d20708090e14ccfda083253973eb5dee83eced290ac76b5730664b",
+    "reason": "Shader warm-up behind the loading card (src/v2/shader-warmup.js), merged with main (Great Cat Tree, phone batching). Views match main pixel for pixel."
   },
   "src/v2/atrium-visibility.js": {
     "sha256": "e72253566c3178a89e460e4a95f90c4c796e13d5c64affffc8be1163f41d8ecc",
@@ -88,8 +88,8 @@
     "reason": "Builder's Hub panel on top of the walk: src/walk/hub-panel.js, its links in Feedback and the tester guide; verified by check-hub and check-walk."
   },
   "src/v2/hull-prototypes.authoring.js": {
-    "sha256": "3e8a16648d72175fa36c50bc0ee7dda4e790badd54f5aa19fde247596d49c058",
-    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+    "sha256": "f48355d36e0bad42630e557d03f7cc4c166e587a71f769acd426d5e3ab409171",
+    "reason": "authoring load speedup: indexed skin samples/owner profiles, edge-bucket floor sweeps; outputs byte-identical"
   },
   "src/v2/hull-prototypes.js": {
     "sha256": "07ff6f8d0967c117f7c97430556a83f5eb588a82901353f6a43c83cce3adb481",
@@ -112,12 +112,12 @@
     "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
   },
   "src/v2/prepared-authoring.authoring.js": {
-    "sha256": "025a34b68c57cfda831fe7380ad7082bb0046fa4614b93bceece704412902b09",
-    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+    "sha256": "18060a6773f49b07e7d592a39c3e50b39edce58c9f61911b3444a9509d1c23a1",
+    "reason": "authoring load speedup: indexed skin samples/owner profiles, edge-bucket floor sweeps; outputs byte-identical"
   },
   "src/v2/prepared-authoring.js": {
-    "sha256": "f5931b90869838c7629c5a2641aa4cb4599d7df57e57c8d0c3f09ed7f0f6b067",
-    "reason": "Fast deploy round 2: reviewed owner spans and equivalent room/kit extraction; gates retained."
+    "sha256": "37a3c905f9d30e6b865f9110ce0c1a8192bdd14e65330c34f8b6c2e9b343ecf8",
+    "reason": "feature() owner tags and rail probe recording for the feature fast lane"
   },
   "src/v2/prepared-codec.authoring.js": {
     "sha256": "c8527af69eecd9e44d3af6123f2f95ba25b2d15ad42695f8c6924f029ed2e08f",
@@ -152,12 +152,12 @@
     "reason": "Carry forward the two remaining round-1 fast-deploy source rows from de275fc; existing gates retained."
   },
   "src/v2/phase4-culling.js": {
-    "sha256": "3614907b232efd458231f847eba348e207c80501c66c947c0bb12ca269af7885",
-    "reason": "Move the performance helper import away from the concurrent atrium-visibility import edit; runtime behavior and geometry IDs unchanged."
+    "sha256": "dcb9ed218e4560ac4227d13ac47f72df5eedcf9287513671ec7f081de9fac3c1",
+    "reason": "Room culling verdicts also expire when colliders are replaced (check-atrium-draw-distance); the authoring twin mirrors the runtime culling again."
   },
   "src/v2/phase4-culling.authoring.js": {
-    "sha256": "5cd1a09ba4e98c5012889d157e78f81ca7906df377245cf626ad23a898f57817",
-    "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
+    "sha256": "fe6fd5de2b8c05a4a5b04171169cfe3fe5868b762108d4311235b723254b91c0",
+    "reason": "Room culling verdicts also expire when colliders are replaced (check-atrium-draw-distance); the authoring twin mirrors the runtime culling again."
   },
   "src/v2/cabin-privacy.js": {
     "sha256": "18d616ecfb4035f907d9f99f2afe2a0b864e31f0874d50ed6937576ccf1dc690",
@@ -174,5 +174,37 @@
   "src/v2/facade.authoring.js": {
     "sha256": "f18efaee42bcad153cbbe6a40bb96ef2d8b515a836a263a1d0c1aec4752b0aad",
     "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
+  },
+  "src/walk/prepare.js": {
+    "sha256": "0946520a3eea3640b339031d8655936206b77398a3226a619fe869905d3b67f6",
+    "reason": "feature() owner tags and rail probe recording for the feature fast lane"
+  },
+  "src/walk/prepare.authoring.js": {
+    "sha256": "7d251ccddf5be713ed5d3373e6da3b8b213ebfe54e1df6184fbcd5f5f4912cfe",
+    "reason": "authoring load speedup: indexed skin samples/owner profiles, edge-bucket floor sweeps; outputs byte-identical"
+  },
+  "src/v2/railings.js": {
+    "sha256": "4a3b5a4e106480e682de9384567adf5df68df81912dbc9840a5105520a66008f",
+    "reason": "feature() owner tags and rail probe recording for the feature fast lane"
+  },
+  "src/v2/railings.authoring.js": {
+    "sha256": "6dfd957f7953a897d8edb51eee7851158a941612e3c4e5444446e7af33fa4967",
+    "reason": "feature() owner tags and rail probe recording for the feature fast lane"
+  },
+  "src/v2/geometry.js": {
+    "sha256": "26be814615d7901c23ef48d903656a5994da06b3fd788186a5218fc809ac6cd8",
+    "reason": "authoring load speedup: indexed skin samples/owner profiles, edge-bucket floor sweeps; outputs byte-identical"
+  },
+  "src/v2/floor-boundary.js": {
+    "sha256": "ea73395c7038f8f4bd723f4f57ed1d9dd40be86c4030ce8bcb6eaada4ba35017",
+    "reason": "authoring load speedup: indexed skin samples/owner profiles, edge-bucket floor sweeps; outputs byte-identical"
+  },
+  "src/v2/lounge-falls-fit.js": {
+    "sha256": "143ee7ea84b4362037170d2508e3846f099f36548f9cb955f9a0a1be898cffe7",
+    "reason": "authoring load speedup: indexed skin samples/owner profiles, edge-bucket floor sweeps; outputs byte-identical"
+  },
+  "src/v2/visibility-query.js": {
+    "sha256": "5cd11408fbb3dccb7ea006515709d6933fe7d0c12d7ef4b8c5aa84d8fa0b9161",
+    "reason": "Room culling: numeric cell codes in the visibility broad phase (same cells, same order; scripts/check-visibility-codes.mjs) and probes spread over frames within 3 ms, new owners counted as seen. Views match main pixel for pixel."
   }
 }

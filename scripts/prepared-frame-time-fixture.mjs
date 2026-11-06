@@ -9,9 +9,11 @@ import {createSwimSuit} from '../src/walk/aquarium-treasure/suit.js';
 import {showBands} from '../src/walk/render-bake.js';
 
 // Exercise the saved public graph without loading its large geometry/collision arrays or rendering a flood.
+// Live: three's own matrix update, or the hidden-skip wrapper that falls back to it whenever the branch is shown.
+const live=o=>o.updateMatrixWorld===T.Object3D.prototype.updateMatrixWorld||!!o.updateMatrixWorld.liveWhenShown;
 export async function checkPreparedFrameTime(){
  for(const suffix of ['', '.authoring', '.public'])assert((await fs.readFile('src/v2/prepared-runtime'+suffix+'.js','utf8')).includes('preparedBake(ship){rememberPreparedStatic(ship);'),'Prepared bake must capture fixed contents before late activities');
- for(const suffix of ['.prepared','.public'])assert(/batchLowDeckDraws\(baked,renderer\);(atriumGeometry=createAtriumGeometryRuntime\(baked,renderer,\{[^;]*\}\);)?settlePreparedStatic\(ship\);/.test(await fs.readFile('src/walk/main'+suffix+'.js','utf8')),'Prepared startup must settle after all reparenting and batching');
+ for(const suffix of ['.prepared','.public'])assert(/batchLowDeckDraws\(baked,renderer(?:,\{[^;]*\})?\);(atriumGeometry=(?:preparedPhone\?null:)?createAtriumGeometryRuntime\(baked,renderer,\{[^;]*\}\);)?settlePreparedStatic\(ship\);/.test(await fs.readFile('src/walk/main'+suffix+'.js','utf8')),'Prepared startup must settle after all reparenting and batching');
  const bytes=await fs.readFile('output/leo-interior-v02/prepared-walk/world.bin'),decoder=new ZSTDDecoder();await decoder.init();
  const manifest=JSON.parse(new TextDecoder().decode(bytes[0]===0x28?decoder.decode(bytes):gunzipSync(bytes)));
  const geometry=new T.BufferGeometry(),materials=manifest.materials.map(m=>({transparent:!!m.transparent}));
@@ -27,16 +29,16 @@ export async function checkPreparedFrameTime(){
  // The scene gets its final parent transforms after capture, just as startup may attach bands later.
  scene.position.set(3,4,5);for(const group of bands.values())scene.add(group);first.position.set(7,8,9);
  scene.updateMatrixWorld(true);const expected=new Map();scene.traverse(o=>expected.set(o,o.matrixWorld.toArray()));
- settlePreparedStatic(ship);let total=0,pruned=0;scene.traverse(o=>{total++;if(o.updateMatrixWorld!==T.Object3D.prototype.updateMatrixWorld)pruned++;assert.deepEqual(o.matrixWorld.toArray(),expected.get(o),'Settling moved '+o.name);});
+ settlePreparedStatic(ship);let total=0,pruned=0;scene.traverse(o=>{total++;if(!live(o))pruned++;assert.deepEqual(o.matrixWorld.toArray(),expected.get(o),'Settling moved '+o.name);});
  assert(pruned>6000&&pruned/total>.65,'Prepared graph must prune at least 6000 objects and 65% of this scene');
- for(const o of [...moving,kept,keptMesh,...bands.values()])assert.equal(o.updateMatrixWorld,T.Object3D.prototype.updateMatrixWorld,'Moving/extendable branch was settled: '+o.name);
+ for(const o of [...moving,kept,keptMesh,...bands.values()])assert(live(o),'Moving/extendable branch was settled: '+o.name);
  const mutableInstances=instances.filter(o=>o.userData.phase4||/^Cabin_v2_(door|ensuite-door)/.test(o.name)||[].concat(o.material||[]).some(m=>m.transparent));assert(mutableInstances.length>0);
- for(const o of mutableInstances)assert.equal(o.updateMatrixWorld,T.Object3D.prototype.updateMatrixWorld,'Mutable instances must stay live: '+o.name);
+ for(const o of mutableInstances)assert(live(o),'Mutable instances must stay live: '+o.name);
  for(const o of moving)o.position.x+=2;scene.updateMatrixWorld(true);for(const o of moving)assert.equal(o.matrixWorld.elements[12],expected.get(o)[12]+2,'Forced walk must update '+o.name);
  showBands(bands,-1e6,1e6);assert([...bands.values()].every(g=>g.visible));showBands(bands,1e6,1e6+1);assert([...bands.values()].every(g=>!g.visible));
- const main=await fs.readFile('src/walk/main.public.js','utf8');assert(/batchLowDeckDraws\(baked,renderer\);(atriumGeometry=createAtriumGeometryRuntime\(baked,renderer,\{[^;]*\}\);)?settlePreparedStatic\(ship\);/.test(main),'Public startup must settle after all reparenting and batching');
+ const main=await fs.readFile('src/walk/main.public.js','utf8');assert(/batchLowDeckDraws\(baked,renderer(?:,\{[^;]*\})?\);(atriumGeometry=(?:preparedPhone\?null:)?createAtriumGeometryRuntime\(baked,renderer,\{[^;]*\}\);)?settlePreparedStatic\(ship\);/.test(main),'Public startup must settle after all reparenting and batching');
  // Both startup orders must resolve a manually managed local matrix against its final parent.
- for(const attached of [false,true]){const parent=new T.Scene(),band=new T.Group(),leaf=new T.Mesh(geometry,materials[0]),extra=new T.Group(),testShip={v2PreparedBake:{bands:new Map([[0,band]])}};band.add(leaf);leaf.matrixAutoUpdate=false;leaf.matrix.makeTranslation(7,8,9);parent.position.set(3,4,5);if(attached)parent.add(band);rememberPreparedStatic(testShip);if(!attached)parent.add(band);band.add(extra);settlePreparedStatic(testShip);assert.deepEqual(leaf.matrixWorld.elements.slice(12,15),[10,12,14]);assert.equal(band.updateMatrixWorld,T.Object3D.prototype.updateMatrixWorld);extra.position.x=12;parent.updateMatrixWorld(true);assert.equal(extra.matrixWorld.elements[12],15);}
+ for(const attached of [false,true]){const parent=new T.Scene(),band=new T.Group(),leaf=new T.Mesh(geometry,materials[0]),extra=new T.Group(),testShip={v2PreparedBake:{bands:new Map([[0,band]])}};band.add(leaf);leaf.matrixAutoUpdate=false;leaf.matrix.makeTranslation(7,8,9);parent.position.set(3,4,5);if(attached)parent.add(band);rememberPreparedStatic(testShip);if(!attached)parent.add(band);band.add(extra);settlePreparedStatic(testShip);assert.deepEqual(leaf.matrixWorld.elements.slice(12,15),[10,12,14]);assert(live(band));extra.position.x=12;parent.updateMatrixWorld(true);assert.equal(extra.matrixWorld.elements[12],15);}
  const report={status:'PASS',total,pruned,share:pruned/total,mutableInstances:mutableInstances.length,movingNames,method:'Actual prepared node topology and transforms with empty geometry, plus named late-added moving branches; forced scene traversal and both band visibility states.'};
  // The real prepared materials and all three render scenes use the same one-pass policy.
  const textures=Object.fromEntries(manifest.textures.map(t=>[t.uuid,new T.Texture()])),loader=new T.MaterialLoader().setTextures(textures),glassScene=new T.Scene(),haze=new T.Scene(),sky=new T.Scene();let covered=0;

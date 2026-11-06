@@ -33,6 +33,11 @@ export function attachFacade(ship,scene,{authority=null}={}){
 // Retain source objects for inspection without traversing 250k hidden authoring meshes every frame.
 export function isolateStaticWorld(ship,scene){ship.root.updateMatrixWorld(true);const live=[],visible=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};ship.root.traverse(o=>{if((o.isMesh&&!o.userData.baked||o.isLight)&&visible(o))live.push({o,parent:o.parent});});const root=new T.Group();root.name='V2_live_source_draws';scene.add(root);const groups=new Map();for(const {o,parent} of live){let g=groups.get(parent);if(!g){g=new T.Group();g.name=parent.name;root.add(g);groups.set(parent,g);}g.attach(o);}ship.root.removeFromParent();ship.liveDraws=root;return root;}
 
+// three r185 decides whether a batch needs a new shader by reading `colorTexture`, which BatchedMesh stores as
+// `_colorsTexture`; undefined is never null, so every batched draw rebuilt its shader parameters and cache key to
+// find the same program again (about 0.9 ms of CPU a frame in the arrival hall). Answer with the stored texture.
+if(!('colorTexture' in T.BatchedMesh.prototype))Object.defineProperty(T.BatchedMesh.prototype,'colorTexture',{configurable:true,get(){return this._colorsTexture;}});
+
 // Low-deck architecture has many 40 m chunks sharing exactly one finish.
 // Cache opaque multi-draw lists within each band. Batch bounds and band visibility
 // stay active; the GPU clips offscreen chunks without rebuilding indirect data
@@ -43,14 +48,21 @@ export function compactRenderGeometry(source){
  for(const[name,a]of Object.entries(source.attributes)){const values=new a.array.constructor(ids.length*a.itemSize);for(let i=0;i<ids.length;i++)for(let k=0;k<a.itemSize;k++)values[i*a.itemSize+k]=a.array[ids[i]*a.itemSize+k];g.setAttribute(name,new T.BufferAttribute(values,a.itemSize,a.normalized));}
  if(source.index)g.setIndex(Array.from(source.index.array,i=>remap.get(i)));g.computeBoundingBox();g.computeBoundingSphere();return g;
 }
-export async function batchLowDeckDraws(baked,renderer){
- const yieldWork=()=>new Promise(resolve=>setTimeout(resolve,0));
+// `allBands` (the phone ship) batches every band, not only the low decks. `cull` culls each chunk: its draw list then
+// changes every frame, and on a Galaxy S9 lettering jumped about the screen (chunks drawn with another's matrix), so the
+// phone ship leaves it off. `hidden` is called with each source once it is copied and hidden.
+export async function batchLowDeckDraws(baked,renderer,{allBands=false,cull=false,hidden=null}={}){
+ // Yields to the page about every 12 ms: a timer per chunk waited at least 4 ms each, 20 s over every band's chunks.
+ let slice=performance.now();const yieldWork=async()=>{if(performance.now()-slice<12)return;await new Promise(resolve=>setTimeout(resolve,0));slice=performance.now();};
  const proof={enabled:renderer.extensions.has('WEBGL_multi_draw'),batches:0,sources:0,vertices:0,triangles:0};
+ // A BatchedMesh needs its own shader variant. Sharing a material with the plain meshes left in the bands switched the
+ // program back and forth (and rebuilt its parameters) on every draw, so each batch gets one copy per material.
+ const batchMaterials=new Map(),batchMaterial=m=>{let c=batchMaterials.get(m);if(!c){c=m.clone();c.onBeforeCompile=m.onBeforeCompile;c.customProgramCacheKey=m.customProgramCacheKey;batchMaterials.set(m,c);}return c;};
  proof.fallback=!proof.enabled;
  // Without WEBGL_multi_draw, merge each compatible low-deck material bucket.
  // This trades per-chunk frustum culling for bounded draw submission on phones.
  for(const group of baked.bands.values()){
-  const {band,top=band}=group.userData;if(band< -1||top>4)continue;
+  const {band,top=band}=group.userData;if(!allBands&&(band< -1||top>4))continue;
   const buckets=new Map();
   for(const o of [...group.children]){
    const m=o.material,g=o.geometry;
@@ -61,10 +73,10 @@ export async function batchLowDeckDraws(baked,renderer){
   for(const list of buckets.values()){
    if(list.length<3)continue;
    const compact=[];for(const o of list){compact.push(compactRenderGeometry(o.geometry));await yieldWork();}const vertices=compact.reduce((s,g)=>s+g.attributes.position.count,0),indices=compact.reduce((s,g)=>s+(g.index?.count||g.attributes.position.count),0);
-   if(proof.fallback){for(let i=0;i<compact.length;i++)compact[i].applyMatrix4(list[i].matrix);const merged=mergeGeometries(compact),mesh=new T.Mesh(merged,list[0].material);mesh.name='V2_low_deck_merged_'+list[0].material.name;mesh.renderOrder=list[0].renderOrder;mesh.userData={noCollide:true,renderOnly:true,sources:list.map(o=>o.uuid)};for(const o of list)o.visible=false;group.add(mesh);compact.forEach(g=>g.dispose());proof.batches++;proof.sources+=list.length;proof.vertices+=vertices;proof.triangles+=indices/3;await yieldWork();continue;}
-   const batch=new T.BatchedMesh(list.length,vertices,indices,list[0].material);batch.name='V2_low_deck_batch_'+list[0].material.name;batch.sortObjects=false;batch.perObjectFrustumCulled=false;batch.renderOrder=list[0].renderOrder;
+   if(proof.fallback){for(let i=0;i<compact.length;i++)compact[i].applyMatrix4(list[i].matrix);const merged=mergeGeometries(compact),mesh=new T.Mesh(merged,list[0].material);mesh.name='V2_low_deck_merged_'+list[0].material.name;mesh.renderOrder=list[0].renderOrder;mesh.userData={noCollide:true,renderOnly:true,sources:list.map(o=>o.uuid)};for(const o of list){o.visible=false;hidden?.(o);}group.add(mesh);compact.forEach(g=>g.dispose());proof.batches++;proof.sources+=list.length;proof.vertices+=vertices;proof.triangles+=indices/3;await yieldWork();continue;}
+   const batch=new T.BatchedMesh(list.length,vertices,indices,batchMaterial(list[0].material));batch.name='V2_low_deck_batch_'+list[0].material.name;batch.sortObjects=false;batch.perObjectFrustumCulled=cull;batch.renderOrder=list[0].renderOrder;
    batch.userData={noCollide:true,renderOnly:true,sources:list.map(o=>o.uuid)};
-   for(let i=0;i<list.length;i++){const o=list[i],g=batch.addGeometry(compact[i]),id=batch.addInstance(g);batch.setMatrixAt(id,o.matrix);o.visible=false;compact[i].dispose();}
+   for(let i=0;i<list.length;i++){const o=list[i],g=batch.addGeometry(compact[i]),id=batch.addInstance(g);batch.setMatrixAt(id,o.matrix);o.visible=false;hidden?.(o);compact[i].dispose();}
    batch.computeBoundingBox();batch.computeBoundingSphere();group.add(batch);
    proof.batches++;proof.sources+=list.length;proof.vertices+=vertices;proof.triangles+=indices/3;await yieldWork();
   }

@@ -18,7 +18,7 @@ import {loadMedia} from './ship-log-media.mjs';
 // LEO_LIVE_URL, when set, is the Leo live server the page joins (wss://.../live; server/leo-live.mjs); without it the walk
 // is solo. The walk's paintings (src/walk/paintings.js) and comic pages (src/walk/comics.js) are hashed files of their own,
 // fetched when a walker comes near or opens the book.
-const WALK_SCRIPT=/^walk(-emotes|-map|-hat|-art-[a-z0-9-]+|-reel)?\.[0-9a-f]{10}\.(js|json|png|glb|jpg|mp4)$/;
+const WALK_SCRIPT=/^walk(-emotes|-map|-hat|-art-[a-z0-9-]+|-reel|-atrium-pvs)?\.[0-9a-f]{10}\.(js|json|png|glb|jpg|mp4)$/;
 const WALK_LOGO=/^hydro-nip-main-logo\.[0-9a-f]{10}\.jpg$/;
 const hashed=(stem,ext,data)=>`${stem}.${createHash('sha256').update(data).digest('hex').slice(0,10)}.${ext}`;
 export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverride=null,walkOverride=null,sourceRef=null,sourceAdapters=undefined,profileMap=false,authoringWalk=false,preparedWalk=false,logMedia=undefined}){
@@ -42,8 +42,14 @@ export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverri
  const {media,from}=suppliedMedia||loadMedia(),log=shipLog(process.cwd(),media);
  console.log(`ship log: ${log.length} changes, ${log.filter(e=>e.shots).length} with before-and-after pictures (from ${from})`);
  const data={'walk-partitions':plan,'walk-changes':JSON.stringify(log)};
+ // The atrium PVS (scripts/walk-atrium-pvs.mjs), only where it was baked from this walk's colliders and atrium
+ // (scripts/atrium-pvs-source.mjs); without it the sight rays answer as before.
+ const pvs=v2&&preparedWalk?await(await import('./atrium-pvs-source.mjs')).publishedPvs({layoutText:layoutOverride?JSON.stringify(layoutOverride):await fs.readFile('output/leo-interior-v02/layout.json','utf8'),expectedSha256:manifest['walk-prepared']?.sha256}):null;
+ const pvsName=pvs?.text?hashed('walk-atrium-pvs','json',pvs.text):'';
+ if(pvsName)await fs.writeFile(path.join(out,pvsName),pvs.text);
+ if(pvs)console.log('atrium PVS: '+(pvsName||'none, '+pvs.reason));
  const partitions={name:'walk-data',setup(b){b.onResolve({filter:/^walk-(partitions|changes)$/},a=>({path:a.path,namespace:'walk'}));b.onLoad({filter:/.*/,namespace:'walk'},a=>({contents:data[a.path],loader:'json'}));}};
- const result=await build({...profileMap?{sourcemap:'external',outfile:'walk.js'}:{},entryPoints:[sourceRef?'src/walk/main.js':authoringWalk?'src/walk/main.authoring.js':preparedWalk?'src/walk/main.public.js':'src/walk/main.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2022',legalComments:'eof',define:{__PREPARED_META__:JSON.stringify(manifest['walk-prepared']?.metadataFile||'world.json.gz'),__PREPARED_URL__:JSON.stringify((debug?'/base/':'./')+(manifest['walk-prepared']?.directory||'prepared-walk/')),__COSMO_SCRIPT__:JSON.stringify(cosmo),__HYDRO_NIP_MAIN_LOGO__:JSON.stringify(logoName),__EMOTES_URL__:JSON.stringify(emoteName),__MAP_URL__:JSON.stringify(mapName),__HAT_URL__:JSON.stringify(hatName),__ART_URLS__:JSON.stringify(art),__REEL_URL__:JSON.stringify(reelName),__LIVE_URL__:JSON.stringify(process.env.LEO_LIVE_URL||''),__CREAMERY_URL__:JSON.stringify(process.env.LEO_CREAMERY_URL||'https://creamery.marscatsvoyage.com'),__WALK_DEBUG__:String(debug)},plugins:[partitions,...(v2?[v2Plugin(layoutOverride||JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8')),{sourceRef,preparedWalk,authoringWalk,...(sourceAdapters?{sourceAdapters}:{}),dataDirectory:out})]:[])]});
+ const result=await build({...profileMap?{sourcemap:'external',outfile:'walk.js'}:{},entryPoints:[sourceRef?'src/walk/main.js':authoringWalk?'src/walk/main.authoring.js':preparedWalk?'src/walk/main.public.js':'src/walk/main.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2022',legalComments:'eof',define:{__PREPARED_META__:JSON.stringify(manifest['walk-prepared']?.metadataFile||'world.json.gz'),__PREPARED_URL__:JSON.stringify((debug?'/base/':'./')+(manifest['walk-prepared']?.directory||'prepared-walk/')),__COSMO_SCRIPT__:JSON.stringify(cosmo),__HYDRO_NIP_MAIN_LOGO__:JSON.stringify(logoName),__EMOTES_URL__:JSON.stringify(emoteName),__MAP_URL__:JSON.stringify(mapName),__HAT_URL__:JSON.stringify(hatName),__ART_URLS__:JSON.stringify(art),__REEL_URL__:JSON.stringify(reelName),__LIVE_URL__:JSON.stringify(process.env.LEO_LIVE_URL||''),__CREAMERY_URL__:JSON.stringify(process.env.LEO_CREAMERY_URL||'https://creamery.marscatsvoyage.com'),__ATRIUM_PVS_URL__:JSON.stringify(pvsName),__ATRIUM_PVS_KEY__:JSON.stringify(pvs?.key||''),__WALK_DEBUG__:String(debug)},plugins:[partitions,...(v2?[v2Plugin(layoutOverride||JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8')),{sourceRef,preparedWalk,authoringWalk,...(sourceAdapters?{sourceAdapters}:{}),dataDirectory:out})]:[])]});
  const code=(result.outputFiles.find(f=>f.path.endsWith('.js'))||result.outputFiles[0]).text;
  if(code.includes('createDLCat('))throw new Error('The walk script must load Cosmo from its own file');
  if(!debug&&(code.includes('__walk')||code.includes('anchorTest')))throw new Error('The walk debug hook must not ship');
@@ -56,5 +62,5 @@ export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverri
  // The same walk for Otherside to load: no Discord, no login (src/walk/net/otherside.js).
  if(!html.includes('<head><script>'))throw new Error('walk.html lost its opening script');
  await fs.writeFile(path.join(out,'walkotherside.html'),html.replace('<head><script>',()=>'<head><script>window.LEO_OTHERSIDE=true;</script><script>'));
- return {walk:name,emotes:emoteName,map:mapName,bytes:code.length,...(v2?{corpus:{from,mediaSha256:createHash('sha256').update(JSON.stringify(media)).digest('hex'),mediaPRs:Object.keys(media).length,entries:log.length,queries:log.reduce((n,e)=>n+(e.go?1:0)+(e.shots||[]).filter(s=>s.at).length,0),provenance:suppliedMedia?.provenance||null}}:{})};
+ return {walk:name,emotes:emoteName,map:mapName,atriumPvs:pvsName||null,bytes:code.length,...(v2?{corpus:{from,mediaSha256:createHash('sha256').update(JSON.stringify(media)).digest('hex'),mediaPRs:Object.keys(media).length,entries:log.length,queries:log.reduce((n,e)=>n+(e.go?1:0)+(e.shots||[]).filter(s=>s.at).length,0),provenance:suppliedMedia?.provenance||null}}:{})};
 }
