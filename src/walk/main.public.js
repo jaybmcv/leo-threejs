@@ -411,6 +411,9 @@ const NEAR_CABINS=40,BOAT_REACH=45,nearFrom=new T.Vector3(1e9,0,0);
 // Seen through an opening from under a lower ceiling (the lounge from its access ramp), a taller room's ceiling can be in
 // view with no ray landing on it, so each ray also looks straight up and down from partway along for the space it crosses.
 const VIEW_RAYS=[];for(const x of [-.96,-.5,0,.5,.96])for(const y of [-.96,-.5,0,.5,.96])VIEW_RAYS.push([x,y]);let viewSpan=[0,0],localViewSpan=[0,0],lastSpan=-Infinity,atriumSpanActive=false,atriumSight=null;
+// A phone casts the view rays over SPAN_SLICES frames, a fifth each: until all have answered, the span is the last full
+// one widened by the new answers, never narrowed. A desktop casts them all in one frame, as before.
+const SPAN_SLICES=preparedPhone?5:1;let spanPass=null,fullSpan=null;
 function span(p,now){
  // Sight through an adjoining doorway keeps the whole atrium, even outside its footprint.
  setAtriumView(p);
@@ -418,16 +421,17 @@ function span(p,now){
  setAtriumSight(ATRIUM_VIEW.fullHeight&&(inside||(atriumSight??=createAtriumSight(colliders,{pvs:()=>atriumPvs})).update(camera,p,now)));
  const atriumBand=atriumViewSpan();if(inside&&atriumBand){atriumSpanActive=true;return viewSpan=atriumBand;}
  // Returning indoors must recompute even at the same pose as the last indoor query.
- if(atriumSpanActive){atriumSpanActive=false;lastSpan=-Infinity;spanChanged(camera,p,NaN,NaN,colliders);}
+ if(atriumSpanActive){atriumSpanActive=false;lastSpan=-Infinity;spanPass=null;spanChanged(camera,p,NaN,NaN,colliders);}
 
- if(now-lastSpan>=150){lastSpan=now;if(spanChanged(camera,p,0,0,colliders)){
- const spanStart=performance.now();
- let low=p.y+PVS_LOCAL_SPAN[0],high=p.y+PVS_LOCAL_SPAN[1];const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();
- const reach=y=>{low=Math.min(low,y-1);high=Math.max(high,y+1);};
- for(const [x,y] of VIEW_RAYS){ndc.set(x,y);ray.setFromCamera(ndc,camera);const hit=(spanQuery??=createVisibilityQuery(colliders)).raycast(ray.ray,90,.6),d=hit?hit.distance:90;reach(ray.ray.at(d,probe.origin).y);
+ if(!spanPass&&now-lastSpan>=150){lastSpan=now;if(spanChanged(camera,p,0,0,colliders))spanPass={next:0,low:p.y+PVS_LOCAL_SPAN[0],high:p.y+PVS_LOCAL_SPAN[1]};}
+ if(spanPass){
+ const spanStart=performance.now(),pass=spanPass,end=Math.min(VIEW_RAYS.length,pass.next+Math.ceil(VIEW_RAYS.length/SPAN_SLICES));const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();
+ const reach=y=>{pass.low=Math.min(pass.low,y-1);pass.high=Math.max(pass.high,y+1);};
+ for(let i=pass.next;i<end;i++){const [x,y]=VIEW_RAYS[i];ndc.set(x,y);ray.setFromCamera(ndc,camera);const hit=(spanQuery??=createVisibilityQuery(colliders)).raycast(ray.ray,90,.6),d=hit?hit.distance:90;reach(ray.ray.at(d,probe.origin).y);
   for(const f of [1/3,2/3])for(const s of [1,-1]){ray.ray.at(d*f,probe.origin);probe.direction.set(0,s,0);const h=(spanQuery??=createVisibilityQuery(colliders)).raycast(probe,12);if(h)reach(h.point.y);}}
- renderMetrics.span.push(performance.now()-spanStart);if(renderMetrics.span.length>600)renderMetrics.span.shift();localViewSpan=[low,high];
- }}
+ pass.next=end;if(end===VIEW_RAYS.length){spanPass=null;fullSpan=[pass.low,pass.high];localViewSpan=fullSpan;}else localViewSpan=fullSpan?[Math.min(fullSpan[0],pass.low),Math.max(fullSpan[1],pass.high)]:[pass.low,pass.high];
+ renderMetrics.span.push(performance.now()-spanStart);if(renderMetrics.span.length>600)renderMetrics.span.shift();
+ }
  // Preserve the observer's local floor/ceiling, including views from below Deck 6.
  return viewSpan=atriumBand?[Math.min(localViewSpan[0],atriumBand[0]),Math.max(localViewSpan[1],atriumBand[1])]:localViewSpan;
 }
