@@ -40,11 +40,13 @@ function guard(scene){
  return {keep,users,fixed:fixedIn(keep)};
 }
 
-/** Before low-deck batching: returns what the batching calls with each source it has copied into a batch and hidden for
- * good, which drops the source's arrays unless another mesh draws them. */
+/** Before low-deck batching and the band merge: returns what they call with each source they have copied and hidden for
+ * good, which drops the source's arrays once no other mesh draws them (a desktop's pieces share vertex pools, freed
+ * with the last of them). */
 export function releaseBatchedSources(scene){
  const {users,fixed}=guard(scene),proof={sources:0,bytes:0};
- const done=o=>{const g=o.geometry;if(!prepared.has(g)||o.isSkinnedMesh)return;for(const a of parts(g))if(a.array&&fixed(a)&&users.get(a)===1){proof.bytes+=a.array.byteLength;a.array=null;}proof.sources++;};
+ const done=o=>{const g=o.geometry;if(!prepared.has(g)||o.isSkinnedMesh)return;
+  for(const a of parts(g)){const n=users.get(a)-1;users.set(a,n);if(a.array&&fixed(a)&&n===0){proof.bytes+=a.array.byteLength;a.array=null;}}proof.sources++;};
  done.proof=proof;return done;
 }
 

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {toWorld} from '../plan/rooms.js';
 import {BODY} from './collision.js';
 
@@ -26,13 +27,14 @@ export function createYarn(colliders,{at=YARN.home,color=YARN.color}={}){
  const wool=new T.MeshStandardMaterial({name:'Walk_yarn',color:core,emissive:core.clone().multiplyScalar(.9),emissiveIntensity:.55,roughness:.85});
  const strand=new T.MeshStandardMaterial({name:'Walk_yarn_strand',color:light,emissive:core,emissiveIntensity:.6,roughness:.9});
  ball.add(new T.Mesh(new T.SphereGeometry(r,32,20),wool));
- // Wound strands: thin rings at many angles over the core.
+ // Wound strands: thin rings at many angles over the core, and a loose end trailing onto the floor, all one mesh (one
+ // draw a ball, not fifteen: the arrival hall drew 80 for its balls).
  let seed=4471;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
- const ring=new T.TorusGeometry(r*1.005,.022,5,56);
- for(let i=0;i<14;i++){const m=new T.Mesh(ring,strand);m.rotation.set(random()*Math.PI,random()*Math.PI,0);ball.add(m);}
- // A loose end trailing onto the floor.
+ const ring=new T.TorusGeometry(r*1.005,.022,5,56),strands=[];
+ for(let i=0;i<14;i++)strands.push(ring.clone().applyMatrix4(new T.Matrix4().makeRotationFromEuler(new T.Euler(random()*Math.PI,random()*Math.PI,0))));
  const tail=new T.CatmullRomCurve3([new T.Vector3(0,-.1,r),new T.Vector3(.12,-.4,r+.12),new T.Vector3(.05,-r+.03,r+.4),new T.Vector3(.3,-r+.03,r+.75)]);
- ball.add(new T.Mesh(new T.TubeGeometry(tail,24,.022,5),strand));
+ strands.push(new T.TubeGeometry(tail,24,.022,5));
+ ball.add(new T.Mesh(mergeGeometries(strands),strand));ring.dispose();strands.forEach(g=>g.dispose());
  const position=ball.position.copy(home),velocity=new T.Vector3(),seg=new T.Line3(new T.Vector3(),new T.Vector3()),ray=new T.Ray(),
   n=new T.Vector3(),wall=new T.Vector3(),axis=new T.Vector3(),spin=new T.Quaternion();
  let grounded=false,acc=0;
