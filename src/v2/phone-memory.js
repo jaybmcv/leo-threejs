@@ -3,13 +3,16 @@
 // - Pictures: the walk's canvas is about 450×925 pixels on a phone, so a picture in an ordinary material's colour slots
 //   larger than PHONE_PICTURE_SIZE is swapped for a copy of that size and uploaded so. The original is held only weakly:
 //   a sign drawn once is freed, while a module that redraws its canvas still holds it and gets it back on needsUpdate.
+//   Phones with 4 GB or less, and browsers that don't say (Safari), get LOW_MEMORY_PICTURE_SIZE: a Galaxy S9 crashed
+//   riding a lift with 156 pictures of 1,024 px holding 388 MB of the walk's 534 MB of pictures.
 // - Shapes: the prepared ship's arrays are dropped from the page after their first upload (three's onUpload), and those
 //   of the meshes low-deck batching copies and hides for good as soon as they are copied. Templates (cloned later),
 //   collision, instance attributes, dynamic or morphing geometry and anything outside the prepared ship keep theirs.
 import * as T from 'three';
 import {preparedResource} from './prepared-resource.public.js';
 
-export const PHONE_PICTURE_SIZE=1024;
+export const PHONE_PICTURE_SIZE=1024,LOW_MEMORY_PICTURE_SIZE=512;
+const pictureSize=()=>(globalThis.navigator?.deviceMemory??4)<=4?LOW_MEMORY_PICTURE_SIZE:PHONE_PICTURE_SIZE;
 const release=function(){this.array=null;};
 
 
@@ -62,7 +65,7 @@ export function releasePhoneGeometry(scene){
 
 /** Pictures in the colour slots of ordinary materials larger than `size` are swapped for copies of at most `size`, now and
  * every `every` ms after, and uploaded at that size. Returns {proof, stop, sweep}. */
-export function shrinkPhonePictures(renderer,scene,{size=PHONE_PICTURE_SIZE,every=4000}={}){
+export function shrinkPhonePictures(renderer,scene,{size=pictureSize(),every=4000}={}){
  const done=new WeakSet(),proof={shrunk:0,reuploaded:0,restored:0,pixels:0};
  const shrink=t=>{
   const img=t.image;if(done.has(t)||!img||t.version===0||t.isRenderTargetTexture||t.isVideoTexture||t.isDataTexture||t.isCompressedTexture)return;
