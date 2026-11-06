@@ -1172,7 +1172,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "9007830df95a0dd121ae432bb30a7973e9ccea2b9e70fc3de11828656ab019e6"
+      "signature": "063ba2497976864da6be8a3dd759dcffcbde3ed648f1daf68a1c314f5a9b3fa9"
     },
     {
       "source": "src/walk/arrival-tour.js",
@@ -1486,6 +1486,110 @@
       "interactionTargets": null,
       "placements": 18,
       "signature": "8ef8cfb230736e9b9abce71c8184f4f4402a30b9b0b2563a997dadd5e680fc1c"
+    },
+    {
+      "source": "src/walk/cat-tree.authoring.js",
+      "rooms": [
+        "circulation-6"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The Great Cat Tree stands on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs it was fitted to; it does not move with any room.",
+      "features": [
+        "Great_cat_tree",
+        "Great_cat_tree_solid",
+        "Great_cat_tree_near",
+        "Great_cat_tree_far",
+        "Great_cat_tree_seats",
+        "Meditation_cushion",
+        "Hammock",
+        "Cat_tree_sign",
+        "Cat_tree_leaves"
+      ],
+      "colliders": [
+        "Great_cat_tree_solid"
+      ],
+      "interactionTargets": null,
+      "placements": 48,
+      "signature": "7fc02ed4eada9e35b26fadc2d756c61d57ba9907c579adc063e5d5594efefd6a"
+    },
+    {
+      "source": "src/walk/cat-tree.js",
+      "rooms": [
+        "circulation-6"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The Great Cat Tree stands on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs it was fitted to; it does not move with any room.",
+      "features": [
+        "Great_cat_tree",
+        "Great_cat_tree_solid",
+        "Great_cat_tree_near",
+        "Great_cat_tree_far",
+        "Great_cat_tree_seats",
+        "Meditation_cushion",
+        "Hammock",
+        "Cat_tree_sign",
+        "Cat_tree_leaves"
+      ],
+      "colliders": [
+        "Great_cat_tree_solid"
+      ],
+      "interactionTargets": null,
+      "placements": 48,
+      "signature": "7fc02ed4eada9e35b26fadc2d756c61d57ba9907c579adc063e5d5594efefd6a"
+    },
+    {
+      "source": "src/walk/cat-tree.prepared.js",
+      "rooms": [
+        "circulation-6"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The Great Cat Tree stands on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs it was fitted to; it does not move with any room.",
+      "features": [
+        "Great_cat_tree",
+        "Great_cat_tree_solid",
+        "Great_cat_tree_near",
+        "Great_cat_tree_far",
+        "Great_cat_tree_seats",
+        "Meditation_cushion",
+        "Hammock",
+        "Cat_tree_sign",
+        "Cat_tree_leaves"
+      ],
+      "colliders": [
+        "Great_cat_tree_solid"
+      ],
+      "interactionTargets": null,
+      "placements": 48,
+      "signature": "7fc02ed4eada9e35b26fadc2d756c61d57ba9907c579adc063e5d5594efefd6a"
+    },
+    {
+      "source": "src/walk/cat-tree.public.js",
+      "rooms": [
+        "circulation-6"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The Great Cat Tree stands on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs it was fitted to; it does not move with any room.",
+      "features": [
+        "Great_cat_tree",
+        "Great_cat_tree_solid",
+        "Great_cat_tree_near",
+        "Great_cat_tree_far",
+        "Great_cat_tree_seats",
+        "Meditation_cushion",
+        "Hammock",
+        "Cat_tree_sign",
+        "Cat_tree_leaves"
+      ],
+      "colliders": [
+        "Great_cat_tree_solid"
+      ],
+      "interactionTargets": null,
+      "placements": 48,
+      "signature": "7fc02ed4eada9e35b26fadc2d756c61d57ba9907c579adc063e5d5594efefd6a"
     },
     {
       "source": "src/walk/catnip-face.js",
@@ -2262,7 +2366,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 63,
-      "signature": "ceacfdfdf0df5edbdea53866aed146323797de0b9266c8de83cdd2b0d155e4b8"
+      "signature": "ab131211d6aab24c3a08de5d07855a03b2cdb63fce80562f2e711641582d32a5"
     },
     {
       "source": "src/walk/gaming-lounge.js",
@@ -2283,7 +2387,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 63,
-      "signature": "68db8b08f9a7bbd44efec9465a688f88b7395a3b4f4bb30e905039b3cce2b7e0"
+      "signature": "f0ab41c5b1f69519bdf25e123edcd5f57b51679218115d80aad4c019716c2eec"
     },
     {
       "source": "src/walk/gaming-lounge.prepared.js",
@@ -2304,7 +2408,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 63,
-      "signature": "7bcbe8ec5519d41bedab21c485a80c7e29e9900da16e2b00d3261ceb176f24ed"
+      "signature": "bf376d1b4ec4d5c30ac60689f5690bc5c4e29496add16536a64f4e1dcd4e0615"
     },
     {
       "source": "src/walk/gaming-lounge.public.js",
@@ -2325,7 +2429,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 63,
-      "signature": "ee2a5e4cb796ac5d695d578be34d7a3ba10545f32753e890b928edc61e5aa10a"
+      "signature": "128ceceb1061e83794301259cc6d3ea4ff11ebb924b331974882187ff9114c2a"
     },
     {
       "source": "src/walk/graffiti-wall.js",
@@ -3071,14 +3175,15 @@
       "features": [
         "Lift_shutter",
         "Lift_door_blade",
+        "Lift_door_shut",
         "Walk_lift_signs",
         "Walk_lift_",
         "Car_mars"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 14,
-      "signature": "6b8a7ec889f62eb3f4668d89dcc6f9acc94f5bd57d50b8ca58e2fee72ee9e0b2"
+      "placements": 16,
+      "signature": "e629ec3cb2768a3e00f2c747c05473709dde2c458a33c351bf7531d5a4f8dce5"
     },
     {
       "source": "src/walk/lift-ride.js",
@@ -3110,14 +3215,15 @@
       "features": [
         "Lift_shutter",
         "Lift_door_blade",
+        "Lift_door_shut",
         "Walk_lift_signs",
         "Walk_lift_",
         "Car_mars"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 14,
-      "signature": "d885f75fa63942888cf9cc37358a0461798a61a64eb7960e9a4385457f9ccdd0"
+      "placements": 16,
+      "signature": "38421c14f67b667e7d5e776e008769c973cedbc32953e49c280ed70820189352"
     },
     {
       "source": "src/walk/lift-ride.prepared.js",
@@ -3149,14 +3255,15 @@
       "features": [
         "Lift_shutter",
         "Lift_door_blade",
+        "Lift_door_shut",
         "Walk_lift_signs",
         "Walk_lift_",
         "Car_mars"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 14,
-      "signature": "1ae7310cae9b3e2e92d433151921f6796427d558b3cc24364575e84cd76ebaee"
+      "placements": 16,
+      "signature": "596187f2569ff33f679e11751f8ac0324ca422125006ac0e7e25e7719f005693"
     },
     {
       "source": "src/walk/lift-ride.public.js",
@@ -3188,14 +3295,15 @@
       "features": [
         "Lift_shutter",
         "Lift_door_blade",
+        "Lift_door_shut",
         "Walk_lift_signs",
         "Walk_lift_",
         "Car_mars"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 14,
-      "signature": "9a2ddc62499dfdaf032e582da2ef4a10d21dcb566f91c44a6c6631054a428ca2"
+      "placements": 16,
+      "signature": "cb0af500746176bc9863c0020d2bcf8672d9a93fc45bb426f8b610c7eedeff29"
     },
     {
       "source": "src/walk/lift-tile-floor.authoring.js",
@@ -3679,8 +3787,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 43,
-      "signature": "78bbd5360a9fac7617843dc19efa89cfe9536960790001ade617df87472c798b"
+      "placements": 44,
+      "signature": "e4193747023233897bbfeb32e028636067db38c22ff985d4942db4941e384ad7"
     },
     {
       "source": "src/walk/main.js",
@@ -3700,8 +3808,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 42,
-      "signature": "3c97d5f0f8ed3b83a5becc5b443416fbe7ce52dd32b1b11cd6906432a3c44088"
+      "placements": 43,
+      "signature": "803469909dff37291b131d2273bac61348e87ee6e3e999c167b6ce3dc35fb07a"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -3720,8 +3828,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 37,
-      "signature": "34a460763be373d50a053bf97a4d83ef5a4e6f94bb8c3b62f03ef9b31f1dc78a"
+      "placements": 38,
+      "signature": "29fd5eeac21a1db80fbf3e9c8d7ccc2cd3db1a6c25f1e57d0d8b0403c4ba9b9e"
     },
     {
       "source": "src/walk/main.public.js",
@@ -3740,8 +3848,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 37,
-      "signature": "cf72f1341f88b780ab97a073f91375a746e5a9b80428b78e98d86a99f4847e42"
+      "placements": 38,
+      "signature": "8e423e2a39fc0492d8c618af82e67212230bf84161bbfc4c7524d4b20819966c"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -4578,7 +4686,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "aa4a5e255d357f57df46454f2e085deaad9324b9a0f527be2b8be6702935c8db"
+      "signature": "09bdda6f9667c1c72cbe86d723cafff54d66fb53338595deb7b886652a77e0d9"
     },
     {
       "source": "src/walk/provisions.authoring.js",
@@ -5646,6 +5754,7 @@
       "src/walk/arrival-atrium.js",
       "src/walk/blossom.js",
       "src/walk/cargo-trolley.js",
+      "src/walk/cat-tree.js",
       "src/walk/changes-board.js",
       "src/walk/collision.js",
       "src/walk/comics.js",
@@ -5710,6 +5819,7 @@
       "src/walk/arrival-atrium.js",
       "src/walk/blossom.js",
       "src/walk/cargo-trolley.js",
+      "src/walk/cat-tree.js",
       "src/walk/changes-board.js",
       "src/walk/comics.js",
       "src/walk/comms-displays.js",
@@ -5760,6 +5870,7 @@
       "src/walk/arrival-atrium.js",
       "src/walk/blossom.js",
       "src/walk/cargo-trolley.js",
+      "src/walk/cat-tree.js",
       "src/walk/changes-board.js",
       "src/walk/comics.js",
       "src/walk/comms-displays.js",

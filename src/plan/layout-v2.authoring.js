@@ -283,10 +283,11 @@ function placeRooms({h,decks,rooms,shuttles,circulation,issues}){
   for(const [name,z]of [['Laundry',-6],['Linen',0],['Parcels',6]]){const a={id:'neighborhood-'+(d-5)+'-'+name.toLowerCase(),name,deck:d,kind:'service',width:8,depth:4,height:3.5},r=makeRoom(a,-145,z,0,{outer:false,neighborhood:d-5});addDoor(r,[-141,z],[1,0]);rooms.push(r);}
  }
  // Bow cafes retain the original fitting frame and atrium threshold; Stream F supplies measured side bays.
+// The Deck 9, 12 and 15 cafes also open aft on the centre line onto the Great Cat Tree's bridges (src/walk/cat-tree.js).
  for(const a of NOSE_COMMONS){
   const H=hullPath(h,floorY(a.deck),3.5),legacyX=H.tip-12,width=16,x=legacyX-(width-16)/2,room={id:'nose-commons-'+String(a.number).padStart(2,'0'),name:a.name+' · bow café',deck:a.deck,kind:'cafe',width,depth:12,height:3.5,center:[x,floorY(a.deck),0]};
   const r=makeRoom(room,x,0,0,{outer:true,side:1,replaces:'Nose_commons_'+String(a.number).padStart(2,'0'),reason:'Option C replaces the nose commons with a small bow cafe; former fittings require Phase 4 curation.'});
-  if(!h.fits(r.polygon,r.y,r.height)){r.status='unfitted';issues.push({kind:'bow-cafe-unfitted',id:r.id});}r.launchE={legacyX0:legacyX-8,growth:'side-and-forward',sourceArea:192};addDoor(r,[x-width/2,0],[-1,0]);applyCafeBays(r);rooms.push(r);
+  if(!h.fits(r.polygon,r.y,r.height)){r.status='unfitted';issues.push({kind:'bow-cafe-unfitted',id:r.id});}r.launchE={legacyX0:legacyX-8,growth:'side-and-forward',sourceArea:192};addDoor(r,[x-width/2,0],[-1,0]);applyCafeBays(r);if([9,12,15].includes(a.deck)){const x0=Math.min(...r.polygon.map(q=>q[0]));r.galleryDoors=[...(r.galleryDoors||[]),{id:r.id+'-cat-tree-bridge',deck:a.deck,center:[x0,r.y,0],width:2.4,outward:[-1,0],label:'Great Cat Tree bridge',offDeck:true}];}rooms.push(r);
  }
 }
 function allocateBerths(cabins,rooms,issues){
