@@ -78,8 +78,9 @@ async function servePrepared(dir){
   try{
    if(name==='/')return res.writeHead(200,{'content-type':'text/html'}).end('<!doctype html><body><script type="module" src="bake.js"></script></body>');
    if(name==='/bake.js')return res.writeHead(200,{'content-type':'text/javascript'}).end(script);
-   const file=/^\/prepared\/([\w.-]+)$/.exec(name)?.[1];if(!file)return res.writeHead(404).end();
-   res.writeHead(200,{'content-type':'application/octet-stream'}).end(await fs.readFile(path.join(dir,file)));
+   // A sectioned publish's files sit beside its directory, in prepared-walk/sections/ (prepared-sections-v2.mjs).
+   const file=/^\/prepared\/([\w.-]+)$/.exec(name)?.[1],section=/^\/sections\/(s-[0-9a-f]{20}(?:-\d+)?[.]bin)$/.exec(name)?.[1];if(!file&&!section)return res.writeHead(404).end();
+   res.writeHead(200,{'content-type':'application/octet-stream'}).end(await fs.readFile(file?path.join(dir,file):path.join(dir,'..','sections',section)));
   }catch{res.writeHead(404).end();}
  });
  await new Promise(r=>server.listen(0,'127.0.0.1',r));

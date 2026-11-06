@@ -194,8 +194,12 @@ export async function readPreparedSections(directory){
 export async function verifyPublicSections(directory,source,integrity){
  const index=validSectionsIndex(JSON.parse(await fs.readFile(path.join(directory,'sections.json'),'utf8')));
  assert.equal(index.source,integrity.sha256,'Public prepared sections are for another artifact');
+ // The local artifact is the reference only while its own files still hash to that identity.
+ const h=createHash('sha256');for(const name of [...integrity.files].sort()){assert(/^(geometry-\d+[.]bin|world[.]bin|world[.]json[.]gz)$/.test(name),'Invalid prepared file '+name);h.update(name).update(await fs.readFile(path.join(source,name)));}
+ assert.equal(h.digest('hex'),integrity.sha256,'Local prepared artifact differs from its integrity');
  const manifest=await preparedManifest(source),{fragments,order}=splitPrepared(manifest),readEncoded=encodedReader(manifest,source);
  assert.deepEqual(index.order,order,'Public prepared section order differs from the artifact');
+ assert.deepEqual(index.fastPatch??null,manifest.fastPatch??null,'Public prepared sections misstate the fast patch');
  assert.deepEqual(index.sections.map(e=>e.id),fragments.map(f=>f.id),'Public prepared sections differ from the artifact\'s');
  let bytes=0;for(let i=0;i<fragments.length;i++){const e=index.sections[i],expected=sha(await fragmentFile(fragments[i],readEncoded)),parts=[];
   for(const x of e.files){const b=await fs.readFile(path.join(directory,x.name));assert(b.length===x.bytes&&sha(b)===x.sha256,'Prepared section file '+x.name);parts.push(b);bytes+=b.length;}
