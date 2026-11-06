@@ -147,6 +147,27 @@ The other deploy's nightly checks were running, so these times are slower than t
 
 Next, by size: 237 multi-material wayfinding and directory meshes, about 200 always-drawn facade meshes, lift door shutters (76 at the arrival hall, 114 in the Deck 9 corridor, nearly all past the 148 m indoor fog), and the atrium PVS, whose bake fails its check at the arrival hall.
 
+### On the S9 (2026-11-06, live ca1cfc6)
+
+Jay's Galaxy S9 with `?fps=1`:
+- Arrival hall: 1.5 fps, 1,415 draws, 7.39M triangles, pixel ratio 1.25.
+- Just outside it: 20 fps, 483 draws, 2.9M triangles, pixel ratio 0.63.
+- Riding a lift from the hall to Deck 9 crashed the browser.
+
+Desktop emulation with the CPU throttled 4× puts the hall's frame near 125 ms, so most of the phone's 666 ms is the GPU or memory, not draw submission.
+
+- **Resolution never stepped down in the hall** (#368). The automatic step-down wanted 8 frames in its 4 s window, and at 1.5 fps there are 6. Three are enough now, and frames up to 3 s count.
+- **Pictures** (#369). Of 658 pictures (534 MB), 156 at 1,024 px held 388 MB: the cats' sets and canvases for signs and screens. Phones that report 4 GB or less, or don't say (Safari), now get 512 px copies. Teleporting to Deck 9 adds about 70 MB of GPU memory as new decks come into view, so a lift ride through Decks 3–9 keeps uploading. That this caused the crash is likely but not confirmed.
+- **`?phonehide=bands,glass,furnish,gardens,haze,cats`** (#370) hides those kinds of drawing, to split the GPU's cost on the device.
+
+Where the hall's 7.9M triangles go (live, one frame): 5.25M merged deck structure, 1.2M instanced furnishing, about 0.8M atrium gardens, 0.23M haze, 0.2M cats. The merged triangles by distance from the eye: 3.07M beyond 150 m, 1.57M beyond 250 m. Deck 9 corridor: 1.76M of 3.58M beyond 150 m, past the 148 m indoor fog.
+
+Ruled out, by simulation on live arrays (output/phone-walk/merge-sim.mjs):
+- A distance cut with triangles in a fixed 30–80 m cell order and a few draw ranges per material saves only 5–25% (Deck 9: 3.58M → 3.3M at four ranges, 2.6M at 670–912 draws). Triangles span large areas, so cell bounds overlap.
+- Astra (gpt-6-astra high) advised against packing index ranges on the GPU (copyBufferSubData): about 66 MB more GPU memory on a phone that crashes, and unknown validation cost in Chrome.
+
+Possible next: draw only the upper decks' parts near the atrium outline while the atrium is seen from outside it (output/phone-walk/merge-region.mjs). In the hall, that keeps 2.88M of 5.25M at 10 m from the outline, or 3.38M at 20 m, with everything within 90 m kept. The risk is holes behind glass room fronts, and it waits for the S9's `?phonehide` split.
+
 ## Steps
 
 0. **Stop the silent crashes** (this branch). walk.html sets the start note before the walk script loads, records how far loading got, and clears both once the walk is ready. Likely phones (coarse pointer and a small screen or mobile user agent; not tablets or touch laptops) see the guided-tour card first, with Try anyway; a phone that has finished loading before goes straight in. `scripts/check-phone-memory.mjs` reports download, peak heap and time to a walkable view in phone emulation. It reports only and blocks nothing.
