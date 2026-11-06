@@ -5,6 +5,7 @@ import {createCatTree,TREE,PLATFORMS,RING,BRIDGES,DENS,FOOT_DEN,rampY,rampAngle,
 import {BODY,Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {groundMesh} from '../src/v2/ground.js';
+import {findRestSpots,solidSpots} from '../src/walk/rest.js';
 
 // The Great Cat Tree (src/walk/cat-tree.js) on its own, with the Deck 6 floor and the bow cafes' slab edges round it:
 // budget, the walk from the island to every platform, the ring and each bridge's far end, and no unguarded drop over 1 m.
@@ -46,6 +47,11 @@ let failed=0;for(const [name,x,y,z] of goals){const ok=reached(x,y,z);if(!ok)fai
 const uniq=new Map();for(const d of drops)uniq.set(`${Math.round(d[0])},${Math.round(d[1])},${Math.round(d[2])}`,d);
 console.log(`unguarded drops over 1 m: ${uniq.size}`);for(const d of [...uniq.values()].slice(0,25))console.log('  drop at',d.slice(0,3).map(v=>v.toFixed(1)).join(', '),'height',d[3]);
 assert.equal(failed,0,'unreached goals');assert.equal(uniq.size,0,'unguarded drops');
+// Seats: as in scripts/v2-walk.mjs, each cushion the colliders hold up has somewhere reached to stand within 1.6 m
+// (1.5 here, for its coarser grid), from 1.5 m below the seat to just above it.
+tree.seats.updateMatrixWorld(true);const seatSpots=solidSpots(findRestSpots(tree.seats),col),farSeats=seatSpots.filter(s=>!queue.some(p=>Math.hypot(p[0]-s.point.x,p[2]-s.point.z)<=1.5&&p[1]>=s.height-1.5&&p[1]<=s.height+.05));
+console.log(`seats with somewhere to stand: ${seatSpots.length-farSeats.length}/${seatSpots.length}`);for(const s of farSeats.slice(0,12))console.log('  no standing room near seat at',[s.point.x,s.height,s.point.z].map(v=>v.toFixed(1)).join(', '));
+assert.equal(farSeats.length,0,'seats out of reach');
 
 // The walk's own controller climbs the ramp from the boardwalk to Deck 15, then crosses each bridge from its platform.
 const ctl=new Controller(col);
