@@ -4,6 +4,7 @@
 // With --shots it also captures each view on a virtual clock (fixed 1/60 s per frame, seeded Math.random) so builds
 // can be compared pixel for pixel by scripts/walk-frame-diff.mjs. Usage:
 //   node scripts/walk-frame-bench.mjs --tags=base,cand --rounds=3 --frames=300 [--shots] [--out=name] [--list-places] [--profile]
+//   [--query=a=1&b=2] (added to every page's URL)
 // Chrome runs in a visible window by default (headless timings on this PC varied about 20% between rounds);
 // --headless runs it headless on the real GPU, for when the display may lock.
 import fs from 'node:fs/promises';
@@ -68,7 +69,7 @@ const place=v=>`(()=>{const w=__walk;w.input.enabled=false;w.input.down?.clear?.
 const stats=a=>{const s=[...a].sort((x,y)=>x-y),n=s.length,mean=s.reduce((x,y)=>x+y,0)/n;return {n,mean,median:s[n>>1],p95:s[Math.min(n-1,Math.floor(n*.95))],p99:s[Math.min(n-1,Math.floor(n*.99))]};};
 
 async function open(page,tag){
- await page.send('Page.navigate',{url:site+'/'+tag+'/walk.html?lv=2&view=first&halloween=0'});
+ await page.send('Page.navigate',{url:site+'/'+tag+'/walk.html?lv=2&view=first&halloween=0'+(arg('query',null)?'&'+arg('query'):'')});
  await page.wait('document.body?.dataset.ready==="1"&&!!globalThis.__walk',600000);
  // Interior rooms and lazily built details arrive after the first frames.
  await page.ev(nextFrames(120));await sleep(4000);

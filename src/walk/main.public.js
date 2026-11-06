@@ -7,13 +7,18 @@ import {savedFur} from './fur-colours.js';
 let furColour=savedFur(),furSettings=null;
 import {walkBindings,bindingLabel} from './bindings.js';
 let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
-// Phone ship draws (src/v2/phone-bands.js, phone-furnishing.js): each opaque material of the deck bands is one draw,
-// each kind of room furnishing too, and the rest of the bands are batched as before (src/v2/facade.js, every band, no
-// per-chunk culling). ?phonebatch= tries the earlier ways on a phone: band (batches per band, #347), cull (the same,
-// culled: lettering jumped), low (decks -1 to 4 only).
-const phoneBatching=(()=>{if(!preparedPhone)return {};const mode=new URLSearchParams(location.search).get('phonebatch');
+// Deck band draws (src/v2/phone-bands.js): each opaque or faint glass material of the deck bands is one draw, on phones
+// and desktops (a desktop's frame was mostly the CPU's cost of 2,700 draws at the open atrium, 41 ms on an RTX 3090). On
+// a phone each kind of room furnishing is one draw too (phone-furnishing.js), and the rest of the bands are batched as
+// before (src/v2/facade.js, every band, no per-chunk culling). ?phonebatch= tries the earlier ways on a phone: band
+// (batches per band, #347), cull (the same, culled: lettering jumped), low (decks -1 to 4 only). ?deskbatch=low draws a
+// desktop as before: decks -1 to 4 batched and the atrium geometry pack.
+const phoneBatching=(()=>{const query=new URLSearchParams(location.search);if(!preparedPhone)return query.get('deskbatch')==='low'?{}:{merge:true};const mode=query.get('phonebatch');
  return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
 let phoneBands=null;
+// The atrium geometry pack binds the band pieces the merge hides, so it runs only without the merge; the Detail menu
+// chooses its distant detail, so it shows only then too (the merged bands keep full detail and still draw faster).
+const atriumPack=!preparedPhone&&!phoneBatching.merge;
 import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
 import {settlePreparedStatic} from '../v2/prepared-static.js';
 import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
@@ -394,7 +399,7 @@ async function buildShip(){
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  status('Preparing the walk · 4/4 · setting nearby details…');await idle();
- if(phoneBatching.merge)mergePhoneFurnishing(ship.inside);phase4Visibility=phase4Culling(ship.inside,colliders);ship.inside.traverse(o=>{if(!o.isInstancedMesh||o.userData.phase4)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
+ if(preparedPhone&&phoneBatching.merge)mergePhoneFurnishing(ship.inside);phase4Visibility=phase4Culling(ship.inside,colliders);ship.inside.traverse(o=>{if(!o.isInstancedMesh||o.userData.phase4)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
   const box=o.boundingBox.clone().applyMatrix4(o.matrixWorld);let cabins=false,walls=false,boat=false;for(let q=o;q;q=q.parent){if(q.name==='V2_cabin_instances')cabins=true;if(q.name==='V2_cabin_shells')walls=true;if(/^Area_d\d+-lifeboats-/.test(q.name))boat=true;}
   o.userData.span=[box.min.y,box.max.y];o.userData.cabins=cabins;o.userData.cabinWalls=walls;o.userData.boat=boat;instanced.push(o);});
  // Furniture in the repeated cabins draws only for the cabins nearest the walker; their walls and doors always draw.
@@ -403,7 +408,7 @@ async function buildShip(){
   const key=o.parent.uuid+'|'+(o.userData.cabinIds||[o.uuid]).join(',');if(sharedNear.has(key)){o.userData.near=sharedNear.get(key);continue;}const all=Array.from({length:o.count},(_,i)=>{const m=new T.Matrix4();o.getMatrixAt(i,m);return m;});
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};sharedNear.set(key,o.userData.near);
  }
- isolateStaticWorld(ship,scene);{const hidden=preparedPhone?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}atriumGeometry=preparedPhone?null:createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});settlePreparedStatic(ship);
+ isolateStaticWorld(ship,scene);{const hidden=preparedPhone||phoneBatching.merge?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
@@ -1141,7 +1146,7 @@ emergencyDrill=createEmergencyDrill({
 sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambience.toggle())));
 // Render resolution, set up with the renderer: each press steps High, Med, Low and round again.
 const resButton=$('resolution');setRes(res);
-graphicsSettings=mountGraphicsSettings({onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
+graphicsSettings=atriumPack&&mountGraphicsSettings({onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
 controlsSettings=mountControlsSettings({emotes:EMOTES,onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
 furSettings=mountFurSettings({getColour:()=>furColour,onColour:value=>{furColour=value;walker.setFur(value);},onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
 resButton.addEventListener('click',()=>{resChosen=true;setRes((res+1)%RES.length);try{localStorage.setItem(RES_KEY,RES[res]);}catch{}});
