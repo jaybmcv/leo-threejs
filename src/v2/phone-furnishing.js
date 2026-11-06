@@ -4,7 +4,9 @@
 // Before room culling starts, meshes of the same part, material and shape are combined into one instanced mesh, their
 // instances and owner runs one after another, and the originals leave the scene. Room culling then chooses instances
 // across every deck as it did within one. Owners room culling doesn't know from the layout used to take the bounds of
-// the first mesh with a run of theirs; that box goes along in userData.ownerBoxes, so they keep it.
+// the first mesh with a run of theirs; every furnishing mesh, combined or not, carries those boxes in
+// userData.ownerBoxes, so they keep them whatever mesh room culling meets first. Shapes combine only with equal
+// supplied bounds too, since room culling's screen-size test reads each mesh's bounding sphere.
 import * as T from 'three';
 
 // The vertices a shape draws, in order: prepared meshes share vertex pools, so equal shapes need not share arrays.
@@ -14,6 +16,7 @@ function drawnVertices(g){
  return {names:names.join(','),values:Float32Array.from(out)};
 }
 const same=(a,b)=>a.names===b.names&&a.values.length===b.values.length&&a.values.every((v,i)=>Object.is(v,b.values[i]));
+const sphereKey=g=>{const b=g.boundingSphere;return b?[b.center.x,b.center.y,b.center.z,b.radius].join(','):'none';};
 
 /** `root` is ship.inside. Returns {meshes, sources}: combined meshes made and originals they replace. */
 export function mergePhoneFurnishing(root){
@@ -21,11 +24,12 @@ export function mergePhoneFurnishing(root){
  // Owner bounds as room culling takes them for owners outside the layout: from the first mesh, in this order.
  const ownerBoxes={};
  for(const o of list){o.updateWorldMatrix(true,false);for(const run of o.userData.ownerRuns||[])if(!(run.component in ownerBoxes)){o.computeBoundingBox();ownerBoxes[run.component]=o.boundingBox.clone().applyMatrix4(o.matrixWorld);}}
+ for(const o of list)o.userData.ownerBoxes=ownerBoxes;
  const kinds=new Map();
  for(const o of list){
   const m=o.material,g=o.geometry;
   if(Array.isArray(m)||m.transparent||o.instanceColor||o.morphTexture||Object.keys(g.morphAttributes).length||!o.userData.ownerRuns)continue;
-  const key=[o.name,m.uuid,o.renderOrder,!!o.userData.noCollide,o.castShadow,o.receiveShadow,o.parent?.parent?.uuid].join('|');
+  const key=[o.name,m.uuid,o.renderOrder,!!o.userData.noCollide,o.castShadow,o.receiveShadow,o.parent?.parent?.uuid,sphereKey(g)].join('|');
   let shapes=kinds.get(key);if(!shapes)kinds.set(key,shapes=[]);
   const shape=drawnVertices(g);let entry=shapes.find(e=>same(e.shape,shape));if(!entry)shapes.push(entry={shape,meshes:[]});entry.meshes.push(o);
  }
