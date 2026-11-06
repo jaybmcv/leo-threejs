@@ -1,6 +1,6 @@
 // The walk draws each opaque or faint glass material of the deck bands once, not once per band: a phone's frame was
 // mostly the CPU's cost of thousands of draws (3,200 in the arrival hall, from about 240 materials; PHONE_WALK.md), and so
-// was a desktop's (2,700 at the open atrium, 41 ms a frame on an RTX 3090, 23 ms merged; its GPU time fell too).
+// was a desktop's (2,700 at the open atrium, 13 ms a frame on an RTX 3090, 8.4 ms merged; its GPU time fell too).
 // Every opaque mesh low-deck batching would take from a deck band (Walk_band_*), and faint glass, is copied into one
 // plain mesh per material, its triangles ordered by band, and hidden for good. After showBands, each copy draws the runs
 // of the bands showBands shows, one draw per unbroken run (usually one: the bands a view span shows mostly sit together
