@@ -26,7 +26,7 @@ import {bakedPvs,layoutPvsSetup,preparedDigest,preparedIntegrity,PVS_LAYOUT,PVS_
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
 const tag=arg('tag','pvs-base'),prepared=arg('prepared',null),port=Number(arg('cdp',9338)),site='http://127.0.0.1:'+arg('port',4211);
 const CHROME=arg('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe'),region=arg('region','').split(',').filter(Boolean).map(Number);
-const HEADROOM=1.8,BATCH=400,CANARY_EVERY=10,MAX_FRESH=4;
+const HEADROOM=1.8,BATCH=400,CANARY_EVERY=10,MAX_FRESH=4,EV_TIMEOUT_MS=5*60e3,CLOSE_MS=10e3;
 const loseAt=Number(arg('lose-context-at',-1));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
@@ -38,11 +38,17 @@ async function browser(){
  const tab=await fetch('http://127.0.0.1:'+port+'/json/new?about:blank',{method:'PUT'}).then(r=>r.json()),socket=new WebSocket(tab.webSocketDebuggerUrl,{maxPayload:1<<30});
  await new Promise((r,j)=>{socket.once('open',r);socket.once('error',j);});let id=0;const pending=new Map();
  socket.on('message',raw=>{const m=JSON.parse(raw);if(m.id){const p=pending.get(m.id);pending.delete(m.id);m.error?p?.reject(Error(m.error.message)):p?.resolve(m.result);}});
- const send=(method,params={})=>new Promise((resolve,reject)=>{const n=++id;pending.set(n,{resolve,reject});socket.send(JSON.stringify({id:n,method,params}));});
- const ev=async expression=>{const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value;};
+ // Calls still waiting when the connection closes (Chrome gone) fail at once rather than never.
+ socket.on('close',()=>{for(const p of pending.values())p.reject(Error('The page connection closed'));pending.clear();});
+ const send=(method,params={})=>new Promise((resolve,reject)=>{if(socket.readyState!==WebSocket.OPEN)return reject(Error('The page connection is closed'));const n=++id;pending.set(n,{resolve,reject});socket.send(JSON.stringify({id:n,method,params}));});
+ // Every call answers within EV_TIMEOUT_MS: an unattended bake must not hang until the deploy's own time limit.
+ const ev=async expression=>{let timer;const late=new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('The page did not answer within '+EV_TIMEOUT_MS/1000+' s')),EV_TIMEOUT_MS);});
+  const r=await Promise.race([send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),late]).finally(()=>clearTimeout(timer));if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value;};
  await send('Runtime.enable');await send('Page.enable');
- // close() resolves once Chrome has exited, so a fresh one can take its profile.
- return {ev,close(){socket.close();const exited=new Promise(r=>chrome.once('exit',r));chrome.kill();return exited;}};
+ // close() resolves once Chrome has exited (or at once if it already has), so a fresh one can take its profile; it waits
+ // at most CLOSE_MS, and a second call returns the first one's promise.
+ let closed=null;
+ return {ev,close(){return closed??=(async()=>{socket.close();if(chrome.exitCode!==null||chrome.signalCode!==null)return;const exited=new Promise(r=>chrome.once('exit',r));chrome.kill();await Promise.race([exited,sleep(CLOSE_MS)]);})();}};
 }
 
 // The setup (pvsSetup in src/v2/atrium-pvs-key.js) comes from the layout the build was made from: the void is one prism
@@ -114,9 +120,11 @@ const benchEyes=async()=>{const views=JSON.parse(await fs.readFile('scripts/walk
 try{
  await open();
  const dir=prepared||path.join('output/perf-walk/mirror',await page.ev('window.LEO_PUBLIC_ASSETS["walk-prepared"].directory'));
- await page.ev(digestScript);
- const digest=await preparedDigest(dir),walkDigest=await page.ev('__atriumPvsKey.colliderDigest(__walk.colliders)');
- if(walkDigest!==digest)throw Error(`The walk's colliders (${walkDigest}) are not those of the prepared walk in ${dir} (${digest})`);
+ const digest=await preparedDigest(dir);
+ // Checked on every page, a fresh one after the GPU went wrong included.
+ const checkColliders=async()=>{await page.ev(digestScript);const walkDigest=await page.ev('__atriumPvsKey.colliderDigest(__walk.colliders)');
+  if(walkDigest!==digest)throw Error(`The walk's colliders (${walkDigest}) are not those of the prepared walk in ${dir} (${digest})`);};
+ await checkColliders();
  const integrity=await preparedIntegrity(dir)??await page.ev('window.LEO_PUBLIC_ASSETS?.["walk-prepared"]?.sha256??null')??path.basename(path.resolve(dir));
  const source={prepared:integrity,layout:createHash('sha256').update(layoutText).digest('hex'),key:pvsKey(digest,setup)};
  console.log('source',source);
@@ -145,13 +153,15 @@ try{
  // same every time. So the bench-view eyes are a canary: every CANARY_EVERY batches, and when the WebGL context was
  // lost, they must answer as they did on the first page, or the batches since the last good canary are redone on a
  // fresh browser. The check at the end is unchanged.
- const canaryEyes=(await benchEyes()).flatMap(e=>e.eye),canary=async()=>{const r=await page.ev(`__atriumPvs.run(${JSON.stringify(canaryEyes)})`);return r.lost?null:r.visible.join('');};
+ // A run that fails or does not answer counts as a page gone wrong, as a lost context does.
+ const run=async eyes=>{try{return await page.ev(`__atriumPvs.run(${JSON.stringify(eyes)})`);}catch(e){console.log('the page failed a run:',e.message);return {visible:[],faces:0,lost:true};}};
+ const canaryEyes=(await benchEyes()).flatMap(e=>e.eye),canary=async()=>{const r=await run(canaryEyes);return r.lost?null:r.visible.join('');};
  const baseline=await canary();if(!baseline)throw Error('The WebGL context was lost before the bake began');
  let pending=[],checkpoint=0,since=0,fresh=0;
  for(let b=0;b<samples.length;){
   // --lose-context-at=<n> (testing): the WebGL context is lost before the n-th batch, once.
   if(loseAt>=0&&b===loseAt*BATCH&&!fresh)await page.ev('__walk.renderer.forceContextLoss(),true');
-  const batch=samples.slice(b,b+BATCH),r=await page.ev(`__atriumPvs.run(${JSON.stringify(batch.flatMap(s=>s.slice(1)))})`);faces+=r.faces;
+  const batch=samples.slice(b,b+BATCH),r=await run(batch.flatMap(s=>s.slice(1)));faces+=r.faces;
   r.visible.forEach((v,i)=>{if(v)pending.push(batch[i][0]);});
   if((b/BATCH)%25===0)console.log('run',b+batch.length,'/',samples.length,'visible cells',seen.size+pending.length,'faces',faces,((Date.now()-t)/1000).toFixed(0)+' s');
   b+=batch.length;since++;
@@ -162,7 +172,7 @@ try{
   const differ=now?[...now].filter((v,i)=>v!==baseline[i]).length:null;
   if(++fresh>MAX_FRESH)throw Error(`The page went wrong ${fresh} times (canary eyes changed or the context was lost); the bake was not kept`);
   console.log('page went wrong after sample',b,now?`(${differ} canary eyes changed)`:'(WebGL context lost)','- redoing from',checkpoint,'on a fresh browser');
-  await page.close();page=await browser();await open();await setUp();
+  await page.close();page=await browser();await open();await checkColliders();await setUp();
   if(await canary()!==baseline)throw Error('A fresh page does not answer the canary as the first did: the bake is not repeatable here');
   pending=[];b=checkpoint;since=0;
  }
@@ -176,13 +186,17 @@ try{
  // The bake checks itself before it is kept, since the key proves only which geometry it was baked from: a GPU that drew
  // nothing would call every cell hidden. At least a twentieth of the known cells must see the atrium, the cells must read
  // back as written, and no cell may be hidden where eyes about the bench views (scripts/walk-frame-views.json) see it.
+ // Those eyes must also answer as on the first page (the canary's baseline): a page that drifted after the last canary
+ // would see less from them, and check less.
  const cellAt=(x,y,z)=>{const i=Math.round((x-x0)/step),j=Math.round((z-z0)/step),k=Math.floor((y-y0)/2);return i<0||i>=nx||j<0||j>=nz||k<0||k>=ny?-1:(k*nx+i)*nz+j;};
- let probes=0;const contradicted=new Set(),eyes=await benchEyes();
+ let probes=0,changed=0;const contradicted=new Set(),eyes=await benchEyes();
  {const r=await page.ev(`__atriumPvs.run(${JSON.stringify(eyes.flatMap(e=>e.eye))})`);if(r.lost)throw Error('The WebGL context was lost during the check; the bake was not kept');
-  r.visible.forEach((seen,e)=>{if(!seen)return;probes++;const [x,y,z]=eyes[e].eye,c=cellAt(x,y,z);if(c>=0&&cells[c]===1)contradicted.add(eyes[e].view);});}
+  r.visible.forEach((seen,e)=>{if(!seen)return;probes++;const [x,y,z]=eyes[e].eye,c=cellAt(x,y,z);if(c>=0&&cells[c]===1)contradicted.add(eyes[e].view);});
+  if(r.visible.join('')!==baseline)changed=[...r.visible.join('')].filter((v,i)=>v!==baseline[i]).length;}
  const encoded=encodeCells(cells),back=decodeCells(encoded,cells.length),problems=[];
  if(visible<known.size/20)problems.push(`only ${visible} of ${known.size} known cells see the atrium`);
  if(!probes)problems.push('no bench-view eye sees the atrium');
+ if(changed)problems.push(changed+' bench-view eyes answer differently from the first page');
  if(contradicted.size)problems.push('cells hidden where bench-view eyes see the atrium: '+[...contradicted].join(', '));
  if(back.some((v,i)=>v!==cells[i]))problems.push('the cells do not read back as written');
  console.log('check',{probes,contradicted:contradicted.size,visibleShare:+(visible/Math.max(1,known.size)).toFixed(3)});
@@ -192,4 +206,4 @@ try{
  // Written whole, then renamed: a bake stopped part way (a deploy's time limit) leaves no half file under the key.
  await fs.writeFile(out+'.part',JSON.stringify(data));await fs.rename(out+'.part',out);
  console.log('wrote',out,{known:known.size,hidden,visible,bytes:data.cells.length,seconds:Math.round((Date.now()-t)/1000)});
-}finally{page.close();served?.close();}
+}finally{await page.close();served?.close();}
