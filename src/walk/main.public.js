@@ -8,9 +8,9 @@ let furColour=savedFur(),furSettings=null;
 import {walkBindings,bindingLabel} from './bindings.js';
 let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 // Deck band draws (src/v2/phone-bands.js): each opaque or faint glass material of the deck bands is one draw, on phones
-// and desktops (a desktop's frame was mostly the CPU's cost of 2,700 draws at the open atrium, 41 ms on an RTX 3090). On
-// a phone each kind of room furnishing is one draw too (phone-furnishing.js), and the rest of the bands are batched as
-// before (src/v2/facade.js, every band, no per-chunk culling). ?phonebatch= tries the earlier ways on a phone: band
+// and desktops (a desktop's frame was mostly the CPU's cost of 2,700 draws at the open atrium, 13 ms on an RTX 3090).
+// Each kind of room furnishing is one draw too (phone-furnishing.js), and the rest of the bands are batched as before
+// (src/v2/facade.js; on a phone every band, no per-chunk culling). ?phonebatch= tries the earlier ways on a phone: band
 // (batches per band, #347), cull (the same, culled: lettering jumped), low (decks -1 to 4 only). ?deskbatch=low draws a
 // desktop as before: decks -1 to 4 batched and the atrium geometry pack.
 const phoneBatching=(()=>{const query=new URLSearchParams(location.search);if(!preparedPhone)return query.get('deskbatch')==='low'?{}:{merge:true};const mode=query.get('phonebatch');
@@ -399,7 +399,7 @@ async function buildShip(){
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  status('Preparing the walk · 4/4 · setting nearby details…');await idle();
- if(preparedPhone&&phoneBatching.merge)mergePhoneFurnishing(ship.inside);phase4Visibility=phase4Culling(ship.inside,colliders);ship.inside.traverse(o=>{if(!o.isInstancedMesh||o.userData.phase4)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
+ if(phoneBatching.merge)mergePhoneFurnishing(ship.inside);phase4Visibility=phase4Culling(ship.inside,colliders);ship.inside.traverse(o=>{if(!o.isInstancedMesh||o.userData.phase4)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
   const box=o.boundingBox.clone().applyMatrix4(o.matrixWorld);let cabins=false,walls=false,boat=false;for(let q=o;q;q=q.parent){if(q.name==='V2_cabin_instances')cabins=true;if(q.name==='V2_cabin_shells')walls=true;if(/^Area_d\d+-lifeboats-/.test(q.name))boat=true;}
   o.userData.span=[box.min.y,box.max.y];o.userData.cabins=cabins;o.userData.cabinWalls=walls;o.userData.boat=boat;instanced.push(o);});
  // Furniture in the repeated cabins draws only for the cabins nearest the walker; their walls and doors always draw.

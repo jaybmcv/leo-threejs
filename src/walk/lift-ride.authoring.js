@@ -107,7 +107,8 @@ function shutter(parent,w,h){
  const shut=m.map((material,k)=>{const parts=blades.filter((b,i)=>i%2===k).map(b=>new T.BufferGeometry().copy(b.mesh.geometry).translate(b.mid[0],b.mid[1],0));
   const mesh=new T.Mesh(mergeGeometries(parts),material);parts.forEach(p=>p.dispose());mesh.name='Lift_door_shut';g.add(mesh);return mesh;});
  const n=new T.Vector3(),q=new T.Vector3();
- return {group:g,
+ // `merged`: another mesh draws this shutter while it is shut (a lift's landing doors, mergeLandings below).
+ const api={group:g,shut,merged:false,isShut:true,
   // Lay the shutter on its doorway (sill middle `base`, `along` the doorway) and open it by `open`, 0 shut to 1 open.
   set(base,along,front,open){
    g.matrix.makeBasis(along,new T.Vector3(0,1,0),front).setPosition(base);g.matrixAutoUpdate=false;g.updateMatrixWorld(true);
@@ -115,9 +116,34 @@ function shutter(parent,w,h){
    clip[1].setFromNormalAndCoplanarPoint(n.copy(along).negate(),q.copy(base).addScaledVector(along,w/2));
    clip[2].setFromNormalAndCoplanarPoint(n.set(0,1,0),base);clip[3].setFromNormalAndCoplanarPoint(n.set(0,-1,0),q.copy(base).setY(base.y+h));
    for(const b of blades){b.mesh.position.set(b.mid[0]+b.out[0]*b.travel*open,b.mid[1]+b.out[1]*b.travel*open,0);b.mesh.rotation.z=TWIST*open;}
-   for(const b of blades)b.mesh.visible=open>0;for(const o of shut)o.visible=open<=0;
+   api.isShut=open<=0;for(const b of blades)b.mesh.visible=open>0;for(const o of shut)o.visible=api.isShut&&!api.merged;
    g.visible=open<.999;
   }};
+ return api;
+}
+// A lift's shut landing doors draw as one mesh per material down its whole shaft, one geometry group per unbroken run of
+// shut stops, not two draws a stop (76 a frame at the open atrium); a stop's own shutter draws only while it opens.
+// A doorway laid out mirror-wise (along, up and out make a left-handed basis) mirrors its blades; three turned such a
+// shutter's faces back for it, so once its matrix is baked into the merged geometry, two corners of every triangle swap.
+function unmirror(g,m){
+ if(m.determinant()>=0)return g;
+ if(g.index){const a=g.index.array;for(let i=0;i<a.length;i+=3){const t=a[i+1];a[i+1]=a[i+2];a[i+2]=t;}return g;}
+ for(const a of Object.values(g.attributes)){const n=a.itemSize,v=a.array;for(let i=0;i+2<a.count;i+=3)for(let c=0;c<n;c++){const p=(i+1)*n+c,q=(i+2)*n+c,t=v[p];v[p]=v[q];v[q]=t;}}
+ return g;
+}
+function mergeLandings(l){
+ const meshes=[0,1].map(k=>{
+  const parts=l.stops.map(({shutter:s})=>unmirror(s.shut[k].geometry.clone().applyMatrix4(s.group.matrix),s.group.matrix)),geometry=mergeGeometries(parts,true);parts.forEach(p=>p.dispose());
+  // Shut, the blades lie inside the doorway, so its clipping planes cut nothing: the plain material draws them.
+  const mesh=new T.Mesh(geometry,[k?mats.blade:mats.door]);mesh.name='Lift_doors_shut';mesh.matrixAutoUpdate=false;l.root.add(mesh);
+  return {mesh,ranges:geometry.groups.map(g=>({start:g.start,count:g.count}))};
+ });
+ for(const s of l.stops){s.shutter.merged=true;for(const o of s.shutter.shut)o.visible=false;}
+ return {update(){
+  for(const {mesh,ranges} of meshes){const groups=mesh.geometry.groups;groups.length=0;
+   l.stops.forEach((s,i)=>{if(!s.shutter.isShut)return;const r=ranges[i],last=groups.at(-1);if(last&&last.start+last.count===r.start)last.count+=r.count;else groups.push({start:r.start,count:r.count,materialIndex:0});});
+   mesh.visible=groups.length>0;}
+ }};
 }
 
 export function createLifts(scene,colliders){
@@ -170,7 +196,7 @@ export function createLifts(scene,colliders){
    return {...stop,base,along,leaves,shutter:shutter(root,d.width,DOOR_H),light,callAt:base.clone().addScaledVector(frontOf,.9),width:d.width,frontOf,face:faceOf(d)};
   });
   const lift={spec,root,car,carMover,faces,faceOf,stops,display,...liftState(spec)};
-  place(lift);return lift;
+  place(lift);lift.landings=mergeLandings(lift);lift.landings.update();return lift;
  });
  function place(l){
   // Nothing to move while the car rests with its doors still.
@@ -188,6 +214,7 @@ export function createLifts(scene,colliders){
    s.shutter.set(s.base,s.along,s.frontOf,open);
    for(const leaf of s.leaves){const p=s.base.clone().addScaledVector(s.along,leaf.s*(s.width/4+open*s.width/2*.98));leaf.mover.place(new T.Matrix4().makeTranslation(p.x,p.y,p.z));}
   });
+  l.landings?.update();
  }
  const inside=(l,p)=>{const c=l.spec.car;return Math.abs(p.x-c.x)<c.width/2-.1&&Math.abs(p.z-c.z)<c.depth/2-.1&&p.y>l.y-.6&&p.y<l.y+1.2;};
  // The stop the car is at or passing.
