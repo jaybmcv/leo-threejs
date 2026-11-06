@@ -34,7 +34,8 @@ const load=async(dir,metadataName)=>{const t=performance.now(),w=await readPrepa
 const plain=v=>v?.isObject3D?'node:'+v.uuid:v?.toArray?v.toArray():Array.isArray(v)?v.map(plain):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,plain(x)])):v;
 // The walk as it holds it: each array by content and by which other uses share its buffer.
 const walk=({ship,geometryTemplates})=>{
- const ids=new Map(),array=x=>{if(!x)return null;if(!ids.has(x.buffer))ids.set(x.buffer,'buffer-'+ids.size);return [x.constructor.name,x.length,sha(bytesOf(x)),ids.get(x.buffer)];};
+ // Aliasing is the same region of the same buffer: raw patch arrays are views into whichever transport part holds them.
+ const ids=new Map(),array=x=>{if(!x)return null;let by=ids.get(x.buffer);if(!by)ids.set(x.buffer,by=new Map());const at=x.byteOffset+':'+x.byteLength;if(!by.has(at))by.set(at,'region-'+[...ids.values()].reduce((n,m)=>n+m.size,0));return [x.constructor.name,x.length,sha(bytesOf(x)),by.get(at)];};
  const geometry=g=>({name:g.name,attributes:Object.entries(g.attributes).sort().map(([k,x])=>[k,x.itemSize,x.count,x.normalized,array(x.array)]),index:g.index?[g.index.count,array(g.index.array)]:null,groups:g.groups,bounds:g.boundingBox?.toArray?.()??[g.boundingBox?.min.toArray(),g.boundingBox?.max.toArray()],sphere:g.boundingSphere?[g.boundingSphere.center.toArray(),g.boundingSphere.radius]:null});
  const tree=root=>{const rows=[];root.traverse(o=>rows.push([o.uuid,o.name,o.type,o.parent?.uuid??null,o.matrix.elements,o.visible,o.renderOrder,o.isMesh?[geometry(o.geometry),[].concat(o.material).map(m=>m.uuid),o.count??null,array(o.instanceMatrix?.array),array(o.instanceColor?.array)]:null]));return rows;};
  const bvh=b=>[geometry(b.geometry),b._roots?.map(r=>sha(new Uint8Array(r))),array(b._indirectBuffer),array(b.leoWindowFlags)];
