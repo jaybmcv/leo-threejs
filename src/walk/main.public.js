@@ -7,9 +7,10 @@ import {savedFur} from './fur-colours.js';
 let furColour=savedFur(),furSettings=null;
 import {walkBindings,bindingLabel} from './bindings.js';
 let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
-// Phone ship draws (src/v2/phone-bands.js): each opaque material of the deck bands is one draw, and the rest of the
-// bands are batched as before (src/v2/facade.js, every band, no per-chunk culling). ?phonebatch= tries the earlier ways
-// on a phone: band (batches per band, #347), cull (the same, culled: lettering jumped), low (decks -1 to 4 only).
+// Phone ship draws (src/v2/phone-bands.js, phone-furnishing.js): each opaque material of the deck bands is one draw,
+// each kind of room furnishing too, and the rest of the bands are batched as before (src/v2/facade.js, every band, no
+// per-chunk culling). ?phonebatch= tries the earlier ways on a phone: band (batches per band, #347), cull (the same,
+// culled: lettering jumped), low (decks -1 to 4 only).
 const phoneBatching=(()=>{if(!preparedPhone)return {};const mode=new URLSearchParams(location.search).get('phonebatch');
  return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
 let phoneBands=null;
@@ -19,6 +20,7 @@ import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGl
 import {createAtriumSight} from '../v2/atrium-sight.js';
 import {releaseBatchedSources,releasePhoneGeometry,shrinkPhonePictures} from '../v2/phone-memory.js';
 import {createFrameReadout} from './frame-readout.js';
+import {mergePhoneFurnishing} from '../v2/phone-furnishing.js';
 import {mergePhoneBands} from '../v2/phone-bands.js';
 import {createAtriumPvs} from '../v2/atrium-pvs.js';
 import {PVS_LOCAL_SPAN} from '../v2/atrium-pvs-key.js';
@@ -385,7 +387,7 @@ async function buildShip(){
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  status('Preparing the walk · 4/4 · setting nearby details…');await idle();
- phase4Visibility=phase4Culling(ship.inside,colliders);ship.inside.traverse(o=>{if(!o.isInstancedMesh||o.userData.phase4)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
+ if(phoneBatching.merge)mergePhoneFurnishing(ship.inside);phase4Visibility=phase4Culling(ship.inside,colliders);ship.inside.traverse(o=>{if(!o.isInstancedMesh||o.userData.phase4)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
   const box=o.boundingBox.clone().applyMatrix4(o.matrixWorld);let cabins=false,walls=false,boat=false;for(let q=o;q;q=q.parent){if(q.name==='V2_cabin_instances')cabins=true;if(q.name==='V2_cabin_shells')walls=true;if(/^Area_d\d+-lifeboats-/.test(q.name))boat=true;}
   o.userData.span=[box.min.y,box.max.y];o.userData.cabins=cabins;o.userData.cabinWalls=walls;o.userData.boat=boat;instanced.push(o);});
  // Furniture in the repeated cabins draws only for the cabins nearest the walker; their walls and doors always draw.
@@ -411,6 +413,11 @@ const NEAR_CABINS=40,BOAT_REACH=45,nearFrom=new T.Vector3(1e9,0,0);
 // Seen through an opening from under a lower ceiling (the lounge from its access ramp), a taller room's ceiling can be in
 // view with no ray landing on it, so each ray also looks straight up and down from partway along for the space it crosses.
 const VIEW_RAYS=[];for(const x of [-.96,-.5,0,.5,.96])for(const y of [-.96,-.5,0,.5,.96])VIEW_RAYS.push([x,y]);let viewSpan=[0,0],localViewSpan=[0,0],lastSpan=-Infinity,atriumSpanActive=false,atriumSight=null;
+// A phone casts the view rays over SPAN_SLICES frames, a fifth each, all from the camera as it was when the pass began.
+// The span only widens with a pass's answers; only a pass that ends with the camera where it began (within 5 cm and
+// about a degree) replaces it, and may narrow it. After a pass the camera moved during, the next starts at once. A
+// desktop casts every ray in one frame, as before.
+const SPAN_SLICES=preparedPhone?5:1,spanEye=new T.PerspectiveCamera();let spanPass=null;
 function span(p,now){
  // Sight through an adjoining doorway keeps the whole atrium, even outside its footprint.
  setAtriumView(p);
@@ -418,16 +425,20 @@ function span(p,now){
  setAtriumSight(ATRIUM_VIEW.fullHeight&&(inside||(atriumSight??=createAtriumSight(colliders,{pvs:()=>atriumPvs})).update(camera,p,now)));
  const atriumBand=atriumViewSpan();if(inside&&atriumBand){atriumSpanActive=true;return viewSpan=atriumBand;}
  // Returning indoors must recompute even at the same pose as the last indoor query.
- if(atriumSpanActive){atriumSpanActive=false;lastSpan=-Infinity;spanChanged(camera,p,NaN,NaN,colliders);}
+ if(atriumSpanActive){atriumSpanActive=false;lastSpan=-Infinity;spanPass=null;spanChanged(camera,p,NaN,NaN,colliders);}
 
- if(now-lastSpan>=150){lastSpan=now;if(spanChanged(camera,p,0,0,colliders)){
- const spanStart=performance.now();
- let low=p.y+PVS_LOCAL_SPAN[0],high=p.y+PVS_LOCAL_SPAN[1];const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();
- const reach=y=>{low=Math.min(low,y-1);high=Math.max(high,y+1);};
- for(const [x,y] of VIEW_RAYS){ndc.set(x,y);ray.setFromCamera(ndc,camera);const hit=(spanQuery??=createVisibilityQuery(colliders)).raycast(ray.ray,90,.6),d=hit?hit.distance:90;reach(ray.ray.at(d,probe.origin).y);
+ if(!spanPass&&now-lastSpan>=150){lastSpan=now;if(spanChanged(camera,p,0,0,colliders)){spanEye.copy(camera,false);spanPass={next:0,low:p.y+PVS_LOCAL_SPAN[0],high:p.y+PVS_LOCAL_SPAN[1]};}}
+ if(spanPass){
+ const spanStart=performance.now(),pass=spanPass,end=Math.min(VIEW_RAYS.length,pass.next+Math.ceil(VIEW_RAYS.length/SPAN_SLICES));const ray=new T.Raycaster(),ndc=new T.Vector2(),probe=new T.Ray();
+ const reach=y=>{pass.low=Math.min(pass.low,y-1);pass.high=Math.max(pass.high,y+1);};
+ for(let i=pass.next;i<end;i++){const [x,y]=VIEW_RAYS[i];ndc.set(x,y);ray.setFromCamera(ndc,spanEye);const hit=(spanQuery??=createVisibilityQuery(colliders)).raycast(ray.ray,90,.6),d=hit?hit.distance:90;reach(ray.ray.at(d,probe.origin).y);
   for(const f of [1/3,2/3])for(const s of [1,-1]){ray.ray.at(d*f,probe.origin);probe.direction.set(0,s,0);const h=(spanQuery??=createVisibilityQuery(colliders)).raycast(probe,12);if(h)reach(h.point.y);}}
- renderMetrics.span.push(performance.now()-spanStart);if(renderMetrics.span.length>600)renderMetrics.span.shift();localViewSpan=[low,high];
- }}
+ pass.next=end;const answered=[pass.low,pass.high],widen=s=>s?[Math.min(s[0],answered[0]),Math.max(s[1],answered[1])]:answered;
+ if(end<VIEW_RAYS.length)localViewSpan=widen(localViewSpan);
+ else{spanPass=null;const moved=camera.position.distanceToSquared(spanEye.position)>.0025||camera.quaternion.angleTo(spanEye.quaternion)>.02||!camera.projectionMatrix.equals(spanEye.projectionMatrix);
+  localViewSpan=moved?widen(localViewSpan):answered;if(moved)lastSpan=-Infinity;}
+ renderMetrics.span.push(performance.now()-spanStart);if(renderMetrics.span.length>600)renderMetrics.span.shift();
+ }
  // Preserve the observer's local floor/ceiling, including views from below Deck 6.
  return viewSpan=atriumBand?[Math.min(localViewSpan[0],atriumBand[0]),Math.max(localViewSpan[1],atriumBand[1])]:localViewSpan;
 }

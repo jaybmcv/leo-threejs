@@ -133,7 +133,19 @@ Changes:
 
 The views at six places match `?phonebatch=band`: under 0.6% of pixels differ, and those are animated things. Astra (gpt-6-astra high) reviewed the plan first. It rejected broad glass batching because of order effects, so only faint, non-depth-writing, normal-blended glass merges. It ranked spatial visibility first, then the ray work, and asked for device A/B switches. Its review of the diff found that one run per mesh could include bands `showBands` hides (now groups per run), plus the attribute cases. It then cleared the merge. Spreading span's rays over five frames on phones gave Deck 9 125 → 83 ms walking. It was held back: a pass can mix camera poses and narrow the span on completion.
 
-Next, by size at the arrival hall: room furnishing (509 instanced draws, from about 1,081 deck-split meshes that would merge to about 320), 237 multi-material wayfinding and directory meshes, 198 always-drawn facade meshes, 76 lift door shutters, and the span rays (11–27% while walking).
+Second round (#357 was the first):
+- **One draw per kind of room furnishing** (phone ship only, `src/v2/phone-furnishing.js`). The furnishing room culling compacts came as about 1,080 instanced meshes, one per deck, part and size, and the arrival hall drew 509 of them. Before room culling starts, meshes of the same part, material and shape combine into one, with their instances and owner runs one after another (337 left). Shapes are compared by the vertices they draw, since prepared meshes share vertex pools. Owners the layout doesn't know keep the bounds room culling gave them before (`userData.ownerBoxes`).
+- **Span rays over five frames on phones.** All rays of a pass come from the camera as it was when the pass began. The span only widens with a pass's answers. Only a pass that ends with the camera where it began (within 5 cm and about a degree) replaces it, and may narrow it. After a pass the camera moved during, the next pass starts at once. A band that comes into view while turning can show up to about five frames later. Desktops cast every ray in one frame, as before. Astra asked for one pose per pass, then for no narrowing while moving.
+
+| S9 emulation, walking, CPU 4×, same build and load | `?phonebatch=band` | This round |
+|---|---|---|
+| Arrival hall: frame, draws | 233 ms, 3,218 | 138–146 ms, 1,388 |
+| Deck 9 corridor | 192 ms, 2,499 | 125–129 ms, 1,187 |
+| Garden commons | 96 ms, 787 | 63–67 ms, 354 |
+
+The other deploy's nightly checks were running, so these times are slower than the round above. Compare within the table. The heap while walking was 744–762 MB, the GPU peak 678 MB, no errors. Furnished places (library, café, clinic, food court, workshop, commons) match `?phonebatch=band` apart from the animated cat.
+
+Next, by size: 237 multi-material wayfinding and directory meshes, about 200 always-drawn facade meshes, lift door shutters (76 at the arrival hall, 114 in the Deck 9 corridor, nearly all past the 148 m indoor fog), and the atrium PVS, whose bake fails its check at the arrival hall.
 
 ## Steps
 
