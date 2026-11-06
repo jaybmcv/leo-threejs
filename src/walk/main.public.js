@@ -7,15 +7,19 @@ import {savedFur} from './fur-colours.js';
 let furColour=savedFur(),furSettings=null;
 import {walkBindings,bindingLabel} from './bindings.js';
 let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
-// Phone ship batching (src/v2/facade.js): every band, no per-chunk culling. Until the Galaxy S9 confirms it, ?phonebatch=
-// tries the others on a phone: cull (every band, culled: lettering jumped), low (decks -1 to 4 only, as before #345).
+// Phone ship draws (src/v2/phone-bands.js): each opaque material of the deck bands is one draw, and the rest of the
+// bands are batched as before (src/v2/facade.js, every band, no per-chunk culling). ?phonebatch= tries the earlier ways
+// on a phone: band (batches per band, #347), cull (the same, culled: lettering jumped), low (decks -1 to 4 only).
 const phoneBatching=(()=>{if(!preparedPhone)return {};const mode=new URLSearchParams(location.search).get('phonebatch');
- return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:{allBands:true};})();
+ return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
+let phoneBands=null;
 import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
 import {settlePreparedStatic} from '../v2/prepared-static.js';
 import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
 import {createAtriumSight} from '../v2/atrium-sight.js';
 import {releaseBatchedSources,releasePhoneGeometry,shrinkPhonePictures} from '../v2/phone-memory.js';
+import {createFrameReadout} from './frame-readout.js';
+import {mergePhoneBands} from '../v2/phone-bands.js';
 import {createAtriumPvs} from '../v2/atrium-pvs.js';
 import {PVS_LOCAL_SPAN} from '../v2/atrium-pvs-key.js';
 import {warmShaders,uploadTextures,WARM_WAIT_MS} from '../v2/shader-warmup.js';
@@ -188,8 +192,13 @@ if(LIVE_URL){
  if(inOtherside){$('who-later').hidden=true;$('who-small').hidden=true;$('name-connect').hidden=true;document.querySelector('#name-sheet .verified-note').textContent='Your name aboard is your Glyph name.';}
  onGlyph(g=>{glyphed=true;glyph=g;if(g.username)$('name-input').value=g.username;if(!me.pass){if(g.wallet)live?.rejoin();else if(g.username)live?.rename(g.username);}comeAboard();});
 }
-const renderer=new T.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true,powerPreference:'high-performance'});
-const phone=matchMedia('(pointer:coarse)').matches;
+const phone=matchMedia('(pointer:coarse)').matches,phoneTest=new URLSearchParams(location.search);
+// Phone A/B switches, for testing on a device only: ?phoneaa=0 drops multisampling, ?phonedepth=linear drops the
+// logarithmic depth buffer (its depth writes can keep a phone GPU from skipping hidden surfaces; the near plane moves
+// out to 0.2 m for precision). Neither is on by default.
+const phoneLinearDepth=phone&&phoneTest.get('phonedepth')==='linear';
+const renderer=new T.WebGLRenderer({antialias:!(phone&&phoneTest.get('phoneaa')==='0'),logarithmicDepthBuffer:!phoneLinearDepth,powerPreference:'high-performance'});
+const frameReadout=createFrameReadout(renderer);
 // Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
 // The Res button steps through them and the choice is remembered for the next visit.
 const RES=['High','Med','Low'],RES_SCALE=[1,.75,.5],RES_KEY='leo-walk-resolution',maxRatio=Math.min(devicePixelRatio,phone?1.25:1.75);
@@ -225,7 +234,7 @@ const drift=createStarDrift({count:phone?320:520,still:matchMedia('(prefers-redu
 renderer.autoClear=false;
 // A light haze down the long corridors lets the far plane stop at 150 m.
 scene.fog=new T.Fog(0xd9dcd6,70,148);
-const camera=new T.PerspectiveCamera(phone?70:62,1,.05,ATRIUM_VIEW.far);
+const camera=new T.PerspectiveCamera(phone?70:62,1,phoneLinearDepth?.2:.05,ATRIUM_VIEW.far);
 // Past the far plane, the ship in haze rather than open space (haze.js); drawn between the sky and the ship.
 const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCamera(60,1,ATRIUM_VIEW.far-10,1500);
 // Cool, crisp base light (2B): rooms with a mood of their own warm or dim it while you are inside.
@@ -381,7 +390,7 @@ async function buildShip(){
   const key=o.parent.uuid+'|'+(o.userData.cabinIds||[o.uuid]).join(',');if(sharedNear.has(key)){o.userData.near=sharedNear.get(key);continue;}const all=Array.from({length:o.count},(_,i)=>{const m=new T.Matrix4();o.getMatrixAt(i,m);return m;});
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};sharedNear.set(key,o.userData.near);
  }
- isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...phoneBatching,hidden:preparedPhone?releaseBatchedSources(scene):null});atriumGeometry=preparedPhone?null:createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});settlePreparedStatic(ship);
+ isolateStaticWorld(ship,scene);{const hidden=preparedPhone?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}atriumGeometry=preparedPhone?null:createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});settlePreparedStatic(ship);
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
@@ -420,7 +429,7 @@ function span(p,now){
 }
 function cull(p,now=performance.now()){
  camera.updateMatrixWorld(true);
- cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);let shown=false;
+ cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);phoneBands?.update();let shown=false;
  for(const o of instanced){const [a,b]=o.userData.span,v=o.userData.cabins?a<p.y+3.5&&b>p.y-.5:a<high&&b>low;if(v&&!o.visible)shown=true;o.visible=v;}
  // Re-rank after 3 m of walking, or at once when another deck's cabins come into view.
  if(!shown&&nearFrom.distanceToSquared(p)<9)return;nearFrom.copy(p);
@@ -835,7 +844,7 @@ renderer.setAnimationLoop(()=>{
 function draw(view){
  view.updateMatrixWorld(true);atriumGeometry?.update(view,renderer.domElement.height);
  for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
- renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,view);
+ renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,view);frameReadout?.frame(performance.now());
 }
 // The selfie booth's photo: drawn from its lens and copied off the canvas at once (the drawing buffer is not kept past
 // this frame), then the walker's own view drawn back over it.

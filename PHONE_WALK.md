@@ -92,7 +92,7 @@ On the Galaxy S9 the phone ship loaded but was slow, then crashed while walking.
 On the phone ship only (`src/v2/phone-memory.js`):
 - **Pictures:** a picture over 1,024 px in an ordinary material's colour slots is swapped for a 1,024 px copy, before or soon after its first upload. The original is held weakly. A canvas drawn once is freed, and a module that redraws its canvas gets it back on `needsUpdate`. A global cap (`maxTextureSize`) was tried first and rejected: it also shrank a 768×2048 RGBE environment image that a shader decodes, and every view came out about 45% darker. Shader uniforms, the scene environment and data textures are left as they are.
 - **Shapes:** the prepared ship's arrays leave the page after their first upload. A batched chunk's arrays go as soon as it is copied into its batch, unless another mesh draws them. Templates, collision geometry, instance attributes and dynamic or morphing geometry keep theirs. Culling batches keep their index, and each chunk's bounds are worked out first, since three reads those every frame.
-- **Draw calls:** every band is batched (`batchLowDeckDraws`, `allBands`), with each chunk culled. Desktops still batch only decks −1 to 4.
+- **Draw calls:** every band is batched (`batchLowDeckDraws`, `allBands`). Each chunk was culled at first; #347 turned that off, because on the S9 lettering jumped across the screen. Desktops still batch only decks −1 to 4. Step 3c (below) replaced this for the deck bands.
 - `readPreparedWorld` (public) now has `release()`. Closures it makes (the colliders' triangle count, stand-in bounds) keep its scope alive, and with it every decoded array.
 - Batching yields about every 12 ms, not after every chunk. That saved about 20 s of timers once all bands were batched.
 
@@ -107,6 +107,33 @@ On the phone ship only (`src/v2/phone-memory.js`):
 Views at ten places match the build before (mean difference under 0.6 of 255, only the cat's tail differs). The loading peak in emulation is about the same or higher (1,096–1,115 MB against 1,032–1,108), because desktop Chrome under no memory pressure collects late. The released arrays are gone after a collection. Not measured: GPU memory on a phone, and whether a 4 GB phone now stays up.
 
 Next, if the S9 still struggles: about 320 draws a frame of smart glass and 140 of hull glass (transparent, so not batched), 4.8M triangles at the Deck 9 corridor, and the 1,024 px pictures (257 MB).
+
+## Phone frame rate (step 3c, 2026-11-06)
+
+With #347 the S9 walked without glitches, but at about 10 frames a second or less. Measured on live 9b68fdb in S9 emulation, with the CPU throttled 4× and a 5 s profile per place, both standing and walking with turns:
+- A phone frame is mostly CPU. The arrival hall drew 3,248 draws a frame, the Deck 9 corridor 2,497, commons 787. Only 128 of the arrival hall's draws were within 50 m. The hall sees into the atrium, so every band from 0 to 19 is in the view span, along the whole ship.
+- In the bands there were 2,401 draws but only 240 materials. 664 of them were two faint glass materials, in chunks of about 12 per band.
+- While walking, `span()` took 19–40% of the CPU. It casts 25 view rays plus 100 vertical probes every 150 ms, and on a throttled phone that is every frame. Most of the cost was the ray queries' per-group loop and BVH walks that never shortened after a hit.
+- The atrium PVS isn't shipped: its bake fails its own check (`cells hidden where bench-view eyes see the atrium: arrival-hall`). So the atrium sight casts its own rays too, on desktops and phones.
+- Spatial cells (simulated at 16–48 m) cut triangles but multiplied draws 2–6×, since each cell holds most materials. Changing the far plane didn't help either: views at 450, 200 and 150 m look the same in the hall.
+
+Changes:
+- **One draw per material in the deck bands** (phone ship only, `src/v2/phone-bands.js`). Every opaque mesh low-deck batching would take from a `Walk_band_*` group, and faint glass, goes into one plain mesh per material. Faint glass means transparent, no depth writes, normal blending up to 35% opacity or additive. Triangles are ordered by band. After `showBands`, each mesh draws one run, from its first visible band to its last. Bands in between are drawn too: that is real, depth-tested geometry, so nothing shows that isn't there. Plain draws only: no multi-draw and no draw list that changes from frame to frame. The bands' other groups (the cat tree, paintings, lounge pieces) are batched as before. `?phonebatch=band` brings back #347's per-band batches for comparison.
+- **Ray queries** (desktops too, `src/v2/visibility-query.js`). One cell index across all instance groups replaces the per-ray loop over groups. Each later BVH walk stops at the best distance so far. Over 10,000 random rays from 400 eyes, the hits are identical (distance, point and normal) and take 4.3× less time.
+- **`?fps=1`** shows frames a second, the median and 90th percentile frame, the main pass's draws and triangles, and the pixel ratio. **`?phoneaa=0`** (no multisampling) and **`?phonedepth=linear`** (no logarithmic depth, near plane 0.2 m) are off by default. They are A/B switches for a real phone. Astra expects linear depth to z-fight at 100–200 m, so it isn't a default.
+
+| S9 emulation, walking, CPU 4× | Before (live 9b68fdb) | After |
+|---|---|---|
+| Arrival hall: frame, draws | 292 ms, 3,248 | 150 ms, 1,696 |
+| Deck 9 corridor | 313 ms, 2,497 | 125 ms, 1,417 |
+| Garden commons | 171 ms, 787 | 50 ms, 348 |
+| Library | 171 ms, 722 | 50 ms, 323 |
+| JS heap while walking (12-place route) | 784–807 MB | 726–743 MB |
+| GPU memory peak (route) | 739 MB | 668 MB |
+
+The views at six places match `?phonebatch=band`: under 0.6% of pixels differ, and those are animated things. Astra (gpt-6-astra high) reviewed the plan first. It rejected broad glass batching because of order effects, so only faint, non-depth-writing glass merges. It ranked spatial visibility first, then the ray work, and asked for device A/B switches.
+
+Next, by size at the arrival hall: room furnishing (509 instanced draws, from about 1,081 deck-split meshes that would merge to about 320), 237 multi-material wayfinding and directory meshes, 198 always-drawn facade meshes, 76 lift door shutters, and the span rays (11–27% while walking).
 
 ## Steps
 
