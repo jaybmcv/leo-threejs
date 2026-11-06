@@ -26,7 +26,8 @@ check('the same cells in the same order, or null alike, for 200,000 rays',()=>{
 
 // The query as it was before cell codes, for comparison.
 function stringQuery(col){const query=Object.create(col);query.near=function*(box,ray=null){if(!ray){yield*col.near(box,ray);return;}const keys=visibilityRayCells(box,ray);if(!keys){yield*col.near(box,ray);return;}for(let b=bandOf(box.min.y);b<=bandOf(box.max.y);b++){const band=col.bands.get(b);if(band)yield[band.bvh,null,null];}for(const g of col.groups){if(g.items.length<=keys.length*2){for(const item of g.items)if(item.box.intersectsBox(box)&&ray.intersectsBox(item.box))yield[g.bvh,item.inverse,item.matrix];}else{const seen=new Set();for(const key of keys)for(const item of g.cells.get(key)||[])if(!seen.has(item)){seen.add(item);if(item.box.intersectsBox(box)&&ray.intersectsBox(item.box))yield[g.bvh,item.inverse,item.matrix];}}}for(const m of col.movers)if(m.enabled&&m.box.intersectsBox(box))yield[m.bvh,m.inverse,m.matrix];};return query;}
-// Since the one cell index across groups (#357) the order differs; the colliders and the nearest hit must not.
+// Since the one cell index across groups (#357) the order differs; the colliders (each as often) and the nearest hit must
+// not. Groups without cells are covered by check-atrium-sight, whose fixtures build them.
 check('a query yields the same colliders and finds the same nearest hit',()=>{
  const col=new Colliders(),box=new T.Mesh(new T.BoxGeometry(1,1,1));
  for(const [n,count] of [['small',3],['crates',400],['columns',1500]]){
@@ -35,7 +36,7 @@ check('a query yields the same colliders and finds the same nearest hit',()=>{
  }
  const fast=createVisibilityQuery(col),slow=stringQuery(col);let yields=0;
  for(let i=0;i<20000;i++){const r=ray(),far=span(.5,120),b=new T.Box3().setFromPoints([r.origin,r.at(far,new T.Vector3())]).expandByScalar(.01);
-  const a=[...slow.near(b,r)].map(x=>x[2]),c=[...fast.near(b,r)].map(x=>x[2]);assert.equal(c.length,a.length,'ray '+i);assert.deepEqual(new Set(c),new Set(a),'ray '+i);yields+=a.length;
+  const a=[...slow.near(b,r)].map(x=>x[2]),c=[...fast.near(b,r)].map(x=>x[2]);assert.equal(c.length,a.length,'ray '+i);const count=l=>{const m=new Map();for(const x of l)m.set(x,(m.get(x)||0)+1);return m;};assert.deepEqual(count(c),count(a),'ray '+i);yields+=a.length;
   const h=fast.raycast(r,far),g=col.raycast(r,far);assert.equal(h?.distance,g?.distance,'nearest hit, ray '+i);}
  assert.ok(yields>1000,'the rays met colliders ('+yields+')');
 });
