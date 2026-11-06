@@ -19,5 +19,8 @@ export function checkGeneratedRoomWindows(L) {
  const expected=[['observation-lounge--side-1-0',10],['observation-lounge--side1-1',10],['observation-lounge--head',4]];
  if(obs.length!==24||counts.size!==3||expected.some(([id,n])=>counts.get(id)!==n))issues.push({kind:'observation window count and faces',id:'observation-lounge'});
  for(const [id] of expected){const row=obs.filter(w=>w.prototype===id).sort((a,b)=>a.clearPrototypeRect[0]-b.clearPrototypeRect[0]);for(let i=1;i<row.length;i++)if(Math.abs(row[i].clearPrototypeRect[0]-row[i-1].clearPrototypeRect[0]-3.3)>1e-5)issues.push({kind:'observation window pitch',id});}
+ // The nose row is centred on the ship centreline (1C), so the windscreen shoulders match.
+ const nose=obs.filter(w=>w.prototype==='observation-lounge--head');
+ if(Math.abs(nose.reduce((sum,w)=>sum+w.clearPrototypeRect[0]+w.clearPrototypeRect[1],0))>1e-4)issues.push({kind:'observation nose row centred',id:'observation-lounge'});
  return issues;
 }
