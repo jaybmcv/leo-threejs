@@ -6,13 +6,14 @@ import {MeshoptDecoder} from 'meshoptimizer/decoder';
 export const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 export const inflate=bytes=>bytes[0]===0x28&&bytes[1]===0xb5?zstdDecompressSync(bytes):gunzipSync(bytes);
 export const compress=bytes=>zstdCompressSync(bytes,{params:{[constants.ZSTD_c_compressionLevel]:3}});
-export async function preparedManifest(base){return JSON.parse(inflate(await fs.readFile(base+'/world.bin')));}
+// A published sections directory (prepared-sections-v2.mjs) reads as the same whole-ship manifest.
+export async function preparedManifest(base){let bytes;try{bytes=await fs.readFile(base+'/world.bin');}catch(e){if(e.code!=='ENOENT')throw e;return (await import('./prepared-sections-v2.mjs')).readPreparedSections(base);}return JSON.parse(inflate(bytes));}
 
 // Lazy array reads do not inflate or decode the rest of the ship. This handles
 // both the full-build dictionaries and independently addressed patch parts.
 export function preparedArrayReader(manifest,base){
  const parts=new Map(),arrays=new Map();
- const part=async i=>{if(!parts.has(i))parts.set(i,inflate(await fs.readFile(base+'/'+manifest.parts[i].name)));return parts.get(i);};
+ const part=async i=>{if(manifest.parts[i].payload)return manifest.parts[i].payload;if(!parts.has(i))parts.set(i,inflate(await fs.readFile(base+'/'+manifest.parts[i].name)));return parts.get(i);};
  return async function read(id){
   if(arrays.has(id))return arrays.get(id);await MeshoptDecoder.ready;
   const r=manifest.arrays[id];let bytes;

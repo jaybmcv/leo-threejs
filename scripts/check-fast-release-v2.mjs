@@ -6,6 +6,7 @@ import {publicDirectoryBytes} from './public-bytes-v2.mjs';
 import {readPublicPreparedFile} from './prepared-public-v2.mjs';
 import {stageTimer} from './fast-timing.mjs';
 import {checkFastPatchCollision} from './fast-collision-v2.mjs';
+import {verifyPublicSections} from './prepared-sections-v2.mjs';
 const out='dist-v2',tag=process.env.LEO_FAST_TAG||'last',timer=stageTimer({file:'output/fast-deploy/'+tag+'-check-timing.json',label:'fast release checks'}),sha=b=>createHash('sha256').update(b).digest('hex');
 const report={status:'FAIL',gates:{}};
 const local=file=>{const target=path.resolve(out,file.split('?')[0]);if(!target.startsWith(path.resolve(out)+path.sep))throw Error('Asset points outside public output: '+file);return target;};
@@ -14,8 +15,10 @@ try{
  await timer.stage('artifact integrity',async()=>{
   const prepared=manifest['walk-prepared'];assert(prepared?.directory,'No prepared walk in public manifest');
   const directory=local(prepared.directory),integrity=JSON.parse(await fs.readFile(path.join(directory,'integrity.json'),'utf8')),h=createHash('sha256');
-  for(const name of [...integrity.files].sort()){assert(/^(geometry-\d+\.bin|world\.bin|world\.json\.gz)$/.test(name));const bytes=await readPublicPreparedFile(directory,name,prepared.metadataFile);assert(bytes.length,'Empty prepared payload '+name);h.update(name).update(bytes);}
-  assert.equal(h.digest('hex'),integrity.sha256);assert.equal(integrity.sha256,prepared.sha256);
+  // A sectioned publish is checked file by file against what the local artifact sections into.
+  if(prepared.metadataFile==='sections.json')report.gates.sections=await verifyPublicSections(directory,'output/leo-interior-v02/prepared-walk',integrity);
+  else{for(const name of [...integrity.files].sort()){assert(/^(geometry-\d+\.bin|world\.bin|world\.json\.gz)$/.test(name));const bytes=await readPublicPreparedFile(directory,name,prepared.metadataFile);assert(bytes.length,'Empty prepared payload '+name);h.update(name).update(bytes);}
+  assert.equal(h.digest('hex'),integrity.sha256);}assert.equal(integrity.sha256,prepared.sha256);
   const localIntegrity=JSON.parse(await fs.readFile('output/leo-interior-v02/prepared-walk/integrity.json','utf8'));
   assert.equal(integrity.sha256,localIntegrity.sha256,'Public prepared payload differs from the locally validated geometry');
   for(const file of new Set(Object.values(manifest).flatMap(v=>v.parts||[]))){const bytes=await fs.readFile(local(file));assert(bytes.length,'Empty public asset '+file);const pin=/\/(?:pool|recipe)\.([a-f0-9]{20})\.bin$/.exec(file);if(pin)assert.equal(sha(bytes).slice(0,20),pin[1],file);}
@@ -32,7 +35,9 @@ try{
   const files=(await fs.readdir(out)).filter(n=>/^walk\.[a-f0-9]{10}\.js$/.test(n));assert.equal(files.length,1,'Expected exactly one current walk script');
   const code=await fs.readFile(out+'/'+files[0],'utf8');assert(code.includes('leo-live.marscatsvoyage.com'),'Public walk lacks multiplayer');assert(code.includes('mcv-feedback.mcv-feedback.workers.dev'),'Public walk lacks feedback');report.gates.walk=files[0];
  });
- await timer.stage('changed-room encoded collision probes',async()=>{report.gates.collision=await checkFastPatchCollision();});
+ await timer.stage('changed-room encoded collision probes',async()=>{report.gates.collision=await checkFastPatchCollision();
+  // The same probes through the published sections, as the walk reads them.
+  const prepared=manifest['walk-prepared'];if(prepared.metadataFile==='sections.json')report.gates.publishedCollision=await checkFastPatchCollision(local(prepared.directory));});
  await timer.stage('server layout identity',async()=>{
   const built=JSON.parse(await fs.readFile(out+'/live-layout.json','utf8')),fixture=process.argv.find(a=>a.startsWith('--health-file='))?.slice(14);
   const health=fixture?JSON.parse(await fs.readFile(fixture,'utf8')):await fetch('https://leo-live.marscatsvoyage.com/health',{signal:AbortSignal.timeout(15000)}).then(r=>{if(!r.ok)throw Error('Leo live health HTTP '+r.status);return r.json();});

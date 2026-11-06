@@ -93,7 +93,7 @@ if(prepared&&process.argv.includes('--if-missing')){
 }
 const served=prepared&&await servePrepared(prepared),page=await browser();
 try{
- const names=prepared&&await fs.readdir(prepared),meta=prepared&&['world.parts.json','world.bin','world.json.gz'].find(n=>names.includes(n));
+ const names=prepared&&await fs.readdir(prepared),meta=prepared&&['sections.json','world.parts.json','world.bin','world.json.gz'].find(n=>names.includes(n));
  await page.ev(`location.href=${JSON.stringify(prepared?served.url+'?meta='+meta:site+'/'+tag+'/walk.html?lv=2&view=first&halloween=0')}`);
  for(let i=0;!await page.ev('document.body?.dataset.ready==="1"&&!!globalThis.__walk').catch(()=>false);i++){
   const failed=await page.ev('document.body?.dataset.failed').catch(()=>null);if(failed)throw Error('Colliders did not load: '+failed);
