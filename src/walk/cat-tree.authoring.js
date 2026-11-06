@@ -186,9 +186,9 @@ export function createCatTree(ship){
   const out=new T.Vector3(Math.cos(p.angle),0,Math.sin(p.angle)),base=new T.Vector3(TREE.x,p.y-3.8,TREE.z).addScaledVector(out,trunkR(p.y-3.8)-.4);
   parts.push(paint(tube([base,base.clone().addScaledVector(out,3).setY(p.y-3.1),new T.Vector3(p.x,p.y-2.1,p.z)],.75,14,8),C.felt,.05,rnd));
   guardRing(p.deck,p.x,p.z,p.r-.12,p.y,(x,z)=>Math.hypot(x-TREE.x,z-TREE.z)<rampOut(p.y)+.25||bridgeAt(p.deck,x,z));
-  // cushions on the far half, away from the ramp joint and the bridge
-  const away=p.angle,count=5+(i%2);for(let k=0;k<count;k++){const a=away+(k-(count-1)/2)*.42,r=p.r-(k%2?2.9:1.75),x=p.x+Math.cos(a)*r,z=p.z+Math.sin(a)*r;if(bridgeAt(p.deck,x,z))continue;
-   const c=pumpkin(k%2?.85:1.05,k%2?.7:.95);c.rotateY(-a);at(c,x,p.y,z);parts.push(paint(c.clone(),C.carpet[(i+k+2)%4]));const seat=new T.Mesh(c.clone(),hidden);seat.name='Meditation_cushion';seats.add(seat);grounds.cushion.push(c);}
+  // cushions on the far half, away from the ramp joint and the bridge, with room to stand between and behind them
+  const away=p.angle,count=5+(i%2);for(let k=0;k<count;k++){const a=away+(k-(count-1)/2)*.47,r=p.r-(k%2?3.1:2.15),x=p.x+Math.cos(a)*r,z=p.z+Math.sin(a)*r;if(bridgeAt(p.deck,x,z))continue;
+   const c=pumpkin(k%2?.78:.95,k%2?.7:.95);c.rotateY(-a);at(c,x,p.y,z);parts.push(paint(c.clone(),C.carpet[(i+k+2)%4]));const seat=new T.Mesh(c.clone(),hidden);seat.name='Meditation_cushion';seats.add(seat);grounds.cushion.push(c);}
   if(i%2===0){const a=p.angle+1.25,r=p.r-1.9,x=p.x+Math.cos(a)*r,z=p.z+Math.sin(a)*r;if(!bridgeAt(p.deck,x,z)){
    const bowl=new T.SphereGeometry(1.05,16,8,0,Math.PI*2,Math.PI/2,Math.PI/2);bowl.scale(1,.8,1);at(bowl,x,p.y+.9,z);parts.push(woven(bowl,p.y+.9));{const lip=new T.TorusGeometry(1.03,.11,5,24);lip.rotateX(Math.PI/2);at(lip,x,p.y+.9,z);parts.push(paint(lip,C.wicker));}
    const bed=new T.CylinderGeometry(.85,.85,.12,16);at(bed,x,p.y+.56,z);parts.push(paint(bed.clone(),C.carpet[(i+3)%4]));const m=new T.Mesh(bed,hidden);m.name='Hammock';seats.add(m);
@@ -415,8 +415,9 @@ function fish(color){const body=new T.SphereGeometry(.5,12,8);body.scale(1.5,.8,
 function pumpkin(r,h){const g=new T.SphereGeometry(r,12,6);const p=g.attributes.position;for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),a=Math.atan2(z,x),k=1-.2*Math.pow(Math.abs(Math.sin(a*3)),2),d=Math.hypot(x,z)/r,ny=(y/r)*h/2+h/2-(y>0?h*.28*Math.exp(-d*d/.06):0);p.setXYZ(i,x*k,ny,z*k);}g.computeVertexNormals();return g;}
 // A soft shape's ground collider: a flat-topped, straight-sided puck over its footprint, as tall as the shape. Its
 // rounded flanks would be the first ground a walker stepping off its edge meets, too steep to stand on, and the walk
-// check (scripts/v2-walk.mjs) counts that as falling out of the ship.
-function puck(g){g.computeBoundingBox();const b=g.boundingBox,c=b.getCenter(new T.Vector3()),s=b.getSize(new T.Vector3()),r=Math.min(s.x,s.z)/2;return new T.CylinderGeometry(r,r,s.y,12).translate(c.x,c.y,c.z);}
+// check (scripts/v2-walk.mjs) counts that as falling out of the ship. It is as wide as the pumpkin's waist between its
+// lobes, so a walker can stand right beside a cushion to sit on it.
+function puck(g){g.computeBoundingBox();const b=g.boundingBox,c=b.getCenter(new T.Vector3()),s=b.getSize(new T.Vector3()),r=Math.min(s.x,s.z)/2*.82;return new T.CylinderGeometry(r,r,s.y,12).translate(c.x,c.y,c.z);}
 // Round off a box's corners by pulling its vertices toward a rounded-rectangle shell of radius r.
 function roundBox(g,r){g.computeBoundingBox();const b=g.boundingBox,h=b.getSize(new T.Vector3()).multiplyScalar(.5),c=b.getCenter(new T.Vector3()),p=g.attributes.position,v=new T.Vector3(),q=new T.Vector3();
  const inner=h.clone().subScalar(r).max(new T.Vector3());for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).sub(c);q.copy(v).clamp(inner.clone().negate(),inner);const d=v.clone().sub(q);if(d.lengthSq()>1e-8)d.setLength(r);p.setXYZ(i,c.x+q.x+d.x,c.y+q.y+d.y,c.z+q.z+d.z);}
