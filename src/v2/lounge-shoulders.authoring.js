@@ -177,15 +177,19 @@ function glazeDirect(p){
  return {reveal,glass,mullion:[],left:[],right:[],head:[p0,p1]};
 }
 
-// Above a pane's head (with the head band cut away) a fascia rises on the glass line to just above the ceiling's
-// underside, and a ceiling infill runs SOFFIT room-side from it, hidden wherever the ceiling is.
+// Above a pane's head (with the head band cut away) a fascia rises on the pane's own plane, FASCIA_IN room-side of the
+// glass line, to just above the ceiling's underside, and a ceiling infill runs SOFFIT room-side from it, hidden wherever
+// the ceiling is. The panes lean in toward the top, so a plumb fascia stood up to 0.36 m outside the hull skin; the
+// pane plane itself runs ~6 cm proud of the curved skin at the head, so the inset keeps ~10 cm normal to it.
 // HEAD_IN is measured along the leaning pane normal, which reaches ~HEAD_IN/0.6 across the floor plan.
-const SOFFIT=HEAD_IN/.6,OVERLAP=.5;
-function soffit(line,top){
+const SOFFIT=HEAD_IN/.6,OVERLAP=.5,FASCIA_IN=.2;
+function soffit(line,top,m){
  // Neighbouring panes lie on slightly different planes, so each fascia runs OVERLAP past its ends to close the seams.
  if(line.length>1){const ext=(a,b)=>a.clone().addScaledVector(a.clone().sub(b).normalize(),OVERLAP);line=[ext(line[0],line[1]),...line,ext(line.at(-1),line.at(-2))];}
- const out=[],up=v=>v.clone().setY(top),inward=v=>up(v).addScaledVector(v.clone().sub(CENTRE).setY(0).normalize(),-SOFFIT),quad=(a,b,c,d)=>out.push(a,b,c,a,c,d);
- for(let i=1;i<line.length;i++){const a=line[i-1],b=line[i];quad(a,b,up(b),up(a));quad(up(a),up(b),inward(b),inward(a));}
+ const rise=new T.Vector3(0,1,0).addScaledVector(m,-m.y).normalize(),flat=v=>v.clone().sub(CENTRE).setY(0).normalize();
+ const base=v=>v.clone().addScaledVector(flat(v),-FASCIA_IN),up=v=>{const b=base(v);return b.addScaledVector(rise,(top-b.y)/rise.y);};
+ const out=[],inward=v=>up(v).addScaledVector(flat(v),-SOFFIT),quad=(a,b,c,d)=>out.push(a,b,c,a,c,d);
+ for(let i=1;i<line.length;i++){const a=line[i-1],b=line[i];quad(base(a),base(b),up(b),up(a));quad(up(a),up(b),inward(b),inward(a));}
  return out;
 }
 
@@ -255,7 +259,7 @@ if(root.userData.loungeShouldersGlazed)return root.userData.loungeShouldersGlaze
  const mullion=[...parts.flatMap(q=>q.mullion),...bars];// Two-sided: the pillar faces are wound by construction, not toward the room, and single-sided ones were culled.
  const lining=materials.get('V2_lining'),pillar=lining?lining.clone():rimMat.clone();pillar.side=T.DoubleSide;
  if(mullion.length)meshOf(shell,'V2_lounge_shoulder_mullion',mullion,pillar);
- const fascia=facing([...parts,...middle].flatMap(q=>soffit(q.head,room.y+room.height-.08)),new T.Vector3(CENTRE.x,room.y+room.height/2,CENTRE.z));
+ const fascia=facing([...parts.map((q,i)=>soffit(q.head,room.y+room.height-.08,list[i].m)),...middle.map(q=>soffit(q.head,room.y+room.height-.08,centre.m))].flat(),new T.Vector3(CENTRE.x,room.y+room.height/2,CENTRE.z));
  if(fascia.length)meshOf(shell,'V2_lounge_shoulder_soffit',fascia,pillar);
  if(glass.length)meshOf(shell,'V2_lounge_shoulder_glass',glass,glassMat);
  const stats={panes:list.length,centrePane:!!centre,revealTriangles:reveal.length/3,glassTriangles:glass.length/3,barTriangles:bars.length/3,soffitTriangles:fascia.length/3,cut:Object.fromEntries(cut),skipped,unpacked,ms:Math.round(performance.now()-t0)};
