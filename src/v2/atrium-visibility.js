@@ -1,3 +1,4 @@
+import * as T from 'three';
 import {ATRIUM_VIEW} from './atrium-render-policy.js';
 import layout from'../plan/selected-layout.js';import{contains,distanceToSegment,bounds}from'../plan/geometry-v2.js';import{ATRIUM_PROTOTYPE}from'../plan/atrium-v2.js';
 let position=null,classified;const architecture=[],owners=new Map();
@@ -16,9 +17,21 @@ export function inOpenAtrium(){if(fogClassified!==undefined)return fogClassified
 // geometry the baked bands hold; while the full-height atrium bands draw, it only z-fights with them (feedback
 // #267/#272), so it is hidden then. The distant haze copy is untouched.
 const towerCopies=[];
-function applyTowerCopies(){const full=atriumViewSpan()!==null;for(const o of towerCopies)o.visible=!full;}
+// Below the atrium floor, the rest of the near facade (the atrium's own architecture) draws only while the atrium bands
+// do: unseen, it was still shaded in every pixel it covered, behind whatever hid it, as a logarithmic depth buffer tests
+// depth only after shading. The arrival hall on Deck 2, which sees no atrium (atrium-sight.js), shaded about 100 layers
+// of it per pixel on a phone. From Deck 6 up it always draws: it holds the fronts of the rooms on the atrium, seen from
+// inside them while the atrium is not. The tower copies stay outside the gate: they stand in for the bands when those
+// are hidden (lift-shaft glass seen from a car).
+const nearFacades=[];
+const belowAtrium=()=>!!position&&position.y<fullAtriumSpan[0];
+function applyTowerCopies(){const full=atriumViewSpan()!==null;for(const o of towerCopies)o.visible=!full;for(const o of nearFacades)o.visible=full||!belowAtrium();}
 function applyAtriumFog(){applyTowerCopies();if(!fogs.length)return;const on=inOpenAtrium()||cameraVisible;for(const r of fogs){r.fog.near=on?ATRIUM_VIEW.fogNear:r.near;r.fog.far=on?ATRIUM_VIEW.fogFar:r.far;}}
-export function registerAtriumArchitecture(root){if(root?.name==='V2_atrium_facade')root.traverse(o=>{if(o.isMesh&&o.name==='P6_tower_architecture'&&!towerCopies.includes(o))towerCopies.push(o);});root?.traverse(o=>{if(o.isInstancedMesh&&o.userData.proxySpans&&!architecture.some(a=>a.o===o))architecture.push({o,all:o.instanceMatrix.array.slice(),spans:o.userData.proxySpans});});updateProxies();}
+export function registerAtriumArchitecture(root){if(root?.name==='V2_atrium_facade')root.traverse(o=>{if(o.isMesh&&o.name==='P6_tower_architecture'&&!towerCopies.includes(o))towerCopies.push(o);});
+ // A prepared facade may arrive with the group already made (the authoring build ran this too).
+ if(root?.name==='V2_atrium_facade'){let gated=root.getObjectByName('V2_atrium_facade_gated');
+  if(!gated){gated=new T.Group();gated.name='V2_atrium_facade_gated';gated.userData.noCollide=true;for(const o of [...root.children])if(!towerCopies.includes(o))gated.add(o);root.add(gated);}
+  if(!nearFacades.includes(gated))nearFacades.push(gated);gated.visible=atriumViewSpan()!==null||!belowAtrium();}root?.traverse(o=>{if(o.isInstancedMesh&&o.userData.proxySpans&&!architecture.some(a=>a.o===o))architecture.push({o,all:o.instanceMatrix.array.slice(),spans:o.userData.proxySpans});});updateProxies();}
 function updateProxies(){for(const a of architecture){const selected=[];for(let i=0;i<a.spans.length;i++){const[lo,hi]=a.spans[i];if(!a.o.userData.distantProxy&&proxyY!==null&&lo<proxyY+3.5&&hi>proxyY-.5)continue;selected.push(i);}if(a.selected&&selected.length===a.selected.length&&selected.every((v,i)=>v===a.selected[i]))continue;a.selected=selected;selected.forEach((i,n)=>a.o.instanceMatrix.array.set(a.all.subarray(i*16,i*16+16),n*16));a.o.count=selected.length;a.o.visible=selected.length>0;a.o.instanceMatrix.needsUpdate=true;}}
 export function setAtriumView(p){const changed=!position||(position.x-p.x)**2+(position.y-p.y)**2+(position.z-p.z)**2>=1e-8;if(changed){position={x:p.x,y:p.y,z:p.z};classified=undefined;fogClassified=undefined;cameraVisible=false;if(proxyY!==p.y){proxyY=p.y;updateProxies();}}applyAtriumFog();}
 function classify(){if(classified!==undefined)return classified;const p=position;if(!p)return null;const d=layout.decks.reduce((a,b)=>Math.abs(a.y-p.y)<Math.abs(b.y-p.y)?a:b);
