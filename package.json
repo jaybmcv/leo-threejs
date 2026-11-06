@@ -10,6 +10,8 @@
     "start": "node scripts/serve.mjs",
     "build:reference": "node scripts/build-reference.mjs",
     "start:reference": "node scripts/serve-reference.mjs",
+    "style-lab": "node scripts/style-lab.mjs",
+    "style-lab:walk": "node scripts/style-lab-walk.mjs",
     "check:walk": "node --max-old-space-size=8000 scripts/check-walk.mjs",
     "check:design": "node scripts/check-selected-interiors.mjs",
     "live": "node server/leo-live.mjs",

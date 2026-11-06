@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LEO style lab</title>
+<style>
+@font-face{font-family:Archivo;src:url(brand/archivo.woff2) format('woff2');font-weight:100 900;font-display:swap}
+:root{--ink:#050507;--panel:#101016;--line:#2a2a33;--text:#ecebe6;--muted:#9a99a3;--accent:#f85800}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--ink);color:var(--text);font:14px/1.4 Archivo,system-ui,sans-serif}
+body{display:grid;grid-template-rows:auto 1fr}
+header{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:15px;font-weight:700;letter-spacing:.04em}
+h1 em{font-style:normal;color:var(--accent)}
+.group{display:flex;flex-wrap:wrap;gap:6px}
+button{font:inherit;color:var(--text);background:transparent;border:1px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--ink);font-weight:600}
+#blurb{color:var(--muted);flex:1 1 260px;margin:0}
+#viewport{position:relative;min-height:0}
+#viewport canvas{display:block;width:100%;height:100%}
+#loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted)}
+#loading[hidden]{display:none}
+.labels{display:none;position:absolute;inset:0;pointer-events:none;grid-template:1fr 1fr/1fr 1fr}
+.comparing .labels{display:grid}
+.labels span{align-self:start;justify-self:start;margin:10px;padding:3px 9px;border-radius:999px;background:rgba(5,5,7,.72);font-size:12px;font-weight:600}
+.note{position:absolute;right:12px;bottom:10px;color:var(--muted);font-size:12px;background:rgba(5,5,7,.6);padding:3px 8px;border-radius:6px}
+</style>
+</head>
+<body>
+<header>
+ <h1>LEO <em>style lab</em></h1>
+ <div class="group" role="group" aria-label="Art style">
+  <button data-style="original" aria-pressed="false">1 Leo today</button>
+  <button data-style="toon" aria-pressed="false">2 Bold Ink Toon</button>
+  <button data-style="stylised" aria-pressed="false">3 Stylised 3D</button>
+  <button data-style="graphic" aria-pressed="false">4 Graphic Novel</button>
+  <button data-style="compare" aria-pressed="false">5 Compare all</button>
+ </div>
+ <div class="group" role="group" aria-label="View">
+  <button data-view="hero">Hero</button><button data-view="side">Side</button><button data-view="bow">Bow</button><button data-view="aft">Aft</button>
+ </div>
+ <p id="blurb"></p>
+</header>
+<main id="viewport">
+ <div id="loading">Loading Leo…</div>
+ <div class="labels" aria-hidden="true"><span>Leo today</span><span>Bold Ink Toon</span><span>Stylised 3D</span><span>Graphic Novel</span></div>
+ <div class="note">Test preview: styles ported from Voyager's Reach; not the live viewer</div>
+</main>
+<script type="module" src="style-lab.js"></script>
+</body>
+</html>
