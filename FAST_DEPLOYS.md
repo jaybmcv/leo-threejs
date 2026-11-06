@@ -117,7 +117,7 @@ The verified artifact in `output/leo-interior-v02/prepared-walk` stays the whole
 
 A section carries the artifact's own encoded array bytes, unchanged. Vertex pools, index values and BVHs are the artifact's, so the atrium geometry pack's guards and LOD indices still bind.
 
-Files are named by content: `prepared-walk/sections/s-<sha>.bin`, with `sections.json` in `prepared-walk/<artifact>/`. They are cached in `output/leo-interior-v02/prepared-sections-cache` by their uncompressed bytes. An unchanged section keeps its name and bytes across releases, so it isn't uploaded again and browsers can reuse it. A fast patch still writes the whole-format artifact; packaging then compresses only the sections whose bytes changed. A lane D patch rewrites its `tpl:` section and the collision decks it touched, never render or core.
+Files are named by content: `prepared-walk/sections/s-<sha>.bin`, with `sections.json` in `prepared-walk/<artifact>/`. They are cached in `output/leo-interior-v02/prepared-sections-cache` by their uncompressed bytes. An unchanged section keeps its name and bytes across releases, so it isn't uploaded again and browsers can reuse it. A fast patch still writes the whole-format artifact; packaging then compresses only the sections whose bytes changed. A lane D patch rewrites its `tpl:` section and the collision decks it touched, never render. It rewrites core only when a rebuilt call's feature ledger row changes (its triangle count).
 
 Before compressing a new section, packaging checks it against the artifact. It is mapped back to the artifact's ids, and every geometry, graph, collision record and placement must match JSON for JSON, with every array record the same except its address and every array decoding to its checksum.
 
