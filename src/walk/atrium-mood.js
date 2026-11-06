@@ -7,6 +7,16 @@ import {inOpenAtrium} from '../v2/atrium-visibility.js';
 // nothing per frame beyond a few colour lerps.
 const MOOD={hemi:1.04,fill:1.08,env:.9,sky:0xffe2b8,ground:0x8a7356};
 
+// The waterfall's streaks (atrium-gardens.js, P6_atrium_waterfall) scroll down at about 2 m/s while the walker is in
+// the open atrium. Its texture is shared by the near and distant copies, authored or prepared, so one offset moves
+// them all. Looked for by material name every 2 s until found, giving up after ten tries (no canvas, or a phone that
+// drops the garden decor).
+let fall=null,tries=0,nextLook=0;
+function fallingWater(scene){
+ if(fall||tries>=10)return fall;const now=performance.now();if(now<nextLook)return null;nextLook=now+2000;tries++;
+ scene.traverse(o=>{if(!fall&&o.isMesh&&o.material?.name==='P6_atrium_waterfall'&&o.material.map)fall=o.material.map;});return fall;
+}
+
 export function createAtriumMood(light){
  if(!light)return null;
  const {hemi,fill,scene}=light,base={hemi:hemi.intensity,fill:fill.intensity,env:scene.environmentIntensity,sky:hemi.color.clone(),ground:hemi.groundColor.clone()};
@@ -19,7 +29,7 @@ export function createAtriumMood(light){
   // that settles while the walker crosses back in cannot leave its own light behind); on leaving it restores the base
   // exactly once and then never writes again, so a room mood that takes over is never overwritten by a fade.
   update(dt){
-   if(inOpenAtrium()){mood+=(1-mood)*(1-Math.exp(-3*Math.min(dt,.1)));shown=mood;setMood(mood);}
+   if(inOpenAtrium()){mood+=(1-mood)*(1-Math.exp(-3*Math.min(dt,.1)));shown=mood;setMood(mood);const map=fallingWater(scene);if(map)map.offset.y=(map.offset.y+Math.min(dt,.1)*.9)%1;}
    else if(shown){mood=shown=0;setMood(0);}
   },
   get mood(){return shown;},

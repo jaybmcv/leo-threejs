@@ -43,10 +43,10 @@ export const ATRIUM_SIGNATURE_TREES=[
  {id:'food-aft',x:-34,z:42.9,height:13.5,spread:6.4,seed:37},
  {id:'food-fore',x:12,z:42.9,height:12.5,spread:5.8,seed:41},
 ];
-// 4B waterfalls (visual only): the big one against the lake's hull-side bank, centred on x; a mini waterfall pond in
-// the shallows at the lake's near (west) end, falling toward the boulevard so it is seen from it.
-export const ATRIUM_WATERFALL={x:46,width:9};
-export const ATRIUM_MINI_WATERFALL={x:11.5,width:4.6,scale:.55,setback:4.2};
+// 4B waterfall (visual only), the lake's focal point as in the concept: at the far (east) end of its western basin,
+// just short of the bridge and near the promenade, falling west back toward the boulevard so it faces the walker
+// looking down the atrium. (x, z) is its rock line; yaw turns its local fall direction (+z) to world -x.
+export const ATRIUM_WATERFALL={x:53.9,z:-17,width:8,yaw:-Math.PI/2};
 // 4B pass 2: an avenue along the boulevard's park and food-hall/stage edges. Each run is a tree between two 2.4 m
 // planters (4.8 m), with 7.2 m gaps between runs, centred between the food-hall stalls so a gap opens in front of
 // each stall; the boulevard keeps 9.8 m clear. The cross routes at x=-79 and x=2 stay open, and so does the lake

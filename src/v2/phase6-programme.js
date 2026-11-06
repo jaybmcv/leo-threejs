@@ -1,6 +1,6 @@
 import {addReflectionTerraces} from './reflection-terraces.js';
 import {hydrateHullLayout} from '../plan/envelope-data-v2.js';
-import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS,ATRIUM_WATERFALL,ATRIUM_BOULEVARD_TREES,ATRIUM_PROMENADE_LAMPS,ATRIUM_FESTOONS} from '../plan/atrium-v2.js';
+import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS,ATRIUM_BOULEVARD_TREES,ATRIUM_PROMENADE_LAMPS,ATRIUM_FESTOONS} from '../plan/atrium-v2.js';
 import {patchDepth,worldPoint} from '../plan/hull-skin-v2.js';
 import {contains,distanceToSegment,bounds} from '../plan/geometry-v2.js';
 export function phase6Programme(layout){
@@ -69,7 +69,7 @@ export function phase6Programme(layout){
  for(const x of[11,21,53,69,93,105,115])for(const z of[-52,-9])if(fits(x,z,2.4,1.8)&&!(x===11&&z===-52)){ // Keep the dry garden approach open.
 const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,.42,1.1],[x,bed+.21,z],'cream');for(const dx of[-.75,0,.75])add('atrium6-lake','recovery_planting',[.6,.85,.6],[x+dx,bed+.845,z],'green',{round:true,noCollide:true});}
  // Reeds follow the notched lake edge, with gaps at the crossing and dry garden.
- for(let x=22;x<118;x+=6){if(Math.abs(x-60)<4)continue;const edge=lake.filter(q=>Math.abs(q[0]-x)<.26&&q[1]<-10).reduce((z,q)=>Math.max(z,q[1]),-56);for(const z of[edge+1.25,-8.2])if(fits(x,z,2.4,1.1)&&!(z<-20&&Math.abs(x-ATRIUM_WATERFALL.x)<ATRIUM_WATERFALL.width/2+2)){ // 4B: the waterfall replaces the far-bank reeds there
+ for(let x=22;x<118;x+=6){if(Math.abs(x-60)<4)continue;const edge=lake.filter(q=>Math.abs(q[0]-x)<.26&&q[1]<-10).reduce((z,q)=>Math.max(z,q[1]),-56);for(const z of[edge+1.25,-8.2])if(fits(x,z,2.4,1.1)){
  add('atrium6-lake','recovery_planting',[2.1,.85,1],[x,y+.35,z],'green',{round:true,noCollide:true});}}
  // 4B pass 2: more of the reflection bays' low brass lamps along the promenade edge.
  for(const l of ATRIUM_PROMENADE_LAMPS){add('atrium6-lake','p6_reflection_lamp_stem',[.11,.72,.11],[l.x,y+.38,l.z],'reflection_brass',{selectedDesign:'2C-4A'});add('atrium6-lake','p6_reflection_lamp_diffuser',[.25,.32,.25],[l.x,y+.82,l.z],'reflection_light',{round:true,noCollide:true,selectedDesign:'2C-4A'});}

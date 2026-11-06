@@ -65,3 +65,39 @@ run, so its lighting differs.*
 
 `ATRIUM_BOULEVARD_TREES`, `ATRIUM_PROMENADE_LAMPS`, `ATRIUM_TIMBER_DECKS` and
 `ATRIUM_FESTOONS` live in `src/plan/atrium-v2.js`.
+
+## Pass 2b: planting to the top deck, the waterfall as the focal point
+
+Jay's review of pass 2:
+
+![upper decks and waterfall](atrium-4b/pass3-upper-waterfall.jpg)
+
+![pass 2b before / after](atrium-4b/pass3-before-after.jpg)
+
+- **Hanging gardens on every deck, 7 to 20.** They had stopped at Deck 15, from a
+  misreading of the "atrium-centre-clear" decision. That decision keeps walkways
+  and solid parts from crossing the void above Deck 16, and planting hung on the
+  slab edges crosses nothing. The atrium-void audit (`scripts/atrium-void-v2.mjs`)
+  now has a bounded `atrium-edge-planting` allowance:
+  - it covers only faces of `P6_hanging_garden_*` meshes;
+  - every vertex of a face must lie within 1.2 m of one straight run of a Deck
+    16–20 outline, from 4.1 m below that deck's floor to 0.75 m above it (the
+    measured envelope of the planters, leaves and vines).
+
+  `check-atrium-void-fixtures-v2` proves it stays bounded: an edge planter passes,
+  while each of these fails:
+  - the same planter 2.5 m into the void;
+  - an edge planter under another name;
+  - a planting face spanning the void.
+
+  It adds 285 planters to the same three instanced draws.
+- **One focal waterfall** (`ATRIUM_WATERFALL`), placed as in the concept: at the
+  far end of the lake's western basin, just short of the bridge, falling back
+  toward the boulevard.
+  - It replaces the hull-bank waterfall and the mini one, and the far-bank reeds
+    return.
+  - Rounder rocks stand in three grounded tiers.
+  - The falling water is its own mesh with a streak texture. `atrium-mood.js`
+    scrolls it while you are in the open atrium, which works in authored and
+    prepared builds alike. It costs one draw; the distant copy shares the
+    texture.
