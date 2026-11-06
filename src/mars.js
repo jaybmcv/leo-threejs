@@ -7,6 +7,13 @@ const SUN=new T.Vector3(-.5,.3,.81).normalize();// Mars-to-sun, so the lounge se
 
 function seeded(seed){return()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};}
 
+// A painted canvas may live in GPU memory, and Chrome under memory pressure can (we suspect) drop it blank before the walk uploads it,
+// which left Mars a black disc with no haze. Paint on the GPU (fast blurs), then keep a copy in ordinary memory.
+function settled(c){
+ const copy=document.createElement('canvas');copy.width=c.width;copy.height=c.height;
+ copy.getContext('2d',{willReadFrequently:true}).putImageData(c.getContext('2d').getImageData(0,0,c.width,c.height),0,0);return copy;
+}
+
 // Fractal value noise that wraps east to west, so the mottling has no seam where the texture's edges meet.
 function noiseLayer(w,h,rnd,cells=8,octaves=5){
  const lattice=new Float32Array(65536).map(()=>rnd()),at=(x,y)=>lattice[(y&255)*256+(x&255)];
@@ -69,7 +76,7 @@ function surfaceTexture(){
  for(let i=0;i<14;i++){const x=rnd()*w;g.beginPath();g.moveTo(x,h*.01);g.quadraticCurveTo(x+40,h*.04,x+90,h*.065);g.stroke();}
  g.filter='none';
  // Turn the canyon side (the texture's middle) towards the ship, which looks at Mars along +x.
- const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.anisotropy=8;t.wrapS=T.RepeatWrapping;t.offset.x=.5;return t;
+ const t=new T.CanvasTexture(settled(c));t.colorSpace=T.SRGBColorSpace;t.anisotropy=8;t.wrapS=T.RepeatWrapping;t.offset.x=.5;return t;
 }
 
 // Soft day side, a narrow twilight band, and a faintly visible night side.
@@ -82,7 +89,7 @@ function sunShading(geometry){
 function hazeTexture(){
  const c=document.createElement('canvas');c.width=c.height=512;const g=c.getContext('2d'),r=256,limb=r/1.14;
  const grad=g.createRadialGradient(r,r,limb*.96,r,r,r);grad.addColorStop(0,'rgba(255,190,140,0)');grad.addColorStop(.12,'rgba(255,176,128,.55)');grad.addColorStop(.35,'rgba(240,140,100,.18)');grad.addColorStop(1,'rgba(200,110,80,0)');
- g.fillStyle=grad;g.fillRect(0,0,512,512);const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;return t;
+ g.fillStyle=grad;g.fillRect(0,0,512,512);const t=new T.CanvasTexture(settled(c));t.colorSpace=T.SRGBColorSpace;return t;
 }
 
 // One painted surface for every Mars: the lift art (walk/lift-ride.js) draws its globe from the same texture.

@@ -9,7 +9,8 @@ import layout from '../plan/selected-layout.js';
 import {distanceToSegment} from '../plan/geometry-v2.js';
 import {placements,cabinKey} from './cabins.authoring.js';
 import {mergeBoxes,metal,glass,lining,floor,polygonGeometry} from './geometry.js';
-export function facadeVolumeMasks(lo,hi){const masks=[];for(const r of layout.rooms.filter(r=>!r.aggregate&&r.y<hi&&r.y+r.height>lo)){for(const s of r.envelope||[{rise:0,height:r.height,polygon:r.polygon}])if(r.y+s.rise<hi&&r.y+s.rise+s.height>lo)masks.push(s.polygon);}for(const p of layout.hullPrototypes?.prototypes||[]){const a=Math.max(0,lo-p.chart.origin[1]),b=Math.min(p.rect[3],hi-p.chart.origin[1]);if(b<=a)continue;for(const y of [a,(a+b)/2,b]){const poly=ownerFootprint(p,y).map(q=>{const w=worldPoint(p.chart,q);return[w[0],w[2]];});if(poly.length>2)masks.push(poly);}}return masks;}
+import {loungeShoulderFootprints} from './lounge-shoulders.authoring.js';
+export function facadeVolumeMasks(lo,hi){const masks=[];for(const r of layout.rooms.filter(r=>!r.aggregate&&r.y<hi&&r.y+r.height>lo)){for(const s of r.envelope||[{rise:0,height:r.height,polygon:r.polygon}])if(r.y+s.rise<hi&&r.y+s.rise+s.height>lo)masks.push(s.polygon);}for(const p of layout.hullPrototypes?.prototypes||[]){const a=Math.max(0,lo-p.chart.origin[1]),b=Math.min(p.rect[3],hi-p.chart.origin[1]);if(b<=a)continue;for(const y of [a,(a+b)/2,b]){const poly=ownerFootprint(p,y).map(q=>{const w=worldPoint(p.chart,q);return[w[0],w[2]];});if(poly.length>2)masks.push(poly);}}masks.push(...loungeShoulderFootprints(lo,hi));return masks;}
 export function facadeSlabMasks(d){return [...d.slab.holes.map(h=>h.polygon),...facadeVolumeMasks(d.y-.215,d.y-.015)];}
 export function attachFacade(ship,scene,{authority=null}={}){
  const root=new T.Group();root.name='V2_atrium_facade';root.userData.noCollide=true;const caps=[],fronts=[],panes=[];

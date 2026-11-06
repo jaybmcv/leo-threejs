@@ -9,7 +9,8 @@ import layout from '../plan/selected-layout.js';
 import {distanceToSegment} from '../plan/geometry-v2.js';
 import {placements,cabinKey} from './cabins.js';
 import {mergeBoxes,metal,glass,lining,floor,polygonGeometry} from './geometry.js';
-export function facadeVolumeMasks(lo,hi){const masks=[];for(const r of layout.rooms.filter(r=>!r.aggregate&&r.y<hi&&r.y+r.height>lo)){for(const s of r.envelope||[{rise:0,height:r.height,polygon:r.polygon}])if(r.y+s.rise<hi&&r.y+s.rise+s.height>lo)masks.push(s.polygon);}for(const p of layout.hullPrototypes?.prototypes||[]){const a=Math.max(0,lo-p.chart.origin[1]),b=Math.min(p.rect[3],hi-p.chart.origin[1]);if(b<=a)continue;for(const y of [a,(a+b)/2,b]){const poly=ownerFootprint(p,y).map(q=>{const w=worldPoint(p.chart,q);return[w[0],w[2]];});if(poly.length>2)masks.push(poly);}}return masks;}
+import {loungeShoulderFootprints} from './lounge-shoulders.js';
+export function facadeVolumeMasks(lo,hi){const masks=[];for(const r of layout.rooms.filter(r=>!r.aggregate&&r.y<hi&&r.y+r.height>lo)){for(const s of r.envelope||[{rise:0,height:r.height,polygon:r.polygon}])if(r.y+s.rise<hi&&r.y+s.rise+s.height>lo)masks.push(s.polygon);}for(const p of layout.hullPrototypes?.prototypes||[]){const a=Math.max(0,lo-p.chart.origin[1]),b=Math.min(p.rect[3],hi-p.chart.origin[1]);if(b<=a)continue;for(const y of [a,(a+b)/2,b]){const poly=ownerFootprint(p,y).map(q=>{const w=worldPoint(p.chart,q);return[w[0],w[2]];});if(poly.length>2)masks.push(poly);}}masks.push(...loungeShoulderFootprints(lo,hi));return masks;}
 export function facadeSlabMasks(d){return [...d.slab.holes.map(h=>h.polygon),...facadeVolumeMasks(d.y-.215,d.y-.015)];}
 export function attachFacade(ship,scene,{authority=null}={}){
  const root=new T.Group();root.name='V2_atrium_facade';root.userData.noCollide=true;const caps=[],fronts=[],panes=[];
@@ -49,8 +50,9 @@ export function compactRenderGeometry(source){
 }
 // `allBands` (the phone ship) batches every band, not only the low decks. `cull` culls each chunk: its draw list then
 // changes every frame, and on a Galaxy S9 lettering jumped about the screen (chunks drawn with another's matrix), so the
-// phone ship leaves it off. `hidden` is called with each source once it is copied and hidden.
-export async function batchLowDeckDraws(baked,renderer,{allBands=false,cull=false,hidden=null}={}){
+// phone ship leaves it off. `hidden` is called with each source once it is copied and hidden; `skip` names bands left
+// alone (the phone ship's deck bands, merged by src/v2/phone-bands.js).
+export async function batchLowDeckDraws(baked,renderer,{allBands=false,cull=false,hidden=null,skip=null}={}){
  // Yields to the page about every 12 ms: a timer per chunk waited at least 4 ms each, 20 s over every band's chunks.
  let slice=performance.now();const yieldWork=async()=>{if(performance.now()-slice<12)return;await new Promise(resolve=>setTimeout(resolve,0));slice=performance.now();};
  const proof={enabled:renderer.extensions.has('WEBGL_multi_draw'),batches:0,sources:0,vertices:0,triangles:0};
@@ -61,7 +63,7 @@ export async function batchLowDeckDraws(baked,renderer,{allBands=false,cull=fals
  // Without WEBGL_multi_draw, merge each compatible low-deck material bucket.
  // This trades per-chunk frustum culling for bounded draw submission on phones.
  for(const group of baked.bands.values()){
-  const {band,top=band}=group.userData;if(!allBands&&(band< -1||top>4))continue;
+  const {band,top=band}=group.userData;if(!allBands&&(band< -1||top>4)||skip?.(group))continue;
   const buckets=new Map();
   for(const o of [...group.children]){
    const m=o.material,g=o.geometry;
