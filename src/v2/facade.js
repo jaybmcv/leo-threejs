@@ -49,8 +49,9 @@ export function compactRenderGeometry(source){
 }
 // `allBands` (the phone ship) batches every band, not only the low decks. `cull` culls each chunk: its draw list then
 // changes every frame, and on a Galaxy S9 lettering jumped about the screen (chunks drawn with another's matrix), so the
-// phone ship leaves it off. `hidden` is called with each source once it is copied and hidden.
-export async function batchLowDeckDraws(baked,renderer,{allBands=false,cull=false,hidden=null}={}){
+// phone ship leaves it off. `hidden` is called with each source once it is copied and hidden; `skip` names bands left
+// alone (the phone ship's deck bands, merged by src/v2/phone-bands.js).
+export async function batchLowDeckDraws(baked,renderer,{allBands=false,cull=false,hidden=null,skip=null}={}){
  // Yields to the page about every 12 ms: a timer per chunk waited at least 4 ms each, 20 s over every band's chunks.
  let slice=performance.now();const yieldWork=async()=>{if(performance.now()-slice<12)return;await new Promise(resolve=>setTimeout(resolve,0));slice=performance.now();};
  const proof={enabled:renderer.extensions.has('WEBGL_multi_draw'),batches:0,sources:0,vertices:0,triangles:0};
@@ -61,7 +62,7 @@ export async function batchLowDeckDraws(baked,renderer,{allBands=false,cull=fals
  // Without WEBGL_multi_draw, merge each compatible low-deck material bucket.
  // This trades per-chunk frustum culling for bounded draw submission on phones.
  for(const group of baked.bands.values()){
-  const {band,top=band}=group.userData;if(!allBands&&(band< -1||top>4))continue;
+  const {band,top=band}=group.userData;if(!allBands&&(band< -1||top>4)||skip?.(group))continue;
   const buckets=new Map();
   for(const o of [...group.children]){
    const m=o.material,g=o.geometry;
