@@ -29,7 +29,7 @@ export const preparedIntegrity=dir=>fs.readFile(path.join(dir,'integrity.json'),
 /** colliderDigest of the prepared walk in `dir` (as authored, or as published with world.parts.json). Decoding takes
  * about 20 s, so the digest is kept by the walk's integrity hash and the decoding and hashing code's. */
 export async function preparedDigest(dir){
- const names=await fs.readdir(dir),metadataName=['world.parts.json','world.bin','world.json.gz'].find(n=>names.includes(n));
+ const names=await fs.readdir(dir),metadataName=['sections.json','world.parts.json','world.bin','world.json.gz'].find(n=>names.includes(n));
  if(!metadataName)throw Error('No prepared walk metadata in '+dir);
  const integrity=await preparedIntegrity(dir);
  const code=sha(Buffer.concat(await Promise.all(['../src/v2/atrium-pvs-key.js','../src/v2/prepared-codec.public.js','../package-lock.json'].map(f=>fs.readFile(new URL(f,import.meta.url))))));
