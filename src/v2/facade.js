@@ -9,6 +9,7 @@ import layout from '../plan/selected-layout.js';
 import {distanceToSegment} from '../plan/geometry-v2.js';
 import {placements,cabinKey} from './cabins.js';
 import {mergeBoxes,metal,glass,lining,floor,polygonGeometry} from './geometry.js';
+import {yieldEvery} from './yield-to-page.js';
 import {loungeShoulderFootprints} from './lounge-shoulders.js';
 export function facadeVolumeMasks(lo,hi){const masks=[];for(const r of layout.rooms.filter(r=>!r.aggregate&&r.y<hi&&r.y+r.height>lo)){for(const s of r.envelope||[{rise:0,height:r.height,polygon:r.polygon}])if(r.y+s.rise<hi&&r.y+s.rise+s.height>lo)masks.push(s.polygon);}for(const p of layout.hullPrototypes?.prototypes||[]){const a=Math.max(0,lo-p.chart.origin[1]),b=Math.min(p.rect[3],hi-p.chart.origin[1]);if(b<=a)continue;for(const y of [a,(a+b)/2,b]){const poly=ownerFootprint(p,y).map(q=>{const w=worldPoint(p.chart,q);return[w[0],w[2]];});if(poly.length>2)masks.push(poly);}}masks.push(...loungeShoulderFootprints(lo,hi));return masks;}
 export function facadeSlabMasks(d){return [...d.slab.holes.map(h=>h.polygon),...facadeVolumeMasks(d.y-.215,d.y-.015)];}
@@ -43,10 +44,26 @@ if(!('colorTexture' in T.BatchedMesh.prototype))Object.defineProperty(T.BatchedM
 // stay active; the GPU clips offscreen chunks without rebuilding indirect data
 // every frame. Source meshes stay available
 // for inspection; collisions and transparent sorting are unchanged.
+// The vertices a geometry's index uses, in the order it first uses them, and where each one goes. Typed arrays the size
+// of the vertex list when the index covers much of it (the phone ship's own geometries: a Map and Array.from over its
+// 14 million indices were most of a 15 s batching); a Map when it uses a few of a big shared pool (the desktop ship's
+// pieces), where arrays the pool's size for every piece took longer still.
+const sparse=source=>source.index.count*4<source.attributes.position.count;
+function usedVertices(source){
+ const index=source.index.array;
+ if(sparse(source)){const ids=Array.from(new Set(index)),remap=new Map(ids.map((id,i)=>[id,i]));return {ids,at:v=>remap.get(v)};}
+ const remap=new Int32Array(source.attributes.position.count).fill(-1),ids=new Uint32Array(remap.length);let k=0;
+ for(let i=0;i<index.length;i++){const v=index[i];if(remap[v]<0){remap[v]=k;ids[k++]=v;}}
+ return {ids:ids.subarray(0,k),remap};
+}
 export function compactRenderGeometry(source){
- const ids=source.index?Array.from(new Set(source.index.array)):Array.from({length:source.attributes.position.count},(_,i)=>i),remap=new Map(ids.map((id,i)=>[id,i])),g=new T.BufferGeometry();
- for(const[name,a]of Object.entries(source.attributes)){const values=new a.array.constructor(ids.length*a.itemSize);for(let i=0;i<ids.length;i++)for(let k=0;k<a.itemSize;k++)values[i*a.itemSize+k]=a.array[ids[i]*a.itemSize+k];g.setAttribute(name,new T.BufferAttribute(values,a.itemSize,a.normalized));}
- if(source.index)g.setIndex(Array.from(source.index.array,i=>remap.get(i)));g.computeBoundingBox();g.computeBoundingSphere();return g;
+ const used=source.index?usedVertices(source):null,count=used?used.ids.length:source.attributes.position.count,g=new T.BufferGeometry();
+ for(const[name,a]of Object.entries(source.attributes)){const s=a.itemSize,from=a.array,values=new from.constructor(count*s);
+  if(!used)values.set(from.subarray(0,count*s));else for(let i=0;i<count;i++){const o=used.ids[i]*s;for(let k=0;k<s;k++)values[i*s+k]=from[o+k];}
+  g.setAttribute(name,new T.BufferAttribute(values,s,a.normalized));}
+ // The index type three's setIndex picks for these values.
+ if(used){const index=source.index.array,out=new (count>65535?Uint32Array:Uint16Array)(index.length);if(used.remap)for(let i=0;i<index.length;i++)out[i]=used.remap[index[i]];else for(let i=0;i<index.length;i++)out[i]=used.at(index[i]);g.setIndex(new T.BufferAttribute(out,1));}
+ g.computeBoundingBox();g.computeBoundingSphere();return g;
 }
 // `allBands` (the phone ship) batches every band, not only the low decks. `cull` culls each chunk: its draw list then
 // changes every frame, and on a Galaxy S9 lettering jumped about the screen (chunks drawn with another's matrix), so the
@@ -54,8 +71,8 @@ export function compactRenderGeometry(source){
 // alone (the phone ship's deck bands, merged by src/v2/phone-bands.js).
 export async function batchLowDeckDraws(baked,renderer,{allBands=false,cull=false,hidden=null,skip=null}={}){
  // Yields to the page about every 12 ms: a timer per chunk waited at least 4 ms each, 20 s over every band's chunks.
- let slice=performance.now();const yieldWork=async()=>{if(performance.now()-slice<12)return;await new Promise(resolve=>setTimeout(resolve,0));slice=performance.now();};
- const proof={enabled:renderer.extensions.has('WEBGL_multi_draw'),batches:0,sources:0,vertices:0,triangles:0};
+ const yieldWork=yieldEvery();
+ const t0=performance.now(),proof={enabled:renderer.extensions.has('WEBGL_multi_draw'),batches:0,sources:0,vertices:0,triangles:0};
  // A BatchedMesh needs its own shader variant. Sharing a material with the plain meshes left in the bands switched the
  // program back and forth (and rebuilt its parameters) on every draw, so each batch gets one copy per material.
  const batchMaterials=new Map(),batchMaterial=m=>{let c=batchMaterials.get(m);if(!c){c=m.clone();c.onBeforeCompile=m.onBeforeCompile;c.customProgramCacheKey=m.customProgramCacheKey;batchMaterials.set(m,c);}return c;};
@@ -82,7 +99,7 @@ export async function batchLowDeckDraws(baked,renderer,{allBands=false,cull=fals
    proof.batches++;proof.sources+=list.length;proof.vertices+=vertices;proof.triangles+=indices/3;await yieldWork();
   }
  }
- return proof;
+ proof.ms=Math.round(performance.now()-t0);return proof;
 }
 
 // The atrium paving and the native tower/transit slabs share y=-19.7.

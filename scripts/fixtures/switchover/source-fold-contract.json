@@ -1726,10 +1726,11 @@
     "file": "src/v2/distant-architecture.js",
     "original": "src/v2/distant-architecture.js",
     "mode": "raw",
-    "bodySha256": "a559ee81057cbcaa02cfb749e980c6ecb0ba53115cc34176cb47f450ce507f88",
+    "bodySha256": "8f3cbc4244d3d52d9c0e75eaaa5a0cd0d98b6c605d90b687a3490ffa1bff04eb",
     "imports": [
       "./phone-distant.js",
-      "three"
+      "three",
+      "./yield-to-page.js"
     ],
     "geometryCalls": []
   },
@@ -1737,7 +1738,7 @@
     "file": "src/v2/facade.js",
     "original": "src/v2/facade.js",
     "mode": "raw",
-    "bodySha256": "fc6eb5794c3ee1f7e48a3d820071a21ea4718232f66352463e8d397a3a60f804",
+    "bodySha256": "63d44f0a066fdcb051229806f1ce5f80bd05567b005d65004d510c11db3c64c5",
     "imports": [
       "./atrium-architecture.js",
       "./atrium-visibility.js",
@@ -1749,7 +1750,9 @@
       "../plan/selected-layout.js",
       "../plan/geometry-v2.js",
       "./cabins.js",
-      "./geometry.js"
+      "./geometry.js",
+      "./yield-to-page.js",
+      "./lounge-shoulders.js"
     ],
     "geometryCalls": []
   },
@@ -2220,12 +2223,13 @@
     "file": "src/v2/phone-distant.js",
     "original": "src/v2/phone-distant.js",
     "mode": "raw",
-    "bodySha256": "ecb0aea4dc5b01a4bf1c21733038e73f446877395d0777f3c5f3bb2a535bfe52",
+    "bodySha256": "a5b52f8177b9e7465a4988652eacfb60ecf9c974f0033a302d444f356fc0eba8",
     "imports": [
       "three/addons/libs/meshopt_decoder.module.js",
       "three",
       "three/addons/loaders/GLTFLoader.js",
-      "./public-assets.js"
+      "./public-assets.js",
+      "./yield-to-page.js"
     ],
     "geometryCalls": []
   },
@@ -8172,13 +8176,15 @@
     "file": "src/v2/prepared-codec.public.js",
     "original": "src/v2/prepared-codec.js",
     "mode": "public",
-    "bodySha256": "e31ab5f45eb8fd9edd4f76efba1dd37eee1ab1ec98f9afd98299bf80f7d26359",
+    "bodySha256": "1531abf7cf4b864f30d9038cf0bd768beb2be08484cbe21a3133b31fc186d101",
     "imports": [
       "three/addons/libs/zstddec.module.js",
       "meshoptimizer/decoder",
       "three",
       "three-mesh-bvh",
-      "../walk/collision.js"
+      "../walk/collision.js",
+      "./prepared-sections.js",
+      "./yield-to-page.js"
     ],
     "geometryCalls": []
   },
@@ -9130,9 +9136,11 @@
     "file": "src/walk/prepare.public.js",
     "original": "src/walk/prepare.js",
     "mode": "public",
-    "bodySha256": "78e39aab1943429f25c8e130ef27e5678abc1c4f27066050addb760bcd127143",
+    "bodySha256": "746792cd4fb917fb60af744a550a5b4be4bbd66db91cb6dca2573a96c95bcc83",
     "imports": [
+      "./atmosphere.js",
       "../v2/prepared-codec.public.js",
+      "../v2/yield-to-page.js",
       "../v2/launch-b-geometry.js",
       "../plan/selected-layout.js",
       "../v2/clubhouse-access.js",
@@ -9151,6 +9159,7 @@
       "./life-support-pipes.public.js",
       "./kittens.public.js",
       "./blossom.public.js",
+      "./cat-tree.public.js",
       "./lounge-falls.js",
       "./dining-robots.public.js",
       "./hydration-nook.public.js",
