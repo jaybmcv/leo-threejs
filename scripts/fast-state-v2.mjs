@@ -81,9 +81,10 @@ export async function classifyFastChange(){
  const active=await activeBuildMatches(identity);
  if(active)return {lane:'A',reuse:'active',reason:'Geometry matches the verified previous room patch',files,identity,rooms:active.rooms||[],decks:active.decks||[],smokeRooms:active.smokeRooms||active.rooms||[]};
  // Lane D: only a qualified dressing's own module changed, and nothing else imports it (fast-dressing-v2.mjs).
- const dressing=await (await import('./fast-dressing-v2.mjs')).classifyDressings(files);
+ const {classifyDressings,DRESSINGS}=await import('./fast-dressing-v2.mjs'),dressing=await classifyDressings(files);
  if(dressing?.reason)return {lane:'whole',reason:dressing.reason,files,identity,rooms:[],decks:[]};
- if(dressing)return {lane:'D',reason:'Changed only an additive dressing ('+dressing.dressings.join(', ')+')',files,identity,rooms:[],decks:[],smokeRooms:[],dressings:dressing.dressings,basePrepared:state.prepared,patchProducer:await patchProducerIdentity()};
+ // A room dressing's room gets the public browser visit.
+ if(dressing)return {lane:'D',reason:'Changed only an additive dressing ('+dressing.dressings.join(', ')+')',files,identity,rooms:[],decks:[],smokeRooms:[...new Set(dressing.dressings.map(id=>DRESSINGS[id].room).filter(Boolean))],dressings:dressing.dressings,basePrepared:state.prepared,patchProducer:await patchProducerIdentity()};
  const programmeInputs=new Set(['src/plan/room-fitout-overrides-v2.json','src/v2/phase4-programme.js','src/v2/phase6-programme.js','src/v2/launch-d-fitout.js']);
  const kitInputs=new Set(['src/v2/phase4-mesh-kit.js']);
  const legacyInputs=new Set(['src/special-areas.js','src/areas.js','src/area-finish.js','src/command-deck.js','src/neighborhood-services.js','src/lower-aft.js','src/lower-bow.js','src/upper-aft.js','src/voyage-forum.js','src/v2/room-shell.js']);

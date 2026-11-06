@@ -86,6 +86,22 @@ The lane widens when:
 
 Removing an old in-place change from a feature isn't detected: it stays live until the nightly. Proofs: `node scripts/check-fast-dressing-v2.mjs --patch` and `--full=DIR`.
 
+## Room dressing edits
+
+The gaming lounge and the surgical suite each have two parts:
+- a dress pass (`dressGamingLounge`, `dressSurgery`) that the fit-out runs before collision and the bake, so its furniture and walls are baked with the room;
+- a create (`createGamingLounge`, `createSurgeryArms`) that only the authoring page calls. Its group is drawn and updated, never solid and in no model, so its one prepared output is its geometry templates. The public walk replays them.
+
+An edit to the create takes the dressing lane as `room:gaming-lounge` or `room:surgery`. The create is rebuilt in Node against the baseline's decoded ship and its templates are swapped. The public browser check visits the room. An edit to `capsule-bubbles.js` widens: its module code runs before the world is built.
+
+The lane takes the module only when:
+- the dress pass in every variant matches the hash saved with the clean baseline (the same check as a feature's strip). Any top-level constant counts as the dress pass's, so an edit to one widens;
+- the page's call, wrapped in `feature()`, left the ship untouched in the baseline ledger. The Node rebuild must leave the decoded ship, its module's top-level values, three's exports and the globals untouched. The dress pass's materials are module values shared with what it baked;
+- the code only the create reaches names the ship, the room, the page's lights, the layout or a global only in the lines it was qualified with (`reads` in `fast-dressing-v2.mjs`). The decoded ship lacks the room's baked meshes, so this is what keeps a create from changing one unseen;
+- the create neither records a dress-pass label nor calls a function that does. Templates are told apart by recording site: the dress pass's labels stay the baseline's, and every other label of the module belongs to the create.
+
+Any other use of the group on the authoring page widens. The imaging room is out for now: its create takes the Cosmo kit, which isn't rebuilt in Node. The Hydro-Nip aquarium (`lounge-aquarium.js`) is out too: `lounge.js`, `partitions.js` and the live server identity read it.
+
 
 ## Prepared walk in sections (`LEO_PREPARED_SECTIONS=1`)
 
@@ -101,7 +117,7 @@ The verified artifact in `output/leo-interior-v02/prepared-walk` stays the whole
 
 A section carries the artifact's own encoded array bytes, unchanged. Vertex pools, index values and BVHs are the artifact's, so the atrium geometry pack's guards and LOD indices still bind.
 
-Files are named by content: `prepared-walk/sections/s-<sha>.bin`, with `sections.json` in `prepared-walk/<artifact>/`. They are cached in `output/leo-interior-v02/prepared-sections-cache` by their uncompressed bytes. An unchanged section keeps its name and bytes across releases, so it isn't uploaded again and browsers can reuse it. A fast patch still writes the whole-format artifact; packaging then compresses only the sections whose bytes changed. A lane D patch rewrites its `tpl:` section and the collision decks it touched, never render or core.
+Files are named by content: `prepared-walk/sections/s-<sha>.bin`, with `sections.json` in `prepared-walk/<artifact>/`. They are cached in `output/leo-interior-v02/prepared-sections-cache` by their uncompressed bytes. An unchanged section keeps its name and bytes across releases, so it isn't uploaded again and browsers can reuse it. A fast patch still writes the whole-format artifact; packaging then compresses only the sections whose bytes changed. A lane D patch rewrites its `tpl:` section and the collision decks it touched, never render. It rewrites core only when a rebuilt call's feature ledger row changes (its triangle count).
 
 Before compressing a new section, packaging checks it against the artifact. It is mapped back to the artifact's ids, and every geometry, graph, collision record and placement must match JSON for JSON, with every array record the same except its address and every array decoding to its checksum.
 
