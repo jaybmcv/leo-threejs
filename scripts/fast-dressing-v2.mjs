@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
-import {readFileSync,existsSync} from 'node:fs';
+import {readFileSync,existsSync,readdirSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import assert from 'node:assert/strict';
@@ -73,7 +74,6 @@ export const DRESSINGS={
    allowed:["import {createLoungeCompass} from './lounge-compass.authoring.js';"],
    imports:['src/v2/prepared-geometry-record.js','package:three','src/plan/rooms.js','src/polish-kit.js','src/lounge.js']}),
 };
-Object.assign(DRESSINGS,roomFeatures());
 // A template-only dressing the authoring page alone makes: src/walk/<name>.js and its variants, placed by `glue`.
 function template(name,create,groups,{glue,token,allowed,imports,preload=[]}){
  const file=v=>'src/walk/'+name+v+'.js';
@@ -84,30 +84,100 @@ function template(name,create,groups,{glue,token,allowed,imports,preload=[]}){
 // Room features: every call prepare.js and prepare.authoring.js wrap in feature() (src/v2/feature-owner.js) is an entry,
 // keyed feature:<module>. Each is rebuilt in Node against the baseline's own decoded ship, so its glue is that line in both
 // files. Only calls whose arguments are the ship and the page's still and anisotropy qualify (the Cosmo kit, hat and art
-// urls aren't rebuilt here), and only modules prepare imports nothing but that create call from. Whether the call only
-// adds to the ship is the baseline's ledger and the compile's own; whether it can move a rail is the rail probes'.
+// urls aren't rebuilt here). Each prepare file's own import names the variant it runs; a module with one file is all four.
+// Whether the call only adds to the ship is the baseline's ledger and the compile's own; whether it can move a rail is
+// the rail probes'.
+// Anything else prepare imports from the module (a strip or bed helper) runs in the fit-out, before the walls are fitted,
+// and is baked with its room: its code and what it reaches in the module must be the baseline's (featureHelperHashes).
+// A module only the feature's own files import (layered-conservatory.js under blossom.js) is part of the feature.
+const PREPARES={source:'src/walk/prepare.js',authoring:'src/walk/prepare.authoring.js',public:'src/walk/prepare.public.js',prepared:'src/walk/prepare.prepared.js'};
+const variantOf=f=>f.replace(/(\.authoring|\.public|\.prepared)?\.js$/,'');
+let sourceImports=null;
+// Every src module's relative imports, read once: who imports a helper decides whether it is private to a feature.
+function importers(){
+ if(sourceImports)return sourceImports;sourceImports=new Map();
+ const walk=dir=>{for(const e of readdirSync(dir,{withFileTypes:true})){const f=dir+'/'+e.name;if(e.isDirectory())walk(f);else if(f.endsWith('.js'))
+  for(const m of readFileSync(f,'utf8').matchAll(/(?:from\s*|import\s*\(\s*)['"](\.{1,2}\/[^'"]+)['"]/g)){const to=path.posix.normalize(path.posix.join(path.posix.dirname(f),m[1]));if(!sourceImports.has(to))sourceImports.set(to,new Set());sourceImports.get(to).add(f);}}};
+ walk('src');return sourceImports;
+}
+// The names the authoring page binds prepare's result to ({…,name:alias,…}=prepared, alias=prepared.name), and whether
+// each is only declared, guarded, drawn (toBand, scene.add, a for…of toBand list) or updated (update, near). Debug-only
+// lines, comments and imports are already left out; whitespace is squeezed out first, so `} = prepared` reads as `}=prepared`.
+export function pageUsesOnlyDrawing(raw,name){
+ const page=raw.replace(/\s+/g,' ').replace(/ ?([=:,{}()[\];?.&|]) ?/g,'$1'),escape=n=>n.replace(/[$.]/g,c=>'\\'+c),word='[A-Za-z_$][\\w$]*';
+ // prepared itself is only defined, destructured or read by key: passed on or aliased whole, it could reach anything.
+ if(/(?<![\w$.])prepared(?![\w$])/.test(page.replace(/\bprepared=prepareWalkWorld\(/g,'').replace(/\{[^{}]*\}=prepared\b/g,'').replace(/\bprepared\.[A-Za-z_$][\w$]*/g,'')))return false;
+ const bound=new Set(['prepared.'+name]);
+ for(const m of page.matchAll(/\{([^{}]*)\}=prepared\b/g))for(const p of m[1].split(',')){const [k,a]=p.split(':');if(k===name)bound.add(a||k);}
+ for(const m of page.matchAll(new RegExp('(?<![\\w$.])('+word+')=prepared\\.('+word+')(?![\\w$])','g')))if(m[2]===name)bound.add(m[1]);
+ // The bindings themselves and then each allowed use come out; anything left of a binding is another use.
+ let text=page.replace(/\{[^{}]*\}=prepared\b/g,'').replace(new RegExp('(?<![\\w$.])'+word+'=prepared\\.'+word+'(?![\\w$.])','g'),'');
+ const at=b=>'(?<![\\w$.])'+escape(b)+'(?![\\w$])';
+ text=text.replace(new RegExp('for\\(const ('+word+') of ?(\\[[^;]*?\\])\\)toBand\\(\\1\\)','g'),(m,v,list)=>{
+  for(const b of bound)list=list.replace(new RegExp('\\(?'+at(b)+'\\?\\['+escape(b)+'\\.groups?\\]:\\[\\]\\)?','g'),'').replace(new RegExp('\\(?'+at(b)+'\\?'+escape(b)+'\\.groups:\\[\\]\\)?','g'),'').replace(new RegExp(at(b)+'\\.groups?(?![\\w$])','g'),'');
+  return 'for(const '+v+' of '+list+')toBand('+v+')';});
+ for(const b of bound){const e=escape(b);
+  for(const ok of ['toBand\\('+e+'(?:\\.group)?\\)','scene\\.add\\('+e+'\\.group\\)','for\\(const ('+word+') of '+e+'\\.groups\\)toBand\\(\\1\\)',at(b)+'\\??\\.(?:update|near)\\(','if\\('+e+'\\)',at(b)+'=null(?![\\w$])'])
+   text=text.replace(new RegExp(ok,'g'),'');
+  if(new RegExp(at(b)).test(text))return false;}
+ return true;
+}
 function roomFeatures(){
- const out={},files=['src/walk/prepare.js','src/walk/prepare.authoring.js'],texts=files.map(f=>readFileSync(f,'utf8')),lines=texts.map(t=>t.split(/\r?\n/).map(l=>l.trim())),
-  page=readFileSync('src/walk/main.authoring.js','utf8').split(/\r?\n/).filter(l=>!/^\s*\/\//.test(l)).join('\n');
+ const out={},files=[PREPARES.source,PREPARES.authoring],texts=Object.fromEntries(Object.entries(PREPARES).map(([k,f])=>[k,readFileSync(f,'utf8')])),
+  lines=files.map(f=>readFileSync(f,'utf8').split(/\r?\n/).map(l=>l.trim())),
+  page=readFileSync('src/walk/main.authoring.js','utf8').split(/\r?\n/).filter(l=>!/^\s*(\/\/|import )/.test(l)&&!l.includes('__WALK_DEBUG__')).join('\n');
  for(const line of lines[1]){const m=line.match(/^const ([A-Za-z]+)=feature\('([^']+)',ship,\(\)=>(create[A-Za-z]+)\(([^)]*)\)\);(.*)$/);if(!m)continue;
   const [,name,id,create,args,rest]=m;if(!/^(ship(,\{(still|anisotropy)(,(still|anisotropy))?\})?)?$/.test(args))continue;
-  const imported=texts.map(t=>[...t.matchAll(/import \{([^}]*)\} from '\.\/([^']+)';/g)].filter(x=>x[2].replace(/(\.authoring)?\.js$/,'')===id).flatMap(x=>x[1].split(',').map(s=>s.trim())));
-  if(imported.some(names=>names.length!==1||names[0]!==create))continue;
+  // The variant each prepare file imports, and the names it takes from it.
+  const imports=Object.fromEntries(Object.entries(texts).map(([k,t])=>[k,[...t.matchAll(/import \{([^}]*)\} from '\.\/([^']+)';/g)].filter(x=>variantOf(x[2])===id).map(x=>({file:'src/walk/'+x[2],names:x[1].split(',').map(s=>s.trim())}))]));
+  if(Object.values(imports).some(v=>v.length!==1||!v[0].names.includes(create)))continue;
+  const variant=Object.fromEntries(Object.entries(imports).map(([k,[v]])=>[k,v.file]));
+  const helpers=[...new Map(Object.values(imports).flatMap(([v])=>v.names.filter(n=>n!==create).map(n=>[v.file+'#'+n,[v.file,n]]))).values()];
   const glue=lines.map((l,i)=>[files[i],l.find(x=>x.startsWith('const '+name+"=feature('"+id+"',"))]);if(glue.some(([,g])=>!g))continue;
   // What the authoring page does with the result past prepare: draws it (group, groups) and calls it each frame (update,
-  // near). Any other use (the arcade's treadmill feeds Paws Off's templates; vault.attach adds the door's collision) is one
-  // the patch doesn't rebuild, so that feature stays with the full build.
-  const aliases=[name,...[...page.matchAll(new RegExp('\\b'+name+':([A-Za-z]+)','g'))].map(x=>x[1])];
-  if(aliases.some(a=>[...page.matchAll(new RegExp('\\b'+a+'\\??\\.([A-Za-z_$]+)','g'))].some(x=>!['group','groups','update','near'].includes(x[1]))))continue;
-  if(!['','.authoring','.prepared','.public'].every(v=>existsSync('src/walk/'+id+v+'.js')))continue;
-  const solidCall=rest.match(new RegExp('colliders\\.addStatic\\('+name+'(\\.solid)?(,\\(\\)=>true)?\\)')),file=v=>'src/walk/'+id+v+'.js';
+  // near). Any other use (the arcade's treadmill feeds Paws Off's templates; vault.attach adds the door's collision; the
+  // maze game gets the hold) is one the patch doesn't rebuild, so that feature stays with the full build.
+  if(!pageUsesOnlyDrawing(page,name))continue;
+  const own=[...new Set([...Object.values(variant),...['','.authoring','.prepared','.public'].map(v=>'src/walk/'+id+v+'.js').filter(f=>existsSync(f))])];
+  // Modules only the feature's own files import, one level down.
+  const by=importers(),privates=[...new Set(own.flatMap(f=>[...by.entries()].filter(([,from])=>from.has(f)).map(([to])=>to)))]
+   .filter(f=>f.startsWith('src/walk/')&&!own.includes(f)&&[...by.get(f)].every(u=>own.includes(u)||variantOf(u)===variantOf(f)));
+  const solidCall=rest.match(new RegExp('colliders\\.addStatic\\('+name+'(\\.solid)?(,\\(\\)=>true)?\\)'));
   out['feature:'+id]={feature:id,owner:'feature:'+id,create,args:ctx=>args?[ctx.ship,...(args.includes('{')?[{still:false,anisotropy:16}]:[])]:[],
    groups:r=>r?.groups?[...r.groups]:[r?.isObject3D?r:r?.group].filter(Boolean),solidOf:solidCall?r=>solidCall[1]?r.solid:r:null,filter:solidCall?.[2]?()=>true:null,
-   site:file(''),collision:!!solidCall,model:true,files:['','.authoring','.prepared','.public'].map(file),source:file(''),authoring:file('.authoring'),public:file('.public'),
-   consumers:files,glue,uses:[],imports:null};
+   site:'src/walk/'+id+'.js',sites:['src/walk/'+id+'.js',...new Set(privates.map(f=>variantOf(f)+'.js'))],
+   collision:!!solidCall,model:true,files:[...own,...privates],source:variant.source,authoring:variant.authoring,public:variant.public,
+   consumers:[...files,...own,...privates],glue,uses:[],imports:null,helpers};
  }
  return out;
 }
+// A module's top-level statements, split where a line starts at column 0 (the repo's style: continuation lines are
+// indented or close a bracket), with full-line comments dropped. Each knows the names it declares.
+function topLevel(text){
+ const chunks=[];for(const line of text.replace(/\r\n/g,'\n').split('\n')){if(/^\s*\/\//.test(line))continue;
+  if(/^[^\s}\])]/.test(line)||!chunks.length)chunks.push({text:line});else chunks.at(-1).text+='\n'+line;}
+ for(const c of chunks){const t=c.text,f=t.match(/^(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:function\s*\*?|class)\s*([A-Za-z_$][\w$]*)/);
+  c.list=/^export\s*\{/.test(t);c.declaration=!!f&&!/^(?:export\s+)?(?:default\s+)?class\b/.test(t);
+  c.names=f?[f[1]]:/^(?:export\s+)?(?:const|let|var)\s/.test(t)?[...[...t.matchAll(/([A-Za-z_$][\w$]*)\s*=(?![=>])/g)].map(x=>x[1]),
+   ...[...t.matchAll(/^(?:export\s+)?(?:const|let|var)\s+[{[]([^=]*)[}\]]\s*=/g)].flatMap(x=>x[1].split(',').map(s=>s.split(':').at(-1).trim()))].filter(Boolean):[];}
+ return chunks;
+}
+const mentions=(text,n)=>new RegExp('(^|[^\\w$.])'+n.replace(/\$/g,'\\$')+'(?![\\w$])').test(text);
+// A helper's code and everything it can reach in its module. Only a function declaration can be left out, and only when
+// nothing kept names it: a top-level const, let, var or class runs as the module loads and may change what the helper
+// sees (Object.assign on a pattern it tests), so every one is kept, with every import, every bare statement and what
+// they name. Matching names as text over-includes, which can only widen more often. An export list names everything, so
+// it is kept but not followed.
+export function helperHash(file,name){
+ const chunks=topLevel(readFileSync(file,'utf8')),keep=new Set(),queue=chunks.filter(c=>c.names.includes(name)||!c.declaration);
+ if(!chunks.some(c=>c.names.includes(name)))throw Error('No top-level '+name+' in '+file);
+ while(queue.length){const c=queue.pop();if(keep.has(c))continue;keep.add(c);if(c.list)continue;
+  for(const d of chunks)if(!keep.has(d)&&d.names.some(n=>mentions(c.text,n)))queue.push(d);}
+ return createHash('sha256').update(chunks.filter(c=>keep.has(c)).map(c=>c.text).join('\n')).digest('hex');
+}
+// Every qualified feature helper's hash, saved with the clean baseline (fast-state-v2.mjs).
+export const featureHelperHashes=()=>Object.fromEntries(Object.values(DRESSINGS).flatMap(d=>(d.helpers||[]).map(([f,n])=>[f+'#'+n,helperHash(f,n)])));
+Object.assign(DRESSINGS,roomFeatures());
 // The baseline's decoded ship, restored as the public walk restores it (prepared-runtime.js), for room features to build on.
 let shipContext=null;
 async function featureContext(base){
@@ -142,7 +212,7 @@ const code=text=>text.replace(/\r\n/g,'\n').split('\n').map(l=>l.replace(/^\s*\/
 // rather than failing the deploy; the full pipeline supports it.
 const decline=(ok,message)=>{if(!ok)throw Error(message+'; take the wider build');};
 // A template belongs to a dressing by its recording site: RecordGeometry keys site:n|args, recordMerged site|merge|...
-export const ownsTemplate=(d,key)=>key.startsWith(d.site+':')||key.startsWith(d.site+'|');
+export const ownsTemplate=(d,key)=>(d.sites||[d.site]).some(s=>key.startsWith(s+':')||key.startsWith(s+'|'));
 export const dressingOwners=ids=>new Set(ids.filter(id=>DRESSINGS[id].collision).map(id=>DRESSINGS[id].owner));
 
 // null: not a dressing-only change (the normal lanes decide). {reason}: a dressing file changed but it can't be
@@ -219,6 +289,9 @@ export async function compileDressing(id,{base=null}={}){
  const ctx=d.feature?await featureContext(base):null,make=mod=>{if(!d.feature)return mod[d.create]();const r=feature(d.feature,ctx.ship,()=>mod[d.create](...d.args(ctx)),{deep:true});
   decline(featureLedger().get(d.feature).additive,'Feature '+d.feature+' changes the ship as well as returning its parts');return r;};
  if(d.feature)decline(ctx.ledger.get(d.feature)?.additive===true,'Feature '+d.feature+" isn't an additive call in the baseline ledger");
+ // Its strip and bed helpers were baked with their rooms: each must be the baseline's (featureHelperHashes).
+ if(d.helpers?.length){const saved=JSON.parse(await fs.readFile(path.join(path.dirname(base),'state.json'),'utf8')).featureHelpers||{};
+  for(const [f,n]of d.helpers)decline(saved[f+'#'+n]!==undefined&&saved[f+'#'+n]===helperHash(f,n),'Feature '+d.feature+' helper '+n+' ('+f+') is not the one the baseline was built with');}
  const {geometryRecords}=await import('../src/v2/prepared-geometry-record.js'),before=new Set(geometryRecords().keys());
  // Modules the page has loaded first, where a dressing reaches an import cycle (transit.js and lifts.js) mid-way.
  for(const p of d.preload||[])await import('../'+p);
@@ -267,13 +340,18 @@ async function patchDressingModels({baseline,destination,compiled}){
   for(const c of mine){
    const old=tagged.get(c.id),parent=j.nodes.findIndex(n=>n.children?.includes(old));decline(parent>=0,'Dressing '+c.id+' is not inside the ship model');found.set(c.id,file);
    const {json:a,bin:abin}=parseGlb(c.model);decline(!a.images?.length&&!a.textures?.length&&!a.skins?.length&&!a.animations?.length&&a.scenes[a.scene||0].nodes.length===1,'Dressing model patch must be one static untextured root');
-   // Only plain meshes are relocated: instancing, compression and morph targets hold indices this copy doesn't remap.
-   decline(!(a.extensionsUsed||[]).some(e=>!/^KHR_(materials_|texture_transform)/.test(e))&&!(a.nodes||[]).some(n=>n.extensions)&&!(a.meshes||[]).some(m=>m.extensions||m.primitives.some(p=>p.extensions||p.targets)),'Dressing model uses instancing, compression or morph targets');
+   // Plain and instanced meshes are relocated (an instanced node's EXT_mesh_gpu_instancing attributes are accessors, moved
+   // with the rest; quantized accessors are only other component types). Compression, morph targets and sparse accessors
+   // hold indices this copy doesn't remap.
+   decline(!(a.extensionsUsed||[]).some(e=>!/^(KHR_(materials_|texture_transform|mesh_quantization)|EXT_mesh_gpu_instancing$)/.test(e))
+    &&!(a.nodes||[]).some(n=>n.extensions&&Object.keys(n.extensions).some(k=>k!=='EXT_mesh_gpu_instancing'))&&!(a.accessors||[]).some(x=>x.sparse||x.bufferView===undefined)
+    &&!(a.meshes||[]).some(m=>m.extensions||m.primitives.some(p=>p.extensions||p.targets)),'Dressing model uses compression, morph targets or sparse accessors');
    const viewOffset=j.bufferViews.length,accessorOffset=j.accessors.length,materialOffset=(j.materials||[]).length,meshOffset=j.meshes.length,nodeOffset=j.nodes.length,binOffset=append(abin);
    j.bufferViews.push(...a.bufferViews.map(v=>({...v,buffer:0,byteOffset:binOffset+(v.byteOffset||0)})));
    j.accessors.push(...a.accessors.map(x=>({...x,bufferView:x.bufferView+viewOffset})));j.materials??=[];j.materials.push(...(a.materials||[]));
    j.meshes.push(...(a.meshes||[]).map(m=>({...m,primitives:m.primitives.map(p=>({...p,attributes:Object.fromEntries(Object.entries(p.attributes).map(([k,v])=>[k,v+accessorOffset])),...(p.indices===undefined?{}:{indices:p.indices+accessorOffset}),...(p.material===undefined?{}:{material:p.material+materialOffset})}))})));
-   for(const n of a.nodes){const copy=structuredClone(n);if(copy.mesh!==undefined)copy.mesh+=meshOffset;if(copy.children)copy.children=copy.children.map(i=>i+nodeOffset);j.nodes.push(copy);}
+   for(const n of a.nodes){const copy=structuredClone(n);if(copy.mesh!==undefined)copy.mesh+=meshOffset;if(copy.children)copy.children=copy.children.map(i=>i+nodeOffset);
+    const instancing=copy.extensions?.EXT_mesh_gpu_instancing;if(instancing)instancing.attributes=Object.fromEntries(Object.entries(instancing.attributes).map(([k,v])=>[k,v+accessorOffset]));j.nodes.push(copy);}
    retire(old);const children=j.nodes[parent].children;children[children.indexOf(old)]=a.scenes[a.scene||0].nodes[0]+nodeOffset;
    j.extensionsUsed=[...new Set([...(j.extensionsUsed||[]),...(a.extensionsUsed||[])])];if(a.extensionsRequired?.length)j.extensionsRequired=[...new Set([...(j.extensionsRequired||[]),...a.extensionsRequired])];
   }

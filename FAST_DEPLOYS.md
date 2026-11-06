@@ -50,6 +50,8 @@ The exact, output-neutral implementation migration keeps existing UI and Phase 4
 
 Current wider boundaries are room/frame/layout changes, hull-owned shell changes, legacy rooms with later activity/world modifications, escape-craft assemblies, baked sign-atlas changes, and shared producers outside the isolated kit. These take the wider geometry route. The ordinary wider route reuses unchanged layout, exterior, ceiling and raw-model outputs after checking their dependencies and file hashes. `LEO_FULL_REBUILD=1` explicitly bypasses those stage/model caches. Nightly still runs its prepared authoring and all existing checks.
 
+Moving or resizing a room, or moving its door, always takes the wider route. [docs/room-move-lane.md](docs/room-move-lane.md) covers what such an edit reaches and the ownership work a per-room lane needs first.
+
 ## Shared kit edits
 
 `src/v2/phase4-mesh-kit.js` owns the Phase 4 mesh shapes and materials. Its actual per-owner mesh output is compared with the clean baseline; only changed owners are patched. A material unused by a room does not invalidate that room. Supported atrium owners receive a nearby room/deck browser smoke target; this is a page-load check, not a clearance test. Escape-craft or sign-atlas changes still widen.
@@ -62,10 +64,20 @@ Each feature `prepare.js` and `prepare.authoring.js` create (the concession, the
 
 A feature qualifies only if:
 - its call takes nothing but the ship and the page's still and anisotropy;
-- its module has all four variants;
-- the authoring page uses its result only to draw it and update it.
+- the authoring page only draws, guards and updates what it returns, under the names it binds from `prepared`.
 
-The arcade (its treadmill feeds Paws Off) and the vault (its door adds collision) stay with the wider build.
+Each prepare file's own import says which variant it runs. A module with a single file (pinball, the ward trolley, atmosphere, baggage) is all four: the public walk builds it from code, and only its collision and model are baked.
+
+A strip or bed helper that prepare also imports from the module (`stripAtmosphere`, `prepareBlossomBed`, …) runs in the fit-out and is baked with its room. The lane takes the module only when that helper is unchanged. The check covers the helper's own code, the top-level code it reaches by name, the module's imports and anything at top level that declares nothing, compared with the hashes saved with the clean baseline. An edit inside the create function passes; an edit to the strip, or to a constant the strip uses, widens.
+
+A module only the feature's own files import, such as `layered-conservatory.js` under the blossom garden, counts as part of that feature.
+
+Out of the lane, for now:
+- the theatre, kittens and mudwater (their calls take the Cosmo kit or art urls);
+- the maze (its hold goes to the maze game);
+- the arcade (its treadmill feeds Paws Off);
+- the vault (its door adds collision);
+- the chinampa (the authoring page imports its info panel).
 
 The lane widens when:
 - a rebuild touches anything already in the ship;
@@ -74,6 +86,32 @@ The lane widens when:
 
 Removing an old in-place change from a feature isn't detected: it stays live until the nightly. Proofs: `node scripts/check-fast-dressing-v2.mjs --patch` and `--full=DIR`.
 
+
+## Prepared walk in sections (`LEO_PREPARED_SECTIONS=1`)
+
+With `LEO_PREPARED_SECTIONS=1`, `npm run build:public` publishes the prepared walk in sections instead of one whole-ship transport (`scripts/prepared-sections-v2.mjs`; the format and reader are in `src/v2/prepared-sections.js`). It is off by default.
+
+The verified artifact in `output/leo-interior-v02/prepared-walk` stays the whole-ship format. Builds, fast patches, the phone pack and every check read it as before. Packaging splits it into these sections:
+- `render:<deck>`: the render bands whose lowest deck it is.
+- `collision:<deck>`: the static and ground collision bands for that deck.
+- `tpl:<module>`: one feature's or dressing's geometry templates.
+- `core`: the source graph, finishes, rests, privacy, collision groups and movers.
+- `images`: the core's images.
+- `shared:<type>:<sha256>`: one file per array that more than one section uses (the vertex pools and position dictionaries) or that is a tuple dictionary.
+
+A section carries the artifact's own encoded array bytes, unchanged. Vertex pools, index values and BVHs are the artifact's, so the atrium geometry pack's guards and LOD indices still bind.
+
+Files are named by content: `prepared-walk/sections/s-<sha>.bin`, with `sections.json` in `prepared-walk/<artifact>/`. They are cached in `output/leo-interior-v02/prepared-sections-cache` by their uncompressed bytes. An unchanged section keeps its name and bytes across releases, so it isn't uploaded again and browsers can reuse it. A fast patch still writes the whole-format artifact; packaging then compresses only the sections whose bytes changed. A lane D patch rewrites its `tpl:` section and the collision decks it touched, never render or core.
+
+Before compressing a new section, packaging checks it against the artifact. It is mapped back to the artifact's ids, and every geometry, graph, collision record and placement must match JSON for JSON, with every array record the same except its address and every array decoding to its checksum.
+
+`check-fast-release-v2` and `startup-public-identity-v2` verify a sectioned publish file by file against what the local artifact sections into. The release check also runs the changed-room collision probes through the published sections. `node scripts/check-prepared-sections-v2.mjs` is the by-content proof. It compares `canonicalPrepared` of both (about 25 minutes), then decodes both with the public reader and compares every band, template, graph, shared buffer and collision record, plus the collider digest.
+
+Still on the whole-ship transport, until they read sections:
+- the phone pack (`prepared-walk-phone`; phones could later load the sections near the player);
+- the retired switchover check (`check-switchover-artifacts --include-public`).
+
+The phone pack and the atrium pack are keyed on the whole artifact, so every patch still rebuilds them.
 
 ## Local measurement, without publishing
 
