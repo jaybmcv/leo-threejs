@@ -1,6 +1,6 @@
 import {addReflectionTerraces} from './reflection-terraces.js';
 import {hydrateHullLayout} from '../plan/envelope-data-v2.js';
-import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS,ATRIUM_WATERFALL} from '../plan/atrium-v2.js';
+import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS,ATRIUM_BOULEVARD_TREES,ATRIUM_PROMENADE_LAMPS,ATRIUM_FESTOONS} from '../plan/atrium-v2.js';
 import {patchDepth,worldPoint} from '../plan/hull-skin-v2.js';
 import {contains,distanceToSegment,bounds} from '../plan/geometry-v2.js';
 export function phase6Programme(layout){
@@ -36,6 +36,10 @@ export function phase6Programme(layout){
  }
  // Retain a looser park grove between the garden pockets and the boulevard.
  for(const x of[-82,-66,-50,-34,-18])for(const z of[-27,-14])if(fits(x,z,6,6)&&!inPocket(x,z,6,6)){tree('atrium6-park',x,z);if(fits(x+3.8,z,2,1.2))bench('atrium6-park',x+3.8,z,Math.PI/2);}
+ // 4B pass 2: the boulevard avenue. Collidable planters (their planting becomes faceted beds below) either side of a
+ // collidable trunk, whose canopy atrium-gardens.js draws.
+ for(const t of ATRIUM_BOULEVARD_TREES){const room=t.z<0?'atrium6-park':t.x<62?'atrium6-food':'atrium6-stage';tree(room,t.x,t.z,t.canopyHeight);
+  for(const dx of[-1.2,1.2]){add(room,'garden_planter',[2.4,.42,1.1],[t.x+dx,y+.21,t.z],'cream');add(room,'recovery_planting',[2.1,.85,1],[t.x+dx,y+.845,t.z],'green',{round:true,noCollide:true});}}
  sign('atrium6-park','VOYAGER GARDENS',-84,-8.8,6);for(const x of[-86,-82])add('atrium6-park','p6_sign_post',[.08,2.8,.08],[x,y+1.4,-8.8],'metal');
  // Existing table design, redistributed into courts. 8 m table pitch gives
  // over 4 m clear between occupied seats; 4 m aisles flank every stall row.
@@ -65,8 +69,12 @@ export function phase6Programme(layout){
  for(const x of[11,21,53,69,93,105,115])for(const z of[-52,-9])if(fits(x,z,2.4,1.8)&&!(x===11&&z===-52)){ // Keep the dry garden approach open.
 const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,.42,1.1],[x,bed+.21,z],'cream');for(const dx of[-.75,0,.75])add('atrium6-lake','recovery_planting',[.6,.85,.6],[x+dx,bed+.845,z],'green',{round:true,noCollide:true});}
  // Reeds follow the notched lake edge, with gaps at the crossing and dry garden.
- for(let x=22;x<118;x+=6){if(Math.abs(x-60)<4)continue;const edge=lake.filter(q=>Math.abs(q[0]-x)<.26&&q[1]<-10).reduce((z,q)=>Math.max(z,q[1]),-56);for(const z of[edge+1.25,-8.2])if(fits(x,z,2.4,1.1)&&!(z<-20&&Math.abs(x-ATRIUM_WATERFALL.x)<ATRIUM_WATERFALL.width/2+2)){ // 4B: the waterfall replaces the far-bank reeds there
+ for(let x=22;x<118;x+=6){if(Math.abs(x-60)<4)continue;const edge=lake.filter(q=>Math.abs(q[0]-x)<.26&&q[1]<-10).reduce((z,q)=>Math.max(z,q[1]),-56);for(const z of[edge+1.25,-8.2])if(fits(x,z,2.4,1.1)){
  add('atrium6-lake','recovery_planting',[2.1,.85,1],[x,y+.35,z],'green',{round:true,noCollide:true});}}
+ // 4B pass 2: more of the reflection bays' low brass lamps along the promenade edge.
+ for(const l of ATRIUM_PROMENADE_LAMPS){add('atrium6-lake','p6_reflection_lamp_stem',[.11,.72,.11],[l.x,y+.38,l.z],'reflection_brass',{selectedDesign:'2C-4A'});add('atrium6-lake','p6_reflection_lamp_diffuser',[.25,.32,.25],[l.x,y+.82,l.z],'reflection_light',{round:true,noCollide:true,selectedDesign:'2C-4A'});}
+ // 4B pass 2: posts for the string lights over the timber decks (atrium-gardens.js hangs the strings).
+ for(const f of ATRIUM_FESTOONS)for(const[x,z]of f.posts)add('atrium6-food','p6_stall_post',[.10,2.8,.10],[x,y+1.4,z],'metal');
  sign('atrium6-lake','REFLECTION LAKE / SHALLOW EDGE',17,-8,8);for(const x of[14,20])add('atrium6-lake','p6_lake_sign_post',[.08,2.96,.08],[x,y+1.32,-8],'metal');
  add('atrium6-stage','p6_stage_platform',[14,.36,32],[113,y+.18,30],'oak');add('atrium6-stage','p6_stage_backdrop',[.16,3.1,29],[119.8,y+1.91,30],'navy',{noCollide:true});
  for(const x of Array.from({length:10},(_,i)=>70+i*3.5))for(const z of Array.from({length:20},(_,i)=>11+i*2))if(fits(x,z,1,1))seat('atrium6-stage',x,z,Math.PI/2);

@@ -43,10 +43,27 @@ export const ATRIUM_SIGNATURE_TREES=[
  {id:'food-aft',x:-34,z:42.9,height:13.5,spread:6.4,seed:37},
  {id:'food-fore',x:12,z:42.9,height:12.5,spread:5.8,seed:41},
 ];
-// 4B waterfalls (visual only): the big one against the lake's hull-side bank, centred on x; a mini waterfall pond in
-// the shallows at the lake's near (west) end, falling toward the boulevard so it is seen from it.
-export const ATRIUM_WATERFALL={x:46,width:9};
-export const ATRIUM_MINI_WATERFALL={x:11.5,width:4.6,scale:.55,setback:4.2};
+// 4B waterfall (visual only), the lake's focal point as in the concept: at the far (east) end of its western basin,
+// just short of the bridge and near the promenade, falling west back toward the boulevard so it faces the walker
+// looking down the atrium. (x, z) is its rock line; yaw turns its local fall direction (+z) to world -x.
+export const ATRIUM_WATERFALL={x:53.9,z:-17,width:8,yaw:-Math.PI/2};
+// 4B pass 2: an avenue along the boulevard's park and food-hall/stage edges. Each run is a tree between two 2.4 m
+// planters (4.8 m), with 7.2 m gaps between runs, centred between the food-hall stalls so a gap opens in front of
+// each stall; the boulevard keeps 9.8 m clear. The cross routes at x=-79 and x=2 stay open, and so does the lake
+// side, where the lawn shore and stones already edge the water.
+export const ATRIUM_BOULEVARD_TREES=[...[-66,-54,-42,-30,-18].map(x=>({x,z:-5.45})),...[-66,-54,-42,-30,-18,-6,14,26,38,50,74,86,98,110].map(x=>({x,z:5.45}))].map(t=>({...t,canopyHeight:5.2}));
+// Low brass lamps along the lake promenade edge, like the pairs at the reflection bays, every 8 m between the bays and
+// the bridge.
+export const ATRIUM_PROMENADE_LAMPS=Array.from({length:15},(_,i)=>6+i*8).filter(x=>[30,46,78,94].every(b=>Math.abs(x-b)>6.5)&&Math.abs(x-60)>4).map(x=>({x,z:-5.75}));
+// Timber decks under the food hall's outer table courts (drawn by atrium-gardens.js). Most of each deck lies in a
+// wing approach under Deck 7, so the string lights keep to open atrium: a scalloped run along each deck's front, on
+// posts just off its near rim, and a criss-cross over the open fore end of the larger deck. Every post keeps the
+// 2.4 m perimeter clearance (phase6-sanity) and stays clear of the tables and far-rim lanterns.
+export const ATRIUM_TIMBER_DECKS=[{x0:22,x1:56,z0:35.4,z1:55.2,round:4},{x0:-72,x1:-44,z0:35.4,z1:55.2,round:4}];
+export const ATRIUM_FESTOONS=[
+ {posts:[[22.5,35],[30.75,35],[39,35],[47.25,35],[55.5,35],[47.25,54.8],[53.5,54.8]],strings:[[0,1],[1,2],[2,3],[3,4],[3,6],[4,5],[5,6]]},
+ {posts:[[-71.5,35],[-62.5,35],[-53.5,35],[-44.5,35]],strings:[[0,1],[1,2],[2,3]]},
+];
 export function phase6GardenPolygons(){return ATRIUM_GARDEN_POCKETS.map(p=>rect(p.x-6,p.x+6,p.z-4,p.z+4));}
 // A dry 2.4 m garden approach crosses the shallow edge; no deep tank is built.
 export function phase6LakeIslands(){return [rect(6,18,-48,-40),rect(10.8,13.2,-56,-48)];}

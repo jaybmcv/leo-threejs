@@ -1,12 +1,14 @@
-// 4B "Hanging gardens" for the Deck 6 atrium: planting cascading from the slab edges of Decks 7–15 (in
+// 4B "Hanging gardens" for the Deck 6 atrium: planting cascading from the slab edges of Decks 7–20 (in
 // irregular clusters), four signature trees, stones along the lake edge and timber decks in the food hall.
 // Everything is visual only (noCollide) and lives in the atrium facade root, so the walk, its colliders, seats and
 // routes, and the atrium PVS key are untouched. One opaque vertex-coloured material (no transparency, no textures):
-// the Basic-material swap of the distant and phone copies keeps vertex colours and instancing, so it survives.
+// the Basic-material swap of the distant and phone copies keeps vertex colours and instancing, so it survives. The
+// exceptions, each with its own draw: the warm glow (lanterns, bulbs, downlights), the tree shade decal and the
+// waterfall's streak texture.
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {GREENS,BLOOMS,SHAPES,paint,stem,clump,flower,blade,orient,fern,flowerBush,tuft,aroid,palm} from '../walk/foliage.js';
-import {ATRIUM_ZONES,ATRIUM_SIGNATURE_TREES,ATRIUM_LAKE_BRIDGE,ATRIUM_WATERFALL,ATRIUM_MINI_WATERFALL,ATRIUM_GARDEN_POCKETS,phase6LakePolygon,phase6LakeIslands,phase6LakeShore,phase6ParkPath} from '../plan/atrium-v2.js';
+import {ATRIUM_ZONES,ATRIUM_SIGNATURE_TREES,ATRIUM_LAKE_BRIDGE,ATRIUM_WATERFALL,ATRIUM_GARDEN_POCKETS,ATRIUM_BOULEVARD_TREES,ATRIUM_TIMBER_DECKS,ATRIUM_FESTOONS,phase6LakePolygon,phase6LakeIslands,phase6LakeShore,phase6ParkPath} from '../plan/atrium-v2.js';
 import {paintTreeShade} from './atrium-daylight.js';
 import {walkCanvas} from '../walk/canvas.js';
 import {phase6Programme} from './phase6-programme.js';
@@ -19,8 +21,9 @@ const OUT=-Math.PI/2; // foliage.js yaw for local -z, the atrium side of a plant
 // ---- Cascades -------------------------------------------------------------------------------------------------
 // A planter hung on the outer face of a deck's slab edge, over the atrium (local frame: x along the edge, y up from
 // the deck floor, the void toward -z), with planting spilling over it and vines trailing down the fascia and past it.
-// Decks 7–15 only: nothing is added above Deck 16 (decisions-v2.json, atrium-centre-clear).
-const CASCADE_DECKS=[7,15],SLOT=3.6;
+// Every deck facing the atrium, 7 to 20, as in the concept. They hang on each slab edge and cross none of the void
+// (decisions-v2.json, atrium-centre-clear, keeps walkways and solid parts out of it above Deck 16).
+const CASCADE_DECKS=[7,20],SLOT=3.6;
 // A trailing vine seen from across the atrium: broad heart leaves alternating down a swaying line (no stem tube; at
 // these distances the leaves carry it), largest at the top.
 function vine(out,[x,y,z],length,r){
@@ -122,7 +125,7 @@ export function addGroveTrees(out,layout){
  const y0=layout.decks[5].y;let n=0;
  for(const p of fitoutFootprints(layout)){
   if(p.part!=='p6_tree_trunk'||ATRIUM_SIGNATURE_TREES.some(t=>Math.hypot(t.x-p.x,t.z-p.z)<.01))continue;
-  const pocket=ATRIUM_GARDEN_POCKETS.find(q=>Math.abs(q.z-1.1-p.z)<.01&&(Math.abs(q.x-p.x)<.01||Math.abs(q.x-3.5-p.x)<.01)),h=pocket?pocket.canopyHeight:4.4;
+  const pocket=ATRIUM_GARDEN_POCKETS.find(q=>Math.abs(q.z-1.1-p.z)<.01&&(Math.abs(q.x-p.x)<.01||Math.abs(q.x-3.5-p.x)<.01))??boulevardTree(p),h=pocket?pocket.canopyHeight:4.4;
   const r=random(Math.round(p.x*31+p.z*17)>>>0),top=y0+h,palette=[GREENS.mid,GREENS.bright,GREENS.bright,GREENS.lime];
   for(let k=0;k<3;k++){const a=k/3*Math.PI*2+r(),c=Math.cos(a),s=Math.sin(a);out.push(stem([[p.x,y0+2.3,p.z],[p.x+c*.5,top-1.5,p.z+s*.5],[p.x+c*1.1,top-.9,p.z+s*1.1]],.08,0x6e4a31,4));}
   for(let k=0;k<8;k++){const a=k/8*Math.PI*2+r()*.5,d=k?1+r()*.5:0,ht=top-.7-(d/1.6)**2*.6+r()*.3;clump(out,[p.x+Math.cos(a)*d,ht,p.z+Math.sin(a)*d],{r:.85+r()*.35,rnd:r,palette,squash:.62,leaves:3});}
@@ -141,10 +144,11 @@ export function addSignatureTrees(out,layout){
 // Pale faceted stones in loose groups along the lake's boulevard edge and round the dry garden, sitting in the
 // shallow water (bed 16 cm down). A stone goes only where it is in the water and clear of every atrium fit-out part
 // (bridge, sign posts, planters, reeds, the reflection terraces).
-function stone(out,[x,y,z],size,r){
+// `tall` scales its height and `floor` flattens its underside (the waterfall's rocks are rounder than these).
+function stone(out,[x,y,z],size,r,tall=.5,floor=-.2){
  const g=new T.IcosahedronGeometry(1,0),p=g.attributes.position,jit=new Map(),sx=size*(1.1+r()*.25),sz=size*(.8+r()*.25);
  // One jitter per original corner (the geometry is non-indexed), so neighbouring faces stay welded.
- for(let i=0;i<p.count;i++){const key=p.getX(i).toFixed(3)+','+p.getY(i).toFixed(3)+','+p.getZ(i).toFixed(3);if(!jit.has(key))jit.set(key,.85+r()*.3);const k=jit.get(key);p.setXYZ(i,p.getX(i)*sx*k,Math.max(-.2,p.getY(i))*size*.5*k,p.getZ(i)*sz*k);}
+ for(let i=0;i<p.count;i++){const key=p.getX(i).toFixed(3)+','+p.getY(i).toFixed(3)+','+p.getZ(i).toFixed(3);if(!jit.has(key))jit.set(key,.85+r()*.3);const k=jit.get(key);p.setXYZ(i,p.getX(i)*sx*k,Math.max(floor,p.getY(i))*size*tall*k,p.getZ(i)*sz*k);}
  g.rotateY(r()*Math.PI);g.computeVertexNormals();
  const tones=[0xd9d2c3,0xcfc7b6,0xe3ddd0,0xc4bba9],tone=new T.Color(tones[r()*tones.length|0]).toArray();out.push(paint(g.translate(x,y,z),()=>tone));
 }
@@ -155,7 +159,7 @@ export function addLakeStones(out,layout){
  const y=layout.decks[5].y,r=random(6061),[bx0,bx1]=ATRIUM_LAKE_BRIDGE.bounds,lake=phase6LakePolygon(layout.decks[5].atrium.outline),islands=phase6LakeIslands();let count=0;
  const parts=fitoutFootprints(layout);
  const inIsland=(x,z)=>islands.some(q=>x>q[0][0]-.15&&x<q[1][0]+.15&&z>q[0][1]-.15&&z<q[2][1]+.15);
- const clear=(x,z)=>x>bx0-1.5&&x<bx1+1.5||!contains(lake,[x,z])||inIsland(x,z)||nearWaterfall(layout,x,z,2)||parts.some(p=>Math.hypot(p.x-x,p.z-z)<p.r);
+ const clear=(x,z)=>x>bx0-1.5&&x<bx1+1.5||!contains(lake,[x,z])||inIsland(x,z)||nearWaterfall(x,z,2)||parts.some(p=>Math.hypot(p.x-x,p.z-z)<p.r);
  for(let x=6;x<119;x+=4+r()*4){const n=2+(r()*3|0);for(let k=0;k<n;k++){const sx=x+k*(.7+r()*.5),sz=phase6LakeShore(sx)-.55-r()*.7;if(clear(sx,sz))continue;stone(out,[sx,y-.08,sz],.32+r()*.3,r);count++;}}
  // Round the dry garden island, leaving its approach open.
  const [x0,x1,z0,z1]=[6,18,-48,-40],per=2*((x1-x0)+(z1-z0));
@@ -168,7 +172,6 @@ export function addLakeStones(out,layout){
 // ---- Timber decks -----------------------------------------------------------------------------------------------
 // Two rounded timber decks under the food hall's outer table courts: 3 cm boards, each a slightly different tone, laid
 // along the ship, on top of the paving (walkers and furniture stand where they always did).
-export const ATRIUM_TIMBER_DECKS=[{x0:22,x1:56,z0:35.4,z1:55.2,round:4},{x0:-72,x1:-44,z0:35.4,z1:55.2,round:4}];
 function timberDeck(out,{x0,x1,z0,z1,round},y,r){
  const board=.3,tones=[0xa8794f,0xb3865b,0x9d7049,0xae8155];
  for(let z=z0+board/2;z<z1;z+=board){const dz=Math.max(0,round-Math.min(z-z0,z1-z)),inset=round-Math.sqrt(Math.max(0,round*round-dz*dz)),a=x0+inset,b=x1-inset;
@@ -220,35 +223,67 @@ export function addLawnDetail(out,layout,clearGround,clearWater){
  return {lawnTufts:tufts,lawnFlowers:blooms,lakeMargin:margin};
 }
 
-// ---- Lake: lily pads, a rock waterfall, flowering shrubs ----------------------------------------------------------
-// The waterfall stands in the shallow lake against its far (hull-side) bank: a mound of pale faceted rocks with two
-// tiers of falling water (opaque, vertex-coloured sheets) and a ring of foam where it meets the lake. The reeds that
-// stood there give way (phase6-programme.js); like them and the stones, it is visual only.
-// Inside the waterfall's footprint plus a margin (its rocks reach about 3 m out from the bank).
-function nearWaterfall(layout,x,z,m){const{x:wx,width}=ATRIUM_WATERFALL,edge=lakeSouthEdge(phase6LakePolygon(layout.decks[5].atrium.outline),wx),{x:mx,width:mw,setback}=ATRIUM_MINI_WATERFALL,shore=phase6LakeShore(mx);return Math.abs(x-wx)<width/2+m&&z<edge+3.4+m||Math.abs(x-mx)<mw/2+m&&z<shore+m&&z>shore-setback-1.2-m;}
-function lakeSouthEdge(lake,x){return lake.filter(q=>Math.abs(q[0]-x)<.26&&q[1]<-10).reduce((z,q)=>Math.max(z,q[1]),-56);}
+// ---- Lake: lily pads, the waterfall, flowering shrubs -------------------------------------------------------------
+// The waterfall is the lake's focal point (ATRIUM_WATERFALL): a stepped mound of pale faceted rocks standing in the
+// shallow water, two tiers of falling water, foam on the ledge and spray where it meets the lake. It is built in a
+// local frame (x across the fall, the water falling toward +z), then turned by its yaw onto its rock line. Visual only,
+// like the stones and reeds.
+const fallFrame=()=>{const{x,z,yaw}=ATRIUM_WATERFALL;return new T.Matrix4().makeRotationY(yaw).setPosition(x,0,z);};
+// Inside the waterfall's footprint plus a margin m: its rocks reach about 4.1 m behind the rock line and 3.8 m in front,
+// the shrubs at its sides about 1.4 m past its width.
+function nearWaterfall(x,z,m){const{x:wx,z:wz,width,yaw}=ATRIUM_WATERFALL,dx=x-wx,dz=z-wz,c=Math.cos(yaw),s=Math.sin(yaw),lx=c*dx-s*dz,lz=s*dx+c*dz;return Math.abs(lx)<width/2+1.4+m&&lz>-4.1-m&&lz<3.8+m;}
+// A falling sheet, x0..x1 across, from top down to bottom, leaning out by `lean` toward +z at its foot. Its UVs run in
+// metres (u across, v up) for the falling-water streaks.
 function waterSheet(out,x0,x1,top,bottom,z,lean){
- const g=new T.PlaneGeometry(x1-x0,top-bottom,6,4),p=g.attributes.position;
- for(let i=0;i<p.count;i++){const k=((top-bottom)/2-p.getY(i))/(top-bottom);p.setZ(i,lean*k*k+Math.sin(p.getX(i)*3.1)*.03);}
+ const g=new T.PlaneGeometry(x1-x0,top-bottom,6,4),p=g.attributes.position,uv=g.attributes.uv;
+ for(let i=0;i<p.count;i++){const k=((top-bottom)/2-p.getY(i))/(top-bottom);p.setZ(i,lean*k*k+Math.sin(p.getX(i)*3.1)*.03);uv.setXY(i,uv.getX(i)*(x1-x0)/1.6,uv.getY(i)*(top-bottom)/2.4);}
  g.translate((x0+x1)/2,(top+bottom)/2,z);g.computeVertexNormals();
  out.push(paint(g,q=>new T.Color(0xf4fbfd).lerp(new T.Color(0x8fd0dc),Math.min(1,(top-q.y)/(top-bottom))*.75).toArray()));
 }
-// The waterfall at (x, rock line z0), falling toward +z; scale shrinks every height and size for the mini one.
-export function addWaterfall(out,layout,{x,width,z0,scale=1,seed=4477}){
- const y0=layout.decks[5].y,r=random(seed),s=scale,Y=v=>y0+v*s,stone_=(p,size,rr)=>stone(out,p,size*s,rr),y=y0;
- // Rocks: a back wall of big stones, a ledge, and loose boulders at the foot.
- for(let k=0;k<7;k++)stone_([x-width/2+.5*s+k*(width-s)/6,Y(1.4+r()*.6),z0+.6*s],1.5+r()*.5,r);
- for(let k=0;k<5;k++)stone_([x-width/2+s+k*(width-2*s)/4,Y(3.4+r()*.4),z0+.4*s],1.2+r()*.4,r);
- for(let k=0;k<3;k++)stone_([x-width/2+2*s+k*(width-4*s)/2,Y(4.6+r()*.3),z0+.3*s],.9+r()*.3,r);
- for(let k=0;k<6;k++)stone_([x-width/2+.8*s+k*(width-1.6*s)/5+(r()-.5)*.4*s,Y(.2),z0+(2.1+r()*.6)*s],.55+r()*.35,r);
- // Water: an upper fall from the top lip to the ledge, then a wider fall to the pool.
- waterSheet(out,x-1.3*s,x+1.3*s,Y(4.6),Y(2.4),z0+1.2*s,.45*s);
- waterSheet(out,x-2*s,x+2*s,Y(2.45),y0-.01,z0+1.75*s,.65*s);
- out.push(paint(new T.CircleGeometry(1.9*s,14).rotateX(-Math.PI/2).scale(1.3,1,.6).translate(x,y0-.004,z0+2.35*s),0xeef8f8));
- // Ferns along the top and flowering shrubs at both ends.
- for(let k=0;k<4;k++)fern(out,[x-width/2+.8*s+k*(width-1.6*s)/3,Y(4.7),z0+.4*s],{spread:.8*Math.max(.7,s),fronds:6,pairs:4,rnd:r,droop:1.1});
- for(const dx of[-width/2-.3,width/2+.3])flowerBush(out,[x+dx,y0-.05,z0+1.6*s],{spread:.9*Math.max(.7,s),rnd:r,color:BLOOMS[0],blooms:10});
- return {x,z:z0,width};
+// Rocks, foam and planting go to `out` (the garden mesh); the falling sheets to `water` (addFallingWater).
+export function addWaterfall(out,water,layout){
+ const{width:w,seed=4477}=ATRIUM_WATERFALL,y0=layout.decks[5].y,r=random(seed),Y=v=>y0+v,rock=[],sheets=[],st=(p,size)=>stone(rock,p,size,r,.9,-.25);
+ // Rocks: rounded boulders in three tiers, each resting on the one below (the base runs down into the lake bed), the
+ // middle of each tier set back so the falls stand clear of it; stones framing the ledge; boulders at the foot.
+ const back=x=>Math.abs(x)<2.2?-.7:0;
+ for(let k=0;k<6;k++){const x=-w/2+.8+k*(w-1.6)/5;st([x,Y(.5),-.5+back(x)],1.9+r()*.4);}
+ for(let k=0;k<5;k++){const x=-w/2+1.3+k*(w-2.6)/4;st([x,Y(2.3),-.9+back(x)],1.4+r()*.4);}
+ for(let k=0;k<5;k++)st([-2.8+k*1.4,Y(3.7),-1.5],1.05+r()*.3);
+ for(const x of[-1.2,1.2])st([x,Y(3.3),-2.4],1.5);
+ for(const x of[-2.7,2.7])st([x,Y(2.6),.9],.6+r()*.2);
+ for(let k=0;k<6;k++)st([-w/2+.8+k*(w-1.6)/5+(r()-.5)*.4,Y(.15),2.3+r()*.6],.55+r()*.35);
+ // Water: an upper fall from the crown to the ledge, then a wider fall to the lake.
+ waterSheet(sheets,-1.3,1.3,Y(4.4),Y(2.6),.5,.5);
+ waterSheet(sheets,-2,2,Y(2.65),y0-.01,1.3,.7);
+ // Foam on the ledge and at the foot, with spray: small pale stones of water where the fall meets the lake.
+ rock.push(paint(new T.CircleGeometry(1.3,12).rotateX(-Math.PI/2).scale(1.2,1,.7).translate(0,Y(2.66),1.1),0xf4fbfd));
+ rock.push(paint(new T.CircleGeometry(1.9,14).rotateX(-Math.PI/2).scale(1.3,1,.6).translate(0,y0-.004,2.1),0xeef8f8));
+ for(let k=0;k<16;k++)rock.push(paint(new T.IcosahedronGeometry(.12+r()*.14,0).translate((r()-.5)*4,y0+.04+r()*.12,1.8+r()*.9),0xf6fcff));
+ // Ferns and flowering shrubs along the crown and the ledge, shrubs at both ends.
+ for(let k=0;k<4;k++)fern(rock,[-w/2+1.2+k*(w-2.4)/3,Y(4.3),-1.1],{spread:.9,fronds:6,pairs:4,rnd:r,droop:1.1});
+ for(const x of[-3.3,3.3])flowerBush(rock,[x,Y(3.1),-.2],{spread:.8,rnd:r,color:BLOOMS[1],blooms:8});
+ for(const[x,y,z]of[[-3.6,1.9,.6],[3.6,1.9,.6],[-2.2,4.5,-1.9],[2.2,4.5,-1.9]])clump(rock,[x,Y(y),z],{r:.7,rnd:r,leaves:2,detail:0,squash:.7,palette:[GREENS.dark,GREENS.mid,GREENS.bright,GREENS.lime]});
+ for(const dx of[-w/2-.3,w/2+.3])flowerBush(rock,[dx,y0-.05,1.6],{spread:.9,rnd:r,color:BLOOMS[0],blooms:10});
+ const m=fallFrame();for(const g of rock)out.push(g.applyMatrix4(m));for(const g of sheets)water.push(g.applyMatrix4(m));
+ return {x:ATRIUM_WATERFALL.x,z:ATRIUM_WATERFALL.z,width:w};
+}
+// The falling water: one opaque Basic mesh with a streak texture (one draw), scrolled by atrium-mood.js while the walker
+// is in the open atrium; the distant copy shares the texture. Without a canvas (headless producers) the sheets join the
+// garden mesh as still water.
+function addFallingWater(root,sheets,out){
+ const c=walkCanvas();if(!c){out.push(...sheets);return {fallingWater:0};}
+ if(typeof c.data==='function')Object.defineProperty(c,'data',{value:undefined});
+ const map=new T.CanvasTexture(paintFallingWater(c));map.colorSpace=T.SRGBColorSpace;map.wrapS=map.wrapT=T.RepeatWrapping;
+ const g=mergeGeometries(sheets);sheets.forEach(x=>x.dispose());g.computeBoundingBox();g.computeBoundingSphere();
+ const o=new T.Mesh(g,new T.MeshBasicMaterial({name:'P6_atrium_waterfall',map,vertexColors:true,side:T.DoubleSide}));o.name='P6_atrium_waterfall';o.frustumCulled=false;
+ o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);return {fallingWater:1};
+}
+// Pale streaks of differing length and brightness on blue-white, wrapping top to bottom so the scroll has no seam.
+function paintFallingWater(c){
+ const W=64,H=256,g=c.getContext('2d'),r=random(8181);c.width=W;c.height=H;g.fillStyle='#c6dfe6';g.fillRect(0,0,W,H);
+ for(let i=0;i<70;i++){const x=r()*W,w=1+r()*3.5,y=r()*H,len=30+r()*110,a=.35+r()*.6;
+  for(const dy of[0,-H]){const gr=g.createLinearGradient(0,y+dy,0,y+dy+len);gr.addColorStop(0,`rgba(255,255,255,0)`);gr.addColorStop(.5,`rgba(255,255,255,${a})`);gr.addColorStop(1,`rgba(255,255,255,0)`);g.fillStyle=gr;g.fillRect(x,y+dy,w,len);}}
+ return c;
 }
 // Lily pads: notched discs in loose drifts on the open water, a few pink lotus flowers among them.
 export function addLilyPads(out,layout,clear){
@@ -266,7 +301,8 @@ export function addTreeBeds(out,layout,clear){
   flowerBush(out,[x,y,z],{spread,rnd:r,color:BLOOMS[[0,1,0,3][k%4]],blooms:7});bushes++;}
  // Big-leaved understory (aroids, ferns, the odd palm) round every tree, signature and grove alike.
  let understory=0;
- for(const p of fitoutFootprints(layout))if(p.part==='p6_tree_trunk')for(let k=0;k<6;k++){const a=k/6*Math.PI*2+r(),d=.8+r()*.9,x=p.x+Math.cos(a)*d,z=p.z+Math.sin(a)*d,kind=(k+Math.round(p.x))%3,size=.7+r()*.4;if(clear(x,z,.55))continue;
+ // (Not the boulevard avenue's trees: their planters carry their own beds.)
+ for(const p of fitoutFootprints(layout))if(p.part==='p6_tree_trunk'&&!boulevardTree(p))for(let k=0;k<6;k++){const a=k/6*Math.PI*2+r(),d=.8+r()*.9,x=p.x+Math.cos(a)*d,z=p.z+Math.sin(a)*d,kind=(k+Math.round(p.x))%3,size=.7+r()*.4;if(clear(x,z,.55))continue;
   if(kind===0)aroid(out,[x,y,z],{size,leaves:6,rnd:r});else if(kind===1)fern(out,[x,y,z],{spread:size*.9,fronds:7,pairs:5,rnd:r});else palm(out,[x,y,z],{height:1.2+r()*.5,canes:2,rnd:r});understory++;}
  return {bushes,understory};
 }
@@ -346,17 +382,34 @@ function addDeckLanterns(out,glow,y){
  return n;
 }
 
-// One merged draw for the static garden pieces, one for the warm lanterns, plus the instanced cascades and downlights.
+// One merged draw for the static garden pieces, one for the warm lanterns, one for the falling water, plus the
+// instanced cascades and downlights.
+// String lights between the festoon posts (phase6-programme.js): a dark cable sagging up to 45 cm from the 2.72 m
+// post tops, warm bulbs every ~0.8 m (in the lantern draw).
+function addFestoons(out,glow,y){
+ let bulbs=0;const top=y+2.72;
+ for(const{posts,strings}of ATRIUM_FESTOONS){
+  for(const[i,j]of strings){const a=posts[i],b=posts[j],sag=Math.min(.45,Math.hypot(b[0]-a[0],b[1]-a[1])*.04);
+   const n=Math.max(4,Math.round(Math.hypot(b[0]-a[0],b[1]-a[1])/.8)),at=t=>[a[0]+(b[0]-a[0])*t,top-sag*4*t*(1-t),a[1]+(b[1]-a[1])*t];
+   out.push(stem(Array.from({length:n+1},(_,k)=>at(k/n)),.012,0x2e2a26,3));
+   for(let k=1;k<n;k++){const[x,yy,z]=at(k/n);out.push(paint(new T.BoxGeometry(.03,.05,.03).translate(x,yy-.035,z),0x2e2a26));glow.push(new T.BoxGeometry(.07,.09,.07).translate(x,yy-.1,z));bulbs++;}}}
+ return bulbs;
+}
+const boulevardTree=p=>ATRIUM_BOULEVARD_TREES.find(t=>Math.abs(t.x-p.x)<.01&&Math.abs(t.z-p.z)<.01);
+
+// One merged draw for the static garden pieces, one for the warm lanterns, one for the falling water, plus the
+// instanced cascades and downlights.
 export function addAtriumGardens(root,layout){
  const y=layout.decks[5].y,lake=phase6LakePolygon(layout.decks[5].atrium.outline),islands=phase6LakeIslands(),parts=fitoutFootprints(layout),[bx0,bx1]=ATRIUM_LAKE_BRIDGE.bounds;
  const inIsland=(x,z,m)=>islands.some(q=>x>q[0][0]-m&&x<q[1][0]+m&&z>q[0][1]-m&&z<q[2][1]+m);
- const clearWater=(x,z,m)=>!contains(lake,[x,z])||inIsland(x,z,m)||x>bx0-m-1&&x<bx1+m+1||nearWaterfall(layout,x,z,3)||parts.some(p=>Math.hypot(p.x-x,p.z-z)<p.r+m-.6);
+ const clearWater=(x,z,m)=>!contains(lake,[x,z])||inIsland(x,z,m)||x>bx0-m-1&&x<bx1+m+1||nearWaterfall(x,z,3)||parts.some(p=>Math.hypot(p.x-x,p.z-z)<p.r+m-.6);
  const clearGround=(x,z,m)=>parts.some(p=>p.part!=='p6_tree_trunk'&&Math.hypot(p.x-x,p.z-z)<p.r+m-.6)||ATRIUM_SIGNATURE_TREES.some(t=>Math.hypot(t.x-x,t.z-z)<1.1);
- const out=[],glow=[],trees=addSignatureTrees(out,layout),grove=addGroveTrees(out,layout),planting=addPlantingBeds(out,layout),stones=addLakeStones(out,layout),decks=addTimberDecks(out,layout),waterfall=addWaterfall(out,layout,{...ATRIUM_WATERFALL,z0:lakeSouthEdge(phase6LakePolygon(layout.decks[5].atrium.outline),ATRIUM_WATERFALL.x)+.4}),miniWaterfall=addWaterfall(out,layout,{...ATRIUM_MINI_WATERFALL,z0:phase6LakeShore(ATRIUM_MINI_WATERFALL.x)-ATRIUM_MINI_WATERFALL.setback,seed:5511}),lily=addLilyPads(out,layout,clearWater),beds=addTreeBeds(out,layout,clearGround),lawn=addLawnDetail(out,layout,clearGround,clearWater),joints=addPavingJoints(out,layout),lanterns=addDeckLanterns(out,glow,y+.03);
+ const out=[],glow=[],trees=addSignatureTrees(out,layout),grove=addGroveTrees(out,layout),planting=addPlantingBeds(out,layout),stones=addLakeStones(out,layout),decks=addTimberDecks(out,layout),water=[],waterfall=addWaterfall(out,water,layout),lily=addLilyPads(out,layout,clearWater),beds=addTreeBeds(out,layout,clearGround),lawn=addLawnDetail(out,layout,clearGround,clearWater),joints=addPavingJoints(out,layout),lanterns=addDeckLanterns(out,glow,y+.03),festoonBulbs=addFestoons(out,glow,y+.03);
+ const falling=addFallingWater(root,water,out);
  const g=mergeGeometries(out);out.forEach(x=>x.dispose());g.computeBoundingBox();g.computeBoundingSphere();
  const o=new T.Mesh(g,gardenMaterial);o.name='P6_atrium_gardens';o.frustumCulled=false;o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);
  const gg=mergeGeometries(glow.map(x=>x.toNonIndexed()));glow.forEach(x=>x.dispose());gg.computeBoundingBox();gg.computeBoundingSphere();
  const lo=new T.Mesh(gg,gardenGlowMaterial);lo.name='P6_atrium_lanterns';lo.frustumCulled=false;lo.userData={...o.userData};root.add(lo);
  const cascades=addHangingGardens(root,layout),downlights=addDownlights(root,layout),soffits=addSoffits(root,layout),shade=addTreeShade(root,layout,trees);
- return {trees,...grove,...planting,...stones,...decks,waterfall,miniWaterfall,...lily,...beds,...lawn,...joints,lanterns,...downlights,...soffits,...shade,staticTriangles:g.attributes.position.count/3,cascades};
+ return {trees,...grove,...planting,...stones,...decks,waterfall,...falling,...lily,...beds,...lawn,...joints,lanterns,festoonBulbs,...downlights,...soffits,...shade,staticTriangles:g.attributes.position.count/3,cascades};
 }
