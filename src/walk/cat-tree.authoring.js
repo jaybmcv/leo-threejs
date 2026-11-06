@@ -337,6 +337,193 @@ export function createCatTree(ship){
  return {group,solid,seats,bounds:{y0:TREE.floor,y1:TREE.top+.5}};
 }
 
+// ---- The Toybox Park: the Deck 6 floor of the atrium nose round the tree, in the same felt and knit. Port is a yarn
+// meadow (knit hillocks, giant yarn balls, picnic blankets, felt trees); starboard is a koi pond with an arched bridge,
+// beside the Voyage Commons table, which gets a felt pavilion. Stitched felt paths join the lift tower, the tree's ring,
+// the bow cafe and a loop round both. A 4 m promenade along the cabin fronts stays clear.
+export const PARK={y:TREE.floor,ring:15.9,pathW:4,promenade:4};
+// The nose floor's half-width (its atrium edge) along x, measured from the v2 layout.
+const HALF=[[146,63],[150,63],[160,61.9],[175,60.9],[190,58.6],[205,52.5],[220,42.2],[230,27.7],[236,16.7],[240,0]];
+export const parkHalfWidth=x=>{if(x<=HALF[0][0])return HALF[0][1];for(let i=1;i<HALF.length;i++)if(x<=HALF[i][0]){const [a,ha]=HALF[i-1],[b,hb]=HALF[i];return ha+(hb-ha)*(x-a)/(b-a);}return 0;};
+const smooth=(pts,closed,per=1.2)=>{const c=new T.CatmullRomCurve3(pts.map(([x,z])=>new T.Vector3(x,0,z)),closed,'centripetal');return c.getSpacedPoints(Math.max(8,Math.round(c.getLength()/per))).map(v=>[v.x,v.z]).slice(0,closed?-1:undefined);};
+const LOOP=[[152,0],[150.3,7],[149.2,14],[152,24],[160,34],[172,41],[188,44.5],[204,41.5],[218,32],[227,18],[230.5,0],[227,-18],[218,-32],[204,-41.5],[188,-44.5],[172,-41],[160,-34],[152,-24],[149.2,-14],[150.3,-7]];
+const ringPts=()=>{const out=[];for(let i=0;i<96;i++){const a=i/96*Math.PI*2;out.push([TREE.x+Math.cos(a)*PARK.ring,TREE.z+Math.sin(a)*PARK.ring]);}return out;};
+// Paths as centre lines: [points, closed]. The starboard cross path carries the bridge over the pond.
+export const PARK_PATHS=[
+ {id:'tower',pts:[[147.2,0],[TREE.x-PARK.ring,0]]},
+ {id:'cafe',pts:[[TREE.x+PARK.ring,0],[237.6,0]]},
+ {id:'ring',pts:ringPts(),closed:true},
+ {id:'loop',pts:smooth(LOOP,true),closed:true},
+ {id:'port',pts:[[186,-17.8],[186,-44.4]]},
+ {id:'starboard',pts:[[186,17.8],[186,44.4]]}];
+// The pond, a kidney along the starboard side of the island; the bridge crosses it on the starboard path.
+export const POND=smooth([[159,20],[166,18.5],[174,19.5],[182,21.5],[194,22],[204,18.5],[210,20],[211,25],[206,29.5],[196,34],[184,34.5],[174,32.5],[165,30],[159,26]],true,1);
+export const PARK_BRIDGE={x:186,z0:20.2,z1:35.8,w:2.6,rise:.75};
+export const PAVILION={x0:154.3,x1:169.7,z0:6.3,z1:13.7,h:3.6};
+const segDist=(x,z,a,b)=>{const dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz||1)));return Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz);};
+const polyDist=(x,z,pts,closed)=>{let d=Infinity;for(let i=0;i<pts.length-(closed?0:1);i++)d=Math.min(d,segDist(x,z,pts[i],pts[(i+1)%pts.length]));return d;};
+const inside=(x,z,poly)=>{let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const [xi,zi]=poly[i],[xj,zj]=poly[j];if((zi>z)!==(zj>z)&&x<(xj-xi)*(z-zi)/(zj-zi)+xi)c=!c;}return c;};
+export const onParkPath=(x,z,pad=0)=>PARK_PATHS.some(p=>polyDist(x,z,p.pts,p.closed)<PARK.pathW/2+pad);
+export const inPond=(x,z,pad=0)=>inside(x,z,POND)||polyDist(x,z,POND,true)<pad;
+// The fixed things already on this floor: the lift tower, the Voyage Commons fit-out (phase6-programme.js) and the island.
+const FIXED=[[122.6,146.6,-9,9],[151.5,154.5,-12.5,-11.5],[160.5,163.5,-12.5,-11.5],[169.5,172.5,-12.5,-11.5],[151.7,152.3,14.7,15.3],[171.7,172.3,14.7,15.3],[PAVILION.x0,PAVILION.x1,PAVILION.z0,PAVILION.z1],[237.5,260,-20,20]];
+// A spot of radius r is free when it keeps off the paths, the pond, the island and its ring, the fixed fit-out and the promenade.
+export function parkFree(x,z,r,{path=.8,pond=.8}={}){
+ if(x-r<148||x+r>236)return false;if(Math.abs(z)+r>parkHalfWidth(x)-PARK.promenade)return false;
+ if(Math.hypot(x-TREE.x,z-TREE.z)<PARK.ring+PARK.pathW/2+r+.6)return false;
+ if(onParkPath(x,z,r+path)||inPond(x,z,r+pond))return false;
+ return !FIXED.some(([x0,x1,z0,z1])=>x+r>x0-.6&&x-r<x1+.6&&z+r>z0-.6&&z-r<z1+.6);}
+// Knit hillocks [x,z,radius,height]: gentle (under 15 degrees), walkable and solid.
+export const HILLS=[[166,-27,6,1.05],[200,-30,6,1.15],[214,-20,5,.9],[176,-33,5,.85],[218,14,4,.7],[190,-51,3.5,.6]];
+
+export function createNosePark(ship){
+ if(ship&&ship.v2Layout===false)return null;
+ const rnd=seeded(1106),y0=PARK.y,group=new T.Group(),near=new T.Group(),far=new T.Group(),solid=new T.Group(),seats=new T.Group();
+ group.name='Toybox_park';solid.name='Toybox_park_solid';near.name='Toybox_park_near';far.name='Toybox_park_far';seats.name='Toybox_park_seats';
+ const lod=new T.LOD();lod.position.set(192,0,0);lod.addLevel(near,0);lod.addLevel(far,170);group.add(lod);near.position.set(-192,0,0);far.position.copy(near.position);
+ const bulk=felt(new T.MeshStandardMaterial({name:'Toybox_park_felt',vertexColors:true,roughness:.95,metalness:0,side:T.DoubleSide}));
+ const knitMat=felt(new T.MeshStandardMaterial({name:'Toybox_park_knit',vertexColors:true,roughness:1,metalness:0,side:T.DoubleSide}),1,{knit:true});
+ const glow=new T.MeshStandardMaterial({name:'Toybox_park_lantern',color:0xffc070,emissive:0xffa038,emissiveIntensity:2.6,roughness:.6});
+ const water=new T.MeshStandardMaterial({name:'Toybox_park_water',color:0x62c9c6,roughness:.06,metalness:.05,transparent:true,opacity:.6,depthWrite:false});
+ const hidden=new T.MeshBasicMaterial({visible:false});
+ const base=[],baseKnit=[],parts=[],knits=[],lights=[],grounds=[],walls=[],cushions=[];
+ // Props claim their footprint so none lands on another.
+ let school=[],swim=null,clock=0;
+ const taken=[],free=(x,z,r,o)=>parkFree(x,z,r,o)&&!taken.some(([tx,tz,tr])=>Math.hypot(x-tx,z-tz)<r+tr+.4),claim=(x,z,r)=>{taken.push([x,z,r]);return true;};
+ for(const [hx,hz,R] of HILLS)claim(hx,hz,R);
+ // Every triangle of a walk surface must face up: the walk only stands on ground whose normal points up.
+ const upward=g=>{g=g.index?g.toNonIndexed():g;const p=g.attributes.position,a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3();for(let i=0;i<p.count;i+=3){a.fromBufferAttribute(p,i);b.fromBufferAttribute(p,i+1);c.fromBufferAttribute(p,i+2);if(b.sub(a).cross(c.sub(a)).y<0){const t=[p.getX(i+1),p.getY(i+1),p.getZ(i+1)];p.setXYZ(i+1,p.getX(i+2),p.getY(i+2),p.getZ(i+2));p.setXYZ(i+2,...t);}}g.deleteAttribute('normal');g.computeVertexNormals();return g;};
+ // A square timber lantern on a short post, solid.
+ const lantern=(x,z,h=1.1)=>{parts.push(paint(at(new T.BoxGeometry(.2,h,.2),x,y0+h/2,z),C.wood));parts.push(paint(at(new T.BoxGeometry(.62,.08,.62),x,y0+h+.6,z),C.wood),paint(at(new T.BoxGeometry(.58,.06,.58),x,y0+h,z),C.wood));
+  lights.push(at(new T.BoxGeometry(.46,.54,.46),x,y0+h+.3,z));for(const [dx,dz] of [[-.25,-.25],[.25,-.25],[-.25,.25],[.25,.25]])parts.push(paint(at(new T.BoxGeometry(.06,.58,.06),x+dx,y0+h+.3,z+dz),C.wood));walls.push(at(new T.BoxGeometry(.45,h+.7,.45),x,y0+(h+.7)/2,z));};
+ const flat=(shapePts,y,color,vary=0)=>{const s=new T.Shape(shapePts.map(([x,z])=>new T.Vector2(x,-z)));const g=new T.ShapeGeometry(s,4);g.rotateX(-Math.PI/2);g.translate(0,y,0);return paint(g,color,vary,rnd);};
+ const disc=(x,z,r,y,color,seg=32)=>{const g=new T.CircleGeometry(r,seg);g.rotateX(-Math.PI/2);at(g,x,y,z);return paint(g,color);};
+ // Flat strip along a centre line, facing up.
+ const ribbon=(pts,w,y,closed=false)=>{const P=[],n=pts.length,edge=[];for(let i=0;i<n;i++){const a=pts[closed?(i-1+n)%n:Math.max(0,i-1)],b=pts[closed?(i+1)%n:Math.min(n-1,i+1)],tx=b[0]-a[0],tz=b[1]-a[1],l=Math.hypot(tx,tz)||1;edge.push([pts[i][0]-tz/l*w/2,pts[i][1]+tx/l*w/2,pts[i][0]+tz/l*w/2,pts[i][1]-tx/l*w/2]);}
+  for(let i=0;i<n-(closed?0:1);i++){const e=edge[i],f=edge[(i+1)%n];P.push(e[0],y,e[1],f[0],y,f[1],f[2],y,f[3],e[0],y,e[1],f[2],y,f[3],e[2],y,e[3]);}
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.computeVertexNormals();return g;};
+ // Running stitches inset along both edges of a path.
+ const stitchRun=(pts,w,y,closed=false)=>{const out=[];let carry=0;for(let i=0;i<pts.length-(closed?0:1);i++){const a=pts[i],b=pts[(i+1)%pts.length],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz);if(!l)continue;const ux=dx/l,uz=dz/l;
+  for(let s=carry;s<l;s+=.62){for(const side of [-1,1]){const cx=a[0]+ux*s-uz*side*(w/2-.32),cz=a[1]+uz*s+ux*side*(w/2-.32),q=new T.PlaneGeometry(.34,.07);q.rotateX(-Math.PI/2);q.rotateY(-Math.atan2(uz,ux));at(q,cx,y,cz);out.push(q);}carry=s+.62-l;}}return paint(mergeGeometries(out.map(g=>g.toNonIndexed())),C.carpet[0]);};
+
+ // Lawn: knit green over the whole floor inside the promenade, with darker and lighter patches.
+ {const edge=[];for(let x=148;x<=234;x+=2)edge.push([x,-(parkHalfWidth(x)-PARK.promenade)]);for(let x=234;x>=148;x-=2)edge.push([x,parkHalfWidth(x)-PARK.promenade]);
+  baseKnit.push(flat(edge,y0+.03,0x8fb257,.06));
+  for(let i=0;i<26;i++){const x=150+rnd()*84,z=(rnd()*2-1)*(parkHalfWidth(x)-PARK.promenade-4),r=3+rnd()*5;if(!parkFree(x,z,1,{path:-1.5,pond:-1}))continue;const pts=[];for(let k=0;k<14;k++){const a=k/14*Math.PI*2,rr=r*(.75+.35*rnd());pts.push([x+Math.cos(a)*rr,z+Math.sin(a)*rr]);}baseKnit.push(flat(smooth(pts,true,.8),y0+.04,[0x7da34a,0x9cbf62,0x86ab50][i%3]));}}
+ // Paths: cream felt with a red running stitch inset along each edge.
+ for(const p of PARK_PATHS){const runs=p.id==='starboard'?[[[186,17.8],[186,PARK_BRIDGE.z0]],[[186,PARK_BRIDGE.z1],[186,44.4]]]:[p.pts];
+  for(const r of runs){base.push(paint(ribbon(r,PARK.pathW,y0+.07,p.closed),C.cream));base.push(stitchRun(r,PARK.pathW,y0+.085,p.closed));}}
+ // The promenade along the cabin fronts: a red felt band with a cream stitch, either side.
+ for(const side of [-1,1]){const P=[],edge=[];for(let x=147;x<=235;x+=1.5){P.push([x,side*(parkHalfWidth(x)-.3)]);edge.push([x,side*(parkHalfWidth(x)-PARK.promenade+.6)]);}base.push(flat([...P,...edge.slice().reverse()],y0+.06,0xc0503f));base.push(paint(stitchRun(edge,.01,y0+.075),C.cream));}
+ // The welcome plaza before the lift tower: a cream felt disc with a big red paw print.
+ {base.push(disc(155.5,0,5.6,y0+.075,C.cream,48));const paw=[[155.5,0,1.9],[153.2,-2.1,.75],[152.4,-.55,.75],[152.4,1.1,.75],[153.2,2.6,.75]];for(const [x,z,r] of paw){const g=new T.CircleGeometry(r,20);g.scale(x===155.5?1.15:1,1,1);g.rotateX(-Math.PI/2);at(g,x,y0+.095,z);base.push(paint(g,C.carpet[0]));}}
+
+ // Woven planters of pom-pom flowers flank the plaza.
+ for(const [x,z] of [[158.5,-5.2],[158.5,5.2]]){claim(x,z,.8);const pl=new T.CylinderGeometry(.75,.65,.6,14);at(pl,x,y0+.3,z);parts.push(woven(pl,y0));const top=new T.SphereGeometry(.7,12,8,0,Math.PI*2,0,Math.PI/2);top.scale(1,.6,1);at(top,x,y0+.58,z);knits.push(paint(top,0x6f9a3e,.08,rnd));for(let f=0;f<7;f++){const a=f/7*6.28,r=.25+.25*(f%2);parts.push(paint(at(new T.SphereGeometry(.17,7,5),x+Math.cos(a)*r,y0+.95+.08*(f%3),z+Math.sin(a)*r),[0xec7a92,0xf6ead2,0xf2b84b][f%3]));}walls.push(at(new T.CylinderGeometry(.78,.78,1,10),x,y0+.5,z));}
+ // The pond: a teal bed, a glassy surface just above the floor (it is ankle-deep: walkers wade), pebbles and felt
+ // shrubs round its bank, lily pads, a lotus and felt koi.
+ {base.push(flat(POND,y0+.05,0x3d9c9e));const surf=new T.ShapeGeometry(new T.Shape(POND.map(([x,z])=>new T.Vector2(x,-z))),4);surf.rotateX(-Math.PI/2);surf.translate(0,y0+.14,0);far.add(new T.Mesh(surf.clone(),water));const w=new T.Mesh(surf,water);w.name='Toybox_park_pond';near.add(w);
+  let s=0;for(let i=0;i<POND.length;i++){const a=POND[i],b=POND[(i+1)%POND.length];const l=Math.hypot(b[0]-a[0],b[1]-a[1]);for(;s<l;s+=1.15){const t=s/l,x=a[0]+(b[0]-a[0])*t,z=a[1]+(b[1]-a[1])*t;if(Math.abs(x-PARK_BRIDGE.x)<PARK_BRIDGE.w/2+.6)continue;const r=.38+rnd()*.3,g=new T.SphereGeometry(r,9,6);g.scale(1.25,.55,1.1);g.rotateY(rnd()*3);at(g,x,y0+r*.3,z);parts.push(paint(g,[0xd9cdb6,0xc9bca4,0xe6dcc8][Math.floor(rnd()*3)]));}s-=l;}
+  for(let k=0;k<30;k++){const i=Math.floor(k/30*POND.length+rnd()*3)%POND.length,[x,z]=POND[i],dx=x-189,dz=z-26,l=Math.hypot(dx,dz)||1,ox=x+dx/l*1.3,oz=z+dz/l*1.3;if(Math.abs(ox-PARK_BRIDGE.x)<PARK_BRIDGE.w/2+1.4||onParkPath(ox,oz,.9))continue;const r=.7+rnd()*.5,g=new T.SphereGeometry(r,10,7);g.scale(1,.8,1);at(g,ox,y0+r*.6,oz);knits.push(paint(g,[0x6f9a3e,0x86ab4e,0x5d8a36][k%3],.08,rnd));walls.push(at(new T.CylinderGeometry(r*.9,r*.9,1,10),ox,y0+.5,oz));
+   if(k%2===0)for(let f=0;f<5;f++){const fx=ox+(rnd()-.5)*r*1.4,fz=oz+(rnd()-.5)*r*1.4,fy=y0+r*1.25+rnd()*.25;parts.push(paint(at(new T.SphereGeometry(.16,7,5),fx,fy,fz),[0xec7a92,0xf6ead2,0xf2b84b][f%3]));}}
+  for(let k=0;k<14;k++){let x=0,z=0,ok=false;for(let t=0;t<40&&!ok;t++){x=160+rnd()*50;z=19+rnd()*15;ok=inside(x,z,POND)&&polyDist(x,z,POND,true)>1.2&&Math.abs(x-PARK_BRIDGE.x)>2;}if(!ok)continue;const pad=new T.CircleGeometry(.55+rnd()*.3,14,.3,Math.PI*2-.6);pad.rotateX(-Math.PI/2);pad.rotateY(rnd()*6);at(pad,x,y0+.155,z);parts.push(paint(pad,0x6c9c3c));
+   if(k%5===0){for(let p=0;p<6;p++){const pe=new T.SphereGeometry(.2,6,4);pe.scale(.6,1,.35);pe.rotateZ(.5);pe.rotateY(p/6*Math.PI*2);at(pe,x+Math.cos(p)*.12,y0+.32,z+Math.sin(p)*.12);parts.push(paint(pe,0xf3a6b8));}parts.push(paint(at(new T.SphereGeometry(.1,6,4),x,y0+.36,z),0xf2d44b));}}
+  for(let k=0;k<9;k++){const t=(k+.5)/9,i=Math.floor(t*POND.length*.5),a=POND[i],b=POND[POND.length-1-i],x=a[0]+(b[0]-a[0])*.5+(rnd()-.5),z=a[1]+(b[1]-a[1])*.5+(rnd()-.5);if(!inside(x,z,POND)||Math.abs(x-PARK_BRIDGE.x)<2.5)continue;const st=new T.CylinderGeometry(.55,.62,.2,14);at(st,x,y0+.1,z);parts.push(paint(st,0xe6dcc8,.06,rnd));}
+  // Felt koi: one instanced school, each fish circling its own loop inset from the bank (under the bridge too).
+  const n=POND.length,inward=POND.map((p,i)=>{const a=POND[(i-1+n)%n],b=POND[(i+1)%n],tx=b[0]-a[0],tz=b[1]-a[1],l=Math.hypot(tx,tz)||1,nx=-tz/l,nz=tx/l;return inside(p[0]+nx*.6,p[1]+nz*.6,POND)?[nx,nz]:[-nx,-nz];});
+  const koiTail=new T.ConeGeometry(.46,.75,6);koiTail.rotateZ(Math.PI/2);koiTail.scale(1,1,.25);koiTail.translate(-1,0,0);const koiBody=new T.SphereGeometry(.5,14,8);koiBody.scale(1.5,.7,.55);
+  const koiGeo=mergeGeometries([paint(koiBody,0xffffff),paint(koiTail,0xfff2dc),paint(at(new T.SphereGeometry(.07,6,4),.55,.1,.2),C.ink),paint(at(new T.SphereGeometry(.07,6,4),.55,.1,-.2),C.ink),paint(at(new T.SphereGeometry(.3,8,5).scale(1.2,.5,.85),.05,.2,0),0xf08a4b),paint(at(new T.SphereGeometry(.18,6,4).scale(1,.5,.8),-.55,.12,0),0xe2604e)]);koiGeo.scale(.8,.85,.8);
+  const tints=[0xfff6e6,0xf6a050,0xfff6e6,0xe8604e,0xfff6e6,0xf2c060,0xfff6e6,0xf6a050,0xe8604e,0xfff6e6],koi=new T.InstancedMesh(koiGeo,bulk,tints.length);koi.name='Toybox_park_koi';
+  school=tints.map((c,k)=>{koi.setColorAt(k,new T.Color(c));const d=1.6+(k%4)*.9,loop=POND.map((p,i)=>[p[0]+inward[i][0]*d,p[1]+inward[i][1]*d]).filter(([x,z])=>inside(x,z,POND)&&polyDist(x,z,POND,true)>1.1);let len=0;const acc=[0];for(let i=0;i<loop.length;i++){len+=Math.hypot(loop[(i+1)%loop.length][0]-loop[i][0],loop[(i+1)%loop.length][1]-loop[i][1]);acc.push(len);}
+   return {loop,acc,len,s:rnd()*len,speed:(.45+rnd()*.5)*(k%3===1?-1:1),y:y0+.08+(k%2)*.025,phase:rnd()*6.28};});
+  koi.instanceMatrix.setUsage(T.DynamicDrawUsage);near.add(koi);swim=koi;}
+
+ // The arched footbridge over the pond: a red felt deck on timber with rope rails; the deck is walkable and the rails are walls.
+ {const B=PARK_BRIDGE,N=24,P=[],deckY=t=>y0+.02+B.rise*Math.sin(Math.PI*t);for(let i=0;i<N;i++){const t0=i/N,t1=(i+1)/N,z0=B.z0+(B.z1-B.z0)*t0,z1=B.z0+(B.z1-B.z0)*t1,a=deckY(t0),b=deckY(t1);
+   const top=new T.BufferGeometry();top.setAttribute('position',new T.Float32BufferAttribute([B.x-B.w/2,a+.12,z0,B.x+B.w/2,a+.12,z0,B.x+B.w/2,b+.12,z1,B.x-B.w/2,a+.12,z0,B.x+B.w/2,b+.12,z1,B.x-B.w/2,b+.12,z1],3));top.computeVertexNormals();P.push(top);}
+  const deck=upward(mergeGeometries(P));grounds.push(deck.clone());parts.push(paint(deck,C.carpet[0]));
+  for(let i=0;i<N;i++){const t=(i+.5)/N,z=B.z0+(B.z1-B.z0)*t,y=deckY(t);parts.push(paint(at(new T.BoxGeometry(B.w+.3,.18,(B.z1-B.z0)/N*.82),B.x,y-.02,z),C.wood));}
+  for(const side of [-1,1]){const x=B.x+side*(B.w/2+.08),posts=[];for(let k=0;k<=6;k++){const t=k/6,z=B.z0+(B.z1-B.z0)*t,y=deckY(t);posts.push(new T.Vector3(x,y+1.02,z));parts.push(paint(at(new T.BoxGeometry(.16,1,.16),x,y+.55,z),C.wood));if(k===0||k===6){parts.push(paint(at(new T.SphereGeometry(.14,8,6),x,y+1.12,z),C.wood));}}
+   parts.push(paint(tube(posts,.07,36,6),C.rope));const mid=posts.map(p=>p.clone().setY(p.y-.45));parts.push(paint(tube(mid,.05,36,5),C.wood));
+   for(let i=0;i<N;i++){const t0=i/N,t1=(i+1)/N,za=B.z0+(B.z1-B.z0)*t0,zb=B.z0+(B.z1-B.z0)*t1,ya=deckY(t0),yb=deckY(t1),g=new T.BoxGeometry(.12,1.1,zb-za+.02);at(g,x,(ya+yb)/2+.6,(za+zb)/2);walls.push(g);}}
+  for(const z of [B.z0-.6,B.z1+.6])for(const side of [-1,1]){const x=B.x+side*(B.w/2+.9);lantern(x,z,1.05);}}
+
+ // The Voyage Commons table's pavilion: four rope-wrapped posts, a scalloped red felt roof with a pom-pom on top,
+ // curtains tied back at the corners, string lights along the eaves and a red rug under the table.
+ {const P=PAVILION,cx=(P.x0+P.x1)/2,cz=(P.z0+P.z1)/2,w=P.x1-P.x0,d=P.z1-P.z0;
+  base.push(paint(at(new T.BoxGeometry(w+1.4,.02,d+1.4),cx,y0+.075,cz),C.carpet[0]));base.push(stitchRun([[P.x0-.7,P.z0-.7],[P.x1+.7,P.z0-.7],[P.x1+.7,P.z1+.7],[P.x0-.7,P.z1+.7]],.9,y0+.09,true));
+  for(const x of [P.x0,P.x1])for(const z of [P.z0,P.z1]){const post=new T.CylinderGeometry(.24,.28,P.h,12);at(post,x,y0+P.h/2,z);parts.push(sisal(post,30));walls.push(at(new T.CylinderGeometry(.3,.3,P.h,10),x,y0+P.h/2,z));
+   for(let k=0;k<5;k++){const band=new T.TorusGeometry(.27,.05,4,14);band.rotateX(Math.PI/2);at(band,x,y0+.4+k*.75,z);parts.push(paint(band,C.rope));}
+   // a curtain gathered back against the post
+   const sx=Math.sign(x-cx),sz=Math.sign(z-cz),prof=[[.34,0],[.26,.5],[.13,1.55],[.16,1.75],[.3,2.6],[.42,P.h-.05]].map(([r,y])=>new T.Vector2(r,y)),cu=new T.LatheGeometry(prof,10);cu.scale(1,1,.45);at(cu,x-sx*.2,y0,z-sz*.62);knits.push(paint(cu,0xc84a3e));parts.push(paint(at(new T.TorusGeometry(.17,.05,4,12).rotateX(Math.PI/2),x-sx*.2,y0+1.62,z-sz*.62),C.carpet[1]));}
+  // roof: a low four-sided felt tent, puffed, with a scalloped valance
+  const roof=new T.ConeGeometry(1,1,4,3,true);roof.rotateY(Math.PI/4);roof.scale((w+1.2)/Math.SQRT2,2.3,(d+1.2)/Math.SQRT2);{const q=roof.attributes.position;for(let i=0;i<q.count;i++){const yy=q.getY(i);if(yy<1.1&&yy>-1.1)q.setY(i,yy+.3*Math.cos(yy/2.3*Math.PI));}}roof.computeVertexNormals();at(roof,cx,y0+P.h+1.15,cz);knits.push(paint(roof,0xd2463c));
+  const n=Math.round(2*(w+d+2.4)/1.1);for(let i=0;i<n;i++){const t=i/n,per=2*(w+1.2+d+1.2);let s=t*per,x,z,ang;const W2=w+1.2,D2=d+1.2;if(s<W2){x=cx-W2/2+s;z=cz-D2/2;ang=0;}else if((s-=W2)<D2){x=cx+W2/2;z=cz-D2/2+s;ang=Math.PI/2;}else if((s-=D2)<W2){x=cx+W2/2-s;z=cz+D2/2;ang=0;}else{s-=W2;x=cx-W2/2;z=cz+D2/2-s;ang=Math.PI/2;}
+   const sc=new T.CircleGeometry(.56,10,Math.PI,Math.PI);sc.rotateY(ang);at(sc,x,y0+P.h+.02,z);knits.push(paint(sc,0xd2463c));if(i%2===0)lights.push(at(new T.SphereGeometry(.09,6,4),x,y0+P.h-.5,z));}
+  knits.push(paint(at(new T.SphereGeometry(.55,12,8),cx,y0+P.h+2.45,cz),C.carpet[1]));
+  // a string of lights swagged corner to corner under the roof
+  for(const [a,b] of [[[P.x0,P.z0],[P.x1,P.z1]],[[P.x0,P.z1],[P.x1,P.z0]]]){const pts=[];for(let k=0;k<=16;k++){const t=k/16,x=a[0]+(b[0]-a[0])*t,z=a[1]+(b[1]-a[1])*t,y=y0+P.h-.15-Math.sin(Math.PI*t)*.7;pts.push(new T.Vector3(x,y,z));if(k%2===1)lights.push(at(new T.SphereGeometry(.1,6,4),x,y-.12,z));}parts.push(paint(tube(pts,.02,32,3),C.ink));}}
+
+ // Knit hillocks: smooth bumps, solid and walkable; flowers on their tops.
+ for(const [hx,hz,R,h] of HILLS){if(!parkFree(hx,hz,R,{path:.3,pond:.5}))continue;
+  const prof=[];for(let k=0;k<=10;k++){const d=k/10;prof.push(new T.Vector2(Math.max(.001,R*d),h*Math.pow(Math.cos(d*Math.PI/2),2)));}const dome=new T.LatheGeometry(prof.reverse(),32);at(dome,hx,y0+.03,hz);
+  grounds.push(upward(dome.clone()));knits.push(paint(dome,[0x86ab4e,0x7da34a,0x9cbf62][Math.floor(rnd()*3)],.05,rnd));
+  for(let f=0;f<7;f++){const a=rnd()*6.28,r=rnd()*R*.55,x=hx+Math.cos(a)*r,z=hz+Math.sin(a)*r,y=y0+.03+h*Math.pow(Math.cos(r/R*Math.PI/2),2);parts.push(paint(between(new T.Vector3(x,y,z),new T.Vector3(x,y+.45,z),.025,.025,4),0x5d8a36));parts.push(paint(at(new T.SphereGeometry(.17,7,5),x,y+.5,z),C.toy[f%5]));}}
+
+ // Giant yarn balls with a loose strand trailing over the lawn; solid.
+ for(const [x,z,r,c] of [[180,-25,2.1,C.carpet[0]],[196,-49,1.8,0x6fa8d6],[223,-13,2.2,C.carpet[1]],[217,25,1.7,C.cream],[168,-47,1.6,C.carpet[1]],[226,-24,1.5,0x6fa8d6]]){
+  if(!free(x,z,r,{path:.4})||!claim(x,z,r))continue;{const ball=new T.SphereGeometry(r,22,14);at(ball,x,y0+r*.95,z);parts.push(paint(ball,c,.03,rnd));const dark=new T.Color(c).multiplyScalar(.82).getHex();for(let k=0;k<7;k++){const band=new T.TorusGeometry(r*1.004,r*.045,3,36);band.rotateX(rnd()*Math.PI);band.rotateY(rnd()*Math.PI);band.rotateZ(rnd()*Math.PI);at(band,x,y0+r*.95,z);parts.push(paint(band,k%2?dark:c));}}walls.push(at(new T.SphereGeometry(r*.95,12,8),x,y0+r*.95,z));
+  const a=rnd()*6.28,pts=[new T.Vector3(x+Math.cos(a)*r*.9,y0+.25,z+Math.sin(a)*r*.9)];for(let k=1;k<6;k++)pts.push(new T.Vector3(x+Math.cos(a+k*.35)*(r+k*1.1),y0+.06,z+Math.sin(a+k*.35)*(r+k*1.1)));parts.push(paint(tube(pts,.07,30,5),c));}
+
+ // Picnic blankets (gingham) with round floor cushions to sit on.
+ for(const [x,z,rot] of [[192,-25,.3],[206,-10,-.2],[162,-40,.5],[224,8,.1]]){if(!free(x,z,1.9,{path:.2})||!claim(x,z,1.9))continue;
+  const cells=[];for(let i=0;i<6;i++)for(let j=0;j<6;j++){const q=new T.PlaneGeometry(.47,.47);q.rotateX(-Math.PI/2);q.translate(-1.175+i*.47,0,-1.175+j*.47);cells.push(paint(q,(i+j)%2?C.cream:0xd2463c));}
+  const bl=mergeGeometries(cells);bl.rotateY(rot);at(bl,x,y0+.09,z);base.push(bl);
+  for(const k of [-1,1]){const cx=x+Math.cos(rot)*k*.75,cz=z-Math.sin(rot)*k*.75,c=pumpkin(.5,.4);at(c,cx,y0+.09,cz);parts.push(paint(c.clone(),C.carpet[k<0?1:2]));const seat=new T.Mesh(c.clone(),hidden);seat.name='Meditation_cushion';seats.add(seat);cushions.push(c);}
+  const basket=new T.CylinderGeometry(.3,.26,.32,12);at(basket,x-Math.sin(rot)*.8,y0+.25,z-Math.cos(rot)*.8);parts.push(woven(basket,y0+.09));}
+
+ // Benches along the cafe path and the loop, facing the tree: felt cushion on timber with a back.
+ for(const [x,z,face] of [[212,-4.9,0],[212,4.9,Math.PI],[226,-4.9,0],[226,4.9,Math.PI],[165,-4.9,0],[176,-12.2,0]]){if(!free(x,z,.5,{path:-.3})||!claim(x,z,1.1))continue;
+  const m=new T.Matrix4().makeRotationY(face).setPosition(x,y0,z),put=g=>g.applyMatrix4(m);
+  for(const k of [-.85,.85])parts.push(paint(put(new T.BoxGeometry(.12,.42,.5).translate(k,.21,0)),C.wood));
+  const cush=put(new T.BoxGeometry(2.1,.12,.56).translate(0,.48,0));parts.push(paint(cush.clone(),C.carpet[1]));const seat=new T.Mesh(cush.clone(),hidden);seat.name='Garden_bench_cushion';seats.add(seat);
+  const back=put(new T.BoxGeometry(2.1,.5,.1).translate(0,.85,-.3));parts.push(paint(back.clone(),C.carpet[0]));const bk=new T.Mesh(back.clone(),hidden);bk.name='Bench_back';seats.add(bk);
+  walls.push(put(new T.BoxGeometry(2.1,.54,.56).translate(0,.27,0)),put(new T.BoxGeometry(2.1,1.1,.12).translate(0,.55,-.3)));}
+ // Felt trees in woven planters: a short trunk and three knit pom canopies.
+ const treeSpots=[[158,-47],[174,-50],[204,-46],[226,-24],[230,10],[200,46],[214,36],[160,42],[150.5,-28],[150.5,30],[222,-36],[178,48],[208,-26],[232,-6],[156,-40],[184,-52],[212,-42],[198,-22],[172,-22],[226,30],[218,-4],[230,20],[194,40],[170,46],[156,36],[210,28],[154,-36],[202,52],[180,52],[222,-30]];let trees=0;
+ for(const [x,z] of treeSpots){if(!free(x,z,1.6)||!claim(x,z,1.6))continue;trees++;const s=.85+rnd()*.35;
+  const pl=new T.CylinderGeometry(.95,.8,.8,16);at(pl,x,y0+.4,z);parts.push(woven(pl,y0));parts.push(paint(at(new T.CylinderGeometry(.85,.85,.06,16),x,y0+.78,z),0x5a3a22));
+  parts.push(paint(at(new T.CylinderGeometry(.16*s,.22*s,2.4*s,8),x,y0+.8+1.2*s,z),C.felt));
+  for(const [dx,dy,dz,r] of [[0,3.4,0,1.35],[.8,2.75,.35,.95],[-.7,2.85,-.4,1.0]]){const g=new T.SphereGeometry(r*s,14,10);at(g,x+dx*s,y0+.8+dy*s,z+dz*s);knits.push(paint(g,C.leaf[Math.floor(rnd()*3)],.06,rnd));}
+  walls.push(at(new T.CylinderGeometry(1,1,1.2,12),x,y0+.6,z));
+  far.add(new T.Mesh(paint(at(new T.SphereGeometry(1.4*s,8,6),x,y0+.8+3.2*s,z),C.leaf[1]),bulk));}
+
+ // Flower beds: low knit mounds with pom-pom flowers on stems, scattered over the lawn.
+ for(let i=0,made=0;i<400&&made<56;i++){const x=150+rnd()*84,z=(rnd()*2-1)*(parkHalfWidth(x)-PARK.promenade-1.5),r=.8+rnd()*.6;if(!free(x,z,r,{path:.6,pond:1})||!claim(x,z,r))continue;made++;
+  const g=new T.SphereGeometry(r,12,8,0,Math.PI*2,0,Math.PI/2);g.scale(1,.55,1);at(g,x,y0+.03,z);knits.push(paint(g,[0x6f9a3e,0x86ab4e,0x5d8a36][made%3],.08,rnd));walls.push(at(new T.CylinderGeometry(r,r,.7,10),x,y0+.35,z));
+  const fc=[[0xec7a92,0xf6ead2],[0xf2b84b,0xf08a4b],[0xe2604e,0xf6ead2],[0x9db7e8,0xf2d44b]][made%4];for(let f=0;f<6;f++){const a=f/6*6.28+rnd(),rr=r*.55*rnd(),fx=x+Math.cos(a)*rr,fz=z+Math.sin(a)*rr,fy=y0+r*.55+.15+rnd()*.2;parts.push(paint(at(new T.SphereGeometry(.18,7,5),fx,fy,fz),fc[f%2]));}}
+
+ // Lanterns along the paths: square timber lanterns at the path edges.
+ for(const p of PARK_PATHS){if(p.id==='ring')continue;const step=p.id==='loop'?14:9;let s=4,side=1;for(let i=0;i<p.pts.length-(p.closed?0:1);i++){const a=p.pts[i],b=p.pts[(i+1)%p.pts.length],l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(!l)continue;const ux=(b[0]-a[0])/l,uz=(b[1]-a[1])/l;
+  for(;s<l;s+=step){const x=a[0]+ux*s-uz*side*(PARK.pathW/2+.7),z=a[1]+uz*s+ux*side*(PARK.pathW/2+.7);side=-side;if(p.id==='starboard'&&z>PARK_BRIDGE.z0-1.5&&z<PARK_BRIDGE.z1+1.5||p.id==='tower'&&x<163)continue;if(inPond(x,z,.8)||!parkFree(x,z,.3,{path:.1})&&!(Math.abs(z)<4&&x>205))continue;lantern(x,z);}s-=l;}}
+ // Tall lamp posts with a hanging lantern round the meadow.
+ for(const [x,z] of [[172,-30],[210,-34],[196,-36],[158,-20],[224,-20],[222,22]]){if(!free(x,z,.4,{path:.2})||!claim(x,z,.6))continue;parts.push(paint(at(new T.CylinderGeometry(.09,.12,3.4,8),x,y0+1.7,z),C.wood));parts.push(paint(at(new T.BoxGeometry(.9,.1,.1),x+.4,y0+3.35,z),C.wood));parts.push(paint(between(new T.Vector3(x+.75,y0+3.3,z),new T.Vector3(x+.75,y0+2.95,z),.015),C.rope));
+  lights.push(at(new T.BoxGeometry(.36,.44,.36),x+.75,y0+2.7,z));parts.push(paint(at(new T.ConeGeometry(.32,.2,4).rotateY(Math.PI/4),x+.75,y0+3.0,z),C.wood));walls.push(at(new T.CylinderGeometry(.2,.2,3.4,6),x,y0+1.7,z));}
+
+ // Far: the lawn, paths and pond stay (always drawn); details give way to a few felt blobs (trees, above).
+ named(group,'Toybox_park_ground',base,bulk);named(group,'Toybox_park_lawn',baseKnit,knitMat);
+ named(near,'Toybox_park_body',parts,bulk);named(near,'Toybox_park_knit',knits,knitMat);named(near,'Toybox_park_lanterns',lights,glow);near.add(seats);
+ named(solid,'Toybox_park_walkway',grounds,hidden,['position']);named(solid,'Toybox_park_seat_platform',cushions.map(puck),hidden,['position']);named(solid,'Toybox_park_guard_wall',walls,hidden,['position']);
+ for(const o of [...group.children,...near.children])if(o.isMesh)o.userData.noCollide=true;
+ group.updateMatrixWorld(true);solid.updateMatrixWorld(true);
+ // The koi glide round their loops with a slow tail sway, only while the park's near detail is drawn.
+ const m=new T.Matrix4(),q=new T.Quaternion(),e=new T.Euler(),pos=new T.Vector3(),one=new T.Vector3(1,1,1);
+ const update=dt=>{if(!swim||!near.visible)return;clock+=Math.min(dt,.1);school.forEach((f,k)=>{if(f.loop.length<3)return;f.s=((f.s+f.speed*Math.min(dt,.1))%f.len+f.len)%f.len;let i=0;while(i<f.loop.length-1&&f.acc[i+1]<f.s)i++;const a=f.loop[i],b=f.loop[(i+1)%f.loop.length],t=(f.s-f.acc[i])/((f.acc[i+1]-f.acc[i])||1);
+  pos.set(a[0]+(b[0]-a[0])*t,f.y,a[1]+(b[1]-a[1])*t);const dir=Math.sign(f.speed),hx=(b[0]-a[0])*dir,hz=(b[1]-a[1])*dir;e.set(0,Math.atan2(-hz,hx)+.18*Math.sin(clock*3+f.phase),0);m.compose(pos,q.setFromEuler(e),one);swim.setMatrixAt(k,m);});swim.instanceMatrix.needsUpdate=true;};
+ update(0);near.visible=true;
+ return {group,solid,seats,trees,update,bounds:{y0,y1:y0+6}};
+}
+
 // Felt bark: shallow vertical grooves round the lathe, darker in the grooves (the lathe is still centred on the axis).
 function grooves(g){g=g.index?g.toNonIndexed():g;g.deleteAttribute('uv');const p=g.attributes.position,c=new Float32Array(p.count*3),base=new T.Color(C.felt);
  for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i),r=Math.hypot(x,z);if(r<.05){c.set([base.r,base.g,base.b],i*3);continue;}const a=Math.atan2(z,x),w=Math.sin(a*17+Math.sin(p.getY(i)*.3)*1.1),k=1+.045*w;p.setX(i,x*k);p.setZ(i,z*k);const d=.58+.42*Math.pow(w*.5+.5,.6);c.set([base.r*d,base.g*d,base.b*d],i*3);}
