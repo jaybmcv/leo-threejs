@@ -50,6 +50,8 @@ The exact, output-neutral implementation migration keeps existing UI and Phase 4
 
 Current wider boundaries are room/frame/layout changes, hull-owned shell changes, legacy rooms with later activity/world modifications, escape-craft assemblies, baked sign-atlas changes, and shared producers outside the isolated kit. These take the wider geometry route. The ordinary wider route reuses unchanged layout, exterior, ceiling and raw-model outputs after checking their dependencies and file hashes. `LEO_FULL_REBUILD=1` explicitly bypasses those stage/model caches. Nightly still runs its prepared authoring and all existing checks.
 
+Moving or resizing a room, or moving its door, always takes the wider route. [docs/room-move-lane.md](docs/room-move-lane.md) covers what such an edit reaches and the ownership work a per-room lane needs first.
+
 ## Shared kit edits
 
 `src/v2/phase4-mesh-kit.js` owns the Phase 4 mesh shapes and materials. Its actual per-owner mesh output is compared with the clean baseline; only changed owners are patched. A material unused by a room does not invalidate that room. Supported atrium owners receive a nearby room/deck browser smoke target; this is a page-load check, not a clearance test. Escape-craft or sign-atlas changes still widen.
@@ -62,10 +64,20 @@ Each feature `prepare.js` and `prepare.authoring.js` create (the concession, the
 
 A feature qualifies only if:
 - its call takes nothing but the ship and the page's still and anisotropy;
-- its module has all four variants;
-- the authoring page uses its result only to draw it and update it.
+- the authoring page only draws, guards and updates what it returns, under the names it binds from `prepared`.
 
-The arcade (its treadmill feeds Paws Off) and the vault (its door adds collision) stay with the wider build.
+Each prepare file's own import says which variant it runs. A module with a single file (pinball, the ward trolley, atmosphere, baggage) is all four: the public walk builds it from code, and only its collision and model are baked.
+
+A strip or bed helper that prepare also imports from the module (`stripAtmosphere`, `prepareBlossomBed`, …) runs in the fit-out and is baked with its room. The lane takes the module only when that helper is unchanged. The check covers the helper's own code, the top-level code it reaches by name, the module's imports and anything at top level that declares nothing, compared with the hashes saved with the clean baseline. An edit inside the create function passes; an edit to the strip, or to a constant the strip uses, widens.
+
+A module only the feature's own files import, such as `layered-conservatory.js` under the blossom garden, counts as part of that feature.
+
+Out of the lane, for now:
+- the theatre, kittens and mudwater (their calls take the Cosmo kit or art urls);
+- the maze (its hold goes to the maze game);
+- the arcade (its treadmill feeds Paws Off);
+- the vault (its door adds collision);
+- the chinampa (the authoring page imports its info panel).
 
 The lane widens when:
 - a rebuild touches anything already in the ship;
