@@ -5,9 +5,10 @@ import * as T from 'three';
 import {MeshBVH} from 'three-mesh-bvh';
 import {Colliders} from '../walk/collision.js';
 import {loadPreparedSections} from './prepared-sections.js';
+import {yieldToPage} from './yield-to-page.js';
 const preparedSha256=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),n=>n.toString(16).padStart(2,'0')).join('');
 let preparedZstd=null;const inflatePrepared=async bytes=>{const view=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);if(view[0]===0x28&&view[1]===0xb5){preparedZstd??=new ZSTDDecoder();await preparedZstd.init();return preparedZstd.decode(view);}return new Uint8Array(await new Response(new Blob([view]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());};
-const yieldFrame=()=>new Promise(r=>setTimeout(r,0));
+const yieldFrame=yieldToPage;
 const arrayTypes={Float32Array,Float64Array,Int8Array,Uint8Array,Uint8ClampedArray,Int16Array,Uint16Array,Int32Array,Uint32Array};
 function preparedShipAccess(ship){ship.ensureAft=()=>ship.aft;ship.ensureTransit=()=>ship.transit;ship.ensureObservation=()=>ship.observation;ship.ensureGardens=()=>{};ship.ensureResidentialDeck=n=>ship.residentialDecks.get(n);ship.ensureServiceDeck=n=>ship.serviceDecks.get(n);}
 const preparedGroundCaster=col=>(...args)=>col.v2Ground.raycast(...args);

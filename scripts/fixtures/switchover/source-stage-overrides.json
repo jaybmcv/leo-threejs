@@ -148,8 +148,8 @@
     "reason": "Carry forward the two remaining round-1 fast-deploy source rows from de275fc; existing gates retained."
   },
   "src/v2/prepared-codec.public.js": {
-    "sha256": "93726d5c3e0b5685aea95dd93c603dda45d5a4d5386a8fc4a5ed1e3db1e72d39",
-    "reason": "Carry forward the two remaining round-1 fast-deploy source rows from de275fc; existing gates retained."
+    "sha256": "0d16748c877760d9b117479e7abdf85b97ea1f073a9509c57a0d71e8b091f552",
+    "reason": "Loading yields through src/v2/yield-to-page.js (scheduler.yield, a timer turn every 100 ms), the phone hull copied in 12 ms slices, typed-array compaction (scripts/check-load-yields.mjs); views match the build before pixel for pixel"
   },
   "src/v2/phase4-culling.js": {
     "sha256": "dcb9ed218e4560ac4227d13ac47f72df5eedcf9287513671ec7f081de9fac3c1",
@@ -168,8 +168,8 @@
     "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
   },
   "src/v2/facade.js": {
-    "sha256": "ff24a8a51d47f4b2c244a5407502fadc7b2c00b4985f6200cd039ed1c47d7c4d",
-    "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
+    "sha256": "0478e6aaf9e937ee46cc64779f07252a7eac5fc1be7492801c6f7f273c1a8cf1",
+    "reason": "Loading yields through src/v2/yield-to-page.js (scheduler.yield, a timer turn every 100 ms), the phone hull copied in 12 ms slices, typed-array compaction with the Map kept for sparse or out-of-range indices (scripts/check-load-yields.mjs); views match the build before pixel for pixel"
   },
   "src/v2/facade.authoring.js": {
     "sha256": "f18efaee42bcad153cbbe6a40bb96ef2d8b515a836a263a1d0c1aec4752b0aad",
@@ -206,5 +206,17 @@
   "src/v2/visibility-query.js": {
     "sha256": "5cd11408fbb3dccb7ea006515709d6933fe7d0c12d7ef4b8c5aa84d8fa0b9161",
     "reason": "Room culling: numeric cell codes in the visibility broad phase (same cells, same order; scripts/check-visibility-codes.mjs) and probes spread over frames within 3 ms, new owners counted as seen. Views match main pixel for pixel."
+  },
+  "src/walk/prepare.public.js": {
+    "sha256": "97391ff54d32f19dab987ab880c922a8bf62ef6d340a3b1298fefac5d375a26c",
+    "reason": "Loading yields through src/v2/yield-to-page.js (scheduler.yield, a timer turn every 100 ms), the phone hull copied in 12 ms slices, typed-array compaction (scripts/check-load-yields.mjs); views match the build before pixel for pixel"
+  },
+  "src/v2/distant-architecture.js": {
+    "sha256": "725db0dd8ea9df79526d8185a33d1c752513755277f9fc98f1f3b2f7a8f88b89",
+    "reason": "Loading yields through src/v2/yield-to-page.js (scheduler.yield, a timer turn every 100 ms), the phone hull copied in 12 ms slices, typed-array compaction (scripts/check-load-yields.mjs); views match the build before pixel for pixel"
+  },
+  "src/v2/phone-distant.js": {
+    "sha256": "fd4c158ad71bce80fcfb95288f74212df5ea02072e37824fffa600da7c1c07a1",
+    "reason": "Loading yields through src/v2/yield-to-page.js (scheduler.yield, a timer turn every 100 ms), the phone hull copied in 12 ms slices, typed-array compaction (scripts/check-load-yields.mjs); views match the build before pixel for pixel"
   }
 }

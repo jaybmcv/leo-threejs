@@ -1,5 +1,6 @@
 import {lightDistantPreset,installPhoneDistant} from './phone-distant.js';
 import * as T from 'three';
+import {yieldToPage} from './yield-to-page.js';
 
 // Select actual finished-bake triangles. Door/window/atrium cuts remain cuts;
 // never close a room using a box inferred from its footprint.
@@ -11,7 +12,7 @@ export function structuralRange(r){
 }
 export async function installDistantArchitecture(ship,baked,haze,options={}){
  if(!globalThis.__leoPreparedBuild&&lightDistantPreset(options))return installPhoneDistant(ship,haze);
- const yieldWork=()=>new Promise(resolve=>setTimeout(resolve,0));let checkpoint=performance.now(),processed=0;
+ const yieldWork=yieldToPage;let checkpoint=performance.now(),processed=0;
  const root=new T.Group();root.name='V2_distant_architecture';
  root.userData={noCollide:true,independentOfBands:true,apertures:'finished-bake-triangles'};
  const buckets=new Map(),sources=new Map(),point=new T.Vector3(),matrix=new T.Matrix4();
