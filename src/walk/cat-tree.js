@@ -388,6 +388,7 @@ export function createNosePark(ship){
  const hidden=new T.MeshBasicMaterial({visible:false});
  const base=[],baseKnit=[],parts=[],knits=[],lights=[],grounds=[],walls=[],cushions=[];
  // Props claim their footprint so none lands on another.
+ let school=[],swim=null,clock=0;
  const taken=[],free=(x,z,r,o)=>parkFree(x,z,r,o)&&!taken.some(([tx,tz,tr])=>Math.hypot(x-tx,z-tz)<r+tr+.4),claim=(x,z,r)=>{taken.push([x,z,r]);return true;};
  for(const [hx,hz,R] of HILLS)claim(hx,hz,R);
  // Every triangle of a walk surface must face up: the walk only stands on ground whose normal points up.
@@ -417,16 +418,24 @@ export function createNosePark(ship){
  // The welcome plaza before the lift tower: a cream felt disc with a big red paw print.
  {base.push(disc(155.5,0,5.6,y0+.075,C.cream,48));const paw=[[155.5,0,1.9],[153.2,-2.1,.75],[152.4,-.55,.75],[152.4,1.1,.75],[153.2,2.6,.75]];for(const [x,z,r] of paw){const g=new T.CircleGeometry(r,20);g.scale(x===155.5?1.15:1,1,1);g.rotateX(-Math.PI/2);at(g,x,y0+.095,z);base.push(paint(g,C.carpet[0]));}}
 
+ // Woven planters of pom-pom flowers flank the plaza.
+ for(const [x,z] of [[158.5,-5.2],[158.5,5.2]]){claim(x,z,.8);const pl=new T.CylinderGeometry(.75,.65,.6,14);at(pl,x,y0+.3,z);parts.push(woven(pl,y0));const top=new T.SphereGeometry(.7,12,8,0,Math.PI*2,0,Math.PI/2);top.scale(1,.6,1);at(top,x,y0+.58,z);knits.push(paint(top,0x6f9a3e,.08,rnd));for(let f=0;f<7;f++){const a=f/7*6.28,r=.25+.25*(f%2);parts.push(paint(at(new T.SphereGeometry(.17,7,5),x+Math.cos(a)*r,y0+.95+.08*(f%3),z+Math.sin(a)*r),[0xec7a92,0xf6ead2,0xf2b84b][f%3]));}walls.push(at(new T.CylinderGeometry(.78,.78,1,10),x,y0+.5,z));}
  // The pond: a teal bed, a glassy surface just above the floor (it is ankle-deep: walkers wade), pebbles and felt
  // shrubs round its bank, lily pads, a lotus and felt koi.
  {base.push(flat(POND,y0+.05,0x3d9c9e));const surf=new T.ShapeGeometry(new T.Shape(POND.map(([x,z])=>new T.Vector2(x,-z))),4);surf.rotateX(-Math.PI/2);surf.translate(0,y0+.14,0);far.add(new T.Mesh(surf.clone(),water));const w=new T.Mesh(surf,water);w.name='Toybox_park_pond';near.add(w);
   let s=0;for(let i=0;i<POND.length;i++){const a=POND[i],b=POND[(i+1)%POND.length];const l=Math.hypot(b[0]-a[0],b[1]-a[1]);for(;s<l;s+=1.15){const t=s/l,x=a[0]+(b[0]-a[0])*t,z=a[1]+(b[1]-a[1])*t;if(Math.abs(x-PARK_BRIDGE.x)<PARK_BRIDGE.w/2+.6)continue;const r=.38+rnd()*.3,g=new T.SphereGeometry(r,9,6);g.scale(1.25,.55,1.1);g.rotateY(rnd()*3);at(g,x,y0+r*.3,z);parts.push(paint(g,[0xd9cdb6,0xc9bca4,0xe6dcc8][Math.floor(rnd()*3)]));}s-=l;}
-  for(let k=0;k<16;k++){const i=Math.floor(k/16*POND.length+rnd()*3)%POND.length,[x,z]=POND[i],dx=x-189,dz=z-26,l=Math.hypot(dx,dz)||1,ox=x+dx/l*1.3,oz=z+dz/l*1.3;if(Math.abs(ox-PARK_BRIDGE.x)<PARK_BRIDGE.w/2+1.4||onParkPath(ox,oz,.9))continue;const r=.7+rnd()*.5,g=new T.SphereGeometry(r,10,7);g.scale(1,.8,1);at(g,ox,y0+r*.6,oz);knits.push(paint(g,[0x6f9a3e,0x86ab4e,0x5d8a36][k%3],.08,rnd));walls.push(at(new T.CylinderGeometry(r*.9,r*.9,1,10),ox,y0+.5,oz));
-   if(k%3===0)for(let f=0;f<4;f++){const fx=ox+(rnd()-.5)*r*1.4,fz=oz+(rnd()-.5)*r*1.4,fy=y0+r*1.25+rnd()*.25;parts.push(paint(at(new T.SphereGeometry(.16,7,5),fx,fy,fz),[0xec7a92,0xf6ead2,0xf2b84b][f%3]));}}
+  for(let k=0;k<30;k++){const i=Math.floor(k/30*POND.length+rnd()*3)%POND.length,[x,z]=POND[i],dx=x-189,dz=z-26,l=Math.hypot(dx,dz)||1,ox=x+dx/l*1.3,oz=z+dz/l*1.3;if(Math.abs(ox-PARK_BRIDGE.x)<PARK_BRIDGE.w/2+1.4||onParkPath(ox,oz,.9))continue;const r=.7+rnd()*.5,g=new T.SphereGeometry(r,10,7);g.scale(1,.8,1);at(g,ox,y0+r*.6,oz);knits.push(paint(g,[0x6f9a3e,0x86ab4e,0x5d8a36][k%3],.08,rnd));walls.push(at(new T.CylinderGeometry(r*.9,r*.9,1,10),ox,y0+.5,oz));
+   if(k%2===0)for(let f=0;f<5;f++){const fx=ox+(rnd()-.5)*r*1.4,fz=oz+(rnd()-.5)*r*1.4,fy=y0+r*1.25+rnd()*.25;parts.push(paint(at(new T.SphereGeometry(.16,7,5),fx,fy,fz),[0xec7a92,0xf6ead2,0xf2b84b][f%3]));}}
   for(let k=0;k<14;k++){let x=0,z=0,ok=false;for(let t=0;t<40&&!ok;t++){x=160+rnd()*50;z=19+rnd()*15;ok=inside(x,z,POND)&&polyDist(x,z,POND,true)>1.2&&Math.abs(x-PARK_BRIDGE.x)>2;}if(!ok)continue;const pad=new T.CircleGeometry(.55+rnd()*.3,14,.3,Math.PI*2-.6);pad.rotateX(-Math.PI/2);pad.rotateY(rnd()*6);at(pad,x,y0+.155,z);parts.push(paint(pad,0x6c9c3c));
    if(k%5===0){for(let p=0;p<6;p++){const pe=new T.SphereGeometry(.2,6,4);pe.scale(.6,1,.35);pe.rotateZ(.5);pe.rotateY(p/6*Math.PI*2);at(pe,x+Math.cos(p)*.12,y0+.32,z+Math.sin(p)*.12);parts.push(paint(pe,0xf3a6b8));}parts.push(paint(at(new T.SphereGeometry(.1,6,4),x,y0+.36,z),0xf2d44b));}}
   for(let k=0;k<9;k++){const t=(k+.5)/9,i=Math.floor(t*POND.length*.5),a=POND[i],b=POND[POND.length-1-i],x=a[0]+(b[0]-a[0])*.5+(rnd()-.5),z=a[1]+(b[1]-a[1])*.5+(rnd()-.5);if(!inside(x,z,POND)||Math.abs(x-PARK_BRIDGE.x)<2.5)continue;const st=new T.CylinderGeometry(.55,.62,.2,14);at(st,x,y0+.1,z);parts.push(paint(st,0xe6dcc8,.06,rnd));}
-  const koi=[0xf08a4b,0xf6ead2,0xe2604e,0xf2b84b,0xf08a4b,0xf6ead2,0xe2604e,0xf08a4b,0xf6ead2];koi.forEach((c,i)=>{let x=0,z=0,ok=false;for(let t=0;t<40&&!ok;t++){x=162+rnd()*46;z=20+rnd()*13;ok=inside(x,z,POND)&&polyDist(x,z,POND,true)>1.5&&Math.abs(x-PARK_BRIDGE.x)>2;}if(!ok)return;const f=fish(c);f.scale(.95,.6,.95);f.rotateY(rnd()*6.28);at(f,x,y0+.09,z);parts.push(f);if(c===0xf6ead2)parts.push(paint(at(new T.SphereGeometry(.28,8,5).scale(1,.4,1),x,y0+.13,z),0xf08a4b));});}
+  // Felt koi: one instanced school, each fish circling its own loop inset from the bank (under the bridge too).
+  const n=POND.length,inward=POND.map((p,i)=>{const a=POND[(i-1+n)%n],b=POND[(i+1)%n],tx=b[0]-a[0],tz=b[1]-a[1],l=Math.hypot(tx,tz)||1,nx=-tz/l,nz=tx/l;return inside(p[0]+nx*.6,p[1]+nz*.6,POND)?[nx,nz]:[-nx,-nz];});
+  const koiGeo=mergeGeometries([fish(0xffffff),paint(at(new T.SphereGeometry(.3,8,5).scale(1.2,.5,.85),.05,.2,0),0xf08a4b),paint(at(new T.SphereGeometry(.18,6,4).scale(1,.5,.8),-.55,.12,0),0xe2604e)]);koiGeo.scale(.8,.85,.8);
+  const tints=[0xfff6e6,0xf6a050,0xfff6e6,0xe8604e,0xfff6e6,0xf2c060,0xfff6e6,0xf6a050,0xe8604e,0xfff6e6],koi=new T.InstancedMesh(koiGeo,bulk,tints.length);koi.name='Toybox_park_koi';
+  school=tints.map((c,k)=>{koi.setColorAt(k,new T.Color(c));const d=1.6+(k%4)*.9,loop=POND.map((p,i)=>[p[0]+inward[i][0]*d,p[1]+inward[i][1]*d]).filter(([x,z])=>inside(x,z,POND)&&polyDist(x,z,POND,true)>1.1);let len=0;const acc=[0];for(let i=0;i<loop.length;i++){len+=Math.hypot(loop[(i+1)%loop.length][0]-loop[i][0],loop[(i+1)%loop.length][1]-loop[i][1]);acc.push(len);}
+   return {loop,acc,len,s:rnd()*len,speed:(.45+rnd()*.5)*(k%3===1?-1:1),y:y0+.08+(k%2)*.025,phase:rnd()*6.28};});
+  koi.instanceMatrix.setUsage(T.DynamicDrawUsage);near.add(koi);swim=koi;}
 
  // The arched footbridge over the pond: a red felt deck on timber with rope rails; the deck is walkable and the rails are walls.
  {const B=PARK_BRIDGE,N=24,P=[],deckY=t=>y0+.02+B.rise*Math.sin(Math.PI*t);for(let i=0;i<N;i++){const t0=i/N,t1=(i+1)/N,z0=B.z0+(B.z1-B.z0)*t0,z1=B.z0+(B.z1-B.z0)*t1,a=deckY(t0),b=deckY(t1);
@@ -462,7 +471,7 @@ export function createNosePark(ship){
 
  // Giant yarn balls with a loose strand trailing over the lawn; solid.
  for(const [x,z,r,c] of [[180,-25,2.1,C.carpet[0]],[196,-49,1.8,0x6fa8d6],[223,-13,2.2,C.carpet[1]],[217,25,1.7,C.cream],[168,-47,1.6,C.carpet[1]],[226,-24,1.5,0x6fa8d6]]){
-  if(!free(x,z,r,{path:.4})||!claim(x,z,r))continue;const g=yarn(r,c,rnd,x,y0+r*.95,z);knits.push(g);walls.push(at(new T.SphereGeometry(r*.95,12,8),x,y0+r*.95,z));
+  if(!free(x,z,r,{path:.4})||!claim(x,z,r))continue;{const ball=new T.SphereGeometry(r,28,18);at(ball,x,y0+r*.95,z);parts.push(paint(ball,c,.03,rnd));const dark=new T.Color(c).multiplyScalar(.82).getHex();for(let k=0;k<7;k++){const band=new T.TorusGeometry(r*1.004,r*.045,4,48);band.rotateX(rnd()*Math.PI);band.rotateY(rnd()*Math.PI);band.rotateZ(rnd()*Math.PI);at(band,x,y0+r*.95,z);parts.push(paint(band,k%2?dark:c));}}walls.push(at(new T.SphereGeometry(r*.95,12,8),x,y0+r*.95,z));
   const a=rnd()*6.28,pts=[new T.Vector3(x+Math.cos(a)*r*.9,y0+.25,z+Math.sin(a)*r*.9)];for(let k=1;k<6;k++)pts.push(new T.Vector3(x+Math.cos(a+k*.35)*(r+k*1.1),y0+.06,z+Math.sin(a+k*.35)*(r+k*1.1)));parts.push(paint(tube(pts,.07,30,5),c));}
 
  // Picnic blankets (gingham) with round floor cushions to sit on.
@@ -506,7 +515,12 @@ export function createNosePark(ship){
  named(solid,'Toybox_park_walkway',grounds,hidden,['position']);named(solid,'Toybox_park_seat_platform',cushions.map(puck),hidden,['position']);named(solid,'Toybox_park_guard_wall',walls,hidden,['position']);
  for(const o of [...group.children,...near.children])if(o.isMesh)o.userData.noCollide=true;
  group.updateMatrixWorld(true);solid.updateMatrixWorld(true);
- return {group,solid,seats,trees,bounds:{y0,y1:y0+6}};
+ // The koi glide round their loops with a slow tail sway, only while the park's near detail is drawn.
+ const m=new T.Matrix4(),q=new T.Quaternion(),e=new T.Euler(),pos=new T.Vector3(),one=new T.Vector3(1,1,1);
+ const update=dt=>{if(!swim||!near.visible)return;clock+=Math.min(dt,.1);school.forEach((f,k)=>{if(f.loop.length<3)return;f.s=((f.s+f.speed*Math.min(dt,.1))%f.len+f.len)%f.len;let i=0;while(i<f.loop.length-1&&f.acc[i+1]<f.s)i++;const a=f.loop[i],b=f.loop[(i+1)%f.loop.length],t=(f.s-f.acc[i])/((f.acc[i+1]-f.acc[i])||1);
+  pos.set(a[0]+(b[0]-a[0])*t,f.y,a[1]+(b[1]-a[1])*t);const dir=Math.sign(f.speed),hx=(b[0]-a[0])*dir,hz=(b[1]-a[1])*dir;e.set(0,Math.atan2(-hz,hx)+.18*Math.sin(clock*3+f.phase),0);m.compose(pos,q.setFromEuler(e),one);swim.setMatrixAt(k,m);});swim.instanceMatrix.needsUpdate=true;};
+ update(0);near.visible=true;
+ return {group,solid,seats,trees,update,bounds:{y0,y1:y0+6}};
 }
 
 // Felt bark: shallow vertical grooves round the lathe, darker in the grooves (the lathe is still centred on the axis).

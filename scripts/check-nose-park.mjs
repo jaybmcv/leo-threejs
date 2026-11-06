@@ -60,7 +60,7 @@ assert.equal(failed,0,'unreached goals');assert.equal(uniq.size,0,'unguarded dro
 // The walk Controller walks from the tower over the pond bridge and back down, and round to the bow cafe.
 const ctl=new Controller(col);const go=(x,z,max=1600)=>{let i=0;for(;i<max;i++){const d=new T.Vector3(x-ctl.position.x,0,z-ctl.position.z);if(d.length()<.5)break;d.setLength(Math.min(3.2,d.length()*4+.5));ctl.step(1/60,d,false);}return i<max;};
 ctl.position.set(150,y0+.3,0);ctl.velocity.set(0,0,0);for(let i=0;i<40;i++)ctl.step(1/60,new T.Vector3(),false);
-const route=[[172,0],[TREE.x-PARK.ring*.7,PARK.ring*.7],[PARK_BRIDGE.x,17.8],[PARK_BRIDGE.x,(PARK_BRIDGE.z0+PARK_BRIDGE.z1)/2],[PARK_BRIDGE.x,PARK_BRIDGE.z1+2],[PARK_BRIDGE.x,17.8],...[70,40,10].map(d=>[TREE.x+Math.cos(d*Math.PI/180)*PARK.ring,TREE.z+Math.sin(d*Math.PI/180)*PARK.ring]),[236,0]];let top=-Infinity,walked=true;
+const route=[[172,0],[TREE.x-PARK.ring*.7,PARK.ring*.7],[PARK_BRIDGE.x,17.8],[PARK_BRIDGE.x,(PARK_BRIDGE.z0+PARK_BRIDGE.z1)/2],[PARK_BRIDGE.x,PARK_BRIDGE.z1+2],[PARK_BRIDGE.x,17.8],...[70,40,10].map(d=>[TREE.x+Math.cos(d*Math.PI/180)*PARK.ring,TREE.z+Math.sin(d*Math.PI/180)*PARK.ring]),[207,0],[236,0]];let top=-Infinity,walked=true;
 for(const [x,z] of route){if(!go(x,z)){walked=false;console.log('FAIL controller stuck going to',x,z,'at',ctl.position.toArray().map(v=>v.toFixed(2)).join(','));break;}top=Math.max(top,ctl.position.y);}
 console.log(`${walked?'PASS':'FAIL'} controller walks tower → ring → over the bridge (top ${(top-y0).toFixed(2)} m) → bow cafe, ends at y ${(ctl.position.y-y0).toFixed(2)}`);
 assert(walked&&Math.abs(ctl.position.y-y0)<.15&&top-y0>PARK_BRIDGE.rise*.8,'controller route');
