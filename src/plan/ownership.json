@@ -1172,7 +1172,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "063ba2497976864da6be8a3dd759dcffcbde3ed648f1daf68a1c314f5a9b3fa9"
+      "signature": "1af8fb09b25ef7285d58ce1c84566bc9ef1ca652ee9fa24d19cf6931e858613c"
     },
     {
       "source": "src/walk/arrival-tour.js",
@@ -1494,7 +1494,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "The Great Cat Tree stands on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs it was fitted to; it does not move with any room.",
+      "reason": "The Great Cat Tree and the Toybox Park round it stand on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs and inside the nose's measured floor outline; they do not move with any room.",
       "features": [
         "Great_cat_tree",
         "Great_cat_tree_solid",
@@ -1504,14 +1504,24 @@
         "Meditation_cushion",
         "Hammock",
         "Cat_tree_sign",
-        "Cat_tree_leaves"
+        "Cat_tree_leaves",
+        "Toybox_park",
+        "Toybox_park_solid",
+        "Toybox_park_near",
+        "Toybox_park_far",
+        "Toybox_park_seats",
+        "Toybox_park_pond",
+        "Toybox_park_koi",
+        "Garden_bench_cushion",
+        "Bench_back"
       ],
       "colliders": [
-        "Great_cat_tree_solid"
+        "Great_cat_tree_solid",
+        "Toybox_park_solid"
       ],
       "interactionTargets": null,
-      "placements": 48,
-      "signature": "7fc02ed4eada9e35b26fadc2d756c61d57ba9907c579adc063e5d5594efefd6a"
+      "placements": 67,
+      "signature": "c1758aca4308bbe1d5f4ea32ff8fb584fc6b1937150156d4ced0a394896e9a25"
     },
     {
       "source": "src/walk/cat-tree.js",
@@ -1520,7 +1530,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "The Great Cat Tree stands on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs it was fitted to; it does not move with any room.",
+      "reason": "The Great Cat Tree and the Toybox Park round it stand on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs and inside the nose's measured floor outline; they do not move with any room.",
       "features": [
         "Great_cat_tree",
         "Great_cat_tree_solid",
@@ -1530,14 +1540,24 @@
         "Meditation_cushion",
         "Hammock",
         "Cat_tree_sign",
-        "Cat_tree_leaves"
+        "Cat_tree_leaves",
+        "Toybox_park",
+        "Toybox_park_solid",
+        "Toybox_park_near",
+        "Toybox_park_far",
+        "Toybox_park_seats",
+        "Toybox_park_pond",
+        "Toybox_park_koi",
+        "Garden_bench_cushion",
+        "Bench_back"
       ],
       "colliders": [
-        "Great_cat_tree_solid"
+        "Great_cat_tree_solid",
+        "Toybox_park_solid"
       ],
       "interactionTargets": null,
-      "placements": 48,
-      "signature": "7fc02ed4eada9e35b26fadc2d756c61d57ba9907c579adc063e5d5594efefd6a"
+      "placements": 67,
+      "signature": "c1758aca4308bbe1d5f4ea32ff8fb584fc6b1937150156d4ced0a394896e9a25"
     },
     {
       "source": "src/walk/cat-tree.prepared.js",
@@ -1546,7 +1566,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "The Great Cat Tree stands on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs it was fitted to; it does not move with any room.",
+      "reason": "The Great Cat Tree and the Toybox Park round it stand on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs and inside the nose's measured floor outline; they do not move with any room.",
       "features": [
         "Great_cat_tree",
         "Great_cat_tree_solid",
@@ -1556,14 +1576,24 @@
         "Meditation_cushion",
         "Hammock",
         "Cat_tree_sign",
-        "Cat_tree_leaves"
+        "Cat_tree_leaves",
+        "Toybox_park",
+        "Toybox_park_solid",
+        "Toybox_park_near",
+        "Toybox_park_far",
+        "Toybox_park_seats",
+        "Toybox_park_pond",
+        "Toybox_park_koi",
+        "Garden_bench_cushion",
+        "Bench_back"
       ],
       "colliders": [
-        "Great_cat_tree_solid"
+        "Great_cat_tree_solid",
+        "Toybox_park_solid"
       ],
       "interactionTargets": null,
-      "placements": 48,
-      "signature": "7fc02ed4eada9e35b26fadc2d756c61d57ba9907c579adc063e5d5594efefd6a"
+      "placements": 67,
+      "signature": "c1758aca4308bbe1d5f4ea32ff8fb584fc6b1937150156d4ced0a394896e9a25"
     },
     {
       "source": "src/walk/cat-tree.public.js",
@@ -1572,7 +1602,7 @@
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "The Great Cat Tree stands on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs it was fitted to; it does not move with any room.",
+      "reason": "The Great Cat Tree and the Toybox Park round it stand on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs and inside the nose's measured floor outline; they do not move with any room.",
       "features": [
         "Great_cat_tree",
         "Great_cat_tree_solid",
@@ -1582,14 +1612,24 @@
         "Meditation_cushion",
         "Hammock",
         "Cat_tree_sign",
-        "Cat_tree_leaves"
+        "Cat_tree_leaves",
+        "Toybox_park",
+        "Toybox_park_solid",
+        "Toybox_park_near",
+        "Toybox_park_far",
+        "Toybox_park_seats",
+        "Toybox_park_pond",
+        "Toybox_park_koi",
+        "Garden_bench_cushion",
+        "Bench_back"
       ],
       "colliders": [
-        "Great_cat_tree_solid"
+        "Great_cat_tree_solid",
+        "Toybox_park_solid"
       ],
       "interactionTargets": null,
-      "placements": 48,
-      "signature": "7fc02ed4eada9e35b26fadc2d756c61d57ba9907c579adc063e5d5594efefd6a"
+      "placements": 67,
+      "signature": "c1758aca4308bbe1d5f4ea32ff8fb584fc6b1937150156d4ced0a394896e9a25"
     },
     {
       "source": "src/walk/catnip-face.js",
@@ -3787,8 +3827,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 44,
-      "signature": "e4193747023233897bbfeb32e028636067db38c22ff985d4942db4941e384ad7"
+      "placements": 45,
+      "signature": "6d0911a31ae9c78045c14cfae89ce030b2a588040e8385f7b377d4f5dedf13e1"
     },
     {
       "source": "src/walk/main.js",
@@ -3808,8 +3848,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 43,
-      "signature": "803469909dff37291b131d2273bac61348e87ee6e3e999c167b6ce3dc35fb07a"
+      "placements": 44,
+      "signature": "157165823190d9c346cc52d9b5d9ac4eeaab6c5061230638af88bad1de376afb"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -3828,8 +3868,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 38,
-      "signature": "29fd5eeac21a1db80fbf3e9c8d7ccc2cd3db1a6c25f1e57d0d8b0403c4ba9b9e"
+      "placements": 39,
+      "signature": "75f8d21aa1368d54f61ac52c335b78842ef3a45e9b378db6ded2b03aad301f9f"
     },
     {
       "source": "src/walk/main.public.js",
@@ -3848,8 +3888,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 38,
-      "signature": "8e423e2a39fc0492d8c618af82e67212230bf84161bbfc4c7524d4b20819966c"
+      "placements": 39,
+      "signature": "d36f4775c5be874a8284a1947ca08e7b63dd78863b9fd47cfc731665253da7ab"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -4686,7 +4726,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "09bdda6f9667c1c72cbe86d723cafff54d66fb53338595deb7b886652a77e0d9"
+      "signature": "68c7d063f1edbc801cfbda9d121bbfc148bd9f67bb096df80115a5fd0337b3af"
     },
     {
       "source": "src/walk/provisions.authoring.js",

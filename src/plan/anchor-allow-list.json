@@ -127,6 +127,6 @@
       "src/walk/cat-tree*.js"
     ],
     "room": "circulation-6",
-    "reason": "The Great Cat Tree stands on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs it was fitted to; it does not move with any room."
+    "reason": "The Great Cat Tree and the Toybox Park round it stand on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs and inside the nose's measured floor outline; they do not move with any room."
   }
 ]
