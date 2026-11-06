@@ -100,4 +100,4 @@ The layout stage now depends only on its sources and the v1 hull:
 - **The hull-source cache returns the file it wrote.** A cold run used to return the in-memory scene, and a warm run parsed the saved GLB. The export keeps only visible objects, so the two could differ. Both now parse the same bytes, which standardizes on what every warm build already used.
 - **The unused `--normalize` mode is removed.** It read `layout.json` and `walk-plan.json` back and rewrote both. Nothing in the repository called it. Passing the flag is now an error rather than a silent fresh solve.
 
-**Cost:** these scripts are geometry producers, so the first build after this merge takes the wider route once, and it re-runs the layout and ceilings stages (the cold ceilings fit measured 92 s). The nightly already does a full build.
+**Cost:** these scripts are geometry producers, so the first build after this merge takes the wider route once, and it re-runs the layout, exterior and ceilings stages (the exterior imports the hull-source script; the cold ceilings fit measured 92 s). The nightly already does a full build.
