@@ -1,14 +1,16 @@
-// The phone ship (PHONE_WALK.md) draws each opaque or faint glass material of the deck bands once, not once per band:
-// a phone's frame was mostly the CPU's cost of thousands of draws (3,200 in the arrival hall, from about 240
-// materials), while the GPU draws the same triangles either way.
+// The walk draws each opaque or faint glass material of the deck bands once, not once per band: a phone's frame was
+// mostly the CPU's cost of thousands of draws (3,200 in the arrival hall, from about 240 materials; PHONE_WALK.md), and so
+// was a desktop's (2,700 at the open atrium, 41 ms a frame on an RTX 3090, 23 ms merged; its GPU time fell too).
 // Every opaque mesh low-deck batching would take from a deck band (Walk_band_*), and faint glass, is copied into one
 // plain mesh per material, its triangles ordered by band, and hidden for good. After showBands, each copy draws the runs
 // of the bands showBands shows, one draw per unbroken run (usually one: the bands a view span shows mostly sit together
 // in band order). Plain draws only: no multi-draw, no draw list that changes from frame to frame (src/v2/facade.js has
 // why that matters on a Galaxy S9).
 import * as T from 'three';
+import {compactRenderGeometry} from './facade.js';
+import {yieldEvery} from './yield-to-page.js';
 
-const IDENTITY=new T.Matrix4();
+const IDENTITY=new T.Matrix4(),release=function(){this.array=null;};
 
 // Faint glass that writes no depth merges too (most of the bands' draws are two such glass materials, 18-23% opaque):
 // no pane can hide another, and two such panes blended in the other order differ by the square of their opacity times
@@ -24,7 +26,7 @@ const layoutOf=g=>Object.entries(g.attributes).map(([k,a])=>k+':'+a.itemSize+':'
 /** Merges the deck bands' opaque meshes per material. `hidden` is called with each source once it is copied and hidden.
  * Returns {root, update, proof}: add nothing (root is already in `scene`); call update() after showBands. */
 export async function mergePhoneBands(baked,scene,{hidden=null}={}){
- let slice=performance.now();const yieldWork=async()=>{if(performance.now()-slice<12)return;await new Promise(resolve=>setTimeout(resolve,0));slice=performance.now();};
+ const yieldWork=yieldEvery();
  const bands=[...baked.bands.values()].filter(g=>/^Walk_band_/.test(g.name));
  // Band order: by lowest deck, then highest, so the bands a view span shows sit together.
  bands.sort((a,b)=>a.userData.band-b.userData.band||(a.userData.top??a.userData.band)-(b.userData.top??b.userData.band));
@@ -37,12 +39,14 @@ export async function mergePhoneBands(baked,scene,{hidden=null}={}){
  const merges=[],proof={meshes:0,sources:0,vertices:0,triangles:0},m3=new T.Matrix3(),v=new T.Vector3();
  for(const list of buckets.values()){
   if(list.length<2)continue;
-  let vertices=0,indices=0;for(const {o} of list){const g=o.geometry;vertices+=g.attributes.position.count;indices+=g.index?g.index.count:g.attributes.position.count;}
-  const first=list[0].o.geometry,attributes={};
+  // A desktop's pieces index vertex pools they share: each is copied with only the vertices it draws.
+  for(const e of list){const g=e.o.geometry;e.g=g.index&&g.attributes.position.count>g.index.count?compactRenderGeometry(g):g;await yieldWork();}
+  let vertices=0,indices=0;for(const {g} of list){vertices+=g.attributes.position.count;indices+=g.index?g.index.count:g.attributes.position.count;}
+  const first=list[0].g,attributes={};
   for(const [name,a] of Object.entries(first.attributes))attributes[name]=new a.array.constructor(vertices*a.itemSize);
   const index=new Uint32Array(indices),runs=[];let vo=0,io=0;
-  for(const {o,group} of list){
-   const g=o.geometry,count=g.attributes.position.count,ix=g.index?.array;
+  for(const {o,g,group} of list){
+   const count=g.attributes.position.count,ix=g.index?.array;
    const m=o.matrixWorld,identity=m.equals(IDENTITY);if(!identity)m3.getNormalMatrix(m);
    for(const [name,a] of Object.entries(g.attributes)){const out=attributes[name],n=a.itemSize;
     if(identity||(name!=='position'&&name!=='normal')){out.set(a.array.subarray(0,count*n),vo*n);continue;}
@@ -55,11 +59,13 @@ export async function mergePhoneBands(baked,scene,{hidden=null}={}){
    if(ix){for(let i=0;i<ix.length;i+=3){index[io++]=ix[i]+vo;index[io++]=ix[i+(flip?2:1)]+vo;index[io++]=ix[i+(flip?1:2)]+vo;}}
    else for(let i=0;i<count;i+=3){index[io++]=vo+i;index[io++]=vo+i+(flip?2:1);index[io++]=vo+i+(flip?1:2);}
    const last=runs.at(-1);if(last&&last.group===group)last.count+=io-start;else runs.push({group,start,count:io-start});
-   vo+=count;o.visible=false;hidden?.(o);await yieldWork();
+   vo+=count;o.visible=false;hidden?.(o);if(g!==o.geometry)g.dispose();await yieldWork();
   }
   const geometry=new T.BufferGeometry();
   for(const [name,a] of Object.entries(first.attributes))geometry.setAttribute(name,new T.BufferAttribute(attributes[name],a.itemSize,a.normalized));
   geometry.setIndex(new T.BufferAttribute(index,1));geometry.computeBoundingBox();geometry.computeBoundingSphere();
+  // Drawn only: its arrays leave the page once on the GPU (groups and bounds are all three reads after).
+  for(const a of [...Object.values(geometry.attributes),geometry.index])a.onUpload(release);
   // One material slot, drawn once per run of shown bands (geometry groups).
   const mesh=new T.Mesh(geometry,[list[0].o.material]);mesh.name='V2_low_deck_merged_'+list[0].o.material.name;mesh.renderOrder=list[0].o.renderOrder;
   mesh.matrixAutoUpdate=false;mesh.frustumCulled=false;mesh.userData={noCollide:true,renderOnly:true,sources:list.map(e=>e.o.uuid)};root.add(mesh);

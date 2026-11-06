@@ -34,12 +34,15 @@ function mergedCells(col,state){
  const groups=col.groups;let same=state.groups===groups&&state.sign.length===groups.length*4;
  if(same)for(let i=0,k=0;i<groups.length;i++){const g=groups[i];if(state.sign[k++]!==g||state.sign[k++]!==g.items||state.sign[k++]!==g.items.length||state.sign[k++]!==g.cells.size){same=false;break;}}
  if(same)return state.cells;
- const cells=new Map(),sign=[];
- for(const g of groups){sign.push(g,g.items,g.items.length,g.cells.size);groupCodes.delete(g);for(const [c,items] of cellsByCode(g)){let list=cells.get(c);if(!list)cells.set(c,list=[]);for(const item of items)list.push(g,item);}}
- state.groups=groups;state.sign=sign;state.cells=cells;return cells;
+ const cells=new Map(),sign=[],loose=[];
+ for(const g of groups){sign.push(g,g.items,g.items.length,g.cells.size);groupCodes.delete(g);if(!g.cells.size&&g.items.length)loose.push(g);for(const [c,items] of cellsByCode(g)){let list=cells.get(c);if(!list)cells.set(c,list=[]);for(const item of items)list.push(g,item);}}
+ state.groups=groups;state.sign=sign;state.cells=cells;state.loose=loose;return cells;
 }
-export function createVisibilityQuery(col){const query=Object.create(col),state={groups:null,sign:[],cells:null};query.near=function*(box,ray=null){if(!ray){yield*col.near(box,ray);return;}const codes=visibilityRayCodes(box,ray);if(!codes){yield*col.near(box,ray);return;}for(let b=bandOf(box.min.y);b<=bandOf(box.max.y);b++){const band=col.bands.get(b);if(band)yield[band.bvh,null,null];}
- const cells=mergedCells(col,state),seen=new Set();for(const c of codes){const list=cells.get(c);if(list)for(let i=0;i<list.length;i+=2){const item=list[i+1];if(!seen.has(item)){seen.add(item);if(item.box.intersectsBox(box)&&ray.intersectsBox(item.box))yield[list[i].bvh,item.inverse,item.matrix];}}}
+export function createVisibilityQuery(col){const query=Object.create(col),state={groups:null,sign:[],cells:null,loose:[]};query.near=function*(box,ray=null){if(!ray){yield*col.near(box,ray);return;}const codes=visibilityRayCodes(box,ray);if(!codes){yield*col.near(box,ray);return;}for(let b=bandOf(box.min.y);b<=bandOf(box.max.y);b++){const band=col.bands.get(b);if(band)yield[band.bvh,null,null];}
+ const cells=mergedCells(col,state),seen=new Set();
+ // A group without cells (fixtures, or one built without them) is walked item by item, as before the merged index.
+ for(const g of state.loose)for(const item of g.items)if(item.box.intersectsBox(box)&&ray.intersectsBox(item.box))yield[g.bvh,item.inverse,item.matrix];
+for(const c of codes){const list=cells.get(c);if(list)for(let i=0;i<list.length;i+=2){const item=list[i+1];if(!seen.has(item)){seen.add(item);if(item.box.intersectsBox(box)&&ray.intersectsBox(item.box))yield[list[i].bvh,item.inverse,item.matrix];}}}
  for(const m of col.movers)if(m.enabled&&m.box.intersectsBox(box))yield[m.bvh,m.inverse,m.matrix];};
  // The nearest hit as col.raycast finds it, with each later BVH walk stopped at the best distance so far: a hit at or
  // beyond it could never replace the best (only a strictly nearer one does), so the answer is the same hit.
