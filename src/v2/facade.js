@@ -50,11 +50,12 @@ if(!('colorTexture' in T.BatchedMesh.prototype))Object.defineProperty(T.BatchedM
 // pieces), where arrays the pool's size for every piece took longer still.
 const sparse=source=>source.index.count*4<source.attributes.position.count;
 function usedVertices(source){
- const index=source.index.array;
- if(sparse(source)){const ids=Array.from(new Set(index)),remap=new Map(ids.map((id,i)=>[id,i]));return {ids,at:v=>remap.get(v)};}
- const remap=new Int32Array(source.attributes.position.count).fill(-1),ids=new Uint32Array(remap.length);let k=0;
- for(let i=0;i<index.length;i++){const v=index[i];if(remap[v]<0){remap[v]=k;ids[k++]=v;}}
- return {ids:ids.subarray(0,k),remap};
+ const index=source.index.array,n=source.attributes.position.count;
+ if(!sparse(source)){const remap=new Int32Array(n).fill(-1),ids=new Uint32Array(n);let k=0,i=0;
+  for(;i<index.length;i++){const v=index[i];if(v>=n)break;if(remap[v]<0){remap[v]=k;ids[k++]=v;}}
+  if(i===index.length)return {ids:ids.subarray(0,k),remap};}
+ // The Map also takes an index past the vertex list, copying what lies there as the version before did.
+ const ids=Array.from(new Set(index)),remap=new Map(ids.map((id,i)=>[id,i]));return {ids,at:v=>remap.get(v)};
 }
 export function compactRenderGeometry(source){
  const used=source.index?usedVertices(source):null,count=used?used.ids.length:source.attributes.position.count,g=new T.BufferGeometry();

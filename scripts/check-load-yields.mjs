@@ -42,4 +42,7 @@ await check('compaction keeps the vertices an index uses in first-use order, as 
   if(indexed){assert.equal(b.index.array.constructor,a.index.array.constructor);assert.deepEqual([...b.index.array],[...a.index.array]);}else assert.equal(b.index,null);
   assert.ok(b.boundingSphere.equals(a.boundingSphere));
  }
+ // An index past the vertex list (none in the ship) keeps what the version before made of it.
+ const bad=new T.BufferGeometry();bad.setAttribute('position',new T.BufferAttribute(new Float32Array(12).map((_,i)=>i),3));bad.attributes.position.count=3;bad.setIndex([0,1,3,2,1,0]);
+ const a=before(bad),b=compactRenderGeometry(bad);assert.deepEqual([...b.index.array],[...a.index.array]);assert.deepEqual([...b.attributes.position.array],[...a.attributes.position.array]);
 });

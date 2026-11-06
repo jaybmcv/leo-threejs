@@ -168,8 +168,8 @@
     "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
   },
   "src/v2/facade.js": {
-    "sha256": "9af17fb2a2545c24fcaa0bf1e71ec192266aa73aeb330104f09cafed2df522ae",
-    "reason": "Loading yields through src/v2/yield-to-page.js (scheduler.yield, a timer turn every 100 ms), the phone hull copied in 12 ms slices, typed-array compaction (scripts/check-load-yields.mjs); views match the build before pixel for pixel"
+    "sha256": "0478e6aaf9e937ee46cc64779f07252a7eac5fc1be7492801c6f7f273c1a8cf1",
+    "reason": "Loading yields through src/v2/yield-to-page.js (scheduler.yield, a timer turn every 100 ms), the phone hull copied in 12 ms slices, typed-array compaction with the Map kept for sparse or out-of-range indices (scripts/check-load-yields.mjs); views match the build before pixel for pixel"
   },
   "src/v2/facade.authoring.js": {
     "sha256": "f18efaee42bcad153cbbe6a40bb96ef2d8b515a836a263a1d0c1aec4752b0aad",
