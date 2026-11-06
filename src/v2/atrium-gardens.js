@@ -6,7 +6,7 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {GREENS,BLOOMS,SHAPES,paint,stem,clump,flower,blade,orient,fern,flowerBush,tuft,aroid,palm} from '../walk/foliage.js';
-import {ATRIUM_ZONES,ATRIUM_SIGNATURE_TREES,ATRIUM_LAKE_BRIDGE,ATRIUM_WATERFALL,ATRIUM_MINI_WATERFALL,ATRIUM_GARDEN_POCKETS,phase6LakePolygon,phase6LakeIslands,phase6LakeShore,phase6ParkPath} from '../plan/atrium-v2.js';
+import {ATRIUM_ZONES,ATRIUM_SIGNATURE_TREES,ATRIUM_LAKE_BRIDGE,ATRIUM_WATERFALL,ATRIUM_MINI_WATERFALL,ATRIUM_GARDEN_POCKETS,ATRIUM_BOULEVARD_TREES,ATRIUM_TIMBER_DECKS,ATRIUM_FESTOONS,phase6LakePolygon,phase6LakeIslands,phase6LakeShore,phase6ParkPath} from '../plan/atrium-v2.js';
 import {paintTreeShade} from './atrium-daylight.js';
 import {walkCanvas} from '../walk/canvas.js';
 import {phase6Programme} from './phase6-programme.js';
@@ -122,7 +122,7 @@ export function addGroveTrees(out,layout){
  const y0=layout.decks[5].y;let n=0;
  for(const p of fitoutFootprints(layout)){
   if(p.part!=='p6_tree_trunk'||ATRIUM_SIGNATURE_TREES.some(t=>Math.hypot(t.x-p.x,t.z-p.z)<.01))continue;
-  const pocket=ATRIUM_GARDEN_POCKETS.find(q=>Math.abs(q.z-1.1-p.z)<.01&&(Math.abs(q.x-p.x)<.01||Math.abs(q.x-3.5-p.x)<.01)),h=pocket?pocket.canopyHeight:4.4;
+  const pocket=ATRIUM_GARDEN_POCKETS.find(q=>Math.abs(q.z-1.1-p.z)<.01&&(Math.abs(q.x-p.x)<.01||Math.abs(q.x-3.5-p.x)<.01))??boulevardTree(p),h=pocket?pocket.canopyHeight:4.4;
   const r=random(Math.round(p.x*31+p.z*17)>>>0),top=y0+h,palette=[GREENS.mid,GREENS.bright,GREENS.bright,GREENS.lime];
   for(let k=0;k<3;k++){const a=k/3*Math.PI*2+r(),c=Math.cos(a),s=Math.sin(a);out.push(stem([[p.x,y0+2.3,p.z],[p.x+c*.5,top-1.5,p.z+s*.5],[p.x+c*1.1,top-.9,p.z+s*1.1]],.08,0x6e4a31,4));}
   for(let k=0;k<8;k++){const a=k/8*Math.PI*2+r()*.5,d=k?1+r()*.5:0,ht=top-.7-(d/1.6)**2*.6+r()*.3;clump(out,[p.x+Math.cos(a)*d,ht,p.z+Math.sin(a)*d],{r:.85+r()*.35,rnd:r,palette,squash:.62,leaves:3});}
@@ -168,7 +168,6 @@ export function addLakeStones(out,layout){
 // ---- Timber decks -----------------------------------------------------------------------------------------------
 // Two rounded timber decks under the food hall's outer table courts: 3 cm boards, each a slightly different tone, laid
 // along the ship, on top of the paving (walkers and furniture stand where they always did).
-export const ATRIUM_TIMBER_DECKS=[{x0:22,x1:56,z0:35.4,z1:55.2,round:4},{x0:-72,x1:-44,z0:35.4,z1:55.2,round:4}];
 function timberDeck(out,{x0,x1,z0,z1,round},y,r){
  const board=.3,tones=[0xa8794f,0xb3865b,0x9d7049,0xae8155];
  for(let z=z0+board/2;z<z1;z+=board){const dz=Math.max(0,round-Math.min(z-z0,z1-z)),inset=round-Math.sqrt(Math.max(0,round*round-dz*dz)),a=x0+inset,b=x1-inset;
@@ -266,7 +265,8 @@ export function addTreeBeds(out,layout,clear){
   flowerBush(out,[x,y,z],{spread,rnd:r,color:BLOOMS[[0,1,0,3][k%4]],blooms:7});bushes++;}
  // Big-leaved understory (aroids, ferns, the odd palm) round every tree, signature and grove alike.
  let understory=0;
- for(const p of fitoutFootprints(layout))if(p.part==='p6_tree_trunk')for(let k=0;k<6;k++){const a=k/6*Math.PI*2+r(),d=.8+r()*.9,x=p.x+Math.cos(a)*d,z=p.z+Math.sin(a)*d,kind=(k+Math.round(p.x))%3,size=.7+r()*.4;if(clear(x,z,.55))continue;
+ // (Not the boulevard avenue's trees: their planters carry their own beds.)
+ for(const p of fitoutFootprints(layout))if(p.part==='p6_tree_trunk'&&!boulevardTree(p))for(let k=0;k<6;k++){const a=k/6*Math.PI*2+r(),d=.8+r()*.9,x=p.x+Math.cos(a)*d,z=p.z+Math.sin(a)*d,kind=(k+Math.round(p.x))%3,size=.7+r()*.4;if(clear(x,z,.55))continue;
   if(kind===0)aroid(out,[x,y,z],{size,leaves:6,rnd:r});else if(kind===1)fern(out,[x,y,z],{spread:size*.9,fronds:7,pairs:5,rnd:r});else palm(out,[x,y,z],{height:1.2+r()*.5,canes:2,rnd:r});understory++;}
  return {bushes,understory};
 }
@@ -347,16 +347,30 @@ function addDeckLanterns(out,glow,y){
 }
 
 // One merged draw for the static garden pieces, one for the warm lanterns, plus the instanced cascades and downlights.
+// String lights between the festoon posts (phase6-programme.js): a dark cable sagging up to 45 cm from the 2.72 m
+// post tops, warm bulbs every ~0.8 m (in the lantern draw).
+function addFestoons(out,glow,y){
+ let bulbs=0;const top=y+2.72;
+ for(const{posts,strings}of ATRIUM_FESTOONS){
+  for(const[i,j]of strings){const a=posts[i],b=posts[j],sag=Math.min(.45,Math.hypot(b[0]-a[0],b[1]-a[1])*.04);
+   const n=Math.max(4,Math.round(Math.hypot(b[0]-a[0],b[1]-a[1])/.8)),at=t=>[a[0]+(b[0]-a[0])*t,top-sag*4*t*(1-t),a[1]+(b[1]-a[1])*t];
+   out.push(stem(Array.from({length:n+1},(_,k)=>at(k/n)),.012,0x2e2a26,3));
+   for(let k=1;k<n;k++){const[x,yy,z]=at(k/n);out.push(paint(new T.BoxGeometry(.03,.05,.03).translate(x,yy-.035,z),0x2e2a26));glow.push(new T.BoxGeometry(.07,.09,.07).translate(x,yy-.1,z));bulbs++;}}}
+ return bulbs;
+}
+const boulevardTree=p=>ATRIUM_BOULEVARD_TREES.find(t=>Math.abs(t.x-p.x)<.01&&Math.abs(t.z-p.z)<.01);
+
+// One merged draw for the static garden pieces, one for the warm lanterns, plus the instanced cascades and downlights.
 export function addAtriumGardens(root,layout){
  const y=layout.decks[5].y,lake=phase6LakePolygon(layout.decks[5].atrium.outline),islands=phase6LakeIslands(),parts=fitoutFootprints(layout),[bx0,bx1]=ATRIUM_LAKE_BRIDGE.bounds;
  const inIsland=(x,z,m)=>islands.some(q=>x>q[0][0]-m&&x<q[1][0]+m&&z>q[0][1]-m&&z<q[2][1]+m);
  const clearWater=(x,z,m)=>!contains(lake,[x,z])||inIsland(x,z,m)||x>bx0-m-1&&x<bx1+m+1||nearWaterfall(layout,x,z,3)||parts.some(p=>Math.hypot(p.x-x,p.z-z)<p.r+m-.6);
  const clearGround=(x,z,m)=>parts.some(p=>p.part!=='p6_tree_trunk'&&Math.hypot(p.x-x,p.z-z)<p.r+m-.6)||ATRIUM_SIGNATURE_TREES.some(t=>Math.hypot(t.x-x,t.z-z)<1.1);
- const out=[],glow=[],trees=addSignatureTrees(out,layout),grove=addGroveTrees(out,layout),planting=addPlantingBeds(out,layout),stones=addLakeStones(out,layout),decks=addTimberDecks(out,layout),waterfall=addWaterfall(out,layout,{...ATRIUM_WATERFALL,z0:lakeSouthEdge(phase6LakePolygon(layout.decks[5].atrium.outline),ATRIUM_WATERFALL.x)+.4}),miniWaterfall=addWaterfall(out,layout,{...ATRIUM_MINI_WATERFALL,z0:phase6LakeShore(ATRIUM_MINI_WATERFALL.x)-ATRIUM_MINI_WATERFALL.setback,seed:5511}),lily=addLilyPads(out,layout,clearWater),beds=addTreeBeds(out,layout,clearGround),lawn=addLawnDetail(out,layout,clearGround,clearWater),joints=addPavingJoints(out,layout),lanterns=addDeckLanterns(out,glow,y+.03);
+ const out=[],glow=[],trees=addSignatureTrees(out,layout),grove=addGroveTrees(out,layout),planting=addPlantingBeds(out,layout),stones=addLakeStones(out,layout),decks=addTimberDecks(out,layout),waterfall=addWaterfall(out,layout,{...ATRIUM_WATERFALL,z0:lakeSouthEdge(phase6LakePolygon(layout.decks[5].atrium.outline),ATRIUM_WATERFALL.x)+.4}),miniWaterfall=addWaterfall(out,layout,{...ATRIUM_MINI_WATERFALL,z0:phase6LakeShore(ATRIUM_MINI_WATERFALL.x)-ATRIUM_MINI_WATERFALL.setback,seed:5511}),lily=addLilyPads(out,layout,clearWater),beds=addTreeBeds(out,layout,clearGround),lawn=addLawnDetail(out,layout,clearGround,clearWater),joints=addPavingJoints(out,layout),lanterns=addDeckLanterns(out,glow,y+.03),festoonBulbs=addFestoons(out,glow,y+.03);
  const g=mergeGeometries(out);out.forEach(x=>x.dispose());g.computeBoundingBox();g.computeBoundingSphere();
  const o=new T.Mesh(g,gardenMaterial);o.name='P6_atrium_gardens';o.frustumCulled=false;o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);
  const gg=mergeGeometries(glow.map(x=>x.toNonIndexed()));glow.forEach(x=>x.dispose());gg.computeBoundingBox();gg.computeBoundingSphere();
  const lo=new T.Mesh(gg,gardenGlowMaterial);lo.name='P6_atrium_lanterns';lo.frustumCulled=false;lo.userData={...o.userData};root.add(lo);
  const cascades=addHangingGardens(root,layout),downlights=addDownlights(root,layout),soffits=addSoffits(root,layout),shade=addTreeShade(root,layout,trees);
- return {trees,...grove,...planting,...stones,...decks,waterfall,miniWaterfall,...lily,...beds,...lawn,...joints,lanterns,...downlights,...soffits,...shade,staticTriangles:g.attributes.position.count/3,cascades};
+ return {trees,...grove,...planting,...stones,...decks,waterfall,miniWaterfall,...lily,...beds,...lawn,...joints,lanterns,festoonBulbs,...downlights,...soffits,...shade,staticTriangles:g.attributes.position.count/3,cascades};
 }
