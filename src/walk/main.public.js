@@ -210,11 +210,12 @@ let res=Math.max(0,RES.indexOf(savedRes)),resChosen=savedRes!==null,resFrames=[]
 const setRes=i=>{res=i;renderer.setPixelRatio(maxRatio*RES_SCALE[res]);$('resolution').textContent=`Res ${RES[res]}`;};
 // Until the visitor picks a resolution, four seconds under 20 frames a second steps it down a level, for this visit only
 // (nothing is saved). Older laptops start on High otherwise and many never find the button. Not under automation, so
-// captures keep their sharpness; a stall or a hidden tab doesn't count.
+// captures keep their sharpness; a stall or a hidden tab doesn't count. Three frames are enough: a phone at 1.5 frames a
+// second shows six in four seconds, and with eight required it never stepped down.
 function watchFrames(ms,now){
- if(resChosen||res===RES.length-1||navigator.webdriver||document.hidden||ms>1000)return;
+ if(resChosen||res===RES.length-1||navigator.webdriver||document.hidden||ms>3000)return;
  if(!resFrom)resFrom=now;resFrames.push(ms);if(now-resFrom<4000)return;
- const median=resFrames.sort((a,b)=>a-b)[resFrames.length>>1],enough=resFrames.length>=8;resFrames=[];resFrom=now;
+ const median=resFrames.sort((a,b)=>a-b)[resFrames.length>>1],enough=resFrames.length>=3;resFrames=[];resFrom=now;
  if(enough&&median>50)setRes(res+1);
 }
 renderer.setPixelRatio(maxRatio*RES_SCALE[res]);renderer.outputColorSpace=T.SRGBColorSpace;
