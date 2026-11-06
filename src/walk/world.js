@@ -18,7 +18,8 @@ export {cutOut};
 // since the engine-pod chambers and wing galleries live inside the nacelles and wings.
 const OUTSIDE_ONLY=/(logo|wordmark|brand|identifier|designation|registry|marker|locator|seam|joint|reveal_line|beacon|light|whisker|hazard|amber)/i;
 // (The crown lounge's lamps and glow are inside, though they sit in the exterior model.)
-export const outsideOnly=o=>OUTSIDE_ONLY.test(o.name)&&!/^(Crown_|Fin_)/.test(o.name);
+// The exterior LODs' lounge shoulder glazing (src/v2/lounge-shoulders.js): the walk bake has the real glass.
+export const outsideOnly=o=>(OUTSIDE_ONLY.test(o.name)||o.name==='V2_lounge_shoulder_exterior_glazing')&&!/^(Crown_|Fin_)/.test(o.name);
 const SURFACE=/^(Smooth_pressure_envelope|V3[345]_|Forward_observation|Individual_glazing|Forward_navigation|Forward_side_vent|Crown_|Fin_)/;
 export const RESIDENTIAL=DECKS.filter(d=>d.residential).map(d=>d.number);
 

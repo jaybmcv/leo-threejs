@@ -11,13 +11,15 @@ export function auditWithPhoneHatches(root,webAuthority,layout,options){
  assert.equal(state.length,1,'One actual phone hatch batch is required');
  assert.equal(new Set(state[0].o.userData.hatchIds).size,100,'All 100 phone doors required');
  assert(!isFinishedSkin(state[0].o),'Door hardware must not define its own skin authority');
+ // The lounge shoulder glazing (src/v2/lounge-shoulders.js) is laid on the phone skin too: the same test against it.
+ root.traverse(o=>{if(o.isMesh&&o.name==='V2_lounge_shoulder_exterior_glazing'&&o.userData.phoneSurface){assert(!isFinishedSkin(o),'Shoulder glazing must not define its own skin authority');state.push({o,parent:o.parent,index:o.parent.children.indexOf(o)});}});
  const marks=new T.Group();for(const {o}of state)marks.attach(o);
  try{
   const report=auditSkinClearance(root,webAuthority,layout,options);
   const doors=auditSkinClearance(marks,options.skinAuthority,layout,{...options,tag:options.tag+' hatch hardware on finished phone surface',skinAuthority:null});
-  report.phoneHatches={status:doors.status,meshes:doors.meshes,vertices:doors.vertices,faceSamples:doors.faceSamples,tolerance:doors.tolerance,policy:'Phone-only closed hatch fittings tested against actual finished phone skin; web and all other mesh rules unchanged; no window-volume exemption.'};
+  report.phoneHatches={status:doors.status,meshes:doors.meshes,vertices:doors.vertices,faceSamples:doors.faceSamples,tolerance:doors.tolerance,policy:'Phone-only closed hatch fittings and lounge shoulder glazing tested against actual finished phone skin; web and all other mesh rules unchanged; no window-volume exemption.'};
   report.meshes+=doors.meshes;report.vertices+=doors.vertices;report.faceSamples+=doors.faceSamples;report.windowFaces+=doors.windowFaces;
   report.outside.push(...doors.outside);report.blocked.push(...doors.blocked);
   report.status=report.status==='PASS'&&doors.status==='PASS'?'PASS':'FAIL';return report;
- }finally{for(const {o,parent,index}of state){parent.attach(o);parent.children.splice(parent.children.indexOf(o),1);parent.children.splice(index,0,o);}}
+ }finally{for(const {o,parent,index}of [...state].sort((a,b)=>a.index-b.index)){parent.attach(o);parent.children.splice(parent.children.indexOf(o),1);parent.children.splice(index,0,o);}}
 }

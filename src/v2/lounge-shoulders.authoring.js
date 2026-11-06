@@ -2,7 +2,7 @@ import * as T from 'three';
 import {MeshBVH} from 'three-mesh-bvh';
 import layout from '../plan/selected-layout.js';
 import {cutChartMany} from './chart-cut.authoring.js';
-import {deinterleaveGeometry} from 'three/addons/utils/BufferGeometryUtils.js';
+import {deinterleaveGeometry,mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Lounge windscreen (1C): each bow shoulder of the observation lounge, the blank wall between the nose row and the side
 // row, becomes PANES tapered panes that fan from narrow at the top to wide at the sill. Done at bake time, after the
@@ -24,8 +24,8 @@ function regionBox(planes){const box=new T.Box3(),m=new T.Matrix3(),p=new T.Vect
  return box.expandByScalar(.05);}
 
 // Per side: the nose row's outer edge (A sill, B top) and the side row's forward edge (C sill, D top), on the wall.
-function edges(){
- const ws=layout.windows.filter(w=>w.roomId===ROOM),nose=ws.filter(w=>/--head$/.test(w.prototype)),rows=ws.filter(w=>!/--head$/.test(w.prototype));
+function edges(L){
+ const ws=L.windows.filter(w=>w.roomId===ROOM),nose=ws.filter(w=>/--head$/.test(w.prototype)),rows=ws.filter(w=>!/--head$/.test(w.prototype));
  return [-1,1].map(side=>{
   const n=nose.reduce((a,b)=>side*b.center[2]>side*a.center[2]?b:a),s=rows.filter(w=>Math.sign(w.center[2])===side).reduce((a,b)=>b.center[0]>a.center[0]?b:a);
   // Corners run [u0 sill, u1 sill, u1 top, u0 top]; the nose chart's u is z, the side charts' u is x.
@@ -37,9 +37,9 @@ function edges(){
 
 // Pane k lies between vertical divider planes k and k+1; each divider holds a sill point and a top point spaced evenly
 // along the two chords. Inside means every plane [a,b,c,d] gives a*x+b*y+c*z+d >= 0.
-function panes(){
+function panes(L=layout){
  const out=[];
- for(const {side,A,B,C,D,nose,row}of edges()){
+ for(const {side,A,B,C,D,nose,row}of edges(L)){
   const across=C.clone().sub(A),S=k=>A.clone().lerp(C,k/PANES),P=k=>B.clone().lerp(D,k/PANES);
   const divider=k=>{const e=P(k).sub(S(k)),n=new T.Vector3(-e.z,0,e.x).normalize();if(n.dot(across)<0)n.negate();return {k,n,d:-n.dot(S(k))};};
   for(let k=0;k<PANES;k++){
@@ -60,7 +60,7 @@ function panes(){
    // cut deeper there (only room-shell and hull-room walls get these cuts, so furniture and signs are untouched).
    const deepen=q=>q.map(r=>r===planes[2]?[0,1,0,-(B.y-DEEP_BAND)]:r===planes[4]?[m.x,m.y,m.z,DEEP-m.dot(c)]:r);
    const deep=[prism(deepen(planes)),...endDefs.map(e=>prism(deepen([[e.two[0][0],0,e.two[0][2],e.two[0][3]+e.flap],e.two[1],...slab]).map(r=>r===planes[3]?[0,-1,0,B.y-.03]:r)))];
-   out.push({side,k,a,b,ga,gb,ySill:A.y,yTop:B.y,nbA:k?null:nose,nbB:k+1<PANES?null:row,S0:S(k),P0:P(k),S1:S(k+1),P1:P(k+1),m,c,planes,box,ends,deep,cut:prism(cutPlanes),head:headBand(cutPlanes[0],cutPlanes[1],m,c,B.y)});
+   out.push({side,k,a,b,ga,gb,ySill:A.y,yTop:B.y,nbA:k?null:nose,nbB:k+1<PANES?null:row,S0:S(k),P0:P(k),S1:S(k+1),P1:P(k+1),m,c,planes,box,ends,deep,cut:prism(cutPlanes),head:headBand(cutPlanes[0],cutPlanes[1],m,c,B.y,L)});
   }
  }
  return out;
@@ -69,28 +69,28 @@ function panes(){
 // Mars sits dead ahead, where the centred nose row put a mullion. The two middle nose windows become one 6.3 m pane: the
 // pier between them (and FRAME of each window's edge) is cut through and glazed like a shoulder pane, without a bar.
 const FRAME=.06;
-function centrePane(){
- const nose=layout.windows.filter(w=>w.roomId===ROOM&&/--head$/.test(w.prototype));
+function centrePane(L=layout){
+ const nose=L.windows.filter(w=>w.roomId===ROOM&&/--head$/.test(w.prototype));
  // Only an even row has a mullion on the centreline; a window already spanning it needs nothing.
  if(nose.some(w=>w.corners.some(q=>q[2]<0)&&w.corners.some(q=>q[2]>0)))return null;
- const L=nose.filter(w=>w.center[2]<0).reduce((a,b)=>b.center[2]>a.center[2]?b:a,{center:[0,0,-1e9]}),R=nose.filter(w=>w.center[2]>0).reduce((a,b)=>b.center[2]<a.center[2]?b:a,{center:[0,0,1e9]});
- if(!L.corners||!R.corners)return null;
+ const Lw=nose.filter(w=>w.center[2]<0).reduce((a,b)=>b.center[2]>a.center[2]?b:a,{center:[0,0,-1e9]}),R=nose.filter(w=>w.center[2]>0).reduce((a,b)=>b.center[2]<a.center[2]?b:a,{center:[0,0,1e9]});
+ if(!Lw.corners||!R.corners)return null;
  // Each window's inner edge, moved FRAME into the window along its sill and head (corners run u0 sill, u1 sill, u1 top, u0 top).
- const inset=(w,e,o)=>v3(w.corners[e]).lerp(v3(w.corners[o]),FRAME/w.width),S0=inset(L,1,0),P0=inset(L,2,3),S1=inset(R,0,1),P1=inset(R,3,2);
+ const inset=(w,e,o)=>v3(w.corners[e]).lerp(v3(w.corners[o]),FRAME/w.width),S0=inset(Lw,1,0),P0=inset(Lw,2,3),S1=inset(R,0,1),P1=inset(R,3,2);
  const across=S1.clone().sub(S0),divider=(S,P)=>{const e=P.clone().sub(S),n=new T.Vector3(-e.z,0,e.x).normalize();if(n.dot(across)<0)n.negate();return {n,d:-n.dot(S)};};
  const a=divider(S0,P0),b=divider(S1,P1),corners=[S0,S1,P1,P0],c=corners.reduce((s,q)=>s.add(q),new T.Vector3()).multiplyScalar(.25);
  const m=new T.Vector3().crossVectors(corners[2].clone().sub(corners[0]),corners[3].clone().sub(corners[1])).normalize();if(m.x*(c.x-CENTRE.x)+m.z*(c.z-CENTRE.z)<0)m.negate();
  const planes=[[a.n.x,0,a.n.z,a.d+.005],[-b.n.x,0,-b.n.z,-b.d+.005],[0,1,0,-S0.y],[0,-1,0,P0.y],[m.x,m.y,m.z,INSIDE-m.dot(c)],[-m.x,-m.y,-m.z,OUTSIDE+m.dot(c)]];
  // One sheet of glass spans both windows (their own glass is cut out), so no seam shows where two panes would meet.
- const G=[v3(L.corners[0]),v3(R.corners[1]),v3(R.corners[2]),v3(L.corners[3])],ga=divider(G[0],G[3]),gb=divider(G[1],G[2]);
+ const G=[v3(Lw.corners[0]),v3(R.corners[1]),v3(R.corners[2]),v3(Lw.corners[3])],ga=divider(G[0],G[3]),gb=divider(G[1],G[2]);
  const sheet=prism([[ga.n.x,0,ga.n.z,ga.d+.01],[-gb.n.x,0,-gb.n.z,-gb.d+.01],[0,1,0,.01-S0.y],[0,-1,0,P0.y+.01],[m.x,m.y,m.z,.4-m.dot(c)],[-m.x,-m.y,-m.z,.4+m.dot(c)]]);
- return {side:0,k:1,direct:true,a,b,ga:0,gb:0,ySill:S0.y,yTop:P0.y,S0,P0,S1,P1,G,m,c,planes,box:regionBox(planes),ends:[],deep:[],cut:prism(planes),head:headBand(planes[0],planes[1],m,c,P0.y),sheet};
+ return {side:0,k:1,direct:true,a,b,ga:0,gb:0,ySill:S0.y,yTop:P0.y,S0,P0,S1,P1,G,m,c,planes,box:regionBox(planes),ends:[],deep:[],cut:prism(planes),head:headBand(planes[0],planes[1],m,c,P0.y,L),sheet,pier:[v3(Lw.corners[1]),v3(Lw.corners[2]),v3(R.corners[0]),v3(R.corners[3])]};
 }
 
 // Above a pane's head the hull's underside slopes down into the room to meet the glass (it showed as a lavender band):
 // HEAD_BAND cuts it away between the head and just under the ceiling, out to HEAD_IN room-side, for the soffit to close.
 const HEAD_IN=2.5;
-function headBand(a,b,m,c,yTop){const r=layout.rooms.find(q=>q.id===ROOM);return prism([a,b,[0,1,0,-yTop],[0,-1,0,r.y+r.height-.11],[m.x,m.y,m.z,HEAD_IN-m.dot(c)],[-m.x,-m.y,-m.z,OUTSIDE+m.dot(c)]]);}
+function headBand(a,b,m,c,yTop,L=layout){const r=L.rooms.find(q=>q.id===ROOM);return prism([a,b,[0,1,0,-yTop],[0,-1,0,r.y+r.height-.11],[m.x,m.y,m.z,HEAD_IN-m.dot(c)],[-m.x,-m.y,-m.z,OUTSIDE+m.dot(c)]]);}
 
 function prism(planes){const box=regionBox(planes);return {p:{chart:CHART},rect:[box.min.x,box.max.x,box.min.y,box.max.y],v0:box.min.z,v1:box.max.z,chartPlanes:planes,ignoreOwner:true,box};}
 
@@ -260,4 +260,48 @@ if(root.userData.loungeShouldersGlazed)return root.userData.loungeShouldersGlaze
  if(glass.length)meshOf(shell,'V2_lounge_shoulder_glass',glass,glassMat);
  const stats={panes:list.length,centrePane:!!centre,revealTriangles:reveal.length/3,glassTriangles:glass.length/3,barTriangles:bars.length/3,soffitTriangles:fascia.length/3,cut:Object.fromEntries(cut),skipped,unpacked,ms:Math.round(performance.now()-t0)};
  root.userData.loungeShouldersGlazed=stats;console.log('Lounge shoulders',JSON.stringify(stats));return stats;
+}
+
+// Exterior LODs (1C). The exported hulls keep their finished skin (the walk captures its skin authority from it), so it
+// is never cut here. Copies of the skin's own triangles inside each pane's glass prism (between its mullion gaps, sill
+// and head) are laid OUT_OFFSET outside it, dark like the real windows seen from outside. The mullions and the gaps to the
+// neighbouring rows stay skin, as round every window. The pier between the two middle nose windows is glazed the same
+// way, so the 6.3 m centre pane reads as one sheet. The walk hides this layer (outsideOnly): it has the real glass.
+export const EXTERIOR_GLAZING='V2_lounge_shoulder_exterior_glazing';
+const OUT_OFFSET=.025,PIER_MARGIN=.01,SKIN=/^Smooth_pressure_envelope/;
+// A convex polygon of world points (each with its skin normal), clipped to a*x+b*y+c*z+d >= 0.
+function clipTo(poly,[a,b,c,d]){
+ const f=({p:q})=>a*q.x+b*q.y+c*q.z+d,out=[];
+ for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length],fp=f(p),fq=f(q),t=fp/(fp-fq);if(fp>=0)out.push(p);if(fp*fq<0)out.push({p:p.p.clone().lerp(q.p,t),n:p.n.clone().lerp(q.n,t)});}
+ return out;
+}
+export function exteriorShoulderGlazing(root,{L=layout,phone=false}={}){
+ if(!L.rooms.some(r=>r.id===ROOM))return null;
+ const list=panes(L),centre=centrePane(L),regions=list.map(p=>p.planes);
+ if(centre){
+  const [l0,l1,r0,r1]=centre.pier,across=r0.clone().sub(l0),divider=(S,P)=>{const e=P.clone().sub(S),n=new T.Vector3(-e.z,0,e.x).normalize();if(n.dot(across)<0)n.negate();return {n,d:-n.dot(S)};},a=divider(l0,l1),b=divider(r0,r1);
+  regions.push([[a.n.x,0,a.n.z,a.d-PIER_MARGIN],[-b.n.x,0,-b.n.z,-b.d-PIER_MARGIN],...centre.planes.slice(2)]);
+ }
+ root.updateMatrixWorld(true);
+ const boxes=regions.map(regionBox),points=[],a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3(),e=new T.Vector3(),n=new T.Vector3(),t=new T.Box3(),mb=new T.Box3(),nm=new T.Matrix3();
+ root.traverse(o=>{
+  if(!o.isMesh||!SKIN.test(o.name))return;const g=o.geometry,p=g.attributes.position,sn=g.attributes.normal,ix=g.index?.array,count=ix?ix.length:p.count;nm.getNormalMatrix(o.matrixWorld);
+  g.boundingBox||g.computeBoundingBox();mb.copy(g.boundingBox).applyMatrix4(o.matrixWorld);if(!boxes.some(x=>x.intersectsBox(mb)))return;
+  for(let k=0;k+2<count;k+=3){
+   a.fromBufferAttribute(p,ix?ix[k]:k).applyMatrix4(o.matrixWorld);b.fromBufferAttribute(p,ix?ix[k+1]:k+1).applyMatrix4(o.matrixWorld);c.fromBufferAttribute(p,ix?ix[k+2]:k+2).applyMatrix4(o.matrixWorld);
+   t.makeEmpty().expandByPoint(a).expandByPoint(b).expandByPoint(c);if(!boxes.some(x=>x.intersectsBox(t)))continue;
+   n.subVectors(b,a).cross(e.subVectors(c,a));if(n.lengthSq()<1e-14)continue;n.normalize();
+   // Outward is away from the lounge's vertical axis; the copy is wound and pushed that way.
+   // Each corner is pushed along the skin's shading normal, which neighbouring faces share, so the copies meet without cracks.
+   const flip=n.x*(a.x-CENTRE.x)+n.z*(a.z-CENTRE.z)<0;if(flip)n.negate();
+   const corner=(v,i)=>{const s=sn?new T.Vector3().fromBufferAttribute(sn,ix?ix[k+i]:k+i).applyMatrix3(nm).normalize():n.clone();if(s.dot(n)<0)s.negate();return {p:v.clone(),n:s};},abc=[corner(a,0),corner(b,1),corner(c,2)],tri=flip?[abc[0],abc[2],abc[1]]:abc;
+   for(let r=0;r<regions.length;r++){if(!boxes[r].intersectsBox(t))continue;let poly=tri;for(const q of regions[r]){poly=clipTo(poly,q);if(poly.length<3)break;}
+    if(poly.length<3)continue;const moved=poly.map(v=>v.p.clone().addScaledVector(v.n.clone().normalize(),OUT_OFFSET));for(let i=1;i+1<moved.length;i++)points.push(moved[0],moved[i],moved[i+1]);}
+  }
+ });
+ if(!points.length)return {triangles:0};
+ const g=mergeVertices(new T.BufferGeometry().setFromPoints(points),1e-5);g.computeVertexNormals();g.applyMatrix4(root.matrixWorld.clone().invert());
+ const material=new T.MeshStandardMaterial({name:'V2_lounge_shoulder_exterior_glass',color:0x324453,roughness:.16,metalness:.12});
+ const o=new T.Mesh(g,material);o.name=EXTERIOR_GLAZING;o.userData={room:ROOM,loungeShoulderExterior:true,...(phone?{phoneSurface:true}:{})};root.add(o);
+ const stats={panes:list.length,centrePier:!!centre,triangles:points.length/3};console.log('Lounge shoulder exterior glazing',phone?'phone':'web',JSON.stringify(stats));return stats;
 }

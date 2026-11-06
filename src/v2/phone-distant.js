@@ -14,7 +14,7 @@ export function omitDecorativeDistantRibs(haze){
 export async function installPhoneDistant(ship,haze){
  const bytes=await publicAsset('leo-exterior-phone.glb')||await fetch(new URL('../leo-exterior-phone.glb',location.href)).then(r=>{if(!r.ok)throw Error('Phone hull unavailable');return r.arrayBuffer()});
  const loaded=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(bytes,''),parts=[];let count=0;loaded.scene.updateMatrixWorld(true);
- loaded.scene.traverse(o=>{if(o.isMesh&&o.geometry?.attributes.position){parts.push(o);count+=o.geometry.index?.count||o.geometry.attributes.position.count;}});
+ loaded.scene.traverse(o=>{if(o.isMesh&&o.geometry?.attributes.position&&o.name!=='V2_lounge_shoulder_exterior_glazing'){parts.push(o);count+=o.geometry.index?.count||o.geometry.attributes.position.count;}});
  if(count/3>PHONE_DISTANT_LIMITS.hullTriangles)throw Error('Phone distant hull exceeds triangle gate');
  const positions=new Float32Array(count*3),colors=new Uint8Array(count*3),v=new T.Vector3(),pause=yieldEvery();let at=0;
  for(const o of parts){const p=o.geometry.attributes.position,c=o.geometry.attributes.color,ix=o.geometry.index,m=Array.isArray(o.material)?o.material[0]:o.material,tint=m.color||new T.Color(0xd9dcd6),glass=m.transparent||m.opacity<1;for(let i=0;i<(ix?.count||p.count);i++){const j=ix?ix.getX(i):i;v.fromBufferAttribute(p,j).applyMatrix4(o.matrixWorld);positions[at]=v.x;positions[at+1]=v.y;positions[at+2]=v.z;for(let k=0;k<3;k++)colors[at+k]=Math.round(255*Math.min(1,glass?.63:[tint.r,tint.g,tint.b][k]*(c&&m.vertexColors?c.getComponent(j,k):1)));at+=3;}await pause();}
