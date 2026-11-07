@@ -124,6 +124,7 @@ import {createInvasion} from './invasion/game.js';
 import {createEmergencyDrill} from './emergency-drill/game.js';
 import {drillStation} from './emergency-drill/station.js';
 import layout from '../plan/selected-layout.js';
+import {installCornerShade} from './corner-shade.js';
 let emergencyDrill=null;const emergencyStation=drillStation(layout);
 import {createPawPool} from './pool/game.js';
 import {createPinball} from './pinball/game.js';
@@ -1168,12 +1169,14 @@ $('emote-button').addEventListener('click',()=>actions.emotes());
 $('ping').addEventListener('click',()=>actions.ping());
 for(const b of document.querySelectorAll('.respawn'))b.addEventListener('click',()=>actions.respawn());
 
-if(typeof __WALK_DEBUG__!=="undefined"&&__WALK_DEBUG__)Object.defineProperties(globalThis.__walk,{treasure:{get:()=>treasure},baggage:{get:()=>baggage},featureDiagnostics:{get:()=>ship.v2RuntimeFeatures}});
+if(typeof __WALK_DEBUG__!=="undefined"&&__WALK_DEBUG__)Object.defineProperties(globalThis.__walk,{treasure:{get:()=>treasure},baggage:{get:()=>baggage},featureDiagnostics:{get:()=>ship.v2RuntimeFeatures},cornerShade:{get:()=>cornerShade}});
 // Include the ball and aquarium entrance created later in startup, before the first frame.
 for(const root of [scene,haze,sky])onePassAtriumGlass(root);
+// Corner shading (corner-shade.js): patched in before the warm-up, worked out and faded in after it. Not on phones; ?corner=0 leaves it off.
+const cornerShade=phone||phoneTest.get('corner')==='0'?null:installCornerShade(scene);
 // The shader warm-up (see shaderWarmup): the walk's scene with the arrival hall's lamps both ways, then its sky and haze.
 // The phone ship uploads nothing ahead and keeps no list of pictures.
 Promise.race([environmentReady,new Promise(r=>setTimeout(r,WARM_WAIT_MS))])
  .then(()=>Promise.all([warmShaders(renderer,scene,camera,{lights:[arrivalMood?.lamps].filter(Boolean)}),warmShaders(renderer,haze,hazeCamera),warmShaders(renderer,sky,skyCamera)]))
  .then(([main,...rest])=>{shaderWarmup={proof:main.proof,textures:preparedPhone?null:new Set([main,...rest].flatMap(w=>[...w.textures])),uploaded:null};})
- .catch(e=>console.warn('Shader warm-up skipped.',e)).finally(()=>{warmed=true;});
+ .catch(e=>console.warn('Shader warm-up skipped.',e)).finally(()=>{warmed=true;cornerShade?.start(colliders).catch(e=>console.warn('Corner shading skipped.',e));});
