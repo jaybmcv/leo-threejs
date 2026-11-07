@@ -531,6 +531,7 @@ const actions={
  chat(){if(ready())chat.open();},
  // How to play, and the tester guide (help.js).
  help(){if(ready())toggleHelp();},
+ stats(){frameReadout.toggle();},
  // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
  emote(i){if(ready()&&!resting&&!inBall&&!treasure?.active&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
  // The emote sheet uses the same bindings as the walk.
@@ -761,6 +762,7 @@ renderer.setAnimationLoop(()=>{
  // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
  if(hubPanel.isOpen()&&firstViewReady)return;
  if(!warmed)return;
+ frameReadout.begin();
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
  const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen&&!controlsSettings?.isOpen&&!furSettings?.isOpen});last=now;
  const k=input.read();if(graphicsSettings?.isOpen||controlsSettings?.isOpen||furSettings?.isOpen||emergencyDrill?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
@@ -874,7 +876,7 @@ renderer.setAnimationLoop(()=>{
 function draw(view){
  view.updateMatrixWorld(true);atriumGeometry?.update(view,renderer.domElement.height);
  for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
- renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,view);frameReadout?.frame(performance.now());
+ renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,view);frameReadout.frame(performance.now());
 }
 // The selfie booth's photo: drawn from its lens and copied off the canvas at once (the drawing buffer is not kept past
 // this frame), then the walker's own view drawn back over it.
