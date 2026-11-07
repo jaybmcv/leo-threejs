@@ -19,9 +19,10 @@ export function inOpenAtrium(){if(fogClassified!==undefined)return fogClassified
 // geometry the baked bands hold; while the full-height atrium bands draw, it only z-fights with them (feedback
 // #267/#272), so it is hidden then. The distant haze copy is untouched.
 // Only from the atrium up, though: the bands hold the aft core from about Deck 4, so for Decks 1-3 (the stairs and
-// landings beside the arrival hall) the copy is the only geometry there is. Below the atrium floor the sight test turns
-// the full-height bands on whenever its rays run out, as they do walking up to the Deck 2 aft stairs, and hiding the copy
-// then made the stairs vanish (2026-11-07 report). Below the atrium floor the copy always draws.
+// landings beside the arrival hall) the copy is the only geometry there is. Below the atrium floor the sight test used to
+// turn the full-height bands on near the Deck 2 aft stairs, and hiding the copy then made the stairs vanish (2026-11-07
+// report). Since the same day it never answers visible below the atrium floor (atrium-sight.js), and the copy always
+// draws there anyway.
 const towerCopies=[];
 // Below the atrium floor, the rest of the near facade (the atrium's own architecture) draws only while the atrium bands
 // do: unseen, it was still shaded in every pixel it covered, behind whatever hid it, as a logarithmic depth buffer tests

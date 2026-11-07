@@ -1,7 +1,7 @@
 import * as T from 'three';
 import layout from '../plan/selected-layout.js';
 import {ATRIUM_PROTOTYPE} from '../plan/atrium-v2.js';
-import {contains,distanceToSegment} from '../plan/geometry-v2.js';
+import {contains} from '../plan/geometry-v2.js';
 import {createVisibilityQuery} from './visibility-query.js';
 import {visibilityState} from './visibility-state.js';
 import {opaqueBlocked} from './opaque-visibility.js';
@@ -9,12 +9,12 @@ import {createDetailViewGuard} from './detail-lod.js';
 import {PVS_UNKNOWN,PVS_VISIBLE} from './atrium-pvs.js';
 
 const EPS=1e-7;
-// Rooms where every view was checked to see no atrium, which its rays can't prove: the arrival hall on Deck 2 and the
-// farm above it, open to each other. Under them are three deck slabs of many small ceiling parts, so the rays always ran
-// out, and the hall drew all 20 decks under atrium fog (1.5 fps on a Galaxy S9). Hiding every band from Deck 6 up
-// changes no pixel there (output/phone-walk/hall-atrium.mjs). The eye counts within SEALED_REACH of a room, since the
-// follow camera can stand behind the walker in the wall.
-export const SEALED_ROOMS=['d02-arrival-1','d03-farm-1'];const SEALED_REACH=3;
+// No floor below Deck 6 sees the whole atrium (Jay, 2026-11-07). The atrium starts at Deck 6; from a lower deck the
+// most a view catches is a stair or lift core rising towards it, and span()'s own rays already stretch the drawn decks
+// for that. The full atrium height is about 10M more triangles; from the Deck 2 aft lift lobby it drew under a closed
+// ceiling and changed no pixel but the fog. So while the walker or the eye is below the atrium floor (geometry().low,
+// 30 cm under Deck 6), the answer is hidden at once, before the PVS or any ray. This replaces the sealed-room list (the
+// arrival hall and the farm above it, both below Deck 6). Fixture portals (options.portals) carry no decks and skip it.
 const center=polygon=>polygon.reduce((p,v)=>p.add(v),new T.Vector3()).multiplyScalar(1/polygon.length);
 // Clip a convex portal against a positive half-space. The small tolerance keeps
 // edge-on openings conservative rather than dropping a visible sliver.
@@ -100,13 +100,12 @@ function subtract(polygon,planes){
  * intervalMs, holdMs, layout, pvs}. Layout injection exercises the default envelope
  * and enclosure path in fixtures. Geometry is shared with lazy owner portals.
  * `pvs` returns the loaded atrium PVS (atrium-pvs.js) or null; its cells replace
- * the rays wherever they have data. Unresolved coverage returns visible, except in `sealed` rooms (ids; SEALED_ROOMS by
- * default), where only a clear ray is sight. */
+ * the rays wherever they have data. Unresolved coverage returns visible. With layout geometry, an eye or walker below the
+ * atrium floor answers hidden at once (stats.below counts those answers). */
 export function createAtriumSight(colliders,options={}){
  const query=createVisibilityQuery(colliders),changed=visibilityState(),viewGuard=createDetailViewGuard(),custom=options.portals?.map(portal),g=custom?null:geometry(options.layout);
- const sealedIds=new Set(options.sealed??SEALED_ROOMS),sealedRooms=g?(options.layout??layout).rooms.filter(r=>sealedIds.has(r.id)&&r.polygon?.length).map(r=>({polygon:r.polygon,low:r.y-.5,high:r.y+(r.height||3.4)+.5})):[];
  const maxRays=options.maxRays??24,maxFragments=options.maxFragments??256,intervalMs=options.intervalMs??150,holdMs=options.holdMs??250;
- const stats={updates:0,rays:0,firstHits:0,windowFallbacks:0,coverageRays:0,budgetFallbacks:0,cacheHits:0,pvsHits:0,pvs:PVS_UNKNOWN,portals:0,owner:null,visible:false,lastMs:0,range:null};
+ const stats={updates:0,rays:0,firstHits:0,windowFallbacks:0,coverageRays:0,budgetFallbacks:0,cacheHits:0,pvsHits:0,below:0,pvs:PVS_UNKNOWN,portals:0,owner:null,visible:false,lastMs:0,range:null};
  const scratch={box:new T.Box3(),point:new T.Vector3(),local:new T.Ray(),stats};
  const eye=new T.Vector3(),ray=new T.Ray(),local=new T.Ray(),point=new T.Vector3(),matrix=new T.Matrix4(),frustum=new T.Frustum();
  let last=-Infinity,lastSeen=-Infinity,result=false,remaining=0,fromPvs=false;
@@ -134,9 +133,6 @@ export function createAtriumSight(colliders,options={}){
  }
  function detect(camera){
   camera.getWorldPosition(eye);
-  // In a room checked to be closed to the atrium (SEALED_ROOMS), only a clear ray counts as sight: running out of rays or
-  // fragments answers hidden there. Elsewhere an unresolved query stays visible.
-  const sealed=sealedRooms.some(r=>eye.y>=r.low&&eye.y<=r.high&&(contains(r.polygon,[eye.x,eye.z])||r.polygon.some((a,i)=>distanceToSegment([eye.x,eye.z],a,r.polygon[(i+1)%r.polygon.length])<=SEALED_REACH)));
   stats.portals=0;stats.owner=null;
   frustum.setFromProjectionMatrix(matrix.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
   let candidates=custom,preferred=[];
@@ -170,7 +166,7 @@ export function createAtriumSight(colliders,options={}){
   for(const candidate of possible){
    let polygon=candidate.polygon;for(const plane of frustum.planes){polygon=clip(polygon,plane);if(!polygon.length)break;}
    if(polygon.length)pieces.push(polygon);
-   if(pieces.length>maxFragments){stats.budgetFallbacks++;return !sealed;}
+   if(pieces.length>maxFragments){stats.budgetFallbacks++;return true;}
   }
   stats.portals=pieces.length;if(!pieces.length)return false;
   const cover=planes=>{const next=[];for(const polygon of pieces){next.push(...subtract(polygon,planes));if(next.length>maxFragments){stats.budgetFallbacks++;return false;}}pieces=next;return true;};
@@ -186,28 +182,31 @@ export function createAtriumSight(colliders,options={}){
     const hit=ray.intersectTriangle(polygon[0],polygon[i],polygon[i+1],false,new T.Vector3());
     if(hit&&hit.distanceToSquared(eye)<distance){target=hit;distance=hit.distanceToSquared(eye);}
    }
-   if(target){const hit=test(target);if(hit?.clear)return true;if(hit?.planes&&!cover(hit.planes))return !sealed;}
+   if(target){const hit=test(target);if(hit?.clear)return true;if(hit?.planes&&!cover(hit.planes))return true;}
    if(!pieces.length)return false;
   }
   for(const target of preferred){
    const hit=test(target);if(hit?.clear)return true;
-   if(hit?.planes&&!cover(hit.planes))return !sealed;
+   if(hit?.planes&&!cover(hit.planes))return true;
    if(!pieces.length)return false;
   }
   while(pieces.length&&remaining>0){
    const hit=test(center(pieces[0]));if(hit?.clear)return true;
    if(!hit?.planes)break;
-   const previous=pieces[0];if(!cover(hit.planes))return !sealed;
+   const previous=pieces[0];if(!cover(hit.planes))return true;
    if(pieces.length>maxFragments||pieces[0]===previous)break;
   }
-  if(pieces.length){stats.budgetFallbacks++;return !sealed;}
+  if(pieces.length){stats.budgetFallbacks++;return true;}
   return false;
  }
  const publish=now=>{if(result)lastSeen=now;return stats.visible=result||now-lastSeen<holdMs;};
  return{stats,update(camera,p,now){
+  camera.getWorldPosition(eye);
+  // Below the atrium floor: hidden, with no hold (it is never seen from there). The next answer above recomputes.
+  if(g&&(eye.y<g.low||p&&p.y<g.low)){stats.below++;stats.pvs=PVS_UNKNOWN;stats.range=null;result=false;lastSeen=-Infinity;last=-Infinity;fromPvs=true;return stats.visible=false;}
   // A precomputed cell answers at once, every frame; only cells without data pay for rays. The bake counts lift landing
   // doors as shut, so where `unbaked` says the eye is by an open one, the rays answer.
-  camera.getWorldPosition(eye);const cell=options.unbaked?.(eye)?PVS_UNKNOWN:options.pvs?.()?.at(eye)??PVS_UNKNOWN;stats.pvs=cell;
+  const cell=options.unbaked?.(eye)?PVS_UNKNOWN:options.pvs?.()?.at(eye)??PVS_UNKNOWN;stats.pvs=cell;
   // A visible cell's heights (null: the whole atrium) stand until another visible answer, through the hold.
   if(cell!==PVS_UNKNOWN){stats.pvsHits++;result=cell===PVS_VISIBLE;if(result)stats.range=options.pvs().range?.(eye)??null;last=-Infinity;fromPvs=true;return publish(now);}
   // Snapshot collider/mover state only at the query interval, not every frame.

@@ -5,10 +5,9 @@
 // millimetre, so a repacked BVH or a rebuild on another PC keeps the key.
 import {BAND} from '../walk/collision.js';
 import {PVS_GRID} from './atrium-pvs.js';
-import {shutLandingDoors} from '../walk/lifts.js';
 
 // Bump when the bake's rules change (scripts/walk-atrium-pvs.page.js), so data made under the old rules stops matching.
-export const PVS_BAKE_VERSION=3;
+export const PVS_BAKE_VERSION=4;
 // Eye heights above each floor: the lower cell holds the first-person eye (1.62 m), the upper one a raised third-person camera.
 export const PVS_HEIGHTS=[.35,1.65,3];
 // span() in src/walk/main.public.js draws at least 3 m below to 4 m above the walker's floor, whatever the atrium does.
@@ -16,12 +15,13 @@ export const PVS_LOCAL_SPAN=[-3,4];
 
 /** The bake's inputs besides the colliders. `envelope` is atriumEnvelope(layout) from src/v2/atrium-sight.js: the atrium as
  * the sight rays bound it. Its prism floor sits 5 cm above deck 6's, so a picture of the gallery beneath it, through
- * the prism's polygon offset, does not count as the atrium. */
-export function pvsSetup(layout,envelope){
+ * the prism's polygon offset, does not count as the atrium. `doors` is shutLandingDoors() from src/walk/lifts.js, passed in
+ * so this module stays loadable on the bake page (lifts.js reads layout.json through node:fs). */
+export function pvsSetup(layout,envelope,doors){
  const deck6=layout.decks.find(d=>d.number===6).y;
  // The shut landing doors the bake draws (scripts/walk-atrium-pvs.page.js) are inputs too: moved lifts mean a new bake.
  return {version:PVS_BAKE_VERSION,grid:PVS_GRID,heights:PVS_HEIGHTS,levels:[[envelope.envelope,deck6+.05,envelope.high]],
-  atriumSpan:[envelope.low,envelope.high],localSpan:PVS_LOCAL_SPAN,band:BAND,doors:shutLandingDoors()};
+  atriumSpan:[envelope.low,envelope.high],localSpan:PVS_LOCAL_SPAN,band:BAND,doors};
 }
 
 const SEEDS=[0x9747b28c,0x2c1b3c6d,0x5bd1e995];
