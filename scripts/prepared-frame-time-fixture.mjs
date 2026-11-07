@@ -7,13 +7,13 @@ import {rememberPreparedStatic,settlePreparedStatic} from '../src/v2/prepared-st
 import {onePassAtriumGlass} from '../src/v2/atrium-visibility.js';
 import {createSwimSuit} from '../src/walk/aquarium-treasure/suit.js';
 import {showBands} from '../src/walk/render-bake.js';
+import {checkPreparedStartupSource} from './prepared-startup-source.mjs';
 
 // Exercise the saved public graph without loading its large geometry/collision arrays or rendering a flood.
 // Live: three's own matrix update, or the hidden-skip wrapper that falls back to it whenever the branch is shown.
 const live=o=>o.updateMatrixWorld===T.Object3D.prototype.updateMatrixWorld||!!o.updateMatrixWorld.liveWhenShown;
 export async function checkPreparedFrameTime(){
- for(const suffix of ['', '.authoring', '.public'])assert((await fs.readFile('src/v2/prepared-runtime'+suffix+'.js','utf8')).includes('preparedBake(ship){rememberPreparedStatic(ship);'),'Prepared bake must capture fixed contents before late activities');
- for(const suffix of ['.prepared','.public'])assert(/batchLowDeckDraws\(baked,renderer(?:,\{[^;]*\})?\);\}?(atriumGeometry=(?:preparedPhone\?null:|atriumPack\?)?createAtriumGeometryRuntime\(baked,renderer,\{[^;]*\}\)(?::null)?;)?settlePreparedStatic\(ship\);/.test(await fs.readFile('src/walk/main'+suffix+'.js','utf8')),'Prepared startup must settle after all reparenting and batching');
+ await checkPreparedStartupSource();
  const bytes=await fs.readFile('output/leo-interior-v02/prepared-walk/world.bin'),decoder=new ZSTDDecoder();await decoder.init();
  const manifest=JSON.parse(new TextDecoder().decode(bytes[0]===0x28?decoder.decode(bytes):gunzipSync(bytes)));
  const geometry=new T.BufferGeometry(),materials=manifest.materials.map(m=>({transparent:!!m.transparent}));
@@ -36,7 +36,6 @@ export async function checkPreparedFrameTime(){
  for(const o of mutableInstances)assert(live(o),'Mutable instances must stay live: '+o.name);
  for(const o of moving)o.position.x+=2;scene.updateMatrixWorld(true);for(const o of moving)assert.equal(o.matrixWorld.elements[12],expected.get(o)[12]+2,'Forced walk must update '+o.name);
  showBands(bands,-1e6,1e6);assert([...bands.values()].every(g=>g.visible));showBands(bands,1e6,1e6+1);assert([...bands.values()].every(g=>!g.visible));
- const main=await fs.readFile('src/walk/main.public.js','utf8');assert(/batchLowDeckDraws\(baked,renderer(?:,\{[^;]*\})?\);\}?(atriumGeometry=(?:preparedPhone\?null:|atriumPack\?)?createAtriumGeometryRuntime\(baked,renderer,\{[^;]*\}\)(?::null)?;)?settlePreparedStatic\(ship\);/.test(main),'Public startup must settle after all reparenting and batching');
  // Both startup orders must resolve a manually managed local matrix against its final parent.
  for(const attached of [false,true]){const parent=new T.Scene(),band=new T.Group(),leaf=new T.Mesh(geometry,materials[0]),extra=new T.Group(),testShip={v2PreparedBake:{bands:new Map([[0,band]])}};band.add(leaf);leaf.matrixAutoUpdate=false;leaf.matrix.makeTranslation(7,8,9);parent.position.set(3,4,5);if(attached)parent.add(band);rememberPreparedStatic(testShip);if(!attached)parent.add(band);band.add(extra);settlePreparedStatic(testShip);assert.deepEqual(leaf.matrixWorld.elements.slice(12,15),[10,12,14]);assert(live(band));extra.position.x=12;parent.updateMatrixWorld(true);assert.equal(extra.matrixWorld.elements[12],15);}
  const report={status:'PASS',total,pruned,share:pruned/total,mutableInstances:mutableInstances.length,movingNames,method:'Actual prepared node topology and transforms with empty geometry, plus named late-added moving branches; forced scene traversal and both band visibility states.'};
