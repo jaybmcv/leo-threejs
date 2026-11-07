@@ -17,23 +17,41 @@ const IDENTITY=new T.Matrix4(),release=function(){this.array=null;};
 // their difference (about 5%). Against other transparent things the merged glass sorts by the centre of its bounds, as
 // each 50-150 m chunk of it did before, so mostly behind them as before.
 const faint=m=>m.transparent&&!m.depthWrite&&m.blending===T.NormalBlending&&m.opacity<=.35;
-const eligible=o=>{const m=o.material,g=o.geometry;
- return o.isMesh&&!o.isInstancedMesh&&!o.isBatchedMesh&&!o.isSkinnedMesh&&o.visible&&g?.attributes.position&&!Array.isArray(m)&&(!m.transparent&&m.opacity>=1||faint(m))&&!m.isShaderMaterial&&!m.name.startsWith('P4_menu_deck_')
+// Deck menus are left to phase4-culling's room culling unless `menus` (their sources are marked bandMerged).
+const eligible=(o,menus)=>{const m=o.material,g=o.geometry;
+ return o.isMesh&&!o.isInstancedMesh&&!o.isBatchedMesh&&!o.isSkinnedMesh&&o.visible&&g?.attributes.position&&!Array.isArray(m)&&(!m.transparent&&m.opacity>=1||faint(m))&&!m.isShaderMaterial&&(menus||!m.name.startsWith('P4_menu_deck_'))
   &&!Object.keys(g.morphAttributes).length&&g.drawRange.start===0&&g.drawRange.count===Infinity
   &&!Object.values(g.attributes).some(a=>a.isInterleavedBufferAttribute)&&!(g.attributes.tangent&&!o.matrixWorld.equals(IDENTITY));};
+// The bake makes a copy of some plain materials per chunk (48 of Area_light_polished): an opaque material without
+// textures or shader hooks merges with any other of the same type and settings (userData included; one that can't be
+// written out stays apart).
+const settingsOf=m=>{
+ if(m.transparent||Object.hasOwn(m,'onBeforeCompile')||Object.hasOwn(m,'customProgramCacheKey'))return null;
+ const parts=[m.type];
+ try{
+  for(const k of Object.keys(m).sort()){if(k==='uuid'||k==='id'||k==='version'||k==='_listeners')continue;const v=m[k];
+   if(v?.isTexture||typeof v==='function')return null;
+   parts.push(k+'='+(v?.isColor?v.getHex():typeof v?.toArray==='function'?v.toArray().join(','):v!==null&&typeof v==='object'?JSON.stringify(v):String(v)));}
+ }catch{return null;}
+ return parts.join('|');
+};
 const layoutOf=g=>Object.entries(g.attributes).map(([k,a])=>k+':'+a.itemSize+':'+a.normalized+':'+a.array.constructor.name).sort().join(',');
 
 /** Merges the deck bands' opaque meshes per material. `hidden` is called with each source once it is copied and hidden.
  * Returns {root, update, proof}: add nothing (root is already in `scene`); call update() after showBands. */
-export async function mergePhoneBands(baked,scene,{hidden=null}={}){
+export async function mergePhoneBands(baked,scene,{hidden=null,menus=false}={}){
  const yieldWork=yieldEvery();
  const bands=[...baked.bands.values()].filter(g=>/^Walk_band_/.test(g.name));
  // Band order: by lowest deck, then highest, so the bands a view span shows sit together.
  bands.sort((a,b)=>a.userData.band-b.userData.band||(a.userData.top??a.userData.band)-(b.userData.top??b.userData.band));
- const buckets=new Map();
- for(const group of bands)for(const o of group.children){
-  o.updateWorldMatrix(true,false);if(!eligible(o))continue;
-  const key=o.material.uuid+'|'+o.renderOrder+'|'+layoutOf(o.geometry);let list=buckets.get(key);if(!list)buckets.set(key,list=[]);list.push({o,group});
+ const buckets=new Map(),alike=new Map();
+ // A band's direct meshes, and the meshes inside any of its groups marked userData.bandMergeParts (static, such as the
+ // wayfinding guides: posts, directory backings and floor arrows share a few materials over 20 decks).
+ const partsOf=group=>{const list=[];for(const o of group.children){list.push(o);if(o.userData.bandMergeParts)o.traverse(c=>{if(c!==o&&c.isMesh)list.push(c);});}return list;};
+ for(const group of bands)for(const o of partsOf(group)){
+  o.updateWorldMatrix(true,false);if(!eligible(o,menus))continue;
+  const settings=settingsOf(o.material);let same=settings&&alike.get(settings);if(settings&&!same)alike.set(settings,same=o.material);
+  const key=(same||o.material).uuid+'|'+o.renderOrder+'|'+layoutOf(o.geometry);let list=buckets.get(key);if(!list)buckets.set(key,list=[]);list.push({o,group});
  }
  const root=new T.Group();root.name='V2_phone_band_merges';root.userData={noCollide:true,renderOnly:true};root.matrixAutoUpdate=false;
  const merges=[],proof={meshes:0,sources:0,vertices:0,triangles:0},m3=new T.Matrix3(),v=new T.Vector3();
@@ -59,7 +77,7 @@ export async function mergePhoneBands(baked,scene,{hidden=null}={}){
    if(ix){for(let i=0;i<ix.length;i+=3){index[io++]=ix[i]+vo;index[io++]=ix[i+(flip?2:1)]+vo;index[io++]=ix[i+(flip?1:2)]+vo;}}
    else for(let i=0;i<count;i+=3){index[io++]=vo+i;index[io++]=vo+i+(flip?2:1);index[io++]=vo+i+(flip?1:2);}
    const last=runs.at(-1);if(last&&last.group===group)last.count+=io-start;else runs.push({group,start,count:io-start});
-   vo+=count;o.visible=false;hidden?.(o);if(g!==o.geometry)g.dispose();await yieldWork();
+   vo+=count;o.visible=false;o.userData.bandMerged=true;hidden?.(o);if(g!==o.geometry)g.dispose();await yieldWork();
   }
   const geometry=new T.BufferGeometry();
   for(const [name,a] of Object.entries(first.attributes))geometry.setAttribute(name,new T.BufferAttribute(attributes[name],a.itemSize,a.normalized));
