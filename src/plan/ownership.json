@@ -4219,12 +4219,16 @@
       "via": "roomObject",
       "fixed": false,
       "features": [
-        "Mission_timer"
+        "Mission_timer",
+        "Mission_timer_engine",
+        "Mission_engine_valve",
+        "Mission_engine_feeds",
+        "Mission_engine_flow"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 14,
-      "signature": "19f7ac1bfc20e2553a1b5afaaa46a1fdda486e7c6e040e2db53260316e3b6507"
+      "placements": 42,
+      "signature": "3dcbb126f4a67180d221f5636afa3761eeb9ab4d0462b4a01a3f5604efa67033"
     },
     {
       "source": "src/walk/mudwater.authoring.js",
