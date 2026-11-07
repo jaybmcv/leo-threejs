@@ -88,5 +88,8 @@ export function legacyFeatureSpot(spot){
  // Hydro-Nip wall and sign photos taken about 5 m up, over the open floor. Nothing is walkable
  // up there in v2, so stand on the lounge floor beneath the same spot (commons-1 moved -22.5,-16).
  if(spot&&!spot.resolved&&(spot.lv===undefined||spot.lv===1)&&spot.at[1]>28.9&&spot.at[1]<31&&spot.at[0]>-101&&spot.at[0]<-88.5&&spot.at[2]>-41&&spot.at[2]<-20)return {...spot,at:[spot.at[0]-22.5,24.3,spot.at[2]-16],lv:2,resolved:true,feature:'hydro-nip-high-shot'};
+ // A shuttle-bay photo taken from inside a shuttle, now filled by its lower hull cores. Stand on the bay floor
+ // beside the same shuttle instead.
+ if(spot&&!spot.resolved&&(spot.lv===undefined||spot.lv===1)&&spot.at.every((v,i)=>Math.abs(v-[167,-34.08,24.9][i])<.055))return {...spot,at:[168.9,-35.7,21.95],lv:2,resolved:true,feature:'shuttle-bay-photo'};
  return null;
 }
