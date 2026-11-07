@@ -23,6 +23,7 @@ const palette={floor:0xbdb7a8,lining:0xdbe1da,navy:0x294655,metal:0x8e9fa2,dark:
 const materials=Object.fromEntries(Object.entries(palette).map(([n,color])=>[n,new T.MeshStandardMaterial({name:'Special_'+n,color,roughness:n==='glass'?.18:.75,metalness:n==='metal'?.55:.08,...(n==='screen'||n==='light'||n==='teal'?{emissive:color,emissiveIntensity:n==='light'?.85:.2}:{}),...(n==='glass'?{transparent:true,opacity:.19,depthWrite:false,side:T.DoubleSide}:{})})]));
 materials.vision=visionGlass;
 materials.lining.side=T.DoubleSide;
+const hiddenCollisionMaterial=new T.MeshBasicMaterial({visible:false,transparent:true,opacity:0,depthWrite:false});
 
 function kit(area){
   const root=new T.Group();root.name=`Area_${area.id}`;root.userData={...area,units:'metres',stage:'Furnished concept'};
@@ -267,11 +268,9 @@ function hangar(area,k){
   for(const sx of [-1,1])for(const sz of [-1,1]){
     const g=new T.Group();g.name='Transfer_shuttle';g.position.set(x+sx*17,y,sz*27);k.fit.add(g);
     round('Shuttle_lower_hull',[21,1.2,8],[0,.9,0],'navy',.5,g);
-    // The hull's flat top is ground (#257, #259). The ground probe skips any mesh named *hull*, so a cat that jumped on
-    // the nose fell through the top into the hollow hull and could not get out. A hidden plate over the flat top
-    // carries the feet; it does not draw (render-bake skips hidden meshes; `baked` keeps it in collision) and it
-    // sits under the cabin floor, so boarding is unchanged.
-    const hullTop=box('Shuttle_lower_hull_top_platform',[20,.04,7],[0,1.48,0],'navy',g);hullTop.visible=false;hullTop.userData.baked=true;
+    // The hidden top gives a jumper footing above the shell instead of a hollow space to fall into.
+    const core=add('Shuttle_lower_core_support',new RoundedBoxGeometry(20.8,1.5,7.8,2,.5),[0,.75,0],hiddenCollisionMaterial,g);
+    core.visible=false;core.userData={baked:true};
     // The cabin can be boarded: a doorway on the platform side and the windscreen are cut through its shell (which
     // then collides as its own curved surface), with a floor on the lower hull, seat rows and a two-seat flight deck.
     const cabin=round('Shuttle_cabin',[16,2.8,7],[-1,2.4,0],'lining',1.2,g);cabin.removeFromParent();

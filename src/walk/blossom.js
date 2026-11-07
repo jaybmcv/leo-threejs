@@ -2,6 +2,7 @@ import {createSpatial,updateSpatial} from './spatial-audio.js';
 import * as T from 'three';
 import {roomObject} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {mergeByMaterial} from './merge-by-material.js';
 import {createLayeredConservatory,preserveBlossomRandomSequence} from './layered-conservatory.js';
 import {seeded} from '../polish-kit.js';
 
@@ -159,6 +160,7 @@ export function createBlossomGarden(ship){
   for(const [x,y,z,r] of [[0,4,0,1.5],[-1.7,2.4,0,1.3],[1.8,3.2,0,1.3],[0,3,1.8,1.3],[0,2.2,-1.8,1.3]]){
    const pad=new T.Mesh(tinted(new T.IcosahedronGeometry(r,0).scale(1,.4,1),PINKS[i]),near.children[1].material);pad.position.set(x,y,z);far.add(pad);
   }
+  mergeByMaterial(far);
   lod.addLevel(near,0);lod.addLevel(far,24);lod.position.set(146.3,SOIL,z);lod.scale.setScalar(.5);frame.add(lod);extraTrees.push(lod);
   const trunkCollider=new T.Mesh(new T.CylinderGeometry(.28,.28,1.7,6));trunkCollider.position.set(146.35,SOIL+.85,z);solid.add(trunkCollider);
  }

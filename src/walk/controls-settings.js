@@ -3,7 +3,7 @@ import {walkBindings,bindingLabel,bindingProblem} from './bindings.js';
 // A native modal keeps editing keys out of the walk and its other sheets.
 export function mountControlsSettings({emotes=[],onOpenChange=()=>{}}={}){
  if(typeof document==='undefined'||globalThis.__leoPreparedBuild)return null;
- const mount=document.querySelector('#tools-extra')||document.querySelector('.tools');
+ const mount=document.querySelector('#settings-menu')||document.querySelector('#tools-extra')||document.querySelector('.tools');
  if(!mount||document.getElementById('controls-settings'))return null;
  const el=(tag,props={})=>Object.assign(document.createElement(tag),props);
  const style=el('style',{textContent:`
@@ -36,7 +36,6 @@ export function mountControlsSettings({emotes=[],onOpenChange=()=>{}}={}){
  }
  const actions=el('div',{className:'binding-actions'}),reset=el('button',{type:'button',textContent:'Reset defaults'}),done=el('button',{type:'button',textContent:'Done'});actions.append(reset,done);
  dialog.append(title,description,list,status,actions);document.head.append(style);document.body.append(dialog);mount.append(button);
- const more=document.getElementById('tools-more'),moreLabel=more?.getAttribute('aria-label');if(more)more.setAttribute('aria-label',(moreLabel||'More buttons')+', controls');
  function clearInput(){onOpenChange(false);const more=document.getElementById('tools-more'),target=returnFocus?.getClientRects().length?returnFocus:more?.getClientRects().length?more:button;target.focus();returnFocus=null;}
  function closed(){if(!opened)return;opened=false;pending=null;refresh();clearInput();}
  function close(){if(!opened)return;dialog.close();closed();}
@@ -69,5 +68,5 @@ export function mountControlsSettings({emotes=[],onOpenChange=()=>{}}={}){
  window.addEventListener('keydown',keyboard,true);window.addEventListener('keyup',keyboard,true);window.addEventListener('pointerdown',capture,true);window.addEventListener('mousedown',mouseDefault,true);window.addEventListener('mouseup',mouseDefault,true);window.addEventListener('click',click,true);window.addEventListener('auxclick',click,true);dialog.addEventListener('contextmenu',context);
  button.addEventListener('click',open);done.addEventListener('click',close);reset.addEventListener('click',()=>{pending=null;result(walkBindings.reset());});
  dialog.addEventListener('cancel',e=>{e.preventDefault();close();});dialog.addEventListener('close',closed);const unsubscribe=walkBindings.subscribe(refresh);refresh();
- return {open,close,get isOpen(){return opened;},destroy(){close();unsubscribe();window.removeEventListener('keydown',keyboard,true);window.removeEventListener('keyup',keyboard,true);window.removeEventListener('pointerdown',capture,true);window.removeEventListener('mousedown',mouseDefault,true);window.removeEventListener('mouseup',mouseDefault,true);window.removeEventListener('click',click,true);window.removeEventListener('auxclick',click,true);dialog.removeEventListener('contextmenu',context);dialog.remove();button.remove();style.remove();if(more){if(moreLabel===null)more.removeAttribute('aria-label');else more.setAttribute('aria-label',moreLabel);}}};
+ return {open,close,get isOpen(){return opened;},destroy(){close();unsubscribe();window.removeEventListener('keydown',keyboard,true);window.removeEventListener('keyup',keyboard,true);window.removeEventListener('pointerdown',capture,true);window.removeEventListener('mousedown',mouseDefault,true);window.removeEventListener('mouseup',mouseDefault,true);window.removeEventListener('click',click,true);window.removeEventListener('auxclick',click,true);dialog.removeEventListener('contextmenu',context);dialog.remove();button.remove();style.remove();}};
 }

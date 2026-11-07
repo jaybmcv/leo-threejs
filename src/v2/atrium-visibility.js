@@ -16,6 +16,10 @@ export function inOpenAtrium(){if(fogClassified!==undefined)return fogClassified
 // The near facade's merged copy of the lift tower and aft-core architecture (P6_tower_architecture) is the same
 // geometry the baked bands hold; while the full-height atrium bands draw, it only z-fights with them (feedback
 // #267/#272), so it is hidden then. The distant haze copy is untouched.
+// Only from the atrium up, though: the bands hold the aft core from about Deck 4, so for Decks 1-3 (the stairs and
+// landings beside the arrival hall) the copy is the only geometry there is. Below the atrium floor the sight test turns
+// the full-height bands on whenever its rays run out, as they do walking up to the Deck 2 aft stairs, and hiding the copy
+// then made the stairs vanish (2026-11-07 report). Below the atrium floor the copy always draws.
 const towerCopies=[];
 // Below the atrium floor, the rest of the near facade (the atrium's own architecture) draws only while the atrium bands
 // do: unseen, it was still shaded in every pixel it covered, behind whatever hid it, as a logarithmic depth buffer tests
@@ -26,7 +30,7 @@ const towerCopies=[];
 // else draws.
 const nearFacades=[];
 const belowAtrium=()=>!!position&&position.y<fullAtriumSpan[0];
-function applyTowerCopies(){const full=atriumViewSpan()!==null;for(const o of towerCopies)o.visible=!full;for(const o of nearFacades)o.visible=full||!belowAtrium();}
+function applyTowerCopies(){const full=atriumViewSpan()!==null,below=belowAtrium();for(const o of towerCopies)o.visible=!full||below;for(const o of nearFacades)o.visible=full||!below;}
 function applyAtriumFog(){applyTowerCopies();if(!fogs.length)return;const on=inOpenAtrium()||cameraVisible;for(const r of fogs){r.fog.near=on?ATRIUM_VIEW.fogNear:r.near;r.fog.far=on?ATRIUM_VIEW.fogFar:r.far;}}
 export function registerAtriumArchitecture(root){if(root?.name==='V2_atrium_facade')root.traverse(o=>{if(o.isMesh&&o.name==='P6_tower_architecture'&&!towerCopies.includes(o))towerCopies.push(o);});
  // A prepared facade may arrive with the group already made (the authoring build ran this too).
