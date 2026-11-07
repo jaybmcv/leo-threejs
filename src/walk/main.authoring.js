@@ -46,7 +46,7 @@ import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
 import {buildSteps,cabinPlacements,outsideOnly} from '../v2/world.authoring.js';
 import {Colliders,BODY} from './collision.authoring.js';
 import {STATIC_LIFT_PARTS,LIFTS} from './lifts.authoring.js';
-import {Controller,GLIDE} from './controller.authoring.js';
+import {Controller,GLIDE,HOOK} from './controller.authoring.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
 import {createWalker,WALKER,EMOTES} from './avatar.js';
@@ -85,6 +85,7 @@ import {wearHat,fit,FIT} from './hat.js';
 import {createYarn,YARN_SPOTS} from './yarn.authoring.js';
 import {BALL,createBallMesh} from './hamster-ball.js';
 import {createGlide} from './glide.js';
+import {createGrapple} from './grapple.js';
 import {ballBounce,ballDismount} from './ball-bounce.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink,remapSpot} from './link.js';
@@ -577,6 +578,9 @@ const ballHome=findStand(colliders,BALL.home,{radius:4})||new T.Vector3(...BALL.
 ball.mesh.position.copy(ballHome);scene.add(ball.mesh);
 // The longboard Cosmo rides down a long drop when Space is held through the fall (glide.js, controller.js GLIDE).
 const glide=createGlide(walker,artUrls);
+// The grapple hook (grapple.js, controller.js HOOK): Q, the right mouse button or the Hook button fires a line at the
+// middle of the view; held, Cosmo swings under it.
+const grapple=createGrapple(scene,{camera,colliders,controller,walker,hook:HOOK});
 function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());}
 // Stop before dismounting. In a tight spot the ball returns home so it cannot push Cosmo through a wall.
 function leaveBall(at=null){if(!inBall)return;
@@ -681,7 +685,7 @@ if(LIVE_URL){
 function myPose(riding=false){
  const h=walker.holder,held=resting||run,at=held?h.position:controller.position;
  return {pos:[at.x,at.y,at.z],yaw:held?h.rotation.y:heading,g:controller.grounded||riding||!!held,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:resting?.stand?'healing_capsule':emote,rest:resting&&!resting.stand?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||pinballGame.isOpen||!!emergencyDrill?.isOpen||!$('outside-sheet').hidden||!!run,b:inBall,gl:controller.gliding,f:furColour};
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:resting?.stand?'healing_capsule':emote,rest:resting&&!resting.stand?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||pinballGame.isOpen||!!emergencyDrill?.isOpen||!$('outside-sheet').hidden||!!run,b:inBall,gl:controller.gliding,hk:controller.hook&&!resting&&!run?controller.hook.toArray():undefined,f:furColour};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
@@ -754,7 +758,10 @@ renderer.setAnimationLoop(()=>{
  const riding=vaultLift?.riding||lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
  // In the ball the jump is one low hop (BALL.body.jump).
- if(!resting&&!riding&&!run&&!treasure?.active&&!emergencyDrill?.isOpen){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number));pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ // The grapple fires on a press and holds while the key is held; anything that takes the walker over lets go.
+ const canHook=!resting&&!riding&&!run&&!inBall&&!treasure?.active&&!emergencyDrill?.isOpen&&!graffiti?.active&&ready();
+ if(!canHook)grapple.release();else{if(k.hook)grapple.fire();if(!k.hookHeld)grapple.release();}
+ if(!resting&&!riding&&!run&&!treasure?.active&&!emergencyDrill?.isOpen){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number),k.run&&!!controller.hook);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  treasure?.step(dt,k);
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
  const p=controller.position;
@@ -791,7 +798,8 @@ renderer.setAnimationLoop(()=>{
  const board=glide.update(dt,{gliding:controller.gliding&&!resting&&!run,speed:controller.speed,rise:controller.velocity.y,turnRate});follow.ride=board;
  if(inBall){ball.mesh.position.copy(p);if(controller.grounded)ball.roll(dt,controller.velocity.x,controller.velocity.z);}
  walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
-  turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!!lounge?.inside(walker.holder.position),swimming:!!treasure?.active,board});
+  turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!!lounge?.inside(walker.holder.position),swimming:!!treasure?.active,board,hook:controller.hook&&!resting&&!run?controller.hook:null});
+ grapple.update(dt);
  live?.pose(myPose(riding),now);
  // In a transporter the camera rides higher, over the heads of the others aboard.
  if(treasure?.active)treasure.updateCamera(dt);else follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:cart&&follow.mode==='third'?WALKER.height+.7:WALKER.height,resting||run||inBall?null:controller.grounded?controller.stance:'stand');
@@ -1125,6 +1133,8 @@ resButton.addEventListener('click',()=>{resChosen=true;setRes((res+1)%RES.length
 // Held for a higher jump, as Space is.
 $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;input.jumpHeld=true;$('jump').setPointerCapture(e.pointerId);});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('jump').addEventListener(type,()=>{input.jumpHeld=false;});
+$('hook').addEventListener('pointerdown',e=>{e.preventDefault();input.hookQueued=true;input.hookHeld=true;$('hook').setPointerCapture(e.pointerId);});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])$('hook').addEventListener(type,()=>{input.hookHeld=false;});
 $('crouch').addEventListener('click',()=>actions.crouch());
 $('emote-button').addEventListener('click',()=>actions.emotes());
 $('ping').addEventListener('click',()=>actions.ping());
