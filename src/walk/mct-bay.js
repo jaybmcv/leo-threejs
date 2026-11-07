@@ -110,7 +110,7 @@ export function stripCargoMaintenance(ship){
 }
 
 // The depot in ship coordinates: `group` draws (with its deck band) and `solid` holds plain boxes for the vehicles,
-// power units, tool trolley and lift pump. Returns null if the room is missing.
+// power units and tool trolley. Returns null if the room is missing.
 export function createMctBay(ship){
  const room=roomObject(ship,ROOM);if(!room)return null;
  room.updateWorldMatrix(true,false);
@@ -237,16 +237,14 @@ export function createMctBay(ship){
   });
   {const o=new T.Mesh(new T.BoxGeometry(.6,1.1,1.05));o.position.set(xc+1.95,.55,zs+.55);solid.add(o);}
  }
- // Service bay 2: MCT-06 on four low hydraulic lift pads, their hoses to a small pump unit by the cabinets.
- {const xc=SERVICE_BAYS[1],lift=.1,pump=[xc+2.25,-13.5];
+ // Service bay 2: MCT-06 on four low hydraulic lift pads.
+ // The pump cabinet and hoses are removed to clear the doorway approach.
+ {const xc=SERVICE_BAYS[1],lift=.1;
   vehicle(IN_SERVICE[1],xc,zs,lift);
   within(xc,0,zs,Math.PI,()=>{
    for(const sx of [-1,1])for(const sz of [-1,1]){const x=sx*.48,z=sz*.62;box(M.yellow,[.5,.07,.62],[x,.035,z]);box(M.dark,[.5,.012,.08],[x,.072,z-.2]);cyl(M.steel,.09,.09+lift,[x,.07+(.09+lift)/2,z]);box(M.dark,[.22,.03,.22],[x,.175+lift,z]);}
   });
   vehicleBlock(xc,zs,lift);
-  box(M.yellow,[.55,.62,.42],[pump[0],.31,pump[1]]);box(M.dark,[.4,.12,.02],[pump[0],.48,pump[1]+.22]);box(M.green,[.06,.03,.01],[pump[0]+.14,.5,pump[1]+.232]);
-  block([.6,.66,.46],[pump[0],.33,pump[1]]);
-  for(const sx of [-1,1])for(const sz of [-1,1]){const x=xc-sx*.48,z=zs-sz*.62;tube(M.cable,[[pump[0]-.2,.12,pump[1]+.2],[pump[0]-.5,.03,pump[1]+.6],[x+.32,.025,z],[x+.25,.04,z]],.016,24);}
  }
 
  // --- The roadway: a dashed white centre line down the aisle, chevrons, and the lane legends inside the doorway.
