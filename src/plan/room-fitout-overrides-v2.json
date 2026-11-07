@@ -5,7 +5,7 @@
       {"names":["Parcel_locker"],"by":[-2,0,22]}
     ],
     "replace": [
-      {"match":{"part":"community_mural_wall","display":"Lounge_mural_back"},"set":{"size":[29.16,11.16,0.1],"at":[-140.825,29.92,-47],"yaw":1.5707963267948966}}
+      {"match":{"part":"community_mural_wall","display":"Lounge_mural_back"},"set":{"size":[29.16,11.16,0.1],"at":[-140.75,29.92,-47],"yaw":1.5707963267948966}}
     ],
     "remove": [
       {"part":"community_mural_wall","display":"Lounge_mural_left"}
