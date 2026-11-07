@@ -41,11 +41,11 @@ const subtractRect=(poly,rect)=>{const outside=[];let inside=poly;for(const [axi
  ]){const m=structuredClone(real);mutate(m);assert(hullPlanChecks(m).issues.some(i=>i.kind==='room window dimensions'),name);negatives.push(name);}
  // The phone skin leaves a sub-millimetre seam at the centreline, right under a symmetric pane's middle: a rounded
  // pane's glass must still grid across it (the exact fallback would keep the seam), while square openings are unchanged.
- const seam=patch=>patch.flatMap(t=>[...triangulate(clipPolygon(t,0,-.0003,-1)),...triangulate(clipPolygon(t,0,.0003,1))]);
+ const seam=(patch,w=.0003)=>patch.flatMap(t=>[...triangulate(clipPolygon(t,0,-w,-1)),...triangulate(clipPolygon(t,0,w,1))]);
  for(const grid of [glazingGrid,glazingGridAuthoring]){const p0=byId.get('nose-commons-05'),p={...p0,surface:seam(p0.surface),inner:seam(p0.inner)},o=growOpening(p0.openings.find(r=>r.length>4&&r[0]<0&&r[1]>0),.012);
   assert(grid(p,o,q=>q).index.count>0);assert.throws(()=>grid(p,o.slice(0,4),q=>q),/No actual skin/);}
   // The exact fallback (the phone's usual path for a coarse skin) welds the seam so the pane's centre is glazed.
- const at=(ts,q)=>ts.some(([a,b,c])=>{const d=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);if(Math.abs(d)<1e-12)return false;const s=((b[1]-c[1])*(q[0]-c[0])+(c[0]-b[0])*(q[1]-c[1]))/d,t=((c[1]-a[1])*(q[0]-c[0])+(a[0]-c[0])*(q[1]-c[1]))/d;return Math.min(s,t,1-s-t)>=-1e-5;}),seamed=seam(byId.get('nose-commons-05').surface);
- assert(!at(seamed,[0,1.6]));for(const weld of [weldCentreSeam,weldCentreSeamAuthoring]){const w=weld(seamed);assert(at(w,[0,1.6]));assert(w.every(t=>t.every(q=>q.length===seamed[0][0].length)));}
+ const at=(ts,q)=>ts.some(([a,b,c])=>{const d=(b[1]-c[1])*(a[0]-c[0])+(c[0]-b[0])*(a[1]-c[1]);if(Math.abs(d)<1e-12)return false;const s=((b[1]-c[1])*(q[0]-c[0])+(c[0]-b[0])*(q[1]-c[1]))/d,t=((c[1]-a[1])*(q[0]-c[0])+(a[0]-c[0])*(q[1]-c[1]))/d;return Math.min(s,t,1-s-t)>=-1e-5;}),seamed=[.0003,.004].map(w=>seam(byId.get('nose-commons-05').surface,w));
+ for(const seamPatch of seamed){assert(!at(seamPatch,[0,1.6]));for(const weld of [weldCentreSeam,weldCentreSeamAuthoring]){const w=weld(seamPatch);assert(at(w,[0,1.6]));assert(w.every(t=>t.every(q=>q.length===seamPatch[0][0].length)));}}
  console.log(JSON.stringify({status:'PASS',bowPatches:Object.keys(BOW_GLAZING).length,bowPanes:panes,negatives}));
 }
