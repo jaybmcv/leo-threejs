@@ -8,7 +8,7 @@ import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 // The layout and walk modules load only when a key is wanted: src/v2/atrium-sight.js reads this checkout's layout.json
 // as it loads, and builds without one must not fail on that.
-const modules=async()=>({...await import('../src/plan/runtime-layout.js'),...await import('../src/v2/atrium-sight.js'),...await import('../src/v2/atrium-pvs-key.js')});
+const modules=async()=>({...await import('../src/plan/runtime-layout.js'),...await import('../src/v2/atrium-sight.js'),...await import('../src/v2/atrium-pvs-key.js'),...await import('../src/walk/lifts.js')});
 
 export const PVS_LAYOUT='output/leo-interior-v02/layout.json',PVS_PREPARED='output/leo-interior-v02/prepared-walk';
 // Where the public build looks for baked data, by key: <key>.json in the directory (where a bake can write without a
@@ -18,8 +18,8 @@ const sha=data=>createHash('sha256').update(data).digest('hex');
 
 /** The bake's setup for this layout.json text (see pvsSetup). */
 export async function layoutPvsSetup(layoutText){
- const {selectedRuntimeLayout,atriumEnvelope,pvsSetup}=await modules(),layout=selectedRuntimeLayout(JSON.parse(layoutText));
- return pvsSetup(layout,atriumEnvelope(layout));
+ const {selectedRuntimeLayout,atriumEnvelope,pvsSetup,shutLandingDoors}=await modules(),layout=selectedRuntimeLayout(JSON.parse(layoutText));
+ return pvsSetup(layout,atriumEnvelope(layout),shutLandingDoors());
 }
 
 /** The prepared walk's integrity hash, or null for a copy without integrity.json (a mirror that fetched only what the
