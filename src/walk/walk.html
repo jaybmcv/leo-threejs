@@ -59,8 +59,12 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 @keyframes pulse{from{opacity:.35}to{opacity:1}}
 .touch #use:disabled{background:var(--surface);border-color:var(--orange);color:var(--text)}
 .tools{position:fixed;right:16px;top:14px;z-index:6;display:flex;gap:8px}
-.tools button,.touch button{background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:10px 14px;font:400 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-.tools button:hover{border-color:var(--orange)}
+.tools button,.touch button,#settings-menu button{background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:10px 14px;font:400 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.tools button:hover,#settings-menu button:hover{border-color:var(--orange)}
+#settings-menu{position:fixed;z-index:9;top:58px;right:16px;display:flex;flex-direction:column;gap:6px;width:min(240px,calc(100vw - 32px));max-height:calc(100dvh - 70px);overflow:auto;box-sizing:border-box;padding:8px;background:var(--card);border:1px solid var(--hairline);border-radius:12px}
+#settings-menu[hidden]{display:none}
+#settings-menu button{min-height:40px;text-align:left;color:var(--text)}
+#settings-menu :focus-visible,#settings-toggle:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
 #sound[aria-pressed="true"]{border-color:var(--teal);color:var(--teal)}
 #log{color:var(--teal)}.tools #log:hover{border-color:var(--teal)}
 .touch{display:none;position:fixed;right:18px;bottom:30px;z-index:6;flex-direction:column;align-items:flex-end;gap:12px}
@@ -331,7 +335,8 @@ body.spraying{-webkit-user-select:none;user-select:none}body.spraying #viewport{
 <div id="camera-lock-hint" role="status" aria-live="polite" hidden>Mouse locked · press Esc to unlock</div>
 <div class="top"><div class="pill"><a href="./">← Leo</a><span id="where"></span></div><button id="changes-here" type="button" hidden><i aria-hidden="true">✦</i><b>0</b><span> changes here</span></button><button id="aboard" type="button" hidden aria-label="Show visitors aboard" aria-haspopup="dialog"><i></i><span></span></button><button id="discord-chip" type="button" hidden></button></div>
 <div id="names" aria-hidden="true"></div>
-<div class="tools"><button id="go" type="button">Go to</button><button id="log" type="button" aria-label="Ship log: every change to Leo, before and after (L)"><span class="long">Ship </span>log</button><div id="tools-extra"><button id="view" type="button" aria-label="Switch first or third person">View</button><button id="sound" type="button" aria-pressed="false" aria-label="Ship sound">Sound</button><button id="resolution" type="button" aria-label="Render resolution: lower runs smoother on slower devices">Res High</button></div><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button><button id="help" type="button" aria-label="Help: how to play (H)"><span class="long">Help</span><span class="short">?</span></button><button id="tools-more" type="button" aria-expanded="false" aria-controls="tools-extra" aria-label="More buttons: view, sound, resolution">More</button></div>
+<div class="tools"><button id="go" type="button">Go to</button><button id="log" type="button" aria-label="Ship log: every change to Leo, before and after (L)"><span class="long">Ship </span>log</button><div id="tools-extra"></div><button id="settings-toggle" type="button" aria-expanded="false" aria-controls="settings-menu">Settings</button><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button><button id="help" type="button" aria-label="Help: how to play (H)"><span class="long">Help</span><span class="short">?</span></button><button id="tools-more" type="button" aria-expanded="false" aria-controls="tools-extra" aria-label="More actions">More</button></div>
+<div id="settings-menu" hidden aria-label="Settings"><button id="view" type="button" aria-label="Switch first or third person">View</button><button id="sound" type="button" aria-pressed="false" aria-label="Ship sound">Sound</button><button id="resolution" type="button" aria-label="Render resolution: lower runs smoother on slower devices">Res High</button><button id="settings-help" type="button">Help</button></div>
 <button id="minimap-button" type="button" aria-label="Open the ship map" hidden><canvas id="minimap"></canvas><span id="minimap-deck"></span></button>
 <div class="corner"><div id="chat" hidden><ol id="chat-lines" aria-live="polite" aria-label="Chat aboard"></ol><form id="chat-form" autocomplete="off"><input id="chat-input" enterkeyhint="send" aria-label="Chat message"><button id="chat-send" type="submit">Send</button></form><div class="chat-buttons"><button id="chat-open" type="button" aria-label="Chat with everyone aboard (T)"><kbd>T</kbd>Chat<span id="chat-unread" hidden></span></button><button id="chat-hide" type="button" aria-pressed="false">Hide</button></div></div>
 <div class="help"><b>WASD</b> move · <b>Shift</b> run · <b>Space</b> jump · <b>Drag</b> look · <b>E</b> use · <b>M</b> go to · <b>L</b> ship log<span id="help-ping" hidden> · <b>T</b> chat</span> · <b>H</b> help, every control</div></div>
@@ -360,12 +365,11 @@ body.spraying{-webkit-user-select:none;user-select:none}body.spraying #viewport{
 <script>
 // Phones (the same query as the phone rules in the style above) carry the top row's chips, Emote, Ping and Respawn in
 // More: the buttons themselves are moved, so their listeners and hidden state go with them, and go back where they were
-// for a larger screen. (The walk script adds Detail and Controls to More after these.) A button in More closes it, except
-// Sound and Res, which are tried a few times over. html.phone-hud tells the walk script these are in More.
+// for a larger screen. A button in More closes it. html.phone-hud tells the walk script these are in More.
 (function(){
  var phoneHud=matchMedia('(pointer:coarse) and (max-width:560px),(pointer:coarse) and (orientation:landscape) and (max-width:950px) and (max-height:500px)');
  var tools=document.querySelector('.tools'),extra=document.getElementById('tools-extra'),more=document.getElementById('tools-more');
- var moved=['emote-button','ping','changes-here','aboard','discord-chip'].map(function(id){return document.getElementById(id);}).concat(tools.querySelector(':scope>.respawn'))
+ var moved=['emote-button','ping','changes-here','aboard','discord-chip','settings-toggle'].map(function(id){return document.getElementById(id);}).concat(tools.querySelector(':scope>.respawn'))
   .map(function(node){var home=document.createComment('');node.before(home);return {node:node,home:home};});
  var close=function(){tools.classList.remove('more-open');more.setAttribute('aria-expanded','false');};
  var apply=function(){
@@ -374,7 +378,22 @@ body.spraying{-webkit-user-select:none;user-select:none}body.spraying #viewport{
   close();
  };
  phoneHud.addEventListener('change',apply);apply();
- extra.addEventListener('click',function(e){var b=e.target.closest('button');if(phoneHud.matches&&b&&b.id!=='sound'&&b.id!=='resolution')close();});
+ extra.addEventListener('click',function(e){var b=e.target.closest('button');if(phoneHud.matches&&b)close();});
+})();
+// Settings reuses the walk buttons and leaves the phone's More actions in place.
+(function(){
+ var button=document.getElementById('settings-toggle'),menu=document.getElementById('settings-menu'),more=document.getElementById('tools-more');
+ function close(restore){if(menu.hidden)return;menu.hidden=true;button.setAttribute('aria-expanded','false');if(restore)(button.getClientRects().length?button:more).focus();}
+ button.addEventListener('click',function(){if(!menu.hidden){close(false);return;}menu.hidden=false;button.setAttribute('aria-expanded','true');menu.querySelector('button').focus();});
+ document.getElementById('settings-help').addEventListener('click',function(){close(false);document.getElementById('help').click();});
+ document.addEventListener('pointerdown',function(e){if(!menu.hidden&&!menu.contains(e.target)&&e.target!==button&&!document.querySelector('dialog[open]'))close(false);});
+ document.addEventListener('focusin',function(e){if(!menu.hidden&&!menu.contains(e.target)&&e.target!==button&&!document.querySelector('dialog[open]'))close(false);});
+ ['keydown','keyup'].forEach(function(type){window.addEventListener(type,function(e){
+  if(document.querySelector('dialog[open]'))return;
+  if(e.key==='Escape'&&!menu.hidden){e.preventDefault();e.stopImmediatePropagation();if(type==='keydown')close(true);return;}
+  if(menu.contains(e.target)||e.target===button)e.stopImmediatePropagation();
+ },true);});
+ matchMedia('(pointer:coarse) and (max-width:560px),(pointer:coarse) and (orientation:landscape) and (max-width:950px) and (max-height:500px)').addEventListener('change',function(){close(false);});
 })();
 </script>
 <script>
