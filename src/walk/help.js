@@ -18,6 +18,7 @@ const PLAY=[
   [['W','A','S','D'],'Left thumb','Walk (the arrow keys too)','Walk with the joystick'],
   [['Shift'],'Stick to its edge','Run'],
   [['Space'],'Jump','Jump: hold for height, press again in the air for a double jump'],
+  [['Space'],'Jump','Glide: keep holding it as you fall from a height to ride the longboard down; steer with W A S D, Shift to dive','Glide: keep holding Jump as you fall from a height to ride the longboard down; steer with the joystick, at its edge to dive'],
   [['C'],'Crouch','Crouch; while running, slide'],
   [['X'],null,'Lie flat'],
   [['Drag'],'Right thumb','Click and drag to lock the pointer; press Esc to unlock. If locking is unavailable, dragging still works. Scroll to zoom','Drag to look around'],

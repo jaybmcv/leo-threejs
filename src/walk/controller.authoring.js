@@ -10,6 +10,12 @@ import {BODY} from './collision.authoring.js';
 // ledge, cuts short when let go, and has one more push in the air.
 export const MOVE={gravity:22,accel:42,friction:34,airControl:.28,airDrag:2,turnGrip:10,jump:7*Math.SQRT2,maxFall:30,snap:.12,
  coyote:.12,buffer:.15,minJump:.09,cut:.55,slide:.75,slideDecel:6,slideFrom:5.5,crouchSpeed:2};
+// The longboard glide (glide.js): Space held through a fall with a real drop below (no walkable ground within
+// `minDrop`, more than a held double jump's 4.4 m) rides the board down. It sinks at `sink` m/s at the cruise `speed`, faster as it dives towards `dive`
+// (Shift), and `catch` is how quickly a deployed board takes up that sink rate from the fall. In the air it steers
+// by the wish with `accel`, its velocity turning towards the wish at `grip`; with no keys it coasts, losing `drag`
+// m/s each second. Letting go of Space puts the board away; landing does too. A body with `glide:false` never glides.
+export const GLIDE={minDrop:5,deploy:-1,sink:1.3,diveSink:3.2,speed:9,dive:15,catch:4,accel:12,grip:3,drag:1.2};
 const MIN_NY=Math.cos(BODY.maxSlope*Math.PI/180);
 const FEET=[[0,0],[.18,0],[-.18,0],[0,.18],[0,-.18]];
 
@@ -23,9 +29,11 @@ export class Controller{
   this.jumpBuffer=0;this.jumpHeld=false;this.jumpS=-1;this.jumpCount=0;
   // 'stand' | 'crouch' | 'slide' | 'prone'; the capsule stays 2 m tall in every stance.
   this.stance='stand';this.slideS=0;
+  // Riding the longboard down (GLIDE), and for how long this ride has lasted.
+  this.gliding=false;this.glideS=0;
   this.segment=new T.Line3(new T.Vector3(),new T.Vector3());this.ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0));
  }
- place(p){this.position.copy(p);this.top=p.y;this.fell=0;this.velocity.set(0,0,0);this.bounceS=0;this.grounded=false;this.jumpS=-1;this.jumpCount=0;this.jumpBuffer=0;this.stance='stand';this.slideS=0;this.settle();}
+ place(p){this.position.copy(p);this.top=p.y;this.fell=0;this.velocity.set(0,0,0);this.bounceS=0;this.grounded=false;this.jumpS=-1;this.jumpCount=0;this.jumpBuffer=0;this.stance='stand';this.slideS=0;this.gliding=false;this.glideS=0;this.settle();}
  // Highest walkable ground under the feet within [y-down, y+up]; null over a gap.
  groundAt(p,up,down){
   let best=null;
@@ -50,12 +58,14 @@ export class Controller{
  step(dt,wish,jump=false,bounce=null){
   const v=this.velocity,b=this.body,{radius:r}=b;
   this.jumpJudge(dt,jump);
+  this.glideJudge(dt,jump);
   if(this.stance==='slide'){this.slideS=Math.max(0,this.slideS-dt);if(this.slideS===0||!this.grounded)this.stance='crouch';}
   // Give a ball's rebound a moment to fade before steering takes over again.
   if(!bounce)this.bounceS=0;
   if(this.bounceS>0){this.bounceS=Math.max(0,this.bounceS-dt);const drag=Math.exp(-bounce.drag*dt);v.x*=drag;v.z*=drag;}
   else this.drive(dt,wish);
-  if(!this.grounded)v.y=Math.max(-MOVE.maxFall,v.y-MOVE.gravity*dt);
+  if(this.gliding){const boost=T.MathUtils.clamp((this.speed-GLIDE.speed)/(GLIDE.dive-GLIDE.speed),0,1),sink=-(GLIDE.sink+GLIDE.diveSink*boost);v.y+=(sink-v.y)*(1-Math.exp(-GLIDE.catch*dt));}
+  else if(!this.grounded)v.y=Math.max(-MOVE.maxFall,v.y-MOVE.gravity*dt);
   this.airTime=this.grounded?0:this.airTime+dt;
   // Move in short hops so a fast walker never skips a thin wall.
   const travel=v.clone().multiplyScalar(dt),hops=Math.max(1,Math.ceil(travel.length()/(r*.5)));
@@ -82,7 +92,7 @@ export class Controller{
   // Ground: snap down while walking (stairs and ramps), land when falling onto it.
   const reach=this.grounded?b.step+MOVE.snap:Math.max(.05,-v.y*dt+.05);
   const g=v.y>.5?null:this.groundAt(this.position,b.step+.05,reach);
-  if(g&&(this.grounded||v.y<=0)){if(!this.grounded)this.fell=this.top-g.point.y;this.position.y=g.point.y;v.y=0;this.grounded=true;this.ground=g;this.jumpS=-1;this.jumpCount=0;}
+  if(g&&(this.grounded||v.y<=0)){if(!this.grounded)this.fell=this.top-g.point.y;this.position.y=g.point.y;v.y=0;this.grounded=true;this.ground=g;this.jumpS=-1;this.jumpCount=0;this.gliding=false;}
   else{this.grounded=false;this.ground=null;}
   this.top=this.grounded?this.position.y:Math.max(this.top,this.position.y);
   return this;
@@ -99,15 +109,22 @@ export class Controller{
    this.stance='stand';this.slideS=0;this.jumpCount=footing?1:2;this.velocity.y=this.body.jump??MOVE.jump;this.grounded=false;this.jumpBuffer=0;this.jumpS=0;
   }else if(this.jumpS>=MOVE.minJump&&!held&&this.velocity.y>0){this.velocity.y*=MOVE.cut;this.jumpS=-1;}
  }
+ // The board comes out once Space is held through a fall over a real drop, and goes away when it is let go.
+ glideJudge(dt,held){
+  if(this.grounded||!held||this.body.glide===false||this.stance==='prone'){this.gliding=false;return;}
+  if(this.gliding){this.glideS+=dt;return;}
+  if(this.velocity.y>GLIDE.deploy||this.groundAt(this.position,.05,GLIDE.minDrop))return;
+  this.gliding=true;this.glideS=0;this.stance='stand';this.slideS=0;
+ }
  // Horizontal: the velocity approaches the wish at a limited rate, one rate for the pair so a diagonal turn takes as
  // long as a straight one; on the ground, velocity across the wish goes faster (the turn grips).
  drive(dt,wish){
   const v=this.velocity;
   if(this.stance==='slide'){const s=Math.hypot(v.x,v.z),k=s>1e-6?Math.max(0,s-MOVE.slideDecel*dt)/s:0;v.x*=k;v.z*=k;if(s*k<MOVE.crouchSpeed){this.stance='crouch';this.slideS=0;}return;}
   const wx=wish.x,wz=wish.z,want=Math.hypot(wx,wz);
-  if(this.grounded&&want>1e-6){const nx=wx/want,nz=wz/want,along=v.x*nx+v.z*nz,grip=1-Math.exp(-MOVE.turnGrip*dt);v.x-=(v.x-nx*along)*grip;v.z-=(v.z-nz*along)*grip;}
+  if((this.grounded||this.gliding)&&want>1e-6){const nx=wx/want,nz=wz/want,along=v.x*nx+v.z*nz,grip=1-Math.exp(-(this.gliding?GLIDE.grip:MOVE.turnGrip)*dt);v.x-=(v.x-nx*along)*grip;v.z-=(v.z-nz*along)*grip;}
   const dx=wx-v.x,dz=wz-v.z,gap=Math.hypot(dx,dz);if(gap<1e-6){v.x=wx;v.z=wz;return;}
-  const accel=this.grounded?MOVE.accel:MOVE.accel*MOVE.airControl,brake=this.grounded?MOVE.friction:MOVE.airDrag;
+  const accel=this.gliding?GLIDE.accel:this.grounded?MOVE.accel:MOVE.accel*MOVE.airControl,brake=this.gliding?GLIDE.drag:this.grounded?MOVE.friction:MOVE.airDrag;
   const k=Math.min(1,(want>=Math.hypot(v.x,v.z)?accel:brake)*dt/gap);v.x+=dx*k;v.z+=dz*k;
  }
  get speed(){return Math.hypot(this.velocity.x,this.velocity.z);}

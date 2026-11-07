@@ -52,6 +52,24 @@ function hammockArms(bone){
  }
 }
 
+// Riding the longboard down (glide.js), side-on with the left foot leading: the body turns a quarter to the right on
+// the board, so here, in his own frame (facing +z, left +x), the feet spread along x over the trucks, the knees bend
+// out over them, the arms reach out fore and aft for balance, and the head turns left to look where he is going.
+const Y=new T.Vector3(0,1,0);
+function boardPose(bone){
+ for(const side of ['L','R']){
+  const out=side==='L'?1:-1;
+  aim(bone('thigh.'+side),bone('shin.'+side),new T.Vector3(out*.4,-1,.62));
+  aim(bone('shin.'+side),bone('foot.'+side),new T.Vector3(out*.14,-1,-.5));
+  turn(bone('foot.'+side),Y,-out*12);
+  aim(bone('upper_arm.'+side),bone('forearm.'+side),new T.Vector3(out*1,-.42,out>0?.22:.05));
+  aim(bone('forearm.'+side),bone('hand.'+side),new T.Vector3(out*.85,-.2,out>0?.45:.2));
+ }
+ turn(bone('spine.001'),X,18);turn(bone('spine.003'),Y,14);turn(bone('spine.003'),X,6);
+ turn(bone('spine.005'),Y,24);turn(bone('spine.006'),Y,36);turn(bone('spine.006'),X,-8);
+ for(const [i,deg] of [[1,-35],[2,-15]])turn(bone('Tail_springBone_'+i),X,deg);
+}
+
 // `createDLCat` comes from the Cosmo bundle; `motion` is ecctrl-locomotion.json, the donor clips for the walk.
 export async function createWalker(createDLCat,motion){
  const cat=await createDLCat({height:COSMO_HEIGHT,castShadow:true,receiveShadow:true});
@@ -66,6 +84,10 @@ export async function createWalker(createDLCat,motion){
  hammockArms(bone);const hammock=bones.map(b=>b.quaternion.clone());
  bones.forEach((b,i)=>b.quaternion.copy(rest[i]));figure.root.updateMatrixWorld(true);
  floatPose(bone);const floating=bones.map(b=>b.quaternion.clone());
+ // On the longboard, and how far the bent knees lift the feet towards the hips, so the figure drops to keep them on it.
+ const footY=()=>Math.min(bone('foot.L').getWorldPosition(new T.Vector3()).y,bone('foot.R').getWorldPosition(new T.Vector3()).y);
+ bones.forEach((b,i)=>b.quaternion.copy(rest[i]));figure.root.updateMatrixWorld(true);const standFoot=footY();
+ boardPose(bone);const board=bones.map(b=>b.quaternion.clone());const boardDrop=footY()-standFoot;
  bones.forEach((b,i)=>b.quaternion.copy(rest[i]));figure.root.updateMatrixWorld(true);
  // Eyes shut in a hammock. The face has no lids or morphs, so the eyeballs take the fur's colour from Cosmo's own
  // texture (the body's vertex nearest them) and read as closed lids under the lash line.
@@ -85,7 +107,7 @@ export async function createWalker(createDLCat,motion){
  return {
   holder,body,figure,hipHeight,setFur,
   // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock},
-  //  catnip: in the Hydro-Nip Lounge}
+  //  catnip: in the Hydro-Nip Lounge, board: riding the longboard (0..1, glide.js)}
   update(dt,s){
    const r=s.rest,seated=r?.kind==='sit'&&r.weight>.35;
    figure.apply({pos:[0,0,0],yaw:0,dt,speedMs:r?0:s.speed,grounded:r?true:s.grounded,swimming:!!s.swimming,submerged:!!s.swimming,stance:r?'stand':s.stance||'stand',
@@ -102,6 +124,11 @@ export async function createWalker(createDLCat,motion){
    }
    catnip=T.MathUtils.clamp(catnip+(s.catnip?1:-1)*dt/CATNIP_S,0,1);face.set(catnip*catnip*(3-2*catnip));
    const closed=r?.kind==='lie'&&r.hammock&&r.weight>.6?shut:open;if(eyes.geometry.attributes.uv!==closed)eyes.geometry.setAttribute('uv',closed);
+   if(s.board>0&&!r){
+    bones.forEach((b,i)=>b.quaternion.slerp(board[i],s.board));
+    figure.asset.root.position.y=T.MathUtils.lerp(figure.asset.root.position.y,figure.restOffset-boardDrop,s.board);
+    figure.root.updateMatrixWorld(true);
+   }
    if((r?.kind==='lie'||r?.kind==='float')&&r.weight>0){
     const pose=r.kind==='float'?floating:r.hammock?hammock:lie;bones.forEach((b,i)=>b.quaternion.slerp(pose[i],r.weight));
     figure.asset.root.position.y=T.MathUtils.lerp(figure.asset.root.position.y,figure.restOffset,r.weight);
