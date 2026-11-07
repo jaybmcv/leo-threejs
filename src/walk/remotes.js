@@ -2,6 +2,7 @@ import * as T from 'three';
 import {bandOf} from './collision.js';
 import {wearHat} from './hat.js';
 import {createBallMesh} from './hamster-ball.js';
+import {createGlide} from './glide.js';
 
 // Other visitors aboard, drawn as Cosmo (avatar.js) and moved by the poses Leo live passes on (net/live.js). The
 // easing follows Voyager's Reach's remote players (packages/client/src/scene/remotePlayers.ts): a body eases toward its
@@ -20,8 +21,9 @@ export class RemotePlayers{
  // (paws-off/game.js), where someone playing runs on the spot. hammock(position): lying in one of the Hydro-Nip
  // Lounge's hammocks (rest.js hammockAt), where they take its pose: the wire says only that they lie. catnip(position):
  // in the Hydro-Nip Lounge (lounge.js inside), where they wear its catnip face (catnip-face.js), as they see themselves.
- constructor(scene,{make,colliders,lifts,labels,hatUrl,running,hammock,catnip,swimming}){
-  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,running,hammock,catnip,swimming});
+ // artUrls: the build's art names (__ART_URLS__), for the longboard someone rides down a drop (glide.js).
+ constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming}){
+  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,artUrls,running,hammock,catnip,swimming});
   this.remotes=new Map();this.pool=[];this.making=false;this.labels=[];this.ray=new T.Ray();this.v=new T.Vector3();
  }
  get count(){return this.remotes.size;}
@@ -104,8 +106,11 @@ export class RemotePlayers{
   // Rolling in a hamster ball (hamster-ball.js): standing inside one of this page's own, rolled by their stride.
   if(t.ball&&!t.rest){if(!r.ball)r.ball=createBallMesh();if(!r.ball.mesh.parent)this.scene.add(r.ball.mesh);r.ball.mesh.position.set(c.x,c.y,c.z);
    r.ball.roll(dt,Math.sin(c.yaw)*r.speed,Math.cos(c.yaw)*r.speed);}else r.ball?.mesh.removeFromParent();
+  // Riding the longboard down (glide.js): the body's own board, made on its first ride and put away as they land.
+  const riding=!!t.glide&&!t.rest&&!t.ball;if(riding&&!w.glide)w.glide=createGlide(w,this.artUrls,{prebuild:false});
+  const board=w.glide?w.glide.update(dt,{gliding:riding,speed:r.speed,rise:r.rise,turnRate:r.turnRate}):0;
   w.update(dt,{speed:r.rest?0:belt?RUN_ON_BELT:r.speed,grounded:t.grounded,stance:t.ball?'stand':t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
-   emote:floating?null:t.emote,rest:floating?{kind:'float',weight:1,seatHeight:w.hipHeight}:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c)}:null,catnip:!!this.catnip?.(c),swimming:!t.rest&&!!this.swimming?.(c)});
+   emote:floating?null:t.emote,rest:floating?{kind:'float',weight:1,seatHeight:w.hipHeight}:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c)}:null,catnip:!!this.catnip?.(c),swimming:!t.rest&&!!this.swimming?.(c),board});
   // A captain's hat is ~200k triangles: past HAT_M it is a few pixels, and not drawn.
   if(w.hat&&r.distance>HAT_M)w.hat.mount.visible=false;
  }

@@ -16,7 +16,7 @@
 //   u16 poses, each:      u16 slot · u8 head · three u24 position · u16 heading · extras
 //   head:     bits 0-1 rest (0 none, 1 sitting, 2 lying) · 0x04 GROUNDED · 0x08 MOTION · 0x10 EMOTE · 0x20 PLAYING
 //             (at the lounge telescope's game: walk/invasion) · 0x40 BALL (rolling in a hamster ball:
-//             walk/hamster-ball.js); bit 7 unused
+//             walk/hamster-ball.js) · 0x80 GLIDE (riding the longboard down a drop: walk/glide.js)
 //   position: (metres + 2048) x 4096, an eighth of a millimetre
 //   heading:  a turn in 65,536 steps, read back in [-pi, pi)
 //   fur:      u8 index in walk/fur-colours.js, immediately after heading
@@ -25,17 +25,17 @@
 // Encoding throws on anything out of range (a bug in the sender); decoding drops a frame that does not read cleanly.
 
 import {FUR_COLOURS} from '../fur-colours.js';
-export const WIRE_TAG=0x4c,WIRE_VERSION=6;
+export const WIRE_TAG=0x4c,WIRE_VERSION=7;
 export const STANCES=['stand','crouch','prone','slide'];
 export const RESTS=[null,'sit','lie'];
-const GROUNDED=0x04,MOTION=0x08,EMOTE=0x10,PLAYING=0x20,BALL=0x40,KNOWN=0x7f;
+const GROUNDED=0x04,MOTION=0x08,EMOTE=0x10,PLAYING=0x20,BALL=0x40,GLIDE=0x80,KNOWN=0xff;
 const ORIGIN=-2048,STEPS=4096,MAX_STEP=0xffffff,YAW_STEPS=65536,TURN=Math.PI*2;
 const encoder=new TextEncoder(),decoder=new TextDecoder();
 
 function range(what,n,min,max){if(!Number.isFinite(n)||n<min||n>max)throw new RangeError(`pose wire: ${what} ${n} is outside ${min}..${max}`);}
 const yawStep=yaw=>{const t=yaw/TURN;return Math.round((t-Math.floor(t))*YAW_STEPS)%YAW_STEPS;};
 
-// A pose: {pos:[x,y,z], yaw, grounded, stance, jumpCount, jumpS, rise, emote, rest, playing, ball}.
+// A pose: {pos:[x,y,z], yaw, grounded, stance, jumpCount, jumpS, rise, emote, rest, playing, ball, glide, fur}.
 export function encodeRecord(slot,p){
  range('slot',slot,0,0xffff);
  const steps=p.pos.map(m=>{range('position',m,ORIGIN,ORIGIN+MAX_STEP/STEPS);return Math.round((m-ORIGIN)*STEPS);});
@@ -47,7 +47,7 @@ export function encodeRecord(slot,p){
  if(clip&&clip.length>0xff)throw new RangeError('pose wire: emote too long');
  const fur=p.fur??0;range('fur',fur,0,FUR_COLOURS.length-1);if(!Number.isInteger(fur))throw new RangeError('pose wire: fur is not an index');
  const bytes=new Uint8Array(15+(moving?5:0)+(clip?1+clip.length:0)),v=new DataView(bytes.buffer);
- v.setUint16(0,slot,true);v.setUint8(2,rest|(p.grounded?GROUNDED:0)|(moving?MOTION:0)|(clip?EMOTE:0)|(p.playing?PLAYING:0)|(p.ball?BALL:0));
+ v.setUint16(0,slot,true);v.setUint8(2,rest|(p.grounded?GROUNDED:0)|(moving?MOTION:0)|(clip?EMOTE:0)|(p.playing?PLAYING:0)|(p.ball?BALL:0)|(p.glide?GLIDE:0));
  steps.forEach((s,k)=>{v.setUint16(3+k*3,s&0xffff,true);v.setUint8(5+k*3,s>>>16);});
  v.setUint16(12,yawStep(p.yaw),true);v.setUint8(14,fur);let o=15;
  if(moving){v.setUint8(o,stance|(jumps<<2));v.setInt16(o+1,rise,true);v.setUint16(o+3,jump,true);o+=5;}
@@ -90,7 +90,7 @@ export function decodeFrame(data){
   if(head&~KNOWN||(head&3)===3)return null;
   const pos=[0,1,2].map(k=>(v.getUint16(o+3+k*3,true)+v.getUint8(o+5+k*3)*0x10000)/STEPS+ORIGIN);
   const turned=v.getUint16(o+12,true)/YAW_STEPS*TURN,fur=v.getUint8(o+14);if(fur>=FUR_COLOURS.length)return null;o+=15;
-  const pose={pos,yaw:turned>=Math.PI?turned-TURN:turned,grounded:!!(head&GROUNDED),rest:RESTS[head&3],stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:!!(head&PLAYING),ball:!!(head&BALL),fur};
+  const pose={pos,yaw:turned>=Math.PI?turned-TURN:turned,grounded:!!(head&GROUNDED),rest:RESTS[head&3],stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:!!(head&PLAYING),ball:!!(head&BALL),glide:!!(head&GLIDE),fur};
   if(head&MOTION){
    if(!has(5))return null;const first=v.getUint8(o);if(first&0xf0)return null;
    Object.assign(pose,{stance:STANCES[first&3],jumpCount:first>>2,rise:v.getInt16(o+1,true)/300,jumpS:v.getUint16(o+3,true)/1000-1});o+=5;
@@ -142,5 +142,6 @@ const UNSEEN=new RegExp('[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u
 
 // 2: names can be Discord-verified (a Leo pass in the hello). 3: testers wear the captain's hat. 4: a pose says when its
 // visitor is playing Alien Cat Invasion, and the leaderboard's messages (play, score, board). 5: a pose says when its
-// visitor is rolling in a hamster ball. 6: each pose carries its fur colour after the heading.
-export const PROTOCOL=6;
+// visitor is rolling in a hamster ball. 6: each pose carries its fur colour after the heading. 7: a pose says when its
+// visitor is riding the longboard down (walk/glide.js).
+export const PROTOCOL=7;

@@ -7,9 +7,10 @@ import {toWorld} from '../plan/rooms.js';
 // whoever is riding one in a ball of their own (net/wire.js BALL).
 // The ball is 2.2 m across, so Cosmo (1.75 m, hat and all) stands in it. Its collision is a sphere of `body.radius` on
 // the controller's floating capsule (controller.js), inside the glass so it still passes the lift doors (2.2 m wide).
-// `jump` is the take-off speed of one hop: v squared over twice gravity (22) is about 0.6 m, and it has no second hop.
+// `jump` is the take-off speed of one hop: v squared over twice gravity (22) is about 0.6 m, and it has no second hop
+// and no longboard glide (glide.js).
 export const BALL={home:toWorld('commons-10',[5.4,0,-5.3]),radius:1.1,speed:8,run:12,eye:1.6,
- body:{radius:.8,height:2,step:.4,maxSlope:50,jump:5,jumps:1}};
+ body:{radius:.8,height:2,step:.4,maxSlope:50,jump:5,jumps:1,glide:false}};
 
 const glass=new T.MeshPhysicalMaterial({name:'Walk_hamster_ball',color:0xe8f6ff,roughness:.05,metalness:0,transmission:0,transparent:true,opacity:.2,
  depthWrite:false,side:T.DoubleSide,clearcoat:1,clearcoatRoughness:.05,envMapIntensity:1.4});

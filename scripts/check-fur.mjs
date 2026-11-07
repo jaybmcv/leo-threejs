@@ -52,7 +52,7 @@ for(let colour=0;colour<FUR_COLOURS.length;colour++){
 }
 for(const bad of [-1,5,255,1.5,'2',{},NaN,Infinity]){assert.equal(cleanFur(bad),0);assert.throws(()=>encodeRecord(0,{...pose,fur:bad}));}
 const broken=assembleFrame([],[encodeRecord(1,pose)]);broken[broken.length-1]=255;assert.equal(decodeFrame(broken),null);
-const old=assembleFrame([],[]);old[1]=5;assert.equal(decodeFrame(old),null);assert.equal(PROTOCOL,6);assert.equal(WIRE_VERSION,6);
+const old=assembleFrame([],[]);old[1]=6;assert.equal(decodeFrame(old),null);assert.equal(PROTOCOL,7);assert.equal(WIRE_VERSION,7);
 let stored=null;globalThis.localStorage={getItem:()=>stored,setItem:(k,v)=>{stored=v;}};
 assert.equal(savedFur(),0);assert(saveFur(3));assert.equal(savedFur(),3);stored='"3"';assert.equal(savedFur(),0);stored='invalid';assert.equal(savedFur(),0);
 globalThis.localStorage={getItem(){throw Error('blocked');},setItem(){throw Error('blocked');}};assert.equal(savedFur(),0);assert.equal(saveFur(2),false);delete globalThis.localStorage;
