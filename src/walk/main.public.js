@@ -15,7 +15,7 @@ let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 // desktop as before: decks -1 to 4 batched and the atrium geometry pack.
 const phoneBatching=(()=>{const query=new URLSearchParams(location.search);if(!preparedPhone)return query.get('deskbatch')==='low'?{}:{merge:true};const mode=query.get('phonebatch');
  return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
-let phoneBands=null,wayfindingSigns=null;
+let phoneBands=null,wayfindingSigns=null,fogCull=null;
 // The atrium geometry pack binds the band pieces the merge hides, so it runs only without the merge; the Detail menu
 // chooses its distant detail, so it shows only then too (the merged bands keep full detail and still draw faster).
 const atriumPack=!preparedPhone&&!phoneBatching.merge;
@@ -77,6 +77,7 @@ import {bakeForWalking,showBands} from '../v2/render-bake.js';
 import {bandOf} from './collision.js';
 import {mergeMeshes} from './merge-by-material.js';
 import {mergeWayfindingSigns} from './sign-array.js';
+import {createFogCull} from './fog-cull.js';
 import {partitionMesh} from './partitions.js';
 import walkPlan from 'walk-partitions';
 import {railingMesh} from '../v2/railings.js';
@@ -415,6 +416,8 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};sharedNear.set(key,o.userData.near);
  }
  // The wayfinding signs draw from one texture array (sign-array.js).
+ // Parts wholly beyond the indoor fog draw no longer (fog-cull.js); ?fogcull=0 draws them, to compare.
+ if(new URLSearchParams(location.search).get('fogcull')!=='0')fogCull=createFogCull(scene,camera);
  wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);
  isolateStaticWorld(ship,scene);{const hidden=preparedPhone||phoneBatching.merge?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
@@ -464,7 +467,7 @@ function span(p,now){
 }
 function cull(p,now=performance.now()){
  camera.updateMatrixWorld(true);
- cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);phoneBands?.update();wayfindingSigns?.update();
+ cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);phoneBands?.update();fogCull?.update(now);wayfindingSigns?.update();
  if(phoneHide.length){if(now-phoneHiddenAt>5000){phoneHiddenAt=now;phoneHidden=[];scene.traverse(o=>{if(o.isMesh&&phoneHide.some(f=>f(o)))phoneHidden.push(o);});}for(const o of phoneHidden)o.visible=false;}let shown=false;
  for(const o of instanced){const [a,b]=o.userData.span,v=o.userData.cabins?a<p.y+3.5&&b>p.y-.5:a<high&&b>low;if(v&&!o.visible)shown=true;o.visible=v;}
  // Re-rank after 3 m of walking, or at once when another deck's cabins come into view.
@@ -734,7 +737,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get fogCull(){return fogCull;},get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
