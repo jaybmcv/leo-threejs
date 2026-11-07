@@ -17,7 +17,7 @@ import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import http from 'node:http';
 import WebSocket from 'ws';
-import {PVS_GRID,PVS_RANGE,encodeCells,decodeCells} from '../src/v2/atrium-pvs.js';
+import {PVS_GRID,PVS_RANGE,encodeCells,decodeCells,snapRange} from '../src/v2/atrium-pvs.js';
 import {pvsKey} from '../src/v2/atrium-pvs-key.js';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
 import {build as bundle} from './native-bundle.mjs';
@@ -198,7 +198,7 @@ try{
    // Its cell must reach at least the heights the eye's own sight reaches.
    if(c>=0&&cells[c]===2&&(lo[c]>r.lo[e]||hi[c]<r.hi[e]))narrow.add(eyes[e].view);});
   if(r.visible.join('')!==baseline)changed=[...r.visible.join('')].filter((v,i)=>v!==baseline[i]).length;}
- for(let c=0;c<cells.length;c++)if(cells[c]!==2)lo[c]=hi[c]=0;
+ for(let c=0;c<cells.length;c++)if(cells[c]!==2)lo[c]=hi[c]=0;else[lo[c],hi[c]]=snapRange(lo[c],hi[c]);
  const encoded=encodeCells(cells),back=decodeCells(encoded,cells.length),problems=[];
  const ranges={...PVS_RANGE,lo:encodeCells(lo),hi:encodeCells(hi)},backLo=decodeCells(ranges.lo,cells.length,255),backHi=decodeCells(ranges.hi,cells.length,255);
  if(visible<known.size/20)problems.push(`only ${visible} of ${known.size} known cells see the atrium`);

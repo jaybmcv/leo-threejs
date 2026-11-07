@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {PVS_GRID,PVS_HIDDEN,PVS_RANGE,PVS_UNKNOWN,PVS_VISIBLE,createAtriumPvs,decodeCells,encodeCells} from '../src/v2/atrium-pvs.js';
+import {PVS_GRID,PVS_HIDDEN,PVS_RANGE,PVS_UNKNOWN,PVS_VISIBLE,createAtriumPvs,decodeCells,encodeCells,snapRange} from '../src/v2/atrium-pvs.js';
+import {BAND} from '../src/walk/collision.js';
 import {createAtriumSight} from '../src/v2/atrium-sight.js';
 import {atriumPvsKey} from '../src/v2/atrium-pvs-key.js';
 
@@ -69,6 +70,12 @@ check('a visible cell gives the heights its sight reaches; without ranges, or fo
  assert.equal(pvs.range({x:12,y:-30,z:4}),null);assert.equal(pvs.range({x:900,y:0,z:0}),null);
  assert.equal(createAtriumPvs(plain,source).range({x:10,y:-30,z:4}),null,'no ranges: the whole atrium');
  assert.equal(createAtriumPvs({...plain,ranges:{y0:0,span:100,lo:encodeCells(lo),hi:encodeCells(hi)}},source).range({x:10,y:-30,z:4}),null,'other units: the whole atrium');
+});
+check('snapping widens a range to the band edges around it, never narrows it',()=>{
+ const y=b=>PVS_RANGE.y0+PVS_RANGE.span*b/255;
+ for(let lo=0;lo<256;lo+=3)for(let hi=lo;hi<256;hi+=7){const [a,b]=snapRange(lo,hi);
+  assert(a<=lo&&b>=hi,`${lo}..${hi} -> ${a}..${b}`);
+  for(const v of [a,b])if(v>0&&v<255){const k=(y(v)-BAND.base)/BAND.height;assert(Math.abs(k-Math.round(k))<PVS_RANGE.span/255/BAND.height+1e-9,'off a band edge: '+v);}}
 });
 check('a point finds its own cell; outside the grid is unknown',()=>{
  const pvs=createAtriumPvs(data({[cellOf(10,-18.1,4)]:PVS_HIDDEN,[cellOf(10,-16.5,4)]:PVS_VISIBLE}),source);

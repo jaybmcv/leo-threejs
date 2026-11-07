@@ -11,6 +11,13 @@ export const PVS_RANGE={y0:-45,span:180};
 // Each bound reads a byte out (rounding) and a whole band more: the bake's heights come from colliders, while render-only
 // pieces (glass, plants) can stand a little above or below them (Codex review).
 const RANGE_PAD=PVS_RANGE.span/255+BAND.height;
+const toByte=y=>(y-PVS_RANGE.y0)/PVS_RANGE.span*255,toY=b=>PVS_RANGE.y0+PVS_RANGE.span*b/255;
+/** The bake's range bytes widened to the band edges (BAND) around them, which is all the walk can draw by: the stored
+ * ranges then take a few dozen values in long runs (247 KB gzipped at byte detail, about a seventh of that snapped). */
+export function snapRange(lo,hi){
+ const below=Math.floor((toY(lo)-BAND.base)/BAND.height),above=Math.ceil((toY(hi)-BAND.base)/BAND.height);
+ return [Math.max(0,Math.floor(toByte(BAND.base+below*BAND.height))),Math.min(255,Math.ceil(toByte(BAND.base+above*BAND.height)))];
+}
 
 // Runs of equal values as [value, length] varint pairs, base64 encoded: the cells are long stretches of one state.
 export function encodeCells(cells){
