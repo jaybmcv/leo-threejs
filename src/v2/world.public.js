@@ -25,6 +25,10 @@ export const cabinPlacements=placements;
 export const cabinTemplate=()=>{const out=[];const g=template('twin--1');g.updateMatrixWorld(true);g.traverse(o=>{if(solid(o))meshTriangles(o,out);});return out;};
 export function prepareExteriorForWalking(ship){
  const canonicalSkin=captureFinishedSkinAuthority(ship);progress('captured untouched finished web skin: '+canonicalSkin.components.find(c=>c.name==='pressure').geometry.attributes.position.count/3+' pressure triangles');
+ // The refined exterior GLB carries its own copy of the crown lounge (scripts/build-exterior-finish.mjs) beside the one
+ // the interior builds (aft.js): the two drew in the same planes, flickering. Keep the interior's, as the v1 assembly
+ // does (scripts/build-assembly.mjs), now the untouched skin above has its own copy of the crown's shell.
+ ship.exterior.getObjectByName('Fin_panorama_lounge')?.removeFromParent();
  // Accepted room dressing/cuts run in its authoring frame before world-space v2 shells.
  // Saved generated guards are restored unchanged, matching Node's after-preparation guard stage.
  const generated=ship.inside.children.filter(o=>o.name==='Walk_railings'||o.name==='Walk_partitions');for(const o of generated)o.removeFromParent();progress('preparing exterior and room finishes');const dropped=originalExterior(ship);progress('legacy room dressing complete');applyPrototypeExterior(ship.exterior,layout);clearWingIntrusions(ship);progress('wing intrusions trimmed');fitV2Structure(ship);progress('structural floors and corridors complete');applyLoungeFloorFinish(ship);finishMudwaterShell(ship);fitPrototypeStructure(ship,layout);openForumUpperCeiling(ship,layout);progress('owned hull envelopes fitted');buildPhase4Fitout(ship,layout);buildPhase6Water(ship,layout);progress('Phase 4 rooms, escape craft and Phase 6 atrium prototypes furnished');for(const o of generated)ship.inside.add(o);return dropped;
