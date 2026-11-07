@@ -224,10 +224,11 @@ try{
  const encoded=encodeCells(cells),back=decodeCells(encoded,cells.length),problems=[];
  const ranges={...PVS_RANGE,lo:encodeCells(lo),hi:encodeCells(hi)},backLo=decodeCells(ranges.lo,cells.length,255),backHi=decodeCells(ranges.hi,cells.length,255);
  if(visible<known.size/20)problems.push(`only ${visible} of ${known.size} known cells see the atrium`);
- // And at least a twentieth hidden: a page whose occluders drew nothing (a shader that failed to compile, say) sees the
- // atrium from everywhere, which no check above can catch. A --region bake beside the atrium can be nearly all visible,
- // so it holds for whole-ship bakes only.
- if(!region.length&&hidden<known.size/20)problems.push(`only ${hidden} of ${known.size} known cells are hidden: did the occluders draw?`);
+ // And at least a fiftieth of the cells it decides (hidden or visible; the envelope stays unknown) hidden: a page whose
+ // occluders drew nothing (a shader that failed to compile, say) sees the atrium from everywhere, which no check above can
+ // catch. With no eyes below Deck 6 a sound bake hides about 5.7% (11,510 of 203,374, 2026-11-07); a v2 bake that drew no
+ // occluders hid 0.7%. A --region bake beside the atrium can be nearly all visible, so it holds for whole-ship bakes only.
+ if(!region.length&&hidden<(hidden+visible)/50)problems.push(`only ${hidden} of ${hidden+visible} decided cells are hidden: did the occluders draw?`);
  if(!probes)problems.push('no bench-view eye sees the atrium');
  if(changed)problems.push(changed+' bench-view eyes answer differently from the first page');
  if(contradicted.size)problems.push('cells hidden where bench-view eyes see the atrium: '+[...contradicted].join(', '));
