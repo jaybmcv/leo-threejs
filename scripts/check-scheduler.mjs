@@ -44,7 +44,9 @@ export async function runJobs(jobs,{previous={},record=async()=>{},limits={}}={}
  const reserved=()=>[...running.values()].filter(j=>performance.now()-j.startedAt<WARMUP).reduce((s,j)=>s+NEED[j.kind],0);
  const show=(job,r,note)=>{
   const ok=r.code===0,lines=r.log.trimEnd().split(/\r?\n/);
-  console.log(`\n===== ${ok?'PASS':'FAIL'} ${job.name} (${r.seconds.toFixed(1)} s${note}) =====`);
+  // Windows reports crashes as NTSTATUS codes (0xC0000005 access violation, 0xC0000409 fail-fast/abort); show them in hex.
+  const exit=ok?'':r.signal?', signal '+r.signal:', exit '+(r.code>=0x80000000?'0x'+r.code.toString(16).toUpperCase():r.code);
+  console.log(`\n===== ${ok?'PASS':'FAIL'} ${job.name} (${r.seconds.toFixed(1)} s${exit}${note}) =====`);
   console.log((ok?lines.slice(-15):lines.slice(-80)).join('\n'));
  };
  try{
