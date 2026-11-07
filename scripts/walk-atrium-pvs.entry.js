@@ -1,6 +1,8 @@
 // Page for scripts/walk-atrium-pvs.mjs --prepared: the walk's static colliders, decoded from a prepared walk exactly as the
 // public walk decodes them, and a renderer like the walk's, as window.__walk for scripts/walk-atrium-pvs.page.js. No walk
-// is built or shown. Movers stay unplaced, so lift cars and doors neither block nor hold eye samples.
+// is built or shown. Movers stay unplaced, so lift cars and doors neither block nor hold eye samples; the shut landing
+// doors come from the bake's setup instead (scripts/walk-atrium-pvs.mjs sets __walk.landingDoors to setup.doors: lifts.js
+// reads layout.json through node:fs, so it cannot load here).
 import * as T from 'three';
 import {readPreparedWorld} from '../src/v2/prepared-codec.public.js';
 

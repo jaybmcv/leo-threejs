@@ -6,11 +6,13 @@ for(const r of[...layout.cabins,...layout.rooms.filter(r=>!r.aggregate),...(layo
  if(!r.polygon)continue;const box=bounds(r.polygon),y=r.y,height=r.height||3.4;
  for(const d of layout.decks)if(d.y>=y-.1&&d.y<y+height){let list=owners.get(d.number);if(!list)owners.set(d.number,list=[]);list.push({polygon:r.polygon,box,y,height});}
 }
-let proxyY=null,fogClassified,cameraVisible=false;const fogs=[];
+let proxyY=null,fogClassified,cameraVisible=false,cameraRange=null;const fogs=[];
 const fullAtriumSpan=[layout.decks[5].y-.3,ATRIUM_PROTOTYPE.skyY+.1];
-export function atriumViewSpan(){return ATRIUM_VIEW.fullHeight&&(inOpenAtrium()||cameraVisible)?fullAtriumSpan:null;}
+// Seen from outside it, the atrium draws only the heights the PVS says that sight reaches (setAtriumSight's range), when it
+// says; from inside, or when the rays answered, it draws whole.
+export function atriumViewSpan(){if(!ATRIUM_VIEW.fullHeight)return null;if(inOpenAtrium())return fullAtriumSpan;return cameraVisible?cameraRange??fullAtriumSpan:null;}
 // The camera may see into the atrium while the walker is in an adjoining room.
-export function setAtriumSight(visible){cameraVisible=!!visible;applyAtriumFog();}
+export function setAtriumSight(visible,range=null){cameraVisible=!!visible;cameraRange=visible?range:null;applyAtriumFog();}
 export function registerAtriumFog(fog){if(!fogs.some(r=>r.fog===fog))fogs.push({fog,near:fog.near,far:fog.far});applyAtriumFog();}
 export function inOpenAtrium(){if(fogClassified!==undefined)return fogClassified;const p=position;if(!p||p.y<layout.decks[5].y-.3||p.y>39.94)return fogClassified=false;let d=layout.decks[5];for(const q of layout.decks)if(q.y<=p.y+.2)d=q;if(d.number<6||!d.atrium?.outline)return fogClassified=false;const ring=d.atrium.outline,v=[p.x,p.z];if(!contains(ring,v)&&!ring.some((a,i)=>distanceToSegment(v,a,ring[(i+1)%ring.length])<=3.5))return fogClassified=false;return fogClassified=!(owners.get(d.number)||[]).some(r=>p.y>=r.y-.1&&p.y<r.y+r.height&&p.x>=r.box.x0&&p.x<=r.box.x1&&p.z>=r.box.z0&&p.z<=r.box.z1&&contains(r.polygon,v));}
 // The near facade's merged copy of the lift tower and aft-core architecture (P6_tower_architecture) is the same
