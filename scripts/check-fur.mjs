@@ -52,7 +52,15 @@ for(let colour=0;colour<FUR_COLOURS.length;colour++){
 }
 for(const bad of [-1,5,255,1.5,'2',{},NaN,Infinity]){assert.equal(cleanFur(bad),0);assert.throws(()=>encodeRecord(0,{...pose,fur:bad}));}
 const broken=assembleFrame([],[encodeRecord(1,pose)]);broken[broken.length-1]=255;assert.equal(decodeFrame(broken),null);
-const old=assembleFrame([],[]);old[1]=6;assert.equal(decodeFrame(old),null);assert.equal(PROTOCOL,7);assert.equal(WIRE_VERSION,7);
+const old=assembleFrame([],[]);old[1]=7;assert.equal(decodeFrame(old),null);assert.equal(PROTOCOL,8);assert.equal(WIRE_VERSION,8);
+// A grapple line's bite rides in the motion block, even for a body otherwise standing plainly, to an eighth of a millimetre.
+for(const extras of [{},{stance:'crouch',jumpCount:3,jumpS:.4,rise:-12,emote:'wave'}]){
+ const hooked=assembleFrame([encodeIdentity(7,'cat','Voyager')],[encodeRecord(7,{...pose,...extras,hook:[30.5,-12.25,-80.125]})]),got=new WireReader().read(hooked)[0];
+ got.hook.forEach((m,k)=>assert(Math.abs(m-[30.5,-12.25,-80.125][k])<1e-3,'Grapple bite lost'));assert.equal(got.jumpCount,extras.jumpCount??0);assert.equal(got.emote,extras.emote??null);
+ for(let n=0;n<hooked.length;n++)assert.equal(decodeFrame(hooked.subarray(0,n)),null,'Truncated hooked frame accepted');
+}
+assert.equal(new WireReader().read(assembleFrame([encodeIdentity(7,'cat','Voyager')],[encodeRecord(7,pose)]))[0].hook,null);
+assert.throws(()=>encodeRecord(0,{...pose,hook:[0,0,9999]}));
 let stored=null;globalThis.localStorage={getItem:()=>stored,setItem:(k,v)=>{stored=v;}};
 assert.equal(savedFur(),0);assert(saveFur(3));assert.equal(savedFur(),3);stored='"3"';assert.equal(savedFur(),0);stored='invalid';assert.equal(savedFur(),0);
 globalThis.localStorage={getItem(){throw Error('blocked');},setItem(){throw Error('blocked');}};assert.equal(savedFur(),0);assert.equal(saveFur(2),false);delete globalThis.localStorage;

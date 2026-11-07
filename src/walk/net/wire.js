@@ -20,37 +20,42 @@
 //   position: (metres + 2048) x 4096, an eighth of a millimetre
 //   heading:  a turn in 65,536 steps, read back in [-pi, pi)
 //   fur:      u8 index in walk/fur-colours.js, immediately after heading
-//   MOTION:   u8 stance | jumps << 2 · i16 rise x 300 · u16 (jumpS + 1) x 1000   (a body standing plainly sends none)
+//   MOTION:   u8 stance | jumps << 2 | 0x10 HOOK · i16 rise x 300 · u16 (jumpS + 1) x 1000   (a body standing plainly
+//             sends none); HOOK (on the grapple line: walk/grapple.js) adds three u24 positions, where its claw bit
 //   EMOTE:    u8 bytes · utf-8
 // Encoding throws on anything out of range (a bug in the sender); decoding drops a frame that does not read cleanly.
 
 import {FUR_COLOURS} from '../fur-colours.js';
-export const WIRE_TAG=0x4c,WIRE_VERSION=7;
+export const WIRE_TAG=0x4c,WIRE_VERSION=8;
 export const STANCES=['stand','crouch','prone','slide'];
 export const RESTS=[null,'sit','lie'];
 const GROUNDED=0x04,MOTION=0x08,EMOTE=0x10,PLAYING=0x20,BALL=0x40,GLIDE=0x80,KNOWN=0xff;
-const ORIGIN=-2048,STEPS=4096,MAX_STEP=0xffffff,YAW_STEPS=65536,TURN=Math.PI*2;
+const HOOK=0x10,ORIGIN=-2048,STEPS=4096,MAX_STEP=0xffffff,YAW_STEPS=65536,TURN=Math.PI*2;
 const encoder=new TextEncoder(),decoder=new TextDecoder();
 
 function range(what,n,min,max){if(!Number.isFinite(n)||n<min||n>max)throw new RangeError(`pose wire: ${what} ${n} is outside ${min}..${max}`);}
 const yawStep=yaw=>{const t=yaw/TURN;return Math.round((t-Math.floor(t))*YAW_STEPS)%YAW_STEPS;};
 
-// A pose: {pos:[x,y,z], yaw, grounded, stance, jumpCount, jumpS, rise, emote, rest, playing, ball, glide, fur}.
+// A pose: {pos:[x,y,z], yaw, grounded, stance, jumpCount, jumpS, rise, emote, rest, playing, ball, glide, hook:[x,y,z]|null, fur}.
+const stepsOf=pos=>pos.map(m=>{range('position',m,ORIGIN,ORIGIN+MAX_STEP/STEPS);return Math.round((m-ORIGIN)*STEPS);});
+const putSteps=(v,o,steps)=>steps.forEach((s,k)=>{v.setUint16(o+k*3,s&0xffff,true);v.setUint8(o+2+k*3,s>>>16);});
+const getSteps=(v,o)=>[0,1,2].map(k=>(v.getUint16(o+k*3,true)+v.getUint8(o+2+k*3)*0x10000)/STEPS+ORIGIN);
 export function encodeRecord(slot,p){
  range('slot',slot,0,0xffff);
- const steps=p.pos.map(m=>{range('position',m,ORIGIN,ORIGIN+MAX_STEP/STEPS);return Math.round((m-ORIGIN)*STEPS);});
+ const steps=stepsOf(p.pos),hook=p.hook?stepsOf(p.hook):null;
  const stance=STANCES.indexOf(p.stance||'stand'),jumps=p.jumpCount||0,rise=Math.round((p.rise||0)*300),jump=Math.round(((p.jumpS??-1)+1)*1000);
  if(stance<0)throw new RangeError(`pose wire: unknown stance ${p.stance}`);
  range('jumps',jumps,0,3);range('rise',p.rise||0,-100,100);range('jump time',p.jumpS??-1,-1,60);
  const rest=RESTS.indexOf(p.rest||null);if(rest<0)throw new RangeError(`pose wire: unknown rest ${p.rest}`);
- const moving=stance!==0||jumps!==0||rise!==0||jump!==0,clip=p.emote?encoder.encode(p.emote):null;
+ const moving=stance!==0||jumps!==0||rise!==0||jump!==0||!!hook,clip=p.emote?encoder.encode(p.emote):null;
  if(clip&&clip.length>0xff)throw new RangeError('pose wire: emote too long');
  const fur=p.fur??0;range('fur',fur,0,FUR_COLOURS.length-1);if(!Number.isInteger(fur))throw new RangeError('pose wire: fur is not an index');
- const bytes=new Uint8Array(15+(moving?5:0)+(clip?1+clip.length:0)),v=new DataView(bytes.buffer);
+ const bytes=new Uint8Array(15+(moving?5:0)+(hook?9:0)+(clip?1+clip.length:0)),v=new DataView(bytes.buffer);
  v.setUint16(0,slot,true);v.setUint8(2,rest|(p.grounded?GROUNDED:0)|(moving?MOTION:0)|(clip?EMOTE:0)|(p.playing?PLAYING:0)|(p.ball?BALL:0)|(p.glide?GLIDE:0));
- steps.forEach((s,k)=>{v.setUint16(3+k*3,s&0xffff,true);v.setUint8(5+k*3,s>>>16);});
+ putSteps(v,3,steps);
  v.setUint16(12,yawStep(p.yaw),true);v.setUint8(14,fur);let o=15;
- if(moving){v.setUint8(o,stance|(jumps<<2));v.setInt16(o+1,rise,true);v.setUint16(o+3,jump,true);o+=5;}
+ if(moving){v.setUint8(o,stance|(jumps<<2)|(hook?HOOK:0));v.setInt16(o+1,rise,true);v.setUint16(o+3,jump,true);o+=5;}
+ if(hook){putSteps(v,o,hook);o+=9;}
  if(clip){v.setUint8(o,clip.length);bytes.set(clip,o+1);}
  return bytes;
 }
@@ -88,12 +93,13 @@ export function decodeFrame(data){
   if(!has(15))return null;
   const slot=v.getUint16(o,true),head=v.getUint8(o+2);
   if(head&~KNOWN||(head&3)===3)return null;
-  const pos=[0,1,2].map(k=>(v.getUint16(o+3+k*3,true)+v.getUint8(o+5+k*3)*0x10000)/STEPS+ORIGIN);
+  const pos=getSteps(v,o+3);
   const turned=v.getUint16(o+12,true)/YAW_STEPS*TURN,fur=v.getUint8(o+14);if(fur>=FUR_COLOURS.length)return null;o+=15;
-  const pose={pos,yaw:turned>=Math.PI?turned-TURN:turned,grounded:!!(head&GROUNDED),rest:RESTS[head&3],stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:!!(head&PLAYING),ball:!!(head&BALL),glide:!!(head&GLIDE),fur};
+  const pose={pos,yaw:turned>=Math.PI?turned-TURN:turned,grounded:!!(head&GROUNDED),rest:RESTS[head&3],stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:!!(head&PLAYING),ball:!!(head&BALL),glide:!!(head&GLIDE),hook:null,fur};
   if(head&MOTION){
-   if(!has(5))return null;const first=v.getUint8(o);if(first&0xf0)return null;
-   Object.assign(pose,{stance:STANCES[first&3],jumpCount:first>>2,rise:v.getInt16(o+1,true)/300,jumpS:v.getUint16(o+3,true)/1000-1});o+=5;
+   if(!has(5))return null;const first=v.getUint8(o);if(first&0xe0)return null;
+   Object.assign(pose,{stance:STANCES[first&3],jumpCount:(first>>2)&3,rise:v.getInt16(o+1,true)/300,jumpS:v.getUint16(o+3,true)/1000-1});o+=5;
+   if(first&HOOK){if(!has(9))return null;pose.hook=getSteps(v,o);o+=9;}
   }
   if(head&EMOTE){if(!has(1))return null;const n=v.getUint8(o);o+=1;if(!n||!has(n))return null;pose.emote=text(n);}
   poses.push({slot,pose});
@@ -143,5 +149,6 @@ const UNSEEN=new RegExp('[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u
 // 2: names can be Discord-verified (a Leo pass in the hello). 3: testers wear the captain's hat. 4: a pose says when its
 // visitor is playing Alien Cat Invasion, and the leaderboard's messages (play, score, board). 5: a pose says when its
 // visitor is rolling in a hamster ball. 6: each pose carries its fur colour after the heading. 7: a pose says when its
-// visitor is riding the longboard down (walk/glide.js).
-export const PROTOCOL=7;
+// visitor is riding the longboard down (walk/glide.js). 8: a pose says where its visitor's grapple line has bitten
+// (walk/grapple.js).
+export const PROTOCOL=8;

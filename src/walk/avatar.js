@@ -17,6 +17,9 @@ export const WALKER={height:COSMO_HEIGHT,walk:WALK_SPEED,run:RUN_SPEED,crouch:2,
 export const EMOTES=Object.keys(COSMO_EMOTES);
 // Seconds the catnip face takes to come on or wear off.
 const CATNIP_S=1.2;
+// On the grapple line (grapple.js): the body leans towards the claw by up to HANG_TILT radians, about the feet, and the
+// right arm reaches up the line; both ease in over about HANG_S seconds.
+const HANG_TILT=.6,HANG_S=.12;
 
 function liePose(bone){
  for(const side of ['L','R']){
@@ -104,12 +107,23 @@ export async function createWalker(createDLCat,motion){
  // The hips' height above the feet's origin, standing.
  const hipHeight=bone('spine').getWorldPosition(new T.Vector3()).y-figure.root.getWorldPosition(new T.Vector3()).y;
  let suit=null;
+ const paw=bone('hand.R'),shoulder=bone('upper_arm.R'),elbow=bone('forearm.R'),hung=new T.Quaternion(),lean=new T.Vector3(),hold=new T.Quaternion(),q=new T.Quaternion();
+ let hang=0;const anchor=new T.Vector3();
  return {
   holder,body,figure,hipHeight,setFur,
+  // Where the right paw is drawn (the grapple line leaves from it).
+  hand(out=new T.Vector3()){return paw.getWorldPosition(out);},
   // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock},
-  //  catnip: in the Hydro-Nip Lounge, board: riding the longboard (0..1, glide.js)}
+  //  catnip: in the Hydro-Nip Lounge, board: riding the longboard (0..1, glide.js), hook: the grapple's bite (world) or null}
   update(dt,s){
    const r=s.rest,seated=r?.kind==='sit'&&r.weight>.35;
+   hang=T.MathUtils.clamp(hang+(s.hook&&!r?1:-1)*dt/HANG_S,0,1);if(s.hook)anchor.copy(s.hook);
+   // Hanging, the body leans along the line, in the holder's frame, from the feet.
+   if(hang>0){
+    holder.updateWorldMatrix(true,false);lean.copy(anchor).sub(holder.position).setY(anchor.y-holder.position.y-1).applyQuaternion(holder.getWorldQuaternion(hold).invert()).normalize();
+    hung.setFromUnitVectors(Y,lean);const angle=2*Math.acos(Math.min(1,Math.abs(hung.w)));if(angle>HANG_TILT)hung.slerpQuaternions(q.identity(),hung,HANG_TILT/angle);
+    body.quaternion.premultiply(q.identity().slerp(hung,hang*hang*(3-2*hang)));
+   }
    figure.apply({pos:[0,0,0],yaw:0,dt,speedMs:r?0:s.speed,grounded:r?true:s.grounded,swimming:!!s.swimming,submerged:!!s.swimming,stance:r?'stand':s.stance||'stand',
     jumpCount:s.jumpCount||1,jumpS:s.jumpS,turnRate:r?0:s.turnRate||0,accelMs2:r?0:s.accel||0,riseMs:r?0:s.rise||0,emote:r?null:s.emote||null,
     seated,seatedVariant:'passenger',seatHeight:seated?r.seatHeight:undefined,seatForward:0},dt);
@@ -127,6 +141,14 @@ export async function createWalker(createDLCat,motion){
    if(s.board>0&&!r){
     bones.forEach((b,i)=>b.quaternion.slerp(board[i],s.board));
     figure.asset.root.position.y=T.MathUtils.lerp(figure.asset.root.position.y,figure.restOffset-boardDrop,s.board);
+    figure.root.updateMatrixWorld(true);
+   }
+   // The right arm up the line, eased from the animated arm.
+   if(hang>0){
+    figure.root.updateMatrixWorld(true);const w=hang*hang*(3-2*hang),a=shoulder.quaternion.clone(),b=elbow.quaternion.clone();
+    lean.copy(anchor).sub(shoulder.getWorldPosition(new T.Vector3()));
+    aim(shoulder,elbow,lean);aim(elbow,paw,lean);
+    shoulder.quaternion.copy(a.slerp(shoulder.quaternion,w));elbow.quaternion.copy(b.slerp(elbow.quaternion,w));
     figure.root.updateMatrixWorld(true);
    }
    if((r?.kind==='lie'||r?.kind==='float')&&r.weight>0){

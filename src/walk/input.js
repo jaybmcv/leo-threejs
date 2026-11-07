@@ -1,7 +1,7 @@
 // Keyboard, mouse and touch for walking, with Voyager's Reach's keys: WASD or the arrows move (relative to the camera),
 // Shift runs, Space jumps (hold for height, again in the air), C crouches (a slide when running), X goes prone, B opens
 // the emotes (1-0 play them), E uses what is in front of you (a seat, a bed, a lift), V or F swaps first and third
-// person, M is Go to, N the ship map, L the ship log, H help, P pings where you are for others aboard, T chats with them and R respawns in the arrival hall. Dragging looks around; on touch screens the left thumb steers a joystick and
+// person, Q or the right mouse button fires the grapple hook (held to swing), M is Go to, N the ship map, L the ship log, H help, P pings where you are for others aboard, T chats with them and R respawns in the arrival hall. Dragging looks around; on touch screens the left thumb steers a joystick and
 // the right one looks.
 // Controls can change the emote and ping defaults.
 import {walkBindings} from './bindings.js';
@@ -10,6 +10,8 @@ const KEYS={forward:['KeyW','ArrowUp'],back:['KeyS','ArrowDown'],left:['KeyA','A
 export class WalkInput{
  constructor(surface,{joystick,stick,lockHint,onAction}={}){
   this.surface=surface;this.down=new Set();this.look={x:0,y:0};this.stickVec={x:0,y:0};this.jumpQueued=false;this.jumpHeld=false;this.runLatched=false;this.zoom=0;
+  // The grapple hook: a press waiting to be read, and the mouse's or the touch button's hold (Q is read from `down`).
+  this.hookQueued=false;this.hookMouse=false;this.hookHeld=false;
   this.onAction=onAction||(()=>{});this.enabled=true;
   let drag=null,locked=false,requesting=false,cancelOnArrival=false;
   this.releasePointer=()=>{if(requesting)cancelOnArrival=true;if(document.pointerLockElement===surface)document.exitPointerLock?.();};
@@ -45,6 +47,7 @@ export class WalkInput{
    if(e.repeat){if(e.code.startsWith('Arrow')||e.code==='Space')e.preventDefault();return;}
    if(this.bound(e.code)){e.preventDefault();return;}
    if(e.code==='Space'){this.jumpQueued=true;e.preventDefault();}
+   else if(e.code==='KeyQ')this.hookQueued=true;
    else if(e.code==='KeyE'||e.code==='Enter')this.onAction('use');
    else if(e.code==='KeyV'||e.code==='KeyF')this.onAction('view');
    else if(e.code==='KeyM')this.onAction('places');
@@ -62,11 +65,13 @@ export class WalkInput{
    this.down.add(e.code);
   });
   addEventListener('keyup',e=>this.down.delete(e.code));
-  addEventListener('blur',()=>this.down.clear());
+  addEventListener('blur',()=>{this.down.clear();this.hookMouse=false;});
   // Look: drag with any pointer on the scene (or move with the pointer locked).
   surface.addEventListener('pointerdown',e=>{
    if(e.pointerType==='mouse'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&this.bound('Mouse'+e.button)){e.preventDefault();drag=null;return;}
    if(!this.enabled)return;
+   // The right button is the grapple hook (below), not a drag.
+   if(e.pointerType==='mouse'&&e.button===2)return;
    if(e.pointerType==='touch'&&joystick&&e.clientX<innerWidth*.45)return;
    drag={id:e.pointerId,x:e.clientX,y:e.clientY};surface.setPointerCapture(e.pointerId);
    if(e.pointerType==='mouse'&&e.button===0)requestPointer();
@@ -79,10 +84,14 @@ export class WalkInput{
   });
   const end=e=>{if(drag&&drag.id===e.pointerId)drag=null;};
   surface.addEventListener('pointerup',end);surface.addEventListener('pointercancel',end);
-  // Only a remapped scene button consumes its context menu or browser navigation.
+  // Only a remapped scene button consumes its context menu or browser navigation; unremapped, the right button holds
+  // the grapple hook (mouse events, since a second button pressed during a drag sends no pointerdown).
+  const hookButton=e=>e.button===2&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!walkBindings.action('Mouse2');
   for(const type of ['mousedown','mouseup','auxclick','contextmenu'])surface.addEventListener(type,e=>{
    if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&walkBindings.action('Mouse'+e.button))e.preventDefault();
+   else if(hookButton(e)){e.preventDefault();if(type==='mousedown'&&this.enabled){this.hookQueued=true;this.hookMouse=true;}}
   });
+  addEventListener('mouseup',e=>{if(e.button===2)this.hookMouse=false;});
   surface.addEventListener('wheel',e=>{this.zoom+=Math.sign(e.deltaY);e.preventDefault();},{passive:false});
   if(joystick&&stick)this.bindJoystick(joystick,stick);
  }
@@ -109,13 +118,15 @@ export class WalkInput{
   base.addEventListener('pointerup',end);base.addEventListener('pointercancel',end);
  }
  key(name){return KEYS[name].some(k=>this.down.has(k));}
- // {x: strafe right, y: forward} in [-1,1], plus run and a queued jump (consumed).
+ // {x: strafe right, y: forward} in [-1,1], plus run and a queued jump (consumed), and the grapple's press (consumed)
+ // and hold.
  read(){
   let x=(this.key('right')?1:0)-(this.key('left')?1:0)+this.stickVec.x,y=(this.key('forward')?1:0)-(this.key('back')?1:0)+this.stickVec.y;
   const l=Math.hypot(x,y);if(l>1){x/=l;y/=l;}
   const run=this.down.has('ShiftLeft')||this.down.has('ShiftRight')||this.runLatched||this.stickRun;
   const jump=this.jumpQueued,held=this.down.has('Space')||this.jumpHeld;this.jumpQueued=false;
   const look={...this.look};this.look.x=0;this.look.y=0;const zoom=this.zoom;this.zoom=0;
-  return {x,y,run,jump,held,look,zoom};
+  const hook=this.hookQueued&&this.enabled,hookHeld=this.enabled&&(this.down.has('KeyQ')||this.hookMouse||this.hookHeld);this.hookQueued=false;
+  return {x,y,run,jump,held,look,zoom,hook,hookHeld};
  }
 }
