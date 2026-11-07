@@ -15,7 +15,7 @@ let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 // desktop as before: decks -1 to 4 batched and the atrium geometry pack.
 const phoneBatching=(()=>{const query=new URLSearchParams(location.search);if(!preparedPhone)return query.get('deskbatch')==='low'?{}:{merge:true};const mode=query.get('phonebatch');
  return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
-let phoneBands=null;
+let phoneBands=null,wayfindingSigns=null;
 // The atrium geometry pack binds the band pieces the merge hides, so it runs only without the merge; the Detail menu
 // chooses its distant detail, so it shows only then too (the merged bands keep full detail and still draw faster).
 const atriumPack=!preparedPhone&&!phoneBatching.merge;
@@ -75,6 +75,8 @@ import {WalkInput} from './input.js';
 import {createWalker,WALKER,EMOTES} from './avatar.js';
 import {bakeForWalking,showBands} from '../v2/render-bake.js';
 import {bandOf} from './collision.js';
+import {mergeMeshes} from './merge-by-material.js';
+import {mergeWayfindingSigns} from './sign-array.js';
 import {partitionMesh} from './partitions.js';
 import walkPlan from 'walk-partitions';
 import {railingMesh} from '../v2/railings.js';
@@ -319,7 +321,11 @@ async function buildShip(){
  haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});cabinGlass=createCabinGlass(ship,scene);crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  status('Preparing the walk · 2/4 · placing activities…');await idle();
- const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
+ const toBand=(o,y=o.position.y)=>{const band=bandOf(y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
+ // Opaque lift and deck signs of one material on one band draw as one mesh (300 signs in 36 materials). The call lights
+ // (transparent) change material when lit, so they stay apart.
+ {const lists=new Map();for(const o of lifts.signs.children)if(o.isMesh&&o.name==='Walk_sign'&&!o.material.transparent&&!o.children.length){const key=bandOf(o.position.y)+'|'+o.material.uuid;let l=lists.get(key);if(!l)lists.set(key,l=[]);l.push(o);}
+  for(const list of lists.values()){if(list.length<2)continue;const mesh=mergeMeshes(list);if(!mesh)continue;for(const o of list)lifts.signs.remove(o);toBand(mesh,list[0].position.y);}}
  for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pinballMachine?[pinballMachine.group]:[]),...(pawsOff?pawsOff.groups:[]),...(mudwater?[mudwater.group]:[]),...(arcadeRow?[arcadeRow.group]:[])])toBand(o);
  if(concession)toBand(concession);
  toBand(vault.group);
@@ -408,6 +414,8 @@ async function buildShip(){
   const key=o.parent.uuid+'|'+(o.userData.cabinIds||[o.uuid]).join(',');if(sharedNear.has(key)){o.userData.near=sharedNear.get(key);continue;}const all=Array.from({length:o.count},(_,i)=>{const m=new T.Matrix4();o.getMatrixAt(i,m);return m;});
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};sharedNear.set(key,o.userData.near);
  }
+ // The wayfinding signs draw from one texture array (sign-array.js).
+ wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);
  isolateStaticWorld(ship,scene);{const hidden=preparedPhone||phoneBatching.merge?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
@@ -456,7 +464,7 @@ function span(p,now){
 }
 function cull(p,now=performance.now()){
  camera.updateMatrixWorld(true);
- cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);phoneBands?.update();
+ cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);phoneBands?.update();wayfindingSigns?.update();
  if(phoneHide.length){if(now-phoneHiddenAt>5000){phoneHiddenAt=now;phoneHidden=[];scene.traverse(o=>{if(o.isMesh&&phoneHide.some(f=>f(o)))phoneHidden.push(o);});}for(const o of phoneHidden)o.visible=false;}let shown=false;
  for(const o of instanced){const [a,b]=o.userData.span,v=o.userData.cabins?a<p.y+3.5&&b>p.y-.5:a<high&&b>low;if(v&&!o.visible)shown=true;o.visible=v;}
  // Re-rank after 3 m of walking, or at once when another deck's cabins come into view.

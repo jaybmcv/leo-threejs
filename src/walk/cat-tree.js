@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {mergeByMaterial} from './merge-by-material.js';
 import {seeded} from '../polish-kit.js';
 
 // The Great Cat Tree in the bow of the atrium (Toybox design, concepts/atrium-nose-2026-11): a 39 m cat tree on a mossy
@@ -334,6 +335,7 @@ export function createCatTree(ship){
  named(solid,'Cat_tree_bridge_walkway',grounds.bridge,hidden,['position']);named(solid,'Cat_tree_step_platform',[...grounds.step,...grounds.cushion].map(puck),hidden,['position']);named(solid,'Cat_tree_guard_wall',walls,hidden,['position']);
  for(const o of near.children)if(o.isMesh)o.userData.noCollide=true;
  group.updateMatrixWorld(true);solid.updateMatrixWorld(true);
+ mergeByMaterial(far);
  return {group,solid,seats,bounds:{y0:TREE.floor,y1:TREE.top+.5}};
 }
 
@@ -558,6 +560,7 @@ export function createNosePark(ship){
  const update=dt=>{if(!swim||!near.visible)return;clock+=Math.min(dt,.1);school.forEach((f,k)=>{if(f.loop.length<3)return;f.s=((f.s+f.speed*Math.min(dt,.1))%f.len+f.len)%f.len;let i=0;while(i<f.loop.length-1&&f.acc[i+1]<f.s)i++;const a=f.loop[i],b=f.loop[(i+1)%f.loop.length],t=(f.s-f.acc[i])/((f.acc[i+1]-f.acc[i])||1);
   pos.set(a[0]+(b[0]-a[0])*t,f.y,a[1]+(b[1]-a[1])*t);const dir=Math.sign(f.speed),hx=(b[0]-a[0])*dir,hz=(b[1]-a[1])*dir;e.set(0,Math.atan2(-hz,hx)+.18*Math.sin(clock*3+f.phase),0);m.compose(pos,q.setFromEuler(e),one);swim.setMatrixAt(k,m);});swim.instanceMatrix.needsUpdate=true;balloons.forEach((b,k)=>{pos.set(b.x,b.y+.6*Math.sin(clock*.35+b.phase),b.z);e.set(0,.15*Math.sin(clock*.11+b.phase),0);m.compose(pos,q.setFromEuler(e),one);for(const mesh of balloonMeshes)mesh.setMatrixAt(k,m);});for(const mesh of balloonMeshes)mesh.instanceMatrix.needsUpdate=true;};
  update(0);near.visible=true;
+ mergeByMaterial(far);
  return {group,solid,seats,trees,update,bounds:{y0,y1:8}};
 }
 
