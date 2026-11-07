@@ -30,6 +30,8 @@ export class WalkInput{
    else if(e.code==='KeyR')this.onAction('respawn');
    else if(e.code==='KeyL')this.onAction('log');
    else if(e.code==='KeyH')this.onAction('help');
+   // F3 is the usual key for a game's stats; a Mac keeps F3 for itself, so ` too.
+   else if(e.code==='F3'||e.code==='Backquote'){e.preventDefault();this.onAction('stats');}
    // Chat: the T must not land in the field it opens.
    else if(e.code==='KeyT'){e.preventDefault();this.onAction('chat');}
    if(e.code.startsWith('Arrow'))e.preventDefault();

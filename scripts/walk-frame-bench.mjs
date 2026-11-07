@@ -95,7 +95,7 @@ async function stills(tag){
  const dir=path.resolve('output/perf-walk/shots',tag);await fs.mkdir(dir,{recursive:true});
  const page=await connect();await page.send('Page.addScriptToEvaluateOnNewDocument',{source:'window.__bench&&(window.__bench.virtual=true);'});
  // The virtual clock starts with the page, so the whole startup sequence is the same in every build.
- try{await page.send('Page.navigate',{url:site+'/'+tag+'/walk.html?lv=2&view=first&halloween=0'});await page.wait('document.body?.dataset.ready==="1"&&!!globalThis.__walk',600000);
+ try{await page.send('Page.navigate',{url:site+'/'+tag+'/walk.html?lv=2&view=first&halloween=0'+(arg('query',null)?'&'+arg('query'):'')});await page.wait('document.body?.dataset.ready==="1"&&!!globalThis.__walk',600000);
   await page.ev('(()=>{__bench.running=false;return true})()');await sleep(4000);await page.ev('(()=>{__bench.running=true;return true})()');await page.ev(nextFrames(120));
   for(const v of VIEWS)await capture(page,v,dir);}finally{await page.close();}
 }
