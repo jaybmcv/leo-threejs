@@ -1,10 +1,17 @@
 import defaultOverrides from '../plan/room-fitout-overrides-v2.json' with {type:'json'};
 
-// Source furniture moves in its existing room template before geometry is baked.
+// Source furniture moves and removals apply before geometry is baked.
 export function moveRoomFitoutMeshes(source,id,overrides=defaultOverrides){
  for(const move of overrides[id]?.moveMeshes||[]){
   if(!Array.isArray(move.names)||!Array.isArray(move.by)||move.by.length!==3||!move.by.every(Number.isFinite))throw Error('Invalid source furniture move in '+id);
   source.traverse(o=>{if(o.isMesh&&move.names.includes(o.name)){if(o.userData.v2FitoutMoved)return;move.by.forEach((v,i)=>o.position.setComponent(i,o.position.getComponent(i)+v));o.userData.v2FitoutMoved=true;}});
+ }
+ for(const removal of overrides[id]?.removeMeshes||[]){
+  if(!Array.isArray(removal.names)||!removal.names.length||new Set(removal.names).size!==removal.names.length||!Array.isArray(removal.near)||removal.near.length!==3||!removal.near.every(Number.isFinite)||!Number.isFinite(removal.radius)||removal.radius<=0)throw Error('Invalid source furniture removal in '+id);
+  const key=removal.names.join('|')+'@'+removal.near.join(','),applied=source.userData.v2FitoutRemovals||(source.userData.v2FitoutRemovals=[]);if(applied.includes(key))continue;
+  const found=[];source.traverse(o=>{if(o.isMesh&&removal.names.includes(o.name)&&Math.hypot(o.position.x-removal.near[0],o.position.y-removal.near[1],o.position.z-removal.near[2])<=removal.radius)found.push(o);});
+  if(found.length!==removal.names.length)throw Error('Expected '+removal.names.length+' source furniture meshes for removal in '+id+', found '+found.length);
+  for(const o of found){o.removeFromParent();o.geometry.dispose();}applied.push(key);
  }
 }
 

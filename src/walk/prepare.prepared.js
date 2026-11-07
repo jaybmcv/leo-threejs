@@ -83,8 +83,8 @@ export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBa
  // The Medical ward's two-tier supply trolley stands outside the aisle line (ward-trolley.js).
  const wardTrolley=createWardTrolley(ship);if(wardTrolley)colliders.addStatic(wardTrolley.solid,()=>true);
  await new Promise(r=>setTimeout(r,0));
- // Cargo maintenance's MCT charging and service bays (mct-bay.js): vehicles, charging units and the tool trolley are
- // solid as plain boxes; stowed cables, signs and floor markings are dressing.
+ // Cargo maintenance's MCT charging and service bays (mct-bay.js): the vehicles, power units, tool trolley and lift
+ // pump solid as plain boxes; the cables, signs and floor markings dressing.
  const mctBay=createMctBay(ship);if(mctBay)colliders.addStatic(mctBay.solid,()=>true);
  await new Promise(r=>setTimeout(r,0));
  // The Container Maze in the same hold (maze/hold.js): its container walls and walk-through containers solid as plain
