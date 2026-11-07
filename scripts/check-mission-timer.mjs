@@ -21,7 +21,7 @@ const legacy=createLowerAftArea(area);root.add(legacy.root);root.updateMatrixWor
 assert(!root.getObjectByName('Removable_equipment'));assert(!root.getObjectByName('Equipment_cradle'));
 assert(root.getObjectByName('Worktop'),'Keep the workshop benches');
 const data=applyRoomFitoutOverrides({parts:[],rests:[],rooms:[]},layout),parts=data.parts.filter(p=>p.room===id),physical=new T.Group();
-assert.equal(parts.length,7);
+assert.equal(parts.length,8);
 for(const p of parts){
  const mesh=new T.Mesh(fitoutGeometry(p),material(p.mat));mesh.position.set(...p.at);mesh.rotation.y=p.yaw;physical.add(mesh);
  for(const dx of [-1,1])for(const dz of [-1,1])assert(contains(room.polygon,[p.at[0]+dx*p.size[0]/2,p.at[2]+dz*p.size[2]/2]),'Fitting leaves the workshop');
@@ -31,19 +31,34 @@ assert(top<=3.35&&top>=3.3,'Keep the machine below the ceiling');
 const rug=parts.find(p=>p.part==='mission_timer_rug'),base=parts.find(p=>p.part==='mission_timer_plinth');
 assert(rug.size[0]>base.size[0]&&rug.size[2]>base.size[2]);assert(rug.noCollide,'Rug stays flush and walkable');
 assert(Math.abs(base.at[0]-room.door.center[0])-base.size[0]/2>10,'Keep the entrance approach clear');
+const housing=parts.find(p=>p.part==='mission_engine_housing');
+assert(Math.abs(housing.at[0]-room.door.center[0])-housing.size[0]/2>50,'Engine stays on the wall opposite the v2 doorway');
 
 installWalkCanvas(createCanvas);
 const originalNow=Date.now;let now=MISSION_START+1000;Date.now=()=>now;
 try{
  const timer=createMissionTimer({root},{still:true}),face=timer.group.getObjectByName('Mission_timer_readout'),near=timer.group.position.clone();
+ const valve=timer.group.getObjectByName('Mission_engine_valve'),flow=timer.group.getObjectByName('Mission_engine_flow');
+ const frozen=valve.rotation.z,positions=flow.instanceMatrix.array.slice();
  const digest=()=>createHash('sha256').update(face.material.map.image.getContext('2d').getImageData(0,0,2048,360).data).digest('hex');
  const first=digest();now+=1000;timer.update(.016,near);assert.notEqual(digest(),first,'Reduced motion still updates seconds');
  now+=86400000;timer.update(.016,near.clone().addScalar(200));const away=digest();
  timer.update(.016,near);assert.notEqual(digest(),away,'Returning catches up to wall time');
+ assert.equal(valve.rotation.z,frozen);assert.deepEqual(flow.instanceMatrix.array,positions,'Reduced motion freezes engine flow');
  const normal=new T.Vector3(0,0,1).applyQuaternion(face.quaternion);assert(normal.x*room.door.outward[0]>.99,'Display faces the main entrance');
  assert(timer.group.getObjectByName('Mission_timer_forward_readout'),'Keep the original approach readable too');
  const animated=createMissionTimer({root}),before=animated.group.children.map(o=>o.rotation.y);
  animated.update(.1,near);animated.group.traverse(o=>{if(o.geometry)for(const n of o.geometry.attributes.position.array)assert(Number.isFinite(n));});
+ const engine=animated.group.getObjectByName('Mission_timer_engine'),wheel=engine.getObjectByName('Mission_engine_valve');
+ assert(Math.abs(wheel.rotation.z)>0&&Math.abs(wheel.rotation.z)<=.045,'Valve movement is subtle');
+ const paused=wheel.rotation.z;animated.update(.1,near.clone().addScalar(200));assert.equal(wheel.rotation.z,paused,'Engine pauses away from the room');
+ let draws=0,triangles=0;
+ engine.traverse(o=>{if(!o.isMesh)return;draws++;triangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);});
+ assert(draws<=16&&triangles<16000,'Bound engine geometry and draw calls');
+ const localBounds=new T.Box3().setFromObject(engine,true);localBounds.translate(near.clone().negate());
+ assert(localBounds.min.y>=.3&&localBounds.max.y<3.3,'Engine dressing stays below the ceiling');
+ const hoses=engine.getObjectByName('Mission_engine_feeds').children;assert(hoses.length);
+ for(const hose of hoses){const p=hose.geometry.attributes.position;for(let i=0;i<p.count;i++)if(p.getX(i)>1&&p.getX(i)<26)assert(p.getY(i)>2.9,'Feed hoses keep full walking headroom');}
  assert(animated.group.children.some((o,i)=>o.rotation.y!==before[i]||o.children.some(c=>c.rotation.y!==0)),'Holograms animate');
 }finally{Date.now=originalNow;}
-console.log('PASS: fixed UTC start, elapsed rollovers/DST, clock catch-up/reduced motion, removed blue fittings, footprint, ceiling and entrance facing');
+console.log('PASS: mission clock, engine motion/reduced motion/culling, geometry budget, overhead feeds, footprint, ceiling and entrance clearance');

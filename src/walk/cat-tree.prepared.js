@@ -235,12 +235,11 @@ export function createCatTree(ship){
   [.3,.6,.9].forEach((h,k)=>{const p=start.clone().addScaledVector(tangent,2.5+k*1.3).addScaledVector(side,2.6);const st=new T.CylinderGeometry(.6,.66,h,16);at(st,p.x,TREE.islandTop+h/2,p.z);grounds.step.push(st.clone());{const b=paint(st,C.wood),q=b.attributes.position,c=b.attributes.color;for(let v=0;v<q.count;v++){const a=Math.atan2(q.getZ(v)-p.z,q.getX(v)-p.x),kk=.75+.25*Math.abs(Math.sin(a*8));c.setXYZ(v,c.getX(v)*kk,c.getY(v)*kk,c.getZ(v)*kk);}parts.push(b);}
    parts.push(paint(at(new T.CylinderGeometry(.58,.58,.04,16),p.x,TREE.islandTop+h+.02,p.z),0xf0dcb0));{const ring=new T.TorusGeometry(.32,.025,3,20);ring.rotateX(Math.PI/2);parts.push(paint(at(ring,p.x,TREE.islandTop+h+.045,p.z),0xc8a06a));}});
   // the sign: a board on two posts by the boardwalk, facing out
-  {const p=start.clone().addScaledVector(tangent,.5).addScaledVector(side,2.9),face=-Math.atan2(-tangent.z,-tangent.x);
-   const board=new T.CylinderGeometry(1,1,.2,40);board.rotateX(Math.PI/2);board.scale(2.35,1.05,1);board.rotateY(face+Math.PI/2);at(board,p.x,TREE.islandTop+1.75,p.z);parts.push(paint(board,C.wood));
-   const edge=new T.TorusGeometry(1,.07,5,40);edge.scale(2.35,1.05,1);edge.rotateY(face+Math.PI/2);at(edge,p.x,TREE.islandTop+1.75,p.z);parts.push(paint(edge,0x8a5a30));
-   for(const o of [-1.6,1.6]){const q=p.clone().add(new T.Vector3(0,0,o).applyAxisAngle(new T.Vector3(0,1,0),face));const post=at(new T.CylinderGeometry(.18,.2,1.6,8),q.x,TREE.islandTop+.8,q.z);parts.push(paint(post,0x8a5a30));addWall(post.clone());}
-   const label=signLabel();if(label){const m=new T.Mesh(new T.PlaneGeometry(4.45,1.9),label);m.name='Cat_tree_sign';m.rotation.y=face+Math.PI/2;m.position.set(p.x,TREE.islandTop+1.75,p.z).addScaledVector(new T.Vector3(-tangent.x,0,-tangent.z).normalize(),.1);
-    m.position.add(new T.Vector3(Math.cos(face),0,-Math.sin(face)).multiplyScalar(0));near.add(m);}}
+  {const p=start.clone().addScaledVector(tangent,.5).addScaledVector(side,2.9),face=-Math.atan2(-tangent.z,-tangent.x),normal=new T.Vector3(-tangent.x,0,-tangent.z).normalize(),signY=TREE.islandTop+1.75;
+   const board=new T.CylinderGeometry(1,1,.2,40);board.rotateX(Math.PI/2);board.scale(2.35,1.05,1);board.rotateY(face+Math.PI/2);at(board,p.x,signY,p.z);parts.push(paint(board,C.wood));
+   const edge=new T.TorusGeometry(1,.07,5,40);edge.scale(2.35,1.05,1);edge.rotateY(face+Math.PI/2);const rim=p.clone().addScaledVector(normal,.18);at(edge,rim.x,signY,rim.z);parts.push(paint(edge,0x8a5a30));
+   for(const o of [-1.6,1.6]){const q=p.clone().add(new T.Vector3(0,0,o).applyAxisAngle(new T.Vector3(0,1,0),face)).addScaledVector(normal,-.29);const post=at(new T.CylinderGeometry(.18,.2,1.6,8),q.x,TREE.islandTop+.8,q.z);parts.push(paint(post,0x8a5a30));addWall(post.clone());}
+   const label=signLabel();if(label){const m=new T.Mesh(new T.PlaneGeometry(4.45,1.9),label);m.name='Cat_tree_sign';m.rotation.y=face+Math.PI/2;m.position.set(p.x,signY,p.z).addScaledVector(normal,.12);near.add(m);}}
   // the den: a felt dome against the trunk facing aft, with an arched way in
   {const da=FOOT_DEN.a,dir=new T.Vector3(Math.cos(da),0,Math.sin(da)),c=new T.Vector3(TREE.x,TREE.islandTop,TREE.z).addScaledVector(dir,trunkR(TREE.islandTop)+1.2);
    const dome=new T.SphereGeometry(2.7,24,12,-da+.52,Math.PI*2-1.04,0,Math.PI/2);dome.rotateY(Math.PI);at(dome,c.x,c.y,c.z);

@@ -5,6 +5,10 @@ import {atriumFloorGeometry,atriumFloorMaterial,skyCeilingGeometry,skyMaterial} 
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {placements,doorSide} from './cabins.js';
+// The aft core's stair flights merge into their own copy, P6_tower_stairs. The atrium hides P6_tower_architecture while
+// its full-height bands draw (atrium-visibility.js, #267/#272), but nothing else draws the flights: their sources leave
+// the walk's bake, so hidden with the rest they vanished wherever the atrium was in sight (#258).
+const STAIR_FLIGHT=/^(Stair_(tread|riser)_(up|return)|Stair_support_stringer|Stair_half_landing|Transit_handrail)$/;
 export function addPhase6Architecture(ship,root,layout){
  // Pure proxy/facade fixtures do not instantiate the physical ship. They use
  // the same actual surface factories, never a solid approximation of its void.
@@ -21,8 +25,8 @@ export function addPhase6Architecture(ship,root,layout){
  for(const {o,kind} of selected){
   sourceNames.push(o.name);
   if(kind!=='tower'){const clone=new T.Mesh(o.geometry,o.material);clone.name=kind==='floor'?'P6_atrium_floor_actual':o.name;clone.matrixAutoUpdate=false;clone.matrix.copy(o.matrixWorld);clone.userData={noCollide:true,phase6Architecture:true,role:kind,actualSource:o.name};root.add(clone);o.visible=false;continue;}
-  const m=o.material,key=[m.type,m.roughness,m.metalness,!!m.transparent,m.opacity,m.side,m.emissive?.getHex(),m.emissiveIntensity,m.map?.uuid,m.normalMap?.uuid,m.normalScale?.toArray().join(','),m.roughnessMap?.uuid,m.metalnessMap?.uuid,m.emissiveMap?.uuid,m.alphaMap?.uuid,m.aoMap?.uuid,m.envMap?.uuid,m.envMapIntensity,m.depthWrite,m.depthTest,m.alphaTest,m.blending,m.premultipliedAlpha,m.polygonOffset,m.polygonOffsetFactor,m.polygonOffsetUnits,m.flatShading,m.toneMapped,m.fog,m.wireframe].join('|');
-  let b=buckets.get(key);if(!b){const material=m.clone();material.name='P6_tower_architecture';material.color?.set(0xffffff);material.vertexColors=true;if(material.transparent&&material.side===2)material.forceSinglePass=true;b={parts:[],material};buckets.set(key,b);}
+  const m=o.material,stair=STAIR_FLIGHT.test(o.name),key=[stair,m.type,m.roughness,m.metalness,!!m.transparent,m.opacity,m.side,m.emissive?.getHex(),m.emissiveIntensity,m.map?.uuid,m.normalMap?.uuid,m.normalScale?.toArray().join(','),m.roughnessMap?.uuid,m.metalnessMap?.uuid,m.emissiveMap?.uuid,m.alphaMap?.uuid,m.aoMap?.uuid,m.envMap?.uuid,m.envMapIntensity,m.depthWrite,m.depthTest,m.alphaTest,m.blending,m.premultipliedAlpha,m.polygonOffset,m.polygonOffsetFactor,m.polygonOffsetUnits,m.flatShading,m.toneMapped,m.fog,m.wireframe].join('|');
+  let b=buckets.get(key);if(!b){const material=m.clone();material.name='P6_tower_architecture';material.color?.set(0xffffff);material.vertexColors=true;if(material.transparent&&material.side===2)material.forceSinglePass=true;b={parts:[],material,name:stair?'P6_tower_stairs':'P6_tower_architecture'};buckets.set(key,b);}
   let g=o.geometry.clone();if(g.index)g=g.toNonIndexed();g.applyMatrix4(o.matrixWorld);
   if(!g.attributes.normal)g.computeVertexNormals();if(!m.map)g.deleteAttribute('uv');else if(!g.attributes.uv)g.setAttribute('uv',new T.Float32BufferAttribute(new Float32Array(g.attributes.position.count*2),2));
   for(const name of Object.keys(g.attributes))if(!['position','normal','uv','color'].includes(name))g.deleteAttribute(name);
@@ -30,7 +34,7 @@ export function addPhase6Architecture(ship,root,layout){
   for(let i=0;i<g.attributes.position.count;i++)c.set([tint.r*(prior?prior.getX(i):1),tint.g*(prior?prior.getY(i):1),tint.b*(prior?prior.getZ(i):1)],i*3);
   g.setAttribute('color',new T.BufferAttribute(c,3));b.parts.push(g);o.visible=false;
  }
- for(const b of buckets.values()){const o=new T.Mesh(mergeGeometries(b.parts),b.material);o.name='P6_tower_architecture';o.userData={noCollide:true,phase6Architecture:true,actualSources:true};root.add(o);b.parts.forEach(g=>g.dispose());}
+ for(const b of buckets.values()){const o=new T.Mesh(mergeGeometries(b.parts),b.material);o.name=b.name;o.userData={noCollide:true,phase6Architecture:true,actualSources:true};root.add(o);b.parts.forEach(g=>g.dispose());}
  // Open atrium-facing room carcasses only. Their glass front stays open;
  // the opaque sides/back/floor/ceiling describe the real room behind it.
  const cabins=placements().filter(c=>c.view==='atrium');

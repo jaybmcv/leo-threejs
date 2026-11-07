@@ -20,7 +20,7 @@ const PLAY=[
   [['Space'],'Jump','Jump: hold for height, press again in the air for a double jump'],
   [['C'],'Crouch','Crouch; while running, slide'],
   [['X'],null,'Lie flat'],
-  [['Drag'],'Right thumb','Look around; scroll to bring the camera in or out','Drag to look around'],
+  [['Drag'],'Right thumb','Click and drag to lock the pointer; press Esc to unlock. If locking is unavailable, dragging still works. Scroll to zoom','Drag to look around'],
   [['V'],'View','First or third person'],
   [['Fur'],'Fur','Choose your fur colour in the toolbar; saved on this browser and seen by others aboard'],
  ]},
@@ -73,7 +73,7 @@ export function createHelp(sheet,{touch=()=>false,tester=()=>false,live=()=>fals
   }
   pages.play.append(grid,el('h3',{className:'help-find-title',textContent:'Things to find'}),
    el('ul',{className:'help-find'},...FIND.map(([name,where])=>el('li',{},el('b',{textContent:name}),el('span',{textContent:where})))),
-   ...touch?[]:[el('p',{className:'help-small',textContent:'H opens this again any time. Controls in the toolbar remaps emotes and ping.'})]);
+   ...touch?[]:[el('p',{className:'help-small',textContent:'H opens this again any time. Settings, then Controls, remaps emotes and ping.'})]);
  }
 
  // The tester guide, built the first time it is shown (its pictures load then too).

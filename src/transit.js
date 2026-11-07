@@ -26,6 +26,8 @@ export function createTransit({minimumDeck=1,maximumDeck=20,coreIds=['forward','
   const materials={floor:new T.MeshStandardMaterial({color:0xc4b89e,roughness:.85}),wall:new T.MeshStandardMaterial({color:0xdadfd8,roughness:.82}),navy:new T.MeshStandardMaterial({color:0x294858,roughness:.7}),metal:new T.MeshStandardMaterial({color:0x778d96,metalness:.5,roughness:.55}),glass:new T.MeshStandardMaterial({color:0x83b7c4,transparent:true,opacity:.15,depthWrite:false,side:T.DoubleSide}),light:new T.MeshStandardMaterial({color:0xffe5af,emissive:0xffdf9f,emissiveIntensity:.7}),
     // The aft stairs, behind the aft lifts: blue lit treads in black metal (their light lines: circulation-finish.js).
     holo:new T.MeshStandardMaterial({name:'Stair_holo_tread',color:0x0b3d7c,emissive:0x1478ff,emissiveIntensity:1,roughness:.5,metalness:0}),black:new T.MeshStandardMaterial({name:'Stair_black_metal',color:0x1a1d21,metalness:.65,roughness:.32})};
+  // The riser caps meet the blue treads at the same height, so draw them behind the tread faces.
+  materials.nosing=materials.black.clone();materials.nosing.name='Stair_black_metal_nosing';materials.nosing.polygonOffset=true;materials.nosing.polygonOffsetFactor=1;materials.nosing.polygonOffsetUnits=1;
   const floors=[];
   function box(name,size,p,m='wall',parent=structure){const o=new T.Mesh(new T.BoxGeometry(...size),materials[m]);o.name=name;o.position.set(...p);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
   function rail(a,b,parent,m='metal'){const va=new T.Vector3(...a),vb=new T.Vector3(...b),o=new T.Mesh(new T.CylinderGeometry(.035,.035,va.distanceTo(vb),8),materials[m]);o.name='Transit_handrail';o.position.copy(va.clone().add(vb).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),vb.sub(va).normalize());parent.add(o);}
@@ -77,19 +79,21 @@ export function createTransit({minimumDeck=1,maximumDeck=20,coreIds=['forward','
         for(const end of [-1,1])box('Stair_end_wall',[.14,y1-y0,5.14],[x+end*4.57,(y0+y1)/2,zz],'glass',shell).userData.clearStair=true;
       }
       box('Stair_top_ceiling',[9,.14,5],[x,top-.1,zz],'wall',shell);
-      const look=c.id==='aft'?{tread:'holo',riser:'black',frame:'black',landing:'black'}:{tread:'floor',riser:'wall',frame:'metal',landing:'floor'};
+      const look=c.id==='aft'?{tread:'holo',riser:'nosing',frame:'black',landing:'black'}:{tread:'floor',riser:'wall',frame:'metal',landing:'floor'};
       if(c.id==='forward')for(const end of [-1,1])box('Stair_end_wall',[.14,top-base,5.14],[x+end*4.57,(base+top)/2,zz],'wall',shell);
       for(let d=minimumDeck;d<=c.lastDeck;d++){
         const y=floorY(d),g=decks.get(d);
         floor(d,x-4.5,x-2.5,zz-2.5,zz+2.5,'Stair_main_landing');
         if(d<c.lastDeck){
           box('Stair_half_landing',[2,.18,5],[x+3.5,y+1.91,zz],look.landing,g);
+          // Each riser stops 8 mm under its tread's top: level with it, the riser's top strip fought the tread over their
+          // 25 mm overlap (the aft stairs' black nosing flickering over the blue steps, #258).
           for(let i=0;i<12;i++){
-            const run=5/12,step=(i+1)/6;
+            const run=5/12,step=(i+1)/6,rise=1/6-.008;
             box('Stair_tread_up',[run,.14,2.2],[x-2.5+(i+.5)*run,y+step-.07,zz-1.4],look.tread,g);
-            box('Stair_riser_up',[.05,1/6,2.2],[x-2.5+i*run,y+step-1/12,zz-1.4],look.riser,g);
+            box('Stair_riser_up',[.05,rise,2.2],[x-2.5+i*run,y+step-1/6+rise/2,zz-1.4],look.riser,g);
             box('Stair_tread_return',[run,.14,2.2],[x+2.5-(i+.5)*run,y+2+step-.07,zz+1.4],look.tread,g);
-            box('Stair_riser_return',[.05,1/6,2.2],[x+2.5-i*run,y+2+step-1/12,zz+1.4],look.riser,g);
+            box('Stair_riser_return',[.05,rise,2.2],[x+2.5-i*run,y+2+step-1/6+rise/2,zz+1.4],look.riser,g);
           }
           for(const dz of [-2.45,-.35])rail([x-2.5,y+1.1,zz+dz],[x+2.5,y+3.1,zz+dz],g,look.frame);
           for(const dz of [.35,2.45])rail([x+2.5,y+3.1,zz+dz],[x-2.5,y+5.1,zz+dz],g,look.frame);

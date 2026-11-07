@@ -17,7 +17,7 @@ import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import http from 'node:http';
 import WebSocket from 'ws';
-import {PVS_GRID,encodeCells,decodeCells} from '../src/v2/atrium-pvs.js';
+import {PVS_GRID,PVS_RANGE,encodeCells,decodeCells,snapRange} from '../src/v2/atrium-pvs.js';
 import {pvsKey} from '../src/v2/atrium-pvs-key.js';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
 import {build as bundle} from './native-bundle.mjs';
@@ -113,7 +113,7 @@ async function open(){
  if(!prepared)await sleep(3000);
  await page.ev(await fs.readFile('scripts/walk-atrium-pvs.page.js','utf8'));
 }
-const setUp=()=>page.ev(`__atriumPvs.setup(${JSON.stringify(setup.levels)},${JSON.stringify(setup.atriumSpan)},${JSON.stringify(setup.localSpan)},${JSON.stringify(setup.band)})`);
+const setUp=async()=>{const units=await page.ev('__atriumPvs.range');if(units.y0!==PVS_RANGE.y0||units.span!==PVS_RANGE.span)throw Error('The bake page measures heights unlike src/v2/atrium-pvs.js PVS_RANGE');return page.ev(`__atriumPvs.setup(${JSON.stringify(setup.levels)},${JSON.stringify(setup.atriumSpan)},${JSON.stringify(setup.localSpan)},${JSON.stringify(setup.band)})`);};
 // Eyes about the bench views (scripts/walk-frame-views.json), [x, y, z, floor] each: the bake's canary and its check.
 const benchEyes=async()=>{const views=JSON.parse(await fs.readFile('scripts/walk-frame-views.json','utf8')),eyes=[];
  for(const v of views)for(const h of setup.heights)for(const dx of [-2,0,2])for(const dz of [-2,0,2])eyes.push({view:v.name,eye:[v.at[0]+dx,v.at[1]+h,v.at[2]+dz,v.at[1]]});return eyes;};
@@ -136,7 +136,7 @@ try{
  }
  // --eyes=x,y,z[,floor];...: the verdict at exactly those eyes (debugging a pose); the walker's floor defaults to a
  // first-person eye's.
- if(arg('eyes',null)){const eyes=arg('eyes').split(';').map(e=>e.split(',').map(Number)).map(([x,y,z,floor=y-1.62])=>[x,y,z,floor]);const r=await page.ev(`__atriumPvs.run(${JSON.stringify(eyes.flat())})`);eyes.forEach((e,i)=>console.log(JSON.stringify(e).padEnd(28),r.visible[i]?'visible':'hidden'));process.exit(0);}
+ if(arg('eyes',null)){const eyes=arg('eyes').split(';').map(e=>e.split(',').map(Number)).map(([x,y,z,floor=y-1.62])=>[x,y,z,floor]);const r=await page.ev(`__atriumPvs.run(${JSON.stringify(eyes.flat())})`);const y=v=>(PVS_RANGE.y0+PVS_RANGE.span*v/255).toFixed(1);eyes.forEach((e,i)=>console.log(JSON.stringify(e).padEnd(28),r.visible[i]?'visible '+y(r.lo[i])+' to '+y(r.hi[i]):'hidden'));process.exit(0);}
  const {x0,z0,nx,nz,step,y0,ny}=PVS_GRID;
  const [ix0,ix1,iz0,iz1]=region.length?[Math.round((region[0]-x0)/step),Math.round((region[1]-x0)/step),Math.round((region[2]-z0)/step),Math.round((region[3]-z0)/step)]:[0,nx-1,0,nz-1];
  // Eye samples: [cell, x, y, z, floor] over every floor found.
@@ -147,7 +147,8 @@ try{
    for(let f=0;f<floors.length;f+=2)for(const h of setup.heights){if(h>floors[f+1]-.1)continue;const y=floors[f]+h,k=Math.floor((y-y0)/2);if(k<0||k>=ny)continue;samples.push([(k*nx+ci)*nz+cj,x0+ci*step,y,z0+cj*step,floors[f]]);}}
  }
  console.log('samples',samples.length,'from columns in',((Date.now()-t)/1000).toFixed(0)+' s');
- const known=new Set(samples.map(s=>s[0])),seen=new Set();let faces=0;t=Date.now();
+ // seen: each cell that saw the void, with the lowest and highest height (bytes, PVS_RANGE) any of its eyes reached.
+ const known=new Set(samples.map(s=>s[0])),seen=new Map();let faces=0;t=Date.now();
  // A long bake's page can stop drawing what it should: two full bakes of 0e604d6 saw the atrium from fewer and fewer
  // bench-view eyes (157 on a fresh page, 88 and 56 at the end) and failed their check, while a fresh page answers the
  // same every time. So the bench-view eyes are a canary: every CANARY_EVERY batches, and when the WebGL context was
@@ -162,12 +163,12 @@ try{
   // --lose-context-at=<n> (testing): the WebGL context is lost before the n-th batch, once.
   if(loseAt>=0&&b===loseAt*BATCH&&!fresh)await page.ev('__walk.renderer.forceContextLoss(),true');
   const batch=samples.slice(b,b+BATCH),r=await run(batch.flatMap(s=>s.slice(1)));faces+=r.faces;
-  r.visible.forEach((v,i)=>{if(v)pending.push(batch[i][0]);});
+  r.visible.forEach((v,i)=>{if(v)pending.push([batch[i][0],r.lo[i],r.hi[i]]);});
   if((b/BATCH)%25===0)console.log('run',b+batch.length,'/',samples.length,'visible cells',seen.size+pending.length,'faces',faces,((Date.now()-t)/1000).toFixed(0)+' s');
   b+=batch.length;since++;
   if(!r.lost&&since<CANARY_EVERY&&b<samples.length)continue;
   const now=r.lost?null:await canary();
-  if(now===baseline){for(const c of pending)seen.add(c);pending=[];checkpoint=b;since=0;continue;}
+  if(now===baseline){for(const [c,l,h] of pending){const s=seen.get(c);if(s){s[0]=Math.min(s[0],l);s[1]=Math.max(s[1],h);}else seen.set(c,[l,h]);}pending=[];checkpoint=b;since=0;continue;}
   // Redo from the last good canary on a fresh browser, which must answer as the first page did.
   const differ=now?[...now].filter((v,i)=>v!==baseline[i]).length:null;
   if(++fresh>MAX_FRESH)throw Error(`The page went wrong ${fresh} times (canary eyes changed or the context was lost); the bake was not kept`);
@@ -176,11 +177,13 @@ try{
   if(await canary()!==baseline)throw Error('A fresh page does not answer the canary as the first did: the bake is not repeatable here');
   pending=[];b=checkpoint;since=0;
  }
- // A cell is hidden only when it has samples of its own and neither it nor any of its 26 neighbours saw the void.
- const cells=new Uint8Array(nx*nz*ny);
+ // A cell is hidden only when it has samples of its own and neither it nor any of its 26 neighbours saw the void; a
+ // visible one reaches every height those neighbours reached.
+ const cells=new Uint8Array(nx*nz*ny),lo=new Uint8Array(cells.length).fill(255),hi=new Uint8Array(cells.length);
  for(const c of known)cells[c]=1;
- for(const c of seen){const k=Math.floor(c/(nx*nz)),i=Math.floor(c/nz)%nx,j=c%nz;
-  for(let dk=-1;dk<=1;dk++)for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){const kk=k+dk,ii=i+di,jj=j+dj;if(kk<0||kk>=ny||ii<0||ii>=nx||jj<0||jj>=nz)continue;const n=(kk*nx+ii)*nz+jj;if(cells[n])cells[n]=2;}}
+ for(const [c,[l,h]] of seen){const k=Math.floor(c/(nx*nz)),i=Math.floor(c/nz)%nx,j=c%nz;
+  for(let dk=-1;dk<=1;dk++)for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){const kk=k+dk,ii=i+di,jj=j+dj;if(kk<0||kk>=ny||ii<0||ii>=nx||jj<0||jj>=nz)continue;const n=(kk*nx+ii)*nz+jj;
+   if(cells[n]){cells[n]=2;if(l<lo[n])lo[n]=l;if(h>hi[n])hi[n]=h;}}}
  const envelopeUnknown=leaveEnvelope(cells);
  let hidden=0,visible=0;for(const v of cells){if(v===1)hidden++;else if(v===2)visible++;}
  // The bake checks itself before it is kept, since the key proves only which geometry it was baked from: a GPU that drew
@@ -189,19 +192,28 @@ try{
  // Those eyes must also answer as on the first page (the canary's baseline): a page that drifted after the last canary
  // would see less from them, and check less.
  const cellAt=(x,y,z)=>{const i=Math.round((x-x0)/step),j=Math.round((z-z0)/step),k=Math.floor((y-y0)/2);return i<0||i>=nx||j<0||j>=nz||k<0||k>=ny?-1:(k*nx+i)*nz+j;};
- let probes=0,changed=0;const contradicted=new Set(),eyes=await benchEyes();
+ let probes=0,changed=0;const contradicted=new Set(),narrow=new Set(),eyes=await benchEyes();
  {const r=await page.ev(`__atriumPvs.run(${JSON.stringify(eyes.flatMap(e=>e.eye))})`);if(r.lost)throw Error('The WebGL context was lost during the check; the bake was not kept');
-  r.visible.forEach((seen,e)=>{if(!seen)return;probes++;const [x,y,z]=eyes[e].eye,c=cellAt(x,y,z);if(c>=0&&cells[c]===1)contradicted.add(eyes[e].view);});
+  r.visible.forEach((seen,e)=>{if(!seen)return;probes++;const [x,y,z]=eyes[e].eye,c=cellAt(x,y,z);if(c>=0&&cells[c]===1)contradicted.add(eyes[e].view);
+   // Its cell must reach at least the heights the eye's own sight reaches.
+   if(c>=0&&cells[c]===2&&(lo[c]>r.lo[e]||hi[c]<r.hi[e]))narrow.add(eyes[e].view);});
   if(r.visible.join('')!==baseline)changed=[...r.visible.join('')].filter((v,i)=>v!==baseline[i]).length;}
+ for(let c=0;c<cells.length;c++)if(cells[c]!==2)lo[c]=hi[c]=0;else[lo[c],hi[c]]=snapRange(lo[c],hi[c]);
  const encoded=encodeCells(cells),back=decodeCells(encoded,cells.length),problems=[];
+ const ranges={...PVS_RANGE,lo:encodeCells(lo),hi:encodeCells(hi)},backLo=decodeCells(ranges.lo,cells.length,255),backHi=decodeCells(ranges.hi,cells.length,255);
  if(visible<known.size/20)problems.push(`only ${visible} of ${known.size} known cells see the atrium`);
+ // And at least a twentieth hidden: a page whose occluders drew nothing (a shader that failed to compile, say) sees the
+ // atrium from everywhere, which no check above can catch.
+ if(hidden<known.size/20)problems.push(`only ${hidden} of ${known.size} known cells are hidden: did the occluders draw?`);
  if(!probes)problems.push('no bench-view eye sees the atrium');
  if(changed)problems.push(changed+' bench-view eyes answer differently from the first page');
  if(contradicted.size)problems.push('cells hidden where bench-view eyes see the atrium: '+[...contradicted].join(', '));
+ if(narrow.size)problems.push('cells reach fewer heights than bench-view eyes in them see: '+[...narrow].join(', '));
  if(back.some((v,i)=>v!==cells[i]))problems.push('the cells do not read back as written');
- console.log('check',{probes,contradicted:contradicted.size,visibleShare:+(visible/Math.max(1,known.size)).toFixed(3)});
+ if(backLo.some((v,i)=>v!==lo[i])||backHi.some((v,i)=>v!==hi[i]))problems.push('the ranges do not read back as written');
+ console.log('check',{probes,contradicted:contradicted.size,narrow:narrow.size,visibleShare:+(visible/Math.max(1,known.size)).toFixed(3)});
  if(problems.length)throw Error('The PVS failed its check, so it was not kept: '+problems.join('; '));
- const data={version:1,made:new Date().toISOString(),source,grid:PVS_GRID,heights:setup.heights,atriumSpan:setup.atriumSpan,localSpan:setup.localSpan,known:known.size,hidden,visible,envelopeUnknown,cells:encoded};
+ const data={version:1,made:new Date().toISOString(),source,grid:PVS_GRID,heights:setup.heights,atriumSpan:setup.atriumSpan,localSpan:setup.localSpan,known:known.size,hidden,visible,envelopeUnknown,cells:encoded,ranges};
  const out=arg('out',prepared?path.join(PVS_BAKED_DIR,source.key+'.json'):'output/perf-walk/atrium-pvs/'+tag+'.json');await fs.mkdir(path.dirname(out),{recursive:true});
  // Written whole, then renamed: a bake stopped part way (a deploy's time limit) leaves no half file under the key.
  await fs.writeFile(out+'.part',JSON.stringify(data));await fs.rename(out+'.part',out);
