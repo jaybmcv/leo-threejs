@@ -15,7 +15,7 @@ let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 // desktop as before: decks -1 to 4 batched and the atrium geometry pack.
 const phoneBatching=(()=>{const query=new URLSearchParams(location.search);if(!preparedPhone)return query.get('deskbatch')==='low'?{}:{merge:true};const mode=query.get('phonebatch');
  return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
-let phoneBands=null,wayfindingSigns=null;
+let phoneBands=null,wayfindingSigns=null,fogCull=null;
 // The atrium geometry pack binds the band pieces the merge hides, so it runs only without the merge; the Detail menu
 // chooses its distant detail, so it shows only then too (the merged bands keep full detail and still draw faster).
 const atriumPack=!preparedPhone&&!phoneBatching.merge;
@@ -77,6 +77,7 @@ import {bakeForWalking,showBands} from '../v2/render-bake.js';
 import {bandOf} from './collision.js';
 import {mergeMeshes} from './merge-by-material.js';
 import {mergeWayfindingSigns} from './sign-array.js';
+import {createFogCull,FOG_CULL_LAYER} from './fog-cull.js';
 import {partitionMesh} from './partitions.js';
 import walkPlan from 'walk-partitions';
 import {railingMesh} from '../v2/railings.js';
@@ -415,6 +416,9 @@ async function buildShip(){
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};sharedNear.set(key,o.userData.near);
  }
  // The wayfinding signs draw from one texture array (sign-array.js).
+ // Parts wholly beyond the indoor fog draw no longer (fog-cull.js); ?fogcull=0 draws them, to compare.
+ // Not with the atrium detail pack, whose source checks include the layers the cull changes.
+ if(!atriumPack&&new URLSearchParams(location.search).get('fogcull')!=='0')fogCull=createFogCull(scene,camera);
  wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);
  isolateStaticWorld(ship,scene);{const hidden=preparedPhone||phoneBatching.merge?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
@@ -737,7 +741,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get landingDoors(){return shutLandingDoors();},get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get landingDoors(){return shutLandingDoors();},get fogCull(){return fogCull;},get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -879,7 +883,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){fogCull?.guard();draw(camera);fogCull?.update(performance.now());if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
@@ -894,7 +898,8 @@ function draw(view){
 let photoUrl=null,photoSource=null,photoNames=[],photoRender=0,photoFilename='';
 function takePhoto(){
  const canvas=renderer.domElement,shown=walker.holder.visible;walker.holder.visible=true;
- booth.aim(canvas.width,canvas.height);booth.camera.updateMatrixWorld();draw(booth.camera);
+ // The fog cull leaves out what is beyond the fog from the walker's eye (fog-cull.js), not from the lens: it draws all.
+ booth.aim(canvas.width,canvas.height);booth.camera.layers.enable(FOG_CULL_LAYER);booth.camera.updateMatrixWorld();draw(booth.camera);
  const copy=document.createElement('canvas');copy.width=canvas.width;copy.height=canvas.height;copy.getContext('2d').drawImage(canvas,0,0);
  photoSource=copy;photoNames=selfieNames();photoFilename=`leo-crown-lounge-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.jpg`;$('photo-names').checked=true;
  walker.holder.visible=shown;draw(camera);
