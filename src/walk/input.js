@@ -8,9 +8,33 @@ import {walkBindings} from './bindings.js';
 const KEYS={forward:['KeyW','ArrowUp'],back:['KeyS','ArrowDown'],left:['KeyA','ArrowLeft'],right:['KeyD','ArrowRight']};
 
 export class WalkInput{
- constructor(surface,{joystick,stick,onAction}={}){
+ constructor(surface,{joystick,stick,lockHint,onAction}={}){
   this.surface=surface;this.down=new Set();this.look={x:0,y:0};this.stickVec={x:0,y:0};this.jumpQueued=false;this.jumpHeld=false;this.runLatched=false;this.zoom=0;
   this.onAction=onAction||(()=>{});this.enabled=true;
+  let drag=null,locked=false,requesting=false,cancelOnArrival=false;
+  this.releasePointer=()=>{if(requesting)cancelOnArrival=true;if(document.pointerLockElement===surface)document.exitPointerLock?.();};
+  const pointerLockChange=()=>{
+   const active=document.pointerLockElement===surface;
+   requesting=false;
+   if(active&&(cancelOnArrival||!this.enabled)){cancelOnArrival=false;document.exitPointerLock?.();return;}
+   if(!active)cancelOnArrival=false;
+   if(active===locked)return;
+   locked=active;
+   if(active)drag=null;
+   if(lockHint)lockHint.hidden=!active;
+  };
+  document.addEventListener('pointerlockchange',pointerLockChange);
+  document.addEventListener('pointerlockerror',()=>{requesting=false;cancelOnArrival=false;});
+  const requestPointer=()=>{
+   if(locked||document.pointerLockElement===surface||requesting||typeof surface.requestPointerLock!=='function')return;
+   requesting=true;
+   try{surface.requestPointerLock()?.catch?.(()=>{requesting=false;cancelOnArrival=false;});}
+   catch{requesting=false;cancelOnArrival=false;}
+  };
+  addEventListener('keydown',e=>{
+   if(e.code!=='Escape'||(document.pointerLockElement!==surface&&!requesting))return;
+   e.preventDefault();e.stopImmediatePropagation();this.releasePointer();
+  },true);
   addEventListener('keydown',e=>{
    if(e.code==='Escape'){this.onAction('escape');return;}
    // The browser's own shortcuts (Ctrl+C, Cmd+N...) are not game keys.
@@ -40,12 +64,12 @@ export class WalkInput{
   addEventListener('keyup',e=>this.down.delete(e.code));
   addEventListener('blur',()=>this.down.clear());
   // Look: drag with any pointer on the scene (or move with the pointer locked).
-  let drag=null;
   surface.addEventListener('pointerdown',e=>{
    if(e.pointerType==='mouse'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&this.bound('Mouse'+e.button)){e.preventDefault();drag=null;return;}
    if(!this.enabled)return;
    if(e.pointerType==='touch'&&joystick&&e.clientX<innerWidth*.45)return;
    drag={id:e.pointerId,x:e.clientX,y:e.clientY};surface.setPointerCapture(e.pointerId);
+   if(e.pointerType==='mouse'&&e.button===0)requestPointer();
   });
   surface.addEventListener('pointermove',e=>{
    if(!this.enabled){drag=null;return;}
@@ -62,6 +86,8 @@ export class WalkInput{
   surface.addEventListener('wheel',e=>{this.zoom+=Math.sign(e.deltaY);e.preventDefault();},{passive:false});
   if(joystick&&stick)this.bindJoystick(joystick,stick);
  }
+ get enabled(){return this._enabled;}
+ set enabled(value){this._enabled=!!value;if(!this._enabled)this.releasePointer?.();}
  bound(code){
   const action=walkBindings.action(code);if(!action)return false;
   if(!this.enabled)this.onAction('sheet',code);

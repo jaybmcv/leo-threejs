@@ -441,7 +441,7 @@ function cull(p,now=performance.now()){
  }
 }
 
-const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),onAction:(a,arg)=>actions[a]?.(arg)});
+const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),lockHint:$('camera-lock-hint'),onAction:(a,arg)=>actions[a]?.(arg)});
 const follow=new FollowCamera(camera,colliders);
 const controller=new Controller(colliders);
 let walker=null;
