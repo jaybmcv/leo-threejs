@@ -1,18 +1,57 @@
 import {layoutVersion as selectedLayout} from './layout-selector.mjs';
 if(selectedLayout===1)(await import('./run-legacy.mjs')).runLegacy("scripts/check-all.mjs",process.argv.slice(2));
 import {v2 as useV2} from './layout-selector.mjs';
-import fsTiming from 'node:fs/promises';
-// Per-check timings (time and peak-free stamps) for speeding up the full run: printed as [check-timing] lines and kept in
-// output/fast-deploy/full-check-timing.json, rewritten after every check so a failed run still has them.
-const timings=[],timingStarted=performance.now(),timingFile='output/fast-deploy/full-check-timing.json';
-async function record(name,t,status){const seconds=(performance.now()-t)/1000;timings.push({name,seconds,status});console.log(`[check-timing] ${name}: ${seconds.toFixed(1)} s (${status})`);
- await fsTiming.mkdir('output/fast-deploy',{recursive:true});await fsTiming.writeFile(timingFile,JSON.stringify({started:new Date(Date.now()-(performance.now()-timingStarted)).toISOString(),elapsedSeconds:(performance.now()-timingStarted)/1000,checks:timings},null,1));}
-async function timed(name,fn){const t=performance.now();try{const r=await fn();await record(name,t,'PASS');return r;}catch(e){await record(name,t,'FAIL');throw e;}}
-if(useV2)await timed('check-walk-performance',()=>import('./check-walk-performance.mjs'));
+import fs from 'node:fs/promises';
+import {runJobs} from './check-scheduler.mjs';
+// Every full check runs as its own process, several at once (scripts/check-scheduler.mjs sets the limits). Importing
+// layout-selector above sets LEO_LAYOUT=2, which every child inherits, and has already made the v2 output folders.
+// Two checks read what another writes, so they wait for it: the ship-log browser check reads the remap table written by
+// check-ship-log-remap-v2, and the v2 check reads the hull, phone, skin-clearance and prepared-walk reports check-plan
+// writes. No check uses a fixed port or browser profile.
+// Per-check timings are printed as [check-timing] lines and kept in output/fast-deploy/full-check-timing.json, rewritten
+// after every check so a failed run still has them; the next run starts the longest checks first from them.
+const timingFile='output/fast-deploy/full-check-timing.json',timings=[],started=performance.now();
+// A missing or damaged timing file only loses the longest-first order.
+const previous={};
+try{for(const c of JSON.parse(await fs.readFile(timingFile,'utf8')).checks)if(typeof c?.name==='string'&&Number.isFinite(c.seconds))previous[c.name]=c.seconds;}catch{}
+let writing=Promise.resolve();
+const record=(name,seconds,status)=>{timings.push({name,seconds,status});console.log(`[check-timing] ${name}: ${seconds.toFixed(1)} s (${status})`);
+ return writing=writing.then(async()=>{await fs.mkdir('output/fast-deploy',{recursive:true});const tmp=timingFile+'.'+process.pid+'.tmp';await fs.writeFile(tmp,JSON.stringify({started:new Date(Date.now()-(performance.now()-started)).toISOString(),elapsedSeconds:(performance.now()-started)/1000,parallel:true,checks:timings},null,1));await fs.rename(tmp,timingFile);}).catch(e=>console.log('[check-timing] could not save the timing file: '+e.message));};
+
 // Retired by Jay, 2026-11-02: the v1 rollback proofs, switchover hash pins, frozen layout inputs, ownership
 // signatures, startup and draw-call baselines, and the download and phone-hull limits. The scripts remain to run by hand.
-if(useV2){await timed('check-otherside',()=>import('./check-otherside.mjs'));await timed('launch-b-normalization-fixture',()=>import('./launch-b-normalization-fixture.mjs'));await timed('check-visual-preview-v2',()=>import('./check-visual-preview-v2.mjs'));await timed('check-retirement-transport-v2',()=>import('./check-retirement-transport-v2.mjs'));await timed('check-budgets-v2',()=>import('./check-budgets-v2.mjs'));await timed('ensure v2 output',async()=>(await import('./v2-output.mjs')).ensureV2Output());await timed('check-clean-output-v2',()=>import('./check-clean-output-v2.mjs'));await timed('phase5-hatch-negatives',()=>import('./phase5-hatch-negatives.mjs'));await timed('phase5-inner-fixture',()=>import('./phase5-inner-fixture.mjs'));await timed('phase5-phone-policy-fixture',()=>import('./phase5-phone-policy-fixture.mjs'));await timed('phase5-window-coverage-fixture',()=>import('./phase5-window-coverage-fixture.mjs'));await timed('check-exterior-v2',()=>import('./check-exterior-v2.mjs'));await timed('check-phase4-prototypes',()=>import('./check-phase4-prototypes.mjs'));await timed('check-phase4-community',()=>import('./check-phase4-community.mjs'));await timed('phase4-room-floor-fixture',()=>import('./phase4-room-floor-fixture.mjs'));await timed('phase4-display-floor-fixture',()=>import('./phase4-display-floor-fixture.mjs'));await timed('check-kitten-supports-v2',()=>import('./check-kitten-supports-v2.mjs'));await timed('check-cat-tree',()=>import('./check-cat-tree.mjs'));await timed('check-cat-tree-landings',()=>import('./check-cat-tree-landings.mjs'));await timed('check-nose-park',()=>import('./check-nose-park.mjs'));await timed('check-waterfall-fit-v2',()=>import('./check-waterfall-fit-v2.mjs'));await timed('check-main-features-v2',()=>import('./check-main-features-v2.mjs'));await timed('check-clubhouse-access-v2',()=>import('./check-clubhouse-access-v2.mjs'));await timed('check-ship-log-remap-v2',()=>import('./check-ship-log-remap-v2.mjs'));await timed('check-ship-log-remap-browser-v2',()=>import('./check-ship-log-remap-browser-v2.mjs'));await timed('check-viewer-suite-v2',()=>import('./check-viewer-suite-v2.mjs'));await timed('check-release-v2',()=>import('./check-release-v2.mjs'));await timed('check-phase6-v2',()=>import('./check-phase6-v2.mjs'));await timed('check-freight-airlock-v2',()=>import('./check-freight-airlock-v2.mjs'));await timed('check-v2-round2',()=>import('./check-v2-round2.mjs'));await timed('check-v2-signs',()=>import('./check-v2-signs.mjs'));await timed('check-sign-render-v2',()=>import('./check-sign-render-v2.mjs'));await timed('check-lobby-tile-v2',()=>import('./check-lobby-tile-v2.mjs'));await timed('check-goto-v2',()=>import('./check-goto-v2.mjs'));await timed('check-halloween-v2',()=>import('./check-halloween-v2.mjs'));await timed('check-crew-gallery-v2',()=>import('./check-crew-gallery-v2.mjs'));await timed('check-build-cache-v2',()=>import('./check-build-cache-v2.mjs'));await timed('check-authoring-cache-v2',()=>import('./check-authoring-cache-v2.mjs'));await timed('check-authoring-skin-proof-v2',()=>import('./check-authoring-skin-proof-v2.mjs'));await timed('check-privacy-classes-v2',()=>import('./check-privacy-classes-v2.mjs'));await timed('check-streamed-metadata-v2',()=>import('./check-streamed-metadata-v2.mjs'));await timed('check-public-bindings-v2',()=>import('./check-public-bindings-v2.mjs'));await timed('check-cache-transport-v2',()=>import('./check-cache-transport-v2.mjs'));await timed('check-export-metadata-v2',()=>import('./check-export-metadata-v2.mjs'));await timed('check-atrium-void-fixtures-v2',()=>import('./check-atrium-void-fixtures-v2.mjs'));await timed('check-plan',()=>import('./check-plan.mjs'));const {runV2}=await import('./run-v2.mjs');await timed('v2 launch-b-entry-glass-fixture',()=>runV2('launch-b-entry-glass-fixture'));await timed('v2 check',()=>runV2('check'));}
-import {spawnSync} from 'node:child_process';
+// heavy: loads the full ship or the prepared world; browser: drives Chrome.
+const HEAVY=new Set(['check-exterior-v2','check-phase4-prototypes','check-phase6-v2','check-goto-v2','check-plan']);
+const BROWSER=new Set(['check-ship-log-remap-browser-v2','check-viewer-suite-v2','check-release-v2']);
+const AFTER={'check-ship-log-remap-browser-v2':'check-ship-log-remap-v2','v2 check':'check-plan'};
+const V2_CHECKS=['check-walk-performance','check-otherside','launch-b-normalization-fixture','check-visual-preview-v2','check-retirement-transport-v2',
+ 'check-budgets-v2','check-clean-output-v2','phase5-hatch-negatives','phase5-inner-fixture','phase5-phone-policy-fixture',
+ 'phase5-window-coverage-fixture','check-exterior-v2','check-phase4-prototypes','check-phase4-community','phase4-room-floor-fixture',
+ 'phase4-display-floor-fixture','check-kitten-supports-v2','check-cat-tree','check-cat-tree-landings','check-nose-park','check-waterfall-fit-v2',
+ 'check-main-features-v2','check-clubhouse-access-v2','check-ship-log-remap-v2','check-ship-log-remap-browser-v2','check-viewer-suite-v2',
+ 'check-release-v2','check-phase6-v2','check-freight-airlock-v2','check-v2-round2','check-v2-signs','check-sign-render-v2','check-lobby-tile-v2',
+ 'check-goto-v2','check-halloween-v2','check-crew-gallery-v2','check-build-cache-v2','check-authoring-cache-v2','check-authoring-skin-proof-v2',
+ 'check-privacy-classes-v2','check-streamed-metadata-v2','check-public-bindings-v2','check-cache-transport-v2','check-export-metadata-v2',
+ 'check-atrium-void-fixtures-v2','check-plan'];
 // The games' and features' own rules: quick, and independent of the ship's geometry. (The v1 ship's geometry checks
 // were removed with the v1 rollback, Jay 2026-11-02.)
-for(const script of ['check-hub','check-backdrop','check-invasion','check-emergency-drill','check-paws-off','check-giveaway','check-pool','check-ship-log','check-lullaby','check-maze','check-pinball','check-treasure','check-mudwater']){const t=performance.now(),p=spawnSync(process.execPath,['scripts/'+script+'.mjs'],{stdio:'inherit'});await record(script,t,p.status===0?'PASS':'FAIL');if(p.status!==0)process.exit(p.status||1);}
+const GAMES=['check-hub','check-backdrop','check-invasion','check-emergency-drill','check-paws-off','check-giveaway','check-pool','check-ship-log',
+ 'check-lullaby','check-maze','check-pinball','check-treasure','check-mudwater'];
+const kind=name=>HEAVY.has(name)?'heavy':BROWSER.has(name)?'browser':'light';
+const jobs=[
+ ...(useV2?[
+  // These ran inside check-all's own process, which `npm run check` gives an 11000 MB heap; each keeps that cap.
+  ...V2_CHECKS.map(name=>({name,args:['--max-old-space-size=11000','scripts/'+name+'.mjs']})),
+  // run-v2 bundles the task and runs it with its own 14000 MB heap.
+  {name:'v2 launch-b-entry-glass-fixture',args:['scripts/run-v2.mjs','launch-b-entry-glass-fixture']},
+  {name:'v2 check',args:['scripts/run-v2.mjs','check'],kind:'heavy'},
+ ]:[]),
+ ...GAMES.map(name=>({name,args:['scripts/'+name+'.mjs']})),
+].map(j=>({kind:kind(j.name),...j,after:AFTER[j.name]}));
+
+const {results,minFreeGB}=await runJobs(jobs,{previous,record});
+await writing;
+const failed=[...results].filter(([,r])=>r.code!==0).map(([name,r])=>name+(r.code===-2?' (not run: what it needs failed)':''));
+console.log(`[timing] full checks: ${results.size} checks in ${((performance.now()-started)/1000).toFixed(1)} s, ${failed.length} failed; lowest free memory ${minFreeGB.toFixed(1)} GB`);
+if(failed.length){console.log('Failed: '+failed.join(', '));process.exit(1);}
+process.exit(0);

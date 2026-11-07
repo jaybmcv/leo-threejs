@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {createHash} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {build} from 'esbuild';
 import {spawnSync} from 'node:child_process';
 import {createRequire} from 'node:module';
@@ -41,13 +41,16 @@ export async function producerGraph(entries){
  if(process.platform==='win32'){
   // In restricted Windows sessions inherited handles work even when anonymous
   // service pipes do not. No plugins are needed for this dependency-only graph.
-  const dir='output/fast-deploy/dependencies';await fs.mkdir(dir,{recursive:true});
+  // A folder of its own per trace: checks run side by side, and several trace the graph as they start.
+  const dir='output/fast-deploy/dependencies-'+randomUUID();await fs.mkdir(dir,{recursive:true});
+  try{
   const child=spawnSync(require.resolve('@esbuild/win32-x64/esbuild.exe'),[...entries,'--bundle',
    '--outdir='+dir,'--platform=node','--format=esm','--packages=external',
    '--external:v2-layout','--external:walk-partitions','--external:walk-changes',
    '--metafile='+dir+'/inputs.json','--log-level=error'],{stdio:'inherit',windowsHide:true});
   if(child.status!==0)throw child.error||Error('Geometry dependency trace failed');
   result={metafile:JSON.parse(await fs.readFile(dir+'/inputs.json','utf8'))};
+  }finally{await fs.rm(dir,{recursive:true,force:true});}
  }else result=await build({entryPoints:entries,bundle:true,write:false,outdir:'unused',
    platform:'node',format:'esm',packages:'external',external:['v2-layout','walk-partitions','walk-changes'],metafile:true,logLevel:'silent'});
  const ours=f=>f.startsWith('src/')||f.startsWith('scripts/');
