@@ -310,24 +310,31 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
    scene.environmentIntensity=f(base.env,base.env*MOOD.env);hemi.color.lerpColors(base.sky,skyC,t);hemi.groundColor.lerpColors(base.ground,groundC,t);};
  }
  // Each walker has its own trail. The nearest remote walkers in the room share a small fixed budget.
- const sources=Array.from({length:1+REMOTE_TRAILS},()=>({id:null,head:0,last:new T.Vector3(1e9,0,0)}));
+ const sources=Array.from({length:1+REMOTE_TRAILS},()=>({id:null,head:0,last:new T.Vector3(1e9,0,0),seated:false,resumeAt:null}));
  const onFloor=p=>inside.containsPoint(p)&&Math.abs(p.y-origin.y)<.6;
+ // Leave a sitter's last marks to fade, and wait for a step after standing.
+ const trailAfterMove=(source,p,seated)=>{
+  if(seated){source.seated=true;source.resumeAt=null;return false;}
+  if(source.seated){source.seated=false;source.resumeAt={x:p.x,z:p.z};}
+  if(source.resumeAt){if(Math.hypot(p.x-source.resumeAt.x,p.z-source.resumeAt.z)>.18)source.resumeAt=null;else return false;}
+  return true;
+ };
  const mark=(source,p,index)=>{
   if(Math.hypot(p.x-source.last.x,p.y-source.last.y,p.z-source.last.z)>.18){source.head=(source.head+1)%TRAIL;source.last.set(p.x,p.y,p.z);}
   trail[index*TRAIL+source.head].set(p.x,p.y,p.z,1);
  };
  return {
   group,
-  update(dt,eye,p,remotes=[]){
+  update(dt,eye,p,remotes=[],seated=false){
    if(!still)time.value+=dt;
    for(const t of trail)t.w=Math.max(0,t.w-dt/1.5);
-   if(onFloor(p))mark(sources[0],p,0);
+   if(trailAfterMove(sources[0],p,seated)&&onFloor(p))mark(sources[0],p,0);
    const near=remotes.filter(r=>onFloor(r.cur)).sort((a,b)=>Math.hypot(a.cur.x-eye.x,a.cur.z-eye.z)-Math.hypot(b.cur.x-eye.x,b.cur.z-eye.z)).slice(0,REMOTE_TRAILS);
    for(let i=1;i<sources.length;i++)if(sources[i].id&&!near.some(r=>r.id===sources[i].id))sources[i].id=null;
    for(const r of near){
     let i=sources.findIndex((s,n)=>n>0&&s.id===r.id);
-    if(i<0){i=sources.findIndex((s,n)=>n>0&&!s.id);const s=sources[i];s.id=r.id;s.head=0;s.last.set(1e9,0,0);for(let j=0;j<TRAIL;j++)trail[i*TRAIL+j].w=0;}
-    mark(sources[i],r.cur,i);
+    if(i<0){i=sources.findIndex((s,n)=>n>0&&!s.id);const s=sources[i];s.id=r.id;s.head=0;s.last.set(1e9,0,0);s.seated=false;s.resumeAt=null;for(let j=0;j<TRAIL;j++)trail[i*TRAIL+j].w=0;}
+    if(trailAfterMove(sources[i],r.cur,r.tgt?.rest==='sit'))mark(sources[i],r.cur,i);
    }
    if(!setMood)return;
    mood+=((inside.containsPoint(eye)?1:0)-mood)*(1-Math.exp(-4*dt));
