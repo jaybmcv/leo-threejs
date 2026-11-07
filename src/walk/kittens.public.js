@@ -217,8 +217,8 @@ export function createKittens(ship,kit){
  carton(10-3.2,9+2.6,-.4);track(10+1.6,9-2.7);kitten('pounce',4,10+.5,9-2.9,Math.PI/2);
  mouse(10-3,9-3,2.6);ball(M.red,.07,10+2.9,9-2.4);
 
- // Three runs on each side wall, behind the six habitats and away from the entrance and service counter.
- for(const side of [-1,1])for(const x of [-16,-3,10])shelves(x,side);
+ // Keep the -z entry clear by moving its shelf run to the far end of that wall.
+ for(const side of [-1,1])for(const x of [-16,-3,10])shelves(side===-1&&x===-3?20.5:x,side);
 
  for(const [m,list] of parts){const o=new T.Mesh(replayMerged("src/walk/kittens.js",nativeMergeGeometries,list),m);o.name=m.name;o.castShadow=true;o.receiveShadow=true;group.add(o);}
  recordKittenSupports(ship,solid);return {group,solid};
