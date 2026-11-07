@@ -143,6 +143,9 @@ const AFTER={'check-room-guard-support-v2.mjs':'run-v2.mjs envelope-check','chec
 const gateName=args=>args.map(x=>x.replace('scripts/','')).join(' ');
 const launchB=performance.now();await import('./check-launch-b-plan.mjs');console.log('[check-timing] plan gate check-launch-b-plan: '+((performance.now()-launchB)/1000).toFixed(1)+' s (PASS)');
 const planJobs=GATES.map(args=>{const name=gateName(args);return {name,args:['--max-old-space-size=11000',...args],kind:HEAVY.has(name)?'heavy':'light',after:AFTER[name]};});
-const {results}=await runJobs(planJobs,{record:async(name,seconds,status)=>console.log('[check-timing] plan gate '+name+': '+seconds.toFixed(1)+' s ('+status+')')});
+// One heavy gate at a time: envelope-check (14 GB) beside skin clearance starved the PC of memory on ede8d19 (0.2 GB free,
+// envelope-check 1022 s instead of about 740, skin clearance 913 s) and made check-plan slower than running the gates in turn.
+// The light gates still run beside the heavy one.
+const {results}=await runJobs(planJobs,{limits:{heavy:1},record:async(name,seconds,status)=>console.log('[check-timing] plan gate '+name+': '+seconds.toFixed(1)+' s ('+status+')')});
 const failedGates=[...results].filter(([,r])=>r.code!==0).map(([name])=>name);
 if(failedGates.length)throw Error('Converted hull gate failed: '+failedGates.join(', '));}
