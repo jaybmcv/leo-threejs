@@ -11,10 +11,12 @@ import {runJobs} from './check-scheduler.mjs';
 // Per-check timings are printed as [check-timing] lines and kept in output/fast-deploy/full-check-timing.json, rewritten
 // after every check so a failed run still has them; the next run starts the longest checks first from them.
 const timingFile='output/fast-deploy/full-check-timing.json',timings=[],started=performance.now();
-const previous=Object.fromEntries((await fs.readFile(timingFile,'utf8').then(JSON.parse,()=>({checks:[]}))).checks?.map(c=>[c.name,c.seconds])??[]);
+// A missing or damaged timing file only loses the longest-first order.
+const previous={};
+try{for(const c of JSON.parse(await fs.readFile(timingFile,'utf8')).checks)if(typeof c?.name==='string'&&Number.isFinite(c.seconds))previous[c.name]=c.seconds;}catch{}
 let writing=Promise.resolve();
 const record=(name,seconds,status)=>{timings.push({name,seconds,status});console.log(`[check-timing] ${name}: ${seconds.toFixed(1)} s (${status})`);
- return writing=writing.then(async()=>{await fs.mkdir('output/fast-deploy',{recursive:true});await fs.writeFile(timingFile,JSON.stringify({started:new Date(Date.now()-(performance.now()-started)).toISOString(),elapsedSeconds:(performance.now()-started)/1000,parallel:true,checks:timings},null,1));});};
+ return writing=writing.then(async()=>{await fs.mkdir('output/fast-deploy',{recursive:true});const tmp=timingFile+'.'+process.pid+'.tmp';await fs.writeFile(tmp,JSON.stringify({started:new Date(Date.now()-(performance.now()-started)).toISOString(),elapsedSeconds:(performance.now()-started)/1000,parallel:true,checks:timings},null,1));await fs.rename(tmp,timingFile);}).catch(e=>console.log('[check-timing] could not save the timing file: '+e.message));};
 
 // Retired by Jay, 2026-11-02: the v1 rollback proofs, switchover hash pins, frozen layout inputs, ownership
 // signatures, startup and draw-call baselines, and the download and phone-hull limits. The scripts remain to run by hand.
