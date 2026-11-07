@@ -399,7 +399,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 129,
-      "signature": "f508946dc4cf5937f50f23555c6c9413c681e769ecf9383f0fa867afb78eaf76"
+      "signature": "ec550e2b39bee3edfc785b30a74fd6e137e2abfd303fb65ee8a994c7106b8dbd"
     },
     {
       "source": "src/interior-polish.js",
@@ -864,7 +864,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 34,
-      "signature": "0c2ed8b6328a0c6fa9c81e373b9a18f162837d92e9321d63f18c93dbcf932a37"
+      "signature": "e7f1d8da3551e2fea2e101cf08347c7b41b8a96ec4c4411836b0d1edea44056e"
     },
     {
       "source": "src/transit.js",
@@ -903,7 +903,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 34,
-      "signature": "a123ecf32e9459f26b67a54827c2201ab3cb6650ce0d63720d451ea7a26cd908"
+      "signature": "51b8886886f7fa2e67812a80177807b9953d8222589f937c750ce3bf6060719b"
     },
     {
       "source": "src/upper-aft.js",
@@ -4219,12 +4219,16 @@
       "via": "roomObject",
       "fixed": false,
       "features": [
-        "Mission_timer"
+        "Mission_timer",
+        "Mission_timer_engine",
+        "Mission_engine_valve",
+        "Mission_engine_feeds",
+        "Mission_engine_flow"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 14,
-      "signature": "19f7ac1bfc20e2553a1b5afaaa46a1fdda486e7c6e040e2db53260316e3b6507"
+      "placements": 42,
+      "signature": "3dcbb126f4a67180d221f5636afa3761eeb9ab4d0462b4a01a3f5604efa67033"
     },
     {
       "source": "src/walk/mudwater.authoring.js",

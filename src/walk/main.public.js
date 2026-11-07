@@ -68,7 +68,7 @@ import {createMars} from '../mars.js';
 import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
 const cabinPlacements=preparedPlacements;
 import {Colliders,BODY} from './collision.js';
-import {STATIC_LIFT_PARTS,LIFTS} from './lifts.js';
+import {STATIC_LIFT_PARTS,LIFTS,shutLandingDoors} from './lifts.js';
 import {Controller} from './controller.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
@@ -441,12 +441,15 @@ const VIEW_RAYS=[];for(const x of [-.96,-.5,0,.5,.96])for(const y of [-.96,-.5,0
 // The span only widens with a pass's answers; only a pass that ends with the camera where it began (within 5 cm and
 // about a degree) replaces it, and may narrow it. After a pass the camera moved during, the next starts at once. A
 // desktop casts every ray in one frame, as before.
+// A lift resting with its landing doors open, within 40 m of the eye and 6 m of its height: the atrium PVS counts those
+// doors as shut (scripts/walk-atrium-pvs.page.js), so the atrium sight asks its rays there.
+const openLanding=eye=>!!lifts?.lifts.some(l=>{const s=l.stops[l.at];return l.phase!=='moving'&&l.doors>0&&Math.abs(eye.y-s.base.y)<6&&Math.hypot(eye.x-s.base.x,eye.z-s.base.z)<40;});
 const SPAN_SLICES=preparedPhone?5:1,spanEye=new T.PerspectiveCamera();let spanPass=null;
 function span(p,now){
  // Sight through an adjoining doorway keeps the whole atrium, even outside its footprint.
  setAtriumView(p);
  const inside=inOpenAtrium();
- setAtriumSight(ATRIUM_VIEW.fullHeight&&(inside||(atriumSight??=createAtriumSight(colliders,{pvs:()=>atriumPvs})).update(camera,p,now)));
+ setAtriumSight(ATRIUM_VIEW.fullHeight&&(inside||(atriumSight??=createAtriumSight(colliders,{pvs:()=>atriumPvs,unbaked:openLanding})).update(camera,p,now)),inside?null:atriumSight?.stats.range);
  const atriumBand=atriumViewSpan();if(inside&&atriumBand){atriumSpanActive=true;return viewSpan=atriumBand;}
  // Returning indoors must recompute even at the same pose as the last indoor query.
  if(atriumSpanActive){atriumSpanActive=false;lastSpan=-Infinity;spanPass=null;spanChanged(camera,p,NaN,NaN,colliders);}
@@ -482,7 +485,7 @@ function cull(p,now=performance.now()){
  }
 }
 
-const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),onAction:(a,arg)=>actions[a]?.(arg)});
+const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),lockHint:$('camera-lock-hint'),onAction:(a,arg)=>actions[a]?.(arg)});
 const follow=new FollowCamera(camera,colliders);
 const controller=new Controller(colliders);
 let walker=null;
@@ -738,7 +741,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get fogCull(){return fogCull;},get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get landingDoors(){return shutLandingDoors();},get fogCull(){return fogCull;},get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -856,7 +859,7 @@ renderer.setAnimationLoop(()=>{
  halloween?.update(dt,camera.getWorldPosition(eye),ambience.on);
  hexFloor?.update(dt,camera.getWorldPosition(eye),p,heading);
  leverPanel?.update(dt,p);
- gaming?.update(dt,camera.getWorldPosition(eye),p,remotes?[...remotes.remotes.values()]:[]);
+ gaming?.update(dt,camera.getWorldPosition(eye),p,remotes?[...remotes.remotes.values()]:[],!!(resting&&!resting.lie&&!resting.stand));
  arrivalMood?.apply();
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on,camera);

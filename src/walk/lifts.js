@@ -39,3 +39,16 @@ export function carTriangles(lift,doors=[lift.door]){
  for(const [a,s] of sides)if(a==='x')box(s*w/2-(s>0?t:0),s*w/2+(s<0?t:0),0,h,-d/2,d/2);else box(-w/2,w/2,0,h,s*d/2-(s>0?t:0),s*d/2+(s<0?t:0));
  return out;
 }
+
+// The shut landing doors, two leaves a stop, as lift-ride.js lays them at open=0 (LEAF_T thick, DOOR_H tall, each half the
+// doorway wide and a quarter of it out from the middle, 0.14 m out from the car's face): boxes {min,max} in world space,
+// for the atrium PVS bake, which counts landing doors as shut and has no walk to ask (scripts/walk-atrium-pvs.page.js).
+export function shutLandingDoors({thick=.08,high=2.75}={}){
+ const boxes=[];
+ for(const {car:c,door,stops} of LIFTS)for(const stop of stops){
+  const d=stop.door||door,z=d.axis==='z',half=(z?c.depth:c.width)/2+.14,bx=c.x+(z?0:d.sign*half),bz=c.z+(z?d.sign*half:0);
+  for(const s of [-1,1]){const x=bx+(z?s*d.width/4:0),zz=bz+(z?0:s*d.width/4),hx=z?d.width/4:thick/2,hz=z?thick/2:d.width/4;
+   boxes.push({min:[x-hx,stop.y,zz-hz],max:[x+hx,stop.y+high,zz+hz]});}
+ }
+ return boxes;
+}

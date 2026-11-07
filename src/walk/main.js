@@ -441,7 +441,7 @@ function cull(p,now=performance.now()){
  }
 }
 
-const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),onAction:(a,arg)=>actions[a]?.(arg)});
+const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),lockHint:$('camera-lock-hint'),onAction:(a,arg)=>actions[a]?.(arg)});
 const follow=new FollowCamera(camera,colliders);
 const controller=new Controller(colliders);
 let walker=null;
@@ -805,7 +805,7 @@ renderer.setAnimationLoop(()=>{
  halloween?.update(dt,camera.getWorldPosition(eye),ambience.on);
  hexFloor?.update(dt,camera.getWorldPosition(eye),p,heading);
  leverPanel?.update(dt,p);
- gaming?.update(dt,camera.getWorldPosition(eye),p,remotes?[...remotes.remotes.values()]:[]);
+ gaming?.update(dt,camera.getWorldPosition(eye),p,remotes?[...remotes.remotes.values()]:[],!!(resting&&!resting.lie&&!resting.stand));
  arrivalMood?.apply();
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on,camera);

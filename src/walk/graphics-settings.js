@@ -12,7 +12,7 @@ const choices=[
 // other sheets. The caller owns pausing/clearing WalkInput while the menu is open.
 export function mountGraphicsSettings({onOpenChange=()=>{}}={}){
  if(typeof document==='undefined'||globalThis.__leoPreparedBuild)return null;
- const mount=document.querySelector('#tools-extra')||document.querySelector('.tools');
+ const mount=document.querySelector('#settings-menu')||document.querySelector('#tools-extra')||document.querySelector('.tools');
  if(!mount||document.getElementById('graphics-settings'))return null;
  const el=(tag,props={})=>Object.assign(document.createElement(tag),props);
  const style=el('style',{textContent:`
@@ -59,8 +59,7 @@ export function mountGraphicsSettings({onOpenChange=()=>{}}={}){
  const actions=el('div',{className:'graphics-actions'}),done=el('button',{type:'button',textContent:'Done'});
  actions.append(done);dialog.append(title,description,fieldset,autoStatus,note,actions);
  document.head.append(style);document.body.append(dialog);mount.append(button);
- const more=document.getElementById('tools-more'),previousMoreLabel=more?.getAttribute('aria-label');
- if(more)more.setAttribute('aria-label','More buttons: view, sound, resolution, graphics detail');
+ const more=document.getElementById('tools-more');
  let opened=false,returnFocus=null,destroyed=false;
  const refresh=()=>{
   const current=getAtriumQualitySelection(),effective=getAtriumQuality();for(const [value,radio]of radios)radio.checked=value===current;
@@ -96,8 +95,5 @@ export function mountGraphicsSettings({onOpenChange=()=>{}}={}){
   if(destroyed)return;close();destroyed=true;unsubscribe();
   window.removeEventListener('keydown',keyboard,true);window.removeEventListener('keyup',keyboard,true);
   dialog.remove();button.remove();style.remove();
-  if(more&&more.getAttribute('aria-label')==='More buttons: view, sound, resolution, graphics detail'){
-   if(previousMoreLabel===null)more.removeAttribute('aria-label');else more.setAttribute('aria-label',previousMoreLabel);
-  }
  }};
 }
