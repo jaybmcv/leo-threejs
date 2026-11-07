@@ -7,6 +7,7 @@ import {LOUNGE} from '../hydro-nip-lounge.js';
 import {createLoungeSky} from './lounge-sky.js';
 import {createLoungeMural} from './lounge-mural.js';
 import {createLoungeAquarium,AQUARIUM} from './lounge-aquarium.js';
+import {HEADER} from './commons-hall.js';
 import {bandOf} from './collision.js';
 
 // The Hydro-Nip Lounge on foot (HYDRO_NIP_LOUNGE.md, phases 2-3; the room itself is src/hydro-nip-lounge.js):
@@ -19,7 +20,7 @@ import {bandOf} from './collision.js';
 // - the room's mood (from tester feedback): its ceiling is clear glass open to the stars and a huge full moon
 //   (lounge-sky.js), and while the camera is in the commons the walk's lights (shared by the whole ship) ease down and warm, with a violet bounce from below, and the
 //   neon and its halos burn brighter;
-// - the code-generated synthwave sunset on the aft side wall, spanning Decks 17-19 (lounge-mural.js);
+// - the synthwave sunset over wireframe mountains on its back wall, running on along the left wall (lounge-mural.js);
 // - the aquarium filling its front wall, three storeys of glowing reef and fish, with the jaguar's throat running through
 //   it as a glass tunnel (lounge-aquarium.js).
 // Made after the colliders and rest spots and before the walk merges the ship for drawing: the doors and hammocks
@@ -102,8 +103,8 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
 
  // The mood. The commons' ceiling panels (Circadian_light) go, and a glass roof open to space goes in under the ceiling
  // (lounge-sky.js), drawn with the floor's band so it shows from inside the dome too, where the ceiling's band is culled.
- // The mural fills the aft side wall across Decks 17-19, clear of the upper gallery doors and aquarium.
- const mural=createLoungeMural(frame);
+ // The mural: the left wall stands only above Deck 17's opened hall (commons-hall.js), so it covers that header.
+ const mural=createLoungeMural(frame,{left:HEADER});
  if(mural){mural.group.userData={band:bandOf(toWorld(0,mural.low,0).y),top:bandOf(toWorld(0,mural.top,0).y)};}
  // The aquarium: its glass solid everywhere, its tank drawn in the page (null in Node).
  const aquarium=createLoungeAquarium(ship,frame,colliders);
