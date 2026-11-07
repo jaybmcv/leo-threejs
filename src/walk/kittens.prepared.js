@@ -64,10 +64,12 @@ export function createKittens(ship,kit){
   yarn:mat('yarn',0xff6fb0,{roughness:1}),yarn2:mat('yarn_lime',0xb6e05a,{roughness:1}),card:mat('cardboard',0xb88a55,{roughness:.9}),
   carpet3:mat('carpet_teal',0x8fc4bf,{roughness:1}),track:mat('ball_track',0xf2efe6,{roughness:.5}),mouse:mat('toy_mouse',0x9a9aa2,{roughness:.9}),feather:mat('feather',0x5ad1c9,{roughness:.8}),
   wood:mat('shelf_wood',0xc48b52,{roughness:.65}),bracket:mat('shelf_bracket',0x54565d,{metalness:.5,roughness:.45})};
- const parts=new Map();
- const piece=(m,g)=>{(parts.get(m)||parts.set(m,[]).get(m)).push(g.index?g.toNonIndexed():g);};
+ const parts=new Map(),movedShelfParts=new Set(),SHELF_OFFSET=23.5;
+ const piece=(m,g,move=false)=>{g=g.index?g.toNonIndexed():g;(parts.get(m)||parts.set(m,[]).get(m)).push(g);if(move)movedShelfParts.add(g);};
+ // Shift the selected shelf vertices after merging so the prepared template key stays unchanged.
+ const moveShelfVertices=(g,list)=>{const p=g.attributes.position;let offset=0,moved=false;for(const part of list){const count=part.attributes.position.count;if(movedShelfParts.has(part)){moved=true;for(let i=0;i<count;i++)p.array[(offset+i)*p.itemSize]+=SHELF_OFFSET;}offset+=count;}if(moved){p.needsUpdate=true;g.computeBoundingBox();g.computeBoundingSphere();}return g;};
  const at=(g,x,y,z,ry=0)=>g.rotateY(ry).translate(x,y,z);
- const block=([w,h,d],[x,y,z],ry=0)=>{const o=new T.Mesh(new ReplayGeometry("src/walk/kittens.js:0",T.BoxGeometry,w,h,d));o.position.set(x,y,z);o.rotation.y=ry;solid.add(o);};
+ const block=([w,h,d],[x,y,z],ry=0,move=false)=>{const o=new T.Mesh(new ReplayGeometry("src/walk/kittens.js:0",T.BoxGeometry,w,h,d));o.position.set(x+(move?SHELF_OFFSET:0),y,z);o.rotation.y=ry;solid.add(o);};
  const ball=(m,r,x,z)=>piece(m,new ReplayGeometry("src/walk/kittens.js:1",T.SphereGeometry,r,16,10).translate(x,FLOOR+r,z));
 
  // A climbing tree: a carpeted base and den box, three sisal posts and three platforms stepping up to 1.4 m.
@@ -153,17 +155,17 @@ export function createKittens(ship,kit){
 
  // Five wall-mounted steps rise and fall in 0.35 m increments. Their 1.2 m depth fits the walker's whole footprint;
  // the highest carpet is at 1.085 m, leaving a standing 2 m visitor clear of the unchanged 3.3 m ceiling.
- function shelves(x,side){
+ function shelves(x,side,move=false){
   const z=side*16.24,pads=[M.carpet2,M.carpet,M.carpet3,M.carpet,M.carpet2];
   for(let i=0;i<5;i++){
    const px=x+(i-2)*1.6,top=FLOOR+.35*(3-Math.abs(i-2));
-   piece(M.wood,new ReplayGeometry("src/walk/kittens.js:36",T.BoxGeometry,1.8,.08,1.2).translate(px,top-.065,z));
-   piece(pads[i],new ReplayGeometry("src/walk/kittens.js:37",T.BoxGeometry,1.76,.025,1.16).translate(px,top-.0125,z));
+   piece(M.wood,new ReplayGeometry("src/walk/kittens.js:36",T.BoxGeometry,1.8,.08,1.2).translate(px,top-.065,z),move);
+   piece(pads[i],new ReplayGeometry("src/walk/kittens.js:37",T.BoxGeometry,1.76,.025,1.16).translate(px,top-.0125,z),move);
    for(const dx of [-.6,.6]){
-    piece(M.bracket,new ReplayGeometry("src/walk/kittens.js:38",T.BoxGeometry,.08,.28,.04).translate(px+dx,top-.22,side*16.82));
-    piece(M.bracket,new ReplayGeometry("src/walk/kittens.js:39",T.BoxGeometry,.08,.04,.95).translate(px+dx,top-.125,side*16.345));
+    piece(M.bracket,new ReplayGeometry("src/walk/kittens.js:38",T.BoxGeometry,.08,.28,.04).translate(px+dx,top-.22,side*16.82),move);
+    piece(M.bracket,new ReplayGeometry("src/walk/kittens.js:39",T.BoxGeometry,.08,.04,.95).translate(px+dx,top-.125,side*16.345),move);
    }
-   block([1.8,.105,1.2],[px,top-.0525,z]);
+   block([1.8,.105,1.2],[px,top-.0525,z],0,move);
    solid.children.at(-1).name='Kitten_wall_shelf';
   }
  }
@@ -218,8 +220,8 @@ export function createKittens(ship,kit){
  mouse(10-3,9-3,2.6);ball(M.red,.07,10+2.9,9-2.4);
 
  // Keep the -z entry clear by moving its shelf run to the far end of that wall.
- for(const side of [-1,1])for(const x of [-16,-3,10])shelves(side===-1&&x===-3?20.5:x,side);
+ for(const side of [-1,1])for(const x of [-16,-3,10])shelves(x,side,side===-1&&x===-3);
 
- for(const [m,list] of parts){const o=new T.Mesh(replayMerged("src/walk/kittens.js",nativeMergeGeometries,list),m);o.name=m.name;o.castShadow=true;o.receiveShadow=true;group.add(o);}
+ for(const [m,list] of parts){const o=new T.Mesh(moveShelfVertices(replayMerged("src/walk/kittens.js",nativeMergeGeometries,list),list),m);o.name=m.name;o.castShadow=true;o.receiveShadow=true;group.add(o);}
  recordKittenSupports(ship,solid);return {group,solid};
 }
