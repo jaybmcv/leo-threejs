@@ -417,7 +417,8 @@ async function buildShip(){
  }
  // The wayfinding signs draw from one texture array (sign-array.js).
  // Parts wholly beyond the indoor fog draw no longer (fog-cull.js); ?fogcull=0 draws them, to compare.
- if(new URLSearchParams(location.search).get('fogcull')!=='0')fogCull=createFogCull(scene,camera);
+ // Not with the atrium detail pack, whose source checks include the layers the cull changes.
+ if(!atriumPack&&new URLSearchParams(location.search).get('fogcull')!=='0')fogCull=createFogCull(scene,camera);
  wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);
  isolateStaticWorld(ship,scene);{const hidden=preparedPhone||phoneBatching.merge?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
@@ -467,7 +468,7 @@ function span(p,now){
 }
 function cull(p,now=performance.now()){
  camera.updateMatrixWorld(true);
- cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);phoneBands?.update();fogCull?.update(now);wayfindingSigns?.update();
+ cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);phoneBands?.update();wayfindingSigns?.update();
  if(phoneHide.length){if(now-phoneHiddenAt>5000){phoneHiddenAt=now;phoneHidden=[];scene.traverse(o=>{if(o.isMesh&&phoneHide.some(f=>f(o)))phoneHidden.push(o);});}for(const o of phoneHidden)o.visible=false;}let shown=false;
  for(const o of instanced){const [a,b]=o.userData.span,v=o.userData.cabins?a<p.y+3.5&&b>p.y-.5:a<high&&b>low;if(v&&!o.visible)shown=true;o.visible=v;}
  // Re-rank after 3 m of walking, or at once when another deck's cabins come into view.
@@ -879,7 +880,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){draw(camera);fogCull?.update(performance.now());if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });

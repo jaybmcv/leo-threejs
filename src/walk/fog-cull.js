@@ -8,9 +8,10 @@ import * as T from 'three';
 // code owns `visible`; the photo booth's camera draws that layer too), and back once nearer.
 // Always drawn: parts whose materials ignore fog or are transparent, skinned and instanced meshes (cabins and lifeboats
 // swap their instances as the walker moves), parts that never frustum-cull, and those riding the lifts (keepLive).
-// Nothing is left out while the atrium's long fog (beyond the far plane) is on. update() each frame: it reclassifies
-// every part after `step` metres of camera movement or a fog or view change, rechecks each left-out part that has moved,
-// and adds new parts and drops removed ones every `every` ms.
+// Nothing is left out while the atrium's long fog (beyond the far plane) is on. update() each frame right after the
+// render, when every world matrix is current (for the next frame): it reclassifies every part after `step` metres of
+// camera movement or a fog or view change, rechecks each left-out part that has moved, and every `every` ms adds new
+// parts (classified at once) and drops removed ones.
 export const FOG_CULL_LAYER=31;
 export function createFogCull(scene,camera,{every=10000,step=.5,margin=1}={}){
  const stats={parts:0,culled:0,updates:0};const parts=new Map();let built=-Infinity,lastFar=NaN,lastCos=NaN;
@@ -21,20 +22,20 @@ export function createFogCull(scene,camera,{every=10000,step=.5,margin=1}={}){
  const put=(p,out)=>{if(out!==p.out){p.out=out;p.o.layers.mask=out?hidden:p.mask;stats.culled+=out?1:-1;}};
  const restore=()=>{for(const p of parts.values())put(p,false);};
  const rebuild=()=>{
-  const seen=new Set();
+  const seen=new Set(),added=[];
   scene.traverse(o=>{if(parts.has(o)){seen.add(o);return;}if(o.layers.mask!==1||!eligible(o))return;
-   if(!o.geometry.boundingSphere)o.geometry.computeBoundingSphere();parts.set(o,{o,mask:o.layers.mask,out:false,at:new T.Vector3()});seen.add(o);});
+   if(!o.geometry.boundingSphere)o.geometry.computeBoundingSphere();const p={o,mask:o.layers.mask,out:false,at:new T.Vector3()};parts.set(o,p);seen.add(o);added.push(p);});
   for(const [o,p] of parts)if(!seen.has(o)){put(p,false);parts.delete(o);}
-  stats.parts=parts.size;
+  stats.parts=parts.size;return added;
  };
  const beyond=(p,cos,far)=>{const o=p.o,s=o.geometry.boundingSphere;centre.copy(s.center).applyMatrix4(o.matrixWorld);p.at.setFromMatrixPosition(o.matrixWorld);
   return eye.distanceTo(centre)*cos-s.radius*o.matrixWorld.getMaxScaleOnAxis()>far+margin;};
  return {stats,update(now){
   const fog=scene.fog;
   if(!fog?.isFog||fog.far>=camera.far){if(stats.culled)restore();lastFar=NaN;return;}
-  if(now-built>=every){rebuild();built=now;lastFar=NaN;}
   camera.getWorldPosition(eye);
   const tanV=Math.tan(T.MathUtils.degToRad(camera.fov)/2),tanD=Math.hypot(tanV,tanV*camera.aspect),cos=1/Math.sqrt(1+tanD*tanD);
+  if(now-built>=every){built=now;for(const p of rebuild())put(p,beyond(p,cos,fog.far));}
   if(eye.distanceToSquared(last)>=step*step||fog.far!==lastFar||cos!==lastCos){
    last.copy(eye);lastFar=fog.far;lastCos=cos;stats.updates++;for(const p of parts.values())put(p,beyond(p,cos,fog.far));return;}
   // A left-out part that has moved (a transporter, a ball) is checked again at once.
