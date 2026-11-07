@@ -237,8 +237,10 @@ export function createCatTree(ship){
   {const p=start.clone().addScaledVector(tangent,.5).addScaledVector(side,2.9),face=-Math.atan2(-tangent.z,-tangent.x);
    const board=new T.CylinderGeometry(1,1,.2,40);board.rotateX(Math.PI/2);board.scale(2.35,1.05,1);board.rotateY(face+Math.PI/2);at(board,p.x,TREE.islandTop+1.75,p.z);parts.push(paint(board,C.wood));
    const edge=new T.TorusGeometry(1,.07,5,40);edge.scale(2.35,1.05,1);edge.rotateY(face+Math.PI/2);at(edge,p.x,TREE.islandTop+1.75,p.z);parts.push(paint(edge,0x8a5a30));
-   for(const o of [-1.6,1.6]){const q=p.clone().add(new T.Vector3(0,0,o).applyAxisAngle(new T.Vector3(0,1,0),face));const post=at(new T.CylinderGeometry(.18,.2,1.6,8),q.x,TREE.islandTop+.8,q.z);parts.push(paint(post,0x8a5a30));addWall(post.clone());}
-   const label=signLabel();if(label){const m=new T.Mesh(new T.PlaneGeometry(4.45,1.9),label);m.name='Cat_tree_sign';m.rotation.y=face+Math.PI/2;m.position.set(p.x,TREE.islandTop+1.75,p.z).addScaledVector(new T.Vector3(-tangent.x,0,-tangent.z).normalize(),.1);
+   // The posts stand just behind the board (#269): through its middle they broke out of both faces and the label.
+   const out=new T.Vector3(-tangent.x,0,-tangent.z).normalize();
+   for(const o of [-1.6,1.6]){const q=p.clone().add(new T.Vector3(0,0,o).applyAxisAngle(new T.Vector3(0,1,0),face)).addScaledVector(out,-.31);const post=at(new T.CylinderGeometry(.18,.2,1.6,8),q.x,TREE.islandTop+.8,q.z);parts.push(paint(post,0x8a5a30));addWall(post.clone());}
+   const label=signLabel();if(label){const m=new T.Mesh(new T.PlaneGeometry(4.45,1.9),label);m.name='Cat_tree_sign';m.rotation.y=face+Math.PI/2;m.position.set(p.x,TREE.islandTop+1.75,p.z).addScaledVector(out,.12);
     m.position.add(new T.Vector3(Math.cos(face),0,-Math.sin(face)).multiplyScalar(0));near.add(m);}}
   // the den: a felt dome against the trunk facing aft, with an arched way in
   {const da=FOOT_DEN.a,dir=new T.Vector3(Math.cos(da),0,Math.sin(da)),c=new T.Vector3(TREE.x,TREE.islandTop,TREE.z).addScaledVector(dir,trunkR(TREE.islandTop)+1.2);

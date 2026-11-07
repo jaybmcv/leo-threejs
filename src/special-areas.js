@@ -267,6 +267,11 @@ function hangar(area,k){
   for(const sx of [-1,1])for(const sz of [-1,1]){
     const g=new T.Group();g.name='Transfer_shuttle';g.position.set(x+sx*17,y,sz*27);k.fit.add(g);
     round('Shuttle_lower_hull',[21,1.2,8],[0,.9,0],'navy',.5,g);
+    // The hull's flat top is ground (#257, #259). The ground probe skips any mesh named *hull*, so a cat that jumped on
+    // the nose fell through the top into the hollow hull and could not get out. A hidden plate over the flat top
+    // carries the feet; it does not draw (render-bake skips hidden meshes; `baked` keeps it in collision) and it
+    // sits under the cabin floor, so boarding is unchanged.
+    const hullTop=box('Shuttle_lower_hull_top_platform',[20,.04,7],[0,1.48,0],'navy',g);hullTop.visible=false;hullTop.userData.baked=true;
     // The cabin can be boarded: a doorway on the platform side and the windscreen are cut through its shell (which
     // then collides as its own curved surface), with a floor on the lower hull, seat rows and a two-seat flight deck.
     const cabin=round('Shuttle_cabin',[16,2.8,7],[-1,2.4,0],'lining',1.2,g);cabin.removeFromParent();

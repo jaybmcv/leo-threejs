@@ -22,7 +22,7 @@ const WALL=16.84,CEIL=3.3;
 // flickered level with the finish: tester report).
 const FLOOR=.008;
 // The old benches, their tools and tool boards, and the benches' merged board fittings.
-const OLD=/^(Service_counter|Countertop|Tool|Tool_board|Refined_tool_storage)$/;
+const OLD=/^(Service_counter|Countertop|Tool|Tool_board|Refined_tool_storage)$/,CABINET=/^(Equipment_cabinet|Cabinet_door|Status_display)$/,CABINET_DETAIL=/^(Refined_cabinet_hardware|Refined_display_graphics|Polish_instrument_bezel)$/;
 // Charging bays (x centres, 3.7 m apart, outboard side) and service bays (x centres, cabinet side).
 export const CHARGE_BAYS=[-2.5,1.2,4.9,8.6,12.3,16];
 export const SERVICE_BAYS=[-11.5,-4.5];
@@ -106,6 +106,15 @@ export function stripCargoMaintenance(ship){
  const room=roomObject(ship,ROOM);if(!room)return false;
  const old=[];room.traverse(o=>{if(o.isMesh&&OLD.test(o.name))old.push(o);});
  for(const o of old){o.removeFromParent();o.geometry.dispose();}
+ // The v2 doorway is mid-wall on the cabinet side (z -17, x -2..2), and the cabinet at x 2 stood across half of it
+ // (#248). It moves to the free end of the row, x 23; the doorway and the other cabinets stay.
+ const p=new T.Vector3(),moved=[];room.updateMatrixWorld(true);
+ room.traverse(o=>{if(!o.isMesh||!CABINET.test(o.name))return;room.worldToLocal(o.getWorldPosition(p));if(Math.abs(p.x-2)<1.2&&p.z>-15.7&&p.z<-14.3)moved.push(o);});
+ for(const o of moved){room.worldToLocal(o.getWorldPosition(p));p.x+=21;o.position.copy(o.parent.worldToLocal(room.localToWorld(p)));}
+ // Its hardware, display graphics and bezel were already merged into the room's detail meshes: move those vertices too.
+ room.traverse(o=>{if(!o.isMesh||!CABINET_DETAIL.test(o.name))return;const pos=o.geometry.attributes.position;let n=0;o.updateMatrixWorld(true);
+  for(let i=0;i<pos.count;i++){room.worldToLocal(p.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld));if(Math.abs(p.x-2)>1.25||p.z<-15.75||p.z>-14.25)continue;p.x+=21;o.worldToLocal(room.localToWorld(p));pos.setXYZ(i,p.x,p.y,p.z);n++;}
+  if(n){pos.needsUpdate=true;o.geometry.computeBoundingBox();o.geometry.computeBoundingSphere();}});
  return true;
 }
 

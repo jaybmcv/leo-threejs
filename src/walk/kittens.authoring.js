@@ -9,7 +9,7 @@ import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/Buffe
 // crinkle tunnel, cushion dens with teepees, cardboard boxes and ball-track toys, with fifteen Cosmo kittens at play
 // among balls, toy mice, yarn and feather wands. The kittens are the Cosmo kit's baked kitten poses (cosmo-pose.js
 // KITTEN_POSES) at a third of his size, sharing their meshes; each gets its own fur and hoodie colour.
-// Room frame (Area_d16-childcare-6): rugs 9 x 8 m centred at x -16, -3, 10 and z -9, 9; the entrance at x -26 (|z|<2),
+// Room frame (Area_d16-childcare-6): rugs 9 x 8 m centred at x -16, -3, 10 and z -9, 9; the v1 entrance at x -26 (|z|<2; v2's is at z -17, x -2..2),
 // the service counter at x 18..24, z 10.4..11.6, the ceiling at 3.3 m. Wall shelves sit beyond the rugs, clear of the aisles.
 const ROOM='Area_d16-childcare-6',FLOOR=.035,KITTEN=.3;
 export const KITTEN_POSE_NAMES=['sit','pounce','bat'];
@@ -217,8 +217,9 @@ export function createKittens(ship,kit){
  carton(10-3.2,9+2.6,-.4);track(10+1.6,9-2.7);kitten('pounce',4,10+.5,9-2.9,Math.PI/2);
  mouse(10-3,9-3,2.6);ball(M.red,.07,10+2.9,9-2.4);
 
- // Three runs on each side wall, behind the six habitats and away from the entrance and service counter.
- for(const side of [-1,1])for(const x of [-16,-3,10])shelves(x,side);
+ // Three runs on each side wall, behind the six habitats and away from the entrance and service counter. The v2
+ // entrance is mid-wall on the -z side (x -2..2), so that wall's middle run stands at its far end instead (#243, #276).
+ for(const side of [-1,1])for(const x of side<0?[-16,10,20]:[-16,-3,10])shelves(x,side);
 
  for(const [m,list] of parts){const o=new T.Mesh(recordMerged("src/walk/kittens.js",nativeMergeGeometries,list),m);o.name=m.name;o.castShadow=true;o.receiveShadow=true;group.add(o);}
  recordKittenSupports(ship,solid);return {group,solid};
