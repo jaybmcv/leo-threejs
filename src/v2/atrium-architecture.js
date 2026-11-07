@@ -5,6 +5,30 @@ import {atriumFloorGeometry,atriumFloorMaterial,skyCeilingGeometry,skyMaterial} 
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {placements,doorSide} from './cabins.js';
+// The paving draws 6 mm proud of Deck 6 (separateAtriumPaving, facade.js) to clear the tower and transit slabs at deck
+// level, which put its top in the plane of the room floors laid 6 mm up on it. Under those floors it keeps the deck's own
+// level, buried in them: top triangles reaching under a room are split along its (convex) outline and the part inside
+// lowered by that separation. Every other triangle is copied unchanged.
+const PAVING_SEPARATION=.006;
+function sinkUnderRooms(o,layout){
+ const g=o.geometry,top=layout.decks[5].y,e=o.matrixWorld.elements;if(e.some((v,i)=>Math.abs(v-(i%5===0?1:0))>1e-9))return g;
+ const area=p=>p.reduce((n,a,i)=>{const b=p[(i+1)%p.length];return n+a[0]*b[1]-b[0]*a[1];},0),convex=p=>p.every((a,i)=>{const b=p[(i+1)%p.length],c=p[(i+2)%p.length];return (b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0])>=-1e-9;});
+ const rooms=layout.rooms.filter(r=>r.deck===6&&!r.aggregate&&!(r.kind==='garden'&&r.hullPrototype)&&Math.abs(r.y-top)<1e-4).map(r=>area(r.polygon)<0?[...r.polygon].reverse():r.polygon).filter(convex).map(p=>({p,x0:Math.min(...p.map(q=>q[0])),x1:Math.max(...p.map(q=>q[0])),z0:Math.min(...p.map(q=>q[1])),z1:Math.max(...p.map(q=>q[1]))}));
+ const names=Object.keys(g.attributes),attrs=names.map(n=>g.attributes[n]),P=attrs.slice(0,names.indexOf('position')).reduce((n,a)=>n+a.itemSize,0),ix=g.index,count=ix?ix.count:g.attributes.position.count;
+ const vert=i=>{const v=[];for(const a of attrs)for(let k=0;k<a.itemSize;k++)v.push(a.getComponent(i,k));return v;},out=names.map(()=>[]);
+ const emit=(poly,clipped)=>{for(let i=1;i<poly.length-1;i++){const a=poly[0],b=poly[i],c=poly[i+1];if(clipped&&Math.abs((b[P]-a[P])*(c[P+2]-a[P+2])-(b[P+2]-a[P+2])*(c[P]-a[P]))<1e-10)continue;for(const v of [a,b,c]){let at=0;attrs.forEach((x,j)=>{for(let k=0;k<x.itemSize;k++)out[j].push(v[at++]);});}}};
+ const split=(poly,a,b)=>{const keep=[],away=[],s=v=>(b[0]-a[0])*(v[P+2]-a[1])-(b[1]-a[1])*(v[P]-a[0]);for(let i=0;i<poly.length;i++){const u=poly[i],w=poly[(i+1)%poly.length],su=s(u),sw=s(w);(su>=0?keep:away).push(u);if((su>=0)!==(sw>=0)){const t=su/(su-sw),c=u.map((x,k)=>x+(w[k]-x)*t);keep.push(c);away.push(c);}}return [keep,away];};
+ let sunk=0;
+ for(let t=0;t<count;t+=3){
+  const tri=[0,1,2].map(k=>vert(ix?ix.getX(t+k):t+k));if(!tri.every(v=>Math.abs(v[P+1]-top)<1e-4)){emit(tri);continue;}
+  let rest=[tri];const down=[];
+  for(const r of rooms){const next=[];for(const poly of rest){if(poly.every(v=>v[P]<=r.x0)||poly.every(v=>v[P]>=r.x1)||poly.every(v=>v[P+2]<=r.z0)||poly.every(v=>v[P+2]>=r.z1)){next.push(poly);continue;}let inside=poly;for(let i=0;i<r.p.length&&inside.length>2;i++){const [keep,away]=split(inside,r.p[i],r.p[(i+1)%r.p.length]);if(away.length>2)next.push(away);inside=keep;}if(inside.length>2)down.push(inside);}rest=next;}
+  if(!down.length){emit(tri);continue;}
+  for(const poly of rest)emit(poly,true);for(const poly of down)emit(poly.map(v=>{const w=v.slice();w[P+1]-=PAVING_SEPARATION;return w;}),true);sunk++;
+ }
+ if(!sunk)return g;
+ const result=new T.BufferGeometry();attrs.forEach((a,j)=>result.setAttribute(names[j],new T.BufferAttribute(new a.array.constructor(out[j]),a.itemSize,a.normalized)));result.userData={...g.userData,pavingSunkUnderRooms:sunk};result.computeBoundingBox();result.computeBoundingSphere();return result;
+}
 export function addPhase6Architecture(ship,root,layout){
  // Pure proxy/facade fixtures do not instantiate the physical ship. They use
  // the same actual surface factories, never a solid approximation of its void.
@@ -20,6 +44,7 @@ export function addPhase6Architecture(ship,root,layout){
  const buckets=new Map(),sourceNames=[];
  for(const {o,kind} of selected){
   sourceNames.push(o.name);
+  if(kind==='floor')o.geometry=sinkUnderRooms(o,layout);
   if(kind!=='tower'){const clone=new T.Mesh(o.geometry,o.material);clone.name=kind==='floor'?'P6_atrium_floor_actual':o.name;clone.matrixAutoUpdate=false;clone.matrix.copy(o.matrixWorld);clone.userData={noCollide:true,phase6Architecture:true,role:kind,actualSource:o.name};root.add(clone);o.visible=false;continue;}
   const m=o.material,key=[m.type,m.roughness,m.metalness,!!m.transparent,m.opacity,m.side,m.emissive?.getHex(),m.emissiveIntensity,m.map?.uuid,m.normalMap?.uuid,m.normalScale?.toArray().join(','),m.roughnessMap?.uuid,m.metalnessMap?.uuid,m.emissiveMap?.uuid,m.alphaMap?.uuid,m.aoMap?.uuid,m.envMap?.uuid,m.envMapIntensity,m.depthWrite,m.depthTest,m.alphaTest,m.blending,m.premultipliedAlpha,m.polygonOffset,m.polygonOffsetFactor,m.polygonOffsetUnits,m.flatShading,m.toneMapped,m.fog,m.wireframe].join('|');
   let b=buckets.get(key);if(!b){const material=m.clone();material.name='P6_tower_architecture';material.color?.set(0xffffff);material.vertexColors=true;if(material.transparent&&material.side===2)material.forceSinglePass=true;b={parts:[],material};buckets.set(key,b);}
