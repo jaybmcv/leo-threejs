@@ -28,6 +28,7 @@ try{window.opener.postMessage({leoPassBack:true,pass:pass,error:h.get('leo-pass-
 *{box-sizing:border-box}html,body{margin:0;height:100%;background:#000;color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden;overscroll-behavior:none}
 button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}button:focus-visible,a:focus-visible{outline:2px solid var(--orange);outline-offset:3px}
 #viewport{position:fixed;inset:0;touch-action:none}#viewport canvas{display:block;width:100%;height:100%;outline:none}
+#camera-lock-hint{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9;max-width:calc(100vw - 32px);padding:8px 12px;border:1px solid var(--hairline);border-radius:12px;background:var(--surface);color:var(--text);font:400 11px/1.3 var(--mono);text-align:center;pointer-events:none}#camera-lock-hint[hidden]{display:none}
 /* Inside a healing capsule in first person (main.js capsuleView): the view through blue fluid, wavering slowly. */
 #viewport::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .6s;background:radial-gradient(ellipse at 50% 45%,rgba(40,150,255,.28) 0%,rgba(20,110,230,.42) 60%,rgba(5,40,110,.75) 100%)}
 .capsule-view #viewport::after{opacity:1}
@@ -327,6 +328,7 @@ body.spraying{-webkit-user-select:none;user-select:none}body.spraying #viewport{
 </head>
 <body>
 <div id="viewport"></div>
+<div id="camera-lock-hint" role="status" aria-live="polite" hidden>Mouse locked · press Esc to unlock</div>
 <div class="top"><div class="pill"><a href="./">← Leo</a><span id="where"></span></div><button id="changes-here" type="button" hidden><i aria-hidden="true">✦</i><b>0</b><span> changes here</span></button><button id="aboard" type="button" hidden aria-label="Show visitors aboard" aria-haspopup="dialog"><i></i><span></span></button><button id="discord-chip" type="button" hidden></button></div>
 <div id="names" aria-hidden="true"></div>
 <div class="tools"><button id="go" type="button">Go to</button><button id="log" type="button" aria-label="Ship log: every change to Leo, before and after (L)"><span class="long">Ship </span>log</button><div id="tools-extra"><button id="view" type="button" aria-label="Switch first or third person">View</button><button id="sound" type="button" aria-pressed="false" aria-label="Ship sound">Sound</button><button id="resolution" type="button" aria-label="Render resolution: lower runs smoother on slower devices">Res High</button></div><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button><button id="help" type="button" aria-label="Help: how to play (H)"><span class="long">Help</span><span class="short">?</span></button><button id="tools-more" type="button" aria-expanded="false" aria-controls="tools-extra" aria-label="More buttons: view, sound, resolution">More</button></div>
