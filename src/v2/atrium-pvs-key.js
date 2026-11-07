@@ -7,7 +7,7 @@ import {BAND} from '../walk/collision.js';
 import {PVS_GRID} from './atrium-pvs.js';
 
 // Bump when the bake's rules change (scripts/walk-atrium-pvs.page.js), so data made under the old rules stops matching.
-export const PVS_BAKE_VERSION=2;
+export const PVS_BAKE_VERSION=3;
 // Eye heights above each floor: the lower cell holds the first-person eye (1.62 m), the upper one a raised third-person camera.
 export const PVS_HEIGHTS=[.35,1.65,3];
 // span() in src/walk/main.public.js draws at least 3 m below to 4 m above the walker's floor, whatever the atrium does.
