@@ -10,6 +10,9 @@ import {outlinedSlab,unionRectangles,slabGeometry} from './floor-geometry.js';
 // first stands at 40 m: at 32 m it lay under the hull's top skin at the fin root, its glass band cut into the roof
 // over the upper service gallery.
 export const FIN_PLATFORMS=[40,48,64,80,96,112,128];
+const RIM_PROUD=.006;
+// Mitred outward offset of a closed ring.
+function growRing(ring,by){const n=ring.length;let area=0;for(let i=0;i<n;i++){const a=ring[i],b=ring[(i+1)%n];area+=a[0]*b[1]-b[0]*a[1];}const s=Math.sign(area),normal=(a,b)=>{const l=Math.hypot(b[0]-a[0],b[1]-a[1]);return l<1e-9?null:[s*(b[1]-a[1])/l,-s*(b[0]-a[0])/l];};return ring.map((p,i)=>{const n1=normal(ring[(i+n-1)%n],p)||normal(p,ring[(i+1)%n]),n2=normal(p,ring[(i+1)%n])||n1,k=by/Math.max(.1,1+n1[0]*n2[0]+n1[1]*n2[1]);return[p[0]+(n1[0]+n2[0])*k,p[1]+(n1[1]+n2[1])*k];});}
 export const CROWN={floor:132.3,ceiling:137.5,outline:capPlan.map(([x,z])=>[-235+(x+235)*.985,z*.985]),lift:{x0:-249.2,x1:-244.8,z0:-2.2,z1:2.2}};
 export function attachFinCrown(exterior){
  const owner=exterior.getObjectByName('01_EXTERIOR_REFINED_V31')||exterior;owner.updateWorldMatrix(true,false);
@@ -40,7 +43,8 @@ export function createFinCrown(){
  function edge(name,a,b,h,cy,thick,material){const len=Math.hypot(b[0]-a[0],b[1]-a[1]),o=box(name,[len+.02,h,thick],[(a[0]+b[0])/2,cy,(a[1]+b[1])/2],material,shell);o.rotation.y=-Math.atan2(b[1]-a[1],b[0]-a[0]);if(material==='glass'){const normal=new T.Vector3(0,0,1).applyAxisAngle(new T.Vector3(0,1,0),o.rotation.y),radial=new T.Vector3(o.position.x+235,0,o.position.z);tintBoxWindow(o,'z',Math.sign(normal.dot(radial)));}}
  for(let i=0;i<perimeter.length;i++){const a=perimeter[i],b=perimeter[(i+1)%perimeter.length];edge('Crown_window_sill',a,b,.75,y+.1,.25,'navy');edge('Crown_sill_inlay',a,b,.07,y-.12,.29,'ivory');edge('Crown_panoramic_window',a,b,4.15,y+2.55,.055,'glass');edge('Crown_window_header',a,b,.3,y+4.8,.26,'ivory');edge('Crown_header_gasket',a,b,.065,y+4.59,.27,'navy');box('Crown_window_mullion',[.1,4.4,.1],[a[0],y+2.55,a[1]],'frame',shell);}
  const roof=mesh('Crown_roof',outlinedSlab(CROWN.outline,[],CROWN.ceiling+.6,.6),[0,0,0],'ivory',shell);roofs.push(roof);
- mesh('Crown_white_underfloor_rim',outlinedSlab(CROWN.outline,[CROWN.lift],y-.25,.34),[0,0,0],'ivory',shell);
+ // The rim stands 6 mm proud of the floor's outline: on the same outline its sides shared planes with the floor's.
+ mesh('Crown_white_underfloor_rim',outlinedSlab(growRing(CROWN.outline,RIM_PROUD),[CROWN.lift],y-.25,.34),[0,0,0],'ivory',shell);
  for(const z of [-10,10]){const o=box('Crown_ceiling_light',[59,.07,.18],[-236,CROWN.ceiling-.08,z],'light',shell);roofs.push(o);}
  // A walk-in island bar, with a clear staff entrance on its aft end.
  const barRects=[{x0:-237,x1:-227,z0:-3.3,z1:-2.3},{x0:-237,x1:-227,z0:2.3,z1:3.3},{x0:-228,x1:-227,z0:-2.3,z1:2.3}];
