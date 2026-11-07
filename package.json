@@ -20,7 +20,7 @@
     "check:walk-performance": "node scripts/check-walk-performance.mjs"
   },
   "dependencies": {
-    "three": "0.185.1",
+    "three": "0.187.0",
     "three-mesh-bvh": "0.9.15",
     "ws": "8.21.3"
   },

@@ -8,6 +8,7 @@ import {copyPreparedWalk} from './prepared-public-v2.mjs';
 import {publishPhoneWalk} from './phone-walk-public.mjs';
 import {publishAtriumGeometryPack} from './build-atrium-geometry-pack.mjs';
 import {publicV2Export} from './v2-public-export.mjs';
+import {copyBrandAssets} from './brand-assets.mjs';
 import {v2 as selectedV2} from './layout-selector.mjs';
 if(!selectedV2)throw new Error('This producer requires LEO_LAYOUT=2');
 import fs from 'node:fs/promises';
@@ -25,7 +26,8 @@ manifest[VIEWER_LOUNGE]=await writeViewerLounge({out,bytes:models.get('leo-full-
 await fs.writeFile(out+'/asset-manifest.json',JSON.stringify(manifest,null,2));
 const cosmo=await writeV2Cosmo(out);
 for(const file of ['THREE-LICENSE.txt'])await fs.copyFile(source+'/'+file,out+'/'+file).catch(()=>{});
-await fs.cp('dist/brand',out+'/brand',{recursive:true});
+// The current src/brand, not the pinned v1 build's: since three r187 they differ in the baked environment's format.
+await copyBrandAssets(out);
 const layout=JSON.parse(await fs.readFile(source+'/layout.json','utf8'));
 await writeViewerPageV2(out,{layout,manifest});
 manifest['walk-prepared']=await copyPreparedWalk(out);manifest['walk-phone']=await publishPhoneWalk(out,{prepared:manifest['walk-prepared']});manifest['atrium-geometry']=await publishAtriumGeometryPack({out,preparedManifest:manifest['walk-prepared']});const logMedia=await v2ShipLogMedia(),walkResult=await writeWalkPage(out,{cosmo,manifest,preparedWalk:true,profileMap:true,logMedia});console.log(walkResult);await fs.mkdir('output/phase7',{recursive:true});await fs.writeFile('output/phase7/ship-log-corpus-public.json',JSON.stringify({...walkResult.corpus,at:new Date().toISOString(),bundle:walkResult.walk,bundleSha256:sha(await fs.readFile(out+'/'+walkResult.walk))},null,2));manifest['layout-data']=JSON.parse(await fs.readFile(out+'/layout-data.json','utf8'));await fs.writeFile(out+'/asset-manifest.json',JSON.stringify(manifest,null,2));

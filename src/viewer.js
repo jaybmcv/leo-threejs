@@ -1013,7 +1013,7 @@ $('save-interior').addEventListener('click',async()=>{
  await environmentReady;await firstFrameReady();
  if(window.LEO_ARRIVAL&&!reduced&&mode==='exterior')playArrival();
  $('loading').hidden=true;viewStarted=true;requestAnimationFrame(animate);
- if(studioTools&&params.get('bake')==='environment')bakeEnvironmentPNG(renderer).then(blob=>Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:'environment.png'}).click());
+ if(studioTools&&params.get('bake')==='environment')bakeEnvironmentPNG(renderer).then(blob=>Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:'environment-cube.png'}).click());
  // Tour and room deep links never load the exterior, so Cosmo cannot wait for it. Building him stalls a frame or two, so
  // the arrival goes first.
  setTimeout(loadCosmo,window.LEO_ARRIVAL?ARRIVAL_MS+300:1500);
