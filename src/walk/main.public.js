@@ -77,7 +77,7 @@ import {bakeForWalking,showBands} from '../v2/render-bake.js';
 import {bandOf} from './collision.js';
 import {mergeMeshes} from './merge-by-material.js';
 import {mergeWayfindingSigns} from './sign-array.js';
-import {createFogCull} from './fog-cull.js';
+import {createFogCull,FOG_CULL_LAYER} from './fog-cull.js';
 import {partitionMesh} from './partitions.js';
 import walkPlan from 'walk-partitions';
 import {railingMesh} from '../v2/railings.js';
@@ -894,7 +894,8 @@ function draw(view){
 let photoUrl=null,photoSource=null,photoNames=[],photoRender=0,photoFilename='';
 function takePhoto(){
  const canvas=renderer.domElement,shown=walker.holder.visible;walker.holder.visible=true;
- booth.aim(canvas.width,canvas.height);booth.camera.updateMatrixWorld();draw(booth.camera);
+ // The fog cull leaves out what is beyond the fog from the walker's eye (fog-cull.js), not from the lens: it draws all.
+ booth.aim(canvas.width,canvas.height);booth.camera.layers.enable(FOG_CULL_LAYER);booth.camera.updateMatrixWorld();draw(booth.camera);
  const copy=document.createElement('canvas');copy.width=canvas.width;copy.height=canvas.height;copy.getContext('2d').drawImage(canvas,0,0);
  photoSource=copy;photoNames=selfieNames();photoFilename=`leo-crown-lounge-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.jpg`;$('photo-names').checked=true;
  walker.holder.visible=shown;draw(camera);
