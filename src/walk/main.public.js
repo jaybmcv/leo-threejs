@@ -1,6 +1,7 @@
 import {createAtriumGeometryRuntime} from '../v2/atrium-geometry-runtime.js';
 import {getAtriumQuality,observeAtriumFrame} from '../v2/atrium-quality.js';
 import {mountGraphicsSettings} from './graphics-settings.js';
+import {installFilmLook} from './film-look.js';
 import {mountControlsSettings} from './controls-settings.js';
 import {mountFurSettings} from './fur-settings.js';
 import {savedFur} from './fur-colours.js';
@@ -426,6 +427,9 @@ const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('s
 const follow=new FollowCamera(camera,colliders);
 const controller=new Controller(colliders);
 let walker=null;
+// The film look (film-look.js, chosen in the Graphics detail sheet): Stylised 3D drawn by the walk's own materials,
+// installed before the walk first draws.
+installFilmLook({renderer,scene,keep:()=>walker?.holder});
 const actions={
  view(){follow.mode=follow.mode==='first'?'third':'first';},
  use(){

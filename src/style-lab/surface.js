@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {GRAPHIC_SURFACE_GLSL,pagePaintFor} from './graphic.js';
+import {STYL_SURFACE_GLSL,STYL_INDIRECT_SAT,STYL_METAL_PAINT_GLSL,THREE_DIFFUSE} from '../walk/film-shading.js';
 
 // The style lab's surface terms: Voyager's Reach's Bold Ink Toon, Stylised 3D and graphic novel styles, ported onto
 // Leo's own materials. Every material is patched once and the style is one uniform (uLabStyle), so switching styles
@@ -31,8 +32,6 @@ const glf=n=>Number.isInteger(n)?`${n}.0`:String(n);
 const TOON_LIT_GAIN=1.22,TOON_SHADE=.5;
 // The banded toon's step between flat tones, in stops (the key-light toon's shade is one stop under its lit tone).
 const TOON_BAND_STOPS=1.25;
-// Stylised 3D's surface art (stylised3d.ts STYL_WRAP and STYL_SURFACE_ART).
-const STYL_WRAP=.25,STYL_FLOOR=[.028,.027,.03],STYL_LIFT_GONE=.1,STYL_METAL_PAINT=.6,STYL_INDIRECT_SAT=1.32;
 
 const PARS=`
 uniform float uLabStyle;
@@ -46,26 +45,7 @@ varying vec3 vLabWp;
 // the key light's shadow at this fragment (lights_fragment_begin, patched below), and a scratch for each light's
 float labSunShadow = 1.0;
 float labShadowTap = 1.0;
-const float STYL_WRAP = ${STYL_WRAP.toFixed(3)};
-const vec3 STYL_ALB_FLOOR = vec3(${STYL_FLOOR.map(v=>v.toFixed(3)).join(', ')});
-vec3 stylLift(vec3 c, vec3 lift) {
-  float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  return c + lift * (1.0 - smoothstep(0.0, ${glf(STYL_LIFT_GONE)}, l));
-}
-vec3 stylSat(vec3 c, float s) {
-  float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  return max(vec3(0.0), vec3(l) + (c - vec3(l)) * s);
-}
-// the cosine the key light lights a form with: its tail runs past the terminator and eases in
-float stylWrapNL(float x) {
-  float w = clamp((x + STYL_WRAP) / (1.0 + STYL_WRAP), 0.0, 1.0);
-  return w * w * (3.0 - 2.0 * w);
-}
-// richer and a little warm where light turns to shade, gone in full light and full dark
-vec3 stylTerminator(vec3 alb, float x) {
-  float band = smoothstep(-0.5, 0.05, x) * (1.0 - smoothstep(0.05, 0.75, x));
-  return mix(alb, stylSat(alb, 1.55) * vec3(1.06, 0.97, 0.9), band * 0.75);
-}
+${STYL_SURFACE_GLSL}
 ${GRAPHIC_SURFACE_GLSL}`;
 
 // The flat tones, after the lights are declared: one sun (the key light, the only shadow caster, so the first
@@ -129,7 +109,7 @@ const INDIRECT_STYL=(albedo,paint='vec3( 0.0 )')=>`vec3 stylAlbI = ${albedo};
 		stylAlbI += ${paint};
 		stylAlbI = stylLift( stylSat( stylAlbI, ${glf(STYL_INDIRECT_SAT)} ), STYL_ALB_FLOOR );
 	}`;
-const METAL_PAINT=`material.specularColorBlended * ( ${glf(STYL_METAL_PAINT)} * material.metalness )`;
+const METAL_PAINT=STYL_METAL_PAINT_GLSL;
 
 // A line of three's text, swapped; a three without it fails loudly here rather than drawing the wrong style.
 function swap(text,from,to,label){
@@ -138,13 +118,13 @@ function swap(text,from,to,label){
 }
 const C=T.ShaderChunk;
 const PHYSICAL_PARS=(()=>{
- const s=swap(C.lights_physical_pars_fragment,'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseContribution );',DIRECT_STYL('material.diffuseContribution',METAL_PAINT),'physical direct diffuse');
- return swap(s,'vec3 diffuse = irradiance * BRDF_Lambert( material.diffuseContribution );',`${INDIRECT_STYL('material.diffuseContribution',METAL_PAINT)}
+ const s=swap(C.lights_physical_pars_fragment,THREE_DIFFUSE.physicalDirect,DIRECT_STYL('material.diffuseContribution',METAL_PAINT),'physical direct diffuse');
+ return swap(s,THREE_DIFFUSE.physicalIndirect,`${INDIRECT_STYL('material.diffuseContribution',METAL_PAINT)}
 	vec3 diffuse = irradiance * BRDF_Lambert( stylAlbI );`,'physical indirect diffuse');
 })();
 const LAMBERT_PARS=(()=>{
- const s=swap(C.lights_lambert_pars_fragment,'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );',DIRECT_STYL('material.diffuseColor'),'lambert direct diffuse');
- return swap(s,'reflectedLight.indirectDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );',`${INDIRECT_STYL('material.diffuseColor')}
+ const s=swap(C.lights_lambert_pars_fragment,THREE_DIFFUSE.lambertDirect,DIRECT_STYL('material.diffuseColor'),'lambert direct diffuse');
+ return swap(s,THREE_DIFFUSE.lambertIndirect,`${INDIRECT_STYL('material.diffuseColor')}
 	reflectedLight.indirectDiffuse += irradiance * BRDF_Lambert( stylAlbI );`,'lambert indirect diffuse');
 })();
 // The key light's shadow, kept for the flat styles as well as applied (it is the first directional light: three puts
@@ -155,7 +135,7 @@ const LIGHTS_BEGIN=swap(C.lights_fragment_begin,
 		directLight.color *= labShadowTap;
 		if ( UNROLLED_LOOP_INDEX == 0 ) labSunShadow = labShadowTap;`,'directional shadow');
 // Texture grain: Stylised 3D reads three mips down (its broad colour), the flat styles two (markings stay, grain goes).
-const MAP=swap(C.map_fragment,'diffuseColor *= sampledDiffuseColor;',`if ( uLabStyle > 0.5 ) {
+const MAP=swap(C.map_fragment,THREE_DIFFUSE.map,`if ( uLabStyle > 0.5 ) {
 		vec3 labBroad = texture2D( map, vMapUv, LAB_STYL > 0.0 ? 3.0 : 2.0 ).rgb;
 		sampledDiffuseColor.rgb = mix( sampledDiffuseColor.rgb, labBroad, LAB_STYL > 0.0 ? 0.8 : 1.0 );
 	}

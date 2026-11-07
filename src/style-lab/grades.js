@@ -50,33 +50,5 @@ vec3 toonGrade(vec3 c, float inkShare) {
   return c;
 }`;
 
-// Stylised 3D's grade (stylised3d.ts STYL_GRADE_GLSL): vibrance that spares the light colours, a split tone (cool
-// violet in the shade, warm cream in the light), the bright yellows and the emeralds held short of neon, a little more
-// depth in the shade, a film's cool toe, and the frame staged toward shade at its corners and foot.
-const S={lightSpare:[.5,1.5],yellow:{hue:[.55,.95],blue:[.1,.5],bright:[.3,.8],keep:.7},rich:{sat:[.6,.9],luma:[.03,.12]},green:[.25,.5],satCap:.7,
- shade:{keep:.92,window:[.02,.22]},toe:{lift:[.018,.022,.038],window:[0,.05]},stage:{corner:.15,foot:.08}};
-const ss=(w,x)=>`smoothstep(${w[0].toFixed(2)}, ${w[1].toFixed(2)}, ${x})`;
-export const STYL_GRADE_GLSL=`
-vec3 stylGrade(vec3 color, vec2 uv) {
-  float gl = dot(color, vec3(0.2126, 0.7152, 0.0722));
-  float gMax = max(color.r, max(color.g, color.b));
-  float gSat = (gMax - min(color.r, min(color.g, color.b))) / max(gMax, 1e-4);
-  float gk = mix(1.5, 0.94, smoothstep(0.22, 0.7, gSat));
-  gk = mix(gk, 1.0, ${ss(S.lightSpare,'gl')});
-  vec3 graded = max(vec3(0.0), vec3(gl) + (color - vec3(gl)) * gk);
-  graded *= mix(vec3(0.965, 0.985, 1.045), vec3(1.025, 1.005, 0.975), smoothstep(0.03, 0.45, gl));
-  float gYellow = ${ss(S.yellow.hue,'min(color.r, color.g) / max(max(color.r, color.g), 1e-4)')} * (1.0 - ${ss(S.yellow.blue,'color.b / max(gMax, 1e-4)')});
-  float gHot = ${ss(S.yellow.bright,'gl')} * gYellow;
-  float gRich = ${ss(S.rich.sat,'gSat')} * ${ss(S.rich.luma,'gl')};
-  float gGreen = ${ss(S.green,'(color.g - max(color.r, color.b)) / max(color.g, 1e-4)')} * gRich;
-  float gl2 = dot(graded, vec3(0.2126, 0.7152, 0.0722));
-  float gmx = max(graded.r, max(graded.g, graded.b));
-  float gsG = (gmx - min(graded.r, min(graded.g, graded.b))) / max(gmx, 1e-4);
-  float gCap = 1.0 - max(gsG - ${S.satCap.toFixed(2)}, 0.0) / max(gsG, 1e-4);
-  graded = vec3(gl2) + (graded - vec3(gl2)) * mix(1.0, ${S.yellow.keep.toFixed(2)}, gHot) * mix(1.0, gCap, gGreen);
-  graded *= mix(${S.shade.keep.toFixed(2)}, 1.0, ${ss(S.shade.window,'dot(graded, vec3(0.2126, 0.7152, 0.0722))')});
-  graded += vec3(${S.toe.lift.map(v=>v.toFixed(3)).join(', ')}) * (1.0 - ${ss(S.toe.window,'gl')});
-  vec2 gq = (uv - 0.5) * vec2(1.0, 1.1);
-  graded *= 1.0 - ${S.stage.corner.toFixed(2)} * smoothstep(0.08, 0.5, dot(gq, gq)) - ${S.stage.foot.toFixed(2)} * (1.0 - smoothstep(0.0, 0.4, uv.y));
-  return graded;
-}`;
+// Stylised 3D's grade is the walk's film look's own (src/walk/film-shading.js).
+export {STYL_GRADE_GLSL} from '../walk/film-shading.js';
