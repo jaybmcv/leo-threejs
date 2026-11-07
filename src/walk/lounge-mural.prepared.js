@@ -1,5 +1,5 @@
 import {ReplayGeometry,replayMerged} from "../v2/prepared-geometry-replay.js";
-import {fitSynthwaveMural} from '../v2/community-routes.js';
+import {fitSynthwaveMural,synthwaveMuralOutline,SYNTHWAVE_MURAL} from '../v2/community-routes.js';
 import * as T from 'three';
 import {canvasTexture,seeded} from '../polish-kit.js';
 
@@ -112,7 +112,8 @@ export function createLoungeMural(frame,{back=FLOOR,left=FLOOR}={}){
  const lift=.008,top=FLOOR+HEIGHT;
  const mesh=(name,map,a,b,u,v)=>{const g=plane(a,b,u,v).applyMatrix4(frame),o=new T.Mesh(g,material(map,name));o.name=name;o.frustumCulled=false;group.add(o);return o;};
  // The back wall: its inner face is at z 45.9; the left wall's at x 109.6.
- const backMap=geometryOnly?null:canvasTexture(Math.round(SPAN_BACK*PPM),Math.round(HEIGHT*PPM),(g,w,h)=>paintSynthwave(g,w,h,SPAN_LEFT));
+ // In v2 this panel moves to the aft side wall (fitSynthwaveMural), so its picture is painted for that wall's span.
+ const backMap=geometryOnly?null:canvasTexture(Math.round(synthwaveMuralOutline().width*PPM),Math.round(HEIGHT*PPM),(g,w,h)=>paintSynthwave(g,w,h,SYNTHWAVE_MURAL.s0));
  mesh('Lounge_mural_back',backMap,[ROOM_X0,back,ROOM_Z0+.1+lift],[ROOM_X1,top,ROOM_Z0+.1+lift],[0,1],[(back-FLOOR)/HEIGHT,1]);
  const leftMap=geometryOnly?null:canvasTexture(Math.round(SPAN_LEFT*PPM),Math.round(HEIGHT*PPM),(g,w,h)=>paintSynthwave(g,w,h,0));
  mesh('Lounge_mural_left',leftMap,[ROOM_X0+.1+lift,left,ROOM_Z0],[ROOM_X0+.1+lift,top,ROOM_Z1],[0,1],[(left-FLOOR)/HEIGHT,1]);

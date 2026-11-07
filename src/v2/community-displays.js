@@ -1,8 +1,9 @@
 import {clearArtDoors} from '../plan/art-clearance-v2.js';
 import {applyRoomFitoutOverrides} from './room-fitout-overrides.js';
-// The synthwave mural becomes one full-height backing across Decks 17-19. These edit the display parts made below, so
+// The synthwave mural becomes one full-height panel on the aft wall across Decks 17-19, shaped to the hull line
+// (community-routes.js), so neither of the old Deck 17 box backings stays. These edit the display parts made below, so
 // they live here: the shared room overrides apply to each room's own fittings, which don't include these parts.
-export const SYNTHWAVE_MURAL_EDITS={"replace":[{"match":{"part":"community_mural_wall","display":"Lounge_mural_back"},"set":{"size":[29.16,11.16,0.1],"at":[-140.75,29.92,-47],"yaw":1.5707963267948966}}],"remove":[{"part":"community_mural_wall","display":"Lounge_mural_left"}]};
+export const SYNTHWAVE_MURAL_EDITS={"remove":[{"part":"community_mural_wall","display":"Lounge_mural_back"},{"part":"community_mural_wall","display":"Lounge_mural_left"}]};
 // Interior curation: no display covers a hull opening or reinstates an exterior setback.
 // Backing panels clear the primary floor by 4 cm (2 cm above the highest finish); their tops and artwork stay fixed.
 export function communityArtMounts(layout){const r=id=>layout.rooms.find(r=>r.id===id),capt=r('d20-captain-7'),arrival=r('d02-arrival-1'),ward=r('d05-ward-1'),dining=r('neighborhood-10-dining'),cafe=r('neighborhood-10-cafe');const mounts=[
