@@ -76,6 +76,7 @@ import {createWalker,WALKER,EMOTES} from './avatar.js';
 import {bakeForWalking,showBands} from '../v2/render-bake.js';
 import {bandOf} from './collision.js';
 import {mergeMeshes} from './merge-by-material.js';
+import {mergeCallLights} from './call-lights.js';
 import {mergeWayfindingSigns} from './sign-array.js';
 import {createFogCull,FOG_CULL_LAYER} from './fog-cull.js';
 import {partitionMesh} from './partitions.js';
@@ -276,7 +277,7 @@ async function buildShip(){
  const prepared=await prepareWalkWorld(ship,{into:colliders,kit:cosmoKit,anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches,urls:artUrls,hat:__HAT_URL__,light:{hemi,fill,scene},afterBase(){
  // The hull behind the glass goes for drawing only, after the colliders have it.
  const w0=performance.now(),opened=0;timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
- lifts=createLifts(scene,colliders);addWayfindingGuides(lifts.signs);preparedSigns(ship,lifts.signs);
+ lifts=createLifts(scene,colliders);for(const g of addWayfindingGuides(lifts.signs))g.userData.bandMergeParts=true;preparedSigns(ship,lifts.signs);
  },afterRest(state){
  restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;lullaby=lounge?createLullaby(lounge.dome):null;
  // Its floor, galleries and the promenade in front: glossy acrylic with neon swirls (lounge-floor.js).
@@ -325,9 +326,10 @@ async function buildShip(){
  status('Preparing the walk · 2/4 · placing activities…');await idle();
  const toBand=(o,y=o.position.y)=>{const band=bandOf(y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
  // Opaque lift and deck signs of one material on one band draw as one mesh (300 signs in 36 materials). The call lights
- // (transparent) change material when lit, so they stay apart.
+ // (transparent) change material when lit: call-lights.js merges them per band its own way.
  {const lists=new Map();for(const o of lifts.signs.children)if(o.isMesh&&o.name==='Walk_sign'&&!o.material.transparent&&!o.children.length){const key=bandOf(o.position.y)+'|'+o.material.uuid;let l=lists.get(key);if(!l)lists.set(key,l=[]);l.push(o);}
   for(const list of lists.values()){if(list.length<2)continue;const mesh=mergeMeshes(list);if(!mesh)continue;for(const o of list)lifts.signs.remove(o);toBand(mesh,list[0].position.y);}}
+ mergeCallLights(lifts.signs,bandOf,toBand);
  for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pinballMachine?[pinballMachine.group]:[]),...(pawsOff?pawsOff.groups:[]),...(mudwater?[mudwater.group]:[]),...(arcadeRow?[arcadeRow.group]:[])])toBand(o);
  if(concession)toBand(concession);
  toBand(vault.group);
@@ -421,7 +423,7 @@ async function buildShip(){
  // Not with the atrium detail pack, whose source checks include the layers the cull changes.
  if(!atriumPack&&new URLSearchParams(location.search).get('fogcull')!=='0')fogCull=createFogCull(scene,camera);
  wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);
- isolateStaticWorld(ship,scene);{const hidden=preparedPhone||phoneBatching.merge?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
+ isolateStaticWorld(ship,scene);{const hidden=preparedPhone||phoneBatching.merge?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
