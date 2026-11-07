@@ -47,7 +47,9 @@ export async function runJobs(jobs,{previous={},record=async()=>{},limits={}}={}
   // Windows reports crashes as NTSTATUS codes (0xC0000005 access violation, 0xC0000409 fail-fast/abort); show them in hex.
   const exit=ok?'':r.signal?', signal '+r.signal:', exit '+(r.code>=0x80000000?'0x'+r.code.toString(16).toUpperCase():r.code);
   console.log(`\n===== ${ok?'PASS':'FAIL'} ${job.name} (${r.seconds.toFixed(1)} s${exit}${note}) =====`);
-  console.log((ok?lines.slice(-15):lines.slice(-80)).join('\n'));
+  // Only the tail of a check's output is kept, but its timing lines (check-plan's gates, run-v2 tasks) always are.
+  const tail=ok?15:80,timing=lines.slice(0,-tail).filter(l=>l.includes('[check-timing]')||l.includes('[timing]'));
+  console.log([...timing,...lines.slice(-tail)].join('\n'));
  };
  try{
   await new Promise((resolve,reject)=>{
