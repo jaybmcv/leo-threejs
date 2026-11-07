@@ -106,7 +106,7 @@ export function createAtriumSight(colliders,options={}){
  const query=createVisibilityQuery(colliders),changed=visibilityState(),viewGuard=createDetailViewGuard(),custom=options.portals?.map(portal),g=custom?null:geometry(options.layout);
  const sealedIds=new Set(options.sealed??SEALED_ROOMS),sealedRooms=g?(options.layout??layout).rooms.filter(r=>sealedIds.has(r.id)&&r.polygon?.length).map(r=>({polygon:r.polygon,low:r.y-.5,high:r.y+(r.height||3.4)+.5})):[];
  const maxRays=options.maxRays??24,maxFragments=options.maxFragments??256,intervalMs=options.intervalMs??150,holdMs=options.holdMs??250;
- const stats={updates:0,rays:0,firstHits:0,windowFallbacks:0,coverageRays:0,budgetFallbacks:0,cacheHits:0,pvsHits:0,pvs:PVS_UNKNOWN,portals:0,owner:null,visible:false,lastMs:0};
+ const stats={updates:0,rays:0,firstHits:0,windowFallbacks:0,coverageRays:0,budgetFallbacks:0,cacheHits:0,pvsHits:0,pvs:PVS_UNKNOWN,portals:0,owner:null,visible:false,lastMs:0,range:null};
  const scratch={box:new T.Box3(),point:new T.Vector3(),local:new T.Ray(),stats};
  const eye=new T.Vector3(),ray=new T.Ray(),local=new T.Ray(),point=new T.Vector3(),matrix=new T.Matrix4(),frustum=new T.Frustum();
  let last=-Infinity,lastSeen=-Infinity,result=false,remaining=0,fromPvs=false;
@@ -205,16 +205,18 @@ export function createAtriumSight(colliders,options={}){
  }
  const publish=now=>{if(result)lastSeen=now;return stats.visible=result||now-lastSeen<holdMs;};
  return{stats,update(camera,p,now){
-  // A precomputed cell answers at once, every frame; only cells without data pay for rays.
-  const cell=options.pvs?.()?.at(camera.getWorldPosition(eye))??PVS_UNKNOWN;stats.pvs=cell;
-  if(cell!==PVS_UNKNOWN){stats.pvsHits++;result=cell===PVS_VISIBLE;last=-Infinity;fromPvs=true;return publish(now);}
+  // A precomputed cell answers at once, every frame; only cells without data pay for rays. The bake counts lift landing
+  // doors as shut, so where `unbaked` says the eye is by an open one, the rays answer.
+  camera.getWorldPosition(eye);const cell=options.unbaked?.(eye)?PVS_UNKNOWN:options.pvs?.()?.at(eye)??PVS_UNKNOWN;stats.pvs=cell;
+  // A visible cell's heights (null: the whole atrium) stand until another visible answer, through the hold.
+  if(cell!==PVS_UNKNOWN){stats.pvsHits++;result=cell===PVS_VISIBLE;if(result)stats.range=options.pvs().range?.(eye)??null;last=-Infinity;fromPvs=true;return publish(now);}
   // Snapshot collider/mover state only at the query interval, not every frame.
   if(now-last<intervalMs&&!viewGuard.changed(camera)){stats.cacheHits++;return publish(now);}
   last=now;viewGuard.commit(camera);const started=performance.now();
   // Back at the very pose the rays last answered, `result` still holds the PVS cell's answer from in between.
   const moved=changed(camera,p,0,0,colliders),cached=!moved&&!fromPvs;fromPvs=false;
   if(cached){stats.cacheHits++;return publish(now);}
-  remaining=maxRays;stats.updates++;result=detect(camera);
+  remaining=maxRays;stats.updates++;result=detect(camera);if(result)stats.range=null;
   stats.lastMs=performance.now()-started;return publish(now);
  }};
 }
