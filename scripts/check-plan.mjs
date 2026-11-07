@@ -1,5 +1,5 @@
 import {checkGeneratedRoomWindows} from './window-contract-v2.mjs';
-import './check-window-contract-v2.mjs';
+import './check-window-contract-v2.mjs';import './check-window-outline-v2.mjs';
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {ShapeUtils,Vector2} from 'three';
