@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {PVS_GRID,PVS_HIDDEN,PVS_UNKNOWN,PVS_VISIBLE,createAtriumPvs,decodeCells,encodeCells} from '../src/v2/atrium-pvs.js';
+import {PVS_GRID,PVS_HIDDEN,PVS_RANGE,PVS_UNKNOWN,PVS_VISIBLE,createAtriumPvs,decodeCells,encodeCells} from '../src/v2/atrium-pvs.js';
 import {createAtriumSight} from '../src/v2/atrium-sight.js';
 import {atriumPvsKey} from '../src/v2/atrium-pvs-key.js';
 
@@ -59,6 +59,16 @@ check('a face with two vertices rounded together hashes alike from either of the
  const D=[0,0,0,0,0,.0001,1,0,0];
  assert.equal(atriumPvsKey(colliders([...A,...D]),setup),atriumPvsKey(colliders([...A,...D.slice(3),...D.slice(0,3)]),setup));
  assert.equal(atriumPvsKey(colliders([...A,...D]),setup),atriumPvsKey(colliders([...A,...D.slice(6),...D.slice(0,6)]),setup));
+});
+check('a visible cell gives the heights its sight reaches; without ranges, or for a hidden cell, none',()=>{
+ const set={[cellOf(10,-30,4)]:PVS_VISIBLE,[cellOf(12,-30,4)]:PVS_HIDDEN},plain=data(set),lo=new Uint8Array(length),hi=new Uint8Array(length);
+ const byte=y=>Math.round((y-PVS_RANGE.y0)/PVS_RANGE.span*255);lo[cellOf(10,-30,4)]=byte(-20);hi[cellOf(10,-30,4)]=byte(4);
+ const pvs=createAtriumPvs({...plain,ranges:{...PVS_RANGE,lo:encodeCells(lo),hi:encodeCells(hi)}},source),[a,b]=pvs.range({x:10,y:-30,z:4});
+ // Padded outward by a byte and a band (4 m) each side.
+ assert(a<=-24&&a>-26&&b>=8&&b<10,'range '+a+'..'+b);
+ assert.equal(pvs.range({x:12,y:-30,z:4}),null);assert.equal(pvs.range({x:900,y:0,z:0}),null);
+ assert.equal(createAtriumPvs(plain,source).range({x:10,y:-30,z:4}),null,'no ranges: the whole atrium');
+ assert.equal(createAtriumPvs({...plain,ranges:{y0:0,span:100,lo:encodeCells(lo),hi:encodeCells(hi)}},source).range({x:10,y:-30,z:4}),null,'other units: the whole atrium');
 });
 check('a point finds its own cell; outside the grid is unknown',()=>{
  const pvs=createAtriumPvs(data({[cellOf(10,-18.1,4)]:PVS_HIDDEN,[cellOf(10,-16.5,4)]:PVS_VISIBLE}),source);

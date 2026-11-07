@@ -1,13 +1,18 @@
 // In-page half of scripts/walk-atrium-pvs.mjs, evaluated in a debug walk (window.__walk). It installs
 // globalThis.__atriumPvs with three steps the driver calls in batches:
 //  setup(levels)  occluders: every static collider triangle the sight test treats as opaque (window and collision-only
-//                 faces excluded), re-cut into world-space chunks so each cube face draws only what it can see. Movers
-//                 (doors, gates, lift cars, shutters) are left out, so they count as open. The atrium void is drawn as
-//                 the prisms of each deck's atrium outline.
+//                 faces excluded), re-cut into world-space chunks so each cube face draws only what it can see. Lift
+//                 landing doors count as shut (their leaves where a shut door puts them): a lift lobby otherwise saw up
+//                 the shaft into the atrium and drew every deck. The walk asks its rays instead near a landing whose
+//                 doors are open (atrium-sight.js `unbaked`). Other movers (gates, lift cars, shutters) are left out,
+//                 so they count as open. The atrium void is drawn as the prisms of each deck's atrium outline.
 //  columns(...)   walkable floors under a grid of (x, z) points.
 //  run(samples)   per eye sample, whether any void prism face survives the occluders' depth in a cube map around it,
 //                 or the nearest surface lies in the atrium span but outside the eye's own local span: the walk draws
-//                 that only while the atrium counts as seen (another deck through a glass stair, say).
+//                 that only while the atrium counts as seen (another deck through a glass stair, say). With it, the
+//                 heights that sight reaches (RANGE_Y0 + RANGE_SPAN * [lo, hi] / 255): the nearest surfaces that mark
+//                 the eye, those seen through the void, and the top of the range where the void shows nothing behind
+//                 it. The walk then draws only those heights, not every atrium deck (src/v2/atrium-pvs.js).
 // Leaving geometry out only ever shows more of the void, so every simplification here errs towards "visible".
 (()=>{
  const w=globalThis.__walk,T=w.T,col=w.colliders,renderer=w.renderer;
@@ -16,6 +21,8 @@
  let lost=false;for(const e of ['webglcontextlost','webglcontextrestored'])renderer.domElement.addEventListener(e,()=>{lost=true;});
  // FAR: the whole ship's length, past the walk's own far camera (src/walk/main.public.js) at any eye.
  const CHUNK=24,MIN_AREA=.004,TILE=128,ATLAS=2048,PER_ROW=ATLAS/TILE,TILES=PER_ROW*PER_ROW,FAR=600;
+ // Heights a sight reaches, as bytes: RANGE_Y0 + RANGE_SPAN * byte / 255 (PVS_RANGE in src/v2/atrium-pvs.js; the driver checks).
+ const RANGE_Y0=-45,RANGE_SPAN=180;
  const FACES=[[1,0,0,0,-1,0],[-1,0,0,0,-1,0],[0,1,0,0,0,1],[0,-1,0,0,0,-1],[0,0,1,0,-1,0],[0,0,-1,0,-1,0]];
  let occluders,prisms,voidBox,rt,cameras,pixels,atriumSpan,localSpan;
  function chunked(){
@@ -30,12 +37,18 @@
   const each=(bvh,matrices)=>{const g=bvh.geometry,p=g.attributes.position.array,index=g.index?.array,flags=bvh.leoWindowFlags,n=(index?index.length:p.length/3)/3;for(const m of matrices)for(let f=0;f<n;f++)if(!flags?.[f])triangle(p,index,f,m);};
   for(const band of col.bands.values())each(band.bvh,[null]);
   for(const group of col.groups)each(group.bvh,group.items.map(item=>item.matrix));
-  // Each surface marks itself when it lies in the atrium span (band.xy) but outside the eye's local span (band.zw); the
-  // nearest one wins the depth test, so a marked pixel is such a surface in plain view.
+  // Shut landing doors, from the lift data (src/walk/lifts.js shutLandingDoors): a colliders-only page (--prepared) has
+  // them on __walk, as does a debug walk.
+  for(const b of w.landingDoors||[]){const g=new T.BoxGeometry(b.max[0]-b.min[0],b.max[1]-b.min[1],b.max[2]-b.min[2]);
+   g.translate((b.min[0]+b.max[0])/2,(b.min[1]+b.max[1])/2,(b.min[2]+b.max[2])/2);const p=g.attributes.position.array,index=g.index.array;
+   for(let f=0;f<index.length/3;f++)triangle(p,index,f,null);g.dispose();}
+  // Each surface marks itself in red when it lies in the atrium span (band.xy) but outside the eye's local span (band.zw),
+  // and writes its height in green and that it is there in blue; the nearest one wins the depth test, so a marked pixel
+  // is such a surface in plain view. Alpha stays 0 for the void's pass.
   const material=new T.ShaderMaterial({side:T.DoubleSide,uniforms:{band:{value:new T.Vector4()}},
    // The walk's renderer keeps a logarithmic depth buffer; without its chunks this depth would not compare with the void's.
    vertexShader:'#include <common>\n#include <logdepthbuf_pars_vertex>\nvarying float wy;\nvoid main(){vec4 w=modelMatrix*vec4(position,1.);wy=w.y;gl_Position=projectionMatrix*viewMatrix*w;\n#include <logdepthbuf_vertex>\n}',
-   fragmentShader:'#include <logdepthbuf_pars_fragment>\nuniform vec4 band;varying float wy;\nvoid main(){\n#include <logdepthbuf_fragment>\ngl_FragColor=vec4(wy>=band.x&&wy<=band.y&&(wy<band.z||wy>band.w)?1.:0.,0.,0.,1.);}'});
+   fragmentShader:'#include <logdepthbuf_pars_fragment>\nuniform vec4 band;varying float wy;\nvoid main(){\n#include <logdepthbuf_fragment>\ngl_FragColor=vec4(wy>=band.x&&wy<=band.y&&(wy<band.z||wy>band.w)?1.:0.,clamp((wy-('+RANGE_Y0.toFixed(1)+'))/'+RANGE_SPAN.toFixed(1)+',0.,1.),1.,0.);}'});
   const scene=new T.Scene();
   for(const c of chunks.values()){const g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(c.values.slice(0,c.length),3));g.computeBoundingSphere();const m=new T.Mesh(g,material);m.matrixAutoUpdate=false;scene.add(m);}
   scene.updateMatrixWorld(true);scene.matrixWorldAutoUpdate=false;
@@ -51,8 +64,9 @@
    for(const [x,z] of ring){box.expandByPoint(new T.Vector3(x,y0,z));box.expandByPoint(new T.Vector3(x,y1,z));}
   }
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.computeBoundingSphere();
-  // Pulled towards the eye: a prism face flush with a wall counts as seen.
-  const material=new T.MeshBasicMaterial({color:0xffffff,side:T.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4});
+  // Pulled towards the eye: a prism face flush with a wall counts as seen. It adds only to alpha (black, additive), so the
+  // height of the surface behind it stays in green.
+  const material=new T.MeshBasicMaterial({color:0x000000,side:T.DoubleSide,depthWrite:false,blending:T.AdditiveBlending,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-4});
   const scene=new T.Scene(),mesh=new T.Mesh(g,material);mesh.frustumCulled=false;scene.add(mesh);scene.updateMatrixWorld(true);
   return {scene,box};
  }
@@ -84,15 +98,18 @@
   return out;
  }
  const frustum=new T.Frustum(),matrix=new T.Matrix4();
- // samples: flat [x, y, z, walker floor y, ...]. Returns one 0/1 per sample.
+ // samples: flat [x, y, z, walker floor y, ...]. Returns one 0/1 per sample, and the heights each one's sight reaches.
  function run(samples){
-  const count=samples.length/4,result=new Uint8Array(count),tiles=[],band=occluders.material.uniforms.band.value;let drawn=0;
+  const count=samples.length/4,result=new Uint8Array(count),lo=new Uint8Array(count).fill(255),hi=new Uint8Array(count),tiles=[],band=occluders.material.uniforms.band.value;let drawn=0;
   const saved={target:renderer.getRenderTarget(),autoClear:renderer.autoClear,color:renderer.getClearColor(new T.Color()),alpha:renderer.getClearAlpha()};
   const flush=()=>{
    if(!tiles.length)return;
    renderer.readRenderTargetPixels(rt,0,0,ATLAS,ATLAS,pixels);
-   for(const [tile,sample] of tiles){if(result[sample])continue;const tx=(tile%PER_ROW)*TILE,ty=Math.floor(tile/PER_ROW)*TILE;
-    rows:for(let y=ty;y<ty+TILE;y++){const row=(y*ATLAS+tx)*4;for(let x=0;x<TILE;x++)if(pixels[row+x*4]){result[sample]=1;break rows;}}}
+   for(const [tile,sample] of tiles){const tx=(tile%PER_ROW)*TILE,ty=Math.floor(tile/PER_ROW)*TILE;let l=lo[sample],h=hi[sample];
+    for(let y=ty;y<ty+TILE;y++){const row=(y*ATLAS+tx)*4;for(let x=0;x<TILE;x++){const p=row+x*4,through=pixels[p+3];if(!pixels[p]&&!through)continue;
+     // Through the void with nothing behind: the top of the range.
+     const at=pixels[p+2]?pixels[p+1]:255;result[sample]=1;if(at<l)l=at;if(at>h)h=at;}}
+    lo[sample]=l;hi[sample]=h;}
    tiles.length=0;
   };
   renderer.autoClear=false;renderer.setClearColor(0x000000,0);
@@ -113,8 +130,8 @@
    }
    flush();
   }finally{renderer.setRenderTarget(saved.target);renderer.autoClear=saved.autoClear;renderer.setClearColor(saved.color,saved.alpha);}
-  return {visible:Array.from(result),faces:drawn,lost:lost||renderer.getContext().isContextLost()};
+  return {visible:Array.from(result),lo:Array.from(lo,(v,i)=>result[i]?v:0),hi:Array.from(hi),faces:drawn,lost:lost||renderer.getContext().isContextLost()};
  }
- globalThis.__atriumPvs={setup,columns,run};
+ globalThis.__atriumPvs={setup,columns,run,range:{y0:RANGE_Y0,span:RANGE_SPAN}};
  return true;
 })()
