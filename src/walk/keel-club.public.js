@@ -107,10 +107,10 @@ export function tubeKick(st,dir){const f=riverFrame(st.s),m=Math.hypot(dir[0],di
 export function tubeSeat(st){const f=riverFrame(st.s);return {x:f.x+f.rx*st.d,y:KEEL.floor-RIVER.drop+TUBE.seat,z:f.z+f.rz*st.d,yaw:Math.atan2(f.tx,f.tz)};}
 // The dock a tube can be let out at, or null: within `capture` of it along the loop.
 export function tubeDock(st){const T0=RIVER_PATH.total;for(const dock of DOCKS){let ds=Math.abs(st.s-dock.s);ds=Math.min(ds,T0-ds);if(ds<=TUBE.capture)return dock;}return null;}
-// A tube's bright ring: one geometry for every rider's tube.
-let tubeShape=null;
-export function createTubeMesh(){tubeShape??=new T.TorusGeometry(.55,.24,10,28).rotateX(Math.PI/2);
- const m=new T.Mesh(tubeShape,new T.MeshStandardMaterial({name:'Keel_club_tube',color:0xf07c3c,roughness:.45}));m.name='Keel_club_tube';return m;}
+// A tube's bright ring: one geometry and one material for every rider's tube, so a tube needs no disposing.
+let tubeShape=null,tubeMaterial=null;
+export function createTubeMesh(){tubeShape??=new T.TorusGeometry(.55,.24,10,28).rotateX(Math.PI/2);tubeMaterial??=new T.MeshStandardMaterial({name:'Keel_club_tube',color:0xf07c3c,roughness:.45});
+ const m=new T.Mesh(tubeShape,tubeMaterial);m.name='Keel_club_tube';return m;}
 // Stairs from the main floor up to each terrace: a 23-riser flight running forward along the terrace front wall,
 // then a landing at terrace height and a gap in the rail onto the terrace promenade.
 export const STAIRS=[-112,-58,124];const RISERS=23,TREAD=.28,STAIR_W=3;
@@ -470,12 +470,16 @@ export function createKeelClub(ship){
  const ringMesh=new T.InstancedMesh(new T.RingGeometry(.25,.45,18).rotateX(-Math.PI/2),new T.MeshBasicMaterial({name:'Keel_club_cannon_splash',color:0xffffff,toneMapped:false,transparent:true,opacity:.85,depthWrite:false,side:T.DoubleSide}),RINGS);
  for(const m of [dropMesh,ringMesh]){m.name='Keel_club_cannon_water';m.frustumCulled=false;m.count=0;m.instanceMatrix.setUsage(T.DynamicDrawUsage);group.add(m);}
  const drops=[],rings=[],jets=[],hitShots=new Map(),M=new T.Matrix4(),Q=new T.Quaternion(),S=new T.Vector3(),P=new T.Vector3();
- // A shot is cannon i's jet for JET seconds. Every page aboard simulates every shot from the same `seed`, so all of them
- // see the same jet (net/live.js relays shots); `id` names the shot (one hit per shot per rider) and `who` the shooter
- // (a visitor id, or 'me'). A new shot on a cannon replaces the one it is firing.
- let shots=0;
- const fire=(i,{id=null,seed=null,who='me'}={})=>{if(!CANNONS[i])return null;seed??=(Math.random()*2147483646|0)+1;id??='me-'+(++shots);
-  const shot={i,t:0,acc:0,id,who,rnd:seeded(seed)},old=jets.findIndex(j=>j.i===i);if(old>=0)jets[old]=shot;else jets.push(shot);return {i,seed,id};};
+ // Shots run on a fixed clock of STEP seconds (catching up at most CATCH_UP a frame), and a shot emits its droplets by
+ // its age, so every page simulating it from the same `seed` sees the same jet whatever its frame rate. A shot is
+ // cannon i's jet for JET seconds; `id` names it (one hit per shot per rider) and `who` the shooter (a visitor id, or
+ // 'me'). Online, the server decides which shots happen and every page, the shooter's too, fires what it accepts
+ // (net/live.js); offline, a page fires its own, at most one per cannon every GAP seconds, as the server allows.
+ const STEP=1/60,CATCH_UP=.25,GAP=1.4,lastShot=[];let clock=0,lag=0,shots=0;
+ const seed=()=>(Math.random()*2147483646|0)+1;
+ const fire=(i,{id=null,seed:s=null,who='me'}={})=>{if(!CANNONS[i])return null;
+  if(id===null&&clock-(lastShot[i]??-Infinity)<GAP)return null;lastShot[i]=clock;s??=seed();id??='me-'+(++shots);
+  const shot={i,age:0,emitted:0,id,who,rnd:seeded(s)},old=jets.findIndex(j=>j.i===i);if(old>=0)jets[old]=shot;else jets.push(shot);return {i,seed:s,id};};
  // E's target here: a water cannon on a bridge's crown (of those within reach, the one aimed most nearly the way the
  // walker faces: heading as main.js keeps it, facing sin, cos in x, z; without a heading, the nearest), else a tube dock.
  const near=(p,heading)=>{let best=-1,bs=-Infinity;CANNONS.forEach((c,i)=>{const d=Math.hypot(p.x-c.at[0],p.z-c.at[2]);if(d>=REACH||Math.abs(p.y-(FY+RIVER.rise))>=1.2)return;
@@ -483,34 +487,40 @@ export function createKeelClub(ship){
   if(best>=0)return {kind:'cannon',cannon:best,label:'Fire the water cannon'};
   if(Math.abs(p.y-FY)<1)for(const dock of DOCKS)if(Math.hypot(p.x-dock.at[0],p.z-dock.at[2])<TUBE.reach)return {kind:'tube',dock,label:'Float the Keel Loop'};
   return null;};
- // Did a shot hit a rider whose tube is centred at `c` (x, y, z)? Each droplet's path this frame (from q to p) is
- // tested against a sphere of radius r, so a low frame rate can't skip it; a shot hits a rider once. Returns the hit
- // {id, who, dir (the droplets' x, z heading)} and soaks up that shot's droplets there, or null.
- const hit=(c,r=.8)=>{let found=null;const r2=r*r;
-  for(let k=drops.length-1;k>=0;k--){const d=drops[k];if(found?d.shot!==found.id:hitShots.has(d.shot))continue;
-   const ax=d.q[0]-c[0],ay=d.q[1]-c[1],az=d.q[2]-c[2],bx=d.p[0]-d.q[0],by=d.p[1]-d.q[1],bz=d.p[2]-d.q[2],bb=bx*bx+by*by+bz*bz||1e-9,t=Math.max(0,Math.min(1,-(ax*bx+ay*by+az*bz)/bb));
-   const ex=ax+bx*t,ey=ay+by*t,ez=az+bz*t;if(ex*ex+ey*ey+ez*ez>r2)continue;
-   if(!found){found={id:d.shot,who:d.who,dir:[d.v[0],d.v[2]]};hitShots.set(d.shot,JET+2);}
-   drops.splice(k,1);if(rings.length<RINGS)rings.push({p:[d.p[0],WY+.02,d.p[2]],t:0});}
-  return found;};
- const update=dt=>{
-  // the water's ripples move whenever the club is drawn
-  const t=Math.min(dt,.1);for(const {map,flow} of flows){map.offset.x+=flow[0]*t;map.offset.y+=flow[1]*t;}
-  for(const [id,left] of hitShots){if(left<=t)hitShots.delete(id);else hitShots.set(id,left-t);}
-  if(!jets.length&&!drops.length&&!rings.length)return;dt=Math.min(dt,.05);
-  for(let k=jets.length-1;k>=0;k--){const j=jets[k],{at,aim}=CANNONS[j.i];j.t+=dt;if(j.t>JET){jets.splice(k,1);continue;}j.acc+=dt*RATE;
-   for(;j.acc>=1&&drops.length<DROPS;j.acc--){const sp=SPEED*(.94+j.rnd()*.12),jit=()=>(j.rnd()-.5)*.04,p=[at[0]+aim[0]*1.1,at[1]+.08+aim[1]*1.1,at[2]+aim[2]*1.1];
-    drops.push({p,q:p.slice(),v:[(aim[0]+jit())*sp,(aim[1]+jit())*sp,(aim[2]+jit())*sp],shot:j.id,who:j.who});}}
-  for(let k=drops.length-1;k>=0;k--){const d=drops[k];d.q[0]=d.p[0];d.q[1]=d.p[1];d.q[2]=d.p[2];d.v[1]-=GRAV*dt;for(let a=0;a<3;a++)d.p[a]+=d.v[a]*dt;
+ // A droplet's path this step, from q to p (cut off where it meets the water), against a rider's sphere: centre c, radius R_HIT.
+ const R_HIT=.8;
+ const crosses=(d,c)=>{let ex=d.p[0],ey=d.p[1],ez=d.p[2];if(ey<WY&&d.q[1]>WY){const f=(d.q[1]-WY)/(d.q[1]-ey);ex=d.q[0]+(ex-d.q[0])*f;ey=WY;ez=d.q[2]+(ez-d.q[2])*f;}
+  const ax=d.q[0]-c[0],ay=d.q[1]-c[1],az=d.q[2]-c[2],bx=ex-d.q[0],by=ey-d.q[1],bz=ez-d.q[2],bb=bx*bx+by*by+bz*bz||1e-9,t=Math.max(0,Math.min(1,-(ax*bx+ay*by+az*bz)/bb));
+  const x=ax+bx*t,y=ay+by*t,z=az+bz*t;return x*x+y*y+z*z<=R_HIT*R_HIT;};
+ // One step: shots emit, droplets fly; with a rider (their tube's centre), each droplet's step is tested before a
+ // droplet that reaches the water is retired. A shot's first droplet to reach the rider is its hit, pushed onto `out`
+ // ({id, who, dir: the droplet's x, z heading}); its droplets that reach the rider after that splash on them too.
+ function step(h,rider,out){
+  for(let k=jets.length-1;k>=0;k--){const j=jets[k],{at,aim}=CANNONS[j.i];j.age+=h;const due=Math.floor(Math.min(JET,j.age)*RATE);
+   for(;j.emitted<due;j.emitted++){const sp=SPEED*(.94+j.rnd()*.12),jit=()=>(j.rnd()-.5)*.04,p=[at[0]+aim[0]*1.1,at[1]+.08+aim[1]*1.1,at[2]+aim[2]*1.1];
+    if(drops.length<DROPS)drops.push({p,q:p.slice(),v:[(aim[0]+jit())*sp,(aim[1]+jit())*sp,(aim[2]+jit())*sp],shot:j.id,who:j.who});}
+   if(j.age>=JET)jets.splice(k,1);}
+  for(let k=drops.length-1;k>=0;k--){const d=drops[k];d.q[0]=d.p[0];d.q[1]=d.p[1];d.q[2]=d.p[2];d.v[1]-=GRAV*h;for(let a=0;a<3;a++)d.p[a]+=d.v[a]*h;
+   if(rider&&crosses(d,rider)){if(!hitShots.has(d.shot)){hitShots.set(d.shot,JET+2);out.push({id:d.shot,who:d.who,dir:[d.v[0],d.v[2]]});}
+    drops.splice(k,1);if(rings.length<RINGS)rings.push({p:[rider[0]+(d.p[0]-rider[0])*.5,WY+.02,rider[2]+(d.p[2]-rider[2])*.5],t:0});continue;}
    if(d.p[1]<=WY){drops.splice(k,1);if(rings.length<RINGS&&Math.random()<.3)rings.push({p:[d.p[0],WY+.02,d.p[2]],t:0});}}
-  for(let k=rings.length-1;k>=0;k--){rings[k].t+=dt;if(rings[k].t>.6)rings.splice(k,1);}
-  drops.forEach((d,i)=>dropMesh.setMatrixAt(i,M.makeTranslation(d.p[0],d.p[1],d.p[2])));dropMesh.count=drops.length;
-  rings.forEach((r,i)=>{const g=1+r.t*4;ringMesh.setMatrixAt(i,M.compose(P.set(...r.p),Q.identity(),S.set(g,1,g)));});ringMesh.count=rings.length;
-  dropMesh.instanceMatrix.needsUpdate=true;ringMesh.instanceMatrix.needsUpdate=true;
+  for(let k=rings.length-1;k>=0;k--){rings[k].t+=h;if(rings[k].t>.6)rings.splice(k,1);}
+  for(const [id,left] of hitShots){if(left<=h)hitShots.delete(id);else hitShots.set(id,left-h);}
+ }
+ // Each frame: the ripples move, and the shots catch up on their clock. `rider` is our tube's centre (x, y, z) while we
+ // float, else null. Returns the hits on us this frame.
+ const update=(dt,rider=null)=>{
+  const t=Math.min(dt,.1);for(const {map,flow} of flows){map.offset.x+=flow[0]*t;map.offset.y+=flow[1]*t;}
+  const out=[],busy=jets.length||drops.length||rings.length||hitShots.size;lag+=Math.min(dt,CATCH_UP);
+  while(lag>=STEP){lag-=STEP;clock+=STEP;if(busy)step(STEP,rider,out);}
+  if(busy){drops.forEach((d,i)=>dropMesh.setMatrixAt(i,M.makeTranslation(d.p[0],d.p[1],d.p[2])));dropMesh.count=drops.length;
+   rings.forEach((r,i)=>{const g=1+r.t*4;ringMesh.setMatrixAt(i,M.compose(P.set(...r.p),Q.identity(),S.set(g,1,g)));});ringMesh.count=rings.length;
+   dropMesh.instanceMatrix.needsUpdate=true;ringMesh.instanceMatrix.needsUpdate=true;}
+  return out;
  };
  // Its top band stops under Deck 1's: the walk draws it from Deck 1 (down the stair tower and lift shafts) and below, never from Deck 2 up.
  // In the hall the walk's indoor fog (solid at 148 m) would grey out its far half: from below Deck 1, the fog opens to the
  // hall's own length. Called each frame after the atrium has set the fog, before drawing; elsewhere it leaves the fog alone.
  const mood=(fog,eye)=>{if(!fog?.isFog||eye.y>DECK1-.4||eye.y<FY-4||eye.x<KEEL.aft-2||eye.x>KEEL.bow+2||Math.abs(eye.z)>half(eye.x,Math.max(eye.y,FY))+.5)return;fog.near=Math.max(fog.near,170);fog.far=Math.max(fog.far,440);};
- return {group,deck1,solid,seats,update,near,fire,hit,mood,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
+ return {group,deck1,solid,seats,update,near,fire,seed,mood,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
 }

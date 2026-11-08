@@ -477,7 +477,8 @@ const actions={
   else if(t.kind==='mct')boardCart(t);
   else if(t.kind==='graffiti'){closePanels();graffiti.open();}
   else if(t.kind==='lever')leverPanel.flip(t.lever);
-  else if(t.kind==='cannon'){const shot=keelClub.fire(t.cannon);if(shot)live?.cannon(shot.i,shot.seed);}
+  // Online the server decides each shot and every page, ours too, fires the shots it accepts; offline we fire our own.
+  else if(t.kind==='cannon'){if(live?.live)live.cannon(t.cannon,keelClub.seed());else keelClub.fire(t.cannon);}
   else if(t.kind==='tube')boardTube(t.dock);
   else if(t.kind==='lever-exit')leverPanel.release();
   else if(t.kind==='tv'){closePanels();crownTv.open();}
@@ -649,7 +650,7 @@ if(LIVE_URL){
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),
   // Someone else's Keel Club water cannon shot: the same jet here, from its seed.
-  cannon:(id,i,seed,shot)=>keelClub?.fire(i,{id:shot,seed,who:id}),aboard:(n,names)=>{aboard=n;if(names!==undefined)aboardNames=names;showAboard();showAboardList();},
+  cannon:(id,i,seed,shot)=>keelClub?.fire(i,{id:shot,seed,who:id===live.id?'me':id}),aboard:(n,names)=>{aboard=n;if(names!==undefined)aboardNames=names;showAboard();showAboardList();},
   maze:msg=>maze?.fromServer(msg),
   treasure:msg=>treasure?.fromServer(msg),
   panel:msg=>leverPanel?.apply(msg),
@@ -747,9 +748,10 @@ renderer.setAnimationLoop(()=>{
  vaultLift?.update(dt,controller);
  // A Paws Off run holds the walker on the treadmill (paws-off/game.js); the belts of others playing run too.
  run=pawsOff?.update(dt,remotes?[...remotes.remotes.values()].filter(r=>r.tgt?.playing).map(r=>r.cur):[])||null;
- mudwater?.update(dt);nosePark?.update(dt);keelClub?.update(dt);
- // A water cannon's shot that reaches our tube pushes it, once a shot.
- if(resting?.spot.tube&&resting.phase==='in'){const s=tubeSeat(resting.spot.tube),h=keelClub?.hit([s.x,s.y+.2,s.z]);if(h){tubeKick(resting.spot.tube,h.dir);splashed(h.who);}}
+ mudwater?.update(dt);nosePark?.update(dt);
+ {// A water cannon's shot that reaches our tube pushes it, once a shot (keel-club.js tests it on the shots' own clock).
+  const tube=resting?.spot.tube&&resting.phase==='in'?resting.spot.tube:null,seat=tube?tubeSeat(tube):null;
+  for(const h of keelClub?.update(dt,seat?[seat.x,seat.y+.2,seat.z]:null)||[])if(tube){tubeKick(tube,h.dir);splashed(h.who);}}
  vault?.update(dt,controller.position);
  // Riding a moving car, the car carries the walker; it passes slab edges and the hull skin, which must not push.
  const riding=vaultLift?.riding||lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
@@ -933,7 +935,7 @@ function hud(p){
  const near=changeLog.nearby(p).length,chip=$('changes-here');
  if(chip.dataset.count!==String(near)){chip.dataset.count=String(near);chip.hidden=!near;chip.querySelector('b').textContent=String(near);
   chip.querySelector('span').textContent=near===1?' change here':' changes here';chip.setAttribute('aria-label',`${near} change${near===1?'':'s'} made around here: open the ship log`);}
- const t=run||graffiti?.active?null:resting?{label:resting.spot.tube?(tubeDock(resting.spot.tube)?'Get out at the dock':'Paddle to a dock to get out'):resting.stand?'Leave the capsule':resting.spot.mct?'Get out':resting.lie?'Get up':'Stand up'}:target();
+ const t=run||graffiti?.active?null:resting?{kind:resting.spot.tube&&!tubeDock(resting.spot.tube)?'waiting':undefined,label:resting.spot.tube?(tubeDock(resting.spot.tube)?'Get out at the dock':'Paddle to a dock to get out'):resting.stand?'Leave the capsule':resting.spot.mct?'Get out':resting.lie?'Get up':'Stand up'}:target();
  const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=!show||touch;
  // Waiting for a called lift there's nothing to press: the prompt just says where the car is.
  const waiting=t?.kind==='waiting';prompt.classList.toggle('waiting',waiting);$('use').disabled=waiting;

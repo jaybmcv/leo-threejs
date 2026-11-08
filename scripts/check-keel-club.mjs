@@ -121,9 +121,19 @@ assert.equal(far.length,0,'seats out of reach');assert(spots.length>=100,'seats 
  console.log(`${docks===DOCKS.length?'PASS':'FAIL'} tube docks reached, offering a tube and letting it out: ${docks}/${DOCKS.length}`);assert.equal(docks,DOCKS.length,'a tube dock fails');
  // A shot hits a rider downstream of its cannon once, at 60 and at 20 frames a second, and pushes the tube.
  for(const fps of [60,20]){let hits=0,i=0;for(const c of CANNONS){if(i++%5)continue;const aim=[c.aim[0],c.aim[2]],m=Math.hypot(...aim),land=[c.at[0]+aim[0]/m*7.5,c.at[2]+aim[1]/m*7.5],{s,d}=riverNearest(...land),rider={s,d,vs:TUBE.current,vd:0,ks:0,kd:0},seat=tubeSeat(rider);
-   club.fire(CANNONS.indexOf(c),{id:'t'+fps+'-'+i,seed:7});let got=0,ks=0;for(let k=0;k<fps*3;k++){club.update(1/fps);const h=club.hit([seat.x,seat.y+.2,seat.z]);if(h){got++;tubeKick(rider,h.dir);ks=Math.hypot(rider.ks,rider.kd);}}
+   club.fire(CANNONS.indexOf(c),{id:'t'+fps+'-'+i,seed:7});let got=0,ks=0;for(let k=0;k<fps*3;k++){for(const h of club.update(1/fps,[seat.x,seat.y+.2,seat.z])){got++;tubeKick(rider,h.dir);ks=Math.hypot(rider.ks,rider.kd);}}
    if(got===1&&ks>.3)hits++;else console.log('  cannon',CANNONS.indexOf(c),'at',fps,'fps: hits',got,'push',ks.toFixed(2));}
-  const tried=Math.ceil(CANNONS.length/5);console.log(`${hits===tried?'PASS':'FAIL'} a shot hits a downstream rider exactly once and pushes them, ${fps} fps: ${hits}/${tried}`);assert.equal(hits,tried,'cannon hits');}}
+  const tried=Math.ceil(CANNONS.length/5);console.log(`${hits===tried?'PASS':'FAIL'} a shot hits a downstream rider exactly once and pushes them, ${fps} fps: ${hits}/${tried}`);assert.equal(hits,tried,'cannon hits');}
+ // Two cannons on one bridge fire at once at a rider between their landing points: two hits, one each. And a rider
+ // floating downstream into a jet is hit once as they pass through it.
+ {const a=CANNONS[0],b=CANNONS[1],mid=[(a.at[0]+b.at[0])/2,(a.at[2]+b.at[2])/2];let got=new Set();
+  const land=c=>{const m=Math.hypot(c.aim[0],c.aim[2]);return [c.at[0]+c.aim[0]/m*7.5,c.at[2]+c.aim[2]/m*7.5];};
+  for(const [c,tag] of [[a,'A'],[b,'B']]){const [x,z]=land(c),{s,d}=riverNearest(x,z),seat=tubeSeat({s,d});club.fire(CANNONS.indexOf(c),{id:'pair-'+tag,seed:3});
+   for(let k=0;k<180;k++)for(const h of club.update(1/60,[seat.x,seat.y+.2,seat.z]))got.add(h.id);}
+  console.log(`${got.size===2?'PASS':'FAIL'} two cannons at once: ${got.size} shots hit, one each`);assert.equal(got.size,2,'two shots');
+  const c=CANNONS[4],[x,z]=land(c),{s}=riverNearest(x,z),rider={s:s-3,d:0,vs:TUBE.current,vd:0,ks:0,kd:0};club.fire(4,{id:'moving',seed:5});let n=0;
+  for(let k=0;k<180;k++){tubeStep(rider,1/60,{x:riverFrame(rider.s).tx*5,z:riverFrame(rider.s).tz*5});const seat=tubeSeat(rider);n+=club.update(1/60,[seat.x,seat.y+.2,seat.z]).length;}
+  console.log(`${n===1?'PASS':'FAIL'} a rider paddling into a jet is hit once: ${n}`);assert.equal(n,1,'moving rider');}}
 
 // The walk Controller: from Deck 1's forward stair landing down the tower, out of its door, across to a terrace stair and up.
 const ctl=new Controller(col);const go=(x,z,max=2400)=>{let i=0;for(;i<max;i++){const d=new T.Vector3(x-ctl.position.x,0,z-ctl.position.z);if(d.length()<.4)break;d.setLength(Math.min(3.2,d.length()*4+.5));ctl.step(1/60,d,false);}return i<max;};

@@ -328,11 +328,12 @@ function onMessage(v,data,binary){
    broadcast({m:'mark',id:v.id,at:a.map(n=>Math.round(n*100)/100)},v);break;
   }
   // A Keel Club water cannon shot: from someone on that cannon's bridge crown (policy.canFire), once per cannon per
-  // CANNON_GAP. Everyone else simulates the same jet from its seed, and each rider's page judges its own hits.
+  // CANNON_GAP. Every page aboard, the shooter's too, fires the accepted shot from its seed, and each rider's page judges
+  // its own hits.
   case 'cannon':{
    const i=msg.i,now=Date.now();if(!allowed(v,'cannon')||!Number.isInteger(i)||!policy.canFire(v.pos,i)||now-(cannonShots[i]||0)<CANNON_GAP)break;
    cannonShots[i]=now;v.shots=(v.shots||0)+1;const seed=Number.isInteger(msg.seed)&&msg.seed>0&&msg.seed<2147483647?msg.seed:1+Math.floor(Math.random()*2147483646);
-   broadcast({m:'cannon',id:v.id,i,seed,shot:v.id+':'+v.shots},v);break;
+   broadcast({m:'cannon',id:v.id,i,seed,shot:v.id+':'+v.shots});break;
   }
  }
 }
