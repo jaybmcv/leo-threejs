@@ -40,4 +40,6 @@ scene.add(hull,new T.Mesh(box,shared),new T.Mesh(box,own),new T.Mesh(box,clear),
 const shade=installCornerShade(scene);
 assert.equal(shade.stats.materials,1,'only the interior-only lit opaque material is patched');
 assert.ok(own.customProgramCacheKey().endsWith('|corner')&&!shared.customProgramCacheKey().endsWith('|corner'),'the shared one keeps its program');
+// The Detail menu's switch (detail-levels.js): it never shows the shading before the grid is ready.
+shade.setOn(false);shade.setOn(true);assert.equal(shade.uniforms.uCornerS.value,0,'switching on before the grid is ready shows nothing');
 console.log(`PASS corner shading: ${lines.length} wall lines, wall foot ${dist(2,.1).toFixed(2)} m, grid ${G.NX}x${G.NZ}x${G.DECKS}`);

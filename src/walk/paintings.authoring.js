@@ -2,6 +2,7 @@ import {RecordGeometry,recordMerged} from "../v2/prepared-geometry-record.js";
 import {fitPhase4Painting,phase4PaintingPoint} from '../v2/phase4-community.js';
 import * as T from 'three';
 import {placed,placedV1,placeObject} from '../plan/placements.js';
+import {mergeByMaterial} from './merge-by-material.js';
 import {bandOf} from './collision.authoring.js';
 
 // Paintings hung on the walk's walls. Each is one entry: its image (src/walk/art, hashed into the build by
@@ -68,7 +69,7 @@ export function createPaintings({urls={},anisotropy=1}={}){
   for(const s of [-1,1]){box('Painting_frame_rail',[w+2*W,W,D],[0,cy+s*(h+W)/2,D/2]);box('Painting_frame_stile',[W,h,D],[s*(w+W)/2,cy,D/2]);}
   const canvas=new T.MeshBasicMaterial({name:'Painting_canvas',color:0xe2d8c6});
   const art=new T.Mesh(new RecordGeometry("src/walk/paintings.js:1",T.PlaneGeometry,w,h),canvas);art.name='Painting_art_'+p.name;art.position.set(0,cy,D-FRAME.depth*.4);group.add(art);
-  placeObject(group,'painting/'+p.name);fitPhase4Painting(group,p);group.updateMatrixWorld(true);
+  placeObject(group,'painting/'+p.name);fitPhase4Painting(group,p);mergeByMaterial(group);group.updateMatrixWorld(true);
   return {p,group,canvas,centre:new T.Vector3(...phase4PaintingPoint(p.name,placed('painting/'+p.name))),url:urls[p.file],loading:false};
  });
  return {

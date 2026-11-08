@@ -69,7 +69,7 @@ async function connect(){
  return {send,ev,wait,errors,close:()=>{socket.close();return fetch('http://127.0.0.1:'+port+'/json/close/'+tab.id).catch(()=>{});}};
 }
 const nextFrames=n=>`new Promise(r=>{let n=${n};const f=()=>--n>0?requestAnimationFrame(f):r(true);f.benchHelper=true;requestAnimationFrame(f);})`;
-const place=v=>`(()=>{const w=__walk;w.input.enabled=false;w.input.down?.clear?.();if(!w.goTo({at:${JSON.stringify(v.at)},yaw:${v.yaw},resolved:true}))throw Error('No stand at ${v.name}');w.follow.mode='first';w.follow.yaw=${v.yaw*Math.PI/180};w.follow.pitch=${(v.pitch||0)*Math.PI/180};w.follow.look(0,0);return true;})()`;
+const place=v=>`(()=>{const w=__walk;w.input.enabled=false;w.input.down?.clear?.();if(!w.goTo({at:${JSON.stringify(v.at)},yaw:${v.yaw},resolved:true}))throw Error('No stand at ${v.name}');w.follow.mode='${v.mode||'first'}';w.follow.yaw=${v.yaw*Math.PI/180};w.follow.pitch=${(v.pitch||0)*Math.PI/180};w.follow.look(0,0);return true;})()`;
 const stats=a=>{const s=[...a].sort((x,y)=>x-y),n=s.length,mean=s.reduce((x,y)=>x+y,0)/n;return {n,mean,median:s[n>>1],p95:s[Math.min(n-1,Math.floor(n*.95))],p99:s[Math.min(n-1,Math.floor(n*.99))]};};
 
 async function open(page,tag){
