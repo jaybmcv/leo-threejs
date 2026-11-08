@@ -153,5 +153,6 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const mudwater=feature('mudwater',ship,()=>createMudwater(ship,{urls,anisotropy}));if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
  if(catTree){const spots=treeRestSpots(catTree.seats);restSpots.push(...spots);seats.push(...solidSpots(spots,colliders));}
  if(nosePark){const spots=treeRestSpots(nosePark.seats);restSpots.push(...spots);seats.push(...solidSpots(spots,colliders));}
+ if(keelClub){const spots=treeRestSpots(keelClub.seats);restSpots.push(...spots);seats.push(...solidSpots(spots,colliders));}
  return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,wardTrolley,maze,mctBay,freightGate,blossom,catTree,nosePark,keelClub,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,vaultLift,missionHolo,swordCase,chinampa,baggage,atmosphere,mudwater};
 }

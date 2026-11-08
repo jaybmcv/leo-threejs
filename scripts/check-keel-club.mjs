@@ -7,6 +7,7 @@ import {LIFTS,KEEL_STOP,carTriangles} from '../src/walk/lifts.js';
 import {BODY,Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {groundMesh} from '../src/v2/ground.js';
+import {findRestSpots,solidSpots} from '../src/walk/rest.js';
 
 // The Keel Club, the sports hall under Deck 1 (createKeelClub in src/walk/keel-club.js), walked with the rules of
 // scripts/v2-walk.mjs: from every core lift's Keel Club stop, every zone and both terraces reached, no step off an edge
@@ -79,6 +80,10 @@ let failed=0;for(const [name,x,y,z] of goals){const ok=reached(x,y,z);if(!ok)fai
 const uniq=new Map();for(const d of drops)uniq.set(`${Math.round(d[0])},${Math.round(d[1])},${Math.round(d[2])}`,d);
 console.log(`unguarded drops over 1 m or onto nothing standable: ${uniq.size}`);for(const d of [...uniq.values()].slice(0,25))console.log('  at',d.slice(0,3).map(v=>v.toFixed(1)).join(', '),'drop',d[3]);
 assert.equal(failed,0,'unreached goals');assert.equal(uniq.size,0,'unguarded drops');
+// Seats (benches, stools, loungers): each needs somewhere reached within 1.5 m, from 1.3 m below the seat to just above.
+club.seats.updateMatrixWorld(true);const declared=findRestSpots(club.seats),spots=solidSpots(declared,col),far=spots.filter(sp=>!reached(sp.point.x,sp.height-.2,sp.point.z,1.5,1.3,.25));
+console.log(`seats with somewhere to stand: ${spots.length-far.length}/${spots.length} (of ${declared.length} declared; ${declared.filter(d=>d.kind==='lie').length} loungers)`);for(const sp of far.slice(0,12))console.log('  no standing room near seat at',[sp.point.x,sp.height,sp.point.z].map(v=>v.toFixed(1)).join(', '));
+assert.equal(far.length,0,'seats out of reach');assert(spots.length>=100,'seats lost');
 
 // Water cannons: the prompt on each bridge's crown, a jet that splashes and clears, and every cannon's arc (14 m/s
 // along its aim) coming down in the river, not on a walkway.
