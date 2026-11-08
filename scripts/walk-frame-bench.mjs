@@ -28,7 +28,9 @@ const INIT=`(()=>{
  performance.now=()=>B.virtual?B.vt:realNow();Date.now=()=>B.virtual?1793750400000+Math.round(B.vt):realDate();
  B.poll=()=>{const gl=B.gl,ext=B.ext;while(B.pending.length){const p=B.pending[0];if(!gl.getQueryParameter(p.q,gl.QUERY_RESULT_AVAILABLE))break;const bad=gl.getParameter(ext.GPU_DISJOINT_EXT);p.f.gpu=bad?null:gl.getQueryParameter(p.q,gl.QUERY_RESULT)/1e6;gl.deleteQuery(p.q);B.pending.shift();}};
  const raf=window.requestAnimationFrame.bind(window);
- window.requestAnimationFrame=cb=>raf(t=>{
+ // The bench's own frame counter (nextFrames) is neither a frame nor a tick of the clock: counted, it made every frame
+ // two entries (the walk's callback and its own, near zero), halving the means, and stepped the virtual clock twice.
+ window.requestAnimationFrame=cb=>cb.benchHelper?raf(cb):raf(t=>{
   if(B.virtual&&B.running)B.vt+=B.step;
   const t0=realNow(),gl=B.gl,ext=B.recording&&B.ext;let q=null;
   if(ext){q=gl.createQuery();gl.beginQuery(ext.TIME_ELAPSED_EXT,q);}
@@ -45,7 +47,9 @@ async function launch(){
  // A fresh profile each launch: state saved by an interrupted load (seen once) can stall every later start.
  const profile=path.resolve('output/perf-walk/chrome-profile');await fs.rm(profile,{recursive:true,force:true});await fs.mkdir(profile,{recursive:true});
  const flags=['--remote-debugging-port='+port,'--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','--disable-extensions',
-  '--disable-gpu-vsync','--disable-frame-rate-limit','--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows',
+  // --vsync keeps a visitor's frame pacing (vsync and the frame cap on): the frame interval is then the display's, but the
+  // main-thread and GPU times are what a visitor's frame costs.
+  ...(process.argv.includes('--vsync')?[]:['--disable-gpu-vsync','--disable-frame-rate-limit']),'--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows',
   ...(!process.argv.includes('--headless')?[]:['--headless=new','--use-angle=d3d11','--enable-gpu','--ignore-gpu-blocklist']),
   '--force-device-scale-factor=1','--window-position=0,0','--window-size='+width+','+(height+140),'--autoplay-policy=no-user-gesture-required','about:blank'];
  const chrome=spawn(CHROME,flags,{stdio:'ignore'});
@@ -64,7 +68,7 @@ async function connect(){
  await send('Page.addScriptToEvaluateOnNewDocument',{source:INIT});
  return {send,ev,wait,errors,close:()=>{socket.close();return fetch('http://127.0.0.1:'+port+'/json/close/'+tab.id).catch(()=>{});}};
 }
-const nextFrames=n=>`new Promise(r=>{let n=${n};const f=()=>--n>0?requestAnimationFrame(f):r(true);requestAnimationFrame(f);})`;
+const nextFrames=n=>`new Promise(r=>{let n=${n};const f=()=>--n>0?requestAnimationFrame(f):r(true);f.benchHelper=true;requestAnimationFrame(f);})`;
 const place=v=>`(()=>{const w=__walk;w.input.enabled=false;w.input.down?.clear?.();if(!w.goTo({at:${JSON.stringify(v.at)},yaw:${v.yaw},resolved:true}))throw Error('No stand at ${v.name}');w.follow.mode='first';w.follow.yaw=${v.yaw*Math.PI/180};w.follow.pitch=${(v.pitch||0)*Math.PI/180};w.follow.look(0,0);return true;})()`;
 const stats=a=>{const s=[...a].sort((x,y)=>x-y),n=s.length,mean=s.reduce((x,y)=>x+y,0)/n;return {n,mean,median:s[n>>1],p95:s[Math.min(n-1,Math.floor(n*.95))],p99:s[Math.min(n-1,Math.floor(n*.99))]};};
 
