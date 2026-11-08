@@ -95,7 +95,7 @@ assert.equal(far.length,0,'seats out of reach');assert(spots.length>=100,'seats 
  // facing down the channel either way from a crown picks the cannon aimed that way
  const facing=CANNONS.filter((c,i)=>club.near(crowns[c.bridge],Math.atan2(c.aim[0],c.aim[2]))?.cannon===i).length;
  console.log(`${facing===CANNONS.length?'PASS':'FAIL'} facing picks the cannon aimed that way: ${facing}/${CANNONS.length}`);assert.equal(facing,CANNONS.length,'facing a cannon does not pick it');
- club.fire(club.near(crowns[0]).cannon);let most=0,splashed=0;const [drop,ring]=club.group.children.filter(o=>o.isInstancedMesh);
+ club.fire(club.near(crowns[0]).cannon);let most=0,splashed=0;const [drop,ring]=club.group.children.filter(o=>o.name==='Keel_club_cannon_water');
  for(let i=0;i<240;i++){club.update(1/60);most=Math.max(most,drop.count);splashed=Math.max(splashed,ring.count);}
  console.log(`${dry?'FAIL':'PASS'} cannon jets land in the river (${CANNONS.length} cannons) · prompts on ${prompts}/${crowns.length} crowns · a jet: ${most} drops at once, ${splashed} splashes, ${drop.count+ring.count} left after 4 s`);
  assert.equal(dry,0,'a cannon jet lands out of the river');assert.equal(prompts,crowns.length,'a bridge crown without a cannon prompt');assert(most>30&&splashed>0&&drop.count+ring.count===0,'cannon jet');}
