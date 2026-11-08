@@ -10,6 +10,7 @@ import {createLounge} from './lounge.public.js';
 import {createConcession} from './concession.public.js';
 import {createSelfieBooth} from './selfie.public.js';
 import {createPoolTable} from './pool/table.public.js';
+import {mergeByMaterial} from './merge-by-material.js';
 import {createPinballMachine} from './pinball/machine.js';
 import {buildColliders,prepareExteriorForWalking} from '../v2/world.public.js';
 import {resolveRoomFrames} from '../plan/rooms.js';
@@ -52,7 +53,7 @@ export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBa
  await yieldToPage();
  const booth=createSelfieBooth();colliders.addStatic(booth.group);
  await yieldToPage();
- const carpet=ship.root.getObjectByName('Activity_floor'),poolTable=carpet?createPoolTable(carpet):null;if(poolTable)colliders.addStatic(poolTable.group);
+ const carpet=ship.root.getObjectByName('Activity_floor'),poolTable=carpet?createPoolTable(carpet):null;if(poolTable){colliders.addStatic(poolTable.group);mergeByMaterial(poolTable.group);}
  await yieldToPage();
  // The same hall's pinball machine at its end wall (pinball/machine.js): solid as one plain box.
  const pinball=createPinballMachine(ship);if(pinball)colliders.addStatic(pinball.solid,()=>true);
