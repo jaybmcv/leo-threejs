@@ -142,7 +142,8 @@ const f=CORES[0],sx=f.stairX,sz=f.stairZ;ctl.position.set(sx-3.5,DECK1+.3,sz);ct
 const down=[];for(let k=0;k<3;k++)down.push([sx-2.8,sz+1.4],[sx+2.8,sz+1.4],[sx+3.5,sz],[sx+2.8,sz-1.4],[sx-2.8,sz-1.4],[sx-3.5,sz]);
 // over the forward port bridge (x 120) to the promenade, along it past the stair's rail and up the stair at x 124
 const x0=STAIRS[2],bx=BRIDGES.side.find(x=>x<x0&&x>x0-8),rz=riverInner(bx),oz=riverOuter(bx);
-const route=[...down,[sx-3.5,sz-4],[135,0],[127.5,0],[126,-12],[bx,-(rz-3)],[bx,-(rz-1)],[bx,-(oz+1)],[bx,-(oz+3.6)],[x0-.6,-(oz+3.6)],[x0-.6,-(front(x0)-1.5)],[x0+7,-(front(x0)-1.5)],[x0+7,-(front(x0+7)+2)]];let walked=true;
+// Out of the lifts and through the gap between the walk's planters (x 124 to 126.5 at z -3.4), not across one.
+const route=[...down,[sx-3.5,sz-4],[135,0],[127.5,0],[125.25,-1],[125.25,-12],[bx,-(rz-3)],[bx,-(rz-1)],[bx,-(oz+1)],[bx,-(oz+3.6)],[x0-.6,-(oz+3.6)],[x0-.6,-(front(x0)-1.5)],[x0+7,-(front(x0)-1.5)],[x0+7,-(front(x0+7)+2)]];let walked=true;
 for(const [x,z] of route){if(!go(x,z)){walked=false;console.log('FAIL controller stuck going to',x,z,'at',ctl.position.toArray().map(v=>v.toFixed(2)).join(','));break;}}
 console.log(`${walked?'PASS':'FAIL'} controller walks Deck 1 → down the forward stair → between the lifts → over a bridge → up the port terrace stair, ends at y ${ctl.position.y.toFixed(2)}`);
 assert(walked&&Math.abs(ctl.position.y-TY)<.15,'controller route');

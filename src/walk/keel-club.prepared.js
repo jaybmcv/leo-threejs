@@ -560,10 +560,12 @@ export function createKeelClub(ship){
  for(const [label,x,s] of [['PADEL',-100,-1],['CABANAS · BEACH BAR',30,-1],['MINI PUTT',-90,1],['GOLF SIMS',28,1]])sign(label,x,FY+2.9,s*(front(x)-.03),label.length>12?8:5,1.2,s<0?0:Math.PI,false);
  for(const s of [-1,1])sign('CLIMBING WALLS',165,FY+3.2,s*(front(165)-.5),6,1.3,s<0?0:Math.PI,false);
 
- // Tube docks: a rack of tubes on the island side of each dock's spot, and a small sign facing the river.
- for(const {at:[x,,z],side} of DOCKS){const zr=z-side*1.5;add(box(x-1.4,x+1.4,FY,FY+.9,zr-.35,zr+.35),C.wood,{wall:true});
-  for(let k=0;k<3;k++)parts.push(paint(new T.TorusGeometry(.55,.22,8,20).rotateX(Math.PI/2).translate(x-.75+k*.75,FY+1.12+k*.02,zr),[C.orange,C.teal,C.slide][k]));
-  parts.push(paint(box(x+1.6,x+1.7,FY,FY+2.1,zr-.05,zr+.05),C.core));sign('FLOAT THE KEEL LOOP',x+1.65,FY+2.4,zr,2.6,.6,side<0?Math.PI:0,true);}
+ // Tube docks: beside each dock's spot along the bank (so the camera behind someone facing the river, or floating
+ // in, stays clear of it), a rack of tubes standing on edge, and the sign on two posts over it, facing the river.
+ for(const {at:[x,,z],side} of DOCKS){const xr=x-3.4;add(box(xr-1.4,xr+1.4,FY,FY+.25,z-.55,z+.55),C.wood,{wall:true});walls.push(box(xr-1.4,xr+1.4,FY,FY+1.9,z-.8,z+.8));
+  for(const e of [-1,1])parts.push(paint(box(xr+e*1.4-.06,xr+e*1.4+.06,FY,FY+2.9,z-.06,z+.06),C.core));
+  [C.orange,C.teal,C.slide,C.orange,C.teal].forEach((c,k)=>parts.push(paint(new T.TorusGeometry(.55,.2,8,20).rotateY(Math.PI/2).translate(xr-1+k*.5,FY+1,z),c)));
+  sign('FLOAT THE KEEL LOOP',xr,FY+2.55,z,2.6,.6,side<0?Math.PI:0,true);}
 
  // ---- Materials and draws ----
  const opaque=new T.MeshStandardMaterial({name:'Keel_club_finish',vertexColors:true,roughness:.72,metalness:0,side:T.DoubleSide});
