@@ -54,6 +54,8 @@ for(const b of batches){
  stats.visibleInstances+=selected.length;
  if(b.selected&&selected.length===b.selected.length&&selected.every((v,i)=>v===b.selected[i]))continue;
  b.selected=selected;stats.compactions++;
+ // A furnishing drawn in a shared batch (furnishing-batches.js) shows the same instances there instead.
+ if(b.o.userData.furnishingBatch){b.o.userData.furnishingBatch(selected,b.all);continue;}
  selected.forEach((i,n)=>b.o.instanceMatrix.array.set(b.all.subarray(i*16,i*16+16),n*16));
  b.o.count=selected.length;b.o.instanceMatrix.needsUpdate=true;b.o.visible=selected.length>0;
 }stats.samples.push(performance.now()-started);if(stats.samples.length>600)stats.samples.shift();},stats,batches:batches.length,owners:owners.size};}

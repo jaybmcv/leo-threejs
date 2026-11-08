@@ -24,6 +24,7 @@ import {settlePreparedStatic} from '../v2/prepared-static.js';
 import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
 import {createAtriumSight} from '../v2/atrium-sight.js';
 import {releaseBatchedSources,releasePhoneGeometry,shrinkPhonePictures} from '../v2/phone-memory.js';
+import {batchFurnishing} from '../v2/furnishing-batches.js';
 import {createFrameReadout} from './frame-readout.js';
 import {mergePhoneFurnishing} from '../v2/phone-furnishing.js';
 import {mergePhoneBands} from '../v2/phone-bands.js';
@@ -214,7 +215,7 @@ const phone=matchMedia('(pointer:coarse)').matches,phoneTest=new URLSearchParams
 const phoneLinearDepth=phone&&phoneTest.get('phonedepth')==='linear';
 // ?phonehide=bands,glass,furnish,gardens,haze,cats hides those for a test on a device, to see what its GPU spends on.
 const PHONE_HIDE={bands:o=>/^V2_low_deck_merged_/.test(o.name)&&!o.material[0]?.transparent,glass:o=>[o.material].flat().some(m=>m?.transparent),
- furnish:o=>o.isInstancedMesh&&o.userData.phase4,gardens:o=>[o.material].flat().some(m=>m?.name==='P6_atrium_gardens'),haze:o=>/haze/i.test(o.name),cats:o=>o.isSkinnedMesh};
+ furnish:o=>o.isInstancedMesh&&o.userData.phase4||o.userData.phase4Batch,gardens:o=>[o.material].flat().some(m=>m?.name==='P6_atrium_gardens'),haze:o=>/haze/i.test(o.name),cats:o=>o.isSkinnedMesh};
 const phoneHide=(phoneTest.get('phonehide')||'').split(',').map(k=>PHONE_HIDE[k]).filter(Boolean);let phoneHidden=[],phoneHiddenAt=-Infinity;
 const renderer=new T.WebGLRenderer({antialias:!(phone&&phoneTest.get('phoneaa')==='0'),logarithmicDepthBuffer:!phoneLinearDepth,powerPreference:'high-performance'});
 const frameReadout=createFrameReadout(renderer);
@@ -425,7 +426,7 @@ async function buildShip(){
  // Not with the atrium detail pack, whose source checks include the layers the cull changes.
  if(!atriumPack&&new URLSearchParams(location.search).get('fogcull')!=='0')fogCull=createFogCull(scene,camera);
  wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);
- isolateStaticWorld(ship,scene);{const hidden=preparedPhone||phoneBatching.merge?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
+ isolateStaticWorld(ship,scene);{const hidden=preparedPhone||phoneBatching.merge?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
