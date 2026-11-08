@@ -3,6 +3,9 @@ import {hydrateHullLayout} from '../plan/envelope-data-v2.js';
 import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS,ATRIUM_BOULEVARD_TREES,ATRIUM_PROMENADE_LAMPS,ATRIUM_FESTOONS} from '../plan/atrium-v2.js';
 import {patchDepth,worldPoint} from '../plan/hull-skin-v2.js';
 import {contains,distanceToSegment,bounds} from '../plan/geometry-v2.js';
+export const windowSeatsFor=o=>Math.max(1,Math.ceil((o[1]-o[0])/3-1e-6));
+// The middle window seat of opening k, counted from the cafe's first window seat.
+export const windowSeatOffset=(openings,k)=>openings.slice(0,k).reduce((n,o)=>n+windowSeatsFor(o),0)+Math.floor(windowSeatsFor(openings[k])/2);
 export function phase6Programme(layout){
  const parts=[],rests=[],owners=phase6Owners(layout),y=layout.decks[5].y,outline=layout.decks[5].atrium.outline;
  const add=(room,part,size,at,mat='oak',opts={})=>parts.push({room,part,size,at,mat,yaw:0,deck:6,phase6:true,...opts});
@@ -104,11 +107,12 @@ const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,
   if(k===7){ca('workbench',[3,.9,.8],[x+3,floor+.45,-3.7],'metal');ca('tool_panel',[3,.75,.06],[x+3,floor+1.4,-4.08],accent,{noCollide:true});seat(r.id,x+3,-2.5,Math.PI,floor,deck,accent);seat(r.id,x+4.5,-2.5,Math.PI,floor,deck,accent);}
   if(k===8){ca('community_table',[6,.08,1.2],[x+8.5,floor+.76,0]);for(const dx of[-2.4,2.4])ca('table_pedestal',[.35,.72,.8],[x+8.5+dx,floor+.36,0],'metal');for(const a of[6.1,7.7,9.3,10.9]){seat(r.id,x+a,-1.2,0,floor,deck,accent);seat(r.id,x+a,1.2,Math.PI,floor,deck,accent);}}
   const windowStart=rests.filter(s=>s.room===r.id).length;
-  for(const o of p.openings){const u=(o[0]+o[1])/2,v=Math.min(...[.2,.8,1.7].map(h=>patchDepth(p.inner,u,h)))-1.35,at=worldPoint(p.chart,[u,0,v]);seat(r.id,at[0],at[2],Math.PI/2,floor,deck,accent);}
+  // One window seat per 3 m of glass, spread along each pane (a wide bow pane seats two or three).
+  for(const o of p.openings){const n=windowSeatsFor(o);for(let i=0;i<n;i++){const u=o[0]+(o[1]-o[0])*(i+.5)/n,v=Math.min(...[.2,.8,1.7].map(h=>patchDepth(p.inner,u,h)))-1.35,at=worldPoint(p.chart,[u,0,v]);seat(r.id,at[0],at[2],Math.PI/2,floor,deck,accent);}}
   plant(r.id,x+1.1,counterSide>0?-4.6:4.6,floor,deck);if(k!==9)plant(r.id,x+13.5,4.5,floor,deck);else for(const z of[-4.7,0,4.7])plant(r.id,x+13.5,z,floor,deck);
   sign(r.id,r.name.toUpperCase(),counterX,counterZ-Math.sign(counterZ)*.3,5.4,floor,deck,counterZ>0?0:Math.PI);
   for(const dx of[-1.7,1.7])ca('p6_menu_stem',[.035,1.43,.035],[counterX+dx,floor+1.685,counterZ-Math.sign(counterZ)*.3],'metal',{noCollide:true});
-  cafes.push({id:r.id,deck,theme:BOW_CAFE_THEMES[k],windowStart,windowSeats:p.openings.length,seats:rests.filter(s=>s.room===r.id).length});
+  cafes.push({id:r.id,deck,theme:BOW_CAFE_THEMES[k],windowStart,windowSeats:p.openings.reduce((n,o)=>n+windowSeatsFor(o),0),seats:rests.filter(s=>s.room===r.id).length});
  }
  for(const t of ATRIUM_TERRACES){const floor=layout.decks[t.deck-1].y,z=t.side*13.7,x=-124.9;
   // Deck6 already has a continuous atrium floor. Upper aprons attach directly to the aft core.
