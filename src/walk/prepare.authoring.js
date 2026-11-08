@@ -11,6 +11,7 @@ import {createLounge} from './lounge.authoring.js';
 import {createConcession} from './concession.authoring.js';
 import {createSelfieBooth} from './selfie.authoring.js';
 import {createPoolTable} from './pool/table.authoring.js';
+import {mergeByMaterial} from './merge-by-material.js';
 import {createPinballMachine} from './pinball/machine.js';
 import {buildColliders,prepareExteriorForWalking} from '../v2/world.authoring.js';
 import {resolveRoomFrames} from '../plan/rooms.js';
@@ -104,7 +105,7 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  afterBase?.(colliders);checkpointPreparedWalk(ship);
  const restSpots=findRestSpots(ship.inside),seats=solidSpots(restSpots,colliders),lounge=createLounge(ship,colliders,light);afterRest?.({restSpots,seats,lounge});
  const booth=createSelfieBooth();colliders.addStatic(booth.group);
- const carpet=ship.root.getObjectByName('Activity_floor'),poolTable=carpet?createPoolTable(carpet):null;if(poolTable)colliders.addStatic(poolTable.group);
+ const carpet=ship.root.getObjectByName('Activity_floor'),poolTable=carpet?createPoolTable(carpet):null;if(poolTable){colliders.addStatic(poolTable.group);mergeByMaterial(poolTable.group);}
  // The same hall's pinball machine at its end wall (pinball/machine.js): solid as one plain box.
  const pinball=feature('pinball/machine',ship,()=>createPinballMachine(ship));if(pinball)colliders.addStatic(pinball.solid,()=>true);
  // The Deck 16 theatre's concession stand (concession.js): solid too.
