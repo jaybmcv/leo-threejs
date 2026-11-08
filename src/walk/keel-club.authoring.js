@@ -112,7 +112,10 @@ export function createKeelClub(ship){
  const group=new T.Group(),solid=new T.Group(),seats=new T.Group();
  group.name='Keel_club';solid.name='Keel_club_solid';seats.name='Keel_club_seats';
  const parts=[],glass=[],glow=[],grounds=[],walls=[],stars=[],lamps=[],signs=[],curtains=[],hiddenSeat=new T.MeshBasicMaterial({visible:false});
- const add=(g,color,{ground=false,wall=false}={})=>{parts.push(paint(g.clone(),color));if(ground)grounds.push(upward(g));if(wall)walls.push(g);};
+ // What stands on Deck 1 itself (each stair's balustrade and sign) draws with Deck 1, not with the hall.
+ const d1={parts:[],glass:[],signs:[]};
+ // A walkable box (a tread, a landing, an overhang) also blocks: its sides are walls, or walkers pass into it.
+ const add=(g,color,{ground=false,wall=false}={})=>{parts.push(paint(g.clone(),color));if(ground)grounds.push(upward(g));if(wall||(ground&&g.type==='BoxGeometry'))walls.push(g);};
  const xsHall=xsBetween(KEEL.aft,KEEL.bow),ysHall=ysBetween(FY,CY);
 
  // Shell. Hull lining both sides, floor edge to ceiling.
@@ -230,7 +233,7 @@ export function createKeelClub(ship){
   }
   add(box(x-2.5,x+2.5,FY,DECK1-.3,zz-.3,zz+.3),C.shaft,{wall:true});
   // At Deck 1 the spine carries on as a glass balustrade between the flight up and the flight down.
-  {const g=box(x-2.5,x+2.5,DECK1-.3,DECK1+1.1,zz-.05,zz+.05);glass.push(paint(g.clone(),C.rail));walls.push(g);}
+  {const g=box(x-2.5,x+2.5,DECK1-.3,DECK1+1.1,zz-.05,zz+.05);d1.glass.push(paint(g.clone(),C.rail));walls.push(g);}
   add(box(x-4.64,x+4.64,FY,CY,zz+2.5,zz+2.64),C.shaft,{wall:true});
   for(const e of [-1,1])add(box(x+e*4.5,x+e*4.64,FY,CY,zz-2.64,zz+2.64),C.shaft,{wall:true});
   const inner=box(x-2.5,x+4.5,FY,CY,zz-2.64,zz-2.5),lintel=box(x-4.5,x-2.5,FY+2.75,CY,zz-2.64,zz-2.5);
@@ -336,16 +339,16 @@ export function createKeelClub(ship){
  for(const s of [-1,1])for(let x0=-121;x0<145;x0+=9.5){const xs=xsBetween(x0,x0+8,1),ys=ysBetween(TY+2.4,CY-.7,.5),u0=((x0+121)/9.5*.37)%1;
   stars.push(gridUV(xs.length,ys.length,(i,j)=>[xs[i],ys[j],s*(half(xs[i],ys[j])-.06)],(i,j)=>[u0+i/(xs.length-1)*.45,j/(ys.length-1)*.55],s>0));}
  // ---- Signs: one texture, a row per label (SIGNS); `yaw` turns the sign's face from +z ----
- const sign=(label,cx,cy,cz,w,h,yaw,twoSided=true)=>{const row=SIGNS.indexOf(label),v0=1-(row+1)/SIGNS.length,v1=1-row/SIGNS.length,c=Math.cos(yaw),sn=Math.sin(yaw);
+ const sign=(label,cx,cy,cz,w,h,yaw,twoSided=true,out={signs,parts})=>{const row=SIGNS.indexOf(label),v0=1-(row+1)/SIGNS.length,v1=1-row/SIGNS.length,c=Math.cos(yaw),sn=Math.sin(yaw);
   for(const sd of twoSided?[1,-1]:[1]){const ax=c*sd,az=-sn*sd,nx=sn*.03*sd,nz=c*.03*sd,P=[],U=[];
    const pt=(u,v)=>[cx+ax*(u-.5)*w+nx,cy+(v-.5)*h,cz+az*(u-.5)*w+nz];
    for(const [u,v] of [[0,0],[1,0],[1,1],[0,0],[1,1],[0,1]]){P.push(...pt(u,v));U.push(u,v0+(v1-v0)*v);}
-   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.setAttribute('uv',new T.Float32BufferAttribute(U,2));g.computeVertexNormals();signs.push(g);}
+   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.setAttribute('uv',new T.Float32BufferAttribute(U,2));g.computeVertexNormals();out.signs.push(g);}
   // the board behind, thinner than the faces' offset so both faces show
-  const hx=Math.abs(c)*(w/2+.06)+Math.abs(sn)*.01,hz=Math.abs(sn)*(w/2+.06)+Math.abs(c)*.01;parts.push(paint(box(cx-hx,cx+hx,cy-h/2-.06,cy+h/2+.06,cz-hz,cz+hz),C.core));};
+  const hx=Math.abs(c)*(w/2+.06)+Math.abs(sn)*.01,hz=Math.abs(sn)*(w/2+.06)+Math.abs(c)*.01;out.parts.push(paint(box(cx-hx,cx+hx,cy-h/2-.06,cy+h/2+.06,cz-hz,cz+hz),C.core));};
  const hang=(label,x,y,z,w,h,yaw)=>{sign(label,x,y,z,w,h,yaw);for(const k of [-1,1]){const dx=Math.cos(yaw)*k*w*.4,dz=-Math.sin(yaw)*k*w*.4;parts.push(paint(box(x+dx-.01,x+dx+.01,y+h/2,CY,z+dz-.01,z+dz+.01),C.core));}};
  // over each lift lobby, and on Deck 1 at each stair landing's end wall, pointing down
- for(const c of CORES){hang('KEEL CLUB',c.x,FY+5.2,0,6.4,1.6,Math.PI/2);sign('KEEL CLUB  ↓',c.stairX-4.47,DECK1+1.9,c.stairZ,3.2,.8,Math.PI/2,false);}
+ for(const c of CORES){hang('KEEL CLUB',c.x,FY+5.2,0,6.4,1.6,Math.PI/2);sign('KEEL CLUB  ↓',c.stairX-4.47,DECK1+1.9,c.stairZ,3.2,.8,Math.PI/2,false,d1);}
  hang('TENNIS',-80.5,FY+5,0,5,1.25,Math.PI/2);hang('BASKETBALL',-56,FY+7,0,6,1.4,Math.PI/2);hang('BEACH',-31,FY+5,0,5,1.25,Math.PI/2);hang('WAVE LAGOON',50,FY+6,0,7,1.6,Math.PI/2);
  hang('DRIVING RANGE',150,FY+5.5,0,7,1.6,Math.PI/2);for(const s of [-1,1])hang('5-A-SIDE',-56,FY+5,s*23.5,5,1.25,Math.PI/2);
  for(const c of BRIDGES.side.slice(1,5))for(const s of [-1,1])hang('KEEL LOOP',c,FY+6.5,s*(rIn(c)+RW/2),5,1.2,0);
@@ -388,6 +391,8 @@ export function createKeelClub(ship){
  {const P=[],U=[];for(const {x0,x1,z} of curtains)for(const [x,y] of [[x0,TY-.3],[x1,TY-.3],[x1,WY],[x0,TY-.3],[x1,WY],[x0,WY]]){P.push(x,y,z);U.push(x/2.5,y/2.5);}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.setAttribute('uv',new T.Float32BufferAttribute(U,2));g.computeVertexNormals();
   water(g,0xbfeaf5,{rep:1,flow:[0,1.6],opacity:.7,name:'Keel_club_waterfall',bright:.35});}
+ const deck1=new T.Group();deck1.name='Keel_club_deck1';
+ for(const [g,m,name] of [[merge(d1.parts),opaque,'Keel_club_deck1_finish'],[merge(d1.glass),see,'Keel_club_deck1_glass'],[merge(d1.signs,['position','normal','uv']),signMat,'Keel_club_deck1_signs']])if(g){const mesh=new T.Mesh(g,m);mesh.name=name;deck1.add(mesh);}
  const hidden=new T.MeshBasicMaterial({visible:false});
  for(const [gs,name] of [[grounds,'Keel_club_walkway'],[walls,'Keel_club_guard_wall']]){const g=merge(gs.map(g=>{g=g.index?g.toNonIndexed():g.clone();for(const k of Object.keys(g.attributes))if(k!=='position')g.deleteAttribute(k);return g;}));if(g){const m=new T.Mesh(g,hidden);m.name=name;solid.add(m);}}
  // Water cannons: E on a bridge's crown fires the nearest one (fire(i)) for a second and a half. Its jet is droplets
@@ -420,6 +425,6 @@ export function createKeelClub(ship){
  // Its top band stops under Deck 1's: the walk draws it from Deck 1 (down the stair tower and lift shafts) and below, never from Deck 2 up.
  // In the hall the walk's indoor fog (solid at 148 m) would grey out its far half: from below Deck 1, the fog opens to the
  // hall's own length. Called each frame after the atrium has set the fog, before drawing; elsewhere it leaves the fog alone.
- const mood=(fog,eye)=>{if(!fog?.isFog||eye.y>DECK1-.4||eye.x<KEEL.aft-2||eye.x>KEEL.bow+2)return;fog.near=Math.max(fog.near,170);fog.far=Math.max(fog.far,440);};
- return {group,solid,seats,update,near,fire,mood,bounds:{y0:FY-3,y1:CY-.6}};
+ const mood=(fog,eye)=>{if(!fog?.isFog||eye.y>DECK1-.4||eye.y<FY-4||eye.x<KEEL.aft-2||eye.x>KEEL.bow+2||Math.abs(eye.z)>half(eye.x,Math.max(eye.y,FY))+.5)return;fog.near=Math.max(fog.near,170);fog.far=Math.max(fog.far,440);};
+ return {group,deck1,solid,seats,update,near,fire,mood,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
 }

@@ -321,6 +321,7 @@ async function buildShip(){
  if(nosePark){const g=nosePark.group;g.userData.band=bandOf(nosePark.bounds.y0);g.userData.top=bandOf(nosePark.bounds.y1);baked.bands.set(g.name,g);scene.add(g);}
  // The Keel Club (keel-club.js), the sports hall under Deck 1: it draws while the walker's bands reach it.
  if(keelClub){const g=keelClub.group;g.userData.band=bandOf(keelClub.bounds.y0);g.userData.top=bandOf(keelClub.bounds.y1);baked.bands.set(g.name,g);scene.add(g);}
+ if(keelClub?.deck1){const g=keelClub.deck1;g.userData.band=bandOf(keelClub.deck1Bounds.y0);g.userData.top=bandOf(keelClub.deck1Bounds.y1);baked.bands.set(g.name,g);scene.add(g);}
  // Phones draw the tree's and the park's felt details only from half as far.
  if(phone)for(const f of [catTree,nosePark]){const lod=f?.group.children.find(o=>o.isLOD);if(lod)for(const l of lod.levels.slice(1))l.distance*=.5;}
  // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js).
@@ -906,7 +907,7 @@ function target(){
  const welcome=inBall?null:arrivalTour?.near(p);if(welcome)return welcome;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
  const drill=inBall?null:emergencyStation.near(p);if(drill)return drill;
- const q=poolTable?.near(p)||maze?.near(p)||pinballMachine?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p)||leverPanel?.near(p)||keelClub?.near(p,heading);if(q&&!(inBall&&q.kind==='treadmill'))return q;
+ const q=poolTable?.near(p)||maze?.near(p)||pinballMachine?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p)||leverPanel?.near(p)||(inBall?null:keelClub?.near(p,heading));if(q&&!(inBall&&q.kind==='treadmill'))return q;
  // In the hamster ball: no seats, beds or treadmills; with nothing else to use, E climbs out.
  if(inBall)return {kind:'ball-out',label:'Get out of the ball'};
  const parked=ball.mesh.position;if(Math.abs(p.y-parked.y)<1.2&&Math.hypot(p.x-parked.x,p.z-parked.z)<BALL.radius+1)return {kind:'ball',label:'Get in the ball'};

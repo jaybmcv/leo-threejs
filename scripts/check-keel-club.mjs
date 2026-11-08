@@ -57,7 +57,8 @@ const stands=(x,y,z)=>{seg.start.set(x,y+STEP+R,z);seg.end.set(x,y+H-R,z);return
 // Deck 1 itself (a stand-in slab here, without its shafts and rails) only inside each core's stair tower.
 const inClub=(x,z,y)=>x>KEEL.aft&&x<KEEL.bow&&Math.abs(z)<70&&(y<DECK1-.5||y<DECK1+.3&&CORES.some(c=>x>c.stairX-4.5&&x<c.stairX+4.5&&Math.abs(z-c.stairZ)<2.5));
 const G=.5,seen=new Map(),queue=[],drops=[];const key=([x,y,z])=>`${Math.round(x/G)},${Math.round(y/.2)},${Math.round(z/G)}`;
-for(const l of core){const p=[l.car.x,FY,l.car.z];seen.set(key(p),p);queue.push(p);}
+// One origin, the forward port lift: everything else (the other lifts, both stairs, every zone) must connect to it.
+{const l=core.find(l=>l.id==='forward-port'),p=[l.car.x,FY,l.car.z];seen.set(key(p),p);queue.push(p);}
 for(let i=0;i<queue.length;i++){const [x,y,z]=queue[i];
  for(const [dx,dz] of [[G,0],[-G,0],[0,G],[0,-G]]){const nx=x+dx,nz=z+dz;if(!inClub(nx,nz,y))continue;const ny=floorAt(nx,y,nz);
   if(ny===null){if(!stands(nx,y,nz))continue;ray.origin.set(nx,y+STEP,nz);let h=ground.raycast(ray,60);if(h&&h.normal.y<MIN_NY)h=null;if(!h||y-h.point.y>1)drops.push([nx,y,nz,h?+(y-h.point.y).toFixed(2):'void']);else if(y-h.point.y>STEP){const p=[nx,h.point.y,nz],k=key(p);if(!seen.has(k)&&stands(...p)){seen.set(k,p);queue.push(p);}}continue;}
@@ -68,6 +69,7 @@ const reached=(x,y,z,r=1.2,below=.5,above=.5)=>{for(let i=Math.floor(x-r);i<=Mat
 const front=x=>half(x,FY),terr=(x,s,d=6)=>[x,TY,s*(front(x)+d)],strip=x=>(front(x)+riverOuter(x))/2;
 assert.equal(CANNONS.length,2*BRIDGE_SPANS.length,'two water cannons a bridge');
 const goals=[
+ ...core.map(l=>[`${l.id} lift car at the Keel Club stop`,l.car.x,FY,l.car.z]),
  ...CORES.flatMap(c=>[[`${c.id} lift lobby`,c.x,FY,0],[`${c.id} stair, Deck 1 landing`,c.stairX-3.5,DECK1,c.stairZ],[`${c.id} stair, first storey landing`,c.stairX-3.5,FY+STOREY,c.stairZ]]),
  ['arrival plaza',-140,FY,-20],['tennis court 1',-100,FY,-27],['tennis court 4',-100,FY,27],['port pitch',-56,FY,-31],['starboard pitch',-56,FY,31],['basketball court',-56,FY,0],
  ['beach',-18,FY,0],['port lagoon promenade',50,FY,-34],['starboard lagoon promenade',50,FY,34],['aft promenade, behind the river',RIVER.aft-3,FY,0],

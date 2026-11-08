@@ -4,13 +4,19 @@ import {ARENA_ID,STAGE} from '../mudwater-arena.js';
 import {toLocal} from '../plan/rooms.js';
 
 import {contains} from '../plan/geometry-v2.js';
+import {KEEL_HULL,HALF} from '../walk/keel-club-hull.js';
+// The Keel Club's volume (src/walk/keel-club.js): from its floor to under Deck 1, between its bulkheads, inside the
+// hull's inner lining (keel-club-hull.js: the hull's half-width, less its 2.5 m inset, on a grid).
+const keelHalf=(x,y)=>{const K=KEEL_HULL,fx=Math.min(K.nx-1.001,Math.max(0,(x-K.x0)/K.dx)),fy=Math.min(K.ny-1.001,Math.max(0,(y-K.y0)/K.dy)),i=Math.floor(fx),j=Math.floor(fy),u=fx-i,v=fy-j;
+ return (HALF[j][i]*(1-u)+HALF[j][i+1]*u)*(1-v)+(HALF[j+1][i]*(1-u)+HALF[j+1][i+1]*u)*v;};
+const inKeelClub=(x,y,z)=>x>=-157&&x<=204&&y>=-52&&Math.abs(z)<=keelHalf(x,y)+.3;
 import {forumTerraces} from './launch-e-fitout.js';
 const FORUM_TERRACES=forumTerraces();
 // Go-to links choose actual interior floors, never the exterior hull or the top of a glass guard.
 export function plannedStanding(layout,x,y,z,radius=.35){
  if(x<-170||y>layout.decks.at(-1).y+3.5)return true; // Retained aft/fin/crown use their original detailed circulation.
  // Under Deck 1 there is only the Keel Club (src/walk/keel-club.js): its floor, terraces and stairs are planned floors.
- if(y<layout.decks[0].y-.5)return true;
+ if(y<layout.decks[0].y-.5&&inKeelClub(x,y,z))return true;
  const inside=p=>contains(p,[x,z]),near=h=>Math.abs(y-h)<.13;
  // Stream E's shallow Forum terraces and stage are planned floors too.
  const forum=layout.rooms.find(r=>r.id==='d16-voyage-forum-bow');
