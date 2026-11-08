@@ -20,8 +20,8 @@ export class RemotePlayers{
  // (paws-off/game.js), where someone playing runs on the spot. hammock(position): lying in one of the Hydro-Nip
  // Lounge's hammocks (rest.js hammockAt), where they take its pose: the wire says only that they lie. catnip(position):
  // in the Hydro-Nip Lounge (lounge.js inside), where they wear its catnip face (catnip-face.js), as they see themselves.
- constructor(scene,{make,colliders,lifts,labels,hatUrl,running,hammock,catnip,swimming}){
-  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,running,hammock,catnip,swimming});
+ constructor(scene,{make,colliders,lifts,labels,hatUrl,running,hammock,catnip,swimming,tube}){
+  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,running,hammock,catnip,swimming,tube});
   this.remotes=new Map();this.pool=[];this.making=false;this.labels=[];this.ray=new T.Ray();this.v=new T.Vector3();
  }
  get count(){return this.remotes.size;}
@@ -47,7 +47,7 @@ export class RemotePlayers{
  // Chat hidden: any bubble showing goes at once.
  hush(){for(const r of this.remotes.values())r.said=null;}
  clear(){for(const id of [...this.remotes.keys()])this.gone(id);}
- release(r){r.ball?.mesh.removeFromParent();if(!r.walker)return;r.walker.holder.removeFromParent();this.pool.push(r.walker);r.walker=null;}
+ release(r){r.ball?.mesh.removeFromParent();r.tube?.removeFromParent();if(!r.walker)return;r.walker.holder.removeFromParent();this.pool.push(r.walker);r.walker=null;}
 
  // view: {camera, low, high} — the heights of the deck bands being drawn (main.js cull).
  update(dt,{camera,low,high},now=performance.now()){
@@ -101,6 +101,8 @@ export class RemotePlayers{
   w.body.rotation.set(lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.rest,.25,1):0,0,0);
   w.setFur(r.tgt.fur);
   const t=r.tgt,floating=t.emote==='healing_capsule',belt=t.playing&&!t.rest&&this.running?.(c);
+  // Floating in a Keel Club tube (keel-club.js; tube = {make, y}): seated, in a tube of this page's own on the water.
+  if(t.rest==='tube'&&this.tube){if(!r.tube)r.tube=this.tube.make();if(!r.tube.parent)this.scene.add(r.tube);r.tube.position.set(c.x,this.tube.y,c.z);}else r.tube?.removeFromParent();
   // Rolling in a hamster ball (hamster-ball.js): standing inside one of this page's own, rolled by their stride.
   if(t.ball&&!t.rest){if(!r.ball)r.ball=createBallMesh();if(!r.ball.mesh.parent)this.scene.add(r.ball.mesh);r.ball.mesh.position.set(c.x,c.y,c.z);
    r.ball.roll(dt,Math.sin(c.yaw)*r.speed,Math.cos(c.yaw)*r.speed);}else r.ball?.mesh.removeFromParent();

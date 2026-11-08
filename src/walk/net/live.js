@@ -45,6 +45,8 @@ export function connectLive(url,on,opts={}){
     case 'gone':on.gone?.(msg.id);break;
     case 'lift':on.lift?.(msg.id,msg.s);break;
     case 'mark':on.mark?.(msg.id,msg.at);break;
+    // A Keel Club water cannon shot by someone else (keel-club.js fire): cannon i, the jet's seed and the shot's id.
+    case 'cannon':if(Number.isInteger(msg.i)&&Number.isInteger(msg.seed)&&typeof msg.id==='string'&&typeof msg.shot==='string')on.cannon?.(msg.id,msg.i,msg.seed,msg.shot);break;
     case 'aboard':on.aboard?.(msg.n,Array.isArray(msg.names)?msg.names.filter(n=>typeof n==='string'):null);break;
     // The leaderboards (Alien Cat Invasion's, or Paw Pool's when game is 'pool'): the top ten and this visitor's
     // best, and a game's result.
@@ -103,6 +105,7 @@ export function connectLive(url,on,opts={}){
   call(lift,stop,now){if(live())ws.send(JSON.stringify({m:'call',lift,stop,now:!!now}));},
   // A ping where the walker stands, for everyone else aboard (walk/marks.js).
   mark(at){if(live())ws.send(JSON.stringify({m:'mark',at}));},
+  cannon(i,seed){if(live())ws.send(JSON.stringify({m:'cannon',i,seed}));},
   // Alien Cat Invasion, or Paw Pool with game 'pool': a game starts (the server times it), a game's score, and a
   // request for the board.
   play(game){if(live())ws.send(JSON.stringify({m:'play',game}));},

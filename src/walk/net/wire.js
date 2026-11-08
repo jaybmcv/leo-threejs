@@ -28,7 +28,8 @@
 import {FUR_COLOURS} from '../fur-colours.js';
 export const WIRE_TAG=0x4c,WIRE_VERSION=8;
 export const STANCES=['stand','crouch','prone','slide'];
-export const RESTS=[null,'sit','lie'];
+// 'tube': floating in a Keel Club tube (walk/keel-club.js), seated in it (protocol 9).
+export const RESTS=[null,'sit','lie','tube'];
 const GROUNDED=0x04,MOTION=0x08,EMOTE=0x10,PLAYING=0x20,BALL=0x40,GLIDE=0x80,KNOWN=0xff;
 const HOOK=0x10,ORIGIN=-2048,STEPS=4096,MAX_STEP=0xffffff,YAW_STEPS=65536,TURN=Math.PI*2;
 const encoder=new TextEncoder(),decoder=new TextDecoder();
@@ -151,4 +152,5 @@ const UNSEEN=new RegExp('[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u
 // visitor is rolling in a hamster ball. 6: each pose carries its fur colour after the heading. 7: a pose says when its
 // visitor is riding the longboard down (walk/glide.js). 8: a pose says where its visitor's grapple line has bitten
 // (walk/grapple.js).
-export const PROTOCOL=8;
+// 9: a pose can sit in a Keel Club tube (rest 'tube'), and Keel Club water cannon shots are shared ('cannon').
+export const PROTOCOL=9;
