@@ -9,6 +9,17 @@ import {createHash,randomUUID} from 'node:crypto';
 import {build as serviceBuild} from 'esbuild';
 const require=createRequire(import.meta.url);
 
+// Bare specifiers resolve as esbuild would: an import takes the package's "import" entry, and only a require() call
+// takes its "require" one. require.resolve alone gives the CommonJS build, and three's (r187 on) calls
+// process.emitWarning when loaded, which throws in the browser.
+export function resolvePackage(specifier,resolveDir,kind='import-statement'){
+ const resolved=require.resolve(specifier,{paths:[resolveDir]});
+ const name=specifier.startsWith('@')?specifier.split('/').slice(0,2).join('/'):specifier.split('/')[0],subpath='.'+specifier.slice(name.length);
+ if(kind==='require-call')return resolved;
+ let dir=path.dirname(resolved);while(path.basename(dir)!=='node_modules'&&path.dirname(dir)!==dir){try{const pkg=JSON.parse(require('node:fs').readFileSync(path.join(dir,'package.json'),'utf8'));if(pkg.name===name){const entry=pkg.exports?.[subpath],target=entry&&typeof entry==='object'?entry.import??entry.default:null;return typeof target==='string'?path.join(dir,target):resolved;}}catch{}dir=path.dirname(dir);}
+ return resolved;
+}
+
 // Find literal module specifiers while skipping comments, ordinary strings and
 // templates. Nonliteral imports are left to esbuild exactly as in the API path.
 export function moduleSpecifiers(source){
@@ -47,7 +58,7 @@ export async function nativeBuild(options){
  async function resolve(specifier,importer='',namespace='file',resolveDir=root,kind='import-statement'){
   for(const [o,fn]of resolveHooks)if(matches(o,specifier,namespace)){const result=await fn({path:specifier,importer,namespace,resolveDir,kind});if(result){if(result.errors?.length)throw Error(JSON.stringify(result.errors));if(result.external)return {external:true,path:result.path||specifier};return add(result.path,result.namespace||'file');}}
   if(specifier.startsWith('node:')||options.packages==='external'&&!specifier.startsWith('.')&&!path.isAbsolute(specifier))return {external:true,path:specifier};
-  const target=kind==='entry-point'?path.resolve(root,specifier):specifier.startsWith('.')?path.resolve(resolveDir,specifier):path.isAbsolute(specifier)?specifier:require.resolve(specifier,{paths:[resolveDir]});return add(target,'file');
+  const target=kind==='entry-point'?path.resolve(root,specifier):specifier.startsWith('.')?path.resolve(resolveDir,specifier):path.isAbsolute(specifier)?specifier:resolvePackage(specifier,resolveDir,kind);return add(target,'file');
  }
  function add(original,namespace){const key=namespace+':'+original;let node=nodes.get(key);if(node)return node;node={original,namespace,file:path.join(dir,createHash('sha256').update(key).digest('hex').slice(0,20)+(/\.json$/.test(original)?'.json':/\.ts$/.test(original)?'.ts':'.js'))};nodes.set(key,node);queue.push(node);return node;}
  const entries=[];for(const input of options.entryPoints){const entry=await resolve(path.resolve(root,input),'','file',root,'entry-point');if(entry.external)throw Error('Entry point resolved external: '+input+' ('+entry.path+')');entries.push(entry);}
