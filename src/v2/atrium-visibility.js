@@ -15,25 +15,28 @@ export function atriumViewSpan(){if(!ATRIUM_VIEW.fullHeight)return null;if(inOpe
 export function setAtriumSight(visible,range=null){cameraVisible=!!visible;cameraRange=visible?range:null;applyAtriumFog();}
 export function registerAtriumFog(fog){if(!fogs.some(r=>r.fog===fog))fogs.push({fog,near:fog.near,far:fog.far});applyAtriumFog();}
 export function inOpenAtrium(){if(fogClassified!==undefined)return fogClassified;const p=position;if(!p||p.y<layout.decks[5].y-.3||p.y>39.94)return fogClassified=false;let d=layout.decks[5];for(const q of layout.decks)if(q.y<=p.y+.2)d=q;if(d.number<6||!d.atrium?.outline)return fogClassified=false;const ring=d.atrium.outline,v=[p.x,p.z];if(!contains(ring,v)&&!ring.some((a,i)=>distanceToSegment(v,a,ring[(i+1)%ring.length])<=3.5))return fogClassified=false;return fogClassified=!(owners.get(d.number)||[]).some(r=>p.y>=r.y-.1&&p.y<r.y+r.height&&p.x>=r.box.x0&&p.x<=r.box.x1&&p.z>=r.box.z0&&p.z<=r.box.z1&&contains(r.polygon,v));}
-// The near facade's merged copy of the lift tower and aft-core architecture (P6_tower_architecture) is the same
-// geometry the baked bands hold; while the full-height atrium bands draw, it only z-fights with them (feedback
-// #267/#272), so it is hidden then. The distant haze copy is untouched.
-// Only from the atrium up, though: the bands hold the aft core from about Deck 4, so for Decks 1-3 (the stairs and
-// landings beside the arrival hall) the copy is the only geometry there is. Below the atrium floor the sight test used to
-// turn the full-height bands on near the Deck 2 aft stairs, and hiding the copy then made the stairs vanish (2026-11-07
-// report). Since the same day it never answers visible below the atrium floor (atrium-sight.js), and the copy always
-// draws there anyway.
+// The near facade's merged copy of the lift tower and aft-core architecture (P6_tower_architecture, and the aft stair
+// flights in P6_tower_stairs) is the only geometry those parts have: addPhase6Architecture hides every source it takes
+// before the walk's bake, so no deck band holds them. It always draws. From 2026-11-05 it was hidden while the
+// full-height atrium bands drew, on the belief that it duplicated them (feedback #267/#272), and everything in it went
+// whenever the atrium was in sight: the lift-shaft glass and guide columns at both cores, and the forward core's bridges
+// and landings. The shaft glass came and went as a walker neared a lift, and the bridges had no undersides from the
+// atrium floor (2026-11-08 report). On the live walk that day no band mesh held the shaft glass material, and every
+// tower-copy mesh but the stairs was hidden at each open-atrium spot. The stair flights had already been split out of
+// the gate for the same reason (#258). What #267/#272 saw was the copy's faces sharing planes with band parts around the
+// cores; the copy now sits a few millimetres off them instead (separateAtriumPaving, facade.js). The distant haze copy
+// is untouched.
 const towerCopies=[];
 // Below the atrium floor, the rest of the near facade (the atrium's own architecture) draws only while the atrium bands
 // do: unseen, it was still shaded in every pixel it covered, behind whatever hid it, as a logarithmic depth buffer tests
 // depth only after shading. The arrival hall on Deck 2, which sees no atrium (atrium-sight.js), shaded about 100 layers
 // of it per pixel on a phone. From Deck 6 up it always draws: it holds the fronts of the rooms on the atrium, seen from
-// inside them while the atrium is not. The tower copies stay outside the gate: they stand in for the bands when those
-// are hidden (lift-shaft glass seen from a car), and so do the aft stair flights (P6_tower_stairs), which nothing
-// else draws.
+// inside them while the atrium is not. The tower copies (P6_tower_architecture, P6_tower_stairs) stay outside the gate:
+// nothing else draws them, at any height.
 const nearFacades=[];
 const belowAtrium=()=>!!position&&position.y<fullAtriumSpan[0];
-function applyTowerCopies(){const full=atriumViewSpan()!==null,below=belowAtrium();for(const o of towerCopies)o.visible=!full||below;for(const o of nearFacades)o.visible=full||!below;}
+// A prepared facade keeps the visibility the authoring page last gave each mesh, so the copies are shown here too.
+function applyTowerCopies(){const full=atriumViewSpan()!==null,below=belowAtrium();for(const o of towerCopies)o.visible=true;for(const o of nearFacades)o.visible=full||!below;}
 function applyAtriumFog(){applyTowerCopies();if(!fogs.length)return;const on=inOpenAtrium()||cameraVisible;for(const r of fogs){r.fog.near=on?ATRIUM_VIEW.fogNear:r.near;r.fog.far=on?ATRIUM_VIEW.fogFar:r.far;}}
 export function registerAtriumArchitecture(root){if(root?.name==='V2_atrium_facade')root.traverse(o=>{if(o.isMesh&&o.name==='P6_tower_architecture'&&!towerCopies.includes(o))towerCopies.push(o);});
  // A prepared facade may arrive with the group already made (the authoring build ran this too).

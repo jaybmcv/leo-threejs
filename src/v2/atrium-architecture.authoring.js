@@ -29,9 +29,8 @@ function sinkUnderRooms(o,layout){
  if(!sunk)return g;
  const result=new T.BufferGeometry();attrs.forEach((a,j)=>result.setAttribute(names[j],new T.BufferAttribute(new a.array.constructor(out[j]),a.itemSize,a.normalized)));result.userData={...g.userData,pavingSunkUnderRooms:sunk};result.computeBoundingBox();result.computeBoundingSphere();return result;
 }
-// The aft core's stair flights merge into their own copy, P6_tower_stairs. The atrium hides P6_tower_architecture while
-// its full-height bands draw (atrium-visibility.js, #267/#272), but nothing else draws the flights: their sources leave
-// the walk's bake, so hidden with the rest they vanished wherever the atrium was in sight (#258).
+// The aft core's stair flights merge into their own copy, P6_tower_stairs (#258). Nothing else draws any of the tower
+// parts this takes: their sources leave the walk's bake, so the atrium never hides either copy (atrium-visibility.js).
 const STAIR_FLIGHT=/^(Stair_(tread|riser)_(up|return)|Stair_support_stringer|Stair_half_landing|Transit_handrail)$/;
 export function addPhase6Architecture(ship,root,layout){
  // Pure proxy/facade fixtures do not instantiate the physical ship. They use
