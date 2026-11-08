@@ -7,13 +7,16 @@
 // - every ancestor's name, visibility and user data (ownership and finished-skin naming read them);
 // - every room window that any triangle of any instance can reach, in window-list order, with its whole prototype;
 // - the global key: the skin authority's canonical proof, the exterior GLB bytes, the source files of the audit, the
-//   authority and the GLB parser, package-lock, the exterior fitting list and the audit options.
+//   authority and the GLB parser, package-lock, the installed three, three-mesh-bvh and meshoptimizer, the exterior
+//   fitting list and the audit options.
 // Anything outside what this can fingerprint exactly (other attribute classes, an index whose count is not its whole
 // array, a bounding box that does not enclose the vertices, values other than plain JSON data, typed arrays, undefined
 // and non-finite numbers) is audited afresh. Saved entries are schema-checked and carry a digest of their key and result;
 // anything that does not check out is audited afresh.
 import fs from 'node:fs/promises';
 import {createHash} from 'node:crypto';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import * as T from 'three';
 import {producerDependencies,sourceHash} from './fast-dependencies-v2.mjs';
 
@@ -45,7 +48,6 @@ function stable(value,seen=new Set()){
   if(proto!==Object.prototype&&proto!==null)throw Error('class instance');
   const out=own.map(k=>[k,plain(k)]).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([k,v])=>JSON.stringify(k)+':'+stable(v,seen));
   return '{'+out.join(',')+'}';
-  return '{'+out.join(',')+'}';
  }finally{seen.delete(value);}
 }
 
@@ -55,10 +57,17 @@ const ACCESSORS=['getX','getY','getZ','getW'];
 const plainAttribute=a=>PLAIN_ATTRIBUTES.has(a?.constructor)&&ACCESSORS.every(n=>a[n]===T.BufferAttribute.prototype[n])&&a.itemSize>=1&&a.itemSize<=4&&a.array?.length===a.count*a.itemSize;
 
 // The checker's own code: every source file the audit, the authority, the GLB parser and this module import, plus
-// package-lock (three, three-mesh-bvh).
+// package-lock and the package.json of the three, three-mesh-bvh and meshoptimizer actually installed: node_modules can
+// be a shared junction whose packages differ from this checkout's lock, and three r187 changed this audit's results.
+async function installedPackage(name){
+ let dir=path.dirname(fileURLToPath(import.meta.resolve(name)));
+ for(;;){try{const bytes=await fs.readFile(path.join(dir,'package.json'));if(JSON.parse(bytes).name===name)return bytes;}catch{}const up=path.dirname(dir);if(up===dir)throw Error('No package.json found for '+name);dir=up;}
+}
 export async function clearanceCodeKey(){
  const files=[...await producerDependencies(['src/plan/skin-clearance-v2.js','scripts/clearance-authority-v2.mjs','scripts/exterior-io-v2.mjs','src/v2/skin-authority.js','scripts/skin-clearance-reuse-v2.mjs']),'package-lock.json'].sort();
- const h=createHash('sha256');for(const f of files)h.update(f+'\0'+sourceHash(f,await fs.readFile(f))+'\0');return h.digest('hex');
+ const h=createHash('sha256');for(const f of files)h.update(f+'\0'+sourceHash(f,await fs.readFile(f))+'\0');
+ for(const name of ['three','three-mesh-bvh','meshoptimizer'])h.update(name+'\0'+digest(await installedPackage(name))+'\0');
+ return h.digest('hex');
 }
 
 const count=n=>Number.isInteger(n)&&n>=0;
