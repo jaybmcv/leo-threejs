@@ -60,12 +60,11 @@ is unchanged because it's a skin-clearance authority. Offline probe at the sill:
 with the tower stand-in. That copy is hidden while the full atrium bands draw, and below the atrium floor it is the only
 geometry by design (#258/#267/#272). Changing it means changing the atrium visibility policy, not the walls.
 
-**Deck 9 / Decks 3+ corridors (root cause found, not fixed here).** The probe pairs at Deck 9 housekeeping
-(28.1, -7.69, -68.72) and Deck 3 launch street are not duplicate strips. The walk bake's `coplanarNudges`
-(`src/walk/render-bake.js`) lifts each coplanar face 2 mm (`NUDGE`) per overlap layer. It judges overlap by axis-aligned
-bounds, so adjacent rotated strips stack as well. 2 mm is also the hex finish's offset (`finish-kit.js`), and the finish is
-built before the bake, so a lifted corridor top lands exactly on a neighbour's hex. In the prepared walk, Deck 9 corridor
-tops sit at 8, 10, 12 … 20 mm above the deck, and hex sheets at 2 … 16 mm. Subtracting overlapping strips in
-`corridor-floor-union.js` (tried: one layer everywhere, +98k triangles, all checks pass) left both hotspots unchanged,
-because the bounds still overlap. A fix needs the bake to stop nudging hexed floors (with their overlaps removed first), or
-to nudge each hex sheet with its source floor.
+**Deck 9 / Decks 3+ corridors (fixed).** The pairs at Deck 9 housekeeping (28.1, -7.69, -68.72) and Deck 3 launch
+street weren't duplicate strips. The walk bake's `coplanarNudges` (`src/walk/render-bake.js`) lifts each coplanar face 2 mm
+(`NUDGE`) per overlap layer, and it judges overlap by axis-aligned bounds, so adjacent rotated strips stacked too. 2 mm is
+also the hex finish's offset, so a lifted corridor top landed exactly in a neighbour's hex sheet. Corridor tops on Deck 9
+sat 8 to 20 mm above the deck. Now `finish-kit` marks each floor it lays a hex sheet over (`userData.v2HexBase`), and the
+nudge never lifts those floors' top faces. Anything left flush with such a top is hidden under the same hex sheet. Every
+corridor top in the prepared walk now sits at deck + 8 mm (88,818 m²). Offline probe: Deck 9 225 → 0, Deck 3 98 → 0, and
+Deck 7 N02, Deck 16 and Deck 7 housekeeping stay at 0 under 1 mm. Triangle count is unchanged.

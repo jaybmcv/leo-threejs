@@ -58,7 +58,9 @@ function planes(o,add){
 }
 function coplanarNudges(meshes){
  const faces=new Map(),box=new T.Box3(),e=new Array(16);
- const add=(o,part,axis,sign,a,b)=>{const at=sign>0?b[axis]:a[axis],[u,w]=PLAN[axis],key=(AXES.indexOf(axis)*2+(sign>0?1:0))*1e9+Math.round(at*1000);let list=faces.get(key);if(!list)faces.set(key,list=[]);
+ // A floor under a 2 mm hex finish (finish-kit marks it) keeps its top where it is: lifted a layer, it would land in the
+ // hex sheet's own plane and fight it, while anything left flush with it there is hidden under the same sheet.
+ const add=(o,part,axis,sign,a,b)=>{if(sign>0&&axis==='y'&&o.userData.v2HexBase)return;const at=sign>0?b[axis]:a[axis],[u,w]=PLAN[axis],key=(AXES.indexOf(axis)*2+(sign>0?1:0))*1e9+Math.round(at*1000);let list=faces.get(key);if(!list)faces.set(key,list=[]);
   list.push({o,part,axis,sign,at,u,w,u0:a[u],u1:b[u],w0:a[w],w1:b[w],area:(b[u]-a[u])*(b[w]-a[w])});};
  const six=(o,part,a,b)=>{for(const axis of ['x','y','z'])for(const sign of [1,-1])add(o,part,axis,sign,a,b);};
  for(const o of meshes){
