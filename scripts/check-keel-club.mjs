@@ -8,6 +8,7 @@ import {BODY,Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {groundMesh} from '../src/v2/ground.js';
 import {findRestSpots,solidSpots} from '../src/walk/rest.js';
+import {encodeRecord,encodeIdentity,assembleFrame,WireReader} from '../src/walk/net/wire.js';
 
 // The Keel Club, the sports hall under Deck 1 (createKeelClub in src/walk/keel-club.js), walked with the rules of
 // scripts/v2-walk.mjs: from every core lift's Keel Club stop, every zone and both terraces reached, no step off an edge
@@ -145,4 +146,8 @@ const route=[...down,[sx-3.5,sz-4],[135,0],[127.5,0],[126,-12],[bx,-(rz-3)],[bx,
 for(const [x,z] of route){if(!go(x,z)){walked=false;console.log('FAIL controller stuck going to',x,z,'at',ctl.position.toArray().map(v=>v.toFixed(2)).join(','));break;}}
 console.log(`${walked?'PASS':'FAIL'} controller walks Deck 1 → down the forward stair → between the lifts → over a bridge → up the port terrace stair, ends at y ${ctl.position.y.toFixed(2)}`);
 assert(walked&&Math.abs(ctl.position.y-TY)<.15,'controller route');
+// A floater's pose crosses the wire as rest 'tube' (3), alongside someone sitting, and the frame still decodes.
+{const base={yaw:0,grounded:false,stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:false,ball:false,glide:false,hook:null,fur:0},r=new WireReader();
+ const got=r.read(assembleFrame([encodeIdentity(1,'voyager-a'),encodeIdentity(2,'voyager-b')],[encodeRecord(1,{...base,pos:[-89,-52.05,-43],rest:'tube'}),encodeRecord(2,{...base,pos:[0,-51.5,0],rest:'sit'})]));
+ assert.deepEqual(got.map(p=>p.rest),['tube','sit'],'a tube pose does not cross the wire');console.log('PASS a tube pose crosses the wire with the others in its frame');}
 console.log('PASS Keel Club');

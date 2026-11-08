@@ -14,7 +14,7 @@
 //                         name is the visitor's Discord name, vouched for by The Creamery: net/pass.js; 0x02: a tester,
 //                         who wears the captain's hat: walk/hat.js)
 //   u16 poses, each:      u16 slot · u8 head · three u24 position · u16 heading · extras
-//   head:     bits 0-1 rest (0 none, 1 sitting, 2 lying) · 0x04 GROUNDED · 0x08 MOTION · 0x10 EMOTE · 0x20 PLAYING
+//   head:     bits 0-1 rest (0 none, 1 sitting, 2 lying, 3 in a Keel Club tube) · 0x04 GROUNDED · 0x08 MOTION · 0x10 EMOTE · 0x20 PLAYING
 //             (at the lounge telescope's game: walk/invasion) · 0x40 BALL (rolling in a hamster ball:
 //             walk/hamster-ball.js) · 0x80 GLIDE (riding the longboard down a drop: walk/glide.js)
 //   position: (metres + 2048) x 4096, an eighth of a millimetre
@@ -93,7 +93,7 @@ export function decodeFrame(data){
  for(let i=0;i<count;i++){
   if(!has(15))return null;
   const slot=v.getUint16(o,true),head=v.getUint8(o+2);
-  if(head&~KNOWN||(head&3)===3)return null;
+  if(head&~KNOWN)return null;
   const pos=getSteps(v,o+3);
   const turned=v.getUint16(o+12,true)/YAW_STEPS*TURN,fur=v.getUint8(o+14);if(fur>=FUR_COLOURS.length)return null;o+=15;
   const pose={pos,yaw:turned>=Math.PI?turned-TURN:turned,grounded:!!(head&GROUNDED),rest:RESTS[head&3],stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:!!(head&PLAYING),ball:!!(head&BALL),glide:!!(head&GLIDE),hook:null,fur};
