@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as T from 'three';
 import {TRANSIT_CORES} from '../src/plan/v1.js';
-import {createKeelClub,KEEL,CORES,DECK1,STOREY,STAIRS,RIVER,BRIDGES,BRIDGE_SPANS,FALLS,CANNONS,riverOuter,riverInner,half} from '../src/walk/keel-club.js';
+import {createKeelClub,KEEL,CORES,DECK1,STOREY,STAIRS,RIVER,BRIDGES,BRIDGE_SPANS,FALLS,CANNONS,riverOuter,riverInner,half,RIVER_PATH,riverFrame,riverNearest,TUBE,TUBE_RANGE,DOCKS,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock,bridgeUnderside} from '../src/walk/keel-club.js';
 import {LIFTS,KEEL_STOP,carTriangles} from '../src/walk/lifts.js';
 import {BODY,Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {groundMesh} from '../src/v2/ground.js';
 import {findRestSpots,solidSpots} from '../src/walk/rest.js';
+import {encodeRecord,encodeIdentity,assembleFrame,WireReader} from '../src/walk/net/wire.js';
 
 // The Keel Club, the sports hall under Deck 1 (createKeelClub in src/walk/keel-club.js), walked with the rules of
 // scripts/v2-walk.mjs: from every core lift's Keel Club stop, every zone and both terraces reached, no step off an edge
@@ -95,10 +96,45 @@ assert.equal(far.length,0,'seats out of reach');assert(spots.length>=100,'seats 
  // facing down the channel either way from a crown picks the cannon aimed that way
  const facing=CANNONS.filter((c,i)=>club.near(crowns[c.bridge],Math.atan2(c.aim[0],c.aim[2]))?.cannon===i).length;
  console.log(`${facing===CANNONS.length?'PASS':'FAIL'} facing picks the cannon aimed that way: ${facing}/${CANNONS.length}`);assert.equal(facing,CANNONS.length,'facing a cannon does not pick it');
- club.fire(club.near(crowns[0]).cannon);let most=0,splashed=0;const [drop,ring]=club.group.children.filter(o=>o.isInstancedMesh);
+ club.fire(club.near(crowns[0]).cannon);let most=0,splashed=0;const [drop,ring]=club.group.children.filter(o=>o.name==='Keel_club_cannon_water');
  for(let i=0;i<240;i++){club.update(1/60);most=Math.max(most,drop.count);splashed=Math.max(splashed,ring.count);}
  console.log(`${dry?'FAIL':'PASS'} cannon jets land in the river (${CANNONS.length} cannons) · prompts on ${prompts}/${crowns.length} crowns · a jet: ${most} drops at once, ${splashed} splashes, ${drop.count+ring.count} left after 4 s`);
  assert.equal(dry,0,'a cannon jet lands out of the river');assert.equal(prompts,crowns.length,'a bridge crown without a cannon prompt');assert(most>30&&splashed>0&&drop.count+ring.count===0,'cannon jet');}
+
+// ---- Floating the Keel Loop ----
+// Every place a tube can be (the loop, at every offset it may steer to) is water under the tube's whole ring, and a
+// seated rider (a column RIDER_R round the seat, RIDER_TOP above it) clears every bridge's underside by CLEAR.
+{const {aft:ra,bow:rb,width:W}=RIVER,WY=FY-RIVER.drop,RIDER_R=.4,RIDER_TOP=1.2,CLEAR=.2;
+ const inWater=(x,z)=>x>=ra&&x<=rb&&Math.abs(z)<=riverOuter(x)&&!(x>ra+W&&x<rb-W&&Math.abs(z)<riverInner(x));
+ let dry=0,low=0,worst=Infinity,samples=0;
+ for(let s=0;s<RIVER_PATH.total;s+=.5){const f=riverFrame(s);for(let d=f.lo;d<=f.hi+1e-9;d+=Math.max(.05,(f.hi-f.lo)/12)){const seat=tubeSeat({s,d});samples++;
+  for(let a=0;a<8;a++){const x=seat.x+Math.cos(a*Math.PI/4)*TUBE.radius,z=seat.z+Math.sin(a*Math.PI/4)*TUBE.radius;if(!inWater(x,z)){dry++;if(dry<6)console.log('  tube ring out of the water at',x.toFixed(1),z.toFixed(1),'s',s.toFixed(1),'d',d.toFixed(2));}}
+  for(let a=-1;a<8;a++){const x=a<0?seat.x:seat.x+Math.cos(a*Math.PI/4)*RIDER_R,z=a<0?seat.z:seat.z+Math.sin(a*Math.PI/4)*RIDER_R,u=bridgeUnderside(x,z);if(u===Infinity)continue;
+   const gap=u-(seat.y+RIDER_TOP);worst=Math.min(worst,gap);if(gap<CLEAR){low++;if(low<6)console.log('  rider under a bridge with',gap.toFixed(2),'m at',x.toFixed(1),z.toFixed(1));}}}}
+ let narrow=Infinity;for(let s=0;s<RIVER_PATH.total;s+=.5){const f=riverFrame(s);narrow=Math.min(narrow,f.hi-f.lo);}console.log(`narrowest steering range ${narrow.toFixed(2)} m (full ${(2*TUBE_RANGE).toFixed(1)} m)`);assert(narrow>=1.5,'a corner pinches the tube');
+ console.log(`${dry||low?'FAIL':'PASS'} tube range: ${samples.toLocaleString()} places on the ${RIVER_PATH.total.toFixed(0)} m loop, ring in the water everywhere (${dry} out), least headroom under a bridge ${worst.toFixed(2)} m (needs ${CLEAR})`);
+ assert.equal(dry,0,'a tube can leave the water');assert.equal(low,0,'a rider hits a bridge');
+ // The current carries a tube all the way round, and braking never stops it.
+ const st=tubeBoard(DOCKS[0]),s0=st.s;let gone=0;for(let i=0;i<60*120;i++){const before=st.s;tubeStep(st,1/60,{x:-riverFrame(st.s).tx*5,z:-riverFrame(st.s).tz*5});gone+=((st.s-before)%RIVER_PATH.total+RIVER_PATH.total)%RIVER_PATH.total;}
+ console.log(`PASS braking against the current still drifts ${(gone/120).toFixed(2)} m/s downstream`);assert(gone/120>.2&&gone/120<.4,'brake speed');
+ // Docks: each is reached on foot (in the flood above), offers a tube there, and lets the tube out again where it boards.
+ let docks=0;for(const dock of DOCKS){const [x,y,z]=dock.at,ok=reached(x,y,z,1.2)&&club.near(new T.Vector3(x,y,z))?.kind==='tube'&&tubeDock(tubeBoard(dock))===dock;if(ok)docks++;else console.log('  dock at',x,z,'fails');}
+ console.log(`${docks===DOCKS.length?'PASS':'FAIL'} tube docks reached, offering a tube and letting it out: ${docks}/${DOCKS.length}`);assert.equal(docks,DOCKS.length,'a tube dock fails');
+ // A shot hits a rider downstream of its cannon once, at 60 and at 20 frames a second, and pushes the tube.
+ for(const fps of [60,20]){let hits=0,i=0;for(const c of CANNONS){if(i++%5)continue;const aim=[c.aim[0],c.aim[2]],m=Math.hypot(...aim),land=[c.at[0]+aim[0]/m*7.5,c.at[2]+aim[1]/m*7.5],{s,d}=riverNearest(...land),rider={s,d,vs:TUBE.current,vd:0,ks:0,kd:0},seat=tubeSeat(rider);
+   club.fire(CANNONS.indexOf(c),{id:'t'+fps+'-'+i,seed:7});let got=0,ks=0;for(let k=0;k<fps*3;k++){for(const h of club.update(1/fps,[seat.x,seat.y+.2,seat.z])){got++;tubeKick(rider,h.dir);ks=Math.hypot(rider.ks,rider.kd);}}
+   if(got===1&&ks>.3)hits++;else console.log('  cannon',CANNONS.indexOf(c),'at',fps,'fps: hits',got,'push',ks.toFixed(2));}
+  const tried=Math.ceil(CANNONS.length/5);console.log(`${hits===tried?'PASS':'FAIL'} a shot hits a downstream rider exactly once and pushes them, ${fps} fps: ${hits}/${tried}`);assert.equal(hits,tried,'cannon hits');}
+ // Two cannons on one bridge fire at once at a rider between their landing points: two hits, one each. And a rider
+ // floating downstream into a jet is hit once as they pass through it.
+ {const a=CANNONS[0],b=CANNONS[1],mid=[(a.at[0]+b.at[0])/2,(a.at[2]+b.at[2])/2];let got=new Set();
+  const land=c=>{const m=Math.hypot(c.aim[0],c.aim[2]);return [c.at[0]+c.aim[0]/m*7.5,c.at[2]+c.aim[2]/m*7.5];};
+  for(const [c,tag] of [[a,'A'],[b,'B']]){const [x,z]=land(c),{s,d}=riverNearest(x,z),seat=tubeSeat({s,d});club.fire(CANNONS.indexOf(c),{id:'pair-'+tag,seed:3});
+   for(let k=0;k<180;k++)for(const h of club.update(1/60,[seat.x,seat.y+.2,seat.z]))got.add(h.id);}
+  console.log(`${got.size===2?'PASS':'FAIL'} two cannons at once: ${got.size} shots hit, one each`);assert.equal(got.size,2,'two shots');
+  const c=CANNONS[4],[x,z]=land(c),{s}=riverNearest(x,z),rider={s:s-3,d:0,vs:TUBE.current,vd:0,ks:0,kd:0};club.fire(4,{id:'moving',seed:5});let n=0;
+  for(let k=0;k<180;k++){tubeStep(rider,1/60,{x:riverFrame(rider.s).tx*5,z:riverFrame(rider.s).tz*5});const seat=tubeSeat(rider);n+=club.update(1/60,[seat.x,seat.y+.2,seat.z]).length;}
+  console.log(`${n===1?'PASS':'FAIL'} a rider paddling into a jet is hit once: ${n}`);assert.equal(n,1,'moving rider');}}
 
 // The walk Controller: from Deck 1's forward stair landing down the tower, out of its door, across to a terrace stair and up.
 const ctl=new Controller(col);const go=(x,z,max=2400)=>{let i=0;for(;i<max;i++){const d=new T.Vector3(x-ctl.position.x,0,z-ctl.position.z);if(d.length()<.4)break;d.setLength(Math.min(3.2,d.length()*4+.5));ctl.step(1/60,d,false);}return i<max;};
@@ -106,8 +142,12 @@ const f=CORES[0],sx=f.stairX,sz=f.stairZ;ctl.position.set(sx-3.5,DECK1+.3,sz);ct
 const down=[];for(let k=0;k<3;k++)down.push([sx-2.8,sz+1.4],[sx+2.8,sz+1.4],[sx+3.5,sz],[sx+2.8,sz-1.4],[sx-2.8,sz-1.4],[sx-3.5,sz]);
 // over the forward port bridge (x 120) to the promenade, along it past the stair's rail and up the stair at x 124
 const x0=STAIRS[2],bx=BRIDGES.side.find(x=>x<x0&&x>x0-8),rz=riverInner(bx),oz=riverOuter(bx);
-const route=[...down,[sx-3.5,sz-4],[135,0],[127.5,0],[126,-12],[bx,-(rz-3)],[bx,-(rz-1)],[bx,-(oz+1)],[bx,-(oz+2.6)],[x0-.6,-(oz+2.6)],[x0-.6,-(front(x0)-1.5)],[x0+7,-(front(x0)-1.5)],[x0+7,-(front(x0+7)+2)]];let walked=true;
+const route=[...down,[sx-3.5,sz-4],[135,0],[127.5,0],[126,-12],[bx,-(rz-3)],[bx,-(rz-1)],[bx,-(oz+1)],[bx,-(oz+3.6)],[x0-.6,-(oz+3.6)],[x0-.6,-(front(x0)-1.5)],[x0+7,-(front(x0)-1.5)],[x0+7,-(front(x0+7)+2)]];let walked=true;
 for(const [x,z] of route){if(!go(x,z)){walked=false;console.log('FAIL controller stuck going to',x,z,'at',ctl.position.toArray().map(v=>v.toFixed(2)).join(','));break;}}
 console.log(`${walked?'PASS':'FAIL'} controller walks Deck 1 → down the forward stair → between the lifts → over a bridge → up the port terrace stair, ends at y ${ctl.position.y.toFixed(2)}`);
 assert(walked&&Math.abs(ctl.position.y-TY)<.15,'controller route');
+// A floater's pose crosses the wire as rest 'tube' (3), alongside someone sitting, and the frame still decodes.
+{const base={yaw:0,grounded:false,stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:false,ball:false,glide:false,hook:null,fur:0},r=new WireReader();
+ const got=r.read(assembleFrame([encodeIdentity(1,'voyager-a'),encodeIdentity(2,'voyager-b')],[encodeRecord(1,{...base,pos:[-89,-52.05,-43],rest:'tube'}),encodeRecord(2,{...base,pos:[0,-51.5,0],rest:'sit'})]));
+ assert.deepEqual(got.map(p=>p.rest),['tube','sit'],'a tube pose does not cross the wire');console.log('PASS a tube pose crosses the wire with the others in its frame');}
 console.log('PASS Keel Club');

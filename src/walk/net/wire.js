@@ -14,7 +14,7 @@
 //                         name is the visitor's Discord name, vouched for by The Creamery: net/pass.js; 0x02: a tester,
 //                         who wears the captain's hat: walk/hat.js)
 //   u16 poses, each:      u16 slot · u8 head · three u24 position · u16 heading · extras
-//   head:     bits 0-1 rest (0 none, 1 sitting, 2 lying) · 0x04 GROUNDED · 0x08 MOTION · 0x10 EMOTE · 0x20 PLAYING
+//   head:     bits 0-1 rest (0 none, 1 sitting, 2 lying, 3 in a Keel Club tube) · 0x04 GROUNDED · 0x08 MOTION · 0x10 EMOTE · 0x20 PLAYING
 //             (at the lounge telescope's game: walk/invasion) · 0x40 BALL (rolling in a hamster ball:
 //             walk/hamster-ball.js) · 0x80 GLIDE (riding the longboard down a drop: walk/glide.js)
 //   position: (metres + 2048) x 4096, an eighth of a millimetre
@@ -28,7 +28,8 @@
 import {FUR_COLOURS} from '../fur-colours.js';
 export const WIRE_TAG=0x4c,WIRE_VERSION=8;
 export const STANCES=['stand','crouch','prone','slide'];
-export const RESTS=[null,'sit','lie'];
+// 'tube': floating in a Keel Club tube (walk/keel-club.js), seated in it (protocol 9).
+export const RESTS=[null,'sit','lie','tube'];
 const GROUNDED=0x04,MOTION=0x08,EMOTE=0x10,PLAYING=0x20,BALL=0x40,GLIDE=0x80,KNOWN=0xff;
 const HOOK=0x10,ORIGIN=-2048,STEPS=4096,MAX_STEP=0xffffff,YAW_STEPS=65536,TURN=Math.PI*2;
 const encoder=new TextEncoder(),decoder=new TextDecoder();
@@ -92,7 +93,7 @@ export function decodeFrame(data){
  for(let i=0;i<count;i++){
   if(!has(15))return null;
   const slot=v.getUint16(o,true),head=v.getUint8(o+2);
-  if(head&~KNOWN||(head&3)===3)return null;
+  if(head&~KNOWN)return null;
   const pos=getSteps(v,o+3);
   const turned=v.getUint16(o+12,true)/YAW_STEPS*TURN,fur=v.getUint8(o+14);if(fur>=FUR_COLOURS.length)return null;o+=15;
   const pose={pos,yaw:turned>=Math.PI?turned-TURN:turned,grounded:!!(head&GROUNDED),rest:RESTS[head&3],stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:!!(head&PLAYING),ball:!!(head&BALL),glide:!!(head&GLIDE),hook:null,fur};
@@ -151,4 +152,5 @@ const UNSEEN=new RegExp('[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u
 // visitor is rolling in a hamster ball. 6: each pose carries its fur colour after the heading. 7: a pose says when its
 // visitor is riding the longboard down (walk/glide.js). 8: a pose says where its visitor's grapple line has bitten
 // (walk/grapple.js).
-export const PROTOCOL=8;
+// 9: a pose can sit in a Keel Club tube (rest 'tube'), and Keel Club water cannon shots are shared ('cannon').
+export const PROTOCOL=9;

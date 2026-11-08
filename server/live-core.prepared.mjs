@@ -66,7 +66,9 @@ const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
 // name, scores and hearts count, but a giveaway claim wants a fresh one (arena.mjs).
 const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',lapsed:REMEMBER_S,
  key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
-const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6],chat:[.5,5],clown:[.2,3],wall:[.5,3],paint:[12,24],tv:[.5,3],'tv-ticket':[.5,5],'tv-down':[.2,2]};
+const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6],chat:[.5,5],clown:[.2,3],wall:[.5,3],paint:[12,24],tv:[.5,3],'tv-ticket':[.5,5],'tv-down':[.2,2],cannon:[1,3]};
+// Keel Club water cannons (walk/keel-club.js): when each last fired; one shot per cannon per CANNON_GAP ms.
+const cannonShots=[],CANNON_GAP=1400;
 
 const visitors=new Set();
 const slots=new Map();let nextSlot=1;
@@ -107,7 +109,7 @@ function readPose(v,p){
  if(!p||!Array.isArray(p.pos)||p.pos.length!==3)return false;
  const [x,y,z]=p.pos;if(!finite(x,...BOUNDS.x)||!finite(y,...BOUNDS.y)||!finite(z,...BOUNDS.z)||!finite(p.yaw,-1e3,1e3))return false;
  const pose={pos:[x,y,z],yaw:p.yaw,grounded:!!p.g,stance:STANCES.includes(p.st)?p.st:'stand',jumpCount:finite(p.jc,0,3)?Math.round(p.jc):0,
-  jumpS:finite(p.js,-1,60)?p.js:-1,rise:finite(p.r,-100,100)?p.r:0,emote:typeof p.e==='string'&&/^[a-z0-9_]{1,32}$/.test(p.e)?p.e:null,rest:p.rest==='sit'||p.rest==='lie'?p.rest:null,
+  jumpS:finite(p.js,-1,60)?p.js:-1,rise:finite(p.r,-100,100)?p.r:0,emote:typeof p.e==='string'&&/^[a-z0-9_]{1,32}$/.test(p.e)?p.e:null,rest:p.rest==='sit'||p.rest==='lie'||p.rest==='tube'?p.rest:null,
   playing:p.pl===true,ball:p.b===true,glide:p.gl===true,hook:hookOf(p.hk,[x,y,z]),fur:cleanFur(p.f)};
  try{v.record=encodeRecord(v.slot,pose);}catch{return false;}
  v.pos=pose.pos;v.playing=pose.playing;v.version++;treasure.observe(v);panel.observe(v);return true;
@@ -324,6 +326,14 @@ function onMessage(v,data,binary){
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;
    broadcast({m:'mark',id:v.id,at:a.map(n=>Math.round(n*100)/100)},v);break;
+  }
+  // A Keel Club water cannon shot: from someone on that cannon's bridge crown (policy.canFire), once per cannon per
+  // CANNON_GAP. Every page aboard, the shooter's too, fires the accepted shot from its seed, and each rider's page judges
+  // its own hits.
+  case 'cannon':{
+   const i=msg.i,now=Date.now();if(!allowed(v,'cannon')||!Number.isInteger(i)||!policy.canFire(v.pos,i)||now-(cannonShots[i]||0)<CANNON_GAP)break;
+   cannonShots[i]=now;v.shots=(v.shots||0)+1;const seed=Number.isInteger(msg.seed)&&msg.seed>0&&msg.seed<2147483647?msg.seed:1+Math.floor(Math.random()*2147483646);
+   broadcast({m:'cannon',id:v.id,i,seed,shot:v.id+':'+v.shots});break;
   }
  }
 }

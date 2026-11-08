@@ -1,6 +1,7 @@
 // Spatial authority uses the very same transformed source modules as the v2 walk.
 import {frame,toWorld,toLocal,anchoredPoint,LAYOUT_VERSION} from '../plan/rooms.js';
 import {LIFTS} from '../walk/lifts.authoring.js';
+import {CANNONS} from '../walk/keel-club.authoring.js';
 import {SWIM,swimWorld,swimLocal,limitSwim,gemNear,distance} from '../walk/aquarium-treasure/layout.authoring.js';
 import {AQUARIUM} from '../walk/lounge-aquarium.authoring.js';
 import {MAZE_ROOM,MAZE_START,MAZE_BUTTON,MAZE_FASTEST_S} from '../walk/maze/layout.js';
@@ -17,7 +18,7 @@ export const spatial={version:LAYOUT_VERSION,identity:LIVE_IDENTITY,lifts:LIFTS,
  aquarium:{bounds:AQUARIUM,swim:SWIM,door:swimWorld(SWIM.door),entry:swimWorld(SWIM.entry),chest:swimWorld(SWIM.chest),gems:SWIM.gems.map(swimWorld)},
  arcade,gymSpecs,treadmills:[...GYM.xs.map(x=>toWorld('d16-gym-3',[x,GYM.centerY+GYM.size[1]/2,GYM.z+GYM.size[2]*.08])),mill.centre.clone().addScaledVector(mill.front,-mill.length*.08).toArray()],
  telescope:anchoredPoint('observation-lounge',[203,26.3,0]),pool:toWorld('d16-recreation-4',[ACTIVITY_FLOOR.center[0],ACTIVITY_FLOOR.center[1]+ACTIVITY_FLOOR.size[1]/2,ACTIVITY_FLOOR.center[2]]),
- selfie:[-265.3,120.3,0],transporters:homes(),ball:BALL.home,
+ selfie:[-265.3,120.3,0],transporters:homes(),ball:BALL.home,cannons:CANNONS.map(c=>c.at),
  frames:Object.fromEntries(['commons-1','commons-10','d01-cargo-1','d01-workshop-5','d16-gym-3','d16-recreation-4','observation-lounge'].map(id=>[id,frame(id)]))};
 export {SWIM,swimWorld,swimLocal,limitSwim,gemNear,distance};
 export const near=(p,q,r,dy=2)=>!!p&&Math.abs(p[1]-q[1])<dy&&Math.hypot(p[0]-q[0],p[2]-q[2])<r;
@@ -25,4 +26,6 @@ const poolNear=p=>{if(!p)return false;const q=toLocal('d16-recreation-4',p);retu
 export const policy={version:2,identity:LIVE_IDENTITY,
  canPlay:(game,p)=>game==='pool'?poolNear(p)||near(p,arcade.pool,2):near(p,spatial.telescope,3)||near(p,arcade.invasion,2),
  canGym:p=>!!p&&gymSpecs.some(t=>treadmillNear(p,t)),
+ // A Keel Club water cannon fires for someone standing on its bridge's crown, beside it (the cannon is 1.15 m up).
+ canFire:(p,i)=>{const c=spatial.cannons[i];return !!p&&!!c&&Math.hypot(p[0]-c[0],p[2]-c[2])<2.8&&p[1]>c[1]-2.2&&p[1]<c[1]+.5;},
  canCall:(p,l,stop)=>{const c=l.car;return !!p&&Math.hypot(p[0]-c.x,p[2]-c.z)<Math.hypot(c.width,c.depth)/2+3&&p[1]>=Math.min(...l.stops.map(s=>s.y))-3&&p[1]<=Math.max(...l.stops.map(s=>s.y))+3;}};

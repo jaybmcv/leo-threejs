@@ -45,7 +45,7 @@ import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
 import {buildSteps,cabinPlacements,outsideOnly} from '../v2/world.js';
 import {Colliders,BODY} from './collision.js';
 import {STATIC_LIFT_PARTS,LIFTS} from './lifts.js';
-import {KEEL} from './keel-club.js';
+import {KEEL,RIVER,createTubeMesh,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock} from './keel-club.js';
 import {Controller,GLIDE,HOOK} from './controller.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
@@ -491,7 +491,9 @@ const actions={
   else if(t.kind==='mct')boardCart(t);
   else if(t.kind==='graffiti'){closePanels();graffiti.open();}
   else if(t.kind==='lever')leverPanel.flip(t.lever);
-  else if(t.kind==='cannon')keelClub.fire(t.cannon);
+  // Online the server decides each shot and every page, ours too, fires the shots it accepts; offline we fire our own.
+  else if(t.kind==='cannon'){if(live?.live)live.cannon(t.cannon,keelClub.seed());else keelClub.fire(t.cannon);}
+  else if(t.kind==='tube')boardTube(t.dock);
   else if(t.kind==='lever-exit')leverPanel.release();
   else if(t.kind==='tv'){closePanels();crownTv.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
@@ -646,7 +648,7 @@ async function connectToClaim(){
 const giveaway=createGiveaway({$,live:()=>live,connect:connectToClaim});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p)});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08}});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -660,7 +662,9 @@ if(LIVE_URL){
   chat:line=>{chat.add(line);if(line.id!==live.id&&!chat.quiet)remotes.say(line.id,line.text);},said:r=>chat.refused(r.why),
   poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();mct.offline();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
-  lift:(id,s)=>lifts.apply(id,s),aboard:(n,names)=>{aboard=n;if(names!==undefined)aboardNames=names;showAboard();showAboardList();},
+  lift:(id,s)=>lifts.apply(id,s),
+  // Someone else's Keel Club water cannon shot: the same jet here, from its seed.
+  cannon:(id,i,seed,shot)=>keelClub?.fire(i,{id:shot,seed,who:id===live.id?'me':id}),aboard:(n,names)=>{aboard=n;if(names!==undefined)aboardNames=names;showAboard();showAboardList();},
   maze:msg=>maze?.fromServer(msg),
   treasure:msg=>treasure?.fromServer(msg),
   panel:msg=>leverPanel?.apply(msg),
@@ -689,7 +693,7 @@ if(LIVE_URL){
 function myPose(riding=false){
  const h=walker.holder,held=resting||run,at=held?h.position:controller.position;
  return {pos:[at.x,at.y,at.z],yaw:held?h.rotation.y:heading,g:controller.grounded||riding||!!held,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:resting?.stand?'healing_capsule':emote,rest:resting&&!resting.stand?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||pinballGame.isOpen||!!emergencyDrill?.isOpen||!$('outside-sheet').hidden||!!run,b:inBall,gl:controller.gliding,hk:controller.hook&&!resting&&!run?controller.hook.toArray():undefined,f:furColour};
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:resting?.stand?'healing_capsule':emote,rest:resting&&!resting.stand?(resting.spot.tube?'tube':resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||pinballGame.isOpen||!!emergencyDrill?.isOpen||!$('outside-sheet').hidden||!!run,b:inBall,gl:controller.gliding,hk:controller.hook&&!resting&&!run?controller.hook.toArray():undefined,f:furColour};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
@@ -751,12 +755,17 @@ renderer.setAnimationLoop(()=>{
  // and the camera swings round behind it while it moves. A healing capsule holds you until you leave it (E or the button).
  const cart=resting?.spot.mct,driving=cart?.seat==='driver'&&resting.phase==='in'&&resting.t===1;
  if(driving){mct.drive(dt,k.y,k.x,k.run);if(Math.abs(cart.cart.speed)>.3&&!k.look.x)follow.yaw=dampAngle(follow.yaw,cart.cart.yaw,1.2,dt);}
- else if(resting&&!resting.stand&&resting.phase==='in'&&resting.t===1&&wish.lengthSq()>.1)standUp();
+ else if(resting&&!resting.stand&&!resting.spot.tube&&resting.phase==='in'&&resting.t===1&&wish.lengthSq()>.1)standUp();
+ // In a Keel Club tube the keys paddle and steer it.
+ if(resting?.spot.tube&&resting.phase==='in')tubeStep(resting.spot.tube,dt,wish);
  lifts.update(dt,controller);
  vaultLift?.update(dt,controller);
  // A Paws Off run holds the walker on the treadmill (paws-off/game.js); the belts of others playing run too.
  run=pawsOff?.update(dt,remotes?[...remotes.remotes.values()].filter(r=>r.tgt?.playing).map(r=>r.cur):[])||null;
- mudwater?.update(dt);nosePark?.update(dt);keelClub?.update(dt);
+ mudwater?.update(dt);nosePark?.update(dt);
+ {// A water cannon's shot that reaches our tube pushes it, once a shot (keel-club.js tests it on the shots' own clock).
+  const tube=resting?.spot.tube&&resting.phase==='in'?resting.spot.tube:null,seat=tube?tubeSeat(tube):null;
+  for(const h of keelClub?.update(dt,seat?[seat.x,seat.y+.2,seat.z]:null)||[])if(tube){tubeKick(tube,h.dir);splashed(h.who);}}
  vault?.update(dt,controller.position);
  // Riding a moving car, the car carries the walker; it passes slab edges and the hull skin, which must not push.
  const riding=vaultLift?.riding||lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
@@ -786,13 +795,14 @@ renderer.setAnimationLoop(()=>{
  // Should a walker ever fall out of the ship, it comes back to the last ground it stood on. Nothing aboard is walkable
  // below Deck 1, and the inside of the hull under it (-54.6 m) used to catch fallers and count as safe ground.
  if(p.y<BELOW_SHIP){controller.place(safe);emote=null;}
- else if(controller.grounded&&!inCar)safe.copy(p);
+ else if(controller.grounded&&!inCar&&!resting?.spot.tube)safe.copy(p);
  if(controller.speed>.15&&!resting)heading=dampAngle(heading,Math.atan2(controller.velocity.x,controller.velocity.z),12,dt);
  // What the figure leans into: the turn (+ to its left) and the change of speed, both smoothed a little.
  if(dt>0){turnRate=T.MathUtils.damp(turnRate,Math.atan2(Math.sin(heading-lastHeading),Math.cos(heading-lastHeading))/dt,10,dt);accel=T.MathUtils.damp(accel,(controller.speed-lastSpeed)/dt,10,dt);}
  lastHeading=heading;lastSpeed=controller.speed;
  let pose=null;
  if(cart)followSeat(resting);
+ if(resting?.spot.tube)followTube(resting);
  if(resting)pose=restPose(dt);
  else if(run){heading=run.yaw;walker.holder.position.copy(run.pos);walker.holder.rotation.set(0,run.yaw,0);
   // Off the back: over onto his back, head first the way the belt carried him.
@@ -801,6 +811,7 @@ renderer.setAnimationLoop(()=>{
  if(!resting&&!run){walker.holder.position.copy(p);walker.holder.rotation.set(0,heading,0);walker.body.rotation.set(0,0,0);}
  const board=glide.update(dt,{gliding:controller.gliding&&!resting&&!run,speed:controller.speed,rise:controller.velocity.y,turnRate});follow.ride=board;
  if(inBall){ball.mesh.position.copy(p);if(controller.grounded)ball.roll(dt,controller.velocity.x,controller.velocity.z);}
+ tubeMesh.visible=!!resting?.spot.tube;if(tubeMesh.visible){const s=tubeSeat(resting.spot.tube);tubeMesh.position.set(s.x,KEEL.floor-RIVER.drop+.08,s.z);}
  walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
   turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!!lounge?.inside(walker.holder.position),swimming:!!treasure?.active,board,hook:controller.hook&&!resting&&!run?controller.hook:null});
  grapple.update(dt);
@@ -850,7 +861,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){keelClub?.mood(scene.fog,camera.getWorldPosition(eye));draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
@@ -938,7 +949,7 @@ function hud(p){
  const near=changeLog.nearby(p).length,chip=$('changes-here');
  if(chip.dataset.count!==String(near)){chip.dataset.count=String(near);chip.hidden=!near;chip.querySelector('b').textContent=String(near);
   chip.querySelector('span').textContent=near===1?' change here':' changes here';chip.setAttribute('aria-label',`${near} change${near===1?'':'s'} made around here: open the ship log`);}
- const t=run||graffiti?.active?null:resting?{label:resting.stand?'Leave the capsule':resting.spot.mct?'Get out':resting.lie?'Get up':'Stand up'}:target();
+ const t=run||graffiti?.active?null:resting?{kind:resting.spot.tube&&!tubeDock(resting.spot.tube)?'waiting':undefined,label:resting.spot.tube?(tubeDock(resting.spot.tube)?'Get out at the dock':'Paddle to a dock to get out'):resting.stand?'Leave the capsule':resting.spot.mct?'Get out':resting.lie?'Get up':'Stand up'}:target();
  const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=!show||touch;
  // Waiting for a called lift there's nothing to press: the prompt just says where the car is.
  const waiting=t?.kind==='waiting';prompt.classList.toggle('waiting',waiting);$('use').disabled=waiting;
@@ -982,6 +993,8 @@ function endRun({at,yaw}){
 function capsuleView(on){if(document.body.classList.contains('capsule-view')!==on)document.body.classList.toggle('capsule-view',on);}
 function standUp(){
  if(!resting||resting.phase!=='in')return;
+ // Out of a Keel Club tube only at a dock, onto its spot, facing the island.
+ const tb=resting.spot.tube;if(tb){const dock=tubeDock(tb);if(!dock)return;resting.from.pos.set(...dock.at);resting.from.heading=Math.atan2(0,-dock.side);}
  // Out of a transporter: beside it, or behind a rear seat; a driver leaves it parked where it stopped.
  const m=resting.spot.mct;if(m){const out=mct.exit(m.cart,m.seat);resting.from.pos.copy(out.pos);resting.from.heading=out.heading;if(m.seat==='driver')mct.park(m.cart);}
  resting.phase='out';
@@ -993,6 +1006,23 @@ function followSeat(r){
  r.to.pos.copy(s.point).addScaledVector(s.facing,.04).setY(s.height+.06-walker.hipHeight);r.to.yaw=Math.atan2(s.facing.x,s.facing.z);r.view.set(s.point.x,s.height-.55,s.point.z);
  if(r.phase==='in')controller.position.set(r.to.pos.x,r.spot.mct.cart.pos.y,r.to.pos.z);
 }
+// A Keel Club tube (keel-club.js): a seat that floats round the Keel Loop. The keys paddle and steer it (tubeStep),
+// the camera stays the walker's own; E lets you out only at a dock (tubeDock), onto the dock's own spot.
+const tubeMesh=createTubeMesh();tubeMesh.visible=false;scene.add(tubeMesh);
+function boardTube(dock){
+ emote=null;const st=tubeBoard(dock),seat=tubeSeat(st);
+ resting={spot:{tube:st,dock,point:new T.Vector3(seat.x,seat.y,seat.z),height:seat.y},lie:false,stand:false,from:{pos:controller.position.clone(),heading},to:{pos:new T.Vector3(),yaw:seat.yaw},t:0,phase:'in',view:new T.Vector3()};
+ followTube(resting);
+}
+function followTube(r){const seat=tubeSeat(r.spot.tube);
+ r.to.pos.set(seat.x,seat.y+.06-walker.hipHeight,seat.z);r.to.yaw=seat.yaw;r.view.set(seat.x,seat.y-.55,seat.z);
+ if(r.phase==='in')controller.position.set(seat.x,seat.y,seat.z);}
+// "Splashed by ..." when a water cannon's shot hits our tube: at most every 3 s.
+let splashAt=0,splashHide=0;
+function splashed(who){const now=performance.now();if(now-splashAt<3000)return;splashAt=now;
+ const name=who==='me'?'yourself':remotes?.remotes.get(who)?.name||'a Voyager';let el=$('splash-toast');
+ if(!el){el=document.createElement('div');el.id='splash-toast';Object.assign(el.style,{position:'fixed',left:'50%',top:'16%',transform:'translateX(-50%)',padding:'10px 18px',borderRadius:'14px',background:'rgba(23,58,74,.9)',color:'#f6f2e8',font:'600 18px Inter,"Segoe UI",Arial,sans-serif',pointerEvents:'none',zIndex:'40',transition:'opacity .4s'});document.body.appendChild(el);}
+ el.textContent='Splashed by '+name+'!';el.style.opacity='1';clearTimeout(splashHide);splashHide=setTimeout(()=>{el.style.opacity='0';},1800);}
 function restPose(dt){
  const r=resting;r.t=T.MathUtils.clamp(r.t+(r.phase==='in'?1:-1)*dt/.7,0,1);
  const e=r.t*r.t*(3-2*r.t),h=walker.holder;
