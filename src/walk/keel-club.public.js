@@ -31,8 +31,9 @@ export const WATER={lagoon:[-8,112,32],machine:[112,118]};
 // runs `edge` in from the hull, so a promenade along the terrace walls (with the terrace stairs and the climbing walls)
 // stays outside it; it crosses the hall just forward of the aft hull and in front of the range's dome screen. Everything
 // inside is the centre island; arched bridges (`rise` over the water, for floaters to pass under) cross to it. The
-// water is `drop` below the floor over a bed `bed` down.
-export const RIVER={edge:4.5,width:7,aft:-150,bow:196,drop:.4,bed:1.3,rise:1.4};
+// water is `drop` below the floor over a bed `bed` down. The bridges' decks are `deck` thick: a seated tube rider's
+// head clears every bridge's underside anywhere a tube can go (check-keel-club.mjs).
+export const RIVER={edge:4.5,width:7,aft:-150,bow:196,drop:.8,bed:1.6,rise:1.8,deck:.3};
 const rOut=x=>front(x)-RIVER.edge,rIn=x=>rOut(x)-RIVER.width;
 export {rOut as riverOuter,rIn as riverInner};
 // Bridges: across each side channel at x (4 m wide), and across the aft channel at z (along x).
@@ -40,14 +41,76 @@ export const BRIDGES={side:[-116,-62,-10,66,120,160],aft:[0],width:4};
 // Waterfalls: the terrace edge reaches out over the promenade to the river's outer bank, and a curtain of water falls
 // from it into the river; the promenade passes behind the curtain, under the overhang.
 export const FALLS=[[-44,-30],[40,54]];
-// Each bridge as its deck's centre line, from 2 m inside the centre island's bank to 2 m past the outer bank.
+// Each bridge as its deck's centre line, from LAND m inside the centre island's bank to LAND m past the outer bank: a
+// 13 m span, so the arch is still high over a tube steered right up to either bank (and no steeper than 23 degrees).
+const LAND=3;
 export const BRIDGE_SPANS=[
- ...BRIDGES.side.flatMap(x=>[-1,1].map(s=>({a:[x,s*(rIn(x)-2)],b:[x,s*(rOut(x)+2)]}))),
- ...BRIDGES.aft.map(z=>({a:[RIVER.aft+RIVER.width+2,z],b:[RIVER.aft-2,z]}))];
+ ...BRIDGES.side.flatMap(x=>[-1,1].map(s=>({a:[x,s*(rIn(x)-LAND)],b:[x,s*(rOut(x)+LAND)]}))),
+ ...BRIDGES.aft.map(z=>({a:[RIVER.aft+RIVER.width+LAND,z],b:[RIVER.aft-LAND,z]}))];
 // Water cannons, two on each bridge's crown, one on each rail, aimed down the channel either way and 10 degrees down:
 // {at (the muzzle's pivot), aim (unit), bridge (index in BRIDGE_SPANS)}.
 export const CANNONS=BRIDGE_SPANS.flatMap(({a,b},bridge)=>{const m=[(a[0]+b[0])/2,(a[1]+b[1])/2],l=Math.hypot(b[0]-a[0],b[1]-a[1]),u=[(b[0]-a[0])/l,(b[1]-a[1])/l],n=[-u[1],u[0]],c=Math.cos(.17),d=Math.sin(.17);
  return [-1,1].map(k=>({at:[m[0]+k*n[0]*(BRIDGES.width/2+.25),KEEL.floor+RIVER.rise+1.15,m[1]+k*n[1]*(BRIDGES.width/2+.25)],aim:[k*n[0]*c,-d,k*n[1]*c],bridge}));});
+// The underside of whichever bridge deck is over (x, z), or Infinity: the arch's half sine over its span, less `deck`.
+export function bridgeUnderside(x,z){let low=Infinity;for(const {a,b} of BRIDGE_SPANS){const L=Math.hypot(b[0]-a[0],b[1]-a[1]),u=[(b[0]-a[0])/L,(b[1]-a[1])/L],dx=x-a[0],dz=z-a[1],t=(dx*u[0]+dz*u[1])/L,w=Math.abs(-dx*u[1]+dz*u[0]);
+ if(t<0||t>1||w>BRIDGES.width/2+.05)continue;low=Math.min(low,KEEL.floor+RIVER.rise*Math.sin(Math.PI*t)-RIVER.deck);}return low;}
+
+// ---- Floating the Keel Loop (round 2) ----
+// The river's centre line as one closed loop, the way its water flows: forward along port, across the bow, aft along
+// starboard, across the aft end. Sampled about every metre, its corners rounded by a moving average (`ROUND` samples
+// either side), with the arc length at each sample. A frame's `right` points to the centre island.
+const ROUND=6,TUBE_RING=.9;
+export const RIVER_PATH=(()=>{const {aft:ra,bow:rb,width:W}=RIVER,xa=ra+W/2,xb=rb-W/2,zc=x=>rIn(x)+W/2,raw=[];
+ const leg=(x0,z0,x1,z1)=>{const n=Math.max(1,Math.round(Math.hypot(x1-x0,z1-z0)));for(let i=0;i<n;i++)raw.push([x0+(x1-x0)*i/n,z0+(z1-z0)*i/n]);};
+ for(let x=xa;x<xb;x+=1)raw.push([x,-zc(x)]);leg(xb,-zc(xb),xb,zc(xb));for(let x=xb;x>xa;x-=1)raw.push([x,zc(x)]);leg(xa,zc(xa),xa,-zc(xa));
+ const n=raw.length,pts=raw.map((_,i)=>{let x=0,z=0;for(let k=-ROUND;k<=ROUND;k++){const q=raw[(i+k+n)%n];x+=q[0];z+=q[1];}return [x/(2*ROUND+1),z/(2*ROUND+1)];});
+ const len=[0];for(let i=1;i<=n;i++)len.push(len[i-1]+Math.hypot(pts[i%n][0]-pts[i-1][0],pts[i%n][1]-pts[i-1][1]));
+ // How far a tube may steer either way at each sample: its whole ring (TUBE_RING) still in the water. Rounding the
+ // corners pulls the line towards the island, so near a corner the island side narrows.
+ const wet=(x,z)=>x>=ra&&x<=rb&&Math.abs(z)<=rOut(x)&&!(x>ra+W&&x<rb-W&&Math.abs(z)<rIn(x));
+ const ring=(x,z)=>{for(let a=0;a<12;a++)if(!wet(x+Math.cos(a*Math.PI/6)*TUBE_RING,z+Math.sin(a*Math.PI/6)*TUBE_RING))return false;return true;};
+ const lo=[],hi=[];pts.forEach((p,i)=>{const a=pts[(i-1+n)%n],b=pts[(i+1)%n],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1,rx=-(b[1]-a[1])/l,rz=(b[0]-a[0])/l;
+  const reach=sgn=>{let d=0;while(d<W/2&&ring(p[0]+rx*(d+.05)*sgn,p[1]+rz*(d+.05)*sgn))d+=.05;return d-.1;};hi.push(Math.max(0,reach(1)));lo.push(-Math.max(0,reach(-1)));});
+ return {pts,len,total:len[n],lo,hi};})();
+// The point, the unit tangent (downstream) and `right` (to the island) at arc length s, wrapped round the loop.
+export function riverFrame(s){const {pts,len,total}=RIVER_PATH,n=pts.length;s=((s%total)+total)%total;
+ let lo=0,hi=n;while(hi-lo>1){const m=(lo+hi)>>1;if(len[m]<=s)lo=m;else hi=m;}
+ const a=pts[lo],b=pts[(lo+1)%n],seg=len[lo+1]-len[lo]||1,u=(s-len[lo])/seg,tx=(b[0]-a[0])/seg,tz=(b[1]-a[1])/seg;
+ const j=(lo+1)%n;return {x:a[0]+(b[0]-a[0])*u,z:a[1]+(b[1]-a[1])*u,tx,tz,rx:-tz,rz:tx,lo:Math.max(RIVER_PATH.lo[lo],RIVER_PATH.lo[j]),hi:Math.min(RIVER_PATH.hi[lo],RIVER_PATH.hi[j])};}
+// The loop's arc length and offset nearest to (x, z).
+export function riverNearest(x,z){const {pts,len}=RIVER_PATH;let best=0,bd=Infinity;pts.forEach((p,i)=>{const d=(p[0]-x)**2+(p[1]-z)**2;if(d<bd){bd=d;best=i;}});
+ const f=riverFrame(len[best]);return {s:len[best],d:(x-f.x)*f.rx+(z-f.z)*f.rz};}
+// A tube (numbers from Astra's review, 2026-11-08): the current carries it at `current`; forward keys add `paddle`,
+// back keys brake by `brake` (it still drifts downstream); side keys steer at `steer`, eased over `ease` seconds. A hit
+// adds `kick` (capped at `kickMax`), decaying with time constant `kickDecay`; speed is capped at `max`. It stays
+// `radius` clear of both banks; a rider sits `seat` above the water. Docks: `reach` to take a tube, `capture` (along
+// the loop) to be let out at one.
+export const TUBE={current:.9,paddle:.8,brake:.6,steer:.7,ease:.2,kick:.7,kickMax:1,kickDecay:.4,max:2.2,radius:TUBE_RING,seat:.25,reach:2.2,capture:2.5};
+export const TUBE_RANGE=RIVER.width/2-TUBE.radius;
+// Tube docks on the centre island's bank, four a side, clear of the bridges: `at` is where you stand to take a tube
+// and where you are let out; `s` is its place on the loop.
+export const DOCKS=[-95,-30,15,112].flatMap(x=>[-1,1].map(side=>{const at=[x,KEEL.floor,side*(rIn(x)-1.2)];return {x,side,at,s:riverNearest(at[0],at[2]).s};}));
+export const tubeBoard=dock=>({s:dock.s,d:Math.min(TUBE_RANGE*.6,riverFrame(dock.s).hi),vs:TUBE.current*.5,vd:0,ks:0,kd:0});
+// One step of a tube: `wish` is the walker's camera-relative move (x, z), any length.
+export function tubeStep(st,dt,wish){const f=riverFrame(st.s),m=wish?Math.hypot(wish.x,wish.z):0,k=m>.05?1/Math.max(1,m):0;
+ const along=Math.max(-1,Math.min(1,((wish?.x||0)*f.tx+(wish?.z||0)*f.tz)*k)),across=Math.max(-1,Math.min(1,((wish?.x||0)*f.rx+(wish?.z||0)*f.rz)*k));
+ const e=1-Math.exp(-dt/TUBE.ease),d=Math.exp(-dt/TUBE.kickDecay);
+ st.vs+=(TUBE.current+(along>0?along*TUBE.paddle:along*TUBE.brake)-st.vs)*e;st.vd+=(across*TUBE.steer-st.vd)*e;st.ks*=d;st.kd*=d;
+ const vs=Math.max(TUBE.current-TUBE.brake,Math.min(TUBE.max,st.vs+st.ks));
+ st.s=((st.s+vs*dt)%RIVER_PATH.total+RIVER_PATH.total)%RIVER_PATH.total;
+ // it steers within the water at its new place (riverFrame's lo..hi), and stops steering at a bank
+ const g=riverFrame(st.s),nd=st.d+(st.vd+st.kd)*dt;st.d=Math.max(g.lo,Math.min(g.hi,nd));if(st.d!==nd){st.vd=0;st.kd=0;}return st;}
+// A hit's push, (x, z) world direction, into the tube's frame, capped.
+export function tubeKick(st,dir){const f=riverFrame(st.s),m=Math.hypot(dir[0],dir[1])||1,a=(dir[0]*f.tx+dir[1]*f.tz)/m,c=(dir[0]*f.rx+dir[1]*f.rz)/m;
+ st.ks=Math.max(-TUBE.kickMax,Math.min(TUBE.kickMax,st.ks+a*TUBE.kick));st.kd=Math.max(-TUBE.kickMax,Math.min(TUBE.kickMax,st.kd+c*TUBE.kick));return st;}
+// Where the rider sits (the tube's top, over the water), facing downstream.
+export function tubeSeat(st){const f=riverFrame(st.s);return {x:f.x+f.rx*st.d,y:KEEL.floor-RIVER.drop+TUBE.seat,z:f.z+f.rz*st.d,yaw:Math.atan2(f.tx,f.tz)};}
+// The dock a tube can be let out at, or null: within `capture` of it along the loop.
+export function tubeDock(st){const T0=RIVER_PATH.total;for(const dock of DOCKS){let ds=Math.abs(st.s-dock.s);ds=Math.min(ds,T0-ds);if(ds<=TUBE.capture)return dock;}return null;}
+// A tube's bright ring: one geometry for every rider's tube.
+let tubeShape=null;
+export function createTubeMesh(){tubeShape??=new T.TorusGeometry(.55,.24,10,28).rotateX(Math.PI/2);
+ const m=new T.Mesh(tubeShape,new T.MeshStandardMaterial({name:'Keel_club_tube',color:0xf07c3c,roughness:.45}));m.name='Keel_club_tube';return m;}
 // Stairs from the main floor up to each terrace: a 23-riser flight running forward along the terrace front wall,
 // then a landing at terrace height and a gap in the rail onto the terrace promenade.
 export const STAIRS=[-112,-58,124];const RISERS=23,TREAD=.28,STAIR_W=3;
@@ -105,7 +168,7 @@ function seeded(seed){let s=seed%2147483647||1;return ()=>(s=s*16807%2147483647)
 function canvasTexture(w,h,draw){if(typeof document==='undefined')return null;const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
  const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return t;}
 // The labels on the club's signs, one row each of one texture.
-export const SIGNS=['KEEL CLUB','KEEL CLUB  ↓','TENNIS','5-A-SIDE','BASKETBALL','BEACH','WAVE LAGOON','DRIVING RANGE','PADEL','CABANAS · BEACH BAR','MINI PUTT','GOLF SIMS','CLIMBING WALLS','KEEL LOOP'];
+export const SIGNS=['KEEL CLUB','KEEL CLUB  ↓','TENNIS','5-A-SIDE','BASKETBALL','BEACH','WAVE LAGOON','DRIVING RANGE','PADEL','CABANAS · BEACH BAR','MINI PUTT','GOLF SIMS','CLIMBING WALLS','KEEL LOOP','FLOAT THE KEEL LOOP'];
 
 export function createKeelClub(ship){
  if(ship&&ship.v2Layout===false)return null;
@@ -163,8 +226,8 @@ export function createKeelClub(ship){
   const at=(t,k)=>[a[0]+u[0]*t*L+n[0]*k*BW,FY+RIVER.rise*Math.sin(Math.PI*t),a[1]+u[1]*t*L+n[1]*k*BW];
   // Wound so the deck faces up whichever way the span runs.
   const up=(n[0]*u[1]-n[1]*u[0])>0,deck=grid(N+1,2,(i,j)=>at(i/N,j?1:-1),up);add(deck,C.prom,{ground:true});
-  parts.push(paint(grid(N+1,2,(i,j)=>{const p=at(i/N,j?1:-1);return [p[0],Math.max(FY-.05,p[1]-.35),p[2]];},!up),C.bay));
-  for(const k of [-1,1]){const r=grid(N+1,2,(i,j)=>{const p=at(i/N,k);return [p[0],p[1]+(j?G:-.35),p[2]];});add(r,C.rail,{wall:true});}
+  parts.push(paint(grid(N+1,2,(i,j)=>{const p=at(i/N,j?1:-1);return [p[0],Math.max(FY-.05,p[1]-RIVER.deck),p[2]];},!up),C.bay));
+  for(const k of [-1,1]){const r=grid(N+1,2,(i,j)=>{const p=at(i/N,k);return [p[0],p[1]+(j?G:-RIVER.deck),p[2]];});add(r,C.rail,{wall:true});}
  }
  for(const {at:[x,y,z],aim} of CANNONS){
   add(new T.CylinderGeometry(.22,.28,1.05,10).translate(x,y-.52,z),C.machine);
@@ -356,6 +419,11 @@ export function createKeelClub(ship){
  for(const [label,x,s] of [['PADEL',-100,-1],['CABANAS · BEACH BAR',30,-1],['MINI PUTT',-90,1],['GOLF SIMS',28,1]])sign(label,x,FY+2.9,s*(front(x)-.03),label.length>12?8:5,1.2,s<0?0:Math.PI,false);
  for(const s of [-1,1])sign('CLIMBING WALLS',165,FY+3.2,s*(front(165)-.5),6,1.3,s<0?0:Math.PI,false);
 
+ // Tube docks: a rack of tubes on the island side of each dock's spot, and a small sign facing the river.
+ for(const {at:[x,,z],side} of DOCKS){const zr=z-side*1.5;add(box(x-1.4,x+1.4,FY,FY+.9,zr-.35,zr+.35),C.wood,{wall:true});
+  for(let k=0;k<3;k++)parts.push(paint(new T.TorusGeometry(.55,.22,8,20).rotateX(Math.PI/2).translate(x-.75+k*.75,FY+1.12+k*.02,zr),[C.orange,C.teal,C.slide][k]));
+  parts.push(paint(box(x+1.6,x+1.7,FY,FY+2.1,zr-.05,zr+.05),C.core));sign('FLOAT THE KEEL LOOP',x+1.65,FY+2.4,zr,2.6,.6,side<0?Math.PI:0,true);}
+
  // ---- Materials and draws ----
  const opaque=new T.MeshStandardMaterial({name:'Keel_club_finish',vertexColors:true,roughness:.72,metalness:0,side:T.DoubleSide});
  const lit=new T.MeshStandardMaterial({name:'Keel_club_glow',vertexColors:true,roughness:1,emissive:0xffffff,emissiveIntensity:.35,side:T.DoubleSide});
@@ -401,21 +469,39 @@ export function createKeelClub(ship){
  const dropMesh=new T.InstancedMesh(new T.IcosahedronGeometry(.16,0),new T.MeshBasicMaterial({name:'Keel_club_cannon_drop',color:0xffffff,toneMapped:false,transparent:true,opacity:.95,depthWrite:false}),DROPS);
  const ringMesh=new T.InstancedMesh(new T.RingGeometry(.25,.45,18).rotateX(-Math.PI/2),new T.MeshBasicMaterial({name:'Keel_club_cannon_splash',color:0xffffff,toneMapped:false,transparent:true,opacity:.85,depthWrite:false,side:T.DoubleSide}),RINGS);
  for(const m of [dropMesh,ringMesh]){m.name='Keel_club_cannon_water';m.frustumCulled=false;m.count=0;m.instanceMatrix.setUsage(T.DynamicDrawUsage);group.add(m);}
- const drops=[],rings=[],jets=[],M=new T.Matrix4(),Q=new T.Quaternion(),S=new T.Vector3(),P=new T.Vector3();
- const fire=i=>{if(!CANNONS[i])return;const j=jets.find(j=>j.i===i);if(j)j.t=0;else jets.push({i,t:0,acc:0});};
- // Of the cannons within reach, the one aimed most nearly the way the walker faces (heading, as main.js keeps it:
- // facing sin, cos in x, z); without a heading, the nearest.
+ const drops=[],rings=[],jets=[],hitShots=new Map(),M=new T.Matrix4(),Q=new T.Quaternion(),S=new T.Vector3(),P=new T.Vector3();
+ // A shot is cannon i's jet for JET seconds. Every page aboard simulates every shot from the same `seed`, so all of them
+ // see the same jet (net/live.js relays shots); `id` names the shot (one hit per shot per rider) and `who` the shooter
+ // (a visitor id, or 'me'). A new shot on a cannon replaces the one it is firing.
+ let shots=0;
+ const fire=(i,{id=null,seed=null,who='me'}={})=>{if(!CANNONS[i])return null;seed??=(Math.random()*2147483646|0)+1;id??='me-'+(++shots);
+  const shot={i,t:0,acc:0,id,who,rnd:seeded(seed)},old=jets.findIndex(j=>j.i===i);if(old>=0)jets[old]=shot;else jets.push(shot);return {i,seed,id};};
+ // E's target here: a water cannon on a bridge's crown (of those within reach, the one aimed most nearly the way the
+ // walker faces: heading as main.js keeps it, facing sin, cos in x, z; without a heading, the nearest), else a tube dock.
  const near=(p,heading)=>{let best=-1,bs=-Infinity;CANNONS.forEach((c,i)=>{const d=Math.hypot(p.x-c.at[0],p.z-c.at[2]);if(d>=REACH||Math.abs(p.y-(FY+RIVER.rise))>=1.2)return;
   const score=heading===undefined?-d:c.aim[0]*Math.sin(heading)+c.aim[2]*Math.cos(heading)-d*.01;if(score>bs){bs=score;best=i;}});
-  return best<0?null:{kind:'cannon',cannon:best,label:'Fire the water cannon'};};
+  if(best>=0)return {kind:'cannon',cannon:best,label:'Fire the water cannon'};
+  if(Math.abs(p.y-FY)<1)for(const dock of DOCKS)if(Math.hypot(p.x-dock.at[0],p.z-dock.at[2])<TUBE.reach)return {kind:'tube',dock,label:'Float the Keel Loop'};
+  return null;};
+ // Did a shot hit a rider whose tube is centred at `c` (x, y, z)? Each droplet's path this frame (from q to p) is
+ // tested against a sphere of radius r, so a low frame rate can't skip it; a shot hits a rider once. Returns the hit
+ // {id, who, dir (the droplets' x, z heading)} and soaks up that shot's droplets there, or null.
+ const hit=(c,r=.8)=>{let found=null;const r2=r*r;
+  for(let k=drops.length-1;k>=0;k--){const d=drops[k];if(found?d.shot!==found.id:hitShots.has(d.shot))continue;
+   const ax=d.q[0]-c[0],ay=d.q[1]-c[1],az=d.q[2]-c[2],bx=d.p[0]-d.q[0],by=d.p[1]-d.q[1],bz=d.p[2]-d.q[2],bb=bx*bx+by*by+bz*bz||1e-9,t=Math.max(0,Math.min(1,-(ax*bx+ay*by+az*bz)/bb));
+   const ex=ax+bx*t,ey=ay+by*t,ez=az+bz*t;if(ex*ex+ey*ey+ez*ez>r2)continue;
+   if(!found){found={id:d.shot,who:d.who,dir:[d.v[0],d.v[2]]};hitShots.set(d.shot,JET+2);}
+   drops.splice(k,1);if(rings.length<RINGS)rings.push({p:[d.p[0],WY+.02,d.p[2]],t:0});}
+  return found;};
  const update=dt=>{
   // the water's ripples move whenever the club is drawn
   const t=Math.min(dt,.1);for(const {map,flow} of flows){map.offset.x+=flow[0]*t;map.offset.y+=flow[1]*t;}
+  for(const [id,left] of hitShots){if(left<=t)hitShots.delete(id);else hitShots.set(id,left-t);}
   if(!jets.length&&!drops.length&&!rings.length)return;dt=Math.min(dt,.05);
   for(let k=jets.length-1;k>=0;k--){const j=jets[k],{at,aim}=CANNONS[j.i];j.t+=dt;if(j.t>JET){jets.splice(k,1);continue;}j.acc+=dt*RATE;
-   for(;j.acc>=1&&drops.length<DROPS;j.acc--){const sp=SPEED*(.94+Math.random()*.12),jit=()=>(Math.random()-.5)*.04;
-    drops.push({p:[at[0]+aim[0]*1.1,at[1]+.08+aim[1]*1.1,at[2]+aim[2]*1.1],v:[(aim[0]+jit())*sp,(aim[1]+jit())*sp,(aim[2]+jit())*sp]});}}
-  for(let k=drops.length-1;k>=0;k--){const d=drops[k];d.v[1]-=GRAV*dt;for(let a=0;a<3;a++)d.p[a]+=d.v[a]*dt;
+   for(;j.acc>=1&&drops.length<DROPS;j.acc--){const sp=SPEED*(.94+j.rnd()*.12),jit=()=>(j.rnd()-.5)*.04,p=[at[0]+aim[0]*1.1,at[1]+.08+aim[1]*1.1,at[2]+aim[2]*1.1];
+    drops.push({p,q:p.slice(),v:[(aim[0]+jit())*sp,(aim[1]+jit())*sp,(aim[2]+jit())*sp],shot:j.id,who:j.who});}}
+  for(let k=drops.length-1;k>=0;k--){const d=drops[k];d.q[0]=d.p[0];d.q[1]=d.p[1];d.q[2]=d.p[2];d.v[1]-=GRAV*dt;for(let a=0;a<3;a++)d.p[a]+=d.v[a]*dt;
    if(d.p[1]<=WY){drops.splice(k,1);if(rings.length<RINGS&&Math.random()<.3)rings.push({p:[d.p[0],WY+.02,d.p[2]],t:0});}}
   for(let k=rings.length-1;k>=0;k--){rings[k].t+=dt;if(rings[k].t>.6)rings.splice(k,1);}
   drops.forEach((d,i)=>dropMesh.setMatrixAt(i,M.makeTranslation(d.p[0],d.p[1],d.p[2])));dropMesh.count=drops.length;
@@ -426,5 +512,5 @@ export function createKeelClub(ship){
  // In the hall the walk's indoor fog (solid at 148 m) would grey out its far half: from below Deck 1, the fog opens to the
  // hall's own length. Called each frame after the atrium has set the fog, before drawing; elsewhere it leaves the fog alone.
  const mood=(fog,eye)=>{if(!fog?.isFog||eye.y>DECK1-.4||eye.y<FY-4||eye.x<KEEL.aft-2||eye.x>KEEL.bow+2||Math.abs(eye.z)>half(eye.x,Math.max(eye.y,FY))+.5)return;fog.near=Math.max(fog.near,170);fog.far=Math.max(fog.far,440);};
- return {group,deck1,solid,seats,update,near,fire,mood,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
+ return {group,deck1,solid,seats,update,near,fire,hit,mood,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
 }
