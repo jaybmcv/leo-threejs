@@ -10,11 +10,14 @@ import {FIN_GATE} from '../fin-gate.js';
 const deckStops=(from,to,titles={})=>Array.from({length:to-from+1},(_,i)=>{const deck=from+i;return {deck,label:`Deck ${deck}`,y:floorY(deck),...(titles[deck]&&{title:titles[deck]})};});
 // Both aft lifts' Deck 19 stop is the Hydro-Nip Lounge (tester feedback).
 const AFT_TITLES={19:'Hydro-Nip Lounge'};
+// Below Deck 1, every core lift stops at the Keel Club, the sports hall in the hull (keel-club.js; its floor is KEEL.floor).
+// It is the last stop in the list, not the first, so every deck keeps its stop index on the Leo live wire.
+export const KEEL_STOP={deck:null,label:'Keel Club',y:-51.5};
 export const LIFTS=[
  ...TRANSIT_CORES.flatMap(c=>[-1,1].map(s=>({
   id:`${c.id}-${s<0?'port':'starboard'}`,name:`${c.id==='forward'?'Forward':'Aft'} ${s<0?'port':'starboard'} lift`,
   car:{x:c.x,z:s*6,width:3.3,depth:3.3,height:2.8},door:{axis:'z',sign:-s,width:2.2},
-  stops:deckStops(1,c.lastDeck,c.id==='aft'?AFT_TITLES:{}),parked:c.id==='forward'?15:1,
+  stops:[...deckStops(1,c.lastDeck,c.id==='aft'?AFT_TITLES:{}),{...KEEL_STOP}],parked:c.id==='forward'?15:1,
  }))),
  {id:'aft-service',name:'Aft freight lift',car:{x:-156,z:8,width:7.2,depth:3.6,height:2.7},door:{axis:'z',sign:-1,width:5.8},
   stops:deckStops(4,17),parked:8},

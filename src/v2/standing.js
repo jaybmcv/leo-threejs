@@ -9,6 +9,8 @@ const FORUM_TERRACES=forumTerraces();
 // Go-to links choose actual interior floors, never the exterior hull or the top of a glass guard.
 export function plannedStanding(layout,x,y,z,radius=.35){
  if(x<-170||y>layout.decks.at(-1).y+3.5)return true; // Retained aft/fin/crown use their original detailed circulation.
+ // Under Deck 1 there is only the Keel Club (src/walk/keel-club.js): its floor, terraces and stairs are planned floors.
+ if(y<layout.decks[0].y-.5)return true;
  const inside=p=>contains(p,[x,z]),near=h=>Math.abs(y-h)<.13;
  // Stream E's shallow Forum terraces and stage are planned floors too.
  const forum=layout.rooms.find(r=>r.id==='d16-voyage-forum-bow');

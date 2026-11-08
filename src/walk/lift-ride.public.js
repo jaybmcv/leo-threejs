@@ -259,7 +259,7 @@ export function createLifts(scene,colliders){
    }
    return best;
   },
-  stopsOf:l=>l.stops.map((s,i)=>({index:i,label:stopLabel(s),here:i===l.at&&l.phase!=='moving'})),
+  stopsOf:l=>l.stops.map((s,i)=>({index:i,label:stopLabel(s),here:i===l.at&&l.phase!=='moving',y:s.y})).sort((a,b)=>a.y-b.y),
  };
  return rides;
 }

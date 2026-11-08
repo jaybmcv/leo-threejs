@@ -139,7 +139,9 @@ export function buildLayoutV2(){
   const y=floorY(d.number),H=hullPath(h,y,3.5),openings=transitOpenings(d.number).map(o=>({...o,deck:d.number,kind:o.id.includes('stairs')?'stairs':'lift',polygon:rectPoly(o)}));
   if(d.number>=4&&d.number<=17)openings.push({id:'aft-service',deck:d.number,kind:'lift',polygon:rectangle(FREIGHT_LIFT.x,FREIGHT_LIFT.z,FREIGHT_LIFT.shaftWidth,FREIGHT_LIFT.shaftDepth)});
   if(d.number>4&&d.number<=17)openings.push({id:'aft-service-stair',deck:d.number,kind:'stairs',polygon:rectangle(-166,-10,7,5)});
-  if(d.number===1)openings.push(...transitOpenings(2).filter(o=>o.id.includes('stairs')).map(o=>({...o,deck:1,kind:'stairs',ground:true,polygon:rectPoly(o)})));
+  // Deck 1's stairs start on its slab, except each core's starboard tower, which carries on down to the Keel Club
+  // under Deck 1 (src/walk/keel-club.js): its flights and half landing open the slab like any deck above.
+  if(d.number===1)openings.push(...transitOpenings(2).filter(o=>o.id.includes('stairs')).map(o=>({...o,deck:1,kind:'stairs',ground:!o.id.endsWith('_stairs_1'),polygon:rectPoly(o)})));
   const deck={number:d.number,name:d.name,y,roomLine:{height:3.5,outline:floorOutline(h,y),policy:'Deck-level section; room envelopes check the sloped line over their full height.'},slab:{outline:floorOutline(h,y),holes:[...openings.filter(o=>!o.ground).map(o=>({id:o.id,polygon:o.polygon})),...aftOpenings(d.number).map((r,i)=>({id:'aft-opening-'+i,polygon:rectPoly(r)}))]},openings,corridors:[],atrium:null};
   for(const o of openings)(o.kind==='lift'?circulation.lifts:circulation.stairs).push(o);
   if(d.number>=6&&d.number<=15){const r=residential(d,h,H,openings);cabins.push(...r.cabins);circulation.stairs.push(...r.cores.filter(c=>c.kind==='stairs'));circulation.corridors.push(...r.corridors);circulation.bridges.push(...r.bridges);circulation.towers.push(r.tower);deck.corridors.push(...r.corridors);deck.slab.holes.push(...r.cores.filter(c=>c.kind==='stairs').map(c=>({id:c.id,polygon:c.polygon})));
