@@ -50,6 +50,7 @@ import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
 const cabinPlacements=preparedPlacements;
 import {Colliders,BODY} from './collision.js';
 import {STATIC_LIFT_PARTS,LIFTS} from './lifts.js';
+import {KEEL} from './keel-club.prepared.js';
 import {Controller,GLIDE,HOOK} from './controller.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
@@ -255,7 +256,7 @@ async function buildShip(){
  // The crew recovery lounge's pod side dims the lights (recovery.js).
  recovery=createRecoveryMood(ship,{hemi,fill,scene});arrivalMood=createArrivalMood(ship,{hemi,fill,scene});atriumMood=createAtriumMood({hemi,fill,scene});
  }});
- ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,catTree,nosePark,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
+ ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,catTree,nosePark,keelClub,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
  loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;
  const {pipework,trolley,wardTrolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;atmosphere=prepared.atmosphere;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
@@ -318,6 +319,9 @@ async function buildShip(){
  if(catTree){const g=catTree.group;g.userData.band=bandOf(catTree.bounds.y0);g.userData.top=bandOf(catTree.bounds.y1);baked.bands.set(g.name,g);scene.add(g);}
  // The Toybox Park (cat-tree.js) on the Deck 6 floor round the tree.
  if(nosePark){const g=nosePark.group;g.userData.band=bandOf(nosePark.bounds.y0);g.userData.top=bandOf(nosePark.bounds.y1);baked.bands.set(g.name,g);scene.add(g);}
+ // The Keel Club (keel-club.js), the sports hall under Deck 1: it draws while the walker's bands reach it.
+ if(keelClub){const g=keelClub.group;g.userData.band=bandOf(keelClub.bounds.y0);g.userData.top=bandOf(keelClub.bounds.y1);baked.bands.set(g.name,g);scene.add(g);}
+ if(keelClub?.deck1){const g=keelClub.deck1;g.userData.band=bandOf(keelClub.deck1Bounds.y0);g.userData.top=bandOf(keelClub.deck1Bounds.y1);baked.bands.set(g.name,g);scene.add(g);}
  // Phones draw the tree's and the park's felt details only from half as far.
  if(phone)for(const f of [catTree,nosePark]){const lod=f?.group.children.find(o=>o.isLOD);if(lod)for(const l of lod.levels.slice(1))l.distance*=.5;}
  // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js).
@@ -383,7 +387,7 @@ async function buildShip(){
  isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});settlePreparedStatic(ship);
 }
 let imagingScans=null,missionTimer=null;
-let atriumMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
+let atriumMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,keelClub=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
 let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null,atmosphere=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 // Lifeboat fittings (2,000 seats a deck with their headrests and harnesses, seen only through a hatch or from inside a
@@ -473,6 +477,7 @@ const actions={
   else if(t.kind==='mct')boardCart(t);
   else if(t.kind==='graffiti'){closePanels();graffiti.open();}
   else if(t.kind==='lever')leverPanel.flip(t.lever);
+  else if(t.kind==='cannon')keelClub.fire(t.cannon);
   else if(t.kind==='lever-exit')leverPanel.release();
   else if(t.kind==='tv'){closePanels();crownTv.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
@@ -544,8 +549,8 @@ async function loadCosmo(){
 
 // The arrival hall on Deck 2, where travellers come aboard.
 const START={position:new T.Vector3(...toWorld('d02-arrival-1',[-20,0,0])),yaw:anchoredYaw('d02-arrival-1',Math.PI/2)};
-// Below this a walker has fallen out of the ship: 3 m under Deck 1's floor.
-const BELOW_SHIP=floorY(1)-3;
+// Below the Keel Club's floor (keel-club.js), the walker has fallen out of the ship.
+const BELOW_SHIP=KEEL.floor-3;
 await Promise.all([loadExterior(),loadCosmo()]).catch(e=>{status(e.message);throw e;});
 await buildShip();
 // A walk link (link.js) starts wherever it was taken; otherwise the arrival hall.
@@ -737,7 +742,7 @@ renderer.setAnimationLoop(()=>{
  vaultLift?.update(dt,controller);
  // A Paws Off run holds the walker on the treadmill (paws-off/game.js); the belts of others playing run too.
  run=pawsOff?.update(dt,remotes?[...remotes.remotes.values()].filter(r=>r.tgt?.playing).map(r=>r.cur):[])||null;
- mudwater?.update(dt);nosePark?.update(dt);
+ mudwater?.update(dt);nosePark?.update(dt);keelClub?.update(dt);
  vault?.update(dt,controller.position);
  // Riding a moving car, the car carries the walker; it passes slab edges and the hull skin, which must not push.
  const riding=vaultLift?.riding||lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
@@ -831,7 +836,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){keelClub?.mood(scene.fog,camera.getWorldPosition(eye));draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
@@ -902,7 +907,7 @@ function target(){
  const welcome=inBall?null:arrivalTour?.near(p);if(welcome)return welcome;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
  const drill=inBall?null:emergencyStation.near(p);if(drill)return drill;
- const q=poolTable?.near(p)||maze?.near(p)||pinballMachine?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p)||leverPanel?.near(p);if(q&&!(inBall&&q.kind==='treadmill'))return q;
+ const q=poolTable?.near(p)||maze?.near(p)||pinballMachine?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p)||leverPanel?.near(p)||(inBall?null:keelClub?.near(p,heading));if(q&&!(inBall&&q.kind==='treadmill'))return q;
  // In the hamster ball: no seats, beds or treadmills; with nothing else to use, E climbs out.
  if(inBall)return {kind:'ball-out',label:'Get out of the ball'};
  const parked=ball.mesh.position;if(Math.abs(p.y-parked.y)<1.2&&Math.hypot(p.x-parked.x,p.z-parked.z)<BALL.radius+1)return {kind:'ball',label:'Get in the ball'};

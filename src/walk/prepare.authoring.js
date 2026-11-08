@@ -21,6 +21,7 @@ import {createLifeSupportPipes} from './life-support-pipes.authoring.js';
 import {stripPlayFurniture,createKittens} from './kittens.authoring.js';
 import {prepareBlossomBed,createBlossomGarden} from './blossom.authoring.js';
 import {createCatTree,createNosePark} from './cat-tree.authoring.js';
+import {createKeelClub} from './keel-club.authoring.js';
 import {findRestSpots as treeRestSpots} from './rest.js';
 import {prepareLoungeFalls,createLoungeFalls} from './lounge-falls.js';
 import {createDiningRobots} from './dining-robots.authoring.js';
@@ -141,6 +142,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const catTree=feature('cat-tree',ship,()=>createCatTree(ship));if(catTree)colliders.addStatic(catTree.solid,()=>true);
  // The Toybox Park on the nose floor round the tree (cat-tree.js): its paths' bridge, hillocks and cushions walkable, the rest solid.
  const nosePark=feature('nose-park',ship,()=>createNosePark(ship));if(nosePark)colliders.addStatic(nosePark.solid,()=>true);
+ // The Keel Club, the sports hall in the hull under Deck 1 (keel-club.js): its floors, terraces, stairs and bridges walkable, the rest solid.
+ const keelClub=feature('keel-club',ship,()=>createKeelClub(ship));if(keelClub)colliders.addStatic(keelClub.solid,()=>true);
  // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js): its rim, bed, causeway, landing and rope rails solid.
  const loungeFalls=createLoungeFalls(ship);if(loungeFalls)colliders.addStatic(loungeFalls.solid,()=>true);
  // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
@@ -168,5 +171,6 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const mudwater=feature('mudwater',ship,()=>createMudwater(ship,{urls,anisotropy}));if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
  if(catTree){const spots=treeRestSpots(catTree.seats);restSpots.push(...spots);seats.push(...solidSpots(spots,colliders));}
  if(nosePark){const spots=treeRestSpots(nosePark.seats);restSpots.push(...spots);seats.push(...solidSpots(spots,colliders));}
- return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,wardTrolley,maze,mctBay,freightGate,blossom,catTree,nosePark,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,vaultLift,missionHolo,swordCase,chinampa,baggage,atmosphere,mudwater};
+ if(keelClub){const spots=treeRestSpots(keelClub.seats);restSpots.push(...spots);seats.push(...solidSpots(spots,colliders));}
+ return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,wardTrolley,maze,mctBay,freightGate,blossom,catTree,nosePark,keelClub,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,vaultLift,missionHolo,swordCase,chinampa,baggage,atmosphere,mudwater};
 }

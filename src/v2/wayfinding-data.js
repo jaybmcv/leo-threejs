@@ -24,6 +24,8 @@ export function describeV2(layout,point,{crownFloor=120.3}={}){
  const [x,y,z]=Array.isArray(point)?point:[point.x,point.y,point.z];
  if(y>layout.decks.at(-1).y+3.5)return y>=crownFloor-.3?'Crown lounge':'Fin inspection platforms';
  if(x<-230&&Math.abs(z)<4&&Math.abs(y-layout.decks[16].y)<.3)return 'Deck 17 · Fin lift service gallery';
+ // Under Deck 1, the sports hall in the hull (src/walk/keel-club.js).
+ if(y<layout.decks[0].y-.5)return 'Keel Club · Sports hall';
  const deck=layout.decks.reduce((a,b)=>Math.abs(b.y-y)<Math.abs(a.y-y)?b:a);
  if(deck.number===20&&layout.circulation.bridges.some(b=>b.deck===20&&b.access==='crew'&&contains(b.polygon,[x,z])))return 'Deck 20 · Crew service gallery · Crew only';
  const room=[...layout.rooms,...(layout.fixedRooms||[])].find(r=>!r.aggregate&&y>=r.y-.2&&y<r.y+r.height-.2&&contains(r.polygon,[x,z]));

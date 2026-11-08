@@ -41,6 +41,8 @@ function plaqueLabel(stop){
  if(stop.deck){const title=stop.title||FEATURED[stop.deck];return {eyebrow:'Deck',big:String(stop.deck),name:title||deckName(stop.deck),featured:!!title};}
  const fin=/^Fin platform (\d+)/.exec(stop.label);if(fin)return {eyebrow:'Fin',big:fin[1],name:'Inspection platform'};
  if(/Crown/.test(stop.label))return {eyebrow:'Crown',big:'C',name:'Panoramic lounge'};
+ // The core lifts' stop under Deck 1, the sports hall (keel-club.js).
+ if(stop.label==='Keel Club')return {eyebrow:'Sports',big:'K',name:'Keel Club',featured:true};
  return {eyebrow:'Fin',big:'G',name:stop.label};
 }
 const plaques=new Map();

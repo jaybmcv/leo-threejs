@@ -27,7 +27,7 @@ const AFTER={'check-ship-log-remap-browser-v2':'check-ship-log-remap-v2','v2 che
 const V2_CHECKS=['check-walk-performance','check-otherside','launch-b-normalization-fixture','check-visual-preview-v2','check-retirement-transport-v2',
  'check-budgets-v2','check-clean-output-v2','phase5-hatch-negatives','phase5-inner-fixture','phase5-phone-policy-fixture',
  'phase5-window-coverage-fixture','check-exterior-v2','check-phase4-prototypes','check-phase4-community','phase4-room-floor-fixture',
- 'phase4-display-floor-fixture','check-kitten-supports-v2','check-cat-tree','check-cat-tree-landings','check-nose-park','check-waterfall-fit-v2',
+ 'phase4-display-floor-fixture','check-kitten-supports-v2','check-cat-tree','check-cat-tree-landings','check-nose-park','check-keel-club','check-waterfall-fit-v2',
  'check-main-features-v2','check-clubhouse-access-v2','check-ship-log-remap-v2','check-ship-log-remap-browser-v2','check-viewer-suite-v2',
  'check-release-v2','check-phase6-v2','check-freight-airlock-v2','check-v2-round2','check-v2-signs','check-sign-render-v2','check-lobby-tile-v2',
  'check-goto-v2','check-halloween-v2','check-crew-gallery-v2','check-build-cache-v2','check-authoring-cache-v2','check-authoring-skin-proof-v2',
