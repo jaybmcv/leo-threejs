@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "from": "0b9a6ba03254e42cc097729ead987ac27f5a6f7397cede199201a5a67f567032",
+  "from": "cb2edd07efca95143919211be6647ac8049186bf88bfd527ef2314f052003ccc",
   "to": {
     "version": 3,
-    "hash": "5f0fd0b7c20b9b89a004b6064a101987530b88c2b9f2694709229b7c760b36a2",
+    "hash": "f7ade606d1c60d41df2466b72f9bc199d477d2526865ad1acd8ec3c38bfb1c21",
     "files": {
       "output/leo-interior-v01/leo-exterior-phone.glb": "722201adc1296736448fe3fdb65495b3efdc659708f7ea18c4b27466586b949a",
       "output/leo-interior-v01/leo-exterior-refined.glb": "a80d549cda4463531481d13868737cbe0d9e44b98053c4b78c4ec31fc3866237",
@@ -105,8 +105,8 @@
       "src/plan/launch-b-v2.js": "7a01a9ba8a333f4b383a01a1ef4f136e6d5bc71ae489b069f05274701503f337",
       "src/plan/launch-f-cafes.js": "68b2b4e5d17d62352f0f54d6e3e760f29aa6845a35e684afe7165d427bb22095",
       "src/plan/layout-inputs-v1.js": "eeb23e9def51e6388ae5adbf0952909e135e89b55675c87b09f45dc297d53768",
-      "src/plan/layout-v2.authoring.js": "55324547a292f0dc63b1d6bdb1925152e1b9c5394f20b80afd5d43aecb753147",
-      "src/plan/layout-v2.js": "55324547a292f0dc63b1d6bdb1925152e1b9c5394f20b80afd5d43aecb753147",
+      "src/plan/layout-v2.authoring.js": "2bcba39cd480ba9be5d0aeb0136d6cec744171c3b8e9d817b5b98c4c86e562e1",
+      "src/plan/layout-v2.js": "2bcba39cd480ba9be5d0aeb0136d6cec744171c3b8e9d817b5b98c4c86e562e1",
       "src/plan/lounge-layout-v2.js": "1fa9b22218a7276b189050400261faac82f471562b74813c57bdb15becfdab23",
       "src/plan/navigation-v2.js": "f84d769832cf1a3e9dff479ba7678159031816e05aa5e664080e377574dcb26b",
       "src/plan/placements.js": "07e6bb73e8fb0fc7f497f04f7ba778bc76a9eca680c69a76b4d5e1d1b014f19c",
@@ -289,6 +289,9 @@
       "src/walk/invasion/sprites.js": "7081af7b8aa7ffd370f94fc6d441ce39d11d8b42e1a823bef4f0705ee4e189f2",
       "src/walk/jaguar-gate.authoring.js": "3277bbc3d6588e6094522afc23b32659ed151c3d1e0c7bffeb6c92de13a098d3",
       "src/walk/jaguar-gate.js": "ae53420638defa0b59dc84827c6aa387cb2c18b3dc1d83c71bd67e33d29debcb",
+      "src/walk/keel-club-hull.js": "336738fab12a7da578e363ef0e979ec39318c864ecc7b0d6c8dffe31832bb788",
+      "src/walk/keel-club.authoring.js": "16a9c5353b4f90b79430bc5fde84a1d888c43dc153d432cd33b7dae457eed8da",
+      "src/walk/keel-club.js": "16a9c5353b4f90b79430bc5fde84a1d888c43dc153d432cd33b7dae457eed8da",
       "src/walk/kittens.authoring.js": "8013f5479ec318ca62930466a531c695cf1d919d50a82b423d31447ae94c0578",
       "src/walk/kittens.js": "6a8bcaa36d435e047cac40d41e72319aad8b49a755f87a77d7366359e36fd193",
       "src/walk/layered-conservatory.js": "31d3bc9bca2e751b094ed689b655bb63dacf70f667db2ad8763afc45778c4752",
@@ -297,10 +300,10 @@
       "src/walk/life-support-pipes.authoring.js": "e54ba02593a75c0a6607d5b8a7f989518c87c134afd3f6d17a66244923f353f5",
       "src/walk/life-support-pipes.js": "6ea1f8e511792b7140eca8de3278bfd6edeab80bb38946b822ed84df14d240f7",
       "src/walk/lift-motion.js": "1d5579d2a7821af4630626c824fbbe8d7e61923c9b8a89c60acfc21c4e3c39cc",
-      "src/walk/lift-ride.authoring.js": "fb2eb882f147409f4a128e7a988118c82f8faa80e68fc9716383531f8926c77a",
+      "src/walk/lift-ride.authoring.js": "2367b525e45d39abcafc792404f451c481ae75b9f99da06c1155cc92b30876f3",
       "src/walk/lift-tile-floor.authoring.js": "ff7bca23e21183fe50e9647a119bf93713f75a30bbfb5c15a6f6238d67f6f4fd",
-      "src/walk/lifts.authoring.js": "34fdbae429989d80956397b6a83a18723fa007b9fc2a44f6527f47084a83f484",
-      "src/walk/lifts.js": "99f44e5d5e7a3a41052e5f8e12c9f9c64b99225a2ca6d18609e5649015d77fa7",
+      "src/walk/lifts.authoring.js": "c3c83dd72fd6da2decf4211a6c29504825a137285b88fdfd96da9041229dfffe",
+      "src/walk/lifts.js": "5075928f4bf893bf722a4d9255dd7779862c1c4073187bf9abc9ab42f628f201",
       "src/walk/link.js": "562e734dab0b50c0442b58addedc9d58aac02988d03197ba34855dacb57f46ad",
       "src/walk/lounge-aquarium.authoring.js": "ed2dfd3a622e16a38b29d886990a6bf6f25324a65f8ba6c1bfd6d72b5ecb3809",
       "src/walk/lounge-aquarium.js": "aae5342abc608f3c2f55f1ff6a8a04035c734dbaac02fee765b59e27d9268f74",
@@ -335,8 +338,8 @@
       "src/walk/pool/rules.js": "242fd6a2f4df9533c66b6aae8f84e626f3b46e163a521aaef14bbeb536afeebf",
       "src/walk/pool/table.authoring.js": "4c88e894d90ad6eb35a6a44c1cff1a378077035c65486b797d4a7c2a6b943f83",
       "src/walk/pool/table.js": "38677eaa40fabb9a45445b1906abd404283d841ae9e7d741b74ef0fe060cbe6f",
-      "src/walk/prepare.authoring.js": "5cbb3931d9f69551801cc4550b772556a5ae7ca25398f85a44aea1191679bf58",
-      "src/walk/prepare.js": "68c7d063f1edbc801cfbda9d121bbfc148bd9f67bb096df80115a5fd0337b3af",
+      "src/walk/prepare.authoring.js": "85452e8eb4e3dc92ce8ee8d970fcaf96a4bfd1b09592b3d14100fe0c0b271abf",
+      "src/walk/prepare.js": "58d8234be14d092b4138f0e6d531ba5b4c7d0eadbc1193f3f5cfb07cd3f8fd52",
       "src/walk/provisions.authoring.js": "a6afa0b54468554bf59bf23d79eb9d263dfb4e13cffceff901f4b4e390013a22",
       "src/walk/provisions.js": "76288b2d5289104e30651b7562f0ef5854b14932347448062436202cd81ea8b5",
       "src/walk/railings.authoring.js": "9a1e912ea6bd76636e6034347b6208487e21ac9f44a47b993c0a02a0a865d262",
@@ -346,7 +349,7 @@
       "src/walk/rest.js": "255b1fd851f5e61c1c555bea95a90412d74fb773df7cad336bc95273346ba09d",
       "src/walk/selfie.authoring.js": "dbd936bfcc9ae46e66c8b6e51f9cada3cd99c57f36547c720bd1eb85d5230696",
       "src/walk/selfie.js": "e9a8de6d2c262b74860b3801360b58e8572119d6850d23d96354c4c4ffc7422a",
-      "src/walk/signs.authoring.js": "41d9e2f4bb0d757014c7dd6daad5a22bd72c6677efd59bbc083b5c363bcea367",
+      "src/walk/signs.authoring.js": "f413da6e678622aa20c98aa24ba8f9709b6bf6fc539939ca207b1dc3c0ba0448",
       "src/walk/spatial-audio.js": "226b85fa1ebaf0f74ed6c42bf8d80e5371e220d102c63189ce8e0c54b61d0660",
       "src/walk/surgery.authoring.js": "00163ac6c6e02f289dccad26885245cf7106b77295118f7629bf72af9b06ad19",
       "src/walk/surgery.js": "1acad86197b8135f37a63642df96ede93270dd5687ad19a431a72bfb798f371d",
@@ -368,12 +371,12 @@
   },
   "proof": {
     "status": "PASS",
-    "reference": "5bf4d3d0 (2026-11-08 nightly baseline a4051642 plus #431/#432, neither a geometry input)",
+    "reference": "eedd8927 (clean baseline cb2edd07 captured 2026-11-08 13:52 UTC by the Keel Club 2b7bbff deploy, plus #433)",
     "changedInputs": [
       "scripts/build-laps-v2.mjs",
       "scripts/v2-build.mjs",
       "scripts/v2-world.mjs"
     ],
-    "note": "Timing output only: [build-timing] console lines between build steps. buildAll(ship) became the same buildSteps(ship) loop it runs, with a lap after each step. No geometry, export or cache key changes (retirement worker, window/skin/bvh cache kinds and cache revision identities unchanged). Applies only until the next clean baseline replaces 0b9a6ba0."
+    "note": "Timing output only: [build-timing] console lines between build steps. buildAll(ship) became the same buildSteps(ship) loop it runs, with a lap after each step. No geometry, export or cache key changes (retirement worker, window/skin/bvh cache kinds and cache revision identities unchanged). Applies only until the next clean baseline replaces cb2edd07."
   }
 }
