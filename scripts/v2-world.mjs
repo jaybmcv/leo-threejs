@@ -14,6 +14,8 @@ import {deferRoomFrames,restoreRoomAnchors} from '../src/plan/rooms.js';
 import {buildSteps} from '../src/v2/world.js';
 import {buildLaps} from './build-laps-v2.mjs';
 import {prepareWalkWorld} from '../src/walk/prepare.js';
+// The grid sampler's skin patches must not change after their grids are built (src/v2/patch-sampler.js).
+import {verifyPatchGrids} from '../src/v2/patch-sampler.js';
 import {STATIC_LIFT_PARTS} from '../src/walk/lifts.js';
 import {rasterDecks} from '../src/walk/partitions.js';
 import {planRails,railingMesh} from '../src/v2/railings.js';
@@ -33,7 +35,7 @@ export async function preparedV2({map=false,artifact=false}={}){
  if(!map){plan=JSON.parse(await fs.readFile('output/leo-interior-v02/walk-plan.json','utf8'));const rails=railingMesh(plan.rails);ship.inside.add(rails);prepared.colliders.addStatic(rails);prepared.colliders.commit();}
  if(map){const decks=rasterDecks(ship);for(const d of decks)for(let k=0;k<d.plate.length;k++)if(d.plate[k]&&!d.designed[k]){d.designed[k]=1;d.height[k]=d.y;}const rails=planRails(decks,prepared.colliders,ship);console.log('v2 rails',rails.length);const railings=railingMesh(rails);ship.inside.add(railings);prepared.colliders.addStatic(railings);prepared.colliders.commit();plan.rails=rails;plan.railProbes=railProbeList(ship.v2RailProbes);plan.guardSupport=ship.v2GuardSupport;console.log('v2 raster guard support',JSON.stringify({inputRows:ship.v2GuardSupport.inputRows,removedRows:ship.v2GuardSupport.removed.length,removedMetres:ship.v2GuardSupport.removedMetres}));
  const maps=planMap(ship,decks,rails),c=createCanvas(MAP.nx,MAP.nz*maps.length),ctx=c.getContext('2d'),pixels=ctx.createImageData(c.width,c.height);let i=0;for(const d of maps)for(const v of d.data){pixels.data[i++]=v*50;pixels.data[i++]=v*50;pixels.data[i++]=v*50;pixels.data[i++]=255;}ctx.putImageData(pixels,0,0);image=c.toBuffer('image/png');
- }lap(map?'rails and walk map':'walk plan rails');return {ship,prepared,plan,image};
+ }lap(map?'rails and walk map':'walk plan rails');verifyPatchGrids();return {ship,prepared,plan,image};
 }
 
 export async function loadPreparedV2ForChecking(){
