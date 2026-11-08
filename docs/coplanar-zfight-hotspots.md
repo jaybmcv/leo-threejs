@@ -49,3 +49,23 @@ Deck 9 housekeeping (28.1, -7.69, -68.72): the curved `d9-ring-49` corridor (0.5
 `d9-housekeeping--104--1-door-approach` route overlap about 0.3 m apart. They are nearly parallel but not collinear,
 so the collinear rule above leaves them alone. A fix would mean subtracting general strip overlaps (as Decks 1–2 do)
 across Decks 3+.
+
+## Follow-ups
+
+**Crown sill (fixed).** `Crown_white_underfloor_rim` was laid on the same outline as `Crown_observation_floor`, so the two
+shared side planes. The rim outline now grows 6 mm outward (`growRing` in `fin-crown.js`, mitred, either winding). The floor
+is unchanged because it's a skin-clearance authority. Offline probe at the sill: 15 → 0.
+
+**Stair walls vs `P6_tower_architecture` (left as is).** At lobby 5/6, 60 rays per wall still pair the opaque stair walls
+with the tower stand-in. That copy is hidden while the full atrium bands draw, and below the atrium floor it is the only
+geometry by design (#258/#267/#272). Changing it means changing the atrium visibility policy, not the walls.
+
+**Deck 9 / Decks 3+ corridors (root cause found, not fixed here).** The probe pairs at Deck 9 housekeeping
+(28.1, -7.69, -68.72) and Deck 3 launch street are not duplicate strips. The walk bake's `coplanarNudges`
+(`src/walk/render-bake.js`) lifts each coplanar face 2 mm (`NUDGE`) per overlap layer. It judges overlap by axis-aligned
+bounds, so adjacent rotated strips stack as well. 2 mm is also the hex finish's offset (`finish-kit.js`), and the finish is
+built before the bake, so a lifted corridor top lands exactly on a neighbour's hex. In the prepared walk, Deck 9 corridor
+tops sit at 8, 10, 12 … 20 mm above the deck, and hex sheets at 2 … 16 mm. Subtracting overlapping strips in
+`corridor-floor-union.js` (tried: one layer everywhere, +98k triangles, all checks pass) left both hotspots unchanged,
+because the bounds still overlap. A fix needs the bake to stop nudging hexed floors (with their overlaps removed first), or
+to nudge each hex sheet with its source floor.
