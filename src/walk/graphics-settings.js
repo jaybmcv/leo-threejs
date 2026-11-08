@@ -1,10 +1,16 @@
 import {getAtriumQuality,getAtriumQualitySelection,setAtriumQuality,subscribeAtriumQuality} from '../v2/atrium-quality.js';
+import {getLook,setLook,subscribeLook} from './look.js';
 
 const choices=[
  ['auto','Auto (recommended)','Choose for this device and adjust detail as you play.'],
  ['high','High','Keep the most geometry detail throughout the atrium.'],
  ['balanced','Balanced','Simplify distant geometry while keeping nearby details.'],
  ['performance','Performance','Simplify geometry sooner to reduce rendering work.'],
+];
+// The walk's look (look.js, film-look.js).
+const looks=[
+ ['today','Leo today','The ship as it looks now.'],
+ ['film','Film (preview)',"Voyager's Reach's Stylised 3D: light that wraps round forms, richer shade and a warm grade. The ship's shaders are rebuilt when you change, which can take a few seconds."],
 ];
 
 // Geometry detail is independent of the existing drawing-resolution control.
@@ -28,6 +34,7 @@ export function mountGraphicsSettings({onOpenChange=()=>{}}={}){
  #graphics-settings strong{display:block;font-size:15px;font-weight:600}
  #graphics-settings small{display:block;font:13px/1.45 system-ui,sans-serif;color:#c9d7d2;margin-top:3px}
  #graphics-settings .graphics-note{margin:14px 0;font-size:13px}
+ #graphics-settings .graphics-look{margin-top:4px}
  #graphics-settings .graphics-actions{display:flex;justify-content:flex-end}
  #graphics-settings button{min-height:44px;padding:10px 20px;border:1px solid #a4d8c7;border-radius:10px;background:#b9dfcd;color:#102421;font:600 14px/1.4 system-ui,sans-serif;cursor:pointer}
  #graphics-settings :focus-visible{outline:3px solid #f2bb79;outline-offset:3px}
@@ -44,7 +51,7 @@ export function mountGraphicsSettings({onOpenChange=()=>{}}={}){
  const dialog=el('dialog',{id:'graphics-settings'});
  dialog.setAttribute('aria-labelledby','graphics-title');dialog.setAttribute('aria-describedby','graphics-description');dialog.setAttribute('aria-modal','true');
  const title=el('h2',{id:'graphics-title',textContent:'Graphics detail'});
- const description=el('p',{id:'graphics-description',textContent:'The whole atrium stays visible in every mode. Choose how much geometry detail to keep at a distance.'});
+ const description=el('p',{id:'graphics-description',textContent:'The whole atrium stays visible in every mode. Choose how much geometry detail to keep at a distance, and how the ship looks.'});
  const fieldset=el('fieldset'),legend=el('legend',{textContent:'Geometry detail'}),radios=new Map();
  fieldset.append(legend);
  for(const [value,label,description] of choices){
@@ -54,10 +61,21 @@ export function mountGraphicsSettings({onOpenChange=()=>{}}={}){
   row.append(radio,copy);fieldset.append(row);radios.set(value,radio);
   radio.addEventListener('change',()=>{if(radio.checked)setAtriumQuality(value);});
  }
+ const lookFieldset=el('fieldset',{className:'graphics-look'}),lookRadios=new Map();
+ lookFieldset.append(el('legend',{textContent:'Look'}));
+ for(const [value,label,description] of looks){
+  const row=el('label'),radio=el('input',{type:'radio',name:'leo-walk-look',value}),copy=el('span');
+  radio.id='walk-look-'+value;
+  copy.append(el('strong',{textContent:label}),el('small',{textContent:description}));
+  row.append(radio,copy);lookFieldset.append(row);lookRadios.set(value,radio);
+  radio.addEventListener('change',()=>{if(radio.checked)setLook(value);});
+ }
+ const lookStatus=el('p',{className:'graphics-note'});lookStatus.setAttribute('role','status');lookStatus.setAttribute('aria-live','polite');
+ lookFieldset.append(lookStatus);
  const note=el('p',{className:'graphics-note',textContent:'Changes apply immediately and are remembered on this browser. The Res button controls image sharpness separately.'});
  const autoStatus=el('p',{className:'graphics-note'});autoStatus.setAttribute('role','status');autoStatus.setAttribute('aria-live','polite');
  const actions=el('div',{className:'graphics-actions'}),done=el('button',{type:'button',textContent:'Done'});
- actions.append(done);dialog.append(title,description,fieldset,autoStatus,note,actions);
+ actions.append(done);dialog.append(title,description,fieldset,autoStatus,lookFieldset,note,actions);
  document.head.append(style);document.body.append(dialog);mount.append(button);
  const more=document.getElementById('tools-more');
  let opened=false,returnFocus=null,destroyed=false;
@@ -65,9 +83,11 @@ export function mountGraphicsSettings({onOpenChange=()=>{}}={}){
   const current=getAtriumQualitySelection(),effective=getAtriumQuality();for(const [value,radio]of radios)radio.checked=value===current;
   const label=choices.find(c=>c[0]===effective)[1];
   button.setAttribute('aria-label','Graphics detail: '+(current==='auto'?'Auto — '+label:label));
+  for(const [value,radio]of lookRadios)radio.checked=value===getLook();
+  lookStatus.textContent=getLook()==='film'?'Film look is on.':'Leo today is on.';
   autoStatus.textContent=current==='auto'?'Currently using '+label+'. Manual choices stay fixed.':'Your chosen detail level stays fixed.';
  };
- const unsubscribe=subscribeAtriumQuality(refresh);refresh();
+ const unsubscribe=subscribeAtriumQuality(refresh),unsubscribeLook=subscribeLook(refresh);refresh();
  function open(){
   if(opened||destroyed)return;
   returnFocus=document.activeElement;mount.closest('.tools')?.classList.remove('more-open');more?.setAttribute('aria-expanded','false');onOpenChange(true);
@@ -92,7 +112,7 @@ export function mountGraphicsSettings({onOpenChange=()=>{}}={}){
  dialog.addEventListener('cancel',e=>{e.preventDefault();close();});dialog.addEventListener('close',closed);
  window.addEventListener('keydown',keyboard,true);window.addEventListener('keyup',keyboard,true);
  return {open,close,get isOpen(){return opened;},destroy(){
-  if(destroyed)return;close();destroyed=true;unsubscribe();
+  if(destroyed)return;close();destroyed=true;unsubscribe();unsubscribeLook();
   window.removeEventListener('keydown',keyboard,true);window.removeEventListener('keyup',keyboard,true);
   dialog.remove();button.remove();style.remove();
  }};
