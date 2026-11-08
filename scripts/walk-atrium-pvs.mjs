@@ -186,15 +186,15 @@ try{
  // A run that fails or does not answer counts as a page gone wrong, as a lost context does.
  // An answer of the wrong shape counts as a page gone wrong too.
  const run=async(page,eyes)=>{try{const r=await page.ev(`__atriumPvs.run(${JSON.stringify(eyes)})`),n=eyes.length/4;
-  if([r.visible,r.lo,r.hi].some(a=>a?.length!==n)||r.visible.some((v,i)=>v!==0&&v!==1||v&&r.lo[i]>r.hi[i]))throw Error('The page answered '+(r.visible?.length??0)+' of '+n+' eyes, or answered out of range');return r;}
+  if([r.visible,r.lo,r.hi].some(a=>a?.length!==n)||r.visible.some((v,i)=>v!==0&&v!==1||v&&r.lo[i]>r.hi[i])||[r.lo,r.hi].some(a=>a.some(b=>!Number.isInteger(b)||b<0||b>255)))throw Error('The page answered '+(r.visible?.length??0)+' of '+n+' eyes, or answered out of range');return r;}
   catch(e){console.log('the page failed a run:',e.message);return {visible:[],faces:0,lost:true};}};
- const answers=r=>r.visible.map((v,i)=>v+':'+r.lo[i]+':'+r.hi[i]),differs=(a,b)=>a.filter((v,i)=>v!==b[i]).length;
+ const answers=r=>r.visible.map((v,i)=>v+':'+r.lo[i]+':'+r.hi[i]),differs=(a,b)=>a.length!==b.length?Math.max(a.length,b.length):a.filter((v,i)=>v!==b[i]).length;
  // The canary's answer is every eye's verdict and the heights its sight reaches, so pages that agree agree on those too.
  const canaryEyes=(await benchEyes()).flatMap(e=>e.eye),canary=async page=>{const r=await run(page,canaryEyes);return r.lost?null:answers(r);};
  const baseline=await canary(pages[0]);if(!baseline)throw Error('The WebGL context was lost before the bake began');
  for(const [n,answer] of (await Promise.all(pages.slice(1).map(canary))).entries())if(!answer||differs(answer,baseline))throw Error(`Chrome ${n+1} does not answer the canary as the first: the bake is not repeatable here`);
- // Fresh browsers allowed: MAX_FRESH for canaries that answered otherwise (a page that drifts), and MAX_LOST_PER_PAGE per
- // page for lost contexts and failed runs. A lost context is certain to be seen and its batches are redone, and this PC's
+ // Fresh browsers allowed: MAX_FRESH for canaries that answered otherwise (a page that drifts), and MAX_LOST_PER_PAGE
+ // times the number of pages, shared among them, for lost contexts and failed runs. A lost context is certain to be seen and its batches are redone, and this PC's
  // driver now and then resets one busy Chrome's GPU device when several share the GPU (2026-11-08: 5 resets in one 25
  // minute bake with 4 pages, none in 25 minutes of the same load an hour later).
  let fresh=0,lost=0,lostOnce=false;
@@ -265,7 +265,7 @@ try{
  // would see less from them, and check less.
  const cellAt=(x,y,z)=>{const i=Math.round((x-x0)/step),j=Math.round((z-z0)/step),k=Math.floor((y-y0)/2);return i<0||i>=nx||j<0||j>=nz||k<0||k>=ny?-1:(k*nx+i)*nz+j;};
  let probes=0,changed=0;const contradicted=new Set(),narrow=new Set(),eyes=await benchEyes();
- {const r=await pages[0].ev(`__atriumPvs.run(${JSON.stringify(eyes.flatMap(e=>e.eye))})`);if(r.lost)throw Error('The WebGL context was lost during the check; the bake was not kept');
+ {const r=await run(pages[0],eyes.flatMap(e=>e.eye));if(r.lost)throw Error('The WebGL context was lost (or the run failed) during the check; the bake was not kept');
   r.visible.forEach((seen,e)=>{if(!seen)return;probes++;const [x,y,z]=eyes[e].eye,c=cellAt(x,y,z);if(c>=0&&cells[c]===1)contradicted.add(eyes[e].view);
    // Its cell must reach at least the heights the eye's own sight reaches.
    if(c>=0&&cells[c]===2&&(lo[c]>r.lo[e]||hi[c]<r.hi[e]))narrow.add(eyes[e].view);});
