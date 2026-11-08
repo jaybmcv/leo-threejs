@@ -128,5 +128,12 @@
     ],
     "room": "circulation-6",
     "reason": "The Great Cat Tree and the Toybox Park round it stand on the fixed Deck 6 atrium floor in the bow, in ship coordinates under the stepped Deck 13-16 slabs and inside the nose's measured floor outline; they do not move with any room."
+  },
+  {
+    "paths": [
+      "src/walk/keel-club*.js"
+    ],
+    "room": null,
+    "reason": "The Keel Club fills the hull under Deck 1, between the Deck 1 slab and the keel, in ship coordinates inside the hull lofted by src/plan/hull-v2.js (keel-club-hull.js is its sampled half-width) and round the fixed transit cores; it belongs to no room and moves with none."
   }
 ]

@@ -91,6 +91,13 @@ export async function createWalker(createDLCat,motion){
  const footY=()=>Math.min(bone('foot.L').getWorldPosition(new T.Vector3()).y,bone('foot.R').getWorldPosition(new T.Vector3()).y);
  bones.forEach((b,i)=>b.quaternion.copy(rest[i]));figure.root.updateMatrixWorld(true);const standFoot=footY();
  boardPose(bone);const board=bones.map(b=>b.quaternion.clone());const boardDrop=footY()-standFoot;
+ // Where the board goes under him: the middle of his shoes' footprint in this pose, not his ankles (the big shoes run
+ // well forward of them, so a board centred on the ankles carried only the heels). In his own frame (left +x, facing
+ // +z); glide.js centres the board there. Without shoe meshes, the balls of the feet.
+ const boardFeet=new T.Vector3(),shoes=figure.asset.meshes.filter(m=>/^shoes/.test(m.name));
+ if(shoes.length){const box=new T.Box3(),v=new T.Vector3();for(const m of shoes){m.updateMatrixWorld(true);for(let i=0;i<m.geometry.attributes.position.count;i+=2)box.expandByPoint(m.getVertexPosition(i,v).applyMatrix4(m.matrixWorld));}box.getCenter(boardFeet);}
+ else for(const side of ['L','R'])boardFeet.addScaledVector(bone('toe.'+side).getWorldPosition(new T.Vector3()),.5);
+ boardFeet.x=0;boardFeet.y=0;
  bones.forEach((b,i)=>b.quaternion.copy(rest[i]));figure.root.updateMatrixWorld(true);
  // Eyes shut in a hammock. The face has no lids or morphs, so the eyeballs take the fur's colour from Cosmo's own
  // texture (the body's vertex nearest them) and read as closed lids under the lash line.
@@ -110,7 +117,7 @@ export async function createWalker(createDLCat,motion){
  const paw=bone('hand.R'),shoulder=bone('upper_arm.R'),elbow=bone('forearm.R'),hung=new T.Quaternion(),lean=new T.Vector3(),hold=new T.Quaternion(),q=new T.Quaternion();
  let hang=0;const anchor=new T.Vector3();
  return {
-  holder,body,figure,hipHeight,setFur,
+  holder,body,figure,hipHeight,setFur,boardFeet,
   // Where the right paw is drawn (the grapple line leaves from it).
   hand(out=new T.Vector3()){return paw.getWorldPosition(out);},
   // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock},
