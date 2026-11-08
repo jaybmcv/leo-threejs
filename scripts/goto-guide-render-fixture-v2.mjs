@@ -18,6 +18,16 @@ export function checkGuideRendering(){
  if(mesh.name!=='V2_corridor_room_guides')continue;const position=mesh.geometry.attributes.position,normal=mesh.geometry.attributes.normal;
  for(const [i,label]of mesh.userData.labels.entries()){const r=schedule.get(label.id),centre=new T.Vector3();for(let j=0;j<4;j++)centre.add(new T.Vector3().fromBufferAttribute(position,i*4+j));centre.multiplyScalar(.25).applyMatrix4(mesh.matrixWorld);assert(centre.distanceTo(new T.Vector3(...r.at))<.0001,'Plaque moved in world space '+r.id);const face=new T.Vector3(normal.getX(i*4),normal.getY(i*4),normal.getZ(i*4));assert(face.dot(new T.Vector3(Math.sin(r.yaw),0,Math.cos(r.yaw)))>.999,'Plaque faces away from corridor');labels++;}
  }
- assert.equal(labels,schedule.size);assert.equal(boards,39);assert.equal(arrows,new Set([...schedule.values()].map(r=>r.deck)).size,'Exactly one arrow batch per deck with scheduled rooms');return {status:'PASS',deckRoots:roots.length,labels,boards,arrowBatches:arrows,negativeFixture:'A single zero-height cross-deck root is rejected'};
+ assert.equal(labels,schedule.size);assert.equal(boards,39);assert.equal(arrows,new Set([...schedule.values()].map(r=>r.deck)).size,'Exactly one arrow batch per deck with scheduled rooms');
+ // Desktops share the pictures across decks in pages (pageSize): each plaque and board face must show the same pixels,
+ // at the same size, from its page as from its own picture.
+ const pictured=list=>{const out=[];for(const root of list)root.traverse(o=>{if(o.name==='V2_corridor_room_guides'||o.name==='V2_lobby_deck_directory_faces')out.push(o);});return out;};
+ const single=pictured(roots),shared=pictured(addWayfindingGuides(new T.Group(),{pageSize:4096})),pages=new Set(shared.map(o=>o.material));
+ assert.equal(shared.length,single.length);assert(pages.size<=3,'Shared wayfinding pictures need at most three pages, not '+pages.size);
+ const area=(o,first)=>{const uv=o.geometry.attributes.uv,image=o.material.map.image;let u0=1,v0=1,u1=0,v1=0;for(let i=first;i<first+4;i++){u0=Math.min(u0,uv.getX(i));u1=Math.max(u1,uv.getX(i));v0=Math.min(v0,uv.getY(i));v1=Math.max(v1,uv.getY(i));}
+  return image.getContext('2d').getImageData(Math.round(u0*image.width),Math.round((1-v1)*image.height),Math.round((u1-u0)*image.width),Math.round((v1-v0)*image.height));};
+ let faces=0;for(const [k,o] of shared.entries())for(let first=0;first<o.geometry.attributes.uv.count;first+=4){const a=area(single[k],first),b=area(o,first);faces++;
+  assert(a.width===b.width&&a.height===b.height&&Buffer.compare(Buffer.from(a.data.buffer,a.data.byteOffset,a.data.byteLength),Buffer.from(b.data.buffer,b.data.byteOffset,b.data.byteLength))===0,'A shared picture differs from its own: '+o.name+' face '+first/4);}
+ return {status:'PASS',deckRoots:roots.length,labels,boards,arrowBatches:arrows,sharedPages:pages.size,sharedPictures:faces,negativeFixture:'A single zero-height cross-deck root is rejected'};
  }finally{globalThis.document=original;}
 }

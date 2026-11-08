@@ -55,7 +55,7 @@ function plaqueMaterial(stop){
   c.fillStyle=ORANGE;c.fillRect(w/2-28,238,56,5);
   c.fillStyle=l.featured?GOLD:DIM;fit(c,l.name,`${l.featured?600:400} SIZE ${FONT.sans}`,24,w-36);c.fillText(l.name,w/2,286);
  });
- m=new T.MeshBasicMaterial({map:texture,toneMapped:false});plaques.set(key,m);return m;
+ m=new T.MeshBasicMaterial({name:'Walk_deck_plaque',map:texture,toneMapped:false});plaques.set(key,m);return m;
 }
 const stairsDecks=new Map();
 function stairsSign(deck){
