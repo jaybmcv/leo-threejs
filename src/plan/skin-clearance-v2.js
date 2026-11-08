@@ -53,11 +53,11 @@ export function createWindowClearance(layout){const bins=new Map(),windows=[];fo
  const candidates=box=>{const found=new Set();for(let x=Math.floor(box.min.x/4);x<=Math.floor(box.max.x/4);x++)for(let y=Math.floor(box.min.y/4);y<=Math.floor(box.max.y/4);y++)for(let z=Math.floor(box.min.z/4);z<=Math.floor(box.max.z/4);z++)for(const w of bins.get([x,y,z].join(','))||[])if(w.box.intersectsBox(box))found.add(w);return found;};
  return {windows,candidates,intersections(triangle,w){const {p,rect}=w;let poly=triangle.map(q=>chartPoint(p.chart,q));for(const [axis,value,sign]of [[0,rect[0]+.002,1],[0,rect[1]-.002,-1],[1,rect[2]+.002,1],[1,rect[3]-.002,-1]])poly=clipPolygon(poly,axis,value,sign);for(const pl of cornerPlanes(rect)){if(poly.length<3)break;poly=clipHalf(poly,[pl[0],pl[1],pl[2]-.002]);}if(poly.length<3)return null;const lo=Math.min(...poly.map(q=>q[2])),hi=Math.max(...poly.map(q=>q[2]));for(const face of w.faces){const intersection=intersectTriangle(poly,face);if(intersection.length<3)continue;const [a,b,c]=face,d=(b[0]-a[0])*(c[1]-a[1])-(c[0]-a[0])*(b[1]-a[1]);if(Math.abs(d)<1e-12)continue;const A=((b[2]-a[2])*(c[1]-a[1])-(c[2]-a[2])*(b[1]-a[1]))/d,B=((b[0]-a[0])*(c[2]-a[2])-(c[0]-a[0])*(b[2]-a[2]))/d,C=a[2]-A*a[0]-B*a[1],length=Math.hypot(A,B,1),signed=q=>(q[2]-A*q[0]-B*q[1]-C)/length;let clipped=intersection;const clip=(poly,dist)=>{const out=[];for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length],da=dist(a),db=dist(b);if(da>=0)out.push(a);if(da*db<0){const t=da/(da-db);out.push(a.map((v,k)=>v+(b[k]-v)*t));}}return out;};clipped=clip(clipped,q=>signed(q)+p.wallBuildUp-.002);clipped=clip(clipped,q=>1.05-signed(q));for(const t of triangulate(clipped)){const tri=new T.Triangle(...t.map(q=>new T.Vector3(...q)));if(tri.getArea()>1e-8)return worldPoint(p.chart,tri.getMidpoint(new T.Vector3()).toArray());}}return null;}};
 }
-export function auditSkinClearance(root,authority,layout,{tag='walk',maxWitnesses=2000,onProgress=()=>{},skinAuthority=null}={}){
- root.updateMatrixWorld(true);const windowCheck=createWindowClearance(layout),outside=[],blocked=[],exceptions={},v=new T.Vector3(),matrix=new T.Matrix4();let meshes=0,vertices=0,faceSamples=0,windowFaces=0;
- root.traverse(o=>{
-  if(!o.isMesh||!o.geometry.attributes.position)return;for(let a=o;a;a=a.parent)if(!a.visible&&!a.userData.baked&&!a.userData.collisionOnly)return;
-  const g=o.geometry,pos=g.attributes.position,inst=o.isInstancedMesh?o.count:1,box=g.boundingBox||(g.computeBoundingBox(),g.boundingBox),ownSkin=isFinishedSkin(o),fittingRule=named.get(o.name),limits=fittingRule?.bounds;let bad=0,badVertices=0,badFaces=0,max=0,witness=null;const distanceAuthority=ownSkin&&skinAuthority||authority;
+// Each mesh is audited on its own: its result depends only on the mesh (geometry, matrices, names, materials, user data,
+// ancestors), the room windows near it, the skin authority and this code. options.reuse (scripts/skin-clearance-reuse-v2.mjs)
+// may return a saved result for an unchanged mesh; the totals, witness lists and their order are the same either way.
+function auditMesh(o,box,{windowCheck,authority,skinAuthority,maxWitnesses}){const v=new T.Vector3(),matrix=new T.Matrix4();
+  const g=o.geometry,pos=g.attributes.position,inst=o.isInstancedMesh?o.count:1,ownSkin=isFinishedSkin(o),fittingRule=named.get(o.name),limits=fittingRule?.bounds;let bad=0,badVertices=0,badFaces=0,max=0,witness=null;let vertices=0,faceSamples=0,windowFaces=0;const exceptions={},blocked=[];const distanceAuthority=ownSkin&&skinAuthority||authority;
   const boundedFittingPoint=q=>fittingRule&&limits&&q[0]>=limits[0]&&q[0]<=limits[1]&&q[1]>=limits[2]&&q[1]<=limits[3]&&q[2]>=limits[4]&&q[2]<=limits[5];
   const localBVH=(g.index?.count??pos.count)>30000?new MeshBVH(g,{indirect:true}):null,ix=g.index;
   for(let instance=0;instance<inst;instance++){
@@ -68,7 +68,18 @@ export function auditSkinClearance(root,authority,layout,{tag='walk',maxWitnesse
    if(localBVH){const inverse=matrix.clone().invert();for(const w of nearWindows){const local=w.box.clone().applyMatrix4(inverse);localBVH.shapecast({intersectsBounds:b=>b.intersectsBox(local),intersectsTriangle:(tri,face)=>{const triangle=[tri.a,tri.b,tri.c].map(q=>q.clone().applyMatrix4(matrix).toArray());test(triangle,face,w);return false;}});}}
    else if(nearWindows.size)for(let face=0;face<(ix?.count??pos.count)/3;face++){const triangle=[0,1,2].map(k=>v.fromBufferAttribute(pos,ix?ix.getX(face*3+k):face*3+k).applyMatrix4(matrix).toArray()),triBox=new T.Box3().setFromPoints(triangle.map(q=>new T.Vector3(...q)));for(const w of windowCheck.candidates(triBox))test(triangle,face,w);}
   }
-  if(bad)outside.push({mesh:o.name,owner:o.userData.room,vertices:badVertices,faceSamples:badFaces,samples:bad,maxDistance:max,point:witness});if(++meshes%1000===0)onProgress({meshes,vertices,outside:outside.length,blocked:blocked.length,outsideExamples:outside.slice(0,8),blockedExamples:blocked.slice(0,3)});
+ return {vertices,faceSamples,windowFaces,exceptions,blocked,outside:bad?{mesh:o.name,owner:o.userData.room,vertices:badVertices,faceSamples:badFaces,samples:bad,maxDistance:max,point:witness}:null};
+}
+export function auditSkinClearance(root,authority,layout,{tag='walk',maxWitnesses=2000,onProgress=()=>{},skinAuthority=null,reuse=null}={}){
+ // Status depends on witnesses being kept, so at least one must be.
+ if(!Number.isInteger(maxWitnesses)||maxWitnesses<1)throw Error('maxWitnesses must be a whole number of at least 1');
+ root.updateMatrixWorld(true);const windowCheck=createWindowClearance(layout),outside=[],blocked=[],exceptions={};let meshes=0,vertices=0,faceSamples=0,windowFaces=0,reused=0;
+ root.traverse(o=>{
+  if(!o.isMesh||!o.geometry.attributes.position)return;for(let a=o;a;a=a.parent)if(!a.visible&&!a.userData.baked&&!a.userData.collisionOnly)return;
+  const g=o.geometry,box=g.boundingBox||(g.computeBoundingBox(),g.boundingBox),key=reuse?reuse.key(o,box,windowCheck):null,saved=key?reuse.get(key):null,r=saved||auditMesh(o,box,{windowCheck,authority,skinAuthority,maxWitnesses});
+  if(saved)reused++;else if(key)reuse.put(key,r);
+  vertices+=r.vertices;faceSamples+=r.faceSamples;windowFaces+=r.windowFaces;for(const [id,n] of Object.entries(r.exceptions))exceptions[id]=(exceptions[id]||0)+n;for(const b of r.blocked){if(blocked.length>=maxWitnesses)break;blocked.push(b);}
+  if(r.outside)outside.push(r.outside);if(++meshes%1000===0)onProgress({meshes,vertices,outside:outside.length,blocked:blocked.length,outsideExamples:outside.slice(0,8),blockedExamples:blocked.slice(0,3)});
  });
- return {status:outside.length||blocked.length?'FAIL':'PASS',tag,tolerance:.05,windowOutsideMetres:1,glassContactPadding:.05,meshes,vertices,faceSamples,windowFaces,outside,blocked,exceptions,exceptionList:EXTERIOR_FITTINGS};
+ return {status:outside.length||blocked.length?'FAIL':'PASS',tag,tolerance:.05,windowOutsideMetres:1,glassContactPadding:.05,meshes,vertices,faceSamples,windowFaces,outside,blocked,exceptions,exceptionList:EXTERIOR_FITTINGS,...(reuse?{reuse:{reused,audited:meshes-reused}}:{})};
 }
