@@ -14,6 +14,7 @@
     "style-lab:walk": "node scripts/style-lab-walk.mjs",
     "check:walk": "node --max-old-space-size=8000 scripts/check-walk.mjs",
     "check:film-look": "node scripts/check-film-look.mjs",
+    "check:plaque-atlas": "node scripts/check-plaque-atlas.mjs",
     "check:design": "node scripts/check-selected-interiors.mjs",
     "live": "node server/leo-live.mjs",
     "check:live": "node scripts/check-live.mjs",
