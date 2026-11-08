@@ -7,6 +7,13 @@ const choices=[
  ['balanced','Balanced','Simplify distant geometry while keeping nearby details.'],
  ['performance','Performance','Simplify geometry sooner to reduce rendering work.'],
 ];
+// The same levels on the desktop's merged drawing, which keeps full geometry: they set the atrium's haze (detail-levels.js).
+const hazeChoices=[
+ ['auto','Auto (recommended)','Choose for this device and adjust as you play.'],
+ ['high','High','See the full length of the atrium.'],
+ ['balanced','Balanced','Haze closes in across the far end of the atrium.'],
+ ['performance','Performance','Haze as close as in the corridors, and no corner shading. Edge smoothing turns off from your next visit.'],
+];
 // The walk's look (look.js, film-look.js).
 const looks=[
  ['today','Leo today','The ship as it looks now.'],
@@ -16,7 +23,8 @@ const looks=[
 // Geometry detail is independent of the existing drawing-resolution control.
 // onOpenChange(true) runs before the modal opens, allowing the caller to close
 // other sheets. The caller owns pausing/clearing WalkInput while the menu is open.
-export function mountGraphicsSettings({onOpenChange=()=>{}}={}){
+export function mountGraphicsSettings({onOpenChange=()=>{},haze=false}={}){
+ const levels=haze?hazeChoices:choices;
  if(typeof document==='undefined'||globalThis.__leoPreparedBuild)return null;
  const mount=document.querySelector('#settings-menu')||document.querySelector('#tools-extra')||document.querySelector('.tools');
  if(!mount||document.getElementById('graphics-settings'))return null;
@@ -51,10 +59,10 @@ export function mountGraphicsSettings({onOpenChange=()=>{}}={}){
  const dialog=el('dialog',{id:'graphics-settings'});
  dialog.setAttribute('aria-labelledby','graphics-title');dialog.setAttribute('aria-describedby','graphics-description');dialog.setAttribute('aria-modal','true');
  const title=el('h2',{id:'graphics-title',textContent:'Graphics detail'});
- const description=el('p',{id:'graphics-description',textContent:'The whole atrium stays visible in every mode. Choose how much geometry detail to keep at a distance, and how the ship looks.'});
- const fieldset=el('fieldset'),legend=el('legend',{textContent:'Geometry detail'}),radios=new Map();
+ const description=el('p',{id:'graphics-description',textContent:haze?'Choose how far you see across the atrium before the haze closes in, and how the ship looks. A shorter view draws less, for slower graphics cards.':'The whole atrium stays visible in every mode. Choose how much geometry detail to keep at a distance, and how the ship looks.'});
+ const fieldset=el('fieldset'),legend=el('legend',{textContent:haze?'Detail':'Geometry detail'}),radios=new Map();
  fieldset.append(legend);
- for(const [value,label,description] of choices){
+ for(const [value,label,description] of levels){
   const row=el('label'),radio=el('input',{type:'radio',name:'leo-geometry-detail',value}),copy=el('span');
   radio.id='geometry-detail-'+value;
   copy.append(el('strong',{textContent:label}),el('small',{textContent:description}));
@@ -81,7 +89,7 @@ export function mountGraphicsSettings({onOpenChange=()=>{}}={}){
  let opened=false,returnFocus=null,destroyed=false;
  const refresh=()=>{
   const current=getAtriumQualitySelection(),effective=getAtriumQuality();for(const [value,radio]of radios)radio.checked=value===current;
-  const label=choices.find(c=>c[0]===effective)[1];
+  const label=levels.find(c=>c[0]===effective)[1];
   button.setAttribute('aria-label','Graphics detail: '+(current==='auto'?'Auto — '+label:label));
   for(const [value,radio]of lookRadios)radio.checked=value===getLook();
   lookStatus.textContent=getLook()==='film'?'Film look is on.':'Leo today is on.';

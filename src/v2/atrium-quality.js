@@ -30,7 +30,13 @@ export function createAtriumAutoController({initial='balanced',onChange=()=>{}}=
  }};
 }
 const stored=read(STORAGE_KEY);let selection=valid(stored)?stored:'auto';
-const automaticStart=()=>recommendAtriumQuality()==='performance'||read(AUTO_KEY)==='performance'?'performance':'balanced';
+// Auto starts at autoDefault (Balanced for the atrium geometry pack; the desktop's merged drawing raises it to High, see
+// setAtriumAutoDefault), or lower when the device or the last automatic level is lower.
+let autoDefault='balanced';
+const automaticStart=()=>{
+ if(recommendAtriumQuality()==='performance')return 'performance';
+ const order=ATRIUM_QUALITY_PRESETS,last=read(AUTO_KEY);return order.indexOf(last)>order.indexOf(autoDefault)?last:autoDefault;
+};
 let quality=selection==='auto'?automaticStart():selection;
 const notify=()=>{for(const listener of [...listeners])listener(quality);};
 const makeAuto=()=>createAtriumAutoController({initial:quality,onChange(value){if(selection!=='auto')return;quality=value;save(AUTO_KEY,value);notify();}});
@@ -42,6 +48,11 @@ export function setAtriumQuality(value,{persist=true}={}){
  if(persist)save(STORAGE_KEY,value);
  const previous=selection,previousQuality=quality;selection=value;quality=value==='auto'?automaticStart():value;automatic=makeAuto();
  if(previous!==selection||previousQuality!==quality)notify();return quality;
+}
+export function setAtriumAutoDefault(level){
+ if(!ATRIUM_QUALITY_PRESETS.includes(level))throw new RangeError('Unknown geometry detail preset');
+ autoDefault=level;if(selection!=='auto')return;
+ const previous=quality;quality=automaticStart();automatic=makeAuto();if(previous!==quality)notify();
 }
 export function observeAtriumFrame(ms,now,{active=true}={}){return automatic.sample(ms,now,{active:active&&selection==='auto'});}
 export function subscribeAtriumQuality(listener){

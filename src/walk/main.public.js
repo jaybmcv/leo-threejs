@@ -1,6 +1,7 @@
 import {createAtriumGeometryRuntime} from '../v2/atrium-geometry-runtime.js';
-import {getAtriumQuality,observeAtriumFrame} from '../v2/atrium-quality.js';
+import {getAtriumQuality,observeAtriumFrame,setAtriumAutoDefault,setAtriumQuality,subscribeAtriumQuality} from '../v2/atrium-quality.js';
 import {mountGraphicsSettings} from './graphics-settings.js';
+import {DETAIL,closeHaze} from './detail-levels.js';
 import {installFilmLook} from './film-look.js';
 import {mountControlsSettings} from './controls-settings.js';
 import {mountFurSettings} from './fur-settings.js';
@@ -17,9 +18,12 @@ let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 const phoneBatching=(()=>{const query=new URLSearchParams(location.search);if(!preparedPhone)return query.get('deskbatch')==='low'?{}:{merge:true};const mode=query.get('phonebatch');
  return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
 let phoneBands=null,wayfindingSigns=null,fogCull=null;
-// The atrium geometry pack binds the band pieces the merge hides, so it runs only without the merge; the Detail menu
-// chooses its distant detail, so it shows only then too (the merged bands keep full detail and still draw faster).
-const atriumPack=!preparedPhone&&!phoneBatching.merge;
+// The atrium geometry pack binds the band pieces the merge hides, so it runs only without the merge, and the Detail menu
+// chooses its distant detail. The merged bands keep full detail and still draw faster: on them the menu sets the atrium's
+// haze (detail-levels.js), and Auto starts at High, the look before the menu came back. ?detail=high|balanced|performance
+// tries a level for this visit only.
+const atriumPack=!preparedPhone&&!phoneBatching.merge,deskDetail=!preparedPhone&&!atriumPack;
+if(deskDetail){setAtriumAutoDefault('high');const level=new URLSearchParams(location.search).get('detail');if(Object.hasOwn(DETAIL,level??''))setAtriumQuality(level,{persist:false});}
 import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
 import {settlePreparedStatic} from '../v2/prepared-static.js';
 import {cullByBox} from '../v2/box-frustum.js';
@@ -216,13 +220,14 @@ if(LIVE_URL){
 const phone=matchMedia('(pointer:coarse)').matches,phoneTest=new URLSearchParams(location.search);
 // Phone A/B switches, for testing on a device only: ?phoneaa=0 drops multisampling, ?phonedepth=linear drops the
 // logarithmic depth buffer (its depth writes can keep a phone GPU from skipping hidden surfaces; the near plane moves
-// out to 0.2 m for precision). Neither is on by default.
-const phoneLinearDepth=phone&&phoneTest.get('phonedepth')==='linear';
+// out to 0.2 m for precision). Neither is on by default. ?deskdepth=linear tries the same depth on a desktop.
+const linearDepth=phoneTest.get(phone?'phonedepth':'deskdepth')==='linear';
 // ?phonehide=bands,glass,furnish,gardens,haze,cats hides those for a test on a device, to see what its GPU spends on.
 const PHONE_HIDE={bands:o=>/^V2_low_deck_merged_/.test(o.name)&&!o.material[0]?.transparent,glass:o=>[o.material].flat().some(m=>m?.transparent),
  furnish:o=>o.isInstancedMesh&&o.userData.phase4||o.userData.phase4Batch,gardens:o=>[o.material].flat().some(m=>m?.name==='P6_atrium_gardens'),haze:o=>/haze/i.test(o.name),cats:o=>o.isSkinnedMesh};
 const phoneHide=(phoneTest.get('phonehide')||'').split(',').map(k=>PHONE_HIDE[k]).filter(Boolean);let phoneHidden=[],phoneHiddenAt=-Infinity;
-const renderer=new T.WebGLRenderer({antialias:!(phone&&phoneTest.get('phoneaa')==='0'),logarithmicDepthBuffer:!phoneLinearDepth,powerPreference:'high-performance'});
+// Multisampling is chosen with the context: the Detail menu's Performance drops it from the next load.
+const renderer=new T.WebGLRenderer({antialias:!(phone&&phoneTest.get('phoneaa')==='0')&&!(deskDetail&&!DETAIL[getAtriumQuality()].antialias),logarithmicDepthBuffer:!linearDepth,powerPreference:'high-performance'});
 const frameReadout=createFrameReadout(renderer);
 // Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
 // The Res button steps through them and the choice is remembered for the next visit.
@@ -261,7 +266,7 @@ const drift=createStarDrift({count:phone?320:520,still:matchMedia('(prefers-redu
 renderer.autoClear=false;
 // A light haze down the long corridors lets the far plane stop at 150 m.
 scene.fog=new T.Fog(0xd9dcd6,70,148);
-const camera=new T.PerspectiveCamera(phone?70:62,1,phoneLinearDepth?.2:.05,ATRIUM_VIEW.far);
+const camera=new T.PerspectiveCamera(phone?70:62,1,linearDepth?.2:.05,ATRIUM_VIEW.far);
 // Past the far plane, the ship in haze rather than open space (haze.js); drawn between the sky and the ship.
 const haze=new T.Scene();haze.fog=scene.fog;const hazeCamera=new T.PerspectiveCamera(60,1,ATRIUM_VIEW.far-10,1500);
 // Cool, crisp base light (2B): rooms with a mood of their own warm or dim it while you are inside.
@@ -911,7 +916,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){keelClub?.mood(scene.fog,camera.getWorldPosition(eye));fogCull?.guard();draw(camera);fogCull?.update(performance.now());if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){if(deskDetail)closeHaze(scene.fog,getAtriumQuality());keelClub?.mood(scene.fog,camera.getWorldPosition(eye));fogCull?.guard();draw(camera);fogCull?.update(performance.now());if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
@@ -1192,7 +1197,7 @@ emergencyDrill=createEmergencyDrill({
 sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambience.toggle())));
 // Render resolution, set up with the renderer: each press steps High, Med, Low and round again.
 const resButton=$('resolution');setRes(res);
-graphicsSettings=atriumPack?mountGraphicsSettings({onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}}):null;
+graphicsSettings=atriumPack||deskDetail?mountGraphicsSettings({haze:deskDetail,onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}}):null;
 controlsSettings=mountControlsSettings({emotes:EMOTES,onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
 furSettings=mountFurSettings({getColour:()=>furColour,onColour:value=>{furColour=value;walker.setFur(value);},onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
 resButton.addEventListener('click',()=>{resChosen=true;setRes((res+1)%RES.length);try{localStorage.setItem(RES_KEY,RES[res]);}catch{}});
@@ -1211,6 +1216,7 @@ if(typeof __WALK_DEBUG__!=="undefined"&&__WALK_DEBUG__)Object.defineProperties(g
 for(const root of [scene,haze,sky])onePassAtriumGlass(root);
 // Corner shading (corner-shade.js): patched in before the warm-up, worked out and faded in after it. Not on phones; ?corner=0 leaves it off.
 const cornerShade=phone||phoneTest.get('corner')==='0'?null:installCornerShade(scene);
+if(cornerShade&&deskDetail){const corner=()=>cornerShade.setOn(DETAIL[getAtriumQuality()].corner);corner();subscribeAtriumQuality(corner);}
 // The shader warm-up (see shaderWarmup): the walk's scene with the arrival hall's lamps both ways, then its sky and haze.
 // The phone ship uploads nothing ahead and keeps no list of pictures.
 Promise.race([environmentReady,new Promise(r=>setTimeout(r,WARM_WAIT_MS))])
