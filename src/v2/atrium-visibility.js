@@ -42,8 +42,36 @@ export function registerAtriumArchitecture(root){if(root?.name==='V2_atrium_faca
  // A prepared facade may arrive with the group already made (the authoring build ran this too).
  if(root?.name==='V2_atrium_facade'){let gated=root.getObjectByName('V2_atrium_facade_gated');
   if(!gated){gated=new T.Group();gated.name='V2_atrium_facade_gated';gated.userData.noCollide=true;for(const o of [...root.children])if(!towerCopies.includes(o)&&o.name!=='P6_tower_stairs')gated.add(o);root.add(gated);}
-  if(!nearFacades.includes(gated))nearFacades.push(gated);gated.visible=atriumViewSpan()!==null||!belowAtrium();}root?.traverse(o=>{if(o.isInstancedMesh&&o.userData.proxySpans&&!architecture.some(a=>a.o===o))architecture.push({o,all:o.instanceMatrix.array.slice(),spans:o.userData.proxySpans});});updateProxies();}
-function updateProxies(){for(const a of architecture){const selected=[];for(let i=0;i<a.spans.length;i++){const[lo,hi]=a.spans[i];if(!a.o.userData.distantProxy&&proxyY!==null&&lo<proxyY+3.5&&hi>proxyY-.5)continue;selected.push(i);}if(a.selected&&selected.length===a.selected.length&&selected.every((v,i)=>v===a.selected[i]))continue;a.selected=selected;selected.forEach((i,n)=>a.o.instanceMatrix.array.set(a.all.subarray(i*16,i*16+16),n*16));a.o.count=selected.length;a.o.visible=selected.length>0;a.o.instanceMatrix.needsUpdate=true;}}
+  if(!nearFacades.includes(gated))nearFacades.push(gated);gated.visible=atriumViewSpan()!==null||!belowAtrium();}root?.traverse(o=>{if(o.isInstancedMesh&&o.userData.proxySpans&&!architecture.some(a=>a.o===o))architecture.push({o,all:o.instanceMatrix.array.slice(),spans:o.userData.proxySpans,fade:proxyFadeOn&&!o.userData.distantProxy?fadeProxy(o):null});});updateProxies();}
+// While a room reaches from 0.5 m below the walker's feet to 3.5 m above them, the room's stand-in (the
+// carcass and window frame) is hidden and the deck's real cabins draw instead: walls, doors and the nearest furniture
+// (main.public.js cull, the same window). In the walk (enableAtriumProxyFade) the stand-in no longer stops in one frame at
+// that edge: it carries on into the window, over the real room already drawing there, and dissolves with a screen-space
+// dither over its first PROXY_FADE metres, so climbing, falling or gliding past the decks shows each row of rooms
+// arriving, not snapping in (2026-11-08 glide video). Nothing more draws than the real rooms the window already holds,
+// and standing on a deck changes nothing: the walker's own deck is 3.64 m inside its window, past the fade, and the
+// decks above and below are outside theirs. Each fragment is drawn whole or discarded, so the stand-in stays opaque and
+// nothing sorts; the walk's logarithmic depth already tests depth after shading, so the discard costs no early depth
+// test. Off by default: the authoring build and the checks register the same meshes and keep them exactly as they were.
+const PROXY_FADE=3;let proxyFadeOn=false;
+export function enableAtriumProxyFade(){proxyFadeOn=true;}
+function fadeMaterial(source){const m=source.clone();m.name=source.name+'_fade';
+ m.onBeforeCompile=s=>{s.vertexShader=s.vertexShader.replace('void main() {','attribute float proxyFade;\nvarying float vProxyFade;\nvoid main() {\n\tvProxyFade=proxyFade;');
+  // An ordered 4x4 (Bayer) threshold reads as an even blend; a noise threshold sparkled while gliding.
+  s.fragmentShader=s.fragmentShader.replace('void main() {','varying float vProxyFade;\nconst float PROXY_BAYER[16]=float[16](0.,8.,2.,10.,12.,4.,14.,6.,3.,11.,1.,9.,15.,7.,13.,5.);\nvoid main() {\n\tif(vProxyFade<.999){ivec2 q=ivec2(gl_FragCoord.xy)&3;if((PROXY_BAYER[q.x+q.y*4]+.5)/16.>=vProxyFade)discard;}');};
+ m.customProgramCacheKey=()=>'atrium-proxy-fade';return m;}
+// The fade attribute goes on a geometry of the mesh's own that shares the source's buffers, so nothing else drawing
+// that geometry (the cabins' own window trim) gains it, and a prepared vertex pool is not copied.
+function fadeProxy(o){const s=o.geometry,g=new T.BufferGeometry();for(const[k,v]of Object.entries(s.attributes))g.setAttribute(k,v);g.setIndex(s.index);for(const r of s.groups)g.addGroup(r.start,r.count,r.materialIndex);g.setDrawRange(s.drawRange.start,s.drawRange.count);g.boundingBox=s.boundingBox;g.boundingSphere=s.boundingSphere;g.userData=s.userData;
+ const fade=new T.InstancedBufferAttribute(new Float32Array(o.userData.proxySpans.length).fill(1),1);fade.setUsage(T.DynamicDrawUsage);g.setAttribute('proxyFade',fade);o.geometry=g;o.material=Array.isArray(o.material)?o.material.map(fadeMaterial):fadeMaterial(o.material);return fade;}
+// How much of a stand-in shows: 1 outside the window, then down to 0 over the window's first PROXY_FADE metres (0 hides it).
+export function atriumProxyFade(lo,hi,y,fade=proxyFadeOn){const gap=Math.max(lo-(y+3.5),y-.5-hi);if(gap>=0)return 1;if(!fade)return 0;const t=1+gap/PROXY_FADE;return t<=0?0:Math.round(t*t*(3-2*t)*64)/64;}
+function updateProxies(){
+ for(const a of architecture){const near=!a.o.userData.distantProxy,selected=[],fades=[];
+  for(let i=0;i<a.spans.length;i++){const[lo,hi]=a.spans[i],f=near&&proxyY!==null?atriumProxyFade(lo,hi,proxyY,!!a.fade):1;if(f>0){selected.push(i);fades.push(f);}}
+  if(a.selected&&selected.length===a.selected.length&&selected.every((v,i)=>v===a.selected[i])&&(!a.fade||fades.every((v,i)=>v===a.fades[i])))continue;
+  a.selected=selected;a.fades=fades;selected.forEach((i,n)=>a.o.instanceMatrix.array.set(a.all.subarray(i*16,i*16+16),n*16));if(a.fade){a.fade.array.set(fades);a.fade.needsUpdate=true;}
+  a.o.count=selected.length;a.o.visible=selected.length>0;a.o.instanceMatrix.needsUpdate=true;}}
 export function setAtriumView(p){const changed=!position||(position.x-p.x)**2+(position.y-p.y)**2+(position.z-p.z)**2>=1e-8;if(changed){position={x:p.x,y:p.y,z:p.z};classified=undefined;fogClassified=undefined;cameraVisible=false;if(proxyY!==p.y){proxyY=p.y;updateProxies();}}applyAtriumFog();}
 function classify(){if(classified!==undefined)return classified;const p=position;if(!p)return null;const d=layout.decks.reduce((a,b)=>Math.abs(a.y-p.y)<Math.abs(b.y-p.y)?a:b);
  if(d.number<6||!d.atrium?.outline)return classified=null;
