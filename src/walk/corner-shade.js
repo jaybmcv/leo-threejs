@@ -114,8 +114,10 @@ export function installCornerShade(scene){
   const g=cornerGrid(lines);if(!g)throw Error('no wall lines');
   const old=U.uCorner.value;U.uCorner.value=arrayTexture(await grid(lines.segs,g),g.NX,g.NZ,DECKS);old.dispose();U.uCornerBox.value.set(g.X0,g.Z0,g.NX*RES,g.NZ*RES);
   stats.materials+=patch();stats.ms=Math.round(performance.now()-t0);stats.ready=true;
-  const from=performance.now(),fade=()=>{const k=Math.min(1,(performance.now()-from)/FADE_MS);U.uCornerS.value=STRENGTH*k;if(k<1)requestAnimationFrame(fade);};fade();
+  const from=performance.now(),fade=()=>{shown=Math.min(1,(performance.now()-from)/FADE_MS);show();if(shown<1)requestAnimationFrame(fade);};fade();
   return stats;
  }
- return {stats,uniforms:U,start};
+ // setOn(false) (the Detail menu's Performance) sets the strength to nothing, which skips the shader's lookup.
+ let on=true,shown=0;const show=()=>{U.uCornerS.value=on?STRENGTH*shown:0;};
+ return {stats,uniforms:U,start,setOn(v){on=!!v;show();}};
 }

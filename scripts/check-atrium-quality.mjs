@@ -55,6 +55,17 @@ try{
   const q=await fresh(),a=q.createAtriumAutoController({initial:'high'});for(let t=0;t<60000;t+=60)a.sample(60,t,{active:false});assert.equal(a.level,'high');
   for(let t=60000;t<120000;t+=1000)a.sample(1000,t);assert.equal(a.level,'high');
  });
+ await check('a higher auto default starts there unless the last auto level or a manual choice says otherwise',async()=>{
+  const auto='leo-walk-auto-geometry-detail',data=new Map(),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};install(storage);
+  let q=await fresh(),seen=[];q.subscribeAtriumQuality(v=>seen.push(v));q.setAtriumAutoDefault('high');
+  assert.equal(q.getAtriumQualitySelection(),'auto');assert.equal(q.getAtriumQuality(),'high');assert.deepEqual(seen,['high']);
+  for(let t=0;t<16000;t+=60)q.observeAtriumFrame(60,t);assert.equal(q.getAtriumQuality(),'performance');
+  for(const [last,start] of [['balanced','balanced'],['performance','performance'],['high','high']]){
+   data.set(auto,last);q=await fresh();q.setAtriumAutoDefault('high');assert.equal(q.getAtriumQuality(),start);}
+  data.set(key,'balanced');q=await fresh();q.setAtriumAutoDefault('high');assert.equal(q.getAtriumQualitySelection(),'balanced');assert.equal(q.getAtriumQuality(),'balanced');
+  data.delete(key);data.set(auto,'high');q=await fresh();assert.equal(q.getAtriumQuality(),'balanced');
+  assert.throws(()=>q.setAtriumAutoDefault('auto'),RangeError);assert.throws(()=>q.setAtriumAutoDefault('ultra'),RangeError);
+ });
  await check('manual overrides stay fixed; auto downgrade is remembered separately',async()=>{
   const data=new Map(),storage={getItem:k=>data.get(k),setItem:(k,v)=>data.set(k,v)};install(storage);let q=await fresh();
   q.setAtriumQuality('high');for(let t=0;t<30000;t+=60)q.observeAtriumFrame(60,t);assert.equal(q.getAtriumQuality(),'high');
