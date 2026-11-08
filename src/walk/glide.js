@@ -11,7 +11,7 @@ export const BOARD={scale:.125,deploy:.18};
 const GRIP=.071*BOARD.scale;
 // Studio axes (X length, +Z underside) into the walker's (+z forward, +y up): X -> +z, Y -> -x, Z -> -y.
 const BASE=new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(new T.Vector3(0,0,1),new T.Vector3(-1,0,0),new T.Vector3(0,-1,0)));
-const SIDEWAYS=-Math.PI/2,UP=new T.Vector3(0,1,0);
+const SIDEWAYS=-Math.PI/2,UP=new T.Vector3(0,1,0),ORIGIN=new T.Vector3();
 
 // `prebuild`: make the board while the page idles (the visitor's own); others' boards are made on their first ride.
 export function createGlide(walker,urls,{prebuild=true}={}){
@@ -38,7 +38,9 @@ export function createGlide(walker,urls,{prebuild=true}={}){
    // A small overshoot as it pops out.
    board.root.scale.setScalar(BOARD.scale*k*(1+(gliding?.14*Math.sin(Math.PI*k):0)));
    board.root.quaternion.copy(lean).multiply(BASE);
-   board.root.position.copy(at.set(0,-GRIP,0).applyQuaternion(lean));
+   // Under the middle of his shoes (avatar.js boardFeet), which turn side-on with him.
+   yaw.setFromAxisAngle(UP,SIDEWAYS*k);
+   board.root.position.copy(at.copy(walker.boardFeet||ORIGIN).applyQuaternion(yaw)).setY(-GRIP).applyQuaternion(lean);
    board.spin(dt*speed*4);
    // The rider turns side-on and leans with the board.
    walker.body.quaternion.copy(lean).multiply(yaw.setFromAxisAngle(UP,SIDEWAYS*k));
