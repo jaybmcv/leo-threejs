@@ -111,7 +111,18 @@ export async function batchLowDeckDraws(baked,renderer,{allBands=false,cull=fals
 // The atrium paving and the native tower/transit slabs share y=-19.7.
 // A small visual-only separation is robust with logarithmic fragment depth,
 // unlike polygonOffset. Physical support and the 5 cm hull rule are unchanged.
+// The lift cores' copy (P6_tower_architecture, atrium-architecture.js) gets one too. Its sources leave the walk's bake, so
+// it skips the bake's coplanar nudges (src/walk/render-bake.js), yet its faces lie in the planes of band parts around
+// the cores: the landings' tops and undersides on the transit and deck floors, the forward stair-well slab edges on the
+// stair walls. Drawn together they z-fought (the flicker of #267/#272). It sits 5.5 mm low and 2.5 mm along x and z, so
+// each shared plane has one winner: walked floors keep the bands' finish on top, and the landings show one underside
+// from below. Half millimetres keep it clear of every whole-millimetre layer around it (the bake's 2 mm nudges, the
+// paving's 6 mm, copy faces 7 mm up beside the aft stairs, which 7 mm down put onto the flights' own faces). The aft
+// stair flights (P6_tower_stairs, #258) stay put.
+const TOWER_SEPARATION=[.0025,-.0055,.0025];
 export function separateAtriumPaving(ship){
+ ship.facade?.traverse(o=>{if(!o.isMesh||o.name!=='P6_tower_architecture'||o.userData.renderSeparation)return;
+  o.applyMatrix4(new T.Matrix4().makeTranslation(...TOWER_SEPARATION));o.userData.renderSeparation=TOWER_SEPARATION;o.updateWorldMatrix(true,false);});
  const paving=ship.facade?.getObjectByName('P6_atrium_floor_actual');
  if(!paving||paving.userData.renderSeparation)return;
  paving.applyMatrix4(new T.Matrix4().makeTranslation(0,.006,0));
