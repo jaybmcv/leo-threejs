@@ -220,14 +220,22 @@ if(LIVE_URL){
 const phone=matchMedia('(pointer:coarse)').matches,phoneTest=new URLSearchParams(location.search);
 // Phone A/B switches, for testing on a device only: ?phoneaa=0 drops multisampling, ?phonedepth=linear drops the
 // logarithmic depth buffer (its depth writes can keep a phone GPU from skipping hidden surfaces; the near plane moves
-// out to 0.2 m for precision). Neither is on by default. ?deskdepth=linear tries the same depth on a desktop.
-const linearDepth=phoneTest.get(phone?'phonedepth':'deskdepth')==='linear';
+// out to 0.2 m for precision). Neither is on by default. On a desktop the Detail menu's Performance uses linear depth
+// from the next load (detail-levels.js); ?deskdepth=linear or ?deskdepth=log forces either.
+const linearDepth=phone?phoneTest.get('phonedepth')==='linear':(phoneTest.get('deskdepth')??(deskDetail&&DETAIL[getAtriumQuality()].linearDepth?'linear':'log'))==='linear';
+// Linear depth cannot part the ship's 6 mm layers much past 140 m, so until the next load the view stays within
+// Performance's haze whatever the level, the Keel hall's included.
+const hazeHeld=deskDetail&&linearDepth;
 // ?phonehide=bands,glass,furnish,gardens,haze,cats hides those for a test on a device, to see what its GPU spends on.
 const PHONE_HIDE={bands:o=>/^V2_low_deck_merged_/.test(o.name)&&!o.material[0]?.transparent,glass:o=>[o.material].flat().some(m=>m?.transparent),
  furnish:o=>o.isInstancedMesh&&o.userData.phase4||o.userData.phase4Batch,gardens:o=>[o.material].flat().some(m=>m?.name==='P6_atrium_gardens'),haze:o=>/haze/i.test(o.name),cats:o=>o.isSkinnedMesh};
 const phoneHide=(phoneTest.get('phonehide')||'').split(',').map(k=>PHONE_HIDE[k]).filter(Boolean);let phoneHidden=[],phoneHiddenAt=-Infinity;
 // Multisampling is chosen with the context: the Detail menu's Performance drops it from the next load.
 const renderer=new T.WebGLRenderer({antialias:!(phone&&phoneTest.get('phoneaa')==='0')&&!(deskDetail&&!DETAIL[getAtriumQuality()].antialias),logarithmicDepthBuffer:!linearDepth,powerPreference:'high-performance'});
+// The ship's layers are set apart by height (a floor finish 6 mm over the deck, paint 8 mm): with the logarithmic depth
+// buffer the shaders write the depth, so polygon offset has never applied. With linear depth it would, and pull the hex
+// sub-floor (finish-kit.js) over the Arrival Hall's finish, so it stays off.
+if(linearDepth){const gl=renderer.getContext(),enable=gl.enable.bind(gl);gl.enable=cap=>{if(cap!==gl.POLYGON_OFFSET_FILL)enable(cap);};}
 const frameReadout=createFrameReadout(renderer);
 // Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
 // The Res button steps through them and the choice is remembered for the next visit.
@@ -916,7 +924,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){if(deskDetail)closeHaze(scene.fog,getAtriumQuality());keelClub?.mood(scene.fog,camera.getWorldPosition(eye));fogCull?.guard();draw(camera);fogCull?.update(performance.now());if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){if(deskDetail)closeHaze(scene.fog,getAtriumQuality());keelClub?.mood(scene.fog,camera.getWorldPosition(eye));if(hazeHeld)closeHaze(scene.fog,'performance');fogCull?.guard();draw(camera);fogCull?.update(performance.now());if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
@@ -1197,7 +1205,7 @@ emergencyDrill=createEmergencyDrill({
 sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambience.toggle())));
 // Render resolution, set up with the renderer: each press steps High, Med, Low and round again.
 const resButton=$('resolution');setRes(res);
-graphicsSettings=atriumPack||deskDetail?mountGraphicsSettings({haze:deskDetail,onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}}):null;
+graphicsSettings=atriumPack||deskDetail?mountGraphicsSettings({haze:deskDetail,held:hazeHeld,onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}}):null;
 controlsSettings=mountControlsSettings({emotes:EMOTES,onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
 furSettings=mountFurSettings({getColour:()=>furColour,onColour:value=>{furColour=value;walker.setFur(value);},onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
 resButton.addEventListener('click',()=>{resChosen=true;setRes((res+1)%RES.length);try{localStorage.setItem(RES_KEY,RES[res]);}catch{}});

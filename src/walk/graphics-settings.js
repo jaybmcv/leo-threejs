@@ -12,7 +12,7 @@ const hazeChoices=[
  ['auto','Auto (recommended)','Choose for this device and adjust as you play.'],
  ['high','High','See the full length of the atrium.'],
  ['balanced','Balanced','Haze closes in across the far end of the atrium.'],
- ['performance','Performance','Haze as close as in the corridors, and no corner shading. Edge smoothing turns off from your next visit.'],
+ ['performance','Performance','Haze as close as in the corridors, and no corner shading. From your next visit, edge smoothing turns off and depth is drawn a faster way.'],
 ];
 // The walk's look (look.js, film-look.js).
 const looks=[
@@ -23,7 +23,8 @@ const looks=[
 // Geometry detail is independent of the existing drawing-resolution control.
 // onOpenChange(true) runs before the modal opens, allowing the caller to close
 // other sheets. The caller owns pausing/clearing WalkInput while the menu is open.
-export function mountGraphicsSettings({onOpenChange=()=>{},haze=false}={}){
+// held: this visit loaded with Performance's linear depth, so its haze stays until the next visit (main.public.js).
+export function mountGraphicsSettings({onOpenChange=()=>{},haze=false,held=false}={}){
  const levels=haze?hazeChoices:choices;
  if(typeof document==='undefined'||globalThis.__leoPreparedBuild)return null;
  const mount=document.querySelector('#settings-menu')||document.querySelector('#tools-extra')||document.querySelector('.tools');
@@ -80,7 +81,7 @@ export function mountGraphicsSettings({onOpenChange=()=>{},haze=false}={}){
  }
  const lookStatus=el('p',{className:'graphics-note'});lookStatus.setAttribute('role','status');lookStatus.setAttribute('aria-live','polite');
  lookFieldset.append(lookStatus);
- const note=el('p',{className:'graphics-note',textContent:'Changes apply immediately and are remembered on this browser. The Res button controls image sharpness separately.'});
+ const note=el('p',{className:'graphics-note',textContent:(held?'This visit started in Performance, so the haze stays close until your next visit. ':'')+'Changes apply immediately and are remembered on this browser. The Res button controls image sharpness separately.'});
  const autoStatus=el('p',{className:'graphics-note'});autoStatus.setAttribute('role','status');autoStatus.setAttribute('aria-live','polite');
  const actions=el('div',{className:'graphics-actions'}),done=el('button',{type:'button',textContent:'Done'});
  actions.append(done);dialog.append(title,description,fieldset,autoStatus,lookFieldset,note,actions);

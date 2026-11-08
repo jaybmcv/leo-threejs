@@ -12,8 +12,8 @@ check('the indoor haze is the same at every level',()=>{for(const level of ATRIU
 check('High keeps the atrium clear to its far plane',()=>assert.deepEqual(at('high'),[ATRIUM_VIEW.fogNear,ATRIUM_VIEW.fogFar]));
 check('Balanced closes the atrium haze inside the far plane',()=>{const [near,far]=at('balanced');assert(near<far&&far<ATRIUM_VIEW.far&&far>INDOOR[1],`${near}-${far}`);});
 check('Performance brings the atrium haze to the corridors',()=>assert.deepEqual(at('performance'),INDOOR));
-check('only Performance drops edge smoothing and corner shading',()=>{
- for(const level of ATRIUM_QUALITY_PRESETS){const p=level==='performance';assert.equal(DETAIL[level].antialias,!p,level);assert.equal(DETAIL[level].corner,!p,level);}});
+check('only Performance drops edge smoothing and corner shading, and uses linear depth',()=>{
+ for(const level of ATRIUM_QUALITY_PRESETS){const p=level==='performance';assert.equal(DETAIL[level].antialias,!p,level);assert.equal(DETAIL[level].corner,!p,level);assert.equal(DETAIL[level].linearDepth,p,level);}});
 check('a nearer haze is never pushed out',()=>{const f=new Fog(0,10,40);closeHaze(f,'balanced');assert.deepEqual([f.near,f.far],[10,40]);});
 check('the levels cannot be changed',()=>{assert(Object.isFrozen(DETAIL));for(const d of Object.values(DETAIL))assert(Object.isFrozen(d));});
 console.log(JSON.stringify({status:'PASS',checks},null,2));
