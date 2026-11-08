@@ -288,7 +288,7 @@ async function buildShip(){
  const w0=performance.now(),opened=0;timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
  // A desktop's room plaques, lobby boards and deck plaques share a few pictures across decks, so the band merges below draw
  // them for every deck at once (wayfinding-guides.js, plaque-atlas.js); a phone keeps one picture each.
- lifts=createLifts(scene,colliders);for(const g of addWayfindingGuides(lifts.signs,{pageSize:preparedPhone?0:4096}))g.userData.bandMergeParts=true;if(!preparedPhone)sharePlaques(lifts.signs);preparedSigns(ship,lifts.signs);
+ lifts=createLifts(scene,colliders);for(const g of addWayfindingGuides(lifts.signs,{pageSize:preparedPhone?0:Math.min(4096,renderer.capabilities.maxTextureSize)}))g.userData.bandMergeParts=true;if(!preparedPhone)sharePlaques(lifts.signs);preparedSigns(ship,lifts.signs);
  },afterRest(state){
  restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;lullaby=lounge?createLullaby(lounge.dome):null;
  // Its floor, galleries and the promenade in front: glossy acrylic with neon swirls (lounge-floor.js).
