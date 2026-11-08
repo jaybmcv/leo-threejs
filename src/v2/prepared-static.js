@@ -34,8 +34,8 @@ export function settlePreparedStatic(ship){
   const update=Object.assign(function(force){if(!this.visible){update.stale=true;return;}const catchUp=update.stale;update.stale=false;
    if(this.matrixAutoUpdate&&this.pivot==null){const p=this.position,q=this.quaternion,k=this.scale;
     if(known&&!force&&!catchUp&&!this.matrixWorldNeedsUpdate&&this.parent===parent&&p.x===last[0]&&p.y===last[1]&&p.z===last[2]&&q._x===last[3]&&q._y===last[4]&&q._z===last[5]&&q._w===last[6]&&k.x===last[7]&&k.y===last[8]&&k.z===last[9]){
-     kids??=this.children.filter(c=>c.updateMatrixWorld!==SETTLED);
-     for(let i=0;i<kids.length;i++){const c=kids[i],u=c.updateMatrixWorld;
+     const list=kids??=this.children.filter(c=>c.updateMatrixWorld!==SETTLED);
+     for(let i=0;i<list.length;i++){const c=list[i],u=c.updateMatrixWorld;
       if(!u.liveWhenShown)u.call(c,true);else if(!c.visible)u.stale=true;else u.call(c,!c.matrixAutoUpdate);}
      return;}
     last[0]=p.x;last[1]=p.y;last[2]=p.z;last[3]=q._x;last[4]=q._y;last[5]=q._z;last[6]=q._w;last[7]=k.x;last[8]=k.y;last[9]=k.z;parent=this.parent;known=true;}
