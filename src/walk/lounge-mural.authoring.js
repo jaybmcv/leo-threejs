@@ -1,13 +1,10 @@
 import {RecordGeometry,recordMerged} from "../v2/prepared-geometry-record.js";
-import {fitSynthwaveMural} from '../v2/community-routes.js';
+import {fitSynthwaveMural,synthwaveMuralOutline,SYNTHWAVE_MURAL} from '../v2/community-routes.js';
 import * as T from 'three';
 import {canvasTexture,seeded} from '../polish-kit.js';
 
-// The Hydro-Nip Lounge's synthwave wall (from tester feedback): a neon sunset over wireframe mountains, painted across the
-// back wall, with the same mountains running on along the left wall (the sun stays on the back wall). It is drawn in code
-// (no picture is used), as one panorama unrolled along the walls: the left wall's strip comes first (S 0 to 38 m, front to
-// back), then the back wall's (S 38 to 83 m, left to right), and the mountains' ridgeline carries on across the corner.
-// Each wall is one plane just off its face, in the lounge's own coordinates, drawn unlit so it glows like the neon around it.
+// The Hydro-Nip synthwave panorama is generated in code. V2 uses its sunset panel on Neighborhood 1's aft side wall.
+// The mount spans three decks and leaves the upper gallery doors and aquarium clear.
 const ROOM_X0=109.5,ROOM_X1=154.5,ROOM_Z0=8,ROOM_Z1=46,FLOOR=24.3,HEIGHT=11.2;
 // Where the sun sits on the back wall, in the lounge's x, and its size and height up the wall.
 const SUN={x:143,r:3.5,v:7};
@@ -115,10 +112,11 @@ export function createLoungeMural(frame,{back=FLOOR,left=FLOOR}={}){
  const lift=.008,top=FLOOR+HEIGHT;
  const mesh=(name,map,a,b,u,v)=>{const g=plane(a,b,u,v).applyMatrix4(frame),o=new T.Mesh(g,material(map,name));o.name=name;o.frustumCulled=false;group.add(o);return o;};
  // The back wall: its inner face is at z 45.9; the left wall's at x 109.6.
- const backMap=geometryOnly?null:canvasTexture(Math.round(SPAN_BACK*PPM),Math.round(HEIGHT*PPM),(g,w,h)=>paintSynthwave(g,w,h,SPAN_LEFT));
+ // In v2 this panel moves to the aft side wall (fitSynthwaveMural), so its picture is painted for that wall's span.
+ const backMap=geometryOnly?null:canvasTexture(Math.round(synthwaveMuralOutline().width*PPM),Math.round(HEIGHT*PPM),(g,w,h)=>paintSynthwave(g,w,h,SYNTHWAVE_MURAL.s0));
  mesh('Lounge_mural_back',backMap,[ROOM_X0,back,ROOM_Z0+.1+lift],[ROOM_X1,top,ROOM_Z0+.1+lift],[0,1],[(back-FLOOR)/HEIGHT,1]);
  const leftMap=geometryOnly?null:canvasTexture(Math.round(SPAN_LEFT*PPM),Math.round(HEIGHT*PPM),(g,w,h)=>paintSynthwave(g,w,h,0));
  mesh('Lounge_mural_left',leftMap,[ROOM_X0+.1+lift,left,ROOM_Z0],[ROOM_X0+.1+lift,top,ROOM_Z1],[0,1],[(left-FLOOR)/HEIGHT,1]);
- // Bands (4 m, from collision.js) it reaches, for the walk to draw it by.
- fitSynthwaveMural(group);return {group,low:FLOOR,top:FLOOR+3.65};
+ // Draw it with each of the three deck bands it spans.
+ fitSynthwaveMural(group);return {group,low:FLOOR,top:FLOOR+HEIGHT};
 }

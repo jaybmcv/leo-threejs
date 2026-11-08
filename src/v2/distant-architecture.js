@@ -42,7 +42,7 @@ export async function installDistantArchitecture(ship,baked,haze,options={}){
  });
  let triangles=0,bytes=0;const farMaterials=new Map();
  const farMaterial=source=>{let m=farMaterials.get(source);if(!m){m=new T.MeshBasicMaterial({name:"V2_distant_"+source.name,color:source.color||0xffffff,map:source.map||null,vertexColors:!!source.vertexColors,side:source.side,fog:source.fog,toneMapped:source.toneMapped});farMaterials.set(source,m);}return m;};
- ship.facade?.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||!(/^(P6_atrium_floor_actual|P6_sky_ceiling|P6_sky_tip|P6_tower_architecture)$/.test(o.name))||o.material.transparent)return;o.updateWorldMatrix(true,false);const copy=new T.Mesh(o.geometry,farMaterial(o.material));copy.name='V2_distant_'+o.name;copy.matrixAutoUpdate=false;copy.matrix.copy(o.matrixWorld);copy.userData.noCollide=true;root.add(copy);const count=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;sources.set(o.name,(sources.get(o.name)||0)+count);triangles+=count;});
+ ship.facade?.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||!(/^(P6_atrium_floor_actual|P6_sky_ceiling|P6_sky_tip|P6_tower_architecture|P6_tower_stairs)$/.test(o.name))||o.material.transparent)return;o.updateWorldMatrix(true,false);const copy=new T.Mesh(o.geometry,farMaterial(o.material));copy.name='V2_distant_'+o.name;copy.matrixAutoUpdate=false;copy.matrix.copy(o.matrixWorld);copy.userData.noCollide=true;root.add(copy);const count=(o.geometry.index?.count||o.geometry.attributes.position.count)/3;sources.set(o.name,(sources.get(o.name)||0)+count);triangles+=count;});
  for(const [deck,b] of buckets){
   const positions=new Float32Array(b.count*3),colors=new Uint8Array(b.count*3);let at=0;
   for(const {o,start,count,matrix} of b.parts){

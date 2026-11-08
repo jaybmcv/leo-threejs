@@ -83,13 +83,19 @@ const outsideAway=camera(0,1.5,20);outsideAway.lookAt(0,1.5,30);outsideAway.upda
 check('default envelope outside and offscreen',colliders(),false,defaults,outsideAway);
 const upperLayout={...fixtureLayout,rooms:[],decks:[{number:6,y:0,atrium:{outline:[[-2,-2],[2,-2],[2,2],[-2,2]]}},{number:7,y:4,atrium:{outline:ring}}]},upperEye=camera(6,7,20);upperEye.lookAt(6,7,0);upperEye.updateMatrixWorld(true);
 check('default envelope includes changed upper-deck ring',colliders(),true,{...defaults,layout:upperLayout},upperEye);
-check('default envelope supports below-deck sightline',colliders(),true,defaults,camera(0,-3,15));
-// In a sealed room only a clear ray is sight: under a ceiling of small opaque tiles that uses up the rays it answers
-// hidden, and a gap in the ceiling is still seen through. Outside sealed rooms the same ceiling stays visible.
+// No floor below Deck 6 sees the whole atrium (Jay, 2026-11-07): an eye or walker under the atrium floor (Deck 6 here
+// at y 0, so 0.3 m lower) answers hidden at once, with no PVS lookup or ray, even looking straight up an open gap.
 const tiles=(hole=null)=>{const out=[];for(let x=-20;x<20;x++)for(let z=-20;z<20;z++){if(hole&&Math.abs(x+.5)<hole&&Math.abs(z+.5)<hole)continue;const t=new T.PlaneGeometry(1,1);t.rotateX(-Math.PI/2);t.translate(x+.5,-1,z+.5);out.push(t);}return out;};
 const underEye=camera(0,-3,.01);underEye.lookAt(0,5,0);underEye.updateMatrixWorld(true);
-const sealedLayout={...fixtureLayout,rooms:[...fixtureLayout.rooms,{id:'hall',y:-4.5,height:3.5,polygon:[[-20,-20],[20,-20],[20,20],[-20,20]]}]},sealedOpts={...defaults,layout:sealedLayout,sealed:['hall'],maxRays:4};
-check('in a sealed room, rays used up under a tiled ceiling answer hidden',colliders(tiles()),false,sealedOpts,underEye);
-check('outside sealed rooms, rays used up under a tiled ceiling answer visible',colliders(tiles()),true,{...sealedOpts,sealed:[]},underEye);
-check('in a sealed room, a gap in the ceiling is still sight',colliders(tiles(2)),true,sealedOpts,underEye);
+const below=new T.Vector3(0,-4.5,15);
+for(const [name,col,c,p] of [
+ ['an eye below the atrium floor never sees it, even unobstructed',colliders(),camera(0,-3,15),below],
+ ['under a ceiling of small tiles that would use up the rays',colliders(tiles()),underEye,below],
+ ['looking up through an open gap in the ceiling',colliders(tiles(2)),underEye,below],
+ ['a walker below the floor whose camera rises above it',colliders(),camera(),below]]){
+ const sight=check('below Deck 6: '+name,col,false,{...defaults,maxRays:4},c,p);assert.equal(sight.stats.below,1);assert.equal(sight.stats.coverageRays,0);assert.equal(sight.stats.updates,0);
+}
+{const sight=createAtriumSight(colliders(),defaults),high=camera(0,1.5,15),low=camera(0,-3,15);
+ assert.equal(sight.update(high,player,0),true);assert.equal(sight.update(low,below,1),false);assert.equal(sight.update(high,player,2),true);
+ assert.equal(sight.stats.updates,2);console.log('PASS climbing back above the atrium floor asks again at once');}
 console.log('Atrium sight fixtures passed.');

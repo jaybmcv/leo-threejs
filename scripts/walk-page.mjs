@@ -8,6 +8,7 @@ import {v2Plugin} from './v2-plugin.mjs';
 import {PAINTINGS} from '../src/walk/paintings.js';
 import {COMICS} from '../src/walk/comics.js';
 import {MUDWATER_ART} from '../src/walk/mudwater.js';
+import {LONGBOARD_ART} from '../src/walk/longboard.js';
 import {shipLog} from './ship-log.mjs';
 import {loadMedia} from './ship-log-media.mjs';
 
@@ -31,7 +32,7 @@ export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverri
  const hat=await fs.readFile('src/vendor/captain-hat/captains-hat.glb'),hatName=hashed('walk-hat','glb',hat);
  await fs.writeFile(path.join(out,hatName),hat);
  const art={};
- for(const file of [...PAINTINGS.map(p=>p.file),...COMICS.flatMap(c=>c.pages),...MUDWATER_ART]){const data=await fs.readFile('src/walk/art/'+file),name=hashed('walk-art-'+path.parse(file).name,path.extname(file).slice(1),data);await fs.writeFile(path.join(out,name),data);art[file]=name;}
+ for(const file of [...PAINTINGS.map(p=>p.file),...COMICS.flatMap(c=>c.pages),...MUDWATER_ART,...LONGBOARD_ART]){const data=await fs.readFile('src/walk/art/'+file),name=hashed('walk-art-'+path.parse(file).name,path.extname(file).slice(1),data);await fs.writeFile(path.join(out,name),data);art[file]=name;}
  // The theatre screen's muted film loop (src/walk/theatre.js), fetched when a walker comes near.
  const reel=await fs.readFile('src/walk/art/theatre-loop.mp4'),reelName=hashed('walk-reel','mp4',reel);
  await fs.writeFile(path.join(out,reelName),reel);

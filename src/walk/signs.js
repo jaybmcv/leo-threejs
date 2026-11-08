@@ -125,7 +125,8 @@ function lightMaterial(on){
 export function callLight(parent,colliders,landing){
  const hit=besideDoors(colliders,landing,1,.25,1.3);if(!hit)return null;
  const o=mount(parent,lightMaterial(false),[.14,.14],hit);o.position.addScaledVector(hit.normal,.01);
- return {lit(on){o.material=lightMaterial(on);}};
+ // call-lights.js may merge it with the band's others and replace lit().
+ const light={lit(on){o.material=lightMaterial(on);},material:lightMaterial};o.userData.callLight=light;return light;
 }
 // The car's display, over the call light.
 export function liftDisplayMount(parent,colliders,material,landing){

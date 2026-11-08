@@ -14,6 +14,7 @@ import {loadMedia} from './ship-log-media.mjs';
 import {PAINTINGS} from '../src/walk/paintings.js';
 import {COMICS} from '../src/walk/comics.js';
 import {MUDWATER_ART} from '../src/walk/mudwater.js';
+import {LONGBOARD_ART} from '../src/walk/longboard.js';
 import {preparedPvsKey} from './atrium-pvs-source.mjs';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
@@ -25,7 +26,7 @@ const local=async(file,stem)=>hashed(stem,path.extname(file).slice(1),await fs.r
 const deployedHTML=await fs.readFile(path.join(mirror,'walk.html'),'utf8'),manifest=JSON.parse(await fs.readFile(path.join(mirror,'asset-manifest.json'),'utf8'));
 const deployedScript=deployedHTML.match(/LEO_WALK_BOOT\("([^"]+)"\)/)[1],deployedCode=await fs.readFile(path.join(mirror,deployedScript),'utf8');
 const named=pattern=>{const m=deployedCode.match(pattern);if(!m)throw Error('Deployed walk names no '+pattern);return m[0];};
-const art={};for(const file of [...PAINTINGS.map(p=>p.file),...COMICS.flatMap(c=>c.pages),...MUDWATER_ART])art[file]=await local('src/walk/art/'+file,'walk-art-'+path.parse(file).name);
+const art={};for(const file of [...PAINTINGS.map(p=>p.file),...COMICS.flatMap(c=>c.pages),...MUDWATER_ART,...LONGBOARD_ART])art[file]=await local('src/walk/art/'+file,'walk-art-'+path.parse(file).name);
 const defines={
  __PREPARED_META__:manifest['walk-prepared'].metadataFile,__PREPARED_URL__:'./'+manifest['walk-prepared'].directory,
  __COSMO_SCRIPT__:named(/cosmo\.[0-9a-f]{10}\.js/),__HYDRO_NIP_MAIN_LOGO__:await local('src/walk/assets/hydro-nip-main-logo.jpg','hydro-nip-main-logo'),

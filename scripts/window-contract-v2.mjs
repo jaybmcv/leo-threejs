@@ -1,5 +1,8 @@
 // Acceptance-only contracts; these do not alter the generated ship or browser budget.
+import {isBowOpening} from '../src/plan/bow-glazing-v2.js';
 export function roomWindowValid(w, tolerance=1e-5) {
+ // A bow profile pane (src/plan/bow-glazing-v2.js) is wider than 3 m and round-cornered; its row keeps the public sill and height.
+ if(w.bowProfile)return w.kind==='public'&&w.roomId!=='observation-lounge'&&w.width>=3&&w.radius>0&&Math.abs(w.height-2.2)<tolerance&&Math.abs(w.sill-.5)<tolerance&&Math.abs(w.pitch-w.width)<tolerance;
  const observation=w.roomId==='observation-lounge';
  const expected=observation?{kind:'public',width:3,height:6.65,sill:.45,pitch:3.3}:w.kind==='working'?{kind:'working',width:3,height:1.4,sill:.9,pitch:3.3}:{kind:'public',width:3,height:2.2,sill:.5,pitch:3.3};
  return w.kind===expected.kind&&(w.shuttleId?['width','height','sill']:['width','height','sill','pitch']).every(k=>Number.isFinite(w[k])&&Math.abs(w[k]-expected[k])<tolerance);
@@ -8,7 +11,7 @@ export function prototypeRoomWindowValid(p,r,windows) {
  const matches=windows.filter(w=>w.prototype===p.id&&w.clearPrototypeRect?.every((v,i)=>Math.abs(v-r[i])<1e-5));
  if(matches.length!==1)return false;
  const w=matches[0];
- return roomWindowValid(w)&&(w.shuttleId||w.roomId)===(p.kind==='bay'?p.id:(p.ownerId||p.id))&&(p.kind==='room'||p.kind==='bay')&&(w.roomId!=='observation-lounge'||p.roomKind==='lounge')&&Math.abs(r[1]-r[0]-w.width)<1e-5&&Math.abs(r[3]-r[2]-w.height)<1e-5&&Math.abs(r[2]-w.sill)<1e-5;
+ return roomWindowValid(w)&&(!w.bowProfile||isBowOpening(p,r))&&(w.shuttleId||w.roomId)===(p.kind==='bay'?p.id:(p.ownerId||p.id))&&(p.kind==='room'||p.kind==='bay')&&(w.roomId!=='observation-lounge'||p.roomKind==='lounge')&&Math.abs(r[1]-r[0]-w.width)<1e-5&&Math.abs(r[3]-r[2]-w.height)<1e-5&&Math.abs(r[2]-w.sill)<1e-5;
 }
 export function checkGeneratedRoomWindows(L) {
  const roomIds=new Set(L.rooms.filter(r=>r.kind!=='garden').map(r=>r.id));

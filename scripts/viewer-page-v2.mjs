@@ -5,7 +5,7 @@ import {build} from './native-bundle.mjs';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 // Read source explicitly, so bundling also works in restricted worktrees with linked dependencies.
-const viewerSourcePlugin={name:'v2-viewer-source',setup(b){b.onResolve({filter:/.*/},a=>({path:a.path.startsWith('.')?path.resolve(a.resolveDir||process.cwd(),a.path):path.isAbsolute(a.path)?a.path:require.resolve(a.path),namespace:'viewer-source'}));b.onLoad({filter:/.*/,namespace:'viewer-source'},async a=>({contents:await fs.readFile(a.path,'utf8'),loader:'js',resolveDir:path.dirname(a.path)}));}};
+const viewerSourcePlugin={name:'v2-viewer-source',setup(b){b.onResolve({filter:/.*/},a=>({path:a.path.startsWith('.')?path.resolve(a.resolveDir||process.cwd(),a.path):path.isAbsolute(a.path)?a.path:a.path==='three'?path.resolve('node_modules/three/build/three.module.js'):require.resolve(a.path),namespace:'viewer-source'}));b.onLoad({filter:/.*/,namespace:'viewer-source'},async a=>({contents:await fs.readFile(a.path,'utf8'),loader:'js',resolveDir:path.dirname(a.path)}));}};
 import {selectViewerLayout} from '../src/v2/viewer-data.js';
 const sha=b=>createHash('sha256').update(b).digest('hex').slice(0,10);
 const json=x=>JSON.stringify(x).replaceAll('<','\\u003c');

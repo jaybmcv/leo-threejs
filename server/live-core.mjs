@@ -97,12 +97,18 @@ function allowed(v,kind){
 }
 const finite=(n,min,max)=>typeof n==='number'&&Number.isFinite(n)&&n>=min&&n<=max;
 // The pose a client sends, checked and made into one record (encoded once, copied into every frame that carries it).
+// Where a visitor's grapple line bit (walk/grapple.js): inside the ship's bounds and within the hook's reach of them.
+const HOOK_REACH=80;
+function hookOf(h,[x,y,z]){
+ if(!Array.isArray(h)||h.length!==3)return null;const [a,b,c]=h;
+ return finite(a,...BOUNDS.x)&&finite(b,...BOUNDS.y)&&finite(c,...BOUNDS.z)&&Math.hypot(a-x,b-y,c-z)<=HOOK_REACH?[a,b,c]:null;
+}
 function readPose(v,p){
  if(!p||!Array.isArray(p.pos)||p.pos.length!==3)return false;
  const [x,y,z]=p.pos;if(!finite(x,...BOUNDS.x)||!finite(y,...BOUNDS.y)||!finite(z,...BOUNDS.z)||!finite(p.yaw,-1e3,1e3))return false;
  const pose={pos:[x,y,z],yaw:p.yaw,grounded:!!p.g,stance:STANCES.includes(p.st)?p.st:'stand',jumpCount:finite(p.jc,0,3)?Math.round(p.jc):0,
   jumpS:finite(p.js,-1,60)?p.js:-1,rise:finite(p.r,-100,100)?p.r:0,emote:typeof p.e==='string'&&/^[a-z0-9_]{1,32}$/.test(p.e)?p.e:null,rest:p.rest==='sit'||p.rest==='lie'?p.rest:null,
-  playing:p.pl===true,ball:p.b===true,fur:cleanFur(p.f)};
+  playing:p.pl===true,ball:p.b===true,glide:p.gl===true,hook:hookOf(p.hk,[x,y,z]),fur:cleanFur(p.f)};
  try{v.record=encodeRecord(v.slot,pose);}catch{return false;}
  v.pos=pose.pos;v.playing=pose.playing;v.version++;treasure.observe(v);panel.observe(v);return true;
 }

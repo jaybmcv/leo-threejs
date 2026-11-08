@@ -1,6 +1,7 @@
 import {createAtriumGeometryRuntime} from '../v2/atrium-geometry-runtime.js';
 import {getAtriumQuality,observeAtriumFrame} from '../v2/atrium-quality.js';
 import {mountGraphicsSettings} from './graphics-settings.js';
+import {installFilmLook} from './film-look.js';
 import {mountControlsSettings} from './controls-settings.js';
 import {mountFurSettings} from './fur-settings.js';
 import {savedFur} from './fur-colours.js';
@@ -47,7 +48,7 @@ import {buildSteps,cabinPlacements,outsideOnly} from '../v2/world.authoring.js';
 import {Colliders,BODY} from './collision.authoring.js';
 import {STATIC_LIFT_PARTS,LIFTS} from './lifts.authoring.js';
 import {KEEL} from './keel-club.authoring.js';
-import {Controller} from './controller.authoring.js';
+import {Controller,GLIDE,HOOK} from './controller.authoring.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
 import {createWalker,WALKER,EMOTES} from './avatar.js';
@@ -85,6 +86,8 @@ import {createHostess} from './hostess.authoring.js';
 import {wearHat,fit,FIT} from './hat.js';
 import {createYarn,YARN_SPOTS} from './yarn.authoring.js';
 import {BALL,createBallMesh} from './hamster-ball.js';
+import {createGlide} from './glide.js';
+import {createGrapple} from './grapple.js';
 import {ballBounce,ballDismount} from './ball-bounce.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink,remapSpot} from './link.js';
@@ -453,6 +456,9 @@ const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('s
 const follow=new FollowCamera(camera,colliders);
 const controller=new Controller(colliders);
 let walker=null;
+// The film look (film-look.js, chosen in the Graphics detail sheet): Stylised 3D drawn by the walk's own materials,
+// installed before the walk first draws.
+installFilmLook({renderer,scene,keep:()=>walker?.holder});
 const actions={
  view(){follow.mode=follow.mode==='first'?'third':'first';},
  use(){
@@ -578,6 +584,11 @@ for(const y of yarns)scene.add(y.mesh);
 // The hamster ball (hamster-ball.js), parked in the Deck 17 gardens until someone climbs in.
 const ballHome=findStand(colliders,BALL.home,{radius:4})||new T.Vector3(...BALL.home),ball=createBallMesh();let inBall=false;
 ball.mesh.position.copy(ballHome);scene.add(ball.mesh);
+// The longboard Cosmo rides down a long drop when Space is held through the fall (glide.js, controller.js GLIDE).
+const glide=createGlide(walker,artUrls);
+// The grapple hook (grapple.js, controller.js HOOK): Q, the right mouse button or the Hook button fires a line at the
+// middle of the view; held, Cosmo swings under it.
+const grapple=createGrapple(scene,{camera,colliders,controller,walker,hook:HOOK});
 function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());}
 // Stop before dismounting. In a tight spot the ball returns home so it cannot push Cosmo through a wall.
 function leaveBall(at=null){if(!inBall)return;
@@ -639,7 +650,7 @@ async function connectToClaim(){
 const giveaway=createGiveaway({$,live:()=>live,connect:connectToClaim});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p)});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p)});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -682,7 +693,7 @@ if(LIVE_URL){
 function myPose(riding=false){
  const h=walker.holder,held=resting||run,at=held?h.position:controller.position;
  return {pos:[at.x,at.y,at.z],yaw:held?h.rotation.y:heading,g:controller.grounded||riding||!!held,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:resting?.stand?'healing_capsule':emote,rest:resting&&!resting.stand?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||pinballGame.isOpen||!!emergencyDrill?.isOpen||!$('outside-sheet').hidden||!!run,b:inBall,f:furColour};
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:resting?.stand?'healing_capsule':emote,rest:resting&&!resting.stand?(resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||pinballGame.isOpen||!!emergencyDrill?.isOpen||!$('outside-sheet').hidden||!!run,b:inBall,gl:controller.gliding,hk:controller.hook&&!resting&&!run?controller.hook.toArray():undefined,f:furColour};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
@@ -738,7 +749,7 @@ renderer.setAnimationLoop(()=>{
  const k=input.read();if(graphicsSettings?.isOpen||controlsSettings?.isOpen||furSettings?.isOpen||emergencyDrill?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
  const fwd=follow.forward(),right=new T.Vector3(-fwd.z,0,fwd.x);
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
- if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
+ if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(controller.gliding?(k.run?GLIDE.dive:GLIDE.speed):inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
  if(emote&&(wish.lengthSq()>.01||k.jump))emote=null;
  // Moving off a seat or bed stands you up; in a transporter's driver's seat the keys drive it instead (transporter.js),
  // and the camera swings round behind it while it moves. A healing capsule holds you until you leave it (E or the button).
@@ -755,7 +766,10 @@ renderer.setAnimationLoop(()=>{
  const riding=vaultLift?.riding||lifts.lifts.some(l=>l.phase==='moving'&&lifts.inside(l,controller.position));
  // A tap shorter than a frame still counts as held for the first step.
  // In the ball the jump is one low hop (BALL.body.jump).
- if(!resting&&!riding&&!run&&!treasure?.active&&!emergencyDrill?.isOpen){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number));pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ // The grapple fires on a press and holds while the key is held; anything that takes the walker over lets go.
+ const canHook=!resting&&!riding&&!run&&!inBall&&!treasure?.active&&!emergencyDrill?.isOpen&&!graffiti?.active&&ready();
+ if(!canHook)grapple.release();else{if(k.hook)grapple.fire();if(!k.hookHeld)grapple.release();}
+ if(!resting&&!riding&&!run&&!treasure?.active&&!emergencyDrill?.isOpen){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number),k.run&&!!controller.hook);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  treasure?.step(dt,k);
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
  const p=controller.position;
@@ -789,9 +803,11 @@ renderer.setAnimationLoop(()=>{
   walker.body.rotation.set((-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(run.tumble,.25,1),0,0);
   if(run.tumble>0)pose={kind:'lie',weight:run.tumble,seatHeight:walker.hipHeight};}
  if(!resting&&!run){walker.holder.position.copy(p);walker.holder.rotation.set(0,heading,0);walker.body.rotation.set(0,0,0);}
+ const board=glide.update(dt,{gliding:controller.gliding&&!resting&&!run,speed:controller.speed,rise:controller.velocity.y,turnRate});follow.ride=board;
  if(inBall){ball.mesh.position.copy(p);if(controller.grounded)ball.roll(dt,controller.velocity.x,controller.velocity.z);}
  walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
-  turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!!lounge?.inside(walker.holder.position),swimming:!!treasure?.active});
+  turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!!lounge?.inside(walker.holder.position),swimming:!!treasure?.active,board,hook:controller.hook&&!resting&&!run?controller.hook:null});
+ grapple.update(dt);
  live?.pose(myPose(riding),now);
  // In a transporter the camera rides higher, over the heads of the others aboard.
  if(treasure?.active)treasure.updateCamera(dt);else follow.update(dt,resting?resting.view:run?run.pos:p,inBall?BALL.eye:cart&&follow.mode==='third'?WALKER.height+.7:WALKER.height,resting||run||inBall?null:controller.grounded?controller.stance:'stand');
@@ -1125,6 +1141,8 @@ resButton.addEventListener('click',()=>{resChosen=true;setRes((res+1)%RES.length
 // Held for a higher jump, as Space is.
 $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;input.jumpHeld=true;$('jump').setPointerCapture(e.pointerId);});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])$('jump').addEventListener(type,()=>{input.jumpHeld=false;});
+$('hook').addEventListener('pointerdown',e=>{e.preventDefault();input.hookQueued=true;input.hookHeld=true;$('hook').setPointerCapture(e.pointerId);});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])$('hook').addEventListener(type,()=>{input.hookHeld=false;});
 $('crouch').addEventListener('click',()=>actions.crouch());
 $('emote-button').addEventListener('click',()=>actions.emotes());
 $('ping').addEventListener('click',()=>actions.ping());

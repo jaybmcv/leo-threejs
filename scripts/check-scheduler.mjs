@@ -29,6 +29,7 @@ function limit(name,fallback){const raw=process.env[name];if(raw===undefined||ra
 
 export async function runJobs(jobs,{previous={},record=async()=>{},limits={}}={}){
  const max={all:limit('LEO_CHECK_JOBS',limits.all||4),heavy:limit('LEO_CHECK_HEAVY',limits.heavy||2),browser:limit('LEO_CHECK_BROWSERS',limits.browser||1)};
+ jobs=jobs.map(j=>({...j,kind:NEED[j.kind]?j.kind:'light'}));
  const names=new Set(jobs.map(j=>j.name));
  if(names.size!==jobs.length)throw new Error('two jobs share a name');
  for(const j of jobs)if(j.after&&!names.has(j.after))throw new Error(`${j.name} waits for unknown job ${j.after}`);
@@ -44,8 +45,15 @@ export async function runJobs(jobs,{previous={},record=async()=>{},limits={}}={}
  const reserved=()=>[...running.values()].filter(j=>performance.now()-j.startedAt<WARMUP).reduce((s,j)=>s+NEED[j.kind],0);
  const show=(job,r,note)=>{
   const ok=r.code===0,lines=r.log.trimEnd().split(/\r?\n/);
-  console.log(`\n===== ${ok?'PASS':'FAIL'} ${job.name} (${r.seconds.toFixed(1)} s${note}) =====`);
-  console.log((ok?lines.slice(-15):lines.slice(-80)).join('\n'));
+  // Windows reports crashes as NTSTATUS codes (0xC0000005 access violation, 0xC0000409 fail-fast/abort); show them in hex.
+  const exit=ok?'':r.signal?', signal '+r.signal:', exit '+(r.code>=0x80000000?'0x'+r.code.toString(16).toUpperCase():r.code);
+  console.log(`\n===== ${ok?'PASS':'FAIL'} ${job.name} (${r.seconds.toFixed(1)} s${exit}${note}) =====`);
+  // Only the tail of a check's output is kept, but its timing lines (check-plan's gates, run-v2 tasks) always are.
+  // A failed check that ran its own jobs (check-plan's gates) also keeps every inner FAIL block, which later jobs' output
+  // can push out of the tail.
+  const tail=ok?15:80,head=lines.slice(0,-tail),kept=[];let inFail=false;
+  for(const l of head){if(/^===== /.test(l))inFail=!ok&&/^===== FAIL /.test(l);if(inFail||l.includes('[check-timing]')||l.includes('[timing]'))kept.push(l);}
+  console.log([...kept,...lines.slice(-tail)].join('\n'));
  };
  try{
   await new Promise((resolve,reject)=>{

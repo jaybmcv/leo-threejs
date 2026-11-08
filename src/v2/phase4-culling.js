@@ -41,7 +41,7 @@ return{update(camera,p,low,high,now,pixelHeight=720){setAtriumView(p);if(!materi
  if(!flipped)return;resume=true;}
 if(!resume){last=now;viewGuard.commit(camera);lastOpenAtrium=openAtrium;lastPixelHeight=pixelHeight;if(!changed(camera,p,low,high,col)&&!atriumChanged&&!pixelsChanged)return;}const started=performance.now();stats.updates++;const frustum=new T.Frustum().setFromProjectionMatrix(new T.Matrix4().multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse)),eye=camera.getWorldPosition(new T.Vector3()),visible=new Set();if(!resume&&(moversMoved()||!eye.equals(sightEye))){eyeStamp++;sightEye.copy(eye);}pass++;const probing=[];for(const[id,a]of owners){const box=a.box,r=a.r,publicAtrium=openAtrium&&isAtriumPublicOwner(id,r);if(r?.launchD&&Math.abs(p.y-r.y)>2.0&&!publicAtrium)continue;if((!r?.phase6Atrium&&(box.min.y>=high||box.max.y<=low))||!frustum.intersectsBox(box))continue;if(publicAtrium||r?.showFromBelow){visible.add(id);continue;}if(openAtrium&&r&&!publicAtrium&&box.distanceToPoint(eye)>ATRIUM_VIEW.roomReach)continue;if(r&&p.y>=box.min.y-.5&&p.y<box.max.y&&(r.visibilityPolygons||[r.polygon]).some(poly=>contains(poly,[p.x,p.z]))){visible.add(id);continue;}probing.push(a);}const fresh=a=>a.inView===pass-1?0:1;for(const a of probing)a.range=a.box.distanceToPoint(eye);probing.sort((x,y)=>fresh(y)-fresh(x)||x.stamp-y.stamp||x.range-y.range);queue.length=0;let probed=0;
 for(const a of probing){if(a.stamp!==eyeStamp){if(!probed||performance.now()-started<PROBE_BUDGET_MS){a.seen=inSight(a,eye);a.stamp=eyeStamp;probed++;}else{queue.push(a);stats.deferred++;if(fresh(a))a.seen=true;}}a.inView=pass;if(a.seen)visible.add(a.id);}queue.reverse();stats.probed+=probed;
-for(const menu of menus)menu.o.visible=menu.owners.some(id=>visible.has(id));const pixelScale=pixelHeight*.5*Math.abs(camera.projectionMatrix.elements[5]);stats.detailCulled=0;stats.offscreenCulled=0;stats.visibleInstances=0;
+for(const menu of menus)if(!menu.o.userData.bandMerged)menu.o.visible=menu.owners.some(id=>visible.has(id));const pixelScale=pixelHeight*.5*Math.abs(camera.projectionMatrix.elements[5]);stats.detailCulled=0;stats.offscreenCulled=0;stats.visibleInstances=0;
 for(const b of batches){
  const selected=[];
  for(const run of b.runs){if(!visible.has(run.component))continue;
@@ -54,6 +54,8 @@ for(const b of batches){
  stats.visibleInstances+=selected.length;
  if(b.selected&&selected.length===b.selected.length&&selected.every((v,i)=>v===b.selected[i]))continue;
  b.selected=selected;stats.compactions++;
+ // A furnishing drawn in a shared batch (furnishing-batches.js) shows the same instances there instead.
+ if(b.o.userData.furnishingBatch){b.o.userData.furnishingBatch(selected,b.all);continue;}
  selected.forEach((i,n)=>b.o.instanceMatrix.array.set(b.all.subarray(i*16,i*16+16),n*16));
  b.o.count=selected.length;b.o.instanceMatrix.needsUpdate=true;b.o.visible=selected.length>0;
 }stats.samples.push(performance.now()-started);if(stats.samples.length>600)stats.samples.shift();},stats,batches:batches.length,owners:owners.size};}
