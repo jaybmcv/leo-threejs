@@ -99,7 +99,7 @@ export async function batchLowDeckDraws(baked,renderer){
 const TOWER_SEPARATION=[.0025,-.0055,.0025];
 export function separateAtriumPaving(ship){
  ship.facade?.traverse(o=>{if(!o.isMesh||o.name!=='P6_tower_architecture'||o.userData.renderSeparation)return;
-  o.applyMatrix4(new T.Matrix4().makeTranslation(...TOWER_SEPARATION));o.userData.renderSeparation=TOWER_SEPARATION;o.updateWorldMatrix(true,false);});
+  o.applyMatrix4(new T.Matrix4().makeTranslation(...TOWER_SEPARATION));o.userData.renderSeparation=[...TOWER_SEPARATION];o.updateWorldMatrix(true,false);});
  const paving=ship.facade?.getObjectByName('P6_atrium_floor_actual');
  if(!paving||paving.userData.renderSeparation)return;
  paving.applyMatrix4(new T.Matrix4().makeTranslation(0,.006,0));
