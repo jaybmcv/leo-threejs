@@ -124,13 +124,14 @@ export const DECK1=-39.7,STOREY=(DECK1-KEEL.floor)/3,LIFT_SHAFT={half:1.75,inner
 
 // Colours by role: the ship's warm interior whites and stone (the arrival hall, the atrium), teal accents, light wood
 // decks, and court colours.
-const C={floor:0xe4d8c4,lining:0xf1e8da,ceiling:0xfff3df,bulkhead:0xe8dccb,terraceDeck:0xcda06e,terraceFront:0xe9dac4,prom:0xecdfc8,
- tennis:0x3b74b4,tennisRun:0x2e5a8a,pitch:0x4f9b49,board:0xf4f4f0,court:0xcf9a5e,sand:0xf1dfae,water:0x22c6cf,basin:0x1f6f88,river:0x37d0d9,
+const C={floor:0xe4d8c4,lining:0xebdfcb,ceiling:0xfff3df,bulkhead:0xe8dccb,terraceDeck:0xcda06e,terraceFront:0xdcc4a2,prom:0xecdfc8,
+ tennis:0x3b74b4,tennisRun:0x2e5a8a,pitch:0x4f9b49,board:0xf4f4f0,court:0xcf9a5e,sand:0xe8ca92,water:0x13b1c4,basin:0x16566e,river:0x1cbccd,
  lobby:0xe4dccb,locker:0x2f707b,core:0x5e6c79,machine:0x6b7783,range:0x77b95a,bay:0x3c4550,dome:0x1d3557,climb:0xd9775c,
  padel:0x2f6db3,cabana:0xf7ecd6,bar:0x8a5a33,slide:0xf2b134,slideTube:0x2f8fd8,lounge:0xd9b98f,golf:0x8dc35a,sim:0x2a3138,putt:0x5aab48,rail:0xbfe3ee,stair:0xd2c6b0,
  line:0xfbfbf6,net:0x27323a,wood:0xa77b4f,lounger:0xf3f1ea,teal:0x2a9d9a,orange:0xf07c3c,canopyA:0xf6f1e4,canopyB:0x2a9d9a,screen:0x2f6fb8,cup:0x1e2328,mat:0x2f6e3a,rim:0xe0662a,lamp:0xfff1dc,shaft:0xdfe3e1,beam:0xefe7dc,rib:0xf7efe3,recess:0x24304a,cove:0xffd9a3,glowEdge:0x8ff4ff,railLed:0xffd59a,
  lantern:0xffc46e,brass:0xc9a15a,leaf:0x3f8a3c,leafDark:0x2f6b33,flower:0xe0413a,flowerPink:0xf08bb4,blossom:0xf5a9c8,wicker:0xc79a62,cushion:0xf3ece0,marble:0xf4f1ec,frame:0x2b3036,
- thatch:0xc99a5c,curtain:0xfbf7ef,rock:0xa9a196,climbWall:0xeee3d1,simWall:0x3f6e4f,turf:0x5fae48,bed:0x56733b,bag:0x22262b,crest:0xe9fbfb};
+ thatch:0xc99a5c,curtain:0xfbf7ef,rock:0xa9a196,climbWall:0xeee3d1,simWall:0x3f6e4f,turf:0x5fae48,bed:0x56733b,bag:0x22262b,
+ island:0xd3bf9d,deckProm:0xffffff,deckTerrace:0xead7bf,deckBridge:0xf6e7d2,deckLagoon:0xf2dcc2};
 
 function paint(g,color){g=g.index?g.toNonIndexed():g;for(const k of Object.keys(g.attributes))if(k!=='position'&&k!=='normal')g.deleteAttribute(k);
  if(!g.attributes.normal)g.computeVertexNormals();const n=g.attributes.position.count,c=new Float32Array(n*3),col=new T.Color(color);
@@ -181,6 +182,13 @@ export function createKeelClub(ship){
  const d1={parts:[],glass:[],signs:[]};
  // A walkable box (a tread, a landing, an overhang) also blocks: its sides are walls, or walkers pass into it.
  const add=(g,color,{ground=false,wall=false}={})=>{parts.push(paint(g.clone(),color));if(ground)grounds.push(upward(g));if(wall||(ground&&g.type==='BoxGeometry'))walls.push(g);};
+ // Wood decks (refinement round 4): walk surfaces drawn with the plank texture, mapped by world position (u along x every
+ // 4 m, v across every 1.6 m) and tinted by `color`; like add(), a ground (unless ground is false) and a wall if a box.
+ const decks=[];
+ const sands=[];
+ const addDeck=(g,color,{ground=true,wall=false,sand=false}={})=>{const d=paint(g.clone(),color),p=d.attributes.position,uv=new Float32Array(p.count*2);
+  for(let i=0;i<p.count;i++){uv[i*2]=p.getX(i)/(sand?3:4);uv[i*2+1]=-p.getZ(i)/(sand?3:1.6);}d.setAttribute('uv',new T.BufferAttribute(uv,2));(sand?sands:decks).push(d);
+  if(ground)grounds.push(upward(g));if(wall||(ground&&g.type==='BoxGeometry'))walls.push(g);};
  const xsHall=xsBetween(KEEL.aft,KEEL.bow),ysHall=ysBetween(FY,CY);
 
  // Shell. Hull lining both sides, floor edge to ceiling.
@@ -200,9 +208,9 @@ export function createKeelClub(ship){
  const floorOut=[...xsHall.map(x=>[x,-front(x)]),...xsHall.slice().reverse().map(x=>[x,front(x)])];
  const {aft:ra,bow:rb,width:RW}=RIVER,xo=xsBetween(ra,rb),xi=xsBetween(ra+RW,rb-RW);
  const ringOut=[...xo.map(x=>[x,-rOut(x)]),...xo.slice().reverse().map(x=>[x,rOut(x)])],ringIn=[...xi.map(x=>[x,-rIn(x)]),...xi.slice().reverse().map(x=>[x,rIn(x)])];
- add(flat(floorOut,[ringOut],FY),C.floor,{ground:true});
+ addDeck(flat(floorOut,[ringOut],FY),C.deckProm);
  const [lx0,lx1,lz]=WATER.lagoon;
- add(flat(ringIn,[rect(lx0,lx1,-lz,lz)],FY),C.floor,{ground:true});
+ add(flat(ringIn,[rect(lx0,lx1,-lz,lz)],FY),C.island,{ground:true});
  // Water: the lagoon (deepening from the beach to the wave machine) and the river, both RIVER.drop below the floor.
  const WY=FY-RIVER.drop,BED=FY-RIVER.bed;
  parts.push(paint(grid(2,2,(i,j)=>[i?lx1:lx0,FY-(i?3:.6),j?lz:-lz]),C.basin));
@@ -222,12 +230,22 @@ export function createKeelClub(ship){
  for(const s of [-1,1]){guardCurve(rOut,s,ra,rb);guardCurve(rIn,s,ra+RW,rb-RW);}
  guardLine(ra,-rOut(ra),rOut(ra),BRIDGES.aft);guardLine(ra+RW,-rIn(ra+RW),rIn(ra+RW),BRIDGES.aft);guardLine(rb,-rOut(rb),rOut(rb),[]);guardLine(rb-RW,-rIn(rb-RW),rIn(rb-RW),[]);
  for(const z of [-lz,lz])walls.push(box(lx0,lx1,FY,FY+G,z-.05,z+.05));for(const x of [lx0,lx1])walls.push(box(x-.05,x+.05,FY,FY+G,-lz,lz));
+ // Glass rails on those guards (refinement round 4), each with a warm LED handrail, as in the concepts: both river banks,
+ // the cross channels and the lagoon's long sides; open where a bridge lands and at each tube dock (the island bank).
+ {const RAIL=1.05,cut=(list,w)=>list.map(c=>[c-w,c+w]),spans=(cuts,lo,hi)=>{const out=[];let a=lo;for(const [c0,c1] of [...cuts].sort((p,q)=>p[0]-q[0])){if(c1<lo||c0>hi)continue;if(c0>a)out.push([a,c0]);a=Math.max(a,c1);}if(hi>a)out.push([a,hi]);return out.filter(([p,q])=>q-p>.4);};
+  const rail=(pt,n)=>{glass.push(paint(grid(n,2,(i,j)=>{const [x,z]=pt(i);return [x,FY+(j?RAIL:0),z];}),C.rail));for(const flip of [false,true])lamps.push(paint(grid(n,2,(i,j)=>{const [x,z]=pt(i);return [x,FY+RAIL+(j?.08:0),z];},flip),C.railLed));};
+  const post=(x,z)=>parts.push(paint(box(x-.03,x+.03,FY,FY+RAIL,z-.03,z+.03),C.brass));
+  const along=(f,s,x0,x1,cuts)=>{for(const [a,b] of spans(cuts,x0,x1)){const xs=xsBetween(a,b);rail(i=>[xs[i],s*f(xs[i])],xs.length);const n=Math.max(1,Math.round((b-a)/3));for(let k=0;k<=n;k++){const x=a+(b-a)*k/n;post(x,s*f(x));}}};
+  const across=(x,z0,z1,cuts)=>{for(const [a,b] of spans(cuts,z0,z1)){rail(i=>[x,i?b:a],2);const n=Math.max(1,Math.round((b-a)/3));for(let k=0;k<=n;k++)post(x,a+(b-a)*k/n);}};
+  for(const s of [-1,1]){along(rOut,s,ra,rb,cut(BRIDGES.side,BW));along(rIn,s,ra+RW,rb-RW,[...cut(BRIDGES.side,BW),...DOCKS.filter(d=>d.side===s).map(d=>[d.x-2,d.x+2])]);
+   along(()=>lz,s,lx0,lx1,[]);}
+  across(ra,-rOut(ra),rOut(ra),cut(BRIDGES.aft,BW));across(ra+RW,-rIn(ra+RW),rIn(ra+RW),cut(BRIDGES.aft,BW));across(rb,-rOut(rb),rOut(rb),[]);across(rb-RW,-rIn(rb-RW),rIn(rb-RW),[]);}
  // Arched footbridges: the deck rises RIVER.rise over the water (a half sine over its span, at most 22 degrees), with a
  // solid rail on each side; two water cannons stand on the crown.
  for(const {a,b} of BRIDGE_SPANS){const L=Math.hypot(b[0]-a[0],b[1]-a[1]),u=[(b[0]-a[0])/L,(b[1]-a[1])/L],n=[-u[1],u[0]],N=24;
   const at=(t,k)=>[a[0]+u[0]*t*L+n[0]*k*BW,FY+RIVER.rise*Math.sin(Math.PI*t),a[1]+u[1]*t*L+n[1]*k*BW];
   // Wound so the deck faces up whichever way the span runs.
-  const up=(n[0]*u[1]-n[1]*u[0])>0,deck=grid(N+1,2,(i,j)=>at(i/N,j?1:-1),up);add(deck,C.prom,{ground:true});
+  const up=(n[0]*u[1]-n[1]*u[0])>0,deck=grid(N+1,2,(i,j)=>at(i/N,j?1:-1),up);addDeck(deck,C.deckBridge);
   parts.push(paint(grid(N+1,2,(i,j)=>{const p=at(i/N,j?1:-1);return [p[0],Math.max(FY-.05,p[1]-RIVER.deck),p[2]];},!up),C.rib));
   // each side: a white fascia over the deck's edge, a glass rail above it and a warm LED handrail along its top
   for(const k of [-1,1]){const side=(y0,y1)=>grid(N+1,2,(i,j)=>{const p=at(i/N,k);return [p[0],p[1]+(j?y1:y0),p[2]];});
@@ -243,9 +261,11 @@ export function createKeelClub(ship){
  // Waterfalls off the terrace edge: an overhang slab out to the river's outer bank (walkable, glass-railed), and a
  // curtain of water from under it into the river; the promenade runs on behind the curtain.
  for(const s of [-1,1])for(const [x0,x1] of FALLS){const m=(x0+x1)/2,zo=rOut(m),zf=front(m);
-  add(box(x0,x1,TY-.3,TY,s*zo,s*(zf+.3)),C.terraceDeck,{ground:true});
+  addDeck(box(x0,x1,TY-.3,TY,s*zo,s*(zf+.3)),C.deckTerrace);
   for(const g of [box(x0,x1,TY,TY+G,s*zo-.05,s*zo+.05),box(x0-.05,x0+.05,TY,TY+G,s*zo,s*zf),box(x1-.05,x1+.05,TY,TY+G,s*zo,s*zf)]){glass.push(paint(g.clone(),C.rail));walls.push(g);}
   curtains.push({x0:x0+.4,x1:x1-.4,z:s*(zo-.7),s});
+  // white water where it lands (refinement round 4)
+  glow.push(paint(box(x0+.2,x1-.2,FY-RIVER.drop+.01,FY-RIVER.drop+.05,s*(zo-1.6),s*(zo-.1)),C.curtain));
   glow.push(paint(box(x0+.3,x1-.3,TY-.42,TY-.3,s*(zo-.2),s*(zo-.9)),C.river));
   lamps.push(paint(box(x0,x1,TY-.26,TY-.06,s*(zo-.07),s*(zo-.02)),C.cove));
   parts.push(paint(quad(x0,x1,s*zo,s*zf,TY-.305,true),0xc69a6a));for(let z=zo+.1;z<zf;z+=.22)parts.push(paint(box(x0,x1,TY-.35,TY-.305,s*z,s*(z+.1)),0x9a6a40));
@@ -259,13 +279,13 @@ export function createKeelClub(ship){
  for(const s of [-1,1]){
   add(grid(xsT.length,2,(i,j)=>[xsT[i],j?TY:FY,s*front(xsT[i])],s<0),C.terraceFront,{wall:true});
   lamps.push(paint(grid(xsT.length,2,(i,j)=>[xsT[i],TY-.2+j*.1,s*(front(xsT[i])-.02)],s<0),C.cove));
-  add(grid(xsT.length,2,(i,j)=>[xsT[i],TY,s*(j?half(xsT[i],TY):front(xsT[i]))],s>0),C.terraceDeck,{ground:true});
+  addDeck(grid(xsT.length,2,(i,j)=>[xsT[i],TY,s*(j?half(xsT[i],TY):front(xsT[i]))],s>0),C.deckTerrace);
   for(const x of [tx0,tx1])add(grid(2,ysT.length,(i,j)=>[x,ysT[j],s*(i?half(x,ysT[j]):front(x))],(x===tx0)!==(s>0)),C.terraceFront,{wall:true});
   // a hidden kerb where the deck meets the hull, which curves out above it, and glass rails across both ends of the deck
   walls.push(grid(xsT.length,2,(i,j)=>[xsT[i],j?TY+2.2:TY-.3,s*half(xsT[i],TY)],s>0));
   for(const x of [tx0,tx1]){const r=grid(2,2,(i,j)=>[x,TY+(j?1.1:0),s*(i?half(x,TY):front(x))]);glass.push(paint(r,C.rail));walls.push(r);}
   // promenade strip along the rail
-  parts.push(paint(grid(xsT.length,2,(i,j)=>[xsT[i],TY+.02,s*(front(xsT[i])+(j?PROM:0))],s>0),C.prom));
+  addDeck(grid(xsT.length,2,(i,j)=>[xsT[i],TY+.02,s*(front(xsT[i])+(j?PROM:0))],s>0),C.deckProm,{ground:false});
   // rail: segments between stair landings and waterfall overhangs
   const gaps=[...STAIRS.map(x=>[x+RISERS*TREAD,x+RISERS*TREAD+STAIR_W]),...FALLS].sort((p,q)=>p[0]-q[0]);let a=tx0;
   for(const [g0,g1] of [...gaps,[tx1,tx1]]){for(const x of xsBetween(a,g0,4).slice(0,-1)){const b=Math.min(g0,x+4),z0=front(x),z1=front(b);
@@ -342,10 +362,13 @@ export function createKeelClub(ship){
  const planter=(x,y,z,r=.45,free=false)=>{parts.push(paint(new T.CylinderGeometry(r,r*.88,.5,12).translate(x,y+.25,z),C.brass));bush(x,y+.4,z,r*1.05);if(!free)walls.push(box(x-r,x+r,y,y+1,z-r,z+r));};
  // A rattan armchair facing yaw (a multiple of 90 degrees; 0 faces +z): wicker seat, back and arms, a cushion, and the
  // seat and back markers rest.js sits on.
+ // A rattan tub chair (refinement round 4: round, as in the concepts): a round tub, a back curving round into arms, a round
+ // cushion. It stands and collides as the box it replaced, so its seat markers are unchanged.
  const chair=(x,y,z,yaw)=>{const put=g=>g.rotateY(yaw).translate(x,y,z);
-  add(put(box(-.34,.34,0,.42,-.3,.3)),C.wicker,{wall:true});parts.push(paint(put(box(-.36,.36,.42,.95,-.34,-.24)),C.wicker));
-  for(const e of [-1,1])parts.push(paint(put(box(e*.36-.05,e*.36+.05,.42,.62,-.3,.26)),C.wicker));
-  parts.push(paint(put(box(-.29,.29,.42,.52,-.24,.26)),C.cushion));marker('Seat',put(box(-.2,.2,.44,.48,-.18,.22)));marker('Seat_back',put(box(-.3,.3,.6,.9,-.31,-.27)));};
+  walls.push(put(box(-.34,.34,0,.42,-.3,.3)));parts.push(paint(put(new T.CylinderGeometry(.36,.3,.42,14).translate(0,.21,0)),C.wicker));
+  parts.push(paint(put(new T.CylinderGeometry(.39,.37,.5,14,1,true,Math.PI-1.95,3.9).translate(0,.67,0)),C.wicker));
+  parts.push(paint(put(new T.CylinderGeometry(.4,.4,.06,14,1,true,Math.PI-1.95,3.9).translate(0,.95,0)),C.wicker));
+  parts.push(paint(put(new T.CylinderGeometry(.31,.31,.1,14).translate(0,.47,.02)),C.cushion));marker('Seat',put(box(-.2,.2,.44,.48,-.18,.22)));marker('Seat_back',put(box(-.3,.3,.6,.9,-.31,-.27)));};
  // A round marble table on a brass stem with a lantern on it, and n chairs round it facing in (n = 2: along x; 4: x and z).
  const cafe=(x,y,z,n=2)=>{add(new T.CylinderGeometry(.07,.2,.72,8).translate(x,y+.36,z),C.brass,{wall:true});parts.push(paint(new T.CylinderGeometry(.46,.46,.04,16).translate(x,y+.74,z),C.marble));
   lantern(x,y+.76,z);for(let k=0;k<n;k++){const a=Math.PI/2+k*Math.PI*2/n;chair(x+Math.round(Math.sin(a))*.95,y,z+Math.round(Math.cos(a))*.95,a+Math.PI);}};
@@ -360,7 +383,7 @@ export function createKeelClub(ship){
  const screens={range:[],sims:[]};
 
  // Arrival plaza and lockers round the aft lifts; beach club and lockers round the forward lifts.
- for(const [x0,x1] of [[-142,-121],[124,146]]){inlay(x0,x1,-30,30,C.lobby);for(const s of [-1,1]){add(box(x0+3,x1-3,FY,FY+2.2,s*22,s*24),C.locker,{wall:true});
+ for(const [x0,x1] of [[-142,-121],[124,146]]){addDeck(quad(x0,x1,-30,30,FY+.03),C.deckLagoon,{ground:false});for(const s of [-1,1]){add(box(x0+3,x1-3,FY,FY+2.2,s*22,s*24),C.locker,{wall:true});
   const face=s<0?-21.99:21.99;for(let x=x0+3.6;x<x1-3.4;x+=.6)parts.push(paint(box(x,x+.02,FY+.1,FY+2.1,face-.01,face+.01),C.teal));
   lamps.push(paint(box(x0+3,x1-3,FY+2.2,FY+2.25,s*22.2,s*23.8),C.lantern));for(const x of [x0+1.6,x1-1.6]){planter(x,FY,s*22.6,.55);lantern(x,FY,s*20.6,.55,.17);}}}
  // the walk out of each core's lifts, lined with planters and floor lanterns, and soft sofas facing it
@@ -394,9 +417,9 @@ export function createKeelClub(ship){
    add(box(x-d*.35-.12,x-d*.35+.12,FY,FY+3.95,-.12,.12),C.core,{wall:true});glass.push(paint(box(Math.min(x+d*.95,x+d*1.0),Math.max(x+d*.95,x+d*1.0),FY+2.9,FY+3.95,-.9,.9),C.rail));
    parts.push(paint(new T.TorusGeometry(.23,.02,6,16).rotateX(Math.PI/2).translate(hx,FY+3.05,0),C.rim));parts.push(paint(box(Math.min(x-d*.35,x+d*.97),Math.max(x-d*.35,x+d*.97),FY+3.4,FY+3.5,-.06,.06),C.core));}}
  // Beach: loungers in rows under umbrellas, facing the lagoon.
- inlay(-30,lx0,-36,36,C.sand);
+ addDeck(quad(-30,lx0,-36,36,FY+.03),C.sand,{ground:false,sand:true});
  for(let r=0;r<3;r++)for(let k=0;k<8;k++){const x=-25+r*6.2,z=-31+k*8.85;lounger(x,FY,z-1.1);lounger(x,FY,z+1.1);umbrella(x+1.6,FY,z,k%2?C.canopyB:C.curtain);}
- for(const s of [-1,1])inlay(lx0,lx1,s<0?-36:lz,s<0?-lz:36,C.prom);
+ for(const s of [-1,1])addDeck(quad(lx0,lx1,s<0?-36:lz,s<0?-lz:36,FY+.03),C.deckLagoon,{ground:false});
  // Benches along the river promenade, facing the water, clear of the bridges, the terrace stairs and the climbing walls.
  for(const s of [-1,1])for(let x=-140;x<=188;x+=12){if(BRIDGES.side.some(c=>Math.abs(x-c)<4.5)||STAIRS.some(x0=>x>x0-2.5&&x<x0+RISERS*TREAD+STAIR_W+1.5)||(x>146&&x<183))continue;
   bench(x,FY,s*(front(x)-1.05),-s);}
@@ -454,7 +477,7 @@ export function createKeelClub(ship){
   parts.push(paint(new T.ConeGeometry(1,2.3,4).rotateY(Math.PI/4).scale(hx/Math.SQRT1_2,1,hz/Math.SQRT1_2).translate(56,TY+3.2+1.15,zc),C.thatch));
   for(const g of [box(56-hx,56+hx,TY+2.95,TY+3.25,-z0-.04,-z0+.04),box(56-hx,56+hx,TY+2.95,TY+3.25,-z1-.04,-z1+.04),box(56-hx-.04,56-hx+.04,TY+2.95,TY+3.25,-z1,-z0),box(56+hx-.04,56+hx+.04,TY+2.95,TY+3.25,-z1,-z0)])parts.push(paint(g,C.thatch));
   for(let x=51;x<=61;x+=1.25){rod([x,TY+3.2,-(z0+.45)],[x,TY+2.62,-(z0+.45)],.01,C.frame);lantern(x,TY+2.3,-(z0+.45),.3,.12);}}
- for(const s of [-1,1]){tinlay(118,148,s,C.lounge);const [a]=tz(130,s).map(Math.abs);
+ for(const s of [-1,1]){{const xs=xsBetween(118,148,2);addDeck(grid(xs.length,2,(i,j)=>[xs[i],TY+.03,tz(xs[i],s)[j]],s>0),C.deckTerrace,{ground:false});}const [a]=tz(130,s).map(Math.abs);
   const [,b]=tz(130,s).map(Math.abs);
   for(let x=121;x<147;x+=5){cafe(x,TY,s*(a+3.2),4);if(x<146)planter(x+2.5,TY,s*(a+5.7),.4);cafe(x,TY,s*(a+8),2);}
   for(let x=120;x<148;x+=7)lantern(x,TY,s*(b-1.3),.6,.2);}
@@ -569,6 +592,19 @@ export function createKeelClub(ship){
 
  // ---- Materials and draws ----
  const opaque=new T.MeshStandardMaterial({name:'Keel_club_finish',vertexColors:true,roughness:.72,metalness:0,side:T.DoubleSide});
+ // Wood planks: rows of boards 20 cm wide with staggered joints, each board its own shade, faint grain and dark seams.
+ const woodTex=canvasTexture(512,512,(c,w,h)=>{const r=seeded(401),rows=8,rh=h/rows;c.fillStyle='#5a3a22';c.fillRect(0,0,w,h);
+  for(let k=0;k<rows;k++){let x=-r()*w*.5;while(x<w){const L=w*(.35+r()*.4),t=r(),col=[[176,122,74],[160,108,64],[190,136,86],[150,100,60],[184,128,78]][Math.floor(t*5)];
+    const draw=x0=>{const g=c.createLinearGradient(0,k*rh,0,(k+1)*rh);g.addColorStop(0,`rgb(${col[0]+12},${col[1]+10},${col[2]+8})`);g.addColorStop(1,`rgb(${col[0]-10},${col[1]-8},${col[2]-6})`);c.fillStyle=g;c.fillRect(x0+1.5,k*rh+1.5,L-3,rh-3);
+     c.strokeStyle='rgba(70,40,20,.18)';c.lineWidth=1;for(let i=0;i<5;i++){const y=k*rh+3+r()*(rh-6);c.beginPath();c.moveTo(x0+2,y);c.bezierCurveTo(x0+L*.3,y+(r()-.5)*4,x0+L*.7,y+(r()-.5)*4,x0+L-2,y+(r()-.5)*2);c.stroke();}};
+    draw(x);if(x+L>w)draw(x-w);if(x<0)draw(x+w);x+=L;}}});
+ if(woodTex)woodTex.wrapS=woodTex.wrapT=T.RepeatWrapping;
+ const sandTex=canvasTexture(256,256,(c,w,h)=>{c.fillStyle='#f2ece2';c.fillRect(0,0,w,h);const r=seeded(523);
+  for(let i=0;i<9;i++){const y=i*h/9+r()*8;c.strokeStyle='rgba(150,120,80,.18)';c.lineWidth=5;for(const dy of [-h,0,h]){c.beginPath();c.moveTo(-10,y+dy);for(let x=0;x<=w+10;x+=16)c.lineTo(x,y+dy+Math.sin(x*.05+i)*4);c.stroke();}}
+  for(let i=0;i<5000;i++){const v=r();c.fillStyle=v<.5?`rgba(120,95,60,${.08+r()*.18})`:`rgba(255,255,255,${.1+r()*.3})`;c.fillRect(r()*w,r()*h,1+r()*1.5,1+r()*1.5);}});
+ if(sandTex)sandTex.wrapS=sandTex.wrapT=T.RepeatWrapping;
+ const sandMat=new T.MeshStandardMaterial({name:'Keel_club_sand',map:sandTex,vertexColors:true,roughness:.95,metalness:0,side:T.DoubleSide});
+ const deckMat=new T.MeshStandardMaterial({name:'Keel_club_deck',map:woodTex,vertexColors:true,color:woodTex?0xffffff:0xb07a4a,roughness:.62,metalness:0,side:T.DoubleSide});
  const lit=new T.MeshStandardMaterial({name:'Keel_club_glow',vertexColors:true,roughness:1,emissive:0xffffff,emissiveIntensity:.35,side:T.DoubleSide});
  const see=new T.MeshStandardMaterial({name:'Keel_club_glass',vertexColors:true,roughness:.1,transparent:true,opacity:.2,depthWrite:false,side:T.DoubleSide});
  const stripMat=new T.MeshBasicMaterial({name:'Keel_club_light_strip',vertexColors:true,toneMapped:false});
@@ -581,11 +617,17 @@ export function createKeelClub(ship){
   c.fillStyle='#f6f2e8';c.textAlign='center';c.textBaseline='middle';let size=70;do{c.font=`600 ${size}px "Inter","Segoe UI",Arial,sans-serif`;size-=4;}while(c.measureText(s).width>w-60&&size>24);c.fillText(s,w/2,y+rh/2-6);});});
  const signMat=new T.MeshBasicMaterial({name:'Keel_club_signs',map:signTex,color:signTex?0xffffff:0x173a4a,toneMapped:false,side:T.DoubleSide});
  // The ceiling's sky panel: a warm sunset with soft clouds, mapped once across the hall (its UVs are x, -z in metres).
- const sunset=canvasTexture(2048,512,(c,w,h)=>{const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'#c9a8d8');g.addColorStop(.2,'#efbcc6');g.addColorStop(.38,'#fbd0b2');g.addColorStop(.5,'#ffe1bf');g.addColorStop(.62,'#fbcfb1');g.addColorStop(.8,'#edb9c6');g.addColorStop(1,'#c5a4d6');
-  c.fillStyle=g;c.fillRect(0,0,w,h);const r=seeded(91);for(let i=0;i<420;i++){const x=r()*w,y=r()*h,rx=30+r()*110,ry=rx*(.35+r()*.3),a=.22+r()*.3,lit=r()<.7;const cl=c.createRadialGradient(x,y,0,x,y,rx);cl.addColorStop(0,lit?`rgba(255,244,232,${a})`:`rgba(196,140,190,${a*.6})`);cl.addColorStop(.55,lit?`rgba(255,226,206,${a*.5})`:`rgba(196,140,190,${a*.3})`);cl.addColorStop(1,'rgba(255,240,230,0)');
-   c.save();c.translate(x,y);c.scale(1,ry/rx);c.translate(-x,-y);c.fillStyle=cl;c.beginPath();c.arc(x,y,rx,0,Math.PI*2);c.fill();c.restore();}});
+ const sunset=canvasTexture(2048,512,(c,w,h)=>{const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'#c4bfe6');g.addColorStop(.22,'#f3cfcc');g.addColorStop(.5,'#ffe2b6');g.addColorStop(.78,'#f3cfcc');g.addColorStop(1,'#c4bfe6');
+  c.fillStyle=g;c.fillRect(0,0,w,h);const r=seeded(91);
+  // Cumulus (refinement round 4): clusters of puffs, gold-white where lit and peach-lilac in their shade, with sky
+  // showing between them. The texture spans 361 x 120 m, so a puff is squashed across (0.75) to come out round.
+  for(let i=0;i<120;i++){const cx=r()*w,cy=r()*h,sz=34+r()*80,n=5+Math.floor(r()*7);c.save();c.translate(0,cy);c.scale(1,.75);c.translate(0,-cy);
+   for(let k=0;k<n;k++){const px=cx+(r()-.5)*sz*2.4,py=cy+(r()-.5)*sz*.8,rad=sz*(.32+r()*.42);
+    let gr=c.createRadialGradient(px,py+rad*.3,0,px,py+rad*.3,rad*1.05);gr.addColorStop(0,'rgba(205,150,168,.5)');gr.addColorStop(1,'rgba(205,150,168,0)');c.fillStyle=gr;c.beginPath();c.arc(px,py+rad*.3,rad*1.05,0,Math.PI*2);c.fill();
+    gr=c.createRadialGradient(px-rad*.25,py-rad*.25,0,px,py,rad*.92);gr.addColorStop(0,'rgba(255,251,242,.97)');gr.addColorStop(.55,'rgba(255,229,194,.7)');gr.addColorStop(1,'rgba(255,222,192,0)');c.fillStyle=gr;c.beginPath();c.arc(px,py,rad*.92,0,Math.PI*2);c.fill();}
+   c.restore();}});
  if(sunset){sunset.repeat.set(1/(KEEL.bow-KEEL.aft),1/120);sunset.offset.set(-KEEL.aft/(KEEL.bow-KEEL.aft),.5);}
- const skyMat=new T.MeshBasicMaterial({name:'Keel_club_sky',map:sunset,color:sunset?0xf0e6e0:C.ceiling,toneMapped:false,side:T.DoubleSide});
+ const skyMat=new T.MeshBasicMaterial({name:'Keel_club_sky',map:sunset,color:sunset?0xffffff:C.ceiling,toneMapped:false,side:T.DoubleSide});
  // The range's dome screen: a floodlit fairway with target greens under a starry sky and mountains. The sims' screens:
  // a sunny fairway between trees, a pond and a flag on the green.
  const fairway=(c,w,h,hz,grass,stripe)=>{c.fillStyle=grass;c.beginPath();c.moveTo(w*.08,h);c.lineTo(w*.44,hz);c.lineTo(w*.56,hz);c.lineTo(w*.92,h);c.fill();
@@ -621,7 +663,7 @@ export function createKeelClub(ship){
   for(const im of [trunks,crowns]){im.name=im.material.name;im.computeBoundingSphere();group.add(im);}}
  // Static draws in four sections along the hall, so the walk culls the far ones when they're out of view.
  const draw=(g,m,name)=>{for(const part of sections(g,4)){const mesh=new T.Mesh(part,m);mesh.name=name;group.add(mesh);}};
- draw(merge(parts),opaque,'Keel_club_finish');draw(merge(glow),lit,'Keel_club_glow');draw(merge(glass),see,'Keel_club_glass');draw(merge(lamps),stripMat,'Keel_club_light_strip');
+ draw(merge(parts),opaque,'Keel_club_finish');draw(merge(decks,['position','normal','color','uv']),deckMat,'Keel_club_deck');draw(merge(sands,['position','normal','color','uv']),sandMat,'Keel_club_sand');draw(merge(glow),lit,'Keel_club_glow');draw(merge(glass),see,'Keel_club_glass');draw(merge(lamps),stripMat,'Keel_club_light_strip');
  draw(merge(stars,['position','normal','uv']),sky,'Keel_club_stars');draw(merge(skyPanel,['position','normal','uv']),skyMat,'Keel_club_sky');
  draw(merge(screens.range,['position','normal','uv']),rangeMat,'Keel_club_range_screen');draw(merge(screens.sims,['position','normal','uv']),simMat,'Keel_club_sim_screens');{const g=merge(signs,['position','normal','uv']);if(g){const m=new T.Mesh(g,signMat);m.name='Keel_club_signs';group.add(m);}}
  // Water, each body its own draw so its ripples move their own way: the river flows round the loop (forward along
@@ -631,23 +673,54 @@ export function createKeelClub(ship){
   for(let i=0;i<70;i++){const x=r()*w,y=r()*h,l=20+r()*60,a=r()*Math.PI;c.strokeStyle=`rgba(${150+r()*60|0},${210+r()*40|0},255,${.35+r()*.4})`;c.lineWidth=1.5+r()*3;
    for(const dx of [-w,0,w])for(const dy of [-h,0,h]){c.beginPath();c.moveTo(x+dx,y+dy);c.quadraticCurveTo(x+dx+Math.cos(a)*l/2+10,y+dy+Math.sin(a)*l/2-10,x+dx+Math.cos(a)*l,y+dy+Math.sin(a)*l);c.stroke();}}});
  // The falls: streaks and drops of water on clear, scrolled down the curtain.
- const streaks=canvasTexture(256,512,(c,w,h)=>{c.clearRect(0,0,w,h);const r=seeded(203);c.lineCap='round';
-  for(let i=0;i<170;i++){const x=r()*w,y=r()*h,l=60+r()*260,a=.25+r()*.6;c.strokeStyle=`rgba(255,255,255,${a})`;c.lineWidth=1+r()*2.5;for(const dy of [-h,0,h]){c.beginPath();c.moveTo(x,y+dy);c.lineTo(x+(r()-.5)*3,y+dy+l);c.stroke();}}
+ const streaks=canvasTexture(256,512,(c,w,h)=>{c.clearRect(0,0,w,h);c.fillStyle='rgba(255,255,255,.16)';c.fillRect(0,0,w,h);const r=seeded(203);c.lineCap='round';
+  for(let i=0;i<340;i++){const x=r()*w,y=r()*h,l=60+r()*260,a=.25+r()*.6;c.strokeStyle=`rgba(255,255,255,${a})`;c.lineWidth=1+r()*2.5;for(const dy of [-h,0,h]){c.beginPath();c.moveTo(x,y+dy);c.lineTo(x+(r()-.5)*3,y+dy+l);c.stroke();}}
   for(let i=0;i<500;i++){c.fillStyle=`rgba(255,255,255,${.3+r()*.6})`;c.beginPath();c.arc(r()*w,r()*h,.8+r()*1.6,0,Math.PI*2);c.fill();}});
  const flows=[];
- const water=(geometry,color,{rep=1/6,flow=[0,0],opacity=.84,name='Keel_club_water',bright=.12,tex=ripples}={})=>{const map=tex?tex.clone():null;if(map){map.wrapS=map.wrapT=T.RepeatWrapping;map.repeat.set(rep,rep);map.needsUpdate=true;}
-  const m=new T.MeshStandardMaterial({name,color,map,roughness:.12,metalness:.05,transparent:true,opacity,depthWrite:false,side:T.DoubleSide,emissive:color,emissiveIntensity:bright});
-  const mesh=new T.Mesh(geometry,m);mesh.name=name;group.add(mesh);if(map)flows.push({map,flow:flow.map(v=>v*rep)});};
+ const water=(geometry,color,{rep=1/6,flow=[0,0],opacity=.9,name='Keel_club_water',bright=.3,tex=ripples}={})=>{const map=tex?tex.clone():null;if(map){map.wrapS=map.wrapT=T.RepeatWrapping;map.repeat.set(rep,rep);map.needsUpdate=true;}
+  const m=new T.MeshStandardMaterial({name,color,map,roughness:.12,metalness:.05,transparent:true,opacity,depthWrite:false,side:T.DoubleSide,emissive:color,emissiveIntensity:bright,userData:{envShare:.15}});
+  const mesh=new T.Mesh(geometry,m);mesh.name=name;group.add(mesh);if(map)flows.push({map,flow:flow.map(v=>v*rep)});return mesh;};
  const side=s=>{const xs=xsBetween(ra+RW,rb-RW);return flat([...xs.map(x=>[x,s*rOut(x)]),...xs.slice().reverse().map(x=>[x,s*rIn(x)])],[],WY);};
  const cross=(x0,x1)=>flat([[x0,-rOut(x0)],[x1,-rOut(x1)],[x1,rOut(x1)],[x0,rOut(x0)]],[],WY);
  // a shape's v runs along -z, so a flow towards +z scrolls v the other way
  water(side(-1),C.river,{flow:[-.7,0]});water(side(1),C.river,{flow:[.7,0]});water(cross(rb-RW,rb),C.river,{flow:[0,.7]});water(cross(ra,ra+RW),C.river,{flow:[0,-.7]});
- water(flat(rect(lx0,lx1,-lz,lz),[],WY),C.water,{rep:1/9,flow:[1.1,0],name:'Keel_club_lagoon'});
+ // The lagoon (refinement round 4): surf. A grid 0.5 m along by 4 m across, raised in the vertex shader into waves that
+ // run aft from the wave machine at about 2.6 m/s, 26 m apart: each rises over its first 22 m, stands tallest mid-pool
+ // (lower by the side walls, so the water stays under the deck's edge there), steepens at the front and leans its lip
+ // forward, and washes out as white water over the last 30 m to the beach. Foam rides each crest and trails behind it.
+ // Nobody floats in the lagoon, so the waves are only drawn: the walk and the tubes never ask their height.
+ const SURF={uSurfT:{value:0}};
+ {const nx=Math.round((lx1-lx0)/.5),nz=16,g=gridUV(nx+1,nz+1,(i,j)=>[lx0+(lx1-lx0)*i/nx,WY,-lz+2*lz*j/nz],(i,j)=>[lx0+(lx1-lx0)*i/nx,lz-2*lz*j/nz],true);
+  g.computeBoundingBox();g.boundingBox.min.y-=1;g.boundingBox.max.y+=2;g.boundingSphere=g.boundingBox.getBoundingSphere(new T.Sphere());
+  const mesh=water(g,C.water,{rep:1/9,flow:[1.1,0],name:'Keel_club_lagoon',opacity:.93}),m=mesh.material;
+  const fn=`
+uniform float uSurfT;
+float surfEnv(float x,float z){return (1.-smoothstep(${(lx1-22).toFixed(1)},${lx1.toFixed(1)},x))*smoothstep(${(lx0+4).toFixed(1)},${(lx0+34).toFixed(1)},x)*(.45+.55*cos(clamp(z/${lz.toFixed(1)},-1.,1.)*1.5708));}
+float surfU(float x){return fract((x+2.6*uSurfT)/26.);}
+float surfShape(float u){return u<.3?pow(smoothstep(.17,.3,u),1.6):pow(1.-smoothstep(.3,1.,u),2.2);}
+float surfH(float x,float z){float u=surfU(x);return 1.4*surfEnv(x,z)*(surfShape(u)-.18);}
+float surfLean(float x,float z){float u=surfU(x),d=(u-.29)/.035;return -.55*surfEnv(x,z)*exp(-d*d);}
+`;
+  m.userData.surf=SURF;
+  m.onBeforeCompile=sh=>{Object.assign(sh.uniforms,SURF);
+   sh.vertexShader=fn+'varying float vSurfFoam;\nvarying float vSurfH;\nvarying vec2 vSurfW;\n'+sh.vertexShader
+    .replace('#include <beginnormal_vertex>',`#include <beginnormal_vertex>
+  {float e=.25,hx=(surfH(position.x+e,position.z)-surfH(position.x-e,position.z))/(2.*e),hz=(surfH(position.x,position.z+e)-surfH(position.x,position.z-e))/(2.*e);objectNormal=normalize(vec3(-hx,1.,-hz));}`)
+    .replace('#include <begin_vertex>',`#include <begin_vertex>
+  {float u=surfU(position.x),en=surfEnv(position.x,position.z);vSurfH=surfH(position.x,position.z);transformed.y+=vSurfH;transformed.x+=surfLean(position.x,position.z);
+   float shore=1.-smoothstep(${(lx0+3).toFixed(1)},${(lx0+18).toFixed(1)},position.x);
+   vSurfFoam=clamp(en*(smoothstep(.22,.29,u)*(1.-smoothstep(.29,.44,u))*1.4)+shore*(.45+.45*sin((position.x+2.6*uSurfT)*.9)),0.,1.);vSurfW=position.xz;}`);
+   sh.fragmentShader='uniform float uSurfT;\nvarying float vSurfFoam;\nvarying float vSurfH;\nvarying vec2 vSurfW;\n'+sh.fragmentShader
+    .replace('#include <color_fragment>',`#include <color_fragment>
+  float surfF=0.;{float n=.5+.5*sin(vSurfW.x*2.1+vSurfW.y*1.3)*sin(vSurfW.y*2.7-vSurfW.x*.9+uSurfT*1.7),n2=.5+.5*sin(vSurfW.x*5.3-vSurfW.y*4.1+uSurfT*2.3)*sin(vSurfW.y*6.1+vSurfW.x*1.7);surfF=clamp(vSurfFoam*(.15+.85*n+.6*n2)-.12,0.,1.);
+   diffuseColor.rgb*=mix(.8,1.25,clamp(vSurfH*.8+.2,0.,1.));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.97,.99,1.),surfF);diffuseColor.a=mix(diffuseColor.a,1.,surfF);}`)
+    .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n  totalEmissiveRadiance+=vec3(.22)*surfF;');};
+  m.customProgramCacheKey=()=>'keel-club-surf';}
  {const P=[],U=[];for(const {x0,x1,z} of curtains)for(const [x,y] of [[x0,TY-.3],[x1,TY-.3],[x1,WY],[x0,TY-.3],[x1,WY],[x0,WY]]){P.push(x,y,z);U.push(x/2.5,y/2.5);}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.setAttribute('uv',new T.Float32BufferAttribute(U,2));g.computeVertexNormals();
   water(g,0xe6fbff,{rep:1,flow:[0,1.6],opacity:streaks?.95:.7,name:'Keel_club_waterfall',bright:.6,tex:streaks});}
  const deck1=new T.Group();deck1.name='Keel_club_deck1';
- for(const [g,m,name] of [[merge(d1.parts),opaque,'Keel_club_deck1_finish'],[merge(d1.glass),see,'Keel_club_deck1_glass'],[merge(d1.signs,['position','normal','uv']),signMat,'Keel_club_deck1_signs']])if(g){const mesh=new T.Mesh(g,m);mesh.name=name;deck1.add(mesh);}
+ for(const [g,m,name] of [[merge(d1.parts),opaque.clone(),'Keel_club_deck1_finish'],[merge(d1.glass),see.clone(),'Keel_club_deck1_glass'],[merge(d1.signs,['position','normal','uv']),signMat,'Keel_club_deck1_signs']])if(g){const mesh=new T.Mesh(g,m);mesh.name=name;deck1.add(mesh);}
  const hidden=new T.MeshBasicMaterial({visible:false});
  for(const [gs,name] of [[grounds,'Keel_club_walkway'],[walls,'Keel_club_guard_wall']]){const g=merge(gs.map(g=>{g=g.index?g.toNonIndexed():g.clone();for(const k of Object.keys(g.attributes))if(k!=='position')g.deleteAttribute(k);return g;}));if(g){const m=new T.Mesh(g,hidden);m.name=name;solid.add(m);}}
  // Water cannons: E on a bridge's crown fires the nearest one (fire(i)) for a second and a half. Its jet is droplets
@@ -696,18 +769,13 @@ export function createKeelClub(ship){
  }
  // Each frame: the ripples move, and the shots catch up on their clock. `rider` is our tube's centre (x, y, z) while we
  // float, else null. Returns the hits on us this frame.
- // The lagoon's waves: crests that rise by the wave machine, roll aft across the lagoon and die away at the beach.
- const crestShape=paint(new T.CylinderGeometry(.5,.5,2*lz-2,14,1,false,Math.PI/2,Math.PI).rotateX(Math.PI/2),C.crest);
- {const p=crestShape.attributes.position,c=crestShape.attributes.color,lo=new T.Color(C.water),hi=new T.Color(C.crest),t=new T.Color();for(let i=0;i<p.count;i++){t.copy(lo).lerp(hi,Math.min(1,Math.max(0,p.getY(i)/.5))**4);t.toArray(c.array,i*3);}}
- const CRESTS=4,crestMesh=new T.InstancedMesh(crestShape,new T.MeshStandardMaterial({name:'Keel_club_wave_crest',vertexColors:true,roughness:.3,emissive:0xffffff,emissiveIntensity:.12}),CRESTS);
- let waveT=0;const waves=dt=>{waveT+=dt;const run=lx1-6-(lx0+3);for(let i=0;i<CRESTS;i++){const f=((waveT*2.6+i*run/CRESTS)%run)/run,g=Math.sin(Math.PI*Math.min(1,f*1.1));
-   crestMesh.setMatrixAt(i,M.compose(P.set(lx1-6-f*run,WY+.02,0),Q.identity(),S.set(3.4,Math.max(.01,g)*3,1)));}crestMesh.instanceMatrix.needsUpdate=true;};
+ let waveT=0;const waves=dt=>{waveT+=dt;SURF.uSurfT.value=waveT%2600;};
  // Empty tubes drifting round the Keel Loop with the current, bobbing and turning slowly.
  const FLOATS=18,UP=new T.Vector3(0,1,0),floatMesh=new T.InstancedMesh(new T.TorusGeometry(.55,.22,8,20).rotateX(Math.PI/2),new T.MeshStandardMaterial({name:'Keel_club_drift_tube',roughness:.45}),FLOATS),floats=[];
  {const r=seeded(919),col=new T.Color();for(let i=0;i<FLOATS;i++){floats.push({s:(i+r()*.6)/FLOATS*RIVER_PATH.total,d:(r()-.5)*2,v:TUBE.current*(.8+r()*.3),spin:(r()-.5)*.6,a:r()*6});floatMesh.setColorAt(i,col.setHex([C.slide,C.orange,C.teal,0xf6e05a][i%4]));}}
  const drift=dt=>{floats.forEach((f,i)=>{f.s+=f.v*dt;f.a+=f.spin*dt;const fr=riverFrame(f.s),d=Math.max(fr.lo,Math.min(fr.hi,f.d));
    floatMesh.setMatrixAt(i,M.compose(P.set(fr.x+fr.rx*d,WY+.1+Math.sin(f.s*1.7+i)*.03,fr.z+fr.rz*d),Q.setFromAxisAngle(UP,f.a),S.set(1,1,1)));});floatMesh.instanceMatrix.needsUpdate=true;};
- for(const m of [crestMesh,floatMesh]){m.name=m.material.name;m.frustumCulled=false;m.instanceMatrix.setUsage(T.DynamicDrawUsage);group.add(m);}
+ for(const m of [floatMesh]){m.name=m.material.name;m.frustumCulled=false;m.instanceMatrix.setUsage(T.DynamicDrawUsage);group.add(m);}
  waves(0);drift(0);
  const update=(dt,rider=null)=>{
   const t=Math.min(dt,.1);for(const {map,flow} of flows){map.offset.x+=flow[0]*t;map.offset.y+=flow[1]*t;}
@@ -725,11 +793,19 @@ export function createKeelClub(ship){
  // The haze in the hall is warm, like the concept renders' sunset; leaving the hall gives the fog its own colour back.
  // So is its light (the walk's hemisphere and fill, `light`): golden from the sky panel, warm off the floor. Like the
  // other room moods, it keeps what it found on the way in and puts it back on the way out.
- const HAZE=new T.Color(0xf3dcc8),SKY=new T.Color(0xffdcb6),GROUND=new T.Color(0xb98d66);let saved=null;
+ // The walk lights its rooms with an environment map, and its ACES tone mapping (exposure over 0.6) lifts the hall's warm
+ // mid tones into the curve's shoulder, so floors, sand and walls came out near white. In the hall the club's own
+ // materials (never Deck 1's copies or the walker) take a share of that light instead: their own envMap, the scene's,
+ // at envShare (default .46) of its intensity (refinement round 4).
+ let ownMats=null;const ENV_SHARE=.46;
+ const clubLight=()=>{let sc=group.parent;while(sc&&!sc.isScene)sc=sc.parent;const env=sc?.environment;if(!env)return;
+  if(!ownMats){ownMats=new Set();group.traverse(o=>{for(const m of [].concat(o.material||[]))if(m.isMeshStandardMaterial)ownMats.add(m);});}
+  const k=sc.environmentIntensity??1;for(const m of ownMats){if(m.envMap!==env)m.envMap=env;m.envMapIntensity=k*(m.userData.envShare??ENV_SHARE);}};
+ const HAZE=new T.Color(0xf3dcc8),SKY=new T.Color(0xffd6a4),GROUND=new T.Color(0xa47a55);let saved=null;
  const mood=(fog,eye,light=null)=>{if(!fog?.isFog)return;const inside=!(eye.y>DECK1-.4||eye.y<FY-4||eye.x<KEEL.aft-2||eye.x>KEEL.bow+2||Math.abs(eye.z)>half(eye.x,Math.max(eye.y,FY))+.5);
   if(!inside){if(saved){fog.color.copy(saved.fog);if(saved.hemi){const {hemi,fill}=saved.light;hemi.color.copy(saved.sky);hemi.groundColor.copy(saved.ground);hemi.intensity=saved.hemi;fill.intensity=saved.fill;}saved=null;}return;}
   if(!saved){saved={fog:fog.color.clone()};if(light?.hemi&&light?.fill)Object.assign(saved,{light,sky:light.hemi.color.clone(),ground:light.hemi.groundColor.clone(),hemi:light.hemi.intensity,fill:light.fill.intensity});}
-  fog.color.copy(HAZE);fog.near=Math.max(fog.near,170);fog.far=Math.max(fog.far,440);
-  if(saved.hemi){const {hemi,fill}=saved.light;hemi.color.copy(SKY);hemi.groundColor.copy(GROUND);hemi.intensity=saved.hemi*1.1;fill.intensity=saved.fill*.85;}};
+  fog.color.copy(HAZE);fog.near=Math.max(fog.near,170);fog.far=Math.max(fog.far,440);clubLight();
+  if(saved.hemi){const {hemi,fill}=saved.light;hemi.color.copy(SKY);hemi.groundColor.copy(GROUND);hemi.intensity=saved.hemi*.95;fill.intensity=saved.fill*.75;}};
  return {group,deck1,solid,seats,update,near,fire,seed,mood,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
 }
