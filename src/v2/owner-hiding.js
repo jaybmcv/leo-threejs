@@ -2,6 +2,7 @@
 // scripts/walk-owner-bake.mjs for one exact walk build and configuration (the key) and hidden by the walk around its main
 // render call: for the main camera only, and only while what proved them hidden is itself drawn. Cells are the atrium
 // PVS grid (atrium-pvs.js). Anything the walk cannot match exactly is not used: nothing is hidden on its account.
+import {Matrix4} from 'three';
 import {PVS_GRID} from './atrium-pvs.js';
 
 const PV=PVS_GRID;
@@ -26,16 +27,29 @@ const fixed=a=>Array.from(a,v=>Math.round(v*1e4)).join(',');
 // What a drawable was when baked. A mesh: draw counts and range, materials, its whole world transform and, unless it is a
 // merged deck piece (whose bounds the walk rewrites as decks show), its local bounds; an instanced mesh adds every slot's
 // matrix. A group: its children's names. A part that no longer matches is not used.
-export function ownerPrint(o){
+export function ownerPrint(o,world=o.matrixWorld){
  if(!o.isMesh)return 'g'+hash(o.children.map(c=>c.name+'|'+c.type).join(';'));
  const g=o.geometry,count=g.index?g.index.count:g.attributes.position?.count??0,mats=[o.material].flat().map(m=>[m?.type,m?.name,m?.side,m?.transparent?1:0,m?.visible===false?0:1].join(':')).join(',');
  let bounds='';if(!o.userData.sources){if(!g.boundingBox&&g.attributes.position?.array)g.computeBoundingBox();if(!g.boundingBox)return null;bounds=fixed([...g.boundingBox.min.toArray(),...g.boundingBox.max.toArray()]);}
  const slots=o.isInstancedMesh?hash((o.userData.near?.all??[]).map(m=>fixed(m.elements)).join(';')+'|'+fixed(o.instanceMatrix.array.subarray(0,o.count*16))):'';
- return 'm'+hash([count,g.drawRange.start,g.drawRange.count,mats,fixed(o.matrixWorld.elements),bounds,slots,o.userData.sources?.length??0].join('|'));
+ return 'm'+hash([count,g.drawRange.start,g.drawRange.count,mats,fixed(world.elements),bounds,slots,o.userData.sources?.length??0].join('|'));
 }
-// Its print with its world matrix brought up to date from its transforms first: the walk skips a hidden branch's matrix
-// update, so one moved while hidden would still match by its old world matrix.
-const printNow=o=>{o.updateWorldMatrix(true,false);return ownerPrint(o);};
+// Where it will be drawn: its world matrix worked out from the transforms above it as Object3D.updateMatrix and
+// updateWorldMatrix do, writing nothing. The walk skips a hidden branch's matrix update, so its world matrix may be stale;
+// a node whose world matrix is set by hand (matrixWorldAutoUpdate off) counts as it is.
+const LOCAL=new Matrix4();
+function worldNow(o,out=new Matrix4()){
+ const chain=[];let q=o;for(;q&&q.matrixWorldAutoUpdate!==false;q=q.parent)chain.push(q);
+ if(q)out.copy(q.matrixWorld);else out.identity();
+ for(let i=chain.length-1;i>=0;i--){const n=chain[i];
+  if(n.matrixAutoUpdate){LOCAL.compose(n.position,n.quaternion,n.scale);const c=n.pivot;
+   if(c){const e=LOCAL.elements;e[12]+=c.x-e[0]*c.x-e[4]*c.y-e[8]*c.z;e[13]+=c.y-e[1]*c.x-e[5]*c.y-e[9]*c.z;e[14]+=c.z-e[2]*c.x-e[6]*c.y-e[10]*c.z;}}
+  else LOCAL.copy(n.matrix);
+  out.multiply(LOCAL);}
+ return out;
+}
+// Its print where it will be drawn, not where its world matrix last put it.
+const printNow=o=>ownerPrint(o,o.isMesh?worldNow(o):o.matrixWorld);
 // How far the near plane's corners lie from the eye (null for a camera the bake does not cover).
 export function nearCorner(camera){
  if(!camera?.isPerspectiveCamera)return null;const t=Math.tan((camera.getEffectiveFOV?camera.getEffectiveFOV():camera.fov)*Math.PI/360);
@@ -83,16 +97,21 @@ export function createOwnerHiding(data,{key,scene}){
  const slotSets=entries.map(e=>e[2]?new Set(e[2]):null);
  // A resolved object with what it was at resolve(): it is dropped if it moves or changes geometry or material later.
  // Moving is read from what makes its world matrix: the transform of it and of each node above it (position, rotation,
- // scale and pivot, or the matrix itself when set by hand) and each one's parent. The world matrix is not compared: the
- // walk skips a hidden branch's matrix update (prepared-static.js), and refreshing it every frame cost 0.7 ms. A node is
- // checked once a frame however many parts sit under it.
+ // scale and pivot, or the matrix itself when set by hand), each one's parent and, where a world matrix is set by hand
+ // (matrixWorldAutoUpdate off), that world matrix. Other world matrices are not compared: the walk skips a hidden
+ // branch's matrix update (prepared-static.js), and refreshing them every frame cost 0.7 ms. A node is checked once a
+ // frame however many parts sit under it.
  const nodes=new Map();
  const fill=(q,v)=>{if(!q.matrixAutoUpdate){v.set(q.matrix.elements);return v;}const p=q.position,r=q.quaternion,s=q.scale,c=q.pivot;
   v[0]=p.x;v[1]=p.y;v[2]=p.z;v[3]=r.x;v[4]=r.y;v[5]=r.z;v[6]=r.w;v[7]=s.x;v[8]=s.y;v[9]=s.z;v[10]=c?c.x:0;v[11]=c?c.y:0;v[12]=c?c.z:0;return v;};
- const node=q=>{let n=nodes.get(q);if(!n){n={q,parent:q.parent,auto:q.matrixAutoUpdate,pivot:q.pivot??null,was:fill(q,new Float64Array(16)),now:new Float64Array(16),frame:-1,ok:true};nodes.set(q,n);}return n;};
+ const differ=(a,b,len)=>{for(let i=0;i<len;i++)if(Math.abs(a[i]-b[i])>=1e-6)return true;return false;};
+ const node=q=>{let n=nodes.get(q);
+  if(!n){n={q,parent:q.parent,auto:q.matrixAutoUpdate,worldAuto:q.matrixWorldAutoUpdate,pivot:q.pivot??null,was:fill(q,new Float64Array(16)),now:new Float64Array(16),
+   world:q.matrixWorldAutoUpdate===false?Float64Array.from(q.matrixWorld.elements):null,frame:-1,ok:true};nodes.set(q,n);}
+  return n;};
  const still=n=>{if(n.frame===frame)return n.ok;n.frame=frame;const q=n.q;
-  n.ok=q.parent===n.parent&&q.matrixAutoUpdate===n.auto&&(q.pivot??null)===n.pivot;
-  if(n.ok){const a=fill(q,n.now),b=n.was,len=n.auto?13:16;for(let i=0;i<len;i++)if(Math.abs(a[i]-b[i])>=1e-6){n.ok=false;break;}}
+  n.ok=q.parent===n.parent&&q.matrixAutoUpdate===n.auto&&q.matrixWorldAutoUpdate===n.worldAuto&&(q.pivot??null)===n.pivot
+   &&!differ(fill(q,n.now),n.was,n.auto?13:16)&&!(n.world&&differ(q.matrixWorld.elements,n.world,16));
   return n.ok;};
  const snap=o=>{const chain=[];for(let q=o;q;q=q.parent)chain.push(node(q));return {o,chain,geometry:o.geometry,material:o.material};};
  const same=s=>{if(s.o.geometry!==s.geometry||s.o.material!==s.material)return false;for(const n of s.chain)if(!still(n))return false;return true;};

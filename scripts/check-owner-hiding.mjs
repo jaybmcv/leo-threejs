@@ -67,4 +67,10 @@ for(const [name,undo] of [['not shown',w=>{w.wall.visible=false;}],['on another 
 {const w=world(),data=bake(w);w.b.position.z=30;// moved while hidden, before the walk matched the bake: its world matrix is stale
  const h=createOwnerHiding(data,{key:KEY,scene:w.scene});h.resolve();assert.equal(h.stats.resolved,2);assert.deepEqual(during(h,at(),[w.b]),[true]);
  pass('a part that moved before resolve() does not match by its stale world matrix');}
+{const w=world();w.b.matrixWorldAutoUpdate=false;const h=make(w);assert.deepEqual(during(h,at(),[w.b]),[false]);
+ w.b.matrixWorld.makeTranslation(3,0,30);// its world matrix is set by hand; its transform does not change
+ assert.deepEqual(during(h,at(),[w.b]),[true]);pass('a part whose world matrix is set by hand is caught when that changes');}
+{const w=world();w.b.matrixAutoUpdate=false;const data=bake(w);w.b.matrix.makeTranslation(3,0,30);// its matrix changes and nothing marks it
+ const before=w.b.matrixWorld.clone(),h=createOwnerHiding(data,{key:KEY,scene:w.scene});h.resolve();assert.equal(h.stats.resolved,2);
+ assert.ok(w.b.matrixWorld.equals(before),'matching wrote no world matrix');pass('a hand-set matrix changed before resolve() does not match, and matching writes nothing');}
 console.log(`owner hiding: ${passed} checks passed`);
