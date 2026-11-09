@@ -941,5 +941,7 @@ float surfLean(float x,float z){float u=surfU(x),d=(u-.29)/.035;return -.55*surf
  // On phones the walk calls lite(): the fill-rate extras (additive light pools, lamp halos, wall washes, the second
  // waterfall sheet and its mist) are hidden (still built, not drawn); the decks, rails, surf and greenery stay.
  const lite=()=>{let n=0;group.traverse(o=>{if(/^Keel_club_(light_pools|lamp_halos|wall_washes|waterfall_back|waterfall_mist)$/.test(o.name)){o.visible=false;n++;}});return n;};
- return {group,deck1,solid,seats,update,near,fire,seed,mood,lite,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
+ // The surf's clock (seconds, as its shader sees it), for the lagoon's sound (keel-club-sound.js) to swell with the waves.
+ const surfClock=()=>waveT%2600;
+ return {group,deck1,solid,seats,update,near,fire,seed,mood,lite,surfClock,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
 }
