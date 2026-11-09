@@ -11,12 +11,14 @@ import {paintDuskSky,paintDownlightPool} from './atrium-light-paint.js';
 // The tint follows the ship's clock (ship-time.js). Day is concept A softened: warm golden daylight, warmer cream walls,
 // soft pools of light under the balconies, deeper turquoise water. Night is concept C: a dusk sky panel, windows and
 // balcony glass lit warm from inside, every downlight and promenade lamp on. Intensities multiply the base light.
-// Tuned against local renders of the hero, sky-up and walls-starboard views (docs/atrium-areas/light/).
-const DAY={hemi:1.2,fill:1.09,env:.69,sky:0xffd2a0,ground:0x8e7353,fillColour:0xffe8cc,fog:0xecdcc2};
-const NIGHT={hemi:.95,fill:.8,env:.55,sky:0xffd6c2,ground:0xa07c74,fillColour:0xffd2b4,fog:0xc4a29c,glass:0xffa04a,glassOpacity:1.5};
-// What only the atrium shows follows the time of day wherever the walker is.
-const WATER=[new T.Color(0x2ea3c0),new T.Color(0x3f8c9a)],SOFFIT_NIGHT={emissive:new T.Color(0xffc683),intensity:.72};
-const LAMP_NIGHT=2.6,RETURNS_NIGHT=new T.Color(0xd6b99c),POOLS=[.5,1];
+// Tuned side by side with the concepts on a GPU render that matches the live site (three r187, its baked environment
+// light on): golden undersides by day; at night a pink-lavender dusk light, rooms glowing amber behind the balcony glass.
+const DAY={hemi:1.35,fill:1.13,env:.55,sky:0xffcf9c,ground:0xc8a070,fillColour:0xffe0c0,fog:0xf2dcc4};
+const NIGHT={hemi:.8,fill:.55,env:.4,sky:0xe8c8d4,ground:0xd8a888,fillColour:0xe0b8c8,fog:0xc8a8b0,glass:0xffa04a,glassOpacity:1.74,glassIntensity:1.5};
+// What only the atrium shows follows the time of day wherever the walker is. Day, then night.
+const WATER=[new T.Color(0x2b9ea6),new T.Color(0x6fa3b8)],RETURNS_NIGHT=new T.Color(0xffc27a),POOLS=[.5,1];
+const SOFFIT=[{emissive:new T.Color(0xffd090),intensity:.55},{emissive:new T.Color(0xffd8a8),intensity:.95}];
+const LAMP_NIGHT=4;
 // Shared with the rest of the ship, so changed only while the walker is in the open atrium.
 const SHARED=new Set(['V2_smart_glass','V2_cabin_view_glass']);
 const OWN=new Set(['P6_lake_water','V2_atrium_soffit','P4_reflection_light','P6_atrium_room_returns']);
@@ -79,13 +81,13 @@ function showOwn(found,n,pools){
  if(pools)pools.opacity=lerp(POOLS[0],POOLS[1],n);
  for(const [m,b] of found.materials)switch(m.name){
   case 'P6_lake_water':m.color.lerpColors(WATER[0],WATER[1],n);break;
-  case 'V2_atrium_soffit':m.emissive.lerpColors(b.emissive,SOFFIT_NIGHT.emissive,n);m.emissiveIntensity=lerp(b.intensity,SOFFIT_NIGHT.intensity,n);break;
+  case 'V2_atrium_soffit':m.emissive.lerpColors(SOFFIT[0].emissive,SOFFIT[1].emissive,n);m.emissiveIntensity=lerp(SOFFIT[0].intensity,SOFFIT[1].intensity,n);break;
   case 'P4_reflection_light':m.emissiveIntensity=b.intensity*lerp(1,LAMP_NIGHT,n);break;
   case 'P6_atrium_room_returns':m.color.lerpColors(b.colour,RETURNS_NIGHT,n);break;
  }
 }
 function showShared(found,glass,amount){
- for(const [m,b] of found.materials)if(SHARED.has(m.name)){m.emissive.lerpColors(b.emissive,glass,amount);m.opacity=b.opacity*lerp(1,NIGHT.glassOpacity,amount);}
+ for(const [m,b] of found.materials)if(SHARED.has(m.name)){m.emissive.lerpColors(b.emissive,glass,amount);m.emissiveIntensity=b.intensity*lerp(1,NIGHT.glassIntensity,amount);m.opacity=b.opacity*lerp(1,NIGHT.glassOpacity,amount);}
 }
 
 export function createAtriumMood(light){
