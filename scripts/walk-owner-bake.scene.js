@@ -9,6 +9,8 @@ const LIFT=/^Walk_lift_|^Lift_|^Car_/;
 // Plain opaque materials only: anything transparent, cut out, refracting or shaded by custom code may let sight through.
 const plainOpaque=m=>!!m&&m.visible!==false&&!m.transparent&&(m.opacity??1)>=1&&!(m.alphaTest>0)&&!m.alphaMap&&!(m.transmission>0)&&m.colorWrite!==false&&m.depthWrite!==false&&m.depthTest!==false&&!m.wireframe&&!m.isShaderMaterial&&!m.isRawShaderMaterial
  &&(m.isMeshStandardMaterial||m.isMeshBasicMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial||m.isMeshPhysicalMaterial||m.isMeshToonMaterial||m.isMeshMatcapMaterial);
+// A growing typed array: the soup runs to tens of millions of numbers, past what a plain array can hold.
+class Grow{constructor(Type,size=1<<20){this.Type=Type;this.a=new Type(size);this.n=0;}push(...v){if(this.n+v.length>this.a.length){const b=new this.Type(Math.max(this.a.length*2,this.n+v.length));b.set(this.a.subarray(0,this.n));this.a=b;}for(const x of v)this.a[this.n++]=x;}get values(){return this.a.slice(0,this.n);}}
 const shown=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};
 const moving=o=>{for(let q=o;q;q=q.parent)if(MOVING.test(q.name||''))return true;return false;};
 
@@ -20,8 +22,8 @@ export function collectOccluders(scene){
  const byUuid=new Map();scene.traverse(q=>byUuid.set(q.uuid,q));
  const conditions=[],index=new Map(),condOf=o=>{let i=index.get(o);if(i===undefined){i=conditions.length;conditions.push([ownerPath(o,scene),ownerPrint(o)]);index.set(o,i);}return i;};
  const bandOf=q=>{for(let p=q.parent;p;p=p.parent){if(p.userData?.mergedSources)return p.parent;if(/^Walk_band_\d+$/.test(p.name||''))return p;}return null;};
- const positions=[],sides=[],conds=[],bandConds=new Set(),stats={meshes:0,sources:0,triangles:0,skippedMaterials:0,noArrays:0};let mergeRoot=null;
- const a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3();
+ const positions=new Grow(Float32Array),sides=new Grow(Uint8Array),conds=new Grow(Uint32Array),bandConds=new Set(),stats={meshes:0,sources:0,triangles:0,skippedMaterials:0,noArrays:0};let mergeRoot=null;
+ const a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3(),added=new Set();// every piece of a split merge lists all its sources
  const add=(o,cond)=>{const g=o.geometry,p=g?.attributes?.position,ix=g?.index;if(!p?.array||ix&&!ix.array){stats.noArrays++;return;}
   const mats=[o.material].flat(),flip=o.matrixWorld.determinant()<0,total=ix?ix.count:p.count,dr=g.drawRange,end=Math.min(total,dr.start+dr.count);
   // three ignores geometry groups unless the material is an array.
@@ -32,9 +34,9 @@ export function collectOccluders(scene){
     // Stored counter-clockwise as drawn: a mirrored object's front face flips with its determinant.
     const [B,C]=flip?[c,b]:[b,c];positions.push(a.x,a.y,a.z,B.x,B.y,B.z,C.x,C.y,C.z);sides.push(side);conds.push(cond);stats.triangles++;}}};
  scene.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||o.isSkinnedMesh||o.isBatchedMesh||moving(o))return;
-  if(o.userData.sources?.length){if(o.parent&&mergeRoot===null)mergeRoot=condOf(o.parent);for(const id of o.userData.sources){const q=byUuid.get(id),band=q&&bandOf(q);if(!band)continue;q.updateWorldMatrix(true,false);const k=condOf(band);bandConds.add(k);add(q,k);stats.sources++;}return;}
+  if(o.userData.sources?.length){if(o.parent&&mergeRoot===null)mergeRoot=condOf(o.parent);for(const id of o.userData.sources){if(added.has(id))continue;added.add(id);const q=byUuid.get(id),band=q&&bandOf(q);if(!band)continue;q.updateWorldMatrix(true,false);const k=condOf(band);bandConds.add(k);add(q,k);stats.sources++;}return;}
   if(o.userData.bandMerged||!shown(o))return;add(o,condOf(o));stats.meshes++;});
- return {positions:Float32Array.from(positions),sides:Uint8Array.from(sides),conds:Uint32Array.from(conds),conditions,bandConds,mergeRoot,stats};
+ return {positions:positions.values,sides:sides.values,conds:conds.values,conditions,bandConds,mergeRoot,stats};
 }
 
 const CLUSTER=4;
@@ -56,9 +58,13 @@ export function collectTargets(scene){
  const isRoot=q=>!q.parent||q.parent===scene||/^Walk_band_\d+$|live_source|^V2_live/i.test(q.parent.name||'');
  const ownerOf=o=>{if(o.isInstancedMesh||/_merged_|^Walk_merged_/.test(o.name||''))return o;let q=o;while(!isRoot(q))q=q.parent;return q;};
  const groups=new Map(),byUuid=new Map();scene.traverse(q=>byUuid.set(q.uuid,q));
- const boxesOf=o=>{const g=o.geometry;if(!g.boundingBox){if(!g.attributes.position?.array)return null;g.computeBoundingBox();}
-  if(o.userData.sources?.length)return o.userData.sources.flatMap(id=>{const q=byUuid.get(id),qg=q?.geometry;if(!qg)return [null];if(!qg.boundingBox){if(!qg.attributes.position?.array)return [null];qg.computeBoundingBox();}q.updateWorldMatrix(true,false);return clusters(q,qg.boundingBox.clone().applyMatrix4(q.matrixWorld));});
-  return clusters(o,g.boundingBox.clone().applyMatrix4(o.matrixWorld));};
+ const boxesOf=o=>{const g=o.geometry,own=!!g.attributes.position?.array&&(!g.index||!!g.index.array);
+  // A merged deck piece holds every run it may draw in its own arrays (kept on the bake page): its clusters bound it
+  // whichever decks show. Only without them do its merge's sources stand in.
+  if(own){if(!g.boundingBox)g.computeBoundingBox();return clusters(o,g.boundingBox.clone().applyMatrix4(o.matrixWorld));}
+  if(!o.userData.sources?.length)return null;
+  return o.userData.sources.flatMap(id=>{const q=byUuid.get(id),qg=q?.geometry;if(!qg)return [null];if(!qg.boundingBox){if(!qg.attributes.position?.array)return [null];qg.computeBoundingBox();}q.updateWorldMatrix(true,false);return clusters(q,qg.boundingBox.clone().applyMatrix4(q.matrixWorld));});
+};
  const visit=(o,visible)=>{visible=visible&&o.visible;if(!visible)return;
   if(o.isMesh&&!o.isSkinnedMesh&&!o.isBatchedMesh&&!o.castShadow&&[o.material].flat().every(m=>m&&!m.transparent&&m.visible!==false)){
    const root=ownerOf(o);let lifted=false;for(let q=o;q;q=q.parent)if(LIFT.test(q.name||'')){lifted=true;break;}
