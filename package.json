@@ -16,6 +16,8 @@
     "check:film-look": "node scripts/check-film-look.mjs",
     "check:plaque-atlas": "node scripts/check-plaque-atlas.mjs",
     "check:rig-pace": "node scripts/check-rig-pace.mjs",
+    "check:share-materials": "node scripts/check-share-materials.mjs",
+    "check:call-lights": "node scripts/check-call-lights.mjs",
     "check:band-merge-sources": "node scripts/check-band-merge-sources.mjs",
     "check:atrium-proxy-fade": "node scripts/check-atrium-proxy-fade.mjs",
     "check:design": "node scripts/check-selected-interiors.mjs",
