@@ -32,7 +32,7 @@ const V2_CHECKS=['check-walk-performance','check-otherside','launch-b-normalizat
  'check-release-v2','check-phase6-v2','check-freight-airlock-v2','check-v2-round2','check-v2-signs','check-sign-render-v2','check-lobby-tile-v2',
  'check-goto-v2','check-halloween-v2','check-crew-gallery-v2','check-build-cache-v2','check-authoring-cache-v2','check-authoring-skin-proof-v2',
  'check-privacy-classes-v2','check-streamed-metadata-v2','check-public-bindings-v2','check-cache-transport-v2','check-export-metadata-v2',
- 'check-atrium-void-fixtures-v2','check-band-merge-sources','check-plan'];
+ 'check-atrium-void-fixtures-v2','check-band-merge-sources','check-atrium-proxy-fade','check-plan'];
 // The games' and features' own rules: quick, and independent of the ship's geometry. (The v1 ship's geometry checks
 // were removed with the v1 rollback, Jay 2026-11-02.)
 const GAMES=['check-hub','check-backdrop','check-invasion','check-emergency-drill','check-paws-off','check-giveaway','check-pool','check-ship-log',

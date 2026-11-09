@@ -9,7 +9,9 @@ let furColour=savedFur(),furSettings=null;
 import {walkBindings,bindingLabel} from './bindings.js';
 let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
-import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
+import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass,enableAtriumProxyFade} from '../v2/atrium-visibility.js';
+// The atrium's room stand-ins dissolve near the eye's height instead of vanishing in one frame (atrium-visibility.js).
+enableAtriumProxyFade();
 import {createAtriumSight} from '../v2/atrium-sight.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
 import {gotoStand as v2GotoStand,yarnPlace} from '../v2/wayfinding.js';
