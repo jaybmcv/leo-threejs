@@ -43,7 +43,7 @@ export function paintDaylightSky(c){
 export const SHADE_HALVES={tree:0,dapple:.5};
 export function paintTreeShade(c,seed=1){
  const S=256;c.width=S*2;c.height=S;const g=c.getContext('2d'),rnd=seeded(seed);g.clearRect(0,0,S*2,S);
- for(const[ox,core,flecks]of[[0,1,34],[S,.7,110]]){
+ for(const[ox,core,flecks]of[[0,1,34],[S,.9,110]]){
   g.save();g.beginPath();g.rect(ox,0,S,S);g.clip();
   const r=g.createRadialGradient(ox+S/2,S/2,0,ox+S/2,S/2,S/2);r.addColorStop(0,`rgba(58,44,26,${core})`);r.addColorStop(.6,`rgba(58,44,26,${core*.85})`);r.addColorStop(1,'rgba(58,44,26,0)');
   g.fillStyle=r;g.fillRect(ox,0,S,S);g.globalCompositeOperation='destination-out';
@@ -76,7 +76,7 @@ export function paintTravertine(c){
     // Stone, not timber: round soft clouds, greyish dark and creamy light, and small pits. Nothing long and thin
     // along the paver, which reads as grain at a walker's low angle.
     const vr=seeded(row*31+k*7+1);
-    for(let i=0;i<10;i++){const dark=vr()<.55,rx=10+vr()*24;puff(g,x0+dx+vr()*pw,y0+vr()*ph,rx,rx*(.65+vr()*.35),vr()*3,dark?.07+vr()*.08:.1+vr()*.12,dark?'168,152,136':'255,251,242');}
+    for(let i=0;i<10;i++){const dark=vr()<.55,rx=10+vr()*24;puff(g,x0+dx+vr()*pw,y0+vr()*ph,rx,rx*(.65+vr()*.35),vr()*3,dark?.1+vr()*.1:.12+vr()*.14,dark?'168,148,130':'255,250,240');}
     for(let i=0;i<10;i++){g.fillStyle=`rgba(120,100,84,${.12+vr()*.14})`;g.beginPath();g.ellipse(x0+dx+vr()*pw,y0+vr()*ph,1+vr()*2.2,.8+vr(),0,0,Math.PI*2);g.fill();}
    }
    g.restore();
