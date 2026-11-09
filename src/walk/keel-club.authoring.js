@@ -493,7 +493,7 @@ export function createKeelClub(ship){
  for(let k=0;k<7;k++){const z=-24+k*6+5.4;parts.push(paint(new T.CylinderGeometry(.15,.13,.85,8).translate(153.2,FY+.43,z),C.bag));for(let j=0;j<3;j++)parts.push(paint(box(153.1+j*.08,153.16+j*.08,FY+.85,FY+1.05,z-.05,z+.05),C.line));}
  for(const [x,z,r,c] of [[166,-12,2.4,C.orange],[172,8,3,C.line],[178,-4,3.6,C.screen],[184,14,2.6,C.orange],[184,-18,2.6,C.line]])for(const k of [1,.62,.3])parts.push(paint(new T.RingGeometry(r*k-.18,r*k,28).rotateX(-Math.PI/2).translate(x,FY+.05+k*.002,z),k===.62?C.line:c));
  for(const [x,z] of [[166,-12],[172,8],[178,-4],[184,14],[184,-18]]){parts.push(paint(new T.CylinderGeometry(.02,.02,1.6,4).translate(x,FY+.8,z),C.line));const f=new T.BufferGeometry();f.setAttribute('position',new T.Float32BufferAttribute([x,FY+1.6,z,x,FY+1.3,z,x,FY+1.45,z-.5],3));f.computeVertexNormals();parts.push(paint(f,C.orange));}
- {const zs=xsBetween(-20,20,1),domeX=z=>200-3*(z/20)**2,dome=gridUV(zs.length,2,(i,j)=>[domeX(zs[i]),j?CY-.6:FY,zs[i]],(i,j)=>[i/(zs.length-1),j?1:0]);screens.range.push(dome);walls.push(dome.clone());}
+ {const zs=xsBetween(-32,32,1),domeX=z=>200-2.5*(z/32)**2,dome=gridUV(zs.length,2,(i,j)=>[domeX(zs[i]),j?CY-.6:FY,zs[i]],(i,j)=>[i/(zs.length-1),j?1:0]);screens.range.push(dome);walls.push(dome.clone());}
  // Climbing walls on the bow hull, floor to ceiling, both sides, with holds, and crash mats at their foot.
  for(const s of [-1,1]){const xs=xsBetween(150,180),ys=ysBetween(FY,CY);add(grid(xs.length,2,(i,j)=>[xs[i],j?CY:FY,s*(front(xs[i])+.05)],s>0),C.climbWall,{wall:true});
   for(const x of [150,180])parts.push(paint(grid(2,ys.length,(i,j)=>[x,ys[j],s*(i?half(x,ys[j]):front(x)+.05)]),C.climbWall));
@@ -568,6 +568,10 @@ export function createKeelClub(ship){
  for(const s of [-1,1]){const [a,b]=tz(89,s).map(Math.abs),zc=s*(a+b)/2,xc=89,top=TY+4.6,R=3.5;
   walls.push(new T.CylinderGeometry(4,4,CY-.8-TY,20).translate(xc,(TY+CY-.8)/2,zc));
   parts.push(paint(new T.CylinderGeometry(1,1,CY-TY,16).translate(xc,(TY+CY)/2,zc),C.rib));
+  // a spiral stair round the column up to the platform (round 7): 26 treads, one and a half turns, a handrail of posts
+  for(let k=0;k<26;k++){const t=k/26*Math.PI*3,y=TY+(k+1)/26*(top-.22-TY),ct=Math.cos(t),st=Math.sin(t);
+   parts.push(paint(new T.BoxGeometry(1.9,.08,.62).rotateY(-t).translate(xc+ct*2.05,y,zc+st*2.05),C.wood));
+   if(k%2===0)parts.push(paint(new T.CylinderGeometry(.025,.025,.95,4).translate(xc+ct*3,y+.48,zc+st*3),C.brass));}
   for(let k=0;k<8;k++){const t=k/8*Math.PI*2;parts.push(paint(new T.CylinderGeometry(.09,.09,CY-.9-TY,6).translate(xc+Math.cos(t)*R,(TY+CY-.9)/2,zc+Math.sin(t)*R),C.rib));}
   parts.push(paint(new T.CylinderGeometry(R+.3,R+.3,.22,24).translate(xc,top-.11,zc),C.rib));glass.push(paint(new T.CylinderGeometry(R+.25,R+.25,1,24,1,true).translate(xc,top+.5,zc),C.rail));
   lamps.push(paint(new T.TorusGeometry(R+.25,.04,4,32).rotateX(Math.PI/2).translate(xc,top+1.02,zc),C.railLed));lamps.push(paint(new T.TorusGeometry(R+.31,.05,4,32).rotateX(Math.PI/2).translate(xc,top-.2,zc),C.cove));
@@ -701,7 +705,10 @@ export function createKeelClub(ship){
    for(let k=0;k<n;k++){const px=cx+(r()-.5)*sz*2.4,py=cy+(r()-.5)*sz*.8,rad=sz*(.32+r()*.42);
     let gr=c.createRadialGradient(px,py+rad*.3,0,px,py+rad*.3,rad*1.05);gr.addColorStop(0,'rgba(205,150,168,.5)');gr.addColorStop(1,'rgba(205,150,168,0)');c.fillStyle=gr;c.beginPath();c.arc(px,py+rad*.3,rad*1.05,0,Math.PI*2);c.fill();
     gr=c.createRadialGradient(px-rad*.25,py-rad*.25,0,px,py,rad*.92);gr.addColorStop(0,'rgba(255,251,242,.97)');gr.addColorStop(.55,'rgba(255,229,194,.7)');gr.addColorStop(1,'rgba(255,222,192,0)');c.fillStyle=gr;c.beginPath();c.arc(px,py,rad*.92,0,Math.PI*2);c.fill();}
-   c.restore();}});
+   c.restore();}
+  // a low sun's glow over the bow end of the hall (round 7)
+  {const sx=w*.94,sy=h*.5,sun=c.createRadialGradient(sx,sy,0,sx,sy,w*.2);sun.addColorStop(0,'rgba(255,236,196,.75)');sun.addColorStop(.35,'rgba(255,214,160,.35)');sun.addColorStop(1,'rgba(255,200,150,0)');
+   c.save();c.translate(0,sy);c.scale(1,.75);c.translate(0,-sy);c.fillStyle=sun;c.fillRect(0,0,w,h);c.restore();}});
  if(sunset){sunset.repeat.set(1/(KEEL.bow-KEEL.aft),1/120);sunset.offset.set(-KEEL.aft/(KEEL.bow-KEEL.aft),.5);}
  const skyMat=new T.MeshBasicMaterial({name:'Keel_club_sky',map:sunset,color:sunset?0xffffff:C.ceiling,toneMapped:false,side:T.DoubleSide});
  // The range's dome screen: a floodlit fairway with target greens under a starry sky and mountains. The sims' screens:
@@ -870,7 +877,7 @@ float surfLean(float x,float z){float u=surfU(x),d=(u-.29)/.035;return -.55*surf
  // whole multiples of that period too, so the wrap is seamless.
  let waveT=0;const waves=dt=>{waveT+=dt;SURF.uSurfT.value=waveT%2600;};
  // Empty tubes drifting round the Keel Loop with the current, bobbing and turning slowly.
- const FLOATS=18,UP=new T.Vector3(0,1,0),floatMesh=new T.InstancedMesh(new T.TorusGeometry(.55,.22,8,20).rotateX(Math.PI/2),new T.MeshStandardMaterial({name:'Keel_club_drift_tube',roughness:.45}),FLOATS),floats=[];
+ const FLOATS=30,UP=new T.Vector3(0,1,0),floatMesh=new T.InstancedMesh(new T.TorusGeometry(.55,.22,8,20).rotateX(Math.PI/2),new T.MeshStandardMaterial({name:'Keel_club_drift_tube',roughness:.45}),FLOATS),floats=[];
  {const r=seeded(919),col=new T.Color();for(let i=0;i<FLOATS;i++){floats.push({s:(i+r()*.6)/FLOATS*RIVER_PATH.total,d:(r()-.5)*2,v:TUBE.current*(.8+r()*.3),spin:(r()-.5)*.6,a:r()*6});floatMesh.setColorAt(i,col.setHex([C.slide,C.orange,C.teal,0xf6e05a][i%4]));}}
  const drift=dt=>{floats.forEach((f,i)=>{f.s+=f.v*dt;f.a+=f.spin*dt;const fr=riverFrame(f.s),d=Math.max(fr.lo,Math.min(fr.hi,f.d));
    floatMesh.setMatrixAt(i,M.compose(P.set(fr.x+fr.rx*d,WY+.1+Math.sin(f.s*1.7+i)*.03,fr.z+fr.rz*d),Q.setFromAxisAngle(UP,f.a),S.set(1,1,1)));});floatMesh.instanceMatrix.needsUpdate=true;};
