@@ -574,7 +574,7 @@ export function createKeelClub(ship){
  // A sector slab round the tower's axis: r0..r1, angles t0..t1 (x = cos t, z = sin t), y0..y1; and its top alone.
  const sector=(xc,zc,r0,r1,t0,t1,y0,y1,n=3,topOnly=false)=>{const P=[],ring=(r,y)=>Array.from({length:n+1},(_,i)=>{const t=t0+(t1-t0)*i/n;return [xc+Math.cos(t)*r,y,zc+Math.sin(t)*r];});
   const q=(a,b,c,d)=>P.push(...a,...b,...c,...a,...c,...d),iT=ring(r0,y1),oT=ring(r1,y1),iB=ring(r0,y0),oB=ring(r1,y0);
-  for(let i=0;i<n;i++){q(iT[i],iT[i+1],oT[i+1],oT[i]);if(topOnly)continue;q(iB[i],oB[i],oB[i+1],iB[i+1]);q(oB[i],oB[i+1],oT[i+1],oT[i]);q(iB[i],iT[i],iT[i+1],iB[i+1]);}
+  for(let i=0;i<n;i++){q(iT[i],iT[i+1],oT[i+1],oT[i]);if(topOnly)continue;q(iB[i],oB[i],oB[i+1],iB[i+1]);q(oB[i],oT[i],oT[i+1],oB[i+1]);q(iB[i],iB[i+1],iT[i+1],iT[i]);}
   if(!topOnly){q(iB[0],iT[0],oT[0],oB[0]);q(iB[n],oB[n],oT[n],iT[n]);}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.computeVertexNormals();return g;};
  // A vertical guard along an arc at radius r (angles t0..t1), y0..y1, glass and solid, with a warm handrail along its top.
