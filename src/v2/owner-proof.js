@@ -11,11 +11,12 @@ export const OWNER_PROOF={
  // m: a triangle within this of P counts as lying on it: float noise only. Two patches a little apart in depth leave a
  // slit between them that oblique sight passes through (Astra reproduced one at 1.5 mm), so they are not one cover.
  planeTol:1e-4,
- // m: offsets below this are float noise and count as 0; even at maxSlope they leave a slit under 0.5 mm, under a pixel
- // beyond the near margin (1080p, 62 degrees: a pixel is 1 mrad, 0.5 mm at 0.5 m).
- noise:1e-5,
+ // m: the widest sight gap at P left uncounted between triangles a little off it (offset x slope): 0.25 mm is half a pixel
+ // seen from the near margin (1080p, 62 degrees: a pixel is 1 mrad, 0.5 mm at 0.5 m). Triangles of one flat wall that
+ // share edges leave no gap at all, though float noise puts them up to ~3e-5 m off a plane at ship coordinates.
+ slit:2.5e-4,
  areaEps:1e-9,       // m²: uncovered pieces smaller than this are float noise between triangles that share an edge
- maxPieces:4000,     // a cover that fragments further is given up (not proven)
+ maxPieces:512,      // a cover that fragments further is given up (not proven)
  nearMargin:.5,      // m: every eye in C at least this far from P, clear of the near plane's furthest corner (the walk
                      // hides only for a camera whose near-plane corners lie within this: owner-hiding.js)
  targetMargin:.15,   // m: all of B at least this far behind P (finishes a few mm behind a wall still draw: depth bias)
@@ -98,7 +99,7 @@ export function createOwnerProof(occluders,options={}){
    let t=[f.to2(tri.a),f.to2(tri.b),f.to2(tri.c)];const a=area(t);if(Math.abs(a)<1e-12)return false;if(a<0)t=[t[0],t[2],t[1]];
    // A triangle off P by d: sight crossing P at x crosses the triangle's plane within d*slope of x, so it surely blocks
    // only what lies that far inside it.
-   const d=Math.max(Math.abs(pl.distanceToPoint(tri.a)),Math.abs(pl.distanceToPoint(tri.b)),Math.abs(pl.distanceToPoint(tri.c))),inset=d>o.noise?d*f.slope:0;
+   const d=Math.max(Math.abs(pl.distanceToPoint(tri.a)),Math.abs(pl.distanceToPoint(tri.b)),Math.abs(pl.distanceToPoint(tri.c))),inset=d*f.slope>o.slit?d*f.slope:0;
    if(inset>0){t=shrink(t,inset);if(!t)return false;}
    const tb=bbox2(t),next=[];let touched=false;
    for(const p of pieces){const pb=bbox2(p);if(pb[2]<tb[0]||pb[0]>tb[2]||pb[3]<tb[1]||pb[1]>tb[3])next.push(p);else{touched=true;next.push(...subtract(p,t,o.areaEps));}}
