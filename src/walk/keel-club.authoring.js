@@ -844,7 +844,7 @@ float surfLean(float x,float z){float u=surfU(x),d=(u-.29)/.035;return -.55*surf
     for(const [x,y] of [[x0,TY-.3],[x1,TY-.3],[x1,WY],[x0,TY-.3],[x1,WY],[x0,WY]]){P2.push(x,y,z2);U2.push(x/2.5+.37,y/2.5);}
     for(const [x,v] of [[x0,0],[x1,0],[x1,1],[x0,0],[x1,1],[x0,1]]){PM.push(x,WY+v*1.6,z-s*.15);UM.push(x/3,v);}}
    const g2=new T.BufferGeometry();g2.setAttribute('position',new T.Float32BufferAttribute(P2,3));g2.setAttribute('uv',new T.Float32BufferAttribute(U2,2));g2.computeVertexNormals();
-   water(g2,0xf2fdff,{rep:1,flow:[0,2.3],opacity:.75,name:'Keel_club_waterfall',bright:.7,tex:streaks});
+   water(g2,0xf2fdff,{rep:1,flow:[0,2.3],opacity:.75,name:'Keel_club_waterfall_back',bright:.7,tex:streaks});
    const mistTex=canvasTexture(64,64,(c,w,h)=>{const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.6,'rgba(255,255,255,.35)');g.addColorStop(1,'rgba(255,255,255,.75)');c.fillStyle=g;c.fillRect(0,0,w,h);});
    const gm=new T.BufferGeometry();gm.setAttribute('position',new T.Float32BufferAttribute(PM,3));gm.setAttribute('uv',new T.Float32BufferAttribute(UM,2));gm.computeVertexNormals();
    const mist=new T.Mesh(gm,new T.MeshBasicMaterial({name:'Keel_club_waterfall_mist',map:mistTex,color:0xeaf8ff,transparent:true,opacity:.7,depthWrite:false,side:T.DoubleSide,forceSinglePass:true,toneMapped:false}));mist.name='Keel_club_waterfall_mist';group.add(mist);}}
@@ -938,5 +938,8 @@ float surfLean(float x,float z){float u=surfU(x),d=(u-.29)/.035;return -.55*surf
   if(!saved){saved={fog:fog.color.clone()};if(light?.hemi&&light?.fill)Object.assign(saved,{light,sky:light.hemi.color.clone(),ground:light.hemi.groundColor.clone(),hemi:light.hemi.intensity,fill:light.fill.intensity});}
   fog.color.copy(HAZE);fog.near=Math.max(fog.near,170);fog.far=Math.max(fog.far,440);
   if(saved.hemi){const {hemi,fill}=saved.light;hemi.color.copy(SKY);hemi.groundColor.copy(GROUND);hemi.intensity=saved.hemi*.95;fill.intensity=saved.fill*.75;}};
- return {group,deck1,solid,seats,update,near,fire,seed,mood,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
+ // On phones the walk calls lite(): the fill-rate extras (additive light pools, lamp halos, wall washes, the second
+ // waterfall sheet and its mist) are left out; the decks, rails, surf and greenery stay.
+ const lite=()=>{let n=0;group.traverse(o=>{if(/^Keel_club_(light_pools|lamp_halos|wall_washes|waterfall_back|waterfall_mist)$/.test(o.name)){o.visible=false;n++;}});return n;};
+ return {group,deck1,solid,seats,update,near,fire,seed,mood,lite,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
 }
