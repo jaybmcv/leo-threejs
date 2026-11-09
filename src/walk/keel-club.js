@@ -838,13 +838,13 @@ float surfLean(float x,float z){float u=surfU(x),d=(u-.29)/.035;return -.55*surf
   m.customProgramCacheKey=()=>'keel-club-surf';}
  {const P=[],U=[];for(const {x0,x1,z} of curtains)for(const [x,y] of [[x0,TY-.3],[x1,TY-.3],[x1,WY],[x0,TY-.3],[x1,WY],[x0,WY]]){P.push(x,y,z);U.push(x/2.5,y/2.5);}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.setAttribute('uv',new T.Float32BufferAttribute(U,2));g.computeVertexNormals();
-  water(g,0xe6fbff,{rep:1,flow:[0,1.6],opacity:streaks?.95:.7,name:'Keel_club_waterfall',bright:.6,tex:streaks});
+  water(g,0xe6fbff,{rep:1,flow:[0,1.6],opacity:streaks?1:.7,name:'Keel_club_waterfall',bright:1.1,tex:streaks});
   // a second sheet 0.35 m further out, falling faster (round 5), and mist rising off the river where they land
   if(streaks){const P2=[],U2=[],PM=[],UM=[];for(const {x0,x1,z,s} of curtains){const z2=z-s*.35;
     for(const [x,y] of [[x0,TY-.3],[x1,TY-.3],[x1,WY],[x0,TY-.3],[x1,WY],[x0,WY]]){P2.push(x,y,z2);U2.push(x/2.5+.37,y/2.5);}
     for(const [x,v] of [[x0,0],[x1,0],[x1,1],[x0,0],[x1,1],[x0,1]]){PM.push(x,WY+v*1.6,z-s*.15);UM.push(x/3,v);}}
    const g2=new T.BufferGeometry();g2.setAttribute('position',new T.Float32BufferAttribute(P2,3));g2.setAttribute('uv',new T.Float32BufferAttribute(U2,2));g2.computeVertexNormals();
-   water(g2,0xf2fdff,{rep:1,flow:[0,2.3],opacity:.75,name:'Keel_club_waterfall_back',bright:.7,tex:streaks});
+   water(g2,0xf2fdff,{rep:1,flow:[0,2.3],opacity:.9,name:'Keel_club_waterfall_back',bright:1.1,tex:streaks});
    const mistTex=canvasTexture(64,64,(c,w,h)=>{const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.6,'rgba(255,255,255,.35)');g.addColorStop(1,'rgba(255,255,255,.75)');c.fillStyle=g;c.fillRect(0,0,w,h);});
    const gm=new T.BufferGeometry();gm.setAttribute('position',new T.Float32BufferAttribute(PM,3));gm.setAttribute('uv',new T.Float32BufferAttribute(UM,2));gm.computeVertexNormals();
    const mist=new T.Mesh(gm,new T.MeshBasicMaterial({name:'Keel_club_waterfall_mist',map:mistTex,color:0xeaf8ff,transparent:true,opacity:.7,depthWrite:false,side:T.DoubleSide,forceSinglePass:true,toneMapped:false}));mist.name='Keel_club_waterfall_mist';group.add(mist);}}
