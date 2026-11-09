@@ -24,8 +24,10 @@ function ship(){
 {const scene=new T.Scene(),plain=quad(0,0),mirror=quad(4,0);mirror.scale.x=-1;scene.add(plain,mirror);scene.updateMatrixWorld(true);const o=collectOccluders(scene),p=o.positions;
  const normal=f=>{const v=i=>new T.Vector3(p[f*9+i*3],p[f*9+i*3+1],p[f*9+i*3+2]);return new T.Vector3().subVectors(v(1),v(0)).cross(new T.Vector3().subVectors(v(2),v(0))).normalize();};
  assert.ok(normal(0).z>.99&&normal(2).z>.99,'both face +z as drawn');pass('a mirrored mesh is stored with the face three draws in front');}
-{const scene=new T.Scene(),door=quad(0,0,undefined,'Lounge_door'),lift=new T.Group();lift.name='Walk_lift_core';lift.add(quad(3,0,undefined,'Panel'));scene.add(door,lift);scene.updateMatrixWorld(true);
- assert.equal(collectOccluders(scene).positions.length,0);assert.equal(collectTargets(scene).length,0);pass('doors and lifts neither hide anything nor are hidden');}
+{const scene=new T.Scene(),door=quad(0,0,undefined,'Lounge_door'),lift=new T.Group();lift.name='Walk_lift_core';lift.add(quad(3,0,undefined,'Panel'));
+ const lever=quad(6,0,undefined,'Lever_panel_arm');// swings when pulled, and settles after load at a moment that differs page to page
+ scene.add(door,lift,lever);scene.updateMatrixWorld(true);
+ assert.equal(collectOccluders(scene).positions.length,0);assert.equal(collectTargets(scene).length,0);pass('doors, levers and lifts neither hide anything nor are hidden');}
 {const scene=new T.Scene(),tree=quad(0,0,undefined,'Blossom_tree');tree.castShadow=true;const glass=quad(3,0,new T.MeshStandardMaterial({transparent:true}),'Pane');scene.add(tree,glass);scene.updateMatrixWorld(true);
  assert.equal(collectTargets(scene).length,0);pass('shadow casters and see-through parts are never hidden');}
 {const scene=new T.Scene(),geo=new T.BoxGeometry(1,1,1),mat=new T.MeshStandardMaterial();
