@@ -8,10 +8,13 @@ import * as T from 'three';
 // (`conds`): an index the caller maps to what must be drawn for that triangle to be there. A proof returns the set of
 // conditions it relied on, or null. Anything not proven stays visible, so every shortcut here errs towards null.
 export const OWNER_PROOF={
- planeTol:.002,      // m: a triangle within this of P counts as lying on it (the footprint grows to allow for it)
+ // m: a triangle within this of P counts as lying on it: float noise only. Two patches a little apart in depth leave a
+ // slit between them that oblique sight passes through (Astra reproduced one at 1.5 mm), so they are not one cover.
+ planeTol:1e-4,
  areaEps:1e-9,       // m²: uncovered pieces smaller than this are float noise between triangles that share an edge
  maxPieces:4000,     // a cover that fragments further is given up (not proven)
- nearMargin:.1,      // m: every eye in C at least this far from P (clear of the camera's near plane)
+ nearMargin:.5,      // m: every eye in C at least this far from P, clear of the near plane's furthest corner (the walk
+                     // hides only for a camera whose near-plane corners lie within this: owner-hiding.js)
  targetMargin:.15,   // m: all of B at least this far behind P (finishes a few mm behind a wall still draw: depth bias)
  maxSlope:50,        // the steepest sight line's slope against P beyond which the tolerance is unbounded
  subdiv:2,

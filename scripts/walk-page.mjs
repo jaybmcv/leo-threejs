@@ -19,7 +19,7 @@ import {loadMedia} from './ship-log-media.mjs';
 // LEO_LIVE_URL, when set, is the Leo live server the page joins (wss://.../live; server/leo-live.mjs); without it the walk
 // is solo. The walk's paintings (src/walk/paintings.js) and comic pages (src/walk/comics.js) are hashed files of their own,
 // fetched when a walker comes near or opens the book.
-const WALK_SCRIPT=/^walk(-emotes|-map|-hat|-art-[a-z0-9-]+|-reel|-atrium-pvs)?\.[0-9a-f]{10}\.(js|json|png|glb|jpg|mp4)$/;
+const WALK_SCRIPT=/^walk(-emotes|-map|-hat|-art-[a-z0-9-]+|-reel|-atrium-pvs|-owner-bake)?\.[0-9a-f]{10}\.(js|json|png|glb|jpg|mp4)$/;
 const WALK_LOGO=/^hydro-nip-main-logo\.[0-9a-f]{10}\.jpg$/;
 const hashed=(stem,ext,data)=>`${stem}.${createHash('sha256').update(data).digest('hex').slice(0,10)}.${ext}`;
 export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverride=null,walkOverride=null,sourceRef=null,sourceAdapters=undefined,profileMap=false,authoringWalk=false,preparedWalk=false,logMedia=undefined}){
@@ -55,6 +55,8 @@ export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverri
  if(code.includes('createDLCat('))throw new Error('The walk script must load Cosmo from its own file');
  if(!debug&&(code.includes('__walk')||code.includes('anchorTest')))throw new Error('The walk debug hook must not ship');
  const name=hashed('walk','js',code);if(profileMap){await fs.mkdir('output/phase3b/startup/maps',{recursive:true});await fs.writeFile('output/phase3b/startup/maps/'+name+'.map',result.outputFiles.find(f=>f.path.endsWith('.map')).contents);}await fs.writeFile(path.join(out,name),code);
+ // The owner bake's file for this script (src/v2/owner-hiding.js): empty until scripts/walk-owner-bake.mjs fills it.
+ if(v2&&preparedWalk){const {emptyOwnerBake,ownerBakeFile}=await import('../src/v2/owner-hiding.js');await fs.writeFile(path.join(out,ownerBakeFile(name)),JSON.stringify(emptyOwnerBake(name)));}
  let html=(await fs.readFile('src/walk/walk.html','utf8')).replace('<script>/* BUNDLE */</script>',()=>`<script>LEO_WALK_BOOT("${name}")</script>`);
  if(v2&&preparedWalk)html=html.replace('This can take a few minutes: the whole ship is built on this device, using a few GB of memory. Keep this tab open, and if your browser says the page isn’t responding, choose Wait. Closing other tabs helps.','Loading the prepared ship and setting up the walk on this device. This can take longer on a slower connection or device. Keep this tab open; closing other tabs may help if memory is low.');
  if(html.includes('/* BUNDLE */'))throw new Error('walk.html lost its bundle placeholder');

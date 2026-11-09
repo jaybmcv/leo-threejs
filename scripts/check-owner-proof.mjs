@@ -42,6 +42,9 @@ check('a box through the wall stays visible',[{geometry:wall()}],false,{b:box(-.
 check('a wall tiled from 3,200 triangles still covers',[{geometry:wall({segments:40})}],true);
 check('two halves sharing an edge cover without a seam',[{geometry:rect(-10,0,-2,8,0)},{geometry:rect(0,10,-2,8,0)}],true);
 check('a 1 cm gap between two halves shows the box',[{geometry:rect(-10,-.005,-2,8,0)},{geometry:rect(.005,10,-2,8,0)}],false);
+// Astra's case: halves meeting at x=0 but 1.5 mm apart in depth leave a slit that oblique sight passes through.
+check('two halves 1.5 mm apart in depth do not cover (a slit between them)',[{geometry:rect(-10,0,-2,8,0)},{geometry:rect(0,10,-2,8,.0015)}],false);
+check('an eye within the near-plane margin is not trusted',[{geometry:wall()}],false,{c:box(-1,0,.3,1,2,1)});
 check('grazing sight lines are not trusted',[{geometry:rect(-100,100,-2,8,0)}],false,{c:box(-1,0,.15,1,2,.35),b:box(50,.5,-.6,51,1.5,-.3)});
 check('a box touching the cell is never hidden',[{geometry:wall()}],false,{b:box(0,1,5,1,2,7)});
 // Two walls in different planes, each covering one half: only splitting proves it, and both are relied on.
