@@ -5,7 +5,7 @@ view, so they are settled before the ground zones; otherwise each zone's concept
 
 | Area | Covers | Main sources |
 | --- | --- | --- |
-| S4 Light & palette | Warm atrium light, material tones; locked first | `src/walk/atrium-mood.js`, detail haze levels |
+| S4 Light & palette | Warm atrium light, material tones, day and night ([light/](atrium-areas/light/README.md)); locked first | `src/walk/atrium-mood.js`, `ship-time.js`, `atrium-light-paint.js`, detail haze levels |
 | S1 Floor & boulevard | Paving, lawns, paths, avenue planters, tree shade | `src/v2/atrium-surfaces.js`, `atrium-gardens.js` (joints, shade), `atrium-daylight.js` |
 | S2 Balcony walls | Slab edges, soffits and downlights (Decks 7–16), cascades (7–20), dining aprons (6–15), guards | `src/v2/facade.js`, `flowing-ribs.js`, `atrium-terrace-guards.js`, `atrium-gardens.js` |
 | S3a Sky | Deck 20 sky panel, Deck 16 bow underside | `src/v2/atrium-daylight.js`, `sky-tip.js`, `crew-gallery.js` |
@@ -25,7 +25,7 @@ concept images. Each is a walk share link (`walk.html?lv=2&at=x,y,z&yaw=°&pitch
 any build. Capture with headless Chrome on debug port 9333:
 
 ```
-node scripts/capture-atrium-areas.mjs <tag> [baseUrl] [--only=id,id]
+node scripts/capture-atrium-areas.mjs <tag> [baseUrl] [--only=id,id] [--query=time=night]
 node scripts/atrium-contact-sheet.mjs <out.jpg> <columns> <image>...
 ```
 
