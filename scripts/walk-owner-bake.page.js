@@ -24,8 +24,12 @@ const cellsOf=b=>{const c=p=>[Math.round((p.x-PV.x0)/PV.step),Math.floor((p.y-PV
 const isCell=b=>{const s=b.getSize(new T.Vector3());return s.x<=PV.step+.01&&s.y<=2.01&&s.z<=PV.step+.01;};
 
 let host,proof,targets,parts,partIndex,conditions,bandConds,mergeRoot;
-function setup(){
+// `seed` {at, yaw}: where the walker stands while the bake runs and checks itself (the decks shown there are those a
+// visitor in the baked cells sees).
+async function setup(seed){
  host=globalThis.__ownerBakeHost;if(!host?.scene)throw Error('No __ownerBakeHost: open the walk with ?ownerBake');
+ if(seed){if(!host.goTo({at:seed.at,yaw:seed.yaw,resolved:true}))throw Error('Could not stand the walker at '+JSON.stringify(seed.at));host.follow.mode='third';host.follow.yaw=(seed.yaw??0)*Math.PI/180;
+  for(let n=0;n<60;n++)await new Promise(f=>requestAnimationFrame(f));}
  host.scene.updateMatrixWorld(true);
  const occ=collectOccluders(host.scene),g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(occ.positions,3));
  proof=createOwnerProof({bvh:new MeshBVH(g,{indirect:true,maxLeafSize:8}),sides:occ.sides,conds:occ.conds});conditions=occ.conditions;bandConds=occ.bandConds;mergeRoot=occ.mergeRoot;

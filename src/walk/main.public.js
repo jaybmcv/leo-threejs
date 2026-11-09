@@ -59,7 +59,7 @@ const WALK_SCRIPT=new URL(import.meta.url).pathname.split('/').pop(),OWNER_BAKE_
 let ownerHiding=null;
 function startOwnerHiding(){
  if(preparedPhone)return;const key=ownerKey(WALK_SCRIPT,(phoneBatching.merge?'merge':'batch')+deskPiece);
- if(OWNER_BAKE_PAGE){globalThis.__ownerBakeHost={T,scene,renderer,camera,key};return;}
+ if(OWNER_BAKE_PAGE){globalThis.__ownerBakeHost={T,scene,renderer,camera,key,follow,goTo:place=>goTo(place)};return;}
  const file=ownerBakeFile(WALK_SCRIPT);if(!file)return;
  fetch(new URL(file,import.meta.url)).then(r=>r.ok?r.json():null).then(data=>{const hiding=createOwnerHiding(data,{key,scene});hiding?.resolve();ownerHiding=hiding;}).catch(e=>console.warn('Owner hiding not used:',e.message));
 }

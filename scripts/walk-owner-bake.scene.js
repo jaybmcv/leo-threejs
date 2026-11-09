@@ -11,7 +11,8 @@ const plainOpaque=m=>!!m&&m.visible!==false&&!m.transparent&&(m.opacity??1)>=1&&
  &&(m.isMeshStandardMaterial||m.isMeshBasicMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial||m.isMeshPhysicalMaterial||m.isMeshToonMaterial||m.isMeshMatcapMaterial);
 // A growing typed array: the soup runs to tens of millions of numbers, past what a plain array can hold.
 class Grow{constructor(Type,size=1<<20){this.Type=Type;this.a=new Type(size);this.n=0;}push(...v){if(this.n+v.length>this.a.length){const b=new this.Type(Math.max(this.a.length*2,this.n+v.length));b.set(this.a.subarray(0,this.n));this.a=b;}for(const x of v)this.a[this.n++]=x;}get values(){return this.a.slice(0,this.n);}}
-const shown=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};
+// A merge source: copied into a merged deck mesh and never drawn itself (it counts through that mesh).
+const copied=o=>{if(o.userData.bandMerged)return true;for(let p=o.parent;p;p=p.parent)if(p.userData?.mergedSources)return true;return false;};
 const moving=o=>{for(let q=o;q;q=q.parent)if(MOVING.test(q.name||''))return true;return false;};
 
 /** Occluder soup: {positions (Float32Array, 9 per triangle), sides, conds (indices into `conditions`), conditions
@@ -35,7 +36,8 @@ export function collectOccluders(scene){
     const [B,C]=flip?[c,b]:[b,c];positions.push(a.x,a.y,a.z,B.x,B.y,B.z,C.x,C.y,C.z);sides.push(side);conds.push(cond);stats.triangles++;}}};
  scene.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||o.isSkinnedMesh||o.isBatchedMesh||moving(o))return;
   if(o.userData.sources?.length){if(o.parent&&mergeRoot===null)mergeRoot=condOf(o.parent);for(const id of o.userData.sources){if(added.has(id))continue;added.add(id);const q=byUuid.get(id),band=q&&bandOf(q);if(!band)continue;q.updateWorldMatrix(true,false);const k=condOf(band);bandConds.add(k);add(q,k);stats.sources++;}return;}
-  if(o.userData.bandMerged||!shown(o))return;add(o,condOf(o));stats.meshes++;});
+  // Whatever is drawn now or not: the walk shows decks as the walker moves, and each triangle's condition says when it counts.
+  if(copied(o))return;add(o,condOf(o));stats.meshes++;});
  return {positions:positions.values,sides:sides.values,conds:conds.values,conditions,bandConds,mergeRoot,stats};
 }
 
@@ -50,8 +52,9 @@ function clusters(o,box){
  return [...m.values()];
 }
 
-/** Parts the bake may hide, grouped by owner (an instanced or merged mesh is its own owner; any other part belongs to
- * its feature root): [{root, parts:[{o, path, print, boxes, slots?}]}]. A cabin part (re-packed from userData.near.all)
+/** Parts the bake may hide, whether or not they are drawn at the moment (the walk shows decks as the walker moves), grouped
+ * by owner (an instanced or merged mesh is its own owner; any other part belongs to its feature root):
+ * [{root, parts:[{o, path, print, boxes, slots?}]}]. A cabin part (re-packed from userData.near.all)
  * lists its slots: [{id, centre, box}]. Left out: movers, lift parts, shadow casters, see-through parts, other instanced
  * meshes (their shown instances change and their full list is not exposed). */
 export function collectTargets(scene){
@@ -65,7 +68,7 @@ export function collectTargets(scene){
   if(!o.userData.sources?.length)return null;
   return o.userData.sources.flatMap(id=>{const q=byUuid.get(id),qg=q?.geometry;if(!qg)return [null];if(!qg.boundingBox){if(!qg.attributes.position?.array)return [null];qg.computeBoundingBox();}q.updateWorldMatrix(true,false);return clusters(q,qg.boundingBox.clone().applyMatrix4(q.matrixWorld));});
 };
- const visit=(o,visible)=>{visible=visible&&o.visible;if(!visible)return;
+ const visit=o=>{if(o.userData?.mergedSources||copied(o))return;
   if(o.isMesh&&!o.isSkinnedMesh&&!o.isBatchedMesh&&!o.castShadow&&[o.material].flat().every(m=>m&&!m.transparent&&m.visible!==false)){
    const root=ownerOf(o);let lifted=false;for(let q=o;q;q=q.parent)if(LIFT.test(q.name||'')){lifted=true;break;}
    if(!lifted&&!MOVING.test(o.name||'')){let part=null;
@@ -73,6 +76,6 @@ export function collectTargets(scene){
       part={o,slots:near.all.map((m,i)=>({id:o.userData.cabinIds[i],centre:near.centres[i],box:g.boundingBox.clone().applyMatrix4(m.clone().premultiply(o.matrixWorld))}))};}}
     else{const boxes=boxesOf(o);if(boxes&&!boxes.includes(null))part={o,boxes};}
     if(part){part.path=ownerPath(o,scene);part.print=ownerPrint(o);if(part.print){let e=groups.get(root);if(!e)groups.set(root,e={root,parts:[]});e.parts.push(part);}}}}
-  for(const c of o.children)visit(c,visible);};
- visit(scene,true);return [...groups.values()];
+  for(const c of o.children)visit(c);};
+ visit(scene);return [...groups.values()];
 }

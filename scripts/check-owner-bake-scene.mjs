@@ -35,4 +35,8 @@ function ship(){
  const parts=collectTargets(scene).flatMap(e=>e.parts);assert.equal(parts.length,1);assert.deepEqual(parts[0].slots.map(s=>s.id),['A','B','C']);pass('instanced parts only with every slot listed (cabins), never re-packed ones without');}
 {const w=ship(),parts=collectTargets(w.scene).flatMap(e=>e.parts).filter(p=>/merged/.test(p.o.name));assert.equal(parts.length,2);
  for(const p of parts){const box=p.boxes.reduce((b,x)=>b.union(x),new T.Box3());assert.ok(box.min.x>=17.9&&box.max.x<=22.1,'the piece\'s own triangles at x 18..22');}pass('a merged piece is boxed by its own triangles, not its whole merge');}
+{const w=ship(),hidden=new T.Group();hidden.name='Walk_band_9';hidden.visible=false;const lamp=quad(0,0,undefined,'Lamp'),wall=quad(0,-3,undefined,'Wall');hidden.add(lamp,wall);w.scene.add(hidden);w.scene.updateMatrixWorld(true);
+ const names=collectTargets(w.scene).flatMap(e=>e.parts.map(p=>p.o.name));assert.ok(names.includes('Lamp'));
+ assert.equal(names.filter(n=>n==='Wall').length,1,"merge sources are not targets; the hidden band's wall is");
+ const o=collectOccluders(w.scene);assert.ok(o.conditions.some(c=>c[0].includes('Walk_band_9')));pass('parts and walls of a deck not shown now are still baked (their conditions decide when they count)');}
 console.log(`owner bake scene: ${passed} checks passed`);

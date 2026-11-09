@@ -46,7 +46,8 @@ async function region(){
  const layout=(await import('../src/plan/selected-layout.js')).default,deck=layout.decks.find(d=>d.number===6&&d.atrium?.outline);if(!deck)throw Error('No Deck 6 atrium outline in the layout');
  const ring=deck.atrium.outline,near=p=>contains(ring,p)||ring.some((a,n)=>distanceToSegment(p,a,ring[(n+1)%ring.length])<=MARGIN);
  const xs=ring.map(p=>p[0]),zs=ring.map(p=>p[1]),i=x=>Math.round((x-PV.x0)/PV.step),j=z=>Math.round((z-PV.z0)/PV.step),k0=Math.floor((deck.y+.01-PV.y0)/2),k1=k0+SLABS-1;
- const views=JSON.parse(await fs.readFile('scripts/walk-frame-views.json','utf8')).map(v=>v.at).filter(a=>near([a[0],a[2]]));const seeds=views.length?views:[[0,deck.y,0]];
+ // Seeds: the bench views standing on this floor (not those on decks above or below the outline).
+ const views=JSON.parse(await fs.readFile('scripts/walk-frame-views.json','utf8')).filter(v=>Math.abs(v.at[1]-deck.y)<3&&near([v.at[0],v.at[2]]));seed=views[0]??{at:[0,deck.y,0],yaw:0};const seeds=views.length?views.map(v=>v.at):[seed.at];
  const blocks=[];
  for(let bi=i(Math.min(...xs)-MARGIN);bi<=i(Math.max(...xs)+MARGIN);bi+=TOP)for(let bj=j(Math.min(...zs)-MARGIN);bj<=j(Math.max(...zs)+MARGIN);bj+=TOP){
   let any=false;for(let a=bi;a<bi+TOP&&!any;a++)for(let b=bj;b<bj+TOP&&!any;b++)if(near([PV.x0+PV.step*a,PV.z0+PV.step*b]))any=true;
@@ -54,6 +55,7 @@ async function region(){
  return blocks.sort((a,b)=>a.d-b.d).map(b=>b.cells);
 }
 
+let seed=null;
 // Chrome number n on its own CDP port, with a profile of its own; killed when the bake ends.
 const chromes=new Set();process.on('exit',()=>{for(const c of chromes)c.kill();});
 async function browser(n){
@@ -76,7 +78,7 @@ async function browser(n){
 async function openPage(n,walk,script){
  const page=await browser(n);await page.send('Page.navigate',{url:walk.url+'?lv=2&view=first&halloween=0&ownerBake'});
  for(let i=0;;i++){if(await page.ev(`document.body?.dataset.ready==='1'&&!!globalThis.__ownerBakeHost`).catch(()=>false))break;if(i>1200)throw Error('The walk did not come up within 10 minutes on page '+n);await sleep(500);}
- await page.ev(script);return {page,setup:await page.ev('__ownerBake.setup()')};
+ await page.ev(script);return {page,setup:await page.ev(`__ownerBake.setup(${JSON.stringify(seed&&{at:seed.at,yaw:seed.yaw})})`)};
 }
 
 const walk=await walkPage();if(!walk.script)throw Error('No walk script named in walk.html');
