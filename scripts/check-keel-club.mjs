@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as T from 'three';
 import {TRANSIT_CORES} from '../src/plan/v1.js';
-import {createKeelClub,KEEL,CORES,DECK1,STOREY,STAIRS,RIVER,BRIDGES,BRIDGE_SPANS,FALLS,CANNONS,riverOuter,riverInner,half,RIVER_PATH,riverFrame,riverNearest,TUBE,TUBE_RANGE,DOCKS,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock,bridgeUnderside,SLIDE_TOWER} from '../src/walk/keel-club.js';
+import {createKeelClub,KEEL,CORES,DECK1,STOREY,STAIRS,RIVER,BRIDGES,BRIDGE_SPANS,FALLS,CANNONS,riverOuter,riverInner,riverBank,riverBed,half,RIVER_PATH,riverFrame,riverNearest,TUBE,TUBE_RANGE,DOCKS,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock,bridgeUnderside,SLIDE_TOWER} from '../src/walk/keel-club.js';
 import {LIFTS,KEEL_STOP,carTriangles} from '../src/walk/lifts.js';
 import {BODY,Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
@@ -118,18 +118,20 @@ assert.equal(far.length,0,'seats out of reach');assert(spots.length>=100,'seats 
  assert.equal(dry,0,'a cannon jet lands out of the river');assert.equal(prompts,crowns.length,'a bridge crown without a cannon prompt');assert(most>30&&splashed>0&&drop.count+ring.count===0,'cannon jet');}
 
 // ---- Floating the Keel Loop ----
-// Every place a tube can be (the loop, at every offset it may steer to) is water under the tube's whole ring, and a
-// seated rider (a column RIDER_R round the seat, RIDER_TOP above it) clears every bridge's underside by CLEAR.
-{const {aft:ra,bow:rb,width:W}=RIVER,WY=FY-RIVER.drop,RIDER_R=.4,RIDER_TOP=1.2,CLEAR=.2;
- const inWater=(x,z)=>x>=ra&&x<=rb&&Math.abs(z)<=riverOuter(x)&&!(x>ra+W&&x<rb-W&&Math.abs(z)<riverInner(x));
- let dry=0,low=0,worst=Infinity,samples=0;
+// Every place a tube can be (the loop, at every offset it may steer to) is water under the tube's whole ring, the tube's
+// underside (its lowest ring, KEEL_R round it, DRAFT under the water) is over the river's bed, and a seated rider (a
+// column RIDER_R round the seat, RIDER_TOP above it) clears every bridge's underside by CLEAR.
+{const {aft:ra,bow:rb,width:W}=RIVER,WY=FY-RIVER.drop,RIDER_R=.4,RIDER_TOP=1.2,CLEAR=.2,KEEL_R=.55,DRAFT=.16;
+ const inWater=(x,z)=>x>=ra&&x<=rb&&Math.abs(z)<=riverBank(x)&&!(x>ra+W&&x<rb-W&&Math.abs(z)<riverInner(x));
+ let dry=0,aground=0,low=0,worst=Infinity,samples=0;
  for(let s=0;s<RIVER_PATH.total;s+=.5){const f=riverFrame(s);for(let d=f.lo;d<=f.hi+1e-9;d+=Math.max(.05,(f.hi-f.lo)/12)){const seat=tubeSeat({s,d});samples++;
   for(let a=0;a<8;a++){const x=seat.x+Math.cos(a*Math.PI/4)*TUBE.radius,z=seat.z+Math.sin(a*Math.PI/4)*TUBE.radius;if(!inWater(x,z)){dry++;if(dry<6)console.log('  tube ring out of the water at',x.toFixed(1),z.toFixed(1),'s',s.toFixed(1),'d',d.toFixed(2));}}
+  for(let a=0;a<16;a++){const x=seat.x+Math.cos(a*Math.PI/8)*KEEL_R,z=seat.z+Math.sin(a*Math.PI/8)*KEEL_R;if(riverBed(x,z)>=WY-DRAFT){aground++;if(aground<6)console.log('  tube underside on the bed at',x.toFixed(1),z.toFixed(1),'s',s.toFixed(1),'d',d.toFixed(2));}}
   for(let a=-1;a<8;a++){const x=a<0?seat.x:seat.x+Math.cos(a*Math.PI/4)*RIDER_R,z=a<0?seat.z:seat.z+Math.sin(a*Math.PI/4)*RIDER_R,u=bridgeUnderside(x,z);if(u===Infinity)continue;
    const gap=u-(seat.y+RIDER_TOP);worst=Math.min(worst,gap);if(gap<CLEAR){low++;if(low<6)console.log('  rider under a bridge with',gap.toFixed(2),'m at',x.toFixed(1),z.toFixed(1));}}}}
  let narrow=Infinity;for(let s=0;s<RIVER_PATH.total;s+=.5){const f=riverFrame(s);narrow=Math.min(narrow,f.hi-f.lo);}console.log(`narrowest steering range ${narrow.toFixed(2)} m (full ${(2*TUBE_RANGE).toFixed(1)} m)`);assert(narrow>=1.5,'a corner pinches the tube');
- console.log(`${dry||low?'FAIL':'PASS'} tube range: ${samples.toLocaleString()} places on the ${RIVER_PATH.total.toFixed(0)} m loop, ring in the water everywhere (${dry} out), least headroom under a bridge ${worst.toFixed(2)} m (needs ${CLEAR})`);
- assert.equal(dry,0,'a tube can leave the water');assert.equal(low,0,'a rider hits a bridge');
+ console.log(`${dry||aground||low?'FAIL':'PASS'} tube range: ${samples.toLocaleString()} places on the ${RIVER_PATH.total.toFixed(0)} m loop, ring in the water everywhere (${dry} out), underside over the bed (${aground} aground), least headroom under a bridge ${worst.toFixed(2)} m (needs ${CLEAR})`);
+ assert.equal(dry,0,'a tube can leave the water');assert.equal(aground,0,'a tube can steer onto the bed');assert.equal(low,0,'a rider hits a bridge');
  // The current carries a tube all the way round, and braking never stops it.
  const st=tubeBoard(DOCKS[0]),s0=st.s;let gone=0;for(let i=0;i<60*120;i++){const before=st.s;tubeStep(st,1/60,{x:-riverFrame(st.s).tx*5,z:-riverFrame(st.s).tz*5});gone+=((st.s-before)%RIVER_PATH.total+RIVER_PATH.total)%RIVER_PATH.total;}
  console.log(`PASS braking against the current still drifts ${(gone/120).toFixed(2)} m/s downstream`);assert(gone/120>.2&&gone/120<.4,'brake speed');
