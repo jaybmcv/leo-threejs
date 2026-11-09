@@ -1,3 +1,4 @@
+import {keepsGeometry} from '../v2/shader-hooks.js';
 import * as T from 'three';
 import {STYL_SURFACE_GLSL,STYL_GRADE_GLSL,STYL_INDIRECT_SAT,STYL_METAL_PAINT_GLSL,THREE_DIFFUSE} from './film-shading.js';
 import {getLook,subscribeLook} from './look.js';
@@ -88,7 +89,7 @@ export function installFilmLook({renderer,scene,keep=()=>null}){
   // (every program carries the texel size: three keeps the uniforms of the program it first built for a material, so
   // a film program found again in its cache would otherwise draw with today's)
   const hook=function(shader,r){before.call(this,shader,r);shader.uniforms.uFilmTexel=texel;if(film)patchShader(shader,level);};
-  hook.filmLook=true;material.onBeforeCompile=hook;
+  hook.filmLook=true;hook.keepsGeometry=keepsGeometry(before);material.onBeforeCompile=hook;
   material.customProgramCacheKey=()=>film?`${todayKey()}|film-${level}`:todayKey();
   wrapped.add(new WeakRef(material));material.needsUpdate=true;
  }

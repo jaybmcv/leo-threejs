@@ -39,4 +39,14 @@ function ship(){
  const names=collectTargets(w.scene).flatMap(e=>e.parts.map(p=>p.o.name));assert.ok(names.includes('Lamp'));
  assert.equal(names.filter(n=>n==='Wall').length,1,"merge sources are not targets; the hidden band's wall is");
  const o=collectOccluders(w.scene);assert.ok(o.conditions.some(c=>c[0].includes('Walk_band_9')));pass('parts and walls of a deck not shown now are still baked (their conditions decide when they count)');}
+{const scene=new T.Scene(),moved=new T.MeshStandardMaterial();moved.onBeforeCompile=s=>{s.vertexShader=s.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed.x+=100.;');};
+ const shaded=new T.MeshStandardMaterial(),hook=()=>{};hook.keepsGeometry=true;shaded.onBeforeCompile=hook;
+ scene.add(quad(0,0,moved,'Fish'),quad(3,0,shaded,'Shaded'));scene.updateMatrixWorld(true);
+ assert.deepEqual(collectTargets(scene).flatMap(e=>e.parts.map(p=>p.o.name)),['Shaded']);const o=collectOccluders(scene);assert.equal(o.positions.length/9,2);
+ pass('a shader that moves vertices keeps its part out of the bake; one marked as keeping geometry does not');}
+{const scene=new T.Scene(),clipped=new T.MeshStandardMaterial({clippingPlanes:[new T.Plane(new T.Vector3(0,1,0),-10)]});scene.add(quad(0,0,clipped,'Lever_panel'));scene.updateMatrixWorld(true);
+ assert.equal(collectOccluders(scene).positions.length,0);pass('a clipped surface is not a wall');}
+{const w=ship(),pieces=w.root.children,g=pieces[0].geometry;g.computeBoundingBox();g.boundingBox.max.x=g.boundingBox.min.x+.1;// the walk narrows it to the decks shown
+ const p=collectTargets(w.scene).flatMap(e=>e.parts).find(x=>x.o===pieces[0]),box=p.boxes.reduce((b,x)=>b.union(x),new T.Box3());assert.ok(box.max.x>=21.9,'every vertex, not the narrowed box');
+ pass('a merged piece is boxed by all its vertices, whatever its bounds say now');}
 console.log(`owner bake scene: ${passed} checks passed`);

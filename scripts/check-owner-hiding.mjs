@@ -56,4 +56,7 @@ for(const [name,undo] of [['not shown',w=>{w.wall.visible=false;}],['on another 
 {const w=world(),data=bake(w);w.b.position.x+=1;w.b.updateMatrixWorld(true);const {data:d,dropped}=pruneOwnerBake(data,w.scene);
  assert.deepEqual(dropped,{parts:1,conds:0,entries:1,blocks:0});assert.equal(d.parts.length,2);assert.equal(ownerBakeProblem(d,KEY),null);
  const h=createOwnerHiding(d,{key:KEY,scene:w.scene});h.resolve();assert.equal(h.stats.resolved,h.stats.parts);assert.deepEqual(during(h,at(),[w.a,w.b,w.cabins]),[false,true,false]);pass('pruned data stays whole, matches fully and still hides the rest');}
+{const w=world(),h=make(w);assert.deepEqual(during(h,at(),[w.a]),[false]);
+ w.a.position.z=20;// moved in front of everything, and nothing has updated its world matrix (the walk does not while it is hidden)
+ assert.deepEqual(during(h,at(),[w.a]),[true]);assert.equal(h.stats.dropped,1);pass('a hidden part that moves is caught before its world matrix is updated for it');}
 console.log(`owner hiding: ${passed} checks passed`);

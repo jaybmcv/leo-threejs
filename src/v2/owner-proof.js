@@ -11,6 +11,9 @@ export const OWNER_PROOF={
  // m: a triangle within this of P counts as lying on it: float noise only. Two patches a little apart in depth leave a
  // slit between them that oblique sight passes through (Astra reproduced one at 1.5 mm), so they are not one cover.
  planeTol:1e-4,
+ // m: offsets below this are float noise and count as 0; even at maxSlope they leave a slit under 0.5 mm, under a pixel
+ // beyond the near margin (1080p, 62 degrees: a pixel is 1 mrad, 0.5 mm at 0.5 m).
+ noise:1e-5,
  areaEps:1e-9,       // m²: uncovered pieces smaller than this are float noise between triangles that share an edge
  maxPieces:4000,     // a cover that fragments further is given up (not proven)
  nearMargin:.5,      // m: every eye in C at least this far from P, clear of the near plane's furthest corner (the walk
@@ -39,6 +42,12 @@ function subtract(poly,t,eps){
  const out=[];let inside=poly;
  for(let i=0;i<3&&inside;i++){const p=t[i],q=t[(i+1)%3],a=-(q[1]-p[1]),b=q[0]-p[0],c=-(a*p[0]+b*p[1]),outside=clip(inside,-a,-b,-c);if(outside&&Math.abs(area(outside))>eps)out.push(outside);inside=clip(inside,a,b,c);}
  return out;
+}
+// A counter-clockwise triangle moved inward by r on every side (about its incentre), or null if nothing is left.
+function shrink(t,r){
+ const len=(p,q)=>Math.hypot(p[0]-q[0],p[1]-q[1]),la=len(t[1],t[2]),lb=len(t[2],t[0]),lc=len(t[0],t[1]),per=la+lb+lc,inr=2*Math.abs(area(t))/per;
+ if(!(r<inr))return null;const ix=(la*t[0][0]+lb*t[1][0]+lc*t[2][0])/per,iy=(la*t[0][1]+lb*t[1][1]+lc*t[2][1])/per,k=(inr-r)/inr;
+ return t.map(([x,y])=>[ix+(x-ix)*k,iy+(y-iy)*k]);
 }
 const bbox2=p=>{let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;for(const [x,y] of p){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}return [x0,y0,x1,y1];};
 const canonical=pl=>{const n=pl.normal;if(n.x<0||n.x===0&&(n.y<0||n.y===0&&n.z<0))pl.negate();return pl;};
@@ -71,11 +80,12 @@ export function createOwnerProof(occluders,options={}){
   if(Math.min(...dc.map(Math.abs))<o.nearMargin||Math.min(...db.map(Math.abs))<o.targetMargin){stats.margin++;return null;}
   let slope=0;for(const c of cc)for(const b of bc){const d=b.clone().sub(c),cos=Math.abs(d.dot(pl.normal))/d.length();slope=Math.max(slope,Math.sqrt(Math.max(0,1-cos*cos))/Math.max(cos,1e-9));}
   if(slope>o.maxSlope){stats.steep++;return null;}
-  const grow=o.planeTol*slope+1e-4,n=pl.normal,u=(Math.abs(n.y)<.9?new T.Vector3(0,1,0):new T.Vector3(1,0,0)).cross(n).normalize(),v=n.clone().cross(u),origin=n.clone().multiplyScalar(-pl.constant);
+  // Each triangle carries its own offset (cover: inset); the footprint only grows by float slack.
+  const grow=1e-4,n=pl.normal,u=(Math.abs(n.y)<.9?new T.Vector3(0,1,0):new T.Vector3(1,0,0)).cross(n).normalize(),v=n.clone().cross(u),origin=n.clone().multiplyScalar(-pl.constant);
   const to2=p=>{const d=p.clone().sub(origin);return [d.dot(u),d.dot(v)];},points=[];
   for(let i=0;i<8;i++)for(let j=0;j<8;j++){const t=dc[i]/(dc[i]-db[j]),q=to2(cc[i].clone().lerp(bc[j],t));for(const sx of [-1,1])for(const sy of [-1,1])points.push([q[0]+sx*grow,q[1]+sy*grow]);}
   const poly=hull2(points);if(poly.length<3)return null;if(area(poly)<0)poly.reverse();
-  return {poly,to2,u,v,origin};
+  return {poly,to2,u,v,origin,slope};
  }
  // The conditions of the triangles on P that cover the footprint, or null.
  function cover(pl,cc,bc,from){
@@ -86,6 +96,10 @@ export function createOwnerProof(occluders,options={}){
    // `index` is already the geometry's triangle (shapecast resolves an indirect BVH's order).
    if(Math.abs(pl.distanceToPoint(tri.a))>o.planeTol||Math.abs(pl.distanceToPoint(tri.b))>o.planeTol||Math.abs(pl.distanceToPoint(tri.c))>o.planeTol||!blocks(index,from))return false;
    let t=[f.to2(tri.a),f.to2(tri.b),f.to2(tri.c)];const a=area(t);if(Math.abs(a)<1e-12)return false;if(a<0)t=[t[0],t[2],t[1]];
+   // A triangle off P by d: sight crossing P at x crosses the triangle's plane within d*slope of x, so it surely blocks
+   // only what lies that far inside it.
+   const d=Math.max(Math.abs(pl.distanceToPoint(tri.a)),Math.abs(pl.distanceToPoint(tri.b)),Math.abs(pl.distanceToPoint(tri.c))),inset=d>o.noise?d*f.slope:0;
+   if(inset>0){t=shrink(t,inset);if(!t)return false;}
    const tb=bbox2(t),next=[];let touched=false;
    for(const p of pieces){const pb=bbox2(p);if(pb[2]<tb[0]||pb[0]>tb[2]||pb[3]<tb[1]||pb[1]>tb[3])next.push(p);else{touched=true;next.push(...subtract(p,t,o.areaEps));}}
    if(touched)used.add(conds[index]);pieces=next;if(pieces.length>o.maxPieces){overflow=true;return true;}return !pieces.length;}});

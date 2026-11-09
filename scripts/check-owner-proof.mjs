@@ -44,6 +44,9 @@ check('two halves sharing an edge cover without a seam',[{geometry:rect(-10,0,-2
 check('a 1 cm gap between two halves shows the box',[{geometry:rect(-10,-.005,-2,8,0)},{geometry:rect(.005,10,-2,8,0)}],false);
 // Astra's case: halves meeting at x=0 but 1.5 mm apart in depth leave a slit that oblique sight passes through.
 check('two halves 1.5 mm apart in depth do not cover (a slit between them)',[{geometry:rect(-10,0,-2,8,0)},{geometry:rect(0,10,-2,8,.0015)}],false);
+// Astra's second case: 0.05 mm apart, under the old tolerance; each triangle now covers only what it surely covers.
+check('two halves 0.05 mm apart in depth do not cover either',[{geometry:rect(-10,0,-2,8,0)},{geometry:rect(0,10,-2,8,.00005)}],false);
+{const g=rect(-10,10,-2,8,0,{segments:12});g.rotateY(Math.PI/6);check('a turned wall of many triangles still covers',[{geometry:g}],true,{c:box(-1,0,4,1,2,6).applyMatrix4(new T.Matrix4().makeRotationY(Math.PI/6)),b:target.clone().applyMatrix4(new T.Matrix4().makeRotationY(Math.PI/6))});}
 check('an eye within the near-plane margin is not trusted',[{geometry:wall()}],false,{c:box(-1,0,.3,1,2,1)});
 check('grazing sight lines are not trusted',[{geometry:rect(-100,100,-2,8,0)}],false,{c:box(-1,0,.15,1,2,.35),b:box(50,.5,-.6,51,1.5,-.3)});
 check('a box touching the cell is never hidden',[{geometry:wall()}],false,{b:box(0,1,5,1,2,7)});

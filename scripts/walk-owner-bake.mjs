@@ -77,7 +77,10 @@ async function browser(n){
 // A page with the walk up and the bake installed; its setup() answer.
 async function openPage(n,walk,script){
  const page=await browser(n);await page.send('Page.navigate',{url:walk.url+'?lv=2&view=first&halloween=0&ownerBake'});
- for(let i=0;;i++){if(await page.ev(`document.body?.dataset.ready==='1'&&!!globalThis.__ownerBakeHost`).catch(()=>false))break;if(i>1200)throw Error('The walk did not come up within 10 minutes on page '+n);await sleep(500);}
+ const until=Date.now()+10*60e3;
+ for(;;){if(Date.now()>until)throw Error('The walk did not come up within 10 minutes on page '+n);
+  let up=false;try{up=await page.ev(`document.body?.dataset.ready==='1'&&!!globalThis.__ownerBakeHost`);}catch(e){if(/did not answer|closed/.test(e.message))throw e;}
+  if(up)break;await sleep(500);}
  await page.ev(script);return {page,setup:await page.ev(`__ownerBake.setup(${JSON.stringify(seed&&{at:seed.at,yaw:seed.yaw})})`)};
 }
 
@@ -102,7 +105,7 @@ const data={version:OWNER_BAKE_VERSION,key,made:new Date().toISOString(),grid:{x
 // beside the output for a failed one).
 const pruned=await pages[0].page.ev(`__ownerBake.prune(${JSON.stringify(data)})`);Object.assign(data,pruned.data);console.log('pruned:',JSON.stringify(pruned.dropped));
 await fs.mkdir(path.dirname(out),{recursive:true});await fs.writeFile(out+'.unchecked',JSON.stringify(data));
-const check=await pages[0].page.ev(`__ownerBake.check(${JSON.stringify(data)},${POSES})`),worst=Math.max(0,...check.poses.map(p=>p.big));
+const check=data.blocks.length?await pages[0].page.ev(`__ownerBake.check(${JSON.stringify(data)},${POSES})`):{resolved:0,parts:0,condsResolved:0,conds:0,poses:[]},worst=Math.max(0,...check.poses.map(p=>p.big));
 console.log('check:',JSON.stringify({resolved:`${check.resolved}/${check.parts}`,conds:`${check.condsResolved}/${check.conds}`,poses:check.poses.length,worstPixels:worst,maxDelta:Math.max(0,...check.poses.map(p=>p.max)),meanHidden:Math.round(check.poses.reduce((a,p)=>a+p.hidden,0)/Math.max(1,check.poses.length))}));
 for(const {page} of pages)page.close();
 if(check.resolved!==check.parts||check.condsResolved!==check.conds)throw Error('The walk could not match every baked part and condition; the bake was not kept');

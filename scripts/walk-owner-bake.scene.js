@@ -1,5 +1,6 @@
 // The owner bake's view of a built walk scene (bundled into the bake page by scripts/walk-owner-bake.mjs): the occluders
 // the proof may use, with the condition each depends on, and the parts it may hide, with their boxes and identities.
+import {geometryKept} from '../src/v2/shader-hooks.js';
 import * as T from 'three';
 import {ownerPath,ownerPrint} from '../src/v2/owner-hiding.js';
 
@@ -8,7 +9,11 @@ export const MOVING=/pool_ball|door|drape|curtain|yarn|ball_|swing|fan_|rotor|wh
 const LIFT=/^Walk_lift_|^Lift_|^Car_/;
 // Plain opaque materials only: anything transparent, cut out, refracting or shaded by custom code may let sight through.
 const plainOpaque=m=>!!m&&m.visible!==false&&!m.transparent&&(m.opacity??1)>=1&&!(m.alphaTest>0)&&!m.alphaMap&&!(m.transmission>0)&&m.colorWrite!==false&&m.depthWrite!==false&&m.depthTest!==false&&!m.wireframe&&!m.isShaderMaterial&&!m.isRawShaderMaterial
- &&(m.isMeshStandardMaterial||m.isMeshBasicMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial||m.isMeshPhysicalMaterial||m.isMeshToonMaterial||m.isMeshMatcapMaterial);
+ &&(m.isMeshStandardMaterial||m.isMeshBasicMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial||m.isMeshPhysicalMaterial||m.isMeshToonMaterial||m.isMeshMatcapMaterial)
+ // drawn where its geometry says (no vertex-moving or discarding shader hook), and not clipped away
+ &&geometryKept(m)&&!m.clippingPlanes?.length;
+// Morph targets move vertices at draw time.
+const morphs=g=>Object.keys(g?.morphAttributes||{}).length>0;
 // A growing typed array: the soup runs to tens of millions of numbers, past what a plain array can hold.
 class Grow{constructor(Type,size=1<<20){this.Type=Type;this.a=new Type(size);this.n=0;}push(...v){if(this.n+v.length>this.a.length){const b=new this.Type(Math.max(this.a.length*2,this.n+v.length));b.set(this.a.subarray(0,this.n));this.a=b;}for(const x of v)this.a[this.n++]=x;}get values(){return this.a.slice(0,this.n);}}
 // A merge source: copied into a merged deck mesh and never drawn itself (it counts through that mesh).
@@ -25,7 +30,7 @@ export function collectOccluders(scene){
  const bandOf=q=>{for(let p=q.parent;p;p=p.parent){if(p.userData?.mergedSources)return p.parent;if(/^Walk_band_\d+$/.test(p.name||''))return p;}return null;};
  const positions=new Grow(Float32Array),sides=new Grow(Uint8Array),conds=new Grow(Uint32Array),bandConds=new Set(),stats={meshes:0,sources:0,triangles:0,skippedMaterials:0,noArrays:0};let mergeRoot=null;
  const a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3(),added=new Set();// every piece of a split merge lists all its sources
- const add=(o,cond)=>{const g=o.geometry,p=g?.attributes?.position,ix=g?.index;if(!p?.array||ix&&!ix.array){stats.noArrays++;return;}
+ const add=(o,cond)=>{const g=o.geometry,p=g?.attributes?.position,ix=g?.index;if(!p?.array||ix&&!ix.array){stats.noArrays++;return;}if(morphs(g))return;
   const mats=[o.material].flat(),flip=o.matrixWorld.determinant()<0,total=ix?ix.count:p.count,dr=g.drawRange,end=Math.min(total,dr.start+dr.count);
   // three ignores geometry groups unless the material is an array.
   const groups=Array.isArray(o.material)&&g.groups?.length?g.groups:[{start:0,count:total,materialIndex:0}];
@@ -64,16 +69,17 @@ export function collectTargets(scene){
  const boxesOf=o=>{const g=o.geometry,own=!!g.attributes.position?.array&&(!g.index||!!g.index.array);
   // A merged deck piece holds every run it may draw in its own arrays (kept on the bake page): its clusters bound it
   // whichever decks show. Only without them do its merge's sources stand in.
-  if(own){if(!g.boundingBox)g.computeBoundingBox();return clusters(o,g.boundingBox.clone().applyMatrix4(o.matrixWorld));}
+  // From every vertex: the walk narrows a merged piece's boundingBox to the decks shown.
+  if(own)return clusters(o,new T.Box3().setFromBufferAttribute(g.attributes.position).applyMatrix4(o.matrixWorld));
   if(!o.userData.sources?.length)return null;
   return o.userData.sources.flatMap(id=>{const q=byUuid.get(id),qg=q?.geometry;if(!qg)return [null];if(!qg.boundingBox){if(!qg.attributes.position?.array)return [null];qg.computeBoundingBox();}q.updateWorldMatrix(true,false);return clusters(q,qg.boundingBox.clone().applyMatrix4(q.matrixWorld));});
 };
  const visit=o=>{if(o.userData?.mergedSources||copied(o))return;
-  if(o.isMesh&&!o.isSkinnedMesh&&!o.isBatchedMesh&&!o.castShadow&&[o.material].flat().every(m=>m&&!m.transparent&&m.visible!==false)){
+  if(o.isMesh&&!o.isSkinnedMesh&&!o.isBatchedMesh&&!o.castShadow&&!morphs(o.geometry)&&[o.material].flat().every(m=>m&&!m.transparent&&m.visible!==false&&geometryKept(m))){
    const root=ownerOf(o);let lifted=false;for(let q=o;q;q=q.parent)if(LIFT.test(q.name||'')){lifted=true;break;}
    if(!lifted&&!MOVING.test(o.name||'')){let part=null;
-    if(o.isInstancedMesh){const near=o.userData.near;if(near&&o.userData.cabinIds&&!o.userData.boat){const g=o.geometry;if(!g.boundingBox)g.computeBoundingBox();
-      part={o,slots:near.all.map((m,i)=>({id:o.userData.cabinIds[i],centre:near.centres[i],box:g.boundingBox.clone().applyMatrix4(m.clone().premultiply(o.matrixWorld))}))};}}
+    if(o.isInstancedMesh){const near=o.userData.near;if(near&&o.userData.cabinIds&&!o.userData.boat&&o.geometry.attributes.position?.array){const g=o.geometry,local=new T.Box3().setFromBufferAttribute(g.attributes.position);
+      part={o,slots:near.all.map((m,i)=>({id:o.userData.cabinIds[i],centre:near.centres[i],box:local.clone().applyMatrix4(m.clone().premultiply(o.matrixWorld))}))};}}
     else{const boxes=boxesOf(o);if(boxes&&!boxes.includes(null))part={o,boxes};}
     if(part){part.path=ownerPath(o,scene);part.print=ownerPrint(o);if(part.print){let e=groups.get(root);if(!e)groups.set(root,e={root,parts:[]});e.parts.push(part);}}}}
   for(const c of o.children)visit(c);};

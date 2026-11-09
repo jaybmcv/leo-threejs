@@ -79,8 +79,10 @@ export function createOwnerHiding(data,{key,scene}){
  // A cabin entry's proven cabins as a set (checked every frame against the up to 40 its mesh shows).
  const slotSets=entries.map(e=>e[2]?new Set(e[2]):null);
  // A resolved object with what it was at resolve(): it is dropped if it moves or changes geometry or material later.
- const snap=o=>({o,matrix:o.matrixWorld.elements.slice(),geometry:o.geometry,material:o.material});
- const same=s=>{if(s.o.geometry!==s.geometry||s.o.material!==s.material)return false;const e=s.o.matrixWorld.elements,m=s.matrix;for(let i=0;i<16;i++)if(Math.abs(e[i]-m[i])>=1e-6)return false;return true;};
+ // `moves`: a transform up its chain recomposes each frame, so its world matrix is refreshed before each comparison (the
+ // walk does not keep a hidden object's up to date).
+ const snap=o=>{let moves=false;for(let q=o;q;q=q.parent)if(q.matrixAutoUpdate){moves=true;break;}return {o,moves,matrix:o.matrixWorld.elements.slice(),geometry:o.geometry,material:o.material};};
+ const same=s=>{if(s.o.geometry!==s.geometry||s.o.material!==s.material)return false;if(s.moves)s.o.updateWorldMatrix(true,false);const e=s.o.matrixWorld.elements,m=s.matrix;for(let i=0;i<16;i++)if(Math.abs(e[i]-m[i])>=1e-6)return false;return true;};
  // Each condition's answer is worked out once a frame: frame number and answer per condition.
  let frame=0,condFrame=new Uint32Array(0),condValue=new Uint8Array(0);
  function resolve(){
