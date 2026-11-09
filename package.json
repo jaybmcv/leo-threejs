@@ -15,6 +15,7 @@
     "check:walk": "node --max-old-space-size=8000 scripts/check-walk.mjs",
     "check:film-look": "node scripts/check-film-look.mjs",
     "check:plaque-atlas": "node scripts/check-plaque-atlas.mjs",
+    "check:share-materials": "node scripts/check-share-materials.mjs",
     "check:band-merge-sources": "node scripts/check-band-merge-sources.mjs",
     "check:atrium-proxy-fade": "node scripts/check-atrium-proxy-fade.mjs",
     "check:design": "node scripts/check-selected-interiors.mjs",
