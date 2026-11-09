@@ -36,6 +36,8 @@ const settingsOf=m=>{
  return parts.join('|');
 };
 const layoutOf=g=>Object.entries(g.attributes).map(([k,a])=>k+':'+a.itemSize+':'+a.normalized+':'+a.array.constructor.name).sort().join(',');
+// Whether o's subtree draws something and every drawable in it was copied into a merge.
+const allCopied=o=>{let any=false,all=true;o.traverse(c=>{if(!(c.isMesh||c.isLine||c.isPoints||c.isSprite))return;any=true;if(!c.userData.bandMerged)all=false;});return any&&all;};
 
 /** Merges the deck bands' opaque meshes per material. `hidden` is called with each source once it is copied and hidden.
  * Returns {root, update, proof}: add nothing (root is already in `scene`); call update() after showBands. */
@@ -89,6 +91,13 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false}={}){
   mesh.matrixAutoUpdate=false;mesh.frustumCulled=false;mesh.userData={noCollide:true,renderOnly:true,sources:list.map(e=>e.o.uuid)};root.add(mesh);
   merges.push({mesh,runs});proof.meshes++;proof.sources+=list.length;proof.vertices+=vertices;proof.triangles+=indices/3;await yieldWork();
  }
+ // The sources copied here are hidden for good, yet three's scene walk and matrix pass still visit them in their bands
+ // each frame (at the open atrium 63 range bands and 15 guide roots held about 1,070 such nodes). A band's children whose
+ // every drawable was copied move into one hidden group in that band, which neither walks; they keep their names, place
+ // and band for anything that looks them up. Whatever other code has hidden for now stays where it is.
+ for(const group of bands){const gone=group.children.filter(allCopied);if(!gone.length)continue;
+  const kept=new T.Group();kept.name=group.name+'_merged_sources';kept.visible=false;kept.userData={noCollide:true,mergedSources:true};
+  for(const o of gone)kept.add(o);group.add(kept);proof.moved=(proof.moved||0)+gone.length;}
  scene.add(root);root.updateMatrixWorld(true);
  let last='';
  const update=()=>{

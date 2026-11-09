@@ -54,7 +54,8 @@ export function mergeWayfindingSigns(bands,{maxLayers=256}={}){
    const g=compactRenderGeometry(e.o.geometry);g.applyMatrix4(e.o.matrixWorld);
    g.setAttribute('signLayer',new T.BufferAttribute(new Float32Array(g.attributes.position.count).fill(i%maxLayers),1));
    const count=g.index.count,last=runs.at(-1);if(last&&last.band===e.band)last.count+=count;else runs.push({band:e.band,start:io,count});io+=count;parts.push(g);
-   e.o.visible=false;
+   // A placement group holding only this sign then draws nothing: hide it too, so three's scene walk skips it.
+   e.o.visible=false;if(e.o.parent!==e.band&&e.o.parent?.children.length===1)e.o.parent.visible=false;
   }
   if(!parts.length)continue;
   const geometry=mergeGeometries(parts);parts.forEach(g=>g.dispose());if(!geometry)continue;
