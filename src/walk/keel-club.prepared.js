@@ -292,8 +292,8 @@ export function createKeelClub(ship){
     const r=grid(2,2,(i,j)=>[i?b:x,TY+(j?1.1:0),s*(i?z1:z0)]);glass.push(paint(r,C.rail));walls.push(r);
     lamps.push(paint(grid(2,2,(i,j)=>[i?b:x,TY+1.1+j*.05,s*(i?z1:z0)]),C.railLed));}a=g1;}
  }
- // Greenery trailing over the terrace front walls from the deck's edge (refinement round 5, as in the concepts), in
- // 2.4 m drops every 3 m, clear of the stairs, the waterfall overhangs and the terrace signs.
+ // Greenery trailing over the terrace front walls from the deck's edge (refinement round 5, as in the concepts): drops
+ // 2.4 m wide and 1.35 m long every 3 m, clear of the stairs, the waterfall overhangs and the terrace signs.
  const vines=[];
  {const signsAt=[[-100,-1,3.5],[30,-1,5],[-90,1,3.5],[28,1,3.5]],free=(x,s)=>!STAIRS.some(x0=>x>x0-1.5&&x<x0+RISERS*TREAD+STAIR_W+1.5)&&!FALLS.some(([a,b])=>x>a-1.8&&x<b+1.8)&&!signsAt.some(([c,side,w])=>side===s&&Math.abs(x-c)<w+1.4);
   for(const s of [-1,1])for(let x=tx0+2;x<=tx1-2;x+=3){if(!free(x,s))continue;const a=x-1.2,b=x+1.2,za=s*(front(a)-.06),zb=s*(front(b)-.06);
@@ -614,6 +614,10 @@ export function createKeelClub(ship){
   for(let i=0;i<5000;i++){const v=r();c.fillStyle=v<.5?`rgba(120,95,60,${.08+r()*.18})`:`rgba(255,255,255,${.1+r()*.3})`;c.fillRect(r()*w,r()*h,1+r()*1.5,1+r()*1.5);}});
  if(sandTex)sandTex.wrapS=sandTex.wrapT=T.RepeatWrapping;
  const sandMat=new T.MeshStandardMaterial({name:'Keel_club_sand',map:sandTex,vertexColors:true,roughness:.95,metalness:0,side:T.DoubleSide});
+ // Additive glows fade out in fog: the usual fog would mix them towards the fog colour, which additive blending then adds.
+ const fadeInFog=m=>{m.onBeforeCompile=sh=>{sh.fragmentShader=sh.fragmentShader.replace('#include <fog_fragment>',
+  '#ifdef USE_FOG\n#ifdef FOG_EXP2\nfloat glowFog=1.0-exp(-fogDensity*fogDensity*vFogDepth*vFogDepth);\n#else\nfloat glowFog=smoothstep(fogNear,fogFar,vFogDepth);\n#endif\ngl_FragColor.rgb*=1.0-glowFog;\n#endif');};
+  m.customProgramCacheKey=()=>'keel-club-glow-fog';return m;};
  const poolTex=canvasTexture(128,128,(c,w,h)=>{const g=c.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.35,'rgba(255,255,255,.55)');g.addColorStop(.7,'rgba(255,255,255,.16)');g.addColorStop(1,'rgba(255,255,255,0)');c.fillStyle=g;c.fillRect(0,0,w,h);});
  // Trailing leaves: thick at the top, thinning into strands; alpha cut out.
  const vineTex=canvasTexture(256,128,(c,w,h)=>{c.clearRect(0,0,w,h);const r=seeded(613);
@@ -681,14 +685,16 @@ export function createKeelClub(ship){
  // Static draws in four sections along the hall, so the walk culls the far ones when they're out of view.
  const draw=(g,m,name)=>{for(const part of sections(g,4)){const mesh=new T.Mesh(part,m);mesh.name=name;group.add(mesh);}};
  draw(merge(parts),opaque,'Keel_club_finish');if(vineTex)draw(merge(vines,['position','normal','uv']),vineMat,'Keel_club_vines');
- if(poolTex&&pools.length){const im=new T.InstancedMesh(new T.PlaneGeometry(1,1).rotateX(-Math.PI/2),new T.MeshBasicMaterial({name:'Keel_club_light_pools',map:poolTex,color:0xffa456,transparent:true,opacity:.62,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}),pools.length);
+ if(poolTex&&pools.length){const im=new T.InstancedMesh(new T.PlaneGeometry(1,1).rotateX(-Math.PI/2),fadeInFog(new T.MeshBasicMaterial({name:'Keel_club_light_pools',map:poolTex,color:0xffa456,transparent:true,opacity:.5,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false})),pools.length);
   const m=new T.Matrix4(),q=new T.Quaternion();pools.forEach(([x,y,z,r],i)=>im.setMatrixAt(i,m.compose(new T.Vector3(x,y+.045,z),q,new T.Vector3(2*r,1,2*r))));
-  im.name='Keel_club_light_pools';im.renderOrder=1;im.computeBoundingSphere();group.add(im);
+  im.name='Keel_club_light_pools';im.computeBoundingSphere();group.add(im);
   // a soft halo round each lamp head (one draw of points), and a warm wash on the wall round each sconce
   const hg=new T.BufferGeometry();hg.setAttribute('position',new T.Float32BufferAttribute(halos,3));hg.computeBoundingSphere();
-  const hp=new T.Points(hg,new T.PointsMaterial({name:'Keel_club_lamp_halos',map:poolTex,color:0xffc27a,size:.75,sizeAttenuation:true,transparent:true,opacity:.75,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}));hp.name='Keel_club_lamp_halos';hp.renderOrder=2;group.add(hp);
-  if(washes.length){const wm=new T.InstancedMesh(new T.PlaneGeometry(1,1),new T.MeshBasicMaterial({name:'Keel_club_wall_washes',map:poolTex,color:0xffa456,transparent:true,opacity:.5,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false,side:T.DoubleSide}),washes.length);
-   washes.forEach(([x,y,z],i)=>wm.setMatrixAt(i,m.compose(new T.Vector3(x,y,z),q,new T.Vector3(1.7,2.4,1))));wm.name='Keel_club_wall_washes';wm.renderOrder=1;wm.computeBoundingSphere();group.add(wm);}}draw(merge(decks,['position','normal','color','uv']),deckMat,'Keel_club_deck');draw(merge(sands,['position','normal','color','uv']),sandMat,'Keel_club_sand');draw(merge(glow),lit,'Keel_club_glow');draw(merge(glass),see,'Keel_club_glass');draw(merge(lamps),stripMat,'Keel_club_light_strip');
+  const hp=new T.Points(hg,fadeInFog(new T.PointsMaterial({name:'Keel_club_lamp_halos',map:poolTex,color:0xffc27a,size:.75,sizeAttenuation:true,transparent:true,opacity:.75,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false})));hp.name='Keel_club_lamp_halos';group.add(hp);
+  if(washes.length){const wm=new T.InstancedMesh(new T.PlaneGeometry(1,1),fadeInFog(new T.MeshBasicMaterial({name:'Keel_club_wall_washes',map:poolTex,color:0xffa456,transparent:true,opacity:.4,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false,side:T.DoubleSide,forceSinglePass:true})),washes.length);
+   // each along the wall's own line there (the hull curves), just off it
+   const wq=new T.Quaternion(),Y=new T.Vector3(0,1,0);washes.forEach(([x,y,,side],i)=>{const dz=side*(front(x+.5)-front(x-.5));wq.setFromAxisAngle(Y,Math.atan2(-dz,1));
+    wm.setMatrixAt(i,m.compose(new T.Vector3(x,y,side*(front(x)-.05)),wq,new T.Vector3(1.7,2.4,1)));});wm.name='Keel_club_wall_washes';wm.computeBoundingSphere();group.add(wm);}}draw(merge(decks,['position','normal','color','uv']),deckMat,'Keel_club_deck');draw(merge(sands,['position','normal','color','uv']),sandMat,'Keel_club_sand');draw(merge(glow),lit,'Keel_club_glow');draw(merge(glass),see,'Keel_club_glass');draw(merge(lamps),stripMat,'Keel_club_light_strip');
  draw(merge(stars,['position','normal','uv']),sky,'Keel_club_stars');draw(merge(skyPanel,['position','normal','uv']),skyMat,'Keel_club_sky');
  draw(merge(screens.range,['position','normal','uv']),rangeMat,'Keel_club_range_screen');draw(merge(screens.sims,['position','normal','uv']),simMat,'Keel_club_sim_screens');{const g=merge(signs,['position','normal','uv']);if(g){const m=new T.Mesh(g,signMat);m.name='Keel_club_signs';group.add(m);}}
  // Water, each body its own draw so its ripples move their own way: the river flows round the loop (forward along
@@ -749,12 +755,12 @@ float surfLean(float x,float z){float u=surfU(x),d=(u-.29)/.035;return -.55*surf
   // a second sheet 0.35 m further out, falling faster (round 5), and mist rising off the river where they land
   if(streaks){const P2=[],U2=[],PM=[],UM=[];for(const {x0,x1,z,s} of curtains){const z2=z-s*.35;
     for(const [x,y] of [[x0,TY-.3],[x1,TY-.3],[x1,WY],[x0,TY-.3],[x1,WY],[x0,WY]]){P2.push(x,y,z2);U2.push(x/2.5+.37,y/2.5);}
-    for(const [x,v] of [[x0,0],[x1,0],[x1,1],[x0,0],[x1,1],[x0,1]]){PM.push(x,WY+v*1.6,z-s*.15);UM.push(x/3,1-v);}}
+    for(const [x,v] of [[x0,0],[x1,0],[x1,1],[x0,0],[x1,1],[x0,1]]){PM.push(x,WY+v*1.6,z-s*.15);UM.push(x/3,v);}}
    const g2=new T.BufferGeometry();g2.setAttribute('position',new T.Float32BufferAttribute(P2,3));g2.setAttribute('uv',new T.Float32BufferAttribute(U2,2));g2.computeVertexNormals();
    water(g2,0xf2fdff,{rep:1,flow:[0,2.3],opacity:.75,name:'Keel_club_waterfall',bright:.7,tex:streaks});
    const mistTex=canvasTexture(64,64,(c,w,h)=>{const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.6,'rgba(255,255,255,.35)');g.addColorStop(1,'rgba(255,255,255,.75)');c.fillStyle=g;c.fillRect(0,0,w,h);});
    const gm=new T.BufferGeometry();gm.setAttribute('position',new T.Float32BufferAttribute(PM,3));gm.setAttribute('uv',new T.Float32BufferAttribute(UM,2));gm.computeVertexNormals();
-   const mist=new T.Mesh(gm,new T.MeshBasicMaterial({name:'Keel_club_waterfall_mist',map:mistTex,color:0xeaf8ff,transparent:true,opacity:.7,depthWrite:false,side:T.DoubleSide,toneMapped:false}));mist.name='Keel_club_waterfall_mist';group.add(mist);}}
+   const mist=new T.Mesh(gm,new T.MeshBasicMaterial({name:'Keel_club_waterfall_mist',map:mistTex,color:0xeaf8ff,transparent:true,opacity:.7,depthWrite:false,side:T.DoubleSide,forceSinglePass:true,toneMapped:false}));mist.name='Keel_club_waterfall_mist';group.add(mist);}}
  const deck1=new T.Group();deck1.name='Keel_club_deck1';
  for(const [g,m,name] of [[merge(d1.parts),opaque.clone(),'Keel_club_deck1_finish'],[merge(d1.glass),see.clone(),'Keel_club_deck1_glass'],[merge(d1.signs,['position','normal','uv']),signMat,'Keel_club_deck1_signs']])if(g){const mesh=new T.Mesh(g,m);mesh.name=name;deck1.add(mesh);}
  const hidden=new T.MeshBasicMaterial({visible:false});
