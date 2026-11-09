@@ -813,17 +813,26 @@ const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
 function sizeCanvas(c){const r=Math.min(devicePixelRatio||1,c===mini&&document.documentElement.classList.contains('phone-hud')?3:2),w=Math.round(c.clientWidth*r),h=Math.round(c.clientHeight*r);if(w&&h&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}}
 // In the Keel Club (below Deck 1, keel-club.js) the maps show the club's own plan; map 0 is the club.
 const inClub=p=>!!keelClub&&inKeelHall(p);
+// Go-to places in the club show on the club's map, not on Deck 1's.
+const clubPlace=p=>inClub({x:p.at[0],y:p.at[1],z:p.at[2]}),shipPlaces=()=>keelClub?PLACES.filter(p=>!clubPlace(p)):PLACES;
 function clubMini(p){const g=mini.getContext('2d'),w=mini.width,h=mini.height,dpr=w/(mini.clientWidth||w),turn=-Math.PI/2-Math.atan2(Math.cos(follow.yaw),Math.sin(follow.yaw));
  g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.save();g.translate(w/2,h/2);g.rotate(turn);g.scale(3.2*dpr,3.2*dpr);g.translate(-p.x,-p.z);keelPlan(g,{px:1/(3.2*dpr)});g.restore();
  g.save();g.translate(w/2,h/2);mapArrow(g,7*dpr,1.5*dpr);g.restore();}
-function clubFull(c,p){const g=c.getContext('2d'),w=c.width,h=c.height,dpr=w/(c.clientWidth||w),e=KEEL_PLAN_EXTENT,pad=6,scale=Math.min(w/(e.x1-e.x0+2*pad),h/(e.z1-e.z0+2*pad));
+function clubFull(c,p){const g=c.getContext('2d'),w=c.width,h=c.height,dpr=w/(c.clientWidth||w),e=KEEL_PLAN_EXTENT,pad=6,scale=Math.min(w/(e.x1-e.x0+2*pad),h/(e.z1-e.z0+2*pad)),cx=(e.x0+e.x1)/2,cz=(e.z0+e.z1)/2,shown=[];
  g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.save();g.translate(w/2,h/2);g.scale(scale,scale);g.translate(-(e.x0+e.x1)/2,-(e.z0+e.z1)/2);keelPlan(g,{px:dpr/scale,labels:true});g.restore();
- if(inClub(p)){g.save();g.translate(w/2+(p.x-(e.x0+e.x1)/2)*scale,h/2+(p.z-(e.z0+e.z1)/2)*scale);g.rotate(Math.atan2(Math.cos(heading),Math.sin(heading))+Math.PI/2);mapArrow(g,9*dpr,2*dpr);g.restore();}}
-function miniMap(p){sizeCanvas(mini);if(inClub(p)){clubMini(p);$('minimap-deck').textContent='Keel Club';return;}const d=drawMiniMap(mini,shipMap,{x:p.x,y:p.y,z:p.z,yaw:follow.yaw,places:PLACES});$('minimap-deck').textContent=d?`Deck ${d.number}`:p.y>100?'Crown lounge':'Fin';}
+ // the club's Go-to places, marked and named as on the ship's maps; a click takes you there
+ g.textAlign='center';g.textBaseline='middle';
+ for(const pl of PLACES){if(!clubPlace(pl))continue;const px=w/2+(pl.at[0]-cx)*scale,pz=h/2+(pl.at[2]-cz)*scale;
+  g.fillStyle='#2fd6c5';g.strokeStyle='#050507';g.lineWidth=2*dpr;g.beginPath();g.arc(px,pz,6*dpr,0,Math.PI*2);g.fill();g.stroke();
+  g.font=`500 ${11*dpr}px "JetBrains Mono",monospace`;g.fillStyle='#f4f0e8';g.strokeStyle='rgba(5,5,7,.9)';g.lineWidth=3*dpr;g.strokeText(pl.name,px,pz-14*dpr);g.fillText(pl.name,px,pz-14*dpr);
+  shown.push({place:pl,x:px/dpr,y:pz/dpr});}
+ if(inClub(p)){g.save();g.translate(w/2+(p.x-cx)*scale,h/2+(p.z-cz)*scale);g.rotate(Math.atan2(Math.cos(heading),Math.sin(heading))+Math.PI/2);mapArrow(g,9*dpr,2*dpr);g.restore();}
+ return shown;}
+function miniMap(p){sizeCanvas(mini);if(inClub(p)){clubMini(p);$('minimap-deck').textContent='Keel Club';return;}const d=drawMiniMap(mini,shipMap,{x:p.x,y:p.y,z:p.z,yaw:follow.yaw,places:shipPlaces()});$('minimap-deck').textContent=d?`Deck ${d.number}`:p.y>100?'Crown lounge':'Fin';}
 function showMap(number){
  mapDeck=T.MathUtils.clamp(number,keelClub?0:1,DECKS.length);const c=$('map-canvas');sizeCanvas(c);const p=controller.position;
- if(mapDeck===0){mapShown=[];clubFull(c,p);$('map-title').textContent='Keel Club · below Deck 1';$('map-deck').value='0';return;}
- mapShown=drawFullMap(c,shipMap,mapDeck,{walker:{x:p.x,y:p.y,z:p.z,yaw:heading},places:PLACES});
+ if(mapDeck===0){mapShown=clubFull(c,p);$('map-title').textContent='Keel Club · below Deck 1';$('map-deck').value='0';return;}
+ mapShown=drawFullMap(c,shipMap,mapDeck,{walker:inClub(p)?null:{x:p.x,y:p.y,z:p.z,yaw:heading},places:shipPlaces()});
  $('map-title').textContent=`Deck ${mapDeck} · ${DECKS[mapDeck-1].name}`;$('map-deck').value=String(mapDeck);
 }
 function toggleMap(){
