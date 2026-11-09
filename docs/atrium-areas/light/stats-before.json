@@ -1,81 +1,19 @@
 {
- "commit": "f8af5b3a",
- "source": "debug review walk, scripts/launch-a-measure.mjs measure(), 90 frames, 1280x720",
+ "note": "Base on three 0.187: tower branch 1682c220 (f8af5b3a + lift tower), whose tower copy adds 5,640 triangles at both views; subtract them for f8af5b3a. Earlier rows (f8af5b3a on three 0.185.1, 287 programs) are in git history.",
  "rows": [
   {
    "view": "hero",
-   "time": "(none)",
    "calls": 558,
-   "triangles": 10760649,
-   "programs": 287,
-   "passes": [
-    {
-     "name": "sky",
-     "calls": 4,
-     "triangles": 16130
-    },
-    {
-     "name": "distant",
-     "calls": 0,
-     "triangles": 0
-    },
-    {
-     "name": "main",
-     "calls": 558,
-     "triangles": 10760649
-    }
-   ],
-   "pageErrors": 0
+   "triangles": 10766289,
+   "trianglesWithoutTower": 10760649,
+   "programs": 297
   },
   {
-   "view": "walls-starboard",
-   "time": "(none)",
-   "calls": 613,
-   "triangles": 11067498,
-   "programs": 287,
-   "passes": [
-    {
-     "name": "sky",
-     "calls": 2,
-     "triangles": 0
-    },
-    {
-     "name": "distant",
-     "calls": 0,
-     "triangles": 0
-    },
-    {
-     "name": "main",
-     "calls": 613,
-     "triangles": 11067498
-    }
-   ],
-   "pageErrors": 0
-  },
-  {
-   "view": "sky-up",
-   "time": "(none)",
-   "calls": 533,
-   "triangles": 10560360,
-   "programs": 287,
-   "passes": [
-    {
-     "name": "sky",
-     "calls": 2,
-     "triangles": 0
-    },
-    {
-     "name": "distant",
-     "calls": 0,
-     "triangles": 0
-    },
-    {
-     "name": "main",
-     "calls": 533,
-     "triangles": 10560360
-    }
-   ],
-   "pageErrors": 0
+   "view": "sky-bow",
+   "calls": 467,
+   "triangles": 10828905,
+   "trianglesWithoutTower": 10823265,
+   "programs": 297
   }
  ]
 }
