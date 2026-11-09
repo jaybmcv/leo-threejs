@@ -93,7 +93,7 @@ async function splitPieces(attributes,layout,index,runs,most,yieldWork){
 /** Merges the deck bands' opaque meshes per material. `hidden` is called with each source once it is copied and hidden.
  * `piece` (most triangles a piece, 0 for none) splits each bigger material merge into view-culled pieces.
  * Returns {root, update, proof}: add nothing (root is already in `scene`); call update() after showBands. */
-export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece=0}={}){
+export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece=0,keepArrays=false}={}){
  const yieldWork=yieldEvery();
  const bands=[...baked.bands.values()].filter(g=>/^Walk_band_/.test(g.name));
  // Band order: by lowest deck, then highest, so the bands a view span shows sit together.
@@ -139,8 +139,9 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece
    const geometry=new T.BufferGeometry();
    for(const [name,a] of Object.entries(first.attributes))geometry.setAttribute(name,new T.BufferAttribute(piece.attributes[name],a.itemSize,a.normalized));
    geometry.setIndex(new T.BufferAttribute(piece.index,1));geometry.computeBoundingBox();geometry.computeBoundingSphere();
-   // Drawn only: its arrays leave the page once on the GPU (groups and bounds are all three reads after).
-   for(const a of [...Object.values(geometry.attributes),geometry.index])a.onUpload(release);
+   // Drawn only: its arrays leave the page once on the GPU (groups and bounds are all three reads after), unless the
+   // owner bake's page (keepArrays) needs to read them.
+   if(!keepArrays)for(const a of [...Object.values(geometry.attributes),geometry.index])a.onUpload(release);
    // One material slot, drawn once per run of shown bands (geometry groups). The fog cull (fog-cull.js) never leaves one
    // out: these are the fogged walls and floors that stand behind whatever it leaves out.
    const mesh=new T.Mesh(geometry,[material]);mesh.name='V2_low_deck_merged_'+material.name;mesh.renderOrder=list[0].o.renderOrder;

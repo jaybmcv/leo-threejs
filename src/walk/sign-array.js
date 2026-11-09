@@ -44,6 +44,7 @@ export function mergeWayfindingSigns(bands,{maxLayers=256}={}){
   m.onBeforeCompile=shader=>{shader.uniforms.signArray={value:array};
    shader.vertexShader='attribute float signLayer;\nvarying float vSignLayer;\n'+shader.vertexShader.replace('#include <uv_vertex>','#include <uv_vertex>\n\tvSignLayer=signLayer;');
    shader.fragmentShader='uniform highp sampler2DArray signArray;\nvarying float vSignLayer;\n'+shader.fragmentShader.replace('#include <map_fragment>','diffuseColor*=texture(signArray,vec3(vMapUv,vSignLayer));');};
+  m.onBeforeCompile.keepsGeometry=true;// a varying and a texture lookup only (src/v2/shader-hooks.js)
   m.customProgramCacheKey=()=>'v2-wayfinding-array';return m;};
  const root=new T.Group();root.name='V2_wayfinding_array';root.userData={noCollide:true,renderOnly:true};root.matrixAutoUpdate=false;
  const merges=[],proof={signs:entries.length,layers:index.size,arrays:chunks,meshes:0,size:[w,h]};

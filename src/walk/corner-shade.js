@@ -1,3 +1,4 @@
+import {keepsGeometry} from '../v2/shader-hooks.js';
 import * as T from 'three';
 import layout from '../plan/selected-layout.js';
 
@@ -108,6 +109,7 @@ export function installCornerShade(scene){
   m.onBeforeCompile=function(s,r){before?.call(this,s,r);Object.assign(s.uniforms,U);
    s.vertexShader='varying vec3 vCornerW;\n'+s.vertexShader.replace('#include <project_vertex>',VERTEX);
    s.fragmentShader='varying vec3 vCornerW;\nuniform highp sampler2DArray uCorner;\nuniform float uCornerS;\nuniform vec4 uCornerBox;\n'+s.fragmentShader.replace('#include <color_fragment>',FRAGMENT);};
+  m.onBeforeCompile.keepsGeometry=keepsGeometry(before);// shading only (the vertex keeps project_vertex)
   m.customProgramCacheKey=function(){return key.call(this)+'|corner';};m.needsUpdate=true;count++;}});return count;};
  const stats={materials:patch(),walls:0,ms:0,ready:false};
  async function start(colliders){
