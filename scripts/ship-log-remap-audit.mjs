@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
+import {legacyDeck} from '../src/v2/legacy-corridors.js';
 
 // Audit final poses independently of candidate selection. Native measurements
 // additionally prove the real prepared floor and the unchanged walker capsule.
@@ -7,6 +8,9 @@ export function auditCorridorLanding(layout,row){
  const {original,current,oldRoom}=row;
  const eligible=!oldRoom||/^(circulation-|lift-|stairs-|service-lift-)/.test(oldRoom);
  if(!eligible||current.feature)return;
+ // The runtime remaps only spots on an old deck (legacyDeck). A link on no old deck, such as the Keel Club below Deck 1,
+ // never had a corridor, so it must land exactly where it points.
+ if(!legacyDeck(layout,original.at)){assert(!current.legacyCorridor&&Math.hypot(...current.at.map((v,i)=>v-original.at[i]))<.01,row.id+' moved a link that is on no old deck');return;}
  assert(current.legacyCorridor,row.id+' left a circulation link unresolved');
  const deck=layout.decks.reduce((a,b)=>Math.abs(b.y-original.at[1])<=Math.abs(a.y-original.at[1])+1e-7?b:a);
  assert(Math.abs(current.at[1]-deck.y)<.01,row.id+' changed decks');

@@ -13,6 +13,9 @@ breakPose('wall-facing yaw',r=>r.current.yaw+=Math.PI/2);
 breakPose('atrium void',r=>r.current.at=[0,20.3,0]);
 breakPose('cabin interior',r=>r.current.at=[...layout.rooms.find(c=>c.id==='d16-library-2').center]);
 breakPose('stale route id',r=>r.current.corridor='removed-corridor');
+// A link on no old deck (the Keel Club, below Deck 1) is not a corridor link: it passes unmoved and fails if moved.
+const keel={id:'keel-fixture',oldRoom:null,original:{at:[15,-51.5,-38.3],yaw:0,lv:1},current:{at:[15,-51.5,-38.3],yaw:0,lv:1,resolved:true}};auditCorridorLanding(layout,keel);
+assert.throws(()=>auditCorridorLanding(layout,{...keel,current:{...keel.current,at:[15,-39.7,-38.3]}}),undefined,'a moved off-deck link must be rejected');
 const row=table.rows.find(r=>r.id==='d10-lane'),changed=structuredClone(row);changed.current.legacyCorridor.cabin='N05-001';assert.throws(()=>auditCorridorLanding(layout,changed),undefined,'wrong cabin range must fail');
 const native={id:'fixture',source:'ship-log',spot:{at:[0,0,0],legacyCorridor:{deck:1}},at:[0,0,0],exact:[0,0,0],ahead:[.9,0,0],details:{floor:{at:[0,0,0],normal:[0,1,0]},overlap:false},inLog:true,nearby:true};auditNativeLanding(native);
 for(const [label,patch] of [['no landing',{at:null}],['spiral escaped',{exact:null}],['no floor',{details:{floor:null,overlap:false}}],['capsule collision',{details:{...native.details,overlap:true}}],['wrong floor height',{details:{floor:{at:[0,-4,0],normal:[0,1,0]},overlap:false}}],['forward obstruction',{ahead:null}],['nearby omitted',{nearby:false}]])assert.throws(()=>auditNativeLanding({...native,...patch}),undefined,label+' must fail');
@@ -28,4 +31,4 @@ const narrow=structuredClone(tiny);narrow.circulation.corridors[0].width=.6;asse
 assert.equal(map.remap({...spot,lv:2},'circulation-1'),null);assert.equal(map.remap({...spot,resolved:true},'circulation-1'),null);assert.equal(map.remap(spot,'room'),null);
 assert.equal(legacyFeatureSpot({at:[-229.36,35.32,-2.24],lv:2}),null);
 const physicalMap=createLegacyCorridorRemapper(layout,[]),deck2=layout.decks[1];assert(physicalMap.safe(deck2,[138,6.7]));assert(!physicalMap.safe(deck2,[138,7.6]),'Forward stair outer wall blocks the full capsule');const oldStairPhoto=physicalMap.remap({at:[140.6,-36.4,6.7],yaw:Math.PI/2,lv:1},'stairs-forward-1-d1');assert.deepEqual(oldStairPhoto.at,[138,-35.7,6.7]);assert.equal(oldStairPhoto.yaw,Math.PI,'Saved photo faces the clear side of the same landing');
-console.log('Phase 7 remap negative fixtures: old fallback, wrong deck/range/yaw, void, wall, missing floor, capsule, nearby, trimmed selection PASS');
+console.log('Phase 7 remap negative fixtures: old fallback, wrong deck/range/yaw, void, wall, missing floor, capsule, nearby, trimmed selection, off-deck links PASS');
