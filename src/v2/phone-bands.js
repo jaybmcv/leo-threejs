@@ -39,9 +39,61 @@ const layoutOf=g=>Object.entries(g.attributes).map(([k,a])=>k+':'+a.itemSize+':'
 // Whether o's subtree draws something and every drawable in it was copied into a merge.
 const allCopied=o=>{let any=false,all=true;o.traverse(c=>{if(!(c.isMesh||c.isLine||c.isPoints||c.isSprite))return;any=true;if(!c.userData.bandMerged)all=false;});return any&&all;};
 
+// A desktop splits each big material merge into pieces of nearby triangles, one mesh each, bounded by the bands it
+// shows, so three leaves out the pieces beside and behind the view. One mesh per material drew every triangle of the
+// shown bands wherever the camera looked: at the open atrium 6.8 million, of which about 2 million face the view, and an
+// M5 MacBook Air's GPU spent 51 ms on its 11 million a frame. Each draw costs the processor too (about 10 us on an
+// RTX PC's Chrome, 6.5 us on the M5): fixed 48 m squares drew 3.2 million there but took 950 draws, and 1,000 in the
+// arrival hall, where nearly everything is in view (144 fps fell to 57 on the RTX PC). Pieces of up to `piece`
+// triangles go where the triangles are: at 100,000 the atrium draws about 4.4 million in 155 draws instead of 77, the
+// arrival hall 156 instead of 60, Deck 2's hangar 1.1 of 2.8 million. A phone keeps one mesh per material (piece 0): the
+// Galaxy S9's processor is what limits it.
+// Splitting: halve the ship's plan (x, z) across its longer side at about the median triangle centre, until a piece holds
+// at most `most` triangles or spans under MIN_SPAN metres. Each triangle keeps its order, so a piece's bands still run
+// in band order, and each run of a band in a piece keeps its bounds (box).
+const MIN_SPAN=8;
+async function splitPieces(attributes,layout,index,runs,most,yieldWork){
+ const p=attributes.position,vertices=p.length/3,count=index.length/3,cx=new Float32Array(count),cz=new Float32Array(count),runOf=new Uint32Array(count);
+ runs.forEach((r,n)=>{for(let t=r.start/3,end=(r.start+r.count)/3;t<end;t++){const a=index[t*3]*3,b=index[t*3+1]*3,c=index[t*3+2]*3;
+  cx[t]=(p[a]+p[b]+p[c])/3;cz[t]=(p[a+2]+p[b+2]+p[c+2])/3;runOf[t]=n;}});
+ const all=new Uint32Array(count);for(let t=0;t<count;t++)all[t]=t;
+ const leaves=[],todo=[all],bins=new Uint32Array(256);
+ while(todo.length){const list=todo.pop();if(list.length<=most){leaves.push(list);continue;}
+  let lx=Infinity,hx=-Infinity,lz=Infinity,hz=-Infinity;
+  for(const t of list){const x=cx[t],z=cz[t];if(x<lx)lx=x;if(x>hx)hx=x;if(z<lz)lz=z;if(z>hz)hz=z;}
+  const alongX=hx-lx>=hz-lz,c=alongX?cx:cz,lo=alongX?lx:lz,span=alongX?hx-lx:hz-lz;
+  if(span<MIN_SPAN){leaves.push(list);continue;}
+  // The median by a 256-bin histogram: the halves need only be about even. Both keep the list's order, and neither is
+  // empty (the lowest and highest bins both hold a triangle).
+  const bin=t=>Math.min(255,Math.floor((c[t]-lo)/span*256));bins.fill(0);for(const t of list)bins[bin(t)]++;
+  let k=0,below=0;while(below+bins[k]<list.length/2)below+=bins[k++];const last=Math.min(k,254);
+  const a=new Uint32Array(list.length),b=new Uint32Array(list.length);let na=0,nb=0;
+  for(const t of list)if(bin(t)<=last)a[na++]=t;else b[nb++]=t;
+  todo.push(a.subarray(0,na),b.subarray(0,nb));await yieldWork();
+ }
+ const remap=new Int32Array(vertices).fill(-1),pieces=[];
+ for(const tris of leaves){
+  const used=[],pieceRuns=[];let r=null,start=0;
+  for(const t of tris){const run=runs[runOf[t]];
+   if(r?.group!==run.group){if(r)start+=r.count;pieceRuns.push(r={group:run.group,start,count:0,box:new T.Box3()});}
+   r.count+=3;const {min,max}=r.box;
+   for(let j=0;j<3;j++){const v=index[t*3+j],i=v*3,x=p[i],y=p[i+1],z=p[i+2];if(remap[v]<0){remap[v]=used.length;used.push(v);}
+    if(x<min.x)min.x=x;if(x>max.x)max.x=x;if(y<min.y)min.y=y;if(y>max.y)max.y=y;if(z<min.z)min.z=z;if(z>max.z)max.z=z;}}
+  const ix=used.length<=65536?new Uint16Array(tris.length*3):new Uint32Array(tris.length*3);
+  for(let n=0;n<tris.length;n++)for(let j=0;j<3;j++)ix[n*3+j]=remap[index[tris[n]*3+j]];
+  const out={};
+  for(const [name,a] of Object.entries(layout)){const n=a.itemSize,from=attributes[name],to=new from.constructor(used.length*n);
+   for(let u=0;u<used.length;u++){const s=used[u]*n,d=u*n;for(let q=0;q<n;q++)to[d+q]=from[s+q];}out[name]=to;}
+  for(const v of used)remap[v]=-1;
+  pieces.push({attributes:out,index:ix,runs:pieceRuns});await yieldWork();
+ }
+ return pieces;
+}
+
 /** Merges the deck bands' opaque meshes per material. `hidden` is called with each source once it is copied and hidden.
+ * `piece` (most triangles a piece, 0 for none) splits each bigger material merge into view-culled pieces.
  * Returns {root, update, proof}: add nothing (root is already in `scene`); call update() after showBands. */
-export async function mergePhoneBands(baked,scene,{hidden=null,menus=false}={}){
+export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece=0}={}){
  const yieldWork=yieldEvery();
  const bands=[...baked.bands.values()].filter(g=>/^Walk_band_/.test(g.name));
  // Band order: by lowest deck, then highest, so the bands a view span shows sit together.
@@ -56,7 +108,7 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false}={}){
   const key=(same||o.material).uuid+'|'+o.renderOrder+'|'+layoutOf(o.geometry);let list=buckets.get(key);if(!list)buckets.set(key,list=[]);list.push({o,group});
  }
  const root=new T.Group();root.name='V2_phone_band_merges';root.userData={noCollide:true,renderOnly:true};root.matrixAutoUpdate=false;
- const merges=[],proof={meshes:0,sources:0,vertices:0,triangles:0},m3=new T.Matrix3(),v=new T.Vector3();
+ const merges=[],proof={meshes:0,regions:0,sources:0,vertices:0,triangles:0},m3=new T.Matrix3(),v=new T.Vector3();
  for(const list of buckets.values()){
   if(list.length<2)continue;
   // A desktop's pieces index vertex pools they share: each is copied with only the vertices it draws.
@@ -81,15 +133,21 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false}={}){
    const last=runs.at(-1);if(last&&last.group===group)last.count+=io-start;else runs.push({group,start,count:io-start});
    vo+=count;o.visible=false;o.userData.bandMerged=true;hidden?.(o);if(g!==o.geometry)g.dispose();await yieldWork();
   }
-  const geometry=new T.BufferGeometry();
-  for(const [name,a] of Object.entries(first.attributes))geometry.setAttribute(name,new T.BufferAttribute(attributes[name],a.itemSize,a.normalized));
-  geometry.setIndex(new T.BufferAttribute(index,1));geometry.computeBoundingBox();geometry.computeBoundingSphere();
-  // Drawn only: its arrays leave the page once on the GPU (groups and bounds are all three reads after).
-  for(const a of [...Object.values(geometry.attributes),geometry.index])a.onUpload(release);
-  // One material slot, drawn once per run of shown bands (geometry groups).
-  const mesh=new T.Mesh(geometry,[list[0].o.material]);mesh.name='V2_low_deck_merged_'+list[0].o.material.name;mesh.renderOrder=list[0].o.renderOrder;
-  mesh.matrixAutoUpdate=false;mesh.frustumCulled=false;mesh.userData={noCollide:true,renderOnly:true,sources:list.map(e=>e.o.uuid)};root.add(mesh);
-  merges.push({mesh,runs});proof.meshes++;proof.sources+=list.length;proof.vertices+=vertices;proof.triangles+=indices/3;await yieldWork();
+  const material=list[0].o.material,sources=list.map(e=>e.o.uuid),split=piece>0&&indices/3>piece&&attributes.position instanceof Float32Array;
+  const pieces=split?await splitPieces(attributes,first.attributes,index,runs,piece,yieldWork):[{attributes,index,runs}];
+  for(const piece of pieces){
+   const geometry=new T.BufferGeometry();
+   for(const [name,a] of Object.entries(first.attributes))geometry.setAttribute(name,new T.BufferAttribute(piece.attributes[name],a.itemSize,a.normalized));
+   geometry.setIndex(new T.BufferAttribute(piece.index,1));geometry.computeBoundingBox();geometry.computeBoundingSphere();
+   // Drawn only: its arrays leave the page once on the GPU (groups and bounds are all three reads after).
+   for(const a of [...Object.values(geometry.attributes),geometry.index])a.onUpload(release);
+   // One material slot, drawn once per run of shown bands (geometry groups). The fog cull (fog-cull.js) never leaves one
+   // out: these are the fogged walls and floors that stand behind whatever it leaves out.
+   const mesh=new T.Mesh(geometry,[material]);mesh.name='V2_low_deck_merged_'+material.name;mesh.renderOrder=list[0].o.renderOrder;
+   mesh.matrixAutoUpdate=false;mesh.frustumCulled=split;mesh.userData={noCollide:true,renderOnly:true,fogBackdrop:true,sources};root.add(mesh);
+   merges.push({mesh,runs:piece.runs,split});proof.regions++;
+  }
+  proof.meshes++;proof.sources+=list.length;proof.vertices+=vertices;proof.triangles+=indices/3;await yieldWork();
  }
  // The sources copied here are hidden for good, yet three's scene walk and matrix pass still visit them in their bands
  // each frame (at the open atrium 63 range bands and 15 guide roots held about 1,070 such nodes). A band's children whose
@@ -102,9 +160,11 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false}={}){
  let last='';
  const update=()=>{
   let key='';for(const g of bands)key+=g.visible?'1':'0';if(key===last)return;last=key;
-  for(const {mesh,runs} of merges){const groups=mesh.geometry.groups;groups.length=0;
-   for(const r of runs){if(!r.group.visible)continue;const last=groups.at(-1);if(last&&last.start+last.count===r.start)last.count+=r.count;else groups.push({start:r.start,count:r.count,materialIndex:0});}
-   mesh.visible=groups.length>0;}
+  for(const {mesh,runs,split} of merges){const g=mesh.geometry,groups=g.groups;groups.length=0;if(split)g.boundingBox.makeEmpty();
+   for(const r of runs){if(!r.group.visible)continue;const last=groups.at(-1);if(last&&last.start+last.count===r.start)last.count+=r.count;else groups.push({start:r.start,count:r.count,materialIndex:0});
+    if(split)g.boundingBox.union(r.box);}
+   // A piece's bounds are those of the bands it shows, so three's view culling skips it whenever they are out of view.
+   mesh.visible=groups.length>0;if(split&&mesh.visible)g.boundingBox.getBoundingSphere(g.boundingSphere);}
  };
  update();
  return {root,update,proof};

@@ -17,6 +17,9 @@ let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 // desktop as before: decks -1 to 4 batched and the atrium geometry pack.
 const phoneBatching=(()=>{const query=new URLSearchParams(location.search);if(!preparedPhone)return query.get('deskbatch')==='low'?{}:{merge:true};const mode=query.get('phonebatch');
  return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
+// A desktop's bigger merged bands draw in view-culled pieces of at most this many triangles (phone-bands.js);
+// ?deskpiece= tries another size, 0 for one draw per material as on a phone.
+const deskPiece=(()=>{const v=new URLSearchParams(location.search).get('deskpiece');return preparedPhone?0:v!==null&&Number.isFinite(+v)&&+v>=0?+v:100000;})();
 let phoneBands=null,wayfindingSigns=null,fogCull=null;
 // The atrium geometry pack binds the band pieces the merge hides, so it runs only without the merge, and the Detail menu
 // chooses its distant detail. The merged bands keep full detail and still draw faster: on them the menu sets the atrium's
@@ -461,7 +464,7 @@ async function buildShip(){
  // Not with the atrium detail pack, whose source checks include the layers the cull changes.
  if(!atriumPack&&new URLSearchParams(location.search).get('fogcull')!=='0')fogCull=createFogCull(scene,camera);
  wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);
- isolateStaticWorld(ship,scene);{const hidden=preparedPhone||phoneBatching.merge?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
+ isolateStaticWorld(ship,scene);{const hidden=preparedPhone||phoneBatching.merge?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // The groups holding only those instanced meshes once the live draws have their final parents (V2_live_source_draws: a
  // deck's cabin shells, a cabin template's fittings), and groups of only such groups, innermost first: cull() hides each
  // while nothing in it shows, so three's scene walk and matrix pass skip it.
