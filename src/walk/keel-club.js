@@ -171,6 +171,55 @@ function seeded(seed){let s=seed%2147483647||1;return ()=>(s=s*16807%2147483647)
 function canvasTexture(w,h,draw){if(typeof document==='undefined')return null;const c=document.createElement('canvas');c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
  const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.anisotropy=4;return t;}
 // The labels on the club's signs, one row each of one texture.
+// ---- The Keel Club on the walk's maps (main.public.js) ----
+// Whether a walker at p (feet) is in the hall: below Deck 1's floor, inside the hull at its height. The mini-map and the
+// full map switch to the club's own plan there (the ship map's band for Deck 1 is a different floor).
+export const inKeelHall=p=>p.y<DECK1-.6&&p.y>KEEL.floor-3&&p.x>KEEL.aft-2&&p.x<KEEL.bow+2&&Math.abs(p.z)<=half(p.x,Math.max(p.y,KEEL.floor))+.5;
+// The plan's extent in metres, for fitting it to the full map.
+export const KEEL_PLAN_EXTENT=(()=>{let w=0;for(const x of xsBetween(KEEL.aft,KEEL.bow,2))w=Math.max(w,half(x,KEEL.terrace));return {x0:KEEL.aft,x1:KEEL.bow,z0:-w,z1:w};})();
+// Draws the club's plan on a 2D canvas in world metres, x to the right and z down (the ship map's way round), in the ship
+// map's colours. The caller sets the transform; `px` is the size of a screen pixel in metres (for line widths and text);
+// `labels` names the zones (the full map). Leaves the canvas state as it found it.
+export function keelPlan(g,{px=.3,labels=false}={}){
+ const {aft:ra,bow:rb,width:RW}=RIVER,[lx0,lx1,lz]=WATER.lagoon,xs=xsBetween(KEEL.aft,KEEL.bow,2);
+ const COL={floor:'rgb(201,206,199)',raised:'rgb(146,170,186)',wall:'rgb(58,63,72)',water:'rgb(64,168,204)',lift:'rgb(47,214,197)',
+  tennis:'rgb(86,128,176)',pitch:'rgb(104,160,96)',court:'rgb(204,160,110)',sand:'rgb(228,204,150)',wood:'rgb(196,150,104)',turf:'rgb(92,150,82)'};
+ const path=pts=>{g.beginPath();pts.forEach(([x,z],i)=>i?g.lineTo(x,z):g.moveTo(x,z));g.closePath();};
+ const fill=(pts,c)=>{path(pts);g.fillStyle=c;g.fill();};
+ const box=(x0,x1,z0,z1,c)=>{g.fillStyle=c;g.fillRect(Math.min(x0,x1),Math.min(z0,z1),Math.abs(x1-x0),Math.abs(z1-z0));};
+ const band=(f1,f2,s,a,b)=>{const xx=xsBetween(a,b,2);return [...xx.map(x=>[x,s*f1(x)]),...xx.slice().reverse().map(x=>[x,s*f2(x)])];};
+ g.save();g.lineJoin='round';g.lineCap='round';
+ // floor, then the terraces out to the hull
+ fill([...xs.map(x=>[x,-front(x)]),...xs.slice().reverse().map(x=>[x,front(x)])],COL.floor);
+ for(const s of [-1,1])fill(band(front,x=>half(x,KEEL.terrace),s,...KEEL.terraceX),COL.raised);
+ // the Keel Loop round the island, and the lagoon
+ const xo=xsBetween(ra,rb,2),xi=xsBetween(ra+RW,rb-RW,2);
+ fill([...xo.map(x=>[x,-rOut(x)]),...xo.slice().reverse().map(x=>[x,rOut(x)])],COL.water);
+ fill([...xi.map(x=>[x,-rIn(x)]),...xi.slice().reverse().map(x=>[x,rIn(x)])],COL.floor);
+ box(lx0,lx1,-lz,lz,COL.water);
+ // the island: lobbies, tennis, pitches, basketball, beach, range
+ for(const [x0,x1] of [[-142,-121],[124,146]])box(x0,x1,-30,30,COL.wood);
+ box(-118,-81.4,-36.6,36.6,COL.tennis);for(const s of [-1,1])box(-78,-34,s*11,s*36,COL.pitch);box(-72,-40,-9.5,9.5,COL.court);
+ box(-30,lx0,-36,36,COL.sand);box(152,rb-RW,-30,30,COL.turf);
+ // bridges over the loop
+ g.strokeStyle=COL.floor;g.lineWidth=BRIDGES.width;g.lineCap='butt';for(const {a,b} of BRIDGE_SPANS){g.beginPath();g.moveTo(a[0],a[1]);g.lineTo(b[0],b[1]);g.stroke();}
+ // lifts and the stair towers up to Deck 1
+ for(const c of CORES){for(const s of [-1,1])box(c.x-LIFT_SHAFT.half,c.x+LIFT_SHAFT.half,s*LIFT_SHAFT.inner,s*LIFT_SHAFT.outer,COL.lift);box(c.stairX-4.64,c.stairX+4.64,c.stairZ-2.64,c.stairZ+2.64,COL.raised);}
+ // tube docks
+ g.fillStyle='#f07c3c';for(const d of DOCKS){g.beginPath();g.arc(d.at[0],d.at[2],1.2,0,Math.PI*2);g.fill();}
+ // walls: the floor's edge (the terrace fronts) and the hull behind the terraces
+ g.strokeStyle=COL.wall;g.lineWidth=Math.max(.35,1.5*px);g.lineCap='round';
+ for(const s of [-1,1]){g.beginPath();xs.forEach((x,i)=>i?g.lineTo(x,s*front(x)):g.moveTo(x,s*front(x)));g.stroke();
+  const xt=xsBetween(...KEEL.terraceX,2);g.beginPath();xt.forEach((x,i)=>i?g.lineTo(x,s*half(x,KEEL.terrace)):g.moveTo(x,s*half(x,KEEL.terrace)));g.stroke();}
+ for(const x of [KEEL.aft,KEEL.bow]){g.beginPath();g.moveTo(x,-front(x));g.lineTo(x,front(x));g.stroke();}
+ if(labels){const size=12*px;g.font=`500 ${size}px "Sora",sans-serif`;g.textAlign='center';g.textBaseline='middle';g.fillStyle='rgba(20,24,30,.82)';
+  const mid=(x,s)=>s*(front(x)+half(x,KEEL.terrace))/2;
+  for(const [t,x,z] of [['Tennis',-99.7,0],['5-a-side',-56,-23.5],['5-a-side',-56,23.5],['Basketball',-56,0],['Beach',-19,0],['Wave lagoon',52,0],['Driving range',170,0],
+   ['Arrival · lifts',-132,-18],['Lifts',132,-18],['Padel',-61,mid(-61,-1)],['Cabanas · bar',33,mid(33,-1)],['Slides',89,mid(89,-1)],['Slides',89,mid(89,1)],['Mini putt',-66,mid(-66,1)],
+   ['Golf sims',28,mid(28,1)],['Range lounge',133,mid(133,1)]])g.fillText(t,x,z);
+  g.fillStyle='rgba(10,60,80,.85)';g.font=`600 ${11*px}px "Sora",sans-serif`;g.fillText('KEEL LOOP',-10,-rIn(-10)-RW/2);g.fillText('KEEL LOOP',-10,rIn(-10)+RW/2);}
+ g.restore();
+}
 export const SIGNS=['KEEL CLUB','KEEL CLUB  ↓','TENNIS','5-A-SIDE','BASKETBALL','BEACH','WAVE LAGOON','DRIVING RANGE','PADEL','CABANAS · BEACH BAR','MINI PUTT','GOLF SIMS','CLIMBING WALLS','KEEL LOOP','FLOAT THE KEEL LOOP'];
 
 export function createKeelClub(ship){
