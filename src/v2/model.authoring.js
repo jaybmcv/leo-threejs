@@ -25,20 +25,29 @@ import {roomObject,toWorld} from '../plan/rooms.js';
 // the native approach ramp and explicit stairs remain separate meshes.
 function loungeVoidMasks(y,depth=.24){const r=layout.rooms.find(r=>r.id==='observation-lounge');return r&&y>r.y+.4&&y-depth<r.y+r.height-.2?[r.polygon]:[];}
 // Atrium concept A (lit glass tower, 2026-11-08). The facade's copy of the tower (atrium-architecture.js) gives its bridges
-// and landings white fascias and light undersides; the walked tops keep their finish. Each [x,y,z,colour,lit] colours the
-// faces facing that way, and lit (if given) shades them as if they faced that way instead: the atrium's hemisphere light
-// gives a face looking down its dark ground colour, so a light underside would still read brown.
-const TOWER_SLAB_FACES=[[0,-1,0,0xe6e6e2,[0,1,0]],[1,0,0,0xf3f2ec],[-1,0,0,0xf3f2ec],[0,0,1,0xf3f2ec],[0,0,-1,0xf3f2ec]];
+// and landings white fascias and pale blue undersides, close to the concept's glass bands; the walked tops keep their
+// finish. Each [x,y,z,colour,lit] colours the faces facing that way, and lit (if given) shades them as if they faced that
+// way instead: the atrium's hemisphere light gives a face looking down its dark ground colour, and the faces looking aft
+// at the atrium are in the sun's shade, so white fascias and light undersides would still read tan and brown.
+const TOWER_SLAB_FACES=[[0,-1,0,0xbcd8e6,[0,1,0]],...[[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].map(v=>[...v,0xffffff,[0,1,0]])];
 // A warm line of light under both long edges of each bridge above Deck 6, only where it crosses the open atrium (further
-// out it lies over the deck's own slab). 20 cm wide, hanging 8 cm below the slab, so it still reads from the atrium floor.
+// out it lies over the deck's own slab), and along each landing's aft edge and its short returns to the bridges, so the
+// line runs unbroken across the tower. 20 cm wide, hanging 8 cm below the slab, so it still reads from the atrium floor.
 // Lit like the lift lobbies' ceiling lights (transit.js), so the tower copy draws the two together. Visual only.
-const towerBridgeLight=new T.MeshStandardMaterial({name:'V2_tower_bridge_light',color:0xffe5af,emissive:0xffdf9f,emissiveIntensity:.7});
+const towerBridgeLight=new T.MeshStandardMaterial({name:'V2_tower_bridge_light',color:0xffe5af,emissive:0xffdf9f,emissiveIntensity:1.5});
 function towerBridgeLights(structure){
  const parts=[],across=(p,x)=>{let h=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];if(a[0]!==b[0]&&(a[0]-x)*(b[0]-x)<=0)h=Math.max(h,Math.abs(a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0])));}return h;};
  for(const b of layout.circulation.bridges.filter(b=>b.deck>6)){
   const d=layout.decks[b.deck-1],{x0,x1,z0,z1}=bounds(b.polygon),side=Math.sign(z0+z1),open=Math.min(across(d.atrium.outline,x0),across(d.atrium.outline,x1))-.25;
   const lo=Math.min(Math.abs(z0),Math.abs(z1))+.25,hi=Math.min(Math.max(Math.abs(z0),Math.abs(z1)),open);if(hi-lo<1)continue;
   for(const x of [x0+.105,x1-.105])parts.push(new T.BoxGeometry(.2,.1,hi-lo).translate(x,d.y-.27,side*(lo+hi)/2));
+ }
+ for(const t of layout.circulation.towers.filter(t=>t.deck>6)){
+  const d=layout.decks[t.deck-1],{x0,z0,z1}=bounds(t.polygon),bridges=layout.circulation.bridges.filter(b=>b.deck===t.deck);
+  if(across(d.atrium.outline,x0)<z1+.25)continue;
+  parts.push(new T.BoxGeometry(.2,.1,z1-z0).translate(x0+.105,d.y-.27,(z0+z1)/2));
+  const bx=Math.min(...bridges.map(b=>bounds(b.polygon).x0));if(!(bx>x0+1&&bx<Infinity))continue;
+  for(const z of [z0+.105,z1-.105])parts.push(new T.BoxGeometry(bx+.2-x0,.1,.2).translate((x0+bx+.2)/2,d.y-.27,z));
  }
  if(parts.length){mesh(structure,'V2_tower_bridge_light',mergeGeometries(parts),towerBridgeLight).userData.noCollide=true;parts.forEach(g=>g.dispose());}
 }
