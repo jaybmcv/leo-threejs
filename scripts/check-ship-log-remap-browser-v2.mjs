@@ -51,7 +51,7 @@ try{
   report.rows.push({id:row.id,source:row.source,...result});
   if((i+1)%25===0)console.log('Native remap landings',i+1,'/',table.rows.length);
  }
- report.auditErrors=[];for(const row of report.rows)try{auditNativeLanding(row);auditCorridorLanding(layout,{...row,current:row.spot})}catch(e){report.auditErrors.push(e.message)};
+ report.auditErrors=[];for(const row of report.rows)try{auditNativeLanding(row,layout);auditCorridorLanding(layout,{...row,current:row.spot})}catch(e){report.auditErrors.push(e.message)};
  report.noLanding=report.rows.filter(r=>!r.at).map(r=>r.id);report.status=!report.auditErrors.length&&!errors.length?'PASS':'FAIL';
  const examples=['pr50','pr55','pr90','pr98','pr99','pr122','pr126','pr128','d6-lane','d10-lane'];report.goThere=[];
  await fs.mkdir('output/phase7/remap-shots',{recursive:true});
