@@ -143,7 +143,8 @@ import {createInvasion} from './invasion/game.js';
 import {createEmergencyDrill} from './emergency-drill/game.js';
 import {drillStation} from './emergency-drill/station.js';
 import layout from '../plan/selected-layout.js';
-import {installCornerShade} from './corner-shade.js';
+import {installCornerShade,cornerShadeLeavesAlone} from './corner-shade.js';
+import {shareEquivalentMaterials} from './share-materials.js';
 let emergencyDrill=null;const emergencyStation=drillStation(layout);
 import {createPawPool} from './pool/game.js';
 import {createPinball} from './pinball/game.js';
@@ -462,6 +463,9 @@ async function buildShip(){
  // deck's cabin shells, a cabin template's fittings), and groups of only such groups, innermost first: cull() hides each
  // while nothing in it shows, so three's scene walk and matrix pass skip it.
  {const held=new Set(instanced);for(let pass=0;pass<4;pass++){const add=[...new Set([...held].map(o=>o.parent))].filter(g=>g&&!held.has(g)&&!g.isScene&&g!==ship.liveDraws&&!/^Walk_band_/.test(g.name)&&g.children.every(c=>held.has(c)));if(!add.length)break;for(const g of add){held.add(g);instancedGroups.push(g);}}}
+ // The cabins' parts on every deck draw with one object per look of material (share-materials.js), so equal draws sort
+ // together and three refreshes each look once. Corner shading still treats every part as before. Not on phones.
+ if(!preparedPhone){const alone=cornerShadeLeavesAlone(scene);shareEquivalentMaterials(scene,{member:o=>o.userData.v2Cabins&&!o.userData.proxySpans,split:o=>alone.has(o.material)?'alone':''});}
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
