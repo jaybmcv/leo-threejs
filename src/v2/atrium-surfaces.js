@@ -19,9 +19,9 @@ function pavingMap(){
  const map=new T.CanvasTexture(c);map.colorSpace=T.SRGBColorSpace;map.wrapS=map.wrapT=T.RepeatWrapping;map.anisotropy=8;atriumFloorMaterial.map=map;
 }
 // 4B: sunlit lawns (park and garden beds) instead of the earlier muted sage.
-// Warm travertine paving on the boulevards (concept B): under the atrium's real light (a GPU browser, live or local)
-// it renders about 222,186,149 in the sun, the concept's paving.
-const LAWN=0x7ea95b,GARDEN_LAWN=0x8bb566,PAVING=0xe7b887;
+// Warm travertine paving on the boulevards (concept B): under the walk's current atrium light it renders about
+// 184,154,122, the concept's hue (the concept was painted over the brighter live site of 639f7393).
+const LAWN=0x7ea95b,GARDEN_LAWN=0x8bb566,PAVING=0xfde0c8;
 function keepFaces(g,test){const p=g.attributes.position,n=g.attributes.normal,out=[];for(let i=0;i<p.count;i+=3)if(test(n.getY(i),i,p))for(let k=0;k<3;k++)out.push(p.getX(i+k),p.getY(i+k),p.getZ(i+k));g.dispose();const result=new T.BufferGeometry();result.setAttribute('position',new T.Float32BufferAttribute(out,3));result.computeVertexNormals();return result;}
 export function atriumFloorGeometry(outline,holes,y,atriumOutline=outline){
  pavingMap();

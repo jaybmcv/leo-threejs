@@ -205,10 +205,10 @@ export function addPlantingBeds(out,layout){
 // aft end. Slabs are one paver (1.3 m) long, each a little different in tone, and kept only on solid floor. The arrival
 // lobby takes the pavers alone.
 const INLAY_X=[-96,148],STRIPE=.935,BRASS=.975,BAND=[4.875,6],ROSES={first:-84,last:116,every:20};
-// The basalt is a dark warm grey (as in the concept, about 0.55 of the travertine's brightness under the atrium's
-// light). Each slab differs a little in tone, clouds softly from point to point, and is set off from the next by a 2 cm
+// The basalt is a neutral grey that the atrium's warm light and tone mapping render a dark warm grey (about 0.6 of
+// the travertine's brightness, as in the concept; a warmer albedo renders brown). Each slab differs a little in tone, clouds softly from point to point, and is set off from the next by a 2 cm
 // joint, so the stripe and bands read as laid stone rather than one flat strip.
-const BASALT=[0x7a6858,0x726252,0x816f5e,0x766556],JOINT=.02,JOINT_HEX=0x4e443b,BRASS_LINE=0xc9a253,BRASS_LIGHT=0xe6c473,BRASS_DARK=0xa07832,ROSE_GROUND=0x5f544a;
+const BASALT=[0x9a948c,0x918c83,0xa29b95,0x968f87],JOINT=.02,JOINT_HEX=0x63605a,BRASS_LINE=0xc9a253,BRASS_LIGHT=0xe6c473,BRASS_DARK=0xa07832,ROSE_GROUND=0x77736d;
 // Stone clouding: a tone per vertex, hashed from its position, so cells and slabs that share a point share its tone.
 const cloud=(x,z)=>{let h=Math.imul(Math.round(x*100),73856093)^Math.imul(Math.round(z*100),19349663);h=Math.imul(h^h>>>13,1274126177);return((h^h>>>16)>>>0)/4294967296;};
 // Flat triangles facing up, one colour each (or clouded per vertex), as one garden geometry.
