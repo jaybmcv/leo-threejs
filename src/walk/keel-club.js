@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {KEEL_HULL as K,HALF} from './keel-club-hull.js';
+import {KEEL_HULL as K,HALF,KEEL_BOTTOM as KB,BOTTOM} from './keel-club-hull.js';
 
 // The Keel Club (concepts/sports-deck-2026-11): one sports hall filling the hull under Deck 1. The main floor
 // (y -51.5) runs from a bulkhead at x -157 to one at x 204, up to 102 m wide; the hull curves up and out from its
@@ -21,6 +21,15 @@ export function half(x,y){
  const fx=Math.min(K.nx-1.001,Math.max(0,(x-K.x0)/K.dx)),fy=Math.min(K.ny-1.001,Math.max(0,(y-K.y0)/K.dy)),i=Math.floor(fx),j=Math.floor(fy),u=fx-i,v=fy-j;
  return (HALF[j][i]*(1-u)+HALF[j][i+1]*u)*(1-v)+(HALF[j+1][i]*(1-u)+HALF[j+1][i+1]*u)*v;
 }
+// The hull's bottom (its outer skin) at (x, z), bilinear in the generated table. The hull's bottom is only 1-3.5 m under
+// the floor, and it rises steeply under the floor's edges and at both ends, so every basin below the floor keeps
+// SKIN_GAP above it (the full nightly's skin gate, check-skin-clearance-v2.mjs, found the river bed and the lagoon's
+// deep end through it on 2026-11-09; check-keel-club.mjs audits the club against the finished web skin the same way).
+export function hullBottom(x,z){
+ const fx=Math.min(KB.nx-1.001,Math.max(0,(x-KB.x0)/KB.dx)),fz=Math.min(KB.nz-1.001,Math.abs(z)/KB.dz),i=Math.floor(fx),k=Math.floor(fz),u=fx-i,v=fz-k;
+ return (BOTTOM[i][k]*(1-v)+BOTTOM[i][k+1]*v)*(1-u)+(BOTTOM[i+1][k]*(1-v)+BOTTOM[i+1][k+1]*v)*u;
+}
+const SKIN_GAP=.05;
 const front=x=>half(x,FY);                       // terrace front wall: straight up from the floor's edge
 const xsBetween=(a,b,step=2)=>{const n=Math.max(1,Math.ceil((b-a)/step));return Array.from({length:n+1},(_,i)=>a+(b-a)*i/n);};
 const ysBetween=(a,b,step=.5)=>xsBetween(a,b,step);
@@ -36,6 +45,14 @@ export const WATER={lagoon:[-8,112,32],machine:[112,118]};
 export const RIVER={edge:4.5,width:7,aft:-150,bow:196,drop:.8,bed:1.6,rise:1.8,deck:.3};
 const rOut=x=>front(x)-RIVER.edge,rIn=x=>rOut(x)-RIVER.width;
 export {rOut as riverOuter,rIn as riverInner};
+// Where the water can be: inside rOut, and only where the hull's bottom is at least SHORE below the water, so its bed
+// fits above the skin. That pulls the outer bank in at the aft corners and a little at the bow corners, where the hull
+// rises under the river's ends; along the sides the bed shoals to a few centimetres at the outer bank instead (bedAt).
+const SHORE=.05,riverWet=(x,z)=>Math.abs(z)<=rOut(x)&&hullBottom(x,z)<=FY-RIVER.drop-SHORE;
+// The outer bank's |z| at x: rOut, or nearer the middle where riverWet stops (the hull's bottom rises outwards).
+export function riverBank(x){let z=rOut(x);if(riverWet(x,z))return z;let lo=0;for(let n=0;n<24;n++){const m=(lo+z)/2;if(riverWet(x,m))lo=m;else z=m;}return lo;}
+// The river's bed at (x, z): RIVER.bed down, raised to keep SKIN_GAP above the hull's bottom, and always just under the water.
+const bedAt=(x,z)=>Math.min(FY-RIVER.drop-.02,Math.max(FY-RIVER.bed,hullBottom(x,z)+SKIN_GAP));
 // Bridges: across each side channel at x (4 m wide), and across the aft channel at z (along x).
 export const BRIDGES={side:[-116,-62,-10,66,120,160],aft:[0],width:4};
 // Waterfalls: the terrace edge reaches out over the promenade to the river's outer bank, and a curtain of water falls
@@ -67,7 +84,7 @@ export const RIVER_PATH=(()=>{const {aft:ra,bow:rb,width:W}=RIVER,xa=ra+W/2,xb=r
  const len=[0];for(let i=1;i<=n;i++)len.push(len[i-1]+Math.hypot(pts[i%n][0]-pts[i-1][0],pts[i%n][1]-pts[i-1][1]));
  // How far a tube may steer either way at each sample: its whole ring (TUBE_RING) still in the water. Rounding the
  // corners pulls the line towards the island, so near a corner the island side narrows.
- const wet=(x,z)=>x>=ra&&x<=rb&&Math.abs(z)<=rOut(x)&&!(x>ra+W&&x<rb-W&&Math.abs(z)<rIn(x));
+ const wet=(x,z)=>x>=ra&&x<=rb&&riverWet(x,z)&&!(x>ra+W&&x<rb-W&&Math.abs(z)<rIn(x));
  const ring=(x,z)=>{for(let a=0;a<12;a++)if(!wet(x+Math.cos(a*Math.PI/6)*TUBE_RING,z+Math.sin(a*Math.PI/6)*TUBE_RING))return false;return true;};
  const lo=[],hi=[];pts.forEach((p,i)=>{const a=pts[(i-1+n)%n],b=pts[(i+1)%n],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1,rx=-(b[1]-a[1])/l,rz=(b[0]-a[0])/l;
   const reach=sgn=>{let d=0;while(d<W/2&&ring(p[0]+rx*(d+.05)*sgn,p[1]+rz*(d+.05)*sgn))d+=.05;return d-.1;};hi.push(Math.max(0,reach(1)));lo.push(-Math.max(0,reach(-1)));});
@@ -194,7 +211,7 @@ export function keelPlan(g,{px=.3,labels=false}={}){
  for(const s of [-1,1])fill(band(front,x=>half(x,KEEL.terrace),s,...KEEL.terraceX),COL.raised);
  // the Keel Loop round the island, and the lagoon
  const xo=xsBetween(ra,rb,2),xi=xsBetween(ra+RW,rb-RW,2);
- fill([...xo.map(x=>[x,-rOut(x)]),...xo.slice().reverse().map(x=>[x,rOut(x)])],COL.water);
+ fill([...xo.map(x=>[x,-riverBank(x)]),...xo.slice().reverse().map(x=>[x,riverBank(x)])],COL.water);
  fill([...xi.map(x=>[x,-rIn(x)]),...xi.slice().reverse().map(x=>[x,rIn(x)])],COL.floor);
  box(lx0,lx1,-lz,lz,COL.water);
  // the island: lobbies, tennis, pitches, basketball, beach, range
@@ -256,29 +273,35 @@ export function createKeelClub(ship){
  // Main floor: the promenade outside the Keel Loop, and the centre island inside it with the lagoon cut out.
  const floorOut=[...xsHall.map(x=>[x,-front(x)]),...xsHall.slice().reverse().map(x=>[x,front(x)])];
  const {aft:ra,bow:rb,width:RW}=RIVER,xo=xsBetween(ra,rb),xi=xsBetween(ra+RW,rb-RW);
- const ringOut=[...xo.map(x=>[x,-rOut(x)]),...xo.slice().reverse().map(x=>[x,rOut(x)])],ringIn=[...xi.map(x=>[x,-rIn(x)]),...xi.slice().reverse().map(x=>[x,rIn(x)])];
+ // The river's outlines (its outer bank where the hull allows, riverBank), each end in 1 m steps so its bank meets the bed.
+ const across=(x,b,up)=>{const zs=xsBetween(-b,b,1).slice(1,-1);return (up?zs:zs.reverse()).map(z=>[x,z]);};
+ const ringOut=[...xo.map(x=>[x,-riverBank(x)]),...across(rb,riverBank(rb),true),...xo.slice().reverse().map(x=>[x,riverBank(x)]),...across(ra,riverBank(ra),false)],
+  ringIn=[...xi.map(x=>[x,-rIn(x)]),...across(rb-RW,rIn(rb-RW),true),...xi.slice().reverse().map(x=>[x,rIn(x)]),...across(ra+RW,rIn(ra+RW),false)];
  addDeck(flat(floorOut,[ringOut],FY),C.deckProm);
  const [lx0,lx1,lz]=WATER.lagoon;
  add(flat(ringIn,[rect(lx0,lx1,-lz,lz)],FY),C.island,{ground:true});
- // Water: the lagoon (deepening from the beach to the wave machine) and the river, both RIVER.drop below the floor.
- const WY=FY-RIVER.drop,BED=FY-RIVER.bed;
+ // Water: the lagoon and the river, both RIVER.drop below the floor. The lagoon's floor deepens from the beach (.6 m)
+ // to the wave machine (3 m) and shoals towards its sides to keep SKIN_GAP above the hull; the river's bed is bedAt.
+ const WY=FY-RIVER.drop,lagoonFloor=(x,z)=>Math.max(FY-.6-2.4*(x-lx0)/(lx1-lx0),hullBottom(x,z)+SKIN_GAP);
  // the lagoon's floor is light sand under the water (round 7): shallow by the beach, it reads turquoise, not dark
- parts.push(paint(grid(2,2,(i,j)=>[i?lx1:lx0,FY-(i?3:.6),j?lz:-lz]),0x6fc4c4));
- parts.push(paint(flat(ringOut,[ringIn],BED),C.basin));
- // Basin walls: the lagoon's, and both river banks down to the bed (a vertical strip along each outline).
- const ring=(x0,x1,z0,z1,y0,y1)=>[box(x0,x1,y0,y1,z0-.1,z0),box(x0,x1,y0,y1,z1,z1+.1),box(x0-.1,x0,y0,y1,z0,z1),box(x1,x1+.1,y0,y1,z0,z1)];
- for(const g of ring(lx0,lx1,-lz,lz,FY-3,FY))parts.push(paint(g,C.basin));
- const strip=(poly,y0,y1)=>{const P=[];for(let i=0;i<poly.length;i++){const [ax,az]=poly[i],[bx,bz]=poly[(i+1)%poly.length];P.push(ax,y0,az,bx,y0,bz,bx,y1,bz,ax,y0,az,bx,y1,bz,ax,y1,az);}
+ {const xs=xsBetween(lx0,lx1,4),zs=xsBetween(-lz,lz,1);parts.push(paint(grid(xs.length,zs.length,(i,j)=>[xs[i],lagoonFloor(xs[i],zs[j]),zs[j]],true),0x6fc4c4));}
+ // The river's bed: along each side channel from bank to bank, and right across each end.
+ for(const s of [-1,1])parts.push(paint(grid(xi.length,8,(i,j)=>{const x=xi[i],z=rIn(x)+(riverBank(x)-rIn(x))*j/7;return [x,bedAt(x,z),s*z];},s>0),C.basin));
+ for(const [x0,x1] of [[ra,ra+RW],[rb-RW,rb]]){const xs=xsBetween(x0,x1,1),n=Math.ceil(2*Math.max(...xs.map(riverBank)))+1;
+  parts.push(paint(grid(xs.length,n,(i,j)=>{const x=xs[i],b=riverBank(x),z=-b+2*b*j/(n-1);return [x,bedAt(x,z),z];},true),C.basin));}
+ // Basin walls: the lagoon's and both river banks, from the basin's floor up to the main floor (a strip along each outline).
+ const strip=(poly,y0,y1)=>{const P=[],lo=typeof y0==='function'?y0:()=>y0;for(let i=0;i<poly.length;i++){const [ax,az]=poly[i],[bx,bz]=poly[(i+1)%poly.length],ay=lo(ax,az),by=lo(bx,bz);P.push(ax,ay,az,bx,by,bz,bx,y1,bz,ax,ay,az,bx,y1,bz,ax,y1,az);}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.computeVertexNormals();return g;};
- for(const poly of [ringOut,ringIn])parts.push(paint(strip(poly,BED,FY),C.basin));
+ {const xs=xsBetween(lx0,lx1,4),zs=xsBetween(-lz,lz,1);parts.push(paint(strip([...xs.map(x=>[x,-lz]),...zs.slice(1,-1).map(z=>[lx1,z]),...xs.slice().reverse().map(x=>[x,lz]),...zs.slice(1,-1).reverse().map(z=>[lx0,z])],lagoonFloor,FY),C.basin));}
+ for(const poly of [ringOut,ringIn])parts.push(paint(strip(poly,bedAt,FY),C.basin));
  // An invisible guard along every water edge for the walk-only round, open only where a bridge lands (its rails close
  // the sides). Along a side channel's banks it follows the hull's curve; across the ends it runs straight.
  const BW=BRIDGES.width/2,G=1.1;
  const openings=(list,lo,hi)=>{const out=[];let a=lo;for(const c of [...list].sort((p,q)=>p-q)){if(c+BW<lo||c-BW>hi)continue;if(c-BW>a)out.push([a,c-BW]);a=Math.max(a,c+BW);}if(hi>a)out.push([a,hi]);return out;};
  const guardCurve=(f,s,x0,x1)=>{for(const [a,b] of openings(BRIDGES.side,x0,x1)){const xs=xsBetween(a,b);walls.push(grid(xs.length,2,(i,j)=>[xs[i],j?FY+G:FY-.2,s*f(xs[i])]));}};
  const guardLine=(x,z0,z1,open)=>{for(const [a,b] of openings(open,z0,z1))walls.push(box(x-.05,x+.05,FY-.2,FY+G,a,b));};
- for(const s of [-1,1]){guardCurve(rOut,s,ra,rb);guardCurve(rIn,s,ra+RW,rb-RW);}
- guardLine(ra,-rOut(ra),rOut(ra),BRIDGES.aft);guardLine(ra+RW,-rIn(ra+RW),rIn(ra+RW),BRIDGES.aft);guardLine(rb,-rOut(rb),rOut(rb),[]);guardLine(rb-RW,-rIn(rb-RW),rIn(rb-RW),[]);
+ for(const s of [-1,1]){guardCurve(riverBank,s,ra,rb);guardCurve(rIn,s,ra+RW,rb-RW);}
+ guardLine(ra,-riverBank(ra),riverBank(ra),BRIDGES.aft);guardLine(ra+RW,-rIn(ra+RW),rIn(ra+RW),BRIDGES.aft);guardLine(rb,-riverBank(rb),riverBank(rb),[]);guardLine(rb-RW,-rIn(rb-RW),rIn(rb-RW),[]);
  for(const z of [-lz,lz])walls.push(box(lx0,lx1,FY,FY+G,z-.05,z+.05));for(const x of [lx0,lx1])walls.push(box(x-.05,x+.05,FY,FY+G,-lz,lz));
  // Glass rails on those guards (refinement round 4), each with a warm LED handrail, as in the concepts: both river banks,
  // the cross channels and the lagoon's long sides; open where a bridge lands and at each tube dock (the island bank).
@@ -287,9 +310,9 @@ export function createKeelClub(ship){
   const post=(x,z)=>parts.push(paint(box(x-.03,x+.03,FY,FY+RAIL,z-.03,z+.03),C.brass));
   const along=(f,s,x0,x1,cuts)=>{for(const [a,b] of spans(cuts,x0,x1)){const xs=xsBetween(a,b);rail(i=>[xs[i],s*f(xs[i])],xs.length);const n=Math.max(1,Math.round((b-a)/3));for(let k=0;k<=n;k++){const x=a+(b-a)*k/n;post(x,s*f(x));}}};
   const across=(x,z0,z1,cuts)=>{for(const [a,b] of spans(cuts,z0,z1)){rail(i=>[x,i?b:a],2);const n=Math.max(1,Math.round((b-a)/3));for(let k=0;k<=n;k++)post(x,a+(b-a)*k/n);}};
-  for(const s of [-1,1]){along(rOut,s,ra,rb,cut(BRIDGES.side,BW));along(rIn,s,ra+RW,rb-RW,[...cut(BRIDGES.side,BW),...DOCKS.filter(d=>d.side===s).map(d=>[d.x-2,d.x+2])]);
+  for(const s of [-1,1]){along(riverBank,s,ra,rb,cut(BRIDGES.side,BW));along(rIn,s,ra+RW,rb-RW,[...cut(BRIDGES.side,BW),...DOCKS.filter(d=>d.side===s).map(d=>[d.x-2,d.x+2])]);
    along(()=>lz,s,lx0,lx1,[]);}
-  across(ra,-rOut(ra),rOut(ra),cut(BRIDGES.aft,BW));across(ra+RW,-rIn(ra+RW),rIn(ra+RW),cut(BRIDGES.aft,BW));across(rb,-rOut(rb),rOut(rb),[]);across(rb-RW,-rIn(rb-RW),rIn(rb-RW),[]);}
+  across(ra,-riverBank(ra),riverBank(ra),cut(BRIDGES.aft,BW));across(ra+RW,-rIn(ra+RW),rIn(ra+RW),cut(BRIDGES.aft,BW));across(rb,-riverBank(rb),riverBank(rb),[]);across(rb-RW,-rIn(rb-RW),rIn(rb-RW),[]);}
  // Arched footbridges: the deck rises RIVER.rise over the water (a half sine over its span, at most 22 degrees), with a
  // solid rail on each side; two water cannons stand on the crown.
  for(const {a,b} of BRIDGE_SPANS){const L=Math.hypot(b[0]-a[0],b[1]-a[1]),u=[(b[0]-a[0])/L,(b[1]-a[1])/L],n=[-u[1],u[0]],N=24;
@@ -772,8 +795,8 @@ export function createKeelClub(ship){
  const water=(geometry,color,{rep=1/6,flow=[0,0],opacity=.9,name='Keel_club_water',bright=.3,tex=ripples}={})=>{const map=tex?tex.clone():null;if(map){map.wrapS=map.wrapT=T.RepeatWrapping;map.repeat.set(rep,rep);map.needsUpdate=true;}
   const m=new T.MeshStandardMaterial({name,color,map,roughness:.12,metalness:.05,transparent:true,opacity,depthWrite:false,side:T.DoubleSide,forceSinglePass:true,emissive:color,emissiveIntensity:bright,userData:{envShare:0}});
   const mesh=new T.Mesh(geometry,m);mesh.name=name;group.add(mesh);if(map)flows.push({map,flow:flow.map(v=>v*rep)});return mesh;};
- const side=s=>{const xs=xsBetween(ra+RW,rb-RW);return flat([...xs.map(x=>[x,s*rOut(x)]),...xs.slice().reverse().map(x=>[x,s*rIn(x)])],[],WY);};
- const cross=(x0,x1)=>flat([[x0,-rOut(x0)],[x1,-rOut(x1)],[x1,rOut(x1)],[x0,rOut(x0)]],[],WY);
+ const side=s=>{const xs=xsBetween(ra+RW,rb-RW);return flat([...xs.map(x=>[x,s*riverBank(x)]),...xs.slice().reverse().map(x=>[x,s*rIn(x)])],[],WY);};
+ const cross=(x0,x1)=>{const xs=xsBetween(x0,x1,1);return flat([...xs.map(x=>[x,-riverBank(x)]),...xs.slice().reverse().map(x=>[x,riverBank(x)])],[],WY);};
  // a shape's v runs along -z, so a flow towards +z scrolls v the other way
  water(side(-1),C.river,{flow:[-.7,0]});water(side(1),C.river,{flow:[.7,0]});water(cross(rb-RW,rb),C.river,{flow:[0,.7]});water(cross(ra,ra+RW),C.river,{flow:[0,-.7]});
  // The lagoon (refinement round 4): surf. A grid 0.5 m along by 4 m across, raised in the vertex shader into waves that
