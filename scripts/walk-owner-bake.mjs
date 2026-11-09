@@ -80,14 +80,14 @@ async function openPage(n,walk,script){
 }
 
 const walk=await walkPage();if(!walk.script)throw Error('No walk script named in walk.html');
-const key=ownerKey(walk.script),out=arg('out',walk.dir?path.join(walk.dir,ownerBakeFile(walk.script)):path.resolve('output/perf-walk/owner-bake',TAG+'.json'));
-if(process.argv.includes('--if-missing')){try{const d=JSON.parse(await fs.readFile(out,'utf8'));if(d.key===key&&d.blocks?.length){console.log('owner bake: already baked for',walk.script);process.exit(0);}}catch{}}
+const scriptKey=ownerKey(walk.script),out=arg('out',walk.dir?path.join(walk.dir,ownerBakeFile(walk.script)):path.resolve('output/perf-walk/owner-bake',TAG+'.json'));
+if(process.argv.includes('--if-missing')){try{const d=JSON.parse(await fs.readFile(out,'utf8'));if(d.key?.startsWith(scriptKey)&&d.blocks?.length){console.log('owner bake: already baked for',walk.script);process.exit(0);}}catch{}}
 const blocks=await region();console.log(`owner bake: ${walk.script}, ${blocks.length} blocks of ${TOP}x${TOP} cells x ${SLABS} slabs, ${PAGES} pages, ${MINUTES} min`);
 const script=(await bundle({entryPoints:['scripts/walk-owner-bake.page.js'],bundle:true,minify:true,format:'iife',write:false,target:'es2022'})).outputFiles[0].text;
 const pages=await Promise.all(Array.from({length:PAGES},(_,n)=>openPage(n,walk,script)));
 // Every page must see the same scene: the same parts and conditions, in the same order.
 const digest=t=>createHash('sha256').update(JSON.stringify(t)).digest('hex');
-const tables=pages[0].setup.tables,first=digest(tables);for(const [n,p] of pages.entries())if(digest(p.setup.tables)!==first)throw Error(`Page ${n} built a different scene; the bake was not kept`);
+const tables=pages[0].setup.tables,first=digest(tables),key=pages[0].setup.key;if(!key?.startsWith(scriptKey))throw Error('The page reports key '+key+' for '+walk.script);for(const [n,p] of pages.entries())if(digest(p.setup.tables)!==first)throw Error(`Page ${n} built a different scene; the bake was not kept`);
 console.log('scene:',JSON.stringify({...pages[0].setup,tables:undefined}));
 // Blocks are shared out as pages come free; none starts after the time limit.
 const results=[],queue=[...blocks],deadline=started+MINUTES*60e3;let done=0;
@@ -96,12 +96,15 @@ await Promise.all(pages.map(async({page})=>{while(queue.length&&Date.now()<deadl
 // The bake's data: entries shared between blocks.
 const entries=[],entryIndex=new Map(),stored=results.map(([i0,k0,j0,i1,k1,j1,list])=>[i0,k0,j0,i1,k1,j1,list.map(e=>{const k=JSON.stringify(e);let n=entryIndex.get(k);if(n===undefined){n=entries.length;entries.push(e);entryIndex.set(k,n);}return n;})]);
 const data={version:OWNER_BAKE_VERSION,key,made:new Date().toISOString(),grid:{x0:PV.x0,z0:PV.z0,step:PV.step,y0:PV.y0},nearMargin:pages[0].setup.nearMargin,region:{deck:6,slabs:SLABS,margin:MARGIN,top:TOP,blocks:blocks.length,baked:done},parts:tables.parts,conds:tables.conditions,entries,blocks:stored};
-// The self-check, through the walk's own hiding.
+// Drop what moved or changed since setup, then the self-check through the walk's own hiding (the unchecked data is kept
+// beside the output for a failed one).
+const pruned=await pages[0].page.ev(`__ownerBake.prune(${JSON.stringify(data)})`);Object.assign(data,pruned.data);console.log('pruned:',JSON.stringify(pruned.dropped));
+await fs.mkdir(path.dirname(out),{recursive:true});await fs.writeFile(out+'.unchecked',JSON.stringify(data));
 const check=await pages[0].page.ev(`__ownerBake.check(${JSON.stringify(data)},${POSES})`),worst=Math.max(0,...check.poses.map(p=>p.big));
 console.log('check:',JSON.stringify({resolved:`${check.resolved}/${check.parts}`,conds:`${check.condsResolved}/${check.conds}`,poses:check.poses.length,worstPixels:worst,maxDelta:Math.max(0,...check.poses.map(p=>p.max)),meanHidden:Math.round(check.poses.reduce((a,p)=>a+p.hidden,0)/Math.max(1,check.poses.length))}));
 for(const {page} of pages)page.close();
 if(check.resolved!==check.parts||check.condsResolved!==check.conds)throw Error('The walk could not match every baked part and condition; the bake was not kept');
 if(worst>MAX_PIXELS)throw Error(`A pose changed ${worst} pixels (> ${MAX_PIXELS}); the bake was not kept`);
-await fs.mkdir(path.dirname(out),{recursive:true});await fs.writeFile(out+'.part',JSON.stringify(data));await fs.rename(out+'.part',out);
+await fs.writeFile(out+'.part',JSON.stringify(data));await fs.rm(out+'.unchecked',{force:true});await fs.rename(out+'.part',out);
 console.log(`owner bake: ${done}/${blocks.length} blocks, ${entries.length} entries, ${(Buffer.byteLength(JSON.stringify(data))/1024).toFixed(0)} KB -> ${out} in ${((Date.now()-started)/60e3).toFixed(1)} min`);
 process.exit(0);

@@ -49,12 +49,30 @@ function valid(d){
   &&d.blocks.every(b=>Array.isArray(b)&&b.length===7&&b.slice(0,6).every(Number.isInteger)&&b[0]<=b[3]&&b[1]<=b[4]&&b[2]<=b[5]&&ints(b[6],E));
 }
 
+/** The bake's data checked against `scene` as it is now: every part and condition that no longer matches (it moved or
+ * changed since it was recorded) is dropped with every entry relying on it, and the tables shrink to what the entries
+ * still use. Returns {data, dropped: {parts, conds, entries, blocks}}. */
+export function pruneOwnerBake(data,scene){
+ const byPath=new Map();scene.traverse(o=>{if(o===scene)return;const p=ownerPath(o,scene);byPath.set(p,byPath.has(p)?null:o);});
+ const ok=([path,print])=>{const o=byPath.get(path);return !!o&&ownerPrint(o)===print;},partOk=data.parts.map(ok),condOk=data.conds.map(ok);
+ const kept=new Map(),entries=[];data.entries.forEach((e,i)=>{if(partOk[e[0]]&&e[1].every(k=>condOk[k])){kept.set(i,entries.length);entries.push(e);}});
+ const index=list=>{const m=new Map();[...new Set(list)].sort((a,b)=>a-b).forEach((v,i)=>m.set(v,i));return m;},pIdx=index(entries.map(e=>e[0])),cIdx=index(entries.flatMap(e=>e[1]));
+ const blocks=data.blocks.map(b=>[...b.slice(0,6),b[6].filter(i=>kept.has(i)).map(i=>kept.get(i))]).filter(b=>b[6].length);
+ return {data:{...data,parts:[...pIdx.keys()].map(i=>data.parts[i]),conds:[...cIdx.keys()].map(i=>data.conds[i]),entries:entries.map(([p,cs,slots])=>[pIdx.get(p),cs.map(k=>cIdx.get(k)),...(slots?[slots]:[])]),blocks},
+  dropped:{parts:partOk.filter(x=>!x).length,conds:condOk.filter(x=>!x).length,entries:data.entries.length-entries.length,blocks:data.blocks.length-blocks.length}};
+}
+/** Why the walk would not use `data` (a short reason), or null when it would. */
+export function ownerBakeProblem(data,key){
+ if(data?.version!==OWNER_BAKE_VERSION)return 'format '+data?.version+', not '+OWNER_BAKE_VERSION;
+ if(!key||data.key!==key)return 'key '+data?.key+', not '+key;
+ const g=data.grid;if(['x0','z0','step','y0'].some(k=>g?.[k]!==PV[k]))return 'another grid';
+ return valid(data)?null:'not whole (a table, entry or block out of shape)';
+}
 /** `data` as written by the bake; `{key, scene}`. Returns null when the data is for another build or not whole.
  * Otherwise {resolve(), around(camera, draw), stats}: resolve() matches parts and conditions to the scene once it is
  * built; around() runs `draw` with the camera cell's proven parts hidden, and restores them after whatever happens. */
 export function createOwnerHiding(data,{key,scene}){
- if(data?.version!==OWNER_BAKE_VERSION||!key||data.key!==key)return null;
- const g=data.grid;if(['x0','z0','step','y0'].some(k=>g?.[k]!==PV[k])||!valid(data))return null;
+ if(ownerBakeProblem(data,key))return null;
  const stats={parts:data.parts.length,resolved:0,conds:data.conds.length,condsResolved:0,cells:0,hidden:0,held:0,dropped:0};
  let parts=null,conds=null,lastCell='',active=[];
  const blocks=data.blocks,inBlock=(b,i,k,j)=>i>=b[0]&&i<=b[3]&&k>=b[1]&&k<=b[4]&&j>=b[2]&&j<=b[5];

@@ -2,7 +2,7 @@
 // where, when and while the bake allows.
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {createOwnerHiding,ownerBakeFile,ownerKey,ownerCell,ownerPath,ownerPrint,emptyOwnerBake,nearCorner,OWNER_BAKE_VERSION} from '../src/v2/owner-hiding.js';
+import {createOwnerHiding,ownerBakeFile,ownerKey,ownerCell,ownerPath,ownerPrint,emptyOwnerBake,nearCorner,pruneOwnerBake,ownerBakeProblem,OWNER_BAKE_VERSION} from '../src/v2/owner-hiding.js';
 import {PVS_GRID} from '../src/v2/atrium-pvs.js';
 
 let passed=0;const pass=name=>{passed++;console.log('PASS '+name);};
@@ -51,4 +51,9 @@ for(const [name,undo] of [['not shown',w=>{w.wall.visible=false;}],['on another 
 {const w=world(),h=make(w);let threw=false;try{h.around(at(),()=>{throw Error('draw failed');});}catch{threw=true;}
  assert.ok(threw);assert.deepEqual([w.a,w.b,w.cabins].map(o=>o.visible),[true,true,true]);pass('a failed draw still restores every part');}
 {const w=world(),dup=mesh('Lamp');w.band.add(dup);w.scene.updateMatrixWorld(true);const h=make(w);assert.deepEqual(during(h,at(),[w.a]),[false]);pass('a later sibling of the same name does not take an earlier one\'s place');}
+{const w=world(),data=bake(w);w.wall.position.y+=1;w.wall.updateMatrixWorld(true);const {data:d,dropped}=pruneOwnerBake(data,w.scene);
+ assert.deepEqual(dropped,{parts:0,conds:1,entries:3,blocks:1});assert.equal(d.entries.length,0);assert.equal(ownerBakeProblem(d,KEY),null);pass('pruning drops every entry relying on a wall that moved');}
+{const w=world(),data=bake(w);w.b.position.x+=1;w.b.updateMatrixWorld(true);const {data:d,dropped}=pruneOwnerBake(data,w.scene);
+ assert.deepEqual(dropped,{parts:1,conds:0,entries:1,blocks:0});assert.equal(d.parts.length,2);assert.equal(ownerBakeProblem(d,KEY),null);
+ const h=createOwnerHiding(d,{key:KEY,scene:w.scene});h.resolve();assert.equal(h.stats.resolved,h.stats.parts);assert.deepEqual(during(h,at(),[w.a,w.b,w.cabins]),[false,true,false]);pass('pruned data stays whole, matches fully and still hides the rest');}
 console.log(`owner hiding: ${passed} checks passed`);

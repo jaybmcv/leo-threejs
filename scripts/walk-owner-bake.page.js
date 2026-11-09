@@ -10,7 +10,7 @@
 import * as T from 'three';
 import {MeshBVH} from 'three-mesh-bvh';
 import {createOwnerProof,OWNER_PROOF} from '../src/v2/owner-proof.js';
-import {createOwnerHiding} from '../src/v2/owner-hiding.js';
+import {createOwnerHiding,ownerBakeProblem,pruneOwnerBake} from '../src/v2/owner-hiding.js';
 import {PVS_GRID} from '../src/v2/atrium-pvs.js';
 import {collectOccluders,collectTargets} from './walk-owner-bake.scene.js';
 
@@ -62,9 +62,11 @@ async function bake(blocks){
    const cabins=e.parts.filter(p=>p.slots).map(p=>proveSlots(box,p,hint)).filter(Boolean);record(box,cabins);}}
  return {blocks:out,visits,ms:Math.round(performance.now()-started),stats:{...proof.stats}};
 }
+// After the bake: whatever moved or changed since setup is dropped (pruneOwnerBake in src/v2/owner-hiding.js).
+const prune=data=>{host.scene.updateMatrixWorld(true);return pruneOwnerBake(data,host.scene);};
 // Picture diffs through the walk's own hiding.
 async function check(data,poses=60,seed=7){
- const {scene,renderer:r,camera}=host,gl=r.getContext(),hiding=createOwnerHiding(data,{key:host.key,scene});if(!hiding)throw Error('The walk would not use this bake (key or grid)');hiding.resolve();
+ const {scene,renderer:r,camera}=host,gl=r.getContext(),hiding=createOwnerHiding(data,{key:host.key,scene});if(!hiding)throw Error('The walk would not use this bake: '+ownerBakeProblem(data,host.key));hiding.resolve();
  const W=r.domElement.width,H=r.domElement.height,A=new Uint8Array(W*H*4),A2=new Uint8Array(W*H*4),B=new Uint8Array(W*H*4);
  const draw=(cam,buf,hide)=>{const rt=r.getRenderTarget();r.setRenderTarget(null);const go=()=>{r.clear();r.render(scene,cam);};if(hide)hiding.around(cam,go);else go();gl.readPixels(0,0,W,H,gl.RGBA,gl.UNSIGNED_BYTE,buf);r.setRenderTarget(rt);};
  const diff=(a,b)=>{let big=0,max=0;for(let p=0;p<a.length;p+=4){const d=Math.max(Math.abs(a[p]-b[p]),Math.abs(a[p+1]-b[p+1]),Math.abs(a[p+2]-b[p+2]));if(d>max)max=d;if(d>24)big++;}return {big,max};};
@@ -75,4 +77,4 @@ async function check(data,poses=60,seed=7){
   if(n%10===9)await new Promise(f=>setTimeout(f,0));}
  return {resolved:hiding.stats.resolved,parts:hiding.stats.parts,condsResolved:hiding.stats.condsResolved,conds:hiding.stats.conds,poses:rows};
 }
-globalThis.__ownerBake={setup,bake,check};
+globalThis.__ownerBake={setup,bake,prune,check};
