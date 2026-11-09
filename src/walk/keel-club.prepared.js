@@ -53,6 +53,7 @@ const SHORE=.05,riverWet=(x,z)=>Math.abs(z)<=rOut(x)&&hullBottom(x,z)<=FY-RIVER.
 export function riverBank(x){let z=rOut(x);if(riverWet(x,z))return z;let lo=0;for(let n=0;n<24;n++){const m=(lo+z)/2;if(riverWet(x,m))lo=m;else z=m;}return lo;}
 // The river's bed at (x, z): RIVER.bed down, raised to keep SKIN_GAP above the hull's bottom, and always just under the water.
 const bedAt=(x,z)=>Math.min(FY-RIVER.drop-.02,Math.max(FY-RIVER.bed,hullBottom(x,z)+SKIN_GAP));
+export {bedAt as riverBed};
 // Bridges: across each side channel at x (4 m wide), and across the aft channel at z (along x).
 export const BRIDGES={side:[-116,-62,-10,66,120,160],aft:[0],width:4};
 // Waterfalls: the terrace edge reaches out over the promenade to the river's outer bank, and a curtain of water falls
@@ -76,7 +77,9 @@ export function bridgeUnderside(x,z){let low=Infinity;for(const {a,b} of BRIDGE_
 // The river's centre line as one closed loop, the way its water flows: forward along port, across the bow, aft along
 // starboard, across the aft end. Sampled about every metre, its corners rounded by a moving average (`ROUND` samples
 // either side), with the arc length at each sample. A frame's `right` points to the centre island.
-const ROUND=6,TUBE_RING=.9;
+// A floating tube's underside: createTubeMesh's torus (.55 round, .24 thick) floats .08 over the water (main.js), so its
+// lowest ring, TUBE_KEEL round its centre, is .16 under the water; the steering keeps it TUBE_DRAFT (2 cm more) over the bed.
+const ROUND=6,TUBE_RING=.9,TUBE_KEEL=.55,TUBE_DRAFT=.18;
 export const RIVER_PATH=(()=>{const {aft:ra,bow:rb,width:W}=RIVER,xa=ra+W/2,xb=rb-W/2,zc=x=>rIn(x)+W/2,raw=[];
  const leg=(x0,z0,x1,z1)=>{const n=Math.max(1,Math.round(Math.hypot(x1-x0,z1-z0)));for(let i=0;i<n;i++)raw.push([x0+(x1-x0)*i/n,z0+(z1-z0)*i/n]);};
  for(let x=xa;x<xb;x+=1)raw.push([x,-zc(x)]);leg(xb,-zc(xb),xb,zc(xb));for(let x=xb;x>xa;x-=1)raw.push([x,zc(x)]);leg(xa,zc(xa),xa,-zc(xa));
@@ -85,7 +88,9 @@ export const RIVER_PATH=(()=>{const {aft:ra,bow:rb,width:W}=RIVER,xa=ra+W/2,xb=r
  // How far a tube may steer either way at each sample: its whole ring (TUBE_RING) still in the water. Rounding the
  // corners pulls the line towards the island, so near a corner the island side narrows.
  const wet=(x,z)=>x>=ra&&x<=rb&&riverWet(x,z)&&!(x>ra+W&&x<rb-W&&Math.abs(z)<rIn(x));
- const ring=(x,z)=>{for(let a=0;a<12;a++)if(!wet(x+Math.cos(a*Math.PI/6)*TUBE_RING,z+Math.sin(a*Math.PI/6)*TUBE_RING))return false;return true;};
+ // Its underside must clear the bed too, which shoals towards the outer bank over the hull's bottom (bedAt).
+ const ring=(x,z)=>{for(let a=0;a<12;a++){const c=Math.cos(a*Math.PI/6),n=Math.sin(a*Math.PI/6);
+  if(!wet(x+c*TUBE_RING,z+n*TUBE_RING)||bedAt(x+c*TUBE_KEEL,z+n*TUBE_KEEL)>FY-RIVER.drop-TUBE_DRAFT)return false;}return true;};
  const lo=[],hi=[];pts.forEach((p,i)=>{const a=pts[(i-1+n)%n],b=pts[(i+1)%n],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1,rx=-(b[1]-a[1])/l,rz=(b[0]-a[0])/l;
   const reach=sgn=>{let d=0;while(d<W/2&&ring(p[0]+rx*(d+.05)*sgn,p[1]+rz*(d+.05)*sgn))d+=.05;return d-.1;};hi.push(Math.max(0,reach(1)));lo.push(-Math.max(0,reach(-1)));});
  return {pts,len,total:len[n],lo,hi};})();
