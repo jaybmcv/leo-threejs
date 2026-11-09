@@ -9,6 +9,9 @@ import {Controller} from '../src/walk/controller.js';
 import {groundMesh} from '../src/v2/ground.js';
 import {findRestSpots,solidSpots} from '../src/walk/rest.js';
 import {encodeRecord,encodeIdentity,assembleFrame,WireReader} from '../src/walk/net/wire.js';
+import {parseExterior} from './exterior-io-v2.mjs';
+import {createSkinAuthority} from './clearance-authority-v2.mjs';
+import {auditSkinClearance} from '../src/plan/skin-clearance-v2.js';
 
 // The Keel Club, the sports hall under Deck 1 (createKeelClub in src/walk/keel-club.js), walked with the rules of
 // scripts/v2-walk.mjs: from every core lift's Keel Club stop, every zone and both terraces reached, no step off an edge
@@ -32,6 +35,19 @@ for(const c of CORES)assert(deck1.slab.holes.some(h=>h.id===`${c.id}_stairs_1`),
 // Budget (Jay, 2026-11-07): 4M triangles and 400 draws on desktop for the whole Keel Club.
 let tris=0,draws=0;club.group.traverse(o=>{if(o.isMesh&&o.material.visible!==false){draws++;tris+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);}});
 console.log(`Keel Club: ${draws} draws, ${Math.round(tris).toLocaleString()} triangles`);assert(tris<=4e6,'over 4M triangles');assert(draws<=400,'over 400 draws');
+
+// Inside the finished web skin, by the full nightly's own rule (check-skin-clearance-v2.mjs, which fast deploys skip; it
+// found the river bed and the lagoon's deep end through the hull's bottom on 2026-11-09): every visible club mesh,
+// each vertex and long face no more than 5 cm outside, and none in a room window, against the same authority, the
+// finished web skin of the last full build in output/leo-interior-v02.
+{const skin=new URL('../output/leo-interior-v02/leo-exterior-web.glb',import.meta.url);
+ assert(fs.existsSync(skin),'output/leo-interior-v02/leo-exterior-web.glb is missing: the skin check needs the finished web skin of a full build');
+ const authority=createSkinAuthority(await parseExterior(fs.readFileSync(skin)));
+ for(const root of [club.group,club.deck1]){const r=auditSkinClearance(root,authority,layout,{tag:root.name});
+  for(const o of r.outside)console.log(`FAIL ${o.mesh} outside the finished web skin: ${o.samples} samples, up to ${o.maxDistance.toFixed(3)} m at ${o.point.map(v=>v.toFixed(2)).join(',')}`);
+  for(const b of r.blocked.slice(0,5))console.log(`FAIL ${b.mesh} in room window ${b.interface}`);
+  assert.equal(r.status,'PASS',`${root.name}: outside the finished web skin or in a room window (check-skin-clearance-v2.mjs)`);
+  console.log(`PASS ${root.name} inside the finished web skin (${r.meshes} meshes, ${r.vertices.toLocaleString()} vertices, ${r.faceSamples.toLocaleString()} face samples)`);}}
 
 // Walk surfaces face up.
 club.solid.updateMatrixWorld(true);
