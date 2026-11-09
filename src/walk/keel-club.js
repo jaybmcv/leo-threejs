@@ -606,7 +606,7 @@ export function createKeelClub(ship){
  const sandMat=new T.MeshStandardMaterial({name:'Keel_club_sand',map:sandTex,vertexColors:true,roughness:.95,metalness:0,side:T.DoubleSide});
  const deckMat=new T.MeshStandardMaterial({name:'Keel_club_deck',map:woodTex,vertexColors:true,color:woodTex?0xffffff:0xb07a4a,roughness:.62,metalness:0,side:T.DoubleSide});
  const lit=new T.MeshStandardMaterial({name:'Keel_club_glow',vertexColors:true,roughness:1,emissive:0xffffff,emissiveIntensity:.35,side:T.DoubleSide});
- const see=new T.MeshStandardMaterial({name:'Keel_club_glass',vertexColors:true,roughness:.1,transparent:true,opacity:.2,depthWrite:false,side:T.DoubleSide});
+ const see=new T.MeshStandardMaterial({name:'Keel_club_glass',vertexColors:true,roughness:.1,transparent:true,opacity:.2,depthWrite:false,side:T.DoubleSide,forceSinglePass:true});
  const stripMat=new T.MeshBasicMaterial({name:'Keel_club_light_strip',vertexColors:true,toneMapped:false});
  const starTex=canvasTexture(1024,512,(c,w,h)=>{const g=c.createLinearGradient(0,0,0,h);g.addColorStop(0,'#05081a');g.addColorStop(1,'#0c1636');c.fillStyle=g;c.fillRect(0,0,w,h);
   const r=seeded(31);for(const [x,y,rad,col] of [[.2,.4,.22,'rgba(120,70,190,.22)'],[.7,.6,.28,'rgba(40,150,170,.18)'],[.45,.2,.18,'rgba(220,110,80,.14)']]){const n=c.createRadialGradient(x*w,y*h,0,x*w,y*h,rad*w);n.addColorStop(0,col);n.addColorStop(1,'rgba(0,0,0,0)');c.fillStyle=n;c.fillRect(0,0,w,h);}
@@ -678,7 +678,7 @@ export function createKeelClub(ship){
   for(let i=0;i<500;i++){c.fillStyle=`rgba(255,255,255,${.3+r()*.6})`;c.beginPath();c.arc(r()*w,r()*h,.8+r()*1.6,0,Math.PI*2);c.fill();}});
  const flows=[];
  const water=(geometry,color,{rep=1/6,flow=[0,0],opacity=.9,name='Keel_club_water',bright=.3,tex=ripples}={})=>{const map=tex?tex.clone():null;if(map){map.wrapS=map.wrapT=T.RepeatWrapping;map.repeat.set(rep,rep);map.needsUpdate=true;}
-  const m=new T.MeshStandardMaterial({name,color,map,roughness:.12,metalness:.05,transparent:true,opacity,depthWrite:false,side:T.DoubleSide,emissive:color,emissiveIntensity:bright,userData:{envShare:.15}});
+  const m=new T.MeshStandardMaterial({name,color,map,roughness:.12,metalness:.05,transparent:true,opacity,depthWrite:false,side:T.DoubleSide,forceSinglePass:true,emissive:color,emissiveIntensity:bright,userData:{envShare:.06}});
   const mesh=new T.Mesh(geometry,m);mesh.name=name;group.add(mesh);if(map)flows.push({map,flow:flow.map(v=>v*rep)});return mesh;};
  const side=s=>{const xs=xsBetween(ra+RW,rb-RW);return flat([...xs.map(x=>[x,s*rOut(x)]),...xs.slice().reverse().map(x=>[x,s*rIn(x)])],[],WY);};
  const cross=(x0,x1)=>flat([[x0,-rOut(x0)],[x1,-rOut(x1)],[x1,rOut(x1)],[x0,rOut(x0)]],[],WY);
@@ -705,14 +705,16 @@ float surfLean(float x,float z){float u=surfU(x),d=(u-.29)/.035;return -.55*surf
   m.onBeforeCompile=sh=>{Object.assign(sh.uniforms,SURF);
    sh.vertexShader=fn+'varying float vSurfFoam;\nvarying float vSurfH;\nvarying vec2 vSurfW;\n'+sh.vertexShader
     .replace('#include <beginnormal_vertex>',`#include <beginnormal_vertex>
-  {float e=.25,hx=(surfH(position.x+e,position.z)-surfH(position.x-e,position.z))/(2.*e),hz=(surfH(position.x,position.z+e)-surfH(position.x,position.z-e))/(2.*e);objectNormal=normalize(vec3(-hx,1.,-hz));}`)
+  {float e=.25,Hx=(surfH(position.x+e,position.z)-surfH(position.x-e,position.z))/(2.*e),Hz=(surfH(position.x,position.z+e)-surfH(position.x,position.z-e))/(2.*e),
+   Lx=(surfLean(position.x+e,position.z)-surfLean(position.x-e,position.z))/(2.*e),Lz=(surfLean(position.x,position.z+e)-surfLean(position.x,position.z-e))/(2.*e);
+   objectNormal=normalize(cross(vec3(Lz,Hz,1.),vec3(1.+Lx,Hx,0.)));}`)
     .replace('#include <begin_vertex>',`#include <begin_vertex>
   {float u=surfU(position.x),en=surfEnv(position.x,position.z);vSurfH=surfH(position.x,position.z);transformed.y+=vSurfH;transformed.x+=surfLean(position.x,position.z);
    float shore=1.-smoothstep(${(lx0+3).toFixed(1)},${(lx0+18).toFixed(1)},position.x);
-   vSurfFoam=clamp(en*(smoothstep(.22,.29,u)*(1.-smoothstep(.29,.44,u))*1.4)+shore*(.45+.45*sin((position.x+2.6*uSurfT)*.9)),0.,1.);vSurfW=position.xz;}`);
+   vSurfFoam=clamp(en*(smoothstep(.22,.29,u)*(1.-smoothstep(.29,.44,u))*1.4)+shore*(.45+.45*sin((position.x+2.6*uSurfT)*.9666439)),0.,1.);vSurfW=position.xz;}`);
    sh.fragmentShader='uniform float uSurfT;\nvarying float vSurfFoam;\nvarying float vSurfH;\nvarying vec2 vSurfW;\n'+sh.fragmentShader
     .replace('#include <color_fragment>',`#include <color_fragment>
-  float surfF=0.;{float n=.5+.5*sin(vSurfW.x*2.1+vSurfW.y*1.3)*sin(vSurfW.y*2.7-vSurfW.x*.9+uSurfT*1.7),n2=.5+.5*sin(vSurfW.x*5.3-vSurfW.y*4.1+uSurfT*2.3)*sin(vSurfW.y*6.1+vSurfW.x*1.7);surfF=clamp(vSurfFoam*(.15+.85*n+.6*n2)-.12,0.,1.);
+  float surfF=0.;{float n=.5+.5*sin(vSurfW.x*2.1+vSurfW.y*1.3)*sin(vSurfW.y*2.7-vSurfW.x*.9+uSurfT*1.8849556),n2=.5+.5*sin(vSurfW.x*5.3-vSurfW.y*4.1+uSurfT*2.5132741)*sin(vSurfW.y*6.1+vSurfW.x*1.7);surfF=clamp(vSurfFoam*(.15+.85*n+.6*n2)-.12,0.,1.);
    diffuseColor.rgb*=mix(.8,1.25,clamp(vSurfH*.8+.2,0.,1.));diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.97,.99,1.),surfF);diffuseColor.a=mix(diffuseColor.a,1.,surfF);}`)
     .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n  totalEmissiveRadiance+=vec3(.22)*surfF;');};
   m.customProgramCacheKey=()=>'keel-club-surf';}
@@ -769,6 +771,8 @@ float surfLean(float x,float z){float u=surfU(x),d=(u-.29)/.035;return -.55*surf
  }
  // Each frame: the ripples move, and the shots catch up on their clock. `rider` is our tube's centre (x, y, z) while we
  // float, else null. Returns the hits on us this frame.
+ // The surf's clock wraps at 2600 s, a whole number of its 10 s period (26 m at 2.6 m/s); the foam's own phases are
+ // whole multiples of that period too, so the wrap is seamless.
  let waveT=0;const waves=dt=>{waveT+=dt;SURF.uSurfT.value=waveT%2600;};
  // Empty tubes drifting round the Keel Loop with the current, bobbing and turning slowly.
  const FLOATS=18,UP=new T.Vector3(0,1,0),floatMesh=new T.InstancedMesh(new T.TorusGeometry(.55,.22,8,20).rotateX(Math.PI/2),new T.MeshStandardMaterial({name:'Keel_club_drift_tube',roughness:.45}),FLOATS),floats=[];
@@ -794,18 +798,18 @@ float surfLean(float x,float z){float u=surfU(x),d=(u-.29)/.035;return -.55*surf
  // So is its light (the walk's hemisphere and fill, `light`): golden from the sky panel, warm off the floor. Like the
  // other room moods, it keeps what it found on the way in and puts it back on the way out.
  // The walk lights its rooms with an environment map, and its ACES tone mapping (exposure over 0.6) lifts the hall's warm
- // mid tones into the curve's shoulder, so floors, sand and walls came out near white. In the hall the club's own
- // materials (never Deck 1's copies or the walker) take a share of that light instead: their own envMap, the scene's,
- // at envShare (default .46) of its intensity (refinement round 4).
+ // mid tones into the curve's shoulder, so floors, sand and walls came out near white. The club's own materials (never
+ // Deck 1's copies or the walker) take a share of that light instead, every frame from the first, wherever the hall is
+ // seen from: their own envMap, the scene's, at envShare (default .46) of its intensity (refinement round 4).
  let ownMats=null;const ENV_SHARE=.46;
  const clubLight=()=>{let sc=group.parent;while(sc&&!sc.isScene)sc=sc.parent;const env=sc?.environment;if(!env)return;
   if(!ownMats){ownMats=new Set();group.traverse(o=>{for(const m of [].concat(o.material||[]))if(m.isMeshStandardMaterial)ownMats.add(m);});}
   const k=sc.environmentIntensity??1;for(const m of ownMats){if(m.envMap!==env)m.envMap=env;m.envMapIntensity=k*(m.userData.envShare??ENV_SHARE);}};
  const HAZE=new T.Color(0xf3dcc8),SKY=new T.Color(0xffd6a4),GROUND=new T.Color(0xa47a55);let saved=null;
- const mood=(fog,eye,light=null)=>{if(!fog?.isFog)return;const inside=!(eye.y>DECK1-.4||eye.y<FY-4||eye.x<KEEL.aft-2||eye.x>KEEL.bow+2||Math.abs(eye.z)>half(eye.x,Math.max(eye.y,FY))+.5);
+ const mood=(fog,eye,light=null)=>{clubLight();if(!fog?.isFog)return;const inside=!(eye.y>DECK1-.4||eye.y<FY-4||eye.x<KEEL.aft-2||eye.x>KEEL.bow+2||Math.abs(eye.z)>half(eye.x,Math.max(eye.y,FY))+.5);
   if(!inside){if(saved){fog.color.copy(saved.fog);if(saved.hemi){const {hemi,fill}=saved.light;hemi.color.copy(saved.sky);hemi.groundColor.copy(saved.ground);hemi.intensity=saved.hemi;fill.intensity=saved.fill;}saved=null;}return;}
   if(!saved){saved={fog:fog.color.clone()};if(light?.hemi&&light?.fill)Object.assign(saved,{light,sky:light.hemi.color.clone(),ground:light.hemi.groundColor.clone(),hemi:light.hemi.intensity,fill:light.fill.intensity});}
-  fog.color.copy(HAZE);fog.near=Math.max(fog.near,170);fog.far=Math.max(fog.far,440);clubLight();
+  fog.color.copy(HAZE);fog.near=Math.max(fog.near,170);fog.far=Math.max(fog.far,440);
   if(saved.hemi){const {hemi,fill}=saved.light;hemi.color.copy(SKY);hemi.groundColor.copy(GROUND);hemi.intensity=saved.hemi*.95;fill.intensity=saved.fill*.75;}};
  return {group,deck1,solid,seats,update,near,fire,seed,mood,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
 }
