@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
-import {auditCorridorLanding,auditNativeLanding} from './ship-log-remap-audit.mjs';
-import {createLegacyCorridorRemapper,legacyFeatureSpot} from '../src/v2/legacy-corridors.js';
+import {auditCorridorLanding,auditNativeLanding,onOldDeck} from './ship-log-remap-audit.mjs';
+import {createLegacyCorridorRemapper,legacyFeatureSpot,legacyDeck} from '../src/v2/legacy-corridors.js';
 const layout=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8'));
 const table=JSON.parse(await fs.readFile('output/phase7/remap-table.json','utf8'));
 const good=table.rows.find(r=>r.id==='pr50');auditCorridorLanding(layout,good);
@@ -13,9 +13,19 @@ breakPose('wall-facing yaw',r=>r.current.yaw+=Math.PI/2);
 breakPose('atrium void',r=>r.current.at=[0,20.3,0]);
 breakPose('cabin interior',r=>r.current.at=[...layout.rooms.find(c=>c.id==='d16-library-2').center]);
 breakPose('stale route id',r=>r.current.corridor='removed-corridor');
-// A link on no old deck (the Keel Club, below Deck 1) is not a corridor link: it passes unmoved and fails if moved.
-const keel={id:'keel-fixture',oldRoom:null,original:{at:[15,-51.5,-38.3],yaw:0,lv:1},current:{at:[15,-51.5,-38.3],yaw:0,lv:1,resolved:true}};auditCorridorLanding(layout,keel);
+// Links on no old deck (the Keel Club, below Deck 1 at y -39.7): fixed expectations at the deck boundaries, and the
+// runtime's legacyDeck must agree with the audit's own rule at each.
+for(const [y,expected] of [[-39.7,true],[-41.7,true],[-41.8,false],[-47.5,false],[-51.5,false],[36.3,true],[38.3,true],[38.4,false]]){
+ assert.equal(onOldDeck(layout,[0,y,0]),expected,'audit old-deck rule at y '+y);assert.equal(!!legacyDeck(layout,[0,y,0]),expected,'runtime legacyDeck at y '+y);
+}
+// The corridor audit takes an unmoved Keel Club link and rejects a moved one or a corridor remap.
+const keel={id:'keel-fixture',source:'ship-log',oldRoom:null,original:{at:[15,-51.5,-38.3],yaw:0,lv:1},current:{at:[15,-51.5,-38.3],yaw:0,lv:1,resolved:true}};auditCorridorLanding(layout,keel);
 assert.throws(()=>auditCorridorLanding(layout,{...keel,current:{...keel.current,at:[15,-39.7,-38.3]}}),undefined,'a moved off-deck link must be rejected');
+assert.throws(()=>auditCorridorLanding(layout,{...keel,current:{...keel.current,legacyCorridor:{deck:1}}}),undefined,'a corridor-remapped off-deck link must be rejected');
+// With the layout, the native audit holds it to the corridor floor and capsule proof.
+const keelNative={...keel,spot:keel.current,at:[15,-51.5,-38.3],exact:[15,-51.5,-38.3],ahead:null,details:{floor:{at:[15,-51.5,-38.3],normal:[0,1,0]},overlap:false},inLog:true,nearby:true};auditNativeLanding(keelNative,layout);
+for(const [label,patch] of [['displaced fallback',{at:[-115,-51.5,-38]}],['no exact landing',{exact:null}],['no floor',{details:{floor:null,overlap:false}}],['steep floor',{details:{floor:{at:[15,-51.5,-38.3],normal:[.8,.6,0]},overlap:false}}],['wrong floor height',{details:{floor:{at:[15,-47.5,-38.3],normal:[0,1,0]},overlap:false}}],['capsule collision',{details:{...keelNative.details,overlap:true}}],['nearby omitted',{nearby:false}]])
+ assert.throws(()=>auditNativeLanding({...keelNative,...patch},layout),undefined,'off-deck '+label+' must fail');
 const row=table.rows.find(r=>r.id==='d10-lane'),changed=structuredClone(row);changed.current.legacyCorridor.cabin='N05-001';assert.throws(()=>auditCorridorLanding(layout,changed),undefined,'wrong cabin range must fail');
 const native={id:'fixture',source:'ship-log',spot:{at:[0,0,0],legacyCorridor:{deck:1}},at:[0,0,0],exact:[0,0,0],ahead:[.9,0,0],details:{floor:{at:[0,0,0],normal:[0,1,0]},overlap:false},inLog:true,nearby:true};auditNativeLanding(native);
 for(const [label,patch] of [['no landing',{at:null}],['spiral escaped',{exact:null}],['no floor',{details:{floor:null,overlap:false}}],['capsule collision',{details:{...native.details,overlap:true}}],['wrong floor height',{details:{floor:{at:[0,-4,0],normal:[0,1,0]},overlap:false}}],['forward obstruction',{ahead:null}],['nearby omitted',{nearby:false}]])assert.throws(()=>auditNativeLanding({...native,...patch}),undefined,label+' must fail');
