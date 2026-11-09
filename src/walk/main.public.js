@@ -904,7 +904,9 @@ renderer.setAnimationLoop(()=>{
  const board=glide.update(dt,{gliding:controller.gliding&&!resting&&!run,speed:controller.speed,rise:controller.velocity.y,turnRate});follow.ride=board;
  if(inBall){ball.mesh.position.copy(p);if(controller.grounded)ball.roll(dt,controller.velocity.x,controller.velocity.z);}
  tubeMesh.visible=!!resting?.spot.tube;if(tubeMesh.visible){const s=tubeSeat(resting.spot.tube);tubeMesh.position.set(s.x,KEEL.floor-RIVER.drop+.08,s.z);}
- walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
+ // In first person Cosmo is hidden (below), so his rig solves less often while he was hidden last frame and no selfie is
+ // counting down (the booth draws him). Switching back to third person it solves every frame again, before he shows.
+ walker.update(dt,{unseen:follow.mode==='first'&&!walker.holder.visible&&!booth?.counting,speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
   turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!!lounge?.inside(walker.holder.position),swimming:!!treasure?.active,board,hook:controller.hook&&!resting&&!run?controller.hook:null});
  grapple.update(dt);
  live?.pose(myPose(riding),now);

@@ -36,7 +36,7 @@ const V2_CHECKS=['check-walk-performance','check-otherside','launch-b-normalizat
 // The games' and features' own rules: quick, and independent of the ship's geometry. (The v1 ship's geometry checks
 // were removed with the v1 rollback, Jay 2026-11-02.)
 const GAMES=['check-hub','check-backdrop','check-invasion','check-emergency-drill','check-paws-off','check-giveaway','check-pool','check-ship-log',
- 'check-lullaby','check-maze','check-pinball','check-treasure','check-mudwater','check-plaque-atlas'];
+ 'check-lullaby','check-maze','check-pinball','check-treasure','check-mudwater','check-plaque-atlas','check-rig-pace'];
 const kind=name=>HEAVY.has(name)?'heavy':BROWSER.has(name)?'browser':'light';
 const jobs=[
  ...(useV2?[
