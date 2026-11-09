@@ -918,7 +918,7 @@ renderer.setAnimationLoop(()=>{
  walker.holder.visible=follow.mode!=='first'&&follow.current>.75&&!graffiti?.active;
  capsuleView(!!resting?.stand&&resting.t===1&&follow.mode==='first');
  cull(p);
- remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
+ remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1],photo:!!booth?.counting},now);
  // Carts others drive go where their drivers sit; ours is where we drove it.
  mct.update(dt,remotes,walker.hipHeight);
  // The lounge's doors open, and the cold room's strip curtain parts, for anyone near them.
