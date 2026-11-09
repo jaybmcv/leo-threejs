@@ -74,43 +74,56 @@ export function ownerBakeProblem(data,key){
 export function createOwnerHiding(data,{key,scene}){
  if(ownerBakeProblem(data,key))return null;
  const stats={parts:data.parts.length,resolved:0,conds:data.conds.length,condsResolved:0,cells:0,hidden:0,held:0,dropped:0};
- let parts=null,conds=null,lastCell='',active=[];
- const blocks=data.blocks,inBlock=(b,i,k,j)=>i>=b[0]&&i<=b[3]&&k>=b[1]&&k<=b[4]&&j>=b[2]&&j<=b[5];
+ let parts=null,conds=null,lastCell=NaN,active=[];
+ const blocks=data.blocks,entries=data.entries,inBlock=(b,i,k,j)=>i>=b[0]&&i<=b[3]&&k>=b[1]&&k<=b[4]&&j>=b[2]&&j<=b[5];
+ // A cabin entry's proven cabins as a set (checked every frame against the up to 40 its mesh shows).
+ const slotSets=entries.map(e=>e[2]?new Set(e[2]):null);
  // A resolved object with what it was at resolve(): it is dropped if it moves or changes geometry or material later.
  const snap=o=>({o,matrix:o.matrixWorld.elements.slice(),geometry:o.geometry,material:o.material});
- const same=s=>s.o.geometry===s.geometry&&s.o.material===s.material&&s.o.matrixWorld.elements.every((v,i)=>Math.abs(v-s.matrix[i])<1e-6);
+ const same=s=>{if(s.o.geometry!==s.geometry||s.o.material!==s.material)return false;const e=s.o.matrixWorld.elements,m=s.matrix;for(let i=0;i<16;i++)if(Math.abs(e[i]-m[i])>=1e-6)return false;return true;};
+ // Each condition's answer is worked out once a frame: frame number and answer per condition.
+ let frame=0,condFrame=new Uint32Array(0),condValue=new Uint8Array(0);
  function resolve(){
   const byPath=new Map();scene.traverse(o=>{if(o===scene)return;const p=ownerPath(o,scene);byPath.set(p,byPath.has(p)?null:o);});// a path met twice matches nothing
   const match=([path,print])=>{const o=byPath.get(path);return o&&ownerPrint(o)===print?snap(o):null;};
   parts=data.parts.map(match);conds=data.conds.map(c=>{const s=match(c);return s?{...s,slot:c[2]??null}:null;});
-  stats.resolved=parts.filter(Boolean).length;stats.condsResolved=conds.filter(Boolean).length;lastCell='';
+  condFrame=new Uint32Array(conds.length);condValue=new Uint8Array(conds.length);
+  stats.resolved=parts.filter(Boolean).length;stats.condsResolved=conds.filter(Boolean).length;lastCell=NaN;
  }
  const inScene=o=>{let q=o;while(q.parent)q=q.parent;return q===scene;};
  const shown=o=>{for(let q=o;q;q=q.parent)if(!q.visible)return false;return true;};
+ const materialsOn=o=>{const m=o.material;if(!Array.isArray(m))return !!m&&m.visible!==false;for(const x of m)if(!x||x.visible===false)return false;return true;};
  // Is condition k drawn now for this camera: in the scene, shown, on the camera's layers, its materials visible, unmoved;
  // a cabin slot also among those its mesh shows.
- const drawn=(k,camera,memo)=>{let v=memo.get(k);if(v===undefined){const c=conds[k];
-   v=!!c&&same(c)&&inScene(c.o)&&shown(c.o)&&(!c.o.isMesh||c.o.layers.test(camera.layers)&&[c.o.material].flat().every(m=>m&&m.visible!==false))&&(c.slot===null||Array.isArray(c.o.userData.currentCabinIds)&&c.o.userData.currentCabinIds.includes(c.slot));
-   if(c&&!same(c)){conds[k]=null;stats.dropped++;}memo.set(k,v);}return v;};
+ function drawn(k,camera){
+  if(condFrame[k]===frame)return condValue[k]===1;
+  const c=conds[k];let v=false;
+  if(c){if(!same(c)){conds[k]=null;stats.dropped++;}
+   else v=inScene(c.o)&&shown(c.o)&&(!c.o.isMesh||c.o.layers.test(camera.layers)&&materialsOn(c.o))&&(c.slot===null||Array.isArray(c.o.userData.currentCabinIds)&&c.o.userData.currentCabinIds.includes(c.slot));}
+  condFrame[k]=frame;condValue[k]=v?1:0;return v;
+ }
+ // The camera cell's entries (by index), gathered again only when the camera changes cell.
  function entriesAt(camera){
-  const p=camera.getWorldPosition(camera.position.clone()),[i,k,j]=ownerCell(p),cell=i+','+k+','+j;
-  if(cell!==lastCell){lastCell=cell;active=[];for(const b of blocks)if(inBlock(b,i,k,j))for(const e of b[6])active.push(data.entries[e]);stats.cells++;}
+  const e=camera.matrixWorld.elements,i=Math.round((e[12]-PV.x0)/PV.step),k=Math.floor((e[13]-PV.y0)/2),j=Math.round((e[14]-PV.z0)/PV.step),cell=(k*4096+i)*4096+j;
+  if(cell!==lastCell){lastCell=cell;active=[];for(const b of blocks)if(inBlock(b,i,k,j))for(const n of b[6])active.push(n);stats.cells++;}
   return active;
  }
+ const off=[];
  // Entry [part, [cond...], [cabin id...]?]: hide the part when it is unchanged, every condition is drawn and, for a
  // cabin part, every cabin it shows now was proven.
  function around(camera,draw){
-  const off=[];
+  off.length=0;
   try{
    const near=nearCorner(camera);
-   if(parts&&near!==null&&near<=data.nearMargin){const memo=new Map();
-    for(const [pi,cs,slots] of entriesAt(camera)){const s=parts[pi];if(!s||!s.o.visible)continue;
+   if(parts&&near!==null&&near<=data.nearMargin){frame=frame+1>>>0||1;
+    for(const n of entriesAt(camera)){const [pi,cs]=entries[n],s=parts[pi];if(!s||!s.o.visible)continue;
      if(!same(s)){parts[pi]=null;stats.dropped++;continue;}
-     if(slots){const ids=s.o.userData.currentCabinIds;if(!Array.isArray(ids)||!ids.every(id=>slots.includes(id))){stats.held++;continue;}}
-     if(cs.every(k=>drawn(k,camera,memo))){s.o.visible=false;off.push(s.o);}else stats.held++;}}
+     const slots=slotSets[n];if(slots){const ids=s.o.userData.currentCabinIds;let all=Array.isArray(ids);if(all)for(const id of ids)if(!slots.has(id)){all=false;break;}if(!all){stats.held++;continue;}}
+     let ok=true;for(const k of cs)if(!drawn(k,camera)){ok=false;break;}
+     if(ok){s.o.visible=false;off.push(s.o);}else stats.held++;}}
    stats.hidden=off.length;
    return draw();
-  }finally{for(const o of off)o.visible=true;}
+  }finally{for(const o of off)o.visible=true;off.length=0;}
  }
  return {resolve,around,stats};
 }
