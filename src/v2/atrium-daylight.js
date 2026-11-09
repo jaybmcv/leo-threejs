@@ -10,30 +10,38 @@ function puff(g,x,y,rx,ry,angle,alpha,colour='255,255,255'){
  g.fillStyle=r;g.beginPath();g.arc(0,0,rx,0,Math.PI*2);g.fill();g.restore();
 }
 
-// The panel's texture runs along the ship (u) and across the atrium (v, edge to edge). Pale blue-white: deepest blue
-// down the middle, fading to a hazy white at both long edges, with drifting wisps of cloud.
+// A stylised low-poly cloud, like the walk's faceted trees: a row of lumps, each a fan of flat facets lit from above
+// (white on top, pale blue-grey underneath), cut flat along a common base. Opaque facets, each stroked in its own
+// colour so no seam of sky shows between them. Drawn in the cloud's own frame (x along the row, y down to the base)
+// turned onto the panel so the row lies across the atrium and the base faces the bow, as concept A has them from the
+// floor.
+function lowPolyCloud(g,rnd,cx,cy,size){
+ g.save();g.transform(0,1,1,0,cx,cy);
+ const lumps=3+(rnd()*3|0),base=size*.35;g.lineJoin='round';g.lineWidth=1;
+ for(let l=0;l<lumps;l++){
+  const t=l/(lumps-1)-.5,r=size*(.6+rnd()*.35)*(1-Math.abs(t)*.6),lx=t*size*2.1+(rnd()-.5)*size*.3,ly=base-r*.62,n=7+(rnd()*3|0),pts=[];
+  for(let k=0;k<n;k++){const a=(k+rnd()*.4)/n*Math.PI*2,s=.8+rnd()*.32;pts.push([lx+Math.cos(a)*r*s,Math.min(base,ly+Math.sin(a)*r*.85*s)]);}
+  const hub=[lx+(rnd()-.5)*r*.3,ly-r*.15];
+  for(let k=0;k<n;k++){const a=pts[k],b=pts[(k+1)%n],lit=Math.max(0,Math.min(1,.62-((a[1]+b[1])/2-hub[1])/r+(rnd()-.5)*.2));
+   const col=`rgb(${Math.round(196+59*lit)},${Math.round(214+41*lit)},${Math.round(236+19*lit)})`;
+   g.fillStyle=g.strokeStyle=col;g.beginPath();g.moveTo(...hub);g.lineTo(...a);g.lineTo(...b);g.closePath();g.fill();g.stroke();}
+ }
+ g.restore();
+}
+
+// The panel's texture runs along the ship (u, aft to bow) and across the atrium (v, edge to edge). Sky concept A: a
+// clear, deep blue, brightening toward the bow where the sun is, with a few faceted low-poly clouds. It stays blue right
+// to the long edges (no white haze), so the panel meets the top decks crisply, with a thin warm rim of sunlight there.
 export function paintDaylightSky(c){
  const W=2048,H=256;c.width=W;c.height=H;const g=c.getContext('2d'),rnd=seeded(4182);
- const across=g.createLinearGradient(0,0,0,H);
- for(const[at,col]of[[0,'#d3e6f3'],[.22,'#93c2ec'],[.5,'#5d9fdc'],[.78,'#93c2ec'],[1,'#d3e6f3']])across.addColorStop(at,col);
- g.fillStyle=across;g.fillRect(0,0,W,H);
- // A soft sunlit brightening toward the bow, so the panel is not one flat strip.
- const glow=g.createRadialGradient(W*.68,H*.42,0,W*.68,H*.42,W*.42);glow.addColorStop(0,'rgba(255,251,238,.22)');glow.addColorStop(1,'rgba(255,251,238,0)');
- g.fillStyle=glow;g.fillRect(0,0,W,H);
- // Wisps: chains of soft puffs along gently curving, slightly diagonal paths.
- for(let i=0;i<34;i++){
-  const x0=rnd()*W,y0=H*(.12+rnd()*.76),len=120+rnd()*360,angle=(rnd()-.5)*.35,bend=(rnd()-.5)*.5,n=8+(len/26|0),thick=5+rnd()*11,alpha=.08+rnd()*.12;
-  for(let k=0;k<n;k++){const t=k/(n-1),a=angle+bend*(t-.5),x=x0+Math.cos(angle)*len*t,y=y0+Math.sin(angle)*len*t+Math.sin(t*Math.PI)*bend*28,taper=Math.sin(Math.PI*Math.min(1,.12+t*.88))**.7;
-   puff(g,x,y,(18+rnd()*22)*(.5+taper),thick*(.55+taper*.6),a,alpha*(.55+taper*.6));}
- }
- // Cumulus: clusters of bright rounded puffs, denser and whiter on top, softer at a flattened base.
- for(let i=0;i<26;i++){const cx=rnd()*W,cy=H*(.18+rnd()*.64),size=26+rnd()*34,n=6+(rnd()*8|0);
-  for(let k=0;k<n;k++){const a=rnd()*Math.PI*2,d=size*Math.sqrt(rnd())*1.4,px=cx+Math.cos(a)*d*1.8,py=cy+Math.sin(a)*d*.55,rad=size*(.45+rnd()*.5);puff(g,px,py,rad*1.25,rad*.8,0,.42+rnd()*.3);}
-  puff(g,cx,cy-size*.15,size*1.6,size*.7,0,.35);}
- // A few fine cirrus streaks on top.
- g.lineCap='round';
- for(let i=0;i<8;i++){const x=rnd()*W,y=H*(.1+rnd()*.8),len=40+rnd()*150,a=(rnd()-.5)*.3,lift=(rnd()-.5)*14;
-  g.strokeStyle=`rgba(255,255,255,${.06+rnd()*.1})`;g.lineWidth=1+rnd()*2.4;g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x+Math.cos(a)*len*.5,y+Math.sin(a)*len*.5+lift,x+Math.cos(a)*len,y+Math.sin(a)*len);g.stroke();}
+ const along=g.createLinearGradient(0,0,W,0);
+ for(const[at,col]of[[0,'#1a50b0'],[.45,'#2462c2'],[.8,'#4287d8'],[1,'#72aee8']])along.addColorStop(at,col);
+ g.fillStyle=along;g.fillRect(0,0,W,H);
+ const sun=g.createRadialGradient(W,H*.5,0,W,H*.5,W*.32);sun.addColorStop(0,'rgba(255,250,236,.4)');sun.addColorStop(1,'rgba(255,250,236,0)');
+ g.fillStyle=sun;g.fillRect(0,0,W,H);
+ for(let x=40+rnd()*60;x<W-30;x+=90+rnd()*120)lowPolyCloud(g,rnd,x,H*(.22+rnd()*.56),18+rnd()*24);
+ for(const y of[0,H]){const rim=g.createLinearGradient(0,y,0,y?y-10:10);rim.addColorStop(0,'rgba(255,170,84,1)');rim.addColorStop(1,'rgba(255,170,84,0)');
+  g.fillStyle=rim;g.fillRect(0,y?y-10:0,W,10);}
  return c;
 }
 
