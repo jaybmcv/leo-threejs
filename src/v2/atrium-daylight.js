@@ -61,17 +61,16 @@ export function paintTravertine(c){
  const W=1024,H=512,N=8,pw=W/N,ph=H/N,g=c.getContext('2d'),rnd=seeded(6406);c.width=W;c.height=H;
  g.fillStyle='#fff';g.fillRect(0,0,W,H);
  for(let row=0;row<N;row++)for(let k=0;k<N;k++){
-  const x0=k*pw+(row%2?pw/2:0),y0=row*ph,plain=!row&&!k,tone=plain?1:.88+rnd()*.12,warm=plain?0:(rnd()-.5)*.04;
+  const x0=k*pw+(row%2?pw/2:0),y0=row*ph,plain=!row&&!k,tone=plain?1:.9+rnd()*.1,warm=plain?0:(rnd()-.5)*.03;
   const rgb=[tone*(1+warm),tone,tone*(1-warm*1.5)].map(v=>Math.round(255*Math.min(1,v)));
   // Each paver is drawn twice, a tile apart, so the odd rows' last paver wraps round to the first column.
   for(const dx of[0,-W]){
    g.save();g.beginPath();g.rect(x0+dx,y0,pw,ph);g.clip();g.fillStyle=`rgb(${rgb})`;g.fillRect(x0+dx,y0,pw,ph);
    if(!plain){
-    // Travertine's bedding: a few soft streaks along the paver, and small pits.
+    // Travertine, not timber: soft cloudy mottling, one faint band along the bedding, and small pits.
     const vr=seeded(row*31+k*7+1);
-    for(let i=0;i<4;i++){const y=y0+6+vr()*(ph-12),a=.05+vr()*.08,amp=.4+vr()*1.2,ph0=vr()*6;
-     g.strokeStyle=vr()<.7?`rgba(120,88,58,${a})`:`rgba(255,250,238,${a*2})`;g.lineWidth=1+vr()*2.5;g.beginPath();
-     for(let x=0;x<=pw;x+=8)g.lineTo(x0+dx+x,y+Math.sin(ph0+x/37)*amp);g.stroke();}
+    for(let i=0;i<7;i++){const dark=vr()<.6;puff(g,x0+dx+vr()*pw,y0+vr()*ph,12+vr()*30,6+vr()*12,(vr()-.5)*.4,dark?.08+vr()*.1:.12+vr()*.14,dark?'150,118,84':'255,252,244');}
+    g.fillStyle=`rgba(140,108,76,${.04+vr()*.05})`;g.fillRect(x0+dx,y0+8+vr()*(ph-16),pw,2+vr()*5);
     for(let i=0;i<10;i++){g.fillStyle=`rgba(110,82,56,${.12+vr()*.14})`;g.beginPath();g.ellipse(x0+dx+vr()*pw,y0+vr()*ph,1+vr()*2.2,.6+vr(),0,0,Math.PI*2);g.fill();}
    }
    g.restore();

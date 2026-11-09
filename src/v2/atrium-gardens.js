@@ -205,7 +205,9 @@ export function addPlantingBeds(out,layout){
 // aft end. Slabs are one paver (1.3 m) long, each a little different in tone, and kept only on solid floor. The arrival
 // lobby takes the pavers alone.
 const INLAY_X=[-96,148],STRIPE=.935,BRASS=.975,BAND=[4.875,6],ROSES={first:-84,last:116,every:20};
-const BASALT=[0x58504a,0x544c46,0x5c544d,0x514943],BRASS_LINE=0xc9a253,BRASS_LIGHT=0xe6c473,BRASS_DARK=0xa07832,ROSE_GROUND=0x48413c;
+// The basalt is a mid warm grey: under the atrium's warm light it renders about half as bright as the travertine, as
+// in the concept (a darker value reads near-black).
+const BASALT=[0x8c857e,0x868079,0x908981,0x837c75],BRASS_LINE=0xc9a253,BRASS_LIGHT=0xe6c473,BRASS_DARK=0xa07832,ROSE_GROUND=0x7a736c;
 // Flat triangles facing up, one colour each, as one garden geometry.
 function sheet(){
  const pos=[],col=[],c=new T.Color();
@@ -403,11 +405,11 @@ export function addTreeShade(root,layout,signatures){
  const y=layout.decks[5].y+.016,sig=new Map(signatures.map(t=>[t.id,t])),geos=[];
  for(const p of fitoutFootprints(layout)){if(p.part!=='p6_tree_trunk')continue;
   // Concept B: the avenue's shade is broader and drawn out along the boulevard, so the paving reads dappled.
-  const s=ATRIUM_SIGNATURE_TREES.find(t=>Math.hypot(t.x-p.x,t.z-p.z)<.01),avenue=!s&&boulevardTree(p),radius=s?(sig.get(s.id)?.spread??s.spread)*1.05:avenue?3:2.1,h=s?s.height*.7:3.8;
+  const s=ATRIUM_SIGNATURE_TREES.find(t=>Math.hypot(t.x-p.x,t.z-p.z)<.01),avenue=!s&&boulevardTree(p),radius=s?(sig.get(s.id)?.spread??s.spread)*1.05:avenue?3.4:2.1,h=s?s.height*.7:3.8;
   geos.push(new T.CircleGeometry(radius,28).rotateX(-Math.PI/2).rotateY(p.x*.37).scale(avenue?1.3:1,1,1).translate(p.x-h*.15,y,p.z-h*.1));}
  if(typeof c.data==='function')Object.defineProperty(c,'data',{value:undefined});
  const map=new T.CanvasTexture(paintTreeShade(c,77));map.colorSpace=T.SRGBColorSpace;
- const m=new T.MeshBasicMaterial({name:'P6_atrium_tree_shade',map,transparent:true,opacity:.42,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+ const m=new T.MeshBasicMaterial({name:'P6_atrium_tree_shade',map,transparent:true,opacity:.5,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
  const o=new T.Mesh(mergeGeometries(geos),m);const count=geos.length;geos.forEach(g=>g.dispose());o.name='P6_atrium_tree_shade';o.frustumCulled=false;o.renderOrder=-1; // floor decal: before any glass
  o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);return {treeShade:count};
 }
