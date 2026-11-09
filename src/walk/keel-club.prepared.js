@@ -770,7 +770,7 @@ export function createKeelClub(ship){
   for(let i=0;i<500;i++){c.fillStyle=`rgba(255,255,255,${.3+r()*.6})`;c.beginPath();c.arc(r()*w,r()*h,.8+r()*1.6,0,Math.PI*2);c.fill();}});
  const flows=[];
  const water=(geometry,color,{rep=1/6,flow=[0,0],opacity=.9,name='Keel_club_water',bright=.3,tex=ripples}={})=>{const map=tex?tex.clone():null;if(map){map.wrapS=map.wrapT=T.RepeatWrapping;map.repeat.set(rep,rep);map.needsUpdate=true;}
-  const m=new T.MeshStandardMaterial({name,color,map,roughness:.12,metalness:.05,transparent:true,opacity,depthWrite:false,side:T.DoubleSide,forceSinglePass:true,emissive:color,emissiveIntensity:bright,userData:{envShare:.06}});
+  const m=new T.MeshStandardMaterial({name,color,map,roughness:.12,metalness:.05,transparent:true,opacity,depthWrite:false,side:T.DoubleSide,forceSinglePass:true,emissive:color,emissiveIntensity:bright,userData:{envShare:0}});
   const mesh=new T.Mesh(geometry,m);mesh.name=name;group.add(mesh);if(map)flows.push({map,flow:flow.map(v=>v*rep)});return mesh;};
  const side=s=>{const xs=xsBetween(ra+RW,rb-RW);return flat([...xs.map(x=>[x,s*rOut(x)]),...xs.slice().reverse().map(x=>[x,s*rIn(x)])],[],WY);};
  const cross=(x0,x1)=>flat([[x0,-rOut(x0)],[x1,-rOut(x1)],[x1,rOut(x1)],[x0,rOut(x0)]],[],WY);
