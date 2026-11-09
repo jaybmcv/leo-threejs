@@ -14,6 +14,7 @@ import {cutOut} from '../cut-out.js';
 import {rectangle} from '../plan/geometry-v2.js';
 import {wingFlight} from '../plan/structure-v2.js';
 import * as T from 'three';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import layout from '../plan/selected-layout.js';
 import {buildCabins} from './cabins.js';
 import {polygonGeometry,mesh,box,wall,strip,removeBottomCap,removePanelEndCaps,removeGeometryCaps,glass,lining,floor,bounds} from './geometry.js';
@@ -23,6 +24,23 @@ import {roomObject,toWorld} from '../plan/rooms.js';
 // the finished room. Reserve the full floor projection through its height;
 // the native approach ramp and explicit stairs remain separate meshes.
 function loungeVoidMasks(y,depth=.24){const r=layout.rooms.find(r=>r.id==='observation-lounge');return r&&y>r.y+.4&&y-depth<r.y+r.height-.2?[r.polygon]:[];}
+// Atrium concept A (lit glass tower, 2026-11-08). The facade's copy of the tower (atrium-architecture.js) gives its bridges
+// and landings white fascias and light undersides; the walked tops keep their finish. Each [x,y,z,colour] colours the
+// faces facing that way.
+const TOWER_SLAB_FACES=[[0,-1,0,0xe8e5dc],[1,0,0,0xf3f2ec],[-1,0,0,0xf3f2ec],[0,0,1,0xf3f2ec],[0,0,-1,0xf3f2ec]];
+// A warm line of light under both long edges of each bridge above Deck 6, only where it crosses the open atrium (further
+// out it lies over the deck's own slab). Lit like the lift lobbies' ceiling lights (transit.js), so the tower copy draws
+// the two together. Visual only.
+const towerBridgeLight=new T.MeshStandardMaterial({name:'V2_tower_bridge_light',color:0xffe5af,emissive:0xffdf9f,emissiveIntensity:.7});
+function towerBridgeLights(structure){
+ const parts=[],across=(p,x)=>{let h=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];if(a[0]!==b[0]&&(a[0]-x)*(b[0]-x)<=0)h=Math.max(h,Math.abs(a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0])));}return h;};
+ for(const b of layout.circulation.bridges.filter(b=>b.deck>6)){
+  const d=layout.decks[b.deck-1],{x0,x1,z0,z1}=bounds(b.polygon),side=Math.sign(z0+z1),open=Math.min(across(d.atrium.outline,x0),across(d.atrium.outline,x1))-.25;
+  const lo=Math.min(Math.abs(z0),Math.abs(z1))+.25,hi=Math.min(Math.max(Math.abs(z0),Math.abs(z1)),open);if(hi-lo<1)continue;
+  for(const x of [x0+.14,x1-.14])parts.push(new T.BoxGeometry(.05,.03,hi-lo).translate(x,d.y-.255,side*(lo+hi)/2));
+ }
+ if(parts.length){mesh(structure,'V2_tower_bridge_light',mergeGeometries(parts),towerBridgeLight).userData.noCollide=true;parts.forEach(g=>g.dispose());}
+}
 function alignShuttleGlass(o,y){o.updateMatrix();o.geometry.applyMatrix4(o.matrix);o.position.set(0,0,0);o.rotation.set(0,0,0);o.scale.set(1,1,1);const p=o.geometry.attributes.position,base=Math.fround(y);for(let i=0;i<p.count;i++)if(Math.abs(p.getY(i)-base)<.0001)p.setY(i,base);o.geometry.computeBoundingBox();o.geometry.computeBoundingSphere();o.updateMatrix();return o;}
 export function configureV2Ship(ship){
  ship.layout=layout;ship.root.userData={...ship.root.userData,layoutVersion:2,cabins:layout.cabins.length,berths:layout.summary.berths,cabinsPerNeighborhood:layout.summary.perDeck.filter(d=>d.cabins).map(d=>d.cabins),berthsPerCabin:'1 or 2',cabinEnvelope:[3.42,3.5,7.64],cabinInternal:[3.18,3.4,7.4]};
@@ -52,8 +70,9 @@ export function fitV2Structure(ship){
  const holeBounds=layout.decks.map(d=>d.slab.holes.map(h=>({...h,box:bounds(h.polygon)}))),roomHoles=layout.decks.map(d=>layout.rooms.filter(r=>!r.aggregate&&Math.abs(r.y-d.y)<.1&&r.polygon.length).map(r=>({polygon:r.polygon,box:bounds(r.polygon)})));
  buildCorridorFloors(structure,layout,roomHoles,holeBounds);
  buildCommonsHallFinish(structure,layout);
- for(const b of layout.circulation.bridges)mesh(structure,'V2_tower_bridge_floor',polygonGeometry(b.polygon,[],layout.decks[b.deck-1].y,.24),b.deck===20?new T.MeshStandardMaterial({name:'P6_crew_service_floor',color:0x59666b,roughness:.8}):floor);
- for(const t of layout.circulation.towers)mesh(structure,'V2_tower_landing_floor',polygonGeometry(t.polygon,layout.decks[t.deck-1].openings.filter(o=>o.x0>120).map(o=>o.polygon),layout.decks[t.deck-1].y,.24),floor);
+ for(const b of layout.circulation.bridges)mesh(structure,'V2_tower_bridge_floor',polygonGeometry(b.polygon,[],layout.decks[b.deck-1].y,.24),b.deck===20?new T.MeshStandardMaterial({name:'P6_crew_service_floor',color:0x59666b,roughness:.8}):floor).userData.towerFaces=TOWER_SLAB_FACES;
+ for(const t of layout.circulation.towers)mesh(structure,'V2_tower_landing_floor',polygonGeometry(t.polygon,layout.decks[t.deck-1].openings.filter(o=>o.x0>120).map(o=>o.polygon),layout.decks[t.deck-1].y,.24),floor).userData.towerFaces=TOWER_SLAB_FACES;
+ towerBridgeLights(structure);
  for(const s of layout.circulation.stairs.filter(s=>s.wing!==undefined&&s.deck<15)){
   const y=layout.decks[s.deck-1].y,f=wingFlight(s,layout.circulation.stairs),run=5;
   // Nine lower risers reach a 1.5 m half landing under the upper slab. Fifteen return
