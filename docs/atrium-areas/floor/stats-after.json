@@ -1,0 +1,69 @@
+{
+  "base": "http://127.0.0.1:4182",
+  "rows": [
+    {
+      "id": "hero",
+      "samples": [
+        {
+          "draws": 558,
+          "trisM": 10.77
+        },
+        {
+          "draws": 558,
+          "trisM": 10.77
+        },
+        {
+          "draws": 558,
+          "trisM": 10.77
+        },
+        {
+          "draws": 558,
+          "trisM": 10.77
+        }
+      ]
+    },
+    {
+      "id": "boulevard-aft",
+      "samples": [
+        {
+          "draws": 695,
+          "trisM": 10.82
+        },
+        {
+          "draws": 695,
+          "trisM": 10.82
+        },
+        {
+          "draws": 695,
+          "trisM": 10.82
+        },
+        {
+          "draws": 695,
+          "trisM": 10.82
+        }
+      ]
+    },
+    {
+      "id": "boulevard-cross",
+      "samples": [
+        {
+          "draws": 502,
+          "trisM": 10.72
+        },
+        {
+          "draws": 502,
+          "trisM": 10.72
+        },
+        {
+          "draws": 502,
+          "trisM": 10.72
+        },
+        {
+          "draws": 502,
+          "trisM": 10.72
+        }
+      ]
+    }
+  ],
+  "errors": []
+}
