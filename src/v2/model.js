@@ -25,11 +25,11 @@ import {roomObject,toWorld} from '../plan/rooms.js';
 // the native approach ramp and explicit stairs remain separate meshes.
 function loungeVoidMasks(y,depth=.24){const r=layout.rooms.find(r=>r.id==='observation-lounge');return r&&y>r.y+.4&&y-depth<r.y+r.height-.2?[r.polygon]:[];}
 // Atrium concept A (lit glass tower, 2026-11-08). The facade's copy of the tower (atrium-architecture.js) gives its bridges
-// and landings white fascias and pale blue undersides, close to the concept's glass bands; the walked tops keep their
-// finish. Each [x,y,z,colour,lit] colours the faces facing that way, and lit (if given) shades them as if they faced that
-// way instead: the atrium's hemisphere light gives a face looking down its dark ground colour, and the faces looking aft
-// at the atrium are in the sun's shade, so white fascias and light undersides would still read tan and brown.
-const TOWER_SLAB_FACES=[[0,-1,0,0xa6d1ea,[0,1,0]],...[[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].map(v=>[...v,0xffffff,[0,1,0]])];
+// and landings white fascias and glass-blue undersides, close to the concept's light glass bands; the walked tops keep
+// their finish. Each [x,y,z,colour,lit] colours the faces facing that way, and lit (if given) shades them as if they faced
+// that way instead: shaded truly, a face looking down takes the hemisphere's ground colour and the lower environment, so
+// the concept's pale glass-blue would read steel grey.
+const TOWER_SLAB_FACES=[[0,-1,0,0x80b2cc,[0,1,0]],...[[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].map(v=>[...v,0xffffff,[0,1,0]])];
 // A warm line of light under both long edges of each bridge above Deck 6, only where it crosses the open atrium (further
 // out it lies over the deck's own slab), and along each landing's aft edge and its short returns to the bridges, so the
 // line runs unbroken across the tower. 20 cm wide, hanging 8 cm below the slab, so it still reads from the atrium floor.

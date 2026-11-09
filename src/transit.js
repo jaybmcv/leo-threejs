@@ -23,8 +23,8 @@ export function transitOpenings(deck){
 // metre of each storey is frosted, so with the car away the shaft still reads as a wall at a walker's feet (the walk
 // frosts the other shafts whole, main.js). Visual only: the glass enclosure keeps the collision, and the frame clears the
 // car by 5 cm. The atrium's copy of the tower shades the glass, frit and frame as if they faced up (TOWER_LIT,
-// atrium-architecture.js): the faces looking aft at the atrium are in the sun's shade, so the white frame read tan and
-// four layers of shaded glass read brown.
+// atrium-architecture.js): the faces looking aft at the atrium are in the sun's shade, so the white frame and four layers
+// of shaded glass read grey rather than as the concept's bright glass.
 const FRIT=1,TOWER_LIT=[0,1,0];
 function towerFrame(c,z,s,base,top,minimumDeck,structure,shell,materials){
   const frame=[],frit=[],part=(list,size,p)=>list.push(new T.BoxGeometry(...size).translate(...p));
