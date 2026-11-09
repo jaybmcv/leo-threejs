@@ -34,7 +34,7 @@ export class ShipMap{
 // Map position (pixels of the deck canvas) of a world point.
 const toMap=(x,z)=>[(x-MAP.x0)/MAP.cell,(z-MAP.z0)/MAP.cell];
 // The walker's marker: an arrow pointing up, centred on the origin.
-function arrow(g,size,line){g.fillStyle='#f85800';g.strokeStyle='#050507';g.lineWidth=line;g.beginPath();g.moveTo(0,-size);g.lineTo(size*.7,size*.7);g.lineTo(0,size*.3);g.lineTo(-size*.7,size*.7);g.closePath();g.fill();g.stroke();}
+export function arrow(g,size,line){g.fillStyle='#f85800';g.strokeStyle='#050507';g.lineWidth=line;g.beginPath();g.moveTo(0,-size);g.lineTo(size*.7,size*.7);g.lineTo(0,size*.3);g.lineTo(-size*.7,size*.7);g.closePath();g.fill();g.stroke();}
 
 // The corner mini-map, heading-up around the walker (yaw 0 looks along +z). Returns the deck shown.
 export function drawMiniMap(canvas,map,{x,y,z,yaw,places=[]}){

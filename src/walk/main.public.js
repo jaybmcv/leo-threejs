@@ -82,7 +82,7 @@ import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
 const cabinPlacements=preparedPlacements;
 import {Colliders,BODY} from './collision.js';
 import {STATIC_LIFT_PARTS,LIFTS,shutLandingDoors} from './lifts.js';
-import {KEEL,RIVER,createTubeMesh,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock} from './keel-club.public.js';
+import {KEEL,RIVER,createTubeMesh,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock,inKeelHall,keelPlan,KEEL_PLAN_EXTENT} from './keel-club.public.js';
 import {Controller,GLIDE,HOOK} from './controller.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
@@ -97,7 +97,7 @@ import {createFogCull,FOG_CULL_LAYER} from './fog-cull.js';
 import {partitionMesh} from './partitions.js';
 import walkPlan from 'walk-partitions';
 import {railingMesh} from '../v2/railings.js';
-import {ShipMap,drawMiniMap,drawFullMap,deckOf} from './minimap.public.js';
+import {ShipMap,drawMiniMap,drawFullMap,deckOf,arrow as mapArrow} from './minimap.public.js';
 const DECKS=preparedDecks;
 import {floorY} from '../transit.js';
 import {createLifts} from './lift-ride.public.js';
@@ -109,6 +109,7 @@ import {createStarDrift} from './star-drift.js';
 import {createAmbience} from './ambience.js';
 import {createLullaby} from './lullaby.js';
 import {createLoungeSound} from './lounge-sound.js';
+import {createKeelSound} from './keel-club-sound.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.public.js';
 import {corridorTrim} from './trim.public.js';
 import {connectLive,savedName,httpBase} from './net/live.js';
@@ -317,7 +318,9 @@ async function buildShip(){
  recovery=createRecoveryMood(ship,{hemi,fill,scene});arrivalMood=createArrivalMood(ship,{hemi,fill,scene});atriumMood=createAtriumMood({hemi,fill,scene});
  }});
  ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,catTree,nosePark,keelClub,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
- loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;
+ // Phones keep the Keel Club's look but not its fill-rate extras (keel-club.js lite()).
+ if(preparedPhone)keelClub?.lite?.();
+ loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;keelSound=keelClub?createKeelSound():null;
  const {pipework,trolley,wardTrolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;atmosphere=prepared.atmosphere;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;
@@ -470,7 +473,7 @@ async function buildShip(){
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
 let imagingScans=null,missionTimer=null;
-let atriumMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,keelClub=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
+let atriumMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,keelClub=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,keelSound=null,mct=null;
 let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null,atmosphere=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[],instancedGroups=[];
 // Lifeboat fittings (2,000 seats a deck with their headrests and harnesses, seen only through a hatch or from inside a
@@ -815,15 +818,34 @@ if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperties(g
 const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
 // (A phone's small mini-map, html.phone-hud from walk.html, keeps up to 3× its pixels, so its names stay sharp.)
 function sizeCanvas(c){const r=Math.min(devicePixelRatio||1,c===mini&&document.documentElement.classList.contains('phone-hud')?3:2),w=Math.round(c.clientWidth*r),h=Math.round(c.clientHeight*r);if(w&&h&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}}
-function miniMap(p){sizeCanvas(mini);const d=drawMiniMap(mini,shipMap,{x:p.x,y:p.y,z:p.z,yaw:follow.yaw,places:PLACES});$('minimap-deck').textContent=d?`Deck ${d.number}`:p.y>100?'Crown lounge':'Fin';}
+// In the Keel Club (below Deck 1, keel-club.js) the maps show the club's own plan; map 0 is the club.
+const inClub=p=>!!keelClub&&inKeelHall(p);
+// Go-to places in the club show on the club's map, not on Deck 1's.
+const clubPlace=p=>inClub({x:p.at[0],y:p.at[1],z:p.at[2]}),shipPlaces=()=>keelClub?PLACES.filter(p=>!clubPlace(p)):PLACES;
+function clubMini(p){const g=mini.getContext('2d'),w=mini.width,h=mini.height,dpr=w/(mini.clientWidth||w),turn=-Math.PI/2-Math.atan2(Math.cos(follow.yaw),Math.sin(follow.yaw));
+ g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.save();g.translate(w/2,h/2);g.rotate(turn);g.scale(3.2*dpr,3.2*dpr);g.translate(-p.x,-p.z);keelPlan(g,{px:1/(3.2*dpr)});g.restore();
+ g.save();g.translate(w/2,h/2);mapArrow(g,7*dpr,1.5*dpr);g.restore();}
+function clubFull(c,p){const g=c.getContext('2d'),w=c.width,h=c.height,dpr=w/(c.clientWidth||w),e=KEEL_PLAN_EXTENT,pad=6,scale=Math.min(w/(e.x1-e.x0+2*pad),h/(e.z1-e.z0+2*pad)),cx=(e.x0+e.x1)/2,cz=(e.z0+e.z1)/2,shown=[];
+ g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.save();g.translate(w/2,h/2);g.scale(scale,scale);g.translate(-(e.x0+e.x1)/2,-(e.z0+e.z1)/2);keelPlan(g,{px:dpr/scale,labels:true});g.restore();
+ // the club's Go-to places, marked and named as on the ship's maps; a click takes you there
+ g.textAlign='center';g.textBaseline='middle';
+ for(const pl of PLACES){if(!clubPlace(pl))continue;const px=w/2+(pl.at[0]-cx)*scale,pz=h/2+(pl.at[2]-cz)*scale;
+  g.fillStyle='#2fd6c5';g.strokeStyle='#050507';g.lineWidth=2*dpr;g.beginPath();g.arc(px,pz,6*dpr,0,Math.PI*2);g.fill();g.stroke();
+  g.font=`500 ${11*dpr}px "JetBrains Mono",monospace`;g.fillStyle='#f4f0e8';g.strokeStyle='rgba(5,5,7,.9)';g.lineWidth=3*dpr;g.strokeText(pl.name,px,pz-14*dpr);g.fillText(pl.name,px,pz-14*dpr);
+  shown.push({place:pl,x:px/dpr,y:pz/dpr});}
+ if(inClub(p)){g.save();g.translate(w/2+(p.x-cx)*scale,h/2+(p.z-cz)*scale);g.rotate(Math.atan2(Math.cos(heading),Math.sin(heading))+Math.PI/2);mapArrow(g,9*dpr,2*dpr);g.restore();}
+ return shown;}
+function miniMap(p){sizeCanvas(mini);if(inClub(p)){clubMini(p);$('minimap-deck').textContent='Keel Club';return;}const d=drawMiniMap(mini,shipMap,{x:p.x,y:p.y,z:p.z,yaw:follow.yaw,places:shipPlaces()});$('minimap-deck').textContent=d?`Deck ${d.number}`:p.y>100?'Crown lounge':'Fin';}
 function showMap(number){
- mapDeck=T.MathUtils.clamp(number,1,DECKS.length);const c=$('map-canvas');sizeCanvas(c);
- const p=controller.position;mapShown=drawFullMap(c,shipMap,mapDeck,{walker:{x:p.x,y:p.y,z:p.z,yaw:heading},places:PLACES});
+ mapDeck=T.MathUtils.clamp(number,keelClub?0:1,DECKS.length);const c=$('map-canvas');sizeCanvas(c);const p=controller.position;
+ if(mapDeck===0){mapShown=clubFull(c,p);$('map-title').textContent='Keel Club · below Deck 1';$('map-deck').value='0';return;}
+ mapShown=drawFullMap(c,shipMap,mapDeck,{walker:inClub(p)?null:{x:p.x,y:p.y,z:p.z,yaw:heading},places:shipPlaces()});
  $('map-title').textContent=`Deck ${mapDeck} · ${DECKS[mapDeck-1].name}`;$('map-deck').value=String(mapDeck);
 }
 function toggleMap(){
  const panel=$('map-sheet');if(!panel.hidden){closePanels();return;}
- panel.hidden=false;input.enabled=false;showMap(deckOf(controller.position.y)?.number??20);
+ if(keelClub&&!$('map-deck').querySelector('option[value="0"]'))$('map-deck').prepend(new Option('Keel Club','0'));
+ panel.hidden=false;input.enabled=false;showMap(inClub(controller.position)?0:deckOf(controller.position.y)?.number??20);
 }
 {const select=$('map-deck');for(const d of DECKS)select.append(new Option(`Deck ${d.number}`,String(d.number)));select.onchange=()=>showMap(+select.value);
  for(const b of document.querySelectorAll('[data-deck]'))b.addEventListener('click',()=>showMap(mapDeck+Number(b.dataset.deck)));
@@ -938,7 +960,7 @@ renderer.setAnimationLoop(()=>{
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on,camera);
  loungeFalls?.update(dt,p);
- loungeSound?.update(p,ambience.on,camera);
+ loungeSound?.update(p,ambience.on,camera);keelSound?.update(p,ambience.on,camera,keelClub?.surfClock?.());
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
  missionTimer?.update(dt,p);
