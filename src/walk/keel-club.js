@@ -185,9 +185,9 @@ export function createKeelClub(ship){
  // Wood decks (refinement round 4): walk surfaces drawn with the plank texture, mapped by world position (u along x every
  // 4 m, v across every 1.6 m) and tinted by `color`; like add(), a ground (unless ground is false) and a wall if a box.
  const decks=[];
- const sands=[];
- const addDeck=(g,color,{ground=true,wall=false,sand=false}={})=>{const d=paint(g.clone(),color),p=d.attributes.position,uv=new Float32Array(p.count*2);
-  for(let i=0;i<p.count;i++){uv[i*2]=p.getX(i)/(sand?3:4);uv[i*2+1]=-p.getZ(i)/(sand?3:1.6);}d.setAttribute('uv',new T.BufferAttribute(uv,2));(sand?sands:decks).push(d);
+ const sands=[],turfs=[];
+ const addDeck=(g,color,{ground=true,wall=false,sand=false,turf=false}={})=>{const d=paint(g.clone(),color),p=d.attributes.position,uv=new Float32Array(p.count*2);
+  for(let i=0;i<p.count;i++){uv[i*2]=p.getX(i)/(turf?8:sand?3:4);uv[i*2+1]=-p.getZ(i)/(turf?8:sand?3:1.6);}d.setAttribute('uv',new T.BufferAttribute(uv,2));(turf?turfs:sand?sands:decks).push(d);
   if(ground)grounds.push(upward(g));if(wall||(ground&&g.type==='BoxGeometry'))walls.push(g);};
  const xsHall=xsBetween(KEEL.aft,KEEL.bow),ysHall=ysBetween(FY,CY);
 
@@ -437,7 +437,7 @@ export function createKeelClub(ship){
   lampPost(x,FY,s*(front(x)-.45));}
  // Starfield driving range: tee bays with mats, turf with target rings down to the river's bow channel, and beyond it a
  // curved 40 m dome screen of stars, so the Keel Loop floats past in front of them.
- inlay(152,rb-RW,-30,30,C.range);
+ addDeck(quad(152,rb-RW,-30,30,FY+.03),0xffffff,{ground:false,turf:true});
  for(let k=0;k<8;k++){const z0=-24+k*6;add(box(152,156,FY,FY+1.2,z0+.2,z0+.4),C.bay,{wall:true});lantern(155.6,FY+1.2,z0+.3,.3,.12);if(k<7)parts.push(paint(quad(156.4,158.4,z0+1.6,z0+4.8,FY+.05),C.mat));}
  add(box(152,152.4,FY,FY+1,-24,24),C.bay,{wall:true});
  lamps.push(paint(box(152,152.4,FY+1,FY+1.05,-24,24),C.cove));
@@ -531,10 +531,11 @@ export function createKeelClub(ship){
  // Wall lanterns along the terrace front walls, over the promenade.
  for(const s of [-1,1])for(let x=KEEL.terraceX[0]+6;x<KEEL.terraceX[1]-2;x+=6){if(STAIRS.some(x0=>x>x0-1&&x<x0+RISERS*TREAD+STAIR_W+1))continue;
   lantern(x,FY+2.1,s*(front(x)-.16),.38,.1);washes.push([x,FY+2.2,s*(front(x)-.03),s]);parts.push(paint(box(x-.04,x+.04,FY+1.95,FY+2.12,s*(front(x)-.06),s*(front(x)-.02)),C.brass));}
- // Cafe tables along the terrace rails: starboard by the putt and the sims, port by the cabanas.
+ // Cafe tables along the terrace rails: starboard by the putt and the sims, port by the padel courts and the cabanas, and
+ // both sides forward of the slide towers (the padel and forward ones added in refinement round 6, as in the concepts).
  const railFree=x=>!STAIRS.some(x0=>x>x0+RISERS*TREAD-2&&x<x0+RISERS*TREAD+STAIR_W+2)&&!FALLS.some(([a,b])=>x>a-2.5&&x<b+2.5);
- for(const x of [-116,-96,-80,-64,-24,-10,4,18,32,60])if(railFree(x))cafe(x,TY,front(x)+1.1,2);
- for(const x of [10,24,34,62])if(railFree(x))cafe(x,TY,-(front(x)+1.1),2);
+ for(const x of [-116,-96,-80,-64,-24,-10,4,18,32,60,76,104])if(railFree(x))cafe(x,TY,front(x)+1.1,2);
+ for(const x of [-116,-100,-86,-72,-24,-10,10,24,34,62,76,104])if(railFree(x))cafe(x,TY,-(front(x)+1.1),2);
  // and a lantern table against the terrace wall behind each waterfall
  for(const s of [-1,1])for(const [x0,x1] of FALLS){const m=(x0+x1)/2;cafe(m,FY,s*(front(m)-1.15),2);}
 
@@ -613,6 +614,11 @@ export function createKeelClub(ship){
   for(let i=0;i<9;i++){const y=i*h/9+r()*8;c.strokeStyle='rgba(150,120,80,.18)';c.lineWidth=5;for(const dy of [-h,0,h]){c.beginPath();c.moveTo(-10,y+dy);for(let x=0;x<=w+10;x+=16)c.lineTo(x,y+dy+Math.sin(x*.05+i)*4);c.stroke();}}
   for(let i=0;i<5000;i++){const v=r();c.fillStyle=v<.5?`rgba(120,95,60,${.08+r()*.18})`:`rgba(255,255,255,${.1+r()*.3})`;c.fillRect(r()*w,r()*h,1+r()*1.5,1+r()*1.5);}});
  if(sandTex)sandTex.wrapS=sandTex.wrapT=T.RepeatWrapping;
+ // Range turf (round 6): mown stripes 4 m wide across the range, fine grass speckle.
+ const turfTex=canvasTexture(256,64,(c,w,h)=>{c.fillStyle='#3d8738';c.fillRect(0,0,w/2,h);c.fillStyle='#4b9842';c.fillRect(w/2,0,w/2,h);const r=seeded(733);
+  for(let i=0;i<2600;i++){c.fillStyle=r()<.5?`rgba(20,60,20,${.1+r()*.2})`:`rgba(170,220,120,${.08+r()*.18})`;c.fillRect(r()*w,r()*h,1,1+r()*2);}});
+ if(turfTex)turfTex.wrapS=turfTex.wrapT=T.RepeatWrapping;
+ const turfMat=new T.MeshStandardMaterial({name:'Keel_club_turf',map:turfTex,vertexColors:true,color:turfTex?0xffffff:C.range,roughness:.95,metalness:0,side:T.DoubleSide});
  const sandMat=new T.MeshStandardMaterial({name:'Keel_club_sand',map:sandTex,vertexColors:true,roughness:.95,metalness:0,side:T.DoubleSide});
  // Additive glows fade out in fog: the usual fog would mix them towards the fog colour, which additive blending then adds.
  const fadeInFog=m=>{m.onBeforeCompile=sh=>{sh.fragmentShader=sh.fragmentShader.replace('#include <fog_fragment>',
@@ -694,7 +700,7 @@ export function createKeelClub(ship){
   if(washes.length){const wm=new T.InstancedMesh(new T.PlaneGeometry(1,1),fadeInFog(new T.MeshBasicMaterial({name:'Keel_club_wall_washes',map:poolTex,color:0xffa456,transparent:true,opacity:.4,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false,side:T.DoubleSide,forceSinglePass:true})),washes.length);
    // each along the wall's own line there (the hull curves), just off it
    const wq=new T.Quaternion(),Y=new T.Vector3(0,1,0);washes.forEach(([x,y,,side],i)=>{const dz=side*(front(x+.5)-front(x-.5));wq.setFromAxisAngle(Y,Math.atan2(-dz,1));
-    wm.setMatrixAt(i,m.compose(new T.Vector3(x,y,side*(front(x)-.05)),wq,new T.Vector3(1.7,2.4,1)));});wm.name='Keel_club_wall_washes';wm.computeBoundingSphere();group.add(wm);}}draw(merge(decks,['position','normal','color','uv']),deckMat,'Keel_club_deck');draw(merge(sands,['position','normal','color','uv']),sandMat,'Keel_club_sand');draw(merge(glow),lit,'Keel_club_glow');draw(merge(glass),see,'Keel_club_glass');draw(merge(lamps),stripMat,'Keel_club_light_strip');
+    wm.setMatrixAt(i,m.compose(new T.Vector3(x,y,side*(front(x)-.05)),wq,new T.Vector3(1.7,2.4,1)));});wm.name='Keel_club_wall_washes';wm.computeBoundingSphere();group.add(wm);}}draw(merge(decks,['position','normal','color','uv']),deckMat,'Keel_club_deck');draw(merge(sands,['position','normal','color','uv']),sandMat,'Keel_club_sand');draw(merge(turfs,['position','normal','color','uv']),turfMat,'Keel_club_turf');draw(merge(glow),lit,'Keel_club_glow');draw(merge(glass),see,'Keel_club_glass');draw(merge(lamps),stripMat,'Keel_club_light_strip');
  draw(merge(stars,['position','normal','uv']),sky,'Keel_club_stars');draw(merge(skyPanel,['position','normal','uv']),skyMat,'Keel_club_sky');
  draw(merge(screens.range,['position','normal','uv']),rangeMat,'Keel_club_range_screen');draw(merge(screens.sims,['position','normal','uv']),simMat,'Keel_club_sim_screens');{const g=merge(signs,['position','normal','uv']);if(g){const m=new T.Mesh(g,signMat);m.name='Keel_club_signs';group.add(m);}}
  // Water, each body its own draw so its ripples move their own way: the river flows round the loop (forward along
