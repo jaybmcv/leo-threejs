@@ -956,7 +956,7 @@ renderer.setAnimationLoop(()=>{
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on,camera);
  loungeFalls?.update(dt,p);
- loungeSound?.update(p,ambience.on,camera);keelSound?.update(p,ambience.on,camera);
+ loungeSound?.update(p,ambience.on,camera);keelSound?.update(p,ambience.on,camera,keelClub?.surfClock?.());
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
  missionTimer?.update(dt,p);
