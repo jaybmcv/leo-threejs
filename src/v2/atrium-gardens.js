@@ -1,5 +1,6 @@
 // 4B "Hanging gardens" for the Deck 6 atrium: planting cascading from the slab edges of Decks 7–20 (in
-// irregular clusters), four signature trees, stones along the lake edge and timber decks in the food hall.
+// irregular clusters), four signature trees, stones along the lake edge and timber decks in the food hall; and the
+// boulevard's stone inlays and planter trims (concept B).
 // Everything is visual only (noCollide) and lives in the atrium facade root, so the walk, its colliders, seats and
 // routes, and the atrium PVS key are untouched. One opaque vertex-coloured material (no transparency, no textures):
 // the Basic-material swap of the distant and phone copies keeps vertex colours and instancing, so it survives. The
@@ -9,7 +10,7 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {GREENS,BLOOMS,SHAPES,paint,stem,clump,flower,blade,orient,fern,flowerBush,tuft,aroid,palm} from '../walk/foliage.js';
 import {ATRIUM_ZONES,ATRIUM_SIGNATURE_TREES,ATRIUM_LAKE_BRIDGE,ATRIUM_WATERFALL,ATRIUM_GARDEN_POCKETS,ATRIUM_BOULEVARD_TREES,ATRIUM_TIMBER_DECKS,ATRIUM_FESTOONS,phase6LakePolygon,phase6LakeIslands,phase6LakeShore,phase6ParkPath} from '../plan/atrium-v2.js';
-import {paintTreeShade} from './atrium-daylight.js';
+import {paintTreeShade,SHADE_HALVES,PAVER} from './atrium-daylight.js';
 import {walkCanvas} from '../walk/canvas.js';
 import {phase6Programme} from './phase6-programme.js';
 import {contains,distanceToSegment} from '../plan/geometry-v2.js';
@@ -196,19 +197,91 @@ export function addPlantingBeds(out,layout){
  return {beds,reedBeds:reeds};
 }
 
-// ---- Paving joints ---------------------------------------------------------------------------------------------
-// A 1.5 m stone-tile grid of thin, slightly darker joints on the boulevard and the arrival lobby (the paving zones),
-// laid 12 mm above the floor (the paving itself is lifted 6 mm at runtime), each 1.5 m run kept only on solid floor.
-export function addPavingJoints(out,layout){
- const y=layout.decks[5].y+.012,floor=layout.decks[5].atrium.outline,holes=(layout.decks[5].slab?.holes||[]).map(h=>h.polygon),lobby=ATRIUM_ZONES.find(z=>z.id==='atrium6-lobby').bounds,J=.025,S=1.5;
- const solid=(x,z)=>contains(floor,[x,z])&&!holes.some(h=>contains(h,[x,z]));let runs=0;const pos=[];
- const quad=(x0,z0,x1,z1)=>{pos.push(x0,y,z0, x0,y,z1, x1,y,z0, x1,y,z0, x0,y,z1, x1,y,z1);runs++;};
- for(const[x0,x1,z0,z1]of[[-96,148,-5.9,5.9],lobby]){
-  for(let z=Math.ceil(z0/S)*S;z<=z1;z+=S)for(let x=x0;x<x1-.01;x+=S){const e=Math.min(x1,x+S);if(solid(x,z)&&solid(e,z))quad(x,z-J,e,z+J);}
-  for(let x=Math.ceil(x0/S)*S;x<=x1;x+=S)for(let z=z0;z<z1-.01;z+=S){const e=Math.min(z1,z+S);if(solid(x,z)&&solid(x,e))quad(x-J,z,x+J,e);}
+// ---- Promenade inlays (concept B, "inlaid promenade") --------------------------------------------------------------
+// The boulevard's travertine pavers are a texture on the paving (atrium-daylight.js), joints and all. Its inlays are
+// thin vertex-coloured sheets 12 mm over the floor (the paving itself is lifted 6 mm at runtime), laid side by side and
+// never stacked: a basalt band along both edges, under the avenue (|z| 4.875..6); a basalt centre stripe edged in brass
+// (|z| < 0.975 in all); and a brass compass rose set into the stripe every 20 m, the first just ahead of the boulevard's
+// aft end. Slabs are one paver (1.3 m) long, each a little different in tone, and kept only on solid floor. The arrival
+// lobby takes the pavers alone.
+const INLAY_X=[-96,148],STRIPE=.935,BRASS=.975,BAND=[4.875,6],ROSES={first:-84,last:116,every:20};
+// The basalt is a dark neutral grey: under the atrium's light it renders about 116,103,94, the concept's stripe (about
+// half the travertine's brightness). Each slab differs a little in tone, clouds softly from point to point, and is set off from the next by a 2 cm
+// joint, so the stripe and bands read as laid stone rather than one flat strip.
+const BASALT=[0x5d5550,0x57504b,0x625955,0x5a524d],JOINT=.02,JOINT_HEX=0x3a3531,BRASS_LINE=0xc9a253,BRASS_LIGHT=0xe6c473,BRASS_DARK=0xa07832,ROSE_GROUND=0x47413d;
+// Stone clouding: a tone per vertex, hashed from its position, so cells and slabs that share a point share its tone.
+const cloud=(x,z)=>{let h=Math.imul(Math.round(x*100),73856093)^Math.imul(Math.round(z*100),19349663);h=Math.imul(h^h>>>13,1274126177);return((h^h>>>16)>>>0)/4294967296;};
+// Flat triangles facing up, one colour each (or clouded per vertex), as one garden geometry.
+function sheet(){
+ const pos=[],col=[],c=new T.Color();
+ return {
+  tri(a,b,d,hex){c.set(hex);for(const p of[a,b,d]){pos.push(...p);col.push(c.r,c.g,c.b);}},
+  quad(x0,z0,x1,z1,y,hex){this.tri([x0,y,z0],[x0,y,z1],[x1,y,z0],hex);this.tri([x1,y,z0],[x0,y,z1],[x1,y,z1],hex);},
+  // A slab cut into nx by nz cells, its tone drifting by up to 8% either way between points.
+  slab(x0,z0,x1,z1,y,hex,nx,nz){
+   c.set(hex);const {r,g,b}=c,at=(x,z)=>{const k=1+(cloud(x,z)-.5)*.16;col.push(r*k,g*k,b*k);};
+   for(let i=0;i<nx;i++)for(let j=0;j<nz;j++){const a=x0+(x1-x0)*i/nx,e=x0+(x1-x0)*(i+1)/nx,p=z0+(z1-z0)*j/nz,q=z0+(z1-z0)*(j+1)/nz;
+    for(const[x,z]of[[a,p],[a,q],[e,p],[e,p],[a,q],[e,q]]){pos.push(x,y,z);at(x,z);}}
+  },
+  geometry(){const g=new T.BufferGeometry(),n=pos.length/3;g.setAttribute('position',new T.Float32BufferAttribute(pos,3));
+   g.setAttribute('normal',new T.Float32BufferAttribute(Array.from({length:n},()=>[0,1,0]).flat(),3));g.setAttribute('uv',new T.Float32BufferAttribute(new Float32Array(n*2),2));
+   g.setAttribute('color',new T.Float32BufferAttribute(col,3));return g;},
+ };
+}
+// A compass rose filling the stripe's width at x=cx: the stripe's stone out to the disc, a brass ring, and an
+// eight-point star (long points along and across the ship), each point split light and dark, on darker stone. The
+// rings and the ground share their 32 samples, so the pieces meet edge to edge.
+function compassRose(s,cx,y,stone){
+ const N=32,at=(r,a)=>[cx+Math.cos(a)*r,y,Math.sin(a)*r],sq=a=>at(STRIPE/Math.max(Math.abs(Math.cos(a)),Math.abs(Math.sin(a))),a),turn=i=>i/N*Math.PI*2;
+ for(let i=0;i<N;i++){const a=turn(i),b=turn(i+1);
+  s.tri(at(.88,a),sq(a),sq(b),stone);s.tri(at(.88,a),sq(b),at(.88,b),stone);
+  s.tri(at(.8,a),at(.88,a),at(.88,b),BRASS_LINE);s.tri(at(.8,a),at(.88,b),at(.8,b),BRASS_LINE);}
+ const star=Array.from({length:16},(_,k)=>at(k%4===0?.72:k%2===0?.46:.15,k/16*Math.PI*2)),centre=[cx,y,0];
+ for(let k=0;k<16;k+=2){s.tri(centre,star[(k+15)%16],star[k],BRASS_LIGHT);s.tri(centre,star[k],star[k+1],BRASS_DARK);}
+ for(let k=0;k<16;k++){const c=at(.8,turn(2*k+1));s.tri(c,at(.8,turn(2*k)),star[k],ROSE_GROUND);s.tri(c,star[k],star[(k+1)%16],ROSE_GROUND);s.tri(c,star[(k+1)%16],at(.8,turn(2*k+2)),ROSE_GROUND);}
+}
+export function addPromenadeInlays(out,layout){
+ const y=layout.decks[5].y+.012,floor=layout.decks[5].atrium.outline,holes=(layout.decks[5].slab?.holes||[]).map(h=>h.polygon),s=sheet(),r=random(4407),L=PAVER.length;
+ const solid=(x,z)=>contains(floor,[x,z])&&!holes.some(h=>contains(h,[x,z])),run=(x,e,...zs)=>zs.every(z=>solid(x,z)&&solid(e,z));
+ const roses=[];for(let x=ROSES.first;x<=ROSES.last;x+=ROSES.every)if(run(x-STRIPE,x+STRIPE,0,-.9,.9))roses.push(x);
+ let slabs=0;
+ for(let x=INLAY_X[0];x<INLAY_X[1]-.01;x+=L){
+  const e=Math.min(INLAY_X[1],x+L),j=x+JOINT,stone=()=>BASALT[r()*BASALT.length|0];
+  for(const side of[-1,1]){
+   const[z0,z1]=side<0?[-BAND[1],-BAND[0]]:[BAND[0],BAND[1]];
+   if(run(x,e,side*BAND[0],side*(BAND[1]-.05))){s.quad(x,z0,j,z1,y,JOINT_HEX);s.slab(j,z0,e,z1,y,stone(),3,3);slabs++;}
+   if(run(x,e,side*BRASS))s.quad(x,side<0?-BRASS:STRIPE,e,side<0?-STRIPE:BRASS,y,BRASS_LINE);
+  }
+  // The stripe's slab, less any rose's square; a joint where it starts a slab (not where it leaves a rose).
+  let pieces=[[x,e]];const tone=stone();
+  for(const m of roses)pieces=pieces.flatMap(([a,b])=>b<=m-STRIPE||a>=m+STRIPE?[[a,b]]:[[a,Math.min(b,m-STRIPE)],[Math.max(a,m+STRIPE),b]].filter(([p,q])=>q-p>.01));
+  for(const[a,b]of pieces)if(run(a,b,0,-.9,.9)){const from=a===x&&b>j?j:a;if(from>a)s.quad(a,-STRIPE,from,STRIPE,y,JOINT_HEX);s.slab(from,-STRIPE,b,STRIPE,y,tone,3,5);slabs++;}
  }
- const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.computeVertexNormals();out.push(paint(g,0xc7b394));
- return {pavingJoints:runs};
+ for(const m of roses)compassRose(s,m,y,BASALT[0]);
+ out.push(s.geometry());
+ return {inlaySlabs:slabs,compassRoses:roses.length};
+}
+
+// ---- Planters (concept B) ----------------------------------------------------------------------------------------
+// The atrium's box planters read as low stone planters (phase6-programme.js gives their collidable boxes, unchanged in
+// size and place, a stone finish): a paler stone coping 4 cm proud all round, timber bench boards along both long edges
+// and across the ends, dark soil between, and leaves spilling over the long sides. Visual only, like the beds.
+export function addPlanterTrims(out,layout){
+ const r=random(7717),wood=[0xa8794f,0xb3865b,0x9d7049,0xae8155],B=.26;let planters=0;
+ for(const p of phase6Programme(layout).parts){
+  if(p.deck!==6||p.part!=='garden_planter'||!p.room.startsWith('atrium6-'))continue;
+  const[w,h,d]=p.size,[cx,cy,cz]=p.at,top=cy+h/2;
+  out.push(paint(new T.BoxGeometry(w+.08,.06,d+.08).translate(cx,top+.01,cz),0xddd3c0));
+  for(const s of[-1,1]){
+   out.push(paint(new T.BoxGeometry(w,.06,B).translate(cx,top+.06,cz+s*(d-B)/2),wood[r()*wood.length|0]));
+   out.push(paint(new T.BoxGeometry(B,.06,d-2*B).translate(cx+s*(w-B)/2,top+.06,cz),wood[r()*wood.length|0]));
+  }
+  out.push(paint(new T.BoxGeometry(w-2*B,.04,d-2*B).translate(cx,top+.05,cz),0x4a3a2a));
+  for(const s of[-1,1])for(let k=0;k<4;k++){const x=cx+(k/3-.5)*(w-.6)+(r()-.5)*.3,len=.42+r()*.2;
+   out.push(orient(blade(len,len*.4,{segs:2,shape:SHAPES.lance,fold:.25,droop:.8,base:GREENS.mid,mid:GREENS.bright,tip:GREENS.lime}),[x,top+.08,cz+s*(d/2-B)],s*Math.PI/2+(r()-.5)*.6,.3+r()*.3,0));}
+  planters++;
+ }
+ return {planterTrims:planters};
 }
 
 // ---- Lawn and lake-edge detail -------------------------------------------------------------------------------------
@@ -337,17 +410,28 @@ export function addSoffits(root,layout){
 // tree, the size of its canopy, just above the paving (1.6 cm, over the 6 mm paving lift and the tile joints), shifted
 // away from the ship's fill light (it shines from +x+z, high up). One draw; it needs a canvas, so headless producers
 // without one skip it.
+// A decal samples one half of the shade texture (paintTreeShade): the tree's crown shade or the boulevard's dapple.
+const shadeHalf=(g,at)=>{const uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setX(i,at+uv.getX(i)*.5);return g;};
 export function addTreeShade(root,layout,signatures){
  const c=walkCanvas();if(!c)return {treeShade:0};
  const y=layout.decks[5].y+.016,sig=new Map(signatures.map(t=>[t.id,t])),geos=[];
  for(const p of fitoutFootprints(layout)){if(p.part!=='p6_tree_trunk')continue;
-  const s=ATRIUM_SIGNATURE_TREES.find(t=>Math.hypot(t.x-p.x,t.z-p.z)<.01),radius=s?(sig.get(s.id)?.spread??s.spread)*1.05:2.1,h=s?s.height*.7:3.8;
-  geos.push(new T.CircleGeometry(radius,28).rotateX(-Math.PI/2).rotateY(p.x*.37).translate(p.x-h*.15,y,p.z-h*.1));}
+  // Concept B: the avenue's shade is broader and drawn out along the boulevard, so the paving reads dappled.
+  const s=ATRIUM_SIGNATURE_TREES.find(t=>Math.hypot(t.x-p.x,t.z-p.z)<.01),avenue=!s&&boulevardTree(p),radius=s?(sig.get(s.id)?.spread??s.spread)*1.05:avenue?3.4:2.1,h=s?s.height*.7:3.8;
+  geos.push(shadeHalf(new T.CircleGeometry(radius,28).rotateX(-Math.PI/2).rotateY(p.x*.37).scale(avenue?1.3:1,1,1).translate(p.x-h*.15,y,p.z-h*.1),SHADE_HALVES.tree));}
+ const count=geos.length;
+ // Concept B: the open boulevard between the trees is dappled too, as if the avenue's crowns met overhead: lighter,
+ // more broken patches every few metres, alternating sides of the stripe, kept to solid floor.
+ const floor=layout.decks[5].atrium.outline,holes=(layout.decks[5].slab?.holes||[]).map(q=>q.polygon),r=random(5150);
+ const solid=(x,z)=>contains(floor,[x,z])&&!holes.some(q=>contains(q,[x,z]));
+ for(let x=INLAY_X[0]+2,i=0;x<INLAY_X[1]-2;x+=4.2,i++){const z=(i%2?1:-1)*(1.4+r()*1.4),rad=2.2+r()*.9,turn=r()*Math.PI*2;
+  if([[0,0],[rad*1.3,0],[-rad*1.3,0],[0,rad],[0,-rad]].every(([dx,dz])=>solid(x+dx,z+dz)))
+   geos.push(shadeHalf(new T.CircleGeometry(rad,24).rotateX(-Math.PI/2).rotateY(turn).scale(1.3,1,1).translate(x,y,z),SHADE_HALVES.dapple));}
  if(typeof c.data==='function')Object.defineProperty(c,'data',{value:undefined});
  const map=new T.CanvasTexture(paintTreeShade(c,77));map.colorSpace=T.SRGBColorSpace;
- const m=new T.MeshBasicMaterial({name:'P6_atrium_tree_shade',map,transparent:true,opacity:.42,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
- const o=new T.Mesh(mergeGeometries(geos),m);const count=geos.length;geos.forEach(g=>g.dispose());o.name='P6_atrium_tree_shade';o.frustumCulled=false;o.renderOrder=-1; // floor decal: before any glass
- o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);return {treeShade:count};
+ const m=new T.MeshBasicMaterial({name:'P6_atrium_tree_shade',map,transparent:true,opacity:.5,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+ const o=new T.Mesh(mergeGeometries(geos),m);const dapples=geos.length-count;geos.forEach(g=>g.dispose());o.name='P6_atrium_tree_shade';o.frustumCulled=false;o.renderOrder=-1; // floor decal: before any glass
+ o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);return {treeShade:count,boulevardDapples:dapples};
 }
 
 // ---- Glow: warm downlights under the overhanging deck soffits, lanterns on the timber decks ---------------------
@@ -404,12 +488,12 @@ export function addAtriumGardens(root,layout){
  const inIsland=(x,z,m)=>islands.some(q=>x>q[0][0]-m&&x<q[1][0]+m&&z>q[0][1]-m&&z<q[2][1]+m);
  const clearWater=(x,z,m)=>!contains(lake,[x,z])||inIsland(x,z,m)||x>bx0-m-1&&x<bx1+m+1||nearWaterfall(x,z,3)||parts.some(p=>Math.hypot(p.x-x,p.z-z)<p.r+m-.6);
  const clearGround=(x,z,m)=>parts.some(p=>p.part!=='p6_tree_trunk'&&Math.hypot(p.x-x,p.z-z)<p.r+m-.6)||ATRIUM_SIGNATURE_TREES.some(t=>Math.hypot(t.x-x,t.z-z)<1.1);
- const out=[],glow=[],trees=addSignatureTrees(out,layout),grove=addGroveTrees(out,layout),planting=addPlantingBeds(out,layout),stones=addLakeStones(out,layout),decks=addTimberDecks(out,layout),water=[],waterfall=addWaterfall(out,water,layout),lily=addLilyPads(out,layout,clearWater),beds=addTreeBeds(out,layout,clearGround),lawn=addLawnDetail(out,layout,clearGround,clearWater),joints=addPavingJoints(out,layout),lanterns=addDeckLanterns(out,glow,y+.03),festoonBulbs=addFestoons(out,glow,y+.03);
+ const out=[],glow=[],trees=addSignatureTrees(out,layout),grove=addGroveTrees(out,layout),planting=addPlantingBeds(out,layout),stones=addLakeStones(out,layout),decks=addTimberDecks(out,layout),water=[],waterfall=addWaterfall(out,water,layout),lily=addLilyPads(out,layout,clearWater),beds=addTreeBeds(out,layout,clearGround),lawn=addLawnDetail(out,layout,clearGround,clearWater),inlays=addPromenadeInlays(out,layout),trims=addPlanterTrims(out,layout),lanterns=addDeckLanterns(out,glow,y+.03),festoonBulbs=addFestoons(out,glow,y+.03);
  const falling=addFallingWater(root,water,out);
  const g=mergeGeometries(out);out.forEach(x=>x.dispose());g.computeBoundingBox();g.computeBoundingSphere();
  const o=new T.Mesh(g,gardenMaterial);o.name='P6_atrium_gardens';o.frustumCulled=false;o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);
  const gg=mergeGeometries(glow.map(x=>x.toNonIndexed()));glow.forEach(x=>x.dispose());gg.computeBoundingBox();gg.computeBoundingSphere();
  const lo=new T.Mesh(gg,gardenGlowMaterial);lo.name='P6_atrium_lanterns';lo.frustumCulled=false;lo.userData={...o.userData};root.add(lo);
  const cascades=addHangingGardens(root,layout),downlights=addDownlights(root,layout),soffits=addSoffits(root,layout),shade=addTreeShade(root,layout,trees);
- return {trees,...grove,...planting,...stones,...decks,waterfall,...falling,...lily,...beds,...lawn,...joints,lanterns,festoonBulbs,...downlights,...soffits,...shade,staticTriangles:g.attributes.position.count/3,cascades};
+ return {trees,...grove,...planting,...stones,...decks,waterfall,...falling,...lily,...beds,...lawn,...inlays,...trims,lanterns,festoonBulbs,...downlights,...soffits,...shade,staticTriangles:g.attributes.position.count/3,cascades};
 }
