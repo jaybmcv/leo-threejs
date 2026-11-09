@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as T from 'three';
 import {TRANSIT_CORES} from '../src/plan/v1.js';
-import {createKeelClub,KEEL,CORES,DECK1,STOREY,STAIRS,RIVER,BRIDGES,BRIDGE_SPANS,FALLS,CANNONS,riverOuter,riverInner,riverBank,riverBed,half,RIVER_PATH,riverFrame,riverNearest,TUBE,TUBE_RANGE,DOCKS,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock,bridgeUnderside} from '../src/walk/keel-club.js';
+import {createKeelClub,KEEL,CORES,DECK1,STOREY,STAIRS,RIVER,BRIDGES,BRIDGE_SPANS,FALLS,CANNONS,riverOuter,riverInner,riverBank,riverBed,half,RIVER_PATH,riverFrame,riverNearest,TUBE,TUBE_RANGE,DOCKS,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock,bridgeUnderside,SLIDE_TOWER} from '../src/walk/keel-club.js';
 import {LIFTS,KEEL_STOP,carTriangles} from '../src/walk/lifts.js';
 import {BODY,Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
@@ -165,6 +165,16 @@ const route=[...down,[sx-3.5,sz-4],[135,0],[127.5,0],[125.25,-1],[125.25,-12],[b
 for(const [x,z] of route){if(!go(x,z)){walked=false;console.log('FAIL controller stuck going to',x,z,'at',ctl.position.toArray().map(v=>v.toFixed(2)).join(','));break;}}
 console.log(`${walked?'PASS':'FAIL'} controller walks Deck 1 → down the forward stair → between the lifts → over a bridge → up the port terrace stair, ends at y ${ctl.position.y.toFixed(2)}`);
 assert(walked&&Math.abs(ctl.position.y-TY)<.15,'controller route');
+// The slide towers are climbable (round 8): both platforms are in the flood, and the controller climbs the port tower's
+// spiral stair from the terrace to its platform and comes back down.
+{const T0=SLIDE_TOWER,top=TY+T0.height;
+ for(const s of [-1,1]){const x=T0.x+2.4*Math.cos(1.2),z=s*T0.z+2.4*Math.sin(1.2),ok=reached(x,top,z);console.log(`${ok?'PASS':'FAIL'} ${s<0?'port':'starboard'} slide tower platform (${x.toFixed(1)}, ${top.toFixed(2)}, ${z.toFixed(1)})`);assert(ok,'slide tower platform');}
+ const zc=-T0.z,dt=Math.PI*2/T0.steps,at=(t,r)=>[T0.x+Math.cos(t)*r,zc+Math.sin(t)*r],up=[];for(let k=0;k<T0.steps;k++)up.push(at((k+.5)*dt,2.05));
+ const w=-(half(95,FY)+2.8),door=at(Math.PI/8,3.6),climb=[[95,w],[95,zc],door,...up,at(.9,2.3)];let ok=true;
+ const walk=(list,what)=>{for(const [x,z] of list)if(!go(x,z)){console.log('FAIL controller stuck '+what+' to',x.toFixed(2),z.toFixed(2),'at',ctl.position.toArray().map(v=>v.toFixed(2)).join(','));return false;}return true;};
+ ok=walk(climb,'climbing');const atTop=ctl.position.y;if(ok)ok=walk([...up.slice().reverse(),door,[95,zc],[95,w]],'coming down');
+ console.log(`${ok?'PASS':'FAIL'} controller climbs the port slide tower to its platform (y ${atTop.toFixed(2)}) and back down to the terrace (y ${ctl.position.y.toFixed(2)})`);
+ assert(ok&&Math.abs(atTop-top)<.15&&Math.abs(ctl.position.y-TY)<.15,'slide tower climb');}
 // A floater's pose crosses the wire as rest 'tube' (3), alongside someone sitting, and the frame still decodes.
 {const base={yaw:0,grounded:false,stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:false,ball:false,glide:false,hook:null,fur:0},r=new WireReader();
  const got=r.read(assembleFrame([encodeIdentity(1,'voyager-a'),encodeIdentity(2,'voyager-b')],[encodeRecord(1,{...base,pos:[-89,-52.05,-43],rest:'tube'}),encodeRecord(2,{...base,pos:[0,-51.5,0],rest:'sit'})]));

@@ -137,6 +137,8 @@ export function createTubeMesh(){tubeShape??=new T.TorusGeometry(.55,.24,10,28).
 // then a landing at terrace height and a gap in the rail onto the terrace promenade.
 export const STAIRS=[-112,-58,124];const RISERS=23,TREAD=.28,STAIR_W=3;
 const PROM=3.5;                                  // terrace promenade along the rail
+// The slide towers on both terraces (round 8: climbable), at x, centred in the terrace zone behind the promenade.
+export const SLIDE_TOWER={x:89,z:(half(89,KEEL.floor)+PROM+half(89,KEEL.terrace)-.2)/2,steps:28,inner:1,outer:3.1,deck:Math.PI-.5,height:4.6};
 // The two transit cores (TRANSIT_CORES in src/plan/v1.js; check-keel-club.mjs holds these to it): each core's lifts
 // (cars at z ±6) get a Keel Club stop in a shaft with its landing door facing the lobby between them, and the
 // starboard stair tower carries on down from Deck 1 (whose slab opens over it, layout-v2.js) in three storeys of the
@@ -596,13 +598,37 @@ export function createKeelClub(ship){
  // An open tower round a white column (eight posts, a glass-railed platform on top under a round canopy); a yellow slide
  // and a blue one spiral down round it (the blue one, outside, three quarters of a turn, so the yellow one's run out passes
  // through its gap), then run side by side out over the rail, high over the walkways, and down into the river.
+ // The towers are climbable (round 8): a spiral stair winds once round the column inside the posts, from the terrace up to
+ // a viewing platform over half the tower (the rest is the stair's well, so every tread under the platform keeps 2.4 m of
+ // headroom); the canopy sits 2.3 m over the platform. Glass guards with a warm handrail follow the stair from 0.9 m up,
+ // and close the platform's rail and both of its edges over the well, open only where the top tread meets it.
+ // A sector slab round the tower's axis: r0..r1, angles t0..t1 (x = cos t, z = sin t), y0..y1; and its top alone.
+ const sector=(xc,zc,r0,r1,t0,t1,y0,y1,n=3,topOnly=false)=>{const P=[],ring=(r,y)=>Array.from({length:n+1},(_,i)=>{const t=t0+(t1-t0)*i/n;return [xc+Math.cos(t)*r,y,zc+Math.sin(t)*r];});
+  const q=(a,b,c,d)=>P.push(...a,...b,...c,...a,...c,...d),iT=ring(r0,y1),oT=ring(r1,y1),iB=ring(r0,y0),oB=ring(r1,y0);
+  for(let i=0;i<n;i++){q(iT[i],iT[i+1],oT[i+1],oT[i]);if(topOnly)continue;q(iB[i],oB[i],oB[i+1],iB[i+1]);q(oB[i],oT[i],oT[i+1],oB[i+1]);q(iB[i],iB[i+1],iT[i+1],iT[i]);}
+  if(!topOnly){q(iB[0],iT[0],oT[0],oB[0]);q(iB[n],oB[n],oT[n],iT[n]);}
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(P,3));g.computeVertexNormals();return g;};
+ // A vertical guard along an arc at radius r (angles t0..t1), y0..y1, glass and solid, with a warm handrail along its top.
+ const arcGuard=(xc,zc,r,t0,t1,y0,y1,n=2)=>{const g=grid(n+1,2,(i,j)=>{const t=t0+(t1-t0)*i/n;return [xc+Math.cos(t)*r,j?y1:y0,zc+Math.sin(t)*r];});glass.push(paint(g.clone(),C.rail));walls.push(g);
+  for(const flip of [false,true])lamps.push(paint(grid(n+1,2,(i,j)=>{const t=t0+(t1-t0)*i/n;return [xc+Math.cos(t)*r,y1+(j?.06:0),zc+Math.sin(t)*r];},flip),C.railLed));};
+ const radialGuard=(xc,zc,t,r0,r1,y0,y1)=>{const c=Math.cos(t),sn=Math.sin(t),g=grid(2,2,(i,j)=>[xc+c*(i?r1:r0),j?y1:y0,zc+sn*(i?r1:r0)]);glass.push(paint(g.clone(),C.rail));walls.push(g);
+  for(const flip of [false,true])lamps.push(paint(grid(2,2,(i,j)=>[xc+c*(i?r1:r0),y1+(j?.06:0),zc+sn*(i?r1:r0)],flip),C.railLed));};
+ const TOWER={...SLIDE_TOWER,guard:3.2};
  for(const s of [-1,1]){const [a,b]=tz(89,s).map(Math.abs),zc=s*(a+b)/2,xc=89,top=TY+4.6,R=3.5;
-  walls.push(new T.CylinderGeometry(4,4,CY-.8-TY,20).translate(xc,(TY+CY-.8)/2,zc));
+  walls.push(new T.CylinderGeometry(1,1,CY-TY,16).translate(xc,(TY+CY)/2,zc));
   parts.push(paint(new T.CylinderGeometry(1,1,CY-TY,16).translate(xc,(TY+CY)/2,zc),C.rib));
-  for(let k=0;k<8;k++){const t=k/8*Math.PI*2;parts.push(paint(new T.CylinderGeometry(.09,.09,CY-.9-TY,6).translate(xc+Math.cos(t)*R,(TY+CY-.9)/2,zc+Math.sin(t)*R),C.rib));}
-  parts.push(paint(new T.CylinderGeometry(R+.3,R+.3,.22,24).translate(xc,top-.11,zc),C.rib));glass.push(paint(new T.CylinderGeometry(R+.25,R+.25,1,24,1,true).translate(xc,top+.5,zc),C.rail));
-  lamps.push(paint(new T.TorusGeometry(R+.25,.04,4,32).rotateX(Math.PI/2).translate(xc,top+1.02,zc),C.railLed));lamps.push(paint(new T.TorusGeometry(R+.31,.05,4,32).rotateX(Math.PI/2).translate(xc,top-.2,zc),C.cove));
-  parts.push(paint(new T.CylinderGeometry(R+.6,R+.6,.18,24).translate(xc,CY-.86,zc),C.curtain));lamps.push(paint(new T.TorusGeometry(R+.6,.05,4,32).rotateX(Math.PI/2).translate(xc,CY-.96,zc),C.cove));
+  for(let k=0;k<8;k++){const t=k/8*Math.PI*2,post=new T.CylinderGeometry(.09,.09,CY-.4-TY,6).translate(xc+Math.cos(t)*R,(TY+CY-.4)/2,zc+Math.sin(t)*R);parts.push(paint(post.clone(),C.rib));walls.push(post);}
+  // the stair: treads you stand on (their tops are ground, the slabs walls), guarded from 0.9 m up
+  {const {steps:N,inner:r0,outer:r1}=TOWER,dt=Math.PI*2/N,rise=(top-TY)/N;
+   for(let k=0;k<N;k++){const t0=k*dt,t1=(k+1)*dt,y=TY+(k+1)*rise,slab=sector(xc,zc,r0,r1,t0,t1,y-.08,y);parts.push(paint(slab.clone(),C.wood));walls.push(slab);grounds.push(sector(xc,zc,r0,r1,t0,t1,y-.08,y,3,true));
+    if(y>TY+.9)arcGuard(xc,zc,TOWER.guard,t0,t1,y,y+1.1);}}
+  // the platform: a half-round deck over the stair's first half turn, its rail solid, guarded along both edges over the well
+  {const deck=sector(xc,zc,TOWER.inner,R+.3,0,TOWER.deck,top-.22,top,10);parts.push(paint(deck.clone(),C.rib));walls.push(deck);grounds.push(sector(xc,zc,TOWER.inner,R+.3,0,TOWER.deck,top-.22,top,10,true));
+   radialGuard(xc,zc,TOWER.deck,TOWER.inner,R+.3,top,top+1.05);radialGuard(xc,zc,0,TOWER.guard-.05,R+.3,top,top+1.05);
+   walls.push(new T.CylinderGeometry(R+.25,R+.25,1.05,24,1,true).translate(xc,top+.52,zc));}
+  glass.push(paint(new T.CylinderGeometry(R+.25,R+.25,1,24,1,true).translate(xc,top+.5,zc),C.rail));
+  lamps.push(paint(new T.TorusGeometry(R+.25,.04,4,32).rotateX(Math.PI/2).translate(xc,top+1.02,zc),C.railLed));lamps.push(paint(new T.TorusGeometry(R+.31,.05,4,32,TOWER.deck).rotateX(Math.PI/2).translate(xc,top-.2,zc),C.cove));
+  parts.push(paint(new T.CylinderGeometry(R+.6,R+.6,.18,24).translate(xc,CY-.3,zc),C.curtain));lamps.push(paint(new T.TorusGeometry(R+.6,.05,4,32).rotateX(Math.PI/2).translate(xc,CY-.4,zc),C.cove));
   for(const [r,turn,color] of [[4.4,2.5,C.slide],[5.5,1.5,C.slideTube]]){const te=s>0?Math.PI:0,xe=xc+Math.cos(te)*r,pts=[];
    for(let i=0;i<=40;i++){const u=i/40,t=te-(1-u)*Math.PI*turn;pts.push(new T.Vector3(xc+Math.cos(t)*r,top-.3-u*1.3,zc+Math.sin(t)*r));}
    for(const [y,z] of [[TY+2.75,front(xe)+.3],[FY+3,front(xe)-2.6],[FY+2.1,front(xe)-4.6],[FY+.6,front(xe)-6.3],[WY+.15,front(xe)-7.9]])pts.push(new T.Vector3(xe,y,s*z));
