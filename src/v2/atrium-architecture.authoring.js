@@ -56,10 +56,11 @@ export function addPhase6Architecture(ship,root,layout){
   for(const name of Object.keys(g.attributes))if(!['position','normal','uv','color'].includes(name))g.deleteAttribute(name);
   const tint=m.color||new T.Color(1,1,1),prior=g.attributes.color,c=new Float32Array(g.attributes.position.count*3);
   for(let i=0;i<g.attributes.position.count;i++)c.set([tint.r*(prior?prior.getX(i):1),tint.g*(prior?prior.getY(i):1),tint.b*(prior?prior.getZ(i):1)],i*3);
-  // A source can colour the faces facing given ways ([x,y,z,colour]; the tower's bridge fascias and undersides, model.js).
-  for(const [x,y,z,hex] of o.userData.towerFaces||[]){
+  // A source can colour the faces facing given ways, and shade them as if they faced another ([x,y,z,colour,lit]; the
+  // tower's bridge fascias and undersides, model.js).
+  for(const [x,y,z,hex,lit] of o.userData.towerFaces||[]){
    const want=new T.Vector3(x,y,z),colour=new T.Color(hex),n=g.attributes.normal,sum=new T.Vector3(),v=new T.Vector3();
-   for(let i=0;i<n.count;i+=3){sum.set(0,0,0);for(let k=0;k<3;k++)sum.add(v.fromBufferAttribute(n,i+k));if(sum.normalize().dot(want)>.7)for(let k=0;k<3;k++)colour.toArray(c,(i+k)*3);}
+   for(let i=0;i<n.count;i+=3){sum.set(0,0,0);for(let k=0;k<3;k++)sum.add(v.fromBufferAttribute(n,i+k));if(sum.normalize().dot(want)>.7)for(let k=0;k<3;k++){colour.toArray(c,(i+k)*3);if(lit)n.setXYZ(i+k,...lit);}}
   }
   g.setAttribute('color',new T.BufferAttribute(c,3));b.parts.push(g);o.visible=false;
  }

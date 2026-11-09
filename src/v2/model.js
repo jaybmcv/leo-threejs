@@ -25,19 +25,20 @@ import {roomObject,toWorld} from '../plan/rooms.js';
 // the native approach ramp and explicit stairs remain separate meshes.
 function loungeVoidMasks(y,depth=.24){const r=layout.rooms.find(r=>r.id==='observation-lounge');return r&&y>r.y+.4&&y-depth<r.y+r.height-.2?[r.polygon]:[];}
 // Atrium concept A (lit glass tower, 2026-11-08). The facade's copy of the tower (atrium-architecture.js) gives its bridges
-// and landings white fascias and light undersides; the walked tops keep their finish. Each [x,y,z,colour] colours the
-// faces facing that way.
-const TOWER_SLAB_FACES=[[0,-1,0,0xe8e5dc],[1,0,0,0xf3f2ec],[-1,0,0,0xf3f2ec],[0,0,1,0xf3f2ec],[0,0,-1,0xf3f2ec]];
+// and landings white fascias and light undersides; the walked tops keep their finish. Each [x,y,z,colour,lit] colours the
+// faces facing that way, and lit (if given) shades them as if they faced that way instead: the atrium's hemisphere light
+// gives a face looking down its dark ground colour, so a light underside would still read brown.
+const TOWER_SLAB_FACES=[[0,-1,0,0xe6e6e2,[0,1,0]],[1,0,0,0xf3f2ec],[-1,0,0,0xf3f2ec],[0,0,1,0xf3f2ec],[0,0,-1,0xf3f2ec]];
 // A warm line of light under both long edges of each bridge above Deck 6, only where it crosses the open atrium (further
-// out it lies over the deck's own slab). Lit like the lift lobbies' ceiling lights (transit.js), so the tower copy draws
-// the two together. Visual only.
+// out it lies over the deck's own slab). 20 cm wide, hanging 8 cm below the slab, so it still reads from the atrium floor.
+// Lit like the lift lobbies' ceiling lights (transit.js), so the tower copy draws the two together. Visual only.
 const towerBridgeLight=new T.MeshStandardMaterial({name:'V2_tower_bridge_light',color:0xffe5af,emissive:0xffdf9f,emissiveIntensity:.7});
 function towerBridgeLights(structure){
  const parts=[],across=(p,x)=>{let h=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];if(a[0]!==b[0]&&(a[0]-x)*(b[0]-x)<=0)h=Math.max(h,Math.abs(a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0])));}return h;};
  for(const b of layout.circulation.bridges.filter(b=>b.deck>6)){
   const d=layout.decks[b.deck-1],{x0,x1,z0,z1}=bounds(b.polygon),side=Math.sign(z0+z1),open=Math.min(across(d.atrium.outline,x0),across(d.atrium.outline,x1))-.25;
   const lo=Math.min(Math.abs(z0),Math.abs(z1))+.25,hi=Math.min(Math.max(Math.abs(z0),Math.abs(z1)),open);if(hi-lo<1)continue;
-  for(const x of [x0+.14,x1-.14])parts.push(new T.BoxGeometry(.05,.03,hi-lo).translate(x,d.y-.255,side*(lo+hi)/2));
+  for(const x of [x0+.105,x1-.105])parts.push(new T.BoxGeometry(.2,.1,hi-lo).translate(x,d.y-.27,side*(lo+hi)/2));
  }
  if(parts.length){mesh(structure,'V2_tower_bridge_light',mergeGeometries(parts),towerBridgeLight).userData.noCollide=true;parts.forEach(g=>g.dispose());}
 }
