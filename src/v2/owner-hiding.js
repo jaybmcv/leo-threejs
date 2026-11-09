@@ -33,6 +33,9 @@ export function ownerPrint(o){
  const slots=o.isInstancedMesh?hash((o.userData.near?.all??[]).map(m=>fixed(m.elements)).join(';')+'|'+fixed(o.instanceMatrix.array.subarray(0,o.count*16))):'';
  return 'm'+hash([count,g.drawRange.start,g.drawRange.count,mats,fixed(o.matrixWorld.elements),bounds,slots,o.userData.sources?.length??0].join('|'));
 }
+// Its print with its world matrix brought up to date from its transforms first: the walk skips a hidden branch's matrix
+// update, so one moved while hidden would still match by its old world matrix.
+const printNow=o=>{o.updateWorldMatrix(true,false);return ownerPrint(o);};
 // How far the near plane's corners lie from the eye (null for a camera the bake does not cover).
 export function nearCorner(camera){
  if(!camera?.isPerspectiveCamera)return null;const t=Math.tan((camera.getEffectiveFOV?camera.getEffectiveFOV():camera.fov)*Math.PI/360);
@@ -54,7 +57,7 @@ function valid(d){
  * still use. Returns {data, dropped: {parts, conds, entries, blocks}}. */
 export function pruneOwnerBake(data,scene){
  const byPath=new Map();scene.traverse(o=>{if(o===scene)return;const p=ownerPath(o,scene);byPath.set(p,byPath.has(p)?null:o);});
- const ok=([path,print])=>{const o=byPath.get(path);return !!o&&ownerPrint(o)===print;},partOk=data.parts.map(ok),condOk=data.conds.map(ok);
+ const ok=([path,print])=>{const o=byPath.get(path);return !!o&&printNow(o)===print;},partOk=data.parts.map(ok),condOk=data.conds.map(ok);
  const kept=new Map(),entries=[];data.entries.forEach((e,i)=>{if(partOk[e[0]]&&e[1].every(k=>condOk[k])){kept.set(i,entries.length);entries.push(e);}});
  const index=list=>{const m=new Map();[...new Set(list)].sort((a,b)=>a-b).forEach((v,i)=>m.set(v,i));return m;},pIdx=index(entries.map(e=>e[0])),cIdx=index(entries.flatMap(e=>e[1]));
  const blocks=data.blocks.map(b=>[...b.slice(0,6),b[6].filter(i=>kept.has(i)).map(i=>kept.get(i))]).filter(b=>b[6].length);
@@ -79,15 +82,25 @@ export function createOwnerHiding(data,{key,scene}){
  // A cabin entry's proven cabins as a set (checked every frame against the up to 40 its mesh shows).
  const slotSets=entries.map(e=>e[2]?new Set(e[2]):null);
  // A resolved object with what it was at resolve(): it is dropped if it moves or changes geometry or material later.
- // `moves`: a transform up its chain recomposes each frame, so its world matrix is refreshed before each comparison (the
- // walk does not keep a hidden object's up to date).
- const snap=o=>{let moves=false;for(let q=o;q;q=q.parent)if(q.matrixAutoUpdate){moves=true;break;}return {o,moves,matrix:o.matrixWorld.elements.slice(),geometry:o.geometry,material:o.material};};
- const same=s=>{if(s.o.geometry!==s.geometry||s.o.material!==s.material)return false;if(s.moves)s.o.updateWorldMatrix(true,false);const e=s.o.matrixWorld.elements,m=s.matrix;for(let i=0;i<16;i++)if(Math.abs(e[i]-m[i])>=1e-6)return false;return true;};
+ // Moving is read from what makes its world matrix: the transform of it and of each node above it (position, rotation,
+ // scale and pivot, or the matrix itself when set by hand) and each one's parent. The world matrix is not compared: the
+ // walk skips a hidden branch's matrix update (prepared-static.js), and refreshing it every frame cost 0.7 ms. A node is
+ // checked once a frame however many parts sit under it.
+ const nodes=new Map();
+ const fill=(q,v)=>{if(!q.matrixAutoUpdate){v.set(q.matrix.elements);return v;}const p=q.position,r=q.quaternion,s=q.scale,c=q.pivot;
+  v[0]=p.x;v[1]=p.y;v[2]=p.z;v[3]=r.x;v[4]=r.y;v[5]=r.z;v[6]=r.w;v[7]=s.x;v[8]=s.y;v[9]=s.z;v[10]=c?c.x:0;v[11]=c?c.y:0;v[12]=c?c.z:0;return v;};
+ const node=q=>{let n=nodes.get(q);if(!n){n={q,parent:q.parent,auto:q.matrixAutoUpdate,pivot:q.pivot??null,was:fill(q,new Float64Array(16)),now:new Float64Array(16),frame:-1,ok:true};nodes.set(q,n);}return n;};
+ const still=n=>{if(n.frame===frame)return n.ok;n.frame=frame;const q=n.q;
+  n.ok=q.parent===n.parent&&q.matrixAutoUpdate===n.auto&&(q.pivot??null)===n.pivot;
+  if(n.ok){const a=fill(q,n.now),b=n.was,len=n.auto?13:16;for(let i=0;i<len;i++)if(Math.abs(a[i]-b[i])>=1e-6){n.ok=false;break;}}
+  return n.ok;};
+ const snap=o=>{const chain=[];for(let q=o;q;q=q.parent)chain.push(node(q));return {o,chain,geometry:o.geometry,material:o.material};};
+ const same=s=>{if(s.o.geometry!==s.geometry||s.o.material!==s.material)return false;for(const n of s.chain)if(!still(n))return false;return true;};
  // Each condition's answer is worked out once a frame: frame number and answer per condition.
  let frame=0,condFrame=new Uint32Array(0),condValue=new Uint8Array(0);
  function resolve(){
   const byPath=new Map();scene.traverse(o=>{if(o===scene)return;const p=ownerPath(o,scene);byPath.set(p,byPath.has(p)?null:o);});// a path met twice matches nothing
-  const match=([path,print])=>{const o=byPath.get(path);return o&&ownerPrint(o)===print?snap(o):null;};
+  nodes.clear();const match=([path,print])=>{const o=byPath.get(path);return o&&printNow(o)===print?snap(o):null;};
   parts=data.parts.map(match);conds=data.conds.map(c=>{const s=match(c);return s?{...s,slot:c[2]??null}:null;});
   condFrame=new Uint32Array(conds.length);condValue=new Uint8Array(conds.length);
   stats.resolved=parts.filter(Boolean).length;stats.condsResolved=conds.filter(Boolean).length;lastCell=NaN;

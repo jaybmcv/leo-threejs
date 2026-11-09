@@ -26,6 +26,7 @@ export function mergeCallLights(parent,bandOf,place){
    material.onBeforeCompile=shader=>{shader.uniforms.litMap={value:on.map};
     shader.vertexShader='attribute float callLit;\nvarying float vCallLit;\n'+shader.vertexShader.replace('#include <uv_vertex>','#include <uv_vertex>\n\tvCallLit=callLit;');
     shader.fragmentShader='uniform sampler2D litMap;\nvarying float vCallLit;\n'+shader.fragmentShader.replace('#include <map_fragment>','diffuseColor*=mix(texture2D(map,vMapUv),texture2D(litMap,vMapUv),vCallLit);');};
+   material.onBeforeCompile.keepsGeometry=true;// a varying and texture lookups only (src/v2/shader-hooks.js)
    material.customProgramCacheKey=()=>'walk-call-lights';pair.set(on,material);}
   const mesh=new T.Mesh(geometry,material);mesh.name='Walk_call_lights';mesh.userData={noCollide:true,renderOnly:true};
   let start=0;

@@ -59,4 +59,12 @@ for(const [name,undo] of [['not shown',w=>{w.wall.visible=false;}],['on another 
 {const w=world(),h=make(w);assert.deepEqual(during(h,at(),[w.a]),[false]);
  w.a.position.z=20;// moved in front of everything, and nothing has updated its world matrix (the walk does not while it is hidden)
  assert.deepEqual(during(h,at(),[w.a]),[true]);assert.equal(h.stats.dropped,1);pass('a hidden part that moves is caught before its world matrix is updated for it');}
+{const w=world(),h=make(w);assert.deepEqual(during(h,at(),[w.b]),[false]);
+ w.band.position.x=.5;// its band moves; no world matrix below it is updated
+ assert.deepEqual(during(h,at(),[w.b]),[true]);assert.ok(h.stats.dropped>=1);pass('a hidden part whose parent moves is caught from the parent\'s transform');}
+{const w=world();w.b.matrixAutoUpdate=false;const h=make(w);assert.deepEqual(during(h,at(),[w.b]),[false]);
+ w.b.matrix.makeTranslation(3,0,30);assert.deepEqual(during(h,at(),[w.b]),[true]);pass('a part placed by a hand-set matrix is caught when that matrix changes');}
+{const w=world(),data=bake(w);w.b.position.z=30;// moved while hidden, before the walk matched the bake: its world matrix is stale
+ const h=createOwnerHiding(data,{key:KEY,scene:w.scene});h.resolve();assert.equal(h.stats.resolved,2);assert.deepEqual(during(h,at(),[w.b]),[true]);
+ pass('a part that moved before resolve() does not match by its stale world matrix');}
 console.log(`owner hiding: ${passed} checks passed`);

@@ -8,7 +8,7 @@ import {ownerPath,ownerPrint} from '../src/v2/owner-hiding.js';
 export const MOVING=/pool_ball|door|drape|curtain|yarn|ball_|swing|fan_|rotor|wheel|car_|lift|gate|shutter/i;
 const LIFT=/^Walk_lift_|^Lift_|^Car_/;
 // Plain opaque materials only: anything transparent, cut out, refracting or shaded by custom code may let sight through.
-const plainOpaque=m=>!!m&&m.visible!==false&&!m.transparent&&(m.opacity??1)>=1&&!(m.alphaTest>0)&&!m.alphaMap&&!(m.transmission>0)&&m.colorWrite!==false&&m.depthWrite!==false&&m.depthTest!==false&&!m.wireframe&&!m.isShaderMaterial&&!m.isRawShaderMaterial
+const plainOpaque=m=>!!m&&m.visible!==false&&!m.transparent&&(m.opacity??1)>=1&&!(m.alphaTest>0)&&!m.alphaToCoverage&&!m.alphaMap&&!(m.transmission>0)&&m.colorWrite!==false&&m.depthWrite!==false&&m.depthTest!==false&&!m.wireframe&&!m.isShaderMaterial&&!m.isRawShaderMaterial
  &&(m.isMeshStandardMaterial||m.isMeshBasicMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial||m.isMeshPhysicalMaterial||m.isMeshToonMaterial||m.isMeshMatcapMaterial)
  // drawn where its geometry says (no vertex-moving or discarding shader hook), and not clipped away
  &&geometryKept(m)&&!m.clippingPlanes?.length;
