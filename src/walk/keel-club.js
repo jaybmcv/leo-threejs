@@ -568,10 +568,6 @@ export function createKeelClub(ship){
  for(const s of [-1,1]){const [a,b]=tz(89,s).map(Math.abs),zc=s*(a+b)/2,xc=89,top=TY+4.6,R=3.5;
   walls.push(new T.CylinderGeometry(4,4,CY-.8-TY,20).translate(xc,(TY+CY-.8)/2,zc));
   parts.push(paint(new T.CylinderGeometry(1,1,CY-TY,16).translate(xc,(TY+CY)/2,zc),C.rib));
-  // a spiral stair round the column up to the platform (round 7): 26 treads, one and a half turns, a handrail of posts
-  for(let k=0;k<26;k++){const t=k/26*Math.PI*3,y=TY+(k+1)/26*(top-.22-TY),ct=Math.cos(t),st=Math.sin(t);
-   parts.push(paint(new T.BoxGeometry(1.9,.08,.62).rotateY(-t).translate(xc+ct*2.05,y,zc+st*2.05),C.wood));
-   if(k%2===0)parts.push(paint(new T.CylinderGeometry(.025,.025,.95,4).translate(xc+ct*3,y+.48,zc+st*3),C.brass));}
   for(let k=0;k<8;k++){const t=k/8*Math.PI*2;parts.push(paint(new T.CylinderGeometry(.09,.09,CY-.9-TY,6).translate(xc+Math.cos(t)*R,(TY+CY-.9)/2,zc+Math.sin(t)*R),C.rib));}
   parts.push(paint(new T.CylinderGeometry(R+.3,R+.3,.22,24).translate(xc,top-.11,zc),C.rib));glass.push(paint(new T.CylinderGeometry(R+.25,R+.25,1,24,1,true).translate(xc,top+.5,zc),C.rail));
   lamps.push(paint(new T.TorusGeometry(R+.25,.04,4,32).rotateX(Math.PI/2).translate(xc,top+1.02,zc),C.railLed));lamps.push(paint(new T.TorusGeometry(R+.31,.05,4,32).rotateX(Math.PI/2).translate(xc,top-.2,zc),C.cove));
