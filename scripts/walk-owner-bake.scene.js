@@ -8,10 +8,10 @@ import {ownerPath,ownerPrint} from '../src/v2/owner-hiding.js';
 export const MOVING=/pool_ball|door|drape|curtain|yarn|ball_|swing|fan_|rotor|wheel|car_|lift|gate|shutter|lever/i;
 const LIFT=/^Walk_lift_|^Lift_|^Car_/;
 // Plain opaque materials only: anything transparent, cut out, refracting or shaded by custom code may let sight through.
-const plainOpaque=m=>!!m&&m.visible!==false&&!m.transparent&&(m.opacity??1)>=1&&!(m.alphaTest>0)&&!m.alphaToCoverage&&!m.alphaMap&&!(m.transmission>0)&&m.colorWrite!==false&&m.depthWrite!==false&&m.depthTest!==false&&!m.wireframe&&!m.isShaderMaterial&&!m.isRawShaderMaterial
+const plainOpaque=(m,empty)=>!!m&&m.visible!==false&&!m.transparent&&(m.opacity??1)>=1&&!(m.alphaTest>0)&&!m.alphaToCoverage&&!m.alphaHash&&!m.alphaMap&&!(m.transmission>0)&&m.colorWrite!==false&&m.depthWrite!==false&&m.depthTest!==false&&!m.wireframe&&!m.isShaderMaterial&&!m.isRawShaderMaterial
  &&(m.isMeshStandardMaterial||m.isMeshBasicMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial||m.isMeshPhysicalMaterial||m.isMeshToonMaterial||m.isMeshMatcapMaterial)
  // drawn where its geometry says (no vertex-moving or discarding shader hook), and not clipped away
- &&geometryKept(m)&&!m.clippingPlanes?.length;
+ &&geometryKept(m,empty)&&!m.clippingPlanes?.length;
 // Morph targets move vertices at draw time.
 const morphs=g=>Object.keys(g?.morphAttributes||{}).length>0;
 // A growing typed array: the soup runs to tens of millions of numbers, past what a plain array can hold.
@@ -23,26 +23,27 @@ const moving=o=>{for(let q=o;q;q=q.parent)if(MOVING.test(q.name||''))return true
 /** Occluder soup: {positions (Float32Array, 9 per triangle), sides, conds (indices into `conditions`), conditions
  * ([path, print] of what must be drawn: a merge source's band group, or the mesh itself), bandConds (the band ones),
  * mergeRoot (the merged pieces' group, which every band condition also needs), stats}. Merged deck meshes
- * contribute through their sources, which keep their arrays in a bake page (?ownerBake). */
-export function collectOccluders(scene){
+ * contribute through their sources, which keep their arrays in a bake page (?ownerBake). `emptyHook`: three's empty
+ * onBeforeCompile as the walk's three has it (src/v2/shader-hooks.js). */
+export function collectOccluders(scene,{emptyHook}={}){
  const byUuid=new Map();scene.traverse(q=>byUuid.set(q.uuid,q));
  const conditions=[],index=new Map(),condOf=o=>{let i=index.get(o);if(i===undefined){i=conditions.length;conditions.push([ownerPath(o,scene),ownerPrint(o)]);index.set(o,i);}return i;};
  const bandOf=q=>{for(let p=q.parent;p;p=p.parent){if(p.userData?.mergedSources)return p.parent;if(/^Walk_band_\d+$/.test(p.name||''))return p;}return null;};
  const positions=new Grow(Float32Array),sides=new Grow(Uint8Array),conds=new Grow(Uint32Array),bandConds=new Set(),stats={meshes:0,sources:0,triangles:0,skippedMaterials:0,noArrays:0};let mergeRoot=null;
  const a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3(),added=new Set();// every piece of a split merge lists all its sources
- const add=(o,cond)=>{const g=o.geometry,p=g?.attributes?.position,ix=g?.index;if(!p?.array||ix&&!ix.array){stats.noArrays++;return;}if(morphs(g))return;
+ const add=(o,condOf)=>{let cond=null;const g=o.geometry,p=g?.attributes?.position,ix=g?.index;if(!p?.array||ix&&!ix.array){stats.noArrays++;return;}if(morphs(g))return;
   const mats=[o.material].flat(),flip=o.matrixWorld.determinant()<0,total=ix?ix.count:p.count,dr=g.drawRange,end=Math.min(total,dr.start+dr.count);
   // three ignores geometry groups unless the material is an array.
   const groups=Array.isArray(o.material)&&g.groups?.length?g.groups:[{start:0,count:total,materialIndex:0}];
-  for(const gr of groups){const m=mats[gr.materialIndex??0];if(!plainOpaque(m)){stats.skippedMaterials++;continue;}const side=m.side===T.DoubleSide?2:m.side===T.BackSide?1:0;
+  for(const gr of groups){const m=mats[gr.materialIndex??0];if(!plainOpaque(m,emptyHook)){stats.skippedMaterials++;continue;}const side=m.side===T.DoubleSide?2:m.side===T.BackSide?1:0;
    for(let i=Math.max(gr.start,dr.start);i+2<Math.min(gr.start+gr.count,end);i+=3){
     a.fromBufferAttribute(p,ix?ix.getX(i):i).applyMatrix4(o.matrixWorld);b.fromBufferAttribute(p,ix?ix.getX(i+1):i+1).applyMatrix4(o.matrixWorld);c.fromBufferAttribute(p,ix?ix.getX(i+2):i+2).applyMatrix4(o.matrixWorld);
     // Stored counter-clockwise as drawn: a mirrored object's front face flips with its determinant.
-    const [B,C]=flip?[c,b]:[b,c];positions.push(a.x,a.y,a.z,B.x,B.y,B.z,C.x,C.y,C.z);sides.push(side);conds.push(cond);stats.triangles++;}}};
+    if(cond===null)cond=condOf();const [B,C]=flip?[c,b]:[b,c];positions.push(a.x,a.y,a.z,B.x,B.y,B.z,C.x,C.y,C.z);sides.push(side);conds.push(cond);stats.triangles++;}}};
  scene.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||o.isSkinnedMesh||o.isBatchedMesh||moving(o))return;
-  if(o.userData.sources?.length){if(o.parent&&mergeRoot===null)mergeRoot=condOf(o.parent);for(const id of o.userData.sources){if(added.has(id))continue;added.add(id);const q=byUuid.get(id),band=q&&bandOf(q);if(!band)continue;q.updateWorldMatrix(true,false);const k=condOf(band);bandConds.add(k);add(q,k);stats.sources++;}return;}
+  if(o.userData.sources?.length){if(o.parent&&mergeRoot===null)mergeRoot=condOf(o.parent);for(const id of o.userData.sources){if(added.has(id))continue;added.add(id);const q=byUuid.get(id),band=q&&bandOf(q);if(!band)continue;q.updateWorldMatrix(true,false);add(q,()=>{const k=condOf(band);bandConds.add(k);return k;});stats.sources++;}return;}
   // Whatever is drawn now or not: the walk shows decks as the walker moves, and each triangle's condition says when it counts.
-  if(copied(o))return;add(o,condOf(o));stats.meshes++;});
+  if(copied(o))return;add(o,()=>condOf(o));stats.meshes++;});
  return {positions:positions.values,sides:sides.values,conds:conds.values,conditions,bandConds,mergeRoot,stats};
 }
 
@@ -62,7 +63,7 @@ function clusters(o,box){
  * [{root, parts:[{o, path, print, boxes, slots?}]}]. A cabin part (re-packed from userData.near.all)
  * lists its slots: [{id, centre, box}]. Left out: movers, lift parts, shadow casters, see-through parts, other instanced
  * meshes (their shown instances change and their full list is not exposed). */
-export function collectTargets(scene){
+export function collectTargets(scene,{emptyHook}={}){
  const isRoot=q=>!q.parent||q.parent===scene||/^Walk_band_\d+$|live_source|^V2_live/i.test(q.parent.name||'');
  const ownerOf=o=>{if(o.isInstancedMesh||/_merged_|^Walk_merged_/.test(o.name||''))return o;let q=o;while(!isRoot(q))q=q.parent;return q;};
  const groups=new Map(),byUuid=new Map();scene.traverse(q=>byUuid.set(q.uuid,q));
@@ -75,9 +76,9 @@ export function collectTargets(scene){
   return o.userData.sources.flatMap(id=>{const q=byUuid.get(id),qg=q?.geometry;if(!qg)return [null];if(!qg.boundingBox){if(!qg.attributes.position?.array)return [null];qg.computeBoundingBox();}q.updateWorldMatrix(true,false);return clusters(q,qg.boundingBox.clone().applyMatrix4(q.matrixWorld));});
 };
  const visit=o=>{if(o.userData?.mergedSources||copied(o))return;
-  if(o.isMesh&&!o.isSkinnedMesh&&!o.isBatchedMesh&&!o.castShadow&&!morphs(o.geometry)&&[o.material].flat().every(m=>m&&!m.transparent&&m.visible!==false&&geometryKept(m))){
+  if(o.isMesh&&!o.isSkinnedMesh&&!o.isBatchedMesh&&!o.castShadow&&!morphs(o.geometry)&&[o.material].flat().every(m=>m&&!m.transparent&&m.visible!==false&&geometryKept(m,emptyHook))){
    const root=ownerOf(o);let lifted=false;for(let q=o;q;q=q.parent)if(LIFT.test(q.name||'')){lifted=true;break;}
-   if(!lifted&&!MOVING.test(o.name||'')){let part=null;
+   if(!lifted&&!moving(o)){let part=null;
     if(o.isInstancedMesh){const near=o.userData.near;if(near&&o.userData.cabinIds&&!o.userData.boat&&o.geometry.attributes.position?.array){const g=o.geometry,local=new T.Box3().setFromBufferAttribute(g.attributes.position);
       part={o,slots:near.all.map((m,i)=>({id:o.userData.cabinIds[i],centre:near.centres[i],box:local.clone().applyMatrix4(m.clone().premultiply(o.matrixWorld))}))};}}
     else{const boxes=boxesOf(o);if(boxes&&!boxes.includes(null))part={o,boxes};}
@@ -85,3 +86,14 @@ export function collectTargets(scene){
   for(const c of o.children)visit(c);};
  visit(scene);return [...groups.values()];
 }
+
+// Two pages' tables ({parts, conditions}: rows [path, print, ...]): null when they hold different things (rows of other
+// paths, or another count), else the rows whose prints differ: parts or walls that moved on their own between the pages.
+export function tablesDiffer(a,b){
+ const out={parts:[],conditions:[]};
+ for(const k of ['parts','conditions']){if(a[k].length!==b[k].length)return null;
+  for(let i=0;i<a[k].length;i++){if(a[k][i][0]!==b[k][i][0])return null;if(JSON.stringify(a[k][i])!==JSON.stringify(b[k][i]))out[k].push(i);}}
+ return out;
+}
+// A block's entries ([part, [cond...], slots?]) without those relying on a moved row, as the part hidden or a wall.
+export const withoutMoved=(list,moved)=>{const p=new Set(moved.parts),c=new Set(moved.conditions);return list.filter(e=>!p.has(e[0])&&!e[1].some(k=>c.has(k)));};

@@ -20,6 +20,7 @@ import {build as bundle} from './native-bundle.mjs';
 import {PVS_GRID} from '../src/v2/atrium-pvs.js';
 import {OWNER_BAKE_VERSION,ownerBakeFile,ownerKey} from '../src/v2/owner-hiding.js';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
+import {tablesDiffer,withoutMoved} from './walk-owner-bake.scene.js';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
 const SITE_DIR=arg('site',null),TAG=arg('tag',null),PAGES=Number(arg('pages',2)),MINUTES=Number(arg('minutes',80)),TOP=Number(arg('top',8)),SLABS=Number(arg('slabs',2)),MARGIN=Number(arg('margin',4));
@@ -92,17 +93,20 @@ const script=(await bundle({entryPoints:['scripts/walk-owner-bake.page.js'],bund
 const pages=await Promise.all(Array.from({length:PAGES},(_,n)=>openPage(n,walk,script)));
 // Every page must see the same scene: the same parts and conditions, in the same order.
 const digest=t=>createHash('sha256').update(JSON.stringify(t)).digest('hex');
-const tables=pages[0].setup.tables,first=digest(tables),key=pages[0].setup.key;if(!key?.startsWith(scriptKey))throw Error('The page reports key '+key+' for '+walk.script);for(const [n,p] of pages.entries())if(digest(p.setup.tables)!==first){
- // Name what differs: usually a part that moves on its own and is missing from MOVING (walk-owner-bake.scene.js).
- const name=r=>JSON.parse(r[0]).map(s=>s[0]).filter(Boolean).join('/'),differ=['parts','conditions'].flatMap(k=>p.setup.tables[k].filter((r,i)=>JSON.stringify(r)!==JSON.stringify(tables[k][i])).map(name));
- throw Error(`Page ${n} built a different scene (${[...new Set(differ)].slice(0,6).join(', ')||'tables of another length'}); the bake was not kept`);}
+const tables=pages[0].setup.tables,first=digest(tables),key=pages[0].setup.key;if(!key?.startsWith(scriptKey))throw Error('The page reports key '+key+' for '+walk.script);// A row whose print differs between pages moved on its own (an animation MOVING does not name): every entry relying on
+// it, as the part hidden or as a wall that helped prove it, is dropped below. Rows of other paths refuse the bake.
+const moved={parts:new Set(),conditions:new Set()},rowName=r=>JSON.parse(r[0]).map(s=>s[0]).filter(Boolean).join('/');
+for(const [n,p] of pages.entries()){if(digest(p.setup.tables)===first)continue;const d=tablesDiffer(tables,p.setup.tables);
+ if(!d)throw Error(`Page ${n} built a different scene (other parts or walls); the bake was not kept`);for(const k of ['parts','conditions'])for(const i of d[k])moved[k].add(i);}
+if(moved.parts.size||moved.conditions.size)console.log('moved between pages, entries relying on them dropped:',JSON.stringify({parts:moved.parts.size,conditions:moved.conditions.size,names:[...new Set([...[...moved.parts].map(i=>rowName(tables.parts[i])),...[...moved.conditions].map(i=>rowName(tables.conditions[i]))])].slice(0,8)}));
+const movedRows={parts:[...moved.parts],conditions:[...moved.conditions]};
 console.log('scene:',JSON.stringify({...pages[0].setup,tables:undefined}));
 // Blocks are shared out as pages come free; none starts after the time limit.
 const results=[],queue=[...blocks],deadline=started+MINUTES*60e3;let done=0;
 await Promise.all(pages.map(async({page})=>{while(queue.length&&Date.now()<deadline){const block=queue.shift(),r=await page.ev(`__ownerBake.bake(${JSON.stringify([block])})`);results.push(...r.blocks);done++;
  if(done%20===0)console.log(`  ${done}/${blocks.length} blocks, ${((Date.now()-started)/60e3).toFixed(1)} min`);}}));
 // The bake's data: entries shared between blocks.
-const entries=[],entryIndex=new Map(),stored=results.map(([i0,k0,j0,i1,k1,j1,list])=>[i0,k0,j0,i1,k1,j1,list.map(e=>{const k=JSON.stringify(e);let n=entryIndex.get(k);if(n===undefined){n=entries.length;entries.push(e);entryIndex.set(k,n);}return n;})]);
+const entries=[],entryIndex=new Map(),stored=results.map(([i0,k0,j0,i1,k1,j1,list])=>[i0,k0,j0,i1,k1,j1,withoutMoved(list,movedRows).map(e=>{const k=JSON.stringify(e);let n=entryIndex.get(k);if(n===undefined){n=entries.length;entries.push(e);entryIndex.set(k,n);}return n;})]);
 const data={version:OWNER_BAKE_VERSION,key,made:new Date().toISOString(),grid:{x0:PV.x0,z0:PV.z0,step:PV.step,y0:PV.y0},nearMargin:pages[0].setup.nearMargin,region:{deck:6,slabs:SLABS,margin:MARGIN,top:TOP,blocks:blocks.length,baked:done},parts:tables.parts,conds:tables.conditions,entries,blocks:stored};
 // Drop what moved or changed since setup, then the self-check through the walk's own hiding (the unchecked data is kept
 // beside the output for a failed one).

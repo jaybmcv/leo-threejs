@@ -31,9 +31,9 @@ async function setup(seed){
  if(seed){if(!host.goTo({at:seed.at,yaw:seed.yaw,resolved:true}))throw Error('Could not stand the walker at '+JSON.stringify(seed.at));host.follow.mode='third';host.follow.yaw=(seed.yaw??0)*Math.PI/180;
   for(let n=0;n<60;n++)await new Promise(f=>requestAnimationFrame(f));}
  host.scene.updateMatrixWorld(true);
- const occ=collectOccluders(host.scene),g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(occ.positions,3));
+ const emptyHook=host.T.Material.prototype.onBeforeCompile,occ=collectOccluders(host.scene,{emptyHook}),g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(occ.positions,3));
  proof=createOwnerProof({bvh:new MeshBVH(g,{indirect:true,maxLeafSize:8}),sides:occ.sides,conds:occ.conds});conditions=occ.conditions;bandConds=occ.bandConds;mergeRoot=occ.mergeRoot;
- targets=collectTargets(host.scene);parts=[];partIndex=new Map();for(const e of targets)for(const p of e.parts){partIndex.set(p,parts.length);parts.push([p.path,p.print]);}
+ targets=collectTargets(host.scene,{emptyHook});parts=[];partIndex=new Map();for(const e of targets)for(const p of e.parts){partIndex.set(p,parts.length);parts.push([p.path,p.print]);}
  return {key:host.key,nearMargin:OWNER_PROOF.nearMargin,occluders:occ.stats,conditions:conditions.length,owners:targets.length,parts:parts.length,tables:{parts,conditions}};
 }
 // The parts of one owner group proven from `box`: [{p, conds}]. The group's plain parts together first, then each. The
