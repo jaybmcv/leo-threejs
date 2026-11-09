@@ -2,7 +2,7 @@
 // condition, and which parts may be hidden.
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {collectOccluders,collectTargets} from './walk-owner-bake.scene.js';
+import {collectOccluders,collectTargets,tablesDiffer,withoutMoved} from './walk-owner-bake.scene.js';
 
 let passed=0;const pass=name=>{passed++;console.log('PASS '+name);};
 const quad=(x=0,z=0,mat=new T.MeshStandardMaterial({name:'wall'}),name='Wall')=>{const m=new T.Mesh(new T.PlaneGeometry(2,2),mat);m.name=name;m.position.set(x,1,z);return m;};
@@ -19,15 +19,18 @@ function ship(){
 {const w=ship(),o=collectOccluders(w.scene);assert.equal(o.stats.sources,2);assert.equal(o.positions.length,(2*2)*9);pass('a merge source counts once however many pieces list it');
  const bandCond=o.conditions.findIndex(c=>c[0].includes('Walk_band_3')&&!c[0].includes('merged_sources'));assert.ok(o.bandConds.has(bandCond));assert.equal(JSON.parse(o.conditions[o.mergeRoot][0])[0][0],'V2_phone_band_merges');
  assert.ok([...o.conds].every(k=>k===bandCond));pass('its triangles depend on its band, and the band on the merged pieces\' root');}
-{const scene=new T.Scene();const see=[new T.MeshStandardMaterial({transparent:true,opacity:.5}),new T.MeshStandardMaterial({alphaTest:.5}),new T.ShaderMaterial(),new T.MeshPhysicalMaterial({transmission:1}),new T.MeshStandardMaterial({colorWrite:false}),new T.MeshBasicMaterial({alphaToCoverage:true})];
- see.forEach((m,i)=>scene.add(quad(i*3,0,m,'Glass'+i)));scene.updateMatrixWorld(true);const o=collectOccluders(scene);assert.equal(o.positions.length,0);assert.equal(o.stats.skippedMaterials,see.length);pass('see-through, cut-out, refracting and custom-shaded surfaces are not occluders');}
+{const scene=new T.Scene();const see=[new T.MeshStandardMaterial({transparent:true,opacity:.5}),new T.MeshStandardMaterial({alphaTest:.5}),new T.ShaderMaterial(),new T.MeshPhysicalMaterial({transmission:1}),new T.MeshStandardMaterial({colorWrite:false}),new T.MeshBasicMaterial({alphaToCoverage:true}),new T.MeshStandardMaterial({alphaHash:true})];
+ see.forEach((m,i)=>scene.add(quad(i*3,0,m,'Glass'+i)));scene.updateMatrixWorld(true);const o=collectOccluders(scene);assert.equal(o.positions.length,0);assert.equal(o.stats.skippedMaterials,see.length);
+ assert.equal(o.conditions.length,0,'a mesh with no wall triangle adds no condition (a moving one would split the pages\' tables)');
+ pass('see-through, cut-out, hashed, refracting and custom-shaded surfaces are not occluders, nor conditions');}
 {const scene=new T.Scene(),plain=quad(0,0),mirror=quad(4,0);mirror.scale.x=-1;scene.add(plain,mirror);scene.updateMatrixWorld(true);const o=collectOccluders(scene),p=o.positions;
  const normal=f=>{const v=i=>new T.Vector3(p[f*9+i*3],p[f*9+i*3+1],p[f*9+i*3+2]);return new T.Vector3().subVectors(v(1),v(0)).cross(new T.Vector3().subVectors(v(2),v(0))).normalize();};
  assert.ok(normal(0).z>.99&&normal(2).z>.99,'both face +z as drawn');pass('a mirrored mesh is stored with the face three draws in front');}
 {const scene=new T.Scene(),door=quad(0,0,undefined,'Lounge_door'),lift=new T.Group();lift.name='Walk_lift_core';lift.add(quad(3,0,undefined,'Panel'));
  const lever=quad(6,0,undefined,'Lever_panel_arm');// swings when pulled, and settles after load at a moment that differs page to page
- scene.add(door,lift,lever);scene.updateMatrixWorld(true);
- assert.equal(collectOccluders(scene).positions.length,0);assert.equal(collectTargets(scene).length,0);pass('doors, levers and lifts neither hide anything nor are hidden');}
+ const panel=new T.Group();panel.name='Lever_panel';panel.add(quad(9,0,undefined,'Panel_face'));// moves with what it holds
+ scene.add(door,lift,lever,panel);scene.updateMatrixWorld(true);
+ assert.equal(collectOccluders(scene).positions.length,0);assert.equal(collectTargets(scene).length,0);pass('doors, levers and lifts, and what they hold, neither hide anything nor are hidden');}
 {const scene=new T.Scene(),tree=quad(0,0,undefined,'Blossom_tree');tree.castShadow=true;const glass=quad(3,0,new T.MeshStandardMaterial({transparent:true}),'Pane');scene.add(tree,glass);scene.updateMatrixWorld(true);
  assert.equal(collectTargets(scene).length,0);pass('shadow casters and see-through parts are never hidden');}
 {const scene=new T.Scene(),geo=new T.BoxGeometry(1,1,1),mat=new T.MeshStandardMaterial();
@@ -49,12 +52,22 @@ function ship(){
 {// The bake's page bundles its own three: the walk's materials inherit another copy's empty hook.
  const scene=new T.Scene(),foreign=new T.MeshStandardMaterial(),theirs=Object.create(Object.getPrototypeOf(foreign),{onBeforeCompile:{value:function onBeforeCompile(){}}});
  Object.setPrototypeOf(foreign,theirs);assert.ok(!Object.prototype.hasOwnProperty.call(foreign,'onBeforeCompile')&&foreign.onBeforeCompile!==T.Material.prototype.onBeforeCompile);
- scene.add(quad(0,0,foreign,'Painting_frame_rail'));scene.updateMatrixWorld(true);
- assert.deepEqual(collectTargets(scene).flatMap(e=>e.parts.map(p=>p.o.name)),['Painting_frame_rail']);assert.equal(collectOccluders(scene).positions.length/9,2);
- pass('a material with another three copy\'s empty hook is baked (hidden and a wall)');}
-{const scene=new T.Scene(),clipped=new T.MeshStandardMaterial({clippingPlanes:[new T.Plane(new T.Vector3(0,1,0),-10)]});scene.add(quad(0,0,clipped,'Lever_panel'));scene.updateMatrixWorld(true);
+ // A hook inherited that is not that copy's empty one: it may discard (a subclass, a shared prototype).
+ const sneaky=new T.MeshStandardMaterial();Object.setPrototypeOf(sneaky,Object.create(theirs,{onBeforeCompile:{value:s=>{s.fragmentShader=s.fragmentShader.replace('}','discard;}');}}}));
+ scene.add(quad(0,0,foreign,'Painting_frame_rail'),quad(3,0,sneaky,'Inherited_hook'));scene.updateMatrixWorld(true);
+ const emptyHook=theirs.onBeforeCompile,names=o=>collectTargets(scene,o).flatMap(e=>e.parts.map(p=>p.o.name));
+ assert.deepEqual(names({emptyHook}),['Painting_frame_rail']);assert.equal(collectOccluders(scene,{emptyHook}).positions.length/9,2);
+ assert.deepEqual(names(),[],'without the walk\'s empty hook nothing is trusted');
+ pass('a material with the walk\'s empty hook is baked; an inherited hook of any other kind is not');}
+{const scene=new T.Scene(),clipped=new T.MeshStandardMaterial({clippingPlanes:[new T.Plane(new T.Vector3(0,1,0),-10)]});scene.add(quad(0,0,clipped,'Clipped_panel'));scene.updateMatrixWorld(true);
  assert.equal(collectOccluders(scene).positions.length,0);pass('a clipped surface is not a wall');}
 {const w=ship(),pieces=w.root.children,g=pieces[0].geometry;g.computeBoundingBox();g.boundingBox.max.x=g.boundingBox.min.x+.1;// the walk narrows it to the decks shown
  const p=collectTargets(w.scene).flatMap(e=>e.parts).find(x=>x.o===pieces[0]),box=p.boxes.reduce((b,x)=>b.union(x),new T.Box3());assert.ok(box.max.x>=21.9,'every vertex, not the narrowed box');
  pass('a merged piece is boxed by all its vertices, whatever its bounds say now');}
+{const t=(parts,conditions)=>({parts,conditions}),a=t([['["p1"]','m1'],['["p2"]','m2']],[['["w1"]','m3']]);
+ assert.deepEqual(tablesDiffer(a,a),{parts:[],conditions:[]});
+ const moved=tablesDiffer(a,t([['["p1"]','m1'],['["p2"]','mX']],[['["w1"]','mY']]));assert.deepEqual(moved,{parts:[1],conditions:[0]});
+ assert.equal(tablesDiffer(a,t([['["p1"]','m1']],[['["w1"]','m3']])),null);assert.equal(tablesDiffer(a,t([['["p1"]','m1'],['["p3"]','m2']],[['["w1"]','m3']])),null);
+ const list=[[0,[0]],[1,[]],[0,[]]];assert.deepEqual(withoutMoved(list,moved),[[0,[]]]);
+ pass('rows that moved between pages drop every entry relying on them; other differences refuse the bake');}
 console.log(`owner bake scene: ${passed} checks passed`);
