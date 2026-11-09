@@ -11,10 +11,11 @@ import {paintDuskSky,paintDownlightPool} from './atrium-light-paint.js';
 // The tint follows the ship's clock (ship-time.js). Day is concept A softened: warm golden daylight, warmer cream walls,
 // soft pools of light under the balconies, deeper turquoise water. Night is concept C: a dusk sky panel, windows and
 // balcony glass lit warm from inside, every downlight and promenade lamp on. Intensities multiply the base light.
-const DAY={hemi:1.08,fill:1.12,env:.9,sky:0xffdcac,ground:0x8c7455,fillColour:0xfff0da,fog:0xe9ddc8};
-const NIGHT={hemi:.8,fill:.5,env:.55,sky:0xffc29e,ground:0x5b4757,fillColour:0xffbe92,fog:0xb08f88,glass:0xffb563,glassOpacity:2};
+// Tuned against local renders of the hero, sky-up and walls-starboard views (docs/atrium-areas/light/).
+const DAY={hemi:1.2,fill:1.09,env:.69,sky:0xffd2a0,ground:0x8e7353,fillColour:0xffe8cc,fog:0xecdcc2};
+const NIGHT={hemi:.95,fill:.8,env:.55,sky:0xffd6c2,ground:0xa07c74,fillColour:0xffd2b4,fog:0xc4a29c,glass:0xffa04a,glassOpacity:1.5};
 // What only the atrium shows follows the time of day wherever the walker is.
-const WATER=[new T.Color(0x2fa0a5),new T.Color(0x2b5d69)],SOFFIT_NIGHT={emissive:new T.Color(0xffc683),intensity:.72};
+const WATER=[new T.Color(0x2ea3c0),new T.Color(0x3f8c9a)],SOFFIT_NIGHT={emissive:new T.Color(0xffc683),intensity:.72};
 const LAMP_NIGHT=2.6,RETURNS_NIGHT=new T.Color(0xd6b99c),POOLS=[.5,1];
 // Shared with the rest of the ship, so changed only while the walker is in the open atrium.
 const SHARED=new Set(['V2_smart_glass','V2_cabin_view_glass']);

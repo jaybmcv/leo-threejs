@@ -72,7 +72,7 @@ const px=a.mats.sky.map.image.getContext('2d').getImageData(32,4,1,1).data;asser
 pass('at night the sky panel shows the dusk made from its own day picture');
 assert(a.mats.glass.emissive.r>.5&&a.mats.glass.opacity>.23);assert(a.mats.lamp.emissiveIntensity>1.5);assert(a.mats.soffit.emissiveIntensity>.38);
 assert(a.hemi.intensity<1&&a.hemi.color.r>a.hemi.color.b);assert(a.scene.fog.color.r>a.scene.fog.color.b&&a.scene.fog.color.g<fogBase.g);
-assert.equal(a.mats.water.color.getHex(),0x2b5d69);assert.equal(a.lights.material.opacity,1);
+assert.equal(a.mats.water.color.getHex(),0x3f8c9a);assert.equal(a.lights.material.opacity,1);
 pass('night lights the glass, lamps and soffits and dims and warms the atrium light');
 assert.equal(a.lights.material.name,'P6_atrium_downlight_pool');assert.equal(a.lights.count,3);assert.equal(a.lights.material.blending,T.AdditiveBlending);
 const e=new T.Matrix4();a.lights.getMatrixAt(1,e);const s=new T.Vector3(),p=new T.Vector3();e.decompose(p,new T.Quaternion(),s);
@@ -87,6 +87,6 @@ clock.setTimeChoice('day',{persist:false});
 setAtriumView(IN);run(mood,400);
 assert.equal(mood.night,0);assert.equal(a.mats.sky.map.image,a.day);assert.equal(a.mats.glass.emissive.getHex(),glassBase.getHex());
 assert.equal(a.mats.soffit.emissiveIntensity,.38);assert.equal(a.mats.lamp.emissiveIntensity,.65);assert(a.hemi.intensity>1);
-assert.equal(a.mats.water.color.getHex(),0x2fa0a5);assert.equal(a.lights.material.opacity,.5);
+assert.equal(a.mats.water.color.getHex(),0x2ea3c0);assert.equal(a.lights.material.opacity,.5);
 pass('switching to Day eases back to the day sky and daylight');
 console.log(checks+' checks passed');

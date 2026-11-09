@@ -15,8 +15,8 @@ export function paintDuskSky(c,day){
  const along=g.createLinearGradient(0,0,W,0);
  for(const[at,col]of[[0,'rgba(150,140,210,.5)'],[.45,'rgba(225,160,185,0)'],[1,'rgba(248,176,138,.6)']])along.addColorStop(at,col);
  g.fillStyle=along;g.fillRect(0,0,W,H);
- // Dusk is a little dimmer than noon, and a touch warmer.
- g.globalCompositeOperation='multiply';g.fillStyle='#f1dfdc';g.fillRect(0,0,W,H);
+ // Dusk is dimmer and richer than noon: the same colours multiplied in at half strength deepen the pale day sky.
+ g.globalCompositeOperation='multiply';g.globalAlpha=.55;g.fillStyle=across;g.fillRect(0,0,W,H);g.globalAlpha=1;
  g.globalCompositeOperation='source-over';return c;
 }
 
