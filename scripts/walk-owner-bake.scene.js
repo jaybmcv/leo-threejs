@@ -5,7 +5,7 @@ import * as T from 'three';
 import {ownerPath,ownerPrint} from '../src/v2/owner-hiding.js';
 
 // Parts that move, ride or animate: never hidden, never occluders.
-export const MOVING=/pool_ball|door|drape|curtain|yarn|ball_|swing|fan_|rotor|wheel|car_|lift|gate|shutter/i;
+export const MOVING=/pool_ball|door|drape|curtain|yarn|ball_|swing|fan_|rotor|wheel|car_|lift|gate|shutter|lever/i;
 const LIFT=/^Walk_lift_|^Lift_|^Car_/;
 // Plain opaque materials only: anything transparent, cut out, refracting or shaded by custom code may let sight through.
 const plainOpaque=m=>!!m&&m.visible!==false&&!m.transparent&&(m.opacity??1)>=1&&!(m.alphaTest>0)&&!m.alphaToCoverage&&!m.alphaMap&&!(m.transmission>0)&&m.colorWrite!==false&&m.depthWrite!==false&&m.depthTest!==false&&!m.wireframe&&!m.isShaderMaterial&&!m.isRawShaderMaterial

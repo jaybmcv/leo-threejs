@@ -92,7 +92,10 @@ const script=(await bundle({entryPoints:['scripts/walk-owner-bake.page.js'],bund
 const pages=await Promise.all(Array.from({length:PAGES},(_,n)=>openPage(n,walk,script)));
 // Every page must see the same scene: the same parts and conditions, in the same order.
 const digest=t=>createHash('sha256').update(JSON.stringify(t)).digest('hex');
-const tables=pages[0].setup.tables,first=digest(tables),key=pages[0].setup.key;if(!key?.startsWith(scriptKey))throw Error('The page reports key '+key+' for '+walk.script);for(const [n,p] of pages.entries())if(digest(p.setup.tables)!==first)throw Error(`Page ${n} built a different scene; the bake was not kept`);
+const tables=pages[0].setup.tables,first=digest(tables),key=pages[0].setup.key;if(!key?.startsWith(scriptKey))throw Error('The page reports key '+key+' for '+walk.script);for(const [n,p] of pages.entries())if(digest(p.setup.tables)!==first){
+ // Name what differs: usually a part that moves on its own and is missing from MOVING (walk-owner-bake.scene.js).
+ const name=r=>JSON.parse(r[0]).map(s=>s[0]).filter(Boolean).join('/'),differ=['parts','conditions'].flatMap(k=>p.setup.tables[k].filter((r,i)=>JSON.stringify(r)!==JSON.stringify(tables[k][i])).map(name));
+ throw Error(`Page ${n} built a different scene (${[...new Set(differ)].slice(0,6).join(', ')||'tables of another length'}); the bake was not kept`);}
 console.log('scene:',JSON.stringify({...pages[0].setup,tables:undefined}));
 // Blocks are shared out as pages come free; none starts after the time limit.
 const results=[],queue=[...blocks],deadline=started+MINUTES*60e3;let done=0;

@@ -24,8 +24,10 @@ function ship(){
 {const scene=new T.Scene(),plain=quad(0,0),mirror=quad(4,0);mirror.scale.x=-1;scene.add(plain,mirror);scene.updateMatrixWorld(true);const o=collectOccluders(scene),p=o.positions;
  const normal=f=>{const v=i=>new T.Vector3(p[f*9+i*3],p[f*9+i*3+1],p[f*9+i*3+2]);return new T.Vector3().subVectors(v(1),v(0)).cross(new T.Vector3().subVectors(v(2),v(0))).normalize();};
  assert.ok(normal(0).z>.99&&normal(2).z>.99,'both face +z as drawn');pass('a mirrored mesh is stored with the face three draws in front');}
-{const scene=new T.Scene(),door=quad(0,0,undefined,'Lounge_door'),lift=new T.Group();lift.name='Walk_lift_core';lift.add(quad(3,0,undefined,'Panel'));scene.add(door,lift);scene.updateMatrixWorld(true);
- assert.equal(collectOccluders(scene).positions.length,0);assert.equal(collectTargets(scene).length,0);pass('doors and lifts neither hide anything nor are hidden');}
+{const scene=new T.Scene(),door=quad(0,0,undefined,'Lounge_door'),lift=new T.Group();lift.name='Walk_lift_core';lift.add(quad(3,0,undefined,'Panel'));
+ const lever=quad(6,0,undefined,'Lever_panel_arm');// swings when pulled, and settles after load at a moment that differs page to page
+ scene.add(door,lift,lever);scene.updateMatrixWorld(true);
+ assert.equal(collectOccluders(scene).positions.length,0);assert.equal(collectTargets(scene).length,0);pass('doors, levers and lifts neither hide anything nor are hidden');}
 {const scene=new T.Scene(),tree=quad(0,0,undefined,'Blossom_tree');tree.castShadow=true;const glass=quad(3,0,new T.MeshStandardMaterial({transparent:true}),'Pane');scene.add(tree,glass);scene.updateMatrixWorld(true);
  assert.equal(collectTargets(scene).length,0);pass('shadow casters and see-through parts are never hidden');}
 {const scene=new T.Scene(),geo=new T.BoxGeometry(1,1,1),mat=new T.MeshStandardMaterial();
@@ -44,6 +46,12 @@ function ship(){
  scene.add(quad(0,0,moved,'Fish'),quad(3,0,shaded,'Shaded'));scene.updateMatrixWorld(true);
  assert.deepEqual(collectTargets(scene).flatMap(e=>e.parts.map(p=>p.o.name)),['Shaded']);const o=collectOccluders(scene);assert.equal(o.positions.length/9,2);
  pass('a shader that moves vertices keeps its part out of the bake; one marked as keeping geometry does not');}
+{// The bake's page bundles its own three: the walk's materials inherit another copy's empty hook.
+ const scene=new T.Scene(),foreign=new T.MeshStandardMaterial(),theirs=Object.create(Object.getPrototypeOf(foreign),{onBeforeCompile:{value:function onBeforeCompile(){}}});
+ Object.setPrototypeOf(foreign,theirs);assert.ok(!Object.prototype.hasOwnProperty.call(foreign,'onBeforeCompile')&&foreign.onBeforeCompile!==T.Material.prototype.onBeforeCompile);
+ scene.add(quad(0,0,foreign,'Painting_frame_rail'));scene.updateMatrixWorld(true);
+ assert.deepEqual(collectTargets(scene).flatMap(e=>e.parts.map(p=>p.o.name)),['Painting_frame_rail']);assert.equal(collectOccluders(scene).positions.length/9,2);
+ pass('a material with another three copy\'s empty hook is baked (hidden and a wall)');}
 {const scene=new T.Scene(),clipped=new T.MeshStandardMaterial({clippingPlanes:[new T.Plane(new T.Vector3(0,1,0),-10)]});scene.add(quad(0,0,clipped,'Lever_panel'));scene.updateMatrixWorld(true);
  assert.equal(collectOccluders(scene).positions.length,0);pass('a clipped surface is not a wall');}
 {const w=ship(),pieces=w.root.children,g=pieces[0].geometry;g.computeBoundingBox();g.boundingBox.max.x=g.boundingBox.min.x+.1;// the walk narrows it to the decks shown
