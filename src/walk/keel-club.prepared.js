@@ -264,7 +264,8 @@ export function createKeelClub(ship){
  add(flat(ringIn,[rect(lx0,lx1,-lz,lz)],FY),C.island,{ground:true});
  // Water: the lagoon (deepening from the beach to the wave machine) and the river, both RIVER.drop below the floor.
  const WY=FY-RIVER.drop,BED=FY-RIVER.bed;
- parts.push(paint(grid(2,2,(i,j)=>[i?lx1:lx0,FY-(i?3:.6),j?lz:-lz]),C.basin));
+ // the lagoon's floor is light sand under the water (round 7): shallow by the beach, it reads turquoise, not dark
+ parts.push(paint(grid(2,2,(i,j)=>[i?lx1:lx0,FY-(i?3:.6),j?lz:-lz]),0x6fc4c4));
  parts.push(paint(flat(ringOut,[ringIn],BED),C.basin));
  // Basin walls: the lagoon's, and both river banks down to the bed (a vertical strip along each outline).
  const ring=(x0,x1,z0,z1,y0,y1)=>[box(x0,x1,y0,y1,z0-.1,z0),box(x0,x1,y0,y1,z1,z1+.1),box(x0-.1,x0,y0,y1,z0,z1),box(x1,x1+.1,y0,y1,z0,z1)];
@@ -495,7 +496,9 @@ export function createKeelClub(ship){
  for(let k=0;k<7;k++){const z=-24+k*6+5.4;parts.push(paint(new T.CylinderGeometry(.15,.13,.85,8).translate(153.2,FY+.43,z),C.bag));for(let j=0;j<3;j++)parts.push(paint(box(153.1+j*.08,153.16+j*.08,FY+.85,FY+1.05,z-.05,z+.05),C.line));}
  for(const [x,z,r,c] of [[166,-12,2.4,C.orange],[172,8,3,C.line],[178,-4,3.6,C.screen],[184,14,2.6,C.orange],[184,-18,2.6,C.line]])for(const k of [1,.62,.3])parts.push(paint(new T.RingGeometry(r*k-.18,r*k,28).rotateX(-Math.PI/2).translate(x,FY+.05+k*.002,z),k===.62?C.line:c));
  for(const [x,z] of [[166,-12],[172,8],[178,-4],[184,14],[184,-18]]){parts.push(paint(new T.CylinderGeometry(.02,.02,1.6,4).translate(x,FY+.8,z),C.line));const f=new T.BufferGeometry();f.setAttribute('position',new T.Float32BufferAttribute([x,FY+1.6,z,x,FY+1.3,z,x,FY+1.45,z-.5],3));f.computeVertexNormals();parts.push(paint(f,C.orange));}
- {const zs=xsBetween(-32,32,1),domeX=z=>200-2.5*(z/32)**2,dome=gridUV(zs.length,2,(i,j)=>[domeX(zs[i]),j?CY-.6:FY,zs[i]],(i,j)=>[i/(zs.length-1),j?1:0]);screens.range.push(dome);walls.push(dome.clone());}
+ {const zs=xsBetween(-32,32,1),domeX=z=>200-2.5*(z/32)**2,dome=gridUV(zs.length,2,(i,j)=>[domeX(zs[i]),j?CY-.6:FY,zs[i]],(i,j)=>[i/(zs.length-1),j?1:0]);screens.range.push(dome);walls.push(dome.clone());
+  // its back, seen from the bow walk behind it, is a plain panel, not the picture mirrored
+  parts.push(paint(gridUV(zs.length,2,(i,j)=>[domeX(zs[i])+.12,j?CY-.6:FY,zs[i]],(i,j)=>[0,0]),C.bulkhead));}
  // Climbing walls on the bow hull, floor to ceiling, both sides, with holds, and crash mats at their foot.
  for(const s of [-1,1]){const xs=xsBetween(150,180),ys=ysBetween(FY,CY);add(grid(xs.length,2,(i,j)=>[xs[i],j?CY:FY,s*(front(xs[i])+.05)],s>0),C.climbWall,{wall:true});
   for(const x of [150,180])parts.push(paint(grid(2,ys.length,(i,j)=>[x,ys[j],s*(i?half(x,ys[j]):front(x)+.05)]),C.climbWall));
