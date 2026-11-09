@@ -7,6 +7,7 @@ import {WALK_SPEED,RUN_SPEED} from './vr/worldCore.ts';
 import {catnipFace} from './catnip-face.js';
 import {createSwimSuit} from './aquarium-treasure/suit.js';
 import {createFurColour} from './fur.js';
+import {rigPace} from './rig-pace.js';
 
 // Cosmo as the walker, animated by Voyager's Reach's own figure (vr/dlCatFigure.ts): the authored Ecctrl walk and jog,
 // the reference sprint, take-off, air and landing, the turning lean, the tail spring, the idle, crouch, slide and
@@ -74,6 +75,8 @@ function boardPose(bone){
 }
 
 // `createDLCat` comes from the Cosmo bundle; `motion` is ecctrl-locomotion.json, the donor clips for the walk.
+// The longest step Cosmo's rig takes in one solve: the figure's own cap (dlCatFigure.ts apply, stepMax), a 20 fps frame.
+const RIG_CAP=.05;
 export async function createWalker(createDLCat,motion){
  const cat=await createDLCat({height:COSMO_HEIGHT,castShadow:true,receiveShadow:true});
  const figure=new DLCatFigure(cat,()=>DEFAULT_DLCAT_TUNING,motion);figure.stylProportions=false;
@@ -115,13 +118,14 @@ export async function createWalker(createDLCat,motion){
  const hipHeight=bone('spine').getWorldPosition(new T.Vector3()).y-figure.root.getWorldPosition(new T.Vector3()).y;
  let suit=null;
  const paw=bone('hand.R'),shoulder=bone('upper_arm.R'),elbow=bone('forearm.R'),hung=new T.Quaternion(),lean=new T.Vector3(),hold=new T.Quaternion(),q=new T.Quaternion();
- let hang=0;const anchor=new T.Vector3();
+ let hang=0,lastPose=null;const anchor=new T.Vector3(),pace=rigPace(RIG_CAP);
  return {
   holder,body,figure,hipHeight,setFur,boardFeet,
   // Where the right paw is drawn (the grapple line leaves from it).
   hand(out=new T.Vector3()){return paw.getWorldPosition(out);},
   // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock},
-  //  catnip: in the Hydro-Nip Lounge, board: riding the longboard (0..1, glide.js), hook: the grapple's bite (world) or null}
+  //  catnip: in the Hydro-Nip Lounge, board: riding the longboard (0..1, glide.js), hook: the grapple's bite (world) or null,
+  //  unseen: nothing draws him this frame (first person), so the figure's rig solve (about 0.33 ms) runs less often}
   update(dt,s){
    const r=s.rest,seated=r?.kind==='sit'&&r.weight>.35;
    hang=T.MathUtils.clamp(hang+(s.hook&&!r?1:-1)*dt/HANG_S,0,1);if(s.hook)anchor.copy(s.hook);
@@ -131,9 +135,15 @@ export async function createWalker(createDLCat,motion){
     hung.setFromUnitVectors(Y,lean);const angle=2*Math.acos(Math.min(1,Math.abs(hung.w)));if(angle>HANG_TILT)hung.slerpQuaternions(q.identity(),hung,HANG_TILT/angle);
     body.quaternion.premultiply(q.identity().slerp(hung,hang*hang*(3-2*hang)));
    }
-   figure.apply({pos:[0,0,0],yaw:0,dt,speedMs:r?0:s.speed,grounded:r?true:s.grounded,swimming:!!s.swimming,submerged:!!s.swimming,stance:r?'stand':s.stance||'stand',
+   // Unseen (first person), the rig solves as on a 20 fps machine, keeping pace exactly (rig-pace.js): he is current when
+   // he shows, and the paw the grapple aims from is at most one such step behind. A third of the work at 60 Hz. Time
+   // gathered before a change of input is solved with the inputs it was gathered under (the previous frame's pose).
+   const inputs=[s.grounded,s.jumpCount,s.stance,!!s.swimming,s.emote,r?.kind,seated].join('|');
+   const pose={pos:[0,0,0],yaw:0,dt,speedMs:r?0:s.speed,grounded:r?true:s.grounded,swimming:!!s.swimming,submerged:!!s.swimming,stance:r?'stand':s.stance||'stand',
     jumpCount:s.jumpCount||1,jumpS:s.jumpS,turnRate:r?0:s.turnRate||0,accelMs2:r?0:s.accel||0,riseMs:r?0:s.rise||0,emote:r?null:s.emote||null,
-    seated,seatedVariant:'passenger',seatHeight:seated?r.seatHeight:undefined,seatForward:0},dt);
+    seated,seatedVariant:'passenger',seatHeight:seated?r.seatHeight:undefined,seatForward:0};
+   for(const {dt:step,prior} of pace(dt,!!s.unseen,inputs))figure.apply({...(prior&&lastPose||pose),dt:step},step);
+   lastPose=pose;
    // Lying down, in a bed or playing dead, the hat comes off: on his back it would sink into the floor or the pillow.
    if(this.hat)this.hat.mount.visible=!s.swimming&&!(r?.kind==='lie'&&r.weight>.3)&&s.emote!=='play_dead';
    if(s.swimming&&!suit)suit=createSwimSuit(figure,body);suit?.update(!!s.swimming);

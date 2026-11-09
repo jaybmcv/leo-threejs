@@ -15,6 +15,11 @@ import {createGrappleLine} from './grapple.js';
 // body standing in a lift car stands on its floor as this page draws the car, so a rider never sinks or floats.
 const STALE_MS=12000,EASE_PER_S=10,GLIDE_MIN_MS=200,GLIDE_MAX_MS=700,STOPPED_AFTER_MS=185,STRIDE_HALF_LIFE_MS=100;
 const RUN_ON_BELT=5,HAT_M=35,MAX_RIGS=24,LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12,SAY_MS=8000;
+// Each body's rig solve (avatar.js) costs about 0.33 ms a frame: a body outside the camera's view (a sphere of IN_VIEW_M
+// round its middle, enough for one lying down or on a board) solves as a 20 fps machine would (avatar.js unseen,
+// rig-pace.js), keeping pace, so it is current the frame it comes into view. Not while its grapple line is out (the
+// line can cross the view from its paw), nor while the selfie booth counts down (its lens may see the body).
+const IN_VIEW_M=2.5,viewFrustum=new T.Frustum(),viewMatrix=new T.Matrix4(),bodySphere=new T.Sphere();
 
 export class RemotePlayers{
  // make(): a new walker (avatar.js createWalker); colliders: for hiding names behind walls; lifts: lift-ride.js.
@@ -52,8 +57,9 @@ export class RemotePlayers{
  clear(){for(const id of [...this.remotes.keys()])this.gone(id);}
  release(r){r.ball?.mesh.removeFromParent();r.tube?.removeFromParent();r.line?.hide();if(!r.walker)return;r.walker.holder.removeFromParent();this.pool.push(r.walker);r.walker=null;}
 
- // view: {camera, low, high} — the heights of the deck bands being drawn (main.js cull).
- update(dt,{camera,low,high},now=performance.now()){
+ // view: {camera, low, high, photo} — the heights of the deck bands being drawn (main.js cull); photo: the selfie booth is
+ // counting down.
+ update(dt,{camera,low,high,photo=false},now=performance.now()){
   camera.getWorldPosition(this.v);const eye=this.v.clone(),k=1-Math.exp(-EASE_PER_S*dt),shown=[];
   const bandLow=bandOf(low),bandHigh=bandOf(high);
   for(const [id,r] of this.remotes){
@@ -69,6 +75,7 @@ export class RemotePlayers{
   // Bodies for the nearest; the rest give theirs back to the pool.
   shown.sort((a,b)=>a.distance-b.distance);
   shown.slice(MAX_RIGS).forEach(r=>this.release(r));
+  viewFrustum.setFromProjectionMatrix(viewMatrix.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
   const bodied=shown.slice(0,MAX_RIGS);
   for(const r of bodied){
    if(!r.walker){
@@ -77,7 +84,8 @@ export class RemotePlayers{
    }
    // A body from the pool may have worn someone else's hat.
    if(r.hat&&!r.walker.hat&&this.hatUrl)wearHat(r.walker,this.hatUrl);else if(!r.hat&&r.walker.hat)r.walker.hat.remove();
-   this.pose(r,dt);
+   const lined=!!r.tgt.hook||r.line?.out>0;
+   this.pose(r,dt,!photo&&!lined&&!viewFrustum.intersectsSphere(bodySphere.set(bodySphere.center.set(r.cur.x,r.cur.y+.6,r.cur.z),IN_VIEW_M)));
   }
   this.name(bodied,camera,now);
  }
@@ -95,7 +103,7 @@ export class RemotePlayers{
   // Standing in a lift car: on its floor, where this page draws the car.
   if(r.tgt.grounded&&!r.tgt.rest&&this.lifts)for(const l of this.lifts.lifts)if(this.lifts.inside(l,{x:c.x,y:to[1],z:c.z})){c.y=l.y;break;}
  }
- pose(r,dt){
+ pose(r,dt,unseen=false){
   const w=r.walker,c=r.cur;
   w.holder.position.set(c.x,c.y,c.z);w.holder.rotation.set(0,c.yaw,0);
   const turn=Math.atan2(Math.sin(c.yaw-r.lastYaw),Math.cos(c.yaw-r.lastYaw));r.lastYaw=c.yaw;
@@ -114,7 +122,7 @@ export class RemotePlayers{
   const board=w.glide?w.glide.update(dt,{gliding:riding,speed:r.speed,rise:r.rise,turnRate:r.turnRate}):0;
   // On the grapple line (grapple.js): it reels out from their paw to where it bit, and back in when they let go.
   const hook=t.hook&&!t.rest&&!t.ball?(r.hookAt??=new T.Vector3()).fromArray(t.hook):null;if(hook&&!r.line)r.line=createGrappleLine(this.scene);
-  w.update(dt,{speed:r.rest?0:belt?RUN_ON_BELT:r.speed,grounded:t.grounded,stance:t.ball?'stand':t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
+  w.update(dt,{unseen,speed:r.rest?0:belt?RUN_ON_BELT:r.speed,grounded:t.grounded,stance:t.ball?'stand':t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
    emote:floating?null:t.emote,rest:floating?{kind:'float',weight:1,seatHeight:w.hipHeight}:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c)}:null,catnip:!!this.catnip?.(c),swimming:!t.rest&&!!this.swimming?.(c),board,hook});
   r.line?.update(dt,w.hand(this.v2??=new T.Vector3()),hook);
   // A captain's hat is ~200k triangles: past HAT_M it is a few pixels, and not drawn.
