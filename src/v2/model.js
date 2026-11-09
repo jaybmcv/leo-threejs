@@ -29,12 +29,12 @@ function loungeVoidMasks(y,depth=.24){const r=layout.rooms.find(r=>r.id==='obser
 // finish. Each [x,y,z,colour,lit] colours the faces facing that way, and lit (if given) shades them as if they faced that
 // way instead: the atrium's hemisphere light gives a face looking down its dark ground colour, and the faces looking aft
 // at the atrium are in the sun's shade, so white fascias and light undersides would still read tan and brown.
-const TOWER_SLAB_FACES=[[0,-1,0,0xbcd8e6,[0,1,0]],...[[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].map(v=>[...v,0xffffff,[0,1,0]])];
+const TOWER_SLAB_FACES=[[0,-1,0,0xa6d1ea,[0,1,0]],...[[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].map(v=>[...v,0xffffff,[0,1,0]])];
 // A warm line of light under both long edges of each bridge above Deck 6, only where it crosses the open atrium (further
 // out it lies over the deck's own slab), and along each landing's aft edge and its short returns to the bridges, so the
 // line runs unbroken across the tower. 20 cm wide, hanging 8 cm below the slab, so it still reads from the atrium floor.
 // Lit like the lift lobbies' ceiling lights (transit.js), so the tower copy draws the two together. Visual only.
-const towerBridgeLight=new T.MeshStandardMaterial({name:'V2_tower_bridge_light',color:0xffe5af,emissive:0xffdf9f,emissiveIntensity:1.5});
+const towerBridgeLight=new T.MeshStandardMaterial({name:'V2_tower_bridge_light',color:0xffe5af,emissive:0xffc66e,emissiveIntensity:1.5});
 function towerBridgeLights(structure){
  const parts=[],across=(p,x)=>{let h=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];if(a[0]!==b[0]&&(a[0]-x)*(b[0]-x)<=0)h=Math.max(h,Math.abs(a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0])));}return h;};
  for(const b of layout.circulation.bridges.filter(b=>b.deck>6)){
