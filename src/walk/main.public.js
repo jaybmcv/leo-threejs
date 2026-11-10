@@ -29,13 +29,19 @@ import {settlePreparedStatic} from '../v2/prepared-static.js';
 import {cullByBox} from '../v2/box-frustum.js';
 // Meshes whose bounding sphere reaches the view but whose box does not are culled too (src/v2/box-frustum.js).
 cullByBox();
-import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass} from '../v2/atrium-visibility.js';
+import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass,enableAtriumProxyFade,setAtriumRoomViews,setAtriumFurnished,atriumStandIns} from '../v2/atrium-visibility.js';
+import {atriumRoomViewJob,atriumCabinSides} from '../v2/atrium-room-views.js';
+// The atrium's room stand-ins: painted with the real cabins' insides once captured (below, atrium-room-views.js), until
+// then dissolving near the eye's height instead of vanishing in one frame (atrium-visibility.js).
+enableAtriumProxyFade();
 import {createAtriumSight} from '../v2/atrium-sight.js';
 import {releaseBatchedSources,releasePhoneGeometry,shrinkPhonePictures} from '../v2/phone-memory.js';
 import {batchFurnishing} from '../v2/furnishing-batches.js';
 import {createFrameReadout} from './frame-readout.js';
+import {deskAntialias,heldRes} from './pixel-switches.js';
 import {mergePhoneFurnishing} from '../v2/phone-furnishing.js';
 import {mergePhoneBands} from '../v2/phone-bands.js';
+import {deskPieceSize,gpuName} from '../v2/desk-piece.js';
 import {createAtriumPvs} from '../v2/atrium-pvs.js';
 import {PVS_LOCAL_SPAN} from '../v2/atrium-pvs-key.js';
 import {warmShaders,uploadTextures,WARM_WAIT_MS} from '../v2/shader-warmup.js';
@@ -43,6 +49,21 @@ import {warmShaders,uploadTextures,WARM_WAIT_MS} from '../v2/shader-warmup.js';
 // baked from (__ATRIUM_PVS_KEY__). Until it arrives, or if it was baked from other geometry, the sight rays answer as before.
 let atriumPvs=null;
 if(typeof __ATRIUM_PVS_URL__!=='undefined'&&__ATRIUM_PVS_URL__)fetch(new URL(__ATRIUM_PVS_URL__,location.href)).then(r=>r.ok?r.json():null).then(data=>{atriumPvs=createAtriumPvs(data,{key:__ATRIUM_PVS_KEY__});}).catch(e=>console.warn('Atrium PVS not used:',e.message));
+import {createOwnerHiding,ownerBakeFile,ownerBakeProblem,ownerKey} from '../v2/owner-hiding.js';
+// Owner hiding (scripts/walk-owner-bake.mjs): drawables proven hidden from the camera's 2 m cell, baked for this exact
+// walk script into walk-owner-bake.<hash>.json beside it (the build writes an empty one), fetched once the first view is
+// up and used around the main camera's draw. ?ownerBake opens the walk as the bake's page instead: geometry arrays are
+// kept and the scene goes to the bake (globalThis.__ownerBakeHost). Not on phones, whose scene is built differently.
+const WALK_SCRIPT=new URL(import.meta.url).pathname.split('/').pop(),OWNER_BAKE_PAGE=new URLSearchParams(location.search).has('ownerBake');
+let ownerHiding=null;
+function startOwnerHiding(){
+ if(preparedPhone)return;const key=ownerKey(WALK_SCRIPT,(phoneBatching.merge?'merge':'batch')+deskPiece);
+ if(OWNER_BAKE_PAGE){globalThis.__ownerBakeHost={T,scene,renderer,camera,key,follow,goTo:place=>goTo(place)};return;}
+ const file=ownerBakeFile(WALK_SCRIPT);if(!file)return;
+ fetch(new URL(file,import.meta.url)).then(r=>r.ok?r.json():null).then(data=>{const hiding=createOwnerHiding(data,{key,scene});hiding?.resolve();ownerHiding=hiding;
+  // A real bake the walk will not use (another key, format or grid): say why. The build's empty file stays quiet.
+  if(!hiding&&data?.blocks?.length)console.info('Owner hiding not used:',ownerBakeProblem(data,key));}).catch(e=>console.warn('Owner hiding not used:',e.message));
+}
 import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns,preparedPhone} from '../v2/prepared-runtime.public.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
 import {gotoStand as v2GotoStand,yarnPlace} from '../v2/wayfinding.js';
@@ -78,7 +99,7 @@ import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
 const cabinPlacements=preparedPlacements;
 import {Colliders,BODY} from './collision.js';
 import {STATIC_LIFT_PARTS,LIFTS,shutLandingDoors} from './lifts.js';
-import {KEEL,RIVER,createTubeMesh,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock} from './keel-club.public.js';
+import {KEEL,RIVER,createTubeMesh,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock,inKeelHall,keelPlan,KEEL_PLAN_EXTENT} from './keel-club.public.js';
 import {Controller,GLIDE,HOOK} from './controller.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
@@ -93,7 +114,7 @@ import {createFogCull,FOG_CULL_LAYER} from './fog-cull.js';
 import {partitionMesh} from './partitions.js';
 import walkPlan from 'walk-partitions';
 import {railingMesh} from '../v2/railings.js';
-import {ShipMap,drawMiniMap,drawFullMap,deckOf} from './minimap.public.js';
+import {ShipMap,drawMiniMap,drawFullMap,deckOf,arrow as mapArrow} from './minimap.public.js';
 const DECKS=preparedDecks;
 import {floorY} from '../transit.js';
 import {createLifts} from './lift-ride.public.js';
@@ -105,6 +126,7 @@ import {createStarDrift} from './star-drift.js';
 import {createAmbience} from './ambience.js';
 import {createLullaby} from './lullaby.js';
 import {createLoungeSound} from './lounge-sound.js';
+import {createKeelSound} from './keel-club-sound.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.public.js';
 import {corridorTrim} from './trim.public.js';
 import {connectLive,savedName,httpBase} from './net/live.js';
@@ -139,7 +161,8 @@ import {createInvasion} from './invasion/game.js';
 import {createEmergencyDrill} from './emergency-drill/game.js';
 import {drillStation} from './emergency-drill/station.js';
 import layout from '../plan/selected-layout.js';
-import {installCornerShade} from './corner-shade.js';
+import {installCornerShade,cornerShadeLeavesAlone} from './corner-shade.js';
+import {shareEquivalentMaterials} from './share-materials.js';
 let emergencyDrill=null;const emergencyStation=drillStation(layout);
 import {createPawPool} from './pool/game.js';
 import {createPinball} from './pinball/game.js';
@@ -172,11 +195,11 @@ import {createHubPanel} from './hub-panel.js';
 const $=id=>document.getElementById(id);
 // Building the walk takes about 2 GB at its largest, more than a phone with 4 GB or less can give one tab. walk.html
 // asks such phones first, and any browser whose last start never finished (its tab was closed under it), before this
-// script loads. The note is set from here until the walk is ready, and cleared on leaving the page, so only a start
-// that was cut off leaves it behind.
+// script loads. The note is set from here until the walk is ready, so only a start that was cut off leaves it behind:
+// walk.html clears it when the page is left in good order (from before this script loads) or the start fails for
+// another reason than memory.
 const STARTING='leo-walk-building';
 try{localStorage.setItem(STARTING,String(Date.now()));}catch{}
-addEventListener('pagehide',()=>{try{localStorage.removeItem(STARTING);}catch{}});
 // From the first moment, so the Builder's Hub knows a walk is on its way and doesn't start a second one.
 const hubLink=listenForHub();
 const timings=[],t0=performance.now();
@@ -231,17 +254,24 @@ const hazeHeld=deskDetail&&linearDepth;
 const PHONE_HIDE={bands:o=>/^V2_low_deck_merged_/.test(o.name)&&!o.material[0]?.transparent,glass:o=>[o.material].flat().some(m=>m?.transparent),
  furnish:o=>o.isInstancedMesh&&o.userData.phase4||o.userData.phase4Batch,gardens:o=>[o.material].flat().some(m=>m?.name==='P6_atrium_gardens'),haze:o=>/haze/i.test(o.name),cats:o=>o.isSkinnedMesh};
 const phoneHide=(phoneTest.get('phonehide')||'').split(',').map(k=>PHONE_HIDE[k]).filter(Boolean);let phoneHidden=[],phoneHiddenAt=-Infinity;
-// Multisampling is chosen with the context: the Detail menu's Performance drops it from the next load.
-const renderer=new T.WebGLRenderer({antialias:!(phone&&phoneTest.get('phoneaa')==='0')&&!(deskDetail&&!DETAIL[getAtriumQuality()].antialias),logarithmicDepthBuffer:!linearDepth,powerPreference:'high-performance'});
+// Multisampling is chosen with the context: the Detail menu's Performance drops it from the next load. On a desktop
+// ?deskaa=0 or ?deskaa=1 forces either (pixel-switches.js), as ?deskdepth= does the depth buffer.
+const antialiasByDetail=!(phone&&phoneTest.get('phoneaa')==='0')&&!(deskDetail&&!DETAIL[getAtriumQuality()].antialias);
+const renderer=new T.WebGLRenderer({antialias:phone?antialiasByDetail:deskAntialias(phoneTest,antialiasByDetail),logarithmicDepthBuffer:!linearDepth,powerPreference:'high-performance'});
+// A desktop's bigger merged bands draw in view-culled pieces of at most this many triangles (phone-bands.js): smaller
+// on Apple and integrated GPUs, which are short of triangles, larger on discrete cards, which are short of draws
+// (desk-piece.js). ?deskpiece= sets any size, 0 for one draw per material as on a phone.
+const deskPiece=deskPieceSize({query:new URLSearchParams(location.search),phone:preparedPhone,gpu:gpuName(renderer.getContext())});
 // The ship's layers are set apart by height (a floor finish 6 mm over the deck, paint 8 mm): with the logarithmic depth
 // buffer the shaders write the depth, so polygon offset has never applied. With linear depth it would, and pull the hex
 // sub-floor (finish-kit.js) over the Arrival Hall's finish, so it stays off.
 if(linearDepth){const gl=renderer.getContext(),enable=gl.enable.bind(gl);gl.enable=cap=>{if(cap!==gl.POLYGON_OFFSET_FILL)enable(cap);};}
 const frameReadout=createFrameReadout(renderer);
 // Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
-// The Res button steps through them and the choice is remembered for the next visit.
+// The Res button steps through them and the choice is remembered for the next visit. ?res=high, med or low holds a
+// level for this visit in the saved one's place (pixel-switches.js): nothing is saved, and it never steps down.
 const RES=['High','Med','Low'],RES_SCALE=[1,.75,.5],RES_KEY='leo-walk-resolution',maxRatio=Math.min(devicePixelRatio,phone?1.25:1.75);
-const savedRes=(()=>{try{return localStorage.getItem(RES_KEY);}catch{return null;}})();
+const savedRes=heldRes(phoneTest,RES)??(()=>{try{return localStorage.getItem(RES_KEY);}catch{return null;}})();
 let res=Math.max(0,RES.indexOf(savedRes)),resChosen=savedRes!==null,resFrames=[],resFrom=0;
 const setRes=i=>{res=i;renderer.setPixelRatio(maxRatio*RES_SCALE[res]);$('resolution').textContent=`Res ${RES[res]}`;};
 // Until the visitor picks a resolution, four seconds under 20 frames a second steps it down a level, for this visit only
@@ -259,8 +289,9 @@ renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
 // Lift door shutter blades are clipped to their doorway as they open (lift-ride.js).
 renderer.localClippingEnabled=true;
 $('viewport').appendChild(renderer.domElement);
-// A phone short of graphics memory drops the WebGL context: bring the card back with a reason, not a frozen view.
-renderer.domElement.addEventListener('webglcontextlost',()=>{document.body.dataset.ready='0';$('loading-text').textContent='The view stopped: this device ran short of graphics memory. Reload to walk again.';});
+// A phone short of graphics memory drops the WebGL context: bring the card back with a reason, not a frozen view. The
+// card then shows that line and Reload alone (walk.html, LEO_WALK_FAILED), not the notes of a start still under way.
+renderer.domElement.addEventListener('webglcontextlost',()=>{document.body.dataset.ready='0';const line='The view stopped: this device ran short of graphics memory. Reload to walk again.';if(window.LEO_WALK_FAILED)window.LEO_WALK_FAILED(line);else $('loading-text').textContent=line;});
 const scene=new T.Scene();scene.environmentIntensity=.65;
 // Space through the windows: stars and Mars in their own pass behind the ship, so the ship's far plane can stay short.
 const sky=new T.Scene();sky.background=new T.Color(0x05080d);const skyCamera=new T.PerspectiveCamera(60,1,10,5000);
@@ -312,7 +343,9 @@ async function buildShip(){
  recovery=createRecoveryMood(ship,{hemi,fill,scene});arrivalMood=createArrivalMood(ship,{hemi,fill,scene});atriumMood=createAtriumMood({hemi,fill,scene});
  }});
  ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,catTree,nosePark,keelClub,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
- loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;
+ // Phones keep the Keel Club's look but not its fill-rate extras (keel-club.js lite()).
+ if(preparedPhone)keelClub?.lite?.();
+ loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;keelSound=keelClub?createKeelSound():null;
  const {pipework,trolley,wardTrolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;atmosphere=prepared.atmosphere;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;
@@ -445,19 +478,29 @@ async function buildShip(){
   const key=o.parent.uuid+'|'+(o.userData.cabinIds||[o.uuid]).join(',');if(sharedNear.has(key)){o.userData.near=sharedNear.get(key);continue;}const all=Array.from({length:o.count},(_,i)=>{const m=new T.Matrix4();o.getMatrixAt(i,m);return m;});
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};sharedNear.set(key,o.userData.near);
  }
+ // The atrium's room stand-ins paint what a real cabin looks like inside, captured once the lighting is final, one view
+ // a frame just before the frame draws (atrium-room-views.js, atrium-visibility.js). Phones keep the plain stand-ins.
+ if(!preparedPhone)environmentReady.then(()=>{const placements=cabinPlacements();roomViewJob=atriumRoomViewJob(renderer,scene,instanced,placements,{hide:atriumStandIns()});roomViewJob.sides=atriumCabinSides(placements);});
  // The wayfinding signs draw from one texture array (sign-array.js).
  // Parts wholly beyond the indoor fog draw no longer (fog-cull.js); ?fogcull=0 draws them, to compare.
  // Not with the atrium detail pack, whose source checks include the layers the cull changes.
  if(!atriumPack&&new URLSearchParams(location.search).get('fogcull')!=='0')fogCull=createFogCull(scene,camera);
  wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);
- isolateStaticWorld(ship,scene);{const hidden=preparedPhone||phoneBatching.merge?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
+ isolateStaticWorld(ship,scene);{const hidden=(preparedPhone||phoneBatching.merge)&&!OWNER_BAKE_PAGE?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
+ // The groups holding only those instanced meshes once the live draws have their final parents (V2_live_source_draws: a
+ // deck's cabin shells, a cabin template's fittings), and groups of only such groups, innermost first: cull() hides each
+ // while nothing in it shows, so three's scene walk and matrix pass skip it.
+ {const held=new Set(instanced);for(let pass=0;pass<4;pass++){const add=[...new Set([...held].map(o=>o.parent))].filter(g=>g&&!held.has(g)&&!g.isScene&&g!==ship.liveDraws&&!/^Walk_band_/.test(g.name)&&g.children.every(c=>held.has(c)));if(!add.length)break;for(const g of add){held.add(g);instancedGroups.push(g);}}}
+ // The cabins' parts on every deck draw with one object per look of material (share-materials.js), so equal draws sort
+ // together and three refreshes each look once. Corner shading still treats every part as before. Not on phones.
+ if(!preparedPhone){const alone=cornerShadeLeavesAlone(scene);shareEquivalentMaterials(scene,{member:o=>o.userData.v2Cabins&&!o.userData.proxySpans,split:o=>alone.has(o.material)?'alone':''});}
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
 let imagingScans=null,missionTimer=null;
-let atriumMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,keelClub=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
+let atriumMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,keelClub=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,keelSound=null,mct=null;
 let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null,atmosphere=null;
-const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
+const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[],instancedGroups=[];
 // Lifeboat fittings (2,000 seats a deck with their headrests and harnesses, seen only through a hatch or from inside a
 // craft) draw only near the walker: drawn whole, they were most of the triangles in any view on the lower decks.
 const NEAR_CABINS=40,BOAT_REACH=45,nearFrom=new T.Vector3(1e9,0,0);
@@ -503,9 +546,10 @@ function cull(p,now=performance.now()){
  camera.updateMatrixWorld(true);
  cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);phoneBands?.update();wayfindingSigns?.update();
  if(phoneHide.length){if(now-phoneHiddenAt>5000){phoneHiddenAt=now;phoneHidden=[];scene.traverse(o=>{if(o.isMesh&&phoneHide.some(f=>f(o)))phoneHidden.push(o);});}for(const o of phoneHidden)o.visible=false;}let shown=false;
- for(const o of instanced){const [a,b]=o.userData.span,v=o.userData.cabins?a<p.y+3.5&&b>p.y-.5:a<high&&b>low;if(v&&!o.visible)shown=true;o.visible=v;}
+ let flipped=false;for(const o of instanced){const [a,b]=o.userData.span,v=o.userData.cabins?a<p.y+3.5&&b>p.y-.5:a<high&&b>low;if(v!==o.visible){flipped=true;if(v)shown=true;}o.visible=v;}
+ for(const g of instancedGroups)g.visible=g.children.some(c=>c.visible);
  // Re-rank after 3 m of walking, or at once when another deck's cabins come into view.
- if(!shown&&nearFrom.distanceToSquared(p)<9)return;nearFrom.copy(p);
+ if(!shown&&nearFrom.distanceToSquared(p)<9){if(flipped)noteFurnished();return;}nearFrom.copy(p);
  // Every part of a cabin shares its instance index, so one ranking per deck serves all of that deck's parts.
  const ranks=new Map();
  for(const o of instanced){const near=o.userData.near;if(!near||!o.visible)continue;
@@ -513,7 +557,10 @@ function cull(p,now=performance.now()){
   let order=ranks.get(o.parent);if(!order)ranks.set(o.parent,order=near.centres.map((c,i)=>[c.distanceToSquared(p),i]).sort((a,b)=>a[0]-b[0]).slice(0,NEAR_CABINS).map(e=>e[1]));
   order.forEach((i,k)=>o.setMatrixAt(k,near.all[i]));o.userData.currentCabinIds=order.map(i=>o.userData.cabinIds[i]);o.count=order.length;o.instanceMatrix.needsUpdate=true;o.computeBoundingSphere();
  }
+ noteFurnished();
 }
+// The atrium's room stand-ins show their cabin without furniture while its real furniture draws (atrium-visibility.js).
+function noteFurnished(){const ids=new Set();for(const o of instanced)if(o.visible&&o.userData.near&&!o.userData.boat&&o.userData.currentCabinIds)for(const id of o.userData.currentCabinIds)ids.add(id);setAtriumFurnished(ids);}
 
 const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),lockHint:$('camera-lock-hint'),onAction:(a,arg)=>actions[a]?.(arg)});
 const follow=new FollowCamera(camera,colliders);
@@ -720,7 +767,7 @@ async function connectToClaim(){
 const giveaway=createGiveaway({$,live:()=>live,connect:connectToClaim});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08}});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion,{mergeDraws:true}),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08}});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -784,7 +831,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get landingDoors(){return shutLandingDoors();},get fogCull(){return fogCull;},get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={get ownerHiding(){return ownerHiding;},registry,get landingDoors(){return shutLandingDoors();},get fogCull(){return fogCull;},get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -796,15 +843,34 @@ if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperties(g
 const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
 // (A phone's small mini-map, html.phone-hud from walk.html, keeps up to 3× its pixels, so its names stay sharp.)
 function sizeCanvas(c){const r=Math.min(devicePixelRatio||1,c===mini&&document.documentElement.classList.contains('phone-hud')?3:2),w=Math.round(c.clientWidth*r),h=Math.round(c.clientHeight*r);if(w&&h&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}}
-function miniMap(p){sizeCanvas(mini);const d=drawMiniMap(mini,shipMap,{x:p.x,y:p.y,z:p.z,yaw:follow.yaw,places:PLACES});$('minimap-deck').textContent=d?`Deck ${d.number}`:p.y>100?'Crown lounge':'Fin';}
+// In the Keel Club (below Deck 1, keel-club.js) the maps show the club's own plan; map 0 is the club.
+const inClub=p=>!!keelClub&&inKeelHall(p);
+// Go-to places in the club show on the club's map, not on Deck 1's.
+const clubPlace=p=>inClub({x:p.at[0],y:p.at[1],z:p.at[2]}),shipPlaces=()=>keelClub?PLACES.filter(p=>!clubPlace(p)):PLACES;
+function clubMini(p){const g=mini.getContext('2d'),w=mini.width,h=mini.height,dpr=w/(mini.clientWidth||w),turn=-Math.PI/2-Math.atan2(Math.cos(follow.yaw),Math.sin(follow.yaw));
+ g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.save();g.translate(w/2,h/2);g.rotate(turn);g.scale(3.2*dpr,3.2*dpr);g.translate(-p.x,-p.z);keelPlan(g,{px:1/(3.2*dpr)});g.restore();
+ g.save();g.translate(w/2,h/2);mapArrow(g,7*dpr,1.5*dpr);g.restore();}
+function clubFull(c,p){const g=c.getContext('2d'),w=c.width,h=c.height,dpr=w/(c.clientWidth||w),e=KEEL_PLAN_EXTENT,pad=6,scale=Math.min(w/(e.x1-e.x0+2*pad),h/(e.z1-e.z0+2*pad)),cx=(e.x0+e.x1)/2,cz=(e.z0+e.z1)/2,shown=[];
+ g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.save();g.translate(w/2,h/2);g.scale(scale,scale);g.translate(-(e.x0+e.x1)/2,-(e.z0+e.z1)/2);keelPlan(g,{px:dpr/scale,labels:true});g.restore();
+ // the club's Go-to places, marked and named as on the ship's maps; a click takes you there
+ g.textAlign='center';g.textBaseline='middle';
+ for(const pl of PLACES){if(!clubPlace(pl))continue;const px=w/2+(pl.at[0]-cx)*scale,pz=h/2+(pl.at[2]-cz)*scale;
+  g.fillStyle='#2fd6c5';g.strokeStyle='#050507';g.lineWidth=2*dpr;g.beginPath();g.arc(px,pz,6*dpr,0,Math.PI*2);g.fill();g.stroke();
+  g.font=`500 ${11*dpr}px "JetBrains Mono",monospace`;g.fillStyle='#f4f0e8';g.strokeStyle='rgba(5,5,7,.9)';g.lineWidth=3*dpr;g.strokeText(pl.name,px,pz-14*dpr);g.fillText(pl.name,px,pz-14*dpr);
+  shown.push({place:pl,x:px/dpr,y:pz/dpr});}
+ if(inClub(p)){g.save();g.translate(w/2+(p.x-cx)*scale,h/2+(p.z-cz)*scale);g.rotate(Math.atan2(Math.cos(heading),Math.sin(heading))+Math.PI/2);mapArrow(g,9*dpr,2*dpr);g.restore();}
+ return shown;}
+function miniMap(p){sizeCanvas(mini);if(inClub(p)){clubMini(p);$('minimap-deck').textContent='Keel Club';return;}const d=drawMiniMap(mini,shipMap,{x:p.x,y:p.y,z:p.z,yaw:follow.yaw,places:shipPlaces()});$('minimap-deck').textContent=d?`Deck ${d.number}`:p.y>100?'Crown lounge':'Fin';}
 function showMap(number){
- mapDeck=T.MathUtils.clamp(number,1,DECKS.length);const c=$('map-canvas');sizeCanvas(c);
- const p=controller.position;mapShown=drawFullMap(c,shipMap,mapDeck,{walker:{x:p.x,y:p.y,z:p.z,yaw:heading},places:PLACES});
+ mapDeck=T.MathUtils.clamp(number,keelClub?0:1,DECKS.length);const c=$('map-canvas');sizeCanvas(c);const p=controller.position;
+ if(mapDeck===0){mapShown=clubFull(c,p);$('map-title').textContent='Keel Club · below Deck 1';$('map-deck').value='0';return;}
+ mapShown=drawFullMap(c,shipMap,mapDeck,{walker:inClub(p)?null:{x:p.x,y:p.y,z:p.z,yaw:heading},places:shipPlaces()});
  $('map-title').textContent=`Deck ${mapDeck} · ${DECKS[mapDeck-1].name}`;$('map-deck').value=String(mapDeck);
 }
 function toggleMap(){
  const panel=$('map-sheet');if(!panel.hidden){closePanels();return;}
- panel.hidden=false;input.enabled=false;showMap(deckOf(controller.position.y)?.number??20);
+ if(keelClub&&!$('map-deck').querySelector('option[value="0"]'))$('map-deck').prepend(new Option('Keel Club','0'));
+ panel.hidden=false;input.enabled=false;showMap(inClub(controller.position)?0:deckOf(controller.position.y)?.number??20);
 }
 {const select=$('map-deck');for(const d of DECKS)select.append(new Option(`Deck ${d.number}`,String(d.number)));select.onchange=()=>showMap(+select.value);
  for(const b of document.querySelectorAll('[data-deck]'))b.addEventListener('click',()=>showMap(mapDeck+Number(b.dataset.deck)));
@@ -814,8 +880,10 @@ function toggleMap(){
  $('minimap-button').addEventListener('click',toggleMap);}
 let last=performance.now(),acc=0,lastHud=0,lastHeading=heading,lastSpeed=0,turnRate=0,accel=0;const STEP=1/120,wish=new T.Vector3();
 const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WALKER.prone};
-// Should anything stop the warm-up starting (it is the last thing this script does), the walk still draws.
-setTimeout(()=>{warmed=true;},3*WARM_WAIT_MS);
+// Should anything stop the warm-up starting (it is the last thing this script does), the walk still draws. From here
+// on an error in the rest of this script is therefore not a failed start, which the page is told (walk.html,
+// LEO_WALK_FAILED): before this line nothing can make the walk ready, so an error there is one.
+setTimeout(()=>{warmed=true;},3*WARM_WAIT_MS);window.LEO_WALK_ARMED=true;
 renderer.setAnimationLoop(()=>{
  // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
  if(hubPanel.isOpen()&&firstViewReady)return;
@@ -889,7 +957,9 @@ renderer.setAnimationLoop(()=>{
  const board=glide.update(dt,{gliding:controller.gliding&&!resting&&!run,speed:controller.speed,rise:controller.velocity.y,turnRate});follow.ride=board;
  if(inBall){ball.mesh.position.copy(p);if(controller.grounded)ball.roll(dt,controller.velocity.x,controller.velocity.z);}
  tubeMesh.visible=!!resting?.spot.tube;if(tubeMesh.visible){const s=tubeSeat(resting.spot.tube);tubeMesh.position.set(s.x,KEEL.floor-RIVER.drop+.08,s.z);}
- walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
+ // In first person Cosmo is hidden (below), so his rig solves less often while he was hidden last frame and no selfie is
+ // counting down (the booth draws him). Switching back to third person it solves every frame again, before he shows.
+ walker.update(dt,{unseen:follow.mode==='first'&&!walker.holder.visible&&!booth?.counting,speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
   turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!!lounge?.inside(walker.holder.position),swimming:!!treasure?.active,board,hook:controller.hook&&!resting&&!run?controller.hook:null});
  grapple.update(dt);
  live?.pose(myPose(riding),now);
@@ -901,7 +971,7 @@ renderer.setAnimationLoop(()=>{
  walker.holder.visible=follow.mode!=='first'&&follow.current>.75&&!graffiti?.active;
  capsuleView(!!resting?.stand&&resting.t===1&&follow.mode==='first');
  cull(p);
- remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
+ remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1],photo:!!booth?.counting,height:renderer.domElement.height},now);
  // Carts others drive go where their drivers sit; ours is where we drove it.
  mct.update(dt,remotes,walker.hipHeight);
  // The lounge's doors open, and the cold room's strip curtain parts, for anyone near them.
@@ -919,7 +989,7 @@ renderer.setAnimationLoop(()=>{
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on,camera);
  loungeFalls?.update(dt,p);
- loungeSound?.update(p,ambience.on,camera);
+ loungeSound?.update(p,ambience.on,camera);keelSound?.update(p,ambience.on,camera,keelClub?.surfClock?.());
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
  missionTimer?.update(dt,p);
@@ -938,15 +1008,18 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){if(deskDetail)closeHaze(scene.fog,getAtriumQuality());keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});if(hazeHeld)closeHaze(scene.fog,'performance');fogCull?.guard();draw(camera);fogCull?.update(performance.now());if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){if(deskDetail)closeHaze(scene.fog,getAtriumQuality());keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});if(hazeHeld)closeHaze(scene.fog,'performance');fogCull?.guard();draw(camera);fogCull?.update(performance.now());if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';startOwnerHiding();hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
  const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
  if(shot.due)takePhoto();
 });
 // One frame of the ship from `view`: the sky, the haze past the far plane, then the ship.
+// The atrium room views being captured (set once the environment is ready); var, as that may be before this line runs.
+var roomViewJob;
 function draw(view){
+ if(roomViewJob){try{const views=roomViewJob.step();if(views){const job=roomViewJob;roomViewJob=null;if(setAtriumRoomViews(views,job.sides))nearFrom.set(1e9,0,0);}}catch(e){roomViewJob=null;console.warn('Atrium room views skipped.',e);}}
  view.updateMatrixWorld(true);atriumGeometry?.update(view,renderer.domElement.height);
  for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
- renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,view);frameReadout.frame(performance.now());
+ renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();if(ownerHiding&&view===camera)ownerHiding.around(view,()=>renderer.render(scene,view));else renderer.render(scene,view);frameReadout.frame(performance.now());
 }
 // The selfie booth's photo: drawn from its lens and copied off the canvas at once (the drawing buffer is not kept past
 // this frame), then the walker's own view drawn back over it.
@@ -1198,7 +1271,8 @@ const arcade=createInvasion({
  scores:{
   request(){if(live?.live)live.board();else arcade.setBoard({status:'offline'});},
   start(){if(live?.live)live.play();},
-  submit(score,wave){if(live?.live)live.score(score,wave);else arcade.setResult({ok:false,why:'offline'});},
+  // The link holds a score it cannot send yet (net/live.js heldFinishes) and says when it never went.
+  submit(score,wave){const lost=()=>arcade.setResult({ok:false,why:'offline'});if(live)live.score(score,wave,lost);else lost();},
  },
 });
 // Paw Pool at the Recreation Hall's table (pool/game.js), the same way: its fastest clears are Leo live's second board.
@@ -1209,7 +1283,7 @@ const pool=createPawPool({
  scores:{
   request(){if(live?.live)live.board('pool');else pool.setBoard({status:'offline'});},
   start(){if(live?.live)live.play('pool');},
-  submit(ms,shots){if(live?.live)live.cleared(ms,shots);else pool.setResult({ok:false,why:'offline'});},
+  submit(ms,shots){const lost=()=>pool.setResult({ok:false,why:'offline'});if(live)live.cleared(ms,shots,lost);else lost();},
  },
 });
 // The Container Maze (maze/run.js): its clock, its best times on Leo live, and a way back to its start.

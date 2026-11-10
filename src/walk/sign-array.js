@@ -44,6 +44,7 @@ export function mergeWayfindingSigns(bands,{maxLayers=256}={}){
   m.onBeforeCompile=shader=>{shader.uniforms.signArray={value:array};
    shader.vertexShader='attribute float signLayer;\nvarying float vSignLayer;\n'+shader.vertexShader.replace('#include <uv_vertex>','#include <uv_vertex>\n\tvSignLayer=signLayer;');
    shader.fragmentShader='uniform highp sampler2DArray signArray;\nvarying float vSignLayer;\n'+shader.fragmentShader.replace('#include <map_fragment>','diffuseColor*=texture(signArray,vec3(vMapUv,vSignLayer));');};
+  m.onBeforeCompile.keepsGeometry=true;// a varying and a texture lookup only (src/v2/shader-hooks.js)
   m.customProgramCacheKey=()=>'v2-wayfinding-array';return m;};
  const root=new T.Group();root.name='V2_wayfinding_array';root.userData={noCollide:true,renderOnly:true};root.matrixAutoUpdate=false;
  const merges=[],proof={signs:entries.length,layers:index.size,arrays:chunks,meshes:0,size:[w,h]};
@@ -54,7 +55,8 @@ export function mergeWayfindingSigns(bands,{maxLayers=256}={}){
    const g=compactRenderGeometry(e.o.geometry);g.applyMatrix4(e.o.matrixWorld);
    g.setAttribute('signLayer',new T.BufferAttribute(new Float32Array(g.attributes.position.count).fill(i%maxLayers),1));
    const count=g.index.count,last=runs.at(-1);if(last&&last.band===e.band)last.count+=count;else runs.push({band:e.band,start:io,count});io+=count;parts.push(g);
-   e.o.visible=false;
+   // A placement group holding only this sign then draws nothing: hide it too, so three's scene walk skips it.
+   e.o.visible=false;if(e.o.parent!==e.band&&e.o.parent?.children.length===1)e.o.parent.visible=false;
   }
   if(!parts.length)continue;
   const geometry=mergeGeometries(parts);parts.forEach(g=>g.dispose());if(!geometry)continue;

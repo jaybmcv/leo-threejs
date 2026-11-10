@@ -2,13 +2,16 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as T from 'three';
 import {TRANSIT_CORES} from '../src/plan/v1.js';
-import {createKeelClub,KEEL,CORES,DECK1,STOREY,STAIRS,RIVER,BRIDGES,BRIDGE_SPANS,FALLS,CANNONS,riverOuter,riverInner,half,RIVER_PATH,riverFrame,riverNearest,TUBE,TUBE_RANGE,DOCKS,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock,bridgeUnderside} from '../src/walk/keel-club.js';
+import {createKeelClub,KEEL,CORES,DECK1,STOREY,STAIRS,RIVER,BRIDGES,BRIDGE_SPANS,FALLS,CANNONS,riverOuter,riverInner,riverBank,riverBed,half,RIVER_PATH,riverFrame,riverNearest,TUBE,TUBE_RANGE,DOCKS,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock,bridgeUnderside,SLIDE_TOWER} from '../src/walk/keel-club.js';
 import {LIFTS,KEEL_STOP,carTriangles} from '../src/walk/lifts.js';
 import {BODY,Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {groundMesh} from '../src/v2/ground.js';
 import {findRestSpots,solidSpots} from '../src/walk/rest.js';
 import {encodeRecord,encodeIdentity,assembleFrame,WireReader} from '../src/walk/net/wire.js';
+import {parseExterior} from './exterior-io-v2.mjs';
+import {createSkinAuthority} from './clearance-authority-v2.mjs';
+import {auditSkinClearance} from '../src/plan/skin-clearance-v2.js';
 
 // The Keel Club, the sports hall under Deck 1 (createKeelClub in src/walk/keel-club.js), walked with the rules of
 // scripts/v2-walk.mjs: from every core lift's Keel Club stop, every zone and both terraces reached, no step off an edge
@@ -32,6 +35,19 @@ for(const c of CORES)assert(deck1.slab.holes.some(h=>h.id===`${c.id}_stairs_1`),
 // Budget (Jay, 2026-11-07): 4M triangles and 400 draws on desktop for the whole Keel Club.
 let tris=0,draws=0;club.group.traverse(o=>{if(o.isMesh&&o.material.visible!==false){draws++;tris+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);}});
 console.log(`Keel Club: ${draws} draws, ${Math.round(tris).toLocaleString()} triangles`);assert(tris<=4e6,'over 4M triangles');assert(draws<=400,'over 400 draws');
+
+// Inside the finished web skin, by the full nightly's own rule (check-skin-clearance-v2.mjs, which fast deploys skip; it
+// found the river bed and the lagoon's deep end through the hull's bottom on 2026-11-09): every visible club mesh,
+// each vertex and long face no more than 5 cm outside, and none in a room window, against the same authority, the
+// finished web skin of the last full build in output/leo-interior-v02.
+{const skin=new URL('../output/leo-interior-v02/leo-exterior-web.glb',import.meta.url);
+ assert(fs.existsSync(skin),'output/leo-interior-v02/leo-exterior-web.glb is missing: the skin check needs the finished web skin of a full build');
+ const authority=createSkinAuthority(await parseExterior(fs.readFileSync(skin)));
+ for(const root of [club.group,club.deck1]){const r=auditSkinClearance(root,authority,layout,{tag:root.name});
+  for(const o of r.outside)console.log(`FAIL ${o.mesh} outside the finished web skin: ${o.samples} samples, up to ${o.maxDistance.toFixed(3)} m at ${o.point.map(v=>v.toFixed(2)).join(',')}`);
+  for(const b of r.blocked.slice(0,5))console.log(`FAIL ${b.mesh} in room window ${b.interface}`);
+  assert.equal(r.status,'PASS',`${root.name}: outside the finished web skin or in a room window (check-skin-clearance-v2.mjs)`);
+  console.log(`PASS ${root.name} inside the finished web skin (${r.meshes} meshes, ${r.vertices.toLocaleString()} vertices, ${r.faceSamples.toLocaleString()} face samples)`);}}
 
 // Walk surfaces face up.
 club.solid.updateMatrixWorld(true);
@@ -102,18 +118,20 @@ assert.equal(far.length,0,'seats out of reach');assert(spots.length>=100,'seats 
  assert.equal(dry,0,'a cannon jet lands out of the river');assert.equal(prompts,crowns.length,'a bridge crown without a cannon prompt');assert(most>30&&splashed>0&&drop.count+ring.count===0,'cannon jet');}
 
 // ---- Floating the Keel Loop ----
-// Every place a tube can be (the loop, at every offset it may steer to) is water under the tube's whole ring, and a
-// seated rider (a column RIDER_R round the seat, RIDER_TOP above it) clears every bridge's underside by CLEAR.
-{const {aft:ra,bow:rb,width:W}=RIVER,WY=FY-RIVER.drop,RIDER_R=.4,RIDER_TOP=1.2,CLEAR=.2;
- const inWater=(x,z)=>x>=ra&&x<=rb&&Math.abs(z)<=riverOuter(x)&&!(x>ra+W&&x<rb-W&&Math.abs(z)<riverInner(x));
- let dry=0,low=0,worst=Infinity,samples=0;
+// Every place a tube can be (the loop, at every offset it may steer to) is water under the tube's whole ring, the tube's
+// underside (its lowest ring, KEEL_R round it, DRAFT under the water) is over the river's bed, and a seated rider (a
+// column RIDER_R round the seat, RIDER_TOP above it) clears every bridge's underside by CLEAR.
+{const {aft:ra,bow:rb,width:W}=RIVER,WY=FY-RIVER.drop,RIDER_R=.4,RIDER_TOP=1.2,CLEAR=.2,KEEL_R=.55,DRAFT=.16;
+ const inWater=(x,z)=>x>=ra&&x<=rb&&Math.abs(z)<=riverBank(x)&&!(x>ra+W&&x<rb-W&&Math.abs(z)<riverInner(x));
+ let dry=0,aground=0,low=0,worst=Infinity,samples=0;
  for(let s=0;s<RIVER_PATH.total;s+=.5){const f=riverFrame(s);for(let d=f.lo;d<=f.hi+1e-9;d+=Math.max(.05,(f.hi-f.lo)/12)){const seat=tubeSeat({s,d});samples++;
   for(let a=0;a<8;a++){const x=seat.x+Math.cos(a*Math.PI/4)*TUBE.radius,z=seat.z+Math.sin(a*Math.PI/4)*TUBE.radius;if(!inWater(x,z)){dry++;if(dry<6)console.log('  tube ring out of the water at',x.toFixed(1),z.toFixed(1),'s',s.toFixed(1),'d',d.toFixed(2));}}
+  for(let a=0;a<16;a++){const x=seat.x+Math.cos(a*Math.PI/8)*KEEL_R,z=seat.z+Math.sin(a*Math.PI/8)*KEEL_R;if(riverBed(x,z)>=WY-DRAFT){aground++;if(aground<6)console.log('  tube underside on the bed at',x.toFixed(1),z.toFixed(1),'s',s.toFixed(1),'d',d.toFixed(2));}}
   for(let a=-1;a<8;a++){const x=a<0?seat.x:seat.x+Math.cos(a*Math.PI/4)*RIDER_R,z=a<0?seat.z:seat.z+Math.sin(a*Math.PI/4)*RIDER_R,u=bridgeUnderside(x,z);if(u===Infinity)continue;
    const gap=u-(seat.y+RIDER_TOP);worst=Math.min(worst,gap);if(gap<CLEAR){low++;if(low<6)console.log('  rider under a bridge with',gap.toFixed(2),'m at',x.toFixed(1),z.toFixed(1));}}}}
  let narrow=Infinity;for(let s=0;s<RIVER_PATH.total;s+=.5){const f=riverFrame(s);narrow=Math.min(narrow,f.hi-f.lo);}console.log(`narrowest steering range ${narrow.toFixed(2)} m (full ${(2*TUBE_RANGE).toFixed(1)} m)`);assert(narrow>=1.5,'a corner pinches the tube');
- console.log(`${dry||low?'FAIL':'PASS'} tube range: ${samples.toLocaleString()} places on the ${RIVER_PATH.total.toFixed(0)} m loop, ring in the water everywhere (${dry} out), least headroom under a bridge ${worst.toFixed(2)} m (needs ${CLEAR})`);
- assert.equal(dry,0,'a tube can leave the water');assert.equal(low,0,'a rider hits a bridge');
+ console.log(`${dry||aground||low?'FAIL':'PASS'} tube range: ${samples.toLocaleString()} places on the ${RIVER_PATH.total.toFixed(0)} m loop, ring in the water everywhere (${dry} out), underside over the bed (${aground} aground), least headroom under a bridge ${worst.toFixed(2)} m (needs ${CLEAR})`);
+ assert.equal(dry,0,'a tube can leave the water');assert.equal(aground,0,'a tube can steer onto the bed');assert.equal(low,0,'a rider hits a bridge');
  // The current carries a tube all the way round, and braking never stops it.
  const st=tubeBoard(DOCKS[0]),s0=st.s;let gone=0;for(let i=0;i<60*120;i++){const before=st.s;tubeStep(st,1/60,{x:-riverFrame(st.s).tx*5,z:-riverFrame(st.s).tz*5});gone+=((st.s-before)%RIVER_PATH.total+RIVER_PATH.total)%RIVER_PATH.total;}
  console.log(`PASS braking against the current still drifts ${(gone/120).toFixed(2)} m/s downstream`);assert(gone/120>.2&&gone/120<.4,'brake speed');
@@ -142,10 +160,21 @@ const f=CORES[0],sx=f.stairX,sz=f.stairZ;ctl.position.set(sx-3.5,DECK1+.3,sz);ct
 const down=[];for(let k=0;k<3;k++)down.push([sx-2.8,sz+1.4],[sx+2.8,sz+1.4],[sx+3.5,sz],[sx+2.8,sz-1.4],[sx-2.8,sz-1.4],[sx-3.5,sz]);
 // over the forward port bridge (x 120) to the promenade, along it past the stair's rail and up the stair at x 124
 const x0=STAIRS[2],bx=BRIDGES.side.find(x=>x<x0&&x>x0-8),rz=riverInner(bx),oz=riverOuter(bx);
-const route=[...down,[sx-3.5,sz-4],[135,0],[127.5,0],[126,-12],[bx,-(rz-3)],[bx,-(rz-1)],[bx,-(oz+1)],[bx,-(oz+3.6)],[x0-.6,-(oz+3.6)],[x0-.6,-(front(x0)-1.5)],[x0+7,-(front(x0)-1.5)],[x0+7,-(front(x0+7)+2)]];let walked=true;
+// Out of the lifts and through the gap between the walk's planters (x 124 to 126.5 at z -3.4), not across one.
+const route=[...down,[sx-3.5,sz-4],[135,0],[127.5,0],[125.25,-1],[125.25,-12],[bx,-(rz-3)],[bx,-(rz-1)],[bx,-(oz+1)],[bx,-(oz+3.6)],[x0-.6,-(oz+3.6)],[x0-.6,-(front(x0)-1.5)],[x0+7,-(front(x0)-1.5)],[x0+7,-(front(x0+7)+2)]];let walked=true;
 for(const [x,z] of route){if(!go(x,z)){walked=false;console.log('FAIL controller stuck going to',x,z,'at',ctl.position.toArray().map(v=>v.toFixed(2)).join(','));break;}}
 console.log(`${walked?'PASS':'FAIL'} controller walks Deck 1 → down the forward stair → between the lifts → over a bridge → up the port terrace stair, ends at y ${ctl.position.y.toFixed(2)}`);
 assert(walked&&Math.abs(ctl.position.y-TY)<.15,'controller route');
+// The slide towers are climbable (round 8): both platforms are in the flood, and the controller climbs the port tower's
+// spiral stair from the terrace to its platform and comes back down.
+{const T0=SLIDE_TOWER,top=TY+T0.height;
+ for(const s of [-1,1]){const x=T0.x+2.4*Math.cos(1.2),z=s*T0.z+2.4*Math.sin(1.2),ok=reached(x,top,z);console.log(`${ok?'PASS':'FAIL'} ${s<0?'port':'starboard'} slide tower platform (${x.toFixed(1)}, ${top.toFixed(2)}, ${z.toFixed(1)})`);assert(ok,'slide tower platform');}
+ const zc=-T0.z,dt=Math.PI*2/T0.steps,at=(t,r)=>[T0.x+Math.cos(t)*r,zc+Math.sin(t)*r],up=[];for(let k=0;k<T0.steps;k++)up.push(at((k+.5)*dt,2.05));
+ const w=-(half(95,FY)+2.8),door=at(Math.PI/8,3.6),climb=[[95,w],[95,zc],door,...up,at(.9,2.3)];let ok=true;
+ const walk=(list,what)=>{for(const [x,z] of list)if(!go(x,z)){console.log('FAIL controller stuck '+what+' to',x.toFixed(2),z.toFixed(2),'at',ctl.position.toArray().map(v=>v.toFixed(2)).join(','));return false;}return true;};
+ ok=walk(climb,'climbing');const atTop=ctl.position.y;if(ok)ok=walk([...up.slice().reverse(),door,[95,zc],[95,w]],'coming down');
+ console.log(`${ok?'PASS':'FAIL'} controller climbs the port slide tower to its platform (y ${atTop.toFixed(2)}) and back down to the terrace (y ${ctl.position.y.toFixed(2)})`);
+ assert(ok&&Math.abs(atTop-top)<.15&&Math.abs(ctl.position.y-TY)<.15,'slide tower climb');}
 // A floater's pose crosses the wire as rest 'tube' (3), alongside someone sitting, and the frame still decodes.
 {const base={yaw:0,grounded:false,stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:false,ball:false,glide:false,hook:null,fur:0},r=new WireReader();
  const got=r.read(assembleFrame([encodeIdentity(1,'voyager-a'),encodeIdentity(2,'voyager-b')],[encodeRecord(1,{...base,pos:[-89,-52.05,-43],rest:'tube'}),encodeRecord(2,{...base,pos:[0,-51.5,0],rest:'sit'})]));

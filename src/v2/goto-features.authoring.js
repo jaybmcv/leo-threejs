@@ -32,6 +32,11 @@ export function featurePlaces(layout,{crownFloor=LIFTS.find(l=>l.id==='crown').s
  const blossom=room('commons-10').components.pieces.find(p=>p.name==='blossom garden assembly');add('blossom','Blossom garden',17,[blossom.center[0]-5.5,blossom.center[1],blossom.center[2]],Math.PI/2,'commons-10');
  local('hamster-ball','Hamster ball','commons-10',[5.4,0,-7.3],0);
  add('graffiti','Graffiti wall',19,[-129.5,layout.decks[18].y,0],-Math.PI/2);
+ // The Keel Club, the sports hall in the hull below Deck 1 (src/walk/keel-club.js), listed with Deck 1. Floors from
+ // KEEL.floor (-51.5) and KEEL.terrace (-47.5): the arrival plaza by the aft lifts, the lagoon's port promenade and the
+ // cabana terrace, each facing into the hall.
+ for(const [id,name,at,yaw] of [['keel-club','Keel Club',[-140,-51.5,-20],Math.PI/2],['keel-club-lagoon','Keel Club wave lagoon',[50,-51.5,-34],0],['keel-club-cabanas','Keel Club cabana terrace',[46,-47.5,-56],Math.PI/4]])
+  out.push({id,name,deck:1,section:'Highlights',detail:'Below Deck 1 · Sports hall',at,yaw,lv:2,resolved:true});
  for(const [i,stop]of LIFTS.find(l=>l.id==='crown').stops.slice(0,-1).entries())add(i?'fin-platform-'+i:'fin-service-gallery',i?stop.label:'Fin lift service gallery',null,[-242.8,stop.y,0],-Math.PI/2,undefined,i?'Inspection platform':'Deck 17 · upper aft gallery');
  add('crown-lounge','Crown lounge',null,[-240,crownFloor,4],Math.PI/2);
  add('selfie-camera','Group photo camera',null,[-264.3,crownFloor,.8],-Math.PI/2);

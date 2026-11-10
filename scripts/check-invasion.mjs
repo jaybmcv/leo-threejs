@@ -1,9 +1,19 @@
 // Alien Cat Invasion's rules (src/walk/invasion/rules.js), played headless: the march and its speed-up, scoring, the
 // extra life, shields, deaths, waves, a landing, a bot playing whole games, and the same seed playing the same game.
 import {newGame,step,alive,alienBox,STEP,PLAYER,SHIELDS,POINTS,EXTRA_AT,LIVES,GROUND} from '../src/walk/invasion/rules.js';
+import {overlayPage} from './overlay-page.mjs';
 
 const problems=[],log=(...a)=>console.log(...a);
 const expect=(ok,what)=>{if(!ok)problems.push(what);log(ok?'ok  ':'FAIL',what);};
+// The pages' part of a score (walk/main*.js, all four): it goes to the link even while the link is down, since the link
+// holds a finish while it reconnects (net/live.js heldFinishes); the game hears 'offline' only when the link says it
+// never went.
+for(const {page,found,submit} of (await import('./page-submit.mjs')).pageSubmits('score,wave','arcade')){
+ const calls=[],told=found?submit({live:false,score:(...a)=>calls.push(a)},1200,4):[];
+ expect(calls.length===1&&calls[0][0]===1200&&calls[0][1]===4&&!told.length,`${page}: a score with the link down is handed to the link to hold, and nothing is said yet`);
+ calls[0]?.[2]?.();expect(told.length===1&&told[0].ok===false&&told[0].why==='offline',`${page}: when the link says it never went, the game says offline`);
+ expect(found&&submit(null,1200,4)[0]?.why==='offline',`${page}: with no link at all, offline is said at once`);
+}
 const run=(g,seconds,input={})=>{for(let i=0;i<Math.round(seconds/STEP);i++)step(g,input);};
 
 {const g=newGame(1);expect(alive(g).length===55&&g.lives===LIVES&&g.wave===1&&g.score===0,'a new game: 55 cats, three lives, wave 1');}
@@ -73,5 +83,27 @@ expect(JSON.stringify(play(21))===JSON.stringify(play(21)),'the same seed plays 
 
 // The best rate any bot scored at, for the server's sanity cap (points per second of play).
 const rate=Math.max(...games.map(r=>r.score/(r.steps*STEP)));log('     best bot rate',rate.toFixed(1),'points/s');
+// The game itself on a stand-in page (invasion/game.js): a score Leo live never answers must not say SAVING for good.
+{const page=overlayPage();try{
+ const {createInvasion}=await import('../src/walk/invasion/game.js');
+ const sent=[];let answer=null;const g=createInvasion({scores:{request(){},start(){},submit(score,wave){sent.push([score,wave]);if(answer)g.setResult(answer);}}});
+ // A game played to its end: the frame loop sees it over and sends the score.
+ const over=score=>{g._begin();Object.assign(g.state.game,{phase:'over',score});return page.frame();};
+ const waits=()=>page.timers.filter(t=>!t.cancelled);
+ g.open();let wrote=over(120);
+ expect(sent.length===1&&sent[0][0]===120&&g.state.screen==='over'&&wrote.includes('SAVING…'),'game over sends the score and says SAVING while it waits');
+ expect(waits().length===1&&waits()[0].ms===6000,'it waits six seconds for Leo live to answer');
+ waits()[0]?.f();wrote=page.frame();
+ expect(g.state.result?.ok===false&&g.state.result.why==='unavailable'&&wrote.includes('THE BOARD DID NOT ANSWER')&&!wrote.includes('SAVING…'),'no answer in six seconds: it says the board did not answer, and stops saying SAVING');
+ g.setResult({ok:true,best:120,rank:4,newBest:true});wrote=page.frame();
+ expect(wrote.some(s=>s.startsWith('NEW BEST')),'an answer that comes late is still shown');
+ over(80);const wait=page.timers.at(-1);g.setResult({ok:true,best:120,rank:4,newBest:false});
+ expect(wait.cancelled&&g.state.result.ok,'an answer in time ends the wait');
+ over(90);const stale=page.timers.at(-1);over(60);
+ expect(stale.cancelled&&waits().length===1,'a new game drops the last game\'s wait');waits()[0].cancelled=true;
+ answer={ok:false,why:'offline'};const n=page.timers.length;wrote=over(70);
+ expect(page.timers.length===n&&wrote.includes('OFFLINE: SCORE NOT SAVED'),'offline is said at once, with nothing to wait for');
+}finally{page.restore();}}
+
 console.log(problems.length?`FAIL: ${problems.length} problem(s)`:'PASS');
 process.exitCode=problems.length?1:0;

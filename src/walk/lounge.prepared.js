@@ -160,7 +160,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
 // so nothing more goes over Leo live.
 export function inLounge(frame){
  const {ROOM}=LOUNGE,inverse=frame.clone().invert(),at=new T.Vector3();
- // Feet stand on the floor, so the room reaches a little below it.
- const box=new T.Box3(new T.Vector3(ROOM.x0,LOUNGE.FLOOR-.3,ROOM.z0),new T.Vector3(ROOM.x1,LOUNGE.CEILING,ROOM.z1));
+ // Feet stand on the floor, but a body on a low cushion sits its hip height under the seat, so the room reaches a metre below it.
+ const box=new T.Box3(new T.Vector3(ROOM.x0,LOUNGE.FLOOR-1,ROOM.z0),new T.Vector3(ROOM.x1,LOUNGE.CEILING,ROOM.z1));
  return p=>box.containsPoint(at.copy(p).applyMatrix4(inverse));
 }

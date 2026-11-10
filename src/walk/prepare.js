@@ -4,6 +4,7 @@ import {finishLaunchBGeometry} from '../v2/launch-b-geometry.js';
 import layout from '../plan/selected-layout.js';
 import {prepareClubhouseAccess} from '../v2/clubhouse-access.js';
 import {prepareV2LoungeFalls} from '../v2/lounge-falls-fit.js';
+import {patchDepth} from '../v2/patch-sampler.js';
 import {findRestSpots,solidSpots} from '../v2/rest.js';
 import {createLounge} from './lounge.js';
 import {createConcession} from './concession.js';
@@ -80,7 +81,7 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  dressImaging(ship);
  // Deck 1's aft spares room gains the freight gate's logistics console and its chair (freight-gate.js), solid and sittable.
  dressFreightGate(ship);
- resolveRoomFrames(ship.root);finishLaunchBGeometry(ship,layout);prepareV2LoungeFalls(ship,()=>createLoungeFalls(ship));
+ resolveRoomFrames(ship.root);finishLaunchBGeometry(ship,layout);prepareV2LoungeFalls(ship,()=>createLoungeFalls(ship),patchDepth);
  prepareVaultLift(ship);
  const accessLift=createVaultLift({addMover(){return{place(){}}}});prepareClubhouseAccess(ship,accessLift);
  const colliders=buildColliders(ship,{extra:[ship.exterior],filter:o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name),...(into?{into}:{})});

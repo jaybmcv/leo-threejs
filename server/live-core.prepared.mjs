@@ -25,6 +25,7 @@
 //   LEO_LIVE_TV_CLEAR=...             the file that, once created, takes the TV's video down (default ../leo-live-tv-clear;
 //                                     node scripts/tv-clear.mjs)
 //   LEO_LIVE_TV_MAX_MB=40, LEO_LIVE_TV_MAX_S=120   the largest and longest video the TV takes
+//   LEO_LIVE_RUN_KEEP_S=90            how long a game run is kept for a visitor whose link dropped (0 keeps none)
 //
 // Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
 // server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
@@ -253,19 +254,50 @@ async function hello(v,msg){
  const id=await actorIdOf(typeof msg.key==='string'?msg.key:'');
  if(!id){v.ws.close(4001,'no key');return;}
  const who=msg.pass?await verifyPass(msg.pass,PASS).catch(()=>null):glyphVisitor(msg.glyph)||(msg.otherside===true?typedVisitor(id,msg.name):null);
+ // A pass not taken: 'bad' when it was checked and failed, 'unchecked' when Creamery's keys could not be had (it has
+ // not answered since this server started, or not for a key this server has not seen). The page forgets a bad pass
+ // and keeps one that was only unchecked (net/live.js), so a restart while Creamery is away costs nobody their login.
+ const pass=msg.pass&&!who?(PASS.key.down()?'unchecked':'bad'):null;
  // One body per visitor: the same browser in a second tab, or the same Discord account elsewhere, takes over.
  for(const o of visitors)if(o!==v&&(o.id===id||(who&&o.discord?.discordId===who.discordId))){send(o.ws,{m:'replaced'});o.ws.close(4002,'replaced');leave(o);}
  if([...visitors].filter(o=>o.ready).length>=MAX){send(v.ws,{m:'full'});v.ws.close(4003,'full');return;}
  v.slot=takeSlot();if(!v.slot){v.ws.close(4003,'full');return;}
  // A tester (the page holds a tester invite) wears the captain's hat. Taken on the page's word: it is a hat.
  Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);
- send(v.ws,{m:'welcome',...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{}),id,aboard:aboard(),you:{name:v.name,verified:!!who,typed:!!who?.typed},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state(),panel:panel.state()});
- countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`${who.glyph?'':'discord:'}${who.discordId}${who.lapsed?' (remembered)':''}`:msg.pass?'(pass refused)':'');
+ send(v.ws,{m:'welcome',...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{}),id,aboard:aboard(),you:{name:v.name,verified:!!who,typed:!!who?.typed,...(pass?{pass}:{})},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state(),panel:panel.state()});
+ countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`${who.glyph?'':'discord:'}${who.discordId}${who.lapsed?' (remembered)':''}`:pass==='unchecked'?'(pass not checked: no keys from Creamery)':pass?'(pass refused)':'');
  if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
+ // A run this visitor had open when their last connection dropped is theirs again (keepRuns).
+ returnRuns(v);
+}
+// A run that outlives a dropped link. A visitor who leaves with a run open (Paw Pool, Alien Cat Invasion, the Container
+// Maze) has it kept under their id for RUN_KEEP_MS; when that browser (its key gives the id) says hello again as the
+// same account, the run is theirs again. Its start time is never touched, so the server's clock ran through the gap,
+// and the finish is judged as ever: where they stand comes from a pose on the new connection. A second tab of the same
+// browser inherits the run as well: the server cannot tell it from a link that dropped before its old socket closed.
+// An aquarium treasure swim is not kept: the server follows it pose by pose (aquarium-treasure.mjs) and cannot vouch
+// for a stretch it did not see.
+const RUN_KEEP_MS=Number(process.env.LEO_LIVE_RUN_KEEP_S||90)*1000,KEPT_MOST=1000,kept=new Map();
+const accountOf=v=>v.discord?.discordId||null;
+function keepRuns(v){
+ if(!v.ready)return;
+ const pool=v.games.pool,invasion=v.games.invasion,run=maze.take(v),now=Date.now();
+ if(!pool&&!invasion&&!run)return;
+ for(const [id,k] of kept)if(k.until<=now)kept.delete(id);
+ kept.delete(v.id);if(kept.size>=KEPT_MOST)kept.delete(kept.keys().next().value);
+ kept.set(v.id,{pool,invasion,maze:run,account:accountOf(v),until:now+RUN_KEEP_MS});
+ log('run kept',v.id,[pool&&'pool',invasion&&'invasion',run&&'maze'].filter(Boolean).join(' '));
+}
+function returnRuns(v){
+ const k=kept.get(v.id);if(!k||k.account!==accountOf(v))return;
+ kept.delete(v.id);if(k.until<=Date.now())return;
+ if(k.pool)v.games.pool=k.pool;if(k.invasion)v.games.invasion=k.invasion;if(k.maze)maze.give(v,k.maze);
+ log('run back',v.id);
 }
 function leave(v){
  if(!visitors.delete(v))return;
  if(v.slot)slots.delete(v.slot);
+ keepRuns(v);
  graffiti.leave(v);
  gym.left(v);
  mct.left(v);
