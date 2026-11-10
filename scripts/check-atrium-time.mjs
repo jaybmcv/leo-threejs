@@ -54,7 +54,9 @@ function atrium(){
  };
  const glow=new T.MeshBasicMaterial({name:'P6_atrium_glow',color:0xffe3b8}),lights=new T.InstancedMesh(new T.CircleGeometry(.16,10),glow,3);
  for(let i=0;i<3;i++)lights.setMatrixAt(i,new T.Matrix4().makeTranslation(i*3.6,10,0));lights.name='P6_atrium_downlights';scene.add(lights);
- return {scene,hemi,fill,mats,lights,day};
+ const stems=new T.InstancedMesh(new T.CylinderGeometry(.05,.05,.72),new T.MeshStandardMaterial({name:'P4_reflection_brass'}),2);
+ for(let i=0;i<2;i++)stems.setMatrixAt(i,new T.Matrix4().makeTranslation(6+i*8,-19.32,-5.8));stems.name='P4_p6_reflection_lamp_stem';scene.add(stems);
+ return {scene,hemi,fill,mats,lights,stems,day};
 }
 const run=(mood,frames=200)=>{for(let i=0;i<frames;i++)mood.update(1/30);};
 const IN={x:0,y:-18.1,z:0},OUT={x:0,y:-50,z:0};
@@ -72,12 +74,15 @@ const px=a.mats.sky.map.image.getContext('2d').getImageData(32,4,1,1).data;asser
 pass('at night the sky panel shows the dusk made from its own day picture');
 assert(a.mats.glass.emissive.r>.5&&a.mats.glass.opacity>.23);assert(a.mats.lamp.emissiveIntensity>1.5);assert(a.mats.soffit.emissiveIntensity>.38);
 assert(a.hemi.intensity<1&&a.hemi.color.r>a.hemi.color.b);assert(a.scene.fog.color.r>a.scene.fog.color.b&&a.scene.fog.color.g<fogBase.g);
-assert.equal(a.mats.water.color.getHex(),0x6fa3b8);assert(Math.abs(a.mats.glass.emissiveIntensity-1.5)<1e-6);assert.equal(a.lights.material.opacity,1);
+assert.equal(a.mats.water.color.getHex(),0x405e74);assert(Math.abs(a.mats.glass.emissiveIntensity-2)<1e-6);assert.equal(a.lights.material.opacity,1);
 pass('night lights the glass, lamps and soffits and dims and warms the atrium light');
 assert.equal(a.lights.material.name,'P6_atrium_downlight_pool');assert.equal(a.lights.count,3);assert.equal(a.lights.material.blending,T.AdditiveBlending);
 const e=new T.Matrix4();a.lights.getMatrixAt(1,e);const s=new T.Vector3(),p=new T.Vector3();e.decompose(p,new T.Quaternion(),s);
 assert(Math.abs(p.x-3.6)<1e-6);assert(s.x>3&&Math.abs(s.y-1)<1e-9);
 pass('the downlights keep their one instanced draw and gain warm pools');
+const lampPools=a.stems.getObjectByName('P6_atrium_lamp_pools');assert(lampPools?.isInstancedMesh&&lampPools.visible);assert.equal(lampPools.count,2);
+assert.equal(lampPools.material.blending,T.AdditiveBlending);lampPools.getMatrixAt(1,e);assert(Math.abs(e.elements[12]-14)<1e-6&&Math.abs(e.elements[13]-(-19.32-.38+.02))<1e-6);
+pass('at night the promenade lamps throw warm pools on the floor, one instanced draw');
 setAtriumView(OUT);assert.equal(inOpenAtrium(),false);run(mood,1);
 assert.equal(a.mats.glass.emissive.getHex(),glassBase.getHex());assert.equal(a.mats.glass.opacity,.23);assert.equal(a.mats.glass.emissiveIntensity,1);
 assert.equal(a.hemi.intensity,1);assert.equal(a.hemi.color.getHex(),0xeef4ff);assert.equal(a.fill.color.getHex(),0xf2f6ff);assert.equal(a.scene.fog.color.getHex(),fogBase.getHex());
@@ -87,6 +92,6 @@ clock.setTimeChoice('day',{persist:false});
 setAtriumView(IN);run(mood,400);
 assert.equal(mood.night,0);assert.equal(a.mats.sky.map.image,a.day);assert.equal(a.mats.glass.emissive.getHex(),glassBase.getHex());
 assert.equal(a.mats.soffit.emissiveIntensity,.55);assert.equal(a.mats.lamp.emissiveIntensity,.65);assert(a.hemi.intensity>1);
-assert.equal(a.mats.water.color.getHex(),0x2b9ea6);assert.equal(a.lights.material.opacity,.5);
+assert.equal(a.mats.water.color.getHex(),0x2b9ea6);assert.equal(a.lights.material.opacity,.5);assert.equal(lampPools.visible,false);
 pass('switching to Day eases back to the day sky and daylight');
 console.log(checks+' checks passed');

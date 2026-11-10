@@ -16,6 +16,14 @@ export function paintDuskSky(c,day){
  g.globalCompositeOperation='source-over';g.globalAlpha=.7;g.fillRect(0,0,W,H);g.globalAlpha=1;return c;
 }
 
+// The warm pool a promenade lamp throws on the floor at night, seen from above: brightest at the lamp's foot, fading
+// softly to nothing at the rim. Drawn additively.
+export function paintLampPool(c){
+ const S=64;c.width=S;c.height=S;const g=c.getContext('2d'),r=g.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);
+ for(const[at,col]of[[0,'rgba(255,214,150,.9)'],[.35,'rgba(255,190,120,.45)'],[.7,'rgba(255,170,100,.12)'],[1,'rgba(255,160,90,0)']])r.addColorStop(at,col);
+ g.clearRect(0,0,S,S);g.fillStyle=r;g.fillRect(0,0,S,S);return c;
+}
+
 // A downlight seen from below, with the warm pool it throws on the soffit round it: a bright core (the lamp, about the
 // size of the old disc once the instance is scaled) fading softly to nothing at the rim. Drawn additively.
 export function paintDownlightPool(c){

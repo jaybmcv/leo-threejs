@@ -2,7 +2,7 @@ import * as T from 'three';
 import {inOpenAtrium} from '../v2/atrium-visibility.js';
 import {walkCanvas} from './canvas.js';
 import {nightTarget,subscribeTime} from './ship-time.js';
-import {paintDuskSky,paintDownlightPool} from './atrium-light-paint.js';
+import {paintDuskSky,paintDownlightPool,paintLampPool} from './atrium-light-paint.js';
 
 // 4B: the atrium's own warm golden light. The ship-wide base stays the cool 2B light; while the walker is in the open
 // atrium (the Deck 6 floor or a balcony facing it, as atrium-visibility.js classifies it) the shared lights ease to a
@@ -14,11 +14,16 @@ import {paintDuskSky,paintDownlightPool} from './atrium-light-paint.js';
 // Tuned side by side with the concepts on a GPU render that matches the live site (three r187, its baked environment
 // light on): golden undersides by day; at night a pink-lavender dusk light, rooms glowing amber behind the balcony glass.
 const DAY={hemi:1.35,fill:1.13,env:.55,sky:0xffcf9c,ground:0xc8a070,fillColour:0xffe0c0,fog:0xf2dcc4};
-const NIGHT={hemi:.8,fill:.55,env:.4,sky:0xe8c8d4,ground:0xd8a888,fillColour:0xe0b8c8,fog:0xc8a8b0,glass:0xffa04a,glassOpacity:1.74,glassIntensity:1.5};
+// Night is a dusk interior: the daylight drops well below day so the building's own light carries the scene (amber
+// rooms, downlights, lamp pools on the floor), and the undersides fall off between the downlights.
+const NIGHT={hemi:.5,fill:.25,env:.25,sky:0xcaa8c4,ground:0xb08870,fillColour:0xd0a8c0,fog:0x8a7080,glass:0xffa04a,glassOpacity:1.96,glassIntensity:2};
 // What only the atrium shows follows the time of day wherever the walker is. Day, then night.
-const WATER=[new T.Color(0x2b9ea6),new T.Color(0x6fa3b8)],RETURNS_NIGHT=new T.Color(0xffc27a),POOLS=[.5,1];
-const SOFFIT=[{emissive:new T.Color(0xffd090),intensity:.55},{emissive:new T.Color(0xffd8a8),intensity:.95}];
+const WATER=[new T.Color(0x2b9ea6),new T.Color(0x405e74)],RETURNS_NIGHT=new T.Color(0xffb35a),POOLS=[.5,1];
+const SOFFIT=[{emissive:new T.Color(0xffd090),intensity:.55},{emissive:new T.Color(0xffc890),intensity:.55}];
 const LAMP_NIGHT=4;
+// Warm pools of lamplight on the floor round the promenade lamps at night, LAMP_POOL m across. The lamp stems stand
+// with their middle STEM_RISE above the floor (phase6-programme.js, reflection-terraces.js).
+const LAMP_POOL=6,STEM_RISE=.38;
 // Shared with the rest of the ship, so changed only while the walker is in the open atrium.
 const SHARED=new Set(['V2_smart_glass','V2_cabin_view_glass']);
 const OWN=new Set(['P6_lake_water','V2_atrium_soffit','P4_reflection_light','P6_atrium_room_returns']);
@@ -30,13 +35,14 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 // streaks (atrium-gardens.js, P6_atrium_waterfall) scroll down at about 2 m/s while the walker is in the open atrium;
 // its texture is shared by the near and distant copies, so one offset moves them all.
 function finder(scene){
- const found={fall:null,downlights:null,skies:new Set(),materials:new Map()};let tries=0,next=0;
+ const found={fall:null,downlights:null,stems:null,skies:new Set(),materials:new Map()};let tries=0,next=0;
  // A material joins untouched (nothing changes it before it is kept), so what it holds then is its own. Glass and soffit
  // copies without an emissive colour (a Basic stand-in) are left alone.
  const keep=m=>{if((SHARED.has(m.name)||m.name==='V2_atrium_soffit')&&!m.emissive)return;if(!found.materials.has(m))found.materials.set(m,{colour:m.color?.clone(),emissive:m.emissive?.clone(),intensity:m.emissiveIntensity,opacity:m.opacity});};
  return()=>{
   const now=performance.now();if(tries>=15||now<next)return found;next=now+2000;tries++;
   scene.traverse(o=>{if(!o.isMesh)return;if(o.isInstancedMesh&&o.name==='P6_atrium_downlights')found.downlights??=o;
+   if(o.isInstancedMesh&&o.name==='P4_p6_reflection_lamp_stem'&&!o.material?.isMeshBasicMaterial)found.stems??=o;
    for(const m of Array.isArray(o.material)?o.material:[o.material]){if(!m)continue;
     if(m.name==='P6_atrium_waterfall'&&m.map)found.fall??=m.map;
     if(/P6_sky_ceiling$/.test(m.name)&&m.map)found.skies.add(m.map);
@@ -77,8 +83,21 @@ function lightPools(mesh){
  mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();mesh.material=m;return m;
 }
 
-function showOwn(found,n,pools){
+// The promenade lamps' pools of light on the floor: one instanced draw of flat additive discs, a child of the lamps'
+// own instanced stems (so it shows and hides with them), on the floor under each stem. Shown only at night, so by day
+// it costs nothing.
+function lampPools(stems){
+ const c=walkCanvas();if(!c)return null;
+ const map=new T.CanvasTexture(paintLampPool(c));map.colorSpace=T.SRGBColorSpace;
+ const m=new T.MeshBasicMaterial({name:'P6_atrium_lamp_pool',map,transparent:true,depthWrite:false,blending:T.AdditiveBlending,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+ const o=new T.InstancedMesh(new T.PlaneGeometry(LAMP_POOL,LAMP_POOL).rotateX(-Math.PI/2),m,stems.count),at=new T.Matrix4(),p=new T.Vector3();
+ for(let i=0;i<stems.count;i++){stems.getMatrixAt(i,at);p.setFromMatrixPosition(at);o.setMatrixAt(i,at.makeTranslation(p.x,p.y-STEM_RISE+.02,p.z));}
+ o.name='P6_atrium_lamp_pools';o.userData.noCollide=true;o.visible=false;o.computeBoundingSphere();stems.add(o);return o;
+}
+
+function showOwn(found,n,pools,floorPools){
  if(pools)pools.opacity=lerp(POOLS[0],POOLS[1],n);
+ if(floorPools){floorPools.visible=n>.01;floorPools.material.opacity=n;}
  for(const [m,b] of found.materials)switch(m.name){
   case 'P6_lake_water':m.color.lerpColors(WATER[0],WATER[1],n);break;
   case 'V2_atrium_soffit':m.emissive.lerpColors(SOFFIT[0].emissive,SOFFIT[1].emissive,n);m.emissiveIntensity=lerp(SOFFIT[0].intensity,SOFFIT[1].intensity,n);break;
@@ -96,7 +115,7 @@ export function createAtriumMood(light){
  const base={hemi:hemi.intensity,fill:fill.intensity,env:scene.environmentIntensity,sky:hemi.color.clone(),ground:hemi.groundColor.clone(),fillColour:fill.color.clone(),fog:scene.fog?.color.clone()};
  const pair=k=>[new T.Color(DAY[k]),new T.Color(NIGHT[k])],colours={sky:pair('sky'),ground:pair('ground'),fillColour:pair('fillColour'),fog:pair('fog')};
  const keys=Object.keys(colours),now=Object.fromEntries(keys.map(k=>[k,new T.Color()])),glass=new T.Color(NIGHT.glass);
- let mood=0,shown=0,n=nightTarget(),target=n,nextClock=0,pools=null,poolsTried=false,ownAt=-1,ownCount=-1;
+ let mood=0,shown=0,n=nightTarget(),target=n,nextClock=0,pools=null,poolsTried=false,floorPools=null,stemsTried=false,ownAt=-1,ownCount=-1;
  // The clock is read once a second; a choice made in the Graphics detail sheet takes effect at once.
  subscribeTime(()=>{nextClock=0;});
  // The light for t (0 the ship's base, 1 the atrium's own) at the current time of day n.
@@ -116,7 +135,8 @@ export function createAtriumMood(light){
    if(time>=nextClock){target=nightTarget();nextClock=time+1000;}
    n=Math.abs(target-n)<1e-3?target:n+(target-n)*(1-Math.exp(-NIGHT_EASE*step));
    if(found.downlights&&!poolsTried){poolsTried=true;pools=lightPools(found.downlights);ownAt=-1;}
-   if(ownAt!==n||ownCount!==found.materials.size){showOwn(found,n,pools);ownAt=n;ownCount=found.materials.size;}
+   if(found.stems&&!stemsTried){stemsTried=true;floorPools=lampPools(found.stems);ownAt=-1;}
+   if(ownAt!==n||ownCount!==found.materials.size){showOwn(found,n,pools,floorPools);ownAt=n;ownCount=found.materials.size;}
    showSky(found.skies,n);
    if(inOpenAtrium()){mood+=(1-mood)*(1-Math.exp(-3*step));shown=mood;setMood(mood,found);if(found.fall)found.fall.offset.y=(found.fall.offset.y+step*.9)%1;}
    else if(shown){mood=shown=0;setMood(0,found);}
