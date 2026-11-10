@@ -149,6 +149,8 @@ import {createGrapple} from './grapple.js';
 import {ballBounce,ballDismount} from './ball-bounce.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink,remapSpot} from './link.js';
+import {keepSpot,takeSpot} from './last-spot.js';
+import {restrictedAt,publicStand} from './public-area.js';
 import {KITTEN_POSE_NAMES} from './kittens.public.js';
 import {createAtriumKittens} from './arrival-atrium.public.js';
 import {createSurgeryArms} from './surgery.public.js';
@@ -688,10 +690,14 @@ const START={position:new T.Vector3(...toWorld('d02-arrival-1',[-20,0,0])),yaw:a
 const BELOW_SHIP=KEEL.floor-3;
 await Promise.all([loadExterior(),loadCosmo()]).catch(e=>{status(e.message);throw e;});
 await buildShip();
-// A walk link (link.js) starts wherever it was taken; otherwise the arrival hall.
-const spot=remapSpot(readSpot()),stand=spot&&findStand(colliders,spot.at);
+// A walk link (link.js) starts wherever it was taken. Otherwise a visitor back within 10 minutes (a reload, or the page
+// opened again after the link dropped) starts where they last stood (last-spot.js), if that was a public area
+// (public-area.js) and it, or a spot in sight of it, still passes findStand's and Go to's landing checks; otherwise the
+// arrival hall.
+const spot=remapSpot(readSpot()),back=spot?null:takeSpot(),view=spot||back;
+const stand=spot?findStand(colliders,spot.at):back?publicStand(back.at,{colliders,stand:at=>findStand(colliders,at,{radius:0}),check:at=>v2GotoStand(colliders,at)}):null;
 controller.place(stand||findStand(colliders,START.position.toArray())||START.position);
-follow.yaw=stand?spot.yaw:START.yaw;if(stand){follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;}
+follow.yaw=stand?view.yaw:START.yaw;if(stand){follow.pitch=view.pitch;follow.look(0,0);follow.mode=view.view;}
 walker.holder.position.copy(controller.position);
 // Balls of yarn to push about: the arrival hall's, and one in each of six common areas (yarn.js).
 const yarn=createYarn(colliders),yarns=[yarn];
@@ -807,16 +813,34 @@ if(LIVE_URL){
  mct.link({send:msg=>live.mct(msg),id:()=>live.id});
  $('ping').hidden=false;$('help-ping').hidden=false;
 }
+// In a game here: what a pose says (pl).
+function playing(){return arcade.isOpen||pool.isOpen||pinballGame.isOpen||!!emergencyDrill?.isOpen||!$('outside-sheet').hidden||!!run;}
 // The pose others see. Resting, the body is where the bed or seat put it, not where the controller stands.
 // On a treadmill (Paws Off), it is where the run has him: on the belt, or on his back behind it after a fall.
 function myPose(riding=false){
  const h=walker.holder,held=resting||run,at=held?h.position:controller.position;
  return {pos:[at.x,at.y,at.z],yaw:held?h.rotation.y:heading,g:controller.grounded||riding||!!held,st:controller.stance,jc:Math.min(3,controller.jumpCount),
-  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:resting?.stand?'healing_capsule':emote,rest:resting&&!resting.stand?(resting.spot.tube?'tube':resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:arcade.isOpen||pool.isOpen||pinballGame.isOpen||!!emergencyDrill?.isOpen||!$('outside-sheet').hidden||!!run,b:inBall,gl:controller.gliding,hk:controller.hook&&!resting&&!run?controller.hook.toArray():undefined,f:furColour};
+  js:T.MathUtils.clamp(controller.jumpS,-1,60),r:T.MathUtils.clamp(controller.velocity.y,-100,100),e:resting?.stand?'healing_capsule':emote,rest:resting&&!resting.stand?(resting.spot.tube?'tube':resting.lie?'lie':'sit'):run?.tumble>.5?'lie':null,pl:playing(),b:inBall,gl:controller.gliding,hk:controller.hook&&!resting&&!run?controller.hook.toArray():undefined,f:furColour};
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
 if(live)setInterval(()=>{if(document.hidden||performance.now()-last>1000)live.pose(myPose());},1000);
+// Where this visitor stands, kept for a reload within 10 minutes (last-spot.js): on foot in a public area, or the
+// arrival hall once they are somewhere restricted (public-area.js) or in a game. Passing through (a lift, a jump, a
+// seat, the hamster ball) keeps the spot from before. Only a page that has been aboard Leo live, or started from a
+// kept spot, keeps one, so the build's tools and checks, which never are, start where they ask to. A page left before
+// its walk was up puts back the spot it started from, untried.
+let spotKept=!!back;
+function noteSpot(e){
+ if(live?.live)spotKept=true;
+ if(!ready()){if(e?.type==='pagehide'&&back)keepSpot(back,back.t);return;}
+ if(!spotKept)return;
+ const p=controller.position,where=restrictedAt(p);
+ if((where&&where!=='lift')||playing()||pawsOff?.active||maze?.running||treasure?.active){keepSpot(null);return;}
+ if(where||resting||inBall||!controller.grounded||controller.gliding||controller.hook)return;
+ keepSpot({at:[p.x,p.y,p.z],yaw:follow.yaw,pitch:follow.pitch,view:follow.mode});
+}
+setInterval(noteSpot,2000);addEventListener('pagehide',noteSpot);
 function showAboard(){
  const b=$('aboard');b.hidden=!live;if(!live)return;
  // Short labels on a narrow screen, unless they are in a phone's More menu (walk.html), which has room for the long ones.
