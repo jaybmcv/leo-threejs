@@ -133,5 +133,10 @@
       {"part":"interior_wall","size":[9.739,2.8,0.12],"at":[-16.9305,1.4,-9],"mat":"navy"},
       {"part":"interior_wall","size":[0.12,2.8,8],"at":[-12,1.4,-13],"mat":"navy"}
     ]
+  },
+  "observation-lounge": {
+    "add": [
+      {"part":"finish_panel","size":[0.11,2.15,104.4],"at":[0.185,-1.225,0],"mat":"cream"}
+    ]
   }
 }
