@@ -1,0 +1,111 @@
+{
+  "base": "http://127.0.0.1:4182",
+  "build": "2c7381a5 (three 0.187.0)",
+  "rows": [
+    {
+      "id": "hero",
+      "samples": [
+        {
+          "draws": 558,
+          "trisM": 10.78
+        },
+        {
+          "draws": 558,
+          "trisM": 10.78
+        },
+        {
+          "draws": 558,
+          "trisM": 10.78
+        },
+        {
+          "draws": 558,
+          "trisM": 10.78
+        }
+      ]
+    },
+    {
+      "id": "boulevard-aft",
+      "samples": [
+        {
+          "draws": 695,
+          "trisM": 10.84
+        },
+        {
+          "draws": 695,
+          "trisM": 10.84
+        },
+        {
+          "draws": 695,
+          "trisM": 10.84
+        },
+        {
+          "draws": 695,
+          "trisM": 10.84
+        }
+      ]
+    },
+    {
+      "id": "boulevard-cross",
+      "samples": [
+        {
+          "draws": 502,
+          "trisM": 10.73
+        },
+        {
+          "draws": 502,
+          "trisM": 10.73
+        },
+        {
+          "draws": 502,
+          "trisM": 10.73
+        },
+        {
+          "draws": 502,
+          "trisM": 10.73
+        }
+      ]
+    },
+    {
+      "id": "food-wide",
+      "samples": [
+        {
+          "draws": 391,
+          "trisM": 10.54
+        },
+        {
+          "draws": 391,
+          "trisM": 10.54
+        },
+        {
+          "draws": 391,
+          "trisM": 10.54
+        },
+        {
+          "draws": 391,
+          "trisM": 10.54
+        }
+      ]
+    },
+    {
+      "id": "food-deck",
+      "samples": [
+        {
+          "draws": 491,
+          "trisM": 10.69
+        },
+        {
+          "draws": 491,
+          "trisM": 10.69
+        },
+        {
+          "draws": 491,
+          "trisM": 10.69
+        },
+        {
+          "draws": 491,
+          "trisM": 10.69
+        }
+      ]
+    }
+  ]
+}

@@ -34,7 +34,7 @@ export function phase6Programme(layout){
  for(const p of gardenPockets){
   const room=p.z<0&&p.x>0?'atrium6-lake':p.z<0?'atrium6-park':'atrium6-food';
   for(const dx of[-3.5,0])tree(room,p.x+dx,p.z-1.1,p.canopyHeight);
-  for(const dx of[-4.5,-1.5,1.5,4.5])for(const dz of[-3.1,3.1]){if(p.x>0&&p.z<0&&dz<0&&Math.abs(dx)<3)continue;add(room,'garden_planter',[2.4,.32,1.1],[p.x+dx,y+.16,p.z+dz],'cream');add(room,'recovery_planting',[2.1,.85,1],[p.x+dx,y+.74,p.z+dz],'green',{round:true,noCollide:true});}
+  for(const dx of[-4.5,-1.5,1.5,4.5])for(const dz of[-3.1,3.1]){if(p.x>0&&p.z<0&&dz<0&&Math.abs(dx)<3)continue;add(room,'garden_planter',[2.4,.32,1.1],[p.x+dx,y+.16,p.z+dz],'stone');add(room,'recovery_planting',[2.1,.85,1],[p.x+dx,y+.74,p.z+dz],'green',{round:true,noCollide:true});}
   for(const dz of[-1.5,1.5])bench(room,p.x+3.8,p.z+dz,-Math.PI/2);
  }
  // Retain a looser park grove between the garden pockets and the boulevard.
@@ -42,7 +42,7 @@ export function phase6Programme(layout){
  // 4B pass 2: the boulevard avenue. Collidable planters (their planting becomes faceted beds below) either side of a
  // collidable trunk, whose canopy atrium-gardens.js draws.
  for(const t of ATRIUM_BOULEVARD_TREES){const room=t.z<0?'atrium6-park':t.x<62?'atrium6-food':'atrium6-stage';tree(room,t.x,t.z,t.canopyHeight);
-  for(const dx of[-1.2,1.2]){add(room,'garden_planter',[2.4,.42,1.1],[t.x+dx,y+.21,t.z],'cream');add(room,'recovery_planting',[2.1,.85,1],[t.x+dx,y+.845,t.z],'green',{round:true,noCollide:true});}}
+  for(const dx of[-1.2,1.2]){add(room,'garden_planter',[2.4,.42,1.1],[t.x+dx,y+.21,t.z],'stone');add(room,'recovery_planting',[2.1,.85,1],[t.x+dx,y+.845,t.z],'green',{round:true,noCollide:true});}}
  sign('atrium6-park','VOYAGER GARDENS',-84,-8.8,6);for(const x of[-86,-82])add('atrium6-park','p6_sign_post',[.08,2.8,.08],[x,y+1.4,-8.8],'metal');
  // Existing table design, redistributed into courts. 8 m table pitch gives
  // over 4 m clear between occupied seats; 4 m aisles flank every stall row.
@@ -70,7 +70,7 @@ export function phase6Programme(layout){
  {const b=ATRIUM_LAKE_BRIDGE,[x0,x1,z0,z1]=b.bounds;add('atrium6-lake','p6_lake_bridge',[x1-x0,b.rise,z1-z0],[(x0+x1)/2,y+b.rise/2,(z0+z1)/2],'oak');}
  for(const z of[-53,-45,-37,-29,-21,-13])add('atrium6-lake','p6_bridge_pier',[2.2,.16,.4],[60,y-.08,z],'metal');
  for(const x of[11,21,53,69,93,105,115])for(const z of[-52,-9])if(fits(x,z,2.4,1.8)&&!(x===11&&z===-52)){ // Keep the dry garden approach open.
-const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,.42,1.1],[x,bed+.21,z],'cream');for(const dx of[-.75,0,.75])add('atrium6-lake','recovery_planting',[.6,.85,.6],[x+dx,bed+.845,z],'green',{round:true,noCollide:true});}
+const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,.42,1.1],[x,bed+.21,z],'stone');for(const dx of[-.75,0,.75])add('atrium6-lake','recovery_planting',[.6,.85,.6],[x+dx,bed+.845,z],'green',{round:true,noCollide:true});}
  // Reeds follow the notched lake edge, with gaps at the crossing and dry garden.
  for(let x=22;x<118;x+=6){if(Math.abs(x-60)<4)continue;const edge=lake.filter(q=>Math.abs(q[0]-x)<.26&&q[1]<-10).reduce((z,q)=>Math.max(z,q[1]),-56);for(const z of[edge+1.25,-8.2])if(fits(x,z,2.4,1.1)){
  add('atrium6-lake','recovery_planting',[2.1,.85,1],[x,y+.35,z],'green',{round:true,noCollide:true});}}

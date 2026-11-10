@@ -46,11 +46,54 @@ export function paintDaylightSky(c){
 }
 
 // A tree's dappled shade (RGBA, for a transparent decal under its canopy): warm dark shadow, densest under the crown
-// and fading to nothing at the rim, with irregular sun flecks cut out of it.
+// and fading to nothing at the rim, with irregular sun flecks cut out of it. Two variants side by side: the left half
+// under a tree's crown, the right half lighter and more broken, for the open boulevard between the trees.
+export const SHADE_HALVES={tree:0,dapple:.5};
 export function paintTreeShade(c,seed=1){
- const S=256;c.width=S;c.height=S;const g=c.getContext('2d'),rnd=seeded(seed);g.clearRect(0,0,S,S);
- const r=g.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);r.addColorStop(0,'rgba(58,44,26,1)');r.addColorStop(.6,'rgba(58,44,26,.85)');r.addColorStop(1,'rgba(58,44,26,0)');
- g.fillStyle=r;g.fillRect(0,0,S,S);g.globalCompositeOperation='destination-out';
- for(let i=0;i<34;i++){const cx=rnd()*S,cy=rnd()*S,n=2+(rnd()*5|0);for(let k=0;k<n;k++)puff(g,cx+(rnd()-.5)*24,cy+(rnd()-.5)*24,3+rnd()*8,3+rnd()*6,rnd()*3,.7+rnd()*.3);}
- g.globalCompositeOperation='source-over';return c;
+ const S=256;c.width=S*2;c.height=S;const g=c.getContext('2d'),rnd=seeded(seed);g.clearRect(0,0,S*2,S);
+ for(const[ox,core,flecks]of[[0,1,34],[S,.9,110]]){
+  g.save();g.beginPath();g.rect(ox,0,S,S);g.clip();
+  const r=g.createRadialGradient(ox+S/2,S/2,0,ox+S/2,S/2,S/2);r.addColorStop(0,`rgba(58,44,26,${core})`);r.addColorStop(.6,`rgba(58,44,26,${core*.85})`);r.addColorStop(1,'rgba(58,44,26,0)');
+  g.fillStyle=r;g.fillRect(ox,0,S,S);g.globalCompositeOperation='destination-out';
+  for(let i=0;i<flecks;i++){const cx=ox+rnd()*S,cy=rnd()*S,n=2+(rnd()*5|0);for(let k=0;k<n;k++)puff(g,cx+(rnd()-.5)*24,cy+(rnd()-.5)*24,3+rnd()*8,3+rnd()*6,rnd()*3,.7+rnd()*.3);}
+  g.restore();
+ }
+ return c;
+}
+
+// The boulevard's travertine (concept B, "inlaid promenade"): large-format pavers, 1.3 x 0.65 m, in a running bond laid
+// along the ship. A texture on the existing paving faces (atrium-surfaces.js) that multiplies their vertex colour, so the
+// floor, its height and its colliders (and the atrium PVS key) stay as they were. Rows fall at z = 0.325 + 0.65k, so the
+// brass-edged centre stripe (|z| < 0.975) and the edge bands (|z| > 4.875, atrium-gardens.js) meet whole rows. One tile
+// of the texture covers 10.4 x 5.2 m (8 pavers by 8 rows).
+export const PAVER={length:1.3,row:.65,tile:[10.4,5.2],rowOffset:.325};
+export const pavingUV=(x,z)=>[x/PAVER.tile[0],(z-PAVER.rowOffset)/PAVER.tile[1]];
+// Faces that are not paving sample one spot in the tile's first paver, kept pure white, so lawns, water and the stage
+// keep exactly their own colours.
+export const PAVING_PLAIN_UV=[.0625,.9375];
+export function paintTravertine(c){
+ const W=1024,H=512,N=8,pw=W/N,ph=H/N,g=c.getContext('2d'),rnd=seeded(6406);c.width=W;c.height=H;
+ g.fillStyle='#fff';g.fillRect(0,0,W,H);
+ for(let row=0;row<N;row++)for(let k=0;k<N;k++){
+  const x0=k*pw+(row%2?pw/2:0),y0=row*ph,tone=.94+rnd()*.06,warm=(rnd()-.5)*.02;
+  const rgb=[tone*(1+warm),tone,tone*(1-warm*1.5)].map(v=>Math.round(255*Math.min(1,v)));
+  // Each paver is drawn twice, a tile apart, so the odd rows' last paver wraps round to the first column.
+  for(const dx of[0,-W]){
+   g.save();g.beginPath();g.rect(x0+dx,y0,pw,ph);g.clip();g.fillStyle=`rgb(${rgb})`;g.fillRect(x0+dx,y0,pw,ph);
+   {
+    // Stone, not timber: round soft clouds, greyish dark and creamy light, and small pits. Nothing long and thin
+    // along the paver, which reads as grain at a walker's low angle.
+    const vr=seeded(row*31+k*7+1);
+    for(let i=0;i<10;i++){const dark=vr()<.55,rx=10+vr()*24;puff(g,x0+dx+vr()*pw,y0+vr()*ph,rx,rx*(.65+vr()*.35),vr()*3,dark?.1+vr()*.1:.12+vr()*.14,dark?'168,148,130':'255,250,240');}
+    for(let i=0;i<10;i++){g.fillStyle=`rgba(120,100,84,${.12+vr()*.14})`;g.beginPath();g.ellipse(x0+dx+vr()*pw,y0+vr()*ph,1+vr()*2.2,.8+vr(),0,0,Math.PI*2);g.fill();}
+   }
+   g.restore();
+  }
+  // Joints: each paver's left (aft) edge, 2 px (2 cm); the rows' edges follow.
+  g.fillStyle='rgb(196,184,168)';for(const dx of[0,-W])g.fillRect(x0+dx,y0,2,ph);
+ }
+ g.fillStyle='rgb(196,184,168)';for(let row=0;row<N;row++)g.fillRect(0,row*ph,W,2);
+ // The plain spot non-paving faces sample (PAVING_PLAIN_UV, always at full size): 8 cm of pure white.
+ g.fillStyle='#fff';g.fillRect(W*PAVING_PLAIN_UV[0]-4,H*(1-PAVING_PLAIN_UV[1])-4,8,8);
+ return c;
 }

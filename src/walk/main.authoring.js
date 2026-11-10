@@ -265,7 +265,11 @@ async function buildShip(){
  // The aft back faces have another glazed partition behind them: keep the combined view through to the stairs clear.
  const aftBackGlass=shaftGlass.clone();aftBackGlass.name='Walk_aft_shaft_back_glass';aftBackGlass.opacity=.18;
  const aftX=LIFTS.find(l=>l.id==='aft-starboard').car.x;
- ship.inside.traverse(o=>{if(/^Lift_(back|side)_enclosure$/.test(o.name))o.material=o.name==='Lift_back_enclosure'&&Math.abs(o.position.x-aftX)<.01?aftBackGlass:shaftGlass;});
+ // The forward tower's shafts stay clear (atrium concept A): the frosted frit at the foot of each storey (transit.js) does
+ // the frosting's job there. Its glass shares the aft back glass's settings, so the tower copy draws it with that.
+ const towerGlass=aftBackGlass.clone();towerGlass.name='Walk_tower_shaft_glass';towerGlass.color.set(0xd4ebf1);
+ const towerX=LIFTS.find(l=>l.id==='forward-starboard').car.x;
+ ship.inside.traverse(o=>{if(o.name==='Lift_shaft_frit')o.material=shaftGlass;else if(/^Lift_(back|side)_enclosure$/.test(o.name))o.material=Math.abs(o.position.x-towerX)<2?towerGlass:o.name==='Lift_back_enclosure'&&Math.abs(o.position.x-aftX)<.01?aftBackGlass:shaftGlass;});
  status('Fitting the walls…');await idle();
  const prepared=prepareWalkWorld(ship,{into:colliders,kit:cosmoKit,anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches,urls:artUrls,hat:__HAT_URL__,light:{hemi,fill,scene},afterBase(){
  // The hull behind the glass goes for drawing only, after the colliders have it.

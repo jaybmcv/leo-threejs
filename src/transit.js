@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {TRANSIT_CORES} from './plan/v1.js';
 import {finishCirculation} from './circulation-finish.js';
 import {COMMONS} from './model.js';
@@ -17,17 +18,49 @@ export function transitOpenings(deck){
   return holes;
 }
 
+// The forward lift tower is the atrium's lit glass tower (concept A, 2026-11-08). Each shaft's three glazed faces carry a
+// slim white frame: two mullions, so three bays across, and a transom at every floor and a metre above it. That lowest
+// metre of each storey is frosted, so with the car away the shaft still reads as a wall at a walker's feet (the walk
+// frosts the other shafts whole, main.js). Visual only: the glass enclosure keeps the collision, and the frame clears the
+// car by 5 cm. The atrium's copy of the tower shades the glass, frit and frame as if they faced up (TOWER_LIT,
+// atrium-architecture.js): the faces looking aft at the atrium are in the sun's shade, so the white frame and four layers
+// of shaded glass read grey rather than as the concept's bright glass.
+const FRIT=1,TOWER_LIT=[0,1,0];
+function towerFrame(c,z,s,base,top,minimumDeck,structure,shell,materials){
+  const frame=[],frit=[],lights=[],part=(list,size,p)=>list.push(new T.BoxGeometry(...size).translate(...p));
+  for(const {x,zz,ox,oz} of [{x:c.x-1.8,zz:z,ox:-1,oz:0},{x:c.x+1.8,zz:z,ox:1,oz:0},{x:c.x,zz:z+s*1.8,ox:0,oz:s}]){
+    const across=(w,h,d)=>ox?[d,h,w]:[w,h,d]; // w along the face, d through it
+    for(const a of [-.6,.6])part(frame,across(.06,top-base,.2),[x+(ox?0:a),(base+top)/2,zz+(ox?a:0)]);
+    for(let d=minimumDeck;d<=c.lastDeck;d++){
+      const y=floorY(d);for(const t of [0,FRIT])part(frame,across(3.44,.06,.2),[x,y+t,zz]);
+      part(frit,across(3.44,FRIT-.06,.01),[x+ox*.07,y+FRIT/2,zz+oz*.07]);
+    }
+  }
+  // The concept's lit shaft: a warm light line down both aft corners, the full height, so the shaft reads as one column
+  // between the landings, and a small warm light in the middle bay of the fore face at every storey, seen through the
+  // shaft from the atrium. The lift lobbies' light, so the tower copy draws them with it.
+  for(const zz of [z-1.8,z+1.8])part(lights,[.04,top-base,.06],[c.x-1.9,(base+top)/2,zz]);
+  for(let d=Math.max(minimumDeck,6);d<=c.lastDeck;d++)part(lights,[.02,.3,.3],[c.x+1.91,floorY(d)+2.6,z]); // from the atrium floor up
+  for(const [name,list,m,parent] of [['Lift_tower_frame',frame,'mullion',structure],['Lift_shaft_frit',frit,'frit',shell],['Lift_tower_lights',lights,'light',structure]]){
+    const o=new T.Mesh(mergeGeometries(list),materials[m]);o.name=name;o.userData.noCollide=true;o.userData.towerLit=TOWER_LIT;parent.add(o);list.forEach(g=>g.dispose());
+  }
+}
+
 export function createTransit({minimumDeck=1,maximumDeck=20,coreIds=['forward','aft']}={}){
   const cores=TRANSIT_CORES.filter(c=>coreIds.includes(c.id)).map(c=>({...c,lastDeck:Math.min(c.lastDeck,maximumDeck)}));
   const root=new T.Group();root.name='LEO_connected_transit';root.userData={units:'metres',liftShafts:4,stairTowers:4,decks:20,stage:'Fitted circulation concept'};
   const shell=new T.Group();shell.name='Transit_enclosure';root.add(shell);
   const structure=new T.Group();structure.name='Transit_structure';root.add(structure);
   const decks=new Map();for(let d=minimumDeck;d<=maximumDeck;d++){const g=new T.Group();g.name=`Transit_deck_${d}`;g.userData.deck=d;root.add(g);decks.set(d,g);}
-  const materials={floor:new T.MeshStandardMaterial({color:0xc4b89e,roughness:.85}),wall:new T.MeshStandardMaterial({color:0xdadfd8,roughness:.82}),navy:new T.MeshStandardMaterial({color:0x294858,roughness:.7}),metal:new T.MeshStandardMaterial({color:0x778d96,metalness:.5,roughness:.55}),glass:new T.MeshStandardMaterial({color:0x83b7c4,transparent:true,opacity:.15,depthWrite:false,side:T.DoubleSide}),light:new T.MeshStandardMaterial({color:0xffe5af,emissive:0xffdf9f,emissiveIntensity:.7}),
+  const materials={floor:new T.MeshStandardMaterial({color:0xc4b89e,roughness:.85}),wall:new T.MeshStandardMaterial({color:0xdadfd8,roughness:.82}),navy:new T.MeshStandardMaterial({color:0x294858,roughness:.7}),metal:new T.MeshStandardMaterial({color:0x778d96,metalness:.5,roughness:.55}),glass:new T.MeshStandardMaterial({color:0x83b7c4,transparent:true,opacity:.15,depthWrite:false,side:T.DoubleSide}),light:new T.MeshStandardMaterial({color:0xffe5af,emissive:0xffc66e,emissiveIntensity:1.5}),
     // The aft stairs, behind the aft lifts: blue lit treads in black metal (their light lines: circulation-finish.js).
     holo:new T.MeshStandardMaterial({name:'Stair_holo_tread',color:0x0b3d7c,emissive:0x1478ff,emissiveIntensity:1,roughness:.5,metalness:0}),black:new T.MeshStandardMaterial({name:'Stair_black_metal',color:0x1a1d21,metalness:.65,roughness:.32})};
   // The riser caps meet the blue treads at the same height, so draw them behind the tread faces.
   materials.nosing=materials.black.clone();materials.nosing.name='Stair_black_metal_nosing';materials.nosing.polygonOffset=true;materials.nosing.polygonOffsetFactor=1;materials.nosing.polygonOffsetUnits=1;
+  // The forward tower's white frame and frosted frit (towerFrame). The frame is the guide columns' material in white, so
+  // the atrium's merged copy of the tower (atrium-architecture.js) draws it with them.
+  materials.mullion=materials.navy.clone();materials.mullion.name='Lift_tower_mullion';materials.mullion.color.set(0xf4f5f1);
+  materials.frit=materials.glass.clone();materials.frit.name='Lift_shaft_frit';materials.frit.opacity=.5;
   const floors=[];
   function box(name,size,p,m='wall',parent=structure){const o=new T.Mesh(new T.BoxGeometry(...size),materials[m]);o.name=name;o.position.set(...p);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;}
   function rail(a,b,parent,m='metal'){const va=new T.Vector3(...a),vb=new T.Vector3(...b),o=new T.Mesh(new T.CylinderGeometry(.035,.035,va.distanceTo(vb),8),materials[m]);o.name='Transit_handrail';o.position.copy(va.clone().add(vb).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),vb.sub(va).normalize());parent.add(o);}
@@ -42,9 +75,11 @@ export function createTransit({minimumDeck=1,maximumDeck=20,coreIds=['forward','
     const base=floorY(minimumDeck)-.24,top=floorY(c.lastDeck)+3.4;
     for(const s of [-1,1]){
       const z=s*6;
-      for(const sx of [-1,1])for(const sz of [-1,1])box('Lift_guide_column',[.16,top-base,.16],[c.x+sx*1.8,(base+top)/2,z+sz*1.8],'navy',structure);
-      box('Lift_back_enclosure',[3.6,top-base,.12],[c.x,(base+top)/2,z+s*1.8],'glass',shell);
-      for(const sx of [-1,1])box('Lift_side_enclosure',[.12,top-base,3.6],[c.x+sx*1.8,(base+top)/2,z],'glass',shell);
+      const lit=o=>{if(c.id==='forward')o.userData.towerLit=TOWER_LIT;return o;};
+      for(const sx of [-1,1])for(const sz of [-1,1])lit(box('Lift_guide_column',[.16,top-base,.16],[c.x+sx*1.8,(base+top)/2,z+sz*1.8],c.id==='forward'?'mullion':'navy',structure));
+      lit(box('Lift_back_enclosure',[3.6,top-base,.12],[c.x,(base+top)/2,z+s*1.8],'glass',shell));
+      for(const sx of [-1,1])lit(box('Lift_side_enclosure',[.12,top-base,3.6],[c.x+sx*1.8,(base+top)/2,z],'glass',shell));
+      if(c.id==='forward')towerFrame(c,z,s,base,top,minimumDeck,structure,shell,materials);
       // One parked car per shaft; doors and landing sills repeat at every served deck.
       const parked=Math.max(minimumDeck,Math.min(c.lastDeck,c.id==='forward'?15:1)),cy=floorY(parked);
       floor(parked,c.x-1.65,c.x+1.65,z-1.65,z+1.65,'Lift_car_floor');
