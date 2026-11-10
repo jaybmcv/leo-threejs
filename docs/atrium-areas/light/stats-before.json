@@ -1,0 +1,19 @@
+{
+ "note": "Base on three 0.187: tower branch 1682c220 (f8af5b3a + lift tower), whose tower copy adds 5,640 triangles at both views; subtract them for f8af5b3a. Earlier rows (f8af5b3a on three 0.185.1, 287 programs) are in git history.",
+ "rows": [
+  {
+   "view": "hero",
+   "calls": 558,
+   "triangles": 10766289,
+   "trianglesWithoutTower": 10760649,
+   "programs": 297
+  },
+  {
+   "view": "sky-bow",
+   "calls": 467,
+   "triangles": 10828905,
+   "trianglesWithoutTower": 10823265,
+   "programs": 297
+  }
+ ]
+}

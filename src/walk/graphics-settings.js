@@ -1,5 +1,6 @@
 import {getAtriumQuality,getAtriumQualitySelection,setAtriumQuality,subscribeAtriumQuality} from '../v2/atrium-quality.js';
 import {getLook,setLook,subscribeLook} from './look.js';
+import {getTimeChoice,setTimeChoice,subscribeTime} from './ship-time.js';
 
 const choices=[
  ['auto','Auto (recommended)','Choose for this device and adjust detail as you play.'],
@@ -18,6 +19,12 @@ const hazeChoices=[
 const looks=[
  ['today','Leo today','The ship as it looks now.'],
  ['film','Film (preview)',"Voyager's Reach's Stylised 3D: light that wraps round forms, richer shade and a warm grade. The ship's shaders are rebuilt when you change, which can take a few seconds."],
+];
+// The Deck 6 atrium's time of day (ship-time.js, atrium-mood.js).
+const times=[
+ ['auto','Auto (recommended)','Follow the ship’s clock, the same for everyone aboard: night from 8 pm to 6 am New York time.'],
+ ['day','Day','Warm golden daylight under the sky panel.'],
+ ['night','Night','A dusk sky, lit windows, downlights and promenade lamps.'],
 ];
 
 // Geometry detail is independent of the existing drawing-resolution control.
@@ -81,10 +88,19 @@ export function mountGraphicsSettings({onOpenChange=()=>{},haze=false,held=false
  }
  const lookStatus=el('p',{className:'graphics-note'});lookStatus.setAttribute('role','status');lookStatus.setAttribute('aria-live','polite');
  lookFieldset.append(lookStatus);
+ const timeFieldset=el('fieldset',{className:'graphics-look'}),timeRadios=new Map();
+ timeFieldset.append(el('legend',{textContent:'Atrium time of day'}));
+ for(const [value,label,description] of times){
+  const row=el('label'),radio=el('input',{type:'radio',name:'leo-walk-time',value}),copy=el('span');
+  radio.id='walk-time-'+value;
+  copy.append(el('strong',{textContent:label}),el('small',{textContent:description}));
+  row.append(radio,copy);timeFieldset.append(row);timeRadios.set(value,radio);
+  radio.addEventListener('change',()=>{if(radio.checked)setTimeChoice(value);});
+ }
  const note=el('p',{className:'graphics-note',textContent:(held?'This visit started in Performance, so the haze stays close until your next visit. ':'')+'Changes apply immediately and are remembered on this browser. The Res button controls image sharpness separately.'});
  const autoStatus=el('p',{className:'graphics-note'});autoStatus.setAttribute('role','status');autoStatus.setAttribute('aria-live','polite');
  const actions=el('div',{className:'graphics-actions'}),done=el('button',{type:'button',textContent:'Done'});
- actions.append(done);dialog.append(title,description,fieldset,autoStatus,lookFieldset,note,actions);
+ actions.append(done);dialog.append(title,description,fieldset,autoStatus,lookFieldset,timeFieldset,note,actions);
  document.head.append(style);document.body.append(dialog);mount.append(button);
  const more=document.getElementById('tools-more');
  let opened=false,returnFocus=null,destroyed=false;
@@ -94,9 +110,10 @@ export function mountGraphicsSettings({onOpenChange=()=>{},haze=false,held=false
   button.setAttribute('aria-label','Graphics detail: '+(current==='auto'?'Auto — '+label:label));
   for(const [value,radio]of lookRadios)radio.checked=value===getLook();
   lookStatus.textContent=getLook()==='film'?'Film look is on.':'Leo today is on.';
+  for(const [value,radio]of timeRadios)radio.checked=value===getTimeChoice();
   autoStatus.textContent=current==='auto'?'Currently using '+label+'. Manual choices stay fixed.':'Your chosen detail level stays fixed.';
  };
- const unsubscribe=subscribeAtriumQuality(refresh),unsubscribeLook=subscribeLook(refresh);refresh();
+ const unsubscribe=subscribeAtriumQuality(refresh),unsubscribeLook=subscribeLook(refresh),unsubscribeTime=subscribeTime(refresh);refresh();
  function open(){
   if(opened||destroyed)return;
   returnFocus=document.activeElement;mount.closest('.tools')?.classList.remove('more-open');more?.setAttribute('aria-expanded','false');onOpenChange(true);
@@ -121,7 +138,7 @@ export function mountGraphicsSettings({onOpenChange=()=>{},haze=false,held=false
  dialog.addEventListener('cancel',e=>{e.preventDefault();close();});dialog.addEventListener('close',closed);
  window.addEventListener('keydown',keyboard,true);window.addEventListener('keyup',keyboard,true);
  return {open,close,get isOpen(){return opened;},destroy(){
-  if(destroyed)return;close();destroyed=true;unsubscribe();unsubscribeLook();
+  if(destroyed)return;close();destroyed=true;unsubscribe();unsubscribeLook();unsubscribeTime();
   window.removeEventListener('keydown',keyboard,true);window.removeEventListener('keyup',keyboard,true);
   dialog.remove();button.remove();style.remove();
  }};
