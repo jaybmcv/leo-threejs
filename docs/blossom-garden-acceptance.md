@@ -1,0 +1,75 @@
+# Deck 17 blossom garden: acceptance record
+
+Acceptance check of the existing garden in the layout 2 walk. Nothing was changed or repaired in this step; the record says what the source, the colliders and the walk's own controller show today. History: #155 (tree, flowers, wall, petals, butterflies), #194 (pond, waterfall, koi, red bridge, bench, sound), #191/#192 (pond rim stones), then the layered planting, the spatial sound (`spatial-audio.js`) and the expansion (`docs/blossom-garden-expansion.md`: bed 12 x 9 m, pond 3.3 x 6.3 m, two added half-scale cherries).
+
+## Where it is now
+
+The historical report view (`?at=133.76,24.30,30.78`) was in layout 1; a walk link without `lv=2` is read as a layout 1 spot and remapped (`src/walk/link.js`), so links to the garden in layout 2 carry `&lv=2`. The garden is Neighborhood 10's commons, `commons-10`, in the v2 plan (origin 105.5, 24.3, 43; Deck 17). Its planter, pond and trees are built in the commons template frame by `src/walk/blossom.js` (four identical copies: `.js`, `.authoring.js`, `.prepared.js`, `.public.js`, md5 equal) and the selected frame moves them by X -26.5, Z +16. In ship metres:
+
+| Part | v2 position |
+| --- | --- |
+| Planter and soil (soil y 25.01, floor y 24.3) | X 110-122, Z 43.5-52.5 |
+| Main bonsai cherry | X 114.5, Z 48 |
+| Added cherries (half scale) | X 119.8, Z 43.8 and 48.2 |
+| Pond (water y 24.58) | X 110-113.3, Z 49.2-55.5 |
+| Waterfall rocks and lip (lip y 25.62) | about X 113.4, Z 49.7 |
+| Red bridge (floor to soil, over the pond) | X 109.95-113.55, Z 51 |
+| Bench (seat top y 25.51) | X 114.65, Z 50.8 |
+
+The Go-to list's "Blossom garden" entry (`src/v2/goto-features.js`) puts a walker 5.5 m west of the assembly, facing +X. The plan keeps the assembly (`check-plan.mjs` requires the koi pond, waterfall, red bridge and blossom bench pieces in neighborhood 10). `src/walk/main*.js` all hand the garden to the walk (`blossom?.update(dt,p,ambience.on,camera)`, `toBand(blossom.group)`), so visitors, authoring and prepared builds get the same garden.
+
+## How it was checked
+
+- `node scripts/check-blossom-expansion.mjs`: PASS (four copies agree, three trees, pond 3.3 x 6.3 m, koi stay in the water, eight butterflies, 160 falling petals, tree LOD).
+- `node scripts/check-blossom-walk.mjs` (new, in the project): PASS, 18 checks. It is a component check: it builds the garden and planter alone in the commons frame on an artificial floor that covers the whole search area, and drives the walk's `Controller` and `Colliders`. It does not load the built ship, so it says nothing about floor gaps or obstacles round the garden in the current layout.
+- Visual (2026-11-10, layout 2 walk, four captures of this build; links need `&lv=2`):
+  - `?lv=2&at=107.5,24.30,51.00&yaw=90&pitch=8`, eye level from the west: the pink bonsai cherry with blossom pads and fallen petals on the floor, the pale stone wall round the planter with flowers and ferns, the red arched bridge with gold-capped posts, and the pile of rocks beside it, with mint seating nearby.
+  - `?lv=2&at=117.00,24.30,53.50&yaw=223&pitch=-5`, from the north-east: the pond's rounded rim stones, the red bridge and, beyond it, two cherry trees with blossom over a petal-covered bed.
+  - `?lv=2&at=123.50,24.30,47.00&yaw=276&pitch=6`, from the east: three cherry trees on the stone-walled planter, with the red bridge behind them.
+  - `?lv=2&at=108.50,24.30,53.00&yaw=108&pitch=-38`, looking down from beside the pond: orange koi, lily pads and floating petals in the water, the stone rim, the bridge, and the bench on the soil at the bridge's far end (the first capture caught it before it had loaded).
+  Nothing was heard.
+
+## Requirement by requirement
+
+| # | Requirement | Result | Evidence |
+| --- | --- | --- | --- |
+| 1 | Bonsai-shaped cherry with pink blossoms and natural detail | Met in source; confirm in captures | `cherry()`: seven-section gnarled trunk 0.55 to 0.15 m radius, seven surface roots, eight near-level branches that each fork once, flat blossom pads in six pinks on every tip, fork and crown, bark and blossom materials. Two smaller cherries from the same builder fill the east bed; far LOD swaps in at 24 m. |
+| 2 | Varied flowers round the base | Met in source; confirm in captures | The selected layered planting (`layered-conservatory.js`, `createLayeredConservatory`) fills the bed; the older green foliage in the bed is cut out by `prepareBlossomBed`. |
+| 3 | Butterflies | Met | `Blossom_butterflies`: 8 butterflies, 2 hinged wings each (count 16), six colours, flapping along looped paths round the main tree and the east bed; they animate within 45 m of the walker. |
+| 4 | Falling pink petals and petals on the ground | Met | 160 petals drift down with sway and tumble and restart at the canopy; 3,200 fixed petals: 2,700 on the soil, 120 on the water, the rest on the floor round the wall. Petals keep out of the pond and drift over the water or soil by what is below them. |
+| 5 | Stone perimeter | Met | `Blossom_stone_wall`: two courses of irregular dry stones and a capstone rim along all six edges of the L-shaped planter, including the pond's two sides; no caps where the bridge lands. |
+| 6 | Corner pond with waterfall fountain | Met | Pond with dark pebbled bed, rim stones, 70 pebbles, four lily pads and a pink flower, clear water at y 24.58. Waterfall: rock pile in the corner the bed wraps round, a curved water sheet from the lip at y 25.62, 36 running streaks, 9 foam bubbles and 3 ripple rings, all animated. |
+| 7 | Orange fish | Met in source; confirm in captures | 7 koi (orange `0xff5a0a` body with white patches, fanned tail, side fins; brightened by the #194 follow-up) swim in loops that the expansion check keeps inside the water, passing under the bridge. |
+| 8 | Red bridge to a bench under the tree | Bridge met in the component check; bench seating not tested in the current layout | See walk results (component check). Red lacquered arched deck of 15 planks with beams, posts, gold caps and two rails; the bench is on the soil beside the tree, 0.59 m from the bridge landing, with a cushion and back that rest.js seat-finding matches by name (`Garden_bench_cushion`, `Garden_bench_back`). Sitting on the bench was not tried in the current layout; the only seat evidence is #194's check, on the layout of that time. |
+| 9 | Gentle fountain sound, fading with distance, respecting audio settings | Unresolved: met in source, never heard | `sound()`: looped cross-faded noise, high-passed 400 Hz and low-passed near 3 kHz with slow brightness changes, plus small bubble plinks. Gain follows `(1 - d/14)^2`, so it starts 14 m away and is silent beyond; it is only on while the walk's Sound button is on (`ambience.on`), within 4 m of the falls' height, and the page's `AudioContext` is created only after a user gesture. The sound is pointed at the falls through the shared panner (`spatial-audio.js`) and is suspended while the tab is hidden. It has no separate volume control: Sound on/off is the existing setting. |
+| 10 | Routes: no blocked routes, gaps, falls or snagging | Unresolved: met for the garden alone, not shown in the current ship | The component check finds zero holes and zero drops over 1 m in a flood fill from the bridge foot, and a biggest climb of 0.134 m in one frame against a 0.4 m step, but on an artificial floor with nothing else round the garden. The real approach from the commons floor, the stairs, rails and walls beside the garden, and the edges at eye level and from above are not covered by it. |
+| 11 | Later improvements, other trees and the layout preserved | Met | Nothing changed in this step. The expansion check pins the original trunk, canopy and bridge geometry by hash and the clear route to the cafe counter (over 1.75 m) and lower stairs (over 4 m). The commons' other planter and trees are untouched by `prepareBlossomBed`. |
+
+## Walk results (`check-blossom-walk.mjs`, commons frame, garden alone on an artificial floor)
+
+- Walking +X from the floor at the bridge foot, the controller climbs the bridge (deck y 24.30 at the foot, 24.56, 24.77, 24.95, 25.09, 25.19, 25.24, 25.25 at the crest, then 25.22, 25.12, 25.08 down to the soil at 25.01) and stops in front of the bench. Walking back returns to the floor at 24.30.
+- The bench's cushion (top 25.51 m, 1.7 m long) is held up by the colliders and is 0.59 m from the bridge landing.
+- The bridge rails stop a walker stepping off either side of the deck (stopped at z 35.23 and 34.77).
+- The pond rim stops a walker from the floor on its west and north sides (stopped at x 136.29 and z 39.71).
+- A walker who steps from the soil into the pond lands on its floor (y 24.45) and steps back out over the rim to the floor (y 24.30).
+- The falls' rocks, the planter's face, the main trunk and both added trunks all stop a walker.
+- A flood fill from the bridge foot reaches 331 spots on the soil bed, with no holes and no drop over 1 m.
+
+## Not verified
+
+- Sound was not played or recorded; only its source, falloff, gating and wiring were read. Requirement 9 stays open until someone hears it in the walk.
+- Route evidence from the current layout: the walk results above come from the isolated component check. A walk of the real ship (bridge, bench approach and garden edges, with the surrounding floor, stairs and rails) has not been done.
+- Sitting on the bench in the current layout.
+- Butterflies, the falling petals and the water's motion are animations a still can't show; the falls' water sheet and streaks were not told apart in the stills (the rocks were), so those rest on the source. The flowers seen are ferns, broadleaf plants and white and cream blooms; the full variety is read from the planting module.
+- Frame rate cost on weaker devices is not measured here.
+- `rest.js` seat finding needs a built layout; its earlier check (#194) found two seats on this bench and none from behind the planter.
+
+## Verdict
+
+The report is not ready to close; closure is pending. Nothing is found missing or broken in the source, the colliders or the component walk check, and the captures show the tree, flowers, fish, petals, stone wall, pond, bridge and bench as described. Three acceptance items remain open and need a manual pass in the live layout 2 walk (`?lv=2` links, standing within 14 m of the falls with Sound on):
+
+1. Hear the fountain water, and check it fades with distance and follows the Sound button (requirement 9).
+2. Walk the bridge, the bench approach and the garden edges in the real ship, at eye level and from above, for gaps, blocked routes, falls or snagging (requirement 10, and the route part of 8).
+3. Sit on the bench (requirement 8).
+
+If those pass, the report is ready to close; otherwise the failed item goes to the next build decision.
