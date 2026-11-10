@@ -52,7 +52,7 @@ import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
 const cabinPlacements=preparedPlacements;
 import {Colliders,BODY} from './collision.js';
 import {STATIC_LIFT_PARTS,LIFTS} from './lifts.js';
-import {KEEL,RIVER,createTubeMesh,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock} from './keel-club.prepared.js';
+import {KEEL,RIVER,createTubeMesh,tubeBoard,tubeStep,tubeKick,tubeSeat,TUBE_LIE,tubeDock} from './keel-club.prepared.js';
 import {Controller,GLIDE,HOOK} from './controller.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
@@ -636,7 +636,7 @@ async function connectToClaim(){
 const giveaway=createGiveaway({$,live:()=>live,connect:connectToClaim});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08}});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08,feet:TUBE_LIE.feet}});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -999,11 +999,13 @@ function followSeat(r){
 const tubeMesh=createTubeMesh();tubeMesh.visible=false;scene.add(tubeMesh);
 function boardTube(dock){
  emote=null;const st=tubeBoard(dock),seat=tubeSeat(st);
- resting={spot:{tube:st,dock,point:new T.Vector3(seat.x,seat.y,seat.z),height:seat.y},lie:false,stand:false,from:{pos:controller.position.clone(),heading},to:{pos:new T.Vector3(),yaw:seat.yaw},t:0,phase:'in',view:new T.Vector3()};
+ resting={spot:{tube:st,dock,point:new T.Vector3(seat.x,seat.y,seat.z),height:seat.y},lie:true,stand:false,from:{pos:controller.position.clone(),heading},to:{pos:new T.Vector3(),yaw:seat.yaw},t:0,phase:'in',view:new T.Vector3()};
  followTube(resting);
 }
-function followTube(r){const seat=tubeSeat(r.spot.tube);
- r.to.pos.set(seat.x,seat.y+.06-walker.hipHeight,seat.z);r.to.yaw=seat.yaw;r.view.set(seat.x,seat.y-.55,seat.z);
+// Lying back along the river on top of the ring (keel-club.js TUBE_LIE), feet first downstream: the walker faces
+// downstream and restPose tips the body back, so the head lies upstream across the ring.
+function followTube(r){const seat=tubeSeat(r.spot.tube),f=TUBE_LIE.feet;
+ r.to.pos.set(seat.x+Math.sin(seat.yaw)*f,KEEL.floor-RIVER.drop+TUBE_LIE.y,seat.z+Math.cos(seat.yaw)*f);r.to.yaw=seat.yaw;r.view.set(seat.x,seat.y-.55,seat.z);
  if(r.phase==='in')controller.position.set(seat.x,seat.y,seat.z);}
 // "Splashed by ..." when a water cannon's shot hits our tube: at most every 3 s.
 let splashAt=0,splashHide=0;
