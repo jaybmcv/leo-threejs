@@ -6,15 +6,17 @@ import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/Buffe
 import {canvasTexture} from '../polish-kit.js';
 import {floorY} from '../transit.js';
 
-// The Hydro-Nip Lounge's entrances on Decks 19 and 18 (from tester feedback): the short neck that runs from the
-// aft promenade into the lounge's end gallery gets a theatre-marquee canopy. A dark fascia across its mouth reads
-// "Hydro-Nip Lounge" in lit lettering inside a ring of purple bulbs, and a low lit soffit runs back along the neck
-// to the lounge, rows of bulbs and purple tubes down its underside. It sits entirely inside the neck (nothing
-// sticks out into the promenade), above head height, and is dressing only: nothing in it is solid. Glow is emissive
-// geometry and additive washes, no real lights. In the group's frame x runs across the neck, y up from the deck's
-// floor, and the passage runs from z 0 at the mouth back to −NECK.
-const NECK={half:1.94,length:4},PURPLE=0xa04dff,PALE=0xdcb8ff;
-const FASCIA={w:3.8,y0:2.56,y1:3.62},DEPTH=.2,SOFFIT=2.56;
+// The Hydro-Nip Lounge's two entrances, the aft gallery doors on Decks 19 and 18: out on the
+// promenade, beside each doorway, a theatre-marquee board stands on two posts. It is square to the lounge's aft wall,
+// on the side of the walkway that leads to the door, so it reads face-on as you come along that walkway and from the
+// promenade beyond; both faces carry "Hydro-Nip Lounge" in lit lettering inside a ring of purple bulbs, under a purple
+// tube round the rim. Its board is above head height and under the 3.64 m deck above; the walkway to the door passes
+// under it between the posts. Like the canopy it replaces (which hung inside the door's neck and was seen edge-on from
+// the walkway), it is dressing only: nothing in it is solid. Glow is emissive geometry, no real lights. In the group's frame (src/v2/community-routes.js fitLoungeEntrance) the door is centred on
+// x 0 with its jambs at x ±1, y runs up from the deck's floor, the wall's outer face is z 0 and the promenade is +z;
+// +x is the walkway's side. The board's plane is x BOARD.x, running out from z BOARD.z0.
+const DOOR_HALF=1,PURPLE=0xa04dff,PALE=0xdcb8ff;
+const BOARD={x:DOOR_HALF+.45,z0:.3,w:3.4,y0:2.5,y1:3.46},POST={r:.06,top:3.52},DEPTH=.2;
 const SIZE=[2048,572];
 
 // One neon catnip sprig: a stem and three serrated leaves, drawn pointing up from (x,y).
@@ -41,10 +43,7 @@ const paintFace=(g,w,h)=>{
  g.fillStyle='#fdf6ff';g.font=`800 232px ${brand}`;g.letterSpacing='34px';g.fillText('LOUNGE',w/2+17,432);g.letterSpacing='0px';
  for(const sx of [-1,1])sprig(g,w/2+sx*760,420,230);
 };
-// A soft fall-off for the wash the tubes throw down the walls: full at the top of the texture, gone at the bottom.
-const fadeTexture=()=>canvasTexture(8,128,(g,w,h)=>{const f=g.createLinearGradient(0,0,0,h);f.addColorStop(0,'rgba(255,255,255,1)');f.addColorStop(.3,'rgba(255,255,255,.5)');f.addColorStop(.65,'rgba(255,255,255,.15)');f.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=f;g.fillRect(0,0,w,h);});
-
-// A rounded rectangle of fascia, extruded .2 m deep (its front face at z 0, its back at z −DEPTH).
+// A rounded rectangle of board, extruded .2 m deep (its front face at z 0, its back at z −DEPTH).
 function slab(w,h,r){
  const s=new T.Shape(),x=w/2,y=h/2;
  s.moveTo(-x+r,-y);s.lineTo(x-r,-y);s.quadraticCurveTo(x,-y,x,-y+r);s.lineTo(x,y-r);s.quadraticCurveTo(x,y,x-r,y);s.lineTo(-x+r,y);s.quadraticCurveTo(-x,y,-x,y-r);s.lineTo(-x,-y+r);s.quadraticCurveTo(-x,-y,-x+r,-y);
@@ -56,38 +55,37 @@ function createSign(deck,key,mats){
  const [gx,,gz]=placedV1(key);group.position.set(gx,floorY(deck),gz);
  const parts=new Map(),add=(m,g)=>{(parts.get(m)||parts.set(m,[]).get(m)).push(g);};
  const at=(g,x,y,z,rx=0,ry=0,rz=0)=>g.rotateX(rx).rotateY(ry).rotateZ(rz).translate(x,y,z);
- const fw=FASCIA.w,fh=FASCIA.y1-FASCIA.y0,fy=(FASCIA.y0+FASCIA.y1)/2,len=NECK.length-.12;
+ const bw=BOARD.w,bh=BOARD.y1-BOARD.y0,by=(BOARD.y0+BOARD.y1)/2,zc=BOARD.z0+bw/2;
+ // The board is drawn facing +z (its width along x), then turned square to the wall and set out beside the door: its
+ // front looks toward the walkway (+x), its back across the doorway.
+ const out=g=>g.rotateY(Math.PI/2).translate(BOARD.x,0,zc);
 
- // Fascia across the mouth and an end plate where the neck meets the lounge (turned to face it), both with the wording.
- add(mats.body,at(slab(fw,fh,.16),0,fy,0));
- add(mats.body,at(slab(fw,fh,.16),0,fy,-len,0,Math.PI));
- add(mats.face,at(new ReplayGeometry("src/walk/lounge-entrance-signs.js:1",T.PlaneGeometry,fw-.04,fh-.04),0,fy,.003));
- add(mats.face,at(new ReplayGeometry("src/walk/lounge-entrance-signs.js:2",T.PlaneGeometry,fw-.04,fh-.04),0,fy,-len-.003,0,Math.PI));
- // The soffit and its lid: a hollow canopy between the plates, so the top reads as a solid cover from above.
- const sw=fw,sl=len-2*DEPTH;
- add(mats.body,at(new ReplayGeometry("src/walk/lounge-entrance-signs.js:3",T.BoxGeometry,sw,.06,sl),0,SOFFIT+.03,-len/2));
- add(mats.body,at(new ReplayGeometry("src/walk/lounge-entrance-signs.js:4",T.BoxGeometry,sw,.06,sl),0,FASCIA.y1-.03,-len/2));
+ // The board, with the wording on both faces.
+ add(mats.body,out(at(slab(bw,bh,.16),0,by,DEPTH/2)));
+ add(mats.face,out(at(new ReplayGeometry("src/walk/lounge-entrance-signs.js:1",T.PlaneGeometry,bw-.04,bh-.04),0,by,DEPTH/2+.003)));
+ add(mats.face,out(at(new ReplayGeometry("src/walk/lounge-entrance-signs.js:2",T.PlaneGeometry,bw-.04,bh-.04),0,by,-DEPTH/2-.003,0,Math.PI)));
 
- // A ring of bulbs just inside each fascia edge, alternating pale and violet, and a purple tube round the rim.
- const bulb=()=>new ReplayGeometry("src/walk/lounge-entrance-signs.js:5",T.SphereGeometry,.036,6,3);
+ // A ring of bulbs just inside each face's edge, alternating pale and violet, and a purple tube round the rim.
+ const bulb=()=>new ReplayGeometry("src/walk/lounge-entrance-signs.js:3",T.SphereGeometry,.036,6,3);
  const ring=(zz,face)=>{
-  const hx=fw/2-.12,hy=fh/2-.11,step=.14;let k=0;
-  const put=(x,y)=>add(k++%2?mats.bulbB:mats.bulbA,at(bulb(),x,fy+y,zz+face*.012));
+  const hx=bw/2-.12,hy=bh/2-.11,step=.14;let k=0;
+  const put=(x,y)=>add(k++%2?mats.bulbB:mats.bulbA,out(at(bulb(),x,by+y,zz+face*.012)));
   for(let x=-hx;x<=hx+1e-6;x+=(2*hx)/Math.round(2*hx/step)){put(x,hy);put(x,-hy);}
   for(let y=-hy+(2*hy)/Math.round(2*hy/step);y<hy-1e-6;y+=(2*hy)/Math.round(2*hy/step)){put(-hx,y);put(hx,y);}
   const path=new T.CurvePath(),c=[[-hx-.07,hy+.07],[hx+.07,hy+.07],[hx+.07,-hy-.07],[-hx-.07,-hy-.07]];
-  c.forEach((p,i)=>{const q=c[(i+1)%4];path.add(new T.LineCurve3(new T.Vector3(p[0],fy+p[1],zz+face*.012),new T.Vector3(q[0],fy+q[1],zz+face*.012)));});
-  add(mats.tube,new ReplayGeometry("src/walk/lounge-entrance-signs.js:6",T.TubeGeometry,path,64,.02,5,false));
+  c.forEach((p,i)=>{const q=c[(i+1)%4];path.add(new T.LineCurve3(new T.Vector3(p[0],by+p[1],zz+face*.012),new T.Vector3(q[0],by+q[1],zz+face*.012)));});
+  add(mats.tube,out(new ReplayGeometry("src/walk/lounge-entrance-signs.js:4",T.TubeGeometry,path,64,.02,5,false)));
  };
- ring(0,1);ring(-len,-1);
+ ring(DEPTH/2,1);ring(-DEPTH/2,-1);
 
- // The soffit's underside: four lengthwise rows of bulbs and a tube along each side, running the length of the neck.
- for(const [i,x] of [-1.35,-.45,.45,1.35].entries())for(let z=-DEPTH-.2;z>-len+DEPTH+.1;z-=.3)add(i%2?mats.bulbA:mats.bulbB,at(bulb(),x,SOFFIT-.012,z));
- for(const sx of [-1,1])add(mats.tube,at(new ReplayGeometry("src/walk/lounge-entrance-signs.js:7",T.CylinderGeometry,.022,.022,sl-.1,6),sx*(fw/2-.1),SOFFIT-.012,-len/2,Math.PI/2));
- // Purple light washed down both side walls from the soffit, and a pool of it on the floor.
- const wash=new ReplayGeometry("src/walk/lounge-entrance-signs.js:8",T.PlaneGeometry,sl,1.25);
- for(const sx of [-1,1])add(mats.wash,at(wash.clone(),sx*(NECK.half-.01),SOFFIT-.625,-len/2,0,-sx*Math.PI/2));
- add(mats.pool,at(new ReplayGeometry("src/walk/lounge-entrance-signs.js:9",T.PlaneGeometry,NECK.half*2-.1,sl),0,.03,-len/2,-Math.PI/2));
+ // The two posts, one at each end of the board (the inner one 0.17 m off the wall), on round foot plates, with a neon
+ // collar under the board and a cap at the top.
+ for(const z of [BOARD.z0-POST.r-.01,BOARD.z0+bw+POST.r+.01]){
+  add(mats.body,at(new ReplayGeometry("src/walk/lounge-entrance-signs.js:5",T.CylinderGeometry,POST.r,POST.r,POST.top,10),BOARD.x,POST.top/2,z));
+  add(mats.body,at(new ReplayGeometry("src/walk/lounge-entrance-signs.js:6",T.CylinderGeometry,.15,.17,.04,16),BOARD.x,.02,z));
+  add(mats.body,at(new ReplayGeometry("src/walk/lounge-entrance-signs.js:7",T.CylinderGeometry,.085,.085,.05,10),BOARD.x,POST.top+.025,z));
+  add(mats.tube,at(new ReplayGeometry("src/walk/lounge-entrance-signs.js:8",T.CylinderGeometry,.075,.075,.035,10),BOARD.x,BOARD.y0-.07,z));
+ }
 
  for(const [m,list] of parts){const o=new T.Mesh(replayMerged("src/walk/lounge-entrance-signs.js",nativeMergeGeometries,list.map(g=>g.index?g.toNonIndexed():g)),m);o.name=m.name;o.userData.noCollide=true;group.add(o);}
  group.updateMatrixWorld(true);placeObject(group,key);fitLoungeEntrance(group,deck);return group;
@@ -104,8 +102,6 @@ export function createLoungeEntranceSigns(){
   bulbA:new T.MeshBasicMaterial({name:'Lounge_sign_bulb_pale',color:PALE,toneMapped:false}),
   bulbB:new T.MeshBasicMaterial({name:'Lounge_sign_bulb_violet',color:PURPLE,toneMapped:false}),
   tube:new T.MeshBasicMaterial({name:'Lounge_sign_neon',color:PURPLE,toneMapped:false}),
-  wash:new T.MeshBasicMaterial({name:'Lounge_sign_wash_glow',color:PURPLE,map:fadeTexture(),transparent:true,opacity:.38,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,toneMapped:false}),
-  pool:new T.MeshBasicMaterial({name:'Lounge_sign_floor_glow',color:PURPLE,transparent:true,opacity:.07,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}),
  };
  return {groups:[createSign(19,'lounge-entrance-sign-19',mats),createSign(18,'lounge-entrance-sign-18',mats)]};
 }
