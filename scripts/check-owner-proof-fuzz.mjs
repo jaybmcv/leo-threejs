@@ -136,14 +136,14 @@ function patch(r,S,F,[a0,a1,b0,b1],c,face,cond,fine,drawn=true){
 // stopping short of an edge (a slit), set off in depth (a step, whose riser is open), or pierced by a hole of a
 // millimetre or a few. Not flaws: a patch that laps over its neighbours, or sits within the proof's plane tolerance of the
 // wall's plane. A `long` wall is for looking along: many patches in a row, half of them off its plane by most of that
-// tolerance and half lapping by millimetres, so that whether sight at a slope slips between two of them turns on the
-// proof's slope bound.
+// tolerance and most lapping all round by millimetres, so that whether sight at a slope slips between two of them
+// turns on the proof's slope bound.
 function wall(r,S,F,c,[u0,u1],[v0,v1],{face,conds,flaws,fine,long}){
  const cuts=(lo,hi,n)=>{const out=[lo];for(const x of Array.from({length:n},()=>r.range(lo,hi)).sort((a,b)=>a-b))if(x-out.at(-1)>.1&&hi-x>.1)out.push(x);return [...out,hi];};
  const us=cuts(u0,u1,long?r.int(3,7):r.int(0,3)),vs=cuts(v0,v1,r.int(0,2)),mixed=r.chance(.4);
  for(let i=0;i+1<us.length;i++)for(let j=0;j+1<vs.length;j++){
   const edges=[us[i],us[i+1],vs[j],vs[j+1]],q=edges.slice(),flaw=r.chance(flaws)?r.pick(['hole','away','slit','step','pinhole']):null;let h=c;
-  if(r.chance(long?.5:.25))for(let k=0;k<4;k++)if(r.chance(.5))q[k]+=(k%2?1:-1)*r.log(1e-4,long?.005:.3);
+  if(r.chance(long?.85:.25))for(let k=0;k<4;k++)if(long||r.chance(.5))q[k]+=(k%2?1:-1)*r.log(1e-4,long?.005:.3);
   if(r.chance(long?.5:.12))h+=r.sign()*r.log(long?6e-5:2e-5,9.5e-5);
   if(flaw==='slit'){const k=r.int(0,3);q[k]=edges[k]+(k%2?-1:1)*r.log(GAP,.08);}
   if(flaw==='step')h=c+r.sign()*r.log(3e-4,.03);
