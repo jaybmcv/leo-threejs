@@ -4,6 +4,7 @@ import {wearHat} from './hat.js';
 import {createBallMesh} from './hamster-ball.js';
 import {createGlide} from './glide.js';
 import {createGrappleLine} from './grapple.js';
+import {createCrowdDraw} from './crowd-draw.js';
 
 // Other visitors aboard, drawn as Cosmo (avatar.js) and moved by the poses Leo live passes on (net/live.js). The
 // easing follows Voyager's Reach's remote players (packages/client/src/scene/remotePlayers.ts): a body eases toward its
@@ -30,9 +31,11 @@ export class RemotePlayers{
  // (paws-off/game.js), where someone playing runs on the spot. hammock(position): lying in one of the Hydro-Nip
  // Lounge's hammocks (rest.js hammockAt), where they take its pose: the wire says only that they lie. catnip(position):
  // in the Hydro-Nip Lounge (lounge.js inside), where they wear its catnip face (catnip-face.js), as they see themselves.
- // artUrls: the build's art names (__ART_URLS__), for the longboard someone rides down a drop (glide.js).
- constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube}){
+ // artUrls: the build's art names (__ART_URLS__), for the longboard someone rides down a drop (glide.js). crowd: draw the
+ // bodies together, one instanced draw per body part (crowd-draw.js; the bodies need cacheBones: avatar.js).
+ constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false}){
   Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube});
+  this.crowd=crowd?createCrowdDraw(scene,{slots:MAX_RIGS}):null;
   this.remotes=new Map();this.pool=[];this.making=false;this.labels=[];this.ray=new T.Ray();this.v=new T.Vector3();
  }
  get count(){return this.remotes.size;}
@@ -97,11 +100,13 @@ export class RemotePlayers{
    this.pose(r,dt,unseen,every);
   }
   this.name(bodied,camera,now);
+  // The selfie booth's camera may see a body the view does not: every body is drawn while it counts down.
+  this.crowd?.update(camera,{all:photo});
  }
  // One new body at a time (building one takes a moment); the pool keeps every body made.
  grow(){
   if(this.making||this.pool.length+[...this.remotes.values()].filter(r=>r.walker).length>=MAX_RIGS)return;
-  this.making=true;this.make().then(w=>{this.pool.push(w);}).catch(()=>{}).finally(()=>{this.making=false;});
+  this.making=true;this.make().then(w=>{this.crowd?.add(w);this.pool.push(w);}).catch(()=>{}).finally(()=>{this.making=false;});
  }
  ease(r,k,quiet){
   const to=r.tgt.pos,c=r.cur;

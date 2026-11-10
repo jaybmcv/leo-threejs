@@ -135,6 +135,8 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
  const touched=()=>{held.touched();matrices?.changed();};
  return {
   holder,body,figure,hipHeight,setFur,boardFeet,merged,
+  // (figure-matrices.js, with cacheBones: how many times the figure's matrices were made, for crowd-draw.js)
+  matrices,
   // Where the right paw is drawn (the grapple line leaves from it).
   hand(out=new T.Vector3()){return paw.getWorldPosition(out);},
   // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock},
