@@ -104,12 +104,14 @@ export function installCornerShade(scene){
  const patch=()=>{let count=0;const outside=cornerShadeLeavesAlone(scene);
   for(const m of outside){const was=done.get(m);if(was){[m.onBeforeCompile,m.customProgramCacheKey]=was;m.needsUpdate=true;done.delete(m);}}
   scene.traverse(o=>{if(!o.isMesh)return;for(const m of [].concat(o.material)){
-  if(!m||done.has(m)||outside.has(m)||!(m.isMeshStandardMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial)||m.transparent)continue;
+  if(!m||done.has(m)||outside.has(m)||m.onBeforeCompile?.cornerShade||!(m.isMeshStandardMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial)||m.transparent)continue;
   const before=m.onBeforeCompile,key=m.customProgramCacheKey;done.set(m,[before,key]);
   m.onBeforeCompile=function(s,r){before?.call(this,s,r);Object.assign(s.uniforms,U);
    s.vertexShader='varying vec3 vCornerW;\n'+s.vertexShader.replace('#include <project_vertex>',VERTEX);
    s.fragmentShader='varying vec3 vCornerW;\nuniform highp sampler2DArray uCorner;\nuniform float uCornerS;\nuniform vec4 uCornerBox;\n'+s.fragmentShader.replace('#include <color_fragment>',FRAGMENT);};
   m.onBeforeCompile.keepsGeometry=keepsGeometry(before);// shading only (the vertex keeps project_vertex)
+  // (a material copied with these hooks, as the crowd's are from a visitor's: crowd-draw.js, carries them already)
+  m.onBeforeCompile.cornerShade=true;
   m.customProgramCacheKey=function(){return key.call(this)+'|corner';};m.needsUpdate=true;count++;}});return count;};
  const stats={materials:patch(),walls:0,ms:0,ready:false};
  async function start(colliders){

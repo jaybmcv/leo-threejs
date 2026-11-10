@@ -23,6 +23,7 @@
     "check:figure-matrices": "node scripts/check-figure-matrices.mjs",
     "check:bone-walk": "node scripts/check-bone-walk.mjs",
     "check:visitor-bones": "node scripts/check-visitor-bones.mjs",
+    "check:crowd-draw": "node scripts/check-crowd-draw.mjs",
     "check:share-materials": "node scripts/check-share-materials.mjs",
     "check:owner-proof": "node scripts/check-owner-proof.mjs",
     "check:owner-proof-fuzz": "node scripts/check-owner-proof-fuzz.mjs",
