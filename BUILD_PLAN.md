@@ -1,16 +1,16 @@
 # LEO — whole-ship build plan
 
-## Layout 2 — takes effect at cutover
+## Layout 2 — the live ship
 
-Until cutover, the canonical live site and the historical build notes below describe layout 1. Layout 2 is selected with `LEO_LAYOUT=2` at build time and writes only `output/leo-interior-v02` and `dist-v2`; URL parameters cannot switch worlds. These v2 sections take precedence for the redesigned ship after cutover. This work does not deploy or approve a release.
+Layout 2 is what leo.marscatsvoyage.com serves (checked 2026-11-09: the site's `build.json` named 034a0c7c, and `vercel.json` publishes `dist-v2`). It has been the default build since the switchover merged on 2026-11-02 (#197): with `LEO_LAYOUT` unset, the build, public build and checks select layout 2 and write `output/leo-interior-v02` and `dist-v2`. `LEO_LAYOUT=1` selects the pinned rollback under `legacy/v1`, which writes `output/leo-interior-v01` and `dist`. Selection is a build input; URL parameters cannot switch worlds. The sections under "Layout 1 reference and history" below describe the earlier ship.
 
 The accepted source of truth is [the v2 plan](src/plan/README-v2.md), [the selected walk](src/plan/README-phase2.md) and [recorded decisions](src/plan/decisions-v2.json).
 
-V2 acceptance follows the selected plan rather than the completed v1 boxes below: 5,028 cabins / 10,000 berths, 100 escape shuttles, the Deck 6 atrium programme, distinct small bow cafés, and the crew-only Deck 20 gallery. Keep v1 model and walk source bytes intact; adapt inherited modules through the v2 plugin until cutover folds the adapters into selected source.
+V2 acceptance follows the selected plan rather than the completed v1 boxes below: 5,028 cabins / 10,000 berths, 100 escape shuttles, the Deck 6 atrium programme, distinct small bow cafés, and the crew-only Deck 20 gallery. The switchover folded the v2 adapters into the selected source (9e348c22); layout 1's model and walk source are kept, unedited, as the pinned snapshot in `legacy/v1`.
 
-Wayfinding has its own modules under `src/v2/goto-*` and `src/v2/wayfinding*`, with small source hooks in `scripts/goto-adapters-v2.mjs`. The new `scripts/check-goto-v2.mjs` is wired into the v2 check sequence. It checks every destination against prepared collisions and includes mutations that must fail. It reads the same trimmed layout shape as the browser, using `layout.circulation.corridors`.
+Wayfinding has its own modules under `src/v2/goto-*` and `src/v2/wayfinding*`. (`scripts/goto-adapters-v2.mjs`, which held its source hooks before the switchover, no longer exists.) `scripts/check-goto-v2.mjs` is wired into the v2 check sequence. It checks every destination against prepared collisions and includes mutations that must fail. It reads the same trimmed layout shape as the browser, using `layout.circulation.corridors`.
 
-The Phase 7 goto scope uses focused fixtures and an immutable prepared build. A passing targeted check does not replace the final combined model build, full walk validation, startup/performance validation or release review. Exterior and shuttle-door implementation are separate workstreams.
+The Phase 7 goto scope uses focused fixtures and an immutable prepared build. A passing targeted check does not replace the full build and its checks. Before the switchover this plan listed four gates as pending; this is where each stands now. The combined model build is the default `npm run build`. Full walk validation is `npm run check:walk`, then `npm run check`. Walk performance is checked inside `npm run check` (`check-walk-performance`); the startup baseline was retired from the full check on 2026-11-02 (`scripts/check-all.mjs`) and runs by hand with `npm run check:startup`, which needs `LEO_LAYOUT=2` set explicitly. For release approval, the owner merged #197 on 2026-11-02. Exterior and shuttle-door implementation are separate workstreams.
 
 ## Layout 1 reference and history
 

@@ -6,7 +6,7 @@
 // [--pages=2]: blocks are shared among n headless Chromes (a walk page with its arrays peaks near 3 GB). [--minutes=80]:
 // no new block starts after this; cells left unbaked hide nothing. [--top=8]: blocks of top x top cells, one slab tall,
 // proven whole first and halved where that fails. [--slabs=2] 2 m slabs from Deck 6's floor; [--margin=4] m round Deck 6's atrium outline.
-// The bake is kept only if the self-check passes: [--poses=60] random poses inside the baked blocks, drawn with and
+// The bake is kept only if the self-check passes: [--poses=200] random poses inside the baked blocks, drawn with and
 // without the hiding through the walk's own createOwnerHiding, none changing more than [--max-pixels=8] pixels by more
 // than 24 levels. It is written to walk-owner-bake.<hash>.json beside the walk script (--site), replacing the build's
 // empty one, or output/perf-walk/owner-bake/<tag>.json. --if-missing skips the bake when that file already holds blocks.
@@ -26,7 +26,7 @@ import {DESK_PIECE} from '../src/v2/desk-piece.js';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
 const SITE_DIR=arg('site',null),TAG=arg('tag',null),PAGES=Number(arg('pages',2)),MINUTES=Number(arg('minutes',80)),TOP=Number(arg('top',8)),SLABS=Number(arg('slabs',2)),MARGIN=Number(arg('margin',4));
-const POSES=Number(arg('poses',60)),MAX_PIXELS=Number(arg('max-pixels',8)),CDP=Number(arg('cdp',9348)),CHROME=arg('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe');
+const POSES=Number(arg('poses',200)),MAX_PIXELS=Number(arg('max-pixels',8)),CDP=Number(arg('cdp',9348)),CHROME=arg('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe');
 if(!SITE_DIR===!TAG)throw Error('Give one of --site=<built site dir> or --tag=<debug build>');
 if(!Number.isInteger(PAGES)||PAGES<1||PAGES>8)throw Error('--pages takes a whole number from 1 to 8');
 const EV_TIMEOUT_MS=10*60e3,PV=PVS_GRID,sleep=ms=>new Promise(r=>setTimeout(r,ms)),started=Date.now();

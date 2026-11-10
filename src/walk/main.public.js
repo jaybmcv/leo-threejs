@@ -38,6 +38,7 @@ import {createAtriumSight} from '../v2/atrium-sight.js';
 import {releaseBatchedSources,releasePhoneGeometry,shrinkPhonePictures} from '../v2/phone-memory.js';
 import {batchFurnishing} from '../v2/furnishing-batches.js';
 import {createFrameReadout} from './frame-readout.js';
+import {deskAntialias,heldRes} from './pixel-switches.js';
 import {mergePhoneFurnishing} from '../v2/phone-furnishing.js';
 import {mergePhoneBands} from '../v2/phone-bands.js';
 import {deskPieceSize,gpuName} from '../v2/desk-piece.js';
@@ -48,7 +49,7 @@ import {warmShaders,uploadTextures,WARM_WAIT_MS} from '../v2/shader-warmup.js';
 // baked from (__ATRIUM_PVS_KEY__). Until it arrives, or if it was baked from other geometry, the sight rays answer as before.
 let atriumPvs=null;
 if(typeof __ATRIUM_PVS_URL__!=='undefined'&&__ATRIUM_PVS_URL__)fetch(new URL(__ATRIUM_PVS_URL__,location.href)).then(r=>r.ok?r.json():null).then(data=>{atriumPvs=createAtriumPvs(data,{key:__ATRIUM_PVS_KEY__});}).catch(e=>console.warn('Atrium PVS not used:',e.message));
-import {createOwnerHiding,ownerBakeFile,ownerKey} from '../v2/owner-hiding.js';
+import {createOwnerHiding,ownerBakeFile,ownerBakeProblem,ownerKey} from '../v2/owner-hiding.js';
 // Owner hiding (scripts/walk-owner-bake.mjs): drawables proven hidden from the camera's 2 m cell, baked for this exact
 // walk script into walk-owner-bake.<hash>.json beside it (the build writes an empty one), fetched once the first view is
 // up and used around the main camera's draw. ?ownerBake opens the walk as the bake's page instead: geometry arrays are
@@ -59,7 +60,9 @@ function startOwnerHiding(){
  if(preparedPhone)return;const key=ownerKey(WALK_SCRIPT,(phoneBatching.merge?'merge':'batch')+deskPiece);
  if(OWNER_BAKE_PAGE){globalThis.__ownerBakeHost={T,scene,renderer,camera,key,follow,goTo:place=>goTo(place)};return;}
  const file=ownerBakeFile(WALK_SCRIPT);if(!file)return;
- fetch(new URL(file,import.meta.url)).then(r=>r.ok?r.json():null).then(data=>{const hiding=createOwnerHiding(data,{key,scene});hiding?.resolve();ownerHiding=hiding;}).catch(e=>console.warn('Owner hiding not used:',e.message));
+ fetch(new URL(file,import.meta.url)).then(r=>r.ok?r.json():null).then(data=>{const hiding=createOwnerHiding(data,{key,scene});hiding?.resolve();ownerHiding=hiding;
+  // A real bake the walk will not use (another key, format or grid): say why. The build's empty file stays quiet.
+  if(!hiding&&data?.blocks?.length)console.info('Owner hiding not used:',ownerBakeProblem(data,key));}).catch(e=>console.warn('Owner hiding not used:',e.message));
 }
 import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns,preparedPhone} from '../v2/prepared-runtime.public.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
@@ -251,8 +254,10 @@ const hazeHeld=deskDetail&&linearDepth;
 const PHONE_HIDE={bands:o=>/^V2_low_deck_merged_/.test(o.name)&&!o.material[0]?.transparent,glass:o=>[o.material].flat().some(m=>m?.transparent),
  furnish:o=>o.isInstancedMesh&&o.userData.phase4||o.userData.phase4Batch,gardens:o=>[o.material].flat().some(m=>m?.name==='P6_atrium_gardens'),haze:o=>/haze/i.test(o.name),cats:o=>o.isSkinnedMesh};
 const phoneHide=(phoneTest.get('phonehide')||'').split(',').map(k=>PHONE_HIDE[k]).filter(Boolean);let phoneHidden=[],phoneHiddenAt=-Infinity;
-// Multisampling is chosen with the context: the Detail menu's Performance drops it from the next load.
-const renderer=new T.WebGLRenderer({antialias:!(phone&&phoneTest.get('phoneaa')==='0')&&!(deskDetail&&!DETAIL[getAtriumQuality()].antialias),logarithmicDepthBuffer:!linearDepth,powerPreference:'high-performance'});
+// Multisampling is chosen with the context: the Detail menu's Performance drops it from the next load. On a desktop
+// ?deskaa=0 or ?deskaa=1 forces either (pixel-switches.js), as ?deskdepth= does the depth buffer.
+const antialiasByDetail=!(phone&&phoneTest.get('phoneaa')==='0')&&!(deskDetail&&!DETAIL[getAtriumQuality()].antialias);
+const renderer=new T.WebGLRenderer({antialias:phone?antialiasByDetail:deskAntialias(phoneTest,antialiasByDetail),logarithmicDepthBuffer:!linearDepth,powerPreference:'high-performance'});
 // A desktop's bigger merged bands draw in view-culled pieces of at most this many triangles (phone-bands.js): smaller
 // on Apple and integrated GPUs, which are short of triangles, larger on discrete cards, which are short of draws
 // (desk-piece.js). ?deskpiece= sets any size, 0 for one draw per material as on a phone.
@@ -263,9 +268,10 @@ const deskPiece=deskPieceSize({query:new URLSearchParams(location.search),phone:
 if(linearDepth){const gl=renderer.getContext(),enable=gl.enable.bind(gl);gl.enable=cap=>{if(cap!==gl.POLYGON_OFFSET_FILL)enable(cap);};}
 const frameReadout=createFrameReadout(renderer);
 // Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
-// The Res button steps through them and the choice is remembered for the next visit.
+// The Res button steps through them and the choice is remembered for the next visit. ?res=high, med or low holds a
+// level for this visit in the saved one's place (pixel-switches.js): nothing is saved, and it never steps down.
 const RES=['High','Med','Low'],RES_SCALE=[1,.75,.5],RES_KEY='leo-walk-resolution',maxRatio=Math.min(devicePixelRatio,phone?1.25:1.75);
-const savedRes=(()=>{try{return localStorage.getItem(RES_KEY);}catch{return null;}})();
+const savedRes=heldRes(phoneTest,RES)??(()=>{try{return localStorage.getItem(RES_KEY);}catch{return null;}})();
 let res=Math.max(0,RES.indexOf(savedRes)),resChosen=savedRes!==null,resFrames=[],resFrom=0;
 const setRes=i=>{res=i;renderer.setPixelRatio(maxRatio*RES_SCALE[res]);$('resolution').textContent=`Res ${RES[res]}`;};
 // Until the visitor picks a resolution, four seconds under 20 frames a second steps it down a level, for this visit only

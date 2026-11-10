@@ -2,8 +2,9 @@
 // shown). Twice a second they show, over the last five seconds: frames a second; frame times (median, 95th and 99th
 // percentile, worst); the frame's main-thread time and, where the browser can time the GPU
 // (EXT_disjoint_timer_query_webgl2), its GPU time; frames over 50 ms; the main pass's draws and triangles; the drawing
-// size, pixel ratio and JS heap; and the GPU's name. The choice is remembered on this browser. Hidden, they cost nothing
-// a frame.
+// size, pixel ratio and JS heap; the multisampling and depth buffer it draws with (pixel-switches.js); and the GPU's
+// name. The choice is remembered on this browser. Hidden, they cost nothing a frame.
+import {pixelLine} from './pixel-switches.js';
 const STORAGE_KEY='leo-walk-stats',WINDOW_MS=5000,PAINT_MS=500,HITCH_MS=50;
 const at=(sorted,p)=>sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*p))]:0;
 const sortedOf=(list,key)=>list.map(e=>e[key]).filter(v=>v!=null).sort((a,b)=>a-b);
@@ -14,6 +15,8 @@ export function createFrameReadout(renderer){
  try{shown||=localStorage.getItem(STORAGE_KEY)==='1';}catch{/* storage blocked: start hidden */}
  const gl=renderer.getContext(),timer=gl.getExtension('EXT_disjoint_timer_query_webgl2'),debug=gl.getExtension('WEBGL_debug_renderer_info');
  const gpuName=debug?String(gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)).replace(/^ANGLE \((.*)\)$/,'$1').replace(/ \(0x[0-9a-f]+\)/gi,''):'GPU name hidden by this browser';
+ // Read once, now: the canvas's own framebuffer is the one bound, and neither changes without a new context.
+ const pixels=pixelLine({samples:gl.getParameter(gl.SAMPLES),logDepth:renderer.capabilities.logarithmicDepthBuffer});
  let box=null,samples=[],pending=[],query=null,started=0,last=0,painted=0;
  const show=()=>{
   if(!box){box=document.createElement('div');box.id='walk-stats';box.setAttribute('aria-hidden','true');
@@ -37,6 +40,7 @@ export function createFrameReadout(renderer){
    `cpu ${ms(at(cpu,.5))} med  ${ms(at(cpu,.95))} p95   gpu ${timer?(gpu.length?`${ms(at(gpu,.5))} med  ${ms(at(gpu,.95))} p95`:'…'):'n/a'}`,
    `frames >${HITCH_MS} ms: ${hitches}   draws ${calls}   tris ${(triangles/1e6).toFixed(2)}M`,
    `${gl.drawingBufferWidth}×${gl.drawingBufferHeight} ×${renderer.getPixelRatio().toFixed(2)}   heap ${heap}   last ${WINDOW_MS/1000} s`,
+   pixels,
    gpuName,
   ].join('\n');
  };

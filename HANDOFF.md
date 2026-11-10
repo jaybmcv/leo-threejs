@@ -1,18 +1,18 @@
 # LEO Three.js source handoff
 
-## Layout 2 — takes effect at cutover
+## Layout 2 — the live ship
 
-Until cutover, the canonical live site and the historical build notes below describe layout 1. Layout 2 is selected with `LEO_LAYOUT=2` at build time and writes only `output/leo-interior-v02` and `dist-v2`; URL parameters cannot switch worlds. These v2 sections take precedence for the redesigned ship after cutover. This work does not deploy or approve a release.
+Layout 2 is what leo.marscatsvoyage.com serves (checked 2026-11-09: the site's `build.json` named 034a0c7c, and `vercel.json` publishes `dist-v2`). It has been the default build since the switchover merged on 2026-11-02 (#197): with `LEO_LAYOUT` unset, the build, public build and checks select layout 2 and write `output/leo-interior-v02` and `dist-v2`. `LEO_LAYOUT=1` selects the pinned rollback under `legacy/v1`, which writes `output/leo-interior-v01` and `dist`. Selection is a build input; URL parameters cannot switch worlds. The sections under "Layout 1 reference and history" below describe the earlier ship.
 
 The accepted source of truth is [the v2 plan](src/plan/README-v2.md), [the selected walk](src/plan/README-phase2.md) and [recorded decisions](src/plan/decisions-v2.json).
 
-For v2 work, read the selected plan and adapters first. Coordinates are ship metres: X forward, Y up, Z starboard. **Walk yaw 0 faces +Z and 90 degrees faces +X**. Keep the live v1 models and walk source unchanged. The 283 existing v2 stair/lift signs keep their planned placement in `src/plan/signs-v2.js`.
+For v2 work, read the selected plan first. Coordinates are ship metres: X forward, Y up, Z starboard. **Walk yaw 0 faces +Z and 90 degrees faces +X**. The v2 adapters were folded into the source at the switchover (9e348c22), so layout 1 now lives only in `legacy/v1`, a pinned snapshot whose ship geometry is not to be edited ([legacy/README.md](legacy/README.md)). The 283 existing v2 stair/lift signs keep their planned placement in `src/plan/signs-v2.js`.
 
 The v2 Go-to catalog covers every nonaggregate selected room, retained fixed room, escape shuttle and named activity approach. It groups twenty decks plus fin/crown, searches current names, uses real floor points, and omits the Deck 20 crew gallery as a public destination. Runtime code must use the trimmed layout shape: per-deck corridor lists are absent; use `layout.circulation.corridors`.
 
-`node scripts/check-goto-v2.mjs` uses this checkout’s prepared walk by default; `--prepared=<directory>` selects a frozen prepared-walk folder for targeted review. `LEO_LAYOUT=2 node scripts/check-live.mjs` selects the v2 camera/walker pose smoke. The default v1 live test body is retained. The focused v2 pose smoke checks floor support and network pose delivery; it does not substitute for the full feature/server interaction suite at combined validation.
+`node scripts/check-goto-v2.mjs` uses this checkout’s prepared walk by default; `--prepared=<directory>` selects a frozen prepared-walk folder for targeted review. `node scripts/check-live.mjs` runs the v2 live checks by default; with `LEO_LAYOUT=1` it runs the retained v1 test body through `scripts/run-legacy.mjs`. The focused v2 pose smoke checks floor support and network pose delivery; it does not substitute for the full feature/server interaction suite.
 
-Use [REPORT-goto.md](output/phase7/REPORT-goto.md) for exact PowerShell commands, browser-review setup and checks still requiring the final combined build. Cutover must point hosting at the validated v2 public output; no deployment occurs as part of this handoff.
+The Go-to review's PowerShell commands and browser set-up were written to `output/phase7/REPORT-goto.md`. `output/` is ignored and the report was never committed, so a fresh clone does not have it. Deploys are described in [FAST_DEPLOYS.md](FAST_DEPLOYS.md).
 
 ## Layout 1 reference and history
 
@@ -76,7 +76,7 @@ The build writes GLB files into `output/leo-interior-v01/`. `leo-full-ship.glb` 
 
 For a static web distribution, run `npm run build:public` after the main build. This creates `dist/` with compressed model parts and the matching browser loader. Serve that entire directory over HTTP; do not open its HTML as a file URL.
 
-The live site is leo.marscatsvoyage.com, served from `dist/` by its Vercel project. Another tool should build locally and should not deploy to it or change its access unless the owner explicitly requests it.
+The live site is leo.marscatsvoyage.com. Its Vercel project now serves layout 2 from `dist-v2/` (`vercel.json`); `dist/` is the layout 1 output. Another tool should build locally and should not deploy to it or change its access unless the owner explicitly requests it.
 
 Suggested instruction to another tool: “Read HANDOFF.md, install and build the project, then inspect the Captain's bridge in the actual Three.js viewer. Preserve the existing ship geometry and layout; improve its presentation using the real source and assets rather than replacing it with a mockup.”
 
