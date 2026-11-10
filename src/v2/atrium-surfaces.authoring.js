@@ -19,7 +19,7 @@ function pavingMap(){
  const map=new T.CanvasTexture(c);map.colorSpace=T.SRGBColorSpace;map.wrapS=map.wrapT=T.RepeatWrapping;map.anisotropy=8;atriumFloorMaterial.map=map;
 }
 // 4B: sunlit lawns (park and garden beds) instead of the earlier muted sage.
-// Warm travertine paving on the boulevards (concept B): under the atrium's light (three 0.187, as live) sunlit pavers
+// Warm travertine paving on the boulevards and the food hall around them (concept B): under the atrium's light (three 0.187, as live) sunlit pavers
 // render about 227,195,157, near the concept's 224,188,151.
 const LAWN=0x7ea95b,GARDEN_LAWN=0x8bb566,PAVING=0xe7aa79;
 function keepFaces(g,test){const p=g.attributes.position,n=g.attributes.normal,out=[];for(let i=0;i<p.count;i+=3)if(test(n.getY(i),i,p))for(let k=0;k<3;k++)out.push(p.getX(i+k),p.getY(i+k),p.getZ(i+k));g.dispose();const result=new T.BufferGeometry();result.setAttribute('position',new T.Float32BufferAttribute(out,3));result.computeVertexNormals();return result;}
@@ -33,7 +33,7 @@ export function atriumFloorGeometry(outline,holes,y,atriumOutline=outline){
  const gardenPolys=phase6GardenPolygons(),islands=phase6LakeIslands();
  const indexed=holes.map(p=>({p,x0:Math.min(...p.map(q=>q[0])),x1:Math.max(...p.map(q=>q[0])),z0:Math.min(...p.map(q=>q[1])),z1:Math.max(...p.map(q=>q[1]))}));
  for(const z of zones){const[x0,x1,z0,z1]=z.bounds,cuts=indexed.filter(h=>h.x0<x1&&h.x1>x0&&h.z0<z1&&h.z1>z0).map(h=>h.p);cuts.push(...gardenPolys,...islands.slice(1));if(z.id==='atrium6-park')cuts.push(path);const top=y-(z.id.endsWith('lake')?ATRIUM_PROTOTYPE.waterDepth:0);
- g.push(colourGeometry(keepFaces((z.id.endsWith('lake')?polygonGeometry(z.polygon,cuts,top,0):polygonGeometry(outline,[...cuts,...outsideRect(z.bounds)],top,0)),ny=>ny>.5),z.id==='atrium6-park'?LAWN:z.colour,z.id==='atrium6-lobby'));
+ g.push(colourGeometry(keepFaces((z.id.endsWith('lake')?polygonGeometry(z.polygon,cuts,top,0):polygonGeometry(outline,[...cuts,...outsideRect(z.bounds)],top,0)),ny=>ny>.5),z.id==='atrium6-park'?LAWN:z.id==='atrium6-food'?PAVING:z.colour,z.id==='atrium6-lobby'||z.id==='atrium6-food'));
  if(z.id.endsWith('lake')){const wall=keepFaces(polygonGeometry(z.polygon,cuts,y,ATRIUM_PROTOTYPE.waterDepth),(ny)=>Math.abs(ny)<.5);g.push(colourGeometry(wall,0xd9d3c4));}}
  for(const poly of [...gardenPolys,...islands.slice(1)])g.push(colourGeometry(keepFaces(polygonGeometry(poly,holes,y,0),ny=>ny>.5),GARDEN_LAWN));
  // 4B: lawn banks along the lake's rounded shoreline, and the winding park path in the boulevard's paving.

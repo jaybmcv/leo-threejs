@@ -6,6 +6,8 @@ Jay's pick for the Deck 6 boulevard floor ([`docs/atrium-areas.md`](../../atrium
 
 ![before / after at boulevard-aft, boulevard-cross and hero](contact-before-after.jpg)
 
+![before / after in the food hall, at food-wide and food-deck](contact-food-hall.jpg)
+
 *Before is the live site (`baseline-639f7393`; its atrium floor is the same as `f8af5b3a`). After is a local build of
 this branch, captured with `scripts/capture-atrium-areas.mjs`. Both render with three 0.187.*
 
@@ -19,8 +21,11 @@ this branch, captured with `scripts/capture-atrium-areas.mjs`. Both render with 
   (`paintTravertine`, `src/v2/atrium-daylight.js`) on the existing paving faces. The texture has round soft clouds
   and small pits, with nothing long and thin, because streaks read as wood grain at a walker's angle. Sunlit pavers
   render about 227,194,157 (concept 224,188,151). Paved faces get world-planar UVs. Every other face samples an 8 cm
-  pure-white spot, so lawns, water, the food hall and the stage keep their colours. The arrival lobby and the park
-  path take the same pavers. The old 1.5 m joint geometry is gone.
+  pure-white spot, so lawns, water and the stage keep their colours. The arrival lobby, the park path and the food
+  hall around the boulevards take the same pavers, so the boulevards and the food hall read as one paved floor; the
+  food hall used to be plain cream (224,213,196) and now renders 229,197,162. The basalt edge bands still mark the
+  boulevards, and the timber decks under the food hall's table courts are unchanged. The old 1.5 m joint geometry
+  is gone.
 - **Inlays** (`addPromenadeInlays`, `src/v2/atrium-gardens.js`), thin sheets 12 mm over the floor, side by side:
   - a basalt band along both boulevard edges, under the avenue (|z| 4.875..6);
   - a basalt centre stripe edged in brass (1.95 m);
@@ -51,8 +56,10 @@ Unchanged:
 | hero | 558 -> 558 | 10.76M -> 10.78M |
 
 Draws and triangles are the main pass, from the walk's own `?fps=1` readout ([`stats-before.json`](stats-before.json),
-a local build of `f8af5b3a`; [`stats-after.json`](stats-after.json)). The readout rounds triangles to 0.01M. The
-exact change:
+a local build of `f8af5b3a`; [`stats-after.json`](stats-after.json)). The readout rounds triangles to 0.01M. In the
+food hall the after build reads 391 draws, 10.54M at food-wide and 491 draws, 10.69M at food-deck. Paving the food hall
+changes only its colour and UVs, so it adds no draws or triangles: the three views above read the same with and
+without it. The exact change:
 
 | Change | Triangles |
 | --- | --- |

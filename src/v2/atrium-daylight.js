@@ -60,8 +60,8 @@ export function paintTreeShade(c,seed=1){
 // of the texture covers 10.4 x 5.2 m (8 pavers by 8 rows).
 export const PAVER={length:1.3,row:.65,tile:[10.4,5.2],rowOffset:.325};
 export const pavingUV=(x,z)=>[x/PAVER.tile[0],(z-PAVER.rowOffset)/PAVER.tile[1]];
-// Faces that are not paving sample one spot in the tile's first paver, kept pure white, so lawns, water, the food
-// hall and the stage keep exactly their own colours.
+// Faces that are not paving sample one spot in the tile's first paver, kept pure white, so lawns, water and the stage
+// keep exactly their own colours.
 export const PAVING_PLAIN_UV=[.0625,.9375];
 export function paintTravertine(c){
  const W=1024,H=512,N=8,pw=W/N,ph=H/N,g=c.getContext('2d'),rnd=seeded(6406);c.width=W;c.height=H;
