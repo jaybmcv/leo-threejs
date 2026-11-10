@@ -88,7 +88,8 @@ export function connectLive(url,on,opts={}){
     case 'mark':on.mark?.(msg.id,msg.at);break;
     // A Keel Club water cannon shot by someone else (keel-club.js fire): cannon i, the jet's seed and the shot's id.
     case 'cannon':if(Number.isInteger(msg.i)&&Number.isInteger(msg.seed)&&typeof msg.id==='string'&&typeof msg.shot==='string')on.cannon?.(msg.id,msg.i,msg.seed,msg.shot);break;
-    case 'aboard':on.aboard?.(msg.n,Array.isArray(msg.names)?msg.names.filter(n=>typeof n==='string'):null);break;
+    // Above server/live-core.mjs's NAMES_UP_TO the count comes alone: 'heard', the names being those heard with the poses.
+    case 'aboard':on.aboard?.(msg.n,msg.names==='heard'?'heard':Array.isArray(msg.names)?msg.names.filter(n=>typeof n==='string'):null);break;
     // The leaderboards (Alien Cat Invasion's, or Paw Pool's when game is 'pool'): the top ten and this visitor's
     // best, and a game's result.
     case 'board':on.board?.(msg);break;
