@@ -19,7 +19,7 @@ function ship(){
 {const w=ship(),o=collectOccluders(w.scene);assert.equal(o.stats.sources,2);assert.equal(o.positions.length,(2*2)*9);pass('a merge source counts once however many pieces list it');
  const bandCond=o.conditions.findIndex(c=>c[0].includes('Walk_band_3')&&!c[0].includes('merged_sources'));assert.ok(o.bandConds.has(bandCond));assert.equal(JSON.parse(o.conditions[o.mergeRoot][0])[0][0],'V2_phone_band_merges');
  assert.ok([...o.conds].every(k=>k===bandCond));pass('its triangles depend on its band, and the band on the merged pieces\' root');}
-{const scene=new T.Scene();const see=[new T.MeshStandardMaterial({transparent:true,opacity:.5}),new T.MeshStandardMaterial({alphaTest:.5}),new T.ShaderMaterial(),new T.MeshPhysicalMaterial({transmission:1}),new T.MeshStandardMaterial({colorWrite:false}),new T.MeshBasicMaterial({alphaToCoverage:true}),new T.MeshStandardMaterial({alphaHash:true}),new T.MeshBasicMaterial({blending:T.AdditiveBlending})];
+{const scene=new T.Scene();const see=[new T.MeshStandardMaterial({transparent:true,opacity:.5}),new T.MeshStandardMaterial({alphaTest:.5}),new T.ShaderMaterial(),new T.MeshPhysicalMaterial({transmission:1}),new T.MeshStandardMaterial({colorWrite:false}),new T.MeshBasicMaterial({alphaToCoverage:true}),new T.MeshStandardMaterial({alphaHash:true}),new T.MeshBasicMaterial({blending:T.AdditiveBlending}),new T.MeshStandardMaterial({depthFunc:T.NeverDepth}),new T.MeshStandardMaterial({stencilWrite:true})];
  see.forEach((m,i)=>scene.add(quad(i*3,0,m,'Glass'+i)));scene.updateMatrixWorld(true);const o=collectOccluders(scene);assert.equal(o.positions.length,0);assert.equal(o.stats.skippedMaterials,see.length);
  assert.equal(o.conditions.length,0,'a mesh with no wall triangle adds no condition (a moving one would split the pages\' tables)');
  pass('see-through, cut-out, hashed, additive, refracting and custom-shaded surfaces are not occluders, nor conditions');}
@@ -33,7 +33,8 @@ function ship(){
  assert.equal(collectOccluders(scene).positions.length,0);assert.equal(collectTargets(scene).length,0);pass('doors, levers and lifts, and what they hold, neither hide anything nor are hidden');}
 {const scene=new T.Scene(),tree=quad(0,0,undefined,'Blossom_tree');tree.castShadow=true;const glass=quad(3,0,new T.MeshStandardMaterial({transparent:true}),'Pane');
  const overlay=quad(6,0,new T.MeshBasicMaterial({depthTest:false}),'Marker');// drawn over whatever is in front of it
- scene.add(tree,glass,overlay);scene.updateMatrixWorld(true);
+ const always=quad(9,0,new T.MeshBasicMaterial({depthFunc:T.AlwaysDepth}),'Halo'),stencil=quad(12,0,new T.MeshBasicMaterial({stencilWrite:true}),'Mask');
+ scene.add(tree,glass,overlay,always,stencil);scene.updateMatrixWorld(true);
  assert.equal(collectTargets(scene).length,0);pass('shadow casters, see-through parts and parts drawn without the depth test are never hidden');}
 {const scene=new T.Scene(),geo=new T.BoxGeometry(1,1,1),mat=new T.MeshStandardMaterial();
  const loose=new T.InstancedMesh(geo,mat,3);loose.name='P4_seat';const cabins=new T.InstancedMesh(geo,mat,2);cabins.name='Cabin_fit';
