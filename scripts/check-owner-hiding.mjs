@@ -73,4 +73,14 @@ for(const [name,undo] of [['not shown',w=>{w.wall.visible=false;}],['on another 
 {const w=world();w.b.matrixAutoUpdate=false;const data=bake(w);w.b.matrix.makeTranslation(3,0,30);// its matrix changes and nothing marks it
  const before=w.b.matrixWorld.clone(),h=createOwnerHiding(data,{key:KEY,scene:w.scene});h.resolve();assert.equal(h.stats.resolved,2);
  assert.ok(w.b.matrixWorld.equals(before),'matching wrote no world matrix');pass('a hand-set matrix changed before resolve() does not match, and matching writes nothing');}
+{const w=world(),h=make(w),halo=new T.Sprite(new T.SpriteMaterial());halo.scale.set(3,3,1);w.a.add(halo);// a gem's glow, bigger than the gem: nothing proved it hidden
+ assert.deepEqual(during(h,at(),[w.a,w.b]),[true,false]);assert.equal(h.stats.dropped,0);pass('a part with something attached stays: hiding it would hide that too');
+ w.a.remove(halo);assert.deepEqual(during(h,at(),[w.a]),[false]);pass('and it hides again once nothing is attached (it was held, not dropped)');}
+{const w=world();w.a.add(new T.Group());const h=make(w);assert.equal(h.stats.resolved,h.stats.parts);assert.deepEqual(during(h,at(),[w.a,w.b]),[true,false]);pass('so does one that already had a child when the bake was made and matched');}
+{const w=world(),h=make(w);w.wall.add(new T.Sprite(new T.SpriteMaterial()));assert.deepEqual(during(h,at(),[w.a,w.b]),[false,false]);pass('a wall with something attached is still a wall: it is only looked at, never hidden');}
+{const geo=new T.BoxGeometry(1,1,1),all=[0,4,8].map(x=>new T.Matrix4().makeTranslation(x,0,-10)),cabins=new T.InstancedMesh(geo,new T.MeshBasicMaterial(),2);
+ cabins.userData={near:{all},cabinIds:['A','B','C']};const pack=order=>{order.forEach((i,k)=>cabins.setMatrixAt(k,all[i]));cabins.count=order.length;cabins.userData.currentCabinIds=order.map(i=>cabins.userData.cabinIds[i]);};
+ pack([0,1]);const here=ownerPrint(cabins);pack([2,1]);assert.equal(ownerPrint(cabins),here,'the cabins packed in follow the walker');
+ cabins.userData.near={all:[...all.slice(0,2),new T.Matrix4().makeTranslation(9,0,-10)]};assert.notEqual(ownerPrint(cabins),here,'a cabin moved');
+ pass('a cabin part\'s print holds every cabin it may show, not the ones packed in where the walker stands');}
 console.log(`owner hiding: ${passed} checks passed`);

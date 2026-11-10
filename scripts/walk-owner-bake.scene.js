@@ -8,7 +8,11 @@ import {ownerPath,ownerPrint} from '../src/v2/owner-hiding.js';
 export const MOVING=/pool_ball|door|drape|curtain|yarn|ball_|swing|fan_|rotor|wheel|car_|lift|gate|shutter|lever/i;
 const LIFT=/^Walk_lift_|^Lift_|^Car_/;
 // Plain opaque materials only: anything transparent, cut out, refracting or shaded by custom code may let sight through.
-const plainOpaque=(m,empty)=>!!m&&m.visible!==false&&!m.transparent&&(m.opacity??1)>=1&&!(m.alphaTest>0)&&!m.alphaToCoverage&&!m.alphaHash&&!m.alphaMap&&!(m.transmission>0)&&m.colorWrite!==false&&m.depthWrite!==false&&m.depthTest!==false&&!m.wireframe&&!m.isShaderMaterial&&!m.isRawShaderMaterial
+// The depth test three uses by default (or Less) and no stencil: another depth function can draw a part through walls or
+// a wall nowhere, and a stencil test can leave a wall uncovered.
+const usualDepth=m=>m.depthTest!==false&&(m.depthFunc===T.LessEqualDepth||m.depthFunc===T.LessDepth)&&!m.stencilWrite&&(m.stencilFunc===undefined||m.stencilFunc===T.AlwaysStencilFunc);
+// Normal blending only: an additive or multiplied surface adds to what is behind it rather than covering it.
+const plainOpaque=(m,empty)=>!!m&&m.visible!==false&&!m.transparent&&(m.blending===T.NormalBlending||m.blending===T.NoBlending)&&usualDepth(m)&&(m.opacity??1)>=1&&!(m.alphaTest>0)&&!m.alphaToCoverage&&!m.alphaHash&&!m.alphaMap&&!(m.transmission>0)&&m.colorWrite!==false&&m.depthWrite!==false&&m.depthTest!==false&&!m.wireframe&&!m.isShaderMaterial&&!m.isRawShaderMaterial
  &&(m.isMeshStandardMaterial||m.isMeshBasicMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial||m.isMeshPhysicalMaterial||m.isMeshToonMaterial||m.isMeshMatcapMaterial)
  // drawn where its geometry says (no vertex-moving or discarding shader hook), and not clipped away
  &&geometryKept(m,empty)&&!m.clippingPlanes?.length;
@@ -62,7 +66,10 @@ function clusters(o,box){
  * by owner (an instanced or merged mesh is its own owner; any other part belongs to its feature root):
  * [{root, parts:[{o, path, print, boxes, slots?}]}]. A cabin part (re-packed from userData.near.all)
  * lists its slots: [{id, centre, box}]. Left out: movers, lift parts, shadow casters, see-through parts, other instanced
- * meshes (their shown instances change and their full list is not exposed). */
+ * meshes (their shown instances change and their full list is not exposed). A part with something attached to it is
+ * still listed, though its boxes cover only its own triangles: the walk never hides one while it has children
+ * (owner-hiding.js), and leaving it out here would make the list depend on when its children arrive, which the bake's
+ * pages must agree on (walk-owner-bake.mjs refuses the bake when their tables hold different rows). */
 export function collectTargets(scene,{emptyHook}={}){
  const isRoot=q=>!q.parent||q.parent===scene||/^Walk_band_\d+$|live_source|^V2_live/i.test(q.parent.name||'');
  const ownerOf=o=>{if(o.isInstancedMesh||/_merged_|^Walk_merged_/.test(o.name||''))return o;let q=o;while(!isRoot(q))q=q.parent;return q;};
@@ -76,7 +83,7 @@ export function collectTargets(scene,{emptyHook}={}){
   return o.userData.sources.flatMap(id=>{const q=byUuid.get(id),qg=q?.geometry;if(!qg)return [null];if(!qg.boundingBox){if(!qg.attributes.position?.array)return [null];qg.computeBoundingBox();}q.updateWorldMatrix(true,false);return clusters(q,qg.boundingBox.clone().applyMatrix4(q.matrixWorld));});
 };
  const visit=o=>{if(o.userData?.mergedSources||copied(o))return;
-  if(o.isMesh&&!o.isSkinnedMesh&&!o.isBatchedMesh&&!o.castShadow&&!morphs(o.geometry)&&[o.material].flat().every(m=>m&&!m.transparent&&m.visible!==false&&geometryKept(m,emptyHook))){
+  if(o.isMesh&&!o.isSkinnedMesh&&!o.isBatchedMesh&&!o.castShadow&&!morphs(o.geometry)&&[o.material].flat().every(m=>m&&!m.transparent&&m.visible!==false&&usualDepth(m)&&geometryKept(m,emptyHook))){// another depth test can draw it through walls
    const root=ownerOf(o);let lifted=false;for(let q=o;q;q=q.parent)if(LIFT.test(q.name||'')){lifted=true;break;}
    if(!lifted&&!moving(o)){let part=null;
     if(o.isInstancedMesh){const near=o.userData.near;if(near&&o.userData.cabinIds&&!o.userData.boat&&o.geometry.attributes.position?.array){const g=o.geometry,local=new T.Box3().setFromBufferAttribute(g.attributes.position);
