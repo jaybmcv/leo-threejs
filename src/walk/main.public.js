@@ -192,11 +192,11 @@ import {createHubPanel} from './hub-panel.js';
 const $=id=>document.getElementById(id);
 // Building the walk takes about 2 GB at its largest, more than a phone with 4 GB or less can give one tab. walk.html
 // asks such phones first, and any browser whose last start never finished (its tab was closed under it), before this
-// script loads. The note is set from here until the walk is ready, and cleared on leaving the page, so only a start
-// that was cut off leaves it behind.
+// script loads. The note is set from here until the walk is ready, so only a start that was cut off leaves it behind:
+// walk.html clears it when the page is left in good order (from before this script loads) or the start fails for
+// another reason than memory.
 const STARTING='leo-walk-building';
 try{localStorage.setItem(STARTING,String(Date.now()));}catch{}
-addEventListener('pagehide',()=>{try{localStorage.removeItem(STARTING);}catch{}});
 // From the first moment, so the Builder's Hub knows a walk is on its way and doesn't start a second one.
 const hubLink=listenForHub();
 const timings=[],t0=performance.now();
@@ -283,8 +283,9 @@ renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
 // Lift door shutter blades are clipped to their doorway as they open (lift-ride.js).
 renderer.localClippingEnabled=true;
 $('viewport').appendChild(renderer.domElement);
-// A phone short of graphics memory drops the WebGL context: bring the card back with a reason, not a frozen view.
-renderer.domElement.addEventListener('webglcontextlost',()=>{document.body.dataset.ready='0';$('loading-text').textContent='The view stopped: this device ran short of graphics memory. Reload to walk again.';});
+// A phone short of graphics memory drops the WebGL context: bring the card back with a reason, not a frozen view. The
+// card then shows that line and Reload alone (walk.html, LEO_WALK_FAILED), not the notes of a start still under way.
+renderer.domElement.addEventListener('webglcontextlost',()=>{document.body.dataset.ready='0';const line='The view stopped: this device ran short of graphics memory. Reload to walk again.';if(window.LEO_WALK_FAILED)window.LEO_WALK_FAILED(line);else $('loading-text').textContent=line;});
 const scene=new T.Scene();scene.environmentIntensity=.65;
 // Space through the windows: stars and Mars in their own pass behind the ship, so the ship's far plane can stay short.
 const sky=new T.Scene();sky.background=new T.Color(0x05080d);const skyCamera=new T.PerspectiveCamera(60,1,10,5000);
@@ -873,8 +874,10 @@ function toggleMap(){
  $('minimap-button').addEventListener('click',toggleMap);}
 let last=performance.now(),acc=0,lastHud=0,lastHeading=heading,lastSpeed=0,turnRate=0,accel=0;const STEP=1/120,wish=new T.Vector3();
 const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WALKER.prone};
-// Should anything stop the warm-up starting (it is the last thing this script does), the walk still draws.
-setTimeout(()=>{warmed=true;},3*WARM_WAIT_MS);
+// Should anything stop the warm-up starting (it is the last thing this script does), the walk still draws. From here
+// on an error in the rest of this script is therefore not a failed start, which the page is told (walk.html,
+// LEO_WALK_FAILED): before this line nothing can make the walk ready, so an error there is one.
+setTimeout(()=>{warmed=true;},3*WARM_WAIT_MS);window.LEO_WALK_ARMED=true;
 renderer.setAnimationLoop(()=>{
  // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
  if(hubPanel.isOpen()&&firstViewReady)return;
