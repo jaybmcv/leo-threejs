@@ -21,6 +21,8 @@ import {PVS_GRID} from '../src/v2/atrium-pvs.js';
 import {OWNER_BAKE_VERSION,ownerBakeFile,ownerKey} from '../src/v2/owner-hiding.js';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
 import {tablesDiffer,withoutMoved} from './walk-owner-bake.scene.js';
+// The bake is for discrete desktop GPUs' piece size (src/v2/desk-piece.js), whatever GPU bakes it: its key holds the size.
+import {DESK_PIECE} from '../src/v2/desk-piece.js';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
 const SITE_DIR=arg('site',null),TAG=arg('tag',null),PAGES=Number(arg('pages',2)),MINUTES=Number(arg('minutes',80)),TOP=Number(arg('top',8)),SLABS=Number(arg('slabs',2)),MARGIN=Number(arg('margin',4));
@@ -77,7 +79,7 @@ async function browser(n){
 }
 // A page with the walk up and the bake installed; its setup() answer.
 async function openPage(n,walk,script){
- const page=await browser(n);await page.send('Page.navigate',{url:walk.url+'?lv=2&view=first&halloween=0&ownerBake'});
+ const page=await browser(n);await page.send('Page.navigate',{url:walk.url+'?lv=2&view=first&halloween=0&ownerBake&deskpiece='+DESK_PIECE.discrete});
  const until=Date.now()+10*60e3;
  for(;;){if(Date.now()>until)throw Error('The walk did not come up within 10 minutes on page '+n);
   let up=false;try{up=await page.ev(`document.body?.dataset.ready==='1'&&!!globalThis.__ownerBakeHost`);}catch(e){if(/did not answer|closed/.test(e.message))throw e;}

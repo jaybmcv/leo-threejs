@@ -17,9 +17,6 @@ let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 // desktop as before: decks -1 to 4 batched and the atrium geometry pack.
 const phoneBatching=(()=>{const query=new URLSearchParams(location.search);if(!preparedPhone)return query.get('deskbatch')==='low'?{}:{merge:true};const mode=query.get('phonebatch');
  return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
-// A desktop's bigger merged bands draw in view-culled pieces of at most this many triangles (phone-bands.js);
-// ?deskpiece= tries another size, 0 for one draw per material as on a phone.
-const deskPiece=(()=>{const v=new URLSearchParams(location.search).get('deskpiece');return preparedPhone?0:v!==null&&Number.isFinite(+v)&&+v>=0?+v:100000;})();
 let phoneBands=null,wayfindingSigns=null,fogCull=null;
 // The atrium geometry pack binds the band pieces the merge hides, so it runs only without the merge, and the Detail menu
 // chooses its distant detail. The merged bands keep full detail and still draw faster: on them the menu sets the atrium's
@@ -43,6 +40,7 @@ import {batchFurnishing} from '../v2/furnishing-batches.js';
 import {createFrameReadout} from './frame-readout.js';
 import {mergePhoneFurnishing} from '../v2/phone-furnishing.js';
 import {mergePhoneBands} from '../v2/phone-bands.js';
+import {deskPieceSize,gpuName} from '../v2/desk-piece.js';
 import {createAtriumPvs} from '../v2/atrium-pvs.js';
 import {PVS_LOCAL_SPAN} from '../v2/atrium-pvs-key.js';
 import {warmShaders,uploadTextures,WARM_WAIT_MS} from '../v2/shader-warmup.js';
@@ -255,6 +253,10 @@ const PHONE_HIDE={bands:o=>/^V2_low_deck_merged_/.test(o.name)&&!o.material[0]?.
 const phoneHide=(phoneTest.get('phonehide')||'').split(',').map(k=>PHONE_HIDE[k]).filter(Boolean);let phoneHidden=[],phoneHiddenAt=-Infinity;
 // Multisampling is chosen with the context: the Detail menu's Performance drops it from the next load.
 const renderer=new T.WebGLRenderer({antialias:!(phone&&phoneTest.get('phoneaa')==='0')&&!(deskDetail&&!DETAIL[getAtriumQuality()].antialias),logarithmicDepthBuffer:!linearDepth,powerPreference:'high-performance'});
+// A desktop's bigger merged bands draw in view-culled pieces of at most this many triangles (phone-bands.js): smaller
+// on Apple and integrated GPUs, which are short of triangles, larger on discrete cards, which are short of draws
+// (desk-piece.js). ?deskpiece= sets any size, 0 for one draw per material as on a phone.
+const deskPiece=deskPieceSize({query:new URLSearchParams(location.search),phone:preparedPhone,gpu:gpuName(renderer.getContext())});
 // The ship's layers are set apart by height (a floor finish 6 mm over the deck, paint 8 mm): with the logarithmic depth
 // buffer the shaders write the depth, so polygon offset has never applied. With linear depth it would, and pull the hex
 // sub-floor (finish-kit.js) over the Arrival Hall's finish, so it stays off.
