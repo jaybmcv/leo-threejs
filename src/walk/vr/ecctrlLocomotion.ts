@@ -5,6 +5,7 @@ import { COSMO_RUN_DURATION, cosmoRunBlend } from './cosmoRunCycle.js';
 import { DEFAULT_DLCAT_TUNING } from './dlCatTuning.js';
 
 /** Ordinary walking must remain the donor walk, even at the game's fast travel speed. */
+const DONOR_FEET=['DEF-foot.L','DEF-foot.R','DEF-toe.L','DEF-toe.R'] as const;
 export function ecctrlRunBlend(speed:number){
   return T.MathUtils.smoothstep(speed,WALK_SPEED+.1,(WALK_SPEED+RUN_SPEED)/2);
 }
@@ -57,6 +58,10 @@ export class EcctrlLocomotion {
   private readonly lazy:LazyWorld|undefined;
   private readonly scratchPosition=new T.Vector3();
   private readonly scratchScale=new T.Vector3();
+  private readonly scratchBasis=new T.Quaternion();
+  private readonly scratchCorrection=new T.Quaternion();
+  private readonly scratchDesired=new T.Quaternion();
+  private readonly scratchParent=new T.Quaternion();
   constructor(data:EcctrlAnimationData,root:T.Object3D,bones:Map<string,T.Bone>,lazy?:LazyWorld){
     this.root=root;this.lazy=lazy;
     this.nodes=data.nodes.map(n=>{
@@ -121,7 +126,9 @@ export class EcctrlLocomotion {
       pair.walkCorrection=pair.source.getWorldQuaternion(new T.Quaternion()).invert().multiply(footRest.get(side)!);
     }
   }
-  private footHeight(){return Math.min(...['DEF-foot.L','DEF-foot.R','DEF-toe.L','DEF-toe.R'].map(n=>this.byName.get(n)!.getWorldPosition(new T.Vector3()).y));}
+  // (Leo) Every caller has just refreshed the donor whole (source.updateMatrixWorld(true); nothing parents the source),
+  // so its feet's world heights are read as they stand: three's getter remade each one's path again, to the same numbers.
+  private footHeight(){let low=Infinity;for(const n of DONOR_FEET)low=Math.min(low,this.byName.get(n)!.matrixWorld.elements[13]!);return low;}
   setPhase(phase:number){this.phase=((phase%1)+1)%1;}
   get currentPhase(){return this.phase;}
   get state(){return {engine:'Ecctrl / Quaternius authored clips',phase:this.phase,clips:this.actions.map(a=>a.getClip().name),weights:this.actions.map(a=>a.getEffectiveWeight()),travelPerCycle:[...this.travelPerCycle]};}
@@ -149,10 +156,12 @@ export class EcctrlLocomotion {
     const lazy=this.lazy;
     const targetRotation=(o:T.Object3D,q:T.Quaternion)=>lazy?(lazy.world(o).decompose(this.scratchPosition,q,this.scratchScale),q):o.getWorldQuaternion(q);
     const donorRotation=(o:T.Object3D,q:T.Quaternion)=>lazy?(o.matrixWorld.decompose(this.scratchPosition,q,this.scratchScale),q):o.getWorldQuaternion(q);
-    const basis=targetRotation(this.root,new T.Quaternion());
+    // (Leo) scratch quaternions, not new ones for every pair on every solve: the same arithmetic
+    const basis=targetRotation(this.root,this.scratchBasis);
     for(const pair of this.pairs){
-      const desired=donorRotation(pair.source,new T.Quaternion()).multiply(pair.walkCorrection?pair.correction.clone().slerp(pair.walkCorrection,walkWeight):pair.correction).premultiply(basis);
-      desired.premultiply(targetRotation(pair.target.parent!,new T.Quaternion()).invert());
+      const correction=pair.walkCorrection?this.scratchCorrection.copy(pair.correction).slerp(pair.walkCorrection,walkWeight):pair.correction;
+      const desired=donorRotation(pair.source,this.scratchDesired).multiply(correction).premultiply(basis);
+      desired.premultiply(targetRotation(pair.target.parent!,this.scratchParent).invert());
       pair.target.quaternion.slerp(desired.normalize(),weight).normalize();
       if(lazy)lazy.edited(pair.target);else pair.target.updateWorldMatrix(false,true);
     }
