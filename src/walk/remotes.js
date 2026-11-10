@@ -64,8 +64,10 @@ export class RemotePlayers{
  // counting down.
  update(dt,{camera,low,high,photo=false,height=0},now=performance.now()){
   camera.getWorldPosition(this.v);
-  // A body's height on screen in pixels, per metre of distance: the drawing height over the view's height at 1 m.
-  const pxAt1m=height&&camera.isPerspectiveCamera?BODY_M*height/2/Math.tan(T.MathUtils.degToRad(camera.getEffectiveFOV()/2)):0;const eye=this.v.clone(),k=1-Math.exp(-EASE_PER_S*dt),shown=[];
+  // A body's height on screen in pixels at 1 m of depth: the drawing height over the view's height there.
+  const pxAt1m=height&&camera.isPerspectiveCamera?BODY_M*height/2/Math.tan(T.MathUtils.degToRad(camera.getEffectiveFOV()/2)):0;
+  // Depth along the view, not distance: a body off to the side of the screen is drawn as tall as one ahead at that depth.
+  const ce=camera.matrixWorld.elements,fx=-ce[8],fy=-ce[9],fz=-ce[10];const eye=this.v.clone(),k=1-Math.exp(-EASE_PER_S*dt),shown=[];
   const bandLow=bandOf(low),bandHigh=bandOf(high);
   for(const [id,r] of this.remotes){
    if(now-r.seen>STALE_MS){this.gone(id);continue;}
@@ -91,7 +93,7 @@ export class RemotePlayers{
    if(r.hat&&!r.walker.hat&&this.hatUrl)wearHat(r.walker,this.hatUrl);else if(!r.hat&&r.walker.hat)r.walker.hat.remove();
    const lined=!!r.tgt.hook||r.line?.out>0;
    const unseen=!photo&&!lined&&!viewFrustum.intersectsSphere(bodySphere.set(bodySphere.center.set(r.cur.x,r.cur.y+.6,r.cur.z),IN_VIEW_M));
-   const px=pxAt1m/Math.max(r.distance,.1),every=photo||lined||!pxAt1m||px>=FULL_PX?0:px>=HALF_PX?HALF_S:THIRD_S;
+   const depth=(r.cur.x-eye.x)*fx+(r.cur.y+BODY_M/2-eye.y)*fy+(r.cur.z-eye.z)*fz,px=pxAt1m/Math.max(depth,.1),every=photo||lined||!pxAt1m||px>=FULL_PX?0:px>=HALF_PX?HALF_S:THIRD_S;
    this.pose(r,dt,unseen,every);
   }
   this.name(bodied,camera,now);
