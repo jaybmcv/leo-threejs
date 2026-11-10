@@ -14,6 +14,7 @@
     "style-lab:walk": "node scripts/style-lab-walk.mjs",
     "check:walk": "node --max-old-space-size=8000 scripts/check-walk.mjs",
     "check:film-look": "node scripts/check-film-look.mjs",
+    "check:atrium-time": "node scripts/check-atrium-time.mjs",
     "check:plaque-atlas": "node scripts/check-plaque-atlas.mjs",
     "check:rig-pace": "node scripts/check-rig-pace.mjs",
     "check:merged-skin": "node scripts/check-merged-skin.mjs",
