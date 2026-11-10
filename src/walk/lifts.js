@@ -17,7 +17,9 @@ export const LIFTS=[
  ...TRANSIT_CORES.flatMap(c=>[-1,1].map(s=>({
   id:`${c.id}-${s<0?'port':'starboard'}`,name:`${c.id==='forward'?'Forward':'Aft'} ${s<0?'port':'starboard'} lift`,
   car:{x:c.x,z:s*6,width:3.3,depth:3.3,height:2.8},door:{axis:'z',sign:-s,width:2.2},
-  stops:[...deckStops(1,c.lastDeck,c.id==='aft'?AFT_TITLES:{}),{...KEEL_STOP}],parked:c.id==='forward'?15:1,
+  // `parked` is only where a car starts (the page alone, or the server on start); a car stays wherever it last stopped.
+  // The forward cars start low enough to show as lit cabins from the atrium floor (concept A), port lower than starboard.
+  stops:[...deckStops(1,c.lastDeck,c.id==='aft'?AFT_TITLES:{}),{...KEEL_STOP}],parked:c.id==='forward'?(s<0?7:10):1,
  }))),
  {id:'aft-service',name:'Aft freight lift',car:{x:-156,z:8,width:7.2,depth:3.6,height:2.7},door:{axis:'z',sign:-1,width:5.8},
   stops:deckStops(4,17),parked:8},

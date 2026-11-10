@@ -27,7 +27,7 @@ export function transitOpenings(deck){
 // of shaded glass read grey rather than as the concept's bright glass.
 const FRIT=1,TOWER_LIT=[0,1,0];
 function towerFrame(c,z,s,base,top,minimumDeck,structure,shell,materials){
-  const frame=[],frit=[],part=(list,size,p)=>list.push(new T.BoxGeometry(...size).translate(...p));
+  const frame=[],frit=[],lights=[],part=(list,size,p)=>list.push(new T.BoxGeometry(...size).translate(...p));
   for(const {x,zz,ox,oz} of [{x:c.x-1.8,zz:z,ox:-1,oz:0},{x:c.x+1.8,zz:z,ox:1,oz:0},{x:c.x,zz:z+s*1.8,ox:0,oz:s}]){
     const across=(w,h,d)=>ox?[d,h,w]:[w,h,d]; // w along the face, d through it
     for(const a of [-.6,.6])part(frame,across(.06,top-base,.2),[x+(ox?0:a),(base+top)/2,zz+(ox?a:0)]);
@@ -36,7 +36,12 @@ function towerFrame(c,z,s,base,top,minimumDeck,structure,shell,materials){
       part(frit,across(3.44,FRIT-.06,.01),[x+ox*.07,y+FRIT/2,zz+oz*.07]);
     }
   }
-  for(const [name,list,m,parent] of [['Lift_tower_frame',frame,'mullion',structure],['Lift_shaft_frit',frit,'frit',shell]]){
+  // The concept's lit shaft: a warm light line down both aft corners, the full height, so the shaft reads as one column
+  // between the landings, and a small warm light in the middle bay of the fore face at every storey, seen through the
+  // shaft from the atrium. The lift lobbies' light, so the tower copy draws them with it.
+  for(const zz of [z-1.8,z+1.8])part(lights,[.04,top-base,.06],[c.x-1.9,(base+top)/2,zz]);
+  for(let d=Math.max(minimumDeck,6);d<=c.lastDeck;d++)part(lights,[.02,.3,.3],[c.x+1.91,floorY(d)+2.6,z]); // from the atrium floor up
+  for(const [name,list,m,parent] of [['Lift_tower_frame',frame,'mullion',structure],['Lift_shaft_frit',frit,'frit',shell],['Lift_tower_lights',lights,'light',structure]]){
     const o=new T.Mesh(mergeGeometries(list),materials[m]);o.name=name;o.userData.noCollide=true;o.userData.towerLit=TOWER_LIT;parent.add(o);list.forEach(g=>g.dispose());
   }
 }

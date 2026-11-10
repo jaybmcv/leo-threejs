@@ -25,11 +25,24 @@ import {roomObject,toWorld} from '../plan/rooms.js';
 // the native approach ramp and explicit stairs remain separate meshes.
 function loungeVoidMasks(y,depth=.24){const r=layout.rooms.find(r=>r.id==='observation-lounge');return r&&y>r.y+.4&&y-depth<r.y+r.height-.2?[r.polygon]:[];}
 // Atrium concept A (lit glass tower, 2026-11-08). The facade's copy of the tower (atrium-architecture.js) gives its bridges
-// and landings white fascias and glass-blue undersides, close to the concept's light glass bands; the walked tops keep
-// their finish. Each [x,y,z,colour,lit] colours the faces facing that way, and lit (if given) shades them as if they faced
-// that way instead: shaded truly, a face looking down takes the hemisphere's ground colour and the lower environment, so
-// the concept's pale glass-blue would read steel grey.
-const TOWER_SLAB_FACES=[[0,-1,0,0x80b2cc,[0,1,0]],...[[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].map(v=>[...v,0xffffff,[0,1,0]])];
+// and landings glass-blue undersides, close to the concept's light glass bands, and fascias in the same tone, so a slab's
+// edge recedes and reads as the warm light line under it; the walked tops keep their finish. Each [x,y,z,colour,lit]
+// colours the faces facing that way, and lit (if given) shades them as if they faced that way instead: shaded truly, a
+// face looking down takes the hemisphere's ground colour and the lower environment, so the concept's pale glass-blue
+// would read steel grey.
+const TOWER_SLAB_FACES=[[0,-1,0,0x80b2cc,[0,1,0]],...[[1,0,0],[-1,0,0],[0,0,1],[0,0,-1]].map(v=>[...v,0x80b2cc,[0,1,0]])];
+// Under each landing above Deck 6, a pale lane runs from its aft edge to each forward shaft, as wide as the shaft, so the
+// glass shafts read as one column through the landings (the concept's glass prism). 2 cm thick, 2 cm under the slab, in
+// the landings' own bucket of the tower copy (named in atrium-architecture.js). Visual only.
+const TOWER_LANE_FACES=[[0,-1,0,0xe6f3f8,[0,1,0]]];
+function towerShaftLanes(structure){
+ const parts=[];
+ for(const t of layout.circulation.towers.filter(t=>t.deck>6)){
+  const d=layout.decks[t.deck-1],{x0}=bounds(t.polygon);
+  for(const l of LIFTS.filter(l=>l.id.startsWith('forward-'))){const x1=l.car.x-1.8;if(x1-x0>1)parts.push(new T.BoxGeometry(x1-x0-.21,.02,3.6).translate((x0+.21+x1)/2,d.y-.27,l.car.z));}
+ }
+ if(parts.length){const o=mesh(structure,'V2_tower_shaft_lanes',mergeGeometries(parts),floor);o.userData.noCollide=true;o.userData.towerFaces=TOWER_LANE_FACES;parts.forEach(g=>g.dispose());}
+}
 // A warm line of light under both long edges of each bridge above Deck 6, only where it crosses the open atrium (further
 // out it lies over the deck's own slab), and along each landing's aft edge and its short returns to the bridges, so the
 // line runs unbroken across the tower. 20 cm wide, hanging 8 cm below the slab, so it still reads from the atrium floor.
@@ -82,7 +95,7 @@ export function fitV2Structure(ship){
  buildCommonsHallFinish(structure,layout);
  for(const b of layout.circulation.bridges)mesh(structure,'V2_tower_bridge_floor',polygonGeometry(b.polygon,[],layout.decks[b.deck-1].y,.24),b.deck===20?new T.MeshStandardMaterial({name:'P6_crew_service_floor',color:0x59666b,roughness:.8}):floor).userData.towerFaces=TOWER_SLAB_FACES;
  for(const t of layout.circulation.towers)mesh(structure,'V2_tower_landing_floor',polygonGeometry(t.polygon,layout.decks[t.deck-1].openings.filter(o=>o.x0>120).map(o=>o.polygon),layout.decks[t.deck-1].y,.24),floor).userData.towerFaces=TOWER_SLAB_FACES;
- towerBridgeLights(structure);
+ towerBridgeLights(structure);towerShaftLanes(structure);
  for(const s of layout.circulation.stairs.filter(s=>s.wing!==undefined&&s.deck<15)){
   const y=layout.decks[s.deck-1].y,f=wingFlight(s,layout.circulation.stairs),run=5;
   // Nine lower risers reach a 1.5 m half landing under the upper slab. Fifteen return
