@@ -7,8 +7,10 @@ import {shapePoint} from '../concept-shape.js';
 // The selfie booth in the crown lounge: a Mars backdrop across the aft end of the centre aisle and a camera on a tripod
 // facing it. Use the camera and it counts down 5 seconds, time to join the others in front of the backdrop, then takes
 // the photo from the lens and frames it in Mars Cats Voyage colours.
-// The photo is 2:1, wide enough for the whole 9.6 m backdrop (about 11 m across at its plane) and a group spread along it.
-const BACK_X=-272.5,LENS_X=-265.5,WIDTH=9.6,HEIGHT=4.4,FOV=46,ASPECT=2,COUNT=5,REACH=1.9;
+// The photo is 2:1 and taken from 8.7 m back: about 11.2 m across where a group stands 3 m out from the backdrop, so cats
+// at both ends of the 9.6 m backdrop are in. The tripod stays within 2 m of the live server's booth point (SELFIE.at in
+// server/live-core.mjs, reach 4 m), so a press from anywhere within REACH still starts everyone's countdown.
+const BACK_X=-272.5,LENS_X=-263.5,WIDTH=9.6,HEIGHT=4.4,FOV=52,ASPECT=2,COUNT=5,REACH=1.9;
 const OUT={w:1600,margin:40,band:150};
 const FONT={display:'"Archivo", "Sora", sans-serif',mono:'"JetBrains Mono", ui-monospace, monospace'};
 const ORANGE='#f85800';
