@@ -97,6 +97,7 @@ import {ballBounce,ballDismount} from './ball-bounce.js';
 import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink,remapSpot} from './link.js';
 import {keepSpot,takeSpot} from './last-spot.js';
+import {createJoin} from './join.js';
 import {restrictedAt,publicStand} from './public-area.js';
 import {KITTEN_POSE_NAMES} from './kittens.prepared.js';
 import {createAtriumKittens} from './arrival-atrium.prepared.js';
@@ -625,7 +626,7 @@ hubLink.ready(search=>{const spot=readSpot(search);if(!spot)return false;hubPane
 // A tester (this browser holds a tester invite) wears the captain's hat (hat.js).
 if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 // Others aboard: their poses in, ours out, the lifts as the server runs them.
-let remotes=null,marks=null,aboard=0,aboardNames=undefined,liveStatus='',wasInArena=false;
+let remotes=null,marks=null,aboard=0,aboardNames=undefined,aboardIds=null,join=null,liveStatus='',wasInArena=false;
 // The giveaway card at Mudwater Arena's counter, which claims through Leo live.
 // Claiming takes a Discord account: its small window leaves them standing at the counter, and they carry on under their
 // Discord account from there. Not offered inside Otherside, where pop-ups can't open (mudwater-giveaway.js).
@@ -646,7 +647,7 @@ if(LIVE_URL){
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
-  status:s=>{liveStatus=s;if(s!=='live'){aboardNames=undefined;leverPanel?.lost();}showAboard();showAboardList();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
+  status:s=>{liveStatus=s;if(s!=='live'){aboardNames=undefined;aboardIds=null;leverPanel?.lost();join?.reset();}showAboard();showAboardList();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
   welcome:msg=>{leverPanel?.apply(msg.panel);for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();mct.apply(msg.mcts);live.tv();
    // A server from before chat sends no chat: it stays hidden.
    chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);
@@ -654,11 +655,11 @@ if(LIVE_URL){
    if(!$('mudwater-sheet').hidden)live.giveaway();},
   // A line of chat: in the corner, and over the speaker's head.
   chat:line=>{chat.add(line);if(line.id!==live.id&&!chat.quiet)remotes.say(line.id,line.text);},said:r=>chat.refused(r.why),
-  poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();mct.offline();},
+  poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();mct.offline();join?.reset();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),
   // Someone else's Keel Club water cannon shot: the same jet here, from its seed.
-  cannon:(id,i,seed,shot)=>keelClub?.fire(i,{id:shot,seed,who:id===live.id?'me':id}),aboard:(n,names)=>{aboard=n;if(names!==undefined)aboardNames=names;showAboard();showAboardList();},
+  cannon:(id,i,seed,shot)=>keelClub?.fire(i,{id:shot,seed,who:id===live.id?'me':id}),aboard:(n,names,ids)=>{aboard=n;if(names!==undefined){aboardNames=names;aboardIds=ids||null;}showAboard();showAboardList();},
   maze:msg=>maze?.fromServer(msg),
   treasure:msg=>treasure?.fromServer(msg),
   panel:msg=>leverPanel?.apply(msg),
@@ -672,6 +673,8 @@ if(LIVE_URL){
   wall:w=>graffiti?.wall(w),stroke:s=>graffiti?.stroke(s),painted:r=>graffiti?.painted(r),
   // Paws Off's gym round on the treadmills: its countdown, start, runners out and results.
   gym:msg=>pawsOff?.round(msg),
+  // Asking to join someone from the Aboard list, and being asked (join.js).
+  join:msg=>join?.fromServer(msg),
   // The Deck 1 transporters: who drives each cart, and where each is parked.
   mcts:list=>mct.apply(list),
   // The Crown lounge TV (crown-tv.js): what is on it, and a ticket to share a video.
@@ -680,6 +683,7 @@ if(LIVE_URL){
  if(!me.pass&&name!==savedName())live.rename(name);
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
  mct.link({send:msg=>live.mct(msg),id:()=>live.id});
+ join=createJoin({live:()=>live,here:joinBlock,land:joinBeside});
  $('ping').hidden=false;$('help-ping').hidden=false;
 }
 // In a game here: what a pose says (pl).
@@ -710,6 +714,15 @@ function noteSpot(e){
  keepSpot({at:[p.x,p.y,p.z],yaw:follow.yaw,pitch:follow.pitch,view:follow.mode});
 }
 setInterval(noteSpot,2000);addEventListener('pagehide',noteSpot);
+// Asking to join someone (join.js, server/joins.mjs). Asked, a visitor can be joined only where the walk could put
+// someone down (public-area.js) and not in a game; the server checks the same from their last pose.
+function joinBlock(){return restrictedAt(controller.position)||(playing()||pawsOff?.active||maze?.running||treasure?.active?'game':null);}
+// Accepted: a public floor beside them, 1.2 to 4 m out and in their sight, through the walk's own landing checks; facing them.
+function joinBeside(at,name){
+ if(!ready())return false;
+ const q=publicStand(at,{colliders,stand:p=>findStand(colliders,p,{radius:0}),check:p=>v2GotoStand(colliders,p),away:1.2,radius:4});
+ if(!q)return false;closePanels();emote=null;return goTo({at:q.toArray(),yaw:Math.atan2(at[0]-q.x,at[2]-q.z),resolved:true});
+}
 function showAboard(){
  const b=$('aboard');b.hidden=!live;if(!live)return;
  // Short labels on a narrow screen, unless they are in a phone's More menu (walk.html), which has room for the long ones.
@@ -1091,7 +1104,11 @@ function closePanels(){furSettings?.close();emergencyDrill?.close();controlsSett
 function showAboardList(){
  const list=$('aboard-list'),note=$('aboard-note');list.replaceChildren();
  note.textContent=liveStatus!=='live'?'Not connected to Leo live.':aboardNames===undefined?'Waiting for the visitor list...':aboardNames===null?'Visitor list unavailable on this connection.':'';
- if(liveStatus==='live'&&aboardNames)for(const name of aboardNames){const li=document.createElement('li');li.textContent=name;list.appendChild(li);}
+ // Each name but this visitor's own offers Ask to join (join.js), when the server says who is who.
+ if(liveStatus==='live'&&aboardNames)aboardNames.forEach((name,i)=>{const li=document.createElement('li'),id=aboardIds?.[i];
+  if(!id||id===live.id){li.textContent=id?name+' (you)':name;list.appendChild(li);return;}
+  const b=Object.assign(document.createElement('button'),{type:'button',className:'join',textContent:join?.asking===id?'Asked':'Ask to join',disabled:join?.asking===id});
+  b.onclick=()=>{closePanels();join?.ask(id,name);};li.append(Object.assign(document.createElement('span'),{className:'who',textContent:name}),b);list.appendChild(li);});
 }
 $('aboard').addEventListener('click',()=>{if(!$('aboard-sheet').hidden){closePanels();return;}closePanels();showAboardList();$('aboard-sheet').hidden=false;input.enabled=false;input.down.clear();$('aboard-close').focus();});
 $('aboard-name').addEventListener('click',openName);

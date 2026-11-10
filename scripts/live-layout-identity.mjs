@@ -10,7 +10,10 @@ const logic=['src/walk/net/panel-rules.js','server/lever-panel.mjs','src/v2/live
  // These implement shared coordinate transforms and moving-game rules, not
  // merely their serialized start positions. A toLocal-only edit must differ.
  'src/plan/rooms.js','src/walk/lifts.js','src/walk/lift-motion.js',
- 'src/walk/hamster-ball.js','src/walk/net/wire.js','package-lock.json'];
+ 'src/walk/hamster-ball.js','src/walk/net/wire.js','package-lock.json',
+ // Where a visitor may be put down when they join someone (server/joins.mjs): its zones are in the snapshot's data, its
+ // rule is this source.
+ 'src/walk/public-area.js'];
 const memo=new Map();
 
 export async function liveProtocolSnapshot(layout){

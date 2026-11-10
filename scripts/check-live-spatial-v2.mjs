@@ -28,6 +28,8 @@ const stop=async s=>{s.p.kill();await new Promise(r=>s.p.exitCode!==null||s.p.si
 try{
  // These servers keep a dropped visitor's game run for 4 s, not 90 (live-core.mjs keepRuns), so the check can outwait it.
  process.env.LEO_LIVE_RUN_KEEP_S='4';
+ // Asks to join run out after 2 s, not 30 (joins.mjs).
+ process.env.LEO_LIVE_JOIN_S='2';
  const dir=path.join(tmp,'v2'),legacyId='880000000000000001',legacy=[{id:legacyId,name:'Earlier swimmer',ms:45678,at:'2026-10-01T00:00:00.000Z'}];await fs.mkdir(dir,{recursive:true});await fs.writeFile(path.join(dir,'treasure.json'),JSON.stringify(legacy));const historicScores=[{id:legacyId,name:'Earlier player',score:900,wave:3,at:'2026-10-01T00:00:00.000Z'},{game:'pool',id:legacyId,name:'Earlier player',ms:80000,shots:22,at:'2026-10-01T00:00:00.000Z'}],historicMaze=[{id:legacyId,name:'Earlier player',ms:12345,at:'2026-10-01T00:00:00.000Z'}];await fs.writeFile(path.join(dir,'scores.json'),JSON.stringify(historicScores));await fs.writeFile(path.join(dir,'maze.json'),JSON.stringify(historicMaze));const s=await start(2,dir);
  check('v2 health advertises matching layout identity',s.health.layout===2&&s.health.layoutIdentity===now.identity);
  const a=await bot(s,{id:legacyId}),observer=await bot(s);check('locally signed identities are verified',a.welcome?.you.verified&&observer.welcome?.you.verified&&jwksReads>0);
@@ -140,10 +142,67 @@ try{
  await observer.pose(now.selfie);await a.pose([0,0,0]);n=observer.msgs.length;a.send({m:'selfie'});await sleep(150);check('outside selfie range cannot trigger countdown',!observer.msgs.slice(n).some(m=>m.m==='selfie'));await a.pose(now.selfie);a.send({m:'selfie'});await until(()=>observer.msgs.slice(n).some(m=>m.m==='selfie'),'selfie countdown');check('unchanged selfie location still starts countdown',true);
  await sleep(1200);const saved=JSON.parse(await fs.readFile(path.join(dir,'treasure.json'),'utf8'));check('v2 write preserves existing record values and stores no course tags',JSON.stringify(saved.find(e=>e.id===legacyId))===JSON.stringify(legacy[0])&&saved.some(e=>e.id===swimmer.id&&e.ms===treasureYes.ms)&&saved.every(e=>!('course' in e)));
  const keptScores=JSON.parse(await fs.readFile(path.join(dir,'scores.json'),'utf8')),keptMaze=JSON.parse(await fs.readFile(path.join(dir,'maze.json'),'utf8'));check('new awards preserve existing score and maze record values',historicScores.every(e=>JSON.stringify(keptScores.find(x=>x.id===e.id&&x.game===e.game))===JSON.stringify(e))&&JSON.stringify(keptMaze.find(e=>e.id===legacyId))===JSON.stringify(historicMaze[0]));
+ // Ask to join (server/joins.mjs, protocol 10): the Aboard list says who is who; a request is accepted, declined, lets
+ // its 2 s run out (LEO_LIVE_JOIN_S here), is cancelled or goes with either side; the place given on accept is public.
+ {const joinFrom=(b,n,test)=>until(()=>b.msgs.slice(n).find(m=>m.m==='join'&&test(m)),'join reply');
+  const quiet=async(b,n)=>{await sleep(250);return !b.msgs.slice(n).some(m=>m.m==='join');};
+  const host=await bot(s,{name:'Host'}),guest=await bot(s,{name:'Guest'});await host.pose(now.selfie);await guest.pose([0,0,0]);
+  const list=await until(()=>[...guest.msgs].reverse().find(m=>m.m==='aboard'&&m.ids?.includes(host.welcome.id)),'aboard ids');
+  check('the Aboard list gives each name its visitor id, in order',Array.isArray(list.ids)&&list.ids.length===list.names.length&&list.names[list.ids.indexOf(host.welcome.id)]===host.welcome.you.name);
+  let n=guest.msgs.length,h=host.msgs.length;guest.send({m:'join',op:'ask',to:host.welcome.id});
+  const sent=await joinFrom(guest,n,m=>m.e==='sent'),asked=await joinFrom(host,h,m=>m.e==='ask');
+  check('an ask reaches the one asked with the asker\'s name and id',sent.to===host.welcome.id&&asked.from===guest.welcome.id&&asked.req===sent.req&&asked.name===guest.welcome.you.name&&asked.ms===2000);
+  n=guest.msgs.length;h=host.msgs.length;const stranger=await bot(s);stranger.send({m:'join',op:'answer',req:asked.req,ok:true});
+  check('only the one asked can answer',await quiet(guest,n));
+  host.send({m:'join',op:'answer',req:asked.req,ok:true});const go=await joinFrom(guest,n,m=>m.e==='go'),done=await joinFrom(host,h,m=>m.e==='done');
+  check('accepted: the asker is told where the host stands',go.req===sent.req&&go.at.every((v,i)=>Math.abs(v-now.selfie[i])<.01)&&done.from===guest.welcome.id);
+  n=guest.msgs.length;host.send({m:'join',op:'answer',req:asked.req,ok:true});check('a request is answered once',await quiet(guest,n));
+  // Declined, then asked again at once: refused for a minute.
+  n=guest.msgs.length;h=host.msgs.length;guest.send({m:'join',op:'ask',to:host.welcome.id});const again=await joinFrom(host,h,m=>m.e==='ask');
+  host.send({m:'join',op:'answer',req:again.req,ok:false});check('declined: the asker hears no',(await joinFrom(guest,n,m=>m.e==='no')).why==='declined');
+  n=guest.msgs.length;guest.send({m:'join',op:'ask',to:host.welcome.id});check('asking again right after a no is refused',(await joinFrom(guest,n,m=>m.e==='no')).why==='again');
+  // Unanswered: both sides hear it ran out.
+  const late=await bot(s,{name:'Late'});n=late.msgs.length;h=host.msgs.length;late.send({m:'join',op:'ask',to:host.welcome.id});
+  const lateAsk=await joinFrom(host,h,m=>m.e==='ask');
+  const ranOut=await joinFrom(late,n,m=>m.e==='no'),hostOut=await joinFrom(host,h,m=>m.e==='off');
+  check('unanswered: it runs out for both',ranOut.why==='expired'&&hostOut.why==='expired'&&hostOut.req===lateAsk.req);
+  n=late.msgs.length;host.send({m:'join',op:'answer',req:lateAsk.req,ok:true});check('a request that ran out cannot be accepted',await quiet(late,n));
+  // Cancelled by the asker.
+  const shy=await bot(s,{name:'Shy'});n=shy.msgs.length;h=host.msgs.length;shy.send({m:'join',op:'ask',to:host.welcome.id});await joinFrom(host,h,m=>m.e==='ask');
+  shy.send({m:'join',op:'cancel'});check('cancelled: the one asked is told and the asker hears it went',(await joinFrom(host,h,m=>m.e==='off')).why==='cancelled'&&(await joinFrom(shy,n,m=>m.e==='no')).why==='cancelled');
+  // Either side leaves.
+  const leaver=await bot(s);h=host.msgs.length;leaver.send({m:'join',op:'ask',to:host.welcome.id});await joinFrom(host,h,m=>m.e==='ask');leaver.ws.close();
+  check('the asker leaves: the one asked is told',(await joinFrom(host,h,m=>m.e==='off')).why==='gone');
+  const left=await bot(s),waiter=await bot(s);await left.pose(now.selfie);n=waiter.msgs.length;waiter.send({m:'join',op:'ask',to:left.welcome.id});await joinFrom(waiter,n,m=>m.e==='sent');left.ws.close();
+  check('the one asked leaves: the asker is told',(await joinFrom(waiter,n,m=>m.e==='no')).why==='gone');
+  // Never into a restricted area, a lift shaft or a game: the one asked is told why, the asker hears busy.
+  const club=now.restricted.find(z=>z.name==='clubhouse'),lift=now.lifts[0],cx=club.poly.reduce((s,p)=>s+p[0],0)/club.poly.length,cz=club.poly.reduce((s,p)=>s+p[1],0)/club.poly.length;
+  for(const [where,pos,extra] of [['the clubhouse',[cx,club.y[0]+.5,cz],{}],['a lift shaft',[lift.car.x,lift.stops[1].y,lift.car.z],{}],['a game',now.selfie,{pl:true}],['the maze',now.maze.button,{}]]){
+   const busy=await bot(s),asker=await bot(s);await busy.pose(pos,extra);n=asker.msgs.length;h=busy.msgs.length;asker.send({m:'join',op:'ask',to:busy.welcome.id});
+   const r=await joinFrom(busy,h,m=>m.e==='ask');busy.send({m:'join',op:'answer',req:r.req,ok:true});
+   check('accepting in '+where+' sends nobody',(await joinFrom(asker,n,m=>m.e==='no')).why==='busy'&&(await joinFrom(busy,h,m=>m.e==='off')).why==='busy');busy.ws.close();asker.ws.close();}
+  check('policy: the selfie booth and the maze\'s way in are public; inside the maze, the tank bay and the clubhouse are not',
+   v2.policy.canJoin(now.selfie)&&v2.policy.canJoin(now.maze.start)&&!v2.policy.canJoin(now.maze.button)&&!v2.policy.canJoin([cx,club.y[0]+.5,cz])&&!v2.policy.canJoin([-180,-27.7,0])&&!v2.policy.canJoin(null));
+  // Limits: yourself, nobody, three asking one visitor, and three asks in 30 s.
+  n=guest.msgs.length;guest.send({m:'join',op:'ask',to:guest.welcome.id});check('asking yourself is refused',(await joinFrom(guest,n,m=>m.e==='no')).why==='self');
+  const popular=await bot(s),fans=[];for(let i=0;i<4;i++)fans.push(await bot(s));await popular.pose(now.selfie);
+  for(const f of fans.slice(0,3)){const k=f.msgs.length;f.send({m:'join',op:'ask',to:popular.welcome.id});await joinFrom(f,k,m=>m.e==='sent');}
+  n=fans[3].msgs.length;fans[3].send({m:'join',op:'ask',to:popular.welcome.id});check('a fourth asking the same visitor at once is refused',(await joinFrom(fans[3],n,m=>m.e==='no')).why==='busy');
+  const eager=await bot(s),targets=[];for(let i=0;i<4;i++)targets.push(await bot(s));
+  for(let i=0;i<3;i++){const k=eager.msgs.length;eager.send({m:'join',op:'ask',to:targets[i].welcome.id});await joinFrom(eager,k,m=>m.e==='sent');}
+  n=eager.msgs.length;eager.send({m:'join',op:'ask',to:targets[3].welcome.id});check('only three asks in 30 s',(await joinFrom(eager,n,m=>m.e==='no')).why==='slow');
+  n=guest.msgs.length;guest.send({m:'join',op:'ask',to:'nobody-here'});check('asking someone not aboard is refused',(await joinFrom(guest,n,m=>m.e==='no')).why==='unknown');
+  for(const b of [host,guest,stranger,late,shy,waiter,popular,...fans,eager,...targets])b.ws.close();}
+ // A page from before protocol 10 is told to reload.
+ {const ws=new WebSocket('ws://127.0.0.1:'+s.port+'/live',{origin:'http://localhost:4180'}),got=[];let code=null;ws.on('message',d=>got.push(JSON.parse(d)));ws.on('close',c=>code=c);await new Promise(r=>ws.once('open',r));
+  ws.send(JSON.stringify({m:'hello',v:PROTOCOL-1,layout:2,layoutIdentity:now.identity,key:randomBytes(32).toString('hex')}));await until(()=>code!==null,'old page closed');
+  check('a protocol '+(PROTOCOL-1)+' page is told to reload',PROTOCOL===10&&got.some(m=>m.m==='reload')&&code===4000);}
  for(const b of bots)b.ws.close();await stop(s);
  // A server started while the identity provider is unreachable has no keys: a good pass is unchecked, not bad, the
  // visitor comes aboard unverified with their login intact, and the same pass is taken once the keys can be had.
  {keysDown=true;const dark=await start(2,path.join(tmp,'no-keys')),who='880000000000000903',pass=await sign(who),early=await bot(dark,{id:who,pass});
+  // The server's log line can reach this process a moment after the welcome does: wait for it, up to the usual 10 s.
+  await until(()=>dark.log().includes('pass not checked'),'the unchecked pass in the server log').catch(()=>{});
   check('with no keys from the provider a good pass is unchecked, not bad',early.welcome?.you.verified===false&&early.welcome.you.pass==='unchecked'&&dark.log().includes('pass not checked'));
   keysDown=false;const later=await bot(dark,{id:who,key:early.key,pass});check('the same pass is taken once the provider answers',later.welcome?.you.verified===true&&!('pass' in later.welcome.you));
   early.ws.close();later.ws.close();await stop(dark);}

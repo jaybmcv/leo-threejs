@@ -18,8 +18,9 @@ const browserKey=()=>storage('leo-live-key',()=>[...crypto.getRandomValues(new U
 export const savedName=()=>storage('leo-live-name')||'';
 export function saveName(name){try{localStorage.setItem('leo-live-name',name);}catch{}}
 
-// on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n), board(b), scored(r), hearts(h), hearted(r), selfie(id,ms),
-// giveaway(g), claimed(r), clown(r), chat(line), said(r), wall(w), stroke(s), painted(r), gym(msg), mcts(carts), tv(t), tvTicket(r)}; status
+// on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n,names,ids), board(b), scored(r), hearts(h), hearted(r),
+// selfie(id,ms), giveaway(g), claimed(r), clown(r), chat(line), said(r), wall(w), stroke(s), painted(r), gym(msg), mcts(carts), tv(t), tvTicket(r),
+// join(msg)}; status
 // is 'connecting', 'live',
 // 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). Nothing is said before connectLive has
 // returned, so the page's handlers can read the link it returns. opts.pass(): a Leo pass for this
@@ -88,7 +89,11 @@ export function connectLive(url,on,opts={}){
     case 'mark':on.mark?.(msg.id,msg.at);break;
     // A Keel Club water cannon shot by someone else (keel-club.js fire): cannon i, the jet's seed and the shot's id.
     case 'cannon':if(Number.isInteger(msg.i)&&Number.isInteger(msg.seed)&&typeof msg.id==='string'&&typeof msg.shot==='string')on.cannon?.(msg.id,msg.i,msg.seed,msg.shot);break;
-    case 'aboard':on.aboard?.(msg.n,Array.isArray(msg.names)?msg.names.filter(n=>typeof n==='string'):null);break;
+    // Who is aboard: names, and each one's id in the same order (for asking to join them), or null for an id not given.
+    case 'aboard':{const names=Array.isArray(msg.names)?msg.names.filter(n=>typeof n==='string'):null;
+     on.aboard?.(msg.n,names,names&&Array.isArray(msg.ids)&&msg.ids.length===names.length?msg.ids.map(i=>typeof i==='string'?i:null):null);break;}
+    // Asking to join someone, and being asked (walk/join.js, server/joins.mjs).
+    case 'join':if(typeof msg.e==='string')on.join?.(msg);break;
     // The leaderboards (Alien Cat Invasion's, or Paw Pool's when game is 'pool'): the top ten and this visitor's
     // best, and a game's result.
     case 'board':on.board?.(msg);break;
@@ -195,6 +200,11 @@ export function connectLive(url,on,opts={}){
   gym(msg){if(!live())return false;ws.send(JSON.stringify({...msg,m:'gym'}));return true;},
   // The Deck 1 transporters: take a driver's seat, say where the cart is, park it; false when there is no connection.
   mct(msg){if(!live())return false;ws.send(JSON.stringify({...msg,m:'mct'}));return true;},
+  // Ask to join someone (their id), cancel that, and answer someone who asked (their request, true to accept); false when
+  // there is no connection to send it on.
+  join(to){if(!live())return false;ws.send(JSON.stringify({m:'join',op:'ask',to}));return true;},
+  joinCancel(){if(!live())return false;ws.send(JSON.stringify({m:'join',op:'cancel'}));return true;},
+  joinAnswer(req,ok){if(!live())return false;ws.send(JSON.stringify({m:'join',op:'answer',req,ok:!!ok}));return true;},
   // The Crown lounge TV: ask what is on it, ask for a ticket to upload a video, and (an owner) take it down.
   tv(){if(live())ws.send(JSON.stringify({m:'tv'}));},
   tvTicket(){if(!live())return false;ws.send(JSON.stringify({m:'tv-ticket'}));return true;},

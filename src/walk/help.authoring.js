@@ -40,7 +40,7 @@ const PLAY=[
  {title:'With others aboard',live:true,rows:[
   [['T'],'Chat','Chat with everyone aboard (connect Discord if it asks)'],
   [['P'],'Ping','Ping where you stand, so others can find you'],
-  [['Aboard'],'Aboard','Click the aboard count to set the name over your head; a teal dot marks a Discord-verified name','Tap the aboard count to set the name over your head; a teal dot marks a Discord-verified name'],
+  [['Aboard'],'Aboard','Click the aboard count to see who is aboard, ask to join someone where they are (they accept or decline), or set the name over your head; a teal dot marks a Discord-verified name','Tap the aboard count to see who is aboard, ask to join someone where they are (they accept or decline), or set the name over your head; a teal dot marks a Discord-verified name'],
  ]},
 ];
 const FIND=V2_FIND;
