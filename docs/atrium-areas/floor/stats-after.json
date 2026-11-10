@@ -1,5 +1,6 @@
 {
   "base": "http://127.0.0.1:4182",
+  "build": "2c7381a5 (three 0.187.0)",
   "rows": [
     {
       "id": "hero",
@@ -63,7 +64,48 @@
           "trisM": 10.73
         }
       ]
+    },
+    {
+      "id": "food-wide",
+      "samples": [
+        {
+          "draws": 391,
+          "trisM": 10.54
+        },
+        {
+          "draws": 391,
+          "trisM": 10.54
+        },
+        {
+          "draws": 391,
+          "trisM": 10.54
+        },
+        {
+          "draws": 391,
+          "trisM": 10.54
+        }
+      ]
+    },
+    {
+      "id": "food-deck",
+      "samples": [
+        {
+          "draws": 491,
+          "trisM": 10.69
+        },
+        {
+          "draws": 491,
+          "trisM": 10.69
+        },
+        {
+          "draws": 491,
+          "trisM": 10.69
+        },
+        {
+          "draws": 491,
+          "trisM": 10.69
+        }
+      ]
     }
-  ],
-  "errors": []
+  ]
 }
