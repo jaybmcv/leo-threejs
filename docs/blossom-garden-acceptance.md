@@ -4,7 +4,7 @@ Acceptance check of the existing garden in the layout 2 walk. Nothing was change
 
 ## Where it is now
 
-The historical report view (`?at=133.76,24.30,30.78`) was in layout 1. The garden is Neighborhood 10's commons, `commons-10`, in the v2 plan (origin 105.5, 24.3, 43; Deck 17). Its planter, pond and trees are built in the commons template frame by `src/walk/blossom.js` (four identical copies: `.js`, `.authoring.js`, `.prepared.js`, `.public.js`, md5 equal) and the selected frame moves them by X -26.5, Z +16. In ship metres:
+The historical report view (`?at=133.76,24.30,30.78`) was in layout 1; a walk link without `lv=2` is read as a layout 1 spot and remapped (`src/walk/link.js`), so links to the garden in layout 2 carry `&lv=2`. The garden is Neighborhood 10's commons, `commons-10`, in the v2 plan (origin 105.5, 24.3, 43; Deck 17). Its planter, pond and trees are built in the commons template frame by `src/walk/blossom.js` (four identical copies: `.js`, `.authoring.js`, `.prepared.js`, `.public.js`, md5 equal) and the selected frame moves them by X -26.5, Z +16. In ship metres:
 
 | Part | v2 position |
 | --- | --- |
@@ -22,7 +22,12 @@ The Go-to list's "Blossom garden" entry (`src/v2/goto-features.js`) puts a walke
 
 - `node scripts/check-blossom-expansion.mjs`: PASS (four copies agree, three trees, pond 3.3 x 6.3 m, koi stay in the water, eight butterflies, 160 falling petals, tree LOD).
 - `node scripts/check-blossom-walk.mjs` (new, in the project): PASS, 18 checks. It builds the garden and planter in the commons frame, adds a floor, and drives the walk's `Controller` and `Colliders`. It does not need a built ship.
-- Visual: this record was written from source in a worktree without a built ship, so the visual column below says what the geometry makes, and the screenshots that come with this pull request (the bridge, the pond and falls, the bench from the east, and the pond from above) are the visual evidence to confirm it. Nothing below was heard.
+- Visual (2026-11-10, layout 2 walk, four captures of this build; links need `&lv=2`):
+  - `?lv=2&at=107.5,24.30,51.00&yaw=90&pitch=8`, eye level from the west: the pink bonsai cherry with blossom pads and fallen petals on the floor, the pale stone wall round the planter with flowers and ferns, the red arched bridge with gold-capped posts, and the pile of rocks beside it, with mint seating nearby.
+  - `?lv=2&at=117.00,24.30,53.50&yaw=223&pitch=-5`, from the north-east: the pond's rounded rim stones, the red bridge and, beyond it, two cherry trees with blossom over a petal-covered bed.
+  - `?lv=2&at=123.50,24.30,47.00&yaw=276&pitch=6`, from the east: three cherry trees on the stone-walled planter, with the red bridge behind them.
+  - `?lv=2&at=108.50,24.30,53.00&yaw=108&pitch=-38`, looking down from beside the pond: orange koi, lily pads and floating petals in the water, the stone rim, the bridge, and the bench on the soil at the bridge's far end (the first capture caught it before it had loaded).
+  Nothing was heard.
 
 ## Requirement by requirement
 
@@ -53,10 +58,10 @@ The Go-to list's "Blossom garden" entry (`src/v2/goto-features.js`) puts a walke
 ## Not verified
 
 - Sound was not played or recorded; only its source, falloff, gating and wiring were read.
-- Eye-level and overhead looks, the colours and the look of the tree, flowers and fish need the screenshots; flower variety is read from the planting module, not from a render.
+- Butterflies, the falling petals and the water's motion are animations a still can't show; the falls' water sheet and streaks were not told apart in the stills (the rocks were), so those rest on the source. The flowers seen are ferns, broadleaf plants and white and cream blooms; the full variety is read from the planting module.
 - Frame rate cost on weaker devices is not measured here.
 - `rest.js` seat finding needs a built layout; its earlier check (#194) found two seats on this bench and none from behind the planter.
 
 ## Verdict
 
-No requirement is missing or broken in the source, the colliders or the walk. The report is ready to close, once the attached captures confirm the tree, flowers, fish and petals look as described. If they do not, the visual item that fails is the next build decision; the walk, the sound and the layout items need nothing further.
+No requirement is missing or broken in the source, the colliders or the walk. The captures show the tree, flowers, fish, petals, stone wall, pond, bridge and bench as described. The report is ready to close. The only things not seen or heard are the animations and the sound; if Jay wants those confirmed by ear or eye, that is a manual check in the live walk with Sound on, standing within 14 m of the falls.
