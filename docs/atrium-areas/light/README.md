@@ -8,8 +8,10 @@ sky); at night it is recoloured to concept C's dusk.
 
 ![concept A beside day and concept C beside night at hero; sky concept A beside day at sky-up](contact-concepts.jpg)
 
-*Before is the live site at 639f7393 (`baseline-639f7393`). Day and night are this branch at 42113d02 on three
-0.187.0, held with `?time=day` / `?time=night`, captured with
+![concept C beside night at hero, walls-starboard and sky-up](contact-night-concept-c.jpg)
+
+*Before is the live site at 639f7393 (`baseline-639f7393`). Day is this branch at 42113d02, night at cec4ef33 (day
+captured again there, unchanged), on three 0.187.0, held with `?time=day` / `?time=night`, captured with
 `scripts/capture-atrium-areas.mjs --only=hero,sky-up,sky-bow,walls-starboard [--query=time=night]`. Three 0.187
 builds render like the live site; see "Local renders" below.*
 
@@ -26,13 +28,17 @@ builds render like the live site; see "Local renders" below.*
   leaving, as before.
   - Day: a warmer, brighter hemisphere with a light golden ground colour, so the balcony undersides glow gold as in
     concept A; less of the neutral environment light.
-  - Night: a dimmer pink-lavender dusk light with a warm ground bounce.
+  - Night, a dusk interior lit by the building: the sky light drops to about a third of the base with less
+    environment light, so the building's own light carries the scene and the undersides fall off between the
+    downlights. The fill becomes a warm peach glow from above standing for the downlights, so the floor reads
+    lamp-lit as in concept C while the walls stay dim behind the lit rooms.
 - **Materials**, found by name:
   - room interiors seen through the balcony glass (`P6_atrium_room_returns`, unlit) glow amber at night: concept C's
-    lit windows;
+    lit windows. Their colour goes above 1 (amber x1.9) so they glow through the tone mapping; a plain amber tops
+    out at tan;
   - balcony and cabin glass (`V2_smart_glass`, `V2_cabin_view_glass`, changed only while in the open atrium, since
-    the rest of the ship shares them) gain a warm amber emissive, 1.5x as strong, at 1.74x opacity;
-  - soffits (`V2_atrium_soffit`) are warm gold by day and bright cream at night;
+    the rest of the ship shares them) gain a warm amber emissive, 2x as strong, at 1.96x opacity;
+  - soffits (`V2_atrium_soffit`) glow warm gold, a little warmer at night;
   - promenade lamps (`P4_reflection_light`) go up 4x at night;
   - water (`P6_lake_water`) is teal by day and blue-grey at night.
 - **Sky panel**:
@@ -46,9 +52,14 @@ builds render like the live site; see "Local renders" below.*
     between day and dusk are cached in 16 steps.
 - **Downlight pools**: the existing instanced `P6_atrium_downlights` draw gets an additive radial texture, with its
   discs scaled 3.2x to hold a soft pool on the soffit. The pools are faint by day and full at night.
+- **Lamp pools on the floor** (night only): one instanced draw of flat additive discs, 6 m across at half strength,
+  under the promenade lamps (`P6_atrium_lamp_pools`, a child of the lamps' instanced stems, `noCollide`). The culling
+  (`phase4-culling.js`) packs the lamps in sight to the front of the stems' matrices, so the pools are placed again
+  whenever those change: a pool shows exactly where a lamp does. Hidden by day.
 
-No lights or meshes are added. `src/walk/*` is outside the prepared geometry identity; `atrium-daylight.js` is inside
-it (the sky picture), so a build needs `build-fast-v2`. No collider changes, so the atrium PVS key stays as built.
+No lights are added; the lamp pools are the one added draw, at night only. `src/walk/*` is outside the prepared
+geometry identity; `atrium-daylight.js` is inside it (the sky picture), so a build needs `build-fast-v2`. No collider
+changes, so the atrium PVS key stays as built.
 
 ## Local renders
 
@@ -62,13 +73,15 @@ side by side with the concepts. Build with `node_modules/three` at 0.187.0.
 
 | View | Draws base -> day / night | Triangles base -> day / night | Programs |
 | --- | --- | --- | --- |
-| hero | 558 -> 558 / 558 | 10,760,649 -> 10,760,649 / 10,760,649 | 297 -> 297 |
+| hero | 558 -> 558 / 559 | 10,760,649 -> 10,760,649 / 10,760,685 | 297 -> 297 |
 | walls-starboard | 613 -> 613 / 613 | 11,067,498 -> 11,067,498 / 11,067,498 | 297 -> 297 |
 | sky-up | 533 -> 533 / 533 | 10,560,360 -> 10,560,360 / 10,560,360 | 297 -> 297 |
-| sky-bow | 467 -> 467 / 467 | 10,823,265 -> 10,823,265 / 10,823,265 | 297 -> 297 |
+| sky-bow | 467 -> 467 / 468 | 10,823,265 -> 10,823,265 / 10,823,269 | 297 -> 297 |
 
 These are main-pass draws and triangles from the debug review walk (`scripts/launch-a-measure.mjs` `measure()`, 90
-frames): [`stats-after.json`](stats-after.json) for this branch on three 0.187. Base numbers:
+frames): [`stats-after.json`](stats-after.json) for this branch at cec4ef33 on three 0.187. At night the lamp pools add
+one draw where a lamp is in sight and two triangles per lamp in sight (18 at hero, 2 at sky-bow, none at
+walls-starboard and sky-up). Base numbers:
 - hero, walls-starboard and sky-up draws and triangles are from f8af5b3a (the earlier r185 measurement in git history;
   three's version doesn't change draws or triangles);
 - hero and sky-bow programs and sky-bow's numbers are from an r187 build of the lift-tower branch, less its tower copy's
@@ -84,14 +97,17 @@ lerps, as the mood did before. A dusk or dawn blend re-uploads the one sky textu
   - another time zone sees the same ship hour;
   - the blend table;
   - the stored choice and `?time`;
-  - what the mood changes at night and restores on leaving the atrium or switching to Day.
+  - what the mood changes at night and restores on leaving the atrium or switching to Day;
+  - the floor pools: one instanced draw at night, hidden by day, following the lamps the culling leaves in sight.
 - `npm run check:walk`, `scripts/check-phase6-v2.mjs` and `scripts/check-prepared-runtime-migration.mjs` on the r187
-  build of 42113d02.
+  build of cec4ef33.
 
 ## Not covered
 
 - Phones have no Detail sheet, so they follow Auto (the clock) or `?time=` only.
-- Concept C's glow is not reproduced: no bloom, no lamp pools on the floor, and the lake doesn't reflect the lamps or
-  windows (no screen-space reflections).
+- Concept C's glow is only approximated: no bloom, and the lake doesn't reflect the lamps or windows (no screen-space
+  reflections; reflections would be view-dependent, so they were left out).
+- The facades at the far end of the hero view stay pale at night where concept C has them lit; not yet looked into
+  (the hero view draws nothing in the distant pass, so it is not the Basic distant copies).
 - Sky concept A's clouds are larger and softer-edged than the low-poly ones here.
 - The ship outside the open atrium keeps its one base light at every hour.

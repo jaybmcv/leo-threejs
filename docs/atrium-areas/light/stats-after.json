@@ -22,7 +22,7 @@
    }
   ],
   "programs": 297,
-  "frameMs": 16.600000023841858,
+  "frameMs": 16.699999928474426,
   "errors": 0
  },
  {
@@ -48,7 +48,7 @@
    }
   ],
   "programs": 297,
-  "frameMs": 16.700000047683716,
+  "frameMs": 16.600000023841858,
   "errors": 0
  },
  {
@@ -74,7 +74,7 @@
    }
   ],
   "programs": 297,
-  "frameMs": 16.600000023841858,
+  "frameMs": 16.699999928474426,
   "errors": 0
  },
  {
@@ -106,8 +106,8 @@
  {
   "view": "hero",
   "query": "time=night",
-  "calls": 558,
-  "triangles": 10760649,
+  "calls": 559,
+  "triangles": 10760685,
   "passes": [
    {
     "name": "sky",
@@ -121,12 +121,12 @@
    },
    {
     "name": "main",
-    "calls": 558,
-    "triangles": 10760649
+    "calls": 559,
+    "triangles": 10760685
    }
   ],
   "programs": 297,
-  "frameMs": 16.700000047683716,
+  "frameMs": 16.699999928474426,
   "errors": 0
  },
  {
@@ -178,14 +178,14 @@
    }
   ],
   "programs": 297,
-  "frameMs": 16.799999952316284,
+  "frameMs": 16.699999928474426,
   "errors": 0
  },
  {
   "view": "sky-bow",
   "query": "time=night",
-  "calls": 467,
-  "triangles": 10823265,
+  "calls": 468,
+  "triangles": 10823269,
   "passes": [
    {
     "name": "sky",
@@ -199,12 +199,12 @@
    },
    {
     "name": "main",
-    "calls": 467,
-    "triangles": 10823265
+    "calls": 468,
+    "triangles": 10823269
    }
   ],
   "programs": 297,
-  "frameMs": 16.600000023841858,
+  "frameMs": 16.5,
   "errors": 0
  }
 ]
