@@ -7,7 +7,7 @@ import {Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {groundMesh} from '../src/v2/ground.js';
 
-// Acceptance walk of the Deck 17 blossom garden (src/walk/blossom.js), in the commons template frame: the garden's own
+// Component check of the Deck 17 blossom garden (src/walk/blossom.js), not proof of the current ship's routes, in the commons template frame: the garden's own
 // colliders and its planter, with a floor round them, driven by the walk's own Controller. Only room lookup is substituted.
 // The garden sits 26.5 m back and 16 m across in the v2 ship (docs/blossom-garden-acceptance.md).
 const dir=path.resolve('.qa/blossom-walk');await fs.mkdir(dir,{recursive:true});
