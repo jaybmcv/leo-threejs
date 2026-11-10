@@ -37,8 +37,3 @@ export async function liveLayoutIdentity(layout){
  })());
  return memo.get(key);
 }
-
-export async function legacyLayoutIdentity(layout){
- const inputs=['src/plan/rooms.js','src/plan/v1.js','src/walk/lifts.js','src/walk/maze/layout.js','src/walk/aquarium-treasure/layout.js','src/walk/lounge-aquarium.js','src/walk/arcade.js','src/walk/transporter.js','src/walk/hamster-ball.js','src/areas.js','src/transit.js','src/v2/live-spatial.js','src/v2/activity-layout.js','src/walk/pool/rules.js'];
- const h=createHash('sha256').update(JSON.stringify({rooms:layout.rooms,fixedRooms:layout.fixedRooms}));for(const f of inputs)h.update(f).update(await fs.readFile(f));return h.digest('hex');
-}
