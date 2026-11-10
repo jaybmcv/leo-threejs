@@ -83,6 +83,10 @@ pass('the downlights keep their one instanced draw and gain warm pools');
 const lampPools=a.stems.getObjectByName('P6_atrium_lamp_pools');assert(lampPools?.isInstancedMesh&&lampPools.visible);assert.equal(lampPools.count,2);
 assert.equal(lampPools.material.blending,T.AdditiveBlending);assert.equal(lampPools.material.opacity,.5);lampPools.getMatrixAt(1,e);assert(Math.abs(e.elements[12]-14)<1e-6&&Math.abs(e.elements[13]-(-19.32-.38+.02))<1e-6);
 pass('at night the promenade lamps throw warm pools on the floor, one instanced draw');
+// The culling (phase4-culling.js) packs the lamps in sight to the front of the stems' matrices and sets their count.
+a.stems.getMatrixAt(1,e);a.stems.setMatrixAt(0,e);a.stems.count=1;a.stems.instanceMatrix.needsUpdate=true;run(mood,1);
+assert.equal(lampPools.count,1);lampPools.getMatrixAt(0,e);assert(Math.abs(e.elements[12]-14)<1e-6);
+pass('the floor pools follow the lamps the culling leaves in sight');
 setAtriumView(OUT);assert.equal(inOpenAtrium(),false);run(mood,1);
 assert.equal(a.mats.glass.emissive.getHex(),glassBase.getHex());assert.equal(a.mats.glass.opacity,.23);assert.equal(a.mats.glass.emissiveIntensity,1);
 assert.equal(a.hemi.intensity,1);assert.equal(a.hemi.color.getHex(),0xeef4ff);assert.equal(a.fill.color.getHex(),0xf2f6ff);assert.equal(a.scene.fog.color.getHex(),fogBase.getHex());

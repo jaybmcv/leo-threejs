@@ -88,14 +88,19 @@ function lightPools(mesh){
 
 // The promenade lamps' pools of light on the floor: one instanced draw of flat additive discs, a child of the lamps'
 // own instanced stems (so it shows and hides with them), on the floor under each stem. Shown only at night, so by day
-// it costs nothing.
+// it costs nothing. The culling (phase4-culling.js) packs the lamps in sight to the front of the stems' matrices and
+// sets their count, so the pools are placed again whenever those change (placePools): a pool shows where a lamp does.
 function lampPools(stems){
  const c=walkCanvas();if(!c)return null;
  const map=new T.CanvasTexture(paintLampPool(c));map.colorSpace=T.SRGBColorSpace;
  const m=new T.MeshBasicMaterial({name:'P6_atrium_lamp_pool',map,transparent:true,depthWrite:false,blending:T.AdditiveBlending,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
- const o=new T.InstancedMesh(new T.PlaneGeometry(LAMP_POOL,LAMP_POOL).rotateX(-Math.PI/2),m,stems.count),at=new T.Matrix4(),p=new T.Vector3();
- for(let i=0;i<stems.count;i++){stems.getMatrixAt(i,at);p.setFromMatrixPosition(at);o.setMatrixAt(i,at.makeTranslation(p.x,p.y-STEM_RISE+.02,p.z));}
- o.name='P6_atrium_lamp_pools';o.userData.noCollide=true;o.visible=false;o.computeBoundingSphere();stems.add(o);return o;
+ const o=new T.InstancedMesh(new T.PlaneGeometry(LAMP_POOL,LAMP_POOL).rotateX(-Math.PI/2),m,stems.instanceMatrix.count);
+ o.name='P6_atrium_lamp_pools';o.userData.noCollide=true;o.visible=false;o.count=0;stems.add(o);return o;
+}
+const stemAt=new T.Matrix4(),stemFoot=new T.Vector3();
+function placePools(stems,o){
+ for(let i=0;i<stems.count;i++){stems.getMatrixAt(i,stemAt);stemFoot.setFromMatrixPosition(stemAt);o.setMatrixAt(i,stemAt.makeTranslation(stemFoot.x,stemFoot.y-STEM_RISE+.02,stemFoot.z));}
+ o.count=stems.count;o.instanceMatrix.needsUpdate=true;o.computeBoundingSphere();
 }
 
 function showOwn(found,n,pools,floorPools){
@@ -118,7 +123,7 @@ export function createAtriumMood(light){
  const base={hemi:hemi.intensity,fill:fill.intensity,env:scene.environmentIntensity,sky:hemi.color.clone(),ground:hemi.groundColor.clone(),fillColour:fill.color.clone(),fog:scene.fog?.color.clone()};
  const pair=k=>[new T.Color(DAY[k]),new T.Color(NIGHT[k])],colours={sky:pair('sky'),ground:pair('ground'),fillColour:pair('fillColour'),fog:pair('fog')};
  const keys=Object.keys(colours),now=Object.fromEntries(keys.map(k=>[k,new T.Color()])),glass=new T.Color(NIGHT.glass);
- let mood=0,shown=0,n=nightTarget(),target=n,nextClock=0,pools=null,poolsTried=false,floorPools=null,stemsTried=false,ownAt=-1,ownCount=-1;
+ let mood=0,shown=0,n=nightTarget(),target=n,nextClock=0,pools=null,poolsTried=false,floorPools=null,stemsTried=false,stemsPlaced=-1,ownAt=-1,ownCount=-1;
  // The clock is read once a second; a choice made in the Graphics detail sheet takes effect at once.
  subscribeTime(()=>{nextClock=0;});
  // The light for t (0 the ship's base, 1 the atrium's own) at the current time of day n.
@@ -140,6 +145,7 @@ export function createAtriumMood(light){
    if(found.downlights&&!poolsTried){poolsTried=true;pools=lightPools(found.downlights);ownAt=-1;}
    if(found.stems&&!stemsTried){stemsTried=true;floorPools=lampPools(found.stems);ownAt=-1;}
    if(ownAt!==n||ownCount!==found.materials.size){showOwn(found,n,pools,floorPools);ownAt=n;ownCount=found.materials.size;}
+   if(floorPools?.visible&&stemsPlaced!==found.stems.instanceMatrix.version){stemsPlaced=found.stems.instanceMatrix.version;placePools(found.stems,floorPools);}
    showSky(found.skies,n);
    if(inOpenAtrium()){mood+=(1-mood)*(1-Math.exp(-3*step));shown=mood;setMood(mood,found);if(found.fall)found.fall.offset.y=(found.fall.offset.y+step*.9)%1;}
    else if(shown){mood=shown=0;setMood(0,found);}
