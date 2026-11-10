@@ -1,8 +1,8 @@
 # Residential hierarchy proposal
 
-## Layout 2 — takes effect at cutover
+## Layout 2 — the live ship
 
-Until cutover, the canonical live site and the historical build notes below describe layout 1. Layout 2 is selected with `LEO_LAYOUT=2` at build time and writes only `output/leo-interior-v02` and `dist-v2`; URL parameters cannot switch worlds. These v2 sections take precedence for the redesigned ship after cutover. This work does not deploy or approve a release.
+Layout 2 is what leo.marscatsvoyage.com serves, and has been the default build since the switchover merged on 2026-11-02 (#197). `LEO_LAYOUT=1` selects the pinned rollback under `legacy/v1`; URL parameters cannot switch worlds. [HANDOFF.md](HANDOFF.md) has the details.
 
 The accepted v2 physical allocation below supersedes the September proposal for 5,214 rooms. The proposal is retained as history; it is not the current v2 capacity target. Labels, individual assignments and legacy-link joins must use the v2 plan and its `cabinIdMap`, without deriving cabin identity from list order.
 

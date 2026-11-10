@@ -9,7 +9,7 @@ Layout 2 is now the default. In PowerShell:
     npm run check
     node scripts/serve-v2.mjs
 
-Review http://127.0.0.1:4182/ and walk.html locally. Set LEO_LAYOUT=1 to reproduce the pinned v1 source and output. Selection is a build input; URL parameters cannot select the other world. Models are in output/leo-interior-v02 and public assets in dist-v2. Nothing is deployed.
+Review http://127.0.0.1:4182/ and walk.html locally. Set LEO_LAYOUT=1 to reproduce the pinned v1 source and output. Selection is a build input; URL parameters cannot select the other world. Models are in output/leo-interior-v02 and public assets in dist-v2. Since the switchover (merged 2026-11-02, #197) this is the ship the live site serves.
 
 ## Isolation and frames
 
@@ -43,7 +43,7 @@ The local GPU harness expects a dedicated Chrome debugging session on port 9333 
 
 ## Historical adapter cutover checklist
 
-The checklist below records the pre-Phase-8 architecture. The adapters have now been folded into source; use [the current cutover runbook](../../output/launch-g/SWITCHOVER.md) for release and rollback steps.
+The checklist below records the pre-Phase-8 architecture. The adapters have now been folded into source. The cutover runbook, `output/launch-g/SWITCHOVER.md`, was never committed (`output/` is ignored); deploys now follow [FAST_DEPLOYS.md](../../FAST_DEPLOYS.md) and rollback [legacy/README.md](../../legacy/README.md).
 
 Every operation checks its source anchor; preflight accumulates every mismatch. Removed-target regressions cover all 59 adapters. Fold each line into selected source at cutover:
 
