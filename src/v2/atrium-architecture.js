@@ -42,7 +42,7 @@ export function addPhase6Architecture(ship,root,layout){
   for(let q=o;q;q=q.parent)if(!q.visible||q.userData.keepLive)return;
   if(o.userData.phase6SkyTip||o.name==='P6_sky_ceiling'||o.name==='P6_lake_water'||o.name==='Deck_slab'&&o.parent.userData.number===6){selected.push({o,kind:o.name==='Deck_slab'?'floor':o.name==='P6_lake_water'?'water':'sky'});return;}
   const b=new T.Box3().setFromObject(o,true);
-  if((b.min.x>=126&&b.max.x<=138&&Math.max(Math.abs(b.min.z),Math.abs(b.max.z))<=10.2||b.min.x>=-141&&b.max.x<=-122&&Math.max(Math.abs(b.min.z),Math.abs(b.max.z))<=19)&&b.min.y>=-40.8&&b.max.y<=40.3||/^(V2_tower_(bridge|landing)_floor|V2_lounge_balcony_floor)$/.test(o.name))selected.push({o,kind:'tower'});
+  if((b.min.x>=126&&b.max.x<=138&&Math.max(Math.abs(b.min.z),Math.abs(b.max.z))<=10.2||b.min.x>=-141&&b.max.x<=-122&&Math.max(Math.abs(b.min.z),Math.abs(b.max.z))<=19)&&b.min.y>=-40.8&&b.max.y<=40.3||/^(V2_tower_(bridge|landing)_floor|V2_tower_bridge_light|V2_tower_shaft_lanes|V2_lounge_balcony_floor)$/.test(o.name))selected.push({o,kind:'tower'});
  });
  const buckets=new Map(),sourceNames=[];
  for(const {o,kind} of selected){
@@ -56,6 +56,14 @@ export function addPhase6Architecture(ship,root,layout){
   for(const name of Object.keys(g.attributes))if(!['position','normal','uv','color'].includes(name))g.deleteAttribute(name);
   const tint=m.color||new T.Color(1,1,1),prior=g.attributes.color,c=new Float32Array(g.attributes.position.count*3);
   for(let i=0;i<g.attributes.position.count;i++)c.set([tint.r*(prior?prior.getX(i):1),tint.g*(prior?prior.getY(i):1),tint.b*(prior?prior.getZ(i):1)],i*3);
+  // A source can colour the faces facing given ways, and shade them as if they faced another ([x,y,z,colour,lit]; the
+  // tower's bridge fascias and undersides, model.js), or shade all its faces as if they faced one way (towerLit [x,y,z];
+  // the forward shafts' glass and white frame, transit.js and main.js).
+  for(const [x,y,z,hex,lit] of o.userData.towerFaces||[]){
+   const want=new T.Vector3(x,y,z),colour=new T.Color(hex),n=g.attributes.normal,sum=new T.Vector3(),v=new T.Vector3();
+   for(let i=0;i<n.count;i+=3){sum.set(0,0,0);for(let k=0;k<3;k++)sum.add(v.fromBufferAttribute(n,i+k));if(sum.normalize().dot(want)>.7)for(let k=0;k<3;k++){colour.toArray(c,(i+k)*3);if(lit)n.setXYZ(i+k,...lit);}}
+  }
+  if(o.userData.towerLit)for(let i=0;i<g.attributes.normal.count;i++)g.attributes.normal.setXYZ(i,...o.userData.towerLit);
   g.setAttribute('color',new T.BufferAttribute(c,3));b.parts.push(g);o.visible=false;
  }
  for(const b of buckets.values()){const o=new T.Mesh(mergeGeometries(b.parts),b.material);o.name=b.name;o.userData={noCollide:true,phase6Architecture:true,actualSources:true};root.add(o);b.parts.forEach(g=>g.dispose());}
