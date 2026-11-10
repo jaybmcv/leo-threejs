@@ -253,14 +253,18 @@ async function hello(v,msg){
  const id=await actorIdOf(typeof msg.key==='string'?msg.key:'');
  if(!id){v.ws.close(4001,'no key');return;}
  const who=msg.pass?await verifyPass(msg.pass,PASS).catch(()=>null):glyphVisitor(msg.glyph)||(msg.otherside===true?typedVisitor(id,msg.name):null);
+ // A pass not taken: 'bad' when it was checked and failed, 'unchecked' when Creamery's keys could not be had (it has
+ // not answered since this server started, or not for a key this server has not seen). The page forgets a bad pass
+ // and keeps one that was only unchecked (net/live.js), so a restart while Creamery is away costs nobody their login.
+ const pass=msg.pass&&!who?(PASS.key.down()?'unchecked':'bad'):null;
  // One body per visitor: the same browser in a second tab, or the same Discord account elsewhere, takes over.
  for(const o of visitors)if(o!==v&&(o.id===id||(who&&o.discord?.discordId===who.discordId))){send(o.ws,{m:'replaced'});o.ws.close(4002,'replaced');leave(o);}
  if([...visitors].filter(o=>o.ready).length>=MAX){send(v.ws,{m:'full'});v.ws.close(4003,'full');return;}
  v.slot=takeSlot();if(!v.slot){v.ws.close(4003,'full');return;}
  // A tester (the page holds a tester invite) wears the captain's hat. Taken on the page's word: it is a hat.
  Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);
- send(v.ws,{m:'welcome',...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{}),id,aboard:aboard(),you:{name:v.name,verified:!!who,typed:!!who?.typed},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state(),panel:panel.state()});
- countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`${who.glyph?'':'discord:'}${who.discordId}${who.lapsed?' (remembered)':''}`:msg.pass?'(pass refused)':'');
+ send(v.ws,{m:'welcome',...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{}),id,aboard:aboard(),you:{name:v.name,verified:!!who,typed:!!who?.typed,...(pass?{pass}:{})},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state(),panel:panel.state()});
+ countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`${who.glyph?'':'discord:'}${who.discordId}${who.lapsed?' (remembered)':''}`:pass==='unchecked'?'(pass not checked: no keys from Creamery)':pass?'(pass refused)':'');
  if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
 }
 function leave(v){

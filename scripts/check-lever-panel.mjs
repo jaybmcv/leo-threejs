@@ -75,6 +75,8 @@ class Socket{constructor(){socket=this;this.readyState=1;this.sent=[];}send(s){t
 globalThis.WebSocket=Socket;globalThis.localStorage={getItem:()=>null,setItem(){}};
 try{
  const received=[],live=connectLive('ws://127.0.0.1:1/live',{panel:m=>received.push(m)});
+ // The link opens its socket once its pass is in (net/live.js), a moment after it is made.
+ for(let i=0;i<100&&!socket;i++)await new Promise(r=>setTimeout(r,0));
  await socket.onopen();const hello=socket.sent[0];
  socket.onmessage({data:JSON.stringify({m:'welcome',layout:2,layoutIdentity:hello.layoutIdentity,id:'wire',you:{}})});
  assert(live.panel({op:'flip',i:3}));assert.deepEqual(socket.sent.at(-1),{op:'flip',i:3,m:'panel'});

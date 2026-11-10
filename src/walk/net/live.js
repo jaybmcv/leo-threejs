@@ -6,6 +6,11 @@ import {WireReader,PROTOCOL} from './wire.js';
 // passes lift calls on, and hands everything that comes back to the page. If the server cannot be reached the page
 // carries on alone, and the link keeps trying, waiting longer each time.
 const SEND_MS=100,STILL_MS=2000,RETRY_MS=[1000,2000,5000,10000,30000];
+// A full ship is asked again every FULL_MS, and goes on saying it is full until the answer changes. A tab that another
+// one took over from asks again only when its visitor comes back to it (the tab is shown or focused again), and not
+// within WAKE_MS of being told: the other tab is then the one left out, until its visitor returns to that one. Each
+// change of hands takes a person switching tabs, so two tabs never fight on their own.
+const FULL_MS=30000,WAKE_MS=3000;
 
 function storage(key,make){try{let v=localStorage.getItem(key);if(!v&&make){v=make();localStorage.setItem(key,v);}return v;}catch{return make?make():null;}}
 // A random key, kept by this browser; the server derives the visitor's id from it (wire.js actorIdOf).
@@ -16,31 +21,46 @@ export function saveName(name){try{localStorage.setItem('leo-live-name',name);}c
 // on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n), board(b), scored(r), hearts(h), hearted(r), selfie(id,ms),
 // giveaway(g), claimed(r), clown(r), chat(line), said(r), wall(w), stroke(s), painted(r), gym(msg), mcts(carts), tv(t), tvTicket(r)}; status
 // is 'connecting', 'live',
-// 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). opts.pass(): a Leo pass for this
-// (re)connection or null (connect.js); opts.refused(): the server would not take it; opts.invite: the invite code the
-// page was opened with; opts.hat(): whether this visitor wears the captain's hat (a tester).
+// 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). Nothing is said before connectLive has
+// returned, so the page's handlers can read the link it returns. opts.pass(): a Leo pass for this
+// (re)connection or null (connect.js); opts.refused(): the server checked it and it is bad, so it should be forgotten;
+// opts.invite: the invite code the page was opened with; opts.hat(): whether this visitor wears the captain's hat (a
+// tester).
 // The server's web address, from its websocket's: wss://host/live is https://host (the TV's uploads and video, tv.mjs).
 export const httpBase=url=>url.replace(/^ws(s?):\/\//,'http$1://').replace(/\/live\/?$/,'');
 export function connectLive(url,on,opts={}){
  const reader=new WireReader(),key=browserKey();
- let ws=null,tries=0,stopped=false,last='',lastAt=0,sentAt=0,name=savedName(),id=null,you=null,sentPass=false,refused=false;
+ // held: what the server last said that keeps this visitor out for now, 'full' or 'replaced' (since heldAt).
+ // turnedDown: a pass the server did not take, which is not sent again.
+ let ws=null,tries=0,stopped=false,last='',lastAt=0,sentAt=0,name=savedName(),id=null,you=null,refused=false,turnedDown=null,attempt=0,timer=0,held=null,heldAt=0;
  const status=s=>on.status?.(s);
+ // One try at coming aboard. The pass comes first and the socket after: the server gives a new socket five seconds
+ // to say hello (HELLO_MS), and Creamery may take longer than that to answer (connect.js waits 8 s), so a socket
+ // opened while the pass was still on its way was closed unheard, again and again, for every remembered visitor.
  function open(){
-  if(stopped)return;status('connecting');
-  const pass=opts.pass?opts.pass().catch(()=>null):Promise.resolve(null);
-  try{ws=new WebSocket(url);}catch{retry();return;}
-  const socket=ws;ws.binaryType='arraybuffer';
-  ws.onopen=async()=>{const p=await pass;if(socket!==ws)return;sentPass=!!p;if(ws.readyState===1)ws.send(JSON.stringify({m:'hello',v:PROTOCOL,layout:2,layoutIdentity:LIVE_IDENTITY,key,name,hat:!!opts.hat?.(),...(p?{pass:p,invite:opts.invite||undefined}:opts.glyph?.()?{glyph:opts.glyph()}:opts.otherside?{otherside:true}:{})}));};
+  if(stopped)return;clearTimeout(timer);const mine=++attempt;
+  if(held!=='full')status('connecting');
+  Promise.resolve().then(()=>opts.pass?.()).catch(()=>null).then(p=>{if(mine===attempt&&!stopped)dial(p&&p!==turnedDown?p:null);});
+ }
+ function dial(p){
+  let socket,verdict=null;
+  try{socket=ws=new WebSocket(url);}catch{held=null;retry();return;}
+  ws.binaryType='arraybuffer';
+  ws.onopen=()=>{if(socket===ws&&ws.readyState===1)ws.send(JSON.stringify({m:'hello',v:PROTOCOL,layout:2,layoutIdentity:LIVE_IDENTITY,key,name,hat:!!opts.hat?.(),...(p?{pass:p,invite:opts.invite||undefined}:opts.glyph?.()?{glyph:opts.glyph()}:opts.otherside?{otherside:true}:{})}));};
   ws.onmessage=e=>{
+   if(socket!==ws)return;
    if(e.data instanceof ArrayBuffer){const poses=reader.read(e.data);if(poses.length)on.poses?.(poses.filter(p=>p.id!==id));return;}
    let msg;try{msg=JSON.parse(e.data);}catch{return;}
    switch(msg.m){
     case 'welcome':
      if(msg.layout!==2||msg.layoutIdentity!==LIVE_IDENTITY){stopped=true;status('layout');ws.close(4004,'layout mismatch');return;}
-     tries=0;id=msg.id;last='';you=msg.you||null;status('live');on.welcome?.(msg);on.aboard?.(msg.aboard);
-     // A pass the server would not take (an old key, or one from another Creamery): drop it and come back once with
-     // a fresh one.
-     if(sentPass&&!you?.verified&&!refused){refused=true;opts.refused?.();ws.close();}
+     tries=0;held=null;id=msg.id;last='';you=msg.you||null;status('live');on.welcome?.(msg);on.aboard?.(msg.aboard);
+     // A pass the server did not take: come back once without it (with a newer one, if Creamery gives one). The
+     // login this browser keeps is forgotten only when the server says it checked the pass and it is bad (you.pass
+     // 'bad': an old key, or one from another Creamery). A server that could not check it ('unchecked': it has no
+     // keys from Creamery yet) leaves the visitor aboard as they are, to be vouched for the next time they connect;
+     // one that does not say (older than this) costs nobody their login either.
+     if(p&&!you?.verified&&you?.pass!=='unchecked'&&!refused){refused=true;turnedDown=p;if(you?.pass==='bad')opts.refused?.();ws.close();}
      break;
     case 'gone':on.gone?.(msg.id);break;
     case 'lift':on.lift?.(msg.id,msg.s);break;
@@ -80,17 +100,32 @@ export function connectLive(url,on,opts={}){
     // The Crown lounge TV (server/tv.mjs): what is on it, and a ticket to upload a video (or why not).
     case 'tv':on.tv?.(msg);break;
     case 'tv-ticket':on.tvTicket?.(msg);break;
-    case 'full':stopped=true;status('full');break;
-    case 'replaced':stopped=true;status('replaced');break;
+    case 'full':case 'replaced':verdict=msg.m;status(msg.m);break;
     case 'reload':stopped=true;status(msg.why==='layout'?'layout':'offline');break;
    }
   };
-  ws.onclose=()=>{reader.reset();id=null;on.reset?.();if(!stopped)retry();};
+  ws.onclose=()=>{
+   if(socket!==ws)return;reader.reset();id=null;on.reset?.();if(stopped)return;
+   held=verdict;heldAt=Date.now();
+   if(held==='full')timer=setTimeout(open,FULL_MS);else if(!held)retry();
+  };
   ws.onerror=()=>{};
  }
- function retry(){status('offline');setTimeout(open,RETRY_MS[Math.min(tries++,RETRY_MS.length-1)]);}
+ function retry(){status('offline');clearTimeout(timer);timer=setTimeout(open,RETRY_MS[Math.min(tries++,RETRY_MS.length-1)]);}
+ // Back at a tab another one took over from: come aboard again here. Too soon after being told, it waits out the
+ // rest of WAKE_MS and goes ahead only if this is still the tab in front.
+ const page=globalThis.document;
+ function wake(){
+  if(stopped||held!=='replaced'||page?.hidden)return;
+  const wait=heldAt+WAKE_MS-Date.now();
+  if(wait>0){clearTimeout(timer);timer=setTimeout(()=>{if(page?.hasFocus?.()!==false)wake();},wait);return;}
+  held=null;open();
+ }
+ page?.addEventListener?.('visibilitychange',wake);globalThis.addEventListener?.('focus',wake);
  const live=()=>ws&&ws.readyState===1&&id;
- open();
+ // The first try starts once connectLive has returned: the page hears 'connecting' with the link already in hand
+ // (said any sooner, main.js's showAboard found no link and hid "Joining…").
+ queueMicrotask(open);
  return {
   get id(){return id;},
   // The walker's pose: {pos, yaw, g, st, jc, js, r, e, rest}. Sent at most ten times a second.
@@ -147,7 +182,10 @@ export function connectLive(url,on,opts={}){
   // How the server has this visitor: {name, verified}.
   get you(){return you;},
   // Say hello again, when who this visitor is has changed.
-  rejoin(){ws?.close();},
-  close(){stopped=true;ws?.close();},
+  // With a socket up, closing it brings the next one; with none (a pass still on its way, or waiting to try again),
+  // a new try starts now, and the pass asked for before it is not used. A tab that was taken over from, or a full
+  // ship, stays as it is.
+  rejoin(){if(stopped||held)return;if(ws&&ws.readyState<2)ws.close();else open();},
+  close(){stopped=true;clearTimeout(timer);page?.removeEventListener?.('visibilitychange',wake);globalThis.removeEventListener?.('focus',wake);ws?.close();},
  };
 }

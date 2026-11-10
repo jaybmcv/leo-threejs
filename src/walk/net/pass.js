@@ -15,9 +15,10 @@ export function readPass(token){
 }
 
 // Creamery's public keys, fetched and kept for an hour; fetched again early when a pass names a key not seen yet
-// (at most once a minute, so a stream of made-up key ids costs nothing).
+// (at most once a minute, so a stream of made-up key ids costs nothing). down(): the last fetch failed, so a key
+// that was not found says nothing about the pass that named it (Leo live then tells the page it could not check).
 export function keySet(url,{ttl=3600e3,retry=60e3,fetcher=globalThis.fetch}={}){
- let keys=new Map(),at=0,tried=0,loading=null;
+ let keys=new Map(),at=0,tried=0,loading=null,down=false;
  async function load(){
   const res=await fetcher(url,{headers:{accept:'application/json'}});if(!res.ok)throw new Error(`keys ${res.status}`);
   const body=await res.json(),next=new Map();
@@ -26,11 +27,13 @@ export function keySet(url,{ttl=3600e3,retry=60e3,fetcher=globalThis.fetch}={}){
   }
   keys=next;at=Date.now();
  }
- return async kid=>{
+ const find=async kid=>{
   const now=Date.now();
-  if(!at||now-at>ttl||(!keys.has(kid)&&now-tried>retry)){tried=now;loading??=load().finally(()=>{loading=null;});try{await loading;}catch{}}
+  if(!at||now-at>ttl||(!keys.has(kid)&&now-tried>retry)){tried=now;loading??=load().then(()=>{down=false;},()=>{down=true;}).finally(()=>{loading=null;});await loading;}
   return keys.get(kid)||null;
  };
+ find.down=()=>down;
+ return find;
 }
 
 // How long after its last pass a browser is still remembered (net/connect.js keeps the pass): Creamery's own sign-in
