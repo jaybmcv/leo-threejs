@@ -11,7 +11,7 @@ import {kittenFigure} from './kittens.public.js';
 import {BLOOMS,SHAPES,blade,orient,aroid,palm,fern,snakePlant,flower,clump,flowerBush,tuft,pothos} from './foliage.js';
 
 // The Deck 2 arrival hall, the first room every visitor sees, as a garden atrium (Jay's pick of three concepts,
-// 2026-10-26). The middle of its ceiling opens in an oval into Hydroponic garden A on Deck 3, where a glass balustrade
+// 2026-10-26). The middle of its ceiling opens in an oval into Hydroponic garden A on Deck 3, where a timber balustrade
 // with a planter of trailing vines rings the opening under a grow-light panel. The planting throughout is foliage.js's:
 // palms, aroids, ferns, snake plants, flowering shrubs, grass, pothos and leafy clumps, varied island to island. A climbing cat tree rises through it from
 // a ring of seats on Deck 2; its top platform is level with the garden floor and a plank bridge runs from it through a
@@ -49,8 +49,12 @@ const POTS=[[-24.6,-15.6,1.1,'palm'],[24.4,-15.6,1.2,'palm'],[24.4,15.6,1.2,'pal
 // In the garden, the racks either side of the opening [x, z] give way to beds of tall greenery that show from the hall.
 const GARDEN_BEDS=[[-9,-7],[0,-7],[-9,7],[0,7]];
 // Pillows, lanterns, branches, hanging baskets, the ceiling trellis and the sign hung over the arrival spot are
-// dressing: no walker stops on them (nor jumps into the sign).
-const DRESSING=new Set(['Atrium_pillow','Cat_tree_branch','Atrium_garden_branch','Atrium_shelf_bracket','Atrium_basket','Atrium_trellis','Atrium_hanging_sign']);
+// dressing: no walker stops on them (nor jumps into the sign). So are the wooden rails' mid rails and posts that took the
+// place of the guards' glass: the guards' own shapes stay solid as collision only (GUARDS), so the rails look like wood
+// and stop a walker exactly as the glass did.
+const DRESSING=new Set(['Atrium_pillow','Cat_tree_branch','Atrium_garden_branch','Atrium_shelf_bracket','Atrium_basket','Atrium_trellis','Atrium_hanging_sign','Cat_tree_top_guard_mid_rail','Cat_tree_top_guard_post','Atrium_rail_mid']);
+// Solid but never drawn (hidden from drawing like the cabins' collision glass; collision.js keeps baked meshes solid).
+const GUARDS=new Set(['Cat_tree_top_guard','Atrium_balustrade_guard']);
 // Where the room frame's origin is in the ship (the hall's floor; the garden's is 4 m up).
 const [rx,ry,rz]=placedV1('arrival-room'),ROOM={x:rx,y:ry,z:rz};
 
@@ -90,7 +94,6 @@ export function openArrivalAtrium(ship){
   planter:mat('planter',0xcb965d,{roughness:.65}),soil:mat('soil',0x4a3626,{roughness:1}),pot:mat('pot',0xe8ddcb,{roughness:.8}),
   sage:mat('cushion_sage',0xa8ba8e,{roughness:.95}),cream:mat('cushion_cream',0xefe5cf,{roughness:.95}),pillow:mat('pillow',0xdbe4c8,{roughness:.95}),
   rugSage:mat('rug_sage',0xb3c49c,{roughness:1}),rugCream:mat('rug_cream',0xebe2cb,{roughness:1}),
-  glass:new T.MeshStandardMaterial({name:'Atrium_glass',color:0xd9eef0,roughness:.08,metalness:.1,transparent:true,opacity:.28,depthWrite:false,side:T.DoubleSide}),
   lamp:mat('lamp_glow',0xffe6b8,{emissive:0xffc978,emissiveIntensity:1.4}),frame:mat('lamp_frame',0x5b4330,{roughness:.6}),hole:mat('cubby_hole',0x3a2a1e,{roughness:1}),
   letters:mat('sign_lettering',0xfff4dc,{emissive:0xfff0d0,emissiveIntensity:.9}),
   foliage:mat('foliage',0xffffff,{vertexColors:true,flatShading:true,side:T.DoubleSide,roughness:.8})};
@@ -195,7 +198,19 @@ export function openArrivalAtrium(ship){
   put('Cat_tree_bridge',M.wood,box(1.2,.08,z1-z0,TREE.x,y-.042,(z0+z1)/2));
   for(const dx of [-.3,0,.3])put('Cat_tree_bridge_seam',M.dark,box(.015,.004,z1-z0,TREE.x+dx,y-.001,(z0+z1)/2));
   branch([TREE.x,y-1.2,TREE.z+.3],[TREE.x,y-.5,z0],[TREE.x,y-.12,(z0+z1)/2],.08);}
- {const [px,py,pz]=platformAt(TREE.platforms.at(-1)),radius=TREE.radius+.02,angle=Math.asin(.6/radius),arc=2*Math.PI-2*angle;put('Cat_tree_top_guard_glass',M.glass,new ReplayGeometry("src/walk/arrival-atrium.js:9",T.CylinderGeometry,radius,radius,1.1,32,1,true,angle,arc).translate(px,py+.55,pz));const points=Array.from({length:41},(_,i)=>{const t=angle+arc*i/40;return new T.Vector3(px+Math.sin(t)*radius,py+1.1,pz+Math.cos(t)*radius)});put('Cat_tree_top_guard_rail',M.trim,new ReplayGeometry("src/walk/arrival-atrium.js:10",T.TubeGeometry,new T.CatmullRomCurve3(points),20,.025,4,false));const reach=Math.min(Math.abs(TREE.x-cx-.6),Math.abs(TREE.x-cx+.6)),end=b*Math.sqrt(1-reach*reach/(a*a))+.03;for(const side of[-1,1]){put('Cat_tree_top_guard_glass',M.glass,box(.05,1.1,end-pz,px+side*.6,py+.55,(pz+end)/2));put('Cat_tree_top_guard_rail',M.trim,box(.05,.05,end-pz,px+side*.6,py+1.1,(pz+end)/2));}}
+ // Round the top platform (open toward the bridge) and along the bridge's sides: a slim wooden rail, no glass. The top
+ // rail at 1.1 m (solid, as it always was), and under it a mid rail on posts about 0.4 m apart. The guard the glass
+ // made, a 1.1 m ring and two side panels, stays solid as collision only.
+ {const [px,py,pz]=platformAt(TREE.platforms.at(-1)),radius=TREE.radius+.02,angle=Math.asin(.6/radius),arc=2*Math.PI-2*angle;
+  put('Cat_tree_top_guard',M.trim,new ReplayGeometry("src/walk/arrival-atrium.js:9",T.CylinderGeometry,radius,radius,1.1,32,1,true,angle,arc).translate(px,py+.55,pz));
+  const ring=h=>new T.CatmullRomCurve3(Array.from({length:41},(_,i)=>{const t=angle+arc*i/40;return new T.Vector3(px+Math.sin(t)*radius,py+h,pz+Math.cos(t)*radius)}));
+  put('Cat_tree_top_guard_rail',M.trim,new ReplayGeometry("src/walk/arrival-atrium.js:10",T.TubeGeometry,ring(1.1),20,.025,4,false));put('Cat_tree_top_guard_mid_rail',M.trim,new ReplayGeometry("src/walk/arrival-atrium.js:11",T.TubeGeometry,ring(.55),20,.025,4,false));
+  const posts=Math.round(arc*radius/.4);for(let i=0;i<=posts;i++){const t=angle+arc*i/posts;put('Cat_tree_top_guard_post',M.trim,cyl(.018,.018,1.1,px+Math.sin(t)*radius,py+.55,pz+Math.cos(t)*radius,6));}
+  // Along the bridge's sides to the opening's edge; the side rails' posts start where the ring opens.
+  const reach=Math.min(Math.abs(TREE.x-cx-.6),Math.abs(TREE.x-cx+.6)),end=b*Math.sqrt(1-reach*reach/(a*a))+.03,z0=pz+Math.cos(angle)*radius,n=Math.max(1,Math.round((end-z0)/.4));
+  for(const side of[-1,1]){put('Cat_tree_top_guard',M.trim,box(.05,1.1,end-pz,px+side*.6,py+.55,(pz+end)/2));put('Cat_tree_top_guard_rail',M.trim,box(.05,.05,end-pz,px+side*.6,py+1.1,(pz+end)/2));
+   put('Cat_tree_top_guard_mid_rail',M.trim,box(.05,.05,end-z0,px+side*.6,py+.55,(z0+end)/2));
+   for(let i=1;i<=n;i++)put('Cat_tree_top_guard_post',M.trim,cyl(.018,.018,1.1,px+side*.6,py+.55,z0+(end-z0)*i/n,6));}}
  // The canopy: limbs spreading at the garden's head height, clumps of foliage along them and fans of leaves spilling out.
  {const r=random(7),out=greenery.garden;
   for(let i=0;i<6;i++){const t=i/6*Math.PI*2+.4,d=1.4+r()*.6,ex=TREE.x+Math.cos(t)*d,ez=TREE.z+Math.sin(t)*d,ey=6.3+r()*.5;
@@ -205,19 +220,20 @@ export function openArrivalAtrium(ship){
    pothos(out,[ex,ey-.1,ez],{length:.5+r()*.6,rnd:r,spacing:.13});}
   for(let i=0;i<8;i++){const t=r()*Math.PI*2,d=r()*.7;clump(out,[TREE.x+Math.cos(t)*d,6.75+r()*.3,TREE.z+Math.sin(t)*d],{r:.34+r()*.16,rnd:r,squash:.72,leaves:4});}}
 
- // Up in the garden: the balustrade (glass between posts under a timber cap) and, between it and the edge, a trough of
- // greenery with vines trailing down into the hall; both open for the bridge.
+ // Up in the garden: the balustrade (a timber cap and a slim timber mid rail on posts, no glass) and,
+ // between it and the edge, a trough of greenery with vines trailing down into the hall; both open for the bridge.
  const gap=inGap,N=80;
  for(let i=0;i<N;i++){
   const t0=i/N*Math.PI*2,t1=(i+1)/N*Math.PI*2,[x0,z0]=edge(t0,rail),[x1,z1]=edge(t1,rail),mx=(x0+x1)/2,mz=(z0+z1)/2;
   const [u0,w0]=edge(t0,.17),[u1,w1]=edge(t1,.17);
   if(gap(mx,mz)){if(!gap(x0,z0))put('Atrium_rail_post',M.dark,cyl(.03,.03,1,x0,UPPER+.5,z0,8));if(!gap(x1,z1))put('Atrium_rail_post',M.dark,cyl(.03,.03,1,x1,UPPER+.5,z1,8));continue;}
   const len=Math.hypot(x1-x0,z1-z0),yaw=-Math.atan2(z1-z0,x1-x0);
-  put('Atrium_glass_rail',M.glass,box(len-.03,.9,.02,mx,UPPER+.5,mz,yaw));
+  put('Atrium_balustrade_guard',M.wood,box(len-.03,.9,.02,mx,UPPER+.5,mz,yaw));
+  put('Atrium_rail_mid',M.wood,box(len+.01,.04,.04,mx,UPPER+.5,mz,yaw));
   put('Atrium_rail_cap',M.wood,box(len+.01,.05,.09,mx,UPPER+.98,mz,yaw));
   put('Atrium_rail_post',M.dark,cyl(.025,.025,.95,x0,UPPER+.475,z0,8));
   put('Atrium_trough',M.planter,box(Math.hypot(u1-u0,w1-w0)+.02,.3,.24,(u0+u1)/2,UPPER+.15,(w0+w1)/2,-Math.atan2(w1-w0,u1-u0)));
-  // Its planting spills out over the opening (never back through the glass): ferns, small aroids and leafy clumps in
+  // Its planting spills out over the opening (never back through the rail): ferns, small aroids and leafy clumps in
   // turn, a flower here and there, and long blades leaning over the edge.
   const ux=(u0+u1)/2,wz=(w0+w1)/2,out=Math.atan2(-wz/(b*b),-(ux-cx)/(a*a)),g=greenery.garden,rr=random(700+i);
   if(i%3===0)fern(g,[ux,UPPER+.3,wz],{spread:.55,fronds:5,pairs:3,rnd:rr,droop:1.25,facing:out,arc:2.6});
@@ -266,7 +282,7 @@ export function openArrivalAtrium(ship){
  {const r=random(41);
   for(let i=0;i<16;i++){const [x,z]=edgeAt(i/16*Math.PI*2+.1,.9);if(inGap(x,z))continue;const y=6.35;
    put('Atrium_basket',M.wood,cyl(.26,.18,.22,x,y,z,10));
-   for(let k=0;k<3;k++){const t=k/3*Math.PI*2;put('Atrium_basket',M.frame,new ReplayGeometry("src/walk/arrival-atrium.js:11",T.CylinderGeometry,.006,.006,TOP-y-.1,4).translate(0,(TOP-y-.1)/2,0).rotateZ(.12).rotateY(-t).translate(x+Math.cos(t)*.22,y+.1,z+Math.sin(t)*.22));}
+   for(let k=0;k<3;k++){const t=k/3*Math.PI*2;put('Atrium_basket',M.frame,new ReplayGeometry("src/walk/arrival-atrium.js:12",T.CylinderGeometry,.006,.006,TOP-y-.1,4).translate(0,(TOP-y-.1)/2,0).rotateZ(.12).rotateY(-t).translate(x+Math.cos(t)*.22,y+.1,z+Math.sin(t)*.22));}
    // A drooping fern, with pothos trailing over the rim.
    fern(greenery.garden,[x,y+.1,z],{spread:.45,fronds:8,pairs:4,rnd:r,droop:1.35});
    for(let k=0;k<3;k++){const t=k/3*Math.PI*2+r();pothos(greenery.garden,[x+Math.cos(t)*.2,y,z+Math.sin(t)*.2],{length:.4+r()*.5,rnd:r,spacing:.12,size:.85});}}}
@@ -274,7 +290,7 @@ export function openArrivalAtrium(ship){
  // The floor: timber boards along the hall and a round rug about the tree. The ceiling: timber slats, broken by the opening.
  for(let z=-16.5;z<=16.51;z+=.6)put('Atrium_floor_seam',M.seam,box(51.7,.003,.025,0,.0015,z));
  [[2.95,3.6,M.rugCream],[3.6,3.95,M.rugSage],[3.95,5.05,M.rugCream],[5.05,5.5,M.rugSage]].forEach(([r0,r1,m],i)=>
-  put('Atrium_rug_inlay',m,new ReplayGeometry("src/walk/arrival-atrium.js:12",T.RingGeometry,r0,r1,72).rotateX(-Math.PI/2).translate(TREE.x,.005+i*.0005,TREE.z)));
+  put('Atrium_rug_inlay',m,new ReplayGeometry("src/walk/arrival-atrium.js:13",T.RingGeometry,r0,r1,72).rotateX(-Math.PI/2).translate(TREE.x,.005+i*.0005,TREE.z)));
  for(let z=-16.65;z<=16.66;z+=.45){const w=halfWidth(z),y=CEILING-.004;
   if(!w)put('Atrium_ceiling_seam',M.slat,box(51.7,.006,.035,0,y,z));
   else for(const [x0,x1] of [[-25.85,cx-w-.05],[cx+w+.05,25.85]])put('Atrium_ceiling_seam',M.slat,box(x1-x0,.006,.035,(x0+x1)/2,y,z));}
@@ -283,7 +299,7 @@ export function openArrivalAtrium(ship){
  for(const [s,run] of SHELVES)for(const [x,y] of run){put('Atrium_cat_shelf',M.wood,box(1.8,.08,.75,x,y-.04,s*(WALL-.375)));
   for(const dx of [-.6,.6])put('Atrium_shelf_bracket',M.dark,box(.05,.3,.45,x+dx,y-.23,s*(WALL-.25)));}
  for(const [s,x] of CUBBIES){const z=s*(WALL-.3);put('Atrium_cat_cubby',M.wood,box(.8,.65,.6,x,2.5,z));put('Atrium_cat_shelf',M.wood,box(1.2,.06,.66,x,2.14,s*(WALL-.33)));
-  put('Atrium_cubby_hole_inlay',M.hole,new ReplayGeometry("src/walk/arrival-atrium.js:13",T.CircleGeometry,.2,16).rotateY(s>0?Math.PI:0).translate(x,2.48,z-s*.301));}
+  put('Atrium_cubby_hole_inlay',M.hole,new ReplayGeometry("src/walk/arrival-atrium.js:14",T.CircleGeometry,.2,16).rotateY(s>0?Math.PI:0).translate(x,2.48,z-s*.301));}
  POTS.forEach(([x,z,s,kind],i)=>{put('Atrium_pot',M.pot,cyl(.38*s,.3*s,.55*s,x,.275*s,z,16));put('Atrium_soil',M.soil,cyl(.34*s,.34*s,.02,x,.54*s,z,12));
   plant(kind,x,.54*s,z,{palm:1.8,snake:1.1,aroid:1.25,fern:.85,bloom:.7}[kind]*s,200+i);tufts(x,.55*s,z,.3*s,3,210+i);});
 
@@ -304,7 +320,7 @@ export function openArrivalAtrium(ship){
     g.translate(-(bb.min.x+bb.max.x)/2,-(bb.min.y+bb.max.y)/2,0).rotateY(side*Math.PI/2).translate(x,y,centre);
     place({geometry:g,name:'Atrium_sign_lettering',material:M.letters});});
    if(arrow){const s=size*1.15,shape=new T.Shape([[0,1],[.75,.15],[.27,.15],[.27,-1],[-.27,-1],[-.27,.15],[-.75,.15]].map(([u,v])=>new T.Vector2(u*s,v*s)));
-    place({geometry:new ReplayGeometry("src/walk/arrival-atrium.js:14",T.ShapeGeometry,shape).rotateY(side*Math.PI/2).translate(x,0,-right*(W/2-pad-icon/2)),name:'Atrium_sign_lettering',material:M.letters});}
+    place({geometry:new ReplayGeometry("src/walk/arrival-atrium.js:15",T.ShapeGeometry,shape).rotateY(side*Math.PI/2).translate(x,0,-right*(W/2-pad-icon/2)),name:'Atrium_sign_lettering',material:M.letters});}
   }
   return {W,H};
  }
@@ -321,7 +337,7 @@ export function openArrivalAtrium(ship){
  // A print: a main pad and four toe beans, toes toward yaw (the direction (cos, sin)).
  function paw(x,y,z,yaw,s=1){
   const f=[Math.cos(yaw),Math.sin(yaw)],r=[-f[1],f[0]],at=(u,v)=>[x+f[0]*u+r[0]*v,z+f[1]*u+r[1]*v];
-  const disc=(rad,[px,pz],wide=1)=>put('Atrium_paw_decal',M.paw,new ReplayGeometry("src/walk/arrival-atrium.js:15",T.CircleGeometry,rad,12).scale(1,wide,1).rotateX(-Math.PI/2).rotateY(-yaw).translate(px,y,pz));
+  const disc=(rad,[px,pz],wide=1)=>put('Atrium_paw_decal',M.paw,new ReplayGeometry("src/walk/arrival-atrium.js:16",T.CircleGeometry,rad,12).scale(1,wide,1).rotateX(-Math.PI/2).rotateY(-yaw).translate(px,y,pz));
   disc(.06*s,at(0,0),1.15);
   for(const [u,v] of [[.075,-.065],[.1,-.022],[.1,.022],[.075,.065]])disc(.025*s,at(u*s,v*s));
  }
@@ -335,7 +351,7 @@ export function openArrivalAtrium(ship){
  {const t=Math.PI+.75,x=TREE.x+Math.cos(t)*3.1,z=TREE.z+Math.sin(t)*3.1,y=1.5,{H}=sign('Atrium_climb_sign',{lines:['CLIMB TO','THE GARDEN'],size:.11,at:[x,y,z],arrow:true,both:true});
   put('Atrium_climb_sign',M.dark,cyl(.04,.045,y-H/2+.05,x,(y-H/2+.05)/2,z,8));}
 
- for(const {name,material,list} of parts.values()){const o=own(name,material,replayMerged("src/walk/arrival-atrium.js",nativeMergeGeometries,list));if(DRESSING.has(name))o.userData.noCollide=true;}
+ for(const {name,material,list} of parts.values()){const o=own(name,material,replayMerged("src/walk/arrival-atrium.js",nativeMergeGeometries,list));if(DRESSING.has(name))o.userData.noCollide=true;if(GUARDS.has(name)){o.visible=false;Object.assign(o.userData,{collisionOnly:true,baked:true});}}
  for(const [where,list] of Object.entries(greenery))if(list.length)own('Atrium_foliage_'+where,M.foliage,replayMerged("src/walk/arrival-atrium.js",nativeMergeGeometries,list));
  if(slabs.length){for(const [o,g] of slabs)o.geometry=g;cutOut(ship.inside,region(CEILING-.2,UPPER+.1),o=>o.name==='Deck_slab',deltaMatrix('arrival-assembly').invert());}
  return true;
