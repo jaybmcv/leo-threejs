@@ -28,7 +28,28 @@ export function saveName(name){try{localStorage.setItem('leo-live-name',name);}c
 // tester).
 // The server's web address, from its websocket's: wss://host/live is https://host (the TV's uploads and video, tv.mjs).
 export const httpBase=url=>url.replace(/^ws(s?):\/\//,'http$1://').replace(/\/live\/?$/,'');
+// A game's finish (a score, a clear, a maze time) said while this visitor is not aboard. Leo live keeps a run for a
+// visitor whose link dropped (live-core.mjs keepRuns), so the finish is held instead of dropped: for HOLD_MS at most,
+// and only when a pose went out less than KEPT_MS ago (longer than that and the kept run is gone, or the link was
+// never up). It goes once the visitor is aboard again and a pose has gone out on that connection, since the server
+// judges where they stand from their last pose. lost() is called when it never went.
+const HOLD_MS=5000,KEPT_MS=90000;
+function heldFinishes(){
+ const unsent=[];let posedOn=null,posedAt=0;
+ return {
+  // A pose went out on this socket: whatever was held follows it.
+  posed(ws){posedOn=ws;posedAt=Date.now();for(const h of unsent.splice(0)){clearTimeout(h.timer);ws.send(h.text);}},
+  // ws: the socket this visitor is aboard on, or null; trying: the link is still trying to come aboard.
+  say(ws,trying,msg,lost){
+   const text=JSON.stringify(msg);
+   if(ws&&ws===posedOn){ws.send(text);return;}
+   if(!ws&&(!trying||Date.now()-posedAt>=KEPT_MS)){lost?.();return;}
+   const h={text,timer:setTimeout(()=>{unsent.splice(unsent.indexOf(h),1);lost?.();},HOLD_MS)};unsent.push(h);
+  },
+ };
+}
 export function connectLive(url,on,opts={}){
+ const finishes=heldFinishes();
  const reader=new WireReader(),key=browserKey();
  // held: what the server last said that keeps this visitor out for now, 'full' or 'replaced' (since heldAt).
  // turnedDown: a pass the server did not take, which is not sent again.
@@ -135,21 +156,22 @@ export function connectLive(url,on,opts={}){
    // Unchanged to the centimetre and the degree: only a keepalive now and then.
    const same=JSON.stringify([p.pos.map(v=>Math.round(v*100)),Math.round(p.yaw*57),p.g,p.st,p.jc,p.e,p.rest,p.pl,p.f]);
    if(same===last&&now-lastAt<STILL_MS)return;
-   last=same;lastAt=now;sentAt=now;ws.send(text);
+   last=same;lastAt=now;sentAt=now;ws.send(text);finishes.posed(ws);
   },
   call(lift,stop,now){if(live())ws.send(JSON.stringify({m:'call',lift,stop,now:!!now}));},
   // A ping where the walker stands, for everyone else aboard (walk/marks.js).
   mark(at){if(live())ws.send(JSON.stringify({m:'mark',at}));},
   cannon(i,seed){if(live())ws.send(JSON.stringify({m:'cannon',i,seed}));},
   // Alien Cat Invasion, or Paw Pool with game 'pool': a game starts (the server times it), a game's score, and a
-  // request for the board.
+  // request for the board. A score, a clear and a maze finish are held while the link is down (heldFinishes, above);
+  // lost() is called when one never went.
   play(game){if(live())ws.send(JSON.stringify({m:'play',game}));},
-  score(score,wave){if(live())ws.send(JSON.stringify({m:'score',score,wave}));},
+  score(score,wave,lost){finishes.say(live()?ws:null,!stopped,{m:'score',score,wave},lost);},
   board(game){if(live())ws.send(JSON.stringify({m:'board',game}));},
   // Paw Pool: a rack cleared, in ms by the page's clock, and the kicks it took.
-  cleared(ms,shots){if(live())ws.send(JSON.stringify({m:'score',game:'pool',ms,shots}));},
+  cleared(ms,shots,lost){finishes.say(live()?ws:null,!stopped,{m:'score',game:'pool',ms,shots},lost);},
   // The Container Maze: a run starts ('start'), ends at the button ('finish', {ms}), or the board is wanted ('board').
-  maze(op,extra={}){if(live())ws.send(JSON.stringify({m:'maze',op,...extra}));},
+  maze(op,extra={},lost){if(op==='finish')finishes.say(live()?ws:null,!stopped,{m:'maze',op,...extra},lost);else if(live())ws.send(JSON.stringify({m:'maze',op,...extra}));},
   panel(msg){if(!live())return false;ws.send(JSON.stringify({...msg,m:'panel'}));return true;},
   treasure(op,extra={}){if(live())ws.send(JSON.stringify({m:'treasure',op,...extra}));},
   // The ship log boards: ask for the hearts; give (on) or take back a heart for a change.

@@ -1108,7 +1108,8 @@ const arcade=createInvasion({
  scores:{
   request(){if(live?.live)live.board();else arcade.setBoard({status:'offline'});},
   start(){if(live?.live)live.play();},
-  submit(score,wave){if(live?.live)live.score(score,wave);else arcade.setResult({ok:false,why:'offline'});},
+  // The link holds a score it cannot send yet (net/live.js heldFinishes) and says when it never went.
+  submit(score,wave){const lost=()=>arcade.setResult({ok:false,why:'offline'});if(live)live.score(score,wave,lost);else lost();},
  },
 });
 // Paw Pool at the Recreation Hall's table (pool/game.js), the same way: its fastest clears are Leo live's second board.
@@ -1119,7 +1120,7 @@ const pool=createPawPool({
  scores:{
   request(){if(live?.live)live.board('pool');else pool.setBoard({status:'offline'});},
   start(){if(live?.live)live.play('pool');},
-  submit(ms,shots){if(live?.live)live.cleared(ms,shots);else pool.setResult({ok:false,why:'offline'});},
+  submit(ms,shots){const lost=()=>pool.setResult({ok:false,why:'offline'});if(live)live.cleared(ms,shots,lost);else lost();},
  },
 });
 // The Container Maze (maze/run.js): its clock, its best times on Leo live, and a way back to its start.

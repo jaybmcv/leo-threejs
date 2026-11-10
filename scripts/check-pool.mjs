@@ -10,6 +10,15 @@ import {overlayPage} from './overlay-page.mjs';
 
 const problems=[],log=(...a)=>console.log(...a);
 const expect=(ok,what)=>{if(!ok)problems.push(what);log(ok?'ok  ':'FAIL',what);};
+// The pages' part of a clear (walk/main*.js, all four): it goes to the link even while the link is down, since the link
+// holds a finish while it reconnects (net/live.js heldFinishes); the game hears 'offline' only when the link says it
+// never went.
+for(const {page,found,submit} of (await import('./page-submit.mjs')).pageSubmits('ms,shots','pool')){
+ const calls=[],told=found?submit({live:false,cleared:(...a)=>calls.push(a)},61500,22):[];
+ expect(calls.length===1&&calls[0][0]===61500&&calls[0][1]===22&&!told.length,`${page}: a clear with the link down is handed to the link to hold, and nothing is said yet`);
+ calls[0]?.[2]?.();expect(told.length===1&&told[0].ok===false&&told[0].why==='offline',`${page}: when the link says it never went, the game says offline`);
+ expect(found&&submit(null,61500,22)[0]?.why==='offline',`${page}: with no link at all, offline is said at once`);
+}
 const settle=(g,limit=60)=>{const all=[];for(let i=0;i<limit/STEP&&g.phase==='roll';i++)all.push(...step(g));return all;};
 const onTable=b=>b.potted||(Math.abs(b.x)<=TABLE.w/2-R+1e-9&&Math.abs(b.y)<=TABLE.h/2-R+1e-9)||POCKETS.some(p=>Math.hypot(b.x-p.x,b.y-p.y)<p.r+R);
 
