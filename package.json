@@ -25,6 +25,7 @@
     "check:visitor-bones": "node scripts/check-visitor-bones.mjs",
     "check:share-materials": "node scripts/check-share-materials.mjs",
     "check:owner-proof": "node scripts/check-owner-proof.mjs",
+    "check:owner-proof-fuzz": "node scripts/check-owner-proof-fuzz.mjs",
     "check:owner-hiding": "node scripts/check-owner-hiding.mjs",
     "check:owner-bake-scene": "node scripts/check-owner-bake-scene.mjs",
     "check:desk-piece": "node scripts/check-desk-piece.mjs",
