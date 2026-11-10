@@ -5,11 +5,12 @@
 // pieces 554 while keeping 68-86% of the triangle cut.
 export const DESK_PIECE={small:100000,discrete:200000};
 
-// A discrete card by its WebGL renderer name: NVIDIA, AMD Radeon RX or Pro, Intel Arc A-series. Integrated parts name
-// themselves otherwise ("AMD Radeon(TM) Graphics", "Intel(R) Arc(TM) Graphics", "Intel(R) UHD Graphics", "Apple M3"), and
-// software renderers never count.
-const DISCRETE=/nvidia|geforce|quadro|radeon\s*(rx|pro)\b|arc\(tm\)\s*a\d{3}/i,SOFTWARE=/swiftshader|llvmpipe|softpipe|microsoft basic render/i;
-export const discreteGpu=name=>typeof name==='string'&&DISCRETE.test(name)&&!SOFTWARE.test(name);
+// A discrete card by its WebGL renderer name, trademark marks aside ("Radeon (TM) RX 480"): NVIDIA, AMD Radeon RX or Pro.
+// Integrated parts name themselves otherwise ("AMD Radeon(TM) Graphics", "Radeon 780M", "Intel(R) UHD Graphics", "Apple
+// M3"). Intel Arc counts as integrated: Firefox reports the integrated Arc as an A750, and the discrete cards are few.
+// Software renderers never count.
+const DISCRETE=/nvidia|geforce|quadro|radeon\s*(rx|pro)\b/i,SOFTWARE=/swiftshader|llvmpipe|softpipe|microsoft basic render/i;
+export const discreteGpu=name=>{if(typeof name!=='string')return false;const n=name.replace(/\((tm|r)\)/gi,'');return DISCRETE.test(n)&&!SOFTWARE.test(n);};
 
 // The renderer's name as the browser reports it unmasked, or '' when it will not say.
 export function gpuName(gl){
