@@ -1,6 +1,6 @@
 {
   "base": "http://127.0.0.1:4290/review",
-  "measuredAt": "2026-11-09T21:20:02.873Z",
+  "measuredAt": "2026-11-10T04:31:00.759Z",
   "rows": [
     {
       "id": "hero",
@@ -13,7 +13,7 @@
       "pitch": 6,
       "draws": {
         "calls": 558,
-        "triangles": 11162263
+        "triangles": 11215125
       },
       "passes": [
         {
@@ -29,10 +29,10 @@
         {
           "name": "main",
           "calls": 558,
-          "triangles": 11162263
+          "triangles": 11215125
         }
       ],
-      "frameMs": 16.699999928474426,
+      "frameMs": 16.799999952316284,
       "programs": 297,
       "towerCopy": {
         "meshes": 21,
@@ -55,7 +55,7 @@
       "pitch": 24,
       "draws": {
         "calls": 613,
-        "triangles": 11469112
+        "triangles": 11521974
       },
       "passes": [
         {
@@ -71,10 +71,10 @@
         {
           "name": "main",
           "calls": 613,
-          "triangles": 11469112
+          "triangles": 11521974
         }
       ],
-      "frameMs": 16.699999928474426,
+      "frameMs": 16.600000023841858,
       "programs": 297,
       "towerCopy": {
         "meshes": 21,
@@ -97,7 +97,7 @@
       "pitch": 18,
       "draws": {
         "calls": 812,
-        "triangles": 11300965
+        "triangles": 11353827
       },
       "passes": [
         {
@@ -113,10 +113,10 @@
         {
           "name": "main",
           "calls": 812,
-          "triangles": 11300965
+          "triangles": 11353827
         }
       ],
-      "frameMs": 16.699999928474426,
+      "frameMs": 16.600000023841858,
       "programs": 297,
       "towerCopy": {
         "meshes": 21,

@@ -11,7 +11,7 @@ fascias). The balcony undersides stay cream; balustrades and geometry are unchan
 ![walls-along and hero: before, after by day, after at night](contact-day-night.jpg)
 
 *Before is a local r187 build (three 0.187.0) of 42113d02 (day/night light + sky A); after is the same base plus this
-change (2e56f019), built in the same folder. All captures are `scripts/capture-atrium-areas.mjs
+change (09a4cacb, the refine pass), built in the same folder. All captures are `scripts/capture-atrium-areas.mjs
 --only=walls-starboard,walls-along,hero --query=time=day|night`. The concepts were painted over older, darker
 captures, so compare hue and pattern, not brightness.*
 
@@ -19,7 +19,9 @@ captures, so compare hue and pattern, not brightness.*
 
 - **Planter strip, Decks 7–16:** each run of the slab edge is cut into equal slots of about 3.6 m, one trough per slot,
   stretched to fill its run so neighbours abut. On curves, short runs are gathered into chords first. The strip stops
-  only where the tower, its bridges or a dining apron meet the edge. Vines trail about 1–3 m.
+  only where the tower, its bridges or a dining apron meet the edge. Each trough carries a curtain of large leaves (up
+  to three rows, about 1.3 m deep on the lush variant) and vines trailing about 1–3 m, with white and pink blossom
+  cards (two crossed cards, four triangles) hung in front of the curtain, where the floor sees them.
 - **Lighter higher up:** three variants (lush, medium, light; the light one gathers its foliage at one end of the
   trough). The lush share falls from about 90 % on Deck 7 to about 2 % on Deck 16, and the light share rises from
   0 % to 60 %. Variants come in clustered runs from smooth noise along the edge, with a random mirror and a trail
@@ -29,14 +31,18 @@ captures, so compare hue and pattern, not brightness.*
   the floor up to it. The cream limestone is drawn with the soffit (`V2_atrium_soffit`), so it follows atrium-light's
   day/night lerp. The oak band and the bronze line join the static garden draw. They stop at the same tower, bridge
   and apron mouths.
+- **Walkway ceilings, Decks 7–16:** the grey bands seen over the guards were the walkway ceilings (the undersides of
+  the slab and the facade terrace plate above). A cream sheet in the soffit material now runs just under them, from
+  each edge up to 3.5 m inboard (sampled every 0.75 m), stopping at the voids above and below, slab holes and rooms,
+  so it shows only where the bare underside did (`walkwayCeilings`).
 
 ## Rules kept
 
 - **Void:** every new piece above Deck 16 is a `P6_hanging_garden_*` face within 1.2 m of an edge and no more than
   0.75 m above its deck. Fascias stay at or below their deck's floor. A node run of `auditAtriumVoid` on the gardens
-  layer passes: 88,794 faces, 0 violations.
+  layer passes: 85,958 faces, 0 violations.
 - **Batching:** no new meshes. The planting is still the three instanced `P6_hanging_garden_*` draws (distant copy:
-  one silhouette template, Basic). The fascias join `P6_atrium_soffits` and `P6_atrium_gardens`. All of these are
+  one silhouette template, Basic). The fascias and walkway ceilings join `P6_atrium_soffits` and `P6_atrium_gardens`. All of these are
   `gardenDecor`, so phones drop them from the distant layer.
 - **No collider change:** everything is `noCollide`, so the atrium PVS key is unchanged. `atrium-gardens.js` has no
   pin rows, so nothing to re-pin.
@@ -45,18 +51,19 @@ captures, so compare hue and pattern, not brightness.*
 
 | View | Draws before → after | Triangles before → after |
 | --- | --- | --- |
-| hero | 558 → 558 | 10,760,649 → 11,162,263 |
-| walls-starboard | 613 → 613 | 11,067,498 → 11,469,112 |
-| walls-along | 812 → 812 | 10,899,351 → 11,300,965 |
+| hero | 558 → 558 | 10,760,649 → 11,215,125 |
+| walls-starboard | 613 → 613 | 11,067,498 → 11,521,974 |
+| walls-along | 812 → 812 | 10,899,351 → 11,353,827 |
 
 Main-pass draws and triangles from the debug review walk (`scripts/launch-a-measure.mjs`): [`stats-before.json`](stats-before.json),
-[`stats-after.json`](stats-after.json). The +401,614 triangles (+3.7 %) are the same in every view because the facade
+[`stats-after.json`](stats-after.json). The +454,476 triangles (+4.2 %) are the same in every view because the facade
 layer draws whole.
 
 | Planting | Before | After |
 | --- | --- | --- |
 | Instances | 1,267 | 3,810 |
-| Triangles per variant | 576 / 600 / 656 | 398 / 228 / 148 |
-| Near triangles | 775,048 | 1,163,030 |
-| Distant-copy triangles | 141,904 | 403,860 |
+| Triangles per variant | 576 / 600 / 656 | 400 / 248 / 138 |
+| Near triangles | 775,048 | 1,182,596 |
+| Distant-copy triangles | 141,904 | 441,960 |
 | Fascias | – | 11.9 km, 13,632 triangles |
+| Walkway ceilings | – | 33,296 triangles |
