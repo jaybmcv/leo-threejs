@@ -48,7 +48,7 @@ import {warmShaders,uploadTextures,WARM_WAIT_MS} from '../v2/shader-warmup.js';
 // baked from (__ATRIUM_PVS_KEY__). Until it arrives, or if it was baked from other geometry, the sight rays answer as before.
 let atriumPvs=null;
 if(typeof __ATRIUM_PVS_URL__!=='undefined'&&__ATRIUM_PVS_URL__)fetch(new URL(__ATRIUM_PVS_URL__,location.href)).then(r=>r.ok?r.json():null).then(data=>{atriumPvs=createAtriumPvs(data,{key:__ATRIUM_PVS_KEY__});}).catch(e=>console.warn('Atrium PVS not used:',e.message));
-import {createOwnerHiding,ownerBakeFile,ownerKey} from '../v2/owner-hiding.js';
+import {createOwnerHiding,ownerBakeFile,ownerBakeProblem,ownerKey} from '../v2/owner-hiding.js';
 // Owner hiding (scripts/walk-owner-bake.mjs): drawables proven hidden from the camera's 2 m cell, baked for this exact
 // walk script into walk-owner-bake.<hash>.json beside it (the build writes an empty one), fetched once the first view is
 // up and used around the main camera's draw. ?ownerBake opens the walk as the bake's page instead: geometry arrays are
@@ -59,7 +59,9 @@ function startOwnerHiding(){
  if(preparedPhone)return;const key=ownerKey(WALK_SCRIPT,(phoneBatching.merge?'merge':'batch')+deskPiece);
  if(OWNER_BAKE_PAGE){globalThis.__ownerBakeHost={T,scene,renderer,camera,key,follow,goTo:place=>goTo(place)};return;}
  const file=ownerBakeFile(WALK_SCRIPT);if(!file)return;
- fetch(new URL(file,import.meta.url)).then(r=>r.ok?r.json():null).then(data=>{const hiding=createOwnerHiding(data,{key,scene});hiding?.resolve();ownerHiding=hiding;}).catch(e=>console.warn('Owner hiding not used:',e.message));
+ fetch(new URL(file,import.meta.url)).then(r=>r.ok?r.json():null).then(data=>{const hiding=createOwnerHiding(data,{key,scene});hiding?.resolve();ownerHiding=hiding;
+  // A real bake the walk will not use (another key, format or grid): say why. The build's empty file stays quiet.
+  if(!hiding&&data?.blocks?.length)console.info('Owner hiding not used:',ownerBakeProblem(data,key));}).catch(e=>console.warn('Owner hiding not used:',e.message));
 }
 import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns,preparedPhone} from '../v2/prepared-runtime.public.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
