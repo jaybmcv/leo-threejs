@@ -49,5 +49,9 @@ export function createMazeBoard({log,send,file=process.env.LEO_LIVE_MAZE||new UR
    else if(msg.op==='finish')finish(v,msg);
    else if(msg.op==='board')send(v.ws,boardFor(v));
   },
+  // A run in hand follows its walker to their next connection (live-core.mjs keepRuns): take(v) gives it up and
+  // give(v,run) puts it back as it was, its clock still running.
+  take(v){const run=runs.get(v);runs.delete(v);return run;},
+  give(v,run){runs.set(v,run);},
  };
 }

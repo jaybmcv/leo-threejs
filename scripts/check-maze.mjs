@@ -107,6 +107,18 @@ expect(moves.length===1,'the result card still returns the walker to the start')
 game.update(foyer,now);game.update({x:X0+1,y:0,z:0},now);
 elements.find(e=>e.text==='Give up').listeners.click();
 expect(!game.running&&moves.length===2,'Give up still exits a run');
+// A finish with the link down is handed to the link, which holds it while it reconnects (net/live.js heldFinishes).
+{const held=[],enter=()=>{game.update(foyer,now);game.update({x:X0+1,y:0,z:0},now);};link.maze=(op,extra,lost)=>{sent.push({op,...extra});if(op==='finish')held.push(lost);};
+ enter();link.live=false;now+=12000;game.update({x:X0+1,y:0,z:0},now);game.use({at:'button'},now);
+ expect(held.length===1&&typeof held[0]==='function'&&sent.at(-1).op==='finish'&&sent.at(-1).ms===12000&&sheet.textContent.includes('Saving your time'),'a finish with the link down is handed to the link to hold, and the card goes on saving');
+ tick(3000);expect(sheet.textContent.includes('Saving your time'),'while the finish is held, the lost connection does not end the wait');
+ link.live=true;tick(100);game.fromServer({op:'result',ok:true,ms:12000,best:9531,rank:1,newBest:false});
+ expect(sheet.textContent.includes('Your best is 0:09.5'),'the answer to a held finish shows as any other');
+ enter();link.live=false;now+=13000;game.update({x:X0+1,y:0,z:0},now);game.use({at:'button'},now);tick(5000);held[1]?.();
+ expect(held.length===2&&sheet.textContent.includes('Not connected to Leo live')&&!sheet.textContent.includes('Saving your time'),'a held finish the link gives up is said to be offline');
+ link.live=true;enter();now+=14000;game.update({x:X0+1,y:0,z:0},now);link.live=false;game.use({at:'button'},now);tick(6001);
+ expect(held.length===3&&sheet.textContent.includes('board did not answer'),'a held finish never answered still stops waiting after six seconds');
+ link.live=true;}
 Object.defineProperty(globalThis,'performance',oldPerformance);delete globalThis.document;delete globalThis.localStorage;
 
 if(problems.length){console.error(`\n${problems.length} problem(s)`);process.exit(1);}

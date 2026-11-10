@@ -26,6 +26,8 @@ async function start(version,dir){await fs.mkdir(dir,{recursive:true});const pro
 async function bot(s,{layout=2,identity=now.identity,id=String(880000000000000000n+BigInt(++serial)),key=randomBytes(32).toString('hex'),signed=true,pass,glyph,otherside,name}={}){const ws=new WebSocket('ws://127.0.0.1:'+s.port+'/live',{origin:'http://localhost:4180'}),b={ws,msgs:[],poses:new Map(),closed:null,id,key},reader=new WireReader();bots.push(b);ws.on('message',(data,binary)=>{if(binary){for(const p of reader.read(data))b.poses.set(p.id,p);}else b.msgs.push(JSON.parse(data));});ws.on('close',code=>b.closed=code);await new Promise((r,j)=>{ws.once('open',r);ws.once('error',j);});b.send=m=>ws.send(JSON.stringify(m));b.pose=async(pos,extra={})=>{b.send({m:'pose',p:{pos,yaw:0,g:true,...extra}});await sleep(65);};b.ask=async(m,test=x=>x.m===m.m)=>{const n=b.msgs.length;b.send(m);return until(()=>b.msgs.slice(n).find(test),'reply '+m.m);};b.send({m:'hello',v:PROTOCOL,key,...(layout===null?{}:{layout}),...(identity?{layoutIdentity:identity}:{}),...(pass?{pass}:signed?{pass:await sign(id)}:{}),...(glyph?{glyph}:{}),...(otherside?{otherside}:{}),...(name?{name}:{})});await until(()=>b.msgs.some(m=>m.m==='welcome'||m.m==='reload')||b.closed,'join');b.welcome=b.msgs.find(m=>m.m==='welcome');return b;}
 const stop=async s=>{s.p.kill();await new Promise(r=>s.p.exitCode!==null||s.p.signalCode!==null?r():s.p.once('exit',r));};
 try{
+ // These servers keep a dropped visitor's game run for 4 s, not 90 (live-core.mjs keepRuns), so the check can outwait it.
+ process.env.LEO_LIVE_RUN_KEEP_S='4';
  const dir=path.join(tmp,'v2'),legacyId='880000000000000001',legacy=[{id:legacyId,name:'Earlier swimmer',ms:45678,at:'2026-10-01T00:00:00.000Z'}];await fs.mkdir(dir,{recursive:true});await fs.writeFile(path.join(dir,'treasure.json'),JSON.stringify(legacy));const historicScores=[{id:legacyId,name:'Earlier player',score:900,wave:3,at:'2026-10-01T00:00:00.000Z'},{game:'pool',id:legacyId,name:'Earlier player',ms:80000,shots:22,at:'2026-10-01T00:00:00.000Z'}],historicMaze=[{id:legacyId,name:'Earlier player',ms:12345,at:'2026-10-01T00:00:00.000Z'}];await fs.writeFile(path.join(dir,'scores.json'),JSON.stringify(historicScores));await fs.writeFile(path.join(dir,'maze.json'),JSON.stringify(historicMaze));const s=await start(2,dir);
  check('v2 health advertises matching layout identity',s.health.layout===2&&s.health.layoutIdentity===now.identity);
  const a=await bot(s,{id:legacyId}),observer=await bot(s);check('locally signed identities are verified',a.welcome?.you.verified&&observer.welcome?.you.verified&&jwksReads>0);
@@ -87,6 +89,41 @@ try{
  await until(()=>runners.every(b=>b.msgs.some(m=>m.m==='gym'&&m.e==='go')),'shared gym starts');for(const b of runners){const go=b.msgs.find(m=>m.m==='gym'&&m.e==='go');check('signed treadmill '+runners.indexOf(b)+' runs shared round',go.runners.length===7);b.send({m:'gym',e:'fell',round:go.round,t:.1,cleared:1});}await until(()=>runners.every(b=>b.msgs.some(m=>m.m==='gym'&&m.e==='results')),'shared gym results');check('all relocated treadmill runners receive same results',runners.every(b=>JSON.stringify(b.msgs.find(m=>m.m==='gym'&&m.e==='results'))===JSON.stringify(runners[0].msgs.find(m=>m.m==='gym'&&m.e==='results'))));
  // Maze: unchanged course length and time floor, but new start/finish frame.
  const maze=await bot(s),badMaze=await bot(s);await maze.pose(now.maze.start);maze.send({m:'maze',op:'start'});await badMaze.pose(old.maze.start);badMaze.send({m:'maze',op:'start'});await sleep(now.maze.fastest*1000+100);await maze.pose(now.maze.button);await badMaze.pose(now.maze.button);const mazeYes=await maze.ask({m:'maze',op:'finish',ms:now.maze.fastest*1000},m=>m.m==='maze'),mazeNo=await badMaze.ask({m:'maze',op:'finish',ms:now.maze.fastest*1000},m=>m.m==='maze');check('moved maze finishes; old start cannot award time',mazeYes.ok&&!mazeNo.ok&&now.maze.fastest===old.maze.fastest);
+ // A run outlives a dropped link (live-core.mjs keepRuns): the same browser, back in time as the same player, has its
+ // run again with the server's clock still running, and the finish is judged as ever. Nobody else gets it.
+ {const back=b=>bot(s,{id:b.id,key:b.key}),drop=async b=>{b.ws.close();await until(()=>b.closed,'drop');};
+  const poolAt=now.arcade.pool,invAt=now.arcade.invasion,poolMs=POOL_FASTEST_S*1000,mazeMs=now.maze.fastest*1000;
+  const clear={m:'score',game:'pool',ms:poolMs,shots:30},points={m:'score',score:100,wave:1},pressed={m:'maze',op:'finish',ms:mazeMs},scored=m=>m.m==='scored',result=m=>m.m==='maze'&&m.op==='result';
+  const playing=async(game,at)=>{const b=await bot(s);await b.pose(at,{pl:true});b.send({m:'play',game});await sleep(60);return b;};
+  const running=async()=>{const b=await bot(s);await b.pose(now.maze.start);b.send({m:'maze',op:'start'});await sleep(60);return b;};
+  let quick=await playing('pool',poolAt),hasty=await playing('pool',poolAt),walker=await running(),stray=await running(),away=await playing('invasion',invAt);
+  const t0=Date.now();await drop(away);
+  // Invasion has no shortest game, so its finishes can be tried at once.
+  let v=await playing('invasion',invAt);await drop(v);v=await back(v);
+  check('back aboard, a finish before any pose is refused: where they stood is not remembered',!(await v.ask(points,scored)).ok);
+  await v.pose(invAt,{pl:true});check('and that finish used the run up',!(await v.ask(points,scored)).ok);
+  v=await playing('invasion',invAt);await drop(v);v=await back(v);await v.pose([0,0,0],{pl:true});
+  check('back aboard somewhere else, the finish is refused',!(await v.ask(points,scored)).ok);
+  v=await playing('invasion',invAt);await drop(v);v=await back(v);await v.pose(invAt,{pl:true});const kept=await v.ask(points,scored);
+  check('an invasion game survives a dropped link',kept.ok===true,JSON.stringify(kept));
+  // The old socket still open when the same browser says hello again: a link that died unseen, or a second tab.
+  const first=await playing('invasion',invAt),second=await back(first);await until(()=>first.closed,'takeover');await second.pose(invAt,{pl:true});
+  check('the same browser taking over from its own open socket inherits the run',first.closed===4002&&(await second.ask(points,scored)).ok===true);
+  v=await playing('invasion',invAt);await drop(v);const other=await bot(s,{id:v.id});await other.pose(invAt,{pl:true});const taken=await other.ask(points,scored);
+  v=await back(v);await v.pose(invAt,{pl:true});const own=await v.ask(points,scored);
+  check('another browser signed in as the same player does not inherit the run; their own browser, back in time, does',!taken.ok&&own.ok===true);
+  v=await playing('invasion',invAt);await drop(v);v=await bot(s,{key:v.key});await v.pose(invAt,{pl:true});
+  check('the same browser signed in as another player does not inherit the run',!(await v.ask(points,scored)).ok);
+  // Pool and the maze have a shortest time, counted by the server from the first start: dropped part-way, not before.
+  await sleep(Math.max(0,t0+3000-Date.now()));
+  for(const b of [quick,hasty,walker,stray])await drop(b);quick=await back(quick);hasty=await back(hasty);walker=await back(walker);stray=await back(stray);
+  await hasty.pose(poolAt,{pl:true});check('a reconnect buys no time: a clear said before the shortest game is refused',!(await hasty.ask(clear,scored)).ok);
+  await sleep(Math.max(0,t0+4400-Date.now()));away=await back(away);await away.pose(invAt,{pl:true});
+  check('a run is kept only so long: back after that, the finish is refused',!(await away.ask(points,scored)).ok);
+  await sleep(Math.max(0,t0+mazeMs+200-Date.now()));await stray.pose(now.maze.start);await walker.pose(now.maze.button);const strayed=await stray.ask(pressed,result),ran=await walker.ask(pressed,result);
+  check('a maze run survives a dropped link, and still ends only at the button',ran.ok===true&&!strayed.ok,JSON.stringify(ran));
+  await sleep(Math.max(0,t0+poolMs+200-Date.now()));await quick.pose(poolAt,{pl:true});const cleared=await quick.ask(clear,scored);
+  check('a pool game survives a dropped link, timed by the server from its first play',cleared.ok===true&&cleared.ms>=poolMs,JSON.stringify(cleared));}
  // Aquarium: real-speed poses visit every gem; sample the new course in the same world frame as the client.
  const swimmer=await bot(s);await swimmer.pose(now.aquarium.door);swimmer.send({m:'treasure',op:'start'});let q=[...v2.SWIM.entry],started=Date.now();await swimmer.pose(v2.swimWorld(q));
  const travel=async target=>{const n=Math.ceil(v2.distance(q,target)/.32),from=[...q];for(let i=1;i<=n;i++){await sleep(100);q=from.map((x,k)=>x+(target[k]-x)*i/n);await swimmer.pose(v2.swimWorld(q));}};

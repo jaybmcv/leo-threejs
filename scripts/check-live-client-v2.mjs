@@ -87,4 +87,25 @@ try{const {connectLive}=await import(entry.href);
   page.focused=true;fire('focus');await socket(n+2,'a socket on the next return');live.close();
   fire('focus');await ticks(5);assert.equal(sockets.length,n+3,'a closed link listens no more');}
  console.log('PASS a tab that was taken over comes back when its visitor returns to it, and only then');
+ // A game's finish said while the link is down is held, and goes once this visitor is aboard again and a pose has gone
+ // out on the new connection; one that cannot be held, or is held too long, is said to be lost.
+ {const pause=ms=>new Promise(r=>setTimeout(r,ms)),next=async from=>{for(let i=0;i<60&&sockets.at(-1)===from;i++)await pause(50);assert.notEqual(sockets.at(-1),from,'a new socket opens');return sockets.at(-1);};
+  const aboard=async ws=>{await ws.onopen();ws.onmessage({data:JSON.stringify({m:'welcome',id:'runner',layout:2,layoutIdentity:ws.sent[0].layoutIdentity,you:{verified:true}})});};
+  const kinds=ws=>ws.sent.slice(1).map(m=>m.m==='maze'?'maze '+m.op:m.m==='score'?'score '+(m.game||'invasion'):m.m),lost=[],at={pos:[1,2,3],yaw:0};
+  const before=sockets.at(-1),link=connectLive('ws://127.0.0.1:1/live',{}),first=await next(before);
+  link.score(100,1,()=>lost.push('never aboard'));assert.deepEqual(lost,['never aboard'],'a finish from a link that was never up is lost at once');
+  await aboard(first);link.cleared(61500,22,()=>lost.push('no pose yet'));assert.deepEqual(kinds(first),[],'aboard with no pose out yet, a finish waits: the server has nowhere to judge it from');
+  link.pose(at,1000);link.score(120,2);assert.deepEqual(kinds(first),['pose','score pool','score invasion'],'it follows the first pose, and later ones go at once');
+  first.close();link.cleared(62000,23,()=>lost.push('pool'));link.score(300,2,()=>lost.push('invasion'));link.maze('finish',{ms:9000},()=>lost.push('maze'));link.maze('start');link.maze('board');
+  const second=await next(first);await aboard(second);assert.deepEqual(kinds(second),[],'back aboard, the held finishes still wait for a pose');
+  link.pose(at,5000);assert.deepEqual(kinds(second),['pose','score pool','score invasion','maze finish'],'the held finishes go after the pose, in the order they were said; a maze start or board asked for meanwhile is not kept');
+  assert.deepEqual(second.sent.at(-1),{m:'maze',op:'finish',ms:9000});assert.deepEqual(lost,['never aboard'],'and none of them was lost');
+  second.close();const held=Date.now();link.score(500,3,()=>lost.push('held too long'));const third=await next(second);
+  await pause(Math.max(0,held+4500-Date.now()));assert.equal(lost.length,1,'a finish is held for most of five seconds');
+  await pause(Math.max(0,held+5300-Date.now()));assert.equal(lost.at(-1),'held too long','and given up after five');
+  await aboard(third);link.pose(at,9000);assert.deepEqual(kinds(third),['pose'],'a finish given up does not go later');
+  third.close();const clock=Date.now;Date.now=()=>clock()+90001;try{link.score(700,4,()=>lost.push('too long ago'));}finally{Date.now=clock;}
+  assert.equal(lost.at(-1),'too long ago','with the last pose more than a kept run\'s life ago there is nothing to hold for');
+  link.close();link.maze('finish',{ms:9000},()=>lost.push('closed'));assert.equal(lost.at(-1),'closed','a link that has stopped trying holds nothing');
+  console.log('PASS a finish said while the link is down is held for the reconnect, sent after a pose, and reported lost when it cannot go');}
 }finally{Object.assign(globalThis,previous);for(const k of names)if(previous[k]===undefined)delete globalThis[k];}

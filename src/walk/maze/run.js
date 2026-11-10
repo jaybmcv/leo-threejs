@@ -39,7 +39,7 @@ export function createMazeGame({hold,live,goTo,onOpen,onClose,muted=()=>false}){
   title,big,note,el('h3',{textContent:'Fastest times'}),list,mine,el('div',{className:'row'},back,close)));
  document.body.append(bar,toast,sheet);
  let state='idle',t0=0,wasFront=false,ran=null,result=null,board={status:'loading',top:[],you:null},toastTimer=0,audio=null,
-  boardDue=0,boardPending=0,resultPending=0,runKept=false;
+  boardDue=0,boardPending=0,resultPending=0,runKept=false,resultHeld=false;
  const best=()=>{try{const v=+localStorage.getItem(BEST_KEY);return v>0?v:null;}catch{return null;}};
  const keepBest=ms=>{const b=best();if(b&&b<=ms)return false;try{localStorage.setItem(BEST_KEY,String(ms));}catch{}return true;};
  // A short beep on starting, and three rising notes on stopping the clock.
@@ -92,7 +92,10 @@ export function createMazeGame({hold,live,goTo,onOpen,onClose,muted=()=>false}){
    state='done';ran=Math.round(now-t0);result=null;bar.hidden=true;beep([[660,0,.12],[880,.12,.12],[1320,.24,.3]]);
    const kept=keepBest(ran),link=live();
    runKept=kept;resultPending=0;
-   if(link?.live){resultPending=now+REPLY_MS;link.maze('finish',{ms:ran});}else result={ok:false,why:'offline',kept};
+   // With the link down the finish is not lost at once: the link holds it while it reconnects (net/live.js
+   // heldFinishes), and says so when it never went.
+   const lost=()=>{resultPending=0;resultHeld=false;result={ok:false,why:'offline',kept:runKept};if(!sheet.hidden)show();};
+   if(link){resultPending=now+REPLY_MS;resultHeld=!link.live;link.maze('finish',{ms:ran},lost);}else lost();
    open();
   },
   // Each frame: start, run or drop the clock from where the walker is.
@@ -101,7 +104,7 @@ export function createMazeGame({hold,live,goTo,onOpen,onClose,muted=()=>false}){
    const q=hold.toLocal(p),inside=inMaze(q.x,q.y,q.z),front=inFront(q.x,q.y,q.z);
    const foyer=q.x<=X0&&q.x>X0-10&&Math.abs(q.z)<17&&Math.abs(q.y)<1.5;
    if(!live()?.live){boardPending=0;boardDue=0;if(board.status!=='offline')setBoard({status:'offline',top:[],you:null});
-    if(resultPending){resultPending=0;result={ok:false,why:'offline',kept:runKept};if(!sheet.hidden)show();}}
+    if(resultPending&&!resultHeld){resultPending=0;result={ok:false,why:'offline',kept:runKept};if(!sheet.hidden)show();}}
    else{
     if(boardPending&&now>=boardPending){boardPending=0;setBoard({status:'unavailable',top:[],you:null});}
     if((foyer||!sheet.hidden)&&now>=boardDue&&!boardPending)requestBoard(now);
