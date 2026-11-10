@@ -97,13 +97,15 @@ export class RemotePlayers{
   w.holder.position.set(c.x,c.y,c.z);w.holder.rotation.set(0,c.yaw,0);
   const turn=Math.atan2(Math.sin(c.yaw-r.lastYaw),Math.cos(c.yaw-r.lastYaw));r.lastYaw=c.yaw;
   if(dt>0)r.turnRate=T.MathUtils.damp(r.turnRate,turn/dt,10,dt);
-  const e=r.rest*r.rest*(3-2*r.rest),lie=r.restKind==='lie'||r.restKind==='tube';
-  w.body.rotation.set(lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.rest,.25,1):0,0,0);
+  const e=r.rest*r.rest*(3-2*r.rest),lie=r.restKind==='lie';
+  // A Keel Club tube rider sits leaning back into the ring (keel-club.js TUBE_SIT; tube = {make, y, recline}).
+  const recline=r.restKind==='tube'&&this.tube?this.tube.recline:0;
+  w.body.rotation.set(lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.rest,.25,1):-recline*T.MathUtils.smoothstep(r.rest,.25,1),0,0);
   w.setFur(r.tgt.fur);
   const t=r.tgt,floating=t.emote==='healing_capsule',belt=t.playing&&!t.rest&&this.running?.(c);
-  // Floating in a Keel Club tube (keel-club.js; tube = {make, y, feet}): lying back on a tube of this page's own on the
-  // water; their pose is their feet, so the ring sits `feet` back along their heading, under the middle of the body.
-  if(t.rest==='tube'&&this.tube){if(!r.tube)r.tube=this.tube.make();if(!r.tube.parent)this.scene.add(r.tube);r.tube.position.set(c.x-Math.sin(c.yaw)*this.tube.feet,this.tube.y,c.z-Math.cos(c.yaw)*this.tube.feet);}else r.tube?.removeFromParent();
+  // Floating in a Keel Club tube (keel-club.js; tube = {make, y, recline}): seated leaning back, in a tube of this page's
+  // own on the water. Their pose is the walker's origin, ahead of the hips by the recline, so the ring goes under the hips.
+  if(t.rest==='tube'&&this.tube){if(!r.tube)r.tube=this.tube.make();if(!r.tube.parent)this.scene.add(r.tube);{const k=w.hipHeight*Math.sin(this.tube.recline);r.tube.position.set(c.x-Math.sin(c.yaw)*k,this.tube.y,c.z-Math.cos(c.yaw)*k);}}else r.tube?.removeFromParent();
   // Rolling in a hamster ball (hamster-ball.js): standing inside one of this page's own, rolled by their stride.
   if(t.ball&&!t.rest){if(!r.ball)r.ball=createBallMesh();if(!r.ball.mesh.parent)this.scene.add(r.ball.mesh);r.ball.mesh.position.set(c.x,c.y,c.z);
    r.ball.roll(dt,Math.sin(c.yaw)*r.speed,Math.cos(c.yaw)*r.speed);}else r.ball?.mesh.removeFromParent();
@@ -117,7 +119,7 @@ export class RemotePlayers{
   const near=bodied.filter(r=>r.distance<LABEL_M).slice(0,LABELS),eye=this.v,p=new T.Vector3(),rect=this.labelLayer.getBoundingClientRect();
   for(const r of this.remotes.values())if(r.label&&!near.includes(r)){r.label.hidden=true;if(r.bubble)r.bubble.hidden=true;}
   for(const r of near){
-   p.set(r.cur.x,r.cur.y+(r.rest&&(r.restKind==='lie'||r.restKind==='tube')?.8:2.15),r.cur.z);
+   p.set(r.cur.x,r.cur.y+(r.rest&&r.restKind==='lie'?.8:2.15),r.cur.z);
    if(now-r.clearAt>250){r.clearAt=now;const d=p.clone().sub(eye),len=d.length();this.ray.set(eye,d.divideScalar(len));
     // Aquarium glass stays solid to swimmers but should not hide their names.
     const hit=this.swimming?.(r.cur)?this.colliders.raycastSight(this.ray,len):this.colliders.raycast(this.ray,len);r.clear=!hit||hit.distance>len-.4;}
