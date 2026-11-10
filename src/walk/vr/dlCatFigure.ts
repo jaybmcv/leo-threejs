@@ -102,7 +102,21 @@ export class DLCatFigure {
   private readonly runFrom=new Map<string,T.Quaternion>();
   private readonly runBones:string[]=[];
   private readonly runBoneSet=new Set<string>();
+  // the bones whose parent is not a bone: their subtrees are the skeleton
+  private readonly topBones:T.Bone[]=[];
+  // (Leo) The bones in the map's order, with what a solve looks up for each, so
+  // its per-bone loops index arrays instead of hashing names: the same bones,
+  // in the same order, with the same arithmetic. prevList and animList hold the
+  // very quaternions `previous` and `animated` keep (cacheAt fills both).
+  private readonly boneNames:string[]=[];
+  private readonly boneList:T.Bone[]=[];
+  private readonly restList:{p:T.Vector3;q:T.Quaternion}[]=[];
+  private readonly legBone:boolean[]=[];
+  private readonly runBone:boolean[]=[];
+  private readonly prevList:(T.Quaternion|undefined)[]=[];
+  private readonly animList:(T.Quaternion|undefined)[]=[];
   private cacheQuaternion(map:Map<string,T.Quaternion>,name:string,value:T.Quaternion){const cached=map.get(name);if(cached)cached.copy(value);else map.set(name,value.clone());}
+  private cacheAt(list:(T.Quaternion|undefined)[],map:Map<string,T.Quaternion>,i:number,value:T.Quaternion){const cached=list[i];if(cached)cached.copy(value);else{const made=value.clone();map.set(this.boneNames[i]!,made);list[i]=made;}}
 
   constructor(readonly asset:DLCatAsset, private readonly readTuning:()=>DLCatTuning=getDLCatTuning, authoredData?:EcctrlAnimationData){
     this.uniqueSkeletons=[...new Set(asset.meshes.map(m=>m.skeleton))];
@@ -118,6 +132,10 @@ export class DLCatFigure {
     for(const name of this.runBones)this.runBoneSet.add(name);
     for(const name of this.bones.keys())if(/^(f_index|f_middle|f_ring|f_pinky|thumb)\.0[123]\.[LR]$/.test(name))this.runBoneSet.add(name);
     for(let i=1;i<=5;i++)this.runBoneSet.add('Tail_springBone_'+i);
+    // (Leo) once runBoneSet is complete
+    for(const b of this.bones.values())if(!(b.parent as T.Bone|null)?.isBone)this.topBones.push(b);
+    for(const [name,b] of this.bones){this.boneNames.push(name);this.boneList.push(b);this.restList.push(this.rest.get(name)!);
+      this.legBone.push(/^(thigh|shin|foot|toe)\./.test(name));this.runBone.push(this.runBoneSet.has(name));this.prevList.push(undefined);this.animList.push(undefined);}
     for(const name of ['spine','spine.003','spine.006','thigh.L','thigh.R','shin.L','shin.R','foot.L','foot.R','upper_arm.L','upper_arm.R','forearm.L','forearm.R','hand.L','hand.R'])if(!this.bones.has(name))throw new Error('DLCat missing required bone: '+name);
     for(const bone of this.bones.values())eulerOnDemand(bone);
     this.root.updateMatrixWorld(true);
@@ -288,12 +306,15 @@ export class DLCatFigure {
     }
     if(pose.seated||(!pose.grounded&&!swimming)){this.swimTransition=1;this.swimFrom.clear();}
     this.swimTransition=Math.min(1,this.swimTransition+dt/(swimming?tuning.locomotion.swimEntry:tuning.locomotion.swimRecovery));
-    for(const [name,b] of this.bones){if(this.initialized)this.cacheQuaternion(this.previous,name,this.animated.get(name)??b.quaternion);const rest=this.rest.get(name)!;b.position.copy(rest.p);b.quaternion.copy(rest.q);}
+    for(let i=0;i<this.boneList.length;i++){const b=this.boneList[i]!;if(this.initialized)this.cacheAt(this.prevList,this.previous,i,this.animList[i]??b.quaternion);const rest=this.restList[i]!;b.position.copy(rest.p);b.quaternion.copy(rest.q);}
     // (the Stylised 3D style gives the head, hands and feet a size up: stylisedCharacter.ts)
     if(this.stylProportions)applyStylProportions(this.bones);
     this.asset.root.position.set(0,this.restOffset,0);this.asset.root.rotation.set(0,0,0);
     // The avatar's parent may have moved since rendering the previous frame.
-    this.root.updateWorldMatrix(true,true);this.lazy.settle();
+    // (Leo) Only the figure's own matrix now: everything under it is made as
+    // the solve reads it (lazyWorld.ts invalidate). Remaking the whole tree here
+    // cost more than both full refreshes below.
+    this.root.updateWorldMatrix(true,false);this.lazy.invalidate();
     const age=this.jumpClock.step(!pose.grounded&&!pose.swimming&&!pose.seated,pose.jumpCount??1,pose.jumpS,dt);
     let f=this.poser.step({speedMs:pose.speedMs,grounded:pose.grounded,swimming:pose.swimming,submerged:pose.submerged,seated:!!pose.seated,seatedVariant:pose.seatedVariant??"car",stance:pose.stance??"stand",jumpCount:pose.jumpCount??1,jumpS:age,dip:pose.dip??0,turnRate:pose.turnRate??0,accelMs2:pose.accelMs2??0,riseMs:pose.riseMs??0,dt,...(pose.stepMax!==undefined?{stepMax:pose.stepMax}:{})});
     if(pose.seated) Object.assign(f,seatedPose(pose.seatedVariant??"car").frame);
@@ -533,10 +554,11 @@ export class DLCatFigure {
     const blend=this.initialized&&!edited&&!this.scrubbed?1-Math.exp(-dt*(takeoff?45:onFeet?24:15)):1;
     // The mixer already blends gait speed. Filtering the solved leg joints a
     // second time breaks boot clearance; retain that filter only on entry.
-    if(blend<1)for(const [name,b] of this.bones){
-      let jointBlend=onFeet&&/^(thigh|shin|foot|toe)\./.test(name)?T.MathUtils.lerp(blend,1,T.MathUtils.smoothstep(this.onFeetAge,0,.3)):blend;
-      if(this.runBoneSet.has(name))jointBlend=T.MathUtils.lerp(jointBlend,1,referenceRunWeight*T.MathUtils.smoothstep(this.onFeetAge,0,.3));
-      b.quaternion.slerpQuaternions(this.previous.get(name)!,this.blendTarget.copy(b.quaternion),jointBlend);
+    if(blend<1)for(let i=0;i<this.boneList.length;i++){
+      const b=this.boneList[i]!;
+      let jointBlend=onFeet&&this.legBone[i]?T.MathUtils.lerp(blend,1,T.MathUtils.smoothstep(this.onFeetAge,0,.3)):blend;
+      if(this.runBone[i])jointBlend=T.MathUtils.lerp(jointBlend,1,referenceRunWeight*T.MathUtils.smoothstep(this.onFeetAge,0,.3));
+      b.quaternion.slerpQuaternions(this.prevList[i]!,this.blendTarget.copy(b.quaternion),jointBlend);
     }
     if(this.swimTransition<1){
       const weight=T.MathUtils.smoothstep(this.swimTransition,0,1);
@@ -545,13 +567,17 @@ export class DLCatFigure {
         if(from)b.quaternion.slerpQuaternions(from,this.blendTarget.copy(b.quaternion),weight);
       }
     }else this.swimFrom.clear();
-    for(const [name,b] of this.bones){
-      this.cacheQuaternion(this.animated,name,b.quaternion);
+    for(let i=0;i<this.boneList.length;i++){
+      const b=this.boneList[i]!,name=this.boneNames[i]!;
+      this.cacheAt(this.animList,this.animated,i,b.quaternion);
       const edit=tuning.joints[name];
-      if(edit){const next=tunedJointPose(this.rest.get(name)!.q,b.quaternion,edit,this.jointAngles.get(name));b.quaternion.copy(next.quaternion);this.jointAngles.set(name,next.angles);}
-      else this.jointAngles.delete(name);
+      if(edit){const next=tunedJointPose(this.restList[i]!.q,b.quaternion,edit,this.jointAngles.get(name));b.quaternion.copy(next.quaternion);this.jointAngles.set(name,next.angles);}
+      else if(this.jointAngles.size)this.jointAngles.delete(name);
     }
-    this.scrubbed=false;this.initialized=true;this.root.updateMatrixWorld(true);this.lazy.settle();this.uniqueSkeletons.forEach(s=>s.update());
+    // (Leo) The probes and the foot lift below read bones only, so only the
+    // bones are made current here; the refresh at the end makes the rest, and
+    // rebuilds the skeletons (nothing reads their bone texture before then).
+    this.scrubbed=false;this.initialized=true;this.lazy.refresh(this.topBones);
     if(authoredWeight>0&&this.authored){
       // A long swing boot must not become the floor anchor and lift the planted
       // foot. Bend the swing leg just enough to clear the support sole instead.
@@ -575,7 +601,7 @@ export class DLCatFigure {
         const solvedKnee=hip.clone().addScaledVector(line,along).addScaledVector(pole,Math.sqrt(Math.max(0,upper*upper-along*along)));
         this.aim('thigh.'+side,'shin.'+side,solvedKnee.sub(hip));
         this.aim('shin.'+side,'foot.'+side,ankle.sub(this.worldPosition(shin,new T.Vector3())));
-        this.world('foot.'+side,rotation);this.lazy.flush();this.uniqueSkeletons.forEach(s=>s.update());
+        this.world('foot.'+side,rotation);this.lazy.flush();
       }
     }
     // Nothing below reads through this.lazy, and nothing below tells it of an
