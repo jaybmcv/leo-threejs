@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {createRequire} from 'node:module';
+import {spawn} from 'node:child_process';
+import WebSocket from 'ws';
 import {build} from 'esbuild';
 
 // Renders the blossom garden's real fountain sound (src/walk/blossom.js) in headless Chrome and measures the audio it makes.
@@ -38,13 +39,20 @@ window.runSound=async()=>({
 const out=await build({stdin:{contents:entry,resolveDir:path.resolve('src/walk'),loader:'js'},bundle:true,write:false,format:'iife',platform:'browser',plugins:[stubRooms],nodePaths:[path.resolve('node_modules')],logLevel:'error'});
 const code=out.outputFiles[0].text;await fs.writeFile(path.join(dir,'sound-page.js'),code);
 
-const installed='C:/Program Files/Google/Chrome/Application/chrome.exe';
-let chromium;try{chromium=createRequire('C:/Users/henri/code/feedback-inbox-timers/build/package.json')('playwright').chromium;}catch{console.log('SKIP no browser driver available; the fountain sound was not rendered');process.exit(0);}
-const browser=await chromium.launch({channel:'chrome',...await fs.stat(installed).then(()=>({executablePath:installed})).catch(()=>({})),headless:true,args:['--autoplay-policy=no-user-gesture-required']});
+// Chrome is driven over its DevTools socket with the project's own ws package, as scripts/check-fast-browser-v2.mjs does. No browser means a failed check, never a skipped one.
+const sleep=ms=>new Promise(r=>setTimeout(r,ms)),profile=await fs.mkdtemp(path.join(dir,'chrome-'));let child,socket;
 try{
- const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(String(e)));
- await page.setContent('<!doctype html><html><body></body></html>');await page.addScriptTag({content:code});
- const r=await page.evaluate(()=>window.runSound());
+ child=spawn(process.env.LEO_CHROME_EXE||'C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless=new','--remote-debugging-port=0','--no-sandbox','--disable-gpu-sandbox','--autoplay-policy=no-user-gesture-required','--user-data-dir='+profile,'about:blank'],{windowsHide:true,stdio:'ignore'});
+ let launchError;child.once('error',e=>{launchError=e;});
+ let port;for(let i=0;i<150;i++){if(launchError)throw Error('Chrome could not start (set LEO_CHROME_EXE): '+launchError.message);try{port=Number((await fs.readFile(profile+'/DevToolsActivePort','utf8')).split('\n')[0]);if(port)break;}catch{}await sleep(100);}
+ if(!port)throw Error('Chrome did not start; the fountain sound was not rendered');
+ const target=(await fetch('http://127.0.0.1:'+port+'/json/list').then(r=>r.json())).find(t=>t.type==='page');if(!target)throw Error('Chrome opened no page');
+ socket=new WebSocket(target.webSocketDebuggerUrl);await new Promise((r,j)=>{socket.once('open',r);socket.once('error',j);});
+ const pending=new Map();let id=0;socket.on('message',raw=>{const e=JSON.parse(raw),p=e.id&&pending.get(e.id);if(p){pending.delete(e.id);e.error?p.reject(Error(JSON.stringify(e.error))):p.resolve(e.result);}});
+ const send=(method,params)=>new Promise((resolve,reject)=>{pending.set(++id,{resolve,reject});socket.send(JSON.stringify({id,method,params}));});
+ const run=async expression=>{const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value;};
+ const errors=[];let r;try{await run(code);r=await run('window.runSound()');}catch(e){errors.push(String(e));}
+ if(!r)throw Error('the fountain sound was not rendered: '+errors.join('; '));
  const db=x=>x>0?(20*Math.log10(x)).toFixed(1)+' dBFS':'silent',row=(k,v)=>console.log(`${k.padEnd(7)} ${v.context?`rms ${db(v.rms)}, peak ${v.peak.toFixed(3)}, centroid ${v.centroid.toFixed(0)} Hz, <300 Hz ${(v.lowShare*100).toFixed(1)}%, 300-4k ${(v.midShare*100).toFixed(1)}%, >4k ${(v.highShare*100).toFixed(1)}%`:'no audio context made'}`);
  for(const [k,v] of Object.entries(r))row(k,v);
  const checks=[],ok=(name,pass)=>{checks.push({name,pass});console.log(`${pass?'PASS':'FAIL'} ${name}`);};
@@ -59,4 +67,4 @@ try{
  await fs.writeFile(path.join(dir,'sound-report.json'),JSON.stringify(r,null,1));
  const failed=checks.filter(c=>!c.pass);console.log(JSON.stringify({status:failed.length?'FAIL':'PASS',checks:checks.length,failed:failed.map(c=>c.name)}));
  assert.equal(failed.length,0,'blossom sound checks failed');
-}finally{await browser.close();}
+}finally{socket?.close();child?.kill();await fs.rm(profile,{recursive:true,force:true}).catch(()=>{});}
