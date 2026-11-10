@@ -62,7 +62,10 @@ function clusters(o,box){
  * by owner (an instanced or merged mesh is its own owner; any other part belongs to its feature root):
  * [{root, parts:[{o, path, print, boxes, slots?}]}]. A cabin part (re-packed from userData.near.all)
  * lists its slots: [{id, centre, box}]. Left out: movers, lift parts, shadow casters, see-through parts, other instanced
- * meshes (their shown instances change and their full list is not exposed). */
+ * meshes (their shown instances change and their full list is not exposed). A part with something attached to it is
+ * still listed, though its boxes cover only its own triangles: the walk never hides one while it has children
+ * (owner-hiding.js), and leaving it out here would make the list depend on when its children arrive, which the bake's
+ * pages must agree on (walk-owner-bake.mjs refuses the bake when their tables hold different rows). */
 export function collectTargets(scene,{emptyHook}={}){
  const isRoot=q=>!q.parent||q.parent===scene||/^Walk_band_\d+$|live_source|^V2_live/i.test(q.parent.name||'');
  const ownerOf=o=>{if(o.isInstancedMesh||/_merged_|^Walk_merged_/.test(o.name||''))return o;let q=o;while(!isRoot(q))q=q.parent;return q;};

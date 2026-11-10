@@ -73,4 +73,9 @@ for(const [name,undo] of [['not shown',w=>{w.wall.visible=false;}],['on another 
 {const w=world();w.b.matrixAutoUpdate=false;const data=bake(w);w.b.matrix.makeTranslation(3,0,30);// its matrix changes and nothing marks it
  const before=w.b.matrixWorld.clone(),h=createOwnerHiding(data,{key:KEY,scene:w.scene});h.resolve();assert.equal(h.stats.resolved,2);
  assert.ok(w.b.matrixWorld.equals(before),'matching wrote no world matrix');pass('a hand-set matrix changed before resolve() does not match, and matching writes nothing');}
+{const w=world(),h=make(w),halo=new T.Sprite(new T.SpriteMaterial());halo.scale.set(3,3,1);w.a.add(halo);// a gem's glow, bigger than the gem: nothing proved it hidden
+ assert.deepEqual(during(h,at(),[w.a,w.b]),[true,false]);assert.equal(h.stats.dropped,0);pass('a part with something attached stays: hiding it would hide that too');
+ w.a.remove(halo);assert.deepEqual(during(h,at(),[w.a]),[false]);pass('and it hides again once nothing is attached (it was held, not dropped)');}
+{const w=world();w.a.add(new T.Group());const h=make(w);assert.equal(h.stats.resolved,h.stats.parts);assert.deepEqual(during(h,at(),[w.a,w.b]),[true,false]);pass('so does one that already had a child when the bake was made and matched');}
+{const w=world(),h=make(w);w.wall.add(new T.Sprite(new T.SpriteMaterial()));assert.deepEqual(during(h,at(),[w.a,w.b]),[false,false]);pass('a wall with something attached is still a wall: it is only looked at, never hidden');}
 console.log(`owner hiding: ${passed} checks passed`);
