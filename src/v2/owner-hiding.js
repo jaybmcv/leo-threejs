@@ -26,12 +26,14 @@ const hash=text=>{let h=0x811c9dc5;for(let i=0;i<text.length;i++){h^=text.charCo
 const fixed=a=>Array.from(a,v=>Math.round(v*1e4)).join(',');
 // What a drawable was when baked. A mesh: draw counts and range, materials, its whole world transform and, unless it is a
 // merged deck piece (whose bounds the walk rewrites as decks show), its local bounds; an instanced mesh adds every slot's
-// matrix. A group: its children's names. A part that no longer matches is not used.
+// matrix: for a cabin mesh (userData.near), every cabin it may show (near.all), not the ones packed in now, which follow
+// the walker (the walk checks the cabins shown each frame against those proven). A group: its children's names. A part
+// that no longer matches is not used.
 export function ownerPrint(o,world=o.matrixWorld){
  if(!o.isMesh)return 'g'+hash(o.children.map(c=>c.name+'|'+c.type).join(';'));
  const g=o.geometry,count=g.index?g.index.count:g.attributes.position?.count??0,mats=[o.material].flat().map(m=>[m?.type,m?.name,m?.side,m?.transparent?1:0,m?.visible===false?0:1].join(':')).join(',');
  let bounds='';if(!o.userData.sources){if(!g.boundingBox&&g.attributes.position?.array)g.computeBoundingBox();if(!g.boundingBox)return null;bounds=fixed([...g.boundingBox.min.toArray(),...g.boundingBox.max.toArray()]);}
- const slots=o.isInstancedMesh?hash((o.userData.near?.all??[]).map(m=>fixed(m.elements)).join(';')+'|'+fixed(o.instanceMatrix.array.subarray(0,o.count*16))):'';
+ const slots=!o.isInstancedMesh?'':o.userData.near?hash('near|'+o.userData.near.all.map(m=>fixed(m.elements)).join(';')):hash(fixed(o.instanceMatrix.array.subarray(0,o.count*16)));
  return 'm'+hash([count,g.drawRange.start,g.drawRange.count,mats,fixed(world.elements),bounds,slots,o.userData.sources?.length??0].join('|'));
 }
 // Where it will be drawn: its world matrix worked out from the transforms above it as Object3D.updateMatrix and

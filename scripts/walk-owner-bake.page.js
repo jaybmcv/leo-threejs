@@ -76,7 +76,7 @@ async function check(data,poses=60,seed=7){
  const diff=(a,b)=>{let big=0,max=0;for(let p=0;p<a.length;p+=4){const d=Math.max(Math.abs(a[p]-b[p]),Math.abs(a[p+1]-b[p+1]),Math.abs(a[p+2]-b[p+2]));if(d>max)max=d;if(d>24)big++;}return {big,max};};
  let s=seed;const rand=()=>(s=(s*16807)%2147483647)/2147483647,rows=[];
  for(let n=0;n<poses;n++){const b=data.blocks[Math.floor(rand()*data.blocks.length)],box=blockBox(b),cam=camera.clone();
-  cam.position.set(box.min.x+rand()*(box.max.x-box.min.x),box.min.y+.25+rand()*Math.max(0,box.max.y-box.min.y-.25),box.min.z+rand()*(box.max.z-box.min.z));cam.rotation.set((rand()-.5),rand()*Math.PI*2,0,'YXZ');cam.updateMatrixWorld(true);
+  cam.position.set(box.min.x+rand()*(box.max.x-box.min.x),box.min.y+.25+rand()*Math.max(0,box.max.y-box.min.y-.25),box.min.z+rand()*(box.max.z-box.min.z));cam.rotation.set((rand()-.5)*2,rand()*Math.PI*2,0,'YXZ');cam.updateMatrixWorld(true);// pitch within 1 rad: down at floors, up through the atrium
   draw(cam,A,false);draw(cam,A2,false);draw(cam,B,true);const noise=diff(A,A2),d=diff(A,B);rows.push({pos:cam.position.toArray().map(v=>+v.toFixed(2)),hidden:hiding.stats.hidden,noise:noise.big,big:d.big,max:d.max});
   if(n%10===9)await new Promise(f=>setTimeout(f,0));}
  return {resolved:hiding.stats.resolved,parts:hiding.stats.parts,condsResolved:hiding.stats.condsResolved,conds:hiding.stats.conds,poses:rows};

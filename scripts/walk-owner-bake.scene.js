@@ -8,7 +8,11 @@ import {ownerPath,ownerPrint} from '../src/v2/owner-hiding.js';
 export const MOVING=/pool_ball|door|drape|curtain|yarn|ball_|swing|fan_|rotor|wheel|car_|lift|gate|shutter|lever/i;
 const LIFT=/^Walk_lift_|^Lift_|^Car_/;
 // Plain opaque materials only: anything transparent, cut out, refracting or shaded by custom code may let sight through.
-const plainOpaque=(m,empty)=>!!m&&m.visible!==false&&!m.transparent&&(m.opacity??1)>=1&&!(m.alphaTest>0)&&!m.alphaToCoverage&&!m.alphaHash&&!m.alphaMap&&!(m.transmission>0)&&m.colorWrite!==false&&m.depthWrite!==false&&m.depthTest!==false&&!m.wireframe&&!m.isShaderMaterial&&!m.isRawShaderMaterial
+// The depth test three uses by default (or Less) and no stencil: another depth function can draw a part through walls or
+// a wall nowhere, and a stencil test can leave a wall uncovered.
+const usualDepth=m=>m.depthTest!==false&&(m.depthFunc===T.LessEqualDepth||m.depthFunc===T.LessDepth)&&!m.stencilWrite&&(m.stencilFunc===undefined||m.stencilFunc===T.AlwaysStencilFunc);
+// Normal blending only: an additive or multiplied surface adds to what is behind it rather than covering it.
+const plainOpaque=(m,empty)=>!!m&&m.visible!==false&&!m.transparent&&(m.blending===T.NormalBlending||m.blending===T.NoBlending)&&usualDepth(m)&&(m.opacity??1)>=1&&!(m.alphaTest>0)&&!m.alphaToCoverage&&!m.alphaHash&&!m.alphaMap&&!(m.transmission>0)&&m.colorWrite!==false&&m.depthWrite!==false&&m.depthTest!==false&&!m.wireframe&&!m.isShaderMaterial&&!m.isRawShaderMaterial
  &&(m.isMeshStandardMaterial||m.isMeshBasicMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial||m.isMeshPhysicalMaterial||m.isMeshToonMaterial||m.isMeshMatcapMaterial)
  // drawn where its geometry says (no vertex-moving or discarding shader hook), and not clipped away
  &&geometryKept(m,empty)&&!m.clippingPlanes?.length;
@@ -79,7 +83,7 @@ export function collectTargets(scene,{emptyHook}={}){
   return o.userData.sources.flatMap(id=>{const q=byUuid.get(id),qg=q?.geometry;if(!qg)return [null];if(!qg.boundingBox){if(!qg.attributes.position?.array)return [null];qg.computeBoundingBox();}q.updateWorldMatrix(true,false);return clusters(q,qg.boundingBox.clone().applyMatrix4(q.matrixWorld));});
 };
  const visit=o=>{if(o.userData?.mergedSources||copied(o))return;
-  if(o.isMesh&&!o.isSkinnedMesh&&!o.isBatchedMesh&&!o.castShadow&&!morphs(o.geometry)&&[o.material].flat().every(m=>m&&!m.transparent&&m.visible!==false&&geometryKept(m,emptyHook))){
+  if(o.isMesh&&!o.isSkinnedMesh&&!o.isBatchedMesh&&!o.castShadow&&!morphs(o.geometry)&&[o.material].flat().every(m=>m&&!m.transparent&&m.visible!==false&&usualDepth(m)&&geometryKept(m,emptyHook))){// another depth test can draw it through walls
    const root=ownerOf(o);let lifted=false;for(let q=o;q;q=q.parent)if(LIFT.test(q.name||'')){lifted=true;break;}
    if(!lifted&&!moving(o)){let part=null;
     if(o.isInstancedMesh){const near=o.userData.near;if(near&&o.userData.cabinIds&&!o.userData.boat&&o.geometry.attributes.position?.array){const g=o.geometry,local=new T.Box3().setFromBufferAttribute(g.attributes.position);
