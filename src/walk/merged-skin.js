@@ -11,6 +11,11 @@ import * as T from 'three';
 const REACH_M=.5;
 const sameMatrix=(a,b)=>a.elements.every((v,i)=>Math.abs(v-b.elements[i])<1e-6);
 const GET=['getX','getY','getZ','getW'];
+// A hidden part's own matrices are read by nothing once the figure is built (its readers read the bones), yet every pass
+// over the figure remade them, with a matrix inverse each for a skinned mesh: the scene's pass and the rig's own three a
+// solve (dlCatFigure.ts apply). While hidden it skips them; shown again (dispose), it is made current and updates as before.
+const still=p=>{const a=p.updateMatrixWorld,b=p.updateWorldMatrix;
+ p.updateMatrixWorld=function(force){if(this.visible)a.call(this,force);};p.updateWorldMatrix=function(up,down){if(this.visible)b.call(this,up,down);};};
 
 /** parts: SkinnedMeshes (a figure's asset.meshes). Returns {meshes, merged: parts drawn through them, sync(), dispose()}. */
 export function mergeSkinnedParts(parts){
@@ -42,7 +47,7 @@ export function mergeSkinnedParts(parts){
   const sphere=new T.Sphere();sphere.makeEmpty();for(const p of ok){if(!p.boundingSphere)p.computeBoundingSphere();sphere.union(p.boundingSphere);}
   mesh.boundingSphere=sphere.isEmpty()?null:sphere.set(sphere.center,sphere.radius+REACH_M);
   first.parent.add(mesh);meshes.push(mesh);
-  ok.forEach((p,i)=>{p.visible=false;links.push({part:p,mesh,start:starts[i],count:p.geometry.attributes.position.count,attributes:{...p.geometry.attributes}});});
+  ok.forEach((p,i)=>{p.visible=false;still(p);links.push({part:p,mesh,start:starts[i],count:p.geometry.attributes.position.count,attributes:{...p.geometry.attributes}});});
  }
  return {
   meshes,merged:links.length,
@@ -50,6 +55,7 @@ export function mergeSkinnedParts(parts){
   sync(){for(const l of links)for(const n in l.attributes){const now=l.part.geometry.attributes[n];if(now===l.attributes[n])continue;l.attributes[n]=now;
    const into=l.mesh.geometry.attributes[n],k=into.itemSize;for(let i=0;i<l.count;i++)for(let c=0;c<k;c++)into.array[(l.start+i)*k+c]=now[GET[c]](i);
    into.addUpdateRange(l.start*k,l.count*k);into.needsUpdate=true;}},
-  dispose(){for(const m of meshes){m.removeFromParent();m.geometry.dispose();}for(const l of links)l.part.visible=true;meshes.length=0;links.length=0;},
+  dispose(){for(const m of meshes){m.removeFromParent();m.geometry.dispose();}
+   for(const l of links){const p=l.part;p.visible=true;delete p.updateMatrixWorld;delete p.updateWorldMatrix;p.updateMatrixWorld(true);}meshes.length=0;links.length=0;},
  };
 }

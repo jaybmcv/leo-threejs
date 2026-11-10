@@ -10,6 +10,8 @@ import {createFurColour} from './fur.js';
 import {rigPace} from './rig-pace.js';
 import {mergeSkinnedParts} from './merged-skin.js';
 import {solvedPose} from './solved-pose.js';
+import {figureMatrices} from './figure-matrices.js';
+import {boneWalk} from './bone-walk.js';
 
 // Cosmo as the walker, animated by Voyager's Reach's own figure (vr/dlCatFigure.ts): the authored Ecctrl walk and jog,
 // the reference sprint, take-off, air and landing, the turning lean, the tail spring, the idle, crouch, slide and
@@ -79,8 +81,10 @@ function boardPose(bone){
 // `createDLCat` comes from the Cosmo bundle; `motion` is ecctrl-locomotion.json, the donor clips for the walk.
 // The longest step Cosmo's rig takes in one solve: the figure's own cap (dlCatFigure.ts apply, stepMax), a 20 fps frame.
 const RIG_CAP=.05;
-// mergeDraws: draw the body's parts as one skinned mesh per material (merged-skin.js): other visitors (remotes.js).
-export async function createWalker(createDLCat,motion,{mergeDraws=false}={}){
+// mergeDraws: draw the body's parts as one skinned mesh per material (merged-skin.js); cacheBones: the scene pass and the
+// bone texture leave the figure alone on frames nothing moved it (figure-matrices.js), and the scene walk skips the
+// bones (bone-walk.js). Both for other visitors (remotes.js), which nothing draws into shadow maps.
+export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBones=false}={}){
  const cat=await createDLCat({height:COSMO_HEIGHT,castShadow:true,receiveShadow:true});
  const figure=new DLCatFigure(cat,()=>DEFAULT_DLCAT_TUNING,motion);figure.stylProportions=false;
  const setFur=createFurColour(figure.asset);
@@ -126,6 +130,9 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false}={}){
  figure.root.updateMatrixWorld(true);const merged=mergeDraws?mergeSkinnedParts(figure.asset.meshes):null;
  // What is done on top of a solve below starts from the solved pose on frames without one (solved-pose.js).
  const held=solvedPose(bones,figure.asset.root);
+ const matrices=cacheBones?figureMatrices(figure):null,walk=cacheBones?boneWalk(bones):null;
+ // Bones moved on top of a solve, or back to it.
+ const touched=()=>{held.touched();matrices?.changed();};
  return {
   holder,body,figure,hipHeight,setFur,boardFeet,merged,
   // Where the right paw is drawn (the grapple line leaves from it).
@@ -150,8 +157,9 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false}={}){
    const pose={pos:[0,0,0],yaw:0,dt,speedMs:r?0:s.speed,grounded:r?true:s.grounded,swimming:!!s.swimming,submerged:!!s.swimming,stance:r?'stand':s.stance||'stand',
     jumpCount:s.jumpCount||1,jumpS:s.jumpS,turnRate:r?0:s.turnRate||0,accelMs2:r?0:s.accel||0,riseMs:r?0:s.rise||0,emote:r?null:s.emote||null,
     seated,seatedVariant:'passenger',seatHeight:seated?r.seatHeight:undefined,seatForward:0};
-   let solved=false;for(const {dt:step,prior} of pace(dt,s.unseen?true:s.solveEvery||0,inputs)){figure.apply({...(prior&&lastPose||pose),dt:step},step);solved=true;}
-   if(solved)held.keep();else held.restore();
+   let solved=false;for(const {dt:step,prior} of pace(dt,s.unseen?true:s.solveEvery||0,inputs)){
+    const p={...(prior&&lastPose||pose),dt:step};if(matrices)matrices.solve(()=>figure.apply(p,step));else figure.apply(p,step);solved=true;}
+   if(solved)held.keep();else if(held.restore())matrices?.changed();
    lastPose=pose;
    // Lying down, in a bed or playing dead, the hat comes off: on his back it would sink into the floor or the pillow.
    if(this.hat)this.hat.mount.visible=!s.swimming&&!(r?.kind==='lie'&&r.weight>.3)&&s.emote!=='play_dead';
@@ -160,12 +168,12 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false}={}){
    if(tailDrop>.001){
     // About the walker's own right axis, in the tail base's parent frame.
     axis.set(1,0,0).applyQuaternion(holder.getWorldQuaternion(tq)).applyQuaternion(tail.parent.getWorldQuaternion(tq).invert());
-    tail.quaternion.premultiply(tq.setFromAxisAngle(axis,TAIL_DROP*tailDrop));held.touched();
+    tail.quaternion.premultiply(tq.setFromAxisAngle(axis,TAIL_DROP*tailDrop));touched();
    }
    catnip=T.MathUtils.clamp(catnip+(s.catnip?1:-1)*dt/CATNIP_S,0,1);face.set(catnip*catnip*(3-2*catnip));
    const closed=r?.kind==='lie'&&r.hammock&&r.weight>.6?shut:open;if(eyes.geometry.attributes.uv!==closed){eyes.geometry.setAttribute('uv',closed);merged?.sync();}
    if(s.board>0&&!r){
-    bones.forEach((b,i)=>b.quaternion.slerp(board[i],s.board));held.touched();
+    bones.forEach((b,i)=>b.quaternion.slerp(board[i],s.board));touched();
     figure.asset.root.position.y=T.MathUtils.lerp(figure.asset.root.position.y,figure.restOffset-boardDrop,s.board);
     figure.root.updateMatrixWorld(true);
    }
@@ -173,15 +181,17 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false}={}){
    if(hang>0){
     figure.root.updateMatrixWorld(true);const w=hang*hang*(3-2*hang),a=shoulder.quaternion.clone(),b=elbow.quaternion.clone();
     lean.copy(anchor).sub(shoulder.getWorldPosition(new T.Vector3()));
-    aim(shoulder,elbow,lean);aim(elbow,paw,lean);held.touched();
+    aim(shoulder,elbow,lean);aim(elbow,paw,lean);touched();
     shoulder.quaternion.copy(a.slerp(shoulder.quaternion,w));elbow.quaternion.copy(b.slerp(elbow.quaternion,w));
     figure.root.updateMatrixWorld(true);
    }
    if((r?.kind==='lie'||r?.kind==='float')&&r.weight>0){
-    const pose=r.kind==='float'?floating:r.hammock?hammock:lie;bones.forEach((b,i)=>b.quaternion.slerp(pose[i],r.weight));held.touched();
+    const pose=r.kind==='float'?floating:r.hammock?hammock:lie;bones.forEach((b,i)=>b.quaternion.slerp(pose[i],r.weight));touched();
     figure.asset.root.position.y=T.MathUtils.lerp(figure.asset.root.position.y,figure.restOffset,r.weight);
     figure.root.updateMatrixWorld(true);
    }
+   // The hat and the catnip face, shown or hidden above, keep their way through the scene walk.
+   walk?.sync();
   },
   dispose(){merged?.dispose();suit?.dispose();figure.dispose();holder.removeFromParent();}
  };

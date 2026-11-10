@@ -134,9 +134,11 @@ export class EcctrlLocomotion {
     const cycleRate=T.MathUtils.lerp(gaitRate,1/COSMO_RUN_DURATION*tuning.cadenceScale/DEFAULT_DLCAT_TUNING.locomotion.cadenceScale,cosmoRunBlend(speed));
     this.phase=(this.phase+dt*cycleRate)%1;
     this.actions.forEach((a,i)=>{a.time=this.phase*a.getClip().duration;a.setEffectiveWeight(i===0?1-run:i===1?run:0);});
+    // (Leo) Unweighted (standing, crouched, in the air) the donor is not posed: nothing reads it, and the flight it
+    // would give is multiplied by the zero weight.
+    if(weight<=0){this.flight=0;return;}
     this.mixer.update(0);this.source.updateMatrixWorld(true);
     this.flight=Math.max(0,this.footHeight()-T.MathUtils.lerp(this.floors[0]!,this.floors[1]!,run))*this.scale*run*weight;
-    if(weight<=0)return;
     this.retarget(weight,1-run);
   }
   private retarget(weight:number,walkWeight=0){
