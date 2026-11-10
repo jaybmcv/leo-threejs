@@ -14,8 +14,9 @@ import * as T from 'three';
 //   groups, members, texture (checks)}
 // A walker needs cacheBones (figure-matrices.js): its bone texture row is rebuilt only when its matrices were remade.
 
-// A body's sphere for culling, from its holder (feet): up to its head, and lying or on a board.
-const CENTER_Y=.9,RADIUS=1.8;
+// Room round a body's parts' own bounds (merged-skin.js, dlCatFigure.ts: wide enough for any pose) for how far it may
+// have moved since its matrices were last made: a frame's run or ride.
+const MOVED_M=.5;
 const PARS=`
 uniform highp sampler2D crowdBones;
 uniform mat4 crowdBind;
@@ -68,12 +69,16 @@ export function createCrowdDraw(scene,{slots=24}={}){
  const members=[],groups=new Map(),frustum=new T.Frustum(),view=new T.Matrix4(),sphere=new T.Sphere(),drawnNow=[];
  const crowdMaterial=(source,bindMatrix)=>{
   const m=source.clone();
-  // The map's image is shared by every visitor of that fur colour; the texture object is the visitor's own (fur.js
-  // repaints it), so the draw takes its own.
-  if(source.map)m.map=source.map.clone();
+  // The map's image is shared by every visitor of that fur colour; the texture is the visitor's own, and fur.js swaps
+  // its image (its source's data, which a clone would share), so the draw has a source of its own on that image.
+  if(source.map){const map=source.map.clone();map.source=new T.Source(source.map.image);m.map=map;}
   const uniforms={crowdBones:{value:texture},crowdBind:{value:bindMatrix.clone()}};
-  m.onBeforeCompile=shader=>{Object.assign(shader.uniforms,uniforms);shader.vertexShader=crowdShader(shader.vertexShader);};
-  m.customProgramCacheKey=()=>'crowd-skin';
+  // The visitor's own hooks come too, the skin after them (the film look, corner shading: film-look.js and
+  // corner-shade.js mark theirs, and leave a material alone that carries them already).
+  const before=source.onBeforeCompile,key=source.customProgramCacheKey;
+  const hook=function(shader,renderer){before.call(this,shader,renderer);Object.assign(shader.uniforms,uniforms);shader.vertexShader=crowdShader(shader.vertexShader);};
+  for(const mark of ['filmLook','cornerShade'])if(before[mark])hook[mark]=before[mark];
+  hook.keepsGeometry=false;m.onBeforeCompile=hook;m.customProgramCacheKey=function(){return key.call(this)+'|crowd-skin';};
   return m;
  };
  const makeGroup=(key,part)=>{
@@ -97,7 +102,12 @@ export function createCrowdDraw(scene,{slots=24}={}){
  // they are shut.
  const keyOf=(m,part)=>`${part.material.name}|${idOf(part.material.map?.image)}|${part===m.eyesPart&&m.eyes.geometry.attributes.uv!==m.open?1:0}`;
  // Back to the crowd: its row again (three gives a skeleton drawn on its own a padded copy of its matrices).
- const join=m=>{m.skeleton.boneMatrices=m.row;m.made=NaN;for(const p of m.parts)p.visible=false;};
+ const join=m=>{m.skeleton.boneMatrices=m.row;m.made=NaN;for(const p of m.parts)p.visible=false;
+  // (drawn on its own meanwhile, three gave it a bone texture on a padded copy: dropped, so a next time rebuilds it)
+  if(m.skeleton.boneTexture){m.skeleton.boneTexture.dispose();m.skeleton.boneTexture=null;}};
+ // In the camera's view: any of the body's parts, by its own bounds where its matrices were last made.
+ const inView=m=>{for(const p of m.parts){const s=p.boundingSphere;if(!s)return true;
+  sphere.copy(s).applyMatrix4(p.matrixWorld);sphere.radius+=MOVED_M;if(frustum.intersectsSphere(sphere))return true;}return false;};
  const leave=m=>{for(const p of m.parts)p.visible=true;};
  return {
   add(walker){
@@ -119,7 +129,7 @@ export function createCrowdDraw(scene,{slots=24}={}){
    view.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);frustum.setFromProjectionMatrix(view);
    for(const m of members){
     const holder=m.walker.holder;if(!holder.parent)continue;
-    if(!all){sphere.center.copy(holder.position);sphere.center.y+=CENTER_Y;sphere.radius=RADIUS;if(!frustum.intersectsSphere(sphere))continue;}
+    if(!all&&!inView(m))continue;
     drawnNow.push(m);
     for(const part of m.parts){const key=keyOf(m,part),g=groups.get(key)??makeGroup(key,part);g.slots[g.count++]=m.slot;}
    }
