@@ -24,11 +24,12 @@ const OUT=-Math.PI/2; // foliage.js yaw for local -z, the atrium side of a plant
 // the deck floor, the void toward -z), with planting spilling over it and vines trailing down the fascia and past it.
 // Every deck facing the atrium, 7 to 20. They hang on each slab edge and cross none of the void (decisions-v2.json,
 // atrium-centre-clear, keeps walkways and solid parts out of it above Deck 16).
-// Decks 7–16 (S2 concept B, garden terraces) carry a continuous planter strip along every slab edge: one trough per
-// slot, stretched to fill its run, so the strip never breaks except where the tower, its bridges or a dining apron
-// meet the edge. The planting thins upward: mostly the lush variant on the low decks, mostly the light one under
-// Deck 16, chosen in clustered runs so no deck reads as a uniform stripe. Decks 17–20 keep the irregular runs.
-const CASCADE_DECKS=[7,20],STRIP_DECKS=[7,16],SLOT=3.6;
+// Decks 7–16 (S2 concept B, garden terraces) carry a planter strip along every slab edge: one trough per slot,
+// stretched to fill its run, broken by clustered gaps where the cream fascia shows (more of them higher up) and
+// where the tower, its bridges or a dining apron meet the edge. The planting thins upward: mostly the lush variant on
+// Decks 7–8, mostly medium and light from Deck 12, chosen in clustered runs so no deck reads as a uniform stripe.
+// Decks 17–20 keep the irregular runs.
+const CASCADE_DECKS=[7,20],STRIP_DECKS=[7,16],SLOT=3.6,LIGHT_BY=5;
 const DENSE=0,MEDIUM=1,LIGHT=2;
 const TROUGH=0xe3d5bb;
 // A leaf seen from across the atrium: one folded diamond (two triangles), along +x from the origin like a blade.
@@ -62,9 +63,9 @@ function curtain(out,from,to,rows,r){
 // Lush (low decks), medium and light (high decks): fewer and shorter vines, a thinner curtain, fewer blossoms, and
 // the light one's foliage gathered to one end of its trough.
 const CASCADE_VARIANTS=[
- {clumps:4,curtain:[11,10,8],vines:9,trail:2.4,lip:7,blossoms:22,onVines:.3,span:1},
- {clumps:3,curtain:[8,6,3],vines:6,trail:1.8,lip:5,blossoms:12,onVines:.2,span:1},
- {clumps:2,curtain:[4,3],vines:3,trail:1.2,lip:3,blossoms:5,onVines:.14,span:.55},
+ {clumps:4,curtain:[11,9],vines:7,trail:2,lip:7,blossoms:20,onVines:.3,span:1},
+ {clumps:3,curtain:[8,5],vines:5,trail:1.5,lip:5,blossoms:12,onVines:.2,span:1},
+ {clumps:2,curtain:[4,3],vines:3,trail:1.1,lip:3,blossoms:5,onVines:.14,span:.55},
 ];
 function cascadeTemplate(variant){
  const v=CASCADE_VARIANTS[variant],r=random(9100+variant*77),out=[],w=SLOT/2,from=-w+.25,to=-w+.25+(SLOT-.5)*v.span;
@@ -104,10 +105,11 @@ function stripSlots(ring){
  flush();return slots;
 }
 function addPlanterStrip(chosen,d,reserved){
- const full=d.atrium.outline,noise=noise1(700+d.number*17),t=(d.number-STRIP_DECKS[0])/(STRIP_DECKS[1]-STRIP_DECKS[0]);
- const pDense=.8-.66*t,pLight=.04+.52*t;let along=0;
+ const full=d.atrium.outline,noise=noise1(700+d.number*17),gaps=noise1(900+d.number*29),t=Math.min(1,(d.number-STRIP_DECKS[0])/LIGHT_BY);
+ const pDense=.8-.75*t,pLight=.04+.56*t,pGap=.3+.2*t;let along=0;
  for(const[a,b]of stripSlots(simplifyRing(full))){
   const len=Math.hypot(b[0]-a[0],b[1]-a[1]),ux=(b[0]-a[0])/len,uz=(b[1]-a[1])/len,x=(a[0]+b[0])/2,z=(a[1]+b[1])/2;along+=len;
+  if(gaps(along/11)<pGap)continue;
   let nx=-uz,nz=ux;if(!contains(full,[x+nx*.5,z+nz*.5])){nx=-nx;nz=-nz;}
   if([a,b,[x,z]].some(p=>reserved([p[0]+nx*.2,p[1]+nz*.2])))continue;
   const h=Math.abs(Math.sin(x*12.9898+d.number*78.233+z*3.1)*43758.5453)%1,u=noise(along/14)*.65+h*.35;
