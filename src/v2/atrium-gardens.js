@@ -30,7 +30,7 @@ const OUT=-Math.PI/2; // foliage.js yaw for local -z, the atrium side of a plant
 // Deck 16, chosen in clustered runs so no deck reads as a uniform stripe. Decks 17–20 keep the irregular runs.
 const CASCADE_DECKS=[7,20],STRIP_DECKS=[7,16],SLOT=3.6;
 const DENSE=0,MEDIUM=1,LIGHT=2;
-const WHITE=0xf7f2e8,PINK=0xf2b4c6,BLUSH=0xf7d5de,TROUGH=0xe3d5bb;
+const TROUGH=0xe3d5bb;
 // A leaf seen from across the atrium: one folded diamond (two triangles), along +x from the origin like a blade.
 function leaf(len,wid,base,tip){
  const w=wid/2,fold=w*.35,p=[0,0,0,len*.45,fold,-w,len,0,0, 0,0,0,len,0,0,len*.45,fold,w];
@@ -38,31 +38,33 @@ function leaf(len,wid,base,tip){
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('color',new T.Float32BufferAttribute(c,3));
  g.computeVertexNormals();g.setAttribute('uv',new T.Float32BufferAttribute(new Float32Array(12),2));return g;
 }
-// A small flower: a squat octahedron, white or soft pink (a tetrahedron, half the triangles, among the vines).
-const bloom=(out,[x,y,z],r,color,small=false)=>out.push(paint((small?new T.TetrahedronGeometry(r*1.2,0):new T.OctahedronGeometry(r,0)).scale(1,.55,1).translate(x,y,z),color));
-const bloomColor=r=>{const k=r();return k<.5?WHITE:k<.8?PINK:BLUSH;};
 // A trailing vine: leaves alternating down a swaying line (no stem tube; at these distances the leaves carry it),
 // largest at the top, the odd flower among them.
 function vine(out,[x,y,z],length,r,flowers){
  const n=Math.max(2,Math.round(length/.42)),phase=r()*6;
  for(let i=1;i<=n;i++){const t=i/n,len=.5+.22*(1-t)+r()*.08,p=[x+Math.sin(phase+t*3)*.12*t,y-length*t,z-.06*t+Math.cos(phase+t*2.3)*.07*t];
   out.push(orient(leaf(len,len*.85,GREENS.mid,i%3?GREENS.bright:GREENS.lime),p,phase+i*2.4,-.6-r()*.5,(r()-.5)*.6));
-  if(r()<flowers)bloom(out,[p[0]+(r()-.5)*.12,p[1]+.04,p[2]-.14],.1+r()*.03,bloomColor(r),true);}
+  if(r()<flowers)blossom(out,[p[0]+(r()-.5)*.12,p[1]+.02,p[2]-.2],.2,blossomColor(r));}
 }
-// A flower cluster: three blooms close together, so it reads as one white or pink spot from the atrium floor.
-function cluster(out,[x,y,z],size,r,small=false){const color=bloomColor(r);for(let k=0;k<3;k++)bloom(out,[x+(k-1)*size*1.3+(r()-.5)*size*.4,y+(r()-.5)*size*.6,z-r()*size*.6],size*(.8+r()*.3),k===1?color:bloomColor(r),small);}
+// A flower seen from the atrium floor: two crossed cards (four triangles), one level and one hanging, so it shows from
+// below and from across the atrium. Stronger pinks than the bush flowers, so they read against the cream walls.
+const BLOSSOMS=[0xfbf8f2,0xfbf8f2,0xee8fae,0xf5b7c8];
+const blossomColor=r=>BLOSSOMS[Math.floor(r()*BLOSSOMS.length)];
+function blossom(out,[x,y,z],size,color){
+ out.push(orient(leaf(size,size,color,color),[x,y,z+size/2],OUT,0,0),orient(leaf(size,size*.9,color,color),[x,y+size/2,z],OUT,-Math.PI/2,0));
+}
 // The leafy mass hanging over the trough's face: rows of large leaves pointing down, darker toward the back, so the
-// strip reads as a thick green band below the edge, as in the concept.
+// strip reads as a thick green band below the edge, as in the concept. Blossoms hang in front of it.
 function curtain(out,from,to,rows,r){
  rows.forEach((n,row)=>{for(let k=0;k<n;k++){const x=from+(to-from)*(k+.5+(row%2)*.5)/(n+(row%2)*.5)+(r()-.5)*.15,len=.6+r()*.18;
   out.push(orient(leaf(len,len*.75,row?GREENS.dark:GREENS.mid,k%3?GREENS.bright:GREENS.lime),[x,.08-row*.42,-.4-row*.05-r()*.06],OUT+(r()-.5)*.9,-1.15-r()*.3,(r()-.5)*.5));}});
 }
-// Lush (low decks), medium and light (high decks): fewer and shorter vines, a thinner curtain, fewer flowers, and the
-// light one's foliage gathered to one end of its trough.
+// Lush (low decks), medium and light (high decks): fewer and shorter vines, a thinner curtain, fewer blossoms, and
+// the light one's foliage gathered to one end of its trough.
 const CASCADE_VARIANTS=[
- {clumps:4,curtain:[9,8],vines:7,trail:2.2,lip:7,clusters:6,hanging:4,onVines:.3,span:1},
- {clumps:3,curtain:[7,5],vines:5,trail:1.7,lip:5,clusters:4,hanging:2,onVines:.2,span:1},
- {clumps:2,curtain:[4,2],vines:3,trail:1.2,lip:3,clusters:2,hanging:1,onVines:.14,span:.55},
+ {clumps:4,curtain:[11,10,8],vines:9,trail:2.4,lip:7,blossoms:22,onVines:.3,span:1},
+ {clumps:3,curtain:[8,6,3],vines:6,trail:1.8,lip:5,blossoms:12,onVines:.2,span:1},
+ {clumps:2,curtain:[4,3],vines:3,trail:1.2,lip:3,blossoms:5,onVines:.14,span:.55},
 ];
 function cascadeTemplate(variant){
  const v=CASCADE_VARIANTS[variant],r=random(9100+variant*77),out=[],w=SLOT/2,from=-w+.25,to=-w+.25+(SLOT-.5)*v.span;
@@ -74,9 +76,9 @@ function cascadeTemplate(variant){
  for(let k=0;k<v.lip;k++)out.push(orient(leaf(.6+r()*.18,.3,GREENS.mid,GREENS.lime),[at((k+.5)/v.lip)+(r()-.5)*.2,.27,-.34],OUT+(r()-.5)*.8,-.5-r()*.5,0));
  curtain(out,from,to,v.curtain,r);
  for(let k=0;k<v.vines;k++)vine(out,[at((k+.5)/v.vines)+(r()-.5)*.2,-.3,-.45],v.trail*(.6+r()*.5),r,v.onVines);
- // Flower clusters on the planting and hanging in front of the curtain.
- for(let k=0;k<v.clusters;k++)cluster(out,[at((k+.5)/v.clusters)+(r()-.5)*.3,.42+r()*.04,-.3-r()*.12],.12,r);
- for(let k=0;k<v.hanging;k++)cluster(out,[at((k+.5)/v.hanging)+(r()-.5)*.3,-.15-r()*.45,-.62],.13,r,true);
+ // Blossoms scattered over the front of the curtain, where the floor sees them.
+ const drop=.42*v.curtain.length;
+ for(let k=0;k<v.blossoms;k++)blossom(out,[at((k+r())/v.blossoms),.1-r()*drop,-.78-r()*.1],.2+r()*.06,blossomColor(r));
  const g=mergeGeometries(out);out.forEach(x=>x.dispose());return g;
 }
 // Smooth value noise along each deck edge, so planters come in runs and gaps rather than a pattern.
@@ -153,7 +155,7 @@ function distantCascadeTemplate(){
  const r=random(9900),out=[paint(new T.BoxGeometry(SLOT,.26,.28,4,1,1).translate(0,.15,-.19),TROUGH)];
  clump(out,[0,.32,-.22],{r:.6,rnd:r,leaves:0,detail:0,squash:.5,palette:[GREENS.mid,GREENS.bright,GREENS.lime]});
  for(let k=0;k<6;k++){for(let i=0;i<3;i++)out.push(orient(leaf(.7,.55,i?GREENS.dark:GREENS.mid,GREENS.bright),[-1.5+k*.6,.08-i*.5,-.45],-Math.PI/2+(r()-.5),-1.2,0));
-  bloom(out,[-1.5+k*.6+.2,k%2?.44:-.3,k%2?-.3:-.62],.16,bloomColor(r),true);}
+  blossom(out,[-1.5+k*.6+.2,-.2-(k%3)*.25,-.8],.3,blossomColor(r));}
  distantCascade=mergeGeometries(out);out.forEach(x=>x.dispose());return distantCascade;
 }
 export function simplifyDistantGardens(distant){let triangles=0;distant.traverse(o=>{if(!o.isInstancedMesh||!/^P6_hanging_garden_/.test(o.name))return;o.geometry=distantCascadeTemplate();triangles+=o.geometry.attributes.position.count/3*o.count;});return triangles;}
@@ -427,6 +429,34 @@ function trim(positions,color){
  const c=new T.Color(color),col=new Float32Array(positions.length);for(let i=0;i<col.length;i+=3){col[i]=c.r;col[i+1]=c.g;col[i+2]=c.b;}
  g.setAttribute('color',new T.BufferAttribute(col,3));g.setAttribute('uv',new T.BufferAttribute(new Float32Array(positions.length/3*2),2));return g;
 }
+// The walkway ceilings over the atrium edge of Decks 7–16, once a grey band seen over the guards: a cream sheet in
+// the soffit's material just under the deck above (below its slab and terrace plate), from the edge inboard up to
+// WALKWAY_DEPTH. It stops short of the void above or below, slab holes and any room (whose own ceiling it would
+// otherwise show through), so it is seen only where the slab's underside was.
+const WALKWAY_DEPTH=3.5,WALKWAY_STEP=.25,WALKWAY_DROP=.37;
+function walkwayStops(layout,d,above){
+ const box=p=>{const xs=p.map(q=>q[0]),zs=p.map(q=>q[1]);return[Math.min(...xs),Math.max(...xs),Math.min(...zs),Math.max(...zs)];};
+ const y=above.y-WALKWAY_DROP,rooms=layout.rooms.filter(r=>!r.aggregate&&r.y<y+.05&&r.y+r.height>y-.6).map(r=>r.polygon);
+ const polys=[...rooms,...[d,above].flatMap(k=>(k.slab?.holes||[]).filter(h=>h.id!=='atrium').map(h=>h.polygon))].map(p=>({p,b:box(p)}));
+ return q=>contains(d.atrium.outline,q)||contains(above.atrium.outline,q)||polys.some(({p,b})=>q[0]>=b[0]&&q[0]<=b[1]&&q[1]>=b[2]&&q[1]<=b[3]&&contains(p,q));
+}
+export function walkwayCeilings(layout){
+ const pos=[];
+ for(const d of layout.decks){
+  const above=layout.decks[d.number];if(d.number<STRIP_DECKS[0]||d.number>STRIP_DECKS[1]||!d.atrium?.outline||!above?.atrium?.outline)continue;
+  // The edge, sampled every 0.75 m or less, so a room along a long straight run still stops the sheet.
+  const edge=simplifyRing(d.atrium.outline,.015),ring=edge.flatMap((a,i)=>{const b=edge[(i+1)%edge.length],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.75));return Array.from({length:n},(_,k)=>[a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n]);});
+  const unit=offsetRing(ring,-1),stops=walkwayStops(layout,d,above),y=above.y-WALKWAY_DROP;
+  // How far in each vertex's sheet may run, along its mitre, before it meets a stop.
+  const depth=ring.map((p,i)=>{const dir=[unit[i][0]-p[0],unit[i][1]-p[1]];let reach=0;
+   for(let s=WALKWAY_STEP;s<=WALKWAY_DEPTH+1e-6;s+=WALKWAY_STEP){if(stops([p[0]+dir[0]*s,p[1]+dir[1]*s]))break;reach=s;}
+   return {dir,reach:stops([p[0]+dir[0]*.05,p[1]+dir[1]*.05])?0:reach};});
+  for(let i=0;i<ring.length;i++){const j=(i+1)%ring.length,a=depth[i],b=depth[j];if(a.reach<WALKWAY_STEP||b.reach<WALKWAY_STEP)continue;
+   const at=(k,s)=>[ring[k][0]+depth[k].dir[0]*s,y,ring[k][1]+depth[k].dir[1]*s];
+   quad(pos,at(i,0),at(j,0),at(j,b.reach),at(i,a.reach),[0,-1,0]);}
+ }
+ return pos;
+}
 export function addFascias(out,layout){
  const cream=[],oak=[],bronze=[];let length=0;
  for(const d of layout.decks){
@@ -525,6 +555,6 @@ export function addAtriumGardens(root,layout){
  const o=new T.Mesh(g,gardenMaterial);o.name='P6_atrium_gardens';o.frustumCulled=false;o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);
  const gg=mergeGeometries(glow.map(x=>x.toNonIndexed()));glow.forEach(x=>x.dispose());gg.computeBoundingBox();gg.computeBoundingSphere();
  const lo=new T.Mesh(gg,gardenGlowMaterial);lo.name='P6_atrium_lanterns';lo.frustumCulled=false;lo.userData={...o.userData};root.add(lo);
- const cascades=addHangingGardens(root,layout),downlights=addDownlights(root,layout),soffits=addSoffits(root,layout,cream),shade=addTreeShade(root,layout,trees);
+ const cascades=addHangingGardens(root,layout),downlights=addDownlights(root,layout),soffits=addSoffits(root,layout,cream.concat(walkwayCeilings(layout))),shade=addTreeShade(root,layout,trees);
  return {trees,...grove,...planting,...stones,...decks,waterfall,...falling,...lily,...beds,...lawn,...joints,lanterns,festoonBulbs,...fascias,...downlights,...soffits,...shade,staticTriangles:g.attributes.position.count/3,cascades};
 }
