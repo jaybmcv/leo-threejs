@@ -74,14 +74,14 @@ const px=a.mats.sky.map.image.getContext('2d').getImageData(32,4,1,1).data;asser
 pass('at night the sky panel shows the dusk made from its own day picture');
 assert(a.mats.glass.emissive.r>.5&&a.mats.glass.opacity>.23);assert(a.mats.lamp.emissiveIntensity>1.5);assert(a.mats.soffit.emissiveIntensity>.38);
 assert(a.hemi.intensity<1&&a.hemi.color.r>a.hemi.color.b);assert(a.scene.fog.color.r>a.scene.fog.color.b&&a.scene.fog.color.g<fogBase.g);
-assert.equal(a.mats.water.color.getHex(),0x405e74);assert(Math.abs(a.mats.glass.emissiveIntensity-2)<1e-6);assert.equal(a.lights.material.opacity,1);
+assert.equal(a.mats.water.color.getHex(),0x4a7086);assert(Math.abs(a.mats.glass.emissiveIntensity-2)<1e-6);assert.equal(a.lights.material.opacity,1);
 pass('night lights the glass, lamps and soffits and dims and warms the atrium light');
 assert.equal(a.lights.material.name,'P6_atrium_downlight_pool');assert.equal(a.lights.count,3);assert.equal(a.lights.material.blending,T.AdditiveBlending);
 const e=new T.Matrix4();a.lights.getMatrixAt(1,e);const s=new T.Vector3(),p=new T.Vector3();e.decompose(p,new T.Quaternion(),s);
 assert(Math.abs(p.x-3.6)<1e-6);assert(s.x>3&&Math.abs(s.y-1)<1e-9);
 pass('the downlights keep their one instanced draw and gain warm pools');
 const lampPools=a.stems.getObjectByName('P6_atrium_lamp_pools');assert(lampPools?.isInstancedMesh&&lampPools.visible);assert.equal(lampPools.count,2);
-assert.equal(lampPools.material.blending,T.AdditiveBlending);lampPools.getMatrixAt(1,e);assert(Math.abs(e.elements[12]-14)<1e-6&&Math.abs(e.elements[13]-(-19.32-.38+.02))<1e-6);
+assert.equal(lampPools.material.blending,T.AdditiveBlending);assert.equal(lampPools.material.opacity,.5);lampPools.getMatrixAt(1,e);assert(Math.abs(e.elements[12]-14)<1e-6&&Math.abs(e.elements[13]-(-19.32-.38+.02))<1e-6);
 pass('at night the promenade lamps throw warm pools on the floor, one instanced draw');
 setAtriumView(OUT);assert.equal(inOpenAtrium(),false);run(mood,1);
 assert.equal(a.mats.glass.emissive.getHex(),glassBase.getHex());assert.equal(a.mats.glass.opacity,.23);assert.equal(a.mats.glass.emissiveIntensity,1);

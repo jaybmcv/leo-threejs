@@ -14,16 +14,19 @@ import {paintDuskSky,paintDownlightPool,paintLampPool} from './atrium-light-pain
 // Tuned side by side with the concepts on a GPU render that matches the live site (three r187, its baked environment
 // light on): golden undersides by day; at night a pink-lavender dusk light, rooms glowing amber behind the balcony glass.
 const DAY={hemi:1.35,fill:1.13,env:.55,sky:0xffcf9c,ground:0xc8a070,fillColour:0xffe0c0,fog:0xf2dcc4};
-// Night is a dusk interior: the daylight drops well below day so the building's own light carries the scene (amber
-// rooms, downlights, lamp pools on the floor), and the undersides fall off between the downlights.
-const NIGHT={hemi:.5,fill:.25,env:.25,sky:0xcaa8c4,ground:0xb08870,fillColour:0xd0a8c0,fog:0x8a7080,glass:0xffa04a,glassOpacity:1.96,glassIntensity:2};
-// What only the atrium shows follows the time of day wherever the walker is. Day, then night.
-const WATER=[new T.Color(0x2b9ea6),new T.Color(0x405e74)],RETURNS_NIGHT=new T.Color(0xffb35a),POOLS=[.5,1];
+// Night is a dusk interior: the sky light drops well below day so the building's own light carries the scene, and the
+// undersides fall off between the downlights. The fill turns into a warm overhead glow standing for the downlights, so
+// the floor reads lamp-lit peach as in concept C while the walls stay dim behind the amber rooms.
+const NIGHT={hemi:.34,fill:.91,env:.15,sky:0xe0a8a8,ground:0xb08870,fillColour:0xffb894,fog:0x8a7080,glass:0xffa04a,glassOpacity:1.96,glassIntensity:2};
+// What only the atrium shows follows the time of day wherever the walker is. Day, then night. The rooms go above 1 so
+// they glow amber through the tone mapping; a plain colour tops out at tan.
+const WATER=[new T.Color(0x2b9ea6),new T.Color(0x4a7086)],RETURNS_NIGHT=new T.Color(0xffb35a).multiplyScalar(1.9),POOLS=[.5,1];
 const SOFFIT=[{emissive:new T.Color(0xffd090),intensity:.55},{emissive:new T.Color(0xffc890),intensity:.55}];
 const LAMP_NIGHT=4;
-// Warm pools of lamplight on the floor round the promenade lamps at night, LAMP_POOL m across. The lamp stems stand
-// with their middle STEM_RISE above the floor (phase6-programme.js, reflection-terraces.js).
-const LAMP_POOL=6,STEM_RISE=.38;
+// Warm pools of lamplight on the floor round the promenade lamps at night, LAMP_POOL m across, at LAMP_POOL_OPACITY so
+// they stay a glow on the peach floor rather than a white blot. The lamp stems stand with their middle STEM_RISE above
+// the floor (phase6-programme.js, reflection-terraces.js).
+const LAMP_POOL=6,LAMP_POOL_OPACITY=.5,STEM_RISE=.38;
 // Shared with the rest of the ship, so changed only while the walker is in the open atrium.
 const SHARED=new Set(['V2_smart_glass','V2_cabin_view_glass']);
 const OWN=new Set(['P6_lake_water','V2_atrium_soffit','P4_reflection_light','P6_atrium_room_returns']);
@@ -97,7 +100,7 @@ function lampPools(stems){
 
 function showOwn(found,n,pools,floorPools){
  if(pools)pools.opacity=lerp(POOLS[0],POOLS[1],n);
- if(floorPools){floorPools.visible=n>.01;floorPools.material.opacity=n;}
+ if(floorPools){floorPools.visible=n>.01;floorPools.material.opacity=n*LAMP_POOL_OPACITY;}
  for(const [m,b] of found.materials)switch(m.name){
   case 'P6_lake_water':m.color.lerpColors(WATER[0],WATER[1],n);break;
   case 'V2_atrium_soffit':m.emissive.lerpColors(SOFFIT[0].emissive,SOFFIT[1].emissive,n);m.emissiveIntensity=lerp(SOFFIT[0].intensity,SOFFIT[1].intensity,n);break;
