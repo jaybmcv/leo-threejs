@@ -8,6 +8,8 @@ import {catnipFace} from './catnip-face.js';
 import {createSwimSuit} from './aquarium-treasure/suit.js';
 import {createFurColour} from './fur.js';
 import {rigPace} from './rig-pace.js';
+import {mergeSkinnedParts} from './merged-skin.js';
+import {solvedPose} from './solved-pose.js';
 
 // Cosmo as the walker, animated by Voyager's Reach's own figure (vr/dlCatFigure.ts): the authored Ecctrl walk and jog,
 // the reference sprint, take-off, air and landing, the turning lean, the tail spring, the idle, crouch, slide and
@@ -77,7 +79,8 @@ function boardPose(bone){
 // `createDLCat` comes from the Cosmo bundle; `motion` is ecctrl-locomotion.json, the donor clips for the walk.
 // The longest step Cosmo's rig takes in one solve: the figure's own cap (dlCatFigure.ts apply, stepMax), a 20 fps frame.
 const RIG_CAP=.05;
-export async function createWalker(createDLCat,motion){
+// mergeDraws: draw the body's parts as one skinned mesh per material (merged-skin.js): other visitors (remotes.js).
+export async function createWalker(createDLCat,motion,{mergeDraws=false}={}){
  const cat=await createDLCat({height:COSMO_HEIGHT,castShadow:true,receiveShadow:true});
  const figure=new DLCatFigure(cat,()=>DEFAULT_DLCAT_TUNING,motion);figure.stylProportions=false;
  const setFur=createFurColour(figure.asset);
@@ -119,13 +122,18 @@ export async function createWalker(createDLCat,motion){
  let suit=null;
  const paw=bone('hand.R'),shoulder=bone('upper_arm.R'),elbow=bone('forearm.R'),hung=new T.Quaternion(),lean=new T.Vector3(),hold=new T.Quaternion(),q=new T.Quaternion();
  let hang=0,lastPose=null;const anchor=new T.Vector3(),pace=rigPace(RIG_CAP);
+ // Last, once every part is in place: the parts stay for what reads them, hidden, and the merged copies draw.
+ figure.root.updateMatrixWorld(true);const merged=mergeDraws?mergeSkinnedParts(figure.asset.meshes):null;
+ // What is done on top of a solve below starts from the solved pose on frames without one (solved-pose.js).
+ const held=solvedPose(bones,figure.asset.root);
  return {
-  holder,body,figure,hipHeight,setFur,boardFeet,
+  holder,body,figure,hipHeight,setFur,boardFeet,merged,
   // Where the right paw is drawn (the grapple line leaves from it).
   hand(out=new T.Vector3()){return paw.getWorldPosition(out);},
   // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock},
   //  catnip: in the Hydro-Nip Lounge, board: riding the longboard (0..1, glide.js), hook: the grapple's bite (world) or null,
-  //  unseen: nothing draws him this frame (first person), so the figure's rig solve (about 0.33 ms) runs less often}
+  //  unseen: nothing draws him this frame (first person), so the figure's rig solve (about 0.33 ms) runs less often,
+  //  solveEvery: seconds between solves while he is small on screen (another visitor far off: remotes.js), 0 every frame}
   update(dt,s){
    const r=s.rest,seated=r?.kind==='sit'&&r.weight>.35;
    hang=T.MathUtils.clamp(hang+(s.hook&&!r?1:-1)*dt/HANG_S,0,1);if(s.hook)anchor.copy(s.hook);
@@ -142,7 +150,8 @@ export async function createWalker(createDLCat,motion){
    const pose={pos:[0,0,0],yaw:0,dt,speedMs:r?0:s.speed,grounded:r?true:s.grounded,swimming:!!s.swimming,submerged:!!s.swimming,stance:r?'stand':s.stance||'stand',
     jumpCount:s.jumpCount||1,jumpS:s.jumpS,turnRate:r?0:s.turnRate||0,accelMs2:r?0:s.accel||0,riseMs:r?0:s.rise||0,emote:r?null:s.emote||null,
     seated,seatedVariant:'passenger',seatHeight:seated?r.seatHeight:undefined,seatForward:0};
-   for(const {dt:step,prior} of pace(dt,!!s.unseen,inputs))figure.apply({...(prior&&lastPose||pose),dt:step},step);
+   let solved=false;for(const {dt:step,prior} of pace(dt,s.unseen?true:s.solveEvery||0,inputs)){figure.apply({...(prior&&lastPose||pose),dt:step},step);solved=true;}
+   if(solved)held.keep();else held.restore();
    lastPose=pose;
    // Lying down, in a bed or playing dead, the hat comes off: on his back it would sink into the floor or the pillow.
    if(this.hat)this.hat.mount.visible=!s.swimming&&!(r?.kind==='lie'&&r.weight>.3)&&s.emote!=='play_dead';
@@ -151,12 +160,12 @@ export async function createWalker(createDLCat,motion){
    if(tailDrop>.001){
     // About the walker's own right axis, in the tail base's parent frame.
     axis.set(1,0,0).applyQuaternion(holder.getWorldQuaternion(tq)).applyQuaternion(tail.parent.getWorldQuaternion(tq).invert());
-    tail.quaternion.premultiply(tq.setFromAxisAngle(axis,TAIL_DROP*tailDrop));
+    tail.quaternion.premultiply(tq.setFromAxisAngle(axis,TAIL_DROP*tailDrop));held.touched();
    }
    catnip=T.MathUtils.clamp(catnip+(s.catnip?1:-1)*dt/CATNIP_S,0,1);face.set(catnip*catnip*(3-2*catnip));
-   const closed=r?.kind==='lie'&&r.hammock&&r.weight>.6?shut:open;if(eyes.geometry.attributes.uv!==closed)eyes.geometry.setAttribute('uv',closed);
+   const closed=r?.kind==='lie'&&r.hammock&&r.weight>.6?shut:open;if(eyes.geometry.attributes.uv!==closed){eyes.geometry.setAttribute('uv',closed);merged?.sync();}
    if(s.board>0&&!r){
-    bones.forEach((b,i)=>b.quaternion.slerp(board[i],s.board));
+    bones.forEach((b,i)=>b.quaternion.slerp(board[i],s.board));held.touched();
     figure.asset.root.position.y=T.MathUtils.lerp(figure.asset.root.position.y,figure.restOffset-boardDrop,s.board);
     figure.root.updateMatrixWorld(true);
    }
@@ -164,16 +173,16 @@ export async function createWalker(createDLCat,motion){
    if(hang>0){
     figure.root.updateMatrixWorld(true);const w=hang*hang*(3-2*hang),a=shoulder.quaternion.clone(),b=elbow.quaternion.clone();
     lean.copy(anchor).sub(shoulder.getWorldPosition(new T.Vector3()));
-    aim(shoulder,elbow,lean);aim(elbow,paw,lean);
+    aim(shoulder,elbow,lean);aim(elbow,paw,lean);held.touched();
     shoulder.quaternion.copy(a.slerp(shoulder.quaternion,w));elbow.quaternion.copy(b.slerp(elbow.quaternion,w));
     figure.root.updateMatrixWorld(true);
    }
    if((r?.kind==='lie'||r?.kind==='float')&&r.weight>0){
-    const pose=r.kind==='float'?floating:r.hammock?hammock:lie;bones.forEach((b,i)=>b.quaternion.slerp(pose[i],r.weight));
+    const pose=r.kind==='float'?floating:r.hammock?hammock:lie;bones.forEach((b,i)=>b.quaternion.slerp(pose[i],r.weight));held.touched();
     figure.asset.root.position.y=T.MathUtils.lerp(figure.asset.root.position.y,figure.restOffset,r.weight);
     figure.root.updateMatrixWorld(true);
    }
   },
-  dispose(){suit?.dispose();figure.dispose();holder.removeFromParent();}
+  dispose(){merged?.dispose();suit?.dispose();figure.dispose();holder.removeFromParent();}
  };
 }

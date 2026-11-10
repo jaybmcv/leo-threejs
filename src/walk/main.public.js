@@ -766,7 +766,7 @@ async function connectToClaim(){
 const giveaway=createGiveaway({$,live:()=>live,connect:connectToClaim});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08}});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion,{mergeDraws:true}),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08}});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -968,7 +968,7 @@ renderer.setAnimationLoop(()=>{
  walker.holder.visible=follow.mode!=='first'&&follow.current>.75&&!graffiti?.active;
  capsuleView(!!resting?.stand&&resting.t===1&&follow.mode==='first');
  cull(p);
- remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1],photo:!!booth?.counting},now);
+ remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1],photo:!!booth?.counting,height:renderer.domElement.height},now);
  // Carts others drive go where their drivers sit; ours is where we drove it.
  mct.update(dt,remotes,walker.hipHeight);
  // The lounge's doors open, and the cold room's strip curtain parts, for anyone near them.

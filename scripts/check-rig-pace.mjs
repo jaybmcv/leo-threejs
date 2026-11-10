@@ -44,4 +44,13 @@ pass('unseen, it solves as on a 20 fps machine at any rate, jitter included: no 
  assert.equal(out.length,1);assert(close(out[0].dt,3/60));pass('when he shows, the rig solves at once with all the time gathered while hidden');}
 
 {const pace=rigPace(CAP);assert(close(sum(pace(NaN,false,'a')),0));assert(close(sum(pace(-1,false,'a')),0));pass('a frame time that is not a number, or negative, counts as none');}
+
+// Another visitor small on screen (remotes.js): in view, solved at about a given interval, gathered as when unseen.
+for(const [name,frame,every,share] of [['30 fps at 60 Hz',1/60,1/30,1/2],['about 36 fps at 144 Hz (every fourth frame: it solves early rather than past the interval)',1/144,1/30,1/4],['20 fps at 60 Hz',1/60,.05,1/3],['an interval past the cap is the cap',1/60,.2,1/3]]){
+ const pace=primed(),n=480,out=Array.from({length:n},()=>pace(frame,every,'a')),rest=pace(0,0,'a'),steps=out.flat();
+ assert(steps.every(s=>s.dt<=Math.min(every,CAP)+1e-6),name+': a step over the interval');assert(steps.every(s=>!s.prior),name);
+ assert(close(sum(steps)+sum(rest),n*frame),name+': time lost');assert(Math.abs(out.filter(s=>s.length).length/n-share)<.04,name+': solved '+out.filter(s=>s.length).length+' of '+n);}
+{const pace=primed();assert.equal(pace(1/60,1/30,'a').length,0);const out=pace(1/60,1/30,'b');assert.equal(out.length,2);assert(out[0].prior&&!out[1].prior);
+ assert(run(rigPace(CAP),[[1/60,0],[1/60,0]]).every(s=>s.length===1));pass('paced by an interval: a change of input still solves at once, and an interval of 0 solves every frame');}
+pass('in view and small, it solves at about the interval asked for (30 fps from every second frame at 60 Hz), capped, no time lost');
 console.log(`rig pace: ${checks} checks passed`);
