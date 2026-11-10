@@ -1,0 +1,133 @@
+{
+  "base": "http://127.0.0.1:4290/review",
+  "measuredAt": "2026-11-09T19:53:31.982Z",
+  "rows": [
+    {
+      "id": "hero",
+      "at": [
+        -2,
+        -19.7,
+        -6
+      ],
+      "yaw": 90,
+      "pitch": 6,
+      "draws": {
+        "calls": 558,
+        "triangles": 10760649
+      },
+      "passes": [
+        {
+          "name": "sky",
+          "calls": 4,
+          "triangles": 16130
+        },
+        {
+          "name": "distant",
+          "calls": 0,
+          "triangles": 0
+        },
+        {
+          "name": "main",
+          "calls": 558,
+          "triangles": 10760649
+        }
+      ],
+      "frameMs": 16.600000023841858,
+      "programs": 297,
+      "towerCopy": {
+        "meshes": 21,
+        "triangles": 97398
+      },
+      "camera": [
+        -1.88,
+        -18.072500762939452,
+        -6
+      ]
+    },
+    {
+      "id": "walls-starboard",
+      "at": [
+        -20,
+        -19.7,
+        -22
+      ],
+      "yaw": 0,
+      "pitch": 24,
+      "draws": {
+        "calls": 613,
+        "triangles": 11067498
+      },
+      "passes": [
+        {
+          "name": "sky",
+          "calls": 2,
+          "triangles": 0
+        },
+        {
+          "name": "distant",
+          "calls": 0,
+          "triangles": 0
+        },
+        {
+          "name": "main",
+          "calls": 613,
+          "triangles": 11067498
+        }
+      ],
+      "frameMs": 16.59999990463257,
+      "programs": 297,
+      "towerCopy": {
+        "meshes": 21,
+        "triangles": 97398
+      },
+      "camera": [
+        -20,
+        -18.072500762939452,
+        -21.88
+      ]
+    },
+    {
+      "id": "walls-along",
+      "at": [
+        -100,
+        -19.7,
+        -24
+      ],
+      "yaw": 90,
+      "pitch": 18,
+      "draws": {
+        "calls": 812,
+        "triangles": 10899351
+      },
+      "passes": [
+        {
+          "name": "sky",
+          "calls": 4,
+          "triangles": 16130
+        },
+        {
+          "name": "distant",
+          "calls": 0,
+          "triangles": 0
+        },
+        {
+          "name": "main",
+          "calls": 812,
+          "triangles": 10899351
+        }
+      ],
+      "frameMs": 16.699999928474426,
+      "programs": 297,
+      "towerCopy": {
+        "meshes": 21,
+        "triangles": 97398
+      },
+      "camera": [
+        -99.88,
+        -18.072500762939452,
+        -24
+      ]
+    }
+  ],
+  "errors": []
+}
