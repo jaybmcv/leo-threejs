@@ -26,6 +26,7 @@
 //                                     node scripts/tv-clear.mjs)
 //   LEO_LIVE_TV_MAX_MB=40, LEO_LIVE_TV_MAX_S=120   the largest and longest video the TV takes
 //   LEO_LIVE_RUN_KEEP_S=90            how long a game run is kept for a visitor whose link dropped (0 keeps none)
+//   LEO_LIVE_JOIN_S=30                how long an ask to join someone waits for their answer (joins.mjs)
 //
 // Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
 // server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
@@ -54,6 +55,7 @@ import {createTreasureBoard} from './aquarium-treasure.mjs';
 import {createSharedPanel} from './lever-panel.mjs';
 import {createTransporters} from './transporters.mjs';
 import {createTv} from './tv.mjs';
+import {createJoins} from './joins.mjs';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||1000);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -122,6 +124,9 @@ const panel=createSharedPanel({everyone:()=>visitors,broadcast:msg=>broadcast(ms
 // The Mars Cat Transporters on Deck 1 (transporters.mjs): who drives each, and where each is parked, in memory only.
 const mct=createTransporters({log,broadcast:msg=>broadcast(msg),send:(v,msg)=>send(v.ws,msg)});BUDGETS.mct=[3,8];
 setInterval(()=>mct.tick(),10000);
+// Ask to join (joins.mjs): someone in the Aboard list asked to come to where another visitor stands, who accepts or
+// declines. Requests live in memory only; the place given on accept must be public (policy.canJoin).
+const joins=createJoins({send:(v,msg)=>send(v.ws,msg),find:id=>[...visitors].find(v=>v.ready&&v.id===id)||null,canJoin:policy.canJoin,log,ms:Number(process.env.LEO_LIVE_JOIN_S||30)*1000});BUDGETS.join=[2,8];
 // The Crown lounge TV (tv.mjs): the video everyone sees, uploaded over plain HTTP by a signed-in visitor with a ticket.
 const tv=createTv({send:(v,msg)=>send(v.ws,msg),log,everyone:()=>visitors,allowed:origin=>ORIGINS.some(o=>o.test(origin))});
 
@@ -347,6 +352,7 @@ function leave(v){
  mct.left(v);
  panel.left(v);
  tv.leave(v);
+ joins.left(v);
  if(v.ready){broadcast({m:'gone',id:v.id});countChanged=true;log('aboard',aboard(),'-',v.id);}
 }
 const aboard=()=>{let n=0;for(const v of visitors)if(v.ready)n++;return n;};
@@ -396,6 +402,8 @@ function onMessage(v,data,binary){
   case 'gym':if(allowed(v,'gym')){if(msg.e==='in'&&!policy.canGym(v.pos)){send(v.ws,{m:'gym',e:'cancel'});break;}gym.message(v,msg);}break;
   // The Deck 1 transporters (transporters.mjs): a driver's seat taken, where a cart is, a cart parked.
   case 'mct':if(allowed(v,'mct'))mct.message(v,msg);break;
+  // Ask to join someone from the Aboard list (joins.mjs): ask, cancel, and the answer of the one asked.
+  case 'join':if(allowed(v,'join'))joins.message(v,msg);break;
   // The Crown lounge TV (tv.mjs): what is on it, a ticket to upload a video, and an owner taking it down.
   case 'tv':case 'tv-ticket':case 'tv-down':if(allowed(v,msg.m))tv.message(v,msg);break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
@@ -504,10 +512,11 @@ function pagePoses(r,now){
 }
 function flush(){
  const now=Date.now(),t0=performance.now(),dt=Math.min(.25,(now-last)/1000);last=now;flushes++;
- panel.tick(dt);
+ panel.tick(dt);joins.tick();
  for(const l of lifts){stepLift(l.state,l.stops,dt);liftChanged(l,false);}
- if(countChanged){countChanged=false;const n=aboard();
-  broadcast(n<=NAMES_UP_TO?{m:'aboard',n,names:[...visitors].filter(v=>v.ready).map(v=>v.name||'Voyager '+v.id.slice(-4))}:{m:'aboard',n,names:'heard'});}
+ // The Aboard list: names, and each one's id (for asking to join them), in the same order; above NAMES_UP_TO, the count alone.
+ if(countChanged){countChanged=false;const n=aboard(),here=n<=NAMES_UP_TO?[...visitors].filter(v=>v.ready):null;
+  broadcast(here?{m:'aboard',n,names:here.map(v=>v.name||'Voyager '+v.id.slice(-4)),ids:here.map(v=>v.id)}:{m:'aboard',n,names:'heard'});}
  grid.clear();
  for(const k of active){const key=cellKey(Math.floor(px[k]/CELL_M),Math.floor(py[k]/NEAR_DY),Math.floor(pz[k]/CELL_M)),here=grid.get(key);if(here)here.push(k);else grid.set(key,[k]);}
  for(const r of visitors){

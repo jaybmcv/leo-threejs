@@ -153,4 +153,5 @@ const UNSEEN=new RegExp('[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u
 // visitor is riding the longboard down (walk/glide.js). 8: a pose says where its visitor's grapple line has bitten
 // (walk/grapple.js).
 // 9: a pose can sit in a Keel Club tube (rest 'tube'), and Keel Club water cannon shots are shared ('cannon').
-export const PROTOCOL=9;
+// 10: ask to join someone from the Aboard list ('join', server/joins.mjs); the Aboard list says each visitor's id.
+export const PROTOCOL=10;

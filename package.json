@@ -34,6 +34,7 @@
     "check:call-lights": "node scripts/check-call-lights.mjs",
     "check:walk-start": "node scripts/check-walk-start.mjs",
     "check:public-area": "node scripts/check-public-area.mjs",
+    "check:joins": "node scripts/check-joins.mjs",
     "check:band-merge-sources": "node scripts/check-band-merge-sources.mjs",
     "check:atrium-proxy-fade": "node scripts/check-atrium-proxy-fade.mjs",
     "check:design": "node scripts/check-selected-interiors.mjs",
