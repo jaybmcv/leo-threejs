@@ -42,29 +42,77 @@ export function eulerOnDemand(o: THREE.Object3D): void {
   });
 }
 
+// (Leo) An object's times, kept on the object itself under its LazyWorld's own
+// key and valid only in the epoch they were written in: settle() starts a new
+// epoch instead of clearing maps, so a read costs two property loads per
+// ancestor rather than two map lookups.
+type Stamp = { madeEpoch: number; made: number; changedEpoch: number; changed: number };
+
 export class LazyWorld {
   private clock = 0;
   // when the whole tree was last current, when an object's matrixWorld was
-  // made since, and when its own transform changed since
+  // made since, and when its own transform changed since (Stamp)
   private settledAt = 0;
-  private readonly madeAt = new Map<THREE.Object3D, number>();
-  private readonly changedAt = new Map<THREE.Object3D, number>();
+  private epoch = 1;
+  private readonly key = Symbol("lazyWorld");
+  // the objects edited since the last settle, in the order first edited
+  private readonly editedList: THREE.Object3D[] = [];
+
+  // after invalidate(): nothing under `top` is current until read
+  private stale = false;
 
   // `top`'s own matrixWorld is the caller's to keep current: the solver never
   // edits it, and refreshes it before solving (the avatar may have moved)
   constructor(private readonly top: THREE.Object3D) {}
 
+  private stamp(o: THREE.Object3D): Stamp {
+    const held = o as unknown as Record<symbol, Stamp | undefined>;
+    let s = held[this.key];
+    if (!s) {
+      s = { madeEpoch: 0, made: 0, changedEpoch: 0, changed: 0 };
+      held[this.key] = s;
+    }
+    return s;
+  }
+
   // Every matrix under `top` is current: the caller has just refreshed the
   // whole tree (updateMatrixWorld(true)).
   settle(): void {
-    this.madeAt.clear();
-    this.changedAt.clear();
+    this.epoch++;
+    this.editedList.length = 0;
     this.settledAt = ++this.clock;
+    this.stale = false;
+  }
+
+  // Every transform under `top` may have changed (a solve puts each bone back
+  // to its rest pose): nothing below is current until read, and a read remakes
+  // its path, as an edit's would be. A solve reads about half the skeleton
+  // before it next needs all of it, and never the meshes, so this replaces
+  // refreshing the whole tree up front.
+  invalidate(): void {
+    this.settle();
+    this.stale = true;
+  }
+
+  // Only these subtrees made current (their ancestors first), then the tree
+  // taken as current: for a caller that reads nothing outside them before its
+  // next full refresh (a solve's probes read bones, not meshes).
+  refresh(roots: readonly THREE.Object3D[]): void {
+    for (const o of roots) {
+      if (o.parent) this.current(o.parent);
+      o.updateWorldMatrix(false, true);
+    }
+    this.settle();
   }
 
   // `o`'s position, quaternion or scale has changed.
   edited(o: THREE.Object3D): void {
-    this.changedAt.set(o, ++this.clock);
+    const s = this.stamp(o);
+    if (s.changedEpoch !== this.epoch) {
+      s.changedEpoch = this.epoch;
+      this.editedList.push(o);
+    }
+    s.changed = ++this.clock;
   }
 
   // `o`'s matrixWorld, as the transforms stand now.
@@ -76,7 +124,12 @@ export class LazyWorld {
   // Everything edited since the last settle, and all below it, made current
   // once: for readers of every bone (a skeleton's update, a probe).
   flush(): void {
-    const edited = [...this.changedAt.keys()];
+    if (this.stale) {
+      for (const o of this.top.children) o.updateWorldMatrix(false, true);
+      this.settle();
+      return;
+    }
+    const edited = this.editedList.slice();
     const set = new Set(edited);
     for (const o of edited) {
       // the topmost edits only: each one's subtree carries the ones below
@@ -105,13 +158,17 @@ export class LazyWorld {
       return ++this.clock;
     }
     const parentAt = this.current(parent);
-    const madeAt = this.madeAt.get(o) ?? this.settledAt;
-    const changedAt = this.changedAt.get(o) ?? 0;
+    // stale, an object not yet remade is older than anything, and its own
+    // transform counts as changed
+    const s = this.stamp(o);
+    const madeAt = s.madeEpoch === this.epoch ? s.made : (this.stale ? -1 : this.settledAt);
+    const changedAt = s.changedEpoch === this.epoch ? s.changed : (this.stale ? this.settledAt : 0);
     if (madeAt >= parentAt && madeAt >= changedAt) return madeAt;
     if (changedAt > madeAt && o.matrixAutoUpdate) o.updateMatrix();
     o.matrixWorld.multiplyMatrices(parent.matrixWorld, o.matrix);
     const now = ++this.clock;
-    this.madeAt.set(o, now);
+    s.made = now;
+    s.madeEpoch = this.epoch;
     return now;
   }
 }

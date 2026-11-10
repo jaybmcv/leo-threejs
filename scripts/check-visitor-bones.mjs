@@ -118,6 +118,6 @@ for(const [name,frames,step] of phases){
  const a=await cost(A),b=await cost(B);
  assert.equal(a.solves,b.solves);assert.ok(a.solves>=19&&a.solves<=21,`solves ${a.solves}`);
  assert.equal(a.scene,0,`cached scene pass remade the figure ${a.scene} times`);assert.equal(b.scene,60);
- assert.equal(a.inside,0);assert.equal(a.drawing,a.solves);assert.equal(b.inside,2*b.solves);assert.equal(b.drawing,60);
+ assert.equal(a.inside,0);assert.equal(a.drawing,a.solves);assert.equal(b.inside,b.solves,'the rig rebuilds the texture once a solve, in its final refresh');assert.equal(b.drawing,60);
  pass(`standing still over 60 frames at 20 fps (${a.solves} solves): the scene pass remakes the figure 0 times (was 60), the bone texture is rebuilt ${a.drawing} times (was ${b.inside+b.drawing})`);}
 console.log(`visitor bones: ${passed} checks passed`);
