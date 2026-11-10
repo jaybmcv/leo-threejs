@@ -40,6 +40,8 @@
     "check:design": "node scripts/check-selected-interiors.mjs",
     "live": "node server/leo-live.mjs",
     "check:live": "node scripts/check-live.mjs",
+    "check:live-crowd": "node scripts/check-live-crowd.mjs",
+    "load:live": "node scripts/live-load.mjs",
     "check:invasion": "node scripts/check-invasion.mjs",
     "check:lounge": "node --max-old-space-size=8000 scripts/check-lounge.mjs",
     "check:startup": "node scripts/check-startup-v2.mjs",

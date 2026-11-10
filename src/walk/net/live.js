@@ -90,7 +90,9 @@ export function connectLive(url,on,opts={}){
     // A Keel Club water cannon shot by someone else (keel-club.js fire): cannon i, the jet's seed and the shot's id.
     case 'cannon':if(Number.isInteger(msg.i)&&Number.isInteger(msg.seed)&&typeof msg.id==='string'&&typeof msg.shot==='string')on.cannon?.(msg.id,msg.i,msg.seed,msg.shot);break;
     // Who is aboard: names, and each one's id in the same order (for asking to join them), or null for an id not given.
-    case 'aboard':{const names=Array.isArray(msg.names)?msg.names.filter(n=>typeof n==='string'):null;
+    // Above server/live-core.mjs's NAMES_UP_TO the count comes alone: 'heard', the names being those heard with the poses.
+    case 'aboard':{if(msg.names==='heard'){on.aboard?.(msg.n,'heard',null);break;}
+     const names=Array.isArray(msg.names)?msg.names.filter(n=>typeof n==='string'):null;
      on.aboard?.(msg.n,names,names&&Array.isArray(msg.ids)&&msg.ids.length===names.length?msg.ids.map(i=>typeof i==='string'?i:null):null);break;}
     // Asking to join someone, and being asked (walk/join.js, server/joins.mjs).
     case 'join':if(typeof msg.e==='string')on.join?.(msg);break;

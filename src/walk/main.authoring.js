@@ -47,7 +47,7 @@ import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
 import {buildSteps,cabinPlacements,outsideOnly} from '../v2/world.authoring.js';
 import {Colliders,BODY} from './collision.authoring.js';
 import {STATIC_LIFT_PARTS,LIFTS} from './lifts.authoring.js';
-import {KEEL,RIVER,createTubeMesh,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock} from './keel-club.authoring.js';
+import {KEEL,RIVER,createTubeMesh,tubeBoard,tubeStep,tubeKick,tubeSeat,TUBE_SIT,tubeDock} from './keel-club.authoring.js';
 import {Controller,GLIDE,HOOK} from './controller.authoring.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
@@ -647,7 +647,8 @@ hubLink.ready(search=>{const spot=readSpot(search);if(!spot)return false;hubPane
 // A tester (this browser holds a tester invite) wears the captain's hat (hat.js).
 if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 // Others aboard: their poses in, ours out, the lifts as the server runs them.
-let remotes=null,marks=null,aboard=0,aboardNames=undefined,aboardIds=null,join=null,liveStatus='',wasInArena=false;
+// (listedAt: when the list of who is aboard was last made: showAboardList)
+let remotes=null,marks=null,aboard=0,aboardNames=undefined,aboardIds=null,join=null,listedAt=0,liveStatus='',wasInArena=false;
 // The giveaway card at Mudwater Arena's counter, which claims through Leo live.
 // Claiming takes a Discord account: its small window leaves them standing at the counter, and they carry on under their
 // Discord account from there. Not offered inside Otherside, where pop-ups can't open (mudwater-giveaway.js).
@@ -664,7 +665,7 @@ async function connectToClaim(){
 const giveaway=createGiveaway({$,live:()=>live,connect:connectToClaim});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08}});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08,recline:TUBE_SIT.recline}});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -676,7 +677,7 @@ if(LIVE_URL){
    if(!$('mudwater-sheet').hidden)live.giveaway();},
   // A line of chat: in the corner, and over the speaker's head.
   chat:line=>{chat.add(line);if(line.id!==live.id&&!chat.quiet)remotes.say(line.id,line.text);},said:r=>chat.refused(r.why),
-  poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();mct.offline();join?.reset();},
+  poses:list=>{remotes.onPoses(list);if(aboardNames==='heard'&&performance.now()-listedAt>1000)showAboardList();},gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();mct.offline();join?.reset();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),
   // Someone else's Keel Club water cannon shot: the same jet here, from its seed.
@@ -1060,8 +1061,10 @@ function boardTube(dock){
  resting={spot:{tube:st,dock,point:new T.Vector3(seat.x,seat.y,seat.z),height:seat.y},lie:false,stand:false,from:{pos:controller.position.clone(),heading},to:{pos:new T.Vector3(),yaw:seat.yaw},t:0,phase:'in',view:new T.Vector3()};
  followTube(resting);
 }
-function followTube(r){const seat=tubeSeat(r.spot.tube);
- r.to.pos.set(seat.x,seat.y+.06-walker.hipHeight,seat.z);r.to.yaw=seat.yaw;r.view.set(seat.x,seat.y-.55,seat.z);
+// Sat down into the ring (keel-club.js TUBE_SIT), facing downstream: restPose tips the sitting figure back about its
+// hips, so the walker's origin sits ahead of and below the hips by the recline.
+function followTube(r){const seat=tubeSeat(r.spot.tube),h=walker.hipHeight,b=TUBE_SIT.recline,ahead=h*Math.sin(b);
+ r.to.pos.set(seat.x+Math.sin(seat.yaw)*ahead,KEEL.floor-RIVER.drop+TUBE_SIT.hip-h*Math.cos(b),seat.z+Math.cos(seat.yaw)*ahead);r.to.yaw=seat.yaw;r.view.set(seat.x,seat.y-.55,seat.z);
  if(r.phase==='in')controller.position.set(seat.x,seat.y,seat.z);}
 // "Splashed by ..." when a water cannon's shot hits our tube: at most every 3 s.
 let splashAt=0,splashHide=0;
@@ -1073,7 +1076,8 @@ function restPose(dt){
  const r=resting;r.t=T.MathUtils.clamp(r.t+(r.phase==='in'?1:-1)*dt/.7,0,1);
  const e=r.t*r.t*(3-2*r.t),h=walker.holder;
  h.position.lerpVectors(r.from.pos,r.to.pos,e);h.rotation.set(0,lerpAngle(r.from.heading,r.to.yaw,Math.min(1,e*1.6)),0);
- walker.body.rotation.set(r.lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.t,.25,1):0,0,0);
+ // In a Keel Club tube the sitting figure leans back into the ring (TUBE_SIT).
+ walker.body.rotation.set(r.lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.t,.25,1):r.spot.tube?-TUBE_SIT.recline*T.MathUtils.smoothstep(r.t,.25,1):0,0,0);
  // In a hammock (lounge.js) the body swings with it.
  const swing=r.spot.hammock&&lounge?.swingOf(r.spot.hammock);
  if(swing){const q=new T.Quaternion().setFromAxisAngle(swing.axis,swing.angle*e);h.position.sub(swing.pivot).applyQuaternion(q).add(swing.pivot);h.quaternion.premultiply(q);}
@@ -1122,16 +1126,22 @@ function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(collide
 // Keys held when a panel opened would otherwise keep walking after it closes.
 function closePanels(){furSettings?.close();emergencyDrill?.close();controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
 // The list is a current server snapshot, including visitors who have not sent a pose yet.
+// The list of who is aboard, while its sheet is open.
 function showAboardList(){
+ if($('aboard-sheet').hidden)return;listedAt=performance.now();
  const list=$('aboard-list'),note=$('aboard-note');list.replaceChildren();
  note.textContent=liveStatus!=='live'?'Not connected to Leo live.':aboardNames===undefined?'Waiting for the visitor list...':aboardNames===null?'Visitor list unavailable on this connection.':'';
- // Each name but this visitor's own offers Ask to join (join.js), when the server says who is who.
- if(liveStatus==='live'&&aboardNames)aboardNames.forEach((name,i)=>{const li=document.createElement('li'),id=aboardIds?.[i];
-  if(!id||id===live.id){li.textContent=id?name+' (you)':name;list.appendChild(li);return;}
+ // With many aboard the server sends the count alone ('heard': net/live.js): the names are this page's own (the
+ // server's for a verified visitor who has not typed one, else the one this page last sent) and those it hears with
+ // the poses, each with their id. Each name but this visitor's own offers Ask to join (join.js), when its id is known.
+ const entries=aboardNames==='heard'?[{name:(live?.you?.verified&&!live.you.typed?live.you.name:savedName())||me.name||'Voyager',id:live?.id||null},...[...(remotes?.remotes.entries()??[])].map(([id,r])=>({name:r.name||'Voyager',id}))]
+  :aboardNames?.map((name,i)=>({name,id:aboardIds?.[i]||null}));
+ if(liveStatus==='live'&&entries)for(const {name,id} of entries){const li=document.createElement('li');
+  if(!id||id===live.id){li.textContent=id?name+' (you)':name;list.appendChild(li);continue;}
   const b=Object.assign(document.createElement('button'),{type:'button',className:'join',textContent:join?.asking===id?'Asked':'Ask to join',disabled:join?.asking===id});
-  b.onclick=()=>{closePanels();join?.ask(id,name);};li.append(Object.assign(document.createElement('span'),{className:'who',textContent:name}),b);list.appendChild(li);});
+  b.onclick=()=>{closePanels();join?.ask(id,name);};li.append(Object.assign(document.createElement('span'),{className:'who',textContent:name}),b);list.appendChild(li);}
 }
-$('aboard').addEventListener('click',()=>{if(!$('aboard-sheet').hidden){closePanels();return;}closePanels();showAboardList();$('aboard-sheet').hidden=false;input.enabled=false;input.down.clear();$('aboard-close').focus();});
+$('aboard').addEventListener('click',()=>{if(!$('aboard-sheet').hidden){closePanels();return;}closePanels();$('aboard-sheet').hidden=false;showAboardList();input.enabled=false;input.down.clear();$('aboard-close').focus();});
 $('aboard-name').addEventListener('click',openName);
 // The name others see over your head.
 function openName(){closePanels();

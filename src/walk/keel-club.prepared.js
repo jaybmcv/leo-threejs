@@ -107,6 +107,11 @@ export function riverNearest(x,z){const {pts,len}=RIVER_PATH;let best=0,bd=Infin
 // adds `kick` (capped at `kickMax`), decaying with time constant `kickDecay`; speed is capped at `max`. It stays
 // `radius` clear of both banks; a rider sits `seat` above the water. Docks: `reach` to take a tube, `capture` (along
 // the loop) to be let out at one.
+// Riding a tube (Jay, 2026-11-10): sat down into the ring like a low lawn chair, facing downstream, the seat sunk into
+// the hole, the back leaning towards the rear rim and the knees over the front one. `recline` tips the sitting figure
+// back about its hips (radians); `hip` is how high the hips sit over the water (the ring's top is .32 up:
+// createTubeMesh's torus floats .08 over the water).
+export const TUBE_SIT={recline:.7,hip:.14};
 export const TUBE={current:.9,paddle:.8,brake:.6,steer:.7,ease:.2,kick:.7,kickMax:1,kickDecay:.4,max:2.2,radius:TUBE_RING,seat:.25,reach:2.2,capture:2.5};
 export const TUBE_RANGE=RIVER.width/2-TUBE.radius;
 // Tube docks on the centre island's bank, four a side, clear of the bridges: `at` is where you stand to take a tube
