@@ -8,7 +8,10 @@ crouch, slide, emotes and seated poses. They are copied unchanged except:
 - the art-style imports point at `style.ts` (Leo has only the plain style);
 - `cosmoEmotes.ts` fetches its clips from `globalThis.LEO_COSMO_EMOTES` when set;
 - the two loaders at the end of `dlCatFigure.ts` (which fetch Voyager's Reach's own copy of the rig) are left out: Leo
-  builds the figure from the Cosmo bundle (`../avatar.js`).
+  builds the figure from the Cosmo bundle (`../avatar.js`);
+- `ecctrlLocomotion.ts` `apply` returns before posing the donor when its weight is zero (standing, crouched, in the
+  air): nothing reads that pose, and the flight it gave was multiplied by the zero weight. Every other visitor standing
+  in view solved it (`scripts/check-visitor-bones.mjs` drives the real rig through it).
 
 `dlCatFigure.ts` also carries Voyager's Reach's later tail fix (commit 959ac8ff, 2026-10-22): the reference run keeps
 the tail's upright resting curl and the spring adds sway and inertia after it, and in the air the tail trails the body's
