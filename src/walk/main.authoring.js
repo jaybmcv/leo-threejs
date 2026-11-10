@@ -640,7 +640,8 @@ hubLink.ready(search=>{const spot=readSpot(search);if(!spot)return false;hubPane
 // A tester (this browser holds a tester invite) wears the captain's hat (hat.js).
 if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 // Others aboard: their poses in, ours out, the lifts as the server runs them.
-let remotes=null,marks=null,aboard=0,aboardNames=undefined,liveStatus='',wasInArena=false;
+// (listedAt: when the list of who is aboard was last made: showAboardList)
+let remotes=null,marks=null,aboard=0,aboardNames=undefined,listedAt=0,liveStatus='',wasInArena=false;
 // The giveaway card at Mudwater Arena's counter, which claims through Leo live.
 // Claiming takes a Discord account: its small window leaves them standing at the counter, and they carry on under their
 // Discord account from there. Not offered inside Otherside, where pop-ups can't open (mudwater-giveaway.js).
@@ -669,7 +670,7 @@ if(LIVE_URL){
    if(!$('mudwater-sheet').hidden)live.giveaway();},
   // A line of chat: in the corner, and over the speaker's head.
   chat:line=>{chat.add(line);if(line.id!==live.id&&!chat.quiet)remotes.say(line.id,line.text);},said:r=>chat.refused(r.why),
-  poses:list=>remotes.onPoses(list),gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();mct.offline();},
+  poses:list=>{remotes.onPoses(list);if(aboardNames==='heard'&&performance.now()-listedAt>1000)showAboardList();},gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();mct.offline();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),
   // Someone else's Keel Club water cannon shot: the same jet here, from its seed.
@@ -1088,12 +1089,18 @@ function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(collide
 // Keys held when a panel opened would otherwise keep walking after it closes.
 function closePanels(){furSettings?.close();emergencyDrill?.close();controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
 // The list is a current server snapshot, including visitors who have not sent a pose yet.
+// The list of who is aboard, while its sheet is open.
 function showAboardList(){
+ if($('aboard-sheet').hidden)return;listedAt=performance.now();
  const list=$('aboard-list'),note=$('aboard-note');list.replaceChildren();
  note.textContent=liveStatus!=='live'?'Not connected to Leo live.':aboardNames===undefined?'Waiting for the visitor list...':aboardNames===null?'Visitor list unavailable on this connection.':'';
- if(liveStatus==='live'&&aboardNames)for(const name of aboardNames){const li=document.createElement('li');li.textContent=name;list.appendChild(li);}
+ // With many aboard the server sends the count alone ('heard': net/live.js): the names are this page's own (the
+ // server's for a verified visitor who has not typed one, else the one this page last sent) and those it hears with
+ // the poses.
+ const names=aboardNames==='heard'?[(live?.you?.verified&&!live.you.typed?live.you.name:savedName())||me.name||'Voyager',...[...(remotes?.remotes.values()??[])].map(r=>r.name||'Voyager')]:aboardNames;
+ if(liveStatus==='live'&&names)for(const name of names){const li=document.createElement('li');li.textContent=name;list.appendChild(li);}
 }
-$('aboard').addEventListener('click',()=>{if(!$('aboard-sheet').hidden){closePanels();return;}closePanels();showAboardList();$('aboard-sheet').hidden=false;input.enabled=false;input.down.clear();$('aboard-close').focus();});
+$('aboard').addEventListener('click',()=>{if(!$('aboard-sheet').hidden){closePanels();return;}closePanels();$('aboard-sheet').hidden=false;showAboardList();input.enabled=false;input.down.clear();$('aboard-close').focus();});
 $('aboard-name').addEventListener('click',openName);
 // The name others see over your head.
 function openName(){closePanels();

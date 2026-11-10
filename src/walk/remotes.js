@@ -8,13 +8,13 @@ import {createCrowdDraw} from './crowd-draw.js';
 
 // Other visitors aboard, drawn as Cosmo (avatar.js) and moved by the poses Leo live passes on (net/live.js). The
 // easing follows Voyager's Reach's remote players (packages/client/src/scene/remotePlayers.ts): a body eases toward its
-// latest pose; poses arriving at an even, sparse rate (the server's twice a second for someone far off) are crossed at
-// an even pace rather than chased; a stride is worked out from successive positions and dies away when the poses stop
+// latest pose; poses arriving at an even, sparse rate (server/live-core.mjs: every 200 or 400 ms some way off, every
+// second farther, and slower still for a page in a dense crowd, to 4 s) are crossed at an even pace rather than chased; a stride is worked out from successive positions and dies away when the poses stop
 // moving; someone not heard from for 12 s is gone.
 //
 // Only the nearest MAX_RIGS visitors on the decks being drawn get a body, from a small pool that is kept and reused. A
 // body standing in a lift car stands on its floor as this page draws the car, so a rider never sinks or floats.
-const STALE_MS=12000,EASE_PER_S=10,GLIDE_MIN_MS=200,GLIDE_MAX_MS=700,STOPPED_AFTER_MS=185,STRIDE_HALF_LIFE_MS=100;
+const STALE_MS=12000,EASE_PER_S=10,GLIDE_MIN_MS=200,GLIDE_MAX_MS=4500,STOPPED_AFTER_MS=185,STRIDE_HALF_LIFE_MS=100;
 const RUN_ON_BELT=5,HAT_M=35,MAX_RIGS=24,LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12,SAY_MS=8000;
 // Each body's rig solve (avatar.js) costs about 0.35 ms a frame: a body outside the camera's view (a sphere of IN_VIEW_M
 // round its middle, enough for one lying down or on a board) solves as a 20 fps machine would (avatar.js unseen,

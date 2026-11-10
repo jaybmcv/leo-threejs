@@ -55,12 +55,31 @@ import {createSharedPanel} from './lever-panel.mjs';
 import {createTransporters} from './transporters.mjs';
 import {createTv} from './tv.mjs';
 
-const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||150);
+const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||1000);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
  .map(o=>new RegExp('^'+o.replace(/[.+?^${}()|[\]\\]/g,'\\$&').replace(/:\*$/,'(:\\d+)?')+'$'));
-const FLUSH_MS=50,FAR_MS=500,KEEPALIVE_MS=2000,HELLO_MS=5000,PING_MS=25000,SLOW_BYTES=256*1024,SLOW_MS=5000;
-// Near: on the same or the next deck and within 64 m, every flush; anyone else twice a second.
-const NEAR_DY=9,NEAR_M=64;
+const FLUSH_MS=50,KEEPALIVE_MS=2000,HELLO_MS=5000,PING_MS=25000,SLOW_BYTES=256*1024,SLOW_MS=5000;
+// How often a page hears of another visitor, by how far apart they are on the same or the next deck (NEAR_DY): the
+// nearest NEAR_MOST within RINGS[0][0] m (as many as a page gives a body: walk/remotes.js MAX_RIGS) every RINGS[0][1] ms,
+// which is each pose they send; the rest about every RINGS[i][1] ms within RINGS[i][0] m; and anyone farther or on
+// another deck every FAR_MS. A page is sent a frame every PAGE_MS (the pages take turns, a share at each flush: a send
+// is the server's dearest work) of at most PAGE_RECORDS poses (LEO_LIVE_PAGE_RECORDS, but never fewer than the nearest
+// and the long unheard need, below; a pose is about 15 bytes, so 80 is at most about 12 KB a second): first the nearest
+// (they are few) and anyone long unheard (below); then changes of state (stance, emote, jump, rest, board, ball, hook, fur)
+// from anyone at any distance, up to half of what is left, so a crowd sees a move at once (a Simon Says round); then
+// the other rings and the far their SHARES of the rest; then what is left, nearest first. When a crowd wants more, that
+// page's rates past the nearest stretch together (its pace, to PACE_MOST; the far's to FAR_PACE_MOST) and ease back as
+// it thins. (Pages glide over the gaps and let a visitor go after 12 s unheard: walk/remotes.js.) A page's neighbours
+// come from a grid of CELL_M cells every NEIGHBOURS_MS, and each ring, and everyone else, is swept once a period, a
+// slice a frame: a flush costs about what it sends, not a pass over every pair. Anyone a page has not been sent for
+// QUIET_MOST (one walking to and fro across a ring's edge can miss both rings' turns, or a crowd's changes of state
+// crowd them out) goes next after the nearest, found by a scan of everyone every QUIET_SCAN_MS: nobody goes unheard for
+// much more than the two together (pages let a visitor go after 12 s).
+const NEAR_DY=9,RINGS=[[16,100],[32,200],[64,400]],NEAR_MOST=24,FAR_MS=1000,PAGE_MS=100,PAGE_TURNS=Math.max(1,Math.round(PAGE_MS/FLUSH_MS)),
+ SHARES=[.45,.25,.3],PACE_MOST=8,FAR_PACE_MOST=4,QUIET_MOST=3000,QUIET_SCAN_MS=2000,NEIGHBOURS_MS=250,CELL_M=32,
+ PAGE_RECORDS=Math.max(NEAR_MOST+Math.ceil(1.25*MAX*PAGE_MS/QUIET_MOST),Math.floor(Number(process.env.LEO_LIVE_PAGE_RECORDS)||80));
+// Above this many aboard, the aboard count comes without the names: pages list the names they hear with the poses.
+const NAMES_UP_TO=150;
 // The ship's bounds, generously: a pose outside them is not a pose from this page.
 const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
 // A pass up to REMEMBER_S past its expiry is a remembered visitor (the page kept it; Creamery's sign-in ran out): their
@@ -73,6 +92,22 @@ const cannonShots=[],CANNON_GAP=1400;
 
 const visitors=new Set();
 const slots=new Map();let nextSlot=1;
+// Each visitor aboard has a seat k: what the flush reads of them is kept in arrays by seat, and what each page was last
+// sent of them (seen*) too, so a flush is arithmetic over arrays, not a map per pair. gen changes when a seat changes
+// hands, so pages hear of its new visitor as someone new.
+const SEATS=MAX+1,gen=new Int32Array(SEATS).fill(1),ver=new Int32Array(SEATS),stateVer=new Int32Array(SEATS),nameVer=new Int32Array(SEATS),
+ px=new Float64Array(SEATS),py=new Float64Array(SEATS),pz=new Float64Array(SEATS),recs=new Array(SEATS).fill(null),seated=new Array(SEATS).fill(null);
+// (urgent: the seats whose state changed since the last flush; urgents: those of the last PAGE_TURNS flushes, newest
+// first, so a page sent a frame at one flush in PAGE_TURNS hears of them all)
+const freeSeats=[],active=[],urgents=Array.from({length:PAGE_TURNS},()=>[]);let urgent=urgents[0];for(let k=SEATS-1;k>=0;k--)freeSeats.push(k);
+function seat(v){const k=freeSeats.pop();v.k=k;seated[k]=v;nameVer[k]=v.nameVersion||0;
+ v.seenGen=new Int32Array(SEATS);v.seenVer=new Int32Array(SEATS);v.seenState=new Int32Array(SEATS);v.seenName=new Int32Array(SEATS);v.seenAt=new Float64Array(SEATS);
+ // Its neighbours by ring (seats) and which ring each seat is in (-1: none); for each ring and the far (the last), where
+ // its sweep is and how many it owes; its pace.
+ v.rings=RINGS.map(()=>[]);v.ringOf=new Int8Array(SEATS).fill(-1);v.at=new Int32Array(RINGS.length+1);v.owed=new Float64Array(RINGS.length+1);
+ v.pace=1;v.ringsAt=0;v.sweptAt=Date.now();v.quietAt=0;v.quietOwed=0;}
+function unseat(v){const k=v.k;if(k===undefined)return;const i=active.indexOf(k);if(i>=0){active[i]=active[active.length-1];active.pop();}
+ gen[k]++;recs[k]=null;seated[k]=null;v.k=undefined;v.active=false;freeSeats.push(k);}
 const lifts=LIFTS.map(spec=>({spec,stops:spec.stops,state:liftState(spec),sent:''}));
 const log=(...a)=>console.log(new Date().toISOString(),...a);
 const arena=createArena({log});
@@ -113,7 +148,13 @@ function readPose(v,p){
   jumpS:finite(p.js,-1,60)?p.js:-1,rise:finite(p.r,-100,100)?p.r:0,emote:typeof p.e==='string'&&/^[a-z0-9_]{1,32}$/.test(p.e)?p.e:null,rest:p.rest==='sit'||p.rest==='lie'||p.rest==='tube'?p.rest:null,
   playing:p.pl===true,ball:p.b===true,glide:p.gl===true,hook:hookOf(p.hk,[x,y,z]),fur:cleanFur(p.f)};
  try{v.record=encodeRecord(v.slot,pose);}catch{return false;}
- v.pos=pose.pos;v.playing=pose.playing;v.version++;treasure.observe(v);panel.observe(v);return true;
+ v.pos=pose.pos;v.playing=pose.playing;v.version++;
+ // (a pose can still come from a visitor who has left, their socket closing: they have no seat)
+ const k=v.k;if(k===undefined)return false;px[k]=x;py[k]=y;pz[k]=z;recs[k]=v.record;ver[k]++;
+ const state=`${pose.stance}|${pose.emote}|${pose.rest}|${pose.jumpCount}|${pose.playing}|${pose.ball}|${pose.glide}|${!!pose.hook}|${pose.fur}`;
+ if(state!==v.state){v.state=state;stateVer[k]++;urgent.push(k);}
+ if(!v.active){v.active=true;active.push(k);}
+ treasure.observe(v);panel.observe(v);return true;
 }
 
 // Alien Cat Invasion's leaderboard (walk/invasion): one best score per Discord-verified player, kept in a file beside
@@ -254,6 +295,8 @@ async function hello(v,msg){
  const id=await actorIdOf(typeof msg.key==='string'?msg.key:'');
  if(!id){v.ws.close(4001,'no key');return;}
  const who=msg.pass?await verifyPass(msg.pass,PASS).catch(()=>null):glyphVisitor(msg.glyph)||(msg.otherside===true?typedVisitor(id,msg.name):null);
+ // (the socket may have closed while the key or the pass was checked: then the visitor has left, and takes no seat)
+ if(!visitors.has(v))return;
  // A pass not taken: 'bad' when it was checked and failed, 'unchecked' when Creamery's keys could not be had (it has
  // not answered since this server started, or not for a key this server has not seen). The page forgets a bad pass
  // and keeps one that was only unchecked (net/live.js), so a restart while Creamery is away costs nobody their login.
@@ -261,9 +304,9 @@ async function hello(v,msg){
  // One body per visitor: the same browser in a second tab, or the same Discord account elsewhere, takes over.
  for(const o of visitors)if(o!==v&&(o.id===id||(who&&o.discord?.discordId===who.discordId))){send(o.ws,{m:'replaced'});o.ws.close(4002,'replaced');leave(o);}
  if([...visitors].filter(o=>o.ready).length>=MAX){send(v.ws,{m:'full'});v.ws.close(4003,'full');return;}
- v.slot=takeSlot();if(!v.slot){v.ws.close(4003,'full');return;}
+ v.slot=takeSlot();if(!v.slot||!freeSeats.length){v.ws.close(4003,'full');return;}
  // A tester (the page holds a tester invite) wears the captain's hat. Taken on the page's word: it is a hat.
- Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);
+ Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);seat(v);
  send(v.ws,{m:'welcome',...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{}),id,aboard:aboard(),you:{name:v.name,verified:!!who,typed:!!who?.typed,...(pass?{pass}:{})},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state(),panel:panel.state()});
  countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`${who.glyph?'':'discord:'}${who.discordId}${who.lapsed?' (remembered)':''}`:pass==='unchecked'?'(pass not checked: no keys from Creamery)':pass?'(pass refused)':'');
  if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
@@ -297,6 +340,7 @@ function returnRuns(v){
 function leave(v){
  if(!visitors.delete(v))return;
  if(v.slot)slots.delete(v.slot);
+ unseat(v);
  keepRuns(v);
  graffiti.leave(v);
  gym.left(v);
@@ -316,7 +360,7 @@ function onMessage(v,data,binary){
  switch(msg.m){
   case 'pose':if(allowed(v,'pose'))readPose(v,msg.p);break;
   // A verified visitor's name is their Discord name.
-  case 'name':if(allowed(v,'name')&&(!v.discord||v.discord.typed)){v.name=cleanName(msg.name)||(v.discord?v.discord.name:null);v.nameVersion=(v.nameVersion||0)+1;countChanged=true;}break;
+  case 'name':if(allowed(v,'name')&&(!v.discord||v.discord.typed)){v.name=cleanName(msg.name)||(v.discord?v.discord.name:null);v.nameVersion=(v.nameVersion||0)+1;if(v.k!==undefined)nameVer[v.k]=v.nameVersion;countChanged=true;}break;
   case 'call':{
    if(!allowed(v,'call'))break;
    const l=lifts.find(l=>l.spec.id===msg.lift);if(!l||!Number.isInteger(msg.stop)||msg.stop<0||msg.stop>=l.stops.length||!policy.canCall(v.pos,l.spec,msg.stop))break;
@@ -378,29 +422,107 @@ function liftChanged(l,force){
  l.sent=key;l.sentAt=now;broadcast({m:'lift',id:l.spec.id,s:liftWire(s)});
 }
 
-// Every flush: step the lifts, then send each visitor the poses due to them.
-let last=Date.now();
+// Every flush: step the lifts, then send the visitors whose turn it is the poses due to them.
+// (flushMs: a running mean of what a flush takes; peaks: the most in each of the last ten seconds)
+let last=Date.now(),flushes=0,flushMs=0,peakSecond=0;const peaks=new Float64Array(10);
+// Those with a pose by grid cell (CELL_M across, NEAR_DY high), made again each flush.
+const grid=new Map(),cellKey=(cx,cy,cz)=>((cx+512)*1024+cz+512)*256+cy+128;
+const RING2=RINGS.map(([m])=>m*m),REACH=Math.ceil(RINGS.at(-1)[0]/CELL_M),SWEEPS=RINGS.length+1,periods=new Float64Array(SWEEPS);
+// A page's neighbours by ring, from the cells round it: in the first, the nearest NEAR_MOST within its reach (where it
+// ends found from a histogram of how far they are, BINS steps of the distance squared), the rest of those in the next.
+const near=new Int32Array(SEATS),nearD2=new Float64Array(SEATS),BINS=32,bins=new Int32Array(BINS);
+function neighbours(r){
+ for(const list of r.rings){for(const k of list)r.ringOf[k]=-1;list.length=0;}
+ if(!r.active)return;
+ const me=r.k,rx=px[me],ry=py[me],rz=pz[me],cx=Math.floor(rx/CELL_M),cy=Math.floor(ry/NEAR_DY),cz=Math.floor(rz/CELL_M),reach2=RING2.at(-1);
+ let n=0,inFirst=0;
+ for(let a=-REACH;a<=REACH;a++)for(let b=-REACH;b<=REACH;b++)for(let c=-1;c<=1;c++){
+  const here=grid.get(cellKey(cx+a,cy+c,cz+b));if(!here)continue;
+  for(const k of here){
+   const dy=py[k]-ry;if(k===me||dy>=NEAR_DY||dy<=-NEAR_DY)continue;
+   const dx=px[k]-rx,dz=pz[k]-rz,d2=dx*dx+dz*dz;if(d2>=reach2)continue;
+   near[n]=k;nearD2[n++]=d2;if(d2<RING2[0])inFirst++;
+  }
+ }
+ // The first ring: every bin below edgeBin, and of that bin all nearer than edgeD2 and as many as there is room for
+ // of those exactly as near (ties: visitors standing on one spot, as at a spawn point, are all as near).
+ let edgeBin=BINS,edgeD2=-1,ties=0;
+ if(inFirst>NEAR_MOST){
+  bins.fill(0);for(let i=0;i<n;i++)if(nearD2[i]<RING2[0])bins[Math.floor(nearD2[i]/RING2[0]*BINS)]++;
+  let below=0;edgeBin=0;while(below+bins[edgeBin]<=NEAR_MOST)below+=bins[edgeBin++];
+  const room=NEAR_MOST-below;
+  if(room>0){const cut=[];for(let i=0;i<n;i++)if(nearD2[i]<RING2[0]&&Math.floor(nearD2[i]/RING2[0]*BINS)===edgeBin)cut.push(nearD2[i]);cut.sort((a,b)=>a-b);edgeD2=cut[room-1];ties=room-cut.indexOf(edgeD2);}
+ }
+ for(let i=0;i<n;i++){
+  const k=near[i],d2=nearD2[i];let j=1;
+  if(d2<RING2[0]){const bin=Math.floor(d2/RING2[0]*BINS);if(bin<edgeBin||bin===edgeBin&&(d2<edgeD2||d2===edgeD2&&ties-->0))j=0;}
+  else while(d2>=RING2[j])j++;
+  r.rings[j].push(k);r.ringOf[k]=j;
+ }
+}
+// One page's frame: the nearest ring; anyone long unheard; changes of state, up to half of what is left; the other rings and the far, each
+// up to its share of the rest; then what is left, nearest first. The nearest ring keeps its own rate, the rest the
+// page's pace. Each ring, and everyone in none, is swept once a period: owed[s] is how many that sweep has still to
+// look at, at[s] where it is. Due: someone new or a change of state; a newer pose, half a period or more since they
+// were last sent; or a keepalive.
+function pagePoses(r,now){
+ const me=r.k,sGen=r.seenGen,sVer=r.seenVer,sState=r.seenState,sAt=r.seenAt,ringOf=r.ringOf,pace=r.pace;
+ const identities=[],records=[];let left=PAGE_RECORDS;
+ const take=k=>{const o=seated[k];
+  if(sGen[k]!==gen[k]||r.seenName[k]!==nameVer[k])identities.push(encodeIdentity(o.slot,o.id,o.name,vouched(o),o.hat));
+  records.push(recs[k]);sGen[k]=gen[k];sVer[k]=ver[k];sState[k]=stateVer[k];r.seenName[k]=nameVer[k];sAt[k]=now;left--;};
+ const elapsed=Math.max(0,now-r.sweptAt);r.sweptAt=now;
+ for(let s=0;s<SWEEPS;s++){const ring=s<RINGS.length,n=ring?r.rings[s].length:active.length;
+  periods[s]=s===0?RINGS[0][1]:ring?RINGS[s][1]*pace:FAR_MS*Math.min(pace,FAR_PACE_MOST);r.owed[s]=Math.min(n,r.owed[s]+n*elapsed/periods[s]);}
+ // Sweep s, taking at most quota of those due.
+ const sweep=(s,quota)=>{
+  const ring=s<RINGS.length,list=ring?r.rings[s]:active,n=list.length;if(!n)return;
+  const period=periods[s];let at=r.at[s]%n,owed=r.owed[s];
+  for(;owed>=1&&quota>0&&left>0;owed--){
+   const k=list[at];at=at+1===n?0:at+1;
+   if(k===me||!recs[k]||!ring&&ringOf[k]>=0)continue;
+   const age=now-sAt[k];
+   if(sGen[k]!==gen[k]||sState[k]!==stateVer[k]||(sVer[k]!==ver[k]?age>=period/2:age>=Math.max(KEEPALIVE_MS-period/2,period/2))){take(k);quota--;}
+  }
+  r.at[s]=at;r.owed[s]=owed;
+ };
+ sweep(0,left);
+ // Anyone not sent for QUIET_MOST, from a scan of everyone once every QUIET_SCAN_MS.
+ const count=active.length;
+ if(count){
+  let at=r.quietAt%count;r.quietOwed=Math.min(count,r.quietOwed+count*elapsed/QUIET_SCAN_MS);
+  for(;r.quietOwed>=1&&left>0;r.quietOwed--){const k=active[at];at=at+1===count?0:at+1;if(k!==me&&recs[k]&&now-sAt[k]>=QUIET_MOST)take(k);}
+  r.quietAt=at;
+ }
+ const keep=left-(left>>1);
+ for(const list of urgents)for(let i=0;i<list.length&&left>keep;i++){const k=list[i];if(k!==me&&recs[k]&&(sGen[k]!==gen[k]||sState[k]!==stateVer[k]))take(k);}
+ const base=left;for(let s=1;s<SWEEPS;s++)sweep(s,Math.max(1,Math.floor(base*SHARES[s-1])));
+ for(let s=1;s<SWEEPS&&left;s++)sweep(s,left);
+ // A page whose budget ran out goes slower; one with room to spare eases back.
+ r.pace=left===0?Math.min(PACE_MOST,pace*1.25):left>PAGE_RECORDS*.3?Math.max(1,pace/1.1):pace;
+ if(records.length)send(r.ws,assembleFrame(identities,records));
+}
 function flush(){
- const now=Date.now(),dt=Math.min(.25,(now-last)/1000);last=now;
+ const now=Date.now(),t0=performance.now(),dt=Math.min(.25,(now-last)/1000);last=now;flushes++;
  panel.tick(dt);
  for(const l of lifts){stepLift(l.state,l.stops,dt);liftChanged(l,false);}
- if(countChanged){countChanged=false;broadcast({m:'aboard',n:aboard(),names:[...visitors].filter(v=>v.ready).map(v=>v.name||'Voyager '+v.id.slice(-4))});}
+ if(countChanged){countChanged=false;const n=aboard();
+  broadcast(n<=NAMES_UP_TO?{m:'aboard',n,names:[...visitors].filter(v=>v.ready).map(v=>v.name||'Voyager '+v.id.slice(-4))}:{m:'aboard',n,names:'heard'});}
+ grid.clear();
+ for(const k of active){const key=cellKey(Math.floor(px[k]/CELL_M),Math.floor(py[k]/NEAR_DY),Math.floor(pz[k]/CELL_M)),here=grid.get(key);if(here)here.push(k);else grid.set(key,[k]);}
  for(const r of visitors){
-  if(!r.ready)continue;
+  if(!r.ready||(flushes+r.k)%PAGE_TURNS)continue;
   if(r.ws.bufferedAmount>SLOW_BYTES){if(!r.slowSince)r.slowSince=now;else if(now-r.slowSince>SLOW_MS){r.ws.close(4004,'too slow');leave(r);}continue;}
   r.slowSince=0;
-  const identities=[],records=[];
-  for(const o of visitors){
-   if(o===r||!o.ready||!o.record)continue;
-   const seen=r.seen.get(o.slot),near=r.pos&&Math.abs(o.pos[1]-r.pos[1])<NEAR_DY&&Math.hypot(o.pos[0]-r.pos[0],o.pos[2]-r.pos[2])<NEAR_M;
-   const fresh=!seen||seen.id!==o.id;
-   const due=fresh||(seen.version!==o.version&&(near||now-seen.at>=FAR_MS))||now-seen.at>=KEEPALIVE_MS;
-   if(!due)continue;
-   if(fresh||seen.nameVersion!==(o.nameVersion||0))identities.push(encodeIdentity(o.slot,o.id,o.name,vouched(o),o.hat));
-   records.push(o.record);r.seen.set(o.slot,{id:o.id,version:o.version,at:now,nameVersion:o.nameVersion||0});
-  }
-  if(records.length)send(r.ws,assembleFrame(identities,records));
+  // (each page's neighbours are found again in turn, NEIGHBOURS_MS apart)
+  if(now>=r.ringsAt){neighbours(r);r.ringsAt=now+NEIGHBOURS_MS;}
+  pagePoses(r,now);
  }
+ urgent=urgents.pop();urgent.length=0;urgents.unshift(urgent);
+ // What a flush costs the server (/health): a running mean, and the most in the last ten seconds.
+ const ms=performance.now()-t0,second=Math.floor(t0/1000);flushMs+=(ms-flushMs)*.05;
+ if(second!==peakSecond){for(let s=peakSecond+1;s<=second&&s<=peakSecond+10;s++)peaks[s%10]=0;peakSecond=second;}
+ peaks[second%10]=Math.max(peaks[second%10],ms);
 }
 setInterval(flush,FLUSH_MS);
 
@@ -412,7 +534,7 @@ const server=http.createServer((req,res)=>{
  if(req.url==='/arena'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify(arena.report()));return;}
  // The Crown lounge TV: its video, and uploads to it (tv.mjs).
  if(tv.http(req,res))return;
- if(req.url==='/health'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify({ok:true,aboard:aboard(),max:MAX,revision:REVISION,...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{})}));return;}
+ if(req.url==='/health'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify({ok:true,aboard:aboard(),max:MAX,seatsFree:freeSeats.length,pageRecords:PAGE_RECORDS,revision:REVISION,flush:{ms:+flushMs.toFixed(2),max:+Math.max(...peaks).toFixed(2)},...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{})}));return;}
  res.writeHead(200,{'Content-Type':'text/plain'});res.end('Leo live: the multiplayer server for Walk around Leo.\n');
 });
 const wss=new WebSocketServer({noServer:true,maxPayload:4096,perMessageDeflate:false});
@@ -422,7 +544,7 @@ server.on('upgrade',(req,socket,head)=>{
  wss.handleUpgrade(req,socket,head,ws=>wss.emit('connection',ws,req));
 });
 wss.on('connection',ws=>{
- const v={ws,ready:false,id:null,slot:0,name:null,record:null,pos:null,version:0,seen:new Map(),budget:{},games:{},alive:true};visitors.add(v);
+ const v={ws,ready:false,id:null,slot:0,name:null,record:null,pos:null,version:0,budget:{},games:{},alive:true};visitors.add(v);
  const timer=setTimeout(()=>{if(!v.ready)ws.close(4005,'no hello');},HELLO_MS);
  ws.on('message',(data,binary)=>onMessage(v,binary?data:data.toString(),binary));
  ws.on('pong',()=>{v.alive=true;});
