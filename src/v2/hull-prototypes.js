@@ -13,9 +13,12 @@ import {openingRadius,cornerChartPlanes,subtractOutline,withinOutline,clipHalf,c
 import * as T from 'three';
 import {attachEnvelopeOwners} from '../plan/envelope-mesh-v2.js';
 import {pressureRoomCuts} from '../plan/pressure-cuts-v2.js';
-import {envelopeProfile,ownerFrontSpan,ownerFootprint} from '../plan/envelope-ownership-v2.js';
+import {ownerFrontSpan,ownerFootprint} from '../plan/envelope-ownership-v2.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {clipPolygon,triangulate,chartPoint,worldPoint,chartPatch,patchDepth,patchNormal,patchProfile,offsetPatch,GLAZING_SETBACK} from '../plan/hull-skin-v2.js';
+import {clipPolygon,triangulate,chartPoint,worldPoint,chartPatch,offsetPatch,GLAZING_SETBACK} from '../plan/hull-skin-v2.js';
+// The same skin samples and owner profiles as hull-skin-v2.js and envelope-ownership-v2.js, read from an index of each
+// patch (patch-sampler.js).
+import {patchDepth,patchNormal,patchProfile,envelopeProfile} from './patch-sampler.js';
 import {skinFragments,repairSkin,intersectTriangle,closedSkinFragments,invalidateSkinCache} from '../plan/finished-skin-v2.js';
 const innerMat=new T.MeshStandardMaterial({name:'V2_prototype_inner_wall',color:0xdce1db,roughness:.8,side:T.DoubleSide});
 const glassMat=new T.MeshStandardMaterial({name:'V2_prototype_hull_glass',color:0x83b4c4,transparent:true,opacity:.18,depthWrite:false,roughness:.16,metalness:.12,side:T.DoubleSide});

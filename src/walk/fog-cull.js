@@ -7,7 +7,8 @@ import * as T from 'three';
 // half-diagonal field of view, less its radius. It moves to FOG_CULL_LAYER, which the walking camera does not draw (other
 // code owns `visible`; the photo booth's camera draws that layer too), and back once nearer.
 // Always drawn: parts whose materials ignore fog or are transparent, skinned and instanced meshes (cabins and lifeboats
-// swap their instances as the walker moves), parts that never frustum-cull, and those riding the lifts (keepLive).
+// swap their instances as the walker moves), parts that never frustum-cull, those riding the lifts (keepLive), and the
+// merged deck bands (userData.fogBackdrop: on a desktop they view-cull in squares, but they are the backdrop).
 // Nothing is left out while the atrium's long fog (beyond the far plane) is on. update() each frame right after the
 // render, when every world matrix is current (for the next frame): it reclassifies every part after `step` metres of
 // camera movement or a fog or view change, rechecks each left-out part that has moved, and every `every` ms adds new
@@ -19,7 +20,7 @@ export function createFogCull(scene,camera,{every=10000,step=.5,margin=1,jump=5}
  const eye=new T.Vector3(),last=new T.Vector3(NaN,NaN,NaN),centre=new T.Vector3(),hidden=1<<FOG_CULL_LAYER;
  const fogged=m=>m&&m.fog!==false&&!m.transparent;
  const live=o=>{for(let n=o;n;n=n.parent)if(n.userData?.keepLive)return true;return false;};
- const eligible=o=>o.isMesh&&!o.isInstancedMesh&&!o.isSkinnedMesh&&o.frustumCulled&&[].concat(o.material).every(fogged)&&!live(o);
+ const eligible=o=>o.isMesh&&!o.isInstancedMesh&&!o.isSkinnedMesh&&o.frustumCulled&&!o.userData.fogBackdrop&&[].concat(o.material).every(fogged)&&!live(o);
  const put=(p,out)=>{if(out!==p.out){p.out=out;p.o.layers.mask=out?hidden:p.mask;stats.culled+=out?1:-1;}};
  const restore=()=>{for(const p of parts.values())put(p,false);};
  const rebuild=()=>{

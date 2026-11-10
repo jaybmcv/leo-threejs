@@ -11,6 +11,7 @@ import * as T from 'three';
 import {preparedV2} from './v2-world.mjs';
 import layout from 'v2-layout';
 import {buildLaps} from './build-laps-v2.mjs';
+import {verifyPatchGrids} from '../src/v2/patch-sampler.js';
 const out=process.env.LEO_SCOPED_OUTPUT||'output/leo-interior-v02',buildStart=performance.now();const {ship,prepared,plan,image}=await preparedV2({map:true});const lap=buildLaps('models');
 await fs.writeFile(out+'/launch-b-proof.json',JSON.stringify({version:1,...ship.v2LaunchB},null,2));
 for(const item of Object.values(prepared))if(item?.group&&!item.group.parent)ship.inside.add(item.group);
@@ -28,4 +29,4 @@ await writeV2DeckCosts(ship,layout);lap('deck costs');
 
 await modelExports.save();lap('save model exports');
 for(const deck of [15,17]){const root=new T.Group();root.name='Scope_proof_deck_'+deck;for(const part of [ship.decks[deck-1],...structure.filter(o=>o.userData.v2Deck===deck),...(deck===17?[ship.shared]:[])])root.add(part.clone(true));prepareArrivalCanvasExport(root);shareExportGeometry(root);const bytes=Buffer.from(await indexedV2Export(await exporter.parseAsync(root,{binary:true,onlyVisible:true}))),prefix=process.env.LEO_BUILD_SCOPE?'scoped':'full';await fs.writeFile('output/phase3/'+prefix+'-deck-'+deck+'.glb',bytes);if(process.env.LEO_SCOPED_PROVE==='1'){const full=await fs.readFile('output/phase3/full-deck-'+deck+'.glb');if(!bytes.equals(full))throw Error('Scoped/full deck bytes differ: '+deck);console.log('PASS scoped/full byte identity: deck '+deck+' '+bytes.length);}}
-lap('scope proof decks');console.log('[build-timing] models total: '+((performance.now()-buildStart)/1000).toFixed(1)+' s');
+lap('scope proof decks');verifyPatchGrids();console.log('[build-timing] models total: '+((performance.now()-buildStart)/1000).toFixed(1)+' s');

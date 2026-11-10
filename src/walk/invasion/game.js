@@ -11,6 +11,9 @@ import {createSound} from './sound.js';
 //   scores.submit(score,wave) a game ended; the result arrives through setResult
 // setBoard({status:'ok'|'guest'|'offline'|'loading', top:[{name,score}], you:{score,rank}|null})
 // setResult({ok, best, rank, newBest} | {ok:false, why:'sign-in'|'offline'|'rejected'})
+// A score with no answer inside REPLY_MS (the link dropped as the game ended, say) stops saying SAVING: the game sets
+// {ok:false, why:'unavailable'} itself, as the Container Maze does (maze/run.js). An answer that comes later still shows.
+const REPLY_MS=6000;
 const S=3,FONT='"JetBrains Mono", ui-monospace, "Courier New", monospace';
 const KEYS={left:['ArrowLeft','KeyA'],right:['ArrowRight','KeyD'],fire:['Space','ArrowUp','KeyW']};
 
@@ -57,13 +60,14 @@ export function createInvasion({onOpen=()=>{},onClose=()=>{},muted=()=>false,sco
  const text=(s,x,y,size,color,align='left')=>{g2.font=`700 ${size*S}px ${FONT}`;g2.fillStyle=color;g2.textAlign=align;g2.textBaseline='top';g2.fillText(s,x*S,y*S);};
  const pad=n=>String(n).padStart(5,'0');
 
- let open=false,screen='title',game=null,raf=0,last=0,acc=0,paused=false,board={status:'loading',top:[],you:null},result=null,best=0;
+ let open=false,screen='title',game=null,raf=0,last=0,acc=0,paused=false,board={status:'loading',top:[],you:null},result=null,best=0,replyTimer=0;
  const down=new Set();
  const held=k=>KEYS[k].some(c=>down.has(c))||pads[k]||pad_(k);
  function pad_(k){const p=[...(navigator.getGamepads?.()||[])].find(Boolean);if(!p)return false;const x=p.axes[0]||0;
   return k==='left'?x<-.4||p.buttons[14]?.pressed:k==='right'?x>.4||p.buttons[15]?.pressed:p.buttons[0]?.pressed||p.buttons[1]?.pressed;}
- function begin(){if(screen==='play')return;game=newGame((Math.random()*2**31)|0);screen='play';result=null;paused=false;scores?.start();}
- function finish(){screen='over';sound.stop();best=Math.max(best,game.score);scores?.submit(game.score,game.wave);}
+ function begin(){if(screen==='play')return;game=newGame((Math.random()*2**31)|0);screen='play';result=null;clearTimeout(replyTimer);paused=false;scores?.start();}
+ function submit(){clearTimeout(replyTimer);result=null;scores?.submit(game.score,game.wave);if(!result)replyTimer=setTimeout(()=>{if(!result)result={ok:false,why:'unavailable'};},REPLY_MS);}
+ function finish(){screen='over';sound.stop();best=Math.max(best,game.score);submit();}
  // Keys while open are the game's alone: caught before the walk's own listener sees them.
  function onKey(e){
   if(!open)return;const press=e.type==='keydown';
@@ -139,7 +143,7 @@ export function createInvasion({onOpen=()=>{},onClose=()=>{},muted=()=>false,sco
   g2.fillStyle='rgba(5,7,13,.82)';g2.fillRect(0,0,W*S,H*S);
   text('GAME OVER',120,36,20,COLORS.accent,'center');text(`SCORE ${pad(game.score)} · WAVE ${game.wave}`,120,62,8,COLORS.text,'center');
   const line=!result?'SAVING…':result.ok?(result.newBest?`NEW BEST! RANK ${result.rank||'-'}`:`YOUR BEST ${pad(result.best)} · RANK ${result.rank||'-'}`):
-   result.why==='sign-in'?'SIGN IN WITH DISCORD TO POST SCORES':result.why==='offline'?'OFFLINE: SCORE NOT SAVED':'SCORE NOT ACCEPTED';
+   result.why==='sign-in'?'SIGN IN WITH DISCORD TO POST SCORES':result.why==='offline'?'OFFLINE: SCORE NOT SAVED':result.why==='unavailable'?'THE BOARD DID NOT ANSWER':'SCORE NOT ACCEPTED';
   text(line,120,76,7,result?.ok?COLORS.ground:COLORS.dim,'center');
   panel(28,92,184,124);text('TOP 10 · SIGNED-IN PLAYERS',120,96,7,COLORS.ground,'center');boardLines(36,108,10,204);
   if((now/600|0)%2===0)text(touch?'TAP TO PLAY AGAIN':'SPACE TO PLAY AGAIN',120,228,8,COLORS.accent,'center');
@@ -147,13 +151,13 @@ export function createInvasion({onOpen=()=>{},onClose=()=>{},muted=()=>false,sco
  }
  function show(){if(open)return;open=true;root.style.display='flex';screen='title';paused=false;down.clear();fit();scores?.request();onOpen();last=performance.now();acc=0;raf=requestAnimationFrame(loop);}
  function hide(){if(!open)return;open=false;root.style.display='none';cancelAnimationFrame(raf);sound.stop();down.clear();for(const k in pads)pads[k]=false;
-  if(screen==='play'&&game&&game.score>0)scores?.submit(game.score,game.wave);onClose();}
+  if(screen==='play'&&game&&game.score>0)submit();onClose();}
  return {
   open:show,close:hide,
   get isOpen(){return open;},
   get playing(){return open;},
   setBoard(b){board={top:[],you:null,...b};},
-  setResult(r){result=r;if(r?.ok)scores?.request();},
+  setResult(r){clearTimeout(replyTimer);result=r;if(r?.ok)scores?.request();},
   // For checks: the state and a way to step without the loop.
   get state(){return {screen,game,board,result,paused};},
   _begin:begin,

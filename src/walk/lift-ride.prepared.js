@@ -119,7 +119,8 @@ function shutter(parent,w,h){
    clip[2].setFromNormalAndCoplanarPoint(n.set(0,1,0),base);clip[3].setFromNormalAndCoplanarPoint(n.set(0,-1,0),q.copy(base).setY(base.y+h));
    for(const b of blades){b.mesh.position.set(b.mid[0]+b.out[0]*b.travel*open,b.mid[1]+b.out[1]*b.travel*open,0);b.mesh.rotation.z=TWIST*open;}
    api.isShut=open<=0;for(const b of blades)b.mesh.visible=open>0;for(const o of shut)o.visible=api.isShut&&!api.merged;
-   g.visible=open<.999;
+   // Shut while another mesh draws it (merged), nothing in it draws: hidden, the scene walk skips it.
+   g.visible=open<.999&&(open>0||!api.merged);
   }};
  return api;
 }
@@ -140,7 +141,7 @@ function mergeLandings(l){
   const mesh=new T.Mesh(geometry,[k?mats.blade:mats.door]);mesh.name='Lift_doors_shut';mesh.matrixAutoUpdate=false;l.root.add(mesh);
   return {mesh,ranges:geometry.groups.map(g=>({start:g.start,count:g.count}))};
  });
- for(const s of l.stops){s.shutter.merged=true;for(const o of s.shutter.shut)o.visible=false;}
+ for(const s of l.stops){s.shutter.merged=true;for(const o of s.shutter.shut)o.visible=false;if(s.shutter.isShut)s.shutter.group.visible=false;}
  return {update(){
   for(const {mesh,ranges} of meshes){const groups=mesh.geometry.groups;groups.length=0;
    l.stops.forEach((s,i)=>{if(!s.shutter.isShut)return;const r=ranges[i],last=groups.at(-1);if(last&&last.start+last.count===r.start)last.count+=r.count;else groups.push({start:r.start,count:r.count,materialIndex:0});});

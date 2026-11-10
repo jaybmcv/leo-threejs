@@ -4,6 +4,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {MeshoptDecoder} from 'three/addons/libs/meshopt_decoder.module.js';
 import {publicAsset,enablePublicDownloads} from './public-assets.js';
 import {prepareInspectorModel} from './inspector-model.js';
+import {createCover,once} from './inspector-loading.js';
 import {viewerRoutes,sampleShot,tourWalkSpot} from './viewer-routes.js';
 import {loadEnvironment} from '../environment.js';
 import {createThrusterEffects} from '../thruster-effects.js';
@@ -24,14 +25,21 @@ scene.environmentIntensity=.4;loadEnvironment(renderer).then(t=>scene.environmen
 const camera=new T.PerspectiveCamera(42,1,.05,10000),controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;controls.minDistance=1;controls.maxDistance=6000;
 const amount={value:0},selectedDeck={value:0},models=new Map();
-let layout,exterior,interior,thrusters,mode='exterior',operation=0,turntable=false,playing=false,shotIndex=0,tourTime=0,lastTime=0,explodeAnimation=null,lastCull=-1,room=null,viewBounds=null;
+let layout,exterior,interior,thrusters,mode='exterior',turntable=false,playing=false,shotIndex=0,tourTime=0,lastTime=0,explodeAnimation=null,lastCull=-1,room=null,viewBounds=null;
 const names={exterior:'Exterior',layout:'Deck layout',areas:'Ship areas',neighborhood:'Neighborhood',aft:'Aft systems',transit:'Connections',walk:'Take the tour'};
 const backdrop=createSpaceBackdrop(lite?{scale:.5,fps:30,pixels:true}:{});
 scene.background=backdrop.texture;
 let dimensionBox=null;
-const loading=text=>{$('loading').hidden=!text;$('loading').textContent=text||'';};
-const fail=e=>{loading('');$('error').hidden=false;$('error').textContent=e.message||String(e);};
-const action=fn=>async(...args)=>{try{$('error').hidden=true;await fn(...args);}catch(e){fail(e);}};
+// The loading cover (#loading) has this one writer. It shows while the operation that owns the view (the last view or
+// explode asked for) waits for a model, and never for one a later click superseded (src/v2/inspector-loading.js).
+const cover=createCover(text=>{const el=$('loading');el.hidden=!text;el.textContent=text;});
+const fail=e=>{$('error').hidden=false;$('error').textContent=e.message||String(e);};
+// A button pressed before the ship's shell is in (boot, below) waits for it, then runs: there is nothing to show before.
+let booted;const ready=new Promise(r=>booted=r);
+const action=fn=>async(...args)=>{try{if(!exterior)await ready;$('error').hidden=true;await fn(...args);}catch(e){fail(e);}};
+// The route and turntable buttons always say what is running: every change goes through these two.
+function setPlaying(on){playing=on;$('play-tour').textContent=on?'Pause route':'Play route';}
+function setTurntable(on){turntable=on;$('turntable').textContent=on?'Stop turntable':'Start turntable';}
 function bounds(){return new T.Box3(new T.Vector3(-400,-120-210*amount.value,-420),new T.Vector3(300,amount.value?420:180,420));}
 function fit(box,direction=[1,.35,1.2]){const sphere=box.getBoundingSphere(new T.Sphere());controls.enabled=true;camera.up.set(0,1,0);camera.fov=42;camera.updateProjectionMatrix();const half=Math.min(T.MathUtils.degToRad(21),Math.atan(Math.tan(T.MathUtils.degToRad(21))*camera.aspect));camera.position.copy(sphere.center).add(new T.Vector3(...direction).normalize().multiplyScalar(sphere.radius/Math.sin(half)*1.02));controls.target.copy(sphere.center);controls.update();}
 function cameraPreset(name='boarding'){
@@ -42,24 +50,23 @@ function cameraPreset(name='boarding'){
   fit(box,direction);camera.position.sub(controls.target).multiplyScalar(.74).add(controls.target);controls.update();if(name==='top'){camera.up.set(1,0,0);camera.lookAt(controls.target);}
   for(const b of document.querySelectorAll('[data-camera]'))b.setAttribute('aria-pressed',b.dataset.camera===name);
 }
-async function load(name){
+async function load(name,what){
   if(!models.has(name))models.set(name,(async()=>{
-    const bytes=await publicAsset(name,p=>loading('Loading current ship… '+p+'%'));
+    const bytes=await publicAsset(name,p=>cover.say(what,'Loading current ship… '+p+'%'));
     const gltf=await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(bytes,'');
     gltf.scene.traverse(o=>{const association=gltf.parser.associations.get(o);if(association?.nodes!==undefined)o.name=gltf.parser.json.nodes[association.nodes].name||o.name;});
     return gltf.scene;
   })().catch(e=>{models.delete(name);throw e;}));
   return models.get(name);
 }
-async function getInterior(){
-  if(interior)return interior;
-  const root=await load('leo-full-ship.glb');
-  if(interior)return interior;
-  const savedExterior=root.getObjectByName('01_EXTERIOR_REFINED_V31');savedExterior?.removeFromParent();
-  loading('Preparing the updated decks and cabin parts…');await new Promise(r=>setTimeout(r,0));
+// Every view that needs the decks shares this one download and one preparation, however many ask while it runs.
+const getInterior=once(async()=>{
+  const root=await load('leo-full-ship.glb','interior');
+  root.getObjectByName('01_EXTERIOR_REFINED_V31')?.removeFromParent();
+  cover.say('interior','Preparing the updated decks and cabin parts…');await new Promise(r=>setTimeout(r,0));
   interior=prepareInspectorModel(root,layout,{amount,selectedDeck});scene.add(root);root.visible=false;
   return interior;
-}
+});
 function cutaway(on){if(!interior)return;for(const r of interior.records)r.mesh.userData.inspectorCut=on&&r.ceiling;lastCull=-1;}
 function cull(force=false){
   if(!interior?.root.visible)return;
@@ -79,8 +86,8 @@ function setAmount(value,reframe=true){
   if(reframe)cameraPreset();cull(true);updateLink();
 }
 async function explodeTo(value,animate=false){
-  const token=++operation;if(value>0)await getInterior();if(token!==operation)return;
-  loading('');if(animate){explodeAnimation={from:amount.value,to:value,start:performance.now()};fit(bounds(),[1,.9,1.3]);}else{explodeAnimation=null;setAmount(value);}
+  const token=cover.begin();if(value>0)await cover.wait(token,'interior',getInterior());if(!cover.owns(token))return;
+  if(animate){explodeAnimation={from:amount.value,to:value,start:performance.now()};fit(bounds(),[1,.9,1.3]);}else{explodeAnimation=null;setAmount(value);}
 }
 function clipBox(box){viewBounds=box;renderer.clippingPlanes=[new T.Plane(new T.Vector3(1,0,0),-box.min.x),new T.Plane(new T.Vector3(-1,0,0),box.max.x),new T.Plane(new T.Vector3(0,1,0),-box.min.y),new T.Plane(new T.Vector3(0,-1,0),box.max.y),new T.Plane(new T.Vector3(0,0,1),-box.min.z),new T.Plane(new T.Vector3(0,0,-1),box.max.z)];}
 function roomBox(r){const xs=r.polygon.map(p=>p[0]),zs=r.polygon.map(p=>p[1]);return new T.Box3(new T.Vector3(Math.min(...xs)-.2,r.y-.2,Math.min(...zs)-.2),new T.Vector3(Math.max(...xs)+.2,r.y+r.height-.15,Math.max(...zs)+.2));}
@@ -103,7 +110,7 @@ let routes;
 function showShot(){const route=routes[$('tour-select').value],shot=route.shots[shotIndex];room=layout.byId.get(shot.room)||null;amount.value=0;selectedDeck.value=0;renderer.clippingPlanes=[];interior.root.visible=true;exterior.root.visible=false;cutaway(false);controls.enabled=false;camera.fov=65;camera.updateProjectionMatrix();tourTime=0;poseShot(0);$('route-name').textContent=shot.label;$('stop-count').textContent=`${shotIndex+1} / ${route.shots.length}`;$('route-detail').textContent=shot.label+' · Deck '+shot.deck;$('status').textContent='Current furnished ship · guided camera tour';const spot=tourWalkSpot(layout,shot);$('tour-walk').href='walk.html?lv=2&at='+spot.at.join(',')+'&yaw='+spot.yaw+'&view=first';cull(true);}
 function poseShot(t){const shot=routes[$('tour-select').value].shots[shotIndex],pose=sampleShot(shot,t);camera.position.fromArray(pose.position);camera.lookAt(new T.Vector3(...pose.target));}
 async function setMode(next){
-  const token=++operation;explodeAnimation=null;playing=false;turntable=false;if(next!=='exterior')await getInterior();if(token!==operation)return;
+  const token=cover.begin();explodeAnimation=null;setPlaying(false);setTurntable(false);if(next!=='exterior')await cover.wait(token,'interior',getInterior());if(!cover.owns(token))return false;
   mode=next;room=null;viewBounds=null;amount.value=0;selectedDeck.value=0;renderer.clippingPlanes=[];controls.enabled=true;
   if(interior)interior.root.visible=false;exterior.root.visible=next==='exterior';document.body.dataset.mode=mode;
   for(const key of Object.keys(names))$(key+'-controls').hidden=key!==mode;
@@ -111,7 +118,7 @@ async function setMode(next){
   $('m-view-label').textContent=names[mode];$('panel-title').textContent=names[mode];$('eyebrow').textContent='LEO / CURRENT MODEL';$('view-title').textContent=mode==='exterior'?'A home between planets.':names[mode];$('view-description').textContent=`${layout.stats.cabins.toLocaleString()} cabins · ${layout.stats.berths.toLocaleString()} berths · ${layout.stats.decks} decks`;$('route').hidden=mode!=='walk';
   if(next==='exterior'){setAmount(0,false);cameraPreset();}else if(next==='layout')showDeck();else if(next==='areas')focusRoom($('area-select').value);else if(next==='neighborhood')focusNeighborhood();else if(next==='aft')showAft();else if(next==='transit')showTransit();else showShot();
   $('save-interior').hidden=mode==='exterior';
-  loading('');updateLink();await renderer.compileAsync(scene,camera);renderer.render(scene,camera);document.body.dataset.ready='1';
+  updateLink();await renderer.compileAsync(scene,camera);renderer.render(scene,camera);document.body.dataset.ready='1';return cover.owns(token);
 }
 function focusNeighborhood(kind='all'){const number=+$('neighborhood-select').value,deck=number+5;if(kind==='garden')focusRoom('commons-'+number);else if(kind==='observation')focusRoom('observation-lounge');else if(kind==='nose')focusRoom('neighborhood-'+number+'-dining');else if(kind==='cabin')focusRoom(layout.cabins.find(c=>c.deck===deck).id);else{$('deck-select').value=deck;showDeck(deck);}const cs=layout.cabins.filter(c=>c.deck===deck);$('neighborhood-cabins').textContent=cs.length;$('neighborhood-berths').textContent=cs.reduce((s,c)=>s+c.berths,0);}
 async function savePicture(){renderer.render(scene,camera);const blob=await new Promise(r=>renderer.domElement.toBlob(r,'image/png'));const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='leo-current-model.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
@@ -120,7 +127,7 @@ new ResizeObserver(resize).observe($('viewport'));resize();
 renderer.domElement.addEventListener('webglcontextlost',()=>fail(Error('Graphics memory exhausted. Reload with ?lite=1.')));
 renderer.domElement.addEventListener('webglcontextrestored',()=>{$('error').hidden=true;});
 for(const b of document.querySelectorAll('[data-mode]'))b.onclick=action(()=>setMode(b.dataset.mode));
-for(const b of document.querySelectorAll('[data-camera]'))b.onclick=()=>{turntable=false;cameraPreset(b.dataset.camera);};
+for(const b of document.querySelectorAll('[data-camera]'))b.onclick=()=>{setTurntable(false);cameraPreset(b.dataset.camera);};
 for(const [name,value] of [['Ship',0],['Hull',.28],['Decks',.67],['Rooms',1]]){const b=document.createElement('button');b.textContent=name;b.dataset.value=value;b.onclick=action(()=>explodeTo(value));$('explode-stops').append(b);}
 $('explode-play').onclick=action(()=>explodeTo(amount.value>=.5?0:1,true));
 const dial=$('explode-dial');dial.onkeydown=action(async e=>{const step=e.shiftKey?.1:.02;let v=amount.value;if(['ArrowUp','ArrowRight'].includes(e.key))v+=step;else if(['ArrowDown','ArrowLeft'].includes(e.key))v-=step;else if(e.key==='Home')v=0;else if(e.key==='End')v=1;else return;e.preventDefault();await explodeTo(v);});
@@ -131,25 +138,30 @@ $('area-select').onchange=()=>focusRoom($('area-select').value);for(const b of d
 $('locate-area').onclick=action(async()=>{const deck=room.deck;$('deck-select').value=deck;await setMode('layout');});
 $('neighborhood-select').onchange=()=>focusNeighborhood();for(const b of document.querySelectorAll('[data-focus]'))b.onclick=()=>focusNeighborhood(b.dataset.focus);$('detail-walls').onchange=()=>{cutaway(!$('detail-walls').checked);cull(true);};
 for(const id of ['aft-section','aft-shell'])$(id).onchange=showAft;for(const id of ['transit-core','transit-deck'])$(id).onchange=showTransit;
-$('tour-select').onchange=()=>{shotIndex=0;showShot();};$('restart-tour').onclick=()=>{shotIndex=0;showShot();};$('play-tour').onclick=()=>{playing=!playing;$('play-tour').textContent=playing?'Pause route':'Play route';};
+$('tour-select').onchange=()=>{shotIndex=0;showShot();};$('restart-tour').onclick=()=>{shotIndex=0;showShot();};$('play-tour').onclick=()=>setPlaying(!playing);
 function stepTour(n){shotIndex=(shotIndex+n+routes[$('tour-select').value].shots.length)%routes[$('tour-select').value].shots.length;showShot();}
 $('next-stop').onclick=()=>stepTour(1);$('previous-stop').onclick=()=>stepTour(-1);
-$('turntable').onclick=()=>{turntable=!turntable;$('turntable').textContent=turntable?'Stop turntable':'Start turntable';};controls.addEventListener('start',()=>turntable=false);
+$('turntable').onclick=()=>setTurntable(!turntable);controls.addEventListener('start',()=>{if(turntable)setTurntable(false);});
 for(const id of ['save-render','save-interior'])$(id).onclick=action(savePicture);
 $('toggle-panels').onclick=()=>document.body.classList.toggle('panels-hidden');$('m-handle').onclick=()=>{const open=document.querySelector('.panel').classList.toggle('open');$('m-handle').setAttribute('aria-expanded',open);};
 $('m-view').onclick=()=>{$('m-menu').hidden=!$('m-menu').hidden;};for(const [key,name]of Object.entries(names)){const b=document.createElement('button');b.textContent=name;b.onclick=action(async()=>{$('m-menu').hidden=true;await setMode(key);});$('m-menu').append(b);}$('m-tour').onclick=action(()=>setMode('walk'));
 $('clean-branding').onchange=()=>{for(const r of exterior.records)if(/wordmark|Mission_identifier|Mission_brand|Crest_|Tail_registry|authentic_Mars_Cats/i.test(r.mesh.name))r.mesh.visible=!$('clean-branding').checked;};
 $('dimensions').onchange=()=>{if(!dimensionBox&&exterior){dimensionBox=new T.Box3Helper(new T.Box3().setFromObject(exterior.root),0xf85800);scene.add(dimensionBox);}if(dimensionBox)dimensionBox.visible=$('dimensions').checked;};
 installFeedback({renderer,page:'viewer',mount:()=>document.querySelector('.foot-links'),context:()=>({where:$('status').textContent,link:location.href})});
-async function start(){
+async function boot(){
   layout=await(await fetch(window.LEO_VIEWER_LAYOUT)).json();layout.byId=new Map([...layout.rooms,...layout.cabins,...layout.shuttles].map(r=>[r.id,r]));routes=viewerRoutes(layout);
   for(const d of layout.decks){$('deck-select').add(new Option(d.number+' · '+d.name,d.number));$('transit-deck').add(new Option(d.number+' · '+d.name,d.number));}
   for(const r of [...layout.rooms].sort((a,b)=>a.deck-b.deck||a.name.localeCompare(b.name)))$('area-select').add(new Option('D'+r.deck+' · '+r.name,r.id));$('area-count').textContent=layout.rooms.length;$('area-select').value='d02-arrival-1';
   for(let n=1;n<=10;n++)$('neighborhood-select').add(new Option('Neighborhood '+n+' · Deck '+(n+5),n));
   $('deck-select').value=query.get('deck')||6;$('transit-deck').value=6;
-  const root=await load(lite?'leo-exterior-phone.glb':'leo-exterior-web.glb');exterior=prepareInspectorModel(root,layout,{exterior:true,amount});scene.add(root);thrusters=createThrusterEffects(root);scene.add(thrusters.root);
+  const root=await load(lite?'leo-exterior-phone.glb':'leo-exterior-web.glb','exterior');exterior=prepareInspectorModel(root,layout,{exterior:true,amount});scene.add(root);thrusters=createThrusterEffects(root);scene.add(thrusters.root);
   if(query.get('area')&&layout.byId.has(query.get('area')))$('area-select').value=query.get('area');
-  await setMode(names[query.get('view')]?query.get('view'):'exterior');if(query.has('explode'))await explodeTo(Math.min(100,+query.get('explode'))/100);loading('');
+}
+async function start(){
+  const token=cover.begin();await cover.wait(token,'exterior',boot());
+  // The link's view takes the view first; a button pressed during boot runs right after it and supersedes it.
+  const first=setMode(names[query.get('view')]?query.get('view'):'exterior');booted();
+  if(await first&&query.has('explode'))await explodeTo(Math.min(100,+query.get('explode'))/100);
   if(query.get('review')==='1')window.__leoInspector={get stats(){return layout.stats;},get amount(){return amount.value;},get modelHash(){return window.LEO_PUBLIC_ASSETS['leo-full-ship.glb'].sha256;},get exteriorHash(){return window.LEO_PUBLIC_ASSETS['leo-exterior-web.glb'].sha256;},get draw(){return {...renderer.info.render};},get interiorRecords(){return interior?.records.length||0;},get ownerBatches(){return interior?.records.filter(r=>r.attribute).length||0;}};
 }
 start().catch(fail);

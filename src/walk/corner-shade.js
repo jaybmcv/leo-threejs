@@ -1,3 +1,4 @@
+import {keepsGeometry} from '../v2/shader-hooks.js';
 import * as T from 'three';
 import layout from '../plan/selected-layout.js';
 
@@ -32,6 +33,8 @@ function arrayTexture(data,w,h,depth){
  t.minFilter=t.magFilter=T.LinearFilter;t.generateMipmaps=false;t.needsUpdate=true;return t;
 }
 const skipped=o=>{for(let p=o;p;p=p.parent)if(SKIP.test(p.name||''))return true;return false;};
+// The materials corner shading leaves alone: those an outside mesh (facade, hull, glass...) uses, as the patch would reach it too.
+export function cornerShadeLeavesAlone(scene){const outside=new Set();scene.traverse(o=>{if(o.isMesh&&skipped(o))for(const m of [].concat(o.material))outside.add(m);});return outside;}
 
 // The grid: each wall line darkens the cells within R of it (255 = R or further). Self-contained, as it runs in a worker.
 export function rasterWalls({segs,NX,NZ,DECKS,X0,Z0,RES,R}){
@@ -98,8 +101,7 @@ export function installCornerShade(scene){
  const U={uCorner:{value:arrayTexture(new Uint8Array([255]),1,1,1)},uCornerS:{value:0},uCornerBox:{value:new T.Vector4(0,0,1,1)}},done=new Map();
  // A material that any skipped (outside) mesh also uses is left alone, as the patch would reach that mesh too; one patched
  // earlier, before such a mesh came, gets its own hooks back.
- const patch=()=>{let count=0;const outside=new Set();
-  scene.traverse(o=>{if(o.isMesh&&skipped(o))for(const m of [].concat(o.material))outside.add(m);});
+ const patch=()=>{let count=0;const outside=cornerShadeLeavesAlone(scene);
   for(const m of outside){const was=done.get(m);if(was){[m.onBeforeCompile,m.customProgramCacheKey]=was;m.needsUpdate=true;done.delete(m);}}
   scene.traverse(o=>{if(!o.isMesh)return;for(const m of [].concat(o.material)){
   if(!m||done.has(m)||outside.has(m)||!(m.isMeshStandardMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial)||m.transparent)continue;
@@ -107,6 +109,7 @@ export function installCornerShade(scene){
   m.onBeforeCompile=function(s,r){before?.call(this,s,r);Object.assign(s.uniforms,U);
    s.vertexShader='varying vec3 vCornerW;\n'+s.vertexShader.replace('#include <project_vertex>',VERTEX);
    s.fragmentShader='varying vec3 vCornerW;\nuniform highp sampler2DArray uCorner;\nuniform float uCornerS;\nuniform vec4 uCornerBox;\n'+s.fragmentShader.replace('#include <color_fragment>',FRAGMENT);};
+  m.onBeforeCompile.keepsGeometry=keepsGeometry(before);// shading only (the vertex keeps project_vertex)
   m.customProgramCacheKey=function(){return key.call(this)+'|corner';};m.needsUpdate=true;count++;}});return count;};
  const stats={materials:patch(),walls:0,ms:0,ready:false};
  async function start(colliders){

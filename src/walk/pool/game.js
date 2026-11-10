@@ -14,6 +14,9 @@ import {newMatch,judge,legal,place,onEight,downOf,GROUPS} from './eightball.js';
 //   scores.submit(ms,shots)   a rack cleared; the result arrives through setResult
 // setBoard({status:'ok'|'guest'|'offline'|'loading', top:[{name,ms}], you:{ms,rank}|null})
 // setResult({ok, ms, best, rank, newBest} | {ok:false, why:'sign-in'|'offline'|'rejected'})
+// A clear with no answer inside REPLY_MS (the link dropped as the rack cleared, say) stops saying SAVING: the game sets
+// {ok:false, why:'unavailable'} itself, as the Container Maze does (maze/run.js). An answer that comes later still shows.
+const REPLY_MS=6000;
 const FONT={display:'"Archivo", "Sora", sans-serif',mono:'"JetBrains Mono", ui-monospace, monospace'};
 const C={back:'#05070d',text:'#f4f0e8',dim:'#a6a5b4',orange:'#f85800',teal:'#2fd6c5',navy:'#233b4b',rail:'#1b2f3d',bronze:'#9d7950',pocket:'#06080b',
  fur:'#2f56d8',shorts:'#d89a3a',shoe:'#f4f0e8',sole:'#b9b4aa'};
@@ -48,7 +51,7 @@ export function createPawPool({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
  document.body.appendChild(root);
  const g2=canvas.getContext('2d');
 
- let open=false,screen='title',game=null,raf=0,last=0,acc=0,board={status:'loading',top:[],you:null},result=null,doneAt=-Infinity;
+ let open=false,screen='title',game=null,raf=0,last=0,acc=0,board={status:'loading',top:[],you:null},result=null,doneAt=-Infinity,replyTimer=0;
  let angle=0,charge=0,swing=null,padKick=false;
  // The game chosen ('practice' or 'versus'), an 8-ball match while one is on, its turn banner, a dragged cue ball,
  // the title's two game cards (for clicks) and the gamepad's buttons last frame.
@@ -79,11 +82,15 @@ export function createPawPool({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
   if(screen==='play'||performance.now()-doneAt<700)return;
   const seed=(Math.random()*2**31)|0,breaker=screen==='done'&&match?1-match.breaker:0;mode=next;
   if(mode==='versus'){match=newMatch(seed,breaker);game=match.g;}else{match=null;game=newGame(seed);}
-  screen='play';result=null;charge=0;swing=null;angle=0;acc=0;banner=null;dragCue=null;sound.rack();
+  screen='play';result=null;clearTimeout(replyTimer);charge=0;swing=null;angle=0;acc=0;banner=null;dragCue=null;sound.rack();
   if(match)say(`${NAME[breaker]} TO BREAK`,'BALL IN HAND BEHIND THE LINE',breaker);else scores?.start();
  }
- function finish(){screen='done';doneAt=performance.now();charge=0;if(!match)scores?.submit(Math.round(game.t*1000),game.shots);}
- function menu(){if(screen!=='done')return;screen='title';match=null;game=null;banner=null;result=null;}
+ function finish(){
+  screen='done';doneAt=performance.now();charge=0;if(match)return;
+  clearTimeout(replyTimer);result=null;scores?.submit(Math.round(game.t*1000),game.shots);
+  if(!result)replyTimer=setTimeout(()=>{if(!result)result={ok:false,why:'unavailable'};},REPLY_MS);
+ }
+ function menu(){if(screen!=='done')return;screen='title';match=null;game=null;banner=null;result=null;clearTimeout(replyTimer);}
  // 8-ball: judge each shot once the balls stop, and say what happened.
  const say=(title,sub,p)=>{banner={title,sub,color:PLAYER[p],at:performance.now()};};
  function settled(){
@@ -288,7 +295,7 @@ export function createPawPool({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
   text('RACK CLEARED',view.w/2,y+16,30,C.orange,'center',800,FONT.display);
   text(clock(game.t*1000),view.w/2,y+56,40,C.text,'center');text(`${game.shots} KICK${game.shots===1?'':'S'}`,view.w/2,y+102,12,C.dim,'center');
   const line=!result?'SAVING…':result.ok?(result.newBest?`NEW BEST! RANK ${result.rank||'-'}`:`YOUR BEST ${clock(result.best)} · RANK ${result.rank||'-'}`):
-   result.why==='sign-in'?'NOT SAVED: SIGN IN WITH DISCORD':result.why==='offline'?'OFFLINE: TIME NOT SAVED':'TIME NOT ACCEPTED';
+   result.why==='sign-in'?'NOT SAVED: SIGN IN WITH DISCORD':result.why==='offline'?'OFFLINE: TIME NOT SAVED':result.why==='unavailable'?'THE BOARD DID NOT ANSWER':'TIME NOT ACCEPTED';
   text(line,view.w/2,y+122,13,result?.ok?C.teal:result?C.orange:C.dim,'center');
   text('TOP 10 · SIGNED-IN PLAYERS',view.w/2,y+150,11,C.bronze,'center');boardLines(x+28,y+170,8,x+w-28);
   if((now/600|0)%2===0)text(touch?'TAP TO PLAY AGAIN':'SPACE OR CLICK TO PLAY AGAIN',view.w/2,y+h-28,14,C.orange,'center');
@@ -362,7 +369,7 @@ export function createPawPool({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
   open:show,close:hide,
   get isOpen(){return open;},
   setBoard(b){board={top:[],you:null,...b};},
-  setResult(r){result=r;if(r?.ok)scores?.request();},
+  setResult(r){clearTimeout(replyTimer);result=r;if(r?.ok)scores?.request();},
   // For checks: the state, and ways to play without input devices.
   get state(){return {screen,mode,game,match,board,result,angle,charge,swing,banner};},
   _begin:begin,_aim(a){angle=a;},_kick(p){swing={t:0,power:p,angle};},_place:(x,y)=>!!match&&place(match,x,y),_menu:menu,
