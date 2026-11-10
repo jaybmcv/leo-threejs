@@ -6,6 +6,7 @@
 import {newGame,step,kick,aim,rack,left,TABLE,R,STEP,POCKETS,HEAD,FOOT,MAX_SPEED} from '../src/walk/pool/rules.js';
 import {POOL_FASTEST_S} from '../src/walk/pool/limits.js';
 import {newMatch,judge,legal,place,onEight,GROUPS} from '../src/walk/pool/eightball.js';
+import {overlayPage} from './overlay-page.mjs';
 
 const problems=[],log=(...a)=>console.log(...a);
 const expect=(ok,what)=>{if(!ok)problems.push(what);log(ok?'ok  ':'FAIL',what);};
@@ -179,6 +180,26 @@ expect(matches.every(r=>r.winner!==null),`every 8-ball match ends with a winner 
 expect(matches.filter(r=>r.why==='eight').length>=matches.length/2,`most matches are won by potting the 8 (${matches.filter(r=>r.why==='eight').length} of ${matches.length})`);
 expect(new Set(matches.map(r=>r.winner)).size===2,'both players win some');
 expect(JSON.stringify(match(41))===JSON.stringify(match(41)),'the same seed and kicks play the same match');
+
+// The game itself on a stand-in page (pool/game.js): a clear Leo live never answers must not say SAVING for good.
+{const page=overlayPage(),pause=ms=>new Promise(r=>setTimeout(r,ms));try{
+ const {createPawPool}=await import('../src/walk/pool/game.js');
+ const sent=[];let answer=null;const p=createPawPool({scores:{request(){},start(){},submit(ms,shots){sent.push([ms,shots]);if(answer)p.setResult(answer);}}});
+ // A practice rack cleared: the frame loop sees it done and sends the time. (A new rack waits out the 0.7 s after a clear.)
+ const clear=async(t,shots)=>{if(p.state.screen==='done')await pause(750);p._begin('practice');Object.assign(p.state.game,{phase:'done',t,shots});return page.frame();};
+ const waits=()=>page.timers.filter(t=>!t.cancelled);
+ p.open();let wrote=await clear(61.5,22);
+ expect(sent.length===1&&sent[0][0]===61500&&sent[0][1]===22&&p.state.screen==='done'&&wrote.includes('SAVING…'),'a cleared rack sends its time and says SAVING while it waits');
+ expect(waits().length===1&&waits()[0].ms===6000,'it waits six seconds for Leo live to answer');
+ waits()[0]?.f();wrote=page.frame();
+ expect(p.state.result?.ok===false&&p.state.result.why==='unavailable'&&wrote.includes('THE BOARD DID NOT ANSWER')&&!wrote.includes('SAVING…'),'no answer in six seconds: it says the board did not answer, and stops saying SAVING');
+ p.setResult({ok:true,ms:61500,best:61500,rank:2,newBest:true});wrote=page.frame();
+ expect(wrote.some(s=>s.startsWith('NEW BEST')),'an answer that comes late is still shown');
+ await clear(70,30);const wait=page.timers.at(-1);p.setResult({ok:true,ms:70000,best:61500,rank:2,newBest:false});
+ expect(wait.cancelled&&p.state.result.ok,'an answer in time ends the wait');
+ answer={ok:false,why:'offline'};const n=page.timers.length;wrote=await clear(80,40);
+ expect(page.timers.length===n&&wrote.includes('OFFLINE: TIME NOT SAVED'),'offline is said at once, with nothing to wait for');
+}finally{page.restore();}}
 
 console.log(problems.length?`FAIL: ${problems.length} problem(s)`:'PASS');
 process.exitCode=problems.length?1:0;
