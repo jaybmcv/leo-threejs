@@ -44,17 +44,25 @@ const bloomColor=r=>{const k=r();return k<.5?WHITE:k<.8?PINK:BLUSH;};
 // A trailing vine: leaves alternating down a swaying line (no stem tube; at these distances the leaves carry it),
 // largest at the top, the odd flower among them.
 function vine(out,[x,y,z],length,r,flowers){
- const n=Math.max(2,Math.round(length/.36)),phase=r()*6;
- for(let i=1;i<=n;i++){const t=i/n,len=.42+.2*(1-t)+r()*.08,p=[x+Math.sin(phase+t*3)*.12*t,y-length*t,z-.06*t+Math.cos(phase+t*2.3)*.07*t];
+ const n=Math.max(2,Math.round(length/.42)),phase=r()*6;
+ for(let i=1;i<=n;i++){const t=i/n,len=.5+.22*(1-t)+r()*.08,p=[x+Math.sin(phase+t*3)*.12*t,y-length*t,z-.06*t+Math.cos(phase+t*2.3)*.07*t];
   out.push(orient(leaf(len,len*.85,GREENS.mid,i%3?GREENS.bright:GREENS.lime),p,phase+i*2.4,-.6-r()*.5,(r()-.5)*.6));
-  if(r()<flowers)bloom(out,[p[0]+(r()-.5)*.12,p[1]+.04,p[2]-.12],.07+r()*.02,bloomColor(r),true);}
+  if(r()<flowers)bloom(out,[p[0]+(r()-.5)*.12,p[1]+.04,p[2]-.14],.1+r()*.03,bloomColor(r),true);}
 }
-// Lush (low decks), medium and light (high decks): fewer and shorter vines, fewer flowers, and the light one's
-// foliage gathered to one end of its trough.
+// A flower cluster: three blooms close together, so it reads as one white or pink spot from the atrium floor.
+function cluster(out,[x,y,z],size,r,small=false){const color=bloomColor(r);for(let k=0;k<3;k++)bloom(out,[x+(k-1)*size*1.3+(r()-.5)*size*.4,y+(r()-.5)*size*.6,z-r()*size*.6],size*(.8+r()*.3),k===1?color:bloomColor(r),small);}
+// The leafy mass hanging over the trough's face: rows of large leaves pointing down, darker toward the back, so the
+// strip reads as a thick green band below the edge, as in the concept.
+function curtain(out,from,to,rows,r){
+ rows.forEach((n,row)=>{for(let k=0;k<n;k++){const x=from+(to-from)*(k+.5+(row%2)*.5)/(n+(row%2)*.5)+(r()-.5)*.15,len=.6+r()*.18;
+  out.push(orient(leaf(len,len*.75,row?GREENS.dark:GREENS.mid,k%3?GREENS.bright:GREENS.lime),[x,.08-row*.42,-.4-row*.05-r()*.06],OUT+(r()-.5)*.9,-1.15-r()*.3,(r()-.5)*.5));}});
+}
+// Lush (low decks), medium and light (high decks): fewer and shorter vines, a thinner curtain, fewer flowers, and the
+// light one's foliage gathered to one end of its trough.
 const CASCADE_VARIANTS=[
- {clumps:4,vines:8,trail:2.2,lip:7,flowers:13,onVines:.3,span:1},
- {clumps:3,vines:6,trail:1.7,lip:5,flowers:8,onVines:.2,span:1},
- {clumps:2,vines:4,trail:1.2,lip:3,flowers:5,onVines:.14,span:.55},
+ {clumps:4,curtain:[9,8],vines:7,trail:2.2,lip:7,clusters:6,hanging:4,onVines:.3,span:1},
+ {clumps:3,curtain:[7,5],vines:5,trail:1.7,lip:5,clusters:4,hanging:2,onVines:.2,span:1},
+ {clumps:2,curtain:[4,2],vines:3,trail:1.2,lip:3,clusters:2,hanging:1,onVines:.14,span:.55},
 ];
 function cascadeTemplate(variant){
  const v=CASCADE_VARIANTS[variant],r=random(9100+variant*77),out=[],w=SLOT/2,from=-w+.25,to=-w+.25+(SLOT-.5)*v.span;
@@ -63,9 +71,12 @@ function cascadeTemplate(variant){
  out.push(paint(new T.BoxGeometry(SLOT,.26,.28,4,1,1).translate(0,.15,-.19),TROUGH));
  for(let k=0;k<v.clumps;k++)clump(out,[at((k+.5)/v.clumps)+(r()-.5)*.25,.28,-.22],{r:.46+r()*.1,rnd:r,leaves:0,detail:0,squash:.5,palette:[GREENS.dark,GREENS.mid,GREENS.bright,GREENS.lime]});
  // Leaves arching over the lip, so the trough edge disappears under foliage as in the concept.
- for(let k=0;k<v.lip;k++)out.push(orient(leaf(.55+r()*.18,.28,GREENS.mid,GREENS.lime),[at((k+.5)/v.lip)+(r()-.5)*.2,.27,-.34],OUT+(r()-.5)*.8,-.5-r()*.5,0));
- for(let k=0;k<v.vines;k++)vine(out,[at((k+.5)/v.vines)+(r()-.5)*.2,.06,-.35],v.trail*(.6+r()*.5),r,v.onVines);
- for(let k=0;k<v.flowers;k++)bloom(out,[at((k+.5)/v.flowers)+(r()-.5)*.3,.4+r()*.1,-.26-r()*.16],.09+r()*.03,bloomColor(r));
+ for(let k=0;k<v.lip;k++)out.push(orient(leaf(.6+r()*.18,.3,GREENS.mid,GREENS.lime),[at((k+.5)/v.lip)+(r()-.5)*.2,.27,-.34],OUT+(r()-.5)*.8,-.5-r()*.5,0));
+ curtain(out,from,to,v.curtain,r);
+ for(let k=0;k<v.vines;k++)vine(out,[at((k+.5)/v.vines)+(r()-.5)*.2,-.3,-.45],v.trail*(.6+r()*.5),r,v.onVines);
+ // Flower clusters on the planting and hanging in front of the curtain.
+ for(let k=0;k<v.clusters;k++)cluster(out,[at((k+.5)/v.clusters)+(r()-.5)*.3,.42+r()*.04,-.3-r()*.12],.12,r);
+ for(let k=0;k<v.hanging;k++)cluster(out,[at((k+.5)/v.hanging)+(r()-.5)*.3,-.15-r()*.45,-.62],.13,r,true);
  const g=mergeGeometries(out);out.forEach(x=>x.dispose());return g;
 }
 // Smooth value noise along each deck edge, so planters come in runs and gaps rather than a pattern.
@@ -141,8 +152,8 @@ function distantCascadeTemplate(){
  if(distantCascade)return distantCascade;
  const r=random(9900),out=[paint(new T.BoxGeometry(SLOT,.26,.28,4,1,1).translate(0,.15,-.19),TROUGH)];
  clump(out,[0,.32,-.22],{r:.6,rnd:r,leaves:0,detail:0,squash:.5,palette:[GREENS.mid,GREENS.bright,GREENS.lime]});
- for(let k=0;k<5;k++){for(let i=1;i<=3;i++)out.push(orient(leaf(.55,.46,GREENS.mid,GREENS.lime),[-1.4+k*.7,.06-i*.5,-.4],-Math.PI/2+(r()-.5),-1.2,0));
-  bloom(out,[-1.4+k*.7+.2,.46,-.3],.08,bloomColor(r),true);}
+ for(let k=0;k<6;k++){for(let i=0;i<3;i++)out.push(orient(leaf(.7,.55,i?GREENS.dark:GREENS.mid,GREENS.bright),[-1.5+k*.6,.08-i*.5,-.45],-Math.PI/2+(r()-.5),-1.2,0));
+  bloom(out,[-1.5+k*.6+.2,k%2?.44:-.3,k%2?-.3:-.62],.16,bloomColor(r),true);}
  distantCascade=mergeGeometries(out);out.forEach(x=>x.dispose());return distantCascade;
 }
 export function simplifyDistantGardens(distant){let triangles=0;distant.traverse(o=>{if(!o.isInstancedMesh||!/^P6_hanging_garden_/.test(o.name))return;o.geometry=distantCascadeTemplate();triangles+=o.geometry.attributes.position.count/3*o.count;});return triangles;}
