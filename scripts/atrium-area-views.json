@@ -1,0 +1,25 @@
+{
+  "width": 1600,
+  "height": 900,
+  "about": "Deck 6 atrium viewpoints per improvement area. at = ship metres (Deck 6 floor y -19.7, the walk resolves standing height); yaw/pitch in degrees: yaw 90 looks forward (+x, toward the lift tower), 0 to starboard (+z, food hall), 180 to port (-z, park), 270 aft; pitch up is positive. concept = the one view per area sent for concept images.",
+  "views": [
+    {"id": "hero", "area": "S4 light & palette", "concept": true, "at": [-2, -19.7, -6], "yaw": 90, "pitch": 6},
+    {"id": "boulevard-aft", "area": "S1 floor & boulevard", "concept": true, "at": [-88, -19.7, 0], "yaw": 90, "pitch": -6},
+    {"id": "boulevard-cross", "area": "S1 floor & boulevard", "at": [2, -19.7, 2], "yaw": 60, "pitch": -4},
+    {"id": "walls-starboard", "area": "S2 balcony walls", "concept": true, "at": [-20, -19.7, -22], "yaw": 0, "pitch": 24},
+    {"id": "walls-along", "area": "S2 balcony walls", "at": [-100, -19.7, -24], "yaw": 90, "pitch": 18},
+    {"id": "sky-up", "area": "S3a sky", "concept": true, "at": [0, -19.7, 0], "yaw": 90, "pitch": 60},
+    {"id": "sky-bow", "area": "S3a sky", "at": [105, -19.7, -2], "yaw": 90, "pitch": 45},
+    {"id": "tower-near", "area": "S3b lift tower", "concept": true, "at": [70, -19.7, 0], "yaw": 90, "pitch": 18},
+    {"id": "lobby-in", "area": "G1 arrival lobby", "concept": true, "at": [-120, -19.7, 0], "yaw": 90, "pitch": 4},
+    {"id": "lobby-back", "area": "G1 arrival lobby", "at": [-92, -19.7, 8], "yaw": 270, "pitch": 4},
+    {"id": "park-wide", "area": "G2 Voyager park", "concept": true, "at": [-47, -19.7, -6], "yaw": 180, "pitch": 4},
+    {"id": "park-path", "area": "G2 Voyager park", "at": [-85, -19.7, -30], "yaw": 90, "pitch": 2},
+    {"id": "lake-waterfall", "area": "G3 reflection lake", "concept": true, "at": [38, -19.7, -7], "yaw": 122, "pitch": 4},
+    {"id": "lake-east", "area": "G3 reflection lake", "at": [110, -19.7, -8], "yaw": 240, "pitch": 2},
+    {"id": "food-wide", "area": "G4 food hall", "concept": true, "at": [-20, -19.7, 7], "yaw": 0, "pitch": 4},
+    {"id": "food-deck", "area": "G4 food hall", "at": [18, -19.7, 32], "yaw": 70, "pitch": 6},
+    {"id": "stage-wide", "area": "G5 common stage", "concept": true, "at": [68, -19.7, 30], "yaw": 90, "pitch": 6},
+    {"id": "stage-front", "area": "G5 common stage", "at": [100, -19.7, 30], "yaw": 90, "pitch": 4}
+  ]
+}

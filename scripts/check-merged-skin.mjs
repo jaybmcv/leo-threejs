@@ -38,4 +38,11 @@ const drawn=meshes=>meshes.flatMap(m=>Array.from({length:m.geometry.attributes.p
 
 {const f=figure(),solo=new T.Group();f.root.add(solo);f.parts[3].removeFromParent();solo.add(f.parts[3]);f.root.updateMatrixWorld(true);
  const m=mergeSkinnedParts(f.parts);assert.deepEqual(shown(f).map(o=>o.name).sort(),['Merged_body','hoodie','shirt']);pass('parts under another parent are not merged with the rest');}
+
+{const f=figure(),m=mergeSkinnedParts(f.parts),before=f.parts[0].matrixWorld.clone();
+ f.root.position.set(2,0,1);f.root.updateMatrixWorld(true);f.root.updateWorldMatrix(false,true);
+ assert.ok(f.parts.every(p=>p.matrixWorld.equals(before)));assert.ok(Math.abs(m.meshes[0].matrixWorld.elements[12]-2)<1e-9);
+ m.dispose();assert.ok(f.parts.every(p=>Math.abs(p.matrixWorld.elements[12]-2)<1e-9&&Math.abs(p.bindMatrixInverse.elements[12]+2)<1e-9));
+ f.root.position.set(5,0,0);f.root.updateMatrixWorld(true);assert.ok(f.parts.every(p=>Math.abs(p.matrixWorld.elements[12]-5)<1e-9));
+ pass('hidden parts skip the figure\'s matrix passes (their readers read the bones); shown again, they are current and update');}
 console.log(`merged skin: ${passed} checks passed`);

@@ -1,0 +1,210 @@
+[
+ {
+  "view": "hero",
+  "query": "time=day",
+  "calls": 558,
+  "triangles": 10760649,
+  "passes": [
+   {
+    "name": "sky",
+    "calls": 4,
+    "triangles": 16130
+   },
+   {
+    "name": "distant",
+    "calls": 0,
+    "triangles": 0
+   },
+   {
+    "name": "main",
+    "calls": 558,
+    "triangles": 10760649
+   }
+  ],
+  "programs": 297,
+  "frameMs": 16.699999928474426,
+  "errors": 0
+ },
+ {
+  "view": "walls-starboard",
+  "query": "time=day",
+  "calls": 613,
+  "triangles": 11067498,
+  "passes": [
+   {
+    "name": "sky",
+    "calls": 2,
+    "triangles": 0
+   },
+   {
+    "name": "distant",
+    "calls": 0,
+    "triangles": 0
+   },
+   {
+    "name": "main",
+    "calls": 613,
+    "triangles": 11067498
+   }
+  ],
+  "programs": 297,
+  "frameMs": 16.600000023841858,
+  "errors": 0
+ },
+ {
+  "view": "sky-up",
+  "query": "time=day",
+  "calls": 533,
+  "triangles": 10560360,
+  "passes": [
+   {
+    "name": "sky",
+    "calls": 2,
+    "triangles": 0
+   },
+   {
+    "name": "distant",
+    "calls": 0,
+    "triangles": 0
+   },
+   {
+    "name": "main",
+    "calls": 533,
+    "triangles": 10560360
+   }
+  ],
+  "programs": 297,
+  "frameMs": 16.699999928474426,
+  "errors": 0
+ },
+ {
+  "view": "sky-bow",
+  "query": "time=day",
+  "calls": 467,
+  "triangles": 10823265,
+  "passes": [
+   {
+    "name": "sky",
+    "calls": 2,
+    "triangles": 0
+   },
+   {
+    "name": "distant",
+    "calls": 0,
+    "triangles": 0
+   },
+   {
+    "name": "main",
+    "calls": 467,
+    "triangles": 10823265
+   }
+  ],
+  "programs": 297,
+  "frameMs": 16.699999928474426,
+  "errors": 0
+ },
+ {
+  "view": "hero",
+  "query": "time=night",
+  "calls": 559,
+  "triangles": 10760685,
+  "passes": [
+   {
+    "name": "sky",
+    "calls": 4,
+    "triangles": 16130
+   },
+   {
+    "name": "distant",
+    "calls": 0,
+    "triangles": 0
+   },
+   {
+    "name": "main",
+    "calls": 559,
+    "triangles": 10760685
+   }
+  ],
+  "programs": 297,
+  "frameMs": 16.699999928474426,
+  "errors": 0
+ },
+ {
+  "view": "walls-starboard",
+  "query": "time=night",
+  "calls": 613,
+  "triangles": 11067498,
+  "passes": [
+   {
+    "name": "sky",
+    "calls": 2,
+    "triangles": 0
+   },
+   {
+    "name": "distant",
+    "calls": 0,
+    "triangles": 0
+   },
+   {
+    "name": "main",
+    "calls": 613,
+    "triangles": 11067498
+   }
+  ],
+  "programs": 297,
+  "frameMs": 16.600000023841858,
+  "errors": 0
+ },
+ {
+  "view": "sky-up",
+  "query": "time=night",
+  "calls": 533,
+  "triangles": 10560360,
+  "passes": [
+   {
+    "name": "sky",
+    "calls": 2,
+    "triangles": 0
+   },
+   {
+    "name": "distant",
+    "calls": 0,
+    "triangles": 0
+   },
+   {
+    "name": "main",
+    "calls": 533,
+    "triangles": 10560360
+   }
+  ],
+  "programs": 297,
+  "frameMs": 16.699999928474426,
+  "errors": 0
+ },
+ {
+  "view": "sky-bow",
+  "query": "time=night",
+  "calls": 468,
+  "triangles": 10823269,
+  "passes": [
+   {
+    "name": "sky",
+    "calls": 2,
+    "triangles": 0
+   },
+   {
+    "name": "distant",
+    "calls": 0,
+    "triangles": 0
+   },
+   {
+    "name": "main",
+    "calls": 468,
+    "triangles": 10823269
+   }
+  ],
+  "programs": 297,
+  "frameMs": 16.5,
+  "errors": 0
+ }
+]
