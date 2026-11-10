@@ -99,7 +99,7 @@ import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
 const cabinPlacements=preparedPlacements;
 import {Colliders,BODY} from './collision.js';
 import {STATIC_LIFT_PARTS,LIFTS,shutLandingDoors} from './lifts.js';
-import {KEEL,RIVER,createTubeMesh,tubeBoard,tubeStep,tubeKick,tubeSeat,tubeDock,inKeelHall,keelPlan,KEEL_PLAN_EXTENT} from './keel-club.public.js';
+import {KEEL,RIVER,createTubeMesh,tubeBoard,tubeStep,tubeKick,tubeSeat,TUBE_SIT,tubeDock,inKeelHall,keelPlan,KEEL_PLAN_EXTENT} from './keel-club.public.js';
 import {Controller,GLIDE,HOOK} from './controller.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
@@ -767,7 +767,7 @@ async function connectToClaim(){
 const giveaway=createGiveaway({$,live:()=>live,connect:connectToClaim});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion,{mergeDraws:true,cacheBones:true}),crowd:true,colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08}});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion,{mergeDraws:true,cacheBones:true}),crowd:true,colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08,recline:TUBE_SIT.recline}});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -1165,8 +1165,10 @@ function boardTube(dock){
  resting={spot:{tube:st,dock,point:new T.Vector3(seat.x,seat.y,seat.z),height:seat.y},lie:false,stand:false,from:{pos:controller.position.clone(),heading},to:{pos:new T.Vector3(),yaw:seat.yaw},t:0,phase:'in',view:new T.Vector3()};
  followTube(resting);
 }
-function followTube(r){const seat=tubeSeat(r.spot.tube);
- r.to.pos.set(seat.x,seat.y+.06-walker.hipHeight,seat.z);r.to.yaw=seat.yaw;r.view.set(seat.x,seat.y-.55,seat.z);
+// Sat down into the ring (keel-club.js TUBE_SIT), facing downstream: restPose tips the sitting figure back about its
+// hips, so the walker's origin sits ahead of and below the hips by the recline.
+function followTube(r){const seat=tubeSeat(r.spot.tube),h=walker.hipHeight,b=TUBE_SIT.recline,ahead=h*Math.sin(b);
+ r.to.pos.set(seat.x+Math.sin(seat.yaw)*ahead,KEEL.floor-RIVER.drop+TUBE_SIT.hip-h*Math.cos(b),seat.z+Math.cos(seat.yaw)*ahead);r.to.yaw=seat.yaw;r.view.set(seat.x,seat.y-.55,seat.z);
  if(r.phase==='in')controller.position.set(seat.x,seat.y,seat.z);}
 // "Splashed by ..." when a water cannon's shot hits our tube: at most every 3 s.
 let splashAt=0,splashHide=0;
@@ -1178,7 +1180,8 @@ function restPose(dt){
  const r=resting;r.t=T.MathUtils.clamp(r.t+(r.phase==='in'?1:-1)*dt/.7,0,1);
  const e=r.t*r.t*(3-2*r.t),h=walker.holder;
  h.position.lerpVectors(r.from.pos,r.to.pos,e);h.rotation.set(0,lerpAngle(r.from.heading,r.to.yaw,Math.min(1,e*1.6)),0);
- walker.body.rotation.set(r.lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.t,.25,1):0,0,0);
+ // In a Keel Club tube the sitting figure leans back into the ring (TUBE_SIT).
+ walker.body.rotation.set(r.lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.t,.25,1):r.spot.tube?-TUBE_SIT.recline*T.MathUtils.smoothstep(r.t,.25,1):0,0,0);
  // In a hammock (lounge.js) the body swings with it.
  const swing=r.spot.hammock&&lounge?.swingOf(r.spot.hammock);
  if(swing){const q=new T.Quaternion().setFromAxisAngle(swing.axis,swing.angle*e);h.position.sub(swing.pivot).applyQuaternion(q).add(swing.pivot);h.quaternion.premultiply(q);}

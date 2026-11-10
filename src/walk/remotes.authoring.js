@@ -98,11 +98,14 @@ export class RemotePlayers{
   const turn=Math.atan2(Math.sin(c.yaw-r.lastYaw),Math.cos(c.yaw-r.lastYaw));r.lastYaw=c.yaw;
   if(dt>0)r.turnRate=T.MathUtils.damp(r.turnRate,turn/dt,10,dt);
   const e=r.rest*r.rest*(3-2*r.rest),lie=r.restKind==='lie';
-  w.body.rotation.set(lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.rest,.25,1):0,0,0);
+  // A Keel Club tube rider sits leaning back into the ring (keel-club.js TUBE_SIT; tube = {make, y, recline}).
+  const recline=r.restKind==='tube'&&this.tube?this.tube.recline:0;
+  w.body.rotation.set(lie?(-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(r.rest,.25,1):-recline*T.MathUtils.smoothstep(r.rest,.25,1),0,0);
   w.setFur(r.tgt.fur);
   const t=r.tgt,floating=t.emote==='healing_capsule',belt=t.playing&&!t.rest&&this.running?.(c);
-  // Floating in a Keel Club tube (keel-club.js; tube = {make, y}): seated, in a tube of this page's own on the water.
-  if(t.rest==='tube'&&this.tube){if(!r.tube)r.tube=this.tube.make();if(!r.tube.parent)this.scene.add(r.tube);r.tube.position.set(c.x,this.tube.y,c.z);}else r.tube?.removeFromParent();
+  // Floating in a Keel Club tube (keel-club.js; tube = {make, y, recline}): seated leaning back, in a tube of this page's
+  // own on the water. Their pose is the walker's origin, ahead of the hips by the recline, so the ring goes under the hips.
+  if(t.rest==='tube'&&this.tube){if(!r.tube)r.tube=this.tube.make();if(!r.tube.parent)this.scene.add(r.tube);{const k=w.hipHeight*Math.sin(this.tube.recline);r.tube.position.set(c.x-Math.sin(c.yaw)*k,this.tube.y,c.z-Math.cos(c.yaw)*k);}}else r.tube?.removeFromParent();
   // Rolling in a hamster ball (hamster-ball.js): standing inside one of this page's own, rolled by their stride.
   if(t.ball&&!t.rest){if(!r.ball)r.ball=createBallMesh();if(!r.ball.mesh.parent)this.scene.add(r.ball.mesh);r.ball.mesh.position.set(c.x,c.y,c.z);
    r.ball.roll(dt,Math.sin(c.yaw)*r.speed,Math.cos(c.yaw)*r.speed);}else r.ball?.mesh.removeFromParent();
