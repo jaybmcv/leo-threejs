@@ -39,7 +39,7 @@ export function featurePlaces(layout,{crownFloor=LIFTS.find(l=>l.id==='crown').s
   out.push({id,name,deck:1,section:'Highlights',detail:'Below Deck 1 · Sports hall',at,yaw,lv:2,resolved:true});
  for(const [i,stop]of LIFTS.find(l=>l.id==='crown').stops.slice(0,-1).entries())add(i?'fin-platform-'+i:'fin-service-gallery',i?stop.label:'Fin lift service gallery',null,[-242.8,stop.y,0],-Math.PI/2,undefined,i?'Inspection platform':'Deck 17 · upper aft gallery');
  add('crown-lounge','Crown lounge',null,[-240,crownFloor,4],Math.PI/2);
- add('selfie-camera','Group photo camera',null,[-264.3,crownFloor,.8],-Math.PI/2);
+ add('selfie-camera','Group photo camera',null,[-262.3,crownFloor,.8],-Math.PI/2);
  add('crown-tv','Crown TV',null,[-253,crownFloor,0],Math.PI/2);
  const sample=layout.cabins.find(c=>c.id==='N10-271'&&c.berths===2)||layout.cabins.find(c=>c.deck===15&&c.berths===2);add('sample-cabin','Your twin cabin',sample.deck,[sample.x,sample.y,sample.z],sample.yaw||0,sample.id,'Neighborhood '+sample.neighborhood);
  return out;

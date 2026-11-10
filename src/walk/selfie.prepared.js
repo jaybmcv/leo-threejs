@@ -7,7 +7,10 @@ import {shapePoint} from '../concept-shape.js';
 // The selfie booth in the crown lounge: a Mars backdrop across the aft end of the centre aisle and a camera on a tripod
 // facing it. Use the camera and it counts down 5 seconds, time to join the others in front of the backdrop, then takes
 // the photo from the lens and frames it in Mars Cats Voyage colours.
-const BACK_X=-272.5,LENS_X=-265.5,WIDTH=9.6,HEIGHT=4.4,FOV=46,COUNT=5,REACH=1.9;
+// The photo is 2:1 and taken from 8.7 m back: about 11.2 m across where a group stands 3 m out from the backdrop, so cats
+// at both ends of the 9.6 m backdrop are in. The tripod stays within 2 m of the live server's booth point (SELFIE.at in
+// server/live-core.mjs, reach 4 m), so a press from anywhere within REACH still starts everyone's countdown.
+const BACK_X=-272.5,LENS_X=-263.5,WIDTH=9.6,HEIGHT=4.4,FOV=52,ASPECT=2,COUNT=5,REACH=1.9;
 const OUT={w:1600,margin:40,band:150};
 const FONT={display:'"Archivo", "Sora", sans-serif',mono:'"JetBrains Mono", ui-monospace, monospace'};
 const ORANGE='#f85800';
@@ -75,7 +78,7 @@ export function createSelfieBooth(){
  const tally=new T.Mesh(new ReplayGeometry("src/walk/selfie.js:4",T.SphereGeometry,.025,10,8),new T.MeshBasicMaterial({color:0x3a1006}));tally.name='Selfie_tally_light';tally.position.set(LENS_X-.11,lensY+.07,.12);group.add(tally);
  // The photo's view: from the lens, tipped 5° up so a group standing 3 m out is in head to toe and the backdrop's name
  // is in above them.
- const camera=new T.PerspectiveCamera(FOV,1.5,.05,150);
+ const camera=new T.PerspectiveCamera(FOV,ASPECT,.05,150);
  const setAngle=index=>{if(!Number.isInteger(index)||index<0||index>2)return;camera.position.set(LENS_X-.26,lensY,[0,-2.5,2.5][index]);camera.lookAt(BACK_X,lensY+(LENS_X-.26-BACK_X)*Math.tan(5*Math.PI/180),0);};
  setAngle(0);
  const stand=new T.Vector3(LENS_X+.2,floor,0);
@@ -99,12 +102,12 @@ export function createSelfieBooth(){
    if(now<ends)return {left,due:false};
    ends=0;tally.material.color.setHex(0x3a1006);return {left:0,due:true};
   },
-  // Set the camera for a canvas of w×h so the 3:2 crop taken from it shows FOV degrees top to bottom.
-  aim(w,h){const crop=Math.min(h,w/1.5);camera.aspect=w/h;camera.fov=2*Math.atan(Math.tan(FOV*Math.PI/360)*h/crop)*180/Math.PI;camera.updateProjectionMatrix();},
-  // Right after the photo is drawn into `source`: crop it to 3:2 and frame it. Resolves to a canvas.
+  // Set the camera for a canvas of w×h so the 2:1 crop taken from it shows FOV degrees top to bottom.
+  aim(w,h){const crop=Math.min(h,w/ASPECT);camera.aspect=w/h;camera.fov=2*Math.atan(Math.tan(FOV*Math.PI/360)*h/crop)*180/Math.PI;camera.updateProjectionMatrix();},
+  // Right after the photo is drawn into `source`: crop it to 2:1 and frame it. Resolves to a canvas.
   async frame(source,names=[],showNames=true){
-   const w=source.width,h=source.height,cw=Math.min(w,h*1.5),ch=cw/1.5;
-   const pw=OUT.w-OUT.margin*2,ph=Math.round(pw/1.5),out=walkCanvas();out.width=OUT.w;out.height=OUT.margin+ph+OUT.band;
+   const w=source.width,h=source.height,cw=Math.min(w,h*ASPECT),ch=cw/ASPECT;
+   const pw=OUT.w-OUT.margin*2,ph=Math.round(pw/ASPECT),out=walkCanvas();out.width=OUT.w;out.height=OUT.margin+ph+OUT.band;
    const logo=await mark;await globalThis.document?.fonts?.ready;
    const c=out.getContext('2d');c.drawImage(source,(w-cw)/2,(h-ch)/2,cw,ch,OUT.margin,OUT.margin,pw,ph);
    if(showNames){
