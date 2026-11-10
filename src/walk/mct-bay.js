@@ -15,7 +15,8 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 // repair benches go to make room; the tool cabinets, the centre aisle and the doorway stay as they were.
 // Room frame (Area_d01-workshop-5): the doorway at x=-25.92 (|z|<2), the amber aisle lines at z=±2, the outboard wall's
 // face at z=16.84, the tool cabinets along z=-15 (front faces at z=-14.45, 2.6 m high), the room title on the far wall
-// at x=25.84 (|z|<7), the ceiling at y=3.3 with light strips at z=0, ±6 and ±12.
+// at x=25.84 (|z|<7; refitted over the street doorway there, below), the ceiling at y=3.3 with light strips at z=0, ±6
+// and ±12.
 const ROOM='Area_d01-workshop-5';
 const WALL=16.84,CEIL=3.3;
 // The deck's floor finish stands 6 mm above the room's floor plane, so floor paint is laid 8 mm up, clear of it (it
@@ -100,12 +101,24 @@ function stripeTexture(){
  t.wrapS=t.wrapT=T.RepeatWrapping;return t;
 }
 
-// Take the room's repair benches, tools and tool boards out before the colliders are built. Returns false if the
-// room is missing.
+// The room title on the far wall (the room kit's 14 m navy panel, 2.2-2.9 m up, and its lettering) hangs where the street
+// doorway now opens on the roadway (src/plan/layout-v2.js; 2.5 m high, |z|<2), so it becomes a board just wider than
+// its lettering, lifted clear above the doorway and still under the ceiling.
+const TITLE={panel:14,margin:.45,lift:.375};
+function refitTitle(room){
+ const panel=room.getObjectByName('Area_identity_panel'),text=[];room.traverse(o=>{if(o.isMesh&&o.name==='Wayfinding_text'&&o.position.x>20)text.push(o);});
+ if(!panel||text.length!==1)return false;
+ const g=text[0].geometry;g.computeBoundingBox();const width=g.boundingBox.max.x-g.boundingBox.min.x;
+ panel.scale.z=(width+2*TITLE.margin)/TITLE.panel;for(const o of [panel,text[0]])o.position.y+=TITLE.lift;return true;
+}
+
+// Take the room's repair benches, tools and tool boards out, and refit the room title over the street doorway, before
+// the colliders are built. Returns false if the room is missing.
 export function stripCargoMaintenance(ship){
  const room=roomObject(ship,ROOM);if(!room)return false;
  const old=[];room.traverse(o=>{if(o.isMesh&&OLD.test(o.name))old.push(o);});
  for(const o of old){o.removeFromParent();o.geometry.dispose();}
+ refitTitle(room);
  return true;
 }
 
