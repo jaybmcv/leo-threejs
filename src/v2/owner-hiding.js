@@ -143,8 +143,8 @@ export function createOwnerHiding(data,{key,scene}){
   return active;
  }
  const off=[];
- // Entry [part, [cond...], [cabin id...]?]: hide the part when it is unchanged, every condition is drawn and, for a
- // cabin part, every cabin it shows now was proven.
+ // Entry [part, [cond...], [cabin id...]?]: hide the part when it is unchanged, nothing is attached to it, every
+ // condition is drawn and, for a cabin part, every cabin it shows now was proven.
  function around(camera,draw){
   off.length=0;
   try{
@@ -152,6 +152,9 @@ export function createOwnerHiding(data,{key,scene}){
    if(parts&&near!==null&&near<=data.nearMargin){frame=frame+1>>>0||1;
     for(const n of entriesAt(camera)){const [pi,cs]=entries[n],s=parts[pi];if(!s||!s.o.visible)continue;
      if(!same(s)){parts[pi]=null;stats.dropped++;continue;}
+     // three draws nothing under a hidden object, and the proof covered this part's own triangles only: a gem's glow
+     // (aquarium-treasure/game.js) is bigger than its gem. Held while it has children, whenever they were attached.
+     if(s.o.children.length){stats.held++;continue;}
      const slots=slotSets[n];if(slots){const ids=s.o.userData.currentCabinIds;let all=Array.isArray(ids);if(all)for(const id of ids)if(!slots.has(id)){all=false;break;}if(!all){stats.held++;continue;}}
      let ok=true;for(const k of cs)if(!drawn(k,camera)){ok=false;break;}
      if(ok){s.o.visible=false;off.push(s.o);}else stats.held++;}}
