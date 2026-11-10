@@ -15,6 +15,8 @@ Base: `walk.html?fps=1&lv=2&at=0,-19.7,0&yaw=90&pitch=0`
 | E | `&detail=performance&deskaa=1&deskdepth=linear&res=high` | D | What the logarithmic depth buffer's depth writes cost. Linear depth always holds the haze at Performance's, so it is only comparable with D. |
 | F | `&detail=high&deskaa=1&deskdepth=log&res=high&deskpiece=0` | A | What #455's view-culled pieces save on this machine. |
 
+The `desk` switches apply where the main pointer is a mouse or trackpad. A touch-first device is treated as a phone and takes `?phoneaa=0` and `?phonedepth=linear` instead. `?res=` works on both; `?detail=` only where the desktop's ship is loaded.
+
 Ask for the whole Stats box from each, after standing still for ten seconds. Its lines say what was measured: frames a second and frame times, CPU and GPU time, draws and triangles, the drawing size and pixel ratio, `msaa ×4` or `msaa off` with `log depth` or `linear depth`, and the GPU's name. The GPU time shows only where the browser can time it; where it reads `n/a`, compare the median frame time instead.
 
 ## The switches

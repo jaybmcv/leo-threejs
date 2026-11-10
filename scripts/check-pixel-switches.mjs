@@ -1,5 +1,6 @@
 // Per-pixel A/B switches and their line in the Stats readout (src/walk/pixel-switches.js).
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {deskAntialias,heldRes,pixelLine} from '../src/walk/pixel-switches.js';
 
 let passed=0;const pass=name=>{passed++;console.log('PASS '+name);};
@@ -27,4 +28,13 @@ assert.equal(pixelLine({samples:4,logDepth:true}),'msaa ×4   log depth');assert
 assert.equal(pixelLine({samples:0,logDepth:true}),'msaa off   log depth');assert.equal(pixelLine({samples:1,logDepth:false}),'msaa off   linear depth');
 assert.equal(pixelLine({samples:null,logDepth:false}),'msaa off   linear depth');assert.equal(pixelLine(),'msaa off   linear depth');
 pass('the Stats line says the samples the context really got and which depth it draws with');
+
+// The walk's own lines: the checks above pass whatever the walk does with the switches, so its wiring is held here.
+const walk=fs.readFileSync(new URL('../src/walk/main.public.js',import.meta.url),'utf8'),readout=fs.readFileSync(new URL('../src/walk/frame-readout.js',import.meta.url),'utf8');
+assert.ok(walk.includes('antialias:phone?antialiasByDetail:deskAntialias(phoneTest,antialiasByDetail)'),'the renderer asks ?deskaa= on a desktop only');
+assert.ok(walk.includes('const savedRes=heldRes(phoneTest,RES)??'),'a held level stands in the saved one\'s place');
+assert.ok(walk.includes('resChosen=savedRes!==null')&&/function watchFrames\(ms,now\)\{\s*if\(resChosen\|\|/.test(walk),'a level in that place stops the step down');
+assert.equal(walk.split('localStorage.setItem(RES_KEY').length-1,1);assert.ok(/resButton\.addEventListener\('click',\(\)=>\{[^\n]*localStorage\.setItem\(RES_KEY/.test(walk),'only a click on the Res button saves a level');
+assert.ok(readout.includes('pixelLine({samples:gl.getParameter(gl.SAMPLES),logDepth:renderer.capabilities.logarithmicDepthBuffer})')&&/\n\s+pixels,\r?\n\s+gpuName,/.test(readout),'the readout shows the line above the GPU name');
+pass('the walk asks ?deskaa= on a desktop only, reads ?res= where the saved level is read, saves only on a click, and shows the line');
 console.log(`pixel switches: ${passed} checks passed`);
