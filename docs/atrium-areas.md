@@ -14,7 +14,7 @@ view, so they are settled before the ground zones; otherwise each zone's concept
 | G2 Voyager park | x −90..−4, z −56..−6 | `phase6-programme.js`, `atrium-gardens.js`, `src/plan/atrium-v2.js` |
 | G3 Reflection lake | x 4..120, z −56..−6: water, waterfall, bridge, bays, island | `reflection-terraces.js`, `atrium-gardens.js`, `atrium-v2.js` |
 | G4 Food hall | x −90..58, z 6..56: stalls, tables, timber decks, festoons | `phase6-programme.js`, `atrium-gardens.js`, `atrium-v2.js` |
-| G5 Common stage | x 66..122, z 6..56: timber amphitheatre tiers, stage deck, cream wall ([stage/](atrium-areas/stage/README.md)) | `src/v2/atrium-stage.js`, `phase6-programme.js` |
+| G5 Common stage | x 66..122, z 6..56: timber amphitheatre tiers, stage deck, cream wall ([stage/](atrium-areas/stage/README.md)) | `src/v2/atrium-stage.js`, `phase6-programme.js`, `atrium-gardens.js` |
 
 Out of scope unless asked: Voyage Commons, bow coffee bars, observation lounge.
 
