@@ -259,9 +259,9 @@ const hazeHeld=deskDetail&&linearDepth;
 const leanCats=phone&&phoneTest.get('phonecats')!=='full';
 // The crowd's farther visitors are drawn on lighter meshes (crowd-tier.js); ?crowdlod=0 draws them all in full, to compare.
 const crowdLod=phoneTest.get('crowdlod')!=='0';
-// The crowd is trimmed to keep frames at 30 a second (crowd-count.js); ?crowdfps=N keeps N instead (1 to 240), and
-// ?crowdfps=0 caps it as before, to compare.
-const crowdFpsAsked=phoneTest.get('crowdfps'),crowdFpsN=Number(crowdFpsAsked),crowdFps=crowdFpsAsked&&Number.isInteger(crowdFpsN)&&crowdFpsN>=0&&crowdFpsN<=240?crowdFpsN:undefined;
+// The crowd is capped (remotes.js); ?crowdfps=N (1 to 240) trims it to keep N frames a second instead (crowd-count.js),
+// on trial: on a phone it kept cuts that bought nothing.
+const crowdFpsN=Number(phoneTest.get('crowdfps')),crowdFps=Number.isInteger(crowdFpsN)&&crowdFpsN>=1&&crowdFpsN<=240?crowdFpsN:0;
 // ?phonehide=bands,glass,furnish,gardens,haze,cats hides those for a test on a device, to see what its GPU spends on.
 const PHONE_HIDE={bands:o=>/^V2_low_deck_merged_/.test(o.name)&&!o.material[0]?.transparent,glass:o=>[o.material].flat().some(m=>m?.transparent),
  furnish:o=>o.isInstancedMesh&&o.userData.phase4||o.userData.phase4Batch,gardens:o=>[o.material].flat().some(m=>m?.name==='P6_atrium_gardens'),haze:o=>/haze/i.test(o.name),cats:o=>o.isSkinnedMesh};

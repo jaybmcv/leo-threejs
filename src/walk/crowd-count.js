@@ -30,6 +30,11 @@
 // unless they go on, SUSTAIN of them or SUSTAIN_S: then this page is that slow (rig-budget.js does the same); one past
 // GAP_S is not a frame drawn slowly (a tab come back, the Builder's Hub closed), and long frames either side of one, or
 // of the selfie booth's countdown, are not in a row.
+// On trial only (remotes.js crowdFps, the walk's ?crowdfps=N), not by default: on a phone (an S20 Ultra, 200 in a crowd
+// 3 m off) it cut to the least and held there, with frames no shorter than at the old cap. Frames that grew shorter for
+// another reason meanwhile (the page warming up after a load, the view turned somewhere lighter) passed for the cuts'
+// gain; and between the target and HEADROOM nothing tries a low cap again. Before it is the default it wants cuts judged
+// against frames either side of them, none while the page warms up, and a low cap tried again from time to time.
 //   createCrowdCount({fps, least, most, start}) -> {frame(dt, drawn, {active}), most, state}
 //   frame: each frame, its length (s) and how many of the crowd it drew; active false (the selfie booth counting down,
 //   when the crowd is drawn in view or not): no step, and its frames not counted. most: how many to draw from now.
