@@ -14,6 +14,8 @@ import {WALL,paintStroke,wallFromText} from '../src/walk/graffiti-wall.js';
 
 const check=(name,ok,detail='')=>{assert(ok,name+' '+detail);console.log('PASS '+name+(detail?' ('+detail+')':''));};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const built=new URL('../output/leo-interior-v02/layout.json',import.meta.url);
+if(!await fs.access(built).then(()=>true,()=>false)){console.error('Needs the built layout 2 ship (output/leo-interior-v02/layout.json): build it first (node scripts/build-fast-v2.mjs on a warm baseline, or the full build), then run this again.');process.exit(2);}
 const tmp=await fs.mkdtemp(path.join(os.tmpdir(),'leo-graffiti-')),children=[],bots=[];
 const pair=await crypto.subtle.generateKey('Ed25519',true,['sign','verify']),jwk=await crypto.subtle.exportKey('jwk',pair.publicKey);
 const keys=http.createServer((q,res)=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify({keys:[{...jwk,kid:'local-g',alg:'EdDSA',use:'sig'}]}));});
@@ -48,7 +50,7 @@ const stop=async s=>{s.p.kill();await new Promise(r=>s.p.exitCode!==null||s.p.si
 let srv;
 try{
  srv=await start();
- console.log('server layout',srv.health.layout,'identity',String(srv.health.layoutIdentity).slice(0,8),'(isolated, storage in a temp folder)');
+ console.log('server layout',srv.health.layout,'identity',String(srv.health.layoutIdentity).slice(0,8),'revision',String(srv.health.revision).slice(0,8),'(isolated, storage in a temp folder)');
  const guest=await bot(srv,{signed:false}),bea=await bot(srv,{id:'912121212121212121'}),cal=await bot(srv,{id:'913131313131313131'}),away=await bot(srv,{signed:false});
  const bare=await look(guest),calWall=await look(cal);await look(bea);
  check('anyone can look at the wall; a guest is marked not signed in',bare?.w===WALL.w&&bare.h===WALL.h&&bare.verified===false&&wallFromText(bare.cells)?.every(c=>c===0)&&calWall?.verified===true);
