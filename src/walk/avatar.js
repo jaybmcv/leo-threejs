@@ -25,6 +25,10 @@ const CATNIP_S=1.2;
 // On the grapple line (grapple.js): the body leans towards the claw by up to HANG_TILT radians, about the feet, and the
 // right arm reaches up the line; both ease in over about HANG_S seconds.
 const HANG_TILT=.6,HANG_S=.12;
+// Arms on a tube's rim: each rests on the ring's top RIM_IN inside its centre line, somewhere RIM_TURN radians round from
+// straight ahead (from just forward of the side to behind it), RIM_LIFT over it (the forearm's own thickness).
+const RIM_TURN=[1.3,2.5],RIM_IN=.04,RIM_LIFT=.035;
+const rimHips=new T.Vector3(),rimAt=new T.Vector3(),rimFrom=new T.Vector3(),rimDir=new T.Vector3(),rimBend=new T.Vector3(),rimTurn=new T.Quaternion();
 
 function liePose(bone){
  for(const side of ['L','R']){
@@ -121,6 +125,9 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
  // A hat wearer (hat.js) on all fours: the tail's arc would carry its tip up through the back of the crown, so its base
  // tips down a little more, eased in and out.
  const tail=bone('Tail_springBone_1'),TAIL_DROP=-.55,tq=new T.Quaternion(),axis=new T.Vector3();let tailDrop=0;
+ // How far an arm reaches, shoulder joint to wrist, a little short of straight (a tube rider's arms rest out on the rim).
+ const armReach=.95*(bone('upper_arm.L').getWorldPosition(new T.Vector3()).distanceTo(bone('forearm.L').getWorldPosition(new T.Vector3()))
+  +bone('forearm.L').getWorldPosition(new T.Vector3()).distanceTo(bone('hand.L').getWorldPosition(new T.Vector3())));
  // The hips' height above the feet's origin, standing.
  const hipHeight=bone('spine').getWorldPosition(new T.Vector3()).y-figure.root.getWorldPosition(new T.Vector3()).y;
  let suit=null;
@@ -139,7 +146,7 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
   matrices,
   // Where the right paw is drawn (the grapple line leaves from it).
   hand(out=new T.Vector3()){return paw.getWorldPosition(out);},
-  // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock},
+  // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock, rim},
   //  catnip: in the Hydro-Nip Lounge, board: riding the longboard (0..1, glide.js), hook: the grapple's bite (world) or null,
   //  unseen: nothing draws him this frame (first person), so the figure's rig solve (about 0.33 ms) runs less often,
   //  solveEvery: seconds between solves while he is small on screen (another visitor far off: remotes.js), 0 every frame}
@@ -186,6 +193,33 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
     aim(shoulder,elbow,lean);aim(elbow,paw,lean);touched();
     shoulder.quaternion.copy(a.slerp(shoulder.quaternion,w));elbow.quaternion.copy(b.slerp(elbow.quaternion,w));
     figure.root.updateMatrixWorld(true);
+   }
+   // In a Keel Club tube (rest.rim: the ring round the hips, keel-club.js TUBE_RIM), the arms rest out to the sides on
+   // its top, the paws on the rim. Aimed in the world each frame, so the sitting body's lean back (main.js restPose) is
+   // already in it.
+   if(r?.rim&&r.weight>0){
+    figure.root.updateMatrixWorld(true);const w=r.weight*r.weight*(3-2*r.weight),R=r.rim;
+    bone('spine').getWorldPosition(rimHips);holder.getWorldQuaternion(rimTurn);
+    // The ring's top over the hips at a distance d from its middle (the torus's tube, centred `tube` under its top).
+    const top=d=>R.up-R.tube+Math.sqrt(Math.max(0,R.tube*R.tube-(d-R.r)*(d-R.r)));
+    for(const side of ['L','R']){
+     const out=side==='L'?1:-1,up=bone('upper_arm.'+side),fore=bone('forearm.'+side),hand=bone('hand.'+side);
+     const a=up.quaternion.clone(),b=fore.quaternion.clone(),c=hand.quaternion.clone();
+     up.getWorldPosition(rimFrom);
+     // Round the ring's top from the side towards the back (he leans back, so his shoulders are behind his hips) to where
+     // the arm, nearly straight, just reaches it.
+     const d=R.r-RIM_IN;let best=Infinity;for(let turn=RIM_TURN[0];turn<=RIM_TURN[1];turn+=.05){
+      rimDir.set(out*Math.sin(turn)*d,top(d)+RIM_LIFT,Math.cos(turn)*d).applyQuaternion(rimTurn).add(rimHips);
+      const miss=Math.abs(rimDir.distanceTo(rimFrom)-armReach);if(miss<best){best=miss;rimAt.copy(rimDir);}}
+     // A little bend at the elbow: the upper arm aims just over the spot, the forearm at it.
+     aim(up,fore,rimDir.subVectors(rimAt,rimFrom).add(rimBend.set(0,.05,0)));up.updateMatrixWorld(true);
+     aim(fore,hand,rimDir.subVectors(rimAt,fore.getWorldPosition(rimFrom)));fore.updateMatrixWorld(true);
+     // The paw lies on the rim, fingers out and over its curve.
+     aim(hand,bone('f_middle.01.'+side),rimDir.set(out*.8,-.55,.25).applyQuaternion(rimTurn));
+     up.quaternion.copy(a.slerp(up.quaternion,w));fore.quaternion.copy(b.slerp(fore.quaternion,w));hand.quaternion.copy(c.slerp(hand.quaternion,w));
+     figure.root.updateMatrixWorld(true);
+    }
+    touched();
    }
    if((r?.kind==='lie'||r?.kind==='float')&&r.weight>0){
     const pose=r.kind==='float'?floating:r.hammock?hammock:lie;bones.forEach((b,i)=>b.quaternion.slerp(pose[i],r.weight));touched();

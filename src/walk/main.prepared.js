@@ -52,7 +52,7 @@ import motion from './assets/ecctrl-locomotion.json' with {type:'json'};
 const cabinPlacements=preparedPlacements;
 import {Colliders,BODY} from './collision.js';
 import {STATIC_LIFT_PARTS,LIFTS} from './lifts.js';
-import {KEEL,RIVER,createTubeMesh,tubeBoard,tubeStep,tubeKick,tubeSeat,TUBE_SIT,tubeDock} from './keel-club.prepared.js';
+import {KEEL,RIVER,createTubeMesh,tubeBoard,tubeStep,tubeKick,tubeSeat,TUBE_SIT,TUBE_RIM,tubeDock} from './keel-club.prepared.js';
 import {Controller,GLIDE,HOOK} from './controller.js';
 import {FollowCamera} from './camera.js';
 import {WalkInput} from './input.js';
@@ -644,7 +644,7 @@ async function connectToClaim(){
 const giveaway=createGiveaway({$,live:()=>live,connect:connectToClaim});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08,recline:TUBE_SIT.recline}});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion),colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08,recline:TUBE_SIT.recline,rim:TUBE_RIM}});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
@@ -1063,7 +1063,7 @@ function restPose(dt){
  if(r.phase==='out'&&r.t===0){heading=r.from.heading;controller.place(r.from.pos);resting=null;return null;}
  // In a healing capsule the body floats a little in the fluid, standing.
  if(r.stand){h.position.y+=(.20+.025*(1-Math.cos(performance.now()/1100)))*e;return {kind:'float',weight:e,seatHeight:walker.hipHeight};}
- return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight,hammock:!!r.spot.hammock};
+ return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight,hammock:!!r.spot.hammock,rim:r.spot.tube?TUBE_RIM:null};
 }
 function lerpAngle(a,b,t){return a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;}
 
