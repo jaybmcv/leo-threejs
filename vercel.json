@@ -39,7 +39,7 @@
       ]
     },
     {
-      "source": "/(viewer|cosmo|walk|walk-emotes|walk-map|hub)\\.([0-9a-f]{10})\\.(js|json|png)",
+      "source": "/(viewer|cosmo|walk|walk-emotes|walk-crowd|walk-map|hub)\\.([0-9a-f]{10})\\.(js|json|png)",
       "headers": [
         {
           "key": "Cache-Control",

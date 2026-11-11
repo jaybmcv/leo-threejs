@@ -6,6 +6,7 @@ import {createGlide} from './glide.js';
 import {createGrappleLine} from './grapple.js';
 import {createCrowdDraw} from './crowd-draw.js';
 import {createRigBudget} from './rig-budget.js';
+import {createCrowdTier} from './crowd-tier.js';
 
 // Other visitors aboard, drawn as Cosmo (avatar.js) and moved by the poses Leo live passes on (net/live.js). The
 // easing follows Voyager's Reach's remote players (packages/client/src/scene/remotePlayers.ts): a body eases toward its
@@ -14,12 +15,14 @@ import {createRigBudget} from './rig-budget.js';
 // a stride is worked out from successive positions and dies away when the poses stop moving; someone not heard from for
 // 12 s is gone.
 //
-// Only the nearest MAX_RIGS visitors on the decks being drawn get a body, from a small pool that is kept and reused (the
-// budget for their rigs, rig-budget.js, sets their pace; its tier, how many it could carry, waits for a way to draw the
-// rest without a rig). A body standing in a lift car stands on its floor as this page draws the car, so a rider never
-// sinks or floats.
+// Only the nearest visitors on the decks being drawn get a body, from a small pool that is kept and reused: as many as the
+// budget for their rigs carries (rig-budget.js: its tier, up to MAX_RIGS; all MAX_RIGS until the crowd is here). The
+// rest, up to CROWD_MOST (CROWD_SLOW on a page that can carry few bodies), are the crowd, drawn without a rig, playing
+// loops recorded from it (crowd-tier.js: fetched, with a body to copy, the first time there is anyone beyond the
+// nearest). A body standing in a lift car stands on its floor as this page draws the car, so a rider never sinks or
+// floats.
 const STALE_MS=12000,EASE_PER_S=10,GLIDE_MIN_MS=200,GLIDE_MAX_MS=4500,STOPPED_AFTER_MS=185,STRIDE_HALF_LIFE_MS=100;
-const RUN_ON_BELT=5,HAT_M=35,MAX_RIGS=24,LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12,SAY_MS=8000;
+const RUN_ON_BELT=5,HAT_M=35,MAX_RIGS=24,CROWD_MOST=1000,CROWD_SLOW=150,SLOW_TIER=12,CROWD_RETRY_MS=[5e3,3e4,12e4],LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12,SAY_MS=8000;
 // Each body's rig solve (avatar.js) costs about 0.1 ms on a desktop and several times that on a phone: a body outside
 // the camera's view (a sphere of IN_VIEW_M round its middle, enough for one lying down or on a board) solves as a 20 fps
 // machine would (avatar.js unseen, rig-pace.js), keeping pace, so it is current the frame it comes into view. In view,
@@ -40,9 +43,11 @@ export class RemotePlayers{
  // artUrls: the build's art names (__ART_URLS__), for the longboard someone rides down a drop (glide.js). crowd: draw the
  // bodies together, one instanced draw per body part (crowd-draw.js; the bodies need cacheBones: avatar.js). budget:
  // false gives every body its natural rate and MAX_RIGS bodies, whatever they cost (this.budget may also be set to null
- // later, as a probe does to compare).
- constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false,budget=true}){
-  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube});
+ // later, as a probe does to compare). crowdMotion: the URL of the crowd's recorded loops (crowd-motion.json; none: no
+ // crowd, only the nearest MAX_RIGS drawn).
+ constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false,budget=true,crowdMotion=null}){
+  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowdMotion});
+  this.crowdTier=null;this.crowdLoading=false;this.crowdTries=0;this.crowdAfter=0;
   this.budget=budget?createRigBudget({most:MAX_RIGS}):null;
   this.crowd=crowd?createCrowdDraw(scene,{slots:MAX_RIGS}):null;
   this.remotes=new Map();this.pool=[];this.making=false;this.labels=[];this.ray=new T.Ray();this.v=new T.Vector3();
@@ -91,10 +96,18 @@ export class RemotePlayers{
    const band=bandOf(r.cur.y+.5);
    if(band>=bandLow&&band<=bandHigh)shown.push(r);else this.release(r);
   }
-  // Bodies for the nearest; the rest give theirs back to the pool.
-  const budget=this.budget;budget?.frame(dt);const tier=MAX_RIGS;
+  // Bodies for the nearest, as many as the budget carries once the crowd can draw the rest; those give theirs back to the
+  // pool and join the crowd.
+  const budget=this.budget,crowdTier=this.crowdTier;budget?.frame(dt);const tier=budget&&crowdTier?budget.tier:MAX_RIGS;
   shown.sort((a,b)=>a.distance-b.distance);
   shown.slice(tier).forEach(r=>this.release(r));
+  if(shown.length>tier&&!crowdTier)this.startCrowd();
+  if(crowdTier){
+   // (the cap is of those drawn: one out of view takes no place; the selfie booth's lens may see any of them)
+   const most=budget&&budget.tier<SLOW_TIER?CROWD_SLOW:CROWD_MOST;crowdTier.begin(camera,{all:photo,most});
+   for(let i=tier;i<shown.length&&crowdTier.count<most;i++){const r=shown[i];crowdTier.place(r,dt,!!this.swimming?.(r.cur));}
+   crowdTier.end();
+  }
   viewFrustum.setFromProjectionMatrix(viewMatrix.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
   const bodied=shown.slice(0,tier),posed=[];
   for(const r of bodied){
@@ -121,6 +134,16 @@ export class RemotePlayers{
   this.name(bodied,camera,now);
   // The selfie booth's camera may see a body the view does not: every body is drawn while it counts down.
   this.crowd?.update(camera,{all:photo});
+ }
+ // The crowd: its loops fetched and a body made to copy, once (crowd-tier.js). Without them, only the nearest are drawn.
+ // A try that fails is tried again, CROWD_RETRY_MS later each time, then given up.
+ startCrowd(now=performance.now()){
+  if(this.crowdLoading||!this.crowdMotion||now<this.crowdAfter||this.crowdTries>CROWD_RETRY_MS.length)return;
+  this.crowdLoading=true;this.crowdTries++;
+  Promise.all([fetch(this.crowdMotion).then(r=>{if(!r.ok)throw Error('crowd motion '+r.status);return r.json();}),this.make()])
+   .then(([motion,template])=>{this.crowdTier=createCrowdTier(this.scene,{template,motion,most:CROWD_MOST});})
+   .catch(e=>{console.warn('Leo crowd unavailable:',e?.message||e);this.crowdAfter=performance.now()+(CROWD_RETRY_MS[this.crowdTries-1]??Infinity);})
+   .finally(()=>{this.crowdLoading=false;});
  }
  // One new body at a time (building one takes a moment); the pool keeps every body made.
  grow(){
