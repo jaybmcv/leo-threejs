@@ -5,23 +5,28 @@ import {createBallMesh} from './hamster-ball.js';
 import {createGlide} from './glide.js';
 import {createGrappleLine} from './grapple.js';
 import {createCrowdDraw} from './crowd-draw.js';
+import {createRigBudget} from './rig-budget.js';
 
 // Other visitors aboard, drawn as Cosmo (avatar.js) and moved by the poses Leo live passes on (net/live.js). The
 // easing follows Voyager's Reach's remote players (packages/client/src/scene/remotePlayers.ts): a body eases toward its
 // latest pose; poses arriving at an even, sparse rate (server/live-core.mjs: every 200 or 400 ms some way off, every
-// second farther, and slower still for a page in a dense crowd, to 4 s) are crossed at an even pace rather than chased; a stride is worked out from successive positions and dies away when the poses stop
-// moving; someone not heard from for 12 s is gone.
+// second farther, and slower still for a page in a dense crowd, to 4 s) are crossed at an even pace rather than chased;
+// a stride is worked out from successive positions and dies away when the poses stop moving; someone not heard from for
+// 12 s is gone.
 //
-// Only the nearest MAX_RIGS visitors on the decks being drawn get a body, from a small pool that is kept and reused. A
-// body standing in a lift car stands on its floor as this page draws the car, so a rider never sinks or floats.
+// Only the nearest visitors on the decks being drawn get a body, from a small pool that is kept and reused: MAX_RIGS, or
+// fewer on a page whose budget for their rigs buys fewer (rig-budget.js). A body standing in a lift car stands on its
+// floor as this page draws the car, so a rider never sinks or floats.
 const STALE_MS=12000,EASE_PER_S=10,GLIDE_MIN_MS=200,GLIDE_MAX_MS=4500,STOPPED_AFTER_MS=185,STRIDE_HALF_LIFE_MS=100;
 const RUN_ON_BELT=5,HAT_M=35,MAX_RIGS=24,LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12,SAY_MS=8000;
-// Each body's rig solve (avatar.js) costs about 0.35 ms a frame: a body outside the camera's view (a sphere of IN_VIEW_M
-// round its middle, enough for one lying down or on a board) solves as a 20 fps machine would (avatar.js unseen,
-// rig-pace.js), keeping pace, so it is current the frame it comes into view. In view, by its height on screen: every
-// frame from FULL_PX, at 30 fps from HALF_PX, below that at 20 fps (at 1080p, about 10 m and 17 m off). Not while its
-// grapple line is out (the line can cross the view from its paw), nor while the selfie booth counts down (its lens may
-// see the body). A body draws as one skinned mesh per material (merged-skin.js): 4 draws, not 15.
+// Each body's rig solve (avatar.js) costs about 0.1 ms on a desktop and several times that on a phone: a body outside
+// the camera's view (a sphere of IN_VIEW_M round its middle, enough for one lying down or on a board) solves as a 20 fps
+// machine would (avatar.js unseen, rig-pace.js), keeping pace, so it is current the frame it comes into view. In view,
+// by its height on screen, at most: every frame from FULL_PX, at 30 fps from HALF_PX, below that at 20 fps (at 1080p,
+// about 10 m and 17 m off). Every frame while its grapple line is out (the line can cross the view from its paw) or the
+// selfie booth counts down (its lens may see the body). Within that, the budget (rig-budget.js) gives the biggest on
+// screen the most, and no body less than 20 fps. A body draws as one skinned mesh per material (merged-skin.js): 4
+// draws, not 15.
 const IN_VIEW_M=2.5,viewFrustum=new T.Frustum(),viewMatrix=new T.Matrix4(),bodySphere=new T.Sphere();
 const BODY_M=1.75,FULL_PX=160,HALF_PX=90,HALF_S=1/30,THIRD_S=.05;
 
@@ -32,9 +37,12 @@ export class RemotePlayers{
  // Lounge's hammocks (rest.js hammockAt), where they take its pose: the wire says only that they lie. catnip(position):
  // in the Hydro-Nip Lounge (lounge.js inside), where they wear its catnip face (catnip-face.js), as they see themselves.
  // artUrls: the build's art names (__ART_URLS__), for the longboard someone rides down a drop (glide.js). crowd: draw the
- // bodies together, one instanced draw per body part (crowd-draw.js; the bodies need cacheBones: avatar.js).
- constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false}){
+ // bodies together, one instanced draw per body part (crowd-draw.js; the bodies need cacheBones: avatar.js). budget:
+ // false gives every body its natural rate and MAX_RIGS bodies, whatever they cost (this.budget may also be set to null
+ // later, as a probe does to compare).
+ constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false,budget=true}){
   Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube});
+  this.budget=budget?createRigBudget({most:MAX_RIGS}):null;
   this.crowd=crowd?createCrowdDraw(scene,{slots:MAX_RIGS}):null;
   this.remotes=new Map();this.pool=[];this.making=false;this.labels=[];this.ray=new T.Ray();this.v=new T.Vector3();
  }
@@ -82,11 +90,12 @@ export class RemotePlayers{
    const band=bandOf(r.cur.y+.5);
    if(band>=bandLow&&band<=bandHigh)shown.push(r);else this.release(r);
   }
-  // Bodies for the nearest; the rest give theirs back to the pool.
+  // Bodies for the nearest, as many as the budget buys; the rest give theirs back to the pool.
+  const budget=this.budget;budget?.frame(dt);const tier=budget?budget.tier:MAX_RIGS;
   shown.sort((a,b)=>a.distance-b.distance);
-  shown.slice(MAX_RIGS).forEach(r=>this.release(r));
+  shown.slice(tier).forEach(r=>this.release(r));
   viewFrustum.setFromProjectionMatrix(viewMatrix.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
-  const bodied=shown.slice(0,MAX_RIGS);
+  const bodied=shown.slice(0,tier),posed=[];
   for(const r of bodied){
    if(!r.walker){
     const w=this.pool.pop();if(w)r.walker=w;else{this.grow();continue;}
@@ -94,10 +103,19 @@ export class RemotePlayers{
    }
    // A body from the pool may have worn someone else's hat.
    if(r.hat&&!r.walker.hat&&this.hatUrl)wearHat(r.walker,this.hatUrl);else if(!r.hat&&r.walker.hat)r.walker.hat.remove();
-   const lined=!!r.tgt.hook||r.line?.out>0;
-   const unseen=!photo&&!lined&&!viewFrustum.intersectsSphere(bodySphere.set(bodySphere.center.set(r.cur.x,r.cur.y+.6,r.cur.z),IN_VIEW_M));
-   const depth=(r.cur.x-eye.x)*fx+(r.cur.y+BODY_M/2-eye.y)*fy+(r.cur.z-eye.z)*fz,px=pxAt1m/Math.max(depth,.1),every=photo||lined||!pxAt1m||px>=FULL_PX?0:px>=HALF_PX?HALF_S:THIRD_S;
-   this.pose(r,dt,unseen,every);
+   const lined=!!r.tgt.hook||r.line?.out>0,forced=photo||lined;
+   const unseen=!forced&&!viewFrustum.intersectsSphere(bodySphere.set(bodySphere.center.set(r.cur.x,r.cur.y+.6,r.cur.z),IN_VIEW_M));
+   const depth=(r.cur.x-eye.x)*fx+(r.cur.y+BODY_M/2-eye.y)*fy+(r.cur.z-eye.z)*fz,px=pxAt1m/Math.max(depth,.1);
+   posed.push({r,unseen,forced,px,natural:unseen?true:forced||!pxAt1m||px>=FULL_PX?0:px>=HALF_PX?HALF_S:THIRD_S});
+  }
+  // Those that must solve every frame first, then the biggest on screen, each at the rate the budget gives it; what
+  // each update takes tells the budget what a solve costs this page.
+  if(budget)posed.sort((a,b)=>(b.forced-a.forced)||(a.unseen-b.unseen)||(b.px-a.px));
+  // Past the frame's cap (a frame on which many come due at once), the smaller wait a frame or two (rig-pace.js hold).
+  const every=budget?budget.rates(posed):posed.map(p=>p.natural),cap=budget?budget.frameCap():Infinity;let solved=0;
+  for(let i=0;i<posed.length;i++){
+   const p=posed[i],solves=this.pose(p.r,dt,p.unseen,every[i]===true?0:every[i],!p.forced&&solved>=cap);
+   solved+=solves;budget?.spent(p.r.walker.solveMs,solves);
   }
   this.name(bodied,camera,now);
   // The selfie booth's camera may see a body the view does not: every body is drawn while it counts down.
@@ -117,7 +135,8 @@ export class RemotePlayers{
   // Standing in a lift car: on its floor, where this page draws the car.
   if(r.tgt.grounded&&!r.tgt.rest&&this.lifts)for(const l of this.lifts.lifts)if(this.lifts.inside(l,{x:c.x,y:to[1],z:c.z})){c.y=l.y;break;}
  }
- pose(r,dt,unseen=false,every=0){
+ // Returns how many times its rig solved (avatar.js update).
+ pose(r,dt,unseen=false,every=0,hold=false){
   const w=r.walker,c=r.cur;
   w.holder.position.set(c.x,c.y,c.z);w.holder.rotation.set(0,c.yaw,0);
   const turn=Math.atan2(Math.sin(c.yaw-r.lastYaw),Math.cos(c.yaw-r.lastYaw));r.lastYaw=c.yaw;
@@ -139,11 +158,12 @@ export class RemotePlayers{
   const board=w.glide?w.glide.update(dt,{gliding:riding,speed:r.speed,rise:r.rise,turnRate:r.turnRate}):0;
   // On the grapple line (grapple.js): it reels out from their paw to where it bit, and back in when they let go.
   const hook=t.hook&&!t.rest&&!t.ball?(r.hookAt??=new T.Vector3()).fromArray(t.hook):null;if(hook&&!r.line)r.line=createGrappleLine(this.scene);
-  w.update(dt,{unseen,solveEvery:every,speed:r.rest?0:belt?RUN_ON_BELT:r.speed,grounded:t.grounded,stance:t.ball?'stand':t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
+  const solves=w.update(dt,{unseen,solveEvery:every,hold,speed:r.rest?0:belt?RUN_ON_BELT:r.speed,grounded:t.grounded,stance:t.ball?'stand':t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
    emote:floating?null:t.emote,rest:floating?{kind:'float',weight:1,seatHeight:w.hipHeight}:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c)}:null,catnip:!!this.catnip?.(c),swimming:!t.rest&&!!this.swimming?.(c),board,hook});
   r.line?.update(dt,w.hand(this.v2??=new T.Vector3()),hook);
   // A captain's hat is ~200k triangles: past HAT_M it is a few pixels, and not drawn.
   if(w.hat&&r.distance>HAT_M)w.hat.mount.visible=false;
+  return solves;
  }
  // Names over the nearest heads, hidden behind walls (checked a few times a second).
  name(bodied,camera,now){

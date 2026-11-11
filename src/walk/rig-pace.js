@@ -5,15 +5,18 @@
 // is solved first with the previous frame's inputs, the ones it was gathered under: the states the rig starts on an edge
 // (a landing, the jump clock, prone, swimming) see each change once, at its own time. So he is current whenever he
 // shows. A gathering that would pass the cap solves a full step and carries the rest (less than a frame) to the next.
-//   rigPace(cap) -> next(dt,every,inputs): this frame's solves, in order, each {dt, prior}: prior means "with the
+//   rigPace(cap) -> next(dt,every,inputs,hold): this frame's solves, in order, each {dt, prior}: prior means "with the
 //   previous frame's inputs". None, one, or (on a change of input) two. every: false (or 0) solves every frame; true
 //   (unseen) as at 1/cap fps; a number of seconds, up to cap, at about that interval (another visitor small on screen:
-//   remotes.js), gathering in the same way.
+//   remotes.js), gathering in the same way: it solves once every floor(every/frame) frames. hold: this frame's budget
+//   for other visitors is spent (rig-budget.js), so it gathers this frame too, up to two caps, unless an input changed;
+//   it then catches up a cap at a time.
 const SLACK=1e-6;
 export function rigPace(cap=.05){
  let due=0,last=null;
- return (dt,every,inputs)=>{
+ return (dt,every,inputs,hold=false)=>{
   const step=Number.isFinite(dt)?Math.min(Math.max(dt,0),cap):0,changed=inputs!==last;last=inputs;
+  if(hold&&!changed&&due+step<=2*cap+SLACK){due+=step;return [];}
   const gap=every===true?cap:Math.min(Math.max(Number(every)||0,0),cap);
   // Defer while the next frame (of about this one's length) would still fit in one gap.
   if(gap>0&&!changed&&due+2*step<=gap+SLACK){due+=step;return [];}
