@@ -58,12 +58,17 @@ const GRADE=`#if defined( TONE_MAPPING )
 #endif
 #include <tonemapping_fragment>`;
 
+// The line film adds to every shader it patches.
+const TEXEL='uniform vec2 uFilmTexel;';
 // `level` 'lit': Stylised 3D's light, its softened grain and the grade; 'lit-sharp': the same with the texture kept
 // sharp; 'grade': the grade alone.
 function patchShader(shader,level){
+ // (once a shader: a material copied with the hooks of a wrapped one that another hook has wrapped since, as corner
+ // shading wraps film's, holds film twice; the first film hook to run, the source's, patches it)
+ if(shader.fragmentShader.includes(TEXEL))return;
  const lit=level!=='grade';
  let f=shader.fragmentShader
-  .replace('#include <common>',`#include <common>\nuniform vec2 uFilmTexel;${lit?'\n'+STYL_SURFACE_GLSL:''}${STYL_GRADE_GLSL}`)
+  .replace('#include <common>',`#include <common>\n${TEXEL}${lit?'\n'+STYL_SURFACE_GLSL:''}${STYL_GRADE_GLSL}`)
   .replace('#include <tonemapping_fragment>',GRADE);
  if(lit){
   const c=filmChunks();
