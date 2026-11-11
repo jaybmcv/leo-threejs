@@ -33,7 +33,7 @@ export function atriumFloorGeometry(outline,holes,y,atriumOutline=outline){
  const gardenPolys=phase6GardenPolygons(),islands=phase6LakeIslands();
  const indexed=holes.map(p=>({p,x0:Math.min(...p.map(q=>q[0])),x1:Math.max(...p.map(q=>q[0])),z0:Math.min(...p.map(q=>q[1])),z1:Math.max(...p.map(q=>q[1]))}));
  for(const z of zones){const[x0,x1,z0,z1]=z.bounds,cuts=indexed.filter(h=>h.x0<x1&&h.x1>x0&&h.z0<z1&&h.z1>z0).map(h=>h.p);cuts.push(...gardenPolys,...islands.slice(1));if(z.id==='atrium6-park')cuts.push(path);const top=y-(z.id.endsWith('lake')?ATRIUM_PROTOTYPE.waterDepth:0);
- g.push(colourGeometry(keepFaces((z.id.endsWith('lake')?polygonGeometry(z.polygon,cuts,top,0):polygonGeometry(outline,[...cuts,...outsideRect(z.bounds)],top,0)),ny=>ny>.5),z.id==='atrium6-park'?LAWN:z.id==='atrium6-food'||z.id==='atrium6-stage'?PAVING:z.colour,z.id==='atrium6-lobby'||z.id==='atrium6-food'||z.id==='atrium6-stage'));
+ g.push(colourGeometry(keepFaces((z.id.endsWith('lake')?polygonGeometry(z.polygon,cuts,top,0):polygonGeometry(outline,[...cuts,...outsideRect(z.bounds)],top,0)),ny=>ny>.5),z.id==='atrium6-park'?LAWN:z.id==='atrium6-food'?PAVING:z.colour,z.id==='atrium6-lobby'||z.id==='atrium6-food'||z.id==='atrium6-stage'));
  if(z.id.endsWith('lake')){const wall=keepFaces(polygonGeometry(z.polygon,cuts,y,ATRIUM_PROTOTYPE.waterDepth),(ny)=>Math.abs(ny)<.5);g.push(colourGeometry(wall,0xd9d3c4));}}
  for(const poly of [...gardenPolys,...islands.slice(1)])g.push(colourGeometry(keepFaces(polygonGeometry(poly,holes,y,0),ny=>ny>.5),GARDEN_LAWN));
  // 4B: lawn banks along the lake's rounded shoreline, and the winding park path in the boulevard's paving.
