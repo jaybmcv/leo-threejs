@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import * as T from 'three';
-import {OUT,LOOPS,rigHash,recordLoop,walker,partsOf} from './bake-crowd-motion.mjs';
+import {OUT,LOOPS,EMOTES,rigHash,recordLoop,walker,partsOf} from './bake-crowd-motion.mjs';
 import {crowdLoop,crowdBoneMatrix,crowdHalves} from '../src/walk/crowd-tier.js';
 
 let passed=0;const pass=name=>{passed++;console.log('PASS '+name);};
@@ -104,7 +104,9 @@ const pick=(o)=>crowdLoop({rest:null,stance:'stand',swimming:false,speed:0,...o}
 assert.equal(pick({}),'idle');assert.equal(pick({speed:1.4}),'walk');assert.equal(pick({speed:5}),'run');
 assert.equal(pick({stance:'crouch'}),'crouch');assert.equal(pick({stance:'crouch',speed:1}),'crouchWalk');
 assert.equal(pick({stance:'prone'}),'prone');assert.equal(pick({stance:'prone',speed:.5}),'crawl');
+assert.equal(pick({emote:'dance'}),'dance');assert.equal(pick({emote:'box',speed:1.4}),'walk');assert.equal(pick({emote:'dance',stance:'crouch'}),'crouch');
+assert.equal(pick({emote:'dance',rest:'sit'}),'sit');assert.equal(pick({emote:'play_dead'}),'play_dead');
 assert.equal(pick({rest:'sit',speed:3}),'sit');assert.equal(pick({rest:'tube'}),'sit');assert.equal(pick({rest:'lie'}),'lie');assert.equal(pick({swimming:true,speed:1}),'swim');
-for(const name of new Set(['idle','walk','run','crouch','crouchWalk','prone','crawl','sit','lie','swim']))assert.ok(motion.clips.some(c=>c.name===name),name);
-pass('each pose picks its loop: standing, walking, running, crouched, crouch-walking, prone, crawling, sitting (and in a tube), lying, swimming');
+for(const name of new Set(['idle','walk','run','crouch','crouchWalk','prone','crawl','sit','lie','swim',...EMOTES]))assert.ok(motion.clips.some(c=>c.name===name),name);
+pass('each pose picks its loop: standing, walking, running, crouched, crouch-walking, prone, crawling, sitting (and in a tube), lying, swimming, and each emote standing still (one not recorded stands idle)');
 console.log(`crowd motion: ${passed} checks passed`);
