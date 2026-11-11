@@ -254,6 +254,9 @@ const linearDepth=phone?phoneTest.get('phonedepth')==='linear':(phoneTest.get('d
 // Linear depth cannot part the ship's 6 mm layers much past 140 m, so until the next load the view stays within
 // Performance's haze whatever the level, the Keel hall's included.
 const hazeHeld=deskDetail&&linearDepth;
+// Other visitors are shaded cheaply on a phone (crowd-draw.js leanMaterial); ?phonecats=full gives them their own
+// materials, to compare.
+const leanCats=phone&&phoneTest.get('phonecats')!=='full';
 // ?phonehide=bands,glass,furnish,gardens,haze,cats hides those for a test on a device, to see what its GPU spends on.
 const PHONE_HIDE={bands:o=>/^V2_low_deck_merged_/.test(o.name)&&!o.material[0]?.transparent,glass:o=>[o.material].flat().some(m=>m?.transparent),
  furnish:o=>o.isInstancedMesh&&o.userData.phase4||o.userData.phase4Batch,gardens:o=>[o.material].flat().some(m=>m?.name==='P6_atrium_gardens'),haze:o=>/haze/i.test(o.name),cats:o=>o.isSkinnedMesh};
@@ -776,7 +779,7 @@ async function connectToClaim(){
 const giveaway=createGiveaway({$,live:()=>live,connect:connectToClaim});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion,{mergeDraws:true,cacheBones:true}),crowd:true,crowdMotion:typeof __CROWD_URL__==='string'?__CROWD_URL__:null,colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08,recline:TUBE_SIT.recline}});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion,{mergeDraws:true,cacheBones:true}),crowd:true,lean:leanCats,crowdMotion:typeof __CROWD_URL__==='string'?__CROWD_URL__:null,colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08,recline:TUBE_SIT.recline}});
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{

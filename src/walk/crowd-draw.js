@@ -9,9 +9,9 @@ import * as T from 'three';
 // their fur colour (the body's map image, fur.js) and their eyes (shut in a hammock: their uvs, avatar.js), so there is a
 // draw for each part, colour and eye state in use. The hat, the catnip face, the swimsuit, the board and the grapple
 // line still draw on their own.
-//   createCrowdDraw(scene, {slots}) -> {add(walker), update(camera, {all}): before rendering (all: draw every body,
-//   in view or not, as for the selfie booth's camera); enabled (false: each visitor draws its own meshes again);
-//   groups, members, texture (checks)}
+//   createCrowdDraw(scene, {slots, lean}) -> {add(walker), update(camera, {all}): before rendering (all: draw every
+//   body, in view or not, as for the selfie booth's camera); enabled (false: each visitor draws its own meshes again);
+//   groups, members, texture (checks)}. lean: each part in leanMaterial's place of its own (a phone's).
 // A walker needs cacheBones (figure-matrices.js): its bone texture row is rebuilt only when its matrices were remade.
 
 // Room round a body's parts' own bounds (merged-skin.js, dlCatFigure.ts: wide enough for any pose) for how far it may
@@ -53,6 +53,17 @@ const SKIN=`
 	skinned += boneMatZ * skinVertex * skinWeight.z;
 	skinned += boneMatW * skinVertex * skinWeight.w;
 	transformed = skinned.xyz;`;
+// A visitor's part shaded cheaply, for a phone: Lambert with its colour map only, front faces only. A phone's GPU is
+// short of pixels, not draws, and with the logarithmic depth buffer (main.public.js) its shaders write the depth, so
+// every pixel of a body is shaded even behind another. The walk's own GPU, timed at 5760x3240 with 200 visitors from
+// 4 m, each way in turn: the visitors 2.9 ms in their own materials (Physical and Standard, with
+// normal, roughness and metalness maps, both faces), 1.6 ms front faces only, 0.8 ms so. They look much the same from a
+// few metres: the colours keep, the folds of the hoodie flatten, the shine goes. (Standard without its maps is no
+// cheaper and darker: its metalness then applies everywhere.)
+export function leanMaterial(source){
+ return new T.MeshLambertMaterial({name:source.name,color:source.color,map:source.map,vertexColors:source.vertexColors,
+  transparent:source.transparent,opacity:source.opacity,alphaTest:source.alphaTest,side:T.FrontSide});
+}
 // The vertex shader with three's skinning chunks (empty here: the draw is not a SkinnedMesh) replaced by the crowd's.
 // pars: what declares crowdBone(i) and crowdBind (this draw's: a visitor's own row of the shared bone texture; the
 // crowd tier's: a recorded frame of a loop, crowd-tier.js).
@@ -66,11 +77,11 @@ export function crowdShader(vertexShader,pars=PARS){
 const ids=new WeakMap();let nextId=1;
 const idOf=o=>{if(!o)return 0;let id=ids.get(o);if(!id)ids.set(o,id=nextId++);return id;};
 
-export function createCrowdDraw(scene,{slots=24}={}){
+export function createCrowdDraw(scene,{slots=24,lean=false}={}){
  let width=0,bones=0,data=null,texture=null,frame=-1,enabled=true;
  const members=[],groups=new Map(),frustum=new T.Frustum(),view=new T.Matrix4(),sphere=new T.Sphere(),drawnNow=[];
  const crowdMaterial=(source,bindMatrix)=>{
-  const m=source.clone();
+  const m=lean?leanMaterial(source):source.clone();
   // The map's image is shared by every visitor of that fur colour; the texture is the visitor's own, and fur.js swaps
   // its image (its source's data, which a clone would share), so the draw has a source of its own on that image.
   if(source.map){const map=source.map.clone();map.source=new T.Source(source.map.image);m.map=map;}
