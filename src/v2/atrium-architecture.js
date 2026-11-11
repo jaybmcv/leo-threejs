@@ -40,6 +40,8 @@ export function addPhase6Architecture(ship,root,layout){
   if(o.isInstancedMesh&&/^P4_p6_terrace_(glass|rail)$/.test(o.name)){for(let i=0;i<o.count;i++){const q=new T.Mesh(o.geometry,o.material),m=new T.Matrix4();o.getMatrixAt(i,m);q.name='P6_terrace_guard_actual';q.matrixWorld.copy(o.matrixWorld).multiply(m);selected.push({o:q,kind:'tower'});}o.userData.phase6ArchitectureSource=true;o.visible=false;return;}
   // Collision-only fit-out parts (the welcome desk's stand-in, atrium-lobby-park.js): they collide, nothing draws them.
   if(o.isInstancedMesh&&/^P4_p6_\w+_collider$/.test(o.name)){o.userData.phase6ArchitectureSource=true;o.visible=false;return;}
+ // The Common stage's tiers, cushions and deck collide as furnishings but draw in the garden mesh (atrium-stage.js).
+ if(o.isInstancedMesh&&/^P4_p6_stage_(tiers|cushions_\d+|platform)$/.test(o.name)){o.userData.phase6ArchitectureSource=true;o.visible=false;return;}
   if(!o.isMesh||o.isInstancedMesh||!o.geometry?.attributes.position?.count||Array.isArray(o.material))return;
   for(let q=o;q;q=q.parent)if(!q.visible||q.userData.keepLive)return;
   if(o.userData.phase6SkyTip||o.name==='P6_sky_ceiling'||o.name==='P6_lake_water'||o.name==='Deck_slab'&&o.parent.userData.number===6){selected.push({o,kind:o.name==='Deck_slab'?'floor':o.name==='P6_lake_water'?'water':'sky'});return;}

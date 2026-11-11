@@ -1,5 +1,6 @@
 import {addReflectionTerraces} from './reflection-terraces.js';
 import {addWelcomeCourtParts} from './atrium-lobby-park.js';
+import {addAtriumStage} from './atrium-stage.js';
 import {hydrateHullLayout} from '../plan/envelope-data-v2.js';
 import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS,ATRIUM_BOULEVARD_TREES,ATRIUM_PROMENADE_LAMPS,ATRIUM_FESTOONS} from '../plan/atrium-v2.js';
 import {patchDepth,worldPoint} from '../plan/hull-skin-v2.js';
@@ -80,8 +81,7 @@ const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,
  // 4B pass 2: posts for the string lights over the timber decks (atrium-gardens.js hangs the strings).
  for(const f of ATRIUM_FESTOONS)for(const[x,z]of f.posts)add('atrium6-food','p6_stall_post',[.10,2.8,.10],[x,y+1.4,z],'metal');
  sign('atrium6-lake','REFLECTION LAKE / SHALLOW EDGE',17,-8,8);for(const x of[14,20])add('atrium6-lake','p6_lake_sign_post',[.08,2.96,.08],[x,y+1.32,-8],'metal');
- add('atrium6-stage','p6_stage_platform',[14,.36,32],[113,y+.18,30],'oak');add('atrium6-stage','p6_stage_backdrop',[.16,3.1,29],[119.8,y+1.91,30],'navy',{noCollide:true});
- for(const x of Array.from({length:10},(_,i)=>70+i*3.5))for(const z of Array.from({length:20},(_,i)=>11+i*2))if(fits(x,z,1,1))seat('atrium6-stage',x,z,Math.PI/2);
+ addAtriumStage({parts,rests,y});
  sign('atrium6-stage','THE COMMON STAGE',119.69,30,9,y+.36,6,-Math.PI/2);
  add('atrium6-lobby','counter_body',[6,.88,1],[-109,y+.44,-14],'cream');add('atrium6-lobby','counter_top',[6.12,.09,1.12],[-109,y+.925,-14]);
  sign('atrium6-lobby','LEO ATRIUM / RECEPTION',-109,-14.5,7);for(const x of[-111.5,-106.5])add('atrium6-lobby','p6_sign_post',[.08,2.8,.08],[x,y+1.4,-14.5],'metal');

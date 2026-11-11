@@ -6,7 +6,7 @@ export const ATRIUM_ZONES=[
  {id:'atrium6-park',name:'Voyager park',bounds:[-90,-4,-56,-6],colour:0x789974},
  {id:'atrium6-lake',name:'Reflection lake',bounds:[4,120,-56,-6],colour:0x71aeb3},
  {id:'atrium6-food',name:'Atrium food hall',bounds:[-90,58,6,56],colour:0xd6bea0},
- {id:'atrium6-stage',name:'Common stage',bounds:[66,122,6,56],colour:0xb6b8b0},
+ {id:'atrium6-stage',name:'Common stage',bounds:[66,122,6,56],colour:0xf2d7b4},
  {id:'atrium6-commons',name:'Voyage Commons',bounds:[150,174,-18,18],colour:0xd9d3c4}
 ].map(z=>({...z,polygon:rect(...z.bounds)}));
 export const ATRIUM_LAKE_BRIDGE={deck:6,bounds:[58.5,61.5,-57,-5],rise:.22};

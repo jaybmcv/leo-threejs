@@ -13,6 +13,7 @@ import {ATRIUM_TERRACES,ATRIUM_ZONES,ATRIUM_SIGNATURE_TREES,ATRIUM_LAKE_BRIDGE,A
 import {paintTreeShade,SHADE_HALVES,PAVER} from './atrium-daylight.js';
 import {walkCanvas} from '../walk/canvas.js';
 import {phase6Programme} from './phase6-programme.js';
+import {addStageDecor} from './atrium-stage.js';
 import {contains,distanceToSegment} from '../plan/geometry-v2.js';
 import {addLakeFood} from './atrium-lake-food.js';
 import {addLobbyPark} from './atrium-lobby-park.js';
@@ -653,6 +654,8 @@ export function addAtriumGardens(root,layout){
  const lobbyPark=addLobbyPark(out,glow,layout,clearGround,parts); // G1 welcome court, G2 flower meadow
  const falling=addFallingWater(root,water,out);
  const lakeFood=addLakeFood(out,layout,nearWaterfall); // G3 + G4 option A: lake edges and market stalls (atrium-lake-food.js)
+ // The Common stage's timber terraces, deck and cushions (atrium-stage.js), in this one draw.
+ addStageDecor(out,layout);
  const g=mergeGeometries(out);out.forEach(x=>x.dispose());g.computeBoundingBox();g.computeBoundingSphere();
  const o=new T.Mesh(g,gardenMaterial);o.name='P6_atrium_gardens';o.frustumCulled=false;o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);
  const gg=mergeGeometries(glow.map(x=>x.toNonIndexed()));glow.forEach(x=>x.dispose());gg.computeBoundingBox();gg.computeBoundingSphere();
