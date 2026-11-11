@@ -110,11 +110,11 @@ function placePools(stems,o){
 // pools' picture, tinted per kind. Its lanterns' cores are in the garden glow draw, which is one colour day and night,
 // so the light they throw is this instead: shown only at night while the walker is in the open atrium, so by day it
 // costs nothing and leaves no mark.
-const COURT_GLOW={pool:.55,halo:.7,uplight:1};
+const COURT_GLOW={pool:.85,halo:1,uplight:1};
 function courtGlows(scene){
  const c=walkCanvas();if(!c)return null;
  const map=new T.CanvasTexture(paintLampPool(c));map.colorSpace=T.SRGBColorSpace;
- const m=new T.MeshBasicMaterial({name:'P6_atrium_court_glow',map,transparent:true,depthWrite:false,side:T.DoubleSide,blending:T.AdditiveBlending,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+ const m=new T.MeshBasicMaterial({name:'P6_atrium_court_glow',map,transparent:true,depthWrite:false,side:T.DoubleSide,forceSinglePass:true,blending:T.AdditiveBlending,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
  const glows=welcomeCourtGlows(layout.decks[5].y),o=new T.InstancedMesh(new T.PlaneGeometry(1,1),m,glows.length);
  const at=new T.Matrix4(),turn=new T.Quaternion(),e=new T.Euler(),p=new T.Vector3(),s=new T.Vector3(),tint=new T.Color();
  glows.forEach((g,i)=>{o.setMatrixAt(i,at.compose(p.fromArray(g.at),turn.setFromEuler(e.set(g.tilt,g.turn,0,'YXZ')),s.set(g.size,g.size,1)));o.setColorAt(i,tint.setScalar(COURT_GLOW[g.kind]));});

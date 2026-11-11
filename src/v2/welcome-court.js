@@ -18,7 +18,7 @@ export const COURT_LANTERN_CORE=3.865;
 // long sides (uplights): a warm pool under each lamp; a faint halo round each lantern, three crossed upright squares so it
 // reads from every side; two small uplights at the foot of each long side of every planter, their lower half under the
 // floor, so each shows as a glow rising up the stone.
-const POOL=3.6,HALO=1.1,UPLIGHT=.55,UPLIGHT_SPREAD=.6,PLANTER_FACE=COURT_PLANTER[2]/2+.015;
+const POOL=3.6,HALO=1.3,UPLIGHT=.55,UPLIGHT_SPREAD=.6,PLANTER_FACE=COURT_PLANTER[2]/2+.015;
 
 /** The court's night glows over a floor at y: {kind:'pool'|'halo'|'uplight', at:[x,y,z], size, tilt, turn}, a size-m
  * square in the x-y plane tilted about x then turned about y (radians). Pools first, then halos, then uplights. */

@@ -93,7 +93,7 @@ pass('the floor pools follow the lamps the culling leaves in sight');
 // uplights at the foot of the court's planters, in one additive instanced draw of their own.
 const court=a.scene.getObjectByName('P6_atrium_court_glows'),floor=layout.decks[5].y;
 assert(court?.isInstancedMesh&&court.visible);assert.equal(court.count,welcomeCourtGlows(floor).length);assert.equal(court.count,4+12+32);
-assert.equal(court.material.blending,T.AdditiveBlending);assert.equal(court.material.depthWrite,false);assert.equal(court.material.opacity,1);
+assert.equal(court.material.blending,T.AdditiveBlending);assert.equal(court.material.depthWrite,false);assert.equal(court.material.forceSinglePass,true);assert.equal(court.material.opacity,1);
 court.getMatrixAt(0,e);assert(Math.abs(e.elements[12]-(WELCOME_COURT.x+COURT_LAMPS[0][0]))<1e-6&&Math.abs(e.elements[14]-(WELCOME_COURT.z+COURT_LAMPS[0][1]))<1e-6);
 assert(e.elements[13]>floor&&e.elements[13]<floor+.05);
 pass('at night the welcome court\'s lanterns throw warm pools, halos and planter uplights, one instanced draw');
