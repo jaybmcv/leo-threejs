@@ -105,6 +105,26 @@ for(const name of ['walk','crouch']){
  }finally{globalThis.fetch=realFetch;console.warn=warn;}
  pass('a crowd recording that fails to load is fetched again five seconds later, and the crowd comes');
 }
+// Who has a body (remotes.js tierOf): the nearest, held steady at the edge. Two visitors walking to and fro across the
+// edge of a tier of 4 (one with a body, one without) do not change hands; one coming clearly near takes the place of the
+// farthest kept beyond the tier; with room, those at the edge come in; the tier falling, the farthest give theirs back.
+{
+ const {build}=await import('./native-bundle.mjs'),path=await import('node:path'),file=path.resolve('output/check-walker',`remotes-tier.${process.pid}.mjs`);
+ await fs.mkdir(path.dirname(file),{recursive:true});
+ const b=await build({entryPoints:['src/walk/remotes.js'],bundle:true,format:'esm',platform:'node',external:['three'],write:false,target:'es2022',logLevel:'error'});
+ await fs.writeFile(file,b.outputFiles[0].text);let tierOf;try{({tierOf}=await import(pathToFileURL(file).href));}finally{await fs.rm(file,{force:true});}
+ const v=(name,walker)=>({name,walker:walker?{}:null}),names=list=>list.map(x=>x.name).join('');
+ // a tier of 4, hold 3 (as remotes.js): A..C near with bodies; D has a body; E has none; they swap ranks 4 and 5 by turns
+ let swaps=0,had=null;
+ for(let t=0;t<20;t++){const [A,B,C]=[v('A',1),v('B',1),v('C',1)],D=v('D',1),E=v('E',0),shown=t%2?[A,B,C,E,D]:[A,B,C,D,E];
+  const now=names(tierOf(shown,4,3));if(had!==null&&now!==had)swaps++;had=now;}
+ assert.equal(swaps,0,'the edge did not hold');
+ assert.equal(names(tierOf([v('N',0),v('A',1),v('B',1),v('C',1),v('D',1),v('F',1)],4,1)),'NABC','one clearly near takes the place of the farthest kept');
+ assert.equal(names(tierOf([v('A',1),v('B',0),v('C',0)],4,3)),'ABC','with room, those at the edge come in');
+ assert.equal(names(tierOf([v('A',1),v('B',1),v('C',1),v('D',1),v('E',1)],3,3)),'ABC','the tier falling, the farthest give theirs back');
+ assert.equal(tierOf([],4,3).length,0);
+ pass('the near tier holds steady at its edge: no change of hands as two cross it to and fro; the clearly near come in, the farthest go first');
+}
 // The loop each visitor plays.
 const pick=(o)=>crowdLoop({rest:null,stance:'stand',swimming:false,speed:0,...o});
 assert.equal(pick({}),'idle');assert.equal(pick({speed:1.4}),'walk');assert.equal(pick({speed:5}),'run');
