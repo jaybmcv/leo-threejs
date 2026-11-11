@@ -1,6 +1,6 @@
 // The crowd's recorded loops (src/walk/assets/crowd-motion.json, scripts/bake-crowd-motion.mjs) and how the crowd tier
 // reads them (src/walk/crowd-tier.js): the recording is of the rig as it is now (its sources' hash); every loop is
-// there, whole, and comes round without a jump (its biggest step at most three of its usual ones); recording a loop again gives the same numbers (half-float close); a body
+// there, whole, and comes round without a jump (no step bigger than a quarter more than its own biggest within); recording a loop again gives the same numbers (half-float close); a body
 // skinned from the recording's numbers, as the crowd's vertex shader reads them (crowdBoneMatrix: the same layout), is
 // where three's own skinning puts the rig's body, to the millimetre; and each visitor's pose picks the loop it should.
 import assert from 'node:assert/strict';
@@ -18,10 +18,10 @@ pass('the recording is of the rig as it is (its sources\' hash)');
 const halves=crowdHalves(motion),numbers=Float32Array.from(halves,h=>T.DataUtils.fromHalfFloat(h)),bones=motion.bones;
 assert.deepEqual(motion.clips.map(c=>c.name),LOOPS.map(l=>l[0]));
 let at=0;for(const c of motion.clips){assert.equal(c.start,at,`${c.name} starts where the last ended`);assert.ok(c.frames>=1);at+=c.frames;
- assert.ok(c.seam<=3,`${c.name}: its biggest step is ${c.seam} times its usual one`);}
+ assert.ok(c.seam<=1.25,`${c.name}: coming round is ${c.seam} times its biggest step within`);}
 assert.equal(halves.length,at*bones*12,'the numbers are every frame of every loop');
 assert.ok(numbers.every(Number.isFinite));
-pass(`${motion.clips.length} loops, ${at} frames, ${bones} bones; each comes round with its biggest step at most ${Math.max(...motion.clips.map(c=>c.seam)).toFixed(2)} times its usual one`);
+pass(`${motion.clips.length} loops, ${at} frames, ${bones} bones; each comes round in a step at most ${Math.max(...motion.clips.map(c=>c.seam)).toFixed(2)} times its biggest step within`);
 
 // Recorded again, a loop is the same (the rig is deterministic; half floats keep about three figures).
 for(const name of ['walk','crouch']){
