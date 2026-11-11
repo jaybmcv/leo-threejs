@@ -19,9 +19,10 @@ import {createCrowdCount} from './crowd-count.js';
 // Only the nearest visitors on the decks being drawn get a body, from a small pool that is kept and reused: as many as the
 // budget for their rigs carries (rig-budget.js: its tier, up to MAX_RIGS; all MAX_RIGS until the crowd is here). The
 // rest are the crowd, drawn without a rig, playing loops recorded from it, the farther on lighter meshes (crowd-tier.js:
-// fetched, with a body to copy, the first time there is anyone beyond the nearest): as many in view as this page's frames
-// allow (crowd-count.js: from CROWD_SLOW, up to CROWD_MOST), the nearest first. A body standing in a lift car stands on
-// its floor as this page draws the car, so a rider never sinks or floats.
+// fetched, with a body to copy, the first time there is anyone beyond the nearest): up to CROWD_MOST in view (CROWD_SLOW
+// on a page that can carry few bodies), the nearest first; with crowdFps, as many as this page's frames allow
+// (crowd-count.js). A body standing in a lift car stands on its floor as this page draws the car, so a rider never sinks
+// or floats.
 const STALE_MS=12000,EASE_PER_S=10,GLIDE_MIN_MS=200,GLIDE_MAX_MS=4500,STOPPED_AFTER_MS=185,STRIDE_HALF_LIFE_MS=100;
 const RUN_ON_BELT=5,HAT_M=35,MAX_RIGS=24,HOLD_RANKS=3,CROWD_MOST=1000,CROWD_SLOW=150,SLOW_TIER=12,CROWD_RETRY_MS=[5e3,3e4,12e4],LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12,SAY_MS=8000;
 // Each body's rig solve (avatar.js) costs about 0.1 ms on a desktop and several times that on a phone: a body outside
@@ -65,13 +66,13 @@ export class RemotePlayers{
  // later, as a probe does to compare). crowdMotion: the URL of the crowd's recorded loops (crowd-motion.json; none: no
  // crowd, only the nearest MAX_RIGS drawn). lod: false draws the crowd in full however far (crowd-tier.js). lean: their
  // bodies shaded cheaply, near and in the crowd alike (crowd-draw.js leanMaterial: a phone's). crowdFps: the frames a
- // second the crowd is trimmed to keep (crowd-count.js; its own when not given); 0 caps it as before, at CROWD_SLOW on a
- // page that can carry few bodies (the rig budget's tier under SLOW_TIER) and CROWD_MOST on any other.
- constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false,budget=true,crowdMotion=null,lean=false,lod=true,crowdFps}){
+ // second the crowd is trimmed to keep (crowd-count.js), on trial only (it misjudged a phone); none or 0, the crowd is
+ // capped at CROWD_SLOW on a page that can carry few bodies (the rig budget's tier under SLOW_TIER), CROWD_MOST on any other.
+ constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false,budget=true,crowdMotion=null,lean=false,lod=true,crowdFps=0}){
   Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowdMotion,lean,lod});
   this.crowdTier=null;this.crowdLoading=false;this.crowdTries=0;this.crowdAfter=0;
   this.budget=budget?createRigBudget({most:MAX_RIGS}):null;
-  this.crowdCount=crowdFps===0?null:createCrowdCount({fps:crowdFps,most:CROWD_MOST,start:CROWD_SLOW});this.crowdMost=0;this.lastUpdate=0;
+  this.crowdCount=crowdFps>0?createCrowdCount({fps:crowdFps,most:CROWD_MOST,start:CROWD_SLOW}):null;this.crowdMost=0;this.lastUpdate=0;
   this.crowd=crowd?createCrowdDraw(scene,{slots:MAX_RIGS,lean}):null;
   this.remotes=new Map();this.pool=[];this.making=false;this.labels=[];this.ray=new T.Ray();this.v=new T.Vector3();
  }
