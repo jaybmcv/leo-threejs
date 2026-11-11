@@ -93,6 +93,7 @@ import {MeshBVH} from 'three-mesh-bvh';
 import {readSpot,spotLink,remapSpot} from './link.js';
 import {keepSpot,takeSpot} from './last-spot.js';
 import {createJoin} from './join.js';
+import {createCaptainSays} from './captain-says.js';
 import {restrictedAt,publicStand} from './public-area.js';
 import {KITTEN_POSE_NAMES} from './kittens.js';
 import {createAtriumKittens} from './arrival-atrium.js';
@@ -645,7 +646,7 @@ hubLink.ready(search=>{const spot=readSpot(search);if(!spot)return false;hubPane
 if(hasTesterInvite())wearHat(walker,__HAT_URL__);
 // Others aboard: their poses in, ours out, the lifts as the server runs them.
 // (listedAt: when the list of who is aboard was last made: showAboardList)
-let remotes=null,marks=null,aboard=0,aboardNames=undefined,aboardIds=null,join=null,listedAt=0,liveStatus='',wasInArena=false;
+let remotes=null,marks=null,aboard=0,aboardNames=undefined,aboardIds=null,join=null,captainSays=null,listedAt=0,liveStatus='',wasInArena=false;
 // The giveaway card at Mudwater Arena's counter, which claims through Leo live.
 // Claiming takes a Discord account: its small window leaves them standing at the counter, and they carry on under their
 // Discord account from there. Not offered inside Otherside, where pop-ups can't open (mudwater-giveaway.js).
@@ -667,14 +668,14 @@ if(LIVE_URL){
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
   status:s=>{liveStatus=s;if(s!=='live'){aboardNames=undefined;aboardIds=null;leverPanel?.lost();join?.reset();}showAboard();showAboardList();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
-  welcome:msg=>{leverPanel?.apply(msg.panel);for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();mct.apply(msg.mcts);live.tv();
+  welcome:msg=>{leverPanel?.apply(msg.panel);captainSays?.back();for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();mct.apply(msg.mcts);live.tv();
    // A server from before chat sends no chat: it stays hidden.
    chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);
    // Just connected Discord at the giveaway's counter: its card shows what they can claim now.
    if(!$('mudwater-sheet').hidden)live.giveaway();},
   // A line of chat: in the corner, and over the speaker's head.
   chat:line=>{chat.add(line);if(line.id!==live.id&&!chat.quiet)remotes.say(line.id,line.text);},said:r=>chat.refused(r.why),
-  poses:list=>{remotes.onPoses(list);if(aboardNames==='heard'&&performance.now()-listedAt>1000)showAboardList();},gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();mct.offline();join?.reset();},
+  poses:list=>{remotes.onPoses(list);if(aboardNames==='heard'&&performance.now()-listedAt>1000)showAboardList();},gone:id=>remotes.gone(id),reset:()=>{remotes.clear();marks.clear();graffiti?.reset();pawsOff?.lost();mct.offline();join?.reset();captainSays?.lost();},
   mark:(id,at)=>{const r=remotes.remotes.get(id);marks.show(id,r?.name||'Voyager '+id.slice(-4),at);},
   lift:(id,s)=>lifts.apply(id,s),
   // Someone else's Keel Club water cannon shot: the same jet here, from its seed.
@@ -694,6 +695,8 @@ if(LIVE_URL){
   gym:msg=>pawsOff?.round(msg),
   // Asking to join someone from the Aboard list, and being asked (join.js).
   join:msg=>join?.fromServer(msg),
+  // Captain Says (captain-says.js): its countdown, each call and its judging, and the result.
+  cs:msg=>captainSays?.fromServer(msg),
   // The Deck 1 transporters: who drives each cart, and where each is parked.
   mcts:list=>mct.apply(list),
   // The Crown lounge TV (crown-tv.js): what is on it, and a ticket to share a video.
@@ -703,6 +706,8 @@ if(LIVE_URL){
  lifts.onCall=(l,index,opts)=>live.call(l.spec.id,index,opts?.now);
  mct.link({send:msg=>live.mct(msg),id:()=>live.id});
  join=createJoin({live:()=>live,here:joinBlock,land:joinBeside});
+ // Captain Says (captain-says.js): joined from the Aboard sheet; its call's button does the move.
+ captainSays=createCaptainSays({live:()=>live,move:captainMove,key:captainKey,row:$('aboard-sheet').querySelector('.row'),close:closePanels});
  $('ping').hidden=false;$('help-ping').hidden=false;
 }
 // In a game here: what a pose says (pl).
@@ -741,6 +746,20 @@ function joinBeside(at,name){
  if(!ready())return false;
  const q=publicStand(at,{colliders,stand:p=>findStand(colliders,p,{radius:0}),check:p=>v2GotoStand(colliders,p),away:1.2,radius:4});
  if(!q)return false;closePanels();emote=null;return goTo({at:q.toArray(),yaw:Math.atan2(at[0]-q.x,at[2]-q.z),resolved:true});
+}
+// Captain Says (captain-says.js): the call's button does the move as its key would (the stance keys toggle, so a stance
+// already taken is left as it is), and the key is shown beside the call (a touch screen has the button alone).
+function captainMove(mv){
+ if(!ready()||resting||inBall||treasure?.active)return;
+ const st=controller.stance,down=st==='crouch'||st==='slide';
+ if(mv==='stand'){if(down)actions.crouch();else if(st==='prone')actions.prone();}
+ else if(mv==='crouch'){if(!down)actions.crouch();}else if(mv==='prone'){if(st!=='prone')actions.prone();}
+ else if(mv==='jump')input.jumpQueued=true;else if(EMOTES.includes(mv))actions.emote(EMOTES.indexOf(mv));
+}
+function captainKey(mv){
+ if(matchMedia('(pointer:coarse)').matches)return '';
+ const st=controller.stance,emote=EMOTES.indexOf(mv);
+ return mv==='stand'?(st==='prone'?'X':st==='stand'?'':'C'):mv==='crouch'?'C':mv==='prone'?'X':mv==='jump'?'Space':emote>=0?bindingLabel(walkBindings.get('emote:'+emote)):'';
 }
 function showAboard(){
  const b=$('aboard');b.hidden=!live;if(!live)return;
@@ -1125,7 +1144,7 @@ function closePanels(){furSettings?.close();emergencyDrill?.close();controlsSett
 // The list is a current server snapshot, including visitors who have not sent a pose yet.
 // The list of who is aboard, while its sheet is open.
 function showAboardList(){
- if($('aboard-sheet').hidden)return;listedAt=performance.now();
+ if($('aboard-sheet').hidden)return;listedAt=performance.now();captainSays?.refresh();
  const list=$('aboard-list'),note=$('aboard-note');list.replaceChildren();
  note.textContent=liveStatus!=='live'?'Not connected to Leo live.':aboardNames===undefined?'Waiting for the visitor list...':aboardNames===null?'Visitor list unavailable on this connection.':'';
  // With many aboard the server sends the count alone ('heard': net/live.js): the names are this page's own (the
