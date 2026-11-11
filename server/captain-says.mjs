@@ -44,6 +44,10 @@ export function note(seen,s){
  const jumped=s.jc>seen.jc;
  return {...s,jumped:seen.jumped||jumped,moved:seen.moved||jumped||s.st!==seen.st||(!!s.e&&s.e!==seen.e)};
 }
+// A pose in the grace after a call (it may have left its page before the call reached it): its stance and emote are
+// taken as where the player stood at the call. But on "Captain says jump!" a jump in it counts, against the jump count
+// at the call: a quick player is not put out for jumping at once. -> {before, seen}
+export function graced(call,before,s){const b={...s,jc:call.cs&&call.mv==='jump'?before.jc:s.jc};return {before:b,seen:note(fresh(b),s)};}
 // Whether a player stays in. call: {mv, cs}; before: their state at the call; now: what note made of their poses since.
 // A call of the stance or emote they are already in is done as it stands.
 export function judge(call,before,now){
@@ -131,7 +135,7 @@ export function createCaptainSays({log=()=>{},send,now=()=>Date.now(),random=Mat
   observe(v,pose){
    if(!joined.has(v))return;const s=stateOf(pose);last.set(v,s);
    const p=game?.call&&game.players.get(v);if(!p||p.out)return;
-   if(now()<game.graceUntil){p.before=s;p.seen=fresh(s);}else p.seen=note(p.seen,s);
+   if(now()<game.graceUntil)Object.assign(p,graced(game.call,p.before,s));else p.seen=note(p.seen,s);
   },
   // Gone from the ship (or the connection lost).
   left:leave,

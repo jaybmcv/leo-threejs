@@ -411,7 +411,8 @@ function onMessage(v,data,binary){
   // Ask to join someone from the Aboard list (joins.mjs): ask, cancel, and the answer of the one asked.
   case 'join':if(allowed(v,'join'))joins.message(v,msg);break;
   // Captain Says (captain-says.mjs): join its next game, or leave it.
-  case 'cs':if(allowed(v,'cs'))captainSays.message(v,msg);break;
+  // (only from a visitor still aboard: a socket closing after being taken over may still send; leaving is never held back)
+  case 'cs':if(visitors.has(v)&&(msg.e==='leave'||allowed(v,'cs')))captainSays.message(v,msg);break;
   // The Crown lounge TV (tv.mjs): what is on it, a ticket to upload a video, and an owner taking it down.
   case 'tv':case 'tv-ticket':case 'tv-down':if(allowed(v,msg.m))tv.message(v,msg);break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.

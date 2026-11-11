@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {mock} from 'node:test';
-import {judge,note,fresh,stateOf,pickCall,callMs,createCaptainSays,MOVES,STANCE_CALLS,CALL_MS,CALL_STEP_MS,CALL_FLOOR_MS,JUDGE_SLACK_MS,
+import {judge,note,fresh,graced,stateOf,pickCall,callMs,createCaptainSays,MOVES,STANCE_CALLS,CALL_MS,CALL_STEP_MS,CALL_FLOOR_MS,JUDGE_SLACK_MS,
  CALL_GRACE_MS,PAUSE_MS,WAIT_MS,COUNT_MS,WINNERS_SHOWN,MOST_ROUNDS} from '../server/captain-says.mjs';
 import {WORDS} from '../src/walk/captain-says.js';
 let checks=0;const pass=name=>{checks++;console.log('PASS '+name);};
@@ -64,6 +64,16 @@ const seeded=seed=>()=>{seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|
  assert.deepEqual([CALL_MS,CALL_FLOOR_MS,JUDGE_SLACK_MS,CALL_GRACE_MS,PAUSE_MS,WAIT_MS],[4000,1500,400,250,2000,10000]);
  pass(`a call gives 4 s, ${CALL_STEP_MS/1000} s less each round, 1.5 s from round ${floorAt} on; judged ${JUDGE_SLACK_MS} ms after; ${PAUSE_MS/1000} s between calls; a ${WAIT_MS/1000} s countdown, and result`);}
 
+// In the grace after a call: on "Captain says jump!" a jump counts (a quick player jumping at once stays in); on a trick,
+// or any other call, what came in the grace is where they stood at the call.
+{
+ const at={st:'stand',e:null,jc:3},jumpedNow={st:'stand',e:null,jc:4};
+ const g1=graced({mv:'jump',cs:true},at,jumpedNow);assert.ok(judge({mv:'jump',cs:true},g1.before,g1.seen),'a jump in the grace counts');
+ const g2=graced({mv:'crouch',cs:false},at,jumpedNow);assert.ok(judge({mv:'crouch',cs:false},g2.before,g2.seen),'a jump in the grace of a trick does not count against');
+ const g3=graced({mv:'crouch',cs:true},at,{st:'crouch',e:null,jc:3});assert.ok(judge({mv:'crouch',cs:true},g3.before,g3.seen),'a crouch in the grace is done');
+ const g4=graced({mv:'jump',cs:true},at,at);assert.ok(!judge({mv:'jump',cs:true},g4.before,g4.seen),'no jump, not done');
+ pass('in the grace after a call: a quick jump on "Captain says jump!" counts; on a trick what came in the grace is where they stood');
+}
 // Whole games on a stand-in clock. With random() always 0 the calls go: "Captain says crouch", then a trick "Stand up!",
 // "Captain says crouch", "Captain says stand up", a trick "Crouch!", ... (pickCall).
 mock.timers.enable({apis:['setTimeout','setInterval','Date'],now:1_000_000});
@@ -134,7 +144,7 @@ try{
 
 // Wiring: every server copy and every page the same way; the emotes called are ones every page has, and every call has words.
 for(const f of ['live-core','live-core.authoring','live-core.prepared','live-core.public']){const s=await fs.readFile(`server/${f}.mjs`,'utf8');
- for(const piece of ["import {createCaptainSays} from './captain-says.mjs';",'captainSays.observe(v,pose);','captainSays.left(v);',"case 'cs':if(allowed(v,'cs'))captainSays.message(v,msg);break;",'BUDGETS.cs=[1,4]','LEO_LIVE_CS_WAIT_S'])assert(s.includes(piece),f+': '+piece);}
+ for(const piece of ["import {createCaptainSays} from './captain-says.mjs';",'captainSays.observe(v,pose);','captainSays.left(v);',"case 'cs':if(visitors.has(v)&&(msg.e==='leave'||allowed(v,'cs')))captainSays.message(v,msg);break;",'BUDGETS.cs=[1,4]','LEO_LIVE_CS_WAIT_S'])assert(s.includes(piece),f+': '+piece);}
 for(const f of ['main','main.authoring','main.prepared','main.public']){const s=await fs.readFile(`src/walk/${f}.js`,'utf8');
  for(const piece of ["import {createCaptainSays} from './captain-says.js';",'captainSays=createCaptainSays({live:()=>live,move:captainMove,key:captainKey,','cs:msg=>captainSays?.fromServer(msg)','captainSays?.lost();','captainSays?.back();','captainSays?.refresh();','function captainMove(mv){','function captainKey(mv){'])assert(s.includes(piece),f+': '+piece);}
 {const s=await fs.readFile('src/walk/net/live.js','utf8');assert(s.includes("case 'cs':if(typeof msg.s==='string')on.cs?.(msg);break;")&&s.includes("cs(e){if(!live())return false;ws.send(JSON.stringify({m:'cs',e}));return true;}"));}
