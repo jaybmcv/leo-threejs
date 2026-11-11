@@ -7,6 +7,7 @@ import {createGrappleLine} from './grapple.js';
 import {createCrowdDraw} from './crowd-draw.js';
 import {createRigBudget} from './rig-budget.js';
 import {createCrowdTier} from './crowd-tier.js';
+import {createCrowdCount} from './crowd-count.js';
 
 // Other visitors aboard, drawn as Cosmo (avatar.js) and moved by the poses Leo live passes on (net/live.js). The
 // easing follows Voyager's Reach's remote players (packages/client/src/scene/remotePlayers.ts): a body eases toward its
@@ -17,10 +18,10 @@ import {createCrowdTier} from './crowd-tier.js';
 //
 // Only the nearest visitors on the decks being drawn get a body, from a small pool that is kept and reused: as many as the
 // budget for their rigs carries (rig-budget.js: its tier, up to MAX_RIGS; all MAX_RIGS until the crowd is here). The
-// rest, up to CROWD_MOST (CROWD_SLOW on a page that can carry few bodies), are the crowd, drawn without a rig, playing
-// loops recorded from it, the farther on lighter meshes (crowd-tier.js: fetched, with a body to copy, the first time there is anyone beyond the
-// nearest). A body standing in a lift car stands on its floor as this page draws the car, so a rider never sinks or
-// floats.
+// rest are the crowd, drawn without a rig, playing loops recorded from it, the farther on lighter meshes (crowd-tier.js:
+// fetched, with a body to copy, the first time there is anyone beyond the nearest): as many in view as this page's frames
+// allow (crowd-count.js: from CROWD_SLOW, up to CROWD_MOST), the nearest first. A body standing in a lift car stands on
+// its floor as this page draws the car, so a rider never sinks or floats.
 const STALE_MS=12000,EASE_PER_S=10,GLIDE_MIN_MS=200,GLIDE_MAX_MS=4500,STOPPED_AFTER_MS=185,STRIDE_HALF_LIFE_MS=100;
 const RUN_ON_BELT=5,HAT_M=35,MAX_RIGS=24,HOLD_RANKS=3,CROWD_MOST=1000,CROWD_SLOW=150,SLOW_TIER=12,CROWD_RETRY_MS=[5e3,3e4,12e4],LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12,SAY_MS=8000;
 // Each body's rig solve (avatar.js) costs about 0.1 ms on a desktop and several times that on a phone: a body outside
@@ -63,12 +64,14 @@ export class RemotePlayers{
  // false gives every body its natural rate and MAX_RIGS bodies, whatever they cost (this.budget may also be set to null
  // later, as a probe does to compare). crowdMotion: the URL of the crowd's recorded loops (crowd-motion.json; none: no
  // crowd, only the nearest MAX_RIGS drawn). lod: false draws the crowd in full however far (crowd-tier.js). lean: their
- // bodies shaded cheaply, near and in the crowd alike (crowd-draw.js
- // leanMaterial: a phone's).
- constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false,budget=true,crowdMotion=null,lean=false,lod=true}){
+ // bodies shaded cheaply, near and in the crowd alike (crowd-draw.js leanMaterial: a phone's). crowdFps: the frames a
+ // second the crowd is trimmed to keep (crowd-count.js; its own when not given); 0 caps it as before, at CROWD_SLOW on a
+ // page that can carry few bodies (the rig budget's tier under SLOW_TIER) and CROWD_MOST on any other.
+ constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false,budget=true,crowdMotion=null,lean=false,lod=true,crowdFps}){
   Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowdMotion,lean,lod});
   this.crowdTier=null;this.crowdLoading=false;this.crowdTries=0;this.crowdAfter=0;
   this.budget=budget?createRigBudget({most:MAX_RIGS}):null;
+  this.crowdCount=crowdFps===0?null:createCrowdCount({fps:crowdFps,most:CROWD_MOST,start:CROWD_SLOW});this.crowdMost=0;this.lastUpdate=0;
   this.crowd=crowd?createCrowdDraw(scene,{slots:MAX_RIGS,lean}):null;
   this.remotes=new Map();this.pool=[];this.making=false;this.labels=[];this.ray=new T.Ray();this.v=new T.Vector3();
  }
@@ -127,10 +130,13 @@ export class RemotePlayers{
   for(const r of bodied)if(!r.walker){const w=this.pool.pop();if(!w){this.grow();break;}r.walker=w;this.scene.add(w.holder);}
   if(shown.length>tier&&!crowdTier)this.startCrowd();
   if(crowdTier){
-   // (the cap is of those drawn: one out of view takes no place; the selfie booth's lens may see any of them, each in full)
-   const most=budget&&budget.tier<SLOW_TIER?CROWD_SLOW:CROWD_MOST;crowdTier.begin(camera,{all:photo,most,pxPerM:this.lod&&!photo?pxAt1m/BODY_M:0});
+   // (the cap is of those drawn: one out of view takes no place; the selfie booth's lens may see any of them, each in full,
+   // and its frames do not count towards the cap)
+   const most=this.crowdMost=this.crowdCount?this.crowdCount.most:budget&&budget.tier<SLOW_TIER?CROWD_SLOW:CROWD_MOST;
+   crowdTier.begin(camera,{all:photo,most,pxPerM:this.lod&&!photo?pxAt1m/BODY_M:0});
    for(let i=0;i<shown.length&&crowdTier.count<most;i++){const r=shown[i];if(!inTier.has(r)||!r.walker)crowdTier.place(r,dt,!!this.swimming?.(r.cur));}
-   crowdTier.end();
+   // (the frame's own length, from the last update: the dt passed is clamped at 0.1 s)
+   crowdTier.end();this.crowdCount?.frame(this.lastUpdate?(now-this.lastUpdate)/1000:0,crowdTier.count,{active:!photo});
   }
   viewFrustum.setFromProjectionMatrix(viewMatrix.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
   for(const r of bodied){
@@ -153,7 +159,14 @@ export class RemotePlayers{
   }
   this.name(bodied,camera,now);
   // The selfie booth's camera may see a body the view does not: every body is drawn while it counts down.
-  this.crowd?.update(camera,{all:photo});
+  this.crowd?.update(camera,{all:photo});this.lastUpdate=now;
+ }
+ // For the Stats readout (frame-readout.js): how many of the crowd this frame drew, of how many it may, and what holds
+ // that (the frames it keeps; a cut on trial; the room, not the crowd, holding frames back; or a fixed cap).
+ crowdLine(){
+  if(!this.crowdTier)return null;const s=this.crowdCount?.state;
+  const why=!s?'fixed':s.trial?'trying fewer':s.quiet>0?`room-bound, retry ${Math.ceil(s.quiet)} s`:`keeps ${s.fps} fps`;
+  return `crowd ${this.crowdTier.count} of ${this.crowdMost}   ${why}`;
  }
  // The crowd: its loops fetched and a body made to copy, once (crowd-tier.js). Without them, only the nearest are drawn.
  // A try that fails is tried again, CROWD_RETRY_MS later each time, then given up.

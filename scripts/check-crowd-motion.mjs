@@ -175,6 +175,42 @@ for(const name of ['walk','crouch']){
  }finally{globalThis.fetch=realFetch;console.warn=warn;}
  pass('a crowd recording that fails to load is fetched again five seconds later, and the crowd comes');
 }
+// How many of the crowd a page draws (remotes.js, crowd-count.js), on a page whose frames take 10 ms and 0.1 ms for each
+// of the crowd drawn, four hundred in view 31 to 69 m ahead: from 150 it rises while frames have room, the crowd tier
+// drawing as many as the cap, the nearest; the room 15 ms heavier, it comes down to what keeps 30 fps. Frames are timed
+// between updates, not by the step passed (clamped at 0.1 s): on a page where each of the crowd takes 3 ms (450 ms
+// frames at 150, as slow at 40 as the step can tell), it comes down to the least. crowdFps 0 (?crowdfps=0) caps it as
+// before: all four hundred, on a page that can carry its bodies. The Stats line says how many, of how many, and why.
+{
+ const {build}=await import('./native-bundle.mjs'),path=await import('node:path'),file=path.resolve('output/check-walker',`remotes-count.${process.pid}.mjs`);
+ await fs.mkdir(path.dirname(file),{recursive:true});
+ const b=await build({entryPoints:['src/walk/remotes.js'],bundle:true,format:'esm',platform:'node',external:['three'],write:false,target:'es2022',logLevel:'error'});
+ await fs.writeFile(file,b.outputFiles[0].text);let RemotePlayers;try{({RemotePlayers}=await import(pathToFileURL(file).href));}finally{await fs.rm(file,{force:true});}
+ const {w}=await walker(),realFetch=globalThis.fetch;globalThis.fetch=async()=>({ok:true,json:async()=>motion});
+ const camera=new T.PerspectiveCamera(60,16/9,.1,500);camera.position.set(0,1.6,0);camera.updateMatrixWorld();
+ // (past the names' 30 m, so no label is made; a body never comes, so the nearest are drawn in the crowd meanwhile)
+ const labels={getBoundingClientRect:()=>({left:0,top:0,width:1920,height:1080})},poses=Array.from({length:400},(_,i)=>({id:'v'+i,pos:[(i%20-9.5)*1.5,0,-31-Math.floor(i/20)*2],yaw:0,rest:null,stance:'stand',fur:i%5}));
+ const page=async crowdFps=>{
+  let made=0;const make=()=>made++?new Promise(()=>{}):Promise.resolve(w);
+  const remotes=new RemotePlayers(new T.Scene(),{make,crowdMotion:'walk-crowd.json',labels,crowdFps});
+  let now=1000,ms=10;remotes.onPoses(poses,now);remotes.startCrowd(now);await new Promise(r=>setTimeout(r,50));assert.ok(remotes.crowdTier,'the crowd came');
+  // a page drawing for `seconds`, its frames `room` ms and `perCat` ms for each of the crowd drawn
+  const frames=(seconds,room,perCat=.1)=>{const end=now+seconds*1000;let heard=now;
+   while(now<end){if(now-heard>1000){remotes.onPoses(poses,now);heard=now;}remotes.update(Math.min(.1,ms/1000),{camera,low:-1e3,high:1e3,height:1080},now);ms=room+perCat*remotes.crowdTier.count;now+=ms;}};
+  return {remotes,frames,get ms(){return ms;}};
+ };
+ try{
+  const p=await page();p.frames(20,10);const {remotes}=p,tier=remotes.crowdTier,count=remotes.crowdCount;
+  assert.ok(count.most>150&&count.most<400,`${count.most} after 20 s`);assert.equal(tier.count,count.most,'the tier draws as many as the cap');
+  assert.ok(p.ms<=1000/30*1.03,`frames of ${p.ms.toFixed(1)} ms`);const risen=count.most;
+  assert.match(remotes.crowdLine(),new RegExp(`^crowd ${tier.count} of ${count.most}   keeps 30 fps$`));
+  p.frames(20,25);assert.ok(count.most<risen,`${count.most} once the room was heavier`);assert.ok(p.ms<=1000/30*1.03,`frames of ${p.ms.toFixed(1)} ms`);
+  const heavy=await page();heavy.frames(30,0,3);assert.equal(heavy.remotes.crowdCount.most,40,`${heavy.remotes.crowdCount.most} with 3 ms each`);
+  const fixed=await page(0);fixed.frames(5,10);assert.equal(fixed.remotes.crowdCount,null);assert.equal(fixed.remotes.crowdTier.count,400);
+  assert.equal(fixed.remotes.crowdLine(),'crowd 400 of 1000   fixed');
+  pass(`the crowd's count on a page: from 150 to ${risen} while frames had room, ${count.most} once the room was 15 ms heavier (${p.ms.toFixed(1)} ms frames), 40 with 3 ms each (${heavy.ms.toFixed(0)} ms frames, past the step's clamp); crowdFps 0 draws all 400 as before`);
+ }finally{globalThis.fetch=realFetch;}
+}
 // Who has a body (remotes.js tierOf): the nearest, held steady at the edge. Two visitors walking to and fro across the
 // edge of a tier of 4 (one with a body, one without) do not change hands; one coming clearly near takes the place of the
 // farthest kept beyond the tier; with room, those at the edge come in; the tier falling, the farthest give theirs back.
