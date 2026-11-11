@@ -256,4 +256,10 @@ export function createArcade(){
  };
 }
 
+// Where the row ends and the treadmill's tower stands, in the ship's frame, on the floor: the wall at the row's stair end
+// and far end, the tower's near and far edges along the wall, and a point one metre out from the wall (scripts/check-arcade.mjs).
+export function arcadeRow(at=frame()){
+ const p=(x,z=0)=>at.localToWorld(new T.Vector3(x,0,z)),h=SHAPES.tower.w/2;
+ return {start:p(START),end:p(ROW_END),towerNear:p(MX-h),towerFar:p(MX+h),wall:p(MX),room:p(MX,1)};
+}
 export function liveArcadeStations(){const g=frame(),out={};let x=START;for(const c of ROW){const sh=SHAPES[c.shape];if(c.game)out[c.game]=g.localToWorld(new T.Vector3(x+sh.w/2,0,sh.d+sh.po+.35)).toArray();x+=sh.w+GAP;}return out;}
