@@ -22,6 +22,9 @@ const DX=LOUNGE_PLAN.doorZ+43,R=1.25,CY=1.35,RD=1.36,DOOR_T=.34,HINGE=DX+RD,KX=D
 const GAP={half:.9,top:2.35};
 // The wheel turns before the door swings outward and closes behind the visitor.
 const SPIN=1,SWING=1.8,SHUT=1.4,OPEN_ANGLE=100*Math.PI/180,WAIT=20,REACH=2.4;
+// The lounge-side prompt reaches just past the keypad, but stops where the arcade row starts (arcade.js builds it in this
+// same frame): its first cabinet stands in front of the keypad, so E in front of a cabinet plays that cabinet's game.
+const PROMPT_END=Math.min(KX+.6,LOUNGE_PLAN.arcadeStart+43);
 // A game code, not a credential: anyone reading the page's script can find it.
 const CODE='9lives';
 
@@ -139,7 +142,7 @@ export function createVault(ship){
   // E at the door or keypad from the lounge asks for the password; from inside, E at the door lets the walker out.
   near(p){
    if(state!=='locked'||Math.abs(p.y-FLOOR)>1.2)return null;const q=toLocal(p);
-   if(q.z>0&&q.z<REACH&&q.x>DX-1.7&&q.x<KX+.6)return {kind:'vault',label:'Enter the vault password'};
+   if(q.z>0&&q.z<REACH&&q.x>DX-1.7&&q.x<PROMPT_END)return {kind:'vault',label:'Enter the vault password'};
    if(q.z<-THICK&&q.z>-2.8&&Math.abs(q.x-DX)<1.6)return {kind:'vault-exit',label:'Open the vault door'};
    return null;
   },
