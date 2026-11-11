@@ -1,5 +1,6 @@
 // The Deck 17 arcade row (src/walk/arcade.js): Invasion and Pool cabinets at the stair end, Paws Off's treadmill past the
 // far end, in the current lounge layout. Positions only; the cabinets' art needs a canvas, so the browser checks see that.
+// Run: node scripts/check-arcade.mjs (reads output/leo-interior-v02/layout.json, which a build writes). Passes on the plan's layout too.
 import {arcadeRow,arcadeTreadmill,liveArcadeStations} from '../src/walk/arcade.js';
 
 let bad=0;
