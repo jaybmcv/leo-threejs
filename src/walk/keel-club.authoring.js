@@ -112,6 +112,9 @@ export function riverNearest(x,z){const {pts,len}=RIVER_PATH;let best=0,bd=Infin
 // back about its hips (radians); `hip` is how high the hips sit over the water (the ring's top is .32 up:
 // createTubeMesh's torus floats .08 over the water).
 export const TUBE_SIT={recline:.7,hip:.14};
+// Where a rider's arms rest (avatar.js): the ring round the hips, as createTubeMesh's torus: its centre line `r` round
+// them, its top `up` over them (the ring's top is .32 over the water, the hips TUBE_SIT.hip) and its tube `tube` thick.
+export const TUBE_RIM={r:.55,up:.32-TUBE_SIT.hip,tube:.24};
 export const TUBE={current:.9,paddle:.8,brake:.6,steer:.7,ease:.2,kick:.7,kickMax:1,kickDecay:.4,max:2.2,radius:TUBE_RING,seat:.25,reach:2.2,capture:2.5};
 export const TUBE_RANGE=RIVER.width/2-TUBE.radius;
 // Tube docks on the centre island's bank, four a side, clear of the bridges: `at` is where you stand to take a tube

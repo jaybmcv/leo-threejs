@@ -203,7 +203,7 @@ export class RemotePlayers{
   // On the grapple line (grapple.js): it reels out from their paw to where it bit, and back in when they let go.
   const hook=t.hook&&!t.rest&&!t.ball?(r.hookAt??=new T.Vector3()).fromArray(t.hook):null;if(hook&&!r.line)r.line=createGrappleLine(this.scene);
   const solves=w.update(dt,{unseen,solveEvery:every,hold,speed:r.rest?0:belt?RUN_ON_BELT:r.speed,grounded:t.grounded,stance:t.ball?'stand':t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
-   emote:floating?null:t.emote,rest:floating?{kind:'float',weight:1,seatHeight:w.hipHeight}:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c)}:null,catnip:!!this.catnip?.(c),swimming:!t.rest&&!!this.swimming?.(c),board,hook});
+   emote:floating?null:t.emote,rest:floating?{kind:'float',weight:1,seatHeight:w.hipHeight}:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c),rim:r.restKind==='tube'?this.tube?.rim:null}:null,catnip:!!this.catnip?.(c),swimming:!t.rest&&!!this.swimming?.(c),board,hook});
   r.line?.update(dt,w.hand(this.v2??=new T.Vector3()),hook);
   // A captain's hat is ~200k triangles: past HAT_M it is a few pixels, and not drawn.
   if(w.hat&&r.distance>HAT_M)w.hat.mount.visible=false;
