@@ -11,10 +11,12 @@ const SETTLED=()=>{};
 // The hull's skin is the backdrop to every opening, so it draws a band early either way: over the upper service
 // gallery the walker sees past the end of Deck 18 to the hull top, a band above any the view rays reach.
 const SKIN=/^Smooth_pressure_envelope/;
-// The drive nacelles' outer shell stands outside the hull, seen whole through the windows of decks above and beside it.
-// Cut by deck it showed only the slices of the decks in view, with the pods' inner panels through the gaps, so every
-// triangle of it takes the whole shell's band range and draws while any deck it spans is in view.
-const WHOLE=/^Sculpted_nacelle_shell$/;
+// The drive nacelles' outer shell and the wing stand outside the hull, seen whole through the windows of decks above and
+// beside them. Cut by deck they showed only the slices of the decks in view (the wing as pale triangles with gaps
+// between them, from Deck 16 Voyage training), so every triangle of one takes its whole mesh's band range and draws
+// while any deck it spans is in view. Measured: the wing is about 78k triangles in four meshes over bands 3-11 and each
+// nacelle shell 19k over 0-14, still cut by 40 m stretch, so it adds draws only in the views that already show a slice.
+const WHOLE=/^(Sculpted_nacelle_shell|Blended_double_delta|Wing_thermal_edge|Wing_leading_edge|Wing_stabilizer_fence)$/;
 const fraction=x=>Math.round(Math.min(1,Math.max(0,x))*65535);
 const worldVisible=o=>{for(let p=o;p;p=p.parent)if(!p.visible)return false;return true;};
 // Plain colour materials (no textures, opaque, not glowing) fold into a few shared ones that take their colour per
