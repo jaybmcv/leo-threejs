@@ -75,20 +75,21 @@ const big=n=>Array.from({length:n},()=>({natural:0,forced:false}));
 }
 // The solves that run, as avatar.js runs them (rig-pace.js), held past the frame's cap as remotes.js holds them: 24 big
 // bodies for 10 s, in step (all made at once, the worst case), the rates given afresh each frame. On average within the
-// budget, on no frame after the first past the cap, and each body at least 20 a second.
-for(const hz of [30,60,144]){
- const f=1/hz,b=settled(f,.1),paces=Array.from({length:24},()=>rigPace(CAP)),solved=new Array(24).fill(0);let total=0,frames=0,most=0;
+// budget (or, where it cannot carry them all at the slowest pace, within what that pace needs: 120 Hz with solves of
+// 0.22 ms, as a desktop measured), on no frame after the first past the cap, and each body at least 20 a second.
+for(const [hz,ms] of [[30,.1],[60,.1],[144,.1],[120,.22]]){
+ const f=1/hz,b=settled(f,ms),paces=Array.from({length:24},()=>rigPace(CAP)),solved=new Array(24).fill(0);let total=0,frames=0,most=0;
  for(let t=0;t<10;t+=f,frames++){
-  const rates=b.rates(big(24)),cap=b.frameCap();let now=0;
+  const rates=b.rates(big(24)),cap=b.frameCap(24);let now=0;
   paces.forEach((p,i)=>{const n=p(f,rates[i],'walk',now>=cap).length;solved[i]+=n;now+=n;});
   // (the first frame is every body's first input, which always solves: rig-pace.js)
   total+=now;if(frames)most=Math.max(most,now);
  }
- const per=total/frames,{solves}=b.state,cap=b.frameCap();
- assert.ok(per<=solves*1.05,`${hz} Hz: ${per.toFixed(2)} solves a frame against ${solves.toFixed(2)}`);
+ const per=total/frames,{solves}=b.state,cap=b.frameCap(24),floor=24/Math.max(1,Math.floor(CAP*hz+1e-6));
+ assert.ok(per<=Math.max(solves,floor)*1.05,`${hz} Hz: ${per.toFixed(2)} solves a frame against ${solves.toFixed(2)} (the slowest pace needs ${floor.toFixed(2)})`);
  assert.ok(most<=Math.ceil(cap)+1,`${hz} Hz: a frame ran ${most} solves against a cap of ${cap.toFixed(1)}`);
  assert.ok(solved.every(n=>n>=20*10*.97),`${hz} Hz: each solved at least 20 a second: ${Math.min(...solved)}`);
- pass(`${hz} Hz through rig-pace for 10 s: ${per.toFixed(2)} solves a frame against ${solves.toFixed(2)}, at most ${most} on a frame (cap ${cap.toFixed(1)}), each body at least ${(Math.min(...solved)/10).toFixed(0)} a second`);
+ pass(`${hz} Hz, solves of ${ms} ms, through rig-pace for 10 s: ${per.toFixed(2)} solves a frame against ${solves.toFixed(2)}, at most ${most} on a frame (cap ${cap.toFixed(1)}), each body at least ${(Math.min(...solved)/10).toFixed(0)} a second`);
 }
 // Held, a body gathers its time and catches up a cap at a time: none of it is lost.
 {

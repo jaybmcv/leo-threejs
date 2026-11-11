@@ -14,9 +14,10 @@ import {createRigBudget} from './rig-budget.js';
 // a stride is worked out from successive positions and dies away when the poses stop moving; someone not heard from for
 // 12 s is gone.
 //
-// Only the nearest visitors on the decks being drawn get a body, from a small pool that is kept and reused: MAX_RIGS, or
-// fewer on a page whose budget for their rigs buys fewer (rig-budget.js). A body standing in a lift car stands on its
-// floor as this page draws the car, so a rider never sinks or floats.
+// Only the nearest MAX_RIGS visitors on the decks being drawn get a body, from a small pool that is kept and reused (the
+// budget for their rigs, rig-budget.js, sets their pace; its tier, how many it could carry, waits for a way to draw the
+// rest without a rig). A body standing in a lift car stands on its floor as this page draws the car, so a rider never
+// sinks or floats.
 const STALE_MS=12000,EASE_PER_S=10,GLIDE_MIN_MS=200,GLIDE_MAX_MS=4500,STOPPED_AFTER_MS=185,STRIDE_HALF_LIFE_MS=100;
 const RUN_ON_BELT=5,HAT_M=35,MAX_RIGS=24,LABEL_M=30,LABELS=16,REST_S=.7,PILLOW_TILT=.12,SAY_MS=8000;
 // Each body's rig solve (avatar.js) costs about 0.1 ms on a desktop and several times that on a phone: a body outside
@@ -90,8 +91,8 @@ export class RemotePlayers{
    const band=bandOf(r.cur.y+.5);
    if(band>=bandLow&&band<=bandHigh)shown.push(r);else this.release(r);
   }
-  // Bodies for the nearest, as many as the budget buys; the rest give theirs back to the pool.
-  const budget=this.budget;budget?.frame(dt);const tier=budget?budget.tier:MAX_RIGS;
+  // Bodies for the nearest; the rest give theirs back to the pool.
+  const budget=this.budget;budget?.frame(dt);const tier=MAX_RIGS;
   shown.sort((a,b)=>a.distance-b.distance);
   shown.slice(tier).forEach(r=>this.release(r));
   viewFrustum.setFromProjectionMatrix(viewMatrix.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
@@ -112,7 +113,7 @@ export class RemotePlayers{
   // each update takes tells the budget what a solve costs this page.
   if(budget)posed.sort((a,b)=>(b.forced-a.forced)||(a.unseen-b.unseen)||(b.px-a.px));
   // Past the frame's cap (a frame on which many come due at once), the smaller wait a frame or two (rig-pace.js hold).
-  const every=budget?budget.rates(posed):posed.map(p=>p.natural),cap=budget?budget.frameCap():Infinity;let solved=0;
+  const every=budget?budget.rates(posed):posed.map(p=>p.natural),cap=budget?budget.frameCap(posed.length):Infinity;let solved=0;
   for(let i=0;i<posed.length;i++){
    const p=posed[i],solves=this.pose(p.r,dt,p.unseen,every[i]===true?0:every[i],!p.forced&&solved>=cap);
    solved+=solves;budget?.spent(p.r.walker.solveMs,solves);

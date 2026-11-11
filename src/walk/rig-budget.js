@@ -3,8 +3,9 @@
 // the frame (SHARE of its smoothed length), turned into solves by what one solve has been taking (spent: the solves'
 // own time, which avatar.js measures).
 //
-// The tier: how many of the nearest visitors get a body at all, as many as can solve at the rig's slowest pace (a 20 fps
-// machine: rig-pace.js cap) within the budget, from LEAST to MOST. It moves one at a time, a STEP_S apart, down as soon
+// The tier: how many of the nearest visitors could have a body, as many as can solve at the rig's slowest pace (a 20 fps
+// machine: rig-pace.js cap) within the budget, from LEAST to MOST (remotes.js gives bodies to MOST until there is a way to
+// draw the rest without a rig). It moves one at a time, a STEP_S apart, down as soon
 // as the budget cannot carry it, up only with HEADROOM to spare, so a body never comes and goes with timing noise.
 //
 // Rates: bodies ranked biggest on screen first (forced first: the selfie booth counting down, a grapple line out),
@@ -14,7 +15,7 @@
 // slowest pace already. The rates hold on average; on a frame where many come due at once, past frameCap() the smaller
 // wait (rig-pace.js hold).
 //   createRigBudget({share, cap, most, least}) -> {frame(dt), spent(ms, solves), tier, rates(bodies) -> every[],
-//   frameCap() -> solves}
+//   frameCap(bodies) -> solves}
 //   bodies: [{natural, forced}] in rank order; natural: 0 (every frame) or seconds between solves, true for unseen.
 //   every[i]: what to pass the body's update as solveEvery (0, or seconds; true stays true).
 const SHARE=.08,STEP_S=.5,EASE=.05,FIRST_SOLVE_MS=.15,HEADROOM=.9,OUTLIER=3,SPIKE=1.25;
@@ -37,8 +38,10 @@ export function createRigBudget({share=SHARE,cap=.05,most=24,least=6}={}){
   // What a body's solves took (ms), and how many there were.
   spent(ms,count){if(count>0&&ms>=0)solveMs+=(ms/count-solveMs)*EASE;},
   get tier(){return tier;},
-  // The most solves one frame should run: the budget's, with room for the frames where the paces line up.
-  frameCap(){return Math.max(1,solves()*SPIKE);},
+  // The most solves one frame should run for `bodies` bodies: the budget's, or (when it cannot carry them all at the
+  // slowest pace) what that pace needs, with room for the frames where the paces line up. Holding below that would only
+  // gather them until they all come due at once.
+  frameCap(bodies=0){return Math.max(1,Math.max(solves(),bodies*cost(true))*SPIKE);},
   // (for checks and probes: what the budget is working from)
   get state(){return {frameS,solveMs,solves:solves(),tier};},
   rates(bodies){
