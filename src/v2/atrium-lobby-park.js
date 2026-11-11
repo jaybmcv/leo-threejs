@@ -108,7 +108,7 @@ function addWelcomeCourt(out,glow,y){
 }
 
 // ---- G2: the flower meadow ----------------------------------------------------------------------------------------
-const MEADOW={pink:0xf5adc6,white:0xfbf7ee,yellow:0xf5e28a},MEADOW_TONES=[MEADOW.pink,MEADOW.white,MEADOW.yellow],EYE=0xf2c94c;
+const MEADOW={pink:0xf08cb3,white:0xfdfaf2,yellow:0xf6d257},MEADOW_TONES=[MEADOW.pink,MEADOW.white,MEADOW.yellow],EYE=0xf2c94c;
 // A meadow flower as seen from standing height: five kite petals round a yellow eye, the disc tipped up toward the
 // viewer by `tilt`. Eleven triangles.
 function bloom(s,[x,y,z],size,hex,r){
@@ -139,9 +139,9 @@ const OPEN_LAWN=[-46.5,-36.5,-15,-6],CROSS_ROUTE=[-81,-77],PATH_HALF=1.2;
 /** A drift: blooms over leafy mounds, scattered over a region by `sample` (which gives a point, or null to skip). */
 function drift(out,s,sample,area,colour,r,ok){
  let blooms=0;
- for(let k=0;k<Math.round(area*2.5);k++){const q=sample();if(!q||!ok(q[0],q[1],.2))continue;clump(out,[q[0],q[2]+.06,q[1]],{r:.2+r()*.1,rnd:r,leaves:1,detail:0,squash:.55,palette:[GREENS.dark,GREENS.mid,GREENS.bright]});}
- for(let k=0;k<Math.round(area*12);k++){const q=sample();if(!q||!ok(q[0],q[1],.15))continue;
-  bloom(s,[q[0],q[2]+.16+r()*.14,q[1]],.085+r()*.04,r()<.65?MEADOW_TONES[colour]:MEADOW_TONES[r()*3|0],r);blooms++;}
+ for(let k=0;k<Math.round(area*2.2);k++){const q=sample();if(!q||!ok(q[0],q[1],.2))continue;clump(out,[q[0],q[2]+.1,q[1]],{r:.22+r()*.1,rnd:r,leaves:2,detail:0,squash:.72,palette:[GREENS.mid,GREENS.bright,GREENS.bright,GREENS.dark]});}
+ for(let k=0;k<Math.round(area*16);k++){const q=sample();if(!q||!ok(q[0],q[1],.15))continue;
+  bloom(s,[q[0],q[2]+.22+r()*.16,q[1]],.11+r()*.05,r()<.65?MEADOW_TONES[colour]:MEADOW_TONES[r()*3|0],r);blooms++;}
  return blooms;
 }
 function addFlowerMeadow(out,layout,blocked,trees){
@@ -151,15 +151,17 @@ function addFlowerMeadow(out,layout,blocked,trees){
  const onPath=(x,z,m)=>x>edge[0][0]-m&&x<edge.at(-1)[0]+m&&Math.abs(z-centre(x))<PATH_HALF+m;
  const ok=(x,z,m)=>x>x0&&x<x1&&z>z0&&z<-6.6&&contains(floor,[x,z])&&!onPath(x,z,m+.1)&&!(x>OPEN_LAWN[0]&&x<OPEN_LAWN[1]&&z>OPEN_LAWN[2]&&z<OPEN_LAWN[3])&&!(x>CROSS_ROUTE[0]&&x<CROSS_ROUTE[1])&&!blocked(x,z,m)&&NEW_TREES.every(t=>Math.hypot(t.x-x,t.z-z)>.5);
  let drifts=0,blooms=0,grasses=0;
- // Along both edges of the path: drifts 3.5-7 m long hugging the edge, grasses in the gaps between them.
+ // Along both edges of the path: drifts 4-8 m long hugging the edge, grasses in the gaps between them.
  for(const side of[-1,1]){
   let x=edge[0][0]+.5+r()*2.5;
   while(x<edge.at(-1)[0]-1){
-   const len=3.5+r()*3.5,depth=1.1+r()*1,from=x,colour=r()*3|0;
+   const len=4+r()*4,depth=1.3+r()*1.1,from=x,colour=r()*3|0;
    const sample=()=>{const u=r()*2-1,px=from+(u+1)/2*len,v=r()*depth*Math.sqrt(1-u*u);return px<edge.at(-1)[0]?[px,centre(px)+side*(PATH_HALF+.3+v),y]:null;};
    blooms+=drift(out,s,sample,len*depth*Math.PI/4,colour,r,ok);drifts++;
-   x+=len;const gap=1.6+r()*3.6;
-   for(let g=x+.8;g<x+gap-.5;g+=1.4+r()*.8){const gz=centre(g)+side*(PATH_HALF+.5+r()*.3);if(ok(g,gz,.3)){grass(out,[g,y,gz],r);grasses++;}}
+   // A few grasses rising behind the flowers, along the drift's back edge.
+   for(let g=from+1+r();g<from+len-1;g+=2.2+r()*1.2){const back=depth*Math.sqrt(1-((g-from)/len*2-1)**2)*.85,gz=centre(g)+side*(PATH_HALF+.3+back);if(ok(g,gz,.3)){grass(out,[g,y,gz],r);grasses++;}}
+   x+=len;const gap=1.4+r()*2.4;
+   for(let g=x+.8;g<x+gap-.5;g+=1.1+r()*.6){const gz=centre(g)+side*(PATH_HALF+.5+r()*.3);if(ok(g,gz,.3)){grass(out,[g,y,gz],r);grasses++;}}
    x+=gap;
   }
  }
