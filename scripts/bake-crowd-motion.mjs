@@ -23,15 +23,17 @@ export const RIG=['src/walk/avatar.js','src/walk/rig-pace.js','src/walk/solved-p
 const RIG_DIRS=['src/walk/vr'];
 // The loops: [name, state for the walker's update, seconds recorded (the longest a loop may be)], the speed (m/s) a
 // moving loop was recorded at, which the crowd scales its pace by, and its frames a second (FPS; the emotes, standing,
-// EMOTE_FPS: they are seen from afar). Lying, the body turns as remotes.js turns it. The emotes that come round within
-// four seconds; talk, spell, box and interact turn through moves of their own for longer, and stand in the crowd.
+// EMOTE_FPS: they are seen from afar). Lying, the body turns as remotes.js turns it. The emotes whose loop is one move
+// (fix, kneeling, is 5.2 s: recorded for longer); talk, spell, box and interact turn through moves of their own, and
+// stand in the crowd.
 export const EMOTES=['dance','slash','push','fix','pick_up'];
+const EMOTE_S={fix:6.5};
 export const LOOPS=[
  ['idle',{},4],['walk',{speed:1.4},2.5,1.4],['run',{speed:5},2,5],
  ['crouch',{stance:'crouch'},3],['crouchWalk',{stance:'crouch',speed:1},2.5,1],
  ['prone',{stance:'prone'},3],['crawl',{stance:'prone',speed:.6},3,.6],
  ['sit',{rest:'sit'},3],['lie',{rest:'lie'},3],['swim',{swimming:true,speed:1},3,1],
- ...EMOTES.map(e=>[e,{emote:e},4,0,EMOTE_FPS]),
+ ...EMOTES.map(e=>[e,{emote:e},EMOTE_S[e]??4,0,EMOTE_FPS]),
 ];
 const PILLOW_TILT=.12;
 
