@@ -16,24 +16,25 @@ import * as T from 'three';
 import {build} from './native-bundle.mjs';
 
 export const OUT='src/walk/assets/crowd-motion.json';
-const FPS=15,EMOTE_FPS=10,STEP=1/60,WARM_S=3,MIN_S=.5,CROSS_S=.3;
+const FPS=15,EMOTE_FPS=10,STEP=1/60,WARM_S=3,MIN_S=.5,CROSS_S=.3,EMOTE_CROSS_S=.6;
 // What the recording depends on: the rig, the walker round it, its motion and this script.
 export const RIG=['src/walk/avatar.js','src/walk/rig-pace.js','src/walk/solved-pose.js','src/walk/merged-skin.js','src/vendor/cosmo/DLCat.js',
  'src/walk/assets/ecctrl-locomotion.json','src/walk/assets/cosmo-emotes.json','scripts/bake-crowd-motion.mjs'];
 const RIG_DIRS=['src/walk/vr'];
 // The loops: [name, state for the walker's update, seconds recorded (the longest a loop may be)], the speed (m/s) a
 // moving loop was recorded at, which the crowd scales its pace by, and its frames a second (FPS; the emotes, standing,
-// EMOTE_FPS: they are seen from afar). Lying, the body turns as remotes.js turns it. The emotes whose loop is one move
-// (fix, kneeling, is 5.2 s: recorded for longer); talk, spell, box and interact turn through moves of their own, and
-// stand in the crowd.
-export const EMOTES=['dance','slash','push','fix','pick_up'];
-const EMOTE_S={fix:6.5};
+// EMOTE_FPS: they are seen from afar). Lying, the body turns as remotes.js turns it. Each emote is recorded long enough
+// to come round whole (fix, kneeling, is 5.2 s; box and spell turn through two moves each); play dead holds its last
+// pose, breathing. An emote's way round is faded over EMOTE_CROSS_S (a punch or a spell's moves come in their own
+// order, and seldom round to the first exactly). Talk and interact are not called in Captain Says, and stand in the crowd.
+export const EMOTES=['dance','slash','push','fix','pick_up','box','spell','play_dead'];
+const EMOTE_S={fix:6.5,box:8,spell:8};
 export const LOOPS=[
  ['idle',{},4],['walk',{speed:1.4},2.5,1.4],['run',{speed:5},2,5],
  ['crouch',{stance:'crouch'},3],['crouchWalk',{stance:'crouch',speed:1},2.5,1],
  ['prone',{stance:'prone'},3],['crawl',{stance:'prone',speed:.6},3,.6],
  ['sit',{rest:'sit'},3],['lie',{rest:'lie'},3],['swim',{swimming:true,speed:1},3,1],
- ...EMOTES.map(e=>[e,{emote:e},EMOTE_S[e]??4,0,EMOTE_FPS]),
+ ...EMOTES.map(e=>[e,{emote:e},EMOTE_S[e]??4,0,EMOTE_FPS,EMOTE_CROSS_S]),
 ];
 const PILLOW_TILT=.12;
 
@@ -63,8 +64,9 @@ export const partsOf=w=>{const parts=[];w.figure.root.traverse(o=>{if(o.isSkinne
 
 // One loop: the state held, recorded at 60 Hz, its period found (where a run of frames is most like the first run, from
 // MIN_S on), its last CROSS_S faded into its first so it comes round without a jump, and resampled to FPS with the
-// period shared evenly between its frames. seam: the biggest step from one kept frame to the next, over the usual one.
-async function record(make,[name,state,seconds,speed,fps=FPS]){
+// period shared evenly between its frames. seam: the step from its last frame round to its first, over the biggest
+// step within it (a punch is quick: what matters is that coming round is no jump beside the loop's own moves).
+async function record(make,[name,state,seconds,speed,fps=FPS,crossS=CROSS_S]){
  const {w,scene}=await make(),skeleton=partsOf(w)[0].skeleton,bones=skeleton.bones.length;
  const rest=state.rest?{kind:state.rest,weight:1,seatHeight:w.hipHeight}:null;
  const s={speed:0,grounded:true,stance:'stand',jumpCount:1,jumpS:-1,turnRate:0,accel:0,rise:0,emote:null,...state,rest};
@@ -80,15 +82,15 @@ async function record(make,[name,state,seconds,speed,fps=FPS]){
  const diff=(a,b)=>{let d=0;for(let k=0;k<a.length;k++)d+=Math.abs(a[k]-b[k]);return d/a.length;};
  // A loop that never moves (nothing differs) is one frame.
  if(raw.every(f=>diff(raw[0],f)<1e-6))return {name,frames:[raw[0]],bones,speed:speed??0,fps,seam:0};
- const RUN=6,cross=Math.round(CROSS_S/STEP);let period=raw.length-cross-RUN,best=Infinity;
+ const RUN=6,cross=Math.round(crossS/STEP);let period=raw.length-cross-RUN,best=Infinity;
  for(let p=Math.round(MIN_S/STEP);p+RUN+cross<=raw.length;p++){let d=0;for(let k=0;k<RUN;k++)d+=diff(raw[k],raw[p+k]);if(d<best){best=d;period=p;}}
  // Faded: the first `cross` frames lean from what followed the period (the loop's way round) to their own.
  const c=Math.min(cross,Math.floor(period/3)),loop=raw.slice(0,period).map((f,i)=>{if(i>=c)return f;const u=i/c,g=raw[period+i],o=new Float32Array(f.length);
   for(let k=0;k<f.length;k++)o[k]=g[k]+(f[k]-g[k])*u;return o;});
  const n=Math.max(2,Math.round(period*STEP*fps)),frames=[];
  for(let i=0;i<n;i++){const x=i*period/n,a=Math.floor(x),u=x-a,p=loop[a],q=loop[(a+1)%period],o=new Float32Array(p.length);for(let k=0;k<p.length;k++)o[k]=p[k]+(q[k]-p[k])*u;frames.push(o);}
- const steps=frames.map((f,i)=>diff(f,frames[(i+1)%n])),usual=steps.slice().sort((x,y)=>x-y)[n>>1]||1e-9;
- return {name,frames,bones,speed:speed??0,fps,seam:Math.max(...steps)/usual};
+ const steps=frames.map((f,i)=>diff(f,frames[(i+1)%n])),within=Math.max(...steps.slice(0,-1))||1e-9;
+ return {name,frames,bones,speed:speed??0,fps,seam:steps[n-1]/within};
 }
 
 // One loop recorded afresh, and the walker it was recorded on (for check-crowd-motion.mjs).
