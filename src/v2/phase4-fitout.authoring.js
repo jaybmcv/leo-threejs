@@ -1,4 +1,5 @@
 import {reflectionGeometry,reflectionMaterial} from './reflection-terraces.js';
+import {stageGeometry} from './atrium-stage.js';
 import{communityDisplayParts}from'./community-displays.js';
 import {fitoutGeometry,material,atriumGlass} from './phase4-mesh-kit.js';
 import {walkCanvas} from '../walk/canvas.js';
@@ -17,7 +18,7 @@ export function buildPhase4Fitout(ship,layout){
   const key=[p.deck,p.part,p.mat,p.size.join(','),!!p.round,!!p.noCollide,JSON.stringify(p.reflectionShape||null)].join('|');let b=batches.get(key);if(!b)batches.set(key,b={...p,list:[]});b.list.push(p);
  }
  for(const b of batches.values()){
-  const geo=reflectionGeometry(b)||fitoutGeometry(b),o=new T.InstancedMesh(geo,(reflectionMaterial(b.mat)||(b.mat==='glass'?atriumGlass:material(b.mat))),b.list.length);o.name='P4_'+b.part;
+  const geo=reflectionGeometry(b)||stageGeometry(b)||fitoutGeometry(b),o=new T.InstancedMesh(geo,(reflectionMaterial(b.mat)||(b.mat==='glass'?atriumGlass:material(b.mat))),b.list.length);o.name='P4_'+b.part;
   b.list.forEach((p,i)=>o.setMatrixAt(i,new T.Matrix4().compose(new T.Vector3(...p.at),new T.Quaternion().setFromEuler(new T.Euler(0,p.yaw,p.roll||0)),new T.Vector3(1,1,1))));o.computeBoundingBox();o.computeBoundingSphere();
   const ownerRuns=[];b.list.forEach((p,i)=>{const last=ownerRuns.at(-1),component=p.component||p.room;if(last&&last.room===p.room&&last.component===component)last.count++;else ownerRuns.push({start:i,count:1,room:p.room,component});});o.userData={phase4:true,v2Deck:b.deck,noCollide:!!b.noCollide,roomOwners:[...new Set(b.list.map(p=>p.room))],ownerRuns};root.add(o);
  }
