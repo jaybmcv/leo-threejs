@@ -150,6 +150,9 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
   //  catnip: in the Hydro-Nip Lounge, board: riding the longboard (0..1, glide.js), hook: the grapple's bite (world) or null,
   //  unseen: nothing draws him this frame (first person), so the figure's rig solve (about 0.33 ms) runs less often,
   //  solveEvery: seconds between solves while he is small on screen (another visitor far off: remotes.js), 0 every frame}
+  // Returns how many times the rig solved this frame (none, one, or two on a change of input: rig-pace.js), and keeps
+  // what those solves took (solveMs) for the budget of other visitors' rigs (rig-budget.js). s.hold: that budget is
+  // spent this frame, so the rig gathers its time instead of solving (rig-pace.js), unless an input changed.
   update(dt,s){
    const r=s.rest,seated=r?.kind==='sit'&&r.weight>.35;
    hang=T.MathUtils.clamp(hang+(s.hook&&!r?1:-1)*dt/HANG_S,0,1);if(s.hook)anchor.copy(s.hook);
@@ -166,8 +169,10 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
    const pose={pos:[0,0,0],yaw:0,dt,speedMs:r?0:s.speed,grounded:r?true:s.grounded,swimming:!!s.swimming,submerged:!!s.swimming,stance:r?'stand':s.stance||'stand',
     jumpCount:s.jumpCount||1,jumpS:s.jumpS,turnRate:r?0:s.turnRate||0,accelMs2:r?0:s.accel||0,riseMs:r?0:s.rise||0,emote:r?null:s.emote||null,
     seated,seatedVariant:'passenger',seatHeight:seated?r.seatHeight:undefined,seatForward:0};
-   let solved=false;for(const {dt:step,prior} of pace(dt,s.unseen?true:s.solveEvery||0,inputs)){
-    const p={...(prior&&lastPose||pose),dt:step};if(matrices)matrices.solve(()=>figure.apply(p,step));else figure.apply(p,step);solved=true;}
+   let solved=0;const solving=pace(dt,s.unseen?true:s.solveEvery||0,inputs,!!s.hold),t0=solving.length?performance.now():0;
+   for(const {dt:step,prior} of solving){
+    const p={...(prior&&lastPose||pose),dt:step};if(matrices)matrices.solve(()=>figure.apply(p,step));else figure.apply(p,step);solved++;}
+   this.solveMs=solved?performance.now()-t0:0;
    if(solved)held.keep();else if(held.restore())matrices?.changed();
    lastPose=pose;
    // Lying down, in a bed or playing dead, the hat comes off: on his back it would sink into the floor or the pillow.
@@ -228,6 +233,7 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
    }
    // The hat and the catnip face, shown or hidden above, keep their way through the scene walk.
    walk?.sync();
+   return solved;
   },
   dispose(){merged?.dispose();suit?.dispose();figure.dispose();holder.removeFromParent();}
  };

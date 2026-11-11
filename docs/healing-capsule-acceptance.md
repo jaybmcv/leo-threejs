@@ -2,7 +2,39 @@
 
 Project-local record for the existing capsules in the Deck 5 Surgical suite (`src/walk/surgery.js` and its `.authoring`, `.prepared` and `.public` copies, which differ only in how geometry is replayed; `src/walk/capsule-bubbles.js`; the entry, leave and float code in `src/walk/main.js`; the blue view in `src/walk/walk.html`). History: step 1 from tester feedback (PR #229) built the capsules; the later report (#210, PR #299) added bubbles, the shared floating pose, wall monitors and hazard bins. Nothing was built, moved or repaired in this step: no capsule rebuild, no roaming robot medic, beds, robot arms, layout and circulation untouched.
 
-Tested build: source at main `33ed54f3`. This checkout has no built layout 2 (`output/leo-interior-v02/layout.json` is absent) and no browser pass was run, so **nothing below was exercised on screen**. "Verified" here means read from the source and the earlier step's recorded results. Every row marked "untested" needs a walk on a layout 2 build. No screenshots are attached for that reason; the original tester shot and reference picture were not available to this step and were not imported or copied.
+Step 1 tested build: source at main `33ed54f3`. This checkout has no built layout 2 (`output/leo-interior-v02/layout.json` is absent) and no browser pass was run, so **nothing below was exercised on screen**. "Verified" here means read from the source and the earlier step's recorded results. Every row marked "untested" needs a walk on a layout 2 build. No screenshots are attached for that reason; the original tester shot and reference picture were not available to this step and were not imported or copied.
+
+## Step 2: browser verification attempt (2026-11-10)
+
+Tested build: source at main `0dbcd338` (checkout of branch `feedback/issue-122`). Still no screen observations. Direct observations in this step: only the two below.
+
+- Observed: `node` loading `src/plan/selected-layout.js` fails with `ENOENT … output/leo-interior-v02/layout.json`. The checkout has only `output/leo-interior-v01`; layout 2 is a generated file from the geometry build (`FAST_DEPLOYS.md`), so the room frame `d05-surgery-2` cannot be turned into layout 2 world coordinates, and `walk.html?lv=2&at=…` links for the bays cannot be written from source alone.
+- Observed: there is no `dist-v2` build and no browser walk in this checkout, and the geometry bake is not run in the builder's worktree (a full build is a separate, one-at-a-time job). Nothing below was seen on screen.
+
+**Testing blocker: every on-screen check is blocked, not failed.** What each needs, so a later pass can run it without rediscovery:
+
+| Check | Result | Needs |
+| --- | --- | --- |
+| Outside view of each bay (6) | Blocked | Layout 2 build; world position of each capsule |
+| Entry works (E or Use) | Blocked (source and PR #229 headless run only) | Walk to each capsule; read the prompt "Enter the healing capsule" |
+| Occupancy continues until Leave | Blocked (source and PR #229 headless run only) | Wait inside, try walking keys, then E or the button |
+| Cosmo floats inside, third person | Blocked | Screenshot per bay |
+| First person, blue tint, size waver | Blocked | Screenshot per bay in first person; compare with the same view outside |
+| V switch during occupancy | Blocked | Toggle several times in one stay, including during the 0.6 s tint fade |
+| Hoses meet the moving body | Blocked | Close third-person screenshots at two points of the float bob |
+| Bubbles and existing effects | Blocked | Screenshot with an occupant: lights pulsing, three rings rising |
+| Nearby equipment hoses and varied readouts | Blocked | Close screenshots of each bay's readings unit, wall monitor, bed panel |
+| Safe exit after ordinary entry | Blocked | Leave from each bay; check the landing is on floor, clear of the pedestal, controls and follow camera back |
+| Safe exit after entry while jumping | Blocked | Press Space and E together next to a capsule; then as above |
+| Tint or size gone after Leave, Hub open | Blocked | Leave with the Builder's Hub overlay open over the walk; wait over 1 s; check `body.capsule-view` is off and the canvas is unscaled |
+
+How to reproduce, on a layout 2 build (the nightly or `dist-v2` with `layout.json`):
+
+1. World position of a bay: with `output/leo-interior-v02/layout.json` present, run `toWorld('d05-surgery-2',[x,0,z])` from `src/plan/rooms.js`, using the capsule x, z in the table below (add 2.0 m along the capsule's facing direction for a standing spot outside). Or walk to the bay and use the walk's link button: `spotLink` writes `lv=2`, `at`, `yaw`, `pitch` and `view=first` for the first-person variant.
+2. Open `walk.html?lv=2&at=X,Y,Z&yaw=…&pitch=-10` for outside, add `&view=first` once inside.
+3. The original `walk.html?at=-62.46,-23.70,-42.43&yaw=156&pitch=-28` is a layout 1 link without `lv`, which `src/walk/link.js` remaps by room; it is the historical view only.
+
+Screenshots saved: none. Remaining gaps per bay are unchanged from the section below, plus "no on-screen pass": bays 1 to 6 each still need the 12 checks above.
 
 ## Where it is
 
@@ -62,4 +94,4 @@ A walking robot medic that visits bays was deferred in step 1 and is not built. 
 
 ## Verdict
 
-Outstanding. The capsule is present, enterable, held until Leave and returned to the floor in source and in the earlier step's headless run, and the blue tint and size waver are limited to the capsule by source. That is not yet enough to mark the capsule portion satisfied: nothing was run on a layout 2 build, hose attachment on the floating body is unconfirmed, and the wall equipment and floating panel lack hoses and varied readouts. The report stays open. This step is the first: the record. What would follow is the layout 2 walk and screenshot pass for each bay, then the small equipment fixes (hoses, varied readouts), then the robot medic if Jay wants it.
+Outstanding. The capsule is present, enterable, held until Leave and returned to the floor in source and in the earlier step's headless run, and the blue tint and size waver are limited to the capsule by source. That is not yet enough to mark the capsule portion satisfied: nothing was run on a layout 2 build, hose attachment on the floating body is unconfirmed, and the wall equipment and floating panel lack hoses and varied readouts. The report stays open. Step 2 (the verification pass) hit a testing blocker: no layout 2 build or browser in the builder's checkout, so the capsule portion is **not** marked satisfied. Still to do: run the checklist in "Step 2" on a layout 2 build. Possible follow-ups once that evidence exists (none supported by screenshots yet, so none started): move hose ends to the floating body's height; hoses on the wall monitors and hazard bins; varied or animated readouts on the wall monitors and the floating vitals panel. The roaming medic stays separate and unstarted.
