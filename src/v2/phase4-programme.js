@@ -6,6 +6,35 @@ import{contains}from'../plan/geometry-v2.js';
 // Accepted stage-1 kit, rolled out through the normal v2 producers.
 export const PHASE4_ROOMS=[...[7,7,6,6,8].flatMap((count,i)=>Array.from({length:count},(_,j)=>'d'+String(i+1).padStart(2,'0')+'-new-'+(j+1))), 'd16-new-1','d16-new-2',...Array.from({length:10},(_,i)=>['neighborhood-'+(i+1)+'-dining','neighborhood-'+(i+1)+'-cafe']).flat()];
 export const PHASE4_SHUTTLE='d3-escape-p-1';
+// Lifeboat signage: a boat number each side of the boarding door, exit arrows along both cabin walls pointing at the
+// door (aft end), and brace placards. Pictograms are instanced parts; text goes into one atlas mesh a deck (boatSign).
+function boatSigns(s,parts,at,cs,sn){
+ const put=(th,c,ex,ey,off,part,size,mat,opts)=>parts.push({part:'shuttle_'+part,size,at:[c[0]+ex*Math.cos(th)+off*Math.sin(th),c[1]+ey,c[2]-ex*Math.sin(th)+off*Math.cos(th)],yaw:th,mat,room:s.roomId,component:s.id,deck:s.deck,noCollide:true,...opts});
+ // A panel at craft-local (u,y,v) facing the local direction (nu,nv); sx is the sign of its x axis along the craft's +u.
+ const panel=(u,y,v,nu,nv)=>{const th=Math.atan2(nu*cs+nv*sn,-nu*sn+nv*cs);return{th,c:at(u,y,v),sx:Math.sign(Math.cos(th-s.yaw))};};
+ const text=(p,ex,ey,off,t,w,h)=>put(p.th,p.c,ex,ey,off,'sign',[w,h,.02],'navy',{part:'sign',text:t,boatSign:true});
+ const [,side,num]=/-escape-([ps])-(\d+)$/.exec(s.id)||[];
+ // Boat number on the aft wall's outer face, either side of the door (the wall runs 1.1 to 3.75 m from the centreline).
+ if(side)for(const v of [-2.425,2.425])text(panel(-10.81,1.55,v,-1,0),0,0,0,'BOAT D'+s.deck+'-'+side.toUpperCase()+num,2,.25);
+ text(panel(-10.65,2.68,0,1,0),0,0,0,'EXIT',1.6,.2);
+ // Exit arrows on the side walls, above the headrests, pointing aft; brace placards between them.
+ for(const wall of [-1,1]){
+  for(const u of [-7,-3,1,5]){
+   const p=panel(u,1.78,wall*3.615,0,-wall),d=-p.sx,a=.7;
+   put(p.th,p.c,0,0,0,'exit_plate',[1.2,.4,.03],'navy');
+   put(p.th,p.c,d*.03,0,.022,'exit_shaft',[.9,.07,.012],'orange');
+   for(const e of [-1,1])put(p.th,p.c,d*.385,e*.096,.022,'exit_head',[.3,.06,.012],'orange',{roll:-d*e*a});
+  }
+  for(const u of [-5,3])placard(panel(u,1.45,wall*3.615,0,-wall));
+ }
+ placard(panel(10.665,1.45,2.75,-1,0));
+ function placard(p){
+  const k=1.2,fig=(x,y,w,h,mat,roll=0)=>put(p.th,p.c,x*k,y*k-.02,.021,'brace_figure',[w*k,h*k,.012],mat,{roll});
+  put(p.th,p.c,0,0,0,'brace_plate',[1,.9,.03],'cream');
+  text(p,0,.36,.025,'BRACE',.8,.1);
+  fig(-.02,-.17,.42,.05,'orange');fig(.01,-.11,.3,.06,'navy');fig(.14,-.22,.06,.22,'navy');fig(-.035,-.02,.25,.07,'navy',.81);fig(.13,.13,.12,.12,'navy');fig(.12,.2,.2,.05,'navy');
+ }
+}
 export function phase4Programme(layout){
  const parts=[],rests=[],rooms=[];
  const roomStarts=new Map();
@@ -92,6 +121,7 @@ export function phase4Programme(layout){
  for(const v of [-.43,.43])add('helm_raised_screen',[.035,.46,.76],[10.16,1.38,v],'screen',{noCollide:true});
  for(const v of [-.90,.90]){add('control_stick',[.05,.26,.05],[9.52,1.20,v],'navy',{noCollide:true});add('stick_grip',[.09,.10,.09],[9.52,1.38,v],'orange',{noCollide:true});}
  add('view_screen_frame',[.035,1.06,3.8],[10.65,1.86,0],'navy',{noCollide:true});add('view_screen',[.02,.90,3.6],[10.62,1.86,0],'screen',{noCollide:true});
+ boatSigns(s,parts,at,cs,sn);
  for(const seat of s.seats){const [u,,v]=seat.local;
   add('seat_cushion',[.58,.16,.48],[u,.50,v],'teal');add('seat_back',[.10,.73,.48],[u-.28,.91,v],'teal');add('seat_base',[.22,.42,.32],[u,.29,v],'metal');
   add('headrest',[.12,.22,.42],[u-.28,1.38,v],'navy',{noCollide:true});for(const dz of [-.14,.14])add('shoulder_harness',[.025,.56,.06],[u-.21,.95,v+dz],'orange',{noCollide:true});add('harness_buckle',[.035,.09,.12],[u-.20,.78,v],'metal',{noCollide:true});
