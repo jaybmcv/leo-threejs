@@ -6,6 +6,7 @@ import {ATRIUM_ZONES,ATRIUM_PROTOTYPE,phase6LakePolygon,phase6GardenPolygons,pha
 import {polygonGeometry} from './geometry.js';
 import {walkCanvas} from '../walk/canvas.js';
 import {paintDaylightSky,paintTravertine,pavingUV,PAVING_PLAIN_UV} from './atrium-daylight.js';
+import {shadeLakeWater} from './lake-water.js';
 const rect=(x0,x1,z0,z1)=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]];
 const outsideRect=([x0,x1,z0,z1])=>[rect(-1000,x0,-1000,1000),rect(x1,1000,-1000,1000),rect(x0,x1,-1000,z0),rect(x0,x1,z1,1000)];
 const cleanRing=ring=>{const p=ring.filter((b,i)=>!i||Math.hypot(b[0]-ring[i-1][0],b[1]-ring[i-1][1])>1e-8);if(p.length>1&&Math.hypot(p[0][0]-p.at(-1)[0],p[0][1]-p.at(-1)[1])<1e-8)p.pop();return p.filter((b,i)=>{const a=p[(i+p.length-1)%p.length],c=p[(i+1)%p.length];return Math.abs((b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]))>1e-8;});};
@@ -55,7 +56,9 @@ export function skyCeilingGeometry(layout){const d=layout.decks[19];return skyUV
 export function buildPhase6Water(ship,layout){
  applyPublicFinishKit(ship,layout,{authority:finishedSkinAuthority(ship)});finishGardenStairRails(ship,layout);
  const parent=ship.inside.getObjectByName('V2_structure'),y=layout.decks[5].y;
- const zone=ATRIUM_ZONES.find(z=>z.id==='atrium6-lake'),water=keepFaces(polygonGeometry(phase6LakePolygon(layout.decks[5].atrium.outline),phase6LakeIslands(),y-.01,0),ny=>ny>.5);
- const o=new T.Mesh(water,new T.MeshStandardMaterial({name:'P6_lake_water',color:0x4f99a4,roughness:.18,metalness:.1,transparent:true,opacity:.76,side:T.DoubleSide,forceSinglePass:true}));
+ const zone=ATRIUM_ZONES.find(z=>z.id==='atrium6-lake'),lake=phase6LakePolygon(layout.decks[5].atrium.outline),islands=phase6LakeIslands();
+ // G3 option A: lighter, clearer shallows along every shore, deeper water away from them (lake-water.js).
+ const water=shadeLakeWater(keepFaces(polygonGeometry(lake,islands,y-.01,0),ny=>ny>.5),[lake,...islands]);
+ const o=new T.Mesh(water,new T.MeshStandardMaterial({name:'P6_lake_water',color:0x4f99a4,roughness:.18,metalness:.1,transparent:true,opacity:.76,vertexColors:true,side:T.DoubleSide,forceSinglePass:true}));
  o.name='P6_lake_water';o.userData={noCollide:true,v2Deck:6,room:'atrium6-lake',phase6:true,shallowDepth:.15};parent.add(o);return o;
 }

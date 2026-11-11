@@ -12,8 +12,8 @@ view, so they are settled before the ground zones; otherwise each zone's concept
 | S3b Lift tower | Forward glass lift tower and bridges | `src/transit.js`, `src/v2/model.js`, `facade.js` |
 | G1 Arrival lobby | x −123..−96, z −32..32 | `src/v2/phase6-programme.js` (reception) |
 | G2 Voyager park | x −90..−4, z −56..−6 | `phase6-programme.js`, `atrium-gardens.js`, `src/plan/atrium-v2.js` |
-| G3 Reflection lake | x 4..120, z −56..−6: water, waterfall, bridge, bays, island | `reflection-terraces.js`, `atrium-gardens.js`, `atrium-v2.js` |
-| G4 Food hall | x −90..58, z 6..56: stalls, tables, timber decks, festoons | `phase6-programme.js`, `atrium-gardens.js`, `atrium-v2.js` |
+| G3 Reflection lake | x 4..120, z −56..−6: water, waterfall, bridge, bays, island ([option A](atrium-areas/lake-food/README.md)) | `reflection-terraces.js`, `atrium-gardens.js`, `atrium-v2.js` |
+| G4 Food hall | x −90..58, z 6..56: stalls, tables, timber decks, festoons ([option A](atrium-areas/lake-food/README.md)) | `phase6-programme.js`, `atrium-gardens.js`, `atrium-v2.js` |
 | G5 Common stage | x 66..122, z 6..56 | `phase6-programme.js` |
 
 Out of scope unless asked: Voyage Commons, bow coffee bars, observation lounge.
