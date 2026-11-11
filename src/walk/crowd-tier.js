@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {crowdShader} from './crowd-draw.js';
+import {crowdShader,leanMaterial} from './crowd-draw.js';
 import {furImage} from './fur.js';
 
 // Visitors beyond the nearest few (remotes.js), drawn without a rig of their own: the crowd. Each plays a loop recorded
@@ -11,11 +11,12 @@ import {furImage} from './fur.js';
 // part and colour. Not drawn on them: the hat, the catnip face, the swimsuit, the board, the ball, the grapple line, an
 // emote's way in or out (it starts in its loop), or shut eyes.
 //   crowdLoop({rest, stance, swimming, speed, emote}) -> the loop's name (an emote not recorded stands: idle)
-//   createCrowdTier(scene, {template, motion, most}) -> {begin(camera, {all, most}), place(r, dt, swimming), end(), count,
+//   createCrowdTier(scene, {template, motion, most, lean}) -> {begin(camera, {all, most}), place(r, dt, swimming), end(), count,
 //   dispose()}: begin's all draws them in view or not (the selfie booth's lens may see any); its most, fewer than the
 //   tier was made for (a slow page).
 //   template: a walker (avatar.js, merged draws) whose skinned parts give the geometry and materials; motion: the
-//   recording (crowd-motion.json); most: the most visitors drawn. place(r): a visitor as remotes.js keeps them (cur,
+//   recording (crowd-motion.json); most: the most visitors drawn; lean: each part in crowd-draw.js leanMaterial's place
+//   of the template's (a phone's, as the near tier's). place(r): a visitor as remotes.js keeps them (cur,
 //   tgt, speed); r.crowd keeps their loop and how far into it they are.
 export function crowdLoop({rest,stance,swimming,speed,emote=null}){
  if(rest==='sit'||rest==='tube')return 'sit';if(rest==='lie')return 'lie';if(swimming)return 'swim';
@@ -55,7 +56,7 @@ export function crowdHalves(motion){
  return new Uint16Array(bytes.buffer);
 }
 
-export function createCrowdTier(scene,{template,motion,most=1000}){
+export function createCrowdTier(scene,{template,motion,most=1000,lean=false}){
  const bones=motion.bones,rows=motion.clips.reduce((s,c)=>s+c.frames,0),fps=motion.fps,clips=new Map(motion.clips.map(c=>[c.name,c]));
  const texture=new T.DataTexture(crowdHalves(motion),bones*3,rows,T.RGBAFormat,T.HalfFloatType);
  texture.magFilter=texture.minFilter=T.NearestFilter;texture.generateMipmaps=false;texture.needsUpdate=true;
@@ -66,7 +67,7 @@ export function createCrowdTier(scene,{template,motion,most=1000}){
  // A part's material for a fur colour: the template's, its map on that colour's image (fur.js), skinned from the
  // recording. Its own hooks come too, the skin after them (as crowd-draw.js does).
  const material=(part,image)=>{
-  const source=part.material,m=source.clone();
+  const source=part.material,m=lean?leanMaterial(source):source.clone();
   if(source.map){const map=source.map.clone();map.source=new T.Source(image);map.needsUpdate=true;m.map=map;}
   const uniforms={crowdMotion:{value:texture},crowdBind:{value:part.bindMatrix.clone()}};
   const before=source.onBeforeCompile,key=source.customProgramCacheKey;

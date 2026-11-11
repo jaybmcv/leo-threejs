@@ -63,7 +63,8 @@ for(const name of ['walk','crouch']){
 // The crowd tier itself, on a walker as its template (three makes the draws without a GPU): a draw for each part and
 // fur colour; out of the camera's view not drawn, unless all are (the selfie booth); the cap counts only those drawn (a
 // visible one after a slow page's whole cap of unseen ones is drawn); a one-frame loop at a standstill keeps finite
-// numbers; and each instance stands where its visitor is, turned their way.
+// numbers; each instance stands where its visitor is, turned their way; and a phone's (lean) draws each part in
+// Lambert, front faces only, on the same fur colour's image, skinned from the recording.
 {
  // (fur colours are drawn on a canvas: fur.js; here, @napi-rs/canvas's)
  const {createCanvas}=await import('@napi-rs/canvas');globalThis.document??={createElement:()=>createCanvas(1,1)};
@@ -85,8 +86,15 @@ for(const name of ['walk','crouch']){
  tier.begin(camera);tier.place(ahead[2],1/60);tier.end();
  const g=[...tier.groups.values()].find(x=>x.count===1),m=new T.Matrix4().fromArray(g.mesh.instanceMatrix.array,0),p=new T.Vector3(),q=new T.Quaternion(),sc=new T.Vector3();m.decompose(p,q,sc);
  assert.ok(p.distanceTo(new T.Vector3(-3,0,-10))<1e-6,`placed at ${p.toArray()}`);assert.ok(Math.abs(new T.Euler().setFromQuaternion(q,'YXZ').y-.5)<1e-6,'turned their way');
+ {const lean=createCrowdTier(scene,{template:w,motion,most:4,lean:true});lean.begin(camera);lean.place(ahead[2],1/60);lean.end();
+  const drawn=[...lean.groups.values()].filter(x=>x.count===1);assert.equal(drawn.length,parts);
+  for(const x of drawn){const mat=x.mesh.material,full=[...tier.groups.values()].find(y=>y.count===1&&y.mesh.material.name===mat.name).mesh.material;
+   assert.ok(mat.isMeshLambertMaterial&&mat.side===T.FrontSide&&!mat.normalMap,mat.name);assert.ok(mat.color.equals(full.color));assert.equal(mat.map?.image,full.map?.image,'the same fur colour');
+   const shader={vertexShader:T.ShaderLib.lambert.vertexShader,uniforms:{}};mat.onBeforeCompile(shader,null);
+   assert.ok(shader.vertexShader.includes('crowdBone( skinIndex.x )')&&shader.uniforms.crowdMotion);assert.ok(mat.customProgramCacheKey().endsWith('|crowd-tier'));}
+  lean.dispose();}
  tier.dispose();assert.equal(scene.children.length,0,'disposed, its draws leave the scene');
- pass(`the crowd tier: ${tier.groups.size||'its'} draws by part and fur, culled to the view unless all are wanted, its cap counting only those drawn, finite at a standstill, each placed and turned`);
+ pass(`the crowd tier: ${tier.groups.size||'its'} draws by part and fur, culled to the view unless all are wanted, its cap counting only those drawn, finite at a standstill, each placed and turned; a phone's in Lambert`);
 }
 // Loading: a fetch that fails is tried again (remotes.js startCrowd), a moment later, and the crowd comes.
 {

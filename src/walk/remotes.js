@@ -62,12 +62,13 @@ export class RemotePlayers{
  // bodies together, one instanced draw per body part (crowd-draw.js; the bodies need cacheBones: avatar.js). budget:
  // false gives every body its natural rate and MAX_RIGS bodies, whatever they cost (this.budget may also be set to null
  // later, as a probe does to compare). crowdMotion: the URL of the crowd's recorded loops (crowd-motion.json; none: no
- // crowd, only the nearest MAX_RIGS drawn).
- constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false,budget=true,crowdMotion=null}){
-  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowdMotion});
+ // crowd, only the nearest MAX_RIGS drawn). lean: their bodies shaded cheaply, near and in the crowd alike (crowd-draw.js
+ // leanMaterial: a phone's).
+ constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false,budget=true,crowdMotion=null,lean=false}){
+  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowdMotion,lean});
   this.crowdTier=null;this.crowdLoading=false;this.crowdTries=0;this.crowdAfter=0;
   this.budget=budget?createRigBudget({most:MAX_RIGS}):null;
-  this.crowd=crowd?createCrowdDraw(scene,{slots:MAX_RIGS}):null;
+  this.crowd=crowd?createCrowdDraw(scene,{slots:MAX_RIGS,lean}):null;
   this.remotes=new Map();this.pool=[];this.making=false;this.labels=[];this.ray=new T.Ray();this.v=new T.Vector3();
  }
  get count(){return this.remotes.size;}
@@ -159,7 +160,7 @@ export class RemotePlayers{
   if(this.crowdLoading||!this.crowdMotion||now<this.crowdAfter||this.crowdTries>CROWD_RETRY_MS.length)return;
   this.crowdLoading=true;this.crowdTries++;
   Promise.all([fetch(this.crowdMotion).then(r=>{if(!r.ok)throw Error('crowd motion '+r.status);return r.json();}),this.make()])
-   .then(([motion,template])=>{this.crowdTier=createCrowdTier(this.scene,{template,motion,most:CROWD_MOST});})
+   .then(([motion,template])=>{this.crowdTier=createCrowdTier(this.scene,{template,motion,most:CROWD_MOST,lean:this.lean});})
    .catch(e=>{console.warn('Leo crowd unavailable:',e?.message||e);this.crowdAfter=performance.now()+(CROWD_RETRY_MS[this.crowdTries-1]??Infinity);})
    .finally(()=>{this.crowdLoading=false;});
  }
