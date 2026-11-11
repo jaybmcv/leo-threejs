@@ -120,19 +120,19 @@ export class RemotePlayers{
   shown.sort((a,b)=>a.distance-b.distance);
   const bodied=tierOf(shown,tier),inTier=new Set(bodied),posed=[];
   for(const r of shown)if(!inTier.has(r))this.release(r);
+  // Bodies for those chosen, from the pool (bodies are made one at a time: grow); one still without is drawn in the crowd
+  // meanwhile, not left out.
+  for(const r of bodied)if(!r.walker){const w=this.pool.pop();if(!w){this.grow();break;}r.walker=w;this.scene.add(w.holder);}
   if(shown.length>tier&&!crowdTier)this.startCrowd();
   if(crowdTier){
    // (the cap is of those drawn: one out of view takes no place; the selfie booth's lens may see any of them)
    const most=budget&&budget.tier<SLOW_TIER?CROWD_SLOW:CROWD_MOST;crowdTier.begin(camera,{all:photo,most});
-   for(let i=0;i<shown.length&&crowdTier.count<most;i++){const r=shown[i];if(!inTier.has(r))crowdTier.place(r,dt,!!this.swimming?.(r.cur));}
+   for(let i=0;i<shown.length&&crowdTier.count<most;i++){const r=shown[i];if(!inTier.has(r)||!r.walker)crowdTier.place(r,dt,!!this.swimming?.(r.cur));}
    crowdTier.end();
   }
   viewFrustum.setFromProjectionMatrix(viewMatrix.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
   for(const r of bodied){
-   if(!r.walker){
-    const w=this.pool.pop();if(w)r.walker=w;else{this.grow();continue;}
-    this.scene.add(r.walker.holder);
-   }
+   if(!r.walker)continue;
    // A body from the pool may have worn someone else's hat.
    if(r.hat&&!r.walker.hat&&this.hatUrl)wearHat(r.walker,this.hatUrl);else if(!r.hat&&r.walker.hat)r.walker.hat.remove();
    const lined=!!r.tgt.hook||r.line?.out>0,forced=photo||lined;
