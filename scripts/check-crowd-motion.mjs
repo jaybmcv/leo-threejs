@@ -1,6 +1,7 @@
 // The crowd's recorded loops (src/walk/assets/crowd-motion.json, scripts/bake-crowd-motion.mjs) and how the crowd tier
 // reads them (src/walk/crowd-tier.js): the recording is of the rig as it is now (its sources' hash); every loop is
-// there, whole, and comes round without a jump (no step bigger than a quarter more than its own biggest within); recording a loop again gives the same numbers (half-float close); a body
+// there, whole, and comes round without a jump (its seam no bigger than a quarter more than its biggest step within,
+// nor than five of its usual steps); recording a loop again gives the same numbers (half-float close); a body
 // skinned from the recording's numbers, as the crowd's vertex shader reads them (crowdBoneMatrix: the same layout), is
 // where three's own skinning puts the rig's body, to the millimetre; and each visitor's pose picks the loop it should.
 import assert from 'node:assert/strict';
@@ -18,7 +19,12 @@ pass('the recording is of the rig as it is (its sources\' hash)');
 const halves=crowdHalves(motion),numbers=Float32Array.from(halves,h=>T.DataUtils.fromHalfFloat(h)),bones=motion.bones;
 assert.deepEqual(motion.clips.map(c=>c.name),LOOPS.map(l=>l[0]));
 let at=0;for(const c of motion.clips){assert.equal(c.start,at,`${c.name} starts where the last ended`);assert.ok(c.frames>=1);at+=c.frames;
- assert.ok(c.seam<=1.25,`${c.name}: coming round is ${c.seam} times its biggest step within`);}
+ // (from the numbers, not the recording's own measure: coming round is no bigger than a quarter more than the loop's
+ // biggest step within, nor than five of its usual ones, so a jump within cannot excuse one at the seam)
+ const W=bones*12,step=(i,j)=>{let d=0;for(let k=0;k<W;k++)d+=Math.abs(numbers[(c.start+i)*W+k]-numbers[(c.start+j)*W+k]);return d/W;};
+ if(c.frames>=3){const inner=Array.from({length:c.frames-1},(_,i)=>step(i,i+1)).sort((x,y)=>x-y),wrap=step(c.frames-1,0);
+  assert.ok(wrap<=inner.at(-1)*1.25+1e-9,`${c.name}: coming round is ${(wrap/inner.at(-1)).toFixed(2)} times its biggest step within`);
+  assert.ok(wrap<=inner[inner.length>>1]*5+1e-9,`${c.name}: coming round is ${(wrap/inner[inner.length>>1]).toFixed(2)} of its usual steps`);}}
 assert.equal(halves.length,at*bones*12,'the numbers are every frame of every loop');
 assert.ok(numbers.every(Number.isFinite));
 pass(`${motion.clips.length} loops, ${at} frames, ${bones} bones; each comes round in a step at most ${Math.max(...motion.clips.map(c=>c.seam)).toFixed(2)} times its biggest step within`);
