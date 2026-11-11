@@ -387,7 +387,7 @@ function waterSheet(out,x0,x1,top,bottom,z,lean){
  for(let i=0;i<p.count;i++){const k=((top-bottom)/2-p.getY(i))/(top-bottom);p.setZ(i,lean*k*k+Math.sin(p.getX(i)*3.1)*.03);uv.setXY(i,uv.getX(i)*(x1-x0)/1.6,uv.getY(i)*(top-bottom)/2.4);}
  g.translate((x0+x1)/2,(top+bottom)/2,z);g.computeVertexNormals();
  // White water: near white at the lip, only a little aqua toward the foot.
- out.push(paint(g,q=>new T.Color(0xffffff).lerp(new T.Color(0xbfe6ee),Math.min(1,(top-q.y)/(top-bottom))*.6).toArray()));
+ out.push(paint(g,q=>new T.Color(0xffffff).lerp(new T.Color(0xbfe6ee),Math.min(1,(top-q.y)/(top-bottom))*.3).toArray()));
 }
 // The tiers, bottom to top (the last is the crown): the height of each one's ledge, where its front stands (it steps
 // back 0.6 m a tier), how wide its fall is (narrowing upward) and how wide its row of rocks is. The mound stays inside
@@ -441,7 +441,7 @@ function addFallingWater(root,sheets,out){
 // Pale streaks of differing length and brightness on blue-white, wrapping top to bottom so the scroll has no seam.
 // (G3 option A: a whiter ground and more streaks, for white water.)
 function paintFallingWater(c){
- const W=64,H=256,g=c.getContext('2d'),r=random(8181);c.width=W;c.height=H;g.fillStyle='#d6ebf0';g.fillRect(0,0,W,H);
+ const W=64,H=256,g=c.getContext('2d'),r=random(8181);c.width=W;c.height=H;g.fillStyle='#e8f4f7';g.fillRect(0,0,W,H);
  for(let i=0;i<95;i++){const x=r()*W,w=1+r()*3.5,y=r()*H,len=30+r()*110,a=.35+r()*.6;
   for(const dy of[0,-H]){const gr=g.createLinearGradient(0,y+dy,0,y+dy+len);gr.addColorStop(0,`rgba(255,255,255,0)`);gr.addColorStop(.5,`rgba(255,255,255,${a})`);gr.addColorStop(1,`rgba(255,255,255,0)`);g.fillStyle=gr;g.fillRect(x,y+dy,w,len);}}
  return c;

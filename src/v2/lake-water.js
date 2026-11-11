@@ -9,7 +9,7 @@ import {REFLECTION_BAYS} from './reflection-terraces.js';
 // from REACH out it is darker and more opaque. The colour multiplies the material's (atrium-mood.js moves it between
 // day and night) and the alpha multiplies its opacity, so the night look keeps working.
 const SPLIT=2.5,REACH=4.5;
-const SHALLOW=[1.7,1.35,1.1,.4],DEEP=[.3,.6,.78,1.3];
+const SHALLOW=[1.3,1.25,1.05,.6],DEEP=[.12,.38,.5,1.3];
 // The reflection island and the bay floors (reflection-terraces.js): circles whose outside is water.
 const RINGS=[{x:44,z:-26.8,r:7.22},...REFLECTION_BAYS.map(x=>({x,z:-5.8,r:5.62}))];
 

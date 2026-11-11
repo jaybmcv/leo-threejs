@@ -56,7 +56,7 @@ function cattails(out,[x,y,z],height,r){
   out.push(orient(blade(height*(.55+r()*.5),.05+r()*.02,{segs:3,shape:SHAPES.strap,fold:.25,droop:.1+r()*.25,base:GREENS.dark,mid:GREENS.mid,tip:r()<.5?GREENS.lime:GREENS.pale}),[x+Math.cos(a)*o,y,z+Math.sin(a)*o],a,1.3+r()*.22,0));}
  for(let k=0,n=2+(r()*3|0);k<n;k++){const a=r()*Math.PI*2,o=r()*.14,h=height*(.95+r()*.3),bx=x+Math.cos(a)*o,bz=z+Math.sin(a)*o,top=[bx+(r()-.5)*.12,y+h,bz+(r()-.5)*.12];
   out.push(stem([[bx,y,bz],top],.007,0x5d7a3a,3));
-  out.push(paint(new T.CylinderGeometry(.032,.03,.2,6).translate(top[0],top[1]-.16,top[2]),0x6b4226));}
+  out.push(paint(new T.CylinderGeometry(.026,.024,.17,6).translate(top[0],top[1]-.14,top[2]),0x6b4226));}
 }
 // A white water lily: two rings of cupped white petals round a yellow heart, just above the water.
 function waterLily(out,[x,y,z],size,turn){
