@@ -27,10 +27,14 @@ vec3 stylTerminator(vec3 alb, float x) {
   return mix(alb, stylSat(alb, 1.55) * vec3(1.06, 0.97, 0.9), band * 0.75);
 }`;
 
-// The lines of three's diffuse lighting that Stylised 3D replaces (three 0.185).
+// The lines of three's diffuse lighting that Stylised 3D replaces (three 0.187). Each whole line is replaced, so a
+// Standard surface's film diffuse is lit as a Lambert one's is: the share three 0.187 keeps back for the specular layer
+// (the `1.0 - F` and the multiple-scattering terms) is not taken from it, as Stylised 3D was tuned on 0.185, which had
+// none. Today's look keeps three's lines as they are. (A material with a diffuseRoughness would keep three's own
+// indirect diffuse, which takes another branch there; none of Leo's has one.)
 export const THREE_DIFFUSE={
- physicalDirect:'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseContribution );',
- physicalIndirect:'vec3 diffuse = irradiance * BRDF_Lambert( material.diffuseContribution );',
+ physicalDirect:'reflectedLight.directDiffuse += irradiance * diffuseBRDF * ( 1.0 - F );',
+ physicalIndirect:'vec3 diffuse = irradiance * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - singleScattering - multiScattering );',
  lambertDirect:'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );',
  lambertIndirect:'reflectedLight.indirectDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );',
  map:'diffuseColor *= sampledDiffuseColor;',
