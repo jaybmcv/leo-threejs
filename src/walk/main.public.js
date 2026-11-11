@@ -259,6 +259,9 @@ const hazeHeld=deskDetail&&linearDepth;
 const leanCats=phone&&phoneTest.get('phonecats')!=='full';
 // The crowd's farther visitors are drawn on lighter meshes (crowd-tier.js); ?crowdlod=0 draws them all in full, to compare.
 const crowdLod=phoneTest.get('crowdlod')!=='0';
+// The crowd is trimmed to keep frames at 30 a second (crowd-count.js); ?crowdfps=N keeps N instead (1 to 240), and
+// ?crowdfps=0 caps it as before, to compare.
+const crowdFpsAsked=phoneTest.get('crowdfps'),crowdFpsN=Number(crowdFpsAsked),crowdFps=crowdFpsAsked&&Number.isInteger(crowdFpsN)&&crowdFpsN>=0&&crowdFpsN<=240?crowdFpsN:undefined;
 // ?phonehide=bands,glass,furnish,gardens,haze,cats hides those for a test on a device, to see what its GPU spends on.
 const PHONE_HIDE={bands:o=>/^V2_low_deck_merged_/.test(o.name)&&!o.material[0]?.transparent,glass:o=>[o.material].flat().some(m=>m?.transparent),
  furnish:o=>o.isInstancedMesh&&o.userData.phase4||o.userData.phase4Batch,gardens:o=>[o.material].flat().some(m=>m?.name==='P6_atrium_gardens'),haze:o=>/haze/i.test(o.name),cats:o=>o.isSkinnedMesh};
@@ -275,7 +278,7 @@ const deskPiece=deskPieceSize({query:new URLSearchParams(location.search),phone:
 // buffer the shaders write the depth, so polygon offset has never applied. With linear depth it would, and pull the hex
 // sub-floor (finish-kit.js) over the Arrival Hall's finish, so it stays off.
 if(linearDepth){const gl=renderer.getContext(),enable=gl.enable.bind(gl);gl.enable=cap=>{if(cap!==gl.POLYGON_OFFSET_FILL)enable(cap);};}
-const frameReadout=createFrameReadout(renderer);
+const frameReadout=createFrameReadout(renderer,{extra:()=>remotes?.crowdLine()});
 // Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
 // The Res button steps through them and the choice is remembered for the next visit. ?res=high, med or low holds a
 // level for this visit in the saved one's place (pixel-switches.js): nothing is saved, and it never steps down.
@@ -781,7 +784,7 @@ async function connectToClaim(){
 const giveaway=createGiveaway({$,live:()=>live,connect:connectToClaim});
 if(LIVE_URL){
  marks=new Marks($('names'));
- remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion,{mergeDraws:true,cacheBones:true}),crowd:true,lean:leanCats,lod:crowdLod,crowdMotion:typeof __CROWD_URL__==='string'?__CROWD_URL__:null,colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08,recline:TUBE_SIT.recline}});
+ remotes=new RemotePlayers(scene,{make:()=>createWalker(globalThis.LeoCosmo.createDLCat,motion,{mergeDraws:true,cacheBones:true}),crowd:true,lean:leanCats,lod:crowdLod,crowdFps,crowdMotion:typeof __CROWD_URL__==='string'?__CROWD_URL__:null,colliders,lifts,labels:$('names'),hatUrl:__HAT_URL__,artUrls,running:p=>!!pawsOff?.onBelt(p),hammock:p=>!!rest?.hammockAt(p),catnip:p=>!!lounge?.inside(p),swimming:p=>!!treasure?.contains(p),tube:{make:createTubeMesh,y:KEEL.floor-RIVER.drop+.08,recline:TUBE_SIT.recline}});
  remotes.tube.rim=TUBE_RIM;// the ring a tube rider's arms rest on (avatar.js)
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
