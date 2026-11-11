@@ -1,0 +1,29 @@
+{
+ "commit": "db6b42da (origin/main)",
+ "views": [
+  {
+   "id": "lobby-in",
+   "query": "time=day",
+   "draws": 876,
+   "trisM": 10.69
+  },
+  {
+   "id": "lobby-back",
+   "query": "time=day",
+   "draws": 488,
+   "trisM": 8.28
+  },
+  {
+   "id": "lobby-in",
+   "query": "time=night",
+   "draws": 877,
+   "trisM": 10.69
+  },
+  {
+   "id": "lobby-back",
+   "query": "time=night",
+   "draws": 488,
+   "trisM": 8.28
+  }
+ ]
+}
