@@ -18,7 +18,7 @@ import {createCrowdTier} from './crowd-tier.js';
 // Only the nearest visitors on the decks being drawn get a body, from a small pool that is kept and reused: as many as the
 // budget for their rigs carries (rig-budget.js: its tier, up to MAX_RIGS; all MAX_RIGS until the crowd is here). The
 // rest, up to CROWD_MOST (CROWD_SLOW on a page that can carry few bodies), are the crowd, drawn without a rig, playing
-// loops recorded from it (crowd-tier.js: fetched, with a body to copy, the first time there is anyone beyond the
+// loops recorded from it, the farther on lighter meshes (crowd-tier.js: fetched, with a body to copy, the first time there is anyone beyond the
 // nearest). A body standing in a lift car stands on its floor as this page draws the car, so a rider never sinks or
 // floats.
 const STALE_MS=12000,EASE_PER_S=10,GLIDE_MIN_MS=200,GLIDE_MAX_MS=4500,STOPPED_AFTER_MS=185,STRIDE_HALF_LIFE_MS=100;
@@ -62,10 +62,11 @@ export class RemotePlayers{
  // bodies together, one instanced draw per body part (crowd-draw.js; the bodies need cacheBones: avatar.js). budget:
  // false gives every body its natural rate and MAX_RIGS bodies, whatever they cost (this.budget may also be set to null
  // later, as a probe does to compare). crowdMotion: the URL of the crowd's recorded loops (crowd-motion.json; none: no
- // crowd, only the nearest MAX_RIGS drawn). lean: their bodies shaded cheaply, near and in the crowd alike (crowd-draw.js
+ // crowd, only the nearest MAX_RIGS drawn). lod: false draws the crowd in full however far (crowd-tier.js). lean: their
+ // bodies shaded cheaply, near and in the crowd alike (crowd-draw.js
  // leanMaterial: a phone's).
- constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false,budget=true,crowdMotion=null,lean=false}){
-  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowdMotion,lean});
+ constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false,budget=true,crowdMotion=null,lean=false,lod=true}){
+  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowdMotion,lean,lod});
   this.crowdTier=null;this.crowdLoading=false;this.crowdTries=0;this.crowdAfter=0;
   this.budget=budget?createRigBudget({most:MAX_RIGS}):null;
   this.crowd=crowd?createCrowdDraw(scene,{slots:MAX_RIGS,lean}):null;
@@ -126,8 +127,8 @@ export class RemotePlayers{
   for(const r of bodied)if(!r.walker){const w=this.pool.pop();if(!w){this.grow();break;}r.walker=w;this.scene.add(w.holder);}
   if(shown.length>tier&&!crowdTier)this.startCrowd();
   if(crowdTier){
-   // (the cap is of those drawn: one out of view takes no place; the selfie booth's lens may see any of them)
-   const most=budget&&budget.tier<SLOW_TIER?CROWD_SLOW:CROWD_MOST;crowdTier.begin(camera,{all:photo,most});
+   // (the cap is of those drawn: one out of view takes no place; the selfie booth's lens may see any of them, each in full)
+   const most=budget&&budget.tier<SLOW_TIER?CROWD_SLOW:CROWD_MOST;crowdTier.begin(camera,{all:photo,most,pxPerM:this.lod&&!photo?pxAt1m/BODY_M:0});
    for(let i=0;i<shown.length&&crowdTier.count<most;i++){const r=shown[i];if(!inTier.has(r)||!r.walker)crowdTier.place(r,dt,!!this.swimming?.(r.cur));}
    crowdTier.end();
   }

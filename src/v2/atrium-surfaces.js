@@ -6,6 +6,7 @@ import {ATRIUM_ZONES,ATRIUM_PROTOTYPE,phase6LakePolygon,phase6GardenPolygons,pha
 import {polygonGeometry} from './geometry.js';
 import {walkCanvas} from '../walk/canvas.js';
 import {paintDaylightSky,paintTravertine,pavingUV,PAVING_PLAIN_UV} from './atrium-daylight.js';
+import {shadeLakeWater} from './lake-water.js';
 const rect=(x0,x1,z0,z1)=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]];
 const outsideRect=([x0,x1,z0,z1])=>[rect(-1000,x0,-1000,1000),rect(x1,1000,-1000,1000),rect(x0,x1,-1000,z0),rect(x0,x1,z1,1000)];
 const cleanRing=ring=>{const p=ring.filter((b,i)=>!i||Math.hypot(b[0]-ring[i-1][0],b[1]-ring[i-1][1])>1e-8);if(p.length>1&&Math.hypot(p[0][0]-p.at(-1)[0],p[0][1]-p.at(-1)[1])<1e-8)p.pop();return p.filter((b,i)=>{const a=p[(i+p.length-1)%p.length],c=p[(i+1)%p.length];return Math.abs((b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]))>1e-8;});};
@@ -33,7 +34,7 @@ export function atriumFloorGeometry(outline,holes,y,atriumOutline=outline){
  const gardenPolys=phase6GardenPolygons(),islands=phase6LakeIslands();
  const indexed=holes.map(p=>({p,x0:Math.min(...p.map(q=>q[0])),x1:Math.max(...p.map(q=>q[0])),z0:Math.min(...p.map(q=>q[1])),z1:Math.max(...p.map(q=>q[1]))}));
  for(const z of zones){const[x0,x1,z0,z1]=z.bounds,cuts=indexed.filter(h=>h.x0<x1&&h.x1>x0&&h.z0<z1&&h.z1>z0).map(h=>h.p);cuts.push(...gardenPolys,...islands.slice(1));if(z.id==='atrium6-park')cuts.push(path);const top=y-(z.id.endsWith('lake')?ATRIUM_PROTOTYPE.waterDepth:0);
- g.push(colourGeometry(keepFaces((z.id.endsWith('lake')?polygonGeometry(z.polygon,cuts,top,0):polygonGeometry(outline,[...cuts,...outsideRect(z.bounds)],top,0)),ny=>ny>.5),z.id==='atrium6-park'?LAWN:z.id==='atrium6-food'?PAVING:z.colour,z.id==='atrium6-lobby'||z.id==='atrium6-food'));
+ g.push(colourGeometry(keepFaces((z.id.endsWith('lake')?polygonGeometry(z.polygon,cuts,top,0):polygonGeometry(outline,[...cuts,...outsideRect(z.bounds)],top,0)),ny=>ny>.5),z.id==='atrium6-park'?LAWN:z.id==='atrium6-food'?PAVING:z.colour,z.id==='atrium6-lobby'||z.id==='atrium6-food'||z.id==='atrium6-stage'));
  if(z.id.endsWith('lake')){const wall=keepFaces(polygonGeometry(z.polygon,cuts,y,ATRIUM_PROTOTYPE.waterDepth),(ny)=>Math.abs(ny)<.5);g.push(colourGeometry(wall,0xd9d3c4));}}
  for(const poly of [...gardenPolys,...islands.slice(1)])g.push(colourGeometry(keepFaces(polygonGeometry(poly,holes,y,0),ny=>ny>.5),GARDEN_LAWN));
  // 4B: lawn banks along the lake's rounded shoreline, and the winding park path in the boulevard's paving.
@@ -55,7 +56,9 @@ export function skyCeilingGeometry(layout){const d=layout.decks[19];return skyUV
 export function buildPhase6Water(ship,layout){
  applyPublicFinishKit(ship,layout,{authority:finishedSkinAuthority(ship)});finishGardenStairRails(ship,layout);
  const parent=ship.inside.getObjectByName('V2_structure'),y=layout.decks[5].y;
- const zone=ATRIUM_ZONES.find(z=>z.id==='atrium6-lake'),water=keepFaces(polygonGeometry(phase6LakePolygon(layout.decks[5].atrium.outline),phase6LakeIslands(),y-.01,0),ny=>ny>.5);
- const o=new T.Mesh(water,new T.MeshStandardMaterial({name:'P6_lake_water',color:0x4f99a4,roughness:.18,metalness:.1,transparent:true,opacity:.76,side:T.DoubleSide,forceSinglePass:true}));
+ const zone=ATRIUM_ZONES.find(z=>z.id==='atrium6-lake'),lake=phase6LakePolygon(layout.decks[5].atrium.outline),islands=phase6LakeIslands();
+ // G3 option A: lighter, clearer shallows along every shore, deeper water away from them (lake-water.js).
+ const water=shadeLakeWater(keepFaces(polygonGeometry(lake,islands,y-.01,0),ny=>ny>.5),[lake,...islands]);
+ const o=new T.Mesh(water,new T.MeshStandardMaterial({name:'P6_lake_water',color:0x4f99a4,roughness:.18,metalness:.1,transparent:true,opacity:.76,vertexColors:true,side:T.DoubleSide,forceSinglePass:true}));
  o.name='P6_lake_water';o.userData={noCollide:true,v2Deck:6,room:'atrium6-lake',phase6:true,shallowDepth:.15};parent.add(o);return o;
 }
