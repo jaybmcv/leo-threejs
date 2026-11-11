@@ -30,7 +30,7 @@ const art={};for(const file of [...PAINTINGS.map(p=>p.file),...COMICS.flatMap(c=
 const defines={
  __PREPARED_META__:manifest['walk-prepared'].metadataFile,__PREPARED_URL__:'./'+manifest['walk-prepared'].directory,
  __COSMO_SCRIPT__:named(/cosmo\.[0-9a-f]{10}\.js/),__HYDRO_NIP_MAIN_LOGO__:await local('src/walk/assets/hydro-nip-main-logo.jpg','hydro-nip-main-logo'),
- __EMOTES_URL__:await local('src/walk/assets/cosmo-emotes.json','walk-emotes'),__MAP_URL__:named(/walk-map\.[0-9a-f]{10}\.png/),
+ __EMOTES_URL__:await local('src/walk/assets/cosmo-emotes.json','walk-emotes'),__CROWD_URL__:await local('src/walk/assets/crowd-motion.json','walk-crowd'),__MAP_URL__:named(/walk-map\.[0-9a-f]{10}\.png/),
  __HAT_URL__:await local('src/vendor/captain-hat/captains-hat.glb','walk-hat'),__ART_URLS__:art,
  __REEL_URL__:await local('src/walk/art/theatre-loop.mp4','walk-reel'),__LIVE_URL__:'',__CREAMERY_URL__:'https://creamery.marscatsvoyage.com'};
 // --pvs=<file> ships an atrium PVS (scripts/walk-atrium-pvs.mjs) beside the walk script, keyed as the public build keys it
@@ -53,5 +53,7 @@ const layoutData=JSON.parse(await fs.readFile(path.join(out,'layout-data.json'),
 const html=deployedHTML.replace(deployedScript,name).replace(/window\.LEO_PUBLIC_ASSETS=(\{.*?\});<\/script>/s,(_,json)=>{const m=JSON.parse(json);m['layout-data']=layoutData;return 'window.LEO_PUBLIC_ASSETS='+JSON.stringify(m)+';</script>';});
 if(html===deployedHTML)throw Error('Walk page was not rewritten');
 await fs.writeFile(path.join(out,'walk.html'),html);
+// The crowd's loops (src/walk/crowd-tier.js) beside the walk script: a deployed site may not have this recording yet.
+await fs.copyFile('src/walk/assets/crowd-motion.json',path.join(out,defines.__CROWD_URL__));
 const summary={tag,debug,script:name,bytes:code.length,layoutSource:{file:layoutFile,sha256:createHash('sha256').update(layoutText).digest('hex')},layoutData,deployedLayoutData:manifest['layout-data'],layoutMatchesDeployed:layoutData.sha256===manifest['layout-data'].sha256};
 await fs.writeFile(path.join(out,'build.json'),JSON.stringify(summary,null,2));console.log(summary);

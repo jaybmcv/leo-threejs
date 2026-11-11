@@ -54,10 +54,12 @@ const SKIN=`
 	skinned += boneMatW * skinVertex * skinWeight.w;
 	transformed = skinned.xyz;`;
 // The vertex shader with three's skinning chunks (empty here: the draw is not a SkinnedMesh) replaced by the crowd's.
-export function crowdShader(vertexShader){
+// pars: what declares crowdBone(i) and crowdBind (this draw's: a visitor's own row of the shared bone texture; the
+// crowd tier's: a recorded frame of a loop, crowd-tier.js).
+export function crowdShader(vertexShader,pars=PARS){
  for(const chunk of ['#include <common>','#include <skinbase_vertex>','#include <skinnormal_vertex>','#include <skinning_vertex>'])
   if(!vertexShader.includes(chunk))throw Error('crowd draw: the vertex shader has no '+chunk);
- return vertexShader.replace('#include <common>','#include <common>'+PARS).replace('#include <skinbase_vertex>',BASE)
+ return vertexShader.replace('#include <common>','#include <common>'+pars).replace('#include <skinbase_vertex>',BASE)
   .replace('#include <skinnormal_vertex>',NORMAL).replace('#include <skinning_vertex>',SKIN);
 }
 

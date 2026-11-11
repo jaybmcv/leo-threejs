@@ -19,6 +19,8 @@
     "check:rig-pace": "node scripts/check-rig-pace.mjs",
     "check:fur": "node scripts/check-fur.mjs",
     "check:rig-budget": "node scripts/check-rig-budget.mjs",
+    "check:crowd-motion": "node scripts/check-crowd-motion.mjs",
+    "bake:crowd": "node scripts/bake-crowd-motion.mjs",
     "check:merged-skin": "node scripts/check-merged-skin.mjs",
     "check:solved-pose": "node scripts/check-solved-pose.mjs",
     "check:figure-matrices": "node scripts/check-figure-matrices.mjs",
