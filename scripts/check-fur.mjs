@@ -52,7 +52,7 @@ for(let colour=0;colour<FUR_COLOURS.length;colour++){
 }
 for(const bad of [-1,5,255,1.5,'2',{},NaN,Infinity]){assert.equal(cleanFur(bad),0);assert.throws(()=>encodeRecord(0,{...pose,fur:bad}));}
 const broken=assembleFrame([],[encodeRecord(1,pose)]);broken[broken.length-1]=255;assert.equal(decodeFrame(broken),null);
-const old=assembleFrame([],[]);old[1]=7;assert.equal(decodeFrame(old),null);assert.equal(PROTOCOL,9);assert.equal(WIRE_VERSION,8);
+const old=assembleFrame([],[]);old[1]=7;assert.equal(decodeFrame(old),null);assert.equal(PROTOCOL,10);assert.equal(WIRE_VERSION,8);
 // A grapple line's bite rides in the motion block, even for a body otherwise standing plainly, to an eighth of a millimetre.
 for(const extras of [{},{stance:'crouch',jumpCount:3,jumpS:.4,rise:-12,emote:'wave'}]){
  const hooked=assembleFrame([encodeIdentity(7,'cat','Voyager')],[encodeRecord(7,{...pose,...extras,hook:[30.5,-12.25,-80.125]})]),got=new WireReader().read(hooked)[0];
