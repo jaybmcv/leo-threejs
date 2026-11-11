@@ -14,6 +14,7 @@ import {paintTreeShade,SHADE_HALVES,PAVER} from './atrium-daylight.js';
 import {walkCanvas} from '../walk/canvas.js';
 import {phase6Programme} from './phase6-programme.js';
 import {contains,distanceToSegment} from '../plan/geometry-v2.js';
+import {addLobbyPark} from './atrium-lobby-park.js';
 
 export const gardenMaterial=new T.MeshStandardMaterial({name:'P6_atrium_gardens',color:0xffffff,vertexColors:true,flatShading:true,side:T.DoubleSide,roughness:.82});
 const random=seed=>{let s=seed>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};};
@@ -635,6 +636,7 @@ export function addAtriumGardens(root,layout){
  const clearWater=(x,z,m)=>!contains(lake,[x,z])||inIsland(x,z,m)||x>bx0-m-1&&x<bx1+m+1||nearWaterfall(x,z,3)||parts.some(p=>Math.hypot(p.x-x,p.z-z)<p.r+m-.6);
  const clearGround=(x,z,m)=>parts.some(p=>p.part!=='p6_tree_trunk'&&Math.hypot(p.x-x,p.z-z)<p.r+m-.6)||ATRIUM_SIGNATURE_TREES.some(t=>Math.hypot(t.x-x,t.z-z)<1.1);
  const out=[],glow=[],trees=addSignatureTrees(out,layout),grove=addGroveTrees(out,layout),planting=addPlantingBeds(out,layout),stones=addLakeStones(out,layout),decks=addTimberDecks(out,layout),water=[],waterfall=addWaterfall(out,water,layout),lily=addLilyPads(out,layout,clearWater),beds=addTreeBeds(out,layout,clearGround),lawn=addLawnDetail(out,layout,clearGround,clearWater),inlays=addPromenadeInlays(out,layout),trims=addPlanterTrims(out,layout),lanterns=addDeckLanterns(out,glow,y+.03),festoonBulbs=addFestoons(out,glow,y+.03),{cream,...fascias}=addFascias(out,layout);
+ const lobbyPark=addLobbyPark(out,glow,layout,clearGround,parts); // G1 welcome court, G2 flower meadow
  const falling=addFallingWater(root,water,out);
  const g=mergeGeometries(out);out.forEach(x=>x.dispose());g.computeBoundingBox();g.computeBoundingSphere();
  const o=new T.Mesh(g,gardenMaterial);o.name='P6_atrium_gardens';o.frustumCulled=false;o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);
