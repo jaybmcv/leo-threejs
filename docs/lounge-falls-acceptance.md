@@ -62,6 +62,8 @@ Viewpoints to use once a layout 2 build exists (all inferred from the line above
 - Causeway foot from the dome ring: `walk.html?lv=2&at=-109.60,24.30,-31.50&yaw=180&pitch=-5`
 - From above (Deck 19 gallery edge), down onto the pond: `walk.html?lv=2&at=-109.60,32.30,-34.00&yaw=180&pitch=-45`
 
+Browser observation from the four viewpoints above (screenshots taken by the build tooling on a layout 2 build and on the live site; they are not stored in the project). The guessed viewpoints were not framed on the pond. The two eye-level views from the tasting-deck and stair sides look at the dome ring and the arcade and do not show the pond; the causeway-foot view looks at the dome's door and the stair, not the causeway. The from-above view shows the pond, its stone rim and the falls at the top of the frame, further along the view direction than the guess, so the inferred position above is off and must not be reused. Live site and build looked the same in all four. Nothing about access, clearance, the bench, sound or frame rate can be taken from these pictures.
+
 To close findings 1 to 5 and 7, on a prepared layout 2 build run `npm run check:lounge`, read `loungeFalls` from the prepared ship, walk these four views plus the bench (sit, leave) and the causeway end to end, and record the measured clearances, the scale and the captures here.
 
 ## Deferred expansion (option A) and its dependency
