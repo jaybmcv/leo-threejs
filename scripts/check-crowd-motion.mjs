@@ -96,6 +96,68 @@ for(const name of ['walk','crouch']){
  tier.dispose();assert.equal(scene.children.length,0,'disposed, its draws leave the scene');
  pass(`the crowd tier: ${tier.groups.size||'its'} draws by part and fur, culled to the view unless all are wanted, its cap counting only those drawn, finite at a standstill, each placed and turned; a phone's in Lambert`);
 }
+// The lighter meshes (scripts/crowd-lod.mjs, carried in the recording) and how the crowd tier draws them: made again
+// from the body's parts as they are, they are the same; each level is lighter than the last by a quarter at least, its
+// error within what it was made for, each part's index whole triangles of its own vertices; every triangle's corners
+// on one island of the colour map (none across a seam between two: simplifying without Protect makes many such), and
+// every small or thin piece (whiskers, eyelids, drawstrings, a shoe's details) there whole. (An island that wraps round
+// to meet itself at a seam is held by Protect alone: a corner swapped for its twin there stays on the island.) A
+// visitor is drawn at the lightest level whose error comes to under a pixel at their depth (one off to the side no sooner than one ahead), each level's draws on the full one's vertices and material
+// (only the index its own, one for every fur colour); without the pixels a metre (the selfie booth), all in full;
+// lighter meshes that do not fit the body are let go, and the crowd drawn in full. Disposed, every draw's own buffers go.
+{
+ const {crowdLods,pieces,ERRORS}=await import('./crowd-lod.mjs'),{createCrowdTier,crowdLevels}=await import('../src/walk/crowd-tier.js');
+ const {w}=await walker(),parts=partsOf(w),lods=motion.lods;
+ assert.equal(lods?.length,ERRORS.length,'the recording carries a lighter mesh for each error');
+ assert.deepEqual(await crowdLods(parts),lods,'the lighter meshes are of the body as it is: run node scripts/bake-crowd-motion.mjs');
+ const full=parts.reduce((s,p)=>s+p.geometry.index.count/3,0);let last=full;
+ lods.forEach((l,k)=>{const tris=l.parts.reduce((s,p)=>s+p.triangles,0);assert.ok(tris<=last*.75,`level ${k+1}: ${tris} triangles after ${last}`);
+  assert.ok(l.error>0&&l.error<=ERRORS[k]*1.001&&(!k||l.error>lods[k-1].error),`level ${k+1}: error ${l.error}`);last=tris;});
+ assert.ok(last<=full*.45,`the lightest is ${(100*last/full).toFixed(0)}% of the body`);
+ const levels=crowdLevels(motion,parts);assert.equal(levels.length,lods.length);let small=0;
+ const across=(s,a)=>{let n=0;for(let t=0;t<a.length;t+=3)if(s.island[a[t]]!==s.island[a[t+1]]||s.island[a[t]]!==s.island[a[t+2]])n++;return n;};
+ levels.forEach((l,k)=>l.index.forEach((a,i)=>{
+  assert.equal(a.length,lods[k].parts[i].triangles*3);const n=parts[i].geometry.attributes.position.count;assert.ok(a.every(v=>v<n));
+  const s=pieces(parts[i]),key=(x,y,z)=>[x,y,z].sort((p,q)=>p-q).join(),index=Uint32Array.from(a);
+  assert.equal(across(s,index),0,`level ${k+1}, ${parts[i].material.name}: a triangle across a seam of the colour map`);
+  const has=new Set();for(let t=0;t<a.length;t+=3)has.add(key(a[t],a[t+1],a[t+2]));
+  for(const whole of s.kept){for(const t of whole)assert.ok(has.has(key(s.index[t*3],s.index[t*3+1],s.index[t*3+2])),`level ${k+1}, ${parts[i].material.name}: a piece kept whole lost a triangle`);if(!k)small++;}
+ }));
+ assert.ok(small>=20,`${small} pieces kept whole`);
+ {const {MeshoptSimplifier}=await import('meshoptimizer/simplifier'),s=pieces(parts[0]);
+  const [loose]=MeshoptSimplifier.simplify(s.index,s.position,3,3,ERRORS[0]/s.scale,['ErrorAbsolute','Permissive']);
+  assert.ok(across(s,loose)>10,'simplified without Protect, it crosses seams the check finds');}
+ const scene=new T.Scene(),tier=createCrowdTier(scene,{template:w,motion,most:20});
+ const camera=new T.PerspectiveCamera(60,16/9,.1,500);camera.position.set(0,1.6,0);camera.lookAt(0,1.6,-10);camera.updateMatrixWorld();
+ const visitor=z=>({cur:{x:0,y:0,z,yaw:0},tgt:{rest:null,stance:'stand',fur:1},speed:0});
+ // (pixels a metre for the first level to start 5 m off: the second, at its error's share of that, about 15 m)
+ const pxPerM=5/levels[0].error,drawnAt=()=>[...tier.groups.values()].filter(g=>g.count).map(g=>g.level);
+ tier.begin(camera,{pxPerM});for(const z of [-3,-8,-40])tier.place(visitor(z),1/60);tier.end();
+ const at=drawnAt();for(let k=0;k<=levels.length;k++)assert.equal(at.filter(l=>l===k).length,parts.length,`level ${k}: ${at}`);
+ for(const g of tier.groups.values()){if(!g.level||!g.count)continue;
+  const whole=[...tier.groups.values()].find(x=>!x.level&&x.mesh.material===g.mesh.material);assert.ok(whole,'a lighter draw shares its full one\'s material');
+  for(const name of ['position','skinIndex','skinWeight','uv'])assert.equal(g.mesh.geometry.attributes[name],whole.mesh.geometry.attributes[name],name);
+  assert.notEqual(g.mesh.geometry.index,whole.mesh.geometry.index);}
+ // Off to the side at 7 m deep (about 10 m away), with the first level from 8 m: in full, as one 7 m ahead is.
+ const aside={...visitor(-7),cur:{x:7,y:0,z:-7,yaw:0}};tier.begin(camera,{pxPerM:8/levels[0].error});tier.place(aside,1/60);tier.end();
+ assert.ok(tier.count===1);assert.deepEqual(drawnAt(),parts.map(()=>0),'off to the side, by its depth');
+ const indexes=new Set([...tier.groups.values()].filter(g=>g.level===1).map(g=>g.mesh.geometry.index));
+ tier.begin(camera,{pxPerM});for(let f=0;f<5;f++)tier.place({...visitor(-8),tgt:{rest:null,stance:'stand',fur:f}},1/60);tier.end();
+ for(const g of tier.groups.values())if(g.level===1)indexes.add(g.mesh.geometry.index);
+ assert.equal(indexes.size,parts.length,'one index for each part at a level, whatever the fur colour');
+ tier.begin(camera);tier.place(visitor(-40),1/60);tier.end();assert.deepEqual(drawnAt(),parts.map(()=>0),'without the pixels a metre, in full');
+ const warn=console.warn;let warned=0;console.warn=()=>warned++;
+ try{
+  assert.equal(crowdLevels({...motion,lods:[{...lods[0],parts:lods[0].parts.slice(1)}]},parts).length,0,'a part short');
+  const wrong=Buffer.from(Uint16Array.from([0,1,65535]).buffer).toString('base64');
+  assert.equal(crowdLevels({...motion,lods:[{...lods[0],parts:lods[0].parts.map((p,i)=>i?p:{...p,data:wrong})}]},parts).length,0,'an index past the vertices');
+  assert.equal(crowdLevels({...motion,lods:[...lods].reverse()},parts).length,0,'levels out of order');
+ }finally{console.warn=warn;}
+ assert.equal(warned,3);assert.equal(crowdLevels({...motion,lods:undefined},parts).length,0);
+ let gone=0;for(const g of tier.groups.values())g.mesh.addEventListener('dispose',()=>gone++);const draws=tier.groups.size;
+ tier.dispose();assert.equal(scene.children.length,0);assert.equal(gone,draws,'every draw\'s own buffers go');
+ pass(`lighter meshes for the farther: ${lods.map(l=>`${l.parts.reduce((s,p)=>s+p.triangles,0)} triangles to ${(l.error*1000).toFixed(0)} mm`).join(', ')} of ${full}, none across the colour map's seams, ${small} small or thin pieces whole; each visitor at the lightest under a pixel at their depth, on the full draw's vertices and material`);
+}
 // Loading: a fetch that fails is tried again (remotes.js startCrowd), a moment later, and the crowd comes.
 {
  const {build}=await import('./native-bundle.mjs'),path=await import('node:path'),file=path.resolve('output/check-walker',`remotes.${process.pid}.mjs`);
