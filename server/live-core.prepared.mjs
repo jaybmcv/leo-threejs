@@ -1,6 +1,6 @@
 // Leo live: the multiplayer server for walk mode (src/walk/walk.html). One process is one shuttle: everyone connected
 // walks the same Leo. It passes poses and pings on and runs the lifts (and keeps a few shared things: scores, hearts, chat,
-// the graffiti wall, gym rounds and the Deck 1 transporters); the ship itself is static and every visitor
+// the graffiti wall, gym rounds, Captain Says and the Deck 1 transporters); the ship itself is static and every visitor
 // builds it in their own browser. Modelled on Voyager's Reach's authority (packages/server: pose fan-out by distance,
 // poses as bytes, the visitor's id proved by a key their browser keeps), cut down to what a walk needs.
 //
@@ -27,6 +27,8 @@
 //   LEO_LIVE_TV_MAX_MB=40, LEO_LIVE_TV_MAX_S=120   the largest and longest video the TV takes
 //   LEO_LIVE_RUN_KEEP_S=90            how long a game run is kept for a visitor whose link dropped (0 keeps none)
 //   LEO_LIVE_JOIN_S=30                how long an ask to join someone waits for their answer (joins.mjs)
+//   LEO_LIVE_CS_WAIT_S=10             how long Captain Says counts down to a game, and shows its result after one
+//                                     (captain-says.mjs)
 //
 // Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
 // server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
@@ -56,6 +58,7 @@ import {createSharedPanel} from './lever-panel.mjs';
 import {createTransporters} from './transporters.mjs';
 import {createTv} from './tv.mjs';
 import {createJoins} from './joins.mjs';
+import {createCaptainSays} from './captain-says.mjs';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||1000);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -127,6 +130,8 @@ setInterval(()=>mct.tick(),10000);
 // Ask to join (joins.mjs): someone in the Aboard list asked to come to where another visitor stands, who accepts or
 // declines. Requests live in memory only; the place given on accept must be public (policy.canJoin).
 const joins=createJoins({send:(v,msg)=>send(v.ws,msg),find:id=>[...visitors].find(v=>v.ready&&v.id===id)||null,canJoin:policy.canJoin,log,ms:Number(process.env.LEO_LIVE_JOIN_S||30)*1000});BUDGETS.join=[2,8];
+// Captain Says (captain-says.mjs): Simon Says for everyone aboard who joins, judged from their poses; in memory only.
+const captainSays=createCaptainSays({log,send:(v,text)=>send(v.ws,text),waitMs:Number(process.env.LEO_LIVE_CS_WAIT_S||10)*1000});BUDGETS.cs=[1,4];
 // The Crown lounge TV (tv.mjs): the video everyone sees, uploaded over plain HTTP by a signed-in visitor with a ticket.
 const tv=createTv({send:(v,msg)=>send(v.ws,msg),log,everyone:()=>visitors,allowed:origin=>ORIGINS.some(o=>o.test(origin))});
 
@@ -159,7 +164,7 @@ function readPose(v,p){
  const state=`${pose.stance}|${pose.emote}|${pose.rest}|${pose.jumpCount}|${pose.playing}|${pose.ball}|${pose.glide}|${!!pose.hook}|${pose.fur}`;
  if(state!==v.state){v.state=state;stateVer[k]++;urgent.push(k);}
  if(!v.active){v.active=true;active.push(k);}
- treasure.observe(v);panel.observe(v);return true;
+ treasure.observe(v);panel.observe(v);captainSays.observe(v,pose);return true;
 }
 
 // Alien Cat Invasion's leaderboard (walk/invasion): one best score per Discord-verified player, kept in a file beside
@@ -353,6 +358,7 @@ function leave(v){
  panel.left(v);
  tv.leave(v);
  joins.left(v);
+ captainSays.left(v);
  if(v.ready){broadcast({m:'gone',id:v.id});countChanged=true;log('aboard',aboard(),'-',v.id);}
 }
 const aboard=()=>{let n=0;for(const v of visitors)if(v.ready)n++;return n;};
@@ -404,6 +410,8 @@ function onMessage(v,data,binary){
   case 'mct':if(allowed(v,'mct'))mct.message(v,msg);break;
   // Ask to join someone from the Aboard list (joins.mjs): ask, cancel, and the answer of the one asked.
   case 'join':if(allowed(v,'join'))joins.message(v,msg);break;
+  // Captain Says (captain-says.mjs): join its next game, or leave it.
+  case 'cs':if(allowed(v,'cs'))captainSays.message(v,msg);break;
   // The Crown lounge TV (tv.mjs): what is on it, a ticket to upload a video, and an owner taking it down.
   case 'tv':case 'tv-ticket':case 'tv-down':if(allowed(v,msg.m))tv.message(v,msg);break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
