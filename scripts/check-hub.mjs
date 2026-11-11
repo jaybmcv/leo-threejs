@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import {publicOutput} from './layout-selector.mjs';
 import {listenForHub} from '../src/walk/hub-link.js';
 import {walkLink} from '../src/hub/walk-link.js';
-import {pill,note,hasTrack,isMoving,trackNodes,groups,stats,feature,shortDate} from '../src/hub/model.js';
+import {pill,note,hasTrack,isMoving,trackNodes,groups,stats,feature,shortDate,shotPath,answerKey} from '../src/hub/model.js';
 
 const output=process.env.LEO_PUBLIC_DIR||publicOutput;
 // What the Builder's Hub says for each kind of card, and that the built page stays light and holds nobody's data.
@@ -55,6 +55,16 @@ check('dates read short',()=>{
  const now=new Date('2026-10-31T15:00:00');
  assert.equal(shortDate('2026-10-31T10:00:00',now),'Today');assert.equal(shortDate('2026-10-27T10:00:00',now),'Oct 27');
  assert.equal(shortDate('2025-10-27T10:00:00',now),'Oct 27, 2025');assert.equal(shortDate(null,now),'');assert.equal(shortDate('nonsense',now),'');
+});
+check("a card's own screenshot link is used only in the service's own shape",()=>{
+ const good='/shot/270?exp=1789000000&mac='+'a'.repeat(64);
+ assert.equal(shotPath(good),good);
+ for(const bad of [null,'',good+'&x=1','https://evil.test'+good,'//evil.test/shot/1','/shot/270?exp=1789000000&mac=zz','/media/x/screenshot.jpg?sig=1',{}])assert.equal(shotPath(bad),null,String(bad));
+});
+check('new screenshot links alone are no reason to redraw',()=>{
+ const answer=(shot,status='live')=>JSON.stringify({name:'A',cards:[{number:7,status,shot}]});
+ assert.equal(answerKey(answer('/shot/7?exp=1&mac=a')),answerKey(answer('/shot/7?exp=2&mac=b')));
+ assert.notEqual(answerKey(answer('/shot/7?exp=1&mac=a')),answerKey(answer('/shot/7?exp=1&mac=a','shipped')));
 });
 // The Hub and an open walk, over a real BroadcastChannel.
 const pause=ms=>new Promise(r=>setTimeout(r,ms));

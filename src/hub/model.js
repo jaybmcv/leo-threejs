@@ -77,3 +77,9 @@ export function shortDate(iso,now=new Date()){
  const opts={month:'short',day:'numeric',...(d.getFullYear()===now.getFullYear()?{}:{year:'numeric'})};
  return d.toLocaleDateString('en-US',opts);
 }
+
+// The tester's own screenshot: a ten-minute link the Hub service made for them alone. Only its own shape is used, so a
+// card can never point the page anywhere else.
+export const shotPath=p=>typeof p==='string'&&/^\/shot\/\d{1,6}\?exp=\d{10}&mac=[0-9a-f]{64}$/.test(p)?p:null;
+// An answer from the service, minus those links: every look brings new ones, and they alone are no reason to redraw.
+export const answerKey=text=>JSON.stringify(JSON.parse(text),(k,v)=>k==='shot'?undefined:v);

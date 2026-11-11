@@ -42,6 +42,7 @@ const PLAY=[
   [['T'],'Chat',inOtherside?'Chat with everyone aboard':'Chat with everyone aboard (connect Discord if it asks)'],
   [['P'],'Ping','Ping where you stand, so others can find you'],
   [['Aboard'],'Aboard','Click the aboard count to see who is aboard, ask to join someone where they are (they accept or decline), or set the name over your head; a teal dot marks a Discord-verified name','Tap the aboard count to see who is aboard, ask to join someone where they are (they accept or decline), or set the name over your head; a teal dot marks a Discord-verified name'],
+  [['Aboard'],'Aboard','Captain Says: Play Captain Says in the Aboard list joins a game of copying the captain’s moves with everyone else who joins. Do each move only when the call starts “Captain says”; the call’s button does it too','Captain Says: Play Captain Says in the Aboard list joins a game of copying the captain’s moves with everyone else who joins. Do each move only when the call starts “Captain says”; tap the call to do it'],
  ]},
 ];
 const FIND=V2_FIND;

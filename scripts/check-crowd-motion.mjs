@@ -1,13 +1,14 @@
 // The crowd's recorded loops (src/walk/assets/crowd-motion.json, scripts/bake-crowd-motion.mjs) and how the crowd tier
 // reads them (src/walk/crowd-tier.js): the recording is of the rig as it is now (its sources' hash); every loop is
-// there, whole, and comes round without a jump; recording a loop again gives the same numbers (half-float close); a body
+// there, whole, and comes round without a jump (its seam no bigger than a quarter more than its biggest step within,
+// nor than five of its usual steps); recording a loop again gives the same numbers (half-float close); a body
 // skinned from the recording's numbers, as the crowd's vertex shader reads them (crowdBoneMatrix: the same layout), is
 // where three's own skinning puts the rig's body, to the millimetre; and each visitor's pose picks the loop it should.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import * as T from 'three';
-import {OUT,LOOPS,rigHash,recordLoop,walker,partsOf} from './bake-crowd-motion.mjs';
+import {OUT,LOOPS,EMOTES,rigHash,recordLoop,walker,partsOf} from './bake-crowd-motion.mjs';
 import {crowdLoop,crowdBoneMatrix,crowdHalves} from '../src/walk/crowd-tier.js';
 
 let passed=0;const pass=name=>{passed++;console.log('PASS '+name);};
@@ -18,10 +19,15 @@ pass('the recording is of the rig as it is (its sources\' hash)');
 const halves=crowdHalves(motion),numbers=Float32Array.from(halves,h=>T.DataUtils.fromHalfFloat(h)),bones=motion.bones;
 assert.deepEqual(motion.clips.map(c=>c.name),LOOPS.map(l=>l[0]));
 let at=0;for(const c of motion.clips){assert.equal(c.start,at,`${c.name} starts where the last ended`);assert.ok(c.frames>=1);at+=c.frames;
- assert.ok(c.seam<=2.5,`${c.name}: its biggest step is ${c.seam} times its usual one`);}
+ // (from the numbers, not the recording's own measure: coming round is no bigger than a quarter more than the loop's
+ // biggest step within, nor than five of its usual ones, so a jump within cannot excuse one at the seam)
+ const W=bones*12,step=(i,j)=>{let d=0;for(let k=0;k<W;k++)d+=Math.abs(numbers[(c.start+i)*W+k]-numbers[(c.start+j)*W+k]);return d/W;};
+ if(c.frames>=3){const inner=Array.from({length:c.frames-1},(_,i)=>step(i,i+1)).sort((x,y)=>x-y),wrap=step(c.frames-1,0);
+  assert.ok(wrap<=inner.at(-1)*1.25+1e-9,`${c.name}: coming round is ${(wrap/inner.at(-1)).toFixed(2)} times its biggest step within`);
+  assert.ok(wrap<=inner[inner.length>>1]*5+1e-9,`${c.name}: coming round is ${(wrap/inner[inner.length>>1]).toFixed(2)} of its usual steps`);}}
 assert.equal(halves.length,at*bones*12,'the numbers are every frame of every loop');
 assert.ok(numbers.every(Number.isFinite));
-pass(`${motion.clips.length} loops, ${at} frames, ${bones} bones; each comes round with its biggest step at most ${Math.max(...motion.clips.map(c=>c.seam)).toFixed(2)} times its usual one`);
+pass(`${motion.clips.length} loops, ${at} frames, ${bones} bones; each comes round in a step at most ${Math.max(...motion.clips.map(c=>c.seam)).toFixed(2)} times its biggest step within`);
 
 // Recorded again, a loop is the same (the rig is deterministic; half floats keep about three figures).
 for(const name of ['walk','crouch']){
@@ -57,7 +63,8 @@ for(const name of ['walk','crouch']){
 // The crowd tier itself, on a walker as its template (three makes the draws without a GPU): a draw for each part and
 // fur colour; out of the camera's view not drawn, unless all are (the selfie booth); the cap counts only those drawn (a
 // visible one after a slow page's whole cap of unseen ones is drawn); a one-frame loop at a standstill keeps finite
-// numbers; and each instance stands where its visitor is, turned their way.
+// numbers; each instance stands where its visitor is, turned their way; and a phone's (lean) draws each part in
+// Lambert, front faces only, on the same fur colour's image, skinned from the recording.
 {
  // (fur colours are drawn on a canvas: fur.js; here, @napi-rs/canvas's)
  const {createCanvas}=await import('@napi-rs/canvas');globalThis.document??={createElement:()=>createCanvas(1,1)};
@@ -79,8 +86,15 @@ for(const name of ['walk','crouch']){
  tier.begin(camera);tier.place(ahead[2],1/60);tier.end();
  const g=[...tier.groups.values()].find(x=>x.count===1),m=new T.Matrix4().fromArray(g.mesh.instanceMatrix.array,0),p=new T.Vector3(),q=new T.Quaternion(),sc=new T.Vector3();m.decompose(p,q,sc);
  assert.ok(p.distanceTo(new T.Vector3(-3,0,-10))<1e-6,`placed at ${p.toArray()}`);assert.ok(Math.abs(new T.Euler().setFromQuaternion(q,'YXZ').y-.5)<1e-6,'turned their way');
+ {const lean=createCrowdTier(scene,{template:w,motion,most:4,lean:true});lean.begin(camera);lean.place(ahead[2],1/60);lean.end();
+  const drawn=[...lean.groups.values()].filter(x=>x.count===1);assert.equal(drawn.length,parts);
+  for(const x of drawn){const mat=x.mesh.material,full=[...tier.groups.values()].find(y=>y.count===1&&y.mesh.material.name===mat.name).mesh.material;
+   assert.ok(mat.isMeshLambertMaterial&&mat.side===T.FrontSide&&!mat.normalMap,mat.name);assert.ok(mat.color.equals(full.color));assert.equal(mat.map?.image,full.map?.image,'the same fur colour');
+   const shader={vertexShader:T.ShaderLib.lambert.vertexShader,uniforms:{}};mat.onBeforeCompile(shader,null);
+   assert.ok(shader.vertexShader.includes('crowdBone( skinIndex.x )')&&shader.uniforms.crowdMotion);assert.ok(mat.customProgramCacheKey().endsWith('|crowd-tier'));}
+  lean.dispose();}
  tier.dispose();assert.equal(scene.children.length,0,'disposed, its draws leave the scene');
- pass(`the crowd tier: ${tier.groups.size||'its'} draws by part and fur, culled to the view unless all are wanted, its cap counting only those drawn, finite at a standstill, each placed and turned`);
+ pass(`the crowd tier: ${tier.groups.size||'its'} draws by part and fur, culled to the view unless all are wanted, its cap counting only those drawn, finite at a standstill, each placed and turned; a phone's in Lambert`);
 }
 // Loading: a fetch that fails is tried again (remotes.js startCrowd), a moment later, and the crowd comes.
 {
@@ -99,12 +113,34 @@ for(const name of ['walk','crouch']){
  }finally{globalThis.fetch=realFetch;console.warn=warn;}
  pass('a crowd recording that fails to load is fetched again five seconds later, and the crowd comes');
 }
+// Who has a body (remotes.js tierOf): the nearest, held steady at the edge. Two visitors walking to and fro across the
+// edge of a tier of 4 (one with a body, one without) do not change hands; one coming clearly near takes the place of the
+// farthest kept beyond the tier; with room, those at the edge come in; the tier falling, the farthest give theirs back.
+{
+ const {build}=await import('./native-bundle.mjs'),path=await import('node:path'),file=path.resolve('output/check-walker',`remotes-tier.${process.pid}.mjs`);
+ await fs.mkdir(path.dirname(file),{recursive:true});
+ const b=await build({entryPoints:['src/walk/remotes.js'],bundle:true,format:'esm',platform:'node',external:['three'],write:false,target:'es2022',logLevel:'error'});
+ await fs.writeFile(file,b.outputFiles[0].text);let tierOf;try{({tierOf}=await import(pathToFileURL(file).href));}finally{await fs.rm(file,{force:true});}
+ const v=(name,walker)=>({name,walker:walker?{}:null}),names=list=>list.map(x=>x.name).join('');
+ // a tier of 4, hold 3 (as remotes.js): A..C near with bodies; D has a body; E has none; they swap ranks 4 and 5 by turns
+ let swaps=0,had=null;
+ for(let t=0;t<20;t++){const [A,B,C]=[v('A',1),v('B',1),v('C',1)],D=v('D',1),E=v('E',0),shown=t%2?[A,B,C,E,D]:[A,B,C,D,E];
+  const now=names(tierOf(shown,4,3));if(had!==null&&now!==had)swaps++;had=now;}
+ assert.equal(swaps,0,'the edge did not hold');
+ assert.equal(names(tierOf([v('N',0),v('A',1),v('B',1),v('C',1),v('D',1),v('F',1)],4,1)),'NABC','one clearly near takes the place of the farthest kept');
+ assert.equal(names(tierOf([v('A',1),v('B',0),v('C',0)],4,3)),'ABC','with room, those at the edge come in');
+ assert.equal(names(tierOf([v('A',1),v('B',1),v('C',1),v('D',1),v('E',1)],3,3)),'ABC','the tier falling, the farthest give theirs back');
+ assert.equal(tierOf([],4,3).length,0);
+ pass('the near tier holds steady at its edge: no change of hands as two cross it to and fro; the clearly near come in, the farthest go first');
+}
 // The loop each visitor plays.
 const pick=(o)=>crowdLoop({rest:null,stance:'stand',swimming:false,speed:0,...o});
 assert.equal(pick({}),'idle');assert.equal(pick({speed:1.4}),'walk');assert.equal(pick({speed:5}),'run');
 assert.equal(pick({stance:'crouch'}),'crouch');assert.equal(pick({stance:'crouch',speed:1}),'crouchWalk');
 assert.equal(pick({stance:'prone'}),'prone');assert.equal(pick({stance:'prone',speed:.5}),'crawl');
+assert.equal(pick({emote:'dance'}),'dance');assert.equal(pick({emote:'box',speed:1.4}),'walk');assert.equal(pick({emote:'dance',stance:'crouch'}),'crouch');
+assert.equal(pick({emote:'dance',rest:'sit'}),'sit');assert.equal(pick({emote:'play_dead'}),'play_dead');
 assert.equal(pick({rest:'sit',speed:3}),'sit');assert.equal(pick({rest:'tube'}),'sit');assert.equal(pick({rest:'lie'}),'lie');assert.equal(pick({swimming:true,speed:1}),'swim');
-for(const name of new Set(['idle','walk','run','crouch','crouchWalk','prone','crawl','sit','lie','swim']))assert.ok(motion.clips.some(c=>c.name===name),name);
-pass('each pose picks its loop: standing, walking, running, crouched, crouch-walking, prone, crawling, sitting (and in a tube), lying, swimming');
+for(const name of new Set(['idle','walk','run','crouch','crouchWalk','prone','crawl','sit','lie','swim',...EMOTES]))assert.ok(motion.clips.some(c=>c.name===name),name);
+pass('each pose picks its loop: standing, walking, running, crouched, crouch-walking, prone, crawling, sitting (and in a tube), lying, swimming, and each emote standing still (one not recorded stands idle)');
 console.log(`crowd motion: ${passed} checks passed`);

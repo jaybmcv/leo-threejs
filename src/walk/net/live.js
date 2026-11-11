@@ -20,7 +20,7 @@ export function saveName(name){try{localStorage.setItem('leo-live-name',name);}c
 
 // on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n,names,ids), board(b), scored(r), hearts(h), hearted(r),
 // selfie(id,ms), giveaway(g), claimed(r), clown(r), chat(line), said(r), wall(w), stroke(s), painted(r), gym(msg), mcts(carts), tv(t), tvTicket(r),
-// join(msg)}; status
+// join(msg), cs(msg)}; status
 // is 'connecting', 'live',
 // 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). Nothing is said before connectLive has
 // returned, so the page's handlers can read the link it returns. opts.pass(): a Leo pass for this
@@ -123,6 +123,8 @@ export function connectLive(url,on,opts={}){
     case 'painted':on.painted?.(msg);break;
     // Paws Off's gym round on the treadmills (server/gym.mjs): its countdown, its start, someone out, the results.
     case 'gym':if(typeof msg.e==='string')on.gym?.(msg);break;
+    // Captain Says (server/captain-says.mjs): its lobby, each call and its judging, and the result; only while joined.
+    case 'cs':if(typeof msg.s==='string')on.cs?.(msg);break;
     // The Deck 1 transporters (walk/transporter.js): who drives each cart and where each is parked.
     case 'mcts':if(Array.isArray(msg.carts))on.mcts?.(msg.carts);break;
     // The Crown lounge TV (server/tv.mjs): what is on it, and a ticket to upload a video (or why not).
@@ -200,6 +202,8 @@ export function connectLive(url,on,opts={}){
   paint(stroke){if(!live())return false;ws.send(JSON.stringify({m:'paint',...stroke}));return true;},
   // Paws Off's gym round: stepped on ('in'), fell, stepped off; false when there is no connection to send it on.
   gym(msg){if(!live())return false;ws.send(JSON.stringify({...msg,m:'gym'}));return true;},
+  // Captain Says: join its next game ('join') or leave it ('leave'); false when there is no connection to send it on.
+  cs(e){if(!live())return false;ws.send(JSON.stringify({m:'cs',e}));return true;},
   // The Deck 1 transporters: take a driver's seat, say where the cart is, park it; false when there is no connection.
   mct(msg){if(!live())return false;ws.send(JSON.stringify({...msg,m:'mct'}));return true;},
   // Ask to join someone (their id), cancel that, and answer someone who asked (their request, true to accept); false when

@@ -1,24 +1,26 @@
 import * as T from 'three';
-import {crowdShader} from './crowd-draw.js';
+import {crowdShader,leanMaterial} from './crowd-draw.js';
 import {furImage} from './fur.js';
 
 // Visitors beyond the nearest few (remotes.js), drawn without a rig of their own: the crowd. Each plays a loop recorded
 // from the rig itself (scripts/bake-crowd-motion.mjs: standing, walking, running, crouched, crouch-walking, prone,
-// crawling, sitting, lying, swimming), chosen by what their pose says and paced by their speed. Every loop's frames are
+// crawling, sitting, lying, swimming, and each emote, standing), chosen by what their pose says and paced by their speed. Every loop's frames are
 // rows of one texture, three texels a bone (the top three rows of its skinning matrix, as half floats); the vertex shader
 // blends the two frames either side of the moment and three's instancing places and turns the body. So a visitor in the
 // crowd costs a few numbers a frame, and every visitor of one fur colour draws together: one instanced draw per body
 // part and colour. Not drawn on them: the hat, the catnip face, the swimsuit, the board, the ball, the grapple line, an
-// emote (they stand), or shut eyes.
-//   crowdLoop({rest, stance, swimming, speed}) -> the loop's name
-//   createCrowdTier(scene, {template, motion, most}) -> {begin(camera, {all, most}), place(r, dt, swimming), end(), count,
+// emote's way in or out (it starts in its loop), or shut eyes.
+//   crowdLoop({rest, stance, swimming, speed, emote}) -> the loop's name (an emote not recorded stands: idle)
+//   createCrowdTier(scene, {template, motion, most, lean}) -> {begin(camera, {all, most}), place(r, dt, swimming), end(), count,
 //   dispose()}: begin's all draws them in view or not (the selfie booth's lens may see any); its most, fewer than the
 //   tier was made for (a slow page).
 //   template: a walker (avatar.js, merged draws) whose skinned parts give the geometry and materials; motion: the
-//   recording (crowd-motion.json); most: the most visitors drawn. place(r): a visitor as remotes.js keeps them (cur,
+//   recording (crowd-motion.json); most: the most visitors drawn; lean: each part in crowd-draw.js leanMaterial's place
+//   of the template's (a phone's, as the near tier's). place(r): a visitor as remotes.js keeps them (cur,
 //   tgt, speed); r.crowd keeps their loop and how far into it they are.
-export function crowdLoop({rest,stance,swimming,speed}){
+export function crowdLoop({rest,stance,swimming,speed,emote=null}){
  if(rest==='sit'||rest==='tube')return 'sit';if(rest==='lie')return 'lie';if(swimming)return 'swim';
+ if(emote&&stance!=='crouch'&&stance!=='prone'&&speed<=.3)return emote;
  if(stance==='crouch')return speed>.3?'crouchWalk':'crouch';
  if(stance==='prone')return speed>.15?'crawl':'prone';
  return speed>3?'run':speed>.3?'walk':'idle';
@@ -54,7 +56,7 @@ export function crowdHalves(motion){
  return new Uint16Array(bytes.buffer);
 }
 
-export function createCrowdTier(scene,{template,motion,most=1000}){
+export function createCrowdTier(scene,{template,motion,most=1000,lean=false}){
  const bones=motion.bones,rows=motion.clips.reduce((s,c)=>s+c.frames,0),fps=motion.fps,clips=new Map(motion.clips.map(c=>[c.name,c]));
  const texture=new T.DataTexture(crowdHalves(motion),bones*3,rows,T.RGBAFormat,T.HalfFloatType);
  texture.magFilter=texture.minFilter=T.NearestFilter;texture.generateMipmaps=false;texture.needsUpdate=true;
@@ -65,7 +67,7 @@ export function createCrowdTier(scene,{template,motion,most=1000}){
  // A part's material for a fur colour: the template's, its map on that colour's image (fur.js), skinned from the
  // recording. Its own hooks come too, the skin after them (as crowd-draw.js does).
  const material=(part,image)=>{
-  const source=part.material,m=source.clone();
+  const source=part.material,m=lean?leanMaterial(source):source.clone();
   if(source.map){const map=source.map.clone();map.source=new T.Source(image);map.needsUpdate=true;m.map=map;}
   const uniforms={crowdMotion:{value:texture},crowdBind:{value:part.bindMatrix.clone()}};
   const before=source.onBeforeCompile,key=source.customProgramCacheKey;
@@ -93,11 +95,11 @@ export function createCrowdTier(scene,{template,motion,most=1000}){
   begin(camera,{all:every=false,most:fewer=most}={}){count=0;all=every;cap=Math.min(most,fewer);for(const g of groups.values())g.count=0;
    view.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);frustum.setFromProjectionMatrix(view);},
   place(r,dt,swimming=false){
-   const c=r.cur,t=r.tgt,clip=clips.get(crowdLoop({rest:t.rest,stance:t.stance,swimming,speed:r.speed}))??clips.get('idle');
+   const c=r.cur,t=r.tgt,clip=clips.get(crowdLoop({rest:t.rest,stance:t.stance,swimming,speed:r.speed,emote:t.emote}))??clips.get('idle');
    // Where they are in the loop: kept across a change of loop (a walk into a run keeps its step), each starting somewhere
    // of their own.
    const s=r.crowd??={phase:(idOf(r)*.618)%1};
-   const pace=clip.speed?T.MathUtils.clamp(r.speed/clip.speed,PACE[0],PACE[1]):1;s.phase=(s.phase+dt*pace*fps/clip.frames)%1;
+   const pace=clip.speed?T.MathUtils.clamp(r.speed/clip.speed,PACE[0],PACE[1]):1;s.phase=(s.phase+dt*pace*(clip.fps??fps)/clip.frames)%1;
    if(count>=cap)return;
    if(!all&&!frustum.intersectsSphere(sphere.set(sphere.center.set(c.x,c.y+.6,c.z),IN_VIEW_M)))return;
    const x=s.phase*clip.frames,a=Math.floor(x)%clip.frames,b=(a+1)%clip.frames,u=x-Math.floor(x),cos=Math.cos(c.yaw),sin=Math.sin(c.yaw);

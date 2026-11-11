@@ -1,7 +1,7 @@
 import {identify,currentPass,forget,CREAMERY} from '../walk/net/connect.js';
 import {FEEDBACK_CONFIG} from '../feedback/config.js';
 import {walkLink as openWalk} from './walk-link.js';
-import {TRACK,pill,note,hasTrack,isMoving,trackNodes,groups,stats,feature,shortDate} from './model.js';
+import {TRACK,pill,note,hasTrack,isMoving,trackNodes,groups,stats,feature,shortDate,shotPath,answerKey} from './model.js';
 
 // The Builder's Hub: where testers follow the ideas they sent. Nothing about anyone is in this page or this public
 // repository: a tester's cards come at runtime from the Hub service (feedback-inbox hub/), which checks a fresh Leo pass
@@ -108,10 +108,48 @@ function stepsOf(c){
  return el('ol',{className:'steps',attrs:{'aria-label':'Steps'}},...c.steps.map(s=>el('li',{className:`step step-${s.status==='live'?'live':s.status==='planned'?'todo':'now'}`},
   el('span',{className:'step-n',textContent:String(s.number)}),el('span',{textContent:s.title||`Step ${s.number}`}))));
 }
-// Their own words, fetched the first time they open them.
+// Their own screenshot, the view they had when they sent the idea. The service makes each card a link for this tester
+// alone that lasts ten minutes, and sends the picture private and uncached, so every look asks it again. The newest
+// links are kept here by report; a picture that hasn't loaded yet takes the new one, and one that fails asks once for
+// fresh links before it says the picture is gone.
+const shots=new Map();
+const shotSrc=number=>{const p=shotPath(shots.get(number));return p?SERVICE+p:null;};
+function keepShots(data){
+ shots.clear();for(const c of data.cards||[])if(Number.isInteger(c.number)&&shotPath(c.shot))shots.set(c.number,c.shot);
+ for(const img of document.querySelectorAll('img[data-shot]:not([data-loaded])')){const next=shotSrc(+img.dataset.shot);if(next&&img.getAttribute('src')&&img.src!==next)img.src=next;}
+}
+let renewing=null;
+const renewShots=()=>renewing??=(Date.now()-lastCheck<5e3?Promise.resolve():refreshMine(asked)).finally(()=>{renewing=null;});
+function shotImage(number,{alt,className,lazy,gone}){
+ const img=el('img',{alt,className,decoding:'async',referrerPolicy:'no-referrer',attrs:{'data-shot':String(number)}});
+ if(lazy)img.loading='lazy';
+ let renewed=false;
+ img.addEventListener('load',()=>{img.dataset.loaded='1';});
+ img.addEventListener('error',async()=>{
+  const was=img.src;
+  if(!renewed){renewed=true;await renewShots();const next=shotSrc(number);if(next&&next!==was){if(img.src!==next)img.src=next;return;}}
+  if(img.isConnected)gone(img);
+ });
+ return img;
+}
+// On the card: a small picture that opens what they sent.
+function thumbOf(c,open){
+ if(!shotSrc(c.number))return null;
+ const button=el('button',{type:'button',className:'snap',attrs:{'aria-label':'Your view when you sent this. Show it larger, with your words'}});
+ const img=shotImage(c.number,{alt:'',lazy:true,gone:()=>button.replaceWith(el('div',{className:'snap snap-gone',textContent:'Picture no longer available'}))});
+ button.append(img);img.src=shotSrc(c.number);
+ button.addEventListener('click',open);
+ return button;
+}
+// Their own words, fetched the first time they open them, with their view when they sent it.
 function wordsOf(c){
  if(!c.number||!c.id)return null;
  const text=el('p',{textContent:'Loading…'}),box=el('details',{className:'words'},el('summary',{textContent:'What you said'}),text);
+ if(shotSrc(c.number)){
+  const figure=el('figure',{className:'sent-shot'}),img=shotImage(c.number,{alt:'Your view when you sent this idea',gone:()=>figure.replaceWith(el('p',{className:'sent-gone',textContent:'The picture of your view isn’t available any more.'}))});
+  figure.append(img,el('figcaption',{textContent:'Your view when you sent it'}));box.append(figure);
+  box.addEventListener('toggle',()=>{if(box.open&&!img.getAttribute('src'))img.src=shotSrc(c.number);});
+ }
  box.addEventListener('toggle',async()=>{
   if(!box.open||box.dataset.read)return;box.dataset.read='1';
   try{
@@ -217,12 +255,13 @@ function cardOf(c,{highlight=false}={}){
  const p=pill(c),text=note(c),title=c.title||'Your idea';
  const compare=c.shots?.length?el('button',{type:'button',className:'link',textContent:'See before and after'}):null;
  const actions=compare||c.go?el('div',{className:'actions'},goButton(c.go),compare):null;
+ const words=wordsOf(c),thumb=words&&thumbOf(c,()=>{words.open=true;words.scrollIntoView({block:'nearest',behavior:'smooth'});});
  const card=el('article',{className:`card${highlight?' card-here':''}${isMoving(c)?' card-active':''}`,attrs:c.id?{'data-report':c.id}:{}},
-  el('div',{className:'card-head'},el('h3',{textContent:title}),el('span',{className:`pill pill-${p.tone}`,textContent:p.text})),
+  el('div',{className:`card-head${thumb?' card-head-shot':''}`},thumb,el('h3',{textContent:title}),el('span',{className:`pill pill-${p.tone}`,textContent:p.text})),
   stepsOf(c),hasTrack(c)?trackOf(c):null,
   text?el('p',{className:'note',textContent:text}):null,
   c.repliedAt?el('p',{className:'added-note',textContent:`You added more on ${shortDate(c.repliedAt)}. Thanks, it’s with us.`}):null,
-  wordsOf(c),
+  words,
   c.canAdd&&c.number?addMore(c):null,
   actions);
  if(compare)compare.addEventListener('click',()=>{actions.after(slider(c.shots[0],title));compare.remove();},{once:true});
@@ -281,8 +320,8 @@ async function loadMine(asked){
   // The service didn't take this pass, so it isn't worth keeping.
   if(r.status===401){forget();askToConnect(null);return;}
   if(!r.ok)throw new Error(String(r.status));
-  lastAnswer=await r.text();lastCheck=Date.now();
-  const data=JSON.parse(lastAnswer);showMine(data,asked);
+  const answer=await r.text();lastCheck=Date.now();lastAnswer=answerKey(answer);
+  const data=JSON.parse(answer);keepShots(data);showMine(data,asked);
   if(asked&&!data.cards.some(c=>c.id===asked))waitFor(asked);
  }catch{
   const again=el('button',{type:'button',className:'go',textContent:'Try again'});again.addEventListener('click',()=>loadMine(asked));
@@ -306,9 +345,9 @@ async function refreshMine(asked){
   const r=await fetch(`${SERVICE}/mine`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({pass})});
   if(r.status===401){forget();signInRanOut();return null;}
   if(!r.ok)return null;
-  const text=await r.text(),data=JSON.parse(text);
-  $('sign-in-ran-out')?.remove();
-  if(text!==lastAnswer&&!writing()){lastAnswer=text;showMine(data,asked);}
+  const text=await r.text(),data=JSON.parse(text),key=answerKey(text);
+  $('sign-in-ran-out')?.remove();keepShots(data);
+  if(key!==lastAnswer&&!writing()){lastAnswer=key;showMine(data,asked);}
   return data;
  }catch{return null;}
 }
