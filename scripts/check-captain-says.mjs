@@ -99,9 +99,11 @@ try{
  pass('one alone waits, with no countdown');
 
  for(const b of inGame.slice(1))b.join();
- await until(()=>heard(good,'call').length,WAIT+3000,'the first call');
+ // (each bot's messages come on its own socket: wait for them all, not only Good's)
+ await until(()=>inGame.every(b=>heard(b,'call').length),WAIT+3000,'the first call');
  const lobby=heard(good,'lobby');assert(lobby.length&&lobby[0].ms>WAIT-300&&lobby.at(-1).n===8,`countdown ${JSON.stringify(lobby)}`);
- for(const b of inGame)assert.deepEqual((({r,cs,ms,n,of,you})=>({r,cs,ms,n,of,you}))(heard(b,'call')[0]),{r:1,cs:true,ms:4000,n:8,of:8,you:'in'},b.name);
+ // (the time left when the call is sent: 4 s, less any millisecond it took to send)
+ for(const b of inGame){const c=heard(b,'call')[0];assert.deepEqual((({r,cs,n,of,you})=>({r,cs,n,of,you}))(c),{r:1,cs:true,n:8,of:8,you:'in'},b.name);assert(c.ms>3950&&c.ms<=4000,b.name+' '+c.ms);}
  pass(`the rest join: a ${WAIT_S} s countdown for all, its count reaching 8, then round 1 for all 8, said by the captain ("${heard(good,'call')[0].mv}")`);
 
  // Round by round to the end of the first game, the watcher joining once round 1 is judged.
@@ -133,7 +135,7 @@ try{
 
  // The next game: everyone still joined (Watcher too), nobody answering, so all go out in round 1 and share the win.
  const players2=[good,steady,late,eager,idle,tardy,watcher];
- await until(()=>heard(good,'over',2).length,WAIT*2+8000,'the second game');
+ await until(()=>players2.every(b=>heard(b,'over',2).length),WAIT*2+8000,'the second game');
  for(const b of players2){const c=heard(b,'call',2)[0],o=heard(b,'over',2)[0];assert.deepEqual([c.r,c.of,c.you,o.r,o.wn,o.you],[1,7,'in',1,7,'won'],b.name);}
  assert.deepEqual([...heard(good,'over',2)[0].w].sort(),players2.map(b=>b.name).sort());assert(heard(good,'lobby',2).at(-1).n===7);
  pass('the next game opens with the 7 still joined; nobody answers, so all 7 go out in round 1 and share the win');
