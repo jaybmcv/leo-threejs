@@ -21,7 +21,7 @@ const DEG=Math.PI/180;
 const rgb=hex=>new T.Color(hex).toArray();
 
 // ---- G1: the welcome court ----------------------------------------------------------------------------------------
-// Centre of the court; its outer brass edge (r 5.21) ends 0.19 m short of z=-4.9 and 0.4 m from the reception counter.
+// Centre of the court; its outer brass edge (r 5.21) ends 0.19 m short of z=-4.9 and 0.3 m from the reception counter.
 export const WELCOME_COURT={x:-101.4,z:-10.3};
 const DESK={r:1.32,top:1.38,height:.98},PLANTER_RING=3.1,LAMP_RING=4.8,BAND=[4.55,5.15],BRASS_WIDTH=.06;
 // The boulevard planters' size, so the court's join their batch (and their trims).
