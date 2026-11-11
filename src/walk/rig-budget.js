@@ -18,19 +18,20 @@
 //   frameCap(bodies) -> solves}
 //   bodies: [{natural, forced}] in rank order; natural: 0 (every frame) or seconds between solves, true for unseen.
 //   every[i]: what to pass the body's update as solveEvery (0, or seconds; true stays true).
-const SHARE=.08,STEP_S=.5,EASE=.05,FIRST_SOLVE_MS=.15,HEADROOM=.9,OUTLIER=3,SPIKE=1.25;
+const SHARE=.08,STEP_S=.5,EASE=.05,FIRST_SOLVE_MS=.15,HEADROOM=.9,OUTLIER=3,SUSTAIN=30,SPIKE=1.25,TOL=1.02;
 // The rates a body may be given, fastest first: every frame, then 60, 30 and 20 a second (the last is the cap's).
 const RATES=[0,1/60,1/30,.05];
 export function createRigBudget({share=SHARE,cap=.05,most=24,least=6}={}){
- let frameS=1/60,solveMs=FIRST_SOLVE_MS,tier=most,since=0;
- // A solve every `gap` seconds, as rig-pace.js runs it at this frame length: once every floor(gap/frame) frames.
- const perFrame=gap=>gap>0?1/Math.max(1,Math.floor(Math.min(gap,cap)/frameS+1e-6)):1;
+ let frameS=1/60,solveMs=FIRST_SOLVE_MS,tier=most,since=0,slow=0;
+ // A solve every `gap` seconds, as rig-pace.js runs it at this frame length: once every floor(gap*TOL/frame) frames.
+ const perFrame=gap=>gap>0?1/Math.max(1,Math.floor(Math.min(gap,cap)*TOL/frameS+1e-6)):1;
  const cost=every=>perFrame(every===true?cap:every),solves=()=>share*frameS*1000/solveMs;
  return {
-  // Each frame, its length. One far longer than the pace (a stall, a hidden tab: main.js clamps it to 0.1 s) moves it
-  // only a little, so a page that is slow throughout still gets there.
+  // Each frame, its length. One far longer than the pace (a stall, a hidden tab: main.js clamps it to 0.1 s) is let go,
+  // unless SUSTAIN come in a row: then this page is that slow.
   frame(dt){
-   if(!(dt>0))return;frameS+=(dt-frameS)*(dt>OUTLIER*frameS?EASE*.02:EASE);since+=Math.min(dt,STEP_S);
+   if(!(dt>0))return;if(dt>OUTLIER*frameS&&++slow<SUSTAIN)return;slow=0;
+   frameS+=(dt-frameS)*EASE;since+=Math.min(dt,STEP_S);
    const room=solves()/cost(true),want=room<tier?Math.floor(room):Math.floor(room*HEADROOM)>tier?tier+1:tier;
    const next=Math.max(least,Math.min(most,want));
    if(next!==tier&&since>=STEP_S){tier+=next>tier?1:-1;since=0;}

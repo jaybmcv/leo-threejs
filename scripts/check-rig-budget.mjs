@@ -65,10 +65,18 @@ const big=n=>Array.from({length:n},()=>({natural:0,forced:false}));
  assert.ok(changes<=1,`${changes} tier changes in 10 s of noise`);
  pass(`timing noise at a tier's edge moves the tier ${changes} time${changes===1?'':'s'} in 10 s`);
 }
-// A stall: main.js clamps a frame to 0.1 s, so twenty stalled frames come as 0.1 s each; they barely move the budget,
-// and a frame without a solve says nothing of its cost.
+// Steady under frame-length jitter too: frames of 1/60 s plus or minus 0.12 ms, solves of 0.2 ms (a tier below 24).
 {
- const b=settled(1/60,.1),before=b.state;for(let i=0;i<20;i++)b.frame(.1);b.frame(0);b.frame(-1);b.spent(5,0);
+ const b=settled(1/60,.2);let changes=0,last=b.tier;
+ for(let i=0;i<1200;i++){b.frame(1/60+(i%2?.00012:-.00012));b.spent(.2,1);if(b.tier!==last){changes++;last=b.tier;}}
+ assert.ok(b.tier<24,`the tier is below its cap (${b.tier}), so it could move`);assert.ok(changes<=1,`${changes} tier changes in 20 s of jitter`);
+ pass(`frame-length jitter about 60 Hz moves the tier ${changes} time${changes===1?'':'s'} in 20 s (at ${b.tier})`);
+}
+// A stall: main.js clamps a frame to 0.1 s, so twenty stalled frames come as 0.1 s each; they are let go (thirty in a
+// row would mean the page is that slow), and a frame without a solve says nothing of its cost. Solves of 0.2 ms, so the
+// tier is below its cap and could fall.
+{
+ const b=settled(1/60,.2),before=b.state;for(let i=0;i<20;i++)b.frame(.1);b.frame(0);b.frame(-1);b.spent(5,0);
  const after=b.state;assert.ok(Math.abs(after.frameS/before.frameS-1)<.15,`frame ${before.frameS} -> ${after.frameS}`);
  assert.equal(after.solveMs,before.solveMs);assert.equal(after.tier,before.tier);
  pass(`twenty stalled frames move the frame length ${(100*(after.frameS/before.frameS-1)).toFixed(0)}% and the tier not at all`);
@@ -91,12 +99,16 @@ for(const [hz,ms] of [[30,.1],[60,.1],[144,.1],[120,.22]]){
  assert.ok(solved.every(n=>n>=20*10*.97),`${hz} Hz: each solved at least 20 a second: ${Math.min(...solved)}`);
  pass(`${hz} Hz, solves of ${ms} ms, through rig-pace for 10 s: ${per.toFixed(2)} solves a frame against ${solves.toFixed(2)}, at most ${most} on a frame (cap ${cap.toFixed(1)}), each body at least ${(Math.min(...solved)/10).toFixed(0)} a second`);
 }
-// Held, a body gathers its time and catches up a cap at a time: none of it is lost.
+// Held, a body gathers its time and catches up a cap at a time: none of it is lost, and no step is longer than the cap
+// (the figure clamps a longer one: dlCatFigure.ts), even when an input changes after it was held six frames.
 {
- const p=rigPace(CAP);let time=0;
- for(let i=0;i<120;i++)time+=p(1/60,0,'walk',i%3===0).reduce((s,x)=>s+x.dt,0);
- for(let i=0;i<10;i++)time+=p(1/60,0,'walk').reduce((s,x)=>s+x.dt,0);
- assert.ok(Math.abs(time-130/60)<1e-9,`solved ${time} of ${130/60} s`);
- pass('a held body loses no time: what it gathers it solves later');
+ const p=rigPace(CAP);let time=0,longest=0;const run=out=>{for(const x of out){time+=x.dt;longest=Math.max(longest,x.dt);}};
+ for(let i=0;i<120;i++)run(p(1/60,0,'walk',i%3===0));
+ for(let i=0;i<10;i++)run(p(1/60,0,'walk'));
+ for(let i=0;i<6;i++)run(p(1/60,0,'walk',true));
+ const changed=p(1/60,0,'jump');run(changed);for(let i=0;i<10;i++)run(p(1/60,0,'jump'));
+ assert.ok(Math.abs(time-147/60)<1e-9,`solved ${time} of ${147/60} s`);assert.ok(longest<=CAP+1e-9,`a step of ${longest} s`);
+ assert.ok(changed.length>=3&&changed.at(-1).prior===false,`the change's steps: ${JSON.stringify(changed)}`);
+ pass(`a held body loses no time and no step passes the cap: six held frames then a change solve as ${changed.map(x=>Math.round(x.dt*1000)).join(' + ')} ms`);
 }
 console.log(`rig budget: ${passed} checks passed`);
