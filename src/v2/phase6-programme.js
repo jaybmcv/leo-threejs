@@ -1,4 +1,5 @@
 import {addReflectionTerraces} from './reflection-terraces.js';
+import {addWelcomeCourtParts} from './atrium-lobby-park.js';
 import {hydrateHullLayout} from '../plan/envelope-data-v2.js';
 import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS,ATRIUM_BOULEVARD_TREES,ATRIUM_PROMENADE_LAMPS,ATRIUM_FESTOONS} from '../plan/atrium-v2.js';
 import {patchDepth,worldPoint} from '../plan/hull-skin-v2.js';
@@ -88,6 +89,7 @@ const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,
  add('atrium6-lobby','directory_base',[3,.22,1],[-109,y+.11,7],'metal');add('atrium6-lobby','directory_stem',[.18,1.405,.18],[-109,y+.9225,7],'metal');
  add('atrium6-lobby','sign',[5,1.25,.12],[-109,y+2.25,7],'navy',{text:'DECK 6 / ATRIUM\nFORWARD: PARK / LAKE / FOOD / STAGE\nAFT: LIFTS + STAIRS / MEET HERE',yaw:Math.PI,noCollide:true});
  for(const z of[-27,29])plant('atrium6-lobby',-103,z);
+ addWelcomeCourtParts(add,y); // G1 welcome court: the desk and its planters (atrium-lobby-park.js)
  const cafes=[];
  for(const r of layout.rooms.filter(r=>r.id.startsWith('nose-commons-'))){const p=layout.hullPrototypes.prototypes.find(p=>p.id===r.id),floor=r.y,deck=r.deck,k=deck-6,b=bounds(r.polygon),x=r.launchE?.legacyX0??b.x0,accent=['teal','sage','clay'][k%3];
   if(!Array.isArray(p.inner))hydrateHullLayout({hullPrototypes:{prototypes:[p]},cabins:[],rooms:[],windows:[]});
