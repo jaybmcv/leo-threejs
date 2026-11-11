@@ -65,9 +65,23 @@ The Go-to list's "Blossom garden" entry (`src/v2/goto-features.js`) puts a walke
 - Frame rate cost on weaker devices is not measured here.
 - `rest.js` seat finding needs a built layout; its earlier check (#194) found two seats on this bench and none from behind the planter.
 
+## Runtime pass attempt (2026-11-10, unattended build of branch feedback/issue-95 on main 69d1db55)
+
+The remaining checks were asked for again in the real layout 2 walk with normal visitor controls. None could be performed in this step, so none is claimed as passed. No defects were found or confirmed, because nothing in the real ship was exercised.
+
+| Check | Result | Precise blocker |
+| --- | --- | --- |
+| Cross the red bridge both ways in the built layout 2 walk (eye level and overhead evidence) | Not performed | This worktree holds no built layout 2 ship: there is no `dist-v2` and no `output/leo-interior-v02`, only the retired layout 1 assets. A walk needs the geometry build (`scripts/build-fast-v2.mjs` then `npm run build:public`), which this step may not run, and a driven browser session with the real controls. |
+| Bench: approach, sit, stand, perimeter walk | Not performed | Same missing build. The seating prompt and sit pose come from `rest.js` seat finding over the built ship (`__walk.rest`, `restSpots`). |
+| Enable Sound through the visitor interface and hear the fountain with drips, fade with distance and the Sound control | Not performed | The unattended build has no built ship to open, no audio output device and no listener, and headless Chrome cannot show what a person hears. The drip plinks only run on a live `AudioContext`, so they remain unmeasured. |
+
+What was added from the source (read, not run): the Sound button reaches the garden. `src/walk/main.public.js` creates `ambience` (`createAmbience`, off until asked for, saved in `localStorage`), the `#sound` button toggles it and sets `aria-pressed`, and the frame loop calls `blossom?.update(dt,p,ambience.on,camera)`. The garden's sound starts only when that flag is on, which is what `check-blossom-sound.mjs` rendered with Sound on and off. This is a source reading of one copy, not a runtime result.
+
+What the next pass needs, for Jay or a session with the built ship and speakers: build layout 2, open `walk.html?lv=2&at=107.5,24.30,51.00&yaw=90&pitch=8`, press Sound, listen at about 1.5 m, 7 m and 12 m from the falls, press Sound again to confirm silence, then walk onto the bridge from the west, cross, sit on the bench (`__walk.rest` lists its seats), stand, walk back and round the planter's edges, capturing eye-level and overhead frames.
+
 ## Verdict
 
-The report is not ready to close; closure is pending. Nothing is found missing or broken in the source, the colliders or the component walk check, and the captures show the tree, flowers, fish, petals, stone wall, pond, bridge and bench as described. Three acceptance items remain open and need a manual pass in the live layout 2 walk (`?lv=2` links, standing within 12 m of the falls with Sound on):
+The report is not ready to close; closure is pending, and the 2026-11-10 runtime pass could not be done (see above). Nothing is found missing or broken in the source, the colliders or the component walk check, and the captures show the tree, flowers, fish, petals, stone wall, pond, bridge and bench as described. Three acceptance items remain open and need a manual pass in the live layout 2 walk (`?lv=2` links, standing within 12 m of the falls with Sound on):
 
 1. Hear the fountain in the built walk and check the Sound button silences it. Shape, fade and mute are measured from rendered output (`check-blossom-sound.mjs`); the speaker path and a listener's judgement are not (requirement 9).
 2. Walk the bridge, the bench approach and the garden edges in the real ship, at eye level and from above, for gaps, blocked routes, falls or snagging (requirement 10, and the route part of 8).
