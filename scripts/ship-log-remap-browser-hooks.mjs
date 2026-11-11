@@ -9,7 +9,9 @@ export function remapBrowserHooks(source){
  const ray=/let ([$\w]+)=new ([$\w]+),([$\w]+)=new ([$\w]+)\(new ([$\w]+),new \5\)/.exec(body);assert(ray,'Native ray/capsule constructors changed');
  const size=/\{radius:[$\w]+,height:[$\w]+,step:[$\w]+\}=([$\w]+),/.exec(body);assert(size,'Native body signature changed');
  const layout=/return ([$\w]+)\(([$\w]+),[$\w]+,[$\w]+,[$\w]+,[$\w]+\)\?/.exec(body)?.[2];assert(layout,'Native standing policy changed');
- const initial=get(new RegExp('([$\\w]+)='+escape(remap)+'\\('+escape(read)+'\\(\\)\\),([$\\w]+)=\\1&&'+escape(stand)+'\\(([$\\w]+),\\1\\.at\\);([$\\w]+)\\.place\\('),'initial placement');
+ // The start spot: a link's spot, or, since the walk returns visitors to their last public spot, that spot when there is
+ // no link. Groups: 1 the link's spot, 2 the stand, 3 the colliders, 4 the controller. Both shapes match.
+ const initial=get(new RegExp('([$\\w]+)='+escape(remap)+'\\('+escape(read)+'\\(\\)\\),(?:[^;]*?,)?([$\\w]+)=\\1(?:&&|\\?)'+escape(stand)+'\\(([$\\w]+),\\1\\.at\\)[^;]*;([$\\w]+)\\.place\\('),'initial placement');
  const follow=/;([$\w]+)\.yaw=/.exec(source.slice(initial.index,initial.index+600))?.[1];assert(follow,'Initial camera signature changed');
  const go=get(new RegExp('function ([$\\w]+)\\(([$\\w]+)\\)\\{return \\2='+escape(remap)+'\\(\\2\\),'),'Go there')[1];
  const boards=get(/([$\w]+)\.nearby\([ $\w]+\)\.length/,'nearby')[1];
