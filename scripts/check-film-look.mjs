@@ -77,18 +77,22 @@ const copy=mats.floor.clone();copy.onBeforeCompile=mats.floor.onBeforeCompile;co
 scene.add(new T.Mesh(box,copy));scene.onBeforeRender(renderer,scene,null,null);
 const copied=compileFor(copy);assert.equal(count(copied.shader.fragmentShader,'uniform vec2 uFilmTexel;'),1);assert.equal(copied.key,on.floor.key);
 pass('a material copied with a wrapped one\'s hooks is patched once');
-// With film on from the start, corner shading (src/walk/corner-shade.js) wraps film's hook in its own. A copy made since
-// with those hooks, as the furnishing batches (src/v2/furnishing-batches.js) make theirs, holds film inside a hook film
-// does not know, so film wraps the copy again: its shader is still patched once.
-const shaded=new T.MeshStandardMaterial();scene.add(new T.Mesh(box,shaded));scene.onBeforeRender(renderer,scene,null,null);
-{const before=shaded.onBeforeCompile,key=shaded.customProgramCacheKey;
- shaded.onBeforeCompile=function(s,r){before.call(this,s,r);s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n// corner');};
- shaded.onBeforeCompile.cornerShade=true;shaded.customProgramCacheKey=function(){return key.call(this)+'|corner';};}
-const batched=shaded.clone();batched.onBeforeCompile=shaded.onBeforeCompile;batched.customProgramCacheKey=shaded.customProgramCacheKey;
-scene.add(new T.Mesh(box,batched));scene.onBeforeRender(renderer,scene,null,null);
-for(const [k,m] of Object.entries({shaded,batched})){const f=compileFor(m).shader.fragmentShader;
+// With film on from the start, a furnishing batch (src/v2/furnishing-batches.js) copies a source film has wrapped
+// (P4_metal, P4_reflection_leaf_light) with its hooks, and when no frame is drawn in between, corner shading
+// (src/walk/corner-shade.js) wraps the copy in its own hook before film first looks at it. Film then finds a hook it does
+// not know on top and wraps the copy again: its shader is still patched once.
+const source=new T.MeshStandardMaterial();scene.add(new T.Mesh(box,source));scene.onBeforeRender(renderer,scene,null,null);
+const batched=source.clone();batched.onBeforeCompile=source.onBeforeCompile;batched.customProgramCacheKey=source.customProgramCacheKey;
+scene.add(new T.Mesh(box,batched));
+const cornerShade=m=>{const before=m.onBeforeCompile,key=m.customProgramCacheKey;
+ m.onBeforeCompile=function(s,r){before.call(this,s,r);s.fragmentShader=s.fragmentShader.replace('#include <color_fragment>','#include <color_fragment>\n// corner');};
+ m.onBeforeCompile.cornerShade=true;m.customProgramCacheKey=function(){return key.call(this)+'|corner';};};
+for(const m of [source,batched])cornerShade(m);
+scene.onBeforeRender(renderer,scene,null,null);
+assert.equal(batched.onBeforeCompile.filmLook,true);assert.match(batched.customProgramCacheKey(),/\|film-lit-sharp\|corner\|film-lit-sharp$/);
+for(const [k,m] of Object.entries({source,batched})){const f=compileFor(m).shader.fragmentShader;
  for(const part of ['uniform vec2 uFilmTexel;','float stylWrapNL(','vec3 stylGrade(','stylGrade( gl_FragColor.rgb','// corner'])assert.equal(count(f,part),1,k+': '+part);}
-pass('a copy of a material another hook wrapped after film is patched once');
+pass('a batch copy that corner shading wraps before film looks at it is patched once');
 const late=new T.MeshStandardMaterial();scene.add(new T.Mesh(box,late));scene.onBeforeRender(renderer,scene,null,null);
 assert.match(compileFor(late).key,/\|film-lit-sharp$/);
 pass('a material added while film is on is wrapped before it is drawn');
@@ -97,7 +101,7 @@ setLook('today',{persist:false});
 assert.equal(renderer.toneMapping,T.ACESFilmicToneMapping);assert.equal(renderer.toneMappingExposure,.95);
 for(const [k,m] of Object.entries(mats)){const now=compileFor(m);assert.equal(now.key,before[k].key,k);if(k!=='glow')assert(now.shader.uniforms.uFilmTexel,k);assert.equal(now.shader.fragmentShader.includes('stylGrade'),false,k);}
 pass('back on today\'s look every key is today\'s, and each program still carries the texel size for film again');
-{const now=compileFor(batched);assert.equal(now.key,compileFor(shaded).key);assert.equal(now.shader.fragmentShader.includes('uFilmTexel'),false);}
+{const now=compileFor(batched);assert.equal(now.key,compileFor(source).key);assert.equal(now.shader.fragmentShader.includes('uFilmTexel'),false);}
 pass('the copy wrapped twice draws today\'s program on today\'s look');
 setLook('film',{persist:false});assert.match(compileFor(mats.floor).key,/\|film-lit$/);
 film.dispose();assert.equal(renderer.toneMapping,T.ACESFilmicToneMapping);
