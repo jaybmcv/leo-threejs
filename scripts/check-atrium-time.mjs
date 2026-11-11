@@ -4,6 +4,8 @@ import * as T from 'three';
 import {createCanvas} from '@napi-rs/canvas';
 import {installWalkCanvas} from '../src/walk/canvas.js';
 import {setAtriumView,inOpenAtrium} from '../src/v2/atrium-visibility.js';
+import {WELCOME_COURT,COURT_LAMPS,welcomeCourtGlows} from '../src/v2/welcome-court.js';
+import layout from '../src/plan/selected-layout.js';
 
 // The atrium's day and night (src/walk/ship-time.js, src/walk/atrium-mood.js), without a GPU: the ship's clock, the
 // visitor's choice, and what the mood changes and puts back.
@@ -87,7 +89,15 @@ pass('at night the promenade lamps throw warm pools on the floor, one instanced 
 a.stems.getMatrixAt(1,e);a.stems.setMatrixAt(0,e);a.stems.count=1;a.stems.instanceMatrix.needsUpdate=true;run(mood,1);
 assert.equal(lampPools.count,1);lampPools.getMatrixAt(0,e);assert(Math.abs(e.elements[12]-14)<1e-6);
 pass('the floor pools follow the lamps the culling leaves in sight');
-setAtriumView(OUT);assert.equal(inOpenAtrium(),false);run(mood,1);
+// The welcome court's lanterns (atrium-lobby-park.js) light up as well: a warm pool under each, a halo round each head and
+// uplights at the foot of the court's planters, in one additive instanced draw of their own.
+const court=a.scene.getObjectByName('P6_atrium_court_glows'),floor=layout.decks[5].y;
+assert(court?.isInstancedMesh&&court.visible);assert.equal(court.count,welcomeCourtGlows(floor).length);assert.equal(court.count,4+12+32);
+assert.equal(court.material.blending,T.AdditiveBlending);assert.equal(court.material.depthWrite,false);assert.equal(court.material.opacity,1);
+court.getMatrixAt(0,e);assert(Math.abs(e.elements[12]-(WELCOME_COURT.x+COURT_LAMPS[0][0]))<1e-6&&Math.abs(e.elements[14]-(WELCOME_COURT.z+COURT_LAMPS[0][1]))<1e-6);
+assert(e.elements[13]>floor&&e.elements[13]<floor+.05);
+pass('at night the welcome court\'s lanterns throw warm pools, halos and planter uplights, one instanced draw');
+setAtriumView(OUT);assert.equal(inOpenAtrium(),false);run(mood,1);assert.equal(court.visible,false);
 assert.equal(a.mats.glass.emissive.getHex(),glassBase.getHex());assert.equal(a.mats.glass.opacity,.23);assert.equal(a.mats.glass.emissiveIntensity,1);
 assert.equal(a.hemi.intensity,1);assert.equal(a.hemi.color.getHex(),0xeef4ff);assert.equal(a.fill.color.getHex(),0xf2f6ff);assert.equal(a.scene.fog.color.getHex(),fogBase.getHex());
 a.mats.glass.emissive.set(0x123456);run(mood,5);assert.equal(a.mats.glass.emissive.getHex(),0x123456);a.mats.glass.emissive.copy(glassBase);
@@ -96,6 +106,6 @@ clock.setTimeChoice('day',{persist:false});
 setAtriumView(IN);run(mood,400);
 assert.equal(mood.night,0);assert.equal(a.mats.sky.map.image,a.day);assert.equal(a.mats.glass.emissive.getHex(),glassBase.getHex());
 assert.equal(a.mats.soffit.emissiveIntensity,.55);assert.equal(a.mats.lamp.emissiveIntensity,.65);assert(a.hemi.intensity>1);
-assert.equal(a.mats.water.color.getHex(),0x2b9ea6);assert.equal(a.lights.material.opacity,.5);assert.equal(lampPools.visible,false);
+assert.equal(a.mats.water.color.getHex(),0x2b9ea6);assert.equal(a.lights.material.opacity,.5);assert.equal(lampPools.visible,false);assert.equal(court.visible,false);
 pass('switching to Day eases back to the day sky and daylight');
 console.log(checks+' checks passed');
