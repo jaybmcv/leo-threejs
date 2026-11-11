@@ -14,6 +14,7 @@ import {paintTreeShade,SHADE_HALVES,PAVER} from './atrium-daylight.js';
 import {walkCanvas} from '../walk/canvas.js';
 import {phase6Programme} from './phase6-programme.js';
 import {contains,distanceToSegment} from '../plan/geometry-v2.js';
+import {addLakeFood} from './atrium-lake-food.js';
 
 export const gardenMaterial=new T.MeshStandardMaterial({name:'P6_atrium_gardens',color:0xffffff,vertexColors:true,flatShading:true,side:T.DoubleSide,roughness:.82});
 const random=seed=>{let s=seed>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};};
@@ -372,9 +373,9 @@ export function addLawnDetail(out,layout,clearGround,clearWater){
 
 // ---- Lake: lily pads, the waterfall, flowering shrubs -------------------------------------------------------------
 // The waterfall is the lake's focal point (ATRIUM_WATERFALL): a stepped mound of pale faceted rocks standing in the
-// shallow water, two tiers of falling water, foam on the ledge and spray where it meets the lake. It is built in a
-// local frame (x across the fall, the water falling toward +z), then turned by its yaw onto its rock line. Visual only,
-// like the stones and reeds.
+// shallow water, about 7 m tall (G3 option A), with water falling ledge to ledge down six tiers, foam pooled on every
+// ledge and spray where it meets the lake. It is built in a local frame (x across the fall, the water falling toward
+// +z), then turned by its yaw onto its rock line. Visual only, like the stones and reeds.
 const fallFrame=()=>{const{x,z,yaw}=ATRIUM_WATERFALL;return new T.Matrix4().makeRotationY(yaw).setPosition(x,0,z);};
 // Inside the waterfall's footprint plus a margin m: its rocks reach about 4.1 m behind the rock line and 3.8 m in front,
 // the shrubs at its sides about 1.4 m past its width.
@@ -385,34 +386,46 @@ function waterSheet(out,x0,x1,top,bottom,z,lean){
  const g=new T.PlaneGeometry(x1-x0,top-bottom,6,4),p=g.attributes.position,uv=g.attributes.uv;
  for(let i=0;i<p.count;i++){const k=((top-bottom)/2-p.getY(i))/(top-bottom);p.setZ(i,lean*k*k+Math.sin(p.getX(i)*3.1)*.03);uv.setXY(i,uv.getX(i)*(x1-x0)/1.6,uv.getY(i)*(top-bottom)/2.4);}
  g.translate((x0+x1)/2,(top+bottom)/2,z);g.computeVertexNormals();
- out.push(paint(g,q=>new T.Color(0xf4fbfd).lerp(new T.Color(0x8fd0dc),Math.min(1,(top-q.y)/(top-bottom))*.75).toArray()));
+ // White water: near white at the lip, only a little aqua toward the foot.
+ out.push(paint(g,q=>new T.Color(0xffffff).lerp(new T.Color(0xbfe6ee),Math.min(1,(top-q.y)/(top-bottom))*.6).toArray()));
 }
+// The tiers, bottom to top (the last is the crown): the height of each one's ledge, where its front stands (it steps
+// back 0.6 m a tier), how wide its fall is (narrowing upward) and how wide its row of rocks is. The mound stays inside
+// nearWaterfall's footprint: 4.1 m behind the rock line, 3.8 m in front, 1.4 m past the width either side.
+const TIER_TOP=[1.3,2.6,3.8,4.9,5.9,6.9],TIER_FRONT=[1.3,.7,.1,-.5,-1.1,-1.6],FALL_WIDE=[4.2,3.6,3,2.5,2,1.6],MOUND_WIDE=[7.4,6.6,5.8,5,4.2,3.2];
 // Rocks, foam and planting go to `out` (the garden mesh); the falling sheets to `water` (addFallingWater).
 export function addWaterfall(out,water,layout){
  const{width:w,seed=4477}=ATRIUM_WATERFALL,y0=layout.decks[5].y,r=random(seed),Y=v=>y0+v,rock=[],sheets=[],st=(p,size)=>stone(rock,p,size,r,.9,-.25);
- // Rocks: rounded boulders in three tiers, each resting on the one below (the base runs down into the lake bed), the
- // middle of each tier set back so the falls stand clear of it; stones framing the ledge; boulders at the foot.
- const back=x=>Math.abs(x)<2.2?-.7:0;
- for(let k=0;k<6;k++){const x=-w/2+.8+k*(w-1.6)/5;st([x,Y(.5),-.5+back(x)],1.9+r()*.4);}
- for(let k=0;k<5;k++){const x=-w/2+1.3+k*(w-2.6)/4;st([x,Y(2.3),-.9+back(x)],1.4+r()*.4);}
- for(let k=0;k<5;k++)st([-2.8+k*1.4,Y(3.7),-1.5],1.05+r()*.3);
- for(const x of[-1.2,1.2])st([x,Y(3.3),-2.4],1.5);
- for(const x of[-2.7,2.7])st([x,Y(2.6),.9],.6+r()*.2);
- for(let k=0;k<6;k++)st([-w/2+.8+k*(w-1.6)/5+(r()-.5)*.4,Y(.15),2.3+r()*.6],.55+r()*.35);
- // Water: an upper fall from the crown to the ledge, then a wider fall to the lake.
- waterSheet(sheets,-1.3,1.3,Y(4.4),Y(2.6),.5,.5);
- waterSheet(sheets,-2,2,Y(2.65),y0-.01,1.3,.7);
- // Foam on the ledge and at the foot, with spray: small pale stones of water where the fall meets the lake.
- rock.push(paint(new T.CircleGeometry(1.3,12).rotateX(-Math.PI/2).scale(1.2,1,.7).translate(0,Y(2.66),1.1),0xf4fbfd));
- rock.push(paint(new T.CircleGeometry(1.9,14).rotateX(-Math.PI/2).scale(1.3,1,.6).translate(0,y0-.004,2.1),0xeef8f8));
- for(let k=0;k<16;k++)rock.push(paint(new T.IcosahedronGeometry(.12+r()*.14,0).translate((r()-.5)*4,y0+.04+r()*.12,1.8+r()*.9),0xf6fcff));
- // Ferns and flowering shrubs along the crown and the ledge, shrubs at both ends.
- for(let k=0;k<4;k++)fern(rock,[-w/2+1.2+k*(w-2.4)/3,Y(4.3),-1.1],{spread:.9,fronds:6,pairs:4,rnd:r,droop:1.1});
- for(const x of[-3.3,3.3])flowerBush(rock,[x,Y(3.1),-.2],{spread:.8,rnd:r,color:BLOOMS[1],blooms:8});
- for(const[x,y,z]of[[-3.6,1.9,.6],[3.6,1.9,.6],[-2.2,4.5,-1.9],[2.2,4.5,-1.9]])clump(rock,[x,Y(y),z],{r:.7,rnd:r,leaves:2,detail:0,squash:.7,palette:[GREENS.dark,GREENS.mid,GREENS.bright,GREENS.lime]});
- for(const dx of[-w/2-.3,w/2+.3])flowerBush(rock,[dx,y0-.05,1.6],{spread:.9,rnd:r,color:BLOOMS[0],blooms:10});
+ const foam=(rx,rz,y,z,hex=0xf4fbfd)=>rock.push(paint(new T.CircleGeometry(1,14).rotateX(-Math.PI/2).scale(rx,1,rz).translate(0,y,z),hex));
+ // Rocks: each tier a row of rounded boulders whose tops make its ledge and whose fronts stand on its front line (the
+ // lowest runs down into the lake bed), those behind its fall set back so the water stands clear; the lowest three
+ // tiers have a second row behind, filling the mound out to its back.
+ TIER_TOP.forEach((top,k)=>{
+  const size=k?.25+(top-TIER_TOP[k-1])*.8:1.5,span=MOUND_WIDE[k],n=Math.max(2,Math.round(span/(size*1.35))),cy=top-.9*size;
+  for(let i=0;i<n;i++){const x=-span/2+size*.7+i*(span-1.4*size)/(n-1),cz=TIER_FRONT[k]-.9*size-(Math.abs(x)<FALL_WIDE[k]/2+.3?.35:0);
+   st([x+(r()-.5)*.2,Y(cy),cz],size*(.95+r()*.1));if(k<3)st([x+size*.5*(i%2?1:-1),Y(cy-.1),cz-size*1.3],size);}
+ });
+ // Boulders either side of the plunge.
+ for(const s of[-1,1])for(let k=0;k<2;k++)st([s*(FALL_WIDE[0]/2+.5+k*.9+r()*.3),Y(.1),TIER_FRONT[0]+.8+r()*.6],.5+r()*.3);
+ // Water: from the crown down every ledge to the lake, each fall a little wider than the one above it.
+ TIER_TOP.forEach((top,k)=>{const bottom=k?Y(TIER_TOP[k-1]+.04):y0-.01;waterSheet(sheets,-FALL_WIDE[k]/2,FALL_WIDE[k]/2,Y(top+.06),bottom,TIER_FRONT[k]+.12,.25+.05*(Y(top)-bottom));});
+ // Foam pooled on every ledge where the fall above lands, with a few bubbles of white water at its foot; a spring pool
+ // on the crown; and the white plunge, with spray, where the lowest fall meets the lake.
+ for(let k=0;k+1<TIER_TOP.length;k++){const z=(TIER_FRONT[k]+TIER_FRONT[k+1])/2+.12;foam(FALL_WIDE[k+1]/2+.25,(TIER_FRONT[k]-TIER_FRONT[k+1])/2+.08,Y(TIER_TOP[k]+.05),z);
+  for(let i=0;i<6;i++)rock.push(paint(new T.IcosahedronGeometry(.07+r()*.08,0).translate((r()-.5)*FALL_WIDE[k+1],Y(TIER_TOP[k]+.06+r()*.08),TIER_FRONT[k+1]+.18+r()*.3),0xf6fcff));}
+ foam(.8,.45,Y(TIER_TOP.at(-1)+.05),TIER_FRONT.at(-1)-.45);
+ foam(2.6,1.2,y0-.004,TIER_FRONT[0]+1.2,0xeef8f8);
+ for(let k=0;k<22;k++)rock.push(paint(new T.IcosahedronGeometry(.1+r()*.14,0).translate((r()-.5)*FALL_WIDE[0],y0+.04+r()*.14,TIER_FRONT[0]+.25+r()*1.2),0xf6fcff));
+ // Planting on the ledges either side of the falls (clumps and ferns, alternating), ferns along the crown, flowering
+ // shrubs at the mound's foot.
+ for(let k=1;k<TIER_TOP.length;k++)for(const s of[-1,1]){const x=s*(FALL_WIDE[k]/2+.55+r()*.35),z=TIER_FRONT[k]-.35;
+  if((k+s)%2)clump(rock,[x,Y(TIER_TOP[k]+.12),z],{r:.5+r()*.15,rnd:r,leaves:2,detail:0,squash:.7,palette:[GREENS.dark,GREENS.mid,GREENS.bright,GREENS.lime]});
+  else fern(rock,[x,Y(TIER_TOP[k]+.05),z],{spread:.8,fronds:6,pairs:4,rnd:r,droop:1.1});}
+ for(const x of[-.9,.9])fern(rock,[x,Y(TIER_TOP.at(-1)),TIER_FRONT.at(-1)-1.1],{spread:.8,fronds:6,pairs:4,rnd:r,droop:1.1});
+ for(const x of[-MOUND_WIDE[1]/2,MOUND_WIDE[1]/2])flowerBush(rock,[x,Y(TIER_TOP[0]+.1),TIER_FRONT[0]-.8],{spread:.75,rnd:r,color:BLOOMS[1],blooms:8});
+ for(const dx of[-w/2+.2,w/2-.2])flowerBush(rock,[dx,y0-.05,TIER_FRONT[0]+.3],{spread:.9,rnd:r,color:BLOOMS[0],blooms:10});
  const m=fallFrame();for(const g of rock)out.push(g.applyMatrix4(m));for(const g of sheets)water.push(g.applyMatrix4(m));
- return {x:ATRIUM_WATERFALL.x,z:ATRIUM_WATERFALL.z,width:w};
+ return {x:ATRIUM_WATERFALL.x,z:ATRIUM_WATERFALL.z,width:w,height:TIER_TOP.at(-1),tiers:TIER_TOP.length};
 }
 // The falling water: one opaque Basic mesh with a streak texture (one draw), scrolled by atrium-mood.js while the walker
 // is in the open atrium; the distant copy shares the texture. Without a canvas (headless producers) the sheets join the
@@ -426,9 +439,10 @@ function addFallingWater(root,sheets,out){
  o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);return {fallingWater:1};
 }
 // Pale streaks of differing length and brightness on blue-white, wrapping top to bottom so the scroll has no seam.
+// (G3 option A: a whiter ground and more streaks, for white water.)
 function paintFallingWater(c){
- const W=64,H=256,g=c.getContext('2d'),r=random(8181);c.width=W;c.height=H;g.fillStyle='#c6dfe6';g.fillRect(0,0,W,H);
- for(let i=0;i<70;i++){const x=r()*W,w=1+r()*3.5,y=r()*H,len=30+r()*110,a=.35+r()*.6;
+ const W=64,H=256,g=c.getContext('2d'),r=random(8181);c.width=W;c.height=H;g.fillStyle='#d6ebf0';g.fillRect(0,0,W,H);
+ for(let i=0;i<95;i++){const x=r()*W,w=1+r()*3.5,y=r()*H,len=30+r()*110,a=.35+r()*.6;
   for(const dy of[0,-H]){const gr=g.createLinearGradient(0,y+dy,0,y+dy+len);gr.addColorStop(0,`rgba(255,255,255,0)`);gr.addColorStop(.5,`rgba(255,255,255,${a})`);gr.addColorStop(1,`rgba(255,255,255,0)`);g.fillStyle=gr;g.fillRect(x,y+dy,w,len);}}
  return c;
 }
@@ -636,10 +650,11 @@ export function addAtriumGardens(root,layout){
  const clearGround=(x,z,m)=>parts.some(p=>p.part!=='p6_tree_trunk'&&Math.hypot(p.x-x,p.z-z)<p.r+m-.6)||ATRIUM_SIGNATURE_TREES.some(t=>Math.hypot(t.x-x,t.z-z)<1.1);
  const out=[],glow=[],trees=addSignatureTrees(out,layout),grove=addGroveTrees(out,layout),planting=addPlantingBeds(out,layout),stones=addLakeStones(out,layout),decks=addTimberDecks(out,layout),water=[],waterfall=addWaterfall(out,water,layout),lily=addLilyPads(out,layout,clearWater),beds=addTreeBeds(out,layout,clearGround),lawn=addLawnDetail(out,layout,clearGround,clearWater),inlays=addPromenadeInlays(out,layout),trims=addPlanterTrims(out,layout),lanterns=addDeckLanterns(out,glow,y+.03),festoonBulbs=addFestoons(out,glow,y+.03),{cream,...fascias}=addFascias(out,layout);
  const falling=addFallingWater(root,water,out);
+ const lakeFood=addLakeFood(out,layout,nearWaterfall); // G3 + G4 option A: lake edges and market stalls (atrium-lake-food.js)
  const g=mergeGeometries(out);out.forEach(x=>x.dispose());g.computeBoundingBox();g.computeBoundingSphere();
  const o=new T.Mesh(g,gardenMaterial);o.name='P6_atrium_gardens';o.frustumCulled=false;o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);
  const gg=mergeGeometries(glow.map(x=>x.toNonIndexed()));glow.forEach(x=>x.dispose());gg.computeBoundingBox();gg.computeBoundingSphere();
  const lo=new T.Mesh(gg,gardenGlowMaterial);lo.name='P6_atrium_lanterns';lo.frustumCulled=false;lo.userData={...o.userData};root.add(lo);
  const cascades=addHangingGardens(root,layout),downlights=addDownlights(root,layout),soffits=addSoffits(root,layout,cream.concat(walkwayCeilings(layout))),shade=addTreeShade(root,layout,trees);
- return {trees,...grove,...planting,...stones,...decks,waterfall,...falling,...lily,...beds,...lawn,...inlays,...trims,lanterns,festoonBulbs,...fascias,...downlights,...soffits,...shade,staticTriangles:g.attributes.position.count/3,cascades};
+ return {trees,...grove,...planting,...stones,...decks,waterfall,...falling,...lily,...beds,...lawn,...inlays,...trims,lanterns,festoonBulbs,...fascias,...downlights,...soffits,...shade,lakeFood,staticTriangles:g.attributes.position.count/3,cascades};
 }
