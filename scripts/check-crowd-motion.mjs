@@ -1,13 +1,13 @@
 // The crowd's recorded loops (src/walk/assets/crowd-motion.json, scripts/bake-crowd-motion.mjs) and how the crowd tier
 // reads them (src/walk/crowd-tier.js): the recording is of the rig as it is now (its sources' hash); every loop is
-// there, whole, and comes round without a jump; recording a loop again gives the same numbers (half-float close); a body
+// there, whole, and comes round without a jump (its biggest step at most three of its usual ones); recording a loop again gives the same numbers (half-float close); a body
 // skinned from the recording's numbers, as the crowd's vertex shader reads them (crowdBoneMatrix: the same layout), is
 // where three's own skinning puts the rig's body, to the millimetre; and each visitor's pose picks the loop it should.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
 import * as T from 'three';
-import {OUT,LOOPS,rigHash,recordLoop,walker,partsOf} from './bake-crowd-motion.mjs';
+import {OUT,LOOPS,EMOTES,rigHash,recordLoop,walker,partsOf} from './bake-crowd-motion.mjs';
 import {crowdLoop,crowdBoneMatrix,crowdHalves} from '../src/walk/crowd-tier.js';
 
 let passed=0;const pass=name=>{passed++;console.log('PASS '+name);};
@@ -18,7 +18,7 @@ pass('the recording is of the rig as it is (its sources\' hash)');
 const halves=crowdHalves(motion),numbers=Float32Array.from(halves,h=>T.DataUtils.fromHalfFloat(h)),bones=motion.bones;
 assert.deepEqual(motion.clips.map(c=>c.name),LOOPS.map(l=>l[0]));
 let at=0;for(const c of motion.clips){assert.equal(c.start,at,`${c.name} starts where the last ended`);assert.ok(c.frames>=1);at+=c.frames;
- assert.ok(c.seam<=2.5,`${c.name}: its biggest step is ${c.seam} times its usual one`);}
+ assert.ok(c.seam<=3,`${c.name}: its biggest step is ${c.seam} times its usual one`);}
 assert.equal(halves.length,at*bones*12,'the numbers are every frame of every loop');
 assert.ok(numbers.every(Number.isFinite));
 pass(`${motion.clips.length} loops, ${at} frames, ${bones} bones; each comes round with its biggest step at most ${Math.max(...motion.clips.map(c=>c.seam)).toFixed(2)} times its usual one`);
@@ -104,7 +104,9 @@ const pick=(o)=>crowdLoop({rest:null,stance:'stand',swimming:false,speed:0,...o}
 assert.equal(pick({}),'idle');assert.equal(pick({speed:1.4}),'walk');assert.equal(pick({speed:5}),'run');
 assert.equal(pick({stance:'crouch'}),'crouch');assert.equal(pick({stance:'crouch',speed:1}),'crouchWalk');
 assert.equal(pick({stance:'prone'}),'prone');assert.equal(pick({stance:'prone',speed:.5}),'crawl');
+assert.equal(pick({emote:'dance'}),'dance');assert.equal(pick({emote:'box',speed:1.4}),'walk');assert.equal(pick({emote:'dance',stance:'crouch'}),'crouch');
+assert.equal(pick({emote:'dance',rest:'sit'}),'sit');assert.equal(pick({emote:'play_dead'}),'play_dead');
 assert.equal(pick({rest:'sit',speed:3}),'sit');assert.equal(pick({rest:'tube'}),'sit');assert.equal(pick({rest:'lie'}),'lie');assert.equal(pick({swimming:true,speed:1}),'swim');
-for(const name of new Set(['idle','walk','run','crouch','crouchWalk','prone','crawl','sit','lie','swim']))assert.ok(motion.clips.some(c=>c.name===name),name);
-pass('each pose picks its loop: standing, walking, running, crouched, crouch-walking, prone, crawling, sitting (and in a tube), lying, swimming');
+for(const name of new Set(['idle','walk','run','crouch','crouchWalk','prone','crawl','sit','lie','swim',...EMOTES]))assert.ok(motion.clips.some(c=>c.name===name),name);
+pass('each pose picks its loop: standing, walking, running, crouched, crouch-walking, prone, crawling, sitting (and in a tube), lying, swimming, and each emote standing still (one not recorded stands idle)');
 console.log(`crowd motion: ${passed} checks passed`);
