@@ -7,7 +7,7 @@ export {createCartMesh} from './transporter-mesh.js';
 
 // Mars Cat Transporters (from tester feedback): six three-seat carts parked in Deck 1's Cargo maintenance charging
 // bays, numbered MCT-01 to MCT-06. E at the front takes the centred driver's seat (one driver per cart; with
-// Leo live the server says who has it: server/transporters.mjs). W and S drive at walking pace; hold Shift to run.
+// Leo live the server says who has it: server/transporters.mjs). W and S drive (1.75 times the old walking pace); hold Shift to run.
 // A and D steer the front wheels. E gets out, leaving the cart parked where it stopped. E at the back takes a rear seat.
 // It faces backwards and rides along. The carts stay on Deck 1's floor and out of the lifts; room entry uses the
 // actual wall clearance, including Container hold A and Aft spares. Each visitor drives their own copy without Leo live; with it, others see
@@ -19,8 +19,8 @@ const HOME_ROOM='d01-workshop-5';
 // The charging bays' centres, noses toward the aisle, with room behind the rear seats to board and get out.
 const HOME_Z=13.7,HOME_YAW=Math.PI;
 export const MCT={
- // Walking pace forward and slower back; m/s. Run is a multiplier; accel and brake are m/s^2. Steering uses radians.
- speed:2.25,reverse:1.2,runMultiplier:1.5,accel:2.2,brake:5,steer:.6,steerRate:2.2,
+ // Top speed forward (1.75 times the old walking pace) and slower back; m/s. Run is a multiplier; accel and brake are m/s^2. Steering uses radians.
+ speed:3.9375,reverse:2.1,runMultiplier:1.5,accel:3.85,brake:8.75,steer:.6,steerRate:2.2,
  ...CART_WHEELS,
  // The plan: half its width, its rear and front ends; the collision circles' centres along it and their radius.
  half:.75,rear:-2,front:1.3,circles:[.55,-.35,-1.25],radius:.75,
@@ -166,7 +166,7 @@ export function createTransporters({colliders,lifts}){
   },
   // Driving the cart this visitor has: throttle and steering in [-1,1], plus run.
   drive(dt,throttle,steering,running=false){
-   if(!mine)return;for(let left=dt;left>1e-6;left-=.05)driveCart(mine,Math.min(.05,left),throttle,steering,world,running);
+   if(!mine)return;for(let left=dt;left>1e-6;left-=.025)driveCart(mine,Math.min(.025,left),throttle,steering,world,running);
    const now=performance.now();if(linked&&now-sentAt>1000){sentAt=now;link.send({e:'at',i:mine.i,at:mine.pos.toArray().map(v=>Math.round(v*100)/100),yaw:Math.round(mine.yaw*1000)/1000});}
   },
   // Keep a walker (plan point p, body radius r) out of every cart.
