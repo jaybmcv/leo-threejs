@@ -20,7 +20,7 @@ export function saveName(name){try{localStorage.setItem('leo-live-name',name);}c
 
 // on: {status(s), welcome(msg), poses(list), gone(id), lift(id,state), mark(id,at), aboard(n,names,ids), board(b), scored(r), hearts(h), hearted(r),
 // selfie(id,ms), giveaway(g), claimed(r), clown(r), chat(line), said(r), wall(w), stroke(s), painted(r), gym(msg), mcts(carts), tv(t), tvTicket(r),
-// join(msg), cs(msg)}; status
+// join(msg), cs(msg), pinball(msg)}; status
 // is 'connecting', 'live',
 // 'offline', 'full' or 'replaced' (this visitor opened Leo in another tab). Nothing is said before connectLive has
 // returned, so the page's handlers can read the link it returns. opts.pass(): a Leo pass for this
@@ -103,6 +103,8 @@ export function connectLive(url,on,opts={}){
     // The Container Maze's board and a run's result (server/maze.mjs).
     case 'maze':on.maze?.(msg);break;
     case 'treasure':on.treasure?.(msg);break;
+    // Leo Pinball's shared board, a ranked game's ticket and its result (server/pinball.mjs).
+    case 'pinball':if(typeof msg.op==='string')on.pinball?.(msg);break;
     case 'panel':on.panel?.(msg);break;
     // The ship log boards (walk/changes-board.js): every change's hearts (and this visitor's own), and a heart refused.
     case 'hearts':on.hearts?.(msg);break;
@@ -183,6 +185,15 @@ export function connectLive(url,on,opts={}){
   maze(op,extra={},lost){if(op==='finish')finishes.say(live()?ws:null,!stopped,{m:'maze',op,...extra},lost);else if(live())ws.send(JSON.stringify({m:'maze',op,...extra}));},
   panel(msg){if(!live())return false;ws.send(JSON.stringify({...msg,m:'panel'}));return true;},
   treasure(op,extra={}){if(live())ws.send(JSON.stringify({m:'treasure',op,...extra}));},
+  // Leo Pinball (server/pinball.mjs): ask for the board ('board') or a ranked game's ticket ('ticket'); false when
+  // there is no connection to ask on.
+  pinball(op){if(!live())return false;ws.send(JSON.stringify({m:'pinball',op}));return true;},
+  // A ranked game's finish: its button log in pieces the server takes (1 KB a message), then the finish itself.
+  pinballFinish({ticket,log,steps,score}){
+   if(!live())return false;const PART=900,n=Math.ceil(log.length/PART);
+   for(let i=0;i<n;i++)ws.send(JSON.stringify({m:'pinball',op:'part',t:ticket,i,d:log.slice(i*PART,(i+1)*PART)}));
+   ws.send(JSON.stringify({m:'pinball',op:'finish',t:ticket,n,steps,score}));return true;
+  },
   // The ship log boards: ask for the hearts; give (on) or take back a heart for a change.
   hearts(){if(live())ws.send(JSON.stringify({m:'hearts'}));},
   heart(change,on){if(live())ws.send(JSON.stringify({m:'heart',change,on:!!on}));},

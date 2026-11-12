@@ -80,3 +80,26 @@ export function drawBackglass(x,w,h){
  const glow=(t,y,size,color)=>{x.font=`800 ${size}px ${FONT.display}`;x.shadowColor=color;x.shadowBlur=size*.4;x.fillStyle=color;x.fillText(t,w/2,y);x.shadowBlur=0;};
  glow('LEO',h*.2,h*.2,C.orange);glow('PINBALL',h*.38,h*.13,C.teal);
 }
+
+// A score with thousands commas.
+export const commas=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+// The shared high-score board on the wall beside the machine, `w` by `h` pixels. `board`: {status:'loading'|'ok'|
+// 'offline', top:[{name, score}]}, as Leo live gives it (server/pinball.mjs).
+export function drawScoreBoard(x,w,h,board){
+ const u=h/100,top=board?.top||[],status=board?.status||'offline';
+ x.fillStyle='#0a0e18';x.fillRect(0,0,w,h);x.fillStyle=C.orange;x.fillRect(0,u*15.5,w,u*.8);
+ x.strokeStyle=C.teal;x.lineWidth=u*.8;x.strokeRect(u*.6,u*.6,w-u*1.2,h-u*1.2);
+ x.textBaseline='middle';
+ const text=(s,tx,ty,size,color,align='left',weight=700,font=FONT.mono)=>{x.font=`${weight} ${size*u}px ${font}`;x.fillStyle=color;x.textAlign=align;x.fillText(s,tx,ty,w-u*8);};
+ text('LEO PINBALL',u*5,u*8.5,8,C.orange,'left',800,FONT.display);text('HIGH SCORES',w-u*5,u*8.5,7,C.teal,'right',800,FONT.display);
+ if(status==='ok'&&top.length){
+  top.slice(0,10).forEach((r,i)=>{const y=u*(23+i*6.9);
+   if(i%2===0){x.fillStyle='rgba(47,214,197,.07)';x.fillRect(u*3,y-u*3.3,w-u*6,u*6.6);}
+   text(String(i+1).padStart(2,' '),u*5,y,4.6,i?C.dim:C.gold);text(String(r.name).toUpperCase().slice(0,18),u*14,y,4.6,i?C.text:C.gold);
+   text(commas(r.score),w-u*5,y,4.6,i?C.text:C.gold,'right');});
+ }else{
+  const [a,b]=status==='loading'?['CONNECTING…','THE SHARED BOARD IS ON ITS WAY']:status==='ok'?['NO SCORES YET','BE THE FIRST ON THE BOARD']:['BOARD UNAVAILABLE','THE GAME STILL PLAYS: SCORES STAY ON YOUR DEVICE'];
+  text(a,w/2,u*48,7,status==='offline'?C.gold:C.text,'center',800,FONT.display);text(b,w/2,u*60,3.6,C.dim,'center');
+ }
+ text('POSTED BY DISCORD-CONNECTED PLAYERS · EVERY GAME CHECKED',w/2,u*94,3,C.dim,'center',600);
+}

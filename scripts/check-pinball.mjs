@@ -75,5 +75,26 @@ const inside=g=>{const b=g.b;return Number.isFinite(b.x)&&Number.isFinite(b.y)&&
 {const play=seed=>{const g=newGame(seed),input=flipper(plunge(.8));run(g,60,input);return JSON.stringify([g.score,g.b.x,g.b.y,g.ball]);};
  expect(play(21)===play(21),'the same seed and the same buttons play the same game');}
 
+// Ranked games (replay.js): the page's button log plays the same game again from the seed, as Leo live replays it to
+// check a score; a log that was tampered with, cut short or run on past the end doesn't.
+{const {recorder,replay,decode}=await import('../src/walk/pinball/replay.js');
+ // (a player at the flippers for the first 40 s, who then lets the balls go)
+ const record=seed=>{const g=newGame(seed),rec=recorder(),flip=flipper(plunge(.7)),idle=plunge(.7);
+  while(g.phase==='play'&&rec.steps<600/STEP){const i=g.t<40?flip(g):idle(g);rec.step(i);step(g,i);}return {g,rec};};
+ const {g,rec}=record(31);
+ expect(g.phase==='over'&&g.score>0&&rec.log.length>0&&decode(rec.log)?.length>10,`a recorded game: ${g.score} in ${(rec.steps*STEP).toFixed(0)} s, ${rec.log.length} characters of log`);
+ const same=await replay(31,rec.log,rec.steps);
+ expect(same?.score===g.score,'its log replayed from its seed scores the same');
+ const other=await replay(32,rec.log,rec.steps);
+ expect(other?.score!==g.score,'the same log on another seed does not reach that score');
+ // One button change moved by a step.
+ const changes=decode(rec.log),k=changes.findIndex(([d],i)=>i>3&&d>2);changes[k][0]-=1;changes[k+1][0]+=1;
+ const nudged=changes.map(([d,b])=>d.toString(36)+'ABCDEFGH'[b]).join(''),moved=await replay(31,nudged,rec.steps);
+ expect(moved?.score!==g.score,'moving one flipper press by a single step changes the game');
+ expect(await replay(31,rec.log,rec.steps-1)===null&&await replay(31,rec.log,rec.steps+480)===null,'a game cut short, or run on past its end, does not replay');
+ expect(decode('1A2B!')===null&&decode('5A0B')===null&&decode('x'.repeat(200000)+'A')===null,'a log that is not one (bad letters, two changes on one step, too long) is refused');
+ let paused=0;const slow=await replay(31,rec.log,rec.steps,{pause:async()=>{paused++;},every:5000});
+ expect(slow?.score===g.score&&paused>3,`a replay that pauses as it goes (${paused} pauses) scores the same`);}
+
 console.log(problems.length?`FAIL: ${problems.length} problem(s)`:'PASS');
 process.exitCode=problems.length?1:0;

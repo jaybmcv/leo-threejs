@@ -3,17 +3,21 @@ import {walkCanvas,hasWalkCanvas} from '../canvas.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {W,H} from './rules.js';
-import {drawTable,drawBackglass} from './art.js';
+import {drawTable,drawBackglass,drawScoreBoard} from './art.js';
+import {PINBALL} from './place.js';
 
 // The pinball machine in the Deck 16 Recreation Hall (from tester feedback): against the hall's end wall under its name,
 // on the hall's centre line, facing the door down the aisle, past the end of Paw Pool's table and clear of the tables
 // either side. A navy cabinet on chrome legs, the game's own table under the glass (art.js), a lit backglass, flipper
 // buttons and a plunger. E in front opens the game (game.js). Everything is the walk's own: the ship's models and
 // exports are unchanged. Room frame (Area_d16-recreation-4): the end wall's face at x=25.84 (its name panel above
-// 2.2 m), the aisle between z=±2, the nearest tables' chairs out to x=16.7 at z=±7.75.
-const ROOM='Area_d16-recreation-4',WALL=25.84,Z=0,REACH=1.3;
+// 2.2 m), the aisle between z=±2, the nearest tables' chairs out to x=16.7 at z=±7.75 (place.js).
+// Beside it on the same wall, flat to it and under the name panel, the shared high-score board (Leo live's).
+const ROOM='Area_'+PINBALL.room,WALL=PINBALL.wall,Z=PINBALL.z,REACH=1.3;
 // The cabinet: width, length, the body's depth and its tilt (back up), the backbox's width, height and depth.
-const CAB={w:.74,l:1.36,body:.36,tilt:.07,y:.76,box:{w:.76,h:.74,d:.22}};
+const CAB={w:.74,l:PINBALL.length,body:.36,tilt:.07,y:.76,box:{w:.76,h:.74,d:.22}};
+// The board: its centre across the wall from the machine's (toward the hall's +z side) and up it, its size, its canvas.
+const BOARD={x:1.55,y:1.55,w:1.3,h:1,px:[1040,800]};
 
 function texture(w,h,draw){const c=walkCanvas();c.width=w;c.height=h;draw(c.getContext('2d'),w,h);const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.anisotropy=8;return t;}
 
@@ -31,7 +35,8 @@ export function createPinballMachine(ship){
   orange:mat('orange',0xf85800,{emissive:0xf85800,emissiveIntensity:.35}),teal:new T.MeshBasicMaterial({name:'Pinball_neon',color:0x2fd6c5,toneMapped:false}),
   glass:new T.MeshStandardMaterial({name:'Pinball_glass',color:0xd8f2ff,transparent:true,opacity:.12,roughness:.05,metalness:.2,depthWrite:false}),
   field:new T.MeshBasicMaterial({name:'Pinball_table',map:texture(W*4,H*4,(x)=>drawTable(x,4)),toneMapped:false}),
-  back:new T.MeshBasicMaterial({name:'Pinball_backglass',map:texture(512,512,drawBackglass),toneMapped:false})};
+  back:new T.MeshBasicMaterial({name:'Pinball_backglass',map:texture(512,512,drawBackglass),toneMapped:false}),
+  board:new T.MeshBasicMaterial({name:'Pinball_scores',map:texture(...BOARD.px,(x,w,h)=>drawScoreBoard(x,w,h,{status:'loading'})),toneMapped:false})};
  const parts=new Map();
  const piece=(m,geo,tilted=false)=>{if(tilted)geo.applyMatrix4(tilt);geo.applyMatrix4(at);(parts.get(m)||parts.set(m,[]).get(m)).push(geo.index?geo.toNonIndexed():geo);};
  const box=(m,[w,h,d],[x,y,z],tilted)=>piece(m,new T.BoxGeometry(w,h,d).translate(x,y,z),tilted);
@@ -60,6 +65,10 @@ export function createPinballMachine(ship){
  box(M.body,[bw,bh,bd],[0,by,back.z]);box(M.dark,[bw-.06,bh-.06,.01],[0,by,back.z+bd/2+.002]);
  piece(M.back,new T.PlaneGeometry(bw-.08,bh-.08).translate(0,by,back.z+bd/2+.008));
  box(M.teal,[bw+.01,.015,.015],[0,by+bh/2+.008,back.z+bd/2]);for(const s of [-1,1])box(M.teal,[.015,bh,.015],[s*(bw/2+.008),by,back.z+bd/2]);
+ // The score board: a navy frame 3 cm off the wall's face, the board's picture on it (not solid: flat to the wall).
+ const face=-l/2-.02;
+ box(M.body,[BOARD.w+.08,BOARD.h+.08,.03],[BOARD.x,BOARD.y,face+.015]);
+ piece(M.board,new T.PlaneGeometry(BOARD.w,BOARD.h).translate(BOARD.x,BOARD.y,face+.032));
  for(const [m,gs] of parts){const o=new T.Mesh(mergeGeometries(gs),m);o.name=m.name;o.castShadow=m===M.body||m===M.chrome;o.receiveShadow=m!==M.teal&&m!==M.back&&m!==M.field;gs.forEach(g=>g.dispose());group.add(o);}
  // Solid as one plain box round the cabinet and its backbox.
  {const geo=new T.BoxGeometry(w+.04,by+bh/2,l).translate(0,(by+bh/2)/2,0).applyMatrix4(at);solid.add(new T.Mesh(geo));}
@@ -67,6 +76,8 @@ export function createPinballMachine(ship){
  // Where a player stands to play: in front of the lockdown bar.
  const spot=group.localToWorld(new T.Vector3(0,0,l/2+.4).applyMatrix4(at)),floor=spot.y;
  return {group,solid,spot,
+  // The wall board shows `board` ({status, top}: game.js's board) from now on.
+  board:{show(board){const t=M.board.map;drawScoreBoard(t.image.getContext('2d'),t.image.width,t.image.height,board);t.needsUpdate=true;}},
   near(p){if(Math.abs(p.y-floor)>1.5)return null;return Math.hypot(p.x-spot.x,p.z-spot.z)<REACH?{kind:'pinball',label:'Play Leo Pinball'}:null;},
  };
 }
