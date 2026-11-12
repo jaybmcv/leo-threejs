@@ -5,8 +5,9 @@
 // where it comes round again (record, below). What is kept of a frame is each bone's
 // skinning matrix (the bone's world matrix times its inverse bind) for a body at the origin facing yaw 0, its top three
 // rows, as half floats: the crowd's vertex shader skins with them and the instance's own place and turn.
-// The file carries the hash of the sources the rig and this recording are made from (RIG): check-crowd-motion.mjs fails
-// when they change and it was not recorded again.
+// With it, lighter meshes for the farther (crowd-lod.mjs: each of the body's parts' index, simplified). The file carries
+// the hash of the sources the rig and this recording are made from (RIG): check-crowd-motion.mjs fails when they change
+// and it was not recorded again.
 //   node scripts/bake-crowd-motion.mjs   (writes src/walk/assets/crowd-motion.json; prints each loop and its seam)
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -14,12 +15,13 @@ import {createHash} from 'node:crypto';
 import {loadImage} from '@napi-rs/canvas';
 import * as T from 'three';
 import {build} from './native-bundle.mjs';
+import {crowdLods} from './crowd-lod.mjs';
 
 export const OUT='src/walk/assets/crowd-motion.json';
 const FPS=15,EMOTE_FPS=10,STEP=1/60,WARM_S=3,MIN_S=.5,CROSS_S=.3,EMOTE_CROSS_S=.6;
-// What the recording depends on: the rig, the walker round it, its motion and this script.
+// What the recording depends on: the rig, the walker round it, its motion, this script and the lighter meshes'.
 export const RIG=['src/walk/avatar.js','src/walk/rig-pace.js','src/walk/solved-pose.js','src/walk/merged-skin.js','src/vendor/cosmo/DLCat.js',
- 'src/walk/assets/ecctrl-locomotion.json','src/walk/assets/cosmo-emotes.json','scripts/bake-crowd-motion.mjs'];
+ 'src/walk/assets/ecctrl-locomotion.json','src/walk/assets/cosmo-emotes.json','scripts/bake-crowd-motion.mjs','scripts/crowd-lod.mjs'];
 const RIG_DIRS=['src/walk/vr'];
 // The loops: [name, state for the walker's update, seconds recorded (the longest a loop may be)], the speed (m/s) a
 // moving loop was recorded at, which the crowd scales its pace by, and its frames a second (FPS; the emotes, standing,
@@ -107,7 +109,9 @@ export async function bake(){
  const bones=loops[0].bones,total=loops.reduce((s,l)=>s+l.frames.length,0),half=new Uint16Array(total*bones*12);let at=0;
  const clips=loops.map(l=>{const start=at/(bones*12);for(const f of l.frames)for(let k=0;k<f.length;k++)half[at++]=T.DataUtils.toHalfFloat(f[k]);
   return {name:l.name,start,frames:l.frames.length,speed:l.speed,fps:l.fps,seam:+l.seam.toFixed(6)};});
- return {version:1,rig:await rigHash(),fps:FPS,bones,clips,data:Buffer.from(half.buffer).toString('base64')};
+ const {w}=await make(),lods=await crowdLods(partsOf(w));w.dispose?.();
+ for(const l of lods)console.log(`lighter, to ${(l.error*1000).toFixed(1)} mm: ${l.parts.map(p=>`${p.name} ${p.triangles}`).join(', ')}`);
+ return {version:1,rig:await rigHash(),fps:FPS,bones,clips,data:Buffer.from(half.buffer).toString('base64'),lods};
 }
 
 if(process.argv[1]?.replaceAll('\\','/').endsWith('scripts/bake-crowd-motion.mjs')){

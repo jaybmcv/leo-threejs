@@ -127,8 +127,20 @@ for(let i=0;i<10;i++)frame({solveEvery:0});
  assert.equal(g.mesh.material.customProgramCacheKey(),'own-key|crowd-skin');
  pass('a draw made later keeps the visitor\'s own shader hooks and their marks (film look, corner shading), its skin after them');}
 
-// The shader: three's own standard and physical vertex shaders take the crowd's skinning.
-{for(const lib of ['standard','physical']){const v=crowdShader(T.ShaderLib[lib].vertexShader);
+// A phone's (lean): each part drawn in Lambert with the visitor's own colour map, front faces only, its own hooks and
+// the crowd's skin on Lambert's shader.
+{const scene2=new T.Scene(),lean=createCrowdDraw(scene2,{slots:2,lean:true}),w=await createWalker(createDLCat,motion,{mergeDraws:true,cacheBones:true});
+ scene2.add(w.holder);w.holder.position.set(0,0,-6);lean.add(w);
+ for(let i=0;i<3;i++){w.update(1/60,{...base,solveEvery:0});lean.update(camera,{});scene2.updateMatrixWorld();renderer.info.render.frame=++n;for(const g of lean.groups.values())if(g.mesh.visible)g.mesh.onBeforeRender(renderer);}
+ const groups=[...lean.groups.values()].filter(g=>g.mesh.visible);assert.ok(groups.length>=3,`${groups.length} draws`);
+ for(const g of groups){const mat=g.mesh.material,own=lean.members[0].parts.find(p=>p.material.name===mat.name).material;
+  assert.ok(mat.isMeshLambertMaterial&&mat.side===T.FrontSide&&!mat.normalMap,mat.name);assert.ok(mat.color.equals(own.color));assert.equal(mat.map?.image,own.map?.image);
+  const shader={vertexShader:T.ShaderLib.lambert.vertexShader,uniforms:{}};mat.onBeforeCompile(shader,null);
+  assert.ok(shader.vertexShader.includes('crowdBone( skinIndex.x )')&&shader.uniforms.crowdBones);assert.ok(mat.customProgramCacheKey().endsWith('|crowd-skin'));}
+ pass(`a phone's draws (lean): ${groups.length} parts in Lambert, front faces, each visitor's own colour map, skinned by the crowd`);}
+
+// The shader: three's own standard, physical and Lambert vertex shaders take the crowd's skinning.
+{for(const lib of ['standard','physical','lambert']){const v=crowdShader(T.ShaderLib[lib].vertexShader);
   assert.ok(v.includes('crowdBone( skinIndex.x )')&&v.includes('transformed = skinned.xyz')&&!v.includes('#include <skinning_vertex>'));}
- assert.throws(()=>crowdShader('void main(){}'));pass('three\'s standard and physical vertex shaders take the crowd\'s skinning chunks');}
+ assert.throws(()=>crowdShader('void main(){}'));pass('three\'s standard, physical and Lambert vertex shaders take the crowd\'s skinning chunks');}
 console.log(`crowd draw: ${passed} checks passed`);

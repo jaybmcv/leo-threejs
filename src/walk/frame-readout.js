@@ -2,15 +2,16 @@
 // shown). Twice a second they show, over the last five seconds: frames a second; frame times (median, 95th and 99th
 // percentile, worst); the frame's main-thread time and, where the browser can time the GPU
 // (EXT_disjoint_timer_query_webgl2), its GPU time; frames over 50 ms; the main pass's draws and triangles; the drawing
-// size, pixel ratio and JS heap; the multisampling and depth buffer it draws with (pixel-switches.js); and the GPU's
-// name. The choice is remembered on this browser. Hidden, they cost nothing a frame.
+// size, pixel ratio and JS heap; the multisampling and depth buffer it draws with (pixel-switches.js); the GPU's name;
+// and extra(), if given, a line of the page's own (the walk's: how much of the crowd it draws, remotes.js crowdLine).
+// The choice is remembered on this browser. Hidden, they cost nothing a frame.
 import {pixelLine} from './pixel-switches.js';
 const STORAGE_KEY='leo-walk-stats',WINDOW_MS=5000,PAINT_MS=500,HITCH_MS=50;
 const at=(sorted,p)=>sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*p))]:0;
 const sortedOf=(list,key)=>list.map(e=>e[key]).filter(v=>v!=null).sort((a,b)=>a-b);
 const ms=v=>v<10?v.toFixed(1):v.toFixed(0);
 
-export function createFrameReadout(renderer){
+export function createFrameReadout(renderer,{extra=null}={}){
  let shown=new URLSearchParams(location.search).get('fps')==='1';
  try{shown||=localStorage.getItem(STORAGE_KEY)==='1';}catch{/* storage blocked: start hidden */}
  const gl=renderer.getContext(),timer=gl.getExtension('EXT_disjoint_timer_query_webgl2'),debug=gl.getExtension('WEBGL_debug_renderer_info');
@@ -42,7 +43,8 @@ export function createFrameReadout(renderer){
    `${gl.drawingBufferWidth}×${gl.drawingBufferHeight} ×${renderer.getPixelRatio().toFixed(2)}   heap ${heap}   last ${WINDOW_MS/1000} s`,
    pixels,
    gpuName,
-  ].join('\n');
+   extra?.(),
+  ].filter(line=>line!=null&&line!=='').join('\n');
  };
  const mount=globalThis.__leoPreparedBuild?null:document.querySelector('#tools-extra')||document.querySelector('.tools');let button=null;
  const api={
