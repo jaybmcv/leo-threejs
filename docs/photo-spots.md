@@ -20,10 +20,10 @@ Clearances:
 - **The Great Cat Tree.** The marker is on the port edge of the felt path from the lift tower to the tree's ring, forward of the Toybox Park sign. It is 4.2 m from the nearest solid and off the island, the boardwalk and the den entrance. The lens is past the park sign, so the sign stays out of the photo.
 - **Hydro-Nip aquarium.** The marker is 2 m in front of the aquarium glass. It is clear of the hammock dome and the jaguar throat aft of it, and 2 m aft of the end of the Munchies Converger's counter, so the counter stays clear. The arcade, the Haze Maze and the dome's way in are untouched.
 
-Walk links (open on the walk page; the first stands on the marker facing the camera, the second stands at the lens facing the marker):
+Walk links (layout 2 coordinates, so each carries `lv=2`: a link without it is read as layout 1 and moved; open on the walk page; the first stands on the marker facing the camera, the second stands at the lens facing the marker):
 
-- Crown lounge windows: `walk.html?at=-198,120.3,0&yaw=270&pitch=0` · `walk.html?at=-203.8,120.3,0&yaw=90&pitch=-10`
-- The Great Cat Tree: `walk.html?at=171,-19.7,-2.2&yaw=288&pitch=0` · `walk.html?at=165.6,-19.7,-0.4&yaw=108&pitch=-5`
-- Hydro-Nip aquarium: `walk.html?at=-103.5,24.3,-30&yaw=179&pitch=0` · `walk.html?at=-103.4,24.3,-35.4&yaw=359&pitch=-8`
+- Crown lounge windows: `walk.html?lv=2&at=-198,120.3,0&yaw=270&pitch=0` · `walk.html?lv=2&at=-203.8,120.3,0&yaw=90&pitch=-10`
+- The Great Cat Tree: `walk.html?lv=2&at=171,-19.7,-2.2&yaw=288&pitch=0` · `walk.html?lv=2&at=165.6,-19.7,-0.4&yaw=108&pitch=-5`
+- Hydro-Nip aquarium: `walk.html?lv=2&at=-103.5,24.3,-30&yaw=179&pitch=0` · `walk.html?lv=2&at=-103.4,24.3,-35.4&yaw=359&pitch=-8`
 
-The original booth is still the crown lounge's group-photo camera at x -263.5 (`walk.html?at=-261.75,120.3,0&yaw=270`).
+The original booth is still the crown lounge's group-photo camera at x -263.5 (`walk.html?lv=2&at=-261.75,120.3,0&yaw=270`).
