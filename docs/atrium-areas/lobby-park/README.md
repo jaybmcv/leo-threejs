@@ -48,8 +48,8 @@ merge easily:
   parts.
 - `src/v2/atrium-gardens.js`: `addLobbyPark(out,glow,layout,clearGround,parts)` in `addAtriumGardens` adds everything
   drawn to the existing garden mesh (`P6_atrium_gardens`) and the lamp glow to the existing lantern draw
-  (`P6_atrium_lanterns`, material `P6_atrium_glow`). That draw is one plain colour by day and night; the lanterns'
-  night light is separate, see [Lantern cages](#lantern-cages-concept-b).
+  (`P6_atrium_lanterns`, material `P6_atrium_lantern_glow`, vertex-coloured). That draw is the same by day and night;
+  the lanterns' night light is separate, see [Lantern cages](#lantern-cages-concept-b).
 - `src/v2/atrium-architecture.js` and its `.authoring.js` twin: one branch next to the terrace-glass hook hides
   collision-only fit-out parts (`P4_p6_*_collider`), with `phase6ArchitectureSource` so culling, phone merging and
   furnishing batches leave them hidden.
@@ -217,7 +217,7 @@ The lantern stands 4.45 m tall in all; its dark metal is `0x2a2623`, in `P6_atri
 | Piece | Details |
 | --- | --- |
 | Base | A flared square cup and a 0.32 m base plate. |
-| Glass core | 0.48 m tall, widening from 0.23 to 0.29 m. It sits in the lantern draw `P6_atrium_lanterns` and glows cream, like every lantern there. |
+| Glass core | 0.48 m tall, widening from 0.23 to 0.29 m. It sits in the lantern draw `P6_atrium_lanterns` and glows amber; see [Warmer amber](#warmer-amber). |
 | Cage | A bar up each corner, a rim at the top and bottom of the glass, and a thin mullion down each face. |
 | Roof | An eaved pyramid roof with a ball-and-spike finial. |
 
@@ -227,8 +227,8 @@ the walk lights from.
 ### The night light, and the mechanism chosen
 
 **What the existing mechanisms do:**
-- **The lantern draw** that the deck lanterns and festoon bulbs share has no night mechanism. It is one opaque Basic
-  colour, the same by day and by night. So soft pools, halos and uplights cannot live in it: they would show by day as
+- **The lantern draw** that the deck lanterns and festoon bulbs share has no night mechanism. It is opaque and Basic,
+  the same by day and by night. So soft pools, halos and uplights cannot live in it: they would show by day as
   solid shapes.
 - **The atrium's one night-only light** is the promenade lamps' floor pools (`P6_atrium_lamp_pools` in
   `atrium-mood.js`). It is an additive instanced draw, shown only at night, so by day it costs nothing. But it is a
@@ -302,12 +302,25 @@ All nine run in `leo-build-2` on the r187 build of 9d55aa18, and all pass:
   It equals origin/main's, because the parts are identical. No PVS is baked.
 - No source re-pinning was needed.
 
-### Not done
+### Warmer amber
 
-**The lantern cores still glow cream rather than amber.** The concept's cores and light are more golden.
-- The cores are in the shared lantern draw, which has one colour and no vertex colours on main.
-- Giving the court's cores their own warm colour needs that draw to take vertex colours. The atrium-stage job's shell
-  refine does exactly that: `P6_atrium_lantern_glow`, vertex-coloured, with white for pieces without a colour.
-- Once that lands, the cores can take an amber colour in one line.
-- The glows' tint could also go warmer, from the uniform 0.85 / 1 / 1 to an amber per-instance colour, which is a change
-  in `atrium-mood.js` only.
+Jay asked for the lantern glows to be warmer amber; 9d55aa18's cores and light were cream. 145ae4a3 changes both:
+
+- **The night light** (pools, halos, uplights) is tinted amber `0xffc878` in `atrium-mood.js`, scaled by the same
+  strengths (0.85 / 1 / 1). On the pool picture's cream, it reads amber-orange on the paving.
+- **The cores** glow amber day and night. The lantern draw now has its own vertex-coloured material,
+  `P6_atrium_lantern_glow`: each piece's colour multiplies the plain cream glow, and pieces without one stay plain cream.
+  The court's cores carry `[1.3, 0.66, 0.24]`; all other lanterns, the festoon bulbs and the downlights are unchanged.
+- **Merging with the stage job:** those `atrium-gardens.js` lines are copied word for word from the atrium-stage
+  shell refine (5b8049a9, `claude/atrium-stage-shell`). A trial `git merge-tree` of the two branches is clean.
+
+![lobby-in and lobby-back, cream (9d55aa18) and amber (145ae4a3): night (top) and day (bottom)](contact-lanterns-amber.jpg)
+
+![lobby-in at night, close: cream (9d55aa18) and amber (145ae4a3)](contact-lanterns-amber-night-close.jpg)
+
+![lobby-in by day, the lantern heads close: cream (9d55aa18) and amber (145ae4a3)](contact-lanterns-amber-day-close.jpg)
+
+**Cost:** none. Draws and triangles are the same as 9d55aa18 at both views, by day (876, 488) and by night (878, 489).
+
+**Checks:** all nine pass on the r187 build of 145ae4a3, and the atrium PVS key is the same as above.
+`check:atrium-time` now also holds every court glow amber, not cream.
