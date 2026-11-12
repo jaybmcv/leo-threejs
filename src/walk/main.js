@@ -83,6 +83,7 @@ import {createArrivalMood} from './arrival-mood.js';
 import {Marks} from './marks.js';
 import {createChat} from './chat.js';
 import {createHostess} from './hostess.js';
+import {createPortableSelfie} from './portable-selfie.js';
 import {createPhotoSpots} from './photo-spots.js';
 import {wearHat,fit,FIT} from './hat.js';
 import {createYarn,YARN_SPOTS} from './yarn.js';
@@ -237,6 +238,8 @@ addEventListener('resize',resize);resize();
 
 deferRoomFrames();const ship=createShip({deferExterior:true,lazyInterior:true});scene.add(ship.root);
 const colliders=new Colliders();
+// The Camera button's portable selfie lens (portable-selfie.js): drawn in place of the walker's view while its panel is open.
+const portable=createPortableSelfie();
 // The ship map image is small; it loads alongside the models.
 const shipMap=new ShipMap(__MAP_URL__);shipMap.ready.then(()=>{$('minimap-button').hidden=false;}).catch(()=>{});
 
@@ -780,7 +783,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={get portable(){return portable;},registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -889,7 +892,8 @@ renderer.setAnimationLoop(()=>{
  // Spraying the graffiti wall, the view squares up to it (graffiti.js), and its paint catches up.
  graffiti?.update(camera,now);
  // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle), or is off at the wall.
- walker.holder.visible=follow.mode!=='first'&&follow.current>.75&&!graffiti?.active;
+ walker.holder.visible=portable.active||(follow.mode!=='first'&&follow.current>.75&&!graffiti?.active);
+ if(portable.active)portable.point(walker.holder.position,walker.holder.rotation.y,WALKER.height*.6,colliders);
  capsuleView(!!resting?.stand&&resting.t===1&&follow.mode==='first');
  cull(p);
  remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
@@ -929,10 +933,12 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
- const shot=booth.update(now),spotShot=photoSpots?.update(now)||shot,left=shot.left||spotShot.left;$('countdown').hidden=!left;if(left)$('countdown').textContent=String(left);
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});draw(portable.active?portableView():camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
+ const shot=booth.update(now),spotShot=photoSpots?.update(now)||shot,camShot=portable.update(now),left=shot.left||spotShot.left||camShot.left;$('countdown').hidden=!left;if(left)$('countdown').textContent=String(left);
  if(shot.due)takePhoto();
  if(spotShot!==shot&&spotShot.due)takePhoto(photoSpots);
+ if(portable.active)$('camera-timer').textContent=camShot.left?'Photo in '+camShot.left+'…':'';
+ if(camShot.due)takePhoto(portable);
 });
 // One frame of the ship from `view`: the sky, the haze past the far plane, then the ship.
 function draw(view){
@@ -947,10 +953,10 @@ function takePhoto(lens=booth){
  const canvas=renderer.domElement,shown=walker.holder.visible,spot=lens===photoSpots?photoSpots.spot:null;walker.holder.visible=true;photoSpots?.show(false);
  lens.aim(canvas.width,canvas.height);lens.camera.updateMatrixWorld();draw(lens.camera);
  const copy=document.createElement('canvas');copy.width=canvas.width;copy.height=canvas.height;copy.getContext('2d').drawImage(canvas,0,0);
- photoPlace=spot?{frame:spot.place,name:spot.name,slug:spot.id}:{frame:'CROWN LOUNGE',name:'Crown lounge',slug:'crown-lounge'};
+ photoPlace=lens===portable?portable.place(describe(walker.holder.position).toUpperCase()):spot?{frame:spot.place,name:spot.name,slug:spot.id}:{frame:'CROWN LOUNGE',name:'Crown lounge',slug:'crown-lounge'};
  lastPhoto={place:photoPlace.slug,lens:lens.camera.position.toArray(),at:walker.holder.position.toArray()};
  photoSource=copy;photoNames=selfieNames(lens.camera);photoFilename=`leo-${photoPlace.slug}-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.jpg`;$('photo-names').checked=true;
- walker.holder.visible=shown;photoSpots?.show(true);draw(camera);
+ walker.holder.visible=shown;photoSpots?.show(!portable.active);draw(camera);
  const flash=$('photo-flash');flash.hidden=false;flash.getAnimations?.().forEach(a=>a.cancel());flash.animate?.([{opacity:.85},{opacity:0}],{duration:450}).finished.then(()=>{flash.hidden=true;},()=>{});
  renderPhoto(true);
 }
@@ -990,6 +996,23 @@ $('selfie-backdrop').addEventListener('change',e=>{booth.setBackdrop(Number(e.ta
 $('selfie-angle').addEventListener('change',e=>booth.setAngle(Number(e.target.value)));
 $('selfie-start').addEventListener('click',()=>{closePanels();if(!booth.counting){live?.selfie();booth.start();}});
 $('photo-names').addEventListener('change',()=>{if(photoSource)renderPhoto();});
+// The Camera button (portable-selfie.js): the preview is the ship drawn through the lens, cropped 2:1 as the photo is, with
+// its controls under it. The cat stays where it is (input is off, as in any sheet) and Escape or Close puts everything back.
+function portableView(){const c=renderer.domElement;portable.aim(c.width,c.height);return portable.camera;}
+function openCamera(){
+ if(!lifts)return;closePanels();portable.open();
+ for(const key of ['side','dist','height','fov']){$('camera-'+key).value=portable.settings[key];$('camera-'+key+'-out').textContent=$('camera-'+key).value;}
+ $('camera-timer-set').value=String(portable.settings.timer);$('camera-timer').textContent='';
+ $('camera-panel').hidden=$('camera-frame').hidden=false;document.body.classList.add('camera-mode');photoSpots?.show(false);input.enabled=false;input.down.clear();$('camera-capture').focus();
+}
+function closeCamera(){
+ if(!portable.active)return;portable.close();$('camera-panel').hidden=$('camera-frame').hidden=true;document.body.classList.remove('camera-mode');photoSpots?.show(true);document.activeElement?.blur?.();
+}
+$('camera-open').addEventListener('click',openCamera);
+$('camera-close').addEventListener('click',closePanels);
+for(const key of ['side','dist','height','fov'])$('camera-'+key).addEventListener('input',e=>{portable.set(key,e.target.value);$('camera-'+key+'-out').textContent=e.target.value;});
+$('camera-timer-set').addEventListener('change',e=>portable.set('timer',e.target.value));
+$('camera-capture').addEventListener('click',()=>{if(!portable.active||portable.counting)return;if(portable.settings.timer)portable.start();else takePhoto(portable);});
 function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a));return a+d*(1-Math.exp(-lambda*dt));}
 
 // What's in front of the walker to use: a lift (call button or car panel) first, then the graffiti wall, the selfie camera, a comic book,
@@ -1153,7 +1176,7 @@ function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(collide
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall(q);ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){furSettings?.close();emergencyDrill?.close();controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','spot-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
+function closePanels(){furSettings?.close();emergencyDrill?.close();controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','spot-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();closeCamera();input.enabled=true;input.down.clear();}
 // The list is a current server snapshot, including visitors who have not sent a pose yet.
 // The list of who is aboard, while its sheet is open.
 function showAboardList(){
