@@ -3619,8 +3619,8 @@
         "Lounge_falls_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 28,
-      "signature": "2b940ff189c8ed65097fbe8a14b6a658f12cd2915e6ed99b19382fd14a1994e9"
+      "placements": 29,
+      "signature": "bf6aa01fe3e2cb9bc4da47cb6b837ad21a07d6249a0d8216693a849626c04a6e"
     },
     {
       "source": "src/walk/lounge-floor.js",

@@ -25,6 +25,10 @@ const PATH={x0:136.1,x1:137.9,z0:33.9,z1:43.05,top:FLOOR+.36,step:33.3,rail:34.3
 // leaning out a little at the foot. The lower gallery's railing is at z 42, just behind the sheet.
 const FALL={x0:132.6,x1:141.4,z:41.82,lip:LEVELS[1]-.28-.26,reach:.35},BENCH={x:137,z:45.5,width:2.4};
 const NEAR=50,CYAN=0x46e6ff;
+// The whole assembly (header, falls, pond, causeway, landing, bench, rocks, plants, light, sound) stands SHIFT metres along
+// the ship's +X from the template frame above, toward the stair. 1 m keeps 1 m of floor between its plants and the stair
+// planter's (x 147.25 in the frame; the planter's leaves reach 146.85).
+const SHIFT=1,MOVE=new T.Matrix4().makeTranslation(SHIFT,0,0);
 // What the pond replaces: the kitchen island, its hobs, sink and worktop edge, and the seam over its chairs.
 const OLD=/^(Shared_kitchen_island|Induction_hob|Kitchen_sink|Kitchen_worktop_edge|Polish_tailored_seam)$/,ISLAND={x0:126.5,x1:136.5,z0:36,z1:40.5};
 
@@ -61,7 +65,7 @@ export function prepareLoungeFalls(ship){
 
 // The bench against the back wall, facing the falls: oak slats on stone ends, with a back.
 function bench(){
- const g=new T.Group();g.name='Lounge_falls_bench';
+ const g=new T.Group();g.name='Lounge_falls_bench';g.position.x=SHIFT;
  const oak=new T.MeshStandardMaterial({name:'Lounge_falls_bench_oak',color:0x8a5a36,roughness:.7}),stone=new T.MeshStandardMaterial({name:'Lounge_falls_bench_stone',color:0x8d8a80,roughness:.9,flatShading:true});
  const part=(name,size,[x,y,z],mat,tilt=0)=>{const o=new T.Mesh(new T.BoxGeometry(...size),mat);o.name=name;o.position.set(BENCH.x+x,LANDING.top+y,BENCH.z+z);o.rotation.x=tilt;o.castShadow=o.receiveShadow=true;g.add(o);};
  part('Garden_bench_cushion',[BENCH.width,.08,.46],[0,.43,-.02],oak);
@@ -120,12 +124,12 @@ void main(){
 function createUnfittedLoungeFalls(ship){
  const lounge=roomObject(ship,'Hydro_Nip_Lounge');if(!lounge)return null;
  lounge.updateWorldMatrix(true,false);
- const rnd=seeded(121),centre=new T.Vector3(POND.x,FLOOR,POND.z).applyMatrix4(lounge.matrixWorld);
+ const rnd=seeded(121),centre=new T.Vector3(POND.x,FLOOR,POND.z).applyMatrix4(MOVE).applyMatrix4(lounge.matrixWorld);
  // Drawn in the template frame, under a group placed at the pond so it joins the right deck band (the renderer turns
  // the faces round under the commons' mirror).
  const group=new T.Group();group.name='Lounge_falls';group.position.copy(centre);
- const frame=new T.Group();frame.matrixAutoUpdate=false;frame.matrix.makeTranslation(-centre.x,-centre.y,-centre.z).multiply(lounge.matrixWorld);group.add(frame);
- const solid=new T.Group();solid.name='Lounge_falls_colliders';solid.matrixAutoUpdate=false;solid.matrix.copy(lounge.matrixWorld);
+ const frame=new T.Group();frame.matrixAutoUpdate=false;frame.matrix.makeTranslation(-centre.x,-centre.y,-centre.z).multiply(lounge.matrixWorld).multiply(MOVE);group.add(frame);
+ const solid=new T.Group();solid.name='Lounge_falls_colliders';solid.matrixAutoUpdate=false;solid.matrix.copy(lounge.matrixWorld).multiply(MOVE);
  const block=(w,h,d,x,y,z,turn=0)=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d));o.position.set(x,y,z);o.rotation.y=turn;solid.add(o);};
 
  // Few materials, colour per vertex.
@@ -245,8 +249,8 @@ function createUnfittedLoungeFalls(ship){
  return {group,solid,
   update(dt,walker){if(walker.distanceTo(here.copy(centre))<NEAR)time.value+=Math.min(dt,.1);},
   // For checks: the pond's middle and the bench, in the ship's coordinates.
-  centre,bench:new T.Vector3(BENCH.x,LANDING.top,BENCH.z).applyMatrix4(lounge.matrixWorld),
-  soundLine:{a:new T.Vector3(FALL.x0,FLOOR,FALL.z).applyMatrix4(lounge.matrixWorld),b:new T.Vector3(FALL.x1,FLOOR,FALL.z).applyMatrix4(lounge.matrixWorld)},
+  centre,bench:new T.Vector3(BENCH.x+SHIFT,LANDING.top,BENCH.z).applyMatrix4(lounge.matrixWorld),
+  soundLine:{a:new T.Vector3(FALL.x0+SHIFT,FLOOR,FALL.z).applyMatrix4(lounge.matrixWorld),b:new T.Vector3(FALL.x1+SHIFT,FLOOR,FALL.z).applyMatrix4(lounge.matrixWorld)},
  };
 }
 
