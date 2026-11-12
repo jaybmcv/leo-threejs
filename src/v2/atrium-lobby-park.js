@@ -97,6 +97,9 @@ function planterBlooms(out,x,top,z,r,first){
 // rim top and bottom and a mullion down each face, then an eaved pyramid roof and a finial. The light it throws at
 // night (a pool under it, a halo round it, the planters' uplights) is atrium-mood.js's.
 const METAL=0x2a2623;
+// The core's amber: the lantern draw is vertex-coloured, its colour a multiplier on the plain cream glow (1 keeps it).
+const CORE_AMBER=[1.3,.66,.24];
+const glowing=(g,c)=>g.setAttribute('color',new T.Float32BufferAttribute(Array.from({length:g.attributes.position.count*3},(_,i)=>c[i%3]),3));
 // A square frustum by half-widths, its faces square to the ship.
 const square=(top,bottom,h)=>new T.CylinderGeometry(top*Math.SQRT2,bottom*Math.SQRT2,h,4).rotateY(Math.PI/4);
 const GLASS={bottom:COURT_LANTERN_CORE-.24,top:COURT_LANTERN_CORE+.24,hw0:.115,hw1:.145};
@@ -108,7 +111,7 @@ function lampPost(out,glow,x,y,z){
  out.push(paint(at(new T.CylinderGeometry(.09,.09,.04,10),3.47),BRONZE));
  out.push(paint(at(square(.12,.05,.1),bottom-.085),METAL));
  out.push(paint(at(square(.16,.16,.035),bottom-.0175),METAL));
- glow.push(at(square(hw1,hw0,top-bottom),COURT_LANTERN_CORE));
+ glow.push(glowing(at(square(hw1,hw0,top-bottom),COURT_LANTERN_CORE),CORE_AMBER));
  for(const fx of[-1,1])for(const fz of[-1,1])out.push(bar(bottom,top,fx,fz,.008,.017));
  for(const[fx,fz]of[[1,0],[-1,0],[0,1],[0,-1]])out.push(bar(bottom,top,fx,fz,.006,.009));
  for(const h of[bottom+.02,top-.02]){const w=hw(h)+.01;

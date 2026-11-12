@@ -598,6 +598,8 @@ export function addTreeShade(root,layout,signatures){
 
 // ---- Glow: warm downlights under the overhanging deck soffits, lanterns on the timber decks ---------------------
 export const gardenGlowMaterial=new T.MeshBasicMaterial({name:'P6_atrium_glow',color:0xffe3b8});
+// The lantern draw's own copy, vertex-coloured (addAtriumGardens); the downlights keep the plain one.
+const lanternGlowMaterial=new T.MeshBasicMaterial({name:'P6_atrium_lantern_glow',color:0xffe3b8,vertexColors:true});
 // The cream soffit sheets (addSoffits) read warm and light, as in the concept, rather than grey or navy. The emissive
 // floor holds them up whatever the room light does; the Basic distant copy keeps the cream colour.
 export const atriumSoffitMaterial=new T.MeshStandardMaterial({name:'V2_atrium_soffit',color:0xefdcc0,roughness:.85,emissive:0xf8dcb0,emissiveIntensity:.38});
@@ -658,8 +660,11 @@ export function addAtriumGardens(root,layout){
  addStageDecor(out,layout);
  const g=mergeGeometries(out);out.forEach(x=>x.dispose());g.computeBoundingBox();g.computeBoundingSphere();
  const o=new T.Mesh(g,gardenMaterial);o.name='P6_atrium_gardens';o.frustumCulled=false;o.userData={noCollide:true,phase6Architecture:true,selectedDesign:'4B',gardenDecor:true};root.add(o);
- const gg=mergeGeometries(glow.map(x=>x.toNonIndexed()));glow.forEach(x=>x.dispose());gg.computeBoundingBox();gg.computeBoundingSphere();
- const lo=new T.Mesh(gg,gardenGlowMaterial);lo.name='P6_atrium_lanterns';lo.frustumCulled=false;lo.userData={...o.userData};root.add(lo);
+ // The lantern draw is vertex-coloured: the stage's warm lines and wall wash (atrium-stage.js) carry their own colour;
+ // every other glow is white, so it keeps the plain glow colour.
+ const gg=mergeGeometries(glow.map(x=>{const g=x.toNonIndexed();if(!g.attributes.color)g.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(g.attributes.position.count*3).fill(1),3));return g;}));
+ glow.forEach(x=>x.dispose());gg.computeBoundingBox();gg.computeBoundingSphere();
+ const lo=new T.Mesh(gg,lanternGlowMaterial);lo.name='P6_atrium_lanterns';lo.frustumCulled=false;lo.userData={...o.userData};root.add(lo);
  const cascades=addHangingGardens(root,layout),downlights=addDownlights(root,layout),soffits=addSoffits(root,layout,cream.concat(walkwayCeilings(layout))),shade=addTreeShade(root,layout,trees);
  return {trees,...grove,...planting,...stones,...decks,waterfall,...falling,...lily,...beds,...lawn,...inlays,...trims,lanterns,festoonBulbs,...fascias,...downlights,...soffits,...shade,lakeFood,staticTriangles:g.attributes.position.count/3,cascades};
 }

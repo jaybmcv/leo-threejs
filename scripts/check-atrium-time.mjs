@@ -96,6 +96,7 @@ assert(court?.isInstancedMesh&&court.visible);assert.equal(court.count,welcomeCo
 assert.equal(court.material.blending,T.AdditiveBlending);assert.equal(court.material.depthWrite,false);assert.equal(court.material.forceSinglePass,true);assert.equal(court.material.opacity,1);
 court.getMatrixAt(0,e);assert(Math.abs(e.elements[12]-(WELCOME_COURT.x+COURT_LAMPS[0][0]))<1e-6&&Math.abs(e.elements[14]-(WELCOME_COURT.z+COURT_LAMPS[0][1]))<1e-6);
 assert(e.elements[13]>floor&&e.elements[13]<floor+.05);
+const tint=new T.Color();for(let i=0;i<court.count;i++){court.getColorAt(i,tint);assert(tint.g<tint.r*.7&&tint.b<tint.g*.5,'court glow '+i+' is amber, not cream');}
 pass('at night the welcome court\'s lanterns throw warm pools, halos and planter uplights, one instanced draw');
 setAtriumView(OUT);assert.equal(inOpenAtrium(),false);run(mood,1);assert.equal(court.visible,false);
 assert.equal(a.mats.glass.emissive.getHex(),glassBase.getHex());assert.equal(a.mats.glass.opacity,.23);assert.equal(a.mats.glass.emissiveIntensity,1);
