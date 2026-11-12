@@ -2604,7 +2604,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "c5f36bb3cc0ec53df26b2cfedc7c8407eaf35ad6b064030004807d2f00242f48"
+      "signature": "0cf5792f9bc0734246e65e49a7bbe8d18abf123ea0bb95652c0f830ce63081d8"
     },
     {
       "source": "src/walk/hex-floor.js",
@@ -2619,7 +2619,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "045d89a7393da2b855ad09f40d75af0247239b8f241978a4e9754601cac06707"
+      "signature": "6cadd41ff070fa515350977b48186abd34d35a6b1486732d81f70ca488387184"
     },
     {
       "source": "src/walk/hex-floor.prepared.js",
@@ -2634,7 +2634,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "c2d165b5a61f332bcacab072a22a4a9cfc3616a4303d014561f4b5f209fd83b0"
+      "signature": "02e1754dd7d161d1a248ad82fc046aecfbdd3415c154dfbc766ce26ae08bb2b2"
     },
     {
       "source": "src/walk/hex-floor.public.js",
@@ -2649,7 +2649,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "37153da3b6343b593e5175969f1414e6efddc0c8a43b70a516823ac866c84d04"
+      "signature": "5267f733017bef3ef9f7d4e1952d9215cf5298d3d39fdfa18ccac4089fc316c9"
     },
     {
       "source": "src/walk/hostess.authoring.js",
