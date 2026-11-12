@@ -4228,7 +4228,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 42,
-      "signature": "3dcbb126f4a67180d221f5636afa3761eeb9ab4d0462b4a01a3f5604efa67033"
+      "signature": "ba768ba7faaccbcf4136170514ff0ef87fe55f539289e027a78f9624d358bd72"
     },
     {
       "source": "src/walk/mudwater.authoring.js",
@@ -4811,6 +4811,26 @@
       "interactionTargets": null,
       "placements": 15,
       "signature": "56a1a24f1554d55daeb61f6b808ecf86ea2cdd99007051e4b89d44b2e6f675ce"
+    },
+    {
+      "source": "src/walk/quantum-knitter.js",
+      "rooms": [
+        "d02-maintenance-aft"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Quantum_knitter",
+        "Knitter_ring_set",
+        "Knitter_links",
+        "Knitter_joints",
+        "Knitter_threads",
+        "Knitter_tips"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 15,
+      "signature": "cbefea2c4b34946dc30496c57aebb82d72bd0c3d32ecb38a01961a6122ebffd8"
     },
     {
       "source": "src/walk/railings.authoring.js",

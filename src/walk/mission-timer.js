@@ -3,6 +3,7 @@ import {roomObject} from '../plan/rooms.js';
 import fitouts from '../plan/room-fitout-overrides-v2.json' with {type:'json'};
 import {walkCanvas} from './canvas.js';
 import {mergeByMaterial} from './merge-by-material.js';
+import {createQuantumKnitter} from './quantum-knitter.js';
 
 // Public LEO Walk launch, recorded to the minute; :00 seconds is the timer convention.
 export const MISSION_START=1792710000000;
@@ -17,6 +18,8 @@ export function createMissionTimer(ship,{anisotropy=1,still=false}={}){
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Mission_timer';room.matrixWorld.decompose(group.position,group.quaternion,group.scale);
  const engine=createEngine(group);
+ // The decorative quantum knitter stands on its own plinth in the aft-starboard corner; the plinth is a room fitting.
+ const plinth=fitouts[ROOM].add.find(p=>p.part==='knitter_plinth'),knitter=createQuantumKnitter(group,[plinth.at[0],plinth.at[2]]);
  // Physical fittings and collision come from the room overrides; runtime dressing animates here.
  const display=fitouts[ROOM].add.find(p=>p.part==='mission_timer_display'),[depth,height,width]=display.size,[x,y,z]=display.at;
  const glow=(color,opacity=1)=>new T.MeshBasicMaterial({color,transparent:opacity<1,opacity,depthWrite:opacity===1,toneMapped:false});
@@ -75,7 +78,7 @@ export function createMissionTimer(ship,{anisotropy=1,still=false}={}){
   const now=Date.now();if(Math.floor(now/1000)!==lastSecond)paint(now);
   if(still)return;
   clock+=Math.min(dt,.1);
-  engine.update(clock);
+  engine.update(clock);knitter.update(clock);
   for(const {orbit,side} of orbits)orbit.rotation.y=clock*side*.3;
   for(const {scan,side} of rings){const f=(clock*.45+(side+1)/4)%1;scan.position.y=.05+f*.6;scan.material.opacity=.5*(1-f);}
  }

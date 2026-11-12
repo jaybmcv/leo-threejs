@@ -21,7 +21,7 @@ const legacy=createLowerAftArea(area);root.add(legacy.root);root.updateMatrixWor
 assert(!root.getObjectByName('Removable_equipment'));assert(!root.getObjectByName('Equipment_cradle'));
 assert(root.getObjectByName('Worktop'),'Keep the workshop benches');
 const data=applyRoomFitoutOverrides({parts:[],rests:[],rooms:[]},layout),parts=data.parts.filter(p=>p.room===id),physical=new T.Group();
-assert.equal(parts.length,8);
+assert.equal(parts.length,9);
 for(const p of parts){
  const mesh=new T.Mesh(fitoutGeometry(p),material(p.mat));mesh.position.set(...p.at);mesh.rotation.y=p.yaw;physical.add(mesh);
  for(const dx of [-1,1])for(const dz of [-1,1])assert(contains(room.polygon,[p.at[0]+dx*p.size[0]/2,p.at[2]+dz*p.size[2]/2]),'Fitting leaves the workshop');
