@@ -89,8 +89,10 @@ export function installFilmLook({renderer,scene,keep=()=>null}){
   if(material.onBeforeCompile.filmLook){wrapped.add(new WeakRef(material));material.needsUpdate=true;return;}
   const before=material.onBeforeCompile,key=material.customProgramCacheKey;
   const own=Object.hasOwn(material,'customProgramCacheKey')&&key!==T.Material.prototype.customProgramCacheKey?key:null;
-  // today's key, as three makes it for the material unwrapped
-  const todayKey=own?()=>own.call(material):()=>before.toString();
+  // today's key, as three makes it for the material unwrapped: a key of its own reads the material's hook as it was
+  // (corner shading's builds on three's, which is the hook's text), so today's programs are found again after film
+  const unwrapped=own&&Object.create(material,{onBeforeCompile:{value:before}});
+  const todayKey=own?()=>own.call(unwrapped):()=>before.toString();
   // (every program carries the texel size: three keeps the uniforms of the program it first built for a material, so
   // a film program found again in its cache would otherwise draw with today's)
   const hook=function(shader,r){before.call(this,shader,r);shader.uniforms.uFilmTexel=texel;if(film)patchShader(shader,level);};
