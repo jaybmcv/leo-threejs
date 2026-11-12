@@ -79,3 +79,7 @@ Until that proposal is available, the only fact on record is that the existing p
 ## Verdict
 
 Closure is pending. The layout 2 walk pass was attempted in step 2 and could not run in its checkout (no built ship, see the status table), so findings 1 to 5 and 7 stay open. The existing feature is intact in the source and the earlier step's checks passed on their build, but layout 2 placement, route access, clearances and the bench seats are not confirmed in this checkout, and the expansion is deferred, so the report stays open. This step is the first: the record. What would follow is the layout 2 walk pass (items 1 to 5) and the decision on the expansion once its measured proposal is available.
+
+## Placement proposal (report #238)
+
+A measured proposal for moving the pond and falls so the water passes through the Deck 18 and 19 gallery openings is in `docs/lounge-falls-placement/` (README, `placement.json`, plan and fixed-camera views; reproduce with `node scripts/lounge-falls-placement.mjs`). It is a proposal only: the translation (+7.50, 0, +4.28) m gets the sheet through both openings but leaves 0.17 m to the dome ring and 0.65 m to the stairs, and the lip would need support. Nothing was built.

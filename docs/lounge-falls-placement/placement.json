@@ -1,0 +1,745 @@
+{
+ "about": "Placement study for the Hydro-Nip Lounge waterfall and pond. Ship metres (X forward, Y up, Z starboard). A proposal only; the walk is unchanged.",
+ "frame": {
+  "templateToShip": "x - 246.5, z = -16 - z (the lounge group matrix, read from the live walk)",
+  "depthFit": {
+   "scale": 0.8567,
+   "anchorZ": -49.3
+  },
+  "fitNote": "The depth fit (src/v2/lounge-falls-fit.js) is recomputed from the finished skin when the assembly is moved; this study keeps the live ship's measured scale."
+ },
+ "current": {
+  "sheet": {
+   "x": [
+    -113.9,
+    -105.1
+   ],
+   "zTop": -56.6,
+   "zFoot": -56.3,
+   "yTop": 31.76,
+   "yBottom": 24.57
+  },
+  "lip": {
+   "x": [
+    -114.2,
+    -104.8
+   ],
+   "z": [
+    -56.74,
+    -56.32
+   ],
+   "y": [
+    31.74,
+    32.02
+   ]
+  },
+  "poolCentre": [
+   -109.5,
+   -54.18
+  ],
+  "causeway": {
+   "x": [
+    -110.4,
+    -108.6
+   ],
+   "z": [
+    -57.65,
+    -49.3
+   ]
+  },
+  "landing": {
+   "x": [
+    -113.1,
+    -105.9
+   ],
+   "z": [
+    -60.06,
+    -57.61
+   ]
+  },
+  "bench": {
+   "x": [
+    -110.7,
+    -108.3
+   ],
+   "z": [
+    -60.05,
+    -59.45
+   ]
+  },
+  "bounds": {
+   "collider": {
+    "x": [
+     -116.15,
+     -102.85
+    ],
+    "z": [
+     -60.06,
+     -49.3
+    ]
+   },
+   "dressed": {
+    "x": [
+     -117.3,
+     -101.7
+    ],
+    "z": [
+     -59.32,
+     -49.04
+    ]
+   },
+   "effects": {
+    "x": [
+     -118.1,
+     -100.9
+    ],
+    "z": [
+     -60.01,
+     -48.36
+    ]
+   }
+  },
+  "measures": {
+   "dx": 0,
+   "dz": 0,
+   "levels": [
+    {
+     "level": "Deck 18 (level 2)",
+     "openFraction": 0.949,
+     "minClearance": -0.01,
+     "zAtLevel": -56.566
+    },
+    {
+     "level": "Deck 19 (level 3)",
+     "openFraction": 0,
+     "minClearance": -2.951,
+     "zAtLevel": -56.599
+    }
+   ],
+   "lip": {
+    "supportedFraction": 1,
+    "largestGap": 0
+   },
+   "clearance": {
+    "dome": 1.112,
+    "stairs": 8.15,
+    "tastingDeck": 4.554,
+    "munchies": 7.049,
+    "hullWall": 3.562
+   },
+   "approach": {
+    "freeAhead": 1.1,
+    "stoppedBy": "dome ring",
+    "narrowestSideClearance": 0.4
+   },
+   "collider": {
+    "x0": -116.15,
+    "x1": -102.85,
+    "z0": -60.060152,
+    "z1": -49.3
+   },
+   "centre": [
+    -109.5,
+    -54.183
+   ]
+  }
+ },
+ "proposal": {
+  "sheet": {
+   "x": [
+    -106.4,
+    -97.6
+   ],
+   "zTop": -52.32,
+   "zFoot": -52.02,
+   "yTop": 31.76,
+   "yBottom": 24.57
+  },
+  "lip": {
+   "x": [
+    -106.7,
+    -97.3
+   ],
+   "z": [
+    -52.46,
+    -52.04
+   ],
+   "y": [
+    31.74,
+    32.02
+   ]
+  },
+  "poolCentre": [
+   -102,
+   -49.9
+  ],
+  "causeway": {
+   "x": [
+    -102.9,
+    -101.1
+   ],
+   "z": [
+    -53.37,
+    -45.02
+   ]
+  },
+  "landing": {
+   "x": [
+    -105.6,
+    -98.4
+   ],
+   "z": [
+    -55.78,
+    -53.33
+   ]
+  },
+  "bench": {
+   "x": [
+    -103.2,
+    -100.8
+   ],
+   "z": [
+    -55.77,
+    -55.17
+   ]
+  },
+  "bounds": {
+   "collider": {
+    "x": [
+     -108.65,
+     -95.35
+    ],
+    "z": [
+     -55.78,
+     -45.02
+    ]
+   },
+   "dressed": {
+    "x": [
+     -109.8,
+     -94.2
+    ],
+    "z": [
+     -55.04,
+     -44.76
+    ]
+   },
+   "effects": {
+    "x": [
+     -110.6,
+     -93.4
+    ],
+    "z": [
+     -55.73,
+     -44.08
+    ]
+   }
+  },
+  "measures": {
+   "dx": 7.5,
+   "dz": 4.28,
+   "levels": [
+    {
+     "level": "Deck 18 (level 2)",
+     "openFraction": 1,
+     "minClearance": 0.261,
+     "zAtLevel": -52.286
+    },
+    {
+     "level": "Deck 19 (level 3)",
+     "openFraction": 1,
+     "minClearance": 0.368,
+     "zAtLevel": -52.319
+    }
+   ],
+   "lip": {
+    "supportedFraction": 0,
+    "largestGap": 0.425
+   },
+   "clearance": {
+    "dome": 0.169,
+    "stairs": 0.65,
+    "tastingDeck": 11.25,
+    "munchies": 1.52,
+    "hullWall": 7.802
+   },
+   "approach": {
+    "freeAhead": 1.2,
+    "stoppedBy": "munchies counter",
+    "narrowestSideClearance": 0.37
+   },
+   "collider": {
+    "x0": -108.65,
+    "x1": -95.35,
+    "z0": -55.780152,
+    "z1": -45.019999999999996
+   },
+   "centre": [
+    -102,
+    -49.903
+   ]
+  },
+  "translation": {
+   "x": 7.5,
+   "y": 0,
+   "z": 4.28
+  }
+ },
+ "stairs": {
+  "footprint": {
+   "x": [
+    -94.7,
+    -88.2
+   ],
+   "z": [
+    -54.9,
+    -46.85
+   ]
+  },
+  "flights": [
+   {
+    "id": "commons-1-tread-0",
+    "x": [
+     -91.3,
+     -88.3
+    ],
+    "z": [
+     -54.05,
+     -46.85
+    ],
+    "y": [
+     24.47,
+     28.3
+    ]
+   },
+   {
+    "id": "commons-1-tread-1",
+    "x": [
+     -94.6,
+     -91.6
+    ],
+    "z": [
+     -54.05,
+     -46.85
+    ],
+    "y": [
+     28.47,
+     32.3
+    ]
+   }
+  ]
+ },
+ "dome": {
+  "centre": [
+   -112.5,
+   -41
+  ],
+  "ringRadius": 7.45
+ },
+ "tastingDeck": {
+  "x0": -129.1,
+  "x1": -119.9,
+  "z0": -50,
+  "z1": -46
+ },
+ "openings": [
+  {
+   "level": "Deck 18 (level 2)",
+   "y": 28.3,
+   "slabOpeningRearZ": [
+    {
+     "x": -118.1,
+     "z": -58.54
+    },
+    {
+     "x": -110.1,
+     "z": -58.88
+    },
+    {
+     "x": -102.1,
+     "z": -58.96
+    }
+   ]
+  },
+  {
+   "level": "Deck 19 (level 3)",
+   "y": 32.3,
+   "slabOpeningRearZ": [
+    {
+     "x": -118.1,
+     "z": -53.08
+    },
+    {
+     "x": -110.1,
+     "z": -53.91
+    },
+    {
+     "x": -102.1,
+     "z": -54.15
+    }
+   ]
+  }
+ ],
+ "shaftBetweenDecks": [
+  {
+   "x": -114,
+   "runs": [
+    [
+     -52.32,
+     -50.8
+    ],
+    [
+     -46.79,
+     -44
+    ]
+   ]
+  },
+  {
+   "x": -110,
+   "runs": [
+    [
+     -52.45,
+     -51.33
+    ],
+    [
+     -47.32,
+     -44
+    ]
+   ]
+  },
+  {
+   "x": -106,
+   "runs": [
+    [
+     -52.55,
+     -51.68
+    ],
+    [
+     -47.67,
+     -44
+    ]
+   ]
+  },
+  {
+   "x": -102,
+   "runs": [
+    [
+     -52.58,
+     -51.85
+    ],
+    [
+     -47.84,
+     -44
+    ]
+   ]
+  },
+  {
+   "x": -98,
+   "runs": [
+    [
+     -52.6,
+     -51.95
+    ],
+    [
+     -47.94,
+     -44
+    ]
+   ]
+  }
+ ],
+ "candidates": {
+  "keepingEveryClearance": {
+   "note": "Best translation that keeps at least 1 m to every neighbour and the lip hung from the slab, by how much of the sheet passes both openings.",
+   "measures": {
+    "dx": 7,
+    "dz": -0.1,
+    "levels": [
+     {
+      "level": "Deck 18 (level 2)",
+      "openFraction": 1,
+      "minClearance": 0.061,
+      "zAtLevel": -56.666
+     },
+     {
+      "level": "Deck 19 (level 3)",
+      "openFraction": 0,
+      "minClearance": -2.638,
+      "zAtLevel": -56.699
+     }
+    ],
+    "lip": {
+     "supportedFraction": 1,
+     "largestGap": 0
+    },
+    "clearance": {
+     "dome": 3.579,
+     "stairs": 1.15,
+     "tastingDeck": 11.207,
+     "munchies": 5.9,
+     "hullWall": 3.423
+    },
+    "approach": {
+     "freeAhead": 5.6,
+     "stoppedBy": "munchies counter",
+     "narrowestSideClearance": 2.9
+    },
+    "collider": {
+     "x0": -109.15,
+     "x1": -95.85,
+     "z0": -60.160152000000004,
+     "z1": -49.4
+    },
+    "centre": [
+     -102.5,
+     -54.283
+    ]
+   }
+  },
+  "count": {
+   "tested": 7399,
+   "passingBothOpenings": 779,
+   "passingBothAndWalkingClearance": 0
+  },
+  "byDx": [
+   {
+    "dx": -6,
+    "dz": 5.06,
+    "clearance": {
+     "dome": -3.589,
+     "stairs": 14.15,
+     "tastingDeck": 0,
+     "munchies": 6.341,
+     "hullWall": 8.273
+    },
+    "levels": [
+     {
+      "level": "Deck 18 (level 2)",
+      "openFraction": 1,
+      "minClearance": 0.264,
+      "zAtLevel": -51.506
+     },
+     {
+      "level": "Deck 19 (level 3)",
+      "openFraction": 1,
+      "minClearance": 0.329,
+      "zAtLevel": -51.539
+     }
+    ],
+    "lip": {
+     "supportedFraction": 0,
+     "largestGap": 1.314
+    },
+    "approach": {
+     "freeAhead": 0,
+     "stoppedBy": "dome ring",
+     "narrowestSideClearance": 1000000000
+    }
+   },
+   {
+    "dx": -3,
+    "dz": 4.68,
+    "clearance": {
+     "dome": -3.726,
+     "stairs": 11.15,
+     "tastingDeck": 0.75,
+     "munchies": 4.22,
+     "hullWall": 8.14
+    },
+    "levels": [
+     {
+      "level": "Deck 18 (level 2)",
+      "openFraction": 1,
+      "minClearance": 0.258,
+      "zAtLevel": -51.886
+     },
+     {
+      "level": "Deck 19 (level 3)",
+      "openFraction": 1,
+      "minClearance": 0.408,
+      "zAtLevel": -51.919
+     }
+    ],
+    "lip": {
+     "supportedFraction": 0,
+     "largestGap": 1.27
+    },
+    "approach": {
+     "freeAhead": 0,
+     "stoppedBy": "dome ring",
+     "narrowestSideClearance": 1000000000
+    }
+   },
+   {
+    "dx": 0,
+    "dz": 4.5,
+    "clearance": {
+     "dome": -3.108,
+     "stairs": 8.15,
+     "tastingDeck": 3.75,
+     "munchies": 2.757,
+     "hullWall": 8.062
+    },
+    "levels": [
+     {
+      "level": "Deck 18 (level 2)",
+      "openFraction": 1,
+      "minClearance": 0.263,
+      "zAtLevel": -52.066
+     },
+     {
+      "level": "Deck 19 (level 3)",
+      "openFraction": 1,
+      "minClearance": 0.357,
+      "zAtLevel": -52.099
+     }
+    ],
+    "lip": {
+     "supportedFraction": 0,
+     "largestGap": 1.059
+    },
+    "approach": {
+     "freeAhead": 0,
+     "stoppedBy": "dome ring",
+     "narrowestSideClearance": 1000000000
+    }
+   },
+   {
+    "dx": 3,
+    "dz": 4.38,
+    "clearance": {
+     "dome": -2.108,
+     "stairs": 5.15,
+     "tastingDeck": 6.75,
+     "munchies": 2.231,
+     "hullWall": 7.946
+    },
+    "levels": [
+     {
+      "level": "Deck 18 (level 2)",
+      "openFraction": 1,
+      "minClearance": 0.251,
+      "zAtLevel": -52.186
+     },
+     {
+      "level": "Deck 19 (level 3)",
+      "openFraction": 1,
+      "minClearance": 0.373,
+      "zAtLevel": -52.219
+     }
+    ],
+    "lip": {
+     "supportedFraction": 0,
+     "largestGap": 0.755
+    },
+    "approach": {
+     "freeAhead": 0,
+     "stoppedBy": "dome ring",
+     "narrowestSideClearance": 1000000000
+    }
+   },
+   {
+    "dx": 6,
+    "dz": 4.32,
+    "clearance": {
+     "dome": -0.755,
+     "stairs": 2.15,
+     "tastingDeck": 9.75,
+     "munchies": 1.48,
+     "hullWall": 7.85
+    },
+    "levels": [
+     {
+      "level": "Deck 18 (level 2)",
+      "openFraction": 1,
+      "minClearance": 0.265,
+      "zAtLevel": -52.246
+     },
+     {
+      "level": "Deck 19 (level 3)",
+      "openFraction": 1,
+      "minClearance": 0.352,
+      "zAtLevel": -52.279
+     }
+    ],
+    "lip": {
+     "supportedFraction": 0,
+     "largestGap": 0.513
+    },
+    "approach": {
+     "freeAhead": 1.15,
+     "stoppedBy": "munchies counter",
+     "narrowestSideClearance": 0.38
+    }
+   },
+   {
+    "dx": 7.5,
+    "dz": 4.28,
+    "clearance": {
+     "dome": 0.169,
+     "stairs": 0.65,
+     "tastingDeck": 11.25,
+     "munchies": 1.52,
+     "hullWall": 7.802
+    },
+    "levels": [
+     {
+      "level": "Deck 18 (level 2)",
+      "openFraction": 1,
+      "minClearance": 0.261,
+      "zAtLevel": -52.286
+     },
+     {
+      "level": "Deck 19 (level 3)",
+      "openFraction": 1,
+      "minClearance": 0.368,
+      "zAtLevel": -52.319
+     }
+    ],
+    "lip": {
+     "supportedFraction": 0,
+     "largestGap": 0.425
+    },
+    "approach": {
+     "freeAhead": 1.2,
+     "stoppedBy": "munchies counter",
+     "narrowestSideClearance": 0.37
+    }
+   },
+   {
+    "dx": 9,
+    "dz": 4.24,
+    "clearance": {
+     "dome": 1.216,
+     "stairs": 0,
+     "tastingDeck": 12.75,
+     "munchies": 1.56,
+     "hullWall": 7.756
+    },
+    "levels": [
+     {
+      "level": "Deck 18 (level 2)",
+      "openFraction": 1,
+      "minClearance": 0.251,
+      "zAtLevel": -52.326
+     },
+     {
+      "level": "Deck 19 (level 3)",
+      "openFraction": 1,
+      "minClearance": 0.387,
+      "zAtLevel": -52.359
+     }
+    ],
+    "lip": {
+     "supportedFraction": 0,
+     "largestGap": 0.361
+    },
+    "approach": {
+     "freeAhead": 1.25,
+     "stoppedBy": "munchies counter",
+     "narrowestSideClearance": 0.36
+    }
+   }
+  ]
+ },
+ "walkingClearanceUsed": 1
+}
