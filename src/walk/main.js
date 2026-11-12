@@ -83,6 +83,7 @@ import {createArrivalMood} from './arrival-mood.js';
 import {Marks} from './marks.js';
 import {createChat} from './chat.js';
 import {createHostess} from './hostess.js';
+import {createPhotoSpots} from './photo-spots.js';
 import {wearHat,fit,FIT} from './hat.js';
 import {createYarn,YARN_SPOTS} from './yarn.js';
 import {BALL,createBallMesh} from './hamster-ball.js';
@@ -321,6 +322,8 @@ async function buildShip(){
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
  for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pinballMachine?[pinballMachine.group]:[]),...(pawsOff?pawsOff.groups:[]),...(mudwater?[mudwater.group]:[]),...(arcadeRow?[arcadeRow.group]:[])])toBand(o);
+ // The scenic photo spots' floor markers (photo-spots.js), each with its deck's band.
+ photoSpots=createPhotoSpots();for(const g of photoSpots.groups)toBand(g);
  if(concession)toBand(concession);
  toBand(vault.group);
  if(provisions)toBand(provisions.group);
@@ -411,7 +414,7 @@ async function buildShip(){
  isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});
 }
 let imagingScans=null,missionTimer=null;
-let atriumMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,keelClub=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
+let atriumMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,photoSpots=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,keelClub=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
 let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null,atmosphere=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 // Lifeboat fittings (2,000 seats a deck with their headrests and harnesses, seen only through a hatch or from inside a
@@ -479,6 +482,7 @@ const actions={
   else if(t.kind==='waiting')return;
   else if(t.kind==='sit'||t.kind==='lie'||t.kind==='stand')settle(t.spot);
   else if(t.kind==='selfie'){closePanels();$('selfie-setup').hidden=false;previewBackdrop();input.enabled=false;$('selfie-backdrop').focus();}
+  else if(t.kind==='photo-spot')openPhotoSpot(t.spot);
   else if(t.kind==='comic'){closePanels();reader.open(t.comic);input.enabled=false;}
   else if(t.kind==='read'){closePanels();showInfo($('info-sheet'),t.info);input.enabled=false;}
   else if(t.kind==='play')arcade.open();
@@ -777,7 +781,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -927,8 +931,9 @@ renderer.setAnimationLoop(()=>{
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
  if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
- const shot=booth.update(now);$('countdown').hidden=!shot.left;if(shot.left)$('countdown').textContent=String(shot.left);
+ const shot=booth.update(now),spotShot=photoSpots?.update(now)||shot,left=shot.left||spotShot.left;$('countdown').hidden=!left;if(left)$('countdown').textContent=String(left);
  if(shot.due)takePhoto();
+ if(spotShot!==shot&&spotShot.due)takePhoto(photoSpots);
 });
 // One frame of the ship from `view`: the sky, the haze past the far plane, then the ship.
 function draw(view){
@@ -936,25 +941,27 @@ function draw(view){
  for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,view);
 }
-// The selfie booth's photo: drawn from its lens and copied off the canvas at once (the drawing buffer is not kept past
-// this frame), then the walker's own view drawn back over it.
-let photoUrl=null,photoSource=null,photoNames=[],photoRender=0,photoFilename='';
-function takePhoto(){
- const canvas=renderer.domElement,shown=walker.holder.visible;walker.holder.visible=true;
- booth.aim(canvas.width,canvas.height);booth.camera.updateMatrixWorld();draw(booth.camera);
+// The selfie booth's photo, or a photo spot's (photo-spots.js, `lens` then): drawn from its lens and copied off the
+// canvas at once (the drawing buffer is not kept past this frame), then the walker's own view drawn back over it.
+let photoUrl=null,photoSource=null,photoNames=[],photoRender=0,photoFilename='',photoPlace={frame:'CROWN LOUNGE',name:'Crown lounge',slug:'crown-lounge'},lastPhoto=null;
+function takePhoto(lens=booth){
+ const canvas=renderer.domElement,shown=walker.holder.visible,spot=lens===photoSpots?photoSpots.spot:null;walker.holder.visible=true;photoSpots?.show(false);
+ lens.aim(canvas.width,canvas.height);lens.camera.updateMatrixWorld();draw(lens.camera);
  const copy=document.createElement('canvas');copy.width=canvas.width;copy.height=canvas.height;copy.getContext('2d').drawImage(canvas,0,0);
- photoSource=copy;photoNames=selfieNames();photoFilename=`leo-crown-lounge-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.jpg`;$('photo-names').checked=true;
- walker.holder.visible=shown;draw(camera);
+ photoPlace=spot?{frame:spot.place,name:spot.name,slug:spot.id}:{frame:'CROWN LOUNGE',name:'Crown lounge',slug:'crown-lounge'};
+ lastPhoto={place:photoPlace.slug,lens:lens.camera.position.toArray(),at:walker.holder.position.toArray()};
+ photoSource=copy;photoNames=selfieNames(lens.camera);photoFilename=`leo-${photoPlace.slug}-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.jpg`;$('photo-names').checked=true;
+ walker.holder.visible=shown;photoSpots?.show(true);draw(camera);
  const flash=$('photo-flash');flash.hidden=false;flash.getAnimations?.().forEach(a=>a.cancel());flash.animate?.([{opacity:.85},{opacity:0}],{duration:450}).finished.then(()=>{flash.hidden=true;},()=>{});
  renderPhoto(true);
 }
 // Name tags live in an HTML layer, so add their existing display names to the photo canvas here.
-function selfieNames(){
- const names=[],ray=new T.Ray(),eye=booth.camera.getWorldPosition(new T.Vector3());
+function selfieNames(lens=booth.camera){
+ const names=[],ray=new T.Ray(),eye=lens.getWorldPosition(new T.Vector3());
  const add=(name,x,y,z)=>{
   if(!name)return;const point=new T.Vector3(x,y,z),delta=point.clone().sub(eye),distance=delta.length();if(!distance)return;
   ray.set(eye,delta.divideScalar(distance));const hit=colliders.raycast(ray,distance);if(hit&&hit.distance<distance-.4)return;
-  point.project(booth.camera);names.push({name,x:point.x,y:point.y,z:point.z});
+  point.project(lens);names.push({name,x:point.x,y:point.y,z:point.z});
  };
  for(const r of remotes?.remotes.values()||[])if(r.walker)add(r.name||'Voyager '+r.id.slice(-4),r.cur.x,r.cur.y+(r.rest&&r.restKind==='lie'?.8:2.15),r.cur.z);
  const own=live?.you?.name||me.name||savedName(),p=walker.holder.position;if(own)add(own,p.x,p.y+(resting&&resting.lie ? .8 : 2.15),p.z);
@@ -962,7 +969,7 @@ function selfieNames(){
 }
 function renderPhoto(open=false){
  const serial=++photoRender;
- booth.frame(photoSource,photoNames,$('photo-names').checked).then(out=>new Promise(resolve=>out.toBlob(resolve,'image/jpeg',.92))).then(blob=>{if(blob&&serial===photoRender)showPhoto(blob,open);});
+ booth.frame(photoSource,photoNames,$('photo-names').checked,photoPlace.frame).then(out=>new Promise(resolve=>out.toBlob(resolve,'image/jpeg',.92))).then(blob=>{if(blob&&serial===photoRender)showPhoto(blob,open);});
 }
 function showPhoto(blob,open=false){
  if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=URL.createObjectURL(blob);
@@ -970,9 +977,14 @@ function showPhoto(blob,open=false){
  $('photo-image').src=photoUrl;Object.assign($('photo-save'),{href:photoUrl,download:name});
  // Where the browser can share files (most phones), sharing is the easy way to keep or send it.
  const file=new File([blob],name,{type:'image/jpeg'}),share=$('photo-share');
- share.hidden=!navigator.canShare?.({files:[file]});share.onclick=()=>navigator.share({files:[file],title:'Leo · Crown lounge'}).catch(()=>{});
+ share.hidden=!navigator.canShare?.({files:[file]});share.onclick=()=>navigator.share({files:[file],title:'Leo · '+photoPlace.name}).catch(()=>{});
+ $('photo-place').textContent=photoPlace.name;$('photo-image').alt='The photo from the '+photoPlace.name+' camera';
  if(open){closePanels();$('photo-sheet').hidden=false;input.enabled=false;}
 }
+// A photo spot's sheet (photo-spots.js): its name and the countdown button, which has the focus so Enter starts it.
+let spotChoice=null;
+function openPhotoSpot(spot){closePanels();spotChoice=spot;$('spot-title').textContent=spot.name;$('spot-setup').hidden=false;input.enabled=false;$('spot-start').focus();}
+$('spot-start').addEventListener('click',()=>{const spot=spotChoice;closePanels();if(spot)photoSpots?.start(spot);});
 // Each visitor chooses the backdrop and angle for their own photo.
 function previewBackdrop(){const c=$('selfie-preview').getContext('2d');c.drawImage(booth.backdropCanvas,0,0,c.canvas.width,c.canvas.height);}
 $('selfie-backdrop').addEventListener('change',e=>{booth.setBackdrop(Number(e.target.value));previewBackdrop();});
@@ -990,7 +1002,7 @@ function target(){
  const w=graffiti?.near(p)||crownTv?.near(p);if(w)return w;
  const ladder=hangarDoor?.near(p);if(ladder)return ladder;
  const privacy=cabinGlass?.near(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));if(privacy)return privacy;
- const b=booth.near(p)||comics.near(p)||chinampa?.near(p);if(b)return b;
+ const b=booth.near(p)||photoSpots?.near(p)||comics.near(p)||chinampa?.near(p);if(b)return b;
  const v=inBall?null:vault?.near(p);if(v)return v;
  const tube=inBall?null:vaultLift?.nearest(p);if(tube)return tube.kind==='riding'?null:tube;
  const g=changeLog.near(p);if(g)return g;
@@ -1142,7 +1154,7 @@ function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(collide
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall(q);ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){furSettings?.close();emergencyDrill?.close();controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
+function closePanels(){furSettings?.close();emergencyDrill?.close();controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','spot-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
 // The list is a current server snapshot, including visitors who have not sent a pose yet.
 // The list of who is aboard, while its sheet is open.
 function showAboardList(){
