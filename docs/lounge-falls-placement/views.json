@@ -1,0 +1,47 @@
+{
+ "about": "Fixed cameras for comparing the waterfall placement. Links are for the walk (lv=2, first person); the SVGs project the plan data from the same cameras.",
+ "cameras": [
+  {
+   "id": "reference",
+   "title": "Reference view (tester's camera)",
+   "at": [
+    -101.49,
+    25.52,
+    -41.22
+   ],
+   "yaw": 541,
+   "pitch": 5,
+   "link": "walk.html?lv=2&at=-101.49,25.52,-41.22&yaw=541&pitch=5&view=first",
+   "svgCurrent": "view-reference-current.svg",
+   "svgProposed": "view-reference-proposed.svg"
+  },
+  {
+   "id": "beside-bridge",
+   "title": "From beside the bridge toward the arcade",
+   "at": [
+    -123,
+    24.3,
+    -53
+   ],
+   "yaw": 90,
+   "pitch": 6,
+   "link": "walk.html?lv=2&at=-123,24.3,-53&yaw=90&pitch=6&view=first",
+   "svgCurrent": "view-beside-bridge-current.svg",
+   "svgProposed": "view-beside-bridge-proposed.svg"
+  },
+  {
+   "id": "deck19-edge",
+   "title": "Deck 19 gallery edge, looking down on the pond",
+   "at": [
+    -106,
+    32.3,
+    -48
+   ],
+   "yaw": 180,
+   "pitch": -30,
+   "link": "walk.html?lv=2&at=-106,32.3,-48&yaw=180&pitch=-30&view=first",
+   "svgCurrent": "view-deck19-edge-current.svg",
+   "svgProposed": "view-deck19-edge-proposed.svg"
+  }
+ ]
+}
