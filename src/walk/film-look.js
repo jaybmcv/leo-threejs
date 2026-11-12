@@ -58,12 +58,17 @@ const GRADE=`#if defined( TONE_MAPPING )
 #endif
 #include <tonemapping_fragment>`;
 
+// The line film adds to every shader it patches.
+const TEXEL='uniform vec2 uFilmTexel;';
 // `level` 'lit': Stylised 3D's light, its softened grain and the grade; 'lit-sharp': the same with the texture kept
 // sharp; 'grade': the grade alone.
 function patchShader(shader,level){
+ // (once a shader: a material copied with the hooks of a wrapped one that another hook has wrapped since, as corner
+ // shading wraps film's, holds film twice; the first film hook to run, the source's, patches it)
+ if(shader.fragmentShader.includes(TEXEL))return;
  const lit=level!=='grade';
  let f=shader.fragmentShader
-  .replace('#include <common>',`#include <common>\nuniform vec2 uFilmTexel;${lit?'\n'+STYL_SURFACE_GLSL:''}${STYL_GRADE_GLSL}`)
+  .replace('#include <common>',`#include <common>\n${TEXEL}${lit?'\n'+STYL_SURFACE_GLSL:''}${STYL_GRADE_GLSL}`)
   .replace('#include <tonemapping_fragment>',GRADE);
  if(lit){
   const c=filmChunks();
@@ -84,8 +89,10 @@ export function installFilmLook({renderer,scene,keep=()=>null}){
   if(material.onBeforeCompile.filmLook){wrapped.add(new WeakRef(material));material.needsUpdate=true;return;}
   const before=material.onBeforeCompile,key=material.customProgramCacheKey;
   const own=Object.hasOwn(material,'customProgramCacheKey')&&key!==T.Material.prototype.customProgramCacheKey?key:null;
-  // today's key, as three makes it for the material unwrapped
-  const todayKey=own?()=>own.call(material):()=>before.toString();
+  // today's key, as three makes it for the material unwrapped: a key of its own reads the material's hook as it was
+  // (corner shading's builds on three's, which is the hook's text), so today's programs are found again after film
+  const unwrapped=own&&Object.create(material,{onBeforeCompile:{value:before}});
+  const todayKey=own?()=>own.call(unwrapped):()=>before.toString();
   // (every program carries the texel size: three keeps the uniforms of the program it first built for a material, so
   // a film program found again in its cache would otherwise draw with today's)
   const hook=function(shader,r){before.call(this,shader,r);shader.uniforms.uFilmTexel=texel;if(film)patchShader(shader,level);};
