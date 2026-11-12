@@ -164,11 +164,13 @@ export function createLifts(scene,colliders){
   boxMesh('Car_roof',[c.width,.12,c.depth],[0,c.height+.06,0],mats.roof,car);
   boxMesh('Car_light',[c.width*.6,.03,c.depth*.6],[0,c.height-.02,0],mats.glow,car);
   const glass=spec.id==='aft-service'?null:faceOf({axis:spec.door.axis,sign:-spec.door.sign}),tower=spec.id.startsWith('forward-');
-  for(const [a,sg] of [['x',-1],['x',1],['z',-1],['z',1]]){if(faces.some(f=>faceOf(f.door)===a+sg))continue;const m=a+sg===glass||tower&&a+sg==='x-1'?mats.glass:tower?mats.warm:mats.wall;
+  // A passenger car with a side wall opposite its glass (the aft cars) glazes the wall facing the ship too, so riders see out on both sides; Mars goes on the solid wall across from it.
+  const side=!!glass&&!spec.id.startsWith('forward-')&&spec.door.axis==='z',glazed=a=>a===glass||tower&&a==='x-1'||side&&a==='x1';
+  for(const [a,sg] of [['x',-1],['x',1],['z',-1],['z',1]]){if(faces.some(f=>faceOf(f.door)===a+sg))continue;const m=glazed(a+sg)?mats.glass:tower?mats.warm:mats.wall;
    if(a==='x')boxMesh('Car_wall',[.08,c.height,c.depth],[sg*(c.width/2-.04),c.height/2,0],m,car);else boxMesh('Car_wall',[c.width,c.height,.08],[0,c.height/2,sg*(c.depth/2-.04)],m,car);}
   // Mars fills most of a starfield wall, just in front of its inner face, facing `b`: opposite the crown lounge door on
   // the crown lift, where riders board it; on a side wall where the wall opposite the door is the glass.
-  {const t=faces.at(-1).door,b=faceOf({axis:t.axis,sign:-t.sign})===glass?{axis:t.axis==='x'?'z':'x',sign:-1}:t;
+  {const t=faces.at(-1).door,b=faceOf({axis:t.axis,sign:-t.sign})===glass?{axis:t.axis==='x'?'z':'x',sign:side?1:-1}:t;
    const across=b.axis==='x'?c.depth:c.width,mars=new T.Mesh(new ReplayGeometry("src/walk/lift-ride.js:3",T.CircleGeometry,Math.min(across,c.height)*.4,64),art());
    mars.name='Car_mars';mars.position.y=c.height*.52;mars.position[b.axis]=-b.sign*((b.axis==='x'?c.width:c.depth)/2-.085);
    mars.rotation.y=b.axis==='x'?b.sign*Math.PI/2:(b.sign>0?0:Math.PI);car.add(mars);}
