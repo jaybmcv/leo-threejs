@@ -36,7 +36,7 @@ const V2_CHECKS=['check-walk-performance','check-otherside','launch-b-normalizat
 // The games' and features' own rules: quick, and independent of the ship's geometry. (The v1 ship's geometry checks
 // were removed with the v1 rollback, Jay 2026-11-02.)
 const GAMES=['check-hub','check-backdrop','check-invasion','check-emergency-drill','check-paws-off','check-giveaway','check-pool','check-ship-log','check-walk-start','check-public-area','check-joins','check-fur',
- 'check-lullaby','check-maze','check-pinball','check-treasure','check-mudwater','check-plaque-atlas','check-rig-pace','check-merged-skin','check-solved-pose','check-figure-matrices','check-bone-walk','check-visitor-bones','check-crowd-draw','check-rig-budget','check-crowd-count','check-crowd-motion','check-captain-says-rules','check-share-materials','check-call-lights','check-owner-proof','check-owner-proof-fuzz','check-owner-hiding','check-owner-bake-scene','check-desk-piece','check-pixel-switches','check-inspector-loading'];
+ 'check-lullaby','check-maze','check-pinball','check-treasure','check-mudwater','check-plaque-atlas','check-rig-pace','check-merged-skin','check-solved-pose','check-figure-matrices','check-bone-walk','check-visitor-bones','check-crowd-draw','check-rig-budget','check-crowd-count','check-crowd-motion','check-captain-says-rules','check-share-materials','check-call-lights','check-owner-proof','check-owner-proof-fuzz','check-owner-hiding','check-owner-bake-scene','check-desk-piece','check-pixel-switches','check-inspector-loading','check-film-look'];
 const kind=name=>HEAVY.has(name)?'heavy':BROWSER.has(name)?'browser':'light';
 const jobs=[
  ...(useV2?[

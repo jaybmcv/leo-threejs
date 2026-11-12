@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {installFilmLook} from '../src/walk/film-look.js';
+import {THREE_DIFFUSE} from '../src/walk/film-shading.js';
 import {getLook,setLook} from '../src/walk/look.js';
 
 // The walk's film look (src/walk/film-look.js), without a GPU: which materials it wraps and how, that today's look
-// builds exactly today's programs, and the program keys and shader text three would get in each look.
+// builds exactly today's programs, and the program keys and shader text three would get in each look. Both it and the
+// style lab swap lines of three's own lighting (film-shading.js THREE_DIFFUSE), so a three that has rewritten one fails
+// here rather than drawing film without it.
 let checks=0;const pass=name=>{checks++;console.log('PASS '+name);};
+const warnings=[],consoleWarn=console.warn;console.warn=(...args)=>{warnings.push(args.join(' '));consoleWarn(...args);};
+const D=THREE_DIFFUSE;
 const SHADERS={standard:'standard',physical:'physical',lambert:'lambert',basic:'basic',phong:'phong'};
 // What three passes onBeforeCompile for a material, and what it then builds from (its key and fragment text).
 function compileFor(material){
@@ -46,7 +51,12 @@ setLook('film',{persist:false});
 assert.equal(film.film,true);assert.equal(renderer.toneMapping,T.NeutralToneMapping);assert.equal(renderer.toneMappingExposure,1.15);
 const on=Object.fromEntries(Object.entries(mats).map(([k,m])=>[k,compileFor(m)]));
 const count=(text,part)=>text.split(part).length-1;
-for(const k of ['floor','sign','metal','wall'])assert.match(on[k].shader.fragmentShader,/stylWrapNL\( stylNL \)/,k);
+for(const k of ['floor','sign','metal','wall']){const f=on[k].shader.fragmentShader;
+ assert.match(f,/stylWrapNL\( stylNL \)/,k);assert(f.includes('BRDF_Lambert( stylAlbI )'),k);
+ const replaced=k==='wall'?[D.lambertDirect,D.lambertIndirect]:[D.physicalDirect,D.physicalIndirect];
+ for(const line of replaced)assert.equal(f.includes(line),false,`${k}: ${line}`);}
+assert.deepEqual(warnings.filter(w=>w.startsWith('Film look:')),[]);
+pass('Standard, Physical and Lambert surfaces all take the film\'s light and indirect light, none of three\'s left out');
 assert.match(on.floor.key,/\|film-lit$/);assert.match(on.sign.key,/\|film-lit-sharp$/);
 assert.match(on.floor.shader.fragmentShader,/texture2D\( map, vMapUv, 3\.0 \)/);
 assert.equal(on.floor.shader.fragmentShader.includes('#include <map_fragment>'),false);
@@ -78,4 +88,16 @@ pass('back on today\'s look every key is today\'s, and each program still carrie
 setLook('film',{persist:false});assert.match(compileFor(mats.floor).key,/\|film-lit$/);
 film.dispose();assert.equal(renderer.toneMapping,T.ACESFilmicToneMapping);
 pass('film again, then put away');
+
+// The style lab draws with the same lines: Stylised 3D in their place on its own style, three's own kept for the others
+// (at style 0 a lab material draws exactly what the viewer does). Its patch throws when a line is missing.
+const lab=await import('../src/style-lab/surface.js');
+const labMats={floor:new T.MeshStandardMaterial(),wall:new T.MeshLambertMaterial()},labRoot=new T.Group();
+for(const m of Object.values(labMats))labRoot.add(new T.Mesh(box,m));
+assert.equal(lab.patchStyleMaterials(labRoot),2);
+const labText=Object.fromEntries(Object.entries(labMats).map(([k,m])=>[k,compileFor(m).shader.fragmentShader]));
+for(const [k,f] of Object.entries(labText)){assert.match(f,/stylWrapNL\( stylNL \)/,k);assert(f.includes('BRDF_Lambert( stylAlbI )'),k);}
+for(const line of [D.physicalDirect,D.physicalIndirect])assert(labText.floor.includes(line),line);
+assert(labText.wall.includes(D.lambertDirect));
+pass('the style lab patches the same three: Stylised 3D on its own style, three\'s own lines kept for the others');
 console.log(JSON.stringify({status:'PASS',checks}));

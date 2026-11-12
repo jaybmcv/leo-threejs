@@ -91,19 +91,14 @@ vec3 labGraphic(vec3 alb, vec3 n, vec3 emissive) {
 #endif`;
 
 // three's diffuse lighting with the Stylised 3D wrap and richer shade (stylised3d.ts DIRECT_STYL / INDIRECT_STYL),
-// each left as three wrote it when the style is not on.
-const DIRECT_STYL=(albedo,paint='vec3( 0.0 )')=>`{
-    vec3 stylIrr = irradiance;
-    vec3 stylAlb = ${albedo};
-    if ( LAB_STYL > 0.0 ) {
+// each left as three wrote it when the style is not on (`today`, the line of three's it takes the place of).
+const DIRECT_STYL=(today,albedo,paint='vec3( 0.0 )')=>`if ( LAB_STYL > 0.0 ) {
       float stylNL = dot( geometryNormal, directLight.direction );
-      stylIrr = directLight.color * stylWrapNL( stylNL );
-      stylAlb += ${paint};
-      stylAlb = stylTerminator( stylAlb, stylNL );
-      stylAlb = stylLift( stylAlb, STYL_ALB_FLOOR );
-    }
-    reflectedLight.directDiffuse += stylIrr * BRDF_Lambert( stylAlb );
-  }`;
+      vec3 stylAlb = stylLift( stylTerminator( ${albedo} + ${paint}, stylNL ), STYL_ALB_FLOOR );
+      reflectedLight.directDiffuse += directLight.color * stylWrapNL( stylNL ) * BRDF_Lambert( stylAlb );
+    } else {
+      ${today}
+    }`;
 const INDIRECT_STYL=(albedo,paint='vec3( 0.0 )')=>`vec3 stylAlbI = ${albedo};
 	if ( LAB_STYL > 0.0 ) {
 		stylAlbI += ${paint};
@@ -118,12 +113,13 @@ function swap(text,from,to,label){
 }
 const C=T.ShaderChunk;
 const PHYSICAL_PARS=(()=>{
- const s=swap(C.lights_physical_pars_fragment,THREE_DIFFUSE.physicalDirect,DIRECT_STYL('material.diffuseContribution',METAL_PAINT),'physical direct diffuse');
+ const s=swap(C.lights_physical_pars_fragment,THREE_DIFFUSE.physicalDirect,DIRECT_STYL(THREE_DIFFUSE.physicalDirect,'material.diffuseContribution',METAL_PAINT),'physical direct diffuse');
  return swap(s,THREE_DIFFUSE.physicalIndirect,`${INDIRECT_STYL('material.diffuseContribution',METAL_PAINT)}
-	vec3 diffuse = irradiance * BRDF_Lambert( stylAlbI );`,'physical indirect diffuse');
+	${THREE_DIFFUSE.physicalIndirect}
+	if ( LAB_STYL > 0.0 ) diffuse = irradiance * BRDF_Lambert( stylAlbI );`,'physical indirect diffuse');
 })();
 const LAMBERT_PARS=(()=>{
- const s=swap(C.lights_lambert_pars_fragment,THREE_DIFFUSE.lambertDirect,DIRECT_STYL('material.diffuseColor'),'lambert direct diffuse');
+ const s=swap(C.lights_lambert_pars_fragment,THREE_DIFFUSE.lambertDirect,DIRECT_STYL(THREE_DIFFUSE.lambertDirect,'material.diffuseColor'),'lambert direct diffuse');
  return swap(s,THREE_DIFFUSE.lambertIndirect,`${INDIRECT_STYL('material.diffuseColor')}
 	reflectedLight.indirectDiffuse += irradiance * BRDF_Lambert( stylAlbI );`,'lambert indirect diffuse');
 })();
