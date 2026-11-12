@@ -33,18 +33,17 @@ export function createPinball({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
  const close=document.createElement('button');close.type='button';close.setAttribute('aria-label','Close the game');close.textContent='×';
  close.style.cssText='position:absolute;top:12px;right:14px;width:44px;height:44px;border-radius:22px;border:1px solid #3a4150;background:#11151d;color:#f4f0e8;font:500 26px/1 system-ui;cursor:pointer';
  root.appendChild(close);
- const touch=matchMedia('(pointer:coarse)').matches,pads={left:false,right:false,launch:false};
- if(touch){
-  const bar=document.createElement('div');bar.style.cssText='display:flex;gap:12px;margin-top:10px';
-  for(const [k,label,aria] of [['left','◀ FLIP','Left flipper'],['launch','LAUNCH','Launch the ball'],['right','FLIP ▶','Right flipper']]){
-   const b=document.createElement('button');b.type='button';b.textContent=label;b.setAttribute('aria-label',aria);
-   b.style.cssText=`width:${k==='launch'?96:104}px;height:64px;border-radius:14px;border:1px solid #3a4150;background:#151a24;color:${k==='launch'?C.orange:C.text};font:700 15px ${FONT.mono}`;
-   b.addEventListener('pointerdown',e=>{e.preventDefault();if(screen!=='play'){begin();return;}pads[k]=true;b.setPointerCapture(e.pointerId);});
-   for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>{pads[k]=false;});
-   bar.appendChild(b);
-  }
-  root.appendChild(bar);
+ // (whether this is a touch screen is asked each time the game opens; the buttons show only on one)
+ let touch=matchMedia('(pointer:coarse)').matches;const pads={left:false,right:false,launch:false};
+ const bar=document.createElement('div');bar.className='pinball-pads';bar.style.cssText='display:none;gap:12px;margin-top:10px';
+ for(const [k,label,aria] of [['left','◀ FLIP','Left flipper'],['launch','LAUNCH','Launch the ball'],['right','FLIP ▶','Right flipper']]){
+  const b=document.createElement('button');b.type='button';b.textContent=label;b.setAttribute('aria-label',aria);
+  b.style.cssText=`width:${k==='launch'?96:104}px;height:64px;border-radius:14px;border:1px solid #3a4150;background:#151a24;color:${k==='launch'?C.orange:C.text};font:700 15px ${FONT.mono}`;
+  b.addEventListener('pointerdown',e=>{e.preventDefault();if(screen!=='play'){begin();return;}pads[k]=true;b.setPointerCapture(e.pointerId);});
+  for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,()=>{pads[k]=false;});
+  bar.appendChild(b);
  }
+ root.appendChild(bar);
  document.body.appendChild(root);
  const g2=canvas.getContext('2d');
  const text=(s,x,y,size,color,align='center',weight=700,font=FONT.mono)=>{g2.font=`${weight} ${size*S}px ${font}`;g2.fillStyle=color;g2.textAlign=align;g2.textBaseline='top';g2.fillText(s,x*S,y*S);};
@@ -174,7 +173,7 @@ export function createPinball({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
   if((now/600|0)%2===0)text(touch?'TAP TO PLAY AGAIN':'SPACE TO PLAY AGAIN',120,TOP+300,10,C.orange);
   text(touch?'TAP × TO RETURN TO LEO':'ESC RETURNS TO LEO',120,TOP+322,7,C.dim);
  }
- function show(){if(open)return;open=true;root.style.display='flex';screen='title';paused=false;down.clear();pointers.clear();fit();request();askTicket();onOpen();last=performance.now();acc=0;raf=requestAnimationFrame(loop);}
+ function show(){if(open)return;open=true;root.style.display='flex';touch=matchMedia('(pointer:coarse)').matches;bar.style.display=touch?'flex':'none';screen='title';paused=false;down.clear();pointers.clear();fit();request();askTicket();onOpen();last=performance.now();acc=0;raf=requestAnimationFrame(loop);}
  // (a ranked game left unfinished is dropped: its ticket goes unused, and the next asked for replaces it)
  function hide(){if(!open)return;open=false;root.style.display='none';cancelAnimationFrame(raf);down.clear();pointers.clear();for(const k in pads)pads[k]=false;
   if(screen==='play'&&game&&game.score>best){best=game.score;saveBest(best);}ranked=null;onClose();}
@@ -188,11 +187,12 @@ export function createPinball({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
    else if(msg?.op==='ticket'){if(msg.ok&&typeof msg.id==='string'&&Number.isInteger(msg.seed)){ticket={id:msg.id,seed:msg.seed};why=null;}else{ticket=null;why=msg.why||'offline';}}
    else if(msg?.op==='result'){clearTimeout(resultTimer);result={...msg,pending:false};if(msg.ok)request();}
   },
-  // The link to Leo live came up (true) or went (false).
-  link(up){if(up){request();if(open)askTicket();}else{clearTimeout(boardTimer);ticket=null;why='offline';setBoard({status:'offline'});}},
+  // The link to Leo live came up (true) or went (false). A ranked game under way keeps its ticket through a reconnect
+  // (the server holds it by account): asking for another would drop it, and the game's finish with it.
+  link(up){if(up){request();if(open&&!(screen==='play'&&ranked))askTicket();}else{clearTimeout(boardTimer);ticket=null;why='offline';setBoard({status:'offline'});}},
   get board(){return board;},
   // For checks: the state and a way to start without a key.
-  get state(){return {screen,game,paused,best,board,ranked:!!rec&&screen==='play',ticket,result,steps:rec?.steps??null};},
+  get state(){return {screen,game,paused,best,board,ranked:!!rec&&screen==='play',ticket,why,result,steps:rec?.steps??null,touch};},
   _begin:begin,
  };
 }

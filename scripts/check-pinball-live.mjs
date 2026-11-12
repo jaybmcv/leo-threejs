@@ -105,14 +105,18 @@ try{
  const changes=decode(games[3].log);changes[1][0]=Math.max(1,changes[1][0]-60);
  const tampered=changes.map(([d,b])=>d.toString(36)+'ABCDEFGH'[b]).join('');
  check('a tampered log is refused',tampered!==games[3].log&&(await finish(dee,tickets[3].id,games[3],{log:tampered}))?.why==='rejected');
- const b=await finish(ben,tickets[1].id,games[1]),e=await finish(eli,tickets[4].id,games[4]);
- check('other players’ real games are posted too (Eli’s ticket survived Ben’s try)',b?.ok===true&&e?.ok===true);
+ // Ben's link drops mid-game and he comes back on a new connection (the page asks for no new ticket while a ranked
+ // game is under way: pinball/game.js link): his game's ticket is still his.
+ ben.ws.close();await sleep(200);const benAgain=await bot(srv,{id:ben.id});
+ const b=await finish(benAgain,tickets[1].id,games[1]),e=await finish(eli,tickets[4].id,games[4]);
+ check('a ranked game finished after a reconnect is posted on its original ticket',b?.ok===true&&b.score===games[1].score,JSON.stringify(b));
+ check('other players’ real games are posted too (Eli’s ticket survived Ben’s try)',e?.ok===true);
  const order=[[ada,games[0]],[ben,games[1]],[eli,games[4]]].sort((x,y)=>y[1].score-x[1].score),names=order.map(([p])=>'Pilot '+p.id.slice(-3));
  for(const viewer of [guest,watcher]){const bd=await ask(viewer,'board');
   // (only the three real games, so nothing refused reached it)
   check(`${viewer===guest?'a guest':'another signed-in player'} sees the ranked board: best first, public names only`,
    JSON.stringify(bd.top)===JSON.stringify(order.map(([p,r],i)=>({name:names[i],score:r.score})))&&!JSON.stringify(bd).match(/9[0-9]{17}/));}
- const mine=await ask(ben,'board');check('a player’s own best and rank come with the board',mine.you?.score===games[1].score&&mine.you.rank===order.findIndex(([p])=>p===ben)+1);
+ const mine=await ask(benAgain,'board');check('a player’s own best and rank come with the board',mine.you?.score===games[1].score&&mine.you.rank===order.findIndex(([p])=>p===ben)+1);
  await sleep(1500);
  const saved=JSON.parse(await fs.readFile(store,'utf8'));
  check('accepted results are kept in the pinball store, by account',saved.length===3&&saved.every(x=>/^9\d{17}$/.test(x.id)&&Number.isInteger(x.score)));
