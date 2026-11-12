@@ -67,7 +67,7 @@ export const DRESSINGS={
  ...template('hex-floor','createHexFloor',r=>[r.group],
   {glue:'hexFloor=createHexFloor();',token:/\bcreateHexFloor\b|\bhexFloor\b(?!\?\.update\()/g,
    allowed:["import {createHexFloor} from './hex-floor.authoring.js';",'toBand(hexFloor.group);',',hexFloor=null,'],
-   imports:['src/v2/prepared-geometry-record.js','src/plan/selected-layout.js','package:three','src/plan/rooms.js','package:three/addons/utils/BufferGeometryUtils.js','src/service-circulation.js','src/transit.authoring.js'],
+   imports:['src/v2/prepared-geometry-record.js','src/plan/selected-layout.js','package:three','src/plan/rooms.js','package:three/addons/utils/BufferGeometryUtils.js','src/plan/geometry-v2.js','src/service-circulation.js','src/transit.authoring.js'],
    preload:['src/model.authoring.js','src/model.js']}),
  ...template('lounge-compass','createLoungeCompass',r=>r?[r]:[],
   {glue:'{const compass=createLoungeCompass();if(compass)toBand(compass);}',token:/\bcreateLoungeCompass\b/g,
