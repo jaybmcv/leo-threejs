@@ -104,8 +104,9 @@ export function createSelfieBooth(){
   },
   // Set the camera for a canvas of w×h so the 2:1 crop taken from it shows FOV degrees top to bottom.
   aim(w,h){const crop=Math.min(h,w/ASPECT);camera.aspect=w/h;camera.fov=2*Math.atan(Math.tan(FOV*Math.PI/360)*h/crop)*180/Math.PI;camera.updateProjectionMatrix();},
-  // Right after the photo is drawn into `source`: crop it to 2:1 and frame it. Resolves to a canvas.
-  async frame(source,names=[],showNames=true){
+  // Right after the photo is drawn into `source`: crop it to 2:1 and frame it, `place` named under it (a photo spot's,
+  // photo-spots.js). Resolves to a canvas.
+  async frame(source,names=[],showNames=true,place='CROWN LOUNGE'){
    const w=source.width,h=source.height,cw=Math.min(w,h*ASPECT),ch=cw/ASPECT;
    const pw=OUT.w-OUT.margin*2,ph=Math.round(pw/ASPECT),out=walkCanvas();out.width=OUT.w;out.height=OUT.margin+ph+OUT.band;
    const logo=await mark;await globalThis.document?.fonts?.ready;
@@ -131,7 +132,7 @@ export function createSelfieBooth(){
    if(logo){const s=86;c.drawImage(logo,x,y-s/2,s,s*logo.height/logo.width);x+=s+24;}
    c.textBaseline='alphabetic';c.fillStyle='#f4f0e8';c.font=`500 46px ${FONT.display}`;c.fillText('MARS CATS VOYAGE',x,y+4);
    c.fillStyle='#a6a5b4';c.font=`400 20px ${FONT.mono}`;
-   c.fillText(`LEO · CROWN LOUNGE · ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}).toUpperCase()}`,x,y+38);
+   c.fillText(`LEO · ${place} · ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}).toUpperCase()}`,x,y+38);
    c.textAlign='right';c.fillStyle=ORANGE;c.font=`400 20px ${FONT.mono}`;c.fillText('marscatsvoyage.com',OUT.margin+pw,y+38);
    return out;
   },

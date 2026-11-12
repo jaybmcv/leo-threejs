@@ -480,6 +480,14 @@
     ],
     "via": null
   },
+  "src/walk/photo-spots.js": {
+    "owners": [
+      "crown",
+      "circulation-6",
+      "commons-1"
+    ],
+    "via": null
+  },
   "src/walk/places.js": {
     "owners": [
       "@areas",
