@@ -11,6 +11,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
 import WebSocket from 'ws';
+import {ANGLE} from './chrome-setup.mjs';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
 const tags=arg('tags','base').split(','),rounds=Number(arg('rounds',3)),frames=Number(arg('frames',300)),shots=process.argv.includes('--shots');
@@ -50,7 +51,7 @@ async function launch(){
   // --vsync keeps a visitor's frame pacing (vsync and the frame cap on): the frame interval is then the display's, but the
   // main-thread and GPU times are what a visitor's frame costs.
   ...(process.argv.includes('--vsync')?[]:['--disable-gpu-vsync','--disable-frame-rate-limit']),'--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows',
-  ...(!process.argv.includes('--headless')?[]:['--headless=new','--use-angle=d3d11','--enable-gpu','--ignore-gpu-blocklist']),
+  ...(!process.argv.includes('--headless')?[]:['--headless=new',...ANGLE,'--enable-gpu','--ignore-gpu-blocklist']),
   '--force-device-scale-factor=1','--window-position=0,0','--window-size='+width+','+(height+140),'--autoplay-policy=no-user-gesture-required','about:blank'];
  const chrome=spawn(CHROME,flags,{stdio:'ignore'});
  for(let i=0;i<80;i++){try{await fetch('http://127.0.0.1:'+port+'/json/version');return chrome;}catch{await sleep(250);}}

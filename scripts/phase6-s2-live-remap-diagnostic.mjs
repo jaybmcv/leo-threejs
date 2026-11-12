@@ -7,7 +7,8 @@ import {createHash} from 'node:crypto';
 import {build} from 'esbuild';
 import {auditNativeLanding,auditCorridorLanding} from './ship-log-remap-audit.mjs';
 import {remapBrowserHooks} from './ship-log-remap-browser-hooks.mjs';
-const require=createRequire('C:/Users/henri/code/feedback-inbox-timers/build/package.json'),{chromium}=require('playwright');
+import {ANGLE_IF_ASKED,PLAYWRIGHT_FROM} from './chrome-setup.mjs';
+const require=createRequire(PLAYWRIGHT_FROM),{chromium}=require('playwright');
 // Default: validate the actual current public bundle. --frozen injects only this
 // piece's current pure remapper into the supplied finished geometry baseline.
 const frozenMode=process.argv.includes('--frozen');
@@ -34,7 +35,7 @@ const server=http.createServer(async(req,res)=>{try{const url=new URL(req.url,'h
 await new Promise(r=>server.listen(0,'127.0.0.1',r));const port=server.address().port;
 let browser;const errors=[],report={status:'PENDING',method:frozenMode?'Frozen public geometry with current pure remapper injected':'DIAGNOSTIC ONLY: old public geometry/remapper with fresh GitHub queries; old bundle cannot prove new nearby markers. Final normal actual-public gate remains mandatory.',directory,bundle:script,bundleSHA256:createHash('sha256').update(original).digest('hex'),errors,rows:[]};
 try{
- browser=await chromium.launch({channel:'chrome',executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--disable-gpu-sandbox']});const page=await browser.newPage({viewport:{width:1280,height:720}});
+ browser=await chromium.launch({channel:'chrome',executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--disable-gpu-sandbox',...ANGLE_IF_ASKED]});const page=await browser.newPage({viewport:{width:1280,height:720}});
  page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
  const initial=table.rows.find(r=>r.id==='pr99');

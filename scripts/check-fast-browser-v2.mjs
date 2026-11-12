@@ -5,6 +5,7 @@ import http from 'node:http';
 import {spawn} from 'node:child_process';
 import {randomUUID} from 'node:crypto';
 import WebSocket from 'ws';
+import {ANGLE} from './chrome-setup.mjs';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),out=path.resolve('dist-v2'),tag=process.env.LEO_FAST_TAG||'last',directory='output/fast-deploy/'+tag+'-browser';await fs.mkdir(directory,{recursive:true});
 const plan=JSON.parse(await fs.readFile('output/fast-deploy/plan.json','utf8').catch(()=>'{}')),layout=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json'));
 const report={status:'FAIL',errors:[],rooms:[],started:new Date().toISOString()},start=performance.now();
@@ -12,7 +13,7 @@ const server=http.createServer(async(req,res)=>{try{const name=decodeURIComponen
 const profile=path.resolve(directory,'chrome-'+randomUUID());await fs.mkdir(profile);const stderr=openSync(path.resolve(directory,'chrome.log'),'w');let child,browser,page;
 async function connect(url){const socket=new WebSocket(url),pending=new Map();let id=0;await new Promise((r,j)=>{socket.once('open',r);socket.once('error',j);});socket.on('message',raw=>{const e=JSON.parse(raw);if(e.id){const p=pending.get(e.id);if(p){pending.delete(e.id);clearTimeout(p.timer);e.error?p.reject(Error(JSON.stringify(e.error))):p.resolve(e.result);}}if(e.method==='Runtime.exceptionThrown')report.errors.push(e.params.exceptionDetails.exception?.description||e.params.exceptionDetails.text);if(e.method==='Inspector.targetCrashed')report.errors.push('Renderer crashed');});return {socket,send:(method,params={},timeout=15000)=>new Promise((resolve,reject)=>{const n=++id,timer=setTimeout(()=>{pending.delete(n);reject(Error('CDP timeout '+method));},timeout);pending.set(n,{resolve,reject,timer});socket.send(JSON.stringify({id:n,method,params}));})};}
 try{
- child=spawn(process.env.LEO_CHROME_EXE||'C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless=new','--remote-debugging-port=0','--no-sandbox','--disable-gpu-sandbox','--use-angle=d3d11','--user-data-dir='+profile,'about:blank'],{windowsHide:true,stdio:['ignore','ignore',stderr]});let launchError;child.once('error',e=>{launchError=e;});
+ child=spawn(process.env.LEO_CHROME_EXE||'C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless=new','--remote-debugging-port=0','--no-sandbox','--disable-gpu-sandbox',...ANGLE,'--user-data-dir='+profile,'about:blank'],{windowsHide:true,stdio:['ignore','ignore',stderr]});let launchError;child.once('error',e=>{launchError=e;});
  let port;for(let i=0;i<150;i++){if(launchError)throw launchError;try{port=Number((await fs.readFile(profile+'/DevToolsActivePort','utf8')).split('\n')[0]);if(port)break;}catch{}await sleep(100);}if(!port)throw Error('Chrome did not start; run this same command in your normal PowerShell session');
  browser=await connect((await fetch('http://127.0.0.1:'+port+'/json/version').then(r=>r.json())).webSocketDebuggerUrl);const {targetId}=await browser.send('Target.createTarget',{url:'about:blank'}),tab=(await fetch('http://127.0.0.1:'+port+'/json/list').then(r=>r.json())).find(t=>t.id===targetId);page=await connect(tab.webSocketDebuggerUrl);
  await page.send('Runtime.enable');await page.send('Page.enable');await page.send('Network.enable');await page.send('Inspector.enable');

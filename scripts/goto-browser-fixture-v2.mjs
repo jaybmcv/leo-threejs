@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {createRequire} from 'node:module';
 import {pathToFileURL} from 'node:url';
+import {ANGLE,PLAYWRIGHT_FROM} from './chrome-setup.mjs';
 export async function runGotoBrowser(url){
  if(!/^http:\/\/(127\.0\.0\.1|localhost):\d+\//.test(url))throw Error('Use the local scoped goto review server');
- const require=createRequire('C:/Users/henri/code/feedback-inbox-timers/build/package.json'),{chromium}=require('playwright');
- const installed='C:/Program Files/Google/Chrome/Application/chrome.exe',browser=await chromium.launch({channel:'chrome',...await fs.stat(installed).then(()=>({executablePath:installed})).catch(()=>({})),headless:true,args:['--use-angle=d3d11']});
+ const require=createRequire(PLAYWRIGHT_FROM),{chromium}=require('playwright');
+ const installed='C:/Program Files/Google/Chrome/Application/chrome.exe',browser=await chromium.launch({channel:'chrome',...await fs.stat(installed).then(()=>({executablePath:installed})).catch(()=>({})),headless:true,args:[...ANGLE]});
  try{
  const page=await browser.newPage({viewport:{width:1280,height:800},deviceScaleFactor:1}),errors=[];page.on('pageerror',()=>errors.push('page error'));
  await page.goto(url,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>!!globalThis.__walk,{timeout:60000});

@@ -7,13 +7,14 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createRequire} from 'node:module';
-const {chromium}=createRequire('C:/Users/henri/code/feedback-inbox-timers/build/package.json')('playwright');
+import {ANGLE,PLAYWRIGHT_FROM} from './chrome-setup.mjs';
+const {chromium}=createRequire(PLAYWRIGHT_FROM)('playwright');
 const args=process.argv.slice(2),flag=n=>{const i=args.indexOf(n);if(i<0)return null;const v=args[i+1];args.splice(i,2);return v;};
 const board=!args.includes('--no-board');if(!board)args.splice(args.indexOf('--no-board'),1);
 const out=flag('--out')||'output/phone-memory/'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
 const url=args[0]||'https://leo.marscatsvoyage.com/walk.html',LIMIT=300000,MB=n=>Math.round(n/1e5)/10;
 const report={status:'FAIL',url,at:new Date().toISOString(),phone:'390x844 DPR 3, touch, Android Chrome user agent, cold cache',downloadMB:0,peakHeapMB:0,stages:[],errors:[]};
-const browser=await chromium.launch({channel:'chrome',args:['--use-angle=d3d11','--enable-gpu','--ignore-gpu-blocklist','--disable-blink-features=AutomationControlled','--enable-precise-memory-info']});
+const browser=await chromium.launch({channel:'chrome',args:[...ANGLE,'--enable-gpu','--ignore-gpu-blocklist','--disable-blink-features=AutomationControlled','--enable-precise-memory-info']});
 try{
  const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true,
   userAgent:'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36'});

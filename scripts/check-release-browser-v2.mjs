@@ -5,10 +5,11 @@ import assert from 'node:assert/strict';
 import {once} from 'node:events';
 import {createRequire} from 'node:module';
 import {serveViewerReview} from './serve-viewer-v2.mjs';
-const require=createRequire('C:/Users/henri/code/feedback-inbox-timers/build/package.json'),{chromium}=require('playwright');
+import {ANGLE_IF_ASKED,PLAYWRIGHT_FROM} from './chrome-setup.mjs';
+const require=createRequire(PLAYWRIGHT_FROM),{chromium}=require('playwright');
 const out='output/launch-g';await fs.mkdir(out,{recursive:true});
 const server=serveViewerReview({base:process.cwd(),out:'dist-v2',port:0});await once(server,'listening');const base='http://127.0.0.1:'+server.address().port;
-const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--disable-gpu-sandbox']});
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--disable-gpu-sandbox',...ANGLE_IF_ASKED]});
 const report={status:'RUNNING',checks:[],blocked:[],errors:[],screenshots:[]};
 async function context(options={}){const c=await browser.newContext({acceptDownloads:true,...options});await c.route('**/*',r=>{const u=new URL(r.request().url());if(['127.0.0.1','localhost'].includes(u.hostname)||['data:','blob:'].includes(u.protocol))return r.continue();report.blocked.push(u.origin);return r.abort();});return c;}
 async function ready(p){await p.waitForFunction(()=>document.body.dataset.ready==='1'&&window.__leoViewer,null,{timeout:90000});}

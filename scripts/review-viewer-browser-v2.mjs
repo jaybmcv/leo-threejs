@@ -7,10 +7,11 @@ import {createRequire} from 'node:module';
 import {buildViewerReview} from './build-viewer-v2.mjs';
 import {serveViewerReview} from './serve-viewer-v2.mjs';
 import {checkViewerLabels} from '../src/v2/viewer-data.js';
+import {ANGLE_IF_ASKED,PLAYWRIGHT_FROM} from './chrome-setup.mjs';
 const base=process.argv.find(a=>a.startsWith('--base='))?.slice(7)||process.cwd();
 const build=await buildViewerReview({base}),out='output/phase7/viewer-evidence';await fs.mkdir(out,{recursive:true});
 const selected=JSON.parse(await fs.readFile('output/phase7/viewer-review/'+build.layoutFile,'utf8')),manifest=JSON.parse(await fs.readFile(path.join(base,'dist-v2/asset-manifest.json'),'utf8'));
-const require=createRequire('C:/Users/henri/code/feedback-inbox-timers/build/package.json'),{chromium}=require('playwright'),options={channel:'chrome',headless:true,args:['--disable-gpu-sandbox']};
+const require=createRequire(PLAYWRIGHT_FROM),{chromium}=require('playwright'),options={channel:'chrome',headless:true,args:['--disable-gpu-sandbox',...ANGLE_IF_ASKED]};
 // Playwright checks a per-user Chrome path first on this machine; Chrome is installed system-wide.
 try{await fs.access('C:/Users/henri/AppData/Local/Google/Chrome/Application/chrome.exe');}catch{options.executablePath='C:/Program Files/Google/Chrome/Application/chrome.exe';}
 const server=serveViewerReview({base,port:0});await once(server,'listening');const address='http://127.0.0.1:'+server.address().port;

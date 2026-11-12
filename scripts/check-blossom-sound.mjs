@@ -4,6 +4,7 @@ import path from 'node:path';
 import {spawn} from 'node:child_process';
 import WebSocket from 'ws';
 import {build} from 'esbuild';
+import {ANGLE_IF_ASKED} from './chrome-setup.mjs';
 
 // Renders the blossom garden's real fountain sound (src/walk/blossom.js) in headless Chrome and measures the audio it makes.
 // The page's AudioContext is swapped for an OfflineAudioContext, so the sound's own graph (noise, filters, gain, panner) is rendered to samples
@@ -42,7 +43,7 @@ const code=out.outputFiles[0].text;await fs.writeFile(path.join(dir,'sound-page.
 // Chrome is driven over its DevTools socket with the project's own ws package, as scripts/check-fast-browser-v2.mjs does. No browser means a failed check, never a skipped one.
 const sleep=ms=>new Promise(r=>setTimeout(r,ms)),profile=await fs.mkdtemp(path.join(dir,'chrome-'));let child,socket;
 try{
- child=spawn(process.env.LEO_CHROME_EXE||'C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless=new','--remote-debugging-port=0','--no-sandbox','--disable-gpu-sandbox','--autoplay-policy=no-user-gesture-required','--user-data-dir='+profile,'about:blank'],{windowsHide:true,stdio:'ignore'});
+ child=spawn(process.env.LEO_CHROME_EXE||'C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless=new','--remote-debugging-port=0','--no-sandbox','--disable-gpu-sandbox',...ANGLE_IF_ASKED,'--autoplay-policy=no-user-gesture-required','--user-data-dir='+profile,'about:blank'],{windowsHide:true,stdio:'ignore'});
  let launchError;child.once('error',e=>{launchError=e;});
  let port;for(let i=0;i<150;i++){if(launchError)throw Error('Chrome could not start (set LEO_CHROME_EXE): '+launchError.message);try{port=Number((await fs.readFile(profile+'/DevToolsActivePort','utf8')).split('\n')[0]);if(port)break;}catch{}await sleep(100);}
  if(!port)throw Error('Chrome did not start; the fountain sound was not rendered');
