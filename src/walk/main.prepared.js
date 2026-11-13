@@ -279,6 +279,7 @@ async function buildShip(){
  // The Recreation Hall's darts lanes on its aft glass (darts/lanes.js): E at a throwing line opens the nine-dart challenge.
  dartsLanes=createDartsLanes(ship);
  loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;
+ rest=spotIndex(prepared.seats);// The Keel Club's seats were swapped in after afterRest (prepare.prepared.js).
  const {pipework,trolley,wardTrolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;atmosphere=prepared.atmosphere;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;

@@ -373,6 +373,7 @@ async function buildShip(){
  // Phones keep the Keel Club's look but not its fill-rate extras (keel-club.js lite()).
  if(preparedPhone)keelClub?.lite?.();
  loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;keelSound=keelClub?createKeelSound():null;
+ rest=spotIndex(prepared.seats);// The Keel Club's seats were swapped in after afterRest (prepare.public.js).
  const {pipework,trolley,wardTrolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;atmosphere=prepared.atmosphere;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;
