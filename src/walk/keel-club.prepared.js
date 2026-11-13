@@ -555,7 +555,9 @@ export function createKeelClub(ship){
   {const za=-(a+.3),zb=-(b-.3),ends=[x0+.35,x0+20.15];
    for(const x of ends){glass.push(paint(vpanel(x,za,x,zb,TY+3,TY+4),C.net));for(const y of [TY+3,TY+4])parts.push(paint(box(x-.05,x+.05,y-.05,y+.05,zb,za),C.frame));
     for(let k=0;k<=5;k++){const z=za+(zb-za)*k/5;parts.push(paint(box(x-.05,x+.05,TY,TY+4,z-.05,z+.05),C.frame));}}
-   for(const z of [za,zb])for(const [p,q] of [[ends[0],ends[0]+4],[ends[1]-4,ends[1]]]){const g=box(p,q,TY,TY+2,z-.02,z+.02);glass.push(paint(g.clone(),C.rail));walls.push(g);glass.push(paint(vpanel(p,z,q,z,TY+2,TY+3),C.net));
+   for(const z of [za,zb])for(const [p,q] of [[ends[0],ends[0]+4],[ends[1]-4,ends[1]]]){const g=box(p,q,TY,TY+2,z-.02,z+.02);glass.push(paint(g.clone(),C.rail));
+    // the hull side blocks .3 m in from its pane: the strip behind it was .5 m wide, narrower than the cat, and wedged it
+    walls.push(z===zb?box(p,q,TY,TY+2,z+.28,z+.32):g);glass.push(paint(vpanel(p,z,q,z,TY+2,TY+3),C.net));
     for(const x of [p,(p+q)/2,q])parts.push(paint(box(x-.05,x+.05,TY,TY+3,z-.05,z+.05),C.frame));parts.push(paint(box(p,q,TY+2.95,TY+3.05,z-.05,z+.05),C.frame));}}
   (k%2?planter:lampPost)(x0+10.25,TY,-(a-.45));
   add(box(x0+10.2,x0+10.3,TY,TY+.88,-(a+.6),-(b-.6)),C.net,{wall:true});lines(x0+.6,x0+19.9,-(b-.6),-(a+.6),y);for(const x of [x0+10.25-6.95,x0+10.25+6.95])line(x,-(a+.6),x,-(b-.6),y);line(x0+10.25-6.95,zm,x0+10.25+6.95,zm,y);}

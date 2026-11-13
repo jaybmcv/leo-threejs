@@ -179,4 +179,16 @@ assert(walked&&Math.abs(ctl.position.y-TY)<.15,'controller route');
 {const base={yaw:0,grounded:false,stance:'stand',jumpCount:0,jumpS:-1,rise:0,emote:null,playing:false,ball:false,glide:false,hook:null,fur:0},r=new WireReader();
  const got=r.read(assembleFrame([encodeIdentity(1,'voyager-a'),encodeIdentity(2,'voyager-b')],[encodeRecord(1,{...base,pos:[-89,-52.05,-43],rest:'tube'}),encodeRecord(2,{...base,pos:[0,-51.5,0],rest:'sit'})]));
  assert.deepEqual(got.map(p=>p.rest),['tube','sit'],'a tube pose does not cross the wire');console.log('PASS a tube pose crosses the wire with the others in its frame');}
+// The padel courts' side glass stood 0.5 m off the hull, narrower than the cat (2 x 0.35 m), so a cat at the reported spot
+// (-22.25, -66.27) was squeezed motionless between the glass and the hull. The glass now blocks 0.3 m further in: the cat
+// walks out along the hull to the open court, and from the court the glass and the hull stay solid.
+{const c2=new Controller(col),put=(x,z)=>{c2.position.set(x,TY,z);c2.velocity.set(0,0,0);c2.grounded=true;},at=()=>c2.position.toArray().map(v=>v.toFixed(2)).join(',');
+ const drive=(x,z,steps,jump=false)=>{for(let i=0;i<steps;i++){c2.step(1/60,new T.Vector3(x,0,z).setLength(3.2),jump&&i%45===5);const p=c2.position;
+  if(p.z<-66.45||p.y<TY-.1)bad.push(at());if(p.x>-23.7&&p.x<-20.2&&p.z<-65.3&&!from)bad.push(at());}};
+ let bad=[],from=true;put(-22.25,-66.27);drive(-1,0,240);drive(0,1,240);from=false;
+ const out=c2.position.z>-65.3&&Math.abs(c2.position.y-TY)<.1;
+ console.log(`${out?'PASS':'FAIL'} a cat wedged behind the padel court's side glass walks out to the open court (at ${at()})`);assert(out&&!bad.length,'padel strip trap '+bad[0]);
+ for(const [x,z,dx,dz,jump] of [[-22,-60,0,-1,0],[-22,-60,-1,-1,0],[-22,-60,1,-1,0],[-22,-64,0,-1,1],[-37,-62,0,-1,0],[-37,-62,1,-1,1],[-24.5,-64,1,-1,0],[-19.5,-64,-1,-1,0]]){
+  bad=[];put(x,z);drive(dx,dz,150,!!jump);drive(0,1,150);const ok=!bad.length&&c2.position.z>-65.3&&Math.abs(c2.position.y-TY)<.1;
+  console.log(`${ok?'PASS':'FAIL'} padel court side glass from (${x}, ${z}) heading (${dx}, ${dz})${jump?' with jumps':''}: solid, then backs away to ${at()}`);assert(ok,'padel court approach '+bad[0]);}}
 console.log('PASS Keel Club');
