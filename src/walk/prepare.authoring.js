@@ -126,7 +126,7 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Container hold A's parked hand trolley (cargo-trolley.js): solid as one plain box, clear of the aisle.
  const trolley=feature('cargo-trolley',ship,()=>createCargoTrolley(ship));if(trolley)colliders.addStatic(trolley.solid,()=>true);
  // The Medical ward's two-tier supply trolley stands outside the aisle line (ward-trolley.js).
- const wardTrolley=feature('ward-trolley',ship,()=>createWardTrolley(ship));
+ const wardTrolley=feature('ward-trolley',ship,()=>createWardTrolley(ship));if(wardTrolley)colliders.addStatic(wardTrolley.solid,()=>true);
  // Cargo maintenance's MCT charging and service bays (mct-bay.js): the vehicles, power units, tool trolley and lift
  // pump solid as plain boxes; the cables, signs and floor markings dressing.
  const mctBay=feature('mct-bay',ship,()=>createMctBay(ship));if(mctBay)colliders.addStatic(mctBay.solid,()=>true);

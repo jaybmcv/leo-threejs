@@ -5607,12 +5607,15 @@
       "fixed": false,
       "features": [
         "Ward_supply_trolley",
-        "Ward_supply_trolley_world"
+        "Ward_supply_trolley_world",
+        "Ward_supply_trolley_collider"
       ],
-      "colliders": [],
+      "colliders": [
+        "Ward_supply_trolley_collider"
+      ],
       "interactionTargets": null,
       "placements": 21,
-      "signature": "42d8b9217ba99b450a90676834d761e9b95400c5499d127f9fb69c792c62f293"
+      "signature": "dd2fb40a3bc636bd34b1fe546a8a33afea641a14905f27dc9d72a3f52991568f"
     },
     {
       "source": "src/walk/windows.js",
