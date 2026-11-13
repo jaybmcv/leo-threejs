@@ -97,6 +97,7 @@ import {wearHat,fit,FIT} from './hat.js';
 import {createYarn,YARN_SPOTS} from './yarn.js';
 import {BALL,createBallMesh} from './hamster-ball.js';
 import {createGlide} from './glide.js';
+import {createSkate,skateFooting} from './skate.js';
 import {createGrapple} from './grapple.js';
 import {ballBounce,ballDismount} from './ball-bounce.js';
 import {MeshBVH} from 'three-mesh-bvh';
@@ -455,6 +456,12 @@ const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('s
 const follow=new FollowCamera(camera,colliders);
 const controller=new Controller(colliders);
 let walker=null;
+// The skateboard (skate.js): Skate in the toolbar steps onto it where the floor is firm and level and nothing else has
+// the walker; the frame loop takes him off it when something does (skateBusy).
+const skate=createSkate({button:$('skate'),hint:$('skate-hint'),flipButton:$('kickflip'),controller,touch:()=>matchMedia('(pointer:coarse)').matches,
+ blocked:()=>document.body.dataset.ready!=='1'?'Still loading':skateBusy()?'Not now: step out of what you’re doing first':skateFooting(controller)});
+// Something else has the walker: a seat or bed, a treadmill, the ball, a swim, the hook, a glide, a game or a camera.
+function skateBusy(){return !!(resting||run||inBall||treasure?.active||controller.hook||controller.gliding||playing()||pawsOff?.active||graffiti?.active||emergencyDrill?.isOpen||portable?.active);}
 // The film look (film-look.js, chosen in the Graphics detail sheet): Stylised 3D drawn by the walk's own materials,
 // installed before the walk first draws.
 installFilmLook({renderer,scene,keep:()=>walker?.holder});
@@ -508,7 +515,8 @@ const actions={
  places(){if(ready())togglePlaces();},
  map(){if(ready())toggleMap();},
  crouch(){if(ready()&&!resting&&!inBall&&!treasure?.active){controller.toggle('crouch');emote=null;}},
- prone(){if(ready()&&!resting&&!inBall&&!treasure?.active){controller.toggle('prone');emote=null;}},
+ // On the skateboard X is the kickflip (skate.js), never lying flat.
+ prone(){if(skate.on){skate.kickflip();return;}if(ready()&&!resting&&!inBall&&!treasure?.active){controller.toggle('prone');emote=null;}},
  emotes(){if(ready())toggleEmotes();},
  // The ship log from anywhere aboard, starting on the changes made around the walker (changes-board.js).
  log(){if(ready())openLog();},
@@ -521,7 +529,7 @@ const actions={
  // How to play, and the tester guide (help.js).
  help(){if(ready())toggleHelp();},
  // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
- emote(i){if(ready()&&!resting&&!inBall&&!treasure?.active&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
+ emote(i){if(ready()&&!resting&&!inBall&&!treasure?.active&&!skate.on&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
  // The emote sheet uses the same bindings as the walk.
  sheet(code){
   const open=id=>!$(id).hidden;
@@ -787,7 +795,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuck,get portable(){return portable;},registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuck,skate,glide,get portable(){return portable;},registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -824,7 +832,7 @@ renderer.setAnimationLoop(()=>{
  const k=input.read();if(graphicsSettings?.isOpen||controlsSettings?.isOpen||furSettings?.isOpen||emergencyDrill?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
  const fwd=follow.forward(),right=new T.Vector3(-fwd.z,0,fwd.x);
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
- if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(controller.gliding?(k.run?GLIDE.dive:GLIDE.speed):inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
+ if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(controller.gliding?(k.run?GLIDE.dive:GLIDE.speed):skate.on?WALKER.run:inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
  if(emote&&(wish.lengthSq()>.01||k.jump))emote=null;
  // Moving off a seat or bed stands you up; in a transporter's driver's seat the keys drive it instead (transporter.js),
  // and the camera swings round behind it while it moves. A healing capsule holds you until you leave it (E or the button).
@@ -847,7 +855,7 @@ renderer.setAnimationLoop(()=>{
  // A tap shorter than a frame still counts as held for the first step.
  // In the ball the jump is one low hop (BALL.body.jump).
  // The grapple fires on a press and holds while the key is held; anything that takes the walker over lets go.
- const canHook=!resting&&!riding&&!run&&!inBall&&!treasure?.active&&!emergencyDrill?.isOpen&&!graffiti?.active&&ready();
+ const canHook=!resting&&!riding&&!run&&!inBall&&!treasure?.active&&!skate.on&&!emergencyDrill?.isOpen&&!graffiti?.active&&ready();
  if(!canHook)grapple.release();else{if(k.hook)grapple.fire();if(!k.hookHeld)grapple.release();}
  showAim(canHook&&input.enabled&&!playing()&&!portable.active);
  if(!resting&&!riding&&!run&&!treasure?.active&&!emergencyDrill?.isOpen){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number),k.run&&!!controller.hook);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
@@ -888,7 +896,10 @@ renderer.setAnimationLoop(()=>{
   walker.body.rotation.set((-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(run.tumble,.25,1),0,0);
   if(run.tumble>0)pose={kind:'lie',weight:run.tumble,seatHeight:walker.hipHeight};}
  if(!resting&&!run){walker.holder.position.copy(p);walker.holder.rotation.set(0,heading,0);walker.body.rotation.set(0,0,0);}
- const board=glide.update(dt,{gliding:controller.gliding&&!resting&&!run,speed:controller.speed,rise:controller.velocity.y,turnRate});follow.ride=board;
+ // Anything else that takes the walker over takes him off the skateboard; a landing ends its kickflip (skate.js).
+ if(skate.on&&skateBusy())skate.off();
+ skate.update(dt);
+ const board=glide.update(dt,{gliding:controller.gliding&&!resting&&!run,skating:skate.on&&!resting&&!run,flip:skate.flip,speed:controller.speed,rise:controller.velocity.y,turnRate});follow.ride=glide.ride;
  if(inBall){ball.mesh.position.copy(p);if(controller.grounded)ball.roll(dt,controller.velocity.x,controller.velocity.z);}
  tubeMesh.visible=!!resting?.spot.tube;if(tubeMesh.visible){const s=tubeSeat(resting.spot.tube);tubeMesh.position.set(s.x,KEEL.floor-RIVER.drop+.08,s.z);}
  walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
