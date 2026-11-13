@@ -8,12 +8,14 @@ import {placements,doorSide} from './cabins.js';
 // The paving draws 6 mm proud of Deck 6 (separateAtriumPaving, facade.js) to clear the tower and transit slabs at deck
 // level, which put its top in the plane of the room floors laid 6 mm up on it. Under those floors it keeps the deck's own
 // level, buried in them: top triangles reaching under a room are split along its (convex) outline and the part inside
-// lowered by that separation. Every other triangle is copied unchanged.
+// lowered by that separation (a concave outline splits into convex triangles first). Every other triangle is copied unchanged.
 const PAVING_SEPARATION=.006;
 function sinkUnderRooms(o,layout){
  const g=o.geometry,top=layout.decks[5].y,e=o.matrixWorld.elements;if(e.some((v,i)=>Math.abs(v-(i%5===0?1:0))>1e-9))return g;
  const area=p=>p.reduce((n,a,i)=>{const b=p[(i+1)%p.length];return n+a[0]*b[1]-b[0]*a[1];},0),convex=p=>p.every((a,i)=>{const b=p[(i+1)%p.length],c=p[(i+2)%p.length];return (b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0])>=-1e-9;});
- const rooms=layout.rooms.filter(r=>r.deck===6&&!r.aggregate&&!(r.kind==='garden'&&r.hullPrototype)&&Math.abs(r.y-top)<1e-4).map(r=>area(r.polygon)<0?[...r.polygon].reverse():r.polygon).filter(convex).map(p=>({p,x0:Math.min(...p.map(q=>q[0])),x1:Math.max(...p.map(q=>q[0])),z0:Math.min(...p.map(q=>q[1])),z1:Math.max(...p.map(q=>q[1]))}));
+ // A room outline with a notch (the bow cafes' side bays) sinks as its triangles, each convex.
+ const pieces=p=>convex(p)?[p]:T.ShapeUtils.triangulateShape(p.map(a=>new T.Vector2(a[0],a[1])),[]).map(f=>f.map(i=>p[i])).filter(t=>Math.abs(area(t))>1e-9).map(t=>area(t)<0?t.reverse():t);
+ const rooms=layout.rooms.filter(r=>r.deck===6&&!r.aggregate&&!(r.kind==='garden'&&r.hullPrototype)&&Math.abs(r.y-top)<1e-4).map(r=>area(r.polygon)<0?[...r.polygon].reverse():r.polygon).flatMap(pieces).map(p=>({p,x0:Math.min(...p.map(q=>q[0])),x1:Math.max(...p.map(q=>q[0])),z0:Math.min(...p.map(q=>q[1])),z1:Math.max(...p.map(q=>q[1]))}));
  const names=Object.keys(g.attributes),attrs=names.map(n=>g.attributes[n]),P=attrs.slice(0,names.indexOf('position')).reduce((n,a)=>n+a.itemSize,0),ix=g.index,count=ix?ix.count:g.attributes.position.count;
  const vert=i=>{const v=[];for(const a of attrs)for(let k=0;k<a.itemSize;k++)v.push(a.getComponent(i,k));return v;},out=names.map(()=>[]);
  const emit=(poly,clipped)=>{for(let i=1;i<poly.length-1;i++){const a=poly[0],b=poly[i],c=poly[i+1];if(clipped&&Math.abs((b[P]-a[P])*(c[P+2]-a[P+2])-(b[P+2]-a[P+2])*(c[P]-a[P]))<1e-10)continue;for(const v of [a,b,c]){let at=0;attrs.forEach((x,j)=>{for(let k=0;k<x.itemSize;k++)out[j].push(v[at++]);});}}};
