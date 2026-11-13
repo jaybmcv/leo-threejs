@@ -84,7 +84,7 @@ export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBa
  const trolley=createCargoTrolley(ship);if(trolley)colliders.addStatic(trolley.solid,()=>true);
  await yieldToPage();
  // The Medical ward's two-tier supply trolley stands outside the aisle line (ward-trolley.js).
- const wardTrolley=createWardTrolley(ship);if(wardTrolley)colliders.addStatic(wardTrolley.solid,()=>true);
+ const wardTrolley=createWardTrolley(ship);
  await yieldToPage();
  // Cargo maintenance's MCT charging and service bays (mct-bay.js): the vehicles, power units, tool trolley and lift
  // pump solid as plain boxes; the cables, signs and floor markings dressing.

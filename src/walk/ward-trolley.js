@@ -45,16 +45,15 @@ function trolley(){
  return g;
 }
 
-// The trolley draws with the ward deck and collides as one plain box.
+// The trolley draws with the ward deck. It has no baked collision: ward-trolley-push.js moves it, and keeps the cat out of
+// its box (TROLLEY_BOX) wherever it stands. place() puts it at a room-frame spot.
+export const TROLLEY_BOX=[.7,1.08,.64];
 export function createWardTrolley(ship){
  const room=roomObject(ship,ROOM);if(!room)return null;
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Ward_supply_trolley_world';
  room.matrixWorld.decompose(group.position,group.quaternion,group.scale);
  const {x,z,turn}=TROLLEY_SPOT,model=trolley();model.position.set(x,0,z);model.rotation.y=turn;group.add(model);
- const solid=new T.Group();solid.name='Ward_supply_trolley_collider';
- room.matrixWorld.decompose(solid.position,solid.quaternion,solid.scale);
- const proxy=new T.Mesh(new T.BoxGeometry(.7,1.08,.64),new T.MeshBasicMaterial());
- proxy.name='Ward_supply_trolley_solid';proxy.position.set(x,.54,z);proxy.rotation.y=turn;solid.add(proxy);
- return {group,solid};
+ const state={x,z,turn};
+ return {group,room,state,place(px,pz,pt){state.x=px;state.z=pz;state.turn=pt;model.position.set(px,0,pz);model.rotation.y=pt;}};
 }
