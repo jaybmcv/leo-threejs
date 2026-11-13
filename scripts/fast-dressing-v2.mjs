@@ -215,7 +215,10 @@ function roomDressings(){
     'const outline=roomOutline(room),flat=(flip)=>new T.ShapeGeometry(new T.Shape(outline.local.map(([x,z])=>new T.Vector2(x,flip*z))));',
     'if(light){','const {hemi,fill,scene}=light,base={hemi:hemi.intensity,fill:fill.intensity,env:scene.environmentIntensity,sky:hemi.color.clone(),ground:hemi.groundColor.clone()};',
     'setMood=t=>{const f=(a,b)=>a+(b-a)*t;hemi.intensity=f(base.hemi,base.hemi*MOOD.hemi);fill.intensity=f(base.fill,base.fill*MOOD.fill);',
-    'scene.environmentIntensity=f(base.env,base.env*MOOD.env);hemi.color.lerpColors(base.sky,skyC,t);hemi.groundColor.lerpColors(base.ground,groundC,t);};']},
+    'scene.environmentIntensity=f(base.env,base.env*MOOD.env);hemi.color.lerpColors(base.sky,skyC,t);hemi.groundColor.lerpColors(base.ground,groundC,t);};',
+    // The room's music level (soundLevel, #533): the room frame inverted and the plan's doorway, read at run time only.
+    'const toLocal=room.matrixWorld.clone().invert(),here=new T.Vector3();',
+    "const gap=(d=>{if(!d)return {x0:DOOR[0],x1:DOOR[1],z:SIDE};const c=here.set(...d.center).applyMatrix4(toLocal);return {x0:c.x-d.width/2,x1:c.x+d.width/2,z:c.z};})(layout.rooms?.find(r=>'Area_'+r.id===ROOM)?.door);"]},
   // capsule-bubbles.js isn't the suite's to change here: its module code runs before the world is built, so an edit to it widens.
   surgery:{room:'d05-surgery-2',dress:'dressSurgery',create:'createSurgeryArms',binding:'surgeryArms',args:ctx=>[ctx.ship,{still:false}],
    glue:"surgeryArms=feature('room:surgery',ship,()=>createSurgeryArms(ship,"+still+"));if(surgeryArms)toBand(surgeryArms.group);",
