@@ -67,8 +67,10 @@ assert.equal(reached.size,2,'The rotated ground maze must reach both platform ex
 // The old rear tube gap is guarded again, and the shortened Deck 18 link has an end guard.
 for(const p of [[-128.75,32.3,-43.2],[-89.8,28.3,-47.4]]){segment.start.set(p[0],p[1]+.75,p[2]);segment.end.set(p[0],p[1]+1.65,p[2]);assert(col.overlaps(segment,.35),'Missing closed-edge guard '+p);}
 const serviceBounds=names=>{const b=new T.Box3();root.updateMatrixWorld(true);source.root.traverse(o=>{if(o.isMesh&&names.includes(o.name))b.union(new T.Box3().setFromObject(o,true));});return b;};
-const laundry=serviceBounds(['Laundry_counter','Laundry_machine','Laundry_drum']),parcels=serviceBounds(['Parcel_locker']),arcadeBox=new T.Box3().setFromObject(arcade.solid,true);
-assert(!laundry.intersectsBox(parcels));assert(!laundry.intersectsBox(tank));assert(!parcels.intersectsBox(tank));assert(!arcadeBox.intersectsBox(tank));close(arcadeBox.max.x,-88);assert(arcadeBox.min.z>=-43.91&&arcadeBox.max.z<=-28.49);
+// The laundry, parcel lockers and reading bookcases were removed from this room's source (tester feedback).
+assert(serviceBounds(['Laundry_counter','Laundry_machine','Laundry_drum','Parcel_locker','Reading_shelf','Library_end_panel','Library_shelf','Library_book']).isEmpty(),'Removed lounge furnishings are back');
+const arcadeBox=new T.Box3().setFromObject(arcade.solid,true);
+assert(!arcadeBox.intersectsBox(tank));close(arcadeBox.max.x,-88);assert(arcadeBox.min.z>=-43.91&&arcadeBox.max.z<=-28.49);
 close(new T.Vector3().setFromMatrixPosition(lift.group.matrixWorld).x,-86.53);close(new T.Vector3().setFromMatrixPosition(lift.group.matrixWorld).z,-51.2);
 const door=new T.Vector3().fromArray(swimWorld(SWIM.door));close(door.z,-28.77);assert(clear(door.toArray()));assert.equal(SWIM.gems.length,7);assert(SWIM.gems.every(g=>gemNear(limitSwim([g[0],g[1]-SWIM.offset,g[2]]),g)));
 const places=featurePlaces(layout);for(const id of ['hydro-nip','haze-maze','clubhouse-door','aquarium-treasure','arcade','arcade-pool','neon-arena','arcade-treadmill']){const p=places.find(p=>p.id===id);assert(clear(p.at),'Go-to is obstructed: '+id);}
@@ -77,7 +79,7 @@ for(let i=0;i<40;i++)vault.update(.1,new T.Vector3(-90,24.3,-45.8));assert.equal
 // The hinge thickness stays at the wall; the open leaf projects into the lounge.
 assert(leaf.min.x<-90&&leaf.getCenter(new T.Vector3()).x<-89&&leaf.max.x<-87.7,'Vault swings outward into lounge');route('R5 unlocked vault',[[-90.8,24.3,-45.8],[-86.53,24.3,-45.8],[-86.53,24.3,-49]]);
 console.log('PASS measured tank, services, arcade, unchanged lift, seven gems, Go-to and vault interaction');
-console.log(JSON.stringify({laundry:[laundry.min.toArray(),laundry.max.toArray()],parcels:[parcels.min.toArray(),parcels.max.toArray()],arcade:[arcadeBox.min.toArray(),arcadeBox.max.toArray()],treasureDoor:door.toArray()}));
+console.log(JSON.stringify({arcade:[arcadeBox.min.toArray(),arcadeBox.max.toArray()],treasureDoor:door.toArray()}));
 
 // The moved swim still uses the same standings and accepts a complete seven-gem run.
 await fs.mkdir('.qa',{recursive:true});const dir=await fs.mkdtemp('.qa/lounge-treasure-'),file=dir+'/scores.json';

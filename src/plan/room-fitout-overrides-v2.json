@@ -1,8 +1,9 @@
 {
   "commons-1": {
-    "moveMeshes": [
-      {"names":["Laundry_counter","Laundry_machine","Laundry_drum"],"by":[-3,0,13]},
-      {"names":["Parcel_locker"],"by":[-2,0,22]}
+    "removeMeshes": [
+      {"names":["Laundry_counter","Laundry_machine","Laundry_drum"],"near":[113,25,15.5],"radius":4,"count":11},
+      {"names":["Parcel_locker"],"near":[113,25.3,10],"radius":3.5,"count":6},
+      {"names":["Reading_shelf","Library_end_panel","Library_shelf","Library_book"],"near":[120,25.5,39.5],"radius":4,"count":75}
     ]
   },
   "d01-workshop-5": {
