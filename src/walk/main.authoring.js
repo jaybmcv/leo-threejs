@@ -611,6 +611,10 @@ const glide=createGlide(walker,artUrls);
 // The grapple hook (grapple.js, controller.js HOOK): Q, the right mouse button or the Hook button fires a line at the
 // middle of the view; held, Cosmo swings under it.
 const grapple=createGrapple(scene,{camera,colliders,controller,walker,hook:HOOK});
+// The aim dot (walk.html #aim-dot) marks the middle of the view, where the hook aims. It shows only while the hook can
+// fire: walking with the view, in third or first person, with no sheet, panel, game or camera open.
+const aimDot=$('aim-dot');let aimShown=false;
+const showAim=on=>{if(aimDot&&on!==aimShown){aimShown=on;aimDot.hidden=!on;}};
 function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());}
 // Stop before dismounting. In a tight spot the ball returns home so it cannot push Cosmo through a wall.
 function leaveBall(at=null){if(!inBall)return;
@@ -817,7 +821,7 @@ let last=performance.now(),acc=0,lastHud=0,lastHeading=heading,lastSpeed=0,turnR
 const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WALKER.prone};
 renderer.setAnimationLoop(()=>{
  // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
- if(hubPanel.isOpen()&&firstViewReady)return;
+ if(hubPanel.isOpen()&&firstViewReady){showAim(false);return;}
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
  const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen&&!controlsSettings?.isOpen&&!furSettings?.isOpen});last=now;
  const k=input.read();if(graphicsSettings?.isOpen||controlsSettings?.isOpen||furSettings?.isOpen||emergencyDrill?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
@@ -848,6 +852,7 @@ renderer.setAnimationLoop(()=>{
  // The grapple fires on a press and holds while the key is held; anything that takes the walker over lets go.
  const canHook=!resting&&!riding&&!run&&!inBall&&!treasure?.active&&!emergencyDrill?.isOpen&&!graffiti?.active&&ready();
  if(!canHook)grapple.release();else{if(k.hook)grapple.fire();if(!k.hookHeld)grapple.release();}
+ showAim(canHook&&input.enabled&&!playing()&&!portable.active);
  if(!resting&&!riding&&!run&&!treasure?.active&&!emergencyDrill?.isOpen){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number),k.run&&!!controller.hook);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  treasure?.step(dt,k);
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
