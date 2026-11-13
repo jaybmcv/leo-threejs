@@ -86,6 +86,9 @@
       "src/walk/pinball/game.js",
       "src/walk/pinball/art.js",
       "src/walk/pinball/sound.js",
+      "src/walk/darts/rules.js",
+      "src/walk/darts/game.js",
+      "src/walk/darts/art.js",
       "src/walk/vr/*"
     ],
     "room": null,

@@ -39,6 +39,8 @@ export class Controller{
   this.stance='stand';this.slideS=0;
   // Riding the longboard down (GLIDE), and for how long this ride has lasted.
   this.gliding=false;this.glideS=0;
+  // On the skateboard (skate.js, set by the walk): Space is one ollie, with no air jump, glide or stance change.
+  this.skating=false;
   // Hanging on the grapple line (HOOK): where it bit, how long the line is now, and the length it winds in to.
   this.hook=null;this.rope=0;this.ropeTo=0;
   this.segment=new T.Line3(new T.Vector3(),new T.Vector3());this.ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0));
@@ -57,7 +59,7 @@ export class Controller{
  settle(){const g=this.groundAt(this.position,this.body.step+.05,2);if(g){this.position.y=g.point.y;this.grounded=true;this.ground=g;}}
  // Toggle a stance from the ground: crouch (a slide when running), or prone.
  toggle(stance){
-  if(!this.grounded)return;
+  if(!this.grounded||this.skating)return;
   if(stance==='crouch'){
    if(this.stance==='crouch'||this.stance==='slide')this.stance='stand';
    else if(this.stance==='stand'&&this.speed>=MOVE.slideFrom){this.stance='slide';this.slideS=MOVE.slide;}
@@ -119,14 +121,14 @@ export class Controller{
   if(this.jumpS>=0)this.jumpS+=dt;
   if(this.grounded)this.jumpCount=0;
   // Coyote time spends the ground jump; after it a ledge fall has only the air jump left.
-  const footing=this.grounded||(this.airTime<=MOVE.coyote&&this.jumpCount===0),air=!footing&&pressed&&this.jumpCount<(this.body.jumps??2);
+  const footing=this.grounded||(this.airTime<=MOVE.coyote&&this.jumpCount===0),air=!footing&&pressed&&this.jumpCount<(this.skating?1:this.body.jumps??2);
   if((footing&&this.jumpBuffer>0)||air){
    this.stance='stand';this.slideS=0;this.jumpCount=footing?1:2;this.velocity.y=this.body.jump??MOVE.jump;this.grounded=false;this.jumpBuffer=0;this.jumpS=0;
   }else if(this.jumpS>=MOVE.minJump&&!held&&this.velocity.y>0){this.velocity.y*=MOVE.cut;this.jumpS=-1;}
  }
  // The board comes out once Space is held through a fall over a real drop, and goes away when it is let go.
  glideJudge(dt,held){
-  if(this.grounded||!held||this.hook||this.body.glide===false||this.stance==='prone'){this.gliding=false;return;}
+  if(this.grounded||!held||this.hook||this.skating||this.body.glide===false||this.stance==='prone'){this.gliding=false;return;}
   if(this.gliding){this.glideS+=dt;return;}
   if(this.velocity.y>GLIDE.deploy||this.groundAt(this.position,.05,GLIDE.minDrop))return;
   this.gliding=true;this.glideS=0;this.stance='stand';this.slideS=0;

@@ -2108,6 +2108,30 @@
       "signature": "9436af0f6239e04b2a7eb1302d6e76b5dee13fb9f2a38a8dd35462ff1dc06d79"
     },
     {
+      "source": "src/walk/darts/art.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "f9f09136f12a973f1b11ceffe948f1430a477577969d0076eb94947944c14d19"
+    },
+    {
+      "source": "src/walk/darts/game.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "324123feea539e54a649a4e1deb1911603a64f0b2ee5a557a274fe6746726ca5"
+    },
+    {
       "source": "src/walk/deck-map.authoring.js",
       "rooms": [
         "circulation-1",
@@ -4930,8 +4954,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 43,
-      "signature": "4fce81cec3905d87ae6bc490e4e4806ae380f95d768bf1296b5b40b691bb595a"
+      "placements": 45,
+      "signature": "5416de92df0b08b0863926092eac02fae51e651fbf51ab11901fff788ecc62fa"
     },
     {
       "source": "src/walk/remotes.authoring.js",
