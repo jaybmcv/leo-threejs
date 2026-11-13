@@ -2,7 +2,8 @@ import {AQUARIUM as A} from '../lounge-aquarium.authoring.js';
 import {toWorld,toLocal} from '../../plan/rooms.js';
 
 // The same tank and room frame as the reef. Points here use the lounge template's coordinates.
-export const SWIM={speed:4,reach:1.15,radius:1.05,offset:.8,door:[130.8,32.3,6.77],entry:[130.8,32.4,3.92],chest:[134,29.7,4.08],
+// The chest's centre is .285 m (half its banded body) over the tunnel roof's top, 28.04, so it rests on the roof.
+export const SWIM={speed:4,reach:1.15,radius:1.05,offset:.8,door:[130.8,32.3,6.77],entry:[130.8,32.4,3.92],chest:[134,28.325,4.08],
  gems:[[123,26.8,4.08],[124,31.4,3.78],[128,26.6,4.28],[134,33.2,4.08],[142.5,30.5,3.78],[148,26.8,4.28],[151.5,33.5,4.08]],
  colors:[0xff526b,0xffa33d,0xffe85b,0x71ff85,0x45e5ff,0x668aff,0xdc6dff]};
 export const swimWorld=p=>toWorld('commons-1',[p[0]-132,p[1]-A.floor,p[2]-21]);
