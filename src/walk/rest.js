@@ -68,11 +68,10 @@ export function findRestSpots(root){
   const {c,ax,az}=it.face,long=ax.length()>=az.length()?ax:az;const pillow=near(c,'pillow',1.4);
   let head=long.clone().normalize();if(pillow&&pillow.face.c.clone().sub(c).dot(head)<0)head.negate();
   // A hammock (the Hydro-Nip Lounge's dome) hangs from its rim: you lie in the bottom of its sag, which is the mesh's
-  // own origin less the sag, and it can swing (the walk's lounge.js), so the spot keeps the mesh. `relax` is what survives
-  // the prepared ship (the mesh doesn't, for a Keel Club lounger): the relaxed pose, eyes shut.
+  // own origin less the sag, and it can swing (the walk's lounge.js), so the spot keeps the mesh.
   if(it.o.name==='Hammock'){const b=it.o.geometry.boundingBox,low=c.clone();low.y=new T.Vector3(0,b.min.y,0).applyMatrix4(it.m).y;
    if(it.o.userData.head){head=new T.Vector3(...it.o.userData.head).transformDirection(it.m);head.y=0;head.normalize();}
-   spots.push({room:it.owner,kind:'lie',point:low,head,length:long.length()*2,height:low.y,hammock:it.o,relax:true});continue;}
+   spots.push({room:it.owner,kind:'lie',point:low,head,length:long.length()*2,height:low.y,hammock:it.o});continue;}
   spots.push({room:it.owner,kind:'lie',point:c.clone(),head,length:long.length()*2,height:c.y});
  }
  for(const it of capsules){const facing=new T.Vector3(...(it.o.userData.facing||[0,0,1])).transformDirection(it.m);facing.y=0;facing.normalize();
@@ -100,7 +99,7 @@ export function spotIndex(spots){
   // Others aboard are only sent that they lie, so this is how their page knows a hammock from a bed (remotes.js).
   hammockAt(p,reach=1.2){
    for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++)for(const s of grid.get(`${Math.floor(p.x/3)+i},${Math.floor(p.z/3)+j}`)||[])
-    if((s.relax||s.hammock)&&Math.abs(s.height+.13-p.y)<.4&&Math.hypot(s.point.x-p.x,s.point.z-p.z)<reach)return s;
+    if(s.hammock&&Math.abs(s.height+.13-p.y)<.4&&Math.hypot(s.point.x-p.x,s.point.z-p.z)<reach)return s;
    return null;
   },
   count:spots.length,

@@ -1074,7 +1074,7 @@ function settle(spot){
   // it meets the headboard); restPose tips the upper body up onto the pillow.
   pos=spot.point.clone().addScaledVector(head,-WALKER.height/2+.25);pos.y=spot.height+.13;
   // A hammock (lounge.js) has no pillow: the body lies centred along it, clear of the bars at both ends.
-  if(spot.relax||spot.hammock)pos.copy(spot.point).addScaledVector(head,-WALKER.height/2).setY(spot.height+.13);
+  if(spot.hammock)pos.copy(spot.point).addScaledVector(head,-WALKER.height/2).setY(spot.height+.13);
  }else if(spot.kind==='stand'){
   // A healing capsule (surgery.js): stood on its floor, facing out of the tube.
   yaw=Math.atan2(spot.facing.x,spot.facing.z);pos=spot.point.clone();
@@ -1143,7 +1143,7 @@ function restPose(dt){
  if(r.phase==='out'&&r.t===0){heading=r.from.heading;controller.place(r.from.pos);resting=null;return null;}
  // In a healing capsule the body floats a little in the fluid, standing.
  if(r.stand){h.position.y+=(.20+.025*(1-Math.cos(performance.now()/1100)))*e;return {kind:'float',weight:e,seatHeight:walker.hipHeight};}
- return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight,hammock:!!(r.spot.relax||r.spot.hammock),rim:r.spot.tube?TUBE_RIM:null};
+ return {kind:r.lie?'lie':'sit',weight:e,seatHeight:walker.hipHeight,hammock:!!r.spot.hammock,rim:r.spot.tube?TUBE_RIM:null};
 }
 function lerpAngle(a,b,t){return a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;}
 
