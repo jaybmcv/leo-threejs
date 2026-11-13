@@ -1,5 +1,6 @@
-// Only the ridden ball on Deck 17 rebounds. Speeds are metres per second; no upward kick is added.
-export const BALL_BOUNCE={restitution:.35,maxSpeed:2.4,minSpeed:.8,drag:6,seconds:.18};
+// Only the ridden ball on Deck 17 rebounds: a firm hit springs back at about half its speed (capped) and steering
+// waits out the recoil. Speeds are metres per second; no upward kick is added.
+export const BALL_BOUNCE={restitution:.55,maxSpeed:4.6,minSpeed:.8,drag:4,seconds:.45};
 export const ballBounce=(inside,deck)=>inside&&deck===17?BALL_BOUNCE:null;
 
 // Find a clear walk off the ball, checking the whole short path so a wall or floor edge cannot be skipped.

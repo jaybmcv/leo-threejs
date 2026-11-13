@@ -160,7 +160,7 @@ const C={floor:0xe4d8c4,lining:0xebdfcb,ceiling:0xfff3df,bulkhead:0xe8dccb,terra
  tennis:0x3b74b4,tennisRun:0x2e5a8a,pitch:0x4f9b49,board:0xf4f4f0,court:0xcf9a5e,sand:0xe8ca92,water:0x13b1c4,basin:0x16566e,river:0x1cbccd,
  lobby:0xe4dccb,locker:0x2f707b,core:0x5e6c79,machine:0x6b7783,range:0x77b95a,bay:0x3c4550,dome:0x1d3557,climb:0xd9775c,
  padel:0x2f6db3,cabana:0xf7ecd6,bar:0x8a5a33,slide:0xf2b134,slideTube:0x2f8fd8,lounge:0xd9b98f,golf:0x8dc35a,sim:0x2a3138,putt:0x5aab48,rail:0xbfe3ee,stair:0xd2c6b0,
- line:0xfbfbf6,net:0x27323a,wood:0xa77b4f,lounger:0xf3f1ea,teal:0x2a9d9a,orange:0xf07c3c,canopyA:0xf6f1e4,canopyB:0x2a9d9a,screen:0x2f6fb8,cup:0x1e2328,mat:0x2f6e3a,rim:0xe0662a,lamp:0xfff1dc,shaft:0xdfe3e1,beam:0xefe7dc,rib:0xf7efe3,recess:0x24304a,cove:0xffd9a3,glowEdge:0x8ff4ff,railLed:0xffd59a,
+ line:0xfbfbf6,net:0x27323a,wood:0xa77b4f,lounger:0xf3f1ea,teal:0x2a9d9a,orange:0xf07c3c,canopyA:0xf6f1e4,canopyB:0x2a9d9a,screen:0x2f6fb8,cup:0x1e2328,mat:0x2f6e3a,rim:0xe0662a,lamp:0xfff1dc,relax:0xff2a22,shaft:0xdfe3e1,beam:0xefe7dc,rib:0xf7efe3,recess:0x24304a,cove:0xffd9a3,glowEdge:0x8ff4ff,railLed:0xffd59a,
  lantern:0xffc46e,brass:0xc9a15a,leaf:0x3f8a3c,leafDark:0x2f6b33,flower:0xe0413a,flowerPink:0xf08bb4,blossom:0xf5a9c8,wicker:0xc79a62,cushion:0xf3ece0,marble:0xf4f1ec,frame:0x2b3036,
  thatch:0xc99a5c,curtain:0xfbf7ef,rock:0xa9a196,climbWall:0xeee3d1,simWall:0x3f6e4f,turf:0x5fae48,bed:0x56733b,bag:0x22262b,
  island:0xd3bf9d,deckProm:0xffffff,deckTerrace:0xead7bf,deckBridge:0xf6e7d2,deckLagoon:0xf2dcc2};
@@ -517,6 +517,11 @@ export function createKeelClub(ship){
  // Beach: loungers in rows under umbrellas, facing the lagoon.
  addDeck(quad(-30,lx0,-36,36,FY+.03),C.sand,{ground:false,sand:true});
  for(let r=0;r<3;r++)for(let k=0;k<8;k++){const x=-25+r*6.2,z=-31+k*8.85;lounger(x,FY,z-1.1);lounger(x,FY,z+1.1);umbrella(x+1.6,FY,z,k%2?C.canopyB:C.curtain);}
+ // Relaxation lamps: on the pole of one beach umbrella (row 2, 4th), two small red lamps on arms reach out past the canopy's edge
+ // over its two loungers. Visual only and above head height; each tints its lounger red and has a soft halo.
+ const relax=[];
+ {const px=-18.8+1.6,pz=-31+3*8.85;for(const s of [-1,1]){const hx=-18.8-.2,hz=pz+s*1.1,ay=FY+2.15;rod([px,ay,pz],[hx,ay,hz],.02,C.frame);
+   parts.push(paint(new T.CylinderGeometry(.09,.14,.1,12).translate(hx,ay-.05,hz),C.brass));lamps.push(paint(new T.CircleGeometry(.13,12).rotateX(Math.PI/2).translate(hx,ay-.105,hz),C.relax));relax.push([hx,ay-.11,hz,hx+.1,FY+.34,hz]);}}
  for(const s of [-1,1])addDeck(quad(lx0,lx1,s<0?-36:lz,s<0?-lz:36,FY+.03),C.deckLagoon,{ground:false});
  // Benches along the river promenade, facing the water, clear of the bridges, the terrace stairs and the climbing walls.
  for(const s of [-1,1])for(let x=-140;x<=188;x+=12){if(BRIDGES.side.some(c=>Math.abs(x-c)<4.5)||STAIRS.some(x0=>x>x0-2.5&&x<x0+RISERS*TREAD+STAIR_W+1.5)||(x>146&&x<183))continue;
@@ -808,6 +813,11 @@ export function createKeelClub(ship){
  // Static draws in four sections along the hall, so the walk culls the far ones when they're out of view.
  const draw=(g,m,name)=>{for(const part of sections(g,4)){const mesh=new T.Mesh(part,m);mesh.name=name;group.add(mesh);}};
  draw(merge(parts),opaque,'Keel_club_finish');if(vineTex)draw(merge(vines,['position','normal','uv']),vineMat,'Keel_club_vines');
+ if(poolTex&&relax.length){const tint=new T.InstancedMesh(new T.PlaneGeometry(1,1).rotateX(-Math.PI/2),fadeInFog(new T.MeshBasicMaterial({name:'Keel_club_relax_wash',map:poolTex,color:0xff2a22,transparent:true,opacity:.8,depthWrite:false,toneMapped:false})),relax.length);
+  const m=new T.Matrix4(),q=new T.Quaternion(),hg=new T.BufferGeometry(),hp=[];relax.forEach(([x,y,z,wx,wy,wz],i)=>{tint.setMatrixAt(i,m.compose(new T.Vector3(wx,wy,wz),q,new T.Vector3(2.3,1,1.1)));hp.push(x,y,z);});
+  tint.name='Keel_club_relax_wash';tint.computeBoundingSphere();group.add(tint);
+  hg.setAttribute('position',new T.Float32BufferAttribute(hp,3));hg.computeBoundingSphere();
+  const halo=new T.Points(hg,fadeInFog(new T.PointsMaterial({name:'Keel_club_relax_halos',map:poolTex,color:0xff3a2a,size:.6,sizeAttenuation:true,transparent:true,opacity:.8,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false})));halo.name='Keel_club_relax_halos';group.add(halo);}
  if(poolTex&&pools.length){const im=new T.InstancedMesh(new T.PlaneGeometry(1,1).rotateX(-Math.PI/2),fadeInFog(new T.MeshBasicMaterial({name:'Keel_club_light_pools',map:poolTex,color:0xffa456,transparent:true,opacity:.5,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false})),pools.length);
   const m=new T.Matrix4(),q=new T.Quaternion();pools.forEach(([x,y,z,r],i)=>im.setMatrixAt(i,m.compose(new T.Vector3(x,y+.045,z),q,new T.Vector3(2*r,1,2*r))));
   im.name='Keel_club_light_pools';im.computeBoundingSphere();group.add(im);
@@ -976,7 +986,7 @@ float surfLean(float x,float z){float u=surfU(x),d=(u-.29)/.035;return -.55*surf
   if(saved.hemi){const {hemi,fill}=saved.light;hemi.color.copy(SKY);hemi.groundColor.copy(GROUND);hemi.intensity=saved.hemi*.95;fill.intensity=saved.fill*.75;}};
  // On phones the walk calls lite(): the fill-rate extras (additive light pools, lamp halos, wall washes, the second
  // waterfall sheet and its mist) are hidden (still built, not drawn); the decks, rails, surf and greenery stay.
- const lite=()=>{let n=0;group.traverse(o=>{if(/^Keel_club_(light_pools|lamp_halos|wall_washes|waterfall_back|waterfall_mist)$/.test(o.name)){o.visible=false;n++;}});return n;};
+ const lite=()=>{let n=0;group.traverse(o=>{if(/^Keel_club_(light_pools|lamp_halos|relax_wash|relax_halos|wall_washes|waterfall_back|waterfall_mist)$/.test(o.name)){o.visible=false;n++;}});return n;};
  // The surf's clock (seconds, as its shader sees it), for the lagoon's sound (keel-club-sound.js) to swell with the waves.
  const surfClock=()=>waveT%2600;
  return {group,deck1,solid,seats,update,near,fire,seed,mood,lite,surfClock,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
