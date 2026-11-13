@@ -218,5 +218,21 @@
   "src/v2/phone-distant.js": {
     "sha256": "fd4c158ad71bce80fcfb95288f74212df5ea02072e37824fffa600da7c1c07a1",
     "reason": "Loading yields through src/v2/yield-to-page.js (scheduler.yield, a timer turn every 100 ms), the phone hull copied in 12 ms slices, typed-array compaction (scripts/check-load-yields.mjs); views match the build before pixel for pixel"
+  },
+  "src/walk/jaguar-gate.js": {
+    "sha256": "a056454a9ac779d237b556f67f1975dc4e5736bab237f064836f19d1c86269ab",
+    "reason": "jaguar gate face flattened so the wayfinding sign stays visible (tester feedback)"
+  },
+  "src/walk/jaguar-gate.public.js": {
+    "sha256": "c96d8ab0680606cbfa80bfbb753bc0add3635add7e9eb384a46548b7ace9f516",
+    "reason": "jaguar gate face flattened so the wayfinding sign stays visible (tester feedback)"
+  },
+  "src/walk/jaguar-gate.prepared.js": {
+    "sha256": "c19e67cb76e809b032eb6f8592774b18eecfe5774fee1a54c875be7aca3683e6",
+    "reason": "jaguar gate face flattened so the wayfinding sign stays visible (tester feedback)"
+  },
+  "src/walk/jaguar-gate.authoring.js": {
+    "sha256": "4f314867e53e091400850136adb2eae61890939f368b98e03f74f5eb9af0021e",
+    "reason": "jaguar gate face flattened so the wayfinding sign stays visible (tester feedback)"
   }
 }

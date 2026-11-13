@@ -3410,7 +3410,7 @@
     "file": "src/walk/jaguar-gate.js",
     "original": "src/walk/jaguar-gate.js",
     "mode": "raw",
-    "bodySha256": "b7d06e9068dbeba451109367e8cca9e45d77015184eb68cfd1e3371f524517ee",
+    "bodySha256": "1465ddddd6591cf7615ac4971995b2120d2e2b9af66e3c503dc4aff4adbbdb04",
     "imports": [
       "../plan/rooms.js",
       "three",
@@ -5931,7 +5931,7 @@
     "file": "src/walk/jaguar-gate.authoring.js",
     "original": "src/walk/jaguar-gate.js",
     "mode": "authoring",
-    "bodySha256": "26e18ada6ab5e814b80fe36c73c262e840a4365d0a3470c3aa28b4da128e6415",
+    "bodySha256": "5748faa8617ab1f419871549f645136a266d8532e650fa7a2efaa3f27fd20158",
     "imports": [
       "../v2/prepared-geometry-record.js",
       "../plan/rooms.js",
@@ -5954,15 +5954,9 @@
       "src/walk/jaguar-gate.js:8",
       "src/walk/jaguar-gate.js:9",
       "src/walk/jaguar-gate.js",
-      "src/walk/jaguar-gate.js:10",
-      "src/walk/jaguar-gate.js:11",
       "src/walk/jaguar-gate.js:12",
-      "src/walk/jaguar-gate.js:13",
       "src/walk/jaguar-gate.js:14",
-      "src/walk/jaguar-gate.js:15",
-      "src/walk/jaguar-gate.js:16",
-      "src/walk/jaguar-gate.js:17",
-      "src/walk/jaguar-gate.js"
+      "src/walk/jaguar-gate.js:17"
     ]
   },
   {
@@ -7365,7 +7359,7 @@
     "file": "src/walk/jaguar-gate.prepared.js",
     "original": "src/walk/jaguar-gate.js",
     "mode": "prepared",
-    "bodySha256": "f8fa9a04cbc0883d3e9b4179f578e7bb28abccfc4229a96b69f40dcbef67d6e4",
+    "bodySha256": "af72bd9c70f43215d0f08f2d3d4813b7fec5cfb797d27829d4c233bd2091aca3",
     "imports": [
       "../v2/prepared-geometry-replay.js",
       "../plan/rooms.js",
@@ -7388,15 +7382,9 @@
       "src/walk/jaguar-gate.js:8",
       "src/walk/jaguar-gate.js:9",
       "src/walk/jaguar-gate.js",
-      "src/walk/jaguar-gate.js:10",
-      "src/walk/jaguar-gate.js:11",
       "src/walk/jaguar-gate.js:12",
-      "src/walk/jaguar-gate.js:13",
       "src/walk/jaguar-gate.js:14",
-      "src/walk/jaguar-gate.js:15",
-      "src/walk/jaguar-gate.js:16",
-      "src/walk/jaguar-gate.js:17",
-      "src/walk/jaguar-gate.js"
+      "src/walk/jaguar-gate.js:17"
     ]
   },
   {
@@ -8650,7 +8638,7 @@
     "file": "src/walk/jaguar-gate.public.js",
     "original": "src/walk/jaguar-gate.js",
     "mode": "public",
-    "bodySha256": "f8fa9a04cbc0883d3e9b4179f578e7bb28abccfc4229a96b69f40dcbef67d6e4",
+    "bodySha256": "af72bd9c70f43215d0f08f2d3d4813b7fec5cfb797d27829d4c233bd2091aca3",
     "imports": [
       "../v2/prepared-geometry-replay.public.js",
       "../plan/rooms.js",
@@ -8673,15 +8661,9 @@
       "src/walk/jaguar-gate.js:8",
       "src/walk/jaguar-gate.js:9",
       "src/walk/jaguar-gate.js",
-      "src/walk/jaguar-gate.js:10",
-      "src/walk/jaguar-gate.js:11",
       "src/walk/jaguar-gate.js:12",
-      "src/walk/jaguar-gate.js:13",
       "src/walk/jaguar-gate.js:14",
-      "src/walk/jaguar-gate.js:15",
-      "src/walk/jaguar-gate.js:16",
-      "src/walk/jaguar-gate.js:17",
-      "src/walk/jaguar-gate.js"
+      "src/walk/jaguar-gate.js:17"
     ]
   },
   {
