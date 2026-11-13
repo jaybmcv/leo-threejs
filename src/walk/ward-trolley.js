@@ -46,8 +46,8 @@ function trolley(){
 }
 
 // The trolley draws with the ward deck. Its box is not baked: the collider group is left empty, so the baked world holds
-// nothing at its first spot, and ward-trolley-push.js moves the trolley and keeps the cat out of its box (TROLLEY_BOX)
-// wherever it stands. place() puts it at a room-frame spot.
+// nothing at its first spot, and ward-trolley-push.js finds the drawn trolley by name, moves it and keeps the cat out of its
+// box (TROLLEY_BOX) wherever it stands.
 export const TROLLEY_BOX=[.7,1.08,.64];
 export function createWardTrolley(ship){
  const room=roomObject(ship,ROOM);if(!room)return null;
@@ -57,6 +57,5 @@ export function createWardTrolley(ship){
  const {x,z,turn}=TROLLEY_SPOT,model=trolley();model.position.set(x,0,z);model.rotation.y=turn;group.add(model);
  const solid=new T.Group();solid.name='Ward_supply_trolley_collider';
  room.matrixWorld.decompose(solid.position,solid.quaternion,solid.scale);
- const state={x,z,turn};
- return {group,solid,room,state,place(px,pz,pt){state.x=px;state.z=pz;state.turn=pt;model.position.set(px,0,pz);model.rotation.y=pt;}};
+ return {group,solid};
 }

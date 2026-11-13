@@ -365,7 +365,7 @@ async function buildShip(){
  // Phones keep the Keel Club's look but not its fill-rate extras (keel-club.js lite()).
  if(preparedPhone)keelClub?.lite?.();
  loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;keelSound=keelClub?createKeelSound():null;
- const {pipework,trolley,wardTrolley,mctBay,swordCase,theatreCast}=prepared;wardPush=wardTrolley?createWardPush(wardTrolley,colliders):null;freightGate=prepared.freightGate;baggage=prepared.baggage;atmosphere=prepared.atmosphere;
+ const {pipework,trolley,wardTrolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;atmosphere=prepared.atmosphere;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;
  // The hidden clubhouse's vault door behind the arcade (vault.js): solid here, as a movable collider of its own.
@@ -421,6 +421,7 @@ async function buildShip(){
  if(hydration)toBand(hydration.group);
  if(trolley)toBand(trolley.group);
  if(typeof __WALK_DEBUG__!=="undefined"&&__WALK_DEBUG__)ship.v2RuntimeFeatures={wardTrolley,baggage,freightGate};if(wardTrolley)toBand(wardTrolley.group);
+ {const trolleyGroup=scene.getObjectByName('Ward_supply_trolley_world');wardPush=trolleyGroup?createWardPush(trolleyGroup,colliders):null;}
  if(mazeHold)toBand(mazeHold.group);
  if(mctBay)toBand(mctBay.group);
  // The aft freight gate (freight-gate.js): its iris, gantry, lanes and posters.

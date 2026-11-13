@@ -5614,8 +5614,8 @@
         "Ward_supply_trolley_collider"
       ],
       "interactionTargets": null,
-      "placements": 21,
-      "signature": "dd2fb40a3bc636bd34b1fe546a8a33afea641a14905f27dc9d72a3f52991568f"
+      "placements": 20,
+      "signature": "0d688adc71036878af633ed49e377870722bf7559137ecc5c261437a74ad5db7"
     },
     {
       "source": "src/walk/windows.js",

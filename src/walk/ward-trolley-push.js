@@ -15,8 +15,10 @@ const PROBES=[-.25,-.083,.083,.25].flatMap(x=>[-.2,-.07,.07,.2].map(z=>[x,z]));
 const CAT={bottom:.4,top:1.6,radius:.33};
 export const PUSH_LABEL='W/S push · A/D steer · E or Esc let go · R send it back';
 
-export function createWardPush(trolley,colliders){
- const start={...trolley.state},room=trolley.room,toLocal=new T.Matrix4(),toWorld=new T.Matrix4(),seg=new T.Line3(new T.Vector3(),new T.Vector3()),ray=new T.Ray(),down=new T.Vector3(0,-1,0);
+// `group` is the drawn trolley's world group (ward-trolley.js): it carries the room's frame, and its first child is the model.
+export function createWardPush(group,colliders){
+ const model=group.getObjectByName('Ward_supply_trolley'),state={x:model.position.x,z:model.position.z,turn:model.rotation.y},start={...state},room=group,
+  trolley={state,place(x,z,t){state.x=x;state.z=z;state.turn=t;model.position.set(x,0,z);model.rotation.y=t;}},toLocal=new T.Matrix4(),toWorld=new T.Matrix4(),seg=new T.Line3(new T.Vector3(),new T.Vector3()),ray=new T.Ray(),down=new T.Vector3(0,-1,0);
  const sync=()=>{room.updateWorldMatrix(true,false);toWorld.copy(room.matrixWorld);toLocal.copy(toWorld).invert();};
  const local=p=>p.clone().applyMatrix4(toLocal),world=(x,y,z)=>new T.Vector3(x,y,z).applyMatrix4(toWorld);
  // The trolley's heading in the world is its own plus the room's yaw.
