@@ -453,7 +453,7 @@ async function buildShip(){
  if(phone)for(const f of [catTree,nosePark]){const lod=f?.group.children.find(o=>o.isLOD);if(lod)for(const l of lod.levels.slice(1))l.distance*=.5;}
  // The Hydro-Nip Lounge's waterfall pond (lounge-falls.js).
  if(loungeFalls)toBand(loungeFalls.group);
- toBand(jaguarGate.group);
+ toBand(jaguarGate.group);toBand(asteroid.group);
  for(const g of prepared.entranceSigns.groups)toBand(g);
  if(lounge)for(const o of lounge.drawn)toBand(o);
  // Its synthwave wall (lounge-mural.js) spans three decks' bands, like a painting.
