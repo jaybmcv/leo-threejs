@@ -120,7 +120,7 @@ const wiring=s=>{const L=lines(s),i=L.findIndex(l=>l.startsWith('const unstuck=c
 const mains={};for(const f of ['main','main.authoring','main.prepared','main.public'])mains[f]=wiring(await fs.readFile(`src/walk/${f}.js`,'utf8'));
 for(const [f,w] of Object.entries(mains)){
  assert.equal(w.imp,"import {createUnstuck,popStand} from './unstuck.js';",f);assert.equal(w.use,'  const t=target();if(!t){unstuck.press();return;}',f);
- assert(w.pop.includes("popStand([p.x,p.y,p.z],{colliders,restrictedAt,")&&w.pop.includes('findStand(colliders,at,{radius:0})')&&w.pop.includes('v2GotoStand(colliders,at)')&&w.pop.includes('goTo({at:q.toArray(),yaw:follow.yaw,resolved:true})')&&w.pop.includes('actions.respawn();'),f);
+ assert(w.pop.includes("popStand([p.x,p.y,p.z],{colliders,restrictedAt,")&&w.pop.includes('findStand(colliders,at,{radius:0})')&&w.pop.includes('v2GotoStand(colliders,at)')&&w.pop.includes('goTo({at:q.toArray(),yaw:Math.atan2(q.x-p.x,q.z-p.z),resolved:true})')&&w.pop.includes('actions.respawn();'),f);
  for(const not of ['canHook','input.enabled','!inCar','!controller.hook','!controller.gliding','!pawsOff?.active','!maze?.running','!playing()'])assert(w.update?.includes(not),f+' free needs '+not);
  assert(w.debug,f);assert.deepEqual(w,mains.main,f+' differs from main.js');}
 pass('all four main variants: the same sense, pop (findStand, Go to check, goTo, Respawn) and keys');
