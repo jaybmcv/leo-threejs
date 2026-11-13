@@ -381,7 +381,8 @@ export function createHydroNipLounge({mirror=1}={}){
   // Vines trailing from the roof inside.
   for(let i=0;i<14;i++){const x=x0+.4+rnd()*(x1-x0-.8),z=z0+.4+rnd()*(z1-z0-.8),n=3+Math.floor(rnd()*4);
    for(let k=0;k<n;k++)put(M.leaf,new T.OctahedronGeometry(.09,0).scale(1,.45,1.3).rotateY(rnd()*3).translate(x+Math.sin(k*1.7)*.08,top-.15-k*.2,z));}
-  sign({at:[116.6+v2MazeFit.dx,FLOOR+3.15,z0-.1],normal:[0,0,-1],width:3.2,height:1.2,color:GREEN,lines:[{text:'HAZE MAZE',size:.42}]});
+  // Centred over the door (x=cx), on a board wide enough for the 3.4 m lettering.
+  sign({at:[cx,FLOOR+3.15,z0-.1],normal:[0,0,-1],width:4.4,height:1.2,color:GREEN,lines:[{text:'HAZE MAZE',size:.42}]});
   // Rotate the complete maze, including its moving doors and cushion anchors.
   turning=null;for(const o of root.children.slice(firstChild)){o.applyMatrix4(turn);if(o.userData.slide){const [x,y,z]=o.userData.slide;o.userData.slide=[-x,y,-z];}}
   // Side exits join the aft gallery below and the new aquarium gallery above.
