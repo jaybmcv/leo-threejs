@@ -22,7 +22,8 @@ export const STUCK={
  free:3,
  // The pop: the nearest floor `near` to `far` m off, on rings `ring` m apart with points `arc` m apart round each.
  near:2,far:4,ring:.25,arc:.4,
- // Stuck again within `again` s and `same` m of the last pop: the button offers Respawn instead.
+ // Stuck again within `again` s of the last pop and `same` m of where it landed (the trap it came out of is 2 to 4 m
+ // off, so inside that too): the button offers Respawn instead. So it does when nowhere near passes.
  again:30,same:5,
 };
 
@@ -80,20 +81,28 @@ export function popStand(at,{colliders,stand,check,restrictedAt,toward=null,o=ST
 }
 
 // The button (walk.html #unstuck). It shows while the sense says stuck; a click, a tap, U, or Enter or E with nothing
-// to use in front (press(), from the walk's Use) calls pop('pop'), or pop('respawn') when the walker is stuck again
-// right where the last pop was. update(dt,state) runs once a frame with the sense's state.
+// to use in front (press(), from the walk's Use) presses it. update(dt,state) runs once a frame with the sense's state.
+// Stuck? Pop out calls pop('pop'), which gives where the walker landed, or null when nowhere near passed: then the
+// button stays up as Still stuck? Respawn, and only pressing that calls pop('respawn'). A pop that landed is kept
+// (where and when): stuck again within `same` m of that landing and `again` s of it, the button comes up as Respawn
+// straight away. A respawn forgets it.
 export function createUnstuck(button,{pop,o=STUCK}){
  const sense=createStuckSense(o),label=button.querySelector('.label');
  let shown=false,mode='pop',clock=0,last=null;
+ function offer(m){
+  mode=m;button.dataset.mode=m;const text=m==='pop'?'Stuck? Pop out':'Still stuck? Respawn';
+  if(label)label.textContent=text;button.setAttribute('aria-label',text+(m==='pop'?' a couple of metres away':' in the arrival hall')+' (U)');
+ }
  function show(on,at){
-  if(on===shown)return;shown=on;button.hidden=!on;if(!on)return;
-  mode=last&&clock-last.t<o.again&&!gone(last.at,at,o.same)?'respawn':'pop';button.dataset.mode=mode;
-  const text=mode==='pop'?'Stuck? Pop out':'Still stuck? Respawn';
-  if(label)label.textContent=text;button.setAttribute('aria-label',text+(mode==='pop'?' a couple of metres away':' in the arrival hall')+' (U)');
+  if(on===shown)return;shown=on;button.hidden=!on;
+  if(on)offer(last&&clock-last.t<o.again&&!gone(last.at,at,o.same)?'respawn':'pop');
  }
  function press(){
-  if(!shown)return false;const was=mode,at=sense.shownAt;show(false);sense.reset();
-  last=was==='pop'&&at?{at,t:clock}:null;pop(was);return true;
+  if(!shown)return false;
+  if(mode==='respawn'){show(false);sense.reset();last=null;pop('respawn');return true;}
+  const landed=pop('pop');
+  if(!landed){offer('respawn');return true;}
+  show(false);sense.reset();last={at:copy(landed),t:clock};return true;
  }
  button.addEventListener('click',e=>{e.preventDefault();press();});
  // U while the button is up (before the walk's own keys, so a key bound to an emote doesn't also play it).

@@ -91,36 +91,52 @@ pass('the pop: nearest floor 2 to 4 m off, the way they face first, in sight, pu
 function element(){const label={textContent:'Stuck? Pop out'};const on={};return {hidden:true,dataset:{},attrs:{},label,on,
  querySelector:s=>s==='.label'?label:null,setAttribute(k,v){this.attrs[k]=v;},addEventListener(type,fn){on[type]=fn;}};}
 const key=(code,o={})=>{const e={code,repeat:false,ctrlKey:false,metaKey:false,altKey:false,target:{closest:()=>null},prevented:false,stopped:false,preventDefault(){this.prevented=true;},stopImmediatePropagation(){this.stopped=true;},...o};for(const k of keys.slice(-1))k.fn(e);return e;};
-{const b=element(),pops=[];const u=createUnstuck(b,{pop:m=>pops.push(m)});
+{const b=element(),pops=[];let landing={x:3,y:0,z:0};
+ // pop('pop') gives where it landed, or null for nowhere near; pop('respawn') respawns.
+ const u=createUnstuck(b,{pop:m=>{pops.push(m);return m==='pop'&&landing?{...landing}:null;}});
  assert(keys.at(-1).capture,'U is heard before the walk keys');
  const frames=(n,s)=>{for(let i=0;i<Math.round(n/STEP);i++)u.update(STEP,{free:true,trying:false,air:false,at:{x:0,y:0,z:0},...s(i*STEP)});};
+ const stuck=(x=0)=>frames(4.2,t=>({trying:true,at:near(t,{x})}));
  assert.equal(u.press(),false);assert.equal(key('KeyU').prevented,false);assert.equal(pops.length,0,'nothing to press while hidden');
  frames(3,t=>({trying:true,at:near(t)}));assert(b.hidden&&!u.shown);
  frames(1.2,t=>({trying:true,at:near(t)}));assert(!b.hidden&&u.shown&&b.dataset.mode==='pop');assert.equal(b.label.textContent,'Stuck? Pop out');
  assert.match(b.attrs['aria-label'],/Pop out a couple of metres away \(U\)/);
  assert.equal(key('KeyU',{target:{closest:()=>({})}}).prevented,false,'not while typing');assert.equal(key('KeyU',{ctrlKey:true}).prevented,false);
  const e=key('KeyU');assert(e.prevented&&e.stopped);assert.deepEqual(pops,['pop']);assert(b.hidden&&!u.shown);
- // Stuck again right where the last pop was, within 30 s: Respawn.
- frames(4.2,t=>({trying:true,at:near(t,{x:1})}));assert.equal(b.dataset.mode,'respawn');assert.equal(b.label.textContent,'Still stuck? Respawn');
- b.on.click({preventDefault(){}});assert.deepEqual(pops,['pop','respawn']);
- // After a respawn, or a pop long ago or far away, it is a pop again.
- frames(4.2,t=>({trying:true,at:near(t)}));assert.equal(b.dataset.mode,'pop');assert(u.press());assert.deepEqual(pops,['pop','respawn','pop']);
- frames(31,()=>({}));frames(4.2,t=>({trying:true,at:near(t)}));assert.equal(b.dataset.mode,'pop','31 s later');u.press();
- frames(4.2,t=>({trying:true,at:near(t,{x:8})}));assert.equal(b.dataset.mode,'pop','8 m away');
- // Walking away or being taken over puts it away without a pop.
+ // Landed at x 3: stuck again by the landing within 30 s, Respawn straight away.
+ stuck(3.5);assert.equal(b.dataset.mode,'respawn');assert.equal(b.label.textContent,'Still stuck? Respawn');assert.match(b.attrs['aria-label'],/Respawn in the arrival hall/);
+ b.on.click({preventDefault(){}});assert.deepEqual(pops,['pop','respawn']);assert(b.hidden);
+ // A respawn forgets the last pop: stuck at the same spot just after, it is a pop again.
+ stuck(3.5);assert.equal(b.dataset.mode,'pop','after a respawn');
+ landing={x:20,y:0,z:0};assert(u.press());assert.deepEqual(pops,['pop','respawn','pop']);
+ // The record is where the pop landed, not where the button came up: back at x 3.5, 16.5 m from the landing, a pop.
+ stuck(3.5);assert.equal(b.dataset.mode,'pop','by the old trap, far from the landing');
+ landing={x:0,y:0,z:0};u.press();
+ // Landed at x 0; stuck 3.5 m off (the trap it came out of): Respawn. Walking 3 m off puts it away unpressed.
+ stuck(3.5);assert.equal(b.dataset.mode,'respawn','by the trap it came out of');
  frames(.2,()=>({trying:true,at:{x:12,y:0,z:0}}));assert(b.hidden);
- frames(4.2,t=>({trying:true,at:near(t)}));assert(!b.hidden);frames(STEP,()=>({free:false}));assert(b.hidden);
- assert.equal(pops.length,4);}
-pass('the button: shows when stuck, U, a click or press() pops; stuck again at once offers Respawn; walking off hides it');
+ frames(31,()=>({}));stuck(0);assert.equal(b.dataset.mode,'pop','31 s after the landing');u.press();
+ stuck(8);assert.equal(b.dataset.mode,'pop','8 m from the landing');
+ // Nowhere near to land: the button stays up and turns into Still stuck? Respawn; only pressing that respawns.
+ landing=null;const before=pops.length;assert(u.press());assert.deepEqual(pops.slice(before),['pop']);
+ assert(u.shown&&!b.hidden&&b.dataset.mode==='respawn'&&b.label.textContent==='Still stuck? Respawn','turned into Respawn');
+ frames(2,t=>({trying:true,at:near(t,{x:8})}));assert(u.shown&&b.dataset.mode==='respawn','and stays so while stuck');
+ assert(key('KeyU').prevented);assert.deepEqual(pops.slice(before),['pop','respawn']);assert(b.hidden);
+ // That respawn forgets the pop before it (landed at x 0 within 30 s): stuck there, a pop.
+ stuck(0);assert.equal(b.dataset.mode,'pop','after a respawn from nowhere to land');
+ // Walking away or being taken over puts it away without a pop.
+ const n=pops.length;frames(.2,()=>({trying:true,at:{x:12,y:0,z:0}}));assert(b.hidden);
+ stuck(0);assert(!b.hidden);frames(STEP,()=>({free:false}));assert(b.hidden);assert.equal(pops.length,n);}
+pass('the button: U, a click or press() pops; nowhere to land turns it into Respawn; stuck again by the last landing offers Respawn; a respawn forgets; walking off hides it');
 
 // Every main variant wires it the same way: the sense, the pop and Enter or E with nothing in front.
 const lines=s=>s.split(/\r?\n/);
 const wiring=s=>{const L=lines(s),i=L.findIndex(l=>l.startsWith('const unstuck=createUnstuck(')),j=L.findIndex(l=>l.includes('unstuck.update(dt,'));
- return {imp:L.find(l=>l.includes("from './unstuck.js'")),use:L.find(l=>l.includes('unstuck.press()')),pop:L.slice(i,i+6).join('\n'),update:L[j],debug:/globalThis\.__walk=\{unstuck,/.test(s)};};
+ return {imp:L.find(l=>l.includes("from './unstuck.js'")),use:L.find(l=>l.includes('unstuck.press()')),pop:L.slice(i,L.indexOf('}});',i)+1).join('\n'),update:L[j],debug:/globalThis\.__walk=\{unstuck,/.test(s)};};
 const mains={};for(const f of ['main','main.authoring','main.prepared','main.public'])mains[f]=wiring(await fs.readFile(`src/walk/${f}.js`,'utf8'));
 for(const [f,w] of Object.entries(mains)){
  assert.equal(w.imp,"import {createUnstuck,popStand} from './unstuck.js';",f);assert.equal(w.use,'  const t=target();if(!t){unstuck.press();return;}',f);
- assert(w.pop.includes("popStand([p.x,p.y,p.z],{colliders,restrictedAt,")&&w.pop.includes('findStand(colliders,at,{radius:0})')&&w.pop.includes('v2GotoStand(colliders,at)')&&w.pop.includes('goTo({at:q.toArray(),yaw:Math.atan2(q.x-p.x,q.z-p.z),resolved:true})')&&w.pop.includes('actions.respawn();'),f);
+ assert(w.pop.includes("popStand([p.x,p.y,p.z],{colliders,restrictedAt,")&&w.pop.includes('findStand(colliders,at,{radius:0})')&&w.pop.includes('v2GotoStand(colliders,at)')&&w.pop.includes('goTo({at:q.toArray(),yaw:Math.atan2(q.x-p.x,q.z-p.z),resolved:true})')&&w.pop.includes("if(mode==='respawn'){actions.respawn();return null;}")&&w.pop.includes('resolved:true})?q:null;'),f);
  for(const not of ['canHook','input.enabled','!inCar','!controller.hook','!controller.gliding','!pawsOff?.active','!maze?.running','!playing()'])assert(w.update?.includes(not),f+' free needs '+not);
  assert(w.debug,f);assert.deepEqual(w,mains.main,f+' differs from main.js');}
 pass('all four main variants: the same sense, pop (findStand, Go to check, goTo, Respawn) and keys');

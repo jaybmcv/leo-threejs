@@ -552,13 +552,15 @@ const actions={
 let emote=null,pinged=-Infinity;const PING_GAP_MS=4000;
 // Stuck (unstuck.js): trying to move and getting nowhere, or wedged off the ground, brings up Stuck? Pop out. It lands the
 // walker on the nearest clear public floor 2 to 4 m away and in their sight, through findStand's and Go to's landing
-// checks, by goTo as Respawn does, so Leo live sees an ordinary move; it faces away from where they were stuck. None near,
-// or stuck again where the last pop was: Respawn.
+// checks, by goTo as Respawn does, so Leo live sees an ordinary move; it faces away from where they were stuck, and gives
+// where it landed. With none near it gives null and the button turns into Still stuck? Respawn, as it comes up when they
+// are stuck again by the last landing; only that press respawns.
 const unstuck=createUnstuck($('unstuck'),{pop(mode){
- if(!ready())return;
- const p=controller.position,fwd=follow.forward(),q=mode==='pop'?popStand([p.x,p.y,p.z],{colliders,restrictedAt,toward:[fwd.x,fwd.z],stand:at=>findStand(colliders,at,{radius:0}),check:at=>v2GotoStand(colliders,at)}):null;
- if(q){closePanels();emote=null;if(goTo({at:q.toArray(),yaw:Math.atan2(q.x-p.x,q.z-p.z),resolved:true}))return;}
- actions.respawn();
+ if(!ready())return null;
+ if(mode==='respawn'){actions.respawn();return null;}
+ const p=controller.position,fwd=follow.forward(),q=popStand([p.x,p.y,p.z],{colliders,restrictedAt,toward:[fwd.x,fwd.z],stand:at=>findStand(colliders,at,{radius:0}),check:at=>v2GotoStand(colliders,at)});
+ if(!q)return null;closePanels();emote=null;
+ return goTo({at:q.toArray(),yaw:Math.atan2(q.x-p.x,q.z-p.z),resolved:true})?q:null;
 }});
 // The clubhouse vault behind the arcade (vault.js): its door, and the password sheet it asks with.
 let vault=null,vaultLift=null;
