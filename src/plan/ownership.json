@@ -3985,7 +3985,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 40,
-      "signature": "6e7c801c50bf0a34b793cd7a1c165b7091fee2872eb9c283b2ffd26de36e852b"
+      "signature": "9d678fb8f34d8c0636ed2e471de8757ea45ec36e1828e45f00dbc781bccd527c"
     },
     {
       "source": "src/walk/maze/layout.js",
