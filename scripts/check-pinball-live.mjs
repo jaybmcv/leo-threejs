@@ -1,9 +1,10 @@
 // Leo Pinball's shared high scores on an isolated Leo live server (server/pinball.mjs): temporary storage, a locally
 // signed pass key, no Creamery, never the live server or its board. Players at the machine play real games with the
 // game's own rules, from the seeds their tickets give, and post them as the page does (net/live.js pinballFinish).
-// Checked: the empty board; guests and Otherside visitors can read but not post; a ticket only at the machine; ranked
-// results kept, ranked, seen by two other clients and kept through a restart; and refused: a forged score, a tampered
-// log, a game faster than the server's clock, a ticket used twice, a finish on another player's ticket.
+// Checked: the empty board; guests can read but not post; Otherside players (a Glyph wallet, or a typed name) post like
+// Discord players (Jay's call); a ticket only at the machine; ranked results kept, ranked, seen by two other clients
+// and kept through a restart; and refused: a forged score, a tampered log, a game faster than the server's clock, a
+// ticket used twice, a finish on another player's ticket.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -40,13 +41,13 @@ async function start(){
  const health=await (await fetch('http://127.0.0.1:'+port+'/health')).json();
  return {p,port,health,log:()=>log};
 }
-// A visitor: signed in with a pass for id, a guest, or from Otherside with a wallet (glyph).
-async function bot(s,{id,glyph}={}){
+// A visitor: signed in with a pass for id, a guest, or from Otherside with a wallet (glyph, as username) or a typed name.
+async function bot(s,{id,glyph,username='Glyph',typed}={}){
  const key=randomBytes(32).toString('hex'),ws=new WebSocket('ws://127.0.0.1:'+s.port+'/live',{origin:'http://localhost:4180'}),b={ws,msgs:[],id};bots.push(b);
  ws.on('message',(data,binary)=>{if(!binary)b.msgs.push(JSON.parse(data));});
  await new Promise((r,j)=>{ws.once('open',r);ws.once('error',j);});
  b.send=m=>ws.send(JSON.stringify(m));
- b.send({m:'hello',v:PROTOCOL,key,layout:2,layoutIdentity:s.health.layoutIdentity,...(id?{pass:await sign(id)}:glyph?{glyph:{wallet:glyph,username:'Glyph'}}:{name:'Guest'})});
+ b.send({m:'hello',v:PROTOCOL,key,layout:2,layoutIdentity:s.health.layoutIdentity,...(id?{pass:await sign(id)}:glyph?{glyph:{wallet:glyph,username}}:typed?{otherside:true,name:typed}:{name:'Guest'})});
  for(let i=0;i<500&&!b.msgs.some(m=>m.m==='welcome');i++)await sleep(20);
  assert(b.msgs.some(m=>m.m==='welcome'),'welcome');
  b.stand=async at=>{b.send({m:'pose',p:{pos:at,yaw:0,g:true,st:'stand'}});await sleep(150);};
@@ -67,30 +68,33 @@ let srv;
 try{
  srv=await start();
  console.log('server layout',srv.health.layout,'identity',String(srv.health.layoutIdentity).slice(0,8),'(isolated, storage in a temp folder); the machine at',AT.map(n=>n.toFixed(2)).join(','));
- const guest=await bot(srv),watcher=await bot(srv,{id:'914141414141414141'}),glyph=await bot(srv,{glyph:'0x'+'ab'.repeat(20)});
+ const guest=await bot(srv),watcher=await bot(srv,{id:'914141414141414141'});
+ // Otherside players: Gus with a Glyph wallet, Tia with a typed name (no wallet).
+ const gus=await bot(srv,{glyph:'0x'+'ab'.repeat(20),username:'Orbit Gus'}),tia=await bot(srv,{typed:'Tia Comet'});
  const ada=await bot(srv,{id:'915151515151515151'}),ben=await bot(srv,{id:'916161616161616161'}),cy=await bot(srv,{id:'917171717171717171'}),
   dee=await bot(srv,{id:'918181818181818181'}),eli=await bot(srv,{id:'919191919191919191'}),fox=await bot(srv,{id:'910101010101010101'});
- const players=[ada,ben,cy,dee,eli,fox];
+ const players=[ada,ben,cy,dee,eli,fox,gus,tia];
+ const nameOf=p=>p===gus?'Orbit Gus':p===tia?'Tia Comet':'Pilot '+p.id.slice(-3);
  const empty=await ask(guest,'board');
  check('the board starts empty, and a guest may read it, marked not signed in',empty?.verified===false&&Array.isArray(empty.top)&&empty.top.length===0&&empty.you===null);
  check('a signed-in player reading it is marked signed in',(await ask(watcher,'board'))?.verified===true);
- await guest.stand(AT);await glyph.stand(AT);
+ await guest.stand(AT);
  check('a guest at the machine gets no ticket: sign-in',(await ask(guest,'ticket'))?.why==='sign-in');
- check('an Otherside visitor (a wallet taken on the page’s word) gets no ticket either',(await ask(glyph,'ticket'))?.why==='sign-in');
+ check('an Otherside player reading it is marked as one who can post',(await ask(gus,'board'))?.verified===true&&(await ask(tia,'board'))?.verified===true);
  check('a guest’s finish is refused: sign-in',(await ask(guest,'finish',{t:'x',n:0,steps:10,score:10}))?.why==='sign-in');
  await ada.stand(AWAY);
  check('a signed-in player away from the machine gets no ticket',(await ask(ada,'ticket'))?.why==='away');
  for(const p of players)await p.stand(AT);
  const tickets=[];for(const p of players){const t=await ask(p,'ticket');tickets.push(t);}
- check('signed-in players at the machine each get a ticket with a seed',tickets.every(t=>t?.ok===true&&typeof t.id==='string'&&Number.isInteger(t.seed))&&new Set(tickets.map(t=>t.id)).size===players.length);
+ check('signed-in and Otherside players at the machine each get a ticket with a seed',tickets.every(t=>t?.ok===true&&typeof t.id==='string'&&Number.isInteger(t.seed))&&new Set(tickets.map(t=>t.id)).size===players.length);
  const t0=Date.now();
  // Each plays a game from their own seed (holds chosen to end in under a minute with different scores).
- const holds=[.25,.3,.45,.3,.8,.3],games=players.map((p,i)=>{for(const h of [holds[i],.3,.5,.7,.9]){const r=play(tickets[i].seed,h);if(r.over&&r.score>0)return r;}throw Error('no short game');});
+ const holds=[.25,.3,.45,.3,.8,.3,.45,.3],games=players.map((p,i)=>{for(const h of [holds[i],.3,.5,.7,.9]){const r=play(tickets[i].seed,h);if(r.over&&r.score>0)return r;}throw Error('no short game');});
  console.log('     games:',games.map(r=>`${r.score} in ${r.seconds.toFixed(1)} s`).join(', '));
  // Fox posts at once: the server's clock has not run as long as the game.
  check('a game posted sooner than it could have been played is refused',(await finish(fox,tickets[5].id,games[5]))?.why==='rejected'&&srv.log().includes('faster than the clock'));
  check('and that ticket can’t be tried again',(await finish(fox,tickets[5].id,games[5]))?.why==='used');
- const longest=Math.max(...games.slice(0,5).map(r=>r.seconds))*1000;console.log(`     waiting ${((longest-(Date.now()-t0))/1000).toFixed(0)} s for the games to have been played`);
+ const longest=Math.max(...games.filter((r,i)=>i!==5).map(r=>r.seconds))*1000;console.log(`     waiting ${((longest-(Date.now()-t0))/1000).toFixed(0)} s for the games to have been played`);
  await sleep(Math.max(0,longest-(Date.now()-t0))+300);
  // Ben tries Eli's ticket: refused, and Eli's ticket still holds.
  check('a finish on another player’s ticket is refused',(await finish(ben,tickets[4].id,games[4]))?.why==='rejected');
@@ -111,15 +115,22 @@ try{
  const b=await finish(benAgain,tickets[1].id,games[1]),e=await finish(eli,tickets[4].id,games[4]);
  check('a ranked game finished after a reconnect is posted on its original ticket',b?.ok===true&&b.score===games[1].score,JSON.stringify(b));
  check('other players’ real games are posted too (Eli’s ticket survived Ben’s try)',e?.ok===true);
- const order=[[ada,games[0]],[ben,games[1]],[eli,games[4]]].sort((x,y)=>y[1].score-x[1].score),names=order.map(([p])=>'Pilot '+p.id.slice(-3));
+ // Otherside: Gus's real game is posted under his Glyph name, and posting it again is refused; Tia's forged score too.
+ const nT=watcher.msgs.length,g=await finish(gus,tickets[6].id,games[6]);
+ check('an Otherside (Glyph wallet) player’s ranked game is checked by replay and posted',g?.ok===true&&g.score===games[6].score&&g.best===games[6].score,JSON.stringify(g));
+ const heard=await wait(watcher,nT,x=>x.m==='pinball'&&x.op==='top'&&x.top.some(r=>r.name==='Orbit Gus'));
+ check('others hear it under the Otherside name shown aboard, with no wallet or account id',heard?.top.find(r=>r.name==='Orbit Gus')?.score===games[6].score&&!/glyph:|otherside:|0x[0-9a-f]{40}/i.test(JSON.stringify(heard)));
+ check('an Otherside player’s game posted again is refused: used',(await finish(gus,tickets[6].id,games[6]))?.why==='used');
+ check('an Otherside (typed) player’s forged score is refused',(await finish(tia,tickets[7].id,games[7],{score:games[7].score+5000}))?.why==='rejected');
+ const order=[[ada,games[0]],[ben,games[1]],[eli,games[4]],[gus,games[6]]].sort((x,y)=>y[1].score-x[1].score),names=order.map(([p])=>nameOf(p));
  for(const viewer of [guest,watcher]){const bd=await ask(viewer,'board');
-  // (only the three real games, so nothing refused reached it)
+  // (only the four real games, so nothing refused reached it)
   check(`${viewer===guest?'a guest':'another signed-in player'} sees the ranked board: best first, public names only`,
-   JSON.stringify(bd.top)===JSON.stringify(order.map(([p,r],i)=>({name:names[i],score:r.score})))&&!JSON.stringify(bd).match(/9[0-9]{17}/));}
+   JSON.stringify(bd.top)===JSON.stringify(order.map(([p,r],i)=>({name:names[i],score:r.score})))&&!/9[0-9]{17}|glyph:|otherside:|0x[0-9a-f]{40}/i.test(JSON.stringify(bd)));}
  const mine=await ask(benAgain,'board');check('a player’s own best and rank come with the board',mine.you?.score===games[1].score&&mine.you.rank===order.findIndex(([p])=>p===ben)+1);
  await sleep(1500);
  const saved=JSON.parse(await fs.readFile(store,'utf8'));
- check('accepted results are kept in the pinball store, by account',saved.length===3&&saved.every(x=>/^9\d{17}$/.test(x.id)&&Number.isInteger(x.score)));
+ check('accepted results are kept in the pinball store, by account (Discord or Otherside wallet)',saved.length===4&&saved.every(x=>/^(9\d{17}|glyph:0x[0-9a-f]{40})$/.test(x.id)&&Number.isInteger(x.score))&&saved.some(x=>x.id==='glyph:0x'+'ab'.repeat(20)));
  await stop(srv);srv=await start();
  const after=await bot(srv),again=await ask(after,'board');
  check('after a restart the board is read back from the store, unchanged',JSON.stringify(again.top)===JSON.stringify(order.map(([p,r],i)=>({name:names[i],score:r.score}))));

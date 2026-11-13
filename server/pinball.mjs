@@ -1,7 +1,9 @@
-// Leo Pinball's shared high scores (walk/pinball, from tester feedback), for Leo live: one best score per Discord-
-// verified player, kept in a file of its own beside this checkout (LEO_LIVE_PINBALL overrides it). Anyone can play and
-// read the board; only a player signed in through The Creamery with a checked Leo pass can post, and who they are comes
-// from that pass, never from the page.
+// Leo Pinball's shared high scores (walk/pinball, from tester feedback), for Leo live: one best score per player with
+// an account aboard, kept in a file of its own beside this checkout (LEO_LIVE_PINBALL overrides it). Anyone can play and
+// read the board; a player with an account can post: a Discord account checked by its Leo pass, or an Otherside player
+// (Jay's call), whose wallet or browser is their account (live-core.mjs glyphVisitor, typedVisitor). Which account is
+// the server's own record of the visitor, never what the page puts in a pinball message. An Otherside name is the
+// page's word (no sign-in behind it), so the board takes it as the Aboard list does; every score is still replay-checked.
 // A ranked game is the server's from start to end. At the machine the page asks for a ticket, which gives the game's
 // seed and starts the server's clock. At game over the page sends what its buttons did, step by step
 // (pinball/replay.js), and the server plays the game again from that seed with the same rules (pinball/rules.js). The
@@ -36,8 +38,11 @@ export function createPinballBoard({log,send,everyone,file=process.env.LEO_LIVE_
  const save=()=>{if(saving)return;saving=setTimeout(()=>{saving=null;fs.writeFile(file,JSON.stringify([...best.values()],null,1),e=>{if(e)log('pinball scores not saved',e.message);});},1000);};
  const ranked=()=>[...best.values()].sort((a,b)=>b.score-a.score||a.at.localeCompare(b.at));
  const top=()=>ranked().slice(0,10).map(e=>({name:e.name,score:e.score}));
- // A Discord account checked by its pass; an Otherside visitor's (glyph) is taken on the page's word, so it can't post.
- const account=v=>v.discord&&!v.discord.glyph?v.discord.discordId:null;
+ // The account the server gave the visitor at hello: a checked Discord pass, an Otherside wallet ('glyph:…') or an
+ // Otherside browser ('otherside:…'). A guest has none.
+ const account=v=>v.discord?.discordId||null;
+ // How an account reads in the server's log.
+ const said=id=>id.includes(':')?id:'discord:'+id;
  const reply=(v,msg)=>send(v.ws,{m:'pinball',...msg});
  function allowed(v,kind,[rate,burst]){const now=Date.now(),all=buckets.get(v)||{},b=all[kind]||(all[kind]={tokens:burst,at:now});buckets.set(v,all);
   b.tokens=Math.min(burst,b.tokens+(now-b.at)/1000*rate);b.at=now;if(b.tokens<1)return false;b.tokens-=1;return true;}
@@ -65,19 +70,19 @@ export function createPinballBoard({log,send,everyone,file=process.env.LEO_LIVE_
   const id=account(v);if(!id)return reply(v,{op:'result',ok:false,why:'sign-in'});
   const t=msg.t,k=tickets.get(t);
   if(!k||k.account!==id){
-   const why=used.has(t)?'used':'rejected';log('pinball refused',`discord:${id}`,k?'(another player’s ticket)':why==='used'?'(ticket already used)':'(no ticket)');
+   const why=used.has(t)?'used':'rejected';log('pinball refused',said(id),k?'(another player’s ticket)':why==='used'?'(ticket already used)':'(no ticket)');
    return reply(v,{op:'result',ok:false,why});}
   drop(t);used.add(t);if(used.size>USED_MOST)used.delete(used.values().next().value);
   const steps=msg.steps,score=msg.score,elapsed=Date.now()-k.at;
   const why=k.at+TICKET_MS<Date.now()?'ticket ran out':k.bad||msg.n!==k.parts.length?'log incomplete':!Number.isInteger(score)||score<0?'bad score':
    !Number.isInteger(steps)||steps<1||steps>MOST_STEPS?'bad length':elapsed+SLACK_MS<steps*STEP*1000?`faster than the clock (${(steps*STEP).toFixed(0)} s in ${(elapsed/1000).toFixed(0)} s)`:null;
-  if(why){log('pinball refused',`discord:${id}`,score,why);return reply(v,{op:'result',ok:false,why:'rejected'});}
+  if(why){log('pinball refused',said(id),score,why);return reply(v,{op:'result',ok:false,why:'rejected'});}
   queue=queue.then(()=>replay(k.seed,k.parts.join(''),steps,{pause})).then(r=>{
-   if(!r||r.score!==score){log('pinball refused',`discord:${id}`,score,r?`(the replay scored ${r.score})`:'(the replay does not end there)');return reply(v,{op:'result',ok:false,why:'rejected'});}
+   if(!r||r.score!==score){log('pinball refused',said(id),score,r?`(the replay scored ${r.score})`:'(the replay does not end there)');return reply(v,{op:'result',ok:false,why:'rejected'});}
    const had=best.get(id),newBest=score>0&&(!had||score>had.score),before=JSON.stringify(top());
    if(newBest){best.set(id,{id,name:v.name||'Voyager',score,at:new Date().toISOString()});save();}
    else if(had&&v.name&&had.name!==v.name){had.name=v.name;save();}
-   const mine=best.get(id),all=ranked();log('pinball',`discord:${id}`,v.name||'',score,`${(steps*STEP).toFixed(0)}s`,newBest?'(best)':'');
+   const mine=best.get(id),all=ranked();log('pinball',said(id),v.name||'',score,`${(steps*STEP).toFixed(0)}s`,newBest?'(best)':'');
    reply(v,{op:'result',ok:true,score,best:mine?.score??null,rank:mine?all.indexOf(mine)+1:null,newBest});
    const now=top();if(JSON.stringify(now)!==before)for(const o of everyone())if(o.ready)send(o.ws,{m:'pinball',op:'top',top:now});
   }).catch(e=>{log('pinball replay failed',e?.message);reply(v,{op:'result',ok:false,why:'rejected'});});

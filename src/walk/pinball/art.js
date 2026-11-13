@@ -101,5 +101,5 @@ export function drawScoreBoard(x,w,h,board){
   const [a,b]=status==='loading'?['CONNECTING…','THE SHARED BOARD IS ON ITS WAY']:status==='ok'?['NO SCORES YET','BE THE FIRST ON THE BOARD']:['BOARD UNAVAILABLE','THE GAME STILL PLAYS: SCORES STAY ON YOUR DEVICE'];
   text(a,w/2,u*48,7,status==='offline'?C.gold:C.text,'center',800,FONT.display);text(b,w/2,u*60,3.6,C.dim,'center');
  }
- text('POSTED BY DISCORD-CONNECTED PLAYERS · EVERY GAME CHECKED',w/2,u*94,3,C.dim,'center',600);
+ text('SIGNED-IN AND OTHERSIDE PLAYERS · EVERY GAME CHECKED',w/2,u*94,3,C.dim,'center',600);
 }

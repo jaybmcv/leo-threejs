@@ -141,7 +141,7 @@ export function createPinball({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
    text(`${i+1}.`,36,yy,7,C.dim,'left');text(r.name.toUpperCase().slice(0,15),52,yy,7,c,'left');text(commas(r.score),204,yy,7,c,'right');});
  }
  // Why a game isn't ranked, in a few words.
- const casual=()=>board.status==='offline'||why==='offline'?'BOARD UNAVAILABLE':why==='sign-in'||board.status==='ok'&&!board.verified?'CONNECT DISCORD TO POST':why==='away'?'STAND AT THE MACHINE':'NOT RANKED';
+ const casual=()=>board.status==='offline'||why==='offline'?'BOARD UNAVAILABLE':why==='sign-in'||board.status==='ok'&&!board.verified?'SIGN IN TO POST':why==='away'?'STAND AT THE MACHINE':'NOT RANKED';
  function drawTitle(now){
   veil();
   text('LEO',120,TOP+16,30,C.orange,'center',800,FONT.display);text('PINBALL',120,TOP+52,20,C.teal,'center',800,FONT.display);
@@ -152,7 +152,7 @@ export function createPinball({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
    const y=TOP+142+i*11;text(a,40,y,6.5,C.dim,'left');text(String(b),200,y,6.5,C.gold,'right');});
   text('HIGH SCORES',120,TOP+194,9,C.orange,'center',800,FONT.display);boardLines(TOP+210,5);
   text(`YOUR BEST  ${pad(best)}`,120,TOP+272,8,C.text);
-  text(ticket?'SIGNED IN · THIS GAME IS RANKED':`3 BALLS · CASUAL: ${casual()}`,120,TOP+286,6,ticket?C.teal:C.dim);
+  text(ticket?'THIS GAME IS RANKED':`3 BALLS · CASUAL: ${casual()}`,120,TOP+286,6,ticket?C.teal:C.dim);
   if((now/600|0)%2===0)text(touch?'TAP TO PLAY':'SPACE OR CLICK TO PLAY',120,TOP+330,10,C.orange);
   text(touch?'TAP × TO RETURN TO LEO':'ESC RETURNS TO LEO',120,TOP+352,7,C.dim);
  }
@@ -160,7 +160,7 @@ export function createPinball({onOpen=()=>{},onClose=()=>{},muted=()=>false,scor
  function outcome(){
   if(result?.pending)return ['CHECKING YOUR GAME…',C.dim];
   if(result?.ok)return [result.newBest?`ON THE BOARD! RANK ${result.rank}`:result.rank?`POSTED · YOUR BOARD BEST ${commas(result.best)} · #${result.rank}`:'POSTED',C.teal];
-  if(result)return [{'sign-in':'CONNECT DISCORD TO POST SCORES',rejected:'THIS GAME COULD NOT BE CHECKED: NOT POSTED',used:'THIS GAME WAS ALREADY POSTED'}[result.why]||'BOARD UNAVAILABLE: SCORE NOT POSTED',C.gold];
+  if(result)return [{'sign-in':'SIGN IN WITH DISCORD TO POST SCORES',rejected:'THIS GAME COULD NOT BE CHECKED: NOT POSTED',used:'THIS GAME WAS ALREADY POSTED'}[result.why]||'BOARD UNAVAILABLE: SCORE NOT POSTED',C.gold];
   return ['CASUAL GAME · '+casual(),C.dim];
  }
  function drawOver(now){
