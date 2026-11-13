@@ -19,19 +19,21 @@ const mix=(a,b,t)=>a+(b-a)*t;
 const LINE=[[255,64,200],[150,92,255],[56,214,255]];
 const lineColor=t=>{const s=t*2,i=Math.min(1,Math.floor(s)),f=s-i,a=LINE[i],b=LINE[i+1];return [0,1,2].map(k=>Math.round(mix(a[k],b[k],f)));};
 
-// Paints the panorama between S = s0 and s0 + w / PPM into a w x h canvas (h / PPM is the wall's height, 11.2 m).
-export function paintSynthwave(g,w,h,s0){
+// Paints the panorama between S = s0 and s0 + w / PPM into a w x h canvas (h / PPM is the wall's height, 11.2 m). `keep` is
+// the S range an earlier, narrower picture covered: its stars stay where they were, and the extra strip gets its own.
+export function paintSynthwave(g,w,h,s0,keep){
  const sx=s=>(s-s0)*PPM,sy=v=>h-v*PPM,span=w/PPM;
  // Sky: black at the top, violet toward the horizon, with a cool haze right at it.
  const sky=g.createLinearGradient(0,0,0,sy(HORIZON));
  sky.addColorStop(0,'#03010c');sky.addColorStop(.45,'#0a0430');sky.addColorStop(.8,'#2a0f66');sky.addColorStop(1,'#4a1a8a');
  g.fillStyle=sky;g.fillRect(0,0,w,h);
- const rnd=seeded(168);
  // Stars, a few brighter.
- for(let i=0;i<Math.round(span*16);i++){
-  const x=sx(s0+rnd()*span),y=sy(HORIZON+rnd()*(HEIGHT-HORIZON)),b=rnd(),r=.5+b*b*1.9;
-  g.fillStyle=`rgba(${215+rnd()*40|0},${200+rnd()*40|0},255,${.25+b*.7})`;g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fill();
- }
+ const stars=(a,b,rnd)=>{for(let i=0;i<Math.round((b-a)*16);i++){
+  const x=sx(a+rnd()*(b-a)),y=sy(HORIZON+rnd()*(HEIGHT-HORIZON)),k=rnd(),r=.5+k*k*1.9;
+  g.fillStyle=`rgba(${215+rnd()*40|0},${200+rnd()*40|0},255,${.25+k*.7})`;g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fill();
+ }};
+ if(!keep)stars(s0,s0+span,seeded(168));
+ else{stars(keep[0],keep[1],seeded(168));stars(s0,keep[0],seeded(169));stars(keep[1],s0+span,seeded(170));}
  // The sun, when it is in this picture: a pink glow, a disc from magenta to amber, and dark bars cutting into its lower half.
  const cx=sx(SUN_S),cy=sy(SUN.v),R=SUN.r*PPM;
  if(cx>-R*3&&cx<w+R*3){
@@ -113,7 +115,7 @@ export function createLoungeMural(frame,{back=FLOOR,left=FLOOR}={}){
  const mesh=(name,map,a,b,u,v)=>{const g=plane(a,b,u,v).applyMatrix4(frame),o=new T.Mesh(g,material(map,name));o.name=name;o.frustumCulled=false;group.add(o);return o;};
  // The back wall: its inner face is at z 45.9; the left wall's at x 109.6.
  // In v2 this panel moves to the aft side wall (fitSynthwaveMural), so its picture is painted for that wall's span.
- const backMap=geometryOnly?null:canvasTexture(Math.round(synthwaveMuralOutline().width*PPM),Math.round(HEIGHT*PPM),(g,w,h)=>paintSynthwave(g,w,h,SYNTHWAVE_MURAL.s0));
+ const backMap=geometryOnly?null:canvasTexture(Math.round(synthwaveMuralOutline().width*PPM),Math.round(HEIGHT*PPM),(g,w,h)=>paintSynthwave(g,w,h,SYNTHWAVE_MURAL.s0,[SYNTHWAVE_MURAL.s0+SYNTHWAVE_MURAL.inner-SYNTHWAVE_MURAL.was,SYNTHWAVE_MURAL.s0+synthwaveMuralOutline().width]));
  mesh('Lounge_mural_back',backMap,[ROOM_X0,back,ROOM_Z0+.1+lift],[ROOM_X1,top,ROOM_Z0+.1+lift],[0,1],[(back-FLOOR)/HEIGHT,1]);
  const leftMap=geometryOnly?null:canvasTexture(Math.round(SPAN_LEFT*PPM),Math.round(HEIGHT*PPM),(g,w,h)=>paintSynthwave(g,w,h,0));
  mesh('Lounge_mural_left',leftMap,[ROOM_X0+.1+lift,left,ROOM_Z0],[ROOM_X0+.1+lift,top,ROOM_Z1],[0,1],[(left-FLOOR)/HEIGHT,1]);

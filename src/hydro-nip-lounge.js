@@ -44,7 +44,9 @@ export const LOUNGE={FLOOR,CEILING,LEVELS,ROOM,DOME,MAZE,SPLIT,TUBES};
 const PINK=0xff4fd8,CYAN=0x45e3ff,GREEN=0x6dff7a,PURPLE=0xa77bff,AMBER=0xffc266,BLACKLIGHT=0x8a4dff,ORANGE=0xff7a1a;
 // The commons' broad stair (model.js): two flights of 24 treads, 0.3 m deep and 1/6 m high. Each flight's sides in x,
 // the floor it starts from, the z of its foot and the way it climbs in z, and where its handrail starts past the foot.
-const FLIGHTS=[{xs:[150.3,153.3],base:FLOOR,foot:34.85,dir:1,rail:0},{xs:[147,150],base:LEVELS[0],foot:42.05,dir:-1,rail:-.15}];
+// The v2 plan moves both flights inboard; the stringers, glass and planter follow its first tread (the model's was 151.8, 35).
+const {dx:SDX,dz:SDZ}=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1'),t=r.components.stairs.find(t=>t.id.endsWith('-tread-0-0'));return {dx:t.center[0]-r.x+132-151.8,dz:27+r.side*(t.center[2]-r.z)-35};})();
+const FLIGHTS=[{xs:[150.3+SDX,153.3+SDX],base:FLOOR,foot:34.85+SDZ,dir:1,rail:0},{xs:[147+SDX,150+SDX],base:LEVELS[0],foot:42.05+SDZ,dir:-1,rail:-.15}];
 // Under each flight a slab this deep (straight down from the nose line) is all that stays solid, so the underside runs
 // parallel to the slope. The step glow is the purple of the stair's reference, shown on every riser.
 const SLAB=.34,STEP_GLOW=0x9b4dff;
@@ -401,7 +403,7 @@ export function createHydroNipLounge({mirror=1}={}){
   for(const f of FLIGHTS){const {base,foot,dir}=f,nose=s=>base+1/6+s/1.8,cap=base+4.05,rail=s=>base+1.1+(s-f.rail)*4/7.35;
    // (s, y) in the flight's side to the template frame at side x, for an outward face that way.
    const side=(x,out)=>new T.Matrix4().makeBasis(new T.Vector3(0,0,dir),new T.Vector3(0,1,0),new T.Vector3(1,0,0)).setPosition(x+(out<0?-.06:0),0,foot);
-   const s0=f.base===FLOOR?-.9:0,sHead=(cap-.05-base-1/6)*1.8;
+   const s0=f.base===FLOOR?-.6:0,sHead=(cap-.05-base-1/6)*1.8;
    // A thin plate: the nose line and a parallel one SLAB below it, down to the floor at the foot.
    const shape=new T.Shape();shape.moveTo(s0,base);
    if(s0<0)shape.quadraticCurveTo(-.1,base,.3,nose(.3)+.05);else shape.lineTo(0,nose(0)+.05);
@@ -416,7 +418,7 @@ export function createHydroNipLounge({mirror=1}={}){
   }
   // The planter: marble, rounded toward the room, an orange line round its rim, soil, and jungle plants under the
   // upper flight (4 m of headroom), none reaching into the lower flight beside it or the treads above.
-  const P={x0:147.25,x1:150.15,z0:35.4,z1:41.6,h:.55},r=.9,bed=new T.Shape();
+  const P={x0:147.25+SDX,x1:150.15+SDX,z0:35.4+SDZ,z1:41.6+SDZ,h:.55},r=.9,bed=new T.Shape();
   bed.moveTo(P.x1,P.z0);bed.lineTo(P.x1,P.z1);bed.lineTo(P.x0+r,P.z1);bed.quadraticCurveTo(P.x0,P.z1,P.x0,P.z1-r);bed.lineTo(P.x0,P.z0+r);bed.quadraticCurveTo(P.x0,P.z0,P.x0+r,P.z0);bed.closePath();
   put(marble,new T.ExtrudeGeometry(bed,{depth:P.h,bevelEnabled:false,curveSegments:8}).rotateX(Math.PI/2).translate(0,FLOOR+P.h,0));
   put(paint('matte',0x2e2219),new T.ExtrudeGeometry(bed,{depth:.02,bevelEnabled:false,curveSegments:8}).rotateX(Math.PI/2).translate(-(P.x0+P.x1)/2,0,-(P.z0+P.z1)/2).scale(.95,1,.98).translate((P.x0+P.x1)/2,FLOOR+P.h+.02,(P.z0+P.z1)/2));
@@ -431,14 +433,14 @@ export function createHydroNipLounge({mirror=1}={}){
    for(let i=1;i<=14;i++){const t=i/14,c=at(t),l=leaflet*Math.sin(Math.PI*Math.min(1,t*1.1))+.04;blade(p,at(t-1/14),c,.012);
     for(const s of [-1,1])blade(p,c,c.clone().addScaledVector(across,s*l).addScaledVector(h,l*.35).addScaledVector(UPY,-l*.45),.035);}};
   // Palms: a ringed, leaning trunk and a crown of fronds.
-  for(const [x,z,ht,lean] of [[148.4,37,2.3,.2],[148.9,40.1,1.75,-.15],[148,38.9,1.2,.1]]){
+  for(const [px,pz,ht,lean] of [[148.4,37,2.3,.2],[148.9,40.1,1.75,-.15],[148,38.9,1.2,.1]]){const x=px+SDX,z=pz+SDZ;
    const top=new T.Vector3(x+lean*.5,soil+ht,z+lean*.3);rod(paint('matte',0x5a4632),[x,soil,z],top.toArray(),.07,7);
    for(let k=1;k<5;k++)put(paint('matte',0x463627),new T.TorusGeometry(.07,.012,4,10).rotateX(Math.PI/2).translate(x+lean*.5*k/5,soil+ht*k/5,z+lean*.3*k/5));
    const n=10+Math.floor(rnd()*3);for(let i=0;i<n;i++)frond(paint('leaf',greens[i%greens.length]),top,i/n*Math.PI*2+rnd()*.3,1.05+rnd()*.35,.35+rnd()*.25,.28+rnd()*.08);}
   // Ferns and a red-leaved fan palm low in the bed, broad split leaves on stems between them.
-  for(const [x,z,c] of [[147.75,36.1,greens[3]],[149.5,36.2,greens[1]],[147.7,40.9,greens[0]],[149.6,41,greens[4]],[149.6,38.5,0xa8432a]]){
+  for(const [px,pz,c] of [[147.75,36.1,greens[3]],[149.5,36.2,greens[1]],[147.7,40.9,greens[0]],[149.6,41,greens[4]],[149.6,38.5,0xa8432a]]){const x=px+SDX,z=pz+SDZ;
    const n=8+Math.floor(rnd()*4),at=new T.Vector3(x,soil+.05,z);for(let i=0;i<n;i++)frond(paint('leaf',c),at,i/n*Math.PI*2+rnd()*.4,.55+rnd()*.3,.35+rnd()*.2,.12+rnd()*.05);}
-  for(const [x,z] of [[147.6,37.6],[149.4,37.1],[147.9,39.9],[149.3,39.6]])for(let k=0;k<4;k++){
+  for(const [px,pz] of [[147.6,37.6],[149.4,37.1],[147.9,39.9],[149.3,39.6]])for(let k=0;k<4;k++){const x=px+SDX,z=pz+SDZ;
    const a=k/4*Math.PI*2+rnd(),h=.55+rnd()*.5,tip=new T.Vector3(x+Math.cos(a)*.35,soil+h,z+Math.sin(a)*.35);
    rod(paint('leaf',greens[2]),[x,soil,z],tip.toArray(),.012,4);
    const g=new T.SphereGeometry(1,10,6).scale(.2,.018,.3);g.rotateX(-.5).rotateY(-a+Math.PI/2);

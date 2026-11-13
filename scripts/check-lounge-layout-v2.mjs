@@ -26,6 +26,12 @@ root.add(source.root);resolveRoomFrames(root);
 const structure=new T.Group();root.add(structure);const ship={root,inside:root,cutaway:new Set()};buildRoomShell(ship,r,structure);
 // The inter-garden gap keeps its existing Deck 17 slab in the full ship.
 mesh(root,'Deck_slab',polygonGeometry([[-88,-61.9],[-86,-61.9],[-86,-24],[-88,-24]],[],r.y,.24));
+// The lounge's own Deck 17 floor: in the full ship visitors stand on the deck slab under the room, which the room shell
+// doesn't draw for the garden commons. Without it every Deck 17 route found no floor (R5 failed at its first point with
+// layout 2 at every commit back to 0802eedf). Any slab opening inside the room stays open.
+{const deck=layout.decks.find(d=>d.number===r.deck),box=p=>[Math.min(...p.map(q=>q[0])),Math.max(...p.map(q=>q[0])),Math.min(...p.map(q=>q[1])),Math.max(...p.map(q=>q[1]))],b=box(r.polygon);
+ const openings=deck.slab.holes.map(h=>h.polygon).filter(p=>{const o=box(p);return o[1]>b[0]&&o[0]<b[1]&&o[3]>b[2]&&o[2]<b[3];});
+ mesh(root,'Lounge_deck_slab',polygonGeometry(r.polygon,openings,r.y,.24));}
 mesh(root,'Door_landing',polygonGeometry([[-113.05,-24],[-111.95,-24],[-111.95,-23.2],[-113.05,-23.2]],[],r.y,.24));
 const col=new Colliders(),f=frame(r.id),m=new T.Matrix4().makeTranslation(...f.origin).multiply(new T.Matrix4().makeRotationY(f.yaw)).multiply(new T.Matrix4().makeScale(1,1,f.mirror?-1:1)).multiply(new T.Matrix4().makeTranslation(-132,-24.3,-27));
 const boxes=[];createLoungeAquarium(ship,m,{addStatic:g=>{boxes.push(g);col.addStatic(g,()=>true);}});
@@ -52,6 +58,10 @@ route('R4 maze upper exit',[[-125.8,32.3,-29],[-126.75,32.3,-29]]);
 route('R5 clubhouse and ground lift',[[-90.8,24.3,-45.8],[-86.53,24.3,-45.8],[-86.53,24.3,-49]]);
 route('R6 jaguar to dome',[[-112.5,24.3,-23.5],[-112.5,24.3,-28.8],[-113.3,24.3,-29.1],[-113.3,24.3,-32.7],[-112.5,24.3,-32.7],[-112.5,24.3,-34]]);
 for(const y of [28.3,32.3])route('R7 aft door '+y,[[-140.6,y,-30],[-138.2,y,-30]]);
+// The lounge floor can't make solids walkable: the aquarium's front glass stays blocked (the tank itself is swimmable
+// water), while the floor 2 m in front of it is clear.
+assert(!clear([-100,24.3,-28])&&!clear([-120,24.3,-28]),'The aquarium glass stays solid over the lounge floor');
+assert(clear([-100,24.3,-30]),'The floor in front of the aquarium is walkable');console.log('PASS aquarium glass blocks, the floor before it is clear');
 // Reach both floors from the rotated ground door, staying inside the tower.
 const queue=[[-129.5,24.3,-41.4]],seen=new Set(),goals=[[-132.25,28.3,-37.8],[-126.75,32.3,-29]],reached=new Set();
 const push=p=>{const key=p.map(v=>Math.round(v*100)).join(',');if(!seen.has(key)){seen.add(key);queue.push(p);}};
