@@ -1,5 +1,6 @@
 {
   "commons-1": {
+    "removeGardenPrints": [73],
     "removeMeshes": [
       {"names":["Laundry_counter","Laundry_machine","Laundry_drum"],"near":[113,25,15.5],"radius":4,"count":11},
       {"names":["Parcel_locker"],"near":[113,25.3,10],"radius":3.5,"count":6},
