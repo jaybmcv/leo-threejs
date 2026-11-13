@@ -19,6 +19,7 @@ const PLAY=[
   [['Shift'],'Stick to its edge','Run'],
   [['Space'],'Jump','Jump: hold for height, press again in the air for a double jump'],
   [['Space'],'Jump','Glide: keep holding it as you fall from a height to ride the longboard down; steer with W A S D, Shift to dive','Glide: keep holding Jump as you fall from a height to ride the longboard down; steer with the joystick, at its edge to dive'],
+  [['Skate'],'Skate','Skateboard: Skate in the toolbar steps on or off your own board on level floor. W A S D ride at running speed, Space ollies, X kickflips in the air. Only you see your board for now; others aboard see you running','Skateboard: Skate in the toolbar (More on a phone) steps on or off your own board on level floor. The joystick rides at running speed, Jump ollies, Flip kickflips in the air. Only you see your board for now; others aboard see you running'],
   [['Q'],'Hook','Grapple: Q or the right mouse button fires a line at the middle of the view; hold to swing, let go to fly. W A S D pump the swing, Shift reels in, Space lets go with a hop','Grapple: hold Hook to fire a line at the middle of the view and swing; let go to fly'],
   [['C'],'Crouch','Crouch; while running, slide'],
   [['X'],null,'Lie flat'],
