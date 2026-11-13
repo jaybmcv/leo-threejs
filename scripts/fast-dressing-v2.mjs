@@ -52,7 +52,8 @@ export const DRESSINGS={
    ['src/walk/main.authoring.js',/\bcorridorTrim\b/g,["import {corridorTrim} from './trim.authoring.js';"]]],
   // [consumer, its only importers]: the idle consumer is reached only through the files the uses check reads.
   idle:[['src/walk/trim.authoring.js',['src/walk/main.authoring.js']]],
-  imports:['package:three','src/v2/phase4-community.js','src/plan/placements.js','src/walk/collision.authoring.js','src/v2/prepared-geometry-record.js']},
+  // merge-by-material.js: each frame draws one mesh per material since 97f142ea (2026-11-08).
+  imports:['package:three','src/v2/phase4-community.js','src/plan/placements.js','src/walk/collision.authoring.js','src/v2/prepared-geometry-record.js','src/walk/merge-by-material.js']},
  // The rest of the authoring page's template-only props, hung after collision and the bake like the paintings: the
  // ship log boards, the comic books, Deck 1's hex floor and the observation lounge's compass inlay. Past their glue
  // the page only calls their runtime methods (the lookaheads below); their meshes reach nothing that is saved.
