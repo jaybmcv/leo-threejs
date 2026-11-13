@@ -16,14 +16,17 @@ import {canvasTexture,seeded} from './polish-kit.js';
 // Neon, glass, mist and light are merged per material here (the walk leaves glowing and see-through meshes unmerged);
 // seats, hammocks and doors stay separate meshes, named as the walk expects.
 const FLOOR=24.3,CEILING=35.65,LEVELS=[28.3,32.3],ROOM={x0:109.5,x1:154.5,z0:14,z1:46};
-// These runs follow the current Deck 18 and 19 balcony edges in the commons source frame.
+// These runs follow the lounge-facing edges of the current Deck 18 and 19 galleries in the commons source frame, so the
+// lights and plants hang where the open room sees them; `offset` points from the edge into the room.
 const BALCONY_RUNS=[
- {level:LEVELS[0],points:[[105.5,12],[105.5,31.377]],offset:[.45,0]},
- {level:LEVELS[0],points:[[107.5,35.127],[120,38.407],[132.5,40.324],[144.5,40.581],[156.5,40.621]],offset:[0,-.45]},
- {level:LEVELS[1],points:[[105.5,12],[105.5,24.694]],offset:[.45,0]},
+ {level:LEVELS[0],points:[[109.5,12],[109.5,31.377]],offset:[.45,0]},
+ {level:LEVELS[0],points:[[109.5,31.7],[112.5,32.561],[120,34.407],[132.5,36.311],[144.5,36.581],[156.5,36.621]],offset:[0,-.45]},
+ {level:LEVELS[1],points:[[109.5,12],[109.5,24.694]],offset:[.45,0]},
  {level:LEVELS[1],points:[[120.5,14],[155,14]],offset:[0,.45]},
- {level:LEVELS[1],points:[[107.5,28.444],[120,31.882],[132.5,34.795],[144.5,35.848],[156.5,36.009]],offset:[0,-.45]}
+ {level:LEVELS[1],points:[[109.5,25.07],[112.5,26.001],[120,27.882],[132.5,30.727],[144.5,31.848],[156.5,32.009]],offset:[0,-.45]}
 ];
+// The two stair flights at the rear galleries' east end are solid under their treads: the lights keep out of them.
+const STAIR_FLIGHTS=[{level:LEVELS[0],x0:155.1,x1:158.4,z0:30.8,z1:38.6},{level:LEVELS[1],x0:151.8,x1:155,z0:30.8,z1:38.1}];
 const DOME={x:134,z:25,r:6.5},MAZE={x0:114+v2MazeFit.dx,x1:120.5+v2MazeFit.dx,z0:19+v2MazeFit.dz,z1:33+v2MazeFit.dz,top:35.2},MUNCH={x:145.5,z:25};
 const MAIN_LOGO_URL=typeof __HYDRO_NIP_MAIN_LOGO__==='undefined'?null:__HYDRO_NIP_MAIN_LOGO__;
 // The maze inside: a ground floor of 3 x 6 roomy cells, walled to chest height so you and the camera see over the
@@ -516,16 +519,18 @@ export function createHydroNipLounge({mirror=1}={}){
 
  // String lights and catnip pots follow the current gallery edges.
  const tubeAt=(x,z,lvl,pad)=>TUBES.some(t=>Math.abs(x-t.to)<1&&Math.abs(z-t.z)<(t.half||TUBE.r)+pad&&(lvl===undefined||lvl===t.level));
+ // The lights hang in open air at the gallery edges: not through a stair flight, and not solid to a jumper in the room below.
+ const stairAt=(x,z,lvl,pad)=>STAIR_FLIGHTS.some(f=>f.level===lvl&&x>f.x0-pad&&x<f.x1+pad&&z>f.z0-pad&&z<f.z1+pad),hang=loose(M.dark),pots=loose(M.pot);
  for(const{level,points,offset}of BALCONY_RUNS){const y=level-.32,lengths=points.slice(1).map((b,i)=>Math.hypot(b[0]-points[i][0],b[1]-points[i][1])),len=lengths.reduce((a,b)=>a+b,0),spans=Math.max(1,Math.round(len/4.5));
   const pointAt=t=>{let d=len*t;for(let i=0;i<lengths.length;i++){const part=lengths[i];if(d<=part||i===lengths.length-1){const a=points[i],b=points[i+1],f=part?d/part:0;return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];}d-=part;}return points.at(-1);};
   for(let s=0;s<spans;s++){let prev=null;const n=8;
    for(let i=0;i<=n;i++){const t=(s+i/n)/spans,[x,z]=pointAt(t),sag=.35*(1-(2*i/n-1)**2),p=[x,y-sag,z];
-    if(tubeAt(x,z,level,.3)){prev=null;continue;}
-    if(prev)rod(M.dark,prev,p,.006,3);if(i<n)put(neon(AMBER),new T.OctahedronGeometry(.05,0).translate(x,y-sag-.06,z));prev=p;}
+    if(tubeAt(x,z,level,.3)||stairAt(x,z,level,.3)){prev=null;continue;}
+    if(prev)rod(hang,prev,p,.006,3);if(i<n)put(neon(AMBER),new T.OctahedronGeometry(.05,0).translate(x,y-sag-.06,z));prev=p;}
    // Each pot hangs just inside the gallery edge, clear of the maze and tube landings.
    const t=(s+.5)/spans,[x,z]=pointAt(t),px=x+offset[0],pz=z+offset[1],py=level-.95;
-   if(px<MAZE.x0+.5&&pz>MAZE.z0-.5&&pz<MAZE.z1+.5||tubeAt(px,pz,undefined,.6))continue;
-   cyl(M.pot,.2,.14,.24,[px,py,pz],10);for(let k=0;k<3;k++){const ang=k/3*Math.PI*2;rod(M.dark,[px+Math.cos(ang)*.18,py+.12,pz+Math.sin(ang)*.18],[x,level-.3,z],.005,3);}
+   if(px<MAZE.x1+.5&&(offset[0]||px>MAZE.x0-.5)&&pz>MAZE.z0-.5&&pz<MAZE.z1+.5||tubeAt(px,pz,undefined,.6)||stairAt(px,pz,level,.6))continue;
+   cyl(pots,.2,.14,.24,[px,py,pz],10);for(let k=0;k<3;k++){const ang=k/3*Math.PI*2;rod(hang,[px+Math.cos(ang)*.18,py+.12,pz+Math.sin(ang)*.18],[x,level-.3,z],.005,3);}
    const reach=level===LEVELS[0]?1.4:2.1;
    for(let k=0;k<4;k++){const ang=k/4*Math.PI*2+rnd(),sx=px+Math.cos(ang)*.17,sz=pz+Math.sin(ang)*.17,len=reach*(.55+rnd()*.45);
     for(let d=0;d<len;d+=.23)put(M.leaf,new T.OctahedronGeometry(.075,0).scale(1,.4,1.25).rotateY(d*3+k).translate(sx+Math.sin(d*2.3)*.05,py+.1-d,sz+Math.cos(d*2.1)*.05));}}
