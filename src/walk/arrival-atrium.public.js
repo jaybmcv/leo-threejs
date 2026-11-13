@@ -198,19 +198,15 @@ export function openArrivalAtrium(ship){
   put('Cat_tree_bridge',M.wood,box(1.2,.08,z1-z0,TREE.x,y-.042,(z0+z1)/2));
   for(const dx of [-.3,0,.3])put('Cat_tree_bridge_seam',M.dark,box(.015,.004,z1-z0,TREE.x+dx,y-.001,(z0+z1)/2));
   branch([TREE.x,y-1.2,TREE.z+.3],[TREE.x,y-.5,z0],[TREE.x,y-.12,(z0+z1)/2],.08);}
- // Round the top platform (open toward the bridge) and along the bridge's sides: a slim wooden rail, no glass. The top
- // rail at 1.1 m (solid, as it always was), and under it a mid rail on posts about 0.4 m apart. The guard the glass
- // made, a 1.1 m ring and two side panels, stays solid as collision only.
- {const [px,py,pz]=platformAt(TREE.platforms.at(-1)),radius=TREE.radius+.02,angle=Math.asin(.6/radius),arc=2*Math.PI-2*angle;
-  put('Cat_tree_top_guard',M.trim,new ReplayGeometry("src/walk/arrival-atrium.js:9",T.CylinderGeometry,radius,radius,1.1,32,1,true,angle,arc).translate(px,py+.55,pz));
-  const ring=h=>new T.CatmullRomCurve3(Array.from({length:41},(_,i)=>{const t=angle+arc*i/40;return new T.Vector3(px+Math.sin(t)*radius,py+h,pz+Math.cos(t)*radius)}));
-  put('Cat_tree_top_guard_rail',M.trim,new ReplayGeometry("src/walk/arrival-atrium.js:10",T.TubeGeometry,ring(1.1),20,.025,4,false));put('Cat_tree_top_guard_mid_rail',M.trim,new ReplayGeometry("src/walk/arrival-atrium.js:11",T.TubeGeometry,ring(.55),20,.025,4,false));
-  const posts=Math.round(arc*radius/.4);for(let i=0;i<=posts;i++){const t=angle+arc*i/posts;put('Cat_tree_top_guard_post',M.trim,cyl(.018,.018,1.1,px+Math.sin(t)*radius,py+.55,pz+Math.cos(t)*radius,6));}
-  // Along the bridge's sides to the opening's edge; the side rails' posts start where the ring opens.
-  const reach=Math.min(Math.abs(TREE.x-cx-.6),Math.abs(TREE.x-cx+.6)),end=b*Math.sqrt(1-reach*reach/(a*a))+.03,z0=pz+Math.cos(angle)*radius,n=Math.max(1,Math.round((end-z0)/.4));
-  for(const side of[-1,1]){put('Cat_tree_top_guard',M.trim,box(.05,1.1,end-pz,px+side*.6,py+.55,(pz+end)/2));put('Cat_tree_top_guard_rail',M.trim,box(.05,.05,end-pz,px+side*.6,py+1.1,(pz+end)/2));
+ // Along the bridge's sides: a slim wooden rail, no glass: a top rail at 1.1 m (solid) and under it a mid rail on posts
+ // about 0.4 m apart. The platform itself stands open round its rim. The guard the glass made, two side panels, stays solid
+ // as collision only.
+ {const [px,py,pz]=platformAt(TREE.platforms.at(-1));
+  // To the opening's edge, starting a little behind the platform's centre so no one stands off its flanks.
+  const reach=Math.min(Math.abs(TREE.x-cx-.6),Math.abs(TREE.x-cx+.6)),end=b*Math.sqrt(1-reach*reach/(a*a))+.03,z0=pz-.45,n=Math.max(1,Math.round((end-z0)/.4));
+  for(const side of[-1,1]){put('Cat_tree_top_guard',M.trim,box(.05,1.1,end-z0,px+side*.6,py+.55,(z0+end)/2));put('Cat_tree_top_guard_rail',M.trim,box(.05,.05,end-z0,px+side*.6,py+1.1,(z0+end)/2));
    put('Cat_tree_top_guard_mid_rail',M.trim,box(.05,.05,end-z0,px+side*.6,py+.55,(z0+end)/2));
-   for(let i=1;i<=n;i++)put('Cat_tree_top_guard_post',M.trim,cyl(.018,.018,1.1,px+side*.6,py+.55,z0+(end-z0)*i/n,6));}}
+   for(let i=0;i<=n;i++)put('Cat_tree_top_guard_post',M.trim,cyl(.018,.018,1.1,px+side*.6,py+.55,z0+(end-z0)*i/n,6));}}
  // The canopy: limbs spreading at the garden's head height, clumps of foliage along them and fans of leaves spilling out.
  {const r=random(7),out=greenery.garden;
   for(let i=0;i<6;i++){const t=i/6*Math.PI*2+.4,d=1.4+r()*.6,ex=TREE.x+Math.cos(t)*d,ez=TREE.z+Math.sin(t)*d,ey=6.3+r()*.5;
