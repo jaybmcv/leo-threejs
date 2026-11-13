@@ -121,12 +121,12 @@ import {createInvasion} from './invasion/game.js';
 import {createEmergencyDrill} from './emergency-drill/game.js';
 import {drillStation} from './emergency-drill/station.js';
 import layout from '../plan/selected-layout.js';
-let emergencyDrill=null;const emergencyStation=drillStation(layout),asteroid=asteroidStation(layout);
+let emergencyDrill=null;const emergencyStation=drillStation(layout);
 import {createPawPool} from './pool/game.js';
 import {createPinball} from './pinball/game.js';
 import {createDarts} from './darts/game.js';
 import {createDartsLanes} from './darts/lanes.js';
-import {openOutside,closeOutside,asteroidStation,GAMES as outsideGames} from './outside-game.js';
+import {openOutside,closeOutside} from './outside-game.js';
 import {createMazeGame} from './maze/run.js';
 import {createTreasureGame} from './aquarium-treasure/game.js';
 import {createPawsOff} from './paws-off/game.prepared.js';
@@ -505,7 +505,7 @@ const actions={
   else if(t.kind==='clubhouse-inside')openLiftPanel(t.lift,vaultLift);
   else if(t.kind==='pinball')pinballGame.open();
   else if(t.kind==='darts')dartsGame.open(t.lane);
-  else if(t.kind==='outside'){closePanels();emote=null;input.enabled=false;input.down.clear();openOutside($('outside-sheet'),$('outside-frame'),t.game);}
+  else if(t.kind==='outside'){closePanels();emote=null;input.enabled=false;input.down.clear();openOutside($('outside-sheet'),$('outside-frame'));}
   else if(t.kind==='maze')maze.use(t);
   else if(t.kind==='treasure')treasure.use(t);
   else if(t.kind==='treadmill')pawsOff.start(t.mill);
@@ -809,7 +809,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuck,skate,glide,get wardPush(){return wardPush;},get portable(){return portable;},registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get shuttleDoors(){return shuttleDoors;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,asteroid,outsideGames,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuck,skate,glide,get wardPush(){return wardPush;},get portable(){return portable;},registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get shuttleDoors(){return shuttleDoors;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -1071,7 +1071,6 @@ function target(){
  const welcome=inBall?null:arrivalTour?.near(p);if(welcome)return welcome;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
  const drill=inBall?null:emergencyStation.near(p);if(drill)return drill;
- const sealed=inBall?null:asteroid.near(p);if(sealed)return sealed;
  const q=poolTable?.near(p)||maze?.near(p)||pinballMachine?.near(p)||dartsLanes?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p)||leverPanel?.near(p)||(inBall?null:keelClub?.near(p,heading));if(q&&!(inBall&&q.kind==='treadmill'))return q;
  // In the hamster ball: no seats, beds or treadmills; with nothing else to use, E climbs out.
  const trolleyNear=inBall?null:wardPush?.near(p);if(trolleyNear)return trolleyNear;
