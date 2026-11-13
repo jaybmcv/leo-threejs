@@ -22,6 +22,9 @@ import {floorY} from '../transit.js';
 // up, above a captain's hat, and the lower teeth stand on the lip at the corners, in line with the walls.
 const [gx,,gz]=placedV1('jaguar-gate'),GATE={x:gx,z:gz,half:2,h:3.68,depth:2.08,wall:.06};
 const GLOW=0xffcf3a,PURPLE=0xa04dff;
+// The head stands this far forward of the throat (in z), out of the aquarium's frontage and into the promenade: its widest
+// outline (z 0 in its own frame) sits just in front of the tank's wall, so the face and jaw show clear of the glass.
+const PUSH=2.2;
 // The mouth's outline: straight sides from the floor to `side`, then a nearly flat top with rounded corners at `top`.
 const MOUTH={foot:1.05,half:1.0,side:1.72,top:2.12},EDGE=.3;
 // The head is shaped below with its mouth 2.12 m tall and its crown at 3.45 m, then stretched up to its built height
@@ -136,7 +139,7 @@ export function createJaguarGate(){
  for(let i=0;i<NU;i++)for(let r=0;r<M;r++){const a=i*M+r,b=a+M,a1=i*M+(r+1)%M,b1=a1+M;(r<2*NS?quads:inside).push(a,b,a1,b,b1,a1);}
  const headGeo=new T.BufferGeometry();headGeo.setAttribute('position',new T.Float32BufferAttribute(shell,3));headGeo.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));
  headGeo.setIndex([...quads,...inside]);headGeo.addGroup(0,quads.length,0);headGeo.addGroup(quads.length,inside.length,1);headGeo.computeVertexNormals();
- const face=new T.Mesh(headGeo,[mat.skin,mat.mouth]);face.name='Jaguar_head';solid.add(face);
+ const face=new T.Mesh(headGeo,[mat.skin,mat.mouth]);face.name='Jaguar_head';face.position.z=PUSH;solid.add(face);
  // Where a point on the face lies: the nearest point of the face's grid, for setting the eyes, nose and teeth on it.
  const surf=(x,y)=>{let best=1e9,z=0;for(let i=0;i<=NU;i++)for(let r=0;r<=NS;r++){const k=(i*M+r)*3,d=(shell[k]-x)**2+(shell[k+1]-y)**2;if(d<best){best=d;z=shell[k+2];}}return z;};
 
@@ -183,13 +186,26 @@ export function createJaguarGate(){
  }
  for(const x of [-.6,-.36,-.12,.12,.36,.6])add(mat.fang,at(tooth(.3,.09,.04,true),x,top(x)+.1,lipZ(x)-.14));
  // The lower teeth stand on the lip at the mouth's corners, outside the way through, and are solid like the lip.
- const jaw=new T.Mesh(mergeGeometries(lower.map(g=>g.toNonIndexed())),mat.fang);jaw.name='Jaguar_lower_teeth';solid.add(jaw);
+ const jaw=new T.Mesh(mergeGeometries(lower.map(g=>g.toNonIndexed())),mat.fang);jaw.name='Jaguar_lower_teeth';jaw.position.z=PUSH;solid.add(jaw);
+ // The lower jaw: a thick ridge of the same stone rounding each cheek down to the foot of the mouth, where it meets the lower
+ // fang, with smaller teeth along its slope. It ends outside the mouth's walls, so the way through stays clear and level.
+ const ridge=[];
+ for(const sx of [-1,1]){
+  const along=a=>{const x=sx*(1.3+.62*Math.cos(a)),y=1.05+.9*Math.sin(a);return new T.Vector3(x,y,surf(x,y)+.04);};
+  ridge.push(new T.TubeGeometry(new T.CatmullRomCurve3(Array.from({length:17},(_,k)=>along(-k*Math.PI/32))),32,.17,12,false));
+  for(const a of [0,-Math.PI/2]){const p=along(a);ridge.push(new T.SphereGeometry(.17,12,8).translate(p.x,p.y,p.z));}
+  for(const a of [-.55,-.85,-1.1]){const p=along(a);ridge.push(at(tooth(.26,.075,0,true),p.x,p.y+.1,p.z,Math.PI));}
+ }
+ const chin=new T.Mesh(mergeGeometries(ridge.map(g=>g.toNonIndexed())),mat.fang);chin.name='Jaguar_lower_jaw';chin.position.z=PUSH;solid.add(chin);
+
+ // Everything of the head so far moves out with it; the throat below stays where it was.
+ for(const list of parts.values())for(const g of list)g.translate(0,0,PUSH);
 
  // Inside: clear glass on both sides and over the roof, held by black stone ribs, with the neon along the roof of the
  // mouth showing through it and the deck's own floor underfoot. Nothing in the throat is solid.
- // The glass starts a metre back, inside the head's rear, so its roof and neon don't show over the head from in front.
+ // The glass starts inside the head's rear, so its roof and neon don't show over the head from in front.
  // The movable throat uses its current dimensions, independent of prepared templates.
- const inner=half-wall,THROAT=1,run=depth-THROAT,mid=THROAT+run/2;
+ const inner=half-wall,THROAT=1-PUSH,run=depth-THROAT,mid=THROAT+run/2;
  for(const sx of [-1,1])add(mat.glass,at(new T.PlaneGeometry(run,h),sx*(inner-.01),h/2,-mid,0,-sx*Math.PI/2));
  add(mat.glass,at(new T.PlaneGeometry(2*inner,run),0,h-.03,-mid,Math.PI/2));
  // Three ribs across the roof of the passage, just under the glass.

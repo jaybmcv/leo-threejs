@@ -218,5 +218,21 @@
   "src/v2/phone-distant.js": {
     "sha256": "fd4c158ad71bce80fcfb95288f74212df5ea02072e37824fffa600da7c1c07a1",
     "reason": "Loading yields through src/v2/yield-to-page.js (scheduler.yield, a timer turn every 100 ms), the phone hull copied in 12 ms slices, typed-array compaction (scripts/check-load-yields.mjs); views match the build before pixel for pixel"
+  },
+  "src/walk/jaguar-gate.js": {
+    "sha256": "464fca8add55f95c6d9aa3d0fdfb2d6e8068812a8f756029ac44fd992320c66f",
+    "reason": "jaguar gate head pushed out of the aquarium frontage with a lower jaw ridge (tester feedback)"
+  },
+  "src/walk/jaguar-gate.public.js": {
+    "sha256": "204dd238c76f7d626bf6c4e8fdffbe2be020eef5614d2d204f34b11e27879cde",
+    "reason": "jaguar gate head pushed out of the aquarium frontage with a lower jaw ridge (tester feedback)"
+  },
+  "src/walk/jaguar-gate.prepared.js": {
+    "sha256": "d0fa1d5d76998ab69fbe7670fafbfcbd976317dab62c04813e55b6142adff5b0",
+    "reason": "jaguar gate head pushed out of the aquarium frontage with a lower jaw ridge (tester feedback)"
+  },
+  "src/walk/jaguar-gate.authoring.js": {
+    "sha256": "1e8af7645bfde829eaed55846fef636b705f924d9b43c8803f76d3733c195df1",
+    "reason": "jaguar gate head pushed out of the aquarium frontage with a lower jaw ridge (tester feedback)"
   }
 }
