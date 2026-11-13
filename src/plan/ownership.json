@@ -4029,7 +4029,7 @@
       ],
       "interactionTargets": null,
       "placements": 48,
-      "signature": "50882b35c33644b1a47d87606c1bb3b524b0e498c1d1aac248a13cde47e4858b"
+      "signature": "bb2e26aaba2bd1440671402d8a5ae5b6250eefe6225f0bf8246353360cee169f"
     },
     {
       "source": "src/walk/minimap.authoring.js",

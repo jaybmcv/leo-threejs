@@ -1,4 +1,21 @@
 import defaultOverrides from '../plan/room-fitout-overrides-v2.json' with {type:'json'};
+import * as T from 'three';
+
+// Merged cabinet details share meshes with their neighbours. Trim only the removed fitting's triangles.
+function removeFittingDetails(source,found,names){
+ source.updateWorldMatrix(true,true);
+ const bounds=new T.Box3();for(const o of found)bounds.union(new T.Box3().setFromObject(o));bounds.expandByScalar(.02);
+ const point=new T.Vector3(),details=[];source.traverse(o=>{if(o.isMesh&&names.includes(o.name))details.push(o);});
+ for(const o of details){
+  const g=o.geometry,p=g.attributes.position,kept=[],count=g.index?g.index.count:p.count;let removed=0;
+  for(let i=0;i<count;i+=3){const ids=[0,1,2].map(k=>g.index?g.index.getX(i+k):i+k);
+   if(ids.every(k=>bounds.containsPoint(point.fromBufferAttribute(p,k).applyMatrix4(o.matrixWorld))))removed+=3;else kept.push(...ids);
+  }
+  if(!removed)continue;
+  if(kept.length){o.geometry=g.clone();o.geometry.setIndex(kept);o.geometry.computeBoundingBox();o.geometry.computeBoundingSphere();}else o.removeFromParent();
+  g.dispose();
+ }
+}
 
 // Source furniture moves and removals apply before geometry is baked.
 export function moveRoomFitoutMeshes(source,id,overrides=defaultOverrides){
@@ -12,6 +29,7 @@ export function moveRoomFitoutMeshes(source,id,overrides=defaultOverrides){
   const found=[];source.traverse(o=>{if(o.isMesh&&removal.names.includes(o.name)&&Math.hypot(o.position.x-removal.near[0],o.position.y-removal.near[1],o.position.z-removal.near[2])<=removal.radius)found.push(o);});
   const expected=removal.count??removal.names.length;
   if(found.length!==expected)throw Error('Expected '+expected+' source furniture meshes for removal in '+id+', found '+found.length);
+  if(removal.details){if(!Array.isArray(removal.details)||!removal.details.length||!removal.details.every(n=>typeof n==='string'&&/^(Refined_|Polish_)/.test(n)))throw Error('Invalid source furniture details in '+id);removeFittingDetails(source,found,removal.details);}
   for(const o of found){o.removeFromParent();o.geometry.dispose();}applied.push(key);
  }
 }
