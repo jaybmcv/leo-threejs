@@ -205,7 +205,8 @@ function roomDressings(){
   'gaming-lounge':{room:'d16-training-aft',dress:'dressGamingLounge',create:'createGamingLounge',binding:'gaming',
    args:ctx=>[ctx.ship,{hemi:new T.HemisphereLight(0xffffff,0x444444,1),fill:new T.DirectionalLight(0xffffff,1),scene:new T.Scene()},{still:false}],
    glue:"gaming=feature('room:gaming-lounge',ship,()=>createGamingLounge(ship,{hemi,fill,scene},"+still+"));",
-   allowed:['if(gaming)toBand(gaming.group);',',gaming=null,','get gaming(){return gaming;}'],
+   // The room's music (training-sound.js) only reads the room's soundLevel while the walk runs: it draws and builds nothing.
+   allowed:['if(gaming)toBand(gaming.group);',',gaming=null,','get gaming(){return gaming;}','trainingSound=gaming?createTrainingSound(gaming):null;'],
    imports:['src/v2/prepared-geometry-record.js','src/plan/selected-layout.js','src/plan/rooms.js','package:three','package:three/addons/utils/BufferGeometryUtils.js'],
    reads:['export function createGamingLounge(ship,light=null,{still=false}={}){',...ROOM_READS,'function roomOutline(room){',
     "const plan=layout.rooms?.find(r=>'Area_'+r.id===ROOM)?.polygon,toLocal=room.matrixWorld.clone().invert(),y=room.matrixWorld.elements[13];",
