@@ -155,6 +155,7 @@ import {keepSpot,takeSpot} from './last-spot.js';
 import {createJoin} from './join.js';
 import {createCaptainSays} from './captain-says.js';
 import {restrictedAt,publicStand} from './public-area.js';
+import {createUnstuck,popStand} from './unstuck.js';
 import {KITTEN_POSE_NAMES} from './kittens.public.js';
 import {createAtriumKittens} from './arrival-atrium.public.js';
 import {createSurgeryArms} from './surgery.public.js';
@@ -592,7 +593,8 @@ const actions={
  use(){
   if(!lifts)return;// still loading
   if(resting){standUp();return;}
-  const t=target();if(!t)return;
+  // Nothing to use in front: Enter or E presses Stuck? Pop out, when it is up (unstuck.js).
+  const t=target();if(!t){unstuck.press();return;}
   if(t.kind==='arrival-tour'){closePanels();arrivalTour.open();return;}
   if(t.kind==='launch-ladder'){goTo({at:t.at,yaw:heading,lv:2,resolved:true});return;}
   if(t.kind==='cabin-glass'){cabinGlass.toggle(t.cabin);return;}
@@ -662,6 +664,16 @@ const actions={
  },
 };
 let emote=null,pinged=-Infinity;const PING_GAP_MS=4000;
+// Stuck (unstuck.js): trying to move and getting nowhere, or wedged off the ground, brings up Stuck? Pop out. It lands the
+// walker on the nearest clear public floor 2 to 4 m away and in their sight, through findStand's and Go to's landing
+// checks, by goTo as Respawn does, so Leo live sees an ordinary move. None near, or stuck again where the last pop was:
+// Respawn.
+const unstuck=createUnstuck($('unstuck'),{pop(mode){
+ if(!ready())return;
+ const p=controller.position,fwd=follow.forward(),q=mode==='pop'?popStand([p.x,p.y,p.z],{colliders,restrictedAt,toward:[fwd.x,fwd.z],stand:at=>findStand(colliders,at,{radius:0}),check:at=>v2GotoStand(colliders,at)}):null;
+ if(q){closePanels();emote=null;if(goTo({at:q.toArray(),yaw:follow.yaw,resolved:true}))return;}
+ actions.respawn();
+}});
 // The clubhouse vault behind the arcade (vault.js): its door, and the password sheet it asks with.
 let vault=null,vaultLift=null;
 const VAULT_ASK='This door opens only for the clubhouse password.';
@@ -904,7 +916,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={get portable(){return portable;},get ownerHiding(){return ownerHiding;},registry,get landingDoors(){return shutLandingDoors();},get fogCull(){return fogCull;},get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuck,get portable(){return portable;},get ownerHiding(){return ownerHiding;},registry,get landingDoors(){return shutLandingDoors();},get fogCull(){return fogCull;},get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -1014,6 +1026,9 @@ renderer.setAnimationLoop(()=>{
  // below Deck 1, and the inside of the hull under it (-54.6 m) used to catch fallers and count as safe ground.
  if(p.y<BELOW_SHIP){controller.place(safe);emote=null;}
  else if(controller.grounded&&!inCar&&!resting?.spot.tube)safe.copy(p);
+ // Stuck? Sensed only on foot with the walk's keys (unstuck.js): never seated, riding, in a lift car, in a game, swimming,
+ // in the ball, on the hook or the board, or with a panel open.
+ unstuck.update(dt,{free:canHook&&input.enabled&&!inCar&&!controller.hook&&!controller.gliding&&!pawsOff?.active&&!maze?.running&&!playing(),trying:Math.hypot(k.x,k.y)>.5,air:!controller.grounded,at:p});
  if(controller.speed>.15&&!resting)heading=dampAngle(heading,Math.atan2(controller.velocity.x,controller.velocity.z),12,dt);
  // What the figure leans into: the turn (+ to its left) and the change of speed, both smoothed a little.
  if(dt>0){turnRate=T.MathUtils.damp(turnRate,Math.atan2(Math.sin(heading-lastHeading),Math.cos(heading-lastHeading))/dt,10,dt);accel=T.MathUtils.damp(accel,(controller.speed-lastSpeed)/dt,10,dt);}
