@@ -66,46 +66,22 @@ function fadeProxy(o){const s=o.geometry,g=new T.BufferGeometry();for(const[k,v]
  const fade=new T.InstancedBufferAttribute(new Float32Array(o.userData.proxySpans.length).fill(1),1);fade.setUsage(T.DynamicDrawUsage);g.setAttribute('proxyFade',fade);o.geometry=g;o.material=Array.isArray(o.material)?o.material.map(fadeMaterial):fadeMaterial(o.material);return fade;}
 // How much of a stand-in shows: 1 outside the window, then down to 0 over the window's first PROXY_FADE metres (0 hides it).
 export function atriumProxyFade(lo,hi,y,fade=proxyFadeOn){const gap=Math.max(lo-(y+3.5),y-.5-hi);if(gap>=0)return 1;if(!fade)return 0;const t=1+gap/PROXY_FADE;return t<=0?0:Math.round(t*t*(3-2*t)*64)/64;}
-// Once the walk has captured what its cabins look like inside (atrium-room-views.js), the room stand-ins stop being
-// stand-ins: every one stays drawn, at every height, painted with that capture (box-projected, so its walls, floor and
-// ceiling keep their perspective), and a room never disappears or swaps as the walker passes its deck. It is drawn from
-// the inside only (back faces), so from inside a cabin it is not there, and from a corridor it shows the room as through
-// the open window. It sits 2-3 cm inside the real cabin's surfaces, so where the real cabin draws too (near the walker)
-// the two never fight over a pixel: the stand-in covers the real walls and the real furniture stands in front of it. A
-// cabin whose real furniture is drawn (main.public.js, the nearest cabins) shows the capture without furniture, so the
-// furniture is never there twice; elsewhere the furnished capture. Within 5-8 m of the eye, where the real room is
-// drawing, the stand-in dissolves so the real walls show at full sharpness; the two look alike, so nothing reads as a
-// change. The window frames have one owner each: the stand-in frame until the real cabin draws, then the real one (the
-// same front outline), with no dissolve.
-const ROOM_NEAR=5,ROOM_FAR=8,roomUniforms={walkerY:{value:0}};let roomViews=false;
-function roomMaterial(source,view){const m=source.clone();m.name='P6_atrium_room_view';m.side=T.BackSide;m.toneMapped=false;
- m.onBeforeCompile=s=>{Object.assign(s.uniforms,{roomWalkerY:roomUniforms.walkerY,roomFull:{value:view.full.texture},roomEmpty:{value:view.empty.texture},roomRot:{value:view.rotation}});
-  s.vertexShader=s.vertexShader.replace('void main() {','uniform float roomWalkerY;\nattribute float roomFurnished;\nvarying vec3 vRoomDir;\nvarying float vRoomFade;\nvarying float vRoomEmpty;\nvoid main() {')
-   .replace('#include <begin_vertex>',`#include <begin_vertex>
-	vRoomDir=position;transformed*=vec3(.985,.985,.995);
-	{vec3 centre=(modelMatrix*instanceMatrix*vec4(0.,0.,0.,1.)).xyz;float gap=max(centre.y-1.84-(roomWalkerY+3.5),roomWalkerY-.5-(centre.y+1.8));
-	vRoomFade=gap>=0.?1.:smoothstep(${ROOM_NEAR.toFixed(1)},${ROOM_FAR.toFixed(1)},distance(cameraPosition,centre));vRoomEmpty=roomFurnished;}`);
-  s.fragmentShader=s.fragmentShader.replace('void main() {','uniform samplerCube roomFull;\nuniform samplerCube roomEmpty;\nuniform mat3 roomRot;\nvarying vec3 vRoomDir;\nvarying float vRoomFade;\nvarying float vRoomEmpty;\nconst float ROOM_BAYER[16]=float[16](0.,8.,2.,10.,12.,4.,14.,6.,3.,11.,1.,9.,15.,7.,13.,5.);\nvoid main() {\n\tif(vRoomFade<.999){ivec2 q=ivec2(gl_FragCoord.xy)&3;if((ROOM_BAYER[q.x+q.y*4]+.5)/16.>=vRoomFade)discard;}')
-   .replace('vec4 diffuseColor = vec4( diffuse, opacity );','vec3 roomD=roomRot*vRoomDir;vec4 diffuseColor=vec4(sRGBTransferEOTF(vRoomEmpty>.5?textureCube(roomEmpty,roomD):textureCube(roomFull,roomD)).rgb,opacity);');};
- m.customProgramCacheKey=()=>'atrium-room-view';return m;}
-// views: Map side (-1|1) -> {full, empty: WebGLCubeRenderTarget, rotation: Matrix3}; sides: Map cabin id -> side.
-export function setAtriumRoomViews(views,sides){
- for(const a of architecture){if(a.o.name!=='P6_atrium_room_returns'||a.o.userData.distantProxy||!a.fade)continue;
-  const view=views.get(sides.get(a.o.userData.roomOwners?.[0]));if(!view?.full||!view.empty)continue;
-  const furnished=new T.InstancedBufferAttribute(new Float32Array(a.spans.length),1);furnished.setUsage(T.DynamicDrawUsage);a.o.geometry.setAttribute('roomFurnished',furnished);
-  a.o.material=roomMaterial(a.o.material,view);a.o.material.userData.capture={ms:views.ms,worst:views.worst};a.room={furnished};a.selected=null;roomViews=true;}
- updateProxies();return roomViews;}
-// The cabins whose real furniture is drawing (ids), so their stand-ins show the room without it.
-export function setAtriumFurnished(ids){for(const a of architecture){if(!a.room)continue;const v=a.room.furnished,owners=a.o.userData.roomOwners;let changed=false;
- for(let i=0;i<owners.length;i++){const f=ids.has(owners[i])?1:0;if(v.array[i]!==f){v.array[i]=f;changed=true;}}if(changed)v.needsUpdate=true;}}
+// Once the walk draws the atrium's cabins by what the camera sees (atrium-rooms.js: a card across each window, real
+// rooms near the camera on any deck), it says here which cabins are real, by id. Their window-frame stand-ins hide, at
+// any height, and every other frame stays; the room boxes stop drawing altogether, as the cards replace them. The frames
+// swap whole, with no dissolve: the stand-in frame and the real one share the same front outline and finish. Until then
+// (a phone, the authoring build, the checks) the height window above is the rule.
+let realRooms=null;
+export function setAtriumRealRooms(ids){realRooms=ids;updateProxies();}
 export const atriumStandIns=()=>architecture.map(a=>a.o);
 function updateProxies(){
  for(const a of architecture){const near=!a.o.userData.distantProxy,selected=[],fades=[];
-  for(let i=0;i<a.spans.length;i++){const[lo,hi]=a.spans[i],f=a.room?1:near&&proxyY!==null?atriumProxyFade(lo,hi,proxyY,!!a.fade&&!roomViews):1;if(f>0){selected.push(i);fades.push(f);}}
+  const owners=a.o.userData.roomOwners,byRoom=!!realRooms&&near&&!!owners,gone=byRoom&&a.o.name==='P6_atrium_room_returns';
+  for(let i=0;i<a.spans.length;i++){const[lo,hi]=a.spans[i],f=gone?0:byRoom?(realRooms.has(owners[i])?0:1):near&&proxyY!==null?atriumProxyFade(lo,hi,proxyY,!!a.fade):1;if(f>0){selected.push(i);fades.push(f);}}
   if(a.selected&&selected.length===a.selected.length&&selected.every((v,i)=>v===a.selected[i])&&(!a.fade||fades.every((v,i)=>v===a.fades[i])))continue;
   a.selected=selected;a.fades=fades;selected.forEach((i,n)=>a.o.instanceMatrix.array.set(a.all.subarray(i*16,i*16+16),n*16));if(a.fade){a.fade.array.set(fades);a.fade.needsUpdate=true;}
   a.o.count=selected.length;a.o.visible=selected.length>0;a.o.instanceMatrix.needsUpdate=true;}}
-export function setAtriumView(p){roomUniforms.walkerY.value=p.y;const changed=!position||(position.x-p.x)**2+(position.y-p.y)**2+(position.z-p.z)**2>=1e-8;if(changed){position={x:p.x,y:p.y,z:p.z};classified=undefined;fogClassified=undefined;cameraVisible=false;if(proxyY!==p.y){proxyY=p.y;updateProxies();}}applyAtriumFog();}
+export function setAtriumView(p){const changed=!position||(position.x-p.x)**2+(position.y-p.y)**2+(position.z-p.z)**2>=1e-8;if(changed){position={x:p.x,y:p.y,z:p.z};classified=undefined;fogClassified=undefined;cameraVisible=false;if(proxyY!==p.y){proxyY=p.y;if(!realRooms)updateProxies();}}applyAtriumFog();}
 function classify(){if(classified!==undefined)return classified;const p=position;if(!p)return null;const d=layout.decks.reduce((a,b)=>Math.abs(a.y-p.y)<Math.abs(b.y-p.y)?a:b);
  if(d.number<6||!d.atrium?.outline)return classified=null;
  const q=[p.x,p.z],ring=d.atrium.outline;

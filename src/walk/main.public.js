@@ -31,10 +31,12 @@ import {settlePreparedStatic} from '../v2/prepared-static.js';
 import {cullByBox} from '../v2/box-frustum.js';
 // Meshes whose bounding sphere reaches the view but whose box does not are culled too (src/v2/box-frustum.js).
 cullByBox();
-import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass,enableAtriumProxyFade,setAtriumRoomViews,setAtriumFurnished,atriumStandIns} from '../v2/atrium-visibility.js';
-import {atriumRoomViewJob,atriumCabinSides} from '../v2/atrium-room-views.js';
-// The atrium's room stand-ins: painted with the real cabins' insides once captured (below, atrium-room-views.js), until
-// then dissolving near the eye's height instead of vanishing in one frame (atrium-visibility.js).
+import {setAtriumView,setAtriumSight,inOpenAtrium,atriumViewSpan,onePassAtriumGlass,enableAtriumProxyFade,atriumStandIns} from '../v2/atrium-visibility.js';
+import {createAtriumRooms,cabinBandShown} from '../v2/atrium-rooms.js';
+import {atriumRoomViewJob} from '../v2/atrium-room-views.js';
+// The atrium's cabins: drawn by what the camera sees once the walk has captured a real cabin's inside (below,
+// atrium-room-views.js and atrium-rooms.js); until then, and on a phone, plain stand-ins that dissolve near the walker's
+// height instead of vanishing in one frame (atrium-visibility.js).
 enableAtriumProxyFade();
 import {createAtriumSight} from '../v2/atrium-sight.js';
 import {releaseBatchedSources,releasePhoneGeometry,shrinkPhonePictures} from '../v2/phone-memory.js';
@@ -512,9 +514,10 @@ async function buildShip(){
   const key=o.parent.uuid+'|'+(o.userData.cabinIds||[o.uuid]).join(',');if(sharedNear.has(key)){o.userData.near=sharedNear.get(key);continue;}const all=Array.from({length:o.count},(_,i)=>{const m=new T.Matrix4();o.getMatrixAt(i,m);return m;});
   o.userData.near={all,centres:all.map(m=>new T.Vector3().setFromMatrixPosition(m).applyMatrix4(o.matrixWorld))};sharedNear.set(key,o.userData.near);
  }
- // The atrium's room stand-ins paint what a real cabin looks like inside, captured once the lighting is final, one view
- // a frame just before the frame draws (atrium-room-views.js, atrium-visibility.js). Phones keep the plain stand-ins.
- if(!preparedPhone)environmentReady.then(()=>{const placements=cabinPlacements();roomViewJob=atriumRoomViewJob(renderer,scene,instanced,placements,{hide:atriumStandIns()});roomViewJob.sides=atriumCabinSides(placements);});
+ // The atrium's cabins are drawn by what the camera sees once the walk has captured what a real cabin looks like
+ // inside (atrium-room-views.js: after the lighting is final, one view a frame just before the frame draws; then
+ // atrium-rooms.js). Phones keep the plain stand-ins.
+ if(!preparedPhone)environmentReady.then(()=>{roomViewJob=atriumRoomViewJob(renderer,scene,instanced,cabinPlacements(),{hide:atriumStandIns()});});
  // The wayfinding signs draw from one texture array (sign-array.js).
  // Parts wholly beyond the indoor fog draw no longer (fog-cull.js); ?fogcull=0 draws them, to compare.
  // Not with the atrium detail pack, whose source checks include the layers the cull changes.
@@ -580,10 +583,13 @@ function cull(p,now=performance.now()){
  camera.updateMatrixWorld(true);
  cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);phoneBands?.update();wayfindingSigns?.update();
  if(phoneHide.length){if(now-phoneHiddenAt>5000){phoneHiddenAt=now;phoneHidden=[];scene.traverse(o=>{if(o.isMesh&&phoneHide.some(f=>f(o)))phoneHidden.push(o);});}for(const o of phoneHidden)o.visible=false;}let shown=false;
- let flipped=false;for(const o of instanced){const [a,b]=o.userData.span,v=o.userData.cabins?a<p.y+3.5&&b>p.y-.5:a<high&&b>low;if(v!==o.visible){flipped=true;if(v)shown=true;}o.visible=v;}
+ // A deck's cabins show together once atrium-rooms.js has given them the deck's own range (userData.band).
+ for(const o of instanced){const [a,b]=o.userData.cabins&&o.userData.band||o.userData.span,v=o.userData.cabins?cabinBandShown(a,b,p.y):a<high&&b>low;if(v&&!o.visible)shown=true;o.visible=v;}
  for(const g of instancedGroups)g.visible=g.children.some(c=>c.visible);
+ // The atrium's cabins on the other decks: stand-ins, and real rooms near the camera (atrium-rooms.js).
+ atriumRooms?.update(camera,p);
  // Re-rank after 3 m of walking, or at once when another deck's cabins come into view.
- if(!shown&&nearFrom.distanceToSquared(p)<9){if(flipped)noteFurnished();return;}nearFrom.copy(p);
+ if(!shown&&nearFrom.distanceToSquared(p)<9)return;nearFrom.copy(p);
  // Every part of a cabin shares its instance index, so one ranking per deck serves all of that deck's parts.
  const ranks=new Map();
  for(const o of instanced){const near=o.userData.near;if(!near||!o.visible)continue;
@@ -591,10 +597,7 @@ function cull(p,now=performance.now()){
   let order=ranks.get(o.parent);if(!order)ranks.set(o.parent,order=near.centres.map((c,i)=>[c.distanceToSquared(p),i]).sort((a,b)=>a[0]-b[0]).slice(0,NEAR_CABINS).map(e=>e[1]));
   order.forEach((i,k)=>o.setMatrixAt(k,near.all[i]));o.userData.currentCabinIds=order.map(i=>o.userData.cabinIds[i]);o.count=order.length;o.instanceMatrix.needsUpdate=true;o.computeBoundingSphere();
  }
- noteFurnished();
 }
-// The atrium's room stand-ins show their cabin without furniture while its real furniture draws (atrium-visibility.js).
-function noteFurnished(){const ids=new Set();for(const o of instanced)if(o.visible&&o.userData.near&&!o.userData.boat&&o.userData.currentCabinIds)for(const id of o.userData.currentCabinIds)ids.add(id);setAtriumFurnished(ids);}
 
 const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),lockHint:$('camera-lock-hint'),onAction:(a,arg)=>{if(a==='respawn'&&wardPush?.engaged){wardPush.reset(controller);return;}actions[a]?.(arg);}});
 const follow=new FollowCamera(camera,colliders);
@@ -955,7 +958,7 @@ if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuc
 // (Debug: the vault, vault.js.)
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vault',{get:()=>vault});
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vaultLift',{get:()=>vaultLift});
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperties(globalThis.__walk,{atriumSight:{get:()=>atriumSight},atriumPvs:{get:()=>atriumPvs},viewSpan:{get:()=>viewSpan},shaderWarmup:{get:()=>shaderWarmup}});
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperties(globalThis.__walk,{atriumSight:{get:()=>atriumSight},atriumPvs:{get:()=>atriumPvs},viewSpan:{get:()=>viewSpan},shaderWarmup:{get:()=>shaderWarmup},atriumRooms:{get:()=>atriumRooms}});
 // The ship map: the corner mini-map, redrawn a few times a second, and the full map sheet.
 const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
 // (A phone's small mini-map, html.phone-hud from walk.html, keeps up to 3× its pixels, so its names stay sharp.)
@@ -1148,10 +1151,13 @@ renderer.setAnimationLoop(()=>{
  if(camShot.due)takePhoto(portable);
 });
 // One frame of the ship from `view`: the sky, the haze past the far plane, then the ship.
-// The atrium room views being captured (set once the environment is ready); var, as that may be before this line runs.
-var roomViewJob;
+// The atrium room views being captured (set once the environment is ready), then the atrium's cabins drawn with them
+// (atrium-rooms.js); var, as that may be before this line runs.
+var roomViewJob,atriumRooms;
 function draw(view){
- if(roomViewJob){try{const views=roomViewJob.step();if(views){const job=roomViewJob;roomViewJob=null;if(setAtriumRoomViews(views,job.sides))nearFrom.set(1e9,0,0);}}catch(e){roomViewJob=null;console.warn('Atrium room views skipped.',e);}}
+ if(roomViewJob){try{const views=roomViewJob.step();if(views){roomViewJob=null;
+   atriumRooms=createAtriumRooms({scene,parent:atriumStandIns().find(o=>o.name==='P6_atrium_room_returns'&&!o.userData.distantProxy)?.parent,placements:cabinPlacements(),views,instanced,lining:instanced.find(o=>o.name==='Cabin_v2_shell_V2_lining_polished')?.material});
+   atriumRooms?.update(camera,controller.position);}}catch(e){roomViewJob=null;console.warn('Atrium room views skipped.',e);}}
  view.updateMatrixWorld(true);atriumGeometry?.update(view,renderer.domElement.height);
  for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();if(ownerHiding&&view===camera)ownerHiding.around(view,()=>renderer.render(scene,view));else renderer.render(scene,view);frameReadout.frame(performance.now());

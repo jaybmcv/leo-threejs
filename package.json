@@ -42,6 +42,7 @@
     "check:unstuck": "node scripts/check-unstuck.mjs",
     "check:band-merge-sources": "node scripts/check-band-merge-sources.mjs",
     "check:atrium-proxy-fade": "node scripts/check-atrium-proxy-fade.mjs",
+    "check:atrium-rooms": "node scripts/check-atrium-rooms.mjs",
     "check:design": "node scripts/check-selected-interiors.mjs",
     "live": "node server/leo-live.mjs",
     "check:live": "node scripts/check-live.mjs",
