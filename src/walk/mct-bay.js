@@ -103,13 +103,16 @@ function stripeTexture(){
 
 // The room title on the far wall (the room kit's 14 m navy panel, 2.2-2.9 m up, and its lettering) hangs where the street
 // doorway now opens on the roadway (src/plan/layout-v2.js; 2.5 m high, |z|<2), so it becomes a board just wider than
-// its lettering, lifted clear above the doorway and still under the ceiling.
+// its lettering, lifted clear above the doorway and still under the ceiling. The aft doorway gets the same sign.
 const TITLE={panel:14,margin:.45,lift:.375};
 function refitTitle(room){
  const panel=room.getObjectByName('Area_identity_panel'),text=[];room.traverse(o=>{if(o.isMesh&&o.name==='Wayfinding_text'&&o.position.x>20)text.push(o);});
  if(!panel||text.length!==1)return false;
  const g=text[0].geometry;g.computeBoundingBox();const width=g.boundingBox.max.x-g.boundingBox.min.x;
- panel.scale.z=(width+2*TITLE.margin)/TITLE.panel;for(const o of [panel,text[0]])o.position.y+=TITLE.lift;return true;
+ panel.scale.z=(width+2*TITLE.margin)/TITLE.panel;for(const o of [panel,text[0]])o.position.y+=TITLE.lift;
+ // Keep the old deck/category label beside the new board rather than behind its lettering.
+ room.traverse(o=>{if(o.isMesh&&o.name==='Wayfinding_text'&&o.position.x< -20&&o.position.y>2.8)o.position.z=width/2+TITLE.margin+2;});
+ if(!room.getObjectByName('Cargo_aft_identity_panel'))for(const [i,o]of [panel,text[0]].entries()){const copy=o.clone();copy.name=i?'Cargo_aft_identity_text':'Cargo_aft_identity_panel';copy.applyMatrix4(new T.Matrix4().makeRotationY(Math.PI));o.parent.add(copy);}return true;
 }
 
 // Take the room's repair benches, tools and tool boards out, and refit the room title over the street doorway, before

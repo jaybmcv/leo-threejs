@@ -1,6 +1,9 @@
 // Physical headroom for the scheduled ramp and wing flights. Runs before navigation/programme.
 export function wingFlight(s,stairs=[]){const x=s.x,inner=Math.abs(s.z)-3,z=s.side*(inner+.8),previous=stairs.find(p=>p.wing===s.wing&&p.side===s.side&&p.deck===s.deck-1),below=previous?Math.abs(previous.z)-3+.8:inner,choices=[inner+2.6,inner+5.2],outer=s.side*choices.sort((a,b)=>Math.abs(b-below)-Math.abs(a-below))[0];return {x,z,outer,portal:[[x-3.4,z-.8],[x+3.4,z-.8],[x+3.4,z+.8],[x-3.4,z+.8]]};}
 export function addStructuralOpenings(plan){
+ // Open the aft end of the painted cargo road with the same entry as its forward end.
+ const cargo=plan.rooms?.find(r=>r.id==='d01-workshop-5');
+ if(cargo&&!cargo.galleryDoors?.some(d=>d.id===cargo.id+'-aft-street-door')){const matching=cargo.galleryDoors?.find(d=>d.id===cargo.id+'-street-door')||cargo.door;cargo.galleryDoors=[...(cargo.galleryDoors||[]),{id:cargo.id+'-aft-street-door',deck:cargo.deck,center:[Math.min(...cargo.polygon.map(p=>p[0])),cargo.y,cargo.frame.origin[2]],width:matching.width,outward:[-1,0],label:'Cargo maintenance street doorway'}];}
  // A wing core is a reservation, not a floor opening. Only the incoming return
  // flight pierces a deck; the first residential deck has no incoming wing stair.
  for(const d of plan.decks)d.slab.holes=d.slab.holes.filter(h=>!/^d\d+-wing-stair-/.test(h.id)||h.id.endsWith('-return-headroom'));

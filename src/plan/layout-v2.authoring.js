@@ -176,7 +176,7 @@ export function buildLayoutV2(){
  addLaunchDPlan({h,decks,rooms,circulation});
  // Cargo maintenance's painted roadway (centre z 49.63, between amber lines 4 m apart) ran into a wall at both ends. Its
  // forward end wall (x -89) now opens onto the Deck 1 street on that roadway, a doorway as wide as the room's own
- // entrance; the aft end stays closed, with escape bay d1-escape-s-2 behind it.
+ // entrance. addStructuralOpenings supplies the matching aft doorway onto the hall before the escape bay.
  {const r=rooms.find(r=>r.id==='d01-workshop-5');r.galleryDoors=[...(r.galleryDoors||[]),{id:r.id+'-street-door',deck:r.deck,center:[Math.max(...r.polygon.map(p=>p[0])),r.y,r.frame.origin[2]],width:4,outward:[1,0],label:'Cargo maintenance street doorway'}];}
  connectCirculation({h,decks,rooms,cabins,shuttles,circulation,issues});
  for(const c of circulation.corridors.filter(c=>c.deck===20))Object.assign(c,{access:'public',label:'Deck 20 public circulation'});for(const b of circulation.bridges.filter(b=>b.deck===20))Object.assign(b,{access:'crew',name:'Crew service gallery'});
