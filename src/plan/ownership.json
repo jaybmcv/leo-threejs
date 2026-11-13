@@ -399,7 +399,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 129,
-      "signature": "ec550e2b39bee3edfc785b30a74fd6e137e2abfd303fb65ee8a994c7106b8dbd"
+      "signature": "8da493b25bf185c4447a1599d07d6a23f776bcc8550bef47fdc313301d03fce7"
     },
     {
       "source": "src/interior-polish.js",
