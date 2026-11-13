@@ -3620,7 +3620,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 29,
-      "signature": "bf6aa01fe3e2cb9bc4da47cb6b837ad21a07d6249a0d8216693a849626c04a6e"
+      "signature": "301e80d98e2820a6a5014a9162dd507b0a9008cc9057bc17313eae742c30c2b4"
     },
     {
       "source": "src/walk/lounge-floor.js",

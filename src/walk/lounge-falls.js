@@ -26,9 +26,10 @@ const PATH={x0:136.1,x1:137.9,z0:33.9,z1:43.05,top:FLOOR+.36,step:33.3,rail:34.3
 const FALL={x0:132.6,x1:141.4,z:41.82,lip:LEVELS[1]-.28-.26,reach:.35},BENCH={x:137,z:45.5,width:2.4};
 const NEAR=50,CYAN=0x46e6ff;
 // The whole assembly (header, falls, pond, causeway, landing, bench, rocks, plants, light, sound) stands SHIFT metres along
-// the ship's +X from the template frame above, toward the stair. 1 m keeps 1 m of floor between its plants and the stair
-// planter's (x 147.25 in the frame; the planter's leaves reach 146.85).
-const SHIFT=1,MOVE=new T.Matrix4().makeTranslation(SHIFT,0,0);
+// the ship's +X from the template frame above, toward the stair. 0.75 m keeps the pond's east rim off the x -102 floor
+// samples of the room's walk check (scripts/v2-walk.mjs wants 80% of them reached; at 1 m the rim covered that column)
+// and still leaves over 1 m of floor between its plants and the stair planter's (x 147.25 in the frame; its leaves reach 146.85).
+const SHIFT=.75,MOVE=new T.Matrix4().makeTranslation(SHIFT,0,0);
 // What the pond replaces: the kitchen island, its hobs, sink and worktop edge, and the seam over its chairs.
 const OLD=/^(Shared_kitchen_island|Induction_hob|Kitchen_sink|Kitchen_worktop_edge|Polish_tailored_seam)$/,ISLAND={x0:126.5,x1:136.5,z0:36,z1:40.5};
 
