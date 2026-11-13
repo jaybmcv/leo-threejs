@@ -56,6 +56,11 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 #prompt[hidden]{display:none}
 #prompt .key{display:grid;place-items:center;min-width:26px;height:26px;border-radius:7px;background:var(--orange);color:#fff;font-weight:600}
 #prompt.waiting{padding-left:16px;border-color:var(--orange)}#prompt.waiting .key{display:none}#prompt.waiting .label::before{content:"";display:inline-block;width:8px;height:8px;margin-right:10px;border-radius:50%;background:var(--orange);vertical-align:1px;animation:pulse 1s ease-in-out infinite alternate}
+/* Stuck? Pop out (unstuck.js): above the use prompt; on touch screens under the top row, clear of both thumbs */
+#unstuck{position:fixed;left:50%;bottom:132px;transform:translateX(-50%);z-index:8;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--orange);border-radius:999px;padding:8px 16px 8px 8px;font:500 12px/1 var(--mono);letter-spacing:.06em;color:var(--text);white-space:nowrap;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+#unstuck[hidden]{display:none}#unstuck:hover{border-color:#fff}#unstuck:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#unstuck .key{display:grid;place-items:center;min-width:26px;height:26px;border-radius:7px;background:var(--orange);color:#fff;font-weight:600}
+@media (pointer:coarse){#unstuck{top:calc(112px + var(--hud-top,0px));bottom:auto;min-height:44px;padding:12px 18px}#unstuck .key{display:none}}
 @keyframes pulse{from{opacity:.35}to{opacity:1}}
 .touch #use:disabled{background:var(--surface);border-color:var(--orange);color:var(--text)}
 .tools{position:fixed;right:16px;top:14px;z-index:6;display:flex;gap:8px}
@@ -357,6 +362,7 @@ body.spraying{-webkit-user-select:none;user-select:none}body.spraying #viewport{
 <div class="corner"><div id="chat" hidden><ol id="chat-lines" aria-live="polite" aria-label="Chat aboard"></ol><form id="chat-form" autocomplete="off"><input id="chat-input" enterkeyhint="send" aria-label="Chat message"><button id="chat-send" type="submit">Send</button></form><div class="chat-buttons"><button id="chat-open" type="button" aria-label="Chat with everyone aboard (T)"><kbd>T</kbd>Chat<span id="chat-unread" hidden></span></button><button id="chat-hide" type="button" aria-pressed="false">Hide</button></div></div>
 <div class="help"><b>WASD</b> move · <b>Shift</b> run · <b>Space</b> jump · <b>Q</b> grapple · <b>Drag</b> look · <b>E</b> use · <b>M</b> go to · <b>L</b> ship log<span id="help-ping" hidden> · <b>T</b> chat</span> · <b>H</b> help, every control</div></div>
 <div id="prompt" hidden><span class="key">E</span><span class="label"></span></div>
+<button id="unstuck" type="button" hidden aria-label="Stuck? Pop out a couple of metres away (U)"><span class="key">U</span><span class="label">Stuck? Pop out</span></button>
 <div class="touch"><button id="use" type="button" hidden></button><div class="row"><button id="emote-button" type="button">Emote</button><button id="crouch" type="button">Crouch</button><button id="ping" type="button" hidden aria-label="Ping where you are for others aboard">Ping</button><button class="respawn" type="button" aria-label="Respawn in the arrival hall">Respawn</button></div><button id="hook" type="button" aria-label="Grapple hook: hold to swing">Hook</button><button id="jump" type="button" aria-label="Jump">Jump</button></div>
 <div id="lift-panel" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="lift-title"><div class="card"><div class="eyebrow">Lift</div><h2 id="lift-title"></h2><div class="stops"></div><button type="button" data-close>Close</button></div></div>
 <div id="places" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="places-title"><div class="card"><div class="eyebrow">Walk around Leo</div><h2 id="places-title">Go to</h2><div class="stops"></div><button type="button" data-close>Close</button></div></div>

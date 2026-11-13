@@ -36,6 +36,7 @@ const PLAY=[
   [['N'],'Mini-map','Ship map, deck by deck (or click the mini-map)','Tap it for the ship map, deck by deck'],
   [['L'],'Log','Ship log: every change to Leo, before and after'],
   [['R'],'Respawn','Respawn in the arrival hall'],
+  [['U'],'Pop out','Stuck somewhere? A Stuck? Pop out button comes up: press U or click it to land on clear floor a couple of metres away','Stuck somewhere? A Stuck? Pop out button comes up: tap it to land on clear floor a couple of metres away'],
   [['Esc'],null,'Close any panel'],
  ]},
  {title:'With others aboard',live:true,rows:[
