@@ -5632,16 +5632,14 @@
       "features": [
         "Ward_supply_trolley",
         "Ward_supply_trolley_world",
-        "Ward_supply_trolley_collider",
-        "Ward_supply_trolley_solid"
+        "Ward_supply_trolley_collider"
       ],
       "colliders": [
-        "Ward_supply_trolley_collider",
-        "Ward_supply_trolley_solid"
+        "Ward_supply_trolley_collider"
       ],
       "interactionTargets": null,
-      "placements": 21,
-      "signature": "5cfed1bfeac6ed3900fbfa1ba0e3cefb77f5c55a361700a1c2ac887e94c3a39c"
+      "placements": 20,
+      "signature": "0d688adc71036878af633ed49e377870722bf7559137ecc5c261437a74ad5db7"
     },
     {
       "source": "src/walk/windows.js",
