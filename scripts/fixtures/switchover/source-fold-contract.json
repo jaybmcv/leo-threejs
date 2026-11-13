@@ -3410,7 +3410,7 @@
     "file": "src/walk/jaguar-gate.js",
     "original": "src/walk/jaguar-gate.js",
     "mode": "raw",
-    "bodySha256": "8a69cccb6113ea643374a145a04309e601b33bd54ac5399ac5320550c23bc1f7",
+    "bodySha256": "1465ddddd6591cf7615ac4971995b2120d2e2b9af66e3c503dc4aff4adbbdb04",
     "imports": [
       "../plan/rooms.js",
       "three",
@@ -5931,7 +5931,7 @@
     "file": "src/walk/jaguar-gate.authoring.js",
     "original": "src/walk/jaguar-gate.js",
     "mode": "authoring",
-    "bodySha256": "454b6f53b83dd7267ce4d5679c53fef09ba32c51bea01a23b1101565de2616f3",
+    "bodySha256": "5748faa8617ab1f419871549f645136a266d8532e650fa7a2efaa3f27fd20158",
     "imports": [
       "../v2/prepared-geometry-record.js",
       "../plan/rooms.js",
@@ -7359,7 +7359,7 @@
     "file": "src/walk/jaguar-gate.prepared.js",
     "original": "src/walk/jaguar-gate.js",
     "mode": "prepared",
-    "bodySha256": "21330bc7105fadae1e013124e38ba984a361a4bb9e970ee2595d9666ee51d104",
+    "bodySha256": "af72bd9c70f43215d0f08f2d3d4813b7fec5cfb797d27829d4c233bd2091aca3",
     "imports": [
       "../v2/prepared-geometry-replay.js",
       "../plan/rooms.js",
@@ -8638,7 +8638,7 @@
     "file": "src/walk/jaguar-gate.public.js",
     "original": "src/walk/jaguar-gate.js",
     "mode": "public",
-    "bodySha256": "21330bc7105fadae1e013124e38ba984a361a4bb9e970ee2595d9666ee51d104",
+    "bodySha256": "af72bd9c70f43215d0f08f2d3d4813b7fec5cfb797d27829d4c233bd2091aca3",
     "imports": [
       "../v2/prepared-geometry-replay.public.js",
       "../plan/rooms.js",

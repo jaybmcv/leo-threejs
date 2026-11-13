@@ -24,8 +24,9 @@ import {floorY} from '../transit.authoring.js';
 const [gx,,gz]=placedV1('jaguar-gate'),GATE={x:gx,z:gz,half:2,h:3.68,depth:2.08,wall:.06};
 const GLOW=0xffcf3a,PURPLE=0xa04dff;
 // The head stands this far forward of the throat (in z), out of the aquarium's frontage and into the promenade: its widest
-// outline (z 0 in its own frame) sits just in front of the tank's wall, so the face and jaw show clear of the glass.
-const PUSH=2.2;
+// outline (z 0 in its own frame) sits just in front of the tank's wall, so the face and jaw show clear of the glass. The face
+// stands out FACE times as far as it was, so its nose stays behind the wall's wayfinding sign, 0.9 m out from the door.
+const PUSH=2,FACE=.45;
 // The mouth's outline: straight sides from the floor to `side`, then a nearly flat top with rounded corners at `top`.
 const MOUTH={foot:1.05,half:1.0,side:1.72,top:2.12},EDGE=.3;
 // The head is shaped below with its mouth 2.12 m tall and its crown at 3.45 m, then stretched up to its built height
@@ -128,13 +129,13 @@ export function createJaguarGate(){
  // the head's rear to the mouth's back edge, then forward along the mouth's wall to its front edge again. One closed
  // surface, so the lips and the outline shade round smoothly. The face rolls in a little at the lip. The skin wraps
  // round it as if round a cylinder standing just behind the face, so the spots don't streak down the sides.
- const NU=240,NS=44,WALL=6,M=2*NS+WALL,shell=[],uvs=[],quads=[];
+ const NU=240,NS=44,WALL=6,M=2*NS+WALL,shell=[],deep=[],uvs=[],quads=[];
  const ease=s=>Math.sqrt(1-s**4),lip=(s,k)=>k+(1-k)*Math.sqrt(Math.min(1,s/.12));
  for(let i=0;i<=NU;i++){const [mx,my]=mouthAt(i/NU),[ox,oy]=outerAt(i/NU),pt=s=>[mx+(ox-mx)*s,my+(oy-my)*s];
-  const front=s=>{const [x,y]=pt(s);return [x,y,wall/2+relief(x,y)*ease(s)*lip(s,.75)];},rear=s=>{const [x,y]=pt(s);return [x,y,-backDepth(x,y)*ease(s)*lip(s,.85)];};
+  const front=(s,k=FACE)=>{const [x,y]=pt(s);return [x,y,wall/2+relief(x,y)*k*ease(s)*lip(s,.75)];},rear=s=>{const [x,y]=pt(s);return [x,y,-backDepth(x,y)*ease(s)*lip(s,.85)];};
   const f0=front(0),b0=rear(0);
   for(let r=0;r<M;r++){const v=r<=NS?front(r/NS):r<=2*NS?rear((2*NS-r)/NS):b0.map((c,k)=>c+(f0[k]-c)*(r-2*NS)/WALL);
-   v[1]=lift(v[1]);shell.push(...v);uvs.push(2*Math.atan2(v[0],v[2]+.3),v[1]);}}
+   deep.push(r<=NS?front(r/NS,1)[2]:v[2]);v[1]=lift(v[1]);shell.push(...v);uvs.push(2*Math.atan2(v[0],v[2]+.3),v[1]);}}
  // The face and rear first, then the mouth's walls, which take the darker inside-of-the-mouth stone.
  const inside=[];
  for(let i=0;i<NU;i++)for(let r=0;r<M;r++){const a=i*M+r,b=a+M,a1=i*M+(r+1)%M,b1=a1+M;(r<2*NS?quads:inside).push(a,b,a1,b,b1,a1);}
@@ -142,7 +143,8 @@ export function createJaguarGate(){
  headGeo.setIndex([...quads,...inside]);headGeo.addGroup(0,quads.length,0);headGeo.addGroup(quads.length,inside.length,1);headGeo.computeVertexNormals();
  const face=new T.Mesh(headGeo,[mat.skin,mat.mouth]);face.name='Jaguar_head';face.position.z=PUSH;solid.add(face);
  // Where a point on the face lies: the nearest point of the face's grid, for setting the eyes, nose and teeth on it.
- const surf=(x,y)=>{let best=1e9,z=0;for(let i=0;i<=NU;i++)for(let r=0;r<=NS;r++){const k=(i*M+r)*3,d=(shell[k]-x)**2+(shell[k+1]-y)**2;if(d<best){best=d;z=shell[k+2];}}return z;};
+ // `full` gives the face's height before it was flattened, which the lower teeth keep standing on.
+ const surf=(x,y,full=false)=>{let best=1e9,z=0;for(let i=0;i<=NU;i++)for(let r=0;r<=NS;r++){const k=(i*M+r)*3,d=(shell[k]-x)**2+(shell[k+1]-y)**2;if(d<best){best=d;z=full?deep[k/3]:shell[k+2];}}return z;};
 
  for(const sx of [-1,1]){
   // Eyes in the sockets under the brow, slanted up at their outer corners: almonds that glow yellow, paler at the
@@ -179,7 +181,7 @@ export function createJaguarGate(){
   for(let k=0;k<p.count;k++){const t=.5-p.getY(k),w=r*(bullet?Math.sqrt(Math.max(0,1-Math.max(0,(t-.4)/.6)**2)):Math.pow(Math.max(0,1-t),.55));
    p.setXYZ(k,p.getX(k)*w,-t*len,p.getZ(k)*w-bend*len*t*t);}
   g.computeVertexNormals();return g;};
- const top=x=>lift(mouthTop(x)),lipZ=x=>surf(x,top(x)),floorZ=x=>surf(x,.12),lower=[];
+ const top=x=>lift(mouthTop(x)),lipZ=x=>surf(x,top(x)),floorZ=x=>surf(x,.12,true),lower=[];
  for(const sx of [-1,1]){
   add(mat.fang,at(tooth(.55,.22,.12),sx*.84,top(.84)+.21,lipZ(sx*.84)-.12,0,0,-sx*.05));
   lower.push(at(tooth(.8,.24,.1),sx*1.26,0,floorZ(sx*1.15)-.12,Math.PI,0,sx*.04));
