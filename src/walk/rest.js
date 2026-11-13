@@ -72,7 +72,7 @@ export function findRestSpots(root){
   if(it.o.name==='Hammock'){const b=it.o.geometry.boundingBox,low=c.clone();low.y=new T.Vector3(0,b.min.y,0).applyMatrix4(it.m).y;
    if(it.o.userData.head){head=new T.Vector3(...it.o.userData.head).transformDirection(it.m);head.y=0;head.normalize();}
    spots.push({room:it.owner,kind:'lie',point:low,head,length:long.length()*2,height:low.y,hammock:it.o});continue;}
-  spots.push({room:it.owner,kind:'lie',point:c.clone(),head,length:long.length()*2,height:c.y});
+  spots.push({room:it.owner,kind:'lie',point:c.clone(),head,length:long.length()*2,height:c.y,slide:it.o.userData.slide||0});
  }
  for(const it of capsules){const facing=new T.Vector3(...(it.o.userData.facing||[0,0,1])).transformDirection(it.m);facing.y=0;facing.normalize();
   spots.push({room:it.owner,kind:'stand',point:it.face.c.clone(),facing,height:it.face.c.y});}
