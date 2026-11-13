@@ -720,8 +720,8 @@ if(LIVE_URL){
  await identity;
  const name=me.pass?me.name||'':$('name-input').value.trim();
  live=connectLive(LIVE_URL,{
-  status:s=>{liveStatus=s;if(s!=='live'){aboardNames=undefined;aboardIds=null;leverPanel?.lost();join?.reset();}showAboard();showAboardList();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
-  welcome:msg=>{leverPanel?.apply(msg.panel);captainSays?.back();for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();mct.apply(msg.mcts);live.tv();
+  status:s=>{liveStatus=s;if(s!=='live'&&s!=='connecting')pinballGame.link(false);if(s!=='live'){aboardNames=undefined;aboardIds=null;leverPanel?.lost();join?.reset();}showAboard();showAboardList();changeLog.setStatus(s==='live'?'live':'offline');if(s!=='live')chat.set({live:false});},
+  welcome:msg=>{leverPanel?.apply(msg.panel);captainSays?.back();for(const {id,s} of msg.lifts)lifts.apply(id,s);live.hearts();mct.apply(msg.mcts);live.tv();pinballGame.link(true);
    // A server from before chat sends no chat: it stays hidden.
    chat.set({live:true,id:msg.id,verified:!!msg.you?.verified,mode:msg.chat?.mode||'off'});chat.load(msg.chat?.lines);
    // Just connected Discord at the giveaway's counter: its card shows what they can claim now.
@@ -735,6 +735,7 @@ if(LIVE_URL){
   cannon:(id,i,seed,shot)=>keelClub?.fire(i,{id:shot,seed,who:id===live.id?'me':id}),aboard:(n,names,ids)=>{aboard=n;if(names!==undefined){aboardNames=names;aboardIds=ids||null;}showAboard();showAboardList();},
   maze:msg=>maze?.fromServer(msg),
   treasure:msg=>treasure?.fromServer(msg),
+  pinball:msg=>pinballGame.fromServer(msg),
   panel:msg=>leverPanel?.apply(msg),
   board:b=>(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
   hearts:h=>changeLog.setHearts(h),hearted:r=>changeLog.refused(r.why),
@@ -828,7 +829,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuck,skate,glide,get wardPush(){return wardPush;},get portable(){return portable;},registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get shuttleDoors(){return shuttleDoors;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuck,skate,glide,get wardPush(){return wardPush;},get portable(){return portable;},registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get shuttleDoors(){return shuttleDoors;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -1319,12 +1320,16 @@ treasure=createTreasureGame({tank:lounge?.aquarium,controller,follow,camera,inpu
  onOpen(){closePanels();input.enabled=false;input.down.clear();},
  onClose(){input.enabled=true;input.down.clear();},
 });
-// Leo Pinball at the Recreation Hall's end wall (pinball/game.js), the same way; its best score stays in this browser.
+// Leo Pinball at the Recreation Hall's end wall (pinball/game.js), the same way. This browser keeps its own best; the
+// shared board, in the game and on the wall beside the machine, is Leo live's (server/pinball.mjs): ranked games post to it.
 const pinballGame=createPinball({
  onOpen(){closePanels();emote=null;input.enabled=false;},
  onClose(){input.enabled=true;input.down.clear();},
  muted:()=>!ambience.on,
+ scores:{request:()=>!!live?.pinball('board'),ticket:()=>!!live?.pinball('ticket'),submit:r=>!!live?.pinballFinish(r)},
+ onBoard:b=>pinballMachine?.board.show(b),
 });
+if(!LIVE_URL)pinballGame.link(false);
 // The nine-dart challenge at the Recreation Hall's boards (darts/game.js): its keys are its own while it is open, and the
 // walk's come back on every way out. Best rounds stay on this device.
 const dartsGame=createDarts({

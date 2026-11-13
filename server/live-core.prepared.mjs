@@ -29,6 +29,7 @@
 //   LEO_LIVE_JOIN_S=30                how long an ask to join someone waits for their answer (joins.mjs)
 //   LEO_LIVE_CS_WAIT_S=10             how long Captain Says counts down to a game, and shows its result after one
 //                                     (captain-says.mjs)
+//   LEO_LIVE_PINBALL=...              where Leo Pinball's best scores are kept (default ../leo-live-pinball.json): pinball.mjs
 //
 // Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
 // server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
@@ -59,6 +60,7 @@ import {createTransporters} from './transporters.mjs';
 import {createTv} from './tv.mjs';
 import {createJoins} from './joins.mjs';
 import {createCaptainSays} from './captain-says.mjs';
+import {createPinballBoard} from './pinball.mjs';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||1000);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -123,6 +125,8 @@ const gym=createGym({log,send,canPlay:policy.canGym});BUDGETS.gym=[2,6];
 // The Container Maze's best times (maze.mjs): its own file, its own message.
 const maze=createMazeBoard({log,send});
 const treasure=createTreasureBoard({log,send});
+// Leo Pinball's shared high scores (pinball.mjs): its own file, its own message; ranked games replayed here to be checked.
+const pinball=createPinballBoard({log,send,everyone:()=>visitors});
 const panel=createSharedPanel({everyone:()=>visitors,broadcast:msg=>broadcast(msg)});BUDGETS.panel=[4,8];
 // The Mars Cat Transporters on Deck 1 (transporters.mjs): who drives each, and where each is parked, in memory only.
 const mct=createTransporters({log,broadcast:msg=>broadcast(msg),send:(v,msg)=>send(v.ws,msg)});BUDGETS.mct=[3,8];
@@ -395,6 +399,8 @@ function onMessage(v,data,binary){
   // The Container Maze (maze.mjs): a run starts, a run ends at the button, the board.
   case 'maze':maze.message(v,msg);break;
   case 'treasure':treasure.message(v,msg);break;
+  // Leo Pinball (pinball.mjs): the board, a ranked game's ticket, and its button log and finish.
+  case 'pinball':pinball.message(v,msg);break;
   case 'panel':if(allowed(v,'panel'))panel.message(v,msg);break;
   // A line of chat, for everyone aboard.
   case 'chat':chat(v,msg);break;
