@@ -105,8 +105,19 @@ function parts(urls){
  kit={m,g};return kit;
 }
 
-export function createLongboard(urls){
- const {m,g}=parts(urls),root=new T.Group();root.name='Walk_longboard';
+// The plain skateboard (glide.js SKATEBOARD, from tester feedback): the same board in a sunny yellow, its gritty grip a
+// shade deeper so it reads from behind the rider, and no artwork; the coral wheels stay.
+let plainKit=null;
+function plainParts(urls){
+ const {m,g}=parts(urls);if(plainKit)return {m:plainKit,g};
+ const mat=(name,color,roughness)=>new T.MeshStandardMaterial({name:'Walk_skateboard_'+name,color,roughness});
+ const art=mat('deck','#f4c534',.6);art.roughnessMap=m.art.roughnessMap;art.normalMap=m.art.normalMap;art.normalScale.copy(m.art.normalScale);
+ const grip=mat('grip','#e2a91f',1);grip.normalMap=m.grip.normalMap;grip.normalScale.copy(m.grip.normalScale);
+ plainKit={...m,art,grip,plies:[mat('ply_dark','#e0a92a',.65),mat('ply_light','#f7d56a',.65)]};return {m:plainKit,g};
+}
+// plain: the plain skateboard instead of the illustrated longboard.
+export function createLongboard(urls,{plain=false}={}){
+ const {m,g}=plain?plainParts(urls):parts(urls),root=new T.Group();root.name=plain?'Walk_skateboard':'Walk_longboard';
  const add=(geo,mat,parent,name)=>{const a=new T.Mesh(geo,mat);a.name=name;a.castShadow=true;parent.add(a);return a;};
  const rod=(parent,a,b,r,mat,name,r2=r)=>{const va=new T.Vector3(...a),vb=new T.Vector3(...b),v=vb.clone().sub(va);const o=add(g.cyl(r,r2),mat,parent,name);
   o.scale.y=v.length();o.position.copy(va).add(vb).multiplyScalar(.5);o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),v.normalize());return o;};
