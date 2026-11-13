@@ -22,8 +22,6 @@ check('a pair is named from its alt text, or its file when that only says before
 check('pictures from anywhere but the pr-media branch are left out',!JSON.stringify(m).includes('example.com'));
 check('a description with neither gives nothing',JSON.stringify(parseMedia('Just words.'))==='{}');
 check('walk links keep only the walk\'s own keys',spotQuery('at=1,2,3&yaw=90.4&pitch=x&live=wss://evil&view=first')==='at=1,2,3&yaw=90&view=first'&&spotQuery('at=1,2')===null);
-check('walk links keep their layout version',spotQuery('lv=2&at=1,2,3&yaw=94')==='lv=2&at=1,2,3&yaw=94'&&spotQuery('at=1,2,3&lv=2')==='lv=2&at=1,2,3'&&spotQuery('lv=x&at=1,2,3')==='at=1,2,3'&&spotQuery('lv=0&at=1,2,3')==='at=1,2,3');
-check('a new-layout picture\'s spot is kept where it was taken',parseMedia('| ![view, before](https://raw.githubusercontent.com/jaybmcv/leo-threejs/pr-media/a/view-before.jpg) | ![view, after](https://raw.githubusercontent.com/jaybmcv/leo-threejs/pr-media/a/view-after.jpg) |\n| `walk.html?lv=2&at=239.40,-19.69,0.00&yaw=94&pitch=-18` | |').shots?.[0].at==='lv=2&at=239.4,-19.69,0&yaw=94&pitch=-18');
 const snap=Object.entries(readSnapshot()),shots=snap.flatMap(([,v])=>v.shots||[]);
 check('the kept copy has spots and pictures',snap.length>0&&shots.length>0,`${snap.length} changes, ${shots.length} pairs`);
 check('every kept spot and picture is one the walk can use',snap.every(([id,v])=>/^\d+$/.test(id)&&(!v.go||spotQuery(v.go)===v.go))&&shots.every(s=>s.label&&/^[\w./-]+\.(jpe?g|png|webp)$/.test(s.before)&&/^[\w./-]+\.(jpe?g|png|webp)$/.test(s.after)&&(!s.at||spotQuery(s.at)===s.at)));

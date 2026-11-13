@@ -13,14 +13,11 @@ export const MEDIA_BASE=`https://raw.githubusercontent.com/${REPO}/pr-media/`;
 const IMAGE=new RegExp(String.raw`!\[([^\]]*)\]\(${MEDIA_BASE.replace(/[./]/g,'\\$&')}([\w./-]+\.(?:jpe?g|png|webp))\)`,'g');
 const SPOT=/walk\.html\?([^\s`)>\]"'|]+)/,MAX_SHOTS=8;
 
-// A walk link's query, kept to what the walk reads (src/walk/link.js), or null. The layout version stays: without it
-// the walk takes a spot for an old-layout one (lv=1) and moves it into the old room's place on the new ship, so a
-// picture's "Go to this view" and "changes here" landed somewhere else (Jay, 2026-11-13).
+// A walk link's query, kept to what the walk reads (src/walk/link.js), or null.
 export function spotQuery(link){
  const p=new URLSearchParams(link.replace(/&amp;/g,'&')),at=(p.get('at')||'').split(',').map(Number);
  if(at.length!==3||!at.every(Number.isFinite))return null;
- const lv=p.get('lv'),out=/^[1-9]\d?$/.test(lv||'')?[`lv=${lv}`]:[];
- out.push(`at=${at.map(v=>+v.toFixed(2)).join(',')}`);
+ const out=[`at=${at.map(v=>+v.toFixed(2)).join(',')}`];
  for(const k of ['yaw','pitch']){const v=Number(p.get(k));if(p.has(k)&&Number.isFinite(v))out.push(`${k}=${Math.round(v)}`);}
  if(p.get('view')==='first')out.push('view=first');
  return out.join('&');
