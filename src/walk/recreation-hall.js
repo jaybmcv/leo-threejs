@@ -2,10 +2,13 @@ import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {roomObject} from '../plan/rooms.js';
 import {walkCanvas,hasWalkCanvas} from './canvas.js';
+import {WALL as DARTS_WALL,FACE as DARTS_FACE,OCHE as DARTS_OCHE,LANES as DARTS_LANES,LANE_W as DARTS_LANE_W,BOARD_Y as DARTS_Y} from './darts/lanes.js';
+import {drawBoard} from './darts/art.js';
+import {RING} from './darts/rules.js';
 
 // A furnishing pass for Deck 16. These games are display props; Paw Pool and pinball keep their own play prompts.
 // All positions are in the hall's frame. The entry, central aisle and both sides of Paw Pool stay clear.
-const ROOM='d16-recreation-4';
+const ROOM='d16-recreation-4',DARTS_MID=DARTS_LANES[1];
 function texture(draw,w=512,h=256){
  if(!hasWalkCanvas())return null;
  const c=walkCanvas();c.width=w;c.height=h;draw(c.getContext('2d'),w,h);
@@ -49,24 +52,20 @@ export function dressRecreationHall(ship){
  const table=(root,w,d,h=.84)=>{legs(root,w,d,h-.1);soft(root,'Recreation_table_body',[w,.2,d],M.navy,[0,h-.1,0]);};
  const rails=(root,w,d,h,m=M.cream)=>{for(const s of [-1,1]){box(root,'Recreation_table_rail',[w+.14,.12,.07],m,[0,h,s*(d/2+.035)]);box(root,'Recreation_table_rail',[.07,.12,d],m,[s*(w/2+.035),h,0]);}};
 
- // Three dartboards, each with its own throwing lane and oche, away from the table games.
- const darts=station('Recreation_darts',-14.5,-16.65),numbers=[20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
- for(const x of [-3.5,0,3.5]){
-  cyl(darts,'Recreation_dart_surround',.5,.08,M.navy,[x,1.73,0]).rotation.x=Math.PI/2;
-  const board=panel(darts,'Recreation_dartboard',.88,.88,(g,w,h)=>{
-   const r=h*.39,cx=w/2,cy=h/2;g.fillStyle='#19242c';g.beginPath();g.arc(cx,cy,h/2,0,Math.PI*2);g.fill();
-   for(let i=0;i<20;i++){const a=-Math.PI/2-Math.PI/20+i*Math.PI/10,b=a+Math.PI/10;
-    for(const [lo,hi,color] of [[0,1,i%2?'#e9ddbd':'#1b2428'],[.9,1,i%2?'#3a9b70':'#d85540'],[.55,.63,i%2?'#3a9b70':'#d85540']]){
-     g.beginPath();g.arc(cx,cy,r*hi,a,b);g.arc(cx,cy,r*lo,b,a,true);g.closePath();g.fillStyle=color;g.fill();g.strokeStyle='#8a9b9e';g.lineWidth=1;g.stroke();}
-    const mid=(a+b)/2;g.fillStyle='#f7eed8';g.font='18px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(String(numbers[i]),cx+Math.cos(mid)*r*1.15,cy+Math.sin(mid)*r*1.15);
-   }
-   for(const [r0,color] of [[.08,'#42a477'],[.035,'#df5941']]){g.beginPath();g.arc(cx,cy,r*r0,0,Math.PI*2);g.fillStyle=color;g.fill();}
-  },[x,1.73,.046]);
+ // Three dartboards on the long glass partition behind air hockey (darts/lanes.js), each on a small backing so the glass
+ // stays whole, with its own throwing lane and oche. The station's +z faces into the hall; its x runs along the glass.
+ const darts=station('Recreation_darts',DARTS_WALL,DARTS_MID);darts.rotation.y=Math.PI/2;
+ const face=DARTS_FACE-DARTS_WALL,line=face+DARTS_OCHE;
+ for(const z of DARTS_LANES){
+  const x=DARTS_MID-z;
+  box(darts,'Recreation_dart_backing',[1.12,1.12,.04],M.navy,[x,DARTS_Y,.025],false);
+  cyl(darts,'Recreation_dart_surround',.5,.08,M.dark,[x,DARTS_Y,face-.046]).rotation.x=Math.PI/2;
+  const board=panel(darts,'Recreation_dartboard',.88,.88,(g,w,h)=>drawBoard(g,w/2,h/2,h/2/RING.edge),[x,DARTS_Y,face]);
   board.material.transparent=true;board.material.alphaTest=.1;
-  box(darts,'Recreation_oche',[2.5,.012,.055],M.teal,[x,.009,2.8],false);
-  for(const s of [-1,1])box(darts,'Recreation_lane_inlay',[.025,.012,2.8],M.wood,[x+s*1.25,.009,1.4],false);
+  box(darts,'Recreation_oche',[DARTS_LANE_W,.012,.055],M.teal,[x,.009,line],false);
+  for(const s of [-1,1])box(darts,'Recreation_lane_inlay',[.025,.012,line-face],M.wood,[x+s*DARTS_LANE_W/2,.009,(line+face)/2],false);
  }
- label(darts,'DARTS',3,[0,2.6,.06]);
+ box(darts,'Recreation_dart_backing',[3.1,.37,.03],M.navy,[0,2.6,.02],false);label(darts,'DARTS',3,[0,2.6,.04]);
 
  const air=station('Recreation_air_hockey',-15,-9);table(air,2.5,1.4,.86);rails(air,2.5,1.4,.89);
  topPicture(air,'Recreation_air_hockey_pitch',2.5,1.4,(g,w,h)=>{pitch(g,w,h,'#d9eee9');g.fillStyle='#7fabad';for(let x=22;x<w-20;x+=14)for(let y=22;y<h-20;y+=14)g.fillRect(x,y,1.5,1.5);},[0,.863,0]);

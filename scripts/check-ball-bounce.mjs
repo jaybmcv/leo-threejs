@@ -5,6 +5,13 @@ import {Controller} from '../src/walk/controller.js';
 import {Controller as AuthoringController} from '../src/walk/controller.authoring.js';
 import {Colliders,BODY} from '../src/walk/collision.js';
 import {BALL_BOUNCE,ballBounce,ballDismount} from '../src/walk/ball-bounce.js';
+import {deckOf} from '../src/walk/minimap.js';
+import {floorY} from '../src/transit.js';
+
+// The active layout's Deck 17 floor (the sky garden's, 24.3 m) is the deck the walk reports, so the gate opens there.
+assert.equal(deckOf(floorY(17))?.number,17);assert.equal(ballBounce(true,deckOf(floorY(17)).number),BALL_BOUNCE);
+assert.equal(ballBounce(true,deckOf(floorY(16)).number),null);
+assert(BALL_BOUNCE.restitution*8>1.5&&BALL_BOUNCE.restitution<1&&BALL_BOUNCE.maxSpeed<8,'a visible but damped rebound at the ball\'s travel speed');
 
 const dt=1/120,y=24.3,body={...BODY,radius:.8,jump:5,jumps:1},zero=new T.Vector3();
 function world(boxes=[]){
@@ -22,7 +29,7 @@ for(const C of [Controller,AuthoringController]){
   else{assert.equal(profile,null);assert.equal(c.velocity.x,0,'ordinary wall slide stays unchanged');}
  }
  const c=start();c.velocity.set(12,0,5);c.step(dt,new T.Vector3(12,0,5),false,BALL_BOUNCE);
- assert(c.velocity.x<0&&c.speed<=2.4+1e-6,'glancing impacts also have a capped total rebound');
+ assert(c.velocity.x<0&&c.speed<=BALL_BOUNCE.maxSpeed+1e-6,'glancing impacts also have a capped total rebound');
  const before=c.position.x,speed=c.speed;c.step(dt,new T.Vector3(12,0,5),false,BALL_BOUNCE);
  assert(c.position.x<before&&c.speed<speed,'held steering cannot cancel the first recoil frame');
  for(let i=0;i<600;i++){c.step(dt,new T.Vector3(12,0,5),false,BALL_BOUNCE);assert(c.position.x<=limit+1e-5);assert(c.speed<=13.01);assert(Math.abs(c.position.y-y)<1e-5);}
