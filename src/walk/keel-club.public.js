@@ -436,10 +436,13 @@ export function createKeelClub(ship){
  const rnd=seeded(7117);
  // Seats the walk can use (rest.js names): hidden markers in `seats`, the visible furniture in parts.
  const marker=(name,g)=>{const m=new T.Mesh(g,hiddenSeat);m.name=name;seats.add(m);};
- // A sun lounger along x or z: a lie-down spot (rest.js reads 'Hammock' as a bed with no pillow).
+ // A lounger's lying cat is slid this far toward the foot (slideAt, used by main.js settle), so its head ends at the teal cushion, not inside it.
+ // Asked of the built club, not read from the baked rest spots, which a fast deploy leaves as they were.
+ const LOUNGER_SLIDE=.3,loungers=[];
+ // A sun lounger along x or z: a lie-down spot (rest.js reads 'Mattress' as a bed; with no pillow the head is the +x or +z end).
  const lounger=(cx,y,cz,alongX=true)=>{const L=1.95,W=.68,b=alongX?box(cx-L/2,cx+L/2,y,y+.32,cz-W/2,cz+W/2):box(cx-W/2,cx+W/2,y,y+.32,cz-L/2,cz+L/2);add(b,C.lounger,{wall:true});
   const head=alongX?box(cx+L/2-.45,cx+L/2,y+.32,y+.62,cz-W/2,cz+W/2):box(cx-W/2,cx+W/2,y+.32,y+.62,cz+L/2-.45,cz+L/2);parts.push(paint(head,C.teal));
-  marker('Hammock',alongX?box(cx-L/2+.1,cx+L/2-.1,y+.28,y+.34,cz-W/2+.05,cz+W/2-.05):box(cx-W/2+.05,cx+W/2-.05,y+.28,y+.34,cz-L/2+.1,cz+L/2-.1));};
+  marker('Mattress',alongX?box(cx-L/2+.1,cx+L/2-.1,y+.28,y+.34,cz-W/2+.05,cz+W/2-.05):box(cx-W/2+.05,cx+W/2-.05,y+.28,y+.34,cz-L/2+.1,cz+L/2-.1));loungers.push([cx,cz]);};
  const umbrella=(x,y,z,color)=>{parts.push(paint(new T.CylinderGeometry(.04,.04,2.4,6).translate(x,y+1.2,z),C.wood));parts.push(paint(new T.ConeGeometry(1.5,.55,10).translate(x,y+2.5,z),color));};
  const stool=(x,y,z)=>{add(new T.CylinderGeometry(.2,.17,.72,10).translate(x,y+.36,z),C.wood,{wall:true});marker('Seat',box(x-.18,x+.18,y+.7,y+.74,z-.18,z+.18));};
  // A bench facing `face` (+1/-1 in z): seat, and its back on the far side, as rest.js seats.
@@ -991,5 +994,5 @@ float surfLean(float x,float z){float u=surfU(x),d=(u-.29)/.035;return -.55*surf
  const lite=()=>{let n=0;group.traverse(o=>{if(/^Keel_club_(light_pools|lamp_halos|relax_wash|relax_halos|wall_washes|waterfall_back|waterfall_mist)$/.test(o.name)){o.visible=false;n++;}});return n;};
  // The surf's clock (seconds, as its shader sees it), for the lagoon's sound (keel-club-sound.js) to swell with the waves.
  const surfClock=()=>waveT%2600;
- return {group,deck1,solid,seats,update,near,fire,seed,mood,lite,surfClock,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
+ return {group,deck1,solid,seats,slideAt:p=>loungers.some(([x,z])=>Math.abs(p.x-x)<.1&&Math.abs(p.z-z)<.1)?LOUNGER_SLIDE:0,update,near,fire,seed,mood,lite,surfClock,bounds:{y0:FY-3,y1:CY-.6},deck1Bounds:{y0:DECK1-.5,y1:DECK1+2.5}};
 }
