@@ -435,11 +435,13 @@ export function createKeelClub(ship){
  const arc=(cx,cz,r,a0,a1,y,n=24)=>{for(let i=0;i<n;i++){const a=a0+(a1-a0)*i/n,b=a0+(a1-a0)*(i+1)/n;line(cx+r*Math.cos(a),cz+r*Math.sin(a),cx+r*Math.cos(b),cz+r*Math.sin(b),y);}};
  const rnd=seeded(7117);
  // Seats the walk can use (rest.js names): hidden markers in `seats`, the visible furniture in parts.
- const marker=(name,g)=>{const m=new T.Mesh(g,hiddenSeat);m.name=name;seats.add(m);};
+ const marker=(name,g)=>{const m=new T.Mesh(g,hiddenSeat);m.name=name;seats.add(m);return m;};
  // A sun lounger along x or z: a lie-down spot (rest.js reads 'Hammock' as a bed with no pillow).
  const lounger=(cx,y,cz,alongX=true)=>{const L=1.95,W=.68,b=alongX?box(cx-L/2,cx+L/2,y,y+.32,cz-W/2,cz+W/2):box(cx-W/2,cx+W/2,y,y+.32,cz-L/2,cz+L/2);add(b,C.lounger,{wall:true});
   const head=alongX?box(cx+L/2-.45,cx+L/2,y+.32,y+.62,cz-W/2,cz+W/2):box(cx-W/2,cx+W/2,y+.32,y+.62,cz+L/2-.45,cz+L/2);parts.push(paint(head,C.teal));
-  marker('Hammock',alongX?box(cx-L/2+.1,cx+L/2-.1,y+.28,y+.34,cz-W/2+.05,cz+W/2-.05):box(cx-W/2+.05,cx+W/2-.05,y+.28,y+.34,cz-L/2+.1,cz+L/2-.1));};
+  // The marker is the cushion's lying part: from the mattress top up (the body rests on it, not in it) and short of the
+  // headrest, with the head toward it.
+  const m=marker('Hammock',alongX?box(cx-L/2-.1,cx+L/2-.55,y+.32,y+.34,cz-W/2+.05,cz+W/2-.05):box(cx-W/2+.05,cx+W/2-.05,y+.32,y+.34,cz-L/2-.1,cz+L/2-.55));m.userData.head=alongX?[1,0,0]:[0,0,1];};
  const umbrella=(x,y,z,color)=>{parts.push(paint(new T.CylinderGeometry(.04,.04,2.4,6).translate(x,y+1.2,z),C.wood));parts.push(paint(new T.ConeGeometry(1.5,.55,10).translate(x,y+2.5,z),color));};
  const stool=(x,y,z)=>{add(new T.CylinderGeometry(.2,.17,.72,10).translate(x,y+.36,z),C.wood,{wall:true});marker('Seat',box(x-.18,x+.18,y+.7,y+.74,z-.18,z+.18));};
  // A bench facing `face` (+1/-1 in z): seat, and its back on the far side, as rest.js seats.
