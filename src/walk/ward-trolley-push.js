@@ -15,11 +15,30 @@ const PROBES=[-.25,-.083,.083,.25].flatMap(x=>[-.2,-.07,.07,.2].map(z=>[x,z]));
 const CAT={bottom:.4,top:1.6,radius:.33};
 export const PUSH_LABEL='W/S push · A/D steer · E or Esc let go · R send it back';
 
+// The trolley used to be baked into the ship as a solid box at its first spot. A fast deploy that only patches the ward
+// keeps that box until the nightly rebuild, and it would stay behind as an invisible wall once the trolley is pushed
+// away. So the box is taken out of the collision here: the triangles whose three corners are the box's own corners are
+// moved far below the ship and their bounds refitted. Nothing else can match, and after a rebuild nothing does.
+function dropBakedBox(sets,toWorld,spot){
+ const c=[];for(const x of [-1,1])for(const y of [0,1])for(const z of [-1,1])c.push(new T.Vector3(spot.x+x*HALF[0],y*TROLLEY_BOX[1],spot.z+z*HALF[1]).applyMatrix4(toWorld));
+ const box=new T.Box3().setFromPoints(c).expandByScalar(.02);
+ const corner=(a,i)=>c.some(p=>Math.abs(p.x-a[i])<.01&&Math.abs(p.y-a[i+1])<.01&&Math.abs(p.z-a[i+2])<.01);
+ for(const col of sets)for(const band of col?.bands?.values()||[]){
+  const a=band.geometry?.attributes.position?.array;if(!a||!band.bvh?.refit)continue;let moved=false;
+  for(let i=0;i<a.length;i+=9){
+   if(a[i]<box.min.x||a[i]>box.max.x||a[i+1]<box.min.y||a[i+1]>box.max.y||a[i+2]<box.min.z||a[i+2]>box.max.z)continue;
+   if(corner(a,i)&&corner(a,i+3)&&corner(a,i+6)){a[i+1]-=1e4;a[i+4]-=1e4;a[i+7]-=1e4;moved=true;}
+  }
+  if(moved)band.bvh.refit();
+ }
+}
+
 // `group` is the drawn trolley's world group (ward-trolley.js): it carries the room's frame, and its first child is the model.
 export function createWardPush(group,colliders){
  const model=group.getObjectByName('Ward_supply_trolley'),state={x:model.position.x,z:model.position.z,turn:model.rotation.y},start={...state},room=group,
   trolley={state,place(x,z,t){state.x=x;state.z=z;state.turn=t;model.position.set(x,0,z);model.rotation.y=t;}},toLocal=new T.Matrix4(),toWorld=new T.Matrix4(),seg=new T.Line3(new T.Vector3(),new T.Vector3()),ray=new T.Ray(),down=new T.Vector3(0,-1,0);
  const sync=()=>{room.updateWorldMatrix(true,false);toWorld.copy(room.matrixWorld);toLocal.copy(toWorld).invert();};
+ sync();dropBakedBox([colliders,colliders.v2Ground],toWorld,start);
  const local=p=>p.clone().applyMatrix4(toLocal),world=(x,y,z)=>new T.Vector3(x,y,z).applyMatrix4(toWorld);
  // The trolley's heading in the world is its own plus the room's yaw.
  const roomYaw=()=>{sync();const d=new T.Vector3(0,0,1).transformDirection(toWorld);return Math.atan2(d.x,d.z);};
