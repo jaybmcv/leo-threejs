@@ -4,6 +4,7 @@ import path from 'node:path';
 import {spawn} from 'node:child_process';
 import {randomUUID} from 'node:crypto';
 import WebSocket from 'ws';
+import {ANGLE} from './chrome-setup.mjs';
 const NL=String.fromCharCode(10),pause=ms=>new Promise(r=>setTimeout(r,ms));
 async function connect(url){
  const socket=new WebSocket(url),pending=new Map(),handlers=new Map();let id=0;
@@ -26,7 +27,7 @@ const probeCode='('+function(){
 }.toString()+')()';
 export async function measurePublicStartup({url,tag,directory='output/phase3b/startup',captureTimeout=180000,profile=false,touch=false,reducedMotion=false,chrome=process.env.LEO_CHROME_EXE||'C:/Program Files/Google/Chrome/Application/chrome.exe'}={}){
  await fs.mkdir(directory,{recursive:true});const profileDir=path.resolve(directory,'chrome-'+tag+'-'+randomUUID());await fs.mkdir(profileDir);
- const child=spawn(chrome,['--headless=new','--remote-debugging-port=0','--no-sandbox','--disable-gpu-sandbox','--use-angle=d3d11','--enable-precise-memory-info','--user-data-dir='+profileDir,'about:blank'],{windowsHide:true,stdio:'ignore'});
+ const child=spawn(chrome,['--headless=new','--remote-debugging-port=0','--no-sandbox','--disable-gpu-sandbox',...ANGLE,'--enable-precise-memory-info','--user-data-dir='+profileDir,'about:blank'],{windowsHide:true,stdio:'ignore'});
  let browser,page,trace,profiler=false,traceActive=false,interval,ready=null,heapBusy=false,runtimeBusy=false;
  const report={tag,url,at:new Date().toISOString(),status:'RUNNING',readyMs:null,statuses:[],longTasks:[],errors:[],heapSamples:[],peakJSHeap:0,peakPageMemory:0,peakBackingStorage:0,firstStatusMs:null,metricTimeouts:0,profileDir,browserPid:child.pid};
  const heap=(used,at,source,extra={})=>{if(!Number.isFinite(used))return;if(source==='page')report.peakPageMemory=Math.max(report.peakPageMemory,used);else report.peakJSHeap=Math.max(report.peakJSHeap,used);if(extra.backingStorageSize)report.peakBackingStorage=Math.max(report.peakBackingStorage,extra.backingStorageSize);report.heapSamples.push({at,used,source,...extra});};

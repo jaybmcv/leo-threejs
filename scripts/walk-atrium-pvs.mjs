@@ -25,6 +25,7 @@ import {pvsKey} from '../src/v2/atrium-pvs-key.js';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
 import {build as bundle} from './native-bundle.mjs';
 import {bakedPvs,layoutPvsSetup,preparedDigest,preparedIntegrity,PVS_LAYOUT,PVS_BAKED_DIR} from './atrium-pvs-source.mjs';
+import {ANGLE} from './chrome-setup.mjs';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
 const tag=arg('tag','pvs-base'),prepared=arg('prepared',null),port=Number(arg('cdp',9338)),site='http://127.0.0.1:'+arg('port',4211),PAGES=Number(arg('pages',4));
@@ -42,7 +43,7 @@ process.on('exit',killChromes);
 // Chrome number n, on its own CDP port (above) with a profile of its own.
 async function browser(n){
  const cdp=n?port+100+n:port,profile=path.resolve('output/perf-walk/chrome-profile-pvs'+(cdp===9338?'':'-'+cdp));await fs.rm(profile,{recursive:true,force:true,maxRetries:20,retryDelay:250});await fs.mkdir(profile,{recursive:true});
- const chrome=spawn(CHROME,['--remote-debugging-port='+cdp,'--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','--disable-extensions','--headless=new','--use-angle=d3d11','--enable-gpu','--ignore-gpu-blocklist',
+ const chrome=spawn(CHROME,['--remote-debugging-port='+cdp,'--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','--disable-extensions','--headless=new',...ANGLE,'--enable-gpu','--ignore-gpu-blocklist',
   '--disable-background-timer-throttling','--disable-renderer-backgrounding','--window-size=800,600','about:blank'],{stdio:'ignore'});
  chromes.add(chrome);chrome.once('exit',()=>chromes.delete(chrome));
  for(let i=0;i<80;i++){try{await fetch('http://127.0.0.1:'+cdp+'/json/version');break;}catch{await sleep(250);}}

@@ -11,6 +11,7 @@ import {spawn} from 'node:child_process';
 import WebSocket from 'ws';
 import {loadImage,createCanvas} from '@napi-rs/canvas';
 import {PVS_GRID,PVS_HIDDEN,PVS_VISIBLE,decodeCells} from '../src/v2/atrium-pvs.js';
+import {ANGLE} from './chrome-setup.mjs';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
 const tag=arg('tag','pvs'),lifts=process.argv.includes('--lifts'),poses=Number(arg('poses',150)),port=Number(arg('cdp',9339)),site='http://127.0.0.1:'+arg('port',4211),width=1280,height=720;
@@ -30,7 +31,7 @@ for(let c=0;c<cells.length;c++){if(cells[c]!==PVS_HIDDEN)continue;hidden.push(c)
 console.log('hidden cells',hidden.length,'beside visible',edge.length);
 
 const profile=path.resolve('output/perf-walk/chrome-profile-pvs-check-'+port);await fs.rm(profile,{recursive:true,force:true});await fs.mkdir(profile,{recursive:true});
-const chrome=spawn(CHROME,['--remote-debugging-port='+port,'--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','--disable-extensions','--headless=new','--use-angle=d3d11','--enable-gpu','--ignore-gpu-blocklist',
+const chrome=spawn(CHROME,['--remote-debugging-port='+port,'--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','--disable-extensions','--headless=new',...ANGLE,'--enable-gpu','--ignore-gpu-blocklist',
  '--disable-background-timer-throttling','--disable-renderer-backgrounding','--force-device-scale-factor=1','--window-size='+width+','+height,'about:blank'],{stdio:'ignore'});
 try{
  for(let i=0;i<80;i++){try{await fetch('http://127.0.0.1:'+port+'/json/version');break;}catch{await sleep(250);}}

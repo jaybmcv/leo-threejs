@@ -23,6 +23,7 @@ import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
 import {tablesDiffer,withoutMoved} from './walk-owner-bake.scene.js';
 // The bake is for discrete desktop GPUs' piece size (src/v2/desk-piece.js), whatever GPU bakes it: its key holds the size.
 import {DESK_PIECE} from '../src/v2/desk-piece.js';
+import {ANGLE} from './chrome-setup.mjs';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
 const SITE_DIR=arg('site',null),TAG=arg('tag',null),PAGES=Number(arg('pages',2)),MINUTES=Number(arg('minutes',80)),TOP=Number(arg('top',8)),SLABS=Number(arg('slabs',2)),MARGIN=Number(arg('margin',4));
@@ -63,7 +64,7 @@ let seed=null;
 const chromes=new Set();process.on('exit',()=>{for(const c of chromes)c.kill();});
 async function browser(n){
  const port=CDP+n,profile=path.resolve('output/perf-walk/chrome-profile-owner-'+port);await fs.rm(profile,{recursive:true,force:true,maxRetries:20,retryDelay:250});await fs.mkdir(profile,{recursive:true});
- const chrome=spawn(CHROME,['--remote-debugging-port='+port,'--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','--disable-extensions','--headless=new','--use-angle=d3d11','--enable-gpu','--ignore-gpu-blocklist',
+ const chrome=spawn(CHROME,['--remote-debugging-port='+port,'--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','--disable-extensions','--headless=new',...ANGLE,'--enable-gpu','--ignore-gpu-blocklist',
   '--disable-background-timer-throttling','--disable-renderer-backgrounding','--js-flags=--max-old-space-size=8192','--window-size=1920,1080','about:blank'],{stdio:'ignore'});
  chromes.add(chrome);chrome.once('exit',()=>chromes.delete(chrome));
  for(let i=0;i<80;i++){try{await fetch('http://127.0.0.1:'+port+'/json/version');break;}catch{await sleep(250);}}
