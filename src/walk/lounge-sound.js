@@ -99,13 +99,16 @@ export function createLoungeSound(lounge,falls){
    voice(ctx,music,noise,t,NOTES[index]);if(++index===NOTES.length){index=0;loops++;}
   }
  }
- return {update(walker,soundOn,camera=null){
+ return {
+  // Whether the music is audible now (the Deck 16 gaming lounge track waits for this to clear: training-sound.js).
+  get audible(){return !!ctx&&music.gain.value>.003;},
+  update(walker,soundOn,camera=null,hush=false){
   const dome=lounge.dome,insideDome=Math.abs(walker.y-dome.centre.y)<dome.r&&Math.hypot(walker.x-dome.centre.x,walker.z-dome.centre.z)<dome.r;
   const dx=falls.a.x-falls.b.x,dz=falls.a.z-falls.b.z,len=dx*dx+dz*dz;
   const u=Math.max(0,Math.min(1,((walker.x-falls.b.x)*dx+(walker.z-falls.b.z)*dz)/len));
   const distance=Math.hypot(walker.x-(falls.b.x+u*dx),walker.z-(falls.b.z+u*dz));
   const waterLevel=soundOn&&Math.abs(walker.y-falls.a.y)<4?Math.max(0,1-distance/14)**2:0;
-  const musicOn=soundOn&&lounge.inside(walker)&&!insideDome;
+  const musicOn=soundOn&&!hush&&lounge.inside(walker)&&!insideDome;
   wanted=!!(waterLevel||musicOn);
   if(wanted&&!ctx){if(navigator.userActivation?.hasBeenActive===false)return;build();}
   if(!ctx)return;

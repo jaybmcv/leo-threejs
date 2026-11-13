@@ -19,7 +19,7 @@ import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/Buffe
 // Room frame (Area_d16-training-aft): x along the room (+x toward the nose), z across (+z the entry wall, doorway at
 // x 2..6), floor at y 0, wall faces at |x|=23.84 and |z|=7.84, the ceiling at 3.35. The aisle |z|<1.7 stays clear.
 const ROOM='Area_d16-training-aft';
-const END=23.84,SIDE=7.84,TOP=3.35,DOOR=[2,6],HEX=.25;
+const END=23.84,SIDE=7.84,TOP=3.35,DOOR=[2,6],HEX=.25,SOUND_FADE=3;
 const OLD=/^(Seat|Back|Seat_base|Meeting_table|Table_support|Worktop|Training_console|Equipment_cabinet|Status_display|Briefing_wall|Aisle_inlay|Polish_.*|Refined_.*)$/;
 const PCS=[-21,-17.4,-13.8,-10.2,-6.6,-3,.6,4.2],CONSOLES=[-21,-16.5,-12,-7.5,-3,10.5];
 const ACCENTS=[0xff3b5c,0x2fd8ff,0xff4fd8,0x7dff5a,0xffa53a,0x9d6bff];
@@ -301,6 +301,11 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
  // The room, in ship coordinates: where the floor lights and the mood holds.
  const within=(x,z)=>{let c=false;const w=outline.world;for(let i=0,j=w.length-1;i<w.length;j=i++){const [xi,zi]=w[i],[xj,zj]=w[j];if((zi>z)!==(zj>z)&&x<(xj-xi)*(z-zi)/(zj-zi)+xi)c=!c;}return c;};
  const inside={containsPoint:p=>p.y>=origin.y-.5&&p.y<=origin.y+TOP&&within(p.x,p.z)};
+ // How much of the room's music (training-sound.js) reaches a walker at p, 0 to 1: none outside the room or on another deck, easing in with the distance from the plan's doorway.
+ const toLocal=room.matrixWorld.clone().invert(),here=new T.Vector3();
+ const gap=(d=>{if(!d)return {x0:DOOR[0],x1:DOOR[1],z:SIDE};const c=here.set(...d.center).applyMatrix4(toLocal);return {x0:c.x-d.width/2,x1:c.x+d.width/2,z:c.z};})(layout.rooms?.find(r=>'Area_'+r.id===ROOM)?.door);
+ const soundLevel=p=>{if(!inside.containsPoint(p))return 0;here.set(p.x,p.y,p.z).applyMatrix4(toLocal);
+  const k=Math.min(1,Math.hypot(here.x-Math.max(gap.x0,Math.min(gap.x1,here.x)),here.z-gap.z)/SOUND_FADE),up=Math.min(1,(origin.y+TOP-p.y)/.25);return k*k*(3-2*k)*up;};
  // The mood: the walk's lights ease down and cool while the camera is in the room.
  let mood=0,shown=0,setMood=null;
  if(light){
@@ -341,5 +346,6 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
    if(Math.abs(mood-shown)>.002||(mood<.002&&shown)){shown=mood<.002?0:mood;setMood(shown);}
   },
   get mood(){return shown;},
+  soundLevel,
  };
 }
