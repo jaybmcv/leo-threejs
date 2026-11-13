@@ -21,7 +21,8 @@ import {createLifeSupportPipes} from './life-support-pipes.public.js';
 import {stripPlayFurniture,createKittens} from './kittens.public.js';
 import {prepareBlossomBed,createBlossomGarden} from './blossom.public.js';
 import {createCatTree,createNosePark} from './cat-tree.public.js';
-import {createKeelClub} from './keel-club.public.js';
+import {createKeelClub,inKeelHall} from './keel-club.public.js';
+import {findRestSpots as keelRestSpots} from './rest.js';
 import {prepareLoungeFalls,createLoungeFalls} from './lounge-falls.js';
 import {createDiningRobots} from './dining-robots.public.js';
 import {createHydrationNook} from './hydration-nook.public.js';
@@ -142,6 +143,11 @@ export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBa
  // Mudwater Arena's turning hologram cards, brand art, game link and pack counter (mudwater.js), before the room is
  // merged; its corridor entrance (door surround and pack standee) solid as plain boxes.
  const mudwater=createMudwater(ship,{urls,anisotropy});if(mudwater)colliders.addStatic(mudwater.solid,()=>true);colliders.commit();
+ // The Keel Club's seats and beds come from the club itself, not the bake, so a moved or reshaped lounger needs no rebake.
+ if(keelClub){const live=keelRestSpots(keelClub.seats),keep=s=>!inKeelHall(s.point);
+  for(let i=restSpots.length;i--;)if(!keep(restSpots[i]))restSpots.splice(i,1);
+  for(let i=seats.length;i--;)if(!keep(seats[i]))seats.splice(i,1);
+  restSpots.push(...live);seats.push(...solidSpots(live,colliders));}
  await yieldToPage();
  return {colliders,dropped,restSpots,seats,lounge,booth,poolTable,pinball,concession,theatreCast,provisions,pipework,kittens,diningRobots,hydration,trolley,wardTrolley,maze,mctBay,freightGate,blossom,catTree,nosePark,keelClub,loungeFalls,jaguarGate,entranceSigns,arcadeRow,vault,vaultLift,missionHolo,swordCase,chinampa,baggage,atmosphere,mudwater};
 }

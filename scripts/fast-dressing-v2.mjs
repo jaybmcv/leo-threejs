@@ -52,7 +52,8 @@ export const DRESSINGS={
    ['src/walk/main.authoring.js',/\bcorridorTrim\b/g,["import {corridorTrim} from './trim.authoring.js';"]]],
   // [consumer, its only importers]: the idle consumer is reached only through the files the uses check reads.
   idle:[['src/walk/trim.authoring.js',['src/walk/main.authoring.js']]],
-  imports:['package:three','src/v2/phase4-community.js','src/plan/placements.js','src/walk/collision.authoring.js','src/v2/prepared-geometry-record.js']},
+  // merge-by-material.js: each frame draws one mesh per material since 97f142ea (2026-11-08).
+  imports:['package:three','src/v2/phase4-community.js','src/plan/placements.js','src/walk/collision.authoring.js','src/v2/prepared-geometry-record.js','src/walk/merge-by-material.js']},
  // The rest of the authoring page's template-only props, hung after collision and the bake like the paintings: the
  // ship log boards, the comic books, Deck 1's hex floor and the observation lounge's compass inlay. Past their glue
  // the page only calls their runtime methods (the lookaheads below); their meshes reach nothing that is saved.
@@ -67,7 +68,7 @@ export const DRESSINGS={
  ...template('hex-floor','createHexFloor',r=>[r.group],
   {glue:'hexFloor=createHexFloor();',token:/\bcreateHexFloor\b|\bhexFloor\b(?!\?\.update\()/g,
    allowed:["import {createHexFloor} from './hex-floor.authoring.js';",'toBand(hexFloor.group);',',hexFloor=null,'],
-   imports:['src/v2/prepared-geometry-record.js','src/plan/selected-layout.js','package:three','src/plan/rooms.js','package:three/addons/utils/BufferGeometryUtils.js','src/service-circulation.js','src/transit.authoring.js'],
+   imports:['src/v2/prepared-geometry-record.js','src/plan/selected-layout.js','package:three','src/plan/rooms.js','package:three/addons/utils/BufferGeometryUtils.js','src/plan/geometry-v2.js','src/service-circulation.js','src/transit.authoring.js'],
    preload:['src/model.authoring.js','src/model.js']}),
  ...template('lounge-compass','createLoungeCompass',r=>r?[r]:[],
   {glue:'{const compass=createLoungeCompass();if(compass)toBand(compass);}',token:/\bcreateLoungeCompass\b/g,
@@ -205,7 +206,8 @@ function roomDressings(){
   'gaming-lounge':{room:'d16-training-aft',dress:'dressGamingLounge',create:'createGamingLounge',binding:'gaming',
    args:ctx=>[ctx.ship,{hemi:new T.HemisphereLight(0xffffff,0x444444,1),fill:new T.DirectionalLight(0xffffff,1),scene:new T.Scene()},{still:false}],
    glue:"gaming=feature('room:gaming-lounge',ship,()=>createGamingLounge(ship,{hemi,fill,scene},"+still+"));",
-   allowed:['if(gaming)toBand(gaming.group);',',gaming=null,','get gaming(){return gaming;}'],
+   // The room's music (training-sound.js) only reads the room's soundLevel while the walk runs: it draws and builds nothing.
+   allowed:['if(gaming)toBand(gaming.group);',',gaming=null,','get gaming(){return gaming;}','trainingSound=gaming?createTrainingSound(gaming):null;'],
    imports:['src/v2/prepared-geometry-record.js','src/plan/selected-layout.js','src/plan/rooms.js','package:three','package:three/addons/utils/BufferGeometryUtils.js'],
    reads:['export function createGamingLounge(ship,light=null,{still=false}={}){',...ROOM_READS,'function roomOutline(room){',
     "const plan=layout.rooms?.find(r=>'Area_'+r.id===ROOM)?.polygon,toLocal=room.matrixWorld.clone().invert(),y=room.matrixWorld.elements[13];",
@@ -213,7 +215,10 @@ function roomDressings(){
     'const outline=roomOutline(room),flat=(flip)=>new T.ShapeGeometry(new T.Shape(outline.local.map(([x,z])=>new T.Vector2(x,flip*z))));',
     'if(light){','const {hemi,fill,scene}=light,base={hemi:hemi.intensity,fill:fill.intensity,env:scene.environmentIntensity,sky:hemi.color.clone(),ground:hemi.groundColor.clone()};',
     'setMood=t=>{const f=(a,b)=>a+(b-a)*t;hemi.intensity=f(base.hemi,base.hemi*MOOD.hemi);fill.intensity=f(base.fill,base.fill*MOOD.fill);',
-    'scene.environmentIntensity=f(base.env,base.env*MOOD.env);hemi.color.lerpColors(base.sky,skyC,t);hemi.groundColor.lerpColors(base.ground,groundC,t);};']},
+    'scene.environmentIntensity=f(base.env,base.env*MOOD.env);hemi.color.lerpColors(base.sky,skyC,t);hemi.groundColor.lerpColors(base.ground,groundC,t);};',
+    // The room's music level (soundLevel, #533): the room frame inverted and the plan's doorway, read at run time only.
+    'const toLocal=room.matrixWorld.clone().invert(),here=new T.Vector3();',
+    "const gap=(d=>{if(!d)return {x0:DOOR[0],x1:DOOR[1],z:SIDE};const c=here.set(...d.center).applyMatrix4(toLocal);return {x0:c.x-d.width/2,x1:c.x+d.width/2,z:c.z};})(layout.rooms?.find(r=>'Area_'+r.id===ROOM)?.door);"]},
   // capsule-bubbles.js isn't the suite's to change here: its module code runs before the world is built, so an edit to it widens.
   surgery:{room:'d05-surgery-2',dress:'dressSurgery',create:'createSurgeryArms',binding:'surgeryArms',args:ctx=>[ctx.ship,{still:false}],
    glue:"surgeryArms=feature('room:surgery',ship,()=>createSurgeryArms(ship,"+still+"));if(surgeryArms)toBand(surgeryArms.group);",

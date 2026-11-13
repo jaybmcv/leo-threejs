@@ -5,7 +5,9 @@ import {installFilmLook} from './film-look.js';
 import {mountControlsSettings} from './controls-settings.js';
 import {mountFurSettings} from './fur-settings.js';
 import {savedFur} from './fur-colours.js';
-let furColour=savedFur(),furSettings=null;
+import {startOutfit} from './outfits.js';
+import {createWardrobe} from './wardrobe.js';
+let furColour=savedFur(),furSettings=null,outfit=startOutfit(),wardrobe=null;
 import {walkBindings,bindingLabel} from './bindings.js';
 let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 import {ATRIUM_VIEW} from '../v2/atrium-render-policy.js';
@@ -22,7 +24,8 @@ import {renderGotoMenu} from '../v2/goto-menu.js';
 import {gotoStand as v2GotoStand,yarnPlace} from '../v2/wayfinding.js';
 import {addWayfindingGuides} from '../v2/wayfinding-guides.js';
 import {createHangarDoor} from '../v2/hangar-door.js';
-let hangarDoor=null;
+import {createShuttleDoors} from './shuttle-doors.js';
+let hangarDoor=null,shuttleDoors=null;
 import {visibilityState} from '../v2/visibility-state.js';
 const spanChanged=visibilityState(),renderMetrics={span:[]};let spanQuery=null;
 import {createVisibilityQuery} from '../v2/visibility-query.js';
@@ -74,6 +77,7 @@ import {createStarDrift} from './star-drift.js';
 import {createAmbience} from './ambience.js';
 import {createLullaby} from './lullaby.js';
 import {createLoungeSound} from './lounge-sound.js';
+import {createTrainingSound} from './training-sound.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.prepared.js';
 import {corridorTrim} from './trim.prepared.js';
 import {connectLive,savedName,httpBase} from './net/live.js';
@@ -88,11 +92,13 @@ import {createArrivalMood} from './arrival-mood.js';
 import {Marks} from './marks.prepared.js';
 import {createChat} from './chat.js';
 import {createHostess} from './hostess.prepared.js';
+import {createPortableSelfie} from './portable-selfie.js';
 import {createPhotoSpots} from './photo-spots.js';
 import {wearHat,fit,FIT} from './hat.js';
 import {createYarn,YARN_SPOTS} from './yarn.js';
 import {BALL,createBallMesh} from './hamster-ball.js';
 import {createGlide} from './glide.js';
+import {createSkate,skateFooting} from './skate.js';
 import {createGrapple} from './grapple.js';
 import {ballBounce,ballDismount} from './ball-bounce.js';
 import {MeshBVH} from 'three-mesh-bvh';
@@ -101,6 +107,8 @@ import {keepSpot,takeSpot} from './last-spot.js';
 import {createJoin} from './join.js';
 import {createCaptainSays} from './captain-says.js';
 import {restrictedAt,publicStand} from './public-area.js';
+import {createUnstuck,popStand} from './unstuck.js';
+import {createWardPush} from './ward-trolley-push.js';
 import {KITTEN_POSE_NAMES} from './kittens.prepared.js';
 import {createAtriumKittens} from './arrival-atrium.prepared.js';
 import {createSurgeryArms} from './surgery.prepared.js';
@@ -116,6 +124,8 @@ import layout from '../plan/selected-layout.js';
 let emergencyDrill=null;const emergencyStation=drillStation(layout);
 import {createPawPool} from './pool/game.js';
 import {createPinball} from './pinball/game.js';
+import {createDarts} from './darts/game.js';
+import {createDartsLanes} from './darts/lanes.js';
 import {openOutside,closeOutside} from './outside-game.js';
 import {createMazeGame} from './maze/run.js';
 import {createTreasureGame} from './aquarium-treasure/game.js';
@@ -242,6 +252,8 @@ addEventListener('resize',resize);resize();
 
 deferRoomFrames();const ship=await loadPreparedShip(scene,status);scene.add(ship.root);
 const colliders=new Colliders();
+// The Camera button's portable selfie lens (portable-selfie.js): drawn in place of the walker's view while its panel is open.
+const portable=createPortableSelfie();
 // The ship map image is small; it loads alongside the models.
 const shipMap=new ShipMap(__MAP_URL__);shipMap.ready.then(()=>{$('minimap-button').hidden=false;}).catch(()=>{});
 
@@ -264,7 +276,10 @@ async function buildShip(){
  recovery=createRecoveryMood(ship,{hemi,fill,scene});arrivalMood=createArrivalMood(ship,{hemi,fill,scene});atriumMood=createAtriumMood({hemi,fill,scene});
  }});
  ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,catTree,nosePark,keelClub,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
+ // The Recreation Hall's darts lanes on its aft glass (darts/lanes.js): E at a throwing line opens the nine-dart challenge.
+ dartsLanes=createDartsLanes(ship);
  loungeSound=lounge&&loungeFalls?createLoungeSound(lounge,loungeFalls.soundLine):null;
+ rest=spotIndex(prepared.seats);// The Keel Club's seats were swapped in after afterRest (prepare.prepared.js).
  const {pipework,trolley,wardTrolley,mctBay,swordCase,theatreCast}=prepared;freightGate=prepared.freightGate;baggage=prepared.baggage;atmosphere=prepared.atmosphere;
  // The Container Maze in Container hold A (maze/hold.js; its clock and board are maze/run.js).
  mazeHold=prepared.maze;
@@ -282,6 +297,7 @@ async function buildShip(){
  await idle();
  // The gaming lounge's lights, screens, glass floor and starry ceiling (gaming-lounge.js), drawn with its deck band.
  gaming=createGamingLounge(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches});
+ trainingSound=gaming?createTrainingSound(gaming):null;
  await idle();
  // Deck 15 dressed for Halloween until November (halloween.js): its lanes' ceiling diffusers go dead before the merge.
  halloween=createHalloween(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches,sheet:$('clown-sheet')});
@@ -301,6 +317,8 @@ async function buildShip(){
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  status('Preparing the walk · 2/4 · placing activities…');await idle();
  const toBand=o=>{const band=bandOf(o.position.y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
+ // The shuttle cabins' door casings and sliding leaves on Deck 2 (shuttle-doors.js).
+ shuttleDoors=createShuttleDoors(toBand);
  for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pinballMachine?[pinballMachine.group]:[]),...(pawsOff?pawsOff.groups:[]),...(mudwater?[mudwater.group]:[]),...(arcadeRow?[arcadeRow.group]:[])])toBand(o);
  // The scenic photo spots' floor markers (photo-spots.js), each with its deck's band.
  photoSpots=createPhotoSpots();for(const g of photoSpots.groups)toBand(g);
@@ -315,6 +333,7 @@ async function buildShip(){
  if(hydration)toBand(hydration.group);
  if(trolley)toBand(trolley.group);
  if(typeof __WALK_DEBUG__!=="undefined"&&__WALK_DEBUG__)ship.v2RuntimeFeatures={wardTrolley,baggage,freightGate};if(wardTrolley)toBand(wardTrolley.group);
+ {const trolleyGroup=scene.getObjectByName('Ward_supply_trolley_world');wardPush=trolleyGroup?createWardPush(trolleyGroup,colliders):null;}
  if(mazeHold)toBand(mazeHold.group);
  if(mctBay)toBand(mctBay.group);
  // The aft freight gate (freight-gate.js): its iris, gantry, lanes and posters.
@@ -396,8 +415,8 @@ async function buildShip(){
  isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});settlePreparedStatic(ship);
 }
 let imagingScans=null,missionTimer=null;
-let atriumMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,photoSpots=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,keelClub=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,mct=null;
-let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null,atmosphere=null;
+let atriumMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,photoSpots=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,keelClub=null,loungeFalls=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,dartsLanes=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,trainingSound=null,mct=null;
+let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null,atmosphere=null,wardPush=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 // Lifeboat fittings (2,000 seats a deck with their headrests and harnesses, seen only through a hatch or from inside a
 // craft) draw only near the walker: drawn whole, they were most of the triangles in any view on the lower decks.
@@ -443,20 +462,29 @@ function cull(p,now=performance.now()){
  }
 }
 
-const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),lockHint:$('camera-lock-hint'),onAction:(a,arg)=>actions[a]?.(arg)});
+const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),lockHint:$('camera-lock-hint'),onAction:(a,arg)=>{if(a==='respawn'&&wardPush?.engaged){wardPush.reset(controller);return;}actions[a]?.(arg);}});
 const follow=new FollowCamera(camera,colliders);
 const controller=new Controller(colliders);
 let walker=null;
+// The skateboard (skate.js): Skate in the toolbar steps onto it where the floor is firm and level and nothing else has
+// the walker; the frame loop takes him off it when something does (skateBusy).
+const skate=createSkate({button:$('skate'),hint:$('skate-hint'),flipButton:$('kickflip'),controller,touch:()=>matchMedia('(pointer:coarse)').matches,
+ blocked:()=>document.body.dataset.ready!=='1'?'Still loading':skateBusy()?'Not now: step out of what you’re doing first':skateFooting(controller)});
+// Something else has the walker: a seat or bed, a treadmill, the ball, a swim, the hook, a glide, a game or a camera.
+function skateBusy(){return !!(resting||run||inBall||treasure?.active||controller.hook||controller.gliding||playing()||pawsOff?.active||graffiti?.active||emergencyDrill?.isOpen||portable?.active||wardPush?.engaged);}
 // The film look (film-look.js, chosen in the Graphics detail sheet): Stylised 3D drawn by the walk's own materials,
 // installed before the walk first draws.
 installFilmLook({renderer,scene,keep:()=>walker?.holder});
 const actions={
  view(){follow.mode=follow.mode==='first'?'third':'first';},
  use(){
+  if(wardPush?.engaged){wardPush.release();return;}
   if(!lifts)return;// still loading
   if(resting){standUp();return;}
-  const t=target();if(!t)return;
+  // Nothing to use in front: Enter or E presses Stuck? Pop out, when it is up (unstuck.js).
+  const t=target();if(!t){unstuck.press();return;}
   if(t.kind==='arrival-tour'){closePanels();arrivalTour.open();return;}
+  if(t.kind==='trolley-push'){emote=null;wardPush.begin(controller);return;}
   if(t.kind==='launch-ladder'){goTo({at:t.at,yaw:heading,lv:2,resolved:true});return;}
   if(t.kind==='cabin-glass'){cabinGlass.toggle(t.cabin);return;}
   if(t.kind==='call')lifts.call(t.lift,t.stop);
@@ -476,6 +504,7 @@ const actions={
   else if(t.kind==='clubhouse-call')vaultLift.call(t.lift,t.stop);
   else if(t.kind==='clubhouse-inside')openLiftPanel(t.lift,vaultLift);
   else if(t.kind==='pinball')pinballGame.open();
+  else if(t.kind==='darts')dartsGame.open(t.lane);
   else if(t.kind==='outside'){closePanels();emote=null;input.enabled=false;input.down.clear();openOutside($('outside-sheet'),$('outside-frame'));}
   else if(t.kind==='maze')maze.use(t);
   else if(t.kind==='treasure')treasure.use(t);
@@ -494,12 +523,13 @@ const actions={
   else if(t.kind==='tv'){closePanels();crownTv.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
  },
- escape(){if(treasure?.active){treasure.leave();return;}closePanels();arrivalTour?.close();},
+ escape(){if(wardPush?.engaged){wardPush.release();return;}if(treasure?.active){treasure.leave();return;}closePanels();arrivalTour?.close();},
  // (Nothing below until the walk is ready.)
  places(){if(ready())togglePlaces();},
  map(){if(ready())toggleMap();},
- crouch(){if(ready()&&!resting&&!inBall&&!treasure?.active){controller.toggle('crouch');emote=null;}},
- prone(){if(ready()&&!resting&&!inBall&&!treasure?.active){controller.toggle('prone');emote=null;}},
+ crouch(){if(ready()&&!resting&&!inBall&&!treasure?.active&&!wardPush?.engaged){controller.toggle('crouch');emote=null;}},
+ // On the skateboard X is the kickflip (skate.js), never lying flat.
+ prone(){if(skate.on){skate.kickflip();return;}if(ready()&&!resting&&!inBall&&!treasure?.active&&!wardPush?.engaged){controller.toggle('prone');emote=null;}},
  emotes(){if(ready())toggleEmotes();},
  // The ship log from anywhere aboard, starting on the changes made around the walker (changes-board.js).
  log(){if(ready())openLog();},
@@ -512,7 +542,7 @@ const actions={
  // How to play, and the tester guide (help.js).
  help(){if(ready())toggleHelp();},
  // Standing still, an emote plays until the walker moves (Voyager's Reach's wheel).
- emote(i){if(ready()&&!resting&&!inBall&&!treasure?.active&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
+ emote(i){if(ready()&&!resting&&!inBall&&!treasure?.active&&!skate.on&&!wardPush?.engaged&&EMOTES[i]&&controller.grounded){emote=EMOTES[i];controller.stance='stand';}},
  // The emote sheet uses the same bindings as the walk.
  sheet(code){
   const open=id=>!$(id).hidden;
@@ -524,6 +554,18 @@ const actions={
  },
 };
 let emote=null,pinged=-Infinity;const PING_GAP_MS=4000;
+// Stuck (unstuck.js): trying to move and getting nowhere, or wedged off the ground, brings up Stuck? Pop out. It lands the
+// walker on the nearest clear public floor 2 to 4 m away and in their sight, through findStand's and Go to's landing
+// checks, by goTo as Respawn does, so Leo live sees an ordinary move; it faces away from where they were stuck, and gives
+// where it landed. With none near it gives null and the button turns into Still stuck? Respawn, as it comes up when they
+// are stuck again by the last landing; only that press respawns.
+const unstuck=createUnstuck($('unstuck'),{pop(mode){
+ if(!ready())return null;
+ if(mode==='respawn'){actions.respawn();return null;}
+ const p=controller.position,fwd=follow.forward(),q=popStand([p.x,p.y,p.z],{colliders,restrictedAt,toward:[fwd.x,fwd.z],stand:at=>findStand(colliders,at,{radius:0}),check:at=>v2GotoStand(colliders,at)});
+ if(!q)return null;closePanels();emote=null;
+ return goTo({at:q.toArray(),yaw:Math.atan2(q.x-p.x,q.z-p.z),resolved:true})?q:null;
+}});
 // The clubhouse vault behind the arcade (vault.js): its door, and the password sheet it asks with.
 let vault=null,vaultLift=null;
 const VAULT_ASK='This door opens only for the clubhouse password.';
@@ -555,7 +597,7 @@ function goToSpot(spot){spot=remapSpot(spot);if(!goTo({at:spot.at,yaw:spot.yaw,r
 async function loadCosmo(){
  globalThis.LEO_THREE=T;globalThis.LEO_COSMO_EMOTES=__EMOTES_URL__;
  await new Promise((resolve,reject)=>{const s=Object.assign(document.createElement('script'),{src:__COSMO_SCRIPT__,async:true});s.onload=resolve;s.onerror=()=>reject(new Error('Cosmo could not load'));document.head.appendChild(s);});
- walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion);walker.setFur(furColour);scene.add(walker.holder);
+ walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion);walker.setFur(furColour);wardrobe=createWardrobe(walker.figure);wardrobe.set(outfit);scene.add(walker.holder);
  cosmoKit=await globalThis.LeoCosmo.createCosmoKit({poses:[...KITTEN_POSE_NAMES,...ACTOR_POSE_NAMES,'scanPatient']});
 }
 
@@ -587,6 +629,10 @@ const glide=createGlide(walker,artUrls);
 // The grapple hook (grapple.js, controller.js HOOK): Q, the right mouse button or the Hook button fires a line at the
 // middle of the view; held, Cosmo swings under it.
 const grapple=createGrapple(scene,{camera,colliders,controller,walker,hook:HOOK});
+// The aim dot (walk.html #aim-dot) marks the middle of the view, where the hook aims. It shows only while the hook can
+// fire: walking with the view, in third or first person, with no sheet, panel, game or camera open.
+const aimDot=$('aim-dot');let aimShown=false;
+const showAim=on=>{if(aimDot&&on!==aimShown){aimShown=on;aimDot.hidden=!on;}};
 function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());}
 // Stop before dismounting. In a tight spot the ball returns home so it cannot push Cosmo through a wall.
 function leaveBall(at=null){if(!inBall)return;
@@ -699,7 +745,7 @@ if(LIVE_URL){
  $('ping').hidden=false;$('help-ping').hidden=false;
 }
 // In a game here: what a pose says (pl).
-function playing(){return arcade.isOpen||pool.isOpen||pinballGame.isOpen||!!emergencyDrill?.isOpen||!$('outside-sheet').hidden||!!run;}
+function playing(){return arcade.isOpen||pool.isOpen||pinballGame.isOpen||dartsGame.isOpen||!!emergencyDrill?.isOpen||!$('outside-sheet').hidden||!!run;}
 // The pose others see. Resting, the body is where the bed or seat put it, not where the controller stands.
 // On a treadmill (Paws Off), it is where the run has him: on the belt, or on his back behind it after a fall.
 function myPose(riding=false){
@@ -763,7 +809,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuck,skate,glide,get wardPush(){return wardPush;},get portable(){return portable;},registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get shuttleDoors(){return shuttleDoors;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -794,13 +840,16 @@ let last=performance.now(),acc=0,lastHud=0,lastHeading=heading,lastSpeed=0,turnR
 const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WALKER.prone};
 renderer.setAnimationLoop(()=>{
  // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
- if(hubPanel.isOpen()&&firstViewReady)return;
+ if(hubPanel.isOpen()&&firstViewReady){showAim(false);return;}
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
  const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen&&!controlsSettings?.isOpen&&!furSettings?.isOpen});last=now;
  const k=input.read();if(graphicsSettings?.isOpen||controlsSettings?.isOpen||furSettings?.isOpen||emergencyDrill?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
  const fwd=follow.forward(),right=new T.Vector3(-fwd.z,0,fwd.x);
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
- if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(controller.gliding?(k.run?GLIDE.dive:GLIDE.speed):inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
+ if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(controller.gliding?(k.run?GLIDE.dive:GLIDE.speed):skate.on?WALKER.run:inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
+ // Holding the Medical ward's supply trolley (ward-trolley-push.js): any other activity lets go; the keys push and steer it.
+ if(wardPush?.engaged&&(!ready()||resting||run||inBall||treasure?.active||!input.enabled||playing()))wardPush.release();
+ if(wardPush?.engaged)wardPush.steer(k,wish,dt,WALKER.walk);
  if(emote&&(wish.lengthSq()>.01||k.jump))emote=null;
  // Moving off a seat or bed stands you up; in a transporter's driver's seat the keys drive it instead (transporter.js),
  // and the camera swings round behind it while it moves. A healing capsule holds you until you leave it (E or the button).
@@ -823,17 +872,21 @@ renderer.setAnimationLoop(()=>{
  // A tap shorter than a frame still counts as held for the first step.
  // In the ball the jump is one low hop (BALL.body.jump).
  // The grapple fires on a press and holds while the key is held; anything that takes the walker over lets go.
- const canHook=!resting&&!riding&&!run&&!inBall&&!treasure?.active&&!emergencyDrill?.isOpen&&!graffiti?.active&&ready();
+ const canHook=!resting&&!riding&&!run&&!inBall&&!wardPush?.engaged&&!treasure?.active&&!skate.on&&!emergencyDrill?.isOpen&&!graffiti?.active&&ready();
  if(!canHook)grapple.release();else{if(k.hook)grapple.fire();if(!k.hookHeld)grapple.release();}
+ showAim(canHook&&input.enabled&&!playing()&&!portable.active);
  if(!resting&&!riding&&!run&&!treasure?.active&&!emergencyDrill?.isOpen){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number),k.run&&!!controller.hook);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  treasure?.step(dt,k);
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
+ wardPush?.after(controller);
  const p=controller.position;
  // The parked ball is solid to walk into.
  if(!inBall&&!resting&&!run&&Math.abs(p.y-ball.mesh.position.y)<1.2){const b=ball.mesh.position,dx=p.x-b.x,dz=p.z-b.z,d=Math.hypot(dx,dz),reach=BALL.radius+BODY.radius;
   if(d<1e-4)p.x+=reach;else if(d<reach){p.x+=dx/d*(reach-d);p.z+=dz/d*(reach-d);}}
  // So are the transporters, parked or moving.
  if(!resting&&!run)mct.push(p,controller.body.radius);
+ // And the Medical ward's supply trolley, wherever it was left.
+ if(!resting&&!run)wardPush?.push(p,controller.body.radius);
  // Neither safety net keeps a lift car's floor to return to: the car may have gone by the time it is needed, leaving
  // only the shaft.
  const inCar=vaultLift?.inside(p)||lifts.lifts.some(l=>lifts.inside(l,p));
@@ -847,7 +900,11 @@ renderer.setAnimationLoop(()=>{
  // below Deck 1, and the inside of the hull under it (-54.6 m) used to catch fallers and count as safe ground.
  if(p.y<BELOW_SHIP){controller.place(safe);emote=null;}
  else if(controller.grounded&&!inCar&&!resting?.spot.tube)safe.copy(p);
- if(controller.speed>.15&&!resting)heading=dampAngle(heading,Math.atan2(controller.velocity.x,controller.velocity.z),12,dt);
+ // Stuck? Sensed only on foot with the walk's keys (unstuck.js): never seated, riding, in a lift car, in a game, swimming,
+ // in the ball, on the hook or the board, or with a panel open.
+ unstuck.update(dt,{free:canHook&&input.enabled&&!inCar&&!controller.hook&&!controller.gliding&&!pawsOff?.active&&!maze?.running&&!playing(),trying:Math.hypot(k.x,k.y)>.5,air:!controller.grounded,at:p});
+ if(wardPush?.engaged){heading=wardPush.yaw;if(!k.look.x&&(k.x||k.y))follow.yaw=dampAngle(follow.yaw,heading,1.5,dt);}
+ else if(controller.speed>.15&&!resting)heading=dampAngle(heading,Math.atan2(controller.velocity.x,controller.velocity.z),12,dt);
  // What the figure leans into: the turn (+ to its left) and the change of speed, both smoothed a little.
  if(dt>0){turnRate=T.MathUtils.damp(turnRate,Math.atan2(Math.sin(heading-lastHeading),Math.cos(heading-lastHeading))/dt,10,dt);accel=T.MathUtils.damp(accel,(controller.speed-lastSpeed)/dt,10,dt);}
  lastHeading=heading;lastSpeed=controller.speed;
@@ -860,7 +917,10 @@ renderer.setAnimationLoop(()=>{
   walker.body.rotation.set((-Math.PI/2+PILLOW_TILT)*T.MathUtils.smoothstep(run.tumble,.25,1),0,0);
   if(run.tumble>0)pose={kind:'lie',weight:run.tumble,seatHeight:walker.hipHeight};}
  if(!resting&&!run){walker.holder.position.copy(p);walker.holder.rotation.set(0,heading,0);walker.body.rotation.set(0,0,0);}
- const board=glide.update(dt,{gliding:controller.gliding&&!resting&&!run,speed:controller.speed,rise:controller.velocity.y,turnRate});follow.ride=board;
+ // Anything else that takes the walker over takes him off the skateboard; a landing ends its kickflip (skate.js).
+ if(skate.on&&skateBusy())skate.off();
+ skate.update(dt);
+ const board=glide.update(dt,{gliding:controller.gliding&&!resting&&!run,skating:skate.on&&!resting&&!run,flip:skate.flip,speed:controller.speed,rise:controller.velocity.y,turnRate});follow.ride=glide.ride;
  if(inBall){ball.mesh.position.copy(p);if(controller.grounded)ball.roll(dt,controller.velocity.x,controller.velocity.z);}
  tubeMesh.visible=!!resting?.spot.tube;if(tubeMesh.visible){const s=tubeSeat(resting.spot.tube);tubeMesh.position.set(s.x,KEEL.floor-RIVER.drop+.08,s.z);}
  walker.update(dt,{speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
@@ -872,7 +932,8 @@ renderer.setAnimationLoop(()=>{
  // Spraying the graffiti wall, the view squares up to it (graffiti.js), and its paint catches up.
  graffiti?.update(camera,now);
  // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle), or is off at the wall.
- walker.holder.visible=follow.mode!=='first'&&follow.current>.75&&!graffiti?.active;
+ walker.holder.visible=portable.active||(follow.mode!=='first'&&follow.current>.75&&!graffiti?.active);
+ if(portable.active)portable.point(walker.holder.position,walker.holder.rotation.y,WALKER.height*.6,colliders);
  capsuleView(!!resting?.stand&&resting.t===1&&follow.mode==='first');
  cull(p);
  remotes?.update(dt,{camera,low:viewSpan[0],high:viewSpan[1]},now);
@@ -893,7 +954,7 @@ renderer.setAnimationLoop(()=>{
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on,camera);
  loungeFalls?.update(dt,p);
- loungeSound?.update(p,ambience.on,camera);
+ trainingSound?.update(p,ambience.on,loungeSound?.audible);loungeSound?.update(p,ambience.on,camera,trainingSound?.audible);
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
  missionTimer?.update(dt,p);
@@ -901,7 +962,7 @@ renderer.setAnimationLoop(()=>{
  imagingScans?.update(dt,p,resting,remotes?.remotes);
  // The Container Maze's clock starts at its way in and drops if the walker leaves (maze/run.js).
  maze?.update(p,now);
- freightGate?.update(dt,p,bodies);hangarDoor?.update(dt,p);
+ freightGate?.update(dt,p,bodies);hangarDoor?.update(dt,p);shuttleDoors?.update(dt,p);
  chinampa?.update(dt,p);
  baggage?.update(dt,p);
  atmosphere?.update(dt,p);
@@ -912,10 +973,12 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!emergencyDrill?.isOpen){keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});draw(camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
- const shot=booth.update(now),spotShot=photoSpots?.update(now)||shot,left=shot.left||spotShot.left;$('countdown').hidden=!left;if(left)$('countdown').textContent=String(left);
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!dartsGame.isOpen&&!emergencyDrill?.isOpen){keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});draw(portable.active?portableView():camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
+ const shot=booth.update(now),spotShot=photoSpots?.update(now)||shot,camShot=portable.update(now),left=shot.left||spotShot.left||camShot.left;$('countdown').hidden=!left;if(left)$('countdown').textContent=String(left);
  if(shot.due)takePhoto();
  if(spotShot!==shot&&spotShot.due)takePhoto(photoSpots);
+ if(portable.active)$('camera-timer').textContent=camShot.left?'Photo in '+camShot.left+'…':'';
+ if(camShot.due)takePhoto(portable);
 });
 // One frame of the ship from `view`: the sky, the haze past the far plane, then the ship.
 function draw(view){
@@ -930,10 +993,10 @@ function takePhoto(lens=booth){
  const canvas=renderer.domElement,shown=walker.holder.visible,spot=lens===photoSpots?photoSpots.spot:null;walker.holder.visible=true;photoSpots?.show(false);
  lens.aim(canvas.width,canvas.height);lens.camera.updateMatrixWorld();draw(lens.camera);
  const copy=document.createElement('canvas');copy.width=canvas.width;copy.height=canvas.height;copy.getContext('2d').drawImage(canvas,0,0);
- photoPlace=spot?{frame:spot.place,name:spot.name,slug:spot.id}:{frame:'CROWN LOUNGE',name:'Crown lounge',slug:'crown-lounge'};
+ photoPlace=lens===portable?portable.place(describe(walker.holder.position).toUpperCase()):spot?{frame:spot.place,name:spot.name,slug:spot.id}:{frame:'CROWN LOUNGE',name:'Crown lounge',slug:'crown-lounge'};
  lastPhoto={place:photoPlace.slug,lens:lens.camera.position.toArray(),at:walker.holder.position.toArray()};
  photoSource=copy;photoNames=selfieNames(lens.camera);photoFilename=`leo-${photoPlace.slug}-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.jpg`;$('photo-names').checked=true;
- walker.holder.visible=shown;photoSpots?.show(true);draw(camera);
+ walker.holder.visible=shown;photoSpots?.show(!portable.active);draw(camera);
  const flash=$('photo-flash');flash.hidden=false;flash.getAnimations?.().forEach(a=>a.cancel());flash.animate?.([{opacity:.85},{opacity:0}],{duration:450}).finished.then(()=>{flash.hidden=true;},()=>{});
  renderPhoto(true);
 }
@@ -973,12 +1036,29 @@ $('selfie-backdrop').addEventListener('change',e=>{booth.setBackdrop(Number(e.ta
 $('selfie-angle').addEventListener('change',e=>booth.setAngle(Number(e.target.value)));
 $('selfie-start').addEventListener('click',()=>{closePanels();if(!booth.counting){live?.selfie();booth.start();}});
 $('photo-names').addEventListener('change',()=>{if(photoSource)renderPhoto();});
+// The Camera button (portable-selfie.js): the preview is the ship drawn through the lens, cropped 2:1 as the photo is, with
+// its controls under it. The cat stays where it is (input is off, as in any sheet) and Escape or Close puts everything back.
+function portableView(){const c=renderer.domElement;portable.aim(c.width,c.height);return portable.camera;}
+function openCamera(){
+ if(!lifts)return;closePanels();portable.open();
+ for(const key of ['side','dist','height','fov']){$('camera-'+key).value=portable.settings[key];$('camera-'+key+'-out').textContent=$('camera-'+key).value;}
+ $('camera-timer-set').value=String(portable.settings.timer);$('camera-timer').textContent='';
+ $('camera-panel').hidden=$('camera-frame').hidden=false;document.body.classList.add('camera-mode');photoSpots?.show(false);input.enabled=false;input.down.clear();$('camera-capture').focus();
+}
+function closeCamera(){
+ if(!portable.active)return;portable.close();$('camera-panel').hidden=$('camera-frame').hidden=true;document.body.classList.remove('camera-mode');photoSpots?.show(true);document.activeElement?.blur?.();
+}
+$('camera-open').addEventListener('click',openCamera);
+$('camera-close').addEventListener('click',closePanels);
+for(const key of ['side','dist','height','fov'])$('camera-'+key).addEventListener('input',e=>{portable.set(key,e.target.value);$('camera-'+key+'-out').textContent=e.target.value;});
+$('camera-timer-set').addEventListener('change',e=>portable.set('timer',e.target.value));
+$('camera-capture').addEventListener('click',()=>{if(!portable.active||portable.counting)return;if(portable.settings.timer)portable.start();else takePhoto(portable);});
 function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a));return a+d*(1-Math.exp(-lambda*dt));}
 
 // What's in front of the walker to use: a lift (call button or car panel) first, then the graffiti wall, the selfie camera, a comic book,
 // a ship log board, the telescope or an arcade cabinet, then a seat or bed.
 function target(){
- const p=controller.position;if(treasure?.active)return treasure.near(p);
+ const p=controller.position;if(wardPush?.engaged)return wardPush.holdTarget;if(treasure?.active)return treasure.near(p);
  const t=inBall?null:treasure?.near(p);if(t)return t;
  const l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
  const w=graffiti?.near(p)||crownTv?.near(p);if(w)return w;
@@ -991,8 +1071,9 @@ function target(){
  const welcome=inBall?null:arrivalTour?.near(p);if(welcome)return welcome;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
  const drill=inBall?null:emergencyStation.near(p);if(drill)return drill;
- const q=poolTable?.near(p)||maze?.near(p)||pinballMachine?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p)||leverPanel?.near(p)||(inBall?null:keelClub?.near(p,heading));if(q&&!(inBall&&q.kind==='treadmill'))return q;
+ const q=poolTable?.near(p)||maze?.near(p)||pinballMachine?.near(p)||dartsLanes?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p)||leverPanel?.near(p)||(inBall?null:keelClub?.near(p,heading));if(q&&!(inBall&&q.kind==='treadmill'))return q;
  // In the hamster ball: no seats, beds or treadmills; with nothing else to use, E climbs out.
+ const trolleyNear=inBall?null:wardPush?.near(p);if(trolleyNear)return trolleyNear;
  if(inBall)return {kind:'ball-out',label:'Get out of the ball'};
  const parked=ball.mesh.position;if(Math.abs(p.y-parked.y)<1.2&&Math.hypot(p.x-parked.x,p.z-parked.z)<BALL.radius+1)return {kind:'ball',label:'Get in the ball'};
  // A transporter's driver's seat or rear seats (transporter.js).
@@ -1024,8 +1105,8 @@ function settle(spot){
  if(lie){
   const head=spot.head.clone().normalize();yaw=Math.atan2(-head.x,-head.z);
   // The body lies along the bed, the back on the mattress and the head on the near half of the pillow (any further and
-  // it meets the headboard); restPose tips the upper body up onto the pillow.
-  pos=spot.point.clone().addScaledVector(head,-WALKER.height/2+.25);pos.y=spot.height+.13;
+  // it meets the headboard; a sun lounger, keel-club.js, slides it toward the foot so the head ends at the cushion); restPose tips the upper body up onto the pillow.
+  pos=spot.point.clone().addScaledVector(head,-WALKER.height/2+.25-(keelClub?.slideAt(spot.point)||0));pos.y=spot.height+.13;
   // A hammock (lounge.js) has no pillow: the body lies centred along it, clear of the bars at both ends.
   if(spot.hammock)pos.copy(spot.point).addScaledVector(head,-WALKER.height/2).setY(spot.height+.13);
  }else if(spot.kind==='stand'){
@@ -1130,13 +1211,13 @@ function toggleEmotes(){
  panel.hidden=false;input.enabled=false;list.querySelector('button')?.focus();
 }
 function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(colliders,place.at):findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();
- treasure?.leave(false);
+ treasure?.leave(false);wardPush?.release();
  // Going elsewhere from a transporter's driver's seat leaves it parked where it is.
  if(resting?.spot.mct?.seat==='driver')mct.park(resting.spot.mct.cart);resting=null;
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall(q);ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){furSettings?.close();emergencyDrill?.close();controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','spot-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();input.enabled=true;input.down.clear();}
+function closePanels(){furSettings?.close();emergencyDrill?.close();controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','spot-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();closeCamera();input.enabled=true;input.down.clear();}
 // The list is a current server snapshot, including visitors who have not sent a pose yet.
 // The list of who is aboard, while its sheet is open.
 function showAboardList(){
@@ -1229,6 +1310,13 @@ const pinballGame=createPinball({
  onBoard:b=>pinballMachine?.board.show(b),
 });
 if(!LIVE_URL)pinballGame.link(false);
+// The nine-dart challenge at the Recreation Hall's boards (darts/game.js): its keys are its own while it is open, and the
+// walk's come back on every way out. Best rounds stay on this device.
+const dartsGame=createDarts({
+ onOpen(){closePanels();emote=null;input.enabled=false;input.down.clear();input.jumpQueued=input.jumpHeld=false;},
+ onClose(){input.enabled=true;input.down.clear();input.jumpQueued=input.jumpHeld=false;},
+});
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__&&globalThis.__walk)Object.defineProperties(globalThis.__walk,{darts:{get:()=>dartsGame},dartsLanes:{get:()=>dartsLanes}});
 // One escape-shuttle practice flight. Its personal best stays in this browser.
 emergencyDrill=createEmergencyDrill({
  onOpen(){closePanels();emote=null;input.enabled=false;input.down.clear();input.jumpQueued=input.jumpHeld=false;controller.velocity.set(0,0,0);},
@@ -1239,7 +1327,7 @@ sound.addEventListener('click',()=>sound.setAttribute('aria-pressed',String(ambi
 const resButton=$('resolution');setRes(res);
 graphicsSettings=mountGraphicsSettings({onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
 controlsSettings=mountControlsSettings({emotes:EMOTES,onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
-furSettings=mountFurSettings({getColour:()=>furColour,onColour:value=>{furColour=value;walker.setFur(value);},onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
+furSettings=mountFurSettings({getColour:()=>furColour,onColour:value=>{furColour=value;walker.setFur(value);},getOutfit:()=>outfit,onOutfit:value=>{outfit=wardrobe?wardrobe.set(value):value;},onOpenChange(open){if(open)closePanels();input.enabled=!open;input.down.clear();input.jumpQueued=false;input.jumpHeld=false;input.runLatched=false;input.stickRun=false;input.zoom=0;input.look.x=0;input.look.y=0;input.stickVec.x=0;input.stickVec.y=0;}});
 resButton.addEventListener('click',()=>{resChosen=true;setRes((res+1)%RES.length);try{localStorage.setItem(RES_KEY,RES[res]);}catch{}});
 // Held for a higher jump, as Space is.
 $('jump').addEventListener('pointerdown',e=>{e.preventDefault();input.jumpQueued=true;input.jumpHeld=true;$('jump').setPointerCapture(e.pointerId);});

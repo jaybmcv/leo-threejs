@@ -608,6 +608,12 @@
     ],
     "via": "inherited"
   },
+  "src/walk/quantum-knitter.js": {
+    "owners": [
+      "d02-maintenance-aft"
+    ],
+    "via": "inherited"
+  },
   "src/walk/mission-timer.js": {
     "owners": [
       "d02-maintenance-aft"

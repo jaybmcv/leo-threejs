@@ -3,16 +3,17 @@ import layout from '../plan/selected-layout.js';
 import * as T from 'three';
 import {anchorObject} from '../plan/rooms.js';
 import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {contains} from '../plan/geometry-v2.js';
 import {serviceRoutes} from '../service-circulation.js';
 import {TRANSIT_CORES} from '../transit.authoring.js';
 
 // Deck 1's hallways on foot (from tester feedback): the service spine, its side corridors and the forward lift lobby
 // are laid with hexagon tiles that light up round where the walker stands and fade softly behind them, teal while
 // heading forward (toward the Forward lifts, +x) and orange while heading aft (toward the Aft lifts); walking across
-// the ship keeps the last colour. The tiles are a thin drawn layer 8 mm over the floor: the floor itself, its height and
-// its colliders are unchanged, and the guide lines, wayfinding edges and thresholds stay on top of it. Away from the
+// the ship keeps the last colour. The tiles are a thin drawn layer 16 mm over the floor (6 mm over the hex finish on the
+// corridor floors, which would hide a lower one): the floor itself, its height and its colliders are unchanged, and the guide lines, wayfinding edges and thresholds stay on top of it. Away from the
 // walker the grout lines are faint and fade out with distance, so the hallway reads as before.
-const DECK=1,HEX=.36,LIFT=.008,TRAIL=16,FADE=1.2,REACH=1.05;
+const DECK=1,HEX=.36,LIFT=.016,TRAIL=16,FADE=1.2,REACH=1.05;
 const TEAL=new T.Color('#2fd6c5'),ORANGE=new T.Color('#ff6a10');
 
 const VERTEX=`#include <common>
@@ -60,8 +61,28 @@ void main(){
 }`;
 
 // The hallway floors as rectangles [x0,x1,z0,z1]: the spine (on through the forward lift lobby, which transit.js lays
-// 8 m forward of the core) and each side corridor either side of it.
-function hallways(){const rects=[];for(const c of layout.circulation.corridors.filter(c=>c.deck===1))for(let i=1;i<c.points.length;i++){const a=c.points[i-1],b=c.points[i],w=c.width/2;rects.push([Math.min(a[0],b[0])-w,Math.max(a[0],b[0])+w,Math.min(a[1],b[1])-w,Math.max(a[1],b[1])+w]);}return {y:layout.decks[0].y,rects};}
+// 8 m forward of the core) and each side corridor either side of it, then the open slab off the corridors.
+// What is left of rectangle r once rectangle c is taken out of it.
+function minus(r,c){const [x0,x1,z0,z1]=r,[a0,a1,b0,b1]=c;if(a0>=x1||a1<=x0||b0>=z1||b1<=z0)return [r];const out=[],m0=Math.max(x0,a0),m1=Math.min(x1,a1);
+ if(x0<a0)out.push([x0,a0,z0,z1]);if(a1<x1)out.push([a1,x1,z0,z1]);if(z0<b0)out.push([m0,m1,z0,b0]);if(b1<z1)out.push([m0,m1,b1,z1]);return out;}
+const without=(r,cuts)=>{let pieces=[r];for(const c of cuts){const next=[];for(const p of pieces)next.push(...minus(p,c));pieces=next;if(!pieces.length)break;}return pieces;};
+// The open floor off the corridors, such as the apron round Aft spares & bulk stores: the Deck 1 slab's 1 m cells whose
+// corners all lie on the slab and clear of rooms and shafts (room floors are left alone), run-merged into rectangles.
+function apron(){
+ const d=layout.decks[0],slab=d.slab.outline,cuts=[...d.slab.holes.map(h=>h.polygon),...[...layout.rooms,...(layout.cabins||[])].filter(r=>r.deck===1&&!r.aggregate&&r.polygon).map(r=>r.polygon)].map(poly=>{const xs=poly.map(p=>p[0]),zs=poly.map(p=>p[1]);return {poly,x0:Math.min(...xs),x1:Math.max(...xs),z0:Math.min(...zs),z1:Math.max(...zs)};});
+ const X0=Math.floor(Math.min(...slab.map(p=>p[0]))),Z0=Math.floor(Math.min(...slab.map(p=>p[1]))),nx=Math.ceil(Math.max(...slab.map(p=>p[0])))-X0,nz=Math.ceil(Math.max(...slab.map(p=>p[1])))-Z0,ok=new Uint8Array((nx+1)*(nz+1));
+ for(let i=0;i<=nx;i++){const x=X0+i,hits=[];
+  for(let k=0,j=slab.length-1;k<slab.length;j=k++){const a=slab[k],b=slab[j];if((a[0]<=x)!==(b[0]<=x))hits.push(a[1]+(b[1]-a[1])*(x-a[0])/(b[0]-a[0]));}
+  hits.sort((p,q)=>p-q);const here=cuts.filter(c=>x>=c.x0&&x<=c.x1);
+  for(let j=0;j<=nz;j++){const z=Z0+j;let n=0;for(const h of hits)if(h<z)n++;else break;if(n%2&&!here.some(c=>z>=c.z0&&z<=c.z1&&contains(c.poly,[x,z])))ok[i*(nz+1)+j]=1;}}
+ const cell=(i,j)=>ok[i*(nz+1)+j]&&ok[(i+1)*(nz+1)+j]&&ok[i*(nz+1)+j+1]&&ok[(i+1)*(nz+1)+j+1],rects=[];let open=new Map();
+ for(let i=0;i<=nx;i++){const next=new Map();
+  if(i<nx)for(let j=0;j<nz;){if(!cell(i,j)){j++;continue;}let k=j;while(k<nz&&cell(i,k))k++;const key=j+','+k,run=open.get(key);if(run){next.set(key,run);open.delete(key);}else next.set(key,{x0:X0+i,z0:Z0+j,z1:Z0+k});j=k;}
+  for(const r of open.values())rects.push([r.x0,X0+i,r.z0,r.z1]);open=next;}
+ return rects;}
+function hallways(){const lanes=[];for(const c of layout.circulation.corridors.filter(c=>c.deck===1))for(let i=1;i<c.points.length;i++){const a=c.points[i-1],b=c.points[i],w=c.width/2;lanes.push([Math.min(a[0],b[0])-w,Math.max(a[0],b[0])+w,Math.min(a[1],b[1])-w,Math.max(a[1],b[1])+w]);}
+ // No two rectangles overlap, or the lit tiles there would be drawn twice.
+ const rects=[];for(const r of lanes)rects.push(...without(r,rects));const lanesOnly=rects.slice();for(const r of apron())rects.push(...without(r,lanesOnly));return {y:layout.decks[0].y,rects};}
 
 export function createHexFloor(){
  const {y,rects}=hallways();

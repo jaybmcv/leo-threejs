@@ -12,7 +12,7 @@ const SCRIPTS=[
  'check-lullaby','check-maze','check-pinball','check-treasure','check-mudwater',
  // Ship features and walk rules that build only what they test.
  'check-walk-performance','check-otherside','phase4-room-floor-fixture','check-kitten-supports-v2','check-cat-tree','check-cat-tree-landings',
- 'check-nose-park','check-keel-club','check-clubhouse-access-v2','check-public-area','check-joins','check-release-v2','check-sign-render-v2','check-lobby-tile-v2','check-halloween-v2',
+ 'check-nose-park','check-keel-club','check-clubhouse-access-v2','check-public-area','check-joins','check-unstuck','check-release-v2','check-sign-render-v2','check-lobby-tile-v2','check-halloween-v2',
  'check-crew-gallery-v2','check-build-cache-v2','check-privacy-classes-v2','check-export-metadata-v2','check-atrium-proxy-fade',
 ];
 const started=performance.now(),jobs=Math.max(1,Number(process.env.LEO_QUICK_JOBS)||3),results=[];
