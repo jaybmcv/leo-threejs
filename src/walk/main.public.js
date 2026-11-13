@@ -1254,8 +1254,8 @@ function settle(spot){
  if(lie){
   const head=spot.head.clone().normalize();yaw=Math.atan2(-head.x,-head.z);
   // The body lies along the bed, the back on the mattress and the head on the near half of the pillow (any further and
-  // it meets the headboard); restPose tips the upper body up onto the pillow.
-  pos=spot.point.clone().addScaledVector(head,-WALKER.height/2+.25);pos.y=spot.height+.13;
+  // it meets the headboard; a sun lounger, keel-club.js, slides it toward the foot so the head ends at the cushion); restPose tips the upper body up onto the pillow.
+  pos=spot.point.clone().addScaledVector(head,-WALKER.height/2+.25-(keelClub?.slideAt(spot.point)||0));pos.y=spot.height+.13;
   // A hammock (lounge.js) has no pillow: the body lies centred along it, clear of the bars at both ends.
   if(spot.hammock)pos.copy(spot.point).addScaledVector(head,-WALKER.height/2).setY(spot.height+.13);
  }else if(spot.kind==='stand'){
