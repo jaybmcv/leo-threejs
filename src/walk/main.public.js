@@ -731,6 +731,10 @@ const glide=createGlide(walker,artUrls);
 // The grapple hook (grapple.js, controller.js HOOK): Q, the right mouse button or the Hook button fires a line at the
 // middle of the view; held, Cosmo swings under it.
 const grapple=createGrapple(scene,{camera,colliders,controller,walker,hook:HOOK});
+// The aim dot (walk.html #aim-dot) marks the middle of the view, where the hook aims. It shows only while the hook can
+// fire: walking with the view, in third or first person, with no sheet, panel, game or camera open.
+const aimDot=$('aim-dot');let aimShown=false;
+const showAim=on=>{if(aimDot&&on!==aimShown){aimShown=on;aimDot.hidden=!on;}};
 function enterBall(){emote=null;inBall=true;controller.body=BALL.body;controller.place(ball.mesh.position.clone());}
 // Stop before dismounting. In a tight spot the ball returns home so it cannot push Cosmo through a wall.
 function leaveBall(at=null){if(!inBall)return;
@@ -961,7 +965,7 @@ const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WA
 setTimeout(()=>{warmed=true;},3*WARM_WAIT_MS);window.LEO_WALK_ARMED=true;
 renderer.setAnimationLoop(()=>{
  // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
- if(hubPanel.isOpen()&&firstViewReady)return;
+ if(hubPanel.isOpen()&&firstViewReady){showAim(false);return;}
  if(!warmed)return;
  frameReadout.begin();
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
@@ -994,6 +998,7 @@ renderer.setAnimationLoop(()=>{
  // The grapple fires on a press and holds while the key is held; anything that takes the walker over lets go.
  const canHook=!resting&&!riding&&!run&&!inBall&&!treasure?.active&&!emergencyDrill?.isOpen&&!graffiti?.active&&ready();
  if(!canHook)grapple.release();else{if(k.hook)grapple.fire();if(!k.hookHeld)grapple.release();}
+ showAim(canHook&&input.enabled&&!playing()&&!portable.active);
  if(!resting&&!riding&&!run&&!treasure?.active&&!emergencyDrill?.isOpen){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number),k.run&&!!controller.hook);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  treasure?.step(dt,k);
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
