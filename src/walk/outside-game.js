@@ -1,62 +1,16 @@
-// Games hosted outside Leo, opened in a window over the walk: Neon Arena Survival (arcade.js) and Asteroid Defense (the
-// sealed airlock panel on Deck 1's lifeboat bank). The page loads only when the window opens and is dropped when it
-// closes, so nothing outside loads until a visitor chooses to play. The frame is sandboxed without top navigation or popups:
-// the game cannot send the visitor away from Leo, and Back to Leo (or Esc, while Leo has the keys) closes the window and
-// returns to the walk where they stood. Leo sends the game nothing: no referrer, no visitor identity.
-import overrides from '../plan/room-fitout-overrides-v2.json' with {type:'json'};
-
+// The arcade's Neon Arena Survival (arcade.js): a game hosted outside Leo, opened in a window over the walk. The page loads
+// only when the window opens and is dropped when it closes, so nothing outside loads until a visitor chooses to play. The
+// frame is sandboxed without top navigation or popups: the game cannot send the visitor away from Leo, and Back to Leo
+// (or Esc, while Leo has the keys) closes the window and returns to the walk where they stood.
 export const NEON_ARENA_URL='https://neonarenasurvival.grok.me/';
-export const GAMES={
- neon:{url:NEON_ARENA_URL,eyebrow:'Deck 17 arcade',title:'Neon Arena Survival',back:'returns you to the arcade',
-  sandbox:'allow-scripts allow-same-origin allow-forms allow-pointer-lock allow-modals'},
- // Scripts and pointer lock are what play needs; no forms, dialogs, popups or navigation away.
- asteroid:{url:'https://asteroiddefense.grok.me/',eyebrow:'Deck 1 lifeboat bank',title:'Asteroid Defense',back:'returns you to the corridor',
-  sandbox:'allow-scripts allow-same-origin allow-pointer-lock',retry:true,wait:12},
-};
 
-const LATE='The game has not answered yet. Try Reload game, open it in a new tab, or go Back to Leo.';
-let timer=0;
-function clear(){clearTimeout(timer);timer=0;}
-// The window's words come from the game's entry, so a second game never shows the first one's name.
-function dress(sheet,frame,g){
- const q=s=>sheet.querySelector(s);
- q('.eyebrow').textContent=g.eyebrow;q('#outside-title').textContent=g.title;frame.title=g.title;
- const note=q('.note');note.textContent='';
- note.append(`A game from outside Leo, shown in this window. Back to Leo ${g.back}. Not showing? The game’s site may not allow being shown here; `);
- const a=document.createElement('a');a.href=g.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent='open it in a new tab';note.append(a,'.');
- sheet.classList.toggle('retryable',!!g.retry);const re=q('[data-reload]');if(re)re.onclick=()=>reloadOutside(sheet,frame);
- frame.setAttribute('sandbox',g.sandbox);frame.setAttribute('referrerpolicy','no-referrer');
-}
-export function openOutside(sheet,frame,game='neon'){
- const g=GAMES[game]||GAMES.neon,wait=sheet.querySelector('.wait');
- clear();dress(sheet,frame,g);wait.textContent='Loading the game…';
+export function openOutside(sheet,frame,url=NEON_ARENA_URL){
  sheet.classList.toggle('loading',true);sheet.hidden=false;
- frame.onload=()=>{clear();sheet.classList.toggle('loading',false);frame.focus();};
- // A load event only says a page arrived, never that the game runs; what is left to say is in the note and Reload game.
- // If nothing arrives at all, say so rather than wait for ever.
- if(g.wait){const late=()=>{wait.textContent=LATE;};if(navigator.onLine===false)late();else timer=setTimeout(late,g.wait*1000);}
- frame.src=g.url;
- sheet.dataset.game=game;
+ frame.onload=()=>{sheet.classList.toggle('loading',false);frame.focus();};
+ frame.src=url;
 }
-// Starts the same game again from a blank frame.
-export function reloadOutside(sheet,frame){frame.onload=null;frame.src='about:blank';openOutside(sheet,frame,sheet.dataset.game);}
-// Drops the page, so the game stops and its sound with it. The keys go back to Leo's page.
+// Drops the page, so the game stops and its sound with it.
 export function closeOutside(sheet,frame){
- clear();frame.onload=null;sheet.classList.toggle('loading',false);
+ frame.onload=null;sheet.classList.toggle('loading',false);
  const src=frame.getAttribute('src');if(src&&src!=='about:blank')frame.src='about:blank';
- if(document.activeElement===frame)frame.blur();
-}
-
-// The red button beside the sealed airlock on the lifeboat bank (room-fitout-overrides-v2.json, d01-launch-d-15): in front
-// of it, E opens Asteroid Defense. The panel and button sit on the room's outer wall; the room's own side gets no prompt.
-export const ASTEROID_ROOM='d01-launch-d-15';
-export function asteroidStation(layout){
- const room=layout.rooms.find(r=>r.id===ASTEROID_ROOM),button=overrides[ASTEROID_ROOM]?.add?.find(p=>p.part==='asteroid_defense_button');
- if(!room||!button)throw Error('Missing Asteroid Defense panel');
- const o=room.fittingFrame?.origin||room.frame?.origin||[room.x,room.y,room.z],yaw=room.fittingFrame?.yaw??room.frame?.yaw??room.yaw??0,c=Math.cos(yaw),s=Math.sin(yaw);
- const [bx,by,bz]=button.at,point=[o[0]+c*bx+s*bz,o[1]+by,o[2]-s*bx+c*bz];
- return {room:room.id,point,
-  near(p){const dx=p.x-o[0],dz=p.z-o[2],u=c*dx-s*dz,v=s*dx+c*dz;
-   return p.y-o[1]>-.1&&p.y-o[1]<1&&u<bx&&Math.hypot(u-bx,v-bz)<1.6?{kind:'outside',game:'asteroid',label:'Play '+GAMES.asteroid.title}:null;},
- };
 }
