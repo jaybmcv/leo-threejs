@@ -125,6 +125,11 @@ export function createCatTree(ship){
  const hidden=new T.MeshBasicMaterial({visible:false});
  const parts=[],lights=[],dens=[],sprigs=[],sprigCards=[],walls=[],grounds={island:[],ramp:[],platform:[],bridge:[],step:[],cushion:[]},addWall=(...g)=>walls.push(...g);
  const clear=clearOf(),y0=TREE.floor;
+ // A mound's collider: one thin lid `r` wide, `h` above the island, a walk surface. From the side its rim stops a walker
+ // (the capsule spans it), and from above a cat that jumps onto it stands on it, with head room under the Deck 7 landing.
+ // It was a closed prism of guard walls, which are no ground: a cat that jumped onto one sank through its bare top, and
+ // with that over its head could neither jump nor walk out; where mounds overlapped, the prisms also walled off floor.
+ const mounds=[],moundLid=(x,z,r,h,seg)=>{mounds.push([x,z,r,h]);grounds.island.push(new T.CircleGeometry(r,seg,-Math.PI/2).rotateX(-Math.PI/2).translate(x,y0+.25+h,z));};
 
  // Island: a felt-moss disc with a low rim, mounds and boulders round the edge.
  {const disc=new T.CylinderGeometry(TREE.island,TREE.island+.3,.25,72);at(disc,TREE.x,y0+.125,TREE.z);parts.push(paint(disc,C.moss,.08,rnd));grounds.island.push(disc.clone());
@@ -133,10 +138,10 @@ export function createCatTree(ship){
   for(let i=0,made=0;i<120&&made<28;i++){const a=rnd()*Math.PI*2,r=TREE.island-1.1-rnd()*2.6,x=TREE.x+Math.cos(a)*r,z=TREE.z+Math.sin(a)*r;if(!clear(x,y0+.3,z,1)||!offWalk(x,z,2.2)||!offFootDoor(x,z,1.6))continue;made++;
    const s=.9+rnd()*.55;for(let k=0;k<3;k++){const o=k===0?[0,0]:[(rnd()-.5)*1.6*s,(rnd()-.5)*1.6*s],r0=s*(k===0?1:.7+rnd()*.2),b=new T.SphereGeometry(r0,9,6);b.scale(1.1,.8,1.1);at(b,x+o[0],y0+.25+r0*.55,z+o[1]);parts.push(paint(b,[C.mossDark,C.moss,C.leaf[1]][k],.06,rnd));
     if(k===0)for(const m of [0,Math.PI/2])for(let q=1;q<10;q++){const t=q/10*Math.PI,d=new T.PlaneGeometry(.2,.05);d.rotateZ(Math.PI/2-t);d.rotateY(m);const cx=Math.cos(t)*r0*1.11,cy=Math.sin(t)*r0*.81;d.translate(Math.cos(m)*cx,cy,-Math.sin(m)*cx);parts.push(paint(at(d,x+o[0],y0+.25+r0*.55,z+o[1]),0xf2d67a));}}
-   addWall(new T.CylinderGeometry(s*1.4,s*1.5,s*1.4,10).translate(x,y0+.25+s*.7,z));}
+   moundLid(x,z,s*.7,.8,10);}
   for(let i=0,made=0;i<40&&made<5;i++){const a=rnd()*Math.PI*2,r=TREE.island-1-rnd()*3,x=TREE.x+Math.cos(a)*r,z=TREE.z+Math.sin(a)*r;if(!clear(x,y0+.3,z,.8)||!offWalk(x,z,1)||!offFootDoor(x,z,.8))continue;made++;
    if(made===3){const f=fish(C.toy[2]);f.scale(1.3,1.3,1.3);f.rotateY(a);at(f,x,y0+.55,z);parts.push(f);continue;}
-   parts.push(yarn(.8,C.toy[made%2?0:3],rnd,x,y0+1.05,z));addWall(new T.CylinderGeometry(.8,.8,1.6,8).translate(x,y0+1.05,z));}
+   parts.push(yarn(.8,C.toy[made%2?0:3],rnd,x,y0+1.05,z));moundLid(x,z,.8,.8,8);}
  }
  // Trunk: a felt lathe with rope bands, a broad buttress root at five places away from the ramp's foot.
  {const ys=[...Array.from({length:40},(_,h)=>y0+.2+h*(TREE.top-y0-.2)/39),...DENS.flatMap(d=>[d.y,d.y+d.h])].sort((a,b)=>a-b);
@@ -335,7 +340,7 @@ export function createCatTree(ship){
  for(const o of near.children)if(o.isMesh)o.userData.noCollide=true;
  group.updateMatrixWorld(true);solid.updateMatrixWorld(true);
  mergeByMaterial(far);
- return {group,solid,seats,bounds:{y0:TREE.floor,y1:TREE.top+.5}};
+ return {group,solid,seats,mounds,bounds:{y0:TREE.floor,y1:TREE.top+.5}};
 }
 
 // ---- The Toybox Park: the Deck 6 floor of the atrium nose round the tree, in the same felt and knit. Port is a yarn
