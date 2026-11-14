@@ -119,6 +119,9 @@ import {createGraffiti} from './graffiti.js';
 import {createCrownTv} from './crown-tv.js';
 import {createInvasion} from './invasion/game.js';
 import {createEmergencyDrill} from './emergency-drill/game.js';
+import {createMctRepair} from './mct-repair/game.js';
+import {mctRepairStations} from './mct-bay.js';
+let mctRepair=null;const repairStations=mctRepairStations();
 import {drillStation} from './emergency-drill/station.js';
 import layout from '../plan/selected-layout.js';
 let emergencyDrill=null;const emergencyStation=drillStation(layout),asteroid=asteroidStation(layout);
@@ -497,6 +500,7 @@ const actions={
   else if(t.kind==='read'){closePanels();showInfo($('info-sheet'),t.info);input.enabled=false;}
   else if(t.kind==='play')arcade.open();
   else if(t.kind==='emergency-drill')emergencyDrill.open();
+  else if(t.kind==='mct-repair')mctRepair.open(t.bay);
   else if(t.kind==='log')changeLog.open({near:controller.position});
   else if(t.kind==='pool')pool.open();
   else if(t.kind==='vault')openVault();
@@ -745,7 +749,7 @@ if(LIVE_URL){
  $('ping').hidden=false;$('help-ping').hidden=false;
 }
 // In a game here: what a pose says (pl).
-function playing(){return arcade.isOpen||pool.isOpen||pinballGame.isOpen||dartsGame.isOpen||!!emergencyDrill?.isOpen||!$('outside-sheet').hidden||!!run;}
+function playing(){return arcade.isOpen||pool.isOpen||pinballGame.isOpen||dartsGame.isOpen||!!emergencyDrill?.isOpen||!!mctRepair?.isOpen||!$('outside-sheet').hidden||!!run;}
 // The pose others see. Resting, the body is where the bed or seat put it, not where the controller stands.
 // On a treadmill (Paws Off), it is where the run has him: on the belt, or on his back behind it after a fall.
 function myPose(riding=false){
@@ -809,7 +813,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuck,skate,glide,get wardPush(){return wardPush;},get portable(){return portable;},registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get shuttleDoors(){return shuttleDoors;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},emergencyStation,asteroid,outsideGames,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuck,skate,glide,get wardPush(){return wardPush;},get portable(){return portable;},registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get shuttleDoors(){return shuttleDoors;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},get mctRepair(){return mctRepair;},repairStations,emergencyStation,asteroid,outsideGames,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -843,7 +847,7 @@ renderer.setAnimationLoop(()=>{
  if(hubPanel.isOpen()&&firstViewReady){showAim(false);return;}
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
  const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen&&!controlsSettings?.isOpen&&!furSettings?.isOpen});last=now;
- const k=input.read();if(graphicsSettings?.isOpen||controlsSettings?.isOpen||furSettings?.isOpen||emergencyDrill?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
+ const k=input.read();if(graphicsSettings?.isOpen||controlsSettings?.isOpen||furSettings?.isOpen||emergencyDrill?.isOpen||mctRepair?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
  const fwd=follow.forward(),right=new T.Vector3(-fwd.z,0,fwd.x);
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
  if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(controller.gliding?(k.run?GLIDE.dive:GLIDE.speed):skate.on?WALKER.run:inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
@@ -872,10 +876,10 @@ renderer.setAnimationLoop(()=>{
  // A tap shorter than a frame still counts as held for the first step.
  // In the ball the jump is one low hop (BALL.body.jump).
  // The grapple fires on a press and holds while the key is held; anything that takes the walker over lets go.
- const canHook=!resting&&!riding&&!run&&!inBall&&!wardPush?.engaged&&!treasure?.active&&!skate.on&&!emergencyDrill?.isOpen&&!graffiti?.active&&ready();
+ const canHook=!resting&&!riding&&!run&&!inBall&&!wardPush?.engaged&&!treasure?.active&&!skate.on&&!mctRepair?.isOpen&&!emergencyDrill?.isOpen&&!graffiti?.active&&ready();
  if(!canHook)grapple.release();else{if(k.hook)grapple.fire();if(!k.hookHeld)grapple.release();}
  showAim(canHook&&input.enabled&&!playing()&&!portable.active);
- if(!resting&&!riding&&!run&&!treasure?.active&&!emergencyDrill?.isOpen){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number),k.run&&!!controller.hook);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ if(!resting&&!riding&&!run&&!treasure?.active&&!mctRepair?.isOpen&&!emergencyDrill?.isOpen){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number),k.run&&!!controller.hook);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  treasure?.step(dt,k);
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
  wardPush?.after(controller);
@@ -973,7 +977,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!dartsGame.isOpen&&!emergencyDrill?.isOpen){keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});draw(portable.active?portableView():camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!dartsGame.isOpen&&!mctRepair?.isOpen&&!emergencyDrill?.isOpen){keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});draw(portable.active?portableView():camera);if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}}}
  const shot=booth.update(now),spotShot=photoSpots?.update(now)||shot,camShot=portable.update(now),left=shot.left||spotShot.left||camShot.left;$('countdown').hidden=!left;if(left)$('countdown').textContent=String(left);
  if(shot.due)takePhoto();
  if(spotShot!==shot&&spotShot.due)takePhoto(photoSpots);
@@ -1070,6 +1074,7 @@ function target(){
  const g=changeLog.near(p);if(g)return g;
  const welcome=inBall?null:arrivalTour?.near(p);if(welcome)return welcome;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
+ const repair=inBall?null:repairStations.near(p);if(repair)return repair;
  const drill=inBall?null:emergencyStation.near(p);if(drill)return drill;
  const sealed=inBall?null:asteroid.near(p);if(sealed)return sealed;
  const q=poolTable?.near(p)||maze?.near(p)||pinballMachine?.near(p)||dartsLanes?.near(p)||arcadeRow?.near(p)||pawsOff?.near(p)||mudwater?.near(p)||halloween?.near(p)||leverPanel?.near(p)||(inBall?null:keelClub?.near(p,heading));if(q&&!(inBall&&q.kind==='treadmill'))return q;
@@ -1218,7 +1223,7 @@ function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(collide
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall(q);ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){furSettings?.close();emergencyDrill?.close();controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','spot-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();closeCamera();input.enabled=true;input.down.clear();}
+function closePanels(){furSettings?.close();emergencyDrill?.close();mctRepair?.close();controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','spot-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();closeCamera();input.enabled=true;input.down.clear();}
 // The list is a current server snapshot, including visitors who have not sent a pose yet.
 // The list of who is aboard, while its sheet is open.
 function showAboardList(){
@@ -1318,6 +1323,11 @@ const dartsGame=createDarts({
  onClose(){input.enabled=true;input.down.clear();input.jumpQueued=input.jumpHeld=false;},
 });
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__&&globalThis.__walk)Object.defineProperties(globalThis.__walk,{darts:{get:()=>dartsGame},dartsLanes:{get:()=>dartsLanes}});
+// One escape-shuttle practice flight. Its personal best stays in this browser.
+mctRepair=createMctRepair({
+ onOpen(){closePanels();emote=null;input.enabled=false;input.down.clear();input.jumpQueued=input.jumpHeld=false;input.hookQueued=input.hookHeld=input.hookMouse=false;input.stickVec.x=input.stickVec.y=0;input.look.x=input.look.y=0;input.zoom=0;controller.velocity.set(0,0,0);},
+ onClose(){input.enabled=true;input.down.clear();input.jumpQueued=input.jumpHeld=false;input.hookQueued=input.hookHeld=input.hookMouse=false;input.stickVec.x=input.stickVec.y=0;input.look.x=input.look.y=0;input.zoom=0;},
+});
 // One escape-shuttle practice flight. Its personal best stays in this browser.
 emergencyDrill=createEmergencyDrill({
  onOpen(){closePanels();emote=null;input.enabled=false;input.down.clear();input.jumpQueued=input.jumpHeld=false;controller.velocity.set(0,0,0);},
