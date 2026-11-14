@@ -207,12 +207,12 @@
       "fixed": true,
       "reason": "Lighting/asset loading, DOM input/chat, lift state or saved-link math; no geometry placement.",
       "features": [
-        "PMREM.cubeUv"
+        "PMREM"
       ],
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "0c3e3b82120b3e3a3d0cc44130e3cb729e6588f5c8b9576f19f0e8fc3bed20bc"
+      "signature": "15dd0b75d16b598cb2f78232f1c159c46032a4d9cb0f448b9ce651f685af99a8"
     },
     {
       "source": "src/escort-shuttle.js",
@@ -308,7 +308,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 34,
-      "signature": "9699dd3f24ae0eb86e9462675b3a38e6d7c5b2caefc8033a411625d8d2440d0a"
+      "signature": "fcfc2fdd508acbf931b86ffb97f2c73869ea4267742a98b049c03ec0ffef0f58"
     },
     {
       "source": "src/forward-polish.js",
@@ -394,12 +394,13 @@
         "Hydro_Nip_Main_Sign",
         "Hydro_Nip_Main_Sign_Body",
         "Hydro_Nip_Main_Sign_Rim",
+        "Lounge_porch_floor",
         "Hammock"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 129,
-      "signature": "ec550e2b39bee3edfc785b30a74fd6e137e2abfd303fb65ee8a994c7106b8dbd"
+      "placements": 131,
+      "signature": "07859fe309f054a15c0425b3d7c6c610ae6b5a4bc1c3789b55e6103a554a2f1f"
     },
     {
       "source": "src/interior-polish.js",
@@ -476,7 +477,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "6f4d72a621604facbb9c19111bf7e2bebd47401a603ebcfcb3cbdc98cf763a13"
+      "signature": "7a07b0ab6de7f45f7dfa4a5dcb9fe35014da79aa4c19cc7f7bcf333182519d36"
     },
     {
       "source": "src/model.authoring.js",
@@ -719,8 +720,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 189,
-      "signature": "cac05bf04acc70c5d8414dddd988dee474a5f16e215766cdf63eb3cfba854308"
+      "placements": 190,
+      "signature": "65e05a46ecbb42b18299bf8f5c4676b81d6d6d352005d18ba615597854b44ccd"
     },
     {
       "source": "src/special-circulation.authoring.js",
@@ -755,6 +756,18 @@
       "interactionTargets": null,
       "placements": 9,
       "signature": "0dcdf682c90f44a0d3098fcb7bd2b938e8ded13d5471eab4d036130b11cdcb83"
+    },
+    {
+      "source": "src/style-lab.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "A test preview page apart from the viewer and the walk (style-lab.html): it draws Leo's exterior with its own camera and frame to compare art styles; nothing it places is aboard the ship.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 10,
+      "signature": "ac0eab27a210d6c15b8b2a42d7fecaecdfa898c18ebf9ddf8b22809d994177ca"
     },
     {
       "source": "src/stylized-plants.js",
@@ -858,13 +871,16 @@
         "LEO_connected_transit",
         "Transit_enclosure",
         "Transit_structure",
+        "Stair_black_metal_nosing",
+        "Lift_tower_mullion",
+        "Lift_shaft_frit",
         "Transit_handrail",
         "Connected_transit_floor"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 34,
-      "signature": "e7f1d8da3551e2fea2e101cf08347c7b41b8a96ec4c4411836b0d1edea44056e"
+      "placements": 36,
+      "signature": "62651d5e18fbc8d1737d7f918f6fef76970671853cd45369a26b6dcec28e5a27"
     },
     {
       "source": "src/transit.js",
@@ -897,13 +913,16 @@
         "LEO_connected_transit",
         "Transit_enclosure",
         "Transit_structure",
+        "Stair_black_metal_nosing",
+        "Lift_tower_mullion",
+        "Lift_shaft_frit",
         "Transit_handrail",
         "Connected_transit_floor"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 34,
-      "signature": "51b8886886f7fa2e67812a80177807b9953d8222589f937c750ce3bf6060719b"
+      "placements": 36,
+      "signature": "8d4895d9af19905e8ca861dff584c616675bcbc118d015d5e09df9cd7332b566"
     },
     {
       "source": "src/upper-aft.js",
@@ -935,7 +954,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 68,
-      "signature": "65b004c85cfb8506f329ec4633e38af5704f15ed4e3d12dc86bfbebfe501cdbe"
+      "signature": "30bfdf43fe08b0f2aaad206b36a2442d718a8e2d6da552e739c60db5de408c47"
     },
     {
       "source": "src/viewer.js",
@@ -952,7 +971,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 68,
-      "signature": "8452a42e9ab78be312d8cc1ae0ae0f6c5deba9cd5fda26d388b3e62297c409af"
+      "signature": "a5fe7f5e8ba5cee2a912f905a282a8fe4d65743ab08812081def1ff48f255271"
     },
     {
       "source": "src/voyage-forum.js",
@@ -1031,7 +1050,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "8a667f57d2f8bf13ee93574a1f26001a5780587105bf4535297b4319e3e5f6bc"
+      "signature": "61297be396e5d8985147e8c453e15eb25944b8e926ea4c209960ef70dd51430e"
     },
     {
       "source": "src/walk/arcade.js",
@@ -1049,7 +1068,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "5bbb8e59cf8fdd9f650674858e8854dc06351fd366c33ce641b7345b33f9f805"
+      "signature": "e1b0d0dbd1ac219d8cf1d742a4953500746cd2d70f636483716ac580e6f075d9"
     },
     {
       "source": "src/walk/arcade.prepared.js",
@@ -1067,7 +1086,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "7db628407f5ba28f6d29f45b978210b3b3fe0d012de444d71b626d6300737f94"
+      "signature": "f91fbc262de59aa3c6d606aeeb712b6d623946ca91e219438102060c71b42b7b"
     },
     {
       "source": "src/walk/arcade.public.js",
@@ -1085,7 +1104,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 34,
-      "signature": "468046c4ea8212dc7b7777d08d83e8e9872aad8a8c00100f8e93dfd9ab38a3ff"
+      "signature": "55e8446c62e8c673ac66d7d151faad4373a3894f10fd36f70f5e2b42bb9c066f"
     },
     {
       "source": "src/walk/arrival-atrium.authoring.js",
@@ -1102,8 +1121,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 70,
-      "signature": "d3872fb9c30ca4b43b220727a6f1f7ba6270a1f0d6c7b4a93b24536233d1f364"
+      "placements": 74,
+      "signature": "5df851eea5fa2b471811aa2258551e0357c8d7d9737997db00663fb60f4c33e2"
     },
     {
       "source": "src/walk/arrival-atrium.js",
@@ -1120,8 +1139,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 70,
-      "signature": "61c8125fde3594c1b27781352e2aa646cb993b873355a5c83e5ddf310d8de21d"
+      "placements": 74,
+      "signature": "2f3823a96d23dccd9ffe25c4ce7a3e0642784b5d6d03d9c295cdd7b6ed9cd3d6"
     },
     {
       "source": "src/walk/arrival-atrium.prepared.js",
@@ -1138,8 +1157,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 70,
-      "signature": "2a707041bb169304ce5d661c0b8911234e5a38bcf0cd079045c83e889c256545"
+      "placements": 74,
+      "signature": "c173c307b96688af6cb21dc860310532a473f40824e9fa4304dcf29c5b85b261"
     },
     {
       "source": "src/walk/arrival-atrium.public.js",
@@ -1156,8 +1175,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 70,
-      "signature": "4cc5d3d8aef5a8499a7f2b2991dcfe3fe9a39f364ff5819ebd3379e3fedcd8dd"
+      "placements": 74,
+      "signature": "0a3482c37e6723bf6039cd7fcc15060e4f59a2646554c6c3c12126dc84f01835"
     },
     {
       "source": "src/walk/arrival-mood.js",
@@ -1210,6 +1229,20 @@
       "signature": "d9f96c77c26268b4309598faa086ce77137c7d3758cc3bcac7eb2614b6e96c62"
     },
     {
+      "source": "src/walk/atrium-mood.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [
+        "P6_atrium_lamp_pools"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 5,
+      "signature": "f6914f5746c353c6538d82c9c80d0c5bf65129cc4fbcd0438981f0c7e584dded"
+    },
+    {
       "source": "src/walk/avatar.js",
       "rooms": [],
       "via": "frame boundary",
@@ -1220,8 +1253,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 2,
-      "signature": "ffd6ebf6ec8c853dd6ba9982e3d3754c1cf1a04c5fa79e5245cf52c0f27ad81a"
+      "placements": 5,
+      "signature": "169497f1851c5dc5b824ad80be687a2d73368b63721b85ff8a0502bb40195ebb"
     },
     {
       "source": "src/walk/baggage.js",
@@ -1277,7 +1310,7 @@
       ],
       "interactionTargets": null,
       "placements": 59,
-      "signature": "f1a597680ddbc5cd6d8493ebaa4e6952c423cce870062c59afb436bd686851fa"
+      "signature": "5d533afbf06362ecdc6d260f4dbeb4c0547dcffceeec1df54938f2ea8d04c0a7"
     },
     {
       "source": "src/walk/blossom.js",
@@ -1312,7 +1345,7 @@
       ],
       "interactionTargets": null,
       "placements": 59,
-      "signature": "f1a597680ddbc5cd6d8493ebaa4e6952c423cce870062c59afb436bd686851fa"
+      "signature": "5d533afbf06362ecdc6d260f4dbeb4c0547dcffceeec1df54938f2ea8d04c0a7"
     },
     {
       "source": "src/walk/blossom.prepared.js",
@@ -1347,7 +1380,7 @@
       ],
       "interactionTargets": null,
       "placements": 59,
-      "signature": "f1a597680ddbc5cd6d8493ebaa4e6952c423cce870062c59afb436bd686851fa"
+      "signature": "5d533afbf06362ecdc6d260f4dbeb4c0547dcffceeec1df54938f2ea8d04c0a7"
     },
     {
       "source": "src/walk/blossom.public.js",
@@ -1382,7 +1415,19 @@
       ],
       "interactionTargets": null,
       "placements": 59,
-      "signature": "f1a597680ddbc5cd6d8493ebaa4e6952c423cce870062c59afb436bd686851fa"
+      "signature": "5d533afbf06362ecdc6d260f4dbeb4c0547dcffceeec1df54938f2ea8d04c0a7"
+    },
+    {
+      "source": "src/walk/bone-walk.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "80da0f1aede632fc07acec64c28518bbc325ad1b643ce1b1e5307edb749cd723"
     },
     {
       "source": "src/walk/camera.js",
@@ -1394,7 +1439,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "e9163e7543441ae7fdb6f19433ff9e4e5c442058f36cee81fe0e0e8a75672243"
+      "signature": "8fd3e30a13e494c3078a8ea55861ca7d7690e00948c055949006ae8be221371b"
     },
     {
       "source": "src/walk/capsule-bubbles.js",
@@ -1513,15 +1558,18 @@
         "Toybox_park_pond",
         "Toybox_park_koi",
         "Garden_bench_cushion",
-        "Bench_back"
+        "Bench_back",
+        "Toybox_park_sign",
+        "Toybox_park_balloon",
+        "Toybox_park_balloon_basket"
       ],
       "colliders": [
         "Great_cat_tree_solid",
         "Toybox_park_solid"
       ],
       "interactionTargets": null,
-      "placements": 67,
-      "signature": "c1758aca4308bbe1d5f4ea32ff8fb584fc6b1937150156d4ced0a394896e9a25"
+      "placements": 77,
+      "signature": "8af7496e625edef7b10b92716a695ce8c0a6184276599c41875fa3ddd5a816a2"
     },
     {
       "source": "src/walk/cat-tree.js",
@@ -1549,15 +1597,18 @@
         "Toybox_park_pond",
         "Toybox_park_koi",
         "Garden_bench_cushion",
-        "Bench_back"
+        "Bench_back",
+        "Toybox_park_sign",
+        "Toybox_park_balloon",
+        "Toybox_park_balloon_basket"
       ],
       "colliders": [
         "Great_cat_tree_solid",
         "Toybox_park_solid"
       ],
       "interactionTargets": null,
-      "placements": 67,
-      "signature": "c1758aca4308bbe1d5f4ea32ff8fb584fc6b1937150156d4ced0a394896e9a25"
+      "placements": 77,
+      "signature": "8af7496e625edef7b10b92716a695ce8c0a6184276599c41875fa3ddd5a816a2"
     },
     {
       "source": "src/walk/cat-tree.prepared.js",
@@ -1585,15 +1636,18 @@
         "Toybox_park_pond",
         "Toybox_park_koi",
         "Garden_bench_cushion",
-        "Bench_back"
+        "Bench_back",
+        "Toybox_park_sign",
+        "Toybox_park_balloon",
+        "Toybox_park_balloon_basket"
       ],
       "colliders": [
         "Great_cat_tree_solid",
         "Toybox_park_solid"
       ],
       "interactionTargets": null,
-      "placements": 67,
-      "signature": "c1758aca4308bbe1d5f4ea32ff8fb584fc6b1937150156d4ced0a394896e9a25"
+      "placements": 77,
+      "signature": "8af7496e625edef7b10b92716a695ce8c0a6184276599c41875fa3ddd5a816a2"
     },
     {
       "source": "src/walk/cat-tree.public.js",
@@ -1621,15 +1675,18 @@
         "Toybox_park_pond",
         "Toybox_park_koi",
         "Garden_bench_cushion",
-        "Bench_back"
+        "Bench_back",
+        "Toybox_park_sign",
+        "Toybox_park_balloon",
+        "Toybox_park_balloon_basket"
       ],
       "colliders": [
         "Great_cat_tree_solid",
         "Toybox_park_solid"
       ],
       "interactionTargets": null,
-      "placements": 67,
-      "signature": "c1758aca4308bbe1d5f4ea32ff8fb584fc6b1937150156d4ced0a394896e9a25"
+      "placements": 77,
+      "signature": "8af7496e625edef7b10b92716a695ce8c0a6184276599c41875fa3ddd5a816a2"
     },
     {
       "source": "src/walk/catnip-face.js",
@@ -2064,6 +2121,18 @@
       "signature": "36151b98913d97db4c286b948d63a62c746ed39fd48da4b5759c651b33450d77"
     },
     {
+      "source": "src/walk/contact-shade.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 3,
+      "signature": "533330f5921b8cccbb043cd28c35aeef60a3613b06d7ff535311b7356c9df1bf"
+    },
+    {
       "source": "src/walk/controller.authoring.js",
       "rooms": [],
       "via": "frame boundary",
@@ -2073,7 +2142,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "3d9a5d78943f9da4e0b2a31de7069415135d6559da5696bb855b2fb7a88dfc48"
+      "signature": "a99a2eed186e1ec539644cf2f4b1c7b95fbf6d305f6a445df022494a9757ca7a"
     },
     {
       "source": "src/walk/controller.js",
@@ -2085,7 +2154,47 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "e3642382ac54acfb7664d2d56790fc1b53f75393b4b7a503f82935b6601c86da"
+      "signature": "45235c49b98c160dac3094dc6c931099ce97aec5a8bc52ab5a3cab2dfc31d38a"
+    },
+    {
+      "source": "src/walk/corner-shade.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 4,
+      "signature": "ba9732df0afa8287497ad8eda8cbbd5a7f875d4d111e81711fae1a8d185e2b55"
+    },
+    {
+      "source": "src/walk/crowd-draw.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [
+        "Crowd_"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 2,
+      "signature": "b1dc3ad7a5334e362cbd90281a3a64e8581ec416d9d8cf99912d6fc6c472556f"
+    },
+    {
+      "source": "src/walk/crowd-tier.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [
+        "Crowd_"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "85e4775d3b843c88cc0c9d41f21711d34d13d5ee9c82df8b2442042fa2b986cb"
     },
     {
       "source": "src/walk/crown-tv.js",
@@ -2352,6 +2461,30 @@
       "signature": "9933a39f72acd92c8192b66a8fbb228bc25b41ba315bfbc07df781b4aed2b35a"
     },
     {
+      "source": "src/walk/figure-matrices.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "c46ead8ce4690099ff6e56a771871defad93b179fa2ccf274c304ba88fb85cf0"
+    },
+    {
+      "source": "src/walk/film-look.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 5,
+      "signature": "3051482e199dafaa34f2b3a6c407a6add5f787ca411a6b933bdde2a887616133"
+    },
+    {
       "source": "src/walk/fin-casing.js",
       "rooms": [
         "aft-machinery"
@@ -2370,6 +2503,18 @@
       "signature": "4bb347e717eed754207735b8276a9627b5fdc632d202fe5e62654fd3483ea63f"
     },
     {
+      "source": "src/walk/fog-cull.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 7,
+      "signature": "4d35d5624e5f90bd5c53b435d0cb3c945f8120151001192b5de919fd2144f665"
+    },
+    {
       "source": "src/walk/foliage.js",
       "rooms": [],
       "via": "frame boundary",
@@ -2380,6 +2525,18 @@
       "interactionTargets": null,
       "placements": 3,
       "signature": "9f310ca690f1353919ed62e7a664ffe376d4ff3c18630ced41506c67b603e73f"
+    },
+    {
+      "source": "src/walk/frame-readout.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "b33725bddb61ace9745c33ea3611177d3ce6548fd0c9f88a63fa2fddc5f50e22"
     },
     {
       "source": "src/walk/freight-gate.js",
@@ -2409,7 +2566,7 @@
       ],
       "interactionTargets": null,
       "placements": 77,
-      "signature": "d003e7b5c54c44f0b4eb17402f33c8ac7364e85bea76173cc4aef8036a053464"
+      "signature": "5bdfc78e4aac30436b24a83c0532528e1d4eb83220feebdf4d8a7d53fbbfeda2"
     },
     {
       "source": "src/walk/gaming-lounge.authoring.js",
@@ -2430,7 +2587,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 63,
-      "signature": "ab131211d6aab24c3a08de5d07855a03b2cdb63fce80562f2e711641582d32a5"
+      "signature": "a750bb6e106000c3501658b236950adf90867e4890300e6adaf42726e672f0ed"
     },
     {
       "source": "src/walk/gaming-lounge.js",
@@ -2451,7 +2608,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 63,
-      "signature": "f0ab41c5b1f69519bdf25e123edcd5f57b51679218115d80aad4c019716c2eec"
+      "signature": "8dc08bb61fceb448df7017d943de45bcc284b0d9844585a261ed944f9ede959e"
     },
     {
       "source": "src/walk/gaming-lounge.prepared.js",
@@ -2472,7 +2629,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 63,
-      "signature": "bf376d1b4ec4d5c30ac60689f5690bc5c4e29496add16536a64f4e1dcd4e0615"
+      "signature": "0f279ee8f771b4f9b34c8951721a55656ce35e5b4ba3ca336f80e040e3db084e"
     },
     {
       "source": "src/walk/gaming-lounge.public.js",
@@ -2493,7 +2650,19 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 63,
-      "signature": "128ceceb1061e83794301259cc6d3ea4ff11ebb924b331974882187ff9114c2a"
+      "signature": "c028e6b448de3b365490f3ffb3c9bd0d14f48fd2cbbcfd99272430ac3f1142fe"
+    },
+    {
+      "source": "src/walk/glide.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The visitor's own walker and what moves with it (board glide, longboard, grapple line, unstuck pop, the saved last spot, the jacket on the cat, the pushed ward trolley from its own resting place in ward-trolley.js), public-area tests of where the walker stands, and pinball replay steps: positions follow the walker or a game's own state, never a room frame.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 3,
+      "signature": "4768a14ce15a6a2c046ab771fdd78413d73df19b4bfad2c4e997d24ed357db6c"
     },
     {
       "source": "src/walk/graffiti-wall.js",
@@ -2524,6 +2693,21 @@
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 3,
       "signature": "ba9afb6f5fba84ffee4c0ef60e1859f58fc96d654c5dc80ae4c2d807dc0ded85"
+    },
+    {
+      "source": "src/walk/grapple.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The visitor's own walker and what moves with it (board glide, longboard, grapple line, unstuck pop, the saved last spot, the jacket on the cat, the pushed ward trolley from its own resting place in ward-trolley.js), public-area tests of where the walker stands, and pinball replay steps: positions follow the walker or a game's own state, never a room frame.",
+      "features": [
+        "Walk_grapple_line",
+        "Walk_grapple_claw"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 6,
+      "signature": "970f5025609d845ada584d8d0bea2f30daaedf100eb6d49995d02084cb28f02e"
     },
     {
       "source": "src/walk/halloween.authoring.js",
@@ -2586,7 +2770,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "128a292673408c115d0e9fc8c95a03d4cf86dc066497cc7f2de6d5295260480a"
+      "signature": "8744178ae92395cd9cfe9fa4e92003461ff15e013e495f55978c5f36e8148254"
     },
     {
       "source": "src/walk/hat.js",
@@ -2613,7 +2797,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "128492b75d368d467451c1ee2c80d88ae56c210a3153ab2e1e6faf5c04900927"
+      "signature": "1fe14a1205b7305a87444a1a1660a89fe6190cb4eb4b0dfa46f13b477415dde9"
     },
     {
       "source": "src/walk/hex-floor.authoring.js",
@@ -2865,7 +3049,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "8c41f7855a45a598c960bfbc8d421b8cbbd06d46a44ad4f5228ab6c34e9b1db0"
+      "signature": "c81b08ab626e88b843f60186147da85675fb959419dd87df3f29574ebfdfbc2c"
     },
     {
       "source": "src/walk/instance-matrix.js",
@@ -2889,7 +3073,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 8,
-      "signature": "57c97797417a149200401c8299c6a03eabfa5a97aac47195d1096c17039b30bb"
+      "signature": "e488af2985d2c2b259acf0edd7634d17d900e20f5430800e3e835ac766be4623"
     },
     {
       "source": "src/walk/invasion/rules.js",
@@ -2916,14 +3100,15 @@
         "Jaguar_ears",
         "Jaguar_head",
         "Jaguar_lower_teeth",
+        "Jaguar_lower_jaw",
         "Jaguar_exit_arch"
       ],
       "colliders": [
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 26,
-      "signature": "3277bbc3d6588e6094522afc23b32659ed151c3d1e0c7bffeb6c92de13a098d3"
+      "placements": 29,
+      "signature": "4f314867e53e091400850136adb2eae61890939f368b98e03f74f5eb9af0021e"
     },
     {
       "source": "src/walk/jaguar-gate.js",
@@ -2938,14 +3123,15 @@
         "Jaguar_ears",
         "Jaguar_head",
         "Jaguar_lower_teeth",
+        "Jaguar_lower_jaw",
         "Jaguar_exit_arch"
       ],
       "colliders": [
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 26,
-      "signature": "ae53420638defa0b59dc84827c6aa387cb2c18b3dc1d83c71bd67e33d29debcb"
+      "placements": 29,
+      "signature": "a056454a9ac779d237b556f67f1975dc4e5736bab237f064836f19d1c86269ab"
     },
     {
       "source": "src/walk/jaguar-gate.prepared.js",
@@ -2960,14 +3146,15 @@
         "Jaguar_ears",
         "Jaguar_head",
         "Jaguar_lower_teeth",
+        "Jaguar_lower_jaw",
         "Jaguar_exit_arch"
       ],
       "colliders": [
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 26,
-      "signature": "c869674751142dd8eb6256d1066e4f0c9d12adbc4df13a1266c9fbe329505573"
+      "placements": 29,
+      "signature": "c19e67cb76e809b032eb6f8592774b18eecfe5774fee1a54c875be7aca3683e6"
     },
     {
       "source": "src/walk/jaguar-gate.public.js",
@@ -2982,14 +3169,127 @@
         "Jaguar_ears",
         "Jaguar_head",
         "Jaguar_lower_teeth",
+        "Jaguar_lower_jaw",
         "Jaguar_exit_arch"
       ],
       "colliders": [
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 26,
-      "signature": "482b6903ad2141d5c164bd41df6f0297d6dabb4106b2803c021d9307db38df43"
+      "placements": 29,
+      "signature": "c96d8ab0680606cbfa80bfbb753bc0add3635add7e9eb384a46548b7ace9f516"
+    },
+    {
+      "source": "src/walk/keel-club.authoring.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The Keel Club fills the hull under Deck 1, between the Deck 1 slab and the keel, in ship coordinates inside the hull lofted by src/plan/hull-v2.js (keel-club-hull.js is its sampled half-width) and round the fixed transit cores; it belongs to no room and moves with none.",
+      "features": [
+        "Keel_club_tube",
+        "Keel_club",
+        "Keel_club_solid",
+        "Keel_club_seats",
+        "Keel_club_relax_wash",
+        "Keel_club_relax_halos",
+        "Keel_club_light_pools",
+        "Keel_club_lamp_halos",
+        "Keel_club_wall_washes",
+        "Keel_club_signs",
+        "Keel_club_waterfall_mist",
+        "Keel_club_deck1",
+        "Keel_club_cannon_water"
+      ],
+      "colliders": [
+        "Keel_club_solid"
+      ],
+      "interactionTargets": null,
+      "placements": 171,
+      "signature": "a6d27e3305e2e7cb1839720c231082dd41b48761752fb1bf8123fa183adb29d8"
+    },
+    {
+      "source": "src/walk/keel-club.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The Keel Club fills the hull under Deck 1, between the Deck 1 slab and the keel, in ship coordinates inside the hull lofted by src/plan/hull-v2.js (keel-club-hull.js is its sampled half-width) and round the fixed transit cores; it belongs to no room and moves with none.",
+      "features": [
+        "Keel_club_tube",
+        "Keel_club",
+        "Keel_club_solid",
+        "Keel_club_seats",
+        "Keel_club_relax_wash",
+        "Keel_club_relax_halos",
+        "Keel_club_light_pools",
+        "Keel_club_lamp_halos",
+        "Keel_club_wall_washes",
+        "Keel_club_signs",
+        "Keel_club_waterfall_mist",
+        "Keel_club_deck1",
+        "Keel_club_cannon_water"
+      ],
+      "colliders": [
+        "Keel_club_solid"
+      ],
+      "interactionTargets": null,
+      "placements": 171,
+      "signature": "a6d27e3305e2e7cb1839720c231082dd41b48761752fb1bf8123fa183adb29d8"
+    },
+    {
+      "source": "src/walk/keel-club.prepared.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The Keel Club fills the hull under Deck 1, between the Deck 1 slab and the keel, in ship coordinates inside the hull lofted by src/plan/hull-v2.js (keel-club-hull.js is its sampled half-width) and round the fixed transit cores; it belongs to no room and moves with none.",
+      "features": [
+        "Keel_club_tube",
+        "Keel_club",
+        "Keel_club_solid",
+        "Keel_club_seats",
+        "Keel_club_relax_wash",
+        "Keel_club_relax_halos",
+        "Keel_club_light_pools",
+        "Keel_club_lamp_halos",
+        "Keel_club_wall_washes",
+        "Keel_club_signs",
+        "Keel_club_waterfall_mist",
+        "Keel_club_deck1",
+        "Keel_club_cannon_water"
+      ],
+      "colliders": [
+        "Keel_club_solid"
+      ],
+      "interactionTargets": null,
+      "placements": 171,
+      "signature": "a6d27e3305e2e7cb1839720c231082dd41b48761752fb1bf8123fa183adb29d8"
+    },
+    {
+      "source": "src/walk/keel-club.public.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The Keel Club fills the hull under Deck 1, between the Deck 1 slab and the keel, in ship coordinates inside the hull lofted by src/plan/hull-v2.js (keel-club-hull.js is its sampled half-width) and round the fixed transit cores; it belongs to no room and moves with none.",
+      "features": [
+        "Keel_club_tube",
+        "Keel_club",
+        "Keel_club_solid",
+        "Keel_club_seats",
+        "Keel_club_relax_wash",
+        "Keel_club_relax_halos",
+        "Keel_club_light_pools",
+        "Keel_club_lamp_halos",
+        "Keel_club_wall_washes",
+        "Keel_club_signs",
+        "Keel_club_waterfall_mist",
+        "Keel_club_deck1",
+        "Keel_club_cannon_water"
+      ],
+      "colliders": [
+        "Keel_club_solid"
+      ],
+      "interactionTargets": null,
+      "placements": 171,
+      "signature": "a6d27e3305e2e7cb1839720c231082dd41b48761752fb1bf8123fa183adb29d8"
     },
     {
       "source": "src/walk/kittens.authoring.js",
@@ -3008,8 +3308,8 @@
         "Young_explorers_kitten_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 52,
-      "signature": "624e8dcfbf791cd295b7fb32f2ff59d93b6a2e8114e42ba74a143887ee96acad"
+      "placements": 53,
+      "signature": "8013f5479ec318ca62930466a531c695cf1d919d50a82b423d31447ae94c0578"
     },
     {
       "source": "src/walk/kittens.js",
@@ -3028,8 +3328,8 @@
         "Young_explorers_kitten_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 52,
-      "signature": "30b11cec20ba5a3be6c6093cf90e25783ae27021e8efc0783f132d2d8b5498e9"
+      "placements": 53,
+      "signature": "6a8bcaa36d435e047cac40d41e72319aad8b49a755f87a77d7366359e36fd193"
     },
     {
       "source": "src/walk/kittens.prepared.js",
@@ -3048,8 +3348,8 @@
         "Young_explorers_kitten_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 52,
-      "signature": "409cc63eeef28d17acde53f5527a4ff5bc6c6c9a79255c4dc440987eabcec6fc"
+      "placements": 53,
+      "signature": "9d7dd147bd76fab3889ad57e0ead283caec7beffe074173b2d3405dea0ccc4c5"
     },
     {
       "source": "src/walk/kittens.public.js",
@@ -3068,8 +3368,20 @@
         "Young_explorers_kitten_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 52,
-      "signature": "fcefdeeb8d0d6fd513d7ccaa5fd6c04f42a94d645bb60c6cf5d52987f078eaed"
+      "placements": 53,
+      "signature": "2cb6a7ed1174127afd49a0de7eb2006565a93df9fdc8e2ff0f817675ea7d967e"
+    },
+    {
+      "source": "src/walk/last-spot.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The visitor's own walker and what moves with it (board glide, longboard, grapple line, unstuck pop, the saved last spot, the jacket on the cat, the pushed ward trolley from its own resting place in ward-trolley.js), public-area tests of where the walker stands, and pinball replay steps: positions follow the walker or a game's own state, never a room frame.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "1976a6d3561728cc2d92e58a28a5f165d1b752c29de410b684124c8eb66ed0ad"
     },
     {
       "source": "src/walk/layered-conservatory.js",
@@ -3240,14 +3552,15 @@
         "Lift_shutter",
         "Lift_door_blade",
         "Lift_door_shut",
+        "Lift_doors_shut",
         "Walk_lift_signs",
         "Walk_lift_",
         "Car_mars"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 16,
-      "signature": "e629ec3cb2768a3e00f2c747c05473709dde2c458a33c351bf7531d5a4f8dce5"
+      "placements": 17,
+      "signature": "e8d43ccbabf99c6e4a3957b8648e9c9d99dbcf4f637c2241c12b556e0d3fc96b"
     },
     {
       "source": "src/walk/lift-ride.js",
@@ -3280,14 +3593,15 @@
         "Lift_shutter",
         "Lift_door_blade",
         "Lift_door_shut",
+        "Lift_doors_shut",
         "Walk_lift_signs",
         "Walk_lift_",
         "Car_mars"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 16,
-      "signature": "38421c14f67b667e7d5e776e008769c973cedbc32953e49c280ed70820189352"
+      "placements": 17,
+      "signature": "6d5e372831872981a5456f59fd3078f5ee355f7064e827fed83596fc88db0396"
     },
     {
       "source": "src/walk/lift-ride.prepared.js",
@@ -3320,14 +3634,15 @@
         "Lift_shutter",
         "Lift_door_blade",
         "Lift_door_shut",
+        "Lift_doors_shut",
         "Walk_lift_signs",
         "Walk_lift_",
         "Car_mars"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 16,
-      "signature": "596187f2569ff33f679e11751f8ac0324ca422125006ac0e7e25e7719f005693"
+      "placements": 17,
+      "signature": "87748a7594c9c0437d913d808f9ba419165d9b424843d18cafec66c654376099"
     },
     {
       "source": "src/walk/lift-ride.public.js",
@@ -3360,14 +3675,15 @@
         "Lift_shutter",
         "Lift_door_blade",
         "Lift_door_shut",
+        "Lift_doors_shut",
         "Walk_lift_signs",
         "Walk_lift_",
         "Car_mars"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 16,
-      "signature": "cb0af500746176bc9863c0020d2bcf8672d9a93fc45bb426f8b610c7eedeff29"
+      "placements": 17,
+      "signature": "16d34a05b12bb9b0a0b0e1205058d4dcdda307b8098594a4b81dd9d83c5f35b3"
     },
     {
       "source": "src/walk/lift-tile-floor.authoring.js",
@@ -3426,7 +3742,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "34fdbae429989d80956397b6a83a18723fa007b9fc2a44f6527f47084a83f484"
+      "signature": "415ec0d0d79f8c4c14d14d358e31c4ba7aa645b141d4e7944fc00ac16046c333"
     },
     {
       "source": "src/walk/lifts.js",
@@ -3459,7 +3775,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "1f06b2bf7a6a50badeee2c2658ea05f25f6b1c019684f852563696286cbac1b6"
+      "signature": "b64e1ad7e25c277dea6c240d759c629f05afa72625d55c05f5dc78d478f33043"
     },
     {
       "source": "src/walk/link.js",
@@ -3472,6 +3788,33 @@
       "interactionTargets": null,
       "placements": 1,
       "signature": "562e734dab0b50c0442b58addedc9d58aac02988d03197ba34855dacb57f46ad"
+    },
+    {
+      "source": "src/walk/longboard.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The visitor's own walker and what moves with it (board glide, longboard, grapple line, unstuck pop, the saved last spot, the jacket on the cat, the pushed ward trolley from its own resting place in ward-trolley.js), public-area tests of where the walker stands, and pinball replay steps: positions follow the walker or a game's own state, never a room frame.",
+      "features": [
+        "Walk_longboard_deck",
+        "Wheel"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 19,
+      "signature": "1201576591d8f125b2618cfbfe82a865e6157477d300cfbb9277c96c4c721aff"
+    },
+    {
+      "source": "src/walk/look.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "ec5d9a8574ee6d4ab820dd649c8341d75364a6828508a438d121810af21e3576"
     },
     {
       "source": "src/walk/lounge-aquarium.authoring.js",
@@ -3583,8 +3926,8 @@
       "features": [],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 20,
-      "signature": "88062225a410fd923e59c5bc894b6752e2a013802943471601db49166ddd77ad"
+      "placements": 18,
+      "signature": "fd09e762ef653a0ad740c392541621e3a32a812c7a62c7f7586f25e29822ece7"
     },
     {
       "source": "src/walk/lounge-entrance-signs.js",
@@ -3596,8 +3939,8 @@
       "features": [],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 20,
-      "signature": "2cea98ee0f886551a20036a8f9388fac3a1de50d5af76e2814d83efc9906276b"
+      "placements": 18,
+      "signature": "af7cf41049efe9ce1159cd3e5d9b340f274f58e979ce2ebe26b546fc02677f3b"
     },
     {
       "source": "src/walk/lounge-entrance-signs.prepared.js",
@@ -3609,8 +3952,8 @@
       "features": [],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 20,
-      "signature": "ab17ce2dcf3c05f3eb789ff05c5d641a137d572b2cc130936e26b0101338682f"
+      "placements": 18,
+      "signature": "ccc4f1b8154d937982a04af5cd2bf30bbccd7e7baf028b907f798779ee9e405e"
     },
     {
       "source": "src/walk/lounge-entrance-signs.public.js",
@@ -3622,8 +3965,8 @@
       "features": [],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 20,
-      "signature": "3f30321cc67f96fc148def55d3ce919f1cd0c8f7c951b30d5627d86d9b08ffc2"
+      "placements": 18,
+      "signature": "934687c51d9fe352f4f572caccb81daa7a03b6ecf66599a8d7acfaffcbee5583"
     },
     {
       "source": "src/walk/lounge-falls.js",
@@ -3673,7 +4016,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 7,
-      "signature": "e68ae157ba6c37511b89ef004ba7c02e10c1d1f30593ecdda0586f58ad981624"
+      "signature": "97e646dde92e8fc670f93c65bedce7977aa19436ae1aa3c958488b4a519c44b0"
     },
     {
       "source": "src/walk/lounge-mural.js",
@@ -3688,7 +4031,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 7,
-      "signature": "e537ffa915a6aa4df995d972e4c8c7184edd36d6188736c6c52b016313e31b51"
+      "signature": "84414bcb2fb17396df85c58b557159de7a40dd5ed76afca0a228cfe597b81993"
     },
     {
       "source": "src/walk/lounge-mural.prepared.js",
@@ -3703,7 +4046,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 7,
-      "signature": "c1f5071e8d893bcedbcfe6cd12ca2288e5992853deae23bfc364450b7dc80e19"
+      "signature": "1fa0acafd7a97b73887c5615500645f21706f6c3fd4f3f41e2d468e246b42f3f"
     },
     {
       "source": "src/walk/lounge-mural.public.js",
@@ -3718,7 +4061,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 7,
-      "signature": "36e0c811cd8704eb5210f44247b6a9f7aef6446aef473d825ac5fa928f076a1e"
+      "signature": "4ff9b39bc9eb01f3011e274eec01135ba3398f9ede733f98e5439cbb70742d74"
     },
     {
       "source": "src/walk/lounge-sky.authoring.js",
@@ -3785,7 +4128,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "87700eb348132476f80b2a8a7cf67fe98a9dfe0d74830dcff6f19faa38edea12"
+      "signature": "84ddb3265dbfc5982b30d764548d57460faa2d395b1859e552b8966a78956bf8"
     },
     {
       "source": "src/walk/lounge.js",
@@ -3800,7 +4143,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "d35057d1ed1ccde9c4d18e7415b83ea389be6d4d4663301cb37f457809ed5fca"
+      "signature": "0adf3c84dcb344842362c9bec020ff6a13fcc9ac9b8e5dab8066d5baff213d40"
     },
     {
       "source": "src/walk/lounge.prepared.js",
@@ -3815,7 +4158,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "6a4728e354f1d8ca37dc9bae675b5bfb5119c6da506728a39f66e66ff925ce2a"
+      "signature": "13d40f2d41ecddd691c0fd0b966fb8e599fc36fca7609bba4477ba163ce48e63"
     },
     {
       "source": "src/walk/lounge.public.js",
@@ -3830,7 +4173,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "9b47ae6597c7965fb389e2f566846149df891b5921ac5aa8ba0ab44a14c2e9cd"
+      "signature": "d418271e04abc4db07d9f41c90fe36103a9634548f1680575b4c55e60d5ca18f"
     },
     {
       "source": "src/walk/main.authoring.js",
@@ -3846,13 +4189,14 @@
       "fixed": false,
       "features": [
         "Walk_aft_shaft_back_glass",
+        "Walk_tower_shaft_glass",
         "Prepared_v2_signs",
         "Walk_band_"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 45,
-      "signature": "6d0911a31ae9c78045c14cfae89ce030b2a588040e8385f7b377d4f5dedf13e1"
+      "placements": 52,
+      "signature": "21fafbcff0b58f8698f70c282bb6e82b03b026d1987068ac216b1fa2277c1752"
     },
     {
       "source": "src/walk/main.js",
@@ -3868,12 +4212,13 @@
       "fixed": false,
       "features": [
         "Walk_aft_shaft_back_glass",
+        "Walk_tower_shaft_glass",
         "Walk_band_"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 44,
-      "signature": "157165823190d9c346cc52d9b5d9ac4eeaab6c5061230638af88bad1de376afb"
+      "placements": 51,
+      "signature": "6324de4552d0b1813c10c8d055cb3891443d26751c48cd3e5664ac5526669236"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -3892,8 +4237,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 39,
-      "signature": "75f8d21aa1368d54f61ac52c335b78842ef3a45e9b378db6ded2b03aad301f9f"
+      "placements": 46,
+      "signature": "34c5036c30b2d5010f5ccd4d55eb882122acf9d92bbd4456a4a12e49d66df73d"
     },
     {
       "source": "src/walk/main.public.js",
@@ -3912,8 +4257,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 39,
-      "signature": "d36f4775c5be874a8284a1947ca08e7b63dd78863b9fd47cfc731665253da7ab"
+      "placements": 52,
+      "signature": "2008e2d1e93ac1545ea4903c6cfc8174e699fb80a5f86529ab99d6f0287dc455"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -3985,7 +4330,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 40,
-      "signature": "6e7c801c50bf0a34b793cd7a1c165b7091fee2872eb9c283b2ffd26de36e852b"
+      "signature": "9d678fb8f34d8c0636ed2e471de8757ea45ec36e1828e45f00dbc781bccd527c"
     },
     {
       "source": "src/walk/maze/layout.js",
@@ -4011,7 +4356,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 1,
-      "signature": "9ff568aa7c1c85743fb9709ac7f8dcf32c0e434c0a1bf47d7282c90270841c46"
+      "signature": "5d1eca03bbe188bc0fc1d68cc07b54a0f4053a6e7e2815161f6ce02752f3e056"
     },
     {
       "source": "src/walk/mct-bay.js",
@@ -4029,7 +4374,33 @@
       ],
       "interactionTargets": null,
       "placements": 48,
-      "signature": "50882b35c33644b1a47d87606c1bb3b524b0e498c1d1aac248a13cde47e4858b"
+      "signature": "bb2e26aaba2bd1440671402d8a5ae5b6250eefe6225f0bf8246353360cee169f"
+    },
+    {
+      "source": "src/walk/merge-by-material.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "ec989aef663822a0436476d0d62a54fb77a827fd7a24414225ced463328f5fa4"
+    },
+    {
+      "source": "src/walk/merged-skin.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [
+        "Merged_"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 2,
+      "signature": "51a0cbbb63159b3ad93be903ae46b678586b658569535d53763b24db8f6fe05d"
     },
     {
       "source": "src/walk/minimap.authoring.js",
@@ -4161,7 +4532,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 7,
-      "signature": "12c173f2e80498746dd82c12cc400ee684f3725f902b2149464143da595322ac"
+      "signature": "d27a79f81e78d778d95afd7a00eabc4697cef68ea28e4ff8e2e8b12089be1906"
     },
     {
       "source": "src/walk/mission-holo.authoring.js",
@@ -4335,6 +4706,20 @@
       "signature": "9ad55a8afdec05021fdcb8fce7aaefca8ce73a9a23e3b50867fa3272eb1eb19f"
     },
     {
+      "source": "src/walk/outside-game.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Read their places from the selected layout itself: the Deck 2 shuttle cabin doors from each cabin's own door in the layout, and the Asteroid Defense airlock panel from d01-launch-d-15's frame on its corridor face (outside the room, so no room owns it).",
+      "features": [
+        "Asteroid_Defense_airlock"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 6,
+      "signature": "04dfc94a63f4d9249df33f95105c74722a67e95a352f12f9ebb4b5a834f2621b"
+    },
+    {
       "source": "src/walk/paintings.authoring.js",
       "rooms": [
         "crown",
@@ -4356,7 +4741,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "a728bd408eb3224370a03c9687cc13aec9ff6dfeb245476244465144a0dd18c7"
+      "signature": "0058ca441e5d42b6343f69c32cc73b1d629ea2d2f128cec204928a6396d6db50"
     },
     {
       "source": "src/walk/paintings.js",
@@ -4380,7 +4765,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "e59695e812802d6f5454b697517365f63af6b9c1939080dd6356ba3cdcdb9d2c"
+      "signature": "56f4e14357c70edb0636165d396751b2ab5517e0f2a5d672834366420e8f8013"
     },
     {
       "source": "src/walk/paintings.prepared.js",
@@ -4404,7 +4789,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "35a89edf1d7f99354fe55219169f53d6088d182a44a263a246a5b096e9a462e2"
+      "signature": "0484cee9dd1a004517dcb6f0103457542afa35c731e4be11a1c71f06aff58e1b"
     },
     {
       "source": "src/walk/paintings.public.js",
@@ -4428,7 +4813,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "e4ef5cf3379c577554603edc4afbe317f2c90718577118733425822641f96224"
+      "signature": "541026c913b26fedf6433021041f153bcaf4c5a512a98d3eef610b5fa3a03a73"
     },
     {
       "source": "src/walk/partitions.authoring.js",
@@ -4569,6 +4954,25 @@
       "signature": "033d61e848e323414c369b11f25fba2cebfd061728aa4355debdea513d388231"
     },
     {
+      "source": "src/walk/photo-spots.js",
+      "rooms": [
+        "crown",
+        "circulation-6",
+        "commons-1"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Photo_spot_",
+        "Photo_spot_marker",
+        "Photo_spot_badge"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 5,
+      "signature": "1550c5022ca1097cd6af54e9f33e509652f9f5bcd2e91b4a52bf6fe15e5f5537"
+    },
+    {
       "source": "src/walk/pinball/art.js",
       "rooms": [],
       "via": "frame boundary",
@@ -4578,7 +4982,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "d4c0d57e4ebd3c5513ff3fe79eb45073dc3a9d7844c9d1d9492d2968dbdf0d76"
+      "signature": "3e0f56825d9448203ff4bdee2117659bd611cbc4df07da826f329ebfddc210df"
     },
     {
       "source": "src/walk/pinball/game.js",
@@ -4590,7 +4994,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "969878441ee6f083875006a6f3bb634849aadb7295f89cf2968b8615f525979c"
+      "signature": "d8c7754cb080aaa0d5ac1944c62f8aeab93a16ab372a9af74871a8826bb74c3d"
     },
     {
       "source": "src/walk/pinball/machine.js",
@@ -4607,8 +5011,20 @@
         "Recreation_pinball_collider"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 17,
-      "signature": "d0fe8f2d3cdd221d99ed4490fd59a1f75dd82cc3de8addf86222d42a7b22abea"
+      "placements": 19,
+      "signature": "0e8c7c040531ce4790aae1432723a0b0e2dfd59e234afc200c00915266994582"
+    },
+    {
+      "source": "src/walk/pinball/replay.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The visitor's own walker and what moves with it (board glide, longboard, grapple line, unstuck pop, the saved last spot, the jacket on the cat, the pushed ward trolley from its own resting place in ward-trolley.js), public-area tests of where the walker stands, and pinball replay steps: positions follow the walker or a game's own state, never a room frame.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "3e8290007faa61bb22c5fc25b82038cc8af74a8ec62fb8cbe658e5da35551b6e"
     },
     {
       "source": "src/walk/pinball/rules.js",
@@ -4657,6 +5073,18 @@
       "signature": "464395510af2b0ebcd8daac37ff57cb92af3b4c38e581e036ffab9a17cb2c1b1"
     },
     {
+      "source": "src/walk/plaque-atlas.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "ac363c331cd157fc661a5ef323c9bf8a1c629d295470ec154ff7b5c7c75a74ad"
+    },
+    {
       "source": "src/walk/pool/game.js",
       "rooms": [],
       "via": "frame boundary",
@@ -4666,7 +5094,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 14,
-      "signature": "5d2e0e3b8e3690a03ffe024213becf3a39639d8895113431f5fab82472131791"
+      "signature": "52836fb27b83e57ad880f08f5b20f04b2160f2370b3a804a3a6514c8d854400f"
     },
     {
       "source": "src/walk/pool/rules.js",
@@ -4754,7 +5182,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "68c7d063f1edbc801cfbda9d121bbfc148bd9f67bb096df80115a5fd0337b3af"
+      "signature": "3ecc3d4abc4b6c0486535e24180f47954dad922c98556e3ce2d54f820e83451a"
     },
     {
       "source": "src/walk/provisions.authoring.js",
@@ -4835,6 +5263,30 @@
       "interactionTargets": null,
       "placements": 15,
       "signature": "56a1a24f1554d55daeb61f6b808ecf86ea2cdd99007051e4b89d44b2e6f675ce"
+    },
+    {
+      "source": "src/walk/public-area.authoring.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The visitor's own walker and what moves with it (board glide, longboard, grapple line, unstuck pop, the saved last spot, the jacket on the cat, the pushed ward trolley from its own resting place in ward-trolley.js), public-area tests of where the walker stands, and pinball replay steps: positions follow the walker or a game's own state, never a room frame.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "6b2ea28fc7d515d57d17a9611abcd320361707c1fd17ba71f1bb32dba83470c8"
+    },
+    {
+      "source": "src/walk/public-area.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The visitor's own walker and what moves with it (board glide, longboard, grapple line, unstuck pop, the saved last spot, the jacket on the cat, the pushed ward trolley from its own resting place in ward-trolley.js), public-area tests of where the walker stands, and pinball replay steps: positions follow the walker or a game's own state, never a room frame.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "d4a35f82951ef36e0572ffd3a179721c45463f80ae6170bba20c09f80a7d1c1b"
     },
     {
       "source": "src/walk/quantum-knitter.js",
@@ -4966,8 +5418,8 @@
       "features": [],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 3,
-      "signature": "c7b1fb101965d0f1703bc136a4419e09469bf542d062146354be0cdee8a222fd"
+      "placements": 4,
+      "signature": "11898c0468aa99ef8349a0d826d5718c0c6ca39d239cb9dfd8a1a1a5753c51b0"
     },
     {
       "source": "src/walk/remotes.js",
@@ -4978,8 +5430,8 @@
       "features": [],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 3,
-      "signature": "3a3bc5f05fdc4b6715e043c15000bd99597af8f978522e71bb17b213d78da214"
+      "placements": 5,
+      "signature": "fab8c5a0e20f43e263d81c6799f87668e64bbd5fbcee8ccda94654fd402f0bd1"
     },
     {
       "source": "src/walk/render-bake.authoring.js",
@@ -4994,7 +5446,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 15,
-      "signature": "da1f6283253fb445f9c07e117d8e500483dd6b7f0ef2f8edd155a33143aff0ab"
+      "signature": "ab67bc4776e4480980d98a311d2d977558b350886ef31ddd9938218926b23396"
     },
     {
       "source": "src/walk/render-bake.js",
@@ -5009,7 +5461,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 15,
-      "signature": "a247fbf1ae48d50338e87495c634ce4e7ebef71a886637f68b2d590109d440ac"
+      "signature": "5fcda2ba0e714fd18da74574fdf43b36af358b0b63b3985b93cc410c8cbf2727"
     },
     {
       "source": "src/walk/selfie.authoring.js",
@@ -5029,7 +5481,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 12,
-      "signature": "dbd936bfcc9ae46e66c8b6e51f9cada3cd99c57f36547c720bd1eb85d5230696"
+      "signature": "4ab5db88630ed18627e3e01cd0e220961c851ba83cbcae9513bccf99024424a1"
     },
     {
       "source": "src/walk/selfie.js",
@@ -5049,7 +5501,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 12,
-      "signature": "e9a8de6d2c262b74860b3801360b58e8572119d6850d23d96354c4c4ffc7422a"
+      "signature": "bf8d0f94d881f9521f29b3dbbb4f138427d01d8447f999d8e2d9f001e00935e9"
     },
     {
       "source": "src/walk/selfie.prepared.js",
@@ -5069,7 +5521,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 12,
-      "signature": "e52b4370ff546382ece7706483abcf7ef617180fbb7c286e5c247c103637eb7a"
+      "signature": "5286e2bcdf1cd42aa35b9bcb2a79d5bef75fcf657cfc4e1acf2e3ad17fd720b7"
     },
     {
       "source": "src/walk/selfie.public.js",
@@ -5089,7 +5541,51 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 12,
-      "signature": "7decbf984445f3d5a2cae0f36528d32d86f5a9d5340a077834fe0f8a1dc295dd"
+      "signature": "8d39e12a083956d36503322684208f5df08d5ecad88503e48f1ddf3cc86326eb"
+    },
+    {
+      "source": "src/walk/ship-time.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "42d2a7ac638143049a550f302aa0f41a4d52be4737c96bde3eea2b1281676512"
+    },
+    {
+      "source": "src/walk/shuttle-doors.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Read their places from the selected layout itself: the Deck 2 shuttle cabin doors from each cabin's own door in the layout, and the Asteroid Defense airlock panel from d01-launch-d-15's frame on its corridor face (outside the room, so no room owns it).",
+      "features": [
+        "V2_shuttle_doors",
+        "V2_shuttle_door_casings",
+        "V2_shuttle_door_",
+        "V2_shuttle_door_leaf"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 9,
+      "signature": "69bb31e6aba735ac31d12ea309ad7e67bef9c8739e5d8c108e5323c1d9127e97"
+    },
+    {
+      "source": "src/walk/sign-array.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [
+        "V2_wayfinding_array",
+        "V2_wayfinding_array_"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "1d52c3a76ef8fafa433f50e5609a82fed7accd63a0955ff16cefecfa0f06db2c"
     },
     {
       "source": "src/walk/signs.authoring.js",
@@ -5106,7 +5602,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 25,
-      "signature": "386780d8dc85926f46daa4b72faf40bff71278bc23c537376ab4c2889e37520a"
+      "signature": "af740c7f14e19e546408625916c1dd6ad1f21df51ba4a5cb123a742e29678c3f"
     },
     {
       "source": "src/walk/signs.js",
@@ -5123,7 +5619,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 25,
-      "signature": "a0052c7eba0b2d4dc86078ac87ec3054d14af57df8abd0f247ba97b5bd97924f"
+      "signature": "9314fc787b2e40b99891651386ba601427625b572ae26c707849e6b9fb15e0f5"
     },
     {
       "source": "src/walk/signs.prepared.js",
@@ -5140,7 +5636,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 25,
-      "signature": "bc812c5772406ea5a5c5af04c73aa2a2ee69548e09c8df592fa565cd27fdcb6c"
+      "signature": "cbf6c34a71940d4bd8d355c2df337e94437430bc7aaa16afbb2f31ac25acd000"
     },
     {
       "source": "src/walk/signs.public.js",
@@ -5157,7 +5653,19 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 25,
-      "signature": "6b63ad43ab26b98c13977824c2b6c7a046cb27252427eb3620e34465a9b1719f"
+      "signature": "c0adbe280e0c678065bcd34a5a583692a8bd774bb12092ec09ca664ae9667c39"
+    },
+    {
+      "source": "src/walk/solved-pose.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "fd531a615a5dbbfaf9c5501e2415a86a6c74c16cad0b544fc380f555e75833d3"
     },
     {
       "source": "src/walk/surgery.authoring.js",
@@ -5461,7 +5969,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 4,
-      "signature": "55549c2bb5439af3282e0d8c1c7c0ed02d8cf4f8bba127466df53af2a2515e52"
+      "signature": "6ab040054569f233dd73ebb1b72f3fd4c8ed0f10b6d3f31ff3f6bbeef10652c6"
     },
     {
       "source": "src/walk/transporter.js",
@@ -5474,7 +5982,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 4,
-      "signature": "c6def6e40bfb364094e65c9179cfe93847a7afd30aaeecf7d388ac3861e0e700"
+      "signature": "8e97327bcd4bb7e73b74bd5ded13292aac18bafe2044206c47ce1faae870e131"
     },
     {
       "source": "src/walk/trim.authoring.js",
@@ -5527,6 +6035,18 @@
       "interactionTargets": null,
       "placements": 10,
       "signature": "ba2e79a9cae2c266954b0cf9936ebd378341e9e9296e1b3744b8116edb31d9cb"
+    },
+    {
+      "source": "src/walk/unstuck.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The visitor's own walker and what moves with it (board glide, longboard, grapple line, unstuck pop, the saved last spot, the jacket on the cat, the pushed ward trolley from its own resting place in ward-trolley.js), public-area tests of where the walker stands, and pinball replay steps: positions follow the walker or a game's own state, never a room frame.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 1,
+      "signature": "7e8abad0ddd7da6dec4a20f7138a917c65ae01b92dfbbc0d23ac3222014cf14a"
     },
     {
       "source": "src/walk/vault-lift.authoring.js",
@@ -5587,7 +6107,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 21,
-      "signature": "be24d74390cb002f67e7c2d0bccca4e45cb1cc6d9f9e1844c38a803414bb65d1"
+      "signature": "11ccad5261bbc984eac7a31627692b768eba50d04a660dc07205dccc41771d3e"
     },
     {
       "source": "src/walk/vault.js",
@@ -5608,7 +6128,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 21,
-      "signature": "ab291484acefa069830d407e38435e74d1fdd9d3939842184be6422470909349"
+      "signature": "0c3fda3d3ce502ac4db89aa6f93a120e2c91e86a54d2f2a2765e9d7c934a9890"
     },
     {
       "source": "src/walk/wall-kit.js",
@@ -5621,6 +6141,18 @@
       "interactionTargets": null,
       "placements": 11,
       "signature": "19dd95f48a39c83b67ed7c5c51528695b11d7a8b7c1cb6dc2d85a4acbd6022e3"
+    },
+    {
+      "source": "src/walk/ward-trolley-push.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The visitor's own walker and what moves with it (board glide, longboard, grapple line, unstuck pop, the saved last spot, the jacket on the cat, the pushed ward trolley from its own resting place in ward-trolley.js), public-area tests of where the walker stands, and pinball replay steps: positions follow the walker or a game's own state, never a room frame.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 1,
+      "signature": "f0033116c7b2f49e71955f9f52355ad84a5b92dbfdae7665cc0efee2a734c379"
     },
     {
       "source": "src/walk/ward-trolley.js",
@@ -5640,6 +6172,20 @@
       "interactionTargets": null,
       "placements": 20,
       "signature": "0d688adc71036878af633ed49e377870722bf7559137ecc5c261437a74ad5db7"
+    },
+    {
+      "source": "src/walk/wardrobe.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The visitor's own walker and what moves with it (board glide, longboard, grapple line, unstuck pop, the saved last spot, the jacket on the cat, the pushed ward trolley from its own resting place in ward-trolley.js), public-area tests of where the walker stands, and pinball replay steps: positions follow the walker or a game's own state, never a room frame.",
+      "features": [
+        "Wardrobe_bomber"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 5,
+      "signature": "b8093c7513a6ea6d5dea5b5f83f4de7fa812dfd295e481a0d227e709fee993b2"
     },
     {
       "source": "src/walk/windows.js",
@@ -5671,7 +6217,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "a2dd99f4cba56aaa11597935b6bf8379ee7c03d22e1a793c3435570619fa98eb"
+      "signature": "b87dc872cf1b886dbdbcc0c2262adf144a3f926cd826ae9884e20fa49ec95b18"
     },
     {
       "source": "src/walk/world.js",
@@ -5689,7 +6235,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "d91b95e9024dcddd05de56eb4c2094e74f7888a23a5153517b0f5e4a937c7b09"
+      "signature": "0fb3aa15b6c76254c4d6da9aa97ee2a5cb7317c62fe59f9e6163735fee29e78c"
     },
     {
       "source": "src/walk/world.prepared.js",
@@ -5707,7 +6253,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "681eec42329fc4b84e55b8f316f81efc3ca5e28d99e1dfd8145aa241120c303e"
+      "signature": "920531a730ac140cbd0393a6fd5e596e5fca6cd5408b19f8e32c778d4646725a"
     },
     {
       "source": "src/walk/world.public.js",
@@ -5725,7 +6271,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "c6eb5af15f5a34949347fc982bcf7dec18575afe60ca734d15598bb2df1b00a1"
+      "signature": "602589e80146bb3457f7168a5aea8329971323887a1632998700b0b921567dc3"
     },
     {
       "source": "src/walk/yarn.authoring.js",
@@ -5745,8 +6291,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 5,
-      "signature": "688ea9307b6ceb71192bc5433fc5fa2754513561767ebf995fbdd2420c6b02c8"
+      "placements": 4,
+      "signature": "956f028896ad0e9d5b89a016e79e8dbad15bd2427f4884fdcd4c8045c1a76203"
     },
     {
       "source": "src/walk/yarn.js",
@@ -5766,8 +6312,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 5,
-      "signature": "b96deee09f05d70497873d8720ed306c8e57b56f668026475064a341e2560e10"
+      "placements": 4,
+      "signature": "4af1bf0e56ae215f5c296841a7d4fcd1e5fa689da8a66856342594ca680c379c"
     },
     {
       "source": "src/window-geometry.js",
@@ -5857,6 +6403,7 @@
       "src/walk/hostess.js",
       "src/walk/hydration-nook.js",
       "src/walk/jaguar-gate.js",
+      "src/walk/keel-club.js",
       "src/walk/kittens.js",
       "src/walk/lever-panel.js",
       "src/walk/life-support-pipes.js",
@@ -5917,6 +6464,7 @@
       "src/walk/hostess.js",
       "src/walk/hydration-nook.js",
       "src/walk/jaguar-gate.js",
+      "src/walk/keel-club.js",
       "src/walk/kittens.js",
       "src/walk/life-support-pipes.js",
       "src/walk/lift-ride.js",
@@ -5968,6 +6516,7 @@
       "src/walk/hostess.js",
       "src/walk/hydration-nook.js",
       "src/walk/jaguar-gate.js",
+      "src/walk/keel-club.js",
       "src/walk/kittens.js",
       "src/walk/life-support-pipes.js",
       "src/walk/lift-ride.js",
