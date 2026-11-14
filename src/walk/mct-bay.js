@@ -7,12 +7,13 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 // Deck 1's Cargo maintenance becomes the depot for the ship's Mars Cat Transporters (MCTs), small grey utility
 // vehicles (from tester feedback). Six charging bays line the outboard wall, each with a wall-mounted power unit, its
 // heavy charging cable and an orange coolant umbilical, a wheel stop and a lit sign, MCT-01 CHARGING to MCT-06
-// CHARGING. The six drivable carts use these bays (transporter.js); cables hang coiled on their units. Two service bays
-// sit in front of the tool cabinets, MCT-01 SERVICE and MCT-02 SERVICE: in the first an MCT stands raised on yellow jack stands beside
+// CHARGING. The six drivable carts use these bays (transporter.js); cables hang coiled on their units. Four service bays
+// sit in front of the tool cabinets, MCT-01 SERVICE to MCT-04 SERVICE: in the first an MCT stands raised on yellow jack stands beside
 // a mechanic's tool trolley (an open drawer, torque wrenches and two diagnostic tablets with telemetry); in the second
 // one stands on low hydraulic lift pads. Road markings on the floor (a dashed centre line, lane legends at the
 // entrance, dashed lead-in curves and painted bay numbers) guide vehicles from the doorway into their bays. The old
-// repair benches go to make room; the tool cabinets, the centre aisle and the doorway stay as they were.
+// repair benches go to make room. Bays 3 and 4 repeat the two service fit-outs, beyond the cleared side doorway.
+// The other cabinets and the doorway stay in place, with the centre aisle clear.
 // Room frame (Area_d01-workshop-5): the doorway at x=-25.92 (|z|<2), the amber aisle lines at z=±2, the outboard wall's
 // face at z=16.84, the tool cabinets along z=-15 (front faces at z=-14.45, 2.6 m high), the room title on the far wall
 // at x=25.84 (|z|<7; refitted over the street doorway there, below), the ceiling at y=3.3 with light strips at z=0, ±6
@@ -26,7 +27,7 @@ const FLOOR=.008;
 const OLD=/^(Service_counter|Countertop|Tool|Tool_board|Refined_tool_storage)$/;
 // Charging bays (x centres, 3.7 m apart, outboard side) and service bays (x centres, cabinet side).
 export const CHARGE_BAYS=[-2.5,1.2,4.9,8.6,12.3,16];
-export const SERVICE_BAYS=[-11.5,-4.5];
+export const SERVICE_BAYS=[-11.5,-4.5,9.5,16.5];
 const BAY_W=3.7,MOUTH=10.7,SERVICE={w:6.2,z0:-14.2,z1:-6.8};
 // The service displays stay on their stands and lift pads.
 const IN_SERVICE=[3,6];
@@ -57,7 +58,7 @@ function signAtlas(){
 }
 // Painted floor legends and bay numbers: yellow on clear, slightly worn.
 function floorAtlas(){
- const rows=[['▶ CHARGING 01–06','lane'],['▶ SERVICE 1–2','lane'],...CHARGE_BAYS.map((_,i)=>[`MCT-0${i+1}`,'bay']),...SERVICE_BAYS.map((_,i)=>[`SERVICE ${i+1}`,'bay'])];
+ const rows=[['▶ CHARGING 01–06','lane'],[`▶ SERVICE 1–${SERVICE_BAYS.length}`,'lane'],...CHARGE_BAYS.map((_,i)=>[`MCT-0${i+1}`,'bay']),...SERVICE_BAYS.map((_,i)=>[`SERVICE ${i+1}`,'bay'])];
  return atlas(1024,256,rows.length,(g,r,w,h)=>{
   const [text,kind]=rows[r];g.fillStyle=kind==='lane'?'#f4f1e6':'#f2b631';g.textAlign='center';g.textBaseline='middle';
   g.font=`800 ${kind==='lane'?150:190}px ${FONT}`;let size=kind==='lane'?150:190;
@@ -205,9 +206,9 @@ export function createMctBay(ship){
   dashes(xc-2.6,-2.35,xc,z1+.15,xc,-2.35);
  }
  const zs=-10.45;
- // Service bay 1: MCT-03 raised on four yellow jack stands, a side panel off and leaning on the cabinets, and the
+ // Service bays 1 and 3: MCT-03 raised on four yellow jack stands, a side panel off and leaning on the cabinets, and the
  // mechanic's tool trolley at its right side.
- {const xc=SERVICE_BAYS[0],lift=.2;
+ for(const xc of [SERVICE_BAYS[0],SERVICE_BAYS[2]]){const lift=.2;
   vehicle(IN_SERVICE[0],xc,zs,lift);
   within(xc,0,zs,Math.PI,()=>{
    for(const sx of [-1,1])for(const sz of [-1,1]){
@@ -250,8 +251,8 @@ export function createMctBay(ship){
   });
   {const o=new T.Mesh(new T.BoxGeometry(.6,1.1,1.05));o.position.set(xc+1.95,.55,zs+.55);solid.add(o);}
  }
- // Service bay 2: MCT-06 on four low hydraulic lift pads, their hoses to a small pump unit by the cabinets.
- {const xc=SERVICE_BAYS[1],lift=.1,pump=[xc+2.25,-13.5];
+ // Service bays 2 and 4: MCT-06 on four low hydraulic lift pads, their hoses to a small pump unit by the cabinets.
+ for(const xc of [SERVICE_BAYS[1],SERVICE_BAYS[3]]){const lift=.1,pump=[xc+2.25,-13.5];
   vehicle(IN_SERVICE[1],xc,zs,lift);
   within(xc,0,zs,Math.PI,()=>{
    for(const sx of [-1,1])for(const sz of [-1,1]){const x=sx*.48,z=sz*.62;box(M.yellow,[.5,.07,.62],[x,.035,z]);box(M.dark,[.5,.012,.08],[x,.072,z-.2]);cyl(M.steel,.09,.09+lift,[x,.07+(.09+lift)/2,z]);box(M.dark,[.22,.03,.22],[x,.175+lift,z]);}

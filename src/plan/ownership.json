@@ -4374,7 +4374,7 @@
       ],
       "interactionTargets": null,
       "placements": 48,
-      "signature": "494f8ed3cd9917f61adb14abb9092963b31bfe91b601797525ad231674b36577"
+      "signature": "bb2e26aaba2bd1440671402d8a5ae5b6250eefe6225f0bf8246353360cee169f"
     },
     {
       "source": "src/walk/merge-by-material.js",
