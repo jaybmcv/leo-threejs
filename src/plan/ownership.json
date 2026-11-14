@@ -4196,7 +4196,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "21fafbcff0b58f8698f70c282bb6e82b03b026d1987068ac216b1fa2277c1752"
+      "signature": "2895b3e91a64c399201dddd221eb5e9e2b9fa9c81e73852f97187c22cda91b5e"
     },
     {
       "source": "src/walk/main.js",
@@ -4218,7 +4218,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "6324de4552d0b1813c10c8d055cb3891443d26751c48cd3e5664ac5526669236"
+      "signature": "a15ee73f5c2ee117d8caf93fcc42edce78353ce9d6ee0a646bfa9928ea7b2ef6"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4238,7 +4238,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "34c5036c30b2d5010f5ccd4d55eb882122acf9d92bbd4456a4a12e49d66df73d"
+      "signature": "7834360cafa4b541730dbe337642b514f05bee62abdb0562635d86f398847087"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4258,7 +4258,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "2008e2d1e93ac1545ea4903c6cfc8174e699fb80a5f86529ab99d6f0287dc455"
+      "signature": "d5c146b7b9188d2b0805aedb093f10f1d8dab0be532f593f84e591e0ea3ef117"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -4372,9 +4372,33 @@
       "colliders": [
         "Cargo_maintenance_MCT_bay_colliders"
       ],
-      "interactionTargets": null,
+      "interactionTargets": "same room frames; see debug world positions",
       "placements": 50,
-      "signature": "7d01b2850566009c30988bb965f87ec6d97d248d33f01db2612ce626bd4a11e9"
+      "signature": "a3afe044faae75b6c33b0dd8dbbb936f4753dc016940c573f3b881e3313bbfae"
+    },
+    {
+      "source": "src/walk/mct-repair/game.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 2,
+      "signature": "fc108753716eaef47a239bbb960de03938086543c0ed165183456c4c630baf04"
+    },
+    {
+      "source": "src/walk/mct-repair/rules.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Observer/avatar space, detached reusable models, renderer transforms or a standalone game canvas; no placed ship fitting.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 2,
+      "signature": "af6108fc5ee42c69761893183a7fcf61aa51e24f211382d9b6baed9552185d27"
     },
     {
       "source": "src/walk/merge-by-material.js",

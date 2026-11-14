@@ -7,7 +7,8 @@ import {buildRoomShell} from '../src/v2/room-shell.js';
 import {polygonGeometry} from '../src/v2/geometry.js';
 import {moveRoomFitoutMeshes} from '../src/v2/room-fitout-overrides.js';
 import {installWalkCanvas} from '../src/walk/canvas.js';
-import {stripCargoMaintenance,createMctBay,SERVICE_BAYS} from '../src/walk/mct-bay.js';
+import {stripCargoMaintenance,createMctBay,SERVICE_BAYS,mctRepairStations} from '../src/walk/mct-bay.js';
+import {createTransporters} from '../src/walk/transporter.js';
 import {Colliders,BODY,solid} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 
@@ -32,6 +33,18 @@ const slab=layout.decks[0].slab;root.add(new T.Mesh(polygonGeometry(slab.outline
 const col=new Colliders();col.addStatic(root,solid);col.addStatic(bay.solid,()=>true);col.commit();
 const seg=new T.Line3(),p=new T.Vector3(),ray=new T.Ray(),up=new T.Vector3(0,1,0);let probes=0;
 function clear(x,z){room.localToWorld(p.set(x,0,z));seg.start.copy(p).addScaledVector(up,BODY.step+BODY.radius);seg.end.copy(p).addScaledVector(up,BODY.height-BODY.radius);assert(!col.overlaps(seg,BODY.radius),'Blocked route '+[x,z]);ray.origin.copy(p).addScaledVector(up,.3);ray.direction.set(0,-1,0);assert(col.raycast(ray,.5),'Missing floor '+[x,z]);probes++;}
+const repairs=mctRepairStations(),transporters=createTransporters({colliders:col,lifts:{lifts:[]}});
+assert.equal(repairs.spots.length,SERVICE_BAYS.length);
+for(const [i,s] of repairs.spots.entries()){
+ clear(SERVICE_BAYS[i]-1.5,-9.6);
+ const p=new T.Vector3(...s.at),t=repairs.near(p);assert.equal(t?.kind,'mct-repair');assert.equal(t.bay,i+1);assert.equal(t.label,`Repair MCT · Service ${i+1}`);
+ assert.equal(transporters.near(p),null,'Service displays do not take a boarding prompt');
+ assert.equal(repairs.near(p.clone().add(new T.Vector3(0,4,0))),null,'No prompt on the next deck');
+ assert.equal(repairs.near(p.clone().add(new T.Vector3(0,0,2))),null,'Prompt stays beside its service MCT');
+ // Walk from the open bay mouth to the interaction along the clear side of the MCT.
+ for(let z=-7.5;z>=-9.6;z-=.15)clear(SERVICE_BAYS[i]-1.5,z);
+}
+for(const c of transporters.carts){const p=c.pos.clone().add(new T.Vector3(1.3,0,0));assert.equal(transporters.near(p)?.kind,'mct');assert.equal(repairs.near(p),null,'Charging carts keep boarding without a repair prompt');}
 // Cross the old cabinet footprint and the unchanged doorway in both directions.
 for(let z=-18;z<=-1;z+=.2)clear(1.3,z);
 for(const xc of SERVICE_BAYS.slice(2)){

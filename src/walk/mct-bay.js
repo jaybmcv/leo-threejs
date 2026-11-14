@@ -1,4 +1,4 @@
-import {roomObject} from '../plan/rooms.js';
+import {roomObject,toWorld} from '../plan/rooms.js';
 import {walkCanvas} from './canvas.js';
 import {createCartMesh} from './transporter-mesh.js';
 import * as T from 'three';
@@ -28,6 +28,12 @@ const OLD=/^(Service_counter|Countertop|Tool|Tool_board|Refined_tool_storage)$/;
 // Charging bays (x centres, 3.7 m apart, outboard side) and service bays (x centres, cabinet side).
 export const CHARGE_BAYS=[-2.5,1.2,4.9,8.6,12.3,16];
 export const SERVICE_BAYS=[-11.5,-4.5,9.5,16.5];
+// Service displays are static. Charging-bay carts keep their separate boarding prompts.
+export function mctRepairStations(){
+ const spots=SERVICE_BAYS.map((x,i)=>({bay:i+1,at:toWorld('d01-workshop-5',[x-1.5,0,-9.6])}));
+ return {spots,near(p){const spot=spots.find(s=>Math.abs(p.y-s.at[1])<.8&&Math.hypot(p.x-s.at[0],p.z-s.at[2])<1);
+  return spot?{kind:'mct-repair',bay:spot.bay,label:`Repair MCT · Service ${spot.bay}`}:null;}};
+}
 const BAY_W=3.7,MOUTH=10.7,SERVICE={w:6.2,z0:-14.2,z1:-6.8};
 // The service displays stay on their stands and lift pads.
 const IN_SERVICE=[3,6];
