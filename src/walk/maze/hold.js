@@ -82,7 +82,7 @@ export function createMazeHold(ship){
  // The walls: each rectangle (layout.js) cut into containers of about 3 m, a hand's width apart, kept off the room's
  // own walls (the hold's name plate on the end wall stands 4 cm proud).
  for(const r of MAZE.walls){
-  const axis=r.along,[a0,a1]=axis==='x'?[r.x0,Math.min(r.x1,END-.1)]:[Math.max(r.z0,-SIDE+.05),Math.min(r.z1,SIDE-.05)],[c0,c1]=axis==='x'?[r.z0,r.z1]:[r.x0,r.x1];
+  const axis=r.along,[a0,a1]=axis==='x'?[r.x0,Math.min(r.x1,END-.1)]:[Math.max(r.z0,-SIDE+.1),Math.min(r.z1,SIDE-.1)],[c0,c1]=axis==='x'?[r.z0,r.z1]:[r.x0,r.x1];
   collider(along(axis,a0,a1,c0+.02,c1-.02,0,HEIGHT),'Container_maze_wall_solid');
   // A net inside at waist height, so a body can never be taken to stand inside a container: a capsule wholly inside a
   // box touches none of its faces, and is only found within its radius of a triangle's edge, so the net's squares are
@@ -117,7 +117,11 @@ export function createMazeHold(ship){
    if(!isOpen){const g=along(axis,a-s*T_,a,c0,c1,0,HEIGHT);put(m,g.clone());collider(g,'Container_maze_hollow_solid');doors(axis,a-s*T_,-s,c0+T_,c1-T_);number(axis,a-s*T_,-s,h.c,id);return;}
    put(M.steel,along(axis,a-s*.02,a+s*.02,c0,c1,HEIGHT-.34,HEIGHT-.06));
    number(axis,a,s,h.c,id,HEIGHT-.2);
-   for(const side of [-1,1]){const hinge=side<0?c0:c1;put(m,along(axis,a+s*.02,a+s*.07,side<0?hinge-HALF:hinge,side<0?hinge:hinge+HALF,.05,HEIGHT-.05));}
+   // Folded leaves beside an outer wall must stop inside it, just like the container body.
+   const lo=axis==='x'?-SIDE+.05:-END+.05,hi=axis==='x'?SIDE-.05:END-.1;
+   for(const side of [-1,1]){const hinge=side<0?c0:c1,g=along(axis,a+s*.02,a+s*.07,
+    Math.max(lo,side<0?hinge-HALF:hinge),Math.min(hi,side<0?hinge:hinge+HALF),.05,HEIGHT-.05);
+    put(m,g);collider(g.clone(),'Container_maze_hollow_solid');}
   });
  }
  // All number plates use one texture and one draw, including the open containers' headers.
