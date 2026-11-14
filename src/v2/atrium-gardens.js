@@ -604,14 +604,18 @@ export const atriumSoffitMaterial=new T.MeshStandardMaterial({name:'V2_atrium_so
 export function addDownlights(root,layout){
  const mats=[];
  for(const d of layout.decks){
-  if(d.number<7||d.number>16||!d.atrium?.outline)continue;const below=layout.decks[d.number-2]?.atrium?.outline;if(!below)continue;
+  if(d.number<7||d.number>20||!d.atrium?.outline)continue;const lower=layout.decks[d.number-2],below=lower?.atrium?.outline;if(!below)continue;
+  // The upper galleries share a void edge, so their ceilings sit outside both outlines rather than over open air.
+  const upper=d.number>16,stops=upper?walkwayStops(layout,lower,d):null,holes=upper?(d.slab?.holes||[]).filter(h=>h.id!=='atrium').map(h=>h.polygon):[];
   const full=d.atrium.outline,ring=simplifyRing(full);
   for(let i=0;i<ring.length;i++){
    const a=ring[i],b=ring[(i+1)%ring.length],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<SLOT)continue;
    const ux=(b[0]-a[0])/len,uz=(b[1]-a[1])/len,mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];let nx=-uz,nz=ux;if(!contains(full,[mid[0]+nx*.5,mid[1]+nz*.5])){nx=-nx;nz=-nz;}
    for(let t=SLOT;t<len-.5;t+=SLOT){const x=a[0]+ux*t-nx*1.1,z=a[1]+uz*t-nz*1.1;
-    // Only where the soffit is open to the atrium below (an overhang), never over a cabin or room under the slab.
-    if(!contains(below,[x,z])||!contains(below,[x-nx*.6,z-nz*.6]))continue;
+    // Retain the lower overhangs; above them, include the open gallery ceilings along the same edge.
+    const overhang=contains(below,[x,z])&&contains(below,[x-nx*.6,z-nz*.6]);
+    if(!overhang&&(!upper||stops([x,z])))continue;
+    if(upper&&(!contains(d.slab.outline,[x,z])||holes.some(h=>contains(h,[x,z]))))continue;
     mats.push(new T.Matrix4().makeTranslation(x,d.y-SOFFIT_DROP-.004,z));}
   }
  }
