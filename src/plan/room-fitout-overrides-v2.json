@@ -1,5 +1,6 @@
 {
   "commons-1": {
+    "removeGardenPrints": [73],
     "remove": [
       {"part":"Lounge_cat_tree","x":147,"z":18.6}
     ],
