@@ -50,7 +50,6 @@
     "check:captain-says": "node scripts/check-captain-says.mjs",
     "load:live": "node scripts/live-load.mjs",
     "check:invasion": "node scripts/check-invasion.mjs",
-    "check:lounge": "node --max-old-space-size=8000 scripts/check-lounge.mjs",
     "check:startup": "node scripts/check-startup-v2.mjs",
     "check:walk-performance": "node scripts/check-walk-performance.mjs"
   },
