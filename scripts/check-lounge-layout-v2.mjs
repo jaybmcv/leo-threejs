@@ -16,6 +16,7 @@ import {prepareClubhouseAccess} from '../src/v2/clubhouse-access.js';
 import {Colliders,solid} from '../src/walk/collision.js';
 import {groundMesh} from '../src/v2/ground.js';
 import {Controller} from '../src/walk/controller.js';
+import {findRestSpots} from '../src/walk/rest.js';
 import {SWIM,swimWorld,limitSwim,gemNear} from '../src/walk/aquarium-treasure/layout.js';
 import {featurePlaces} from '../src/v2/goto-features.js';
 import {mesh,polygonGeometry} from '../src/v2/geometry.js';
@@ -86,6 +87,9 @@ route('R4 maze upper exit',[[-125.8,32.3,-29],[-126.75,32.3,-29]]);
 route('R5 clubhouse and ground lift',[[-90.8,24.3,-45.8],[-86.53,24.3,-45.8],[-86.53,24.3,-49]]);
 route('R6 jaguar to dome',[[-112.5,24.3,-23.5],[-112.5,24.3,-28.8],[-113.3,24.3,-29.1],[-113.3,24.3,-32.7],[-112.5,24.3,-32.7],[-112.5,24.3,-34]]);
 for(const y of [28.3,32.3])route('R7 aft door '+y,[[-140.6,y,-30],[-138.2,y,-30]]);
+// Walk below the retired side strips from the reported view, and below the rear strip.
+route('R8 old side lights',[[-134.36,24.3,-38.2],[-135.41,24.3,-43.6],[-134.36,24.3,-38.2]]);
+route('R9 old rear light',[[-121,24.3,-57],[-121,24.3,-59.5],[-121,24.3,-57]]);
 // The lounge floor can't make solids walkable: the aquarium's front glass stays blocked (the tank itself is swimmable
 // water), while the floor 2 m in front of it is clear.
 assert(!clear([-100,24.3,-28])&&!clear([-120,24.3,-28]),'The aquarium glass stays solid over the lounge floor');
@@ -112,6 +116,20 @@ for(const p of [[-128.75,32.3,-43.2],[-89.8,28.3,-47.4]]){segment.start.set(p[0]
 const serviceBounds=names=>{const b=new T.Box3();root.updateMatrixWorld(true);source.root.traverse(o=>{if(o.isMesh&&names.includes(o.name))b.union(new T.Box3().setFromObject(o,true));});return b;};
 // The laundry, parcel lockers and reading bookcases were removed from this room's source (tester feedback).
 assert(serviceBounds(['Laundry_counter','Laundry_machine','Laundry_drum','Parcel_locker','Reading_shelf','Library_end_panel','Library_shelf','Library_book']).isEmpty(),'Removed lounge furnishings are back');
+// The three loose reading chairs and their batched seams leave bare, walkable floor.
+const chairs=[];source.root.traverse(o=>{if(o.name==='Tail_clearance_chair')chairs.push(o.getWorldPosition(new T.Vector3()));});
+assert.deepEqual(chairs.map(p=>p.toArray()),[[-118.5,24.3,-53],[-116.5,24.3,-53],[-114.5,24.3,-53],[-112.5,24.3,-53]],'Keep all four kitchen chairs');
+const rests=findRestSpots(source.root),seams=[];source.root.traverse(o=>{if(o.name==='Polish_tailored_seam')seams.push(new T.Box3().setFromObject(o,true));});
+for(const x of [-128.5,-125.5,-122.5]){
+ route('Former reading chair '+x,[[x,24.3,-59.8],[x,24.3,-54.8]]);
+ assert(!rests.some(s=>Math.abs(s.height-24.8)<.5&&Math.hypot(s.point.x-x,s.point.z+56)<1.5),'Invisible chair rest anchor at '+x);
+ const b=new T.Box3(new T.Vector3(x-.4,24.3,-56.4),new T.Vector3(x+.4,25.5,-55.6));
+ assert(!seams.some(s=>s.intersectsBox(b)),'Floating upholstery seam at '+x);
+}
+for(const p of chairs)assert(rests.some(s=>Math.hypot(s.point.x-p.x,s.point.z-p.z)<.1),'Kitchen chair still has its sit anchor');
+// Old rectangular-gallery lights floated below the reshaped balconies. Remove the
+// hidden upper rear strip too, before rendering and collision use the same source.
+assert(serviceBounds(['Gallery_end_light','Gallery_warm_light']).isEmpty(),'Retired lounge light strips are back');
 const arcadeBox=new T.Box3().setFromObject(arcade.solid,true);
 assert(!arcadeBox.intersectsBox(tank));close(arcadeBox.max.x,-88);assert(arcadeBox.min.z>=-43.91&&arcadeBox.max.z<=-28.49);
 close(new T.Vector3().setFromMatrixPosition(lift.group.matrixWorld).x,-86.53);close(new T.Vector3().setFromMatrixPosition(lift.group.matrixWorld).z,-51.2);
