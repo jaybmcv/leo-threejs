@@ -394,12 +394,13 @@
         "Hydro_Nip_Main_Sign",
         "Hydro_Nip_Main_Sign_Body",
         "Hydro_Nip_Main_Sign_Rim",
+        "Lounge_porch_floor",
         "Hammock"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 129,
-      "signature": "59d3c6e3240b628ef9a46bb1f9375c5be879420c94dcb29d0cc18b17b8866e94"
+      "placements": 131,
+      "signature": "07859fe309f054a15c0425b3d7c6c610ae6b5a4bc1c3789b55e6103a554a2f1f"
     },
     {
       "source": "src/interior-polish.js",
@@ -4329,7 +4330,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 40,
-      "signature": "6e7c801c50bf0a34b793cd7a1c165b7091fee2872eb9c283b2ffd26de36e852b"
+      "signature": "9d678fb8f34d8c0636ed2e471de8757ea45ec36e1828e45f00dbc781bccd527c"
     },
     {
       "source": "src/walk/maze/layout.js",
@@ -4373,7 +4374,7 @@
       ],
       "interactionTargets": null,
       "placements": 48,
-      "signature": "494f8ed3cd9917f61adb14abb9092963b31bfe91b601797525ad231674b36577"
+      "signature": "bb2e26aaba2bd1440671402d8a5ae5b6250eefe6225f0bf8246353360cee169f"
     },
     {
       "source": "src/walk/merge-by-material.js",
