@@ -394,12 +394,13 @@
         "Hydro_Nip_Main_Sign",
         "Hydro_Nip_Main_Sign_Body",
         "Hydro_Nip_Main_Sign_Rim",
+        "Lounge_porch_floor",
         "Hammock"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 129,
-      "signature": "8da493b25bf185c4447a1599d07d6a23f776bcc8550bef47fdc313301d03fce7"
+      "placements": 131,
+      "signature": "41b18fa97d50a52b31d1aa442dbdb1d9cc7b1d28a16f6fdfaa9b9d88b03bbf0f"
     },
     {
       "source": "src/interior-polish.js",
