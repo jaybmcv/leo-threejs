@@ -1,6 +1,34 @@
+import * as T from 'three';
+
+// Warm prepared ships still carry the retired rectangular-gallery lights. Their
+// source names and exact lounge-frame bounds keep every other fitting intact.
+export function retirePreparedLoungeLights(ship){
+ const lounge=ship.root.getObjectByName('Fitted_garden_commons_01');if(!lounge)return 0;
+ lounge.updateWorldMatrix(true,false);const inverse=lounge.matrixWorld.clone().invert(),point=new T.Vector3();let removed=0;
+ const inside=(name,p)=>[27.99,31.99].some(y=>Math.abs(p.y-y)<.06)&&(name==='Gallery_end_light'?Math.abs(p.x-111.7)<.06&&p.z>11.94&&p.z<41.06:Math.abs(p.z-42.25)<.06&&p.x>112.94&&p.x<153.06);
+ for(const group of ship.v2PreparedBake.bands.values()){
+  group.updateWorldMatrix(true,true);const meshes=[];group.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh)meshes.push(o);});
+  for(const o of meshes){
+   const g=o.geometry,ranges=g.userData.preparedRanges||[],targets=ranges.filter(r=>r.name==='Gallery_end_light'||r.name==='Gallery_warm_light');if(!targets.length)continue;
+   const p=g.attributes.position,index=g.index,matrix=inverse.clone().multiply(o.matrixWorld),drop=new Set();
+   for(const r of targets)for(let face=r.start;face<r.start+r.count;face++)if([0,1,2].every(k=>inside(r.name,point.fromBufferAttribute(p,index?index.getX(face*3+k):face*3+k).applyMatrix4(matrix))))drop.add(face);
+   if(!drop.size)continue;removed+=drop.size;
+   const count=(index?.count??p.count)/3,kept=[],prefix=new Uint32Array(count+1);
+   for(let face=0;face<count;face++){prefix[face+1]=prefix[face]+(drop.has(face)?1:0);if(!drop.has(face))for(let k=0;k<3;k++)kept.push(index?index.getX(face*3+k):face*3+k);}
+   if(!kept.length){o.removeFromParent();continue;}
+   const next=g.clone();next.setIndex(kept);next.clearGroups();
+   for(const r of g.groups){const start=r.start/3,end=(r.start+r.count)/3,n=r.count-(prefix[end]-prefix[start])*3;if(n)next.addGroup(r.start-prefix[start]*3,n,r.materialIndex);}
+   next.userData.preparedRanges=ranges.map(r=>({...r,start:r.start-prefix[r.start],count:r.count-prefix[r.start+r.count]+prefix[r.start]})).filter(r=>r.count);
+   next.computeBoundingBox();next.computeBoundingSphere();o.geometry=next;
+  }
+ }
+ return removed;
+}
+
 // Only the original, baked render contents are fixed. Band parents receive live activities later.
 const pending=new WeakMap(),SETTLED=()=>{};
 export function rememberPreparedStatic(ship){
+ ship.v2RetiredLoungeLights=retirePreparedLoungeLights(ship);
  const fixed=new Set();for(const group of ship.v2PreparedBake.bands.values())for(const child of group.children)child.traverse(o=>fixed.add(o));
  pending.set(ship,fixed);
 }
