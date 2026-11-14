@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import * as T from 'three';
 import layout from '../src/plan/selected-layout.js';
 import {buildRoomShell} from '../src/v2/room-shell.js';
+import {polygonGeometry} from '../src/v2/geometry.js';
+import {createShipArea,SHIP_AREAS} from '../src/areas.js';
+import {stripCargoMaintenance} from '../src/walk/mct-bay.js';
 import {Colliders} from '../src/walk/collision.js';
 import * as visitor from '../src/walk/transporter.js';
 import * as authoring from '../src/walk/transporter.authoring.js';
@@ -11,6 +14,26 @@ const rooms=layout.rooms.filter(r=>r.deck===1&&!r.aggregate),width=1.52,clearanc
 const entries=r=>[r.door,r.fittingDoor,...(r.galleryDoors||[]),...(r.bayAccessDoors||[])].filter(Boolean);
 const walkOnly=rooms.filter(r=>!entries(r).some(d=>d.width>=width+2*clearance));
 assert.equal(walkOnly.length,0,'Review narrow rooms before allowing the MCT');
+// Both road ends use the same shell/finish entry. The new aft cut must leave its jambs and header solid.
+const cargo=rooms.find(r=>r.id==='d01-workshop-5'),forward=cargo.galleryDoors.find(d=>d.id===cargo.id+'-street-door'),aft=cargo.galleryDoors.find(d=>d.id===cargo.id+'-aft-street-door');
+assert(aft&&forward,'Cargo road must have both street doorways');
+assert.equal(aft.width,forward.width);assert.equal(aft.width,4);
+assert.deepEqual(aft.center,[Math.min(...cargo.polygon.map(p=>p[0])),cargo.y,forward.center[2]]);
+const cargoShell=new T.Group(),source=createShipArea(SHIP_AREAS.find(r=>r.id===cargo.id));cargoShell.add(source.root);
+const cargoShip={root:cargoShell,inside:cargoShell,cutaway:new Set([source.shell])};stripCargoMaintenance(cargoShip);buildRoomShell(cargoShip,cargo,cargoShell);
+const sign=source.root.getObjectByName('Cargo_aft_identity_panel'),title=source.root.getObjectByName('Cargo_aft_identity_text');
+assert(sign&&title,'Aft doorway must carry the matching room sign');
+sign.geometry.computeBoundingBox();assert(sign.position.y+sign.geometry.boundingBox.min.y>2.5,'Room sign must stay above the doorway');
+const deck=layout.decks[0],slab=new T.Mesh(polygonGeometry(deck.slab.outline,deck.slab.holes.map(h=>h.polygon),deck.y));cargoShell.add(slab);
+const cargoCol=new Colliders();cargoCol.addStatic(cargoShell);cargoCol.commit();
+const [ax,ay,az]=aft.center,capsule=(x,z)=>new T.Line3(new T.Vector3(x,ay+.8,z),new T.Vector3(x,ay+1.65,z));
+for(const z of [az-1.5,az,az+1.5])for(let x=ax-3;x<=ax+3;x+=.15){
+ assert(!cargoCol.overlaps(capsule(x,z),.35),'Aft cargo doorway must admit the walking capsule');
+ const ground=cargoCol.raycast(new T.Ray(new T.Vector3(x,ay+.5,z),new T.Vector3(0,-1,0)),1);
+ assert(ground&&ground.normal.y>.9&&Math.abs(ground.point.y-ay)<.01,'Cargo threshold must retain continuous level floor');
+}
+for(const z of [az-3.3,az+3.3])assert(cargoCol.overlaps(capsule(ax,z),.35),'Wall beside the aft cargo doorway stays solid');
+assert(cargoCol.raycast(new T.Ray(new T.Vector3(ax+1,ay+2.75,az),new T.Vector3(-1,0,0)),2),'Aft cargo doorway retains its header');
 let crossings=0;
 for(const r of rooms){
  const root=new T.Group();buildRoomShell({root:new T.Group(),cutaway:new Set()},r,root);

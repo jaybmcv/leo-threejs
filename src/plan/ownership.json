@@ -4373,8 +4373,8 @@
         "Cargo_maintenance_MCT_bay_colliders"
       ],
       "interactionTargets": null,
-      "placements": 48,
-      "signature": "bb2e26aaba2bd1440671402d8a5ae5b6250eefe6225f0bf8246353360cee169f"
+      "placements": 50,
+      "signature": "7d01b2850566009c30988bb965f87ec6d97d248d33f01db2612ce626bd4a11e9"
     },
     {
       "source": "src/walk/merge-by-material.js",
