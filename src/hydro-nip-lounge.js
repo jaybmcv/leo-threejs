@@ -289,7 +289,10 @@ export function createHydroNipLounge({mirror=1}={}){
   // The porch: glass sides and roof from the door out front to inside the dome's skin, with a dark frame where it meets
   // the cut, and the sliding door at its front.
   {const {half,height}=PORCH,len=PORCH.in-PORCH.out,mid=(PORCH.in+PORCH.out)/2;
-   for(const s of [-1,1])box(M.glass,[.04,height,len],[o.x+s*half,FLOOR+height/2,mid]);box(M.glass,[2*half,.04,len],[o.x,FLOOR+height,mid]);
+   for(const s of [-1,1])box(M.glass,[.04,height,len],[o.x+s*half,FLOOR+height/2,mid]);
+   // Keep the thin roof pane separate so ground probes support it without making the other glass a floor.
+   const roof=new T.Mesh(tidy(new T.BoxGeometry(2*half,.04,len).translate(o.x,FLOOR+height,mid),M.glass.color),M.glass.mat);
+   roof.name='Lounge_porch_floor';roof.receiveShadow=true;root.add(roof);
    for(const s of [-1,1])box(M.dark,[.1,height,.1],[o.x+s*half,FLOOR+height/2,PORCH.in]);box(M.dark,[2*half+.1,.1,.1],[o.x,FLOOR+height,PORCH.in]);
    for(const s of [-1,1])box(M.dark,[.08,.08,len],[o.x+s*half,FLOOR+height,mid]);
    door({x:o.x,z:PORCH.out,width:1.7,height:2.45,face:-1,pocket:-1});
