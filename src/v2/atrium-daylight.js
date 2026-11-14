@@ -10,38 +10,39 @@ function puff(g,x,y,rx,ry,angle,alpha,colour='255,255,255'){
  g.fillStyle=r;g.beginPath();g.arc(0,0,rx,0,Math.PI*2);g.fill();g.restore();
 }
 
-// A stylised low-poly cloud, like the walk's faceted trees: a row of lumps, each a fan of flat facets lit from above
-// (white on top, pale blue-grey underneath), cut flat along a common base. Opaque facets, each stroked in its own
-// colour so no seam of sky shows between them. Drawn in the cloud's own frame (x along the row, y down to the base)
-// turned onto the panel so the row lies across the atrium and the base faces the bow, as concept A has them from the
-// floor.
-function lowPolyCloud(g,rnd,cx,cy,size){
+// Overlapping soft lobes, shaded blue-grey underneath and warm white above. Each cluster has its own outline.
+// Turn the row across the atrium so the long panel still reads as a sky from the floor.
+function softCloud(g,rnd,cx,cy,size){
  g.save();g.transform(0,1,1,0,cx,cy);
- const lumps=3+(rnd()*3|0),base=size*.35;g.lineJoin='round';g.lineWidth=1;
+ const lumps=3+(rnd()*5|0),lobes=[],angle=(rnd()-.5)*.3;
+ const lobe=(x,y,r,h,colour)=>{
+  g.save();g.translate(x,y);g.scale(1,h/r);const fill=g.createRadialGradient(0,0,0,0,0,r);
+  for(const[at,alpha]of[[0,.96],[.6,.9],[.82,.45],[1,0]])fill.addColorStop(at,`rgba(${colour},${alpha})`);
+  g.fillStyle=fill;g.beginPath();g.arc(0,0,r,0,Math.PI*2);g.fill();g.restore();
+ };
+ g.rotate(angle);
  for(let l=0;l<lumps;l++){
-  const t=l/(lumps-1)-.5,r=size*(.6+rnd()*.35)*(1-Math.abs(t)*.6),lx=t*size*2.1+(rnd()-.5)*size*.3,ly=base-r*.62,n=7+(rnd()*3|0),pts=[];
-  for(let k=0;k<n;k++){const a=(k+rnd()*.4)/n*Math.PI*2,s=.8+rnd()*.32;pts.push([lx+Math.cos(a)*r*s,Math.min(base,ly+Math.sin(a)*r*.85*s)]);}
-  const hub=[lx+(rnd()-.5)*r*.3,ly-r*.15];
-  for(let k=0;k<n;k++){const a=pts[k],b=pts[(k+1)%n],lit=Math.max(0,Math.min(1,.62-((a[1]+b[1])/2-hub[1])/r+(rnd()-.5)*.2));
-   const col=`rgb(${Math.round(196+59*lit)},${Math.round(214+41*lit)},${Math.round(236+19*lit)})`;
-   g.fillStyle=g.strokeStyle=col;g.beginPath();g.moveTo(...hub);g.lineTo(...a);g.lineTo(...b);g.closePath();g.fill();g.stroke();}
+  const t=l/(lumps-1)-.5,r=size*(.65+rnd()*.5)*(1-Math.abs(t)*.45);
+  lobes.push({x:t*size*2.4,y:(rnd()-.5)*size*.6,r,h:r*(.8+rnd()*.45)});
  }
+ for(const {x,y,r,h}of lobes)lobe(x,y+h*.25,r*1.12,h,'187,207,225');
+ for(const {x,y,r,h}of lobes)lobe(x,y-h*.22,r,h*.82,'255,253,247');
  g.restore();
 }
 
-// The panel's texture runs along the ship (u, aft to bow) and across the atrium (v, edge to edge). Sky concept A: a
-// clear, deep blue, brightening toward the bow where the sun is, with a few faceted low-poly clouds. It stays blue right
-// to the long edges (no white haze), so the panel meets the top decks crisply, with a thin warm rim of sunlight there.
+// The panel runs aft to bow along u, edge to edge along v. Muted blue overhead fades into haze at its edges and bow.
+// Painted once at the existing resolution; the day/night blend and the distant and phone copies share this picture.
 export function paintDaylightSky(c){
  const W=2048,H=256;c.width=W;c.height=H;const g=c.getContext('2d'),rnd=seeded(4182);
  const along=g.createLinearGradient(0,0,W,0);
- for(const[at,col]of[[0,'#1a50b0'],[.45,'#2462c2'],[.8,'#4287d8'],[1,'#72aee8']])along.addColorStop(at,col);
+ for(const[at,col]of[[0,'#769ac0'],[.38,'#6f96bf'],[.75,'#8db0cd'],[1,'#b8d0df']])along.addColorStop(at,col);
  g.fillStyle=along;g.fillRect(0,0,W,H);
- const sun=g.createRadialGradient(W,H*.5,0,W,H*.5,W*.32);sun.addColorStop(0,'rgba(255,250,236,.4)');sun.addColorStop(1,'rgba(255,250,236,0)');
+ const haze=g.createLinearGradient(0,0,0,H);
+ for(const[at,alpha]of[[0,.65],[.2,.22],[.5,0],[.8,.22],[1,.65]])haze.addColorStop(at,`rgba(216,230,236,${alpha})`);
+ g.fillStyle=haze;g.fillRect(0,0,W,H);
+ const sun=g.createRadialGradient(W,H*.5,0,W,H*.5,W*.32);sun.addColorStop(0,'rgba(255,250,236,.18)');sun.addColorStop(1,'rgba(255,250,236,0)');
  g.fillStyle=sun;g.fillRect(0,0,W,H);
- for(let x=40+rnd()*60;x<W-30;x+=90+rnd()*120)lowPolyCloud(g,rnd,x,H*(.22+rnd()*.56),18+rnd()*24);
- for(const y of[0,H]){const rim=g.createLinearGradient(0,y,0,y?y-10:10);rim.addColorStop(0,'rgba(255,170,84,1)');rim.addColorStop(1,'rgba(255,170,84,0)');
-  g.fillStyle=rim;g.fillRect(0,y?y-10:0,W,10);}
+ for(let x=55+rnd()*60;x<W-45;x+=65+rnd()*155)softCloud(g,rnd,x,H*(.18+rnd()*.64),10+rnd()*25);
  return c;
 }
 
