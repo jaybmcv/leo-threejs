@@ -14,6 +14,9 @@ const SCRIPTS=[
  'check-walk-performance','check-otherside','phase4-room-floor-fixture','check-kitten-supports-v2','check-cat-tree','check-cat-tree-landings',
  'check-nose-park','check-keel-club','check-clubhouse-access-v2','check-public-area','check-joins','check-unstuck','check-release-v2','check-sign-render-v2','check-lobby-tile-v2','check-halloween-v2',
  'check-crew-gallery-v2','check-build-cache-v2','check-privacy-classes-v2','check-export-metadata-v2','check-atrium-proxy-fade','check-atrium-rooms',
+ // The ownership list's fingerprints (src/plan/ownership.json): a change that skips check-anchors --write stops this
+ // deploy instead of the next build and the nightly (leo-threejs #579, 2026-11-14).
+ 'check-anchors',
 ];
 const started=performance.now(),jobs=Math.max(1,Number(process.env.LEO_QUICK_JOBS)||3),results=[];
 const run=(name,args)=>new Promise(resolve=>{const t=performance.now();let log='';
