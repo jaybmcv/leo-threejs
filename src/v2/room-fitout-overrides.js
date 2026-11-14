@@ -26,11 +26,16 @@ export function moveRoomFitoutMeshes(source,id,overrides=defaultOverrides){
  for(const removal of overrides[id]?.removeMeshes||[]){
   if(!Array.isArray(removal.names)||!removal.names.length||new Set(removal.names).size!==removal.names.length||!Array.isArray(removal.near)||removal.near.length!==3||!removal.near.every(Number.isFinite)||!Number.isFinite(removal.radius)||removal.radius<=0||removal.count!==undefined&&!(Number.isInteger(removal.count)&&removal.count>0))throw Error('Invalid source furniture removal in '+id);
   const key=removal.names.join('|')+'@'+removal.near.join(','),applied=source.userData.v2FitoutRemovals||(source.userData.v2FitoutRemovals=[]);if(applied.includes(key))continue;
-  const found=[];source.traverse(o=>{if(o.isMesh&&removal.names.includes(o.name)&&Math.hypot(o.position.x-removal.near[0],o.position.y-removal.near[1],o.position.z-removal.near[2])<=removal.radius)found.push(o);});
+  const found=[];source.traverse(o=>{
+   if(!(o.isMesh||o.isGroup)||!removal.names.includes(o.name))return;
+   // Groups remove a whole chair; merged trim is located by its geometry.
+   let at=o.position;if(removal.geometryCenter){if(!o.isMesh)return;o.geometry.computeBoundingBox();o.updateMatrix();at=o.geometry.boundingBox.getCenter(o.position.clone()).applyMatrix4(o.matrix);}
+   if(Math.hypot(at.x-removal.near[0],at.y-removal.near[1],at.z-removal.near[2])<=removal.radius)found.push(o);
+  });
   const expected=removal.count??removal.names.length;
-  if(found.length!==expected)throw Error('Expected '+expected+' source furniture meshes for removal in '+id+', found '+found.length);
+  if(found.length!==expected)throw Error('Expected '+expected+' source furniture objects for removal in '+id+', found '+found.length);
   if(removal.details){if(!Array.isArray(removal.details)||!removal.details.length||!removal.details.every(n=>typeof n==='string'&&/^(Refined_|Polish_)/.test(n)))throw Error('Invalid source furniture details in '+id);removeFittingDetails(source,found,removal.details);}
-  for(const o of found){o.removeFromParent();o.geometry.dispose();}applied.push(key);
+  for(const o of found){o.removeFromParent();o.traverse(q=>q.geometry?.dispose());}applied.push(key);
  }
 }
 

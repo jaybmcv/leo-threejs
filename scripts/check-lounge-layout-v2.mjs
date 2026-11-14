@@ -16,6 +16,7 @@ import {prepareClubhouseAccess} from '../src/v2/clubhouse-access.js';
 import {Colliders,solid} from '../src/walk/collision.js';
 import {groundMesh} from '../src/v2/ground.js';
 import {Controller} from '../src/walk/controller.js';
+import {findRestSpots} from '../src/walk/rest.js';
 import {SWIM,swimWorld,limitSwim,gemNear} from '../src/walk/aquarium-treasure/layout.js';
 import {featurePlaces} from '../src/v2/goto-features.js';
 import {mesh,polygonGeometry} from '../src/v2/geometry.js';
@@ -115,6 +116,17 @@ for(const p of [[-128.75,32.3,-43.2],[-89.8,28.3,-47.4]]){segment.start.set(p[0]
 const serviceBounds=names=>{const b=new T.Box3();root.updateMatrixWorld(true);source.root.traverse(o=>{if(o.isMesh&&names.includes(o.name))b.union(new T.Box3().setFromObject(o,true));});return b;};
 // The laundry, parcel lockers and reading bookcases were removed from this room's source (tester feedback).
 assert(serviceBounds(['Laundry_counter','Laundry_machine','Laundry_drum','Parcel_locker','Reading_shelf','Library_end_panel','Library_shelf','Library_book']).isEmpty(),'Removed lounge furnishings are back');
+// The three loose reading chairs and their batched seams leave bare, walkable floor.
+const chairs=[];source.root.traverse(o=>{if(o.name==='Tail_clearance_chair')chairs.push(o.getWorldPosition(new T.Vector3()));});
+assert.deepEqual(chairs.map(p=>p.toArray()),[[-118.5,24.3,-53],[-116.5,24.3,-53],[-114.5,24.3,-53],[-112.5,24.3,-53]],'Keep all four kitchen chairs');
+const rests=findRestSpots(source.root),seams=[];source.root.traverse(o=>{if(o.name==='Polish_tailored_seam')seams.push(new T.Box3().setFromObject(o,true));});
+for(const x of [-128.5,-125.5,-122.5]){
+ route('Former reading chair '+x,[[x,24.3,-59.8],[x,24.3,-54.8]]);
+ assert(!rests.some(s=>Math.abs(s.height-24.8)<.5&&Math.hypot(s.point.x-x,s.point.z+56)<1.5),'Invisible chair rest anchor at '+x);
+ const b=new T.Box3(new T.Vector3(x-.4,24.3,-56.4),new T.Vector3(x+.4,25.5,-55.6));
+ assert(!seams.some(s=>s.intersectsBox(b)),'Floating upholstery seam at '+x);
+}
+for(const p of chairs)assert(rests.some(s=>Math.hypot(s.point.x-p.x,s.point.z-p.z)<.1),'Kitchen chair still has its sit anchor');
 // Old rectangular-gallery lights floated below the reshaped balconies. Remove the
 // hidden upper rear strip too, before rendering and collision use the same source.
 assert(serviceBounds(['Gallery_end_light','Gallery_warm_light']).isEmpty(),'Retired lounge light strips are back');
