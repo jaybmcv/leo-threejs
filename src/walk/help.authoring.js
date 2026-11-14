@@ -46,15 +46,18 @@ const PLAY=[
  ]},
 ];
 const FIND=V2_FIND;
-// The tester guide, as the printed one (minus its QR code: you're already aboard).
+// The tester guide: the printed one's five steps (minus its QR code: you're already aboard), as they run since the
+// feedback autopilot (2026-11-14). An AI sorts a report within minutes and decides on it: it can build it, plan it
+// first, ask the tester or pass it to Jay, and never turns one down. A change is live soon after it is merged, not the
+// next morning. No model is named: they change more often than this page.
 const STEPS=[
  ['You send it','1 minute','Press <b>Feedback</b>, then type it or say it.'],
- ['It gets sorted','A few hours','<b>Sonnet 5.5</b>, an AI agent, names it and sizes it.'],
- ['Team approves','Up to the team',null],
- ['Built and checked','Usually hours','<b>Opus 5.5</b>, the best AI model on the market, builds and checks it.'],
- ['Live on the ship','Overnight','Live by morning. Press <b>L</b> in Leo to see it in the ship log.'],
+ ['It gets sorted','Within minutes','An AI reads it, names it and sizes it.'],
+ ['It gets a decision','Minutes, or up to Jay',null],
+ ['Built and reviewed','Usually hours','One AI builds it from a written brief. A different AI reviews it before it goes in.'],
+ ['Live on the ship','Soon after','Press <b>L</b> in Leo to see it in the ship log.'],
 ];
-const DECISIONS=[['build','✓','Build it'],['plan','≡','Plan it first'],['','?','More info'],['','✕','No thanks']];
+const DECISIONS=[['build','✓','Build it'],['plan','≡','Plan it first'],['','?','Ask you for more'],['','→','Pass it to Jay']];
 const TIPS=['Separate each idea clearly','Stand in-game where you want to see it','Explain what you want to see or fix'];
 
 const el=(tag,props={},...kids)=>{const e=Object.assign(document.createElement(tag),props);e.append(...kids);return e;};
@@ -96,7 +99,7 @@ export function createHelp(sheet,{touch=()=>false,tester=()=>false,live=()=>fals
   pages.ideas.append(
    el('div',{className:'eyebrow guide-eyebrow'},el('span',{textContent:'Tester guide'}),el('span',{textContent:'Feedback → ship'})),
    el('h3',{className:'guide-title'},'From your idea to ',el('em',{textContent:'the ship'})),
-   el('p',{className:'guide-lead',textContent:'A real person reads every report, and the team decides what gets built.'}),
+   el('p',{className:'guide-lead',textContent:'An AI reads every report, and a clear idea gets built without waiting for a person. Jay decides the rest.'}),
    steps,el('div',{className:'guide-after'},el('span',{textContent:'Not showing yet? Refresh the page.'}),log,hub),
    el('div',{className:'eyebrow guide-eyebrow'},el('span',{textContent:'Writing a good report'})),
    el('h3',{className:'guide-title small',textContent:'Plain words work'}),
