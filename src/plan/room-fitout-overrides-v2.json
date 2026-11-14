@@ -8,7 +8,9 @@
       {"names":["Parcel_locker"],"near":[113,25.3,10],"radius":3.5,"count":6},
       {"names":["Reading_shelf","Library_end_panel","Library_shelf","Library_book"],"near":[120,25.5,39.5],"radius":4,"count":75},
       {"names":["Tail_clearance_chair"],"near":[121,24.3,40],"radius":3.1,"count":3},
-      {"names":["Polish_tailored_seam"],"near":[121,24.833,40],"radius":3.1,"count":2,"geometryCenter":true}
+      {"names":["Polish_tailored_seam"],"near":[121,24.833,40],"radius":3.1,"count":2,"geometryCenter":true},
+      {"names":["Gallery_end_light"],"near":[111.7,29.99,26.5],"radius":2.1,"count":2},
+      {"names":["Gallery_warm_light"],"near":[133,29.99,42.25],"radius":2.1,"count":2}
     ]
   },
   "d01-workshop-5": {

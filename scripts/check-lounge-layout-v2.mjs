@@ -87,6 +87,9 @@ route('R4 maze upper exit',[[-125.8,32.3,-29],[-126.75,32.3,-29]]);
 route('R5 clubhouse and ground lift',[[-90.8,24.3,-45.8],[-86.53,24.3,-45.8],[-86.53,24.3,-49]]);
 route('R6 jaguar to dome',[[-112.5,24.3,-23.5],[-112.5,24.3,-28.8],[-113.3,24.3,-29.1],[-113.3,24.3,-32.7],[-112.5,24.3,-32.7],[-112.5,24.3,-34]]);
 for(const y of [28.3,32.3])route('R7 aft door '+y,[[-140.6,y,-30],[-138.2,y,-30]]);
+// Walk below the retired side strips from the reported view, and below the rear strip.
+route('R8 old side lights',[[-134.36,24.3,-38.2],[-135.41,24.3,-43.6],[-134.36,24.3,-38.2]]);
+route('R9 old rear light',[[-121,24.3,-57],[-121,24.3,-59.5],[-121,24.3,-57]]);
 // The lounge floor can't make solids walkable: the aquarium's front glass stays blocked (the tank itself is swimmable
 // water), while the floor 2 m in front of it is clear.
 assert(!clear([-100,24.3,-28])&&!clear([-120,24.3,-28]),'The aquarium glass stays solid over the lounge floor');
@@ -124,6 +127,9 @@ for(const x of [-128.5,-125.5,-122.5]){
  assert(!seams.some(s=>s.intersectsBox(b)),'Floating upholstery seam at '+x);
 }
 for(const p of chairs)assert(rests.some(s=>Math.hypot(s.point.x-p.x,s.point.z-p.z)<.1),'Kitchen chair still has its sit anchor');
+// Old rectangular-gallery lights floated below the reshaped balconies. Remove the
+// hidden upper rear strip too, before rendering and collision use the same source.
+assert(serviceBounds(['Gallery_end_light','Gallery_warm_light']).isEmpty(),'Retired lounge light strips are back');
 const arcadeBox=new T.Box3().setFromObject(arcade.solid,true);
 assert(!arcadeBox.intersectsBox(tank));close(arcadeBox.max.x,-88);assert(arcadeBox.min.z>=-43.91&&arcadeBox.max.z<=-28.49);
 close(new T.Vector3().setFromMatrixPosition(lift.group.matrixWorld).x,-86.53);close(new T.Vector3().setFromMatrixPosition(lift.group.matrixWorld).z,-51.2);
