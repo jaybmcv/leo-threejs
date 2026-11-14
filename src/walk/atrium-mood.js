@@ -3,6 +3,8 @@ import {inOpenAtrium} from '../v2/atrium-visibility.js';
 import {walkCanvas} from './canvas.js';
 import {nightTarget,subscribeTime} from './ship-time.js';
 import {paintDuskSky,paintDownlightPool,paintLampPool} from './atrium-light-paint.js';
+import layout from '../plan/selected-layout.js';
+import {welcomeCourtGlows} from '../v2/welcome-court.js';
 
 // 4B: the atrium's own warm golden light. The ship-wide base stays the cool 2B light; while the walker is in the open
 // atrium (the Deck 6 floor or a balcony facing it, as atrium-visibility.js classifies it) the shared lights ease to a
@@ -103,6 +105,22 @@ function placePools(stems,o){
  o.count=stems.count;o.instanceMatrix.needsUpdate=true;o.computeBoundingSphere();
 }
 
+// The welcome court's lantern light (welcome-court.js): a warm pool under each of its four lamps, a halo round each
+// lantern and uplights at the foot of its planters, as one instanced draw of soft additive squares with the promenade
+// pools' picture, tinted amber (deeper than the promenade pools' cream) and scaled per kind. Its lanterns' cores are in
+// the lantern glow draw, which is the same day and night, so the light they throw is this instead: shown only at night
+// while the walker is in the open atrium, so by day it costs nothing and leaves no mark.
+const COURT_AMBER=new T.Color(0xffc878),COURT_GLOW={pool:.85,halo:1,uplight:1};
+function courtGlows(scene){
+ const c=walkCanvas();if(!c)return null;
+ const map=new T.CanvasTexture(paintLampPool(c));map.colorSpace=T.SRGBColorSpace;
+ const m=new T.MeshBasicMaterial({name:'P6_atrium_court_glow',map,transparent:true,depthWrite:false,side:T.DoubleSide,forceSinglePass:true,blending:T.AdditiveBlending,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+ const glows=welcomeCourtGlows(layout.decks[5].y),o=new T.InstancedMesh(new T.PlaneGeometry(1,1),m,glows.length);
+ const at=new T.Matrix4(),turn=new T.Quaternion(),e=new T.Euler(),p=new T.Vector3(),s=new T.Vector3(),tint=new T.Color();
+ glows.forEach((g,i)=>{o.setMatrixAt(i,at.compose(p.fromArray(g.at),turn.setFromEuler(e.set(g.tilt,g.turn,0,'YXZ')),s.set(g.size,g.size,1)));o.setColorAt(i,tint.copy(COURT_AMBER).multiplyScalar(COURT_GLOW[g.kind]));});
+ o.computeBoundingSphere();o.name='P6_atrium_court_glows';o.userData.noCollide=true;o.visible=false;scene.add(o);return o;
+}
+
 function showOwn(found,n,pools,floorPools){
  if(pools)pools.opacity=lerp(POOLS[0],POOLS[1],n);
  if(floorPools){floorPools.visible=n>.01;floorPools.material.opacity=n*LAMP_POOL_OPACITY;}
@@ -123,7 +141,7 @@ export function createAtriumMood(light){
  const base={hemi:hemi.intensity,fill:fill.intensity,env:scene.environmentIntensity,sky:hemi.color.clone(),ground:hemi.groundColor.clone(),fillColour:fill.color.clone(),fog:scene.fog?.color.clone()};
  const pair=k=>[new T.Color(DAY[k]),new T.Color(NIGHT[k])],colours={sky:pair('sky'),ground:pair('ground'),fillColour:pair('fillColour'),fog:pair('fog')};
  const keys=Object.keys(colours),now=Object.fromEntries(keys.map(k=>[k,new T.Color()])),glass=new T.Color(NIGHT.glass);
- let mood=0,shown=0,n=nightTarget(),target=n,nextClock=0,pools=null,poolsTried=false,floorPools=null,stemsTried=false,stemsPlaced=-1,ownAt=-1,ownCount=-1;
+ let mood=0,shown=0,n=nightTarget(),target=n,nextClock=0,pools=null,poolsTried=false,floorPools=null,stemsTried=false,stemsPlaced=-1,ownAt=-1,ownCount=-1,court=null,courtTried=false;
  // The clock is read once a second; a choice made in the Graphics detail sheet takes effect at once.
  subscribeTime(()=>{nextClock=0;});
  // The light for t (0 the ship's base, 1 the atrium's own) at the current time of day n.
@@ -146,6 +164,8 @@ export function createAtriumMood(light){
    if(found.stems&&!stemsTried){stemsTried=true;floorPools=lampPools(found.stems);ownAt=-1;}
    if(ownAt!==n||ownCount!==found.materials.size){showOwn(found,n,pools,floorPools);ownAt=n;ownCount=found.materials.size;}
    if(floorPools?.visible&&stemsPlaced!==found.stems.instanceMatrix.version){stemsPlaced=found.stems.instanceMatrix.version;placePools(found.stems,floorPools);}
+   if(!courtTried){courtTried=true;court=courtGlows(scene);}
+   if(court){court.visible=n>.01&&inOpenAtrium();court.material.opacity=n;}
    showSky(found.skies,n);
    if(inOpenAtrium()){mood+=(1-mood)*(1-Math.exp(-3*step));shown=mood;setMood(mood,found);if(found.fall)found.fall.offset.y=(found.fall.offset.y+step*.9)%1;}
    else if(shown){mood=shown=0;setMood(0,found);}

@@ -1,6 +1,7 @@
 // Deck 6 atrium ground zones, option A of each (docs/atrium-areas.md, docs/atrium-areas/lobby-park/):
 // G1 Arrival lobby, "welcome court": a round welcome desk (timber slats under a cream stone top) in a ring of eight
-// low stone planters with flowering shrubs, four warm lamp posts, and a round basalt inlay edged in brass, the plaza's
+// low stone planters with flowering shrubs, four lamp posts with classic dark metal lantern cages round warm glowing
+// cores (lit at night by atrium-mood.js: pools, halos, uplights), and a round basalt inlay edged in brass, the plaza's
 // focal point in the middle ground of the arrival view, just port of the centre line. The walk to the boulevard flows
 // round it: 7 m and more to starboard (past the directory sign to the benches), 3 m of open paving to port before the
 // reception counter, which the inlay clears.
@@ -16,21 +17,20 @@ import * as T from 'three';
 import {GREENS,paint,blade,orient,clump,stem,SHAPES} from '../walk/foliage.js';
 import {ATRIUM_ZONES,phase6ParkPath} from '../plan/atrium-v2.js';
 import {contains} from '../plan/geometry-v2.js';
+import {WELCOME_COURT,COURT_PLANTER,COURT_PLANTERS,COURT_LAMPS,COURT_LANTERN_CORE} from './welcome-court.js';
 
 const random=seed=>{let s=seed>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296;};};
 const DEG=Math.PI/180;
 const rgb=hex=>new T.Color(hex).toArray();
 
 // ---- G1: the welcome court ----------------------------------------------------------------------------------------
-// Centre of the court, 11 m from the arrival view (lobby-in) and 29° to its left, as in the concept. Its outer brass
-// edge (r 7.48) crosses the centre line by 2 m (flat inlay, walkable) and clears the reception counter by 0.45 m.
-export const WELCOME_COURT={x:-110,z:-5.5};
-const DESK={r:1.9,top:1.97,height:1.1},PLANTER_RING=4.6,LAMP_RING=5.3,BAND=[6.6,7.4],BRASS_WIDTH=.08;
-// The boulevard planters' size, so the court's join their batch (and their trims).
-const PLANTER=[2.4,.42,1.1];
-// Eight planters 45° apart from 22.5°, all square to the ship (the trims are laid unrotated): 2.4 m openings fore and
-// aft, toward the boulevard and the lifts, 1.1-1.4 m gaps elsewhere, and a 1.3 m aisle round the desk inside.
-const PLANTERS=Array.from({length:8},(_,k)=>(22.5+k*45)*DEG).map(a=>[Math.cos(a)*PLANTER_RING,Math.sin(a)*PLANTER_RING]);
+// Where it stands is welcome-court.js's (the walk lights its lanterns at night from there). Its outer brass edge
+// (r 7.48) crosses the centre line by 2 m (flat inlay, walkable) and clears the reception counter by 0.45 m. The eight
+// planters leave 2.4 m openings fore and aft, toward the boulevard and the lifts, 1.1-1.4 m gaps elsewhere, and a 1.3 m
+// aisle round the desk inside.
+export {WELCOME_COURT};
+const PLANTER=COURT_PLANTER,PLANTERS=COURT_PLANTERS;
+const DESK={r:1.9,top:1.97,height:1.1},BAND=[6.6,7.4],BRASS_WIDTH=.08;
 
 /** The court's collidable parts, for phase6Programme (`add` is its part adder, `y` Deck 6's floor). */
 export function addWelcomeCourtParts(add,y){
@@ -92,20 +92,41 @@ function planterBlooms(out,x,top,z,r,first){
  for(let k=0;k<22;k++)bloom(s,[x+(r()-.5)*1.85,top+.24+r()*.12,z+(r()-.5)*.55],.09+r()*.03,(k+first)%3?MEADOW.pink:MEADOW.white,r);
  out.push(s.geometry());
 }
-// A warm lamp post, 4.1 m: dark bronze base, post and cap; the 0.6 m lantern between them glows (the lantern draw).
+// A lamp post with a classic lantern, 4.45 m: a dark bronze base and post, then a dark metal cage round a glowing glass
+// core 0.48 m tall, wider at the top (the lantern draw): a flared cup and base plate under it, a bar up each corner, a
+// rim top and bottom and a mullion down each face, then an eaved pyramid roof and a finial. The light it throws at
+// night (a pool under it, a halo round it, the planters' uplights) is atrium-mood.js's.
+const METAL=0x2a2623;
+// The core's amber: the lantern draw is vertex-coloured, its colour a multiplier on the plain cream glow (1 keeps it).
+const CORE_AMBER=[1.3,.66,.24];
+const glowing=(g,c)=>g.setAttribute('color',new T.Float32BufferAttribute(Array.from({length:g.attributes.position.count*3},(_,i)=>c[i%3]),3));
+// A square frustum by half-widths, its faces square to the ship.
+const square=(top,bottom,h)=>new T.CylinderGeometry(top*Math.SQRT2,bottom*Math.SQRT2,h,4).rotateY(Math.PI/4);
+const GLASS={bottom:COURT_LANTERN_CORE-.24,top:COURT_LANTERN_CORE+.24,hw0:.115,hw1:.145};
 function lampPost(out,glow,x,y,z){
- out.push(paint(new T.CylinderGeometry(.14,.17,.05,12).translate(x,y+.025,z),BRONZE));
- out.push(paint(new T.CylinderGeometry(.05,.065,3.4,8).translate(x,y+.05+1.7,z),BRONZE));
- out.push(paint(new T.CylinderGeometry(.09,.09,.04,10).translate(x,y+3.47,z),BRONZE));
- glow.push(new T.CylinderGeometry(.13,.13,.6,12).translate(x,y+3.79,z));
- out.push(paint(new T.CylinderGeometry(.17,.17,.06,12).translate(x,y+4.12,z),BRONZE));
+ const at=(g,h)=>g.translate(x,y+h,z),{bottom,top,hw0,hw1}=GLASS,hw=h=>hw0+(hw1-hw0)*(h-bottom)/(top-bottom);
+ const bar=(h0,h1,fx,fz,off,r)=>stem([[x+fx*(hw0+off),y+h0,z+fz*(hw0+off)],[x+fx*(hw1+off),y+h1,z+fz*(hw1+off)]],r,METAL,4);
+ out.push(paint(at(new T.CylinderGeometry(.14,.17,.05,12),.025),BRONZE));
+ out.push(paint(at(new T.CylinderGeometry(.05,.065,3.4,8),.05+1.7),BRONZE));
+ out.push(paint(at(new T.CylinderGeometry(.09,.09,.04,10),3.47),BRONZE));
+ out.push(paint(at(square(.12,.05,.1),bottom-.085),METAL));
+ out.push(paint(at(square(.16,.16,.035),bottom-.0175),METAL));
+ glow.push(glowing(at(square(hw1,hw0,top-bottom),COURT_LANTERN_CORE),CORE_AMBER));
+ for(const fx of[-1,1])for(const fz of[-1,1])out.push(bar(bottom,top,fx,fz,.008,.017));
+ for(const[fx,fz]of[[1,0],[-1,0],[0,1],[0,-1]])out.push(bar(bottom,top,fx,fz,.006,.009));
+ for(const h of[bottom+.02,top-.02]){const w=hw(h)+.01;
+  for(const s of[-1,1])out.push(paint(at(new T.BoxGeometry(2*w+.03,.035,.022),h).translate(0,0,s*w),METAL),paint(at(new T.BoxGeometry(.022,.035,2*w+.03),h).translate(s*w,0,0),METAL));}
+ out.push(paint(at(square(.19,.19,.035),top+.0175),METAL));
+ out.push(paint(at(square(.025,.17,.17),top+.12),METAL));
+ out.push(paint(at(new T.SphereGeometry(.03,8,6),top+.235),METAL));
+ out.push(paint(at(new T.ConeGeometry(.012,.08,6),top+.305),METAL));
 }
 function addWelcomeCourt(out,glow,y){
  const {x,z}=WELCOME_COURT,r=random(6206),s=triangles();
  const inlaySlabs=courtInlay(s,[x,y+.012,z],r);out.push(s.geometry());
  welcomeDesk(out,x,y,z);
  PLANTERS.forEach(([dx,dz],i)=>planterBlooms(out,x+dx,y+PLANTER[1]+.07,z+dz,r,i));
- for(const a of[45,135,225,315])lampPost(out,glow,x+Math.cos(a*DEG)*LAMP_RING,y,z+Math.sin(a*DEG)*LAMP_RING);
+ for(const[dx,dz]of COURT_LAMPS)lampPost(out,glow,x+dx,y,z+dz);
  return {courtInlaySlabs:inlaySlabs,courtPlanters:PLANTERS.length,courtLamps:4};
 }
 
