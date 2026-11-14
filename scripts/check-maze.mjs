@@ -34,9 +34,23 @@ expect(inMaze(...MAZE_BUTTON)&&inFront(MAZE_START[0]-1,0,MAZE_START[2]),'the sta
 const ship={root:new T.Group()},area=new T.Group();area.name='Area_'+MAZE_ROOM;area.position.set(...room.origin);ship.root.add(area);
 const hold=createMazeHold(ship);
 expect(!!hold,'the maze builds');
+// Include folded doors, castings and number plates, not only the layout's container rectangles.
+for(const [name,root] of [['visible maze',hold.group],['maze collision',hold.solid]]){
+ root.updateMatrixWorld(true);const inverse=root.matrixWorld.clone().invert(),bounds=new T.Box3();
+ root.traverse(o=>{if(!o.isMesh)return;o.geometry.computeBoundingBox();bounds.union(o.geometry.boundingBox.clone().applyMatrix4(inverse.clone().multiply(o.matrixWorld)));});
+ expect(bounds.min.x>=-END+.035&&bounds.max.x<=END-.035&&bounds.min.z>=-SIDE+.035&&bounds.max.z<=SIDE-.035,
+  `${name} stays inside all four walls with a small gap`);
+}
 const col=new Colliders();col.addStatic(hold.solid,()=>true);col.commit();
 const {radius:R,height:H,step:STEP}=BODY,G=.25,seg=new T.Line3(new T.Vector3(),new T.Vector3());
 const free=(x,z)=>{if(x<-25.84+R||x>END-R||Math.abs(z)>SIDE-R)return false;const p=hold.toShip(x,0,z);seg.start.set(p.x,p.y+STEP+R,p.z);seg.end.set(p.x,p.y+H-R,p.z);return !col.overlaps(seg,R);};
+const changed=[];
+for(let i=0;i<NX;i++)for(let j=0;j<NZ;j++)for(const [di,dj,axis] of [[1,0,'x'],[0,1,'z']]){
+ if(i+di>=NX||j+dj>=NZ)continue;const a=cellCentre(i,j),b=cellCentre(i+di,j+dj),n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.1),key=`${axis}${i},${j}`;
+ let clear=true;for(let q=0;q<=n;q++)if(!free(a[0]+(b[0]-a[0])*q/n,a[1]+(b[1]-a[1])*q/n)){clear=false;break;}
+ if(clear!==MAZE.open.has(key))changed.push(key);
+}
+expect(!changed.length,`every cell-to-cell passage matches the fixed course${changed.length?': '+changed.join(' '):''}`);
 const k=(i,j)=>i*1000+j,seen=new Set(),queue=[[Math.round(-20/G),0]];seen.add(k(...queue[0]));
 for(let n=0;n<queue.length;n++){const [i,j]=queue[n];for(const [di,dj] of [[1,0],[-1,0],[0,1],[0,-1]]){const a=i+di,b=j+dj;if(seen.has(k(a,b))||!free(a*G,b*G))continue;seen.add(k(a,b));queue.push([a,b]);}}
 const reached=(x,z,r=.3)=>queue.some(([i,j])=>Math.hypot(i*G-x,j*G-z)<=r);

@@ -13,7 +13,9 @@ import {createVault} from '../src/walk/vault.js';
 import {createArcade,arcadeTreadmill} from '../src/walk/arcade.js';
 import {createVaultLift} from '../src/walk/vault-lift.js';
 import {prepareClubhouseAccess} from '../src/v2/clubhouse-access.js';
-import {Colliders} from '../src/walk/collision.js';
+import {Colliders,solid} from '../src/walk/collision.js';
+import {groundMesh} from '../src/v2/ground.js';
+import {Controller} from '../src/walk/controller.js';
 import {SWIM,swimWorld,limitSwim,gemNear} from '../src/walk/aquarium-treasure/layout.js';
 import {featurePlaces} from '../src/v2/goto-features.js';
 import {mesh,polygonGeometry} from '../src/v2/geometry.js';
@@ -42,6 +44,32 @@ col.addStatic(root);
 for(const o of [jaguar.group,arcade.group,vault.group,lift.group])root.add(o);
 for(const o of [jaguar.solid,arcade.solid,vault.solid,lift.solid])col.addStatic(o,()=>true);
 col.commit();
+// The dome's porch roof supports feet across the whole pane, with the passage below left clear.
+const porch=source.root.getObjectByName('Lounge_porch_floor');assert(porch,'Missing separate porch support');
+const porchBox=new T.Box3().setFromObject(porch,true),ground=new Colliders();ground.addStatic(root,o=>solid(o)&&groundMesh(o));ground.commit();
+close(porchBox.min.x,-113.55);close(porchBox.max.x,-111.45);close(porchBox.min.z,-35.6);close(porchBox.max.z,-33.25);
+close(porchBox.min.y,26.98);close(porchBox.max.y,27.02);
+assert(porch.material.transparent&&porch.material.opacity===.15,'Porch stays see-through');
+const roofRay=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0)),onlyRoof=new Colliders();onlyRoof.addStatic(porch);onlyRoof.commit();let roofProbes=0;
+for(let x=porchBox.min.x+.02;x<porchBox.max.x;x+=.1)for(let z=porchBox.min.z+.02;z<porchBox.max.z;z+=.1){
+ roofRay.origin.set(x,27.2,z);const hit=ground.raycast(roofRay,.4),pane=onlyRoof.raycast(roofRay,.4);assert(hit&&pane,'Porch roof has a support gap');close(pane.point.y,27.02);assert(Math.abs(hit.point.y-27.02)<.031,'Porch support stays level with its frame');roofProbes++;
+ // A standing visitor's capsule fits beneath every point in the new support.
+ const body=new T.Line3(new T.Vector3(x,25.05,z),new T.Vector3(x,25.95,z));assert(!onlyRoof.overlaps(body,.35),'Roof must not fill the porch');
+}
+for(const [x,z] of [[-113.8,-34.3],[-111.2,-34.3],[-112.5,-33]]){roofRay.origin.set(x,27.2,z);assert.equal(ground.raycast(roofRay,.3),null,'Roof support stops at the pane edge');}
+console.log('PASS porch roof',roofProbes,'ground probes, unchanged glass and clear space below');
+const walker=new Controller(col);col.raycastGround=(...args)=>ground.raycast(...args);
+const walk=(wish,seconds,test)=>{for(let i=0;i<Math.round(seconds*60);i++){walker.step(1/60,new T.Vector3(...wish),false);test?.(walker.position);}};
+walker.place(new T.Vector3(-111.62,26.87,-33.2));
+walk([0,0,-2.25],.5,p=>assert(p.y>26.8&&p.y<27.08,'Step from the frame onto the roof must stay supported'));
+walk([-2.25,0,0],.75,p=>assert(Math.abs(p.y-27.02)<.06,'Crossing the pane must stay supported'));
+assert(walker.position.x<-113,'Walker crosses to the far side of the pane');
+walk([2.25,0,0],.35,p=>assert(Math.abs(p.y-27.02)<.06,'Return to the middle stays supported'));
+walk([0,0,2.25],.85);walk([0,0,0],1);
+assert(walker.grounded&&Math.abs(walker.position.y-24.3)<.05,'Visitor can step off the roof and land below');
+walker.place(new T.Vector3(-112.5,24.3,-32.7));walk([0,0,-2.25],.8,p=>assert(p.y>=24.29&&p.y<24.51,'Porch passage stays on its floor and threshold'));
+assert(walker.position.z<-34,'Visitor walks into the porch under the roof');walk([0,0,2.25],.9,p=>assert(p.y>=24.29&&p.y<24.51,'Visitor can leave the porch'));
+assert(walker.position.z>-33&&Math.abs(walker.position.y-24.3)<.05,'Visitor walks back out onto the lounge floor');console.log('PASS porch frame, crossing, return, drop and floor-level passage with the real controller');
 const ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0)),segment=new T.Line3();
 const clear=([x,y,z])=>{ray.origin.set(x,y+.42,z);const hit=col.raycast(ray,.85);segment.start.set(x,y+.75,z);segment.end.set(x,y+1.65,z);return !!hit&&hit.normal.y>.6&&Math.abs(hit.point.y-y)<.1&&!col.overlaps(segment,.35);};
 const route=(name,points)=>{let count=0;for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],n=Math.ceil(new T.Vector3(...a).distanceTo(new T.Vector3(...b))/.1);for(let j=0;j<=n;j++){const p=a.map((v,k)=>v+(b[k]-v)*j/n);assert(clear(p),name+' blocked at '+JSON.stringify(p));count++;}}console.log('PASS',name,count,'capsule probes');};
@@ -62,6 +90,11 @@ for(const y of [28.3,32.3])route('R7 aft door '+y,[[-140.6,y,-30],[-138.2,y,-30]
 // water), while the floor 2 m in front of it is clear.
 assert(!clear([-100,24.3,-28])&&!clear([-120,24.3,-28]),'The aquarium glass stays solid over the lounge floor');
 assert(clear([-100,24.3,-30]),'The floor in front of the aquarium is walkable');console.log('PASS aquarium glass blocks, the floor before it is clear');
+// The small entrance cat tree is gone, including its base and both posts. The other two stay solid.
+route('Removed cat tree footprint',[[-99.5,24.3,-36],[-99.5,24.3,-33]]);
+route('Removed cat tree side post',[[-99.05,24.3,-36],[-99.05,24.3,-33]]);
+ray.origin.set(-99.5,24.6,-34.6);close(col.raycast(ray,.5)?.point.y,r.y);
+assert(!clear([-121.9,24.3,-38.5])&&!clear([-133.9,24.3,-51.8]),'The other lounge cat trees stay solid');
 // Reach both floors from the rotated ground door, staying inside the tower.
 const queue=[[-129.5,24.3,-41.4]],seen=new Set(),goals=[[-132.25,28.3,-37.8],[-126.75,32.3,-29]],reached=new Set();
 const push=p=>{const key=p.map(v=>Math.round(v*100)).join(',');if(!seen.has(key)){seen.add(key);queue.push(p);}};

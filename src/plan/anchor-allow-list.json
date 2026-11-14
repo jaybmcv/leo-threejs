@@ -138,5 +138,59 @@
     ],
     "room": null,
     "reason": "The Keel Club fills the hull under Deck 1, between the Deck 1 slab and the keel, in ship coordinates inside the hull lofted by src/plan/hull-v2.js (keel-club-hull.js is its sampled half-width) and round the fixed transit cores; it belongs to no room and moves with none."
+  },
+  {
+    "paths": [
+      "src/walk/atrium-mood.js",
+      "src/walk/bone-walk.js",
+      "src/walk/contact-shade.js",
+      "src/walk/corner-shade.js",
+      "src/walk/crowd-draw.js",
+      "src/walk/crowd-tier.js",
+      "src/walk/figure-matrices.js",
+      "src/walk/film-look.js",
+      "src/walk/fog-cull.js",
+      "src/walk/frame-readout.js",
+      "src/walk/look.js",
+      "src/walk/merge-by-material.js",
+      "src/walk/merged-skin.js",
+      "src/walk/plaque-atlas.js",
+      "src/walk/sign-array.js",
+      "src/walk/ship-time.js",
+      "src/walk/solved-pose.js"
+    ],
+    "room": null,
+    "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room."
+  },
+  {
+    "paths": [
+      "src/walk/glide.js",
+      "src/walk/grapple.js",
+      "src/walk/longboard.js",
+      "src/walk/unstuck.js",
+      "src/walk/last-spot.js",
+      "src/walk/wardrobe.js",
+      "src/walk/ward-trolley-push.js",
+      "src/walk/public-area*.js",
+      "src/walk/pinball/replay.js"
+    ],
+    "room": null,
+    "reason": "The visitor's own walker and what moves with it (board glide, longboard, grapple line, unstuck pop, the saved last spot, the jacket on the cat, the pushed ward trolley from its own resting place in ward-trolley.js), public-area tests of where the walker stands, and pinball replay steps: positions follow the walker or a game's own state, never a room frame."
+  },
+  {
+    "paths": [
+      "src/walk/shuttle-doors.js",
+      "src/walk/outside-game.js"
+    ],
+    "room": null,
+    "reason": "Read their places from the selected layout itself: the Deck 2 shuttle cabin doors from each cabin's own door in the layout, and the Asteroid Defense airlock panel from d01-launch-d-15's frame on its corridor face (outside the room, so no room owns it)."
+  },
+  {
+    "paths": [
+      "src/style-lab.js",
+      "src/style-lab/*.js"
+    ],
+    "room": null,
+    "reason": "A test preview page apart from the viewer and the walk (style-lab.html): it draws Leo's exterior with its own camera and frame to compare art styles; nothing it places is aboard the ship."
   }
 ]
