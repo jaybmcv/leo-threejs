@@ -90,6 +90,11 @@ for(const y of [28.3,32.3])route('R7 aft door '+y,[[-140.6,y,-30],[-138.2,y,-30]
 // water), while the floor 2 m in front of it is clear.
 assert(!clear([-100,24.3,-28])&&!clear([-120,24.3,-28]),'The aquarium glass stays solid over the lounge floor');
 assert(clear([-100,24.3,-30]),'The floor in front of the aquarium is walkable');console.log('PASS aquarium glass blocks, the floor before it is clear');
+// The small entrance cat tree is gone, including its base and both posts. The other two stay solid.
+route('Removed cat tree footprint',[[-99.5,24.3,-36],[-99.5,24.3,-33]]);
+route('Removed cat tree side post',[[-99.05,24.3,-36],[-99.05,24.3,-33]]);
+ray.origin.set(-99.5,24.6,-34.6);close(col.raycast(ray,.5)?.point.y,r.y);
+assert(!clear([-121.9,24.3,-38.5])&&!clear([-133.9,24.3,-51.8]),'The other lounge cat trees stay solid');
 // Reach both floors from the rotated ground door, staying inside the tower.
 const queue=[[-129.5,24.3,-41.4]],seen=new Set(),goals=[[-132.25,28.3,-37.8],[-126.75,32.3,-29]],reached=new Set();
 const push=p=>{const key=p.map(v=>Math.round(v*100)).join(',');if(!seen.has(key)){seen.add(key);queue.push(p);}};

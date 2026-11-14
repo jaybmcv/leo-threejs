@@ -1,4 +1,5 @@
 import layout from './plan/selected-layout.js';
+import fitoutOverrides from './plan/room-fitout-overrides-v2.json' with {type:'json'};
 const v2MazeFit=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1'),p=r.components.pieces.find(p=>p.name==='Haze Maze tower'),toLocal=z=>27+r.side*(z-r.z);return {dx:p.center[0]-r.x+132-117.25,dz:toLocal(p.center[2])-26,tubes:r.components.mazeTubes.map(t=>({...t,from:t.from-r.x+132,to:t.to-r.x+132,z:toLocal(t.z),level:r.y+t.rise}))};})();
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -512,8 +513,10 @@ export function createHydroNipLounge({mirror=1}={}){
  for(const [x,z] of [[127.2,15],[137.2,15]].map(([x,z,...rest])=>[x,z+1.5,...rest])){cyl(M.wood,.5,.5,.05,[x,FLOOR+.4,z],18);cyl(M.dark,.08,.12,.38,[x,FLOOR+.19,z],8);
   cyl(M.board,.18,.12,.08,[x,FLOOR+.465,z],12);put(M.leaf,new T.SphereGeometry(.15,8,5,0,Math.PI*2,0,Math.PI/2).translate(x,FLOOR+.49,z));}
  [[125.8,15.8,PINK],[131.6,13.6,AMBER],[136,16.8,GREEN],[139.6,15.6,PURPLE],[143.4,17.4,CYAN],[128.8,13.1,AMBER]].map(([x,z,...rest])=>[x,z+1.5,...rest]).forEach(([x,z,c])=>put(neon(c),new T.IcosahedronGeometry(.09,1).translate(x,FLOOR+.11,z)));
- // Cat trees: sisal posts, platforms and a bed on top.
+ // Cat trees: sisal posts, platforms and a bed on top. Remove source-frame instances before their parts merge.
+ const removedTrees=fitoutOverrides['commons-1']?.remove||[];
  for(const [x,z,h] of [[124.6,22.5,2.6],[147,18.6,2.2],[112.6,35.8,1.8]]){
+  if(removedTrees.some(p=>p.part==='Lounge_cat_tree'&&p.x===x&&p.z===z))continue;
   cyl(M.sisal,.09,.09,h,[x,FLOOR+h/2,z],8);cyl(M.sisal,.07,.07,h*.6,[x+.45,FLOOR+h*.3,z+.2],8);
   cyl(M.wood,.5,.5,.06,[x,FLOOR+.03,z],16);
   for(const [dy,dx,r] of [[h*.38,.3,.32],[h*.68,-.2,.36]])cyl(M.purple,r,r,.05,[x+dx,FLOOR+dy,z],14);
