@@ -22,6 +22,15 @@ export function retirePreparedLoungeLights(ship){
    next.computeBoundingBox();next.computeBoundingSphere();o.geometry=next;
   }
  }
+ // Keep exact source-range bounds after pruning. Static position arrays can be
+ // released after GPU upload, while neighbouring gardens share render batches.
+ for(const group of ship.v2PreparedBake.bands.values())group.traverse(o=>{
+  if(!o.isMesh||o.isInstancedMesh)return;const g=o.geometry,p=g.attributes.position,index=g.index;
+  for(const r of g.userData.preparedRanges||[])if(r.name==='Gallery_end_light'||r.name==='Gallery_warm_light'){
+   const bounds=new T.Box3();for(let face=r.start;face<r.start+r.count;face++)for(let k=0;k<3;k++)bounds.expandByPoint(point.fromBufferAttribute(p,index?index.getX(face*3+k):face*3+k));
+   r.bounds=[bounds.min.toArray(),bounds.max.toArray()];
+  }
+ });
  return removed;
 }
 

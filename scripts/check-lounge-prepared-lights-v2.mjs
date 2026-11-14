@@ -31,4 +31,10 @@ assert(expected.some(r=>r.name==='Lounge_string_light'),'Overlapping current lig
 assert.equal(new Set(expected.filter(r=>names.has(r.name)).map(r=>r.source)).size,4,'Other garden lights retained');
 assert.equal(retirePreparedLoungeLights(ship),0,'Cleanup is idempotent');
 const clean={root,v2PreparedBake:{bands:new Map()}};assert.equal(retirePreparedLoungeLights(clean),0,'Fresh ship without retired batches needs no cleanup');
+const probeBoxes=probes.map(([at,dir])=>{const a=new T.Vector3(...at);return new T.Box3().setFromPoints([a,a.clone().addScaledVector(new T.Vector3(...dir),.3)]);});
+const inspectBounds=()=>{let checked=0;for(const group of ship.v2PreparedBake.bands.values())group.traverse(o=>{if(!o.isMesh)return;for(const r of o.geometry.userData.preparedRanges||[]){if(!names.has(r.name))continue;assert(r.bounds,'Retained source range needs bounds before its arrays are released');const b=new T.Box3(new T.Vector3(...r.bounds[0]),new T.Vector3(...r.bounds[1])).applyMatrix4(o.matrixWorld);assert(!probeBoxes.some(p=>p.intersectsBox(b)),'Old lounge light source bounds remain at a playback probe');checked++;}});assert(checked>0,'Other gardens still have inspectable source ranges');};
+inspectBounds();
+for(const group of ship.v2PreparedBake.bands.values())group.traverse(o=>{if(!o.geometry)return;for(const a of Object.values(o.geometry.attributes))a.array=null;if(o.geometry.index)o.geometry.index.array=null;});
+inspectBounds();
 console.log('PASS warm prepared lounge strips removed; other garden and overlapping lights unchanged; repeat and fresh loads safe');
+console.log('PASS retained light source bounds remain verifiable after CPU geometry arrays are released');
