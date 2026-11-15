@@ -46,11 +46,13 @@ function take(poly,rect){
 
 export function partitionLoungeWalkway(geometry,plan){
  const attrs=Object.entries(geometry.attributes),ordered=[['position',geometry.attributes.position],...attrs.filter(([k])=>k!=='position')],sizes=ordered.map(([,a])=>a.itemSize),outputs={floor:[],carpet:[],gold:[]},p=geometry.attributes.position;
+ // Corridors already stand 8 mm above the slab. Replace both hex tops in place.
+ const heights=[plan.y+.002,plan.y+.010];
  const vertex=i=>ordered.flatMap(([,a])=>Array.from({length:a.itemSize},(_,k)=>a.array[i*a.itemSize+k]));
  const emit=(kind,poly)=>{for(let i=1;i<poly.length-1;i++){const t=[poly[0],poly[i],poly[i+1]],area=(t[1][0]-t[0][0])*(t[2][2]-t[0][2])-(t[1][2]-t[0][2])*(t[2][0]-t[0][0]);if(Math.abs(area)>1e-10)outputs[kind].push(...t.flat());}};
  for(let i=0;i<p.count;i+=3){
   const tri=[vertex(i),vertex(i+1),vertex(i+2)],xs=tri.map(v=>v[0]),zs=tri.map(v=>v[2]),r=plan.outer;
-  if(Math.max(...xs)<=r[0]||Math.min(...xs)>=r[1]||Math.max(...zs)<=r[2]||Math.min(...zs)>=r[3]||tri.some(v=>Math.abs(v[1]-plan.y-.002)>.001)){emit('floor',tri);continue;}
+  if(Math.max(...xs)<=r[0]||Math.min(...xs)>=r[1]||Math.max(...zs)<=r[2]||Math.min(...zs)>=r[3]||!heights.some(y=>tri.every(v=>Math.abs(v[1]-y)<.001))){emit('floor',tri);continue;}
   const zone=take(tri,r);for(const q of zone.rest)emit('floor',q);if(zone.kept.length<3)continue;
   let carpet=[zone.kept];for(const mask of [plan.tile,...plan.landings]){const next=[];for(const poly of carpet){const cut=take(poly,mask);emit('floor',cut.kept);next.push(...cut.rest);}carpet=next;}
   for(const band of plan.bands){const next=[];for(const poly of carpet){const cut=take(poly,band);emit('gold',cut.kept);next.push(...cut.rest);}carpet=next;}
