@@ -8,10 +8,13 @@ import {Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {findRestSpots,solidSpots} from '../src/walk/rest.js';
 import {COSMO_HEIGHT} from '../src/cosmo-pose.js';
+import layout from '../src/plan/selected-layout.js';
+import {buildRoomShell} from '../src/v2/room-shell.js';
 
 // Exercise the actual lounge furniture with the visitor's capsule, without a browser.
 installWalkCanvas(createCanvas);
-const root=new T.Group(),source=createGardenCommons(1);root.add(source.root);resolveRoomFrames(root);root.updateMatrixWorld(true);
+const root=new T.Group(),source=createGardenCommons(1);root.add(source.root);resolveRoomFrames(root);
+const structure=new T.Group();root.add(structure);buildRoomShell({root,inside:root,cutaway:new Set()},layout.rooms.find(r=>r.id==='commons-1'),structure);root.updateMatrixWorld(true);
 const lounge=source.root.getObjectByName('Hydro_Nip_Lounge'),stone=lounge.getObjectByName('Lounge_bar_stone'),front=lounge.getObjectByName('Lounge_bar_front');
 assert(stone&&front,'Stone top and bowed front exist');
 const bounds=o=>new T.Box3().setFromObject(o,true),top=bounds(stone),body=bounds(front),close=(a,b)=>assert(Math.abs(a-b)<.005,`${a} != ${b}`);
@@ -24,7 +27,7 @@ const neon=lounge.getObjectByName('Lounge_neon_glow'),np=neon.geometry.attribute
 root.traverse(o=>{if(o.isMesh&&!o.material.transparent&&o!==neon)opaque.push(o);});
 const eye=new T.Vector3(-124.28,24.3+COSMO_HEIGHT*.93,-46.19),sight=new T.Raycaster(),rims=[0,0];
 for(let i=0;i<np.count;i+=3){if(nc.getZ(i)>.3||nc.getX(i)<.9)continue;
- const p=new T.Vector3().fromBufferAttribute(np,i).add(new T.Vector3().fromBufferAttribute(np,i+1)).add(new T.Vector3().fromBufferAttribute(np,i+2)).multiplyScalar(1/3).applyMatrix4(neon.matrixWorld),rim=[27.025,28.075].findIndex(y=>Math.abs(p.y-y)<.03);
+ const p=new T.Vector3().fromBufferAttribute(np,i).add(new T.Vector3().fromBufferAttribute(np,i+1)).add(new T.Vector3().fromBufferAttribute(np,i+2)).multiplyScalar(1/3).applyMatrix4(neon.matrixWorld),rim=[27.025,27.875].findIndex(y=>Math.abs(p.y-y)<.03);
  if(rim<0||p.x<-127.81||p.x>-121.19||p.z<-53.7||p.z>-53.2)continue;
  const d=p.clone().sub(eye);sight.set(eye,d.clone().normalize());sight.far=d.length()-.005;
  const hit=sight.intersectObjects(opaque,false)[0];assert(!hit,'Amber rim is hidden by '+hit?.object.name+' at '+p.toArray());rims[rim]++;

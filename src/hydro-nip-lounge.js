@@ -502,8 +502,9 @@ export function createHydroNipLounge({mirror=1}={}){
   for(let i=0;i<6;i++){const x=x0+1+i*1.4,z=bz-1.2,yaw=-Math.atan(.76*(x-cx)/(len/2-.22)**2);
    for(const [name,geometry] of [['Seat',cushion],['Seat_back',back]]){const o=new T.Mesh(geometry,shared.barChair);o.name=name;o.position.set(x,FLOOR+.76,z);o.rotation.y=yaw;o.castShadow=o.receiveShadow=true;root.add(o);}
    cyl(paint('barPost'),.035,.035,.72,[x,FLOOR+.36,z],6);put(paint('barPost'),new T.TorusGeometry(.2,.018,4,16).rotateX(Math.PI/2).translate(x,FLOOR+.3,z));cyl(paint('barPost'),.24,.24,.03,[x,FLOOR+.015,z],16);}
-  sign({at:[cx,FLOOR+3.25,shelf-.3],normal:[0,0,-1],width:6.6,height:1.25,bow:.3,color:GREEN,frame:AMBER,lines:[{text:'THE',size:.2},{size:.33,runs:[{text:'TERPENE TASTING',color:GREEN},{text:'DECK',color:AMBER}]}]});
-  for(const x of [cx-2.8,cx+2.8])rod(M.dark,[x,FLOOR+3.875,shelf-.3],[x,LEVELS[0]-.08,shelf-.3],.015,5);
+  // Keep the whole band beneath the current gallery slab, including its upper rim.
+  sign({at:[cx,FLOOR+3.15,shelf-.3],normal:[0,0,-1],width:6.6,height:1.05,bow:.3,color:GREEN,frame:AMBER,lines:[{text:'THE',size:.2},{size:.33,runs:[{text:'TERPENE TASTING',color:GREEN},{text:'DECK',color:AMBER}]}]});
+  for(const x of [cx-2.8,cx+2.8])rod(M.dark,[x,FLOOR+3.675,shelf-.3],[x,LEVELS[0]-.24,shelf-.3],.015,5);
  }
 
  // The Cosmic Munchies Converger: a counter with snack dispensers, and the machine hung from the ceiling, beaming down.
