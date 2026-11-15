@@ -1,4 +1,5 @@
 import layout from './plan/selected-layout.js';
+import {LOUNGE_PLAN} from './plan/lounge-layout-v2.js';
 import fitoutOverrides from './plan/room-fitout-overrides-v2.json' with {type:'json'};
 const v2MazeFit=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1'),p=r.components.pieces.find(p=>p.name==='Haze Maze tower'),toLocal=z=>27+r.side*(z-r.z);return {dx:p.center[0]-r.x+132-117.25,dz:toLocal(p.center[2])-26,tubes:r.components.mazeTubes.map(t=>({...t,from:t.from-r.x+132,to:t.to-r.x+132,z:toLocal(t.z),level:r.y+t.rise}))};})();
 import * as T from 'three';
@@ -189,8 +190,8 @@ export function createHydroNipLounge({mirror=1}={}){
   const c=new Float32Array(n.attributes.position.count*3);for(let i=0;i<c.length;i+=3){c[i]=color.r;c[i+1]=color.g;c[i+2]=color.b;}n.setAttribute('color',new T.BufferAttribute(c,3));
   if(uv){const a=n.attributes.uv;for(let i=0;i<a.count;i++){const [u,v]=uv(a.getX(i),a.getY(i));a.setXY(i,u,v);}}return n;};
  // (Loose paints merge apart, as Lounge_*_loose meshes the walk doesn't collide with.)
- let turning=null;
- const put=(p,g)=>{if(turning)g.applyMatrix4(turning);if(!p){g.dispose();return;}const key=p.loose?p.mat.name+'|loose':p.mat;(lists.get(key)||lists.set(key,{mat:p.mat,loose:!!p.loose,gs:[]}).get(key)).gs.push(tidy(g,p.color,p.uv));};
+ let turning=null,piece=null;
+ const put=(p,g)=>{if(turning)g.applyMatrix4(turning);if(!p){g.dispose();return;}const key=piece?piece+'|'+p.mat.name:p.loose?p.mat.name+'|loose':p.mat;(lists.get(key)||lists.set(key,{mat:p.mat,loose:!!p.loose,piece,gs:[]}).get(key)).gs.push(tidy(g,p.color,p.uv));};
  const box=(m,[w,h,d],[x,y,z])=>put(m,new T.BoxGeometry(w,h,d).translate(x,y,z));
  const cyl=(m,rt,rb,h,[x,y,z],seg=12,open=false)=>put(m,new T.CylinderGeometry(rt,rb,h,seg,1,open).translate(x,y,z));
  const ball=(m,r,[x,y,z],detail=1)=>put(m,new T.IcosahedronGeometry(r,detail).translate(x,y,z));
@@ -479,7 +480,10 @@ export function createHydroNipLounge({mirror=1}={}){
  }
 
  // The Cosmic Munchies Converger: a counter with snack dispensers, and the machine hung from the ceiling, beaming down.
- {const {x,z}=MUNCH,top=FLOOR+1.1;
+ {const {x,z}=MUNCH,top=FLOOR+1.1,c=LOUNGE_PLAN.converger,r=layout.rooms.find(r=>r.id==='commons-1');
+  const cx=c.center[0]-r.x+132,cz=27+r.side*(c.center[2]-r.z),firstChild=root.children.length;
+  const turn=new T.Matrix4().makeTranslation(cx,0,cz).multiply(new T.Matrix4().makeRotationY(-c.yaw)).multiply(new T.Matrix4().makeTranslation(-x,0,-z));
+  turning=turn;piece='Cosmic_Munchies_Converger';
   box(M.metal,[3,1.06,5],[x,FLOOR+.53,z]);box(M.board,[3.2,.06,5.2],[x,top,z]);
   for(const s of [-1,1])box(neon(CYAN),[3.1,.025,.02],[x,top-.05,z+s*2.61]);box(neon(CYAN),[.02,.025,5.1],[x-1.61,top-.05,z]);
   cyl(M.dark,.62,.7,.12,[x,top+.06,z],24);put(halo(CYAN),new T.CircleGeometry(.9,24).rotateX(-Math.PI/2).translate(x,top+.125,z));
@@ -500,8 +504,12 @@ export function createHydroNipLounge({mirror=1}={}){
   put(neon(PINK),new T.TorusGeometry(.16,.07,8,18).rotateX(1.1).translate(x+.1,FLOOR+4.6,z));
   put(M.wood,new T.CylinderGeometry(.14,.14,.04,14).rotateZ(.5).translate(x-.12,FLOOR+3.4,z+.1));
   for(let i=0;i<3;i++){const sz=z-1.4+i*1.4;seat('Seat',new T.CylinderGeometry(.22,.22,.08,14),M.teal,[x-2.6,FLOOR+.76,sz]);cyl(M.dark,.035,.035,.72,[x-2.6,FLOOR+.36,sz],6);cyl(M.dark,.2,.2,.03,[x-2.6,FLOOR+.015,sz],12);}
-  sign({at:[x,CEILING-4.1,z-3.1],normal:[0,0,-1],width:4.6,height:1.3,color:CYAN,frame:PINK,lines:[{text:'COSMIC MUNCHIES',size:.3},{text:'CONVERGER',size:.36,color:PINK}]});
-  for(const s of [-1,1])rod(M.dark,[x+s*2,CEILING-3.45,z-3.1],[x+s*2,CEILING,z-3.1],.012,3);
+  turning=null;for(const o of root.children.slice(firstChild)){o.applyMatrix4(turn);o.userData.converger=true;}
+  // Face the jaguar entrance, with the same mirror correction as the other neon signs.
+  piece='Cosmic_Munchies_Sign';const a=-c.signYaw,n=[-Math.sin(a),0,-Math.cos(a)],sx=cx+n[0]*3.1,sz=cz+n[2]*3.1;
+  sign({at:[sx,CEILING-4.1,sz],normal:n,width:4.6,height:1.3,color:CYAN,frame:PINK,lines:[{text:'COSMIC MUNCHIES',size:.3},{text:'CONVERGER',size:.36,color:PINK}]});
+  for(const s of [-1,1]){const xx=sx+s*2*Math.cos(a),zz=sz-s*2*Math.sin(a);rod(M.dark,[xx,CEILING-3.45,zz],[xx,CEILING,zz],.012,3);}
+  piece=null;
  }
 
  // Lounge seating toward the entrance: patterned rugs, beanbags, floor cushions, low tables and cat toys.
@@ -560,7 +568,7 @@ export function createHydroNipLounge({mirror=1}={}){
   sign({at:[at[0],FLOOR+1.32,at[2]],normal:[0,0,-1],width:1.25,height:.62,color:AMBER,lines:[{text:'HYDRO-NIP LOUNGE',size:.085},{text:'Concept by Tochtli',size:.075,color:0xf3e6c4}]});}
 
  // One mesh per material.
- for(const {mat:m,loose,gs} of lists.values()){const g=mergeGeometries(gs);gs.forEach(x=>x.dispose());const o=new T.Mesh(g,m);o.name=loose?m.name+'_loose':m.name;o.receiveShadow=true;o.castShadow=!m.transparent&&!(m instanceof T.MeshBasicMaterial);
+ for(const {mat:m,loose,piece,gs} of lists.values()){const g=mergeGeometries(gs);gs.forEach(x=>x.dispose());const o=new T.Mesh(g,m);o.name=piece?piece+'_'+m.name:loose?m.name+'_loose':m.name;o.receiveShadow=true;o.castShadow=!m.transparent&&!(m instanceof T.MeshBasicMaterial);
   if(loose)o.userData.noCollide=true;root.add(o);}
  return root;
 }

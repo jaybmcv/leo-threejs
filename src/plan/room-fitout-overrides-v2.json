@@ -1,5 +1,6 @@
 {
   "commons-1": {
+    "converger": {"center":[-97.5,24.3,-34.7],"yaw":-1.5707963267948966,"signYaw":-0.7853981633974483},
     "removeGardenPrints": [73],
     "remove": [
       {"part":"Lounge_cat_tree","x":147,"z":18.6}
