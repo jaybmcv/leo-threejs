@@ -37,6 +37,12 @@ run([0,0,0],.1);assert(!walker.grounded&&walker.velocity.y<0&&walker.position.y<
 run([0,0,0],1);assert(walker.grounded,'Arrival lands');close(walker.position.y,r.y);
 assert(Math.hypot(walker.position.x-arrival.at[0],walker.position.z-arrival.at[2])<.01,'Arrival falls vertically');
 run([2.25,0,0],1.6);assert(walker.position.x-arrival.at[0]>3,'Arrival walks into the lounge');close(walker.position.y,r.y);
+// Looking slightly toward the open floor keeps the departure clear of the maze corner.
+for(const from of [arrival.at,stopped.toArray()]){
+ walker.place(new T.Vector3(from[0],r.y,from[2]));const start=walker.position.clone(),yaw=Math.PI/2+30*.0042;
+ run([2.25*Math.sin(yaw),0,2.25*Math.cos(yaw)],2);
+ assert(walker.position.distanceTo(start)>3,'The play departure clears 3 m after looking toward the open floor');close(walker.position.y,r.y);
+}
 const effect=createHydroPortal(),mesh=effect.group,mat=mesh.material;
 close(mesh.position.x-SYNTHWAVE_MURAL.x,.04);close(portal.y-portal.height/2-r.y,1.2);close(arrival.at[0]-SYNTHWAVE_MURAL.x,.8);assert.equal(arrival.yaw,90);
 // Both the coloured oval and its halo fit the actual painted wall at this height.

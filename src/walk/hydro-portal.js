@@ -51,10 +51,17 @@ export function createHydroPortalSound(){
 
 export function createHydroPortal(){
  const uniforms={uTime:{value:0}},material=new T.ShaderMaterial({uniforms,transparent:true,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false,
-  vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+  vertexShader:`#include <common>
+   #include <logdepthbuf_pars_vertex>
+   varying vec2 vUv;
+   void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);
+    #include <logdepthbuf_vertex>
+   }`,
   fragmentShader:`
+   #include <logdepthbuf_pars_fragment>
    uniform float uTime;varying vec2 vUv;
    void main(){
+    #include <logdepthbuf_fragment>
     vec2 p=(vUv-.5)*2.7;float r=length(p),a=atan(p.y,p.x),t=uTime;
     if(r>1.25)discard;
     float phase=4.*a+13.*log(r+.16)+1.4*t;

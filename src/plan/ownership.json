@@ -3012,7 +3012,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "5ba109e31b2afc3785b636d8eda55a07c1d72aaf67ffa93884350e500c274598"
+      "signature": "0b6ba86315ec1b764f781b98479027096601f54953baa870277b3f413224e476"
     },
     {
       "source": "src/walk/hydroponics.js",
