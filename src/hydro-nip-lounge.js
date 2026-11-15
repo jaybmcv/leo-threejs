@@ -235,7 +235,7 @@ export function createHydroNipLounge({mirror=1}={}){
   // The glow spills round the board from behind it; in front, it washed the dark board out to grey.
   if(!bow)local.push([halo(color),new T.PlaneGeometry(width*1.3,height*2).translate(0,0,board?-.12:.02)]);
   if(board)local.push([M.board,new T.BoxGeometry(width,height,.08,bow?24:1,1,1).translate(0,0,-.04)]);
-  if(bow)for(const s of [-1,1])local.push([neon(frame),new T.CylinderGeometry(.025,.025,width,5,24).rotateZ(Math.PI/2).translate(0,s*(height/2-.025),.025)]);
+  if(bow)for(const s of [-1,1])local.push([neon(frame),new T.CylinderGeometry(.025,.025,width-.12,5,24).rotateZ(Math.PI/2).translate(0,s*(height/2-.1),.06)]);
   else local.push([neon(frame),new T.TubeGeometry(roundRect(width-.12,height-.12,Math.min(.3,height/4),.03),96,.03,5,true)]);
   if(leaves)for(const s of [-1,1])local.push([neon(GREEN),new T.TubeGeometry(leafCurve(s*(width/2-.42),0,.34,.04),56,.022,4,true)],[neon(GREEN),new T.CylinderGeometry(.015,.015,.5,4).translate(s*(width/2-.42),-.2,.04)]);
   for(const [mat,g] of local){if(bow){const p=g.attributes.position;for(let i=0;i<p.count;i++)p.setZ(i,p.getZ(i)+bow*(1-(p.getX(i)/(width/2))**2));g.computeVertexNormals();}put(mat,mirrored(g.applyMatrix4(m),m));}
@@ -470,18 +470,20 @@ export function createHydroNipLounge({mirror=1}={}){
   const slab=(pad,depth,top)=>new T.ExtrudeGeometry(outline(pad),{depth,bevelEnabled:false,steps:1,curveSegments:16}).rotateX(Math.PI/2).translate(cx,top,bz);
   // A small repeatable stone texture also exists in Node, so the prepared and phone walks keep the veining.
   const pixels=new Uint8Array(128*128*4);
-  for(let y=0;y<128;y++)for(let x=0;x<128;x++){const u=x/128*Math.PI*2,v=y/128*Math.PI*2,d=Math.abs(Math.sin(u*2+v+Math.sin(v*2)*.65+Math.sin(u-v)*.25)),vein=Math.max(0,1-d/.055),c=19+vein*32+Math.sin(u*4+v*3)*1.5,i=(y*128+x)*4;
+  for(let y=0;y<128;y++)for(let x=0;x<128;x++){const u=x/128*Math.PI*2,v=y/128*Math.PI*2,d=Math.abs(Math.sin(u*2+v+Math.sin(v*2)*.65+Math.sin(u-v)*.25)),vein=Math.max(0,1-d/.075),c=46+vein*105+Math.sin(u*4+v*3)*1.5,i=(y*128+x)*4;
    pixels[i]=c;pixels[i+1]=c+1;pixels[i+2]=c+4;pixels[i+3]=255;}
   const stoneMap=new T.DataTexture(pixels,128,128);stoneMap.colorSpace=T.SRGBColorSpace;stoneMap.wrapS=stoneMap.wrapT=T.RepeatWrapping;stoneMap.magFilter=T.LinearFilter;stoneMap.minFilter=T.LinearMipmapLinearFilter;stoneMap.generateMipmaps=true;stoneMap.needsUpdate=true;
-  shared.barStone=std('Lounge_bar_stone',0xffffff,{vertexColors:true,map:stoneMap,roughness:.16,metalness:.12,envMapIntensity:1.15});
-  shared.barFront=std('Lounge_bar_front',0x18151e,{vertexColors:true,roughness:.32,metalness:.12});
+  // A faint map lift keeps the veins visible under the lounge's dimmed lighting.
+  shared.barStone=std('Lounge_bar_stone',0xffffff,{vertexColors:true,map:stoneMap,roughness:.14,metalness:.08,envMapIntensity:2,emissive:0x777f88,emissiveMap:stoneMap,emissiveIntensity:.2});
+  shared.barFront=std('Lounge_bar_front',0x24212b,{vertexColors:true,roughness:.32,metalness:.12});
   shared.barChair=std('Lounge_bar_upholstery',0x542780,{vertexColors:true,roughness:.48});
   shared.barPost=std('Lounge_bar_post',0x101016,{vertexColors:true,roughness:.26,metalness:.65});
   const stone=slab(.1,.06,FLOOR+1.08),uv=stone.attributes.uv,p=stone.attributes.position;
   for(let i=0;i<p.count;i++)uv.setXY(i,(p.getX(i)-x0)/2,(p.getZ(i)-bz)/2);
   put(paint('barStone'),stone);put(paint('barFront'),slab(0,1.02,FLOOR+1.02));
-  const trim=outline(.018).getPoints(16).map(p=>new T.Vector3(p.x,0,p.y)),rim=new T.CatmullRomCurve3(trim.slice(0,-1),true,'centripetal');
-  for(const y of [FLOOR+.08,FLOOR+1.005])put(neon(GREEN),new T.TubeGeometry(rim,64,.018,4,true).translate(cx,y,bz));
+  // Exact offset outlines keep the strips outside the body, including the rounded ends.
+  const trim=outline(.03);trim.holes.push(outline(.005));
+  for(const y of [FLOOR+.08,FLOOR+1.005])put(neon(GREEN),new T.ExtrudeGeometry(trim,{depth:.035,bevelEnabled:false,steps:1,curveSegments:16}).rotateX(Math.PI/2).translate(cx,y+.0175,bz));
   box(M.wood,[len,2.6,.45],[cx,FLOOR+1.3,shelf]);
   for(const y of [FLOOR+1.15,FLOOR+1.75,FLOOR+2.35])box(M.board,[len,.04,.5],[cx,y,shelf-.25]);
   const liquids=[GREEN,AMBER,PURPLE,PINK,CYAN],flask=new T.LatheGeometry([[0,0],[.11,0],[.11,.02],[.04,.17],[.035,.26],[.04,.27]].map(([x,y])=>new T.Vector2(x,y)),8),fz=shelf-.28;
