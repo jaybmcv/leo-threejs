@@ -1,11 +1,13 @@
 import {identify,currentPass,forget,CREAMERY} from '../walk/net/connect.js';
 import {FEEDBACK_CONFIG} from '../feedback/config.js';
 import {walkLink as openWalk} from './walk-link.js';
-import {TRACK,pill,note,hasTrack,isMoving,trackNodes,groups,stats,feature,shortDate,shotPath,answerKey} from './model.js';
+import {TRACK,pill,note,hasTrack,isMoving,trackNodes,groups,stats,feature,shortDate,shotPath,answerKey,agoText} from './model.js';
+import {hubSession} from './session.js';
 
 // The Builder's Hub: where testers follow the ideas they sent. Nothing about anyone is in this page or this public
-// repository: a tester's cards come at runtime from the Hub service (feedback-inbox hub/), which checks a fresh Leo pass
-// and returns only theirs. Everything from the service goes in as text, never as markup.
+// repository: a tester's cards come at runtime from the Hub service (feedback-inbox hub/), which checks who they are (a
+// fresh Leo pass, or the Hub sign-in it then hands back: session.js) and returns only theirs. Everything from the
+// service goes in as text, never as markup.
 // A local service for development, from a page on localhost only.
 const LOCAL=(()=>{
  const asked=new URLSearchParams(location.search).get('hub');
@@ -14,7 +16,7 @@ const LOCAL=(()=>{
 const SERVICE=LOCAL||'https://mcv-feedback-hub.mcv-feedback.workers.dev',REPLIES=(LOCAL||FEEDBACK_CONFIG.endpoint.replace(/\/$/,''))+'/replies';
 const HUMAN_KEY=LOCAL?'1x00000000000000000000AA':FEEDBACK_CONFIG.turnstileSiteKey;
 const MEDIA='https://raw.githubusercontent.com/jaybmcv/leo-threejs/pr-media/';
-const MAX_IMAGES=3,MAX_SHOT=1600,MAX_TEXT=2000,LIVE_SHOWN=6,POLL_MS=30e3,POLLS=10,STALE_MS=60e3,OPEN_LOOK_MS=15*60e3,LIVE_STALE_MS=5*60e3;
+const MAX_IMAGES=3,MAX_SHOT=1600,MAX_TEXT=2000,LIVE_SHOWN=6,POLL_MS=30e3,POLLS=10,STALE_MS=60e3,OPEN_LOOK_MS=15*60e3,LIVE_STALE_MS=5*60e3,STAMP_MS=60e3,AGO_MS=20e3,PRESS_GAP_MS=5e3;
 const $=id=>document.getElementById(id);
 function el(tag,props={},...kids){
  const {attrs,...rest}=props,e=Object.assign(document.createElement(tag),rest);
@@ -153,7 +155,7 @@ function wordsOf(c){
  box.addEventListener('toggle',async()=>{
   if(!box.open||box.dataset.read)return;box.dataset.read='1';
   try{
-   const pass=await currentPass(),r=pass&&await fetch(`${SERVICE}/words`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({pass,number:c.number})});
+   const r=await askHub('words',{number:c.number});
    if(!r?.ok)throw new Error('no answer');
    text.textContent=(await r.json()).words||'You sent a voice note or pictures, with no words.';
   }catch{delete box.dataset.read;box.open=false;text.textContent='Loading…';}
@@ -193,6 +195,11 @@ function addMore(c){
   catch{picturesKept=!images.length;try{sessionStorage.setItem(key,JSON.stringify({words:text.value,images:[]}));}catch{}}
  };
  const fail=message=>{error.textContent=message;sending=false;waiting=false;send.disabled=false;send.textContent='Send';};
+ const failToConnect=message=>{
+  fail(message);
+  const again=el('button',{type:'button',className:'link',textContent:'Connect Discord'});again.addEventListener('click',()=>connect());
+  error.append(' ',again);
+ };
  const showPics=()=>{
   pics.replaceChildren(...images.map((im,i)=>{const drop=el('button',{type:'button',textContent:'×',attrs:{'aria-label':`Remove picture ${i+1}`}});drop.addEventListener('click',()=>{images.splice(i,1);showPics();});return el('figure',{},el('img',{src:im,alt:`Picture ${i+1} to add`}),drop);}));
   addPics.hidden=images.length>=MAX_IMAGES;keep();
@@ -224,10 +231,12 @@ function addMore(c){
   sending=true;waiting=false;send.textContent='Sending…';
   const human=token;token=null;
   try{
-   const pass=await currentPass();
-   if(!pass){keep();signInRanOut();fail(picturesKept?'Your sign-in ran out. Connect Discord above, and what you added will be here when you’re back.':'Your sign-in ran out. Connect Discord above. Your words will be here when you’re back, but you’ll need to add your pictures again.');return;}
-   const r=await fetch(REPLIES,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({number:c.number,turnstile:human,pass,text:words,images:images.map(data=>({data}))})});
+   // The Hub sign-in, and a pass beside it when there is one: the human check can't be tried twice.
+   const session=hubSession.get(),pass=await currentPass();
+   if(!session&&!pass){keep();signInRanOut();fail(picturesKept?'Your sign-in ran out. Connect Discord above, and what you added will be here when you’re back.':'Your sign-in ran out. Connect Discord above. Your words will be here when you’re back, but you’ll need to add your pictures again.');return;}
+   const r=await fetch(REPLIES,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({number:c.number,turnstile:human,...(session?{session}:{}),...(pass?{pass}:{}),text:words,images:images.map(data=>({data}))})});
    const reply=await r.json().catch(()=>({}));
+   if(r.status===401){keep();failToConnect(picturesKept?'Discord needs to check it’s you before this can go. What you added will be here when you’re back.':'Discord needs to check it’s you before this can go. Your words will be here when you’re back, but you’ll need to add your pictures again.');return;}
    if(!r.ok){fail(reply.error||'That could not be sent. Please try again.');return;}
    drafts.delete(c.number);try{sessionStorage.removeItem(key);}catch{}
    open.remove();form.remove();box.append(el('p',{className:'note',textContent:'Thanks, that’s with us now.'}));box.dataset.done='1';
@@ -282,11 +291,42 @@ function panel(title,text,...kids){
 const skeleton=()=>el('div',{className:'skeleton',attrs:{'aria-hidden':'true'}},el('div',{}),el('div',{}),el('div',{}));
 
 let scrolled=false,lastAnswer='',lastCheck=0,polling=0;
+// Asks the Hub service as this tester: with the Hub's own sign-in (session.js) while there is one, else with a fresh
+// pass, which starts one. null when neither is at hand, so they need to connect Discord; otherwise the response.
+async function askHub(path,extra={}){
+ const post=proof=>fetch(SERVICE+'/'+path,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({...proof,...extra})});
+ const session=hubSession.get();
+ if(session){const r=await post({session});if(r.status!==401)return r;hubSession.clear();}
+ const pass=await currentPass();if(!pass)return null;
+ const r=await post({pass});
+ // The service didn't take this pass, so it isn't worth keeping.
+ if(r.status===401)forget();
+ return r;
+}
+// What comes with the cards: the sign-in, renewed, and the stamp they were read at (see lookForChanges).
+let seenStamp,stampWorks=false,checkedAt=0;
+function took(data){
+ hubSession.keep(data.session);
+ if('stamp' in data)seenStamp=data.stamp;
+ checked();
+}
+const checked=()=>{checkedAt=Date.now();showWhen();};
+const showWhen=()=>{$('fresh-when').textContent=agoText(checkedAt);};
+function showWho(name){
+ if(!name){$('who').replaceChildren();return;}
+ const out=el('button',{type:'button',textContent:'Not you?'});out.addEventListener('click',signOut);
+ $('who').replaceChildren('Signed in as '+name+' · ',out);
+}
+// "Not you?": this browser forgets its Hub sign-in and pass (The Creamery's own sign-in is Creamery's).
+function signOut(){
+ hubSession.clear();forget();lastAnswer='';clearInterval(polling);checkedAt=0;showWhen();
+ askToConnect(null);
+}
 // My ideas. asked: a report's id from a link right after sending it; it may not have arrived yet.
 function showMine(data,asked){
  const box=$('mine'),{cards}=data;
  $('hero-stats').replaceChildren(cards.length?statsOf(cards):'');
- $('who').textContent=data.name?`Signed in as ${data.name}`:'';
+ showWho(data.name);
  const out=[];
  const waiting=asked&&!cards.some(c=>c.id===asked);
  if(waiting)out.push(el('div',{className:'strip'},el('b',{textContent:'Thanks, we’ve got it.'}),' Your new idea shows up here within a few minutes.'));
@@ -314,14 +354,16 @@ function askToConnect(me){
 async function loadMine(asked){
  $('mine').replaceChildren(skeleton());
  try{
-  const me=await identify(),pass=me.pass&&await currentPass();
-  if(!pass){askToConnect(me);return;}
-  const r=await fetch(`${SERVICE}/mine`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({pass})});
-  // The service didn't take this pass, so it isn't worth keeping.
-  if(r.status===401){forget();askToConnect(null);return;}
+  const me=await identify();
+  // A Discord account just connected that isn't the one signed in here: that one, from now on.
+  const signed=hubSession.claims(),connected=me.remembered?null:me.claims?.discord?.id;
+  if(signed&&connected&&signed.sub!==connected)hubSession.clear();
+  if(!hubSession.get()&&!me.pass){askToConnect(me);return;}
+  const r=await askHub('mine');
+  if(!r||r.status===401){askToConnect(r?null:me);return;}
   if(!r.ok)throw new Error(String(r.status));
   const answer=await r.text();lastCheck=Date.now();lastAnswer=answerKey(answer);
-  const data=JSON.parse(answer);keepShots(data);showMine(data,asked);
+  const data=JSON.parse(answer);keepShots(data);took(data);showMine(data,asked);
   if(asked&&!data.cards.some(c=>c.id===asked))waitFor(asked);
  }catch{
   const again=el('button',{type:'button',className:'go',textContent:'Try again'});again.addEventListener('click',()=>loadMine(asked));
@@ -341,12 +383,11 @@ async function refreshMine(asked){
  if(!lastAnswer)return null;
  lastCheck=Date.now();
  try{
-  const pass=await currentPass();if(!pass){signInRanOut();return null;}
-  const r=await fetch(`${SERVICE}/mine`,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({pass})});
-  if(r.status===401){forget();signInRanOut();return null;}
+  const r=await askHub('mine');
+  if(!r||r.status===401){signInRanOut();return null;}
   if(!r.ok)return null;
   const text=await r.text(),data=JSON.parse(text),key=answerKey(text);
-  $('sign-in-ran-out')?.remove();keepShots(data);
+  $('sign-in-ran-out')?.remove();keepShots(data);took(data);showWho(data.name);
   if(key!==lastAnswer&&!writing()){lastAnswer=key;showMine(data,asked);}
   return data;
  }catch{return null;}
@@ -362,19 +403,19 @@ function waitFor(asked){
 }
 // Just went live: from the public ship log, the same for everyone.
 let liveAt=0,liveAnswer='';
-async function loadLive(){
- if(Date.now()-liveAt<LIVE_STALE_MS)return;
+async function loadLive({force=false}={}){
+ if(force!==true&&Date.now()-liveAt<LIVE_STALE_MS)return;
  const box=$('live'),first=!liveAnswer;if(first)box.replaceChildren(skeleton());
  try{
-  const r=await fetch(`${SERVICE}/live`);if(!r.ok)throw new Error(String(r.status));
-  const text=await r.text();liveAt=Date.now();if(text===liveAnswer)return;liveAnswer=text;
+  const r=await fetch(`${SERVICE}/live`,force===true?{cache:'no-cache'}:{});if(!r.ok)throw new Error(String(r.status));
+  const text=await r.text();liveAt=Date.now();checked();if(text===liveAnswer)return;liveAnswer=text;
   const {items}=JSON.parse(text);
   if(!items.length){box.replaceChildren(panel('Nothing new just yet','The latest changes aboard will show up here.'));return;}
   box.replaceChildren(el('div',{className:'gallery'},...items.map(i=>el('article',{className:'tile'},slider(i.shots[0],i.name),
    el('div',{className:'tile-text'},el('h3',{textContent:i.name}),el('span',{className:'tile-date',textContent:shortDate(i.date+'T12:00:00')}),goButton(i.go))))));
  }catch{
   if(!first)return;
-  const again=el('button',{type:'button',className:'go',textContent:'Try again'});again.addEventListener('click',loadLive);
+  const again=el('button',{type:'button',className:'go',textContent:'Try again'});again.addEventListener('click',()=>loadLive());
   box.replaceChildren(panel('We can’t reach the Hub right now','Please try again in a moment.',again));
  }
 }
@@ -394,11 +435,40 @@ $('tabs').addEventListener('keydown',e=>{
 });
 pick(query.get('tab')==='live'?'live':'mine');
 loadMine(asked);
+// Has anything changed? While the page is in view it asks once a minute for the Hub's stamp, one small read, and looks at
+// the cards (and Just went live, once opened) only when that has moved: GitHub tells the Hub within seconds, and what is
+// running within five minutes. A look that finds the stamp unchanged counts as up to date.
+let looking=false;
+async function lookForChanges(){
+ if(document.hidden||looking||(!lastAnswer&&!liveAnswer))return;
+ looking=true;
+ try{
+  const r=await fetch(SERVICE+'/stamp',{cache:'no-store'});if(!r.ok)return;
+  const {stamp}=await r.json();stampWorks=true;
+  if(stamp===seenStamp){if(lastAnswer)checked();return;}
+  // One look per change, even if that look fails.
+  seenStamp=stamp;
+  await Promise.all([lastAnswer?refreshMine(asked):null,liveAnswer?loadLive({force:true}):null]);
+ }catch{}
+ finally{looking=false;}
+}
+// Refresh: look now, at both. Signed out or stuck on an error, it starts again, which also tries a quiet sign-in.
+async function refreshNow(){
+ const button=$('refresh');
+ if(button.getAttribute('aria-busy')==='true'||lastAnswer&&Date.now()-checkedAt<PRESS_GAP_MS){showWhen();return;}
+ button.setAttribute('aria-busy','true');
+ try{await Promise.all([lastAnswer?refreshMine(asked):loadMine(asked),liveAnswer||!$('live').hidden?loadLive({force:true}):null]);}
+ finally{button.removeAttribute('aria-busy');showWhen();}
+}
+$('refresh').addEventListener('click',refreshNow);
+setInterval(lookForChanges,STAMP_MS);
+setInterval(()=>{if(!document.hidden)showWhen();},AGO_MS);
 // Back on this tab after a while: things may have moved.
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden)return;
- walk.ask();
- if(Date.now()-lastCheck>STALE_MS)refreshMine(asked);
+ walk.ask();showWhen();
+ if(Date.now()-lastCheck<=STALE_MS)return;
+ if(stampWorks)lookForChanges();else refreshMine(asked);
 });
-// Left open and in view, it still looks now and then.
+// Left open and in view, it still looks at the cards now and then, in case a change was missed.
 setInterval(()=>{if(!document.hidden)refreshMine(asked);},OPEN_LOOK_MS);

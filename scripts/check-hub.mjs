@@ -3,7 +3,8 @@ import fs from 'node:fs/promises';
 import {publicOutput} from './layout-selector.mjs';
 import {listenForHub} from '../src/walk/hub-link.js';
 import {walkLink} from '../src/hub/walk-link.js';
-import {pill,note,hasTrack,isMoving,trackNodes,groups,stats,feature,shortDate,shotPath,answerKey} from '../src/hub/model.js';
+import {pill,note,hasTrack,isMoving,trackNodes,groups,stats,feature,shortDate,shotPath,answerKey,agoText} from '../src/hub/model.js';
+import {sessionClaims} from '../src/hub/session.js';
 
 const output=process.env.LEO_PUBLIC_DIR||publicOutput;
 // What the Builder's Hub says for each kind of card, and that the built page stays light and holds nobody's data.
@@ -66,6 +67,26 @@ check('new screenshot links alone are no reason to redraw',()=>{
  assert.equal(answerKey(answer('/shot/7?exp=1&mac=a')),answerKey(answer('/shot/7?exp=2&mac=b')));
  assert.notEqual(answerKey(answer('/shot/7?exp=1&mac=a')),answerKey(answer('/shot/7?exp=1&mac=a','shipped')));
 });
+check('a renewed sign-in or a new stamp alone is no reason to redraw',()=>{
+ const answer=(session,stamp,status='live')=>JSON.stringify({name:'A',cards:[{number:7,status}],session,stamp});
+ assert.equal(answerKey(answer('hub1.a.b','2026-11-14T00:00:00Z')),answerKey(answer('hub1.c.d','2026-11-14T00:05:00Z')));
+ assert.notEqual(answerKey(answer('hub1.a.b','t')),answerKey(answer('hub1.a.b','t','shipped')));
+});
+check('beside Refresh: how long ago the Hub was checked',()=>{
+ const now=Date.parse('2026-11-14T12:00:00Z');
+ assert.equal(agoText(0,now),'');assert.equal(agoText(NaN,now),'');
+ assert.equal(agoText(now-20e3,now),'Updated just now');assert.equal(agoText(now+5e3,now),'Updated just now','a clock a little ahead');
+ assert.equal(agoText(now-61e3,now),'Updated 1 min ago');assert.equal(agoText(now-45*60e3,now),'Updated 45 min ago');
+ assert.equal(agoText(now-3*3600e3,now),'Updated 3 h ago');assert.equal(agoText(now-30*3600e3,now),'Updated over a day ago');
+});
+check('the page reads a Hub sign-in only in its own shape, and drops one that has ended',()=>{
+ const token=(claims,mac='A'.repeat(43))=>`hub1.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.${mac}`;
+ const now=1_800_000_000,good={sub:'801107098355630082',name:'Sloth',since:now-86400,exp:now+86400};
+ assert.deepEqual(sessionClaims(token(good),now),good);
+ assert.equal(sessionClaims(token({...good,exp:now-1}),now),null,'ended');
+ for(const bad of [null,'',{},token(good,'short'),'hub2'+token(good).slice(4),token(good)+' ','hub1.!!!.'+'A'.repeat(43),token({name:'no id',exp:now+1})])
+  assert.equal(sessionClaims(bad,now),null,String(bad).slice(0,30));
+});
 // The Hub and an open walk, over a real BroadcastChannel.
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 {
@@ -91,5 +112,11 @@ try{
  check('the built page is light and carries no Three.js',()=>{assert.ok(code.length<60*1024,`${code.length} bytes`);assert.ok(!code.includes('WebGLRenderer'));});
  check('the built page uses only text for what the service sends',()=>assert.ok(!/innerHTML|insertAdjacentHTML|document\.write/.test(code)));
  check('the built page names the service, and holds no report data',()=>{assert.ok(code.includes('mcv-feedback-hub.'));assert.ok(!/discord:\d|\b\d{17,20}\b/.test(code+html));});
+ check('the built page has its Refresh button beside the tabs, outside the tab list',()=>{
+  const bar=/<div class="bar">([\s\S]*?)<\/div>\s*<main>/.exec(html)?.[1]||'';
+  assert.match(bar,/<button class="refresh" id="refresh" type="button" aria-label="Refresh"/);
+  assert.ok(!/role="tablist"[^>]*>[^]*id="refresh"[^]*<\/nav>/.test(bar),'not inside the tab list');
+  assert.ok(code.includes('/stamp')&&code.includes('leo-hub-session'));
+ });
 }catch(e){if(e.code!=='ENOENT'||process.env.LEO_PUBLIC_DIR)throw e;console.log(output+'/hub.html not built; skipped the page checks');}
 console.log(`All Builder's Hub checks passed (${passed}).`);
