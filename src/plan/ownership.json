@@ -399,8 +399,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 131,
-      "signature": "fdf95fff05aa342a3af3152662808d0a40374d2a74cbc4d8a6df4297b906947a"
+      "placements": 129,
+      "signature": "b3330280678e94cf26fb49ed27e2c2d903e57dbb6e6aba8747fa7a02dcb68393"
     },
     {
       "source": "src/interior-polish.js",
@@ -419,6 +419,21 @@
       "interactionTargets": null,
       "placements": 7,
       "signature": "4390e8342fea62ba98063dc9f556ada07fe17ab5138e0f4f3ed803f7e1d22a6b"
+    },
+    {
+      "source": "src/lounge-dome-plants.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Lounge_dome_"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 11,
+      "signature": "013b6e20d6629cefe39e189bcc848407068a3953e268cb857582b53710016e5c"
     },
     {
       "source": "src/lounge.js",
