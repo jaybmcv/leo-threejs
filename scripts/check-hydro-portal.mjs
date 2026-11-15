@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import * as T from 'three';
 import layout from '../src/plan/selected-layout.js';
 import {createGardenCommons} from '../src/model.js';
@@ -11,9 +12,13 @@ import {Colliders,solid} from '../src/walk/collision.js';
 import {groundMesh} from '../src/v2/ground.js';
 import {Controller} from '../src/walk/controller.js';
 import {FollowCamera} from '../src/walk/camera.js';
+import {findStand} from '../src/walk/places.js';
+import {createTransit} from '../src/transit.js';
+import {atriumFloorGeometry} from '../src/v2/atrium-surfaces.js';
+import {phase6Programme} from '../src/v2/phase6-programme.js';
 import {createLoungeMural} from '../src/walk/lounge-mural.js';
 import {SYNTHWAVE_MURAL,synthwaveMuralOutline} from '../src/v2/community-routes.js';
-import {HYDRO_PORTAL as portal,HYDRO_PORTAL_ARRIVAL as arrival,createHydroPortal,createHydroPortalSound,hydroPortalLevel,buildHydroPortalWarp} from '../src/walk/hydro-portal.js';
+import {HYDRO_PORTAL as portal,HYDRO_PORTAL_ARRIVAL as arrival,HYDRO_PARK_PORTAL as park,HYDRO_PARK_ARRIVAL as parkArrival,HYDRO_PORTAL_LINKS,hydroPortalContains,createHydroPortalTravel,createHydroPortal,createHydroPortalSound,hydroPortalLevel,buildHydroPortalWarp} from '../src/walk/hydro-portal.js';
 
 // Real lounge furniture and the current hull-owned shell, without loading the rest of the ship.
 const r=layout.rooms.find(r=>r.id==='commons-1'),root=new T.Group(),structure=new T.Group();root.add(createGardenCommons(1).root,structure);resolveRoomFrames(root);
@@ -27,17 +32,17 @@ const close=(a,b)=>assert(Math.abs(a-b)<.01,`${a} != ${b}`),walker=new Controlle
 const run=(v,seconds)=>{for(let i=0;i<seconds*120;i++)walker.step(1/120,wish.set(...v));};
 walker.place(new T.Vector3(-138.8,r.y,-41.56));run([-Math.cos(Math.PI/60)*2.25,0,Math.sin(Math.PI/60)*2.25],3);
 assert(walker.position.x>portal.x&&walker.position.x<-140,'Mural wall blocks the approach: '+walker.position.toArray());close(walker.position.y,r.y);
-assert(Math.abs(walker.position.z-arrival.at[2])<.3,'No teleport at the wall');
+assert(Math.abs(walker.position.z-arrival.at[2])<.3,'Mural approach aligns with the portal');
 run([0,0,0],.5);const stopped=walker.position.clone();run([-2.25,0,0],3);assert(walker.position.distanceTo(stopped)<.02,'Wall stays blocked');
 run([2.25,0,0],1.6);assert(walker.position.x-stopped.x>3,'Walk away from the wall');
-// place() snaps short drops, so begin with airborne feet to exercise gravity itself.
+// Both portals now deliver feet directly to clear floor.
 walker.position.fromArray(arrival.at);walker.velocity.set(0,0,0);walker.grounded=false;walker.top=arrival.at[1];
 const capsule=new T.Line3(new T.Vector3(arrival.at[0],r.y+.75,arrival.at[2]),new T.Vector3(arrival.at[0],arrival.at[1]+1.65,arrival.at[2]));
 assert(!col.overlaps(capsule,.35),'Clear arrival column, without a seat, rail or plant');
 const under=walker.groundAt(walker.position,0,2);assert(under,'Floor below arrival');close(under.point.y,r.y);
-run([0,0,0],.1);assert(!walker.grounded&&walker.velocity.y<0&&walker.position.y<arrival.at[1],'Arrival falls freely');
+run([0,0,0],.1);assert(walker.grounded,'Arrival is on the lounge floor');
 run([0,0,0],1);assert(walker.grounded,'Arrival lands');close(walker.position.y,r.y);
-assert(Math.hypot(walker.position.x-arrival.at[0],walker.position.z-arrival.at[2])<.01,'Arrival falls vertically');
+assert(Math.hypot(walker.position.x-arrival.at[0],walker.position.z-arrival.at[2])<.01,'Arrival stays at the exact landing');
 run([2.25,0,0],1.6);assert(walker.position.x-arrival.at[0]>3,'Arrival walks into the lounge');close(walker.position.y,r.y);
 // Looking slightly toward the open floor keeps the departure clear of the maze corner.
 for(const from of [arrival.at,stopped.toArray()]){
@@ -46,7 +51,7 @@ for(const from of [arrival.at,stopped.toArray()]){
  assert(walker.position.distanceTo(start)>3,'The play departure clears 3 m after looking toward the open floor');close(walker.position.y,r.y);
 }
 const effect=createHydroPortal(),mesh=effect.group,mat=mesh.material;
-close(mesh.position.x-SYNTHWAVE_MURAL.x,.04);close(portal.y-portal.height/2-r.y,1.2);close(arrival.at[0]-SYNTHWAVE_MURAL.x,.8);assert.equal(arrival.yaw,160);
+close(mesh.position.x-SYNTHWAVE_MURAL.x,.04);close(portal.y-portal.height/2-r.y,1.2);close(arrival.at[0]-SYNTHWAVE_MURAL.x,.8);close(arrival.at[1],r.y);assert.equal(arrival.yaw,160);
 // The painted surface is in front of the structural wall. It blocks only the chase camera.
 const mural=createLoungeMural(new T.Matrix4()).group;mural.updateMatrixWorld(true);
 const camera=new T.PerspectiveCamera(62,1280/720,.05,100),follow=new FollowCamera(camera,col);
@@ -95,4 +100,51 @@ try{
  for(const [axis,key] of [['x','positionX'],['y','positionY'],['z','positionZ']])close(sound.spatial[key].value,portal[axis]);
  sound.update(near,false,new T.PerspectiveCamera());assert(nodes.some(n=>n.links.includes(sound.spatial)&&n.gain.value===0),'Sound toggle mutes the warp');
 }finally{for(const [k,v] of Object.entries(saved))if(v===undefined)delete globalThis[k];else globalThis[k]=v;}
-console.log('PASS Hydro-Portal: real wall blocking, clear arrival/free fall and camera, 3 m exits, transparent animated oval and synthesized distance-limited warp');
+// Probe the real core surface from the reported approach, rather than testing a stand-in wall.
+const transit=createTransit({minimumDeck:6,maximumDeck:7,coreIds:['forward']}),deck=layout.decks[5];
+transit.root.updateMatrixWorld(true);
+const faceHit=new T.Raycaster(new T.Vector3(150.34,deck.y+1.5,-5.25),new T.Vector3(Math.sin(266*Math.PI/180),0,Math.cos(266*Math.PI/180))).intersectObject(transit.root,true)[0];
+assert(faceHit,'Core face ahead of the reported view');
+const face=new T.Box3().setFromObject(faceHit.object);
+close(park.x-face.max.x,.04);close(park.z,(face.min.z+face.max.z)/2);
+assert(park.z-park.width*.54>face.min.z&&park.z+park.width*.54<face.max.z,'Complete oval stays inside the pier edges');
+close(park.y-park.height*.54,deck.y);
+assert(park.y+park.height*.54<layout.decks[6].y-.3,'Halo clears the deck above');
+const parkEffect=createHydroPortal(park);
+assert.equal(parkEffect.group.material.fragmentShader,mat.fragmentShader,'Same spinning neon design');
+close(parkEffect.group.rotation.y,Math.PI/2);assert(parkEffect.group.userData.noCollide);
+close(parkEffect.group.position.x,park.x);close(parkEffect.group.position.y,park.y);close(parkEffect.group.position.z,park.z);
+const floor=new T.Mesh(atriumFloorGeometry(deck.slab.outline,deck.slab.holes.map(h=>h.polygon),deck.y,deck.atrium.outline),new T.MeshBasicMaterial());floor.name='Deck_slab';transit.root.add(floor);
+for(const p of phase6Programme(layout).parts.filter(p=>p.deck===6&&!p.noCollide&&p.at[0]>140&&p.at[0]<158&&Math.abs(p.at[2])<10)){
+ const o=new T.Mesh(new T.BoxGeometry(...p.size),new T.MeshBasicMaterial());o.name=p.part;o.position.set(...p.at);o.rotation.y=p.yaw||0;transit.root.add(o);
+}
+col.addStatic(transit.root);col.commit();ground.addStatic(transit.root,o=>solid(o)&&groundMesh(o));ground.commit();
+for(const landing of [arrival,parkArrival]){
+ const q=findStand(col,landing.at,{radius:0});assert(q,'Exact landing has planned floor and capsule clearance');close(q.y,landing.at[1]);
+ walker.place(q);const start=q.clone(),a=landing.yaw*Math.PI/180;
+ run([Math.sin(a)*2.25,0,Math.cos(a)*2.25],2);assert(walker.position.distanceTo(start)>3,'Landing facing walks freely for 3 m');close(walker.position.y,landing.at[1]);
+}
+assert.equal(HYDRO_PORTAL_LINKS[0].arrival,parkArrival);assert.equal(HYDRO_PORTAL_LINKS[1].arrival,arrival);
+for(const [source,target,start,yaw] of [[park,arrival,[150.34,deck.y,-5.25],266],[portal,parkArrival,[portal.x+3,r.y,portal.z],270]]){
+ const travel=createHydroPortalTravel();let trips=0;walker.place(new T.Vector3(...start));
+ const go=dest=>{assert.deepEqual(dest.at,target.at);assert.equal(dest.yaw,target.yaw*Math.PI/180);assert(dest.resolved);const q=findStand(col,dest.at,{radius:0});assert(q);walker.place(q);trips++;return true;};
+ const a=yaw*Math.PI/180;wish.set(Math.sin(a)*2.25,0,Math.cos(a)*2.25);
+ for(let i=0;i<360&&!trips;i++){walker.step(1/120,wish);travel.step(walker.position,true,go);}
+ assert.equal(trips,1,'Walking into the source travels once');
+ for(let i=0;i<240;i++){walker.step(1/120,wish.set(0,0,0));travel.step(walker.position,true,go);}
+ assert.equal(trips,1,'Waiting at arrival never bounces back');close(walker.position.y,target.at[1]);
+ // Even moving back into the arrival oval cannot rearm until the cat first leaves it.
+ const other=source===park?portal:park;walker.place(new T.Vector3(other.x+.5,other.floor,other.z));travel.step(walker.position,true,go);assert.equal(trips,1);
+ walker.place(new T.Vector3(other.x+3,other.floor,other.z));travel.step(walker.position,true,go);
+ walker.place(new T.Vector3(other.x+.5,other.floor,other.z));
+ assert(hydroPortalContains(other,walker.position));
+ travel.step(walker.position,false,()=>assert.fail('Disabled controls must not travel'));
+ travel.step(walker.position,true,dest=>{assert.deepEqual(dest.at,source===park?parkArrival.at:arrival.at);trips++;return true;});assert.equal(trips,2,'Leaving and re-entering allows the return trip');
+}
+for(const suffix of ['','.public','.prepared','.authoring']){
+ const main=readFileSync(new URL(`../src/walk/main${suffix}.js`,import.meta.url),'utf8');
+ assert(main.includes('hydroParkPortal=createHydroPortal(HYDRO_PARK_PORTAL)'));
+ assert(main.includes('hydroTravel.step(p,canHook&&input.enabled&&!playing()&&controller.grounded,goTo)'),'Uses the regular Go-to teleport before pose and room updates');
+ assert(main.indexOf('hydroTravel.step(')<main.indexOf('live?.pose(myPose('));
+}
+console.log('PASS Hydro-Portal: paired walk-in travel, real pier placement/floor/clearance, arrival guard, 3 m departures, lounge camera, shared animated oval and spatial warp');

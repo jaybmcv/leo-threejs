@@ -3002,17 +3002,16 @@
     {
       "source": "src/walk/hydro-portal.js",
       "rooms": [
-        "commons-1"
+        "commons-1",
+        "circulation-6"
       ],
       "via": "inherited",
       "fixed": false,
-      "features": [
-        "Hydro_Portal"
-      ],
+      "features": [],
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "10fb69c558f5d3d9017b61553aea2de2c0a584f25504bf42758c35dec08ce418"
+      "signature": "8dda66a80780215ef965a568dae9f5e0f62e8624a6a88dbd813637a01d2e9389"
     },
     {
       "source": "src/walk/hydroponics.js",
@@ -4207,7 +4206,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "511342f0cd6081156a25cbb02dcbef204592cca03a13bb6f03bfd7b843f6b809"
+      "signature": "1bcbf855b0165c72a988ccb34a487b6916e113503469b56ed26130a1f3b057c2"
     },
     {
       "source": "src/walk/main.js",
@@ -4229,7 +4228,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "84e2afb5e232dd751496d80b253fb248d142dc305c17781b923b02c847d9f901"
+      "signature": "811d6b0537d0f7a8c713a4223e39564304b2844740de3b784308cdf3b5439314"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4249,7 +4248,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "5e19a89bf114d1fa8afb1beef126d308f1752d3c79d9c73cdbbf6414b6823107"
+      "signature": "244fdf08b63ef0d7c59df81e01181f885ebd9d80132d791c8342a5c2a05bb58c"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4269,7 +4268,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "6803dc2cb33970966115956ca50d82e76bb9f69aa72d18e176165641edfdfd20"
+      "signature": "111ba421d5204ca193c06be48afbc9cb6c16aa6db6f33997c2c327522a78dceb"
     },
     {
       "source": "src/walk/marks.authoring.js",
