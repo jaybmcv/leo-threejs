@@ -81,5 +81,16 @@ export function shortDate(iso,now=new Date()){
 // The tester's own screenshot: a ten-minute link the Hub service made for them alone. Only its own shape is used, so a
 // card can never point the page anywhere else.
 export const shotPath=p=>typeof p==='string'&&/^\/shot\/\d{1,6}\?exp=\d{10}&mac=[0-9a-f]{64}$/.test(p)?p:null;
-// An answer from the service, minus those links: every look brings new ones, and they alone are no reason to redraw.
-export const answerKey=text=>JSON.stringify(JSON.parse(text),(k,v)=>k==='shot'?undefined:v);
+// An answer from the service, minus those links, the renewed sign-in and the stamp: every look brings new ones, and they
+// alone are no reason to redraw.
+const FRESH_EACH_TIME=new Set(['shot','session','stamp']);
+export const answerKey=text=>JSON.stringify(JSON.parse(text),(k,v)=>FRESH_EACH_TIME.has(k)?undefined:v);
+// How long ago the cards on screen were checked, for beside the Refresh button.
+export function agoText(at,now=Date.now()){
+ if(!Number.isFinite(at)||at<=0)return '';
+ const s=Math.max(0,(now-at)/1000);
+ if(s<60)return 'Updated just now';
+ if(s<3600)return `Updated ${Math.floor(s/60)} min ago`;
+ if(s<86400)return `Updated ${Math.floor(s/3600)} h ago`;
+ return 'Updated over a day ago';
+}
