@@ -61,7 +61,8 @@ export function createHydroPortal(){
     float arms=pow(.5+.5*cos(phase),7.);
     float sparks=pow(.5+.5*cos(phase),24.)*pow(.5+.5*cos(34.*r+2.6*t+sin(7.*a)),24.);
     float edge=1.+.012*sin(9.*a+2.*t)+.008*sin(13.*a-1.3*t);
-    float rim=exp(-pow((r-edge)/.014,2.)),halo=exp(-abs(r-edge)*26.);
+    float rimDistance=(r-edge)/.014;
+    float rim=exp(-rimDistance*rimDistance),halo=exp(-abs(r-edge)*26.);
     float inside=1.-smoothstep(.92,1.02,r);
     float hue=a+2.*log(r+.16)+.25*t;
     vec3 ink=mix(vec3(.58,.06,1.),vec3(1.,.025,.42),.5+.5*sin(hue));
