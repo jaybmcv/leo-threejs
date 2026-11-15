@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import * as T from 'three';
+import {createCanvas} from '@napi-rs/canvas';
+import layout from '../src/plan/selected-layout.js';
+import {addWayfindingGuides} from '../src/v2/wayfinding-guides.js';
+import {guideSchedule} from '../src/v2/wayfinding-guide-data.js';
+import {HYDRO_NIP_HANGER} from '../src/v2/hydro-nip-wayfinding.js';
+import {buildCommonsHallFinish} from '../src/v2/commons-hall-finish.js';
+
+globalThis.document={createElement:()=>createCanvas(1,1)};
+const parent=new T.Group(),roots=addWayfindingGuides(parent),schedule=guideSchedule(layout);
+parent.updateMatrixWorld(true);
+const labels=roots.flatMap(r=>r.children.flatMap(o=>o.userData.labels||[]));
+assert.deepEqual(labels.map(r=>r.id).sort(),schedule.filter(r=>r.id!=='commons-1').map(r=>r.id).sort(),'Only the jaguar plaque is removed');
+assert(roots[16].getObjectByName('V2_floor_guides').userData.destinations.includes('commons-1'),'Retain its floor arrow');
+assert.equal(schedule.filter(r=>!r.plaque).length,1);
+const sign=parent.getObjectByName('Hydro_Nip_Promenade_Sign'),box=new T.Box3().setFromObject(sign,true),floor=layout.decks[16].y;
+assert.equal(sign.parent,roots[16],'Sign stays in the Deck 17 render band');
+assert(box.min.y-floor>=2.3,'Standing cats have generous clearance');
+assert(Math.abs(box.max.y-floor-HYDRO_NIP_HANGER.ceiling)<1e-5,'Rods end at the hall ceiling');
+assert(box.min.z>-20,'Sign stays well outboard of the jaguar face and aquarium');
+sign.traverse(o=>assert(o.userData.noCollide,'Every sign part is non-solid'));
+const front=sign.getObjectByName('Hydro_Nip_Hanger_Front'),back=sign.getObjectByName('Hydro_Nip_Hanger_Back');
+assert.equal(front.material,back.material,'Both faces use the same artwork');
+assert.equal(front.material.side,T.FrontSide,'Backwards lettering never shows through');
+const normal=o=>new T.Vector3(0,0,1).transformDirection(o.matrixWorld);
+assert(normal(front).x>.999&&normal(back).x<-.999,'Separate readable faces look along the walkway');
+for(const o of [front,back])assert(o.matrixWorld.determinant()>0,'No mirrored artwork');
+const hall=new T.Group();buildCommonsHallFinish(hall,layout);hall.updateMatrixWorld(true);
+const ray=new T.Raycaster(new T.Vector3(sign.position.x,floor+3,sign.position.z),new T.Vector3(0,1,0));
+const ceiling=hall.getObjectByName('V2_commons_hall_ceiling');
+assert(ray.intersectObject(ceiling).some(h=>Math.abs(h.point.y-floor-HYDRO_NIP_HANGER.ceiling)<.001),'Real ceiling exists above the rods');
+const lights=hall.getObjectByName('V2_commons_hall_lights'),p=lights.geometry.attributes.position,idx=lights.geometry.index,triangle=new T.Triangle();
+for(let i=0;i<(idx?.count||p.count);i+=3){for(let k=0;k<3;k++)triangle[['a','b','c'][k]].fromBufferAttribute(p,idx?idx.getX(i+k):i+k).applyMatrix4(lights.matrixWorld);assert(!box.intersectsTriangle(triangle),'Hanger must not clip a ceiling light');}
+console.log('PASS: only jaguar plaque removed; floor arrow retained; two readable faces, ceiling attachment, light clearance and 2.52 m headroom');
