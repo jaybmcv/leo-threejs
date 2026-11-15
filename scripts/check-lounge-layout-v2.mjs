@@ -120,6 +120,23 @@ assert(serviceBounds(['Laundry_counter','Laundry_machine','Laundry_drum','Parcel
 const chairs=[];source.root.traverse(o=>{if(o.name==='Tail_clearance_chair')chairs.push(o.getWorldPosition(new T.Vector3()));});
 assert.deepEqual(chairs.map(p=>p.toArray()),[[-118.5,24.3,-53],[-116.5,24.3,-53],[-114.5,24.3,-53],[-112.5,24.3,-53]],'Keep all four kitchen chairs');
 const rests=findRestSpots(source.root),seams=[];source.root.traverse(o=>{if(o.name==='Polish_tailored_seam')seams.push(new T.Box3().setFromObject(o,true));});
+// The far rug turns across the maze glass; the nearer rugs keep their source bounds.
+const rug=source.root.getObjectByName('Lounge_rug'),rugVertices=rug.geometry.attributes.position;
+assert.equal(rugVertices.count,108,'Keep exactly three lounge rugs');
+for(const [i,expected] of [[0,[-124,-120,-36.5,-29.5]],[1,[-113,-106,-34.5,-30.5]],[2,[-104.5,-100.5,-35,-32]]]){
+ const box=new T.Box3();for(let k=i*36;k<(i+1)*36;k++)box.expandByPoint(new T.Vector3().fromBufferAttribute(rugVertices,k).applyMatrix4(rug.matrixWorld));
+ [box.min.x,box.max.x,box.min.z,box.max.z].forEach((v,k)=>close(v,expected[k]));
+}
+const movedSeats=[[-122.8,-35.4],[-120.6,-32.4],[-123,-30.4],[-123.6,-33.6]];
+for(const [x,z] of movedSeats)assert(rests.some(s=>Math.hypot(s.point.x-x,s.point.z-z)<.01&&s.height<25.2),'Moved cushion has a sit spot');
+for(const [x,z] of [[-121.9,-31.7],[-118.9,-33.9],[-116.9,-31.5],[-120.1,-30.9]])assert(!rests.some(s=>Math.hypot(s.point.x-x,s.point.z-z)<.01&&s.height<25.2),'Old cushion spot is gone');
+route('Old rug centre is clear',[[-119.5,24.3,-32.5],[-115.5,24.3,-32.5]]);
+route('Moved rug full circuit',[[-125.1,24.3,-28.75],[-125.1,24.3,-37.25],[-120.3,24.3,-37.25],[-119.25,24.3,-35.8],[-119.25,24.3,-28.75],[-125.1,24.3,-28.75]]);
+walker.place(new T.Vector3(-119.5,24.3,-32.5));walk([2.25,0,0],1.7);
+assert(walker.position.x>-116,'Visitor crosses the old table position');
+walker.place(new T.Vector3(-125.1,24.3,-29));walk([0,0,-2.25],3.5);
+assert(walker.position.z<-36.5&&Math.abs(walker.position.x+125.1)<.05,'Visitor crosses the entire maze-side gap');
+console.log('PASS rotated rug, unchanged near rugs, four moved sit spots and real controller routes');
 for(const x of [-128.5,-125.5,-122.5]){
  route('Former reading chair '+x,[[x,24.3,-59.8],[x,24.3,-54.8]]);
  assert(!rests.some(s=>Math.abs(s.height-24.8)<.5&&Math.hypot(s.point.x-x,s.point.z+56)<1.5),'Invisible chair rest anchor at '+x);

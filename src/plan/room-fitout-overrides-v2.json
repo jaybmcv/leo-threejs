@@ -1,5 +1,6 @@
 {
   "commons-1": {
+    "mazeRugMove": {"from":[127,16.5],"to":[124.5,17],"yaw":90},
     "removeGardenPrints": [73],
     "remove": [
       {"part":"Lounge_cat_tree","x":147,"z":18.6}
