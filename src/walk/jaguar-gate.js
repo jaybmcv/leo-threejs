@@ -5,21 +5,9 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {canvasTexture,seeded} from '../polish-kit.js';
 import {floorY} from '../transit.js';
 
-// The Hydro-Nip Lounge's entrance from the Deck 17 promenade as a black obsidian jaguar's open mouth (from tester
-// feedback, three times): only this doorway, the entry bridge into Neighborhood 1's commons. The head is a sculpted
-// head of polished black stone standing at the doorway, modelled on the concept art of a giant jaguar's head, its
-// rosettes matte against the gloss and pale veins through it: a domed skull with cupped ears leaning back, a heavy
-// brow over slanted eyes that glow yellow, a broad nose ridge down to a wide nose, whisker pads over the upper lip and
-// jowls spreading out to the floor like a bell. The mouth is an arch through it (2.1 m wide, 2.35 m tall, nearly flat
-// along the top) with curved fangs hanging at its top corners, a row of six rounded teeth between them, thick lower
-// fangs rising at its corners and rounded teeth on the lip in front of them. The throat behind is clear glass (sides and
-// roof, black ribs, the purple neon along its roof showing through) and the way out into the lounge is framed by a
-// black obsidian arch. Walk only.
-// In the group's frame x runs across the doorway (world x), y up from the floor, +z out into the promenade; the
-// passage runs from z 0 back to -2.08, where it meets the lounge. The head is about 4.6 m wide and stands from 1.6 m out
-// in front of z 0 to 1.3 m behind it, its crown 3.64 m up under the 3.7 m ceiling. The head and its lower teeth are
-// solid. A walker fits through anywhere between the mouth's walls without touching a tooth: the hanging teeth end 1.95 m
-// up, above a captain's hat, and the lower teeth stand on the lip at the corners, in line with the walls.
+// The Hydro-Nip entrance is a faceted obsidian jaguar roaring around the existing mouth.
+// Local +z faces the corridor. Ears stay below the 3.7 m ceiling; teeth and jaw stay
+// outside the mouth's unchanged outline. The glass throat and lounge exit stay put.
 const [gx,,gz]=placedV1('jaguar-gate'),GATE={x:gx,z:gz,half:2,h:3.68,depth:2.08,wall:.06};
 const GLOW=0xffcf3a,PURPLE=0xa04dff;
 // The head stands this far forward of the throat (in z), out of the aquarium's frontage and into the promenade: its widest
@@ -30,7 +18,7 @@ const PUSH=2,FACE=.45;
 const MOUTH={foot:1.05,half:1.0,side:1.72,top:2.12},EDGE=.3;
 // The head is shaped below with its mouth 2.12 m tall and its crown at 3.45 m, then stretched up to its built height
 // (lift): the mouth's sides and arch to 1.95 m and 2.35 m, so a walker in a captain's hat clears every tooth, and the
-// face above it nearly unchanged up to the crown at 3.64 m, which the ears, laid back, leave room for under the ceiling.
+// face above it nearly unchanged up to the crown at 3.64 m, under the ceiling.
 const lift=y=>y<MOUTH.side?y*1.95/MOUTH.side:y<MOUTH.top?1.95+(y-MOUTH.side):2.35+(y-MOUTH.top)*(3.64-2.35)/(3.45-MOUTH.top);
 const mouthAt=u=>{const k=Math.min(u,1-u)/EDGE,sx=u<.5?-1:1;
  if(k<1)return [sx*(MOUTH.foot-(MOUTH.foot-MOUTH.half)*k),MOUTH.side*k];
@@ -103,12 +91,12 @@ const fadeTexture=()=>canvasTexture(8,256,(g,w,h)=>{const f=g.createLinearGradie
 export function createJaguarGate(){
  const group=new T.Group();group.name='Jaguar_gate';group.position.set(GATE.x,floorY(17),GATE.z);
  const solid=new T.Group();solid.name='Jaguar_gate_solid';group.add(solid);
- const stone=(name,color,extra={})=>new T.MeshStandardMaterial({name,color,roughness:.08,metalness:.15,envMapIntensity:.9,...extra});
+ const stone=(name,color,extra={})=>new T.MeshStandardMaterial({name,color,roughness:.16,metalness:.15,envMapIntensity:.9,flatShading:true,...extra});
  const mat={
-  skin:new T.MeshStandardMaterial({name:'Jaguar_skin',map:skinTexture(),roughnessMap:skinRoughness(),roughness:1,metalness:.1,envMapIntensity:.8}),
+  skin:new T.MeshStandardMaterial({name:'Jaguar_skin',map:skinTexture(),roughnessMap:skinRoughness(),roughness:1,metalness:.1,envMapIntensity:.8,flatShading:true}),
   stone:stone('Jaguar_obsidian',0x08080b),
   nose:stone('Jaguar_nose',0x141419,{roughness:.12}),
-  fang:stone('Jaguar_fangs',0x050508,{roughness:.05}),
+  fang:stone('Jaguar_fangs',0x202027,{roughness:.12}),
   mouth:stone('Jaguar_mouth',0x020203,{roughness:.3,envMapIntensity:.35}),
   pit:new T.MeshStandardMaterial({name:'Jaguar_whisker_pits',color:0x020203,roughness:.9}),
   eye:new T.MeshBasicMaterial({name:'Jaguar_eye',color:GLOW,toneMapped:false}),
@@ -118,7 +106,7 @@ export function createJaguarGate(){
   neon:new T.MeshBasicMaterial({name:'Jaguar_neon_glow',color:PURPLE,toneMapped:false}),
   wash:new T.MeshBasicMaterial({name:'Jaguar_neon_wash_glow',color:PURPLE,map:fadeTexture(),transparent:true,opacity:.55,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,toneMapped:false}),
  };
- mat.ear=mat.skin.clone();mat.ear.name='Jaguar_ears';mat.ear.side=T.DoubleSide;
+ mat.ear=stone('Jaguar_ears',0x24212a,{roughness:.28});
  const parts=new Map(),add=(m,g)=>{(parts.get(m)||parts.set(m,[]).get(m)).push(g);};
  const at=(g,x,y,z,rx=0,ry=0,rz=0,s=[1,1,1])=>g.scale(...s).rotateX(rx).rotateY(ry).rotateZ(rz).translate(x,y,z);
  const {half,h,depth,wall}=GATE;
@@ -128,77 +116,63 @@ export function createJaguarGate(){
  // the head's rear to the mouth's back edge, then forward along the mouth's wall to its front edge again. One closed
  // surface, so the lips and the outline shade round smoothly. The face rolls in a little at the lip. The skin wraps
  // round it as if round a cylinder standing just behind the face, so the spots don't streak down the sides.
- const NU=240,NS=44,WALL=6,M=2*NS+WALL,shell=[],deep=[],uvs=[],quads=[];
+ const NU=64,NS=5,WALL=2,M=2*NS+WALL,shell=[],uvs=[],quads=[];
  const ease=s=>Math.sqrt(1-s**4),lip=(s,k)=>k+(1-k)*Math.sqrt(Math.min(1,s/.12));
  for(let i=0;i<=NU;i++){const [mx,my]=mouthAt(i/NU),[ox,oy]=outerAt(i/NU),pt=s=>[mx+(ox-mx)*s,my+(oy-my)*s];
   const front=(s,k=FACE)=>{const [x,y]=pt(s);return [x,y,wall/2+relief(x,y)*k*ease(s)*lip(s,.75)];},rear=s=>{const [x,y]=pt(s);return [x,y,-backDepth(x,y)*ease(s)*lip(s,.85)];};
   const f0=front(0),b0=rear(0);
   for(let r=0;r<M;r++){const v=r<=NS?front(r/NS):r<=2*NS?rear((2*NS-r)/NS):b0.map((c,k)=>c+(f0[k]-c)*(r-2*NS)/WALL);
-   deep.push(r<=NS?front(r/NS,1)[2]:v[2]);v[1]=lift(v[1]);shell.push(...v);uvs.push(2*Math.atan2(v[0],v[2]+.3),v[1]);}}
+   v[1]=lift(v[1]);shell.push(...v);uvs.push(2*Math.atan2(v[0],v[2]+.3),v[1]);}}
  // The face and rear first, then the mouth's walls, which take the darker inside-of-the-mouth stone.
  const inside=[];
  for(let i=0;i<NU;i++)for(let r=0;r<M;r++){const a=i*M+r,b=a+M,a1=i*M+(r+1)%M,b1=a1+M;(r<2*NS?quads:inside).push(a,b,a1,b,b1,a1);}
  const headGeo=new T.BufferGeometry();headGeo.setAttribute('position',new T.Float32BufferAttribute(shell,3));headGeo.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));
  headGeo.setIndex([...quads,...inside]);headGeo.addGroup(0,quads.length,0);headGeo.addGroup(quads.length,inside.length,1);headGeo.computeVertexNormals();
  const face=new T.Mesh(headGeo,[mat.skin,mat.mouth]);face.name='Jaguar_head';face.position.z=PUSH;solid.add(face);
- // Where a point on the face lies: the nearest point of the face's grid, for setting the eyes, nose and teeth on it.
- // `full` gives the face's height before it was flattened, which the lower teeth keep standing on.
- const surf=(x,y,full=false)=>{let best=1e9,z=0;for(let i=0;i<=NU;i++)for(let r=0;r<=NS;r++){const k=(i*M+r)*3,d=(shell[k]-x)**2+(shell[k+1]-y)**2;if(d<best){best=d;z=full?deep[k/3]:shell[k+2];}}return z;};
-
+ // Closed volumes give the face strong planes and keep the back tidy.
+ const orb=()=>new T.SphereGeometry(1,8,4);
+ const pad=(m,x,y,z,s,rz=0)=>add(m,at(orb(),x,y,z,0,0,rz,s));
  for(const sx of [-1,1]){
-  // Eyes in the sockets under the brow, slanted up at their outer corners: almonds that glow yellow, paler at the
-  // middle, rimmed in black stone, each with a soft halo of its light on the face.
-  const ex=sx*.95,ey=lift(2.97),ez=surf(ex,ey);
-  add(mat.stone,at(new T.SphereGeometry(1,24,12),ex,ey,ez-.06,0,0,sx*.4,[.365,.18,.15]));
-  add(mat.eye,at(new T.SphereGeometry(1,24,12),ex,ey,ez-.02,0,0,sx*.4,[.34,.16,.14]));
-  add(mat.core,at(new T.SphereGeometry(1,16,8),ex,ey,ez+.01,0,0,sx*.4,[.19,.075,.12]));
-  add(mat.halo,at(new T.PlaneGeometry(1.4,.8),ex,ey,ez+.15,0,0,sx*.4));
-  // Rows of small whisker pits across each pad.
-  for(let k=0;k<4;k++)for(let r=0;r<3;r++){const x=sx*(.28+k*.14),y=lift(2.25+r*.09+k*.015);add(mat.pit,at(new T.SphereGeometry(.026,6,4),x,y,surf(x,y)));}
-  // Thick cupped ears leaning back on the shoulders of the dome, where it is lower, so their points rise clear of the
-  // crown and still stay under the ceiling, tilted out and pinched to a rounded point: an outer shell, a smaller one inside it facing into the cup and
-  // a rim joining them, the skin wrapped on as on the head.
-  const pinch=g=>{const p=g.attributes.position;for(let k=0;k<p.count;k++)p.setX(k,p.getX(k)*(1-.42*Math.max(0,p.getY(k))));g.computeVertexNormals();return g;};
-  const cup=(r,d)=>new T.SphereGeometry(1,24,12,0,Math.PI*2,0,Math.PI/2).rotateX(-Math.PI/2).scale(r,r,d);
-  const hollow=cup(.78,.7);hollow.setIndex([...hollow.index.array].reverse());
-  const ear=mergeGeometries([cup(1,1),hollow,new T.RingGeometry(.78,1,24,1)].map(g=>pinch(g).toNonIndexed()));
-  const placed=at(ear,sx*1.32,3.12,.12,-.55,sx*.45,-sx*.2,[.52,.56,.34]),ep=placed.attributes.position;
-  placed.setAttribute('uv',new T.Float32BufferAttribute(Array.from({length:ep.count},(_,k)=>[2*Math.atan2(ep.getX(k),ep.getZ(k)+.3),ep.getY(k)]).flat(),2));
-  add(mat.ear,placed);
+  // Broad cheeks taper to the split lower jaw instead of reading as paws.
+  pad(mat.stone,sx*1.52,1.96,.42,[.47,.73,.29],sx*.16);
+  pad(mat.stone,sx*1.35,2.68,.5,[.4,.42,.3],-sx*.2);
+  // Round upright ears with a dark inset; both volumes have closed backs.
+  pad(mat.stone,sx*1.4,3.12,.16,[.43,.51,.23],-sx*.12);
+  pad(mat.ear,sx*1.4,3.16,.35,[.27,.34,.08],-sx*.12);
+  // Sockets and slanted brows frame eyes that stand clear of the skull.
+  pad(mat.mouth,sx*.94,3.01,.56,[.43,.23,.18],sx*.2);
+  pad(mat.eye,sx*.94,3.01,.72,[.32,.115,.085],sx*.2);
+  pad(mat.core,sx*.94,3.01,.79,[.15,.055,.025],sx*.2);
+  pad(mat.pit,sx*.94,3.01,.815,[.027,.1,.012],sx*.2);
+  add(mat.halo,at(new T.PlaneGeometry(.95,.5),sx*.94,3.01,.83,0,0,sx*.2));
+  pad(mat.stone,sx*.91,3.24,.62,[.56,.16,.22],sx*.2);
+  // Two whisker pads project below the nose, entirely above the opening.
+  pad(mat.stone,sx*.43,2.64,.73,[.52,.27,.32],-sx*.07);
+  for(const [dx,dy] of [[.25,0],[.44,.05],[.63,0]])pad(mat.pit,sx*dx,2.66+dy,1.035,[.032,.026,.013]);
  }
- // The nose: a broad rounded pad of glossier stone set into the foot of the bridge, wider at the top, with two
- // nostrils under its front.
- const nose=new T.SphereGeometry(1,28,16),np=nose.attributes.position;
- for(let k=0;k<np.count;k++)np.setX(k,np.getX(k)*(.72+.38*np.getY(k)));
- const ny=lift(2.72),nz=surf(0,ny);nose.computeVertexNormals();add(mat.nose,at(nose,0,ny,nz-.14,-.3,0,0,[.6,.26,.26]));
- for(const sx of [-1,1])add(mat.pit,at(new T.SphereGeometry(1,12,8),sx*.13,ny-.19,nz+.04,.5,0,sx*.35,[.08,.04,.06]));
+ pad(mat.stone,0,3.12,.53,[.27,.39,.27]);
+ const nose=orb(),np=nose.attributes.position;
+ for(let k=0;k<np.count;k++)np.setX(k,np.getX(k)*(.72+.25*np.getY(k)));
+ nose.computeVertexNormals();add(mat.nose,at(nose,0,2.87,.98,0,0,0,[.48,.21,.19]));
+ for(const sx of [-1,1])pad(mat.pit,sx*.14,2.81,1.15,[.075,.04,.022]);
 
- // Teeth, black stone: curved fangs hanging at the top corners of the mouth (tips 1.95 m up, over a walker's hat)
- // with a row of six rounded ones between them, thick lower fangs rising at its corners and two rounded teeth on the
- // lip in front of each of them.
- const tooth=(len,r,bend,bullet=false)=>{const g=new T.CylinderGeometry(1,1,1,18,14),p=g.attributes.position;
-  for(let k=0;k<p.count;k++){const t=.5-p.getY(k),w=r*(bullet?Math.sqrt(Math.max(0,1-Math.max(0,(t-.4)/.6)**2)):Math.pow(Math.max(0,1-t),.55));
-   p.setXYZ(k,p.getX(k)*w,-t*len,p.getZ(k)*w-bend*len*t*t);}
+ // Curved black fangs flank the mouth; the small top teeth stop above 2.35 m.
+ const tooth=(len,r,bend)=>{const g=new T.CylinderGeometry(1,1,1,7,4),p=g.attributes.position;
+  for(let k=0;k<p.count;k++){const t=.5-p.getY(k),w=r*Math.pow(Math.max(0,1-t),.6);
+   p.setXYZ(k,p.getX(k)*w,-t*len,p.getZ(k)*w+bend*t*t);}
   g.computeVertexNormals();return g;};
- const top=x=>lift(mouthTop(x)),lipZ=x=>surf(x,top(x)),floorZ=x=>surf(x,.12,true),lower=[];
+ const lower=[],ridge=[];
  for(const sx of [-1,1]){
-  add(mat.fang,at(tooth(.55,.22,.12),sx*.84,top(.84)+.21,lipZ(sx*.84)-.12,0,0,-sx*.05));
-  lower.push(at(tooth(.8,.24,.1),sx*1.26,0,floorZ(sx*1.15)-.12,Math.PI,0,sx*.04));
-  for(const [x,dz] of [[1.16,.22],[1.4,.12]])lower.push(at(tooth(.32,.11,0,true),sx*x,0,floorZ(sx*1.15)+dz,Math.PI));
+  add(mat.fang,at(tooth(.76,.17,.16),sx*1.2,2.72,.72));
+  lower.push(at(tooth(.56,.18,-.12),sx*1.32,.12,.7,Math.PI));
+  for(const x of [1.62,1.85])lower.push(at(tooth(.21,.09,-.03),sx*x,.15,.58,Math.PI));
+  ridge.push(at(orb(),sx*1.57,.14,.4,0,0,0,[.47,.14,.46]));
+  ridge.push(at(orb(),sx*1.84,.48,.34,0,0,sx*.32,[.22,.48,.29]));
  }
- for(const x of [-.6,-.36,-.12,.12,.36,.6])add(mat.fang,at(tooth(.3,.09,.04,true),x,top(x)+.1,lipZ(x)-.14));
- // The lower teeth stand on the lip at the mouth's corners, outside the way through, and are solid like the lip.
+ for(const x of [-.6,-.36,-.12,.12,.36,.6])add(mat.fang,at(tooth(.22,.085,.04),x,2.58,.82));
+ // Keep the centre of the lower jaw open down to the unchanged deck floor.
  const jaw=new T.Mesh(mergeGeometries(lower.map(g=>g.toNonIndexed())),mat.fang);jaw.name='Jaguar_lower_teeth';jaw.position.z=PUSH;solid.add(jaw);
- // The lower jaw: a thick ridge of the same stone rounding each cheek down to the foot of the mouth, where it meets the lower
- // fang, with smaller teeth along its slope. It ends outside the mouth's walls, so the way through stays clear and level.
- const ridge=[];
- for(const sx of [-1,1]){
-  const along=a=>{const x=sx*(1.3+.62*Math.cos(a)),y=1.05+.9*Math.sin(a);return new T.Vector3(x,y,surf(x,y)+.04);};
-  ridge.push(new T.TubeGeometry(new T.CatmullRomCurve3(Array.from({length:17},(_,k)=>along(-k*Math.PI/32))),32,.17,12,false));
-  for(const a of [0,-Math.PI/2]){const p=along(a);ridge.push(new T.SphereGeometry(.17,12,8).translate(p.x,p.y,p.z));}
-  for(const a of [-.55,-.85,-1.1]){const p=along(a);ridge.push(at(tooth(.26,.075,0,true),p.x,p.y+.1,p.z,Math.PI));}
- }
- const chin=new T.Mesh(mergeGeometries(ridge.map(g=>g.toNonIndexed())),mat.fang);chin.name='Jaguar_lower_jaw';chin.position.z=PUSH;solid.add(chin);
+ const chin=new T.Mesh(mergeGeometries(ridge.map(g=>g.toNonIndexed())),mat.stone);chin.name='Jaguar_lower_jaw';chin.position.z=PUSH;solid.add(chin);
 
  // Everything of the head so far moves out with it; the throat below stays where it was.
  for(const list of parts.values())for(const g of list)g.translate(0,0,PUSH);
@@ -217,6 +191,7 @@ export function createJaguarGate(){
  // the glass and onto the floor.
  for(const x of [-inner+.12,0,inner-.12])add(mat.neon,at(new T.CylinderGeometry(.035,.035,run-.1,8),x,h-.1,-mid,Math.PI/2));
  add(mat.neon,at(new T.CylinderGeometry(.035,.035,2*inner-.2,8),0,h-.1,-THROAT-.08,0,0,Math.PI/2));
+ add(mat.neon,at(new T.CylinderGeometry(.025,.025,1.7,8),0,2.4,PUSH-.08,0,0,Math.PI/2));
  for(const sx of [-1,1])add(mat.wash,at(new T.PlaneGeometry(run,h*.85),sx*(inner-.03),h*.575,-mid,0,-sx*Math.PI/2));
  const pool=new T.PlaneGeometry(2*inner-.2,run-.2);add(new T.MeshBasicMaterial({name:'Jaguar_floor_glow',color:PURPLE,transparent:true,opacity:.18,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}),at(pool,0,.03,-mid,-Math.PI/2));
 
