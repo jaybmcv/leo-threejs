@@ -383,7 +383,7 @@ async function buildShip(){
  if(lounge)for(const o of lounge.drawn)toBand(o);
  if(lounge){hydroPortal=createHydroPortal();toBand(hydroPortal.group,hydroPortal.arrival.at[1]-1.2);}
  // Its synthwave wall (lounge-mural.js) spans three decks' bands, like a painting.
- if(lounge?.mural){baked.bands.set(lounge.mural.name,lounge.mural);scene.add(lounge.mural);}
+ if(lounge?.mural){follow.occluders.push(...lounge.mural.children);baked.bands.set(lounge.mural.name,lounge.mural);scene.add(lounge.mural);}
  // Its aquarium (lounge-aquarium.js) fills the front wall over the same three decks.
  if(lounge?.aquarium){baked.bands.set(lounge.aquarium.name,lounge.aquarium);scene.add(lounge.aquarium);}
  // The paintings (paintings.js) span several bands each: they draw while any of them is in view.

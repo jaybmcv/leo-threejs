@@ -7,8 +7,9 @@ const FLOOR=SYNTHWAVE_MURAL.paintFloor,X=SYNTHWAVE_MURAL.x+.04;
 const Z=-41.56+(X+138.8)/Math.tan(273*Math.PI/180);
 // The gallery underside is at 28.02 m; the oval and its halo must both fit below it.
 export const HYDRO_PORTAL=Object.freeze({x:X,y:FLOOR+2.4,z:Z,width:2.2,height:2.4,floor:FLOOR,range:9});
-// Feet arrive at the oval's lower centre, 0.8 m into the room, facing +X. No feature uses this yet.
-export const HYDRO_PORTAL_ARRIVAL=Object.freeze({name:'Hydro-Portal',at:Object.freeze([SYNTHWAVE_MURAL.x+.8,FLOOR+1.2,Z]),yaw:90});
+// Feet arrive at the oval's lower centre, 0.8 m into the room, facing clear floor so the camera can frame the landing.
+// No feature uses this destination yet.
+export const HYDRO_PORTAL_ARRIVAL=Object.freeze({name:'Hydro-Portal',at:Object.freeze([SYNTHWAVE_MURAL.x+.8,FLOOR+1.2,Z]),yaw:160});
 
 export function hydroPortalLevel(p,on){
  const d=Math.hypot(p.x-X,p.y-HYDRO_PORTAL.y,p.z-Z);

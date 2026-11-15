@@ -10,6 +10,8 @@ import {worldPoint} from '../src/plan/hull-skin-v2.js';
 import {Colliders,solid} from '../src/walk/collision.js';
 import {groundMesh} from '../src/v2/ground.js';
 import {Controller} from '../src/walk/controller.js';
+import {FollowCamera} from '../src/walk/camera.js';
+import {createLoungeMural} from '../src/walk/lounge-mural.js';
 import {SYNTHWAVE_MURAL,synthwaveMuralOutline} from '../src/v2/community-routes.js';
 import {HYDRO_PORTAL as portal,HYDRO_PORTAL_ARRIVAL as arrival,createHydroPortal,createHydroPortalSound,hydroPortalLevel,buildHydroPortalWarp} from '../src/walk/hydro-portal.js';
 
@@ -44,7 +46,29 @@ for(const from of [arrival.at,stopped.toArray()]){
  assert(walker.position.distanceTo(start)>3,'The play departure clears 3 m after looking toward the open floor');close(walker.position.y,r.y);
 }
 const effect=createHydroPortal(),mesh=effect.group,mat=mesh.material;
-close(mesh.position.x-SYNTHWAVE_MURAL.x,.04);close(portal.y-portal.height/2-r.y,1.2);close(arrival.at[0]-SYNTHWAVE_MURAL.x,.8);assert.equal(arrival.yaw,90);
+close(mesh.position.x-SYNTHWAVE_MURAL.x,.04);close(portal.y-portal.height/2-r.y,1.2);close(arrival.at[0]-SYNTHWAVE_MURAL.x,.8);assert.equal(arrival.yaw,160);
+// The painted surface is in front of the structural wall. It blocks only the chase camera.
+const mural=createLoungeMural(new T.Matrix4()).group;mural.updateMatrixWorld(true);
+const camera=new T.PerspectiveCamera(62,1280/720,.05,100),follow=new FollowCamera(camera,col);
+follow.occluders.push(...mural.children);follow.yaw=arrival.yaw*Math.PI/180;
+const view=()=>{
+ follow.update(1/120,walker.position,1.75);camera.updateMatrixWorld(true);
+ for(const x of [-1,1])for(const y of [-1,1]){
+  const near=new T.Vector3(x,y,-1).unproject(camera);
+  assert(near.x>SYNTHWAVE_MURAL.x+.02,'Camera near plane clears the wallpaper at '+near.toArray());
+ }
+};
+walker.position.fromArray(arrival.at);walker.velocity.set(0,0,0);walker.grounded=false;walker.top=arrival.at[1];
+for(let i=0;i<120;i++){walker.step(1/120,wish.set(0,0,0));view();}
+assert(walker.grounded&&follow.current>1.1,'Settled arrival frames the visible cat');close(walker.position.y,r.y);
+const feet=walker.position.clone().project(camera);assert(Math.abs(feet.x)<1&&Math.abs(feet.y)<1,'The settled cat feet are in the landing picture');
+const depart=walker.position.clone(),direction=follow.forward().multiplyScalar(2.25);
+for(let i=0;i<240;i++){walker.step(1/120,direction);view();}
+assert(walker.position.distanceTo(depart)>3,'The exported facing walks at least 3 m into the lounge');close(walker.position.y,r.y);
+walker.place(new T.Vector3(arrival.at[0],r.y,arrival.at[2]));follow.yaw+=30*.0042;
+const turned=walker.position.clone();direction.copy(follow.forward()).multiplyScalar(2.25);
+for(let i=0;i<240;i++){walker.step(1/120,direction);view();}
+assert(walker.position.distanceTo(turned)>3,'The play drag and walk clear 3 m');close(walker.position.y,r.y);
 // Both the coloured oval and its halo fit the actual painted wall at this height.
 const outline=synthwaveMuralOutline().points;
 for(const [z,y] of [[portal.z-portal.width*.54,portal.y-portal.height*.54],[portal.z+portal.width*.54,portal.y+portal.height*.54]]){
@@ -71,4 +95,4 @@ try{
  for(const [axis,key] of [['x','positionX'],['y','positionY'],['z','positionZ']])close(sound.spatial[key].value,portal[axis]);
  sound.update(near,false,new T.PerspectiveCamera());assert(nodes.some(n=>n.links.includes(sound.spatial)&&n.gain.value===0),'Sound toggle mutes the warp');
 }finally{for(const [k,v] of Object.entries(saved))if(v===undefined)delete globalThis[k];else globalThis[k]=v;}
-console.log('PASS Hydro-Portal: real wall blocking, clear arrival/free fall, 3 m exits, transparent animated oval and synthesized distance-limited warp');
+console.log('PASS Hydro-Portal: real wall blocking, clear arrival/free fall and camera, 3 m exits, transparent animated oval and synthesized distance-limited warp');
