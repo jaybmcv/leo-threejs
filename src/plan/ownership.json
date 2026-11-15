@@ -3107,7 +3107,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 24,
-      "signature": "669a34be1437ad2a90fd366e29ff0211a7c815a7da3d51dc2c286b0b7b30c2e0"
+      "signature": "92e613c62039fee0fe1141ccfaaef9e7d49a6d058347a966d3cf467ce857079a"
     },
     {
       "source": "src/walk/jaguar-gate.js",
@@ -3129,7 +3129,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 24,
-      "signature": "4e69291858b08198c007d41fffc55b6e3388c66434bebe9b0c7e1e85af0951b3"
+      "signature": "b6c52c5478a75908c50e2f84b4810ce91b0e367ebb102310286b60110a4e1d32"
     },
     {
       "source": "src/walk/jaguar-gate.prepared.js",
@@ -3151,7 +3151,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 24,
-      "signature": "4b711fbf4316d714c10c5c063efdb998d4fba54eb6831ad9430110c9155f0c71"
+      "signature": "01cb1e76fbd21846e5072eec41669f93a70b2e03a7cf71715650c5f2f275bc9b"
     },
     {
       "source": "src/walk/jaguar-gate.public.js",
@@ -3173,7 +3173,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 24,
-      "signature": "1ca46ea7ec22ff46ce408f95207ab9ea269e0c5dcf3e30bd843d6e7ae16bf8fb"
+      "signature": "f93126317b1e2cbbaf9876bc0f45a73a66c0909eda3464fcd8a78f722b7fd0cc"
     },
     {
       "source": "src/walk/keel-club.authoring.js",
