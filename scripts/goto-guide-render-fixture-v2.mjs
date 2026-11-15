@@ -18,7 +18,8 @@ export function checkGuideRendering(){
  if(mesh.name!=='V2_corridor_room_guides')continue;const position=mesh.geometry.attributes.position,normal=mesh.geometry.attributes.normal;
  for(const [i,label]of mesh.userData.labels.entries()){const r=schedule.get(label.id),centre=new T.Vector3();for(let j=0;j<4;j++)centre.add(new T.Vector3().fromBufferAttribute(position,i*4+j));centre.multiplyScalar(.25).applyMatrix4(mesh.matrixWorld);assert(centre.distanceTo(new T.Vector3(...r.at))<.0001,'Plaque moved in world space '+r.id);const face=new T.Vector3(normal.getX(i*4),normal.getY(i*4),normal.getZ(i*4));assert(face.dot(new T.Vector3(Math.sin(r.yaw),0,Math.cos(r.yaw)))>.999,'Plaque faces away from corridor');labels++;}
  }
- assert.equal(labels,schedule.size);assert.equal(boards,39);assert.equal(arrows,new Set([...schedule.values()].map(r=>r.deck)).size,'Exactly one arrow batch per deck with scheduled rooms');
+ assert.equal(labels,[...schedule.values()].filter(r=>r.plaque).length);assert.equal(boards,39);assert.equal(arrows,new Set([...schedule.values()].map(r=>r.deck)).size,'Exactly one arrow batch per deck with scheduled rooms');
+ assert(!roots.flatMap(g=>g.children).some(o=>o.userData.labels?.some(r=>r.id==='commons-1')),'The jaguar entrance must have no room plaque');
  // Desktops share the pictures across decks in pages (pageSize): each plaque and board face must show the same pixels,
  // at the same size, from its page as from its own picture.
  const pictured=list=>{const out=[];for(const root of list)root.traverse(o=>{if(o.name==='V2_corridor_room_guides'||o.name==='V2_lobby_deck_directory_faces')out.push(o);});return out;};
