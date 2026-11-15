@@ -17,11 +17,23 @@ import {createTransit} from '../src/transit.js';
 import {atriumFloorGeometry} from '../src/v2/atrium-surfaces.js';
 import {phase6Programme} from '../src/v2/phase6-programme.js';
 import {createLoungeMural} from '../src/walk/lounge-mural.js';
+import {inLounge} from '../src/walk/lounge.js';
 import {SYNTHWAVE_MURAL,synthwaveMuralOutline} from '../src/v2/community-routes.js';
 import {HYDRO_PORTAL as portal,HYDRO_PORTAL_ARRIVAL as arrival,HYDRO_PARK_PORTAL as park,HYDRO_PARK_ARRIVAL as parkArrival,HYDRO_PORTAL_LINKS,hydroPortalContains,createHydroPortalTravel,createHydroPortal,createHydroPortalSound,hydroPortalLevel,buildHydroPortalWarp} from '../src/walk/hydro-portal.js';
 
 // Real lounge furniture and the current hull-owned shell, without loading the rest of the ship.
 const r=layout.rooms.find(r=>r.id==='commons-1'),root=new T.Group(),structure=new T.Group();root.add(createGardenCommons(1).root,structure);resolveRoomFrames(root);
+// Portal arrivals must enter the same room predicate that starts the lounge music.
+for(const suffix of ['','.public','.prepared','.authoring']){
+ const source=readFileSync(new URL(`../src/walk/lounge${suffix}.js`,import.meta.url),'utf8'),canonical=readFileSync(new URL('../src/walk/lounge.js',import.meta.url),'utf8');
+ const region=s=>s.slice(s.indexOf('export function inLounge()')).replaceAll('\r\n','\n');
+ assert.equal(region(source),region(canonical),'All lounge variants share body and mood predicates');assert(source.includes('inside:inLounge()'));
+ const inside=inLounge();
+ for(const at of [arrival.at,[portal.x+3,r.y,portal.z],[-89.8,25.95,-35.47],[-114.5,26,-60]])assert(inside(new T.Vector3(...at)),'Lounge body region includes portal and native room in '+suffix);
+ for(const at of [parkArrival.at,[-141.1,26,-35],[-114.5,26,-23.9],[-114.5,35.6,-40],[-114.5,34,-60]])assert(!inside(new T.Vector3(...at)),'Lounge body region stays inside the native envelope in '+suffix);
+ assert(inside(new T.Vector3(arrival.at[0],r.y-.7,arrival.at[2])),'Low cushion keeps its body effects');
+ assert(!inside(new T.Vector3(arrival.at[0],r.y-1.1,arrival.at[2])),'Body effects do not reach the deck below');
+}
 buildRoomShell({root,inside:root,cutaway:new Set()},r,structure);
 const parts=shellParts(r.hullPrototype,q=>worldPoint(r.hullPrototype.chart,q));
 for(const [kind,geometry] of Object.entries(parts)){
