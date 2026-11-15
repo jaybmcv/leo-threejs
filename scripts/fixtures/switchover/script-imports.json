@@ -1,43 +1,5 @@
 [
   {
-    "file": "scripts/check-anchor-movement.mjs",
-    "bodySha256": "b874b18d519bcd2df93ec8f8484028190995771e020c7dc8788ea0bd78267b4d",
-    "imports": [
-      "node:assert/strict",
-      "three",
-      "@napi-rs/canvas",
-      "../src/areas.js",
-      "../src/model.js",
-      "../src/plan/rooms.js",
-      "../src/walk/canvas.js",
-      "../src/walk/arrival-atrium.js",
-      "../src/walk/hydroponics.js",
-      "../src/walk/mission-holo.js",
-      "../src/walk/sword-case.js",
-      "../src/walk/chinampa.js",
-      "../src/walk/concession.js",
-      "../src/walk/theatre.js",
-      "../src/walk/blossom.js",
-      "../src/walk/lounge-falls.js",
-      "../src/walk/arcade.js",
-      "../src/walk/jaguar-gate.js",
-      "../src/v2/rest.js",
-      "../src/plan/v1.js",
-      "../src/walk/collision.js",
-      "../src/walk/lounge.js",
-      "../src/walk/collision.js"
-    ]
-  },
-  {
-    "file": "scripts/check-anchor-preparation.mjs",
-    "bodySha256": "cfa6b1ba487e18251229c3d88d75d2315e66b79bd9c71a282d73a225065a77ee",
-    "imports": [
-      "node:assert/strict",
-      "./walk-plan.mjs",
-      "../src/v2/rest.js"
-    ]
-  },
-  {
     "file": "scripts/check-mudwater.mjs",
     "bodySha256": "6f0a163732eb03efa9e1a2eef6bf0f1fadf96669ba4035377e038da330780b8b",
     "imports": [
