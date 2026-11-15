@@ -121,11 +121,26 @@ assert(serviceBounds(['Laundry_counter','Laundry_machine','Laundry_drum','Parcel
 const chairs=[];source.root.traverse(o=>{if(o.name==='Tail_clearance_chair')chairs.push(o.getWorldPosition(new T.Vector3()));});
 assert.deepEqual(chairs.map(p=>p.toArray()),[[-118.5,24.3,-53],[-116.5,24.3,-53],[-114.5,24.3,-53],[-112.5,24.3,-53]],'Keep all four kitchen chairs');
 const rests=findRestSpots(source.root),seams=[];source.root.traverse(o=>{if(o.name==='Polish_tailored_seam')seams.push(new T.Box3().setFromObject(o,true));});
-// Only the small rug moves. Its long edges already run along the aquarium glass.
+// Only the middle seating group moves, centred on the maze door with a 1.75 m approach.
+const rug=source.root.getObjectByName('Lounge_rug'),rugBoxes=[];
+for(let start=0;start<rug.geometry.attributes.position.count;start+=36){const b=new T.Box3();for(let i=start;i<start+36;i++)b.expandByPoint(new T.Vector3().fromBufferAttribute(rug.geometry.attributes.position,i).applyMatrix4(rug.matrixWorld));rugBoxes.push(b);}
+assert.equal(rugBoxes.length,3,'Keep exactly three lounge rugs');
+for(const [i,x,z] of [[0,-119.5,-32.5],[1,-129.5,-45.75],[2,-103.15,-30]]){const b=rugBoxes[i],c=b.getCenter(new T.Vector3());close(c.x,x);close(c.z,z);close(b.max.x-b.min.x,i===2?4:7);close(b.max.z-b.min.z,i===2?3:4);}
+close(rugBoxes[1].max.z,-43.75);
+for(const [x,z] of [[-131.7,-44.85],[-128.3,-47.25],[-126.3,-45.05],[-132.9,-46.75],[-130.3,-44.15]])assert(rests.some(s=>s.kind==='sit'&&Math.hypot(s.point.x-x,s.point.z-z)<.01),'Moved cushion has a sit anchor');
+assert(!rests.some(s=>s.height<25.1&&s.point.x>-113.5&&s.point.x<-105.9&&s.point.z>-35&&s.point.z<-29.8),'No old cushion anchors');
+route('Former middle rug centre',[[-109.5,24.3,-33],[-109.5,24.3,-31]]);
+walker.place(new T.Vector3(-129.5,24.3,-49));
+walk([0,0,2.25],3.6,p=>assert(Math.abs(p.x+129.5)<.35&&p.y>=24.29&&p.y<25.1,'Cross the rug on the door centre line'));
+assert(walker.position.z>-41.5&&walker.position.z<-40.5,'Cross the rug and finish inside the maze entrance');
+walk([0,0,-2.25],3.6,p=>assert(Math.abs(p.x+129.5)<.35&&p.y>=24.29&&p.y<25.1,'Return across the rug'));
+assert(walker.position.z<-48.5,'Walk back out beyond the rug');
+console.log('PASS three rugs, moved cushion anchors, bare old footprint and centre-line crossing in both directions');
+// The small rug at the photo spot keeps its long edges along the aquarium glass.
 {
  const rug=source.root.getObjectByName('Lounge_rug'),p=rug.geometry.attributes.position,boxes=[];
  for(let i=0;i<p.count;i+=36)boxes.push(new T.Box3().setFromPoints(Array.from({length:36},(_,j)=>new T.Vector3().fromBufferAttribute(p,i+j).applyMatrix4(rug.matrixWorld))));
- assert.equal(boxes.length,3);for(const [i,x0,x1] of [[0,-123,-116],[1,-113,-106]]){close(boxes[i].min.x,x0);close(boxes[i].max.x,x1);close(boxes[i].min.z,-34.5);close(boxes[i].max.z,-30.5);}
+ assert.equal(boxes.length,3);for(const [i,x0,x1,z0,z1] of [[0,-123,-116,-34.5,-30.5],[1,-133,-126,-47.75,-43.75]]){close(boxes[i].min.x,x0);close(boxes[i].max.x,x1);close(boxes[i].min.z,z0);close(boxes[i].max.z,z1);}
  const small=boxes[2];close(small.min.x,-105.15);close(small.max.x,-101.15);close(small.min.z,-31.5);close(small.max.z,-28.5);
  assert(small.max.z<tank.min.z-.5&&!small.intersectsBox(boxes[1]),'Moved rug clears the glass and larger rug');
  const seats=[[-102.55,25.0196,-30.1],[-104.45,24.47,-28.9],[-101.55,24.47,-31.2]];
