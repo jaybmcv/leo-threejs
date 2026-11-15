@@ -18,7 +18,7 @@ export const PHOTO_SPOTS=[
  {id:'cat-tree',name:'The Great Cat Tree',place:'DECK 6 · GREAT CAT TREE',room:'circulation-6',stand:[171,0,-2.2],lens:[165.6,1.3,-.4],look:[176,3.1,-1.5]},
  // Deck 17, the Hydro-Nip Lounge (Neighborhood 1's mirrored commons): its floor in front of the aquarium glass, between
  // the hammock dome and the Munchies Converger's counter.
- {id:'aquarium',name:'Hydro-Nip aquarium',place:'DECK 17 · HYDRO-NIP AQUARIUM',room:'commons-1',stand:[11,0,-13],lens:[11.1,1.55,-7.6],look:[11,1.35,-15]},
+ {id:'aquarium',name:'Hydro-Nip aquarium',place:'DECK 17 · HYDRO-NIP AQUARIUM',room:'commons-1',stand:[11,0,-13],lens:[11.1,1.55,-7.6],look:[11,1.35,-15],markerHeight:.025},
 ];
 // A room point in ship metres, to the millimetre.
 const world=(room,p)=>toWorld(room,p).map(v=>Math.round(v*1000)/1000);
@@ -50,7 +50,7 @@ export function createPhotoSpots(){
  const groups=spots.map(s=>{
   const g=new T.Group();g.name='Photo_spot_'+s.id;g.position.set(...s.stand);
   // The disc reads upright to someone walking up from the camera's side.
-  const m=new T.Mesh(floorGeometry,disc);m.name='Photo_spot_marker';m.position.y=.02;m.rotation.y=Math.atan2(s.lens[0]-s.stand[0],s.lens[2]-s.stand[2]);m.renderOrder=1;g.add(m);
+  const m=new T.Mesh(floorGeometry,disc);m.name='Photo_spot_marker';m.position.y=s.markerHeight??.02;m.rotation.y=Math.atan2(s.lens[0]-s.stand[0],s.lens[2]-s.stand[2]);m.renderOrder=1;g.add(m);
   const b=new T.Sprite(badge);b.name='Photo_spot_badge';b.position.y=2.6;b.scale.set(.5,.5,1);g.add(b);
   return g;});
  const camera=new T.PerspectiveCamera(FOV,ASPECT,.05,400);

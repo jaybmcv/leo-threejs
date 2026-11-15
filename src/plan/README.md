@@ -12,7 +12,7 @@ With __WALK_DEBUG__ true, use ?anchorTest=d16-theater-5:7,-3,37 or ?anchorTest=c
 
 check-anchors checks documented room boundaries, inventories authoring sites and compares normalized source fingerprints. It is a conservative ownership gate, not a JavaScript AST proof. Assign a new feature to a registry id before regenerating ownership.json with node scripts/check-anchors.mjs --write. Fixed spaces and non-ship/helper coordinate systems are documented individually in anchor-allow-list.json. The old holo placement fixture must fail the boundary check.
 
-Additional checks: check-anchor-movement.mjs tests the six specified assemblies, unaffected library geometry, individual cabin instances, rest facing and automatic door collider orientation. check-anchor-preparation.mjs checks shared feature availability and rest-filter parity. check-anchor-bundle.mjs bundles both variants and checks public debug stripping; its workspace-only resolver avoids native esbuild's ancestor-directory access failure in this managed sandbox.
+The v1-era anchor checks (check-anchor-movement, check-anchor-preparation, check-anchor-bundle) were retired on 2026-11-15: they tested the old ship and failed on main. Copies stay in legacy/v1/scripts. The public walk's debug stripping is enforced by scripts/walk-page.mjs and check-public-v2.mjs.
 
 Full frozen-time browser hashes, generated-plan comparison and the 63 reference captures remain the verifier's acceptance gate. No publication or deployment is implied.
 

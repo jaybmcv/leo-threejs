@@ -2,6 +2,7 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import layout from '../plan/selected-layout.js';
 import {guideSchedule,lobbySchedule} from './wayfinding-guide-data.js';
+import {hangHydroNipSign} from './hydro-nip-wayfinding.js';
 // The distribution ceiling's underside is 3.64 m above each deck.
 const DIRECTORY_WIDTH=3.6,DIRECTORY_HEIGHT=1.05,DIRECTORY_CEILING_HEIGHT=3.64,BACKGROUND='#10252e';
 const directoryBacking=new T.MeshBasicMaterial({color:0x10252e,toneMapped:false}),directorySupport=new T.MeshStandardMaterial({color:0x586e7b,metalness:.55,roughness:.4});
@@ -41,7 +42,7 @@ export function addWayfindingGuides(parent,{pageSize=0}={}){
  const fit=(c,text,x,y,width,size=28)=>{while(size>12){c.font='600 '+size+'px sans-serif';if(c.measureText(text).width<=width)break;size--;}c.fillText(text,x,y);};
  // All of a deck's room plaques are one block, two cells wide: one draw per deck, independent of room count.
  const cols=2,cellW=512,cellH=112,decks=new Map(),boards=new Map();
- for(const d of layout.decks){const rows=guides.filter(g=>g.deck===d.number);if(rows.length)decks.set(d.number,{rows,w:cellW*cols,h:Math.ceil(rows.length/cols)*cellH});}
+ for(const d of layout.decks){const rows=guides.filter(g=>g.deck===d.number&&g.plaque);if(rows.length)decks.set(d.number,{rows,w:cellW*cols,h:Math.ceil(rows.length/cols)*cellH});}
  for(const row of lobbies)boards.set(row,{w:1024,h:300});
  placePictures([...decks.values(),...boards.values()],pageSize);
  for(const d of layout.decks){const root=roots.get(d.number),b=decks.get(d.number),rows=b?b.rows:[];
@@ -50,8 +51,8 @@ export function addWayfindingGuides(parent,{pageSize=0}={}){
    const count=Math.ceil(rows.length/cols),planes=rows.map((r,i)=>{const g=new T.PlaneGeometry(r.width,.55),uv=g.attributes.uv,col=i%cols,row=Math.floor(i/cols);for(let j=0;j<uv.count;j++)uv.setXY(j,(col+uv.getX(j))/cols,1-(row+1-uv.getY(j))/count);intoPage(b,uv);g.rotateY(r.yaw).translate(r.at[0],r.at[1]-d.y,r.at[2]);return g;});
    const m=new T.Mesh(mergeGeometries(planes),b.page.material);m.name='V2_corridor_room_guides';m.userData={noCollide:true,deck:d.number,labels:rows.map(r=>({id:r.id,label:r.label,youAreHere:r.youAreHere,corridor:r.corridor}))};root.add(m);for(const g of planes)g.dispose();
   }
-  const arrows=rows.map(r=>{const dx=r.to[0]-r.from[0],dz=r.to[2]-r.from[2],length=Math.hypot(dx,dz),g=new T.ShapeGeometry(new T.Shape([new T.Vector2(0,.20),new T.Vector2(length,0),new T.Vector2(0,-.20),new T.Vector2(.15,0)]));g.rotateX(-Math.PI/2).rotateY(-Math.atan2(dz,dx)).translate(r.from[0],r.from[1]-d.y,r.from[2]);return g;});
-  if(arrows.length){const m=new T.Mesh(mergeGeometries(arrows),new T.MeshBasicMaterial({color:0x2fd6c5,toneMapped:false}));m.name='V2_floor_guides';m.userData={noCollide:true,deck:d.number,destinations:rows.map(r=>r.id)};root.add(m);for(const g of arrows)g.dispose();}
+  const routes=guides.filter(g=>g.deck===d.number),arrows=routes.map(r=>{const dx=r.to[0]-r.from[0],dz=r.to[2]-r.from[2],length=Math.hypot(dx,dz),g=new T.ShapeGeometry(new T.Shape([new T.Vector2(0,.20),new T.Vector2(length,0),new T.Vector2(0,-.20),new T.Vector2(.15,0)]));g.rotateX(-Math.PI/2).rotateY(-Math.atan2(dz,dx)).translate(r.from[0],r.from[1]-d.y,r.from[2]);return g;});
+  if(arrows.length){const m=new T.Mesh(mergeGeometries(arrows),new T.MeshBasicMaterial({color:0x2fd6c5,toneMapped:false}));m.name='V2_floor_guides';m.userData={noCollide:true,deck:d.number,destinations:routes.map(r=>r.id)};root.add(m);for(const g of arrows)g.dispose();}
  }
  for(const row of lobbies){const b=boards.get(row);
   const draw=()=>paintBlock(b,c=>{c.fillStyle=BACKGROUND;c.fillRect(0,0,1024,300);c.fillStyle='#2fd6c5';fit(c,row.youAreHere,20,30,984,24);row.rows.forEach((text,i)=>{c.fillStyle=text.startsWith('Deck '+row.deck+' ·')?'#ffb578':'#f5ddba';fit(c,text,i<10?20:526,58+i%10*22,478,18);});c.fillStyle='#2fd6c5';fit(c,row.note,20,289,984,19);});draw();paint.push(draw);
@@ -62,5 +63,6 @@ export function addWayfindingGuides(parent,{pageSize=0}={}){
   const face=new T.Mesh(faces,b.page.material);face.name='V2_lobby_deck_directory_faces';face.userData={noCollide:true,readableFaces:2};board.add(face);
   if(postHeight>0)for(const side of [-1,1]){const post=new T.Mesh(new T.CylinderGeometry(.022,.022,postHeight,6),directorySupport);post.name='V2_lobby_deck_directory_support';post.position.set(side*DIRECTORY_WIDTH/2,top+postHeight/2,0);post.userData.noCollide=true;board.add(post);}
  }
+ hangHydroNipSign(roots.get(17));
  globalThis.document.fonts?.ready.then(()=>{for(const draw of paint)draw();});return [...roots.values()];
 }

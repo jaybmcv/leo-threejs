@@ -7,7 +7,11 @@ import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
 // not imported, so a change to the runtime rule cannot quietly move the audit with it; the fixture pins both at the
 // deck boundaries.
 export const onOldDeck=(layout,at)=>layout.decks.some(d=>Math.abs(d.y-at[1])<=2.05);
-const corridorEligible=(row,current)=>(!row.oldRoom||/^(circulation-|lift-|stairs-|service-lift-)/.test(row.oldRoom))&&!current.feature;
+// A link written on the current layout (lv=2 or later: every builder's picture since 2026-11-13, and src/walk/link.js
+// spotLink) is never remapped, so the old-layout corridor rules don't apply to it; it must still land on real floor
+// (auditNativeLanding). Until 2026-11-15 the ship log dropped lv, and the gate saw every link as an old-layout one.
+export const currentLayout=row=>Number(row.original?.lv)>=2;
+const corridorEligible=(row,current)=>!currentLayout(row)&&(!row.oldRoom||/^(circulation-|lift-|stairs-|service-lift-)/.test(row.oldRoom))&&!current.feature;
 // A link the corridor audit would take but that is on no old deck, such as the Keel Club below Deck 1. It never had a
 // corridor, so it must land exactly where it points, and auditNativeLanding proves the floor and capsule there.
 export const offDeckLink=(layout,row,current=row.current||row.spot)=>corridorEligible(row,current)&&!onOldDeck(layout,row.original.at);

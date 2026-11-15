@@ -40,6 +40,6 @@ for(const [name,method] of [['jaguar-gate','createJaguarGate'],['arcade','create
  console.log('PASS',name,'public/prepared/authoring match native geometry with old templates');
 }
 const {ReplayGeometry}=await import(url(replayPath));assert.throws(()=>new ReplayGeometry('src/walk/jaguar-gate.js:10',T.PlaneGeometry,1.08,3.68),/missing a fixed geometry template/,'Missing-template validation remains strict');
-const retainedKey='src/walk/jaguar-gate.js:0|[1,24,12]',retained=records.get(retainedKey);assert(retained);records.delete(retainedKey);
+const retainedKey='src/walk/jaguar-gate.js:18|[1,8,4]',retained=records.get(retainedKey);assert(retained);records.delete(retainedKey);
 try{const current=await factory('jaguar-gate','.public');assert.throws(()=>current.createJaguarGate(),/missing a fixed geometry template/,'Unchanged head geometry still requires its recorded template');}finally{records.set(retainedKey,retained);}
 console.log('PASS strict missing-template negative controls');
