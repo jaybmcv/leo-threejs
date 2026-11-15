@@ -1,3 +1,4 @@
+import '../src/model.js';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {createCanvas} from '@napi-rs/canvas';
@@ -6,6 +7,7 @@ import {addWayfindingGuides} from '../src/v2/wayfinding-guides.js';
 import {guideSchedule} from '../src/v2/wayfinding-guide-data.js';
 import {HYDRO_NIP_HANGER} from '../src/v2/hydro-nip-wayfinding.js';
 import {buildCommonsHallFinish} from '../src/v2/commons-hall-finish.js';
+import {createJaguarGate} from '../src/walk/jaguar-gate.js';
 
 globalThis.document={createElement:()=>createCanvas(1,1)};
 const parent=new T.Group(),roots=addWayfindingGuides(parent),schedule=guideSchedule(layout);
@@ -15,6 +17,9 @@ assert.deepEqual(labels.map(r=>r.id).sort(),schedule.filter(r=>r.id!=='commons-1
 assert(roots[16].getObjectByName('V2_floor_guides').userData.destinations.includes('commons-1'),'Retain its floor arrow');
 assert.equal(schedule.filter(r=>!r.plaque).length,1);
 const sign=parent.getObjectByName('Hydro_Nip_Promenade_Sign'),box=new T.Box3().setFromObject(sign,true),floor=layout.decks[16].y;
+const {group:gate}=createJaguarGate(),gateBox=new T.Box3().setFromObject(gate,true);
+assert(Math.abs(sign.position.x-gate.position.x)<1e-6,'Hanging sign follows the actual doorway centre');
+assert(box.min.z>gateBox.max.z+.1,'Centred sign and rods stay clear of the jaguar head');
 assert.equal(sign.parent,roots[16],'Sign stays in the Deck 17 render band');
 assert(box.min.y-floor>=2.3,'Standing cats have generous clearance');
 assert(Math.abs(box.max.y-floor-HYDRO_NIP_HANGER.ceiling)<1e-5,'Rods end at the hall ceiling');
@@ -32,4 +37,4 @@ const ceiling=hall.getObjectByName('V2_commons_hall_ceiling');
 assert(ray.intersectObject(ceiling).some(h=>Math.abs(h.point.y-floor-HYDRO_NIP_HANGER.ceiling)<.001),'Real ceiling exists above the rods');
 const lights=hall.getObjectByName('V2_commons_hall_lights'),p=lights.geometry.attributes.position,idx=lights.geometry.index,triangle=new T.Triangle();
 for(let i=0;i<(idx?.count||p.count);i+=3){for(let k=0;k<3;k++)triangle[['a','b','c'][k]].fromBufferAttribute(p,idx?idx.getX(i+k):i+k).applyMatrix4(lights.matrixWorld);assert(!box.intersectsTriangle(triangle),'Hanger must not clip a ceiling light');}
-console.log('PASS: only jaguar plaque removed; floor arrow retained; two readable faces, ceiling attachment, light clearance and 2.52 m headroom');
+console.log('PASS: sign centred on the jaguar doorway with head clearance; floor arrow retained; two readable faces, ceiling attachment, light clearance and 2.52 m headroom');
