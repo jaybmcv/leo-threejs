@@ -17,6 +17,7 @@ import {Colliders,solid} from '../src/walk/collision.js';
 import {groundMesh} from '../src/v2/ground.js';
 import {Controller} from '../src/walk/controller.js';
 import {findRestSpots} from '../src/walk/rest.js';
+import {createPhotoSpots} from '../src/walk/photo-spots.js';
 import {SWIM,swimWorld,limitSwim,gemNear} from '../src/walk/aquarium-treasure/layout.js';
 import {featurePlaces} from '../src/v2/goto-features.js';
 import {mesh,polygonGeometry} from '../src/v2/geometry.js';
@@ -124,7 +125,7 @@ const rests=findRestSpots(source.root),seams=[];source.root.traverse(o=>{if(o.na
 const rug=source.root.getObjectByName('Lounge_rug'),rugBoxes=[];
 for(let start=0;start<rug.geometry.attributes.position.count;start+=36){const b=new T.Box3();for(let i=start;i<start+36;i++)b.expandByPoint(new T.Vector3().fromBufferAttribute(rug.geometry.attributes.position,i).applyMatrix4(rug.matrixWorld));rugBoxes.push(b);}
 assert.equal(rugBoxes.length,3,'Keep exactly three lounge rugs');
-for(const [i,x,z] of [[0,-119.5,-32.5],[1,-129.5,-45.75],[2,-102.5,-33.5]]){const b=rugBoxes[i],c=b.getCenter(new T.Vector3());close(c.x,x);close(c.z,z);close(b.max.x-b.min.x,i===2?4:7);close(b.max.z-b.min.z,i===2?3:4);}
+for(const [i,x,z] of [[0,-119.5,-32.5],[1,-129.5,-45.75],[2,-103.15,-30]]){const b=rugBoxes[i],c=b.getCenter(new T.Vector3());close(c.x,x);close(c.z,z);close(b.max.x-b.min.x,i===2?4:7);close(b.max.z-b.min.z,i===2?3:4);}
 close(rugBoxes[1].max.z,-43.75);
 for(const [x,z] of [[-131.7,-44.85],[-128.3,-47.25],[-126.3,-45.05],[-132.9,-46.75],[-130.3,-44.15]])assert(rests.some(s=>s.kind==='sit'&&Math.hypot(s.point.x-x,s.point.z-z)<.01),'Moved cushion has a sit anchor');
 assert(!rests.some(s=>s.height<25.1&&s.point.x>-113.5&&s.point.x<-105.9&&s.point.z>-35&&s.point.z<-29.8),'No old cushion anchors');
@@ -135,6 +136,28 @@ assert(walker.position.z>-41.5&&walker.position.z<-40.5,'Cross the rug and finis
 walk([0,0,-2.25],3.6,p=>assert(Math.abs(p.x+129.5)<.35&&p.y>=24.29&&p.y<25.1,'Return across the rug'));
 assert(walker.position.z<-48.5,'Walk back out beyond the rug');
 console.log('PASS three rugs, moved cushion anchors, bare old footprint and centre-line crossing in both directions');
+// The small rug at the photo spot keeps its long edges along the aquarium glass.
+{
+ const rug=source.root.getObjectByName('Lounge_rug'),p=rug.geometry.attributes.position,boxes=[];
+ for(let i=0;i<p.count;i+=36)boxes.push(new T.Box3().setFromPoints(Array.from({length:36},(_,j)=>new T.Vector3().fromBufferAttribute(p,i+j).applyMatrix4(rug.matrixWorld))));
+ assert.equal(boxes.length,3);for(const [i,x0,x1,z0,z1] of [[0,-123,-116,-34.5,-30.5],[1,-133,-126,-47.75,-43.75]]){close(boxes[i].min.x,x0);close(boxes[i].max.x,x1);close(boxes[i].min.z,z0);close(boxes[i].max.z,z1);}
+ const small=boxes[2];close(small.min.x,-105.15);close(small.max.x,-101.15);close(small.min.z,-31.5);close(small.max.z,-28.5);
+ assert(small.max.z<tank.min.z-.5&&!small.intersectsBox(boxes[1]),'Moved rug clears the glass and larger rug');
+ const seats=[[-102.55,25.0196,-30.1],[-104.45,24.47,-28.9],[-101.55,24.47,-31.2]];
+ for(const at of seats)assert.equal(rests.filter(s=>s.point.distanceTo(new T.Vector3(...at))<.002).length,1,'Each moved cushion keeps its sit point');
+ assert(!rests.some(s=>s.point.x>-104.5&&s.point.x<-100.5&&s.point.z>-35&&s.point.z<-32),'No old cushion sit points');
+ for(const [x,z] of [[-101.9,-33.6],[-103.8,-32.4],[-100.9,-34.7]]){assert(clear([x,24.3,z]),'No old cushion collider');ray.origin.set(x,24.7,z);close(col.raycast(ray,.5)?.point.y,24.3);}
+ route('Old small rug floor',[[-104,24.3,-34.7],[-101,24.3,-34.7],[-101,24.3,-32.1]]);
+ const photos=createPhotoSpots(),spot=photos.spots.find(s=>s.id==='aquarium'),marker=photos.groups.find(g=>g.name==='Photo_spot_aquarium').getObjectByName('Photo_spot_marker');
+ assert.deepEqual(spot.stand,[-103.5,24.3,-30]);assert(small.containsPoint(new T.Vector3(spot.stand[0],small.max.y,spot.stand[2])));
+ assert(marker.getWorldPosition(new T.Vector3()).y>small.max.y+.004,'Photo marker sits just above the rug');
+ for(const g of photos.groups.filter(g=>g.name!=='Photo_spot_aquarium'))close(g.getObjectByName('Photo_spot_marker').position.y,.02);
+ assert(clear(spot.stand),'The photo standing point remains clear');assert.equal(photos.near(new T.Vector3(...spot.stand)).kind,'photo-spot');
+ walker.place(new T.Vector3(-103.5,24.3,-33.8));walk([0,0,2.25],1.69);walk([0,0,0],.3);
+ assert(Math.hypot(walker.position.x+103.5,walker.position.z+30)<.15,'Walk onto the photo circle without a cushion blocking it');
+ walk([-2.25,0,0],1);assert(walker.position.x<small.min.x-.3,'Walk off the far edge of the rug');
+ console.log('PASS moved small rug, three sit points, bare old floor, visible photo marker and walk across the photo spot');
+}
 for(const x of [-128.5,-125.5,-122.5]){
  route('Former reading chair '+x,[[x,24.3,-59.8],[x,24.3,-54.8]]);
  assert(!rests.some(s=>Math.abs(s.height-24.8)<.5&&Math.hypot(s.point.x-x,s.point.z+56)<1.5),'Invisible chair rest anchor at '+x);

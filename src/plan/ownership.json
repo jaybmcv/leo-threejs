@@ -400,7 +400,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 131,
-      "signature": "fdf95fff05aa342a3af3152662808d0a40374d2a74cbc4d8a6df4297b906947a"
+      "signature": "5bd9b9fe5de4629aa674146a8876d7f1649de4be078d7501c373cef2e381f145"
     },
     {
       "source": "src/interior-polish.js",
@@ -5005,7 +5005,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 5,
-      "signature": "1550c5022ca1097cd6af54e9f33e509652f9f5bcd2e91b4a52bf6fe15e5f5537"
+      "signature": "1045c91dda830fa6b39098a00ac4d4e5bef413c921588ee44b1dd78c0f5fd8bf"
     },
     {
       "source": "src/walk/pinball/art.js",
