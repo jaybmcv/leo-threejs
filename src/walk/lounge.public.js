@@ -18,7 +18,7 @@ import {bandOf} from './collision.js';
 // - inside the maze the catnip mist thins round the camera and a green haze tints the view instead, heavy on the
 //   ground floor, light on the lower platform and gone on the top one;
 // - the room's mood (from tester feedback): its ceiling is clear glass open to the stars and a huge full moon
-//   (lounge-sky.js), and while the camera is in the commons the walk's lights (shared by the whole ship) ease down and warm, with a violet bounce from below, and the
+//   (lounge-sky.js), and while the visitor is in the commons the walk's lights (shared by the whole ship) ease down and warm, with a violet bounce from below, and the
 //   neon and its halos burn brighter;
 // - the code-generated synthwave sunset on the aft side wall, spanning Decks 17-19 (lounge-mural.js);
 // - the aquarium filling its front wall, three storeys of glowing reef and fish, with the jaguar's throat running through
@@ -109,7 +109,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  // The aquarium: its glass solid everywhere, its tank drawn in the page (null in Node).
  const aquarium=createLoungeAquarium(ship,frame,colliders);
  if(aquarium)aquarium.group.userData={band:bandOf(toWorld(0,aquarium.low,0).y),top:bandOf(toWorld(0,aquarium.top,0).y)};
- const {ROOM}=LOUNGE,room=new T.Box3().setFromPoints([new T.Vector3(ROOM.x0,LOUNGE.FLOOR,ROOM.z0),new T.Vector3(ROOM.x1,LOUNGE.CEILING,ROOM.z1)]);
+ const {ROOM}=LOUNGE,insideRoom=inLounge(frame);
  const panels=[];root.parent?.parent?.traverse(o=>{if(o.isMesh&&o.name==='Circadian_light')panels.push(o);});for(const o of panels)o.removeFromParent();
  {const sky=createLoungeSky(frame,ROOM,LOUNGE.CEILING-.16,uniforms.uTime);place(sky.geometry,sky.material,'Walk_lounge_glass_roof');}
  const glows=[];root.traverse(o=>{if(o.isMesh&&/^Lounge_(neon_glow|additive_glow)$/.test(o.material?.name)&&!glows.some(g=>g.m===o.material))glows.push({m:o.material,k:o.material.name==='Lounge_neon_glow'?MOOD.neon:MOOD.glow});});
@@ -147,11 +147,13 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
    mist+=((inside?.12:1)-mist)*k;for(const o of mists)o.material.opacity=o.material.userData.full*mist;
    haze+=((inside?(eye.y<LEVELS[0]?.34:eye.y<LEVELS[1]?.16:0):0)-haze)*k;if(tint)tint.style.opacity=haze.toFixed(3);
    const underwater=inWaterView(eye);waterMix+=((underwater?1:0)-waterMix)*k;if(waterTint)waterTint.style.opacity=waterMix.toFixed(3);
-   mood+=((underwater||room.containsPoint(eye.clone().applyMatrix4(inverse))?1:0)-mood)*k;if(Math.abs(mood-shown)>.002||(mood<.002&&shown)){shown=mood<.002?0:mood;setMood(shown);}
+   // Follow the visitor through the gate, even when the orbit camera is on its other side.
+   mood+=((underwater||insideRoom(bodies[0]||eye)?1:0)-mood)*k;if(Math.abs(mood-shown)>.002||(mood<.002&&shown)){shown=mood<.002?0:mood;setMood(shown);}
   },
   swingOf,
   // Whether a body is in the room (inLounge, below).
-  inside:inLounge(frame),
+  inside:insideRoom,
+  get mood(){return shown;},
  };
 }
 
@@ -161,6 +163,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
 export function inLounge(frame){
  const {ROOM}=LOUNGE,inverse=frame.clone().invert(),at=new T.Vector3();
  // Feet stand on the floor, but a body on a low cushion sits its hip height under the seat, so the room reaches a metre below it.
- const box=new T.Box3(new T.Vector3(ROOM.x0,LOUNGE.FLOOR-1,ROOM.z0),new T.Vector3(ROOM.x1,LOUNGE.CEILING,ROOM.z1));
+ // The aquarium sits 6 m forward in this frame; its outer pane reaches .1 m beyond its back.
+ const box=new T.Box3(new T.Vector3(ROOM.x0,LOUNGE.FLOOR-1,Math.min(ROOM.z0,AQUARIUM.back+6-.1)),new T.Vector3(ROOM.x1,LOUNGE.CEILING,ROOM.z1));
  return p=>box.containsPoint(at.copy(p).applyMatrix4(inverse));
 }
