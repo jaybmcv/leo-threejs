@@ -400,7 +400,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 129,
-      "signature": "b3330280678e94cf26fb49ed27e2c2d903e57dbb6e6aba8747fa7a02dcb68393"
+      "signature": "d9f47088227bb932f36a14cd6f5b35626456b5da02136e31e2791e56ea220921"
     },
     {
       "source": "src/interior-polish.js",
@@ -5481,7 +5481,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 15,
-      "signature": "ab67bc4776e4480980d98a311d2d977558b350886ef31ddd9938218926b23396"
+      "signature": "9674a0856fba4ccd46ca3c5403e613fec5dfbdd635b0a720875084ca096ba412"
     },
     {
       "source": "src/walk/render-bake.js",
@@ -5496,7 +5496,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 15,
-      "signature": "5fcda2ba0e714fd18da74574fdf43b36af358b0b63b3985b93cc410c8cbf2727"
+      "signature": "f8f24ace9dd044d7a3014dbc3127b0ac5ac470da467284ab4d4e089b90dfd80d"
     },
     {
       "source": "src/walk/selfie.authoring.js",

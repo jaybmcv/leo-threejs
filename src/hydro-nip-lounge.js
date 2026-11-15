@@ -156,7 +156,7 @@ export function createHydroNipLounge({mirror=1}={}){
  const shared={
   matte:std('Lounge_matte',0xffffff,{vertexColors:true,roughness:.85}),
   sheen:std('Lounge_sheen',0xffffff,{vertexColors:true,roughness:.32,metalness:.55}),
-  planter:std('Lounge_dome_planter',0xffffff,{vertexColors:true,roughness:.1,metalness:.7}),
+  planter:new T.MeshPhysicalMaterial({name:'Lounge_dome_planter',color:0xffffff,vertexColors:true,roughness:.14,metalness:.55,clearcoat:.85,clearcoatRoughness:.23,envMapIntensity:3.5}),
   tubeHalo:new T.MeshBasicMaterial({name:'Lounge_dome_tube_glow',vertexColors:true,transparent:true,opacity:.12,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}),
   // Foliage apart, so its name keeps it from being solid (src/walk/collision.js skips leaves).
   leaf:std('Lounge_catnip_leaf',0xffffff,{vertexColors:true,roughness:.9}),
@@ -169,6 +169,8 @@ export function createHydroNipLounge({mirror=1}={}){
   marble:std('Lounge_marble',0xffffff,{vertexColors:true,roughness:.22}),
   frost:std('Lounge_frosted_glass',0xffffff,{vertexColors:true,transparent:true,opacity:.62,roughness:.55,metalness:0,side:T.DoubleSide}),
  };
+ // Keep the ring's clear coat and reflection strength through the walk's material merge.
+ shared.planter.userData.preserveWalkFinish=true;
  // The mist inside the maze is the glow apart, so the walk can thin it out round a walker inside (src/walk/lounge.js).
  shared.mazeMist=canvas&&Object.assign(shared.glow.clone(),{name:'Lounge_maze_mist'});
  // A paint is a shared material and a colour.
