@@ -47,8 +47,12 @@ const effect=createHydroPortal(),mesh=effect.group,mat=mesh.material;
 close(mesh.position.x-SYNTHWAVE_MURAL.x,.04);close(portal.y-portal.height/2-r.y,1.2);close(arrival.at[0]-SYNTHWAVE_MURAL.x,.8);assert.equal(arrival.yaw,90);
 // Both the coloured oval and its halo fit the actual painted wall at this height.
 const outline=synthwaveMuralOutline().points;
-for(const [z,y] of [[portal.z-portal.width*.625,portal.y-portal.height*.625],[portal.z+portal.width*.625,portal.y+portal.height*.625]]){
+for(const [z,y] of [[portal.z-portal.width*.54,portal.y-portal.height*.54],[portal.z+portal.width*.54,portal.y+portal.height*.54]]){
  assert(contains(outline,[z,y]),'Oval and halo stay inside the painted wall');
+}
+for(const g of [...r.components.galleries,...r.components.links]){
+ if(Math.abs(g.center[0]-portal.x)>g.size[0]/2||Math.abs(g.center[2]-portal.z)>g.size[2]/2||g.center[1]<portal.y)continue;
+ assert(portal.y+portal.height*.54<g.center[1]-g.size[1]-.01,'The complete oval and halo clear the upper gallery underside');
 }
 assert.equal(mat.blending,T.AdditiveBlending);assert(mat.transparent&&!mat.depthWrite&&!mat.toneMapped&&mesh.userData.noCollide);assert(!('near' in effect)&&!('solid' in effect),'No action or collision');
 effect.update(1,new T.Vector3(),false,null);close(mat.uniforms.uTime.value,1);

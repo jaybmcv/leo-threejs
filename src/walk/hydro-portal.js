@@ -5,7 +5,8 @@ import {createSpatial,updateSpatial} from './spatial-audio.js';
 // The exit sits on the Deck 17 mural, centred on the reported approach (yaw 273).
 const FLOOR=SYNTHWAVE_MURAL.paintFloor,X=SYNTHWAVE_MURAL.x+.04;
 const Z=-41.56+(X+138.8)/Math.tan(273*Math.PI/180);
-export const HYDRO_PORTAL=Object.freeze({x:X,y:FLOOR+2.7,z:Z,width:2.2,height:3,floor:FLOOR,range:9});
+// The gallery underside is at 28.02 m; the oval and its halo must both fit below it.
+export const HYDRO_PORTAL=Object.freeze({x:X,y:FLOOR+2.4,z:Z,width:2.2,height:2.4,floor:FLOOR,range:9});
 // Feet arrive at the oval's lower centre, 0.8 m into the room, facing +X. No feature uses this yet.
 export const HYDRO_PORTAL_ARRIVAL=Object.freeze({name:'Hydro-Portal',at:Object.freeze([SYNTHWAVE_MURAL.x+.8,FLOOR+1.2,Z]),yaw:90});
 
@@ -63,7 +64,7 @@ export function createHydroPortal(){
    void main(){
     #include <logdepthbuf_fragment>
     vec2 p=(vUv-.5)*2.7;float r=length(p),a=atan(p.y,p.x),t=uTime;
-    if(r>1.25)discard;
+    if(r>1.08)discard;
     float phase=4.*a+13.*log(r+.16)+1.4*t;
     float arms=pow(.5+.5*cos(phase),7.);
     float sparks=pow(.5+.5*cos(phase),24.)*pow(.5+.5*cos(34.*r+2.6*t+sin(7.*a)),24.);
@@ -76,7 +77,7 @@ export function createHydroPortal(){
     ink=mix(ink,vec3(1.,.30,.025),pow(.5+.5*cos(hue+1.5),4.));
     vec3 colour=ink*(arms*1.3*inside+rim*1.7+halo*.3);
     colour+=vec3(1.,.65,.36)*(sparks*3.*inside+2.2*exp(-r*19.));
-    gl_FragColor=vec4(colour,1.-smoothstep(1.15,1.25,r));
+    gl_FragColor=vec4(colour,1.-smoothstep(1.03,1.08,r));
    }`});
  const group=new T.Mesh(new T.PlaneGeometry(HYDRO_PORTAL.width*1.35,HYDRO_PORTAL.height*1.35),material);
  group.name='Hydro_Portal';group.position.set(X,HYDRO_PORTAL.y,Z);group.rotation.y=Math.PI/2;
