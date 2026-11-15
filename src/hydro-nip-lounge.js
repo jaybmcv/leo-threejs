@@ -508,8 +508,9 @@ export function createHydroNipLounge({mirror=1}={}){
  for(const [x,z,w,d] of [[127,15,7,4],[137,15,7,4],[144,16,4,3]].map(([x,z,...rest])=>[x,z+1.5,...rest]))box(M.rug,[w,.02,d],[x,FLOOR+.01,z]);
  [[124.6,14.2,'magenta'],[127.6,16.4,'teal'],[129.6,14,'purple'],[134.8,14.1,'teal'],[138.2,16.5,'magenta'],[140.2,14.3,'purple'],[144.6,16.1,'magenta']].map(([x,z,...rest])=>[x,z+1.5,...rest]).forEach(([x,z,c])=>
   seat('Soft_seat',new T.SphereGeometry(.58,16,10).scale(1,.62,1),M[c],[x,FLOOR+.36,z]));
- [[126.4,13.4],[131,16.2],[133.6,16],[136.2,13.4],[142.7,14.9],[145.6,17.2]].map(([x,z,...rest])=>[x,z+1.5,...rest]).forEach(([x,z],i)=>
-  seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),[M.purple,M.teal,M.magenta][i%3],[x,FLOOR+.095,z]));
+ // Only the two round cushions on the rug beside the photo spot use the crossed-leg pose.
+ [[126.4,13.4],[131,16.2],[133.6,16],[136.2,13.4],[142.7,14.9,'crossLegged'],[145.6,17.2,'crossLegged']].map(([x,z,...rest])=>[x,z+1.5,...rest]).forEach(([x,z,sitPose],i)=>{
+  const o=seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),[M.purple,M.teal,M.magenta][i%3],[x,FLOOR+.095,z]);if(sitPose)o.userData.sitPose=sitPose;});
  for(const [x,z] of [[127.2,15],[137.2,15]].map(([x,z,...rest])=>[x,z+1.5,...rest])){cyl(M.wood,.5,.5,.05,[x,FLOOR+.4,z],18);cyl(M.dark,.08,.12,.38,[x,FLOOR+.19,z],8);
   cyl(M.board,.18,.12,.08,[x,FLOOR+.465,z],12);put(M.leaf,new T.SphereGeometry(.15,8,5,0,Math.PI*2,0,Math.PI/2).translate(x,FLOOR+.49,z));}
  [[125.8,15.8,PINK],[131.6,13.6,AMBER],[136,16.8,GREEN],[139.6,15.6,PURPLE],[143.4,17.4,CYAN],[128.8,13.1,AMBER]].map(([x,z,...rest])=>[x,z+1.5,...rest]).forEach(([x,z,c])=>put(neon(c),new T.IcosahedronGeometry(.09,1).translate(x,FLOOR+.11,z)));

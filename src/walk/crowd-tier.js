@@ -16,14 +16,15 @@ import {furImage} from './fur.js';
 //   crowdLoop({rest, stance, swimming, speed, emote}) -> the loop's name (an emote not recorded stands: idle)
 //   crowdLevels(motion, parts) -> [{error, index: [Uint16Array a part]}], or none when they do not fit the parts
 //   createCrowdTier(scene, {template, motion, most, lean}) -> {begin(camera, {all, most, pxPerM}), place(r, dt,
-//   swimming), end(), count, levels, dispose()}: begin's all draws them in view or not (the selfie booth's lens may see
+//   swimming, sitPose), end(), count, levels, dispose()}: begin's all draws them in view or not (the selfie booth's lens may see
 //   any); its most, fewer than the tier was made for (a slow page); its pxPerM, the pixels a metre at 1 m of depth
 //   (none: every one in full).
 //   template: a walker (avatar.js, merged draws) whose skinned parts give the geometry and materials; motion: the
 //   recording (crowd-motion.json); most: the most visitors drawn; lean: each part in crowd-draw.js leanMaterial's place
 //   of the template's (a phone's, as the near tier's). place(r): a visitor as remotes.js keeps them (cur,
 //   tgt, speed); r.crowd keeps their loop and how far into it they are.
-export function crowdLoop({rest,stance,swimming,speed,emote=null}){
+export function crowdLoop({rest,stance,swimming,speed,emote=null,sitPose=null}){
+ if(rest==='sit'&&sitPose==='crossLegged')return 'crossLegged';
  if(rest==='sit'||rest==='tube')return 'sit';if(rest==='lie')return 'lie';if(swimming)return 'swim';
  if(emote&&stance!=='crouch'&&stance!=='prone'&&speed<=.3)return emote;
  if(stance==='crouch')return speed>.3?'crouchWalk':'crouch';
@@ -120,8 +121,9 @@ export function createCrowdTier(scene,{template,motion,most=1000,lean=false}){
    view.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);frustum.setFromProjectionMatrix(view);
    const e=camera.matrixWorld.elements;eye.set(e[12],e[13],e[14]);ahead.set(-e[8],-e[9],-e[10]).normalize();
    for(let k=0;k<levels.length;k++)reach[k]=pxPerM>0?levels[k].error*pxPerM/LOD_PX:Infinity;},
-  place(r,dt,swimming=false){
-   const c=r.cur,t=r.tgt,clip=clips.get(crowdLoop({rest:t.rest,stance:t.stance,swimming,speed:r.speed,emote:t.emote}))??clips.get('idle');
+  hipHeight:template.hipHeight,
+  place(r,dt,swimming=false,sitPose=null){
+   const c=r.cur,t=r.tgt,clip=clips.get(crowdLoop({rest:t.rest,stance:t.stance,swimming,speed:r.speed,emote:t.emote,sitPose}))??clips.get('idle');
    // Where they are in the loop: kept across a change of loop (a walk into a run keeps its step), each starting somewhere
    // of their own.
    const s=r.crowd??={phase:(idOf(r)*.618)%1};
