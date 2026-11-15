@@ -12,6 +12,7 @@ import {createLoungeEntranceSigns} from '../src/walk/lounge-entrance-signs.js';
 import {VIP_RUNNER} from '../src/v2/lounge-vip-entrance.js';
 import {Colliders,BODY} from '../src/walk/collision.js';
 import {buildRoomShell} from '../src/v2/room-shell.js';
+import {createPaintings} from '../src/walk/paintings.js';
 
 globalThis.document={createElement:()=>createCanvas(1,1)};
 const parent=new T.Group(),roots=addWayfindingGuides(parent),schedule=guideSchedule(layout);
@@ -47,8 +48,13 @@ assert.deepEqual(entrances.solid.position.toArray(),door.center,'Post collision 
 const panel=vip.getObjectByName('Lounge_VIP_marquee_panel');panel.geometry.computeBoundingBox();
 const pb=panel.geometry.boundingBox;
 assert(Math.abs(pb.min.x+pb.max.x)<1e-5,'Marquee is centred above the doorway');
-assert(pb.min.y>2.5&&pb.max.y<3.5,'Marquee fits the existing wall above the opening');
-assert(pb.max.x-pb.min.x>=door.width*2,'Marquee is twice the doorway width');
+assert(pb.min.y>2.5&&pb.max.y<room.y+room.height-door.center[1],'Marquee fits the real wall height above the opening');
+const marquee=new T.Box3();
+for(const o of vip.children){if(o.name==='Lounge_VIP_runner'||o.name==='Lounge_VIP_velvet_ropes'||o.name.startsWith('Lounge_VIP_post_'))continue;marquee.union(new T.Box3().setFromObject(o,true));}
+assert(marquee.min.y>door.center[1]+2.52&&marquee.max.y<room.y+room.height-.02,'Entire marquee, including crest, bulbs and scrolls, stays on the wall header');
+assert(marquee.max.z-marquee.min.z>=door.width*1.75&&marquee.max.z-marquee.min.z<=door.width*2.25,'Complete marquee is roughly twice the doorway width');
+const painting=new T.Box3().setFromObject(createPaintings().groups.find(g=>g.name==='Painting_Orange_Haze_14_1'),true);
+assert(marquee.min.z>painting.max.z+.02,'Marquee and scrollwork leave the unchanged painting frame visible');
 assert(!vip.children.some(o=>o.name.startsWith('Lounge_sign_')),'Deck 19 has no original post sign');
 assert.equal(vip.getObjectByName('Lounge_VIP_warm_bulbs').isInstancedMesh,true);
 assert.equal(vip.getObjectByName('Lounge_VIP_post_shafts').count,10,'Posts are instanced at both edges');

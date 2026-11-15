@@ -26,11 +26,12 @@ export function createLoungeVipEntrance(sprig){
  const instances=(name,geometry,material,positions)=>{const o=new T.InstancedMesh(geometry,material,positions.length);o.name=name;o.userData.noCollide=true;
   positions.forEach((p,i)=>o.setMatrixAt(i,new T.Matrix4().makeTranslation(...p)));group.add(o);return o;};
 
- const shape=outline(),cy=3.03,front=.245;
- add('Lounge_VIP_marquee_panel',new T.ExtrudeGeometry(shape,{depth:.12,bevelEnabled:false,curveSegments:12}).translate(0,cy,.12),body);
- const edge=shape.getSpacedPoints(110).map(p=>new T.Vector3(p.x,p.y+cy,front));
+ // Fit the real 0.7 m wall header and leave the neighbouring painting's frame clear.
+ const shape=outline(),cy=2.85,rise=.68,span=.8,front=.245;
+ add('Lounge_VIP_marquee_panel',new T.ExtrudeGeometry(shape,{depth:.12,bevelEnabled:false,curveSegments:12}).scale(span,rise,1).translate(0,cy,.12),body);
+ const edge=shape.getSpacedPoints(110).map(p=>new T.Vector3(p.x*span,p.y*rise+cy,front));
  add('Lounge_VIP_marquee_rim',new T.TubeGeometry(new T.CatmullRomCurve3(edge.slice(0,-1),true),180,.014,5,true),purple);
- instances('Lounge_VIP_warm_bulbs',new T.SphereGeometry(.026,8,5),neon('Lounge_VIP_bulb',0xffd78c),shape.getSpacedPoints(64).slice(0,-1).map(p=>[p.x*.94,cy+p.y*.82,front+.012]));
+ instances('Lounge_VIP_warm_bulbs',new T.SphereGeometry(.026,8,5),neon('Lounge_VIP_bulb',0xffd78c),shape.getSpacedPoints(64).slice(0,-1).map(p=>[p.x*.94*span,cy+p.y*.82*rise,front+.012]));
 
  // Transparent artwork leaves the scalloped panel and its real bulb border visible.
  const paint=(g,w,h)=>{g.clearRect(0,0,w,h);g.textAlign='center';g.textBaseline='alphabetic';g.lineJoin='round';
@@ -40,10 +41,10 @@ export function createLoungeVipEntrance(sprig){
   for(const sx of [-1,1])sprig(g,w/2+sx*690,300,154);};
  const map=canvasTexture(2048,480,paint);
  globalThis.document?.fonts?.ready.then(()=>{paint(map.image.getContext('2d'),2048,480);map.needsUpdate=true;});
- add('Lounge_VIP_neon_lettering',new T.PlaneGeometry(3.6,.78).translate(0,cy,front+.008),new T.MeshBasicMaterial({name:'Lounge_VIP_lettering',map,transparent:true,toneMapped:false,depthWrite:false}));
+ add('Lounge_VIP_neon_lettering',new T.PlaneGeometry(3.6*span,.78*rise).translate(0,cy,front+.008),new T.MeshBasicMaterial({name:'Lounge_VIP_lettering',map,transparent:true,toneMapped:false,depthWrite:false}));
  // Paired curls sit outside the bulb ring, tight against the wall above the opening.
  for(const side of [-1,1])for(const top of [-1,1]){
-  const pts=[[1.58,.26],[1.86,.43],[2.18,.38],[2.24,.2],[2.1,.18],[2.08,.29]].map(([x,y])=>new T.Vector3(side*x,cy+top*y,front+.012));
+  const pts=[[1.58,.26],[1.86,.43],[2.18,.38],[2.24,.2],[2.1,.18],[2.08,.29]].map(([x,y])=>new T.Vector3(side*x*span,cy+top*y*rise,front+.012));
   add('Lounge_VIP_neon_scroll',new T.TubeGeometry(new T.CatmullRomCurve3(pts),32,.018,6,false),top>0?pink:purple);
  }
 
