@@ -13,7 +13,7 @@ import {newGame as newRun,step,press,beltAt} from './paws-off/rules.js';
 // along the forward wall, between the lounge's front gallery and the foot of its stair. The first two play the ship's
 // games: Alien Cat Invasion (as the telescope does) and Paw Pool (as the Recreation Hall's table does), each dressed in
 // its game's own art; the third, Neon Arena Survival, opens a game from outside Leo in a window over the walk (outside-game.js).
-// The rest are grey "coming soon" cabinets, kept for games still to come. Shapes and neon vary
+// The rest are charcoal "coming soon" cabinets, kept for games still to come. Shapes and neon vary
 // cabinet to cabinet. Past the row's far end from the stair, a second Paws Off station: an arcade treadmill, nose to the
 // wall under a cabinet-style screen and marquee (Paws Off itself, paws-off/game.js, lays the belt and runs the game).
 // Neon is glowing materials and soft additive glows on the wall; no real lights.
@@ -36,11 +36,11 @@ const ROW=[
  {game:'invasion',label:'Play Alien Cat Invasion',shape:'upright',body:0x3a1d5a,side:0x4d2a78,neon:[ORANGE,GREEN]},
  {game:'pool',label:'Play Paw Pool',shape:'wide',body:0x24405a,side:0x2f5370,neon:[CYAN,ORANGE]},
  {game:'neon',kind:'outside',label:'Play Neon Arena Survival',shape:'tall',body:0x2b1850,side:0x3b2470,neon:[PINK,PINK]},
- {shape:'low',body:0xa4a9b0,side:0x8a8f96,neon:[CYAN,CYAN]},
- {shape:'upright',body:0x959aa2,side:0x7b8088,neon:[AMBER,AMBER]},
- {shape:'wide',body:0x9fa4ab,side:0x858a92,neon:[GREEN,GREEN]},
- {shape:'tall',body:0x989da5,side:0x7e838b,neon:[PURPLE,PURPLE]},
- {shape:'upright',body:0xa1a6ad,side:0x878c94,neon:[PINK,CYAN]},
+ {shape:'low',body:0x292d36,side:0x222630,neon:[CYAN,CYAN]},
+ {shape:'upright',body:0x242833,side:0x1e222c,neon:[AMBER,AMBER]},
+ {shape:'wide',body:0x282c35,side:0x21252f,neon:[GREEN,GREEN]},
+ {shape:'tall',body:0x252934,side:0x1f232d,neon:[PURPLE,PURPLE]},
+ {shape:'upright',body:0x292c36,side:0x22252f,neon:[PINK,CYAN]},
 ];
 const GAP=LOUNGE_PLAN.arcadeGap,START=LOUNGE_PLAN.arcadeStart+43,ROW_END=ROW.reduce((x,c)=>x+SHAPES[c.shape].w+GAP,START)-GAP;
 // Paws Off's arcade treadmill: its tower, a little further on than the cabinets are spaced, and its deck in front, as
@@ -165,8 +165,8 @@ export function createArcade(){
  mats.glow=new T.MeshBasicMaterial({name:'Arcade_wall_glow',vertexColors:true,map:glowTex,transparent:true,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false});
  const lists=new Map();
  // (Only the glows keep their texture coordinates.)
- const put=(m,color,geo)=>{const g=geo.index?geo.toNonIndexed():geo;if(m!=='glow')g.deleteAttribute('uv');
-  const col=new T.Color(color),n=g.attributes.position.count,a=new Float32Array(n*3);for(let i=0;i<n;i++)col.toArray(a,i*3);g.setAttribute('color',new T.BufferAttribute(a,3));
+ const put=(m,color,geo,strength=1)=>{const g=geo.index?geo.toNonIndexed():geo;if(m!=='glow')g.deleteAttribute('uv');
+  const col=new T.Color(color).multiplyScalar(strength),n=g.attributes.position.count,a=new Float32Array(n*3);for(let i=0;i<n;i++)col.toArray(a,i*3);g.setAttribute('color',new T.BufferAttribute(a,3));
   if(!lists.has(m))lists.set(m,[]);lists.get(m).push(g);};
  const box=(m,color,[w,h,d],[x,y,z])=>put(m,color,new ReplayGeometry("src/walk/arcade.js:0",T.BoxGeometry,w,h,d).translate(x,y,z));
  const rod=(m,color,a,b,r=.012)=>{const A=new T.Vector3(...a),B=new T.Vector3(...b),len=A.distanceTo(B);
@@ -208,8 +208,8 @@ export function createArcade(){
    box('trim',0x2a2c31,[.22,.3,.02],[cx,.48,d+.01]);for(const ox of [-.05,.05])box('neon',cab.neon[0],[.012,.06,.012],[cx+ox,.55,d+.022]);}
   // The game's own art on the outside of both side panels.
   if(cab.game)for(const sd of [-1,1])panel(art+'-side',ART[art].side,.42,.42,[cx+sd*(w/2+.008),1.3,d*.45],0,sd*Math.PI/2);
-  // A soft glow on the wall behind and the floor in front, in the cabinet's neon.
-  put('glow',cab.neon[0],new ReplayGeometry("src/walk/arcade.js:8",T.PlaneGeometry,w+1.1,2.4).translate(cx,1.25,.012));
+  // A faint wall halo keeps the dark backing visible; the floor glow stays as before.
+  put('glow',cab.neon[0],new ReplayGeometry("src/walk/arcade.js:8",T.PlaneGeometry,w+1.1,2.4).translate(cx,1.25,.012),.16);
   put('glow',cab.neon[1],new ReplayGeometry("src/walk/arcade.js:9",T.PlaneGeometry,w+.6,1.1).rotateX(-Math.PI/2).translate(cx,.012,d+.55));
   // Solid as one plain box.
   const b=new T.Mesh(new ReplayGeometry("src/walk/arcade.js:10",T.BoxGeometry,w,top,d+po));b.position.set(cx,top/2,(d+po)/2);solid.add(b);
@@ -245,7 +245,7 @@ export function createArcade(){
   4.2,1.05,[(START+END)/2,3.25,.03]);
  // (The sign writes no depth, so the glow behind it shows through round the letters.)
  Object.assign(panels.get('sign').material,{transparent:true,depthWrite:false});
- put('glow',PINK,new ReplayGeometry("src/walk/arcade.js:13",T.PlaneGeometry,6,2.2).translate((START+END)/2,3.25,.015));
+ put('glow',PINK,new ReplayGeometry("src/walk/arcade.js:13",T.PlaneGeometry,6,2.2).translate((START+END)/2,3.25,.015),.18);
  // Cabinet positions change the batches; retain only the fixed shape templates.
  for(const [m,gs] of lists){const o=new T.Mesh(nativeMergeGeometries(gs),mats[m]);o.name=mats[m].name;o.castShadow=m==='body'||m==='trim';o.receiveShadow=m!=='glow';gs.forEach(g=>g.dispose());group.add(o);}
  for(const {material,gs} of panels.values()){const o=new T.Mesh(nativeMergeGeometries(gs),material);o.name=material.name;gs.forEach(g=>g.dispose());group.add(o);}

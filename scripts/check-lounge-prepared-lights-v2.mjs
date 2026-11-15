@@ -5,6 +5,15 @@ import {createGardenCommons} from '../src/model.js';
 import {bakeForWalking} from '../src/walk/render-bake.js';
 import {solid} from '../src/walk/collision.js';
 import {retirePreparedLoungeLights,rememberPreparedStatic} from '../src/v2/prepared-static.js';
+import {liveArcadeStations} from '../src/walk/arcade.js';
+import {loungeMoodRegion} from '../src/walk/lounge.js';
+
+// Mood follows the selected room, including the row beyond the old fitting bounds.
+const inside=loungeMoodRegion(),at=p=>inside(new T.Vector3(...p));
+for(const p of [[-89.8,25.95,-35.47],[-88.01,26,-35],[-114.5,26,-40],[-114.5,26,-60]])assert(at(p),'Lounge mood missing at '+p);
+for(const p of Object.values(liveArcadeStations()))assert(at([p[0],p[1]+1.65,p[2]]),'Cabinet approach must keep the lounge mood');
+for(const p of [[-87.9,26,-35],[-141.1,26,-35],[-114.5,26,-23.9],[-114.5,24.2,-40],[-114.5,35.6,-40],[-114.5,34,-60]])assert(!at(p),'Lounge mood spills outside the room at '+p);
+console.log('PASS lounge mood covers the arcade and stays inside the current sloping room');
 
 // Bake real old source fittings, as a warm prepared ship does, with another
 // garden and an overlapping differently named light as preservation witnesses.

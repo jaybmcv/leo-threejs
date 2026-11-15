@@ -148,6 +148,21 @@ assert(serviceBounds(['Laundry_counter','Laundry_machine','Laundry_drum','Parcel
 const chairs=[];source.root.traverse(o=>{if(o.name==='Tail_clearance_chair')chairs.push(o.getWorldPosition(new T.Vector3()));});
 assert.deepEqual(chairs.map(p=>p.toArray()),[[-118.5,24.3,-53],[-116.5,24.3,-53],[-114.5,24.3,-53],[-112.5,24.3,-53]],'Keep all four kitchen chairs');
 const rests=findRestSpots(source.root),seams=[];source.root.traverse(o=>{if(o.name==='Polish_tailored_seam')seams.push(new T.Box3().setFromObject(o,true));});
+// Only the middle seating group moves, centred on the maze door with a 1.75 m approach.
+const rug=source.root.getObjectByName('Lounge_rug'),rugBoxes=[];
+for(let start=0;start<rug.geometry.attributes.position.count;start+=36){const b=new T.Box3();for(let i=start;i<start+36;i++)b.expandByPoint(new T.Vector3().fromBufferAttribute(rug.geometry.attributes.position,i).applyMatrix4(rug.matrixWorld));rugBoxes.push(b);}
+assert.equal(rugBoxes.length,3,'Keep exactly three lounge rugs');
+for(const [i,x,z] of [[0,-119.5,-32.5],[1,-129.5,-45.75],[2,-102.5,-33.5]]){const b=rugBoxes[i],c=b.getCenter(new T.Vector3());close(c.x,x);close(c.z,z);close(b.max.x-b.min.x,i===2?4:7);close(b.max.z-b.min.z,i===2?3:4);}
+close(rugBoxes[1].max.z,-43.75);
+for(const [x,z] of [[-131.7,-44.85],[-128.3,-47.25],[-126.3,-45.05],[-132.9,-46.75],[-130.3,-44.15]])assert(rests.some(s=>s.kind==='sit'&&Math.hypot(s.point.x-x,s.point.z-z)<.01),'Moved cushion has a sit anchor');
+assert(!rests.some(s=>s.height<25.1&&s.point.x>-113.5&&s.point.x<-105.9&&s.point.z>-35&&s.point.z<-29.8),'No old cushion anchors');
+route('Former middle rug centre',[[-109.5,24.3,-33],[-109.5,24.3,-31]]);
+walker.place(new T.Vector3(-129.5,24.3,-49));
+walk([0,0,2.25],3.6,p=>assert(Math.abs(p.x+129.5)<.35&&p.y>=24.29&&p.y<25.1,'Cross the rug on the door centre line'));
+assert(walker.position.z>-41.5&&walker.position.z<-40.5,'Cross the rug and finish inside the maze entrance');
+walk([0,0,-2.25],3.6,p=>assert(Math.abs(p.x+129.5)<.35&&p.y>=24.29&&p.y<25.1,'Return across the rug'));
+assert(walker.position.z<-48.5,'Walk back out beyond the rug');
+console.log('PASS three rugs, moved cushion anchors, bare old footprint and centre-line crossing in both directions');
 for(const x of [-128.5,-125.5,-122.5]){
  route('Former reading chair '+x,[[x,24.3,-59.8],[x,24.3,-54.8]]);
  assert(!rests.some(s=>Math.abs(s.height-24.8)<.5&&Math.hypot(s.point.x-x,s.point.z+56)<1.5),'Invisible chair rest anchor at '+x);
