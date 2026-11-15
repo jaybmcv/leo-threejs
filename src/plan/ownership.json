@@ -3923,7 +3923,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 18,
-      "signature": "fd09e762ef653a0ad740c392541621e3a32a812c7a62c7f7586f25e29822ece7"
+      "signature": "66b10e5cae2e1c0f21744f1d812309abb5672abc9dac61fc3a36d9841a163ed4"
     },
     {
       "source": "src/walk/lounge-entrance-signs.js",
@@ -3936,7 +3936,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 18,
-      "signature": "af7cf41049efe9ce1159cd3e5d9b340f274f58e979ce2ebe26b546fc02677f3b"
+      "signature": "c998bbf95753b25a692bac928129d5aef7f0a94b0d0867d6f12f69abc4ee7b6a"
     },
     {
       "source": "src/walk/lounge-entrance-signs.prepared.js",
@@ -3949,7 +3949,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 18,
-      "signature": "ccc4f1b8154d937982a04af5cd2bf30bbccd7e7baf028b907f798779ee9e405e"
+      "signature": "81879e7396ae6968a044743eddb44b0874309e98eb069718c4e807d1446ef99d"
     },
     {
       "source": "src/walk/lounge-entrance-signs.public.js",
@@ -3962,7 +3962,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 18,
-      "signature": "934687c51d9fe352f4f572caccb81daa7a03b6ecf66599a8d7acfaffcbee5583"
+      "signature": "4c55a7d2de6276d2f36e823eea98753f9682e54ae29755ec7318a8c7a4c7b43d"
     },
     {
       "source": "src/walk/lounge-falls.js",
@@ -5202,7 +5202,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 0,
-      "signature": "3ecc3d4abc4b6c0486535e24180f47954dad922c98556e3ce2d54f820e83451a"
+      "signature": "7e464dd03a55789ce1f6f1e90d7b120f69188b459334496590ff03e07dc73dbc"
     },
     {
       "source": "src/walk/provisions.authoring.js",
