@@ -6,8 +6,8 @@ import {COMMONS} from '../model.authoring.js';
 
 // One tank fills the room glass across three decks. The jaguar throat crosses it,
 // and the treasure entrance opens from the room-side Deck 19 gallery.
-// Coordinates use the lounge template, with the tank's six-metre frame offset.
-export const AQUARIUM={x0:105.7,x1:158.3,back:2.15,glass:5.90,front:5.98,floor:24.3,bed:24.62,top:35.5,deck18:28,tunnel:{x0:132,x1:136,top:28.04}};
+import {AQUARIUM} from './lounge-aquarium-profile.js';
+export {AQUARIUM};
 const A=AQUARIUM,TUN=A.tunnel,WATER=new T.Color(0x073c47);
 const C=hex=>new T.Color(hex);
 const NEON=[0xff3fd0,0xff7a3d,0x8dff5a,0x3df0ff,0xa66bff,0xffe44d,0xff4f7a,0x4dffc3].map(C);

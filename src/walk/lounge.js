@@ -1,5 +1,6 @@
 import layout from '../plan/selected-layout.js';
 import {contains} from '../plan/geometry-v2.js';
+import {onLoungeAtriumWalkway} from '../v2/lounge-light-boundary.js';
 import {fitNativeLounge} from '../v2/skin-retirement.js';
 import * as T from 'three';
 import {roomObject,deltaMatrix,hasFrameOverride,moverOrientation} from '../plan/rooms.js';
@@ -170,5 +171,5 @@ export function inLounge(frame){
 export function loungeMoodRegion(room=layout.rooms.find(r=>r.id==='commons-1')){
  const sections=room.envelope?.length?room.envelope:[{rise:0,height:room.height,polygon:room.polygon}];
  return p=>{const rise=p.y-room.y,s=sections.find(s=>rise>=s.rise&&rise<=s.rise+s.height);
-  return !!s&&contains(s.polygon,[p.x,p.z]);};
+  return !!s&&!onLoungeAtriumWalkway(p)&&contains(s.polygon,[p.x,p.z]);};
 }
