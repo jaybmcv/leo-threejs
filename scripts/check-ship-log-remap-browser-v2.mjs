@@ -57,6 +57,8 @@ try{
  const examples=['pr50','pr55','pr90','pr98','pr99','pr122','pr126','pr128','d6-lane','d10-lane'];report.goThere=[];
  await fs.mkdir('output/phase7/remap-shots',{recursive:true});
  for(const id of examples){const q=table.rows.find(r=>r.id===id),go=await page.evaluate(query=>{const a=globalThis.__p7RemapTest,s=a.readSpot('?'+query),ok=a.go(s);return {ok,actual:a.position(),expected:a.remapSpot(s).at,yaw:a.yaw()}},q.query);report.goThere.push({id,...go});assert(go.ok,id+' native Go there failed');assert(Math.hypot(...go.actual.map((v,i)=>v-go.expected[i]))<.2,id+' Go there displaced');await page.waitForTimeout(80);await page.screenshot({path:'output/phase7/remap-shots/'+id+'.png'});}
+ // Which spots failed, in the output itself: an auto-fix report carries the output, not this PC's files (feedback-inbox #388).
+ if(report.status!=='PASS')console.log('Failing spots: '+JSON.stringify({auditErrors:report.auditErrors,noLanding:report.noLanding,pageErrors:errors.slice(0,5)}));
  assert.equal(report.status,'PASS','Native landing failure: see output/phase7/remap-browser.json');
  console.log(JSON.stringify({status:report.status,positions:report.rows.length,noLanding:report.noLanding,auditErrors:report.auditErrors,pageErrors:errors.length,goThere:report.goThere.length}));
 }catch(e){report.status='FAIL';report.error=String(e.message);throw e;}finally{await fs.writeFile('output/phase7/remap-browser.json',JSON.stringify(report,null,2)+'\n');await browser?.close();await new Promise(r=>server.close(r));}
