@@ -1,5 +1,6 @@
 {
   "commons-1": {
+    "loungeRug": {"at":[143.35,14],"yaw":0},
     "removeGardenPrints": [73],
     "remove": [
       {"part":"Lounge_cat_tree","x":147,"z":18.6}
