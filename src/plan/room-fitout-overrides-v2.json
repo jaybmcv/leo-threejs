@@ -1,6 +1,7 @@
 {
   "commons-1": {
     "moveLoungeSeating": [{"from":[137,16.5],"to":[117,29.75]}],
+    "loungeRug": {"at":[143.35,14],"yaw":0},
     "removeGardenPrints": [73],
     "remove": [
       {"part":"Lounge_cat_tree","x":147,"z":18.6}
