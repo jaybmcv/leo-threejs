@@ -3134,7 +3134,7 @@
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 18,
+      "placements": 19,
       "signature": "e04c44bf325d11d6ab08de065b98c95e6b404d41921fb9846275141d9fd1be18"
     },
     {
@@ -3155,7 +3155,7 @@
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 18,
+      "placements": 19,
       "signature": "d9131d184382222f791a460e3d99021709057fcf3ffc9dbf34c502dfa8f03c50"
     },
     {
@@ -3176,7 +3176,7 @@
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 18,
+      "placements": 19,
       "signature": "cf7af99c67f201d48fa58cac8eac2b739156a312728d8507a207606cbeb96766"
     },
     {
@@ -3197,7 +3197,7 @@
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 18,
+      "placements": 19,
       "signature": "cf5b25da274caa116c51e674b7ea1475fbe1ab0559388478dc970b9eadaa8514"
     },
     {
