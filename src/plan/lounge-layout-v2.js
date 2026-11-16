@@ -2,7 +2,15 @@ import {rectangle} from './geometry-v2.js';
 import fitoutOverrides from './room-fitout-overrides-v2.json' with {type:'json'};
 
 // Shared measured lounge layout. All coordinates are ship metres.
-export const LOUNGE_PLAN={tank:[-140.9,-88.1,-27.98,-24.05],entryX:-112.5,doorZ:-45.8,arcadeWall:-88,arcadeStart:-43.9,arcadeGap:.8,converger:fitoutOverrides['commons-1'].converger};
+export const LOUNGE_PLAN={tank:[-140.9,-88.1,-27.98,-24.05],entryX:-112.5,doorZ:-45.8,arcadeWall:-88,arcadeStart:-43.9,arcadeGap:.8,balconyEnd:-38.75,converger:fitoutOverrides['commons-1'].converger};
+export function applyLoungeBalconyCut(r){
+ if(r?.id!=='commons-1'||!r.components)return;
+ const g=r.components.galleries.find(g=>g.id==='commons-1-end-4');if(!g)return;
+ // Keep only the gallery door's route to the maze tube, including its full floor width.
+ const xs=g.polygon.map(p=>p[0]),x0=Math.min(...xs),x1=Math.max(...xs),z1=Math.max(...g.polygon.map(p=>p[1])),z0=LOUNGE_PLAN.balconyEnd;
+ g.center=[(x0+x1)/2,g.center[1],(z0+z1)/2];g.size=[x1-x0,g.size[1],z1-z0];g.polygon=rectangle(g.center[0],g.center[2],g.size[0],g.size[2]);
+ g.reason='Retain the dry gallery door and maze exit; remove the side walkway to the curved balcony.';
+}
 export function applyConvergerLayout(r){
  if(!r?.components)return;
  const p=r.components.pieces.find(p=>p.name==='munchies converger'),c=LOUNGE_PLAN.converger;
@@ -25,6 +33,7 @@ export function applyLoungeLayout(r){
  const arcade=r.components.pieces.find(p=>p.name==='arcade row with Paws Off treadmill');shape(arcade,-91.9,-88,-43.9,-28.5);
  r.components.pieces.find(p=>p.name==='Haze Maze tower').yaw=Math.PI;
  applyConvergerLayout(r);
+ applyLoungeBalconyCut(r);
  r.aquarium={recess:4.08,canonicalX:[105.7,158.3],worldBounds:LOUNGE_PLAN.tank,reason:'Full glass length on three decks, with a dry room-side upper gallery.'};
  r.frontRecess={metres:4.08,reason:'Aligned jaguar throat through the tank at the room glass.'};
  r.contentContract.pieceMoves=r.components.pieces.map(p=>({name:p.name,center:p.center,scale:[1,1,1],...(p.yaw?{yaw:p.yaw}:{})}));

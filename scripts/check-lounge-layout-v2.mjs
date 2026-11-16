@@ -22,7 +22,7 @@ import {SWIM,swimWorld,limitSwim,gemNear} from '../src/walk/aquarium-treasure/la
 import {featurePlaces} from '../src/v2/goto-features.js';
 import {mesh,polygonGeometry} from '../src/v2/geometry.js';
 import {createTreasureBoard} from '../server/aquarium-treasure.mjs';
-import {LOUNGE_PLAN} from '../src/plan/lounge-layout-v2.js';
+import {LOUNGE_PLAN,applyLoungeBalconyCut} from '../src/plan/lounge-layout-v2.js';
 
 // Real source furniture, maze, gallery guards and activity colliders, without a full ship build.
 installWalkCanvas(createCanvas);
@@ -76,6 +76,30 @@ assert(walker.position.z>-33&&Math.abs(walker.position.y-24.3)<.05,'Visitor walk
 const ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0)),segment=new T.Line3();
 const clear=([x,y,z])=>{ray.origin.set(x,y+.42,z);const hit=col.raycast(ray,.85);segment.start.set(x,y+.75,z);segment.end.set(x,y+1.65,z);return !!hit&&hit.normal.y>.6&&Math.abs(hit.point.y-y)<.1&&!col.overlaps(segment,.35);};
 const route=(name,points)=>{let count=0;for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],n=Math.ceil(new T.Vector3(...a).distanceTo(new T.Vector3(...b))/.1);for(let j=0;j<=n;j++){const p=a.map((v,k)=>v+(b[k]-v)*j/n);assert(clear(p),name+' blocked at '+JSON.stringify(p));count++;}}console.log('PASS',name,count,'capsule probes');};
+// Cut only Deck 18's side strip. Its maze landing remains accessible from the gallery door.
+const end=r.components.galleries.find(g=>g.id==='commons-1-end-4'),snapshot=JSON.stringify(r.components);
+close(Math.min(...end.polygon.map(p=>p[1])),LOUNGE_PLAN.balconyEnd);
+applyLoungeBalconyCut(r);assert.equal(JSON.stringify(r.components),snapshot,'The cut is idempotent on a rebuilt layout');
+for(let x=-140.4;x<=-137.6;x+=.4)for(let z=-46.8;z<=-39.2;z+=.4){ray.origin.set(x,28.5,z);assert.equal(ground.raycast(ray,.6),null,'Removed walkway still supports feet at '+[x,z]);}
+route('Deck 18 retained maze access',[[-140,28.3,-30],[-139,28.3,-30],[-139,28.3,-37.8],[-137.5,28.3,-37.8]]);
+const guardRay=new T.Raycaster(new T.Vector3(),new T.Vector3(1,0,0),0,1);
+for(const [name,y]of [['V2_garden_guard_glass',28.9],['V2_garden_guard_cap',29.4]]){const guards=structure.getObjectsByProperty('name',name);
+ for(let z=-50.7;z<=-47.4;z+=.1){guardRay.set(new T.Vector3(-139.4,y,z),new T.Vector3(1,0,0));assert(guardRay.intersectObjects(guards).length,'Curved balcony cut needs continuous '+name+' at '+z);}
+ for(let x=-140.7;x<=-137.3;x+=.1){guardRay.set(new T.Vector3(x,y,-39.1),new T.Vector3(0,0,1));assert(guardRay.intersectObjects(guards).length,'Maze balcony cut needs continuous '+name+' at '+x);}
+ assert(guards.every(o=>name.endsWith('_glass')||o.material.color.getHex()===0xff6b20),'Retain the orange cap material');
+}
+for(const o of source.root.getObjectsByProperty('isMesh',true).filter(o=>o.name.startsWith('Lounge_'))){const p=o.geometry.attributes.position,v=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);assert(!(v.x>-137.2&&v.x<-136.3&&v.z>-47.1&&v.z<-39.2&&v.y>25.4&&v.y<28.1),'Floating dressing beneath removed walkway: '+o.name+' '+v.toArray()+' '+Array.from(o.geometry.attributes.color?.array.slice(i*3,i*3+3)||[]));}}
+walker.place(new T.Vector3(-134.99,28.3,-51.77));walk([-1.258,0,1.865],3,p=>assert(Math.abs(p.y-28.3)<.06,'Near cut rail must prevent a fall'));
+assert(walker.position.z<-47.4,'Near rail stops the approach');console.log('Near cut stop',walker.position.toArray());
+walk([1.258,0,-1.865],1.7);
+const rear=r.components.galleries.find(g=>g.id==='commons-1-rear-4'),escape=[-130,-125,-120,-115,-110,-105,-100,-95,-91.5].map(x=>[x,28.3,rear.polygon.find(p=>p[0]===x)[1]-2]);escape.push([-90.6,28.3,escape.at(-1)[2]]);
+route('Curved balcony to retained stair',[walker.position.toArray(),...escape]);
+for(const target of escape){let steps=0;const aim=new T.Vector3(...target);while(walker.position.distanceTo(aim)>.1&&steps++<900){const wish=aim.clone().sub(walker.position);wish.y=0;walker.step(1/60,wish.normalize().multiplyScalar(2.25),false);assert(Math.abs(walker.position.y-28.3)<.06,'Curved balcony escape stays supported');}assert(walker.position.distanceTo(aim)<.1,'Cannot reach retained stair route '+target);}
+walk([0,0,2.25],1);assert(walker.position.y<28&&walker.position.y>26.5,'Visitor leaves the balcony down the retained stairs');
+walker.place(new T.Vector3(-139,28.3,-37.8));walk([0,0,-2.25],2,p=>assert(Math.abs(p.y-28.3)<.06,'Far cut rail must prevent a fall'));
+assert(walker.position.z>-38.5,'Far rail stops the approach');console.log('Far cut stop',walker.position.toArray());
+walk([0,0,2.25],3.4,p=>assert(Math.abs(p.y-28.3)<.06,'Door approach remains supported'));assert(walker.position.z>-31,'Visitor can return to the gallery door');
+console.log('PASS Deck 18 side cut: no floor or hanging remnants, continuous glass guards, controller stops and retained maze access');
 route('R1 maze lower exit',[[-132.25,28.3,-37.8],[-139,28.3,-37.8],[-139,28.3,-30],[-140.5,28.3,-30]]);
 route('R2 lift Deck 18',[[-89.8,28.3,-48.9],[-86.53,28.3,-48.9]]);
 for(const flight of [0,1]){

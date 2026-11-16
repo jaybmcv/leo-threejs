@@ -29,6 +29,7 @@ const BALCONY_RUNS=[
  {level:LEVELS[1],points:[[120.5,14],[155,14]],offset:[0,.45]},
  {level:LEVELS[1],points:[[109.5,25.07],[112.5,26.001],[120,27.882],[132.5,30.727],[144.5,31.848],[156.5,32.009]],offset:[0,-.45]}
 ];
+const BALCONY_CUT=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1');return 27+r.side*(LOUNGE_PLAN.balconyEnd-r.z);})();
 // The two stair flights at the rear galleries' east end are solid under their treads: the lights keep out of them.
 const STAIR_FLIGHTS=[{level:LEVELS[0],x0:155.1,x1:158.4,z0:30.8,z1:38.6},{level:LEVELS[1],x0:151.8,x1:155,z0:30.8,z1:38.1}];
 const DOME={x:134,z:25,r:6.5},MAZE={x0:114+v2MazeFit.dx,x1:120.5+v2MazeFit.dx,z0:19+v2MazeFit.dz,z1:33+v2MazeFit.dz,top:35.2},MUNCH={x:145.5,z:25};
@@ -196,8 +197,8 @@ export function createHydroNipLounge({mirror=1}={}){
   const c=new Float32Array(n.attributes.position.count*3);for(let i=0;i<c.length;i+=3){c[i]=color.r;c[i+1]=color.g;c[i+2]=color.b;}n.setAttribute('color',new T.BufferAttribute(c,3));
   if(uv){const a=n.attributes.uv;for(let i=0;i<a.count;i++){const [u,v]=uv(a.getX(i),a.getY(i));a.setXY(i,u,v);}}return n;};
  // (Loose paints merge apart, as Lounge_*_loose meshes the walk doesn't collide with.)
- let turning=null,piece=null;
- const put=(p,g)=>{if(turning)g.applyMatrix4(turning);if(!p){g.dispose();return;}const key=piece?piece+'|'+p.mat.name:p.loose?p.mat.name+'|loose':p.mat;(lists.get(key)||lists.set(key,{mat:p.mat,loose:!!p.loose,piece,gs:[]}).get(key)).gs.push(tidy(g,p.color,p.uv));};
+ let turning=null,piece=null,omit=false;
+ const put=(p,g)=>{if(turning)g.applyMatrix4(turning);if(!p||omit){g.dispose();return;}const key=piece?piece+'|'+p.mat.name:p.loose?p.mat.name+'|loose':p.mat;(lists.get(key)||lists.set(key,{mat:p.mat,loose:!!p.loose,piece,gs:[]}).get(key)).gs.push(tidy(g,p.color,p.uv));};
  const box=(m,[w,h,d],[x,y,z])=>put(m,new T.BoxGeometry(w,h,d).translate(x,y,z));
  const cyl=(m,rt,rb,h,[x,y,z],seg=12,open=false)=>put(m,new T.CylinderGeometry(rt,rb,h,seg,1,open).translate(x,y,z));
  const ball=(m,r,[x,y,z],detail=1)=>put(m,new T.IcosahedronGeometry(r,detail).translate(x,y,z));
@@ -570,6 +571,8 @@ export function createHydroNipLounge({mirror=1}={}){
  for(const{level,points,offset}of BALCONY_RUNS){const y=level-.32,lengths=points.slice(1).map((b,i)=>Math.hypot(b[0]-points[i][0],b[1]-points[i][1])),len=lengths.reduce((a,b)=>a+b,0),spans=Math.max(1,Math.round(len/4.5));
   const pointAt=t=>{let d=len*t;for(let i=0;i<lengths.length;i++){const part=lengths[i];if(d<=part||i===lengths.length-1){const a=points[i],b=points[i+1],f=part?d/part:0;return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];}d-=part;}return points.at(-1);};
   for(let s=0;s<spans;s++){let prev=null;const n=8;
+   // Retire whole hanging spans over the cut; consume the same seed so the curved edge stays unchanged.
+   omit=points===BALCONY_RUNS[0].points&&pointAt((s+1)/spans)[1]>BALCONY_CUT;
    for(let i=0;i<=n;i++){const t=(s+i/n)/spans,[x,z]=pointAt(t),sag=.35*(1-(2*i/n-1)**2),p=[x,y-sag,z];
     if(tubeAt(x,z,level,.3)||stairAt(x,z,level,.3)){prev=null;continue;}
     if(prev)rod(hang,prev,p,.006,3);if(i<n)put(neon(AMBER),new T.OctahedronGeometry(.05,0).translate(x,y-sag-.06,z));prev=p;}
@@ -582,6 +585,7 @@ export function createHydroNipLounge({mirror=1}={}){
     for(let d=0;d<len;d+=.23)put(M.leaf,new T.OctahedronGeometry(.075,0).scale(1,.4,1.25).rotateY(d*3+k).translate(sx+Math.sin(d*2.3)*.05,py+.1-d,sz+Math.cos(d*2.1)*.05));}}
  }
 
+ omit=false;
  // Blacklight sconces along the rear and end walls, on the floor and both galleries (from tester feedback): a violet tube
  // between dark caps on a back plate, washing the wall round it in violet. Each sits clear of the gallery doors,
  // columns and prints; `n` is the way it faces, into the room.
@@ -593,7 +597,10 @@ export function createHydroNipLounge({mirror=1}={}){
   // (The end wall's prints hang between the ground floor's sconces: src/garden-finish.js.)
   for(const [y,up,ends] of [[FLOOR,2.3,[14,19.5,25,31,37]],[LEVELS[0],1.9,[14,20.5,27,33.5,40]],[LEVELS[1],1.9,[14,20.5,27,33.5,40]]]){
    for(const x of [113.5,119,123.5,128.4,137.4,147.5])sconce(x,y+up,ROOM.z1-.1,[0,0,-1]);
-   for(const z of ends)sconce(ROOM.x0+.1,y+up,z,[1,0,0]);}}
+   for(const z of ends){
+    // These old side fixtures stood on the retired walkway edge, away from the mural wall.
+    if(y<=LEVELS[0]&&z>BALCONY_CUT&&z<BALCONY_RUNS[0].points.at(-1)[1])continue;
+    sconce(ROOM.x0+.1,y+up,z,[1,0,0]);}}}
 
  // The credit plaque by the entrance.
  {const at=[140.8,FLOOR,10.6];cyl(M.dark,.05,.05,1.1,[at[0],FLOOR+.55,at[2]+.08],8);box(M.dark,[.5,.03,.5],[at[0],FLOOR+.015,at[2]+.08]);
