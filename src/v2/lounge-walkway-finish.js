@@ -62,10 +62,27 @@ export function partitionLoungeWalkway(geometry,plan){
  for(const [kind,values]of Object.entries(outputs)){
   if(!values.length)continue;const g=new T.BufferGeometry();let offset=0;
   for(const [name,a]of ordered){const data=new Float32Array(values.length/stride*a.itemSize);for(let i=0;i<values.length/stride;i++)for(let k=0;k<a.itemSize;k++)data[i*a.itemSize+k]=values[i*stride+offset+k];g.setAttribute(name,new T.BufferAttribute(data,a.itemSize));offset+=a.itemSize;}
-  if(kind==='carpet'){const uv=g.attributes.uv,pos=g.attributes.position;for(let i=0;i<uv.count;i++)uv.setXY(i,pos.getX(i)/.7,pos.getZ(i)/.7);}
+  if(kind==='carpet'&&g.attributes.uv){const uv=g.attributes.uv,pos=g.attributes.position;for(let i=0;i<uv.count;i++)uv.setXY(i,pos.getX(i)/.7,pos.getZ(i)/.7);}
   result[kind]=g;
  }
  return result;
+}
+
+// After collision is built, remove only covered corridor tops from the drawing.
+// Otherwise the bake's overlap nudges can lift their plain backing through the finish.
+export function retireLoungeWalkwayBacking(root,layout){
+ const plan=loungeWalkwayPlan(layout),sources=[];root.updateMatrixWorld(true);
+ root.traverse(o=>{if(o.isMesh&&o.name==='V2_corridor_floor'&&o.material?.name==='V2_floor'&&!o.userData.loungeWalkwayBackingRetired)sources.push(o);});
+ let retired=0;
+ for(const o of sources){
+  const original=o.geometry,box=new T.Box3().setFromObject(o),r=plan.outer;
+  if(box.max.x<=r[0]||box.min.x>=r[1]||box.max.z<=r[2]||box.min.z>=r[3]||Math.abs(box.max.y-plan.y-.008)>.001)continue;
+  const flat=(original.index?original.toNonIndexed():original.clone()).applyMatrix4(o.matrixWorld).translate(0,.002,0),pieces=partitionLoungeWalkway(flat,plan);flat.dispose();
+  if(!pieces.carpet&&!pieces.gold){pieces.floor?.dispose();continue;}
+  o.geometry=pieces.floor||new T.BufferGeometry();o.geometry.translate(0,-.002,0).applyMatrix4(o.matrixWorld.clone().invert());
+  o.userData.loungeWalkwayBackingRetired=true;pieces.carpet?.dispose();pieces.gold?.dispose();retired++;
+ }
+ return retired;
 }
 
 let materials;

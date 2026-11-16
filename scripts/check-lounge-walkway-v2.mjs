@@ -7,8 +7,9 @@ import {installWalkCanvas} from '../src/walk/canvas.js';
 import {polygonGeometry,floor,bounds} from '../src/v2/geometry.js';
 import {buildCorridorFloors} from '../src/v2/corridor-floor-union.js';
 import {applyPublicFinishKit} from '../src/v2/finish-kit.js';
-import {loungeWalkwayPlan} from '../src/v2/lounge-walkway-finish.js';
+import {loungeWalkwayPlan,retireLoungeWalkwayBacking} from '../src/v2/lounge-walkway-finish.js';
 import {bakeForWalking} from '../src/walk/render-bake.js';
+import {Colliders,solid} from '../src/walk/collision.js';
 
 installWalkCanvas(createCanvas);
 const plan=loungeWalkwayPlan(layout),deck=layout.decks[18],root=new T.Group(),structure=new T.Group();structure.name='V2_structure';root.add(structure);
@@ -47,10 +48,15 @@ const carpet=finishes.filter(o=>o.name==='V2_lounge_walkway_carpet'),gold=finish
 for(const o of [...carpet,...gold]){assert.equal(o.userData.noCollide,true);const p=o.geometry.attributes.position;for(let i=0;i<p.count;i++)assert([32.302,32.310].some(y=>Math.abs(p.getY(i)-y)<.00001),'Finish stays at its original slab or corridor hex height');}
 ray.ray.origin.set(-120,32.35,-21);const corridorHit=ray.intersectObjects(finishes)[0];assert.equal(corridorHit.object.material.name,'Lounge_walkway_black_velvet');assert(Math.abs(corridorHit.point.y-32.310)<.00001,'Carpet replaces the raised corridor finish at its existing height');
 assert.equal(carpet[0].material.roughness,.96);assert.equal(carpet[0].material.metalness,0);assert.equal(carpet[0].material.map.image.width,128);assert.equal(gold[0].material.metalness,.55);
+const collision=new Colliders();collision.addStatic(root,solid);collision.commit();const collisionPositions=[...collision.bands.values()].map(b=>({b,positions:b.geometry.attributes.position.array.slice()}));
+assert(retireLoungeWalkwayBacking(root,layout)>0,'Covered corridor backing must retire after collision');assert.equal(retireLoungeWalkwayBacking(root,layout),0,'Backing retirement must be idempotent');
 const baked=bakeForWalking(root),bakedFinishes=[];for(const band of baked.bands.values())band.traverse(o=>{if(o.isMesh&&/^Lounge_walkway_/.test(o.material.name))bakedFinishes.push(o);});
+for(const {b,positions}of collisionPositions)assert.deepEqual(b.geometry.attributes.position.array,positions,'Render retirement must preserve collision triangles');
+const drawn=[...baked.bands.values()];for(const [x,z]of [[-142,-28],[-120,-21],[-90,-21],[-100,-19.3]]){ray.ray.origin.set(x,32.35,z);const top=ray.intersectObjects(drawn,true)[0];assert.equal(top?.object.material.name,'Lounge_walkway_black_velvet','The baked corridor backing must not protrude above the carpet at '+[x,z]);}
 for(const name of ['Lounge_walkway_black_velvet','Lounge_walkway_gold_transition']){const parts=bakedFinishes.filter(o=>o.material.name===name);assert(parts.length,'Finish survives the public walk bake: '+name);for(const o of parts)assert(o.material.polygonOffset,'Depth bias survives material batching');}
 // Nearby decks still have just their existing hex finish.
 for(const number of [17,18]){const root=new T.Group(),slab=new T.Mesh(new T.PlaneGeometry(4,4).rotateX(-Math.PI/2).translate(-145,layout.decks[number-1].y,-10),floor);slab.name='Deck_slab';slab.userData.v2Deck=number;root.add(slab);applyPublicFinishKit({root,inside:root},layout,{decks:[number]});assert(!root.children.some(o=>o.name.startsWith('V2_lounge_walkway_')));}
 const source=f=>fs.readFileSync(f,'utf8').replaceAll('\r\n','\n').replaceAll('.authoring.js','.js');assert.equal(source('src/v2/finish-kit.js'),source('src/v2/finish-kit.authoring.js'),'Authoring and public finish producers must agree');
+assert.equal(source('src/v2/render-bake.js'),source('src/v2/render-bake.authoring.js'),'Both bake producers must retire covered backing');
 console.log('PASS Deck 19 carpet, 65 mm transitions, unchanged tile/landings/interior/void, conserved top area, level non-solid finishes and Decks 17/18');
 console.log(JSON.stringify(plan));
