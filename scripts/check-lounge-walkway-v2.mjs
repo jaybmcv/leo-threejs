@@ -10,8 +10,14 @@ import {applyPublicFinishKit} from '../src/v2/finish-kit.js';
 import {loungeWalkwayPlan,retireLoungeWalkwayBacking} from '../src/v2/lounge-walkway-finish.js';
 import {bakeForWalking} from '../src/walk/render-bake.js';
 import {Colliders,solid} from '../src/walk/collision.js';
+import {LOUNGE_PLAN,applyLoungeBalconyCut} from '../src/plan/lounge-layout-v2.js';
 
 installWalkCanvas(createCanvas);
+// This Deck 18 cut must leave the Deck 19 walkway and every other gallery untouched.
+{const r=structuredClone(layout.rooms.find(r=>r.id==='commons-1')),saved=structuredClone(r.components.galleries.filter(g=>g.id!=='commons-1-end-4'));
+ const end=r.components.galleries.find(g=>g.id==='commons-1-end-4');end.polygon=[[-141,-47.3770888],[-137,-47.3770888],[-137,-28],[-141,-28]];applyLoungeBalconyCut(r);
+ assert.deepEqual(r.components.galleries.filter(g=>g.id!=='commons-1-end-4'),saved);assert.equal(Math.min(...end.polygon.map(p=>p[1])),LOUNGE_PLAN.balconyEnd);
+}
 const plan=loungeWalkwayPlan(layout),deck=layout.decks[18],root=new T.Group(),structure=new T.Group();structure.name='V2_structure';root.add(structure);
 const rect=(x0,x1,z0,z1)=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]],geometry=polygonGeometry(rect(-160,-80,-35,5),deck.slab.holes.map(h=>h.polygon),deck.y,.24),slab=new T.Mesh(geometry,floor);slab.name='Deck_slab';slab.userData.v2Deck=19;structure.add(slab);
 // Use the real raised corridor producer as well as the slab: its top is 8 mm higher.
