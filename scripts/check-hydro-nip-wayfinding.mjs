@@ -1,3 +1,10 @@
+import '../src/model.js';
+import {createHash} from 'node:crypto';
+import {createLoungeEntranceSigns} from '../src/walk/lounge-entrance-signs.js';
+import {VIP_RUNNER} from '../src/v2/lounge-vip-entrance.js';
+import {Colliders,BODY} from '../src/walk/collision.js';
+import {buildRoomShell} from '../src/v2/room-shell.js';
+import {createPaintings} from '../src/walk/paintings.js';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {createCanvas} from '@napi-rs/canvas';
@@ -33,3 +40,46 @@ assert(ray.intersectObject(ceiling).some(h=>Math.abs(h.point.y-floor-HYDRO_NIP_H
 const lights=hall.getObjectByName('V2_commons_hall_lights'),p=lights.geometry.attributes.position,idx=lights.geometry.index,triangle=new T.Triangle();
 for(let i=0;i<(idx?.count||p.count);i+=3){for(let k=0;k<3;k++)triangle[['a','b','c'][k]].fromBufferAttribute(p,idx?idx.getX(i+k):i+k).applyMatrix4(lights.matrixWorld);assert(!box.intersectsTriangle(triangle),'Hanger must not clip a ceiling light');}
 console.log('PASS: only jaguar plaque removed; floor arrow retained; two readable faces, ceiling attachment, light clearance and 2.52 m headroom');
+
+const entrances=createLoungeEntranceSigns(),[vip,retained]=entrances.groups;
+const room=layout.rooms.find(r=>r.id==='commons-1'),door=room.galleryDoors.find(d=>d.deck===19),r=VIP_RUNNER;
+assert.deepEqual(vip.position.toArray(),door.center,'VIP dressing uses the real Deck 19 doorway');
+assert.deepEqual(entrances.solid.position.toArray(),door.center,'Post collision uses the same doorway frame');
+const panel=vip.getObjectByName('Lounge_VIP_marquee_panel');panel.geometry.computeBoundingBox();
+const pb=panel.geometry.boundingBox;
+assert(Math.abs(pb.min.x+pb.max.x)<1e-5,'Marquee is centred above the doorway');
+assert(pb.min.y>2.5&&pb.max.y<room.y+room.height-door.center[1],'Marquee fits the real wall height above the opening');
+const marquee=new T.Box3();
+for(const o of vip.children){if(o.name==='Lounge_VIP_runner'||o.name==='Lounge_VIP_velvet_ropes'||o.name.startsWith('Lounge_VIP_post_'))continue;marquee.union(new T.Box3().setFromObject(o,true));}
+assert(marquee.min.y>door.center[1]+2.52&&marquee.max.y<room.y+room.height-.02,'Entire marquee, including crest, bulbs and scrolls, stays on the wall header');
+assert(marquee.max.z-marquee.min.z>=door.width*1.75&&marquee.max.z-marquee.min.z<=door.width*2.25,'Complete marquee is roughly twice the doorway width');
+const painting=new T.Box3().setFromObject(createPaintings().groups.find(g=>g.name==='Painting_Orange_Haze_14_1'),true);
+assert(marquee.min.z>painting.max.z+.02,'Marquee and scrollwork leave the unchanged painting frame visible');
+assert(!vip.children.some(o=>o.name.startsWith('Lounge_sign_')),'Deck 19 has no original post sign');
+assert.equal(vip.getObjectByName('Lounge_VIP_warm_bulbs').isInstancedMesh,true);
+assert.equal(vip.getObjectByName('Lounge_VIP_post_shafts').count,10,'Posts are instanced at both edges');
+vip.traverse(o=>{assert(!o.isLight,'No new real-time lights');if(o.isMesh)assert(o.userData.noCollide,'Only separate post proxies are solid');});
+assert.equal(entrances.solid.children.length,10);
+assert(r.length>=6&&r.length<=7&&r.width>=door.width);
+assert(r.surface>.02&&r.surface<.06,'Runner clears the floor finish with no step');
+assert(r.postX-.19>=r.width/2-.02,'Post bases stay beside the runner');
+for(let i=1;i<r.posts.length;i++)assert(r.posts[i]-r.posts[i-1]>=1.5&&r.posts[i]-r.posts[i-1]<=2);
+// Keep the other entrance's exact original geometry, including both posts and both readable faces.
+const hash=createHash('sha256');retained.traverse(o=>{if(!o.geometry)return;hash.update(o.name);
+ for(const [name,a] of Object.entries(o.geometry.attributes))hash.update(name).update(new Uint8Array(a.array.buffer,a.array.byteOffset,a.array.byteLength));
+ if(o.geometry.index)hash.update(new Uint8Array(o.geometry.index.array.buffer));
+});
+assert.equal(hash.digest('hex'),'d7bef2aa30a0f0076500c17fd9f4f387ece55b82bec820405ffec14c1cd0cebd','Deck 18 keeps the complete post-sign geometry');
+retained.traverse(o=>{if(o.isMesh)assert(o.userData.noCollide);});
+// Include the real lounge shell and gallery guards in the clearance probes.
+const shell=new T.Group();buildRoomShell({root:new T.Group()},room,shell);
+const col=new Colliders();col.addStatic(shell);col.addStatic(entrances.solid,()=>true);col.commit();
+const clear=(x,z)=>{const p=vip.localToWorld(new T.Vector3(x,0,z));
+ const body=new T.Line3(p.clone().add(new T.Vector3(0,BODY.step+BODY.radius,0)),p.clone().add(new T.Vector3(0,BODY.height-BODY.radius,0)));
+ assert(!col.overlaps(body,BODY.radius),`Visitor clearance at local ${x},${z}`);
+};
+for(let z=-2.3;z<=r.start+r.length+.8;z+=.12)clear(0,z);
+for(let x=-2.2;x<=2.2;x+=.12)clear(x,r.start+r.length+.8);
+const post=entrances.solid.children[0].getWorldPosition(new T.Vector3());
+assert(col.raycast(new T.Ray(post.clone().add(new T.Vector3(-.5,0,0)),new T.Vector3(1,0,0)),1),'Posts have real collision');
+console.log('PASS: Deck 19 wall marquee, instanced bulbs/posts, 6.6 m runner, real post collision, doorway/end clearance; Deck 18 unchanged');
