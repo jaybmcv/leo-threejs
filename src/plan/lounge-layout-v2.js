@@ -1,7 +1,15 @@
 import {rectangle} from './geometry-v2.js';
+import fitoutOverrides from './room-fitout-overrides-v2.json' with {type:'json'};
 
 // Shared measured lounge layout. All coordinates are ship metres.
-export const LOUNGE_PLAN={tank:[-140.9,-88.1,-27.98,-24.05],entryX:-112.5,doorZ:-45.8,arcadeWall:-88,arcadeStart:-43.9,arcadeGap:.8};
+export const LOUNGE_PLAN={tank:[-140.9,-88.1,-27.98,-24.05],entryX:-112.5,doorZ:-45.8,arcadeWall:-88,arcadeStart:-43.9,arcadeGap:.8,converger:fitoutOverrides['commons-1'].converger};
+export function applyConvergerLayout(r){
+ if(!r?.components)return;
+ const p=r.components.pieces.find(p=>p.name==='munchies converger'),c=LOUNGE_PLAN.converger;
+ p.center=[c.center[0],r.y,c.center[2]];p.yaw=c.yaw;p.size=[5.2,p.size[1],4.42];
+ p.polygon=rectangle(p.center[0],p.center[2]-.61,5.2,4.42);
+ const move=r.contentContract?.pieceMoves.find(p=>p.name==='munchies converger');if(move)Object.assign(move,{center:p.center,yaw:p.yaw});
+}
 export function applyLoungeLayout(r){
  if(!r?.components)return;
  r.door.center[0]=LOUNGE_PLAN.entryX;
@@ -16,6 +24,7 @@ export function applyLoungeLayout(r){
  const head=r.components.pieces.find(p=>p.name==='jaguar gate');shape(head,-115.1,-109.9,-28.3,-24.33);
  const arcade=r.components.pieces.find(p=>p.name==='arcade row with Paws Off treadmill');shape(arcade,-91.9,-88,-43.9,-28.5);
  r.components.pieces.find(p=>p.name==='Haze Maze tower').yaw=Math.PI;
+ applyConvergerLayout(r);
  r.aquarium={recess:4.08,canonicalX:[105.7,158.3],worldBounds:LOUNGE_PLAN.tank,reason:'Full glass length on three decks, with a dry room-side upper gallery.'};
  r.frontRecess={metres:4.08,reason:'Aligned jaguar throat through the tank at the room glass.'};
  r.contentContract.pieceMoves=r.components.pieces.map(p=>({name:p.name,center:p.center,scale:[1,1,1],...(p.yaw?{yaw:p.yaw}:{})}));

@@ -1,5 +1,6 @@
 import {ReplayGeometry,replayMerged} from "../v2/prepared-geometry-replay.public.js";
 import layout from '../plan/selected-layout.js';
+import {contains} from '../plan/geometry-v2.js';
 import {fitPreparedLounge as fitNativeLounge} from '../v2/prepared-runtime.public.js';
 import * as T from 'three';
 import {roomObject,deltaMatrix,hasFrameOverride,moverOrientation} from '../plan/rooms.js';
@@ -109,7 +110,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  // The aquarium: its glass solid everywhere, its tank drawn in the page (null in Node).
  const aquarium=createLoungeAquarium(ship,frame,colliders);
  if(aquarium)aquarium.group.userData={band:bandOf(toWorld(0,aquarium.low,0).y),top:bandOf(toWorld(0,aquarium.top,0).y)};
- const {ROOM}=LOUNGE,room=new T.Box3().setFromPoints([new T.Vector3(ROOM.x0,LOUNGE.FLOOR,ROOM.z0),new T.Vector3(ROOM.x1,LOUNGE.CEILING,ROOM.z1)]);
+ const {ROOM}=LOUNGE,inRoom=loungeMoodRegion();
  const panels=[];root.parent?.parent?.traverse(o=>{if(o.isMesh&&o.name==='Circadian_light')panels.push(o);});for(const o of panels)o.removeFromParent();
  {const sky=createLoungeSky(frame,ROOM,LOUNGE.CEILING-.16,uniforms.uTime);place(sky.geometry,sky.material,'Walk_lounge_glass_roof');}
  const glows=[];root.traverse(o=>{if(o.isMesh&&/^Lounge_(neon_glow|additive_glow)$/.test(o.material?.name)&&!glows.some(g=>g.m===o.material))glows.push({m:o.material,k:o.material.name==='Lounge_neon_glow'?MOOD.neon:MOOD.glow});});
@@ -147,7 +148,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
    mist+=((inside?.12:1)-mist)*k;for(const o of mists)o.material.opacity=o.material.userData.full*mist;
    haze+=((inside?(eye.y<LEVELS[0]?.34:eye.y<LEVELS[1]?.16:0):0)-haze)*k;if(tint)tint.style.opacity=haze.toFixed(3);
    const underwater=inWaterView(eye);waterMix+=((underwater?1:0)-waterMix)*k;if(waterTint)waterTint.style.opacity=waterMix.toFixed(3);
-   mood+=((underwater||room.containsPoint(eye.clone().applyMatrix4(inverse))?1:0)-mood)*k;if(Math.abs(mood-shown)>.002||(mood<.002&&shown)){shown=mood<.002?0:mood;setMood(shown);}
+   mood+=((underwater||inRoom(eye)?1:0)-mood)*k;if(Math.abs(mood-shown)>.002||(mood<.002&&shown)){shown=mood<.002?0:mood;setMood(shown);}
   },
   swingOf,
   // Whether a body is in the room (inLounge, below).
@@ -163,4 +164,12 @@ export function inLounge(frame){
  // Feet stand on the floor, but a body on a low cushion sits its hip height under the seat, so the room reaches a metre below it.
  const box=new T.Box3(new T.Vector3(ROOM.x0,LOUNGE.FLOOR-1,ROOM.z0),new T.Vector3(ROOM.x1,LOUNGE.CEILING,ROOM.z1));
  return p=>box.containsPoint(at.copy(p).applyMatrix4(inverse));
+}
+
+// The current room reaches past the old fittings, including the arcade wall.
+// Follow its height slices so the mood stays inside the lounge's sloping envelope.
+export function loungeMoodRegion(room=layout.rooms.find(r=>r.id==='commons-1')){
+ const sections=room.envelope?.length?room.envelope:[{rise:0,height:room.height,polygon:room.polygon}];
+ return p=>{const rise=p.y-room.y,s=sections.find(s=>rise>=s.rise&&rise<=s.rise+s.height);
+  return !!s&&contains(s.polygon,[p.x,p.z]);};
 }
