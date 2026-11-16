@@ -120,6 +120,10 @@
     "owners": ["commons-1"],
     "via": "inherited"
   },
+  "src/terpene-glassware.js": {
+    "owners": ["commons-1"],
+    "via": "inherited"
+  },
   "src/garden-finish.js": {
     "owners": [
       "@commons"

@@ -6,6 +6,7 @@ import * as T from 'three';
 import {roomObject,deltaMatrix,hasFrameOverride,moverOrientation} from '../plan/rooms.js';
 import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {LOUNGE} from '../hydro-nip-lounge.js';
+import {createTerpeneGlassware} from '../terpene-glassware.js';
 import {createLoungeSky} from './lounge-sky.prepared.js';
 import {createLoungeMural} from './lounge-mural.prepared.js';
 import {createLoungeAquarium,AQUARIUM} from './lounge-aquarium.js';
@@ -129,8 +130,12 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  }
 
  fitNativeLounge(ship,layout,drawn,mural);
+ // Keep the small instanced display live, outside the static bake and hull trimming.
+ root.getObjectByName('Terpene_glassware')?.removeFromParent();
+ const still=createTerpeneGlassware(),display=new T.Group();display.name='Walk_terpene_glassware';display.position.y=floorY;
+ still.group.applyMatrix4(new T.Matrix4().makeTranslation(0,-floorY,0).multiply(frame));display.add(still.group);drawn.push(display);
  return {
-  drawn,doors,
+  drawn,doors,still,
   // The dome's centre on its floor and its radius in the world, for its lullaby (lullaby.js).
   dome:{centre:toWorld(LOUNGE.DOME.x,LOUNGE.FLOOR,LOUNGE.DOME.z),r:LOUNGE.DOME.r},
   // The wall mural's group (null in Node), filed with the deck bands it spans by main.js.
@@ -140,7 +145,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
   // After the merge for drawing: the maze's mist meshes (split by deck band) to thin out.
   // `bodies`: the walker's and every other player's positions; `eye`: the camera's.
   update(dt,bodies,eye){
-   uniforms.uTime.value=time();aquarium?.update();
+   uniforms.uTime.value=time();aquarium?.update();still.update(dt);
    for(const d of doors){const near=bodies.some(b=>Math.abs(b.y-d.centre.y)<DOOR.rise&&Math.hypot(b.x-d.centre.x,b.z-d.centre.z)<DOOR.reach);
     const o=T.MathUtils.clamp(d.open+(near?1:-1)*dt/DOOR.time,0,1);if(o!==d.open){d.open=o;doorsMoved=true;}}
    if(doorsMoved){doorsMoved=false;slideDoors();}
