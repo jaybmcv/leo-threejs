@@ -12,6 +12,9 @@ import {createLoungeEntranceSigns} from '../src/walk/lounge-entrance-signs.js';
 import {VIP_RUNNER} from '../src/v2/lounge-vip-entrance.js';
 import {Colliders,BODY} from '../src/walk/collision.js';
 import {buildRoomShell} from '../src/v2/room-shell.js';
+import {shellParts,cutChartMany} from '../src/v2/hull-prototypes.js';
+import {worldPoint} from '../src/plan/hull-skin-v2.js';
+import {sideGalleryDoorCuts} from '../src/v2/gallery-doorways.js';
 import {createPaintings} from '../src/walk/paintings.js';
 import {createJaguarGate} from '../src/walk/jaguar-gate.js';
 
@@ -63,7 +66,8 @@ assert(!vip.children.some(o=>o.name.startsWith('Lounge_sign_')),'Deck 19 has no 
 assert.equal(vip.getObjectByName('Lounge_VIP_warm_bulbs').isInstancedMesh,true);
 assert.equal(vip.getObjectByName('Lounge_VIP_post_shafts').count,10,'Posts are instanced at both edges');
 vip.traverse(o=>{assert(!o.isLight,'No new real-time lights');if(o.isMesh)assert(o.userData.noCollide,'Only separate post proxies are solid');});
-assert.equal(entrances.solid.children.length,10);
+assert.equal(entrances.solid.children.filter(o=>o.name==='Lounge_VIP_post_collider').length,10);
+assert.equal(entrances.solid.children.length,11,'Ten original posts and one seating collision group');
 assert(r.length>=6&&r.length<=7&&r.width>=door.width);
 assert(r.surface>.02&&r.surface<.06,'Runner clears the floor finish with no step');
 assert(r.postX-.19>=r.width/2-.02,'Post bases stay beside the runner');
@@ -77,6 +81,9 @@ assert.equal(hash.digest('hex'),'d7bef2aa30a0f0076500c17fd9f4f387ece55b82bec8204
 retained.traverse(o=>{if(o.isMesh)assert(o.userData.noCollide);});
 // Include the real lounge shell and gallery guards in the clearance probes.
 const shell=new T.Group();buildRoomShell({root:new T.Group()},room,shell);
+if(room.hullPrototype){const p=layout.hullPrototypes.prototypes.find(p=>p.id===room.id),walls=new T.Mesh(shellParts(p,q=>worldPoint(p.chart,q)).sides);
+ cutChartMany(walls,sideGalleryDoorCuts(room));shell.add(walls);
+}
 const col=new Colliders();col.addStatic(shell);col.addStatic(entrances.solid,()=>true);col.commit();
 const clear=(x,z)=>{const p=vip.localToWorld(new T.Vector3(x,0,z));
  const body=new T.Line3(p.clone().add(new T.Vector3(0,BODY.step+BODY.radius,0)),p.clone().add(new T.Vector3(0,BODY.height-BODY.radius,0)));
@@ -87,3 +94,46 @@ for(let x=-2.2;x<=2.2;x+=.12)clear(x,r.start+r.length+.8);
 const post=entrances.solid.children[0].getWorldPosition(new T.Vector3());
 assert(col.raycast(new T.Ray(post.clone().add(new T.Vector3(-.5,0,0)),new T.Vector3(1,0,0)),1),'Posts have real collision');
 console.log('PASS: Deck 19 wall marquee, instanced bulbs/posts, 6.6 m runner, real post collision, doorway/end clearance; Deck 18 unchanged');
+
+const seating=entrances.groups[2],furniture=entrances.solid.getObjectByName('Lounge_VIP_seating_solid');
+assert.equal(seating.name,'Lounge_VIP_seating');
+assert.deepEqual(seating.position.toArray(),door.center,'Seating uses the real Deck 19 doorway frame');
+assert.equal(entrances.groups.length,3,'Only Deck 19 receives another dressing group');
+seating.updateMatrixWorld(true);
+const localBox=o=>new T.Box3().setFromObject(o,true).applyMatrix4(seating.matrixWorld.clone().invert());
+const seatingBounds=localBox(seating);
+assert(-r.postX-.19-seatingBounds.max.x>=1.2,'All furniture, foliage and overhead dressing clear the nearest rope/post line by 1.2 m');
+assert(seatingBounds.min.y>=.02,'Furniture stands above the existing floor finish');
+assert(localBox(seating.getObjectByName('VIP_seating_velvet')).max.y<=.75,'Sofa backs stay low below the painting');
+seating.traverse(o=>{assert(!o.isLight,'Dressing uses emissive glow only');if(o.isMesh)assert(o.userData.noCollide,'Collision comes only from simple furniture proxies');});
+const types=['VIP_sofa_collider','VIP_table_collider','VIP_planter_collider'];
+assert.deepEqual(types.map(name=>furniture.children.filter(o=>o.name===name).length),[2,2,5]);
+assert.equal(furniture.children.length,9);
+for(const o of furniture.children){
+ const b=localBox(o);assert(b.min.z>=.3,'Furniture stays in front of the painting face');
+ assert(b.max.x<=-r.postX-.19-1.2,'Each solid is clear of the runner and door');
+ const c=new T.Box3().setFromObject(o,true).getCenter(new T.Vector3());
+ assert(col.raycast(new T.Ray(c.clone().add(new T.Vector3(-2,0,0)),new T.Vector3(1,0,0)),2.5),'Every furniture proxy has real collision');
+}
+const artLocal=painting.clone().applyMatrix4(seating.matrixWorld.clone().invert());
+for(const name of ['VIP_seating_foliage',...['pink','purple','green'].map(c=>'VIP_frond_'+c)]){
+ const o=seating.getObjectByName(name),p=o.geometry.attributes.position;
+ for(let i=0;i<p.count;i++){
+  assert(p.getZ(i)>.3,'Fronds stay off the painting face');
+  assert(p.getX(i)<-7.1||p.getX(i)>-3.9,'Plants leave the middle of the painting visible');
+ }
+}
+assert(artLocal.max.y>.75+2.4,'Most of the unchanged painting remains above the low sofas');
+const drops=seating.getObjectByName('VIP_crystal_drops');
+assert(drops.isInstancedMesh&&drops.count>=48,'Shared faceted crystal drops');
+assert(localBox(drops).min.y>=3,'Lowest crystal has at least 3 m headroom');
+for(const name of ['VIP_candle_bodies','VIP_candle_holders','VIP_candle_flames'])assert.equal(seating.getObjectByName(name).count,12,'Four table candles and eight chandelier candles share instances');
+const support=seating.getObjectByName('VIP_chandelier_bracket'),sb=localBox(support);
+assert(sb.min.x<artLocal.min.x-.2&&sb.max.x>=-5,'Visible bracket starts outside the painting and reaches the chandelier');
+const mount=seating.localToWorld(new T.Vector3(-8.6,3.04,.3));
+const wallHit=col.raycast(new T.Ray(mount,new T.Vector3(1,0,0)),.5);
+assert(wallHit&&Math.abs(wallHit.point.x-door.center[0])<.2,'Bracket plate bolts to the real wall near its top');
+assert(3.04+.15<=room.y+room.height-door.center[1],'Mount fits below the real wall top');
+for(let z=1.95;z<=8;z+=.1)clear(-5,z);
+for(let x=-6.9;x<=-3.9;x+=.1)clear(x,1.95);
+console.log('PASS: Deck 19 low sofas, two marble tables, five neon plants, instanced candles/crystals, wall-attached chandelier, painting/rope clearance and walkable seating aisle');
