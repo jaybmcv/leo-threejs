@@ -3966,8 +3966,8 @@
       "features": [],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 18,
-      "signature": "66b10e5cae2e1c0f21744f1d812309abb5672abc9dac61fc3a36d9841a163ed4"
+      "placements": 19,
+      "signature": "ef62f27ee47e9c4cfad2eb0ee8dcfb287ca8808da02c21bf97ee0767ae7996c4"
     },
     {
       "source": "src/walk/lounge-entrance-signs.js",
@@ -3979,8 +3979,8 @@
       "features": [],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 18,
-      "signature": "c998bbf95753b25a692bac928129d5aef7f0a94b0d0867d6f12f69abc4ee7b6a"
+      "placements": 19,
+      "signature": "4dd7027269d827b1f5d25d808fc0a68bb9f63e5bec642a69951b136638753b30"
     },
     {
       "source": "src/walk/lounge-entrance-signs.prepared.js",
@@ -3992,8 +3992,8 @@
       "features": [],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 18,
-      "signature": "81879e7396ae6968a044743eddb44b0874309e98eb069718c4e807d1446ef99d"
+      "placements": 19,
+      "signature": "4d72695d880fe803fdbc7cf56aa3b2711067c461500928a6b13f5a9f24210c91"
     },
     {
       "source": "src/walk/lounge-entrance-signs.public.js",
@@ -4005,8 +4005,8 @@
       "features": [],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 18,
-      "signature": "4c55a7d2de6276d2f36e823eea98753f9682e54ae29755ec7318a8c7a4c7b43d"
+      "placements": 19,
+      "signature": "5cdd40cb6c9dc95cc0b0a002c5e9e3ff74531eadf17145d97ceff873190dc134"
     },
     {
       "source": "src/walk/lounge-falls.js",
