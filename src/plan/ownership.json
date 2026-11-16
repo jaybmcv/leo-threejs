@@ -400,7 +400,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 131,
-      "signature": "5bd9b9fe5de4629aa674146a8876d7f1649de4be078d7501c373cef2e381f145"
+      "signature": "ee04ba09994274d474e5626717ae988ff90920b80239a104364019a0de6aaa23"
     },
     {
       "source": "src/interior-polish.js",
@@ -3002,17 +3002,16 @@
     {
       "source": "src/walk/hydro-portal.js",
       "rooms": [
-        "commons-1"
+        "commons-1",
+        "circulation-6"
       ],
       "via": "inherited",
       "fixed": false,
-      "features": [
-        "Hydro_Portal"
-      ],
+      "features": [],
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "10fb69c558f5d3d9017b61553aea2de2c0a584f25504bf42758c35dec08ce418"
+      "signature": "8dda66a80780215ef965a568dae9f5e0f62e8624a6a88dbd813637a01d2e9389"
     },
     {
       "source": "src/walk/hydroponics.js",
@@ -4207,7 +4206,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "18bf0ef40aae2b4f157b68c672bd3335e2e99aca47d811fa0f6677865459d82e"
+      "signature": "46401ac5e6d8452ae9be06c84454dc0765c30c1cb07eda34686c7afe6436f0f1"
     },
     {
       "source": "src/walk/main.js",
@@ -4229,7 +4228,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "c128655ebf4059c3d5111a1589e87b0e446ea406433886d6ae840ba5f95d0e15"
+      "signature": "3e047069ae9cd8b8f089f54ef4a7960aa3d4ed732214a9f4c5f482ddefebb0ba"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4249,7 +4248,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "8ef4983203b982ae112ad56c52c69723d036024e128cbb2f269f9ca8b25d2804"
+      "signature": "e6959ed249dc10175972f597684e5cb3c883a445a826b5fb8307e99cddac44a9"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4269,7 +4268,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "cb24fd6c0a8c26412963a79f65f6c7105b9a202de9589c795a8de3c034287413"
+      "signature": "60d53a36722320780948480a2deb1cfab38bd8acfb4cca7a86c3f75feb91d608"
     },
     {
       "source": "src/walk/marks.authoring.js",

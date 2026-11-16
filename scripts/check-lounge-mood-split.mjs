@@ -34,7 +34,7 @@ async function edited(file,from,to,test){
  const text=await fs.readFile(file,'utf8');assert.equal(text.split(from).length,2,file+' no longer has '+from);
  try{await fs.writeFile(file,text.replace(from,to));await test();}finally{await fs.writeFile(file,text);}
 }
-for(const [from,to,what]of [['hemi:.32','hemi:.3','mood light level'],['LOUNGE.FLOOR-1,ROOM.z0','LOUNGE.FLOOR-1.2,ROOM.z0','room test for the catnip face'],['mood+=((underwater||inRoom(eye)','mood+=((inRoom(eye)','mood trigger']])
+for(const [from,to,what]of [['hemi:.32','hemi:.3','mood light level'],['p.y>=room.y-1&&','p.y>=room.y-1.2&&','room test for the catnip face'],['mood+=((underwater||inRoom(eye)','mood+=((inRoom(eye)','mood trigger']])
  await edited(MOOD,from,to,async()=>assert.equal((await geometryIdentity()).hash,before.hash,'A '+what+' edit must not change the geometry fingerprint'));
 for(const file of ROOM)await edited(file,'SWAY={amp:.075','SWAY={amp:.08',async()=>{
  const files=changedInputs(before.files,(await geometryIdentity()).files);

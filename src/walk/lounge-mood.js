@@ -40,7 +40,7 @@ export function createLoungeMood(lounge,light=null){
   for(const {m,k} of lit)m.color.setScalar(1+(k-1)*t);
  }
  // Whether a body is in the room (inLounge, below): the catnip face (main.js) and the lounge music (lounge-sound.js).
- lounge.inside=inLounge(frame);
+ lounge.inside=inLounge();
  return {
   // After the lounge's own step (doors and hammocks), with the camera's position.
   update(dt,eye){
@@ -53,14 +53,11 @@ export function createLoungeMood(lounge,light=null){
  };
 }
 
-// Whether a body's feet are in the lounge, galleries and hammocks included: its catnip face (catnip-face.js) shows while
-// they are. `frame` is the lounge's own frame in the world. Every page works this out from each visitor's own position,
-// so nothing more goes over Leo live.
-export function inLounge(frame){
- const {ROOM}=LOUNGE,inverse=frame.clone().invert(),at=new T.Vector3();
- // Feet stand on the floor, but a body on a low cushion sits its hip height under the seat, so the room reaches a metre below it.
- const box=new T.Box3(new T.Vector3(ROOM.x0,LOUNGE.FLOOR-1,ROOM.z0),new T.Vector3(ROOM.x1,LOUNGE.CEILING,ROOM.z1));
- return p=>box.containsPoint(at.copy(p).applyMatrix4(inverse));
+// Body effects and music follow the same native room as the lighting, including the portal wall.
+export function inLounge(){
+ const room=layout.rooms.find(r=>r.id==='commons-1'),inside=loungeMoodRegion(room),at=new T.Vector3();
+ // A seated body's feet can sit below a low cushion, up to a metre below the floor.
+ return p=>p.y>=room.y-1&&inside(at.copy(p).setY(Math.max(p.y,room.y)));
 }
 
 // The current room reaches past the old fittings, including the arcade wall.

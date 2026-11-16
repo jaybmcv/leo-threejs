@@ -22,6 +22,7 @@ import {SWIM,swimWorld,limitSwim,gemNear} from '../src/walk/aquarium-treasure/la
 import {featurePlaces} from '../src/v2/goto-features.js';
 import {mesh,polygonGeometry} from '../src/v2/geometry.js';
 import {createTreasureBoard} from '../server/aquarium-treasure.mjs';
+import {LOUNGE_PLAN} from '../src/plan/lounge-layout-v2.js';
 
 // Real source furniture, maze, gallery guards and activity colliders, without a full ship build.
 installWalkCanvas(createCanvas);
@@ -95,10 +96,10 @@ route('R9 old rear light',[[-121,24.3,-57],[-121,24.3,-59.5],[-121,24.3,-57]]);
 // water), while the floor 2 m in front of it is clear.
 assert(!clear([-100,24.3,-28])&&!clear([-120,24.3,-28]),'The aquarium glass stays solid over the lounge floor');
 assert(clear([-100,24.3,-30]),'The floor in front of the aquarium is walkable');console.log('PASS aquarium glass blocks, the floor before it is clear');
-// The small entrance cat tree is gone, including its base and both posts. The other two stay solid.
-route('Removed cat tree footprint',[[-99.5,24.3,-36],[-99.5,24.3,-33]]);
-route('Removed cat tree side post',[[-99.05,24.3,-36],[-99.05,24.3,-33]]);
-ray.origin.set(-99.5,24.6,-34.6);close(col.raycast(ray,.5)?.point.y,r.y);
+// The moved counter now occupies this patch. Exclude it to check for the old tree's base and posts.
+const withoutConverger=new Colliders();withoutConverger.addStatic(root,o=>solid(o)&&!o.name.startsWith('Cosmic_Munchies_')&&!o.userData.converger);withoutConverger.commit();
+for(const x of [-99.5,-99.05])for(let z=-36;z<=-33;z+=.1){segment.start.set(x,r.y+.75,z);segment.end.set(x,r.y+1.65,z);assert(!withoutConverger.overlaps(segment,.35),'Removed cat tree remains');}
+ray.origin.set(-99.5,24.6,-34.6);close(withoutConverger.raycast(ray,.5)?.point.y,r.y);
 assert(!clear([-121.9,24.3,-38.5])&&!clear([-133.9,24.3,-51.8]),'The other lounge cat trees stay solid');
 // Reach both floors from the rotated ground door, staying inside the tower.
 const queue=[[-129.5,24.3,-41.4]],seen=new Set(),goals=[[-132.25,28.3,-37.8],[-126.75,32.3,-29]],reached=new Set();
@@ -115,6 +116,33 @@ assert.equal(reached.size,2,'The rotated ground maze must reach both platform ex
 // The old rear tube gap is guarded again, and the shortened Deck 18 link has an end guard.
 for(const p of [[-128.75,32.3,-43.2],[-89.8,28.3,-47.4]]){segment.start.set(p[0],p[1]+.75,p[2]);segment.end.set(p[0],p[1]+1.65,p[2]);assert(col.overlaps(segment,.35),'Missing closed-edge guard '+p);}
 const serviceBounds=names=>{const b=new T.Box3();root.updateMatrixWorld(true);source.root.traverse(o=>{if(o.isMesh&&names.includes(o.name))b.union(new T.Box3().setFromObject(o,true));});return b;};
+// The complete machine moves at source, before collision and rest anchors are collected.
+const machine=serviceBounds(['Cosmic_Munchies_Converger_Lounge_sheen']),sign=serviceBounds(['Cosmic_Munchies_Sign_Lounge_sheen']);
+close(machine.min.x,-100.1);close(machine.max.x,-94.9);close(machine.min.z,-37.5);close(machine.max.z,-33.1);close(machine.max.y,35.63);
+const converger=r.components.pieces.find(p=>p.name==='munchies converger');assert.deepEqual(converger.center,LOUNGE_PLAN.converger.center);close(converger.yaw,-Math.PI/2);
+assert(arcade.solid&&new T.Box3().setFromObject(arcade.solid,true).min.x-machine.max.x>=1.5,'Every cabinet keeps its approach aisle');
+const seats=[];source.root.traverse(o=>{if(o.userData.converger)seats.push(o.getWorldPosition(new T.Vector3()));});
+assert.equal(seats.length,3);for(const p of seats){close(p.z,-37.3);assert(p.x>-100&&p.x<-95,'Stools face open floor');}
+assert(sign.min.y>r.y+2.2&&sign.max.x<-97.5&&sign.min.z>-34.7,'Sign hangs in front toward the jaguar');
+const signMesh=source.root.getObjectByName('Cosmic_Munchies_Sign_Lounge_sheen'),normals=signMesh.geometry.attributes.normal,normalMatrix=new T.Matrix3().getNormalMatrix(signMesh.matrixWorld);
+let front=0;for(let i=0;i<normals.count;i++){const n=new T.Vector3().fromBufferAttribute(normals,i).applyMatrix3(normalMatrix).normalize();if(n.x<-.7&&n.z>.7&&Math.abs(n.y)<.01)front++;}
+assert(front>=6,'Sign board faces 45 degrees toward the entrance');
+// Probe the whole ceiling emitter column against galleries, rails, lights and plants.
+const overhead=new Colliders();overhead.addStatic(root,o=>o.isMesh&&!o.name.startsWith('Cosmic_Munchies_')&&!o.userData.converger);overhead.commit();
+for(let x=-98.8;x<=-96.2;x+=.2)for(let z=-36;z<=-33.4;z+=.2){segment.start.set(x,r.y+3,z);segment.end.set(x,35.64,z);assert(!overhead.overlaps(segment,.03),'Converger cuts overhead dressing');}
+route('R10 old converger footprint',[[-107.72,24.3,-34.93],[-101,24.3,-41],[-96.5,24.3,-45.06473]]);
+route('R11 arcade aisle to photo spot',[[-96.5,24.3,-45.06473],[-93.5,24.3,-45.06473],[-93.5,24.3,-32.5],[-103.5,24.3,-32.5],[-103.5,24.3,-30]]);
+for(let x=-103.8;x<=-99.4;x+=.2)for(let z=-43.6;z<=-38.4;z+=.2)assert(clear([x,r.y,z]),'Old converger footprint has leftover collision');
+walker.place(new T.Vector3(-107.72,r.y,-34.93));
+for(const [x,z] of [[-96.5,-45.06473],[-93.5,-45.06473],[-93.5,-32.5],[-103.5,-32.5],[-103.5,-30]]){
+ const target=new T.Vector3(x,r.y,z);let steps=0;
+ while(walker.position.distanceTo(target)>.12&&steps++<900){const wish=target.clone().sub(walker.position);wish.y=0;wish.normalize().multiplyScalar(2.25);walker.step(1/60,wish,false);assert(Math.abs(walker.position.y-r.y)<.06,'Converger route stays on the lounge floor');}
+ assert(walker.position.distanceTo(target)<.12,'Controller cannot reach '+target.toArray());
+}
+assert(!clear([-97.5,24.3,-34.7]),'The relocated counter stays solid');
+const movedRests=findRestSpots(source.root);for(const p of seats)assert(movedRests.some(s=>Math.hypot(s.point.x-p.x,s.point.z-p.z)<.1),'Moved stool retains its sit anchor');
+assert(!movedRests.some(s=>s.kind==='sit'&&Math.abs(s.point.x+103.6)<.1&&s.point.z>-43&&s.point.z<-39),'Old stool anchors are gone');
+console.log('PASS converger position, overhead clearance, entrance sign, stool anchors and arcade/photo routes');
 // The laundry, parcel lockers and reading bookcases were removed from this room's source (tester feedback).
 assert(serviceBounds(['Laundry_counter','Laundry_machine','Laundry_drum','Parcel_locker','Reading_shelf','Library_end_panel','Library_shelf','Library_book']).isEmpty(),'Removed lounge furnishings are back');
 // The three loose reading chairs and their batched seams leave bare, walkable floor.
