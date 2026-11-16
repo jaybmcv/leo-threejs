@@ -132,8 +132,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const loungeFalls=createLoungeFalls(ship);if(loungeFalls)colliders.addStatic(loungeFalls.solid,()=>true);
  // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
  const jaguarGate=feature('jaguar-gate',ship,()=>createJaguarGate());colliders.addStatic(jaguarGate.solid,()=>true);
- // The marquee signs over the lounge's Deck 19 and 18 entrances (lounge-entrance-signs.js): dressing only, nothing solid.
- const entranceSigns=feature('lounge-entrance-signs',ship,()=>createLoungeEntranceSigns());
+ // Lounge entrance signs and Deck 19's VIP runner: only its small stanchion proxies are solid.
+ const entranceSigns=feature('lounge-entrance-signs',ship,()=>createLoungeEntranceSigns());colliders.addStatic(entranceSigns.solid,()=>true);
  // The arcade row on the Hydro-Nip Lounge's forward wall, Paws Off's treadmill at its far end (arcade.js): solid as plain
  // boxes.
  const arcadeRow=feature('arcade',ship,()=>createArcade());if(arcadeRow)colliders.addStatic(arcadeRow.solid,()=>true);
