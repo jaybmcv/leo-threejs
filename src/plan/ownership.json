@@ -399,8 +399,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 134,
-      "signature": "de275365159ea6c56e931f1a6dd76a7e365adcf47da5245760bf66ca4e76fd1f"
+      "placements": 133,
+      "signature": "8a4b93ede3b503a3caa5475d982afe029c60167e21e7a05256b3bf46b9c210fd"
     },
     {
       "source": "src/interior-polish.js",
@@ -4026,7 +4026,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 0,
-      "signature": "937203b247d558f86b76efb29c58447dd87dd099729ae2b861d8c43684cb2c7d"
+      "signature": "775facbb9a357f98ea27f87dcad16586c5181324a178e019af28b153813bdf03"
     },
     {
       "source": "src/walk/lounge-mural.authoring.js",
