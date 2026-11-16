@@ -1,8 +1,10 @@
 import * as T from 'three';
+import {jaguarGatePosition} from './jaguar-gate-placement.js';
 
 // On the Deck 17 promenade's light-strip line, clear of the jaguar and aquarium.
 // The hall ceiling underside is 3.54 m; the badge leaves 2.52 m below its rim.
-export const HYDRO_NIP_HANGER={at:[-113.5,2.95,-19.4],radius:.43,ceiling:3.54,yaw:Math.PI/2};
+// Follow the doorway centre along the walkway; the badge and its rods move together.
+export const HYDRO_NIP_HANGER={get at(){return [jaguarGatePosition()[0],2.95,-19.4];},radius:.43,ceiling:3.54,yaw:Math.PI/2};
 const LOGO=typeof __HYDRO_NIP_MAIN_LOGO__==='undefined'?null:__HYDRO_NIP_MAIN_LOGO__;
 export function hangHydroNipSign(parent){
  const {at,radius,ceiling,yaw}=HYDRO_NIP_HANGER,depth=.04,group=new T.Group();
