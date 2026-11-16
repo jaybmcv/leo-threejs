@@ -22,7 +22,8 @@ const head=group.getObjectByName('Jaguar_head'),hp=head.geometry.attributes.posi
 assert(head.material.every(m=>!m.flatShading),'The whole head must use smooth shading');
 assert(head.geometry.groups[2].count>0&&head.geometry.groups[3].count>0,'The continuous skin includes the nose and hollow ear faces');
 assert(hp.getY(48*14+10)>3.4,'The skull dome must rise above the brow between the ears');
-assert(head.material[1].emissiveIntensity<.04,'The mouth lining must stay dark rather than resembling a solid orange panel');
+assert.equal(head.material[1].emissive.getHex(),0xff7628,'The inner mouth emits warm orange');
+assert(head.material[1].emissiveIntensity>=.7&&!head.material[1].toneMapped,'The lining must visibly glow without relying on hidden roof tubes');
 assert(group.getObjectByName('Jaguar_neon_wash_glow').material.opacity<.2,'Throat accents must preserve the view into the lounge');
 assert.equal(group.getObjectsByProperty('isLight',true).length,0,'Eyes and throat glow without real-time lights');
 assert(Math.abs(group.position.x+112.5)<.001,'Gate stays on the existing doorway centre');
@@ -48,7 +49,7 @@ for(const side of [-1,1]){
  assert(box.max.y<3.18&&box.min.y>2.82,'Eyes sit on the face below the ears');
 }
 assert(hp.getY(48*M+10)>3.4,'The skull has a full central dome above the muzzle');
-assert(head.material[1].emissiveIntensity<.04,'The throat remains dark stone rather than an opaque orange panel');
+assert(head.material[0].emissiveIntensity<.04,'The outer head stays dark obsidian');
 assert.equal(group.getObjectByName('Jaguar_neon_glow').material.emissive.getHex(),0xff7628,'Throat glow is warm orange');
 const inverse=group.matrixWorld.clone().invert(),world=p=>new T.Vector3(...p).applyMatrix4(group.matrixWorld);
 // The entrance plaque is now suppressed; the head and its sightlines stay intact.
@@ -56,7 +57,7 @@ const guide=guideSchedule(layout).find(r=>r.id==='commons-1');assert.equal(guide
 const scene=new T.Group();scene.add(group);scene.updateMatrixWorld(true);
 const material=h=>Array.isArray(h.object.material)?h.object.material[h.face.materialIndex]:h.object.material;
 const first=(from,to)=>new T.Raycaster(from,to.clone().sub(from).normalize()).intersectObject(scene,true).find(h=>!material(h).transparent);
-const cameras=[[[-110.10,24.31,-21.57],-848,-8],[[-112.5,24.3,-18.5],180,0]].map(([at,yaw,pitch])=>{
+const cameras=[[[-110.10,24.31,-21.57],-848,-8],[[-112.5,24.3,-17.3],180,0],[[-108.34,24.31,-19.62],226,0]].map(([at,yaw,pitch])=>{
  const camera=new T.PerspectiveCamera(62,1280/720,.05,1000),follow=new FollowCamera(camera,{raycast:()=>null});
  follow.mode=at[0]===-110.10?'third':'first';follow.yaw=yaw*Math.PI/180;follow.pitch=pitch*Math.PI/180;follow.update(0,new T.Vector3(...at),COSMO_HEIGHT);camera.updateMatrixWorld(true);return camera;
 });
@@ -72,6 +73,15 @@ for(const camera of cameras){const from=camera.position;
  const noseTargets=[];for(let i=pad.start;i<pad.start+pad.count;i+=3){const p=new T.Vector3();for(let j=0;j<3;j++)p.add(new T.Vector3().fromBufferAttribute(hp,index.getX(i+j)));noseTargets.push(p.multiplyScalar(1/3));}
  noseTargets.sort((a,b)=>Math.hypot(a.x,a.y-2.78)-Math.hypot(b.x,b.y-2.78));
  assert.equal(material(first(from,noseTargets[0].clone().applyMatrix4(head.matrixWorld))).name,'Jaguar_nose','The projecting nose must remain visible');
+ // Visible lining must cover an area inside the arch, rather than just a hidden orange tube.
+ const lining=head.geometry.groups[1];let area=0;
+ for(let i=lining.start;i<lining.start+lining.count;i+=3){
+  const points=Array.from({length:3},(_,j)=>new T.Vector3().fromBufferAttribute(hp,index.getX(i+j)).applyMatrix4(head.matrixWorld));
+  const target=points.reduce((p,v)=>p.add(v),new T.Vector3()).multiplyScalar(1/3),hit=first(from,target),screen=target.clone().project(camera);
+  if(!hit||material(hit)!==head.material[1]||Math.abs(screen.x)>.96||Math.abs(screen.y)>.95||screen.z< -1||screen.z>1)continue;
+  const [a,b,c]=points.map(p=>p.project(camera));area+=Math.abs((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x))*1280*720/8;
+ }
+ assert(area>100,'The orange inner mouth must be exposed in each proof view: '+area+' square pixels');
 }
 const col=new Colliders();col.addStatic(solid,()=>true);
 const floor=new T.Mesh(new T.BoxGeometry(10,.2,16));floor.position.copy(world([0,-.1,0]));floor.updateMatrixWorld(true);col.addStatic(floor,()=>true);col.commit();
@@ -85,4 +95,4 @@ for(const x of [-.55,0,.55]){
  step(-1);assert(walker.position.clone().applyMatrix4(inverse).z<-3.7,'Visitor must cross the mouth and throat into the lounge');
  step(1);assert(walker.position.clone().applyMatrix4(inverse).z>3.2,'Visitor must return through the mouth into the corridor');
 }
-console.log('PASS visible eyes and nose with entrance plaque removed, ceiling, triangle budget and three standing routes in both directions');
+console.log('PASS visible eyes, nose and orange lining, ceiling, triangle budget and three standing routes in both directions');

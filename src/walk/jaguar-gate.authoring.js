@@ -60,7 +60,7 @@ export function createJaguarGate(){
   stone:stone('Jaguar_obsidian',0x08080b),
   nose:stone('Jaguar_nose',0x141419,{roughness:.12}),
   fang:stone('Jaguar_fangs',0x202027,{roughness:.12,emissiveIntensity:.03}),
-  mouth:stone('Jaguar_mouth',0x020203,{roughness:.3,envMapIntensity:.35,emissive:ORANGE,emissiveIntensity:.025}),
+  mouth:stone('Jaguar_mouth',0x020203,{roughness:.3,envMapIntensity:.35,emissive:ORANGE,emissiveIntensity:.8,toneMapped:false}),
   eye:new T.MeshStandardMaterial({name:'Jaguar_eye',color:0x3b2904,emissive:GLOW,emissiveIntensity:1.1,roughness:.22}),
   pupil:new T.MeshBasicMaterial({name:'Jaguar_pupil',color:0x020104}),
   glass:new T.MeshStandardMaterial({name:'Jaguar_throat_glass',color:0xc8dce6,roughness:.04,metalness:0,envMapIntensity:.5,transparent:true,opacity:.09,depthWrite:false,side:T.DoubleSide}),
