@@ -3142,16 +3142,15 @@
         "Jaguar_gate",
         "Jaguar_gate_solid",
         "Jaguar_head",
-        "Jaguar_lower_teeth",
-        "Jaguar_lower_jaw",
+        "Jaguar_eyes",
         "Jaguar_exit_arch"
       ],
       "colliders": [
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 24,
-      "signature": "92e613c62039fee0fe1141ccfaaef9e7d49a6d058347a966d3cf467ce857079a"
+      "placements": 19,
+      "signature": "e04c44bf325d11d6ab08de065b98c95e6b404d41921fb9846275141d9fd1be18"
     },
     {
       "source": "src/walk/jaguar-gate.js",
@@ -3164,16 +3163,15 @@
         "Jaguar_gate",
         "Jaguar_gate_solid",
         "Jaguar_head",
-        "Jaguar_lower_teeth",
-        "Jaguar_lower_jaw",
+        "Jaguar_eyes",
         "Jaguar_exit_arch"
       ],
       "colliders": [
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 24,
-      "signature": "b6c52c5478a75908c50e2f84b4810ce91b0e367ebb102310286b60110a4e1d32"
+      "placements": 19,
+      "signature": "d9131d184382222f791a460e3d99021709057fcf3ffc9dbf34c502dfa8f03c50"
     },
     {
       "source": "src/walk/jaguar-gate.prepared.js",
@@ -3186,16 +3184,15 @@
         "Jaguar_gate",
         "Jaguar_gate_solid",
         "Jaguar_head",
-        "Jaguar_lower_teeth",
-        "Jaguar_lower_jaw",
+        "Jaguar_eyes",
         "Jaguar_exit_arch"
       ],
       "colliders": [
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 24,
-      "signature": "01cb1e76fbd21846e5072eec41669f93a70b2e03a7cf71715650c5f2f275bc9b"
+      "placements": 19,
+      "signature": "cf7af99c67f201d48fa58cac8eac2b739156a312728d8507a207606cbeb96766"
     },
     {
       "source": "src/walk/jaguar-gate.public.js",
@@ -3208,16 +3205,15 @@
         "Jaguar_gate",
         "Jaguar_gate_solid",
         "Jaguar_head",
-        "Jaguar_lower_teeth",
-        "Jaguar_lower_jaw",
+        "Jaguar_eyes",
         "Jaguar_exit_arch"
       ],
       "colliders": [
         "Jaguar_gate_solid"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 24,
-      "signature": "f93126317b1e2cbbaf9876bc0f45a73a66c0909eda3464fcd8a78f722b7fd0cc"
+      "placements": 19,
+      "signature": "cf5b25da274caa116c51e674b7ea1475fbe1ab0559388478dc970b9eadaa8514"
     },
     {
       "source": "src/walk/keel-club.authoring.js",
