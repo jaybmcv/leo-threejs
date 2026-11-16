@@ -1,5 +1,6 @@
 {
   "commons-1": {
+    "mazeRugMove": {"from":[127,16.5],"to":[124.5,17],"yaw":90},
     "moveLoungeSeating": [{"from":[137,16.5],"to":[117,29.75]}],
     "loungeRug": {"at":[143.35,14],"yaw":0},
     "removeGardenPrints": [73],
