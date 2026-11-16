@@ -60,11 +60,12 @@ export function createJaguarGate(){
   stone:stone('Jaguar_obsidian',0x08080b),
   nose:stone('Jaguar_nose',0x141419,{roughness:.12}),
   fang:stone('Jaguar_fangs',0x202027,{roughness:.12,emissiveIntensity:.03}),
-  mouth:stone('Jaguar_mouth',0x020203,{roughness:.3,envMapIntensity:.35,emissive:ORANGE,emissiveIntensity:.12}),
-  eye:new T.MeshStandardMaterial({name:'Jaguar_eye',color:GLOW,emissive:GLOW,emissiveIntensity:2,toneMapped:false}),
+  mouth:stone('Jaguar_mouth',0x020203,{roughness:.3,envMapIntensity:.35,emissive:ORANGE,emissiveIntensity:.025}),
+  eye:new T.MeshStandardMaterial({name:'Jaguar_eye',color:0x3b2904,emissive:GLOW,emissiveIntensity:1.1,roughness:.22}),
+  pupil:new T.MeshBasicMaterial({name:'Jaguar_pupil',color:0x020104}),
   glass:new T.MeshStandardMaterial({name:'Jaguar_throat_glass',color:0xc8dce6,roughness:.04,metalness:0,envMapIntensity:.5,transparent:true,opacity:.09,depthWrite:false,side:T.DoubleSide}),
   neon:new T.MeshStandardMaterial({name:'Jaguar_neon_glow',color:ORANGE,emissive:ORANGE,emissiveIntensity:2,toneMapped:false}),
-  wash:new T.MeshBasicMaterial({name:'Jaguar_neon_wash_glow',color:ORANGE,map:fadeTexture(),transparent:true,opacity:.55,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,toneMapped:false}),
+  wash:new T.MeshBasicMaterial({name:'Jaguar_neon_wash_glow',color:ORANGE,map:fadeTexture(),transparent:true,opacity:.12,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,toneMapped:false}),
  };
  mat.ear=stone('Jaguar_ears',0x24212a,{roughness:.28});
  const parts=new Map(),add=(m,g)=>{(parts.get(m)||parts.set(m,[]).get(m)).push(g);};
@@ -74,7 +75,7 @@ export function createJaguarGate(){
  // The sculpted skin includes the ears, brows, muzzle and jaw, without intersecting stone parts.
  const head=jaguarHeadGeometry(),face=new T.Mesh(head,[mat.skin,mat.mouth,mat.nose,mat.ear]);
  face.name='Jaguar_head';face.position.z=PUSH;solid.add(face);
- const eyes=new T.Mesh(jaguarEyeGeometry(head),mat.eye);eyes.name='Jaguar_eyes';eyes.position.z=PUSH;group.add(eyes);
+ const eyes=new T.Mesh(jaguarEyeGeometry(head),[mat.eye,mat.pupil]);eyes.name='Jaguar_eyes';eyes.position.z=PUSH;solid.add(eyes);
  // The fangs grow from the curled lip and side jaws, outside the unchanged standing route.
  const upper=[],lower=[],tooth=jaguarToothGeometry;
  for(const sx of [-1,1]){
@@ -103,7 +104,7 @@ export function createJaguarGate(){
  add(mat.neon,at(new RecordGeometry("src/walk/jaguar-gate.js:14",T.CylinderGeometry,.035,.035,2*inner-.2,8),0,h-.1,-THROAT-.08,0,0,Math.PI/2));
  add(mat.neon,at(new T.CylinderGeometry(.025,.025,1.7,8),0,2.4,PUSH-.08,0,0,Math.PI/2));
  for(const sx of [-1,1])add(mat.wash,at(new T.PlaneGeometry(run,h*.85),sx*(inner-.03),h*.575,-mid,0,-sx*Math.PI/2));
- const pool=new T.PlaneGeometry(2*inner-.2,run-.2);add(new T.MeshBasicMaterial({name:'Jaguar_floor_glow',color:ORANGE,transparent:true,opacity:.18,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}),at(pool,0,.03,-mid,-Math.PI/2));
+ const pool=new T.PlaneGeometry(2*inner-.2,run-.2);add(new T.MeshBasicMaterial({name:'Jaguar_floor_glow',color:ORANGE,transparent:true,opacity:.08,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}),at(pool,0,.03,-mid,-Math.PI/2));
 
  // The way out: a black obsidian arch where the passage meets the lounge, its jambs against the opening's edges and
  // its top corners rounded in (nothing under 2.9 m, so the way through is as wide and tall as before).

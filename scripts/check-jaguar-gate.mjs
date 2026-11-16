@@ -21,6 +21,9 @@ assert(headBounds.max.y<28,'Head must stay below the Deck 17 ceiling');
 const head=group.getObjectByName('Jaguar_head'),hp=head.geometry.attributes.position;
 assert(head.material.every(m=>!m.flatShading),'The whole head must use smooth shading');
 assert(head.geometry.groups[2].count>0&&head.geometry.groups[3].count>0,'The continuous skin includes the nose and hollow ear faces');
+assert(hp.getY(48*14+10)>3.4,'The skull dome must rise above the brow between the ears');
+assert(head.material[1].emissiveIntensity<.04,'The mouth lining must stay dark rather than resembling a solid orange panel');
+assert(group.getObjectByName('Jaguar_neon_wash_glow').material.opacity<.2,'Throat accents must preserve the view into the lounge');
 assert.equal(group.getObjectsByProperty('isLight',true).length,0,'Eyes and throat glow without real-time lights');
 assert(Math.abs(group.position.x+112.5)<.001,'Gate stays on the existing doorway centre');
 assert(group.position.distanceTo(new T.Vector3(-112.5,24.3,-26))<1e-9,'The doorway position stays fixed');
@@ -35,7 +38,17 @@ for(let i=0;i<=96;i++){
   assert(Math.abs(hp.getX(j)+hp.getX(mirror))<1e-6&&hp.getY(j)===hp.getY(mirror)&&hp.getZ(j)===hp.getZ(mirror),'The sculpted skin must be exactly mirrored');
  }
 }
-assert(group.getObjectByName('Jaguar_eyes').material.emissiveIntensity>0,'Yellow eyes use an emissive material');
+const eyes=group.getObjectByName('Jaguar_eyes');
+assert(eyes.material[0].emissiveIntensity>0,'Yellow eyes use an emissive material');
+assert(eyes.geometry.groups[1].count>0,'Both inset eyes include dark pupils');
+const eyePoints=Array.from(eyes.geometry.index.array).map(i=>new T.Vector3().fromBufferAttribute(eyes.geometry.attributes.position,i));
+for(const side of [-1,1]){
+ const box=new T.Box3().setFromPoints(eyePoints.filter(p=>p.x*side>0)),size=box.getSize(new T.Vector3());
+ assert(size.x>.5&&size.x<.6&&size.y>.2&&size.y<.3,'Eyes retain their almond proportions');
+ assert(box.max.y<3.18&&box.min.y>2.82,'Eyes sit on the face below the ears');
+}
+assert(hp.getY(48*M+10)>3.4,'The skull has a full central dome above the muzzle');
+assert(head.material[1].emissiveIntensity<.04,'The throat remains dark stone rather than an opaque orange panel');
 assert.equal(group.getObjectByName('Jaguar_neon_glow').material.emissive.getHex(),0xff7628,'Throat glow is warm orange');
 const inverse=group.matrixWorld.clone().invert(),world=p=>new T.Vector3(...p).applyMatrix4(group.matrixWorld);
 // The entrance plaque is now suppressed; the head and its sightlines stay intact.
@@ -49,10 +62,10 @@ const cameras=[[[-110.10,24.31,-21.57],-848,-8],[[-112.5,24.3,-18.5],180,0]].map
 });
 for(const camera of cameras){const from=camera.position;
  for(const side of [-1,1]){
-  const eyes=group.getObjectByName('Jaguar_eyes'),ep=eyes.geometry.attributes.position;
-  const id=Array.from(eyes.geometry.index.array).sort((a,b)=>Math.hypot(ep.getX(a)-side*1.22,ep.getY(a)-3.1)-Math.hypot(ep.getX(b)-side*1.22,ep.getY(b)-3.1))[0];
+  const ep=eyes.geometry.attributes.position,iris=eyes.geometry.groups[0];
+  const id=Array.from(eyes.geometry.index.array.slice(iris.start,iris.start+iris.count)).sort((a,b)=>Math.hypot(ep.getX(a)-side*1.3,ep.getY(a)-3)-Math.hypot(ep.getX(b)-side*1.3,ep.getY(b)-3))[0];
   const target=new T.Vector3().fromBufferAttribute(ep,id).applyMatrix4(eyes.matrixWorld),hit=first(from,target),screen=target.clone().project(camera);
-  assert(hit&&/Jaguar_eye/.test(material(hit).name),'Both yellow eyes must remain visible from each capture');
+  assert(hit&&/Jaguar_eye/.test(material(hit).name),'Both yellow eyes must remain visible from each capture: '+JSON.stringify({from:from.toArray(),side,hit:hit&&material(hit).name,target:target.toArray()}));
   assert(Math.abs(screen.x)<.96&&screen.y<.84&&screen.y>-.95,'Keep both eyes inside the capture below the toolbar');
  }
  const pad=head.geometry.groups[2],index=head.geometry.index;
