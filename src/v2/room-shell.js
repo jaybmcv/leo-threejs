@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {wallJoints,mitreWallGeometry} from './wall-joints.js';
 import {moveRoomFitoutMeshes} from './room-fitout-overrides.js';
 import layout from '../plan/selected-layout.js';
 import {roomObject} from '../plan/rooms.js';
@@ -23,8 +24,8 @@ export function buildRoomShell(ship,r,structure){
   const sections=r.openPlan?[]:r.envelope||[{rise:0,height:r.height,polygon:r.polygon}];
   for(const s of sections)for(let i=0;i<s.polygon.length;i++){const a=s.polygon[i],b=s.polygon[(i+1)%s.polygon.length],doors=[r.door,r.fittingDoor,...(r.galleryDoors||[]),...(r.bayAccessDoors||[])].filter(Boolean).filter(d=>d.center[1]<r.y+s.rise+s.height&&d.center[1]+2.5>r.y+s.rise);
    let segments=[[a,b]];for(const d of doors)segments=segments.flatMap(([a,b])=>entrySegments(a,b,d.center,d.width));
-   for(const [aa,bb] of segments){const o=wall(g,aa,bb,r.y+s.rise,s.height,r.outer||r.publicFront&&Math.abs((aa[0]-r.door.center[0])*r.door.outward[0]+(aa[1]-r.door.center[2])*r.door.outward[1])<.02&&Math.abs((bb[0]-r.door.center[0])*r.door.outward[0]+(bb[1]-r.door.center[2])*r.door.outward[1])<.02||r.kind==='garden'||r.id==='d05-aquarium-gallery'&&(Math.abs(aa[0]-98)<.01&&Math.abs(bb[0]-98)<.01||Math.abs(aa[1]+34)<.01&&Math.abs(bb[1]+34)<.01)?glass:lining);removePanelEndCaps(o);}
-   for(const d of doors){const header=entryHeader(a,b,d.center,d.width);if(header&&d.center[1]+2.5<r.y+s.rise+s.height){const upper=Math.max(r.y+s.rise,d.center[1]+2.5),o=wall(g,header[0],header[1],upper,r.y+s.rise+s.height-upper,glass);removeGeometryCaps(o.geometry,0);}}
+   for(const [aa,bb] of segments){const o=wall(g,aa,bb,r.y+s.rise,s.height,r.outer||r.publicFront&&Math.abs((aa[0]-r.door.center[0])*r.door.outward[0]+(aa[1]-r.door.center[2])*r.door.outward[1])<.02&&Math.abs((bb[0]-r.door.center[0])*r.door.outward[0]+(bb[1]-r.door.center[2])*r.door.outward[1])<.02||r.kind==='garden'||r.id==='d05-aquarium-gallery'&&(Math.abs(aa[0]-98)<.01&&Math.abs(bb[0]-98)<.01||Math.abs(aa[1]+34)<.01&&Math.abs(bb[1]+34)<.01)?glass:lining);removePanelEndCaps(o);if(o&&r.deck===1)mitreWallGeometry(o.geometry,wallJoints(s.polygon,i,aa,bb));}
+   for(const d of doors){const header=entryHeader(a,b,d.center,d.width);if(header&&d.center[1]+2.5<r.y+s.rise+s.height){const upper=Math.max(r.y+s.rise,d.center[1]+2.5),o=wall(g,header[0],header[1],upper,r.y+s.rise+s.height-upper,glass);removeGeometryCaps(o.geometry,0);if(o&&r.deck===1)mitreWallGeometry(o.geometry,wallJoints(s.polygon,i,header[0],header[1]));}}
   }
   }
   if(r.components){const platforms=[...(r.components.galleries||[]),...(r.components.links||[]),...(r.components.landings||[])];for(const [i,o] of platforms.entries()){const holes=galleryHoles(r,o);
