@@ -4,7 +4,8 @@ import {createCanvas} from '@napi-rs/canvas';
 import {installWalkCanvas} from '../src/walk/canvas.js';
 import {createGardenCommons} from '../src/model.js';
 import {resolveRoomFrames} from '../src/plan/rooms.js';
-import {Colliders} from '../src/walk/collision.js';
+import {Colliders,solid} from '../src/walk/collision.js';
+import {createTerpeneGlassware} from '../src/terpene-glassware.js';
 import {Controller} from '../src/walk/controller.js';
 import {findRestSpots,solidSpots} from '../src/walk/rest.js';
 import {COSMO_HEIGHT} from '../src/cosmo-pose.js';
@@ -33,6 +34,29 @@ for(let i=0;i<np.count;i+=3){if(nc.getZ(i)>.3||nc.getX(i)<.9)continue;
  const hit=sight.intersectObjects(opaque,false)[0];assert(!hit,'Amber rim is hidden by '+hit?.object.name+' at '+p.toArray());rims[rim]++;
 }
 assert(rims.every(n=>n>100),'Both complete amber rims face the reported view');
+// Glassware is shared decoration; none of it can become a step or a new collider.
+const display=lounge.getObjectByName('Terpene_glassware');assert(display,'Glassware replaces the old icon display');
+const glassware=createTerpeneGlassware(),all=glassware.vessels.flat(),shelf=all.filter(v=>v.kind==='shelf'),vials=all.filter(v=>v.kind==='vial');
+assert.equal(shelf.length,42);assert.equal(vials.length,25);assert.equal(new Set(shelf.map(v=>v.at[1])).size,3);
+assert(glassware.vessels.every(v=>v.some(i=>i.kind==='shelf')),'All four volumetric bottle shapes appear on the shelves');
+display.traverse(o=>{if(o.isMesh)assert(!solid(o),'Glassware must never add collision: '+o.name);});
+let displayDraws=0,displayTriangles=0;display.traverse(o=>{assert(!o.isLight,'The display adds no room lights');if(o.isMesh){displayDraws++;displayTriangles+=(o.geometry.index?.count||o.geometry.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);}});
+assert(displayDraws<=24&&displayTriangles<30000,'Shared glassware stays inside its modest phone geometry budget');
+const bottleGlass=display.children.filter(o=>/^Terpene_bottle_glass_/.test(o.name));
+assert.equal(bottleGlass.length,4);assert.equal(bottleGlass.reduce((n,o)=>n+o.count,0),67);
+for(const o of bottleGlass){assert(o.isInstancedMesh&&o.geometry.parameters.segments===12,'Bottle shells use modest shared lathe geometry');assert(o.material.transparent&&!o.material.depthWrite&&o.material.side===T.FrontSide&&o.material.roughness<.1&&o.material.envMapIntensity>1,'Glossy single-surface glass preserves the environment without writing depth');}
+const instance=new T.Matrix4(),bb=new T.Box3();
+for(const o of bottleGlass){o.geometry.computeBoundingBox();for(let i=0;i<o.count;i++){o.getMatrixAt(i,instance);bb.copy(o.geometry.boundingBox).applyMatrix4(instance);assert(bb.max.z<37.675,'Shelf bottles stay in front of the dark back panel');}}
+const racks=display.getObjectByName('Terpene_tasting_racks'),strips=display.getObjectByName('Terpene_shelf_strips');assert.equal(racks.count,15);assert.equal(strips.count,3);
+assert(bounds(display.getObjectByName('Terpene_stoppers')).max.y<27.025,'Every shelf stopper remains below the sign rim');
+for(let k=0;k<5;k++){racks.getMatrixAt(k*3,instance);close(instance.elements[12],118.5+k*1.8);close(instance.elements[13]-.025,25.38);close(instance.elements[14],35.95);}
+const stillMeshes=glassware.group.children.filter(o=>/^Terpene_(still_|collecting_|collected_|collector_)/.test(o.name)),stillBounds=new T.Box3();for(const o of stillMeshes)stillBounds.union(bounds(o));
+assert(stillBounds.max.x-stillBounds.min.x<1.5&&stillBounds.min.y>=25.379&&stillBounds.max.y<26.9,'Still fits behind the counter, below all sign lettering');
+assert(glassware.brew.material.transparent&&!glassware.brew.material.depthWrite&&glassware.brew.renderOrder<glassware.bubbles.renderOrder&&glassware.bubbles.renderOrder<glassware.group.getObjectByName('Terpene_still_globe').renderOrder,'Brew, bubbles and shell have explicit interior-to-exterior order');
+const bubbleBefore=Array.from(glassware.bubbles.instanceMatrix.array),brewBefore=glassware.brew.scale.y,collectBefore=glassware.collected.material.color.getHex();
+glassware.update(2);assert.equal(glassware.time,2);assert.notDeepEqual(Array.from(glassware.bubbles.instanceMatrix.array),bubbleBefore);assert.notEqual(glassware.brew.scale.y,brewBefore);assert.notEqual(glassware.collected.material.color.getHex(),collectBefore);
+const restored=new T.ObjectLoader().parse(glassware.group.toJSON());assert.equal(restored.getObjectByName('Terpene_stoppers').count,67,'Glassware retains its instancing in exported scene data');
+console.log('PASS 42 instanced shelf bottles, five supported vial racks, bounded glass still, nested transparency and local liquid/bubble animation');
 const chairs=lounge.children.filter(o=>o.name==='Seat'&&o.material.name==='Lounge_bar_upholstery'),backs=lounge.children.filter(o=>o.name==='Seat_back');
 assert.equal(chairs.length,6);assert.equal(backs.length,6);
 assert(chairs.every(o=>o.geometry===chairs[0].geometry&&o.material===chairs[0].material),'Chairs share seat geometry and material');

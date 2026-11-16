@@ -8,6 +8,7 @@ import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
 import fontData from './assets/helvetiker-bold.json' with {type:'json'};
 import {canvasTexture,seeded} from './polish-kit.js';
+import {createTerpeneGlassware} from './terpene-glassware.js';
 
 // The Hydro-Nip Lounge (feedback-inbox #58, HYDRO_NIP_LOUNGE.md): a catnip lounge in Neighborhood 1's garden commons,
 // concept by Tochtli. Built in the commons template's own frame (x 109.5-154.5, z 8-46, floor 24.3); the commons root
@@ -487,16 +488,7 @@ export function createHydroNipLounge({mirror=1}={}){
   for(const y of [FLOOR+.08,FLOOR+1.005])put(neon(GREEN),new T.ExtrudeGeometry(trim,{depth:.035,bevelEnabled:false,steps:1,curveSegments:16}).rotateX(Math.PI/2).translate(cx,y+.0175,bz));
   box(M.wood,[len,2.6,.45],[cx,FLOOR+1.3,shelf]);
   for(const y of [FLOOR+1.15,FLOOR+1.75,FLOOR+2.35])box(M.board,[len,.04,.5],[cx,y,shelf-.25]);
-  const liquids=[GREEN,AMBER,PURPLE,PINK,CYAN],flask=new T.LatheGeometry([[0,0],[.11,0],[.11,.02],[.04,.17],[.035,.26],[.04,.27]].map(([x,y])=>new T.Vector2(x,y)),8),fz=shelf-.28;
-  let n=0;for(const y of [FLOOR+1.17,FLOOR+1.77,FLOOR+2.37])for(let x=x0+.35;x<x1-.2;x+=.62){const k=n++%5,round=n%3===0;
-   if(round){ball(M.glass,.12,[x,y+.12,fz],1);ball(neon(liquids[k]),.085,[x,y+.1,fz],0);cyl(M.glass,.03,.03,.14,[x,y+.29,fz],6,true);}
-   else{put(M.glass,flask.clone().translate(x,y,fz));put(neon(liquids[k]),new T.ConeGeometry(.095,.12,8).translate(x,y+.06,fz));}}
-  // Tasting flights on the bar top: little glasses of blend on a board.
-  for(let x=x0+1;x<x1-.5;x+=1.8){box(M.wood,[.7,.03,.3],[x,FLOOR+1.095,bz-.15]);for(let i=0;i<4;i++){cyl(M.glass,.03,.025,.09,[x-.24+i*.16,FLOOR+1.155,bz-.15],8,true);cyl(neon(liquids[(i+x|0)%5]),.026,.022,.04,[x-.24+i*.16,FLOOR+1.13,bz-.15],8);}}
-  // A distillery as the centrepiece: a still, its coil and a receiving flask.
-  ball(M.metal,.3,[cx,FLOOR+1.45,bz+.05],1);cyl(M.metal,.05,.05,.5,[cx,FLOOR+1.85,bz+.05],8);
-  put(M.metal,new T.TorusGeometry(.12,.018,4,16,Math.PI*6).rotateX(Math.PI/2).translate(cx+.5,FLOOR+1.55,bz+.05));
-  ball(M.glass,.14,[cx+.75,FLOOR+1.22,bz+.05],1);ball(neon(GREEN),.1,[cx+.75,FLOOR+1.2,bz+.05],0);
+  root.add(createTerpeneGlassware().group);
   const cushion=tidy(new T.CylinderGeometry(.25,.25,.08,16),new T.Color(0xffffff)),wrap=new T.Shape();
   wrap.absarc(0,0,.31,0,Math.PI,false);wrap.absarc(0,0,.25,Math.PI,0,true);wrap.closePath();
   const back=tidy(new T.ExtrudeGeometry(wrap,{depth:.29,bevelEnabled:false,curveSegments:10}).rotateX(-Math.PI/2).translate(0,.02,0),new T.Color(0xffffff));
