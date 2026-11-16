@@ -21,3 +21,27 @@ export function install(g,id){
  return true;
 }
 export function nextRound(g){if(g.phase!=='clear')return false;g.current++;g.view='side';g.placed.clear();g.phase='play';return true;}
+
+// Gentle drift stays near each starting slot so required parts remain easy to find.
+export const floatingPart=(x,y,w,h,index=0)=>({x,y,w,h,ax:x,ay:y,vx:0,vy:0,time:index*2.399});
+export function boundPart(p,width,height){
+ const mx=Math.max(0,width-p.w),my=Math.max(0,height-p.h);
+ if(p.x<0||p.x>mx){p.x=Math.max(0,Math.min(mx,p.x));p.vx*= -.35;}
+ if(p.y<0||p.y>my){p.y=Math.max(0,Math.min(my,p.y));p.vy*= -.35;}
+}
+export function pushPart(p,x,y,reduced=false){
+ const dx=p.x+p.w/2-x,dy=p.y+p.h/2-y,d=Math.hypot(dx,dy),radius=140;
+ if(d<1||d>=radius)return;
+ const force=(reduced?18:80)*(1-d/radius);
+ p.vx+=dx/d*force;p.vy+=dy/d*force;
+ const speed=Math.hypot(p.vx,p.vy),limit=reduced?22:100;
+ if(speed>limit){p.vx*=limit/speed;p.vy*=limit/speed;}
+}
+export function floatPart(p,width,height,dt,{held=false,reduced=false}={}){
+ dt=Math.max(0,Math.min(.05,dt));p.time+=dt;
+ if(held){p.vx=p.vy=0;boundPart(p,width,height);return;}
+ if(!reduced){p.vx+=(Math.sin(p.time*.7)*9+(p.ax-p.x)*1.2)*dt;p.vy+=(Math.cos(p.time*.6)*8+(p.ay-p.y)*1.2)*dt;}
+ const damping=Math.exp(-(reduced?10:3)*dt);p.vx*=damping;p.vy*=damping;
+ if(reduced&&Math.hypot(p.vx,p.vy)<.05)p.vx=p.vy=0;
+ p.x+=p.vx*dt;p.y+=p.vy*dt;boundPart(p,width,height);
+}
