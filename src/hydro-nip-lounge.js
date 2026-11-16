@@ -8,6 +8,7 @@ import {FontLoader} from 'three/addons/loaders/FontLoader.js';
 import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
 import fontData from './assets/helvetiker-bold.json' with {type:'json'};
 import {canvasTexture,seeded} from './polish-kit.js';
+import {domePlants} from './lounge-dome-plants.js';
 
 // The Hydro-Nip Lounge (feedback-inbox #58, HYDRO_NIP_LOUNGE.md): a catnip lounge in Neighborhood 1's garden commons,
 // concept by Tochtli. Built in the commons template's own frame (x 109.5-154.5, z 8-46, floor 24.3); the commons root
@@ -156,6 +157,8 @@ export function createHydroNipLounge({mirror=1}={}){
  const shared={
   matte:std('Lounge_matte',0xffffff,{vertexColors:true,roughness:.85}),
   sheen:std('Lounge_sheen',0xffffff,{vertexColors:true,roughness:.32,metalness:.55}),
+  planter:new T.MeshPhysicalMaterial({name:'Lounge_dome_planter',color:0xffffff,vertexColors:true,roughness:.14,metalness:.55,clearcoat:.85,clearcoatRoughness:.23,envMapIntensity:3.5}),
+  tubeHalo:new T.MeshBasicMaterial({name:'Lounge_dome_tube_glow',vertexColors:true,transparent:true,opacity:.12,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}),
   // Foliage apart, so its name keeps it from being solid (src/walk/collision.js skips leaves).
   leaf:std('Lounge_catnip_leaf',0xffffff,{vertexColors:true,roughness:.9}),
   neon:new T.MeshBasicMaterial({name:'Lounge_neon_glow',vertexColors:true,toneMapped:false}),
@@ -167,6 +170,8 @@ export function createHydroNipLounge({mirror=1}={}){
   marble:std('Lounge_marble',0xffffff,{vertexColors:true,roughness:.22}),
   frost:std('Lounge_frosted_glass',0xffffff,{vertexColors:true,transparent:true,opacity:.62,roughness:.55,metalness:0,side:T.DoubleSide}),
  };
+ // Keep the ring's clear coat and reflection strength through the walk's material merge.
+ shared.planter.userData.preserveWalkFinish=true;
  // The mist inside the maze is the glow apart, so the walk can thin it out round a walker inside (src/walk/lounge.js).
  shared.mazeMist=canvas&&Object.assign(shared.glow.clone(),{name:'Lounge_maze_mist'});
  // A paint is a shared material and a colour.
@@ -178,7 +183,7 @@ export function createHydroNipLounge({mirror=1}={}){
  const loose=p=>p&&{...p,loose:true};
  const M={
   glass:paint('glass',0xcfeeff),mazeGlass:paint('glass',0xa8ffbf),mist:glow(0x7dff8e,.55,(u,v)=>[.5+u*.5,v]),mazeMist:loose(paint('mazeMist',0x7dff8e,{dim:.55,uv:(u,v)=>[.5+u*.5,v]})),frost:paint('frost',0x9fe8b0),beam:glow(0x5fc8ff,.2,()=>[.25,.5]),rug:paint('rug'),
-  dark:paint('sheen',0x272131),board:paint('sheen',0x16111f),metal:paint('sheen',0xb9c2cc),strut:neon(0x7a5cff),
+  dark:paint('sheen',0x272131),board:paint('sheen',0x16111f),metal:paint('sheen',0xb9c2cc),strut:neon(0xede3ff),
   wood:paint('matte',0x4a2f22),sisal:paint('matte',0xcdb18a),purple:paint('matte',0x6a3fa3),magenta:paint('matte',0xb03a86),teal:paint('matte',0x23857f),
   leaf:paint('leaf',0x4f9a55),flower:paint('leaf',0xd5c4f2),pot:paint('matte',0xb5653d),
  };
@@ -225,17 +230,21 @@ export function createHydroNipLounge({mirror=1}={}){
  const placing=(at,normal)=>new T.Matrix4().makeTranslation(...at).multiply(new T.Matrix4().makeScale(1,1,mirror)).multiply(new T.Matrix4().makeRotationY(Math.atan2(normal[0],normal[2]*mirror)));
  const roundRect=(w,h,r,z,pts=[])=>{for(const [cx,cy,a0] of [[w/2-r,h/2-r,0],[-w/2+r,h/2-r,Math.PI/2],[-w/2+r,-h/2+r,Math.PI],[w/2-r,-h/2+r,Math.PI*1.5]])for(let i=0;i<=4;i++){const a=a0+i/4*Math.PI/2;pts.push(new T.Vector3(cx+Math.cos(a)*r,cy+Math.sin(a)*r,z));}return new T.CatmullRomCurve3(pts,true,'catmullrom',.1);};
  const leafCurve=(cx,cy,s,z)=>new T.CatmullRomCurve3(Array.from({length:28},(_,i)=>{const t=i/28*Math.PI*2,c=1+.09*Math.cos(9*t);return new T.Vector3(cx+s*.62*Math.sin(t)*c*(1-.25*Math.cos(t)),cy+s*(Math.cos(t)*.95+.15*Math.sin(t)**2),z);}),true);
- function sign({at,normal,lines,color,frame=color,width,height,leaves=false,board=true}){
+ function sign({at,normal,lines,color,frame=color,width,height,leaves=false,board=true,bow=0}){
   const m=placing(at,normal),local=[];
   let y=lines.reduce((s,l)=>s+l.size*1.35,0)/2;
-  for(const l of lines){y-=l.size;const g=new TextGeometry(l.text,{font,size:l.size,depth:.025,curveSegments:2});g.computeBoundingBox();const b=g.boundingBox;
-   g.translate(-(b.max.x+b.min.x)/2,y,.04);local.push([neon(l.color||color),g]);y-=l.size*.35;}
+  for(const l of lines){y-=l.size;if(!l.runs){const g=new TextGeometry(l.text,{font,size:l.size,depth:.025,curveSegments:2});g.computeBoundingBox();const b=g.boundingBox;
+    g.translate(-(b.max.x+b.min.x)/2,y,.04);local.push([neon(l.color||color),g]);y-=l.size*.35;continue;}
+   const runs=l.runs,gs=runs.map(r=>new TextGeometry(r.text,{font,size:l.size,depth:.025,curveSegments:2}));
+   const widths=gs.map(g=>{g.computeBoundingBox();return g.boundingBox.max.x-g.boundingBox.min.x;}),gap=l.size*.4,total=widths.reduce((a,b)=>a+b,0)+gap*(gs.length-1);let x=-total/2;
+   gs.forEach((g,i)=>{g.translate(x-g.boundingBox.min.x,y,.04);local.push([neon(runs[i].color),g]);x+=widths[i]+gap;});y-=l.size*.35;}
   // The glow spills round the board from behind it; in front, it washed the dark board out to grey.
-  local.push([halo(color),new T.PlaneGeometry(width*1.3,height*2).translate(0,0,board?-.12:.02)]);
-  if(board)local.push([M.board,new T.BoxGeometry(width,height,.08).translate(0,0,-.04)]);
-  local.push([neon(frame),new T.TubeGeometry(roundRect(width-.12,height-.12,Math.min(.3,height/4),.03),96,.03,5,true)]);
+  if(!bow)local.push([halo(color),new T.PlaneGeometry(width*1.3,height*2).translate(0,0,board?-.12:.02)]);
+  if(board)local.push([M.board,new T.BoxGeometry(width,height,.08,bow?24:1,1,1).translate(0,0,-.04)]);
+  if(bow)for(const s of [-1,1])local.push([neon(frame),new T.CylinderGeometry(.025,.025,width-.12,5,24).rotateZ(Math.PI/2).translate(0,s*(height/2-.1),.06)]);
+  else local.push([neon(frame),new T.TubeGeometry(roundRect(width-.12,height-.12,Math.min(.3,height/4),.03),96,.03,5,true)]);
   if(leaves)for(const s of [-1,1])local.push([neon(GREEN),new T.TubeGeometry(leafCurve(s*(width/2-.42),0,.34,.04),56,.022,4,true)],[neon(GREEN),new T.CylinderGeometry(.015,.015,.5,4).translate(s*(width/2-.42),-.2,.04)]);
-  for(const [mat,g] of local)put(mat,mirrored(g.applyMatrix4(m),m));
+  for(const [mat,g] of local){if(bow){const p=g.attributes.position;for(let i=0;i<p.count;i++)p.setZ(i,p.getZ(i)+bow*(1-(p.getX(i)/(width/2))**2));g.computeVertexNormals();}put(mat,mirrored(g.applyMatrix4(m),m));}
  }
  function mainLogoSign({at,normal,diameter=4.5}){
   const group=new T.Group();group.name='Hydro_Nip_Main_Sign';group.userData.assetId='hydro-nip-main-logo';group.applyMatrix4(placing(at,normal));
@@ -273,21 +282,24 @@ export function createHydroNipLounge({mirror=1}={}){
   for(let i=0;i<p.count;i+=3){if(Math.min(p.getY(i),p.getY(i+1),p.getY(i+2))<-DOME.r*.12)continue;const t=[at(i),at(i+1),at(i+2)];if(doorway(...t))continue;
    skin.push(...t);for(const v of t)nodes.set(key(v),v);for(let k=0;k<3;k++){const a=t[k],b=t[(k+1)%3];if(a.y===0&&b.y===0)continue;edges.set([key(a),key(b)].sort().join('|'),[a,b]);}}
   const o=new T.Vector3(DOME.x,FLOOR,DOME.z);
-  for(const [a,b] of edges.values())rod(M.strut,a.clone().add(o).toArray(),b.clone().add(o).toArray(),.045,5);
+  for(const [a,b] of edges.values()){const A=a.clone().add(o).toArray(),B=b.clone().add(o).toArray();rod(M.strut,A,B,.045,5);
+   // Two faint shells soften the violet glow without changing the solid tube.
+   rod(loose(paint('tubeHalo',0xa46aff)),A,B,.085,7);rod(loose(paint('tubeHalo',0x6636bb)),A,B,.13,7);}
   for(const v of nodes.values())ball(M.strut,.08,v.clone().add(o).toArray(),0);
   const g=new T.BufferGeometry().setFromPoints(skin.map(v=>v.clone().add(o)));g.computeVertexNormals();
   put(M.glass,g);
   // A ring planter round the base, full of catnip, open where the porch passes. Each part is made with the gap toward
   // +x and turned to face the entrance (-z).
-  const R0=DOME.r+.15,R1=DOME.r+.95,gap=(PORCH.half+.1)/R0,face=g=>put(M.board,g.rotateY(Math.PI/2).translate(o.x,FLOOR,o.z));
+  const R0=DOME.r+.15,R1=DOME.r+.95,gap=(PORCH.half+.1)/R0,face=g=>put(paint('planter',0x16111f),g.rotateY(Math.PI/2).translate(o.x,FLOOR,o.z));
   for(const r of [R0,R1])face(new T.CylinderGeometry(r,r,.5,48,1,true,Math.PI/2+gap,Math.PI*2-2*gap).translate(0,.25,0));
   face(new T.RingGeometry(R0,R1,48,1,gap,Math.PI*2-2*gap).rotateX(-Math.PI/2).translate(0,.5,0));
   for(const s of [-1,1])face(new T.PlaneGeometry(R1-R0,.5).translate((R0+R1)/2*Math.cos(gap),.25,s*(R0+R1)/2*Math.sin(gap)));
   put(neon(PURPLE),new T.TorusGeometry(R1+.01,.025,4,96,Math.PI*2-2*gap).rotateX(Math.PI/2).rotateY(Math.PI/2-gap).translate(o.x,FLOOR+.5,o.z));
   for(let i=0;i<64;i++){const a=i/64*Math.PI*2+rnd()*.05,r=R0+.2+rnd()*.55,x=o.x+Math.cos(a)*r,z=o.z+Math.sin(a)*r;
    if(Math.abs(x-o.x)<PORCH.half+.3&&z<o.z)continue;// the porch
-   for(let k=0;k<3;k++)put(M.leaf,new T.OctahedronGeometry(.15+rnd()*.08,0).scale(1,1.6,1).translate(x+rnd()*.2-.1,FLOOR+.62+k*.12,z+rnd()*.2-.1));
-   if(i%2)put(M.flower,new T.ConeGeometry(.05,.32,5).translate(x,FLOOR+.95,z));}
+   // Keep the dressing's random sequence stable for everything else in the lounge.
+   for(let k=0;k<9;k++)rnd();}
+  domePlants(root,{x:o.x,z:o.z,y:FLOOR+.51,inner:R0,outer:R1,door:PORCH.half});
   // The porch: glass sides and roof from the door out front to inside the dome's skin, with a dark frame where it meets
   // the cut, and the sliding door at its front.
   {const {half,height}=PORCH,len=PORCH.in-PORCH.out,mid=(PORCH.in+PORCH.out)/2;
@@ -456,11 +468,31 @@ export function createHydroNipLounge({mirror=1}={}){
  }
 
  // The Terpene Tasting Deck: a bar across the back of the room behind the maze, facing the entrance, with a back bar of
- // glowing catnip blends and stools on the room's side. (It stood along the maze's flank at first and hid the maze.)
+ // glowing catnip blends and chairs on the room's side. (It stood along the maze's flank at first and hid the maze.)
  // Its back bar leaves a 1.25 m way behind it to the reading nook; the kitchen island's chairs start past its end.
  {const x0=117.5,x1=126.5,cx=(x0+x1)/2,bz=36.1,shelf=37.9,len=x1-x0;
-  box(M.wood,[len,1.02,1],[cx,FLOOR+.51,bz]);box(M.board,[len+.2,.06,1.2],[cx,FLOOR+1.05,bz]);
-  for(const y of [FLOOR+.08,FLOOR+.98])box(neon(GREEN),[len,.025,.02],[cx,y,bz-.51]);
+  // A shallow bow adds at most 48 cm at the slab's front; the back and the top height stay put.
+  const outline=(pad=0)=>{const h=len/2+pad,r=.22+pad,front=-.5-pad,back=.5+pad,s=new T.Shape();
+   s.moveTo(-h+r,front);s.quadraticCurveTo(0,front-.76,h-r,front);s.quadraticCurveTo(h,front,h,front+r);
+   s.lineTo(h,back-r);s.quadraticCurveTo(h,back,h-r,back);s.lineTo(-h+r,back);s.quadraticCurveTo(-h,back,-h,back-r);
+   s.lineTo(-h,front+r);s.quadraticCurveTo(-h,front,-h+r,front);return s;};
+  const slab=(pad,depth,top)=>new T.ExtrudeGeometry(outline(pad),{depth,bevelEnabled:false,steps:1,curveSegments:16}).rotateX(Math.PI/2).translate(cx,top,bz);
+  // A small repeatable stone texture also exists in Node, so the prepared and phone walks keep the veining.
+  const pixels=new Uint8Array(128*128*4);
+  for(let y=0;y<128;y++)for(let x=0;x<128;x++){const u=x/128*Math.PI*2,v=y/128*Math.PI*2,d=Math.abs(Math.sin(u*2+v+Math.sin(v*2)*.65+Math.sin(u-v)*.25)),vein=Math.max(0,1-d/.075),c=46+vein*105+Math.sin(u*4+v*3)*1.5,i=(y*128+x)*4;
+   pixels[i]=c;pixels[i+1]=c+1;pixels[i+2]=c+4;pixels[i+3]=255;}
+  const stoneMap=new T.DataTexture(pixels,128,128);stoneMap.colorSpace=T.SRGBColorSpace;stoneMap.wrapS=stoneMap.wrapT=T.RepeatWrapping;stoneMap.magFilter=T.LinearFilter;stoneMap.minFilter=T.LinearMipmapLinearFilter;stoneMap.generateMipmaps=true;stoneMap.needsUpdate=true;
+  // A faint map lift keeps the veins visible under the lounge's dimmed lighting.
+  shared.barStone=std('Lounge_bar_stone',0xffffff,{vertexColors:true,map:stoneMap,roughness:.14,metalness:.08,envMapIntensity:2,emissive:0x777f88,emissiveMap:stoneMap,emissiveIntensity:.2});
+  shared.barFront=std('Lounge_bar_front',0x24212b,{vertexColors:true,roughness:.32,metalness:.12});
+  shared.barChair=std('Lounge_bar_upholstery',0x542780,{vertexColors:true,roughness:.48});
+  shared.barPost=std('Lounge_bar_post',0x101016,{vertexColors:true,roughness:.26,metalness:.65});
+  const stone=slab(.1,.06,FLOOR+1.08),uv=stone.attributes.uv,p=stone.attributes.position;
+  for(let i=0;i<p.count;i++)uv.setXY(i,(p.getX(i)-x0)/2,(p.getZ(i)-bz)/2);
+  put(paint('barStone'),stone);put(paint('barFront'),slab(0,1.02,FLOOR+1.02));
+  // Exact offset outlines keep the strips outside the body, including the rounded ends.
+  const trim=outline(.03);trim.holes.push(outline(.005));
+  for(const y of [FLOOR+.08,FLOOR+1.005])put(neon(GREEN),new T.ExtrudeGeometry(trim,{depth:.035,bevelEnabled:false,steps:1,curveSegments:16}).rotateX(Math.PI/2).translate(cx,y+.0175,bz));
   box(M.wood,[len,2.6,.45],[cx,FLOOR+1.3,shelf]);
   for(const y of [FLOOR+1.15,FLOOR+1.75,FLOOR+2.35])box(M.board,[len,.04,.5],[cx,y,shelf-.25]);
   const liquids=[GREEN,AMBER,PURPLE,PINK,CYAN],flask=new T.LatheGeometry([[0,0],[.11,0],[.11,.02],[.04,.17],[.035,.26],[.04,.27]].map(([x,y])=>new T.Vector2(x,y)),8),fz=shelf-.28;
@@ -473,10 +505,15 @@ export function createHydroNipLounge({mirror=1}={}){
   ball(M.metal,.3,[cx,FLOOR+1.45,bz+.05],1);cyl(M.metal,.05,.05,.5,[cx,FLOOR+1.85,bz+.05],8);
   put(M.metal,new T.TorusGeometry(.12,.018,4,16,Math.PI*6).rotateX(Math.PI/2).translate(cx+.5,FLOOR+1.55,bz+.05));
   ball(M.glass,.14,[cx+.75,FLOOR+1.22,bz+.05],1);ball(neon(GREEN),.1,[cx+.75,FLOOR+1.2,bz+.05],0);
-  for(let i=0;i<6;i++){const x=x0+1+i*1.4,z=bz-1.2;
-   seat('Seat',new T.CylinderGeometry(.22,.22,.08,14),M.purple,[x,FLOOR+.76,z]);
-   cyl(M.dark,.035,.035,.72,[x,FLOOR+.36,z],6);put(M.dark,new T.TorusGeometry(.18,.015,4,16).rotateX(Math.PI/2).translate(x,FLOOR+.3,z));cyl(M.dark,.2,.2,.03,[x,FLOOR+.015,z],12);}
-  sign({at:[cx,FLOOR+3.25,shelf-.3],normal:[0,0,-1],width:6.6,height:1.25,color:GREEN,frame:AMBER,lines:[{text:'THE TERPENE',size:.3},{text:'TASTING DECK',size:.38,color:AMBER}]});
+  const cushion=tidy(new T.CylinderGeometry(.25,.25,.08,16),new T.Color(0xffffff)),wrap=new T.Shape();
+  wrap.absarc(0,0,.31,0,Math.PI,false);wrap.absarc(0,0,.25,Math.PI,0,true);wrap.closePath();
+  const back=tidy(new T.ExtrudeGeometry(wrap,{depth:.29,bevelEnabled:false,curveSegments:10}).rotateX(-Math.PI/2).translate(0,.02,0),new T.Color(0xffffff));
+  for(let i=0;i<6;i++){const x=x0+1+i*1.4,z=bz-1.2,yaw=-Math.atan(.76*(x-cx)/(len/2-.22)**2);
+   for(const [name,geometry] of [['Seat',cushion],['Seat_back',back]]){const o=new T.Mesh(geometry,shared.barChair);o.name=name;o.position.set(x,FLOOR+.76,z);o.rotation.y=yaw;o.castShadow=o.receiveShadow=true;root.add(o);}
+   cyl(paint('barPost'),.035,.035,.72,[x,FLOOR+.36,z],6);put(paint('barPost'),new T.TorusGeometry(.2,.018,4,16).rotateX(Math.PI/2).translate(x,FLOOR+.3,z));cyl(paint('barPost'),.24,.24,.03,[x,FLOOR+.015,z],16);}
+  // Keep the whole band beneath the current gallery slab, including its upper rim.
+  sign({at:[cx,FLOOR+3.15,shelf-.3],normal:[0,0,-1],width:6.6,height:1.05,bow:.3,color:GREEN,frame:AMBER,lines:[{text:'THE',size:.2},{size:.33,runs:[{text:'TERPENE TASTING',color:GREEN},{text:'DECK',color:AMBER}]}]});
+  for(const x of [cx-2.8,cx+2.8])rod(M.dark,[x,FLOOR+3.675,shelf-.3],[x,LEVELS[0]-.24,shelf-.3],.015,5);
  }
 
  // The Cosmic Munchies Converger: a counter with snack dispensers, and the machine hung from the ceiling, beaming down.
@@ -573,7 +610,11 @@ export function createHydroNipLounge({mirror=1}={}){
   sign({at:[at[0],FLOOR+1.32,at[2]],normal:[0,0,-1],width:1.25,height:.62,color:AMBER,lines:[{text:'HYDRO-NIP LOUNGE',size:.085},{text:'Concept by Tochtli',size:.075,color:0xf3e6c4}]});}
 
  // One mesh per material.
- for(const {mat:m,loose,piece,gs} of lists.values()){const g=mergeGeometries(gs);gs.forEach(x=>x.dispose());const o=new T.Mesh(g,m);o.name=piece?piece+'_'+m.name:loose?m.name+'_loose':m.name;o.receiveShadow=true;o.castShadow=!m.transparent&&!(m instanceof T.MeshBasicMaterial);
+ for(const {mat:m,loose,piece,gs} of lists.values()){const g=mergeGeometries(gs);gs.forEach(x=>x.dispose());
+  // A dark cyan-violet glaze colours the polished ring's baked environment highlights.
+  if(m===shared.planter){const p=g.attributes.position,c=g.attributes.color,cyan=new T.Color(0x102429),violet=new T.Color(0x24132d),tint=new T.Color();
+   for(let i=0;i<p.count;i++){const a=Math.atan2(p.getZ(i)-DOME.z,p.getX(i)-DOME.x);tint.lerpColors(cyan,violet,.5+.5*Math.sin(a*3));c.setXYZ(i,tint.r,tint.g,tint.b);}}
+  const o=new T.Mesh(g,m);o.name=piece?piece+'_'+m.name:loose?m.name+'_loose':m.name;o.receiveShadow=true;o.castShadow=!m.transparent&&!(m instanceof T.MeshBasicMaterial);
   if(loose)o.userData.noCollide=true;root.add(o);}
  return root;
 }
