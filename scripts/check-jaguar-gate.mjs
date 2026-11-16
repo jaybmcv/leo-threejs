@@ -24,6 +24,10 @@ assert(head.geometry.groups[2].count>0&&head.geometry.groups[3].count>0,'The con
 assert(hp.getY(48*14+10)>3.4,'The skull dome must rise above the brow between the ears');
 assert.equal(head.material[1].emissive.getHex(),0xff7628,'The inner mouth emits warm orange');
 assert(head.material[1].emissiveIntensity>=.7&&!head.material[1].toneMapped,'The lining must visibly glow without relying on hidden roof tubes');
+const glow=head.material[1].emissiveMap,depthUV=head.geometry.attributes.uv1;
+assert(glow&&glow.channel===1&&depthUV,'The mouth glow uses a separate depth UV');
+const glowAt=u=>glow.image.data[Math.round(u*(glow.image.width-1))*4]/255;
+assert(glowAt(1)>.9&&glowAt(0)<.04&&glowAt(.5)<.06,'Orange fades from a bright lip to a dark throat instead of a flat panel');
 assert(group.getObjectByName('Jaguar_neon_wash_glow').material.opacity<.2,'Throat accents must preserve the view into the lounge');
 assert.equal(group.getObjectsByProperty('isLight',true).length,0,'Eyes and throat glow without real-time lights');
 assert(Math.abs(group.position.x+112.5)<.001,'Gate stays on the existing doorway centre');
@@ -35,6 +39,7 @@ for(let i=0;i<=96;i++){
  const x=k<1?sx*(1.05-.05*k):(u-.5)/.2;
  const y=k<1?1.95*k:1.95+.4*Math.max(0,1-Math.abs(x)**5)**.2;
  assert(Math.abs(hp.getX(i*M)-x)<1e-6&&Math.abs(hp.getY(i*M)-y)<1e-6,'Retain every original mouth width and height sample');
+ assert(depthUV.getX(i*M)===1&&depthUV.getX(i*M+12)===0&&depthUV.getX(i*M+13)===.5,'The glow must fade along the inner wall depth');
  for(let r=0;r<M;r++){const j=i*M+r,mirror=(96-i)*M+r;
   assert(Math.abs(hp.getX(j)+hp.getX(mirror))<1e-6&&hp.getY(j)===hp.getY(mirror)&&hp.getZ(j)===hp.getZ(mirror),'The sculpted skin must be exactly mirrored');
  }
@@ -78,7 +83,7 @@ for(const camera of cameras){const from=camera.position;
  for(let i=lining.start;i<lining.start+lining.count;i+=3){
   const points=Array.from({length:3},(_,j)=>new T.Vector3().fromBufferAttribute(hp,index.getX(i+j)).applyMatrix4(head.matrixWorld));
   const target=points.reduce((p,v)=>p.add(v),new T.Vector3()).multiplyScalar(1/3),hit=first(from,target),screen=target.clone().project(camera);
-  if(!hit||material(hit)!==head.material[1]||Math.abs(screen.x)>.96||Math.abs(screen.y)>.95||screen.z< -1||screen.z>1)continue;
+  if(!hit||material(hit)!==head.material[1]||glowAt(hit.uv1.x)<.1||Math.abs(screen.x)>.96||Math.abs(screen.y)>.95||screen.z< -1||screen.z>1)continue;
   const [a,b,c]=points.map(p=>p.project(camera));area+=Math.abs((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x))*1280*720/8;
  }
  assert(area>100,'The orange inner mouth must be exposed in each proof view: '+area+' square pixels');

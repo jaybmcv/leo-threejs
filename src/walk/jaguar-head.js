@@ -40,7 +40,11 @@ export function jaguarHeadGeometry(){
  }
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));
  g.setIndex(faces.flat());let start=0;for(let m=0;m<faces.length;m++){g.addGroup(start,faces[m].length,m);start+=faces[m].length;}g.computeVertexNormals();
- return insetEyes(g);
+ insetEyes(g);
+ // The inner wall has its own depth UV: black at the rear, orange at the lip.
+ const depthUV=new Float32Array(g.attributes.position.count*2);
+ for(let i=0;i<=NU;i++)for(let r=0;r<M;r++)depthUV[(i*M+r)*2]=r===0?1:Math.max(0,(r-FRONT-REAR)/WALL);
+ g.setAttribute('uv1',new T.BufferAttribute(depthUV,2));return g;
 }
 
 // Split the skin triangles at the almond outline. Eyes share the skin's vertices and normals,

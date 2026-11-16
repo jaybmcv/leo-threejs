@@ -50,6 +50,12 @@ const skinRoughness=()=>{const t=wrapped(canvasTexture(SKIN.w,SKIN.h,(g,w,h)=>pa
 // A vertical fade for the neon's light: full at the top of the texture, gone at the bottom.
 const fadeTexture=()=>canvasTexture(8,256,(g,w,h)=>{const f=g.createLinearGradient(0,0,0,h);f.addColorStop(0,'rgba(255,255,255,1)');f.addColorStop(.45,'rgba(255,255,255,.35)');f.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=f;g.fillRect(0,0,w,h);});
 
+// Orange gathers at the lip and fades into the dark throat.
+const mouthGlowTexture=()=>{
+ const data=new Uint8Array(128*4);for(let i=0;i<128;i++){const v=Math.round(255*(.02+.98*(i/127)**8));data.set([v,v,v,255],i*4);}
+ const t=new T.DataTexture(data,128,1);t.channel=1;t.minFilter=t.magFilter=T.LinearFilter;t.needsUpdate=true;return t;
+};
+
 export function createJaguarGate(){
  const group=new T.Group();group.name='Jaguar_gate';group.position.set(GATE.x,floorY(17),GATE.z);
  const solid=new T.Group();solid.name='Jaguar_gate_solid';group.add(solid);
@@ -59,7 +65,7 @@ export function createJaguarGate(){
   stone:stone('Jaguar_obsidian',0x08080b),
   nose:stone('Jaguar_nose',0x141419,{roughness:.12}),
   fang:stone('Jaguar_fangs',0x202027,{roughness:.12,emissiveIntensity:.03}),
-  mouth:stone('Jaguar_mouth',0x020203,{roughness:.3,envMapIntensity:.35,emissive:ORANGE,emissiveIntensity:.8,toneMapped:false}),
+  mouth:stone('Jaguar_mouth',0x020203,{roughness:.3,envMapIntensity:.35,emissive:ORANGE,emissiveMap:mouthGlowTexture(),emissiveIntensity:.8,toneMapped:false}),
   eye:new T.MeshStandardMaterial({name:'Jaguar_eye',color:0x3b2904,emissive:GLOW,emissiveIntensity:1.1,roughness:.22}),
   pupil:new T.MeshBasicMaterial({name:'Jaguar_pupil',color:0x020104}),
   glass:new T.MeshStandardMaterial({name:'Jaguar_throat_glass',color:0xc8dce6,roughness:.04,metalness:0,envMapIntensity:.5,transparent:true,opacity:.09,depthWrite:false,side:T.DoubleSide}),
