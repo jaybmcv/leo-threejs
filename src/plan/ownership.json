@@ -399,8 +399,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 136,
-      "signature": "0601684175edcb4a20c54f3ad55f1be6eb6f5a954e3072ddc3ff6f3cd321b30a"
+      "placements": 134,
+      "signature": "de275365159ea6c56e931f1a6dd76a7e365adcf47da5245760bf66ca4e76fd1f"
     },
     {
       "source": "src/interior-polish.js",
@@ -419,6 +419,21 @@
       "interactionTargets": null,
       "placements": 7,
       "signature": "4390e8342fea62ba98063dc9f556ada07fe17ab5138e0f4f3ed803f7e1d22a6b"
+    },
+    {
+      "source": "src/lounge-dome-plants.js",
+      "rooms": [
+        "commons-1"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Lounge_dome_"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 11,
+      "signature": "013b6e20d6629cefe39e189bcc848407068a3953e268cb857582b53710016e5c"
     },
     {
       "source": "src/lounge.js",
@@ -5480,7 +5495,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 15,
-      "signature": "ab67bc4776e4480980d98a311d2d977558b350886ef31ddd9938218926b23396"
+      "signature": "9674a0856fba4ccd46ca3c5403e613fec5dfbdd635b0a720875084ca096ba412"
     },
     {
       "source": "src/walk/render-bake.js",
@@ -5495,7 +5510,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 15,
-      "signature": "5fcda2ba0e714fd18da74574fdf43b36af358b0b63b3985b93cc410c8cbf2727"
+      "signature": "f8f24ace9dd044d7a3014dbc3127b0ac5ac470da467284ab4d4e089b90dfd80d"
     },
     {
       "source": "src/walk/selfie.authoring.js",
