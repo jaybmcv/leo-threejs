@@ -313,8 +313,6 @@ export function createHydroNipLounge({mirror=1}={}){
    door({x:o.x,z:PORCH.out,width:1.7,height:2.45,face:-1,pocket:-1});
    // The skin left round the cut: a dark collar from the porch's frame out to it.
    for(const s of [-1,1])box(M.dark,[.9,height+.6,.08],[o.x+s*(half+.45),FLOOR+(height+.6)/2,PORCH.in]);box(M.dark,[2*half+1.8,.6,.08],[o.x,FLOOR+height+.3,PORCH.in]);}
-  // A soft purple glow on the floor inside.
-  put(halo(PURPLE),new T.PlaneGeometry(DOME.r*2,DOME.r*2).rotateX(-Math.PI/2).translate(o.x,FLOOR+.03,o.z));
   // Nine spreader-bar hammocks in a ring round the dome's middle, spokes out from it, with the way in from the porch left
   // clear. Each is a gently dished cloth held flat by an oak bar at each end, the bar's ends roped to a point above it,
   // and from there a rope up to the frame (loose: you walk through it). Cloth, bars and their ropes are one mesh
