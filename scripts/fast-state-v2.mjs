@@ -70,6 +70,11 @@ export async function readFastBaseline(){
  return state;
 }
 
+// What lane B rebuilds rooms from: the fit-out programme, the Phase 4 mesh kit and the legacy room sources. Any other
+// changed geometry input that lane D doesn't take goes whole (check-lounge-mood-split.mjs relies on this).
+export const programmeInputs=new Set(['src/plan/room-fitout-overrides-v2.json','src/v2/phase4-programme.js','src/v2/phase6-programme.js','src/v2/launch-d-fitout.js']);
+export const kitInputs=new Set(['src/v2/phase4-mesh-kit.js']);
+export const legacyInputs=new Set(['src/special-areas.js','src/areas.js','src/area-finish.js','src/command-deck.js','src/neighborhood-services.js','src/lower-aft.js','src/lower-bow.js','src/upper-aft.js','src/voyage-forum.js','src/v2/room-shell.js']);
 export async function classifyFastChange(){
  const identity=await geometryIdentity();let state;try{state=await readFastBaseline();}catch(e){return {lane:'whole',reason:e.message,files:[],identity,rooms:[],decks:[]};}
  let baselineIdentity=state.identity,migration=null;
@@ -87,9 +92,6 @@ export async function classifyFastChange(){
  if(dressing?.reason)return {lane:'whole',reason:dressing.reason,files,identity,rooms:[],decks:[]};
  // A room dressing's room gets the public browser visit.
  if(dressing)return {lane:'D',reason:'Changed only an additive dressing ('+dressing.dressings.join(', ')+')',files,identity,rooms:[],decks:[],smokeRooms:[...new Set(dressing.dressings.map(id=>DRESSINGS[id].room).filter(Boolean))],dressings:dressing.dressings,basePrepared:state.prepared,patchProducer:await patchProducerIdentity()};
- const programmeInputs=new Set(['src/plan/room-fitout-overrides-v2.json','src/v2/phase4-programme.js','src/v2/phase6-programme.js','src/v2/launch-d-fitout.js']);
- const kitInputs=new Set(['src/v2/phase4-mesh-kit.js']);
- const legacyInputs=new Set(['src/special-areas.js','src/areas.js','src/area-finish.js','src/command-deck.js','src/neighborhood-services.js','src/lower-aft.js','src/lower-bow.js','src/upper-aft.js','src/voyage-forum.js','src/v2/room-shell.js']);
  if(files.some(f=>!programmeInputs.has(f)&&!legacyInputs.has(f)&&!kitInputs.has(f)))return {lane:'whole',reason:'Changed shared geometry or an unsupported authoring producer',files,identity,rooms:[],decks:[]};
  // The fit-out data shows only what applyRoomFitoutOverrides reads; other modules build from the same file (fast-overrides-v2.mjs).
  if(files.includes(OVERRIDES)){const reason=await baselineOverrideReason(baseline,baselineIdentity.files[OVERRIDES],Object.keys(identity.files));if(reason)return {lane:'whole',reason,files,identity,rooms:[],decks:[]};}
