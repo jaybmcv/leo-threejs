@@ -15,6 +15,7 @@ import {buildRoomShell} from '../src/v2/room-shell.js';
 import {shellParts,cutChartMany} from '../src/v2/hull-prototypes.js';
 import {worldPoint} from '../src/plan/hull-skin-v2.js';
 import {sideGalleryDoorCuts} from '../src/v2/gallery-doorways.js';
+import {polygonGeometry} from '../src/v2/geometry.js';
 import {createPaintings} from '../src/walk/paintings.js';
 import {createJaguarGate} from '../src/walk/jaguar-gate.js';
 
@@ -124,16 +125,23 @@ for(const name of ['VIP_seating_foliage',...['pink','purple','green'].map(c=>'VI
  }
 }
 assert(artLocal.max.y>.75+2.4,'Most of the unchanged painting remains above the low sofas');
+const frondRay=new T.Raycaster(seating.localToWorld(new T.Vector3(-7.8,2.5,.95)),new T.Vector3(0,-1,0));
+const frondHit=frondRay.intersectObjects([seating.getObjectByName('VIP_seating_foliage'),seating.getObjectByName('VIP_frond_pink')])[0];
+assert.equal(frondHit?.object.material.name,'VIP_frond_pink','Neon accent is visible outside the green frond stem');
 const drops=seating.getObjectByName('VIP_crystal_drops');
 assert(drops.isInstancedMesh&&drops.count>=48,'Shared faceted crystal drops');
 assert(localBox(drops).min.y>=3,'Lowest crystal has at least 3 m headroom');
 for(const name of ['VIP_candle_bodies','VIP_candle_holders','VIP_candle_flames'])assert.equal(seating.getObjectByName(name).count,12,'Four table candles and eight chandelier candles share instances');
-const support=seating.getObjectByName('VIP_chandelier_bracket'),sb=localBox(support);
-assert(sb.min.x<artLocal.min.x-.2&&sb.max.x>=-5,'Visible bracket starts outside the painting and reaches the chandelier');
-const mount=seating.localToWorld(new T.Vector3(-8.6,3.04,.3));
-const wallHit=col.raycast(new T.Ray(mount,new T.Vector3(1,0,0)),.5);
-assert(wallHit&&Math.abs(wallHit.point.x-door.center[0])<.2,'Bracket plate bolts to the real wall near its top');
-assert(3.04+.15<=room.y+room.height-door.center[1],'Mount fits below the real wall top');
+const support=seating.getObjectByName('VIP_chandelier_support'),sb=localBox(support),above=layout.decks[19];
+const holes=[...above.slab.holes.map(h=>h.polygon),...layout.hullPrototypes.prototypes.filter(p=>p.deck===20&&p.kind!=='cabin').map(p=>p.polygon)];
+const ceilingMesh=new T.Mesh(polygonGeometry(above.slab.outline,holes,above.y),new T.MeshBasicMaterial({side:T.DoubleSide}));
+ceilingMesh.updateMatrixWorld(true);
+const mount=seating.localToWorld(new T.Vector3(-5,3.6,2.6));
+const ceilingHit=new T.Raycaster(mount,new T.Vector3(0,1,0),0,1).intersectObject(ceilingMesh)[0];
+assert(ceilingHit,'The actual Deck 20 slab exists directly above the chandelier');
+assert(Math.abs(sb.max.y+door.center[1]-ceilingHit.point.y)<1e-5,'Gold canopy and rod attach to the existing slab underside');
+assert(seatingBounds.max.y<=ceilingHit.point.y-door.center[1]+1e-5,'Every arm, bulb and crystal stays below the ceiling');
+assert(sb.min.y<3.41&&sb.max.y-sb.min.y>.3,'Visible suspension rod reaches the chandelier hub');
 for(let z=1.95;z<=8;z+=.1)clear(-5,z);
 for(let x=-6.9;x<=-3.9;x+=.1)clear(x,1.95);
-console.log('PASS: Deck 19 low sofas, two marble tables, five neon plants, instanced candles/crystals, wall-attached chandelier, painting/rope clearance and walkable seating aisle');
+console.log('PASS: Deck 19 low sofas, two marble tables, five neon plants, instanced candles/crystals, ceiling-attached chandelier, painting/rope clearance and walkable seating aisle');

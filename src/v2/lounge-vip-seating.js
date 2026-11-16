@@ -3,6 +3,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {canvasTexture} from '../polish-kit.js';
 import {fitLoungeEntrance} from './community-routes.js';
+import layout from '../plan/selected-layout.js';
 
 // The Deck 19 doorway frame: +z is plaza, -x is the painting side. Collision stays in that local frame.
 export function createLoungeVipSeating(){
@@ -24,7 +25,7 @@ export function createLoungeVipSeating(){
    for(let y=0;y<=h;y+=4){const x=i*39-160+y*.42+16*Math.sin(y*.023+i)+5*Math.sin(y*.085+i*3);if(!y)g.moveTo(x,y);else g.lineTo(x,y);}g.stroke();}
  });
  const stone=new T.MeshStandardMaterial({name:'VIP_dark_veined_marble',map:marble,roughness:.28,metalness:.12});
- const batches=new Map(),bracket=[],add=(m,g)=>{if(!batches.has(m))batches.set(m,[]);batches.get(m).push(g);};
+ const batches=new Map(),add=(m,g)=>{if(!batches.has(m))batches.set(m,[]);batches.get(m).push(g);};
  const box=(m,s,p,r=0,soft=0)=>{const g=soft?new RoundedBoxGeometry(...s,2,soft):new T.BoxGeometry(...s);add(m,g.rotateY(r).translate(...p));};
  const tube=(m,points,r=.025)=>add(m,new T.TubeGeometry(new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p))),24,r,6,false));
  const proxy=(name,s,p,r=0)=>{const o=new T.Mesh(new T.BoxGeometry(...s));o.name=name;o.position.set(...p);o.rotation.y=r;o.userData.collisionOnly=true;solid.add(o);};
@@ -63,7 +64,7 @@ export function createLoungeVipSeating(){
    const a=j*Math.PI*2/9+i*.7,reach=i%2?.53:.6,top=h*(.78+(j%3)*.1),pts=[];
    for(let k=0;k<=8;k++){const t=k/8;pts.push([x+Math.cos(a)*reach*t,top+.27*Math.sin(t*Math.PI)-.28*t,z+Math.sin(a)*reach*t]);}
    tube(green,pts,.014);
-   if(j%3===0)tube(rims[(i+j/3)%3],pts,.008);
+   if(j%3===0)tube(rims[(i+j/3)%3],pts,.02);
    // Paired tapered leaflets give both palms and lower ferns a full, feathered silhouette.
    for(let k=1;k<8;k++)for(const side of [-1,1]){
     const p=pts[k],len=(i%2?.22:.29)*Math.sin(k/8*Math.PI),dx=-Math.sin(a)*side*len,dz=Math.cos(a)*side*len;
@@ -73,28 +74,25 @@ export function createLoungeVipSeating(){
   }
  });
 
- // A braced arm bolts to the wall outside the painting, rises above it, then carries the chandelier.
+ // The Deck 20 slab is overhead here. Hang below its real underside without adding a ceiling.
  const hanger=new T.Group();hanger.name='VIP_chandelier';group.add(hanger);
- bracket.push(new T.BoxGeometry(.3,.3,.12).translate(-8.6,3.04,.06));
- const arm=(points,r)=>bracket.push(new T.TubeGeometry(new T.CatmullRomCurve3(points.map(p=>new T.Vector3(...p))),24,r,6,false));
- arm([[-8.6,2.92,.1],[-8.6,4.8,.16],[-8.6,4.8,2.6],[-5,4.8,2.6]],.055);
- arm([[-8.6,2.92,.1],[-8.6,4.8,1.65]],.035);
- arm([[-8.6,4.8,.16],[-5,4.8,2.6]],.028);
- arm([[-5,4.8,2.6],[-5,3.65,2.6]],.026);
- const support=new T.Mesh(mergeGeometries(bracket.map(g=>g.toNonIndexed())),gold);support.name='VIP_chandelier_bracket';support.userData.noCollide=true;group.add(support);
+ const ceiling=layout.decks[19].y-.24-layout.decks[18].y;
+ const rod=new T.CylinderGeometry(.035,.035,ceiling-3.4,10).translate(-5,(ceiling+3.4)/2,2.6);
+ const cap=new T.CylinderGeometry(.16,.16,.045,16).translate(-5,ceiling-.0225,2.6);
+ const support=new T.Mesh(mergeGeometries([rod,cap]),gold);support.name='VIP_chandelier_support';support.userData.noCollide=true;group.add(support);
  const crystals=[];
  for(let ring=0;ring<2;ring++){
-  const radius=ring?.62:1.1,y=ring?3.5:3.85;
+  const radius=ring?.62:1.1,y=ring?3.4:3.55;
   add(gold,new T.TorusGeometry(radius,.026,6,40).rotateX(Math.PI/2).translate(-5,y,2.6));
   for(let j=0;j<(ring?16:24);j++){
    const a=j*Math.PI*2/(ring?16:24),x=-5+Math.cos(a)*radius,z=2.6+Math.sin(a)*radius;
-   crystals.push([x,y-.16,z]);if(j%2===0)crystals.push([x,y-.32,z]);
+   crystals.push([x,y-.15,z]);if(j%2===0)crystals.push([x,ring?3.2:3.27,z]);
   }
  }
  for(let j=0;j<8;j++){
   const a=j*Math.PI/4,x=-5+Math.cos(a)*1.1,z=2.6+Math.sin(a)*1.1;
-  tube(gold,[[-5,4.15,2.6],[-5+Math.cos(a)*.5,3.83,2.6+Math.sin(a)*.5],[x,3.85,z],[x,4.02,z]],.027);
-  candles.push([x,4.02,z]);
+  tube(gold,[[-5,3.55,2.6],[-5+Math.cos(a)*.5,3.38,2.6+Math.sin(a)*.5],[x,3.4,z],[x,3.48,z]],.027);
+  candles.push([x,3.48,z]);
  }
  crystals.push([-5,3.2,2.6]);
  const instances=(name,g,m,points)=>{const o=new T.InstancedMesh(g,m,points.length);o.name=name;o.userData.noCollide=true;
