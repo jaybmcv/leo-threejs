@@ -22,6 +22,14 @@ export function install(g,id){
 }
 export function nextRound(g){if(g.phase!=='clear')return false;g.current++;g.view='side';g.placed.clear();g.phase='play';return true;}
 
+// Grow the scrollable pile instead of shrinking readable, tappable parts.
+export function pileLayout(count,width,height,partHeight=96){
+ width=Math.max(94,width);const cols=Math.max(1,Math.min(count,Math.floor(width/94))),rows=Math.max(1,Math.ceil(count/cols));
+ const w=Math.min(82,width/cols-20),h=Math.max(96,partHeight);
+ height=Math.max(height,rows*(h+20));
+ return {width,height,cols,cw:width/cols,ch:height/rows,w,h};
+}
+
 // Gentle drift stays near each starting slot so required parts remain easy to find.
 export const floatingPart=(x,y,w,h,index=0)=>({x,y,w,h,ax:x,ay:y,vx:0,vy:0,time:index*2.399});
 export function boundPart(p,width,height){

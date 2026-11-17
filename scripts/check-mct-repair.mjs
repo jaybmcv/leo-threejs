@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {PARTS,PUZZLES,JUNK} from '../src/walk/mct-repair/catalog.js';
-import {VIEWS,newRepair,required,workbench,install,nextRound,formatTime,floatingPart,boundPart,pushPart,floatPart} from '../src/walk/mct-repair/rules.js';
+import {VIEWS,newRepair,required,workbench,install,nextRound,formatTime,pileLayout,floatingPart,boundPart,pushPart,floatPart} from '../src/walk/mct-repair/rules.js';
 import {partArt,cartArt,PART_SPOTS} from '../src/walk/mct-repair/art.js';
 
 const repairNames=[
@@ -80,9 +80,22 @@ for(let round=0;round<3;round++){
 }
 const edge=floatingPart(-10,400,70,80);edge.vx=-10;edge.vy=10;boundPart(edge,320,170);
 assert.equal(edge.x,0);assert.equal(edge.y,90);assert(edge.vx>0&&edge.vy<0);
+// Resizing grows the scrollable pile while preserving usable targets and full label height.
+for(const count of [40,48,56])for(const width of [1246,640,390,320,281,74])for(const labelHeight of [33,66]){
+ const layout=pileLayout(count,width,170,labelHeight+53),{cols,cw,ch,w,h}=layout;
+ assert(w>=74&&h>=96&&h>=labelHeight+53);assert(layout.height>170);assert(layout.width>=width);
+ for(let i=0;i<count;i++){
+  const p=floatingPart(i%cols*cw+(cw-w)/2,Math.floor(i/cols)*ch+(ch-h)/2,w,h,i);
+  for(let frame=0;frame<180;frame++){
+   if(frame%15===0)pushPart(p,p.x-10,p.y+h/2);
+   floatPart(p,layout.width,layout.height,1/60);
+   assert(p.x>=0&&p.y>=0&&p.x+w<=layout.width&&p.y+h<=layout.height);
+  }
+ }
+}
 for(const mode of ['', '.public','.prepared','.authoring']){
  const main=await fs.readFile(`src/walk/main${mode}.js`,'utf8');
  for(const s of ["t.kind==='mct-repair'","repairStations.near(p)",'mctRepair.open(t.bay)','mctRepair?.close();','||!!mctRepair?.isOpen||','!mctRepair?.isOpen&&!emergencyDrill?.isOpen){acc+=dt;'])assert(main.includes(s),`${mode}: ${s}`);
 }
 console.log('PASS MCT repair: all 27 requested names, unique icons, valid mounts, all 26 tasks completable, every part available in each 4/8/12 round, bench counts, scoring and four walk modes.');
-console.log('PASS MCT repair motion: idle drift, held targets, outward pushes, damping, reduced motion and long-run resized bounds.');
+console.log('PASS MCT repair motion: idle drift, held targets, outward pushes, damping, reduced motion, readable scrollable layouts and long-run resized bounds.');
