@@ -177,9 +177,10 @@ async function shrink(file){
 const drafts=new Map();
 // More words and pictures for an idea that is waiting on its owner. What goes in stays through a background refresh.
 function addMore(c){
- const asked=c.status==='more-info';
+ // A question or a plan waits for an answer: the box is open. A plan is answered with yes, or with what to change.
+ const plan=c.status==='proposal',asked=c.status==='more-info'||plan;
  const open=el('button',{type:'button',className:'link',textContent:'Add more to this idea'});
- const text=el('textarea',{className:'add-text',maxLength:MAX_TEXT,placeholder:asked?'Tell us what you can…':'What else should we know?',attrs:{'aria-label':'Add more to this idea'}});
+ const text=el('textarea',{className:'add-text',maxLength:MAX_TEXT,placeholder:plan?'Does this plan fit? Say yes, or what you’d change…':asked?'Tell us what you can…':'What else should we know?',attrs:{'aria-label':plan?'Your answer to the plan':'Add more to this idea'}});
  const picker=el('input',{type:'file',accept:'image/*',multiple:true,hidden:true}),addPics=el('button',{type:'button',className:'more',textContent:'Add pictures'}),pics=el('div',{className:'add-pics'});
  const check=el('div',{className:'add-check'}),error=el('p',{className:'add-error',attrs:{role:'alert'}}),send=el('button',{type:'button',className:'go',textContent:'Send'});
  const form=el('div',{className:'add-form',hidden:!asked},text,el('div',{className:'actions'},addPics,picker,el('span',{className:'add-hint',textContent:`Up to ${MAX_IMAGES} pictures`})),pics,check,error,el('div',{className:'actions'},send));

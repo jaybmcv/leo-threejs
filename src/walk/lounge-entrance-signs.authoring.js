@@ -1,3 +1,4 @@
+import {createLoungeVipSeating} from '../v2/lounge-vip-seating.js';
 import {createLoungeVipEntrance} from '../v2/lounge-vip-entrance.js';
 import {RecordGeometry,recordMerged} from "../v2/prepared-geometry-record.js";
 import {fitLoungeEntrance} from '../v2/community-routes.js';
@@ -97,6 +98,7 @@ export function createLoungeEntranceSigns(){
   bulbB:new T.MeshBasicMaterial({name:'Lounge_sign_bulb_violet',color:PURPLE,toneMapped:false}),
   tube:new T.MeshBasicMaterial({name:'Lounge_sign_neon',color:PURPLE,toneMapped:false}),
  };
- const vip=createLoungeVipEntrance(sprig);
- return {groups:[vip.group,createSign(18,'lounge-entrance-sign-18',mats)],solid:vip.solid};
+ const vip=createLoungeVipEntrance(sprig),seating=createLoungeVipSeating();
+ vip.solid.add(seating.solid);
+ return {groups:[vip.group,createSign(18,'lounge-entrance-sign-18',mats),seating.group],solid:vip.solid};
 }
