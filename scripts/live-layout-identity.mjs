@@ -13,7 +13,7 @@ const logic=['src/walk/net/panel-rules.js','server/lever-panel.mjs','src/v2/live
  'src/walk/hamster-ball.js','src/walk/net/wire.js','package-lock.json',
  // Where a visitor may be put down when they join someone (server/joins.mjs): its zones are in the snapshot's data, its
  // rule is this source.
- 'src/walk/public-area.js'];
+ 'src/walk/public-area.js','src/walk/graffiti-wall.js','server/graffiti.mjs'];
 const memo=new Map();
 
 export async function liveProtocolSnapshot(layout){

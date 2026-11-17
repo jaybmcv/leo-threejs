@@ -408,7 +408,7 @@ function onMessage(v,data,binary){
   case 'clown':if(allowed(v,'clown'))clown(v);break;
   // The Deck 19 graffiti wall (graffiti.mjs): the whole wall for a visitor come to look, and a stroke of spray paint.
   // A stroke over the limit is refused, and the painter told, so their page can take the wall back as it is.
-  case 'wall':if(allowed(v,'wall'))graffiti.look(v);break;
+  case 'wall':if(allowed(v,'wall'))graffiti.look(v,msg);break;
   case 'paint':graffiti.paint(v,msg,{slow:!allowed(v,'paint')});break;
   // Paws Off (walk/paws-off): stepping onto a treadmill, a fall, stepping off, for the gym round (gym.mjs).
   case 'gym':if(allowed(v,'gym')){if(msg.e==='in'&&!policy.canGym(v.pos)){send(v.ws,{m:'gym',e:'cancel'});break;}gym.message(v,msg);}break;

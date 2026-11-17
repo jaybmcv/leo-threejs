@@ -2523,14 +2523,12 @@
       "fixed": true,
       "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
-        "Walk_fin_root_casing",
-        "Fin_root_casing_corner",
-        "Fin_root_casing_wash_light"
+        "Walk_fin_root_casing"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 8,
-      "signature": "4bb347e717eed754207735b8276a9627b5fdc632d202fe5e62654fd3483ea63f"
+      "placements": 6,
+      "signature": "10b0cf650f9a1fbef70cab8caf577c48675d5744cc948cf11b8d57944ec62e7d"
     },
     {
       "source": "src/walk/fog-cull.js",
@@ -2695,6 +2693,23 @@
       "signature": "4768a14ce15a6a2c046ab771fdd78413d73df19b4bfad2c4e997d24ed357db6c"
     },
     {
+      "source": "src/walk/graffiti-surface.js",
+      "rooms": [
+        "aft-machinery"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
+      "features": [
+        "Walk_graffiti_wall",
+        "Graffiti_"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "997e7fe81781e86b4fa04b86fc194cfa2716a3fc31e9fd7437ce69f3ea8b286f"
+    },
+    {
       "source": "src/walk/graffiti-wall.js",
       "rooms": [
         "aft-machinery"
@@ -2706,7 +2721,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "3a7e0ee04722ceaba30540c438862e769d891bc717dac72602f215a4c8dff588"
+      "signature": "8808e7d29b3a2fa2ec7e0cccb31ea2651d3d6bfd9fcc33d8ba9d913c13543181"
     },
     {
       "source": "src/walk/graffiti.js",
@@ -2716,13 +2731,11 @@
       "via": "frame boundary",
       "fixed": true,
       "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
-      "features": [
-        "Walk_graffiti_wall"
-      ],
+      "features": [],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 3,
-      "signature": "ba9afb6f5fba84ffee4c0ef60e1859f58fc96d654c5dc80ae4c2d807dc0ded85"
+      "signature": "4c97db30eb7810d914234ed0f6ce966249defb48d6c40fc3d6094ae9db191731"
     },
     {
       "source": "src/walk/grapple.js",
@@ -4236,7 +4249,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "46401ac5e6d8452ae9be06c84454dc0765c30c1cb07eda34686c7afe6436f0f1"
+      "signature": "98cc5243056b85b07fe56e6bfb0955c7dba19e698f0471175378d2d09615b73e"
     },
     {
       "source": "src/walk/main.js",
@@ -4258,7 +4271,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "3e047069ae9cd8b8f089f54ef4a7960aa3d4ed732214a9f4c5f482ddefebb0ba"
+      "signature": "10b217ec213a439faafcbe714621223b0e823f51ccaaa3ee85fdc5cd7b34e281"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4278,7 +4291,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "e6959ed249dc10175972f597684e5cb3c883a445a826b5fb8307e99cddac44a9"
+      "signature": "7ea99e72fbce34c5da48e26491540bef38311022ff7557cb3cc25138b129614b"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4298,7 +4311,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "60d53a36722320780948480a2deb1cfab38bd8acfb4cca7a86c3f75feb91d608"
+      "signature": "8af5c1624d56df4d4a419a550231e1612c6fc1b0eaf8dbfd2e8375a98469cbdf"
     },
     {
       "source": "src/walk/marks.authoring.js",
