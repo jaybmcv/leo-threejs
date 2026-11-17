@@ -400,7 +400,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 129,
-      "signature": "5fc14f379b2b0405abed67e62c475b81252612cf3bbf34885a7da0833b996f6a"
+      "signature": "934da80531a021feb299ac9a3484ac1565cf4d83a1c2d03743ac85515ae28423"
     },
     {
       "source": "src/interior-polish.js",
@@ -4159,13 +4159,14 @@
       "via": "frame boundary",
       "fixed": false,
       "features": [
+        "Walk_lounge_sign",
         "Walk_lounge_hammocks",
         "Walk_terpene_glassware"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 4,
-      "signature": "dacd29fd064ef5d8630f9102f60363ee03f462999bcad83f2e7ea8f46a603b5a"
+      "placements": 6,
+      "signature": "878c34d1fe7c6f4b1c6886ba496b4034adb90a0f0f92c15313f980832b98d531"
     },
     {
       "source": "src/walk/lounge.js",
@@ -4175,13 +4176,14 @@
       "via": "frame boundary",
       "fixed": false,
       "features": [
+        "Walk_lounge_sign",
         "Walk_lounge_hammocks",
         "Walk_terpene_glassware"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 4,
-      "signature": "d0320efdc73ef77198e0d7da81f3e816f279ccec1819dfb08b08b70dfd66967d"
+      "placements": 6,
+      "signature": "d1ce64547ffe91b06a98d398c5bf48ee1827c1c7b84ee34611fe0dc7e99ae72f"
     },
     {
       "source": "src/walk/lounge.prepared.js",
@@ -4191,13 +4193,14 @@
       "via": "frame boundary",
       "fixed": false,
       "features": [
+        "Walk_lounge_sign",
         "Walk_lounge_hammocks",
         "Walk_terpene_glassware"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 4,
-      "signature": "557a4fe18803e5b9636bd3f5a0b80dad6f16f5823a2de714d931dfcbb00a41ef"
+      "placements": 6,
+      "signature": "1d944833ba0a804538c96f768ccc207cf00cbf4d0bdb803dc105f11510e5a0f6"
     },
     {
       "source": "src/walk/lounge.public.js",
@@ -4207,13 +4210,14 @@
       "via": "frame boundary",
       "fixed": false,
       "features": [
+        "Walk_lounge_sign",
         "Walk_lounge_hammocks",
         "Walk_terpene_glassware"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 4,
-      "signature": "cef341f40aaf6efd4eb138b0f277d00160654fd2507221d0c3b77b83c5abde6c"
+      "placements": 6,
+      "signature": "4634db6855252bc10c99dcdd06955d290f5c13ba2a2536b4017ea50f46214b8c"
     },
     {
       "source": "src/walk/main.authoring.js",
