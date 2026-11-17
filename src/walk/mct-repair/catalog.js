@@ -6,7 +6,7 @@ export const PARTS=[
  {"id":"seat","name":"Modular Seat","view":"top"},
  {"id":"bumper","name":"Front Bumper","view":"front"},
  {"id":"lights","name":"Rear Step & Lights","view":"rear"},
- {"id":"skirt","name":"MCT-01 Side Skirt","view":"side"},
+ {"id":"skirt","name":"Side Skirt","view":"side"},
  {"id":"hood","name":"Hood Deflector","view":"front"},
  {"id":"fender","name":"Fender & Guard","view":"side"},
  {"id":"battery","name":"48V Battery Pack","view":"top"},
