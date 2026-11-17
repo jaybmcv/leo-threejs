@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import {build} from 'esbuild';
+import {ANGLE_IF_ASKED,PLAYWRIGHT_FROM} from './chrome-setup.mjs';
 import {PARTS,PUZZLES,JUNK} from '../src/walk/mct-repair/catalog.js';
 import {VIEWS,newRepair,required,workbench,install,nextRound,formatTime} from '../src/walk/mct-repair/rules.js';
 import {partArt,cartArt,PART_SPOTS} from '../src/walk/mct-repair/art.js';
@@ -57,3 +60,63 @@ for(const mode of ['', '.public','.prepared','.authoring']){
  for(const s of ["t.kind==='mct-repair'","repairStations.near(p)",'mctRepair.open(t.bay)','mctRepair?.close();','||!!mctRepair?.isOpen||','!mctRepair?.isOpen&&!emergencyDrill?.isOpen){acc+=dt;'])assert(main.includes(s),`${mode}: ${s}`);
 }
 console.log('PASS MCT repair: all 27 requested names, unique icons, valid mounts, all 26 tasks completable, every part available in each 4/8/12 round, bench counts, scoring and four walk modes.');
+
+// Measure the real panel, including the longest twelve-part tasks and installed marks.
+const {chromium}=createRequire(PLAYWRIGHT_FROM)('playwright');
+const bundle=await build({stdin:{contents:"export {createMctRepair} from './src/walk/mct-repair/game.js';",resolveDir:process.cwd()},bundle:true,write:false,format:'iife',globalName:'repairCheck',platform:'browser'});
+const browser=await chromium.launch({channel:'chrome',headless:true,args:['--disable-gpu-sandbox',...ANGLE_IF_ASKED]});
+try{
+ const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setContent('<!doctype html><html><body></body></html>');
+ const fonts=await Promise.all([['Archivo','archivo'],['Sora','sora'],['JetBrains Mono','jetbrains']].map(async([name,file])=>`@font-face{font-family:"${name}";src:url(data:font/woff2;base64,${(await fs.readFile(`src/brand/${file}.woff2`)).toString('base64')}) format('woff2');font-weight:100 900}`));
+ await page.addStyleTag({content:fonts.join('\n')});
+ await page.evaluate(()=>Promise.all(['14px Archivo','700 22px Sora','12px "JetBrains Mono"'].map(font=>document.fonts.load(font))));
+ await page.addScriptTag({content:bundle.outputFiles[0].text});
+ await page.evaluate(()=>{globalThis.repair=repairCheck.createMctRepair();});
+ const seen=new Set(),maxParts=Math.max(...PUZZLES.map(p=>p.parts.length));assert.equal(maxParts,12);
+ for(const [width,height] of [[1700,870],[1280,720],[390,844],[844,390]]){
+  await page.setViewportSize({width,height});
+  // Twelve evenly spaced draws cover all 12/8/6 choices across the three rounds.
+  for(let sample=0;sample<12;sample++){
+   await page.evaluate(sample=>{
+    repair.open(3);const random=Math.random;Math.random=()=>(sample+.5)/12;
+    try{document.querySelector('.mct-repair [data-primary]').click();}finally{Math.random=random;}
+   },sample);
+   for(let round=0;round<3;round++){
+    const measure=()=>page.evaluate(()=>{
+     const root=document.querySelector('.mct-repair'),list=root.querySelector('[data-required]'),panel=list.closest('[data-assembly]'),aside=list.parentElement;
+     root.scrollTop=0;
+     const bounds=e=>e.getBoundingClientRect(),inside=(r,b)=>r.left>=b.left-.5&&r.right<=b.right+.5&&r.top>=b.top-.5&&r.bottom<=b.bottom+.5;
+     const view={left:0,top:0,right:innerWidth,bottom:innerHeight},rows=[...list.children],problems=[];
+     if(list.scrollHeight>list.clientHeight+1||list.scrollWidth>list.clientWidth+1)problems.push('List content overflows');
+     if(['auto','scroll','hidden','clip'].includes(getComputedStyle(list).overflowY))problems.push('List clips or scrolls');
+     if(rows.length!==repair.state.needed.length)problems.push('Missing required row');
+     for(const row of rows){
+      const r=bounds(row),text=row.querySelector('span'),icon=row.querySelector('svg'),range=document.createRange();range.selectNodeContents(text);
+      if(![list,aside,panel].every(p=>inside(r,bounds(p)))||!inside(r,view))problems.push('Row outside list, panel or window: '+row.textContent);
+      if(!inside(range.getBoundingClientRect(),r)||!inside(bounds(icon),r))problems.push('Clipped name or icon: '+text.textContent);
+      if(parseFloat(getComputedStyle(text).fontSize)<11||bounds(icon).width<24)problems.push('Unreadable row: '+text.textContent);
+      if(row.classList.contains('done')&&(row.lastElementChild.textContent!=='OK'||!inside(bounds(row.lastElementChild),r)))problems.push('Missing installed mark');
+     }
+     return {problems,count:rows.length,name:root.querySelector('[data-name]').textContent,ids:repair.state.needed.map(p=>p.id).join(',')};
+    });
+    const before=await measure();seen.add(before.ids);assert.deepEqual(before.problems,[],`${width}x${height}, round ${round+1}, ${before.name}`);
+    const first=await page.evaluate(()=>repair.state.needed[0]);
+    await page.locator(`[data-view="${first.view}"]`).click();
+    await page.locator(`[data-part="${first.id}"]`).click();
+    await page.locator('[data-cart]').click();
+    const after=await measure();assert.deepEqual(after.problems,[],`${width}x${height}, installed mark, ${after.name}`);
+    assert.equal(await page.locator('[data-required] .done').count(),1);
+    await page.evaluate(()=>{
+     for(const p of repair.state.needed.slice(1)){document.querySelector(`[data-view="${p.view}"]`).click();document.querySelector(`[data-part="${p.id}"]`).click();document.querySelector('[data-cart]').click();}
+    });
+    await page.waitForFunction(()=>!document.querySelector('.mct-repair [data-screen]').hidden);
+    assert.equal(await page.evaluate(()=>repair.state.phase),round===2?'complete':'clear');
+    if(round<2)await page.locator('.mct-repair [data-primary]').click();
+   }
+   await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>repair.isOpen),false);
+  }
+ }
+ assert.equal(seen.size,PUZZLES.length,'Every catalogue task was measured');assert.deepEqual(errors,[]);
+ console.log(`PASS MCT repair layout: all ${seen.size} tasks, up to ${maxParts} parts, at 1700x870, 1280x720, 390x844 and 844x390; readable rows and installed marks, no clipping or list scroll.`);
+}finally{await browser.close();}
