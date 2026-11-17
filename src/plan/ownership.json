@@ -5634,7 +5634,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 9,
-      "signature": "69bb31e6aba735ac31d12ea309ad7e67bef9c8739e5d8c108e5323c1d9127e97"
+      "signature": "0cd0e7fbb7f59140d3fdc8989da340be3192968da39ad918b2a6b17cbb7c8063"
     },
     {
       "source": "src/walk/sign-array.js",
