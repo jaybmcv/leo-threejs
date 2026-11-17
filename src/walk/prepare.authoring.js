@@ -48,7 +48,7 @@ import {createSwordCase} from './sword-case.authoring.js';
 import {createChinampa} from './chinampa.js';
 import {stripBaggage,createBaggage} from './baggage.js';
 // Room edits and proxy colliders must be identical in the page and the Node checker.
-export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=null,afterRest=null,light=null,kit=null,anisotropy=1,still=false,urls={},hat=''}={}){
+export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=null,afterRest=null,kit=null,anisotropy=1,still=false,urls={},hat=''}={}){
  const dropped=exteriorPrepared?0:prepareExteriorForWalking(ship);
  // Refrigerated provisions loses its shared locker cabinets before the colliders see them (provisions.js).
  globalThis.__leoAuthoringWork?.("prepare-step",{step:"stripProvisions(ship);"});
@@ -103,7 +103,7 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const accessLift=createVaultLift({addMover(){return{place(){}}}});prepareClubhouseAccess(ship,accessLift);
  const colliders=buildColliders(ship,{extra:[ship.exterior],filter:o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name),...(into?{into}:{})});
  afterBase?.(colliders);checkpointPreparedWalk(ship);
- const restSpots=findRestSpots(ship.inside),seats=solidSpots(restSpots,colliders),lounge=createLounge(ship,colliders,light);afterRest?.({restSpots,seats,lounge});
+ const restSpots=findRestSpots(ship.inside),seats=solidSpots(restSpots,colliders),lounge=createLounge(ship,colliders);afterRest?.({restSpots,seats,lounge});
  const booth=createSelfieBooth();colliders.addStatic(booth.group);
  const carpet=ship.root.getObjectByName('Activity_floor'),poolTable=carpet?createPoolTable(carpet):null;if(poolTable){colliders.addStatic(poolTable.group);mergeByMaterial(poolTable.group);}
  // The same hall's pinball machine at its end wall (pinball/machine.js): solid as one plain box.

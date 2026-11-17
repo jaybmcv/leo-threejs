@@ -47,10 +47,10 @@ import {createSwordCase} from './sword-case.public.js';
 import {createChinampa} from './chinampa.js';
 import {stripBaggage,createBaggage} from './baggage.js';
 // Room edits and proxy colliders must be identical in the page and the Node checker.
-export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=null,afterRest=null,light=null,kit=null,anisotropy=1,still=false,urls={},hat=''}={}){
+export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=null,afterRest=null,kit=null,anisotropy=1,still=false,urls={},hat=''}={}){
  const dropped=0,colliders=installPreparedColliders(into,ship.v2PreparedColliders);
  afterBase?.(colliders);
- const restSpots=ship.v2PreparedRest,seats=ship.v2PreparedSeats.map(i=>restSpots[i]),lounge=createLounge(ship,colliders,light);afterRest?.({restSpots,seats,lounge});
+ const restSpots=ship.v2PreparedRest,seats=ship.v2PreparedSeats.map(i=>restSpots[i]),lounge=createLounge(ship,colliders);afterRest?.({restSpots,seats,lounge});
  await yieldToPage();
  const booth=createSelfieBooth();colliders.addStatic(booth.group);
  await yieldToPage();
