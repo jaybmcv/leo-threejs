@@ -4426,7 +4426,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "fc108753716eaef47a239bbb960de03938086543c0ed165183456c4c630baf04"
+      "signature": "08472a5644d3a29298c486a06a533a5a0c8120cdd6e75b57b646bf824222cea5"
     },
     {
       "source": "src/walk/mct-repair/rules.js",
@@ -4438,7 +4438,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "af6108fc5ee42c69761893183a7fcf61aa51e24f211382d9b6baed9552185d27"
+      "signature": "b0b503516e1ba25be5b08bbd69cce55198eddcad3f4f64c1ad3e6fd1da27feaa"
     },
     {
       "source": "src/walk/merge-by-material.js",
