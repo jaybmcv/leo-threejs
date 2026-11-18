@@ -46,8 +46,11 @@ const grain=`
 float lawnHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 float lawnNoise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);return mix(mix(lawnHash(i),lawnHash(i+vec2(1,0)),f.x),mix(lawnHash(i+vec2(0,1)),lawnHash(i+vec2(1,1)),f.x),f.y);}
 `;
+const shadedMaterials=new WeakSet();
 export function shadeLawn(material,y){
- if(material.userData.voyagerLawn)return;material.userData.voyagerLawn=true;
+ // Prepared materials and clones keep userData, but lose shader functions.
+ // Only a material patched in this runtime can skip installing the shader.
+ if(shadedMaterials.has(material))return;shadedMaterials.add(material);material.userData.voyagerLawn=true;
  const base=material.onBeforeCompile,cache=material.customProgramCacheKey.bind(material);
  material.onBeforeCompile=function(shader,renderer){
   base.call(this,shader,renderer);

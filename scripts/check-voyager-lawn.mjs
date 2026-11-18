@@ -5,7 +5,7 @@ import {atriumFloorGeometry,atriumFloorMaterial} from '../src/v2/atrium-surfaces
 import {phase6ParkPath} from '../src/plan/atrium-v2.js';
 import {phase6Programme} from '../src/v2/phase6-programme.js';
 import {geometryKept} from '../src/v2/shader-hooks.js';
-import {createVoyagerLawn,lawnSampler,lawnBlocker} from '../src/v2/voyager-lawn.js';
+import {createVoyagerLawn,lawnSampler,lawnBlocker,shadeLawn} from '../src/v2/voyager-lawn.js';
 
 const d=layout.decks[5],y=d.y+.006;
 const geometry=atriumFloorGeometry(d.slab.outline,d.slab.holes.map(h=>h.polygon),d.y,d.atrium.outline);
@@ -44,6 +44,15 @@ for(const mat of [floor.material,distant.material]){
  const source=mat.isMeshBasicMaterial?T.ShaderLib.basic:T.ShaderLib.standard,shader={vertexShader:source.vertexShader,fragmentShader:source.fragmentShader,uniforms:{}};
  mat.onBeforeCompile(shader);assert(shader.vertexShader.includes('vLawnMask'));assert(shader.fragmentShader.includes('grainFade'));
  assert(!shader.vertexShader.includes('y--'),'negative deck height produces valid subtraction');
+ for(const copy of [mat.clone(),new T.MaterialLoader().parse(mat.toJSON())]){
+  assert(copy.userData.voyagerLawn,'the saved diagnostic marker survives cloning and prepared loading');
+  const before={vertexShader:source.vertexShader,fragmentShader:source.fragmentShader,uniforms:{}};copy.onBeforeCompile(before);
+  assert(!before.fragmentShader.includes('grainFade'),'material serialization does not preserve shader functions');
+  shadeLawn(copy,y);const hook=copy.onBeforeCompile;shadeLawn(copy,y);assert.equal(copy.onBeforeCompile,hook,'runtime installation is idempotent');
+  const after={vertexShader:source.vertexShader,fragmentShader:source.fragmentShader,uniforms:{}};copy.onBeforeCompile(after);
+  assert(after.vertexShader.includes('vLawnMask')&&after.fragmentShader.includes('grainFade'),'restored materials reinstall lawn grain and patches');
+  assert(geometryKept(copy),'restored floor shading still keeps its geometry');
+ }
 }
 assert.deepEqual(geometry.attributes.position.array,original,'render dressing never changes floor geometry');
 console.log('Voyager lawn: '+inspected+' instances checked across Deck 6; clear paths, beds and fittings; one draw, phone/low settings and unchanged floor.');
