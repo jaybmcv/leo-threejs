@@ -1339,8 +1339,8 @@
         "Cherry_blossom_colliders"
       ],
       "interactionTargets": null,
-      "placements": 59,
-      "signature": "5d533afbf06362ecdc6d260f4dbeb4c0547dcffceeec1df54938f2ea8d04c0a7"
+      "placements": 61,
+      "signature": "614798506b2e7bd8419abda88abecf1ea631afde37b099619e3e338483ae6dfe"
     },
     {
       "source": "src/walk/blossom.js",
@@ -1374,8 +1374,8 @@
         "Cherry_blossom_colliders"
       ],
       "interactionTargets": null,
-      "placements": 59,
-      "signature": "5d533afbf06362ecdc6d260f4dbeb4c0547dcffceeec1df54938f2ea8d04c0a7"
+      "placements": 61,
+      "signature": "614798506b2e7bd8419abda88abecf1ea631afde37b099619e3e338483ae6dfe"
     },
     {
       "source": "src/walk/blossom.prepared.js",
@@ -1409,8 +1409,8 @@
         "Cherry_blossom_colliders"
       ],
       "interactionTargets": null,
-      "placements": 59,
-      "signature": "5d533afbf06362ecdc6d260f4dbeb4c0547dcffceeec1df54938f2ea8d04c0a7"
+      "placements": 61,
+      "signature": "614798506b2e7bd8419abda88abecf1ea631afde37b099619e3e338483ae6dfe"
     },
     {
       "source": "src/walk/blossom.public.js",
@@ -1444,8 +1444,8 @@
         "Cherry_blossom_colliders"
       ],
       "interactionTargets": null,
-      "placements": 59,
-      "signature": "5d533afbf06362ecdc6d260f4dbeb4c0547dcffceeec1df54938f2ea8d04c0a7"
+      "placements": 61,
+      "signature": "614798506b2e7bd8419abda88abecf1ea631afde37b099619e3e338483ae6dfe"
     },
     {
       "source": "src/walk/bone-walk.js",
@@ -6378,6 +6378,33 @@
       "interactionTargets": null,
       "placements": 4,
       "signature": "4af1bf0e56ae215f5c296841a7d4fcd1e5fa689da8a66856342594ca680c379c"
+    },
+    {
+      "source": "src/walk/zen-garden.js",
+      "rooms": [
+        "commons-10"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Zen_garden",
+        "Zen_garden_colliders",
+        "Zen_moss_floor",
+        "Zen_pond_wall",
+        "Zen_falls_flow",
+        "Zen_bridge_floor",
+        "Zen_bridge_rail",
+        "Zen_bridge_rail_wall",
+        "Zen_pine_trunk",
+        "Zen_koi",
+        "Zen_pond_ripples"
+      ],
+      "colliders": [
+        "Zen_garden_colliders"
+      ],
+      "interactionTargets": null,
+      "placements": 36,
+      "signature": "58bed453ba1db8caee1ae52ebe74e39902ec892632c8dd4540fe4fb5dd9f5b5c"
     },
     {
       "source": "src/window-geometry.js",
