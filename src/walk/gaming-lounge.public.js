@@ -8,7 +8,7 @@ import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/Buffe
 // - dark grey walls, a cool light strip round the top of the walls and a dark ceiling of faintly twinkling stars;
 // - eight PC stations along the outboard wall (curved dual monitors, RGB keyboard and mouse, tower, headset, gaming
 //   chair), six console stations along the entry wall (one large screen, console, controller and headset on a side
-//   table, gaming chair) and a curved couch facing a big screen at the forward end, controllers on its coffee table;
+//   table, gaming chair) and four curved couches facing split-screen displays, controllers on their coffee tables;
 // - honeycomb clusters of hexagon wall lights that fade slowly through the colours, and a black glass floor of
 //   0.25 m hexagon tiles that light up in colour round where you stand and fade behind you;
 // - while the camera is in the room the walk's lights (shared by the whole ship) ease down, so the RGB glows.
@@ -17,7 +17,7 @@ import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/Buffe
 // before the colliders and rest spots are found, so it is solid and sittable; what glows or moves is a group of its
 // own, drawn with the room's deck band (main.js).
 // Room frame (Area_d16-training-aft): x along the room (+x toward the nose), z across (+z the entry wall, doorway at
-// x 2..6), floor at y 0, wall faces at |x|=23.84 and |z|=7.84, the ceiling at 3.35. The aisle |z|<1.7 stays clear.
+// x 2..6), floor at y 0, wall faces at |x|=23.84 and |z|=7.84, the ceiling at 3.35. The forward floor stations leave cross aisles and both wall rows clear.
 const ROOM='Area_d16-training-aft';
 const END=23.84,SIDE=7.84,TOP=3.35,DOOR=[2,6],HEX=.25,SOUND_FADE=3;
 const OLD=/^(Seat|Back|Seat_base|Meeting_table|Table_support|Worktop|Training_console|Equipment_cabinet|Status_display|Briefing_wall|Aisle_inlay|Polish_.*|Refined_.*)$/;
@@ -25,6 +25,8 @@ const PCS=[-21,-17.4,-13.8,-10.2,-6.6,-3,.6,4.2],CONSOLES=[-21,-16.5,-12,-7.5,-3
 const ACCENTS=[0xff3b5c,0x2fd8ff,0xff4fd8,0x7dff5a,0xffa53a,0x9d6bff];
 // The couch's arc: its centre, radii (seat front, seat back, back rest) and half span, facing +x to the big screen.
 const COUCH={x:21.6,r0:3.35,r1:4.05,r2:4.3,half:.9};
+// Offsets from the original station. The forward grid leaves the wall stations and doorway aisles clear.
+const GROUP_STATIONS=[[-10,-.65],[-9.7,-10],[0,-10]];
 // While the camera is in the room: the lights' share of their usual strength, and their colours.
 const MOOD={hemi:.42,fill:.22,env:.3,sky:0x9aa8ff,ground:0x3a2458};
 const TRAIL=8,REMOTE_TRAILS=3,MARKS=TRAIL*(1+REMOTE_TRAILS);
@@ -180,7 +182,8 @@ export function dressGamingLounge(ship){
   const s=new T.Mesh(new ReplayGeometry("src/walk/gaming-lounge.js:2",T.CylinderGeometry,.03,.03,.53,8),M.metal);s.name='Side_table_stem';s.position.set(x+.62,.265,SIDE-2.15);fit.add(s);
   chair(x,SIDE-2.25,0,M.accent[(i+3)%ACCENTS.length]);
  });
- // The couch lounge: a big screen on the forward end wall over a low console, and a curved couch round a coffee table.
+ // Build one complete station, then share its geometry and materials with the three floor copies.
+ const stationStart=fit.children.length;
  box('Lounge_screen_frame',[.06,1.86,3.26],[END-.03,1.5,0],M.black);
  box('Lounge_media_console',[.45,.4,2.4],[END-.25,.2,0],M.black);
  for(const dz of [-.5,.5])box('Game_console',[.26,.07,.34],[END-.25,.435,dz],dz<0?M.white:M.black);
@@ -194,6 +197,8 @@ export function dressGamingLounge(ship){
  curved('Gaming_curved_couch_back',COUCH.r1,COUCH.r2,.62,.34,M.couch);
  box('Coffee_table_top',[.8,.05,1.8],[19.45,.42,0],M.glass);
  box('Coffee_table_base',[.6,.36,1.5],[19.45,.18,0],M.black);
+ const station=fit.children.slice(stationStart);
+ for(const [dx,dz] of GROUP_STATIONS)for(const part of station){const o=part.clone();o.position.x+=dx;o.position.z+=dz;fit.add(o);}
  room.updateMatrixWorld(true);
  return true;
 }
@@ -285,10 +290,11 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
  });
  // The couch lounge: the big screen's split-screen picture, three controllers on the table and its colour underglow.
  const big=M.basic('lounge_screen',0xffffff);big.map=canvas(1024,576,quad);
- piece(big,new ReplayGeometry("src/walk/gaming-lounge.js:23",T.PlaneGeometry,3.1,1.74).rotateY(-Math.PI/2).translate(END-.065,1.5,0));
- for(const [dz,ry] of [[-.5,.3],[.05,-.2],[.55,.15]])piece(M.dark,controller.clone().rotateY(Math.PI/2+ry).translate(19.4,.48,dz));
- piece(M.keys,new ReplayGeometry("src/walk/gaming-lounge.js:24",T.BoxGeometry,.62,.012,1.52).translate(19.45,.012,0));
- piece(M.keys,new ReplayGeometry("src/walk/gaming-lounge.js:25",T.BoxGeometry,.03,.02,2.2).translate(END-.48,.03,0));
+ const stationPiece=(m,g)=>{piece(m,g);for(const [dx,dz] of GROUP_STATIONS)piece(m,g.clone().translate(dx,0,dz));};
+ stationPiece(big,new ReplayGeometry("src/walk/gaming-lounge.js:23",T.PlaneGeometry,3.1,1.74).rotateY(-Math.PI/2).translate(END-.065,1.5,0));
+ for(const [dz,ry] of [[-.5,.3],[.05,-.2],[.55,.15]])stationPiece(M.dark,controller.clone().rotateY(Math.PI/2+ry).translate(19.4,.48,dz));
+ stationPiece(M.keys,new ReplayGeometry("src/walk/gaming-lounge.js:24",T.BoxGeometry,.62,.012,1.52).translate(19.45,.012,0));
+ stationPiece(M.keys,new ReplayGeometry("src/walk/gaming-lounge.js:25",T.BoxGeometry,.03,.02,2.2).translate(END-.48,.03,0));
  for(const [m,list] of parts){const o=new T.Mesh(replayMerged("src/walk/gaming-lounge.js",nativeMergeGeometries,list),m);o.name=m.name;group.add(o);}
  // The floor: black glass hexagons over the room's own floor; the ceiling of stars under its own.
  const outline=roomOutline(room),flat=(flip)=>new T.ShapeGeometry(new T.Shape(outline.local.map(([x,z])=>new T.Vector2(x,flip*z))));
