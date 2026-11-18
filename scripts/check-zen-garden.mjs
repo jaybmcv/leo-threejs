@@ -33,6 +33,17 @@ assert.ok(draws<=14&&triangles<24000,'bounded garden draw and triangle budget');
 const transform=garden.group.children[0].matrix.clone().premultiply(garden.group.matrixWorld),inv=transform.clone().invert();
 const localBox=o=>new T.Box3().setFromObject(o).applyMatrix4(inv);
 assert.ok(localBox(zen.getObjectByName('Zen_rocks_moss_and_pines')).max.y<28.02,'pines and falls stay below next balcony underside');
+// Retained crew stand on gravel clear of the new bridge and pond rim.
+const bridgeBox=localBox(zen.getObjectByName('Zen_wooden_bridge')),gravel=zen.getObjectByName('Zen_gravel_floor'),ray=new T.Raycaster(),down=new T.Vector3(0,-1,0);
+const crew=[];room.traverse(o=>{if(o.name==='Mars_cat_1.75m')crew.push(o);});assert.equal(crew.length,6,'all existing crew retained');
+for(const actor of crew){
+ const b=new T.Box3().setFromObject(actor);assert.ok(!b.intersectsBox(bridgeBox),'crew clear the entire timber bridge');
+ if(actor.position.y>25)continue;
+ for(const x of [b.min.x,b.max.x])for(const z of [b.min.z,b.max.z]){
+  assert.ok(!contains(ZEN_POND,[x,z])&&ZEN_POND.every((a,i)=>distanceToSegment([x,z],a,ZEN_POND[(i+1)%ZEN_POND.length])>.7),'crew clear the water and rock rim');
+  ray.set(new T.Vector3(x,b.min.y+.1,z).applyMatrix4(transform),down);const hit=ray.intersectObject(gravel)[0];assert.ok(hit&&Math.abs(hit.point.clone().applyMatrix4(inv).y-b.min.y)<.025,'crew feet supported at gravel height');
+ }
+}
 const col=installGround(new Colliders(),new Colliders());col.addStatic(root,solid);col.commit();const ctl=new Controller(col);
 const put=(x,z,y=24.3)=>ctl.place(new T.Vector3(x,y,z));
 const go=(x,z)=>{for(let i=0;i<2400;i++){const d=new T.Vector3(x-ctl.position.x,0,z-ctl.position.z);if(d.length()<.12)return;d.setLength(Math.min(3.2,d.length()*5));ctl.step(1/120,d,false);assert.ok(ctl.position.y>24.28&&ctl.position.y<25.4,'no fall or unintended climb');}assert.fail('stuck en route to '+[x,z]+' at '+ctl.position.toArray());};
@@ -49,4 +60,4 @@ const m=new T.Matrix4(),p=new T.Vector3();
 for(let step=0;step<600;step++){garden.update(.1,new T.Vector3(125,25,26));for(let i=0;i<koi.count;i++){koi.getMatrixAt(i,m);p.setFromMatrixPosition(m);assert.ok(contains(ZEN_POND,[p.x,p.z]),'koi remain in pond');assert.ok(ZEN_POND.every((a,k)=>distanceToSegment([p.x,p.z],a,ZEN_POND[(k+1)%ZEN_POND.length])>.35),'fish clear the rocks');}}
 assert.ok(water.material.opacity>.4&&water.material.opacity<.6,'clear aqua water');
 const selected=layout.rooms.find(r=>r.id==='commons-10');assert.equal(selected.y,24.3);assert.equal(Math.min(...selected.components.galleries.map(g=>g.center[1])),28.3);
-console.log(JSON.stringify({status:'PASS',draws,triangles,bridgeCrest:crest,scope:'Source furniture, arch crossing and departure, full pond circuit, solid rim/rails, fish containment and balcony height. Full ship/browser checked separately.'},null,2));
+console.log(JSON.stringify({status:'PASS',draws,triangles,bridgeCrest:crest,scope:'Source furniture, crew support and bridge/rim clearance, arch crossing and departure, full pond circuit, solid rim/rails, fish containment and balcony height. Full ship/browser checked separately.'},null,2));

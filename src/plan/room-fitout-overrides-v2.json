@@ -155,6 +155,7 @@
   },
   "commons-10": {
     "moveMeshes": [
+      {"names":["Mars_cat_1.75m"],"near":[122,24.3,32],"radius":0.1,"count":1,"by":[-3,0.021,1]},
       {"names":["Cafe_table","Table_pedestal","Table_ceramic_vase","Table_foliage","Tail_clearance_chair"],"near":[142,25,14],"radius":2,"count":6,"by":[0,0,29],"details":["Polish_tailored_seam"]},
       {"names":["Cafe_table","Table_pedestal","Table_ceramic_vase","Table_foliage","Tail_clearance_chair"],"near":[121,25,36],"radius":2,"count":6,"by":[27,0,7],"details":["Polish_tailored_seam"]},
       {"names":["Cafe_table","Table_pedestal","Table_ceramic_vase","Table_foliage","Tail_clearance_chair"],"near":[148,25,23],"radius":2,"count":6,"by":[0,0,16.5],"details":["Polish_tailored_seam"]}
