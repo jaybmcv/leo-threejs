@@ -255,6 +255,10 @@
     ],
     "via": null
   },
+  "src/walk/gaming-refreshments.js": {
+    "owners": ["d16-training-aft"],
+    "via": "inherited"
+  },
   "src/walk/gaming-lounge.js": {
     "owners": [
       "d16-training-aft"

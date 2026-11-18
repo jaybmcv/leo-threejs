@@ -1,4 +1,5 @@
 import {RecordGeometry,recordMerged} from "../v2/prepared-geometry-record.js";
+import {createGamingRefreshments} from './gaming-refreshments.js';
 import layout from '../plan/selected-layout.js';
 import {roomObject} from '../plan/rooms.js';
 import * as T from 'three';
@@ -224,6 +225,7 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
  const M={hex:rgb('hex_light',.035,.025,1.1),halo:rgb('hex_glow',.035,.025,.5,true),keys:rgb('keyboard',.25,.9,1),
   basic:(name,color)=>new T.MeshBasicMaterial({name:'Gaming_'+name,color,toneMapped:false}),
   dark:new T.MeshStandardMaterial({name:'Gaming_kit',color:0x18191d,roughness:.5}),bezel:new T.MeshStandardMaterial({name:'Gaming_bezel',color:0x0c0d10,roughness:.35,side:T.DoubleSide})};
+ const refreshments=createGamingRefreshments(M.keys);group.add(refreshments.group);
  const parts=new Map();const piece=(m,g)=>{(parts.get(m)||parts.set(m,[]).get(m)).push(g.index?g.toNonIndexed():g);};
  const at=(g,x,y,z,ry=0)=>{g.rotateY(ry);g.translate(x,y,z);return g;};
  // Hexagon wall lights in honeycomb clusters: a dark frame, the glowing face and a soft halo on the wall behind.
@@ -332,6 +334,7 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
   group,
   update(dt,eye,p,remotes=[],seated=false){
    if(!still)time.value+=dt;
+   if(!still&&(inside.containsPoint(eye)||(eye.y>=origin.y-.5&&eye.y<=origin.y+TOP&&Math.hypot(eye.x-origin.x,eye.z-origin.z)<28)))refreshments.update(dt);
    for(const t of trail)t.w=Math.max(0,t.w-dt/1.5);
    if(trailAfterMove(sources[0],p,seated)&&onFloor(p))mark(sources[0],p,0);
    const near=remotes.filter(r=>onFloor(r.cur)).sort((a,b)=>Math.hypot(a.cur.x-eye.x,a.cur.z-eye.z)-Math.hypot(b.cur.x-eye.x,b.cur.z-eye.z)).slice(0,REMOTE_TRAILS);

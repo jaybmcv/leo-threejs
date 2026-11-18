@@ -148,6 +148,19 @@
       {"part":"interior_wall","size":[0.12,2.8,8],"at":[-12,1.4,-13],"mat":"navy"}
     ]
   },
+  "d16-training-aft": {
+    "add": [
+      {"part":"gaming_bar_counter","size":[0.7,0.98,4.4],"at":[-22.04,0.49,0],"mat":"navy"},
+      {"part":"gaming_bar_countertop","size":[0.7,0.08,4.4],"at":[-22.04,1.04,0],"mat":"navy"},
+      {"part":"gaming_bar_shelf_back","size":[0.12,1.76,4.4],"at":[-23.74,0.88,0],"mat":"navy"},
+      {"part":"gaming_bar_shelf_side","size":[0.56,1.76,0.08],"at":[-23.52,0.88,-2.16],"mat":"navy"},
+      {"part":"gaming_bar_shelf_side","size":[0.56,1.76,0.08],"at":[-23.52,0.88,2.16],"mat":"navy"},
+      {"part":"gaming_bar_shelf","size":[0.56,0.06,4.4],"at":[-23.52,0.43,0],"mat":"navy"},
+      {"part":"gaming_bar_shelf","size":[0.56,0.06,4.4],"at":[-23.52,0.96,0],"mat":"navy"},
+      {"part":"gaming_bar_shelf","size":[0.56,0.06,4.4],"at":[-23.52,1.48,0],"mat":"navy"},
+      {"part":"gaming_bar_shelf","size":[0.56,0.06,4.4],"at":[-23.52,1.78,0],"mat":"navy"}
+    ]
+  },
   "observation-lounge": {
     "add": [
       {"part":"finish_panel","size":[0.11,2.15,104.4],"at":[0.185,-1.225,0],"mat":"cream"}

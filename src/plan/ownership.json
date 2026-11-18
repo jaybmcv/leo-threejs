@@ -2616,8 +2616,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 63,
-      "signature": "a750bb6e106000c3501658b236950adf90867e4890300e6adaf42726e672f0ed"
+      "placements": 64,
+      "signature": "67a7291f11d7d797bbd9de39ea196554163e013a038f2f944a101e3a1f88c84d"
     },
     {
       "source": "src/walk/gaming-lounge.js",
@@ -2637,8 +2637,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 63,
-      "signature": "8dc08bb61fceb448df7017d943de45bcc284b0d9844585a261ed944f9ede959e"
+      "placements": 64,
+      "signature": "95b630d6265e51aa32c8a66d69001d4f9d3c82c9680e854eeeb0ac02d3766829"
     },
     {
       "source": "src/walk/gaming-lounge.prepared.js",
@@ -2658,8 +2658,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 63,
-      "signature": "0f279ee8f771b4f9b34c8951721a55656ce35e5b4ba3ca336f80e040e3db084e"
+      "placements": 64,
+      "signature": "50db76dfded6d49a620a28e87b3b2d4f02d3a244e6d9633103cf27651ca6f75f"
     },
     {
       "source": "src/walk/gaming-lounge.public.js",
@@ -2679,8 +2679,30 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 63,
-      "signature": "c028e6b448de3b365490f3ffb3c9bd0d14f48fd2cbbcfd99272430ac3f1142fe"
+      "placements": 64,
+      "signature": "0b0f04d1b25430228cd76f07215eb8bbc8952a8e0f9050f3c96e96d296b2ad8c"
+    },
+    {
+      "source": "src/walk/gaming-refreshments.js",
+      "rooms": [
+        "d16-training-aft"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Gaming_refreshments",
+        "Gaming_shelf_can",
+        "Gaming_held_can",
+        "Gaming_served_can",
+        "Gaming_robot_server",
+        "Gaming_robot_torso",
+        "Gaming_robot_head",
+        "Gaming_robot_gripper"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 37,
+      "signature": "b3df21e0d40bb42938fa749f5a5eba17a4f192cc0ae522b330e7a7090034d614"
     },
     {
       "source": "src/walk/glide.js",
