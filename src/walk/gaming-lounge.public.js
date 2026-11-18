@@ -1,4 +1,5 @@
 import {ReplayGeometry,replayMerged} from "../v2/prepared-geometry-replay.public.js";
+import {createGamingRefreshments} from './gaming-refreshments.js';
 import fitout from '../plan/room-fitout-overrides-v2.json' with {type:'json'};
 import {gamingBoards} from './gaming-scores.js';
 import layout from '../plan/selected-layout.js';
@@ -238,6 +239,7 @@ export function createGamingLounge(ship,light=null,{still=false,requestBoards=()
  const M={hex:rgb('hex_light',.035,.025,1.1),halo:rgb('hex_glow',.035,.025,.5,true),keys:rgb('keyboard',.25,.9,1),
   basic:(name,color)=>new T.MeshBasicMaterial({name:'Gaming_'+name,color,toneMapped:false}),
   dark:new T.MeshStandardMaterial({name:'Gaming_kit',color:0x18191d,roughness:.5}),bezel:new T.MeshStandardMaterial({name:'Gaming_bezel',color:0x0c0d10,roughness:.35,side:T.DoubleSide})};
+ const refreshments=createGamingRefreshments(M.keys);group.add(refreshments.group);
  const parts=new Map();const piece=(m,g)=>{(parts.get(m)||parts.set(m,[]).get(m)).push(g.index?g.toNonIndexed():g);};
  const at=(g,x,y,z,ry=0)=>{g.rotateY(ry);g.translate(x,y,z);return g;};
  // Hexagon wall lights in honeycomb clusters: a dark frame, the glowing face and a soft halo on the wall behind.
@@ -350,6 +352,7 @@ export function createGamingLounge(ship,light=null,{still=false,requestBoards=()
   group,leaderboard,
   update(dt,eye,p,remotes=[],seated=false){
    if(!still)time.value+=dt;
+   if(!still&&(inside.containsPoint(eye)||(eye.y>=origin.y-.5&&eye.y<=origin.y+TOP&&Math.hypot(eye.x-origin.x,eye.z-origin.z)<28)))refreshments.update(dt);
    leaderboard.update(dt,still);
    boardDue-=dt;if(inside.containsPoint(eye)&&boardDue<=0){boardDue=30;requestBoards();}
    for(const t of trail)t.w=Math.max(0,t.w-dt/1.5);
