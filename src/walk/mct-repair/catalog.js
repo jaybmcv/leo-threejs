@@ -74,4 +74,9 @@ export const PUZZLES=[
  {"name":"Full Fluids & Air","parts":["reservoir","fluidfilter","hose","mastercyl","moisture","radiator","valves","compressor","pump","snorkel","fan","ecu"],"count":12,"diag":"Critical: Combined fluid and air faults. Compressor cycling hard. Vacuum pump offline. Radiator restricted. ECU not confirming."},
  {"name":"Cabin & Chassis Full","parts":["steer","pedals","cluster","mirror","seat","swheel","cage","strobe","coilover","brake","wheel","skirt"],"count":12,"diag":"Priority: Cabin and chassis concurrent faults. Controls unresponsive. Suspension bottoming. Roll cage misaligned. Beacon offline."}
 ];
-export const JUNK=["bolt","spring","scrap","filter","wire","nut","bracket","wrench","yarn","skate","comic","leaf","box","cup","tape","chargeplug","extinguisher","floorjack","lugwrench","toolbox","cone","towhook","diagscanner","ratchetstrap","laser","tunacan","collar","yarnball","keycard","visor","fishpuck","nippouch","pawpad"];
+export const JUNK_NAMES={
+ chargeplug:'EV Charge Plug',extinguisher:'Fire Extinguisher',floorjack:'Hydraulic Floor Jack',lugwrench:'Cross Lug Wrench',toolbox:"Mechanic's Toolbox",cone:'Safety Traffic Cone',towhook:'Heavy Tow Hook',diagscanner:'Diagnostic Scanner',ratchetstrap:'Cargo Ratchet Strap',
+ laser:'Cosmic Laser Pointer',tunacan:'Zero-G Tuna Can',collar:'Cybernetic Collar',yarnball:'Plasma Yarn Ball',keycard:'Leo Keycard',visor:'Scratched Visor',fishpuck:'Holographic Fish Puck',nippouch:'Space-Nip Pouch',pawpad:'Paw-Pad Control Pedal',
+ fishbowl:'Zero-G Fish Bowl',headphones:'Cat-Ear Headphones',robomouse:'Robo-Mouse Decoy',hydropod:'Catnip Hydro-Pod',scratchpost:'Scratching Post Core',milkcarton:'Space-Milk Carton',chewedbox:'Chewed Cargo Box',featherdrone:'Feather Teaser Drone',kibblebowl:'Gravity Kibble Bowl'
+};
+export const JUNK=["bolt","spring","scrap","filter","wire","nut","bracket","wrench","yarn","skate","comic","leaf","box","cup","tape",...Object.keys(JUNK_NAMES)];
