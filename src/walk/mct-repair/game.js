@@ -1,4 +1,4 @@
-import {PARTS} from './catalog.js';
+import {PARTS,JUNK_NAMES} from './catalog.js';
 import {VIEWS,newRepair,required,workbench,scatterPile,pileMetrics,pilePosition,pileDrop,install,nextRound,formatTime} from './rules.js';
 import {partArt,cartArt,PART_SPOTS} from './art.js';
 
@@ -62,7 +62,7 @@ export function createMctRepair({onOpen=()=>{},onClose=()=>{}}={}){
  function renderPile(){
   pile.replaceChildren();hovered=null;top=0;const box=root.getBoundingClientRect(),ids=workbench(game,box.width,box.height-56),points=scatterPile(ids.length);pileCount=ids.length;
   for(const [i,id] of ids.entries()){
-   const p=PARTS.find(p=>p.id===id),b=document.createElement('button'),point=points[i];b.type='button';b.dataset.part=id;b.dataset.x=point.x;b.dataset.y=point.y;b.setAttribute('aria-label',p?.name||label(id));b.setAttribute('aria-pressed','false');b.className=game.rounds[game.current].parts.includes(id)?'needed':'';b.innerHTML=partArt(id);b.style.setProperty('--angle',point.angle+'deg');
+   const p=PARTS.find(p=>p.id===id),b=document.createElement('button'),point=points[i];b.type='button';b.dataset.part=id;b.dataset.x=point.x;b.dataset.y=point.y;b.setAttribute('aria-label',p?.name||JUNK_NAMES[id]||label(id));b.setAttribute('aria-pressed','false');b.className=game.rounds[game.current].parts.includes(id)?'needed':'';b.innerHTML=partArt(id);b.style.setProperty('--angle',point.angle+'deg');
    b.addEventListener('click',()=>choose(b));b.addEventListener('focus',()=>{raise(b);itemName();});b.addEventListener('blur',()=>itemName());pile.append(b);raise(b);place(b);
   }
   itemName();
