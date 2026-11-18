@@ -4,7 +4,7 @@ import {createRequire} from 'node:module';
 import {build} from 'esbuild';
 import {ANGLE_IF_ASKED,PLAYWRIGHT_FROM} from './chrome-setup.mjs';
 import {PARTS,PUZZLES,JUNK,JUNK_NAMES} from '../src/walk/mct-repair/catalog.js';
-import {VIEWS,newRepair,required,workbench,install,nextRound,formatTime} from '../src/walk/mct-repair/rules.js';
+import {VIEWS,newRepair,required,workbench,scatterPile,pileMetrics,pilePosition,pileDrop,install,nextRound,formatTime} from '../src/walk/mct-repair/rules.js';
 import {partArt,cartArt,PART_SPOTS} from '../src/walk/mct-repair/art.js';
 
 const repairNames=[
@@ -87,11 +87,45 @@ for(const sample of [0,.25,.5,.999999]){
  }
  assert.equal(g.score,4*240+8*190+12*150);assert.equal(nextRound(g),false);
 }
+// Test real rotated bounds after scattering, dropping outside, and resizing.
+let pileSeed=401;const pileRandom=()=>((pileSeed=(Math.imul(pileSeed,1664525)+1013904223)>>>0)/4294967296);
+for(const round of [0,1,2]){
+ const g=newRepair(pileRandom);g.current=round;
+ for(const [width,height] of [[260,160],[350,220],[720,160],[1240,250],[1880,660],[3800,1650]]){
+  const ids=workbench(g,width,height,pileRandom),points=scatterPile(ids.length,pileRandom),m=pileMetrics(width,height,ids.length);
+  assert.equal(points.length,ids.length);for(const p of required(g))assert.equal(ids.filter(id=>id===p.id).length,1,'Every needed part is in the pile');
+  assert(new Set(points.map(p=>p.angle)).size>ids.length/2,'Parts have varied angles');
+  const bounds=(point,metrics,w,h)=>{
+   const p=pilePosition(point,metrics),angle=point.angle*Math.PI/180,half=metrics.size*(Math.abs(Math.cos(angle))+Math.abs(Math.sin(angle)))/2;
+   assert(p.x-half>=0&&p.x+half<=w&&p.y-half>=0&&p.y+half<=h,'Every rotated item stays inside the workbench');return p;
+  };
+  let overlaps=0;
+  for(const [i,point] of points.entries()){
+   assert(point.x>=0&&point.x<=1&&point.y>=0&&point.y<=1);const p=bounds(point,m,width,height);
+   for(const other of points.slice(i+1)){const q=pilePosition(other,m);if(Math.hypot(p.x-q.x,p.y-q.y)<m.size*.6)overlaps++;}
+   for(const [x,y] of [[-1000,-1000],[width+1000,height+1000],[p.x,p.y]]){
+    const dropped={...pileDrop(x,y,m),angle:point.angle};bounds(dropped,m,width,height);
+    bounds(dropped,pileMetrics(260,160,ids.length),260,160);
+    if(x===p.x&&y===p.y){assert(Math.abs(dropped.x-point.x)<1e-9);assert(Math.abs(dropped.y-point.y)<1e-9,'An unmoved drop stays put');}
+   }
+  }
+  assert(overlaps>ids.length/3,'The bench has overlapping clumps rather than separated tiles');
+  assert(Math.max(...points.map(p=>p.x))-Math.min(...points.map(p=>p.x))>.6,'Scatter covers the bench width');
+  assert(Math.max(...points.map(p=>p.y))-Math.min(...points.map(p=>p.y))>.6,'Scatter covers the bench height');
+  assert.notDeepEqual(scatterPile(ids.length,pileRandom),points,'A new round gets a fresh scatter');
+ }
+}
+const ui=await fs.readFile('src/walk/mct-repair/game.js','utf8');
+assert(!/mct-float|animation:|grid-template-columns:repeat|createElement\('small'\)/.test(ui),'The pile has no tiles, permanent captions or continuous movement');
+assert(ui.includes("b.setAttribute('aria-label',p?.name||JUNK_NAMES[id]||label(id))"),'Every covered item retains its accessible name');
+assert(ui.includes("b.addEventListener('focus',()=>{raise(b);itemName();})"),'Keyboard focus uncovers an item');
 for(const mode of ['', '.public','.prepared','.authoring']){
  const main=await fs.readFile(`src/walk/main${mode}.js`,'utf8');
+ assert(main.includes("import {createMctRepair} from './mct-repair/game.js'"),'Every walk mode uses the same pile');
  for(const s of ["t.kind==='mct-repair'","repairStations.near(p)",'mctRepair.open(t.bay)','mctRepair?.close();','||!!mctRepair?.isOpen||','!mctRepair?.isOpen&&!emergencyDrill?.isOpen){acc+=dt;'])assert(main.includes(s),`${mode}: ${s}`);
 }
 console.log('PASS MCT repair: 45 repair parts, 27 named junk with unique icons never required or installable, sampled bench counts, all 26 tasks completable, scoring and four walk modes.');
+console.log('PASS MCT pile: scattering, rotated bounds, persistent drops, resizing and keyboard access.');
 
 // Measure the real panel, including the longest twelve-part tasks and installed marks.
 const {chromium}=createRequire(PLAYWRIGHT_FROM)('playwright');
@@ -135,6 +169,7 @@ try{
     const before=await measure();seen.add(before.ids);assert.deepEqual(before.problems,[],`${width}x${height}, round ${round+1}, ${before.name}`);
     const first=await page.evaluate(()=>repair.state.needed[0]);
     await page.locator(`[data-view="${first.view}"]`).click();
+    await page.locator(`[data-part="${first.id}"]`).focus();
     await page.locator(`[data-part="${first.id}"]`).click();
     await page.locator('[data-cart]').click();
     const after=await measure();assert.deepEqual(after.problems,[],`${width}x${height}, installed mark, ${after.name}`);
