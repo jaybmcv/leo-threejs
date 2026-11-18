@@ -2616,8 +2616,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 63,
-      "signature": "a750bb6e106000c3501658b236950adf90867e4890300e6adaf42726e672f0ed"
+      "placements": 65,
+      "signature": "fff5751e2c992df78ba83bb0a9bea2d3d5785ed85a0d5ecfdc99459cfb4b77d7"
     },
     {
       "source": "src/walk/gaming-lounge.js",
@@ -2637,8 +2637,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 63,
-      "signature": "8dc08bb61fceb448df7017d943de45bcc284b0d9844585a261ed944f9ede959e"
+      "placements": 65,
+      "signature": "16d4e2b986e82400bf5d3d9ea9b695be4414fa3dd7ceb5851de55e7b3abceb3c"
     },
     {
       "source": "src/walk/gaming-lounge.prepared.js",
@@ -2658,8 +2658,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 63,
-      "signature": "0f279ee8f771b4f9b34c8951721a55656ce35e5b4ba3ca336f80e040e3db084e"
+      "placements": 65,
+      "signature": "f0ffe33e0b595e4c13c40aaf9863613e4755aac97b1b025ddb4a93092c6e759b"
     },
     {
       "source": "src/walk/gaming-lounge.public.js",
@@ -2679,8 +2679,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 63,
-      "signature": "c028e6b448de3b365490f3ffb3c9bd0d14f48fd2cbbcfd99272430ac3f1142fe"
+      "placements": 65,
+      "signature": "0061909381482c8756874933b0f95f0b42cac11a45dca716020eb344766d61df"
     },
     {
       "source": "src/walk/glide.js",
