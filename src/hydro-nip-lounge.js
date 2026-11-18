@@ -249,7 +249,7 @@ export function createHydroNipLounge({mirror=1}={}){
   for(const [mat,g] of local){if(bow){const p=g.attributes.position;for(let i=0;i<p.count;i++)p.setZ(i,p.getZ(i)+bow*(1-(p.getX(i)/(width/2))**2));g.computeVertexNormals();}put(mat,mirrored(g.applyMatrix4(m),m));}
  }
  function mainLogoSign({at,normal,diameter=4.5}){
-  const group=new T.Group();group.name='Hydro_Nip_Main_Sign';group.userData.assetId='hydro-nip-main-logo';group.applyMatrix4(placing(at,normal));
+  const group=new T.Group();group.name='Hydro_Nip_Main_Sign';group.userData={assetId:'hydro-nip-main-logo',keepLive:true};group.applyMatrix4(placing(at,normal));
   const radius=diameter/2,depth=.16,body=new T.Mesh(new T.CylinderGeometry(radius,radius,depth,96).rotateX(Math.PI/2),new T.MeshStandardMaterial({name:'Hydro_Nip_Main_Sign_Body',color:0x131127,roughness:.4,metalness:.4}));
   body.name='Hydro_Nip_Main_Sign_Body';group.add(body);
   const rimMaterial=new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Sign_Rim',color:CYAN,toneMapped:false}),rimGeometry=new T.TorusGeometry(radius-.025,.035,8,128);
@@ -264,7 +264,7 @@ export function createHydroNipLounge({mirror=1}={}){
     for(const [text,size,y,color] of [['HYDRO-NIP',.48,.16,0xf36bdc],['LOUNGE',.29,-.38,0x55e5ff]]){const geometry=new TextGeometry(text,{font,size,depth:.012,curveSegments:2});geometry.computeBoundingBox();const bounds=geometry.boundingBox;geometry.translate(-(bounds.max.x+bounds.min.x)/2,y,0);face.add(new T.Mesh(geometry,new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Sign_Fallback',color,toneMapped:false})));}
     group.add(face);}
   }
-  root.add(group);
+  group.traverse(o=>{o.userData.noCollide=true;});root.add(group);
  }
  // A placement that mirrors turns every triangle inside out; swap two corners of each to turn it back.
  function mirrored(g,m){
@@ -338,8 +338,9 @@ export function createHydroNipLounge({mirror=1}={}){
   }
  }
  // The approved Hydro-Nip main logo replaces the banner, with a readable face on each side.
- for(const s of [-1,1])rod(M.dark,[DOME.x+s*2,FLOOR+DOME.r-.8,DOME.z],[DOME.x+s*2,FLOOR+DOME.r+.7,DOME.z],.05,6);
- mainLogoSign({at:[DOME.x,FLOOR+DOME.r+2.1,DOME.z],normal:[0,0,-1]});
+ // A stationary bottom pivot clears the disc's sweep; the 15 cm lift clears the crown tube.
+ rod(M.dark,[DOME.x,FLOOR+DOME.r-.25,DOME.z],[DOME.x,FLOOR+DOME.r,DOME.z],.05,6);
+ mainLogoSign({at:[DOME.x,FLOOR+DOME.r+2.25,DOME.z],normal:[0,0,-1]});
 
  // The Haze Maze: a three-storey glass tower full of green catnip mist. You walk in at the front into a maze of
  // partitions, find the cat-shelf stair at the back up to the lower platform, then climb the second stair to the upper

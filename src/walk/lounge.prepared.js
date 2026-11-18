@@ -31,6 +31,19 @@ const worldGeometry=o=>{const g=(o.geometry.index?o.geometry.toNonIndexed():o.ge
 const boxTriangles=([w,h,d])=>{const out=[],c=i=>[(i&4?1:-1)*w/2,(i&2?1:-1)*h/2,(i&1?1:-1)*d/2];
  for(const f of [[0,1,3],[0,3,2],[4,6,7],[4,7,5],[0,4,5],[0,5,1],[2,3,7],[2,7,6],[0,2,6],[0,6,4],[1,5,7],[1,7,3]])for(const i of f)out.push(...c(i));return out;};
 
+// Keep the disc rigid in world space, outside the static bake and prepared finish trimming.
+export function createLoungeSign(root,floorY){
+ const sign=root.getObjectByName('Hydro_Nip_Main_Sign');if(!sign)return null;
+ sign.updateWorldMatrix(true,true);
+ const matrix=sign.matrixWorld.clone(),centre=new T.Vector3().setFromMatrixPosition(matrix),group=new T.Group();
+ group.name='Walk_lounge_sign';group.position.set(centre.x,floorY,centre.z);
+ sign.removeFromParent();group.add(sign);
+ matrix.premultiply(new T.Matrix4().makeTranslation(-centre.x,-floorY,-centre.z));
+ matrix.decompose(sign.position,sign.quaternion,sign.scale);
+ let angle=0;
+ return {group,update(dt){angle=(angle+Math.min(.1,Math.max(0,dt))*Math.PI*2/25)%(Math.PI*2);group.rotation.y=angle;}};
+}
+
 export function createLounge(ship,colliders){
  const root=roomObject(ship,'Hydro_Nip_Lounge');if(!root)return null;
  root.updateMatrixWorld(true);
@@ -108,6 +121,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  const glows=[];root.traverse(o=>{if(o.isMesh&&/^Lounge_(neon_glow|additive_glow)$/.test(o.material?.name)&&!glows.includes(o.material))glows.push(o.material);});
 
  fitNativeLounge(ship,layout,drawn,mural);
+ const sign=createLoungeSign(root,floorY);if(sign)drawn.push(sign.group);
  // Keep the small instanced display live, outside the static bake and hull trimming.
  root.getObjectByName('Terpene_glassware')?.removeFromParent();
  const still=createTerpeneGlassware(),display=new T.Group();display.name='Walk_terpene_glassware';display.position.y=floorY;
@@ -125,7 +139,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
   frame,mists,glows,
   // `bodies`: the walker's and every other player's positions.
   update(dt,bodies){
-   uniforms.uTime.value=time();aquarium?.update();still.update(dt);
+   uniforms.uTime.value=time();aquarium?.update();still.update(dt);sign?.update(dt);
    for(const d of doors){const near=bodies.some(b=>Math.abs(b.y-d.centre.y)<DOOR.rise&&Math.hypot(b.x-d.centre.x,b.z-d.centre.z)<DOOR.reach);
     const o=T.MathUtils.clamp(d.open+(near?1:-1)*dt/DOOR.time,0,1);if(o!==d.open){d.open=o;doorsMoved=true;}}
    if(doorsMoved){doorsMoved=false;slideDoors();}
