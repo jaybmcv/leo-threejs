@@ -48,7 +48,7 @@ import {createSwordCase} from './sword-case.authoring.js';
 import {createChinampa} from './chinampa.js';
 import {stripBaggage,createBaggage} from './baggage.js';
 // Room edits and proxy colliders must be identical in the page and the Node checker.
-export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=null,afterRest=null,light=null,kit=null,anisotropy=1,still=false,urls={},hat=''}={}){
+export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=null,afterRest=null,kit=null,anisotropy=1,still=false,urls={},hat=''}={}){
  const dropped=exteriorPrepared?0:prepareExteriorForWalking(ship);
  // Refrigerated provisions loses its shared locker cabinets before the colliders see them (provisions.js).
  globalThis.__leoAuthoringWork?.("prepare-step",{step:"stripProvisions(ship);"});
@@ -103,7 +103,7 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const accessLift=createVaultLift({addMover(){return{place(){}}}});prepareClubhouseAccess(ship,accessLift);
  const colliders=buildColliders(ship,{extra:[ship.exterior],filter:o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name),...(into?{into}:{})});
  afterBase?.(colliders);checkpointPreparedWalk(ship);
- const restSpots=findRestSpots(ship.inside),seats=solidSpots(restSpots,colliders),lounge=createLounge(ship,colliders,light);afterRest?.({restSpots,seats,lounge});
+ const restSpots=findRestSpots(ship.inside),seats=solidSpots(restSpots,colliders),lounge=createLounge(ship,colliders);afterRest?.({restSpots,seats,lounge});
  const booth=createSelfieBooth();colliders.addStatic(booth.group);
  const carpet=ship.root.getObjectByName('Activity_floor'),poolTable=carpet?createPoolTable(carpet):null;if(poolTable){colliders.addStatic(poolTable.group);mergeByMaterial(poolTable.group);}
  // The same hall's pinball machine at its end wall (pinball/machine.js): solid as one plain box.
@@ -149,8 +149,8 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  const loungeFalls=createLoungeFalls(ship);if(loungeFalls)colliders.addStatic(loungeFalls.solid,()=>true);
  // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
  const jaguarGate=feature('jaguar-gate',ship,()=>createJaguarGate());colliders.addStatic(jaguarGate.solid,()=>true);
- // The marquee signs over the lounge's Deck 19 and 18 entrances (lounge-entrance-signs.js): dressing only, nothing solid.
- const entranceSigns=feature('lounge-entrance-signs',ship,()=>createLoungeEntranceSigns());
+ // Lounge entrance signs and Deck 19's VIP runner: only its small stanchion proxies are solid.
+ const entranceSigns=feature('lounge-entrance-signs',ship,()=>createLoungeEntranceSigns());colliders.addStatic(entranceSigns.solid,()=>true);
  // The arcade row on the Hydro-Nip Lounge's forward wall, Paws Off's treadmill at its far end (arcade.js): solid as plain
  // boxes.
  const arcadeRow=feature('arcade',ship,()=>createArcade());if(arcadeRow)colliders.addStatic(arcadeRow.solid,()=>true);

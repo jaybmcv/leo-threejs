@@ -1,3 +1,4 @@
+import {hearGamingBoard} from './gaming-scores.js';
 import {createAtriumGeometryRuntime} from '../v2/atrium-geometry-runtime.js';
 import {getAtriumQuality,observeAtriumFrame,setAtriumAutoDefault,setAtriumQuality,subscribeAtriumQuality} from '../v2/atrium-quality.js';
 import {mountGraphicsSettings} from './graphics-settings.js';
@@ -131,6 +132,7 @@ import {createStarDrift} from './star-drift.js';
 import {createAmbience} from './ambience.js';
 import {createLullaby} from './lullaby.js';
 import {createLoungeSound} from './lounge-sound.js';
+import {createLoungeMood} from './lounge-mood.js';
 import {createHydroPortal,HYDRO_PORTAL,HYDRO_PARK_PORTAL,createHydroPortalTravel} from './hydro-portal.js';
 import {createTrainingSound} from './training-sound.js';
 import {createKeelSound} from './keel-club-sound.js';
@@ -358,14 +360,14 @@ async function loadExterior(){}
 const idle=()=>new Promise(r=>(window.requestIdleCallback||setTimeout)(()=>r(),{timeout:60}));
 async function buildShip(){
  status('Fitting the walls…');await idle();
- const prepared=await prepareWalkWorld(ship,{into:colliders,kit:cosmoKit,anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches,urls:artUrls,hat:__HAT_URL__,light:{hemi,fill,scene},afterBase(){
+ const prepared=await prepareWalkWorld(ship,{into:colliders,kit:cosmoKit,anisotropy:renderer.capabilities.getMaxAnisotropy(),still:matchMedia('(prefers-reduced-motion: reduce)').matches,urls:artUrls,hat:__HAT_URL__,afterBase(){
  // The hull behind the glass goes for drawing only, after the colliders have it.
  const w0=performance.now(),opened=0;timings.push([`${opened} hull triangles opened for windows in ${Math.round(performance.now()-w0)} ms`,Math.round(performance.now()-t0)]);
  // A desktop's room plaques, lobby boards and deck plaques share a few pictures across decks, so the band merges below draw
  // them for every deck at once (wayfinding-guides.js, plaque-atlas.js); a phone keeps one picture each.
  lifts=createLifts(scene,colliders);for(const g of addWayfindingGuides(lifts.signs,{pageSize:preparedPhone?0:Math.min(4096,renderer.capabilities.maxTextureSize)}))g.userData.bandMergeParts=true;if(!preparedPhone)sharePlaques(lifts.signs);preparedSigns(ship,lifts.signs);
  },afterRest(state){
- restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;lullaby=lounge?createLullaby(lounge.dome):null;
+ restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;loungeMood=lounge?createLoungeMood(lounge,{hemi,fill,scene}):null;lullaby=lounge?createLullaby(lounge.dome):null;
  // Its floor, galleries and the promenade in front: glossy acrylic with neon swirls (lounge-floor.js).
  quietFloorReflections(scene,scene.environment);
  // Deck 19's lift lobby and promenade up to the lounge: black ceramic tile (lift-tile-floor.js).
@@ -396,7 +398,7 @@ async function buildShip(){
  theatre=createTheatre(ship,{url:typeof __REEL_URL__!=='undefined'?__REEL_URL__:'',anisotropy:renderer.capabilities.getMaxAnisotropy()});
  await idle();
  // The gaming lounge's lights, screens, glass floor and starry ceiling (gaming-lounge.js), drawn with its deck band.
- gaming=createGamingLounge(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches});
+ gaming=createGamingLounge(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches,requestBoards(){if(!live?.live)return;live.board();live.board('pool');live.maze('board');live.treasure('board');live.pinball('board');}});
  trainingSound=gaming?createTrainingSound(gaming):null;
  await idle();
  // Deck 15 dressed for Halloween until November (halloween.js): its lanes' ceiling diffusers go dead before the merge.
@@ -541,7 +543,7 @@ async function buildShip(){
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
 let imagingScans=null,missionTimer=null;
-let atriumMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,photoSpots=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,keelClub=null,loungeFalls=null,hydroPortal=null,hydroParkPortal=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,dartsLanes=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,trainingSound=null,keelSound=null,mct=null;
+let atriumMood=null,loungeMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,photoSpots=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,keelClub=null,loungeFalls=null,hydroPortal=null,hydroParkPortal=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,dartsLanes=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,trainingSound=null,keelSound=null,mct=null;
 let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null,atmosphere=null,wardPush=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[],instancedGroups=[];
 // Lifeboat fittings (2,000 seats a deck with their headrests and harnesses, seen only through a hatch or from inside a
@@ -863,11 +865,11 @@ if(LIVE_URL){
   lift:(id,s)=>lifts.apply(id,s),
   // Someone else's Keel Club water cannon shot: the same jet here, from its seed.
   cannon:(id,i,seed,shot)=>keelClub?.fire(i,{id:shot,seed,who:id===live.id?'me':id}),aboard:(n,names,ids)=>{aboard=n;if(names!==undefined){aboardNames=names;aboardIds=ids||null;}showAboard();showAboardList();},
-  maze:msg=>maze?.fromServer(msg),
-  treasure:msg=>treasure?.fromServer(msg),
-  pinball:msg=>pinballGame.fromServer(msg),
+  maze:msg=>{hearGamingBoard('maze',msg);maze?.fromServer(msg);},
+  treasure:msg=>{hearGamingBoard('treasure',msg);treasure?.fromServer(msg);},
+  pinball:msg=>{hearGamingBoard('pinball',msg);pinballGame.fromServer(msg);},
   panel:msg=>leverPanel?.apply(msg),
-  board:b=>(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
+  board:b=>{hearGamingBoard(b.game==='pool'?'pool':'invasion',b);(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null});},scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
   hearts:h=>changeLog.setHearts(h),hearted:r=>changeLog.refused(r.why),
   // A group photo: someone pressed the selfie camera, and this page takes the photo at the same moment as theirs.
   selfie:(id,ms)=>booth?.start(ms),
@@ -1123,7 +1125,7 @@ renderer.setAnimationLoop(()=>{
  // 4B: the atrium warms first; any room mood after it wins where they meet.
  atriumMood?.update(dt);
  if(arrivalMood)arrivalMood.update(dt,camera.getWorldPosition(eye));
- if(lounge)lounge.update(dt,bodies,camera.getWorldPosition(eye));
+ if(lounge){lounge.update(dt,bodies);loungeMood.update(dt,camera.getWorldPosition(eye));}
  if(recovery)recovery.update(dt,camera.getWorldPosition(eye));
  halloween?.update(dt,camera.getWorldPosition(eye),ambience.on);
  hexFloor?.update(dt,camera.getWorldPosition(eye),p,heading);

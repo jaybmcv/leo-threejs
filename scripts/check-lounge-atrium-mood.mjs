@@ -1,13 +1,11 @@
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
 import * as T from 'three';
-import {loungeMoodRegion} from '../src/walk/lounge.js';
+import {loungeMoodRegion} from '../src/walk/lounge-mood.js';
 import {setAtriumView,inOpenAtrium,fastAtriumSpan} from '../src/v2/atrium-visibility.js';
 import {createAtriumMood} from '../src/walk/atrium-mood.js';
 import {setTimeChoice} from '../src/walk/ship-time.js';
 
-const inside=loungeMoodRegion(),source=suffix=>readFileSync(new URL('../src/walk/lounge'+suffix+'.js',import.meta.url),'utf8'),body=s=>s.slice(s.indexOf('export function loungeMoodRegion(')).trim();
-for(const suffix of ['.public','.prepared','.authoring'])assert.equal(body(source(suffix)),body(source('')),'Room zone parity '+suffix);
+const inside=loungeMoodRegion();
 // Sweep the whole glass and its approaches, including the thin strip the room
 // polygon owns outside the pane. Feet and first-person eyes must agree.
 for(const y of [24.3,28.3,32.3]){
