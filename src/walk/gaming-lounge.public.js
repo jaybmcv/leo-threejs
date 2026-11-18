@@ -1,4 +1,6 @@
 import {ReplayGeometry,replayMerged} from "../v2/prepared-geometry-replay.public.js";
+import fitout from '../plan/room-fitout-overrides-v2.json' with {type:'json'};
+import {gamingBoards} from './gaming-scores.js';
 import layout from '../plan/selected-layout.js';
 import {roomObject} from '../plan/rooms.js';
 import * as T from 'three';
@@ -6,7 +8,7 @@ import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/Buffe
 
 // Deck 16's Voyage training & briefing room as an RGB gaming lounge on foot (from tester feedback; first stage):
 // - dark grey walls, a cool light strip round the top of the walls and a dark ceiling of faintly twinkling stars;
-// - eight PC stations along the outboard wall (curved dual monitors, RGB keyboard and mouse, tower, headset, gaming
+// - eight PC stations along the window side (curved dual monitors, RGB keyboard and mouse, tower, headset, gaming
 //   chair), six console stations along the entry wall (one large screen, console, controller and headset on a side
 //   table, gaming chair) and four curved couches facing split-screen displays, controllers on their coffee tables;
 // - honeycomb clusters of hexagon wall lights that fade slowly through the colours, and a black glass floor of
@@ -19,6 +21,8 @@ import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/Buffe
 // Room frame (Area_d16-training-aft): x along the room (+x toward the nose), z across (+z the entry wall, doorway at
 // x 2..6), floor at y 0, wall faces at |x|=23.84 and |z|=7.84, the ceiling at 3.35. The forward floor stations leave cross aisles and both wall rows clear.
 const ROOM='Area_d16-training-aft';
+const PLACEMENT=fitout['d16-training-aft'],HOLO=PLACEMENT.gamingLeaderboard;
+const pcRowMatrix=()=>new T.Matrix4().makeTranslation(...PLACEMENT.gamingWindowRow.at).multiply(new T.Matrix4().makeRotationY(PLACEMENT.gamingWindowRow.yaw)).multiply(new T.Matrix4().makeTranslation(21,0,7.44));
 const END=23.84,SIDE=7.84,TOP=3.35,DOOR=[2,6],HEX=.25,SOUND_FADE=3;
 const OLD=/^(Seat|Back|Seat_base|Meeting_table|Table_support|Worktop|Training_console|Equipment_cabinet|Status_display|Briefing_wall|Aisle_inlay|Polish_.*|Refined_.*)$/;
 const PCS=[-21,-17.4,-13.8,-10.2,-6.6,-3,.6,4.2],CONSOLES=[-21,-16.5,-12,-7.5,-3,10.5];
@@ -162,7 +166,8 @@ export function dressGamingLounge(ship){
   const head=box('Chair_headrest',[.3,.14,.06],[0,1.28,-.3],accent,g);head.rotation.x=-.12;
   for(const sx of [-1,1]){box('Chair_arm_post',[.04,.2,.04],[sx*.33,.6,-.04],M.metal,g);box('Chair_arm',[.08,.04,.3],[sx*.33,.71,-.02],M.black,g);}
  }
- // PC stations: a desk against the outboard wall, its tower beneath, and the chair.
+ // The free-standing PC row follows the window side; chairs remain on the room side.
+ const rowStart=fit.children.length;
  PCS.forEach((x,i)=>{
   const z=-SIDE+.4;
   box('Gaming_desk_top',[1.7,.05,.75],[x,.735,z],M.desk);
@@ -173,6 +178,10 @@ export function dressGamingLounge(ship){
   box('Monitor_foot',[.9,.015,.16],[x,.767,z-.22],M.metal);
   chair(x,-SIDE+1.55,Math.PI,M.accent[i%ACCENTS.length]);
  });
+ const rowMatrix=pcRowMatrix();for(const o of fit.children.slice(rowStart))o.applyMatrix4(rowMatrix);
+ // The low hexagonal plinth is solid above the walker's step height.
+ const plinth=new T.Mesh(new T.CylinderGeometry(HOLO.radius,HOLO.radius,HOLO.height,6),mat('leaderboard_base',0x15152c,{emissive:0x7024b0,emissiveIntensity:.65}));
+ plinth.name='Gaming_leaderboard_base';plinth.position.set(HOLO.at[0],HOLO.height/2,HOLO.at[2]);fit.add(plinth);
  // Console stations: a cabinet under a wall screen on the entry wall, a side table, and the chair.
  CONSOLES.forEach((x,i)=>{
   box('Media_cabinet',[1.4,.42,.4],[x,.21,SIDE-.2],M.black);
@@ -216,7 +225,7 @@ function headsetGeometry(){
 
 // The glowing and moving parts, in ship coordinates. `update` runs each frame with the camera's position and the
 // walker's (whose steps light the floor).
-export function createGamingLounge(ship,light=null,{still=false}={}){
+export function createGamingLounge(ship,light=null,{still=false,requestBoards=()=>{}}={}){
  const room=roomObject(ship,ROOM);if(!room)return null;
  room.updateWorldMatrix(true,false);
  const group=new T.Group();group.name='Walk_gaming_lounge';
@@ -266,19 +275,20 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
  // PC kit: two curved monitors round the sitter's eye, keyboard and mouse in colour, the tower's colour strip, a headset.
  const pc=M.basic('pc_screen',0xffffff);pc.side=T.DoubleSide;pc.map=canvas(512,288,shooter);
  const controller=controllerGeometry(),headset=headsetGeometry();
+ const rowMatrix=pcRowMatrix(),pcPiece=(m,g)=>piece(m,g.applyMatrix4(rowMatrix));
  PCS.forEach(x=>{
   const z=-SIDE+.4,eye=[x,1.08,-SIDE+1.55],r=1.4,w=.56;
   for(const [start,len] of [[Math.PI-w-.012,w],[Math.PI+.012,w]]){
    const face=new ReplayGeometry("src/walk/gaming-lounge.js:14",T.CylinderGeometry,r,r,.38,16,1,true,start,len),uv=face.attributes.uv;for(let i=0;i<uv.count;i++)uv.setX(i,1-uv.getX(i));
-   piece(pc,face.translate(...eye));
-   piece(M.bezel,new ReplayGeometry("src/walk/gaming-lounge.js:15",T.CylinderGeometry,r+.02,r+.02,.42,16,1,true,start-.008,len+.016).translate(...eye));
+   pcPiece(pc,face.translate(...eye));
+   pcPiece(M.bezel,new ReplayGeometry("src/walk/gaming-lounge.js:15",T.CylinderGeometry,r+.02,r+.02,.42,16,1,true,start-.008,len+.016).translate(...eye));
   }
-  piece(M.dark,new ReplayGeometry("src/walk/gaming-lounge.js:16",T.BoxGeometry,.46,.022,.15).translate(x-.12,.775,z+.18));
-  piece(M.keys,new ReplayGeometry("src/walk/gaming-lounge.js:17",T.BoxGeometry,.43,.006,.13).translate(x-.12,.789,z+.18));
-  piece(M.dark,new ReplayGeometry("src/walk/gaming-lounge.js:18",T.BoxGeometry,.065,.03,.11).translate(x+.36,.778,z+.2));
-  piece(M.keys,new ReplayGeometry("src/walk/gaming-lounge.js:19",T.BoxGeometry,.075,.004,.12).translate(x+.36,.764,z+.2));
-  piece(M.keys,new ReplayGeometry("src/walk/gaming-lounge.js:20",T.BoxGeometry,.006,.36,.02).translate(x+.69,.25,z+.226));
-  piece(M.dark,headset.clone().translate(x-.66,.85,z-.05));
+  pcPiece(M.dark,new ReplayGeometry("src/walk/gaming-lounge.js:16",T.BoxGeometry,.46,.022,.15).translate(x-.12,.775,z+.18));
+  pcPiece(M.keys,new ReplayGeometry("src/walk/gaming-lounge.js:17",T.BoxGeometry,.43,.006,.13).translate(x-.12,.789,z+.18));
+  pcPiece(M.dark,new ReplayGeometry("src/walk/gaming-lounge.js:18",T.BoxGeometry,.065,.03,.11).translate(x+.36,.778,z+.2));
+  pcPiece(M.keys,new ReplayGeometry("src/walk/gaming-lounge.js:19",T.BoxGeometry,.075,.004,.12).translate(x+.36,.764,z+.2));
+  pcPiece(M.keys,new ReplayGeometry("src/walk/gaming-lounge.js:20",T.BoxGeometry,.006,.36,.02).translate(x+.69,.25,z+.226));
+  pcPiece(M.dark,headset.clone().translate(x-.66,.85,z-.05));
  });
  // Console kit: the wall screen's picture, a light on the console, controller and headset on the side table.
  const tv=M.basic('console_screen',0xffffff);tv.map=canvas(512,288,racer);
@@ -296,6 +306,8 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
  stationPiece(M.keys,new ReplayGeometry("src/walk/gaming-lounge.js:24",T.BoxGeometry,.62,.012,1.52).translate(19.45,.012,0));
  stationPiece(M.keys,new ReplayGeometry("src/walk/gaming-lounge.js:25",T.BoxGeometry,.03,.02,2.2).translate(END-.48,.03,0));
  for(const [m,list] of parts){const o=new T.Mesh(replayMerged("src/walk/gaming-lounge.js",nativeMergeGeometries,list),m);o.name=m.name;group.add(o);}
+ const leaderboard=leaderboardColumn(time);leaderboard.mesh.position.set(...HOLO.at);group.add(leaderboard.mesh);
+ let boardDue=0;
  // The floor: black glass hexagons over the room's own floor; the ceiling of stars under its own.
  const outline=roomOutline(room),flat=(flip)=>new T.ShapeGeometry(new T.Shape(outline.local.map(([x,z])=>new T.Vector2(x,flip*z))));
  const uEdge={value:[...outline.world,outline.world[0]].map(([x,z])=>new T.Vector2(x,z))},trail=Array.from({length:MARKS},()=>new T.Vector4(0,0,0,0));
@@ -335,9 +347,11 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
   trail[index*TRAIL+source.head].set(p.x,p.y,p.z,1);
  };
  return {
-  group,
+  group,leaderboard,
   update(dt,eye,p,remotes=[],seated=false){
    if(!still)time.value+=dt;
+   leaderboard.update(dt,still);
+   boardDue-=dt;if(inside.containsPoint(eye)&&boardDue<=0){boardDue=30;requestBoards();}
    for(const t of trail)t.w=Math.max(0,t.w-dt/1.5);
    if(trailAfterMove(sources[0],p,seated)&&onFloor(p))mark(sources[0],p,0);
    const near=remotes.filter(r=>onFloor(r.cur)).sort((a,b)=>Math.hypot(a.cur.x-eye.x,a.cur.z-eye.z)-Math.hypot(b.cur.x-eye.x,b.cur.z-eye.z)).slice(0,REMOTE_TRAILS);
@@ -354,4 +368,51 @@ export function createGamingLounge(ship,light=null,{still=false}={}){
   get mood(){return shown;},
   soundLevel,
  };
+}
+
+
+// One atlas and one additive mesh for all six faces. Canvas work runs once every three seconds.
+function leaderboardColumn(time){
+ const c=document.createElement('canvas');c.width=1536;c.height=1024;
+ const ctx=c.getContext('2d'),texture=new T.CanvasTexture(c);texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=4;
+ const geometries=[],radius=1.5,apothem=radius*Math.cos(Math.PI/6);
+ for(let i=0;i<6;i++){
+  const angle=i*Math.PI/3,g=new T.PlaneGeometry(radius,2.4),uv=g.attributes.uv;
+  for(let j=0;j<uv.count;j++)uv.setXY(j,(uv.getX(j)+i%3)/3,(uv.getY(j)+1-Math.floor(i/3))/2);
+  g.rotateY(angle);g.translate(Math.sin(angle)*apothem,1.86,Math.cos(angle)*apothem);geometries.push(g);
+ }
+ const material=new T.ShaderMaterial({name:'Gaming_leaderboards',vertexShader:VERTEX,fragmentShader:
+  `#include <common>
+  #include <logdepthbuf_pars_fragment>
+  uniform sampler2D uBoards;uniform float uTime;varying vec2 vUv;varying vec3 vWorld;
+  void main(){
+   #include <logdepthbuf_fragment>
+   vec2 p=fract(vUv*vec2(3.,2.));vec4 ink=texture2D(uBoards,vUv);
+   float edge=1.-smoothstep(.008,.022,min(min(p.x,1.-p.x),min(p.y,1.-p.y)));
+   float scan=pow(.5+.5*sin(p.y*160.-uTime*3.),20.);
+   vec3 neon=mix(vec3(.1,.85,1.),vec3(1.,.12,.65),p.y);
+   gl_FragColor=vec4(ink.rgb*ink.a+neon*(edge*.85+scan*.045),max(ink.a,edge*.75));
+   #include <colorspace_fragment>
+  }`,uniforms:{uBoards:{value:texture},uTime:time},transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false});
+ const mesh=new T.Mesh(nativeMergeGeometries(geometries),material);mesh.name='Gaming_leaderboard_column';mesh.userData.noCollide=true;
+ let elapsed=0,due=0,signature='',boards=[];
+ const refresh=()=>{
+  boards=gamingBoards();const page=Math.floor(elapsed/18),visible=Array.from({length:6},(_,i)=>boards[(i+page*6)%boards.length]),next=JSON.stringify(visible);
+  if(next===signature)return;signature=next;ctx.clearRect(0,0,c.width,c.height);
+  visible.forEach((b,i)=>{
+   const x=i%3*512,y=Math.floor(i/3)*512;ctx.save();ctx.translate(x,y);
+   ctx.fillStyle='rgba(8,14,36,.32)';ctx.fillRect(0,0,512,512);
+   ctx.textAlign='center';ctx.fillStyle='#5cecff';ctx.font='600 19px system-ui';ctx.fillText('VOYAGE · HIGH SCORES',256,43);
+   ctx.fillStyle='#fff1fc';ctx.font='700 37px system-ui';
+   const words=b.title.split(' '),lines=[''];for(const word of words){let n=lines.length-1;if(ctx.measureText(lines[n]+' '+word).width>450){lines.push(word);}else lines[n]+=(lines[n]?' ':'')+word;}
+   lines.forEach((line,n)=>ctx.fillText(line,256,104+n*43));
+   ctx.fillStyle='#caabff';ctx.font='18px system-ui';ctx.fillText(b.scope,256,196);
+   if(!b.rows.length){ctx.fillStyle='#edfaff';ctx.font='29px system-ui';ctx.fillText('No scores yet',256,302);}
+   b.rows.forEach((r,n)=>{const yy=251+n*43;ctx.font='22px system-ui';ctx.fillStyle=n?'#e8ecff':'#6df3ff';ctx.textAlign='left';ctx.fillText((n+1)+'. '+r.name,28,yy,310);ctx.textAlign='right';ctx.fillText(r.value,484,yy,130);});
+   ctx.fillStyle='#f281d9';ctx.textAlign='center';ctx.font='18px system-ui';ctx.fillText('LEO / GAMING LOUNGE',256,482);ctx.restore();
+  });texture.needsUpdate=true;
+  mesh.userData.boards=visible;
+ };
+ refresh();
+ return {mesh,update(dt,still){elapsed+=dt;if(!still)mesh.rotation.y=elapsed*Math.PI/36;if(elapsed>=due){due=elapsed+3;refresh();}},get boards(){return boards;}};
 }
