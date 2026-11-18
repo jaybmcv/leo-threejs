@@ -3898,7 +3898,7 @@
       ],
       "interactionTargets": null,
       "placements": 45,
-      "signature": "ed2dfd3a622e16a38b29d886990a6bf6f25324a65f8ba6c1bfd6d72b5ecb3809"
+      "signature": "58714cc08b8fd432f5e7349c471b276c4a272a5782d87142407596080cc5ddd9"
     },
     {
       "source": "src/walk/lounge-aquarium.js",
@@ -3916,7 +3916,7 @@
       ],
       "interactionTargets": null,
       "placements": 45,
-      "signature": "aae5342abc608f3c2f55f1ff6a8a04035c734dbaac02fee765b59e27d9268f74"
+      "signature": "320fbf33b50b119c749377ea42237fcccd2dc0d0c96888bd8ac4d4305c991080"
     },
     {
       "source": "src/walk/lounge-compass.authoring.js",
@@ -4266,7 +4266,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "69cb18e48ae06088f06039a91a65c57bc01879bcee45f963c5acb0e492d84321"
+      "signature": "4feb03bea8c5e40634fb6796bde2a2fc13c34bbbfa0b0d8e88a4564909c7a4be"
     },
     {
       "source": "src/walk/main.js",
@@ -4288,7 +4288,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "9e0c1a7718ede6b267687bed8e10938d7f069cfd9f5940332ce8bef08b28fb2c"
+      "signature": "d3c6bffbc860a51a5051846985fec63d3cc219e4a7e020d1958431503668c605"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4308,7 +4308,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "ac9dfe1953679aebdaccb70cc688ee5368ec2c1f64d3a2455ce9b1940d33dd9f"
+      "signature": "b9e8dc50a188c081813ba2807854f869f1a9a5be4d9688e6d97ba729396f5e88"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4328,7 +4328,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "abf3d7429ac8fdef73ff1b8001f9decfc0238c2d76d415a34f949fda881fe990"
+      "signature": "faff0bccfc2b735a478738d6acb1c3f5bfd573d48d5744723e7887cda5cf9fb1"
     },
     {
       "source": "src/walk/marks.authoring.js",

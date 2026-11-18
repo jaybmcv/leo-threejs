@@ -1,10 +1,11 @@
 import * as T from 'three';
 import {ATRIUM_VIEW} from './atrium-render-policy.js';
+import {onLoungeAtriumWalkway} from './lounge-light-boundary.js';
 import layout from'../plan/selected-layout.js';import{contains,distanceToSegment,bounds}from'../plan/geometry-v2.js';import{ATRIUM_PROTOTYPE}from'../plan/atrium-v2.js';
 let position=null,classified;const architecture=[],owners=new Map();
-for(const r of[...layout.cabins,...layout.rooms.filter(r=>!r.aggregate),...(layout.hullPrototypes?.prototypes||[]).map(p=>({polygon:p.polygon,y:p.chart.origin[1],height:p.rect[3],deck:p.deck}))]){
+for(const r of[...layout.cabins,...layout.rooms.filter(r=>!r.aggregate),...(layout.hullPrototypes?.prototypes||[]).map(p=>({id:p.ownerId||p.id,polygon:p.polygon,y:p.chart.origin[1],height:p.rect[3],deck:p.deck}))]){
  if(!r.polygon)continue;const box=bounds(r.polygon),y=r.y,height=r.height||3.4;
- for(const d of layout.decks)if(d.y>=y-.1&&d.y<y+height){let list=owners.get(d.number);if(!list)owners.set(d.number,list=[]);list.push({polygon:r.polygon,box,y,height});}
+ for(const d of layout.decks)if(d.y>=y-.1&&d.y<y+height){let list=owners.get(d.number);if(!list)owners.set(d.number,list=[]);list.push({id:r.id,polygon:r.polygon,box,y,height});}
 }
 let proxyY=null,fogClassified,cameraVisible=false,cameraRange=null;const fogs=[];
 const fullAtriumSpan=[layout.decks[5].y-.3,ATRIUM_PROTOTYPE.skyY+.1];
@@ -14,7 +15,7 @@ export function atriumViewSpan(){if(!ATRIUM_VIEW.fullHeight)return null;if(inOpe
 // The camera may see into the atrium while the walker is in an adjoining room.
 export function setAtriumSight(visible,range=null){cameraVisible=!!visible;cameraRange=visible?range:null;applyAtriumFog();}
 export function registerAtriumFog(fog){if(!fogs.some(r=>r.fog===fog))fogs.push({fog,near:fog.near,far:fog.far});applyAtriumFog();}
-export function inOpenAtrium(){if(fogClassified!==undefined)return fogClassified;const p=position;if(!p||p.y<layout.decks[5].y-.3||p.y>39.94)return fogClassified=false;let d=layout.decks[5];for(const q of layout.decks)if(q.y<=p.y+.2)d=q;if(d.number<6||!d.atrium?.outline)return fogClassified=false;const ring=d.atrium.outline,v=[p.x,p.z];if(!contains(ring,v)&&!ring.some((a,i)=>distanceToSegment(v,a,ring[(i+1)%ring.length])<=3.5))return fogClassified=false;return fogClassified=!(owners.get(d.number)||[]).some(r=>p.y>=r.y-.1&&p.y<r.y+r.height&&p.x>=r.box.x0&&p.x<=r.box.x1&&p.z>=r.box.z0&&p.z<=r.box.z1&&contains(r.polygon,v));}
+export function inOpenAtrium(){if(fogClassified!==undefined)return fogClassified;const p=position;if(!p||p.y<layout.decks[5].y-.3||p.y>39.94)return fogClassified=false;let d=layout.decks[5];for(const q of layout.decks)if(q.y<=p.y+.2)d=q;if(d.number<6||!d.atrium?.outline)return fogClassified=false;const ring=d.atrium.outline,v=[p.x,p.z],walkway=onLoungeAtriumWalkway(p);if(!walkway&&!contains(ring,v)&&!ring.some((a,i)=>distanceToSegment(v,a,ring[(i+1)%ring.length])<=3.5))return fogClassified=false;return fogClassified=!(owners.get(d.number)||[]).some(r=>!(walkway&&r.id==='commons-1')&&p.y>=r.y-.1&&p.y<r.y+r.height&&p.x>=r.box.x0&&p.x<=r.box.x1&&p.z>=r.box.z0&&p.z<=r.box.z1&&contains(r.polygon,v));}
 // The near facade's merged copy of the lift tower and aft-core architecture (P6_tower_architecture, and the aft stair
 // flights in P6_tower_stairs) is the only geometry those parts have: addPhase6Architecture hides every source it takes
 // before the walk's bake, so no deck band holds them. It always draws. From 2026-11-05 it was hidden while the
@@ -85,8 +86,9 @@ export function setAtriumView(p){const changed=!position||(position.x-p.x)**2+(p
 function classify(){if(classified!==undefined)return classified;const p=position;if(!p)return null;const d=layout.decks.reduce((a,b)=>Math.abs(a.y-p.y)<Math.abs(b.y-p.y)?a:b);
  if(d.number<6||!d.atrium?.outline)return classified=null;
  const q=[p.x,p.z],ring=d.atrium.outline;
- if(Math.abs(p.y-d.y)>1.6||!contains(ring,q)&&!ring.some((a,i)=>distanceToSegment(q,a,ring[(i+1)%ring.length])<=3.5))return classified=null;
- if((owners.get(d.number)||[]).some(r=>p.y>=r.y-.1&&p.y<r.y+r.height&&p.x>=r.box.x0&&p.x<=r.box.x1&&p.z>=r.box.z0&&p.z<=r.box.z1&&contains(r.polygon,q)))return classified=null;
+ const walkway=onLoungeAtriumWalkway(p);
+ if(Math.abs(p.y-d.y)>1.6||!walkway&&!contains(ring,q)&&!ring.some((a,i)=>distanceToSegment(q,a,ring[(i+1)%ring.length])<=3.5))return classified=null;
+ if((owners.get(d.number)||[]).some(r=>!(walkway&&r.id==='commons-1')&&p.y>=r.y-.1&&p.y<r.y+r.height&&p.x>=r.box.x0&&p.x<=r.box.x1&&p.z>=r.box.z0&&p.z<=r.box.z1&&contains(r.polygon,q)))return classified=null;
  return classified=[p.y-ATRIUM_PROTOTYPE.interiorReach,p.y+ATRIUM_PROTOTYPE.interiorReach];
 }
 export function fastAtriumSpan(p){setAtriumView(p);return classify();}
