@@ -1,3 +1,5 @@
+import {createVoyagerLawn} from '../v2/voyager-lawn.js';
+let voyagerLawn=null;
 import {createAtriumGeometryRuntime} from '../v2/atrium-geometry-runtime.js';
 import {getAtriumQuality,observeAtriumFrame,setAtriumAutoDefault,setAtriumQuality,subscribeAtriumQuality} from '../v2/atrium-quality.js';
 import {mountGraphicsSettings} from './graphics-settings.js';
@@ -414,7 +416,7 @@ async function buildShip(){
  // Decals and seams only matter from outside.
  // Exterior visibility was resolved by the build.
  ship.v2Haze=preparedHaze(ship);preparedFacade(ship,scene);const b0=performance.now();baked=preparedBake(ship);for(const g of baked.bands.values())scene.add(g);quietFloorReflections(scene,scene.environment);timings.push([`${baked.sources} meshes merged into ${baked.meshes} in ${Math.round(performance.now()-b0)} ms`,Math.round(performance.now()-t0)]);
- haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});cabinGlass=createCabinGlass(ship,scene);crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);
+ haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});voyagerLawn=createVoyagerLawn(ship,scene,layout,{phone});cabinGlass=createCabinGlass(ship,scene);crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  status('Preparing the walk · 2/4 · placing activities…');await idle();
  const toBand=(o,y=o.position.y)=>{const band=bandOf(y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);};
@@ -1169,7 +1171,7 @@ function draw(view){
  if(roomViewJob){try{const views=roomViewJob.step();if(views){roomViewJob=null;
    atriumRooms=createAtriumRooms({scene,parent:atriumStandIns().find(o=>o.name==='P6_atrium_room_returns'&&!o.userData.distantProxy)?.parent,placements:cabinPlacements(),views,instanced,lining:instanced.find(o=>o.name==='Cabin_v2_shell_V2_lining_polished')?.material});
    atriumRooms?.update(camera,controller.position);}}catch(e){roomViewJob=null;console.warn('Atrium room views skipped.',e);}}
- view.updateMatrixWorld(true);atriumGeometry?.update(view,renderer.domElement.height);
+ view.updateMatrixWorld(true);atriumGeometry?.update(view,renderer.domElement.height);voyagerLawn?.update(view);
  for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();if(ownerHiding&&view===camera)ownerHiding.around(view,()=>renderer.render(scene,view));else renderer.render(scene,view);frameReadout.frame(performance.now());
 }
