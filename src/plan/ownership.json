@@ -2618,8 +2618,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 70,
-      "signature": "2ea797534223bb65ee76cb55be901758ecaf2694ac482d390186f64b20db2193"
+      "placements": 71,
+      "signature": "7eaeec45d04e6121da3df0be5b9a0c8e4370d0904c7c1138c60bff9294aae54a"
     },
     {
       "source": "src/walk/gaming-lounge.js",
@@ -2641,8 +2641,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 70,
-      "signature": "353c685c02eddc28e668eaf75ef316cc17036df6975e8055f7862ed1775fb020"
+      "placements": 71,
+      "signature": "c2a7422ad31d9a2e478e0b68576b3e26cd51d690adebbd1c426d97fdb99d0598"
     },
     {
       "source": "src/walk/gaming-lounge.prepared.js",
@@ -2664,8 +2664,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 70,
-      "signature": "a140f59f865943731bae87215ff7fc125dece14588b461b007a62ea342ca571f"
+      "placements": 71,
+      "signature": "d8b18e3d805080a4abc4a5b6668354b664033d1dac822fd9a7c654d07db9ce71"
     },
     {
       "source": "src/walk/gaming-lounge.public.js",
@@ -2687,8 +2687,30 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 70,
-      "signature": "ba719fd17bf70baef24cb5ee855bf0e46ecbbaf60c89227de37a092451328ab6"
+      "placements": 71,
+      "signature": "358f247074048e3d5dd6a27289b017121ff185121c55d377f8ba68213671a423"
+    },
+    {
+      "source": "src/walk/gaming-refreshments.js",
+      "rooms": [
+        "d16-training-aft"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Gaming_refreshments",
+        "Gaming_shelf_can",
+        "Gaming_held_can",
+        "Gaming_served_can",
+        "Gaming_robot_server",
+        "Gaming_robot_torso",
+        "Gaming_robot_head",
+        "Gaming_robot_gripper"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 37,
+      "signature": "b3df21e0d40bb42938fa749f5a5eba17a4f192cc0ae522b330e7a7090034d614"
     },
     {
       "source": "src/walk/glide.js",
@@ -4244,7 +4266,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "1f13c6237a1da8daf35644d536e8c4724fc943f98e1456153fda680d664a5d6b"
+      "signature": "ee782b9db5c1728f8b07909351724bf8009e4797fded9e7294b2439be6f16d93"
     },
     {
       "source": "src/walk/main.js",
@@ -4266,7 +4288,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "6ef635f53b9d5ace6acd3d849960b19ac947e021ad1e0be9556dac0ceac8c6fa"
+      "signature": "100a8b02cd86a8bc0103f522d71c90399a24114a25b513932bd8e5eb22284d1f"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4286,7 +4308,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "319113209c053fd63fef93aa7d93fef1a8d6df868278138bc77457d4ce4bb796"
+      "signature": "a3b76407735fd66177a27a6b824a3894aa1fd246ebbede20faea466c44c6283c"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4306,7 +4328,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "dbfbe56dbf103f5ad1bbd2aef5f22abf888ec50f5aeb47d4b6948b9b1ee7bd9c"
+      "signature": "443745bae14e4888d6b4455230938ed80a576c11b10f5e52e6847d2cb8aaff7b"
     },
     {
       "source": "src/walk/marks.authoring.js",
