@@ -4,14 +4,13 @@ import * as T from 'three';
 // comes down through the lobby ceiling as a bare white wedge, its nose by the lifts and its sides running aft past the
 // stair approach. The walk boxes it in with flat clad walls standing on its floor outline (it leans in as it rises, so
 // nothing pokes through), a few centimetres proud of it so the lobby keeps its footprint. The exterior is untouched.
-// The forward face is the casing's main face: flat, square on to the lobby, lit by a wash strip, with its own 0-1 UVs.
+// The forward face is the casing's main face: flat, square on to the lobby, with its own 0-1 UVs.
 const Y0=32.3,Y1=36.05;
 // The outline's +z half from the forward face aft (the -z half mirrors it); the fillet's floor width plus 3 cm.
 const HALF=[[-130.75,.9],[-133.85,3.53],[-135,3.73],[-136,3.93],[-137,4.1],[-138,4.22],[-138.6,4.29]];
 const clad=new T.MeshStandardMaterial({name:'Walk_fin_casing_cladding',color:0xd6d9d6,roughness:.72,metalness:.04});
 const face=new T.MeshStandardMaterial({name:'Walk_fin_casing_face',color:0xe9e8e2,roughness:.82});
 const trim=new T.MeshStandardMaterial({name:'Walk_fin_casing_trim',color:0x58636c,roughness:.45,metalness:.5});
-const wash=new T.MeshStandardMaterial({name:'Walk_fin_casing_wash',color:0xfff1dc,emissive:0xffe8c4,emissiveIntensity:1.2,roughness:.4});
 
 // Vertical quads along a polyline, normals out from the casing's middle; u runs in metres along it, or 0-1 with `unit`.
 function band(points,y0,y1,{out=0,unit=false}={}){
@@ -41,13 +40,10 @@ export function createFinCasing(){
  g.add(mesh('Fin_root_casing_cladding',band(ring.slice(HALF.length),Y0,Y1),clad));
  g.add(mesh('Fin_root_casing_cladding',band(back,Y0,Y1),clad));
  // A dark skirting and ceiling band round the visible run, a hair proud of the cladding.
- const run=[...side(-1).reverse(),...side(1)];
- g.add(mesh('Fin_root_casing_skirting',band(run,Y0,Y0+.14,{out:.012}),trim));
- g.add(mesh('Fin_root_casing_cornice',band(run,35.82,Y1,{out:.012}),trim));
- // Upright trims at the main face's corners.
- for(const s of [-1,1]){const x=HALF[0][0],z=HALF[0][1]*s,p=new T.Mesh(new T.BoxGeometry(.06,Y1-Y0,.06),trim);p.position.set(x-.02,(Y0+Y1)/2,z);p.name='Fin_root_casing_corner';g.add(p);}
- // The wash strip under the cornice lights the main face; it is a light, so the walker passes under it.
- const strip=new T.Mesh(new T.BoxGeometry(.08,.05,HALF[0][1]*2-.2),wash);strip.position.set(HALF[0][0]+.06,35.76,0);strip.name='Fin_root_casing_wash_light';g.add(strip);
- g.userData.paintFace={x:HALF[0][0],z0:-HALF[0][1],z1:HALF[0][1],y0:Y0+.14,y1:35.82};
+ for(const s of [-1,1]){
+  g.add(mesh('Fin_root_casing_skirting',band(side(s),Y0,Y0+.14,{out:.012}),trim));
+  g.add(mesh('Fin_root_casing_cornice',band(side(s),35.82,Y1,{out:.012}),trim));
+ }
+ // The former paint face is plain cladding; its wall and floor outline stay in place.
  return g;
 }

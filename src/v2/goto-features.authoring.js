@@ -31,7 +31,7 @@ export function featurePlaces(layout,{crownFloor=LIFTS.find(l=>l.id==='crown').s
  for(const r of layout.rooms.filter(r=>r.kind==='garden'))for(const door of r.galleryDoors||[]){if(door.deck===17)continue;const n=door.outward;add(r.id+'-gallery-'+door.deck,r.name+' · gallery',door.deck,[door.center[0]-n[0]*1.2,door.center[1],door.center[2]-n[1]*1.2],Math.atan2(-n[0],-n[1]),r.id);}
  const blossom=room('commons-10').components.pieces.find(p=>p.name==='blossom garden assembly');add('blossom','Blossom garden',17,[blossom.center[0]-5.5,blossom.center[1],blossom.center[2]],Math.PI/2,'commons-10');
  local('hamster-ball','Hamster ball','commons-10',[5.4,0,-7.3],0);
- add('graffiti','Graffiti wall',19,[-129.5,layout.decks[18].y,0],-Math.PI/2);
+ add('graffiti','Graffiti wall',19,[-223,layout.decks[18].y,4],-Math.PI/2);
  // The Keel Club, the sports hall in the hull below Deck 1 (src/walk/keel-club.js), listed with Deck 1. Floors from
  // KEEL.floor (-51.5) and KEEL.terrace (-47.5): the arrival plaza by the aft lifts, the lagoon's port promenade and the
  // cabana terrace, each facing into the hall.

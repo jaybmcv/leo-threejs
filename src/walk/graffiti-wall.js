@@ -1,11 +1,11 @@
-// The graffiti wall on the fin root casing in Deck 19's aft lift lobby (fin-casing.js): what the paint is, shared by the
-// page (graffiti.js) and Leo live (server/leo-live.mjs), so both lay a stroke down cell for cell the same way.
-//
-// The wall is a fixed grid of cells, W across and H down from the top-left as you face it, each one bare (0) or one of
-// the palette's colours (1-12). A stroke is a colour, a nozzle size and a short run of cell points; painting it sets
-// every cell the nozzle passes over to that colour, over whatever was there. So the stored wall never grows: old paint
-// stays until someone paints over it, and the whole wall is W*H bytes however much is sprayed.
+// Shared paint cells for the Deck 19 stern tiles. The legacy tile retains the original panel unchanged.
 export const WALL={w:120,h:224};
+// Tiles keep the old panel's cell density. Coordinates bound the existing stern finish, never a new wall.
+export const STERN={x0:-240,x1:-224,y0:32.32,y1:34.5,z0:-24,z1:24,dx:3.38/Math.sqrt(1+(3.2/19)**2),dz:1.8,floor:32.3};
+export const COLS=Math.ceil((STERN.z1-STERN.z0)/STERN.dz),ROWS=Math.ceil((STERN.x1-STERN.x0)/STERN.dx);
+export const tileId=(col,row)=>col===15&&row===2?'legacy':`stern-${col}-${row}`;
+export const TILES=Array.from({length:COLS*ROWS},(_,i)=>tileId(i%COLS,Math.floor(i/COLS)));
+export const readTile=id=>id===undefined?'legacy':TILES.includes(id)?id:null;
 // Spray can colours, 1-12 on the wire (0 is the bare casing).
 export const PALETTE=['#f4f1ea','#15161a','#e0262b','#f85800','#ffd21f','#7bd23c','#13915a','#2fd6c5','#2a6fdb','#8a3ffc','#ff5fb4','#7a4a2a'];
 // Nozzle radii in cells (a cell is about 1.5 cm): fine, medium, wide.
@@ -44,6 +44,7 @@ export function paintStroke(cells,{c,s,p},changed){
 // The wall as text for the wire and the file, and back (null if it is not a wall this size).
 export function wallToText(cells){let s='';for(let i=0;i<cells.length;i+=8192)s+=String.fromCharCode(...cells.subarray(i,i+8192));return btoa(s);}
 export function wallFromText(text){
+ if(text==='')return new Uint8Array(WALL.w*WALL.h);
  try{if(typeof text!=='string')return null;const s=atob(text);if(s.length!==WALL.w*WALL.h)return null;
   const cells=new Uint8Array(s.length);for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);if(c>PALETTE.length)return null;cells[i]=c;}return cells;}catch{return null;}
 }

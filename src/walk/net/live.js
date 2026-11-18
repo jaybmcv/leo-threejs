@@ -209,7 +209,7 @@ export function connectLive(url,on,opts={}){
   // A line of chat for everyone aboard; false when there is no connection to say it on.
   say(text){if(!live())return false;ws.send(JSON.stringify({m:'chat',text}));return true;},
   // The graffiti wall: ask for it (and its strokes from then on), and spray one stroke {c, s, p}.
-  wall(){if(live())ws.send(JSON.stringify({m:'wall'}));},
+  wall(tiles,keep){if(live())ws.send(JSON.stringify({m:'wall',tiles,keep}));},
   paint(stroke){if(!live())return false;ws.send(JSON.stringify({m:'paint',...stroke}));return true;},
   // Paws Off's gym round: stepped on ('in'), fell, stepped off; false when there is no connection to send it on.
   gym(msg){if(!live())return false;ws.send(JSON.stringify({...msg,m:'gym'}));return true;},

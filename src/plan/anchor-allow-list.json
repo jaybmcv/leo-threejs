@@ -7,6 +7,7 @@
       "src/walk/fin-casing.js",
       "src/walk/graffiti.js",
       "src/walk/graffiti-wall.js",
+      "src/walk/graffiti-surface.js",
       "src/walk/lever-panel.js"
     ],
     "room": "aft-machinery",
