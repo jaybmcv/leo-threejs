@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {placed,placedV1,placedFacing,placeObject} from '../plan/placements.js';
 import log from 'walk-changes';
-import {readSpot,remapSpot} from './link.js';
+import {readSpot,remapSpot,shipLogShareLink} from './link.js';
 
 // The ship log boards: every change made to Leo (scripts/ship-log.mjs, from git at build time), newest first, with the
 // day it was completed, and beside the list the five changes with the most hearts. One board on the Crown lounge lift's
@@ -272,6 +272,7 @@ export function createChangesBoards({hearts,onOpen=()=>{},onClose=()=>{},onGo=()
  ui.compare.addEventListener('pointerup',()=>{dragging=null;});ui.compare.addEventListener('pointercancel',()=>{dragging=null;});
  function drag(ev){const r=ui.compare.getBoundingClientRect();setSplit((ev.clientX-r.left)/r.width*100);}
  ui.prev.addEventListener('click',()=>showShot(shot-1));ui.next.addEventListener('click',()=>showShot(shot+1));
+ ui.share.addEventListener('click',()=>window.open(shipLogShareLink(goSpot()),'_blank','noopener,noreferrer'));
  ui.go.addEventListener('click',go);ui.heart.addEventListener('click',()=>toggle(detail));ui.back.addEventListener('click',closeDetail);
  ui.detail.addEventListener('click',ev=>{if(ev.target===ui.detail)closeDetail();});
 
@@ -353,11 +354,12 @@ function detailPanel(root){
  const none=el('p',{className:'sl-none'});
  const go=el('button',{type:'button',className:'sl-go'}),heart=el('button',{type:'button',className:'sl-heart'}),
   pull=el('a',{target:'_blank',rel:'noopener',textContent:'How it was made ↗'}),back=el('button',{type:'button',className:'sl-back',textContent:'Back to the log'});
+ const share=el('button',{type:'button',className:'sl-share',textContent:'Share on X'});
  const eyebrow=el('div',{className:'sl-eyebrow'}),title=el('h2'),note=el('div',{className:'sl-note',role:'status'});
  const keys=el('div',{className:'sl-keys',textContent:'Drag the pictures to compare · ← → pictures · ↑ ↓ other changes · G go there · Esc back'});
- const card=el('div',{className:'sl-card',role:'dialog'},eyebrow,title,pictures,none,el('div',{className:'sl-actions'},go,heart,pull,back),note,keys);
+ const card=el('div',{className:'sl-card',role:'dialog'},eyebrow,title,pictures,none,el('div',{className:'sl-actions'},go,heart,pull,share,back),note,keys);
  card.setAttribute('aria-modal','true');
  const detail=el('div',{className:'sl-detail',hidden:true},card);
  root.append(detail,tip);
- return {tip,tipName,tipWhat,detail,eyebrow,title,pictures,compare,before,after,line,wait,prev,next,shotLabel,thumbs,none,go,heart,pull,back,note};
+ return {tip,tipName,tipWhat,detail,eyebrow,title,pictures,compare,before,after,line,wait,prev,next,shotLabel,thumbs,none,go,heart,pull,share,back,note};
 }

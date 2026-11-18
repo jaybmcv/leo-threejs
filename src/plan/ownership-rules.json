@@ -120,6 +120,10 @@
     "owners": ["commons-1"],
     "via": "inherited"
   },
+  "src/terpene-glassware.js": {
+    "owners": ["commons-1"],
+    "via": "inherited"
+  },
   "src/garden-finish.js": {
     "owners": [
       "@commons"
@@ -631,5 +635,6 @@
   "src/walk/layered-conservatory.js": {
     "owners": ["commons-10"],
     "via": "inherited"
-  }
+  },
+  "src/walk/zen-garden.js": {"owners":["commons-10"],"via":"inherited"}
 }

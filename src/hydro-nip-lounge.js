@@ -9,6 +9,7 @@ import {TextGeometry} from 'three/addons/geometries/TextGeometry.js';
 import fontData from './assets/helvetiker-bold.json' with {type:'json'};
 import {canvasTexture,seeded} from './polish-kit.js';
 import {domePlants} from './lounge-dome-plants.js';
+import {createTerpeneGlassware} from './terpene-glassware.js';
 
 // The Hydro-Nip Lounge (feedback-inbox #58, HYDRO_NIP_LOUNGE.md): a catnip lounge in Neighborhood 1's garden commons,
 // concept by Tochtli. Built in the commons template's own frame (x 109.5-154.5, z 8-46, floor 24.3); the commons root
@@ -28,6 +29,7 @@ const BALCONY_RUNS=[
  {level:LEVELS[1],points:[[120.5,14],[155,14]],offset:[0,.45]},
  {level:LEVELS[1],points:[[109.5,25.07],[112.5,26.001],[120,27.882],[132.5,30.727],[144.5,31.848],[156.5,32.009]],offset:[0,-.45]}
 ];
+const BALCONY_CUT=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1');return 27+r.side*(LOUNGE_PLAN.balconyEnd-r.z);})();
 // The two stair flights at the rear galleries' east end are solid under their treads: the lights keep out of them.
 const STAIR_FLIGHTS=[{level:LEVELS[0],x0:155.1,x1:158.4,z0:30.8,z1:38.6},{level:LEVELS[1],x0:151.8,x1:155,z0:30.8,z1:38.1}];
 const DOME={x:134,z:25,r:6.5},MAZE={x0:114+v2MazeFit.dx,x1:120.5+v2MazeFit.dx,z0:19+v2MazeFit.dz,z1:33+v2MazeFit.dz,top:35.2},MUNCH={x:145.5,z:25};
@@ -195,8 +197,8 @@ export function createHydroNipLounge({mirror=1}={}){
   const c=new Float32Array(n.attributes.position.count*3);for(let i=0;i<c.length;i+=3){c[i]=color.r;c[i+1]=color.g;c[i+2]=color.b;}n.setAttribute('color',new T.BufferAttribute(c,3));
   if(uv){const a=n.attributes.uv;for(let i=0;i<a.count;i++){const [u,v]=uv(a.getX(i),a.getY(i));a.setXY(i,u,v);}}return n;};
  // (Loose paints merge apart, as Lounge_*_loose meshes the walk doesn't collide with.)
- let turning=null,piece=null;
- const put=(p,g)=>{if(turning)g.applyMatrix4(turning);if(!p){g.dispose();return;}const key=piece?piece+'|'+p.mat.name:p.loose?p.mat.name+'|loose':p.mat;(lists.get(key)||lists.set(key,{mat:p.mat,loose:!!p.loose,piece,gs:[]}).get(key)).gs.push(tidy(g,p.color,p.uv));};
+ let turning=null,piece=null,omit=false;
+ const put=(p,g)=>{if(turning)g.applyMatrix4(turning);if(!p||omit){g.dispose();return;}const key=piece?piece+'|'+p.mat.name:p.loose?p.mat.name+'|loose':p.mat;(lists.get(key)||lists.set(key,{mat:p.mat,loose:!!p.loose,piece,gs:[]}).get(key)).gs.push(tidy(g,p.color,p.uv));};
  const box=(m,[w,h,d],[x,y,z])=>put(m,new T.BoxGeometry(w,h,d).translate(x,y,z));
  const cyl=(m,rt,rb,h,[x,y,z],seg=12,open=false)=>put(m,new T.CylinderGeometry(rt,rb,h,seg,1,open).translate(x,y,z));
  const ball=(m,r,[x,y,z],detail=1)=>put(m,new T.IcosahedronGeometry(r,detail).translate(x,y,z));
@@ -312,8 +314,6 @@ export function createHydroNipLounge({mirror=1}={}){
    door({x:o.x,z:PORCH.out,width:1.7,height:2.45,face:-1,pocket:-1});
    // The skin left round the cut: a dark collar from the porch's frame out to it.
    for(const s of [-1,1])box(M.dark,[.9,height+.6,.08],[o.x+s*(half+.45),FLOOR+(height+.6)/2,PORCH.in]);box(M.dark,[2*half+1.8,.6,.08],[o.x,FLOOR+height+.3,PORCH.in]);}
-  // A soft purple glow on the floor inside.
-  put(halo(PURPLE),new T.PlaneGeometry(DOME.r*2,DOME.r*2).rotateX(-Math.PI/2).translate(o.x,FLOOR+.03,o.z));
   // Nine spreader-bar hammocks in a ring round the dome's middle, spokes out from it, with the way in from the porch left
   // clear. Each is a gently dished cloth held flat by an oak bar at each end, the bar's ends roped to a point above it,
   // and from there a rope up to the frame (loose: you walk through it). Cloth, bars and their ropes are one mesh
@@ -495,16 +495,7 @@ export function createHydroNipLounge({mirror=1}={}){
   for(const y of [FLOOR+.08,FLOOR+1.005])put(neon(GREEN),new T.ExtrudeGeometry(trim,{depth:.035,bevelEnabled:false,steps:1,curveSegments:16}).rotateX(Math.PI/2).translate(cx,y+.0175,bz));
   box(M.wood,[len,2.6,.45],[cx,FLOOR+1.3,shelf]);
   for(const y of [FLOOR+1.15,FLOOR+1.75,FLOOR+2.35])box(M.board,[len,.04,.5],[cx,y,shelf-.25]);
-  const liquids=[GREEN,AMBER,PURPLE,PINK,CYAN],flask=new T.LatheGeometry([[0,0],[.11,0],[.11,.02],[.04,.17],[.035,.26],[.04,.27]].map(([x,y])=>new T.Vector2(x,y)),8),fz=shelf-.28;
-  let n=0;for(const y of [FLOOR+1.17,FLOOR+1.77,FLOOR+2.37])for(let x=x0+.35;x<x1-.2;x+=.62){const k=n++%5,round=n%3===0;
-   if(round){ball(M.glass,.12,[x,y+.12,fz],1);ball(neon(liquids[k]),.085,[x,y+.1,fz],0);cyl(M.glass,.03,.03,.14,[x,y+.29,fz],6,true);}
-   else{put(M.glass,flask.clone().translate(x,y,fz));put(neon(liquids[k]),new T.ConeGeometry(.095,.12,8).translate(x,y+.06,fz));}}
-  // Tasting flights on the bar top: little glasses of blend on a board.
-  for(let x=x0+1;x<x1-.5;x+=1.8){box(M.wood,[.7,.03,.3],[x,FLOOR+1.095,bz-.15]);for(let i=0;i<4;i++){cyl(M.glass,.03,.025,.09,[x-.24+i*.16,FLOOR+1.155,bz-.15],8,true);cyl(neon(liquids[(i+x|0)%5]),.026,.022,.04,[x-.24+i*.16,FLOOR+1.13,bz-.15],8);}}
-  // A distillery as the centrepiece: a still, its coil and a receiving flask.
-  ball(M.metal,.3,[cx,FLOOR+1.45,bz+.05],1);cyl(M.metal,.05,.05,.5,[cx,FLOOR+1.85,bz+.05],8);
-  put(M.metal,new T.TorusGeometry(.12,.018,4,16,Math.PI*6).rotateX(Math.PI/2).translate(cx+.5,FLOOR+1.55,bz+.05));
-  ball(M.glass,.14,[cx+.75,FLOOR+1.22,bz+.05],1);ball(neon(GREEN),.1,[cx+.75,FLOOR+1.2,bz+.05],0);
+  root.add(createTerpeneGlassware().group);
   const cushion=tidy(new T.CylinderGeometry(.25,.25,.08,16),new T.Color(0xffffff)),wrap=new T.Shape();
   wrap.absarc(0,0,.31,0,Math.PI,false);wrap.absarc(0,0,.25,Math.PI,0,true);wrap.closePath();
   const back=tidy(new T.ExtrudeGeometry(wrap,{depth:.29,bevelEnabled:false,curveSegments:10}).rotateX(-Math.PI/2).translate(0,.02,0),new T.Color(0xffffff));
@@ -581,6 +572,8 @@ export function createHydroNipLounge({mirror=1}={}){
  for(const{level,points,offset}of BALCONY_RUNS){const y=level-.32,lengths=points.slice(1).map((b,i)=>Math.hypot(b[0]-points[i][0],b[1]-points[i][1])),len=lengths.reduce((a,b)=>a+b,0),spans=Math.max(1,Math.round(len/4.5));
   const pointAt=t=>{let d=len*t;for(let i=0;i<lengths.length;i++){const part=lengths[i];if(d<=part||i===lengths.length-1){const a=points[i],b=points[i+1],f=part?d/part:0;return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];}d-=part;}return points.at(-1);};
   for(let s=0;s<spans;s++){let prev=null;const n=8;
+   // Retire whole hanging spans over the cut; consume the same seed so the curved edge stays unchanged.
+   omit=points===BALCONY_RUNS[0].points&&pointAt((s+1)/spans)[1]>BALCONY_CUT;
    for(let i=0;i<=n;i++){const t=(s+i/n)/spans,[x,z]=pointAt(t),sag=.35*(1-(2*i/n-1)**2),p=[x,y-sag,z];
     if(tubeAt(x,z,level,.3)||stairAt(x,z,level,.3)){prev=null;continue;}
     if(prev)rod(hang,prev,p,.006,3);if(i<n)put(neon(AMBER),new T.OctahedronGeometry(.05,0).translate(x,y-sag-.06,z));prev=p;}
@@ -593,6 +586,7 @@ export function createHydroNipLounge({mirror=1}={}){
     for(let d=0;d<len;d+=.23)put(M.leaf,new T.OctahedronGeometry(.075,0).scale(1,.4,1.25).rotateY(d*3+k).translate(sx+Math.sin(d*2.3)*.05,py+.1-d,sz+Math.cos(d*2.1)*.05));}}
  }
 
+ omit=false;
  // Blacklight sconces along the rear and end walls, on the floor and both galleries (from tester feedback): a violet tube
  // between dark caps on a back plate, washing the wall round it in violet. Each sits clear of the gallery doors,
  // columns and prints; `n` is the way it faces, into the room.
@@ -604,7 +598,10 @@ export function createHydroNipLounge({mirror=1}={}){
   // (The end wall's prints hang between the ground floor's sconces: src/garden-finish.js.)
   for(const [y,up,ends] of [[FLOOR,2.3,[14,19.5,25,31,37]],[LEVELS[0],1.9,[14,20.5,27,33.5,40]],[LEVELS[1],1.9,[14,20.5,27,33.5,40]]]){
    for(const x of [113.5,119,123.5,128.4,137.4,147.5])sconce(x,y+up,ROOM.z1-.1,[0,0,-1]);
-   for(const z of ends)sconce(ROOM.x0+.1,y+up,z,[1,0,0]);}}
+   for(const z of ends){
+    // These old side fixtures stood on the retired walkway edge, away from the mural wall.
+    if(y<=LEVELS[0]&&z>BALCONY_CUT&&z<BALCONY_RUNS[0].points.at(-1)[1])continue;
+    sconce(ROOM.x0+.1,y+up,z,[1,0,0]);}}}
 
  // The credit plaque by the entrance.
  {const at=[140.8,FLOOR,10.6];cyl(M.dark,.05,.05,1.1,[at[0],FLOOR+.55,at[2]+.08],8);box(M.dark,[.5,.03,.5],[at[0],FLOOR+.015,at[2]+.08]);
