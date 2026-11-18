@@ -1,3 +1,4 @@
+import {hearGamingBoard} from './gaming-scores.js';
 import {createAtriumGeometryRuntime} from '../v2/atrium-geometry-runtime.js';
 import {getAtriumQuality,observeAtriumFrame,setAtriumAutoDefault,setAtriumQuality,subscribeAtriumQuality} from '../v2/atrium-quality.js';
 import {mountGraphicsSettings} from './graphics-settings.js';
@@ -397,7 +398,7 @@ async function buildShip(){
  theatre=createTheatre(ship,{url:typeof __REEL_URL__!=='undefined'?__REEL_URL__:'',anisotropy:renderer.capabilities.getMaxAnisotropy()});
  await idle();
  // The gaming lounge's lights, screens, glass floor and starry ceiling (gaming-lounge.js), drawn with its deck band.
- gaming=createGamingLounge(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches});
+ gaming=createGamingLounge(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches,requestBoards(){if(!live?.live)return;live.board();live.board('pool');live.maze('board');live.treasure('board');live.pinball('board');}});
  trainingSound=gaming?createTrainingSound(gaming):null;
  await idle();
  // Deck 15 dressed for Halloween until November (halloween.js): its lanes' ceiling diffusers go dead before the merge.
@@ -864,11 +865,11 @@ if(LIVE_URL){
   lift:(id,s)=>lifts.apply(id,s),
   // Someone else's Keel Club water cannon shot: the same jet here, from its seed.
   cannon:(id,i,seed,shot)=>keelClub?.fire(i,{id:shot,seed,who:id===live.id?'me':id}),aboard:(n,names,ids)=>{aboard=n;if(names!==undefined){aboardNames=names;aboardIds=ids||null;}showAboard();showAboardList();},
-  maze:msg=>maze?.fromServer(msg),
-  treasure:msg=>treasure?.fromServer(msg),
-  pinball:msg=>pinballGame.fromServer(msg),
+  maze:msg=>{hearGamingBoard('maze',msg);maze?.fromServer(msg);},
+  treasure:msg=>{hearGamingBoard('treasure',msg);treasure?.fromServer(msg);},
+  pinball:msg=>{hearGamingBoard('pinball',msg);pinballGame.fromServer(msg);},
   panel:msg=>leverPanel?.apply(msg),
-  board:b=>(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null}),scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
+  board:b=>{hearGamingBoard(b.game==='pool'?'pool':'invasion',b);(b.game==='pool'?pool:arcade).setBoard({status:b.verified?'ok':'guest',top:b.top||[],you:b.you||null});},scored:r=>(r.game==='pool'?pool:arcade).setResult(r),
   hearts:h=>changeLog.setHearts(h),hearted:r=>changeLog.refused(r.why),
   // A group photo: someone pressed the selfie camera, and this page takes the photo at the same moment as theirs.
   selfie:(id,ms)=>booth?.start(ms),

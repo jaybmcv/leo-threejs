@@ -1,4 +1,4 @@
-import {PARTS} from './catalog.js';
+import {PARTS,JUNK_NAMES} from './catalog.js';
 import {VIEWS,newRepair,required,workbench,install,nextRound,formatTime} from './rules.js';
 import {partArt,cartArt,PART_SPOTS} from './art.js';
 
@@ -49,7 +49,7 @@ export function createMctRepair({onOpen=()=>{},onClose=()=>{}}={}){
  function renderPile(){
   pile.replaceChildren();const box=root.getBoundingClientRect();
   for(const id of workbench(game,box.width,box.height-56)){
-   const p=PARTS.find(p=>p.id===id),b=document.createElement('button');b.type='button';b.dataset.part=id;b.title=p?.name||label(id);b.setAttribute('aria-label',b.title);b.setAttribute('aria-pressed','false');b.className=game.rounds[game.current].parts.includes(id)?'needed':'';b.innerHTML=partArt(id);const text=document.createElement('small');text.textContent=b.title;b.append(text);b.style.transform=`rotate(${(Math.random()-.5)*12}deg)`;
+   const p=PARTS.find(p=>p.id===id),b=document.createElement('button');b.type='button';b.dataset.part=id;b.title=p?.name||JUNK_NAMES[id]||label(id);b.setAttribute('aria-label',b.title);b.setAttribute('aria-pressed','false');b.className=game.rounds[game.current].parts.includes(id)?'needed':'';b.innerHTML=partArt(id);const text=document.createElement('small');text.textContent=b.title;b.append(text);b.style.transform=`rotate(${(Math.random()-.5)*12}deg)`;
    b.addEventListener('click',()=>choose(b));pile.append(b);
   }
  }
