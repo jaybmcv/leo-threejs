@@ -400,7 +400,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 129,
-      "signature": "5fc14f379b2b0405abed67e62c475b81252612cf3bbf34885a7da0833b996f6a"
+      "signature": "6c0638963e70bce95392d328541cc686c57eeca352c3040c6368494a3346273d"
     },
     {
       "source": "src/interior-polish.js",
@@ -1283,8 +1283,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 5,
-      "signature": "169497f1851c5dc5b824ad80be687a2d73368b63721b85ff8a0502bb40195ebb"
+      "placements": 6,
+      "signature": "ba88213a195095d2d9b03546cbe6999b832f15699b568fb74574ce2316330048"
     },
     {
       "source": "src/walk/baggage.js",
@@ -2224,7 +2224,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "85e4775d3b843c88cc0c9d41f21711d34d13d5ee9c82df8b2442042fa2b986cb"
+      "signature": "b0be151f43e7cff24f5b2e71aadaa3ce08c4b5ae4b289b7f4afce0d86d9fa484"
     },
     {
       "source": "src/walk/crown-tv.js",
@@ -4266,7 +4266,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "ee782b9db5c1728f8b07909351724bf8009e4797fded9e7294b2439be6f16d93"
+      "signature": "4feb03bea8c5e40634fb6796bde2a2fc13c34bbbfa0b0d8e88a4564909c7a4be"
     },
     {
       "source": "src/walk/main.js",
@@ -4288,7 +4288,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "100a8b02cd86a8bc0103f522d71c90399a24114a25b513932bd8e5eb22284d1f"
+      "signature": "d3c6bffbc860a51a5051846985fec63d3cc219e4a7e020d1958431503668c605"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4308,7 +4308,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "a3b76407735fd66177a27a6b824a3894aa1fd246ebbede20faea466c44c6283c"
+      "signature": "b9e8dc50a188c081813ba2807854f869f1a9a5be4d9688e6d97ba729396f5e88"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4328,7 +4328,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "443745bae14e4888d6b4455230938ed80a576c11b10f5e52e6847d2cb8aaff7b"
+      "signature": "faff0bccfc2b735a478738d6acb1c3f5bfd573d48d5744723e7887cda5cf9fb1"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -4456,7 +4456,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "c587df89f4ba6e3754c8d36204f5069cfe83f14024cf22fecda00e425ab4e746"
+      "signature": "89e7ed5ab1004b322f8ecd459ddfad8cd7ec1c9de04961131d6974dae6aa2111"
     },
     {
       "source": "src/walk/mct-repair/rules.js",
@@ -4468,7 +4468,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "7c2d72faeddfd59e783fd7d945634634cd509cce0c53dcf3f339988bf1fb60d1"
+      "signature": "1f7db371e249084bd43d076d4e115fdb64cdff5b22c26b62f034b8fc26b8c149"
     },
     {
       "source": "src/walk/merge-by-material.js",
@@ -5513,7 +5513,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "11898c0468aa99ef8349a0d826d5718c0c6ca39d239cb9dfd8a1a1a5753c51b0"
+      "signature": "aa0b11bd294cea979d7e583285cbe0dcc5b86304b5342ecb54ea73c3266ba3ba"
     },
     {
       "source": "src/walk/remotes.js",
@@ -5525,7 +5525,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 5,
-      "signature": "fab8c5a0e20f43e263d81c6799f87668e64bbd5fbcee8ccda94654fd402f0bd1"
+      "signature": "b6cb09235b58914bfce627d1f3638288bdae87f39f8d64b6cdd93c3cd2d3a419"
     },
     {
       "source": "src/walk/render-bake.authoring.js",
