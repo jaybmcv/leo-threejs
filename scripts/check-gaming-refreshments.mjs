@@ -36,8 +36,10 @@ assert(walk(270,1)<.02,'Continuing forward cannot enter the counter');
 assert(walk(90,.8)>1.4,'Visitor backs away');
 assert(walk(0,2)>4,'Green station approach stays clear');
 assert(walker.position.z>-18.1&&walker.position.z<-17.3);
-assert(walk(180,4)>8.4,'Red station approach stays clear');
-assert(walker.position.z>-27.3&&walker.position.z<-26.1);
+assert(walk(180,6)>12.8,'Relocated red station approach stays clear');
+assert(walker.position.z>-31.8&&walker.position.z<-30.7);
+const redChair=fit.children.find(o=>o.name==='Gaming_chair').getWorldPosition(new T.Vector3());
+assert(Math.hypot(walker.position.x-redChair.x,walker.position.z-redChair.z)<1.8,'Route reaches the relocated red PC chair');
 
 const edge=new T.MeshBasicMaterial(),bar=createGamingRefreshments(edge),g=bar.group;
 let instanced=0,lights=0;g.traverse(o=>{if(o.isInstancedMesh)instanced+=o.count;if(o.isLight)lights++;});
