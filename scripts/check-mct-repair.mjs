@@ -7,6 +7,10 @@ import {PARTS,PUZZLES,JUNK,JUNK_NAMES} from '../src/walk/mct-repair/catalog.js';
 import {VIEWS,newRepair,required,workbench,scatterPile,pileMetrics,pilePosition,pileDrop,install,nextRound,formatTime} from '../src/walk/mct-repair/rules.js';
 import {partArt,cartArt,PART_SPOTS} from '../src/walk/mct-repair/art.js';
 
+const requestedNames=[
+ '48V Battery Pack','Wiring Harness','Solenoid Relay','Vacuum Pump','Electric Drive Motor','Rear Axle Assembly','Steering Wheel','Brake Rotor & Caliper','ECU Controller',
+ 'Wheel & Hub','Safety Roll Cage','Steering & Dash','Modular Seat','Front Bumper','Rear Step & Lights','Side Skirt','Hood Deflector','Fender & Guard'
+];
 const repairNames=[
  'Bed Anchor Ring','Air Intake Snorkel','Electric Winch','Skid Plate Guard','Warning Triangle','Cargo Barrier Wall','Leaf Spring Assembly','Tailgate Hinge Latch','Auxiliary 12V Battery',
  'Fluid Reservoir','Air Compressor','Heavy Fluid Filter','Radiator Core','Pneumatic Valves','Reinforced Hose','Master Cylinder','Moisture Trap Filter','Spring Latch Mechanism',
@@ -46,8 +50,11 @@ for(let i=0;i<32;i++){
 }
 assert.equal(seen.size,JUNK.length,'Every junk item can appear');assert(samples.size>1,'Rounds sample different junk');
 for(const name of repairNames)assert.equal(PARTS.filter(p=>p.name===name).length,1,`${name} appears exactly once`);
+for(const name of requestedNames)assert.equal(PARTS.filter(p=>p.name===name).length,1,`${name} appears exactly once`);
 assert.equal(new Set(PARTS.map(p=>partArt(p.id))).size,PARTS.length,'Every repair part has a distinct icon');
 for(const name of repairNames){const p=PARTS.find(p=>p.name===name);for(const junk of JUNK)assert.notEqual(partArt(p.id),partArt(junk),`${name} must not use generic debris art`);}
+for(const name of requestedNames){const p=PARTS.find(p=>p.name===name);for(const junk of JUNK)assert.notEqual(partArt(p.id),partArt(junk),`${name} must not use generic debris art`);}
+for(const name of requestedNames){const p=PARTS.find(p=>p.name===name);assert(PUZZLES.some(q=>q.parts.includes(p.id)),`${name} can be required in a repair task`);}
 assert.deepEqual([4,8,12].map(n=>PUZZLES.filter(p=>p.count===n).length),[12,8,6]);
 for(const [round,count] of [4,8,12].entries()){
  const choices=PUZZLES.filter(p=>p.count===count);
@@ -124,6 +131,7 @@ for(const mode of ['', '.public','.prepared','.authoring']){
  assert(main.includes("import {createMctRepair} from './mct-repair/game.js'"),'Every walk mode uses the same pile');
  for(const s of ["t.kind==='mct-repair'","repairStations.near(p)",'mctRepair.open(t.bay)','mctRepair?.close();','||!!mctRepair?.isOpen||','!mctRepair?.isOpen&&!emergencyDrill?.isOpen){acc+=dt;'])assert(main.includes(s),`${mode}: ${s}`);
 }
+console.log('PASS MCT repair core: all 18 requested names, distinct icons, valid mounts and playable tasks.');
 console.log('PASS MCT repair: 45 repair parts, 27 named junk with unique icons never required or installable, sampled bench counts, all 26 tasks completable, scoring and four walk modes.');
 console.log('PASS MCT pile: scattering, rotated bounds, persistent drops, resizing and keyboard access.');
 
