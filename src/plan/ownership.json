@@ -4456,7 +4456,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 2,
-      "signature": "89e7ed5ab1004b322f8ecd459ddfad8cd7ec1c9de04961131d6974dae6aa2111"
+      "signature": "0a4a867ee454086aebc9c57cff5ee586806bc728fc5ff127fffe9a6208cf1e1e"
     },
     {
       "source": "src/walk/mct-repair/rules.js",
