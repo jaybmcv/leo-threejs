@@ -10,7 +10,9 @@ export function newRepair(random=Math.random){
 export const required=g=>g.rounds[g.current].parts.map(id=>PARTS.find(p=>p.id===id));
 export function workbench(g,width,height,random=Math.random){
  const ids=g.rounds[g.current].parts,scale=Math.min(2.2,Math.max(1,width*height/(1920*1080))),count=Math.round((28+g.current*4)*scale);
- return shuffled([...ids,...shuffled(PARTS.filter(p=>!ids.includes(p.id)),random).slice(0,8).map(p=>p.id),...Array.from({length:count},(_,i)=>JUNK[i%JUNK.length])],random);
+ // Sample the larger junk catalog without adding more clutter. Large benches reuse a shuffled cycle.
+ const junk=shuffled(JUNK,random);
+ return shuffled([...ids,...shuffled(PARTS.filter(p=>!ids.includes(p.id)),random).slice(0,8).map(p=>p.id),...Array.from({length:count},(_,i)=>junk[i%junk.length])],random);
 }
 // A wrong part, view or repeated installation costs nothing and stays on the bench.
 export function install(g,id){

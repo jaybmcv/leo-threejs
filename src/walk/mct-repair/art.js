@@ -53,9 +53,39 @@ const fittings={
  tailgate:()=>rect(7,19,50,28)+[15,49].map(x=>circle(x,33,4,'#22292d')).join('')+rect(25,24,14,18,'#9aa6ab')+rect(29,27,14,8,'#22292d'),
  auxbattery:()=>rect(8,20,48,33,'#22292d')+rect(14,13,10,8,'#b02020')+rect(40,13,10,8,'#9aa6ab')+rect(19,31,26,13,'#e8782c')+line('23,37 28,37 25,34 25,40','#fff4dc',1.5),
 };
+const paw=(x,y,c)=>circle(x,y,6,c)+circle(x-8,y-8,3,c)+circle(x,y-11,3,c)+circle(x+8,y-8,3,c);
+const debris={
+ chargeplug:()=>'<path d="M44 43 C8 64 2 27 22 23 C37 20 38 34 28 38" fill="none" stroke="#19c4b6" stroke-width="6"/>'+line('28,38 37,33','#19c4b6',6)+rect(35,21,17,17,'#22292d')+line('40,21 40,12')+line('48,21 48,12'),
+ extinguisher:()=>rect(20,16,24,42,'#b02020')+rect(25,8,14,9,'#22292d')+line('28,8 43,8','#9aa6ab',3)+rect(23,31,18,13,'#fff4dc')+line('39,16 50,20 50,44 55,49','#22292d',5),
+ floorjack:()=>wheel(18,51,7)+wheel(48,51,5)+line('10,44 50,44','#9aa6ab',9)+line('23,41 39,29 48,29','#5f6b73',7)+rect(38,24,17,5,'#22292d')+line('14,42 9,12','#e8782c',5),
+ lugwrench:()=>line('12,12 52,52','#9aa6ab',7)+line('12,52 52,12','#9aa6ab',7)+[12,52].map(x=>[12,52].map(y=>circle(x,y,5,'#5f6b73')+circle(x,y,2,'#22292d')).join('')).join(''),
+ toolbox:()=>line('23,21 23,12 41,12 41,21','#9aa6ab',5)+rect(7,21,50,34)+rect(7,21,50,11,'#8a9399')+line('9,33 55,33','#22292d',2)+[17,42].map(x=>rect(x,28,6,11,'#e8782c')).join(''),
+ cone:()=>rect(6,51,52,7,'#22292d')+'<path d="M16 51 L28 8 H36 L48 51Z" fill="#e8782c"/><path d="M22 29 H42 L45 40 H19Z" fill="#fff4dc"/>',
+ towhook:()=>ring(32,13,7,'#9aa6ab',7)+'<path d="M32 20 V34 C12 28 11 54 30 56 C44 58 52 49 47 37" fill="none" stroke="#9aa6ab" stroke-width="9" stroke-linecap="round"/>',
+ diagscanner:()=>'<path d="M34 11 C34 1 56 5 54 17" fill="none" stroke="#22292d" stroke-width="4"/>'+'<path d="M18 12 H46 L42 55 H22Z" fill="#5f6b73"/>'+rect(23,18,18,17,'#19c4b6')+line('26,29 29,25 32,28 38,22','#285e64',2)+circle(27,43,3,'#e8782c')+circle(37,43,3,'#22292d'),
+ ratchetstrap:()=>line('7,14 20,14 20,50 56,50','#e8782c',8)+rect(16,24,29,19,'#9aa6ab')+rect(22,28,17,11,'#22292d')+line('31,32 50,16 55,21','#5f6b73',5),
+ laser:()=>'<path d="M42 19 L62 1 L55 25Z" fill="#ec71b8" fill-opacity=".18"/>'+line('13,51 42,22','#9aa6ab',10)+line('36,28 42,22','#ec71b8',10)+circle(23,40,2,'#22292d'),
+ tunacan:()=>rect(10,20,44,29,'#9aa6ab')+'<ellipse cx="32" cy="20" rx="22" ry="8" fill="#bbc8c8"/><ellipse cx="32" cy="49" rx="22" ry="5" fill="#5f6b73"/>'+rect(11,28,42,16,'#22292d')+line('22,36 29,32 40,36 29,40 22,36','#19c4b6',2)+ring(32,19,5,'#5f6b73',2),
+ collar:()=>'<path d="M14 43 C-1 2 65 2 50 43" fill="none" stroke="#19c4b6" stroke-width="8"/>'+rect(9,37,13,10,'#9aa6ab')+ring(32,43,4,'#9aa6ab',2)+'<path d="M22 49 H42 L32 61Z" fill="#ec71b8"/>',
+ yarnball:()=>circle(29,29,23,'#22292d')+'<path d="M11 17 Q31 13 49 30 M8 29 Q31 22 46 42 M15 46 Q26 17 41 10" fill="none" stroke="#ec71b8" stroke-width="3"/>'+'<path d="M16 10 Q18 35 38 49 M7 36 Q30 47 49 21" fill="none" stroke="#e8782c" stroke-width="3"/>'+'<path d="M28 6 Q49 31 24 51 C20 62 56 64 57 49" fill="none" stroke="#19c4b6" stroke-width="3"/>',
+ keycard:()=>'<g transform="rotate(-18 32 32)">'+rect(6,15,52,35,'#22292d')+rect(12,22,12,10,'#d9bb57')+line('18,22 18,32','#a28c67',1)+paw(42,36,'#e8782c')+'</g>',
+ visor:()=>'<path d="M8 20 L8 7 L24 19 H40 L56 7 V38 Q32 58 8 38Z" fill="#3f6d72" stroke="#19c4b6" stroke-width="3"/>'+line('18,28 28,35 22,39','#bbc8c8',2)+line('34,25 44,33','#bbc8c8',2),
+ fishpuck:()=>'<path d="M16 48 L9 14 H55 L48 48Z" fill="#19c4b6" fill-opacity=".08"/>'+'<path d="M12 23 Q28 7 42 23 L54 14 V32 L42 23 Q28 39 12 23Z" fill="none" stroke="#19c4b6" stroke-width="2" stroke-dasharray="2 3"/>'+circle(22,21,2,'#19c4b6')+'<ellipse cx="32" cy="51" rx="25" ry="9" fill="#22292d"/>'+'<ellipse cx="32" cy="48" rx="21" ry="4" fill="#3f6d72"/>',
+ nippouch:()=>'<path d="M15 13 H49 L46 25 L54 56 H10 L18 25Z" fill="#8a9399"/>'+rect(15,13,34,9,'#e8782c')+circle(32,39,11,'#19c4b6')+line('28,44 35,33 36,41','#285e64',3),
+ pawpad:()=>rect(13,52,38,7,'#5f6b73')+line('32,49 32,37','#9aa6ab',6)+'<ellipse cx="31" cy="35" rx="13" ry="11" fill="#ec71b8"/>'+circle(15,25,6,'#ec71b8')+circle(26,14,6,'#ec71b8')+circle(41,17,6,'#ec71b8')+circle(49,30,6,'#ec71b8'),
+ fishbowl:()=>'<path d="M17 12 C-6 51 15 59 32 59 C52 59 69 48 47 12Z" fill="#19c4b6" fill-opacity=".12" stroke="#9aa6ab" stroke-width="2"/>'+line('16,12 48,12','#bbc8c8',3)+line('12,33 52,33','#3f6d72',2)+'<path d="M20 40 Q31 27 43 40 Q31 53 20 40 L13 33 V47Z" fill="#e8782c"/>'+circle(36,38,2,'#22292d')+ring(41,24,2,'#19c4b6',1),
+ headphones:()=>'<path d="M11 39 V28 C11 1 53 1 53 28 V39" fill="none" stroke="#22292d" stroke-width="9"/>'+line('13,18 10,4 25,11','#ec71b8',3)+line('39,11 54,4 51,18','#ec71b8',3)+rect(6,29,14,27,'#22292d')+rect(44,29,14,27,'#22292d')+line('17,34 17,50','#ec71b8',3)+line('47,34 47,50','#ec71b8',3),
+ robomouse:()=>'<path d="M45 35 C64 30 58 11 49 16 C41 21 60 23 59 9" fill="none" stroke="#e8782c" stroke-width="3"/>'+'<path d="M5 39 Q21 13 41 25 Q55 34 47 44 H11Z" fill="#9aa6ab"/>'+circle(24,24,8,'#5f6b73')+circle(14,35,2,'#22292d')+wheel(20,47,6)+wheel(42,47,6),
+ hydropod:()=>'<path d="M12 43 V26 A20 20 0 0 1 52 26 V43Z" fill="#19c4b6" fill-opacity=".12" stroke="#9aa6ab" stroke-width="2"/>'+line('32,43 32,22','#6ca66b',3)+'<path d="M32 31 Q14 32 19 19 Q34 18 32 31 M32 25 Q29 12 44 14 Q46 26 32 25" fill="#6ca66b"/>'+rect(10,43,44,13,'#22292d')+rect(16,55,32,5,'#5f6b73'),
+ scratchpost:()=>rect(8,51,48,8,'#22292d')+rect(24,8,16,44,'#a28c67')+Array.from({length:9},(_,i)=>line(`25,${12+i*4} 39,${8+i*4}`,'#e8782c',2)).join('')+line('26,26 17,23 13,29','#a28c67',2)+line('38,40 49,42 53,37','#a28c67',2),
+ milkcarton:()=>'<path d="M18 19 L26 6 H40 L48 19 V58 H18Z" fill="#fff4dc"/>'+line('26,6 32,19 32,57','#9aa6ab',2)+line('19,19 47,19','#9aa6ab',2)+rect(18,29,30,14,'#19c4b6')+rect(25,8,16,3,'#bbc8c8'),
+ chewedbox:()=>'<path d="M12 26 L32 17 L52 26 V53 L32 60 L12 51Z" fill="#a28c67"/><path d="M13 27 L32 20 L50 27 L32 35Z" fill="#22292d"/><path d="M12 26 L4 15 L12 17 L17 12 L22 16 L25 12 L32 18 L25 34Z M32 18 L47 9 L60 23 L50 30Z" fill="#a28c67"/>'+line('32,35 32,57','#5f6b73',2)+paw(44,44,'#5f6b73'),
+ featherdrone:()=>line('8,56 32,29','#9aa6ab',3)+line('8,56 18,45','#e8782c',7)+ring(37,24,8,'#9aa6ab',2)+line('39,17 38,9 32,5','#9aa6ab',2)+'<path d="M33 7 Q17 8 22 23 Q34 25 33 7" fill="#e8782c"/><path d="M41 10 Q56 5 58 20 Q47 26 41 10" fill="#19c4b6"/><path d="M45 25 Q60 25 56 40 Q42 40 45 25" fill="#ec71b8"/>',
+ kibblebowl:()=>'<path d="M8 31 H56 L50 53 Q32 61 14 53Z" fill="#9aa6ab"/>'+'<ellipse cx="32" cy="31" rx="24" ry="9" fill="#22292d"/>'+[[15,30],[22,24],[31,21],[39,24],[48,30],[25,33],[36,32]].map(([x,y])=>circle(x,y,5,'#a28c67')+line(`${x-1},${y-1} ${x+1},${y+1}`,'#5f6b73',1)).join('')+line('15,46 49,46','#5f6b73',2),
+};
 // Bench debris has its own silhouettes, distinct from the named replacement parts.
 export function partArt(id){
- const draw=fittings[id];if(draw)return svg(draw());
+ const draw=fittings[id]||debris[id];if(draw)return svg(draw());
  let n=0;for(const c of id)n+=c.charCodeAt(0);
  const shapes=[()=>line('12,13 26,27 26,50 38,50 38,27 52,13','#9aa6ab',7),()=>ring(32,32,19,'#9aa6ab',9)+ring(32,32,7,'#22292d'),()=>rect(12,16,40,34,'#a28c67')+line('32,16 32,50','#22292d',3),()=>coil(),()=>line('9,48 16,16 48,40 54,12','#e8782c',6),()=>line('9,44 24,14 55,24 43,51 9,44','#5f6b73',9)];
  return svg(shapes[n%shapes.length]());

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import {PARTS,PUZZLES,JUNK} from '../src/walk/mct-repair/catalog.js';
+import {PARTS,PUZZLES,JUNK,JUNK_NAMES} from '../src/walk/mct-repair/catalog.js';
 import {VIEWS,newRepair,required,workbench,install,nextRound,formatTime} from '../src/walk/mct-repair/rules.js';
 import {partArt,cartArt,PART_SPOTS} from '../src/walk/mct-repair/art.js';
 
@@ -9,7 +9,39 @@ const repairNames=[
  'Fluid Reservoir','Air Compressor','Heavy Fluid Filter','Radiator Core','Pneumatic Valves','Reinforced Hose','Master Cylinder','Moisture Trap Filter','Spring Latch Mechanism',
  'Coilover Shock','Steering Rack','HV Fuse and Relay Box','Cooling Fan Shroud','Pedal Assembly','Roof Strobe Beacon','Side-View Mirror','Instrument Cluster','Rear Pintle Hitch'
 ];
-assert.equal(PARTS.length,45);assert.equal(new Set(PARTS.map(p=>p.id)).size,45);assert.equal(new Set(PARTS.map(p=>p.name)).size,PARTS.length,'No duplicate part names');assert.equal(PUZZLES.length,26);assert.equal(JUNK.length,33);
+const junkNames=[
+ 'EV Charge Plug','Fire Extinguisher','Hydraulic Floor Jack','Cross Lug Wrench',"Mechanic's Toolbox",'Safety Traffic Cone','Heavy Tow Hook','Diagnostic Scanner','Cargo Ratchet Strap',
+ 'Cosmic Laser Pointer','Zero-G Tuna Can','Cybernetic Collar','Plasma Yarn Ball','Leo Keycard','Scratched Visor','Holographic Fish Puck','Space-Nip Pouch','Paw-Pad Control Pedal',
+ 'Zero-G Fish Bowl','Cat-Ear Headphones','Robo-Mouse Decoy','Catnip Hydro-Pod','Scratching Post Core','Space-Milk Carton','Chewed Cargo Box','Feather Teaser Drone','Gravity Kibble Bowl'
+];
+assert.equal(PARTS.length,45);assert.equal(new Set(PARTS.map(p=>p.id)).size,45);assert.equal(new Set(PARTS.map(p=>p.name)).size,PARTS.length,'No duplicate part names');assert.equal(PUZZLES.length,26);assert.equal(JUNK.length,42);assert.equal(new Set(JUNK).size,JUNK.length);
+assert.deepEqual(Object.values(JUNK_NAMES),junkNames,'All 27 junk names are present exactly once');
+const namedJunk=Object.keys(JUNK_NAMES),oldArt=new Set(JUNK.filter(id=>!namedJunk.includes(id)).map(partArt));
+assert.equal(new Set(namedJunk.map(partArt)).size,27,'Every named junk item has its own icon');
+for(const id of namedJunk){
+ assert(JUNK.includes(id));assert(!PARTS.some(p=>p.id===id||p.name===JUNK_NAMES[id]),'Junk stays outside the repair parts catalog');
+ const art=partArt(id);assert(art.startsWith('<svg'));assert(!oldArt.has(art),'Named junk must not fall back to generic debris art');
+ for(const p of PARTS)assert.notEqual(art,partArt(p.id),'Junk and replacement parts have distinct icons');
+ for(const puzzle of PUZZLES){
+  assert(!puzzle.parts.includes(id),'Junk is never on a Required Parts list');
+  const g=newRepair(()=>0);g.rounds=[puzzle,puzzle,puzzle];
+  for(const view of VIEWS){g.view=view;assert.equal(install(g,id),false,'Junk cannot be installed in any view');}
+  assert.equal(g.score,0);assert.equal(g.placed.size,0);assert.equal(g.phase,'play');
+ }
+}
+// Sampling reaches the whole catalog while retaining the existing bench size and required parts.
+let seed=406;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;},seen=new Set(),samples=new Set();
+for(let i=0;i<32;i++){
+ const g=newRepair(random);
+ for(let round=0;round<3;round++){
+  g.current=round;const pile=workbench(g,1280,664,random),junk=pile.filter(id=>JUNK.includes(id));
+  assert.equal(junk.length,28+round*4);assert.equal(new Set(junk).size,junk.length,'Sample without repeats when the catalog fits');
+  assert.equal(pile.length,[40,48,56][round]);for(const id of g.rounds[round].parts)assert.equal(pile.filter(p=>p===id).length,1);
+  assert(junk.some(id=>namedJunk.includes(id)),'New junk appears in every round');
+  junk.forEach(id=>seen.add(id));samples.add(junk.slice().sort().join(','));
+ }
+}
+assert.equal(seen.size,JUNK.length,'Every junk item can appear');assert(samples.size>1,'Rounds sample different junk');
 for(const name of repairNames)assert.equal(PARTS.filter(p=>p.name===name).length,1,`${name} appears exactly once`);
 assert.equal(new Set(PARTS.map(p=>partArt(p.id))).size,PARTS.length,'Every repair part has a distinct icon');
 for(const name of repairNames){const p=PARTS.find(p=>p.name===name);for(const junk of JUNK)assert.notEqual(partArt(p.id),partArt(junk),`${name} must not use generic debris art`);}
@@ -56,4 +88,4 @@ for(const mode of ['', '.public','.prepared','.authoring']){
  const main=await fs.readFile(`src/walk/main${mode}.js`,'utf8');
  for(const s of ["t.kind==='mct-repair'","repairStations.near(p)",'mctRepair.open(t.bay)','mctRepair?.close();','||!!mctRepair?.isOpen||','!mctRepair?.isOpen&&!emergencyDrill?.isOpen){acc+=dt;'])assert(main.includes(s),`${mode}: ${s}`);
 }
-console.log('PASS MCT repair: all 27 requested names, unique icons, valid mounts, all 26 tasks completable, every part available in each 4/8/12 round, bench counts, scoring and four walk modes.');
+console.log('PASS MCT repair: 45 repair parts, 27 named junk with unique icons never required or installable, sampled bench counts, all 26 tasks completable, scoring and four walk modes.');
