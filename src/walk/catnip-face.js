@@ -15,15 +15,16 @@ const CHEEK={x:.122,y:1.214,r:.019};
 let shape=null;
 
 // The face's front surface as the camera meets it: the eyes and the body near the head.
-function faceSurface(asset){
+export function faceSurface(asset){
  const eyes=asset.meshes.find(m=>m.name==='eyes'),body=asset.meshes.find(m=>m.name==='body'),side=new T.MeshBasicMaterial({side:T.DoubleSide});
  const near=g=>{const p=g.attributes.position,idx=g.index?g.index.array:[...Array(p.count).keys()],out=[];
   for(let i=0;i<idx.length;i+=3){const t=[idx[i],idx[i+1],idx[i+2]];if(t.every(k=>p.getY(k)>1.12&&p.getZ(k)>.04&&Math.abs(p.getX(k))<.3))for(const k of t)out.push(p.getX(k),p.getY(k),p.getZ(k));}
   const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(out,3));return new T.Mesh(geometry,side);};
  const eye=near(eyes.geometry),skin=near(body.geometry),ray=new T.Raycaster(),from=new T.Vector3(),down=new T.Vector3(0,0,-1);
  // {p, eye}: the point just off the surface at (x, y), and whether it is on an eye.
- return (x,y)=>{ray.set(from.set(x,y,1),down);const hit=ray.intersectObjects([eye,skin],false)[0];
+ const at=(x,y)=>{ray.set(from.set(x,y,1),down);const hit=ray.intersectObjects([eye,skin],false)[0];
   return hit?{p:hit.point.setZ(hit.point.z+LIFT),eye:hit.object===eye}:{p:new T.Vector3(x,y,0),eye:false};};
+ at.dispose=()=>{eye.geometry.dispose();skin.geometry.dispose();side.dispose();};return at;
 }
 
 function buildShape(asset,fur){
@@ -74,7 +75,7 @@ function buildShape(asset,fur){
  // Every triangle faces out of the face (+z in the bind pose), whichever way its strip ran.
  const full=keys[KEYS-1],v=i=>new T.Vector3().fromArray(full,i*3);
  for(let i=0;i<index.length;i+=3){const [a,b,c]=[v(index[i]),v(index[i+1]),v(index[i+2])];if(b.sub(a).cross(c.sub(a)).z<0)[index[i+1],index[i+2]]=[index[i+2],index[i+1]];}
- return {keys,uvs:new Float32Array(uvs),index};
+ at.dispose();return {keys,uvs:new Float32Array(uvs),index};
 }
 
 // `asset` is the walker's Cosmo (figure.asset); `fur` the UV of his fur (avatar.js). Returns {mesh, set(strength 0-1)}.
