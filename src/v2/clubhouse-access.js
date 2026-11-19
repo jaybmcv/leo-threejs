@@ -7,7 +7,7 @@ export function prepareClubhouseAccess(ship,lift){
  const{x0,x1,z0,z1,p}=clubhouseAccessBounds(lift),root=new T.Group();root.name='V2_clubhouse_landing_connections';root.userData.room='commons-1';ship.inside.add(root);
  const guard=(name,a,b,y)=>{const dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz),yaw=-Math.atan2(dz,dx);for(const [suffix,h,dy,mat]of[['glass',1.1,.55,glass],['rail',.045,1.1,metal]]){const o=box(root,name+'_'+suffix,[len+.025,h,.07],[(a[0]+b[0])/2,y+dy,(a[1]+b[1])/2],mat);o.rotation.y=yaw;}};
  for(const stop of lift.lift.stops){const y=stop.y;
-  // Ground-floor approach passes inboard of the existing garden stair, through the clubhouse wall.
+  // Keep the separate password vault door. The retired tube opening is restored by prepareVaultLift.
   if(stop.deck===17){const door=new T.Box3(new T.Vector3(p.x-1.9,y+.01,p.z+4.5),new T.Vector3(p.x-1.05,y+2.35,p.z+6.3));cutOut(ship.inside,door,o=>/wall|lining/i.test(o.name)&&!o.userData.noCollide);continue;}
   const opening=new T.Box3(new T.Vector3(x0-.03,y+.01,z0+.08),new T.Vector3(x1+.15,y+2.35,z1-.08));
   // Only room partitions/guards along the new route; never the pressure skin or the tube itself.

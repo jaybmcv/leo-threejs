@@ -659,6 +659,7 @@ const actions={
   else if(t.kind==='mct-repair')mctRepair.open(t.bay);
   else if(t.kind==='log')changeLog.open({near:controller.position});
   else if(t.kind==='pool')pool.open();
+  else if(t.kind==='clubhouse-password')openVault(true);
   else if(t.kind==='vault')openVault();
   else if(t.kind==='vault-exit')vault.release();
   else if(t.kind==='clubhouse-call')vaultLift.call(t.lift,t.stop);
@@ -729,9 +730,9 @@ const unstuck=createUnstuck($('unstuck'),{pop(mode){
  return goTo({at:q.toArray(),yaw:Math.atan2(q.x-p.x,q.z-p.z),resolved:true})?q:null;
 }});
 // The clubhouse vault behind the arcade (vault.js): its door, and the password sheet it asks with.
-let vault=null,vaultLift=null;
+let vault=null,vaultLift=null,vaultLiftPassword=false;
 const VAULT_ASK='This door opens only for the clubhouse password.';
-function openVault(){closePanels();emote=null;input.enabled=false;input.down.clear();$('vault-note').textContent=VAULT_ASK;$('vault-code').value='';$('vault-sheet').hidden=false;
+function openVault(forLift=false){closePanels();vaultLiftPassword=forLift;emote=null;input.enabled=false;input.down.clear();$('vault-note').textContent=VAULT_ASK;$('vault-code').value='';$('vault-sheet').hidden=false;
  // (After the key that opened it, so the E isn't typed into the field.)
  setTimeout(()=>$('vault-code').focus());}
 const ready=()=>document.body.dataset.ready==='1';
@@ -1453,7 +1454,7 @@ function openName(){closePanels();
  $('name-edit').value=savedName();$('name-sheet').hidden=false;input.enabled=false;if(!verified)$('name-edit').focus();}
 $('name-connect').addEventListener('click',connect);
 // The vault's password (vault.js): the right one opens the door; a wrong one says so and lets you try again.
-$('vault-form').addEventListener('submit',e=>{e.preventDefault();if(vault?.unlock($('vault-code').value)){closePanels();return;}
+$('vault-form').addEventListener('submit',e=>{e.preventDefault();if((vaultLiftPassword?vaultLift:vault)?.unlock($('vault-code').value)){closePanels();return;}
  $('vault-note').textContent='That’s not the password. Try again.';$('vault-code').select();});
 $('name-form').addEventListener('submit',e=>{e.preventDefault();live?.rename($('name-edit').value.trim());closePanels();});
 for(const b of document.querySelectorAll('[data-close]'))b.addEventListener('click',closePanels);
