@@ -63,10 +63,11 @@ function powderTexture(){
  c.globalCompositeOperation='destination-out';for(let i=0;i<180;i++){c.globalAlpha=.2+Math.sin(i*7)**2*.45;c.beginPath();c.arc(64+Math.sin(i*2.4)*61,64+Math.cos(i*3.7)*61,.5+i%3,0,Math.PI*2);c.fill();}
  const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;return texture;
 }
-function catMess(walker){
+export const stainSources=asset=>asset.meshes.filter(m=>['body','hoodie.001','hoodie.002'].includes(m.userData.originalName??m.name));
+export function createPrankMess(walker){
  const head=[],body=[],hat=new T.Group(),sphere=new T.SphereGeometry(1,12,8),slime=material(green,.16),flour=new T.MeshBasicMaterial({color:white,transparent:true,depthWrite:false,toneMapped:false}),yolk=material(yellow,.2);
  slime.emissive.copy(slime.color);slime.emissiveIntensity=.2;yolk.emissive.copy(yolk.color);yolk.emissiveIntensity=.25;
- const side=new T.MeshBasicMaterial({side:T.DoubleSide}),surfaces=walker.figure.asset.meshes.filter(m=>['body','hoodie.001','hoodie.002'].includes(m.name)).map(m=>{const g=m.geometry.clone();g.boundsTree=new MeshBVH(g,{indirect:true});const proxy=new T.Mesh(g,side);proxy.userData.source=m;proxy.raycast=acceleratedRaycast;return proxy;}),ray=new T.Raycaster();ray.firstHitOnly=true;
+ const side=new T.MeshBasicMaterial({side:T.DoubleSide}),surfaces=stainSources(walker.figure.asset).map(m=>{const g=m.geometry.clone();g.boundsTree=new MeshBVH(g,{indirect:true});const proxy=new T.Mesh(g,side);proxy.userData.source=m;proxy.raycast=acceleratedRaycast;return proxy;}),ray=new T.Raycaster();ray.firstHitOnly=true;
  const surface=(x,y,back,objects=surfaces)=>{ray.set(new T.Vector3(x,y,back?-1:1),new T.Vector3(0,0,back?1:-1));return ray.intersectObjects(objects,false)[0];};
  // Irregular stains follow the clothing and fur surface instead of sitting on it as round beads.
  function splat(parent,mat,x,y,w,h,seed,back=false){
@@ -77,7 +78,7 @@ function catMess(walker){
    point(x+Math.cos(a)*w*r,y+Math.sin(a)*h*r-drip*h);if(i<n)index.push(0,back?i+2:i+1,back?i+1:i+2);}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));g.setAttribute('skinIndex',new T.Uint16BufferAttribute(skinIndex,4));g.setAttribute('skinWeight',new T.Float32BufferAttribute(skinWeight,4));g.setIndex(index);g.computeVertexNormals();
   // Follow the same blended bones as the clothing, including the torso's bends.
-  const stain=new T.SkinnedMesh(g,mat);stain.position.copy(source.position);stain.quaternion.copy(source.quaternion);stain.scale.copy(source.scale);stain.frustumCulled=false;source.parent.add(stain);stain.bind(source.skeleton,source.bindMatrix);parent.push(stain);
+  const stain=new T.SkinnedMesh(g,mat);stain.userData.prankSurface=source.userData.originalName??source.name;stain.position.copy(source.position);stain.quaternion.copy(source.quaternion);stain.scale.copy(source.scale);stain.frustumCulled=false;source.parent.add(stain);stain.bind(source.skeleton,source.bindMatrix);parent.push(stain);
  }
  // Powder has a soft, grainy edge; the wet slime and yolk remain glossy.
  flour.map=powderTexture();
@@ -177,7 +178,7 @@ export function createPrankButton({scene,colliders,renderer,draw,walker:cat,cont
  }
  const timing=createPrankTiming({
   begin(){onBegin();close();input.enabled=false;input.down.clear();controller.velocity.set(0,0,0);oldMode=follow.mode;follow.mode='third';
-   mess?.dispose();mess=catMess(cat());dispose(face);face=shockedFace(cat());fx?.dispose();fx=effects(scene,controller.position);point();},
+   mess?.dispose();mess=createPrankMess(cat());dispose(face);face=shockedFace(cat());fx?.dispose();fx=effects(scene,controller.position);point();},
   photo:capture,
   release(){release();if(sheet)input.enabled=false;},
   reset(){fx?.dispose();fx=null;},

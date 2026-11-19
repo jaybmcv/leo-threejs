@@ -10,7 +10,8 @@ export function createPrankTiming(hooks,{now=Date.now,set=setTimeout,clear=clear
   get elapsed(){return (now()-started)/1000;},get shocked(){return messUntil>now()&&now()-started<6000;},
   start(){if(cooling)return false;started=now();locked=cooling=true;messUntil=started+PRANK_TIME.mess;clear(cleanTimer);
    cleanTimer=set(safe(()=>{messUntil=0;hooks.clean();}),PRANK_TIME.mess);
-   try{hooks.begin();timers=[set(safe(hooks.photo),PRANK_TIME.photo),set(safe(release),PRANK_TIME.release),set(safe(()=>{cooling=false;hooks.reset();timers=[];}),PRANK_TIME.reset)];}
+   try{hooks.begin();started=now();messUntil=started+PRANK_TIME.mess;clear(cleanTimer);cleanTimer=set(safe(()=>{messUntil=0;hooks.clean();}),PRANK_TIME.mess);
+    timers=[set(safe(hooks.photo),PRANK_TIME.photo),set(safe(release),PRANK_TIME.release),set(safe(()=>{cooling=false;hooks.reset();timers=[];}),PRANK_TIME.reset)];}
    catch(error){cancel();hooks.error?.(error);return false;}return true;
   },cancel,
   dispose(){try{cancel();}finally{clear(cleanTimer);messUntil=0;hooks.clean();}},

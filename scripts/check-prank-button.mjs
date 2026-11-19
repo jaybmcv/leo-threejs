@@ -5,12 +5,21 @@ import layout from '../src/plan/selected-layout.js';
 import {contains} from '../src/plan/geometry-v2.js';
 import {plannedStanding} from '../src/v2/standing.js';
 import {Colliders} from '../src/walk/collision.js';
-import {prankFittings,attachPrankCollider,stainWeights,PRANK} from '../src/walk/prank-button.js';
+import {prankFittings,attachPrankCollider,stainWeights,stainSources,createPrankMess,PRANK} from '../src/walk/prank-button.js';
 import {installPreparedColliders} from '../src/v2/prepared-codec.public.js';
 import {createPrankTiming,PRANK_TIME} from '../src/walk/prank-timing.js';
 import {LIFTS} from '../src/walk/lifts.js';
 
 let checks=0;const pass=s=>{checks++;console.log('PASS '+s);};
+{
+ // Embedded textures need no decoding for these geometry and skinning probes.
+ const load=T.ImageLoader.prototype.loadAsync;let asset;
+ try{T.ImageLoader.prototype.loadAsync=async()=>({width:1,height:1});const {createDLCat}=await import('../src/vendor/cosmo/DLCat.js');asset=await createDLCat({height:1.75});}finally{T.ImageLoader.prototype.loadAsync=load;}
+ assert.deepEqual(stainSources(asset).map(m=>m.userData.originalName).sort(),['body','hoodie.001','hoodie.002']);
+ const mess=createPrankMess({figure:{asset}});assert(mess.body.length>=12);assert(mess.body.some(o=>o.userData.prankSurface==='hoodie.001'),'stains sit on the outer hoodie');assert(mess.body.some(o=>o.userData.prankSurface==='hoodie.002'),'stains also follow the raised pocket');
+ for(const o of mess.body){assert(o.isSkinnedMesh);assert(o.geometry.attributes.skinWeight);assert(o.geometry.attributes.position.array.every(Number.isFinite));}
+ mess.dispose();asset.dispose();pass('the real avatar uses original clothing names and receives skinned stains on its hoodie and pocket');
+}
 {
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute([0,0,0,1,0,0,0,1,0],3));g.setAttribute('skinIndex',new T.Uint16BufferAttribute([0,1,0,0,0,1,0,0,0,1,0,0],4));g.setAttribute('skinWeight',new T.Float32BufferAttribute([1,0,0,0,.35,.65,0,0,0,1,0,0],4));
  const face={a:0,b:1,c:2},skin=stainWeights(g,{face,point:new T.Vector3(.25,.5,0)}),weight=id=>skin.weights.reduce((n,w,k)=>n+(skin.ids[k]===id?w:0),0);assert(Math.abs(weight(0)-.3375)<1e-6);assert(Math.abs(weight(1)-.6625)<1e-6);
@@ -24,6 +33,10 @@ function clock(overrides={}){
  const hooks=Object.fromEntries(['begin','photo','release','reset','clean','error'].map(k=>[k,()=>events.push(k)]));
  const timing=createPrankTiming({...hooks,...overrides},{now:()=>now,set:(fn,ms)=>{jobs.set(++id,{fn,at:now+ms});return id;},clear:id=>jobs.delete(id)});
  return {timing,events,advance(ms){const end=now+ms;for(;;){const next=[...jobs].filter(([,j])=>j.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!next)break;now=next[1].at;jobs.delete(next[0]);next[1].fn();}now=end;},get jobs(){return jobs.size;}};
+}
+{
+ let c;c=clock({begin(){c.advance(800);}});assert(c.timing.start());assert.equal(c.timing.elapsed,0);c.advance(2000);assert.equal(c.timing.elapsed,2);assert(c.timing.locked);assert(!c.events.includes('photo'));c.advance(500);assert(c.events.includes('photo'));c.advance(500);assert(!c.timing.locked);c.timing.dispose();
+ pass('effect setup time cannot put the animation clock ahead of its photo and release timers');
 }
 {
  const c=clock(),t=c.timing;assert.equal(c.jobs,0);assert(!t.locked&&!t.messy);assert(t.start());assert(t.locked&&t.messy);assert(!t.start());
