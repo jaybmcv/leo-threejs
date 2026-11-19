@@ -78,7 +78,7 @@ import {createAmbience} from './ambience.js';
 import {createLullaby} from './lullaby.js';
 import {createLoungeSound} from './lounge-sound.js';
 import {createLoungeMood} from './lounge-mood.js';
-import {createHydroPortal,HYDRO_PORTAL,HYDRO_PARK_PORTAL,createHydroPortalTravel} from './hydro-portal.js';
+import {createHydroPortal,HYDRO_PORTAL,HYDRO_PARK_PORTAL,HYDRO_CARGO_PORTAL,createHydroPortalTravel} from './hydro-portal.js';
 import {createTrainingSound} from './training-sound.js';
 import {stairSigns,corridorSigns,floorGuides} from './signs.authoring.js';
 import {corridorTrim} from './trim.authoring.js';
@@ -392,6 +392,7 @@ async function buildShip(){
  if(lounge)for(const o of lounge.drawn)toBand(o);
  if(lounge){hydroPortal=createHydroPortal();toBand(hydroPortal.group,HYDRO_PORTAL.floor);}
  hydroParkPortal=createHydroPortal(HYDRO_PARK_PORTAL);toBand(hydroParkPortal.group,HYDRO_PARK_PORTAL.floor);
+ hydroCargoPortal=createHydroPortal(HYDRO_CARGO_PORTAL);toBand(hydroCargoPortal.group,HYDRO_CARGO_PORTAL.floor);
  // Its synthwave wall (lounge-mural.js) spans three decks' bands, like a painting.
  if(lounge?.mural){follow.occluders.push(...lounge.mural.children);baked.bands.set(lounge.mural.name,lounge.mural);scene.add(lounge.mural);}
  // Its aquarium (lounge-aquarium.js) fills the front wall over the same three decks.
@@ -450,7 +451,7 @@ async function buildShip(){
  isolateStaticWorld(ship,scene);ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer);atriumGeometry=createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality});
 }
 let imagingScans=null,missionTimer=null;
-let atriumMood=null,loungeMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,photoSpots=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,keelClub=null,loungeFalls=null,hydroPortal=null,hydroParkPortal=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,dartsLanes=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,trainingSound=null,mct=null;
+let atriumMood=null,loungeMood=null,baked=null,cosmoKit=null,lifts=null,rest=null,restSpots=[],resting=null,booth=null,photoSpots=null,concession=null,provisions=null,kittens=null,diningRobots=null,surgeryArms=null,freightGate=null,hydration=null,blossom=null,catTree=null,nosePark=null,keelClub=null,loungeFalls=null,hydroPortal=null,hydroParkPortal=null,hydroCargoPortal=null,jaguarGate=null,scope=null,poolTable=null,pinballMachine=null,dartsLanes=null,pawsOff=null,mudwater=null,arcadeRow=null,run=null,runView='third',paintings=null,comics=null,theatre=null,lounge=null,arrivalMood=null,recovery=null,gaming=null,missionHolo=null,halloween=null,hexFloor=null,graffiti=null,crownTv=null,lullaby=null,loungeSound=null,trainingSound=null,mct=null;
 let mazeHold=null,maze=null,treasure=null,leverPanel=null,chinampa=null,baggage=null,atmosphere=null,wardPush=null;
 const artUrls=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};const bodies=[],eye=new T.Vector3();const instanced=[];
 // Lifeboat fittings (2,000 seats a deck with their headrests and harnesses, seen only through a hatch or from inside a
@@ -850,7 +851,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={get carry(){return carry;},get prank(){return prank;},unstuck,inOpenAtrium,get atriumMood(){return atriumMood;},skate,glide,get wardPush(){return wardPush;},get portable(){return portable;},registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get shuttleDoors(){return shuttleDoors;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},get mctRepair(){return mctRepair;},repairStations,emergencyStation,asteroid,outsideGames,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get hydroPortal(){return hydroPortal;},get hydroParkPortal(){return hydroParkPortal;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={get carry(){return carry;},get prank(){return prank;},unstuck,inOpenAtrium,get atriumMood(){return atriumMood;},skate,glide,get wardPush(){return wardPush;},get portable(){return portable;},registry,get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get shuttleDoors(){return shuttleDoors;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},get mctRepair(){return mctRepair;},repairStations,emergencyStation,asteroid,outsideGames,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get hydroPortal(){return hydroPortal;},get hydroParkPortal(){return hydroParkPortal;},get hydroCargoPortal(){return hydroCargoPortal;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -997,7 +998,7 @@ renderer.setAnimationLoop(()=>{
  provisions?.update(dt,bodies);
  blossom?.update(dt,p,ambience.on,camera);
  loungeFalls?.update(dt,p);
- hydroPortal?.update(dt,p,ambience.on,camera);hydroParkPortal?.update(dt,p,ambience.on,camera);
+ hydroPortal?.update(dt,p,ambience.on,camera);hydroParkPortal?.update(dt,p,ambience.on,camera);hydroCargoPortal?.update(dt,p,ambience.on,camera);
  trainingSound?.update(p,ambience.on,loungeSound?.audible);loungeSound?.update(p,ambience.on,camera,trainingSound?.audible);
  lullaby?.update(p,ambience.on);
  missionHolo?.update(dt,p);
@@ -1112,6 +1113,7 @@ function target(){
  const b=(inBall?null:prank?.near(p))||booth.near(p)||photoSpots?.near(p)||comics.near(p)||chinampa?.near(p);if(b)return b;
  const v=inBall?null:vault?.near(p);if(v)return v;
  const tube=inBall?null:vaultLift?.nearest(p);if(tube)return tube.kind==='riding'?null:tube;
+ const hydro=inBall?null:hydroCargoPortal?.prompt(p);if(hydro)return hydro;
  const g=changeLog.near(p);if(g)return g;
  const welcome=inBall?null:arrivalTour?.near(p);if(welcome)return welcome;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
@@ -1138,11 +1140,11 @@ function hud(p){
  if(chip.dataset.count!==String(near)){chip.dataset.count=String(near);chip.hidden=!near;chip.querySelector('b').textContent=String(near);
   chip.querySelector('span').textContent=near===1?' change here':' changes here';chip.setAttribute('aria-label',`${near} change${near===1?'':'s'} made around here: open the ship log`);}
  const t=run||graffiti?.active?null:resting?{kind:resting.spot.tube&&!tubeDock(resting.spot.tube)?'waiting':undefined,label:resting.spot.tube?(tubeDock(resting.spot.tube)?'Get out at the dock':'Paddle to a dock to get out'):resting.stand?'Leave the capsule':resting.spot.mct?'Get out':resting.lie?'Get up':'Stand up'}:target();
- const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=!show||touch;
- // Waiting for a called lift there's nothing to press: the prompt just says where the car is.
- const waiting=t?.kind==='waiting';prompt.classList.toggle('waiting',waiting);$('use').disabled=waiting;
+ const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=!show||touch&&!t?.passive;
+ // Lift status and walk-in portals show instructions without a use key.
+ const waiting=t?.kind==='waiting'||!!t?.passive;prompt.classList.toggle('waiting',waiting);$('use').disabled=waiting;
  if(show){prompt.querySelector('.label').textContent=t.label;$('use').textContent=t.label;}
- $('use').hidden=!show;
+ $('use').hidden=!show||!!t?.passive;
 }
 
 // Sitting and lying: the walker leaves the controller, eases onto the spot and back off again.

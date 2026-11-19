@@ -386,7 +386,7 @@
     "via": "inherited"
   },
   "src/walk/hydro-portal.js": {
-    "owners": ["commons-1", "circulation-6"],
+    "owners": ["commons-1", "circulation-6", "circulation-2"],
     "via": "inherited"
   },
   "src/walk/lounge-mural.js": {

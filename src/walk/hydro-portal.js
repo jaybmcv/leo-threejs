@@ -15,9 +15,13 @@ const CORE=TRANSIT_CORES.find(c=>c.id==='forward'),PARK_FLOOR=layout.decks[5].y;
 // The blank east face ahead of the park approach, between z -7.87 and -2.73.
 export const HYDRO_PARK_PORTAL=Object.freeze({x:CORE.stairX+4.64+.04,y:PARK_FLOOR+2.4*.54,z:-CORE.stairZ,width:2.2,height:2.4,floor:PARK_FLOOR,range:9});
 export const HYDRO_PARK_ARRIVAL=Object.freeze({name:'Hydro-Portal park',at:Object.freeze([HYDRO_PARK_PORTAL.x+1.6,PARK_FLOOR,HYDRO_PARK_PORTAL.z]),yaw:90});
+const CARGO=layout.rooms.find(r=>r.id==='d02-maintenance-aft');
+// The engine housing's blank back is behind the glass; mount outside its east face without cutting either.
+export const HYDRO_CARGO_PORTAL=Object.freeze({x:CARGO.x+CARGO.width/2+.09,y:CARGO.y+1.7,z:CARGO.z,width:2.2,height:2.4,floor:CARGO.y,range:9});
 export const HYDRO_PORTAL_LINKS=Object.freeze([
  Object.freeze({portal:HYDRO_PORTAL,arrival:HYDRO_PARK_ARRIVAL}),
- Object.freeze({portal:HYDRO_PARK_PORTAL,arrival:HYDRO_PORTAL_ARRIVAL})
+ Object.freeze({portal:HYDRO_PARK_PORTAL,arrival:HYDRO_PORTAL_ARRIVAL}),
+ Object.freeze({portal:HYDRO_CARGO_PORTAL,arrival:HYDRO_PORTAL_ARRIVAL})
 ]);
 
 export function hydroPortalContains(portal,p,pad=0){
@@ -104,8 +108,10 @@ export function createHydroPortal(portal=HYDRO_PORTAL){
     gl_FragColor=vec4(colour,1.-smoothstep(1.03,1.08,r));
    }`});
  const group=new T.Mesh(new T.PlaneGeometry(portal.width*1.35,portal.height*1.35),material);
- group.name=portal===HYDRO_PORTAL?'Hydro_Portal':'Hydro_Portal_Park';group.position.set(portal.x,portal.y,portal.z);group.rotation.y=Math.PI/2;
- group.userData={room:portal===HYDRO_PORTAL?'commons-1':'circulation-6',noCollide:true};
+ group.name=portal===HYDRO_PORTAL?'Hydro_Portal':portal===HYDRO_CARGO_PORTAL?'Hydro_Portal_Cargo':'Hydro_Portal_Park';group.position.set(portal.x,portal.y,portal.z);group.rotation.y=Math.PI/2;
+ group.userData={room:portal===HYDRO_PORTAL?'commons-1':portal===HYDRO_CARGO_PORTAL?'circulation-2':'circulation-6',noCollide:true};
  const sound=createHydroPortalSound(portal);
- return {group,sound,arrival:portal===HYDRO_PORTAL?HYDRO_PORTAL_ARRIVAL:HYDRO_PARK_ARRIVAL,update(dt,p,on,camera){uniforms.uTime.value+=dt;sound.update(p,on,camera);}};
+ return {group,sound,arrival:portal===HYDRO_PARK_PORTAL?HYDRO_PARK_ARRIVAL:HYDRO_PORTAL_ARRIVAL,
+  prompt(p){return portal===HYDRO_CARGO_PORTAL&&hydroPortalContains(portal,p,2)?{kind:'hydro-portal',label:'Walk into Hydro-Portal to Hydro-Nip Lounge',passive:true}:null;},
+  update(dt,p,on,camera){uniforms.uTime.value+=dt;sound.update(p,on,camera);}};
 }

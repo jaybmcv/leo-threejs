@@ -16,10 +16,13 @@ import {findStand} from '../src/walk/places.js';
 import {createTransit} from '../src/transit.js';
 import {atriumFloorGeometry} from '../src/v2/atrium-surfaces.js';
 import {phase6Programme} from '../src/v2/phase6-programme.js';
+import {phase4Programme} from '../src/v2/phase4-programme.js';
+import {fitoutGeometry} from '../src/v2/phase4-mesh-kit.js';
+import {polygonGeometry} from '../src/v2/geometry.js';
 import {createLoungeMural} from '../src/walk/lounge-mural.js';
 import {inLounge} from '../src/walk/lounge-mood.js';
 import {SYNTHWAVE_MURAL,synthwaveMuralOutline} from '../src/v2/community-routes.js';
-import {HYDRO_PORTAL as portal,HYDRO_PORTAL_ARRIVAL as arrival,HYDRO_PARK_PORTAL as park,HYDRO_PARK_ARRIVAL as parkArrival,HYDRO_PORTAL_LINKS,hydroPortalContains,createHydroPortalTravel,createHydroPortal,createHydroPortalSound,hydroPortalLevel,buildHydroPortalWarp} from '../src/walk/hydro-portal.js';
+import {HYDRO_PORTAL as portal,HYDRO_PORTAL_ARRIVAL as arrival,HYDRO_PARK_PORTAL as park,HYDRO_PARK_ARRIVAL as parkArrival,HYDRO_CARGO_PORTAL as cargo,HYDRO_PORTAL_LINKS,hydroPortalContains,createHydroPortalTravel,createHydroPortal,createHydroPortalSound,hydroPortalLevel,buildHydroPortalWarp} from '../src/walk/hydro-portal.js';
 
 // Real lounge furniture and the current hull-owned shell, without loading the rest of the ship.
 const r=layout.rooms.find(r=>r.id==='commons-1'),root=new T.Group(),structure=new T.Group();root.add(createGardenCommons(1).root,structure);resolveRoomFrames(root);
@@ -156,10 +159,53 @@ for(const [source,target,start,yaw] of [[park,arrival,[150.34,deck.y,-5.25],266]
  travel.step(walker.position,false,()=>assert.fail('Disabled controls must not travel'));
  travel.step(walker.position,true,dest=>{assert.deepEqual(dest.at,source===park?parkArrival.at:arrival.at);trips++;return true;});assert.equal(trips,2,'Leaving and re-entering allows the return trip');
 }
+// Deck 2 keeps the actual glass wall and engine housing intact behind the fitting.
+const cargoRoom=layout.rooms.find(r=>r.id==='d02-maintenance-aft'),cargoRoot=new T.Group(),cargoStructure=new T.Group(),cargoDeck=layout.decks[1];cargoRoot.add(cargoStructure);
+buildRoomShell({root:cargoRoot,inside:cargoRoot,cutaway:new Set()},cargoRoom,cargoStructure);
+const housingPart=phase4Programme(layout).parts.find(p=>p.room===cargoRoom.id&&p.part==='mission_engine_housing');assert(housingPart,'Existing dark backing panel');
+const housing=new T.Mesh(fitoutGeometry(housingPart),new T.MeshBasicMaterial());housing.name='P4_mission_engine_housing';housing.position.set(...housingPart.at);cargoRoot.add(housing);
+const cargoFloor=new T.Mesh(polygonGeometry(cargoDeck.slab.outline,cargoDeck.slab.holes.map(h=>h.polygon),cargoDeck.y,.12),new T.MeshBasicMaterial());cargoFloor.name='Deck_slab';cargoRoot.add(cargoFloor);cargoRoot.updateMatrixWorld(true);
+const glassHit=new T.Raycaster(new T.Vector3(-148.59,cargo.floor+1.5,-.30),new T.Vector3(-1,0,0)).intersectObject(cargoStructure,true)[0];
+assert(glassHit&&glassHit.object.name==='V2_glass_wall','Reported approach faces the retained glass partition');
+close(cargo.x-glassHit.point.x,.04);close(cargo.floor,cargoDeck.y);close(cargo.z,housingPart.at[2]);
+close(cargo.x,-153.91);close(cargo.z,0);
+const backing=new T.Box3().setFromObject(housing);
+assert(cargo.x>backing.max.x,'Portal faces the visitor outside the backing and glass');
+assert(cargo.y-cargo.height*.54>backing.min.y&&cargo.y+cargo.height*.54<backing.max.y,'Oval and halo clear the panel top and sill');
+assert(cargo.z-cargo.width*.54>backing.min.z&&cargo.z+cargo.width*.54<backing.max.z,'Oval and halo fit the dark panel width');
+const cargoEffect=createHydroPortal(cargo);assert.equal(cargoEffect.group.name,'Hydro_Portal_Cargo');assert.equal(cargoEffect.group.userData.room,'circulation-2');
+assert(cargoEffect.group.userData.noCollide);assert.equal(cargoEffect.group.material.fragmentShader,parkEffect.group.material.fragmentShader);close(cargoEffect.group.rotation.y,Math.PI/2);
+close(cargoEffect.group.position.x,cargo.x);close(cargoEffect.group.position.y,cargo.y);close(cargoEffect.group.position.z,cargo.z);
+assert.equal(cargoEffect.arrival,arrival);assert.equal(HYDRO_PORTAL_LINKS.length,3);
+const promptPoint=new T.Vector3(cargo.x+2.1,cargo.floor,-.30),cargoPrompt=cargoEffect.prompt(promptPoint);
+assert.equal(cargoPrompt?.label,'Walk into Hydro-Portal to Hydro-Nip Lounge');assert(cargoPrompt.passive,'Walk-in instructions do not advertise a use key');
+assert(!hydroPortalContains(cargo,promptPoint),'Prompt appears before the travel region');
+for(const at of [[-148.59,cargo.floor,-.30],[cargo.x-.2,cargo.floor,0],[cargo.x+2,cargo.floor+4,0],arrival.at])assert.equal(cargoEffect.prompt(new T.Vector3(...at)),null,'No cargo prompt away from its approach');
+assert.equal(effect.prompt(new T.Vector3(portal.x+2,portal.floor,portal.z)),null);assert.equal(parkEffect.prompt(new T.Vector3(park.x+2,park.floor,park.z)),null);
+assert.equal(HYDRO_PORTAL_LINKS.find(l=>l.portal===cargo).arrival,arrival);
+assert(!HYDRO_PORTAL_LINKS.some(l=>l.arrival.at[1]===cargo.floor),'No exit returns to Deck 2');
+col.addStatic(cargoRoot);col.commit();ground.addStatic(cargoRoot,o=>solid(o)&&groundMesh(o));ground.commit();
+const cargoTravel=createHydroPortalTravel();let cargoTrips=0,cargoPromptSeen=false;walker.place(new T.Vector3(-148.59,cargo.floor,-.30));
+const cargoGo=dest=>{assert.deepEqual(dest.at,arrival.at);assert.equal(dest.yaw,arrival.yaw*Math.PI/180);assert(dest.resolved);walker.place(new T.Vector3(...dest.at));cargoTrips++;return true;};
+for(let i=0;i<360&&!cargoTrips;i++){walker.step(1/120,wish.set(-2.25,0,0));if(!hydroPortalContains(cargo,walker.position)&&cargoEffect.prompt(walker.position))cargoPromptSeen=true;cargoTravel.step(walker.position,true,cargoGo);}
+assert(cargoPromptSeen,'Walking from the reported spot shows instructions before travel');
+assert.equal(cargoTrips,1,'Walk from the reported Deck 2 spot enters the lounge');close(walker.position.y,arrival.at[1]);
+for(let i=0;i<120;i++){walker.step(1/120,wish.set(0,0,0));cargoTravel.step(walker.position,true,cargoGo);}
+assert.equal(cargoTrips,1,'Cargo arrival does not bounce back');
+run([2.25*Math.sin(arrival.yaw*Math.PI/180),0,2.25*Math.cos(arrival.yaw*Math.PI/180)],2);assert(walker.position.distanceTo(new T.Vector3(...arrival.at))>3,'Cargo visitor can leave the lounge landing');
+// Pass close beside the oval in both directions, without entering its walk-in region.
+walker.place(new T.Vector3(cargo.x+.86,cargo.floor,-3));
+for(const dir of [1,-1]){const start=walker.position.clone();run([0,0,dir*2.25],2.7);assert(dir*(walker.position.z-start.z)>5.5,'Walk along the glass past the portal: '+start.toArray()+' -> '+walker.position.toArray());close(walker.position.x,start.x);close(walker.position.y,cargo.floor);assert(!hydroPortalContains(cargo,walker.position));}
+walker.place(new T.Vector3(-148.59,cargo.floor,3.5));run([-2.25,0,0],3);assert(walker.position.x>glassHit.point.x,'Glass still blocks walking through beside the portal');
+const blocked=walker.position.clone();run([-2.25,0,0],1);assert(walker.position.distanceTo(blocked)<.02,'Retained partition stays solid');
 for(const suffix of ['','.public','.prepared','.authoring']){
  const main=readFileSync(new URL(`../src/walk/main${suffix}.js`,import.meta.url),'utf8');
  assert(main.includes('hydroParkPortal=createHydroPortal(HYDRO_PARK_PORTAL)'));
+ assert(main.includes('hydroCargoPortal=createHydroPortal(HYDRO_CARGO_PORTAL);toBand(hydroCargoPortal.group,HYDRO_CARGO_PORTAL.floor)'),'Every walk draws the Deck 2 entry in its own band');
+ assert(main.includes('hydroCargoPortal?.update(dt,p,ambience.on,camera)'),'Every walk animates and spatializes the Deck 2 entry');
+ assert(main.includes('const hydro=inBall?null:hydroCargoPortal?.prompt(p);if(hydro)return hydro;'),'Every walk supplies the Deck 2 approach prompt to the HUD');
+ assert(main.includes("const waiting=t?.kind==='waiting'||!!t?.passive;")&&main.includes('prompt.hidden=!show||touch&&!t?.passive;')&&main.includes("$('use').hidden=!show||!!t?.passive;"),'Walk-in instructions are visible on desktop and touch without a use button');
  assert(main.includes('hydroTravel.step(p,canHook&&input.enabled&&!playing()&&controller.grounded,goTo)'),'Uses the regular Go-to teleport before pose and room updates');
  assert(main.indexOf('hydroTravel.step(')<main.indexOf('live?.pose(myPose('));
 }
-console.log('PASS Hydro-Portal: paired walk-in travel, real pier placement/floor/clearance, arrival guard, 3 m departures, lounge camera, shared animated oval and spatial warp');
+console.log('PASS Hydro-Portal: Deck 2 approach prompt and entry-only travel, intact glass/panel fit and pass-by clearance, paired park travel, arrival guard, 3 m departures, lounge camera, shared animated oval and spatial warp');
