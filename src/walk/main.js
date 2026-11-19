@@ -1,3 +1,5 @@
+// Key events with no `code` (Otherside's browser) get one before any handler reads it.
+import './key-code.js';
 import {createVoyagerLawn} from '../v2/voyager-lawn.js';
 let voyagerLawn=null;
 import {hearGamingBoard} from './gaming-scores.js';
