@@ -1730,7 +1730,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 1,
-      "signature": "c4590c922e7543da702bb372c7b81367b7bc2ab18a87e13d5d0e98a9ad15d41b"
+      "signature": "20d86517457cd09491f78d3c74f1a0265713e4e28101d6606fa2c4e35f36d0d6"
     },
     {
       "source": "src/walk/changes-board.authoring.js",
@@ -4266,7 +4266,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "3b76807800a64142c3c1c333dde6adee6d568c319fb6055676dacf58b04b35ac"
+      "signature": "1dcbab255021bc765f34474af8a8c29e132a853c9b6933474175c9fe241354a8"
     },
     {
       "source": "src/walk/main.js",
@@ -4288,7 +4288,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "a693bb7c08806e33cd72ef273a901aebbd158e61d1b2f8d3a250213c21e7eae2"
+      "signature": "fb01da4c2c135a229fc379b1449faecfd3138ee122f9dbacd7c2a561762b3d0b"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4308,7 +4308,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "f822da038c3f25a382366c997d5e30694dd7a9286aa6cd85e2f8e4e5e548cd97"
+      "signature": "36595953d8efcfc8b7c01d39117f3ecf0c09e4bc0caf0eaa174f44aa36f4ee5a"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4328,7 +4328,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "78d99c794d202394c4c5e09d7640cf70b909d35472f32a756ba29387b227e59d"
+      "signature": "7f1e6921004b64fa5578e7caad263dbd60399480fb0fffbf83aa97bad67dd16b"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -5261,6 +5261,22 @@
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 8,
       "signature": "0d2c572b8e401cdcf7ca8dba0b49267081065f243938273efb305fd7ef3df999"
+    },
+    {
+      "source": "src/walk/prank-button.js",
+      "rooms": [
+        "circulation-6"
+      ],
+      "via": "frame boundary",
+      "fixed": false,
+      "features": [
+        "Do_not_press_button",
+        "Prank_mess"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 32,
+      "signature": "644fe3645dd0e6715e81a5ad925cd0e31c5563860b3a40c67e5ebefb83e5c633"
     },
     {
       "source": "src/walk/prepare.js",
