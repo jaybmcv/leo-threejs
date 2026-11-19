@@ -9,12 +9,15 @@ const phone=globalThis.LEO_WALK_PHONE&&globalThis.LEO_PUBLIC_ASSETS?.['walk-phon
 // Every file of the payload gets a few tries (prepared-fetch.js). A failure here, as anywhere in the walk script's start,
 // rejects the import that walk.html made, which puts the failure line on the loading card.
 const base=phone?new URL('./'+phone.directory,import.meta.url):new URL(typeof __PREPARED_URL__!=='undefined'?__PREPARED_URL__:'./prepared-walk/',import.meta.url);
+// Parts asked for ahead of the one being decoded: two on a desktop, so the link isn't idle for each part's round trip;
+// one on the phone ship, whose memory peak is the decode's.
+const PREFETCH=phone?1:2;
 // The decoded ship, once it is.
 export let preparedResource=null;
 export const preparedResourceReady=(async()=>{
  // An arrival-hall start downloads the hall first (arrival-start.js).
  if(arrivalDownload)await arrivalDownload.settled;
- let loaded=await readPreparedWorld(base,{status,fetchBytes:preparedFetcher(base),metadataName:phone?phone.metadataFile:typeof __PREPARED_META__!=='undefined'?__PREPARED_META__:'world.json.gz'});
+ let loaded=await readPreparedWorld(base,{status,fetchBytes:preparedFetcher(base),prefetch:PREFETCH,metadataName:phone?phone.metadataFile:typeof __PREPARED_META__!=='undefined'?__PREPARED_META__:'world.json.gz'});
  preparedResource={ship:loaded.ship,geometryTemplates:loaded.geometryTemplates,manifest:{privacy:loaded.manifest.privacy},frost:await loaded.graph(loaded.manifest.frost),phone:loaded.manifest.phone||null};
  // Controllers keep the ship/templates/frost. Release transport metadata and the temporary graph factory.
  loaded.release();loaded=null;

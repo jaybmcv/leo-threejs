@@ -1,12 +1,13 @@
-// node --max-old-space-size=12000 scripts/build-arrival-pack.mjs <prepared-walk dir> <out dir> [--source-id <prepared sha256>]
+// node --max-old-space-size=12000 scripts/build-arrival-pack.mjs <prepared-walk dir> <out dir> [--source-id <sha256>]
 // The arrival pack (src/v2/arrival-preview.js): the Deck 2 arrival hall and the garden open above it, cut out of the
 // verified prepared walk, small enough to walk a few seconds after the page opens while the whole ship downloads.
-// - render: every mesh the prepared walk draws (its render bands and wayfinding signs, and the source graph's
-//   instanced and live meshes) keeps, whole, each triangle touching the hall's box widened by VIEW_MARGIN (so a
-//   doorway shows a little of what is beyond), in world space, one mesh per material and attribute layout; instance
-//   colours become vertex colours;
-// - its pictures as they are (a handful, and small);
-// - collision and ground, kept apart as the walk keeps them (ground.js: barriers are not ground), the triangles
+// - render: every mesh the prepared walk draws (its render bands, wayfinding signs and hull, and the source graph's
+//   instanced and live meshes) keeps, whole, each triangle touching the hall's box widened by VIEW_MARGIN, in world
+//   space, one mesh per material and attribute layout; instance colours become vertex colours. Positions to 0.24 mm,
+//   normals 8-bit octahedral, colours 16-bit. The paintings the walk hangs there as it starts (paintings.js) come
+//   too, each canvas naming its picture, which the page loads from the walk's own copy;
+// - the materials' pictures (a handful), as lossless WebP;
+// - collision and ground, kept apart as the walk keeps them (ground.js: barriers are not ground), exact, the triangles
 //   touching the box widened by a metre. The page closes the box's sides itself, so nobody walks off the cut.
 // Nothing is re-pooled or re-indexed into the prepared walk: this is a file of its own the full walk never reads.
 // One file, pack.bin: gzip of [u32 header bytes][header JSON][arrays, each 4-byte aligned, meshopt-encoded].
@@ -18,6 +19,8 @@ import * as T from 'three';
 import {MeshoptDecoder} from 'meshoptimizer';
 import {MeshoptEncoder} from 'meshoptimizer/encoder';
 import {MeshBVH} from 'three-mesh-bvh';
+import sharp from 'sharp';
+import {createPaintings,PAINTINGS} from '../src/walk/paintings.js';
 import layout from '../src/plan/selected-layout.js';
 
 const args=process.argv.slice(2),flag=n=>{const i=args.indexOf(n);if(i<0)return null;const v=args[i+1];args.splice(i,2);return v;};
@@ -31,7 +34,8 @@ const BOX=new T.Box3();
 for(const id of ROOMS){const r=layout.rooms.find(r=>r.id===id);if(!r?.polygon)throw Error('Arrival pack: the layout has no room '+id);
  for(const [x,z] of r.polygon)BOX.expandByPoint(new T.Vector3(x,r.y,z)).expandByPoint(new T.Vector3(x,r.y+r.height,z));}
 BOX.expandByVector(new T.Vector3(.6,.7,.6));
-const VIEW_MARGIN=1.5,VIEW_BOX=BOX.clone().expandByVector(new T.Vector3(VIEW_MARGIN,0,VIEW_MARGIN)),COLLISION_BOX=BOX.clone().expandByScalar(1);
+// Drawn this far past the box's sides: a doorway shows several metres of what lies beyond before the page's haze walls.
+const VIEW_MARGIN=6,VIEW_BOX=BOX.clone().expandByVector(new T.Vector3(VIEW_MARGIN,0,VIEW_MARGIN)),COLLISION_BOX=BOX.clone().expandByScalar(1);
 
 const read=name=>fs.readFileSync(path.join(source,name));
 const inflate=b=>b[0]===0x28&&b[1]===0xb5?zlib.zstdDecompressSync(b):zlib.gunzipSync(b);
@@ -109,6 +113,18 @@ const collision=[],ground=[];cutColliders(m.colliders,collision);if(m.colliders.
 const collisionKept=collision.length/9,groundKept=ground.length/9;
 if(!kept||!collisionKept||!groundKept)throw Error(`Arrival pack: nothing cut (render ${kept}, collision ${collisionKept}, ground ${groundKept}): has the arrival hall moved?`);
 
+// The paintings the walk hangs here as it starts (paintings.js, made the same way): frames and canvases, world space, as
+// meshes of their own; each canvas names its picture, which the page loads from the walk's own copy (__ART_URLS__).
+const extraMaterials=new Map(),paintings=[];
+for(const g of createPaintings({}).groups){g.updateMatrixWorld(true);if(!new T.Box3().setFromObject(g).intersectsBox(VIEW_BOX))continue;
+ const file=PAINTINGS.find(p=>'Painting_'+p.name===g.name)?.file;if(!file)throw Error('Arrival pack: no picture for '+g.name);paintings.push(g.name);
+ g.traverse(o=>{if(!o.isMesh)return;const canvas=o.material.name==='Painting_canvas',key='extra:'+o.material.name+(canvas?':'+file:''),geometry=o.geometry.index?o.geometry.toNonIndexed():o.geometry;
+  extraMaterials.set(key,{json:o.material.toJSON(),art:canvas?file:null});normalMatrix.getNormalMatrix(o.matrixWorld);
+  let c=chunks.get(key);if(!c)chunks.set(key,c={material:key,tinted:false,renderOrder:o.renderOrder,attributes:{position:{itemSize:3,values:[]},normal:{itemSize:3,values:[]},uv:{itemSize:2,values:[]}},index:[],vertices:0,from:new Set()});
+  const pos=geometry.attributes.position,nor=geometry.attributes.normal,uv=geometry.attributes.uv;c.from.add('painting:'+g.name);
+  for(let i=0;i<pos.count;i++){const v=new T.Vector3().fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld),n=new T.Vector3().fromBufferAttribute(nor,i).applyMatrix3(normalMatrix).normalize();
+   c.attributes.position.values.push(v.x,v.y,v.z);c.attributes.normal.values.push(n.x,n.y,n.z);c.attributes.uv.values.push(uv.getX(i),uv.getY(i));c.index.push(c.vertices++);}});}
+
 // Solid but not drawn: collision with no drawn surface within 30 cm (something the walk builds as it starts, or draws
 // from a graph left out). The report lists where, in 2 m cells, for the list of what the early walk lacks.
 const unseen=(()=>{const positions=[],index=[];let offset=0;for(const c of chunks.values()){for(const v of c.attributes.position.values)positions.push(v);for(const i of c.index)index.push(i+offset);offset+=c.vertices;}
@@ -121,16 +137,16 @@ const unseen=(()=>{const positions=[],index=[];let offset=0;for(const c of chunk
 const blobs=[];let offset=0;
 const put=(typed,kind)=>{const raw=new Uint8Array(typed.buffer,typed.byteOffset,typed.byteLength);let record;
  if(kind==='index'){const encoded=MeshoptEncoder.encodeIndexSequence(raw,typed.length,typed.BYTES_PER_ELEMENT);record={encoding:'meshopt-sequence',count:typed.length,stride:typed.BYTES_PER_ELEMENT,bytes:encoded.length};blobs.push(encoded);}
- else{const stride=kind.stride,count=raw.length/stride,filtered=kind.exp?MeshoptEncoder.encodeFilterExp(typed,count,stride,kind.exp):raw;
-  const encoded=MeshoptEncoder.encodeVertexBuffer(filtered,count,stride);record={encoding:'meshopt-vertex',count,stride,bytes:encoded.length,...kind.exp?{filter:'EXPONENTIAL'}:{}};blobs.push(encoded);}
- record.type=typed.constructor.name;record.offset=offset;offset+=record.bytes;const pad=(4-offset%4)%4;if(pad){blobs.push(new Uint8Array(pad));offset+=pad;}return record;};
+ else{const stride=kind.stride,count=kind.oct?typed.length/4:raw.length/stride,filtered=kind.exp?MeshoptEncoder.encodeFilterExp(typed,count,stride,kind.exp):kind.oct?MeshoptEncoder.encodeFilterOct(typed,count,stride,kind.oct):raw;
+  const encoded=MeshoptEncoder.encodeVertexBuffer(filtered,count,stride);record={encoding:'meshopt-vertex',count,stride,bytes:encoded.length,...kind.exp?{filter:'EXPONENTIAL'}:kind.oct?{filter:'OCTAHEDRAL'}:{}};blobs.push(encoded);}
+ record.type=kind.oct?'Int8Array':typed.constructor.name;record.offset=offset;offset+=record.bytes;const pad=(4-offset%4)%4;if(pad){blobs.push(new Uint8Array(pad));offset+=pad;}return record;};
 const meshes=[];const usedMaterials=new Set();
 for(const c of chunks.values()){if(!c.index.length)continue;usedMaterials.add(c.material);
  // Drawn positions to 20 bits of mantissa (meshopt's exponential filter: within 0.24 mm here, the same value always the
  // same, so no seams open); collision below stays exact.
  const position=put(new Float32Array(c.attributes.position.values),{stride:12,exp:20});
- // Normals as 8-bit, padded to four (three normalises them on read).
- let normal=null;if(c.attributes.normal){const v=c.attributes.normal.values,n=new Int8Array(v.length/3*4);for(let i=0;i<v.length/3;i++)for(let k=0;k<3;k++)n[i*4+k]=Math.round(Math.max(-1,Math.min(1,v[i*3+k]))*127);normal=put(n,{stride:4});}
+ // Normals as 8-bit octahedral pairs (meshopt's filter), four bytes each, read back as 8-bit xyz.
+ let normal=null;if(c.attributes.normal){const v=c.attributes.normal.values,n=new Float32Array(v.length/3*4);for(let i=0;i<v.length/3;i++)for(let k=0;k<3;k++)n[i*4+k]=v[i*3+k];normal=put(n,{stride:4,oct:8});}
  const uv=c.attributes.uv?put(new Float32Array(c.attributes.uv.values),{stride:c.attributes.uv.itemSize*4}):null;
  // Colours as 16-bit fractions, padded to four (they are linear and all within 0..1: 8 bits would band the darkest).
  let color=null;if(c.attributes.color){const v=c.attributes.color.values,s=c.attributes.color.itemSize;if(v.some(x=>!(x>=0&&x<=1)))throw Error('Arrival pack: a vertex colour outside 0..1');
@@ -141,14 +157,18 @@ const collisionArray=put(new Float32Array(collision),{stride:12}),groundArray=pu
 
 // Materials and only the pictures they use, renumbered from 0.
 const materialIds=[...usedMaterials],materialAt=new Map(materialIds.map((id,i)=>[id,i]));for(const mesh of meshes)mesh.material=materialAt.get(mesh.material);
-const materials=materialIds.map(id=>m.materials[id]);
+const materials=materialIds.map(id=>typeof id==='string'?extraMaterials.get(id).json:m.materials[id]);
+for(const mesh of meshes){const extra=extraMaterials.get(materialIds[mesh.material]);if(extra?.art)mesh.art=extra.art;}
 // Instance colours became vertex colours: those meshes draw with a copy of their material that reads them.
 for(const mesh of meshes)if(mesh.tinted){const j={...materials[mesh.material],uuid:materials[mesh.material].uuid+'-tinted',vertexColors:true};mesh.material=materials.push(j)-1;}
 const textureIds=new Set();for(const j of materials)for(const [k,v] of Object.entries(j))if(/map$/i.test(k)&&typeof v==='string')textureIds.add(v);
-const textures=m.textures.filter(t=>textureIds.has(t.uuid)),imageIds=new Set(textures.map(t=>t.image)),images=m.images.filter(i=>imageIds.has(i.uuid));
+const textures=m.textures.filter(t=>textureIds.has(t.uuid)),imageIds=new Set(textures.map(t=>t.image));
+// Pictures as lossless WebP (the same pixels, colour under transparent ones kept: about a sixth of the PNG's bytes).
+const images=await Promise.all(m.images.filter(i=>imageIds.has(i.uuid)).map(async i=>{const [type,data]=String(i.url).split(',');if(!/^data:image\/png;base64$/.test(type))return i;
+ const png=Buffer.from(data,'base64'),webp=await sharp(png).webp({lossless:true,exact:true,effort:6}).toBuffer();return webp.length<png.length?{...i,url:'data:image/webp;base64,'+webp.toString('base64')}:i;}));
 
 // The arrival spot is worked out by the page (main.js START), from the same layout: the box must hold it.
-const header={format:'leo-arrival-pack-v1',source:sourceId||path.basename(path.resolve(source)),box:[BOX.min.toArray(),BOX.max.toArray()],rooms:ROOMS,meshes,materials,textures,images,collision:{...collisionArray,triangles:collisionKept},ground:{...groundArray,triangles:groundKept}};
+const header={format:'leo-arrival-pack-v1',source:sourceId||path.basename(path.resolve(source)),box:[BOX.min.toArray(),BOX.max.toArray()],view:[VIEW_BOX.min.toArray(),VIEW_BOX.max.toArray()],rooms:ROOMS,meshes,materials,textures,images,collision:{...collisionArray,triangles:collisionKept},ground:{...groundArray,triangles:groundKept}};
 const json=Buffer.from(JSON.stringify(header)),head=Buffer.alloc(4);head.writeUInt32LE(json.length);
 const pad=Buffer.alloc((4-(4+json.length)%4)%4);
 const body=Buffer.concat([head,json,pad,...blobs]);
@@ -156,6 +176,6 @@ const packed=zlib.gzipSync(body,{level:9});
 fs.rmSync(out,{recursive:true,force:true});fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'pack.bin'),packed);
 const sha256=crypto.createHash('sha256').update(packed).digest('hex');
 const report={sha256,files:['pack.bin'],source:header.source,box:header.box,downloadMB:+(packed.length/1e6).toFixed(2),rawMB:+(body.length/1e6).toFixed(2),
- render:{seen,kept,meshes:meshes.length,materials:materials.length,pictures:images.length,leftOut:audit},collision:{triangles:collisionKept,ground:groundKept,unseen},seconds:Math.round((Date.now()-started)/1000)};
+ render:{seen,kept,meshes:meshes.length,materials:materials.length,pictures:images.length,paintings,leftOut:audit},collision:{triangles:collisionKept,ground:groundKept,unseen},seconds:Math.round((Date.now()-started)/1000)};
 fs.writeFileSync(path.join(out,'integrity.json'),JSON.stringify(report,null,1));
 console.log(JSON.stringify(report));

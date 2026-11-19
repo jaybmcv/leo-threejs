@@ -1,12 +1,13 @@
 // The arrival hall, walked while the rest of Leo loads (Otherside asked on 2026-11-19 for the first area first and the
 // rest in the background). On a start in the arrival hall (arrival-start.js) the page downloads the arrival pack first
-// (scripts/build-arrival-pack.mjs: the hall and the garden above it, cut out of this very prepared walk, about 8 MB
-// against the ship's 120), and once the visitor is aboard this draws it through the walk's renderer, with Cosmo and a
-// camera, controller and small collision of its own, until the full walk has built behind it. The full walk then takes
-// over where the visitor stands (finish(), called by main.js just before its first frame).
+// (scripts/build-arrival-pack.mjs: the hall and the garden above it with its two paintings, cut out of this very prepared
+// walk, 5 MB against the ship's 121), and once the visitor is aboard this draws it through the walk's renderer, with
+// Cosmo, the welcome guide standing where the walk puts it, and a camera, controller and small collision of its own,
+// until the full walk has built behind it. The full walk then takes over where the visitor stands (finish(), called by
+// main.js just before its first frame).
 // It shares nothing else with the full walk: not its scene, colliders, controller, input, Leo live or loading notes,
-// and the full walk still installs its own prepared colliders once and whole. The hall's ways out are closed by haze
-// walls (solid, so nobody walks off the cut). Anything that goes wrong here only stops it: the loading card comes back
+// and the full walk still installs its own prepared colliders once and whole. The hall's ways out are closed (solid
+// walls, and haze where the drawn cut ends). Anything that goes wrong here only stops it: the loading card comes back
 // and the start carries on as before. While the ship decodes and builds behind it, the page's main thread is busy for
 // seconds at a time, so this walk stutters then; while the ship downloads it runs freely.
 import * as T from 'three';
@@ -16,17 +17,21 @@ import {Controller} from '../walk/controller.js';
 import {FollowCamera} from '../walk/camera.js';
 import {createWalker,WALKER} from '../walk/avatar.js';
 import {createWardrobe} from '../walk/wardrobe.js';
-import {toWorld,anchoredYaw} from '../plan/rooms.js';
+import {toWorld,anchoredYaw,yawToWorld} from '../plan/rooms.js';
 import motion from '../walk/assets/ecctrl-locomotion.json' with {type:'json'};
 import {arrivalPack,arrivalDownload} from './arrival-start.js';
 import {preparedResourceReady} from './prepared-resource.public.js';
 
+// The walk's own copies of the paintings' pictures (paintings.js), hashed into the build.
+const ART=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};
 const TYPES={Float32Array,Int8Array,Uint8Array,Int16Array,Uint16Array,Uint32Array};
 const STEP=1/120,LOOK=.0032,HAZE=0xd9dcd6;
 // Frames drawn at most this often (ms): it shares the page's one thread with the ship loading behind it, so it never
 // draws faster than a 60 Hz screen, and only 30 a second once the ship is in and the walk builds (the build's turns
 // between its steps are what it draws in).
 const FRAME_MS=1000/60-1,BUILD_FRAME_MS=1000/30-1;
+// The welcome guide stands: what walker.update needs of a walker at rest.
+const STILL={unseen:false,speed:0,grounded:true,stance:'stand',jumpCount:0,jumpS:-1,turnRate:0,accel:0,rise:0,emote:null,rest:null,catnip:false,swimming:false,board:null,hook:null};
 const dampAngle=(a,b,lambda,dt)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*(1-Math.exp(-lambda*dt));
 // A key by its code, or by its name where a browser sends no code (Otherside's Chromium sends an empty code).
 const NAMED={w:'KeyW',a:'KeyA',s:'KeyS',d:'KeyD',' ':'Space',spacebar:'Space',shift:'ShiftLeft',arrowup:'ArrowUp',arrowdown:'ArrowDown',arrowleft:'ArrowLeft',arrowright:'ArrowRight'};
@@ -52,7 +57,7 @@ function walls(box,sides){const out=[],y0=box.min.y,y1=box.max.y;
 
 /** Starts fetching the pack at once; draws only after `aboard` resolves. Returns {active, finish(), stop()}. */
 export function startArrivalPreview({renderer,sky,skyCamera,fov,near,far,environment,aboard,fur,outfit}){
- let state='loading',raf=0,walker=null,building=false,drawn=0;const owned=[],off=[];
+ let state='loading',raf=0,walker=null,guide=null,building=false,drawn=0;const owned=[],off=[];
  preparedResourceReady.then(()=>{building=true;},()=>{});
  const chip=document.getElementById('arrival-chip'),loadingText=document.getElementById('loading-text');
  const scene=new T.Scene();scene.fog=new T.Fog(HAZE,70,148);scene.environmentIntensity=.65;
@@ -66,7 +71,7 @@ export function startArrivalPreview({renderer,sky,skyCamera,fov,near,far,environ
 
  const stop=()=>{if(state==='done')return;state='done';cancelAnimationFrame(raf);for(const f of off.splice(0))f();
   delete document.body.dataset.arrival;if(chip)chip.hidden=true;
-  walker?.dispose();walker=null;
+  walker?.dispose();walker=null;guide?.dispose();guide=null;
   for(const o of owned)o.dispose?.();owned.length=0;scene.clear();controller=follow=null;};
  // A start that fails while this is drawing gets its failure card back (walk.html shows it over everything).
  const failed=new MutationObserver(()=>{if(document.body.dataset.failed)stop();});failed.observe(document.body,{attributes:true,attributeFilter:['data-failed']});off.push(()=>failed.disconnect());
@@ -95,6 +100,7 @@ export function startArrivalPreview({renderer,sky,skyCamera,fov,near,far,environ
   lastHeading=heading;lastSpeed=controller.speed;
   walker.holder.position.copy(controller.position);walker.holder.rotation.set(0,heading,0);
   walker.update(dt,{unseen:false,speed:controller.speed,grounded:controller.grounded,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,turnRate,accel,rise:controller.velocity.y,emote:null,rest:null,catnip:false,swimming:false,board:null,hook:null});
+  guide.update(dt,STILL);
   follow.update(dt,controller.position,WALKER.height,controller.grounded?controller.stance:'stand');
   draw();
  };
@@ -129,10 +135,15 @@ export function startArrivalPreview({renderer,sky,skyCamera,fov,near,far,environ
    if(r.uv)g.setAttribute('uv',new T.BufferAttribute(array(r.uv),r.uv.stride/4));
    if(r.color)g.setAttribute('color',new T.InterleavedBufferAttribute(new T.InterleavedBuffer(array(r.color),4),r.color.itemSize,0,true));
    g.setIndex(new T.BufferAttribute(array(r.index),1));g.computeBoundingSphere();owned.push(g);
-   const mesh=new T.Mesh(g,materials[r.material]);mesh.renderOrder=r.renderOrder;hall.add(mesh);}
-  // The ways out, closed: haze walls on the box's sides away from the hull (its windows look out to space), solid on all four.
+   const mesh=new T.Mesh(g,materials[r.material]);mesh.renderOrder=r.renderOrder;hall.add(mesh);
+   // A painting's canvas: its picture, from the same file the walk hangs (and the browser keeps for it).
+   if(r.art&&ART[r.art]){const canvas=materials[r.material];new T.TextureLoader().load(ART[r.art],t=>{if(state==='done'){t.dispose();return;}owned.push(t);
+    t.colorSpace=T.SRGBColorSpace;t.anisotropy=renderer.capabilities.getMaxAnisotropy();canvas.map=t;canvas.color.set(0xffffff);canvas.needsUpdate=true;},undefined,()=>{});}}
+  // The ways out, closed: solid walls on the box's four sides, and haze walls where the drawn cut ends, on the three sides
+  // away from the hull (its windows look out to space).
   const {min,max}=box,shut=[[min.x,min.z,min.x,max.z],[max.x,max.z,max.x,min.z],[max.x,max.z,min.x,max.z]],hull=[[min.x,min.z,max.x,min.z]];
-  const hazeWalls=soup(walls(box,shut));hazeWalls.material=new T.MeshBasicMaterial({color:HAZE,side:T.DoubleSide});owned.push(hazeWalls.geometry,hazeWalls.material);hall.add(hazeWalls);
+  const view=header.view?new T.Box3(new T.Vector3(...header.view[0]),new T.Vector3(...header.view[1])):box,{min:a,max:b}=view;
+  const hazeWalls=soup(walls(view,[[a.x,a.z,a.x,b.z],[b.x,b.z,b.x,a.z],[b.x,b.z,a.x,b.z]]));hazeWalls.material=new T.MeshBasicMaterial({color:HAZE,side:T.DoubleSide});owned.push(hazeWalls.geometry,hazeWalls.material);hall.add(hazeWalls);
   scene.add(hall);
   // Collision as the walk keeps it: what stops the walker, and the ground it stands on (ground.js), apart.
   const solid=new Colliders(),ground=new Colliders(),stops=new T.Group();
@@ -143,6 +154,10 @@ export function startArrivalPreview({renderer,sky,skyCamera,fov,near,far,environ
   walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion);
   if(state==='done'){walker?.dispose();walker=null;return;}
   walker.setFur(fur);createWardrobe(walker.figure).set(outfit);scene.add(walker.holder);
+  // The welcome guide (arrival-tour.js) where the walk stands it: a Cosmo as others see one, in the usual hoodie.
+  guide=await createWalker(globalThis.LeoCosmo.createDLCat,motion);if(state==='done'){guide.dispose();guide=null;return;}
+  guide.setFur(0);createWardrobe(guide.figure).set('default');guide.holder.position.set(...toWorld('d02-arrival-1',[-16,0,-3]));
+  guide.holder.rotation.y=yawToWorld('d02-arrival-1',Math.PI/2);scene.add(guide.holder);
   await aboard;if(state==='done')return;
   begin();
  })().catch(e=>{console.warn('Arrival hall preview skipped.',e);stop();});

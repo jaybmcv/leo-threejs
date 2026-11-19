@@ -2,17 +2,22 @@
 // walk the desktop loads, by scripts/build-arrival-pack.mjs (in its own process, for the heap), into
 // prepared-walk-arrival/<hash>/. The asset manifest's 'walk-arrival' entry names it, with the prepared walk it was cut
 // from (src/v2/arrival-start.js uses it only for that walk). A build takes a few seconds once the walk is decoded; it is
-// kept in output/arrival-pack-cache/, keyed on the prepared walk, the builder, the layout it reads the hall from, the
-// lockfile and the Node version.
+// kept in output/arrival-pack-cache/, keyed on the prepared walk, the builder and the modules it imports, the layout it
+// reads the hall from, the lockfile and the Node version.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 import crypto from 'node:crypto';
+import {build} from 'esbuild';
 export async function publishArrivalPack(out,{source='output/leo-interior-v02/prepared-walk',prepared}){
  if(!prepared?.sha256)throw Error('Arrival pack: the prepared walk has no sha256');
  const parent=path.resolve(out,'prepared-walk-arrival'),staging=path.join(parent,'staging');if(!parent.startsWith(path.resolve(process.cwd())+path.sep))throw Error('Arrival pack output is outside the workspace');
  await fs.mkdir(parent,{recursive:true});await fs.rm(staging,{recursive:true,force:true});
- const key=crypto.createHash('sha256').update(prepared.sha256);for(const f of ['scripts/build-arrival-pack.mjs','output/leo-interior-v02/layout.json','package-lock.json'])key.update(await fs.readFile(f));
+ // The builder and every local module it imports (the paintings' placement among them: esbuild's metafile), the layout it
+ // reads the hall from, the lockfile and Node.
+ const graph=await build({entryPoints:['scripts/build-arrival-pack.mjs'],bundle:true,write:false,metafile:true,platform:'node',format:'esm',packages:'external',logLevel:'silent'});
+ const inputs=Object.keys(graph.metafile.inputs).filter(f=>!f.startsWith('node_modules/')).sort();
+ const key=crypto.createHash('sha256').update(prepared.sha256);for(const f of [...inputs,'output/leo-interior-v02/layout.json','package-lock.json'])key.update(f).update(await fs.readFile(f));
  const cached=path.resolve('output/arrival-pack-cache',key.update(process.version).digest('hex').slice(0,20));
  if(await fs.access(path.join(cached,'integrity.json')).then(()=>true,()=>false))await fs.cp(cached,staging,{recursive:true});
  else{execFileSync(process.execPath,['--max-old-space-size=12000','scripts/build-arrival-pack.mjs',source,staging,'--source-id',prepared.sha256],{stdio:['ignore','ignore','inherit']});
