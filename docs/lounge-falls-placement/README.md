@@ -1,8 +1,8 @@
-# Hydro-Nip Lounge waterfall and pond: placement proposal
+# Hydro-Nip Lounge waterfall and pond: historical placement study
 
-**A proposal only. Nothing in the walk, the plan or the geometry was changed; the visitor walk is the same as before.** Written from tester feedback (a request for a measured placement of the waterfall and pond in the Deck 17 Neighborhood 1 sky garden, `commons-1`).
+The tables and SVGs below record the earlier, unbuilt translation study. The implemented target now narrows the pond and follows the Deck 19 gallery edge. Its dimensions are in `src/plan/room-fitout-overrides-v2.json` (`commons-1.loungeFalls`); `node scripts/lounge-falls-placement.mjs --check` verifies the current target. `scripts/check-waterfall-fit-v2.mjs` also verifies the generated sheet, collision, bench and sound before checking hull clearance.
 
-Everything below is produced by `node scripts/lounge-falls-placement.mjs` (about 45 s, no built ship needed) and checked by `node scripts/lounge-falls-placement.mjs --check`, which fails if `placement.json` no longer matches the plan or `src/walk/lounge-falls.js` (the script asserts the constants it copies from that file). Coordinates are ship metres: X forward, Y up, Z starboard. The lounge is `x - 246.5, z = -16 - z` from its template frame; the waterfall is then squeezed in depth about its front step (`src/v2/lounge-falls-fit.js`), live scale 0.8567 (`ship.v2FeaturePlacements.loungeFalls`, read from the live walk build 3243183 on 2026-11-12).
+At the time of the study, everything below was produced by `node scripts/lounge-falls-placement.mjs` (about 45 s, no built ship needed) and compared with the source constants by the former placement script. Coordinates are ship metres: X forward, Y up, Z starboard. The lounge is `x - 246.5, z = -16 - z` from its template frame; the waterfall is then squeezed in depth about its front step (`src/v2/lounge-falls-fit.js`), live scale 0.8567 (`ship.v2FeaturePlacements.loungeFalls`, read from the live walk build 3243183 on 2026-11-12).
 
 | File | What it is |
 | --- | --- |
