@@ -111,5 +111,7 @@ export function createHydroPortal(portal=HYDRO_PORTAL){
  group.name=portal===HYDRO_PORTAL?'Hydro_Portal':portal===HYDRO_CARGO_PORTAL?'Hydro_Portal_Cargo':'Hydro_Portal_Park';group.position.set(portal.x,portal.y,portal.z);group.rotation.y=Math.PI/2;
  group.userData={room:portal===HYDRO_PORTAL?'commons-1':portal===HYDRO_CARGO_PORTAL?'circulation-2':'circulation-6',noCollide:true};
  const sound=createHydroPortalSound(portal);
- return {group,sound,arrival:portal===HYDRO_PARK_PORTAL?HYDRO_PARK_ARRIVAL:HYDRO_PORTAL_ARRIVAL,update(dt,p,on,camera){uniforms.uTime.value+=dt;sound.update(p,on,camera);}};
+ return {group,sound,arrival:portal===HYDRO_PARK_PORTAL?HYDRO_PARK_ARRIVAL:HYDRO_PORTAL_ARRIVAL,
+  prompt(p){return portal===HYDRO_CARGO_PORTAL&&hydroPortalContains(portal,p,2)?{kind:'hydro-portal',label:'Walk into Hydro-Portal to Hydro-Nip Lounge',passive:true}:null;},
+  update(dt,p,on,camera){uniforms.uTime.value+=dt;sound.update(p,on,camera);}};
 }

@@ -177,12 +177,18 @@ const cargoEffect=createHydroPortal(cargo);assert.equal(cargoEffect.group.name,'
 assert(cargoEffect.group.userData.noCollide);assert.equal(cargoEffect.group.material.fragmentShader,parkEffect.group.material.fragmentShader);close(cargoEffect.group.rotation.y,Math.PI/2);
 close(cargoEffect.group.position.x,cargo.x);close(cargoEffect.group.position.y,cargo.y);close(cargoEffect.group.position.z,cargo.z);
 assert.equal(cargoEffect.arrival,arrival);assert.equal(HYDRO_PORTAL_LINKS.length,3);
+const promptPoint=new T.Vector3(cargo.x+2.1,cargo.floor,-.30),cargoPrompt=cargoEffect.prompt(promptPoint);
+assert.equal(cargoPrompt?.label,'Walk into Hydro-Portal to Hydro-Nip Lounge');assert(cargoPrompt.passive,'Walk-in instructions do not advertise a use key');
+assert(!hydroPortalContains(cargo,promptPoint),'Prompt appears before the travel region');
+for(const at of [[-148.59,cargo.floor,-.30],[cargo.x-.2,cargo.floor,0],[cargo.x+2,cargo.floor+4,0],arrival.at])assert.equal(cargoEffect.prompt(new T.Vector3(...at)),null,'No cargo prompt away from its approach');
+assert.equal(effect.prompt(new T.Vector3(portal.x+2,portal.floor,portal.z)),null);assert.equal(parkEffect.prompt(new T.Vector3(park.x+2,park.floor,park.z)),null);
 assert.equal(HYDRO_PORTAL_LINKS.find(l=>l.portal===cargo).arrival,arrival);
 assert(!HYDRO_PORTAL_LINKS.some(l=>l.arrival.at[1]===cargo.floor),'No exit returns to Deck 2');
 col.addStatic(cargoRoot);col.commit();ground.addStatic(cargoRoot,o=>solid(o)&&groundMesh(o));ground.commit();
-const cargoTravel=createHydroPortalTravel();let cargoTrips=0;walker.place(new T.Vector3(-148.59,cargo.floor,-.30));
+const cargoTravel=createHydroPortalTravel();let cargoTrips=0,cargoPromptSeen=false;walker.place(new T.Vector3(-148.59,cargo.floor,-.30));
 const cargoGo=dest=>{assert.deepEqual(dest.at,arrival.at);assert.equal(dest.yaw,arrival.yaw*Math.PI/180);assert(dest.resolved);walker.place(new T.Vector3(...dest.at));cargoTrips++;return true;};
-for(let i=0;i<360&&!cargoTrips;i++){walker.step(1/120,wish.set(-2.25,0,0));cargoTravel.step(walker.position,true,cargoGo);}
+for(let i=0;i<360&&!cargoTrips;i++){walker.step(1/120,wish.set(-2.25,0,0));if(!hydroPortalContains(cargo,walker.position)&&cargoEffect.prompt(walker.position))cargoPromptSeen=true;cargoTravel.step(walker.position,true,cargoGo);}
+assert(cargoPromptSeen,'Walking from the reported spot shows instructions before travel');
 assert.equal(cargoTrips,1,'Walk from the reported Deck 2 spot enters the lounge');close(walker.position.y,arrival.at[1]);
 for(let i=0;i<120;i++){walker.step(1/120,wish.set(0,0,0));cargoTravel.step(walker.position,true,cargoGo);}
 assert.equal(cargoTrips,1,'Cargo arrival does not bounce back');
@@ -197,7 +203,9 @@ for(const suffix of ['','.public','.prepared','.authoring']){
  assert(main.includes('hydroParkPortal=createHydroPortal(HYDRO_PARK_PORTAL)'));
  assert(main.includes('hydroCargoPortal=createHydroPortal(HYDRO_CARGO_PORTAL);toBand(hydroCargoPortal.group,HYDRO_CARGO_PORTAL.floor)'),'Every walk draws the Deck 2 entry in its own band');
  assert(main.includes('hydroCargoPortal?.update(dt,p,ambience.on,camera)'),'Every walk animates and spatializes the Deck 2 entry');
+ assert(main.includes('const hydro=inBall?null:hydroCargoPortal?.prompt(p);if(hydro)return hydro;'),'Every walk supplies the Deck 2 approach prompt to the HUD');
+ assert(main.includes("const waiting=t?.kind==='waiting'||!!t?.passive;")&&main.includes('prompt.hidden=!show||touch&&!t?.passive;')&&main.includes("$('use').hidden=!show||!!t?.passive;"),'Walk-in instructions are visible on desktop and touch without a use button');
  assert(main.includes('hydroTravel.step(p,canHook&&input.enabled&&!playing()&&controller.grounded,goTo)'),'Uses the regular Go-to teleport before pose and room updates');
  assert(main.indexOf('hydroTravel.step(')<main.indexOf('live?.pose(myPose('));
 }
-console.log('PASS Hydro-Portal: Deck 2 entry-only travel, intact glass/panel fit and pass-by clearance, paired park travel, arrival guard, 3 m departures, lounge camera, shared animated oval and spatial warp');
+console.log('PASS Hydro-Portal: Deck 2 approach prompt and entry-only travel, intact glass/panel fit and pass-by clearance, paired park travel, arrival guard, 3 m departures, lounge camera, shared animated oval and spatial warp');

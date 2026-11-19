@@ -1113,6 +1113,7 @@ function target(){
  const b=(inBall?null:prank?.near(p))||booth.near(p)||photoSpots?.near(p)||comics.near(p)||chinampa?.near(p);if(b)return b;
  const v=inBall?null:vault?.near(p);if(v)return v;
  const tube=inBall?null:vaultLift?.nearest(p);if(tube)return tube.kind==='riding'?null:tube;
+ const hydro=inBall?null:hydroCargoPortal?.prompt(p);if(hydro)return hydro;
  const g=changeLog.near(p);if(g)return g;
  const welcome=inBall?null:arrivalTour?.near(p);if(welcome)return welcome;
  if(scope&&Math.abs(p.y-scope.y)<1.5&&Math.hypot(p.x-scope.x,p.z-scope.z)<2)return {kind:'play',label:'Play Alien Cat Invasion'};
@@ -1139,11 +1140,11 @@ function hud(p){
  if(chip.dataset.count!==String(near)){chip.dataset.count=String(near);chip.hidden=!near;chip.querySelector('b').textContent=String(near);
   chip.querySelector('span').textContent=near===1?' change here':' changes here';chip.setAttribute('aria-label',`${near} change${near===1?'':'s'} made around here: open the ship log`);}
  const t=run||graffiti?.active?null:resting?{kind:resting.spot.tube&&!tubeDock(resting.spot.tube)?'waiting':undefined,label:resting.spot.tube?(tubeDock(resting.spot.tube)?'Get out at the dock':'Paddle to a dock to get out'):resting.stand?'Leave the capsule':resting.spot.mct?'Get out':resting.lie?'Get up':'Stand up'}:target();
- const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=!show||touch;
- // Waiting for a called lift there's nothing to press: the prompt just says where the car is.
- const waiting=t?.kind==='waiting';prompt.classList.toggle('waiting',waiting);$('use').disabled=waiting;
+ const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=!show||touch&&!t?.passive;
+ // Lift status and walk-in portals show instructions without a use key.
+ const waiting=t?.kind==='waiting'||!!t?.passive;prompt.classList.toggle('waiting',waiting);$('use').disabled=waiting;
  if(show){prompt.querySelector('.label').textContent=t.label;$('use').textContent=t.label;}
- $('use').hidden=!show;
+ $('use').hidden=!show||!!t?.passive;
 }
 
 // Sitting and lying: the walker leaves the controller, eases onto the spot and back off again.
