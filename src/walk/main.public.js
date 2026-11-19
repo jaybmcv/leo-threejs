@@ -155,6 +155,8 @@ import {Marks} from './marks.public.js';
 import {createChat} from './chat.js';
 import {createHostess} from './hostess.public.js';
 import {createPortableSelfie} from './portable-selfie.js';
+import {createPrankButton,PRANK} from './prank-button.js';
+let prank=null;
 import {createPhotoSpots} from './photo-spots.js';
 import {wearHat,fit,FIT} from './hat.js';
 import {createYarn,YARN_SPOTS} from './yarn.js';
@@ -433,6 +435,7 @@ async function buildShip(){
  for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pinballMachine?[pinballMachine.group]:[]),...(pawsOff?pawsOff.groups:[]),...(mudwater?[mudwater.group]:[]),...(arcadeRow?[arcadeRow.group]:[])])toBand(o);
  // The scenic photo spots' floor markers (photo-spots.js), each with its deck's band.
  photoSpots=createPhotoSpots();for(const g of photoSpots.groups)toBand(g);
+ prank=createPrankButton({scene,colliders,renderer,draw,walker:()=>walker,controller,input,follow,name:()=>live?.you?.name||me.name||savedName(),onBegin(){emote=null;heading=PRANK.portraitYaw;controller.stance='stand';grapple.release();}});toBand(prank.group);
  if(concession)toBand(concession);
  toBand(vault.group);
  if(provisions)toBand(provisions.group);
@@ -612,7 +615,7 @@ function cull(p,now=performance.now()){
  }
 }
 
-const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),lockHint:$('camera-lock-hint'),onAction:(a,arg)=>{if(a==='respawn'&&wardPush?.engaged){wardPush.reset(controller);return;}actions[a]?.(arg);}});
+const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),lockHint:$('camera-lock-hint'),onAction:(a,arg)=>{if((prank?.locked||prank?.isOpen)&&a!=='escape')return;if(a==='respawn'&&wardPush?.engaged){wardPush.reset(controller);return;}actions[a]?.(arg);}});
 const follow=new FollowCamera(camera,colliders);
 const controller=new Controller(colliders);
 let walker=null;
@@ -621,7 +624,7 @@ let walker=null;
 const skate=createSkate({button:$('skate'),hint:$('skate-hint'),flipButton:$('kickflip'),controller,touch:()=>matchMedia('(pointer:coarse)').matches,
  blocked:()=>document.body.dataset.ready!=='1'?'Still loading':skateBusy()?'Not now: step out of what you’re doing first':skateFooting(controller)});
 // Something else has the walker: a seat or bed, a treadmill, the ball, a swim, the hook, a glide, a game or a camera.
-function skateBusy(){return !!(resting||run||inBall||treasure?.active||controller.hook||controller.gliding||playing()||pawsOff?.active||graffiti?.active||emergencyDrill?.isOpen||portable?.active||wardPush?.engaged);}
+function skateBusy(){return !!(resting||run||inBall||treasure?.active||controller.hook||controller.gliding||playing()||pawsOff?.active||graffiti?.active||emergencyDrill?.isOpen||prank?.locked||prank?.isOpen||portable?.active||wardPush?.engaged);}
 // The film look (film-look.js, chosen in the Graphics detail sheet): Stylised 3D drawn by the walk's own materials,
 // installed before the walk first draws.
 installFilmLook({renderer,scene,keep:()=>walker?.holder});
@@ -645,6 +648,7 @@ const actions={
   else if(t.kind==='sit'||t.kind==='lie'||t.kind==='stand')settle(t.spot);
   else if(t.kind==='selfie'){closePanels();$('selfie-setup').hidden=false;previewBackdrop();input.enabled=false;$('selfie-backdrop').focus();}
   else if(t.kind==='photo-spot')openPhotoSpot(t.spot);
+  else if(t.kind==='prank-button'){if(!controller.grounded||controller.gliding||inBall)return;closePanels();prank.start();}
   else if(t.kind==='comic'){closePanels();reader.open(t.comic);input.enabled=false;}
   else if(t.kind==='read'){closePanels();showInfo($('info-sheet'),t.info);input.enabled=false;}
   else if(t.kind==='play')arcade.open();
@@ -968,7 +972,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={get carry(){return carry;},unstuck,inOpenAtrium,get atriumMood(){return atriumMood;},skate,glide,get wardPush(){return wardPush;},get portable(){return portable;},get ownerHiding(){return ownerHiding;},registry,get landingDoors(){return shutLandingDoors();},get fogCull(){return fogCull;},get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get shuttleDoors(){return shuttleDoors;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},get mctRepair(){return mctRepair;},repairStations,emergencyStation,asteroid,outsideGames,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get hydroPortal(){return hydroPortal;},get hydroParkPortal(){return hydroParkPortal;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={get carry(){return carry;},get prank(){return prank;},unstuck,inOpenAtrium,get atriumMood(){return atriumMood;},skate,glide,get wardPush(){return wardPush;},get portable(){return portable;},get ownerHiding(){return ownerHiding;},registry,get landingDoors(){return shutLandingDoors();},get fogCull(){return fogCull;},get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get shuttleDoors(){return shuttleDoors;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},get mctRepair(){return mctRepair;},repairStations,emergencyStation,asteroid,outsideGames,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get hydroPortal(){return hydroPortal;},get hydroParkPortal(){return hydroParkPortal;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -1028,7 +1032,7 @@ renderer.setAnimationLoop(()=>{
  frameReadout.begin();
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
  const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen&&!controlsSettings?.isOpen&&!furSettings?.isOpen});last=now;
- const k=input.read();if(carry?.isOpen||graphicsSettings?.isOpen||controlsSettings?.isOpen||furSettings?.isOpen||emergencyDrill?.isOpen||mctRepair?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
+ const k=input.read();if(carry?.isOpen||graphicsSettings?.isOpen||controlsSettings?.isOpen||furSettings?.isOpen||emergencyDrill?.isOpen||mctRepair?.isOpen||prank?.locked||prank?.isOpen){k.x=k.y=k.zoom=0;k.jump=k.held=k.run=false;k.look.x=k.look.y=0;}follow.look(k.look.x,k.look.y);if(k.zoom)follow.distance=T.MathUtils.clamp(follow.distance+k.zoom*.4,1.4,6);
  const fwd=follow.forward(),right=new T.Vector3(-fwd.z,0,fwd.x);
  wish.copy(fwd).multiplyScalar(k.y).addScaledVector(right,k.x);
  if(wish.lengthSq()>1)wish.normalize();wish.multiplyScalar(controller.gliding?(k.run?GLIDE.dive:GLIDE.speed):skate.on?WALKER.run:inBall?(k.run?BALL.run:BALL.speed):controller.stance==='stand'&&k.run?WALKER.run:SPEED[controller.stance]);
@@ -1057,10 +1061,10 @@ renderer.setAnimationLoop(()=>{
  // A tap shorter than a frame still counts as held for the first step.
  // In the ball the jump is one low hop (BALL.body.jump).
  // The grapple fires on a press and holds while the key is held; anything that takes the walker over lets go.
- const canHook=!resting&&!riding&&!run&&!inBall&&!wardPush?.engaged&&!treasure?.active&&!skate.on&&!mctRepair?.isOpen&&!emergencyDrill?.isOpen&&!graffiti?.active&&ready();
+ const canHook=!prank?.locked&&!prank?.isOpen&&!resting&&!riding&&!run&&!inBall&&!wardPush?.engaged&&!treasure?.active&&!skate.on&&!mctRepair?.isOpen&&!emergencyDrill?.isOpen&&!graffiti?.active&&ready();
  if(!canHook)grapple.release();else{if(k.hook)grapple.fire();if(!k.hookHeld)grapple.release();}
  showAim(canHook&&input.enabled&&!playing()&&!portable.active);
- if(!resting&&!riding&&!run&&!treasure?.active&&!mctRepair?.isOpen&&!emergencyDrill?.isOpen){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number),k.run&&!!controller.hook);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
+ if(!prank?.locked&&!resting&&!riding&&!run&&!treasure?.active&&!mctRepair?.isOpen&&!emergencyDrill?.isOpen){acc+=dt;let pressed=k.jump;while(acc>=STEP){controller.step(STEP,wish,pressed||k.held,ballBounce(inBall,deckOf(controller.position.y)?.number),k.run&&!!controller.hook);pressed=false;acc-=STEP;}}else{acc=0;if(riding)controller.velocity.set(0,0,0);}
  treasure?.step(dt,k);
  for(const y of yarns)y.update(dt,resting||riding?null:controller);
  wardPush?.after(controller);
@@ -1112,7 +1116,7 @@ renderer.setAnimationLoop(()=>{
  // In first person Cosmo is hidden (below), so his rig solves less often while he was hidden last frame and no selfie is
  // counting down (the booth draws him). Switching back to third person it solves every frame again, before he shows.
  walker.update(dt,{unseen:follow.mode==='first'&&!walker.holder.visible&&!booth?.counting&&!photoSpots?.counting&&!portable.active,speed:run?run.speed:controller.speed,grounded:controller.grounded||riding,stance:controller.stance,jumpCount:controller.jumpCount,jumpS:controller.jumpS,
-  turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!!lounge?.inside(walker.holder.position),swimming:!!treasure?.active,board,hook:controller.hook&&!resting&&!run?controller.hook:null});
+  turnRate,accel,rise:controller.velocity.y,emote,rest:pose,catnip:!prank?.shocked&&!!lounge?.inside(walker.holder.position),swimming:!!treasure?.active,board,hook:controller.hook&&!resting&&!run?controller.hook:null});
  grapple.update(dt);
  live?.pose(myPose(riding),now);
  // In a transporter the camera rides higher, over the heads of the others aboard.
@@ -1120,7 +1124,8 @@ renderer.setAnimationLoop(()=>{
  // Spraying the graffiti wall, the view squares up to it (graffiti.js), and its paint catches up.
  graffiti?.update(camera,now);
  // Hide Cosmo when the camera is pressed right up against him (a lift car, a narrow aisle), or is off at the wall.
- walker.holder.visible=portable.active||(follow.mode!=='first'&&follow.current>.75&&!graffiti?.active);
+ prank?.update();
+ walker.holder.visible=prank?.locked||portable.active||(follow.mode!=='first'&&follow.current>.75&&!graffiti?.active);
  if(portable.active)portable.point(walker.holder.position,walker.holder.rotation.y,WALKER.height*.6,colliders);
  capsuleView(!!resting?.stand&&resting.t===1&&follow.mode==='first');
  cull(p);
@@ -1162,7 +1167,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!dartsGame.isOpen&&!mctRepair?.isOpen&&!emergencyDrill?.isOpen){if(deskDetail)closeHaze(scene.fog,getAtriumQuality());keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});if(hazeHeld)closeHaze(scene.fog,'performance');fogCull?.guard();draw(portable.active?portableView():camera);fogCull?.update(performance.now());if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';startOwnerHiding();hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!dartsGame.isOpen&&!mctRepair?.isOpen&&!emergencyDrill?.isOpen){if(deskDetail)closeHaze(scene.fog,getAtriumQuality());keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});if(hazeHeld)closeHaze(scene.fog,'performance');fogCull?.guard();draw(prank?.locked?prank.camera:portable.active?portableView():camera);fogCull?.update(performance.now());if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';startOwnerHiding();hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
  const shot=booth.update(now),spotShot=photoSpots?.update(now)||shot,camShot=portable.update(now),left=shot.left||spotShot.left||camShot.left;$('countdown').hidden=!left;if(left)$('countdown').textContent=String(left);
  if(shot.due)takePhoto();
  if(spotShot!==shot&&spotShot.due)takePhoto(photoSpots);
@@ -1261,7 +1266,7 @@ function target(){
  const w=graffiti?.near(p)||crownTv?.near(p);if(w)return w;
  const ladder=hangarDoor?.near(p);if(ladder)return ladder;
  const privacy=cabinGlass?.near(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));if(privacy)return privacy;
- const b=booth.near(p)||photoSpots?.near(p)||comics.near(p)||chinampa?.near(p);if(b)return b;
+ const b=(inBall?null:prank?.near(p))||booth.near(p)||photoSpots?.near(p)||comics.near(p)||chinampa?.near(p);if(b)return b;
  const v=inBall?null:vault?.near(p);if(v)return v;
  const tube=inBall?null:vaultLift?.nearest(p);if(tube)return tube.kind==='riding'?null:tube;
  const g=changeLog.near(p);if(g)return g;
@@ -1410,14 +1415,14 @@ function toggleEmotes(){
  EMOTES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';const label=name.replace(/_/g,' ');b.textContent=`${bindingLabel(walkBindings.get('emote:'+i))} · ${label[0].toUpperCase()}${label.slice(1)}`;b.onclick=()=>{closePanels();actions.emote(i);};list.appendChild(b);});
  panel.hidden=false;input.enabled=false;list.querySelector('button')?.focus();
 }
-function goTo(place){place=remapSpot(place);const q=place.id?v2GotoStand(colliders,place.at):findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();
+function goTo(place){if(prank?.locked||prank?.isOpen)prank.cancel();place=remapSpot(place);const q=place.id?v2GotoStand(colliders,place.at):findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();
  treasure?.leave(false);wardPush?.release();
  // Going elsewhere from a transporter's driver's seat leaves it parked where it is.
  if(resting?.spot.mct?.seat==='driver')mct.park(resting.spot.mct.cart);resting=null;
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall(q);ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){carry?.close();furSettings?.close();emergencyDrill?.close();mctRepair?.close();controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','spot-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();closeCamera();input.enabled=true;input.down.clear();}
+function closePanels(){if(prank?.locked||prank?.isOpen)prank.cancel();carry?.close();furSettings?.close();emergencyDrill?.close();mctRepair?.close();controlsSettings?.close();graphicsSettings?.close();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','spot-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();closeCamera();input.enabled=true;input.down.clear();}
 // The list is a current server snapshot, including visitors who have not sent a pose yet.
 // The list of who is aboard, while its sheet is open.
 function showAboardList(){

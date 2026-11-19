@@ -645,5 +645,6 @@
     "owners": ["commons-10"],
     "via": "inherited"
   },
-  "src/walk/zen-garden.js": {"owners":["commons-10"],"via":"inherited"}
+  "src/walk/zen-garden.js": {"owners":["commons-10"],"via":"inherited"},
+  "src/walk/prank-button.js": {"owners":["circulation-6"],"via":null}
 }

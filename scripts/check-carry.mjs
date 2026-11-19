@@ -48,7 +48,7 @@ for(const spot of spots){
 }
 // Run the actual prompt selectors with the selected layout's seats, without a browser or ship meshes.
 const nearBody=fs.readFileSync('src/walk/carry.js','utf8').match(/near\(p\)\{([\s\S]*?)\n \},use/)[1];
-const quiet={near:()=>null,nearest:()=>null},services=Object.fromEntries('wardPush treasure lifts graffiti crownTv hangarDoor cabinGlass booth photoSpots comics chinampa vault vaultLift changeLog arrivalTour repairStations emergencyStation asteroid poolTable maze pinballMachine dartsLanes arcadeRow pawsOff mudwater halloween leverPanel keelClub mct'.split(' ').map(k=>[k,quiet]));
+const quiet={near:()=>null,nearest:()=>null},services=Object.fromEntries('prank wardPush treasure lifts graffiti crownTv hangarDoor cabinGlass booth photoSpots comics chinampa vault vaultLift changeLog arrivalTour repairStations emergencyStation asteroid poolTable maze pinballMachine dartsLanes arcadeRow pawsOff mudwater halloween leverPanel keelClub mct'.split(' ').map(k=>[k,quiet]));
 for(const mode of ['', '.public','.prepared','.authoring']){
  const source=fs.readFileSync('src/walk/main'+mode+'.js','utf8'),body=source.slice(source.indexOf('function target(){'),source.indexOf('const touch=',source.indexOf('function target(){')));
  const state=createCarryState(desks,{storage:{getItem:()=>null,setItem(){}}}),controller={position:new T.Vector3()},carry={isOpen:false,near:runInNewContext('(function(p){'+nearBody+'})',{opened:false,spots,state,contains,carryItem})};
