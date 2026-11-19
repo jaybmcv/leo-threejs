@@ -1,8 +1,8 @@
-// node scripts/check-arrival-walk.mjs [url] [--down 40] [--rtt 40] [--runs 3] [--out file] [--failure]
+// node scripts/check-arrival-walk.mjs [url] [--down 40] [--rtt 40] [--runs 3] [--out file] [--failure] [--live ws://127.0.0.1:<port>/live]
 // How soon a visitor walks, with the arrival hall walked first (src/v2/arrival-preview.js) and without it (?arrival=0),
 // on the same machine and network: real Chrome (ANGLE, the PC's own GPU), a cold cache, the network throttled through
 // DevTools to --down Mbit/s and --rtt ms (0 for none), boarding as a guest with a dead Leo live address (so the page
-// neither waits on the name card nor joins the real ship). Each run loads the page both ways, one after the other.
+// neither waits on the name card nor joins the real ship), or with --live a local Leo live server (server/leo-live.mjs). Each run loads the page both ways, one after the other.
 // A report only: it fails nothing, and every time in it depends on this PC and what else it was doing.
 // Per load it records when the name card showed, when the arrival hall could be walked (body data-arrival) and when
 // the whole walk was (body data-ready), and the peak JS heap. In the arrival hall it proves the walk: holds W for 60
@@ -16,7 +16,7 @@ import {createRequire} from 'node:module';
 import {ANGLE,PLAYWRIGHT_FROM} from './chrome-setup.mjs';
 const {chromium}=createRequire(PLAYWRIGHT_FROM)('playwright');
 const args=process.argv.slice(2),flag=(n,d)=>{const i=args.indexOf(n);if(i<0)return d;const v=args[i+1];args.splice(i,2);return v;};
-const DOWN=Number(flag('--down',40)),RTT=Number(flag('--rtt',40)),RUNS=Number(flag('--runs',1)),failure=args.includes('--failure');if(failure)args.splice(args.indexOf('--failure'),1);
+const LIVE=flag('--live','ws://127.0.0.1:1/live'),DOWN=Number(flag('--down',40)),RTT=Number(flag('--rtt',40)),RUNS=Number(flag('--runs',1)),failure=args.includes('--failure');if(failure)args.splice(args.indexOf('--failure'),1);
 const out=flag('--out','output/arrival-walk/'+new Date().toISOString().replace(/[:.]/g,'-')+'.json');
 const url=args[0]||'https://leo.marscatsvoyage.com/walk.html',LIMIT=420000,S=ms=>ms==null?null:Math.round(ms/100)/10;
 const browser=await chromium.launch({channel:'chrome',args:[...ANGLE,'--enable-gpu','--ignore-gpu-blocklist','--disable-blink-features=AutomationControlled','--enable-precise-memory-info',
@@ -24,7 +24,7 @@ const browser=await chromium.launch({channel:'chrome',args:[...ANGLE,'--enable-g
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 async function load(early){
- const target=new URL(url);target.searchParams.set('live','ws://127.0.0.1:1/live');if(!early)target.searchParams.set('arrival','0');
+ const target=new URL(url);target.searchParams.set('live',LIVE);if(!early)target.searchParams.set('arrival','0');
  const context=await browser.newContext({viewport:{width:1600,height:900}}),r={early,errors:[]};
  // The page keeps its own record: CDP calls wait while a long build holds the page and would miss moments.
  await context.addInitScript(()=>{const w=window.__arrivalCheck={peak:0,frames:0,preview:null,main:null,box:[[1e9,1e9,1e9],[-1e9,-1e9,-1e9]]};
@@ -58,9 +58,9 @@ async function load(early){
  }
  await lift();
  if(r.walkableS!==undefined)await sleep(3000);
- const end=await page.evaluate(()=>{const w=window.__arrivalCheck,loading=document.getElementById('loading');return {peak:w.peak,heap:performance.memory?.usedJSHeapSize||0,preview:w.previewAtReady,main:w.main,box:w.box,frames:w.frames,
+ const end=await page.evaluate(()=>{const w=window.__arrivalCheck,loading=document.getElementById('loading');return {status:document.querySelector('.top')?.innerText.replace(/\s+/g,' ').slice(0,160)||null,peak:w.peak,heap:performance.memory?.usedJSHeapSize||0,preview:w.previewAtReady,main:w.main,box:w.box,frames:w.frames,
   failed:document.body.dataset.failed||null,cardShown:getComputedStyle(loading).display!=='none'&&getComputedStyle(loading).opacity!=='0',walking:document.body.dataset.arrival==='1'};}).catch(()=>null);
- if(end){r.peakHeapMB=Math.round(end.peak/1e6);r.settledHeapMB=Math.round(end.heap/1e6);r.previewFrames=end.frames;
+ if(end){r.statusLine=end.status;r.peakHeapMB=Math.round(end.peak/1e6);r.settledHeapMB=Math.round(end.heap/1e6);r.previewFrames=end.frames;
   if(early&&end.preview&&end.main){r.handOverM=+Math.hypot(end.main[0]-end.preview[0],end.main[2]-end.preview[2]).toFixed(2);r.handOverDropM=+(end.preview[1]-end.main[1]).toFixed(2);}
   if(early&&end.frames)r.previewSpan={min:end.box[0].map(v=>+v.toFixed(1)),max:end.box[1].map(v=>+v.toFixed(1))};
   if(failure)Object.assign(r,{failureCard:end.cardShown&&!!end.failed,previewStopped:!end.walking});}
