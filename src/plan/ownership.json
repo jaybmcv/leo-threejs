@@ -1284,7 +1284,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 6,
-      "signature": "64ea8b12f99ee5c939ca9894fb3ff75ff44fa9ee38b75e42c550f5ffc9de5643"
+      "signature": "8d6849cab9ae76e34e8a1f4b32d6a05d0965b714ba299c90dec35e093948c5a5"
     },
     {
       "source": "src/walk/baggage.js",

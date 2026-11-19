@@ -70,7 +70,7 @@ function crossLeggedPose(bone,root){
  for(const side of ['L','R']){
   const out=side==='L'?1:-1;
   aim(bone('thigh.'+side),bone('shin.'+side),new T.Vector3(out*.7,0,.7));
-  aim(bone('shin.'+side),bone('foot.'+side),new T.Vector3(-out,.3,side==='L'?.5:1.5));
+  aim(bone('shin.'+side),bone('foot.'+side),new T.Vector3(-out,side==='L'?.19:.3,side==='L'?.5:1.5));
   const toes=new T.Vector3(-out,0,side==='L'?-1:.3).normalize(),sole=new T.Vector3(0,-1,0),width=new T.Vector3().crossVectors(toes,sole);
   setWorldQuat(bone('foot.'+side),new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(width,toes,sole)));
   const knee=bone('shin.'+side).getWorldPosition(new T.Vector3()).add(new T.Vector3(0,.065,.015));

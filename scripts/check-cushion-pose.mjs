@@ -53,6 +53,15 @@ const clearEdges=(shoe,points,target)=>{const idx=shoe.geometry.index,ray=new T.
  const a=points[idx.getX(i+j)],d=points[idx.getX(i+(j+1)%3)].clone().sub(a);ray.set(a,d.clone().normalize());ray.far=d.length();assert.equal(ray.intersectObject(target,false).length,0,'Shoe surfaces clear the other shoe, body, thighs and hands');
 }};
 const shoes=w.figure.asset.meshes.filter(m=>/^shoes/.test(m.name)),shoePoints=shoes.map(vertices),surfaces=shoes.map((m,i)=>surface(shoePoints[i],m.geometry.index));
+// The toe bones end inside the large boots. Measure the actual toe caps, rather than a box corner or an ankle.
+const tips=shoePoints.map((points,i)=>{
+ const side=i===0?'L':'R',ankle=at('foot.'+side),forward=at('toe.'+side).sub(ankle).normalize();
+ const distance=p=>p.clone().sub(ankle).dot(forward),end=Math.max(...points.map(distance)),cap=points.filter(p=>distance(p)>end-.03);
+ return cap.reduce((p,v)=>p.add(v),new T.Vector3()).multiplyScalar(1/cap.length);
+});
+assert(tips[0].x<-.05&&tips[1].x>.05,'Both boot toe caps reach across the centre toward the opposite knee');
+const cross=(a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x),left=[at('shin.L'),at('foot.L'),tips[0]],right=[at('shin.R'),at('foot.R'),tips[1]];
+assert([0,1].some(i=>[0,1].some(j=>cross(left[i],left[i+1],right[j])*cross(left[i],left[i+1],right[j+1])<0&&cross(right[j],right[j+1],left[i])*cross(right[j],right[j+1],left[i+1])<0)),'The shin and boot paths cross in front view, instead of merely folding inward on their own side');
 clearEdges(shoes[0],shoePoints[0],surfaces[1]);clearEdges(shoes[1],shoePoints[1],surfaces[0]);
 const skin=w.figure.asset.meshes.find(m=>m.name==='body'),skinPoints=vertices(skin),a=skin.geometry.attributes,idx=skin.geometry.index;
 for(let i=0;i<skinPoints.length;i++){
