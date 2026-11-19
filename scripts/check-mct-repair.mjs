@@ -262,9 +262,17 @@ try{
  const grabbed=grabBefore.findIndex(p=>p.el);
  assert(Math.hypot(grabAfter[grabbed].x-grabBefore[grabbed].x,grabAfter[grabbed].y-grabBefore[grabbed].y)<.1,'The pressed piece stays under the pointer');
  assert(grabBefore.some((p,i)=>i!==grabbed&&Math.hypot(p.x-target.x,p.y-target.y)<90&&Math.hypot(grabAfter[i].x-target.x,grabAfter[i].y-target.y)>Math.hypot(p.x-target.x,p.y-target.y)+.2),'Pressing a piece pushes a neighbour away');
- await page.mouse.move(target.x+70,target.y,{steps:12});await page.mouse.up();
+ // Move inward so the safe inset cannot clamp the drop. Preserve the actual grab offset.
+ const dragTarget=await page.evaluate(pointer=>{
+  const pile=document.querySelector('[data-pile]'),box=pile.getBoundingClientRect(),r=pile.querySelector('[data-check-grab]').getBoundingClientRect();
+  const x=(r.left+r.right)/2,y=(r.top+r.bottom)/2,dx=x<(box.left+box.right)/2?70:-70,inset=r.width/Math.SQRT2+3;
+  if(x+dx<box.left+inset||x+dx>box.right-inset||y<box.top+inset||y>box.bottom-inset)throw Error('Drag destination must be inside the safe bench bounds');
+  return {x:pointer.x+dx,y:pointer.y,expected:{x:x+dx,y}};
+ },target);
+ await page.mouse.move(dragTarget.x,dragTarget.y,{steps:12});await page.mouse.up();
  const dropped=await page.locator('[data-check-grab]').boundingBox();
- assert(Math.abs(dropped.x+dropped.width/2-target.x-70)<1&&Math.abs(dropped.y+dropped.height/2-target.y)<1,'Dragging leaves a piece at its bench drop point');
+ const dropCentre={x:dropped.x+dropped.width/2,y:dropped.y+dropped.height/2};
+ assert(Math.abs(dropCentre.x-dragTarget.expected.x)<1&&Math.abs(dropCentre.y-dragTarget.expected.y)<1,`Dragging leaves a piece at its bench drop point: expected ${JSON.stringify(dragTarget.expected)}, got ${JSON.stringify(dropCentre)}`);
  assert((await inspectPile()).every(p=>p.inside));
  await page.setViewportSize({width:390,height:600});await page.waitForTimeout(100);
  assert((await inspectPile()).every(p=>p.inside&&p.size>=52),'Narrow viewport retains readable targets inside the bench');
