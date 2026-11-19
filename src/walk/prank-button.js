@@ -12,7 +12,7 @@ export const PRANK={at:toWorld('circulation-6',[125,0,4.5]),yaw:27*Math.PI/180,p
 const white=0xfaf4df,green=0x75f500,yellow=0xffbf13;
 const material=(color,roughness=.65)=>new T.MeshStandardMaterial({color,roughness});
 function mesh(parent,geometry,mat,at,scale){const o=new T.Mesh(geometry,mat);o.position.set(...at);if(scale)o.scale.set(...scale);parent.add(o);return o;}
-function dispose(root){if(!root)return;root.removeFromParent();const geometries=new Set(),materials=new Set();root.traverse(o=>{if(o.geometry)geometries.add(o.geometry);for(const m of [].concat(o.material||[]))materials.add(m);});for(const g of geometries)g.dispose();for(const m of materials){m.map?.dispose();m.dispose();}}
+function dispose(root){if(!root)return;root.removeFromParent();const geometries=new Set(),materials=new Set();root.traverse(o=>{if(o.geometry&&!o.isSprite)geometries.add(o.geometry);for(const m of [].concat(o.material||[]))materials.add(m);});for(const g of geometries)g.dispose();for(const m of materials){m.map?.dispose();m.dispose();}}
 function warning(){
  const canvas=walkCanvas();if(!canvas)return null;canvas.width=640;canvas.height=800;const c=canvas.getContext('2d');
  const paint=()=>{
@@ -53,23 +53,34 @@ function onBone(walker,bone,root){
  const body=walker.figure.asset.meshes.find(m=>m.name==='body'),s=body.skeleton,b=walker.figure.bones.get(bone),i=s.bones.indexOf(b);
  if(i<0)throw Error('Prank overlay is missing '+bone);root.matrixAutoUpdate=false;root.matrix.copy(s.boneInverses[i]).multiply(body.bindMatrix);b.add(root);return root;
 }
+export function stainWeights(geometry,hit){
+ const p=geometry.attributes.position,ids=geometry.attributes.skinIndex,weights=geometry.attributes.skinWeight,{a,b,c}=hit.face,bary=T.Triangle.getBarycoord(hit.point,new T.Vector3().fromBufferAttribute(p,a),new T.Vector3().fromBufferAttribute(p,b),new T.Vector3().fromBufferAttribute(p,c),new T.Vector3()),mix=new Map();
+ for(const [v,w] of [[a,bary.x],[b,bary.y],[c,bary.z]])for(let k=0;k<4;k++){const id=ids.getComponent(v,k);mix.set(id,(mix.get(id)||0)+w*weights.getComponent(v,k));}
+ const best=[...mix].sort((a,b)=>b[1]-a[1]).slice(0,4),total=best.reduce((s,v)=>s+v[1],0);return {ids:Array.from({length:4},(_,k)=>best[k]?.[0]||0),weights:Array.from({length:4},(_,k)=>(best[k]?.[1]||0)/total)};
+}
+function powderTexture(){
+ const canvas=walkCanvas();if(!canvas)return null;canvas.width=canvas.height=128;const c=canvas.getContext('2d'),fade=c.createRadialGradient(64,64,12,64,64,64);fade.addColorStop(0,'#fff');fade.addColorStop(.65,'#ffffffc0');fade.addColorStop(1,'#ffffff00');c.fillStyle=fade;c.fillRect(0,0,128,128);
+ c.globalCompositeOperation='destination-out';for(let i=0;i<180;i++){c.globalAlpha=.2+Math.sin(i*7)**2*.45;c.beginPath();c.arc(64+Math.sin(i*2.4)*61,64+Math.cos(i*3.7)*61,.5+i%3,0,Math.PI*2);c.fill();}
+ const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;return texture;
+}
 function catMess(walker){
- const head=new T.Group(),body=new T.Group(),hat=new T.Group(),sphere=new T.SphereGeometry(1,12,8),slime=material(green,.16),flour=material(white,1),yolk=material(yellow,.2);
- const side=new T.MeshBasicMaterial({side:T.DoubleSide}),surfaces=walker.figure.asset.meshes.filter(m=>['body','hoodie.001'].includes(m.name)).map(m=>{const g=m.geometry.clone();g.boundsTree=new MeshBVH(g,{indirect:true});const proxy=new T.Mesh(g,side);proxy.raycast=acceleratedRaycast;return proxy;}),ray=new T.Raycaster();ray.firstHitOnly=true;
- const surface=(x,y,back)=>{ray.set(new T.Vector3(x,y,back?-1:1),new T.Vector3(0,0,back?1:-1));return ray.intersectObjects(surfaces,false)[0]?.point.z;};
+ const head=[],body=[],hat=new T.Group(),sphere=new T.SphereGeometry(1,12,8),slime=material(green,.16),flour=new T.MeshBasicMaterial({color:white,transparent:true,depthWrite:false,toneMapped:false}),yolk=material(yellow,.2);
+ slime.emissive.copy(slime.color);slime.emissiveIntensity=.2;yolk.emissive.copy(yolk.color);yolk.emissiveIntensity=.25;
+ const side=new T.MeshBasicMaterial({side:T.DoubleSide}),surfaces=walker.figure.asset.meshes.filter(m=>['body','hoodie.001','hoodie.002'].includes(m.name)).map(m=>{const g=m.geometry.clone();g.boundsTree=new MeshBVH(g,{indirect:true});const proxy=new T.Mesh(g,side);proxy.userData.source=m;proxy.raycast=acceleratedRaycast;return proxy;}),ray=new T.Raycaster();ray.firstHitOnly=true;
+ const surface=(x,y,back,objects=surfaces)=>{ray.set(new T.Vector3(x,y,back?-1:1),new T.Vector3(0,0,back?1:-1));return ray.intersectObjects(objects,false)[0];};
  // Irregular stains follow the clothing and fur surface instead of sitting on it as round beads.
  function splat(parent,mat,x,y,w,h,seed,back=false){
-  const centre=surface(x,y,back);if(centre===undefined)return;const positions=[],uvs=[],index=[],n=40,offset=(back?-1:1)*(mat===flour ? .011 : .008);
-  const point=(px,py)=>{positions.push(px,py,(surface(px,py,back)??centre)+offset);uvs.push(.5+(px-x)/(w*2.7),.5+(py-y)/(h*3.2));};
+  const centre=surface(x,y,back);if(!centre)return;const positions=[],uvs=[],skinIndex=[],skinWeight=[],index=[],n=40,offset=(back?-1:1)*(mat===flour ? .026 : .023),source=centre.object.userData.source;
+  const point=(px,py)=>{const hit=surface(px,py,back,[centre.object])||centre,skin=stainWeights(centre.object.geometry,hit);positions.push(px,py,hit.point.z+offset);uvs.push(.5+(px-x)/(w*2.7),.5+(py-y)/(h*3.2));skinIndex.push(...skin.ids);skinWeight.push(...skin.weights);};
   point(x,y);
   for(let i=0;i<=n;i++){const a=i/n*Math.PI*2,r=1+.17*Math.sin(a*5+seed)+.12*Math.cos(a*9-seed),drip=mat===slime?Math.max(0,-Math.sin(a))**7*(.45+.3*Math.sin(a*3+seed)**2):0;
    point(x+Math.cos(a)*w*r,y+Math.sin(a)*h*r-drip*h);if(i<n)index.push(0,back?i+2:i+1,back?i+1:i+2);}
-  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));g.setIndex(index);g.computeVertexNormals();parent.add(new T.Mesh(g,mat));
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));g.setAttribute('skinIndex',new T.Uint16BufferAttribute(skinIndex,4));g.setAttribute('skinWeight',new T.Float32BufferAttribute(skinWeight,4));g.setIndex(index);g.computeVertexNormals();
+  // Follow the same blended bones as the clothing, including the torso's bends.
+  const stain=new T.SkinnedMesh(g,mat);stain.position.copy(source.position);stain.quaternion.copy(source.quaternion);stain.scale.copy(source.scale);stain.frustumCulled=false;source.parent.add(stain);stain.bind(source.skeleton,source.bindMatrix);parent.push(stain);
  }
  // Powder has a soft, grainy edge; the wet slime and yolk remain glossy.
- const powder=walkCanvas();if(powder){powder.width=powder.height=128;const c=powder.getContext('2d'),fade=c.createRadialGradient(64,64,12,64,64,64);fade.addColorStop(0,'#fff');fade.addColorStop(.65,'#ffffffc0');fade.addColorStop(1,'#ffffff00');c.fillStyle=fade;c.fillRect(0,0,128,128);
-  c.globalCompositeOperation='destination-out';for(let i=0;i<180;i++){c.globalAlpha=.2+Math.sin(i*7)**2*.45;c.beginPath();c.arc(64+Math.sin(i*2.4)*61,64+Math.cos(i*3.7)*61,.5+i%3,0,Math.PI*2);c.fill();}
-  flour.map=new T.CanvasTexture(powder);flour.map.colorSpace=T.SRGBColorSpace;flour.transparent=true;flour.depthWrite=false;}
+ flour.map=powderTexture();
  for(const back of [false,true]){
   for(const [x,y,w,h,seed] of [[-.105,1.44,.09,.042,1],[.07,1.46,.1,.05,3],[.16,1.38,.037,.08,5]])splat(head,slime,x,y,w,h,seed,back);
   splat(head,flour,-.15,1.37,.055,.065,7,back);splat(head,yolk,.18,1.4,.035,.048,9,back);
@@ -85,8 +96,8 @@ function catMess(walker){
   const size=box.getSize(new T.Vector3()),top=box.max.y,centre=box.getCenter(new T.Vector3());
   for(let i=0;i<8;i++)mesh(hat,sphere,i%3===0?flour:i%3===1?yolk:slime,[centre.x+Math.sin(i*2.4)*size.x*.28,top-size.y*.025,centre.z+Math.cos(i*2.4)*size.z*.25],[size.x*(.1+i%2*.03),size.y*.035,size.z*.13]);
   mount.add(hat);};
- onBone(walker,'spine.006',head);onBone(walker,'spine.003',body);fitHat();
- return {head,body,hat,update:fitHat,dispose(){dispose(head);dispose(body);dispose(hat);}};
+ fitHat();
+ return {head,body,hat,update:fitHat,dispose(){for(const o of [...head,...body])dispose(o);dispose(hat);sphere.dispose();}};
 }
 function shockedFace(walker){
  const root=new T.Group(),dark=new T.MeshBasicMaterial({color:0x291c20}),cream=new T.MeshBasicMaterial({color:0xfffbed}),sphere=new T.SphereGeometry(1,16,10),surface=faceSurface(walker.figure.asset);
@@ -101,10 +112,9 @@ function shockedFace(walker){
 }
 function effects(scene,feet){
  const root=new T.Group(),air=new T.Group(),floor=new T.Group();root.name='Prank_mess';root.position.copy(feet);root.add(air,floor);scene.add(root);
- const sphere=new T.SphereGeometry(1,10,7),slime=material(green,.12),dust=material(white,1),yolk=material(yellow,.16),shell=material(white,.9);
- dust.transparent=true;dust.opacity=.55;dust.depthWrite=false;
+ const sphere=new T.SphereGeometry(1,10,7),slime=material(green,.12),dust=new T.MeshBasicMaterial({color:white,toneMapped:false}),yolk=material(yellow,.16),shell=material(white,.9),puff=new T.SpriteMaterial({color:0xffffff,map:powderTexture(),transparent:true,opacity:.5,depthWrite:false,toneMapped:false});
  const stream=mesh(air,new T.CylinderGeometry(.11,.16,1,12),slime,[0,2.9,0],[1,2.8,1]);
- const puffs=Array.from({length:16},(_,i)=>mesh(air,sphere,dust,[0,1.25,0],[.15,.15,.15]));
+ const puffs=Array.from({length:16},()=>{const o=new T.Sprite(puff);air.add(o);return o;});
  const eggs=Array.from({length:5},(_,i)=>mesh(air,sphere,shell,[Math.sin(i*2.4)*.22,3.2,Math.cos(i*2.4)*.18],[.07,.095,.07]));
  const shards=Array.from({length:12},(_,i)=>mesh(air,new T.TetrahedronGeometry(.045),shell,[0,1.55,0]));
  mesh(floor,sphere,slime,[0,.018,0],[.59,.02,.52]);
@@ -112,7 +122,8 @@ function effects(scene,feet){
   mesh(floor,sphere,i%3===0?yolk:i%3===1?dust:shell,[x,.035+i%3*.008,z],[.08+i%2*.04,.018,.065]);}
  return {root,air,floor,update(t){
   stream.visible=t<1.1;stream.scale.x=stream.scale.z=.85+Math.sin(t*33)*.12;
-  for(let i=0;i<puffs.length;i++){const o=puffs[i],v=t-.8-i*.025;o.visible=v>0&&v<1.65;const r=Math.max(0,v)*.52,a=i*2.4;o.position.set(Math.sin(a)*r,1.15+v*.45,Math.cos(a)*r);o.scale.setScalar(.12+Math.max(0,v)*.21);}
+  puff.opacity=.5*T.MathUtils.clamp((2.8-t)/1.1,0,1);
+  for(let i=0;i<puffs.length;i++){const o=puffs[i],v=t-.8-i*.025;o.visible=v>0&&v<1.65;const r=Math.max(0,v)*.35,a=i*2.4;o.position.set(Math.sin(a)*r,1.15+v*.24,Math.cos(a)*r);o.scale.setScalar(.25+Math.max(0,v)*.14);}
   for(let i=0;i<eggs.length;i++){const o=eggs[i],v=t-1.5-i*.13;o.visible=v>=0&&v<.43;o.position.y=3.5-Math.max(0,v)*4.7;}
   for(let i=0;i<shards.length;i++){const o=shards[i],v=t-1.9-(i%4)*.12,a=i*2.4;o.visible=v>=0&&v<.8;o.position.set(Math.sin(a)*(.12+v*.35),1.53-v*1.6,Math.cos(a)*(.12+v*.35));o.rotation.set(v*6,i,v*4);}
   floor.visible=t>.3;for(let i=1;i<floor.children.length;i++)floor.children[i].visible=t>(i%3===1?.8:1.9);

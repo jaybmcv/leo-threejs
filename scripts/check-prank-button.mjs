@@ -5,12 +5,20 @@ import layout from '../src/plan/selected-layout.js';
 import {contains} from '../src/plan/geometry-v2.js';
 import {plannedStanding} from '../src/v2/standing.js';
 import {Colliders} from '../src/walk/collision.js';
-import {prankFittings,attachPrankCollider,PRANK} from '../src/walk/prank-button.js';
+import {prankFittings,attachPrankCollider,stainWeights,PRANK} from '../src/walk/prank-button.js';
 import {installPreparedColliders} from '../src/v2/prepared-codec.public.js';
 import {createPrankTiming,PRANK_TIME} from '../src/walk/prank-timing.js';
 import {LIFTS} from '../src/walk/lifts.js';
 
 let checks=0;const pass=s=>{checks++;console.log('PASS '+s);};
+{
+ const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute([0,0,0,1,0,0,0,1,0],3));g.setAttribute('skinIndex',new T.Uint16BufferAttribute([0,1,0,0,0,1,0,0,0,1,0,0],4));g.setAttribute('skinWeight',new T.Float32BufferAttribute([1,0,0,0,.35,.65,0,0,0,1,0,0],4));
+ const face={a:0,b:1,c:2},skin=stainWeights(g,{face,point:new T.Vector3(.25,.5,0)}),weight=id=>skin.weights.reduce((n,w,k)=>n+(skin.ids[k]===id?w:0),0);assert(Math.abs(weight(0)-.3375)<1e-6);assert(Math.abs(weight(1)-.6625)<1e-6);
+ const root=new T.Group(),a=new T.Bone(),b=new T.Bone();a.add(b);root.add(a);const source=new T.SkinnedMesh(g,new T.MeshBasicMaterial());root.add(source);source.add(a);source.bind(new T.Skeleton([a,b]));
+ const v=new T.Vector3().fromBufferAttribute(g.attributes.position,1),atVertex=stainWeights(g,{face,point:v}),overlay=new T.BufferGeometry();overlay.setAttribute('position',new T.Float32BufferAttribute(v.toArray(),3));overlay.setAttribute('skinIndex',new T.Uint16BufferAttribute(atVertex.ids,4));overlay.setAttribute('skinWeight',new T.Float32BufferAttribute(atVertex.weights,4));const stain=new T.SkinnedMesh(overlay,new T.MeshBasicMaterial());root.add(stain);stain.bind(source.skeleton,source.bindMatrix);
+ for(const angle of [0,.4,-.6]){b.rotation.y=angle;b.position.set(.1,angle,.2);root.updateMatrixWorld(true);source.skeleton.update();assert(source.getVertexPosition(1,new T.Vector3()).distanceTo(stain.getVertexPosition(0,new T.Vector3()))<1e-6,'stain follows the clothing through blended bone poses');}
+ g.dispose();overlay.dispose();source.material.dispose();stain.material.dispose();pass('stains inherit surface bone weights and follow the clothing through torso poses');
+}
 function clock(overrides={}){
  let now=1000,id=0;const jobs=new Map(),events=[];
  const hooks=Object.fromEntries(['begin','photo','release','reset','clean','error'].map(k=>[k,()=>events.push(k)]));
