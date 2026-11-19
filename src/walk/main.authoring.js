@@ -1099,7 +1099,7 @@ function dampAngle(a,b,lambda,dt){const d=Math.atan2(Math.sin(b-a),Math.cos(b-a)
 function target(){
  const p=controller.position;if(carry?.isOpen)return null;if(wardPush?.engaged)return wardPush.holdTarget;if(treasure?.active)return treasure.near(p);
  const t=inBall?null:treasure?.near(p);if(t)return t;
- const carried=inBall?null:carry?.near(p);if(carried)return carried;
+ const carried=inBall?null:carry?.near(p);if(carried?.kind==='carry-item')return carried;
  const l=lifts.nearest(p);if(l&&l.kind!=='riding')return l;
  const w=graffiti?.near(p)||crownTv?.near(p);if(w)return w;
  const ladder=hangarDoor?.near(p);if(ladder)return ladder;
@@ -1121,7 +1121,8 @@ function target(){
  // A transporter's driver's seat or rear seats (transporter.js).
  const m=mct.near(p,remotes);if(m)return m;
  const s=rest.pick(p,new T.Vector3(Math.sin(heading),0,Math.cos(heading)));
- return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':s.kind==='stand'?'Enter the healing capsule':'Sit down'}:null;
+ // Desk storage leaves existing seats and other interactions reachable.
+ return s?{kind:s.kind,spot:s,label:s.kind==='lie'?'Lie down':s.kind==='stand'?'Enter the healing capsule':'Sit down'}:carried;
 }
 const touch=matchMedia('(pointer:coarse)').matches;
 function hud(p){
