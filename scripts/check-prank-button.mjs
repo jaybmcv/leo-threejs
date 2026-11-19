@@ -5,7 +5,8 @@ import layout from '../src/plan/selected-layout.js';
 import {contains} from '../src/plan/geometry-v2.js';
 import {plannedStanding} from '../src/v2/standing.js';
 import {Colliders} from '../src/walk/collision.js';
-import {prankFittings,PRANK} from '../src/walk/prank-button.js';
+import {prankFittings,attachPrankCollider,PRANK} from '../src/walk/prank-button.js';
+import {installPreparedColliders} from '../src/v2/prepared-codec.public.js';
 import {createPrankTiming,PRANK_TIME} from '../src/walk/prank-timing.js';
 import {LIFTS} from '../src/walk/lifts.js';
 
@@ -30,7 +31,11 @@ for(const point of ['begin','photo']){
  const c=clock();c.timing.start();c.advance(1000);c.timing.cancel();assert(!c.timing.locked);c.advance(3000);assert(!c.events.includes('photo'));assert.equal(c.events.filter(e=>e==='release').length,1);c.timing.dispose();assert(!c.timing.messy);assert.equal(c.jobs,0);
  pass('Escape or navigation cancels capture; disposal clears every timer and attached mess');
 }
-const f=prankFittings(),colliders=new Colliders();colliders.addMover('prank',f.triangles);
+const f=prankFittings(),colliders=new Colliders(),prepared=new Colliders();prepared.v2PreparedMovers=new Map();prepared.v2Ground=new Colliders();prepared.v2Ground.movers=prepared.movers;
+installPreparedColliders(colliders,prepared);
+assert.throws(()=>colliders.addMover('Do_not_press_button',f.triangles),/Missing prepared movable collision/);
+const mover=attachPrankCollider(colliders,f.triangles);assert.equal(colliders.movers[0],mover);assert.equal(colliders.v2Ground.movers[0],mover);assert.equal(colliders.v2PreparedMovers.size,0);
+pass('local collider attaches to the public prepared world and shared ground queries without a baked mover entry');
 const [x,y,z]=PRANK.at,c=Math.cos(PRANK.yaw),s=Math.sin(PRANK.yaw),world=(u,v)=>[x+c*u+s*v,y,z-s*u+c*v];
 const blocked=p=>colliders.overlaps(new T.Line3(new T.Vector3(p[0],p[1]+.35,p[2]),new T.Vector3(p[0],p[1]+1.65,p[2])),.35);
 assert(blocked(PRANK.at),'pedestal is solid');

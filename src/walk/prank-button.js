@@ -4,6 +4,7 @@ import {walkCanvas} from './canvas.js';
 import {createPortableSelfie} from './portable-selfie.js';
 import {createPrankTiming} from './prank-timing.js';
 import {faceSurface} from './catnip-face.js';
+import {Colliders} from './collision.js';
 
 // A local prank on the open Deck 6 floor. Nothing here is sent to Leo live.
 export const PRANK={at:toWorld('circulation-6',[125,0,4.5]),yaw:27*Math.PI/180,portraitYaw:-33*Math.PI/180,behind:1.8,reach:1.45};
@@ -37,6 +38,11 @@ export function prankFittings(){
  // A separate mover keeps this small fitting out of the prepared ship's geometry.
  const triangles=[];group.traverse(o=>{if(!o.isMesh||o===sign)return;const g=o.geometry.toNonIndexed(),p=g.attributes.position,v=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(o.matrixWorld);triangles.push(v.x,v.y,v.z);}g.dispose();});
  return {group,button,triangles};
+}
+
+export function attachPrankCollider(colliders,triangles){
+ // Prepared addMover consumes baked entries. This local fitting owns its small runtime BVH.
+ const mover=new Colliders().addMover('Do_not_press_button',triangles);colliders.movers.push(mover);return mover;
 }
 
 // Attach overlays in the skin's bind frame, as the lounge's catnip face does.
@@ -107,7 +113,7 @@ function framePhoto(background,cat,name){
 }
 
 export function createPrankButton({scene,colliders,renderer,draw,walker:cat,controller,input,follow,name,onBegin}){
- const fitting=prankFittings();colliders.addMover('Do_not_press_button',fitting.triangles);
+ const fitting=prankFittings();attachPrankCollider(colliders,fitting.triangles);
  const lens=createPortableSelfie();lens.set('dist',3.2);lens.set('height',.1);lens.set('fov',52);
  let mess=null,face=null,fx=null,url=null,sheet=null,oldMode=null;
  const release=()=>{input.enabled=true;input.down.clear();if(oldMode!==null){follow.mode=oldMode;oldMode=null;}if(fx)fx.air.visible=false;};
