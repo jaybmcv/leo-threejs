@@ -3079,7 +3079,8 @@
       "source": "src/walk/hydro-portal.js",
       "rooms": [
         "commons-1",
-        "circulation-6"
+        "circulation-6",
+        "circulation-2"
       ],
       "via": "inherited",
       "fixed": false,
@@ -3087,7 +3088,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "8dda66a80780215ef965a568dae9f5e0f62e8624a6a88dbd813637a01d2e9389"
+      "signature": "0727a691867fa82955e2eb4b1bbee194cd84a6072f9e78b9b4f5bb224243a290"
     },
     {
       "source": "src/walk/hydroponics.js",
@@ -4282,7 +4283,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "0e0dc3c0b1d82d9a7771fa7367c6d79fc874516f9b89b9ada4db3d022c1fc904"
+      "signature": "c3aa35f39eefe031aac26a14332946a0c27b4b13f308ffdf3d4f816076e3f790"
     },
     {
       "source": "src/walk/main.js",
@@ -4304,7 +4305,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "67a56aa6d19df85fc39b59f628f80735a64ac521452ba8eec3de241fa15a6453"
+      "signature": "7f995196b9baa8082f8596a5ab93000fb03d710246f4048e60b2f64b7474ef0c"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4324,7 +4325,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "7be597f75a0b3a37458aa4639f2ae439231eadd591ff41d111f782084e04c7ef"
+      "signature": "af0af15c6b893b3c8ab33fd55a263aeab9c30be59e2642f709f3f3c5e57ced84"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4344,7 +4345,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "507502c8326cc28e723ccfbfdc38a411a395d7253a3bce4ad567b759517b2518"
+      "signature": "03ab2abbe25092d6f9cefdc45aaebc584dc859cef8410416bb3feea3b0822559"
     },
     {
       "source": "src/walk/marks.authoring.js",
