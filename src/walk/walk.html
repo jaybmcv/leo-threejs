@@ -48,6 +48,10 @@ body[data-ready="1"] #loading{opacity:0;pointer-events:none}
 /* The bottom-left corner: chat above the key help (on touch screens, above the joystick) */
 .corner{position:fixed;left:16px;bottom:14px;z-index:5;display:flex;flex-direction:column;align-items:flex-start;gap:10px;max-width:calc(100vw - 32px);pointer-events:none}
 .corner>*{pointer-events:auto}
+/* Inside Otherside its round chat button covers the bottom-left corner: the chat and controls bar move right of it
+   (net/otherside.js marks the page). The offset is estimated from a screenshot, not measured in Otherside. */
+html.otherside{--otherside-corner:72px}
+html.otherside .corner{margin-left:var(--otherside-corner);max-width:calc(100vw - 32px - var(--otherside-corner))}
 .help{font:400 10px/1.7 var(--mono);letter-spacing:.06em;color:var(--dim);background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:10px 14px}
 .help b{color:var(--text);font-weight:500}
 #joystick{display:none;position:fixed;left:22px;bottom:30px;width:128px;height:128px;border-radius:50%;border:1px solid var(--hairline);background:rgba(10,12,16,.45);z-index:6;touch-action:none}
