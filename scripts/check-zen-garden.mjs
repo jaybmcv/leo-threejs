@@ -24,6 +24,10 @@ for(const o of template.gardenParts.fittings)room.add(o);
 moveRoomFitoutMeshes(room,'commons-10');moveRoomFitoutMeshes(room,'commons-10');retireV2RoomShell(room,new Set());
 const tables=[];room.traverse(o=>{if(o.name==='Cafe_table')tables.push(o.position.toArray());});
 assert.deepEqual(tables.map(p=>[p[0],p[2]]),[[142,43],[148,43],[148,39.5]],'all three cafe sets moved to the edge');
+// Each chair's tailored seams are its own child, so they move with the chair exactly once (the nightly hull gate found them doubled).
+room.updateMatrixWorld(true);const chairs=[];room.traverse(o=>{if(o.name==='Tail_clearance_chair'&&o.userData.v2FitoutMoved)chairs.push(o);});assert.equal(chairs.length,6,'six moved cafe chairs');
+for(const chair of chairs){const seat=new T.Box3().setFromObject(chair.getObjectByName('Seat'),true).expandByScalar(.01),seams=[];chair.traverse(o=>{if(o.name==='Polish_tailored_seam')seams.push(o);});
+ assert.equal(seams.length,1,'moved chair keeps its seam pair');for(const s of seams)assert.ok(seat.containsBox(new T.Box3().setFromObject(s,true)),'seams stay on their moved chair at '+chair.position.toArray());}
 assert.ok(!room.children.some(o=>o.name==='Garden_planter'&&o.position.x===125),'old green planter removed');
 const floor=new T.Mesh(new T.BoxGeometry(53,.3,42));floor.name='Fixture_floor';floor.position.set(132,24.15,29);room.add(floor);
 const ship={root};prepareBlossomBed(ship);const garden=createBlossomGarden(ship);root.add(garden.solid);root.updateMatrixWorld(true);garden.group.updateMatrixWorld(true);
