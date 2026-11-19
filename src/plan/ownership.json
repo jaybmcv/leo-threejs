@@ -5275,8 +5275,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 34,
-      "signature": "7e7aa3fdc01436caa984da0ec4d436893166ffb128186ae4d503c52cd2ad16a4"
+      "placements": 32,
+      "signature": "e836823e69a404843bae7d6e61fc44f72e622c71504c16f2cded50089a75fe3d"
     },
     {
       "source": "src/walk/prepare.js",

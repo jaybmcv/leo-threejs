@@ -5,6 +5,7 @@ import {createPortableSelfie} from './portable-selfie.js';
 import {createPrankTiming} from './prank-timing.js';
 import {faceSurface} from './catnip-face.js';
 import {Colliders} from './collision.js';
+import {MeshBVH,acceleratedRaycast} from 'three-mesh-bvh';
 
 // A local prank on the open Deck 6 floor. Nothing here is sent to Leo live.
 export const PRANK={at:toWorld('circulation-6',[125,0,4.5]),yaw:27*Math.PI/180,portraitYaw:-33*Math.PI/180,behind:1.8,reach:1.45};
@@ -25,7 +26,9 @@ function warning(){
 }
 export function prankFittings(){
  const group=new T.Group();group.name='Do_not_press_button';group.position.set(...PRANK.at);group.rotation.y=PRANK.yaw;
- const grey=material(0x777b78,.95),dark=material(0x393f3e),red=material(0xc8201b,.3),metal=material(0x92968e);
+ const grey=material(0x9a9d96,.95),dark=material(0x393f3e),red=material(0xc8201b,.3),metal=material(0x92968e);
+ // Keep the utility grey readable in the deep shade beneath the lift landing.
+ grey.emissive.copy(grey.color);grey.emissiveIntensity=.5;dark.emissive.copy(dark.color);dark.emissiveIntensity=.3;
  const box=(w,h,d,at,mat=grey)=>mesh(group,new T.BoxGeometry(w,h,d),mat,at);
  box(.7,.1,.7,[0,.05,0],dark);box(.52,.87,.52,[0,.515,0]);box(.64,.08,.64,[0,.99,0],dark);
  mesh(group,new T.CylinderGeometry(.12,.12,.05,24),metal,[0,1.055,0]);const button=mesh(group,new T.CylinderGeometry(.09,.09,.06,24),red,[0,1.105,0]);
@@ -52,20 +55,35 @@ function onBone(walker,bone,root){
 }
 function catMess(walker){
  const head=new T.Group(),body=new T.Group(),hat=new T.Group(),sphere=new T.SphereGeometry(1,12,8),slime=material(green,.16),flour=material(white,1),yolk=material(yellow,.2);
- const side=new T.MeshBasicMaterial({side:T.DoubleSide}),surfaces=walker.figure.asset.meshes.filter(m=>['body','hoodie.001'].includes(m.name)).map(m=>new T.Mesh(m.geometry,side)),ray=new T.Raycaster();
- // Keep the centre of the face readable; blobs follow the head, torso and hat without changing their materials.
- for(let i=0;i<18;i++){const a=i*2.4,x=Math.sin(a)*.19,z=Math.cos(a)*.16,y=1.43+(i%3)*.045;
-  mesh(head,sphere,slime,[x,y,z],[.055,.045+(i%4)*.025,.045]);}
- for(let i=0;i<15;i++){const x=(i%3-1)*.12,y=.65+Math.floor(i/3)*.13;ray.set(new T.Vector3(x,y,1),new T.Vector3(0,0,-1));const z=(ray.intersectObjects(surfaces,false)[0]?.point.z??.19)+.022;
-  mesh(body,sphere,i%3===0?yolk:i%3===1?flour:slime,[x,y,z],[.07,.06,.025]);}
- side.dispose();
- mesh(head,sphere,flour,[-.17,1.38,.14],[.09,.035,.035]);mesh(head,sphere,yolk,[.19,1.4,.13],[.05,.07,.027]);
+ const side=new T.MeshBasicMaterial({side:T.DoubleSide}),surfaces=walker.figure.asset.meshes.filter(m=>['body','hoodie.001'].includes(m.name)).map(m=>{const g=m.geometry.clone();g.boundsTree=new MeshBVH(g,{indirect:true});const proxy=new T.Mesh(g,side);proxy.raycast=acceleratedRaycast;return proxy;}),ray=new T.Raycaster();ray.firstHitOnly=true;
+ const surface=(x,y,back)=>{ray.set(new T.Vector3(x,y,back?-1:1),new T.Vector3(0,0,back?1:-1));return ray.intersectObjects(surfaces,false)[0]?.point.z;};
+ // Irregular stains follow the clothing and fur surface instead of sitting on it as round beads.
+ function splat(parent,mat,x,y,w,h,seed,back=false){
+  const centre=surface(x,y,back);if(centre===undefined)return;const positions=[],uvs=[],index=[],n=40,offset=(back?-1:1)*(mat===flour ? .011 : .008);
+  const point=(px,py)=>{positions.push(px,py,(surface(px,py,back)??centre)+offset);uvs.push(.5+(px-x)/(w*2.7),.5+(py-y)/(h*3.2));};
+  point(x,y);
+  for(let i=0;i<=n;i++){const a=i/n*Math.PI*2,r=1+.17*Math.sin(a*5+seed)+.12*Math.cos(a*9-seed),drip=mat===slime?Math.max(0,-Math.sin(a))**7*(.45+.3*Math.sin(a*3+seed)**2):0;
+   point(x+Math.cos(a)*w*r,y+Math.sin(a)*h*r-drip*h);if(i<n)index.push(0,back?i+2:i+1,back?i+1:i+2);}
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));g.setIndex(index);g.computeVertexNormals();parent.add(new T.Mesh(g,mat));
+ }
+ // Powder has a soft, grainy edge; the wet slime and yolk remain glossy.
+ const powder=walkCanvas();if(powder){powder.width=powder.height=128;const c=powder.getContext('2d'),fade=c.createRadialGradient(64,64,12,64,64,64);fade.addColorStop(0,'#fff');fade.addColorStop(.65,'#ffffffc0');fade.addColorStop(1,'#ffffff00');c.fillStyle=fade;c.fillRect(0,0,128,128);
+  c.globalCompositeOperation='destination-out';for(let i=0;i<180;i++){c.globalAlpha=.2+Math.sin(i*7)**2*.45;c.beginPath();c.arc(64+Math.sin(i*2.4)*61,64+Math.cos(i*3.7)*61,.5+i%3,0,Math.PI*2);c.fill();}
+  flour.map=new T.CanvasTexture(powder);flour.map.colorSpace=T.SRGBColorSpace;flour.transparent=true;flour.depthWrite=false;}
+ for(const back of [false,true]){
+  for(const [x,y,w,h,seed] of [[-.105,1.44,.09,.042,1],[.07,1.46,.1,.05,3],[.16,1.38,.037,.08,5]])splat(head,slime,x,y,w,h,seed,back);
+  splat(head,flour,-.15,1.37,.055,.065,7,back);splat(head,yolk,.18,1.4,.035,.048,9,back);
+  for(const [x,y,w,h,seed] of [[-.13,.91,.07,.18,2],[.06,.83,.065,.11,4],[.12,1.04,.065,.08,6]])splat(body,slime,x,y,w,h,seed,back);
+  for(const [x,y,w,h,seed] of [[-.05,1.03,.14,.1,3],[.13,.73,.09,.07,7],[-.14,.69,.08,.09,9]])splat(body,flour,x,y,w,h,seed,back);
+  splat(body,yolk,.09,.94,.07,.049,4,back);splat(body,yolk,-.08,.74,.047,.036,8,back);
+ }
+ for(const o of surfaces){o.geometry.boundsTree=null;o.geometry.dispose();}surfaces.length=0;side.dispose();
  // The hat's actual bounds determine the splats, including a hat changed while messy.
  let lastHat=null;
  const fitHat=()=>{const mount=walker.hat?.mount;if(lastHat===mount||!mount?.children.length)return;lastHat=mount;
   for(const o of [...hat.children])hat.remove(o);mount.updateWorldMatrix(true,true);const box=new T.Box3().setFromObject(mount),inv=mount.matrixWorld.clone().invert();box.applyMatrix4(inv);
   const size=box.getSize(new T.Vector3()),top=box.max.y,centre=box.getCenter(new T.Vector3());
-  for(let i=0;i<8;i++)mesh(hat,sphere,i%3===0?flour:i%3===1?yolk:slime,[centre.x+Math.sin(i*2.4)*size.x*.28,top-size.y*.05,centre.z+Math.cos(i*2.4)*size.z*.25],[size.x*.09,size.y*.12,size.z*.1]);
+  for(let i=0;i<8;i++)mesh(hat,sphere,i%3===0?flour:i%3===1?yolk:slime,[centre.x+Math.sin(i*2.4)*size.x*.28,top-size.y*.025,centre.z+Math.cos(i*2.4)*size.z*.25],[size.x*(.1+i%2*.03),size.y*.035,size.z*.13]);
   mount.add(hat);};
  onBone(walker,'spine.006',head);onBone(walker,'spine.003',body);fitHat();
  return {head,body,hat,update:fitHat,dispose(){dispose(head);dispose(body);dispose(hat);}};
@@ -94,7 +112,7 @@ function effects(scene,feet){
   mesh(floor,sphere,i%3===0?yolk:i%3===1?dust:shell,[x,.035+i%3*.008,z],[.08+i%2*.04,.018,.065]);}
  return {root,air,floor,update(t){
   stream.visible=t<1.1;stream.scale.x=stream.scale.z=.85+Math.sin(t*33)*.12;
-  for(let i=0;i<puffs.length;i++){const o=puffs[i],v=t-.8-i*.025;o.visible=v>0&&v<1.2;const r=Math.max(0,v)*.52,a=i*2.4;o.position.set(Math.sin(a)*r,1.15+v*.45,Math.cos(a)*r);o.scale.setScalar(.12+Math.max(0,v)*.21);}
+  for(let i=0;i<puffs.length;i++){const o=puffs[i],v=t-.8-i*.025;o.visible=v>0&&v<1.65;const r=Math.max(0,v)*.52,a=i*2.4;o.position.set(Math.sin(a)*r,1.15+v*.45,Math.cos(a)*r);o.scale.setScalar(.12+Math.max(0,v)*.21);}
   for(let i=0;i<eggs.length;i++){const o=eggs[i],v=t-1.5-i*.13;o.visible=v>=0&&v<.43;o.position.y=3.5-Math.max(0,v)*4.7;}
   for(let i=0;i<shards.length;i++){const o=shards[i],v=t-1.9-(i%4)*.12,a=i*2.4;o.visible=v>=0&&v<.8;o.position.set(Math.sin(a)*(.12+v*.35),1.53-v*1.6,Math.cos(a)*(.12+v*.35));o.rotation.set(v*6,i,v*4);}
   floor.visible=t>.3;for(let i=1;i<floor.children.length;i++)floor.children[i].visible=t>(i%3===1?.8:1.9);
