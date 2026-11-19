@@ -1,4 +1,6 @@
 import * as T from 'three';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {removeBuriedSlabSides} from './atrium-floor-finish.js';
 import {wallJoints,mitreWallGeometry} from './wall-joints.js';
 import {moveRoomFitoutMeshes} from './room-fitout-overrides.js';
 import layout from '../plan/selected-layout.js';
@@ -28,10 +30,13 @@ export function buildRoomShell(ship,r,structure){
    for(const d of doors){const header=entryHeader(a,b,d.center,d.width);if(header&&d.center[1]+2.5<r.y+s.rise+s.height){const upper=Math.max(r.y+s.rise,d.center[1]+2.5),o=wall(g,header[0],header[1],upper,r.y+s.rise+s.height-upper,glass);removeGeometryCaps(o.geometry,0);if(o&&(r.deck===1||r.deck===2))mitreWallGeometry(o.geometry,wallJoints(s.polygon,i,header[0],header[1]));}}
   }
   }
-  if(r.components){const platforms=[...(r.components.galleries||[]),...(r.components.links||[]),...(r.components.landings||[])];for(const [i,o] of platforms.entries()){const holes=galleryHoles(r,o);
+  if(r.components){const platforms=[...(r.components.galleries||[]),...(r.components.links||[]),...(r.components.landings||[])],landingFloors=[];for(const [i,o] of platforms.entries()){const holes=galleryHoles(r,o);
    // Joined lounge routes share one floor surface instead of coplanar plates.
    if(r.id==='commons-1')holes.push(...platforms.slice(0,i).filter(p=>Math.abs(p.center[1]-o.center[1])<.01).map(p=>p.polygon));
-   mesh(g,'V2_garden_gallery',polygonGeometry(o.polygon,holes,o.center[1],o.size[1]),floor);}
+   const slab=polygonGeometry(o.polygon,holes,o.center[1],o.size[1]);
+   if(r.id==='commons-1'&&['commons-1-rear-4','commons-1-gallery-link-4','commons-1-stair-turn'].includes(o.id))landingFloors.push(slab);else mesh(g,'V2_garden_gallery',slab,floor);}
+   // The squared landing has one top and underside, with no buried join faces.
+   if(landingFloors.length){const merged=mergeGeometries(landingFloors),joined=removeBuriedSlabSides(merged,r.y+4).geometry;mesh(g,'V2_garden_gallery',joined,floor);if(joined!==merged)merged.dispose();landingFloors.forEach(g=>g.dispose());}
    // The plan's stair center.y is its finished tread elevation.
    const stairs=r.components.stairs||[],lights=[];for(const o of stairs){const tread=box(g,'Gallery_stair',o.size,[o.center[0],o.center[1]-o.size[1]/2,o.center[2]],lining);if(r.id!=='commons-1')continue;
     const flight=stairs.filter(t=>t.id.replace(/-\d+$/,'')===o.id.replace(/-\d+$/,'')).sort((a,b)=>a.center[1]-b.center[1]),dir=Math.sign(flight.at(-1).center[2]-flight[0].center[2]),rise=flight[1].center[1]-flight[0].center[1],geo=tread.geometry.clone(),p=geo.attributes.position,h=o.size[1];

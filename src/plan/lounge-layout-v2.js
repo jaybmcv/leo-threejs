@@ -3,6 +3,14 @@ import fitoutOverrides from './room-fitout-overrides-v2.json' with {type:'json'}
 
 // Shared measured lounge layout. All coordinates are ship metres.
 export const LOUNGE_PLAN={tank:[-140.9,-88.1,-27.98,-24.05],entryX:-112.5,doorZ:-45.8,arcadeWall:-88,arcadeStart:-43.9,arcadeGap:.8,balconyEnd:-38.75,converger:fitoutOverrides['commons-1'].converger};
+export function applyLoungeLandingCorner(r){
+ if(r?.id!=='commons-1'||!r.components)return;
+ const rear=r.components.galleries.find(g=>g.id==='commons-1-rear-4'),landing=r.components.landings.find(g=>g.id==='commons-1-stair-turn');if(!rear||!landing)return;
+ const x0=Math.max(...rear.polygon.map(p=>p[0])),x1=Math.max(...landing.polygon.map(p=>p[0]));if(x1<=x0+.001)return;
+ // Continue this gallery's end to the landing edge. Stair holes stay open.
+ rear.polygon=rear.polygon.flatMap((a,i)=>{const b=rear.polygon[(i+1)%rear.polygon.length];return Math.abs(a[0]-x0)<.001&&Math.abs(b[0]-x0)<.001?[a,[x1,a[1]],[x1,b[1]]]:[a];});
+ rear.center[0]+=(x1-x0)/2;rear.size[0]+=x1-x0;
+}
 export function applyLoungeBalconyCut(r){
  if(r?.id!=='commons-1'||!r.components)return;
  const g=r.components.galleries.find(g=>g.id==='commons-1-end-4');if(!g)return;
@@ -34,6 +42,7 @@ export function applyLoungeLayout(r){
  r.components.pieces.find(p=>p.name==='Haze Maze tower').yaw=Math.PI;
  applyConvergerLayout(r);
  applyLoungeBalconyCut(r);
+ applyLoungeLandingCorner(r);
  r.aquarium={recess:4.08,canonicalX:[105.7,158.3],worldBounds:LOUNGE_PLAN.tank,reason:'Full glass length on three decks, with a dry room-side upper gallery.'};
  r.frontRecess={metres:4.08,reason:'Aligned jaguar throat through the tank at the room glass.'};
  r.contentContract.pieceMoves=r.components.pieces.map(p=>({name:p.name,center:p.center,scale:[1,1,1],...(p.yaw?{yaw:p.yaw}:{})}));
