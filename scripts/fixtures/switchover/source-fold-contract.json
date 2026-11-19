@@ -8181,7 +8181,7 @@
     "file": "src/v2/prepared-codec.public.js",
     "original": "src/v2/prepared-codec.js",
     "mode": "public",
-    "bodySha256": "1531abf7cf4b864f30d9038cf0bd768beb2be08484cbe21a3133b31fc186d101",
+    "bodySha256": "a853adc18b3181a713c5fcabcbb495770a891e2504a914ae0cf430578c6e3e3d",
     "imports": [
       "three/addons/libs/zstddec.module.js",
       "meshoptimizer/decoder",
@@ -8208,7 +8208,7 @@
     "file": "src/v2/prepared-resource.public.js",
     "original": "src/v2/prepared-resource.js",
     "mode": "public",
-    "bodySha256": "d6ec6df4a76368821514fde5b4646c1a52d6a0edc264af04ae06f8deca6f93cb",
+    "bodySha256": "698989bb349b2c0c4b867658f653b3a8d8790115e4403d0a1ed8f314a3af1a58",
     "imports": [
       "./prepared-codec.public.js",
       "./prepared-fetch.js",
@@ -8876,8 +8876,9 @@
     "file": "src/walk/main.public.js",
     "original": "src/walk/main.js",
     "mode": "public",
-    "bodySha256": "e05d1d1ce5482bd9ac0e76b338fd820269f3470647aa48c8d42743412149afa6",
+    "bodySha256": "787a69f437198d5ca9187d4d977ff13b49540a1af9d1fe9e57acedc861c8f0c3",
     "imports": [
+      "./key-code.js",
       "../v2/voyager-lawn.js",
       "./gaming-scores.js",
       "../v2/atrium-geometry-runtime.js",
