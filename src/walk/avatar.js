@@ -65,17 +65,18 @@ function hammockArms(bone){
  }
 }
 
-// On the lounge's rug cushions: upright, knees out, ankles crossed at different heights, palms open on the knees.
+// On the lounge's rug cushions: low, wide knees and inward feet, staggered in front to clear the large shoes.
 function crossLeggedPose(bone,root){
  for(const side of ['L','R']){
   const out=side==='L'?1:-1;
-  aim(bone('thigh.'+side),bone('shin.'+side),new T.Vector3(out*.3,.12,.85));
-  aim(bone('shin.'+side),bone('foot.'+side),new T.Vector3(-out,side==='L'?.35:.1,side==='L'?.12:.34));
-  aim(bone('foot.'+side),bone('toe.'+side),new T.Vector3(-out,.08,-.25));
-  const knee=bone('shin.'+side).getWorldPosition(new T.Vector3()).add(new T.Vector3(0,.10,.015));
+  aim(bone('thigh.'+side),bone('shin.'+side),new T.Vector3(out*.7,0,.7));
+  aim(bone('shin.'+side),bone('foot.'+side),new T.Vector3(-out,side==='L'?.19:.3,side==='L'?.5:1.5));
+  const toes=new T.Vector3(-out,0,side==='L'?-1:.3).normalize(),sole=new T.Vector3(0,-1,0),width=new T.Vector3().crossVectors(toes,sole);
+  setWorldQuat(bone('foot.'+side),new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(width,toes,sole)));
+  const knee=bone('shin.'+side).getWorldPosition(new T.Vector3()).add(new T.Vector3(0,.065,.015));
   solveSeatedLimb(root,bone('upper_arm.'+side),bone('forearm.'+side),bone('hand.'+side),root.worldToLocal(knee).toArray(),[out*.4,-1,-.2]);
   // The hand's local Y runs along the fingers; local Z points out of the palm.
-  const along=new T.Vector3(-out*.25,0,1).normalize(),palm=new T.Vector3(0,1,0),across=new T.Vector3().crossVectors(along,palm);
+  const along=new T.Vector3(out*.65,0,.75).normalize(),palm=new T.Vector3(0,1,0),across=new T.Vector3().crossVectors(along,palm);
   setWorldQuat(bone('hand.'+side),new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(across,along,palm)));
  }
 }

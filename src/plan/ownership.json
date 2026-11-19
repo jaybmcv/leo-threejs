@@ -400,7 +400,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 129,
-      "signature": "6c0638963e70bce95392d328541cc686c57eeca352c3040c6368494a3346273d"
+      "signature": "d5a02dc5b4f186182850f7ae4214ca093608f8eca521e32192a40888f1d98f5e"
     },
     {
       "source": "src/interior-polish.js",
@@ -1284,7 +1284,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 6,
-      "signature": "ba88213a195095d2d9b03546cbe6999b832f15699b568fb74574ce2316330048"
+      "signature": "8d6849cab9ae76e34e8a1f4b32d6a05d0965b714ba299c90dec35e093948c5a5"
     },
     {
       "source": "src/walk/baggage.js",
