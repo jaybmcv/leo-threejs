@@ -1,4 +1,9 @@
 {
+  "src/walk/carry.js": {
+    "owners": ["d02-new-2", "d16-new-1"],
+    "via": "inherited",
+    "boundary": {"module":"./carry-spots.js","use":"carrySpots(layout)","reason":"Only the two named desks, resolved in the selected layout's unchanged door frames."}
+  },
   "src/walk/arrival-mood.js": {
     "owners": ["d02-arrival-1"],
     "via": "toWorld"
