@@ -1563,6 +1563,22 @@
       "signature": "8ef8cfb230736e9b9abce71c8184f4f4402a30b9b0b2563a997dadd5e680fc1c"
     },
     {
+      "source": "src/walk/carry.js",
+      "rooms": [
+        "d02-new-2",
+        "d16-new-1"
+      ],
+      "via": "inherited",
+      "fixed": false,
+      "features": [
+        "Visitor_carry_items"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 6,
+      "signature": "4a2ccd9c83465d77dfbb366bb9c1a3531fb2417f1c7b847641cd8991c47dd152"
+    },
+    {
       "source": "src/walk/cat-tree.authoring.js",
       "rooms": [
         "circulation-6"
@@ -4266,7 +4282,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "3b76807800a64142c3c1c333dde6adee6d568c319fb6055676dacf58b04b35ac"
+      "signature": "32199d039c978553de78baff02692c594269ac3166aa46f1b3d7f0ce2ef570ee"
     },
     {
       "source": "src/walk/main.js",
@@ -4288,7 +4304,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "a693bb7c08806e33cd72ef273a901aebbd158e61d1b2f8d3a250213c21e7eae2"
+      "signature": "d4bca8c4600d7508bbda727009b7f81fbddcf473a062991ba2214b761fd3ccdb"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4308,7 +4324,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "f822da038c3f25a382366c997d5e30694dd7a9286aa6cd85e2f8e4e5e548cd97"
+      "signature": "110eb7edc0b08f279c191726914bede1c226a775904950131d62fa561ee78140"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4328,7 +4344,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "78d99c794d202394c4c5e09d7640cf70b909d35472f32a756ba29387b227e59d"
+      "signature": "938ecccd3300167a5a5d1ccf23f99d738c57b093b058674aa280e83dc8544c97"
     },
     {
       "source": "src/walk/marks.authoring.js",

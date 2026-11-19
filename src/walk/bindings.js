@@ -1,5 +1,5 @@
-// Only emotes and the existing live ping are remappable. Other walk keys keep their jobs.
-export const DEFAULT_BINDINGS=Object.freeze({emotes:'KeyB',ping:'KeyP',...Object.fromEntries(Array.from({length:10},(_,i)=>['emote:'+i,'Digit'+(i+1)%10]))});
+// Emotes, ping and the backpack are remappable. Other walk keys keep their jobs.
+export const DEFAULT_BINDINGS=Object.freeze({emotes:'KeyB',ping:'KeyP',backpack:'KeyI',...Object.fromEntries(Array.from({length:10},(_,i)=>['emote:'+i,'Digit'+(i+1)%10]))});
 export const BINDINGS_KEY='leo-walk-bindings-v1';
 const fixed={KeyW:'Walk',KeyA:'Walk',KeyS:'Walk',KeyD:'Walk',ArrowUp:'Walk',ArrowDown:'Walk',ArrowLeft:'Walk',ArrowRight:'Walk',Space:'Jump',ShiftLeft:'Run',ShiftRight:'Run',Enter:'Use',Escape:'Close panels',Tab:'Keyboard navigation',KeyC:'Crouch',KeyX:'Lie flat',KeyE:'Use',KeyV:'View',KeyF:'View',KeyM:'Go to',KeyN:'Ship map',KeyR:'Respawn',KeyL:'Ship log',KeyH:'Help',KeyT:'Chat',Mouse0:'Drag to look'};
 export function bindingLabel(code){
@@ -17,6 +17,8 @@ export function createWalkBindings(storage){
  try{
   storage??=globalThis.localStorage;
   const saved=JSON.parse(storage?.getItem(BINDINGS_KEY)||'null');
+  // Keep earlier custom bindings; leave the backpack unbound if I was already taken.
+  if(saved&&!Object.hasOwn(saved,'backpack'))saved.backpack=Object.values(saved).includes('KeyI')?null:'KeyI';
   if(saved&&Object.keys(DEFAULT_BINDINGS).every(id=>Object.hasOwn(saved,id)&&!bindingProblem(saved[id]))){
    const used=Object.values(saved).filter(v=>v!==null);
    if(new Set(used).size===used.length)values=Object.fromEntries(Object.keys(DEFAULT_BINDINGS).map(id=>[id,saved[id]]));

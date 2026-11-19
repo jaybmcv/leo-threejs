@@ -22,8 +22,8 @@ export function mountControlsSettings({emotes=[],onOpenChange=()=>{}}={}){
  const button=el('button',{id:'controls',type:'button',textContent:'Controls'}),dialog=el('dialog',{id:'controls-settings'});
  button.setAttribute('aria-haspopup','dialog');button.setAttribute('aria-controls',dialog.id);
  dialog.setAttribute('aria-labelledby','controls-title');dialog.setAttribute('aria-describedby','controls-description');
- const title=el('h2',{id:'controls-title',textContent:'Emotes & ping controls'}),description=el('p',{id:'controls-description',textContent:'Select a binding, then press a key or mouse button. Esc cancels. Clear an action to free its binding. Left mouse stays for looking; browser shortcuts stay reserved.'});
- const list=el('div'),buttons=new Map(),labels=new Map([['emotes','Emote menu'],['ping','Ping'],...emotes.map((name,i)=>['emote:'+i,name.replaceAll('_',' ').replace(/^./,s=>s.toUpperCase())])]);
+ const title=el('h2',{id:'controls-title',textContent:'Walk controls'}),description=el('p',{id:'controls-description',textContent:'Select a binding, then press a key or mouse button. Esc cancels. Clear an action to free its binding. Left mouse stays for looking; browser shortcuts stay reserved.'});
+ const list=el('div'),buttons=new Map(),labels=new Map([['emotes','Emote menu'],['ping','Ping'],['backpack','Backpack'],...emotes.map((name,i)=>['emote:'+i,name.replaceAll('_',' ').replace(/^./,s=>s.toUpperCase())])]);
  const status=el('p',{id:'bindings-status',textContent:'Bindings are saved on this browser. Ping works while connected to Leo live.'});status.setAttribute('role','status');status.setAttribute('aria-live','polite');
  let pending=null,opened=false,returnFocus=null;
  function refresh(){for(const [id,b]of buttons){b.textContent=pending===id?'Press key / mouse…':bindingLabel(walkBindings.get(id));b.setAttribute('aria-pressed',String(pending===id));b.setAttribute('aria-label',labels.get(id)+': '+b.textContent);}}
