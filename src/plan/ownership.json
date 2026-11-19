@@ -400,7 +400,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 129,
-      "signature": "6c0638963e70bce95392d328541cc686c57eeca352c3040c6368494a3346273d"
+      "signature": "d5a02dc5b4f186182850f7ae4214ca093608f8eca521e32192a40888f1d98f5e"
     },
     {
       "source": "src/interior-polish.js",
@@ -1284,7 +1284,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 6,
-      "signature": "ba88213a195095d2d9b03546cbe6999b832f15699b568fb74574ce2316330048"
+      "signature": "8d6849cab9ae76e34e8a1f4b32d6a05d0965b714ba299c90dec35e093948c5a5"
     },
     {
       "source": "src/walk/baggage.js",
@@ -4283,7 +4283,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "d4d06f282b79729821f8546670649dc4c7f46e5966c93f80e0717d489c7751d0"
+      "signature": "867271aee0539c0a686123b40d496b5c2b0688494e5a624dc4dc265cb3056880"
     },
     {
       "source": "src/walk/main.js",
@@ -4305,7 +4305,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "b278ca0127616f6a8b01f76410fcee067320a08df0b6d56edba838f1ae85706a"
+      "signature": "9c20d19b7eed7b0c815438e0675406010f53022de29d27e0e89cb95705e33b6d"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4325,7 +4325,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "ba6b0ce2b201f336bd45afe7c7d3f32ae2c28880424b78b2485def086ad35543"
+      "signature": "b391400daeb9afdc5bf6267069b01e0d88ca304a2c7a5abdc1be499627665cb7"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4345,7 +4345,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "c052513381eb4d3d7ab8598c01b77c2a8b95fa39e6f2131473214c4ae1477801"
+      "signature": "05277713796e9968b2e992026df06defe5fc4fbb798c7ba41ed78aa8d8539b46"
     },
     {
       "source": "src/walk/marks.authoring.js",

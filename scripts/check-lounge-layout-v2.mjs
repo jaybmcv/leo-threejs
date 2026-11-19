@@ -22,7 +22,8 @@ import {SWIM,swimWorld,limitSwim,gemNear} from '../src/walk/aquarium-treasure/la
 import {featurePlaces} from '../src/v2/goto-features.js';
 import {mesh,polygonGeometry} from '../src/v2/geometry.js';
 import {createTreasureBoard} from '../server/aquarium-treasure.mjs';
-import {LOUNGE_PLAN,applyLoungeBalconyCut} from '../src/plan/lounge-layout-v2.js';
+import {LOUNGE_PLAN,applyLoungeBalconyCut,applyLoungeLandingCorner} from '../src/plan/lounge-layout-v2.js';
+import {applyLoungeFloorFinish} from '../src/v2/lounge-floor-material.js';
 
 // Real source furniture, maze, gallery guards and activity colliders, without a full ship build.
 installWalkCanvas(createCanvas);
@@ -76,6 +77,34 @@ assert(walker.position.z>-33&&Math.abs(walker.position.y-24.3)<.05,'Visitor walk
 const ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0)),segment=new T.Line3();
 const clear=([x,y,z])=>{ray.origin.set(x,y+.42,z);const hit=col.raycast(ray,.85);segment.start.set(x,y+.75,z);segment.end.set(x,y+1.65,z);return !!hit&&hit.normal.y>.6&&Math.abs(hit.point.y-y)<.1&&!col.overlaps(segment,.35);};
 const route=(name,points)=>{let count=0;for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],n=Math.ceil(new T.Vector3(...a).distanceTo(new T.Vector3(...b))/.1);for(let j=0;j<=n;j++){const p=a.map((v,k)=>v+(b[k]-v)*j/n);assert(clear(p),name+' blocked at '+JSON.stringify(p));count++;}}console.log('PASS',name,count,'capsule probes');};
+// Only Deck 18's forward notch is filled. Nothing passes through the new slab.
+const cornerSnapshot=JSON.stringify(r.components);applyLoungeLandingCorner(r);assert.equal(JSON.stringify(r.components),cornerSnapshot,'Landing fill is idempotent');
+const cornerVolume=new T.Box3(new T.Vector3(-89.98,28.021,-56.60),new T.Vector3(-88.22,30.3,-54.92)),triangle=new T.Triangle();
+source.root.updateMatrixWorld(true);
+source.root.traverse(o=>{if(!o.isMesh||!new T.Box3().setFromObject(o,true).intersectsBox(cornerVolume))return;const p=o.geometry.attributes.position,ix=o.geometry.index;
+ for(let i=0;i<(ix?.count??p.count);i+=3){for(const [k,v]of [triangle.a,triangle.b,triangle.c].entries())v.fromBufferAttribute(p,ix?ix.getX(i+k):i+k).applyMatrix4(o.matrixWorld);assert(!cornerVolume.intersectsTriangle(triangle),'Fitting crosses new floor or standing space: '+o.name);}
+});
+applyLoungeFloorFinish(ship);
+const cornerRay=new T.Raycaster(),slabs=structure.getObjectsByProperty('name','V2_garden_gallery');let cornerProbes=0;
+for(let x=-89.9;x<-88.3;x+=.1)for(let z=-56.5;z<-55;z+=.1){
+ cornerRay.set(new T.Vector3(x,28.5,z),new T.Vector3(0,-1,0));cornerRay.far=.6;const top=cornerRay.intersectObjects(slabs);assert.equal(top.length,1,'Corner needs exactly one floor face');close(top[0].point.y,28.3);assert.equal(top[0].object.material.name,'Lounge_velvet_carpet');
+ cornerRay.set(new T.Vector3(x,27.8,z),new T.Vector3(0,1,0));const underside=cornerRay.intersectObjects(slabs);assert(underside.length,'Open underside');close(underside[0].point.y,28.02);cornerProbes++;
+}
+for(const [at,dir]of [[[-90.2,28.15,-55.7],[1,0,0]],[[-89,28.15,-55.1],[0,0,1]]]){cornerRay.set(new T.Vector3(...at),new T.Vector3(...dir));cornerRay.far=.5;assert.equal(cornerRay.intersectObjects(slabs).length,0,'Buried slab join face');}
+for(const [at,dir]of [[[-87.8,28.15,-55.7],[-1,0,0]],[[-89,28.15,-57],[0,0,1]]]){cornerRay.set(new T.Vector3(...at),new T.Vector3(...dir));cornerRay.far=.8;assert(cornerRay.intersectObjects(slabs).length,'Missing finished outer slab edge');}
+for(const [name,y]of [['V2_garden_guard_glass',28.9],['V2_garden_guard_cap',29.4]]){const rails=structure.getObjectsByProperty('name',name);cornerRay.far=1;
+ for(let x=-89.9;x<-88.2;x+=.1){cornerRay.set(new T.Vector3(x,y,-56.2),new T.Vector3(0,0,-1));assert(cornerRay.intersectObjects(rails).length,'Missing straight corner rail '+name);}
+ for(let z=-56.5;z<-54.9;z+=.1){cornerRay.set(new T.Vector3(-88.7,y,z),new T.Vector3(1,0,0));assert(cornerRay.intersectObjects(rails).length,'Missing far corner rail '+name);}
+ cornerRay.far=2;cornerRay.set(new T.Vector3(-91,y,-55.7),new T.Vector3(1,0,0));assert.equal(cornerRay.intersectObjects(rails).length,0,'Old jog rail remains inside landing');
+}
+route('Below filled corner',[[-91,24.3,-55.7],[-89,24.3,-55.7],[-89,24.3,-57]]);
+walker.place(new T.Vector3(-91.05,28.3,-55.68));walk([2.25,0,0],2,p=>assert(Math.abs(p.y-28.3)<.06,'New corner must support feet'));
+assert(walker.position.x>-89.2&&walker.position.x<-88.5,'Far rail stops the visitor inside the new floor');
+walk([0,0,-2.25],1,p=>assert(Math.abs(p.y-28.3)<.06,'Outer corner rail prevents a fall'));assert(walker.position.z>-56.3&&walker.position.z<-56,'Outer rail stops the visitor');
+const reach=(x,z)=>{let steps=0;while(Math.hypot(walker.position.x-x,walker.position.z-z)>.04&&steps++<900){const wish=new T.Vector3(x-walker.position.x,0,z-walker.position.z).normalize().multiplyScalar(2.25);walker.step(1/60,wish,false);}assert(steps<900,'Cannot leave corner toward '+[x,z]);};
+reach(-91.05,-55.68);reach(-89.8,-55.68);walk([0,0,2.25],1.8);assert(walker.position.y<27.4&&walker.position.y>25.5,'Leave corner down purple-lit stairs');
+reach(-89.8,-55.68);assert(Math.abs(walker.position.y-28.3)<.06,'Return up lower flight');reach(-93.1,-55.68);walk([0,0,2.25],1.8);assert(walker.position.y>29.2&&walker.position.y<31.3,'Leave corner up the second flight');
+console.log('PASS squared Deck 18 corner',cornerProbes,'top/underside probes, clear fittings and route below, square guards, no jog and both stair flights');
 // Cut only Deck 18's side strip. Its maze landing remains accessible from the gallery door.
 const end=r.components.galleries.find(g=>g.id==='commons-1-end-4'),snapshot=JSON.stringify(r.components);
 close(Math.min(...end.polygon.map(p=>p[1])),LOUNGE_PLAN.balconyEnd);
