@@ -131,10 +131,15 @@ function effects(scene,feet){
  },dispose(){dispose(root);}};
 }
 
+// The centred part of a w×h capture with the shape of a dw×dh window, as [x,y,width,height]. The selfie lens is aimed
+// at the middle of the canvas (portable-selfie.js aim), so a tall phone canvas keeps the cat in its middle band
+// instead of being squeezed whole into the wide photo.
+export function photoCrop(w,h,dw,dh){const s=Math.min(w/dw,h/dh),cw=dw*s,ch=dh*s;return [(w-cw)/2,(h-ch)/2,cw,ch];}
 function framePhoto(background,cat,name){
  const out=document.createElement('canvas');out.width=1200;out.height=1000;const c=out.getContext('2d');c.fillStyle='#243b40';c.fillRect(0,0,1200,1000);
  c.save();c.translate(600,500);c.rotate(-.035);c.fillStyle='#fff5d9';c.fillRect(-548,-450,1096,900);
- c.save();c.beginPath();c.rect(-506,-315,1012,620);c.clip();c.filter='blur(24px)';c.drawImage(background,-535,-340,1070,670);c.filter='none';c.drawImage(cat,-506,-315,1012,620);c.restore();
+ c.save();c.beginPath();c.rect(-506,-315,1012,620);c.clip();c.filter='blur(24px)';c.drawImage(background,...photoCrop(background.width,background.height,1070,670),-535,-340,1070,670);
+ c.filter='none';c.drawImage(cat,...photoCrop(cat.width,cat.height,1012,620),-506,-315,1012,620);c.restore();
  c.fillStyle='#28402b';c.font='900 100px Archivo, sans-serif';c.textAlign='center';c.fillText("Ha! Gottem'",0,-346);
  c.font='800 49px Archivo, sans-serif';c.fillText(name,0,390,930);
  for(let i=0;i<14;i++){const x=-515+i*78,y=-304;c.fillStyle='#75d900';c.beginPath();c.roundRect(x,y,20,25+(i%4)*14,10);c.fill();}
