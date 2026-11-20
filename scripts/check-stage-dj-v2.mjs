@@ -5,12 +5,16 @@ import {stageDjLevel,stageDjLoop,createStageDjSound} from '../src/walk/stage-dj-
 import {addAtriumStage,stageGeometry} from '../src/v2/atrium-stage.js';
 import {Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
+import {installPreparedColliders} from '../src/v2/prepared-codec.public.js';
 
 const floorY=STAGE_DJ.at[1]-.36,parts=[],rests=[];addAtriumStage({parts,rests,y:floorY});
 const root=new T.Group(),mat=new T.MeshBasicMaterial(),floor=new T.Mesh(new T.BoxGeometry(90,.2,50),mat);floor.position.set(85,floorY-.1,30);root.add(floor);
 for(const p of parts.filter(p=>!p.noCollide)){const m=new T.Mesh(stageGeometry(p)||new T.BoxGeometry(...p.size),mat);m.name=p.part;m.position.set(...p.at);root.add(m);}
 const colliders=new Colliders();colliders.addStatic(root);colliders.commit();
+// Exercise the public walk's restricted factories, not just an authoring collider collection.
+installPreparedColliders(colliders,{v2PreparedMovers:new Map()});
 const dj=createStageDj({colliders}),bounds=new T.Box3().setFromObject(dj.group);let draws=0,triangles=0;
+assert.equal(colliders.movers.length,1);assert.equal(colliders.movers[0].name,'Common_stage_DJ_solid');
 dj.group.traverse(o=>{assert(!o.isLight,'The DJ adds no lights');if(!o.isMesh)return;draws++;triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;assert(!o.castShadow);for(const v of o.geometry.attributes.position.array)assert(Number.isFinite(v));});
 assert.equal(dj.targets.length,8);assert(draws<=14,'Keep the DJ below fourteen draws');assert(triangles<18000,'Keep the DJ below eighteen thousand triangles');
 assert(bounds.min.x>107&&bounds.max.x<111&&bounds.min.z>26.9&&bounds.max.z<33.1,'Leave clear floor in front, behind and on both sides');

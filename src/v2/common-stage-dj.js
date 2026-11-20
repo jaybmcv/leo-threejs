@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import layout from '../plan/selected-layout.js';
+import {Colliders} from '../walk/collision.js';
 import {createStageDjSound} from '../walk/stage-dj-sound.js';
 
 // The stage faces -X. In the booth frame +Z faces the audience and X spans the desk.
@@ -94,7 +95,11 @@ export function createStageDj({colliders,phone=false,still=false}={}){
  for(const x of[-.49,.89]){ball(head,metal,[.14,.29,.25],[x,2.2,-1.05],DARK);ball(head,glow,[.15,.17,.14],[x,2.2,-1.05]);}
  for(const [parent,mats] of buckets)for(const [mat,list] of mats){const g=mergeGeometries(list);list.forEach(g=>g.dispose());const mesh=new T.Mesh(g,mat);mesh.userData.noCollide=true;parent.add(mesh);}
  group.updateMatrixWorld(true);
- if(colliders){const g=stageDjCollider(),flat=g.toNonIndexed();colliders.addInstances('Common_stage_DJ_solid',flat.attributes.position.array,[group.matrixWorld.clone()]);g.dispose();flat.dispose();}
+ if(colliders){
+  // Local fittings own their small BVH; prepared collider factories only accept baked entries.
+  const g=stageDjCollider(),flat=g.toNonIndexed(),mover=new Colliders().addMover('Common_stage_DJ_solid',flat.attributes.position.array,group.matrixWorld);
+  colliders.movers.push(mover);g.dispose();flat.dispose();
+ }
  const sound=createStageDjSound(STAGE_DJ),at=new T.Vector3(...STAGE_DJ.at);let time=0;
  return {group,head,arms,sound,targets,update(dt,p,on,camera){
   sound.update(p,on,camera);time+=dt;const near=p.distanceToSquared(at)<32**2;
