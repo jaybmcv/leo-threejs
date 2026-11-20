@@ -5,6 +5,19 @@ assert.deepEqual(dock(0).toArray(),[-138.9,24.3,-29.75],'Lounge corner station')
 const lower=new T.Box3().setFromObject(lift.group.children.find(o=>o.children.some(c=>c.name==='Clubhouse_lounge_casing')));
 assert(lower.min.x>-140.692&&lower.max.z<-27.98&&lower.max.y<28.02,'Cab clears mural, aquarium and Deck 18 gallery underside');
 for(let x=-134.5;x>=-138.9;x-=.1)assert(clear(x,24.3,-32.15),'Continuous lounge floor approach '+x);
+// Either upper landing can summon the locked cab without a previous lounge visit.
+for(const index of [1,2]){
+ assert.equal(lift.lift.at,0);assert(!lift.authorized);assert.equal(lift.lift.calls.size,0);
+ lift.call(lift.lift,index,{now:true});assert.equal(lift.lift.calls.size,0,'Locked lounge car cannot choose an upper destination');
+ walker.place(new T.Vector3(0,0,2.5).applyMatrix4(lift.docks[index]));const summon=lift.nearest(walker.position);
+ assert.equal(summon?.kind,'clubhouse-call');assert.equal(summon.stop,index);lift.call(summon.lift,summon.stop);
+ assert(lift.lift.calls.has(index),'Upper landing must queue the fresh locked cab');tick([0,0,0],8);
+ assert.equal(lift.lift.at,index);assert.equal(lift.lift.phase,'open');assert(!lift.authorized,'Summoning alone does not unlock the lounge');
+ tick([0,0,-2.25],.9);assert(lift.inside(walker.position)&&lift.authorized,'Visitor boards at upper landing '+index);
+ lift.call(lift.lift,0,{now:true});tick([0,0,0],8);assert.equal(lift.lift.at,0);assert(lift.inside(walker.position));
+ tick([0,0,-2.25],2);assert(walker.position.z<-33.5&&Math.abs(walker.position.y-24.3)<.05&&!lift.authorized,'Upper visitor exits onto the lounge and the gate relocks');
+}
+console.log('PASS fresh upper landing calls, boarding, lounge return and password reset');
 walker.place(new T.Vector3(-138.9,24.3,-32.15));assert.equal(lift.nearest(walker.position)?.kind,'clubhouse-password');
 assert(!lift.unlock('wrong'),'Wrong password stays locked');tick([0,0,2.25],1);assert(walker.position.z<-31.3,'Password gate blocks entry');
 assert(lift.unlock('9lives'),'Existing clubhouse password opens the new station');tick([0,0,2.25],.8);assert(lift.inside(walker.position),'Walk through the new doorway');tick([0,0,0],.2);

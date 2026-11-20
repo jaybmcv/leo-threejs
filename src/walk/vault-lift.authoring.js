@@ -101,7 +101,8 @@ export function createVaultLift(colliders){
   get authorized(){return authorized;},
   unlock(code){if(!vaultPassword(code))return false;authorized=true;callLift(lift,0);place();return true;},
   get riding(){return lift.phase==='moving'&&carried;},
-  call(l,index,opts){if(!authorized&&dock===0&&index>0)return;if(l!==lift||!Number.isInteger(index)||index<0||index>=3)return;callLift(lift,index,opts);},
+  // Upper landings may summon the locked cab; in-car departures still require access.
+  call(l,index,opts){if(!authorized&&dock===0&&index>0&&opts?.now)return;if(l!==lift||!Number.isInteger(index)||index<0||index>=3)return;callLift(lift,index,opts);},
   stopsOf:()=>lift.stops.map((s,i)=>({index:i,label:`Deck ${s.deck}`,here:i===lift.at&&lift.phase!=='moving'})),
   nearest(p){
    const ground=local(p,0);

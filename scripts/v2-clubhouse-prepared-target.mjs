@@ -13,6 +13,17 @@ const loaded=await readPreparedWorld(new URL('../'+base+'/',import.meta.url),{sk
 restoreRoomAnchors(loaded.ship.root,loaded.ship.v2RoomAnchors);
 const col=installPreparedColliders(new Colliders(),loaded.ship.v2PreparedColliders),lift=createVaultLift(col),cat=new Controller(col);
 const tick=(wish,seconds)=>{for(let i=0;i<Math.round(seconds*60);i++){lift.update(1/60,cat);if(!lift.riding)cat.step(1/60,new T.Vector3(...wish),false);}};
+// Retained upper routes must work before anyone has unlocked the lounge station.
+for(const index of [1,2]){
+ assert.equal(lift.lift.at,0);assert(!lift.authorized);
+ cat.place(new T.Vector3(0,0,2.5).applyMatrix4(lift.docks[index]));const summon=lift.nearest(cat.position);
+ assert.equal(summon?.kind,'clubhouse-call');assert.equal(summon.stop,index);lift.call(summon.lift,summon.stop);
+ assert(lift.lift.calls.has(index),'Prepared upper landing queues the locked cab');tick([0,0,0],8);
+ assert.equal(lift.lift.at,index);assert.equal(lift.lift.phase,'open');assert(!lift.authorized);
+ tick([0,0,-2.25],.9);assert(lift.inside(cat.position)&&lift.authorized,'Prepared upper visitor boards');
+ lift.call(lift.lift,0,{now:true});tick([0,0,0],8);assert.equal(lift.lift.at,0);assert(lift.inside(cat.position));
+ tick([0,0,-2.25],2);assert(cat.position.z<-33&&Math.abs(cat.position.y-24.3)<.05&&!lift.authorized,'Prepared upper visitor exits and the lounge relocks');
+}
 cat.place(new T.Vector3(-138.9,24.3,-32.15));assert.equal(lift.nearest(cat.position)?.kind,'clubhouse-password');
 assert(lift.unlock('9lives'));const entry=cat.position.clone();tick([0,0,2.25],.85);const entryDistance=cat.position.distanceTo(entry);
 assert(entryDistance>=1.5&&lift.inside(cat.position),'Public prepared collision must permit the reported lounge entry: '+JSON.stringify({entryDistance,at:cat.position.toArray()}));
