@@ -15,6 +15,7 @@ import {liftDisplay,stopShort,landingSigns,liftDisplayMount,callLight,FEATURED} 
 // Every landing has a deck plaque, a call light that stays lit until the car arrives, and a display of where the car is.
 const LEAF_T=.08,DOOR_H=2.75;
 const mats={
+ casing:new T.MeshStandardMaterial({name:'Lift_casing',color:0x1b2f3b,roughness:.6,metalness:.25}),
  floor:new T.MeshStandardMaterial({name:'Lift_floor',color:0xc4b89e,roughness:.7}),
  wall:new T.MeshStandardMaterial({name:'Lift_panel',color:0xffffff,roughness:.6,emissive:0xffffff,emissiveIntensity:.7}),
  // The forward tower's cars (atrium concept A) are lit warm, and glazed aft too, so the atrium sees into them.
@@ -133,6 +134,20 @@ function unmirror(g,m){
  for(const a of Object.values(g.attributes)){const n=a.itemSize,v=a.array;for(let i=0;i+2<a.count;i+=3)for(let c=0;c<n;c++){const p=(i+1)*n+c,q=(i+2)*n+c,t=v[p];v[p]=v[q];v[q]=t;}}
  return g;
 }
+// Bridge the surround's 5 cm seam to the cab, keeping the shutter's full opening clear.
+// The three trim pieces at every stop share one mesh per standard passenger shaft. Visual only.
+function landingCasing(l){
+ if(!/^(forward|aft)-(port|starboard)$/.test(l.spec.id))return;
+ const parts=[],trim=.12,depth=.4;
+ for(const s of l.stops){
+  const basis=new T.Matrix4().makeBasis(s.along,new T.Vector3(0,1,0),s.frontOf).setPosition(s.base);
+  const part=(w,h,x,y)=>{const g=new T.BoxGeometry(w,h,depth);g.translate(x,y,-.06);g.applyMatrix4(basis);parts.push(unmirror(g,basis));};
+  for(const side of [-1,1])part(trim,DOOR_H,side*(s.width+trim)/2,DOOR_H/2);
+  part(s.width+2*trim,trim,0,DOOR_H+trim/2);
+ }
+ const mesh=new T.Mesh(mergeGeometries(parts),mats.casing);parts.forEach(g=>g.dispose());
+ mesh.name='Lift_landing_casing';mesh.userData.noCollide=true;l.root.add(mesh);
+}
 function mergeLandings(l){
  const meshes=[0,1].map(k=>{
   const parts=l.stops.map(({shutter:s})=>unmirror(s.shut[k].geometry.clone().applyMatrix4(s.group.matrix),s.group.matrix)),geometry=mergeGeometries(parts,true);parts.forEach(p=>p.dispose());
@@ -200,7 +215,7 @@ export function createLifts(scene,colliders){
    return {...stop,base,along,leaves,shutter:shutter(root,d.width,DOOR_H),light,callAt:base.clone().addScaledVector(frontOf,.9),width:d.width,frontOf,face:faceOf(d)};
   });
   const lift={spec,root,car,carMover,faces,faceOf,stops,display,...liftState(spec)};
-  place(lift);lift.landings=mergeLandings(lift);lift.landings.update();return lift;
+  landingCasing(lift);place(lift);lift.landings=mergeLandings(lift);lift.landings.update();return lift;
  });
  function place(l){
   // Nothing to move while the car rests with its doors still.
