@@ -1454,7 +1454,7 @@ function openName(){closePanels();
  $('name-edit').value=savedName();$('name-sheet').hidden=false;input.enabled=false;if(!verified)$('name-edit').focus();}
 $('name-connect').addEventListener('click',connect);
 // The vault's password (vault.js): the right one opens the door; a wrong one says so and lets you try again.
-$('vault-form').addEventListener('submit',e=>{e.preventDefault();if((vaultLiftPassword?vaultLift:vault)?.unlock($('vault-code').value)){closePanels();return;}
+$('vault-form').addEventListener('submit',e=>{e.preventDefault();if((vaultLiftPassword?vaultLift:vault)?.unlock($('vault-code').value)){$('vault-code').blur();closePanels();return;}
  $('vault-note').textContent='That’s not the password. Try again.';$('vault-code').select();});
 $('name-form').addEventListener('submit',e=>{e.preventDefault();live?.rename($('name-edit').value.trim());closePanels();});
 for(const b of document.querySelectorAll('[data-close]'))b.addEventListener('click',closePanels);
