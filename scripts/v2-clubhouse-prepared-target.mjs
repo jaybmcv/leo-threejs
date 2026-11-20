@@ -13,11 +13,11 @@ const loaded=await readPreparedWorld(new URL('../'+base+'/',import.meta.url),{sk
 restoreRoomAnchors(loaded.ship.root,loaded.ship.v2RoomAnchors);
 const col=installPreparedColliders(new Colliders(),loaded.ship.v2PreparedColliders),lift=createVaultLift(col),cat=new Controller(col);
 const tick=(wish,seconds)=>{for(let i=0;i<Math.round(seconds*60);i++){lift.update(1/60,cat);if(!lift.riding)cat.step(1/60,new T.Vector3(...wish),false);}};
-cat.place(new T.Vector3(-136.72,24.3,-29.91));assert.equal(lift.nearest(cat.position)?.kind,'clubhouse-password');
-assert(lift.unlock('9lives'));const entry=cat.position.clone();tick([-2.25,0,0],.85);const entryDistance=cat.position.distanceTo(entry);
+cat.place(new T.Vector3(-138.9,24.3,-32.15));assert.equal(lift.nearest(cat.position)?.kind,'clubhouse-password');
+assert(lift.unlock('9lives'));const entry=cat.position.clone();tick([0,0,2.25],.85);const entryDistance=cat.position.distanceTo(entry);
 assert(entryDistance>=1.5&&lift.inside(cat.position),'Public prepared collision must permit the reported lounge entry: '+JSON.stringify({entryDistance,at:cat.position.toArray()}));
 for(const index of [1,2,0]){lift.call(lift.lift,index,{now:true});tick([0,0,0],8);assert.equal(lift.lift.at,index);assert.equal(lift.lift.phase,'open');assert(lift.inside(cat.position),'Prepared rider reaches stop '+index);}
-tick([2.25,0,0],2);assert(cat.position.x>-135.3&&Math.abs(cat.position.y-24.3)<.05,'Leave the new station across the actual lounge floor');
+tick([0,0,-2.25],2);assert(cat.position.z<-33&&Math.abs(cat.position.y-24.3)<.05,'Leave the new station across the actual lounge floor');
 cat.place(new T.Vector3(-87,24.3,-51.2));const old=cat.position.clone();tick([2.25,0,0],1);const oldWallDistance=cat.position.distanceTo(old);
 assert(oldWallDistance<=.8&&cat.position.x<-86.3,'Public prepared wall must close the retired opening: '+JSON.stringify({oldWallDistance,at:cat.position.toArray()}));
 assert.equal(lift.nearest(cat.position),null);tick([0,0,2.25],1);assert(cat.position.z>-49.4&&Math.abs(cat.position.y-24.3)<.05,'The old station corridor remains walkable');
