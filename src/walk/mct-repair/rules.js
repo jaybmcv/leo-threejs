@@ -24,13 +24,40 @@ export function scatterPile(count,random=Math.random){
  });
 }
 export function pileMetrics(width,height,count){
- const size=Math.max(0,Math.min(Math.max(52,Math.sqrt(width*height/Math.max(1,count))*1.35),width/3,height/2));
+ const size=Math.max(52,Math.min(Math.sqrt(width*height/Math.max(1,count))*1.35,width/3,height/2));
  // Leave room for every rotated corner and the focus outline.
  const inset=size/Math.SQRT2+3;
  return {size,inset,spanX:Math.max(0,width-2*inset),spanY:Math.max(0,height-2*inset)};
 }
 export function pilePosition(point,metrics){return {x:metrics.inset+unit(point.x)*metrics.spanX,y:metrics.inset+unit(point.y)*metrics.spanY};}
 export function pileDrop(x,y,metrics){return {x:metrics.spanX?unit((x-metrics.inset)/metrics.spanX):.5,y:metrics.spanY?unit((y-metrics.inset)/metrics.spanY):.5};}
+export function pileMotion(point,index=0){return {...point,vx:0,vy:0,phase:index*2.399963};}
+// Velocities are pixels per second, so small benches float at the same gentle pace.
+export function pushPile(point,pointer,metrics,reduced=false){
+ const p=pilePosition(point,metrics),dx=p.x-pointer.x,dy=p.y-pointer.y,d=Math.hypot(dx,dy),radius=Math.max(90,metrics.size*1.6);
+ if(d<.001||d>=radius)return {...point};
+ const strength=(reduced?14:65)*(1-d/radius)**2,limit=reduced?18:80;
+ let vx=point.vx+dx/d*strength,vy=point.vy+dy/d*strength;const speed=Math.hypot(vx,vy);
+ if(speed>limit){vx*=limit/speed;vy*=limit/speed;}
+ return {...point,vx,vy};
+}
+export function stepPile(point,metrics,seconds,time,{held=false,reduced=false}={}){
+ if(held)return {...point,vx:0,vy:0};
+ const dt=Math.max(0,Math.min(.05,seconds)),decay=Math.exp(-(reduced?8:3.5)*dt),phase=point.phase;
+ const idleX=reduced?0:3*Math.sin(time*.37+phase),idleY=reduced?0:2.5*Math.cos(time*.43+phase);
+ let vx=idleX+(point.vx-idleX)*decay,vy=idleY+(point.vy-idleY)*decay;
+ const p=pilePosition(point,metrics);
+ // Steer inward before the edge, then catch even a large push inside the safe inset.
+ const steer=(v,pos,span)=>{
+  const margin=Math.min(24,span/3);if(!margin)return 0;if(reduced)return v;
+  return v+((1-unit(pos/margin))**2-(1-unit((span-pos)/margin))**2)*40*dt;
+ };
+ vx=steer(vx,p.x-metrics.inset,metrics.spanX);vy=steer(vy,p.y-metrics.inset,metrics.spanY);
+ const x=p.x+vx*dt,y=p.y+vy*dt;
+ if(x<metrics.inset)vx=Math.abs(vx)*.35;else if(x>metrics.inset+metrics.spanX)vx=-Math.abs(vx)*.35;
+ if(y<metrics.inset)vy=Math.abs(vy)*.35;else if(y>metrics.inset+metrics.spanY)vy=-Math.abs(vy)*.35;
+ return {...point,...pileDrop(x,y,metrics),vx,vy,angle:point.angle+(reduced?0:Math.sin(time*.29+phase)*1.8*dt)};
+}
 // A wrong part, view or repeated installation costs nothing and stays on the bench.
 export function install(g,id){
  const part=PARTS.find(p=>p.id===id);

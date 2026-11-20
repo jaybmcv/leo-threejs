@@ -4,7 +4,7 @@ import {createRequire} from 'node:module';
 import {build} from 'esbuild';
 import {ANGLE_IF_ASKED,PLAYWRIGHT_FROM} from './chrome-setup.mjs';
 import {PARTS,PUZZLES,JUNK,JUNK_NAMES} from '../src/walk/mct-repair/catalog.js';
-import {VIEWS,newRepair,required,workbench,scatterPile,pileMetrics,pilePosition,pileDrop,install,nextRound,formatTime} from '../src/walk/mct-repair/rules.js';
+import {VIEWS,newRepair,required,workbench,scatterPile,pileMetrics,pilePosition,pileDrop,pileMotion,pushPile,stepPile,install,nextRound,formatTime} from '../src/walk/mct-repair/rules.js';
 import {partArt,cartArt,PART_SPOTS} from '../src/walk/mct-repair/art.js';
 
 const requestedNames=[
@@ -123,7 +123,7 @@ for(const round of [0,1,2]){
  }
 }
 const ui=await fs.readFile('src/walk/mct-repair/game.js','utf8');
-assert(!/mct-float|animation:|grid-template-columns:repeat|createElement\('small'\)/.test(ui),'The pile has no tiles, permanent captions or continuous movement');
+assert(!/animation:|grid-template-columns:repeat|createElement\('small'\)/.test(ui),'The pile has no tiles or permanent captions');
 assert(ui.includes("b.setAttribute('aria-label',p?.name||JUNK_NAMES[id]||label(id))"),'Every covered item retains its accessible name');
 assert(ui.includes("b.addEventListener('focus',()=>{raise(b);itemName();})"),'Keyboard focus uncovers an item');
 for(const mode of ['', '.public','.prepared','.authoring']){
@@ -134,6 +134,48 @@ for(const mode of ['', '.public','.prepared','.authoring']){
 console.log('PASS MCT repair core: all 18 requested names, distinct icons, valid mounts and playable tasks.');
 console.log('PASS MCT repair: 45 repair parts, 27 named junk with unique icons never required or installable, sampled bench counts, all 26 tasks completable, scoring and four walk modes.');
 console.log('PASS MCT pile: scattering, rotated bounds, persistent drops, resizing and keyboard access.');
+
+// Float, grab impulses and bounds use the same pure steps as the open panel.
+const floatMetrics=pileMetrics(700,240,56),initial=pileMotion({x:.5,y:.5,angle:27},3);
+let idle=initial;
+for(let i=0;i<180;i++)idle=stepPile(idle,floatMetrics,1/60,i/60);
+const distance=(a,b,m=floatMetrics)=>{const p=pilePosition(a,m),q=pilePosition(b,m);return Math.hypot(p.x-q.x,p.y-q.y);};
+assert(distance(initial,idle)>1,'Idle pieces move over three seconds');assert(distance(initial,idle)<15,'Idle drift stays easy to click');
+assert.notEqual(idle.angle,initial.angle,'Pieces turn slowly');
+assert.deepEqual(stepPile(initial,floatMetrics,1/60,2,{reduced:true}),initial,'Reduced motion has no idle float or rotation');
+const pointer=pilePosition(initial,floatMetrics);
+for(const [dx,dy] of [[12,0],[-12,0],[0,12],[0,-12],[8,-8]]){
+ const point=pileMotion({...pileDrop(pointer.x+dx,pointer.y+dy,floatMetrics),angle:0}),pushed=pushPile(point,pointer,floatMetrics);
+ assert(pushed.vx*dx+pushed.vy*dy>0,'A grab pushes directly away from the pointer');
+ assert(Math.abs(pushed.vx*dy-pushed.vy*dx)<1e-8,'The push has no sideways component');
+ const moved=stepPile(pushed,floatMetrics,.05,0,{reduced:true});assert(distance(moved,initial)>Math.hypot(dx,dy),'A nearby piece moves farther from the pointer');
+ assert.deepEqual(stepPile(pushed,floatMetrics,.05,0,{held:true}),{...pushed,vx:0,vy:0},'Hovered, focused and held pieces stay put');
+}
+const near=pileMotion({...pileDrop(pointer.x+10,pointer.y,floatMetrics),angle:0}),far=pileMotion({...pileDrop(pointer.x+60,pointer.y,floatMetrics),angle:0});
+assert(pushPile(near,pointer,floatMetrics).vx>pushPile(far,pointer,floatMetrics).vx,'Push fades with distance');
+assert.deepEqual(pushPile(initial,{x:-1000,y:-1000},floatMetrics),initial,'Distant pieces are untouched');
+assert.deepEqual(pushPile(initial,pointer,floatMetrics),initial,'Coincident centres never produce invalid numbers');
+let gentle=pushPile(near,pointer,floatMetrics,true);assert(gentle.vx<pushPile(near,pointer,floatMetrics).vx,'Reduced motion uses a gentle push');
+for(let i=0;i<120;i++)gentle=stepPile(gentle,floatMetrics,1/60,i/60,{reduced:true});
+assert(Math.hypot(gentle.vx,gentle.vy)<.001,'A push damps to rest');assert.equal(gentle.angle,near.angle);
+assert(distance(near,gentle)<3,'A reduced-motion push is short');
+for(const [width,height] of [[82,100],[160,160],[260,160],[350,220],[1240,250],[3800,1650]]){
+ const m=pileMetrics(width,height,56);assert(m.size>=52,'Small benches keep tappable targets');
+ let points=scatterPile(56,pileRandom).map(pileMotion);
+ for(let i=0;i<2400;i++){
+  if(i%15===0){const pointer={x:pileRandom()*width,y:pileRandom()*height};points=points.map(p=>pushPile(p,pointer,m));}
+  points=points.map(p=>stepPile(p,m,1/60,i/60));
+  for(const p of points){
+   const pos=pilePosition(p,m),half=m.size/Math.SQRT2;
+   assert(Object.values(p).every(Number.isFinite),'Motion remains finite');
+   assert(p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1,'Motion stays normalized');
+   assert(pos.x-half>=0&&pos.x+half<=width&&pos.y-half>=0&&pos.y+half<=height,'Repeated grabs and idle keep every rotated corner on the bench');
+  }
+ }
+ const small=pileMetrics(260,160,56);
+ for(const p of points){const pos=pilePosition(p,small);assert(pos.x-small.inset>=0&&pos.x+small.inset<=260+.001&&pos.y-small.inset>=0&&pos.y+small.inset<=160+.001,'Resize contains the whole pile');}
+}
+console.log('PASS MCT float: idle drift, slow rotation, radial falloff, damping, held items, reduced motion and 40 seconds of repeated pushes at six bench sizes.');
 
 // Measure the real panel, including the longest twelve-part tasks and installed marks.
 const {chromium}=createRequire(PLAYWRIGHT_FROM)('playwright');
@@ -192,6 +234,56 @@ try{
    await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>repair.isOpen),false);
   }
  }
+ // Exercise actual pointer input and viewport resizing as well as the pure motion maths.
+ await page.setViewportSize({width:1280,height:720});
+ await page.evaluate(()=>{repair.open(3);document.querySelector('.mct-repair [data-primary]').click();});
+ const pileSample=()=>page.evaluate(()=>[...document.querySelector('[data-pile]').children].map(el=>({x:+el.dataset.x,y:+el.dataset.y})));
+ const beforeFloat=await pileSample();await page.waitForTimeout(3000);const afterFloat=await pileSample();
+ assert(afterFloat.some((p,i)=>Math.hypot(p.x-beforeFloat[i].x,p.y-beforeFloat[i].y)>.001),'The open game floats without input');
+ const inspectPile=()=>page.evaluate(()=>{
+  const pile=document.querySelector('[data-pile]'),box=pile.getBoundingClientRect();
+  return [...pile.children].map(el=>{
+   const r=el.getBoundingClientRect(),angle=parseFloat(el.style.getPropertyValue('--angle'))*Math.PI/180,half=r.width*(Math.abs(Math.cos(angle))+Math.abs(Math.sin(angle)))/2,x=(r.left+r.right)/2,y=(r.top+r.bottom)/2;
+   return {size:r.width,inside:x-half>=box.left-.1&&x+half<=box.right+.1&&y-half>=box.top-.1&&y+half<=box.bottom+.1};
+  });
+ });
+ const target=await page.evaluate(()=>{
+  const pile=document.querySelector('[data-pile]'),box=pile.getBoundingClientRect(),items=[...pile.children],centre=el=>{const r=el.getBoundingClientRect();return {x:(r.left+r.right)/2,y:(r.top+r.bottom)/2};};
+  const el=items.find(el=>{
+   const p=centre(el),hit=document.elementFromPoint(p.x,p.y);
+   return el.contains(hit)&&p.x>box.left+90&&p.x<box.right-90&&p.y>box.top+40&&p.y<box.bottom-40&&items.some(other=>other!==el&&Math.hypot(centre(other).x-p.x,centre(other).y-p.y)<70);
+  });
+  if(!el)throw Error('No accessible clustered piece');el.dataset.checkGrab='';return centre(el);
+ });
+ await page.mouse.move(target.x,target.y);
+ const grabBefore=await page.evaluate(()=>[...document.querySelector('[data-pile]').children].map(el=>{const r=el.getBoundingClientRect();return {el:el.hasAttribute('data-check-grab'),x:(r.left+r.right)/2,y:(r.top+r.bottom)/2};}));
+ await page.mouse.down();await page.waitForTimeout(250);
+ const grabAfter=await page.evaluate(()=>[...document.querySelector('[data-pile]').children].map(el=>{const r=el.getBoundingClientRect();return {x:(r.left+r.right)/2,y:(r.top+r.bottom)/2};}));
+ const grabbed=grabBefore.findIndex(p=>p.el);
+ assert(Math.hypot(grabAfter[grabbed].x-grabBefore[grabbed].x,grabAfter[grabbed].y-grabBefore[grabbed].y)<.1,'The pressed piece stays under the pointer');
+ assert(grabBefore.some((p,i)=>i!==grabbed&&Math.hypot(p.x-target.x,p.y-target.y)<90&&Math.hypot(grabAfter[i].x-target.x,grabAfter[i].y-target.y)>Math.hypot(p.x-target.x,p.y-target.y)+.2),'Pressing a piece pushes a neighbour away');
+ // Move inward so the safe inset cannot clamp the drop. Preserve the actual grab offset.
+ const dragTarget=await page.evaluate(pointer=>{
+  const pile=document.querySelector('[data-pile]'),box=pile.getBoundingClientRect(),r=pile.querySelector('[data-check-grab]').getBoundingClientRect();
+  const x=(r.left+r.right)/2,y=(r.top+r.bottom)/2,dx=x<(box.left+box.right)/2?70:-70,inset=r.width/Math.SQRT2+3;
+  if(x+dx<box.left+inset||x+dx>box.right-inset||y<box.top+inset||y>box.bottom-inset)throw Error('Drag destination must be inside the safe bench bounds');
+  return {x:pointer.x+dx,y:pointer.y,expected:{x:x+dx,y}};
+ },target);
+ await page.mouse.move(dragTarget.x,dragTarget.y,{steps:12});await page.mouse.up();
+ const dropped=await page.locator('[data-check-grab]').boundingBox();
+ const dropCentre={x:dropped.x+dropped.width/2,y:dropped.y+dropped.height/2};
+ assert(Math.abs(dropCentre.x-dragTarget.expected.x)<1&&Math.abs(dropCentre.y-dragTarget.expected.y)<1,`Dragging leaves a piece at its bench drop point: expected ${JSON.stringify(dragTarget.expected)}, got ${JSON.stringify(dropCentre)}`);
+ assert((await inspectPile()).every(p=>p.inside));
+ await page.setViewportSize({width:390,height:600});await page.waitForTimeout(100);
+ assert((await inspectPile()).every(p=>p.inside&&p.size>=52),'Narrow viewport retains readable targets inside the bench');
+ const needed=await page.evaluate(()=>repair.state.needed[0]);
+ await page.locator(`[data-view="${needed.view}"]`).click();await page.locator(`[data-part="${needed.id}"]`).focus();await page.keyboard.press('Enter');await page.locator('[data-cart]').click();
+ assert.equal(await page.evaluate(()=>repair.state.placed.length),1,'A required part installs after resizing');
+ await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(100);
+ const still=await pileSample();await page.waitForTimeout(600);assert.deepEqual(await pileSample(),still,'Reduced motion disables idle movement in the panel');
+ await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>repair.isOpen),false);
+ await page.emulateMedia({reducedMotion:'no-preference'});
  assert.equal(seen.size,PUZZLES.length,'Every catalogue task was measured');assert.deepEqual(errors,[]);
+ console.log('PASS MCT float panel: idle, pointer push, held piece, 390x600 resize, installation and reduced motion.');
  console.log(`PASS MCT repair layout: all ${seen.size} tasks, up to ${maxParts} parts, at 1700x870, 1280x720, 390x844 and 844x390; readable rows and installed marks, no clipping or list scroll.`);
 }finally{await browser.close();}
