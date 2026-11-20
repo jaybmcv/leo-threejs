@@ -84,7 +84,7 @@ for(let head=0;head<BUDGET;head++){
   if(stands(nx,fy,nz))push(nx,fy,nz);else blocked.add(k);
  }
  // Private lifts use their actual serialized car at each stop, like the public lift flood.
- for(const lift of prepared.privateLifts||[]){const[cx,,cz]=lift.centre;if(ridden.has(lift.id)||Math.hypot(x-cx,z-cz)>lift.radius||!lift.stops.some(s=>Math.abs(s.y-y)<.3))continue;ridden.add(lift.id);for(const s of lift.stops){const sx=snap(cx,S0.x),sz=snap(cz,S0.z),fy=floorAt(sx,s.y,sz);if(fy!==null&&stands(sx,fy,sz))push(sx,fy,sz);}}
+ for(const lift of prepared.privateLifts||[]){if(ridden.has(lift.id)||!lift.stops.some(s=>Math.abs(s.y-y)<.3&&Math.hypot(x-(s.centre||lift.centre)[0],z-(s.centre||lift.centre)[2])<=lift.radius))continue;ridden.add(lift.id);for(const s of lift.stops){const [cx,,cz]=s.centre||lift.centre,sx=snap(cx,S0.x),sz=snap(cz,S0.z),fy=floorAt(sx,s.y,sz);if(fy!==null&&stands(sx,fy,sz))push(sx,fy,sz);}}
  // Standing in a car at one stop reaches every stop of that lift.
  for(const lift of LIFTS){const c=lift.car;if(ridden.has(lift.id)||Math.abs(x-c.x)>c.width/2-.4||Math.abs(z-c.z)>c.depth/2-.4||!lift.stops.some(s=>Math.abs(s.y-y)<.3))continue;
   ridden.add(lift.id);for(const s of lift.stops){const sx=snap(c.x,S0.x),sz=snap(c.z,S0.z),fy=floorAt(sx,s.y,sz);if(fy!==null&&stands(sx,fy,sz))push(sx,fy,sz);}}
@@ -105,7 +105,7 @@ const area=new Map();for(let i=0;i<X.length;i++){const b=bandOf(Y[i]+.2)+1;area.
 // positions (about 60 m²) still counts, so a room shut behind a blocked door fails as before.
 const POCKET_LIMIT=500,pocketOf=new Map();
 const overhead=(x,y,z)=>{ray.origin.set(x,y+1,z);ray.direction.set(0,1,0);const h=col.raycast(ray,40);return h?1+h.distance:Infinity;};
-const nearLift=(x,y,z)=>LIFTS.some(l=>Math.abs(x-l.car.x)<=l.car.width/2&&Math.abs(z-l.car.z)<=l.car.depth/2&&l.stops.some(s=>Math.abs(s.y-y)<.3))||(prepared.privateLifts||[]).some(l=>Math.hypot(x-l.centre[0],z-l.centre[2])<=l.radius&&l.stops.some(s=>Math.abs(s.y-y)<.3));
+const nearLift=(x,y,z)=>LIFTS.some(l=>Math.abs(x-l.car.x)<=l.car.width/2&&Math.abs(z-l.car.z)<=l.car.depth/2&&l.stops.some(s=>Math.abs(s.y-y)<.3))||(prepared.privateLifts||[]).some(l=>l.stops.some(s=>Math.abs(s.y-y)<.3&&Math.hypot(x-(s.centre||l.centre)[0],z-(s.centre||l.centre)[2])<=l.radius));
 const sealedPocket=(sx,sy,sz)=>{
  const x0=snap(sx,S0.x),z0=snap(sz,S0.z),y0=floorAt(x0,sy,z0),open={sealed:false,lid:Infinity};if(y0===null||!stands(x0,y0,z0))return open;
  const k0=key(x0,y0,z0);if(seen.has(k0))return open;if(pocketOf.has(k0))return pocketOf.get(k0);

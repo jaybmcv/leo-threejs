@@ -139,7 +139,14 @@ for(const flight of [0,1]){
 route('R3 treasure gallery',[[-93.1,32.3,-47],[-93.1,32.3,-29],[-115.7,32.3,-29]]);
 const floorRay=new T.Raycaster(new T.Vector3(-93,32.5,-28.7),new T.Vector3(0,-1,0),0,.4),floorHits=floorRay.intersectObject(structure,true).filter(h=>h.object.name==='V2_garden_gallery');assert.equal(new Set(floorHits.map(h=>h.object.uuid)).size,1,'Gallery and link must share one floor surface');
 route('R4 maze upper exit',[[-125.8,32.3,-29],[-126.75,32.3,-29]]);
-route('R5 clubhouse and ground lift',[[-90.8,24.3,-45.8],[-86.53,24.3,-45.8],[-86.53,24.3,-49]]);
+route('R5 retained clubhouse corridor',[[-90.8,24.3,-45.8],[-86.53,24.3,-45.8],[-86.53,24.3,-49]]);
+route('R5 lounge lift approach',[[-125,24.3,-29.7],[-125,24.3,-43],[-134.5,24.3,-43],[-134.5,24.3,-32.15],[-138.9,24.3,-32.15]]);
+// The real merged wall-light fittings must stay clear of a standing cat at the new entrance.
+walker.place(new T.Vector3(-138.9,24.3,-32.15));assert(lift.unlock('9lives'));const entryStart=walker.position.clone();
+for(let i=0;i<51;i++){lift.update(1/60,walker);walker.step(1/60,new T.Vector3(0,0,2.25),false);}
+const entryDistance=walker.position.distanceTo(entryStart);
+assert(entryDistance>=1.5&&lift.inside(walker.position),'The retained wall lights must not slow entry into the clubhouse cab: '+JSON.stringify({entryDistance,at:walker.position.toArray()}));
+console.log('PASS clubhouse entry below retained lights',entryDistance,'metres in .85 seconds');
 route('R6 jaguar to dome',[[-112.5,24.3,-23.5],[-112.5,24.3,-28.8],[-113.3,24.3,-29.1],[-113.3,24.3,-32.7],[-112.5,24.3,-32.7],[-112.5,24.3,-34]]);
 for(const y of [28.3,32.3])route('R7 aft door '+y,[[-140.6,y,-30],[-138.2,y,-30]]);
 // Walk below the retired side strips from the reported view, and below the rear strip.
