@@ -8876,7 +8876,7 @@
     "file": "src/walk/main.public.js",
     "original": "src/walk/main.js",
     "mode": "public",
-    "bodySha256": "787a69f437198d5ca9187d4d977ff13b49540a1af9d1fe9e57acedc861c8f0c3",
+    "bodySha256": "8044f0c210c215199f3e78b1bae3d7f2e39a11412b9148f0234b1334c341c83b",
     "imports": [
       "./key-code.js",
       "../v2/voyager-lawn.js",
