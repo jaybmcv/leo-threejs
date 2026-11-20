@@ -15,6 +15,10 @@ const frame=()=>{const g=new T.Group();g.position.set(V.x,V.y,V.z);anchorObject(
 export function prepareVaultLift(ship){
  const g=frame(),box=new T.Box3(new T.Vector3(-R-.1,3.7,-R-.1),new T.Vector3(R+.1,TOP,R+.1));
  cutOut(ship.inside,box,()=>true,g.matrixWorld.clone().invert());
+ // The new cab and its approach must also clear fitted interior partitions before collision is baked.
+ const [x,y,z]=new T.Vector3().setFromMatrixPosition(clubhouseDockMatrix(V,0)).toArray();
+ const entry=new T.Box3(new T.Vector3(x-R-.02,y+.01,z-R-.02),new T.Vector3(x+3.3,y+3.5,z+R+.02));
+ cutOut(ship.inside,entry,o=>/wall|lining|partition/i.test(o.name)&&!/hull|pressure|outer_room|aquarium/i.test(o.name)&&!o.userData.noCollide);
 }
 
 export function createVaultLift(colliders){

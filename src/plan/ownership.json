@@ -6193,7 +6193,7 @@
       ],
       "interactionTargets": null,
       "placements": 31,
-      "signature": "8db1e2064561361d33b62769c58c34558b65beb129d01cd6661771f3b62c3220"
+      "signature": "a97fed22d791883dbf2a325829cd1b55b60f365cb89215a6887509ac06c50891"
     },
     {
       "source": "src/walk/vault-lift.js",
@@ -6213,7 +6213,7 @@
       ],
       "interactionTargets": null,
       "placements": 31,
-      "signature": "d48bb68f9d71b00536ac65ba98fd3a2e21da95f4e9101d193b5831be35dbf9bc"
+      "signature": "68dab78c4a2a9ab0804d782ebed7eb09e25a7d19133b57e99c0a99d87e7f45e7"
     },
     {
       "source": "src/walk/vault.authoring.js",
