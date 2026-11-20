@@ -8876,7 +8876,7 @@
     "file": "src/walk/main.public.js",
     "original": "src/walk/main.js",
     "mode": "public",
-    "bodySha256": "bc8c9b669cd016d80b61326ca4f6913c6efdc93ec6dc41832e3e8d7a4437b2d9",
+    "bodySha256": "8503eacd5cf7ea1902994411da85bf46cb3d39fdf3163fe6206c85fb7767ca28",
     "imports": [
       "./key-code.js",
       "../v2/voyager-lawn.js",
@@ -8969,6 +8969,7 @@
       "../v2/haze.js",
       "./star-drift.js",
       "./ambience.js",
+      "../v2/common-stage-dj.js",
       "./lullaby.js",
       "./lounge-sound.js",
       "./lounge-mood.js",
