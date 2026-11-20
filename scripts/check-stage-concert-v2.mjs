@@ -4,6 +4,8 @@ import layout from '../src/plan/selected-layout.js';
 import {contains} from '../src/plan/geometry-v2.js';
 import {addAtriumStage,stageGeometry} from '../src/v2/atrium-stage.js';
 import {stageConcertParts,stageConcertFixtures,stageConcertGeometry,addStageConcertDecor} from '../src/v2/stage-concert.js';
+import {createStageBeams,stageBeamSources,stageBeamAim} from '../src/v2/stage-beams.js';
+import {setAtriumView} from '../src/v2/atrium-visibility.js';
 import {Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 
@@ -35,6 +37,46 @@ sightMeshes.forEach(o=>o.geometry.dispose());sightMat.dispose();
 const rendered=[];addStageConcertDecor(rendered,y);
 for(const g of rendered){assert.equal(g.attributes.color.count,g.attributes.position.count);assert(!g.index);g.dispose();}
 
+// Runtime beams share the authored lenses and add only three unlit, noncolliding draws.
+const effects=new T.Scene(),beams=createStageBeams(effects,y),sources=stageBeamSources();
+const front=sources.filter(f=>f.row==='front'),back=sources.filter(f=>f.row==='back');
+const [cones,pools,lasers]=beams.group.children,matrix=new T.Matrix4(),point=new T.Vector3(),direction=new T.Vector3();
+assert.equal(effects.children.length,1);assert.equal(beams.group.children.length,3);
+assert.equal(cones.count,back.length);assert.equal(pools.count,back.length);assert.equal(lasers.count,front.length);
+assert(back.length>=9&&front.length>=9);
+effects.traverse(o=>{assert(!o.isLight);if(o.isMesh){assert(o.isInstancedMesh&&o.userData.noCollide);assert(o.material.isShaderMaterial);assert.equal(o.material.blending,T.AdditiveBlending);assert.equal(o.material.depthWrite,false);assert.equal(o.material.toneMapped,false);assert(!o.castShadow&&!o.receiveShadow);}});
+for(const f of sources){
+ const fixture=fixtures.find(v=>v.id===f.id);assert(fixture,'Every beam has an existing fixture');
+ assert.deepEqual(f.at,fixture.at);assert(Math.abs(f.origin[0]-(fixture.at[0]-.24*Math.sin(fixture.tilt)))<1e-9);assert(Math.abs(f.origin[2]-fixture.at[2])<1e-9);
+ assert(Math.abs(f.origin[1]-(fixture.at[1]-.24*Math.cos(fixture.tilt)))<.02,'Beam starts on the lens face');
+}
+back.forEach((f,i)=>{
+ cones.getMatrixAt(i,matrix);point.setFromMatrixPosition(matrix);assert(point.distanceTo(new T.Vector3(...f.origin))<1e-5);
+ direction.set(0,1,0).transformDirection(matrix);assert(direction.distanceTo(new T.Vector3(0,-1,0))<1e-6,'Rear cones point straight down');
+ cones.geometry.computeBoundingBox();point.set(0,cones.geometry.boundingBox.max.y,0).applyMatrix4(matrix);assert(Math.abs(point.y-.36)<1e-5,'Rear cone reaches the stage floor');
+ pools.getMatrixAt(i,matrix);point.setFromMatrixPosition(matrix);assert(Math.abs(point.y-.378)<1e-5);assert(Math.abs(point.x-f.origin[0])<1e-5&&Math.abs(point.z-f.origin[2])<1e-5,'Pool sits under its cone');
+});
+const camera=new T.PerspectiveCamera(60,16/9,.1,300),audience=new T.Vector3(98.71,y+.24,29.92);
+setAtriumView(audience);camera.position.copy(audience).add(new T.Vector3(0,1.63,0));camera.lookAt(113,y+2,30);camera.updateMatrixWorld(true);
+beams.update(camera,0);assert(beams.group.visible,'Always visible from the seating in the open atrium');
+const rearBefore=cones.instanceMatrix.array.slice(),poolsBefore=pools.instanceMatrix.array.slice(),frontBefore=lasers.instanceMatrix.array.slice();
+beams.update(camera,4);assert.notDeepEqual(lasers.instanceMatrix.array,frontBefore,'Front aims change with time');
+assert.deepEqual(cones.instanceMatrix.array,rearBefore,'Rear cones never move');assert.deepEqual(pools.instanceMatrix.array,poolsBefore,'Rear pools never move');
+assert.equal(lasers.material.uniforms.time.value,4);assert.equal(cones.material.uniforms.time,pools.material.uniforms.time,'Cones and their pools change colour together');
+for(let t=0;t<=120;t+=.5)front.forEach((f,i)=>{
+ lasers.geometry.computeBoundingBox();const length=lasers.geometry.boundingBox.max.y;assert(length<=18.01,'Outward beams end near the seating');
+ const aim=stageBeamAim(t,i);assert(aim.x<-.85&&aim.y<0,'Front beams point out towards the audience below the upper decks');assert(Math.abs(aim.length()-1)<1e-6);
+ const end=new T.Vector3(...f.origin).addScaledVector(aim,length);assert(end.y>3&&end.y<4,'Beam stays above the seating camera eye line and below Deck 7');
+ assert(lasers.geometry.boundingBox.max.x<=.021,'Keep the outward lasers thin');
+ assert(contains(layout.decks[5].atrium.outline,[end.x,end.z]),'Finite fan stays inside the atrium');
+ assert(aim.distanceTo(stageBeamAim(t,i+1))+stageBeamAim(t+4,i).distanceTo(stageBeamAim(t+4,i+1))>.05,'Neighbours sweep out of phase, crossing only briefly');
+ assert(aim.distanceTo(stageBeamAim(t+.01,i))<.002,'Motion stays smooth');
+});
+front.forEach((f,i)=>{lasers.getMatrixAt(i,matrix);point.setFromMatrixPosition(matrix);assert(point.distanceTo(new T.Vector3(...f.origin))<1e-5);assert(direction.set(0,1,0).transformDirection(matrix).distanceTo(stageBeamAim(4,i))<1e-6);});
+camera.lookAt(0,camera.position.y,30);camera.updateMatrixWorld(true);beams.update(camera,5);assert(!beams.group.visible,'Hide the offscreen stage');
+camera.position.set(-100,y+2,30);camera.lookAt(113,y+2,30);camera.updateMatrixWorld(true);beams.update(camera,6);assert(!beams.group.visible,'Hide distant beams');
+setAtriumView(new T.Vector3(0,y-4,0));camera.position.set(98.71,y+2,29.92);camera.lookAt(113,y+2,30);camera.updateMatrixWorld(true);beams.update(camera,7);assert(!beams.group.visible,'Follow the atrium visibility gate');
+
 // The actual solid factory feeds the walk's capsule solver, including both independently batched side islands.
 const root=new T.Group(),mat=new T.MeshBasicMaterial(),floor=new T.Mesh(new T.BoxGeometry(60,.2,50),mat);floor.position.set(95,y-.1,30);root.add(floor);
 assert.equal(new Set(parts.filter(p=>p.stageShape?.kind==='concert').map(p=>p.part)).size,2,'Both side shapes retain their own instance batch');
@@ -42,6 +84,11 @@ for(const p of parts.filter(p=>!p.noCollide)){
  const mesh=new T.Mesh(stageGeometry(p)||new T.BoxGeometry(...p.size),mat);mesh.name=p.part;mesh.position.set(...p.at);root.add(mesh);
 }
 const col=new Colliders();col.addStatic(root);col.commit();const cat=new Controller(col),step=(seconds,x=0,z=0)=>{for(let i=0;i<Math.round(seconds*120);i++)cat.step(1/120,new T.Vector3(x,0,z));};
+// Adding the visual effect must never add collision, even while it is visible.
+beams.group.visible=true;effects.updateMatrixWorld(true);assert.equal(col.addStatic(effects),0);col.commit();
+cat.place(audience);step(.2);const suppliedYaw=88*Math.PI/180;
+step(8,2.25*Math.sin(suppliedYaw),2.25*Math.cos(suppliedYaw));assert(cat.position.x>116&&cat.grounded,'Walk from the supplied seating spot across the stage under the beams');assert(Math.abs(cat.position.y-y-.36)<.02);
+step(8,-2.25*Math.sin(suppliedYaw),-2.25*Math.cos(suppliedYaw));assert(Math.abs(cat.position.x-audience.x)<.4&&cat.grounded,'Return to the seating without getting stuck');
 cat.place(new T.Vector3(88.57,y+.24,36.91));step(.2);assert(cat.grounded);
 const angle=103*Math.PI/180;step(13.7,2.25*Math.sin(angle),2.25*Math.cos(angle));
 assert(cat.position.x>117.5&&cat.position.x<119.7,'Reach the back wall through the middle');assert(Math.abs(cat.position.y-y-.36)<.02);
@@ -56,4 +103,5 @@ for(const side of[-1,1]){
  // The corner pillars are solid above the cases, where their angled arms are exposed.
  const z=30+side*14.5,ray=new T.Ray(new T.Vector3(105,y+3,z),new T.Vector3(1,0,0));assert(col.raycast(ray,5),'Corner pillar has a collider');
 }
-console.log(JSON.stringify({status:'PASS',fixtures:fixtures.length,triangles,bounds:[bounds.min.toArray(),bounds.max.toArray()],sideStops:stops,walk:'audience to back wall and out; both side stacks block and release the cat'}));
+beams.group.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});
+console.log(JSON.stringify({status:'PASS',fixtures:fixtures.length,beams:{back:back.length,front:front.length,draws:3},triangles,bounds:[bounds.min.toArray(),bounds.max.toArray()],sideStops:stops,walk:'supplied seating to stage and back; audience to back wall and out; both side stacks block and release the cat'}));
