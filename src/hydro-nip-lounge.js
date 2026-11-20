@@ -533,10 +533,10 @@ export function createHydroNipLounge({mirror=1}={}){
   put(M.wood,new T.CylinderGeometry(.14,.14,.04,14).rotateZ(.5).translate(x-.12,FLOOR+3.4,z+.1));
   for(let i=0;i<3;i++){const sz=z-1.4+i*1.4;seat('Seat',new T.CylinderGeometry(.22,.22,.08,14),M.teal,[x-2.6,FLOOR+.76,sz]);cyl(M.dark,.035,.035,.72,[x-2.6,FLOOR+.36,sz],6);cyl(M.dark,.2,.2,.03,[x-2.6,FLOOR+.015,sz],12);}
   turning=null;for(const o of root.children.slice(firstChild)){o.applyMatrix4(turn);o.userData.converger=true;}
-  // Face the jaguar entrance, with the same mirror correction as the other neon signs.
-  piece='Cosmic_Munchies_Sign';const a=-c.signYaw,n=[-Math.sin(a),0,-Math.cos(a)],sx=cx+n[0]*3.1,sz=cz+n[2]*3.1;
-  sign({at:[sx,CEILING-4.1,sz],normal:n,width:4.6,height:1.3,color:CYAN,frame:PINK,lines:[{text:'COSMIC MUNCHIES',size:.3},{text:'CONVERGER',size:.36,color:PINK}]});
-  for(const s of [-1,1]){const xx=sx+s*2*Math.cos(a),zz=sz-s*2*Math.sin(a);rod(M.dark,[xx,CEILING-3.45,zz],[xx,CEILING,zz],.012,3);}
+  // Face the aquarium photo approach, below the gallery lights with both wires on the room side.
+  piece='Cosmic_Munchies_Sign';const a=-c.signYaw,n=[-Math.sin(a),0,-Math.cos(a)],sx=c.signCenter[0]-r.x+132,sy=c.signCenter[1],sz=27+r.side*(c.signCenter[2]-r.z);
+  sign({at:[sx,sy,sz],normal:n,width:4.6,height:1.3,color:CYAN,frame:PINK,lines:[{text:'COSMIC MUNCHIES',size:.3},{text:'CONVERGER',size:.36,color:PINK}]});
+  for(const s of [-1,1]){const xx=sx+s*1.4*Math.cos(a),zz=sz-s*1.4*Math.sin(a);rod(M.dark,[xx,sy+.65,zz],[xx,CEILING,zz],.012,3);}
   piece=null;
  }
 
