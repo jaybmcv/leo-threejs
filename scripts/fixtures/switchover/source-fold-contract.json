@@ -8876,7 +8876,7 @@
     "file": "src/walk/main.public.js",
     "original": "src/walk/main.js",
     "mode": "public",
-    "bodySha256": "8044f0c210c215199f3e78b1bae3d7f2e39a11412b9148f0234b1334c341c83b",
+    "bodySha256": "bc8c9b669cd016d80b61326ca4f6913c6efdc93ec6dc41832e3e8d7a4437b2d9",
     "imports": [
       "./key-code.js",
       "../v2/voyager-lawn.js",
@@ -8985,6 +8985,7 @@
       "./lift-tile-floor.js",
       "./recovery.js",
       "./atrium-mood.js",
+      "../v2/stage-beams.js",
       "./arrival-mood.js",
       "./marks.public.js",
       "./chat.js",
