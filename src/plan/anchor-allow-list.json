@@ -115,6 +115,11 @@
     "reason": "Geometry/math helper: positions are supplied by a caller whose room ownership is checked separately."
   },
   {
+    "paths": ["src/walk/stage-dj-sound.js"],
+    "room": null,
+    "reason": "Synthesised audio only; Math.round sizes the loop buffer. The stage DJ supplies its source position; no geometry placement."
+  },
+  {
     "paths": [
       "src/environment.js",
       "src/public-assets.js",

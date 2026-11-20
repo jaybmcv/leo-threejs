@@ -4311,7 +4311,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "2ac11b44466c26e164bf26d00f8f10fc9ba461711eb223dd746d24cc85f26d41"
+      "signature": "96be4df5d2c7c7dc859f49b57f4fac8568aed848d0c54d66172a6f2326c0d201"
     },
     {
       "source": "src/walk/main.js",
@@ -4333,7 +4333,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "9d067f85e4e1e1267606fd350229578c8231f3c97f37c08fdf24fa63f074ae07"
+      "signature": "e7b004552829691e4bd0f9f1ae45069b0e48a5afd40e49d16922408c5ce8d57b"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4353,7 +4353,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "67e6d16d859c38b0b33c0450dae1615c62125ace8b2c284777f800e9a69ae1d0"
+      "signature": "15dfdfa3d7192a040dba3fba53d597d58b2c872088366dc9f4301100199f1239"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4373,7 +4373,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "f2aa3400ea246cc1a1844ceac986584dda693cc1ae4929617fb9c4b60276b289"
+      "signature": "04d42961bfce822d99b1e26fe9c3af40e63c368ed7c2494c90a4b2e7986cfcb6"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -5821,6 +5821,18 @@
       "interactionTargets": null,
       "placements": 1,
       "signature": "fd531a615a5dbbfaf9c5501e2415a86a6c74c16cad0b544fc380f555e75833d3"
+    },
+    {
+      "source": "src/walk/stage-dj-sound.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Synthesised audio only; Math.round sizes the loop buffer. The stage DJ supplies its source position; no geometry placement.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "b8434661aa7f090a902b02ada93ce34dd9d8b81cd9b2bad801843c77f42aa321"
     },
     {
       "source": "src/walk/surgery.authoring.js",
