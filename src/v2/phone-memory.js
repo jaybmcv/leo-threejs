@@ -23,7 +23,9 @@ function preparedGeometries(){
  for(const g of [ship.v2PreparedHaze,ship.v2PreparedFacade,ship.v2PreparedLounge,ship.v2PreparedSigns,preparedResource.frost])visit(g);
  return found;
 }
-const prepared=preparedGeometries();
+// Taken as the ship arrives (loadPreparedShip, prepared-runtime.public.js), before main.js moves or batches anything.
+let prepared=null;
+export function rememberPreparedGeometries(){prepared=preparedGeometries();}
 
 const parts=g=>[...Object.values(g.attributes),g.index].filter(Boolean);
 const fixedIn=keep=>a=>!keep.has(a)&&!a.isInstancedBufferAttribute&&!a.isInterleavedBufferAttribute&&a.usage===T.StaticDrawUsage;

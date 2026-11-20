@@ -16,10 +16,16 @@ export function keepSpot(spot,t=Date.now()){
 // The spot kept less than KEEP_MS ago and not tried yet, as {at, yaw, pitch, view, t}, marked as tried; or null (none,
 // too old, tried, or the arrival hall). keepSpot(spot, spot.t) puts it back untried.
 export function takeSpot(now=Date.now()){
- let s=null;try{s=JSON.parse(localStorage.getItem(KEY)||'null');}catch{return null;}
- if(!s||s.tried||!Number.isFinite(s.t)||now-s.t>KEEP_MS||s.t-now>60000)return null;
- if(!Array.isArray(s.at)||s.at.length!==3||!s.at.every(Number.isFinite))return null;
+ const s=kept(now);if(!s)return null;
  write({...s,tried:true});
  const angle=(v,d)=>Number.isFinite(v)?v:d;
  return {at:s.at,yaw:angle(s.yaw,Math.PI/2),pitch:angle(s.pitch,-.18),view:s.view==='first'?'first':'third',t:s.t};
+}
+// The spot takeSpot would take now, left untried: whether this start will be somewhere else than the arrival hall.
+export function peekSpot(now=Date.now()){return kept(now)!==null;}
+function kept(now){
+ let s=null;try{s=JSON.parse(localStorage.getItem(KEY)||'null');}catch{return null;}
+ if(!s||s.tried||!Number.isFinite(s.t)||now-s.t>KEEP_MS||s.t-now>60000)return null;
+ if(!Array.isArray(s.at)||s.at.length!==3||!s.at.every(Number.isFinite))return null;
+ return s;
 }

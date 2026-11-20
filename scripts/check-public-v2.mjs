@@ -10,6 +10,11 @@ let assets=0,parts=0;for(const [name,entry] of Object.entries(manifest)){
  for(const part of entry.parts||[]){assert((await fs.stat(path.join(out,part.split('?')[0]))).size<=16*1048576,'Transport too large: '+part);parts++;}
  if(!name.endsWith('.glb'))continue;const bytes=await publicAsset(name);assert.equal(createHash('sha256').update(new Uint8Array(bytes)).digest('hex'),entry.sha256,name);assets++;
 }
+// The arrival pack (src/v2/arrival-preview.js), when published: its bytes as named, and cut from the prepared walk this
+// site serves (the page uses it only then: src/v2/arrival-start.js).
+if(manifest['walk-arrival']){const pack=manifest['walk-arrival'],bytes=await fs.readFile(path.join(out,pack.parts[0]));
+ assert.equal(pack.format,'leo-arrival-pack-v1');assert.equal(createHash('sha256').update(bytes).digest('hex'),pack.sha256,'Arrival pack bytes');
+ assert.equal(pack.source,manifest['walk-prepared']?.sha256,'Arrival pack is from the published prepared walk');}
 const home=await fs.readFile(out+'/index.html','utf8');
 assert(home.includes('id="explode-dial"'),'Full classic inspector is the home page');
 assert(home.includes('href="walk.html"'),'Classic inspector links to the current walk');
