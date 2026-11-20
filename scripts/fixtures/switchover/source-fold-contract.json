@@ -8876,7 +8876,7 @@
     "file": "src/walk/main.public.js",
     "original": "src/walk/main.js",
     "mode": "public",
-    "bodySha256": "8503eacd5cf7ea1902994411da85bf46cb3d39fdf3163fe6206c85fb7767ca28",
+    "bodySha256": "01fc85fdcda622c7a95a4d64a8527a029996f021150efbf55c80133805ba98b8",
     "imports": [
       "./key-code.js",
       "../v2/voyager-lawn.js",
@@ -8886,6 +8886,8 @@
       "./graphics-settings.js",
       "./detail-levels.js",
       "./film-look.js",
+      "./frog.js",
+      "./frog-trip.js",
       "./controls-settings.js",
       "./carry.js",
       "./fur-settings.js",

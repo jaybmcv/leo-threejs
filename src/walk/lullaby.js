@@ -1,3 +1,4 @@
+import {walkAudioOutput} from './frog-audio.js';
 // The Anti-Gravity Hammock Dome's lullaby (feedback-inbox #165): an original slow tune on a soft synthesised piano, made
 // with Web Audio as the ship's sounds are (ambience.js), so there are no sound files. It plays only while the Sound
 // button is on and the walker is inside the dome, fading in as they go in and out as they leave. Each visitor hears
@@ -31,7 +32,7 @@ export function createLullaby(dome){
  let ctx=null,out=null,wanted=false,playing=false,level=0,startT=0,ei=0,loops=0;
  function build(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
-  out=ctx.createGain();out.gain.value=0;out.connect(ctx.destination);
+  out=ctx.createGain();out.gain.value=0;out.connect(walkAudioOutput(ctx));
   // A hidden tab goes quiet, as the ship's hum does.
   document.addEventListener('visibilitychange',()=>{if(document.hidden)ctx.suspend();else if(wanted)ctx.resume();});
  }
