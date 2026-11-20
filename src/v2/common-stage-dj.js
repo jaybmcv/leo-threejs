@@ -76,7 +76,8 @@ export function createStageDj({colliders,phone=false,still=false}={}){
  const targets=[[-2.15,bow(-2.15)],[-1.2,bow(-1.2)],[-.64,.7],[-.16,.64],[.16,.6],[.64,.7],[1.2,bow(1.2)],[2.15,bow(2.15)]];
  targets.forEach(([x,z],i)=>{
   const a=(i/8)*Math.PI*2,start=point(.2+Math.cos(a)*.42,1.73+Math.sin(a)*.12,-1.05+Math.sin(a)*.36);
-  const curve=new T.CatmullRomCurve3([start,point(x*.65,1.85+(i%3)*.08,-.55-(i%2)*.19),point(x*1.08,1.62,z-.35),point(x,1.43,z)]);
+  // The outside arms clear the open laptop lids before dropping onto the decks.
+  const outside=i===0||i===7,curve=new T.CatmullRomCurve3([start,point(x*.65,outside?2.16:1.85+(i%3)*.08,-.55-(i%2)*.19),...(outside?[point(x,2.12,-.26),point(x*1.08,1.93,z-.15)]:[point(x*1.08,1.62,z-.35)]),point(x,1.43,z)]);
   // A tapered tube with flat faces; cups are merged into a single cyan mesh for all eight arms.
   const g=new T.TubeGeometry(curve,16,.15,6,false),pos=g.attributes.position;
   for(let j=0;j<=16;j++){const centre=curve.getPointAt(j/16),scale=1-.8*j/16;for(let k=0;k<=6;k++){const n=j*7+k;pos.setXYZ(n,centre.x+(pos.getX(n)-centre.x)*scale,centre.y+(pos.getY(n)-centre.y)*scale,centre.z+(pos.getZ(n)-centre.z)*scale);}}

@@ -6,6 +6,7 @@ import {addAtriumStage,stageGeometry} from '../src/v2/atrium-stage.js';
 import {Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {installPreparedColliders} from '../src/v2/prepared-codec.public.js';
+import {MeshBVH} from 'three-mesh-bvh';
 
 const floorY=STAGE_DJ.at[1]-.36,parts=[],rests=[];addAtriumStage({parts,rests,y:floorY});
 const root=new T.Group(),mat=new T.MeshBasicMaterial(),floor=new T.Mesh(new T.BoxGeometry(90,.2,50),mat);floor.position.set(85,floorY-.1,30);root.add(floor);
@@ -19,6 +20,11 @@ dj.group.traverse(o=>{assert(!o.isLight,'The DJ adds no lights');if(!o.isMesh)re
 assert.equal(dj.targets.length,8);assert(draws<=14,'Keep the DJ below fourteen draws');assert(triangles<18000,'Keep the DJ below eighteen thousand triangles');
 assert(bounds.min.x>107&&bounds.max.x<111&&bounds.min.z>26.9&&bounds.max.z<33.1,'Leave clear floor in front, behind and on both sides');
 assert(bounds.max.y-STAGE_DJ.at[1]>2.8&&bounds.max.y-STAGE_DJ.at[1]<3.1);
+// Five centimetres around each lid also covers the arms' small idle movement.
+for(const mesh of dj.arms.children){const bvh=new MeshBVH(mesh.geometry,{indirect:true});for(const x of[-2.12,2.12]){
+ const z=.15+.5*(1-(x/2.8)**2)-.61,lid=new T.BoxGeometry(.78,.54,.135),matrix=new T.Matrix4().compose(new T.Vector3(x,1.62,z),new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-.2),new T.Vector3(1,1,1));
+ assert(!bvh.intersectsGeometry(lid,matrix),'Tentacles and suction cups must clear the open laptop lids');lid.dispose();
+}}
 const cat=new Controller(colliders),step=(seconds,x=0,z=0)=>{for(let i=0;i<Math.round(seconds*120);i++)cat.step(1/120,new T.Vector3(x,0,z));};
 cat.place(new T.Vector3(100.17,floorY+.24,29.49));step(.2);step(5,2.25);assert(cat.position.x>106&&cat.position.x<107,'The cat reaches the stage and stops against the booth');
 const stopped=cat.position.clone();step(1,2.25);assert(cat.position.distanceTo(stopped)<.03,'The cat cannot walk through the booth');
