@@ -155,6 +155,7 @@
       "src/walk/crowd-tier.js",
       "src/walk/figure-matrices.js",
       "src/walk/film-look.js",
+      "src/walk/frog-trip.js",
       "src/walk/fog-cull.js",
       "src/walk/frame-readout.js",
       "src/walk/look.js",
@@ -198,5 +199,12 @@
     ],
     "room": null,
     "reason": "A test preview page apart from the viewer and the walk (style-lab.html): it draws Leo's exterior with its own camera and frame to compare art styles; nothing it places is aboard the ship."
+  },
+  {
+    "paths": [
+      "src/walk/frog.js"
+    ],
+    "room": "circulation-6",
+    "reason": "The frog sits on the fixed Deck 6 Common Stage apron in ship coordinates, inside the seating arc and clear of the stage; it does not move with any room."
   }
 ]

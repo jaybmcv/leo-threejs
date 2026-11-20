@@ -1,3 +1,4 @@
+import {walkAudioOutput} from './frog-audio.js';
 import {createSpatial,updateSpatial} from './spatial-audio.js';
 // Quiet water and an original melodic, half-time electronic arrangement for the lounge. Both follow the Sound button;
 // the dome keeps its own lullaby and does not play the lounge music.
@@ -81,7 +82,7 @@ export function createLoungeSound(lounge,falls){
  function build(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
   water=ctx.createGain();water.gain.value=0;spatial=createSpatial(ctx);water.connect(spatial);
-  music=ctx.createGain();music.gain.value=0;music.connect(ctx.destination);noise=makeNoise(ctx);
+  music=ctx.createGain();music.gain.value=0;music.connect(walkAudioOutput(ctx));noise=makeNoise(ctx);
   // A short, cross-faded noise loop gives the water a gentle, even rush.
   const n=ctx.sampleRate*3,fade=Math.min(2048,Math.floor(n/4)),buf=ctx.createBuffer(1,n,ctx.sampleRate),d=buf.getChannelData(0);let b=0;
   for(let i=0;i<n;i++){const w=Math.random()*2-1;b=(b+.04*w)/1.04;d[i]=w*.25+b;}
