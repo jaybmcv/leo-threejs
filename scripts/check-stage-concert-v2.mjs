@@ -66,7 +66,8 @@ assert.equal(lasers.material.uniforms.time.value,4);assert.equal(cones.material.
 for(let t=0;t<=120;t+=.5)front.forEach((f,i)=>{
  lasers.geometry.computeBoundingBox();const length=lasers.geometry.boundingBox.max.y;assert(length<=18.01,'Outward beams end near the seating');
  const aim=stageBeamAim(t,i);assert(aim.x<-.85&&aim.y<0,'Front beams point out towards the audience below the upper decks');assert(Math.abs(aim.length()-1)<1e-6);
- const end=new T.Vector3(...f.origin).addScaledVector(aim,length);assert(end.y>.54&&end.y<4,'Beam stays above benches and below Deck 7');
+ const end=new T.Vector3(...f.origin).addScaledVector(aim,length);assert(end.y>3&&end.y<4,'Beam stays above the seating camera eye line and below Deck 7');
+ assert(lasers.geometry.boundingBox.max.x<=.021,'Keep the outward lasers thin');
  assert(contains(layout.decks[5].atrium.outline,[end.x,end.z]),'Finite fan stays inside the atrium');
  assert(aim.distanceTo(stageBeamAim(t,i+1))+stageBeamAim(t+4,i).distanceTo(stageBeamAim(t+4,i+1))>.05,'Neighbours sweep out of phase, crossing only briefly');
  assert(aim.distanceTo(stageBeamAim(t+.01,i))<.002,'Motion stays smooth');
