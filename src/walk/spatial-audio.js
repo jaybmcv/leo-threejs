@@ -1,6 +1,7 @@
+import {walkAudioOutput} from './frog-audio.js';
 ﻿// Point sounds use the camera as the listener. Existing gain controls keep their distance and mute rules.
 export function createSpatial(ctx){
- const p=ctx.createPanner();p.panningModel='equalpower';p.distanceModel='inverse';p.rolloffFactor=0;p.connect(ctx.destination);return p;
+ const p=ctx.createPanner();p.panningModel='equalpower';p.distanceModel='inverse';p.rolloffFactor=0;p.connect(walkAudioOutput(ctx));return p;
 }
 function vector(node,keys,values,time,legacy){
  if(node[keys[0]])keys.forEach((key,i)=>node[key].setTargetAtTime(values[i],time,.05));

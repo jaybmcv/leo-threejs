@@ -1,3 +1,4 @@
+import {walkAudioOutput} from './frog-audio.js';
 // The ship's sound aboard: a low hum of air and engines, and now and then a soft two-note chime, as on a liner's
 // address system. All of it is made here with Web Audio, so there are no sound files. It starts off; the Sound button
 // turns it on (browsers only play sound after a click or key), and the choice is remembered for the next visit.
@@ -9,7 +10,7 @@ export function createAmbience(){
  let ctx=null,master=null,timer=0,on=saved();
  function build(){
   ctx=new (window.AudioContext||window.webkitAudioContext)();
-  master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);
+  master=ctx.createGain();master.gain.value=0;master.connect(walkAudioOutput(ctx));
   // Air handling: two seconds of brown noise, looped, low-passed to a soft rush.
   const n=ctx.sampleRate*2,buf=ctx.createBuffer(1,n,ctx.sampleRate),d=buf.getChannelData(0);let b=0;
   for(let i=0;i<n;i++){b=(b+.02*(Math.random()*2-1))/1.02;d[i]=b*3.5;}

@@ -2615,6 +2615,34 @@
       "signature": "5bdfc78e4aac30436b24a83c0532528e1d4eb83220feebdf4d8a7d53fbbfeda2"
     },
     {
+      "source": "src/walk/frog-trip.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "97fb34c7534f3e8304004aa96acfc1b990c5c03b1157637b23a09c8394baf04d"
+    },
+    {
+      "source": "src/walk/frog.js",
+      "rooms": [
+        "circulation-6"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The frog sits on the fixed Deck 6 Common Stage apron in ship coordinates, inside the seating arc and clear of the stage; it does not move with any room.",
+      "features": [
+        "Common_stage_frog"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 7,
+      "signature": "d56ec81dded48030b307f24bcfe4057655793cd451808a8cb5dfefcad0a877f4"
+    },
+    {
       "source": "src/walk/gaming-lounge.authoring.js",
       "rooms": [
         "d16-training-aft"
@@ -3140,7 +3168,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "c81b08ab626e88b843f60186147da85675fb959419dd87df3f29574ebfdfbc2c"
+      "signature": "21983271ab2b7c48bf34f2adefd46b2edcf95fc5f3dade1d8e6bcaa9b5f0834c"
     },
     {
       "source": "src/walk/instance-matrix.js",
@@ -4283,7 +4311,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "f3eacda9c66e457e211ed3e7fdaacd3c11de881077bacc7fe6ba5a11d73429fc"
+      "signature": "188c1ce61d1919b2d063750160586ab1b85f62ae261bbe17addbebe844890ede"
     },
     {
       "source": "src/walk/main.js",
@@ -4305,7 +4333,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "ebd1c394a110ef22bd8f00cd6cec10bdb2012a251e6580deaec3d274463cf875"
+      "signature": "7ca961be82de0df10fe0fac0ac6014a818fb50c38277d0356bc61d4c47f7f529"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4325,7 +4353,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "2d52415640bc3c5f05fcad9a02ab16de8cf9a6312917b82d1a2d6b8fe2c709d9"
+      "signature": "eb0050d04f66df9b13e48f5e0825ac954e30dcf80ba37ef811afc7c27ff34e60"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4345,7 +4373,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "b74eaf033d89ca15a0aa20ac47480a74ea0688307da91723a54c2d4172c85b31"
+      "signature": "a04c5c2b8e48174ea90e712d8db0ce35e5d66c1efe0521c79c05cc7cd76ee452"
     },
     {
       "source": "src/walk/marks.authoring.js",
