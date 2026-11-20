@@ -26,7 +26,22 @@ for(const mesh of plants){
 assert(triangles<30000,'Instanced planting stays within a small triangle budget');
 const base=root.getObjectByName('Lounge_dome_planter');assert(base&&solid(base));
 assert(base.material.roughness<=.16&&base.material.metalness>=.5,'Black base keeps environment specular highlights');
+const frame=root.getObjectByName('Lounge_neon_glow_dome_frame'),violet=new T.Color(0xa46aff);
+assert(frame&&!solid(frame),'The neon frame keeps its existing noncolliding behaviour');
+assert.notEqual(frame.material,root.getObjectByName('Lounge_neon_glow').material,'The frame has its own neon material');
+function purpleFrame(mesh){
+ assert(mesh.material.isMeshBasicMaterial&&!mesh.material.toneMapped,'Unlit neon keeps its hue in dim lighting');
+ assert.equal(mesh.material.color.getHex(),0xffffff,'No brightness multiplier on the frame');
+ const c=mesh.geometry.attributes.color;assert(c?.count>0,'Frame retains vertex colours');
+ for(let i=0;i<c.count;i++)assert(Math.abs(c.getX(i)-violet.r)<2e-5&&Math.abs(c.getY(i)-violet.g)<2e-5&&Math.abs(c.getZ(i)-violet.b)<2e-5,'Every tube and node stays saturated purple');
+}
+purpleFrame(frame);
 for(const bake of [bakeForWalking,authoringBake]){
+ const dome=new T.Group();dome.add(frame.clone());const bakedFrame=bake(dome);let pieces=0;
+ for(const band of bakedFrame.bands.values())band.traverse(o=>{if(o.isMesh){purpleFrame(o);pieces++;}});
+ assert(pieces>0,'Purple frame survives the walk bake');
+ const restoredFrame=new T.MaterialLoader().parse(frame.material.toJSON());
+ assert(restoredFrame.isMeshBasicMaterial&&!restoredFrame.toneMapped&&restoredFrame.vertexColors,'Prepared material retains the same neon shader');
  const sample=new T.Group();sample.add(base.clone());
  const witness=new T.Mesh(new T.BoxGeometry(1,1,1),new T.MeshStandardMaterial({color:0x333333}));witness.position.set(100,FLOOR,0);sample.add(witness);
  const baked=bake(sample),materials=[];for(const band of baked.bands.values())band.traverse(o=>{if(o.isMesh)materials.push(o.material);});
