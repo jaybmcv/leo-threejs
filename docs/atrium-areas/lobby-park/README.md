@@ -48,7 +48,8 @@ merge easily:
   parts.
 - `src/v2/atrium-gardens.js`: `addLobbyPark(out,glow,layout,clearGround,parts)` in `addAtriumGardens` adds everything
   drawn to the existing garden mesh (`P6_atrium_gardens`) and the lamp glow to the existing lantern draw
-  (`P6_atrium_lanterns`, material `P6_atrium_glow`, which atrium-light's night mood already brightens).
+  (`P6_atrium_lanterns`, material `P6_atrium_lantern_glow`, vertex-coloured). That draw is the same by day and night;
+  the lanterns' night light is separate, see [Lantern cages](#lantern-cages-concept-b).
 - `src/v2/atrium-architecture.js` and its `.authoring.js` twin: one branch next to the terrace-glass hook hides
   collision-only fit-out parts (`P4_p6_*_collider`), with `phase6ArchitectureSource` so culling, phone merging and
   furnishing batches leave them hidden.
@@ -72,7 +73,7 @@ It is now centred at (−110, −5.5), radius 7.48 m to the outer brass line, ab
 | --- | --- |
 | Desk | 3.8 m across (radius 1.9 m drum), 1.1 m high. Cream stone plinth, 56 alternating timber slats, brass band, cream stone top with a leather inset, two screens on the aft side. |
 | Planters | Eight of the boulevard's own stone planters (2.4 × 0.42 × 1.1 m), 45° apart on a 4.6 m ring from 22.5°. 2.4 m openings fore and aft, 1.1–1.4 m gaps elsewhere, and a 1.3 m aisle round the desk. `addPlanterTrims` gives them the same coping, timber bench boards and spilling leaves. They are square to the ship because the trims are laid unrotated. Each holds leafy mounds and 22 pink and white flowers. |
-| Lamps | Four, between the planters on the diagonals at 5.3 m. 4.1 m tall: bronze base, 3.4 m post (5–6.5 cm), collar, glowing lantern 0.6 m tall and 0.26 m across, cap. |
+| Lamps | Four, between the planters on the diagonals at 5.3 m: bronze base, 3.4 m post (5–6.5 cm) and collar. The lantern on top was first a plain glowing cylinder, then a cage lantern; see [Lantern cages](#lantern-cages-concept-b). |
 | Inlay | Basalt band from 6.6 to 7.4 m in 36 slabs, each clouded and set off by a 2 cm joint, between brass lines 8 cm wide. Same stone, brass and clouding as `addPromenadeInlays`, 12 mm over the floor. |
 
 ### G2 flower meadow
@@ -183,3 +184,143 @@ All run in `leo-build-2` on the r187 build of each commit.
   width begins forward of it.
 - The x=−79 cross route stays clear.
 - The x=2 cross route and the stall gaps are outside these zones.
+
+## Lantern cages (concept B)
+
+Jay picked concept B of three for the court's lamps, whose heads read pale and unlit at night:
+
+- **Lanterns:** each post now carries a classic dark metal lantern cage round a warm glowing core.
+- **Night light:**
+  - a soft warm pool on the paving under each post;
+  - a faint warm halo round each head;
+  - small warm uplights at the foot of the court's planters.
+
+The desk, planters, inlay, directory sign and everything else are unchanged.
+
+![lobby-in at night: before (main db6b42da) / concept B / after (9d55aa18)](contact-lanterns-lobby-in-night.jpg)
+
+![lobby-in and lobby-back, before and after: day (top) and night (bottom)](contact-lanterns-views.jpg)
+
+![lobby-in at night: first build (b698b92d) and the refine (9d55aa18)](contact-lanterns-refine.jpg)
+
+**How these were made:**
+- **Before:** an r187 build of origin/main db6b42da.
+- **After:** an r187 build of 9d55aa18, on top of the before build in `leo-build-2`.
+- **Captures:** `scripts/capture-atrium-areas.mjs --query=time=day|night` at 1600 × 900.
+- **Concept:** painted over a live capture, so its framing and its sign differ. Codex blanked the sign's text; the real
+  sign is unchanged.
+
+### The lantern
+
+The lantern stands 4.45 m tall in all; its dark metal is `0x2a2623`, in `P6_atrium_gardens`. From the post's collar up:
+
+| Piece | Details |
+| --- | --- |
+| Base | A flared square cup and a 0.32 m base plate. |
+| Glass core | 0.48 m tall, widening from 0.23 to 0.29 m. It sits in the lantern draw `P6_atrium_lanterns` and glows amber; see [Warmer amber](#warmer-amber). |
+| Cage | A bar up each corner, a rim at the top and bottom of the glass, and a thin mullion down each face. |
+| Roof | An eaved pyramid roof with a ball-and-spike finial. |
+
+The court's placement now lives in `src/v2/welcome-court.js`: plain numbers that `atrium-lobby-park.js` builds from and
+the walk lights from.
+
+### The night light, and the mechanism chosen
+
+**What the existing mechanisms do:**
+- **The lantern draw** that the deck lanterns and festoon bulbs share has no night mechanism. It is opaque and Basic,
+  the same by day and by night. So soft pools, halos and uplights cannot live in it: they would show by day as
+  solid shapes.
+- **The atrium's one night-only light** is the promenade lamps' floor pools (`P6_atrium_lamp_pools` in
+  `atrium-mood.js`). It is an additive instanced draw, shown only at night, so by day it costs nothing. But it is a
+  child of the lamps' instanced stems, and the culling hides those stems whenever no promenade lamp is in sight, as at
+  lobby-back. Pools added to that draw would vanish there.
+
+**What the court uses:** the same mechanism, in a draw of its own. `atrium-mood.js` builds `P6_atrium_court_glows`, one
+instanced draw of 48 soft additive squares carrying the promenade pools' picture (`paintLampPool`):
+
+| Glow | Count | Placement | Strength |
+| --- | --- | --- | --- |
+| Pools | 4 | 3.6 m, flat on the paving under each post | 0.85 |
+| Halos | 4 × 3 | 1.3 m, three crossed upright squares round each core, so they read from every side | 1 |
+| Uplights | 8 × 4 | 0.55 m, upright on both long faces of each planter at its foot. The lower half is under the floor, so each shows as a glow rising up the stone | 1 |
+
+**When it shows:**
+- Its opacity follows the clock's night value, as the promenade pools do. It is visible only at night (night > 0.01)
+  while the walker is in the open atrium.
+- By day it is hidden: no draw and no mark on the paving. The day captures match before.
+- It draws in one pass. `forceSinglePass` stops three.js drawing a transparent double-sided material back then front,
+  which cost the first build two draws.
+- It is built at runtime, so the distant copies are not affected: they stay Basic, and phones drop distant decor as before.
+
+**Why it is not in the lantern draw:** the brief asked for cores, halos and uplights to join the lantern draw, with no
+new draws. The cores do join it. The halos, pools and uplights are this one night-only draw instead, because the lantern
+draw cannot fade by time of day.
+
+### Colliders and the PVS key
+
+Everything here is visual only. phase6Programme's fit-out parts, which the colliders and the PVS key come from, are
+identical to origin/main's: 2,645 parts, SHA-1 of the list ad2fa4b6 on both. So the atrium PVS key does not move.
+
+### Cost
+
+Draws and triangles come from the walk's `?fps=1` readout, median of 6 readings. Before is db6b42da, after is
+9d55aa18.
+
+| View | Time | Draws before → after | Triangles before → after |
+| --- | --- | --- | --- |
+| lobby-in | day | 876 → 876 | 10.69M → 10.69M |
+| lobby-back | day | 488 → 488 | 8.28M → 8.28M |
+| lobby-in | night | 877 → 878 | 10.69M → 10.69M |
+| lobby-back | night | 488 → 489 | 8.28M → 8.28M |
+
+- **At night, +1 draw** wherever the court is in view: the court's glows, 96 triangles.
+- **By day, nothing changes.**
+- **Garden mesh** (`P6_atrium_gardens`, Node build): 592,260 → 593,588 triangles (+1,328, the four cages).
+- **Lantern draw:** 1,824 → 1,696 triangles (−128). The square cores have fewer faces than the old round lanterns.
+
+### Checks
+
+All nine run in `leo-build-2` on the r187 build of 9d55aa18, and all pass:
+
+| Check | 9d55aa18 |
+| --- | --- |
+| `npm run check:walk` | PASS |
+| `node scripts/check-phase6-v2.mjs` | PASS |
+| `node scripts/check-prepared-runtime-migration.mjs` | PASS |
+| `npm run check:atrium-time` | PASS (13 checks) |
+| `node scripts/check-atrium-void-fixtures-v2.mjs` | PASS |
+| `node scripts/check-prepared-walk-v2.mjs` | PASS |
+| `node scripts/check-void-guards-v2.mjs` | PASS |
+| `node scripts/check-lobby-tile-v2.mjs` | PASS |
+| `node scripts/check-main-features-v2.mjs` | PASS |
+
+- **New in `check:atrium-time`:**
+  - At night the court's glows form one additive, single-pass instanced draw: 48 squares, the first a pool under the
+    first lamp at floor level.
+  - They hide outside the open atrium and by day.
+- **Atrium PVS key** of this build: `4.2f2a9cfbea1ec433fa6aa8a50093b780.7831373d49322212cb2d8c2a00006850.6afd3900849f657047053acc00000001`.
+  It equals origin/main's, because the parts are identical. No PVS is baked.
+- No source re-pinning was needed.
+
+### Warmer amber
+
+Jay asked for the lantern glows to be warmer amber; 9d55aa18's cores and light were cream. 145ae4a3 changes both:
+
+- **The night light** (pools, halos, uplights) is tinted amber `0xffc878` in `atrium-mood.js`, scaled by the same
+  strengths (0.85 / 1 / 1). On the pool picture's cream, it reads amber-orange on the paving.
+- **The cores** glow amber day and night. The lantern draw now has its own vertex-coloured material,
+  `P6_atrium_lantern_glow`: each piece's colour multiplies the plain cream glow, and pieces without one stay plain cream.
+  The court's cores carry `[1.3, 0.66, 0.24]`; all other lanterns, the festoon bulbs and the downlights are unchanged.
+- **Merging with the stage job:** those `atrium-gardens.js` lines are copied word for word from the atrium-stage
+  shell refine (5b8049a9, `claude/atrium-stage-shell`). A trial `git merge-tree` of the two branches is clean.
+
+![lobby-in and lobby-back, cream (9d55aa18) and amber (145ae4a3): night (top) and day (bottom)](contact-lanterns-amber.jpg)
+
+![lobby-in at night, close: cream (9d55aa18) and amber (145ae4a3)](contact-lanterns-amber-night-close.jpg)
+
+![lobby-in by day, the lantern heads close: cream (9d55aa18) and amber (145ae4a3)](contact-lanterns-amber-day-close.jpg)
+
+**Cost:** none. Draws and triangles are the same as 9d55aa18 at both views, by day (876, 488) and by night (878, 489).
+
+**Checks:** all nine pass on the r187 build of 145ae4a3, and the atrium PVS key is the same as above.
+`check:atrium-time` now also holds every court glow amber, not cream.
