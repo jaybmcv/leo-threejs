@@ -16,6 +16,14 @@ export function checkGuideRendering(){
  for(const root of roots)for(const mesh of root.children){if(mesh.name==='V2_lobby_deck_directory'){boards++;assert.equal(bandOf(mesh.getWorldPosition(new T.Vector3()).y),root.userData.deck-1);}
  if(mesh.name==='V2_floor_guides'){arrows++;assert.deepEqual(mesh.userData.destinations,[...schedule.values()].filter(r=>r.deck===root.userData.deck).map(r=>r.id),'Every scheduled room needs its floor guide');const n=mesh.geometry.attributes.normal;for(let i=0;i<n.count;i++)assert(n.getY(i)>.999,'Floor guide faces into the slab');}
  if(mesh.name!=='V2_corridor_room_guides')continue;const position=mesh.geometry.attributes.position,normal=mesh.geometry.attributes.normal;
+ assert.equal(mesh.material.side,T.FrontSide,'Room text must not read mirrored through glass');assert.equal(mesh.userData.noCollide,true,'Room signs must not block a doorway');
+ for(const [i,label]of mesh.userData.labels.entries()){
+  const r=schedule.get(label.id),corners=Array.from({length:4},(_,j)=>new T.Vector3().fromBufferAttribute(position,i*4+j).applyMatrix4(mesh.matrixWorld));
+  const height=Math.max(...corners.map(p=>p.y))-Math.min(...corners.map(p=>p.y));
+  assert(Math.abs(height-r.height)<.0001,'Rendered plaque ignores its fitted height '+r.id);
+  assert(Math.abs(corners[0].distanceTo(corners[1])-r.width)<.0001,'Rendered plaque ignores its fitted width '+r.id);
+  for(const p of corners)assert(Math.abs((p.x-r.at[0])*Math.sin(r.yaw)+(p.z-r.at[2])*Math.cos(r.yaw))<.0001,'Plaque is tilted out from the wall '+r.id);
+ }
  for(const [i,label]of mesh.userData.labels.entries()){const r=schedule.get(label.id),centre=new T.Vector3();for(let j=0;j<4;j++)centre.add(new T.Vector3().fromBufferAttribute(position,i*4+j));centre.multiplyScalar(.25).applyMatrix4(mesh.matrixWorld);assert(centre.distanceTo(new T.Vector3(...r.at))<.0001,'Plaque moved in world space '+r.id);const face=new T.Vector3(normal.getX(i*4),normal.getY(i*4),normal.getZ(i*4));assert(face.dot(new T.Vector3(Math.sin(r.yaw),0,Math.cos(r.yaw)))>.999,'Plaque faces away from corridor');labels++;}
  }
  assert.equal(labels,[...schedule.values()].filter(r=>r.plaque).length);assert.equal(boards,39);assert.equal(arrows,new Set([...schedule.values()].map(r=>r.deck)).size,'Exactly one arrow batch per deck with scheduled rooms');
