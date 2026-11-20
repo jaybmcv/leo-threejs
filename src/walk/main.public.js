@@ -152,6 +152,8 @@ import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.js';
 import {tileLiftFloor} from './lift-tile-floor.js';
 import {createRecoveryMood} from './recovery.js';
 import {createAtriumMood} from './atrium-mood.js';
+import {createStageBeams} from '../v2/stage-beams.js';
+let stageBeams=null;
 import {createArrivalMood} from './arrival-mood.js';
 import {Marks} from './marks.public.js';
 import {createChat} from './chat.js';
@@ -381,7 +383,7 @@ async function buildShip(){
  // Deck 19's lift lobby and promenade up to the lounge: black ceramic tile (lift-tile-floor.js).
  // The floor finish is in the prepared render bands.
  // The crew recovery lounge's pod side dims the lights (recovery.js).
- recovery=createRecoveryMood(ship,{hemi,fill,scene});arrivalMood=createArrivalMood(ship,{hemi,fill,scene});atriumMood=createAtriumMood({hemi,fill,scene});
+ recovery=createRecoveryMood(ship,{hemi,fill,scene});arrivalMood=createArrivalMood(ship,{hemi,fill,scene});atriumMood=createAtriumMood({hemi,fill,scene});stageBeams=createStageBeams(scene,layout.decks[5].y);
  }});
  ({booth,poolTable,pinball:pinballMachine,concession,provisions,kittens,diningRobots,hydration,blossom,catTree,nosePark,keelClub,loungeFalls,jaguarGate,arcadeRow,missionHolo,mudwater,chinampa}=prepared);
  // The Recreation Hall's darts lanes on its aft glass (darts/lanes.js): E at a throwing line opens the nine-dart challenge.
@@ -1140,6 +1142,7 @@ renderer.setAnimationLoop(()=>{
  bodies.length=0;bodies.push(p);if(remotes)for(const r of remotes.remotes.values())bodies.push(r.cur);
  // 4B: the atrium warms first; any room mood after it wins where they meet.
  atriumMood?.update(dt);
+ stageBeams?.update(camera,now/1000);
  if(arrivalMood)arrivalMood.update(dt,camera.getWorldPosition(eye));
  if(lounge){lounge.update(dt,bodies);loungeMood.update(dt,camera.getWorldPosition(eye));}
  if(recovery)recovery.update(dt,camera.getWorldPosition(eye));
