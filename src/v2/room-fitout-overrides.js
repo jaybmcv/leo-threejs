@@ -18,10 +18,13 @@ function removeFittingDetails(source,found,names){
 }
 
 // Carry merged upholstery seams with a moved furniture group.
+// A detail parented under a moved object already rides its parent's move (the garden commons polish each cushion
+// part, so its seams are the cushion's child); shifting its vertices too would move it twice.
 function moveFittingDetails(source,found,names,by){
  source.updateWorldMatrix(true,true);const bounds=new T.Box3();for(const o of found)bounds.union(new T.Box3().setFromObject(o));bounds.expandByScalar(.02);
- const point=new T.Vector3(),delta=new T.Vector3(...by).applyMatrix3(new T.Matrix3().setFromMatrix4(source.matrixWorld));
- source.traverse(o=>{if(!o.isMesh||!names.includes(o.name))return;
+ const point=new T.Vector3(),delta=new T.Vector3(...by).applyMatrix3(new T.Matrix3().setFromMatrix4(source.matrixWorld)),carried=new Set(found);
+ const ridesMove=o=>{for(let p=o.parent;p;p=p.parent)if(carried.has(p))return true;return false;};
+ source.traverse(o=>{if(!o.isMesh||!names.includes(o.name)||ridesMove(o))return;
   const g=o.geometry.clone(),p=g.attributes.position,n=g.index?.count??p.count,moved=new Set(),d=delta.clone().applyMatrix3(new T.Matrix3().setFromMatrix4(o.matrixWorld.clone().invert()));
   for(let i=0;i<n;i+=3){const ids=[0,1,2].map(k=>g.index?g.index.getX(i+k):i+k);if(ids.every(k=>bounds.containsPoint(point.fromBufferAttribute(p,k).applyMatrix4(o.matrixWorld))))ids.forEach(k=>moved.add(k));}
   if(!moved.size){g.dispose();return;}for(const k of moved)p.setXYZ(k,p.getX(k)+d.x,p.getY(k)+d.y,p.getZ(k)+d.z);g.computeBoundingBox();g.computeBoundingSphere();o.geometry=g;
