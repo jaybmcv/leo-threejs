@@ -9,7 +9,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 // Deck 16's Voyage training & briefing room as an RGB gaming lounge on foot (from tester feedback; first stage):
 // - dark grey walls, a cool light strip round the top of the walls and a dark ceiling of faintly twinkling stars;
 // - eight PC stations along the window side (curved dual monitors, RGB keyboard and mouse, tower, headset, gaming
-//   chair), six console stations along the entry wall (one large screen, console, controller and headset on a side
+//   chair), five console stations along the entry wall (one large screen, console, controller and headset on a side
 //   table, gaming chair) and four curved couches facing split-screen displays, controllers on their coffee tables;
 // - honeycomb clusters of hexagon wall lights that fade slowly through the colours, and a black glass floor of
 //   0.25 m hexagon tiles that light up in colour round where you stand and fade behind you;
@@ -25,12 +25,12 @@ const PLACEMENT=fitout['d16-training-aft'],HOLO=PLACEMENT.gamingLeaderboard;
 const pcRowMatrix=()=>new T.Matrix4().makeTranslation(...PLACEMENT.gamingWindowRow.at).multiply(new T.Matrix4().makeRotationY(PLACEMENT.gamingWindowRow.yaw)).multiply(new T.Matrix4().makeTranslation(21,0,7.44));
 const END=23.84,SIDE=7.84,TOP=3.35,DOOR=[2,6],HEX=.25,SOUND_FADE=3;
 const OLD=/^(Seat|Back|Seat_base|Meeting_table|Table_support|Worktop|Training_console|Equipment_cabinet|Status_display|Briefing_wall|Aisle_inlay|Polish_.*|Refined_.*)$/;
-const PCS=[-21,-17.4,-13.8,-10.2,-6.6,-3,.6,4.2],CONSOLES=[-21,-16.5,-12,-7.5,-3,10.5];
+const PCS=[-21,-17.4,-13.8,-10.2,-6.6,-3,.6,4.2],CONSOLES=PLACEMENT.gamingConsoles;
 const ACCENTS=[0xff3b5c,0x2fd8ff,0xff4fd8,0x7dff5a,0xffa53a,0x9d6bff];
 // The couch's arc: its centre, radii (seat front, seat back, back rest) and half span, facing +x to the big screen.
 const COUCH={x:21.6,r0:3.35,r1:4.05,r2:4.3,half:.9};
-// Offsets from the original station. The forward grid leaves the wall stations and doorway aisles clear.
-const GROUP_STATIONS=[[-10,-.65],[-9.7,-10],[0,-10]];
+// Turn each complete station about its couch centre, leaving the open floor inside the fan.
+const stationMatrices=()=>PLACEMENT.gamingStations.map(s=>new T.Matrix4().makeTranslation(...s.at).multiply(new T.Matrix4().makeRotationY(s.yaw)).multiply(new T.Matrix4().makeTranslation(-COUCH.x,0,0)));
 // While the camera is in the room: the lights' share of their usual strength, and their colours.
 const MOOD={hemi:.42,fill:.22,env:.3,sky:0x9aa8ff,ground:0x3a2458};
 const TRAIL=8,REMOTE_TRAILS=3,MARKS=TRAIL*(1+REMOTE_TRAILS);
@@ -206,8 +206,8 @@ export function dressGamingLounge(ship){
  curved('Gaming_curved_couch_back',COUCH.r1,COUCH.r2,.62,.34,M.couch);
  box('Coffee_table_top',[.8,.05,1.8],[19.45,.42,0],M.glass);
  box('Coffee_table_base',[.6,.36,1.5],[19.45,.18,0],M.black);
- const station=fit.children.slice(stationStart);
- for(const [dx,dz] of GROUP_STATIONS)for(const part of station){const o=part.clone();o.position.x+=dx;o.position.z+=dz;fit.add(o);}
+ const station=fit.children.slice(stationStart);for(const part of station)part.removeFromParent();
+ for(const matrix of stationMatrices())for(const part of station){const o=part.clone();o.applyMatrix4(matrix);fit.add(o);}
  room.updateMatrixWorld(true);
  return true;
 }
@@ -301,7 +301,7 @@ export function createGamingLounge(ship,light=null,{still=false,requestBoards=()
  });
  // The couch lounge: the big screen's split-screen picture, three controllers on the table and its colour underglow.
  const big=M.basic('lounge_screen',0xffffff);big.map=canvas(1024,576,quad);
- const stationPiece=(m,g)=>{piece(m,g);for(const [dx,dz] of GROUP_STATIONS)piece(m,g.clone().translate(dx,0,dz));};
+ const matrices=stationMatrices(),stationPiece=(m,g)=>{for(const matrix of matrices)piece(m,g.clone().applyMatrix4(matrix));};
  stationPiece(big,new T.PlaneGeometry(3.1,1.74).rotateY(-Math.PI/2).translate(END-.065,1.5,0));
  for(const [dz,ry] of [[-.5,.3],[.05,-.2],[.55,.15]])stationPiece(M.dark,controller.clone().rotateY(Math.PI/2+ry).translate(19.4,.48,dz));
  stationPiece(M.keys,new T.BoxGeometry(.62,.012,1.52).translate(19.45,.012,0));
