@@ -13,7 +13,9 @@ function closeOldLiftWalls(ship,root,p,y){
    if(distance<near){near=distance;finish=material;}
   });
   cutOut(ship.inside,patch,o=>/wall|lining|partition/i.test(o.name)&&!/hull|pressure|outer_room/i.test(o.name)&&!o.userData.noCollide);
-  const wall=box(root,'V2_retired_clubhouse_lift_wall',[.12,3.72,3.6],[x,y+1.86,p.z],finish);wall.userData={room:'commons-1',v2Deck:17,role:'wall'};
+  // Its foot goes 5 cm into the slab: a bottom face flush on the garden floor is an opposing coplanar finish (nightly
+  // envelope-check, commons-1 and commons-3). The top stays at y+3.72.
+  const wall=box(root,'V2_retired_clubhouse_lift_wall',[.12,3.77,3.6],[x,y+1.835,p.z],finish);wall.userData={room:'commons-1',v2Deck:17,role:'wall'};
  }
 }
 export function prepareClubhouseAccess(ship,lift){
