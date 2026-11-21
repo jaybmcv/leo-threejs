@@ -23,13 +23,14 @@ export function createZenGarden(koiGeometry){
  const add=(name,g,material)=>{const o=new T.Mesh(g,material);o.name=name;o.receiveShadow=true;group.add(o);return o;};
  const box=(name,w,h,d,x,y,z,angle=0)=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d));o.name=name;o.position.set(x,y,z);o.rotation.z=angle;solid.add(o);return o;};
  const rock=(x,y,z,sx,sy,sz)=>pieces.push(paint(new T.IcosahedronGeometry(1,0).scale(sx,sy,sz).rotateY(rnd()*6).translate(x,y,z),[0x7f867e,0x93988a,0x727c73][rnd()*3|0]));
- const moss=(x,z,r,y=FLOOR+.015)=>{const g=new T.SphereGeometry(1,10,4).scale(r,.14,r*.8).translate(x,y,z);pieces.push(paint(g,0x76915a));
+ // Moss keeps its upper surface; buried undersides need no rendering geometry.
+ const moss=(x,z,r,y=FLOOR+.015)=>{const g=new T.SphereGeometry(1,10,4).scale(r,.14,r*.8).translate(x,y,z);pieces.push(paint(new T.SphereGeometry(1,10,2,0,Math.PI*2,0,Math.PI/2).scale(r,.14,r*.8).translate(x,y,z),0x76915a));
   if(y<FLOOR+.1){const o=new T.Mesh(g.clone());o.name='Zen_moss_floor';solid.add(o);}};
- // A thin gravel finish, never a replacement slab. The curved grooves are merged into one draw.
+ // A thin gravel finish, never a replacement slab. Skip rake lines hidden by the pond bed.
  add('Zen_gravel_floor',new T.ShapeGeometry(shapeOf(ZEN_GROUND)).rotateX(-Math.PI/2).translate(0,FLOOR+.018,0),new T.MeshStandardMaterial({name:'Zen_pale_gravel',color:0xc5bfaa,roughness:1}));
  const grooves=[];
- for(let r=2;r<34;r+=.5){const pts=[];for(let i=0;i<=100;i++){const a=i/100*Math.PI*2,x=124+Math.cos(a)*r,z=26+Math.sin(a)*r*.7;pts.push([x,z]);}
-  for(let i=0;i<pts.length-1;i++){const [x,z]=pts[i],[xx,zz]=pts[i+1];if(!contains(ZEN_GROUND,[x,z])||!contains(ZEN_GROUND,[xx,zz]))continue;
+ for(let r=2;r<34;r+=.5){const pts=[];for(let i=0;i<=64;i++){const a=i/64*Math.PI*2,x=124+Math.cos(a)*r,z=26+Math.sin(a)*r*.7;pts.push([x,z]);}
+  for(let i=0;i<pts.length-1;i++){const [x,z]=pts[i],[xx,zz]=pts[i+1];if(!contains(ZEN_GROUND,[x,z])||!contains(ZEN_GROUND,[xx,zz])||contains(ZEN_POND,[x,z])&&contains(ZEN_POND,[xx,zz]))continue;
    const l=Math.hypot(xx-x,zz-z);grooves.push(new T.PlaneGeometry(l+.008,.025).rotateX(-Math.PI/2).rotateY(-Math.atan2(zz-z,xx-x)).translate((x+xx)/2,FLOOR+.021,(z+zz)/2));}}
  add('Zen_raked_curves',mergeGeometries(grooves),new T.MeshStandardMaterial({name:'Zen_gravel_grooves',color:0x9fa18b,roughness:1}));grooves.forEach(g=>g.dispose());
  add('Zen_pond_bed',pondGeometry(.08,FLOOR+.02),new T.MeshStandardMaterial({name:'Zen_pond_pebbles',color:0x506e61,roughness:1}));

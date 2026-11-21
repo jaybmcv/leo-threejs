@@ -6479,7 +6479,7 @@
       ],
       "interactionTargets": null,
       "placements": 40,
-      "signature": "ed77bfaeabd2a29e3a7d7d70f48d7c991554bffeb0d71bac119c5f234792ed34"
+      "signature": "4cd43979e161f7c458eacc7a8c2d98501643f10a4bb9975791e8afdfe6e8f878"
     },
     {
       "source": "src/window-geometry.js",

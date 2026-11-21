@@ -44,7 +44,7 @@ assert.equal(rest.filter(s=>s.id?.startsWith('p6-')).length,12,'all existing gal
 const ship={root};prepareBlossomBed(ship);const garden=createBlossomGarden(ship);root.add(garden.solid);root.updateMatrixWorld(true);garden.group.updateMatrixWorld(true);
 const zen=garden.group.getObjectByName('Zen_garden'),water=zen.getObjectByName('Zen_pond_water'),koi=zen.getObjectByName('Zen_koi');
 assert.equal(koi.count,24);let draws=0,triangles=0;zen.traverse(o=>{if(o.isMesh){draws++;triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3*(o.count??1);}assert.ok(!o.isLight,'no new real lights');});
-assert.ok(draws<=15&&triangles<34000,'bounded garden draw and triangle budget: '+JSON.stringify({draws,triangles}));
+assert.ok(draws<=14&&triangles<24000,'bounded garden draw and triangle budget: '+JSON.stringify({draws,triangles}));
 const area=Math.abs(ZEN_POND.reduce((sum,[x,z],i)=>{const [xx,zz]=ZEN_POND[(i+1)%ZEN_POND.length];return sum+x*zz-xx*z;},0)/2);
 assert.ok(area>360,'pond grows to several times its original footprint');
 const transform=garden.group.children[0].matrix.clone().premultiply(garden.group.matrixWorld),inv=transform.clone().invert();
