@@ -61,6 +61,7 @@ assert.equal(capsule.geometry.type,'LatheGeometry');capsule.geometry.computeBoun
 assert(Math.abs(capsule.geometry.boundingBox.min.y-.66)<.001&&Math.abs(capsule.geometry.boundingBox.max.y-3.06)<.001,'Capsule retains the former display height');
 assert.equal(holo.userData.boards.length,9);assert.deepEqual(holo.userData.boards,gamingBoards(),'All games keep their existing data');
 assert.equal(holo.material.side,T.FrontSide);assert(holo.material.fragmentShader.includes('if(face<=.18)discard'),'Far-side ink is hidden');
+assert.equal(holo.material.blending,T.NormalBlending,'The board backing dims bright signs behind the scores');
 const positions=holo.geometry.attributes.position,normals=holo.geometry.attributes.normal;
 for(let i=0;i<positions.count;i++)assert(positions.getX(i)*normals.getX(i)+positions.getZ(i)*normals.getZ(i)>1.3,'Curved board fronts face out');
 const before=holo.material.uniforms.uBoards.value.version,initial=holo.userData.boards.map(b=>b.id);

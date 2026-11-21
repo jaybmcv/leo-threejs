@@ -407,9 +407,9 @@ function leaderboardColumn(time){
    float edge=1.-smoothstep(.008,.022,min(min(p.x,1.-p.x),min(p.y,1.-p.y)));
    float scan=pow(.5+.5*sin(p.y*160.-uTime*3.),20.);
    vec3 neon=mix(vec3(.1,.85,1.),vec3(1.,.12,.65),p.y);
-   gl_FragColor=vec4(ink.rgb*ink.a+neon*(edge*.85+scan*.045),max(ink.a,edge*.75)*smoothstep(.18,.55,face));
+   gl_FragColor=vec4(ink.rgb+neon*(edge*.85+scan*.045),max(ink.a,edge*.75)*smoothstep(.18,.55,face));
    #include <colorspace_fragment>
-  }`,uniforms:{uBoards:{value:texture},uTime:time},transparent:true,depthWrite:false,side:T.FrontSide,blending:T.AdditiveBlending,toneMapped:false});
+  }`,uniforms:{uBoards:{value:texture},uTime:time},transparent:true,depthWrite:false,side:T.FrontSide,blending:T.NormalBlending,toneMapped:false});
  const mesh=new T.Mesh(mergeGeometries(geometries),material);mesh.name='Gaming_leaderboard_column';mesh.userData.noCollide=true;
  // Shallow ellipsoidal domes keep the capsule below the existing ceiling.
  const profile=[];
@@ -434,7 +434,8 @@ function leaderboardColumn(time){
   if(next===signature)return;signature=next;ctx.clearRect(0,0,c.width,c.height);
   visible.forEach((b,i)=>{
    const x=i%3*512,y=Math.floor(i/3)*1024;ctx.save();ctx.translate(x,y);
-   ctx.fillStyle='rgba(8,14,36,.5)';ctx.fillRect(0,0,512,1024);
+   // Dark translucent backing keeps bright room signs from washing through the rows.
+   ctx.fillStyle='rgba(8,14,36,.9)';ctx.fillRect(0,0,512,1024);
    ctx.textAlign='center';ctx.fillStyle='#5cecff';ctx.font='600 38px system-ui';ctx.fillText('VOYAGE · HIGH SCORES',256,43,464);
    ctx.fillStyle='#fff1fc';ctx.font='700 100px system-ui';
    const words=b.title.split(' '),lines=[''];for(const word of words){let n=lines.length-1;if(lines[n]&&ctx.measureText(lines[n]+' '+word).width>450){lines.push(word);}else lines[n]+=(lines[n]?' ':'')+word;}
