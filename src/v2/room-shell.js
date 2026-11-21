@@ -2,6 +2,7 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {removeBuriedSlabSides} from './atrium-floor-finish.js';
 import {wallJoints,mitreWallGeometry} from './wall-joints.js';
+import {roomWallBoundary,setRoomCornerObstacles} from './rounded-room-walls.js';
 import {moveRoomFitoutMeshes} from './room-fitout-overrides.js';
 import layout from '../plan/selected-layout.js';
 import {roomObject} from '../plan/rooms.js';
@@ -16,6 +17,13 @@ import {polygonGeometry,mesh,box,wall,mergeBoxes,removePanelEndCaps,removeGeomet
 export function buildRoomShell(ship,r,structure){
   const source=roomObject(ship,r.id);
   if(source){moveRoomFitoutMeshes(source,r.id);retireV2RoomShell(source,ship.cutaway);if(r.id==='d16-voyage-forum-bow')source.clear();if(r.id==='observation-lounge'){const keep=[];source.traverse(o=>{if(/Shared_telescope_base|Viewing_scope|Scope_column|Scope_optical_head/.test(o.name))keep.push(o);});for(const o of keep)source.attach(o);for(const o of [...source.children])if(!keep.includes(o))source.remove(o);}}
+  if(source&&r.deck===2){
+   setRoomCornerObstacles(r,[]);const corners=roomWallBoundary(r,r.polygon).corners,boxes=[],v=new T.Vector3();source.updateWorldMatrix(true,true);
+   source.traverse(o=>{if(!o.isMesh||/floor|ceiling|shell|wall/i.test(o.name))return;for(let p=o;p;p=p.parent)if(!p.visible)return;const g=o.geometry,p=g.attributes.position,ix=g.index;if(!p)return;
+    const bounds=new T.Box3().setFromObject(o);if(!corners.some(c=>c.at[0]>=bounds.min.x-.3&&c.at[0]<=bounds.max.x+.3&&c.at[1]>=bounds.min.z-.3&&c.at[1]<=bounds.max.z+.3))return;
+    for(let i=0;i<(ix?.count??p.count);i+=3){const box=new T.Box3();for(let k=0;k<3;k++)box.expandByPoint(v.fromBufferAttribute(p,ix?ix.getX(i+k):i+k).applyMatrix4(o.matrixWorld));if(box.max.y>=r.y&&box.min.y<=r.y+r.height)boxes.push(box);}
+   });setRoomCornerObstacles(r,boxes);
+  }
   const g=new T.Group();g.name='V2_shell_'+r.id;g.userData.room=r.id;structure.add(g);if(r.launchE?.kind==='oval-forum'){const [x,z,w,d]=r.launchE.seating,oval=Array.from({length:96},(_,i)=>[x+w/2*Math.cos(i*Math.PI/48),z+d/2*Math.sin(i*Math.PI/48)]),inlay=mesh(g,'Forum_oval_inlay',polygonGeometry(oval,[],r.y+.014,.002),new T.MeshStandardMaterial({name:'Forum_oval_textile',color:0x35545a,roughness:.95}));inlay.userData.noCollide=true;}if(r.launchE?.kind==='oval-forum')for(const t of forumTerraces())mesh(g,'Forum_terrace_floor',forumTerraceGeometry(t,r.y),floor);
   if(r.ceilingExtension){const e=r.ceilingExtension,upper=forumUpperPlan(layout,r);g.userData.forumUpper=upper;mesh(g,'V2_room_ceiling',polygonGeometry(e.polygon,upper.ceilingHoles,e.y+e.height,.10),lining);for(let i=0;i<e.polygon.length;i++){let segments=[[e.polygon[i],e.polygon[(i+1)%e.polygon.length]]];for(const d of upper.portals)segments=segments.flatMap(([a,b])=>entrySegments(a,b,d.center,d.width));for(const[a,b]of segments)removePanelEndCaps(wall(g,a,b,e.y,e.height,lining,'V2_forum_upper_wall'));}}
   const replacements=layout.hullPrototypes?.rollout?layout.hullPrototypes.prototypes.filter(p=>p.kind!=='cabin'&&(p.ownerId===r.id||p.parentRoomId===r.id)):[];
@@ -24,11 +32,12 @@ export function buildRoomShell(ship,r,structure){
   const top=r.envelope?.at(-1)?.polygon??r.polygon;if(!r.openPlan)mesh(g,'V2_room_ceiling',polygonGeometry(top,[...(r.ceilingExtension?[r.ceilingExtension.polygon]:[]),...(r.id==='d02-arrival-1'?layout.decks[2].slab.holes.filter(h=>h.id==='arrival-garden-opening').map(h=>h.polygon):[]),...replacements.map(p=>ownerFootprint(p,p.rect[3]).map(q=>{const w=worldPoint(p.chart,q);return [w[0],w[2]];}))],r.y+r.height,.10),lining);
   // Sectioned facade steps follow the supplied full-height envelope without scaling the fitted room.
   const sections=r.openPlan?[]:r.envelope||[{rise:0,height:r.height,polygon:r.polygon}];
-  for(const s of sections)for(let i=0;i<s.polygon.length;i++){const a=s.polygon[i],b=s.polygon[(i+1)%s.polygon.length],doors=[r.door,r.fittingDoor,...(r.galleryDoors||[]),...(r.bayAccessDoors||[])].filter(Boolean).filter(d=>d.center[1]<r.y+s.rise+s.height&&d.center[1]+2.5>r.y+s.rise);
+  // Curved panes and their tangent walls keep triangle collision instead of box bounds.
+  for(const s of sections){const boundary=roomWallBoundary(r,s.polygon),poly=boundary.polygon,rounded=boundary.corners.flatMap(c=>c.points);for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length],doors=[r.door,r.fittingDoor,...(r.galleryDoors||[]),...(r.bayAccessDoors||[])].filter(Boolean).filter(d=>d.center[1]<r.y+s.rise+s.height&&d.center[1]+2.5>r.y+s.rise);
    let segments=[[a,b]];for(const d of doors)segments=segments.flatMap(([a,b])=>entrySegments(a,b,d.center,d.width));
-   for(const [aa,bb] of segments){const o=wall(g,aa,bb,r.y+s.rise,s.height,r.outer||r.publicFront&&Math.abs((aa[0]-r.door.center[0])*r.door.outward[0]+(aa[1]-r.door.center[2])*r.door.outward[1])<.02&&Math.abs((bb[0]-r.door.center[0])*r.door.outward[0]+(bb[1]-r.door.center[2])*r.door.outward[1])<.02||r.kind==='garden'||r.id==='d05-aquarium-gallery'&&(Math.abs(aa[0]-98)<.01&&Math.abs(bb[0]-98)<.01||Math.abs(aa[1]+34)<.01&&Math.abs(bb[1]+34)<.01)?glass:lining);removePanelEndCaps(o);if(o&&(r.deck===1||r.deck===2))mitreWallGeometry(o.geometry,wallJoints(s.polygon,i,aa,bb));}
-   for(const d of doors){const header=entryHeader(a,b,d.center,d.width);if(header&&d.center[1]+2.5<r.y+s.rise+s.height){const upper=Math.max(r.y+s.rise,d.center[1]+2.5),o=wall(g,header[0],header[1],upper,r.y+s.rise+s.height-upper,glass);removeGeometryCaps(o.geometry,0);if(o&&(r.deck===1||r.deck===2))mitreWallGeometry(o.geometry,wallJoints(s.polygon,i,header[0],header[1]));}}
-  }
+   for(const [aa,bb] of segments){const o=wall(g,aa,bb,r.y+s.rise,s.height,r.outer||r.publicFront&&Math.abs((aa[0]-r.door.center[0])*r.door.outward[0]+(aa[1]-r.door.center[2])*r.door.outward[1])<.02&&Math.abs((bb[0]-r.door.center[0])*r.door.outward[0]+(bb[1]-r.door.center[2])*r.door.outward[1])<.02||r.kind==='garden'||r.id==='d05-aquarium-gallery'&&(Math.abs(aa[0]-98)<.01&&Math.abs(bb[0]-98)<.01||Math.abs(aa[1]+34)<.01&&Math.abs(bb[1]+34)<.01)?glass:lining);removePanelEndCaps(o);if(o&&(r.deck===1||r.deck===2))mitreWallGeometry(o.geometry,wallJoints(poly,i,aa,bb));if(o&&rounded.some(p=>Math.hypot(p[0]-aa[0],p[1]-aa[1])<1e-6||Math.hypot(p[0]-bb[0],p[1]-bb[1])<1e-6)){const old=o.geometry;o.geometry=new T.BufferGeometry().copy(old);old.dispose();}}
+   for(const d of doors){const header=entryHeader(a,b,d.center,d.width);if(header&&d.center[1]+2.5<r.y+s.rise+s.height){const upper=Math.max(r.y+s.rise,d.center[1]+2.5),o=wall(g,header[0],header[1],upper,r.y+s.rise+s.height-upper,glass);removeGeometryCaps(o.geometry,0);if(o&&(r.deck===1||r.deck===2))mitreWallGeometry(o.geometry,wallJoints(poly,i,header[0],header[1]));}}
+  }}
   }
   if(r.components){const platforms=[...(r.components.galleries||[]),...(r.components.links||[]),...(r.components.landings||[])],landingFloors=[];for(const [i,o] of platforms.entries()){const holes=galleryHoles(r,o);
    // Joined lounge routes share one floor surface instead of coplanar plates.

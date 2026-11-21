@@ -4,6 +4,7 @@ import layout from '../src/plan/selected-layout.js';
 import {buildRoomShell} from '../src/v2/room-shell.js';
 import {applyPublicFinishKit,createFinishKit} from '../src/v2/finish-kit.js';
 import {wallJoints} from '../src/v2/wall-joints.js';
+import {roomWallBoundary} from '../src/v2/rounded-room-walls.js';
 import {buildShuttleWalls} from '../src/v2/shuttle-shell.js';
 import {entrySegments,entryHeader} from '../src/v2/room-entries.js';
 import {createShuttleDoors,shuttleDoorways,HALF,CASING,HEIGHT,DEEP} from '../src/walk/shuttle-doors.js';
@@ -42,13 +43,13 @@ function checkDoors(root,doors,id){
  }
 }
 function checkDeck2(root,r){
- const doors=[r.door,r.fittingDoor,...(r.galleryDoors||[]),...(r.bayAccessDoors||[])].filter(Boolean),poly=ring(r.polygon),sign=Math.sign(T.ShapeUtils.area(poly.map(q=>new T.Vector2(...q))));
+ const doors=[r.door,r.fittingDoor,...(r.galleryDoors||[]),...(r.bayAccessDoors||[])].filter(Boolean),poly=roomWallBoundary(r,r.polygon).polygon,sign=Math.sign(T.ShapeUtils.area(poly.map(q=>new T.Vector2(...q))));
  for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length],front=r.outer||r.publicFront&&[a,b].every(q=>Math.abs((q[0]-r.door.center[0])*r.door.outward[0]+(q[1]-r.door.center[2])*r.door.outward[1])<.02);let pieces=[[a,b]];for(const d of doors)pieces=pieces.flatMap(([a,b])=>entrySegments(a,b,d.center,d.width+.16));
   const levels=[sign].flatMap(side=>[[.1,.0845*side,'trim'],[3.22,.106*side,'light'],[3.28,.14*side,'trim'],...(!front?[[1.4,.052*side,'panel']]:[])]);
   if(r.kind==='new')levels.push(...levels.map(([h,d,k])=>[h,-d,k]));
   checkEnds(root,poly,i,pieces,r.y,levels.map(([h,d,k])=>[h,d,'V2_public_finish_'+k]),r.id);
  }
- for(const s of r.envelope||[{rise:0,height:r.height,polygon:r.polygon}]){const poly=ring(s.polygon),active=doors.filter(d=>d.center[1]<r.y+s.rise+s.height&&d.center[1]+2.5>r.y+s.rise);
+ for(const s of r.envelope||[{rise:0,height:r.height,polygon:r.polygon}]){const poly=roomWallBoundary(r,s.polygon).polygon,active=doors.filter(d=>d.center[1]<r.y+s.rise+s.height&&d.center[1]+2.5>r.y+s.rise);
   for(let i=0;i<poly.length;i++){let pieces=[[poly[i],poly[(i+1)%poly.length]]];for(const d of active)pieces=pieces.flatMap(([a,b])=>entrySegments(a,b,d.center,d.width));
    const levels=[[s.height/2,.05,'V2_glass_wall'],[s.height/2,-.05,'V2_glass_wall']];checkEnds(root,poly,i,pieces,r.y+s.rise,levels,r.id);
    for(const d of active){const upper=Math.max(r.y+s.rise,d.center[1]+2.5),header=entryHeader(poly[i],poly[(i+1)%poly.length],d.center,d.width);if(header&&upper<r.y+s.rise+s.height)checkEnds(root,poly,i,[header],upper,[[.01,.05,'V2_glass_wall'],[.01,-.05,'V2_glass_wall']],r.id+' header');}
@@ -67,7 +68,7 @@ for(const r of layout.rooms.filter(r=>[1,2].includes(r.deck)&&!r.aggregate&&!r.o
   // Resolve coincident faces to 0.1 mm; the existing skirting back is 0.5 mm inside the shell.
   assert.deepEqual(coplanarOverlaps(cornerFaces(root,q),{distance:.0001}),[],r.id+' has overlapping corner faces at '+q);corners++;
   // A perpendicular ray in the old open slot must now hit each finish layer.
-  const slope=wallJoints(poly,i)[0];if(slope>=-.1)continue;
+  const slope=wallJoints(poly,i)[0];if(slope>=-.1||r.deck===2&&roomWallBoundary(r,r.polygon).corners.some(c=>Math.hypot(c.at[0]-q[0],c.at[1]-q[1])<1e-6))continue;
   for(const [rise,d,kind]of[[.1,.0845,'trim'],[1.4,.052,'panel'],[3.22,.106,'light'],[3.28,.14,'trim'],[2,.05,'shell']]){
    if(kind==='shell'&&r.envelope)continue;
    if(kind==='panel'&&(r.outer||r.publicFront&&Math.abs((q[0]-r.door.center[0])*r.door.outward[0]+(q[1]-r.door.center[2])*r.door.outward[1])<.02))continue;
