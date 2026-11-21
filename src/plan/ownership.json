@@ -6497,7 +6497,7 @@
         "Zen_garden",
         "Zen_garden_colliders",
         "Zen_moss_floor",
-        "Zen_pond_wall",
+        "Zen_pond_bed_floor",
         "Zen_falls_flow",
         "Zen_bridge_floor",
         "Zen_bridge_rail",
@@ -6510,8 +6510,8 @@
         "Zen_garden_colliders"
       ],
       "interactionTargets": null,
-      "placements": 36,
-      "signature": "58bed453ba1db8caee1ae52ebe74e39902ec892632c8dd4540fe4fb5dd9f5b5c"
+      "placements": 40,
+      "signature": "4cd43979e161f7c458eacc7a8c2d98501643f10a4bb9975791e8afdfe6e8f878"
     },
     {
       "source": "src/window-geometry.js",
