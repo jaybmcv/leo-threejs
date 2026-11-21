@@ -17,10 +17,10 @@ room.name='Area_'+id;room.position.set(...v1Frame(id).origin);fit.name='Room_fit
 const floor=new T.Mesh(new T.BoxGeometry(48,.2,32),new T.MeshBasicMaterial());floor.position.set(0,-.1,-5);floor.name='Floor';room.add(floor);
 const ship={root};assert(dressGamingLounge(ship));
 const desks=fit.children.filter(o=>o.name==='Gaming_desk_top'),chairs=fit.children.filter(o=>o.name==='Gaming_chair');
-assert.equal(desks.length,8);assert.equal(chairs.length,14);
+assert.equal(desks.length,8);assert.equal(chairs.length,13);
 assert(desks.every(o=>o.position.z<-11));assert(chairs.slice(0,8).every(o=>o.position.z<-10));
-assert.deepEqual(fit.children.filter(o=>o.name==='Wall_screen_frame').map(o=>o.position.toArray()),[-21,-16.5,-12,-7.5,-3,10.5].map(x=>[x,1.35,7.84-.025]));
-const seats=findRestSpots(root).filter(s=>s.kind==='sit');assert(seats.length>=14);
+assert.deepEqual(fit.children.filter(o=>o.name==='Wall_screen_frame').map(o=>o.position.toArray()),[-21,-16.5,-12,-7.5,-3].map(x=>[x,1.35,7.84-.025]));
+const seats=findRestSpots(root).filter(s=>s.kind==='sit');assert(seats.length>=13);
 for(const chair of chairs.slice(0,8)){const p=chair.getWorldPosition(new T.Vector3());assert(seats.some(s=>Math.hypot(s.point.x-p.x,s.point.z-p.z)<.1));}
 const colliders=new Colliders();colliders.addStatic(root);colliders.commit();
 const restIndex=spotIndex(solidSpots(seats,colliders));
@@ -72,4 +72,5 @@ hearGamingBoard('pool',{m:'board',top:[{name:'Voyager',ms:11000}]});lounge.updat
 assert.equal(holo.userData.boards.find(b=>b.id==='pool').rows[0].value,'11.0 s');assert.equal(holo.material.uniforms.uBoards.value.version,before+1,'Only changed scores repaint the atlas');
 const still=createGamingLounge(ship,null,{still:true});still.update(4,eye,center);assert.equal(still.leaderboard.mesh.rotation.y,0);
 for(const suffix of ['.public','.prepared','.authoring']){const s=fs.readFileSync('src/walk/gaming-lounge'+suffix+'.js','utf8');assert(s.includes('o.applyMatrix4(rowMatrix)'));assert(s.includes('pcPiece('));assert(s.includes('leaderboardColumn(time)'));assert(s.includes('group,leaderboard,'));}
-console.log('PASS gaming lounge: existing stations, round base collision and full circuit, capsule, nine outward boards, 36-second rotation without canvas repaint, score updates, reduced motion and all variants');
+console.log('PASS gaming lounge: eight relocated PCs, thirteen chairs, five retained wall stations, base collision, full circuit, far-end and chair clearance, existing scores, unavailable storage, atlas rotation and cycling, reduced motion and all variants');
+console.log('PASS score capsule: round base collision and full circuit, nine outward boards, 36-second rotation without canvas repaint and score updates');
