@@ -80,11 +80,27 @@ async function browser(n){
 }
 // A page with the walk up and the bake installed; its setup() answer.
 async function openPage(n,walk,script){
- const page=await browser(n);await page.send('Page.navigate',{url:walk.url+'?lv=2&view=first&halloween=0&ownerBake&deskpiece='+DESK_PIECE.discrete});
+ const page=await browser(n),url=new URL(walk.url);
+ // Board through the public build's guest form, with authentication and multiplayer kept local.
+ url.search=new URLSearchParams({lv:'2',view:'first',halloween:'0',ownerBake:'',deskpiece:DESK_PIECE.discrete,live:'ws://127.0.0.1:1/live',creamery:'http://127.0.0.1:1'});
+ await page.send('Page.navigate',{url:url.href});
  const until=Date.now()+10*60e3;
- for(;;){if(Date.now()>until)throw Error('The walk did not come up within 10 minutes on page '+n);
-  let up=false;try{up=await page.ev(`document.body?.dataset.ready==='1'&&!!globalThis.__ownerBakeHost`);}catch(e){if(/did not answer|closed/.test(e.message))throw e;}
-  if(up)break;await sleep(500);}
+ let state;
+ for(;;){
+  if(Date.now()>until)throw Error(`The walk did not come up within 10 minutes on page ${n}: ${JSON.stringify(state)}`);
+  try{
+   state=await page.ev(`(()=>{
+    const form=document.getElementById('who-guest');
+    if(form?.getClientRects().length)form.requestSubmit();
+    return {ready:document.body?.dataset.ready==='1',host:!!globalThis.__ownerBakeHost,
+     stage:document.getElementById('loading-text')?.textContent,failed:document.body?.dataset.failed};
+   })()`);
+  }catch(e){if(!/execution context was destroyed|cannot find context/i.test(e.message))throw e;}
+  if(state?.failed)throw Error(`Walk startup failed on page ${n}: ${state.failed} (${state.stage})`);
+  if(state?.ready&&state.host)break;
+  await sleep(500);
+ }
+ console.log(`owner bake: page ${n} ready`);
  await page.ev(script);return {page,setup:await page.ev(`__ownerBake.setup(${JSON.stringify(seed&&{at:seed.at,yaw:seed.yaw})})`)};
 }
 
