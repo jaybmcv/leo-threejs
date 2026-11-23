@@ -163,3 +163,22 @@ for(let i=0;i<9;i++)finish(1100);
 emit(); assert.equal(sent,2);
 finish(1100); dynamicCam.position.x=100; dynamicCam.updateMatrixWorld(); emit(); assert.equal(sent,3);
 finish(500); dynamicCam.position.x=0; dynamicCam.updateMatrixWorld(); emit(); assert.equal(sent,4);
+
+// A slow mouse turn keeps a visible draw on its staggered schedule. A camera
+// jump behind it must still reject the draw on the next frame.
+{
+ const room=new T.Scene(),eye=new T.PerspectiveCamera(),m=new T.MeshBasicMaterial(),tile=new T.Mesh(new T.PlaneGeometry(),m);
+ const info={render:{frame:0,calls:1100}},r={info,shadowMap:{enabled:false},xr:{isPresenting:false},getRenderTarget:()=>null,
+  renderBufferDirect(){submitted++;}};
+ let submitted=0,tests=0;const determinant=eye.matrixWorld.determinant.bind(eye.matrixWorld);
+ eye.matrixWorld.determinant=()=>{tests++;return determinant();};
+ installQuadFacingTest(r,room,eye);room.onAfterRender(r,room,eye);
+ eye.position.z=2;
+ for(let i=0;i<60;i++){
+  eye.rotation.y=.04*Math.sin(i*.3);eye.updateMatrixWorld();info.render.frame++;
+  r.renderBufferDirect(eye,room,tile.geometry,m,tile,null);room.onAfterRender(r,room,eye);
+ }
+ assert.equal(submitted,60);assert(tests>0&&tests<30);
+ eye.position.z=-2;eye.updateMatrixWorld();info.render.frame++;
+ r.renderBufferDirect(eye,room,tile.geometry,m,tile,null);assert.equal(submitted,60);
+}

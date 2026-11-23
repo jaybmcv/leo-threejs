@@ -127,10 +127,11 @@ export function installQuadFacingTest(renderer, scene, camera) {
  let pose = 0, frame = -1, mainFrames = 0, visibleEpoch = 0, coordinateSystem, reversedDepth;
  function movedView(world) {
   const a = world.elements, b = visibleFrom.elements;
-  // Only governs when to reconsider a previously submitted draw. Hidden draws
-  // always use the exact eye, projection, geometry and transform below.
-  if (Math.abs(a[12]-b[12])>.025 || Math.abs(a[13]-b[13])>.025 || Math.abs(a[14]-b[14])>.025) return true;
-  for (let i=0; i<12; i++) if (Math.abs(a[i]-b[i])>.003) return true;
+  // Small mouse movements keep visible draws on their staggered retest schedule.
+  // A large turn or teleport rechecks them immediately. Hidden draws always
+  // use the exact eye, projection, geometry and transform below.
+  if (Math.abs(a[12]-b[12])>.5 || Math.abs(a[13]-b[13])>.5 || Math.abs(a[14]-b[14])>.5) return true;
+  for (let i=0; i<12; i++) if (Math.abs(a[i]-b[i])>.12) return true;
   return false;
  }
  function maySkip(view, geometry, material, object, group) {
@@ -158,8 +159,10 @@ export function installQuadFacingTest(renderer, scene, camera) {
    slots.set(start, row);
   }
   // A visible draw may always be resubmitted. Spread its next test over moving frames.
-  if (!row.skipped && row.epoch === visibleEpoch && mainFrames < row.next && row.g === geometry && row.side === material.side && row.groupCount === count && row.instanceCount === object.count &&
-      row.version === object.instanceMatrix?.version && row.world.equals(object.matrixWorld)) return false;
+  if (!row.skipped && row.epoch === visibleEpoch && mainFrames < row.next &&
+      row.g === geometry && row.side === material.side && row.groupCount === count &&
+      row.instanceCount === object.count && row.version === object.instanceMatrix?.version &&
+      row.world.equals(object.matrixWorld)) return false;
   const p = geometry.attributes.position, ix = geometry.index, instances = object.instanceMatrix;
   if (row.pose === pose && row.g === geometry && row.p === p && row.pv === p?.version &&
       row.ix === ix && row.iv === ix?.version && row.start === geometry.drawRange.start &&
