@@ -8,7 +8,6 @@
 // why that matters on a Galaxy S9).
 import * as T from 'three';
 import {compactRenderGeometry} from './facade.js';
-import {rememberDeckRuns} from './walk-draw-bounds.js';
 import {yieldEvery} from './yield-to-page.js';
 
 const IDENTITY=new T.Matrix4(),release=function(){this.array=null;};
@@ -94,7 +93,7 @@ async function splitPieces(attributes,layout,index,runs,most,yieldWork){
 /** Merges the deck bands' opaque meshes per material. `hidden` is called with each source once it is copied and hidden.
  * `piece` (most triangles a piece, 0 for none) splits each bigger material merge into view-culled pieces.
  * Returns {root, update, proof}: add nothing (root is already in `scene`); call update() after showBands. */
-export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece=0,keepArrays=false,trackDrawBounds=false}={}){
+export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece=0,keepArrays=false}={}){
  const yieldWork=yieldEvery();
  const bands=[...baked.bands.values()].filter(g=>/^Walk_band_/.test(g.name));
  // Band order: by lowest deck, then highest, so the bands a view span shows sit together.
@@ -147,7 +146,6 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece
    // out: these are the fogged walls and floors that stand behind whatever it leaves out.
    const mesh=new T.Mesh(geometry,[material]);mesh.name='V2_low_deck_merged_'+material.name;mesh.renderOrder=list[0].o.renderOrder;
    mesh.matrixAutoUpdate=false;mesh.frustumCulled=split;mesh.userData={noCollide:true,renderOnly:true,fogBackdrop:true,sources};root.add(mesh);
-   if(trackDrawBounds)rememberDeckRuns(mesh,piece.runs);
    merges.push({mesh,runs:piece.runs,split});proof.regions++;
   }
   proof.meshes++;proof.sources+=list.length;proof.vertices+=vertices;proof.triangles+=indices/3;await yieldWork();

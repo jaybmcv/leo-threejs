@@ -1,5 +1,4 @@
 import {cullByBox} from '../src/v2/box-frustum.js';
-import {installWalkDrawBounds,rememberDeckRuns} from '../src/v2/walk-draw-bounds.js';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {createFeatureBatches} from '../src/v2/feature-batches.js';
@@ -65,38 +64,13 @@ console.log('PASS feature multi-draw respects transforms, live visibility, camer
  equipment.around(camera,()=>{s.onBeforeRender(renderer,s,camera,null);assert.equal(equipment.stats.active,0);});
  assert(r.children.every(o=>o.visible));
 }
-// Only authored deck merges participate. The submitted group's interval and current transform
-// decide visibility even when several bands share one geometry or the group is edited in place.
+// A two-part feature can share its draw. Both source meshes retain their own transform and
+// visibility, and return to the normal path when their parent leaves the registered root.
 {
- const world=new T.Scene(),view=new T.PerspectiveCamera(68,1,.1,100),alt=view.clone();
- view.updateProjectionMatrix();view.updateMatrixWorld();alt.updateMatrixWorld();
- let target=null,submitted=0;
- const gpu={shadowMap:{enabled:false},getRenderTarget:()=>target,renderBufferDirect(){submitted++;}};
- const filter=installWalkDrawBounds(gpu,world),mat=new T.MeshBasicMaterial();
- const positions=[-100,-1,-4,-99,0,-4,-100,1,-4,99,-1,-4,100,0,-4,99,1,-4];
- const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setIndex([0,1,2,3,4,5]);
- const deck=new T.Mesh(g,[mat]),ordinary=new T.Mesh(g,mat);world.add(deck,ordinary);
- rememberDeckRuns(deck,[{start:0,count:3},{start:3,count:3}]);
- const group={start:0,count:6,materialIndex:0};
- const submit=(camera=view,object=deck)=>gpu.renderBufferDirect(camera,world,object.geometry,mat,object,group);
- function draws(camera=view,object=deck){world.updateMatrixWorld(true);const before=submitted;filter.around(view,()=>submit(camera,object));return submitted-before;}
- assert.equal(draws(),0);assert.equal(draws(),0);assert.equal(draws(),0);assert.equal(draws(view,ordinary),1);assert.equal(draws(alt),1);
- group.start=1;group.count=3;assert.equal(draws(),1);group.start=0;group.count=6;
- deck.position.x=-99;assert.equal(draws(),1);group.count=3;assert.equal(draws(),0);group.count=6;
- g.setDrawRange(0,3);assert.equal(draws(),0);g.setDrawRange(3,3);assert.equal(draws(),1);g.setDrawRange(0,Infinity);
- deck.position.x=100;assert.equal(draws(),1);deck.scale.x=-1;assert.equal(draws(),1);
- deck.scale.x=1;deck.position.x=0;assert.equal(draws(),0);
- view.position.x=100;view.updateMatrixWorld(true);assert.equal(draws(),1);view.position.x=0;view.updateMatrixWorld(true);assert.equal(draws(),0);
- mat.wireframe=true;assert.equal(draws(),1);mat.wireframe=false;mat.displacementMap=new T.Texture();assert.equal(draws(),1);mat.displacementMap=null;
- deck.onBeforeRender=()=>{};assert.equal(draws(),1);deck.onBeforeRender=T.Object3D.prototype.onBeforeRender;
- target={};assert.equal(draws(),1);target=null;gpu.shadowMap.enabled=true;assert.equal(draws(),1);gpu.shadowMap.enabled=false;
- filter.around(view,()=>{target={};const before=submitted;submit();assert.equal(submitted,before+1);target=null;});
- filter.around(view,()=>{
-  filter.around(alt,()=>filter.around(alt,()=>{const before=submitted;submit(alt);assert.equal(submitted,before+1);}));
-  const before=submitted;submit();assert.equal(submitted,before);
- });
- g.attributes.position.needsUpdate=true;assert.equal(draws(),1);
- rememberDeckRuns(deck,[{start:0,count:3},{start:3,count:3}]);assert.equal(draws(),0);
- g.setIndex([0,1,3]);assert.equal(draws(),1);
+ const s=new T.Scene(),b=new T.Group(),root=new T.Group(),parent=new T.Group();b.name='Walk_band_pair';s.add(b);b.add(root);root.add(parent);root.position.z=-5;
+ const m=new T.MeshBasicMaterial(),g=new T.BoxGeometry(),parts=[new T.Mesh(g,m),new T.Mesh(g,m)];parent.add(...parts);
+ const controller=await createFeatureBatches(s,renderer,[root]);assert.equal(controller.stats.sources,2);
+ function checkPair(count){s.updateMatrixWorld(true);controller.around(camera,()=>{s.onBeforeRender(renderer,s,camera,null);assert.equal(parts.filter(o=>!o.visible).length,count);});assert(parts.every(o=>o.visible));}
+ checkPair(2);parent.visible=false;checkPair(0);parent.visible=true;parent.renderOrder=1;checkPair(0);parent.renderOrder=0;root.position.x=100;checkPair(0);root.position.x=0;parent.remove(parts[0]);s.add(parts[0]);checkPair(0);
 }
-console.log('PASS exact merged deck ranges, group and transform changes, both camera paths and offscreen or nested draws');
+console.log('PASS two-part equipment collection, parent visibility and existing box-aware frustum culling');

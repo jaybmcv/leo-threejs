@@ -58,7 +58,7 @@ export async function createFeatureBatches(scene,renderer,roots){
  }
  const stats={batches:0,sources:0,active:0,skipped:0};
  for(const set of lists.values()){
-  if(set.rows.length<3)continue;
+  if(set.rows.length<2)continue;
   const unique=[...new Set(set.rows.map(row=>row.g))];
   const vertices=unique.reduce((sum,g)=>sum+g.attributes.position.count,0),indices=unique.reduce((sum,g)=>sum+(g.index?.count||0),0);
   const batch=new T.BatchedMesh(set.rows.length,vertices,indices,set.m);
@@ -85,7 +85,7 @@ export async function createFeatureBatches(scene,renderer,roots){
   scratch.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);
   if(frustumVersion===0||!lastProjection.equals(scratch)){lastProjection.copy(scratch);frustum.setFromProjectionMatrix(scratch);frustumVersion++;}
   for(const [band,sets] of byBand){
-   if(!band.visible||band.renderOrder!==0||(band!==scene&&band.parent!==scene))continue;
+   if(!band.visible||band.renderOrder!==0||band.parent!==scene)continue;
    for(const set of sets){
     if(!set.m.visible)continue;
     let checkedMaterial=false;
