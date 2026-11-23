@@ -1469,7 +1469,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "c9316c3e948d20ea42b63332b4c2bf35c781bb45df471428e3eff2958a250ad2"
+      "signature": "cae08eb8d2a6c865fc418c2d6a2adfa2db3a9ec9d0066b803074a7345773d444"
     },
     {
       "source": "src/walk/capsule-bubbles.js",
