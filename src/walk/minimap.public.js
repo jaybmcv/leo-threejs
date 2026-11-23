@@ -37,10 +37,13 @@ const toMap=(x,z)=>[(x-MAP.x0)/MAP.cell,(z-MAP.z0)/MAP.cell];
 export function arrow(g,size,line){g.fillStyle='#f85800';g.strokeStyle='#050507';g.lineWidth=line;g.beginPath();g.moveTo(0,-size);g.lineTo(size*.7,size*.7);g.lineTo(0,size*.3);g.lineTo(-size*.7,size*.7);g.closePath();g.fill();g.stroke();}
 
 // The corner mini-map, heading-up around the walker (yaw 0 looks along +z). Returns the deck shown.
-export function drawMiniMap(canvas,map,{x,y,z,yaw,places=[]}){
+export function drawMiniMap(canvas,map,{x,y,z,yaw,places=[]},last){
  const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height,dpr=w/(canvas.clientWidth||w);
+ const deck=deckOf(y),plan=deck&&map.deck(deck.number),markers=plan&&currentMapPlaces(places);
+ // The caller owns this canvas. These are all inputs to its ship plan, dots, names and arrow.
+ if(last?.valid&&last.x===x&&last.z===z&&last.yaw===yaw&&last.w===w&&last.h===h&&last.dpr===dpr&&
+    last.deck===deck&&last.plan===plan&&last.markers===markers)return deck;
  g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);
- const deck=deckOf(y),plan=deck&&map.deck(deck.number);
  if(plan){
   // 3.2 screen px a metre: about 25 m either side.
   const scale=3.2*dpr*MAP.cell,[mx,mz]=toMap(x,z);
@@ -48,11 +51,12 @@ export function drawMiniMap(canvas,map,{x,y,z,yaw,places=[]}){
   g.save();g.translate(w/2,h/2);g.rotate(turn);g.scale(scale,scale);g.imageSmoothingEnabled=false;
   g.drawImage(plan,-mx,-mz);
   g.fillStyle='#f4f0e8';
-  for(const p of currentMapPlaces(places)){if(deckOf(p.at[1])!==deck)continue;const [px,pz]=toMap(p.at[0],p.at[2]);g.beginPath();g.arc(px-mx,pz-mz,3*dpr/scale,0,Math.PI*2);g.fill();}
+  for(const p of markers){if(deckOf(p.at[1])!==deck)continue;const [px,pz]=toMap(p.at[0],p.at[2]);g.beginPath();g.arc(px-mx,pz-mz,3*dpr/scale,0,Math.PI*2);g.fill();}
   g.restore();
   miniNames(g,{w,h,dpr,x,z,turn,y:floorY(deck.number)});
  }
  g.save();g.translate(w/2,h/2);arrow(g,7*dpr,1.5*dpr);g.restore();
+ if(last)Object.assign(last,{valid:true,x,z,yaw,w,h,dpr,deck,plan,markers});
  return deck;
 }
 
