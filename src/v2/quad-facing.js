@@ -15,7 +15,9 @@ export function createQuadFacingTest() {
    geometries.set(geometry, prior);
   }
   if (prior.ranges.size > 16) prior.ranges.clear();
-  const key = start + ':' + end;
+  // The ordinary ungrouped quad is the common sparse-view path.
+  if (start === 0 && end === 6 && 'quad' in prior) return prior.quad;
+  const key = start * 2048 + (end - start);
   if (prior.ranges.has(key)) return prior.ranges.get(key);
   let faces = null;
   if (position.array && !position.isInterleavedBufferAttribute && (!index || index.array)) {
@@ -31,7 +33,8 @@ export function createQuadFacingTest() {
     faces.push({normal, offset: normal.dot(a)});
    }
   }
-  prior.ranges.set(key, faces);
+  if (start === 0 && end === 6) prior.quad = faces;
+  else prior.ranges.set(key, faces);
   return faces;
  }
  return (camera, geometry, material, object, group) => {
@@ -63,12 +66,25 @@ export function createQuadFacingTest() {
 
 export function installQuadFacingTest(renderer, scene, camera) {
  const facingAway = createQuadFacingTest(), outside = createDrawBoundsTest(), submit = renderer.renderBufferDirect;
- const history = new WeakMap(), recentlyDrawn = new WeakMap(), cameraWorld = new Matrix4(), cameraView = new Matrix4(), projection = new Matrix4();
- let pose = 0, frame = -1, coordinateSystem, reversedDepth;
+ const history = new WeakMap(), cameraWorld = new Matrix4(), cameraView = new Matrix4(), projection = new Matrix4();
+ const visibleFrom = new Matrix4();
+ let pose = 0, frame = -1, mainFrames = 0, visibleEpoch = 0, coordinateSystem, reversedDepth;
+ function movedView(world) {
+  const a = world.elements, b = visibleFrom.elements;
+  // Only governs when to reconsider a previously submitted draw. Hidden draws
+  // always use the exact eye, projection, geometry and transform below.
+  if (Math.abs(a[12]-b[12])>.025 || Math.abs(a[13]-b[13])>.025 || Math.abs(a[14]-b[14])>.025) return true;
+  for (let i=0; i<12; i++) if (Math.abs(a[i]-b[i])>.003) return true;
+  return false;
+ }
  function maySkip(view, geometry, material, object, group) {
   const currentFrame = renderer.info?.render.frame;
   if (currentFrame === undefined || frame !== currentFrame) {
    frame = currentFrame;
+   mainFrames++;
+   if (!pose || movedView(view.matrixWorld) || !projection.equals(view.projectionMatrix)) {
+    visibleFrom.copy(view.matrixWorld); visibleEpoch++;
+   }
    if (!pose || !cameraWorld.equals(view.matrixWorld) || !cameraView.equals(view.matrixWorldInverse) ||
        !projection.equals(view.projectionMatrix) || coordinateSystem !== view.coordinateSystem || reversedDepth !== view.reversedDepth) {
     pose++;
@@ -86,20 +102,23 @@ export function installQuadFacingTest(renderer, scene, camera) {
    slots.set(start, row);
   }
   // A visible draw may always be resubmitted. Spread its next test over moving frames.
-  if (!row.skipped && row.pose >= 0 && currentFrame < row.next) return false;
+  if (!row.skipped && row.epoch === visibleEpoch && mainFrames < row.next && row.g === geometry && row.side === material.side && row.groupCount === count && row.instanceCount === object.count &&
+      row.version === object.instanceMatrix?.version && row.world.equals(object.matrixWorld)) return false;
   const p = geometry.attributes.position, ix = geometry.index, instances = object.instanceMatrix;
   if (row.pose === pose && row.g === geometry && row.p === p && row.pv === p?.version &&
       row.ix === ix && row.iv === ix?.version && row.start === geometry.drawRange.start &&
       row.count === geometry.drawRange.count && row.groupCount === count && row.side === material.side &&
       row.instances === instances && row.version === instances?.version && row.instanceCount === object.count &&
-      row.world.equals(object.matrixWorld)) return row.skipped;
+      row.world.equals(object.matrixWorld)) {
+   row.epoch = visibleEpoch; row.next = mainFrames + 6 + object.id % 6;
+   return row.skipped;
+  }
   row.pose = pose; row.g = geometry; row.p = p; row.pv = p?.version; row.ix = ix; row.iv = ix?.version;
   row.start = geometry.drawRange.start; row.count = geometry.drawRange.count; row.groupCount = count; row.side = material.side;
   row.instances = instances; row.version = instances?.version; row.instanceCount = object.count;
   row.world.copy(object.matrixWorld);
   row.skipped = facingAway(view, geometry, material, object, group) || outside(view, geometry, object, group, material);
-  row.next = currentFrame + 1 + (object.id % 8);
-  if (!group && !row.skipped) recentlyDrawn.set(object,row.next);
+  row.epoch = visibleEpoch; row.next = mainFrames + 6 + object.id % 6;
   return row.skipped;
  }
  // Extra tests pay off in dense views. Use the last main frame's submitted and omitted
@@ -114,7 +133,6 @@ export function installQuadFacingTest(renderer, scene, camera) {
   }
  };
  renderer.renderBufferDirect = function(view, world, geometry, material, object, group) {
-  if (dense && !group && renderer.info?.render.frame < recentlyDrawn.get(object)) return submit.apply(this, arguments);
   const size = geometry.index?.count ?? geometry.attributes.position?.count;
   const ordinaryQuad = size === 6 && !material.transparent && geometry.drawRange.start === 0 && geometry.drawRange.count >= 6 &&
       (!group || (group.start === 0 && group.count >= 6));
