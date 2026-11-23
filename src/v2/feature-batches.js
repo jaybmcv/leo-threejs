@@ -45,7 +45,17 @@ export async function createFeatureBatches(scene,renderer,roots){
    lists.get(key).rows.push({o,g,root});
   });
  }
- const byBand=new Map(),changed=[],shown=[],frustum=new T.Frustum(),valid=new Map();
+ const byBand=new Map(),changed=[],shown=[],frustum=new T.Frustum(),lastProjection=new T.Matrix4();
+ let pass=0,frustumVersion=0;
+ const ancestors=new WeakMap();
+ function underRoot(parent,root,band){
+  if(!parent||parent===band)return false;
+  let record=ancestors.get(parent);
+  if(record?.pass===pass&&record.root===root)return record.visible;
+  const visible=parent.visible&&!parent.isLOD&&(!parent.isGroup||parent.renderOrder===0)&&(parent===root||underRoot(parent.parent,root,band));
+  if(!record){record={};ancestors.set(parent,record);}
+  record.pass=pass;record.root=root;record.visible=visible;return visible;
+ }
  const stats={batches:0,sources:0,active:0,skipped:0};
  for(const set of lists.values()){
   if(set.rows.length<3)continue;
@@ -66,27 +76,29 @@ export async function createFeatureBatches(scene,renderer,roots){
    batch.setVisibleAt(row.id,false);
   }
   // World-space instance transforms; the scene and this batch have identity transforms.
-  scene.add(batch);set.batch=batch;set.visible=[];
+  scene.add(batch);set.batch=batch;set.visible=[];set.previous=[];
   if(!byBand.has(set.band))byBand.set(set.band,[]);
   byBand.get(set.band).push(set);stats.batches++;stats.sources+=set.rows.length;await yieldWork();
  }
  function collect(camera){
-  stats.skipped=stats.active=0;valid.clear();
-  frustum.setFromProjectionMatrix(scratch.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
+  stats.skipped=stats.active=0;pass++;
+  scratch.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);
+  if(frustumVersion===0||!lastProjection.equals(scratch)){lastProjection.copy(scratch);frustum.setFromProjectionMatrix(scratch);frustumVersion++;}
   for(const [band,sets] of byBand){
-   if(!band.visible||band.parent!==scene)continue;
+   if(!band.visible||band.renderOrder!==0||(band!==scene&&band.parent!==scene))continue;
    for(const set of sets){
-    if(!compatibleMaterial(set.m)||!set.m.visible)continue;
+    if(!set.m.visible)continue;
+    let checkedMaterial=false;
     const list=set.visible;list.length=0;
     for(const row of set.rows){
      const {o,g,root}=row;
      if(!o.visible||!o.layers.test(camera.layers)||!plain(o)||o.geometry!==g||o.material!==set.m||o.renderOrder!==set.order||
         o.receiveShadow!==set.receives||o.castShadow!==set.casts||root.parent!==band)continue;
-     let parent=o.parent,underRoot=false;
-     while(parent&&parent!==band&&parent.visible&&!parent.isLOD&&(!parent.isGroup||parent.renderOrder===0)){if(parent===root)underRoot=true;parent=parent.parent;}
-     if(!underRoot||parent!==band||band.renderOrder!==0||!frustum.intersectsObject(o))continue;
-     if(!valid.has(row.record))valid.set(row.record,unchanged(row.record));
-     if(!valid.get(row.record))continue;
+     if(!underRoot(o.parent,root,band)||!frustum.intersectsObject(o))continue;
+     if(!checkedMaterial){if(!compatibleMaterial(set.m))break;checkedMaterial=true;}
+     const record=row.record;
+     if(record.pass!==pass){record.pass=pass;record.valid=unchanged(record);}
+     if(!record.valid)continue;
      if(!row.checked||!row.matrix.equals(o.matrixWorld)){
       row.matrix.copy(o.matrixWorld);row.checked=true;row.usable=batchableMatrix(row.matrix);
       if(row.usable)set.batch.setMatrixAt(row.id,row.matrix);
@@ -94,8 +106,15 @@ export async function createFeatureBatches(scene,renderer,roots){
      if(row.usable)list.push(row);
     }
     if(list.length<2)continue;
-    for(const row of list){row.o.visible=false;changed.push(row.o);row.next=true;}
-    for(const row of set.rows){const next=!!row.next;if(row.on!==next){set.batch.setVisibleAt(row.id,next);row.on=next;}row.next=false;}
+    for(const row of list){
+     row.o.visible=false;changed.push(row.o);row.pass=pass;
+     if(!row.on){set.batch.setVisibleAt(row.id,true);row.on=true;}
+    }
+    for(const row of set.previous){
+     if(row.pass!==pass){set.batch.setVisibleAt(row.id,false);row.on=false;}
+    }
+    // Keep the last submitted list, including when a later frame leaves this batch idle.
+    set.visible=set.previous;set.previous=list;
     set.batch.visible=true;shown.push(set.batch);stats.active++;stats.skipped+=list.length-1;
    }
   }
