@@ -1010,7 +1010,17 @@ function sizeCanvas(c){const r=Math.min(devicePixelRatio||1,c===mini&&document.d
 // In the Keel Club (below Deck 1, keel-club.js) the maps show the club's own plan; map 0 is the club.
 const inClub=p=>!!keelClub&&inKeelHall(p);
 // Go-to places in the club show on the club's map, not on Deck 1's.
-const clubPlace=p=>inClub({x:p.at[0],y:p.at[1],z:p.at[2]}),shipPlaces=()=>keelClub?PLACES.filter(p=>!clubPlace(p)):PLACES;
+const clubPlace=p=>inClub({x:p.at[0],y:p.at[1],z:p.at[2]});
+const shipDestinations=[];
+// currentMapPlaces checks the list contents and coordinates for changes. Keep its identity
+// across map refreshes so unchanged destinations reuse their room and polygon lookups.
+function shipPlaces(){
+ if(!keelClub)return PLACES;
+ let count=0;
+ for(const place of PLACES)if(!clubPlace(place))shipDestinations[count++]=place;
+ shipDestinations.length=count;
+ return shipDestinations;
+}
 function clubMini(p){const g=mini.getContext('2d'),w=mini.width,h=mini.height,dpr=w/(mini.clientWidth||w),turn=-Math.PI/2-Math.atan2(Math.cos(follow.yaw),Math.sin(follow.yaw));
  g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.save();g.translate(w/2,h/2);g.rotate(turn);g.scale(3.2*dpr,3.2*dpr);g.translate(-p.x,-p.z);keelPlan(g,{px:1/(3.2*dpr)});g.restore();
  g.save();g.translate(w/2,h/2);mapArrow(g,7*dpr,1.5*dpr);g.restore();}

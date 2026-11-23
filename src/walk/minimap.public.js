@@ -73,7 +73,11 @@ function miniNames(g,{w,h,dpr,x,z,turn,y}){
  // The point `inset` metres inside room `a` nearest the walker (its centre once the room is too small for that).
  const spot=(a,inset)=>{const hx=a.width/2,hz=a.depth/2,ix=Math.min(inset,hx),iz=Math.min(inset,hz);
   return [clamp(x,a.center[0]-hx+ix,a.center[0]+hx-ix),clamp(z,a.center[2]-hz+iz,a.center[2]+hz-iz)];};
- const near=SHIP_AREAS.filter(a=>Math.abs(a.center[1]-y)<=2.2&&a.kind!=='lifeboats'&&Math.min(a.width,a.depth)*m>=22*dpr)
+ // Every candidate label centre lies inside the room's plan rectangle. A rectangle
+ // entirely beyond the map's half diagonal cannot place a label at any camera yaw.
+ const reach=Math.hypot(w,h)/(2*m);
+ const near=SHIP_AREAS.filter(a=>Math.abs(a.center[1]-y)<=2.2&&a.kind!=='lifeboats'&&Math.min(a.width,a.depth)*m>=22*dpr&&
+  Math.abs(a.center[0]-x)<=a.width/2+reach&&Math.abs(a.center[2]-z)<=a.depth/2+reach)
   .map(a=>{const [ax,az]=spot(a,4);return {a,d:Math.hypot(ax-x,az-z)};})
   .sort((p,q)=>p.d-q.d);
  g.font=`500 ${px}px "Sora",sans-serif`;g.textAlign='center';g.textBaseline='middle';g.lineJoin='round';

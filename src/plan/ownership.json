@@ -4381,7 +4381,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "8012fa23f65eb2498cd31408223f2b14a4233013cdd015c95db45d3d1e92322b"
+      "signature": "28a7b123e9fb34780fc8c8509fc4925e1482eca9782a1b7ba58915169d79b318"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -4679,7 +4679,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 7,
-      "signature": "d27a79f81e78d778d95afd7a00eabc4697cef68ea28e4ff8e2e8b12089be1906"
+      "signature": "8078d8c7bb24256151ad6e610d99af63d309513af5bfe96ed844e79ebe7b5cb4"
     },
     {
       "source": "src/walk/mission-holo.authoring.js",
