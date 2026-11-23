@@ -181,4 +181,8 @@ finish(500); dynamicCam.position.x=0; dynamicCam.updateMatrixWorld(); emit(); as
  assert.equal(submitted,60);assert(tests>0&&tests<30);
  eye.position.z=-2;eye.updateMatrixWorld();info.render.frame++;
  r.renderBufferDirect(eye,room,tile.geometry,m,tile,null);assert.equal(submitted,60);
+ eye.near=.001;eye.updateProjectionMatrix();eye.position.z=-.04;eye.updateMatrixWorld();info.render.frame++;
+ r.renderBufferDirect(eye,room,tile.geometry,m,tile,null);assert.equal(submitted,60);
+ eye.position.z=.04;eye.updateMatrixWorld();info.render.frame++;
+ r.renderBufferDirect(eye,room,tile.geometry,m,tile,null);assert.equal(submitted,61);
 }
