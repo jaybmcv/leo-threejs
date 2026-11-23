@@ -1,3 +1,4 @@
+import {joinStaticTints} from '../static-tints.js';
 import {roomObject} from '../../plan/rooms.js';
 import {walkCanvas} from '../canvas.js';
 import * as T from 'three';
@@ -194,6 +195,7 @@ export function createMazeHold(ship){
 
  group.updateMatrix();const toRoom=new T.Matrix4().copy(group.matrix).invert(),local=new T.Vector3();
  let pressed=-1;
+ joinStaticTints(group, paint);
  return {
   group,solid,
   setBoard,

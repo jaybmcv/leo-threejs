@@ -1,3 +1,4 @@
+import {batchDisplayRack} from './display-rack.js';
 import {walkCanvas} from '../canvas.js';
 import * as T from 'three';
 import {objectRoom,hasFrameOverride,deltaMatrix,anchorObject,unanchorPoint} from '../../plan/rooms.js';
@@ -76,10 +77,13 @@ export function createPoolTable(carpet){
  }
  // The balls, racked at the foot with the cue ball on the head spot, each turned so a number shows.
  const sphere=new T.SphereGeometry(R,32,16);
+ const displayBalls=[];
  for(const b of [{n:0,x:HEAD.x,y:HEAD.y},...rack(80)]){
   const ball=add('Paw_pool_ball_'+b.n,sphere,new T.MeshStandardMaterial({name:'Paw_pool_ball',map:ballTexture(b.n),roughness:.35}),b.x,FELT+R,b.y,false);
+  displayBalls.push(ball);
   ball.rotation.set(.9+((b.n*37)%7)*.08,Math.PI/2+((b.n*53)%9-4)*.12,0,'YXZ');
  }
+ batchDisplayRack(group, displayBalls);
  anchorObject(group,owner);const reach=[hw+rw,hh+rw];
  return {
   group,centre:new T.Vector3(...(hasFrameOverride(owner)?new T.Vector3(centre.x,floor,centre.z).applyMatrix4(deltaMatrix(owner)).toArray():[centre.x,floor,centre.z])),

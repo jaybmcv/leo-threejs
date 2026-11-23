@@ -1,3 +1,4 @@
+import {joinStaticTints} from './static-tints.js';
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
@@ -111,5 +112,6 @@ export function createBaggage(ship,{still=false}={}){
   if(still||Math.abs(p.y-centre.y)>4||p.distanceToSquared(centre)>65*65)return;
   travel=(travel+Math.min(dt,.1)*SPEED)%LAP;pose(travel);
  }
+ joinStaticTints(group, [M.belt, M.dark]);
  return {group,solid,update};
 }

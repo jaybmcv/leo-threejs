@@ -1,0 +1,66 @@
+import assert from 'node:assert/strict';
+import * as T from 'three';
+import {createQuadFacingTest, installQuadFacingTest} from '../src/v2/quad-facing.js';
+
+const facesAway = createQuadFacingTest(), camera = new T.PerspectiveCamera();
+const geometry = new T.PlaneGeometry(2, 1), material = new T.MeshBasicMaterial();
+const mesh = new T.Mesh(geometry, material);
+const test = (z, expected, group) => {
+ camera.position.copy(mesh.localToWorld(new T.Vector3(0, 0, z)));
+ camera.updateMatrixWorld();
+ assert.equal(facesAway(camera, geometry, material, mesh, group), expected);
+};
+test(3, false);
+test(-3, true);
+test(-.001, false);
+mesh.scale.set(-1, 2, .5);
+mesh.rotation.y = .36;
+mesh.updateMatrixWorld(true);
+test(-3, true);
+test(3, false);
+material.side = T.BackSide;
+test(3, true);
+material.side = T.DoubleSide;
+test(-3, false);
+material.side = T.FrontSide;
+test(-3, false, {start: 1, count: 5});
+material.wireframe = true;
+test(-3, false);
+material.wireframe = false;
+const a = geometry.index.array;
+[a[4], a[5]] = [a[5], a[4]];
+geometry.index.needsUpdate = true;
+test(-3, false);
+test(3, false);
+geometry.setIndex(new T.PlaneGeometry(2, 1).index);
+test(-3, true);
+const position = geometry.attributes.position.clone();
+position.array = null;
+geometry.setAttribute('position', position);
+test(-3, false);
+
+const world = new T.Scene(), view = new T.PerspectiveCamera(), quad = new T.Mesh(new T.PlaneGeometry(), material);
+view.position.z = -2;
+view.updateMatrixWorld();
+let calls = 0, target = null;
+const renderer = {shadowMap: {enabled: false}, xr: {isPresenting: false}, getRenderTarget: () => target,
+ renderBufferDirect() { calls++; }};
+installQuadFacingTest(renderer, world, view);
+function submit(camera = view, scene = world) { renderer.renderBufferDirect(camera, scene, quad.geometry, material, quad, null); }
+submit();
+assert.equal(calls, 0);
+submit(new T.PerspectiveCamera());
+submit(view, null);
+target = {};
+submit();
+target = null;
+world.overrideMaterial = material;
+submit();
+world.overrideMaterial = null;
+renderer.shadowMap.enabled = true;
+submit();
+renderer.shadowMap.enabled = false;
+renderer.xr.isPresenting = true;
+submit();
+assert.equal(calls, 6);
+console.log('Two-triangle winding, mirrored transforms, changing inputs and auxiliary cameras passed.');

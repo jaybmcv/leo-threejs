@@ -1,3 +1,4 @@
+import {installQuadFacingTest} from '../v2/quad-facing.js';
 // Key events with no `code` (Otherside's browser) get one before any handler reads it.
 import './key-code.js';
 import {createVoyagerLawn} from '../v2/voyager-lawn.js';
@@ -552,6 +553,7 @@ async function buildShip(){
  if(!atriumPack&&new URLSearchParams(location.search).get('fogcull')!=='0')fogCull=createFogCull(scene,camera);
  wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);
  isolateStaticWorld(ship,scene);{const hidden=(preparedPhone||phoneBatching.merge)&&!OWNER_BAKE_PAGE?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
+ if(deskDetail&&!OWNER_BAKE_PAGE)installQuadFacingTest(renderer,scene,camera);
  if(deskDetail&&!OWNER_BAKE_PAGE)featureBatches=await createFeatureBatches(scene,renderer,featureRoots);
  // The groups holding only those instanced meshes once the live draws have their final parents (V2_live_source_draws: a
  // deck's cabin shells, a cabin template's fittings), and groups of only such groups, innermost first: cull() hides each
