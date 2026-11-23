@@ -1,3 +1,4 @@
+import {joinStaticTints} from '../static-tints.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {canvasTexture} from '../../polish-kit.js';
@@ -29,6 +30,7 @@ export function createTreasureGame({tank,controller,follow,camera,input,live,onO
  const arrow=new T.Shape();arrow.moveTo(-.19,-.22);arrow.lineTo(.19,-.22);arrow.lineTo(0,.22);arrow.closePath();
  const mark=add(new T.ShapeGeometry(arrow),gold,[door[0],door[1]+.08,dz+.38]);mark.rotation.x=-Math.PI/2;
  add(new T.BoxGeometry(.06,.3,.1),gold,[door[0]+.62,dy,dz+.08]);
+ joinStaticTints(group, [cyan, gold]);
  const label=canvasTexture(768,192,(g,w,h)=>{g.fillStyle='#0a1928';g.fillRect(0,0,w,h);g.textAlign='center';g.fillStyle='#72edff';g.font='bold 44px sans-serif';g.fillText('AQUARIUM TREASURE',w/2,70);g.fillStyle='#ffffff';g.font='30px sans-serif';g.fillText('ENTER · SWIM · FIND 7 GEMS',w/2,133);});
  const face=new T.PlaneGeometry(2.8,.7);tank.updateWorldMatrix(true,false);
  // Keep the wording readable from the gallery when the lounge's frame is mirrored.

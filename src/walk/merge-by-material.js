@@ -22,13 +22,26 @@ export function mergeByMaterial(group){
  }
  return merged;
 }
-/** One mesh drawing `list` (meshes of one material and attribute layout, siblings under one parent), its geometry in
- * that parent's space; or null if the geometries don't merge. The caller adds it and removes the originals. */
-export function mergeMeshes(list){
+/** Merge fixed siblings in their parent frame. With tint, the authored materials share
+ * every shading property except diffuse color, which is carried per vertex. */
+export function mergeMeshes(list, tint=false){
  const indexed=list.every(o=>o.geometry.index);
- const parts=list.map(o=>{o.updateMatrix();const g=indexed?o.geometry.clone():o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();g.applyMatrix4(o.matrix);return o.matrix.determinant()<0?unmirror(g):g;});
+ const parts=list.map(o=>{
+  o.updateMatrix();
+  const source=o.geometry;
+  const g=!indexed&&source.index?source.toNonIndexed():source.clone();
+  g.applyMatrix4(o.matrix);
+  if(tint){
+   const colors=new Float32Array(g.attributes.position.count*3);
+   for(let i=0;i<colors.length;i+=3)o.material.color.toArray(colors,i);
+   g.setAttribute('color',new T.BufferAttribute(colors,3));
+  }
+  return o.matrix.determinant()<0?unmirror(g):g;
+ });
  const geometry=mergeGeometries(parts);parts.forEach(g=>g.dispose());if(!geometry)return null;
- const first=list[0],mesh=new T.Mesh(geometry,first.material);
+ const first=list[0],material=tint?first.material.clone():first.material;
+ if(tint){material.color.setRGB(1,1,1);material.vertexColors=true;}
+ const mesh=new T.Mesh(geometry,material);
  mesh.name=first.name;mesh.renderOrder=first.renderOrder;mesh.castShadow=first.castShadow;mesh.receiveShadow=first.receiveShadow;mesh.layers.mask=first.layers.mask;mesh.frustumCulled=first.frustumCulled;
  return mesh;
 }

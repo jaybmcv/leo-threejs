@@ -160,8 +160,10 @@
       "src/walk/frame-readout.js",
       "src/walk/look.js",
       "src/walk/merge-by-material.js",
+      "src/walk/static-tints.js",
       "src/walk/merged-skin.js",
       "src/walk/plaque-atlas.js",
+      "src/walk/pool/display-rack.js",
       "src/walk/sign-array.js",
       "src/walk/ship-time.js",
       "src/walk/solved-pose.js"
