@@ -495,7 +495,7 @@ async function buildShip(){
  // The ship log boards (changes-board.js) in the crown lounge and the arrival hall.
  for(const g of changeLog.groups)toBand(g);
  paintings=createPaintings({urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});
- for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);}
+ for(const g of paintings.groups){baked.bands.set(g.name,g);scene.add(g);featureRoots.push(g);}
  // The comic books (comics.js) lie on counters and tables, drawn with their deck's band.
  comics=createComics({urls:artUrls,anisotropy:renderer.capabilities.getMaxAnisotropy()});for(const g of comics.groups)toBand(g);
  if(cosmoKit)toBand(createHostess(cosmoKit));
@@ -1004,7 +1004,11 @@ if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(glo
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vaultLift',{get:()=>vaultLift});
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperties(globalThis.__walk,{atriumSight:{get:()=>atriumSight},atriumPvs:{get:()=>atriumPvs},viewSpan:{get:()=>viewSpan},shaderWarmup:{get:()=>shaderWarmup},atriumRooms:{get:()=>atriumRooms}});
 // The ship map: the corner mini-map, redrawn a few times a second, and the full map sheet.
-const mini=$('minimap');let lastMini=0,mapDeck=null,mapShown=[];
+const mini=$('minimap'),lastMiniPaint={valid:false};let lastMini=0,mapDeck=null,mapShown=[];
+const invalidateMini=()=>{lastMiniPaint.valid=false;};
+mini.addEventListener('contextrestored',invalidateMini);
+document.fonts?.addEventListener('loadingdone',invalidateMini);
+document.fonts?.addEventListener('loadingerror',invalidateMini);
 // (A phone's small mini-map, html.phone-hud from walk.html, keeps up to 3× its pixels, so its names stay sharp.)
 function sizeCanvas(c){const r=Math.min(devicePixelRatio||1,c===mini&&document.documentElement.classList.contains('phone-hud')?3:2),w=Math.round(c.clientWidth*r),h=Math.round(c.clientHeight*r);if(w&&h&&(c.width!==w||c.height!==h)){c.width=w;c.height=h;}}
 // In the Keel Club (below Deck 1, keel-club.js) the maps show the club's own plan; map 0 is the club.
@@ -1034,7 +1038,7 @@ function clubFull(c,p){const g=c.getContext('2d'),w=c.width,h=c.height,dpr=w/(c.
   shown.push({place:pl,x:px/dpr,y:pz/dpr});}
  if(inClub(p)){g.save();g.translate(w/2+(p.x-cx)*scale,h/2+(p.z-cz)*scale);g.rotate(Math.atan2(Math.cos(heading),Math.sin(heading))+Math.PI/2);mapArrow(g,9*dpr,2*dpr);g.restore();}
  return shown;}
-function miniMap(p){sizeCanvas(mini);if(inClub(p)){clubMini(p);$('minimap-deck').textContent='Keel Club';return;}const d=drawMiniMap(mini,shipMap,{x:p.x,y:p.y,z:p.z,yaw:follow.yaw,places:shipPlaces()});$('minimap-deck').textContent=d?`Deck ${d.number}`:p.y>100?'Crown lounge':'Fin';}
+function miniMap(p){sizeCanvas(mini);if(inClub(p)){invalidateMini();clubMini(p);$('minimap-deck').textContent='Keel Club';return;}const d=drawMiniMap(mini,shipMap,{x:p.x,y:p.y,z:p.z,yaw:follow.yaw,places:shipPlaces()},lastMiniPaint);$('minimap-deck').textContent=d?`Deck ${d.number}`:p.y>100?'Crown lounge':'Fin';}
 function showMap(number){
  mapDeck=T.MathUtils.clamp(number,keelClub?0:1,DECKS.length);const c=$('map-canvas');sizeCanvas(c);const p=controller.position;
  if(mapDeck===0){mapShown=clubFull(c,p);$('map-title').textContent='Keel Club · below Deck 1';$('map-deck').value='0';return;}

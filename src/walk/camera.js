@@ -40,7 +40,9 @@ export class FollowCamera{
   if(side)this.pivot.set(feet.x,this.pivot.y,feet.z).addScaledVector(right,Math.max(0,side.distance-VIEW.clearance));
   this.ray.origin.copy(this.pivot);this.ray.direction.copy(dir).negate();
   const hit=this.raycast(this.ray,reach+VIEW.clearance),clear=hit?Math.max(.3,hit.distance-VIEW.clearance):reach;
-  this.current=clear<this.current?clear:T.MathUtils.damp(this.current,clear,4,dt);
+  // Once the remaining outward travel is below 0.1 mm, hold the exact resting pose.
+  // Otherwise subpixel motion invalidates static visibility for hundreds of frames.
+  this.current=clear-this.current<.0001?clear:T.MathUtils.damp(this.current,clear,4,dt);
   cam.position.copy(this.pivot).addScaledVector(dir,-this.current);
   cam.lookAt(this.pivot);
  }

@@ -1469,7 +1469,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "cae08eb8d2a6c865fc418c2d6a2adfa2db3a9ec9d0066b803074a7345773d444"
+      "signature": "c9316c3e948d20ea42b63332b4c2bf35c781bb45df471428e3eff2958a250ad2"
     },
     {
       "source": "src/walk/capsule-bubbles.js",
@@ -4381,7 +4381,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "28a7b123e9fb34780fc8c8509fc4925e1482eca9782a1b7ba58915169d79b318"
+      "signature": "44385a1679e9de54d621751e0ef59f4578dbf1091eaff35b8babb6e6527668de"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -4679,7 +4679,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 7,
-      "signature": "8078d8c7bb24256151ad6e610d99af63d309513af5bfe96ed844e79ebe7b5cb4"
+      "signature": "1612766d474181aa0c4759b0ed8a393a694918cc58bed26b0e42b80d4aefe1e4"
     },
     {
       "source": "src/walk/mission-holo.authoring.js",

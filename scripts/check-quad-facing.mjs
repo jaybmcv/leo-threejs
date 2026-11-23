@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {createDrawBoundsTest, rememberMergedBounds} from '../src/v2/draw-bounds.js';
-import {createQuadFacingTest, installQuadFacingTest} from '../src/v2/quad-facing.js';
+import {createQuadFacingTest, createSurfaceFacingTest, installQuadFacingTest} from '../src/v2/quad-facing.js';
 
 const facesAway = createQuadFacingTest(), camera = new T.PerspectiveCamera();
 const geometry = new T.PlaneGeometry(2, 1), material = new T.MeshBasicMaterial();
@@ -100,7 +100,44 @@ clipView.position.z = -3;
 clipView.updateMatrixWorld();
 assert.equal(facesAway(clipView, winding, material, tile, {start:6, count:12}), true);
 assert.equal(facesAway(clipView, winding, material, tile, {start:1, count:12}), false);
-console.log('Winding, clip bounds, aligned ranges, released arrays, instance packing and auxiliary views passed.');
+// A large garden surface and its animated rings must disappear only when every
+// triangle in every current instance is back-facing.
+const surfaceAway = createSurfaceFacingTest();
+const surface = new T.PlaneGeometry(4,4,24,24), garden = new T.MeshBasicMaterial({name:'Zen_gravel_grooves'});
+const floor = new T.Mesh(surface,garden), rings = new T.InstancedMesh(surface,garden,2);
+clipView.position.set(0,0,-3);
+clipView.updateMatrixWorld();
+assert(surfaceAway(clipView,surface,garden,floor,null));
+assert(!surfaceAway(clipView,surface,garden,floor,{start:1,count:3}));
+rings.setMatrixAt(0,new T.Matrix4());
+rings.setMatrixAt(1,new T.Matrix4().makeRotationY(Math.PI));
+assert(!surfaceAway(clipView,surface,garden,rings,null));
+rings.setMatrixAt(1,new T.Matrix4().makeTranslation(0,0,1));
+assert(surfaceAway(clipView,surface,garden,rings,null));
+rings.setMatrixAt(1,new T.Matrix4().makeScale(-1,1,1));
+assert(!surfaceAway(clipView,surface,garden,rings,null));
+const windingIndex=surface.index.getX(1);
+surface.index.setX(1,surface.index.getX(2));
+surface.index.setX(2,windingIndex);
+surface.index.needsUpdate=true;
+assert(!surfaceAway(clipView,surface,garden,floor,null));
+// The Deck 6 laundry can show only 895 submitted calls after sparse quad culling
+// even though the view passes the 900-draw threshold before culling.
+{
+ const room=new T.Scene(), eye=new T.PerspectiveCamera(), material=new T.MeshBasicMaterial();
+ eye.position.z=-3;eye.updateMatrixWorld();
+ const info={render:{frame:1,calls:895}},r={info,shadowMap:{enabled:false},xr:{isPresenting:false},
+  getRenderTarget:()=>null,renderBufferDirect(){info.render.calls++;}};
+ installQuadFacingTest(r,room,eye);
+ const marker=new T.Mesh(new T.PlaneGeometry(),material);
+ for(let i=0;i<101;i++)r.renderBufferDirect(eye,room,marker.geometry,material,marker,null);
+ assert.equal(info.render.calls,895);room.onAfterRender(r,room,eye);
+ const probe=new T.InstancedMesh(new T.BoxGeometry(),material,1);
+ probe.setMatrixAt(0,new T.Matrix4().makeTranslation(100,0,-7));info.render.frame++;info.render.calls=0;
+ r.renderBufferDirect(eye,room,probe.geometry,material,probe,null);
+ assert.equal(info.render.calls,0);
+}
+console.log('Winding, surface instances, clip bounds, aligned ranges, released arrays and auxiliary views passed.');
 
 const dynamicWorld = new T.Scene(), dynamicCam = new T.PerspectiveCamera(60, 1, .1, 100);
 const geometrySlots = new T.BoxGeometry();

@@ -34,14 +34,15 @@ export async function createFeatureBatches(scene,renderer,roots){
  if(!renderer.extensions.has('WEBGL_multi_draw'))return null;
  const lists=new Map(),records=new Map(),yieldWork=yieldEvery();
  for(const root of roots){
-  if(!root.isGroup||!root.parent||!/^Walk_band_/.test(root.parent.name))continue;
+  const band=root.parent;
+  if(!root.isGroup||!band||(band!==scene&&!/^Walk_band_/.test(band.name)))continue;
   root.traverse(o=>{
    const g=o.geometry,m=o.material;
    if(!plain(o)||!compatibleMaterial(m)||!g.attributes.position||g.attributes.position.count>12000||
       g.drawRange.start!==0||g.drawRange.count!==Infinity||Object.keys(g.morphAttributes).length||
       Object.values(g.attributes).some(a=>!a.array||a.isInterleavedBufferAttribute||a.isFloat16BufferAttribute||a.gpuType!==T.FloatType||a.usage!==T.StaticDrawUsage)||g.index&&!g.index.array)return;
-   const key=[root.parent.uuid,m.uuid,o.renderOrder,o.castShadow,o.receiveShadow,!!g.index,geometryKey(g)].join('/');
-   if(!lists.has(key))lists.set(key,{band:root.parent,m,order:o.renderOrder,casts:o.castShadow,receives:o.receiveShadow,rows:[]});
+   const key=[band.uuid,m.uuid,o.renderOrder,o.castShadow,o.receiveShadow,!!g.index,geometryKey(g)].join('/');
+   if(!lists.has(key))lists.set(key,{band,m,order:o.renderOrder,casts:o.castShadow,receives:o.receiveShadow,rows:[]});
    lists.get(key).rows.push({o,g,root});
   });
  }
@@ -85,7 +86,7 @@ export async function createFeatureBatches(scene,renderer,roots){
   scratch.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);
   if(frustumVersion===0||!lastProjection.equals(scratch)){lastProjection.copy(scratch);frustum.setFromProjectionMatrix(scratch);frustumVersion++;}
   for(const [band,sets] of byBand){
-   if(!band.visible||band.renderOrder!==0||band.parent!==scene)continue;
+   if(!band.visible||band.renderOrder!==0||(band!==scene&&band.parent!==scene))continue;
    for(const set of sets){
     if(!set.m.visible)continue;
     let checkedMaterial=false;

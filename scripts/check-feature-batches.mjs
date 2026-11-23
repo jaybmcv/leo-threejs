@@ -74,3 +74,18 @@ console.log('PASS feature multi-draw respects transforms, live visibility, camer
  checkPair(2);parent.visible=false;checkPair(0);parent.visible=true;parent.renderOrder=1;checkPair(0);parent.renderOrder=0;root.position.x=100;checkPair(0);root.position.x=0;parent.remove(parts[0]);s.add(parts[0]);checkPair(0);
 }
 console.log('PASS two-part equipment collection, parent visibility and existing box-aware frustum culling');
+
+// Painting frames can share one material across scene roots that span different decks.
+{
+ const s=new T.Scene(),g=new T.BoxGeometry(),m=new T.MeshBasicMaterial();
+ const roots=[-1,0,1].map(x=>{const root=new T.Group();root.position.set(x,0,-5);root.add(new T.Mesh(g,m));s.add(root);return root;});
+ const controller=await createFeatureBatches(s,renderer,roots);
+ function painted(count){
+  s.updateMatrixWorld(true);
+  controller.around(camera,()=>{s.onBeforeRender(renderer,s,camera,null);assert.equal(roots.filter(root=>!root.children[0].visible).length,count);});
+  assert(roots.every(root=>root.children[0].visible));
+ }
+ painted(3);roots[0].visible=false;painted(2);roots[1].position.x=1000;painted(0);
+ roots[0].visible=true;painted(2);s.remove(roots[2]);painted(0);
+}
+console.log('PASS painting frames retain independent deck, frustum and parent visibility');
