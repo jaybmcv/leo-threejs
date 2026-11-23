@@ -1,19 +1,26 @@
+import {createDrawBoundsTest} from './draw-bounds.js';
 import {FrontSide, BackSide, Matrix4, Object3D, Vector3} from 'three';
 import {geometryKept} from './shader-hooks.js';
 
-// Answer only for complete two-triangle draws. Each triangle must independently face away
+// Each triangle of the submitted range must independently face away
 // from the eye. Testing in object space follows Three's winding change for mirrored meshes.
 export function createQuadFacingTest() {
  const geometries = new WeakMap(), transforms = new WeakMap();
  const a = new Vector3(), b = new Vector3(), c = new Vector3(), eye = new Vector3();
- function planes(geometry, position, index) {
-  const prior = geometries.get(geometry);
-  if (prior && prior.position === position && prior.index === index &&
-      prior.positionVersion === position.version && prior.indexVersion === index?.version) return prior.faces;
+ function planes(geometry, position, index, start, end) {
+  let prior = geometries.get(geometry);
+  if (!prior || prior.position !== position || prior.index !== index ||
+      prior.positionVersion !== position.version || prior.indexVersion !== index?.version) {
+   prior = {position, index, positionVersion:position.version, indexVersion:index?.version, ranges:new Map()};
+   geometries.set(geometry, prior);
+  }
+  if (prior.ranges.size > 16) prior.ranges.clear();
+  const key = start + ':' + end;
+  if (prior.ranges.has(key)) return prior.ranges.get(key);
   let faces = null;
   if (position.array && !position.isInterleavedBufferAttribute && (!index || index.array)) {
    faces = [];
-   for (let i = 0; i < 6; i += 3) {
+   for (let i = start; i < end; i += 3) {
     const vertex = k => index ? index.getX(k) : k;
     a.fromBufferAttribute(position, vertex(i));
     b.fromBufferAttribute(position, vertex(i + 1));
@@ -24,20 +31,22 @@ export function createQuadFacingTest() {
     faces.push({normal, offset: normal.dot(a)});
    }
   }
-  geometries.set(geometry, {position, index, positionVersion: position.version, indexVersion: index?.version, faces});
+  prior.ranges.set(key, faces);
   return faces;
  }
  return (camera, geometry, material, object, group) => {
   const p = geometry.attributes.position, ix = geometry.index;
-  if (!p || !camera.isPerspectiveCamera || (ix?.count ?? p.count) !== 6 || !object.isMesh || object.isInstancedMesh || object.isBatchedMesh ||
+  if (!p || !camera.isPerspectiveCamera || !object.isMesh || object.isInstancedMesh || object.isBatchedMesh ||
       object.isSkinnedMesh || geometry.morphAttributes.position || material.wireframe || !geometryKept(material) ||
       object.onBeforeRender !== Object3D.prototype.onBeforeRender || object.onAfterRender !== Object3D.prototype.onAfterRender ||
-      (material.side !== FrontSide && material.side !== BackSide) || material.transparent ||
-      geometry.drawRange.start !== 0 || geometry.drawRange.count < 6 || (group && (group.start !== 0 || group.count < 6))) return false;
+      (material.side !== FrontSide && material.side !== BackSide)) return false;
+  const start = Math.max(geometry.drawRange.start, group?.start ?? 0);
+  const end = Math.min(ix?.count ?? p.count, geometry.drawRange.start + geometry.drawRange.count, group ? group.start + group.count : Infinity);
+  if (start % 3 || (end - start) % 3 || end <= start || end - start > 1536) return false;
   const projection = camera.projectionMatrix.elements;
   if (projection[3] || projection[7] || projection[11] !== -1 || projection[15] || projection[12] || projection[13] ||
       projection[0] * projection[5] - projection[1] * projection[4] <= 0 || camera.matrixWorld.determinant() <= 0) return false;
-  const faces = planes(geometry, p, ix);
+  const faces = planes(geometry, p, ix, start, end);
   if (!faces) return false;
   let transform = transforms.get(object);
   if (!transform || !transform.matrix.equals(object.matrixWorld)) {
@@ -53,12 +62,71 @@ export function createQuadFacingTest() {
 }
 
 export function installQuadFacingTest(renderer, scene, camera) {
- const facingAway = createQuadFacingTest(), submit = renderer.renderBufferDirect;
+ const facingAway = createQuadFacingTest(), outside = createDrawBoundsTest(), submit = renderer.renderBufferDirect;
+ const history = new WeakMap(), recentlyDrawn = new WeakMap(), cameraWorld = new Matrix4(), cameraView = new Matrix4(), projection = new Matrix4();
+ let pose = 0, frame = -1, coordinateSystem, reversedDepth;
+ function maySkip(view, geometry, material, object, group) {
+  const currentFrame = renderer.info?.render.frame;
+  if (currentFrame === undefined || frame !== currentFrame) {
+   frame = currentFrame;
+   if (!pose || !cameraWorld.equals(view.matrixWorld) || !cameraView.equals(view.matrixWorldInverse) ||
+       !projection.equals(view.projectionMatrix) || coordinateSystem !== view.coordinateSystem || reversedDepth !== view.reversedDepth) {
+    pose++;
+    cameraWorld.copy(view.matrixWorld); cameraView.copy(view.matrixWorldInverse); projection.copy(view.projectionMatrix);
+    coordinateSystem = view.coordinateSystem; reversedDepth = view.reversedDepth;
+   }
+  }
+  let slots = history.get(object);
+  if (!slots) { slots = new Map(); history.set(object, slots); }
+  const start = group?.start ?? 0, count = group?.count ?? Infinity;
+  let row = slots.get(start);
+  if (!row) {
+   if (slots.size >= 16) slots.clear();
+   row = {world:new Matrix4(), pose:-1, skipped:false, next:0};
+   slots.set(start, row);
+  }
+  // A visible draw may always be resubmitted. Spread its next test over moving frames.
+  if (!row.skipped && row.pose >= 0 && currentFrame < row.next) return false;
+  const p = geometry.attributes.position, ix = geometry.index, instances = object.instanceMatrix;
+  if (row.pose === pose && row.g === geometry && row.p === p && row.pv === p?.version &&
+      row.ix === ix && row.iv === ix?.version && row.start === geometry.drawRange.start &&
+      row.count === geometry.drawRange.count && row.groupCount === count && row.side === material.side &&
+      row.instances === instances && row.version === instances?.version && row.instanceCount === object.count &&
+      row.world.equals(object.matrixWorld)) return row.skipped;
+  row.pose = pose; row.g = geometry; row.p = p; row.pv = p?.version; row.ix = ix; row.iv = ix?.version;
+  row.start = geometry.drawRange.start; row.count = geometry.drawRange.count; row.groupCount = count; row.side = material.side;
+  row.instances = instances; row.version = instances?.version; row.instanceCount = object.count;
+  row.world.copy(object.matrixWorld);
+  row.skipped = facingAway(view, geometry, material, object, group) || outside(view, geometry, object, group, material);
+  row.next = currentFrame + 1 + (object.id % 8);
+  if (!group && !row.skipped) recentlyDrawn.set(object,row.next);
+  return row.skipped;
+ }
+ // Extra tests pay off in dense views. Use the last main frame's submitted and omitted
+ // draws so a successful reduction does not turn the optimization off on the next frame.
+ let dense = false, omitted = 0;
+ const after = scene.onAfterRender;
+ scene.onAfterRender = function(r, world, view) {
+  after.apply(this, arguments);
+  if (r === renderer && view === camera && !r.getRenderTarget() && !scene.overrideMaterial && !r.xr.isPresenting) {
+   dense = r.info.render.calls + omitted >= (dense ? 930 : 1000);
+   omitted = 0;
+  }
+ };
  renderer.renderBufferDirect = function(view, world, geometry, material, object, group) {
-  if ((geometry.index?.count ?? geometry.attributes.position?.count) === 6 &&
-      view === camera && world === scene && view.isPerspectiveCamera && !scene.overrideMaterial &&
+  if (dense && !group && renderer.info?.render.frame < recentlyDrawn.get(object)) return submit.apply(this, arguments);
+  const size = geometry.index?.count ?? geometry.attributes.position?.count;
+  const ordinaryQuad = size === 6 && !material.transparent && geometry.drawRange.start === 0 && geometry.drawRange.count >= 6 &&
+      (!group || (group.start === 0 && group.count >= 6));
+  if ((dense || ordinaryQuad) && view === camera && world === scene && view.isPerspectiveCamera && !scene.overrideMaterial &&
       !renderer.shadowMap.enabled && !renderer.xr.isPresenting && !renderer.getRenderTarget() &&
-      facingAway(view, geometry, material, object, group)) return;
+      object.isMesh && !object.isBatchedMesh && !object.isSkinnedMesh && !geometry.isInstancedBufferGeometry &&
+      !geometry.morphAttributes.position && !object.morphTexture && !material.wireframe && geometryKept(material) &&
+      object.onBeforeRender === Object3D.prototype.onBeforeRender && object.onAfterRender === Object3D.prototype.onAfterRender &&
+      (dense ? maySkip(view, geometry, material, object, group) : facingAway(view, geometry, material, object, group))) {
+   if (dense) omitted++;
+   return;
+  }
   return submit.apply(this, arguments);
  };
 }
