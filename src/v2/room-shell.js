@@ -12,6 +12,7 @@ import {ownerFootprint} from '../plan/envelope-ownership-v2.js';
 import {worldPoint} from '../plan/hull-skin-v2.js';
 import {buildGardenGuards,galleryHoles} from './garden-guards.js';
 import {entrySegments,entryHeader} from './room-entries.js';
+import {buildLoungeWalkwayWall} from './lounge-walkway-wall.js';
 import {polygonGeometry,mesh,box,wall,mergeBoxes,removePanelEndCaps,removeGeometryCaps,glass,lining,floor} from './geometry.js';
 
 export function buildRoomShell(ship,r,structure){
@@ -46,6 +47,8 @@ export function buildRoomShell(ship,r,structure){
    if(r.id==='commons-1'&&['commons-1-rear-4','commons-1-gallery-link-4','commons-1-stair-turn'].includes(o.id))landingFloors.push(slab);else mesh(g,'V2_garden_gallery',slab,floor);}
    // The squared landing has one top and underside, with no buried join faces.
    if(landingFloors.length){const merged=mergeGeometries(landingFloors),joined=removeBuriedSlabSides(merged,r.y+4).geometry;mesh(g,'V2_garden_gallery',joined,floor);if(joined!==merged)merged.dispose();landingFloors.forEach(g=>g.dispose());}
+   // Report #427: the black wall under the walkway's open-floor edge, stopping at the waterfall pond (lounge-walkway-wall.js).
+   if(r.id==='commons-1')buildLoungeWalkwayWall(g,r);
    // The plan's stair center.y is its finished tread elevation.
    const stairs=r.components.stairs||[],lights=[];for(const o of stairs){const tread=box(g,'Gallery_stair',o.size,[o.center[0],o.center[1]-o.size[1]/2,o.center[2]],lining);if(r.id!=='commons-1')continue;
     const flight=stairs.filter(t=>t.id.replace(/-\d+$/,'')===o.id.replace(/-\d+$/,'')).sort((a,b)=>a.center[1]-b.center[1]),dir=Math.sign(flight.at(-1).center[2]-flight[0].center[2]),rise=flight[1].center[1]-flight[0].center[1],geo=tread.geometry.clone(),p=geo.attributes.position,h=o.size[1];
