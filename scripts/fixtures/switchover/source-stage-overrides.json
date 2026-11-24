@@ -52,8 +52,8 @@
     "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/main.public.js": {
-    "sha256": "819ddaefdd85938aa562ed8562b74adb8bfc15402fd14a56d1abefdc3c2c1b89",
-    "reason": "arrival walk first (PR #641) merged with main"
+    "sha256": "4f2cbdf4d193fbca50a211336495626fb8f9f6eaf95887f74853db7a4faa46d5",
+    "reason": "arrival hall stays smooth while the ship builds (merged with main)"
   },
   "src/v2/atrium-visibility.js": {
     "sha256": "e72253566c3178a89e460e4a95f90c4c796e13d5c64affffc8be1163f41d8ecc",
@@ -208,8 +208,8 @@
     "reason": "Room culling: numeric cell codes in the visibility broad phase (same cells, same order; scripts/check-visibility-codes.mjs) and probes spread over frames within 3 ms, new owners counted as seen. Views match main pixel for pixel."
   },
   "src/walk/prepare.public.js": {
-    "sha256": "97391ff54d32f19dab987ab880c922a8bf62ef6d340a3b1298fefac5d375a26c",
-    "reason": "Loading yields through src/v2/yield-to-page.js (scheduler.yield, a timer turn every 100 ms), the phone hull copied in 12 ms slices, typed-array compaction (scripts/check-load-yields.mjs); views match the build before pixel for pixel"
+    "sha256": "dc4e63660a99b53e7f3839cf4bef27153318a3490ebceb9957a824dbd35befb6",
+    "reason": "arrival hall stays smooth while the ship builds (merged with main)"
   },
   "src/v2/distant-architecture.js": {
     "sha256": "725db0dd8ea9df79526d8185a33d1c752513755277f9fc98f1f3b2f7a8f88b89",
@@ -242,5 +242,9 @@
   "src/walk/signs.public.js": {
     "sha256": "ccdfc8c4229af849b7597703b0d18801c0cb8ff911264b6737cf3697f99860ed",
     "reason": "Arrival hall walked first (arrival-preview.js): the public resource no longer always waits at module load; the sign rod and the memory snapshot are made after the ship arrives; Cosmo's script loaded once"
+  },
+  "src/walk/pool/table.public.js": {
+    "sha256": "5f9befd1c216f9453a5210686adb5bcb0b0fc4aa2514ce849797a251177c8708",
+    "reason": "arrival hall stays smooth while the ship builds (yields, sliced floor scan, trolley bounds skip, pool skins read on CPU, pre-ready key gate)"
   }
 }

@@ -165,6 +165,8 @@ export function createHydroNipLounge({mirror=1}={}){
   // Foliage apart, so its name keeps it from being solid (src/walk/collision.js skips leaves).
   leaf:std('Lounge_catnip_leaf',0xffffff,{vertexColors:true,roughness:.9}),
   neon:new T.MeshBasicMaterial({name:'Lounge_neon_glow',vertexColors:true,toneMapped:false}),
+  // The dome keeps a saturated tube colour, apart from the room's boosted neon.
+  domeFrame:new T.MeshBasicMaterial({name:'Lounge_neon_glow_dome_frame',vertexColors:true,toneMapped:false}),
   glow:canvas&&new T.MeshBasicMaterial({name:'Lounge_additive_glow',vertexColors:true,map:glowAtlas,transparent:true,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide,toneMapped:false}),
   glass:std('Lounge_glass',0xffffff,{vertexColors:true,transparent:true,opacity:.15,roughness:.05,metalness:.1,depthWrite:false,side:T.DoubleSide}),
   rug:canvas?std('Lounge_rug',0xffffff,{map:rugTex,roughness:1}):std('Lounge_rug',0x3b1f5c,{roughness:1}),
@@ -186,7 +188,7 @@ export function createHydroNipLounge({mirror=1}={}){
  const loose=p=>p&&{...p,loose:true};
  const M={
   glass:paint('glass',0xcfeeff),mazeGlass:paint('glass',0xa8ffbf),mist:glow(0x7dff8e,.55,(u,v)=>[.5+u*.5,v]),mazeMist:loose(paint('mazeMist',0x7dff8e,{dim:.55,uv:(u,v)=>[.5+u*.5,v]})),frost:paint('frost',0x9fe8b0),beam:glow(0x5fc8ff,.2,()=>[.25,.5]),rug:paint('rug'),
-  dark:paint('sheen',0x272131),board:paint('sheen',0x16111f),metal:paint('sheen',0xb9c2cc),strut:neon(0xede3ff),
+  dark:paint('sheen',0x272131),board:paint('sheen',0x16111f),metal:paint('sheen',0xb9c2cc),strut:paint('domeFrame',0xa46aff),
   wood:paint('matte',0x4a2f22),sisal:paint('matte',0xcdb18a),purple:paint('matte',0x6a3fa3),magenta:paint('matte',0xb03a86),teal:paint('matte',0x23857f),
   leaf:paint('leaf',0x4f9a55),flower:paint('leaf',0xd5c4f2),pot:paint('matte',0xb5653d),
  };

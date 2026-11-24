@@ -5,6 +5,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 const DECKS=layout.decks;
 import {TRANSIT_CORES,floorY} from '../transit.js';
 import {SHIP_AREAS} from '../areas.js';
+import {roomNameV2} from '../plan/room-names-v2.js';
 import {serviceRoutes} from '../service-circulation.js';
 
 // Wayfinding for walk mode, in the visitor theme's colours and type: a deck plaque beside every lift landing, a stairs
@@ -235,7 +236,7 @@ function hang(parent,material,back,at,facing,width,ceiling){
 // The lift cells show lift and stairs icons: each core holds both.
 const LIFTS={fore:'Forward lifts',aft:'Aft lifts'},CORE=['lift','stairs'];
 export function corridorSigns(parent){
- const area=id=>SHIP_AREAS.find(a=>a.id===id),roomName=id=>area(id)?.name||'';
+ const area=id=>SHIP_AREAS.find(a=>a.id===id),roomName=id=>roomNameV2(id,area(id)?.name||'');
  const lifts=TEAL,rooms=ORANGE,height=2.8,ceiling=3.3-height;
  for(let deck=1;deck<=20;deck++){
   const plan=serviceRoutes(deck);if(!plan)continue;
