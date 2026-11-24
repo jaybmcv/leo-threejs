@@ -97,7 +97,8 @@ for(const [name,y]of [['V2_garden_guard_glass',28.9],['V2_garden_guard_cap',29.4
  for(let z=-56.5;z<-54.9;z+=.1){cornerRay.set(new T.Vector3(-88.7,y,z),new T.Vector3(1,0,0));assert(cornerRay.intersectObjects(rails).length,'Missing far corner rail '+name);}
  cornerRay.far=2;cornerRay.set(new T.Vector3(-91,y,-55.7),new T.Vector3(1,0,0));assert.equal(cornerRay.intersectObjects(rails).length,0,'Old jog rail remains inside landing');
 }
-route('Below filled corner',[[-91,24.3,-55.7],[-89,24.3,-55.7],[-89,24.3,-57]]);
+// The #427 wall closes the floor below the corner's open-floor edge, so the walk reaches it from the lounge side only (Jay, 2026-11-20).
+route('Below filled corner',[[-91,24.3,-55.7],[-89,24.3,-55.7]]);
 walker.place(new T.Vector3(-91.05,28.3,-55.68));walk([2.25,0,0],2,p=>assert(Math.abs(p.y-28.3)<.06,'New corner must support feet'));
 assert(walker.position.x>-89.2&&walker.position.x<-88.5,'Far rail stops the visitor inside the new floor');
 walk([0,0,-2.25],1,p=>assert(Math.abs(p.y-28.3)<.06,'Outer corner rail prevents a fall'));assert(walker.position.z>-56.3&&walker.position.z<-56,'Outer rail stops the visitor');
@@ -254,8 +255,9 @@ console.log('PASS three rugs, moved cushion anchors, bare old footprint and cent
  walk([-2.25,0,0],1);assert(walker.position.x<small.min.x-.3,'Walk off the far edge of the rug');
  console.log('PASS moved small rug, three sit points, bare old floor, visible photo marker and walk across the photo spot');
 }
-for(const x of [-128.5,-125.5,-122.5]){
- route('Former reading chair '+x,[[x,24.3,-59.8],[x,24.3,-54.8]]);
+// Each walk crosses its old chair spot (z -56) and stops on the open-floor side of the #427 wall (Jay, 2026-11-24).
+for(const [x,end] of [[-128.5,-54.8],[-125.5,-55.1],[-122.5,-55.75]]){
+ route('Former reading chair '+x,[[x,24.3,-59.8],[x,24.3,end]]);
  assert(!rests.some(s=>Math.abs(s.height-24.8)<.5&&Math.hypot(s.point.x-x,s.point.z+56)<1.5),'Invisible chair rest anchor at '+x);
  const b=new T.Box3(new T.Vector3(x-.4,24.3,-56.4),new T.Vector3(x+.4,25.5,-55.6));
  assert(!seams.some(s=>s.intersectsBox(b)),'Floating upholstery seam at '+x);
