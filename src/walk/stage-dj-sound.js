@@ -1,18 +1,11 @@
 import {createSpatial,updateSpatial} from './spatial-audio.js';
 
-const FRONT_REACH=8,NORMAL_REACH=34,BOWL_REACH=44;
-const fade=u=>{u=Math.max(0,Math.min(1,u));return u*u*(3-2*u);};
-export function stageDjLevel(p,at,on=true){
- const aft=at[0]-p.x,dy=p.y-at[1],side=p.z-at[2],d=Math.hypot(aft,dy,side);
- if(!on||d>=BOWL_REACH||Math.abs(dy)>3.5)return 0;
- const normal=fade((NORMAL_REACH-d)/30);
- if(d<=FRONT_REACH)return .16*normal;
- // Extend toward the back row, 37.2 m out. Taper at the boulevard and room recess on either side.
- const audience=fade(Math.min(aft-3,side+22,8-side)/4);
- const bowl=fade((NORMAL_REACH-FRONT_REACH-(d-FRONT_REACH)*.52)/30)*fade((BOWL_REACH-d)/6);
- return .16*(normal+(bowl-normal)*audience);
-}
 // A local sixteen-beat phrase, made once after a gesture. Nothing is fetched or scheduled on a timer.
+export function stageDjLevel(p,at,on=true){
+ const d=Math.hypot(p.x-at[0],p.y-at[1],p.z-at[2]);
+ if(!on||d>=34||Math.abs(p.y-at[1])>5)return 0;
+ const u=Math.max(0,Math.min(1,(34-d)/30));return .16*u*u*(3-2*u);
+}
 export function stageDjLoop(ctx,bpm=134){
  const seconds=16*60/bpm,n=Math.round(ctx.sampleRate*seconds),buffer=ctx.createBuffer(1,n,ctx.sampleRate),data=buffer.getChannelData(0),beat=n/ctx.sampleRate/16;
  const bass=[0,0,7,0,0,12,7,0,0,0,10,7,0,3,7,10],acid=[0,12,7,15,0,10,7,19,0,12,3,10,7,15,12,7];let seed=134,previous=0,low=0,band=0;

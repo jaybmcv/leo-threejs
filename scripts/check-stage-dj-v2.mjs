@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {createStageDj,stageDjCollider,STAGE_DJ} from '../src/v2/common-stage-dj.js';
-import {stageDjLevel,stageDjLoop,createStageDjSound} from '../src/walk/stage-dj-sound.js';
+import {stageDjLevel} from '../src/v2/common-stage-dj-sound.js';
+import {stageDjLoop} from '../src/walk/stage-dj-sound.js';
 import {addAtriumStage,stageGeometry,stageSeats} from '../src/v2/atrium-stage.js';
 import {Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
@@ -65,6 +66,6 @@ const buffer=stageDjLoop(new Audio()),data=buffer.getChannelData(0);let energy=0
 for(const n of data){assert(Number.isFinite(n));energy+=n*n;peak=Math.max(peak,Math.abs(n));}
 assert(Math.sqrt(energy/data.length)>.08);assert(peak<1);assert(Math.abs(data[0])===0&&Math.abs(data.at(-1))===0);assert(Math.abs(buffer.duration-16*60/134)<1/22050);
 built=0;globalThis.AudioContext=Audio;globalThis.document={hidden:false,addEventListener(){}};Object.defineProperty(navigator,'userActivation',{value:{hasBeenActive:false},configurable:true});
-const sound=createStageDjSound(STAGE_DJ);sound.update(near,true);assert.equal(built,0,'Wait for a gesture');navigator.userActivation.hasBeenActive=true;sound.update(near,false);sound.update(far,true);assert.equal(built,0,'Do not start muted or far away');
+const sound=dj.sound;sound.update(near,true);assert.equal(built,0,'Wait for a gesture');navigator.userActivation.hasBeenActive=true;sound.update(near,false);sound.update(far,true);assert.equal(built,0,'Do not start muted or far away');
 sound.update(circle,true);assert.equal(built,1);const audienceGain=sound.gain;sound.update(near,true);assert(sound.gain>audienceGain);assert(sound.running);context.currentTime=.5;assert(sound.beat>1);sound.update(back,true);assert.equal(sound.gain,backGain);sound.update(far,true);assert.equal(sound.level,0);sound.update(near,false);assert.equal(sound.gain,0);
 console.log(JSON.stringify({status:'PASS',draws,triangles,bounds:[bounds.min.toArray(),bounds.max.toArray()],stopped:stopped.toArray(),returned:cat.position.toArray(),audio:{bpm:134,seconds:buffer.duration,peak,audienceGain,nearGain:stageDjLevel(near,at),frontGain,backGain,backRowMetres:{first:backDistances[0],furthest:Math.max(...backDistances),last:backDistances.at(-1)}},walk:'blocked at booth, around both sides and behind, back to seating'}));

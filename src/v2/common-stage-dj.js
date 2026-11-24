@@ -2,7 +2,7 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import layout from '../plan/selected-layout.js';
 import {Colliders} from '../walk/collision.js';
-import {createStageDjSound} from '../walk/stage-dj-sound.js';
+import {createStageDjSound} from './common-stage-dj-sound.js';
 
 // The stage faces -X. In the booth frame +Z faces the audience and X spans the desk.
 export const STAGE_DJ={at:[108.25,layout.decks[5].y+.36,30],yaw:-Math.PI/2,width:5.6,bpm:134};
