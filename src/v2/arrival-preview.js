@@ -17,6 +17,7 @@ import {Controller} from '../walk/controller.js';
 import {FollowCamera} from '../walk/camera.js';
 import {createWalker,WALKER} from '../walk/avatar.js';
 import {createWardrobe} from '../walk/wardrobe.js';
+import {setFrameTurns} from './yield-to-page.js';
 import {toWorld,anchoredYaw,yawToWorld} from '../plan/rooms.js';
 import motion from '../walk/assets/ecctrl-locomotion.json' with {type:'json'};
 import {arrivalPack,arrivalDownload} from './arrival-start.js';
@@ -30,6 +31,8 @@ const STEP=1/120,LOOK=.0032,HAZE=0xd9dcd6;
 // draws faster than a 60 Hz screen, and only 30 a second once the ship is in and the walk builds (the build's turns
 // between its steps are what it draws in).
 const FRAME_MS=1000/60-1,BUILD_FRAME_MS=1000/30-1;
+// Past this long without a frame, the build's next turn waits for one (yield-to-page.js): at worst about 15 a second.
+const STALL_MS=60;
 // The welcome guide stands: what walker.update needs of a walker at rest.
 const STILL={unseen:false,speed:0,grounded:true,stance:'stand',jumpCount:0,jumpS:-1,turnRate:0,accel:0,rise:0,emote:null,rest:null,catnip:false,swimming:false,board:null,hook:null};
 const dampAngle=(a,b,lambda,dt)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*(1-Math.exp(-lambda*dt));
@@ -69,7 +72,7 @@ export function startArrivalPreview({renderer,sky,skyCamera,fov,near,far,environ
  let controller=null,follow=null,heading=startYaw,jumpQueued=false,lookX=0,lookY=0,dragging=false,last=0,acc=0,lastHeading=heading,lastSpeed=0,turnRate=0,accel=0,box=null;
  const listen=(target,type,fn,options)=>{target.addEventListener(type,fn,options);off.push(()=>target.removeEventListener(type,fn,options));};
 
- const stop=()=>{if(state==='done')return;state='done';cancelAnimationFrame(raf);for(const f of off.splice(0))f();
+ const stop=()=>{if(state==='done')return;state='done';cancelAnimationFrame(raf);for(const f of off.splice(0))f();setFrameTurns(null);
   delete document.body.dataset.arrival;if(chip)chip.hidden=true;
   walker?.dispose();walker=null;guide?.dispose();guide=null;
   for(const o of owned)o.dispose?.();owned.length=0;scene.clear();controller=follow=null;};
@@ -116,6 +119,8 @@ export function startArrivalPreview({renderer,sky,skyCamera,fov,near,far,environ
   if(chip&&loadingText){const say=()=>{chip.querySelector('.line').textContent=loadingText.textContent.replace(/…$/,'');};say();
    const seen=new MutationObserver(say);seen.observe(loadingText,{childList:true,characterData:true,subtree:true});off.push(()=>seen.disconnect());chip.hidden=false;}
   last=performance.now();raf=requestAnimationFrame(frame);
+  // The ship's build gives this a frame whenever it has gone STALL_MS without one (yield-to-page.js), in a visible tab.
+  setFrameTurns({due:()=>state==='walking'&&!document.hidden&&performance.now()-drawn>=STALL_MS});
  };
 
  (async()=>{
