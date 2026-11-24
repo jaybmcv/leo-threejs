@@ -73,6 +73,9 @@ export function createFloorOcclusion(scene,camera) {
    m.clippingPlanes?.length || r.clippingPlanes?.length || camera.view?.enabled ||
    r.capabilities?.reverseDepthBuffer) return;
   const e=camera.matrixWorld.elements;
+  const pe=camera.projectionMatrix.elements;
+  if(!camera.isPerspectiveCamera || camera.matrixWorld.determinant()<=0 || pe[3] || pe[7] ||
+     pe[11]!==-1 || pe[15] || pe[12] || pe[13] || pe[0]*pe[5]-pe[1]*pe[4]<=0) return;
   if(!previousProjection.equals(camera.projectionMatrix) || !epoch) {
    previousProjection.copy(camera.projectionMatrix);
    // Maximum radial distance to a near-plane corner, for this actual projection.
