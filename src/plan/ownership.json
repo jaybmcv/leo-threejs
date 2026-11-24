@@ -5854,7 +5854,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "b8434661aa7f090a902b02ada93ce34dd9d8b81cd9b2bad801843c77f42aa321"
+      "signature": "ae791b3bece90cc6e4575be8133b579b679148aa5051e293b114343cb1d39e70"
     },
     {
       "source": "src/walk/static-tints.js",
