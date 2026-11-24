@@ -33,7 +33,17 @@ export function createStageDj({colliders,phone=false,still=false}={}){
  const box=(p,m,size,at,c=DARK,tilt=0)=>put(p,m,new T.BoxGeometry(...size).rotateX(tilt).translate(...at),c);
  const ball=(p,m,size,at,c=PINK)=>put(p,m,new T.SphereGeometry(1,12,8).scale(...size).translate(...at),c);
  function bar(p,m,a,b,r=.035,c=STEEL){const d=b.clone().sub(a);put(p,m,new T.CylinderGeometry(r,r,d.length(),6).applyQuaternion(new T.Quaternion().setFromUnitVectors(point(0,1,0),d.normalize())).translate(...a.clone().add(b).multiplyScalar(.5).toArray()),c);}
- const head=new T.Group(),arms=new T.Group();group.add(head,arms);
+ const seat=point(.2,1.6,-.98),head=new T.Group(),arms=new T.Group(),stool=new T.Group();
+ head.position.copy(seat);stool.position.set(seat.x,0,seat.z);
+ stool.name='Common_stage_DJ_stool';group.add(head,arms,stool);
+ // The stool fits inside the existing DJ collider.
+ put(stool,metal,new T.CylinderGeometry(.23,.23,.09,16).translate(0,seat.y-.045,0),0x263541);
+ put(stool,metal,new T.CylinderGeometry(.205,.205,.055,16).translate(0,seat.y-.1175,0),DARK);
+ for(const x of[-1,1])for(const z of[-1,1]){
+  bar(stool,metal,point(x*.13,seat.y-.135,z*.13),point(x*.24,.025,z*.24),.035,0x475864);
+  put(stool,metal,new T.CylinderGeometry(.06,.06,.05,8).translate(x*.24,.025,z*.24),DARK);
+ }
+ put(stool,metal,new T.TorusGeometry(.297,.023,6,24).rotateX(Math.PI/2).translate(0,.53,0),0x527783);
  // A continuous curved worktop and an open triangular lattice beneath it.
  const shape=new T.Shape();shape.moveTo(-2.8,bow(-2.8)-.525);
  for(let i=0;i<=24;i++){const x=-2.8+i*5.6/24;shape.lineTo(x,bow(x)-.525);}
@@ -60,11 +70,13 @@ export function createStageDj({colliders,phone=false,still=false}={}){
   box(group,metal,[.48,.075,.48],[x,1.3,.7]);
   for(let i=0;i<4;i++)for(let j=0;j<4;j++)box(group,padsMat,[.082,.025,.082],[x-.15+i*.1,1.35,.55+j*.1]);
  }
+ // The lids hinge on the audience edge, with the screens facing the DJ at -Z.
+ const tilt=.2,screen=point(0,Math.sin(tilt),-Math.cos(tilt)).multiplyScalar(.024);
  for(const x of[-2.12,2.12]){
   const z=bow(x)-.41;box(group,metal,[.66,.035,.39],[x,1.4,z]);
-  box(group,metal,[.68,.44,.035],[x,1.62,z-.2],DARK,-.2);
-  box(group,glow,[.59,.34,.012],[x,1.625,z-.17],CYAN,-.2);
-  for(let j=0;j<3;j++)box(group,metal,[.5,.008,.014],[x,1.422,z-.08+j*.065],STEEL);
+  box(group,metal,[.68,.44,.035],[x,1.62,z+.2],DARK,tilt);
+  box(group,glow,[.59,.34,.012],[x,1.62+screen.y,z+.2+screen.z],CYAN,tilt);
+  for(let j=0;j<3;j++)box(group,metal,[.5,.008,.014],[x,1.422,z+.08-j*.065],STEEL);
  }
  // Cables stay inside the booth footprint, away from every walking route.
  for(const x of[-2.4,2.4])for(let i=0;i<3;i++){
@@ -75,9 +87,10 @@ export function createStageDj({colliders,phone=false,still=false}={}){
  // Eight separate curved arms fan out from the mantle and finish on eight controls.
  const targets=[[-2.15,bow(-2.15)],[-1.2,bow(-1.2)],[-.64,.7],[-.16,.64],[.16,.6],[.64,.7],[1.2,bow(1.2)],[2.15,bow(2.15)]];
  targets.forEach(([x,z],i)=>{
-  const a=(i/8)*Math.PI*2,start=point(.2+Math.cos(a)*.42,1.73+Math.sin(a)*.12,-1.05+Math.sin(a)*.36);
+  // Lift the two lowest arm roots just above the seat rim.
+  const a=(i/8)*Math.PI*2,lift=i===5||i===6?.12:0,start=point(.2+Math.cos(a)*.42,1.73+Math.sin(a)*.12+lift,-1.05+Math.sin(a)*.36);
   // The outside arms clear the open laptop lids before dropping onto the decks.
-  const outside=i===0||i===7,curve=new T.CatmullRomCurve3([start,point(x*.65,outside?2.16:1.85+(i%3)*.08,-.55-(i%2)*.19),...(outside?[point(x,2.12,-.26),point(x*1.08,1.93,z-.15)]:[point(x*1.08,1.62,z-.35)]),point(x,1.43,z)]);
+  const outside=i===0||i===7,curve=new T.CatmullRomCurve3([start,point(x*.65,outside?2.16:1.85+(i%3)*.08,-.55-(i%2)*.19),...(outside?[point(x,2.12,-.26),point(x*1.08,2.01,z+.09)]:[point(x*1.08,1.62,z-.35)]),point(x,1.43,z)]);
   // A tapered tube with flat faces; cups are merged into a single cyan mesh for all eight arms.
   const g=new T.TubeGeometry(curve,16,.15,6,false),pos=g.attributes.position;
   for(let j=0;j<=16;j++){const centre=curve.getPointAt(j/16),scale=1-.8*j/16;for(let k=0;k<=6;k++){const n=j*7+k;pos.setXYZ(n,centre.x+(pos.getX(n)-centre.x)*scale,centre.y+(pos.getY(n)-centre.y)*scale,centre.z+(pos.getZ(n)-centre.z)*scale);}}
@@ -94,7 +107,11 @@ export function createStageDj({colliders,phone=false,still=false}={}){
  box(head,metal,[.22,.12,.035],[.2,2.67,-.465],STEEL);
  put(head,metal,new T.TorusGeometry(.67,.065,5,16,Math.PI).translate(.2,2.18,-1.05),DARK);
  for(const x of[-.49,.89]){ball(head,metal,[.14,.29,.25],[x,2.2,-1.05],DARK);ball(head,glow,[.15,.17,.14],[x,2.2,-1.05]);}
- for(const [parent,mats] of buckets)for(const [mat,list] of mats){const g=mergeGeometries(list);list.forEach(g=>g.dispose());const mesh=new T.Mesh(g,mat);mesh.userData.noCollide=true;parent.add(mesh);}
+ for(const [parent,mats] of buckets)for(const [mat,list] of mats){
+  const g=mergeGeometries(list);list.forEach(g=>g.dispose());
+  if(parent===head)g.translate(-seat.x,-seat.y,-seat.z);
+  const mesh=new T.Mesh(g,mat);mesh.userData.noCollide=true;parent.add(mesh);
+ }
  group.updateMatrixWorld(true);
  if(colliders){
   // Local fittings own their small BVH; prepared collider factories only accept baked entries.
@@ -106,7 +123,8 @@ export function createStageDj({colliders,phone=false,still=false}={}){
   sound.update(p,on,camera);time+=dt;const near=p.distanceToSquared(at)<32**2;
   if(still||phone||!near)return;
   const beat=sound.beat??time*STAGE_DJ.bpm/60,pulse=Math.sin(beat*Math.PI*2);
-  head.position.y=.045*pulse;head.rotation.z=.025*pulse;arms.position.y=.018*pulse;arms.rotation.z=.008*Math.sin(beat*Math.PI);
+  // Sway from the seat so the body stays in contact with it.
+  head.rotation.z=.025*pulse;arms.position.y=.018*pulse;arms.rotation.z=.008*Math.sin(beat*Math.PI);
   padsMat.emissiveIntensity=1.1+.8*(.5+.5*Math.sin(beat*Math.PI*4));
  }};
 }
