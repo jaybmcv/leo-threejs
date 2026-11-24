@@ -5,7 +5,9 @@ import path from 'node:path';
 import {once} from 'node:events';
 import {randomBytes} from 'node:crypto';
 import {Worker} from 'node:worker_threads';
+import {crc32} from 'node:zlib';
 import WebSocket from 'ws';
+import sharp from 'sharp';
 import * as T from 'three';
 import layout from '../src/plan/selected-layout.js';
 import {contains} from '../src/plan/geometry-v2.js';
@@ -92,7 +94,14 @@ pass('all four walk entry points install the same station, camera, prompt, updat
 {
  const pair=await crypto.subtle.generateKey('Ed25519',true,['sign','verify']),jwk=await crypto.subtle.exportKey('jwk',pair.publicKey);
  const posts=[],replies=[],logs=[],workers=[],sockets=[];
- const image=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN1sAAAAASUVORK5CYII=','base64');
+ const photo=sharp({create:{width:32,height:32,channels:3,background:'#347b8d'}});
+ const image=await photo.clone().png().toBuffer(),jpeg=await photo.jpeg().toBuffer();
+ // These keep their headers and end markers, but their compressed picture data is broken.
+ const badPng=Buffer.from(image),idat=badPng.indexOf('IDAT'),end=idat+4+badPng.readUInt32BE(idat-4);
+ badPng.fill(0,idat+4,end);badPng.writeUInt32BE(crc32(badPng.subarray(idat,end)),end);
+ const sos=jpeg.indexOf(Buffer.from([0xff,0xda])),scan=sos+2+jpeg.readUInt16BE(sos+2);
+ const badJpeg=Buffer.concat([jpeg.subarray(0,scan+1),jpeg.subarray(-2)]);
+ let webhookStatus=200,received=0;
  const secretPath='/stub-webhook-'+randomBytes(12).toString('hex');
  const stub=http.createServer(async(req,res)=>{
   if(req.url==='/keys'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({keys:[{...jwk,kid:'prank-check',alg:'EdDSA'}]}));return;}
@@ -100,8 +109,9 @@ pass('all four walk entry points install the same station, camera, prompt, updat
   try{
    const chunks=[];for await(const c of req)chunks.push(c);
    const form=await new Response(Buffer.concat(chunks),{headers:{'Content-Type':req.headers['content-type']}}).formData();
-   const file=form.get('files[0]');posts.push({payload:JSON.parse(form.get('payload_json')),name:file.name,type:file.type,bytes:Buffer.from(await file.arrayBuffer())});
-   res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({url:base+secretPath}));
+   const file=form.get('files[0]');received++;
+   if(webhookStatus===200)posts.push({payload:JSON.parse(form.get('payload_json')),name:file.name,type:file.type,bytes:Buffer.from(await file.arrayBuffer())});
+   res.writeHead(webhookStatus,{'Content-Type':'application/json'}).end(JSON.stringify({url:base+secretPath}));
   }catch{res.writeHead(500).end();}
  });
  const dir=fs.mkdtempSync(path.resolve('output','prank-share-check-'));
@@ -124,8 +134,8 @@ pass('all four walk entry points install the same station, camera, prompt, updat
    discord:{id,global_name:'Rook_* @everyone'},iat:t,exp:t+600});
   const signed=b64({alg:'EdDSA',kid:'prank-check'})+'.'+claims;
   const passToken=signed+'.'+Buffer.from(await crypto.subtle.sign('Ed25519',pair.privateKey,Buffer.from(signed))).toString('base64url');
-  async function join(port,hello){
-   const ws=new WebSocket('ws://127.0.0.1:'+port+'/live',{origin}),seen=[];sockets.push(ws);
+  async function join(port,hello,headers){
+   const ws=new WebSocket('ws://127.0.0.1:'+port+'/live',{origin,headers}),seen=[];sockets.push(ws);
    ws.on('error',()=>{});
    ws.on('message',(data,binary)=>{if(!binary){const msg=JSON.parse(data);seen.push(msg);replies.push(String(data));}});
    await once(ws,'open',{signal:AbortSignal.timeout(5000)});
@@ -157,17 +167,32 @@ pass('all four walk entry points install the same station, camera, prompt, updat
   assert.equal((await rook.ticket()).why,'slow');assert.equal((await upload(on,first.ticket))[0],403);
   const rejoined=await join(on,{pass:passToken});assert.equal((await rejoined.ticket()).why,'slow');assert.equal(posts.length,1);
   pass('a second post inside ten minutes is refused even after rejoining');
-  assert.deepEqual(await upload(on,(await guest.ticket()).ticket,Buffer.from('not a photo')),[415,{ok:false,why:'image'}]);
-  assert.deepEqual(await upload(on,(await guest.ticket()).ticket,Buffer.alloc(5*1024*1024+1)),[413,{ok:false,why:'large'}]);
-  assert.equal(posts.length,1);
-  pass('bad and oversized images never reach the webhook');
-  assert.deepEqual(await upload(on,(await guest.ticket()).ticket),[200,{ok:true}]);
+  const invalid=await join(on,{name:'Guest'});
+  assert.deepEqual(await upload(on,(await invalid.ticket()).ticket,Buffer.from('not a photo')),[415,{ok:false,why:'image'}]);
+  assert.deepEqual(await upload(on,(await invalid.ticket()).ticket,Buffer.alloc(5*1024*1024+1)),[413,{ok:false,why:'large'}]);
+  assert.deepEqual(await upload(on,(await guest.ticket()).ticket,badPng),[415,{ok:false,why:'image'}]);
+  assert.deepEqual(await upload(on,(await guest.ticket()).ticket,badJpeg,'image/jpeg'),[415,{ok:false,why:'image'}]);
+  assert.equal(received,1);
+  pass('non-images, corrupt PNG and JPEG picture data, and oversized uploads never reach the webhook');
+  assert.deepEqual(await upload(on,(await guest.ticket()).ticket,jpeg,'image/jpeg'),[200,{ok:true}]);
   assert.equal(posts[1].payload.content,'Do Not Press the Button souvenir from Guest 99999.');
   assert.deepEqual(posts[1].payload.allowed_mentions,{parse:[],users:[]});
+  assert.equal(posts[1].name,'leo-ha-gottem.jpg');assert.equal(posts[1].type,'image/jpeg');assert.deepEqual(posts[1].bytes,jpeg);
   pass('a guest posts by cleaned display name with no mention or browser-supplied caption');
+  const rekeyed=await join(on,{name:'Guest again'},{'X-Forwarded-For':'192.0.2.9','CF-Connecting-IP':'invalid'});
+  assert.notEqual(rekeyed.welcome.id,guest.welcome.id);assert.equal((await rekeyed.ticket()).why,'slow');
+  pass('a fresh guest key and arbitrary forwarded header cannot bypass the socket address cooldown');
+  const tunnel={'CF-Connecting-IP':'192.0.2.10'};
+  webhookStatus=400;
+  for(let i=0;i<6;i++){
+   const retry=await join(on,{name:'Retry'},tunnel);
+   for(let n=0;n<2;n++)assert.deepEqual(await upload(on,(await retry.ticket()).ticket),[502,{ok:false,why:'failed'}]);
+  }
+  assert.equal(received,14);assert.equal(posts.length,2);
+  pass('twelve confirmed webhook rejections use neither the player cooldown nor the hourly cap');
   // Node’s stand-in browser supplies the Origin a browser would set itself.
   const previousSocket=globalThis.WebSocket,previousFetch=globalThis.fetch,previousStorage=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
-  globalThis.WebSocket=class extends WebSocket{constructor(url){super(url,{origin});sockets.push(this);}};
+  globalThis.WebSocket=class extends WebSocket{constructor(url){super(url,{origin,headers:tunnel});sockets.push(this);}};
   globalThis.fetch=(url,options)=>previousFetch(url,{...options,headers:{...options?.headers,Origin:origin}});
   Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:()=>null,setItem(){}}});
   let link;
@@ -179,6 +204,8 @@ pass('all four walk entry points install the same station, camera, prompt, updat
    const blob=new Blob([image],{type:'image/png'});
    assert.equal(link.prankShare,false);assert.equal(await link.postPrankPhoto(blob),'failed');
    await ready;assert.equal(link.prankShare,true);assert.equal(posts.length,2);
+   webhookStatus=429;assert.equal(await link.postPrankPhoto(blob),'slow');
+   webhookStatus=200;
    assert.equal(await link.postPrankPhoto(blob),'posted');assert.equal(posts.length,3);
    assert.equal(await link.postPrankPhoto(blob),'slow');
    link.close();assert.equal(link.prankShare,false);
@@ -187,13 +214,20 @@ pass('all four walk entry points install the same station, camera, prompt, updat
    link?.close();globalThis.WebSocket=previousSocket;globalThis.fetch=previousFetch;
    if(previousStorage)Object.defineProperty(globalThis,'localStorage',previousStorage);else delete globalThis.localStorage;
   }
-  for(let i=posts.length;i<12;i++){
-   const guest=await join(on,{name:'Voyager'});
+  const sameAddress=await join(on,{name:'Guest'},tunnel);
+  assert.equal((await sameAddress.ticket()).why,'slow');
+  pass('guest cooldown also survives a new connection through the local tunnel');
+  for(let i=posts.length;i<11;i++){
+   const guest=await join(on,{name:'Voyager'},{'CF-Connecting-IP':'203.0.113.'+i});
    assert.deepEqual(await upload(on,(await guest.ticket()).ticket),[200,{ok:true}]);
   }
-  const next=await join(on,{name:'Voyager'});
+  const finalGuests=await Promise.all([20,21].map(i=>join(on,{name:'Voyager'},{'CF-Connecting-IP':'203.0.113.'+i})));
+  const finalTickets=await Promise.all(finalGuests.map(g=>g.ticket()));assert(finalTickets.every(t=>t.ok));
+  const results=await Promise.all(finalTickets.map(t=>upload(on,t.ticket)));
+  assert.deepEqual(results.map(r=>r[0]).sort(),[200,429]);
+  const next=await join(on,{name:'Voyager'},{'CF-Connecting-IP':'203.0.113.22'});
   assert.equal((await next.ticket()).why,'slow');assert.equal(posts.length,12);
-  pass('the hourly channel cap refuses a post from a new player');
+  pass('the hourly channel cap holds across different guest addresses and simultaneous uploads');
   assert(![...replies,...logs].some(value=>value.includes(secretPath)));
   pass('the webhook URL stays out of live messages, HTTP replies and server logs');
  }finally{

@@ -62,7 +62,7 @@ import {createTv} from './tv.mjs';
 import {createJoins} from './joins.mjs';
 import {createCaptainSays} from './captain-says.mjs';
 import {createPinballBoard} from './pinball.mjs';
-import {createPrankShare} from './prank-share.mjs';
+import {createPrankShare,prankAddress} from './prank-share.mjs';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||1000);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -575,7 +575,7 @@ server.on('upgrade',(req,socket,head)=>{
  wss.handleUpgrade(req,socket,head,ws=>wss.emit('connection',ws,req));
 });
 wss.on('connection',(ws,req)=>{
- const v={ws,address:req.socket.remoteAddress,ready:false,id:null,slot:0,name:null,record:null,pos:null,version:0,budget:{},games:{},alive:true};visitors.add(v);
+ const v={ws,address:prankAddress(req),ready:false,id:null,slot:0,name:null,record:null,pos:null,version:0,budget:{},games:{},alive:true};visitors.add(v);
  const timer=setTimeout(()=>{if(!v.ready)ws.close(4005,'no hello');},HELLO_MS);
  ws.on('message',(data,binary)=>onMessage(v,binary?data:data.toString(),binary));
  ws.on('pong',()=>{v.alive=true;});
