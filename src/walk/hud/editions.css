@@ -1,0 +1,1852 @@
+#hud-location,
+#hud-dock {
+  display: none;
+}
+body[data-hud-ready] {
+  --sh-ink:#0a242b;
+  --sh-line:#9db8b9;
+  --sh-lit:#ff802c;
+  --sh-type:#f8faf1;
+  --sh-border:3px;
+  --sh-gap:18px;
+}
+body[data-hud-edition=concourse] {
+  --sh-ink:#102c66;
+  --sh-line:#ebe1bd;
+  --sh-lit:#ff603e;
+  --sh-type:#fff4db;
+  --sh-border:6px;
+}
+body[data-hud-edition=orbit] {
+  --sh-ink:#201d3c;
+  --sh-line:#9bb3ff;
+  --sh-lit:#8df3d3;
+  --sh-type:#f6f4ff;
+  --sh-border:16px;
+}
+[data-hud-ready] .tools,
+[data-hud-ready] .top .pill,
+[data-hud-ready] .top #discord-chip,
+[data-hud-ready] .corner > .help {
+  display: none !important;
+}
+[data-hud-ready] #hud-location,
+[data-hud-ready] #hud-dock {
+  display: flex;
+  position: fixed;
+  box-sizing: border-box;
+  z-index: 6;
+  color: var(--sh-type);
+  font:
+    600 15px/1.15 "Bahnschrift",
+    "Segoe UI",
+    sans-serif;
+}
+[data-hud-ready] #hud-location {
+  top: 18px;
+  left: 18px;
+  align-items: center;
+  gap: 12px;
+  background: var(--sh-ink);
+  border-left: 5px solid var(--sh-lit);
+  padding: 9px 15px 9px 12px;
+  max-width: 46vw;
+  box-shadow: 0 2px 12px #0004;
+  border-radius: var(--sh-border);
+}
+#hud-location a {
+  color: inherit;
+  text-decoration: none;
+  letter-spacing: .11em;
+  font-weight: 800;
+  border-right: 1px solid var(--sh-line);
+  padding-right: 10px;
+}
+#hud-location small {
+  display: block;
+  color: var(--sh-lit);
+  font: 700 10px/1.2 Consolas, monospace;
+  letter-spacing: .12em;
+}
+#hud-location b {
+  display: block;
+  font-size: 19px;
+  line-height: 1.2;
+  padding-top: 2px;
+}
+[data-hud-ready] .top {
+  top: 80px;
+  left: 18px;
+  right: auto;
+  gap: 4px;
+  max-width: 46vw;
+  z-index: 5;
+}
+[data-hud-ready] .top button {
+  border-radius: var(--sh-border);
+  font: 600 11px/1.1 "Segoe UI", sans-serif;
+  letter-spacing: .02em;
+  background: var(--sh-ink);
+  color: var(--sh-type);
+  padding: 7px 10px;
+}
+[data-hud-ready] #minimap-button:not([hidden]) {
+  right: 18px;
+  top: 18px;
+  width: clamp(165px, 13vw, 205px);
+  height: clamp(165px, 13vw, 205px);
+  border: 3px solid var(--sh-ink);
+  border-radius: var(--sh-border);
+  outline: 1px solid var(--sh-line);
+  box-shadow: 0 3px 16px #0005;
+}
+body[data-hud-ready].camera-mode #minimap-button:not([hidden]) {
+  display: block !important;
+}
+[data-hud-ready] #minimap-deck {
+  background: var(--sh-ink);
+  color: var(--sh-type);
+  border-top: 2px solid var(--sh-lit);
+  padding: 3px 6px;
+}
+[data-hud-ready] #hud-dock {
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  padding: 5px;
+  gap: 2px;
+  align-items: stretch;
+  background: var(--sh-ink);
+  border: 1px solid var(--sh-line);
+  border-bottom: 3px solid var(--sh-lit);
+  border-radius: var(--sh-border);
+  box-shadow: 0 4px 16px #0005;
+}
+#hud-dock button {
+  cursor: pointer;
+  border: 0;
+  border-radius: 2px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  line-height: 1.1;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 13px;
+}
+#hud-dock button + button {
+  border-left: 1px solid color-mix(in srgb, var(--sh-line) 40%, transparent);
+}
+#hud-dock svg {
+  width: 21px;
+  height: 21px;
+  flex: none;
+}
+#hud-dock kbd {
+  font: 600 10px Consolas, monospace;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  padding: 2px 4px;
+  opacity: .83;
+}
+#hud-dock button[data-action=go] {
+  background: var(--sh-lit);
+  color: #101e24;
+}
+#hud-dock button[aria-pressed=true],
+#hud-dock button[aria-expanded=true] {
+  box-shadow: inset 0 -3px var(--sh-lit);
+}
+#hud-dock button:hover {
+  background: #f2f7e8;
+  color: #12232b;
+}
+#hud-dock button:focus-visible,
+#hud-location a:focus-visible {
+  outline: 3px solid #ffbf44;
+  outline-offset: -3px;
+}
+[data-hud-ready] .corner {
+  bottom: 84px;
+  left: 18px;
+  gap: 3px;
+}
+[data-hud-ready] #chat:not(.open) #chat-lines li:not(:nth-last-child(-n+2)) {
+  display: none;
+}
+[data-hud-ready] #chat-lines {
+  max-width: min(300px, 32vw);
+}
+[data-hud-ready] .chat-buttons button {
+  border-radius: var(--sh-border);
+  background: var(--sh-ink);
+  color: var(--sh-type);
+}
+[data-hud-ready] #settings-menu {
+  top: auto;
+  bottom: 78px;
+  right: 18px;
+  z-index: 12;
+}
+[data-hud-ready] #arrival-tour {
+  bottom: 84px;
+}
+[data-hud-ready] #prompt {
+  bottom: 92px;
+}
+[data-hud-ready].camera-mode #hud-dock,
+[data-hud-ready].spraying #hud-dock {
+  display: none;
+}
+[data-hud-edition=concourse][data-hud-ready] #hud-location {
+  top: 18px;
+  left: 18px;
+  width: 186px;
+  max-width: 42vw;
+  background: #fff2d6;
+  border: 0;
+  border-top: 5px solid var(--sh-lit);
+  border-radius: 5px 5px 0 0;
+  color: var(--sh-ink);
+  box-shadow: none;
+  align-items: center;
+}
+[data-hud-edition=concourse] #hud-location small {
+  color: #93321d;
+}
+[data-hud-edition=concourse][data-hud-ready] #hud-dock {
+  left: 18px;
+  top: 77px;
+  bottom: auto;
+  transform: none;
+  width: 186px;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 8px 7px;
+  background: #fff2d6;
+  color: var(--sh-ink);
+  border: 0;
+  border-bottom: 5px solid var(--sh-ink);
+  border-radius: 0 0 6px 6px;
+}
+[data-hud-edition=concourse] #hud-dock button {
+  justify-content: flex-start;
+  gap: 9px;
+  padding: 0 9px;
+  border: 0;
+  border-top: 1px solid #c9c1ae;
+}
+[data-hud-edition=concourse] #hud-dock button[data-action=go] {
+  background: var(--sh-ink);
+  color: white;
+}
+[data-hud-edition=concourse] #hud-dock kbd {
+  margin-left: auto;
+}
+[data-hud-edition=concourse][data-hud-ready] .top {
+  top: 18px;
+  left: 216px;
+}
+[data-hud-edition=concourse][data-hud-ready] .corner,
+[data-hud-edition=orbit][data-hud-ready] .corner {
+  bottom: 18px;
+}
+[data-hud-edition=orbit][data-hud-ready] #hud-location {
+  background:
+    linear-gradient(
+      100deg,
+      #181629,
+      #2d2d54);
+  border-left: 0;
+  border-bottom: 2px solid var(--sh-lit);
+  border-radius: 22px 4px 22px 4px;
+}
+[data-hud-edition=orbit][data-hud-ready] #hud-dock {
+  left: auto;
+  right: 18px;
+  bottom: 18px;
+  transform: none;
+  width: 270px;
+  height: 165px;
+  background: transparent;
+  box-shadow: none;
+  border: 0;
+  padding: 0;
+  pointer-events: none;
+}
+[data-hud-edition=orbit] #hud-dock button {
+  position: absolute;
+  width: 79px;
+  height: 58px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px;
+  font-size: 13px;
+  background:
+    linear-gradient(
+      145deg,
+      #343252,
+      #191829);
+  border: 1px solid #99a7d0;
+  border-radius: 18px 5px 12px 5px;
+  color: var(--sh-type);
+  pointer-events: auto;
+}
+[data-hud-edition=orbit] #hud-dock svg {
+  color: var(--sh-lit);
+  height: 20px;
+}
+[data-hud-edition=orbit] #hud-dock kbd {
+  display: none;
+}
+[data-hud-edition=orbit] #hud-dock [data-action=go] {
+  left: 0;
+  bottom: 0;
+  border-color: var(--sh-lit);
+  color: white;
+  background: #252c3c;
+}
+[data-hud-edition=orbit] #hud-dock [data-action=log] {
+  left: 44px;
+  bottom: 59px;
+}
+[data-hud-edition=orbit] #hud-dock [data-action=camera-open] {
+  left: 111px;
+  bottom: 105px;
+}
+[data-hud-edition=orbit] #hud-dock [data-action=skate] {
+  right: 0;
+  top: 0;
+}
+[data-hud-edition=orbit] #hud-dock [data-action=more] {
+  right: 0;
+  bottom: 0;
+  width: 105px;
+  height: 50px;
+  flex-direction: row;
+}
+[data-hud-edition=orbit][data-hud-ready] #arrival-tour {
+  bottom: 194px;
+}
+@media (max-width: 850px), (pointer: coarse) {
+  [data-hud-ready] #hud-location,
+  [data-hud-edition=concourse][data-hud-ready] #hud-location {
+    top: 8px;
+    left: 8px;
+    width: auto;
+    max-width: 51vw;
+    padding: 6px 9px;
+    min-height: 37px;
+    border-radius: 5px;
+  }
+  #hud-location b {
+    font-size: 13px;
+  }
+  #hud-location small {
+    font-size: 9px;
+  }
+  #hud-location a {
+    font-size: 13px;
+  }
+  [data-hud-ready] #minimap-button:not([hidden]) {
+    width: clamp(96px, 23vw, 132px);
+    height: clamp(96px, 23vw, 132px);
+    right: 8px;
+    top: 8px;
+  }
+  body[data-hud-edition][data-hud-ready] #hud-dock {
+    display: flex;
+    left: 8px;
+    top: 56px;
+    bottom: auto;
+    right: auto;
+    transform: none;
+    width: auto;
+    height: auto;
+    max-width: calc(100vw - 128px);
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: 2px;
+    background: var(--sh-ink);
+    color: var(--sh-type);
+    border: 1px solid var(--sh-line);
+    border-radius: 5px;
+    pointer-events: auto;
+  }
+  body[data-hud-edition] #hud-dock button {
+    position: static;
+    width: auto;
+    height: 44px;
+    min-width: 45px;
+    padding: 0 6px;
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--sh-ink);
+    color: var(--sh-type);
+    font-size: 13px;
+  }
+  body[data-hud-edition] #hud-dock button[data-action=go] {
+    background: var(--sh-lit);
+    color: #192133;
+  }
+  body[data-hud-edition] #hud-dock button[data-action=camera-open],
+  body[data-hud-edition] #hud-dock button[data-action=skate],
+  body[data-hud-edition] #hud-dock svg,
+  body[data-hud-edition] #hud-dock kbd {
+    display: none;
+  }
+  body[data-hud-edition][data-hud-ready] .top {
+    display: none;
+  }
+  body[data-hud-edition][data-hud-ready] .corner {
+    left: 10px;
+    bottom: 174px;
+  }
+  body[data-hud-edition][data-hud-ready] #arrival-tour {
+    top: 116px;
+    bottom: auto;
+    left: 8px;
+    right: 8px;
+    max-height: calc(100dvh - 330px);
+  }
+  body[data-hud-edition][data-hud-ready] #settings-menu {
+    top: 110px;
+    bottom: auto;
+    left: 10px;
+    right: auto;
+  }
+  [data-hud-ready] #chat-lines {
+    max-width: 55vw;
+  }
+}
+@media (max-width: 360px) {
+  body[data-hud-edition] #hud-dock button {
+    min-width: 40px;
+    padding: 0 4px;
+    font-size: 12px;
+  }
+}
+@media (min-width: 851px) and (pointer: fine) {
+  [data-hud-edition=flight][data-hud-ready] #hud-location {
+    border: 1px solid #c9d8cf;
+    border-left: 6px solid var(--sh-lit);
+    padding: 11px 22px 11px 12px;
+    border-radius: 2px 2px 14px 2px;
+    background:
+      linear-gradient(
+        115deg,
+        #103239,
+        #081e24);
+  }
+  [data-hud-edition=flight] #hud-location b {
+    text-transform: uppercase;
+    font-size: 21px;
+    letter-spacing: .035em;
+  }
+  [data-hud-edition=flight] #hud-dock {
+    padding: 5px 10px 5px 5px;
+    border-radius: 12px 2px 12px 2px;
+    border-bottom: 3px solid #ff802c;
+  }
+  [data-hud-edition=flight] #hud-dock button {
+    font-size: 16px;
+    min-height: 48px;
+    padding: 0 16px;
+  }
+  [data-hud-edition=flight] #hud-dock button[data-action=go] {
+    border-radius: 8px 1px 8px 1px;
+  }
+  [data-hud-edition=concourse][data-hud-ready] #hud-location {
+    width: 202px;
+    max-width: 202px;
+    height: 91px;
+    box-sizing: border-box;
+    padding: 10px 11px 10px 60px;
+    display: block;
+    overflow: hidden;
+  }
+  [data-hud-edition=concourse] #hud-location::before {
+    content: attr(data-deck-number);
+    position: absolute;
+    left: 7px;
+    top: 18px;
+    width: 45px;
+    height: 47px;
+    display: grid;
+    place-items: center;
+    background: #e64828;
+    color: #fff9e8;
+    border-radius: 3px;
+    font: bold 28px/1 Bahnschrift, sans-serif;
+  }
+  [data-hud-edition=concourse] #hud-location a {
+    display: inline-block;
+    font: 700 10px/1 Consolas, monospace;
+    letter-spacing: .21em;
+    border: 0;
+    margin: 0 0 4px;
+  }
+  [data-hud-edition=concourse] #hud-location small {
+    display: none;
+  }
+  [data-hud-edition=concourse] #hud-location b {
+    font-size: 18px;
+    line-height: 1.1;
+  }
+  [data-hud-edition=concourse][data-hud-ready] #hud-dock {
+    width: 202px;
+    top: 106px;
+    border-radius: 0 0 10px 3px;
+  }
+  [data-hud-edition=concourse] #hud-dock button {
+    font-size: 16px;
+    gap: 11px;
+  }
+  [data-hud-edition=concourse][data-hud-ready] .top {
+    left: 228px;
+  }
+  [data-hud-edition=orbit][data-hud-ready] #hud-dock {
+    width: 300px;
+    height: 196px;
+    background:
+      radial-gradient(
+        ellipse 100% 100% at right bottom,
+        transparent 36%,
+        #92efd6 38%,
+        #504b73 40%,
+        #414060 99%,
+        #86dfcf 100%,
+        transparent 101%);
+    border-radius: 100% 0 5px 0;
+    overflow: hidden;
+  }
+  [data-hud-edition=orbit] #hud-dock button:not([data-action=more]) {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    clip-path: var(--sector);
+    background:
+      linear-gradient(
+        138deg,
+        #494667,
+        #1a182f);
+    color: white;
+    display: block;
+  }
+  [data-hud-edition=orbit] #hud-dock button:not([data-action=more]) svg,
+  [data-hud-edition=orbit] #hud-dock button:not([data-action=more]) span {
+    position: absolute;
+    left: var(--label-x);
+    top: var(--label-y);
+    transform: translate(-50%, -90%);
+    white-space: nowrap;
+  }
+  [data-hud-edition=orbit] #hud-dock button:not([data-action=more]) span {
+    transform: translate(-50%, 32%);
+    font-size: 13px;
+  }
+  [data-hud-edition=orbit] #hud-dock button:not([data-action=more]):hover,
+  [data-hud-edition=orbit] #hud-dock button:not([data-action=more]):focus-visible,
+  [data-hud-edition=orbit] #hud-dock button[aria-pressed=true] {
+    background: #414968;
+  }
+  [data-hud-edition=orbit] #hud-dock [data-action=more] {
+    width: 98px;
+    height: 45px;
+    border-radius: 28px 0 5px 0;
+  }
+}
+@media (max-width: 850px), (pointer: coarse) {
+  body[data-hud-ready] #hud-location {
+    height: 42px;
+    max-width: calc(100vw - 128px);
+    overflow: hidden;
+  }
+  #hud-location div {
+    min-width: 0;
+  }
+  #hud-location b {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+@media (pointer: coarse) {
+  body[data-hud-ready] #prompt {
+    display: none !important;
+  }
+}
+#mobile-bar {
+  display: none;
+}
+@media (pointer: coarse) {
+  body[data-hud-ready] {
+    --m-t:max(8px,env(safe-area-inset-top));
+    --m-r:max(10px,env(safe-area-inset-right));
+    --m-b:max(12px,env(safe-area-inset-bottom));
+    --m-l:max(10px,env(safe-area-inset-left));
+    --m-map:clamp(100px,26vw,135px);
+  }
+  body[data-hud-ready][data-hud-edition] #hud-dock {
+    display: none !important;
+  }
+  body[data-hud-ready] #minimap-button:not([hidden]) {
+    right: var(--m-r);
+    top: var(--m-t);
+    width: var(--m-map);
+    height: var(--m-map);
+  }
+  body[data-hud-ready][data-hud-edition] #hud-location {
+    left: var(--m-l);
+    top: var(--m-t);
+    width: auto;
+    max-width: calc(100vw - var(--m-map) - var(--m-r) - var(--m-l) - 12px);
+    height: 46px;
+    box-sizing: border-box;
+    padding: 4px 12px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  body[data-hud-ready] #hud-location a {
+    min-width: 44px;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    padding: 0 6px 0 0;
+  }
+  body[data-hud-ready] #hud-location b {
+    font-size: 15px;
+  }
+  body[data-hud-ready] #mobile-bar {
+    position: fixed;
+    z-index: 6;
+    left: var(--m-l);
+    top: calc(var(--m-t) + 52px);
+    display: flex;
+    gap: 4px;
+  }
+  #mobile-bar button {
+    font:
+      650 14px/1.15 Bahnschrift,
+      "Segoe UI",
+      sans-serif;
+    min-height: 46px;
+    min-width: 46px;
+    padding: 0 13px;
+    touch-action: manipulation;
+    cursor: pointer;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  #mobile-bar button {
+    background: var(--sh-ink);
+    border: 1px solid var(--sh-line);
+    color: var(--sh-type);
+    border-radius: 5px;
+    box-shadow: 0 2px 6px #0003;
+  }
+  #mobile-bar [data-key=go] {
+    background: var(--sh-lit);
+    color: #182122;
+    border-color: transparent;
+  }
+  #mobile-bar [data-key=go]::before {
+    content: "↗";
+    font-size: 18px;
+    margin-right: 7px;
+  }
+  #mobile-bar [data-key=hub]::before {
+    content: "☰";
+    margin-right: 7px;
+  }
+  #mobile-bar button:active,
+  [data-hud-ready] .touch button:active {
+    filter: brightness(1.27);
+    transform: translateY(1px);
+  }
+  body[data-hud-ready] .touch {
+    right: var(--m-r);
+    bottom: calc(var(--m-b) + 5px);
+  }
+  body[data-hud-ready] #joystick {
+    left: var(--m-l);
+    bottom: var(--m-b);
+  }
+  body[data-hud-ready] #jump,
+  body[data-hud-ready] #hook,
+  body[data-hud-ready] #crouch,
+  body[data-hud-ready] #use {
+    font:
+      650 13px/1.14 Bahnschrift,
+      "Segoe UI",
+      sans-serif;
+    letter-spacing: .01em;
+    text-transform: none;
+  }
+  body[data-hud-ready] #jump {
+    background: var(--sh-ink);
+    border: 2px solid var(--sh-lit);
+    color: var(--sh-type);
+  }
+  body[data-hud-ready] #hook,
+  body[data-hud-ready] #crouch {
+    background: var(--sh-ink);
+    color: var(--sh-type);
+    border: 1px solid var(--sh-line);
+    min-height: 46px;
+  }
+  body[data-hud-ready] .touch #use:not([hidden]) {
+    background: var(--sh-lit);
+    color: #152027;
+    min-height: 48px;
+    max-width: 43vw;
+    border: 1px solid var(--sh-ink);
+  }
+  body[data-hud-ready] .corner {
+    left: var(--m-l);
+    bottom: calc(var(--m-b) + 148px);
+  }
+  body[data-hud-ready] #chat-open,
+  body[data-hud-ready] #chat-hide {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  body[data-hub-open] .touch,
+  body[data-hub-open] #joystick,
+  body[data-hub-open] .corner {
+    visibility: hidden;
+  }
+  body[data-hud-ready] .sheet:not([hidden]) .card {
+    max-height: calc(100dvh - var(--m-map) - var(--m-t) - var(--m-b) - 12px);
+    box-sizing: border-box;
+    overflow: auto;
+  }
+  body[data-hud-ready] .sheet:not([hidden]) {
+    box-sizing: border-box;
+    padding-top: calc(var(--m-map) + var(--m-t) + 5px);
+    padding-bottom: var(--m-b);
+  }
+  body[data-hud-ready]:has(.sheet:not([hidden])) #minimap-button:not([hidden]) {
+    z-index: 16;
+    pointer-events: none;
+  }
+  body[data-hud-edition=concourse][data-hud-ready] #hud-location {
+    border: 0;
+    border-top: 3px solid #f55636;
+    border-radius: 7px 7px 0 0;
+    background: #fff1cf;
+    color: #102c66;
+    height: 54px;
+    width: min(208px, calc(100vw - var(--m-map) - 36px));
+    padding-left: 46px;
+  }
+  body[data-hud-edition=concourse] #hud-location:before {
+    content: attr(data-deck-number);
+    position: absolute;
+    left: 6px;
+    top: 8px;
+    display: grid;
+    place-items: center;
+    width: 35px;
+    height: 35px;
+    background: #e94727;
+    color: #fff;
+    font: 700 21px Bahnschrift, sans-serif;
+    border-radius: 3px;
+  }
+  body[data-hud-edition=concourse] #hud-location a {
+    min-width: 0;
+    font-size: 11px;
+  }
+  body[data-hud-edition=concourse] #hud-location small {
+    display: none;
+  }
+  body[data-hud-edition=concourse][data-hud-ready] #mobile-bar {
+    top: calc(var(--m-t) + 54px);
+    width: min(208px, calc(100vw - var(--m-map) - 36px));
+    gap: 0;
+    box-sizing: border-box;
+    padding: 0 4px 4px;
+    background: #fff1cf;
+    border-bottom: 3px solid #102c66;
+    border-radius: 0 0 7px 7px;
+  }
+  body[data-hud-edition=concourse] #mobile-bar [data-key=go] {
+    background: #102c66;
+    color: white;
+    flex: 1;
+    padding: 0 4px;
+  }
+  body[data-hud-edition=concourse] #mobile-bar [data-key=hub] {
+    border: 0;
+    color: #102c66;
+    background: transparent;
+    box-shadow: none;
+    padding: 0 6px;
+  }
+  body[data-hud-edition=concourse] #mobile-bar [data-key=hub]::before {
+    content: none;
+  }
+  body[data-hud-edition=orbit][data-hud-ready] #mobile-bar {
+    top: calc(var(--m-t) + var(--m-map) + 7px);
+    right: var(--m-r);
+    left: auto;
+  }
+  body[data-hud-edition=orbit] #mobile-bar button {
+    border: 1px solid #9df1d6;
+    border-radius: 24px 5px 24px 24px;
+    background: #211e3e;
+    padding: 0 15px;
+  }
+  body[data-hud-edition=orbit] #mobile-bar [data-key=hub]::before {
+    content: "◈";
+    color: #9df1d6;
+  }
+  @media (orientation: landscape) {
+    body[data-hud-ready] {
+      --m-map:clamp(96px,23dvh,118px);
+    }
+    body[data-hud-ready] .sheet:not([hidden]) {
+      padding: var(--m-t) calc(var(--m-map) + var(--m-r) + 8px) var(--m-b) var(--m-l);
+    }
+    body[data-hud-ready] .sheet:not([hidden]) .card {
+      max-height: calc(100dvh - var(--m-t) - var(--m-b));
+      max-width: 100%;
+    }
+    body[data-hud-ready] .corner {
+      left: calc(var(--m-l) + 140px);
+      bottom: var(--m-b);
+    }
+    body[data-hud-ready] .touch #use:not([hidden]) {
+      position: absolute;
+      right: 76px;
+      bottom: 67px;
+      width: 146px;
+    }
+    body[data-hud-edition=orbit][data-hud-ready] #mobile-bar {
+      right: calc(var(--m-r) + var(--m-map) + 7px);
+      top: var(--m-t);
+    }
+  }
+}
+@media (pointer: coarse) {
+  @media (orientation: landscape) {
+    body[data-hud-edition][data-hud-ready] .corner {
+      left: calc(var(--m-l) + 140px);
+      bottom: var(--m-b);
+    }
+  }
+}
+@media (pointer: coarse) {
+  #places:has(#v2-goto-search:not(:placeholder-shown)) [data-mobile-intro] {
+    display: none !important;
+  }
+  #places:has(#v2-goto-search:not(:placeholder-shown)) .card {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  @media (orientation: landscape) {
+    #places:has(#v2-goto-search:not(:placeholder-shown)) .eyebrow {
+      display: none;
+    }
+    #places:has(#v2-goto-search:not(:placeholder-shown)) h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+    #places:has(#v2-goto-search:not(:placeholder-shown)) p {
+      margin: 4px 0;
+    }
+  }
+}
+body[data-hud-edition=flight] {
+  --ink:#10282b;
+  --face:#102629;
+  --fg:#fff3d7;
+  --metal:#dda65e;
+  --tint:#f4c67b;
+  --hair:#977844;
+  --soft:#243a3b;
+  --title:Bahnschrift,"Segoe UI",sans-serif;
+  --paper:linear-gradient(
+      129deg,#264347,#0d2427 65%,#173638);
+  --shape:3px 15px 3px 15px;
+}
+body[data-hud-edition=concourse] {
+  --ink:#103e35;
+  --face:#f8f0d9;
+  --fg:#123d34;
+  --metal:#bc744c;
+  --tint:#f36a41;
+  --hair:#aaa181;
+  --soft:#eee6d0;
+  --title:Georgia,"Times New Roman",serif;
+  --paper:linear-gradient(
+      115deg,#fffae8,#f2e6c9);
+  --shape:16px 3px 16px 3px;
+}
+body[data-hud-edition=orbit] {
+  --ink:#17152c;
+  --face:#19172d;
+  --fg:#f4efff;
+  --metal:#a4ece4;
+  --tint:#bdadfd;
+  --hair:#777397;
+  --soft:#2e2a48;
+  --title:"Segoe UI",sans-serif;
+  --paper:linear-gradient(
+      127deg,#36304c,#19182f 56%,#202d40);
+  --shape:24px 6px 24px 6px;
+}
+body[data-hud-ready] {
+  --sh-ink:var(--ink);
+  --sh-lit:var(--tint);
+  --sh-type:#fff8e7;
+  --sh-line:var(--hair);
+}
+#ship-directory[hidden],
+#ship-directory [hidden] {
+  display: none !important;
+}
+#ship-directory {
+  position: fixed;
+  z-index: 13;
+  box-sizing: border-box;
+  left: 24px;
+  bottom: 88px;
+  width: min(444px, 42vw);
+  max-height: calc(100dvh - 194px);
+  display: flex;
+  flex-direction: column;
+  color: var(--fg);
+  background: var(--paper);
+  border: 1px solid var(--hair);
+  border-radius: var(--shape);
+  box-shadow:
+    inset 0 0 0 3px var(--face),
+    inset 0 0 0 4px color-mix(in srgb, var(--metal) 44%, transparent),
+    0 10px 40px #0005;
+  overflow: hidden;
+  font: 500 15px/1.25 "Segoe UI", sans-serif;
+  text-align: left;
+}
+#ship-directory * {
+  box-sizing: border-box;
+}
+#ship-directory header {
+  padding: 18px 20px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+#ship-directory small {
+  display: block;
+  font: 700 10px/1.45 Consolas, monospace;
+  letter-spacing: .17em;
+}
+#ship-directory h2 {
+  margin: 2px 0 0;
+  font: 600 33px/1.04 var(--title);
+  letter-spacing: -.04em;
+  color: inherit;
+}
+#ship-directory button,
+#ship-directory select {
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: normal;
+}
+#ship-directory .at-x {
+  flex: none;
+  width: 45px;
+  height: 45px;
+  border: 1px solid var(--hair);
+  border-radius: 50%;
+  background: transparent;
+  font-size: 25px;
+}
+#ship-directory .at-body {
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0 15px 6px;
+}
+#ship-directory .at-poster {
+  display: flex;
+  position: relative;
+  width: 100%;
+  height: clamp(150px, 25vh, 230px);
+  overflow: hidden;
+  text-align: left;
+  border: 1px solid var(--hair);
+  border-radius: calc(1px + .3em);
+  background-color: var(--ink);
+  background-image:
+    linear-gradient(
+      90deg,
+      #07161bb8,
+      transparent 73%),
+    var(--arcade-art);
+  background-size: cover;
+  background-position: 60% center;
+  color: #fff8e6;
+  padding: 20px;
+  align-items: flex-end;
+  isolation: isolate;
+}
+.at-poster::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid #f8e9c64a;
+  pointer-events: none;
+}
+#ship-directory .at-copy {
+  position: relative;
+  display: block;
+  z-index: 1;
+  text-shadow: 0 1px 6px #0008;
+}
+#ship-directory .at-copy strong {
+  display: block;
+  margin-top: 8px;
+  font: 600 clamp(28px, 3vw, 46px)/.95 var(--title);
+  letter-spacing: -.05em;
+}
+#ship-directory .at-arrow {
+  position: absolute;
+  right: 14px;
+  bottom: 13px;
+  background: var(--face);
+  color: var(--fg);
+  border: 1px solid var(--hair);
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 20px;
+}
+#ship-directory .at-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--hair);
+  margin: 8px 0;
+}
+#ship-directory .at-tabs button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 44px;
+  position: relative;
+}
+.at-tabs button[aria-pressed=true]::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 18%;
+  right: 18%;
+  height: 3px;
+  background: var(--metal);
+}
+#ship-directory .at-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+#ship-directory .at-actions button {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  text-align: left;
+  min-width: 0;
+  min-height: 47px;
+  background: var(--soft);
+  border: 1px solid color-mix(in srgb, var(--hair) 50%, transparent);
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 7px 10px;
+}
+.at-actions svg {
+  width: 21px;
+  height: 21px;
+  flex: none;
+}
+.at-actions i {
+  margin-left: auto;
+  font: 20px Georgia, serif;
+}
+#ship-directory footer {
+  border-top: 1px solid var(--hair);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  color: inherit;
+  font-size: 12px;
+}
+#ship-directory select {
+  border: 1px solid var(--hair);
+  background: var(--face);
+  border-radius: 4px;
+  padding: 4px 6px;
+  min-height: 32px;
+  font-size: 13px;
+}
+#ship-directory button:focus-visible,
+#ship-directory select:focus-visible {
+  outline: 2px solid var(--metal);
+  outline-offset: -3px;
+}
+#ship-directory .at-actions button:hover {
+  box-shadow: inset 3px 0 var(--metal);
+}
+#ship-directory button:active {
+  filter: brightness(.9);
+}
+@media (prefers-reduced-motion: no-preference) {
+  #ship-directory:not([hidden]) {
+    animation: at-arrive .18s ease-out;
+  }
+  @keyframes at-arrive {
+    from {
+      opacity: .45;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+body[data-hud-ready][data-hud-edition] #hud-location a svg {
+  width: 42px;
+  height: 34px;
+  display: block;
+}
+body[data-hud-ready][data-hud-edition] #hud-location a span {
+  display: block;
+  text-align: center;
+  font: 700 9px/1.15 Consolas, monospace;
+  letter-spacing: .24em;
+}
+body[data-hud-ready][data-hud-edition] #hud-location a {
+  padding: 0 9px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: inherit;
+  text-decoration: none;
+}
+body[data-hud-ready][data-hud-edition] #minimap-button:not([hidden]) {
+  border: 3px solid var(--ink);
+  outline: 1px solid var(--metal);
+  box-shadow:
+    0 0 0 3px var(--ink),
+    0 0 0 4px var(--hair),
+    0 4px 15px #0007;
+}
+body[data-hud-ready] #minimap-deck {
+  background: var(--ink);
+  border-color: var(--metal);
+  color: #fff5dc;
+  letter-spacing: .14em;
+}
+body[data-hud-ready] .tour-guide-tag,
+body[data-hud-ready] #prompt {
+  background: var(--ink);
+  border-color: var(--metal);
+  color: #fff5e5;
+}
+body[data-hud-ready] .top button,
+body[data-hud-ready] .chat-buttons button {
+  background: var(--ink) !important;
+  border: 1px solid var(--hair) !important;
+  border-radius: 4px !important;
+  color: #fff6e6 !important;
+}
+body[data-hud-edition=concourse] #ship-directory h2,
+body[data-hud-edition=concourse] #ship-directory .at-copy strong {
+  font-weight: 500;
+}
+body[data-hud-edition=concourse] #ship-directory h2 {
+  font-style: italic;
+}
+body[data-hud-edition=concourse] #ship-directory .at-actions button {
+  border: 0;
+  border-bottom: 1px solid #afa585;
+  border-radius: 0;
+  background: transparent;
+}
+body[data-hud-edition=flight] #ship-directory header {
+  border-left: 5px solid #ce9552;
+}
+body[data-hud-edition=orbit] #ship-directory {
+  border-color: #bb9de1;
+  box-shadow:
+    inset 0 0 0 3px #1e1e37,
+    0 0 0 1px #a1e6ec,
+    0 5px 32px #29234780;
+}
+body[data-hud-edition=orbit] #ship-directory .at-copy strong {
+  font-weight: 350;
+}
+@media (min-width: 851px) and (pointer: fine) {
+  body[data-hud-ready][data-hud-edition] #hud-location {
+    box-sizing: border-box;
+    top: 20px;
+    left: 20px;
+    max-width: 41vw;
+    min-height: 62px;
+    padding: 9px 18px 9px 11px;
+    border: 1px solid var(--hair);
+    border-radius: var(--shape);
+    background: var(--paper);
+    color: var(--fg);
+    box-shadow:
+      inset 0 0 0 3px var(--face),
+      inset 0 0 0 4px color-mix(in srgb, var(--metal) 35%, transparent),
+      0 4px 14px #0004;
+  }
+  body[data-hud-ready][data-hud-edition] #hud-location b {
+    font: 600 23px/1.05 var(--title);
+    letter-spacing: -.03em;
+  }
+  body[data-hud-edition=concourse][data-hud-ready] #hud-location {
+    display: flex;
+    width: 212px;
+    height: auto;
+    min-height: 72px;
+    border-radius: 12px 3px 0 0;
+  }
+  body[data-hud-edition=concourse] #hud-location::before {
+    content: none;
+  }
+  body[data-hud-edition=concourse] #hud-location small {
+    display: block;
+    color: #815434;
+  }
+  body[data-hud-edition=concourse][data-hud-ready] #hud-dock {
+    top: 91px;
+    left: 20px;
+    width: 212px;
+    background: var(--paper);
+    color: var(--fg);
+    border: 1px solid var(--hair);
+    border-top: 0;
+    border-radius: 0 0 12px 3px;
+    box-shadow: 0 4px 12px #0004;
+  }
+  body[data-hud-edition=concourse] #hud-dock button {
+    font-weight: 550;
+    min-height: 45px;
+  }
+  body[data-hud-edition=concourse] #hud-dock button[data-action=go] {
+    background: #16473b;
+    color: #fff4ce;
+    border-radius: 7px 1px 7px 1px;
+  }
+  body[data-hud-edition=concourse][data-hud-ready] .top {
+    left: 244px;
+  }
+  body[data-hud-edition=concourse][data-hud-ready] #ship-directory {
+    top: 20px;
+    left: 20px;
+    bottom: auto;
+    max-height: calc(100dvh - 100px);
+  }
+  body[data-hud-edition=flight][data-hud-ready] #hud-dock {
+    background:
+      linear-gradient(
+        175deg,
+        #345357,
+        #102e31 50%,
+        #10282b);
+    border: 1px solid #c19d66;
+    border-bottom: 3px solid #c69559;
+    border-radius: 5px 15px 5px 15px;
+    box-shadow: inset 0 1px #d5c3a1, 0 3px 10px #0006;
+  }
+  body[data-hud-edition=flight] #hud-dock button[data-action=go] {
+    background:
+      linear-gradient(
+        120deg,
+        #f1d7a3,
+        #d59b52);
+    color: #271e17;
+  }
+  body[data-hud-edition=orbit][data-hud-ready] #hud-dock {
+    background:
+      radial-gradient(
+        ellipse 100% 100% at right bottom,
+        transparent 36%,
+        #a9f1df 38%,
+        #796e99 40%,
+        #7565b3 92%,
+        #b6ffed 99%,
+        transparent 101%);
+  }
+  body[data-hud-edition=orbit] #hud-dock button:not([data-action=more]) {
+    background:
+      linear-gradient(
+        135deg,
+        #233741,
+        #323153 45%,
+        #302747 75%,
+        #5a4272);
+    color: #fbf5ff;
+  }
+  body[data-hud-edition=orbit] #ship-directory {
+    right: 20px;
+    bottom: 20px;
+    left: auto;
+  }
+  body[data-hud-ready]:not([data-hud-edition=concourse]) .top {
+    top: 90px;
+  }
+}
+@media (pointer: coarse), (max-width: 850px) {
+  body[data-hud-ready] #ship-directory {
+    left: var(--m-l,10px);
+    right: var(--m-r,10px);
+    bottom: var(--m-b,10px);
+    width: auto;
+    max-height: calc(100dvh - var(--m-map,112px) - var(--m-t,8px) - var(--m-b,12px) - 12px);
+  }
+  #ship-directory header {
+    padding: 12px 15px 8px;
+  }
+  #ship-directory h2 {
+    font-size: 27px;
+  }
+  #ship-directory .at-poster {
+    height: clamp(122px, 22dvh, 197px);
+    padding: 14px;
+  }
+  #ship-directory .at-copy strong {
+    font-size: 34px;
+  }
+  #ship-directory .at-body {
+    padding: 0 10px 8px;
+  }
+  #ship-directory footer {
+    padding: 3px 12px;
+  }
+  #ship-directory select {
+    min-height: 44px;
+  }
+  body[data-hud-ready][data-hud-edition] #hud-location a svg {
+    width: 32px;
+    height: 25px;
+  }
+  body[data-hud-ready][data-hud-edition] #hud-location a span {
+    font-size: 7px;
+  }
+  body[data-hud-ready][data-hud-edition=concourse] #hud-location {
+    background: var(--paper);
+    color: var(--fg);
+    border-top-color: #b68c63;
+  }
+  body[data-hud-ready][data-hud-edition=concourse] #mobile-bar {
+    background: var(--paper);
+    border-bottom-color: var(--ink);
+  }
+  body[data-hud-ready][data-hud-edition=concourse] #mobile-bar [data-key=go] {
+    background: var(--ink);
+    color: #fff6df;
+  }
+  body[data-hud-ready][data-hud-edition=flight] #hud-location {
+    background: var(--paper);
+    border-left-color: var(--metal);
+  }
+  body[data-hud-ready][data-hud-edition=orbit] #hud-location {
+    background: var(--paper);
+    border-bottom-color: var(--metal);
+  }
+}
+@media (orientation: landscape) and (pointer: coarse) {
+  body[data-hud-ready] #ship-directory {
+    top: var(--m-t,8px);
+    left: var(--m-l,10px);
+    right: auto;
+    bottom: var(--m-b,12px);
+    width: min(425px, 58vw);
+    max-height: none;
+  }
+  #ship-directory .at-poster {
+    height: 126px;
+  }
+}
+.at-stamp {
+  display: none;
+  pointer-events: none;
+}
+#hud-location[data-room-art] .at-stamp {
+  display: block;
+  flex: none;
+  background-color: var(--ink);
+  background-position: center;
+  background-size: cover;
+  border: 2px solid var(--face);
+  outline: 1px solid var(--metal);
+  box-shadow: 0 1px 4px #10292740;
+}
+#hud-location[data-room-art=arrival] .at-stamp {
+  background-image: var(--arrival-art);
+}
+#hud-location[data-room-art=arcade] .at-stamp {
+  background-image: var(--arcade-art);
+  background-position: 76% center;
+}
+body[data-hud-edition=flight] #hud-location .at-stamp {
+  border-radius: 50%;
+  filter: sepia(.56) saturate(.86);
+}
+body[data-hud-edition=orbit] #hud-location .at-stamp {
+  border-radius: 16px 5px 16px 5px;
+  filter: hue-rotate(110deg) saturate(.68);
+}
+body[data-hud-edition=orbit] #hud-location[data-room-art=arcade] .at-stamp {
+  filter: none;
+}
+body[data-hud-edition=concourse] #hud-location .at-stamp {
+  transform: rotate(3deg);
+  border: 3px double #fff3ce;
+}
+@media (min-width: 851px) and (pointer: fine) {
+  body[data-hud-ready][data-hud-edition] #hud-location {
+    gap: 10px;
+    min-height: 75px;
+    padding: 9px 14px;
+  }
+  body[data-hud-ready][data-hud-edition] #hud-location a {
+    flex: none;
+  }
+  body[data-hud-ready][data-hud-edition] #hud-location .at-stamp {
+    width: 54px;
+    height: 48px;
+    margin-inline-start: 4px;
+  }
+  body[data-hud-ready][data-hud-edition=concourse] #hud-location {
+    width: 255px;
+    height: 83px;
+    min-height: 83px;
+  }
+  body[data-hud-ready][data-hud-edition=concourse] #hud-location a {
+    padding-right: 7px;
+  }
+  body[data-hud-ready][data-hud-edition=concourse] #hud-location .at-stamp {
+    margin-left: auto;
+  }
+  body[data-hud-ready][data-hud-edition=concourse] #hud-dock {
+    width: 255px;
+    top: 103px;
+  }
+  body[data-hud-ready][data-hud-edition=concourse] .top {
+    left: 288px;
+  }
+  body[data-hud-ready][data-hud-edition=orbit] #hud-dock {
+    bottom: 76px;
+    right: 18px;
+    padding: 0;
+  }
+  body[data-hud-ready][data-hud-edition=orbit] #hud-dock button:not([data-action=more]) {
+    background:
+      radial-gradient(
+        ellipse at 100% 100%,
+        #262542 42%,
+        #302b49 62%,
+        #464361 89%,
+        #8c9dba 96%,
+        #9ccfd3 100%);
+  }
+  body[data-hud-edition=flight] #hud-dock::before {
+    content: "";
+    position: absolute;
+    left: 13px;
+    right: 13px;
+    top: -3px;
+    height: 3px;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        #bc9e71 0 1px,
+        transparent 1px 9px);
+    pointer-events: none;
+  }
+}
+@media (pointer: coarse), (max-width: 850px) {
+  body[data-hud-ready][data-hud-edition] #hud-location {
+    gap: 6px;
+    padding: 4px 8px;
+  }
+  body[data-hud-ready][data-hud-edition] #hud-location a {
+    padding-right: 4px;
+    min-width: 30px;
+  }
+  body[data-hud-ready][data-hud-edition=concourse] #hud-location {
+    width: min(225px, calc(100vw - var(--m-map) - 36px));
+  }
+  body[data-hud-ready][data-hud-edition=concourse] #hud-location:before {
+    content: none;
+  }
+  body[data-hud-ready][data-hud-edition=concourse] #hud-location small {
+    display: block;
+    color: #784b32;
+    font-size: 9px;
+  }
+  body[data-hud-ready][data-hud-edition=concourse] #mobile-bar {
+    width: min(225px, calc(100vw - var(--m-map) - 36px));
+  }
+  body[data-hud-ready][data-hud-edition] #hud-location .at-stamp {
+    width: 38px;
+    height: 31px;
+    margin-left: auto;
+  }
+  body[data-hud-ready][data-hub-open] #mobile-bar {
+    visibility: hidden;
+  }
+}
+@media (max-width: 365px) {
+  body[data-hud-ready][data-hud-edition] #hud-location .at-stamp {
+    width: 28px;
+    height: 26px;
+  }
+}
+body[data-hud-edition=flight] #ship-directory {
+  background:
+    repeating-linear-gradient(
+      118deg,
+      #f3cc9804 0 1px,
+      transparent 1px 4px),
+    var(--paper);
+}
+body[data-hud-edition=flight] #ship-directory header {
+  border: 0;
+  background:
+    linear-gradient(
+      90deg,
+      #daa766 0 4px,
+      transparent 4px);
+  position: relative;
+}
+body[data-hud-edition=flight] #ship-directory header small {
+  color: #e9c388;
+}
+body[data-hud-edition=flight] #ship-directory .at-tabs button[aria-pressed=true] {
+  background:
+    linear-gradient(
+      0deg,
+      #d6ad6833,
+      transparent 75%);
+  color: #ffdc9f;
+}
+body[data-hud-edition=flight] #ship-directory .at-poster {
+  border: 3px double #a68756;
+  border-radius: 2px 14px 2px 14px;
+}
+body[data-hud-edition=concourse] #ship-directory .at-poster {
+  border-radius: 2px 11px 2px 11px;
+}
+body[data-hud-edition=concourse] #ship-directory footer {
+  border-top: 1px dashed var(--hair);
+  background:
+    linear-gradient(
+      90deg,
+      #d7cbaa38,
+      transparent 80%);
+}
+body[data-hud-edition=concourse] #ship-directory .at-tabs button[aria-pressed=true] {
+  color: #12503c;
+  background:
+    repeating-linear-gradient(
+      -50deg,
+      #b5ac8012 0px 1px,
+      transparent 1px 4px);
+}
+body[data-hud-edition=orbit] #ship-directory header {
+  background:
+    radial-gradient(
+      ellipse at 5% -90%,
+      #aedac85c,
+      transparent 66%);
+}
+body[data-hud-edition=orbit] #ship-directory .at-poster {
+  border-radius: 16px 5px 16px 5px;
+  border-color: #9185c5;
+}
+body[data-hud-edition=orbit] #ship-directory .at-tabs {
+  border: 1px solid #78758c;
+  border-radius: 30px;
+  overflow: hidden;
+  gap: 2px;
+  padding: 2px;
+}
+body[data-hud-edition=orbit] #ship-directory .at-tabs button {
+  border-radius: 30px;
+  min-height: 44px;
+}
+body[data-hud-edition=orbit] #ship-directory .at-tabs button[aria-pressed=true] {
+  background:
+    linear-gradient(
+      115deg,
+      #c5bdec,
+      #a3dedc);
+  color: #1c2433;
+}
+body[data-hud-edition=orbit] #ship-directory .at-tabs button[aria-pressed=true]::after {
+  content: none;
+}
+@media (min-width: 851px) and (pointer: fine) {
+  body[data-hud-edition=concourse][data-hub-open] .top {
+    visibility: hidden;
+  }
+}
+#hud-collapse {
+  margin-right: auto;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 13px;
+}
+#hud-restore {
+  position: fixed;
+  z-index: 6;
+  left: max(13px, env(safe-area-inset-left));
+  top: max(14px, env(safe-area-inset-top));
+  min-height: 44px;
+  background: var(--paper);
+  color: var(--fg);
+  border: 1px solid var(--metal);
+  border-radius: var(--shape);
+  padding: 0 13px;
+  font: 600 14px/1.2 "Segoe UI", sans-serif;
+  cursor: pointer;
+}
+#hud-restore[hidden],
+body[data-compact-hud] :is(#hud-location, #hud-dock, #mobile-bar, .top, .corner, #backpack) {
+  display: none !important;
+}
+body[data-hud-ready] .sheet .card,
+body[data-hud-ready] :is(#camera-panel, #settings-menu) {
+  background: var(--paper);
+  color: var(--fg);
+  border: 1px solid var(--hair);
+  border-radius: var(--shape);
+  box-shadow:
+    0 8px 48px #0006,
+    inset 0 0 0 3px var(--face),
+    inset 0 0 0 4px color-mix(in srgb, var(--metal) 35%, transparent);
+}
+body[data-hud-ready] .sheet .card h2,
+body[data-hud-ready] #camera-title {
+  font-family: var(--title);
+  color: var(--fg);
+  letter-spacing: -.035em;
+}
+body[data-hud-ready] .sheet .card :is(p, .eyebrow, .legend, small, label),
+body[data-hud-ready] #camera-panel :is(label, output) {
+  color: var(--fg);
+}
+body[data-hud-ready] .sheet .card :is(button, select, input),
+body[data-hud-ready] :is(#settings-menu, #camera-panel) :is(button, select) {
+  background-color: var(--soft);
+  border-color: var(--hair);
+  color: var(--fg);
+}
+body[data-hud-ready] #camera-panel input[type=range] {
+  accent-color: var(--metal);
+}
+body[data-hud-ready] .sheet .card [data-close],
+body[data-hud-ready] :is(#hud-settings-close, #camera-close) {
+  border-color: var(--metal);
+}
+body[data-hud-ready] #settings-menu:not([hidden]) {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  max-height: 72dvh;
+  overflow: auto;
+  z-index: 14;
+  padding: 10px;
+}
+body[data-hud-ready] #ship-directory footer {
+  align-items: center;
+}
+@media (pointer: coarse) {
+  body[data-hud-ready] #settings-menu:not([hidden]) {
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - var(--m-map) - 32px);
+    top: calc(50% + var(--m-map)/3);
+  }
+}
+body[data-hud-ready] #minimap-button:popover-open {
+  position: fixed !important;
+  inset: auto var(--m-r,18px) auto auto !important;
+  top: var(--m-t,18px) !important;
+  margin: 0 !important;
+  padding: 0;
+  pointer-events: none;
+}
+body[data-hud-ready]:has(.sheet:not([hidden]), .ship-log:not([style*="display: none"]):not([style*="display:none"])) #minimap-button:not([hidden]) {
+  z-index: 70;
+  pointer-events: none;
+}
+body[data-hud-ready] :is(#carry-panel, #fur-settings, #graphics-settings, #controls-settings) {
+  background: var(--paper);
+  color: var(--fg);
+  border: 1px solid var(--metal);
+  border-radius: var(--shape);
+}
+body[data-hud-ready] :is(#carry-panel, #fur-settings, #graphics-settings, #controls-settings) :is(h2, legend, p, label) {
+  color: var(--fg);
+}
+body[data-hud-ready] :is(#carry-panel, #fur-settings, #graphics-settings, #controls-settings) button:not(.carry-slot) {
+  border-color: var(--hair);
+  background: var(--soft);
+  color: var(--fg);
+}
+body[data-hud-ready] .ship-log button {
+  border-color: var(--metal) !important;
+}
+@media (pointer: coarse), (max-width: 850px) {
+  body[data-hud-ready] dialog:is(#carry-panel, #fur-settings, #graphics-settings, #controls-settings)[open] {
+    box-sizing: border-box;
+    max-height: calc(100dvh - var(--m-map,110px) - 36px);
+    margin: auto auto var(--m-b,12px);
+    overflow-y: auto;
+  }
+  body[data-hud-ready] .ship-log {
+    box-sizing: border-box;
+    padding-top: calc(var(--m-map,110px) + var(--m-t,8px));
+    overflow: auto;
+  }
+}
+body[data-hud-ready] #carry-panel .carry-slot {
+  border: 1px solid var(--hair);
+  background: var(--soft);
+  color: var(--fg);
+}
+body[data-hud-ready] #carry-panel .carry-slot:focus-visible {
+  outline: 2px solid var(--metal);
+}
+body[data-hud-ready]:has(.invasion[style*="display: flex"], .paw-pool[style*="display: block"], .paw-pool[style*="display: flex"], .pinball[style*="display: block"], .pinball[style*="display: flex"]) #minimap-button:not([hidden]) {
+  z-index: 75;
+  pointer-events: none;
+  opacity: 1;
+}
+body[data-hud-ready] :is(.invasion, .paw-pool, .pinball) button[aria-label*=lose i],
+body[data-hud-ready] :is(.invasion, .paw-pool, .pinball) > button:first-of-type {
+  right: calc(var(--m-r,18px) + var(--m-map,195px) + 12px) !important;
+}
+body[data-hud-ready].camera-mode #minimap-button {
+  opacity: 1;
+}
+@media (orientation: landscape) and (pointer: coarse) {
+  body[data-hud-ready] .sheet:not([hidden]):has(.card) {
+    box-sizing: border-box;
+    padding: var(--m-t,6px) calc(var(--m-map,100px) + var(--m-r,10px) + 12px) var(--m-b,8px) var(--m-l,10px);
+  }
+  body[data-hud-ready] .sheet:not([hidden]) .card {
+    max-width: 100%;
+    min-width: 0;
+  }
+  body[data-hud-ready] .ship-log {
+    padding: 5px calc(var(--m-map,100px) + 20px) 5px 8px;
+    gap: 3px !important;
+    justify-content: center !important;
+  }
+  body[data-hud-ready] .ship-log > canvas {
+    max-height: calc(100dvh - 150px) !important;
+    width: auto !important;
+    max-width: 100% !important;
+    object-fit: contain;
+  }
+  body[data-hud-ready] .ship-log > div {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  body[data-hud-ready] dialog:is(#carry-panel, #fur-settings, #graphics-settings, #controls-settings)[open] {
+    max-height: calc(100dvh - 16px);
+    max-width: calc(100vw - var(--m-map) - 32px);
+    margin: auto;
+  }
+}
+#hud-edition-toggle,
+#hud-editions button {
+  background: var(--soft);
+  color: var(--fg);
+  border: 1px solid var(--hair);
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: 5px;
+}
+#hud-editions:not([hidden]) {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px 10px 8px;
+}
+#hud-editions button[aria-pressed=true] {
+  border: 2px solid var(--metal);
+  font-weight: 700;
+}
+@media (orientation: landscape) and (pointer: coarse) {
+  body[data-hud-ready] .sheet:not([hidden]):has(.card) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body[data-hud-ready] #map-sheet .card {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 14px;
+  }
+  body[data-hud-ready] #map-canvas {
+    width: min(100%, calc((100dvh - 155px)*2.4));
+    margin: 4px auto;
+  }
+  body[data-hud-ready] #map-sheet .map-head {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+  body[data-hud-ready] #map-sheet .legend {
+    margin: 3px 0;
+  }
+}
+body[data-hud-edition=flight] {
+  --arcade-art:url(arcade-flight.webp);
+}
+body[data-hud-edition=concourse] {
+  --arcade-art:url(arcade-concourse.webp);
+}
+body[data-hud-edition=orbit] {
+  --arcade-art:url(arcade-orbit.webp);
+}
+:root {
+  --arrival-art:url(arrival-stamp.webp);
+}
+#mobile-bar button[hidden],
+body:not([data-hud-ready]) #hud-restore {
+  display: none !important;
+}
