@@ -144,7 +144,7 @@ for(const [key,name] of Object.entries(editions)){
   });
   choice.dataset.edition=key;choices.append(choice);
 }
-let initial='concourse';
+let initial='orbit';
 try{const saved=localStorage.getItem(preference);if(Object.hasOwn(editions,saved))initial=saved}catch{}
 applyEdition(initial);
 body.append(locationPlate,dock,mobile,hub,restore);
