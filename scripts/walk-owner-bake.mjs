@@ -9,7 +9,8 @@
 // The bake is kept only if the self-check passes: [--poses=200] random poses inside the baked blocks, drawn with and
 // without the hiding through the walk's own createOwnerHiding, none changing more than [--max-pixels=8] pixels by more
 // than 24 levels. It is written to walk-owner-bake.<hash>.json beside the walk script (--site), replacing the build's
-// empty one, or output/perf-walk/owner-bake/<tag>.json. --if-missing skips the bake when that file already holds blocks.
+// empty one, or output/perf-walk/owner-bake/<tag>.json. --if-missing reuses an existing valid bake and fills missing café coverage.
+// --supplement-only adds the café cell to an existing validated bake for the exact same build.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import http from 'node:http';
@@ -18,8 +19,9 @@ import {createHash} from 'node:crypto';
 import WebSocket from 'ws';
 import {build as bundle} from './native-bundle.mjs';
 import {PVS_GRID} from '../src/v2/atrium-pvs.js';
-import {OWNER_BAKE_VERSION,ownerBakeFile,ownerKey} from '../src/v2/owner-hiding.js';
+import {OWNER_BAKE_VERSION,ownerBakeFile,ownerBakeProblem,ownerKey} from '../src/v2/owner-hiding.js';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
+import {cafe,coversCafe,addCafeCell,compactOwnerBlocks} from './walk-owner-hotspots.mjs';
 import {tablesDiffer,withoutMoved} from './walk-owner-bake.scene.js';
 // The bake is for discrete desktop GPUs' piece size (src/v2/desk-piece.js), whatever GPU bakes it: its key holds the size.
 import {DESK_PIECE} from '../src/v2/desk-piece.js';
@@ -104,11 +106,50 @@ async function openPage(n,walk,script){
  await page.ev(script);return {page,setup:await page.ev(`__ownerBake.setup(${JSON.stringify(seed&&{at:seed.at,yaw:seed.yaw})})`)};
 }
 
+// Run the supplemental cell in its actual deck state. Tables are local to this setup.
+async function extendCafe(page,base){
+ const setup=await page.ev(`__ownerBake.setup(${JSON.stringify({at:cafe.at,yaw:cafe.yaw})})`);
+ if(setup.key!==base.key||setup.nearMargin!==base.nearMargin)throw Error('Café scene differs from the base bake');
+ const bounds=[...cafe.cell,...cafe.cell];
+ const raw=await page.ev(`__ownerBake.bake(${JSON.stringify([bounds])},{staticWhole:true})`);
+ const entries=[],blocks=raw.blocks.map(b=>[...b.slice(0,6),b[6].map(row=>{entries.push(row);return entries.length-1;})]);
+ const extra={version:base.version,key:base.key,grid:base.grid,nearMargin:setup.nearMargin,parts:setup.tables.parts,conds:setup.tables.conditions,entries,blocks};
+ const {data}=await page.ev(`__ownerBake.prune(${JSON.stringify(extra)})`);
+ const combined=addCafeCell(base,data);
+ const focus={...combined,blocks:combined.blocks.filter(b=>cafe.cell.every((v,i)=>b[i]===v&&b[i+3]===v))};
+ if(!focus.blocks.length)throw Error('Missing café proof after compaction');
+ const check=await page.ev(`__ownerBake.check(${JSON.stringify(focus)},100,4523)`);
+ if(check.resolved!==check.parts||check.condsResolved!==check.conds||check.poses.length!==100||check.poses.some(p=>p.big>MAX_PIXELS||!p.hidden))throw Error('Café render check failed');
+ console.log('owner bake:',cafe.name,data.entries.length,'proofs, maximum changed pixels',Math.max(...check.poses.map(p=>p.big)));
+ return combined;
+}
+
 const walk=await walkPage();if(!walk.script)throw Error('No walk script named in walk.html');
 const scriptKey=ownerKey(walk.script),out=arg('out',walk.dir?path.join(walk.dir,ownerBakeFile(walk.script)):path.resolve('output/perf-walk/owner-bake',TAG+'.json'));
-if(process.argv.includes('--if-missing')){try{const d=JSON.parse(await fs.readFile(out,'utf8'));if(d.key?.startsWith(scriptKey)&&d.blocks?.length){console.log('owner bake: already baked for',walk.script);process.exit(0);}}catch{}}
+const onlyCafe=process.argv.includes('--supplement-only');
+let previous=null;
+if(onlyCafe||process.argv.includes('--if-missing')){
+ try{previous=JSON.parse(await fs.readFile(out,'utf8'));}catch(error){if(onlyCafe)throw error;}
+ if(previous&&(previous.key!==ownerKey(walk.script,'merge'+DESK_PIECE.discrete)||!previous.blocks?.length||ownerBakeProblem(previous,previous.key)))previous=null;
+ if(onlyCafe&&!previous)throw Error('A valid current-build owner bake is required for --supplement-only');
+ if(previous&&coversCafe(previous)){
+  const compact=compactOwnerBlocks(previous.blocks);
+  if(compact.length<previous.blocks.length){
+   await fs.writeFile(out+'.part',JSON.stringify({...previous,blocks:compact}));await fs.rename(out+'.part',out);
+  }
+  console.log('owner bake: already baked for',walk.script);process.exit(0);
+ }
+}
 const blocks=await region();console.log(`owner bake: ${walk.script}, ${blocks.length} blocks of ${TOP}x${TOP} cells x ${SLABS} slabs, ${PAGES} pages, ${MINUTES} min`);
 const script=(await bundle({entryPoints:['scripts/walk-owner-bake.page.js'],bundle:true,minify:true,format:'iife',write:false,target:'es2022'})).outputFiles[0].text;
+if(previous){
+ const {page}=await openPage(0,walk,script);
+ try{
+  const combined=await extendCafe(page,previous);
+  await fs.writeFile(out+'.part',JSON.stringify(combined));await fs.rename(out+'.part',out);
+ }finally{page.close();}
+ process.exit(0);
+}
 const pages=await Promise.all(Array.from({length:PAGES},(_,n)=>openPage(n,walk,script)));
 // Every page must see the same scene: the same parts and conditions, in the same order.
 const digest=t=>createHash('sha256').update(JSON.stringify(t)).digest('hex');
@@ -133,9 +174,12 @@ const pruned=await pages[0].page.ev(`__ownerBake.prune(${JSON.stringify(data)})`
 await fs.mkdir(path.dirname(out),{recursive:true});await fs.writeFile(out+'.unchecked',JSON.stringify(data));
 const check=data.blocks.length?await pages[0].page.ev(`__ownerBake.check(${JSON.stringify(data)},${POSES})`):{resolved:0,parts:0,condsResolved:0,conds:0,poses:[]},worst=Math.max(0,...check.poses.map(p=>p.big));
 console.log('check:',JSON.stringify({resolved:`${check.resolved}/${check.parts}`,conds:`${check.condsResolved}/${check.conds}`,poses:check.poses.length,worstPixels:worst,maxDelta:Math.max(0,...check.poses.map(p=>p.max)),meanHidden:Math.round(check.poses.reduce((a,p)=>a+p.hidden,0)/Math.max(1,check.poses.length))}));
-for(const {page} of pages)page.close();
+let complete;
+try{
 if(check.resolved!==check.parts||check.condsResolved!==check.conds)throw Error('The walk could not match every baked part and condition; the bake was not kept');
 if(worst>MAX_PIXELS)throw Error(`A pose changed ${worst} pixels (> ${MAX_PIXELS}); the bake was not kept`);
-await fs.writeFile(out+'.part',JSON.stringify(data));await fs.rm(out+'.unchecked',{force:true});await fs.rename(out+'.part',out);
+complete=await extendCafe(pages[0].page,data);
+}finally{for(const {page} of pages)page.close();}
+await fs.writeFile(out+'.part',JSON.stringify(complete));await fs.rm(out+'.unchecked',{force:true});await fs.rename(out+'.part',out);
 console.log(`owner bake: ${done}/${blocks.length} blocks, ${entries.length} entries, ${(Buffer.byteLength(JSON.stringify(data))/1024).toFixed(0)} KB -> ${out} in ${((Date.now()-started)/60e3).toFixed(1)} min`);
 process.exit(0);
