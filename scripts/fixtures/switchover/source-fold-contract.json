@@ -1726,7 +1726,7 @@
     "file": "src/v2/distant-architecture.js",
     "original": "src/v2/distant-architecture.js",
     "mode": "raw",
-    "bodySha256": "8f3cbc4244d3d52d9c0e75eaaa5a0cd0d98b6c605d90b687a3490ffa1bff04eb",
+    "bodySha256": "e4525285b0fbe1e78dfbd488ddf579bac0a87da4b225bc112943ceae8cd1ce94",
     "imports": [
       "./phone-distant.js",
       "three",
@@ -1738,7 +1738,7 @@
     "file": "src/v2/facade.js",
     "original": "src/v2/facade.js",
     "mode": "raw",
-    "bodySha256": "6521f2d3ecf506c1e5b026bea6d6f8fda600da4ae98213167b284428abcafd9f",
+    "bodySha256": "bb4b1efe97824edfe9d4689c25aeb1baae287122ebce0e907e3e0dbbb3d20ba6",
     "imports": [
       "./atrium-architecture.js",
       "./atrium-visibility.js",
@@ -8208,7 +8208,7 @@
     "file": "src/v2/prepared-resource.public.js",
     "original": "src/v2/prepared-resource.js",
     "mode": "public",
-    "bodySha256": "698989bb349b2c0c4b867658f653b3a8d8790115e4403d0a1ed8f314a3af1a58",
+    "bodySha256": "f07ad0b1b9b6e1a12989c9d9e5a80834b7a35babafa38d34a6a09ef345668ab1",
     "imports": [
       "./prepared-codec.public.js",
       "./prepared-fetch.js",

@@ -54,22 +54,34 @@ if(!('colorTexture' in T.BatchedMesh.prototype))Object.defineProperty(T.BatchedM
 // 14 million indices were most of a 15 s batching); a Map when it uses a few of a big shared pool (the desktop ship's
 // pieces), where arrays the pool's size for every piece took longer still.
 const sparse=source=>source.index.count*4<source.attributes.position.count;
-function usedVertices(source){
+// `scratch` ({remap}), kept by a caller that compacts many pieces of one pool, holds one array the size of the biggest
+// vertex list met so far, all -1 between calls: each call marks the vertices it uses and clears them after (release). The
+// desktop's band merge (phone-bands.js) compacts about 2,000 meshes of the 6.2 million-vertex pool, where the Set and
+// Map took about a second.
+function usedVertices(source,scratch=null){
  const index=source.index.array,n=source.attributes.position.count;
  if(!sparse(source)){const remap=new Int32Array(n).fill(-1),ids=new Uint32Array(n);let k=0,i=0;
   for(;i<index.length;i++){const v=index[i];if(v>=n)break;if(remap[v]<0){remap[v]=k;ids[k++]=v;}}
   if(i===index.length)return {ids:ids.subarray(0,k),remap};}
+ else if(scratch){if(!(scratch.remap?.length>=n))scratch.remap=new Int32Array(n).fill(-1);
+  const remap=scratch.remap,ids=new Uint32Array(Math.min(index.length,n));let k=0,i=0;
+  for(;i<index.length;i++){const v=index[i];if(v>=n)break;if(remap[v]<0){remap[v]=k;ids[k++]=v;}}
+  const release=()=>{for(let j=0;j<k;j++)remap[ids[j]]=-1;};
+  if(i===index.length)return {ids:ids.subarray(0,k),remap,release};release();}
  // The Map also takes an index past the vertex list, copying what lies there as the version before did.
  const ids=Array.from(new Set(index)),remap=new Map(ids.map((id,i)=>[id,i]));return {ids,at:v=>remap.get(v)};
 }
-export function compactRenderGeometry(source){
- const used=source.index?usedVertices(source):null,count=used?used.ids.length:source.attributes.position.count,g=new T.BufferGeometry();
- for(const[name,a]of Object.entries(source.attributes)){const s=a.itemSize,from=a.array,values=new from.constructor(count*s);
-  if(!used)values.set(from.subarray(0,count*s));else for(let i=0;i<count;i++){const o=used.ids[i]*s;for(let k=0;k<s;k++)values[i*s+k]=from[o+k];}
-  g.setAttribute(name,new T.BufferAttribute(values,s,a.normalized));}
- // The index type three's setIndex picks for these values.
- if(used){const index=source.index.array,out=new (count>65535?Uint32Array:Uint16Array)(index.length);if(used.remap)for(let i=0;i<index.length;i++)out[i]=used.remap[index[i]];else for(let i=0;i<index.length;i++)out[i]=used.at(index[i]);g.setIndex(new T.BufferAttribute(out,1));}
- g.computeBoundingBox();g.computeBoundingSphere();return g;
+// `bounds: false` leaves out the bounds, for a copy only read for its arrays.
+export function compactRenderGeometry(source,{scratch=null,bounds=true}={}){
+ const used=source.index?usedVertices(source,scratch):null,count=used?used.ids.length:source.attributes.position.count,g=new T.BufferGeometry();
+ try{
+  for(const[name,a]of Object.entries(source.attributes)){const s=a.itemSize,from=a.array,values=new from.constructor(count*s);
+   if(!used)values.set(from.subarray(0,count*s));else for(let i=0;i<count;i++){const o=used.ids[i]*s;for(let k=0;k<s;k++)values[i*s+k]=from[o+k];}
+   g.setAttribute(name,new T.BufferAttribute(values,s,a.normalized));}
+  // The index type three's setIndex picks for these values.
+  if(used){const index=source.index.array,out=new (count>65535?Uint32Array:Uint16Array)(index.length);if(used.remap)for(let i=0;i<index.length;i++)out[i]=used.remap[index[i]];else for(let i=0;i<index.length;i++)out[i]=used.at(index[i]);g.setIndex(new T.BufferAttribute(out,1));}
+ }finally{used?.release?.();}
+ if(bounds){g.computeBoundingBox();g.computeBoundingSphere();}return g;
 }
 // `allBands` (the phone ship) batches every band, not only the low decks. `cull` culls each chunk: its draw list then
 // changes every frame, and on a Galaxy S9 lettering jumped about the screen (chunks drawn with another's matrix), so the

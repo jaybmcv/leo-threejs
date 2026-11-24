@@ -20,16 +20,22 @@ function makeRecord(g, merged) {
   boxes[i] = boxes[i+1] = boxes[i+2] = Infinity;
   boxes[i+3] = boxes[i+4] = boxes[i+5] = -Infinity;
  }
+ // Plain arrays are read directly (what getX and fromBufferAttribute return for them): the desktop's deck merges hold
+ // about 6 million indices, and the accessors took about half a second. Normalized ones go through the accessors.
+ const pa = p.array, ps = p.itemSize, plain = !p.normalized, ia = ix && !ix.normalized ? ix.array : null;
  for (let i = 0; i < count; i++) {
-  point.fromBufferAttribute(p, ix ? ix.getX(i) : i);
-  if (!Number.isFinite(point.x + point.y + point.z)) return null;
+  const v = ia ? ia[i] : ix ? ix.getX(i) : i;
+  let x, y, z;
+  if (plain) { const o = v * ps; x = pa[o]; y = pa[o+1]; z = pa[o+2]; }
+  else { point.fromBufferAttribute(p, v); x = point.x; y = point.y; z = point.z; }
+  if (!Number.isFinite(x + y + z)) return null;
   const j = 6 * (leaves + Math.floor(i / stride));
-  boxes[j] = Math.min(boxes[j], point.x);
-  boxes[j+1] = Math.min(boxes[j+1], point.y);
-  boxes[j+2] = Math.min(boxes[j+2], point.z);
-  boxes[j+3] = Math.max(boxes[j+3], point.x);
-  boxes[j+4] = Math.max(boxes[j+4], point.y);
-  boxes[j+5] = Math.max(boxes[j+5], point.z);
+  boxes[j] = Math.min(boxes[j], x);
+  boxes[j+1] = Math.min(boxes[j+1], y);
+  boxes[j+2] = Math.min(boxes[j+2], z);
+  boxes[j+3] = Math.max(boxes[j+3], x);
+  boxes[j+4] = Math.max(boxes[j+4], y);
+  boxes[j+5] = Math.max(boxes[j+5], z);
  }
  for (let i = leaves - 1; i > 0; i--) {
   for (let axis = 0; axis < 3; axis++) {

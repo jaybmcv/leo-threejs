@@ -47,11 +47,21 @@ export async function installDistantArchitecture(ship,baked,haze,options={}){
   const positions=new Float32Array(b.count*3),colors=new Uint8Array(b.count*3);let at=0;
   for(const {o,start,count,matrix} of b.parts){
    const p=o.geometry.attributes.position,c=o.geometry.attributes.color,ix=o.geometry.index,m=o.material,tint=m.color||new T.Color(1,1,1);
+   // Plain arrays are read directly and the matrix applied as Vector3.applyMatrix4 does it (the same sums in the same
+   // order): the accessors were most of this copy's 0.8 s. Normalized or interleaved ones go through the accessors, as
+   // do vertex colours.
+   const e=matrix.elements,pa=p.normalized||p.isInterleavedBufferAttribute?null:p.array,ps=p.itemSize,ia=ix&&!ix.normalized?ix.array:null,shaded=m.vertexColors&&c;
+   const flatR=Math.round(255*Math.min(1,tint.r*1)),flatG=Math.round(255*Math.min(1,tint.g*1)),flatB=Math.round(255*Math.min(1,tint.b*1));
    for(let i=start*3;i<(start+count)*3;i++){
-    const j=ix?ix.getX(i):i;point.fromBufferAttribute(p,j).applyMatrix4(matrix);positions[at]=point.x;positions[at+1]=point.y;positions[at+2]=point.z;
-    colors[at++]=Math.round(255*Math.min(1,tint.r*(m.vertexColors&&c?c.getX(j):1)));
-    colors[at++]=Math.round(255*Math.min(1,tint.g*(m.vertexColors&&c?c.getY(j):1)));
-    colors[at++]=Math.round(255*Math.min(1,tint.b*(m.vertexColors&&c?c.getZ(j):1)));
+    const j=ia?ia[i]:ix?ix.getX(i):i;let x,y,z;
+    if(pa){const q=j*ps;x=pa[q];y=pa[q+1];z=pa[q+2];}else{point.fromBufferAttribute(p,j);x=point.x;y=point.y;z=point.z;}
+    const w=1/(e[3]*x+e[7]*y+e[11]*z+e[15]);
+    positions[at]=(e[0]*x+e[4]*y+e[8]*z+e[12])*w;positions[at+1]=(e[1]*x+e[5]*y+e[9]*z+e[13])*w;positions[at+2]=(e[2]*x+e[6]*y+e[10]*z+e[14])*w;
+    if(shaded){
+     colors[at++]=Math.round(255*Math.min(1,tint.r*c.getX(j)));
+     colors[at++]=Math.round(255*Math.min(1,tint.g*c.getY(j)));
+     colors[at++]=Math.round(255*Math.min(1,tint.b*c.getZ(j)));
+    }else{colors[at++]=flatR;colors[at++]=flatG;colors[at++]=flatB;}
     if((++processed&16383)===0&&performance.now()-checkpoint>24){await yieldWork();checkpoint=performance.now();}
    }
   }

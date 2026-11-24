@@ -25,3 +25,12 @@ export function preparedFetcher(base,{fetch=globalThis.fetch,wait=ms=>new Promis
   }
  };
 }
+
+// Asks for `name` at once and hands that answer to the first later ask for it; every other ask (and any after) goes to
+// fetchBytes as it comes. An arrival-hall start asks for the ship's list of metadata parts while the hall downloads
+// (prepared-resource.public.js), so the parts are asked for the moment the hall has come: asked for after, its answer
+// waited behind the hall's first frames and the link sat idle about 1.3 s. A failure is held for that later ask.
+export function askedAhead(fetchBytes,name){
+ let early=fetchBytes(name);early.catch(()=>{});
+ return asked=>{if(asked!==name||!early)return fetchBytes(asked);const answer=early;early=null;return answer;};
+}

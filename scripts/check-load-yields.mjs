@@ -62,3 +62,19 @@ await check('compaction keeps the vertices an index uses in first-use order, as 
  const bad=new T.BufferGeometry();bad.setAttribute('position',new T.BufferAttribute(new Float32Array(12).map((_,i)=>i),3));bad.attributes.position.count=3;bad.setIndex([0,1,3,2,1,0]);
  const a=before(bad),b=compactRenderGeometry(bad);assert.deepEqual([...b.index.array],[...a.index.array]);assert.deepEqual([...b.attributes.position.array],[...a.attributes.position.array]);
 });
+await check('the band merge\'s pieces of one shared pool, through one scratch array: the same copies, the scratch left clear',()=>{
+ let seed=11;const rand=n=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed%n;};
+ const vertices=300000,pos=new T.BufferAttribute(new Float32Array(vertices*3).map(()=>rand(1000)/7),3),uv=new T.BufferAttribute(new Float32Array(vertices*2).map(()=>rand(100)/9),2);
+ const scratch={remap:null};
+ for(let k=0;k<60;k++){const g=new T.BufferGeometry();g.setAttribute('position',pos);g.setAttribute('uv',uv);
+  const base=rand(vertices-80000),spread=k%5===0?70000:500+rand(9000),idx=new Uint32Array(3*(1+rand(4000))).map(()=>base+rand(spread));
+  if(k===13)idx[7]=vertices+2;g.setIndex(new T.BufferAttribute(idx,1));
+  // k 13 indexes past the pool (none in the ship): both read past it, as the version before did, so their bounds are NaN.
+  const warn=console.warn,error=console.error;if(k===13)console.warn=console.error=()=>{};
+  let a,b,c;try{a=compactRenderGeometry(g);b=compactRenderGeometry(g,{scratch,bounds:false});c=compactRenderGeometry(g,{scratch});}finally{console.warn=warn;console.error=error;}
+  for(const name of ['position','uv'])for(const x of [b,c]){assert.equal(x.attributes[name].array.constructor,a.attributes[name].array.constructor);assert.deepEqual(new Uint8Array(x.attributes[name].array.buffer),new Uint8Array(a.attributes[name].array.buffer),name+' '+k);}
+  for(const x of [b,c]){assert.equal(x.index.array.constructor,a.index.array.constructor);assert.deepEqual([...x.index.array],[...a.index.array],'index '+k);}
+  assert.equal(b.boundingBox,null);assert.equal(b.boundingSphere,null);if(k!==13)assert.ok(c.boundingBox.equals(a.boundingBox)&&c.boundingSphere.equals(a.boundingSphere));
+ }
+ assert.equal(scratch.remap.length,vertices);assert.ok(scratch.remap.every(v=>v===-1),'left clear');
+});
