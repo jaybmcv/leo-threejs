@@ -1,4 +1,5 @@
 import {createDrawBoundsTest} from './draw-bounds.js';
+import {createFloorOcclusion} from './floor-occlusion.js';
 import {FrontSide, BackSide, Material, Matrix4, Object3D, Vector3} from 'three';
 import {geometryKept} from './shader-hooks.js';
 
@@ -117,6 +118,7 @@ export function createSurfaceFacingTest() {
 }
 
 export function installQuadFacingTest(renderer, scene, camera) {
+ const floorOcclusion = createFloorOcclusion(scene,camera);
  const surfaceAway = createSurfaceFacingTest(), facingAway = createQuadFacingTest(), outside = createDrawBoundsTest(), submit = renderer.renderBufferDirect;
  // These draws also straddle distant decks from the shuttle and medical rooms.
  // The material selects which draws to test; geometry and camera still decide visibility.
@@ -192,6 +194,8 @@ export function installQuadFacingTest(renderer, scene, camera) {
   }
  };
  renderer.renderBufferDirect = function(view, world, geometry, material, object, group) {
+  const main = floorOcclusion && view===camera && world===scene && !scene.overrideMaterial &&
+      !renderer.shadowMap.enabled && !renderer.xr.isPresenting && !renderer.getRenderTarget();
   const size = geometry.index?.count ?? geometry.attributes.position?.count;
   const ordinaryQuad = size === 6 && !material.transparent && geometry.drawRange.start === 0 && geometry.drawRange.count >= 6 &&
       (!group || (group.start === 0 && group.count >= 6));
@@ -207,6 +211,16 @@ export function installQuadFacingTest(renderer, scene, camera) {
    // whether to enter the dense path so the threshold uses the same measure both ways.
    omitted++;
    return;
+  }
+  if (main && floorOcclusion.hidden(renderer.info.render.frame,geometry,material,object)) {
+   omitted++;
+   return;
+  }
+  if (main && object===floorOcclusion.floor) {
+   const before=renderer.info.render.calls;
+   const result=submit.apply(this,arguments);
+   if (renderer.info.render.calls>before) floorOcclusion.submitted(renderer,material,group);
+   return result;
   }
   return submit.apply(this, arguments);
  };

@@ -2,6 +2,33 @@ import assert from 'node:assert/strict';
 import * as T from 'three';
 import {createDrawBoundsTest, rememberMergedBounds} from '../src/v2/draw-bounds.js';
 import {createQuadFacingTest, createSurfaceFacingTest, installQuadFacingTest} from '../src/v2/quad-facing.js';
+import {createFloorOcclusion} from '../src/v2/floor-occlusion.js';
+
+// A floor with an open side. A target can be hidden only after that floor
+// was submitted in this pass and every submitted instance is behind it.
+{
+ const scene=new T.Scene(), camera=new T.PerspectiveCamera(60,1,.05,100);
+ const geometry=new T.BufferGeometry();
+ geometry.setAttribute('position',new T.Float32BufferAttribute([-10,0,-10,-10,0,10,10,0,-10],3));
+ geometry.setIndex([0,1,2]);
+ const floor=new T.Mesh(geometry,new T.MeshStandardMaterial());
+ floor.name='V2_facade_terraces_and_atrium_roof';scene.add(floor);
+ const target=new T.InstancedMesh(new T.BoxGeometry(.2,.2,.2),new T.MeshStandardMaterial(),2);
+ const move=(i,x,y,z)=>{target.setMatrixAt(i,new T.Matrix4().makeTranslation(x,y,z));target.instanceMatrix.needsUpdate=true;};
+ move(0,-3,-2,-3);move(1,-4,-2,-4);
+ camera.position.set(-2,2,-2);camera.updateMatrixWorld();
+ const proof=createFloorOcclusion(scene,camera),renderer={info:{render:{frame:1}}};
+ const hidden=()=>proof.hidden(renderer.info.render.frame,target.geometry,target.material,target);
+ const submit=()=>proof.submitted(renderer,floor.material,null);
+ assert.equal(hidden(),false);submit();assert.equal(hidden(),true);
+ move(1,8,-2,8);assert.equal(hidden(),false);
+ move(1,-4,-2,-4);assert.equal(hidden(),true);
+ renderer.info.render.frame++;assert.equal(hidden(),false);
+ floor.material.alphaTest=.2;submit();assert.equal(hidden(),false);
+ floor.material.alphaTest=0;submit();assert.equal(hidden(),true);
+ camera.position.y=-3;camera.updateMatrixWorld();submit();assert.equal(hidden(),false);
+ camera.position.y=2;camera.updateMatrixWorld();geometry.setDrawRange(0,0);submit();assert.equal(hidden(),false);
+}
 
 const facesAway = createQuadFacingTest(), camera = new T.PerspectiveCamera();
 const geometry = new T.PlaneGeometry(2, 1), material = new T.MeshBasicMaterial();
