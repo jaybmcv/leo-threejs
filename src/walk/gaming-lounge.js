@@ -9,7 +9,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 // Deck 16's Voyage training & briefing room as an RGB gaming lounge on foot (from tester feedback; first stage):
 // - dark grey walls, a cool light strip round the top of the walls and a dark ceiling of faintly twinkling stars;
 // - eight PC stations along the window side (curved dual monitors, RGB keyboard and mouse, tower, headset, gaming
-//   chair), six console stations along the entry wall (one large screen, console, controller and headset on a side
+//   chair), five console stations along the entry wall (one large screen, console, controller and headset on a side
 //   table, gaming chair) and four curved couches facing split-screen displays, controllers on their coffee tables;
 // - honeycomb clusters of hexagon wall lights that fade slowly through the colours, and a black glass floor of
 //   0.25 m hexagon tiles that light up in colour round where you stand and fade behind you;
@@ -25,12 +25,12 @@ const PLACEMENT=fitout['d16-training-aft'],HOLO=PLACEMENT.gamingLeaderboard;
 const pcRowMatrix=()=>new T.Matrix4().makeTranslation(...PLACEMENT.gamingWindowRow.at).multiply(new T.Matrix4().makeRotationY(PLACEMENT.gamingWindowRow.yaw)).multiply(new T.Matrix4().makeTranslation(21,0,7.44));
 const END=23.84,SIDE=7.84,TOP=3.35,DOOR=[2,6],HEX=.25,SOUND_FADE=3;
 const OLD=/^(Seat|Back|Seat_base|Meeting_table|Table_support|Worktop|Training_console|Equipment_cabinet|Status_display|Briefing_wall|Aisle_inlay|Polish_.*|Refined_.*)$/;
-const PCS=[-21,-17.4,-13.8,-10.2,-6.6,-3,.6,4.2],CONSOLES=[-21,-16.5,-12,-7.5,-3,10.5];
+const PCS=[-21,-17.4,-13.8,-10.2,-6.6,-3,.6,4.2],CONSOLES=PLACEMENT.gamingConsoles;
 const ACCENTS=[0xff3b5c,0x2fd8ff,0xff4fd8,0x7dff5a,0xffa53a,0x9d6bff];
 // The couch's arc: its centre, radii (seat front, seat back, back rest) and half span, facing +x to the big screen.
 const COUCH={x:21.6,r0:3.35,r1:4.05,r2:4.3,half:.9};
-// Offsets from the original station. The forward grid leaves the wall stations and doorway aisles clear.
-const GROUP_STATIONS=[[-10,-.65],[-9.7,-10],[0,-10]];
+// Turn each complete station about its couch centre, leaving the open floor inside the fan.
+const stationMatrices=()=>PLACEMENT.gamingStations.map(s=>new T.Matrix4().makeTranslation(...s.at).multiply(new T.Matrix4().makeRotationY(s.yaw)).multiply(new T.Matrix4().makeTranslation(-COUCH.x,0,0)));
 // While the camera is in the room: the lights' share of their usual strength, and their colours.
 const MOOD={hemi:.42,fill:.22,env:.3,sky:0x9aa8ff,ground:0x3a2458};
 const TRAIL=8,REMOTE_TRAILS=3,MARKS=TRAIL*(1+REMOTE_TRAILS);
@@ -179,8 +179,9 @@ export function dressGamingLounge(ship){
   chair(x,-SIDE+1.55,Math.PI,M.accent[i%ACCENTS.length]);
  });
  const rowMatrix=pcRowMatrix();for(const o of fit.children.slice(rowStart))o.applyMatrix4(rowMatrix);
- // The low hexagonal plinth is solid above the walker's step height.
- const plinth=new T.Mesh(new T.CylinderGeometry(HOLO.radius,HOLO.radius,HOLO.height,6),mat('leaderboard_base',0x15152c,{emissive:0x7024b0,emissiveIntensity:.65}));
+ // The round plinth fits inside the former hexagon and stays solid above step height.
+ const radius=HOLO.radius*Math.cos(Math.PI/6);
+ const plinth=new T.Mesh(new T.CylinderGeometry(radius,radius,HOLO.height,64),mat('leaderboard_base',0x15152c,{emissive:0x7024b0,emissiveIntensity:.65}));
  plinth.name='Gaming_leaderboard_base';plinth.position.set(HOLO.at[0],HOLO.height/2,HOLO.at[2]);fit.add(plinth);
  // Console stations: a cabinet under a wall screen on the entry wall, a side table, and the chair.
  CONSOLES.forEach((x,i)=>{
@@ -206,8 +207,8 @@ export function dressGamingLounge(ship){
  curved('Gaming_curved_couch_back',COUCH.r1,COUCH.r2,.62,.34,M.couch);
  box('Coffee_table_top',[.8,.05,1.8],[19.45,.42,0],M.glass);
  box('Coffee_table_base',[.6,.36,1.5],[19.45,.18,0],M.black);
- const station=fit.children.slice(stationStart);
- for(const [dx,dz] of GROUP_STATIONS)for(const part of station){const o=part.clone();o.position.x+=dx;o.position.z+=dz;fit.add(o);}
+ const station=fit.children.slice(stationStart);for(const part of station)part.removeFromParent();
+ for(const matrix of stationMatrices())for(const part of station){const o=part.clone();o.applyMatrix4(matrix);fit.add(o);}
  room.updateMatrixWorld(true);
  return true;
 }
@@ -301,7 +302,7 @@ export function createGamingLounge(ship,light=null,{still=false,requestBoards=()
  });
  // The couch lounge: the big screen's split-screen picture, three controllers on the table and its colour underglow.
  const big=M.basic('lounge_screen',0xffffff);big.map=canvas(1024,576,quad);
- const stationPiece=(m,g)=>{piece(m,g);for(const [dx,dz] of GROUP_STATIONS)piece(m,g.clone().translate(dx,0,dz));};
+ const matrices=stationMatrices(),stationPiece=(m,g)=>{for(const matrix of matrices)piece(m,g.clone().applyMatrix4(matrix));};
  stationPiece(big,new T.PlaneGeometry(3.1,1.74).rotateY(-Math.PI/2).translate(END-.065,1.5,0));
  for(const [dz,ry] of [[-.5,.3],[.05,-.2],[.55,.15]])stationPiece(M.dark,controller.clone().rotateY(Math.PI/2+ry).translate(19.4,.48,dz));
  stationPiece(M.keys,new T.BoxGeometry(.62,.012,1.52).translate(19.45,.012,0));
@@ -373,48 +374,79 @@ export function createGamingLounge(ship,light=null,{still=false,requestBoards=()
 }
 
 
-// One atlas and one additive mesh for all six faces. Canvas work runs once every three seconds.
+// All nine boards travel together. Only score changes repaint the portrait atlas.
 function leaderboardColumn(time){
- const c=document.createElement('canvas');c.width=1536;c.height=1024;
+ const c=document.createElement('canvas');c.width=1536;c.height=3072;
  const ctx=c.getContext('2d'),texture=new T.CanvasTexture(c);texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=4;
- const geometries=[],radius=1.5,apothem=radius*Math.cos(Math.PI/6);
- for(let i=0;i<6;i++){
-  const angle=i*Math.PI/3,g=new T.PlaneGeometry(radius,2.4),uv=g.attributes.uv;
-  for(let j=0;j<uv.count;j++)uv.setXY(j,(uv.getX(j)+i%3)/3,(uv.getY(j)+1-Math.floor(i/3))/2);
-  g.rotateY(angle);g.translate(Math.sin(angle)*apothem,1.86,Math.cos(angle)*apothem);geometries.push(g);
+ const geometries=[],radius=1.4,span=Math.PI*2/9;
+ for(let i=0;i<9;i++){
+  const g=new T.PlaneGeometry(1,1.8,12,1),p=g.attributes.position,uv=g.attributes.uv;
+  for(let j=0;j<p.count;j++){
+   const u=uv.getX(j),angle=(i+u-.5)*span;
+   p.setXYZ(j,Math.sin(angle)*radius,p.getY(j)+1.86,Math.cos(angle)*radius);
+   uv.setXY(j,(u+i%3)/3,(uv.getY(j)+2-Math.floor(i/3))/3);
+  }
+  g.computeVertexNormals();geometries.push(g);
  }
- const material=new T.ShaderMaterial({name:'Gaming_leaderboards',vertexShader:VERTEX,fragmentShader:
+ const vertex=`#include <common>
+ #include <logdepthbuf_pars_vertex>
+ varying vec2 vUv;varying vec3 vWorld,vNormal;
+ void main(){vUv=uv;vec4 w=modelMatrix*vec4(position,1.);vWorld=w.xyz;
+ vNormal=normalize(mat3(modelMatrix)*normal);gl_Position=projectionMatrix*viewMatrix*w;
+ #include <logdepthbuf_vertex>
+ }`;
+ const material=new T.ShaderMaterial({name:'Gaming_leaderboards',vertexShader:vertex,fragmentShader:
   `#include <common>
   #include <logdepthbuf_pars_fragment>
-  uniform sampler2D uBoards;uniform float uTime;varying vec2 vUv;varying vec3 vWorld;
+  uniform sampler2D uBoards;uniform float uTime;varying vec2 vUv;varying vec3 vWorld,vNormal;
   void main(){
    #include <logdepthbuf_fragment>
-   vec2 p=fract(vUv*vec2(3.,2.));vec4 ink=texture2D(uBoards,vUv);
+   float face=dot(normalize(vNormal),normalize(cameraPosition-vWorld));
+   if(face<=.18)discard;
+   vec2 p=fract(vUv*vec2(3.));vec4 ink=texture2D(uBoards,vUv);
    float edge=1.-smoothstep(.008,.022,min(min(p.x,1.-p.x),min(p.y,1.-p.y)));
    float scan=pow(.5+.5*sin(p.y*160.-uTime*3.),20.);
    vec3 neon=mix(vec3(.1,.85,1.),vec3(1.,.12,.65),p.y);
-   gl_FragColor=vec4(ink.rgb*ink.a+neon*(edge*.85+scan*.045),max(ink.a,edge*.75));
+   gl_FragColor=vec4(ink.rgb+neon*(edge*.85+scan*.045),max(ink.a,edge*.75)*smoothstep(.18,.55,face));
    #include <colorspace_fragment>
-  }`,uniforms:{uBoards:{value:texture},uTime:time},transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false});
+  }`,uniforms:{uBoards:{value:texture},uTime:time},transparent:true,depthWrite:false,side:T.FrontSide,blending:T.NormalBlending,toneMapped:false});
  const mesh=new T.Mesh(mergeGeometries(geometries),material);mesh.name='Gaming_leaderboard_column';mesh.userData.noCollide=true;
+ // Shallow ellipsoidal domes keep the capsule below the existing ceiling.
+ const profile=[];
+ for(let i=0;i<=16;i++){const a=i/16*Math.PI/2;profile.push(new T.Vector2(Math.sin(a)*1.39,.96-Math.cos(a)*.3));}
+ for(let i=0;i<=16;i++){const a=i/16*Math.PI/2;profile.push(new T.Vector2(Math.cos(a)*1.39,2.76+Math.sin(a)*.3));}
+ const shell=new T.Mesh(new T.LatheGeometry(profile,64),new T.ShaderMaterial({name:'Gaming_capsule',vertexShader:vertex,fragmentShader:
+  `#include <common>
+  #include <logdepthbuf_pars_fragment>
+  varying vec2 vUv;varying vec3 vWorld,vNormal;
+  void main(){
+   #include <logdepthbuf_fragment>
+   float face=dot(normalize(vNormal),normalize(cameraPosition-vWorld));
+   float rim=pow(1.-abs(face),3.);
+   vec3 neon=mix(vec3(.55,.12,1.),vec3(1.,.12,.6),vUv.y);
+   gl_FragColor=vec4(neon,.035+rim*.8);
+   #include <colorspace_fragment>
+  }`,transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}));
+ shell.name='Gaming_leaderboard_capsule';shell.userData.noCollide=true;mesh.add(shell);
  let elapsed=0,due=0,signature='',boards=[];
  const refresh=()=>{
-  boards=gamingBoards();const page=Math.floor(elapsed/18),visible=Array.from({length:6},(_,i)=>boards[(i+page*6)%boards.length]),next=JSON.stringify(visible);
+  boards=gamingBoards();const visible=boards,next=JSON.stringify(visible);
   if(next===signature)return;signature=next;ctx.clearRect(0,0,c.width,c.height);
   visible.forEach((b,i)=>{
-   const x=i%3*512,y=Math.floor(i/3)*512;ctx.save();ctx.translate(x,y);
-   ctx.fillStyle='rgba(8,14,36,.32)';ctx.fillRect(0,0,512,512);
-   ctx.textAlign='center';ctx.fillStyle='#5cecff';ctx.font='600 19px system-ui';ctx.fillText('VOYAGE · HIGH SCORES',256,43);
-   ctx.fillStyle='#fff1fc';ctx.font='700 37px system-ui';
-   const words=b.title.split(' '),lines=[''];for(const word of words){let n=lines.length-1;if(ctx.measureText(lines[n]+' '+word).width>450){lines.push(word);}else lines[n]+=(lines[n]?' ':'')+word;}
-   lines.forEach((line,n)=>ctx.fillText(line,256,104+n*43));
-   ctx.fillStyle='#caabff';ctx.font='18px system-ui';ctx.fillText(b.scope,256,196);
-   if(!b.rows.length){ctx.fillStyle='#edfaff';ctx.font='29px system-ui';ctx.fillText('No scores yet',256,302);}
-   b.rows.forEach((r,n)=>{const yy=251+n*43;ctx.font='22px system-ui';ctx.fillStyle=n?'#e8ecff':'#6df3ff';ctx.textAlign='left';ctx.fillText((n+1)+'. '+r.name,28,yy,310);ctx.textAlign='right';ctx.fillText(r.value,484,yy,130);});
-   ctx.fillStyle='#f281d9';ctx.textAlign='center';ctx.font='18px system-ui';ctx.fillText('LEO / GAMING LOUNGE',256,482);ctx.restore();
+   const x=i%3*512,y=Math.floor(i/3)*1024;ctx.save();ctx.translate(x,y);
+   // Dark translucent backing keeps bright room signs from washing through the rows.
+   ctx.fillStyle='rgba(8,14,36,.9)';ctx.fillRect(0,0,512,1024);
+   ctx.textAlign='center';ctx.fillStyle='#5cecff';ctx.font='600 38px system-ui';ctx.fillText('VOYAGE · HIGH SCORES',256,43,464);
+   ctx.fillStyle='#fff1fc';ctx.font='700 100px system-ui';
+   const words=b.title.split(' '),lines=[''];for(const word of words){let n=lines.length-1;if(lines[n]&&ctx.measureText(lines[n]+' '+word).width>450){lines.push(word);}else lines[n]+=(lines[n]?' ':'')+word;}
+   lines.forEach((line,n)=>ctx.fillText(line,256,140+n*90,464));
+   ctx.fillStyle='#caabff';ctx.font='38px system-ui';ctx.fillText(b.scope,256,394);
+   if(!b.rows.length){ctx.fillStyle='#edfaff';ctx.font='64px system-ui';ctx.fillText('No scores yet',256,650,450);}
+   b.rows.forEach((r,n)=>{const yy=465+n*108;ctx.font='60px system-ui';ctx.fillStyle=n?'#e8ecff':'#6df3ff';ctx.textAlign='left';ctx.fillText((n+1)+'. '+r.name,24,yy,464);ctx.textAlign='right';ctx.fillText(r.value,488,yy+55,440);});
+   ctx.fillStyle='#f281d9';ctx.textAlign='center';ctx.font='34px system-ui';ctx.fillText('LEO / GAMING LOUNGE',256,994,464);ctx.restore();
   });texture.needsUpdate=true;
   mesh.userData.boards=visible;
  };
  refresh();
- return {mesh,update(dt,still){elapsed+=dt;if(!still)mesh.rotation.y=elapsed*Math.PI/36;if(elapsed>=due){due=elapsed+3;refresh();}},get boards(){return boards;}};
+ return {mesh,update(dt,still){elapsed+=dt;if(!still)mesh.rotation.y=(mesh.rotation.y+dt*Math.PI/18)%(Math.PI*2);if(elapsed>=due){due=elapsed+3;refresh();}},get boards(){return boards;}};
 }

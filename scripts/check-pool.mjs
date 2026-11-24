@@ -210,5 +210,27 @@ expect(JSON.stringify(match(41))===JSON.stringify(match(41)),'the same seed and 
  expect(page.timers.length===n&&wrote.includes('OFFLINE: TIME NOT SAVED'),'offline is said at once, with nothing to wait for');
 }finally{page.restore();}}
 
+// The stationary rack keeps separate native texel rows for each number. The walk's usual
+// warm-up must see that array, or its first appearance uploads every ball at once.
+{
+ const T=await import('three');
+ const {batchDisplayRack}=await import('../src/walk/pool/display-rack.js');
+ const {shaderSamples}=await import('../src/v2/shader-warmup.js');
+ const group=new T.Group(),geometry=new T.SphereGeometry(.1,8,4);
+ const balls=[0,1].map(i=>{
+  const data=new Uint8ClampedArray([10+i,0,0,255,20+i,0,0,255]);
+  const map=new T.CanvasTexture({width:1,height:2,getContext:()=>({getImageData:()=>({data})})});
+  map.anisotropy=4;map.colorSpace=T.SRGBColorSpace;
+  const ball=new T.Mesh(geometry,new T.MeshStandardMaterial({map}));ball.position.x=i;group.add(ball);return ball;
+ });
+ batchDisplayRack(group,balls);
+ const rack=group.children[0],texture=rack.material.uniforms.rackSkins.value;
+ expect(group.children.length===1&&rack.isInstancedMesh&&rack.count===2,'the fixed display rack uses one instanced draw');
+ expect(shaderSamples(group).textures.has(texture),'normal shader warm-up includes the rack array');
+ expect(texture.image.data[0]===20&&texture.image.data[4]===10&&texture.image.data[8]===21&&texture.image.data[12]===11,'each original skin keeps its native rows and layer');
+ const matrix=new T.Matrix4();rack.getMatrixAt(1,matrix);
+ expect(matrix.elements[12]===1&&texture.anisotropy===4&&texture.colorSpace===T.SRGBColorSpace,'rack positions, texture filtering and color space survive batching');
+}
+
 console.log(problems.length?`FAIL: ${problems.length} problem(s)`:'PASS');
 process.exitCode=problems.length?1:0;

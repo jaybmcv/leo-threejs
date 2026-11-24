@@ -8876,8 +8876,9 @@
     "file": "src/walk/main.public.js",
     "original": "src/walk/main.js",
     "mode": "public",
-    "bodySha256": "5c2611a0175c91ae142c0bc377d5db07d5c8525dbea96c5251a722d2dc30beef",
+    "bodySha256": "1a7a1e6cf880076fbb60562a582187678361d099a14ee87ed9d397023122a32a",
     "imports": [
+      "../v2/quad-facing.js",
       "./key-code.js",
       "../v2/voyager-lawn.js",
       "./gaming-scores.js",
@@ -8895,6 +8896,7 @@
       "./outfits.js",
       "./wardrobe.js",
       "./bindings.js",
+      "../v2/feature-batches.js",
       "../v2/atrium-render-policy.js",
       "../v2/prepared-static.js",
       "../v2/box-frustum.js",

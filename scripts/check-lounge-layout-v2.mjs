@@ -183,13 +183,21 @@ const converger=r.components.pieces.find(p=>p.name==='munchies converger');asser
 assert(arcade.solid&&new T.Box3().setFromObject(arcade.solid,true).min.x-machine.max.x>=1.5,'Every cabinet keeps its approach aisle');
 const seats=[];source.root.traverse(o=>{if(o.userData.converger)seats.push(o.getWorldPosition(new T.Vector3()));});
 assert.equal(seats.length,3);for(const p of seats){close(p.z,-37.3);assert(p.x>-100&&p.x<-95,'Stools face open floor');}
-assert(sign.min.y>r.y+2.2&&sign.max.x<-97.5&&sign.min.z>-34.7,'Sign hangs in front toward the jaguar');
+assert(sign.min.y>r.y+2.2&&sign.max.x<-97.5&&sign.min.z>-34.7,'Sign stays overhead beside the converger');
+const signCenter=new T.Vector3(-99.4,30.9,-31.5),signFront=new T.Vector3(-110.55-signCenter.x,0,-34.36-signCenter.z).normalize();
+assert.deepEqual(LOUNGE_PLAN.converger.signCenter,signCenter.toArray());close(LOUNGE_PLAN.converger.signYaw,-1.821885322640436);
 const signMesh=source.root.getObjectByName('Cosmic_Munchies_Sign_Lounge_sheen'),normals=signMesh.geometry.attributes.normal,normalMatrix=new T.Matrix3().getNormalMatrix(signMesh.matrixWorld);
-let front=0;for(let i=0;i<normals.count;i++){const n=new T.Vector3().fromBufferAttribute(normals,i).applyMatrix3(normalMatrix).normalize();if(n.x<-.7&&n.z>.7&&Math.abs(n.y)<.01)front++;}
-assert(front>=6,'Sign board faces 45 degrees toward the entrance');
+let front=0;for(let i=0;i<normals.count;i++){const n=new T.Vector3().fromBufferAttribute(normals,i).applyMatrix3(normalMatrix).normalize();if(n.dot(signFront)>.99999)front++;}
+assert(front>=6,'Sign board faces the aquarium photo approach');
 // Probe the whole ceiling emitter column against galleries, rails, lights and plants.
 const overhead=new Colliders();overhead.addStatic(root,o=>o.isMesh&&!o.name.startsWith('Cosmic_Munchies_')&&!o.userData.converger);overhead.commit();
 for(let x=-98.8;x<=-96.2;x+=.2)for(let z=-36;z<=-33.4;z+=.2){segment.start.set(x,r.y+3,z);segment.end.set(x,35.64,z);assert(!overhead.overlaps(segment,.03),'Converger cuts overhead dressing');}
+const signRight=new T.Vector3(signFront.z,0,-signFront.x);
+for(let x=-2.3;x<=2.301;x+=.05)for(let y=-.65;y<=.651;y+=.05){const p=signCenter.clone().addScaledVector(signRight,x);p.y+=y;segment.start.copy(p);segment.end.copy(p).addScaledVector(signFront,-.08);assert(!overhead.overlaps(segment,.025),'Sign cuts gallery, aquarium or hanging dressing');}
+for(const s of [-1,1]){segment.start.copy(signCenter).addScaledVector(signRight,s*1.4);segment.start.y+=.65;segment.end.copy(segment.start).setY(35.65);assert(!overhead.overlaps(segment,.025),'Sign wire cuts overhead dressing');}
+walker.place(new T.Vector3(-110.55,24.8,-34.36));
+for(const [yaw,seconds,x,z] of [[449,4,-101.58,-34.18],[0,.8,-101.54,-32.44],[90,1.2,-98.9,-32.39],[90,2.3,-93.72,-32.39]]){const a=yaw*Math.PI/180;walk([Math.sin(a)*2.25,0,Math.cos(a)*2.25],seconds);assert(Math.hypot(walker.position.x-x,walker.position.z-z)<.15&&Math.abs(walker.position.y-r.y)<.05,'Visitor reaches counter and arcade beneath sign');}
+route('Aquarium approach beneath sign',[[-101.6,24.3,-34.2],[-101.6,24.3,-32.5],[-93.5,24.3,-32.5]]);
 route('R10 old converger footprint',[[-107.72,24.3,-34.93],[-101,24.3,-41],[-96.5,24.3,-45.06473]]);
 route('R11 arcade aisle to photo spot',[[-96.5,24.3,-45.06473],[-93.5,24.3,-45.06473],[-93.5,24.3,-32.5],[-103.5,24.3,-32.5],[-103.5,24.3,-30]]);
 for(let x=-103.8;x<=-99.4;x+=.2)for(let z=-43.6;z<=-38.4;z+=.2)assert(clear([x,r.y,z]),'Old converger footprint has leftover collision');
