@@ -20,11 +20,30 @@ dj.group.traverse(o=>{assert(!o.isLight,'The DJ adds no lights');if(!o.isMesh)re
 assert.equal(dj.targets.length,8);assert(draws<=14,'Keep the DJ below fourteen draws');assert(triangles<18000,'Keep the DJ below eighteen thousand triangles');
 assert(bounds.min.x>107&&bounds.max.x<111&&bounds.min.z>26.9&&bounds.max.z<33.1,'Leave clear floor in front, behind and on both sides');
 assert(bounds.max.y-STAGE_DJ.at[1]>2.8&&bounds.max.y-STAGE_DJ.at[1]<3.1);
+const stool=dj.group.getObjectByName('Common_stage_DJ_stool');assert(stool,'The DJ has a stool');
+const stoolBounds=new T.Box3().setFromObject(stool,true),seat=stoolBounds.getCenter(new T.Vector3());seat.y=stoolBounds.max.y;
+const platform=new T.Box3().setFromObject(root.getObjectByName('p6_stage_platform'));
+assert(platform.containsPoint(new T.Vector3(seat.x,platform.max.y,seat.z))&&Math.abs(stoolBounds.min.y-platform.max.y)<1e-5,'The stool feet stand on the stage platform');
+const deskMeshes=dj.group.children.filter(o=>o.isMesh),desk=new T.Box3();for(const mesh of deskMeshes)desk.expandByObject(mesh);
+assert(stoolBounds.min.x>desk.max.x,'The stool clears the table and truss');
+const stoolBvh=new MeshBVH(stool.children[0].geometry,{indirect:true}),toStool=stool.matrix.clone().invert(),up=new T.Vector3(0,1,0);
+for(let i=0;i<=16;i++){
+ dj.update(i?60/STAGE_DJ.bpm/8:0,dj.group.position,false);dj.group.updateMatrixWorld(true);
+ const underside=new T.Raycaster(seat.clone().addScaledVector(up,-.05),up).intersectObject(dj.head,true)[0];
+ assert(underside&&Math.abs(underside.point.y-seat.y)<1e-5&&Math.abs(new T.Box3().setFromObject(dj.head,true).min.y-seat.y)<1e-5,'The DJ rests on the seat throughout its sway');
+ for(const mesh of dj.arms.children)assert(!stoolBvh.intersectsGeometry(mesh.geometry,toStool.clone().multiply(dj.arms.matrix)),'The stool clears the moving tentacles and suction cups');
+}
 // Five centimetres around each lid also covers the arms' small idle movement.
-for(const mesh of dj.arms.children){const bvh=new MeshBVH(mesh.geometry,{indirect:true});for(const x of[-2.12,2.12]){
- const z=.15+.5*(1-(x/2.8)**2)-.61,lid=new T.BoxGeometry(.78,.54,.135),matrix=new T.Matrix4().compose(new T.Vector3(x,1.62,z),new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-.2),new T.Vector3(1,1,1));
- assert(!bvh.intersectsGeometry(lid,matrix),'Tentacles and suction cups must clear the open laptop lids');lid.dispose();
-}}
+const lid=new T.BoxGeometry(.78,.54,.135),armBvhs=dj.arms.children.map(mesh=>new MeshBVH(mesh.geometry,{indirect:true}));
+for(const x of[-2.12,2.12]){
+ const z=.15+.5*(1-(x/2.8)**2)-.21,matrix=new T.Matrix4().makeRotationX(.2).setPosition(x,1.62,z);
+ for(const bvh of armBvhs)assert(!bvh.intersectsGeometry(lid,matrix),'Tentacles and suction cups must clear the open laptop lids');
+ const side=sign=>new T.Raycaster(dj.group.localToWorld(new T.Vector3(x,1.62,z+sign)),new T.Vector3(0,0,-sign).transformDirection(dj.group.matrixWorld)).intersectObjects(deskMeshes,false)[0];
+ const screen=side(-1),back=side(1);
+ assert(screen?.object.material.emissive.getHex()===0x36efff&&screen.face.normal.z<-.9,'Each laptop screen faces the DJ');
+ assert(back?.object.material.emissive.getHex()===0&&back.face.normal.z>.9&&!back.object.material.transparent,'The audience sees each opaque lid back');
+}
+lid.dispose();
 const cat=new Controller(colliders),step=(seconds,x=0,z=0)=>{for(let i=0;i<Math.round(seconds*120);i++)cat.step(1/120,new T.Vector3(x,0,z));};
 cat.place(new T.Vector3(100.17,floorY+.24,29.49));step(.2);step(5,2.25);assert(cat.position.x>106&&cat.position.x<107,'The cat reaches the stage and stops against the booth');
 const stopped=cat.position.clone();step(1,2.25);assert(cat.position.distanceTo(stopped)<.03,'The cat cannot walk through the booth');
