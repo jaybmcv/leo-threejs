@@ -12,7 +12,7 @@ import {Colliders,solid} from '../src/walk/collision.js';
 import {groundMesh} from '../src/v2/ground.js';
 import {Controller} from '../src/walk/controller.js';
 import {mesh,polygonGeometry} from '../src/v2/geometry.js';
-import {createLoungeFalls} from '../src/walk/lounge-falls.js';
+import {prepareLoungeFalls,createLoungeFalls} from '../src/walk/lounge-falls.js';
 import {prepareV2LoungeFalls} from '../src/v2/lounge-falls-fit.js';
 import {LOUNGE_WALKWAY_WALL as W,loungeWalkwayWallLine,loungeWalkwayEdgeZ} from '../src/v2/lounge-walkway-wall.js';
 
@@ -29,7 +29,8 @@ const structure=new T.Group();root.add(structure);const ship={root,inside:root,c
  mesh(root,'Lounge_deck_slab',polygonGeometry(r.polygon,openings,r.y,.24));}
 mesh(root,'Deck_slab',polygonGeometry([[-88,-61.9],[-86,-61.9],[-86,-24],[-88,-24]],[],r.y,.24));
 const col=new Colliders(),lift=createVaultLift(col);prepareClubhouseAccess(ship,lift);root.add(lift.group);
-const pond=prepareV2LoungeFalls(ship,()=>createLoungeFalls(ship));assert(pond,'No waterfall pond');pond.group.updateMatrixWorld(true);pond.solid.updateMatrixWorld(true);
+// As the walk does (scripts/v2-waterfall-target.mjs): the pond replaces the kitchen island, and its bench joins the lounge.
+prepareLoungeFalls(ship);const pond=prepareV2LoungeFalls(ship,()=>createLoungeFalls(ship));assert(pond,'No waterfall pond');pond.group.updateMatrixWorld(true);pond.solid.updateMatrixWorld(true);
 root.updateMatrixWorld(true);col.addStatic(root);col.addStatic(lift.solid,()=>true);col.addStatic(pond.solid,()=>true);col.commit();
 const ground=new Colliders();ground.addStatic(root,o=>solid(o)&&groundMesh(o));ground.addStatic(pond.solid,()=>true);ground.commit();col.raycastGround=(...a)=>ground.raycast(...a);
 
@@ -96,7 +97,8 @@ for(const x of [-140.4,-136,-131,-126,-121,-117,-100,-95,-90.5]){
 {const start=new T.Vector3(-132.07,r.y,-60.39),sign=new T.Vector3(-129.5,r.y,-42),dir=sign.clone().sub(start).normalize().multiplyScalar(2.25);
  walker.place(start);walk(dir.toArray(),8);const e=loungeWalkwayEdgeZ(plan.line,walker.position.x);assert(walker.position.z<e,'Reached past the wall toward the Haze Maze');
  reach(start.x,start.z,'Back to the standing spot');console.log('PASS walls stop the open floor at nine places and the walk toward the Haze Maze sign, and each walker turns back');}
-walker.place(new T.Vector3(-108.75,r.y,-62.5));
-for(const [x,z] of [[-108.75,-47.5],[-129.5,-49],[-129.5,-43.6]])reach(x,z,'Open floor over the causeway to the Haze Maze door');
-for(const [x,z] of [[-129.5,-49],[-108.75,-47.5],[-108.75,-62.5]])reach(x,z,'Haze Maze door back over the causeway');
+// The bench stands on the landing in line with the causeway: step onto the landing beside it.
+walker.place(new T.Vector3(-106.4,r.y,-62.5));
+for(const [x,z] of [[-106.4,-58.5],[-108.75,-58.5],[-108.75,-47.5],[-129.5,-49],[-129.5,-43.6]])reach(x,z,'Open floor over the causeway to the Haze Maze door');
+for(const [x,z] of [[-129.5,-49],[-108.75,-47.5],[-108.75,-58.5],[-106.4,-58.5],[-106.4,-62.5]])reach(x,z,'Haze Maze door back over the causeway');
 console.log('PASS open floor to the Haze Maze door over the pond causeway and back');
