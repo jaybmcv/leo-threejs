@@ -22,7 +22,8 @@ import {SWIM,swimWorld,limitSwim,gemNear} from '../src/walk/aquarium-treasure/la
 import {featurePlaces} from '../src/v2/goto-features.js';
 import {mesh,polygonGeometry} from '../src/v2/geometry.js';
 import {createTreasureBoard} from '../server/aquarium-treasure.mjs';
-import {LOUNGE_PLAN,applyLoungeBalconyCut} from '../src/plan/lounge-layout-v2.js';
+import {LOUNGE_PLAN,applyLoungeBalconyCut,applyLoungeLandingCorner} from '../src/plan/lounge-layout-v2.js';
+import {applyLoungeFloorFinish} from '../src/v2/lounge-floor-material.js';
 
 // Real source furniture, maze, gallery guards and activity colliders, without a full ship build.
 installWalkCanvas(createCanvas);
@@ -76,6 +77,35 @@ assert(walker.position.z>-33&&Math.abs(walker.position.y-24.3)<.05,'Visitor walk
 const ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0)),segment=new T.Line3();
 const clear=([x,y,z])=>{ray.origin.set(x,y+.42,z);const hit=col.raycast(ray,.85);segment.start.set(x,y+.75,z);segment.end.set(x,y+1.65,z);return !!hit&&hit.normal.y>.6&&Math.abs(hit.point.y-y)<.1&&!col.overlaps(segment,.35);};
 const route=(name,points)=>{let count=0;for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],n=Math.ceil(new T.Vector3(...a).distanceTo(new T.Vector3(...b))/.1);for(let j=0;j<=n;j++){const p=a.map((v,k)=>v+(b[k]-v)*j/n);assert(clear(p),name+' blocked at '+JSON.stringify(p));count++;}}console.log('PASS',name,count,'capsule probes');};
+// Only Deck 18's forward notch is filled. Nothing passes through the new slab.
+const cornerSnapshot=JSON.stringify(r.components);applyLoungeLandingCorner(r);assert.equal(JSON.stringify(r.components),cornerSnapshot,'Landing fill is idempotent');
+const cornerVolume=new T.Box3(new T.Vector3(-89.98,28.021,-56.60),new T.Vector3(-88.22,30.3,-54.92)),triangle=new T.Triangle();
+source.root.updateMatrixWorld(true);
+source.root.traverse(o=>{if(!o.isMesh||!new T.Box3().setFromObject(o,true).intersectsBox(cornerVolume))return;const p=o.geometry.attributes.position,ix=o.geometry.index;
+ for(let i=0;i<(ix?.count??p.count);i+=3){for(const [k,v]of [triangle.a,triangle.b,triangle.c].entries())v.fromBufferAttribute(p,ix?ix.getX(i+k):i+k).applyMatrix4(o.matrixWorld);assert(!cornerVolume.intersectsTriangle(triangle),'Fitting crosses new floor or standing space: '+o.name);}
+});
+applyLoungeFloorFinish(ship);
+const cornerRay=new T.Raycaster(),slabs=structure.getObjectsByProperty('name','V2_garden_gallery');let cornerProbes=0;
+for(let x=-89.9;x<-88.3;x+=.1)for(let z=-56.5;z<-55;z+=.1){
+ cornerRay.set(new T.Vector3(x,28.5,z),new T.Vector3(0,-1,0));cornerRay.far=.6;const top=cornerRay.intersectObjects(slabs);assert.equal(top.length,1,'Corner needs exactly one floor face');close(top[0].point.y,28.3);assert.equal(top[0].object.material.name,'Lounge_velvet_carpet');
+ cornerRay.set(new T.Vector3(x,27.8,z),new T.Vector3(0,1,0));const underside=cornerRay.intersectObjects(slabs);assert(underside.length,'Open underside');close(underside[0].point.y,28.02);cornerProbes++;
+}
+for(const [at,dir]of [[[-90.2,28.15,-55.7],[1,0,0]],[[-89,28.15,-55.1],[0,0,1]]]){cornerRay.set(new T.Vector3(...at),new T.Vector3(...dir));cornerRay.far=.5;assert.equal(cornerRay.intersectObjects(slabs).length,0,'Buried slab join face');}
+for(const [at,dir]of [[[-87.8,28.15,-55.7],[-1,0,0]],[[-89,28.15,-57],[0,0,1]]]){cornerRay.set(new T.Vector3(...at),new T.Vector3(...dir));cornerRay.far=.8;assert(cornerRay.intersectObjects(slabs).length,'Missing finished outer slab edge');}
+for(const [name,y]of [['V2_garden_guard_glass',28.9],['V2_garden_guard_cap',29.4]]){const rails=structure.getObjectsByProperty('name',name);cornerRay.far=1;
+ for(let x=-89.9;x<-88.2;x+=.1){cornerRay.set(new T.Vector3(x,y,-56.2),new T.Vector3(0,0,-1));assert(cornerRay.intersectObjects(rails).length,'Missing straight corner rail '+name);}
+ for(let z=-56.5;z<-54.9;z+=.1){cornerRay.set(new T.Vector3(-88.7,y,z),new T.Vector3(1,0,0));assert(cornerRay.intersectObjects(rails).length,'Missing far corner rail '+name);}
+ cornerRay.far=2;cornerRay.set(new T.Vector3(-91,y,-55.7),new T.Vector3(1,0,0));assert.equal(cornerRay.intersectObjects(rails).length,0,'Old jog rail remains inside landing');
+}
+// The #427 wall closes the floor below the corner's open-floor edge, so the walk reaches it from the lounge side only (Jay, 2026-11-20).
+route('Below filled corner',[[-91,24.3,-55.7],[-89,24.3,-55.7]]);
+walker.place(new T.Vector3(-91.05,28.3,-55.68));walk([2.25,0,0],2,p=>assert(Math.abs(p.y-28.3)<.06,'New corner must support feet'));
+assert(walker.position.x>-89.2&&walker.position.x<-88.5,'Far rail stops the visitor inside the new floor');
+walk([0,0,-2.25],1,p=>assert(Math.abs(p.y-28.3)<.06,'Outer corner rail prevents a fall'));assert(walker.position.z>-56.3&&walker.position.z<-56,'Outer rail stops the visitor');
+const reach=(x,z)=>{let steps=0;while(Math.hypot(walker.position.x-x,walker.position.z-z)>.04&&steps++<900){const wish=new T.Vector3(x-walker.position.x,0,z-walker.position.z).normalize().multiplyScalar(2.25);walker.step(1/60,wish,false);}assert(steps<900,'Cannot leave corner toward '+[x,z]);};
+reach(-91.05,-55.68);reach(-89.8,-55.68);walk([0,0,2.25],1.8);assert(walker.position.y<27.4&&walker.position.y>25.5,'Leave corner down purple-lit stairs');
+reach(-89.8,-55.68);assert(Math.abs(walker.position.y-28.3)<.06,'Return up lower flight');reach(-93.1,-55.68);walk([0,0,2.25],1.8);assert(walker.position.y>29.2&&walker.position.y<31.3,'Leave corner up the second flight');
+console.log('PASS squared Deck 18 corner',cornerProbes,'top/underside probes, clear fittings and route below, square guards, no jog and both stair flights');
 // Cut only Deck 18's side strip. Its maze landing remains accessible from the gallery door.
 const end=r.components.galleries.find(g=>g.id==='commons-1-end-4'),snapshot=JSON.stringify(r.components);
 close(Math.min(...end.polygon.map(p=>p[1])),LOUNGE_PLAN.balconyEnd);
@@ -110,7 +140,14 @@ for(const flight of [0,1]){
 route('R3 treasure gallery',[[-93.1,32.3,-47],[-93.1,32.3,-29],[-115.7,32.3,-29]]);
 const floorRay=new T.Raycaster(new T.Vector3(-93,32.5,-28.7),new T.Vector3(0,-1,0),0,.4),floorHits=floorRay.intersectObject(structure,true).filter(h=>h.object.name==='V2_garden_gallery');assert.equal(new Set(floorHits.map(h=>h.object.uuid)).size,1,'Gallery and link must share one floor surface');
 route('R4 maze upper exit',[[-125.8,32.3,-29],[-126.75,32.3,-29]]);
-route('R5 clubhouse and ground lift',[[-90.8,24.3,-45.8],[-86.53,24.3,-45.8],[-86.53,24.3,-49]]);
+route('R5 retained clubhouse corridor',[[-90.8,24.3,-45.8],[-86.53,24.3,-45.8],[-86.53,24.3,-49]]);
+route('R5 lounge lift approach',[[-125,24.3,-29.7],[-125,24.3,-43],[-134.5,24.3,-43],[-134.5,24.3,-32.15],[-138.9,24.3,-32.15]]);
+// The real merged wall-light fittings must stay clear of a standing cat at the new entrance.
+walker.place(new T.Vector3(-138.9,24.3,-32.15));assert(lift.unlock('9lives'));const entryStart=walker.position.clone();
+for(let i=0;i<51;i++){lift.update(1/60,walker);walker.step(1/60,new T.Vector3(0,0,2.25),false);}
+const entryDistance=walker.position.distanceTo(entryStart);
+assert(entryDistance>=1.5&&lift.inside(walker.position),'The retained wall lights must not slow entry into the clubhouse cab: '+JSON.stringify({entryDistance,at:walker.position.toArray()}));
+console.log('PASS clubhouse entry below retained lights',entryDistance,'metres in .85 seconds');
 route('R6 jaguar to dome',[[-112.5,24.3,-23.5],[-112.5,24.3,-28.8],[-113.3,24.3,-29.1],[-113.3,24.3,-32.7],[-112.5,24.3,-32.7],[-112.5,24.3,-34]]);
 for(const y of [28.3,32.3])route('R7 aft door '+y,[[-140.6,y,-30],[-138.2,y,-30]]);
 // Walk below the retired side strips from the reported view, and below the rear strip.
@@ -147,13 +184,21 @@ const converger=r.components.pieces.find(p=>p.name==='munchies converger');asser
 assert(arcade.solid&&new T.Box3().setFromObject(arcade.solid,true).min.x-machine.max.x>=1.5,'Every cabinet keeps its approach aisle');
 const seats=[];source.root.traverse(o=>{if(o.userData.converger)seats.push(o.getWorldPosition(new T.Vector3()));});
 assert.equal(seats.length,3);for(const p of seats){close(p.z,-37.3);assert(p.x>-100&&p.x<-95,'Stools face open floor');}
-assert(sign.min.y>r.y+2.2&&sign.max.x<-97.5&&sign.min.z>-34.7,'Sign hangs in front toward the jaguar');
+assert(sign.min.y>r.y+2.2&&sign.max.x<-97.5&&sign.min.z>-34.7,'Sign stays overhead beside the converger');
+const signCenter=new T.Vector3(-99.4,30.9,-31.5),signFront=new T.Vector3(-110.55-signCenter.x,0,-34.36-signCenter.z).normalize();
+assert.deepEqual(LOUNGE_PLAN.converger.signCenter,signCenter.toArray());close(LOUNGE_PLAN.converger.signYaw,-1.821885322640436);
 const signMesh=source.root.getObjectByName('Cosmic_Munchies_Sign_Lounge_sheen'),normals=signMesh.geometry.attributes.normal,normalMatrix=new T.Matrix3().getNormalMatrix(signMesh.matrixWorld);
-let front=0;for(let i=0;i<normals.count;i++){const n=new T.Vector3().fromBufferAttribute(normals,i).applyMatrix3(normalMatrix).normalize();if(n.x<-.7&&n.z>.7&&Math.abs(n.y)<.01)front++;}
-assert(front>=6,'Sign board faces 45 degrees toward the entrance');
+let front=0;for(let i=0;i<normals.count;i++){const n=new T.Vector3().fromBufferAttribute(normals,i).applyMatrix3(normalMatrix).normalize();if(n.dot(signFront)>.99999)front++;}
+assert(front>=6,'Sign board faces the aquarium photo approach');
 // Probe the whole ceiling emitter column against galleries, rails, lights and plants.
 const overhead=new Colliders();overhead.addStatic(root,o=>o.isMesh&&!o.name.startsWith('Cosmic_Munchies_')&&!o.userData.converger);overhead.commit();
 for(let x=-98.8;x<=-96.2;x+=.2)for(let z=-36;z<=-33.4;z+=.2){segment.start.set(x,r.y+3,z);segment.end.set(x,35.64,z);assert(!overhead.overlaps(segment,.03),'Converger cuts overhead dressing');}
+const signRight=new T.Vector3(signFront.z,0,-signFront.x);
+for(let x=-2.3;x<=2.301;x+=.05)for(let y=-.65;y<=.651;y+=.05){const p=signCenter.clone().addScaledVector(signRight,x);p.y+=y;segment.start.copy(p);segment.end.copy(p).addScaledVector(signFront,-.08);assert(!overhead.overlaps(segment,.025),'Sign cuts gallery, aquarium or hanging dressing');}
+for(const s of [-1,1]){segment.start.copy(signCenter).addScaledVector(signRight,s*1.4);segment.start.y+=.65;segment.end.copy(segment.start).setY(35.65);assert(!overhead.overlaps(segment,.025),'Sign wire cuts overhead dressing');}
+walker.place(new T.Vector3(-110.55,24.8,-34.36));
+for(const [yaw,seconds,x,z] of [[449,4,-101.58,-34.18],[0,.8,-101.54,-32.44],[90,1.2,-98.9,-32.39],[90,2.3,-93.72,-32.39]]){const a=yaw*Math.PI/180;walk([Math.sin(a)*2.25,0,Math.cos(a)*2.25],seconds);assert(Math.hypot(walker.position.x-x,walker.position.z-z)<.15&&Math.abs(walker.position.y-r.y)<.05,'Visitor reaches counter and arcade beneath sign');}
+route('Aquarium approach beneath sign',[[-101.6,24.3,-34.2],[-101.6,24.3,-32.5],[-93.5,24.3,-32.5]]);
 route('R10 old converger footprint',[[-107.72,24.3,-34.93],[-101,24.3,-41],[-96.5,24.3,-45.06473]]);
 route('R11 arcade aisle to photo spot',[[-96.5,24.3,-45.06473],[-93.5,24.3,-45.06473],[-93.5,24.3,-32.5],[-103.5,24.3,-32.5],[-103.5,24.3,-30]]);
 for(let x=-103.8;x<=-99.4;x+=.2)for(let z=-43.6;z<=-38.4;z+=.2)assert(clear([x,r.y,z]),'Old converger footprint has leftover collision');
@@ -210,8 +255,9 @@ console.log('PASS three rugs, moved cushion anchors, bare old footprint and cent
  walk([-2.25,0,0],1);assert(walker.position.x<small.min.x-.3,'Walk off the far edge of the rug');
  console.log('PASS moved small rug, three sit points, bare old floor, visible photo marker and walk across the photo spot');
 }
-for(const x of [-128.5,-125.5,-122.5]){
- route('Former reading chair '+x,[[x,24.3,-59.8],[x,24.3,-54.8]]);
+// Each walk crosses its old chair spot (z -56) and stops on the open-floor side of the #427 wall (Jay, 2026-11-24).
+for(const [x,end] of [[-128.5,-54.8],[-125.5,-55.1],[-122.5,-55.75]]){
+ route('Former reading chair '+x,[[x,24.3,-59.8],[x,24.3,end]]);
  assert(!rests.some(s=>Math.abs(s.height-24.8)<.5&&Math.hypot(s.point.x-x,s.point.z+56)<1.5),'Invisible chair rest anchor at '+x);
  const b=new T.Box3(new T.Vector3(x-.4,24.3,-56.4),new T.Vector3(x+.4,25.5,-55.6));
  assert(!seams.some(s=>s.intersectsBox(b)),'Floating upholstery seam at '+x);

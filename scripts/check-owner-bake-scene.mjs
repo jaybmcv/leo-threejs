@@ -73,4 +73,26 @@ function ship(){
  assert.equal(tablesDiffer(a,t([['["p1"]','m1']],[['["w1"]','m3']])),null);assert.equal(tablesDiffer(a,t([['["p1"]','m1'],['["p3"]','m2']],[['["w1"]','m3']])),null);
  const list=[[0,[0]],[1,[]],[0,[]]];assert.deepEqual(withoutMoved(list,moved),[[0,[]]]);
  pass('rows that moved between pages drop every entry relying on them; other differences refuse the bake');}
+
+{
+ const {cafe,coversCafe,addCafeCell}=await import('./walk-owner-hotspots.mjs');
+ const {emptyOwnerBake}=await import('../src/v2/owner-hiding.js');
+ const base={...emptyOwnerBake('walk.abcd123456.js','merge200000'),nearMargin:.3,parts:[['a','1']],conds:[['wall','2','Deck7']],entries:[[0,[0]]],blocks:[[1,2,3,1,2,3,[0]]]};
+ const bounds=[...cafe.cell,...cafe.cell];
+ const add={...base,parts:[['b','5'],['a','1']],conds:[['wall','2','Deck8'],['wall','2','Deck7']],entries:[[0,[0,1],['cab7']],[1,[1]]],blocks:[[...bounds,[0]],[...bounds,[1]]]};
+ const full=addCafeCell(base,add);
+ for(const key of ['entries','parts','conds'])assert.equal(full[key],base[key]);
+ assert.deepEqual(full.blocks,[base.blocks[0],[...bounds,[0]]]);
+ const repeated={...add,blocks:[[...bounds,[1,0,1]]]};
+ assert.deepEqual(addCafeCell(base,repeated).blocks.at(-1)[6],[0,0]);
+ for(const entry of [[1,[0]],[1,[]],[1,[1],['cab7']],[0,[1]]]){
+  assert.throws(()=>addCafeCell(base,{...add,entries:[entry],blocks:[[...bounds,[0]]]}),/No shared/);
+ }
+ assert(coversCafe(full));assert(!coversCafe({...full,blocks:base.blocks}));
+ assert.throws(()=>addCafeCell(base,{...add,key:'different'}));
+ assert.throws(()=>addCafeCell(base,{...add,parts:[['b','5'],['a','changed']]}),/No shared/);
+ assert.throws(()=>addCafeCell(base,{...add,blocks:[[1,2,3,1,2,3,[0]]]}));
+ assert.throws(()=>addCafeCell(base,{...add,blocks:[[...bounds,[2]]]}));
+}
+pass('a café cell reuses only complete existing proofs and leaves every scene table unchanged');
 console.log(`owner bake scene: ${passed} checks passed`);

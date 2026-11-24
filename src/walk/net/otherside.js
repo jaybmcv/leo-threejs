@@ -35,6 +35,8 @@ export const inOtherside=(()=>{
  const ancestors=page?.ancestorOrigins?[...page.ancestorOrigins]:[];
  return typeof window!=='undefined'&&window.LEO_OTHERSIDE===true||ancestors.some(o=>allowed.includes(o))||heard.some(m=>fromOtherside(m)&&readGlyph(m.data));
 })();
+// For walk.html's styles: Otherside's round chat button sits over the bottom-left corner of the page.
+if(inOtherside&&typeof document!=='undefined')document.documentElement.classList.add('otherside');
 
 // Calls back with glyph:ready's contents, including if it came before this was called, once it names a wallet or a
 // username: an empty or unreadable one leaves the player on the name card, and a later one still counts. Done once a

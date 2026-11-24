@@ -17,10 +17,10 @@ room.name='Area_'+id;room.position.set(...v1Frame(id).origin);fit.name='Room_fit
 const floor=new T.Mesh(new T.BoxGeometry(48,.2,32),new T.MeshBasicMaterial());floor.position.set(0,-.1,-5);floor.name='Floor';room.add(floor);
 const ship={root};assert(dressGamingLounge(ship));
 const desks=fit.children.filter(o=>o.name==='Gaming_desk_top'),chairs=fit.children.filter(o=>o.name==='Gaming_chair');
-assert.equal(desks.length,8);assert.equal(chairs.length,14);
+assert.equal(desks.length,8);assert.equal(chairs.length,13);
 assert(desks.every(o=>o.position.z<-11));assert(chairs.slice(0,8).every(o=>o.position.z<-10));
-assert.deepEqual(fit.children.filter(o=>o.name==='Wall_screen_frame').map(o=>o.position.toArray()),[-21,-16.5,-12,-7.5,-3,10.5].map(x=>[x,1.35,7.84-.025]));
-const seats=findRestSpots(root).filter(s=>s.kind==='sit');assert(seats.length>=14);
+assert.deepEqual(fit.children.filter(o=>o.name==='Wall_screen_frame').map(o=>o.position.toArray()),[-21,-16.5,-12,-7.5,-3].map(x=>[x,1.35,7.84-.025]));
+const seats=findRestSpots(root).filter(s=>s.kind==='sit');assert(seats.length>=13);
 for(const chair of chairs.slice(0,8)){const p=chair.getWorldPosition(new T.Vector3());assert(seats.some(s=>Math.hypot(s.point.x-p.x,s.point.z-p.z)<.1));}
 const colliders=new Colliders();colliders.addStatic(root);colliders.commit();
 const restIndex=spotIndex(solidSpots(seats,colliders));
@@ -55,11 +55,22 @@ for(let i=0;i<pc.geometry.attributes.position.count;i++){
  assert(inside,'All relocated monitors stay inside the sloping window envelope');
  assert(p.y<plan.y+1.4,'Monitors stay below standing window sightlines');
 }
-assert.equal(holo.geometry.attributes.position.count,24);assert.equal(holo.userData.boards.length,6);
+const base=fit.getObjectByName('Gaming_leaderboard_base'),capsule=holo.getObjectByName('Gaming_leaderboard_capsule');
+assert.equal(base.geometry.parameters.radialSegments,64);assert(base.geometry.parameters.radiusTop<=1.65*Math.cos(Math.PI/6),'Round base stays inside the former footprint');
+assert.equal(capsule.geometry.type,'LatheGeometry');capsule.geometry.computeBoundingBox();
+assert(Math.abs(capsule.geometry.boundingBox.min.y-.66)<.001&&Math.abs(capsule.geometry.boundingBox.max.y-3.06)<.001,'Capsule retains the former display height');
+assert.equal(holo.userData.boards.length,9);assert.deepEqual(holo.userData.boards,gamingBoards(),'All games keep their existing data');
+assert.equal(holo.material.side,T.FrontSide);assert(holo.material.fragmentShader.includes('if(face<=.18)discard'),'Far-side ink is hidden');
+assert.equal(holo.material.blending,T.NormalBlending,'The board backing dims bright signs behind the scores');
+const positions=holo.geometry.attributes.position,normals=holo.geometry.attributes.normal;
+for(let i=0;i<positions.count;i++)assert(positions.getX(i)*normals.getX(i)+positions.getZ(i)*normals.getZ(i)>1.3,'Curved board fronts face out');
 const before=holo.material.uniforms.uBoards.value.version,initial=holo.userData.boards.map(b=>b.id);
-lounge.update(1,eye,center);assert(holo.rotation.y>0);assert.equal(holo.material.uniforms.uBoards.value.version,before,'No per-frame canvas redraw');
-lounge.update(18,eye,center);assert.notDeepEqual(holo.userData.boards.map(b=>b.id),initial,'All nine boards cycle over six faces');
-assert.equal(new Set([...initial,...holo.userData.boards.map(b=>b.id)]).size,9);
+lounge.update(1,eye,center);assert(Math.abs(holo.rotation.y-Math.PI/18)<1e-10);assert.equal(holo.material.uniforms.uBoards.value.version,before,'No per-frame canvas redraw');
+lounge.update(35,eye,center);assert(Math.abs(holo.rotation.y)<1e-10,'One continuous turn takes 36 seconds');
+assert.deepEqual(holo.userData.boards.map(b=>b.id),initial);assert.equal(holo.material.uniforms.uBoards.value.version,before,'A complete loop does not repaint unchanged scores');
+hearGamingBoard('pool',{m:'board',top:[{name:'Voyager',ms:11000}]});lounge.update(3,eye,center);
+assert.equal(holo.userData.boards.find(b=>b.id==='pool').rows[0].value,'11.0 s');assert.equal(holo.material.uniforms.uBoards.value.version,before+1,'Only changed scores repaint the atlas');
 const still=createGamingLounge(ship,null,{still:true});still.update(4,eye,center);assert.equal(still.leaderboard.mesh.rotation.y,0);
 for(const suffix of ['.public','.prepared','.authoring']){const s=fs.readFileSync('src/walk/gaming-lounge'+suffix+'.js','utf8');assert(s.includes('o.applyMatrix4(rowMatrix)'));assert(s.includes('pcPiece('));assert(s.includes('leaderboardColumn(time)'));assert(s.includes('group,leaderboard,'));}
-console.log('PASS gaming lounge: eight relocated PCs, fourteen chairs, unchanged wall stations, base collision, full circuit, far-end and chair clearance, existing scores, unavailable storage, atlas rotation and cycling, reduced motion and all variants');
+console.log('PASS gaming lounge: eight relocated PCs, thirteen chairs, five retained wall stations, base collision, full circuit, far-end and chair clearance, existing scores, unavailable storage, atlas rotation and cycling, reduced motion and all variants');
+console.log('PASS score capsule: round base collision and full circuit, nine outward boards, 36-second rotation without canvas repaint and score updates');

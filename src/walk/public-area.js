@@ -3,6 +3,7 @@ import layout from '../plan/selected-layout.js';
 import {contains} from '../plan/geometry-v2.js';
 import {anchoredPoint,toLocal} from '../plan/rooms.js';
 import {LIFTS} from './lifts.js';
+import {CLUBHOUSE_LOUNGE_STATION} from '../v2/vault-lift-fit.js';
 import {VAULT_PLAN,VAULT_LIFT} from './vault.js';
 import {MAZE_ROOM,inMaze} from './maze/layout.js';
 import {panelInside,panelDoor} from './net/panel-rules.js';
@@ -39,7 +40,9 @@ export function restrictedZones(){
  // Its tube lift (radius 1.7) from Deck 17 up, and on the upper stops its landings and their connections
  // (vault-lift.js, v2/clubhouse-access.js): the car, the glass landing to 3.7 m and the opening to 4 m aside.
  const stops=VAULT_LIFT.stops,top=stops.at(-1).y+3.5;
- zones.push(prism('clubhouse',vaultRect(-2,2,-2,2),stops[0].y-.5,top));
+ const [cx,cy,cz]=CLUBHOUSE_LOUNGE_STATION;
+ zones.push(prism('clubhouse',[[cx-1.8,cz-1.8],[cx+1.8,cz-1.8],[cx+1.8,cz+1.8],[cx-1.8,cz+1.8]],cy-.5,cy+3.5));
+ zones.push(prism('clubhouse',vaultRect(-2,2,-2,2),stops[1].y-.5,top));
  if(stops.length>1)zones.push(prism('clubhouse',vaultRect(-4.2,2,-2,3.9),stops[1].y-.5,top));
  // Lift shafts, a car's footprint and a little more, from the lowest stop to above the highest.
  for(const l of LIFTS){const c=l.car,ys=l.stops.map(s=>s.y),hx=c.width/2+.2,hz=c.depth/2+.2;

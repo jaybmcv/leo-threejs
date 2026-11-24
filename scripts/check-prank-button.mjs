@@ -5,7 +5,7 @@ import layout from '../src/plan/selected-layout.js';
 import {contains} from '../src/plan/geometry-v2.js';
 import {plannedStanding} from '../src/v2/standing.js';
 import {Colliders} from '../src/walk/collision.js';
-import {prankFittings,attachPrankCollider,stainWeights,stainSources,createPrankMess,PRANK} from '../src/walk/prank-button.js';
+import {prankFittings,attachPrankCollider,stainWeights,stainSources,createPrankMess,photoCrop,PRANK} from '../src/walk/prank-button.js';
 import {installPreparedColliders} from '../src/v2/prepared-codec.public.js';
 import {createPrankTiming,PRANK_TIME} from '../src/walk/prank-timing.js';
 import {LIFTS} from '../src/walk/lifts.js';
@@ -68,4 +68,15 @@ for(const lift of LIFTS.filter(l=>l.id.startsWith('forward-'))){const stop=lift.
 pass('both forward lift entrances and their three-metre approaches stay clear of the new fitting');
 for(const suffix of ['', '.public', '.prepared', '.authoring']){const source=fs.readFileSync(new URL('../src/walk/main'+suffix+'.js',import.meta.url),'utf8');for(const hook of ['prank=createPrankButton','prank?.locked?prank.camera','prank?.near(p)','prank?.update()','prank.cancel()'])assert(source.includes(hook),suffix+' '+hook);}
 pass('all four walk entry points install the same station, camera, prompt, update and cancellation');
+{
+ // The souvenir's photo window is 1012×620. Phones held upright (and wide desktops) crop to it rather than squeeze.
+ for(const [w,h] of [[1080,1920],[1170,2532],[1920,1080],[2560,1080],[1012,620]]){
+  const [x,y,cw,ch]=photoCrop(w,h,1012,620);
+  assert(Math.abs(cw/ch-1012/620)<1e-9,'the crop keeps the photo window shape, so nothing is stretched');
+  assert(x>=0&&y>=0&&x+cw<=w+1e-9&&y+ch<=h+1e-9,'the crop stays inside the capture');
+  assert(Math.abs(x+cw/2-w/2)<1e-9&&Math.abs(y+ch/2-h/2)<1e-9,'the crop is centred where the lens aims');
+  assert(Math.abs(cw-w)<1e-9||Math.abs(ch-h)<1e-9,'the crop uses the full width or the full height');
+ }
+ pass('the souvenir photo crops portrait and wide captures to its window instead of stretching them');
+}
 console.log('prank button: '+checks+' checks passed');

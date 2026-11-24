@@ -400,7 +400,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 129,
-      "signature": "a6efc352a3e84c573540a11c9e954fc1008dc3c7d6e5420557b168a36aeb9374"
+      "signature": "81bdef2f35608581aa6b1e289ce88c2d89fb60c4bafcf8d3180ce51cd5d6fae8"
     },
     {
       "source": "src/interior-polish.js",
@@ -1033,7 +1033,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 28,
-      "signature": "046ab8c0c7655ff3d7d8a5f6f77567a83ee74af69422bfd6539f2436714e9b1b"
+      "signature": "c4cc7b5b5beb6613d1022d32bfea407588fe2c9715cb2b74f7181f72f899e3a3"
     },
     {
       "source": "src/walk/aquarium-treasure/game.js",
@@ -1048,7 +1048,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 28,
-      "signature": "e6ea43c3b5c29365caee2fc9ef963e0d986d3eb720cf1fb9a8709583e5878f43"
+      "signature": "47dea763cc9d30518a288511aa95a48c931a74d0ba54634b7d06df1dab2739ae"
     },
     {
       "source": "src/walk/aquarium-treasure/suit.js",
@@ -1284,7 +1284,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 6,
-      "signature": "ba88213a195095d2d9b03546cbe6999b832f15699b568fb74574ce2316330048"
+      "signature": "8d6849cab9ae76e34e8a1f4b32d6a05d0965b714ba299c90dec35e093948c5a5"
     },
     {
       "source": "src/walk/baggage.js",
@@ -1305,7 +1305,7 @@
       ],
       "interactionTargets": null,
       "placements": 30,
-      "signature": "e1d6ea39cb9999c8ff926f5963cc0f075ac95306248a769f30a8d26cf00e208e"
+      "signature": "d3345313ead9796426a7963c5074c990a6118a7ded4b3a5a13c711ee359678a5"
     },
     {
       "source": "src/walk/blossom.authoring.js",
@@ -1854,7 +1854,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 57,
-      "signature": "dc551d28913f6f608076b205a34307952760378d0620f8c77c94da069cb9d7c2"
+      "signature": "c9912db76af02601061c9f5b977f7e86e5321dbd1333877b35224e9d1392dcf3"
     },
     {
       "source": "src/walk/collision-cells.js",
@@ -2612,7 +2612,35 @@
       ],
       "interactionTargets": null,
       "placements": 77,
-      "signature": "5bdfc78e4aac30436b24a83c0532528e1d4eb83220feebdf4d8a7d53fbbfeda2"
+      "signature": "111489de7dd588747cf8f6e43c29d5e5faa113f313723e5a27a334c9ed96987c"
+    },
+    {
+      "source": "src/walk/frog-trip.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "97fb34c7534f3e8304004aa96acfc1b990c5c03b1157637b23a09c8394baf04d"
+    },
+    {
+      "source": "src/walk/frog.js",
+      "rooms": [
+        "circulation-6"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The frog sits on the fixed Deck 6 Common Stage apron in ship coordinates, inside the seating arc and clear of the stage; it does not move with any room.",
+      "features": [
+        "Common_stage_frog"
+      ],
+      "colliders": [],
+      "interactionTargets": "same room frames; see debug world positions",
+      "placements": 7,
+      "signature": "d56ec81dded48030b307f24bcfe4057655793cd451808a8cb5dfefcad0a877f4"
     },
     {
       "source": "src/walk/gaming-lounge.authoring.js",
@@ -2630,12 +2658,13 @@
         "Gaming_light_wash",
         "Gaming_hex_floor",
         "Gaming_star_ceiling",
-        "Gaming_leaderboard_column"
+        "Gaming_leaderboard_column",
+        "Gaming_leaderboard_capsule"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 71,
-      "signature": "7eaeec45d04e6121da3df0be5b9a0c8e4370d0904c7c1138c60bff9294aae54a"
+      "signature": "96d722c9bfcbe0280a0b3d720196056717f6de8b0b864c8f65544a2d6927356c"
     },
     {
       "source": "src/walk/gaming-lounge.js",
@@ -2653,12 +2682,13 @@
         "Gaming_light_wash",
         "Gaming_hex_floor",
         "Gaming_star_ceiling",
-        "Gaming_leaderboard_column"
+        "Gaming_leaderboard_column",
+        "Gaming_leaderboard_capsule"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 71,
-      "signature": "c2a7422ad31d9a2e478e0b68576b3e26cd51d690adebbd1c426d97fdb99d0598"
+      "signature": "dde0962922e4a329891be9258add7f694448bf297faf596eed6f162f62b12230"
     },
     {
       "source": "src/walk/gaming-lounge.prepared.js",
@@ -2676,12 +2706,13 @@
         "Gaming_light_wash",
         "Gaming_hex_floor",
         "Gaming_star_ceiling",
-        "Gaming_leaderboard_column"
+        "Gaming_leaderboard_column",
+        "Gaming_leaderboard_capsule"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 71,
-      "signature": "d8b18e3d805080a4abc4a5b6668354b664033d1dac822fd9a7c654d07db9ce71"
+      "signature": "151e89685b81cafadad4dfd893abf8e260b434bf989276c6893e1064b5a9a307"
     },
     {
       "source": "src/walk/gaming-lounge.public.js",
@@ -2699,12 +2730,13 @@
         "Gaming_light_wash",
         "Gaming_hex_floor",
         "Gaming_star_ceiling",
-        "Gaming_leaderboard_column"
+        "Gaming_leaderboard_column",
+        "Gaming_leaderboard_capsule"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 71,
-      "signature": "358f247074048e3d5dd6a27289b017121ff185121c55d377f8ba68213671a423"
+      "signature": "1656ae87b752f3ea10d5fe4a68ccca20c4526af4d909370741620928a4753464"
     },
     {
       "source": "src/walk/gaming-refreshments.js",
@@ -3019,7 +3051,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 20,
-      "signature": "952eac04ae9e5692801d42c6c4f05cbc2e86ab38fe7054e10854845041770f66"
+      "signature": "67c1eac73a021c432b7e302b9d3a6e218faaca4ce17dbbd7e438698360641bb7"
     },
     {
       "source": "src/walk/hydration-nook.js",
@@ -3037,7 +3069,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 20,
-      "signature": "c5883c0311f1ec2cb490ddb77585d438ce731b07487167ba7237b59075d39ae7"
+      "signature": "090ffc16af624778c957992db48fb4123ccd8c8a469abd2ae5b41b9d9d1d73a1"
     },
     {
       "source": "src/walk/hydration-nook.prepared.js",
@@ -3055,7 +3087,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 20,
-      "signature": "86b8619e71eb506641d1439b25ca4eb925cb0b1a8830d3310bf3fd003d38eaa6"
+      "signature": "a4110a1234e6b7d486b1e442c3f8a84469abd4f9082f1cb8fdf88ed3d90ed3b6"
     },
     {
       "source": "src/walk/hydration-nook.public.js",
@@ -3073,13 +3105,14 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 20,
-      "signature": "57ff81604ded149f4e5cef187f678f695bb14303a5393cb8fcee9f32bf746aa3"
+      "signature": "dc4e7405bb974a1045e5d143d1ca19be411859ee5521a938d5eb1d83a05a9092"
     },
     {
       "source": "src/walk/hydro-portal.js",
       "rooms": [
         "commons-1",
-        "circulation-6"
+        "circulation-6",
+        "circulation-2"
       ],
       "via": "inherited",
       "fixed": false,
@@ -3087,7 +3120,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "8dda66a80780215ef965a568dae9f5e0f62e8624a6a88dbd813637a01d2e9389"
+      "signature": "71dd58b06621cf2d28e6ae5fa26e4d931f5f2b50aff5ded9a91e3c1469fd3b14"
     },
     {
       "source": "src/walk/hydroponics.js",
@@ -3139,7 +3172,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "c81b08ab626e88b843f60186147da85675fb959419dd87df3f29574ebfdfbc2c"
+      "signature": "21983271ab2b7c48bf34f2adefd46b2edcf95fc5f3dade1d8e6bcaa9b5f0834c"
     },
     {
       "source": "src/walk/instance-matrix.js",
@@ -3463,7 +3496,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "1976a6d3561728cc2d92e58a28a5f165d1b752c29de410b684124c8eb66ed0ad"
+      "signature": "03e77f001eaa7bfddbf7322f858c1b58992984d77244dd2cf7ec10d86a086345"
     },
     {
       "source": "src/walk/layered-conservatory.js",
@@ -3634,6 +3667,7 @@
         "Lift_shutter",
         "Lift_door_blade",
         "Lift_door_shut",
+        "Lift_landing_casing",
         "Lift_doors_shut",
         "Walk_lift_signs",
         "Walk_lift_",
@@ -3641,8 +3675,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 17,
-      "signature": "e8d43ccbabf99c6e4a3957b8648e9c9d99dbcf4f637c2241c12b556e0d3fc96b"
+      "placements": 19,
+      "signature": "e90608904d74bcc35a99437706d01276ab6424a66088a551bfca958024e13ba0"
     },
     {
       "source": "src/walk/lift-ride.js",
@@ -3675,6 +3709,7 @@
         "Lift_shutter",
         "Lift_door_blade",
         "Lift_door_shut",
+        "Lift_landing_casing",
         "Lift_doors_shut",
         "Walk_lift_signs",
         "Walk_lift_",
@@ -3682,8 +3717,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 17,
-      "signature": "6d5e372831872981a5456f59fd3078f5ee355f7064e827fed83596fc88db0396"
+      "placements": 19,
+      "signature": "14575db7161672f7b8b7fdd014d5652da0a0690a98447a2b95e2df293e35e170"
     },
     {
       "source": "src/walk/lift-ride.prepared.js",
@@ -3716,6 +3751,7 @@
         "Lift_shutter",
         "Lift_door_blade",
         "Lift_door_shut",
+        "Lift_landing_casing",
         "Lift_doors_shut",
         "Walk_lift_signs",
         "Walk_lift_",
@@ -3723,8 +3759,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 17,
-      "signature": "87748a7594c9c0437d913d808f9ba419165d9b424843d18cafec66c654376099"
+      "placements": 19,
+      "signature": "aa6e76600a6951f441cdf0dbde5cd220a961c3780fdaf6497c12ffaf1b7421b6"
     },
     {
       "source": "src/walk/lift-ride.public.js",
@@ -3757,6 +3793,7 @@
         "Lift_shutter",
         "Lift_door_blade",
         "Lift_door_shut",
+        "Lift_landing_casing",
         "Lift_doors_shut",
         "Walk_lift_signs",
         "Walk_lift_",
@@ -3764,8 +3801,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 17,
-      "signature": "16d34a05b12bb9b0a0b0e1205058d4dcdda307b8098594a4b81dd9d83c5f35b3"
+      "placements": 19,
+      "signature": "5ec3c4aa5486db688b801a1bbf587fca4448d34107c583644f2149392749ac51"
     },
     {
       "source": "src/walk/lift-tile-floor.authoring.js",
@@ -4282,7 +4319,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "0e0dc3c0b1d82d9a7771fa7367c6d79fc874516f9b89b9ada4db3d022c1fc904"
+      "signature": "2ac0e2e8048b5b47f494232653df4292b8bc03e55b49304005a1f0e5796f6335"
     },
     {
       "source": "src/walk/main.js",
@@ -4304,7 +4341,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "67a56aa6d19df85fc39b59f628f80735a64ac521452ba8eec3de241fa15a6453"
+      "signature": "4cf50d41f8a4dc77b93c97d1e90a2c0047d9a9435cc01ae7f95793a09849e056"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4324,7 +4361,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "7be597f75a0b3a37458aa4639f2ae439231eadd591ff41d111f782084e04c7ef"
+      "signature": "327b4e42deba5b8ae7ccc9f6b3f0b0505799deb1f10db357a9c110a9c6a63e65"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4343,8 +4380,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 52,
-      "signature": "507502c8326cc28e723ccfbfdc38a411a395d7253a3bce4ad567b759517b2518"
+      "placements": 53,
+      "signature": "819ddaefdd85938aa562ed8562b74adb8bfc15402fd14a56d1abefdc3c2c1b89"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -4416,7 +4453,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 40,
-      "signature": "9d678fb8f34d8c0636ed2e471de8757ea45ec36e1828e45f00dbc781bccd527c"
+      "signature": "afd1da6e61c838764c21f8212dfef00ba3c4ac5f55ceb72f8bd6bc7d30f198c2"
     },
     {
       "source": "src/walk/maze/layout.js",
@@ -4460,7 +4497,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 50,
-      "signature": "a3afe044faae75b6c33b0dd8dbbb936f4753dc016940c573f3b881e3313bbfae"
+      "signature": "4d35bd4d5ef5888daf2148d7c20eb95e90582aff52b4ca67f8e75e7828999577"
     },
     {
       "source": "src/walk/mct-repair/game.js",
@@ -4496,7 +4533,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "ec989aef663822a0436476d0d62a54fb77a827fd7a24414225ced463328f5fa4"
+      "signature": "3963f9c24fa689a7ed0e0d829dd25cf84bab0e70f009bca75c93c754b756e784"
     },
     {
       "source": "src/walk/merged-skin.js",
@@ -4642,7 +4679,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 7,
-      "signature": "d27a79f81e78d778d95afd7a00eabc4697cef68ea28e4ff8e2e8b12089be1906"
+      "signature": "1612766d474181aa0c4759b0ed8a393a694918cc58bed26b0e42b80d4aefe1e4"
     },
     {
       "source": "src/walk/mission-holo.authoring.js",
@@ -5195,6 +5232,20 @@
       "signature": "ac363c331cd157fc661a5ef323c9bf8a1c629d295470ec154ff7b5c7c75a74ad"
     },
     {
+      "source": "src/walk/pool/display-rack.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [
+        "Paw_pool_display_rack"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 2,
+      "signature": "cc3c43c9d529bbbb98431f24c9c2b7ecf6d46edf46ed21f2210c89f78e334bde"
+    },
+    {
       "source": "src/walk/pool/game.js",
       "rooms": [],
       "via": "frame boundary",
@@ -5231,7 +5282,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 8,
-      "signature": "4c88e894d90ad6eb35a6a44c1cff1a378077035c65486b797d4a7c2a6b943f83"
+      "signature": "018a0c4f426740a301623680ab73ac1019933fc86af27f990fa6cb9c038b0c12"
     },
     {
       "source": "src/walk/pool/table.js",
@@ -5246,7 +5297,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 8,
-      "signature": "38677eaa40fabb9a45445b1906abd404283d841ae9e7d741b74ef0fe060cbe6f"
+      "signature": "b23d8cca19a1b63337800a9c4bacc27bdd9cce26ca0d3a90f19c52cf0f562348"
     },
     {
       "source": "src/walk/pool/table.prepared.js",
@@ -5261,7 +5312,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 8,
-      "signature": "66699dc41801f99b22991f767ee5b894c3a2fb79c68f1c69c332ec96c64d11c5"
+      "signature": "77d23fbf34e29bf202da8dbf028a28d2c23a34682e55c98d878a93c32996b10e"
     },
     {
       "source": "src/walk/pool/table.public.js",
@@ -5276,7 +5327,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 8,
-      "signature": "0d2c572b8e401cdcf7ca8dba0b49267081065f243938273efb305fd7ef3df999"
+      "signature": "aa0fa1f11553d024032ea117f1f4e3b3a2314d5dcd5eba08ae9d049bf6b0d4c2"
     },
     {
       "source": "src/walk/prank-button.js",
@@ -5292,7 +5343,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 32,
-      "signature": "644fe3645dd0e6715e81a5ad925cd0e31c5563860b3a40c67e5ebefb83e5c633"
+      "signature": "d094f97f674e0f096ff5c73f16d4a6412385544795e04033bb05f10d4ce1e595"
     },
     {
       "source": "src/walk/prepare.js",
@@ -5400,7 +5451,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "6b2ea28fc7d515d57d17a9611abcd320361707c1fd17ba71f1bb32dba83470c8"
+      "signature": "5e86564042fda28569307399c98838a5c6b51a2310869578c74e5dc09226e870"
     },
     {
       "source": "src/walk/public-area.js",
@@ -5412,7 +5463,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "d4a35f82951ef36e0572ffd3a179721c45463f80ae6170bba20c09f80a7d1c1b"
+      "signature": "e5a76a9c686c2d935195f7bd1d515e04ab454f26592b8d32063eefbcb25623da"
     },
     {
       "source": "src/walk/quantum-knitter.js",
@@ -5779,7 +5830,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 25,
-      "signature": "c0adbe280e0c678065bcd34a5a583692a8bd774bb12092ec09ca664ae9667c39"
+      "signature": "ccdfc8c4229af849b7597703b0d18801c0cb8ff911264b6737cf3697f99860ed"
     },
     {
       "source": "src/walk/solved-pose.js",
@@ -5792,6 +5843,30 @@
       "interactionTargets": null,
       "placements": 1,
       "signature": "fd531a615a5dbbfaf9c5501e2415a86a6c74c16cad0b544fc380f555e75833d3"
+    },
+    {
+      "source": "src/walk/stage-dj-sound.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Synthesised audio only; Math.round sizes the loop buffer. The stage DJ supplies its source position; no geometry placement.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "ae791b3bece90cc6e4575be8133b579b679148aa5051e293b114343cb1d39e70"
+    },
+    {
+      "source": "src/walk/static-tints.js",
+      "rooms": [],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
+      "features": [],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 1,
+      "signature": "04382933516c52dee34b457b4f55b0b884607e2ed7d0fbd748bbad47108c2fe0"
     },
     {
       "source": "src/walk/surgery.authoring.js",
@@ -6191,8 +6266,8 @@
         "Clubhouse_tube_colliders"
       ],
       "interactionTargets": null,
-      "placements": 29,
-      "signature": "e675bea8901b8eab14a57a1e2051875d223d440be91b8f5bdb0e0dc79de97066"
+      "placements": 31,
+      "signature": "6aa82217d766b41c1ba16af9671b4670e60b9d328d32784912504e6fae85e302"
     },
     {
       "source": "src/walk/vault-lift.js",
@@ -6211,8 +6286,8 @@
         "Clubhouse_tube_colliders"
       ],
       "interactionTargets": null,
-      "placements": 29,
-      "signature": "7d082fbe74c87a750091bcced3c702b61a804163094c29b56df282337c400fc7"
+      "placements": 31,
+      "signature": "c72961350d882e636937700ecf1c707b25cd21fcf92d4d1846bf463b46a6d94e"
     },
     {
       "source": "src/walk/vault.authoring.js",
@@ -6233,7 +6308,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 21,
-      "signature": "11ccad5261bbc984eac7a31627692b768eba50d04a660dc07205dccc41771d3e"
+      "signature": "58434b31f69dbec9674366309532628e048ff7a0b612675846f47433ed6f26a9"
     },
     {
       "source": "src/walk/vault.js",
@@ -6254,7 +6329,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 21,
-      "signature": "0c3fda3d3ce502ac4db89aa6f93a120e2c91e86a54d2f2a2765e9d7c934a9890"
+      "signature": "928c467de62e1694834acf9a46204713b24c8624fe380b6cf2587e2b78c11746"
     },
     {
       "source": "src/walk/wall-kit.js",
@@ -6452,7 +6527,7 @@
         "Zen_garden",
         "Zen_garden_colliders",
         "Zen_moss_floor",
-        "Zen_pond_wall",
+        "Zen_pond_bed_floor",
         "Zen_falls_flow",
         "Zen_bridge_floor",
         "Zen_bridge_rail",
@@ -6465,8 +6540,8 @@
         "Zen_garden_colliders"
       ],
       "interactionTargets": null,
-      "placements": 36,
-      "signature": "58bed453ba1db8caee1ae52ebe74e39902ec892632c8dd4540fe4fb5dd9f5b5c"
+      "placements": 40,
+      "signature": "4cd43979e161f7c458eacc7a8c2d98501643f10a4bb9975791e8afdfe6e8f878"
     },
     {
       "source": "src/window-geometry.js",

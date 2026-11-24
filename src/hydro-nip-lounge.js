@@ -534,10 +534,10 @@ export function createHydroNipLounge({mirror=1}={}){
   put(M.wood,new T.CylinderGeometry(.14,.14,.04,14).rotateZ(.5).translate(x-.12,FLOOR+3.4,z+.1));
   for(let i=0;i<3;i++){const sz=z-1.4+i*1.4;seat('Seat',new T.CylinderGeometry(.22,.22,.08,14),M.teal,[x-2.6,FLOOR+.76,sz]);cyl(M.dark,.035,.035,.72,[x-2.6,FLOOR+.36,sz],6);cyl(M.dark,.2,.2,.03,[x-2.6,FLOOR+.015,sz],12);}
   turning=null;for(const o of root.children.slice(firstChild)){o.applyMatrix4(turn);o.userData.converger=true;}
-  // Face the jaguar entrance, with the same mirror correction as the other neon signs.
-  piece='Cosmic_Munchies_Sign';const a=-c.signYaw,n=[-Math.sin(a),0,-Math.cos(a)],sx=cx+n[0]*3.1,sz=cz+n[2]*3.1;
-  sign({at:[sx,CEILING-4.1,sz],normal:n,width:4.6,height:1.3,color:CYAN,frame:PINK,lines:[{text:'COSMIC MUNCHIES',size:.3},{text:'CONVERGER',size:.36,color:PINK}]});
-  for(const s of [-1,1]){const xx=sx+s*2*Math.cos(a),zz=sz-s*2*Math.sin(a);rod(M.dark,[xx,CEILING-3.45,zz],[xx,CEILING,zz],.012,3);}
+  // Face the aquarium photo approach, below the gallery lights with both wires on the room side.
+  piece='Cosmic_Munchies_Sign';const a=-c.signYaw,n=[-Math.sin(a),0,-Math.cos(a)],sx=c.signCenter[0]-r.x+132,sy=c.signCenter[1],sz=27+r.side*(c.signCenter[2]-r.z);
+  sign({at:[sx,sy,sz],normal:n,width:4.6,height:1.3,color:CYAN,frame:PINK,lines:[{text:'COSMIC MUNCHIES',size:.3},{text:'CONVERGER',size:.36,color:PINK}]});
+  for(const s of [-1,1]){const xx=sx+s*1.4*Math.cos(a),zz=sz-s*1.4*Math.sin(a);rod(M.dark,[xx,sy+.65,zz],[xx,CEILING,zz],.012,3);}
   piece=null;
  }
 
@@ -549,10 +549,10 @@ export function createHydroNipLounge({mirror=1}={}){
  const rug=fitoutOverrides['commons-1']?.loungeRug,rugMove=rug?new T.Matrix4().makeTranslation(rug.at[0],FLOOR,rug.at[1]).multiply(new T.Matrix4().makeRotationY(rug.yaw)).multiply(new T.Matrix4().makeTranslation(-144,-FLOOR,-17.5)):null;
  for(const [x,z,w,d] of [[127,15,7,4],[137,15,7,4],[144,16,4,3]].map((p,i)=>seatingRow(p,i))){turning=x===144?rugMove:null;box(M.rug,[w,.02,d],[x,FLOOR+.01,z]);}turning=null;
  [[124.6,14.2,'magenta'],[127.6,16.4,'teal'],[129.6,14,'purple'],[134.8,14.1,'teal'],[138.2,16.5,'magenta'],[140.2,14.3,'purple'],[144.6,16.1,'magenta']].map((p,i)=>seatingRow(p,Math.floor(i/3))).forEach(([x,z,c])=>
-  {const o=seat('Soft_seat',new T.SphereGeometry(.58,16,10).scale(1,.62,1),M[c],[x,FLOOR+.36,z]);if(x===144.6&&rugMove)o.applyMatrix4(rugMove);});
- // Only the two round cushions on the rug beside the photo spot use the crossed-leg pose.
- [[126.4,13.4],[131,16.2],[133.6,16],[136.2,13.4],[142.7,14.9,'crossLegged'],[145.6,17.2,'crossLegged']].map((p,i)=>seatingRow(p,Math.floor(i/2))).forEach(([x,z,sitPose],i)=>
-  {const o=seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),[M.purple,M.teal,M.magenta][i%3],[x,FLOOR+.095,z]);if(x>=142.7&&rugMove)o.applyMatrix4(rugMove);if(sitPose)o.userData.sitPose=sitPose;});
+  {const o=seat('Soft_seat',new T.SphereGeometry(.58,16,10).scale(1,.62,1),M[c],[x,FLOOR+.36,z]);if(x===144.6&&rugMove)o.applyMatrix4(rugMove);o.userData.sitPose='crossLegged';});
+ // Every flat and dome cushion on the three rugs shares the meditation pose.
+ [[126.4,13.4],[131,16.2],[133.6,16],[136.2,13.4],[142.7,14.9],[145.6,17.2]].map((p,i)=>seatingRow(p,Math.floor(i/2))).forEach(([x,z],i)=>
+  {const o=seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),[M.purple,M.teal,M.magenta][i%3],[x,FLOOR+.095,z]);if(x>=142.7&&rugMove)o.applyMatrix4(rugMove);o.userData.sitPose='crossLegged';});
  for(const [x,z] of [[127.2,15],[137.2,15]].map((p,i)=>seatingRow(p,i))){cyl(M.wood,.5,.5,.05,[x,FLOOR+.4,z],18);cyl(M.dark,.08,.12,.38,[x,FLOOR+.19,z],8);
   cyl(M.board,.18,.12,.08,[x,FLOOR+.465,z],12);put(M.leaf,new T.SphereGeometry(.15,8,5,0,Math.PI*2,0,Math.PI/2).translate(x,FLOOR+.49,z));}
  [[125.8,15.8,PINK],[131.6,13.6,AMBER],[136,16.8,GREEN],[139.6,15.6,PURPLE],[143.4,17.4,CYAN],[128.8,13.1,AMBER]].map((p,i)=>seatingRow(p,[0,0,1,1,2,0][i])).forEach(([x,z,c])=>put(neon(c),new T.IcosahedronGeometry(.09,1).translate(x,FLOOR+.11,z)));

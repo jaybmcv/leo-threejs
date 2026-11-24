@@ -37,10 +37,13 @@ const toMap=(x,z)=>[(x-MAP.x0)/MAP.cell,(z-MAP.z0)/MAP.cell];
 export function arrow(g,size,line){g.fillStyle='#f85800';g.strokeStyle='#050507';g.lineWidth=line;g.beginPath();g.moveTo(0,-size);g.lineTo(size*.7,size*.7);g.lineTo(0,size*.3);g.lineTo(-size*.7,size*.7);g.closePath();g.fill();g.stroke();}
 
 // The corner mini-map, heading-up around the walker (yaw 0 looks along +z). Returns the deck shown.
-export function drawMiniMap(canvas,map,{x,y,z,yaw,places=[]}){
+export function drawMiniMap(canvas,map,{x,y,z,yaw,places=[]},last){
  const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height,dpr=w/(canvas.clientWidth||w);
+ const deck=deckOf(y),plan=deck&&map.deck(deck.number),markers=plan&&currentMapPlaces(places);
+ // The caller owns this canvas. These are all inputs to its ship plan, dots, names and arrow.
+ if(last?.valid&&last.x===x&&last.z===z&&last.yaw===yaw&&last.w===w&&last.h===h&&last.dpr===dpr&&
+    last.deck===deck&&last.plan===plan&&last.markers===markers)return deck;
  g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);
- const deck=deckOf(y),plan=deck&&map.deck(deck.number);
  if(plan){
   // 3.2 screen px a metre: about 25 m either side.
   const scale=3.2*dpr*MAP.cell,[mx,mz]=toMap(x,z);
@@ -48,11 +51,12 @@ export function drawMiniMap(canvas,map,{x,y,z,yaw,places=[]}){
   g.save();g.translate(w/2,h/2);g.rotate(turn);g.scale(scale,scale);g.imageSmoothingEnabled=false;
   g.drawImage(plan,-mx,-mz);
   g.fillStyle='#f4f0e8';
-  for(const p of currentMapPlaces(places)){if(deckOf(p.at[1])!==deck)continue;const [px,pz]=toMap(p.at[0],p.at[2]);g.beginPath();g.arc(px-mx,pz-mz,3*dpr/scale,0,Math.PI*2);g.fill();}
+  for(const p of markers){if(deckOf(p.at[1])!==deck)continue;const [px,pz]=toMap(p.at[0],p.at[2]);g.beginPath();g.arc(px-mx,pz-mz,3*dpr/scale,0,Math.PI*2);g.fill();}
   g.restore();
   miniNames(g,{w,h,dpr,x,z,turn,y:floorY(deck.number)});
  }
  g.save();g.translate(w/2,h/2);arrow(g,7*dpr,1.5*dpr);g.restore();
+ if(last)Object.assign(last,{valid:true,x,z,yaw,w,h,dpr,deck,plan,markers});
  return deck;
 }
 
@@ -73,7 +77,11 @@ function miniNames(g,{w,h,dpr,x,z,turn,y}){
  // The point `inset` metres inside room `a` nearest the walker (its centre once the room is too small for that).
  const spot=(a,inset)=>{const hx=a.width/2,hz=a.depth/2,ix=Math.min(inset,hx),iz=Math.min(inset,hz);
   return [clamp(x,a.center[0]-hx+ix,a.center[0]+hx-ix),clamp(z,a.center[2]-hz+iz,a.center[2]+hz-iz)];};
- const near=SHIP_AREAS.filter(a=>Math.abs(a.center[1]-y)<=2.2&&a.kind!=='lifeboats'&&Math.min(a.width,a.depth)*m>=22*dpr)
+ // Every candidate label centre lies inside the room's plan rectangle. A rectangle
+ // entirely beyond the map's half diagonal cannot place a label at any camera yaw.
+ const reach=Math.hypot(w,h)/(2*m);
+ const near=SHIP_AREAS.filter(a=>Math.abs(a.center[1]-y)<=2.2&&a.kind!=='lifeboats'&&Math.min(a.width,a.depth)*m>=22*dpr&&
+  Math.abs(a.center[0]-x)<=a.width/2+reach&&Math.abs(a.center[2]-z)<=a.depth/2+reach)
   .map(a=>{const [ax,az]=spot(a,4);return {a,d:Math.hypot(ax-x,az-z)};})
   .sort((p,q)=>p.d-q.d);
  g.font=`500 ${px}px "Sora",sans-serif`;g.textAlign='center';g.textBaseline='middle';g.lineJoin='round';

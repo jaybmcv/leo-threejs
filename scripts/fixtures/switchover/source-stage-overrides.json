@@ -52,8 +52,8 @@
     "reason": "Otherside entry: walkotherside.html, Discord-level access from glyph:ready or a typed name, Discord window for giveaway claims (src/walk/net/otherside.js); verified by check-otherside, check-giveaway and check-live-spatial-v2."
   },
   "src/walk/main.public.js": {
-    "sha256": "53fa521a18d20708090e14ccfda083253973eb5dee83eced290ac76b5730664b",
-    "reason": "Shader warm-up behind the loading card (src/v2/shader-warmup.js), merged with main (Great Cat Tree, phone batching). Views match main pixel for pixel."
+    "sha256": "819ddaefdd85938aa562ed8562b74adb8bfc15402fd14a56d1abefdc3c2c1b89",
+    "reason": "arrival walk first (PR #641) merged with main"
   },
   "src/v2/atrium-visibility.js": {
     "sha256": "e72253566c3178a89e460e4a95f90c4c796e13d5c64affffc8be1163f41d8ecc",
@@ -76,8 +76,8 @@
     "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
   },
   "src/v2/prepared-runtime.public.js": {
-    "sha256": "9f58b8c6670df96f25fd31e35f43b8329b125a955e0f47fdd5a5e13385178aae",
-    "reason": "Frame-time fixes: cached map places, settled prepared transforms, one-pass glass."
+    "sha256": "c554d9a4a02ee3a79a7b05e1a5d96743ded513cc25984bb2b88002b3aa67b23c",
+    "reason": "Arrival hall walked first (arrival-preview.js): the public resource no longer always waits at module load; the sign rod and the memory snapshot are made after the ship arrives; Cosmo's script loaded once"
   },
   "src/feedback/feedback.js": {
     "sha256": "e456ccbd2c1ad1df3b825d1dadd527a17422ea140ab159a045d5b1996debe6fb",
@@ -148,8 +148,8 @@
     "reason": "Carry forward the two remaining round-1 fast-deploy source rows from de275fc; existing gates retained."
   },
   "src/v2/prepared-codec.public.js": {
-    "sha256": "0d16748c877760d9b117479e7abdf85b97ea1f073a9509c57a0d71e8b091f552",
-    "reason": "Loading yields through src/v2/yield-to-page.js (scheduler.yield, a timer turn every 100 ms), the phone hull copied in 12 ms slices, typed-array compaction (scripts/check-load-yields.mjs); views match the build before pixel for pixel"
+    "sha256": "68722b4aa433937a7dcfd80519312892f1c43ea43d12ddd258e25f3393320ce5",
+    "reason": "Arrival hall walked first (arrival-preview.js): the public resource no longer always waits at module load; the sign rod and the memory snapshot are made after the ship arrives; Cosmo's script loaded once; desktop prefetch of two ship parts"
   },
   "src/v2/phase4-culling.js": {
     "sha256": "dcb9ed218e4560ac4227d13ac47f72df5eedcf9287513671ec7f081de9fac3c1",
@@ -234,5 +234,13 @@
   "src/walk/jaguar-gate.authoring.js": {
     "sha256": "4f314867e53e091400850136adb2eae61890939f368b98e03f74f5eb9af0021e",
     "reason": "jaguar gate face flattened so the wayfinding sign stays visible (tester feedback)"
+  },
+  "src/v2/prepared-resource.public.js": {
+    "sha256": "76945a731af17d66580089f5c78a43ba4451fb112089e0bec62eee73bf36d237",
+    "reason": "Arrival hall walked first (arrival-preview.js): the public resource no longer always waits at module load; the sign rod and the memory snapshot are made after the ship arrives; Cosmo's script loaded once; desktop prefetch of two ship parts"
+  },
+  "src/walk/signs.public.js": {
+    "sha256": "ccdfc8c4229af849b7597703b0d18801c0cb8ff911264b6737cf3697f99860ed",
+    "reason": "Arrival hall walked first (arrival-preview.js): the public resource no longer always waits at module load; the sign rod and the memory snapshot are made after the ship arrives; Cosmo's script loaded once"
   }
 }
