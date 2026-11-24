@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as T from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {MeshBVH} from 'three-mesh-bvh';
 import layout from '../src/plan/selected-layout.js';
 import {contains} from '../src/plan/geometry-v2.js';
 import {plannedStanding} from '../src/v2/standing.js';
@@ -9,6 +11,7 @@ import {prankFittings,attachPrankCollider,stainWeights,stainSources,createPrankM
 import {installPreparedColliders} from '../src/v2/prepared-codec.public.js';
 import {createPrankTiming,PRANK_TIME} from '../src/walk/prank-timing.js';
 import {LIFTS} from '../src/walk/lifts.js';
+import {fit} from '../src/walk/hat.js';
 
 let checks=0;const pass=s=>{checks++;console.log('PASS '+s);};
 {
@@ -16,9 +19,35 @@ let checks=0;const pass=s=>{checks++;console.log('PASS '+s);};
  const load=T.ImageLoader.prototype.loadAsync;let asset;
  try{T.ImageLoader.prototype.loadAsync=async()=>({width:1,height:1});const {createDLCat}=await import('../src/vendor/cosmo/DLCat.js');asset=await createDLCat({height:1.75});}finally{T.ImageLoader.prototype.loadAsync=load;}
  assert.deepEqual(stainSources(asset).map(m=>m.userData.originalName).sort(),['body','hoodie.001','hoodie.002']);
- const mess=createPrankMess({figure:{asset}});assert(mess.body.length>=12);assert(mess.body.some(o=>o.userData.prankSurface==='hoodie.001'),'stains sit on the outer hoodie');assert(mess.body.some(o=>o.userData.prankSurface==='hoodie.002'),'stains also follow the raised pocket');
+ const skin=asset.meshes.find(m=>m.name==='body'),bones=new Map(skin.skeleton.bones.map(b=>[b.userData.originalName,b])),head=bones.get('spine.006'),walker={figure:{asset,bones}};
+ const mess=createPrankMess(walker);assert(mess.body.length>=12);assert(mess.body.some(o=>o.userData.prankSurface==='hoodie.001'),'stains sit on the outer hoodie');assert(mess.body.some(o=>o.userData.prankSurface==='hoodie.002'),'stains also follow the raised pocket');
  for(const o of mess.body){assert(o.isSkinnedMesh);assert(o.geometry.attributes.skinWeight);assert(o.geometry.attributes.position.array.every(Number.isFinite));}
- mess.dispose();asset.dispose();pass('the real avatar uses original clothing names and receives skinned stains on its hoodie and pocket');
+ pass('the real avatar uses original clothing names and receives skinned stains on its hoodie and pocket');
+
+ const bare=head.getObjectByName('Prank_head_stains'),mount=new T.Group();fit(mount);head.add(mount);walker.hat={mount};mess.update();
+ assert(bare.visible,'the bare stains stay on while the hat loads');
+ const glb=fs.readFileSync(new URL('../src/vendor/captain-hat/captains-hat.glb',import.meta.url));
+ const {scene}=await new GLTFLoader().parseAsync(glb.buffer.slice(glb.byteOffset,glb.byteOffset+glb.byteLength),'');
+ const model=scene.getObjectByName('CaptainsHat')||scene,parts=[];model.traverse(o=>{if(o.isMesh)parts.push(o);});
+ mount.add(model);head.rotation.x=.31;head.rotation.y=-.48;mess.update();
+ assert(!bare.visible);assert.equal(mess.hat.parent,model);
+ // Every patch vertex and triangle centre has real surface beneath it, within two millimetres.
+ const checkTop=(stains,sources,scale)=>{
+  assert.equal(stains.children.length,8);const trees=sources.map(o=>new MeshBVH(o.geometry,{indirect:true}));
+  const ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0)),v=new T.Vector3(),next=new T.Vector3();
+  const check=()=>{ray.origin.copy(v).setY(4);const top=Math.max(...trees.map(t=>t.raycastFirst(ray,T.DoubleSide)?.point.y??-Infinity));
+   const gap=(v.y-top)*scale;assert(gap>-.0002&&gap<.002,`${stains.name} gap ${gap} m`);};
+  for(const o of stains.children){const p=o.geometry.attributes.position,index=o.geometry.index;
+   for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);check();}
+   for(let i=0;i<index.count;i+=3){v.set(0,0,0);for(let j=0;j<3;j++)v.add(next.fromBufferAttribute(p,index.getX(i+j)));v.multiplyScalar(1/3);check();}
+  }
+ };
+ checkTop(bare,[skin],1);checkTop(mess.hat,parts,model.getWorldScale(new T.Vector3()).y);
+ mount.visible=false;mess.update();assert(bare.visible);mount.visible=true;mess.update();assert(!bare.visible);
+ mount.removeFromParent();walker.hat=null;mess.update();assert(bare.visible);assert.equal(mess.hat.parent,null);assert.equal(mess.hat.children.length,0);
+ head.add(mount);walker.hat={mount};mess.update();assert(!bare.visible);assert.equal(mess.hat.children.length,8);
+ mess.dispose();assert.equal(bare.parent,null);assert.equal(mess.hat.parent,null);asset.dispose();
+ pass('eight top stains follow the real head and captain hat surfaces through hat loading, hiding and removal');
 }
 {
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute([0,0,0,1,0,0,0,1,0],3));g.setAttribute('skinIndex',new T.Uint16BufferAttribute([0,1,0,0,0,1,0,0,0,1,0,0],4));g.setAttribute('skinWeight',new T.Float32BufferAttribute([1,0,0,0,.35,.65,0,0,0,1,0,0],4));

@@ -64,8 +64,43 @@ function powderTexture(){
  const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;return texture;
 }
 export const stainSources=asset=>asset.meshes.filter(m=>['body','hoodie.001','hoodie.002'].includes(m.userData.originalName??m.name));
+const hatTrees=new WeakMap(),HEAD_SPLAT_LIFT=.0008;
+function hatSurfaces(model,side){
+ model.updateWorldMatrix(true,true);const inverse=model.matrixWorld.clone().invert(),surfaces=[],bounds=new T.Box3();
+ model.traverse(o=>{if(!o.isMesh)return;
+  const g=o.geometry,proxy=new T.Mesh(g,side);let tree=hatTrees.get(g);
+  if(!tree){tree=new MeshBVH(g,{indirect:true});hatTrees.set(g,tree);}
+  proxy.raycast=(ray,hits)=>tree.raycastObject3D(proxy,ray,hits);
+  proxy.matrixWorld.multiplyMatrices(inverse,o.matrixWorld);
+  bounds.union(tree.getBoundingBox(new T.Box3()).applyMatrix4(proxy.matrixWorld));surfaces.push(proxy);
+ });
+ return {surfaces,bounds};
+}
+function topSplats(root,surfaces,mats,{x,z,spreadX,spreadZ,width,depth,from,lift}){
+ const ray=new T.Raycaster(),origin=new T.Vector3(),down=new T.Vector3(0,-1,0),rings=8,segments=32;
+ ray.firstHitOnly=true;
+ for(let i=0;i<8;i++){
+  const cx=x+Math.sin(i*2.4)*spreadX,cz=z+Math.cos(i*2.4)*spreadZ,rx=width*(1+i%2*.25),positions=[],uvs=[],indices=[];
+  // Sample the inside of the stain as well as its edge so it follows bends in the surface.
+  const sample=(u,v)=>{
+   ray.set(origin.set(cx+u*rx,from,cz+v*depth),down);
+   const hit=ray.intersectObjects(surfaces,false)[0];if(!hit)return;
+   positions.push(hit.point.x,hit.point.y+lift*(1+i*.04),hit.point.z);uvs.push(.5+.5*u,.5+.5*v);
+  };
+  sample(0,0);
+  for(let r=1;r<=rings;r++)for(let j=0;j<segments;j++){
+   const a=j/segments*Math.PI*2,at=1+(r-1)*segments+j,next=1+(r-1)*segments+(j+1)%segments;
+   sample(Math.cos(a)*r/rings,Math.sin(a)*r/rings);
+   if(r===1)indices.push(0,next,at);else indices.push(at-segments,next,at,at-segments,next-segments,next);
+  }
+  if(uvs.length!==2*(1+rings*segments))continue;
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));g.setIndex(indices);g.computeVertexNormals();
+  root.add(new T.Mesh(g,mats[i%3]));
+ }
+}
 export function createPrankMess(walker){
- const head=[],body=[],hat=new T.Group(),sphere=new T.SphereGeometry(1,12,8),slime=material(green,.16),flour=new T.MeshBasicMaterial({color:white,transparent:true,depthWrite:false,toneMapped:false}),yolk=material(yellow,.2);
+ const head=[],body=[],hat=new T.Group(),bare=new T.Group(),slime=material(green,.16),flour=new T.MeshBasicMaterial({color:white,transparent:true,depthWrite:false,toneMapped:false}),yolk=material(yellow,.2);
+ const topMaterials=[flour,yolk,slime];hat.name='Prank_hat_stains';bare.name='Prank_head_stains';
  slime.emissive.copy(slime.color);slime.emissiveIntensity=.2;yolk.emissive.copy(yolk.color);yolk.emissiveIntensity=.25;
  const side=new T.MeshBasicMaterial({side:T.DoubleSide}),surfaces=stainSources(walker.figure.asset).map(m=>{const g=m.geometry.clone();g.boundsTree=new MeshBVH(g,{indirect:true});const proxy=new T.Mesh(g,side);proxy.userData.source=m;proxy.raycast=acceleratedRaycast;return proxy;}),ray=new T.Raycaster();ray.firstHitOnly=true;
  const surface=(x,y,back,objects=surfaces)=>{ray.set(new T.Vector3(x,y,back?-1:1),new T.Vector3(0,0,back?1:-1));return ray.intersectObjects(objects,false)[0];};
@@ -89,16 +124,26 @@ export function createPrankMess(walker){
   for(const [x,y,w,h,seed] of [[-.05,1.03,.14,.1,3],[.13,.73,.09,.07,7],[-.14,.69,.08,.09,9]])splat(body,flour,x,y,w,h,seed,back);
   splat(body,yolk,.09,.94,.07,.049,4,back);splat(body,yolk,-.08,.74,.047,.036,8,back);
  }
- for(const o of surfaces){o.geometry.boundsTree=null;o.geometry.dispose();}surfaces.length=0;side.dispose();
- // The hat's actual bounds determine the splats, including a hat changed while messy.
+ // Keep the bare pattern between the ears. This part of the skin is rigid on the head bone.
+ topSplats(bare,[surfaces.find(o=>o.userData.source.name==='body')],topMaterials,{x:0,z:.065,spreadX:.112,spreadZ:.056,width:.025,depth:.019,from:2,lift:HEAD_SPLAT_LIFT});
+ onBone(walker,'spine.006',bare);bare.matrixWorldNeedsUpdate=true;
+ for(const o of surfaces){o.geometry.boundsTree=null;o.geometry.dispose();}surfaces.length=0;
  let lastHat=null;
- const fitHat=()=>{const mount=walker.hat?.mount;if(lastHat===mount||!mount?.children.length)return;lastHat=mount;
-  for(const o of [...hat.children])hat.remove(o);mount.updateWorldMatrix(true,true);const box=new T.Box3().setFromObject(mount),inv=mount.matrixWorld.clone().invert();box.applyMatrix4(inv);
-  const size=box.getSize(new T.Vector3()),top=box.max.y,centre=box.getCenter(new T.Vector3());
-  for(let i=0;i<8;i++)mesh(hat,sphere,i%3===0?flour:i%3===1?yolk:slime,[centre.x+Math.sin(i*2.4)*size.x*.28,top-size.y*.025,centre.z+Math.cos(i*2.4)*size.z*.25],[size.x*(.1+i%2*.03),size.y*.035,size.z*.13]);
-  mount.add(hat);};
+ const clearTop=root=>{for(const o of root.children)o.geometry.dispose();root.clear();root.removeFromParent();};
+ const fitHat=()=>{
+  const mount=walker.hat?.mount,model=mount?.children[0]||null;
+  bare.visible=!model||!mount.visible;
+  if(lastHat===model)return;lastHat=model;clearTop(hat);if(!model)return;
+  // Project in the model's own frame so the pattern follows the hat through every pose and fit adjustment.
+  const {surfaces,bounds}=hatSurfaces(model,side),size=bounds.getSize(new T.Vector3()),centre=bounds.getCenter(new T.Vector3()),scale=model.getWorldScale(new T.Vector3());
+  topSplats(hat,surfaces,topMaterials,{x:centre.x,z:centre.z-size.z*.07,spreadX:size.x*.23,spreadZ:size.z*.16,width:size.x*.085,depth:size.z*.085,from:bounds.max.y+1,lift:HEAD_SPLAT_LIFT/scale.y});
+  model.add(hat);
+ };
  fitHat();
- return {head,body,hat,update:fitHat,dispose(){for(const o of [...head,...body])dispose(o);dispose(hat);sphere.dispose();}};
+ return {head,body,hat,update:fitHat,dispose(){
+  for(const o of [...head,...body]){o.removeFromParent();o.geometry.dispose();}clearTop(bare);clearTop(hat);
+  flour.map?.dispose();for(const m of [...topMaterials,side])m.dispose();
+ }};
 }
 function shockedFace(walker){
  const root=new T.Group(),dark=new T.MeshBasicMaterial({color:0x291c20}),cream=new T.MeshBasicMaterial({color:0xfffbed}),sphere=new T.SphereGeometry(1,16,10),surface=faceSurface(walker.figure.asset);
