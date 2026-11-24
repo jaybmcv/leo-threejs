@@ -8876,7 +8876,7 @@
     "file": "src/walk/main.public.js",
     "original": "src/walk/main.js",
     "mode": "public",
-    "bodySha256": "3d9dcddbeac217fc5b6f24c03f15c251314f2d50280cc5c21d8c8c6d698cfe21",
+    "bodySha256": "04ec53bf3add36d2560b85348851b2cf283a9fb4fca0d3e63bb1efdd890bca5f",
     "imports": [
       "../v2/quad-facing.js",
       "../v2/yield-to-page.js",
@@ -8923,6 +8923,7 @@
       "../v2/prepared-runtime.public.js",
       "../v2/goto-menu.js",
       "../v2/wayfinding.js",
+      "./green-room.js",
       "../v2/wayfinding-guides.js",
       "../v2/hangar-door.js",
       "./shuttle-doors.js",
@@ -9198,7 +9199,7 @@
     "file": "src/walk/prepare.public.js",
     "original": "src/walk/prepare.js",
     "mode": "public",
-    "bodySha256": "1b8a42ac9b028be2bd8f4bac3ca4e446fc67207e3368781637470792838be2ae",
+    "bodySha256": "ac0e8d7a208b4f4c0a1a6723cdf9c3562379f31c9e5656d0c27b9d7d06dbe41b",
     "imports": [
       "./atmosphere.js",
       "../v2/prepared-codec.public.js",

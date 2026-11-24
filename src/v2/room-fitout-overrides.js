@@ -1,5 +1,6 @@
 import defaultOverrides from '../plan/room-fitout-overrides-v2.json' with {type:'json'};
 import * as T from 'three';
+import {greenRoomMaterials} from './green-room-fitout.js';
 
 // Merged cabinet details share meshes with their neighbours. Trim only the removed fitting's triangles.
 function removeFittingDetails(source,found,names){
@@ -62,7 +63,7 @@ export function moveRoomFitoutMeshes(source,id,overrides=defaultOverrides){
 // Added parts use metres in the room's fitting frame; replacements retain the
 // original placement unless explicitly changed. Collision uses the same mesh.
 export function applyRoomFitoutOverrides(data,layout,overrides=defaultOverrides){
- const materials=new Set(['resident','oak','cream','teal','sage','clay','navy','metal','orange','green','light','screen','water','glass','red','alarm']);
+ const materials=new Set(['resident','oak','cream','teal','sage','clay','navy','metal','orange','green','light','screen','water','glass','red','alarm',...Object.keys(greenRoomMaterials)]);
  const matches=(part,filter)=>Object.entries(filter).every(([key,value])=>part[key]===value);
  const check=part=>{if(!part.part||!Array.isArray(part.size)||part.size.length!==3||!part.size.every(n=>Number.isFinite(n)&&n>0)||!Array.isArray(part.at)||part.at.length!==3||!part.at.every(Number.isFinite)||!materials.has(part.mat))throw Error('Invalid room fitout part in '+part.room);return part;};
  for(const [id,change]of Object.entries(overrides)){
