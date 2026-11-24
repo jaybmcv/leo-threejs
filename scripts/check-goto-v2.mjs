@@ -7,6 +7,7 @@ import {runtimeLayout} from './v2-plugin.mjs';
 import {applyV2Adapters,checkV2Adapters} from './source-contract.mjs';
 import {gotoAdapters} from '../legacy/v1/scripts/goto-adapters-v2.mjs';
 import {contains} from '../src/plan/geometry-v2.js';
+import {GREEN_ROOM_ID} from '../src/plan/room-names-v2.js';
 import {buildGotoPlaces,groupPlaces,describeV2,deckDirectory,isCrewGallery} from '../src/v2/wayfinding-data.js';
 import {featurePlaces} from '../src/v2/goto-features.js';
 import {guideSchedule,lobbySchedule} from '../src/v2/wayfinding-guide-data.js';
@@ -24,10 +25,16 @@ assert(!places.some(p=>p.deck===20&&layout.circulation.bridges.some(b=>b.deck===
 assert(!places.some(p=>/lifeboat|skywalk/i.test(p.name+' '+p.detail)),'Retired public wording');
 assert.equal(groupPlaces(layout,places).length,21,'Twenty decks plus fin/crown');
 assert.equal(deckDirectory(layout).length,20);
+const greenRoom=places.find(p=>p.id===GREEN_ROOM_ID);
+assert.equal(greenRoom.name,'Green Room');
+assert.equal(greenRoom.deck,5);
+assert.match(describeV2(layout,greenRoom.at),/Green Room$/);
+assert(deckDirectory(layout).find(d=>d.deck===5).highlights.includes('Green Room'));
 const sample=places.find(p=>p.id==='sample-cabin');assert.equal(sample.deck,15);assert.equal(layout.cabins.find(c=>c.id===sample.room).berths,2);
 const smoke=await fs.readFile('scripts/v2-smoke.mjs','utf8');assert(smoke.includes('b.dataset.place==="sample-cabin"')&&smoke.includes('b.dataset.place==="observation-lounge"'),'Existing v2 smoke must select stable current destination ids');
 for(const r of layout.rooms.filter(r=>/^nose-commons-/.test(r.id)))assert(places.find(p=>p.id===r.id).name===r.name,'Bow café current name');
 const guides=guideSchedule(layout),lobbies=lobbySchedule(layout),rooms=new Map(layout.rooms.map(r=>[r.id,r]));
+assert.equal(guides.find(g=>g.id===GREEN_ROOM_ID).label,'Green Room');
 for(const g of guides){assert.equal(g.label,rooms.get(g.id).name);assert.equal(g.youAreHere,'You are here · Deck '+g.deck);assert(layout.circulation.corridors.some(c=>c.id===g.corridor));}
 for(const g of lobbies){assert.equal(g.rows.length,20);assert(g.rows.every((text,i)=>text==='Deck '+(i+1)+' · '+layout.decks[i].name));}
 assert.match(describeV2(layout,places.find(p=>p.id==='d05-new-4').at),/Wellness & spa/);

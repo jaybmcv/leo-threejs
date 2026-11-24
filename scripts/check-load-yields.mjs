@@ -2,7 +2,7 @@
 // (src/v2/facade.js compactRenderGeometry): same output as before, less waiting. Usage: node scripts/check-load-yields.mjs
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {yieldToPage,yieldEvery,PAINT_MS} from '../src/v2/yield-to-page.js';
+import {yieldToPage,yieldEvery,PAINT_MS,setFrameTurns} from '../src/v2/yield-to-page.js';
 import {compactRenderGeometry} from '../src/v2/facade.js';
 
 function check(name,fn){return Promise.resolve(fn()).then(()=>console.log('PASS '+name));}
@@ -26,6 +26,22 @@ await check('a sliced yield gives a turn only after its slice of work',async()=>
   const end=performance.now()+6;while(performance.now()<end);await pause();assert.equal(yields,1,'a slow step yields once');
   await pause();assert.equal(yields,1,'and the slice starts again');
  }finally{globalThis.scheduler=was;}
+});
+await check('while the arrival hall is walked: a due turn waits for its frame; a page given none waits once, then not until one comes',async()=>{
+ const g=globalThis,saved={raf:g.requestAnimationFrame,add:g.addEventListener,remove:g.removeEventListener};
+ let asked=[];g.requestAnimationFrame=f=>{asked.push(f);return asked.length;};g.addEventListener=()=>{};g.removeEventListener=()=>{};
+ const frame=()=>{const now=asked;asked=[];for(const f of now)f(performance.now());};
+ let due=true;setFrameTurns({due:()=>due});
+ try{
+  let done=false;const turn=yieldToPage().then(()=>{done=true;});await sleep(10);assert.equal(done,false,'it waits for the frame');
+  frame();await turn;
+  const t0=performance.now();await yieldToPage();assert.ok(performance.now()-t0>=40,'no frame: it waits a while once');
+  for(let i=0;i<5;i++)await yieldToPage();
+  assert.equal(asked.length,1,'then no turn asks for a frame: the one asked for is still to come');
+  frame();let again=false;const next=yieldToPage().then(()=>{again=true;});await sleep(10);assert.equal(again,false,'once it came, turns wait for frames again');
+  frame();await next;
+  due=false;await yieldToPage();assert.equal(asked.length,0,'a turn not due asks for no frame');
+ }finally{setFrameTurns(null);g.requestAnimationFrame=saved.raf;g.addEventListener=saved.add;g.removeEventListener=saved.remove;}
 });
 await check('compaction keeps the vertices an index uses in first-use order, as the Map version did',()=>{
  // The version before typed arrays, kept here as the reference; the last case is a few pieces of a big shared pool.
