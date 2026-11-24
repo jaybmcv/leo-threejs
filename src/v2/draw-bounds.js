@@ -54,19 +54,26 @@ function recordFor(g, merged = false) {
 // The deck merge owns these arrays and releases them on upload. Capture their static bounds first.
 export function rememberMergedBounds(g) { recordFor(g, true); }
 
-function outside(tree, frustum, start, end, node, lo, span) {
- if (lo >= end || lo + span <= start) return true;
+// The visibility worker receives a snapshot of the same index-order bounds.
+export function retainedDrawTree(geometry) { return recordFor(geometry); }
+
+function intersectsBox(tree, frustum, node) {
  const j = node * 6, b = tree.boxes;
- if (b[j] === Infinity) return true;
+ if (b[j] === Infinity) return false;
  for (const plane of frustum.planes) {
   const {x, y, z} = plane.normal;
   const support = x*b[j+(x>0?3:0)] + y*b[j+(y>0?4:1)] + z*b[j+(z>0?5:2)];
-  if (support + plane.constant < -clipMargin) return true;
+  if (support + plane.constant < -clipMargin) return false;
  }
- if (node >= tree.leaves) return false;
+ return true;
+}
+
+function firstSurvivingLeaf(tree, frustum, start, end, node, lo, span) {
+ if (lo >= end || lo + span <= start || !intersectsBox(tree, frustum, node)) return 0;
+ if (node >= tree.leaves) return node;
  const half = span / 2;
- return outside(tree, frustum, start, end, node*2, lo, half) &&
-        outside(tree, frustum, start, end, node*2+1, lo+half, half);
+ return firstSurvivingLeaf(tree, frustum, start, end, node*2, lo, half) ||
+        firstSurvivingLeaf(tree, frustum, start, end, node*2+1, lo+half, half);
 }
 
 export function createDrawBoundsTest() {
@@ -106,7 +113,22 @@ export function createDrawBoundsTest() {
   }
   return true;
  }
- return (camera, g, object, group, material = object.material) => {
+ function misses(camera, world, tree, start, end, hint) {
+  projection.multiplyMatrices(vp, world);
+  frustum.setFromProjectionMatrix(projection, camera.coordinateSystem, camera.reversedDepth);
+  if (tree.leaves === 1) return !intersectsBox(tree, frustum, 1);
+  // A surviving leaf also intersects every ancestor. Recheck the leaf against the
+  // current planes and index range before using it to avoid traversing the tree.
+  const leaf = hint?.leaf;
+  if (leaf && hint.leafTree === tree) {
+   const lo = (leaf - tree.leaves) * tree.stride;
+   if (lo < end && lo + tree.stride > start && intersectsBox(tree, frustum, leaf)) return false;
+  }
+  const found = firstSurvivingLeaf(tree, frustum, start, end, 1, 0, tree.leaves * tree.stride);
+  if (found && hint) { hint.leaf = found; hint.leafTree = tree; }
+  return !found;
+ }
+ return (camera, g, object, group, material = object.material, drawHistory) => {
   if (object.isInstancedMesh && (object.count > 256 || object.morphTexture)) return false;
   const tree = recordFor(g);
   if (!tree) return false;
@@ -115,12 +137,7 @@ export function createDrawBoundsTest() {
   // Leaves are made of complete triangles from offset zero. An unaligned group changes the triangles.
   if (!Number.isSafeInteger(start) || start < 0 || start % 3 || !Number.isSafeInteger(end) || end <= start) return false;
   vp.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-  const misses = world => {
-   projection.multiplyMatrices(vp, world);
-   frustum.setFromProjectionMatrix(projection, camera.coordinateSystem, camera.reversedDepth);
-   return outside(tree, frustum, start, end, 1, 0, tree.leaves * tree.stride);
-  };
-  if (!object.isInstancedMesh) return misses(object.matrixWorld) || trianglesOutside(camera, g, object, material, start, end);
+  if (!object.isInstancedMesh) return misses(camera, object.matrixWorld, tree, start, end, drawHistory) || trianglesOutside(camera, g, object, material, start, end);
   // Test the last surviving slot first. Slot packing can change each frame, so always read
   // the current instance matrix even when the camera and the winning slot are unchanged.
   const count = object.count, first = lastVisible.get(object) ?? 0;
@@ -128,7 +145,7 @@ export function createDrawBoundsTest() {
    const slot = (first + j) % count;
    object.getMatrixAt(slot, instance);
    matrix.multiplyMatrices(object.matrixWorld, instance);
-   if (!misses(matrix)) { lastVisible.set(object, slot); return false; }
+   if (!misses(camera, matrix, tree, start, end, drawHistory)) { lastVisible.set(object, slot); return false; }
   }
   return true;
  };

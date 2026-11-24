@@ -1,4 +1,5 @@
 import {createDrawBoundsTest} from './draw-bounds.js';
+import {createFloorOcclusion} from './floor-occlusion.js';
 import {FrontSide, BackSide, Material, Matrix4, Object3D, Vector3} from 'three';
 import {geometryKept} from './shader-hooks.js';
 
@@ -117,6 +118,7 @@ export function createSurfaceFacingTest() {
 }
 
 export function installQuadFacingTest(renderer, scene, camera) {
+ const floorOcclusion = createFloorOcclusion(scene,camera);
  const surfaceAway = createSurfaceFacingTest(), facingAway = createQuadFacingTest(), outside = createDrawBoundsTest(), submit = renderer.renderBufferDirect;
  // These draws also straddle distant decks from the shuttle and medical rooms.
  // The material selects which draws to test; geometry and camera still decide visibility.
@@ -176,7 +178,7 @@ export function installQuadFacingTest(renderer, scene, camera) {
   row.start = geometry.drawRange.start; row.count = geometry.drawRange.count; row.groupCount = count; row.side = material.side;
   row.instances = instances; row.version = instances?.version; row.instanceCount = object.count;
   row.world.copy(object.matrixWorld);
-  row.skipped = surfaceAway(view, geometry, material, object, group) || facingAway(view, geometry, material, object, group) || outside(view, geometry, object, group, material);
+  row.skipped = surfaceAway(view, geometry, material, object, group) || facingAway(view, geometry, material, object, group) || outside(view, geometry, object, group, material, row);
   row.epoch = visibleEpoch; row.next = mainFrames + 6 + object.id % 6;
   return row.skipped;
  }
@@ -187,11 +189,18 @@ export function installQuadFacingTest(renderer, scene, camera) {
  scene.onAfterRender = function(r, world, view) {
   after.apply(this, arguments);
   if (r === renderer && view === camera && !r.getRenderTarget() && !scene.overrideMaterial && !r.xr.isPresenting) {
+   floorOcclusion?.finish();
    dense = r.info.render.calls + omitted >= (dense ? 850 : 900);
    omitted = 0;
   }
  };
  renderer.renderBufferDirect = function(view, world, geometry, material, object, group) {
+  const main = floorOcclusion && view===camera && world===scene && !scene.overrideMaterial &&
+      !renderer.shadowMap.enabled && !renderer.xr.isPresenting && !renderer.getRenderTarget();
+  if(main && floorOcclusion.early(renderer.info.render.frame,geometry,material,object,group)){
+   omitted++;
+   return;
+  }
   const size = geometry.index?.count ?? geometry.attributes.position?.count;
   const ordinaryQuad = size === 6 && !material.transparent && geometry.drawRange.start === 0 && geometry.drawRange.count >= 6 &&
       (!group || (group.start === 0 && group.count >= 6));
@@ -208,6 +217,13 @@ export function installQuadFacingTest(renderer, scene, camera) {
    omitted++;
    return;
   }
+  if (main && floorOcclusion.anchors.has(object)) {
+   const before=renderer.info.render.calls;
+   const result=submit.apply(this,arguments);
+   if (renderer.info.render.calls>before) floorOcclusion.submitted(renderer,material,group,object);
+   return result;
+  }
+  if (main) floorOcclusion.requestProof(renderer.info.render.frame,geometry,material,object,group);
   return submit.apply(this, arguments);
  };
 }

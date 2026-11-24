@@ -2,6 +2,46 @@ import assert from 'node:assert/strict';
 import * as T from 'three';
 import {createDrawBoundsTest, rememberMergedBounds} from '../src/v2/draw-bounds.js';
 import {createQuadFacingTest, createSurfaceFacingTest, installQuadFacingTest} from '../src/v2/quad-facing.js';
+import {createFloorOcclusion} from '../src/v2/floor-occlusion.js';
+import {occlusionWorker} from '../src/v2/occlusion-worker.js';
+
+// A floor with an open side. A target can be hidden only after that floor
+// was submitted in this pass and every submitted instance is behind it.
+{
+ const originalWorker=globalThis.Worker;
+ globalThis.Worker=class {
+  constructor(){this.channel={postMessage:data=>queueMicrotask(()=>this.onmessage({data}))};occlusionWorker(this.channel);}
+  postMessage(data){const snapshot=structuredClone(data);queueMicrotask(()=>this.channel.onmessage({data:snapshot}));}
+  terminate(){}
+ };
+ try{
+ const scene=new T.Scene(), camera=new T.PerspectiveCamera(140,1,.02,100);
+ const geometry=new T.BufferGeometry();
+ geometry.setAttribute('position',new T.Float32BufferAttribute([-10,0,-10,-10,0,10,10,0,-10],3));
+ geometry.setIndex([0,1,2]);
+ const floor=new T.Mesh(geometry,new T.MeshStandardMaterial());
+ floor.name='V2_facade_terraces_and_atrium_roof';scene.add(floor);
+ const target=new T.InstancedMesh(new T.BoxGeometry(.2,.2,.2),new T.MeshStandardMaterial(),2);
+ const move=(i,x,y,z)=>{target.setMatrixAt(i,new T.Matrix4().makeTranslation(x,y,z));target.instanceMatrix.needsUpdate=true;};
+ move(0,-3,-2,-3);move(1,-4,-2,-4);
+ camera.position.set(-2,2,-2);camera.up.set(0,0,-1);camera.lookAt(-2,-2,-2);camera.updateMatrixWorld();
+ const proof=createFloorOcclusion(scene,camera),renderer={info:{render:{frame:1}}};
+ const wait=()=>new Promise(done=>setImmediate(done));
+ const hidden=()=>proof.early(renderer.info.render.frame,target.geometry,target.material,target,null);
+ const submit=()=>proof.submitted(renderer,floor.material,null,floor);
+ const check=async()=>{proof.requestProof(renderer.info.render.frame,target.geometry,target.material,target,null);proof.finish();await wait();};
+ await wait();assert.equal(hidden(),false);submit();await check();assert.equal(hidden(),true);
+ move(1,8,-2,8);assert.equal(hidden(),false);
+ for(let i=0;i<45;i++){renderer.info.render.frame++;submit();}await check();assert.equal(hidden(),false);
+ move(1,-4,-2,-4);
+ for(let i=0;i<45;i++){renderer.info.render.frame++;submit();}await check();assert.equal(hidden(),true);
+ renderer.info.render.frame++;assert.equal(hidden(),false);
+ floor.material.alphaTest=.2;submit();assert.equal(hidden(),false);
+ renderer.info.render.frame++;floor.material.alphaTest=0;submit();assert.equal(hidden(),true);
+ renderer.info.render.frame++;camera.position.y=-3;camera.updateMatrixWorld();submit();assert.equal(hidden(),false);
+ renderer.info.render.frame++;camera.position.y=2;camera.updateMatrixWorld();geometry.setDrawRange(0,0);submit();assert.equal(hidden(),false);
+ }finally{if(originalWorker)globalThis.Worker=originalWorker;else delete globalThis.Worker;}
+}
 
 const facesAway = createQuadFacingTest(), camera = new T.PerspectiveCamera();
 const geometry = new T.PlaneGeometry(2, 1), material = new T.MeshBasicMaterial();
@@ -82,6 +122,17 @@ vertices[0] = 0;
 across.attributes.position.needsUpdate = true;
 assert.equal(outside(clipView, across, clusters, {start:0, count:48}), false);
 assert.equal(outside(clipView, across, clusters, {start:48, count:48}), true);
+const drawHistory = {};
+assert.equal(outside(clipView, across, clusters, null, material, drawHistory), false);
+assert.equal(outside(clipView, across, clusters, {start:48, count:48}, material, drawHistory), true);
+clipView.position.x = 35;
+clipView.updateMatrixWorld();
+assert.equal(outside(clipView, across, clusters, {start:48, count:48}, material, drawHistory), true);
+clipView.position.x = 0;
+clipView.updateMatrixWorld();
+vertices[0] = -100;
+across.attributes.position.needsUpdate = true;
+assert.equal(outside(clipView, across, clusters, null, material, drawHistory), true);
 
 const retained = new T.PlaneGeometry(), slots = new T.InstancedMesh(retained, material, 2);
 rememberMergedBounds(retained);
