@@ -328,7 +328,12 @@
     "owners": [
       "commons-1"
     ],
-    "via": null
+    "via": "inherited",
+    "boundary": {
+      "module": "../v2/vault-lift-fit.js",
+      "use": "clubhouseDockMatrix(V,0)",
+      "reason": "The three stations share the measured gallery edge in the selected lounge plan."
+    }
   },
   "src/walk/jaguar-gate.js": {
     "owners": [

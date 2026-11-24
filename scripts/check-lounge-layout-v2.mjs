@@ -9,7 +9,8 @@ import {resolveRoomFrames,frame} from '../src/plan/rooms.js';
 import {buildRoomShell} from '../src/v2/room-shell.js';
 import {createLoungeAquarium,AQUARIUM} from '../src/walk/lounge-aquarium.js';
 import {createJaguarGate} from '../src/walk/jaguar-gate.js';
-import {createVault} from '../src/walk/vault.js';
+import {createVault,VAULT_LIFT} from '../src/walk/vault.js';
+import {CLUBHOUSE_SHAFT} from '../src/v2/vault-lift-fit.js';
 import {createArcade,arcadeTreadmill} from '../src/walk/arcade.js';
 import {createVaultLift} from '../src/walk/vault-lift.js';
 import {prepareClubhouseAccess} from '../src/v2/clubhouse-access.js';
@@ -43,7 +44,7 @@ const col=new Colliders(),f=frame(r.id),m=new T.Matrix4().makeTranslation(...f.o
 const boxes=[];createLoungeAquarium(ship,m,{addStatic:g=>{boxes.push(g);col.addStatic(g,()=>true);}});
 const tank=new T.Box3().setFromObject(boxes[0],true),close=(a,b)=>assert(Math.abs(a-b)<.002,`${a} != ${b}`);
 [-140.9,24.3,-27.98].forEach((v,i)=>close(tank.min.getComponent(i),v));[-88.1,35.5,-24.05].forEach((v,i)=>close(tank.max.getComponent(i),v));
-const jaguar=createJaguarGate(),arcade=createArcade(),vault=createVault(ship),lift=createVaultLift(col);prepareClubhouseAccess(ship,lift);
+const jaguar=createJaguarGate(),arcade=createArcade(),vault=createVault(ship),lift=createVaultLift(col);prepareClubhouseAccess(ship,VAULT_LIFT);
 col.addStatic(root);
 for(const o of [jaguar.group,arcade.group,vault.group,lift.group])root.add(o);
 for(const o of [jaguar.solid,arcade.solid,vault.solid,lift.solid])col.addStatic(o,()=>true);
@@ -130,7 +131,7 @@ assert(walker.position.z>-38.5,'Far rail stops the approach');console.log('Far c
 walk([0,0,2.25],3.4,p=>assert(Math.abs(p.y-28.3)<.06,'Door approach remains supported'));assert(walker.position.z>-31,'Visitor can return to the gallery door');
 console.log('PASS Deck 18 side cut: no floor or hanging remnants, continuous glass guards, controller stops and retained maze access');
 route('R1 maze lower exit',[[-132.25,28.3,-37.8],[-139,28.3,-37.8],[-139,28.3,-30],[-140.5,28.3,-30]]);
-route('R2 lift Deck 18',[[-89.8,28.3,-48.9],[-86.53,28.3,-48.9]]);
+for(const y of [28.3,32.3])route('R2 walkway by the moved lift '+y,[[-138.75,y,-30],[-138.75,y,-35]]);
 for(const flight of [0,1]){
  const steps=r.components.stairs.filter(t=>t.id.includes('-tread-'+flight+'-')).sort((a,b)=>a.center[1]-b.center[1]);assert.equal(steps.length,24);
  for(let i=1;i<steps.length;i++){const a=steps[i-1].center,b=steps[i].center;for(let k=0;k<=10;k++){const x=a[0]+(b[0]-a[0])*k/10,z=a[2]+(b[2]-a[2])*k/10;ray.origin.set(x,a[1]+.4,z);const hit=col.raycast(ray,.85);assert(hit&&clear([x,hit.point.y,z]),'Stair clearance '+steps[i].id);}}
@@ -140,10 +141,10 @@ route('R3 treasure gallery',[[-93.1,32.3,-47],[-93.1,32.3,-29],[-115.7,32.3,-29]
 const floorRay=new T.Raycaster(new T.Vector3(-93,32.5,-28.7),new T.Vector3(0,-1,0),0,.4),floorHits=floorRay.intersectObject(structure,true).filter(h=>h.object.name==='V2_garden_gallery');assert.equal(new Set(floorHits.map(h=>h.object.uuid)).size,1,'Gallery and link must share one floor surface');
 route('R4 maze upper exit',[[-125.8,32.3,-29],[-126.75,32.3,-29]]);
 route('R5 retained clubhouse corridor',[[-90.8,24.3,-45.8],[-86.53,24.3,-45.8],[-86.53,24.3,-49]]);
-route('R5 lounge lift approach',[[-125,24.3,-29.7],[-125,24.3,-43],[-134.5,24.3,-43],[-134.5,24.3,-32.15],[-138.9,24.3,-32.15]]);
+route('R5 lounge lift approach',[[-125,24.3,-29.7],[-125,24.3,-43],[-134.5,24.3,-43],[-134.5,24.3,-35.12],[-138.2,24.3,-35.12],[-138.2,24.3,CLUBHOUSE_SHAFT.z]]);
 // The real merged wall-light fittings must stay clear of a standing cat at the new entrance.
-walker.place(new T.Vector3(-138.9,24.3,-32.15));assert(lift.unlock('9lives'));const entryStart=walker.position.clone();
-for(let i=0;i<51;i++){lift.update(1/60,walker);walker.step(1/60,new T.Vector3(0,0,2.25),false);}
+walker.place(new T.Vector3(-137.8,24.3,CLUBHOUSE_SHAFT.z));assert(lift.unlock('9lives'));const entryStart=walker.position.clone();
+for(let i=0;i<51;i++){lift.update(1/60,walker);walker.step(1/60,new T.Vector3(2.25,0,0),false);}
 const entryDistance=walker.position.distanceTo(entryStart);
 assert(entryDistance>=1.5&&lift.inside(walker.position),'The retained wall lights must not slow entry into the clubhouse cab: '+JSON.stringify({entryDistance,at:walker.position.toArray()}));
 console.log('PASS clubhouse entry below retained lights',entryDistance,'metres in .85 seconds');
@@ -266,14 +267,14 @@ for(const p of chairs)assert(rests.some(s=>Math.hypot(s.point.x-p.x,s.point.z-p.
 assert(serviceBounds(['Gallery_end_light','Gallery_warm_light']).isEmpty(),'Retired lounge light strips are back');
 const arcadeBox=new T.Box3().setFromObject(arcade.solid,true);
 assert(!arcadeBox.intersectsBox(tank));close(arcadeBox.max.x,-88);assert(arcadeBox.min.z>=-43.91&&arcadeBox.max.z<=-28.49);
-close(new T.Vector3().setFromMatrixPosition(lift.group.matrixWorld).x,-86.53);close(new T.Vector3().setFromMatrixPosition(lift.group.matrixWorld).z,-51.2);
+close(new T.Vector3().setFromMatrixPosition(lift.group.matrixWorld).x,CLUBHOUSE_SHAFT.x);close(new T.Vector3().setFromMatrixPosition(lift.group.matrixWorld).z,CLUBHOUSE_SHAFT.z);
 const door=new T.Vector3().fromArray(swimWorld(SWIM.door));close(door.z,-28.77);assert(clear(door.toArray()));assert.equal(SWIM.gems.length,7);assert(SWIM.gems.every(g=>gemNear(limitSwim([g[0],g[1]-SWIM.offset,g[2]]),g)));
 const places=featurePlaces(layout);for(const id of ['hydro-nip','haze-maze','clubhouse-door','aquarium-treasure','arcade','arcade-pool','neon-arena','arcade-treadmill']){const p=places.find(p=>p.id===id);assert(clear(p.at),'Go-to is obstructed: '+id);}
 close(arcadeTreadmill().centre.z,-29.27);vault.attach(col);assert(!clear([-88,24.3,-45.8]),'Locked vault blocks entry');assert.equal(vault.near(new T.Vector3(-89.3,24.3,-45.8)).kind,'vault');assert.equal(vault.unlock('incorrect'),false);assert.equal(vault.unlock('9lives'),true);
 for(let i=0;i<40;i++)vault.update(.1,new T.Vector3(-90,24.3,-45.8));assert.equal(vault.state,'open');const leaf=new T.Box3().setFromObject(vault.group.getObjectByName('Vault_door'),true);
 // The hinge thickness stays at the wall; the open leaf projects into the lounge.
 assert(leaf.min.x<-90&&leaf.getCenter(new T.Vector3()).x<-89&&leaf.max.x<-87.7,'Vault swings outward into lounge');route('R5 unlocked vault',[[-90.8,24.3,-45.8],[-86.53,24.3,-45.8],[-86.53,24.3,-49]]);
-console.log('PASS measured tank, services, arcade, unchanged lift, seven gems, Go-to and vault interaction');
+console.log('PASS measured tank, services, arcade, aligned lift, seven gems, Go-to and vault interaction');
 console.log(JSON.stringify({arcade:[arcadeBox.min.toArray(),arcadeBox.max.toArray()],treasureDoor:door.toArray()}));
 
 // The moved swim still uses the same standings and accepts a complete seven-gem run.

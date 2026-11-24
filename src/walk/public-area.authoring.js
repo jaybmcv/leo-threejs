@@ -1,9 +1,9 @@
 import * as T from 'three';
 import layout from '../plan/selected-layout.js';
 import {contains} from '../plan/geometry-v2.js';
-import {anchoredPoint,toLocal} from '../plan/rooms.js';
+import {toLocal} from '../plan/rooms.js';
 import {LIFTS} from './lifts.authoring.js';
-import {CLUBHOUSE_LOUNGE_STATION} from '../v2/vault-lift-fit.js';
+import {CLUBHOUSE_SHAFT} from '../v2/vault-lift-fit.js';
 import {VAULT_PLAN,VAULT_LIFT} from './vault.authoring.js';
 import {MAZE_ROOM,inMaze} from './maze/layout.js';
 import {panelInside,panelDoor} from './net/panel-rules.js';
@@ -27,8 +27,6 @@ import {swimLocal,inWater} from './aquarium-treasure/layout.authoring.js';
 // A prism: a floor polygon [[x,z]...] and the heights [y0,y1] it covers, in ship metres.
 const prism=(name,poly,y0,y1)=>({name,poly,y:[y0,y1]});
 const deckY=n=>layout.decks.find(d=>d.number===n)?.y;
-// A rectangle in a lift's own frame (x along the ship, z across), as ship points through commons-1's frame.
-const vaultRect=(x0,x1,z0,z1)=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]].map(([x,z])=>{const p=anchoredPoint('commons-1',[VAULT_LIFT.x+x,VAULT_LIFT.y,VAULT_LIFT.z+z]);return [p[0],p[2]];});
 export function restrictedZones(){
  const zones=[];
  for(const b of layout.circulation.bridges||[])if(b.access==='crew'){const y=deckY(b.deck);if(Number.isFinite(y))zones.push(prism('crew',b.polygon,y-.5,y+3.5));}
@@ -37,13 +35,12 @@ export function restrictedZones(){
  const [a,b]=VAULT_PLAN.lines,floor=deckY(VAULT_PLAN.deck),xs=[a[0].x,a[1].x,b[0].x,b[1].x],zs=[a[0].z,a[1].z,b[0].z,b[1].z];
  const x0=Math.min(...xs)-.3,x1=Math.max(...xs)+.3,z0=Math.min(...zs)-.3,z1=Math.max(...zs)+.3;
  zones.push(prism('clubhouse',[[x0,z0],[x1,z0],[x1,z1],[x0,z1]],floor-.5,floor+3.5));
- // Its tube lift (radius 1.7) from Deck 17 up, and on the upper stops its landings and their connections
- // (vault-lift.js, v2/clubhouse-access.js): the car, the glass landing to 3.7 m and the opening to 4 m aside.
- const stops=VAULT_LIFT.stops,top=stops.at(-1).y+3.5;
- const [cx,cy,cz]=CLUBHOUSE_LOUNGE_STATION;
- zones.push(prism('clubhouse',[[cx-1.8,cz-1.8],[cx+1.8,cz-1.8],[cx+1.8,cz+1.8],[cx-1.8,cz+1.8]],cy-.5,cy+3.5));
- zones.push(prism('clubhouse',vaultRect(-2,2,-2,2),stops[1].y-.5,top));
- if(stops.length>1)zones.push(prism('clubhouse',vaultRect(-4.2,2,-2,3.9),stops[1].y-.5,top));
+ // The shaft and its two sills are private. The lounge floor and upper galleries are public.
+ const stops=VAULT_LIFT.stops,{x,z,edge,radius,doorWidth}=CLUBHOUSE_SHAFT;
+ const shaft=Array.from({length:48},(_,i)=>{const a=i*Math.PI/24;return [x+(radius+.04)*Math.cos(a),z+(radius+.04)*Math.sin(a)];});
+ zones.push(prism('clubhouse',shaft,stops[0].y-.5,stops.at(-1).y+3.5));
+ const half=doorWidth/2,sill=[[edge,z-half],[x,z-half],[x,z+half],[edge,z+half]];
+ for(const {y} of stops.slice(1))zones.push(prism('clubhouse',sill,y-.5,y+3.5));
  // Lift shafts, a car's footprint and a little more, from the lowest stop to above the highest.
  for(const l of LIFTS){const c=l.car,ys=l.stops.map(s=>s.y),hx=c.width/2+.2,hz=c.depth/2+.2;
   zones.push(prism('lift',[[c.x-hx,c.z-hz],[c.x+hx,c.z-hz],[c.x+hx,c.z+hz],[c.x-hx,c.z+hz]],Math.min(...ys)-.5,Math.max(...ys)+3.5));}

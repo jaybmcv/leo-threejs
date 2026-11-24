@@ -10,7 +10,7 @@ let checks=0;const pass=name=>{checks++;console.log('PASS '+name);};
 const area=await import((await buildLiveV2({entry:'src/walk/public-area.js',outfile:'output/launch-h/public-area-v2.mjs'})).href);
 const way=await import((await buildLiveV2({entry:'src/v2/wayfinding.js',outfile:'output/launch-h/wayfinding-v2.mjs'})).href);
 const probe=await import((await buildLiveV2({entry:'scripts/fixtures/public-area-probe.js',outfile:'output/launch-h/public-area-probe-v2.mjs'})).href);
-const {restrictedAt,publicStand,ZONES}=area,{layout,VAULT_PLAN,VAULT_LIFT,LIFTS,MAZE_ROOM,MAZE_START,MAZE_BUTTON,PANEL,SWIM,toWorld,swimWorld}=probe;
+const {restrictedAt,publicStand,ZONES}=area,{layout,VAULT_PLAN,VAULT_LIFT,CLUBHOUSE_SHAFT,LIFTS,MAZE_ROOM,MAZE_START,MAZE_BUTTON,PANEL,SWIM,toWorld,swimWorld}=probe;
 
 // Every Go to place is public: Go to already leaves out the crew gallery and closed rooms, and stops outside the
 // clubhouse door, the lever panel and the maze.
@@ -31,9 +31,12 @@ pass(`crew only: ${crewBridges.length} gallery bridges and ${crewRooms.length} c
 // The password clubhouse, its vault door's room and its tube lift on every stop.
 const [l0,l1]=VAULT_PLAN.lines,clubFloor=deckY(VAULT_PLAN.deck);
 assert.equal(restrictedAt([(l0[0].x+l1[1].x)/2,clubFloor,(l0[0].z+l1[1].z)/2]),'clubhouse');
-assert.equal(restrictedAt([-138.9,clubFloor,-29.75]),'clubhouse','password lounge cab');
-const lift=probe.vaultLiftWorld;for(const s of VAULT_LIFT.stops.slice(1))assert.equal(restrictedAt([lift[0],s.y,lift[2]]),'clubhouse','tube at deck '+s.deck);
-assert.equal(restrictedAt([lift[0],VAULT_LIFT.stops[1].y,lift[2]+2.5]),'clubhouse','upper landing');
+const {x,z,edge}=CLUBHOUSE_SHAFT;for(const s of VAULT_LIFT.stops)assert.equal(restrictedAt([x,s.y,z]),'clubhouse','tube at deck '+s.deck);
+const upper=VAULT_LIFT.stops[1].y;
+assert.equal(restrictedAt([edge+.05,upper,z]),'clubhouse','upper sill');
+assert.equal(restrictedAt([edge-.2,upper,z]),null,'upper walkway remains public');
+assert.equal(restrictedAt([-86.53,upper,-51.2]),null,'old shaft reservation is gone');
+assert.equal(restrictedAt([-138.9,clubFloor,-29.75]),null,'old corner is public again');
 pass('the password clubhouse, and its tube lift and landings on decks '+VAULT_LIFT.stops.map(s=>s.deck).join(', '));
 
 // Deck 4's tank bay behind the lever panel, and its doorway; the corridor in front is public.

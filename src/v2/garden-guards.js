@@ -3,6 +3,7 @@ import {LOUNGE,mazePoint} from '../hydro-nip-lounge.js';
 import * as T from 'three';
 import {contains,bounds,rectangle} from '../plan/geometry-v2.js';
 import {mergeBoxes,glass,metal} from './geometry.js';
+import {CLUBHOUSE_SHAFT} from './vault-lift-fit.js';
 export const galleryHoles=(r,o)=>(r.components.stairs||[]).filter(t=>t.center[1]<=o.center[1]+.02&&t.center[1]>o.center[1]-2.4).map(t=>{
  // Keep the gallery flush with the final tread; padding belongs behind the arrival.
  const arrival=r.id==='commons-1'&&Math.abs(t.center[1]-o.center[1])<.02,dir=t.id.includes('-tread-0-')?-1:1;
@@ -17,8 +18,14 @@ export function buildGardenGuards(parent,r,layout){
  const supported=(p,y,skip)=>sourcePlatforms.some(o=>Math.abs(o.y-y)<.13&&contains(o.polygon,p))||platforms.some(o=>o!==skip&&Math.abs(o.center[1]-y)<.42&&contains(o.polygon,p)&&!o.holes.some(h=>contains(h,p)))||stairs.some(t=>t.center[1]>=y-.42&&t.center[1]<=y+2.3&&contains(t.polygon,p))||layout.decks.some(d=>Math.abs(d.y-y)<.02&&contains(d.slab.outline,p)&&!d.slab.holes.some(h=>contains(h.polygon,p)));
  for(const o of platforms)for(const ring of [o.polygon,...o.holes])for(let i=0;i<ring.length;i++){
   const a=ring[i],b=ring[(i+1)%ring.length],dx=b[0]-a[0],dz=b[1]-a[1],length=Math.hypot(dx,dz);if(length<1e-6)continue;const n=Math.ceil(length/.12),at=t=>[a[0]+dx*t,a[1]+dz*t];let start=null;
+  const {edge,z,doorWidth}=CLUBHOUSE_SHAFT,opening=ring===o.polygon&&/^(commons-1-end-[48])$/.test(o.id)&&Math.abs(a[0]-edge)<.001&&Math.abs(b[0]-edge)<.001;
+  const addRun=(a,b)=>{const y=o.center[1];if(!opening){add(a,b,y);return;}
+   const lo=Math.min(a[1],b[1]),hi=Math.max(a[1],b[1]),half=doorWidth/2;
+   if(lo<z-half)add([edge,lo],[edge,Math.min(hi,z-half)],y);
+   if(hi>z+half)add([edge,Math.max(lo,z+half)],[edge,hi],y);
+  };
   for(let k=0;k<=n;k++){const t=(k+.5)/n,p=at(Math.min(1,t)),test=sign=>[p[0]+sign*dz/length*.09,p[1]-sign*dx/length*.09],own=p=>contains(o.polygon,p)&&!o.holes.some(h=>contains(h,p)),left=test(1),right=test(-1),outside=own(left)?right:left,needs=k<n&&own(left)!==own(right)&&!supported(outside,o.center[1],o);
-   if(needs&&start===null)start=k/n;if(!needs&&start!==null){add(at(start),at(k/n),o.center[1]);start=null;}
+   if(needs&&start===null)start=k/n;if(!needs&&start!==null){addRun(at(start),at(k/n));start=null;}
   }
  }
  // Guard each flight side at that tread's own elevation, joining both galleries above cap height.

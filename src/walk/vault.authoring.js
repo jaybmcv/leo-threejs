@@ -1,5 +1,4 @@
 import {LOUNGE_PLAN} from '../plan/lounge-layout-v2.js';
-import {fitV2VaultLiftSpec} from '../v2/vault-lift-fit.js';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {walkCanvas,hasWalkCanvas} from './canvas.js';
@@ -12,7 +11,7 @@ import {HEADER} from './commons-hall.authoring.js';
 // garden walls enclose it, with short returns at either end. Its round door
 // swings outward into the lounge, leaving the existing lift approach clear.
 // Local x runs along world +Z; local z points into the lounge along world -X.
-const C=COMMONS[0],NEXT=COMMONS[2],FLOOR=floorY(17),WALL=LOUNGE_PLAN.arcadeWall+114.5,H=HEADER-FLOOR,THICK=.12;
+const C=COMMONS[0],FLOOR=floorY(17),WALL=LOUNGE_PLAN.arcadeWall+114.5,H=HEADER-FLOOR,THICK=.12;
 // Close only the existing inter-garden gap.
 const XA=-C.depth/2+.1,XB=C.depth/2,ZF=-2;
 // The door: its centre along the wall, the opening's radius and centre height, and the door's own radius (it closes
@@ -32,8 +31,7 @@ export const vaultPassword=code=>String(code||'').trim().toLowerCase()===CODE;
 // The room's walls on the ship map (deck-map.js), in world coordinates.
 const world=(x,z)=>{const p=anchoredPoint('commons-1',[C.x+WALL-z,FLOOR,C.z+x]);return{x:p[0],z:p[2]};};
 export const VAULT_PLAN={deck:17,lines:[[world(XA,0),world(XB,0)],[world(XA,ZF),world(XB,ZF)],[world(XA,0),world(XA,ZF)],[world(XB,0),world(XB,ZF)]]};
-// Keep the accepted tube position independent of the new enclosure.
-export const VAULT_LIFT=fitV2VaultLiftSpec({x:(C.x+22.44+NEXT.x-NEXT.width/2)/2,z:C.z+XA+3.7,y:FLOOR,stops:[17,18,19].map(deck=>({deck,y:floorY(deck),label:`Deck ${deck}`}))});
+export const VAULT_LIFT={stops:[17,18,19].map(deck=>({deck,y:floorY(deck),label:'Deck '+deck}))};
 
 const FONT='"Archivo", system-ui, sans-serif',MONO='"JetBrains Mono", ui-monospace, monospace';
 // The keypad's face: a small screen over twelve keys. `mode` is 'locked', 'denied' or 'open'.

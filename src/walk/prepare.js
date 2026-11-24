@@ -37,8 +37,8 @@ import {dressImaging} from './imaging.js';
 import {createJaguarGate} from './jaguar-gate.js';
 import {createLoungeEntranceSigns} from './lounge-entrance-signs.js';
 import {createArcade} from './arcade.js';
-import {createVault} from './vault.js';
-import {prepareVaultLift,createVaultLift} from './vault-lift.js';
+import {createVault,VAULT_LIFT} from './vault.js';
+import {createVaultLift} from './vault-lift.js';
 import {placeAttendant,dressTheatre,createTheatreCast} from './theatre.js';
 import {dressGamingLounge} from './gaming-lounge.js';
 import {dressRecreationHall} from './recreation-hall.js';
@@ -82,8 +82,7 @@ export function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=nul
  // Deck 1's aft spares room gains the freight gate's logistics console and its chair (freight-gate.js), solid and sittable.
  dressFreightGate(ship);
  resolveRoomFrames(ship.root);finishLaunchBGeometry(ship,layout);prepareV2LoungeFalls(ship,()=>createLoungeFalls(ship),patchDepth);
- prepareVaultLift(ship);
- const accessLift=createVaultLift({addMover(){return{place(){}}}});prepareClubhouseAccess(ship,accessLift);
+ prepareClubhouseAccess(ship,VAULT_LIFT);
  const colliders=buildColliders(ship,{extra:[ship.exterior],filter:o=>solid(o)&&!STATIC_LIFT_PARTS.test(o.name),...(into?{into}:{})});
  afterBase?.(colliders);
  const restSpots=findRestSpots(ship.inside),seats=solidSpots(restSpots,colliders),lounge=createLounge(ship,colliders);afterRest?.({restSpots,seats,lounge});
