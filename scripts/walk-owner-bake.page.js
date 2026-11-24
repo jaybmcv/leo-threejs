@@ -38,7 +38,7 @@ async function setup(seed){
 }
 // The parts of one owner group proven from `box`: [{p, conds}]. The group's plain parts together first, then each. The
 // proof splits cell or box itself only for a single cell (a block splits itself first: visit below).
-function proveGroup(box,parts,hint){const depth=isCell(box)?undefined:0;
+function proveGroup(box,parts,hint,wholeOnly){const depth=!wholeOnly&&isCell(box)?undefined:0;
  const out=[],plain=parts.filter(p=>p.boxes),centre=box.getCenter(new T.Vector3());
  const all=new T.Box3();for(const p of plain)for(const b of p.boxes)all.union(b);
  const whole=plain.length>1?proof.prove(box,all,hint,'g:'+plain[0].path,depth):null;
@@ -53,16 +53,17 @@ function proveSlots(box,p,hint){
  for(const s of p.slots.map(s=>[s.centre.distanceToSquared(centre),s]).sort((a,b)=>a[0]-b[0]).slice(0,NEAR_SLOTS).map(e=>e[1])){const u=proof.prove(box,s.box,hint,p.path+'@'+s.id,isCell(box)?undefined:0);if(u){ids.push(s.id);for(const k of u)conds.add(k);}}
  return ids.length?{p,conds,slots:ids}:null;
 }
-async function bake(blocks){
+async function bake(blocks,{staticWhole=false}={}){
  const out=[],hint=new Map(),started=performance.now();let visits=0;
  // A merge source's triangles draw only while its band shows and the merged pieces' root is drawn: entries relying on a band
  // rely on that root too.
  const withRoot=c=>{const s=new Set(c);if(mergeRoot!==null&&[...s].some(k=>bandConds.has(k)))s.add(mergeRoot);return [...s].sort((a,b)=>a-b);};
  const record=(box,proven)=>{if(!proven.length)return;out.push([...cellsOf(box),proven.map(x=>[partIndex.get(x.p),withRoot(x.conds),...(x.slots?[x.slots]:[])])]);};
- const visit=async(box,parts)=>{visits++;const proven=proveGroup(box,parts,hint);record(box,proven);const done=new Set(proven.map(x=>x.p)),rest=parts.filter(p=>!done.has(p));
+ const visit=async(box,parts)=>{visits++;const proven=proveGroup(box,parts,hint,staticWhole);record(box,proven);const done=new Set(proven.map(x=>x.p)),rest=parts.filter(p=>!done.has(p));
   if(!rest.length||isCell(box))return;if(visits%100===0)await new Promise(f=>setTimeout(f,0));for(const h of halves(box))await visit(h,rest);};
  for(const block of blocks){const box=blockBox(block);
   for(const e of targets){const plain=e.parts.filter(p=>p.boxes);if(plain.length)await visit(box.clone(),plain);
+   if(staticWhole)continue;
    const cabins=e.parts.filter(p=>p.slots).map(p=>proveSlots(box,p,hint)).filter(Boolean);record(box,cabins);}}
  return {blocks:out,visits,ms:Math.round(performance.now()-started),stats:{...proof.stats}};
 }
