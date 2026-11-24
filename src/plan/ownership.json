@@ -4381,7 +4381,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "819ddaefdd85938aa562ed8562b74adb8bfc15402fd14a56d1abefdc3c2c1b89"
+      "signature": "c0bba556550c7912f0b7e0e2133e48a73af8caff379cef0f4e8919428bf07a9b"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -5327,7 +5327,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 8,
-      "signature": "aa0fa1f11553d024032ea117f1f4e3b3a2314d5dcd5eba08ae9d049bf6b0d4c2"
+      "signature": "5f9befd1c216f9453a5210686adb5bcb0b0fc4aa2514ce849797a251177c8708"
     },
     {
       "source": "src/walk/prank-button.js",
@@ -6352,8 +6352,8 @@
       "features": [],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 1,
-      "signature": "f0033116c7b2f49e71955f9f52355ad84a5b92dbfdae7665cc0efee2a734c379"
+      "placements": 2,
+      "signature": "d17d8f20f818fff5a7c7c97b95641a922cd7549523d974be078cda3cbd0fe512"
     },
     {
       "source": "src/walk/ward-trolley.js",

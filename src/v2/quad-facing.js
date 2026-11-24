@@ -117,8 +117,9 @@ export function createSurfaceFacingTest() {
  };
 }
 
-export function installQuadFacingTest(renderer, scene, camera) {
- const floorOcclusion = createFloorOcclusion(scene,camera);
+// `options.floorOcclusion`: one made already (createFloorOcclusionAsync, so its scan gave the page turns), or null for none.
+export function installQuadFacingTest(renderer, scene, camera, options = {}) {
+ const floorOcclusion = 'floorOcclusion' in options ? options.floorOcclusion : createFloorOcclusion(scene,camera);
  const surfaceAway = createSurfaceFacingTest(), facingAway = createQuadFacingTest(), outside = createDrawBoundsTest(), submit = renderer.renderBufferDirect;
  // These draws also straddle distant decks from the shuttle and medical rooms.
  // The material selects which draws to test; geometry and camera still decide visibility.
