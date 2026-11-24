@@ -189,6 +189,7 @@ export function installQuadFacingTest(renderer, scene, camera) {
  scene.onAfterRender = function(r, world, view) {
   after.apply(this, arguments);
   if (r === renderer && view === camera && !r.getRenderTarget() && !scene.overrideMaterial && !r.xr.isPresenting) {
+   floorOcclusion?.finish();
    dense = r.info.render.calls + omitted >= (dense ? 850 : 900);
    omitted = 0;
   }
@@ -196,6 +197,10 @@ export function installQuadFacingTest(renderer, scene, camera) {
  renderer.renderBufferDirect = function(view, world, geometry, material, object, group) {
   const main = floorOcclusion && view===camera && world===scene && !scene.overrideMaterial &&
       !renderer.shadowMap.enabled && !renderer.xr.isPresenting && !renderer.getRenderTarget();
+  if(main && floorOcclusion.early(renderer.info.render.frame,geometry,material,object,group)){
+   omitted++;
+   return;
+  }
   const size = geometry.index?.count ?? geometry.attributes.position?.count;
   const ordinaryQuad = size === 6 && !material.transparent && geometry.drawRange.start === 0 && geometry.drawRange.count >= 6 &&
       (!group || (group.start === 0 && group.count >= 6));
@@ -212,16 +217,13 @@ export function installQuadFacingTest(renderer, scene, camera) {
    omitted++;
    return;
   }
-  if (main && floorOcclusion.hidden(renderer.info.render.frame,geometry,material,object)) {
-   omitted++;
-   return;
-  }
-  if (main && object===floorOcclusion.floor) {
+  if (main && floorOcclusion.anchors.has(object)) {
    const before=renderer.info.render.calls;
    const result=submit.apply(this,arguments);
-   if (renderer.info.render.calls>before) floorOcclusion.submitted(renderer,material,group);
+   if (renderer.info.render.calls>before) floorOcclusion.submitted(renderer,material,group,object);
    return result;
   }
+  if (main) floorOcclusion.requestProof(renderer.info.render.frame,geometry,material,object,group);
   return submit.apply(this, arguments);
  };
 }

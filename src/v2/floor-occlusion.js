@@ -1,139 +1,254 @@
-import {BackSide, Box3, FrontSide, LessDepth, LessEqualDepth, Material, Matrix4, NoBlending, NormalBlending, Object3D, Vector3} from 'three';
-import {geometryKept} from './shader-hooks.js';
-
-const cellWidth = .125;
-const ordinaryHooks = o => o.onBeforeRender === Object3D.prototype.onBeforeRender && o.onAfterRender === Object3D.prototype.onAfterRender;
-const ordinaryDepth = m => m.depthTest && (m.depthFunc === LessDepth || m.depthFunc === LessEqualDepth) &&
- !m.stencilWrite && !m.polygonOffset && !m.wireframe && m.onBeforeRender === Material.prototype.onBeforeRender && geometryKept(m);
-
-function edge(a,b,sign) {
- const dx=b.x-a.x, dz=b.z-a.z, scale=sign/Math.hypot(dx,dz);
- const x=-dz*scale, z=dx*scale;
- return {x,z,k:-x*a.x-z*a.z-.035,eye:0};
+import { Frustum, LessDepth, LessEqualDepth, Material, Matrix4, NormalBlending, NoBlending, Object3D, Vector3, WebGLCoordinateSystem } from 'three';
+import { geometryKept } from './shader-hooks.js';
+import { retainedDrawTree } from './draw-bounds.js';
+import { occlusionWorker } from './occlusion-worker.js';
+const axes = ['x', 'y', 'z'];
+function hooks(o) { return o.onBeforeRender === Object3D.prototype.onBeforeRender && o.onAfterRender === Object3D.prototype.onAfterRender; }
+function normalDepth(m) { return m.depthTest && (m.depthFunc === LessDepth || m.depthFunc === LessEqualDepth) && !m.stencilWrite && !m.polygonOffset && !m.wireframe && m.onBeforeRender === Material.prototype.onBeforeRender && geometryKept(m); }
+const names = /^(V2_facade_terraces_and_atrium_roof|V2_low_deck_merged_(V2_public_hex_floor|V2_public_wall_panels|Walk_finish_[0-9]+[|][0-9]+[|][0-9]+[|][0-9]+)|P6_atrium_floor_actual|P6_atrium_soffits|P6_sky_tip|P6_sky_ceiling|Gaming_hex_floor)$/;
+function opaque(m) {
+  return (m.isMeshStandardMaterial || m.isMeshBasicMaterial || m.isMeshPhongMaterial || m.isMeshLambertMaterial) && normalDepth(m) &&
+    (m.onBeforeCompile === Material.prototype.onBeforeCompile || m.onBeforeCompile.cornerShade || m.onBeforeCompile.filmLook) && m.depthWrite && m.colorWrite && !m.transparent && !m.transmission &&
+    m.opacity === 1 && !m.alphaMap && !m.alphaTest && !m.alphaHash && !m.alphaToCoverage && !m.clippingPlanes?.length && (m.blending === NormalBlending || m.blending === NoBlending);
 }
-
-// Use individual horizontal triangles from the actual facade mesh. Holes and
-// uncovered seams therefore remain holes even if the surrounding plate is large.
-export function createFloorOcclusion(scene,camera) {
- const floor=scene.getObjectByName?.('V2_facade_terraces_and_atrium_roof');
- if (!floor?.isMesh || floor.isInstancedMesh || !ordinaryHooks(floor)) return null;
- const g=floor.geometry, p=g.attributes.position, ix=g.index, m=floor.material;
- if (!p?.array || p.isInterleavedBufferAttribute || !ix?.array || !m.isMeshStandardMaterial || g.morphAttributes.position) return null;
- floor.updateWorldMatrix(true,false);
- const world=floor.matrixWorld.clone(), sign=Math.sign(world.determinant()), pv=p.version, iv=ix.version;
- const bins=new Map(), binSize=24;
- const a=new Vector3(),b=new Vector3(),c=new Vector3(),point=new Vector3();
- for(let i=0;i+2<ix.count;i+=3) {
-  a.fromBufferAttribute(p,ix.getX(i)).applyMatrix4(world);
-  b.fromBufferAttribute(p,ix.getX(i+1)).applyMatrix4(world);
-  c.fromBufferAttribute(p,ix.getX(i+2)).applyMatrix4(world);
-  if(a.y!==b.y || a.y!==c.y) continue;
-  const cross=(b.x-a.x)*(c.z-a.z)-(b.z-a.z)*(c.x-a.x);
-  if(!(Math.abs(cross)>=2)) continue;
-  const winding=Math.sign(cross), x=(a.x+b.x+c.x)/3,z=(a.z+b.z+c.z)/3;
-  const patch={y:a.y,x,z,front:-winding*sign,area:Math.abs(cross),edges:[edge(a,b,winding),edge(b,c,winding),edge(c,a,winding)]};
-  const key=Math.floor(x/binSize)+','+Math.floor(z/binSize);
-  if(!bins.has(key)) bins.set(key,[]);
-  bins.get(key).push(patch);
- }
- if(!bins.size) return null;
- const targets=new WeakMap(), geometryBoxes=new WeakMap(), instance=new Matrix4(), box=new Box3();
- const selected=[], previousProjection=new Matrix4();
- let cx=NaN,cy=NaN,cz=NaN,side=-1,epoch=0,activeFrame=-1,budget=0,validProjection=false;
-
- function select(x,y,z) {
-  selected.length=0;
-  for(let bx=Math.floor(x/binSize)-2;bx<=Math.floor(x/binSize)+2;bx++) for(let bz=Math.floor(z/binSize)-2;bz<=Math.floor(z/binSize)+2;bz++) {
-   const bin=bins.get(bx+','+bz);
-   if(!bin) continue;
-   for(const t of bin) {
-    const dy=y-t.y, facing=t.front*dy;
-    if(Math.abs(dy)<.7 || (side===FrontSide && facing<=0) || (side===BackSide && facing>=0)) continue;
-    const r2=(x-t.x)**2+dy*dy+(z-t.z)**2;
-    t.rank=t.area*Math.abs(dy)/(r2*Math.sqrt(r2));
-    selected.push(t);
-   }
+// Use actual rendered geometry and material ranges as blockers. The worker chooses
+// witnesses. Every hidden draw revalidates those witnesses in its current pass.
+export function createFloorOcclusion(scene, camera) {
+  if (typeof Worker === 'undefined')
+    return null;
+  const anchors = new WeakMap(), packed = [], sources = [], p0 = new Vector3(), p1 = new Vector3(), p2 = new Vector3();
+  scene.traverse?.(o => {
+    if (!names.test(o.name) || !o.isMesh || o.isInstancedMesh || !hooks(o))
+      return;
+    const g = o.geometry, p = g.attributes.position, ix = g.index, m = Array.isArray(o.material) ? o.material[0] : o.material;
+    if (!p?.array || p.isInterleavedBufferAttribute || ix && !ix.array || g.morphAttributes.position || !opaque(m))
+      return;
+    o.updateWorldMatrix(true, false);
+    const world = o.matrixWorld.clone(), det = Math.sign(world.determinant()), source = { g, p, ix, m, world, side: m.side, pv: p.version, iv: ix?.version, frame: -1, ranges: [] };
+    source.id = sources.length;
+    sources.push(source);
+    const count = ix?.count ?? p.count;
+    for (let i = 0; i + 2 < count; i += 3) {
+      p0.fromBufferAttribute(p, ix ? ix.getX(i) : i).applyMatrix4(world);
+      p1.fromBufferAttribute(p, ix ? ix.getX(i + 1) : i + 1).applyMatrix4(world);
+      p2.fromBufferAttribute(p, ix ? ix.getX(i + 2) : i + 2).applyMatrix4(world);
+      let axis;
+      if (p0.y === p1.y && p0.y === p2.y)
+        axis = 1;
+      else if (p0.x === p1.x && p0.x === p2.x)
+        axis = 0;
+      else if (p0.z === p1.z && p0.z === p2.z)
+        axis = 2;
+      else
+        continue;
+      const h = axes[axis], u = axes[(axis + 1) % 3], v = axes[(axis + 2) % 3], d = p0[h];
+      const area = (p1[u] - p0[u]) * (p2[v] - p0[v]) - (p1[v] - p0[v]) * (p2[u] - p0[u]);
+      if (!(Math.abs(area) >= 2))
+        continue;
+      packed.push(axis, d, Math.sign(area) * det, m.side, source.id, i, p0[u], p0[v], p1[u], p1[v], p2[u], p2[v]);
+      anchors.set(o, source);
+    }
+  });
+  if (!packed.length)
+    return null;
+  let worker, url;
+  try {
+    url = URL.createObjectURL(new Blob(['(' + occlusionWorker.toString() + ')(self)'], { type: 'text/javascript' }));
+    worker = new Worker(url);
   }
-  selected.sort((a,b)=>b.rank-a.rank);
-  if(selected.length>96) selected.length=96;
-  for(const t of selected) {
-   t.above=y>t.y; t.near=Math.abs(y-t.y)-cellWidth/2; t.far=t.near+cellWidth;
-   for(const e of t.edges) e.eye=e.x*x+e.z*z+e.k-cellWidth/2*(Math.abs(e.x)+Math.abs(e.z));
+  catch {
+    return null;
   }
- }
-
- function submitted(r,material,group) {
-  activeFrame=-1;
-  if(group || material!==m || !world.equals(floor.matrixWorld) || floor.geometry!==g ||
-   g.attributes.position!==p || p.version!==pv || g.index!==ix || ix.version!==iv ||
-   g.drawRange.start!==0 || g.drawRange.count<ix.count || !ordinaryDepth(m) || !ordinaryHooks(floor) ||
-   (m.onBeforeCompile!==Material.prototype.onBeforeCompile && !m.onBeforeCompile.cornerShade && !m.onBeforeCompile.filmLook) ||
-   !m.depthWrite || !m.colorWrite || m.transparent || m.transmission || m.opacity!==1 || m.alphaMap ||
-   m.alphaTest || m.alphaHash || m.alphaToCoverage || (m.blending!==NormalBlending && m.blending!==NoBlending) ||
-   m.clippingPlanes?.length || r.clippingPlanes?.length || camera.view?.enabled ||
-   r.capabilities?.reverseDepthBuffer) return;
-  const e=camera.matrixWorld.elements;
-  const pe=camera.projectionMatrix.elements;
-  if(!camera.isPerspectiveCamera || camera.matrixWorld.determinant()<=0 || pe[3] || pe[7] ||
-     pe[11]!==-1 || pe[15] || pe[12] || pe[13] || pe[0]*pe[5]-pe[1]*pe[4]<=0) return;
-  if(!previousProjection.equals(camera.projectionMatrix) || !epoch) {
-   previousProjection.copy(camera.projectionMatrix);
-   // Maximum radial distance to a near-plane corner, for this actual projection.
-   let near=0;
-   for(const x of [-1,1]) for(const y of [-1,1]) near=Math.max(near,point.set(x,y,-1).applyMatrix4(camera.projectionMatrixInverse).length());
-   validProjection=near>0 && near<.30;
+  finally {
+    if (url)
+      URL.revokeObjectURL(url);
   }
-  // The Frobenius norm bounds all world-space stretches, including shear.
-  if(!validProjection || Math.hypot(e[0],e[1],e[2],e[4],e[5],e[6],e[8],e[9],e[10])>1.9) return;
-  const cell=n=>(Math.floor(n/cellWidth)+.5)*cellWidth;
-  const x=cell(e[12]),y=cell(e[13]),z=cell(e[14]);
-  if(cx!==x || cy!==y || cz!==z || side!==m.side) {
-   cx=x;cy=y;cz=z;side=m.side;epoch++;select(x,y,z);
+  const raw = Float64Array.from(packed);
+  packed.length = 0;
+  const targets = new WeakMap(), geometryIds = new WeakMap(), retired = [], rowsById = new Map(), pending = [], trees = [], scope = [];
+  const eyes = new Vector3(), frustum = new Frustum(), vp = new Matrix4(), last = new Matrix4(), v = new Vector3();
+  let ready = false, busy = false, frame = -1, epoch = 0, pass = 0, nextRow = 0, nextTree = 0, view = null, spent = 0, scopeHash = 0;
+  worker.onmessage = ({ data }) => {
+    if (data.ready) {
+      ready = true;
+      return;
+    }
+    busy = false;
+    for (const [id, ticket, result] of data.answers) {
+      const row = rowsById.get(id);
+      rowsById.delete(id);
+      if (row && row.ticket === ticket) {
+        row.pending = false;
+        if (row.epoch === data.epoch) {
+          row.answer = result;
+          row.tried = pass;
+        }
+      }
+    }
+  };
+  const failOpen = () => { ready = false; busy = false; rowsById.clear(); worker.terminate(); };
+  worker.onerror = failOpen;
+  try {
+    worker.postMessage({ anchors: raw }, [raw.buffer]);
   }
-  activeFrame=r.info.render.frame;
-  budget=.65; // CPU milliseconds for new proofs. Cached proofs remain available.
- }
-
- // The ray intersects a horizontal floor at a weighted average of its endpoints.
- // Bound each inward edge at the eye cell and at the target box, then bound
- // the numerator of that weighted average across both height intervals.
- function covered(b) {
-  for(const t of selected) {
-   const near=t.above?t.y-b.max.y:b.min.y-t.y;
-   if(!(near>.08)) continue;
-   const far=t.above?t.y-b.min.y:b.max.y-t.y;
-   let inside=true;
-   for(const e of t.edges) {
-    const f=e.x*(e.x>=0?b.min.x:b.max.x)+e.z*(e.z>=0?b.min.z:b.max.z)+e.k;
-    if(!((e.eye<0?far:near)*e.eye+(f<0?t.far:t.near)*f>0)) { inside=false;break; }
-   }
-   if(inside) return true;
+  catch {
+    failOpen();
+    return null;
   }
-  return false;
- }
- function hidden(frame,geometry,material,o) {
-  if(activeFrame!==frame || activeFrame<0 || o===floor || !o.isMesh || o.isBatchedMesh || o.isSkinnedMesh ||
-     geometry.isInstancedBufferGeometry || geometry.morphAttributes.position || o.morphTexture || !ordinaryHooks(o) || !ordinaryDepth(material)) return false;
-  const attr=geometry.attributes.position, inst=o.instanceMatrix, count=inst?o.count:1;
-  if(!attr || count<1 || count>96) return false;
-  let row=targets.get(o);
-  if(row && row.epoch===epoch && row.attr===attr && row.pv===attr.version && row.inst===inst &&
-     row.iv===inst?.version && row.count===count && row.world.equals(o.matrixWorld)) return row.hidden;
-  if(budget<=0 || !attr.array || attr.isInterleavedBufferAttribute || attr.count>12000) return false;
-  const start=performance.now();
-  if(!row) { row={world:new Matrix4()};targets.set(o,row); }
-  row.world.copy(o.matrixWorld);row.epoch=epoch;row.attr=attr;row.pv=attr.version;row.inst=inst;row.iv=inst?.version;row.count=count;row.hidden=false;
-  let local=geometryBoxes.get(attr);
-  if(!local || local.version!==attr.version) {
-   local={version:attr.version,box:new Box3().setFromBufferAttribute(attr)};geometryBoxes.set(attr,local);
+  function setup(r) {
+    if (!ready || !Number.isSafeInteger(r.info.render.frame) || camera.coordinateSystem !== WebGLCoordinateSystem || r.clippingPlanes?.length || camera.view?.enabled || camera.reversedDepth || r.capabilities?.reversedDepthBuffer || !camera.isPerspectiveCamera || camera.matrixWorld.determinant() <= 0)
+      return false;
+    const p = camera.projectionMatrix.elements, w = camera.matrixWorld.elements;
+    if (p[3] || p[7] || p[11] !== -1 || p[15] || p[12] || p[13] || p[0] * p[5] - p[1] * p[4] <= 0)
+      return false;
+    if (Math.hypot(w[0], w[1], w[2], w[4], w[5], w[6], w[8], w[9], w[10]) > 1.9)
+      return false;
+    for (const x of [-1, 1])
+      for (const y of [-1, 1])
+        if (!(v.set(x, y, -1).applyMatrix4(camera.projectionMatrixInverse).length() < .3))
+          return false;
+    vp.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    let renew = !epoch;
+    // A rotated or translated camera may reuse the clip proof only while its entire
+    // current frustum is inside the expanded frustum sent to the worker.
+    if (!renew && !vp.equals(last))
+      for (const x of [-1, 1])
+        for (const y of [-1, 1])
+          for (const z of [-1, 1]) {
+            v.set(x, y, z).applyMatrix4(camera.projectionMatrixInverse).applyMatrix4(camera.matrixWorld);
+            if (!frustum.containsPoint(v))
+              renew = true;
+          }
+    if (renew) {
+      frustum.setFromProjectionMatrix(vp, camera.coordinateSystem, camera.reversedDepth);
+      for (const plane of frustum.planes)
+        plane.constant += 4;
+    }
+    last.copy(vp);
+    const cell = .25, snap = n => (Math.floor(n / cell) + .5) * cell, x = snap(w[12]), y = snap(w[13]), z = snap(w[14]);
+    if (renew || eyes.x !== x || eyes.y !== y || eyes.z !== z) {
+      eyes.set(x, y, z);
+      epoch++;
+      view = { epoch, eye: eyes.toArray(), half: cell / 2, frustum: frustum.planes.map(p => [p.normal.x, p.normal.y, p.normal.z, p.constant]) };
+    }
+    frame = r.info.render.frame;
+    scope.length = 0;
+    scopeHash = 0;
+    spent = 0;
+    pass++;
+    return true;
   }
-  row.hidden=true;
-  for(let i=0;i<count;i++) {
-   if(inst) { o.getMatrixAt(i,instance);instance.premultiply(o.matrixWorld); }
-   if(!covered(box.copy(local.box).applyMatrix4(inst?instance:o.matrixWorld))) {row.hidden=false;break;}
+  function submitted(r, m, group, o) {
+    const s = anchors.get(o), g = o.geometry;
+    if (g !== s.g || s.p !== g.attributes.position || s.ix !== g.index || s.p.version !== s.pv || s.ix?.version !== s.iv || !o.matrixWorld.equals(s.world) || m !== s.m || m.side !== s.side || !opaque(m) || !hooks(o))
+      return;
+    if (frame !== r.info.render.frame && !setup(r))
+      return;
+    const start = Math.max(g.drawRange.start, group?.start ?? 0), end = Math.min(g.index?.count ?? s.p.count, g.drawRange.start + g.drawRange.count, group ? group.start + group.count : Infinity);
+    if (start % 3 || start >= end)
+      return;
+    if (s.frame !== frame) {
+      s.frame = frame;
+      s.ranges.length = 0;
+    }
+    s.ranges.push(start, end);
+    scope.push(s.id, start, end);
+    scopeHash = Math.imul(Math.imul(scopeHash ^ s.id, 31) ^ start, 31) ^ end;
   }
-  budget-=performance.now()-start;
-  return row.hidden;
- }
- return {floor,submitted,hidden};
+  function drawn(required) {
+    for (let k = 0; k < required.length; k += 3) {
+      const s = sources[required[k]];
+      if (s.frame !== frame)
+        return false;
+      let on = false;
+      for (let i = 0; i < s.ranges.length; i += 2)
+        if (s.ranges[i] <= required[k + 1] && s.ranges[i + 1] >= required[k + 2]) {
+          on = true;
+          break;
+        }
+      if (!on)
+        return false;
+    }
+    return true;
+  }
+  function eligible(o, g, m) { return o.isMesh && !o.isBatchedMesh && !o.isSkinnedMesh && !g.isInstancedBufferGeometry && !g.morphAttributes.position && !o.morphTexture && hooks(o) && normalDepth(m); }
+  function unchanged(row, o, g, group) {
+    const p = g.attributes.position, ix = g.index, inst = o.instanceMatrix;
+    return row.epoch === epoch && row.g === g && row.p === p && row.pv === p.version && row.ix === ix && row.iv === ix?.version &&
+      row.inst === inst && row.version === inst?.version && row.count === (inst ? o.count : 1) && row.groupCount === (group?.count ?? Infinity) &&
+      row.start === g.drawRange.start && row.limit === g.drawRange.count && row.mat.equals(o.matrixWorld);
+  }
+  function early(current, g, m, o, group) {
+    if (frame !== current || !ready)
+      return false;
+    const row = targets.get(o)?.get(group?.start ?? 0);
+    return !!row?.answer && unchanged(row, o, g, group) && eligible(o, g, m) && drawn(row.answer);
+  }
+  function requestProof(current, g, m, o, group) {
+    if (frame !== current || !ready || busy || spent >= .45 || pending.length >= 100 || anchors.has(o) || !eligible(o, g, m))
+      return false;
+    const p = g.attributes.position, ix = g.index, inst = o.instanceMatrix, count = inst ? o.count : 1;
+    if (!p || !count || count > 640 || p.isInterleavedBufferAttribute || inst && !(inst.array instanceof Float32Array))
+      return false;
+    const first = Math.max(g.drawRange.start, group?.start ?? 0), end = Math.min(ix?.count ?? p.count, g.drawRange.start + g.drawRange.count, group ? group.start + group.count : Infinity);
+    if (first % 3 || first >= end)
+      return false;
+    let slots = targets.get(o);
+    if (!slots) {
+      slots = new Map();
+      targets.set(o, slots);
+    }
+    const key = group?.start ?? 0;
+    let row = slots.get(key);
+    if (row && (row.pending || unchanged(row, o, g, group) && row.scopeHash === scopeHash))
+      return false;
+    const started = performance.now();
+    if (!row) {
+      if (slots.size > 16)
+        slots.clear();
+      row = { mat: new Matrix4(), id: ++nextRow, ticket: 0 };
+      slots.set(key, row);
+    }
+    // Keep animated targets from monopolizing new work while static draws wait.
+    if (row.epoch === epoch && row.tried > pass - 40)
+      return false;
+    Object.assign(row, { epoch, scopeHash, g, p, pv: p.version, ix, iv: ix?.version, inst, version: inst?.version, count, groupCount: group?.count ?? Infinity, start: g.drawRange.start, limit: g.drawRange.count, answer: null, tried: pass });
+    row.mat.copy(o.matrixWorld);
+    const tree = retainedDrawTree(g);
+    if (tree) {
+      let registered = geometryIds.get(g);
+      if (registered && registered.tree !== tree)
+        return false;
+      if (!registered) {
+        const id = ++nextTree;
+        registered = { id, tree };
+        geometryIds.set(g, registered);
+        trees.push({ id, boxes: tree.boxes, leaves: tree.leaves, stride: tree.stride });
+        const dispose = () => { retired.push(id); geometryIds.delete(g); g.removeEventListener('dispose', dispose); };
+        g.addEventListener('dispose', dispose);
+      }
+      const id = registered.id;
+      row.ticket++;
+      row.pending = true;
+      rowsById.set(row.id, row);
+      pending.push({ id: row.id, version: row.ticket, geo: id, first, end, world: o.matrixWorld.toArray(), slots: inst ? inst.array.slice(0, count * 16) : null, scope: scope.length });
+    }
+    spent += performance.now() - started;
+    return false;
+  }
+  function finish() {
+    if (!ready || busy || !pending.length)
+      return;
+    busy = true;
+    try {
+      worker.postMessage({ view, jobs: pending, trees, scope, retired });
+    }
+    catch {
+      failOpen();
+    }
+    pending.length = 0;
+    trees.length = 0;
+    retired.length = 0;
+  }
+  return { anchors, submitted, early, requestProof, finish };
 }

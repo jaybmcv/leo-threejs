@@ -54,6 +54,9 @@ function recordFor(g, merged = false) {
 // The deck merge owns these arrays and releases them on upload. Capture their static bounds first.
 export function rememberMergedBounds(g) { recordFor(g, true); }
 
+// The visibility worker receives a snapshot of the same index-order bounds.
+export function retainedDrawTree(geometry) { return recordFor(geometry); }
+
 function intersectsBox(tree, frustum, node) {
  const j = node * 6, b = tree.boxes;
  if (b[j] === Infinity) return false;
