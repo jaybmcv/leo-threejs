@@ -90,7 +90,8 @@ const reach=(x,z,label)=>{let steps=0;while(Math.hypot(walker.position.x-x,walke
  assert(steps<1800,label+': cannot reach '+[x,z]+', stopped at '+walker.position.toArray().map(n=>n.toFixed(2)));};
 for(const x of [-140.4,-136,-131,-126,-121,-117,-100,-95,-90.5]){
  const e=loungeWalkwayEdgeZ(plan.line,x);walker.place(new T.Vector3(x,r.y,e-3));walk([0,0,2.25],4);
- assert(walker.position.z<e,'Walked through the wall at x '+x+': '+walker.position.toArray().map(n=>n.toFixed(2)));const stop=walker.position.z;
+ // The edge slopes, so the walker slides along it in x: hold it to the edge where it stopped.
+ assert(walker.position.z<loungeWalkwayEdgeZ(plan.line,walker.position.x)-.2,'Walked through the wall at x '+x+': '+walker.position.toArray().map(n=>n.toFixed(2)));const stop=walker.position.z;
  walk([0,0,-2.25],1.5);assert(walker.position.z<stop-2,'Cannot walk away from the wall at x '+x);
 }
 // The tester's standing spot, walking straight at the Haze Maze sign, then back.
