@@ -3,6 +3,7 @@ import fitoutOverrides from './room-fitout-overrides-v2.json' with {type:'json'}
 
 // Shared measured lounge layout. All coordinates are ship metres.
 export const LOUNGE_PLAN={tank:[-140.9,-88.1,-27.98,-24.05],entryX:-112.5,doorZ:-45.8,arcadeWall:-88,arcadeStart:-43.9,arcadeGap:.8,balconyEnd:-38.75,converger:fitoutOverrides['commons-1'].converger};
+export const LOUNGE_MURAL_X=-140.692;
 export function applyLoungeLandingCorner(r){
  if(r?.id!=='commons-1'||!r.components)return;
  const rear=r.components.galleries.find(g=>g.id==='commons-1-rear-4'),landing=r.components.landings.find(g=>g.id==='commons-1-stair-turn');if(!rear||!landing)return;
@@ -18,6 +19,16 @@ export function applyLoungeBalconyCut(r){
  const xs=g.polygon.map(p=>p[0]),x0=Math.min(...xs),x1=Math.max(...xs),z1=Math.max(...g.polygon.map(p=>p[1])),z0=LOUNGE_PLAN.balconyEnd;
  g.center=[(x0+x1)/2,g.center[1],(z0+z1)/2];g.size=[x1-x0,g.size[1],z1-z0];g.polygon=rectangle(g.center[0],g.center[2],g.size[0],g.size[2]);
  g.reason='Retain the dry gallery door and maze exit; remove the side walkway to the curved balcony.';
+}
+export function applyLoungeWalkwayExtension(r){
+ if(r?.id!=='commons-1'||!r.components)return;
+ const end=r.components.galleries.find(g=>g.id==='commons-1-end-8'),rear=r.components.galleries.find(g=>g.id==='commons-1-rear-8');if(!end||!rear)return;
+ const x0=Math.min(...end.polygon.map(p=>p[0])),x1=Math.max(...end.polygon.map(p=>p[0])),z1=Math.max(...end.polygon.map(p=>p[1]));
+ const z0=Math.min(...end.polygon.filter(p=>p[0]===x0).map(p=>p[1]));
+ const join=Math.min(...rear.polygon.map(p=>p[0])),drop=Math.min(...rear.polygon.filter(p=>p[0]===join).map(p=>p[1]));
+ // Fill only the gap at the aft end. The new drop edge meets the existing rear rail.
+ end.polygon=[[x0,z0],[LOUNGE_MURAL_X,z0],[LOUNGE_MURAL_X,drop],[join,drop],[join,z0],[x1,z0],[x1,z1],[x0,z1]];
+ end.center[2]=(drop+z1)/2;end.size[2]=z1-drop;
 }
 export function applyConvergerLayout(r){
  if(!r?.components)return;
@@ -43,6 +54,7 @@ export function applyLoungeLayout(r){
  applyConvergerLayout(r);
  applyLoungeBalconyCut(r);
  applyLoungeLandingCorner(r);
+ applyLoungeWalkwayExtension(r);
  r.aquarium={recess:4.08,canonicalX:[105.7,158.3],worldBounds:LOUNGE_PLAN.tank,reason:'Full glass length on three decks, with a dry room-side upper gallery.'};
  r.frontRecess={metres:4.08,reason:'Aligned jaguar throat through the tank at the room glass.'};
  r.contentContract.pieceMoves=r.components.pieces.map(p=>({name:p.name,center:p.center,scale:[1,1,1],...(p.yaw?{yaw:p.yaw}:{})}));
