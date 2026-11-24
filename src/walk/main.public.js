@@ -85,6 +85,7 @@ import {loadCosmoScript} from './cosmo-script.js';
 import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns,preparedPhone} from '../v2/prepared-runtime.public.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
 import {gotoStand as v2GotoStand,yarnPlace} from '../v2/wayfinding.js';
+import {createGreenRoom} from './green-room.js';
 import {addWayfindingGuides} from '../v2/wayfinding-guides.js';
 import {createHangarDoor} from '../v2/hangar-door.js';
 import {createShuttleDoors} from './shuttle-doors.js';
@@ -144,7 +145,7 @@ import {createHaze} from '../v2/haze.js';
 import {createStarDrift} from './star-drift.js';
 import {createAmbience} from './ambience.js';
 import {createStageDj} from '../v2/common-stage-dj.js';
-let stageDj=null;
+let stageDj=null,greenRoom=null;
 import {createLullaby} from './lullaby.js';
 import {createLoungeSound} from './lounge-sound.js';
 import {createLoungeMood} from './lounge-mood.js';
@@ -446,6 +447,7 @@ async function buildShip(){
  const featureRoots=[];
  const toBand=(o,y=o.position.y)=>{const band=bandOf(y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);featureRoots.push(o);};
  toBand(stageDj.group);
+ greenRoom=createGreenRoom({still:matchMedia('(prefers-reduced-motion: reduce)').matches});toBand(greenRoom.group);
  // The shuttle cabins' door casings and sliding leaves on Deck 2 (shuttle-doors.js).
  shuttleDoors=createShuttleDoors(toBand);
  // Opaque lift and deck signs of one material on one band draw as one mesh (300 signs in 36 materials). The call lights
@@ -1210,7 +1212,7 @@ renderer.setAnimationLoop(()=>{
  hydroPortal?.update(dt,p,ambience.on,camera);hydroParkPortal?.update(dt,p,ambience.on,camera);hydroCargoPortal?.update(dt,p,ambience.on,camera);
  trainingSound?.update(p,ambience.on,loungeSound?.audible);loungeSound?.update(p,ambience.on,camera,trainingSound?.audible);keelSound?.update(p,ambience.on,camera,keelClub?.surfClock?.());
  lullaby?.update(p,ambience.on);
- stageDj?.update(dt,p,ambience.on,camera);
+ stageDj?.update(dt,p,ambience.on,camera);greenRoom?.update(dt,p);
  missionHolo?.update(dt,p);
  missionTimer?.update(dt,p);
  surgeryArms?.update(dt,p,remotes?.remotes);
