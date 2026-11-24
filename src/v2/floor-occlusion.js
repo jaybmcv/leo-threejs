@@ -116,7 +116,9 @@ export function createFloorOcclusion(scene, camera) {
     let renew = !epoch;
     // A rotated or translated camera may reuse the clip proof only while its entire
     // current frustum is inside the expanded frustum sent to the worker.
-    if (!epoch || !vp.equals(last))
+    if (!epoch || !vp.equals(last)) {
+      if (view?.reach === 72 && (camera.far > 450 || (!r.capabilities.logarithmicDepthBuffer && camera.near < .2)))
+        renew = true;
       for (const x of [-1, 1])
         for (const y of [-1, 1])
           for (const z of [-1, 1]) {
@@ -126,6 +128,7 @@ export function createFloorOcclusion(scene, camera) {
             if (!frustum.containsPoint(v))
               renew = true;
           }
+    }
     if (renew) {
       frustum.setFromProjectionMatrix(vp, camera.coordinateSystem, camera.reversedDepth);
       for (const plane of frustum.planes)
@@ -133,20 +136,19 @@ export function createFloorOcclusion(scene, camera) {
     }
     last.copy(vp);
     const cell = .25, snap = n => (Math.floor(n / cell) + .5) * cell, x = snap(w[12]), y = snap(w[13]), z = snap(w[14]);
-    // The bow cafés look through several decks. Only these long views need to
-    // search beyond the nearest 32 m of submitted walls and floors.
-    let reach = 32;
-    if (x >= 200 && camera.far <= 450 && (r.capabilities?.logarithmicDepthBuffer || camera.near >= .2)) {
-      if (depthBits === undefined) {
-        const gl = r.getContext?.();
-        depthBits = gl ? gl.getParameter(gl.DEPTH_BITS) : 0;
-      }
-      if (depthBits >= 24) reach = 72;
-    }
-    if (renew || view?.reach !== reach || eyes.x !== x || eyes.y !== y || eyes.z !== z) {
+    if (renew || eyes.x !== x || eyes.y !== y || eyes.z !== z) {
       eyes.set(x, y, z);
       epoch++;
-      view = { epoch, reach, eye: eyes.toArray(), half: cell / 2, frustum: frustum.planes.map(p => [p.normal.x, p.normal.y, p.normal.z, p.constant]) };
+      view = { epoch, eye: eyes.toArray(), half: cell / 2, frustum: frustum.planes.map(p => [p.normal.x, p.normal.y, p.normal.z, p.constant]) };
+      // The bow cafés look through several decks. Select their longer search
+      // when sending a new camera cell or frustum to the worker.
+      if (x >= 200 && camera.far <= 450 && (r.capabilities?.logarithmicDepthBuffer || camera.near >= .2)) {
+        if (depthBits === undefined) {
+          const gl = r.getContext?.();
+          depthBits = gl ? gl.getParameter(gl.DEPTH_BITS) : 0;
+        }
+        if (depthBits >= 24) view.reach = 72;
+      }
     }
     frame = r.info.render.frame;
     scope.length = 0;
