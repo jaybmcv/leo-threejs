@@ -63,7 +63,8 @@ function usedVertices(source,scratch=null){
  if(!sparse(source)){const remap=new Int32Array(n).fill(-1),ids=new Uint32Array(n);let k=0,i=0;
   for(;i<index.length;i++){const v=index[i];if(v>=n)break;if(remap[v]<0){remap[v]=k;ids[k++]=v;}}
   if(i===index.length)return {ids:ids.subarray(0,k),remap};}
- else if(scratch){if(!(scratch.remap?.length>=n))scratch.remap=new Int32Array(n).fill(-1);
+ // Unsigned indices only: a negative one (none in the ship) keeps what the Map made of it.
+ else if(scratch&&(index instanceof Uint32Array||index instanceof Uint16Array||index instanceof Uint8Array)){if(!(scratch.remap?.length>=n))scratch.remap=new Int32Array(n).fill(-1);
   const remap=scratch.remap,ids=new Uint32Array(Math.min(index.length,n));let k=0,i=0;
   for(;i<index.length;i++){const v=index[i];if(v>=n)break;if(remap[v]<0){remap[v]=k;ids[k++]=v;}}
   const release=()=>{for(let j=0;j<k;j++)remap[ids[j]]=-1;};
@@ -73,8 +74,9 @@ function usedVertices(source,scratch=null){
 }
 // `bounds: false` leaves out the bounds, for a copy only read for its arrays.
 export function compactRenderGeometry(source,{scratch=null,bounds=true}={}){
- const used=source.index?usedVertices(source,scratch):null,count=used?used.ids.length:source.attributes.position.count,g=new T.BufferGeometry();
+ const g=new T.BufferGeometry(),used=source.index?usedVertices(source,scratch):null;
  try{
+  const count=used?used.ids.length:source.attributes.position.count;
   for(const[name,a]of Object.entries(source.attributes)){const s=a.itemSize,from=a.array,values=new from.constructor(count*s);
    if(!used)values.set(from.subarray(0,count*s));else for(let i=0;i<count;i++){const o=used.ids[i]*s;for(let k=0;k<s;k++)values[i*s+k]=from[o+k];}
    g.setAttribute(name,new T.BufferAttribute(values,s,a.normalized));}

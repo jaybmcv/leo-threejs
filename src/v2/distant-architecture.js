@@ -1,6 +1,7 @@
 import {lightDistantPreset,installPhoneDistant} from './phone-distant.js';
 import * as T from 'three';
 import {yieldToPage} from './yield-to-page.js';
+import {plainAttribute} from './draw-bounds.js';
 
 // Select actual finished-bake triangles. Door/window/atrium cuts remain cuts;
 // never close a room using a box inferred from its footprint.
@@ -48,9 +49,9 @@ export async function installDistantArchitecture(ship,baked,haze,options={}){
   for(const {o,start,count,matrix} of b.parts){
    const p=o.geometry.attributes.position,c=o.geometry.attributes.color,ix=o.geometry.index,m=o.material,tint=m.color||new T.Color(1,1,1);
    // Plain arrays are read directly and the matrix applied as Vector3.applyMatrix4 does it (the same sums in the same
-   // order): the accessors were most of this copy's 0.8 s. Normalized or interleaved ones go through the accessors, as
-   // do vertex colours.
-   const e=matrix.elements,pa=p.normalized||p.isInterleavedBufferAttribute?null:p.array,ps=p.itemSize,ia=ix&&!ix.normalized?ix.array:null,shaded=m.vertexColors&&c;
+   // order): the accessors were most of this copy's 0.8 s. Anything else (plainAttribute, draw-bounds.js) goes through
+   // the accessors, as do vertex colours.
+   const e=matrix.elements,pa=plainAttribute(p)?p.array:null,ps=p.itemSize,ia=ix&&plainAttribute(ix)&&ix.itemSize===1?ix.array:null,shaded=m.vertexColors&&c;
    const flatR=Math.round(255*Math.min(1,tint.r*1)),flatG=Math.round(255*Math.min(1,tint.g*1)),flatB=Math.round(255*Math.min(1,tint.b*1));
    for(let i=start*3;i<(start+count)*3;i++){
     const j=ia?ia[i]:ix?ix.getX(i):i;let x,y,z;

@@ -1726,11 +1726,12 @@
     "file": "src/v2/distant-architecture.js",
     "original": "src/v2/distant-architecture.js",
     "mode": "raw",
-    "bodySha256": "e4525285b0fbe1e78dfbd488ddf579bac0a87da4b225bc112943ceae8cd1ce94",
+    "bodySha256": "c8eff2b843ae82a921ce694983e854a00ee437dc3a789832d066446767f0b20f",
     "imports": [
       "./phone-distant.js",
       "three",
-      "./yield-to-page.js"
+      "./yield-to-page.js",
+      "./draw-bounds.js"
     ],
     "geometryCalls": []
   },
@@ -1738,7 +1739,7 @@
     "file": "src/v2/facade.js",
     "original": "src/v2/facade.js",
     "mode": "raw",
-    "bodySha256": "bb4b1efe97824edfe9d4689c25aeb1baae287122ebce0e907e3e0dbbb3d20ba6",
+    "bodySha256": "8ceb41ec0f4d8c931069ced0210d84bd4f964dfb2c633391e1c3e9bb0e9e65ad",
     "imports": [
       "./atrium-architecture.js",
       "./atrium-visibility.js",

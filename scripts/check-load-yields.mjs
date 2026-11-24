@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import * as T from 'three';
 import {yieldToPage,yieldEvery,PAINT_MS,setFrameTurns} from '../src/v2/yield-to-page.js';
 import {compactRenderGeometry} from '../src/v2/facade.js';
+import {rememberMergedBounds,retainedDrawTree} from '../src/v2/draw-bounds.js';
+import {installDistantArchitecture} from '../src/v2/distant-architecture.js';
 
 function check(name,fn){return Promise.resolve(fn()).then(()=>console.log('PASS '+name));}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -77,4 +79,23 @@ await check('the band merge\'s pieces of one shared pool, through one scratch ar
   assert.equal(b.boundingBox,null);assert.equal(b.boundingSphere,null);if(k!==13)assert.ok(c.boundingBox.equals(a.boundingBox)&&c.boundingSphere.equals(a.boundingSphere));
  }
  assert.equal(scratch.remap.length,vertices);assert.ok(scratch.remap.every(v=>v===-1),'left clear');
+});
+await check('a signed index and a failed copy leave the scratch as the Map version would, and clear',()=>{
+ const pool=new T.BufferAttribute(new Float32Array(300).map((_,i)=>i),3),scratch={remap:null};
+ const signed=new T.BufferGeometry();signed.setAttribute('position',pool);signed.setIndex(new T.BufferAttribute(new Int32Array([4,-1,6]),1));
+ // Index -1 reads past the pool (as the version before did): its bounds are NaN, which three warns of.
+ const warn=console.warn,error=console.error;console.warn=console.error=()=>{};let a,b;try{a=compactRenderGeometry(signed);b=compactRenderGeometry(signed,{scratch});}finally{console.warn=warn;console.error=error;}assert.deepEqual([...b.index.array],[...a.index.array]);assert.equal(b.attributes.position.count,a.attributes.position.count);
+ const g=new T.BufferGeometry();g.setAttribute('position',pool);g.setIndex([3,4,5]);let n=0;
+ const plain=compactRenderGeometry(g);const saved=Object.getOwnPropertyDescriptor(T.BufferGeometry.prototype,'setIndex');T.BufferGeometry.prototype.setIndex=function(){if(n++===0)throw Error('lost');return saved.value.apply(this,arguments);};
+ try{assert.throws(()=>compactRenderGeometry(g,{scratch}),/lost/);const again=compactRenderGeometry(g,{scratch});assert.deepEqual([...again.index.array],[...plain.index.array]);assert.equal(again.attributes.position.count,3);}
+ finally{Object.defineProperty(T.BufferGeometry.prototype,'setIndex',saved);}assert.ok(scratch.remap.every(v=>v===-1),'left clear');
+});
+await check('plain arrays read directly; half floats and interleaved or strided indices through the accessors',async()=>{
+ // A unit triangle in half floats (stored as 0x3c00 for 1), and an index interleaved at stride 2, offset 1.
+ const half=new T.BufferGeometry();const h=new T.Float16BufferAttribute(new Uint16Array(9),3);h.setXYZ(1,1,0,0);h.setXYZ(2,0,1,0);half.setAttribute('position',h);half.setIndex([0,1,2]);
+ const woven=new T.BufferGeometry();woven.setAttribute('position',new T.BufferAttribute(new Float32Array([0,0,0,1,0,0,3,1,0]),3));woven.index=new T.InterleavedBufferAttribute(new T.InterleavedBuffer(new Uint16Array([9,0,9,1,9,2]),2),1,1);
+ for(const [g,most] of [[half,1],[woven,3]]){rememberMergedBounds(g);const t=retainedDrawTree(g);assert.equal(t.boxes[9],most,'max x');}
+ const ship={inside:new T.Group(),facade:new T.Group()},band=new T.Group(),meshes=[half,woven].map(g=>{g.userData.preparedRanges=[{name:'Deck_slab',start:0,count:1,userData:{}}];const o=new T.Mesh(g,new T.MeshBasicMaterial());band.add(o);return o;});
+ band.updateMatrixWorld(true);const root=await installDistantArchitecture(ship,{bands:new Map([['b',band]])},new T.Group(),{});
+ const xs=root.children.filter(o=>o.name.startsWith('V2_distant_deck_')).flatMap(o=>[...o.geometry.attributes.position.array].filter((_,i)=>i%3===0));assert.deepEqual(xs.sort((p,q)=>p-q),[0,0,0,1,1,3]);
 });

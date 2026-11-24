@@ -168,8 +168,8 @@
     "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
   },
   "src/v2/facade.js": {
-    "sha256": "d05d34f15c32b9ef7f25e503af457fa0eaaa20a8a8a6ddf550fe4eaae18c113a",
-    "reason": "Whole ship sooner: same results with direct array reads, a shared compaction scratch and the metadata list asked for ahead (page-only)"
+    "sha256": "b0c9a520c156bf8e4c85cc7572a03b4ad18525c0bd87b578cf7f6ed3e701f609",
+    "reason": "Whole ship sooner: plain reads only for three's own accessors (Astra review)"
   },
   "src/v2/facade.authoring.js": {
     "sha256": "f18efaee42bcad153cbbe6a40bb96ef2d8b515a836a263a1d0c1aec4752b0aad",
@@ -212,8 +212,8 @@
     "reason": "arrival hall stays smooth while the ship builds (merged with main)"
   },
   "src/v2/distant-architecture.js": {
-    "sha256": "bee3823cff7c83593f745167472b3b60fd60aa93e710772de4d9f891c5466a1e",
-    "reason": "Whole ship sooner: same results with direct array reads, a shared compaction scratch and the metadata list asked for ahead (page-only)"
+    "sha256": "203bb8276978b5c78cdf78e1bf4c3ee9b040bca22aec884039690eb70473377c",
+    "reason": "Whole ship sooner: plain reads only for three's own accessors (Astra review)"
   },
   "src/v2/phone-distant.js": {
     "sha256": "fd4c158ad71bce80fcfb95288f74212df5ea02072e37824fffa600da7c1c07a1",

@@ -1,4 +1,4 @@
-import {BackSide, FrontSide, Frustum, Matrix4, Vector3} from 'three';
+import {BackSide, BufferAttribute, FrontSide, Frustum, Matrix4, Vector3} from 'three';
 
 // A draw can span disjoint rooms or repeated cabin instances. Keep bounds in index order so
 // a changing band group or draw range can reuse the same tree after the GPU upload.
@@ -6,6 +6,10 @@ const records = new WeakMap();
 const point = new Vector3();
 const MAX_ORDINARY_INDICES = 300000;
 const clipMargin = .025;
+// An attribute three's own accessors read as array[i * itemSize + k], unchanged: not normalized, not interleaved and not
+// half floats (Float16BufferAttribute keeps halves in a Uint16Array and overrides them).
+const { getX, getY, getZ } = BufferAttribute.prototype;
+export const plainAttribute = a => !a.normalized && a.getX === getX && a.getY === getY && a.getZ === getZ;
 
 function makeRecord(g, merged) {
  const p = g.attributes.position, ix = g.index, count = ix?.count ?? p?.count;
@@ -21,8 +25,8 @@ function makeRecord(g, merged) {
   boxes[i+3] = boxes[i+4] = boxes[i+5] = -Infinity;
  }
  // Plain arrays are read directly (what getX and fromBufferAttribute return for them): the desktop's deck merges hold
- // about 6 million indices, and the accessors took about half a second. Normalized ones go through the accessors.
- const pa = p.array, ps = p.itemSize, plain = !p.normalized, ia = ix && !ix.normalized ? ix.array : null;
+ // about 6 million indices, and the accessors took about half a second. Anything else goes through the accessors.
+ const pa = p.array, ps = p.itemSize, plain = plainAttribute(p), ia = ix && plainAttribute(ix) && ix.itemSize === 1 ? ix.array : null;
  for (let i = 0; i < count; i++) {
   const v = ia ? ia[i] : ix ? ix.getX(i) : i;
   let x, y, z;
