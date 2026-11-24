@@ -1,3 +1,4 @@
+import {joinStaticTints} from './static-tints.js';
 import * as T from 'three';
 import {anchorObject} from '../plan/rooms.js';
 import {cutOut} from '../cut-out.js';
@@ -60,6 +61,10 @@ export function createVaultLift(colliders){
  const lowerRoof=new T.CylinderGeometry(R,R,.1,64).translate(0,H+.13,0);mesh('Clubhouse_lounge_roof',lowerRoof,metal,lounge);proxy(lowerRoof.clone().applyMatrix4(dockLocal[0]));
  proxy(lowerShell.clone().applyMatrix4(dockLocal[0]));
  for(const x of [-WIDTH/2,WIDTH/2])box('Clubhouse_lift_frame',.08,H,.09,x,H/2,FRONT,metal,lounge);
+ // The landing frames, collars and glow strips have independent walk colliders.
+ joinStaticTints(group, [metal]);
+ joinStaticTints(group, [blue]);
+ joinStaticTints(lounge, [metal]);
  const car=new T.Group();car.name='Clubhouse_lift_platform';group.add(car);
  const floor=new T.CylinderGeometry(CAR,CAR,.16,64).translate(0,-.08,0);
  mesh('Clubhouse_lift_floor',floor,metal,car);ring(-.03,CAR,car);

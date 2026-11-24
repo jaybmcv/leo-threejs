@@ -35,6 +35,7 @@ export class WalkInput{
   };
   addEventListener('keydown',e=>{
    if(e.code!=='Escape'||(document.pointerLockElement!==surface&&!requesting))return;
+   if(this.escapePointer?.())this.onAction('escape');
    e.preventDefault();e.stopImmediatePropagation();this.releasePointer();
   },true);
   addEventListener('keydown',e=>{

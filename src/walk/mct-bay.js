@@ -1,3 +1,4 @@
+import {joinStaticTints} from './static-tints.js';
 import {roomObject,toWorld} from '../plan/rooms.js';
 import {walkCanvas} from './canvas.js';
 import {createCartMesh} from './transporter-mesh.js';
@@ -280,5 +281,9 @@ export function createMctBay(ship){
  plane(M.legend,[1.7,1.1],[-21.2,FLOOR+.007,-1],-Math.PI/2,true,1,floor);
 
  for(const [m,gs] of parts){const o=new T.Mesh(mergeGeometries(gs),m);o.name=m.name;o.castShadow=!m.transparent&&!m.polygonOffset;o.receiveShadow=true;group.add(o);gs.forEach(g=>g.dispose());}
+ joinStaticTints(group, [M.body, M.panel]);
+ joinStaticTints(group, [M.unit, M.trolley]);
+ joinStaticTints(group, [M.green, M.amber, M.head, M.tail, M.beacon]);
+ joinStaticTints(group, [M.line, M.white]);
  return {group,solid};
 }

@@ -1,3 +1,4 @@
+import {joinStaticTints} from './static-tints.js';
 import {roomObject} from '../plan/rooms.js';
 import {walkCanvas,hasWalkCanvas} from './canvas.js';
 import * as T from 'three';
@@ -262,7 +263,10 @@ export function createFreightGate(ship,{still=false,colliders=null}={}){
   const sc=new T.Mesh(mergeGeometries(screens),new T.MeshBasicMaterial({name:'Freight_gate_console_screens',map:scr,toneMapped:false}));sc.name='Freight_gate_console_screens';group.add(sc);
  }
 
+
  for(const [m,gs] of parts){const o=new T.Mesh(mergeGeometries(gs),m);o.name=m.name;o.receiveShadow=true;group.add(o);gs.forEach(g=>g.dispose());}
+ joinStaticTints(group, [M.in, M.out]);
+ joinStaticTints(group, [M.inGlow, M.outGlow]);
 
  // The moving gantry: end trucks, the bridge girder with striped faces, the trolley and its beacon, the two cables
  // and the claw, all riding along z together.

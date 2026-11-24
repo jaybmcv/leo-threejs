@@ -1,3 +1,4 @@
+import {joinStaticTints} from './static-tints.js';
 import {roomObject} from '../plan/rooms.js';
 import {walkCanvas} from './canvas.js';
 import * as T from 'three';
@@ -72,6 +73,9 @@ export function createHydrationNook(ship){
  bottles.forEach((b,i)=>{if(!b)return;const z=z0+(i+.5)*bw;can(b[0],.036,.2,[cx+.01,y0+.115,z]);can(b[1],.026,.035,[cx+.01,y0+.232,z]);});
 
  for(const [m,list] of parts){const o=new T.Mesh(mergeGeometries(list),m);o.name=m.name;o.castShadow=true;o.receiveShadow=true;group.add(o);}
+ joinStaticTints(group, [M.navy, M.dark, M.timber]);
+ joinStaticTints(group, [M.white, M.cap]);
+ joinStaticTints(group, [M.towel, M.towelTeal, M.towelGrey]);
  towel.dispose();
  // One plain box for the whole nook, so nobody walks into it.
  const block=new T.Mesh(new T.BoxGeometry(.5,1.6,SHELF+half-DISPENSER+.25));

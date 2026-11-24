@@ -1,3 +1,4 @@
+import {walkAudioOutput} from './frog-audio.js';
 // A quiet, original instrumental loop for Deck 16's gaming lounge (the old training & briefing room): soft sine and triangle
 // tones over a slow pulse, no vocals, made here with Web Audio like the lounge's music (lounge-sound.js), so there are no sound files.
 // It follows the Sound button, swells in as you step through the doorway and is silent outside the room and on other decks
@@ -62,7 +63,7 @@ export function createTrainingSound(room){
   ctx=new (window.AudioContext||window.webkitAudioContext)();noise=makeNoise(ctx);
   // notes (and the echo) -> a take's gain -> the room's fade -> this track's own volume -> out
   fade=ctx.createGain();fade.gain.value=0;master=ctx.createGain();master.gain.value=MASTER;
-  analyser=ctx.createAnalyser();analyser.fftSize=2048;fade.connect(master).connect(analyser).connect(ctx.destination);
+  analyser=ctx.createAnalyser();analyser.fftSize=2048;fade.connect(master).connect(analyser).connect(walkAudioOutput(ctx));
   document.addEventListener('visibilitychange',()=>{if(document.hidden)ctx.suspend();else if(wanted)ctx.resume().catch(()=>{});});
  }
  // A take is one playthrough, with its own soft dotted-eighth echo on the melody. It ends, and its nodes go, once the music has

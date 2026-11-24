@@ -2,6 +2,13 @@
   "d16-training-aft": {
     "gamingWindowRow": {"at":[-21,0,-11.2],"yaw":0.1683901571475299},
     "gamingLeaderboard": {"at":[0,0,-5],"radius":1.65,"height":0.65},
+    "gamingConsoles": [-21,-16.5,-12,-7.5,-3],
+    "gamingStations": [
+      {"at":[8.7,0,-11],"yaw":1.5707963267948966},
+      {"at":[19,0,-9.5],"yaw":0},
+      {"at":[19,0,0],"yaw":0},
+      {"at":[8.7,0,2],"yaw":-1.5707963267948966}
+    ],
     "add": [
       {"part":"gaming_bar_counter","size":[0.7,0.98,4.4],"at":[-22.04,0.49,0],"mat":"navy"},
       {"part":"gaming_bar_countertop","size":[0.7,0.08,4.4],"at":[-22.04,1.04,0],"mat":"navy"},
@@ -15,7 +22,7 @@
     ]
   },
   "commons-1": {
-    "converger": {"center":[-97.5,24.3,-34.7],"yaw":-1.5707963267948966,"signYaw":-0.7853981633974483},
+    "converger": {"center":[-97.5,24.3,-34.7],"yaw":-1.5707963267948966,"signCenter":[-99.4,30.9,-31.5],"signYaw":-1.821885322640436},
     "moveLoungeSeating": [{"from":[137,16.5],"to":[117,29.75]}],
     "loungeRug": {"at":[143.35,14],"yaw":0},
     "removeGardenPrints": [73],
@@ -169,8 +176,49 @@
     ]
   },
   "commons-10": {
+    "add": [
+      {"part":"zen_bench_plinth","size":[0.72,0.36,2.8],"at":[-18,0.2,0.5],"mat":"oak","round":true},
+      {"part":"zen_seat_cushion","size":[0.72,0.12,0.81],"at":[-18,0.44,-0.35],"mat":"sage","round":true},
+      {"part":"zen_seat_cushion","size":[0.72,0.12,0.81],"at":[-18,0.44,0.5],"mat":"cream","round":true},
+      {"part":"zen_seat_cushion","size":[0.72,0.12,0.81],"at":[-18,0.44,1.35],"mat":"sage","round":true},
+      {"part":"zen_bench_back","size":[0.12,0.5,2.8],"at":[-18.4,0.65,0.5],"mat":"oak","round":true},
+      {"part":"zen_bench_plinth","size":[2.8,0.36,0.72],"at":[-13,0.2,9.5],"mat":"oak","round":true},
+      {"part":"zen_seat_cushion","size":[0.81,0.12,0.72],"at":[-13.85,0.44,9.5],"mat":"sage","round":true},
+      {"part":"zen_seat_cushion","size":[0.81,0.12,0.72],"at":[-13,0.44,9.5],"mat":"cream","round":true},
+      {"part":"zen_seat_cushion","size":[0.81,0.12,0.72],"at":[-12.15,0.44,9.5],"mat":"sage","round":true},
+      {"part":"zen_bench_back","size":[2.8,0.5,0.12],"at":[-13,0.65,9.9],"mat":"oak","round":true},
+      {"part":"zen_bench_plinth","size":[2.8,0.36,0.72],"at":[12,0.2,-13],"mat":"oak","round":true},
+      {"part":"zen_seat_cushion","size":[0.81,0.12,0.72],"at":[11.15,0.44,-13],"mat":"sage","round":true},
+      {"part":"zen_seat_cushion","size":[0.81,0.12,0.72],"at":[12,0.44,-13],"mat":"cream","round":true},
+      {"part":"zen_seat_cushion","size":[0.81,0.12,0.72],"at":[12.85,0.44,-13],"mat":"sage","round":true},
+      {"part":"zen_bench_back","size":[2.8,0.5,0.12],"at":[12,0.65,-13.4],"mat":"oak","round":true}
+    ],
+    "rests": [
+      {"id":"p6-commons-10-seat-0","kind":"sit","point":[-18.1,0.57,-15.9],"facing":[1.2246467991473532e-16,0,-1]},
+      {"id":"p6-commons-10-seat-1","kind":"sit","point":[-18.9,0.57,-15.9],"facing":[1.2246467991473532e-16,0,-1]},
+      {"id":"p6-commons-10-seat-2","kind":"sit","point":[18.9,0.57,-15.9],"facing":[1.2246467991473532e-16,0,-1]},
+      {"id":"p6-commons-10-seat-3","kind":"sit","point":[18.1,0.57,-15.9],"facing":[1.2246467991473532e-16,0,-1]},
+      {"id":"p6-commons-10-seat-4","kind":"sit","point":[-18.1,4.57,-15.9],"facing":[1.2246467991473532e-16,0,-1]},
+      {"id":"p6-commons-10-seat-5","kind":"sit","point":[-18.9,4.57,-15.9],"facing":[1.2246467991473532e-16,0,-1]},
+      {"id":"p6-commons-10-seat-6","kind":"sit","point":[18.9,4.57,-15.9],"facing":[1.2246467991473532e-16,0,-1]},
+      {"id":"p6-commons-10-seat-7","kind":"sit","point":[18.1,4.57,-15.9],"facing":[1.2246467991473532e-16,0,-1]},
+      {"id":"p6-commons-10-seat-8","kind":"sit","point":[-18.1,8.57,-15.9],"facing":[1.2246467991473532e-16,0,-1]},
+      {"id":"p6-commons-10-seat-9","kind":"sit","point":[-18.9,8.57,-15.9],"facing":[1.2246467991473532e-16,0,-1]},
+      {"id":"p6-commons-10-seat-10","kind":"sit","point":[18.9,8.57,-15.9],"facing":[1.2246467991473532e-16,0,-1]},
+      {"id":"p6-commons-10-seat-11","kind":"sit","point":[18.1,8.57,-15.9],"facing":[1.2246467991473532e-16,0,-1]},
+      {"id":"zen-seat-west-0","kind":"sit","point":[-18,0.5,-0.35],"facing":[1,0,0]},
+      {"id":"zen-seat-west-1","kind":"sit","point":[-18,0.5,0.5],"facing":[1,0,0]},
+      {"id":"zen-seat-west-2","kind":"sit","point":[-18,0.5,1.35],"facing":[1,0,0]},
+      {"id":"zen-seat-south-0","kind":"sit","point":[-13.85,0.5,9.5],"facing":[0,0,-1]},
+      {"id":"zen-seat-south-1","kind":"sit","point":[-13,0.5,9.5],"facing":[0,0,-1]},
+      {"id":"zen-seat-south-2","kind":"sit","point":[-12.15,0.5,9.5],"facing":[0,0,-1]},
+      {"id":"zen-seat-east-0","kind":"sit","point":[11.15,0.5,-13],"facing":[0,0,1]},
+      {"id":"zen-seat-east-1","kind":"sit","point":[12,0.5,-13],"facing":[0,0,1]},
+      {"id":"zen-seat-east-2","kind":"sit","point":[12.85,0.5,-13],"facing":[0,0,1]}
+    ],
     "moveMeshes": [
-      {"names":["Mars_cat_1.75m"],"near":[122,24.3,32],"radius":0.1,"count":1,"by":[-3,0.021,1]},
+      {"names":["Mars_cat_1.75m"],"near":[122,24.3,32],"radius":0.1,"count":1,"by":[-6.5,0.021,1.5]},
+      {"names":["Mars_cat_1.75m"],"near":[134,24.3,18],"radius":0.1,"count":1,"by":[1.5,0.021,-2.2]},
       {"names":["Cafe_table","Table_pedestal","Table_ceramic_vase","Table_foliage","Tail_clearance_chair"],"near":[142,25,14],"radius":2,"count":6,"by":[0,0,29],"details":["Polish_tailored_seam"]},
       {"names":["Cafe_table","Table_pedestal","Table_ceramic_vase","Table_foliage","Tail_clearance_chair"],"near":[121,25,36],"radius":2,"count":6,"by":[27,0,7],"details":["Polish_tailored_seam"]},
       {"names":["Cafe_table","Table_pedestal","Table_ceramic_vase","Table_foliage","Tail_clearance_chair"],"near":[148,25,23],"radius":2,"count":6,"by":[0,0,16.5],"details":["Polish_tailored_seam"]}
