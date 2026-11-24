@@ -7,7 +7,7 @@ import {faceSurface} from './catnip-face.js';
 import {Colliders} from './collision.js';
 import {MeshBVH,acceleratedRaycast} from 'three-mesh-bvh';
 
-// A local prank on the open Deck 6 floor. Nothing here is sent to Leo live.
+// The prank runs locally on the open Deck 6 floor.
 export const PRANK={at:toWorld('circulation-6',[125,0,4.5]),yaw:27*Math.PI/180,portraitYaw:-33*Math.PI/180,behind:1.8,reach:1.45};
 const white=0xfaf4df,green=0x75f500,yellow=0xffbf13;
 const material=(color,roughness=.65)=>new T.MeshStandardMaterial({color,roughness});
@@ -147,12 +147,12 @@ function framePhoto(background,cat,name){
  c.restore();return out;
 }
 
-export function createPrankButton({scene,colliders,renderer,draw,walker:cat,controller,input,follow,name,onBegin}){
+export function createPrankButton({scene,colliders,renderer,draw,walker:cat,controller,input,follow,name,live,onBegin}){
  const fitting=prankFittings();attachPrankCollider(colliders,fitting.triangles);
  const lens=createPortableSelfie();lens.set('dist',3.2);lens.set('height',.1);lens.set('fov',52);
- let mess=null,face=null,fx=null,url=null,sheet=null,oldMode=null;
+ let mess=null,face=null,fx=null,url=null,sheet=null,oldMode=null,syncShare=null;
  const release=()=>{input.enabled=true;input.down.clear();if(oldMode!==null){follow.mode=oldMode;oldMode=null;}if(fx)fx.air.visible=false;};
- const close=()=>{if(sheet){sheet.remove();sheet=null;}if(url){URL.revokeObjectURL(url);url=null;}release();};
+ const close=()=>{if(sheet){sheet.remove();sheet=null;syncShare=null;}if(url){URL.revokeObjectURL(url);url=null;}release();};
  const copy=()=>{const c=document.createElement('canvas');c.width=renderer.domElement.width;c.height=renderer.domElement.height;c.getContext('2d').drawImage(renderer.domElement,0,0);return c;};
  function capture(){
   const walker=cat(),shown=walker.holder.visible,hidden=[],alpha=renderer.getClearAlpha(),colour=renderer.getClearColor(new T.Color()),background=scene.background,priorTarget=renderer.getRenderTarget();
@@ -173,13 +173,31 @@ export function createPrankButton({scene,colliders,renderer,draw,walker:cat,cont
   sheet=document.createElement('div');sheet.id='prank-photo';sheet.setAttribute('role','dialog');sheet.setAttribute('aria-modal','true');sheet.setAttribute('aria-label',"Ha! Gottem' souvenir");
   sheet.style.cssText='position:fixed;inset:0;z-index:1100;background:#142026e8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px';
   photo.id='prank-souvenir';photo.setAttribute('aria-label',`Ha! Gottem' — ${displayName}`);photo.style.cssText='max-width:min(92vw,850px);max-height:78vh;object-fit:contain';sheet.append(photo);
-  const buttons=document.createElement('div');buttons.style.cssText='display:flex;gap:16px';
-  for(const label of ['Download','Close']){const b=document.createElement('button');b.textContent=label;b.id='prank-'+label.toLowerCase();b.style.cssText='font:700 18px Archivo,sans-serif;padding:12px 28px;border:2px solid #364a32;border-radius:8px;background:#fff5d9;color:#243b40;cursor:pointer';buttons.append(b);}
-  sheet.append(buttons);document.body.append(sheet);input.enabled=false;input.down.clear();input.releasePointer();
-  sheet.querySelector('#prank-close').onclick=()=>{timing.cancel();close();};
-  sheet.querySelector('#prank-download').onclick=()=>{photo.toBlob(blob=>{if(!blob||!sheet)return;if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='leo-ha-gottem.png';a.click();},'image/png');};
-  sheet.addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();const a=[...buttons.children],i=a.indexOf(document.activeElement);a[(i+(e.shiftKey?-1:1)+a.length)%a.length].focus();}});
-  sheet.querySelector('#prank-close').focus();
+  const dialog=sheet,buttons=document.createElement('div');buttons.style.cssText='display:flex;gap:16px;flex-wrap:wrap;justify-content:center';
+  const button=(id,label)=>{const b=document.createElement('button');b.textContent=label;b.id='prank-'+id;b.style.cssText='font:700 18px Archivo,sans-serif;padding:12px 28px;border:2px solid #364a32;border-radius:8px;background:#fff5d9;color:#243b40;cursor:pointer';return b;};
+  const download=button('download','Download'),post=button('post','Post to #gaming'),dismiss=button('close','Close');
+  const status=document.createElement('div');status.setAttribute('role','status');status.style.cssText='color:#fff5d9;font:700 16px Archivo,sans-serif';
+  buttons.append(download,dismiss);dialog.append(buttons);document.body.append(dialog);input.enabled=false;input.down.clear();input.releasePointer();
+  post.title='Share this photo to the Mars Cats Voyage Discord';
+  syncShare=()=>{
+   if(live()?.prankShare){if(!post.isConnected)buttons.insertBefore(post,dismiss);}
+   else if(post.isConnected){if(document.activeElement===post)dismiss.focus();post.remove();}
+  };syncShare();
+  post.onclick=async()=>{
+   const link=live();if(!link?.prankShare||post.disabled)return;
+   post.disabled=true;dialog.append(status);status.textContent='Posting…';
+   let result='failed';
+   try{
+    const blob=await new Promise(resolve=>photo.toBlob(resolve,'image/png'));
+    if(blob&&dialog.isConnected)result=await link.postPrankPhoto(blob);
+   }catch{}
+   status.textContent=result==='posted'?'Posted to #gaming.':result==='slow'?'Post limit reached. Try again later.':'Could not post the photo.';
+   post.disabled=result==='posted';
+  };
+  dismiss.onclick=()=>{timing.cancel();close();};
+  download.onclick=()=>{photo.toBlob(blob=>{if(!blob||!dialog.isConnected)return;if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='leo-ha-gottem.png';a.click();},'image/png');};
+  dialog.addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();const a=[...buttons.children].filter(b=>!b.disabled),i=a.indexOf(document.activeElement);a[(i+(e.shiftKey?-1:1)+a.length)%a.length].focus();}});
+  dismiss.focus();
  }
  const timing=createPrankTiming({
   begin(){onBegin();close();input.enabled=false;input.down.clear();controller.velocity.set(0,0,0);oldMode=follow.mode;follow.mode='third';
@@ -199,6 +217,6 @@ export function createPrankButton({scene,colliders,renderer,draw,walker:cat,cont
   get locked(){return timing.locked;},get isOpen(){return !!sheet;},get messy(){return timing.messy;},get floorMess(){return !!fx;},get shocked(){return timing.shocked;},
   near(p){const dx=p.x-PRANK.at[0],dz=p.z-PRANK.at[2];if(Math.abs(p.y-PRANK.at[1])>.6||Math.hypot(dx,dz)>PRANK.reach||dx*Math.sin(PRANK.yaw)+dz*Math.cos(PRANK.yaw)>-.45)return null;return timing.cooling?{kind:'waiting',label:'Button resetting…'}:{kind:'prank-button',label:'Press the button'};},
   start(){return timing.start();},cancel,
-  update(){try{if(face)face.visible=timing.shocked;mess?.update();if(timing.locked){point();fx?.update(timing.elapsed);}fitting.button.position.y=timing.cooling?1.075:1.105;}catch(error){cancel();console.warn('Prank reset safely',error);}},
+  update(){try{syncShare?.();if(face)face.visible=timing.shocked;mess?.update();if(timing.locked){point();fx?.update(timing.elapsed);}fitting.button.position.y=timing.cooling?1.075:1.105;}catch(error){cancel();console.warn('Prank reset safely',error);}},
  };
 }

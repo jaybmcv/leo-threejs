@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import {once} from 'node:events';
+import {randomBytes} from 'node:crypto';
+import {Worker} from 'node:worker_threads';
+import WebSocket from 'ws';
 import * as T from 'three';
 import layout from '../src/plan/selected-layout.js';
 import {contains} from '../src/plan/geometry-v2.js';
@@ -9,6 +15,9 @@ import {prankFittings,attachPrankCollider,stainWeights,stainSources,createPrankM
 import {installPreparedColliders} from '../src/v2/prepared-codec.public.js';
 import {createPrankTiming,PRANK_TIME} from '../src/walk/prank-timing.js';
 import {LIFTS} from '../src/walk/lifts.js';
+import {connectLive} from '../src/walk/net/live.js';
+import {PROTOCOL} from '../src/walk/net/wire.js';
+import {LIVE_IDENTITY} from '../src/v2/live-identity.js';
 
 let checks=0;const pass=s=>{checks++;console.log('PASS '+s);};
 {
@@ -66,7 +75,7 @@ for(let u=-3;u<=3;u+=.1)assert(!blocked(world(u,.94)),'standing capsule fits bet
 pass('pedestal collides, both fittings stand on Deck 6, and the full capsule fits through the gap');
 for(const lift of LIFTS.filter(l=>l.id.startsWith('forward-'))){const stop=lift.stops.find(s=>s.deck===6);for(let dx=-1;dx<=1;dx+=.25)for(let out=.4;out<=3;out+=.25){const p=[lift.car.x+dx,stop.y,lift.car.z+lift.door.sign*(lift.car.depth/2+out)];assert(!blocked(p));}}
 pass('both forward lift entrances and their three-metre approaches stay clear of the new fitting');
-for(const suffix of ['', '.public', '.prepared', '.authoring']){const source=fs.readFileSync(new URL('../src/walk/main'+suffix+'.js',import.meta.url),'utf8');for(const hook of ['prank=createPrankButton','prank?.locked?prank.camera','prank?.near(p)','prank?.update()','prank.cancel()'])assert(source.includes(hook),suffix+' '+hook);}
+for(const suffix of ['', '.public', '.prepared', '.authoring']){const source=fs.readFileSync(new URL('../src/walk/main'+suffix+'.js',import.meta.url),'utf8');for(const hook of ['prank=createPrankButton','follow,live:()=>live,name:','prank?.locked?prank.camera','prank?.near(p)','prank?.update()','prank.cancel()'])assert(source.includes(hook),suffix+' '+hook);}
 pass('all four walk entry points install the same station, camera, prompt, update and cancellation');
 {
  // The souvenir's photo window is 1012×620. Phones held upright (and wide desktops) crop to it rather than squeeze.
@@ -78,5 +87,120 @@ pass('all four walk entry points install the same station, camera, prompt, updat
   assert(Math.abs(cw-w)<1e-9||Math.abs(ch-h)<1e-9,'the crop uses the full width or the full height');
  }
  pass('the souvenir photo crops portrait and wide captures to its window instead of stretching them');
+}
+// Two isolated live servers, with a local signing key and a stub for the Discord webhook.
+{
+ const pair=await crypto.subtle.generateKey('Ed25519',true,['sign','verify']),jwk=await crypto.subtle.exportKey('jwk',pair.publicKey);
+ const posts=[],replies=[],logs=[],workers=[],sockets=[];
+ const image=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN1sAAAAASUVORK5CYII=','base64');
+ const secretPath='/stub-webhook-'+randomBytes(12).toString('hex');
+ const stub=http.createServer(async(req,res)=>{
+  if(req.url==='/keys'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({keys:[{...jwk,kid:'prank-check',alg:'EdDSA'}]}));return;}
+  if(req.url!==secretPath+'?wait=true'||req.method!=='POST'){res.writeHead(404).end();return;}
+  try{
+   const chunks=[];for await(const c of req)chunks.push(c);
+   const form=await new Response(Buffer.concat(chunks),{headers:{'Content-Type':req.headers['content-type']}}).formData();
+   const file=form.get('files[0]');posts.push({payload:JSON.parse(form.get('payload_json')),name:file.name,type:file.type,bytes:Buffer.from(await file.arrayBuffer())});
+   res.writeHead(200,{'Content-Type':'application/json'}).end(JSON.stringify({url:base+secretPath}));
+  }catch{res.writeHead(500).end();}
+ });
+ const dir=fs.mkdtempSync(path.resolve('output','prank-share-check-'));
+ let base;
+ try{
+  stub.listen(0,'127.0.0.1');await once(stub,'listening');base='http://127.0.0.1:'+stub.address().port;
+  const webhook=base+secretPath,origin='http://localhost:4180',core=new URL('../server/live-core.mjs',import.meta.url).href;
+  async function start(enabled){
+   const files=['SCORES','HEARTS','CHAT_LOG','GRAFFITI','GRAFFITI_CLEAR','TV','TV_CLEAR','MAZE','TREASURE','PINBALL','GIVEAWAY','GIVEAWAY_CLAIMS','ARENA_STATS','HALLOWEEN'];
+   const env={PORT:'0',LEO_LIVE_ORIGINS:origin,LEO_PASS_ISS:base,LEO_PASS_JWKS_URL:base+'/keys',
+    ...Object.fromEntries(files.map(k=>['LEO_LIVE_'+k,path.join(dir,k)])),...(enabled?{LEO_DISCORD_GAMING_WEBHOOK:webhook}:{})};
+   const worker=new Worker(`const {parentPort,workerData}=require('node:worker_threads');
+    import(workerData).then(({server})=>{const ready=()=>parentPort.postMessage(server.address().port);
+     if(server.listening)ready();else server.once('listening',ready);});`,{eval:true,execArgv:[],workerData:core,env,stdout:true,stderr:true});
+   workers.push(worker);worker.stdout.on('data',c=>logs.push(String(c)));worker.stderr.on('data',c=>logs.push(String(c)));
+   const [port]=await once(worker,'message',{signal:AbortSignal.timeout(20000)});return port;
+  }
+  const id='914141414141414141',b64=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
+  const t=Math.floor(Date.now()/1000),claims=b64({iss:base,aud:'leo.marscatsvoyage.com',sub:'discord:'+id,
+   discord:{id,global_name:'Rook_* @everyone'},iat:t,exp:t+600});
+  const signed=b64({alg:'EdDSA',kid:'prank-check'})+'.'+claims;
+  const passToken=signed+'.'+Buffer.from(await crypto.subtle.sign('Ed25519',pair.privateKey,Buffer.from(signed))).toString('base64url');
+  async function join(port,hello){
+   const ws=new WebSocket('ws://127.0.0.1:'+port+'/live',{origin}),seen=[];sockets.push(ws);
+   ws.on('error',()=>{});
+   ws.on('message',(data,binary)=>{if(!binary){const msg=JSON.parse(data);seen.push(msg);replies.push(String(data));}});
+   await once(ws,'open',{signal:AbortSignal.timeout(5000)});
+   const send=(m,extra)=>ws.send(JSON.stringify({m,...extra}));
+   const wait=async test=>{for(let i=0;i<250;i++){const got=seen.find(test);if(got)return got;await new Promise(r=>setTimeout(r,20));}assert.fail('missing live reply');};
+   send('hello',{v:PROTOCOL,layout:2,layoutIdentity:LIVE_IDENTITY,key:randomBytes(32).toString('hex'),...hello});
+   const welcome=await wait(m=>m.m==='welcome');let request=0;
+   return {welcome,async ticket(){send('prank-ticket',{request:++request,discordId:'99999',caption:'@here'});return wait(m=>m.m==='prank-ticket'&&m.request===request);}};
+  }
+  async function upload(port,ticket,body=image,type='image/png'){
+   const res=await fetch('http://127.0.0.1:'+port+'/prank-photo',{method:'POST',headers:{Origin:origin,'Content-Type':type,'X-Leo-Prank-Ticket':ticket||'missing'},body,signal:AbortSignal.timeout(4000)});
+   const text=await res.text();replies.push(text,JSON.stringify([...res.headers]));return [res.status,JSON.parse(text)];
+  }
+  const off=await start(false),offline=await join(off,{name:'Guest'});
+  assert.equal(offline.welcome.prankShare,false);
+  assert.equal((await offline.ticket()).why,'unavailable');
+  assert.deepEqual(await upload(off),[503,{ok:false,why:'unavailable'}]);assert.equal(posts.length,0);
+  pass('an unset webhook advertises no post button and refuses both ticket and upload');
+  const on=await start(true),rook=await join(on,{pass:passToken}),guest=await join(on,{name:'Guest <@99999>'});
+  assert.equal(rook.welcome.prankShare,true);assert.equal(rook.welcome.you.verified,true);assert.equal(guest.welcome.you.verified,false);
+  assert.equal(posts.length,0);assert.deepEqual(await upload(on),[403,{ok:false,why:'ticket'}]);
+  const first=await rook.ticket();assert(first.ok);
+  assert.deepEqual(await upload(on,first.ticket),[200,{ok:true}]);
+  assert.equal(posts[0].payload.content,`Do Not Press the Button souvenir from Rook everyone (<@${id}>).`);
+  assert.deepEqual(posts[0].payload.allowed_mentions,{parse:[],users:[id]});
+  assert.deepEqual(posts[0].payload.attachments,[{id:0,filename:'leo-ha-gottem.png'}]);
+  assert.equal(posts[0].name,'leo-ha-gottem.png');assert.equal(posts[0].type,'image/png');assert.deepEqual(posts[0].bytes,image);
+  pass('an opt-in upload attaches the photo and allows only the verified session’s Discord mention');
+  assert.equal((await rook.ticket()).why,'slow');assert.equal((await upload(on,first.ticket))[0],403);
+  const rejoined=await join(on,{pass:passToken});assert.equal((await rejoined.ticket()).why,'slow');assert.equal(posts.length,1);
+  pass('a second post inside ten minutes is refused even after rejoining');
+  assert.deepEqual(await upload(on,(await guest.ticket()).ticket,Buffer.from('not a photo')),[415,{ok:false,why:'image'}]);
+  assert.deepEqual(await upload(on,(await guest.ticket()).ticket,Buffer.alloc(5*1024*1024+1)),[413,{ok:false,why:'large'}]);
+  assert.equal(posts.length,1);
+  pass('bad and oversized images never reach the webhook');
+  assert.deepEqual(await upload(on,(await guest.ticket()).ticket),[200,{ok:true}]);
+  assert.equal(posts[1].payload.content,'Do Not Press the Button souvenir from Guest 99999.');
+  assert.deepEqual(posts[1].payload.allowed_mentions,{parse:[],users:[]});
+  pass('a guest posts by cleaned display name with no mention or browser-supplied caption');
+  // Node’s stand-in browser supplies the Origin a browser would set itself.
+  const previousSocket=globalThis.WebSocket,previousFetch=globalThis.fetch,previousStorage=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
+  globalThis.WebSocket=class extends WebSocket{constructor(url){super(url,{origin});sockets.push(this);}};
+  globalThis.fetch=(url,options)=>previousFetch(url,{...options,headers:{...options?.headers,Origin:origin}});
+  Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:()=>null,setItem(){}}});
+  let link;
+  try{
+   let welcomed;const ready=new Promise((resolve,reject)=>{
+    welcomed=resolve;AbortSignal.timeout(5000).addEventListener('abort',()=>reject(Error('missing walk link welcome')),{once:true});
+   });
+   link=connectLive('ws://127.0.0.1:'+on+'/live',{welcome:welcomed});
+   const blob=new Blob([image],{type:'image/png'});
+   assert.equal(link.prankShare,false);assert.equal(await link.postPrankPhoto(blob),'failed');
+   await ready;assert.equal(link.prankShare,true);assert.equal(posts.length,2);
+   assert.equal(await link.postPrankPhoto(blob),'posted');assert.equal(posts.length,3);
+   assert.equal(await link.postPrankPhoto(blob),'slow');
+   link.close();assert.equal(link.prankShare,false);
+   pass('the walk link waits for availability and maps the upload and rate-limit replies');
+  }finally{
+   link?.close();globalThis.WebSocket=previousSocket;globalThis.fetch=previousFetch;
+   if(previousStorage)Object.defineProperty(globalThis,'localStorage',previousStorage);else delete globalThis.localStorage;
+  }
+  for(let i=posts.length;i<12;i++){
+   const guest=await join(on,{name:'Voyager'});
+   assert.deepEqual(await upload(on,(await guest.ticket()).ticket),[200,{ok:true}]);
+  }
+  const next=await join(on,{name:'Voyager'});
+  assert.equal((await next.ticket()).why,'slow');assert.equal(posts.length,12);
+  pass('the hourly channel cap refuses a post from a new player');
+  assert(![...replies,...logs].some(value=>value.includes(secretPath)));
+  pass('the webhook URL stays out of live messages, HTTP replies and server logs');
+ }finally{
+  for(const ws of sockets)ws.terminate();
+  await Promise.all(workers.map(worker=>worker.terminate()));
+  await new Promise(resolve=>stub.close(resolve));
+  fs.rmSync(dir,{recursive:true,force:true});
+ }
 }
 console.log('prank button: '+checks+' checks passed');

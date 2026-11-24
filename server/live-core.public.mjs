@@ -30,6 +30,7 @@
 //   LEO_LIVE_CS_WAIT_S=10             how long Captain Says counts down to a game, and shows its result after one
 //                                     (captain-says.mjs)
 //   LEO_LIVE_PINBALL=...              where Leo Pinball's best scores are kept (default ../leo-live-pinball.json): pinball.mjs
+//   LEO_DISCORD_GAMING_WEBHOOK        server-only Discord #gaming webhook for opt-in prank photos (unset: disabled)
 //
 // Who someone is: a visitor who connected Discord through The Creamery brings a Leo pass (src/walk/net/pass.js); the
 // server checks it and their name aboard is their Discord name, marked as verified. Anyone else is anonymous, with the
@@ -61,6 +62,7 @@ import {createTv} from './tv.mjs';
 import {createJoins} from './joins.mjs';
 import {createCaptainSays} from './captain-says.mjs';
 import {createPinballBoard} from './pinball.mjs';
+import {createPrankShare} from './prank-share.mjs';
 
 const PORT=Number(process.env.PORT||8090),MAX=Number(process.env.LEO_LIVE_MAX||1000);
 const ORIGINS=(process.env.LEO_LIVE_ORIGINS||'https://leo.marscatsvoyage.com,http://localhost:*,http://127.0.0.1:*').split(',').map(o=>o.trim()).filter(Boolean)
@@ -138,6 +140,8 @@ const joins=createJoins({send:(v,msg)=>send(v.ws,msg),find:id=>[...visitors].fin
 const captainSays=createCaptainSays({log,send:(v,text)=>send(v.ws,text),waitMs:Number(process.env.LEO_LIVE_CS_WAIT_S||10)*1000});BUDGETS.cs=[1,4];
 // The Crown lounge TV (tv.mjs): the video everyone sees, uploaded over plain HTTP by a signed-in visitor with a ticket.
 const tv=createTv({send:(v,msg)=>send(v.ws,msg),log,everyone:()=>visitors,allowed:origin=>ORIGINS.some(o=>o.test(origin))});
+const prankShare=createPrankShare({send:(v,msg)=>send(v.ws,msg),allowed:origin=>ORIGINS.some(o=>o.test(origin)),connected:v=>visitors.has(v)});
+BUDGETS['prank-ticket']=[.5,3];
 
 function send(ws,msg){if(ws.readyState===1)ws.send(typeof msg==='string'||msg instanceof Uint8Array?msg:JSON.stringify(msg));}
 function broadcast(msg,except){const text=JSON.stringify(msg);for(const v of visitors)if(v.ready&&v!==except)send(v.ws,text);}
@@ -321,7 +325,7 @@ async function hello(v,msg){
  v.slot=takeSlot();if(!v.slot||!freeSeats.length){v.ws.close(4003,'full');return;}
  // A tester (the page holds a tester invite) wears the captain's hat. Taken on the page's word: it is a hat.
  Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);seat(v);
- send(v.ws,{m:'welcome',...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{}),id,aboard:aboard(),you:{name:v.name,verified:!!who,typed:!!who?.typed,...(pass?{pass}:{})},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state(),panel:panel.state()});
+ send(v.ws,{m:'welcome',...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{}),id,aboard:aboard(),prankShare:prankShare.available,you:{name:v.name,verified:!!who,typed:!!who?.typed,...(pass?{pass}:{})},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state(),panel:panel.state()});
  countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`${who.glyph?'':'discord:'}${who.discordId}${who.lapsed?' (remembered)':''}`:pass==='unchecked'?'(pass not checked: no keys from Creamery)':pass?'(pass refused)':'');
  if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
  // A run this visitor had open when their last connection dropped is theirs again (keepRuns).
@@ -361,6 +365,7 @@ function leave(v){
  mct.left(v);
  panel.left(v);
  tv.leave(v);
+ prankShare.leave(v);
  joins.left(v);
  captainSays.left(v);
  if(v.ready){broadcast({m:'gone',id:v.id});countChanged=true;log('aboard',aboard(),'-',v.id);}
@@ -421,6 +426,7 @@ function onMessage(v,data,binary){
   case 'cs':if(visitors.has(v)&&(msg.e==='leave'||allowed(v,'cs')))captainSays.message(v,msg);break;
   // The Crown lounge TV (tv.mjs): what is on it, a ticket to upload a video, and an owner taking it down.
   case 'tv':case 'tv-ticket':case 'tv-down':if(allowed(v,msg.m))tv.message(v,msg);break;
+  case 'prank-ticket':if(allowed(v,msg.m))prankShare.ticket(v,msg);else if(Number.isSafeInteger(msg.request))send(v.ws,{m:'prank-ticket',request:msg.request,ok:false,why:'slow'});break;
   // A ping for others to find (walk/marks.js): where the visitor stands, passed on to everyone else aboard.
   case 'mark':{
    const a=msg.at;if(!allowed(v,'mark')||!Array.isArray(a)||a.length!==3||!finite(a[0],...BOUNDS.x)||!finite(a[1],...BOUNDS.y)||!finite(a[2],...BOUNDS.z))break;
@@ -558,6 +564,7 @@ const server=http.createServer((req,res)=>{
  if(req.url==='/arena'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify(arena.report()));return;}
  // The Crown lounge TV: its video, and uploads to it (tv.mjs).
  if(tv.http(req,res))return;
+ if(prankShare.http(req,res))return;
  if(req.url==='/health'){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','Access-Control-Allow-Origin':'*'});res.end(JSON.stringify({ok:true,aboard:aboard(),max:MAX,seatsFree:freeSeats.length,pageRecords:PAGE_RECORDS,revision:REVISION,flush:{ms:+flushMs.toFixed(2),max:+Math.max(...peaks).toFixed(2)},...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{})}));return;}
  res.writeHead(200,{'Content-Type':'text/plain'});res.end('Leo live: the multiplayer server for Walk around Leo.\n');
 });
@@ -567,8 +574,8 @@ server.on('upgrade',(req,socket,head)=>{
  if(new URL(req.url,'http://x').pathname!=='/live'||!ORIGINS.some(o=>o.test(origin))){socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');socket.destroy();return;}
  wss.handleUpgrade(req,socket,head,ws=>wss.emit('connection',ws,req));
 });
-wss.on('connection',ws=>{
- const v={ws,ready:false,id:null,slot:0,name:null,record:null,pos:null,version:0,budget:{},games:{},alive:true};visitors.add(v);
+wss.on('connection',(ws,req)=>{
+ const v={ws,address:req.socket.remoteAddress,ready:false,id:null,slot:0,name:null,record:null,pos:null,version:0,budget:{},games:{},alive:true};visitors.add(v);
  const timer=setTimeout(()=>{if(!v.ready)ws.close(4005,'no hello');},HELLO_MS);
  ws.on('message',(data,binary)=>onMessage(v,binary?data:data.toString(),binary));
  ws.on('pong',()=>{v.alive=true;});
