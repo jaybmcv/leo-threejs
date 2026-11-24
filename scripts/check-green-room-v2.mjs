@@ -56,6 +56,15 @@ const seats=solidSpots(fit.rests.map(s=>({...s,point:new T.Vector3(...s.point),f
 assert.equal(seats.length,8);
 const approach=local(-6.65,-6.8);clear(approach);
 assert.equal(spotIndex(seats).pick(new T.Vector3(...approach),new T.Vector3(1,0,0))?.room,id);
+const cushions=fit.meshes.filter(m=>m.name==='P4_green_room_sofa_seat_cushion');
+const upward=new T.Raycaster(undefined,new T.Vector3(0,1,0),0,.13);
+for(const foot of fit.parts.filter(p=>p.part==='green_room_sofa_foot')){
+ const [x,y,z]=foot.at,[w,,d]=foot.size;
+ for(const dx of [-w/2,w/2])for(const dz of [-d/2,d/2]){
+  upward.ray.origin.set(x+dx,y,z+dz);
+  assert(upward.intersectObjects(cushions,false).length,'Sofa foot protrudes past the cushion at '+foot.at);
+ }
+}
 const active=createGreenRoom(),quiet=createGreenRoom({still:true}),screen=g=>g.group.getObjectByName('Green_room_stage_loop').material.map;
 const a=screen(active),q=screen(quiet),version=a.version,stillVersion=q.version;
 const pixels=t=>Buffer.from(t.image.getContext('2d').getImageData(0,0,1024,128).data);
