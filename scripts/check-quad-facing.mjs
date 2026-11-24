@@ -82,6 +82,17 @@ vertices[0] = 0;
 across.attributes.position.needsUpdate = true;
 assert.equal(outside(clipView, across, clusters, {start:0, count:48}), false);
 assert.equal(outside(clipView, across, clusters, {start:48, count:48}), true);
+const drawHistory = {};
+assert.equal(outside(clipView, across, clusters, null, material, drawHistory), false);
+assert.equal(outside(clipView, across, clusters, {start:48, count:48}, material, drawHistory), true);
+clipView.position.x = 35;
+clipView.updateMatrixWorld();
+assert.equal(outside(clipView, across, clusters, {start:48, count:48}, material, drawHistory), true);
+clipView.position.x = 0;
+clipView.updateMatrixWorld();
+vertices[0] = -100;
+across.attributes.position.needsUpdate = true;
+assert.equal(outside(clipView, across, clusters, null, material, drawHistory), true);
 
 const retained = new T.PlaneGeometry(), slots = new T.InstancedMesh(retained, material, 2);
 rememberMergedBounds(retained);

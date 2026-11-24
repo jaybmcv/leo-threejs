@@ -176,7 +176,7 @@ export function installQuadFacingTest(renderer, scene, camera) {
   row.start = geometry.drawRange.start; row.count = geometry.drawRange.count; row.groupCount = count; row.side = material.side;
   row.instances = instances; row.version = instances?.version; row.instanceCount = object.count;
   row.world.copy(object.matrixWorld);
-  row.skipped = surfaceAway(view, geometry, material, object, group) || facingAway(view, geometry, material, object, group) || outside(view, geometry, object, group, material);
+  row.skipped = surfaceAway(view, geometry, material, object, group) || facingAway(view, geometry, material, object, group) || outside(view, geometry, object, group, material, row);
   row.epoch = visibleEpoch; row.next = mainFrames + 6 + object.id % 6;
   return row.skipped;
  }
