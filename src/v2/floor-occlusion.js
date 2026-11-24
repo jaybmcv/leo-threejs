@@ -96,6 +96,7 @@ export function createFloorOcclusion(scene, camera) {
     failOpen();
     return null;
   }
+  let depthBits;
   function setup(r) {
     if (!ready || !Number.isSafeInteger(r.info.render.frame) || camera.coordinateSystem !== WebGLCoordinateSystem || r.clippingPlanes?.length || camera.view?.enabled || camera.reversedDepth || r.capabilities?.reversedDepthBuffer || !camera.isPerspectiveCamera || camera.matrixWorld.determinant() <= 0)
       return false;
@@ -132,10 +133,20 @@ export function createFloorOcclusion(scene, camera) {
     }
     last.copy(vp);
     const cell = .25, snap = n => (Math.floor(n / cell) + .5) * cell, x = snap(w[12]), y = snap(w[13]), z = snap(w[14]);
-    if (renew || eyes.x !== x || eyes.y !== y || eyes.z !== z) {
+    // The bow cafés look through several decks. Only these long views need to
+    // search beyond the nearest 32 m of submitted walls and floors.
+    let reach = 32;
+    if (x >= 200 && camera.far <= 450 && (r.capabilities?.logarithmicDepthBuffer || camera.near >= .2)) {
+      if (depthBits === undefined) {
+        const gl = r.getContext?.();
+        depthBits = gl ? gl.getParameter(gl.DEPTH_BITS) : 0;
+      }
+      if (depthBits >= 24) reach = 72;
+    }
+    if (renew || view?.reach !== reach || eyes.x !== x || eyes.y !== y || eyes.z !== z) {
       eyes.set(x, y, z);
       epoch++;
-      view = { epoch, eye: eyes.toArray(), half: cell / 2, frustum: frustum.planes.map(p => [p.normal.x, p.normal.y, p.normal.z, p.constant]) };
+      view = { epoch, reach, eye: eyes.toArray(), half: cell / 2, frustum: frustum.planes.map(p => [p.normal.x, p.normal.y, p.normal.z, p.constant]) };
     }
     frame = r.info.render.frame;
     scope.length = 0;

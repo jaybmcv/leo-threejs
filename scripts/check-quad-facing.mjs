@@ -43,6 +43,28 @@ import {occlusionWorker} from '../src/v2/occlusion-worker.js';
  }finally{if(originalWorker)globalThis.Worker=originalWorker;else delete globalThis.Worker;}
 }
 
+// A submitted wall 52 m from the camera is usable in the bow's extended
+// search. Its proof still requires the actual triangle's full draw range.
+{
+ let response;
+ const channel={postMessage:data=>{response=data;}};
+ occlusionWorker(channel);
+ const send=data=>channel.onmessage({data});
+ send({anchors:Float64Array.from([0,190,1,2,0,0,-100,-100,100,-100,0,100])});
+ const boxes=new Float64Array(12);boxes.set([169,-1,-1,171,1,1],6);
+ const trees=[{id:1,boxes,leaves:1,stride:3}];
+ const world=new T.Matrix4().toArray();
+ function query(epoch,reach,range){
+  send({view:{epoch,eye:[242,0,0],half:.125,frustum:[],reach},trees,scope:range,
+   jobs:[{id:1,version:epoch,geo:1,first:0,end:3,world,scope:range.length}]});
+  return response.answers[0][2];
+ }
+ assert.equal(query(1,32,[0,0,3]),null);
+ assert.deepEqual(query(2,72,[0,0,3]),[0,0,3]);
+ assert.equal(query(3,72,[0,0,2]),null);
+ assert.equal(query(4,undefined,[0,0,3]),null);
+}
+
 const facesAway = createQuadFacingTest(), camera = new T.PerspectiveCamera();
 const geometry = new T.PlaneGeometry(2, 1), material = new T.MeshBasicMaterial();
 const mesh = new T.Mesh(geometry, material);
