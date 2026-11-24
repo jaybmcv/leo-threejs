@@ -85,6 +85,7 @@ export function createFloorOcclusion(scene, camera) {
         }
       }
     }
+    if (retired.length && !pending.length) queueMicrotask(finish);
   };
   const failOpen = () => { ready = false; busy = false; rowsById.clear(); worker.terminate(); };
   worker.onerror = failOpen;
@@ -99,6 +100,9 @@ export function createFloorOcclusion(scene, camera) {
     if (!ready || !Number.isSafeInteger(r.info.render.frame) || camera.coordinateSystem !== WebGLCoordinateSystem || r.clippingPlanes?.length || camera.view?.enabled || camera.reversedDepth || r.capabilities?.reversedDepthBuffer || !camera.isPerspectiveCamera || camera.matrixWorld.determinant() <= 0)
       return false;
     const p = camera.projectionMatrix.elements, w = camera.matrixWorld.elements;
+    if (!Number.isFinite(camera.far) || !(camera.far > camera.near && camera.near > 0) ||
+        !w.every(Number.isFinite) || w[3] !== 0 || w[7] !== 0 || w[11] !== 0 || w[15] !== 1)
+      return false;
     if (p[3] || p[7] || p[11] !== -1 || p[15] || p[12] || p[13] || p[0] * p[5] - p[1] * p[4] <= 0)
       return false;
     if (Math.hypot(w[0], w[1], w[2], w[4], w[5], w[6], w[8], w[9], w[10]) > 1.9)
@@ -111,11 +115,13 @@ export function createFloorOcclusion(scene, camera) {
     let renew = !epoch;
     // A rotated or translated camera may reuse the clip proof only while its entire
     // current frustum is inside the expanded frustum sent to the worker.
-    if (!renew && !vp.equals(last))
+    if (!epoch || !vp.equals(last))
       for (const x of [-1, 1])
         for (const y of [-1, 1])
           for (const z of [-1, 1]) {
             v.set(x, y, z).applyMatrix4(camera.projectionMatrixInverse).applyMatrix4(camera.matrixWorld);
+            if (!Number.isFinite(v.x + v.y + v.z))
+              return false;
             if (!frustum.containsPoint(v))
               renew = true;
           }
@@ -224,7 +230,12 @@ export function createFloorOcclusion(scene, camera) {
         registered = { id, tree };
         geometryIds.set(g, registered);
         trees.push({ id, boxes: tree.boxes, leaves: tree.leaves, stride: tree.stride });
-        const dispose = () => { retired.push(id); geometryIds.delete(g); g.removeEventListener('dispose', dispose); };
+        const dispose = () => {
+          retired.push(id);
+          geometryIds.delete(g);
+          g.removeEventListener('dispose', dispose);
+          if (!pending.length) queueMicrotask(finish);
+        };
         g.addEventListener('dispose', dispose);
       }
       const id = registered.id;
@@ -237,7 +248,7 @@ export function createFloorOcclusion(scene, camera) {
     return false;
   }
   function finish() {
-    if (!ready || busy || !pending.length)
+    if (!ready || busy || (!pending.length && !retired.length))
       return;
     busy = true;
     try {
