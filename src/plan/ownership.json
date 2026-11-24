@@ -3496,7 +3496,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "1976a6d3561728cc2d92e58a28a5f165d1b752c29de410b684124c8eb66ed0ad"
+      "signature": "03e77f001eaa7bfddbf7322f858c1b58992984d77244dd2cf7ec10d86a086345"
     },
     {
       "source": "src/walk/layered-conservatory.js",
@@ -4380,8 +4380,8 @@
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 52,
-      "signature": "44385a1679e9de54d621751e0ef59f4578dbf1091eaff35b8babb6e6527668de"
+      "placements": 53,
+      "signature": "819ddaefdd85938aa562ed8562b74adb8bfc15402fd14a56d1abefdc3c2c1b89"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -5830,7 +5830,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 25,
-      "signature": "c0adbe280e0c678065bcd34a5a583692a8bd774bb12092ec09ca664ae9667c39"
+      "signature": "ccdfc8c4229af849b7597703b0d18801c0cb8ff911264b6737cf3697f99860ed"
     },
     {
       "source": "src/walk/solved-pose.js",
