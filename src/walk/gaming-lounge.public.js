@@ -22,16 +22,16 @@ import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/Buffe
 // Room frame (Area_d16-training-aft): x along the room (+x toward the nose), z across (+z the entry wall, doorway at
 // x 2..6), floor at y 0, wall faces at |x|=23.84 and |z|=7.84, the ceiling at 3.35. The forward floor stations leave cross aisles and both wall rows clear.
 const ROOM='Area_d16-training-aft';
-const PLACEMENT=fitout['d16-training-aft'],HOLO=PLACEMENT.gamingLeaderboard;
-const pcRowMatrix=()=>new T.Matrix4().makeTranslation(...PLACEMENT.gamingWindowRow.at).multiply(new T.Matrix4().makeRotationY(PLACEMENT.gamingWindowRow.yaw)).multiply(new T.Matrix4().makeTranslation(21,0,7.44));
+const WINDOW_ROW=fitout['d16-training-aft'].gamingWindowRow,HOLO=fitout['d16-training-aft'].gamingLeaderboard,STATIONS=fitout['d16-training-aft'].gamingStations;
+const pcRowMatrix=()=>new T.Matrix4().makeTranslation(...WINDOW_ROW.at).multiply(new T.Matrix4().makeRotationY(WINDOW_ROW.yaw)).multiply(new T.Matrix4().makeTranslation(21,0,7.44));
 const END=23.84,SIDE=7.84,TOP=3.35,DOOR=[2,6],HEX=.25,SOUND_FADE=3;
 const OLD=/^(Seat|Back|Seat_base|Meeting_table|Table_support|Worktop|Training_console|Equipment_cabinet|Status_display|Briefing_wall|Aisle_inlay|Polish_.*|Refined_.*)$/;
-const PCS=[-21,-17.4,-13.8,-10.2,-6.6,-3,.6,4.2],CONSOLES=PLACEMENT.gamingConsoles;
+const PCS=[-21,-17.4,-13.8,-10.2,-6.6,-3,.6,4.2],CONSOLES=fitout['d16-training-aft'].gamingConsoles;
 const ACCENTS=[0xff3b5c,0x2fd8ff,0xff4fd8,0x7dff5a,0xffa53a,0x9d6bff];
 // The couch's arc: its centre, radii (seat front, seat back, back rest) and half span, facing +x to the big screen.
 const COUCH={x:21.6,r0:3.35,r1:4.05,r2:4.3,half:.9};
 // Turn each complete station about its couch centre, leaving the open floor inside the fan.
-const stationMatrices=()=>PLACEMENT.gamingStations.map(s=>new T.Matrix4().makeTranslation(...s.at).multiply(new T.Matrix4().makeRotationY(s.yaw)).multiply(new T.Matrix4().makeTranslation(-COUCH.x,0,0)));
+const stationMatrices=()=>STATIONS.map(s=>new T.Matrix4().makeTranslation(...s.at).multiply(new T.Matrix4().makeRotationY(s.yaw)).multiply(new T.Matrix4().makeTranslation(-COUCH.x,0,0)));
 // While the camera is in the room: the lights' share of their usual strength, and their colours.
 const MOOD={hemi:.42,fill:.22,env:.3,sky:0x9aa8ff,ground:0x3a2458};
 const TRAIL=8,REMOTE_TRAILS=3,MARKS=TRAIL*(1+REMOTE_TRAILS);
