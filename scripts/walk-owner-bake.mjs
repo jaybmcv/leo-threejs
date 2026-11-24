@@ -21,7 +21,7 @@ import {build as bundle} from './native-bundle.mjs';
 import {PVS_GRID} from '../src/v2/atrium-pvs.js';
 import {OWNER_BAKE_VERSION,ownerBakeFile,ownerBakeProblem,ownerKey} from '../src/v2/owner-hiding.js';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
-import {cafe,coversCafe,addCafeCell} from './walk-owner-hotspots.mjs';
+import {cafe,coversCafe,addCafeCell,compactOwnerBlocks} from './walk-owner-hotspots.mjs';
 import {tablesDiffer,withoutMoved} from './walk-owner-bake.scene.js';
 // The bake is for discrete desktop GPUs' piece size (src/v2/desk-piece.js), whatever GPU bakes it: its key holds the size.
 import {DESK_PIECE} from '../src/v2/desk-piece.js';
@@ -116,7 +116,8 @@ async function extendCafe(page,base){
  const extra={version:base.version,key:base.key,grid:base.grid,nearMargin:setup.nearMargin,parts:setup.tables.parts,conds:setup.tables.conditions,entries,blocks};
  const {data}=await page.ev(`__ownerBake.prune(${JSON.stringify(extra)})`);
  const combined=addCafeCell(base,data);
- const focus={...combined,blocks:combined.blocks.slice(base.blocks.length)};
+ const focus={...combined,blocks:combined.blocks.filter(b=>cafe.cell.every((v,i)=>b[i]===v&&b[i+3]===v))};
+ if(!focus.blocks.length)throw Error('Missing café proof after compaction');
  const check=await page.ev(`__ownerBake.check(${JSON.stringify(focus)},100,4523)`);
  if(check.resolved!==check.parts||check.condsResolved!==check.conds||check.poses.length!==100||check.poses.some(p=>p.big>MAX_PIXELS||!p.hidden))throw Error('Café render check failed');
  console.log('owner bake:',cafe.name,data.entries.length,'proofs, maximum changed pixels',Math.max(...check.poses.map(p=>p.big)));
@@ -131,7 +132,13 @@ if(onlyCafe||process.argv.includes('--if-missing')){
  try{previous=JSON.parse(await fs.readFile(out,'utf8'));}catch(error){if(onlyCafe)throw error;}
  if(previous&&(previous.key!==ownerKey(walk.script,'merge'+DESK_PIECE.discrete)||!previous.blocks?.length||ownerBakeProblem(previous,previous.key)))previous=null;
  if(onlyCafe&&!previous)throw Error('A valid current-build owner bake is required for --supplement-only');
- if(previous&&coversCafe(previous)){console.log('owner bake: already baked for',walk.script);process.exit(0);}
+ if(previous&&coversCafe(previous)){
+  const compact=compactOwnerBlocks(previous.blocks);
+  if(compact.length<previous.blocks.length){
+   await fs.writeFile(out+'.part',JSON.stringify({...previous,blocks:compact}));await fs.rename(out+'.part',out);
+  }
+  console.log('owner bake: already baked for',walk.script);process.exit(0);
+ }
 }
 const blocks=await region();console.log(`owner bake: ${walk.script}, ${blocks.length} blocks of ${TOP}x${TOP} cells x ${SLABS} slabs, ${PAGES} pages, ${MINUTES} min`);
 const script=(await bundle({entryPoints:['scripts/walk-owner-bake.page.js'],bundle:true,minify:true,format:'iife',write:false,target:'es2022'})).outputFiles[0].text;

@@ -14,6 +14,23 @@ export function coversCafe(data) {
  return Array.isArray(cell) && cell.length === 3 && cell.every((v, i) => v === cafe.cell[i]) && data.blocks.some(b => b[6].length && sameCell(b, cafe.cell));
 }
 
+// Native baking records each owner's results separately. Consecutive records
+// with identical bounds are visited for exactly the same camera cells. Append
+// their references in place in the new table; runtime hide order is unchanged.
+export function compactOwnerBlocks(blocks) {
+ const result = [];
+ let previous;
+ for (const row of blocks) {
+  if (previous && row.slice(0, 6).every((v, i) => v === previous[i])) {
+   for (const id of row[6]) previous[6].push(id);
+  } else {
+   previous = [...row.slice(0, 6), [...row[6]]];
+   result.push(previous);
+  }
+ }
+ return result;
+}
+
 // Both inputs have passed native pruning on their own scene. An index has meaning only
 // inside its own tables. Keep every old index stable and translate every added reference.
 export function addCafeCell(base, extra) {
@@ -40,11 +57,18 @@ export function addCafeCell(base, extra) {
   return {rows, remap};
  }
  const parts = addRows(base.parts, extra.parts), conds = addRows(base.conds, extra.conds);
- const added = extra.entries.map(([p, cs, slots]) => [parts.remap[p], cs.map(c => conds.remap[c]), ...(slots ? [slots] : [])]);
- // All supplemental records have these exact bounds. Keep their original
- // order, with a single additional bounds check when the camera changes cell.
- const ids = extra.blocks.flatMap(b => b[6].map(i => base.entries.length + i));
+ const entries = base.entries.slice(), index = new Map(entries.map((row, i) => [JSON.stringify(row), i]));
+ const added = extra.entries.map(([p, cs, slots]) => {
+  const row = [parts.remap[p], cs.map(c => conds.remap[c]), ...(slots ? [slots] : [])];
+  const key = JSON.stringify(row);
+  if (!index.has(key)) {
+   index.set(key, entries.length);
+   entries.push(row);
+  }
+  return index.get(key);
+ });
+ const ids = extra.blocks.flatMap(b => b[6].map(i => added[i]));
  const block = [...cafe.cell, ...cafe.cell, ids];
- return {...base, parts: parts.rows, conds: conds.rows, entries: [...base.entries, ...added], blocks: [...base.blocks, block],
+ return {...base, parts: parts.rows, conds: conds.rows, entries, blocks: compactOwnerBlocks([...base.blocks, block]),
   region: {...base.region, bowCafeCell: [...cafe.cell]}};
 }

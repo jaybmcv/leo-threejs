@@ -75,14 +75,20 @@ function ship(){
  pass('rows that moved between pages drop every entry relying on them; other differences refuse the bake');}
 
 {
- const {cafe,coversCafe,addCafeCell}=await import('./walk-owner-hotspots.mjs');
+ const {cafe,coversCafe,addCafeCell,compactOwnerBlocks}=await import('./walk-owner-hotspots.mjs');
  const {emptyOwnerBake}=await import('../src/v2/owner-hiding.js');
  const base={...emptyOwnerBake('walk.abcd123456.js','merge200000'),nearMargin:.3,parts:[['a','1']],conds:[['wall','2','Deck7']],entries:[[0,[0]]],blocks:[[1,2,3,1,2,3,[0]]]};
  const bounds=[...cafe.cell,...cafe.cell];
  const add={...base,parts:[['b','5'],['a','1']],conds:[['wall','2','Deck8'],['wall','2','Deck7']],entries:[[0,[0,1],['cab7']],[1,[1]]],blocks:[[...bounds,[0]],[...bounds,[1]]]};
  const full=addCafeCell(base,add);
- assert.deepEqual(full.entries,[[0,[0]],[1,[1,0],['cab7']],[0,[0]]]);
- assert.deepEqual(full.blocks,[base.blocks[0],[...bounds,[1,2]]]);
+ assert.deepEqual(full.entries,[[0,[0]],[1,[1,0],['cab7']]]);
+ assert.deepEqual(full.blocks,[base.blocks[0],[...bounds,[1,0]]]);
+ const oldBounds=base.blocks[0].slice(0,6);
+ const overlapping=[oldBounds[0]-1,...oldBounds.slice(1)];
+ const raw=[[...oldBounds,[5]],[...oldBounds,[4,5]],[...overlapping,[7]],[...oldBounds,[3]]];
+ const frozen=structuredClone(raw);
+ assert.deepEqual(compactOwnerBlocks(raw),[[...oldBounds,[5,4,5]],[...overlapping,[7]],[...oldBounds,[3]]]);
+ assert.deepEqual(raw,frozen);
  assert(coversCafe(full));assert(!coversCafe({...full,blocks:base.blocks}));
  assert.throws(()=>addCafeCell(base,{...add,key:'different'}));
  assert.throws(()=>addCafeCell(base,{...add,parts:[['a','changed'],['a','1']]}));
