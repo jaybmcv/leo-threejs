@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import * as T from 'three';
 import {createStageDj,stageDjCollider,STAGE_DJ} from '../src/v2/common-stage-dj.js';
 import {stageDjLevel,stageDjLoop,createStageDjSound} from '../src/walk/stage-dj-sound.js';
-import {addAtriumStage,stageGeometry} from '../src/v2/atrium-stage.js';
+import {addAtriumStage,stageGeometry,stageSeats} from '../src/v2/atrium-stage.js';
 import {Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {installPreparedColliders} from '../src/v2/prepared-codec.public.js';
@@ -34,6 +34,23 @@ step(2,0,-2.25);assert(cat.grounded&&Math.abs(cat.position.z-29.49)<1,'Return to
 
 const at=STAGE_DJ.at,near={x:106.65,y:at[1],z:30},circle={x:96,y:floorY+.24,z:30},far={x:63,y:floorY+.96,z:30};
 assert.equal(stageDjLevel(far,at),0);assert(stageDjLevel(circle,at)>0);assert(stageDjLevel(near,at)>stageDjLevel(circle,at));assert.equal(stageDjLevel(near,at,false),0);assert.equal(stageDjLevel({...near,y:at[1]+6},at),0);
+const seats=stageSeats(),seatPoint=s=>({x:s.x,y:floorY+s.top,z:s.z});
+const distance=p=>Math.hypot(p.x-at[0],p.y-at[1],p.z-at[2]);
+const frontRow=seats.filter(s=>s.band===0).map(seatPoint),frontGains=frontRow.map(p=>stageDjLevel(p,at));
+for(const [i,p] of frontRow.entries()){
+ const u=(34-distance(p))/30;
+ assert(Math.abs(frontGains[i]-.16*u*u*(3-2*u))<1e-12,'Preserve the front-row gain');
+}
+const frontGain=Math.max(...frontGains),back={x:72.12,y:-18.66,z:19.73},backGain=stageDjLevel(back,at);
+assert(backGain>=frontGain*.25&&backGain<frontGain*.5,'The reported back-row spot is audible and quieter than the front row');
+for(const s of seats)assert(stageDjLevel(seatPoint(s),at)>=frontGain*.25,`Audible at tier ${s.tier}, pad ${s.index}`);
+const backDistances=seats.filter(s=>s.band===seats.at(-1).band).map(s=>distance(seatPoint(s)));
+assert(stageDjLevel({x:at[0]-43,y:at[1],z:at[2]},at)>0);
+assert.equal(stageDjLevel({x:at[0]-44,y:at[1],z:at[2]},at),0,'The tail ends just beyond the seating bowl');
+for(const [x,z] of [[at[0]-25,at[2]-25],[at[0]-33,at[2]+12],[at[0]+38,at[2]]]){
+ assert.equal(stageDjLevel({x,y:floorY,z},at),0,'The longer reach stays on the audience side and inside the bowl edges');
+}
+for(const y of [floorY-4,floorY+4])assert.equal(stageDjLevel({...near,y},at),0,'Adjacent deck floors stay quiet');
 const param=()=>({value:0,setTargetAtTime(v){this.value=v;}}),node=()=>({connect(){return this;}});let built=0,context;
 class Audio {
  constructor(){context=this;built++;this.sampleRate=22050;this.currentTime=0;this.state='running';this.destination={};}
@@ -49,5 +66,5 @@ for(const n of data){assert(Number.isFinite(n));energy+=n*n;peak=Math.max(peak,M
 assert(Math.sqrt(energy/data.length)>.08);assert(peak<1);assert(Math.abs(data[0])===0&&Math.abs(data.at(-1))===0);assert(Math.abs(buffer.duration-16*60/134)<1/22050);
 built=0;globalThis.AudioContext=Audio;globalThis.document={hidden:false,addEventListener(){}};Object.defineProperty(navigator,'userActivation',{value:{hasBeenActive:false},configurable:true});
 const sound=createStageDjSound(STAGE_DJ);sound.update(near,true);assert.equal(built,0,'Wait for a gesture');navigator.userActivation.hasBeenActive=true;sound.update(near,false);sound.update(far,true);assert.equal(built,0,'Do not start muted or far away');
-sound.update(circle,true);assert.equal(built,1);const audienceGain=sound.gain;sound.update(near,true);assert(sound.gain>audienceGain);assert(sound.running);context.currentTime=.5;assert(sound.beat>1);sound.update(far,true);assert.equal(sound.level,0);sound.update(near,false);assert.equal(sound.gain,0);
-console.log(JSON.stringify({status:'PASS',draws,triangles,bounds:[bounds.min.toArray(),bounds.max.toArray()],stopped:stopped.toArray(),returned:cat.position.toArray(),audio:{bpm:134,seconds:buffer.duration,peak,audienceGain,nearGain:stageDjLevel(near,at)},walk:'blocked at booth, around both sides and behind, back to seating'}));
+sound.update(circle,true);assert.equal(built,1);const audienceGain=sound.gain;sound.update(near,true);assert(sound.gain>audienceGain);assert(sound.running);context.currentTime=.5;assert(sound.beat>1);sound.update(back,true);assert.equal(sound.gain,backGain);sound.update(far,true);assert.equal(sound.level,0);sound.update(near,false);assert.equal(sound.gain,0);
+console.log(JSON.stringify({status:'PASS',draws,triangles,bounds:[bounds.min.toArray(),bounds.max.toArray()],stopped:stopped.toArray(),returned:cat.position.toArray(),audio:{bpm:134,seconds:buffer.duration,peak,audienceGain,nearGain:stageDjLevel(near,at),frontGain,backGain,backRowMetres:{first:backDistances[0],furthest:Math.max(...backDistances),last:backDistances.at(-1)}},walk:'blocked at booth, around both sides and behind, back to seating'}));
