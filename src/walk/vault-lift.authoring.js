@@ -57,16 +57,15 @@ export function createVaultLift(colliders){
  const carGate={mesh:mesh('Clubhouse_lift_car_gate',gateGeo,gateMat,car),mover:colliders.addMover('clubhouse-lift-car-gate',gateTriangles)};
  let display=null;
  if(hasWalkCanvas()){
-  const screen=(name,w,h,parent,x,y,z)=>{
-   const c=walkCanvas();c.width=512;c.height=256;const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;
-   const mat=new T.MeshBasicMaterial({name:'Clubhouse_lift_display',map:tex,toneMapped:false});
-   mesh(name,new T.PlaneGeometry(w,h),mat,parent).position.set(x,y,z);
-   return (deck,status)=>{const g=c.getContext('2d');g.fillStyle='#07131f';g.fillRect(0,0,512,256);g.fillStyle='#46d8ff';g.textAlign='center';
-    g.font='bold 32px sans-serif';g.fillText('CLUBHOUSE',256,64);g.font='bold 50px sans-serif';g.fillText('DECK '+deck,256,132);
-    g.font='24px sans-serif';g.fillText(status,256,190);tex.needsUpdate=true;};
+  const c=walkCanvas();c.width=512;c.height=256;const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;
+  const mat=new T.MeshBasicMaterial({name:'Clubhouse_lift_display',map:tex,toneMapped:false});
+  levels.forEach(y=>mesh('Clubhouse_lift_display',new T.PlaneGeometry(1.5,.75),mat).position.set(0,y+H+.4,FRONT+.03));
+  mesh('Clubhouse_lift_controls',new T.PlaneGeometry(.75,.375),mat,car).position.set(0,1.35,-CAR+.04);
+  display=(deck,status)=>{
+   const g=c.getContext('2d');g.fillStyle='#07131f';g.fillRect(0,0,512,256);g.fillStyle='#46d8ff';g.textAlign='center';
+   g.font='bold 32px sans-serif';g.fillText('CLUBHOUSE',256,64);g.font='bold 50px sans-serif';g.fillText('DECK '+deck,256,132);
+   g.font='24px sans-serif';g.fillText(status,256,190);tex.needsUpdate=true;
   };
-  levels.forEach((y,i)=>screen('Clubhouse_lift_display',1.5,.75,group,0,y+H+.4,FRONT+.03)(lift.stops[i].deck,'17 / 18 / 19'));
-  display=screen('Clubhouse_lift_controls',.75,.375,car,0,1.35,-CAR+.04);
  }
  let shown='',authorized=false,returning=false,carried=false;
  const place=()=>{
@@ -74,7 +73,8 @@ export function createVaultLift(colliders){
   const setGate=(g,y,open)=>{g.mesh.position.y=y+H*open;g.mesh.scale.y=1-open;g.mesh.visible=open<.999;g.mover.enabled=open<.99;};
   gates.forEach((g,i)=>setGate(g,levels[i],i===lift.at&&lift.phase!=='moving'&&(i>0||authorized)?lift.doors:0));
   setGate(carGate,0,lift.phase==='moving'||lift.at===0&&!authorized?0:lift.doors);carGate.mover.place(car.matrixWorld);
-  const key=lift.at+'|'+lift.phase;if(key!==shown){shown=key;display?.(lift.stops[lift.at].deck,lift.phase==='moving'?'IN TRANSIT':'17 / 18 / 19');}
+  const moving=lift.phase==='moving',deck=lift.stops.reduce((a,s)=>Math.abs(s.y-lift.y)<Math.abs(a.y-lift.y)?s:a).deck;
+  const key=deck+'|'+moving;if(key!==shown){shown=key;display?.(deck,moving?'IN TRANSIT':'17 / 18 / 19');}
  };
  const q=new T.Vector3(),local=p=>q.copy(p).applyMatrix4(inverse);
  const inside=p=>{const v=local(p);return Math.hypot(v.x,v.z)<CAR-.12&&Math.abs(p.y-lift.y)<.6;};

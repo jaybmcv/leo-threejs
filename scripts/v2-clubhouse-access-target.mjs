@@ -11,7 +11,7 @@ import {VAULT_LIFT} from '../src/walk/vault.js';
 import {createVaultLift} from '../src/walk/vault-lift.js';
 import {prepareClubhouseAccess} from '../src/v2/clubhouse-access.js';
 import {CLUBHOUSE_SHAFT as S} from '../src/v2/vault-lift-fit.js';
-import {Colliders,solid} from '../src/walk/collision.js';
+import {BODY,Colliders,solid} from '../src/walk/collision.js';
 import {installGround} from '../src/v2/ground.js';
 import {buildRoomShell} from '../src/v2/room-shell.js';
 import {fitPrototypeStructure} from '../src/v2/hull-prototypes.js';
@@ -53,11 +53,18 @@ assert.deepEqual(dock(0).toArray(),[S.x,lift.lift.stops[0].y,S.z]);
 assert(LOUNGE_PLAN.tank[2]-S.z-S.radius>.7,'Walkable aquarium-side clearance');
 
 const ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0)),seg=new T.Line3();
+const overlaps=(x,y,z)=>{
+ seg.start.set(x,y+BODY.step+BODY.radius,z);seg.end.set(x,y+BODY.height-BODY.radius,z);
+ return col.overlaps(seg,BODY.radius);
+};
 const clear=(x,y,z)=>{
  ray.origin.set(x,y+.45,z);const h=col.raycastGround(ray,.9);
- seg.start.set(x,y+.75,z);seg.end.set(x,y+1.65,z);
- return !!h&&Math.abs(h.point.y-y)<.05&&!col.overlaps(seg,.35);
+ return !!h&&Math.abs(h.point.y-y)<.05&&!overlaps(x,y,z);
 };
+// With the car parked below, the standing capsule must hit the fixed glass itself.
+assert.equal(lift.lift.at,0);
+for(const {deck,y} of lift.lift.stops.slice(1))
+ assert(overlaps(S.x+S.radius-.03,y,S.z),'Rear shaft glass blocks a standing cat on Deck '+deck);
 const tick=(x,z,seconds,probe)=>{
  for(let i=0;i<Math.round(seconds*60);i++){lift.update(1/60,walker);if(!lift.riding)walker.step(1/60,new T.Vector3(x,0,z),false);probe?.(walker.position);}
 };
@@ -129,7 +136,6 @@ for(const a of r.components.stairs)for(const b of r.components.stairs){
 assert(stairSteps>40);
 for(const y of [28.3,32.3]){
  assert(!clear(S.edge,y,S.z+1.3)&&!clear(S.edge,y,S.z-1.3),'The rails still guard both sides of the gap');
- assert(!clear(S.x+S.radius-.03,y,S.z),'Glass at the back of the shaft prevents step-off');
 }
 const closed=new T.Group();box(closed,'Old_unsplit_upper_rail',[.07,1.1,2.3],[S.edge,28.85,S.z]);col.addStatic(closed);col.commit();
 assert(!clear(S.edge,28.3,S.z),'Negative control: the old rail would block boarding');

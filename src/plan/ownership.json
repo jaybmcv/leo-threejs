@@ -6266,8 +6266,8 @@
         "Clubhouse_tube_colliders"
       ],
       "interactionTargets": null,
-      "placements": 23,
-      "signature": "b46ff8146e43c8f79130f2b4d9f317a52ace2d6e4e3048d5836d7dcd8286b477"
+      "placements": 24,
+      "signature": "45042c1cf6363f2eb30a6284607ec9de7dd0b5f83971032273e1e2ab1d32b8e8"
     },
     {
       "source": "src/walk/vault-lift.js",
@@ -6286,8 +6286,8 @@
         "Clubhouse_tube_colliders"
       ],
       "interactionTargets": null,
-      "placements": 23,
-      "signature": "b0f5c85a6eb018e708cd7cd8f121f652e422f4adaa96a7e1d55deaf196f7341f"
+      "placements": 24,
+      "signature": "d948addfbce115bee4784a1ed61004fd5f6cbe4c000b8bee7b76126df181fcf5"
     },
     {
       "source": "src/walk/vault.authoring.js",
