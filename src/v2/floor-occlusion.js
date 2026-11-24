@@ -50,10 +50,12 @@ function* floorScan(scene, camera) {
     sources.push(source);
     meshes.push([o, source, det]);
   });
+  let scanned = 0;
   for (const [o, source, det] of meshes) {
     const { p, ix, m, world } = source, count = ix?.count ?? p.count;
     for (let i = 0; i + 2 < count; i += 3) {
-      if (i && i % (SCAN_TRIANGLES * 3) === 0)
+      // Counted across meshes, so many small floors pause as one big one does.
+      if (++scanned % SCAN_TRIANGLES === 0)
         yield;
       p0.fromBufferAttribute(p, ix ? ix.getX(i) : i).applyMatrix4(world);
       p1.fromBufferAttribute(p, ix ? ix.getX(i + 1) : i + 1).applyMatrix4(world);

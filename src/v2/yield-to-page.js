@@ -17,6 +17,9 @@ function frameTurn(){
   const timer=setTimeout(()=>{framesCome=false;go();},FRAME_WAIT_MS);addEventListener('visibilitychange',go);
   requestAnimationFrame(()=>{framesCome=true;clearTimeout(timer);setTimeout(go,0);});});
 }
+/** A turn only while the arrival hall is walked (setFrameTurns): build steps that gave the page none before go straight
+ * on at every other start. */
+export function hallTurn(){return frames?yieldToPage():undefined;}
 export function yieldToPage(){
  const now=performance.now();
  if(framesCome&&frames?.due()){lastTurn=now;return frameTurn();}

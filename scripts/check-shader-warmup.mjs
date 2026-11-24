@@ -44,8 +44,10 @@ await check('while the arrival hall is walked: the same shaders a few at a time,
  assert.equal(two.lamps.visible,false);assert.ok(r2.calls.every(c=>c.meshes<=4));
  // A chunk that fails to compile leaves the rest to go on.
  const three=many(),r3=renderer(),compile=r3.compile;let n=0;r3.compile=(...a)=>{if(n++===1)throw Error('lost one');compile(...a);};
- const partial=await warmShaders(r3,three.scene,camera,{lights:[three.lamps],sliceMs:0,turn:async()=>{}});
+ const warn=console.warn;console.warn=()=>{};let partial;
+ try{partial=await warmShaders(r3,three.scene,camera,{lights:[three.lamps],sliceMs:0,turn:async()=>{}});}finally{console.warn=warn;}
  assert.equal(partial.proof.programs,whole.proof.programs-4);assert.equal(three.lamps.visible,false);
+ assert.equal(partial.proof.ready,false,'not ready when some failed to compile');
 });
 await check('a failing compile is reported, not thrown',async()=>{
  const r=renderer();r.compileAsync=()=>{throw Error('lost context');};

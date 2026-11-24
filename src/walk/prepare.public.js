@@ -1,6 +1,6 @@
 import {stripAtmosphere,createAtmosphere} from './atmosphere.js';
 import {installPreparedColliders} from '../v2/prepared-codec.public.js';
-import {yieldToPage} from '../v2/yield-to-page.js';
+import {yieldToPage,hallTurn} from '../v2/yield-to-page.js';
 import {finishLaunchBGeometry} from '../v2/launch-b-geometry.js';
 import layout from '../plan/selected-layout.js';
 import {prepareClubhouseAccess} from '../v2/clubhouse-access.js';
@@ -102,12 +102,12 @@ export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBa
  await yieldToPage();
  // The cherry blossom garden (blossom.js): its trunk, bridge and pond edges solid.
  const blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
- await yieldToPage();
+ await hallTurn();
  // The Great Cat Tree in the bow of the atrium (cat-tree.js): its island, trunk, ramp, platforms, bridges and guards solid.
  const catTree=createCatTree(ship);if(catTree)colliders.addStatic(catTree.solid,()=>true);
- await yieldToPage();
+ await hallTurn();
  const nosePark=createNosePark(ship);if(nosePark)colliders.addStatic(nosePark.solid,()=>true);
- await yieldToPage();
+ await hallTurn();
  // The Keel Club, the sports hall in the hull under Deck 1 (keel-club.js): its floors, terraces, stairs and bridges walkable, the rest solid.
  const keelClub=createKeelClub(ship);if(keelClub)colliders.addStatic(keelClub.solid,()=>true);
  await yieldToPage();

@@ -49,16 +49,18 @@ export async function warmShaders(renderer,scene,camera,{lights=[],waitMs=WARM_W
   const found=shaderSamples(scene);textures=found.textures;proof.samples=found.samples.length;
   // three's compile walks `traverse` for meshes and `traverseVisible` for lights: the scene's own lights count once.
   const standFor=samples=>({traverse:fn=>samples.forEach(fn),traverseVisible(){}});
+  let failed=false;
   if(turn){let slice=performance.now();
    for(let k=0;k<found.samples.length;k+=CHUNK){const stand=standFor(found.samples.slice(k,k+CHUNK));
-    // As compileAsync below: compile's own work, the waiting is the poll's.
-    for(const _ of lightStates(lights))try{renderer.compile(stand,camera,scene);}catch{}
+    // As compileAsync below: compile's own work, the waiting is the poll's. A few that fail leave the rest to compile,
+    // and the warm-up is then not ready.
+    for(const _ of lightStates(lights))try{renderer.compile(stand,camera,scene);}catch(e){if(!failed)console.warn('Shader warm-up: some shaders did not compile.',e);failed=true;}
     if(performance.now()-slice>=sliceMs){await turn();slice=performance.now();}}}
   else for(const _ of lightStates(lights))renderer.compileAsync(standFor(found.samples),camera,scene).catch(()=>{});
   // compileAsync watches only each material's latest program, so the other light state's would go unwatched: wait on
   // every program instead.
   const programs=[...(renderer.info.programs||[])],end=performance.now()+waitMs;
-  proof.ready=await new Promise(resolve=>{const poll=()=>{if(programs.every(p=>p.isReady?.()??true))resolve(true);else if(performance.now()>end)resolve(false);else setTimeout(poll,10);};poll();});
+  proof.ready=await new Promise(resolve=>{const poll=()=>{if(programs.every(p=>p.isReady?.()??true))resolve(true);else if(performance.now()>end)resolve(false);else setTimeout(poll,10);};poll();})&&!failed;
  }catch(e){console.warn('Shader warm-up stopped.',e);}
  proof.programs=count(renderer)-before;proof.ms=Math.round(performance.now()-t0);
  return {proof,textures};
