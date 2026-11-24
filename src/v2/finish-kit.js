@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {wallJoints,mitreWallGeometry} from './wall-joints.js';
 import {roomWallBoundary} from './rounded-room-walls.js';
-import {loungeWalkwayPlan,partitionLoungeWalkway,loungeWalkwayMaterials} from './lounge-walkway-finish.js';
+import {loungeWalkwayPlan,loungeWalkwayBorderRects,partitionLoungeWalkway,loungeWalkwayMaterials} from './lounge-walkway-finish.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {walkCanvas} from '../walk/canvas.js';
 import {contains,distanceToSegment} from '../plan/geometry-v2.js';
@@ -35,11 +35,19 @@ export function createFinishKit(parent,{cellSize=40,authority=null}={}){
   if(opaque){const g=new T.PlaneGeometry(len,height-.4),uv=g.attributes.uv;for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*len/2.4,uv.getY(i)*(height-.4)/3.2);const yaw=Math.atan2(n[0],n[1]);g.rotateY(yaw);g.translate((a[0]+b[0])/2+n[0]*.052,y+height/2,(a[1]+b[1])/2+n[1]*.052);add(deck,owner,'panel',g);}stats.walls++;
  },
  door({deck,owner,center,width,height=2.5,normal}){const t=[-normal[1],normal[0]],yaw=Math.atan2(normal[0],normal[1]);for(const side of[-1,1])box(deck,owner,'trim',[.065,height,.12],[center[0]+side*t[0]*(width/2+.035),center[1]+height/2,center[2]+side*t[1]*(width/2+.035)],yaw);box(deck,owner,'trim',[width+.14,.065,.12],[center[0],center[1]+height+.035,center[2]],yaw);stats.doors++;},
- ceilingRun({deck,owner,a,b,y,width=2.4,ceiling=true,ceilingHeight=3.65,floorBorder=true}){if(ceiling){line(deck,owner,'trim',a,b,y+ceilingHeight-.12,.40,.12);line(deck,owner,'light',a,b,y+ceilingHeight-.185,.16,.018);}const len=Math.hypot(b[0]-a[0],b[1]-a[1]),n=[(b[1]-a[1])/len,-(b[0]-a[0])/len];if(floorBorder)for(const side of[-1,1]){
+ ceilingRun({deck,owner,a,b,y,width=2.4,ceiling=true,ceilingHeight=3.65,floorBorder=true,walkway=null}){if(ceiling){line(deck,owner,'trim',a,b,y+ceilingHeight-.12,.40,.12);line(deck,owner,'light',a,b,y+ceilingHeight-.185,.16,.018);}const len=Math.hypot(b[0]-a[0],b[1]-a[1]),n=[(b[1]-a[1])/len,-(b[0]-a[0])/len];if(floorBorder)for(const side of[-1,1]){
   // `floorBorder` may be a test for points on another corridor's floor: the border is left out there, so it never
   // runs as a stray line across a crossing hallway (tester report, Deck 1).
   const p=t=>[a[0]+(b[0]-a[0])*t+n[0]*width/2*side,a[1]+(b[1]-a[1])*t+n[1]*width/2*side],steps=Math.max(1,Math.ceil(len/.25));let t0=null;
-  for(let k=0;k<=steps;k++){const keep=k<steps&&(typeof floorBorder!=='function'||!floorBorder(p((k+.5)/steps)));if(keep&&t0===null)t0=k/steps;if(!keep&&t0!==null){line(deck,owner,'trim',p(t0),p(k/steps),y+.018,.055,.015);t0=null;}}
+  const edge=(a,b)=>{
+   if(!walkway){line(deck,owner,'trim',a,b,y+.018,.055,.015);return;}
+   // Circulation routes are laid out on the ship axes.
+   const half=.055/2,rect=[Math.min(a[0],b[0])-Math.abs(n[0])*half,Math.max(a[0],b[0])+Math.abs(n[0])*half,Math.min(a[1],b[1])-Math.abs(n[1])*half,Math.max(a[1],b[1])+Math.abs(n[1])*half];
+   const pieces=loungeWalkwayBorderRects(rect,walkway);
+   if(pieces[0]===rect){line(deck,owner,'trim',a,b,y+.018,.055,.015);return;}
+   for(const [x0,x1,z0,z1]of pieces)box(deck,owner,'trim',[x1-x0,.015,z1-z0],[(x0+x1)/2,y+.018,(z0+z1)/2]);
+  };
+  for(let k=0;k<=steps;k++){const keep=k<steps&&(typeof floorBorder!=='function'||!floorBorder(p((k+.5)/steps)));if(keep&&t0===null)t0=k/steps;if(!keep&&t0!==null){edge(p(t0),p(k/steps));t0=null;}}
  }stats.ceilingRuns++;},
  finish(){for(const b of buckets.values()){const g=mergeGeometries(b.geos),o=new T.Mesh(g,mats[b.kind]);o.name='V2_public_finish_'+b.kind;o.userData={v2Deck:b.deck,roomOwners:[...b.owners],noCollide:true,publicFinish:true};parent.add(o);if(authority){o.updateWorldMatrix(true,false);if(trimMeshToSkin(o,authority))stats.clippedMeshes++;}const final=o.geometry;if(!final.attributes.position.count){parent.remove(o);final.dispose();}else{stats.meshes++;stats.triangles+=(final.index?.count||final.attributes.position.count)/3;stats.geometryBytes+=Object.values(final.attributes).reduce((n,a)=>n+a.array.byteLength,0)+(final.index?.array.byteLength||0);}b.geos.forEach(g=>g.dispose());}return stats;}
  };
@@ -47,6 +55,7 @@ export function createFinishKit(parent,{cellSize=40,authority=null}={}){
 function simplified(p,deduplicate=false){if(deduplicate)p=p.filter((q,i,p)=>Math.hypot(q[0]-p[(i+p.length-1)%p.length][0],q[1]-p[(i+p.length-1)%p.length][1])>1e-6);return p.filter((b,i)=>{const a=p[(i+p.length-1)%p.length],c=p[(i+1)%p.length];return Math.abs((b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0]))>1e-6;});}
 export function applyPublicFinishKit(ship,layout,{decks=null,authority=null}={}){
  if(ship.v2PublicFinish)return ship.v2PublicFinish;const selected=d=>!decks||decks.includes(d),parent=ship.inside.getObjectByName('V2_structure')||ship.inside,kit=createFinishKit(parent,{authority}),mats=publicFinishMaterials();
+ const walkways=new Map([17,18,19].filter(selected).map(d=>[d,loungeWalkwayPlan(layout,d)])),walkwayMats=walkways.size?loungeWalkwayMaterials():null;
  const launchCoverage={rooms:[],openOverlooks:[],streets:layout.circulation.corridors.filter(c=>c.launchD&&selected(c.deck)).map(c=>c.id)};
  const roomCeiling=r=>{const xs=r.polygon.map(p=>p[0]),zs=r.polygon.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),z0=Math.min(...zs),z1=Math.max(...zs),alongX=x1-x0>=z1-z0,a=alongX?[x0+.5,(z0+z1)/2]:[(x0+x1)/2,z0+.5],b=alongX?[x1-.5,(z0+z1)/2]:[(x0+x1)/2,z1-.5];if(r.openPlan){const above=layout.decks[r.deck];if(!above)return false;for(let t=0;t<=1;t+=.025){const q=[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];if(!contains(above.slab.outline,q)||above.slab.holes.some(h=>contains(h.polygon,q)))return false;}}kit.ceilingRun({deck:r.deck,owner:r.id,a,b,y:r.y,ceilingHeight:r.openPlan?3.65:r.height-.1,floorBorder:false});return true;};
  const protectedRoom=r=>r.kind==='garden'||/^(commons-|observation-lounge|nose-commons-|d16-voyage-forum|d05-aquarium-gallery)/.test(r.id);
@@ -57,15 +66,48 @@ export function applyPublicFinishKit(ship,layout,{decks=null,authority=null}={})
  for(const c of layout.circulation.corridors.filter(c=>selected(c.deck)))for(let j=1;j<c.points.length;j++){const a=c.points[j-1],b=c.points[j],axis=Math.abs(a[0]-b[0])<1e-5?1:0,fixed=axis?a[0]:a[1],lo=Math.min(a[axis],b[axis]),hi=Math.max(a[axis],b[axis]);if(hi-lo<.5||c.kind==='architectural-route'&&!(hi-lo>8&&axis===0&&[3,21,-21].some(z=>Math.abs(z-fixed)<.02)))continue;const key=[c.deck,axis,fixed.toFixed(3)].join('|');let r=routes.get(key);if(!r)routes.set(key,r={deck:c.deck,axis,fixed,width:c.width,ranges:[]});r.width=Math.max(r.width,c.width);r.ranges.push([lo,hi]);}
  // A point on another route's floor (inside its width, along one of its intervals): floor borders stop there.
  const routesByDeck=Map.groupBy(routes.values(),r=>r.deck),onOtherFloor=r=>p=>routesByDeck.get(r.deck).some(o=>{if(o===r)return false;const across=o.axis?p[0]:p[1],along=o.axis?p[1]:p[0];return Math.abs(across-o.fixed)<o.width/2-.05&&o.ranges.some(([lo,hi])=>along>lo&&along<hi);});
- for(const r of routes.values()){const d=layout.decks[r.deck-1],next=layout.decks[r.deck],ranges=[];for(const interval of r.ranges.sort((a,b)=>a[0]-b[0])){const prev=ranges.at(-1);if(prev&&interval[0]<=prev[1]+.01)prev[1]=Math.max(prev[1],interval[1]);else ranges.push(interval.slice());}for(const [lo,hi]of ranges){const steps=Math.ceil((hi-lo)/4);let run=null;const flush=()=>{if(!run)return;const point=t=>r.axis?[r.fixed,t]:[t,r.fixed];kit.ceilingRun({deck:r.deck,owner:'circulation-'+r.deck,a:point(run.lo),b:point(run.hi),y:d.y,width:r.width,ceiling:run.ceiling,floorBorder:!(r.deck===6&&r.axis===0&&Math.abs(r.fixed-3)<.02)&&onOtherFloor(r)});run=null;};for(let k=0;k<steps;k++){const a=lo+(hi-lo)*k/steps,b=lo+(hi-lo)*(k+1)/steps,mid=r.axis?[r.fixed,(a+b)/2]:[(a+b)/2,r.fixed],open=contains(d.slab.outline,mid)&&!d.slab.holes.some(h=>contains(h.polygon,mid))&&!roomByDeck.get(r.deck).some(room=>contains(room.polygon,mid)),ceiling=!next?.slab.holes.some(h=>contains(h.polygon,mid));if(!open){flush();continue;}if(run&&run.ceiling!==ceiling)flush();if(!run)run={lo:a,hi:b,ceiling};else run.hi=b;}flush();}}
+ for(const r of routes.values()){const d=layout.decks[r.deck-1],next=layout.decks[r.deck],ranges=[];for(const interval of r.ranges.sort((a,b)=>a[0]-b[0])){const prev=ranges.at(-1);if(prev&&interval[0]<=prev[1]+.01)prev[1]=Math.max(prev[1],interval[1]);else ranges.push(interval.slice());}for(const [lo,hi]of ranges){const steps=Math.ceil((hi-lo)/4);let run=null;const flush=()=>{if(!run)return;const point=t=>r.axis?[r.fixed,t]:[t,r.fixed];kit.ceilingRun({deck:r.deck,owner:'circulation-'+r.deck,a:point(run.lo),b:point(run.hi),y:d.y,width:r.width,ceiling:run.ceiling,floorBorder:!(r.deck===6&&r.axis===0&&Math.abs(r.fixed-3)<.02)&&onOtherFloor(r),walkway:walkways.get(r.deck)});run=null;};for(let k=0;k<steps;k++){const a=lo+(hi-lo)*k/steps,b=lo+(hi-lo)*(k+1)/steps,mid=r.axis?[r.fixed,(a+b)/2]:[(a+b)/2,r.fixed],open=contains(d.slab.outline,mid)&&!d.slab.holes.some(h=>contains(h.polygon,mid))&&!roomByDeck.get(r.deck).some(room=>contains(room.polygon,mid)),ceiling=!next?.slab.holes.some(h=>contains(h.polygon,mid));if(!open){flush();continue;}if(run&&run.ceiling!==ceiling)flush();if(!run)run={lo:a,hi:b,ceiling};else run.hi=b;}flush();}}
  // Keep structural slabs unchanged for haze/physics consumers; a 2 mm top finish carries the UVs above its structural backing.
  // Room floors and all bespoke floors keep their existing materials. UVs are
  // world-metre based, so subdivisions never stretch the Deck 1 hex pattern.
  // The Deck 17 commons hall lays its own matte floor over the promenades and bays: a hex finish under it only fights it (the bake's layering lifts it through in patches), so triangles wholly under it are left out.
  let matte=null;const buried=(a,b,c)=>{matte||=commonsHallPlan(layout).banks;const mx=(a.x+b.x+c.x)/3,mz=(a.z+b.z+c.z)/3;return [[mx,mz],...[a,b,c].map(v=>[mx+(v.x-mx)*.98,mz+(v.z-mz)*.98])].every(q=>matte.some(k=>contains(k.floor.outline,q)&&!k.floor.holes.some(h=>contains(h,q))));};
- const walkway=selected(19)?loungeWalkwayPlan(layout):{deck:19},walkwayMats=selected(19)?loungeWalkwayMaterials():null;
- let floors=0,uvBytes=0,floorTriangles=0,floorGeometryBytes=0;const world=new T.Matrix4(),overlays=new Map();ship.root.updateMatrixWorld(true);ship.inside.traverse(o=>{if(!o.isMesh||o.isInstancedMesh||!o.visible||!o.geometry?.attributes.position)return;const deck=o.userData.v2Deck||Math.round((new T.Box3().setFromObject(o,true).min.y+39.7)/4)+1;if(!selected(deck))return;if(!/^(Deck_slab|V2_corridor_floor|V2_tower_bridge_floor|V2_tower_landing_floor|V2_lounge_balcony_floor|V2_access_ramp)$/.test(o.name)||o.name==='Deck_slab'&&deck===6||o.material?.name!=='V2_floor')return;const g=o.geometry.clone(),p=g.attributes.position,ix=g.index,keep=[],va=new T.Vector3(),vb=new T.Vector3(),vc=new T.Vector3();world.copy(o.matrixWorld);for(let i=0;i<(ix?.count??p.count);i+=3){const ids=[0,1,2].map(k=>ix?ix.getX(i+k):i+k);va.fromBufferAttribute(p,ids[0]).applyMatrix4(world);vb.fromBufferAttribute(p,ids[1]).applyMatrix4(world);vc.fromBufferAttribute(p,ids[2]).applyMatrix4(world);if(deck===17&&buried(va,vb,vc))continue;if(vb.sub(va).cross(vc.sub(va)).normalize().y>.5)keep.push(...ids);}if(!keep.length){g.dispose();return;}g.setIndex(keep);const uv=new Float32Array(p.count*2),v=new T.Vector3();for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(world);uv[i*2]=v.x/.36;uv[i*2+1]=v.z/(.36*1.7320508);}g.setAttribute('uv',new T.BufferAttribute(uv,2));g.applyMatrix4(world);const flat=g.toNonIndexed();flat.translate(0,.002,0);g.dispose();for(const name of Object.keys(flat.attributes))if(!['position','normal','uv'].includes(name))flat.deleteAttribute(name);const pieces=deck===walkway.deck?partitionLoungeWalkway(flat,walkway):{floor:flat};if(deck===walkway.deck)flat.dispose();for(const [kind,part]of Object.entries(pieces)){part.computeBoundingBox();const c=part.boundingBox.getCenter(new T.Vector3()),key=[deck,kind,Math.floor(c.x/40),Math.floor(c.z/40)].join('|');let batch=overlays.get(key);if(!batch)overlays.set(key,batch={deck,kind,geos:[]});batch.geos.push(part);floorTriangles+=part.attributes.position.count/3;}floors++;});const local=parent.matrixWorld.clone().invert();for(const batch of overlays.values()){const g=mergeGeometries(batch.geos).applyMatrix4(local),top=new T.Mesh(g,batch.kind==='floor'?mats.floor:walkwayMats[batch.kind]);top.name=batch.kind==='floor'?'V2_public_floor_finish':'V2_lounge_walkway_'+batch.kind;top.userData={v2Deck:batch.deck,noCollide:true,publicFinish:true};parent.add(top);uvBytes+=g.attributes.uv.array.byteLength;floorGeometryBytes+=Object.values(g.attributes).reduce((n,a)=>n+a.array.byteLength,0);batch.geos.forEach(g=>g.dispose());}
- const result={...kit.finish(),floors,uvBytes,floorTriangles,floorGeometryBytes,floorMeshes:overlays.size,textureBytes:2*256*256*4+(selected(19)?128*128*4+4:0),launchCoverage};ship.v2PublicFinish=result;return result;
+ let floors=0,uvBytes=0,floorTriangles=0,floorGeometryBytes=0;const world=new T.Matrix4(),overlays=new Map();
+ const addFloor=(deck,kind,part)=>{
+  part.computeBoundingBox();const c=part.boundingBox.getCenter(new T.Vector3()),key=[deck,kind,Math.floor(c.x/40),Math.floor(c.z/40)].join('|');
+  let batch=overlays.get(key);if(!batch)overlays.set(key,batch={deck,kind,geos:[]});batch.geos.push(part);floorTriangles+=part.attributes.position.count/3;
+ };
+ ship.root.updateMatrixWorld(true);ship.inside.traverse(o=>{
+  if(!o.isMesh||o.isInstancedMesh||!o.visible||!o.geometry?.attributes.position)return;
+  const deck=o.userData.v2Deck||Math.round((new T.Box3().setFromObject(o,true).min.y+39.7)/4)+1,walkway=walkways.get(deck);if(!selected(deck))return;
+  // Refinish the exposed matte top on Deck 17 at its own height.
+  if(walkway&&o.name==='V2_commons_hall_floor_finish'){
+   const original=o.geometry,flat=(original.index?original.toNonIndexed():original.clone()).applyMatrix4(o.matrixWorld);flat.computeBoundingBox();
+   const {floor,carpet,gold}=partitionLoungeWalkway(flat,walkway,flat.boundingBox.max.y);flat.dispose();
+   if(!carpet&&!gold){floor?.dispose();return;}
+   o.geometry=floor.applyMatrix4(o.matrixWorld.clone().invert());original.dispose();
+   if(carpet)addFloor(deck,'carpet',carpet);if(gold)addFloor(deck,'gold',gold);floors++;return;
+  }
+  if(!/^(Deck_slab|V2_corridor_floor|V2_tower_bridge_floor|V2_tower_landing_floor|V2_lounge_balcony_floor|V2_access_ramp)$/.test(o.name)||o.name==='Deck_slab'&&deck===6||o.material?.name!=='V2_floor')return;
+  const g=o.geometry.clone(),p=g.attributes.position,ix=g.index,keep=[],va=new T.Vector3(),vb=new T.Vector3(),vc=new T.Vector3();world.copy(o.matrixWorld);
+  for(let i=0;i<(ix?.count??p.count);i+=3){
+   const ids=[0,1,2].map(k=>ix?ix.getX(i+k):i+k);va.fromBufferAttribute(p,ids[0]).applyMatrix4(world);vb.fromBufferAttribute(p,ids[1]).applyMatrix4(world);vc.fromBufferAttribute(p,ids[2]).applyMatrix4(world);
+   if(deck===17&&buried(va,vb,vc))continue;if(vb.sub(va).cross(vc.sub(va)).normalize().y>.5)keep.push(...ids);
+  }
+  if(!keep.length){g.dispose();return;}
+  g.setIndex(keep);const uv=new Float32Array(p.count*2),v=new T.Vector3();
+  for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(world);uv[i*2]=v.x/.36;uv[i*2+1]=v.z/(.36*1.7320508);}
+  g.setAttribute('uv',new T.BufferAttribute(uv,2));g.applyMatrix4(world);
+  const flat=g.toNonIndexed();flat.translate(0,.002,0);g.dispose();for(const name of Object.keys(flat.attributes))if(!['position','normal','uv'].includes(name))flat.deleteAttribute(name);
+  const pieces=walkway?partitionLoungeWalkway(flat,walkway):{floor:flat};if(walkway)flat.dispose();
+  for(const [kind,part]of Object.entries(pieces))addFloor(deck,kind,part);floors++;
+ });
+ const local=parent.matrixWorld.clone().invert();
+ for(const batch of overlays.values()){
+  const g=mergeGeometries(batch.geos).applyMatrix4(local),top=new T.Mesh(g,batch.kind==='floor'?mats.floor:walkwayMats[batch.kind]);
+  top.name=batch.kind==='floor'?'V2_public_floor_finish':'V2_lounge_walkway_'+batch.kind;top.userData={v2Deck:batch.deck,noCollide:true,publicFinish:true};parent.add(top);uvBytes+=g.attributes.uv.array.byteLength;floorGeometryBytes+=Object.values(g.attributes).reduce((n,a)=>n+a.array.byteLength,0);batch.geos.forEach(g=>g.dispose());
+ }
+ const result={...kit.finish(),floors,uvBytes,floorTriangles,floorGeometryBytes,floorMeshes:overlays.size,textureBytes:2*256*256*4+(walkways.size?128*128*4+4:0),launchCoverage};ship.v2PublicFinish=result;return result;
 }
 
 function beamGeometry(a,b,width=.06){const va=new T.Vector3(...a),vb=new T.Vector3(...b),dir=vb.clone().sub(va),q=new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),dir.clone().normalize());return new T.BoxGeometry(width,dir.length(),width).applyQuaternion(q).translate(...va.add(vb).multiplyScalar(.5).toArray());}
