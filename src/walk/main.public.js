@@ -79,6 +79,9 @@ function startOwnerHiding(){
   // A real bake the walk will not use (another key, format or grid): say why. The build's empty file stays quiet.
   if(!hiding&&data?.blocks?.length)console.info('Owner hiding not used:',ownerBakeProblem(data,key));}).catch(e=>console.warn('Owner hiding not used:',e.message));
 }
+import {startArrivalPreview} from '../v2/arrival-preview.js';
+import {arrivalStart} from '../v2/arrival-start.js';
+import {loadCosmoScript} from './cosmo-script.js';
 import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns,preparedPhone} from '../v2/prepared-runtime.public.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
 import {gotoStand as v2GotoStand,yarnPlace} from '../v2/wayfinding.js';
@@ -365,6 +368,11 @@ const environmentReady=loadEnvironment(renderer).then(t=>{scene.environment=t;qu
 function resize(){const w=innerWidth,h=innerHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
 
+// A start in the arrival hall (arrival-start.js) walks it while the rest of the ship downloads and builds
+// (arrival-preview.js), once the visitor is aboard; the walk takes over where they stand just before its first frame
+// (takeOverArrival). Until then it has the view and the keys: the walk's own actions and poses wait (arrival.active).
+let arrival=arrivalStart?startArrivalPreview({renderer,sky,skyCamera,fov:camera.fov,near:camera.near,far:camera.far,environment:environmentReady.then(()=>scene.environment),
+ aboard:LIVE_URL?identity.then(r=>r.pass?null:boarded):Promise.resolve(),fur:furColour,outfit}):null;
 deferRoomFrames();const ship=await loadPreparedShip(scene,status);scene.add(ship.root);
 const colliders=new Colliders();
 // The Camera button's portable selfie lens (portable-selfie.js): drawn in place of the walker's view while its panel is open.
@@ -633,7 +641,7 @@ function cull(p,now=performance.now()){
  }
 }
 
-const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),lockHint:$('camera-lock-hint'),onAction:(a,arg)=>{if((prank?.locked||prank?.isOpen)&&a!=='escape')return;if(a==='respawn'&&wardPush?.engaged){wardPush.reset(controller);return;}actions[a]?.(arg);}});
+const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),lockHint:$('camera-lock-hint'),onAction:(a,arg)=>{if(arrival?.active)return;if((prank?.locked||prank?.isOpen)&&a!=='escape')return;if(a==='respawn'&&wardPush?.engaged){wardPush.reset(controller);return;}actions[a]?.(arg);}});
 const follow=new FollowCamera(camera,colliders);
 const controller=new Controller(colliders);
 let walker=null;
@@ -783,8 +791,7 @@ function openLog(){changeLog.open({near:controller.position});}
 function goToSpot(spot){spot=remapSpot(spot);if(!goTo({at:spot.at,yaw:spot.yaw,resolved:true}))return false;emote=null;follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;return true;}
 
 async function loadCosmo(){
- globalThis.LEO_THREE=T;globalThis.LEO_COSMO_EMOTES=__EMOTES_URL__;
- await new Promise((resolve,reject)=>{const s=Object.assign(document.createElement('script'),{src:__COSMO_SCRIPT__,async:true});s.onload=resolve;s.onerror=()=>reject(new Error('Cosmo could not load'));document.head.appendChild(s);});
+ await loadCosmoScript(T);
  walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion);walker.setFur(furColour);wardrobe=createWardrobe(walker.figure);wardrobe.set(outfit);scene.add(walker.holder);
  cosmoKit=await globalThis.LeoCosmo.createCosmoKit({poses:[...KITTEN_POSE_NAMES,...ACTOR_POSE_NAMES,'scanPatient']});
 }
@@ -803,6 +810,7 @@ const spot=remapSpot(readSpot()),back=spot?null:takeSpot(),view=spot||back;
 const stand=spot?findStand(colliders,spot.at):back?publicStand(back.at,{colliders,stand:at=>findStand(colliders,at,{radius:0}),check:at=>v2GotoStand(colliders,at)}):null;
 controller.place(stand||findStand(colliders,START.position.toArray())||START.position);
 follow.yaw=stand?view.yaw:START.yaw;if(stand){follow.pitch=view.pitch;follow.look(0,0);follow.mode=view.view;}
+const placedAt=controller.position.clone();
 walker.holder.position.copy(controller.position);
 // Balls of yarn to push about: the arrival hall's, and one in each of six common areas (yarn.js).
 const yarn=createYarn(colliders),yarns=[yarn];
@@ -943,7 +951,7 @@ function myPose(riding=false){
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
-if(live)setInterval(()=>{if(document.hidden||performance.now()-last>1000)live.pose(myPose());},1000);
+if(live)setInterval(()=>{if(!arrival?.active&&(document.hidden||performance.now()-last>1000))live.pose(myPose());},1000);
 // Where this visitor stands, kept for a reload within 10 minutes (last-spot.js): on foot in a public area, or the
 // arrival hall once they are somewhere restricted (public-area.js) or in a game. Passing through (a lift, a jump, a
 // seat, the hamster ball) keeps the spot from before. Only a page that has been aboard Leo live, or started from a
@@ -1060,6 +1068,19 @@ function toggleMap(){
  $('minimap-button').addEventListener('click',toggleMap);}
 let last=performance.now(),acc=0,lastHud=0,lastHeading=heading,lastSpeed=0,turnRate=0,accel=0;const STEP=1/120,wish=new T.Vector3();
 const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WALKER.prone};
+// The arrival hall walked before the walk was up (arrival-preview.js): the walk goes on from where the visitor last stood
+// on its ground, facing as they did, standing (a jump in the air ends on the ground it left). Not if something has sent
+// the walker elsewhere since the walk placed it (a Builder's Hub link), nor if the full ship has no ground there.
+function takeOverArrival(pose){
+ if(!pose||!controller.position.equals(placedAt))return;
+ // Where they stood, or the nearest standing spot within 2 m (findStand keeps a capsule's width off walls and benches).
+ const at=findStand(colliders,pose.at.toArray(),{radius:0})||findStand(colliders,pose.at.toArray(),{radius:2});
+ if(!at){console.info('The arrival hall hand-over found no standing spot near',pose.at.toArray(),'so the walk starts at the arrival spot.');return;}
+ controller.place(at);walker.holder.position.copy(controller.position);safe.copy(controller.position);heading=lastHeading=pose.heading;
+ follow.mode='third';follow.yaw=pose.yaw;follow.pitch=pose.pitch;follow.distance=follow.current=pose.distance;follow.look(0,0);
+ // Keys held now carry on; a jump, a hook or a look queued for the walk before it had the keys does not.
+ input.jumpQueued=input.hookQueued=false;input.look.x=input.look.y=0;input.zoom=0;
+}
 // Should anything stop the warm-up starting (it is the last thing this script does), the walk still draws. From here
 // on an error in the rest of this script is therefore not a failed start, which the page is told (walk.html,
 // LEO_WALK_FAILED): before this line nothing can make the walk ready, so an error there is one.
@@ -1068,6 +1089,7 @@ renderer.setAnimationLoop(()=>{
  // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
  if(hubPanel.isOpen()&&firstViewReady){showAim(false);return;}
  if(!warmed)return;
+ if(arrival){const pose=arrival.finish();arrival=null;takeOverArrival(pose);last=performance.now();}
  frameReadout.begin();
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
  const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen&&!controlsSettings?.isOpen&&!furSettings?.isOpen});last=now;
