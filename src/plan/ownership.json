@@ -2624,7 +2624,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "97fb34c7534f3e8304004aa96acfc1b990c5c03b1157637b23a09c8394baf04d"
+      "signature": "14b2bde4e799b53928f5a2ed87b6e214e249512ef2c17acef71aafbf1c284351"
     },
     {
       "source": "src/walk/frog.js",
