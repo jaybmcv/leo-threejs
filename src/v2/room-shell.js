@@ -13,6 +13,7 @@ import {LOUNGE_MURAL_X} from '../plan/lounge-layout-v2.js';
 import {worldPoint} from '../plan/hull-skin-v2.js';
 import {buildGardenGuards,galleryHoles} from './garden-guards.js';
 import {entrySegments,entryHeader} from './room-entries.js';
+import {buildLoungeWalkwayWall} from './lounge-walkway-wall.js';
 import {polygonGeometry,mesh,box,wall,mergeBoxes,removePanelEndCaps,removeGeometryCaps,glass,lining,floor} from './geometry.js';
 
 export function buildRoomShell(ship,r,structure){
@@ -44,7 +45,7 @@ export function buildRoomShell(ship,r,structure){
    // Joined lounge routes share one floor surface instead of coplanar plates.
    if(r.id==='commons-1')holes.push(...platforms.slice(0,i).filter(p=>Math.abs(p.center[1]-o.center[1])<.01).map(p=>p.polygon));
    const slab=polygonGeometry(o.polygon,holes,o.center[1],o.size[1]);
-   if(['commons-1-rear-4','commons-1-gallery-link-4','commons-1-stair-turn'].includes(o.id))landingFloors.push(slab);
+   if(r.id==='commons-1'&&['commons-1-rear-4','commons-1-gallery-link-4','commons-1-stair-turn'].includes(o.id))landingFloors.push(slab);
    else if(['commons-1-rear-8','commons-1-end-8'].includes(o.id))muralFloors.push(slab);else mesh(g,'V2_garden_gallery',slab,floor);
    if(o.id==='commons-1-end-8'){
     const zs=o.polygon.filter(p=>p[0]===LOUNGE_MURAL_X).map(p=>p[1]);
@@ -56,6 +57,8 @@ export function buildRoomShell(ship,r,structure){
    }}
    // Keep each joined top and underside continuous in the walk bake.
    for(const [slabs,y]of [[landingFloors,r.y+4],[muralFloors,r.y+8]])if(slabs.length){const merged=mergeGeometries(slabs),joined=removeBuriedSlabSides(merged,y).geometry;mesh(g,'V2_garden_gallery',joined,floor);if(joined!==merged)merged.dispose();slabs.forEach(g=>g.dispose());}
+   // Report #427: the black wall under the walkway's open-floor edge, stopping at the waterfall pond (lounge-walkway-wall.js).
+   if(r.id==='commons-1')buildLoungeWalkwayWall(g,r);
    // The plan's stair center.y is its finished tread elevation.
    const stairs=r.components.stairs||[],lights=[];for(const o of stairs){const tread=box(g,'Gallery_stair',o.size,[o.center[0],o.center[1]-o.size[1]/2,o.center[2]],lining);if(r.id!=='commons-1')continue;
     const flight=stairs.filter(t=>t.id.replace(/-\d+$/,'')===o.id.replace(/-\d+$/,'')).sort((a,b)=>a.center[1]-b.center[1]),dir=Math.sign(flight.at(-1).center[2]-flight[0].center[2]),rise=flight[1].center[1]-flight[0].center[1],geo=tread.geometry.clone(),p=geo.attributes.position,h=o.size[1];

@@ -22,9 +22,13 @@ export const PUSH_LABEL='W/S push · A/D steer · E or Esc let go · R send it b
 function dropBakedBox(sets,toWorld,spot){
  const c=[];for(const x of [-1,1])for(const y of [0,1])for(const z of [-1,1])c.push(new T.Vector3(spot.x+x*HALF[0],y*TROLLEY_BOX[1],spot.z+z*HALF[1]).applyMatrix4(toWorld));
  const box=new T.Box3().setFromPoints(c).expandByScalar(.02);
- const corner=(a,i)=>c.some(p=>Math.abs(p.x-a[i])<.01&&Math.abs(p.y-a[i+1])<.01&&Math.abs(p.z-a[i+2])<.01);
+ const corner=(a,i)=>c.some(p=>Math.abs(p.x-a[i])<.01&&Math.abs(p.y-a[i+1])<.01&&Math.abs(p.z-a[i+2])<.01),read=new Set();
  for(const col of sets)for(const band of col?.bands?.values()||[]){
-  const a=band.geometry?.attributes.position?.array;if(!a||!band.bvh?.refit)continue;let moved=false;
+  const a=band.geometry?.attributes.position?.array;if(!a||!band.bvh?.refit)continue;
+  // The prepared ship's 91 bands share one position array (its vertex dictionary), which was read once for each: half
+  // a second while the visitor walked the arrival hall (arrival-preview.js). Read again, an array has nothing left to
+  // match (the first read moved what it found below the box, and only that band refits), so each is read once.
+  if(read.has(a))continue;read.add(a);let moved=false;
   for(let i=0;i<a.length;i+=9){
    if(a[i]<box.min.x||a[i]>box.max.x||a[i+1]<box.min.y||a[i+1]>box.max.y||a[i+2]<box.min.z||a[i+2]>box.max.z)continue;
    if(corner(a,i)&&corner(a,i+3)&&corner(a,i+6)){a[i+1]-=1e4;a[i+4]-=1e4;a[i+7]-=1e4;moved=true;}

@@ -22,6 +22,11 @@ export const OVERRIDE_READERS=[
  {file:'src/lower-aft.js',rooms:['d01-spares-aft','d02-maintenance-aft','d03-inspection-aft'],keys:['remove']},
  // DRILL_CRAFT: the drill helm's photo spot follows the button's descriptor.
  {file:'src/walk/emergency-drill/station.js',rooms:['d4-escape-s-9'],keys:['add']},
+ // The Hydro-Nip munchies converger's place in the lounge layout.
+ {file:'src/plan/lounge-layout-v2.js',rooms:['commons-1'],keys:['converger']},
+ // The gaming lounge's PC row, consoles, wall stations and leaderboard hologram (the walk module and its authoring twin).
+ {file:'src/walk/gaming-lounge.js',rooms:['d16-training-aft'],keys:['gamingConsoles','gamingLeaderboard','gamingStations','gamingWindowRow']},
+ {file:'src/walk/gaming-lounge.authoring.js',rooms:['d16-training-aft'],keys:['gamingConsoles','gamingLeaderboard','gamingStations','gamingWindowRow']},
 ];
 
 // The [room, key] pairs at which two override files differ. A room added or removed counts each of its keys; a room
