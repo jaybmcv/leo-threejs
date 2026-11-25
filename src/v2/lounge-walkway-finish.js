@@ -129,7 +129,8 @@ export function loungeWalkwayMaterials(){
  const depth={polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1};
  // A white texel keeps the gold's depth bias when the walk batches plain materials.
  const goldMap=new T.DataTexture(new Uint8Array([255,255,255,255]),1,1);goldMap.needsUpdate=true;
- const carpet=new T.MeshPhysicalMaterial({name:'Lounge_walkway_black_velvet',color:0x19191a,map:nap,roughness:.96,metalness:0,specularIntensity:.25,sheen:.36,sheenColor:0x38373a,sheenRoughness:.78,envMapIntensity:.35,...depth});
+ // Faint ambient fill keeps the same pile visible under the dim aquarium hall lighting.
+ const carpet=new T.MeshPhysicalMaterial({name:'Lounge_walkway_black_velvet',color:0x19191a,map:nap,emissive:0x222222,emissiveMap:nap,emissiveIntensity:.85,roughness:.96,metalness:0,specularIntensity:.25,sheen:.36,sheenColor:0x38373a,sheenRoughness:.78,envMapIntensity:.35,...depth});
  carpet.userData.preserveWalkFinish=true;
  materials={carpet,gold:new T.MeshStandardMaterial({name:'Lounge_walkway_gold_transition',color:0xb99845,map:goldMap,roughness:.42,metalness:.55,...depth})};
  return materials;

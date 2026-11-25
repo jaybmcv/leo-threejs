@@ -67,6 +67,8 @@ assert.equal(carpet[0].material.roughness,.96);assert.equal(carpet[0].material.m
 const velvet=carpet[0].material,map=velvet.map,json=velvet.toJSON({textures:{[map.uuid]:{uuid:map.uuid}},images:{}}),readBack=new T.MaterialLoader().setTextures({[json.map]:map}).parse(json);
 assert(velvet.isMeshPhysicalMaterial&&velvet.color.r<.01&&velvet.sheen>0&&velvet.sheenRoughness>=.7,'Black carpet uses a soft grazing sheen');
 assert.equal(readBack.sheen,velvet.sheen,'Prepared walk keeps the sheen');assert.equal(readBack.sheenColor.getHex(),velvet.sheenColor.getHex());assert.equal(readBack.map,velvet.map);
+assert.equal(readBack.emissiveMap,readBack.map,'Dim hall fill reuses the pile texture');
+assert(readBack.emissive.r*readBack.emissiveIntensity>0&&readBack.emissive.r*readBack.emissiveIntensity<.02,'Ambient fill stays near black');
 const pile=velvet.map.image.getContext('2d').getImageData(0,0,128,128).data;
 for(const columns of [false,true]){
  const means=[];
