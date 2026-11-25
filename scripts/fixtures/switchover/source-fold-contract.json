@@ -642,7 +642,7 @@
     "file": "src/mars.js",
     "original": "src/mars.js",
     "mode": "raw",
-    "bodySha256": "3175c03332a7dfaeefab2f9ce3f2585720d98a2c3c3f7c9d59ed857e18042682",
+    "bodySha256": "e2acb0221a32d538404044df2cb0b2a9d5491fda7dee4733c6840f85f6e85dc3",
     "imports": [
       "three"
     ],

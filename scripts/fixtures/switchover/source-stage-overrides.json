@@ -248,7 +248,7 @@
     "reason": "arrival hall stays smooth while the ship builds (yields, sliced floor scan, trolley bounds skip, pool skins read on CPU, pre-ready key gate)"
   },
   "src/mars.js": {
-    "sha256": "c7c9bb6ba79320bede51bfaf973c1f27eb4c80b2d61478b5d529a61874adde4d",
-    "reason": "Mars surface: each blurred group drawn on one layer and blurred once (Chrome 158 GPU stall)"
+    "sha256": "14e846fb8b5698b5e405b33c3734bd3ee7d70f1e9a7728833fee70695d0dcc4b",
+    "reason": "Mars surface: each blurred group drawn on one layer and blurred once (Chrome 158 GPU stall); fallback without filters or layer"
   }
 }

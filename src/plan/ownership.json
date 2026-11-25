@@ -492,7 +492,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "c7c9bb6ba79320bede51bfaf973c1f27eb4c80b2d61478b5d529a61874adde4d"
+      "signature": "14e846fb8b5698b5e405b33c3734bd3ee7d70f1e9a7728833fee70695d0dcc4b"
     },
     {
       "source": "src/model.authoring.js",

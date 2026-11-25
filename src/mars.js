@@ -38,8 +38,10 @@ function surfaceTexture(){
  // Each group of shapes is drawn sharp on a layer of its own, and the layer blurred once. A blur per shape (some 1,300
  // of them) is a filter pass each: Chrome 158 held the GPU 3.5 s for them, and the arrival hall's download and first
  // frames waited behind it. Grouped, it takes about a tenth of a second, and side by side the picture is the same.
- const layer=document.createElement('canvas');layer.width=w;layer.height=h;const lg=layer.getContext('2d');
- const blurred=(px,draw)=>{lg.clearRect(0,0,w,h);lg.save();draw(lg);lg.restore();g.filter=`blur(${px}px)`;g.drawImage(layer,0,0);g.filter='none';};
+ // Without canvas filters (older Safari) or without memory for the layer (a phone), each group is drawn straight onto
+ // the surface as before.
+ const layer='filter' in g?document.createElement('canvas'):null;if(layer){layer.width=w;layer.height=h;}const lg=layer?.getContext('2d');
+ const blurred=(px,draw)=>{g.filter=`blur(${px}px)`;if(lg){lg.clearRect(0,0,w,h);lg.save();draw(lg);lg.restore();g.drawImage(layer,0,0);}else draw(g);g.filter='none';};
  // Broad dark albedo regions and bright dusty plains.
  blurred(22,g=>{
   for(let i=0;i<45;i++){g.fillStyle=`rgba(${70+rnd()*30|0},${28+rnd()*14|0},${14+rnd()*10|0},${.12+rnd()*.22})`;g.beginPath();g.ellipse(rnd()*w,h*.25+rnd()*h*.5,40+rnd()*220,20+rnd()*90,rnd()*Math.PI,0,Math.PI*2);g.fill();}
@@ -83,6 +85,8 @@ function surfaceTexture(){
  blurred(7,g=>{
   g.strokeStyle='rgba(170,116,88,.22)';g.lineWidth=8;
   for(let i=0;i<14;i++){const x=rnd()*w;g.beginPath();g.moveTo(x,h*.01);g.quadraticCurveTo(x+40,h*.04,x+90,h*.065);g.stroke();}});
+ // Let the layer go before settled() makes its copy.
+ if(layer)layer.width=layer.height=0;
  // Turn the canyon side (the texture's middle) towards the ship, which looks at Mars along +x.
  const t=new T.CanvasTexture(settled(c));t.colorSpace=T.SRGBColorSpace;t.anisotropy=8;t.wrapS=T.RepeatWrapping;t.offset.x=.5;return t;
 }
