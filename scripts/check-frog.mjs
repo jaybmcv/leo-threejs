@@ -35,22 +35,40 @@ class AudioContext{
  createBuffer(n,length){return {getChannelData:()=>new Float32Array(length)};}resume(){return Promise.resolve();}close(){this.state='closed';return Promise.resolve();}
 }
 globalThis.AudioContext=AudioContext;let reduced=false;globalThis.matchMedia=()=>({get matches(){return reduced;}});
-const ctx=new AudioContext(),output=walkAudioOutput(ctx),camera=new T.PerspectiveCamera(61),copies=[];
-const renderer={getDrawingBufferSize:v=>v.set(320,180),copyFramebufferToTexture:t=>copies.push(t),render:s=>{renderer.uniforms=s.children[0].material.uniforms;}};
+const ctx=new AudioContext(),output=walkAudioOutput(ctx),camera=new T.PerspectiveCamera(61),copies=[],disposed=[];
+let width=320,draws=0;
+const renderer={getDrawingBufferSize:v=>v.set(width,180),copyFramebufferToTexture(t){
+ if(!copies.includes(t))t.addEventListener('dispose',()=>disposed.push(t));copies.push(t);
+},render:s=>{draws++;renderer.uniforms=s.children[0].material.uniforms;}};
 let clock=0,light=false;const trip=createFrogTrip({renderer,camera,light:()=>light,now:()=>clock});
-const frame=ms=>{clock=ms;trip.update();if(trip.active)trip.render();};
+const frame=ms=>{clock=ms;trip.update();trip.render();};
+const terms=(warp,trails,overlay)=>{
+ const expected=[warp,trails,overlay];assert.deepEqual([trip.warp,trip.trails,trip.overlay],expected);
+ if(trip.active)assert.deepEqual(['warp','trails','overlay'].map(name=>renderer.uniforms[name].value),expected);
+};
 assert.equal(trip.active,false);assert.deepEqual(output.links,[ctx.destination]);
-trip.start();frame(500);assert.equal(trip.strength,.5);frame(1000);assert.equal(trip.strength,1);assert.notEqual(camera.fov,61);assert(trip.audio.active&&trip.audio.hum&&trip.audio.chains===1);
-assert(renderer.uniforms.motion.value===1);frame(1200);assert.equal(renderer.uniforms.trails.value,1);
+frame(0);terms(0,0,0);assert.equal(copies.length,0);assert.equal(draws,0);
+trip.start();frame(0);assert.equal(copies.length,0);assert.equal(draws,0);
+frame(250);terms(frogStrength(.25),0,frogStrength(.25));
+const [picture,history]=copies;assert.notEqual(picture,history);assert.equal(copies.length,2);
+frame(500);assert.equal(trip.strength,.5);terms(.5,.5,.5);assert.deepEqual(copies.slice(2),[picture,history]);
+frame(1000);assert.equal(trip.strength,1);terms(1,1,1);assert.notEqual(camera.fov,61);assert(trip.audio.active&&trip.audio.hum&&trip.audio.chains===1);
+width=640;frame(1200);terms(1,0,1);assert.deepEqual(disposed,[picture,history]);
+const resized=copies.slice(-2);assert(resized.every(t=>t.image.width===640&&!disposed.includes(t)));
 const laterCtx=new AudioContext(),laterOutput=walkAudioOutput(laterCtx);assert.equal(trip.audio.chains,2);
-frame(15000);assert.equal(trip.strength,1);frame(17500);assert.equal(trip.strength,.5);frame(20000);
+frame(15000);assert.equal(trip.strength,1);terms(1,1,1);frame(17500);assert.equal(trip.strength,.5);terms(.5,.5,.5);
+const idleCopies=copies.length,idleDraws=draws;frame(20000);terms(0,0,0);frame(21000);
+assert.equal(copies.length,idleCopies);assert.equal(draws,idleDraws);assert.deepEqual(disposed,[picture,history,...resized]);
 assert.equal(camera.fov,61);assert.equal(trip.active,false);assert.equal(trip.audio.active,false);assert.equal(trip.audio.chains,0);assert.equal(trip.audio.hum,false);assert.deepEqual(output.links,[ctx.destination]);assert.deepEqual(laterOutput.links,[laterCtx.destination]);
 for(const c of contexts)for(const n of c.nodes)if(n.started)assert(n.stopped,'effect oscillator stopped');
-trip.start();frame(23000);trip.end();frame(23225);assert(trip.active);assert(Math.abs(trip.strength-.5)<.001);frame(23450);assert.equal(trip.active,false);assert.equal(camera.fov,61);
-reduced=true;trip.start();frame(25000);assert.equal(camera.fov,61);assert.equal(renderer.uniforms.motion.value,0);assert.equal(renderer.uniforms.trails.value,0);assert(renderer.uniforms.strength.value<.3);trip.end(true);
-reduced=false;light=true;trip.start();frame(27000);assert.equal(renderer.uniforms.motion.value,0);assert.equal(renderer.uniforms.trails.value,0);trip.end(true);assert.equal(camera.fov,61);
+trip.start();frame(23000);terms(1,0,1);assert(copies.slice(-2).every(t=>!disposed.includes(t)));
+trip.end();frame(23225);assert(trip.active);terms(.5,.5,.5);frame(23450);terms(0,0,0);assert.equal(trip.active,false);assert.equal(camera.fov,61);
+reduced=true;trip.start();frame(25000);assert.equal(camera.fov,61);terms(.12,0,.72);assert(renderer.uniforms.strength.value<.3);trip.end(true);
+reduced=false;trip.start();frame(27000);frame(27100);terms(1,1,1);
+const oldHistory=copies.at(-1),lightCopies=copies.length;light=true;frame(27200);terms(.72,0,1);
+assert(disposed.includes(oldHistory));assert.equal(copies.length,lightCopies+1);trip.end(true);terms(0,0,0);assert.equal(camera.fov,61);
 assert.equal(frogStrength(21),0);trip.dispose();
-console.log('PASS 20-second envelope, early fade, exact FOV/audio restoration, reduced motion and light rendering');
+console.log('PASS warp, trails and overlay follow the 20-second envelope; fresh feedback, reduced motion and light rendering; exact FOV and audio restoration');
 
 // Pointer lock consumes Escape before ordinary key handlers. It must still cancel the frog on that first press.
 const handlers=[],surface={addEventListener(){}};let escapes=0,unlocked=0;

@@ -2,6 +2,7 @@
 import {LOUNGE,mazePoint} from '../hydro-nip-lounge.js';
 import * as T from 'three';
 import {contains,bounds,rectangle} from '../plan/geometry-v2.js';
+import {LOUNGE_MURAL_X} from '../plan/lounge-layout-v2.js';
 import {mergeBoxes,glass,metal} from './geometry.js';
 export const galleryHoles=(r,o)=>(r.components.stairs||[]).filter(t=>t.center[1]<=o.center[1]+.02&&t.center[1]>o.center[1]-2.4).map(t=>{
  // Keep the gallery flush with the final tread; padding belongs behind the arrival.
@@ -16,7 +17,10 @@ export function buildGardenGuards(parent,r,layout){
  const panes=[],caps=[],feet=[],add=(a,b,y)=>{const length=Math.hypot(a[0]-b[0],a[1]-b[1]);if(length<.04)return;const yaw=-Math.atan2(b[1]-a[1],b[0]-a[0]),at=[(a[0]+b[0])/2,y+.55,(a[1]+b[1])/2];panes.push([[length+.025,1.1,.07],at,yaw]);caps.push([[length+.025,.045,.07],[at[0],y+1.1,at[2]],yaw]);if(r.id==='commons-1')feet.push([[length+.025,.04,.075],[at[0],y+.04,at[2]],yaw]);};
  const supported=(p,y,skip)=>sourcePlatforms.some(o=>Math.abs(o.y-y)<.13&&contains(o.polygon,p))||platforms.some(o=>o!==skip&&Math.abs(o.center[1]-y)<.42&&contains(o.polygon,p)&&!o.holes.some(h=>contains(h,p)))||stairs.some(t=>t.center[1]>=y-.42&&t.center[1]<=y+2.3&&contains(t.polygon,p))||layout.decks.some(d=>Math.abs(d.y-y)<.02&&contains(d.slab.outline,p)&&!d.slab.holes.some(h=>contains(h.polygon,p)));
  for(const o of platforms)for(const ring of [o.polygon,...o.holes])for(let i=0;i<ring.length;i++){
-  const a=ring[i],b=ring[(i+1)%ring.length],dx=b[0]-a[0],dz=b[1]-a[1],length=Math.hypot(dx,dz);if(length<1e-6)continue;const n=Math.ceil(length/.12),at=t=>[a[0]+dx*t,a[1]+dz*t];let start=null;
+  const a=ring[i],b=ring[(i+1)%ring.length],dx=b[0]-a[0],dz=b[1]-a[1],length=Math.hypot(dx,dz);if(length<1e-6)continue;
+  // The mural and its backing wall close the wall edge and the short return behind it.
+  if(o.id==='commons-1-end-8'&&ring===o.polygon&&(dx===0&&a[0]===LOUNGE_MURAL_X||dz===0&&Math.max(a[0],b[0])<=LOUNGE_MURAL_X))continue;
+  const n=Math.ceil(length/.12),at=t=>[a[0]+dx*t,a[1]+dz*t];let start=null;
   for(let k=0;k<=n;k++){const t=(k+.5)/n,p=at(Math.min(1,t)),test=sign=>[p[0]+sign*dz/length*.09,p[1]-sign*dx/length*.09],own=p=>contains(o.polygon,p)&&!o.holes.some(h=>contains(h,p)),left=test(1),right=test(-1),outside=own(left)?right:left,needs=k<n&&own(left)!==own(right)&&!supported(outside,o.center[1],o);
    if(needs&&start===null)start=k/n;if(!needs&&start!==null){add(at(start),at(k/n),o.center[1]);start=null;}
   }

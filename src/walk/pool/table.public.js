@@ -15,7 +15,8 @@ const ICOSA=[[90,0],[-90,0],...[0,1,2,3,4].map(k=>[26.57,k*72]),...[0,1,2,3,4].m
 // A ball's skin, wrapped round the sphere: its colour (a band of it for 9-15), twelve pentagon panels and its number
 // in a white disc on each side.
 function ballTexture(n){
- const c=walkCanvas();c.width=256;c.height=128;const g=c.getContext('2d');
+ // Read back once by the display rack (display-rack.js): a canvas kept for reading skips 16 GPU readbacks (0.4 s).
+ const c=walkCanvas();c.width=256;c.height=128;const g=c.getContext('2d',{willReadFrequently:true});
  const color=colorOf(n),base=n===0||striped(n)?'#f4f0e8':color;
  g.fillStyle=base;g.fillRect(0,0,256,128);
  if(striped(n)){g.fillStyle=color;g.fillRect(0,40,256,48);}

@@ -9,6 +9,7 @@ import {completeProgramme} from './programme-v2.js';
 import {connectPlan as connectCirculation} from './navigation-v2.js';
 import {DECKS,CABINS,COMMONS} from './layout-inputs-v1.js';
 import {SHIP_AREAS} from './layout-inputs-v1.js';
+import {roomNameV2} from './room-names-v2.js';
 import {loungeFacade} from './layout-inputs-v1.js';
 import {NOSE_COMMONS} from './layout-inputs-v1.js';
 import {aftOpenings} from './layout-inputs-v1.js';
@@ -31,7 +32,7 @@ function hullPath(h,y,height,start=-150,margin=.5){
 function floorOutline(h,y){const p=[];for(let x=-298;x<=265;x+=.25){const w=Math.min(h.skin(x,y,-1),h.skin(x,y,1))-2.5;if(w>.01)p.push([x,w]);}return [...p.map(([x,z])=>[x,-z]),...p.reverse()];}
 function makeRoom(a,x,z,yaw=0,extra={}){
  const y=a.center?.[1]??floorY(a.deck),width=a.width,depth=a.depth,height=a.height??3.5;
- return {id:a.id,name:a.name,deck:a.deck,kind:a.kind,frame:{origin:[x,y,z],yaw},center:[x,y,z],x,y,z,yaw,width,depth,height,polygon:rectangle(x,z,width,depth,yaw),size:[width,height,depth],v1:a.center?{origin:a.center,width:a.width,depth:a.depth,height:a.height,area:width*depth}:null,reason:'Rigid room translation/rotation preserves contents and clear dimensions.',...extra};
+ return {id:a.id,name:roomNameV2(a.id,a.name),deck:a.deck,kind:a.kind,frame:{origin:[x,y,z],yaw},center:[x,y,z],x,y,z,yaw,width,depth,height,polygon:rectangle(x,z,width,depth,yaw),size:[width,height,depth],v1:a.center?{origin:a.center,width:a.width,depth:a.depth,height:a.height,area:width*depth}:null,reason:'Rigid room translation/rotation preserves contents and clear dimensions.',...extra};
 }
 const hit=(poly,items)=>items.some(o=>overlaps(poly,o.polygon??rectPoly(o)));
 function addDoor(room,at,outward){room.door={id:room.id+'-door',center:[at[0],room.y,at[1]],width:Math.min(4,room.width/3),outward};}

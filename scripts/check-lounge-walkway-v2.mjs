@@ -4,17 +4,23 @@ import * as T from 'three';
 import {createCanvas} from '@napi-rs/canvas';
 import layout from '../src/plan/selected-layout.js';
 import {installWalkCanvas} from '../src/walk/canvas.js';
-import {polygonGeometry,floor,bounds} from '../src/v2/geometry.js';
+import {polygonGeometry,floor,bounds,mesh} from '../src/v2/geometry.js';
 import {buildCorridorFloors} from '../src/v2/corridor-floor-union.js';
 import {buildCommonsHallFinish} from '../src/v2/commons-hall-finish.js';
 import {launchDFitout} from '../src/v2/launch-d-fitout.js';
 import {applyPublicFinishKit} from '../src/v2/finish-kit.js';
 import {loungeWalkwayPlan,retireLoungeWalkwayBacking} from '../src/v2/lounge-walkway-finish.js';
+import {buildRoomShell} from '../src/v2/room-shell.js';
+import {applyLoungeFloorFinish} from '../src/v2/lounge-floor-material.js';
+import {cutChartMany,shellParts} from '../src/v2/hull-prototypes.js';
+import {sideGalleryDoorCuts} from '../src/v2/gallery-doorways.js';
+import {SYNTHWAVE_MURAL} from '../src/v2/community-routes.js';
+import {worldPoint} from '../src/plan/hull-skin-v2.js';
+import {installGround} from '../src/v2/ground.js';
 import {bakeForWalking} from '../src/walk/render-bake.js';
 import {Colliders,solid} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
-import {installGround} from '../src/v2/ground.js';
-import {LOUNGE_PLAN,applyLoungeBalconyCut} from '../src/plan/lounge-layout-v2.js';
+import {LOUNGE_PLAN,applyLoungeBalconyCut,applyLoungeWalkwayExtension} from '../src/plan/lounge-layout-v2.js';
 
 installWalkCanvas(createCanvas);
 // This Deck 18 cut must leave the Deck 19 walkway and every other gallery untouched.
@@ -147,3 +153,40 @@ for(const number of [17,18]){
 const source=f=>fs.readFileSync(f,'utf8').replaceAll('\r\n','\n').replaceAll('.authoring.js','.js');assert.equal(source('src/v2/finish-kit.js'),source('src/v2/finish-kit.authoring.js'),'Authoring and public finish producers must agree');
 assert.equal(source('src/v2/render-bake.js'),source('src/v2/render-bake.authoring.js'),'Both bake producers must retire covered backing');
 console.log('PASS: velvet, 65 mm transitions and clipped floor borders on Decks 17–19. Existing tile, landings, interior floors, voids and walking support are preserved.');
+
+// Check the room-side infill with the real shell, finish, guards and cut bulkhead.
+{
+ const r=layout.rooms.find(r=>r.id==='commons-1'),end=r.components.galleries.find(g=>g.id==='commons-1-end-8');
+ const copy={...r,components:structuredClone(r.components)};applyLoungeWalkwayExtension(copy);assert.deepEqual(copy.components,r.components);
+ const xWall=SYNTHWAVE_MURAL.x,xJoin=-139,zDrop=-44.4435229,zEnd=-40.6935229,y=deck.y;
+ const root=new T.Group(),ship={root,inside:root,cutaway:new Set()};buildRoomShell(ship,r,root);applyLoungeFloorFinish(ship);
+ const proto=r.hullPrototype,parts=shellParts(proto,p=>worldPoint(proto.chart,p)),wall=mesh(root,'V2_prototype_garden_side_walls',parts.sides);
+ cutChartMany(wall,sideGalleryDoorCuts(r));root.updateMatrixWorld(true);
+ const slabs=root.getObjectsByProperty('name','V2_garden_gallery'),probe=new T.Raycaster(),cast=(at,dir,objects,far=.4)=>{probe.set(new T.Vector3(...at),new T.Vector3(...dir));probe.far=far;return probe.intersectObjects(objects);};
+ const surface=(x,z)=>{
+  for(const [level,sign] of [[y,-1],[y-end.size[1],1]]){
+   const hits=cast([x,level-sign*.2,z],[0,sign,0],slabs);assert.equal(hits.length,1,'One continuous top or underside at '+[x,z]);
+   assert(Math.abs(hits[0].point.y-level)<.00002);assert.equal(hits[0].object.material.name,'Lounge_velvet_carpet');
+  }
+ };
+ for(const x of [xWall+.002,-140.3,-139.7,xJoin-.01,xJoin+.01])for(const z of [zDrop+.015,-43.2,-41.7,zEnd-.015,zEnd+.015])surface(x,z);
+ for(const [x,z] of [[xWall-.002,-42.5],[-140,zDrop-.02],[-139.7,-48]])assert.equal(cast([x,y+.2,z],[0,-1,0],slabs).length,0,'Slab stops at the mural and the drop edge');
+ for(const [name,height] of [['V2_garden_guard_glass',.6],['V2_garden_guard_cap',1.1],['Lounge_rail_glow',.04]]){
+  const guard=root.getObjectsByProperty('name',name);assert(guard.length);
+  if(name!=='V2_garden_guard_glass')assert.equal(guard[0].material.color.getHex(),0xff6b20);
+  for(let x=xWall+.003;x<xJoin+.05;x+=.025)assert(cast([x,y+height,zDrop+.3],[0,0,-1],guard).length,'Continuous return guard '+name);
+  for(let z=zDrop+.12;z<zEnd-.12;z+=.1)assert.equal(cast([xJoin+.28,y+height,z],[-1,0,0],guard,2.1).length,0,'The old edge and wall line have no guard '+name);
+ }
+ const collision=installGround(new Colliders(),new Colliders());collision.addStatic(root,solid);collision.commit();
+ const start=new T.Vector3(-138.02,y,-40.31),yaw=217*Math.PI/180,walker=new Controller(collision);walker.place(start);
+ const walk=(direction,seconds)=>{for(let i=0;i<Math.round(60*seconds);i++){walker.step(1/60,direction);assert(walker.grounded&&Math.abs(walker.position.y-y)<.00002,'Reported route stays at Deck 19 height');}};
+ walk(new T.Vector3(Math.sin(yaw),0,Math.cos(yaw)).multiplyScalar(2.25),2.2);
+ assert(Math.abs(walker.position.x-xWall-walker.body.radius)<.02&&walker.position.distanceTo(start)>4,'Cross the old guard line to the mural without clipping the camera');
+ walk(new T.Vector3(-2.25,0,0),.35);const stopped=walker.position.clone();walk(new T.Vector3(-2.25,0,0),.4);assert(walker.position.distanceTo(stopped)<.01,'The wall stops further travel');
+ walk(start.clone().sub(stopped).setY(0).normalize().multiplyScalar(2.25),2);assert(walker.position.distanceTo(start)<.4,'Turn and walk back to the starting spot');
+ const baked=[...bakeForWalking(root).bands.values()].flatMap(b=>b.getObjectsByProperty('isMesh',true));
+ for(const [level,sign] of [[y,-1],[y-end.size[1],1]])for(const x of [-140.55,-139.03,-138.97]){
+  const face=cast([x,level-sign*.2,-42.2],[0,sign,0],baked)[0];assert.equal(face?.object.material.name,'Lounge_velvet_carpet');assert(Math.abs(face.point.y-level)<.00002,'The walk bake keeps both sides flush across the joint');
+ }
+ console.log('PASS Deck 19 mural infill: flush carpet and underside, joined orange glass guard, solid wall and level round trip');
+}

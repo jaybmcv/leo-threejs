@@ -22,6 +22,9 @@ const whole=[
  [o=>{o['commons-1'].removeGardenPrints.push(74);},/removeGardenPrints, which src\/v2\/garden-art\.js/,'Garden print removal'],
  [o=>{o['d02-maintenance-aft'].remove.pop();},/d02-maintenance-aft remove, which src\/lower-aft\.js/,'Lower-aft legacy fitting removal'],
  [o=>{o['d4-escape-s-9'].add.find(p=>p.part==='emergency_drill_button').at[0]+=.1;},/station\.js/,'Drill button'],
+ [o=>{o['commons-1'].converger.center[0]+=.5;},/commons-1 converger, which src\/plan\/lounge-layout-v2\.js/,'Moving the munchies converger'],
+ [o=>{o['d16-training-aft'].gamingStations[0].at[0]+=.5;},/d16-training-aft gamingStations, which src\/walk\/gaming-lounge\.js/,'Moving a gaming wall station'],
+ [o=>{o['d16-training-aft'].gamingLeaderboard.radius+=.1;},/d16-training-aft gamingLeaderboard, which src\/walk\/gaming-lounge\.js/,'Resizing the leaderboard hologram'],
  [o=>{o['d16-theater-5'].colour='red';},/d16-theater-5 colour, which the fit-out data does not show/,'Unknown key'],
  [o=>{o['d16-theater-5']=[];},/d16-theater-5, which the fit-out data does not show/,'A room that is not an object'],
 ];
