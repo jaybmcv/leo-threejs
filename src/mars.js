@@ -35,46 +35,54 @@ function surfaceTexture(){
  for(let i=0;i<n.length;i++){const v=(n[i]-.5)*2.2,dark=v<0;
   img.data.set(dark?[92,38,20,Math.min(255,-v*190)]:[236,176,122,Math.min(255,v*120)],i*4);}
  mg.putImageData(img,0,0);g.imageSmoothingQuality='high';g.drawImage(m,0,0,w,h);
+ // Each group of shapes is drawn sharp on a layer of its own, and the layer blurred once. A blur per shape (some 1,300
+ // of them) is a filter pass each: Chrome 158 held the GPU 3.5 s for them, and the arrival hall's download and first
+ // frames waited behind it. Grouped, it takes about a tenth of a second, and side by side the picture is the same.
+ const layer=document.createElement('canvas');layer.width=w;layer.height=h;const lg=layer.getContext('2d');
+ const blurred=(px,draw)=>{lg.clearRect(0,0,w,h);lg.save();draw(lg);lg.restore();g.filter=`blur(${px}px)`;g.drawImage(layer,0,0);g.filter='none';};
  // Broad dark albedo regions and bright dusty plains.
- g.filter='blur(22px)';
- for(let i=0;i<45;i++){g.fillStyle=`rgba(${70+rnd()*30|0},${28+rnd()*14|0},${14+rnd()*10|0},${.12+rnd()*.22})`;g.beginPath();g.ellipse(rnd()*w,h*.25+rnd()*h*.5,40+rnd()*220,20+rnd()*90,rnd()*Math.PI,0,Math.PI*2);g.fill();}
- for(let i=0;i<30;i++){g.fillStyle=`rgba(235,170,120,${.06+rnd()*.12})`;g.beginPath();g.ellipse(rnd()*w,rnd()*h,60+rnd()*200,30+rnd()*90,rnd()*Math.PI,0,Math.PI*2);g.fill();}
- // The named dark regions on the side the ship faces: Acidalia to the north, Erythraeum and Aurorae to the south.
- for(const [x,y,rx,ry,a] of [[.47,.27,150,55,.4],[.56,.66,190,60,.35],[.6,.6,80,35,.3],[.5,.72,120,40,.25]]){
-  g.fillStyle=`rgba(78,32,16,${a})`;g.beginPath();g.ellipse(w*x,h*y,rx,ry,(rnd()-.5)*.6,0,Math.PI*2);g.fill();}
- // Tharsis: a bright, dusty rise west of the canyons, with three shield volcanoes in a line and Olympus Mons beyond.
- g.fillStyle='rgba(238,184,136,.28)';g.beginPath();g.ellipse(w*.36,h*.46,160,110,0,0,Math.PI*2);g.fill();
- g.filter='blur(2px)';
- for(const [x,y,r] of [[.29,.4,34],[.355,.43,15],[.365,.48,17],[.375,.53,14]]){
-  const dome=g.createRadialGradient(w*x-r*.3,h*y-r*.3,0,w*x,h*y,r*1.6);dome.addColorStop(0,'rgba(246,206,166,.55)');dome.addColorStop(.6,'rgba(222,160,112,.3)');dome.addColorStop(1,'rgba(150,80,44,0)');
-  g.fillStyle=dome;g.beginPath();g.arc(w*x,h*y,r*1.6,0,Math.PI*2);g.fill();
-  g.strokeStyle='rgba(120,56,30,.45)';g.lineWidth=1.5;g.beginPath();g.arc(w*x,h*y,r*1.45,0,Math.PI*2);g.stroke();
-  g.fillStyle='rgba(84,36,18,.6)';g.beginPath();g.arc(w*x,h*y,r*.22,0,Math.PI*2);g.fill();}
+ blurred(22,g=>{
+  for(let i=0;i<45;i++){g.fillStyle=`rgba(${70+rnd()*30|0},${28+rnd()*14|0},${14+rnd()*10|0},${.12+rnd()*.22})`;g.beginPath();g.ellipse(rnd()*w,h*.25+rnd()*h*.5,40+rnd()*220,20+rnd()*90,rnd()*Math.PI,0,Math.PI*2);g.fill();}
+  for(let i=0;i<30;i++){g.fillStyle=`rgba(235,170,120,${.06+rnd()*.12})`;g.beginPath();g.ellipse(rnd()*w,rnd()*h,60+rnd()*200,30+rnd()*90,rnd()*Math.PI,0,Math.PI*2);g.fill();}
+  // The named dark regions on the side the ship faces: Acidalia to the north, Erythraeum and Aurorae to the south.
+  for(const [x,y,rx,ry,a] of [[.47,.27,150,55,.4],[.56,.66,190,60,.35],[.6,.6,80,35,.3],[.5,.72,120,40,.25]]){
+   g.fillStyle=`rgba(78,32,16,${a})`;g.beginPath();g.ellipse(w*x,h*y,rx,ry,(rnd()-.5)*.6,0,Math.PI*2);g.fill();}
+  // Tharsis: a bright, dusty rise west of the canyons, with three shield volcanoes in a line and Olympus Mons beyond.
+  g.fillStyle='rgba(238,184,136,.28)';g.beginPath();g.ellipse(w*.36,h*.46,160,110,0,0,Math.PI*2);g.fill();});
+ blurred(2,g=>{
+  for(const [x,y,r] of [[.29,.4,34],[.355,.43,15],[.365,.48,17],[.375,.53,14]]){
+   const dome=g.createRadialGradient(w*x-r*.3,h*y-r*.3,0,w*x,h*y,r*1.6);dome.addColorStop(0,'rgba(246,206,166,.55)');dome.addColorStop(.6,'rgba(222,160,112,.3)');dome.addColorStop(1,'rgba(150,80,44,0)');
+   g.fillStyle=dome;g.beginPath();g.arc(w*x,h*y,r*1.6,0,Math.PI*2);g.fill();
+   g.strokeStyle='rgba(120,56,30,.45)';g.lineWidth=1.5;g.beginPath();g.arc(w*x,h*y,r*1.45,0,Math.PI*2);g.stroke();
+   g.fillStyle='rgba(84,36,18,.6)';g.beginPath();g.arc(w*x,h*y,r*.22,0,Math.PI*2);g.fill();}});
  // Valles Marineris: a long canyon system just south of the equator, branching into Noctis Labyrinthus at its west end.
- g.filter='blur(4px)';g.strokeStyle='rgba(60,22,10,.55)';g.lineWidth=10;g.beginPath();g.moveTo(w*.42,h*.53);g.bezierCurveTo(w*.48,h*.5,w*.55,h*.57,w*.63,h*.55);g.stroke();
- g.lineWidth=4;g.strokeStyle='rgba(60,22,10,.38)';g.beginPath();g.moveTo(w*.45,h*.545);g.bezierCurveTo(w*.5,h*.53,w*.56,h*.585,w*.61,h*.57);g.stroke();
- g.filter='blur(2.5px)';g.lineWidth=2.5;
- for(let i=0;i<14;i++){const x=w*(.4+rnd()*.03),y=h*(.5+rnd()*.06),a=rnd()*Math.PI*2,l=8+rnd()*16;
-  g.strokeStyle=`rgba(60,22,10,${.15+rnd()*.2})`;g.beginPath();g.moveTo(x,y);g.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l*.6);g.stroke();}
+ blurred(4,g=>{
+  g.strokeStyle='rgba(60,22,10,.55)';g.lineWidth=10;g.beginPath();g.moveTo(w*.42,h*.53);g.bezierCurveTo(w*.48,h*.5,w*.55,h*.57,w*.63,h*.55);g.stroke();
+  g.lineWidth=4;g.strokeStyle='rgba(60,22,10,.38)';g.beginPath();g.moveTo(w*.45,h*.545);g.bezierCurveTo(w*.5,h*.53,w*.56,h*.585,w*.61,h*.57);g.stroke();});
+ blurred(2.5,g=>{
+  g.lineWidth=2.5;
+  for(let i=0;i<14;i++){const x=w*(.4+rnd()*.03),y=h*(.5+rnd()*.06),a=rnd()*Math.PI*2,l=8+rnd()*16;
+   g.strokeStyle=`rgba(60,22,10,${.15+rnd()*.2})`;g.beginPath();g.moveTo(x,y);g.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l*.6);g.stroke();}});
  // Light canyon walls along the north rim catch the sun.
- g.filter='blur(2px)';g.strokeStyle='rgba(240,190,146,.3)';g.lineWidth=2;g.beginPath();g.moveTo(w*.42,h*.522);g.bezierCurveTo(w*.48,h*.492,w*.55,h*.562,w*.63,h*.542);g.stroke();
+ blurred(2,g=>{
+  g.strokeStyle='rgba(240,190,146,.3)';g.lineWidth=2;g.beginPath();g.moveTo(w*.42,h*.522);g.bezierCurveTo(w*.48,h*.492,w*.55,h*.562,w*.63,h*.542);g.stroke();});
  // Craters: many small and a few large, each with a darker floor, a shadowed rim on one side and a lit rim on the other.
- g.filter='blur(1.2px)';
- for(let i=0;i<360;i++){const x=rnd()*w,y=h*.1+rnd()*h*.8,r=1.5+rnd()**5*24,a=.05+rnd()*.09;
-  g.fillStyle=`rgba(96,44,22,${a*.8})`;g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fill();
-  g.lineWidth=Math.max(1,r*.14);
-  g.strokeStyle=`rgba(64,26,12,${a*1.6})`;g.beginPath();g.arc(x,y,r,Math.PI*.75,Math.PI*1.75);g.stroke();
-  g.strokeStyle=`rgba(246,200,158,${a*1.3})`;g.beginPath();g.arc(x,y,r,Math.PI*1.75,Math.PI*2.75);g.stroke();}
+ blurred(1.2,g=>{
+  for(let i=0;i<360;i++){const x=rnd()*w,y=h*.1+rnd()*h*.8,r=1.5+rnd()**5*24,a=.05+rnd()*.09;
+   g.fillStyle=`rgba(96,44,22,${a*.8})`;g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fill();
+   g.lineWidth=Math.max(1,r*.14);
+   g.strokeStyle=`rgba(64,26,12,${a*1.6})`;g.beginPath();g.arc(x,y,r,Math.PI*.75,Math.PI*1.75);g.stroke();
+   g.strokeStyle=`rgba(246,200,158,${a*1.3})`;g.beginPath();g.arc(x,y,r,Math.PI*1.75,Math.PI*2.75);g.stroke();}});
  // Faint dust streaks trailing from craters, all blown the same way.
- g.filter='blur(3px)';
- for(let i=0;i<60;i++){const x=rnd()*w,y=h*.2+rnd()*h*.6;g.fillStyle=`rgba(240,186,140,${.05+rnd()*.07})`;g.beginPath();g.ellipse(x+14,y+4,18+rnd()*26,3+rnd()*4,.25,0,Math.PI*2);g.fill();}
+ blurred(3,g=>{
+  for(let i=0;i<60;i++){const x=rnd()*w,y=h*.2+rnd()*h*.6;g.fillStyle=`rgba(240,186,140,${.05+rnd()*.07})`;g.beginPath();g.ellipse(x+14,y+4,18+rnd()*26,3+rnd()*4,.25,0,Math.PI*2);g.fill();}});
  // Polar caps with ragged edges and dark lanes spiralling in the north.
- g.filter='blur(6px)';
- for(const [y0,y1] of [[0,h*.07],[h*.95,h]]){g.fillStyle='rgba(246,240,232,.92)';g.fillRect(0,y0,w,y1-y0);}
- for(let i=0;i<60;i++){g.fillStyle=`rgba(246,240,232,${.35+rnd()*.35})`;g.beginPath();g.ellipse(rnd()*w,rnd()<.5?h*(.07+rnd()*.025):h*(.93+rnd()*.02),20+rnd()*70,5+rnd()*14,0,0,Math.PI*2);g.fill();}
- g.filter='blur(7px)';g.strokeStyle='rgba(170,116,88,.22)';g.lineWidth=8;
- for(let i=0;i<14;i++){const x=rnd()*w;g.beginPath();g.moveTo(x,h*.01);g.quadraticCurveTo(x+40,h*.04,x+90,h*.065);g.stroke();}
- g.filter='none';
+ blurred(6,g=>{
+  for(const [y0,y1] of [[0,h*.07],[h*.95,h]]){g.fillStyle='rgba(246,240,232,.92)';g.fillRect(0,y0,w,y1-y0);}
+  for(let i=0;i<60;i++){g.fillStyle=`rgba(246,240,232,${.35+rnd()*.35})`;g.beginPath();g.ellipse(rnd()*w,rnd()<.5?h*(.07+rnd()*.025):h*(.93+rnd()*.02),20+rnd()*70,5+rnd()*14,0,0,Math.PI*2);g.fill();}});
+ blurred(7,g=>{
+  g.strokeStyle='rgba(170,116,88,.22)';g.lineWidth=8;
+  for(let i=0;i<14;i++){const x=rnd()*w;g.beginPath();g.moveTo(x,h*.01);g.quadraticCurveTo(x+40,h*.04,x+90,h*.065);g.stroke();}});
  // Turn the canyon side (the texture's middle) towards the ship, which looks at Mars along +x.
  const t=new T.CanvasTexture(settled(c));t.colorSpace=T.SRGBColorSpace;t.anisotropy=8;t.wrapS=T.RepeatWrapping;t.offset.x=.5;return t;
 }
