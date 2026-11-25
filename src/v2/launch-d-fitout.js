@@ -1,4 +1,5 @@
 import {contains} from '../plan/geometry-v2.js';
+import {loungeWalkwayPlan,loungeWalkwayBorderRects} from './lounge-walkway-finish.js';
 // The accepted Phase 4 box/rounded-box, material and seat protocol. Every island
 // is checked in the room's final door frame, including its standing approach.
 export function launchDFitout(layout){
@@ -34,6 +35,23 @@ export function launchDFitout(layout){
   if(!r.openPlan)for(let z=4;z<depth-1;z+=9)add('pendant_light',[1.2,.025,.25],[0,3.15,z],'light',{noCollide:true});
   rooms.push({id:r.id,deck:r.deck,name:r.name,origin:r.door.center,u,v,rests:rests.length-start,variant:r.launchD.variant,launchD:true});
  }
- for(const c of layout.circulation.corridors.filter(c=>c.kind==='public-street')){let ordinal=0;for(let i=1;i<c.points.length;i++){const a=c.points[i-1],b=c.points[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<6)continue;for(let t=4;t<len;t+=24){const f=t/len,deck=layout.decks[c.deck-1],x=a[0]+(b[0]-a[0])*f,z=a[1]+(b[1]-a[1])*f;if(deck.slab.holes.some(h=>contains(h.polygon,[x,z]))||layout.rooms.some(r=>!r.aggregate&&r.deck===c.deck&&contains(r.polygon,[x,z])))continue;parts.push({part:'street_wayfinding',size:[1.7,.018,.14],at:[x,deck.y+.025,z],mat:c.deck<6?'orange':'sage',room:'circulation-'+c.deck,deck:c.deck,yaw:-Math.atan2(b[1]-a[1],b[0]-a[0]),noCollide:true});ordinal++;}}}
+ const walkways=new Map();
+ for(const c of layout.circulation.corridors.filter(c=>c.kind==='public-street')){
+  if([17,18,19].includes(c.deck)&&!walkways.has(c.deck))walkways.set(c.deck,loungeWalkwayPlan(layout,c.deck));
+  const walkway=walkways.get(c.deck),deck=layout.decks[c.deck-1];
+  for(let i=1;i<c.points.length;i++){
+   const a=c.points[i-1],b=c.points[i],dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);if(len<6)continue;
+   for(let t=4;t<len;t+=24){
+    const f=t/len,x=a[0]+dx*f,z=a[1]+dz*f;
+    if(deck.slab.holes.some(h=>contains(h.polygon,[x,z]))||layout.rooms.some(r=>!r.aggregate&&r.deck===c.deck&&contains(r.polygon,[x,z])))continue;
+    const mark={part:'street_wayfinding',size:[1.7,.018,.14],at:[x,deck.y+.025,z],mat:c.deck<6?'orange':'sage',room:'circulation-'+c.deck,deck:c.deck,yaw:-Math.atan2(dz,dx),noCollide:true};
+    if(!walkway||dx&&dz){parts.push(mark);continue;}
+    // Paint the street markings only where the floor remains uncovered.
+    const hx=dx?.85:.07,hz=dx?.07:.85,rect=[x-hx,x+hx,z-hz,z+hz],pieces=loungeWalkwayBorderRects(rect,walkway);
+    if(pieces[0]===rect){parts.push(mark);continue;}
+    for(const [x0,x1,z0,z1]of pieces)parts.push({...mark,size:[x1-x0,mark.size[1],z1-z0],at:[(x0+x1)/2,mark.at[1],(z0+z1)/2],yaw:0});
+   }
+  }
+ }
  return {parts,rests,rooms};
 }

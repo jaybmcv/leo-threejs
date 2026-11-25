@@ -16,7 +16,7 @@ const FITOUT_DATA='src/v2/room-fitout-overrides.js';
 export const OVERRIDE_READERS=[
  // moveRoomFitoutMeshes, run by every room shell.
  {file:FITOUT_DATA,rooms:null,keys:['moveMeshes','removeMeshes']},
- {file:'src/hydro-nip-lounge.js',rooms:['commons-1'],keys:['moveLoungeSeating','loungeRug','remove']},
+ {file:'src/hydro-nip-lounge.js',rooms:['commons-1'],keys:['moveLoungeSeating','loungeRug','mazeRugMove','remove']},
  {file:'src/v2/garden-art.js',rooms:null,keys:['removeGardenPrints']},
  // LOWER_AFT_AREAS: its legacy fittings share the override's part names.
  {file:'src/lower-aft.js',rooms:['d01-spares-aft','d02-maintenance-aft','d03-inspection-aft'],keys:['remove']},
@@ -24,6 +24,8 @@ export const OVERRIDE_READERS=[
  {file:'src/walk/emergency-drill/station.js',rooms:['d4-escape-s-9'],keys:['add']},
  // The Hydro-Nip munchies converger's place in the lounge layout.
  {file:'src/plan/lounge-layout-v2.js',rooms:['commons-1'],keys:['converger']},
+ // The Hydro-Nip falls, pond, path, landing and bench (#426).
+ {file:'src/v2/lounge-falls-layout.js',rooms:['commons-1'],keys:['loungeFalls']},
  // The gaming lounge's PC row, consoles, wall stations and leaderboard hologram (the walk module and its authoring twin).
  {file:'src/walk/gaming-lounge.js',rooms:['d16-training-aft'],keys:['gamingConsoles','gamingLeaderboard','gamingStations','gamingWindowRow']},
  {file:'src/walk/gaming-lounge.authoring.js',rooms:['d16-training-aft'],keys:['gamingConsoles','gamingLeaderboard','gamingStations','gamingWindowRow']},

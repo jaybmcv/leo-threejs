@@ -642,7 +642,7 @@
     "file": "src/mars.js",
     "original": "src/mars.js",
     "mode": "raw",
-    "bodySha256": "69e3eba9c97b36febc9fb4f44150916f35caf5780a489fbf02ea9008d17649f9",
+    "bodySha256": "e2acb0221a32d538404044df2cb0b2a9d5491fda7dee4733c6840f85f6e85dc3",
     "imports": [
       "three"
     ],
@@ -1726,11 +1726,12 @@
     "file": "src/v2/distant-architecture.js",
     "original": "src/v2/distant-architecture.js",
     "mode": "raw",
-    "bodySha256": "8f3cbc4244d3d52d9c0e75eaaa5a0cd0d98b6c605d90b687a3490ffa1bff04eb",
+    "bodySha256": "c8eff2b843ae82a921ce694983e854a00ee437dc3a789832d066446767f0b20f",
     "imports": [
       "./phone-distant.js",
       "three",
-      "./yield-to-page.js"
+      "./yield-to-page.js",
+      "./draw-bounds.js"
     ],
     "geometryCalls": []
   },
@@ -1738,7 +1739,7 @@
     "file": "src/v2/facade.js",
     "original": "src/v2/facade.js",
     "mode": "raw",
-    "bodySha256": "6521f2d3ecf506c1e5b026bea6d6f8fda600da4ae98213167b284428abcafd9f",
+    "bodySha256": "8ceb41ec0f4d8c931069ced0210d84bd4f964dfb2c633391e1c3e9bb0e9e65ad",
     "imports": [
       "./atrium-architecture.js",
       "./atrium-visibility.js",
@@ -8208,7 +8209,7 @@
     "file": "src/v2/prepared-resource.public.js",
     "original": "src/v2/prepared-resource.js",
     "mode": "public",
-    "bodySha256": "698989bb349b2c0c4b867658f653b3a8d8790115e4403d0a1ed8f314a3af1a58",
+    "bodySha256": "f07ad0b1b9b6e1a12989c9d9e5a80834b7a35babafa38d34a6a09ef345668ab1",
     "imports": [
       "./prepared-codec.public.js",
       "./prepared-fetch.js",

@@ -50,7 +50,7 @@ console.log('PASS one opaque matte black colliding wall, y',box.min.y.toFixed(2)
  for(let i=0;i<p.count;i+=3){t.setFromAttributeAndIndices(p,i,i+1,i+2);t.getNormal(n);t.getMidpoint(c);
   if(Math.abs(n.y)>.9){assert(n.y>0,'Downward face on the wall');counts.top++;continue;}
   assert(Math.abs(n.y)<1e-3,'Sloping wall face');
-  if(Math.abs(n.x)>.99&&(Math.abs(c.x-W.pond[0])<.02||Math.abs(c.x-W.pond[1])<.02)){assert.equal(Math.sign(n.x),c.x>-108?-1:1,'Pond end cap faces the pond');counts.cap++;continue;}
+  if(Math.abs(n.x)>.99&&(Math.abs(c.x-W.pond[0])<.02||Math.abs(c.x-W.pond[1])<.02)){assert.equal(Math.sign(n.x),c.x>(W.pond[0]+W.pond[1])/2?-1:1,'Pond end cap faces the pond');counts.cap++;continue;}
   const e=loungeWalkwayEdgeZ(plan.line,c.x),d=c.z-e;
   if(d<W.inset+W.thickness/2){assert(n.z<0&&Math.abs(d-W.inset)<.003,'Open-floor face '+c.toArray());counts.front++;}else{assert(n.z>0&&Math.abs(d-W.inset-W.thickness)<.02,'Lounge face '+c.toArray());counts.back++;}
  }
@@ -88,7 +88,7 @@ const walker=new Controller(col);
 const walk=(wish,seconds)=>{for(let i=0;i<Math.round(seconds*60);i++)walker.step(1/60,new T.Vector3(...wish),false);};
 const reach=(x,z,label)=>{let steps=0;while(Math.hypot(walker.position.x-x,walker.position.z-z)>.2&&steps++<1800){const wish=new T.Vector3(x-walker.position.x,0,z-walker.position.z).normalize().multiplyScalar(2.25);walker.step(1/60,wish,false);}
  assert(steps<1800,label+': cannot reach '+[x,z]+', stopped at '+walker.position.toArray().map(n=>n.toFixed(2)));};
-for(const x of [-140.4,-136,-131,-126,-121,-117,-100,-95,-90.5]){
+for(const x of [-140.4,-136,-131,-126,-121,-116,-110,-105.5,-94.5,-90.5]){
  const e=loungeWalkwayEdgeZ(plan.line,x);walker.place(new T.Vector3(x,r.y,e-3));walk([0,0,2.25],4);
  // The edge slopes, so the walker slides along it in x: hold it to the edge where it stopped.
  assert(walker.position.z<loungeWalkwayEdgeZ(plan.line,walker.position.x)-.2,'Walked through the wall at x '+x+': '+walker.position.toArray().map(n=>n.toFixed(2)));const stop=walker.position.z;
@@ -97,9 +97,9 @@ for(const x of [-140.4,-136,-131,-126,-121,-117,-100,-95,-90.5]){
 // The tester's standing spot, walking straight at the Haze Maze sign, then back.
 {const start=new T.Vector3(-132.07,r.y,-60.39),sign=new T.Vector3(-129.5,r.y,-42),dir=sign.clone().sub(start).normalize().multiplyScalar(2.25);
  walker.place(start);walk(dir.toArray(),8);const e=loungeWalkwayEdgeZ(plan.line,walker.position.x);assert(walker.position.z<e,'Reached past the wall toward the Haze Maze');
- reach(start.x,start.z,'Back to the standing spot');console.log('PASS walls stop the open floor at nine places and the walk toward the Haze Maze sign, and each walker turns back');}
+ reach(start.x,start.z,'Back to the standing spot');console.log('PASS walls stop the open floor at ten places and the walk toward the Haze Maze sign, and each walker turns back');}
 // The bench stands on the landing in line with the causeway: step onto the landing beside it.
-walker.place(new T.Vector3(-106.4,r.y,-62.5));
-for(const [x,z] of [[-106.4,-58.5],[-108.75,-58.5],[-108.75,-47.5],[-129.5,-49],[-129.5,-43.6]])reach(x,z,'Open floor over the causeway to the Haze Maze door');
-for(const [x,z] of [[-129.5,-49],[-108.75,-47.5],[-108.75,-58.5],[-106.4,-58.5],[-106.4,-62.5]])reach(x,z,'Haze Maze door back over the causeway');
+walker.place(new T.Vector3(-102.2,r.y,-62.5));
+for(const [x,z] of [[-102.2,-57.2],[-99.7,-56.6],[-99.7,-47.5],[-108.75,-47.5],[-129.5,-49],[-129.5,-43.6]])reach(x,z,'Open floor over the causeway to the Haze Maze door');
+for(const [x,z] of [[-129.5,-49],[-108.75,-47.5],[-99.7,-47.5],[-99.7,-56.6],[-102.2,-57.2],[-102.2,-62.5]])reach(x,z,'Haze Maze door back over the causeway');
 console.log('PASS open floor to the Haze Maze door over the pond causeway and back');

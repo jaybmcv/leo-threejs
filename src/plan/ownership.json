@@ -400,7 +400,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 129,
-      "signature": "e3f739c7fbe2ac0065b9ad61f012997fcf894608cda36ee287eebd0c17a6c1c7"
+      "signature": "7e4c50cd6732062d4cadc772507f131a76b323f7bc8d89e94b331702fe937457"
     },
     {
       "source": "src/interior-polish.js",
@@ -492,7 +492,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "7a07b0ab6de7f45f7dfa4a5dcb9fe35014da79aa4c19cc7f7bcf333182519d36"
+      "signature": "14e846fb8b5698b5e405b33c3734bd3ee7d70f1e9a7728833fee70695d0dcc4b"
     },
     {
       "source": "src/model.authoring.js",
@@ -4135,8 +4135,8 @@
         "Lounge_falls_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 29,
-      "signature": "301e80d98e2820a6a5014a9162dd507b0a9008cc9057bc17313eae742c30c2b4"
+      "placements": 28,
+      "signature": "a369b9ba67fbeb481633509d076fd9772989a602eff347cc99dc4d9cd044b154"
     },
     {
       "source": "src/walk/lounge-floor.js",

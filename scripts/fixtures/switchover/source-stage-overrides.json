@@ -168,8 +168,8 @@
     "reason": "Walk performance: ordered sparse collision lookup, exact opaque visibility traversal, unchanged instance-upload suppression, cached low-deck multi-draw lists. Geometry replay call IDs unchanged; targeted parity fixtures and matched-image checks."
   },
   "src/v2/facade.js": {
-    "sha256": "0478e6aaf9e937ee46cc64779f07252a7eac5fc1be7492801c6f7f273c1a8cf1",
-    "reason": "Loading yields through src/v2/yield-to-page.js (scheduler.yield, a timer turn every 100 ms), the phone hull copied in 12 ms slices, typed-array compaction with the Map kept for sparse or out-of-range indices (scripts/check-load-yields.mjs); views match the build before pixel for pixel"
+    "sha256": "b0c9a520c156bf8e4c85cc7572a03b4ad18525c0bd87b578cf7f6ed3e701f609",
+    "reason": "Whole ship sooner: plain reads only for three's own accessors (Astra review)"
   },
   "src/v2/facade.authoring.js": {
     "sha256": "f18efaee42bcad153cbbe6a40bb96ef2d8b515a836a263a1d0c1aec4752b0aad",
@@ -212,8 +212,8 @@
     "reason": "arrival hall stays smooth while the ship builds (merged with main)"
   },
   "src/v2/distant-architecture.js": {
-    "sha256": "725db0dd8ea9df79526d8185a33d1c752513755277f9fc98f1f3b2f7a8f88b89",
-    "reason": "Loading yields through src/v2/yield-to-page.js (scheduler.yield, a timer turn every 100 ms), the phone hull copied in 12 ms slices, typed-array compaction (scripts/check-load-yields.mjs); views match the build before pixel for pixel"
+    "sha256": "203bb8276978b5c78cdf78e1bf4c3ee9b040bca22aec884039690eb70473377c",
+    "reason": "Whole ship sooner: plain reads only for three's own accessors (Astra review)"
   },
   "src/v2/phone-distant.js": {
     "sha256": "fd4c158ad71bce80fcfb95288f74212df5ea02072e37824fffa600da7c1c07a1",
@@ -236,8 +236,8 @@
     "reason": "jaguar gate face flattened so the wayfinding sign stays visible (tester feedback)"
   },
   "src/v2/prepared-resource.public.js": {
-    "sha256": "76945a731af17d66580089f5c78a43ba4451fb112089e0bec62eee73bf36d237",
-    "reason": "Arrival hall walked first (arrival-preview.js): the public resource no longer always waits at module load; the sign rod and the memory snapshot are made after the ship arrives; Cosmo's script loaded once; desktop prefetch of two ship parts"
+    "sha256": "c7a9e755275927d9e59c75e6d4501d980493c3e19568a5a3f25ad0d23c777213",
+    "reason": "Whole ship sooner: same results with direct array reads, a shared compaction scratch and the metadata list asked for ahead (page-only)"
   },
   "src/walk/signs.public.js": {
     "sha256": "ccdfc8c4229af849b7597703b0d18801c0cb8ff911264b6737cf3697f99860ed",
@@ -246,5 +246,9 @@
   "src/walk/pool/table.public.js": {
     "sha256": "5f9befd1c216f9453a5210686adb5bcb0b0fc4aa2514ce849797a251177c8708",
     "reason": "arrival hall stays smooth while the ship builds (yields, sliced floor scan, trolley bounds skip, pool skins read on CPU, pre-ready key gate)"
+  },
+  "src/mars.js": {
+    "sha256": "14e846fb8b5698b5e405b33c3734bd3ee7d70f1e9a7728833fee70695d0dcc4b",
+    "reason": "Mars surface: each blurred group drawn on one layer and blurred once (Chrome 158 GPU stall); fallback without filters or layer"
   }
 }
