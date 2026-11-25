@@ -5,6 +5,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {mergeByMaterial} from './merge-by-material.js';
 import {createLayeredConservatory,preserveBlossomRandomSequence} from './layered-conservatory.js';
 import {seeded} from '../polish-kit.js';
+import {createZenGarden} from './zen-garden.js';
 
 // This seeded garden builds its own geometry in every mode. Added trees and changed pond sizes must not depend
 // on the exact primitive and merge keys captured by an older prepared ship.
@@ -50,7 +51,7 @@ export function prepareBlossomBed(ship){
   else if(o.name==='Layered_garden_foliage'){
    const g=o.geometry,p=g.attributes.position,idx=g.index,keep=[],v=new T.Vector3(),toLocal=m.multiplyMatrices(toFrame,o.matrixWorld).clone();
    const n=idx?idx.count:p.count,at=i=>idx?idx.getX(i):i;
-   for(let i=0;i<n;i+=3){v.fromBufferAttribute(p,at(i)).applyMatrix4(toLocal);if(inBed(v.x,v.z))continue;for(let k=0;k<3;k++){v.fromBufferAttribute(p,at(i+k));keep.push(v.x,v.y,v.z);}}
+   for(let i=0;i<n;i+=3){v.fromBufferAttribute(p,at(i)).applyMatrix4(toLocal);if(inBed(v.x,v.z)||(v.x>120&&v.x<130&&v.z>19&&v.z<29))continue;for(let k=0;k<3;k++){v.fromBufferAttribute(p,at(i+k));keep.push(v.x,v.y,v.z);}}
    const cut=new T.BufferGeometry();cut.setAttribute('position',new T.Float32BufferAttribute(keep,3));cut.computeVertexNormals();
    o.geometry=cut;// the template's geometry stays as it is for the other commons
   }
@@ -144,7 +145,8 @@ export function createBlossomGarden(ship){
  // Drawn in the template frame, under a group placed at the bed so it joins the right deck band.
  const group=new T.Group();group.name='Cherry_blossom_garden';group.position.copy(centre);
  const frame=new T.Group();frame.matrixAutoUpdate=false;frame.matrix.makeTranslation(-centre.x,-centre.y,-centre.z).multiply(root.matrixWorld);group.add(frame);
- const solid=new T.Group();solid.name='Cherry_blossom_colliders';solid.matrixAutoUpdate=false;solid.matrix.copy(root.matrixWorld);
+ const zen=createZenGarden(koiGeometry);frame.add(zen.group);
+ const solid=new T.Group();solid.name='Cherry_blossom_colliders';solid.matrixAutoUpdate=false;solid.matrix.copy(root.matrixWorld);solid.add(zen.solid);
  const block=(w,h,d,x,y,z,rz=0)=>{const o=new T.Mesh(new T.BoxGeometry(w,h,d));o.position.set(x,y,z);o.rotation.z=rz;solid.add(o);};
  const white=(name,o={})=>new T.MeshStandardMaterial({name,color:0xffffff,roughness:.75,...o});
  const stoneMat=new T.MeshStandardMaterial({name:'Blossom_stone',vertexColors:true,flatShading:true,roughness:.95});
@@ -356,7 +358,7 @@ export function createBlossomGarden(ship){
  const here=new T.Vector3(),falls=IMPACT.clone().applyMatrix4(root.matrixWorld);
  return {group,solid,
   update(dt,walker,soundOn=false,camera=null){
-   if(walker.distanceTo(here.copy(centre))<NEAR)animate(Math.min(dt,.1));
+   if(walker.distanceTo(here.copy(centre))<NEAR){animate(Math.min(dt,.1));zen.update(dt);}
    if(camera)for(const tree of extraTrees)tree.update(camera);
    const d=walker.distanceTo(falls),level=soundOn&&Math.abs(walker.y-falls.y)<4&&d<HEAR?(1-d/HEAR)**2:0;
    if(level>0&&!ctx&&navigator.userActivation?.hasBeenActive!==false)sound();

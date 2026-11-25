@@ -1,3 +1,4 @@
+import {rememberMergedBounds} from './draw-bounds.js';
 // The walk draws each opaque or faint glass material of the deck bands once, not once per band: a phone's frame was
 // mostly the CPU's cost of thousands of draws (3,200 in the arrival hall, from about 240 materials; PHONE_WALK.md), and so
 // was a desktop's (2,700 at the open atrium, 13 ms a frame on an RTX 3090, 8.4 ms merged; its GPU time fell too).
@@ -109,10 +110,12 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece
  }
  const root=new T.Group();root.name='V2_phone_band_merges';root.userData={noCollide:true,renderOnly:true};root.matrixAutoUpdate=false;
  const merges=[],proof={meshes:0,regions:0,sources:0,vertices:0,triangles:0},m3=new T.Matrix3(),v=new T.Vector3();
+ const retainDrawBounds=piece>0&&!keepArrays,scratch={remap:null};
  for(const list of buckets.values()){
   if(list.length<2)continue;
-  // A desktop's pieces index vertex pools they share: each is copied with only the vertices it draws.
-  for(const e of list){const g=e.o.geometry;e.g=g.index&&g.attributes.position.count>g.index.count?compactRenderGeometry(g):g;await yieldWork();}
+  // A desktop's pieces index vertex pools they share: each is copied with only the vertices it draws (its arrays are
+  // all that is read of the copy).
+  for(const e of list){const g=e.o.geometry;e.g=g.index&&g.attributes.position.count>g.index.count?compactRenderGeometry(g,{scratch,bounds:false}):g;await yieldWork();}
   let vertices=0,indices=0;for(const {g} of list){vertices+=g.attributes.position.count;indices+=g.index?g.index.count:g.attributes.position.count;}
   const first=list[0].g,attributes={};
   for(const [name,a] of Object.entries(first.attributes))attributes[name]=new a.array.constructor(vertices*a.itemSize);
@@ -139,6 +142,7 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece
    const geometry=new T.BufferGeometry();
    for(const [name,a] of Object.entries(first.attributes))geometry.setAttribute(name,new T.BufferAttribute(piece.attributes[name],a.itemSize,a.normalized));
    geometry.setIndex(new T.BufferAttribute(piece.index,1));geometry.computeBoundingBox();geometry.computeBoundingSphere();
+   if(retainDrawBounds)rememberMergedBounds(geometry);
    // Drawn only: its arrays leave the page once on the GPU (groups and bounds are all three reads after), unless the
    // owner bake's page (keepArrays) needs to read them.
    if(!keepArrays)for(const a of [...Object.values(geometry.attributes),geometry.index])a.onUpload(release);

@@ -1,4 +1,9 @@
 {
+  "src/walk/carry.js": {
+    "owners": ["d02-new-2", "d16-new-1"],
+    "via": "inherited",
+    "boundary": {"module":"./carry-spots.js","use":"carrySpots(layout)","reason":"Only the two named desks, resolved in the selected layout's unchanged door frames."}
+  },
   "src/walk/arrival-mood.js": {
     "owners": ["d02-arrival-1"],
     "via": "toWorld"
@@ -114,6 +119,14 @@
     "owners": [
       "commons-1"
     ],
+    "via": "inherited"
+  },
+  "src/lounge-dome-plants.js": {
+    "owners": ["commons-1"],
+    "via": "inherited"
+  },
+  "src/terpene-glassware.js": {
+    "owners": ["commons-1"],
     "via": "inherited"
   },
   "src/garden-finish.js": {
@@ -247,6 +260,18 @@
     ],
     "via": null
   },
+  "src/walk/gaming-refreshments.js": {
+    "owners": ["d16-training-aft"],
+    "via": "inherited"
+  },
+  "src/walk/green-room.js": {
+    "owners": ["d05-shelter-8"],
+    "via": null
+  },
+  "src/walk/green-room-art.js": {
+    "owners": ["d05-shelter-8"],
+    "via": "inherited"
+  },
   "src/walk/gaming-lounge.js": {
     "owners": [
       "d16-training-aft"
@@ -369,7 +394,7 @@
     "via": "inherited"
   },
   "src/walk/hydro-portal.js": {
-    "owners": ["commons-1"],
+    "owners": ["commons-1", "circulation-6", "circulation-2"],
     "via": "inherited"
   },
   "src/walk/lounge-mural.js": {
@@ -627,5 +652,7 @@
   "src/walk/layered-conservatory.js": {
     "owners": ["commons-10"],
     "via": "inherited"
-  }
+  },
+  "src/walk/zen-garden.js": {"owners":["commons-10"],"via":"inherited"},
+  "src/walk/prank-button.js": {"owners":["circulation-6"],"via":null}
 }

@@ -1,4 +1,5 @@
 import {parseMedia,spotQuery,readSnapshot} from './ship-log-media.mjs';
+import {SHIP_LOG_SHARE_TEXT,shipLogShareLink,readSpot} from '../src/walk/link.js';
 
 // The ship log's pictures and spots (scripts/ship-log-media.mjs): what the parser takes from a build timer's pull request
 // description, and that the kept copy holds only what the walk's change boards can use.
@@ -27,5 +28,14 @@ check('a new-layout picture\'s spot is kept where it was taken',parseMedia('| ![
 const snap=Object.entries(readSnapshot()),shots=snap.flatMap(([,v])=>v.shots||[]);
 check('the kept copy has spots and pictures',snap.length>0&&shots.length>0,`${snap.length} changes, ${shots.length} pairs`);
 check('every kept spot and picture is one the walk can use',snap.every(([id,v])=>/^\d+$/.test(id)&&(!v.go||spotQuery(v.go)===v.go))&&shots.every(s=>s.label&&/^[\w./-]+\.(jpe?g|png|webp)$/.test(s.before)&&/^[\w./-]+\.(jpe?g|png|webp)$/.test(s.after)&&(!s.at||spotQuery(s.at)===s.at)));
+// The share uses the same query as Go there, keeping picture spots and legacy layout versions intact.
+const visitor='https://leo.example/walk.html?at=999,888,777&name=Visitor&pass=private#private',query='lv=2&at=-114.55,24.31,-20.51&yaw=-2067&pitch=-19&view=first';
+const post=new URL(shipLogShareLink(query,visitor)),walk=new URL(post.searchParams.get('url'));
+check('sharing opens X with only the fixed message and a public walk link',post.origin==='https://x.com'&&post.pathname==='/intent/post'&&[...post.searchParams.keys()].join()==='text,url'&&SHIP_LOG_SHARE_TEXT==='Check out this new update on Leo'&&post.searchParams.get('text')===SHIP_LOG_SHARE_TEXT);
+check('the share address encodes both parameters and round-trips the spot',post.href.includes('text=Check+out+this+new+update+on+Leo')&&post.href.includes('url=https%3A%2F%2Fleo.example%2Fwalk.html%3Flv%3D2%26at%3D-114.55%252C24.31%252C-20.51')&&JSON.stringify(readSpot(walk.search))===JSON.stringify(readSpot('?'+query)));
+check('the walk link uses the current origin without visitor data',walk.origin==='https://leo.example'&&walk.pathname==='/walk.html'&&!walk.hash&&!post.href.includes('private')&&!post.href.includes('Visitor')&&!walk.search.includes('999'));
+check('every recorded Go there and picture query shares its own spot',snap.every(([,e])=>[e.go,...(e.shots||[]).map(s=>s.at)].filter(Boolean).every(q=>{const url=new URL(new URL(shipLogShareLink(q,visitor)).searchParams.get('url'));return JSON.stringify(readSpot(url.search))===JSON.stringify(readSpot('?'+q));})));
+check('a change without a spot shares the normal walk start',[undefined,null,'','at=1,2'].every(q=>new URL(shipLogShareLink(q,visitor)).searchParams.get('url')==='https://leo.example/walk.html'));
+check('only public spot keys can enter a share link',new URL(new URL(shipLogShareLink(query+'&name=Visitor&pass=private&live=secret',visitor)).searchParams.get('url')).search===walk.search);
 if(failed){console.log(`${failed} ship log check(s) failed`);process.exit(1);}
 console.log('ship log checks pass');

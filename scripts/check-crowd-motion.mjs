@@ -30,7 +30,7 @@ assert.ok(numbers.every(Number.isFinite));
 pass(`${motion.clips.length} loops, ${at} frames, ${bones} bones; each comes round in a step at most ${Math.max(...motion.clips.map(c=>c.seam)).toFixed(2)} times its biggest step within`);
 
 // Recorded again, a loop is the same (the rig is deterministic; half floats keep about three figures).
-for(const name of ['walk','crouch']){
+for(const name of ['walk','crouch','crossLegged']){
  const again=await recordLoop(name),c=motion.clips.find(x=>x.name===name);assert.equal(again.frames.length,c.frames,`${name}: frames`);
  let worst=0;again.frames.forEach((f,i)=>{for(let k=0;k<f.length;k++){const v=numbers[(c.start+i)*bones*12+k];worst=Math.max(worst,Math.abs(v-f[k])/Math.max(1,Math.abs(f[k])));}});
  assert.ok(worst<2e-3,`${name}: recorded again, a number differs by ${worst}`);
@@ -93,6 +93,10 @@ for(const name of ['walk','crouch']){
    const shader={vertexShader:T.ShaderLib.lambert.vertexShader,uniforms:{}};mat.onBeforeCompile(shader,null);
    assert.ok(shader.vertexShader.includes('crowdBone( skinIndex.x )')&&shader.uniforms.crowdMotion);assert.ok(mat.customProgramCacheKey().endsWith('|crowd-tier'));}
   lean.dispose();}
+ const cushion=visitor(0,-8,{rest:'sit'}),crossed=motion.clips.find(c=>c.name==='crossLegged');
+ tier.begin(camera);tier.place(cushion,1/60,false,'crossLegged');tier.end();
+ for(const g of tier.groups.values())if(g.count){assert.equal(g.frames.array[0],crossed.start);assert.equal(g.frames.array[1],crossed.start);}
+ assert.equal(tier.hipHeight,w.hipHeight,'The crowd uses its template hip height to find cushion seats');
  tier.dispose();assert.equal(scene.children.length,0,'disposed, its draws leave the scene');
  pass(`the crowd tier: ${tier.groups.size||'its'} draws by part and fur, culled to the view unless all are wanted, its cap counting only those drawn, finite at a standstill, each placed and turned; a phone's in Lambert`);
 }

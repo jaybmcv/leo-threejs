@@ -35,7 +35,7 @@ export const LOOPS=[
  ['idle',{},4],['walk',{speed:1.4},2.5,1.4],['run',{speed:5},2,5],
  ['crouch',{stance:'crouch'},3],['crouchWalk',{stance:'crouch',speed:1},2.5,1],
  ['prone',{stance:'prone'},3],['crawl',{stance:'prone',speed:.6},3,.6],
- ['sit',{rest:'sit'},3],['lie',{rest:'lie'},3],['swim',{swimming:true,speed:1},3,1],
+ ['sit',{rest:'sit'},3],['crossLegged',{rest:'sit',sitPose:'crossLegged'},3],['lie',{rest:'lie'},3],['swim',{swimming:true,speed:1},3,1],
  ...EMOTES.map(e=>[e,{emote:e},EMOTE_S[e]??4,0,EMOTE_FPS,EMOTE_CROSS_S]),
 ];
 const PILLOW_TILT=.12;
@@ -70,7 +70,7 @@ export const partsOf=w=>{const parts=[];w.figure.root.traverse(o=>{if(o.isSkinne
 // step within it (a punch is quick: what matters is that coming round is no jump beside the loop's own moves).
 async function record(make,[name,state,seconds,speed,fps=FPS,crossS=CROSS_S]){
  const {w,scene}=await make(),skeleton=partsOf(w)[0].skeleton,bones=skeleton.bones.length;
- const rest=state.rest?{kind:state.rest,weight:1,seatHeight:w.hipHeight}:null;
+ const rest=state.rest?{kind:state.rest,weight:1,seatHeight:w.hipHeight,sitPose:state.sitPose}:null;
  const s={speed:0,grounded:true,stance:'stand',jumpCount:1,jumpS:-1,turnRate:0,accel:0,rise:0,emote:null,...state,rest};
  if(state.rest==='lie')w.body.rotation.set(-Math.PI/2+PILLOW_TILT,0,0);
  for(let t=0;t<WARM_S;t+=STEP)w.update(STEP,s);

@@ -10,6 +10,7 @@ import {COMICS} from '../src/walk/comics.js';
 import {MUDWATER_ART} from '../src/walk/mudwater.js';
 import {LONGBOARD_ART} from '../src/walk/longboard.js';
 import {shipLog} from './ship-log.mjs';
+import {withWalkHud} from './walk-hud-assets.mjs';
 import {loadMedia} from './ship-log-media.mjs';
 
 // Writes the "Walk around Leo" page (walk.html) and its content-hashed script next to the viewer. The partition plan
@@ -65,7 +66,7 @@ export async function writeWalkPage(out,{cosmo,manifest,debug=false,layoutOverri
  if(v2&&preparedWalk)html=html.replace('This can take a few minutes: the whole ship is built on this device, using a few GB of memory. Keep this tab open, and if your browser says the page isn’t responding, choose Wait. Closing other tabs helps.','Loading the prepared ship and setting up the walk on this device. This can take longer on a slower connection or device. Keep this tab open; closing other tabs may help if memory is low.');
  if(html.includes('/* BUNDLE */'))throw new Error('walk.html lost its bundle placeholder');
  html=html.replace('<body>',()=>`<body><script>window.LEO_PUBLIC_ASSETS=${JSON.stringify(manifest)};</script>`);
- await fs.writeFile(path.join(out,'walk.html'),html);
+ await fs.writeFile(path.join(out,'walk.html'),v2 ? await withWalkHud(html,out) : html);
  // The same walk for Otherside to load: no Discord, no login (src/walk/net/otherside.js).
  if(!html.includes('<head><script>'))throw new Error('walk.html lost its opening script');
  await fs.writeFile(path.join(out,'walkotherside.html'),html.replace('<head><script>',()=>'<head><script>window.LEO_OTHERSIDE=true;</script><script>'));

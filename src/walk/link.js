@@ -21,4 +21,16 @@ export function spotLink({position,yaw,pitch,view}){
  url.search=p.toString().replace(/%2C/g,',');url.hash='';return url.href;
 }
 
+export const SHIP_LOG_SHARE_TEXT='Check out this new update on Leo';
+// Share the log's Go there query, never the visitor's current link or position.
+export function shipLogShareLink(query,href=location.href){
+ const walk=new URL('/walk.html',new URL(href).origin);
+ if(query&&readSpot('?'+query)){
+  const p=new URLSearchParams(query);
+  for(const key of ['lv','at','yaw','pitch','view'])if(p.has(key))walk.searchParams.set(key,p.get(key));
+ }
+ const post=new URL('https://x.com/intent/post');
+ post.searchParams.set('text',SHIP_LOG_SHARE_TEXT);post.searchParams.set('url',walk.href);return post.href;
+}
+
 function fitLegacySpot(id,p){const a=v1Frame(id),f=frame(id),l=toLocal(id,p);let changed=false;for(const k of [0,2]){const a0=a.bounds?.[0][k]??-a.size[k]/2,a1=a.bounds?.[1][k]??a.size[k]/2,b0=f.bounds?.[0][k]??-f.size[k]/2,b1=f.bounds?.[1][k]??f.size[k]/2;if(b1-b0<a1-a0){l[k]=Math.max(b0+.6,Math.min(b1-.6,l[k]));changed=true;}}return changed?toWorld(id,l):p;}

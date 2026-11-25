@@ -8,7 +8,7 @@ import {contains,distanceToSegment,bounds} from '../plan/geometry-v2.js';
 export const windowSeatsFor=o=>Math.max(1,Math.ceil((o[1]-o[0])/3-1e-6));
 // The middle window seat of opening k, counted from the cafe's first window seat.
 export const windowSeatOffset=(openings,k)=>openings.slice(0,k).reduce((n,o)=>n+windowSeatsFor(o),0)+Math.floor(windowSeatsFor(openings[k])/2);
-export function phase6Programme(layout){
+export function phase6Programme(layout,{atriumOnly=false}={}){
  const parts=[],rests=[],owners=phase6Owners(layout),y=layout.decks[5].y,outline=layout.decks[5].atrium.outline;
  const add=(room,part,size,at,mat='oak',opts={})=>parts.push({room,part,size,at,mat,yaw:0,deck:6,phase6:true,...opts});
  const fits=(x,z,w,d,clear=2.4)=>[-w/2,0,w/2].every(dx=>[-d/2,0,d/2].every(dz=>{const q=[x+dx,z+dz];return contains(outline,q)&&outline.every((a,i)=>distanceToSegment(q,a,outline[(i+1)%outline.length])>=clear);}));
@@ -90,6 +90,13 @@ const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,
  add('atrium6-lobby','sign',[5,1.25,.12],[-109,y+2.25,7],'navy',{text:'DECK 6 / ATRIUM\nFORWARD: PARK / LAKE / FOOD / STAGE\nAFT: LIFTS + STAIRS / MEET HERE',yaw:Math.PI,noCollide:true});
  for(const z of[-27,29])plant('atrium6-lobby',-103,z);
  addWelcomeCourtParts(add,y); // G1 welcome court: the desk and its planters (atrium-lobby-park.js)
+ // Runtime lawn clearances need only these parts. Prepared layouts omit the
+ // pressure-skin charts used to author the nose cafes below.
+ if(atriumOnly){
+  addReflectionTerraces({parts,rests,y});const beds=[];
+  for(let i=parts.length-1;i>=0;i--)if(parts[i].part==='recovery_planting'){beds.push(parts[i]);parts.splice(i,1);}
+  return{parts,beds};
+ }
  const cafes=[];
  for(const r of layout.rooms.filter(r=>r.id.startsWith('nose-commons-'))){const p=layout.hullPrototypes.prototypes.find(p=>p.id===r.id),floor=r.y,deck=r.deck,k=deck-6,b=bounds(r.polygon),x=r.launchE?.legacyX0??b.x0,accent=['teal','sage','clay'][k%3];
   if(!Array.isArray(p.inner))hydrateHullLayout({hullPrototypes:{prototypes:[p]},cabins:[],rooms:[],windows:[]});

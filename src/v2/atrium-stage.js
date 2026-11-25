@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {addStageConcertDecor,stageConcertCollider} from './stage-concert.js';
 
 // G5 Common stage, option A (docs/atrium-areas.md, concept stage-a-amphitheatre): curved terraces of warm timber with
 // cream cushions, stepping down from the back of the zone to a short apron in front of the stage's timber deck and cream
@@ -66,6 +67,7 @@ export function stageGeometry(part){
  const spec=part.stageShape;if(!spec)return null;
  // The shapes are laid out from the deck (spec.floor); the part's centre is in the ship frame.
  const [ox,,oz]=part.at,oy=part.at[1]-spec.floor;
+ if(spec.kind==='concert')return stageConcertCollider(spec.side).translate(-ox,-oy,-oz);
  if(spec.kind==='tiers'){const b=stageBands();return arcSolids([...b.map(b=>({...b,y0:0,y1:b.rise})),...b.filter(b=>b.bench).map(benchOf)],ox,oy,oz);}
  if(spec.kind==='cushions'){
   const list=stageSeats().filter(s=>s.band===spec.band).map(s=>new T.BoxGeometry(...CUSHION).rotateY(s.yaw).translate(s.x-ox,s.top-CUSHION[1]/2-oy,s.z-oz));
@@ -142,6 +144,7 @@ export function addStageDecor(out,layout){
   k.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(count*3).map((_,i)=>[cream.r,cream.g,cream.b][i%3]),3));
   for(const name of Object.keys(k.attributes))if(!['position','normal','uv','color'].includes(name))k.deleteAttribute(name);
   out.push(k);cushionTriangles+=count/3;}
+ addStageConcertDecor(out,y);
  return {stageTriangles:pos.length/9+cushionTriangles};
 }
 
@@ -151,6 +154,10 @@ export function addAtriumStage({parts,rests,y}){
  const room='atrium6-stage',add=(part,size,centre,mat,options={})=>parts.push({room,part,size,at:centre,mat,yaw:0,deck:6,phase6:true,selectedDesign:'stage-a',...options});
  add('p6_stage_platform',[14,.36,32],[113,y+.18,30],'oak');
  add('p6_stage_backdrop',[.28,3.1,29],[119.86,y+1.91,30],'cream',{noCollide:true,stageShape:{kind:'wall',floor:y}});
+ for(const side of[-1,1]){
+  const g=stageConcertCollider(side);g.computeBoundingBox();const b=g.boundingBox,size=b.getSize(new T.Vector3()),centre=b.getCenter(new T.Vector3());g.dispose();
+  add(`p6_stage_concert_${side<0?'left':'right'}_collider`,size.toArray(),[centre.x,y+centre.y,centre.z],'metal',{stageShape:{kind:'concert',side,floor:y}});
+ }
  const box=points=>{const xs=points.map(p=>p[0]),zs=points.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),z0=Math.min(...zs),z1=Math.max(...zs);return {size:[x1-x0,z1-z0],centre:[(x0+x1)/2,(z0+z1)/2]};};
  const tiers=box(stageTiers().flatMap(t=>t.polygon)),top=TIERS.length*RISE;
  add('p6_stage_tiers',[tiers.size[0],top,tiers.size[1]],[tiers.centre[0],y+top/2,tiers.centre[1]],'oak',{stageShape:{kind:'tiers',floor:y}});

@@ -1,14 +1,14 @@
 import {ReplayGeometry,replayMerged} from "../v2/prepared-geometry-replay.public.js";
 import layout from '../plan/selected-layout.js';
-import {contains} from '../plan/geometry-v2.js';
 import {fitPreparedLounge as fitNativeLounge} from '../v2/prepared-runtime.public.js';
 import * as T from 'three';
 import {roomObject,deltaMatrix,hasFrameOverride,moverOrientation} from '../plan/rooms.js';
 import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {LOUNGE} from '../hydro-nip-lounge.js';
+import {createTerpeneGlassware} from '../terpene-glassware.js';
 import {createLoungeSky} from './lounge-sky.public.js';
 import {createLoungeMural} from './lounge-mural.public.js';
-import {createLoungeAquarium,AQUARIUM} from './lounge-aquarium.js';
+import {createLoungeAquarium} from './lounge-aquarium.js';
 import {bandOf} from './collision.js';
 
 // The Hydro-Nip Lounge on foot (HYDRO_NIP_LOUNGE.md, phases 2-3; the room itself is src/hydro-nip-lounge.js):
@@ -16,29 +16,25 @@ import {bandOf} from './collision.js';
 //   moving collider while it slides;
 // - the nine hammocks swing gently (in the vertex shader: one draw for all nine), and a walker lying in one swings
 //   with it;
-// - inside the maze the catnip mist thins round the camera and a green haze tints the view instead, heavy on the
-//   ground floor, light on the lower platform and gone on the top one;
 // - the room's mood (from tester feedback): its ceiling is clear glass open to the stars and a huge full moon
-//   (lounge-sky.js), and while the camera is in the commons the walk's lights (shared by the whole ship) ease down and warm, with a violet bounce from below, and the
-//   neon and its halos burn brighter;
+//   (lounge-sky.js); the walk's lights easing down and warm in the room and the maze's mist and haze are
+//   lounge-mood.js, which only the walk pages run, so editing them doesn't rebuild the ship;
 // - the code-generated synthwave sunset on the aft side wall, spanning Decks 17-19 (lounge-mural.js);
 // - the aquarium filling its front wall, three storeys of glowing reef and fish, with the jaguar's throat running through
 //   it as a glass tunnel (lounge-aquarium.js).
 // Made after the colliders and rest spots and before the walk merges the ship for drawing: the doors and hammocks
 // leave the ship for meshes of their own, drawn with the lounge floor's deck band (main.js).
 const DOOR={reach:2.6,rise:2.5,time:.6},SWAY={amp:.075,rate:1.45};
-// In the room: the lights' share of their usual strength, their colours, and how much brighter the neon and halos burn.
-const MOOD={hemi:.32,fill:.12,env:.22,sky:0xffb26b,ground:0x5a2f99,neon:1.35,glow:1.9};
 const flip=g=>{for(const a of Object.values(g.attributes))for(let i=0;i<a.count;i+=3)for(let k=0;k<a.itemSize;k++){const t=a.array[(i+1)*a.itemSize+k];a.array[(i+1)*a.itemSize+k]=a.array[(i+2)*a.itemSize+k];a.array[(i+2)*a.itemSize+k]=t;}return g;};
 // A mesh's geometry in world space (turned back the right way out under the commons' mirror).
 const worldGeometry=o=>{const g=(o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone()).applyMatrix4(o.matrixWorld);return o.matrixWorld.determinant()<0?flip(g):g;};
 const boxTriangles=([w,h,d])=>{const out=[],c=i=>[(i&4?1:-1)*w/2,(i&2?1:-1)*h/2,(i&1?1:-1)*d/2];
  for(const f of [[0,1,3],[0,3,2],[4,6,7],[4,7,5],[0,4,5],[0,5,1],[2,3,7],[2,7,6],[0,2,6],[0,6,4],[1,5,7],[1,7,3]])for(const i of f)out.push(...c(i));return out;};
 
-export function createLounge(ship,colliders,light=null){
+export function createLounge(ship,colliders){
  const root=roomObject(ship,'Hydro_Nip_Lounge');if(!root)return null;
  root.updateMatrixWorld(true);
- const frame=root.matrixWorld,inverse=frame.clone().invert(),toWorld=(x,y,z)=>new T.Vector3(x,y,z).applyMatrix4(frame);
+ const frame=root.matrixWorld,toWorld=(x,y,z)=>new T.Vector3(x,y,z).applyMatrix4(frame);
  // Everything drawn here is placed at the lounge floor's height, so main.js files it with that floor's deck band.
  const floorY=toWorld(0,LOUNGE.FLOOR,0).y,drawn=[];
  const place=(g,mat,name)=>{g.translate(0,-floorY,0);const o=new T.Mesh(g,mat);o.name=name;o.position.y=floorY;o.frustumCulled=false;drawn.push(o);return o;};
@@ -92,15 +88,10 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  const time=()=>performance.now()/1000;
  function swingOf(mesh){const s=swing.find(h=>h.mesh===mesh);if(!s)return null;return {pivot:s.pivot,axis:s.axis,angle:SWAY.amp*Math.sin(time()*SWAY.rate+s.phase)};}
 
- // The maze tower, in the world, for the mist and the haze.
- const {MAZE,LEVELS}=LOUNGE,tower=new T.Box3().setFromPoints([new T.Vector3(MAZE.x0,LOUNGE.FLOOR,MAZE.z0),new T.Vector3(MAZE.x1,MAZE.top,MAZE.z1)]);
- // The maze's mist, taken whole (the walk would split it by deck band, a draw for each).
- const mists=[];let mist=1,haze=0,tint=null;
+ // The maze's mist, taken whole (the walk would split it by deck band, a draw for each); lounge-mood.js thins it.
+ const mists=[];
  root.traverse(o=>{if(o.isMesh&&o.material?.name==='Lounge_maze_mist')mists.push(o);});
  for(const o of mists){const m=place(worldGeometry(o),o.material,'Walk_lounge_mist');m.renderOrder=o.renderOrder;o.removeFromParent();o.material.userData.full=o.material.opacity;}
- if(typeof document!=='undefined'){tint=document.createElement('div');tint.id='lounge-haze';
-  tint.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:1;opacity:0;background:radial-gradient(ellipse at 50% 55%,rgba(150,255,170,.25),rgba(70,200,110,.8));mix-blend-mode:screen';
-  document.body.appendChild(tint);}
 
  // The mood. The commons' ceiling panels (Circadian_light) go, and a glass roof open to space goes in under the ceiling
  // (lounge-sky.js), drawn with the floor's band so it shows from inside the dome too, where the ceiling's band is culled.
@@ -110,66 +101,36 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  // The aquarium: its glass solid everywhere, its tank drawn in the page (null in Node).
  const aquarium=createLoungeAquarium(ship,frame,colliders);
  if(aquarium)aquarium.group.userData={band:bandOf(toWorld(0,aquarium.low,0).y),top:bandOf(toWorld(0,aquarium.top,0).y)};
- const {ROOM}=LOUNGE,inRoom=loungeMoodRegion();
+ const {ROOM}=LOUNGE;
  const panels=[];root.parent?.parent?.traverse(o=>{if(o.isMesh&&o.name==='Circadian_light')panels.push(o);});for(const o of panels)o.removeFromParent();
  {const sky=createLoungeSky(frame,ROOM,LOUNGE.CEILING-.16,uniforms.uTime);place(sky.geometry,sky.material,'Walk_lounge_glass_roof');}
- const glows=[];root.traverse(o=>{if(o.isMesh&&/^Lounge_(neon_glow|additive_glow)$/.test(o.material?.name)&&!glows.some(g=>g.m===o.material))glows.push({m:o.material,k:o.material.name==='Lounge_neon_glow'?MOOD.neon:MOOD.glow});});
- const base=light&&{hemi:light.hemi.intensity,fill:light.fill.intensity,env:light.scene.environmentIntensity,sky:light.hemi.color.clone(),ground:light.hemi.groundColor.clone()};
- const sky=new T.Color(MOOD.sky),ground=new T.Color(MOOD.ground);let mood=0,shown=0,waterMix=0;
- const waterFrame=frame.clone().multiply(new T.Matrix4().makeTranslation(0,0,6)).invert(),waterPoint=new T.Vector3();
- let waterTint=null;if(typeof document!=='undefined'){waterTint=document.createElement('div');
-  waterTint.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:1;opacity:0;background:rgba(0,130,145,.22)';document.body.appendChild(waterTint);}
- function inWaterView(eye){const p=waterPoint.copy(eye).applyMatrix4(waterFrame),a=AQUARIUM,t=a.tunnel;
-  return p.x>a.x0&&p.x<a.x1&&p.y>a.bed&&p.y<a.top&&p.z>a.back&&p.z<a.glass&&!(p.x>t.x0&&p.x<t.x1&&p.y<t.top);}
- function setMood(t){
-  if(base){const {hemi,fill,scene}=light,f=(a,b)=>a+(b-a)*t;
-   hemi.intensity=f(base.hemi,base.hemi*MOOD.hemi);fill.intensity=f(base.fill,base.fill*MOOD.fill);scene.environmentIntensity=f(base.env,base.env*MOOD.env);
-   hemi.color.lerpColors(base.sky,sky,t);hemi.groundColor.lerpColors(base.ground,ground,t);}
-  for(const {m,k} of glows)m.color.setScalar(1+(k-1)*t);
- }
+ // The neon and halo materials, which burn brighter in the room's mood (lounge-mood.js).
+ const glows=[];root.traverse(o=>{if(o.isMesh&&/^Lounge_(neon_glow|additive_glow)$/.test(o.material?.name)&&!glows.includes(o.material))glows.push(o.material);});
 
  fitNativeLounge(ship,layout,drawn,mural);
+ // Keep the small instanced display live, outside the static bake and hull trimming.
+ root.getObjectByName('Terpene_glassware')?.removeFromParent();
+ const still=createTerpeneGlassware(),display=new T.Group();display.name='Walk_terpene_glassware';display.position.y=floorY;
+ still.group.applyMatrix4(new T.Matrix4().makeTranslation(0,-floorY,0).multiply(frame));display.add(still.group);drawn.push(display);
  return {
-  drawn,doors,
+  drawn,doors,still,
   // The dome's centre on its floor and its radius in the world, for its lullaby (lullaby.js).
   dome:{centre:toWorld(LOUNGE.DOME.x,LOUNGE.FLOOR,LOUNGE.DOME.z),r:LOUNGE.DOME.r},
   // The wall mural's group (null in Node), filed with the deck bands it spans by main.js.
   mural:mural?.group||null,
   // The aquarium's group (null in Node), filed the same way.
   aquarium:aquarium?.group||null,
-  // After the merge for drawing: the maze's mist meshes (split by deck band) to thin out.
-  // `bodies`: the walker's and every other player's positions; `eye`: the camera's.
-  update(dt,bodies,eye){
-   uniforms.uTime.value=time();aquarium?.update();
+  // For the room's mood (lounge-mood.js, which the walk pages run after this step and which adds `inside`): the
+  // lounge's frame in the world, the maze's mist meshes and the neon and halo materials.
+  frame,mists,glows,
+  // `bodies`: the walker's and every other player's positions.
+  update(dt,bodies){
+   uniforms.uTime.value=time();aquarium?.update();still.update(dt);
    for(const d of doors){const near=bodies.some(b=>Math.abs(b.y-d.centre.y)<DOOR.rise&&Math.hypot(b.x-d.centre.x,b.z-d.centre.z)<DOOR.reach);
     const o=T.MathUtils.clamp(d.open+(near?1:-1)*dt/DOOR.time,0,1);if(o!==d.open){d.open=o;doorsMoved=true;}}
    if(doorsMoved){doorsMoved=false;slideDoors();}
-   const inside=tower.containsPoint(eye.clone().applyMatrix4(inverse)),k=1-Math.exp(-4*dt);
-   mist+=((inside?.12:1)-mist)*k;for(const o of mists)o.material.opacity=o.material.userData.full*mist;
-   haze+=((inside?(eye.y<LEVELS[0]?.34:eye.y<LEVELS[1]?.16:0):0)-haze)*k;if(tint)tint.style.opacity=haze.toFixed(3);
-   const underwater=inWaterView(eye);waterMix+=((underwater?1:0)-waterMix)*k;if(waterTint)waterTint.style.opacity=waterMix.toFixed(3);
-   mood+=((underwater||inRoom(eye)?1:0)-mood)*k;if(Math.abs(mood-shown)>.002||(mood<.002&&shown)){shown=mood<.002?0:mood;setMood(shown);}
   },
   swingOf,
-  // Whether a body is in the room (inLounge, below).
-  inside:inLounge(frame),
  };
 }
 
-// Whether a body's feet are in the lounge, galleries and hammocks included: its catnip face (catnip-face.js) shows while
-// they are. `frame` is the lounge's own frame in the world. Every page works this out from each visitor's own position,
-// so nothing more goes over Leo live.
-export function inLounge(frame){
- const {ROOM}=LOUNGE,inverse=frame.clone().invert(),at=new T.Vector3();
- // Feet stand on the floor, but a body on a low cushion sits its hip height under the seat, so the room reaches a metre below it.
- const box=new T.Box3(new T.Vector3(ROOM.x0,LOUNGE.FLOOR-1,ROOM.z0),new T.Vector3(ROOM.x1,LOUNGE.CEILING,ROOM.z1));
- return p=>box.containsPoint(at.copy(p).applyMatrix4(inverse));
-}
-
-// The current room reaches past the old fittings, including the arcade wall.
-// Follow its height slices so the mood stays inside the lounge's sloping envelope.
-export function loungeMoodRegion(room=layout.rooms.find(r=>r.id==='commons-1')){
- const sections=room.envelope?.length?room.envelope:[{rise:0,height:room.height,polygon:room.polygon}];
- return p=>{const rise=p.y-room.y,s=sections.find(s=>rise>=s.rise&&rise<=s.rise+s.height);
-  return !!s&&contains(s.polygon,[p.x,p.z]);};
-}

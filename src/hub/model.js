@@ -5,6 +5,8 @@ const STATUS={
  decision:{pill:'Waiting for a decision',tone:'plain'},
  planning:{pill:'Being looked at',tone:'plain'},
  'more-info':{pill:'We need a bit more from you',tone:'orange'},
+ // A big idea's plan for a first version, waiting for its tester to say whether it fits.
+ proposal:{pill:'Our plan for your idea',tone:'orange'},
  approved:{pill:'Approved',tone:'teal'},
  building:{pill:'Being built',tone:'orange'},
  review:{pill:'Built, waiting for review',tone:'orange'},
@@ -19,6 +21,8 @@ const STATUS={
 export const statusOf=status=>STATUS[status]||STATUS.submitted;
 const ENDED=new Set(['joined','resolved','closed']);
 export const hasTrack=c=>!ENDED.has(c.status);
+// Waiting on the tester: a question to answer, or a plan to say yes to or change.
+export const needsYou=c=>c.status==='more-info'||c.status==='proposal';
 // Only work that is really moving gets the pulse: something waiting on a person, or paused, sits still.
 export const isMoving=c=>c.status==='building'||c.status==='review'||c.status==='shipped';
 
@@ -38,6 +42,7 @@ export function pill(c){
 }
 // A sentence under the title, only where the status needs one.
 export function note(c){
+ if(c.status==='proposal')return c.question||null;
  if(c.status==='more-info')return c.question||'Anything else you can tell us helps. Send it through Feedback from the same spot.';
  if(c.status==='closed'||c.status==='joined'||c.status==='resolved')return c.reason||null;
  if(c.status==='shipped')return c.deployment==='pending'?'Merged, and on its way aboard with the next update.':'Merged. It shows as live once we can confirm it’s running aboard.';
@@ -57,7 +62,7 @@ const newest=(a,b)=>when(b)-when(a);
 export function groups(cards){
  const pick=test=>cards.filter(test).sort(newest);
  return [
-  {key:'needs',title:'Needs you',cards:pick(c=>c.status==='more-info')},
+  {key:'needs',title:'Needs you',cards:pick(needsYou)},
   {key:'works',title:'In the works',cards:pick(c=>WORKS.has(c.status))},
   {key:'waiting',title:'Waiting for a decision',cards:pick(c=>WAITING.has(c.status))},
   {key:'live',title:'Live on Leo',cards:pick(c=>c.status==='live')},
@@ -66,7 +71,7 @@ export function groups(cards){
 }
 export function stats(cards){
  const count=test=>cards.filter(test).length;
- return [{n:cards.length,label:'Ideas sent'},{n:count(c=>WORKS.has(c.status)),label:'In the works',tone:'orange'},{n:count(c=>c.status==='live'),label:'Live on Leo',tone:'teal'},{n:count(c=>c.status==='more-info'),label:'Need you'}];
+ return [{n:cards.length,label:'Ideas sent'},{n:count(c=>WORKS.has(c.status)),label:'In the works',tone:'orange'},{n:count(c=>c.status==='live'),label:'Live on Leo',tone:'teal'},{n:count(needsYou),label:'Need you'}];
 }
 export const feature=cards=>cards.filter(c=>c.status==='live'&&c.shots?.length).sort(newest)[0]||null;
 

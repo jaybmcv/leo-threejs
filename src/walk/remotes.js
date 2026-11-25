@@ -68,8 +68,8 @@ export class RemotePlayers{
  // bodies shaded cheaply, near and in the crowd alike (crowd-draw.js leanMaterial: a phone's). crowdFps: the frames a
  // second the crowd is trimmed to keep (crowd-count.js), on trial only (it misjudged a phone); none or 0, the crowd is
  // capped at CROWD_SLOW on a page that can carry few bodies (the rig budget's tier under SLOW_TIER), CROWD_MOST on any other.
- constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowd=false,budget=true,crowdMotion=null,lean=false,lod=true,crowdFps=0}){
-  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,artUrls,running,hammock,catnip,swimming,tube,crowdMotion,lean,lod});
+ constructor(scene,{make,colliders,lifts,labels,hatUrl,artUrls,running,hammock,sitPose,catnip,swimming,tube,crowd=false,budget=true,crowdMotion=null,lean=false,lod=true,crowdFps=0}){
+  Object.assign(this,{scene,make,colliders,lifts,labelLayer:labels,hatUrl,artUrls,running,hammock,sitPose,catnip,swimming,tube,crowdMotion,lean,lod});
   this.crowdTier=null;this.crowdLoading=false;this.crowdTries=0;this.crowdAfter=0;
   this.budget=budget?createRigBudget({most:MAX_RIGS}):null;
   this.crowdCount=crowdFps>0?createCrowdCount({fps:crowdFps,most:CROWD_MOST,start:CROWD_SLOW}):null;this.crowdMost=0;this.lastUpdate=0;
@@ -135,7 +135,7 @@ export class RemotePlayers{
    // and its frames do not count towards the cap)
    const most=this.crowdMost=this.crowdCount?this.crowdCount.most:budget&&budget.tier<SLOW_TIER?CROWD_SLOW:CROWD_MOST;
    crowdTier.begin(camera,{all:photo,most,pxPerM:this.lod&&!photo?pxAt1m/BODY_M:0});
-   for(let i=0;i<shown.length&&crowdTier.count<most;i++){const r=shown[i];if(!inTier.has(r)||!r.walker)crowdTier.place(r,dt,!!this.swimming?.(r.cur));}
+   for(let i=0;i<shown.length&&crowdTier.count<most;i++){const r=shown[i];if(!inTier.has(r)||!r.walker)crowdTier.place(r,dt,!!this.swimming?.(r.cur),r.tgt.rest==='sit'?this.sitPose?.(r.cur,crowdTier.hipHeight):null);}
    // (the frame's own length, from the last update: the dt passed is clamped at 0.1 s)
    crowdTier.end();this.crowdCount?.frame(this.lastUpdate?(now-this.lastUpdate)/1000:0,crowdTier.count,{active:!photo});
   }
@@ -217,7 +217,7 @@ export class RemotePlayers{
   // On the grapple line (grapple.js): it reels out from their paw to where it bit, and back in when they let go.
   const hook=t.hook&&!t.rest&&!t.ball?(r.hookAt??=new T.Vector3()).fromArray(t.hook):null;if(hook&&!r.line)r.line=createGrappleLine(this.scene);
   const solves=w.update(dt,{unseen,solveEvery:every,hold,speed:r.rest?0:belt?RUN_ON_BELT:r.speed,grounded:t.grounded,stance:t.ball?'stand':t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
-   emote:floating?null:t.emote,rest:floating?{kind:'float',weight:1,seatHeight:w.hipHeight}:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c),rim:r.restKind==='tube'?this.tube?.rim:null}:null,catnip:!!this.catnip?.(c),swimming:!t.rest&&!!this.swimming?.(c),board,hook});
+   emote:floating?null:t.emote,rest:floating?{kind:'float',weight:1,seatHeight:w.hipHeight}:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c),sitPose:r.restKind==='sit'?this.sitPose?.(c,w.hipHeight):null,rim:r.restKind==='tube'?this.tube?.rim:null}:null,catnip:!!this.catnip?.(c),swimming:!t.rest&&!!this.swimming?.(c),board,hook});
   r.line?.update(dt,w.hand(this.v2??=new T.Vector3()),hook);
   // A captain's hat is ~200k triangles: past HAT_M it is a few pixels, and not drawn.
   if(w.hat&&r.distance>HAT_M)w.hat.mount.visible=false;

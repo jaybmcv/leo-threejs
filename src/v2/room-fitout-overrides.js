@@ -1,5 +1,6 @@
 import defaultOverrides from '../plan/room-fitout-overrides-v2.json' with {type:'json'};
 import * as T from 'three';
+import {greenRoomMaterials} from './green-room-fitout.js';
 
 // Merged cabinet details share meshes with their neighbours. Trim only the removed fitting's triangles.
 function removeFittingDetails(source,found,names){
@@ -17,11 +18,30 @@ function removeFittingDetails(source,found,names){
  }
 }
 
+// Carry merged upholstery seams with a moved furniture group.
+// A detail parented under a moved object already rides its parent's move (the garden commons polish each cushion
+// part, so its seams are the cushion's child); shifting its vertices too would move it twice.
+function moveFittingDetails(source,found,names,by){
+ source.updateWorldMatrix(true,true);const bounds=new T.Box3();for(const o of found)bounds.union(new T.Box3().setFromObject(o));bounds.expandByScalar(.02);
+ const point=new T.Vector3(),delta=new T.Vector3(...by).applyMatrix3(new T.Matrix3().setFromMatrix4(source.matrixWorld)),carried=new Set(found);
+ const ridesMove=o=>{for(let p=o.parent;p;p=p.parent)if(carried.has(p))return true;return false;};
+ source.traverse(o=>{if(!o.isMesh||!names.includes(o.name)||ridesMove(o))return;
+  const g=o.geometry.clone(),p=g.attributes.position,n=g.index?.count??p.count,moved=new Set(),d=delta.clone().applyMatrix3(new T.Matrix3().setFromMatrix4(o.matrixWorld.clone().invert()));
+  for(let i=0;i<n;i+=3){const ids=[0,1,2].map(k=>g.index?g.index.getX(i+k):i+k);if(ids.every(k=>bounds.containsPoint(point.fromBufferAttribute(p,k).applyMatrix4(o.matrixWorld))))ids.forEach(k=>moved.add(k));}
+  if(!moved.size){g.dispose();return;}for(const k of moved)p.setXYZ(k,p.getX(k)+d.x,p.getY(k)+d.y,p.getZ(k)+d.z);g.computeBoundingBox();g.computeBoundingSphere();o.geometry=g;
+ });
+}
+
 // Source furniture moves and removals apply before geometry is baked.
 export function moveRoomFitoutMeshes(source,id,overrides=defaultOverrides){
  for(const move of overrides[id]?.moveMeshes||[]){
   if(!Array.isArray(move.names)||!Array.isArray(move.by)||move.by.length!==3||!move.by.every(Number.isFinite))throw Error('Invalid source furniture move in '+id);
-  source.traverse(o=>{if(o.isMesh&&move.names.includes(o.name)){if(o.userData.v2FitoutMoved)return;move.by.forEach((v,i)=>o.position.setComponent(i,o.position.getComponent(i)+v));o.userData.v2FitoutMoved=true;}});
+  if(move.near&&(!Array.isArray(move.near)||move.near.length!==3||!move.near.every(Number.isFinite)||!Number.isFinite(move.radius)||move.radius<=0))throw Error('Invalid source furniture move location in '+id);
+  const found=[];source.traverse(o=>{if((o.isMesh||o.isGroup)&&move.names.includes(o.name)&&!o.userData.v2FitoutMoved&&(!move.near||o.position.distanceTo(new T.Vector3(...move.near))<=move.radius))found.push(o);});
+  const key=move.names.join('|')+'@'+(move.near||[]).join(','),applied=source.userData.v2FitoutMoves||(source.userData.v2FitoutMoves=[]);if(applied.includes(key))continue;
+  if(move.count!==undefined&&found.length!==move.count)throw Error('Expected '+move.count+' source furniture objects for move in '+id+', found '+found.length);
+  if(move.details)moveFittingDetails(source,found,move.details,move.by);
+  for(const o of found){move.by.forEach((v,i)=>o.position.setComponent(i,o.position.getComponent(i)+v));o.userData.v2FitoutMoved=true;}applied.push(key);
  }
  for(const removal of overrides[id]?.removeMeshes||[]){
   if(!Array.isArray(removal.names)||!removal.names.length||new Set(removal.names).size!==removal.names.length||!Array.isArray(removal.near)||removal.near.length!==3||!removal.near.every(Number.isFinite)||!Number.isFinite(removal.radius)||removal.radius<=0||removal.count!==undefined&&!(Number.isInteger(removal.count)&&removal.count>0))throw Error('Invalid source furniture removal in '+id);
@@ -43,7 +63,7 @@ export function moveRoomFitoutMeshes(source,id,overrides=defaultOverrides){
 // Added parts use metres in the room's fitting frame; replacements retain the
 // original placement unless explicitly changed. Collision uses the same mesh.
 export function applyRoomFitoutOverrides(data,layout,overrides=defaultOverrides){
- const materials=new Set(['resident','oak','cream','teal','sage','clay','navy','metal','orange','green','light','screen','water','glass','red','alarm']);
+ const materials=new Set(['resident','oak','cream','teal','sage','clay','navy','metal','orange','green','light','screen','water','glass','red','alarm',...Object.keys(greenRoomMaterials)]);
  const matches=(part,filter)=>Object.entries(filter).every(([key,value])=>part[key]===value);
  const check=part=>{if(!part.part||!Array.isArray(part.size)||part.size.length!==3||!part.size.every(n=>Number.isFinite(n)&&n>0)||!Array.isArray(part.at)||part.at.length!==3||!part.at.every(Number.isFinite)||!materials.has(part.mat))throw Error('Invalid room fitout part in '+part.room);return part;};
  for(const [id,change]of Object.entries(overrides)){
@@ -57,7 +77,10 @@ export function applyRoomFitoutOverrides(data,layout,overrides=defaultOverrides)
   const origin=room.fittingFrame?.origin||room.frame?.origin||[room.x,room.y,room.z],yaw=room.fittingFrame?.yaw??room.frame?.yaw??room.yaw??0,c=Math.cos(yaw),s=Math.sin(yaw),point=([x,y,z])=>[origin[0]+c*x+s*z,origin[1]+y,origin[2]-s*x+c*z];
   for(const part of change.add||[])if(support(part))needsAnchors();
   for(const part of change.add||[])data.parts.push(check({...part,at:point(part.at||[]),yaw:yaw+(part.yaw||0),mat:part.mat||'oak',room:owner,deck:room.deck,...(craft?{component:id}:{})}));
-  if(change.rests){data.rests=data.rests.filter(r=>r.room!==id);change.rests.forEach((rest,i)=>{const vector=v=>Array.isArray(v)&&v.length===3&&v.every(Number.isFinite),direction=v=>vector(v)&&Math.hypot(...v)>0,rotate=([x,y,z])=>[c*x+s*z,y,-s*x+c*z];if(!['sit','lie'].includes(rest.kind)||!vector(rest.point)||rest.facing!==undefined&&!direction(rest.facing)||rest.head!==undefined&&!direction(rest.head)||rest.kind==='lie'&&!direction(rest.head))throw Error('Invalid rest anchor in '+id+'; lying anchors need a nonzero head direction');const at=point(rest.point),f=rest.facing||[0,0,1];data.rests.push({...rest,id:rest.id||'fitout-'+id+'-'+i,room:id,point:at,height:at[1],facing:rotate(f),...(rest.head?{head:rotate(rest.head)}:{}),instanced:true,phase4:true});});}
+  // A Phase 6 seat listed again by its id stays a Phase 6 seat, so check-phase6-v2 still finds it where the programme
+  // put it (#656 re-listed commons-10's twelve and the nightly counted 657 of 669).
+  const phase6Seats=new Set(data.rests.filter(r=>r.room===id&&r.phase6).map(r=>r.id));
+  if(change.rests){data.rests=data.rests.filter(r=>r.room!==id);change.rests.forEach((rest,i)=>{const vector=v=>Array.isArray(v)&&v.length===3&&v.every(Number.isFinite),direction=v=>vector(v)&&Math.hypot(...v)>0,rotate=([x,y,z])=>[c*x+s*z,y,-s*x+c*z];if(!['sit','lie'].includes(rest.kind)||!vector(rest.point)||rest.facing!==undefined&&!direction(rest.facing)||rest.head!==undefined&&!direction(rest.head)||rest.kind==='lie'&&!direction(rest.head))throw Error('Invalid rest anchor in '+id+'; lying anchors need a nonzero head direction');const at=point(rest.point),f=rest.facing||[0,0,1];data.rests.push({...rest,id:rest.id||'fitout-'+id+'-'+i,room:id,point:at,height:at[1],facing:rotate(f),...(rest.head?{head:rotate(rest.head)}:{}),instanced:true,phase4:true,...(phase6Seats.has(rest.id)?{phase6:true}:{})});});}
   if(!data.rooms.some(r=>r.id===id))data.rooms.push(room);
  }
  return data;

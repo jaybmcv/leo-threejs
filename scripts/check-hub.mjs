@@ -42,6 +42,13 @@ check('a follow-up uses the written question',()=>{
  assert.equal(note(card({status:'more-info',question:'Which lift?'})),'Which lift?');
  assert.match(note(card({status:'more-info'})),/Feedback/);
 });
+check('a plan for a big idea reads as ours, shows the plan, needs the tester, and never pulses',()=>{
+ const plan='A first version: a red button on the Deck 6 plaza that drops slime on whoever presses it. Does that fit?';
+ const c=card({status:'proposal',question:plan});
+ assert.deepEqual(pill(c),{text:'Our plan for your idea',tone:'orange'});assert.equal(note(c),plan);assert.equal(isMoving(c),false);
+ assert.deepEqual(groups([c,card({status:'decision'})]).map(g=>g.key),['needs','waiting']);
+ assert.equal(stats([c,card({status:'more-info'}),card()]).find(s=>s.label==='Need you').n,2);
+});
 check('an unknown status from a newer service still reads',()=>assert.equal(pill(card({status:'something-new'})).text,'Received'));
 check('cards fall into groups, newest first, with counts',()=>{
  const live=(day,shots=[])=>card({stage:'live',status:'live',dates:{live:`2026-10-${day}T00:00:00Z`},shots});

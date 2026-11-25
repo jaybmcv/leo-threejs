@@ -31,7 +31,8 @@ pass(`crew only: ${crewBridges.length} gallery bridges and ${crewRooms.length} c
 // The password clubhouse, its vault door's room and its tube lift on every stop.
 const [l0,l1]=VAULT_PLAN.lines,clubFloor=deckY(VAULT_PLAN.deck);
 assert.equal(restrictedAt([(l0[0].x+l1[1].x)/2,clubFloor,(l0[0].z+l1[1].z)/2]),'clubhouse');
-const lift=probe.vaultLiftWorld;for(const s of VAULT_LIFT.stops)assert.equal(restrictedAt([lift[0],s.y,lift[2]]),'clubhouse','tube at deck '+s.deck);
+assert.equal(restrictedAt([-138.9,clubFloor,-29.75]),'clubhouse','password lounge cab');
+const lift=probe.vaultLiftWorld;for(const s of VAULT_LIFT.stops.slice(1))assert.equal(restrictedAt([lift[0],s.y,lift[2]]),'clubhouse','tube at deck '+s.deck);
 assert.equal(restrictedAt([lift[0],VAULT_LIFT.stops[1].y,lift[2]+2.5]),'clubhouse','upper landing');
 pass('the password clubhouse, and its tube lift and landings on decks '+VAULT_LIFT.stops.map(s=>s.deck).join(', '));
 

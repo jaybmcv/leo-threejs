@@ -1,6 +1,6 @@
 import {stripAtmosphere,createAtmosphere} from './atmosphere.js';
 import {installPreparedColliders} from '../v2/prepared-codec.public.js';
-import {yieldToPage} from '../v2/yield-to-page.js';
+import {yieldToPage,hallTurn} from '../v2/yield-to-page.js';
 import {finishLaunchBGeometry} from '../v2/launch-b-geometry.js';
 import layout from '../plan/selected-layout.js';
 import {prepareClubhouseAccess} from '../v2/clubhouse-access.js';
@@ -47,10 +47,10 @@ import {createSwordCase} from './sword-case.public.js';
 import {createChinampa} from './chinampa.js';
 import {stripBaggage,createBaggage} from './baggage.js';
 // Room edits and proxy colliders must be identical in the page and the Node checker.
-export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=null,afterRest=null,light=null,kit=null,anisotropy=1,still=false,urls={},hat=''}={}){
+export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBase=null,afterRest=null,kit=null,anisotropy=1,still=false,urls={},hat=''}={}){
  const dropped=0,colliders=installPreparedColliders(into,ship.v2PreparedColliders);
  afterBase?.(colliders);
- const restSpots=ship.v2PreparedRest,seats=ship.v2PreparedSeats.map(i=>restSpots[i]),lounge=createLounge(ship,colliders,light);afterRest?.({restSpots,seats,lounge});
+ const restSpots=ship.v2PreparedRest,seats=ship.v2PreparedSeats.map(i=>restSpots[i]),lounge=createLounge(ship,colliders);afterRest?.({restSpots,seats,lounge});
  await yieldToPage();
  const booth=createSelfieBooth();colliders.addStatic(booth.group);
  await yieldToPage();
@@ -102,9 +102,12 @@ export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBa
  await yieldToPage();
  // The cherry blossom garden (blossom.js): its trunk, bridge and pond edges solid.
  const blossom=createBlossomGarden(ship);if(blossom)colliders.addStatic(blossom.solid,()=>true);
+ await hallTurn();
  // The Great Cat Tree in the bow of the atrium (cat-tree.js): its island, trunk, ramp, platforms, bridges and guards solid.
  const catTree=createCatTree(ship);if(catTree)colliders.addStatic(catTree.solid,()=>true);
+ await hallTurn();
  const nosePark=createNosePark(ship);if(nosePark)colliders.addStatic(nosePark.solid,()=>true);
+ await hallTurn();
  // The Keel Club, the sports hall in the hull under Deck 1 (keel-club.js): its floors, terraces, stairs and bridges walkable, the rest solid.
  const keelClub=createKeelClub(ship);if(keelClub)colliders.addStatic(keelClub.solid,()=>true);
  await yieldToPage();
@@ -114,8 +117,8 @@ export async function prepareWalkWorld(ship,{into,exteriorPrepared=false,afterBa
  // The Hydro-Nip Lounge's promenade doorway as a jaguar's open mouth (jaguar-gate.js): the head's relief solid.
  const jaguarGate=createJaguarGate();colliders.addStatic(jaguarGate.solid,()=>true);
  await yieldToPage();
- // The marquee signs over the lounge's Deck 19 and 18 entrances (lounge-entrance-signs.js): dressing only, nothing solid.
- const entranceSigns=createLoungeEntranceSigns();
+ // Lounge entrance signs and Deck 19's VIP runner: only its small stanchion proxies are solid.
+ const entranceSigns=createLoungeEntranceSigns();colliders.addStatic(entranceSigns.solid,()=>true);
  await yieldToPage();
  // The arcade row on the Hydro-Nip Lounge's forward wall, Paws Off's treadmill at its far end (arcade.js): solid as plain
  // boxes.

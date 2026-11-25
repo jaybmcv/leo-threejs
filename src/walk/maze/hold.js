@@ -1,3 +1,4 @@
+import {joinStaticTints} from '../static-tints.js';
 import {roomObject} from '../../plan/rooms.js';
 import {walkCanvas} from '../canvas.js';
 import * as T from 'three';
@@ -138,8 +139,9 @@ export function createMazeHold(ship){
   map:signTexture(512,96,[['START  ▸',54,'#f2c230',0]],{rule:false}),roughness:.6}));
  header.name='Container_maze_start_header';header.userData.noCollide=true;
  // The header's text only on the face toward the doorway: its other faces are plain dark.
- header.material=[header.material,...Array(5).fill(new T.MeshStandardMaterial({name:'Container_maze_header',color:0x14181c,roughness:.6}))];
- {const g=header.geometry,groups=g.groups;groups.forEach((q,i)=>{q.materialIndex=i===1?0:1;});}
+ header.material=[header.material,new T.MeshStandardMaterial({name:'Container_maze_header',color:0x14181c,roughness:.6})];
+ {const g=header.geometry,face=g.groups[1];g.clearGroups();g.addGroup(0,face.start,1);g.addGroup(face.start,face.count,0);
+  const end=face.start+face.count;g.addGroup(end,g.index.count-end,1);}
  group.add(header);
  // The sign beside the way in, on the front row's face.
  const signAt={x:X0-.03,y:1.6,z:e1+2.6},sign=new T.Mesh(new T.PlaneGeometry(2.6,1.45),new T.MeshStandardMaterial({name:'Container_maze_sign',color:0xffffff,
@@ -193,6 +195,7 @@ export function createMazeHold(ship){
 
  group.updateMatrix();const toRoom=new T.Matrix4().copy(group.matrix).invert(),local=new T.Vector3();
  let pressed=-1;
+ joinStaticTints(group, paint);
  return {
   group,solid,
   setBoard,

@@ -1,3 +1,4 @@
+import {joinStaticTints} from './static-tints.js';
 import {roomObject} from '../plan/rooms.js';
 import {walkCanvas} from './canvas.js';
 import * as T from 'three';
@@ -243,6 +244,9 @@ export function createChinampa(ship,{still=false}={}){
 
  for(const [m,gs] of parts){const o=new T.Mesh(mergeGeometries(gs),m);o.name=m.name;o.receiveShadow=true;o.userData.noCollide=true;
   if(m===M.water)o.renderOrder=1;if(m===M.glass)o.renderOrder=4;group.add(o);gs.forEach(g=>g.dispose());}
+ joinStaticTints(group, [M.stake, M.withy, M.root]);
+ joinStaticTints(group, [M.hoseDark, M.hoseAir]);
+ joinStaticTints(group, [M.led, M.panel, M.gauge, M.status, M.uv]);
  for(const o of solid.children)o.name='Chinampa_tank_solid';
 
  // The bubbles: rising from the tank floor to the underside of the bed or the surface round it, thickest along the

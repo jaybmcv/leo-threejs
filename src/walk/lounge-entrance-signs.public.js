@@ -1,3 +1,5 @@
+import {createLoungeVipSeating} from '../v2/lounge-vip-seating.js';
+import {createLoungeVipEntrance} from '../v2/lounge-vip-entrance.js';
 import {ReplayGeometry,replayMerged} from "../v2/prepared-geometry-replay.public.js";
 import {fitLoungeEntrance} from '../v2/community-routes.js';
 import * as T from 'three';
@@ -6,15 +8,8 @@ import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/Buffe
 import {canvasTexture} from '../polish-kit.js';
 import {floorY} from '../transit.js';
 
-// The Hydro-Nip Lounge's two entrances, the aft gallery doors on Decks 19 and 18: out on the
-// promenade, beside each doorway, a theatre-marquee board stands on two posts. It is square to the lounge's aft wall,
-// on the side of the walkway that leads to the door, so it reads face-on as you come along that walkway and from the
-// promenade beyond; both faces carry "Hydro-Nip Lounge" in lit lettering inside a ring of purple bulbs, under a purple
-// tube round the rim. Its board is above head height and under the 3.64 m deck above; the walkway to the door passes
-// under it between the posts. Like the canopy it replaces (which hung inside the door's neck and was seen edge-on from
-// the walkway), it is dressing only: nothing in it is solid. Glow is emissive geometry, no real lights. In the group's frame (src/v2/community-routes.js fitLoungeEntrance) the door is centred on
-// x 0 with its jambs at x ±1, y runs up from the deck's floor, the wall's outer face is z 0 and the promenade is +z;
-// +x is the walkway's side. The board's plane is x BOARD.x, running out from z BOARD.z0.
+// Deck 19 has a wall marquee and roped runner. Deck 18 retains its two-sided post sign.
+// The original post board faces along the walkway beside the existing doorway.
 const DOOR_HALF=1,PURPLE=0xa04dff,PALE=0xdcb8ff;
 const BOARD={x:DOOR_HALF+.45,z0:.3,w:3.4,y0:2.5,y1:3.46},POST={r:.06,top:3.52},DEPTH=.2;
 const SIZE=[2048,572];
@@ -103,5 +98,7 @@ export function createLoungeEntranceSigns(){
   bulbB:new T.MeshBasicMaterial({name:'Lounge_sign_bulb_violet',color:PURPLE,toneMapped:false}),
   tube:new T.MeshBasicMaterial({name:'Lounge_sign_neon',color:PURPLE,toneMapped:false}),
  };
- return {groups:[createSign(19,'lounge-entrance-sign-19',mats),createSign(18,'lounge-entrance-sign-18',mats)]};
+ const vip=createLoungeVipEntrance(sprig),seating=createLoungeVipSeating();
+ vip.solid.add(seating.solid);
+ return {groups:[vip.group,createSign(18,'lounge-entrance-sign-18',mats),seating.group],solid:vip.solid};
 }

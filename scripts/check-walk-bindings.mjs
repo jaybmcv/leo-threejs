@@ -17,11 +17,13 @@ const unavailable=createWalkBindings({getItem(){throw Error('blocked');},setItem
 assert.deepEqual(unavailable.set('ping','Mouse4'),{ok:true,saved:false});assert.equal(unavailable.action('Mouse4'),'ping');
 
 const target=()=>({listeners:new Map(),addEventListener(type,fn){const list=this.listeners.get(type)||[];list.push(fn);this.listeners.set(type,list);},setPointerCapture(){},emit(type,props={}){const e={code:'',pointerType:'mouse',button:0,target:{closest:()=>false},prevented:false,preventDefault(){this.prevented=true;},...props};for(const fn of this.listeners.get(type)||[])fn(e);return e;}});
-const windowEvents=target(),surface=target(),actions=[];
-globalThis.addEventListener=windowEvents.addEventListener.bind(windowEvents);globalThis.document={pointerLockElement:null};
+const windowEvents=target(),documentEvents=target(),surface=target(),actions=[];
+globalThis.addEventListener=windowEvents.addEventListener.bind(windowEvents);globalThis.document={pointerLockElement:null,addEventListener:documentEvents.addEventListener.bind(documentEvents)};
 const input=new WalkInput(surface,{onAction:(...args)=>actions.push(args)}),key=code=>windowEvents.emit('keydown',{code});
 key('KeyB');key('Digit1');key('Digit0');key('KeyP');
 assert.deepEqual(actions.splice(0),[['emotes'],['emote',0],['emote',9],['ping']]);
+key('KeyI');assert.deepEqual(actions.splice(0),[['backpack']]);
+walkBindings.set('backpack','KeyJ');key('KeyI');assert.equal(actions.length,0);key('KeyJ');assert.deepEqual(actions.splice(0),[['backpack']]);
 walkBindings.set('emotes','KeyQ');walkBindings.set('ping','Mouse4');walkBindings.set('emote:0','Mouse2');
 key('KeyB');key('KeyP');assert.equal(actions.length,0,'old bindings stop firing');
 key('KeyQ');assert.deepEqual(actions.splice(0),[['emotes']]);

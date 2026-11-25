@@ -27,6 +27,7 @@ const SPIN=1,SWING=1.8,SHUT=1.4,OPEN_ANGLE=100*Math.PI/180,WAIT=20,REACH=2.4;
 const PROMPT_END=Math.min(KX+.6,LOUNGE_PLAN.arcadeStart+43);
 // A game code, not a credential: anyone reading the page's script can find it.
 const CODE='9lives';
+export const vaultPassword=code=>String(code||'').trim().toLowerCase()===CODE;
 
 // The room's walls on the ship map (deck-map.js), in world coordinates.
 const world=(x,z)=>{const p=anchoredPoint('commons-1',[C.x+WALL-z,FLOOR,C.z+x]);return{x:p[0],z:p[2]};};
@@ -148,7 +149,7 @@ export function createVault(ship){
   },
   // The password, as typed: true if it opens the door.
   unlock(code){if(state!=='locked')return state!=='closing';
-   if(String(code||'').trim().toLowerCase()===CODE){start('in');return true;}
+   if(vaultPassword(code)){start('in');return true;}
    denied=1.6;show('denied');return false;},
   release(){if(state==='locked')start('out');},
   // Each frame, with the walker's position.

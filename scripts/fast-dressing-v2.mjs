@@ -205,11 +205,13 @@ function roomDressings(){
   // The page's lights stand in as fresh ones, so the mood block runs as it does on the page.
   'gaming-lounge':{room:'d16-training-aft',dress:'dressGamingLounge',create:'createGamingLounge',binding:'gaming',
    args:ctx=>[ctx.ship,{hemi:new T.HemisphereLight(0xffffff,0x444444,1),fill:new T.DirectionalLight(0xffffff,1),scene:new T.Scene()},{still:false}],
-   glue:"gaming=feature('room:gaming-lounge',ship,()=>createGamingLounge(ship,{hemi,fill,scene},"+still+"));",
+   // requestBoards (#629's leaderboard hologram) asks Leo live for the game boards while the cat is in the room; it builds nothing.
+   glue:"gaming=feature('room:gaming-lounge',ship,()=>createGamingLounge(ship,{hemi,fill,scene},{still:matchMedia('(prefers-reduced-motion: reduce)').matches,requestBoards(){if(!live?.live)return;live.board();live.board('pool');live.maze('board');live.treasure('board');live.pinball('board');}}));",
    // The room's music (training-sound.js) only reads the room's soundLevel while the walk runs: it draws and builds nothing.
-   allowed:['if(gaming)toBand(gaming.group);',',gaming=null,','get gaming(){return gaming;}','trainingSound=gaming?createTrainingSound(gaming):null;'],
+   // gaming-scores.js (#629) only keeps the boards the page hears for the hologram; its path is the one "gaming" left.
+   allowed:['if(gaming)toBand(gaming.group);',',gaming=null,','get gaming(){return gaming;}','trainingSound=gaming?createTrainingSound(gaming):null;',"import {hearGamingBoard} from './gaming-scores.js';"],
    imports:['src/v2/prepared-geometry-record.js','src/plan/selected-layout.js','src/plan/rooms.js','package:three','package:three/addons/utils/BufferGeometryUtils.js'],
-   reads:['export function createGamingLounge(ship,light=null,{still=false}={}){',...ROOM_READS,'function roomOutline(room){',
+   reads:['export function createGamingLounge(ship,light=null,{still=false,requestBoards=()=>{}}={}){',...ROOM_READS,'function roomOutline(room){',
     "const plan=layout.rooms?.find(r=>'Area_'+r.id===ROOM)?.polygon,toLocal=room.matrixWorld.clone().invert(),y=room.matrixWorld.elements[13];",
     'const world=local.map(([x,z])=>{const v=new T.Vector3(x,0,z).applyMatrix4(room.matrixWorld);return [v.x,v.z];});',
     'const outline=roomOutline(room),flat=(flip)=>new T.ShapeGeometry(new T.Shape(outline.local.map(([x,z])=>new T.Vector2(x,flip*z))));',
@@ -218,7 +220,9 @@ function roomDressings(){
     'scene.environmentIntensity=f(base.env,base.env*MOOD.env);hemi.color.lerpColors(base.sky,skyC,t);hemi.groundColor.lerpColors(base.ground,groundC,t);};',
     // The room's music level (soundLevel, #533): the room frame inverted and the plan's doorway, read at run time only.
     'const toLocal=room.matrixWorld.clone().invert(),here=new T.Vector3();',
-    "const gap=(d=>{if(!d)return {x0:DOOR[0],x1:DOOR[1],z:SIDE};const c=here.set(...d.center).applyMatrix4(toLocal);return {x0:c.x-d.width/2,x1:c.x+d.width/2,z:c.z};})(layout.rooms?.find(r=>'Area_'+r.id===ROOM)?.door);"]},
+    "const gap=(d=>{if(!d)return {x0:DOOR[0],x1:DOOR[1],z:SIDE};const c=here.set(...d.center).applyMatrix4(toLocal);return {x0:c.x-d.width/2,x1:c.x+d.width/2,z:c.z};})(layout.rooms?.find(r=>'Area_'+r.id===ROOM)?.door);",
+    // The leaderboard hologram's own atlas (#629): a fresh 2D canvas for its texture, drawn from the boards at run time.
+    "const c=document.createElement('canvas');c.width=1536;c.height=1024;"]},
   // capsule-bubbles.js isn't the suite's to change here: its module code runs before the world is built, so an edit to it widens.
   surgery:{room:'d05-surgery-2',dress:'dressSurgery',create:'createSurgeryArms',binding:'surgeryArms',args:ctx=>[ctx.ship,{still:false}],
    glue:"surgeryArms=feature('room:surgery',ship,()=>createSurgeryArms(ship,"+still+"));if(surgeryArms)toBand(surgeryArms.group);",

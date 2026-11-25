@@ -1,5 +1,7 @@
 import * as T from 'three';
 import {SYNTHWAVE_MURAL} from '../v2/community-routes.js';
+import layout from '../plan/selected-layout.js';
+import {TRANSIT_CORES} from '../plan/v1.js';
 import {createSpatial,updateSpatial} from './spatial-audio.js';
 
 // The exit sits on the Deck 17 mural, centred on the reported approach (yaw 273).
@@ -7,13 +9,38 @@ const FLOOR=SYNTHWAVE_MURAL.paintFloor,X=SYNTHWAVE_MURAL.x+.04;
 const Z=-41.56+(X+138.8)/Math.tan(273*Math.PI/180);
 // The gallery underside is at 28.02 m; the oval and its halo must both fit below it.
 export const HYDRO_PORTAL=Object.freeze({x:X,y:FLOOR+2.4,z:Z,width:2.2,height:2.4,floor:FLOOR,range:9});
-// Feet arrive at the oval's lower centre, 0.8 m into the room, facing clear floor so the camera can frame the landing.
-// No feature uses this destination yet.
-export const HYDRO_PORTAL_ARRIVAL=Object.freeze({name:'Hydro-Portal',at:Object.freeze([SYNTHWAVE_MURAL.x+.8,FLOOR+1.2,Z]),yaw:160});
+// Both landings use floor points, facing out into the room.
+export const HYDRO_PORTAL_ARRIVAL=Object.freeze({name:'Hydro-Portal',at:Object.freeze([SYNTHWAVE_MURAL.x+.8,FLOOR,Z]),yaw:160});
+const CORE=TRANSIT_CORES.find(c=>c.id==='forward'),PARK_FLOOR=layout.decks[5].y;
+// The blank east face ahead of the park approach, between z -7.87 and -2.73.
+export const HYDRO_PARK_PORTAL=Object.freeze({x:CORE.stairX+4.64+.04,y:PARK_FLOOR+2.4*.54,z:-CORE.stairZ,width:2.2,height:2.4,floor:PARK_FLOOR,range:9});
+export const HYDRO_PARK_ARRIVAL=Object.freeze({name:'Hydro-Portal park',at:Object.freeze([HYDRO_PARK_PORTAL.x+1.6,PARK_FLOOR,HYDRO_PARK_PORTAL.z]),yaw:90});
+const CARGO=layout.rooms.find(r=>r.id==='d02-maintenance-aft');
+// The engine housing's blank back is behind the glass; mount outside its east face without cutting either.
+export const HYDRO_CARGO_PORTAL=Object.freeze({x:CARGO.x+CARGO.width/2+.09,y:CARGO.y+1.7,z:CARGO.z,width:2.2,height:2.4,floor:CARGO.y,range:9});
+export const HYDRO_PORTAL_LINKS=Object.freeze([
+ Object.freeze({portal:HYDRO_PORTAL,arrival:HYDRO_PARK_ARRIVAL}),
+ Object.freeze({portal:HYDRO_PARK_PORTAL,arrival:HYDRO_PORTAL_ARRIVAL}),
+ Object.freeze({portal:HYDRO_CARGO_PORTAL,arrival:HYDRO_PORTAL_ARRIVAL})
+]);
 
-export function hydroPortalLevel(p,on){
- const d=Math.hypot(p.x-X,p.y-HYDRO_PORTAL.y,p.z-Z);
- return on?Math.max(0,1-d/HYDRO_PORTAL.range)**2*.045:0;
+export function hydroPortalContains(portal,p,pad=0){
+ return p.x>=portal.x-.05&&p.x<portal.x+.75+pad&&Math.abs(p.z-portal.z)<portal.width*.4+pad&&Math.abs(p.y-portal.floor)<.4;
+}
+export function createHydroPortalTravel(){
+ let locked=false;
+ return {step(p,enabled,go){
+  if(locked){if(!HYDRO_PORTAL_LINKS.some(l=>hydroPortalContains(l.portal,p,1.2)))locked=false;return false;}
+  if(!enabled)return false;
+  const link=HYDRO_PORTAL_LINKS.find(l=>hydroPortalContains(l.portal,p));if(!link)return false;
+  // Go-to validates the landing and places the controller before normal pose, light and sound updates.
+  locked=true;return go({...link.arrival,yaw:link.arrival.yaw*Math.PI/180,resolved:true});
+ }};
+}
+
+export function hydroPortalLevel(p,on,portal=HYDRO_PORTAL){
+ const d=Math.hypot(p.x-portal.x,p.y-portal.y,p.z-portal.z);
+ return on?Math.max(0,1-d/portal.range)**2*.045:0;
 }
 
 // A seamless noise loop through a sweeping resonator and two phasing all-pass filters.
@@ -34,11 +61,11 @@ export function buildHydroPortalWarp(ctx,out){
  pull.connect(depth).connect(sweep.frequency);tail.connect(out);src.start();pull.start();
 }
 
-export function createHydroPortalSound(){
+export function createHydroPortalSound(portal=HYDRO_PORTAL){
  let ctx=null,gain=null,spatial=null,wanted=false;
- const source=Object.freeze({x:X,y:HYDRO_PORTAL.y,z:Z});
+ const source=Object.freeze({x:portal.x,y:portal.y,z:portal.z});
  return {source,get spatial(){return spatial;},update(p,on,camera){
-  const level=hydroPortalLevel(p,on);wanted=level>0;
+  const level=hydroPortalLevel(p,on,portal);wanted=level>0;
   if(wanted&&!ctx){
    if(navigator.userActivation?.hasBeenActive===false)return;
    ctx=new (window.AudioContext||window.webkitAudioContext)();gain=ctx.createGain();gain.gain.value=0;
@@ -51,7 +78,7 @@ export function createHydroPortalSound(){
  }};
 }
 
-export function createHydroPortal(){
+export function createHydroPortal(portal=HYDRO_PORTAL){
  const uniforms={uTime:{value:0}},material=new T.ShaderMaterial({uniforms,transparent:true,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false,
   vertexShader:`#include <common>
    #include <logdepthbuf_pars_vertex>
@@ -80,9 +107,11 @@ export function createHydroPortal(){
     colour+=vec3(1.,.65,.36)*(sparks*3.*inside+2.2*exp(-r*19.));
     gl_FragColor=vec4(colour,1.-smoothstep(1.03,1.08,r));
    }`});
- const group=new T.Mesh(new T.PlaneGeometry(HYDRO_PORTAL.width*1.35,HYDRO_PORTAL.height*1.35),material);
- group.name='Hydro_Portal';group.position.set(X,HYDRO_PORTAL.y,Z);group.rotation.y=Math.PI/2;
- group.userData={room:'commons-1',noCollide:true};
- const sound=createHydroPortalSound();
- return {group,sound,arrival:HYDRO_PORTAL_ARRIVAL,update(dt,p,on,camera){uniforms.uTime.value+=dt;sound.update(p,on,camera);}};
+ const group=new T.Mesh(new T.PlaneGeometry(portal.width*1.35,portal.height*1.35),material);
+ group.name=portal===HYDRO_PORTAL?'Hydro_Portal':portal===HYDRO_CARGO_PORTAL?'Hydro_Portal_Cargo':'Hydro_Portal_Park';group.position.set(portal.x,portal.y,portal.z);group.rotation.y=Math.PI/2;
+ group.userData={room:portal===HYDRO_PORTAL?'commons-1':portal===HYDRO_CARGO_PORTAL?'circulation-2':'circulation-6',noCollide:true};
+ const sound=createHydroPortalSound(portal);
+ return {group,sound,arrival:portal===HYDRO_PARK_PORTAL?HYDRO_PARK_ARRIVAL:HYDRO_PORTAL_ARRIVAL,
+  prompt(p){return portal===HYDRO_CARGO_PORTAL&&hydroPortalContains(portal,p,2)?{kind:'hydro-portal',label:'Walk into Hydro-Portal to Hydro-Nip Lounge',passive:true}:null;},
+  update(dt,p,on,camera){uniforms.uTime.value+=dt;sound.update(p,on,camera);}};
 }

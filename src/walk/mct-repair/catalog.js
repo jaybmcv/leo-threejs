@@ -6,7 +6,7 @@ export const PARTS=[
  {"id":"seat","name":"Modular Seat","view":"top"},
  {"id":"bumper","name":"Front Bumper","view":"front"},
  {"id":"lights","name":"Rear Step & Lights","view":"rear"},
- {"id":"skirt","name":"MCT-01 Side Skirt","view":"side"},
+ {"id":"skirt","name":"Side Skirt","view":"side"},
  {"id":"hood","name":"Hood Deflector","view":"front"},
  {"id":"fender","name":"Fender & Guard","view":"side"},
  {"id":"battery","name":"48V Battery Pack","view":"top"},
@@ -20,7 +20,7 @@ export const PARTS=[
  {"id":"ecu","name":"ECU Controller","view":"front"},
  {"id":"coilover","name":"Coilover Shock","view":"side"},
  {"id":"steerrack","name":"Steering Rack","view":"front"},
- {"id":"fusebox","name":"HV Fuse & Relay Box","view":"rear"},
+ {"id":"fusebox","name":"HV Fuse and Relay Box","view":"rear"},
  {"id":"fan","name":"Cooling Fan Shroud","view":"front"},
  {"id":"pedals","name":"Pedal Assembly","view":"front"},
  {"id":"strobe","name":"Roof Strobe Beacon","view":"top"},
@@ -55,6 +55,10 @@ export const PUZZLES=[
  {"name":"Power Quick","parts":["battery","harness","relay","ecu"],"count":4,"diag":"Caution: Battery voltage drop. Relay chatter. Harness short. ECU communication lost."},
  {"name":"Fluid Spot","parts":["reservoir","hose","fluidfilter","moisture"],"count":4,"diag":"Alert: Fluid leak detected. Reservoir low. Hose weep. Moisture in air line."},
  {"name":"Cargo Quick","parts":["hitch","tailgate","anchor","triangle"],"count":4,"diag":"Notice: Hitch pin missing. Tailgate latch failed. Anchor ring loose. Triangle not stowed."},
+ {"name":"Front Cooling","parts":["steerrack","fan","radiator","skidplate"],"count":4,"diag":"Warning: Steering rack binding. Cooling fan seized. Radiator flow restricted. Skid plate bent."},
+ {"name":"Cargo Hardware","parts":["winch","barrier","leafspring","auxbattery"],"count":4,"diag":"Alert: Winch motor offline. Cargo barrier bent. Leaf spring cracked. Auxiliary 12V battery dead."},
+ {"name":"Pressure Check","parts":["compressor","valves","mastercyl","latch"],"count":4,"diag":"Caution: Air compressor cycling hard. Pneumatic valves stuck. Master cylinder leaking. Spring latch bolt jammed."},
+ {"name":"Auxiliary Systems","parts":["fusebox","strobe","snorkel","moisture"],"count":4,"diag":"Warning: HV fuse and relay box shorted. Roof strobe beacon offline. Intake snorkel loose. Moisture trap filter full."},
  {"name":"Chassis & Power","parts":["wheel","skirt","battery","harness","bumper","lights","seat","brake"],"count":8,"diag":"Critical: Multiple chassis faults. Battery voltage unstable. Wiring harness short. Braking uneven. Seat mount loose."},
  {"name":"Full Exterior","parts":["bumper","hood","fender","skirt","lights","cage","steer","wheel"],"count":8,"diag":"Notice: Exterior panel damage across front and sides. Roll cage misaligned. Steering free-play high."},
  {"name":"Cabin Fit","parts":["steer","pedals","cluster","mirror","seat","swheel","cage","strobe"],"count":8,"diag":"Notice: Cabin controls unresponsive. Pedal travel excessive. Instrument cluster blank. Mirror misaligned. Beacon offline."},
@@ -62,11 +66,17 @@ export const PUZZLES=[
  {"name":"Suspension Mid","parts":["coilover","wheel","brake","leafspring","skirt","fender","axle","snorkel"],"count":8,"diag":"Alert: Suspension and intake faults. Leaf spring cracked. Coilover leak. Axle play. Snorkel loose."},
  {"name":"Rear Systems","parts":["lights","motor","axle","hitch","tailgate","barrier","auxbattery","compressor"],"count":8,"diag":"Caution: Rear systems degraded. Motor overtemp. Hitch pin missing. Aux battery dead. Barrier bent."},
  {"name":"Front Systems","parts":["bumper","hood","steer","steerrack","fan","radiator","winch","skidplate"],"count":8,"diag":"Warning: Front end damage. Steering rack binding. Cooling fan seized. Winch offline. Skid plate bent."},
+ {"name":"Cargo Securing","parts":["anchor","triangle","latch","fusebox","tailgate","hitch","auxbattery","barrier"],"count":8,"diag":"Alert: Bed anchor ring loose. Warning triangle missing. Spring latch bolt jammed. HV fuse and relay box shorted. Tailgate latch failed. Pintle hitch damaged. Auxiliary battery dead. Cargo barrier bent."},
  {"name":"Complete Overhaul","parts":["wheel","brake","skirt","fender","bumper","hood","steer","lights","axle","motor","battery","ecu"],"count":12,"diag":"Priority: Full systems scan failed. Powertrain, chassis, and control faults concurrent. ECU not responding."},
  {"name":"Systems Full","parts":["cage","seat","swheel","battery","relay","harness","wheel","brake","bumper","lights","pump","ecu"],"count":12,"diag":"Warning: Cabin and power systems degraded. Vacuum pump offline. Relay chatter. Steering wheel play excessive."},
  {"name":"Power & Chassis","parts":["fusebox","fan","battery","harness","steerrack","coilover","motor","axle","hitch","lights","wheel","ecu"],"count":12,"diag":"Critical: HV system fault. Cooling fan seized. Steering rack binding. Drive motor overtemp. Hitch pin missing."},
- {"name":"Cargo Deck","parts":["anchor","winch","skidplate","barrier","leafspring","tailgate","auxbattery","triangle","hitch","lights","cage","wheel"],"count":12,"diag":"Alert: Cargo deck integrity compromised. Winch motor offline. Tailgate latch failed. Aux battery dead. Warning triangle missing."},
+ {"name":"Cargo Deck","parts":["anchor","winch","skidplate","barrier","leafspring","tailgate","auxbattery","triangle","hitch","latch","cage","wheel"],"count":12,"diag":"Alert: Cargo deck integrity compromised. Winch motor offline. Tailgate latch failed. Aux battery dead. Warning triangle missing. Spring latch bolt jammed."},
  {"name":"Full Fluids & Air","parts":["reservoir","fluidfilter","hose","mastercyl","moisture","radiator","valves","compressor","pump","snorkel","fan","ecu"],"count":12,"diag":"Critical: Combined fluid and air faults. Compressor cycling hard. Vacuum pump offline. Radiator restricted. ECU not confirming."},
  {"name":"Cabin & Chassis Full","parts":["steer","pedals","cluster","mirror","seat","swheel","cage","strobe","coilover","brake","wheel","skirt"],"count":12,"diag":"Priority: Cabin and chassis concurrent faults. Controls unresponsive. Suspension bottoming. Roll cage misaligned. Beacon offline."}
 ];
-export const JUNK=["bolt","spring","scrap","filter","wire","nut","bracket","wrench","yarn","skate","comic","leaf","box","cup","tape","chargeplug","extinguisher","floorjack","lugwrench","toolbox","cone","towhook","diagscanner","ratchetstrap","laser","tunacan","collar","yarnball","keycard","visor","fishpuck","nippouch","pawpad"];
+export const JUNK_NAMES={
+ chargeplug:'EV Charge Plug',extinguisher:'Fire Extinguisher',floorjack:'Hydraulic Floor Jack',lugwrench:'Cross Lug Wrench',toolbox:"Mechanic's Toolbox",cone:'Safety Traffic Cone',towhook:'Heavy Tow Hook',diagscanner:'Diagnostic Scanner',ratchetstrap:'Cargo Ratchet Strap',
+ laser:'Cosmic Laser Pointer',tunacan:'Zero-G Tuna Can',collar:'Cybernetic Collar',yarnball:'Plasma Yarn Ball',keycard:'Leo Keycard',visor:'Scratched Visor',fishpuck:'Holographic Fish Puck',nippouch:'Space-Nip Pouch',pawpad:'Paw-Pad Control Pedal',
+ fishbowl:'Zero-G Fish Bowl',headphones:'Cat-Ear Headphones',robomouse:'Robo-Mouse Decoy',hydropod:'Catnip Hydro-Pod',scratchpost:'Scratching Post Core',milkcarton:'Space-Milk Carton',chewedbox:'Chewed Cargo Box',featherdrone:'Feather Teaser Drone',kibblebowl:'Gravity Kibble Bowl'
+};
+export const JUNK=["bolt","spring","scrap","filter","wire","nut","bracket","wrench","yarn","skate","comic","leaf","box","cup","tape",...Object.keys(JUNK_NAMES)];

@@ -1,5 +1,6 @@
 import * as T from 'three';
-import {COSMO_HEIGHT,aim,turn} from '../cosmo-pose.js';
+import {COSMO_HEIGHT,aim,turn,setWorldQuat} from '../cosmo-pose.js';
+import {solveSeatedLimb} from './vr/seatedContacts.ts';
 import {DLCatFigure} from './vr/dlCatFigure.ts';
 import {DEFAULT_DLCAT_TUNING} from './vr/dlCatTuning.ts';
 import {COSMO_EMOTES} from './vr/cosmoEmotes.ts';
@@ -64,6 +65,22 @@ function hammockArms(bone){
  }
 }
 
+// On the lounge's rug cushions: low, wide knees and inward feet, staggered in front to clear the large shoes.
+function crossLeggedPose(bone,root){
+ for(const side of ['L','R']){
+  const out=side==='L'?1:-1;
+  aim(bone('thigh.'+side),bone('shin.'+side),new T.Vector3(out*.7,0,.7));
+  aim(bone('shin.'+side),bone('foot.'+side),new T.Vector3(-out,side==='L'?.19:.3,side==='L'?.5:1.5));
+  const toes=new T.Vector3(-out,0,side==='L'?-1:.3).normalize(),sole=new T.Vector3(0,-1,0),width=new T.Vector3().crossVectors(toes,sole);
+  setWorldQuat(bone('foot.'+side),new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(width,toes,sole)));
+  const knee=bone('shin.'+side).getWorldPosition(new T.Vector3()).add(new T.Vector3(0,.065,.015));
+  solveSeatedLimb(root,bone('upper_arm.'+side),bone('forearm.'+side),bone('hand.'+side),root.worldToLocal(knee).toArray(),[out*.4,-1,-.2]);
+  // The hand's local Y runs along the fingers; local Z points out of the palm.
+  const along=new T.Vector3(out*.65,0,.75).normalize(),palm=new T.Vector3(0,1,0),across=new T.Vector3().crossVectors(along,palm);
+  setWorldQuat(bone('hand.'+side),new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(across,along,palm)));
+ }
+}
+
 // Riding the longboard down (glide.js), side-on with the left foot leading: the body turns a quarter to the right on
 // the board, so here, in his own frame (facing +z, left +x), the feet spread along x over the trucks, the knees bend
 // out over them, the arms reach out fore and aft for balance, and the head turns left to look where he is going.
@@ -101,6 +118,8 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
  hammockArms(bone);const hammock=bones.map(b=>b.quaternion.clone());
  bones.forEach((b,i)=>b.quaternion.copy(rest[i]));figure.root.updateMatrixWorld(true);
  floatPose(bone);const floating=bones.map(b=>b.quaternion.clone());
+ bones.forEach((b,i)=>b.quaternion.copy(rest[i]));figure.root.updateMatrixWorld(true);
+ crossLeggedPose(bone,figure.root);const crossLegged=bones.map(b=>b.quaternion.clone());
  // On the longboard, and how far the bent knees lift the feet towards the hips, so the figure drops to keep them on it.
  const footY=()=>Math.min(bone('foot.L').getWorldPosition(new T.Vector3()).y,bone('foot.R').getWorldPosition(new T.Vector3()).y);
  bones.forEach((b,i)=>b.quaternion.copy(rest[i]));figure.root.updateMatrixWorld(true);const standFoot=footY();
@@ -146,7 +165,7 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
   matrices,
   // Where the right paw is drawn (the grapple line leaves from it).
   hand(out=new T.Vector3()){return paw.getWorldPosition(out);},
-  // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock, rim},
+  // s: {speed, grounded, stance, jumpCount, jumpS, turnRate, accel, rise, emote, rest:{kind:'sit'|'lie', weight, seatHeight, hammock, sitPose, rim},
   //  catnip: in the Hydro-Nip Lounge, board: riding the longboard (0..1, glide.js), hook: the grapple's bite (world) or null,
   //  unseen: nothing draws him this frame (first person), so the figure's rig solve (about 0.33 ms) runs less often,
   //  solveEvery: seconds between solves while he is small on screen (another visitor far off: remotes.js), 0 every frame}
@@ -155,6 +174,7 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
   // spent this frame, so the rig gathers its time instead of solving (rig-pace.js), unless an input changed.
   update(dt,s){
    const r=s.rest,seated=r?.kind==='sit'&&r.weight>.35;
+   this.sitPose=seated?(r.sitPose||'passenger'):null;
    hang=T.MathUtils.clamp(hang+(s.hook&&!r?1:-1)*dt/HANG_S,0,1);if(s.hook)anchor.copy(s.hook);
    // Hanging, the body leans along the line, in the holder's frame, from the feet.
    if(hang>0){
@@ -175,6 +195,13 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
    this.solveMs=solved?performance.now()-t0:0;
    if(solved)held.keep();else if(held.restore())matrices?.changed();
    lastPose=pose;
+   if(r?.kind==='sit'&&r.sitPose==='crossLegged'&&r.weight>0){
+    bones.forEach((b,i)=>b.quaternion.slerp(crossLegged[i],r.weight));touched();
+    // Keep the pelvis at the seat's hip height after replacing the passenger pose.
+    figure.root.updateMatrixWorld(true);const hip=figure.root.worldToLocal(bone('spine').getWorldPosition(new T.Vector3()));
+    figure.asset.root.position.y+=(r.seatHeight-hip.y)*r.weight;touched();
+    figure.root.updateMatrixWorld(true);
+   }
    // Lying down, in a bed or playing dead, the hat comes off: on his back it would sink into the floor or the pillow.
    if(this.hat)this.hat.mount.visible=!s.swimming&&!(r?.kind==='lie'&&r.weight>.3)&&s.emote!=='play_dead';
    if(s.swimming&&!suit)suit=createSwimSuit(figure,body);suit?.update(!!s.swimming);

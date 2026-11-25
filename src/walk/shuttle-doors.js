@@ -26,8 +26,10 @@ export function createShuttleDoors(toBand,doorways=shuttleDoorways()){
  if(!doorways.length)return null;
  const group=new T.Group(),y0=doorways[0].y;group.name='V2_shuttle_doors';group.position.y=y0;
  const box=(w,h,d,x,y,z)=>new T.BoxGeometry(w,h,d).translate(x,y,z);
+ const withoutJoint=g=>{const p=g.attributes.position,ix=g.index,keep=[];for(let i=0;i<ix.count;i+=3){const ids=[0,1,2].map(k=>ix.getX(i+k));if(!ids.every(id=>Math.abs(p.getY(id)-HEIGHT)<1e-6))keep.push(...ids);}g.setIndex(keep);g.clearGroups();return g;};
  // Casing: two jambs and a head, as deep as the glass and its trim, standing on the floor with a flush bottom edge.
- const jambs=[-1,1].map(s=>box(CASING,HEIGHT+.02,DEEP,s*(HALF+CASING/2),HEIGHT/2-.01,0)),head=box(HALF*2+CASING*2,.12,DEEP,0,HEIGHT+.06,0),frame=mergeGeometries([...jambs,head]);
+ // Only the clear opening has a head underside. Buried jamb/head faces are omitted.
+ const jambs=[-1,1].map(s=>withoutJoint(box(CASING,HEIGHT+.02,DEEP,s*(HALF+CASING/2),HEIGHT/2-.01,0))),head=withoutJoint(box(HALF*2+CASING*2,.12,DEEP,0,HEIGHT+.06,0)),under=new T.PlaneGeometry(HALF*2,DEEP).rotateX(Math.PI/2).translate(0,HEIGHT,0),frame=mergeGeometries([...jambs,head,under]);
  const m4=new T.Matrix4(),parts=[];
  for(const d of doorways){const g=frame.clone();m4.makeRotationY(d.yaw).setPosition(d.x,d.y-y0,d.z);g.applyMatrix4(m4);parts.push(g);}
  const casing=new T.Mesh(mergeGeometries(parts),casingMaterial);casing.name='V2_shuttle_door_casings';casing.userData.noCollide=true;group.add(casing);

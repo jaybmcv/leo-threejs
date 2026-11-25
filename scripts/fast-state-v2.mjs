@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {geometryIdentity,sha,sourceHash,changedInputs} from './fast-dependencies-v2.mjs';
 import {runNode} from './fast-timing.mjs';
+import {OVERRIDES,OVERRIDE_SNAPSHOT,baselineOverrideReason} from './fast-overrides-v2.mjs';
 
 export const output='output/leo-interior-v02';
 export const baseline=output+'/fast-base';
@@ -11,7 +12,7 @@ const modelFiles=async directory=>(await fs.readdir(directory)).filter(f=>f.ends
 // descriptors are identical. It does not invalidate the clean full-build base.
 const patchProducerFiles=['scripts/build-fast-v2.mjs','scripts/fast-state-v2.mjs',
  'scripts/fast-room-patch-v2.mjs','scripts/prepared-patch-v2.mjs',
- 'scripts/patch-models-v2.mjs','scripts/fast-fitout-data-v2.mjs','scripts/fast-room-cache-v2.mjs','scripts/patch-owned-spans-v2.mjs','scripts/legacy-room-data-v2.mjs','scripts/fast-fitout-mesh-data-v2.mjs','src/v2/legacy-room.js','src/v2/room-owner.js','scripts/fast-dressing-v2.mjs','src/v2/feature-owner.js'];
+ 'scripts/patch-models-v2.mjs','scripts/fast-fitout-data-v2.mjs','scripts/fast-room-cache-v2.mjs','scripts/patch-owned-spans-v2.mjs','scripts/legacy-room-data-v2.mjs','scripts/fast-fitout-mesh-data-v2.mjs','src/v2/legacy-room.js','src/v2/room-owner.js','scripts/fast-dressing-v2.mjs','src/v2/feature-owner.js','scripts/fast-overrides-v2.mjs'];
 export const patchProducerIdentity=async()=>sha(JSON.stringify(await Promise.all(patchProducerFiles.map(async f=>[f,sourceHash(f,await fs.readFile(f))]))));
 export async function captureActiveBuild(identity,{rooms=[],decks=[],smokeRooms=rooms}={}){
  const prepared=await verifyPrepared(),files={};for(const name of await modelFiles(output))files[name]=sha(await fs.readFile(output+'/'+name));
@@ -46,13 +47,14 @@ export async function captureFastBaseline({bootstrap=false}={}){
  const next=baseline+'.next',old=baseline+'.old';await fs.rm(next,{recursive:true,force:true});await fs.mkdir(next,{recursive:true});
  for(const e of await fs.readdir(output,{withFileTypes:true}))if(e.isFile()&&(/\.glb$/.test(e.name)||['layout.json','walk-plan.json','walk-map.png','exterior-envelopes.json','scoped-models.json'].includes(e.name)))await fs.copyFile(output+'/'+e.name,next+'/'+e.name);
  await fs.cp(output+'/prepared-walk',next+'/prepared-walk',{recursive:true});
+ await fs.copyFile(OVERRIDES,next+'/'+OVERRIDE_SNAPSHOT);
  // Importing afresh is intentional: a full build and the next deploy run in
  // separate processes; no stale ESM module can hide a room edit.
  await runNode('scripts/fast-fitout-data-v2.mjs');
  await fs.copyFile('output/fast-deploy/fitout-current.json',next+'/fitout.json');
  await runNode('scripts/legacy-room-data-v2.mjs');await fs.copyFile('output/fast-deploy/legacy-current.json',next+'/legacy.json');
  await runNode('scripts/fast-fitout-mesh-data-v2.mjs');await fs.copyFile('output/fast-deploy/fitout-mesh-current.json',next+'/fitout-mesh.json');
- const files={};for(const name of (await fs.readdir(next)).filter(f=>f.endsWith('.glb')||['layout.json','walk-plan.json','walk-map.png','fitout.json','legacy.json','fitout-mesh.json'].includes(f)))files[name]=sha(await fs.readFile(next+'/'+name));
+ const files={};for(const name of (await fs.readdir(next)).filter(f=>f.endsWith('.glb')||['layout.json','walk-plan.json','walk-map.png','fitout.json','legacy.json','fitout-mesh.json',OVERRIDE_SNAPSHOT].includes(f)))files[name]=sha(await fs.readFile(next+'/'+name));
  // The feature lane's strip and bed helpers as built (fast-dressing-v2.mjs featureHelperHashes).
  const featureHelpers=(await import('./fast-dressing-v2.mjs')).featureHelperHashes();
  const record={version:1,identity,prepared:i.sha256,files,featureHelpers,captured:new Date().toISOString()};
@@ -68,6 +70,11 @@ export async function readFastBaseline(){
  return state;
 }
 
+// What lane B rebuilds rooms from: the fit-out programme, the Phase 4 mesh kit and the legacy room sources. Any other
+// changed geometry input that lane D doesn't take goes whole (check-lounge-mood-split.mjs relies on this).
+export const programmeInputs=new Set(['src/plan/room-fitout-overrides-v2.json','src/v2/phase4-programme.js','src/v2/phase6-programme.js','src/v2/launch-d-fitout.js']);
+export const kitInputs=new Set(['src/v2/phase4-mesh-kit.js']);
+export const legacyInputs=new Set(['src/special-areas.js','src/areas.js','src/area-finish.js','src/command-deck.js','src/neighborhood-services.js','src/lower-aft.js','src/lower-bow.js','src/upper-aft.js','src/voyage-forum.js','src/v2/room-shell.js']);
 export async function classifyFastChange(){
  const identity=await geometryIdentity();let state;try{state=await readFastBaseline();}catch(e){return {lane:'whole',reason:e.message,files:[],identity,rooms:[],decks:[]};}
  let baselineIdentity=state.identity,migration=null;
@@ -85,10 +92,9 @@ export async function classifyFastChange(){
  if(dressing?.reason)return {lane:'whole',reason:dressing.reason,files,identity,rooms:[],decks:[]};
  // A room dressing's room gets the public browser visit.
  if(dressing)return {lane:'D',reason:'Changed only an additive dressing ('+dressing.dressings.join(', ')+')',files,identity,rooms:[],decks:[],smokeRooms:[...new Set(dressing.dressings.map(id=>DRESSINGS[id].room).filter(Boolean))],dressings:dressing.dressings,basePrepared:state.prepared,patchProducer:await patchProducerIdentity()};
- const programmeInputs=new Set(['src/plan/room-fitout-overrides-v2.json','src/v2/phase4-programme.js','src/v2/phase6-programme.js','src/v2/launch-d-fitout.js']);
- const kitInputs=new Set(['src/v2/phase4-mesh-kit.js']);
- const legacyInputs=new Set(['src/special-areas.js','src/areas.js','src/area-finish.js','src/command-deck.js','src/neighborhood-services.js','src/lower-aft.js','src/lower-bow.js','src/upper-aft.js','src/voyage-forum.js','src/v2/room-shell.js']);
  if(files.some(f=>!programmeInputs.has(f)&&!legacyInputs.has(f)&&!kitInputs.has(f)))return {lane:'whole',reason:'Changed shared geometry or an unsupported authoring producer',files,identity,rooms:[],decks:[]};
+ // The fit-out data shows only what applyRoomFitoutOverrides reads; other modules build from the same file (fast-overrides-v2.mjs).
+ if(files.includes(OVERRIDES)){const reason=await baselineOverrideReason(baseline,baselineIdentity.files[OVERRIDES],Object.keys(identity.files));if(reason)return {lane:'whole',reason,files,identity,rooms:[],decks:[]};}
  await fs.copyFile(baseline+'/layout.json',output+'/layout.json');
  let kitRooms=[],kitAfter={};
  if(files.some(f=>kitInputs.has(f))){try{await baselineRecord('fitout-mesh');}catch{return {lane:'whole',reason:'Mesh-kit baseline requires one clean build',files,identity,rooms:[],decks:[]};}

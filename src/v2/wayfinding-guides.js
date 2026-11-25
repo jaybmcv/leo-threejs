@@ -5,6 +5,7 @@ import {guideSchedule,lobbySchedule} from './wayfinding-guide-data.js';
 import {hangHydroNipSign} from './hydro-nip-wayfinding.js';
 // The distribution ceiling's underside is 3.64 m above each deck.
 const DIRECTORY_WIDTH=3.6,DIRECTORY_HEIGHT=1.05,DIRECTORY_CEILING_HEIGHT=3.64,BACKGROUND='#10252e';
+const HOLOGRAPHIC_DECKS=new Set([1]);
 const directoryBacking=new T.MeshBasicMaterial({color:0x10252e,toneMapped:false}),directorySupport=new T.MeshStandardMaterial({color:0x586e7b,metalness:.55,roughness:.4});
 // Each picture (a deck's room plaques, a lobby board) is a w×h block of a page: a canvas, its texture and one material.
 // Without `size` every block is a page of its own. With it, the blocks (all one width) fill the columns of pages at most
@@ -31,6 +32,17 @@ function placePictures(blocks,size){
 function paintBlock(b,draw){const c=b.page.canvas.getContext('2d');c.save();c.translate(b.x,b.y);c.beginPath();c.rect(0,0,b.w,b.h);c.clip();draw(c);c.restore();b.page.texture.needsUpdate=true;}
 // Moves texture coordinates from the block (0 to 1 across it, v up) into its page.
 function intoPage(b,uv){for(let i=0;i<uv.count;i++)uv.setXY(i,(b.x+uv.getX(i)*b.w)/b.page.w,1-(b.y+(1-uv.getY(i))*b.h)/b.page.h);}
+// Projected plaques keep dark ink behind the wording and let the room show through their edges.
+function hologramCell(c,x,y,w,h){
+ c.save();c.translate(x,y);c.fillStyle='rgba(16,37,46,.62)';c.fillRect(0,0,w,h);
+ c.fillStyle='rgba(8,20,27,.36)';c.fillRect(12,13,w-24,h-26);
+ c.fillStyle='rgba(47,214,197,.12)';for(let v=4;v<h-4;v+=4)c.fillRect(6,v,w-12,1);
+ c.strokeStyle='#2fd6c5';c.lineWidth=1.5;c.shadowColor='#2fd6c5';c.shadowBlur=9;c.strokeRect(6,6,w-12,h-12);c.restore();
+}
+function hologramMaterial(page){
+ // One transparent draw for the whole deck, after the faint room-front glass. Opaque walls still occlude it.
+ return page.hologramMaterial??=new T.MeshBasicMaterial({name:'V2_holographic_room_guides',map:page.texture,transparent:true,depthWrite:false,toneMapped:false});
+}
 // Additional information only. The existing 283 v2 stair/lift sign placements,
 // signPlace(), lift doors, collision geometry and prepared sign cache stay intact.
 // `pageSize`: share pictures across decks in pages of at most that size (see placePictures); 0 keeps one per picture.
@@ -39,7 +51,7 @@ export function addWayfindingGuides(parent,{pageSize=0}={}){
  // its own floor-height root and local geometry, just like a furnished room.
  const roots=new Map(layout.decks.map(d=>{const g=new T.Group();g.name='V2_wayfinding_guides_deck_'+d.number;g.position.y=d.y;g.userData={noCollide:true,deck:d.number};parent.add(g);return [d.number,g];}));
  const guides=guideSchedule(layout),lobbies=lobbySchedule(layout),paint=[];
- const fit=(c,text,x,y,width,size=28)=>{while(size>12){c.font='600 '+size+'px sans-serif';if(c.measureText(text).width<=width)break;size--;}c.fillText(text,x,y);};
+ const fit=(c,text,x,y,width,size=28,outline=false)=>{while(size>12){c.font='600 '+size+'px sans-serif';if(c.measureText(text).width<=width)break;size--;}if(outline)c.strokeText(text,x,y);c.fillText(text,x,y);};
  // All of a deck's room plaques are one block, two cells wide: one draw per deck, independent of room count.
  const cols=2,cellW=512,cellH=112,decks=new Map(),boards=new Map();
  for(const d of layout.decks){const rows=guides.filter(g=>g.deck===d.number&&g.plaque);if(rows.length)decks.set(d.number,{rows,w:cellW*cols,h:Math.ceil(rows.length/cols)*cellH});}
@@ -47,9 +59,12 @@ export function addWayfindingGuides(parent,{pageSize=0}={}){
  placePictures([...decks.values(),...boards.values()],pageSize);
  for(const d of layout.decks){const root=roots.get(d.number),b=decks.get(d.number),rows=b?b.rows:[];
   if(b){
-   const draw=()=>paintBlock(b,c=>{c.fillStyle=BACKGROUND;c.fillRect(0,0,b.w,b.h);rows.forEach((r,i)=>{const x=i%cols*cellW,y=Math.floor(i/cols)*cellH;c.fillStyle='#2fd6c5';fit(c,r.youAreHere,x+18,y+34,cellW-36,22);c.fillStyle='#f5ddba';fit(c,r.label,x+18,y+79,cellW-36,30);});});draw();paint.push(draw);
-   const count=Math.ceil(rows.length/cols),planes=rows.map((r,i)=>{const g=new T.PlaneGeometry(r.width,.55),uv=g.attributes.uv,col=i%cols,row=Math.floor(i/cols);for(let j=0;j<uv.count;j++)uv.setXY(j,(col+uv.getX(j))/cols,1-(row+1-uv.getY(j))/count);intoPage(b,uv);g.rotateY(r.yaw).translate(r.at[0],r.at[1]-d.y,r.at[2]);return g;});
-   const m=new T.Mesh(mergeGeometries(planes),b.page.material);m.name='V2_corridor_room_guides';m.userData={noCollide:true,deck:d.number,labels:rows.map(r=>({id:r.id,label:r.label,youAreHere:r.youAreHere,corridor:r.corridor}))};root.add(m);for(const g of planes)g.dispose();
+   const holographic=HOLOGRAPHIC_DECKS.has(d.number);
+   const draw=()=>paintBlock(b,c=>{if(holographic)c.clearRect(0,0,b.w,b.h);else{c.fillStyle=BACKGROUND;c.fillRect(0,0,b.w,b.h);}rows.forEach((r,i)=>{const x=i%cols*cellW,y=Math.floor(i/cols)*cellH;c.save();if(holographic){hologramCell(c,x,y,cellW,cellH);c.shadowBlur=5;c.lineWidth=4;c.strokeStyle='#08141b';}
+    const text=(value,color,y,size)=>{c.fillStyle=color;if(holographic)c.shadowColor=color;fit(c,value,x+18,y,cellW-36,size,holographic);};
+    text(r.youAreHere,'#2fd6c5',y+34,22);text(r.label,'#f5ddba',y+79,30);c.restore();});});draw();paint.push(draw);
+   const count=Math.ceil(rows.length/cols),planes=rows.map((r,i)=>{const g=new T.PlaneGeometry(r.width,r.height),uv=g.attributes.uv,col=i%cols,row=Math.floor(i/cols);for(let j=0;j<uv.count;j++)uv.setXY(j,(col+uv.getX(j))/cols,1-(row+1-uv.getY(j))/count);intoPage(b,uv);g.rotateY(r.yaw).translate(r.at[0],r.at[1]-d.y,r.at[2]);return g;});
+   const m=new T.Mesh(mergeGeometries(planes),holographic?hologramMaterial(b.page):b.page.material);if(holographic)m.renderOrder=20;m.name='V2_corridor_room_guides';m.userData={noCollide:true,deck:d.number,labels:rows.map(r=>({id:r.id,label:r.label,youAreHere:r.youAreHere,corridor:r.corridor}))};root.add(m);for(const g of planes)g.dispose();
   }
   const routes=guides.filter(g=>g.deck===d.number),arrows=routes.map(r=>{const dx=r.to[0]-r.from[0],dz=r.to[2]-r.from[2],length=Math.hypot(dx,dz),g=new T.ShapeGeometry(new T.Shape([new T.Vector2(0,.20),new T.Vector2(length,0),new T.Vector2(0,-.20),new T.Vector2(.15,0)]));g.rotateX(-Math.PI/2).rotateY(-Math.atan2(dz,dx)).translate(r.from[0],r.from[1]-d.y,r.from[2]);return g;});
   if(arrows.length){const m=new T.Mesh(mergeGeometries(arrows),new T.MeshBasicMaterial({color:0x2fd6c5,toneMapped:false}));m.name='V2_floor_guides';m.userData={noCollide:true,deck:d.number,destinations:routes.map(r=>r.id)};root.add(m);for(const g of arrows)g.dispose();}

@@ -6,7 +6,7 @@ import {bakeForWalking} from '../src/walk/render-bake.js';
 import {solid} from '../src/walk/collision.js';
 import {retirePreparedLoungeLights,rememberPreparedStatic} from '../src/v2/prepared-static.js';
 import {liveArcadeStations} from '../src/walk/arcade.js';
-import {loungeMoodRegion} from '../src/walk/lounge.js';
+import {loungeMoodRegion} from '../src/walk/lounge-mood.js';
 
 // Mood follows the selected room, including the row beyond the old fitting bounds.
 const inside=loungeMoodRegion(),at=p=>inside(new T.Vector3(...p));
