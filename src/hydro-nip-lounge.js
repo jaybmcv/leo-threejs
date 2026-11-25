@@ -544,19 +544,21 @@ export function createHydroNipLounge({mirror=1}={}){
  }
 
  // Lounge seating toward the entrance: patterned rugs, beanbags, floor cushions, low tables and cat toys.
+ // Move the maze-side rug, its four seats and its complete table alongside the other seating moves.
+ const mazeRugMove=fitoutOverrides['commons-1']?.mazeRugMove,mazeRugTurn=mazeRugMove&&new T.Matrix4().makeTranslation(mazeRugMove.to[0],0,mazeRugMove.to[1]).multiply(new T.Matrix4().makeRotationY(mazeRugMove.yaw*Math.PI/180)).multiply(new T.Matrix4().makeTranslation(-mazeRugMove.from[0],0,-mazeRugMove.from[1]));
  // Move each group before merging, so its furniture, collision and seat anchors stay together.
  const seatingRow=([x,z,...rest],group)=>{const from=[[127,16.5],[137,16.5],[144,17.5]][group],move=fitoutOverrides['commons-1']?.moveLoungeSeating?.find(m=>m.from[0]===from[0]&&m.from[1]===from[1]);
   return [x+(move?move.to[0]-from[0]:0),z+1.5+(move?move.to[1]-from[1]:0),...rest];};
  // Transform the photo rug and its three seats in the source before collision and sit points are baked.
  const rug=fitoutOverrides['commons-1']?.loungeRug,rugMove=rug?new T.Matrix4().makeTranslation(rug.at[0],FLOOR,rug.at[1]).multiply(new T.Matrix4().makeRotationY(rug.yaw)).multiply(new T.Matrix4().makeTranslation(-144,-FLOOR,-17.5)):null;
- for(const [x,z,w,d] of [[127,15,7,4],[137,15,7,4],[144,16,4,3]].map((p,i)=>seatingRow(p,i))){turning=x===144?rugMove:null;box(M.rug,[w,.02,d],[x,FLOOR+.01,z]);}turning=null;
- [[124.6,14.2,'magenta'],[127.6,16.4,'teal'],[129.6,14,'purple'],[134.8,14.1,'teal'],[138.2,16.5,'magenta'],[140.2,14.3,'purple'],[144.6,16.1,'magenta']].map((p,i)=>seatingRow(p,Math.floor(i/3))).forEach(([x,z,c])=>
-  {const o=seat('Soft_seat',new T.SphereGeometry(.58,16,10).scale(1,.62,1),M[c],[x,FLOOR+.36,z]);if(x===144.6&&rugMove)o.applyMatrix4(rugMove);o.userData.sitPose='crossLegged';});
+ for(const [x,z,w,d] of [[127,15,7,4],[137,15,7,4],[144,16,4,3]].map((p,i)=>seatingRow(p,i))){turning=x===144?rugMove:x===127?mazeRugTurn:null;box(M.rug,[w,.02,d],[x,FLOOR+.01,z]);}turning=null;
+ [[124.6,14.2,'magenta'],[127.6,16.4,'teal'],[129.6,14,'purple'],[134.8,14.1,'teal'],[138.2,16.5,'magenta'],[140.2,14.3,'purple'],[144.6,16.1,'magenta']].map((p,i)=>seatingRow(p,Math.floor(i/3))).forEach(([x,z,c],i)=>
+  {const o=seat('Soft_seat',new T.SphereGeometry(.58,16,10).scale(1,.62,1),M[c],[x,FLOOR+.36,z]);if(x===144.6&&rugMove)o.applyMatrix4(rugMove);if(i<3&&mazeRugTurn)o.applyMatrix4(mazeRugTurn);o.userData.sitPose='crossLegged';});
  // Every flat and dome cushion on the three rugs shares the meditation pose.
  [[126.4,13.4],[131,16.2],[133.6,16],[136.2,13.4],[142.7,14.9],[145.6,17.2]].map((p,i)=>seatingRow(p,Math.floor(i/2))).forEach(([x,z],i)=>
-  {const o=seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),[M.purple,M.teal,M.magenta][i%3],[x,FLOOR+.095,z]);if(x>=142.7&&rugMove)o.applyMatrix4(rugMove);o.userData.sitPose='crossLegged';});
- for(const [x,z] of [[127.2,15],[137.2,15]].map((p,i)=>seatingRow(p,i))){cyl(M.wood,.5,.5,.05,[x,FLOOR+.4,z],18);cyl(M.dark,.08,.12,.38,[x,FLOOR+.19,z],8);
-  cyl(M.board,.18,.12,.08,[x,FLOOR+.465,z],12);put(M.leaf,new T.SphereGeometry(.15,8,5,0,Math.PI*2,0,Math.PI/2).translate(x,FLOOR+.49,z));}
+  {const o=seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),[M.purple,M.teal,M.magenta][i%3],[x,FLOOR+.095,z]);if(x>=142.7&&rugMove)o.applyMatrix4(rugMove);if(i===0&&mazeRugTurn)o.applyMatrix4(mazeRugTurn);o.userData.sitPose='crossLegged';});
+ for(const [x,z] of [[127.2,15],[137.2,15]].map((p,i)=>seatingRow(p,i))){turning=x===127.2?mazeRugTurn:null;cyl(M.wood,.5,.5,.05,[x,FLOOR+.4,z],18);cyl(M.dark,.08,.12,.38,[x,FLOOR+.19,z],8);
+  cyl(M.board,.18,.12,.08,[x,FLOOR+.465,z],12);put(M.leaf,new T.SphereGeometry(.15,8,5,0,Math.PI*2,0,Math.PI/2).translate(x,FLOOR+.49,z));}turning=null;
  [[125.8,15.8,PINK],[131.6,13.6,AMBER],[136,16.8,GREEN],[139.6,15.6,PURPLE],[143.4,17.4,CYAN],[128.8,13.1,AMBER]].map((p,i)=>seatingRow(p,[0,0,1,1,2,0][i])).forEach(([x,z,c])=>put(neon(c),new T.IcosahedronGeometry(.09,1).translate(x,FLOOR+.11,z)));
  // Cat trees: sisal posts, platforms and a bed on top. Remove source-frame instances before their parts merge.
  const removedTrees=fitoutOverrides['commons-1']?.remove||[];
