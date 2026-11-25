@@ -23,7 +23,7 @@ import os from 'node:os';
 import {Worker} from 'node:worker_threads';
 import {MeshoptDecoder,MeshoptSimplifier} from 'meshoptimizer';
 import {MeshoptEncoder} from 'meshoptimizer/encoder';
-import sharp from 'sharp';
+import {scalePicture} from './prepared-pictures.mjs';
 
 const args=process.argv.slice(2),flag=n=>{const i=args.indexOf(n);if(i<0)return null;const v=args[i+1];args.splice(i,2);return v;};
 const top=Number(flag('--top')||0),maxError=Number(flag('--error')||0.05),relativeError=Number(flag('--relative')||0.03),collisionError=Number(flag('--collision-error')||0.025),textureScale=Number(flag('--textures')||0.5),[source,out]=args;
@@ -185,9 +185,9 @@ phase='collision';const phoneColliders=colliders(m.colliders);phase='graphs';
 // Pictures, scaled down (none below 16 pixels a side).
 let pictureBytes=[0,0];
 const images=await Promise.all(m.images.map(async i=>{const url=i.url;if(typeof url!=='string'||!url.startsWith('data:image/')||textureScale>=1)return i;
- const data=Buffer.from(url.slice(url.indexOf(',')+1),'base64'),picture=sharp(data),{width,height,format}=await picture.metadata(),w=Math.max(16,Math.round(width*textureScale)),h=Math.max(16,Math.round(height*textureScale));
- if(w>=width&&h>=height)return i;const smaller=await picture.resize(w,h,{fit:'fill'})[format==='jpeg'?'jpeg':'png']().toBuffer();pictureBytes[0]+=width*height*4;pictureBytes[1]+=w*h*4;
- return {...i,url:'data:image/'+(format==='jpeg'?'jpeg':'png')+';base64,'+smaller.toString('base64')};}));
+ const smaller=await scalePicture(Buffer.from(url.slice(url.indexOf(',')+1),'base64'),textureScale);if(!smaller)return i;
+ pictureBytes[0]+=smaller.width*smaller.height*4;pictureBytes[1]+=smaller.w*smaller.h*4;
+ return {...i,url:'data:image/'+smaller.type+';base64,'+smaller.data.toString('base64')};}));
 
 // Checks that stop the build. Every geometry the walk will build reads only arrays written here, whole items of them,
 // and its index stays inside them; every BVH's index is its geometry's.
