@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import {preparedFetcher,PREPARED_TRIES} from '../src/v2/prepared-fetch.js';
+import {preparedFetcher,PREPARED_TRIES,askedAhead} from '../src/v2/prepared-fetch.js';
 
 // The walk's start when it goes wrong, without a browser: the prepared ship's downloads get a few tries
 // (src/v2/prepared-fetch.js), and the page's own start script (src/walk/walk.html, LEO_WALK_BOOT) shows one failure line
@@ -22,7 +22,13 @@ assert.equal(PREPARED_TRIES,3);
 {const drop=TypeError('Failed to fetch'),f=fetcher([drop,drop,drop,reply(200)]);await assert.rejects(f.get('geometry-3.bin'),e=>e.leoWalkFailure==='download'&&/the connection dropped/.test(e.message)&&e.cause===drop);assert.equal(f.calls.length,3);pass('a connection that stays down is given up on after three tries, and says so');}
 {const full=RangeError('Array buffer allocation failed'),f=fetcher([{ok:true,status:200,arrayBuffer:async()=>{throw full;}},reply(200)]);await assert.rejects(f.get('geometry-5.bin'),e=>e===full);assert.equal(f.calls.length,1);pass('running out of memory is not a download to try again');}
 const resource=fs.readFileSync('src/v2/prepared-resource.public.js','utf8');
-assert(/readPreparedWorld\(base,\{status,fetchBytes:preparedFetcher\(base\),/.test(resource));pass('the public walk reads its prepared ship through those tries');
+assert(/let fetchBytes=preparedFetcher\(base\);/.test(resource)&&/fetchBytes=askedAhead\(fetchBytes,metadataName\);/.test(resource)&&/readPreparedWorld\(base,\{status,fetchBytes,/.test(resource));pass('the public walk reads its prepared ship through those tries');
+{const asked=[];let answers=0;const base=name=>{asked.push(name);const n=++answers;return name==='bad.parts.json'?Promise.reject(Error('gone')):Promise.resolve(name+'#'+n);};
+ const get=askedAhead(base,'world.parts.json');assert.deepEqual(asked,['world.parts.json'],'asked for at once');
+ assert.equal(await get('world.parts.json'),'world.parts.json#1');assert.equal(await get('world-meta-0.bin'),'world-meta-0.bin#2');assert.equal(await get('world.parts.json'),'world.parts.json#3');
+ assert.deepEqual(asked,['world.parts.json','world-meta-0.bin','world.parts.json'],'the early answer is handed over once, every other ask goes on');
+ const failing=askedAhead(base,'bad.parts.json');await settle();await assert.rejects(failing('bad.parts.json'),/gone/);
+ pass('the list of metadata parts asked for ahead: handed to the first ask for it, a failure held for that ask');}
 
 // The page's start script.
 const html=fs.readFileSync('src/walk/walk.html','utf8'),scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m=>m[1]).filter(s=>s.includes('window.LEO_WALK_BOOT=function'));

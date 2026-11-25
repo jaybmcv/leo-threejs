@@ -1,5 +1,5 @@
 import {readPreparedWorld} from './prepared-codec.public.js';
-import {preparedFetcher} from './prepared-fetch.js';
+import {preparedFetcher,askedAhead} from './prepared-fetch.js';
 import {arrivalStart,arrivalDownload} from './arrival-start.js';
 const status=text=>{const element=document.getElementById('loading-text');if(element)element.textContent=text;};
 // A phone walks a light copy of the whole ship, from a payload of its own (PHONE_WALK.md step 3,
@@ -15,9 +15,12 @@ const PREFETCH=phone?1:2;
 // The decoded ship, once it is.
 export let preparedResource=null;
 export const preparedResourceReady=(async()=>{
- // An arrival-hall start downloads the hall first (arrival-start.js).
- if(arrivalDownload)await arrivalDownload.settled;
- let loaded=await readPreparedWorld(base,{status,fetchBytes:preparedFetcher(base),prefetch:PREFETCH,metadataName:phone?phone.metadataFile:typeof __PREPARED_META__!=='undefined'?__PREPARED_META__:'world.json.gz'});
+ const metadataName=phone?phone.metadataFile:typeof __PREPARED_META__!=='undefined'?__PREPARED_META__:'world.json.gz';
+ let fetchBytes=preparedFetcher(base);
+ // An arrival-hall start downloads the hall first (arrival-start.js), and meanwhile the list of the ship's metadata parts
+ // (under a kilobyte; askedAhead in prepared-fetch.js says why).
+ if(arrivalDownload){if(metadataName.endsWith('.parts.json'))fetchBytes=askedAhead(fetchBytes,metadataName);await arrivalDownload.settled;}
+ let loaded=await readPreparedWorld(base,{status,fetchBytes,prefetch:PREFETCH,metadataName});
  preparedResource={ship:loaded.ship,geometryTemplates:loaded.geometryTemplates,manifest:{privacy:loaded.manifest.privacy},frost:await loaded.graph(loaded.manifest.frost),phone:loaded.manifest.phone||null};
  // Controllers keep the ship/templates/frost. Release transport metadata and the temporary graph factory.
  loaded.release();loaded=null;
