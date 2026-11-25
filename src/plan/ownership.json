@@ -400,7 +400,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 129,
-      "signature": "e3f739c7fbe2ac0065b9ad61f012997fcf894608cda36ee287eebd0c17a6c1c7"
+      "signature": "20ffc2bd46f3c0ca74d4774eae1fb02d69ca54fbee536555c336d8a0cc920d4e"
     },
     {
       "source": "src/interior-polish.js",
@@ -4135,8 +4135,8 @@
         "Lounge_falls_colliders"
       ],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 29,
-      "signature": "301e80d98e2820a6a5014a9162dd507b0a9008cc9057bc17313eae742c30c2b4"
+      "placements": 28,
+      "signature": "a369b9ba67fbeb481633509d076fd9772989a602eff347cc99dc4d9cd044b154"
     },
     {
       "source": "src/walk/lounge-floor.js",

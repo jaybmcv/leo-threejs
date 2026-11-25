@@ -1,5 +1,6 @@
 import layout from './plan/selected-layout.js';
 import {LOUNGE_PLAN} from './plan/lounge-layout-v2.js';
+import {FALL,fallZ} from './v2/lounge-falls-layout.js';
 import fitoutOverrides from './plan/room-fitout-overrides-v2.json' with {type:'json'};
 const v2MazeFit=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1'),p=r.components.pieces.find(p=>p.name==='Haze Maze tower'),toLocal=z=>27+r.side*(z-r.z);return {dx:p.center[0]-r.x+132-117.25,dz:toLocal(p.center[2])-26,tubes:r.components.mazeTubes.map(t=>({...t,from:t.from-r.x+132,to:t.to-r.x+132,z:toLocal(t.z),level:r.y+t.rise}))};})();
 import * as T from 'three';
@@ -580,7 +581,9 @@ export function createHydroNipLounge({mirror=1}={}){
     if(tubeAt(x,z,level,.3)||stairAt(x,z,level,.3)){prev=null;continue;}
     if(prev)rod(hang,prev,p,.006,3);if(i<n)put(neon(AMBER),new T.OctahedronGeometry(.05,0).translate(x,y-sag-.06,z));prev=p;}
    // Each pot hangs just inside the gallery edge, clear of the maze and tube landings.
-   const t=(s+.5)/spans,[x,z]=pointAt(t),px=x+offset[0],pz=z+offset[1],py=level-.95;
+   const t=(s+.5)/spans,[x,z]=pointAt(t),px=x+offset[0],py=level-.95;
+   // Keep just the pots beside the water behind its sheet; the rest of the row stays put.
+   const pz=level===LEVELS[0]&&px>FALL.x0-.4&&px<FALL.x1+.4?Math.max(z+offset[1],fallZ(px)+.55):z+offset[1];
    if(px<MAZE.x1+.5&&(offset[0]||px>MAZE.x0-.5)&&pz>MAZE.z0-.5&&pz<MAZE.z1+.5||tubeAt(px,pz,undefined,.6)||stairAt(px,pz,level,.6))continue;
    cyl(pots,.2,.14,.24,[px,py,pz],10);for(let k=0;k<3;k++){const ang=k/3*Math.PI*2;rod(hang,[px+Math.cos(ang)*.18,py+.12,pz+Math.sin(ang)*.18],[x,level-.3,z],.005,3);}
    const reach=level===LEVELS[0]?1.4:2.1;
