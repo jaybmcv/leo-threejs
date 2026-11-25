@@ -80,26 +80,27 @@ export function applyPublicFinishKit(ship,layout,{decks=null,authority=null}={})
  ship.root.updateMatrixWorld(true);ship.inside.traverse(o=>{
   if(!o.isMesh||o.isInstancedMesh||!o.visible||!o.geometry?.attributes.position)return;
   const deck=o.userData.v2Deck||Math.round((new T.Box3().setFromObject(o,true).min.y+39.7)/4)+1,walkway=walkways.get(deck);if(!selected(deck))return;
-  // Refinish the exposed matte top on Deck 17 at its own height.
+  // Remove every layer of the matte finish under the carpet, including its pale raised edge.
   if(walkway&&o.name==='V2_commons_hall_floor_finish'){
-   const original=o.geometry,flat=(original.index?original.toNonIndexed():original.clone()).applyMatrix4(o.matrixWorld);flat.computeBoundingBox();
-   const {floor,carpet,gold}=partitionLoungeWalkway(flat,walkway,flat.boundingBox.max.y);flat.dispose();
-   if(!carpet&&!gold){floor?.dispose();return;}
-   o.geometry=floor.applyMatrix4(o.matrixWorld.clone().invert());original.dispose();
-   if(carpet)addFloor(deck,'carpet',carpet);if(gold)addFloor(deck,'gold',gold);floors++;return;
+   const original=o.geometry,box=new T.Box3().setFromObject(o),[x0,x1,z0,z1]=walkway.outer;
+   if(box.max.x<=x0||box.min.x>=x1||box.max.z<=z0||box.min.z>=z1)return;
+   const flat=(original.index?original.toNonIndexed():original.clone()).applyMatrix4(o.matrixWorld);
+   const {floor}=partitionLoungeWalkway(flat,walkway,{matte:true});flat.dispose();
+   o.geometry=(floor||new T.BufferGeometry()).applyMatrix4(o.matrixWorld.clone().invert());original.dispose();return;
   }
   if(!/^(Deck_slab|V2_corridor_floor|V2_tower_bridge_floor|V2_tower_landing_floor|V2_lounge_balcony_floor|V2_access_ramp)$/.test(o.name)||o.name==='Deck_slab'&&deck===6||o.material?.name!=='V2_floor')return;
-  const g=o.geometry.clone(),p=g.attributes.position,ix=g.index,keep=[],va=new T.Vector3(),vb=new T.Vector3(),vc=new T.Vector3();world.copy(o.matrixWorld);
+  const g=o.geometry.clone(),p=g.attributes.position,ix=g.index,keep=[],hidden=[],va=new T.Vector3(),vb=new T.Vector3(),vc=new T.Vector3();world.copy(o.matrixWorld);
   for(let i=0;i<(ix?.count??p.count);i+=3){
    const ids=[0,1,2].map(k=>ix?ix.getX(i+k):i+k);va.fromBufferAttribute(p,ids[0]).applyMatrix4(world);vb.fromBufferAttribute(p,ids[1]).applyMatrix4(world);vc.fromBufferAttribute(p,ids[2]).applyMatrix4(world);
-   if(deck===17&&buried(va,vb,vc))continue;if(vb.sub(va).cross(vc.sub(va)).normalize().y>.5)keep.push(...ids);
+   const underMatte=deck===17&&buried(va,vb,vc);
+   if(vb.sub(va).cross(vc.sub(va)).normalize().y>.5){keep.push(...ids);if(deck===17)hidden.push(underMatte);}
   }
   if(!keep.length){g.dispose();return;}
   g.setIndex(keep);const uv=new Float32Array(p.count*2),v=new T.Vector3();
   for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i).applyMatrix4(world);uv[i*2]=v.x/.36;uv[i*2+1]=v.z/(.36*1.7320508);}
   g.setAttribute('uv',new T.BufferAttribute(uv,2));g.applyMatrix4(world);
   const flat=g.toNonIndexed();flat.translate(0,.002,0);g.dispose();for(const name of Object.keys(flat.attributes))if(!['position','normal','uv'].includes(name))flat.deleteAttribute(name);
-  const pieces=walkway?partitionLoungeWalkway(flat,walkway):{floor:flat};if(walkway)flat.dispose();
+  const pieces=walkway?partitionLoungeWalkway(flat,walkway,{buried:hidden}):{floor:flat};if(walkway)flat.dispose();
   for(const [kind,part]of Object.entries(pieces))addFloor(deck,kind,part);floors++;
  });
  const local=parent.matrixWorld.clone().invert();

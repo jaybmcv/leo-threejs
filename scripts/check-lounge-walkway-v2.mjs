@@ -7,6 +7,7 @@ import {installWalkCanvas} from '../src/walk/canvas.js';
 import {polygonGeometry,floor,bounds} from '../src/v2/geometry.js';
 import {buildCorridorFloors} from '../src/v2/corridor-floor-union.js';
 import {buildCommonsHallFinish} from '../src/v2/commons-hall-finish.js';
+import {launchDFitout} from '../src/v2/launch-d-fitout.js';
 import {applyPublicFinishKit} from '../src/v2/finish-kit.js';
 import {loungeWalkwayPlan,retireLoungeWalkwayBacking} from '../src/v2/lounge-walkway-finish.js';
 import {bakeForWalking} from '../src/walk/render-bake.js';
@@ -60,9 +61,13 @@ assert.equal(carpet[0].material.roughness,.96);assert.equal(carpet[0].material.m
 const velvet=carpet[0].material,map=velvet.map,json=velvet.toJSON({textures:{[map.uuid]:{uuid:map.uuid}},images:{}}),readBack=new T.MaterialLoader().setTextures({[json.map]:map}).parse(json);
 assert(velvet.isMeshPhysicalMaterial&&velvet.color.r<.01&&velvet.sheen>0&&velvet.sheenRoughness>=.7,'Black carpet uses a soft grazing sheen');
 assert.equal(readBack.sheen,velvet.sheen,'Prepared walk keeps the sheen');assert.equal(readBack.sheenColor.getHex(),velvet.sheenColor.getHex());assert.equal(readBack.map,velvet.map);
-const pile=velvet.map.image.getContext('2d').getImageData(0,0,128,128).data,rowMeans=[];
-for(let y=0;y<128;y++){let sum=0;for(let x=0;x<128;x++)sum+=pile[(y*128+x)*4];rowMeans.push(sum/128);}
-assert(Math.max(...rowMeans)-Math.min(...rowMeans)<9&&new Set(pile.filter((_,i)=>i%4===0)).size>=32,'Fine pile varies without regular ribs');
+const pile=velvet.map.image.getContext('2d').getImageData(0,0,128,128).data;
+for(const columns of [false,true]){
+ const means=[];
+ for(let a=0;a<128;a++){let sum=0;for(let b=0;b<128;b++)sum+=pile[(columns?b*128+a:a*128+b)*4];means.push(sum/128);}
+ assert(Math.max(...means)-Math.min(...means)<17,'Fine pile has no large directional bands');
+}
+assert(new Set(pile.filter((_,i)=>i%4===0)).size>=32,'Fine pile varies within the texture');
 const collision=new Colliders();collision.addStatic(root,solid);collision.commit();const collisionPositions=[...collision.bands.values()].map(b=>({b,positions:b.geometry.attributes.position.array.slice()}));
 assert(retireLoungeWalkwayBacking(root,layout)>0,'Covered corridor backing must retire after collision');assert.equal(retireLoungeWalkwayBacking(root,layout),0,'Backing retirement must be idempotent');
 const baked=bakeForWalking(root),bakedFinishes=[];for(const band of baked.bands.values())band.traverse(o=>{if(o.isMesh&&/^Lounge_walkway_/.test(o.material.name))bakedFinishes.push(o);});
@@ -82,6 +87,15 @@ function checkBorders(structure,plan){
  if(plan.deck===17)for(const z of [-20.4,-21.6])assert(border(-148,z),'Aft floor borders outside the carpet remain');
 }
 checkBorders(structure,plan);
+const marks=launchDFitout(layout).parts.filter(p=>p.part==='street_wayfinding');
+for(const number of [17,18,19]){
+ const at=(x,z)=>marks.some(p=>p.deck===number&&p.at[0]===x&&p.at[2]===z);
+ for(const x of [-122,-98]){
+  assert(!at(x,-19.4),'Sage street dashes cannot sit on the carpet');
+  assert(at(x,19.4),'Matching markings on the opposite promenade stay put');
+ }
+ assert(at(-82,-21.55),'The nearest street dash outside the carpet stays put');
+}
 
 for(const number of [17,18]){
  const root=new T.Group(),structure=new T.Group(),plan=loungeWalkwayPlan(layout,number),deck=layout.decks[number-1],y=deck.y;
@@ -108,7 +122,10 @@ for(const number of [17,18]){
  for(const [x,z]of [[-120,-10],[-134,-13.5],[-132,-6]])assert.equal(finishAt(finishes,x,z),undefined,'Keep the atrium, stair and lift openings clear');
  if(number===17){
   expectFinish(-120,-17.3,'Lounge_walkway_black_velvet');assert.equal(finishAt(finishes,-120,-16.7),undefined,'Finish ends at the balcony edge');
-  const matte=finishAt(finishes,-120,-22.1);assert.equal(matte.object.material,velvet);assert(Math.abs(matte.point.y-y-.014)<.00001,'Velvet replaces the exposed Deck 17 matte top');
+  const hall=finishAt(finishes,-120,-22.1);assert.equal(hall.object.material,velvet);assert(Math.abs(hall.point.y-y-.002)<.00001,'Deck 17 velvet follows the slab below the retired matte top');
+  const matte=finishes.filter(o=>o.name==='V2_commons_hall_floor_finish');
+  const seam=new T.Raycaster(new T.Vector3(-142,y+.013,-22),new T.Vector3(1,0,0),0,2);
+  assert.equal(seam.intersectObjects(matte).length,0,'The raised matte side cannot show as a pale seam across the carpet');
   assert.equal(finishAt(finishes,-120,-30)?.object.material.name,'V2_public_hex_floor','No outer carpet inside the lounge');
   expectFinish(-87.9,-22.1,'Commons_hall_matte_floor');
  }else{
