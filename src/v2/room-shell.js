@@ -9,6 +9,7 @@ import {roomObject} from '../plan/rooms.js';
 import {forumTerraces,forumUpperPlan} from './launch-e-fitout.js';
 import {forumTerraceGeometry} from './forum-terrace-geometry.js';
 import {ownerFootprint} from '../plan/envelope-ownership-v2.js';
+import {LOUNGE_MURAL_X} from '../plan/lounge-layout-v2.js';
 import {worldPoint} from '../plan/hull-skin-v2.js';
 import {buildGardenGuards,galleryHoles} from './garden-guards.js';
 import {entrySegments,entryHeader} from './room-entries.js';
@@ -40,13 +41,22 @@ export function buildRoomShell(ship,r,structure){
    for(const d of doors){const header=entryHeader(a,b,d.center,d.width);if(header&&d.center[1]+2.5<r.y+s.rise+s.height){const upper=Math.max(r.y+s.rise,d.center[1]+2.5),o=wall(g,header[0],header[1],upper,r.y+s.rise+s.height-upper,glass);removeGeometryCaps(o.geometry,0);if(o&&(r.deck===1||r.deck===2))mitreWallGeometry(o.geometry,wallJoints(poly,i,header[0],header[1]));}}
   }}
   }
-  if(r.components){const platforms=[...(r.components.galleries||[]),...(r.components.links||[]),...(r.components.landings||[])],landingFloors=[];for(const [i,o] of platforms.entries()){const holes=galleryHoles(r,o);
+  if(r.components){const platforms=[...(r.components.galleries||[]),...(r.components.links||[]),...(r.components.landings||[])],landingFloors=[],muralFloors=[];for(const [i,o] of platforms.entries()){const holes=galleryHoles(r,o);
    // Joined lounge routes share one floor surface instead of coplanar plates.
    if(r.id==='commons-1')holes.push(...platforms.slice(0,i).filter(p=>Math.abs(p.center[1]-o.center[1])<.01).map(p=>p.polygon));
    const slab=polygonGeometry(o.polygon,holes,o.center[1],o.size[1]);
-   if(r.id==='commons-1'&&['commons-1-rear-4','commons-1-gallery-link-4','commons-1-stair-turn'].includes(o.id))landingFloors.push(slab);else mesh(g,'V2_garden_gallery',slab,floor);}
-   // The squared landing has one top and underside, with no buried join faces.
-   if(landingFloors.length){const merged=mergeGeometries(landingFloors),joined=removeBuriedSlabSides(merged,r.y+4).geometry;mesh(g,'V2_garden_gallery',joined,floor);if(joined!==merged)merged.dispose();landingFloors.forEach(g=>g.dispose());}
+   if(r.id==='commons-1'&&['commons-1-rear-4','commons-1-gallery-link-4','commons-1-stair-turn'].includes(o.id))landingFloors.push(slab);
+   else if(['commons-1-rear-8','commons-1-end-8'].includes(o.id))muralFloors.push(slab);else mesh(g,'V2_garden_gallery',slab,floor);
+   if(o.id==='commons-1-end-8'){
+    const zs=o.polygon.filter(p=>p[0]===LOUNGE_MURAL_X).map(p=>p[1]);
+    if(zs.length===2){
+     // Stop the walker at the wallpaper plane so the first-person eye stays in the room.
+     const y=o.center[1],height=r.y+r.height-y,wall=box(g,'V2_lounge_wall_collision',[.02,height,Math.abs(zs[1]-zs[0])],[LOUNGE_MURAL_X-.01,y+height/2,(zs[0]+zs[1])/2]);
+     wall.visible=false;Object.assign(wall.userData,{collisionOnly:true,baked:true});
+    }
+   }}
+   // Keep each joined top and underside continuous in the walk bake.
+   for(const [slabs,y]of [[landingFloors,r.y+4],[muralFloors,r.y+8]])if(slabs.length){const merged=mergeGeometries(slabs),joined=removeBuriedSlabSides(merged,y).geometry;mesh(g,'V2_garden_gallery',joined,floor);if(joined!==merged)merged.dispose();slabs.forEach(g=>g.dispose());}
    // Report #427: the black wall under the walkway's open-floor edge, stopping at the waterfall pond (lounge-walkway-wall.js).
    if(r.id==='commons-1')buildLoungeWalkwayWall(g,r);
    // The plan's stair center.y is its finished tread elevation.

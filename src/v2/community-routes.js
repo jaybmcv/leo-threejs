@@ -1,10 +1,11 @@
 import layout from'../plan/selected-layout.js';import*as T from'three';
+import {LOUNGE_MURAL_X} from '../plan/lounge-layout-v2.js';
 // The synthwave mural on commons-1's aft wall (x -141), across Decks 17-19. Its inboard edge runs to the wall's end at the
 // aquarium glass (z -28), with a hole cut for each of the Deck 18 and 19 gallery doors (z -31 to -29); its outboard edge
 // follows the room's envelope, slice by slice, 1.5 m inside it, so the hull curving in overhead never cuts it and it stays clear of the hull windows. Its top stops under the garden
 // ceiling. S0 is where its picture starts along the painted panorama (lounge-mural.js), chosen so the sun sits where
 // the wall is wide enough for all of it; the picture began at z -32 (`was`) with S 62 before the mural reached the wall's end.
-export const SYNTHWAVE_MURAL={name:'Lounge_mural_back',x:-140.692,inner:-28.02,was:-32,floor:24.34,top:35.4,margin:1.5,s0:58.02,paintFloor:24.3,paintHeight:11.2,doorPad:.1,doorTop:2.6};
+export const SYNTHWAVE_MURAL={name:'Lounge_mural_back',x:LOUNGE_MURAL_X,inner:-28.02,was:-32,floor:24.34,top:35.4,margin:1.5,s0:58.02,paintFloor:24.3,paintHeight:11.2,doorPad:.1,doorTop:2.6};
 let muralOutline=null;
 // The mural's outline as [z,y] points, inboard bottom first, its width (the canvas span in metres) and its holes, one for each
 // upper gallery door, a little larger than the opening so no art or backing crosses it.
