@@ -246,5 +246,9 @@
   "src/walk/pool/table.public.js": {
     "sha256": "5f9befd1c216f9453a5210686adb5bcb0b0fc4aa2514ce849797a251177c8708",
     "reason": "arrival hall stays smooth while the ship builds (yields, sliced floor scan, trolley bounds skip, pool skins read on CPU, pre-ready key gate)"
+  },
+  "src/mars.js": {
+    "sha256": "c7c9bb6ba79320bede51bfaf973c1f27eb4c80b2d61478b5d529a61874adde4d",
+    "reason": "Mars surface: each blurred group drawn on one layer and blurred once (Chrome 158 GPU stall)"
   }
 }
