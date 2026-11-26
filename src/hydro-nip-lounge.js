@@ -50,6 +50,10 @@ const PASSAGES=[[[1,0],[2,0]],[[2,0],[2,1]],[[2,1],[2,2]],[[2,2],[2,3]],[[2,3],[
 const STAIR_CELLS=new Set(['2,4','2,5']);
 // Where the walk finds the lounge's parts (src/walk/lounge.js), in the template frame.
 export const LOUNGE={FLOOR,CEILING,LEVELS,ROOM,DOME,MAZE,SPLIT,TUBES};
+// The back panel's rear centre follows the line between the ends of the curved walkway wall.
+const BAR={x0:117.5,x1:126.5,shelf:37.9,depth:.45},barFit=fitoutOverrides['commons-1'].terpeneBar;
+export const terpeneBarPlacement=new T.Matrix4().makeTranslation(barFit.at[0],0,barFit.at[1])
+ .multiply(new T.Matrix4().makeRotationY(barFit.yaw)).multiply(new T.Matrix4().makeTranslation(-(BAR.x0+BAR.x1)/2,0,-BAR.shelf-BAR.depth/2));
 const PINK=0xff4fd8,CYAN=0x45e3ff,GREEN=0x6dff7a,PURPLE=0xa77bff,AMBER=0xffc266,BLACKLIGHT=0x8a4dff,ORANGE=0xff7a1a;
 // The commons' broad stair (model.js): two flights of 24 treads, 0.3 m deep and 1/6 m high. Each flight's sides in x,
 // the floor it starts from, the z of its foot and the way it climbs in z, and where its handrail starts past the foot.
@@ -193,7 +197,8 @@ export function createHydroNipLounge({mirror=1}={}){
   leaf:paint('leaf',0x4f9a55),flower:paint('leaf',0xd5c4f2),pot:paint('matte',0xb5653d),
  };
  // Geometry, merged per material at the end. Everything is made in the template frame.
- const lists=new Map();
+ const roomLists=new Map(),barLists=new Map(),bar=new T.Group();
+ let lists=roomLists;
  const tidy=(g,color,uv)=>{const n=g.index?g.toNonIndexed():g;if(n!==g)g.dispose();
   for(const k of Object.keys(n.attributes))if(!['position','normal','uv'].includes(k))n.deleteAttribute(k);
   if(!n.attributes.normal)n.computeVertexNormals();if(!n.attributes.uv)n.setAttribute('uv',new T.Float32BufferAttribute(new Float32Array(n.attributes.position.count*2),2));
@@ -470,10 +475,9 @@ export function createHydroNipLounge({mirror=1}={}){
    if(tip.x+.3<P.x1)put(paint('leaf',greens[(k+1)%greens.length]),g.translate(tip.x+Math.cos(a)*.15,tip.y-.05,tip.z+Math.sin(a)*.15));}
  }
 
- // The Terpene Tasting Deck: a bar across the back of the room behind the maze, facing the entrance, with a back bar of
- // glowing catnip blends and chairs on the room's side. (It stood along the maze's flank at first and hid the maze.)
- // Its back bar leaves a 1.25 m way behind it to the reading nook; the kitchen island's chairs start past its end.
- {const x0=117.5,x1=126.5,cx=(x0+x1)/2,bz=36.1,shelf=37.9,len=x1-x0;
+ // The Terpene Tasting Deck sits against the walkway wall with chairs on the lounge side.
+ {const {x0,x1,shelf,depth}=BAR,cx=(x0+x1)/2,bz=36.1,len=x1-x0;
+  bar.name='Terpene_Tasting_Deck';bar.applyMatrix4(terpeneBarPlacement);root.add(bar);lists=barLists;
   // A shallow bow adds at most 48 cm at the slab's front; the back and the top height stay put.
   const outline=(pad=0)=>{const h=len/2+pad,r=.22+pad,front=-.5-pad,back=.5+pad,s=new T.Shape();
    s.moveTo(-h+r,front);s.quadraticCurveTo(0,front-.76,h-r,front);s.quadraticCurveTo(h,front,h,front+r);
@@ -496,18 +500,19 @@ export function createHydroNipLounge({mirror=1}={}){
   // Exact offset outlines keep the strips outside the body, including the rounded ends.
   const trim=outline(.03);trim.holes.push(outline(.005));
   for(const y of [FLOOR+.08,FLOOR+1.005])put(neon(GREEN),new T.ExtrudeGeometry(trim,{depth:.035,bevelEnabled:false,steps:1,curveSegments:16}).rotateX(Math.PI/2).translate(cx,y+.0175,bz));
-  box(M.wood,[len,2.6,.45],[cx,FLOOR+1.3,shelf]);
+  box(M.wood,[len,2.6,depth],[cx,FLOOR+1.3,shelf]);
   for(const y of [FLOOR+1.15,FLOOR+1.75,FLOOR+2.35])box(M.board,[len,.04,.5],[cx,y,shelf-.25]);
-  root.add(createTerpeneGlassware().group);
+  bar.add(createTerpeneGlassware().group);
   const cushion=tidy(new T.CylinderGeometry(.25,.25,.08,16),new T.Color(0xffffff)),wrap=new T.Shape();
   wrap.absarc(0,0,.31,0,Math.PI,false);wrap.absarc(0,0,.25,Math.PI,0,true);wrap.closePath();
   const back=tidy(new T.ExtrudeGeometry(wrap,{depth:.29,bevelEnabled:false,curveSegments:10}).rotateX(-Math.PI/2).translate(0,.02,0),new T.Color(0xffffff));
   for(let i=0;i<6;i++){const x=x0+1+i*1.4,z=bz-1.2,yaw=-Math.atan(.76*(x-cx)/(len/2-.22)**2);
-   for(const [name,geometry] of [['Seat',cushion],['Seat_back',back]]){const o=new T.Mesh(geometry,shared.barChair);o.name=name;o.position.set(x,FLOOR+.76,z);o.rotation.y=yaw;o.castShadow=o.receiveShadow=true;root.add(o);}
+   for(const [name,geometry] of [['Seat',cushion],['Seat_back',back]]){const o=new T.Mesh(geometry,shared.barChair);o.name=name;o.position.set(x,FLOOR+.76,z);o.rotation.y=yaw;o.castShadow=o.receiveShadow=true;bar.add(o);}
    cyl(paint('barPost'),.035,.035,.72,[x,FLOOR+.36,z],6);put(paint('barPost'),new T.TorusGeometry(.2,.018,4,16).rotateX(Math.PI/2).translate(x,FLOOR+.3,z));cyl(paint('barPost'),.24,.24,.03,[x,FLOOR+.015,z],16);}
   // Keep the whole band beneath the current gallery slab, including its upper rim.
   sign({at:[cx,FLOOR+3.15,shelf-.3],normal:[0,0,-1],width:6.6,height:1.05,bow:.3,color:GREEN,frame:AMBER,lines:[{text:'THE',size:.2},{size:.33,runs:[{text:'TERPENE TASTING',color:GREEN},{text:'DECK',color:AMBER}]}]});
   for(const x of [cx-2.8,cx+2.8])rod(M.dark,[x,FLOOR+3.675,shelf-.3],[x,LEVELS[0]-.24,shelf-.3],.015,5);
+  lists=roomLists;
  }
 
  // The Cosmic Munchies Converger: a counter with snack dispensers, and the machine hung from the ceiling, beaming down.
@@ -615,12 +620,12 @@ export function createHydroNipLounge({mirror=1}={}){
  {const at=[140.8,FLOOR,10.6];cyl(M.dark,.05,.05,1.1,[at[0],FLOOR+.55,at[2]+.08],8);box(M.dark,[.5,.03,.5],[at[0],FLOOR+.015,at[2]+.08]);
   sign({at:[at[0],FLOOR+1.32,at[2]],normal:[0,0,-1],width:1.25,height:.62,color:AMBER,lines:[{text:'HYDRO-NIP LOUNGE',size:.085},{text:'Concept by Tochtli',size:.075,color:0xf3e6c4}]});}
 
- // One mesh per material.
- for(const {mat:m,loose,piece,gs} of lists.values()){const g=mergeGeometries(gs);gs.forEach(x=>x.dispose());
+ // One mesh per material in each group.
+ for(const [parent,batches] of [[root,roomLists],[bar,barLists]])for(const {mat:m,loose,piece,gs} of batches.values()){const g=mergeGeometries(gs);gs.forEach(x=>x.dispose());
   // A dark cyan-violet glaze colours the polished ring's baked environment highlights.
   if(m===shared.planter){const p=g.attributes.position,c=g.attributes.color,cyan=new T.Color(0x102429),violet=new T.Color(0x24132d),tint=new T.Color();
    for(let i=0;i<p.count;i++){const a=Math.atan2(p.getZ(i)-DOME.z,p.getX(i)-DOME.x);tint.lerpColors(cyan,violet,.5+.5*Math.sin(a*3));c.setXYZ(i,tint.r,tint.g,tint.b);}}
   const o=new T.Mesh(g,m);o.name=piece?piece+'_'+m.name:loose?m.name+'_loose':m.name;o.receiveShadow=true;o.castShadow=!m.transparent&&!(m instanceof T.MeshBasicMaterial);
-  if(loose)o.userData.noCollide=true;root.add(o);}
+  if(loose)o.userData.noCollide=true;parent.add(o);}
  return root;
 }

@@ -30,7 +30,8 @@ function batchableMatrix(matrix){
  const xy=e[0]*e[4]+e[1]*e[5]+e[2]*e[6],xz=e[0]*e[8]+e[1]*e[9]+e[2]*e[10],yz=e[4]*e[8]+e[5]*e[9]+e[6]*e[10];
  return matrix.determinant()>0&&xy*xy<=1e-12*xx*yy&&xz*xz<=1e-12*xx*zz&&yz*yz<=1e-12*yy*zz;
 }
-export async function createFeatureBatches(scene,renderer,roots){
+// `skip(root, o)`: a row that sits out this frame (group-occlusion.js: its root hidden behind what the frame already drew).
+export async function createFeatureBatches(scene,renderer,roots,{skip=null}={}){
  if(!renderer.extensions.has('WEBGL_multi_draw'))return null;
  const lists=new Map(),records=new Map(),yieldWork=yieldEvery();
  for(const root of roots){
@@ -93,6 +94,7 @@ export async function createFeatureBatches(scene,renderer,roots){
     const list=set.visible;list.length=0;
     for(const row of set.rows){
      const {o,g,root}=row;
+     if(skip?.(root,o))continue;
      if(!o.visible||!o.layers.test(camera.layers)||!plain(o)||o.geometry!==g||o.material!==set.m||o.renderOrder!==set.order||
         o.receiveShadow!==set.receives||o.castShadow!==set.casts||root.parent!==band)continue;
      if(!underRoot(o.parent,root,band)||!frustum.intersectsObject(o))continue;
