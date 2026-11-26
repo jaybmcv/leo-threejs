@@ -20,7 +20,7 @@ import {geometryKept} from './shader-hooks.js';
 // point, never-culled or vertex-moving member is never hidden (its box cannot be trusted); and a member found outside
 // its group's box when about to be left out draws, and the group is measured again.
 // Main camera only; other cameras (the photo booth, portable views) draw all. On by default where it was measured
-// (Chrome and Edge on Windows: ANGLE on Direct3D 11, occlusionByDefault); ?occlusion=1 turns it on elsewhere, and
+// (Chrome and Edge on Windows: Chromium's ANGLE on Direct3D 11, occlusionByDefault); ?occlusion=1 turns it on elsewhere, and
 // ?occlusion=0 off, to compare.
 const corners = new Uint8Array([0,0,0, 1,0,0, 1,1,0, 0,1,0, 0,0,1, 1,0,1, 1,1,1, 0,1,1]);
 const faces = new Uint8Array([0,2,1, 0,3,2, 4,5,6, 4,6,7, 0,1,5, 0,5,4, 3,7,6, 3,6,2, 0,4,7, 0,7,3, 1,2,6, 1,6,5]);
@@ -58,10 +58,12 @@ void main() {
  return p;
 }
 
-/** Whether occlusion is on without ?occlusion: where it was measured, ANGLE on Direct3D 11 (Chrome and Edge on Windows). */
+/** Whether occlusion is on without ?occlusion: where it was measured, Chromium's ANGLE on Direct3D 11 (Chrome and Edge on
+ * Windows). Firefox on Windows names ANGLE on Direct3D 11 too, but was not measured. */
 export function occlusionByDefault(gl) {
  const debug = gl.getExtension('WEBGL_debug_renderer_info'), name = debug ? String(gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)) : '';
- return /ANGLE/.test(name) && /Direct3D11|D3D11/i.test(name);
+ const agent = typeof navigator === 'undefined' ? '' : navigator.userAgent;
+ return /ANGLE/.test(name) && /Direct3D11|D3D11/i.test(name) && /Chrome\//.test(agent) && !/Firefox\//.test(agent);
 }
 
 /** roots: the groups' roots (they may gain children later). Returns {stats, hiddenRoot(root), dispose()} or null. */
