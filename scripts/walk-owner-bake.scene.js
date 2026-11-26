@@ -118,8 +118,8 @@ const arrayWords=a=>a.byteLength%4===0?new Uint32Array(a.buffer,a.byteOffset,a.b
  * triangles it adds to the occluder soup with their sides, in order. A band's are its merge sources', but what draws them
  * is the merged pieces listing those sources (merged by material across bands): every such piece counts for the band, by
  * its path, print where it will be drawn (owner-hiding.js printNow: the walk leaves a hidden branch's world matrices
- * stale), its own materials as the wall test reads them (pieceMaterial), source paths, groups, draw range and geometry arrays, so a piece that draws anything else drops each
- * band it draws (a band with a piece whose arrays are gone has none). A part: the boxes the proof covered, or a cabin
+ * stale), its own materials as the wall test reads them (pieceMaterial), source paths, groups, draw range and geometry
+ * arrays, so a piece that draws anything else drops each band it draws (a band with a piece whose arrays are gone has none). A part: the boxes the proof covered, or a cabin
  * part's slots. Rows come from collectOccluders and collectTargets themselves, so one the bake would not use now
  * (a cut-out or shader-hooked material, a shadow caster, a mover) has none; neither has a path met twice (null).
  * Prints alone are identities within one build: a vertex moved inside a wall's box, alphaTest set on its material or a
