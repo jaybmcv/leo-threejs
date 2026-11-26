@@ -3,7 +3,7 @@ import {fitNativeLounge} from '../v2/skin-retirement.js';
 import * as T from 'three';
 import {roomObject,deltaMatrix,hasFrameOverride,moverOrientation} from '../plan/rooms.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {LOUNGE} from '../hydro-nip-lounge.js';
+import {LOUNGE,terpeneBarPlacement} from '../hydro-nip-lounge.js';
 import {createTerpeneGlassware} from '../terpene-glassware.js';
 import {createLoungeSky} from './lounge-sky.js';
 import {createLoungeMural} from './lounge-mural.js';
@@ -110,7 +110,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  // Keep the small instanced display live, outside the static bake and hull trimming.
  root.getObjectByName('Terpene_glassware')?.removeFromParent();
  const still=createTerpeneGlassware(),display=new T.Group();display.name='Walk_terpene_glassware';display.position.y=floorY;
- still.group.applyMatrix4(new T.Matrix4().makeTranslation(0,-floorY,0).multiply(frame));display.add(still.group);drawn.push(display);
+ still.group.applyMatrix4(new T.Matrix4().makeTranslation(0,-floorY,0).multiply(frame).multiply(terpeneBarPlacement));display.add(still.group);drawn.push(display);
  return {
   drawn,doors,still,
   // The dome's centre on its floor and its radius in the world, for its lullaby (lullaby.js).
