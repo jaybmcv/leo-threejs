@@ -1,13 +1,16 @@
 // Owner hiding: drawables proven hidden from every eye in a 2 m camera cell (src/v2/owner-proof.js), baked by
-// scripts/walk-owner-bake.mjs for one exact walk build and configuration (the key) and hidden by the walk around its main
-// render call: for the main camera only, and only while what proved them hidden is itself drawn. Cells are the atrium
+// scripts/walk-owner-bake.mjs for one exact walk build and configuration (the key), or carried to it from the last full
+// bake by scripts/walk-owner-carry.mjs once a bake page of that build read the same rows and passed the same self-check,
+// and hidden by the walk around its main render call: for the main camera only, and only while what proved them hidden is itself drawn. Cells are the atrium
 // PVS grid (atrium-pvs.js). Anything the walk cannot match exactly is not used: nothing is hidden on its account.
 import {Matrix4} from 'three';
 import {PVS_GRID} from './atrium-pvs.js';
 
 const PV=PVS_GRID;
 export const OWNER_BAKE_VERSION=2;
-// The key: bake format, the walk script (its name carries its content hash) and the scene's build configuration.
+// The key: bake format, the walk script (its name carries its content hash) and the scene's build configuration. A bake
+// for this exact script, proven or carried and checked on it: what the proofs themselves depend on is in
+// scripts/walk-owner-carry-rows.mjs.
 export const ownerKey=(scriptName,config='')=>OWNER_BAKE_VERSION+'.'+scriptName+'.'+config;
 // The bake file for a walk script: walk.<hash>.js -> walk-owner-bake.<hash>.json beside it.
 export const ownerBakeFile=scriptName=>{const m=/^walk\.([0-9a-z]+)\.js$/i.exec(scriptName||'');return m?`walk-owner-bake.${m[1]}.json`:null;};
@@ -51,7 +54,7 @@ function worldNow(o,out=new Matrix4()){
  return out;
 }
 // Its print where it will be drawn, not where its world matrix last put it.
-const printNow=o=>ownerPrint(o,o.isMesh?worldNow(o):o.matrixWorld);
+export const printNow=o=>ownerPrint(o,o.isMesh?worldNow(o):o.matrixWorld);
 // How far the near plane's corners lie from the eye (null for a camera the bake does not cover).
 export function nearCorner(camera){
  if(!camera?.isPerspectiveCamera)return null;const t=Math.tan((camera.getEffectiveFOV?camera.getEffectiveFOV():camera.fov)*Math.PI/360);
@@ -73,7 +76,13 @@ function valid(d){
  * still use. Returns {data, dropped: {parts, conds, entries, blocks}}. */
 export function pruneOwnerBake(data,scene){
  const byPath=new Map();scene.traverse(o=>{if(o===scene)return;const p=ownerPath(o,scene);byPath.set(p,byPath.has(p)?null:o);});
- const ok=([path,print])=>{const o=byPath.get(path);return !!o&&printNow(o)===print;},partOk=data.parts.map(ok),condOk=data.conds.map(ok);
+ const ok=([path,print])=>{const o=byPath.get(path);return !!o&&printNow(o)===print;};
+ return keepOwnerRows(data,data.parts.map(ok),data.conds.map(ok));
+}
+/** `data` with only the parts and conditions marked true in `partOk` and `condOk` (one flag per row): every entry relying
+ * on another row is dropped, and the tables shrink to what the entries still use. Returns {data, dropped}, as
+ * pruneOwnerBake. */
+export function keepOwnerRows(data,partOk,condOk){
  const kept=new Map(),entries=[];data.entries.forEach((e,i)=>{if(partOk[e[0]]&&e[1].every(k=>condOk[k])){kept.set(i,entries.length);entries.push(e);}});
  const index=list=>{const m=new Map();[...new Set(list)].sort((a,b)=>a-b).forEach((v,i)=>m.set(v,i));return m;},pIdx=index(entries.map(e=>e[0])),cIdx=index(entries.flatMap(e=>e[1]));
  const blocks=data.blocks.map(b=>[...b.slice(0,6),b[6].filter(i=>kept.has(i)).map(i=>kept.get(i))]).filter(b=>b[6].length);

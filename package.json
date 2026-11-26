@@ -35,6 +35,7 @@
     "check:owner-proof-fuzz": "node scripts/check-owner-proof-fuzz.mjs",
     "check:owner-hiding": "node scripts/check-owner-hiding.mjs",
     "check:owner-bake-scene": "node scripts/check-owner-bake-scene.mjs",
+    "check:owner-carry": "node scripts/check-owner-carry.mjs",
     "check:desk-piece": "node scripts/check-desk-piece.mjs",
     "check:pixel-switches": "node scripts/check-pixel-switches.mjs",
     "check:call-lights": "node scripts/check-call-lights.mjs",
