@@ -1285,7 +1285,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 6,
-      "signature": "8d6849cab9ae76e34e8a1f4b32d6a05d0965b714ba299c90dec35e093948c5a5"
+      "signature": "5e755d6220e57dd53b9c59518cfed7d85984bed6a284b58e2a8a02a38f220299"
     },
     {
       "source": "src/walk/baggage.js",
@@ -4421,7 +4421,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "0525185c994055b573e254e77fc5a6dbfaf98d6b01766215ac0bd74f209f2906"
+      "signature": "ec4c570335187c241b5736aa07c9ec10cc2a36364dca5eb1f70ea3c65dd90d0e"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -4587,7 +4587,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "51a0cbbb63159b3ad93be903ae46b678586b658569535d53763b24db8f6fe05d"
+      "signature": "da74f4cd0fe1023a6791e6f2f6a33235e6855e42db351cba30d448d4b96e944f"
     },
     {
       "source": "src/walk/minimap.authoring.js",
@@ -6426,7 +6426,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 5,
-      "signature": "b8093c7513a6ea6d5dea5b5f83f4de7fa812dfd295e481a0d227e709fee993b2"
+      "signature": "8bdbb5c5f899ec2edfccf604dcf6b7a210534c4210a8453a0f1b7cc81e14f42e"
     },
     {
       "source": "src/walk/windows.js",

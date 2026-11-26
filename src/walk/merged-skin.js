@@ -1,11 +1,13 @@
 import * as T from 'three';
 
-// Another visitor's Cosmo (avatar.js) is 15 skinned parts on one skeleton in four materials, so each visitor in view cost
-// 15 draws. Drawn instead as one skinned mesh per material, sharing that skeleton, a visitor costs 4. The parts stay in
-// place, hidden, for what reads them: the figure's floor probes and shoe contact (dlCatFigure.ts), the catnip face, the
-// board's footprint. A part whose attribute is swapped later (the eyes shut in a hammock: avatar.js) is copied into its
-// merged copy by sync(). Parts that cannot share a draw (another skeleton, parent, place or bind, morphs, geometry groups,
-// a partial draw range, other attributes) keep drawing on their own.
+// A Cosmo (avatar.js), your own or another visitor's, is 15 skinned parts on one skeleton in four materials, so each cat
+// in view cost 15 draws. Drawn instead as one skinned mesh per material, sharing that skeleton, a cat costs 4. The parts
+// stay in place, hidden, for what reads them: the figure's floor probes and shoe contact (dlCatFigure.ts), the catnip
+// face, the board's footprint, the prank's stains and the bomber jacket (wardrobe.js). A part whose attribute is swapped
+// later (the eyes shut in a hammock: avatar.js) is copied into its merged copy by sync(); a part shown or hidden later
+// (the hoodie under the jacket) is merged again: dispose(), then a new merge (avatar.js reskin). Parts that cannot share
+// a draw (another skeleton, parent, place or bind, morphs, geometry groups, a partial draw range, other attributes) keep
+// drawing on their own.
 
 // Room round the parts' bounds for limbs that reach further than at the pose they were measured in.
 const REACH_M=.5;
