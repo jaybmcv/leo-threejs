@@ -16,7 +16,7 @@ const FITOUT_DATA='src/v2/room-fitout-overrides.js';
 export const OVERRIDE_READERS=[
  // moveRoomFitoutMeshes, run by every room shell.
  {file:FITOUT_DATA,rooms:null,keys:['moveMeshes','removeMeshes']},
- {file:'src/hydro-nip-lounge.js',rooms:['commons-1'],keys:['moveLoungeSeating','loungeRug','mazeRugMove','remove']},
+ {file:'src/hydro-nip-lounge.js',rooms:['commons-1'],keys:['terpeneBar','moveLoungeSeating','loungeRug','mazeRugMove','remove']},
  {file:'src/v2/garden-art.js',rooms:null,keys:['removeGardenPrints']},
  // LOWER_AFT_AREAS: its legacy fittings share the override's part names.
  {file:'src/lower-aft.js',rooms:['d01-spares-aft','d02-maintenance-aft','d03-inspection-aft'],keys:['remove']},
