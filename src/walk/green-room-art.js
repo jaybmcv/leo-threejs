@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {ATRIUM_STAGE,ATRIUM_STAGE_LINES} from '../plan/atrium-v2.js';
 import {walkCanvas} from './canvas.js';
 
 function canvas(w,h){const c=walkCanvas();c.width=w;c.height=h;return c;}
@@ -26,7 +27,7 @@ export function makeStageLoop(){
   const t=i/43,x=132+760*t,y=30-76*t*(1-t);
   bg.beginPath();bg.moveTo(x,y+1);bg.lineTo(x+(i%2?7:-7),y+8);bg.strokeStyle='#a37566';bg.lineWidth=1;bg.stroke();
  }
- type(bg,'COMMON',62,46,17,'#ecc7ab');type(bg,'STAGE',62,66,18,'#ecc7ab');type(bg,'ATRIUM / D06',62,87,8,'#e0a5bb');
+ type(bg,ATRIUM_STAGE_LINES[0],62,46,14,'#ecc7ab');type(bg,ATRIUM_STAGE_LINES[1],62,66,13,'#ecc7ab');type(bg,'ATRIUM / D06',62,87,8,'#e0a5bb');
  type(bg,'SET LOOP',958,57,15,'#e0bcdf');type(bg,'LEO',958,80,10,'#8fdcd6');
  const colours=['#59ddff','#ee6cb9','#ffc382','#ae83ff'];
  function draw(t){
@@ -69,7 +70,7 @@ export function makeGreenRoomPrints(){
   g.shadowColor='#ff268c';g.shadowBlur=14;type(g,'PLAY LOUD',w/2,h*.54,60,'#ffd2e7');g.shadowBlur=0;
  });
  tile('bar',406,0,320,92,(w,h)=>{
-  panel(g,'#281f2e',0,0,w,h);type(g,'BACKSTAGE BAR',w/2,33,30,'#ffe6ad');type(g,'COMMON STAGE',w/2,68,16,'#f3ad8e');
+  panel(g,'#281f2e',0,0,w,h);type(g,'BACKSTAGE BAR',w/2,33,30,'#ffe6ad');type(g,ATRIUM_STAGE.name,w/2,68,16,'#f3ad8e');
  });
  tile('restroom',734,0,284,92,(w,h)=>{
   panel(g,'#242333',0,0,w,h);type(g,'RESTROOM',w/2,47,42,'#ffdbad');

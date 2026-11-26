@@ -1,4 +1,6 @@
 import {LIFTS} from '../walk/lifts.authoring.js';
+import {ATRIUM_STAGE} from '../plan/atrium-v2.js';
+import {STAGE_PLATFORM} from './atrium-stage.js';
 // Feature approaches use selected room frames and physical component reservations.
 // Walk headings: zero faces +Z, pi/2 faces +X. Positions are feet in ship metres.
 const point=(r,p)=>{const f=r.fittingFrame||r.frame,c=Math.cos(f.yaw||0),s=Math.sin(f.yaw||0);return[f.origin[0]+c*p[0]+s*p[2]*(f.mirror?-1:1),f.origin[1]+p[1],f.origin[2]-s*p[0]+c*p[2]*(f.mirror?-1:1)];};
@@ -7,6 +9,8 @@ export function featurePlaces(layout,{crownFloor=LIFTS.find(l=>l.id==='crown').s
  const add=(id,name,deck,at,yaw=0,owner,detail='')=>out.push({id,name,deck,section:'Highlights',detail:(deck?'Deck '+deck:'Fin & crown')+(detail?' · '+detail:''),at,yaw,room:owner,lv:2,resolved:true});
  const local=(id,name,owner,p,yaw=0,detail='')=>{const r=room(owner);add(id,name,r.deck,point(r,p),(r.fittingFrame?.yaw??r.frame.yaw??0)+(r.frame.mirror?Math.PI-yaw:yaw),owner,detail);};
  add('atrium-floor','Open atrium',6,[0,layout.decks[5].y,0],Math.PI/2,undefined,'Atrium floor');
+ // Listed with the Deck 7 overlook. Land on the timber platform beside the DJ, facing the clear way out.
+ add(ATRIUM_STAGE.id,ATRIUM_STAGE.name,7,[110,layout.decks[5].y+STAGE_PLATFORM.rise,35],-Math.PI/2,ATRIUM_STAGE.id,'Stage floor on Deck 6');
  for(const d of layout.decks.filter(d=>d.number<20))add('lobby-'+d.number,'Forward lift lobby',d.number,[132,d.y,0],Math.PI/2,undefined,d.name);
  local('container-maze','Container Maze','d01-cargo-1',[-17,0,0],Math.PI/2);
  local('transporters','MCT transporters','d01-workshop-5',[-2.25,0,11.4],0);

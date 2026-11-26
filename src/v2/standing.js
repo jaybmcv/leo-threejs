@@ -11,7 +11,7 @@ const keelHalf=(x,y)=>{const K=KEEL_HULL,fx=Math.min(K.nx-1.001,Math.max(0,(x-K.
  return (HALF[j][i]*(1-u)+HALF[j][i+1]*u)*(1-v)+(HALF[j+1][i]*(1-u)+HALF[j+1][i+1]*u)*v;};
 const inKeelClub=(x,y,z)=>x>=-157&&x<=204&&y>=-52&&Math.abs(z)<=keelHalf(x,y)+.3;
 import {forumTerraces} from './launch-e-fitout.js';
-import {stageTiers} from './atrium-stage.js';
+import {stageTiers,STAGE_PLATFORM} from './atrium-stage.js';
 const FORUM_TERRACES=forumTerraces(),STAGE_TIERS=stageTiers();
 // Go-to links choose actual interior floors, never the exterior hull or the top of a glass guard.
 export function plannedStanding(layout,x,y,z,radius=.35){
@@ -26,8 +26,10 @@ export function plannedStanding(layout,x,y,z,radius=.35){
   if(FORUM_TERRACES.some(t=>near(forum.y+t.rise)&&inside(t.polygon)))return true;
   if(near(forum.y+.24)&&x>=155+radius&&x<=161-radius&&Math.abs(z)<=10-radius)return true;
  }
- // The Deck 6 Common stage's timber tiers (atrium-stage.js), likewise.
- if(STAGE_TIERS.some(t=>near(layout.decks[5].y+t.rise)&&inside(t.polygon)))return true;
+ // The open atrium's timber seating and platform are raised above the slab.
+ const stageFloor=layout.decks[5].y,{x0,x1,z0,z1,rise}=STAGE_PLATFORM;
+ if(STAGE_TIERS.some(t=>near(stageFloor+t.rise)&&inside(t.polygon)))return true;
+ if(near(stageFloor+rise)&&x>=x0+radius&&x<=x1-radius&&z>=z0+radius&&z<=z1-radius)return true;
  for(const p of HANGAR_MAINTENANCE_PLATFORMS)if(near(p.y)&&[[0,0],[radius,0],[-radius,0],[0,radius],[0,-radius]].every(([dx,dz])=>contains(p.polygon,[x+dx,z+dz])))return true;
  const b=ATRIUM_LAKE_BRIDGE;if(near(layout.decks[b.deck-1].y+b.rise)&&x>=b.bounds[0]+radius&&x<=b.bounds[1]-radius&&z>=b.bounds[2]+radius&&z<=b.bounds[3]-radius)return true;
  // Main's existing low stage/board and its two end steps are real interior floors. Keep the same height tolerance and a whole-capsule footprint.

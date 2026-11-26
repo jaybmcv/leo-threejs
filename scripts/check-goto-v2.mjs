@@ -8,8 +8,11 @@ import {applyV2Adapters,checkV2Adapters} from './source-contract.mjs';
 import {gotoAdapters} from '../legacy/v1/scripts/goto-adapters-v2.mjs';
 import {contains} from '../src/plan/geometry-v2.js';
 import {GREEN_ROOM_ID} from '../src/plan/room-names-v2.js';
+import {ATRIUM_STAGE} from '../src/plan/atrium-v2.js';
 import {buildGotoPlaces,groupPlaces,describeV2,deckDirectory,isCrewGallery} from '../src/v2/wayfinding-data.js';
 import {featurePlaces} from '../src/v2/goto-features.js';
+import {currentMapPlaces,mapPlaceOnDeck,mapRooms} from '../src/v2/map-labels.js';
+import {plannedStanding} from '../src/v2/standing.js';
 import {guideSchedule,lobbySchedule} from '../src/v2/wayfinding-guide-data.js';
 import {checkGotoFloors,gotoFloor} from '../src/v2/goto-floor.js';
 import {readGotoColliders} from './goto-colliders-v2.mjs';
@@ -30,6 +33,14 @@ assert.equal(greenRoom.name,'Green Room');
 assert.equal(greenRoom.deck,5);
 assert.match(describeV2(layout,greenRoom.at),/Green Room$/);
 assert(deckDirectory(layout).find(d=>d.deck===5).highlights.includes('Green Room'));
+const stage=places.find(p=>p.id===ATRIUM_STAGE.id);
+assert.equal(stage.name,'Red-Mars Rocks Amphitheater');
+assert.equal(stage.deck,7);
+assert(!places.some(p=>/common stage/i.test(p.name)));
+assert(describeV2(layout,stage.at).endsWith(stage.name),'Stage location readout uses the current name');
+assert(currentMapPlaces(places).includes(stage),'The stage has a map marker');
+assert.deepEqual(layout.decks.filter(d=>mapPlaceOnDeck(stage,d.number,6)).map(d=>d.number),[6,7]);
+assert.deepEqual(mapRooms.filter(r=>r.id===stage.id).map(r=>[r.name,r.center[1]]),[6,7].map(n=>[stage.name,layout.decks[n-1].y]));
 const sample=places.find(p=>p.id==='sample-cabin');assert.equal(sample.deck,15);assert.equal(layout.cabins.find(c=>c.id===sample.room).berths,2);
 const smoke=await fs.readFile('scripts/v2-smoke.mjs','utf8');assert(smoke.includes('b.dataset.place==="sample-cabin"')&&smoke.includes('b.dataset.place==="observation-lounge"'),'Existing v2 smoke must select stable current destination ids');
 for(const r of layout.rooms.filter(r=>/^nose-commons-/.test(r.id)))assert(places.find(p=>p.id===r.id).name===r.name,'Bow café current name');
@@ -63,6 +74,7 @@ const arg=process.argv.find(a=>a.startsWith('--prepared='))?.slice(11),prepared=
 for(const board of lobbies)assert(gotoFloor(prepared.colliders,[board.at[0],layout.decks[board.deck-1].y,board.at[2]]).ok,'Lobby directory outside real floor '+board.id);
 const failures=checkGotoFloors(guideModule.runtimePlaces,prepared.colliders);
 assert.deepEqual(failures,[],'Go-to entry does not land on a safe floor');
+assert(gotoFloor(prepared.colliders,stage.at,{planned:(...at)=>plannedStanding(layout,...at)}).ok,'The stage platform must pass the public landing check');
 const poses=livePosesV2(layout);for(const p of [...poses.shots,poses.nearWalker,poses.far]){assert(gotoFloor(prepared.colliders,p.feet).ok,'Unsafe live pose '+p.id);assert(Math.abs(p.camera.position[1]-p.feet[1]-1.65)<1e-9);}
 for(let i=0;i<10;i++)assert(gotoFloor(prepared.colliders,poses.walk(i)).ok,'Unsafe live walk step');
 const good=places.find(p=>p.id==='lobby-10'),badTargets=[

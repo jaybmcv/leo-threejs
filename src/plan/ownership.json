@@ -2828,7 +2828,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 21,
-      "signature": "47472faf10ca74edbee113db9cadf917947451344ea0078e8999cb5b298ef6bc"
+      "signature": "57ee93a2926067d9f1c21035d6f8cff0bbfd6d2af7145338cc3bbb38ff4595db"
     },
     {
       "source": "src/walk/green-room.js",
@@ -4610,7 +4610,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 7,
-      "signature": "1396cdbc971eae66d9cdc7d0080c6ad1d17a922ef9cdd3fed6ebbf1d102b6dc0"
+      "signature": "c88d91bb87b8c9643a5aff1662d5530cc9e5805924d5e5215b94e27e762dd300"
     },
     {
       "source": "src/walk/minimap.js",
@@ -4643,7 +4643,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 7,
-      "signature": "2fcc5191ec4616aba1a5cfcf66bacbf5d461d9077e14e3c1a8873eaf1c1aec52"
+      "signature": "8da4261fbd3f4d5b9b8a896700a41dab2df21420a69dcf83fa440906de88bcb4"
     },
     {
       "source": "src/walk/minimap.prepared.js",
@@ -4676,7 +4676,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 7,
-      "signature": "9655f94ac353c3cc7a7c4dfe68b34552563a374779c8173774365d00cd2088ca"
+      "signature": "aabe07ff9f98bd675da9bded05bf301d1b4bd3997efc365b6b560daf891cee06"
     },
     {
       "source": "src/walk/minimap.public.js",
@@ -4709,7 +4709,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 7,
-      "signature": "1612766d474181aa0c4759b0ed8a393a694918cc58bed26b0e42b80d4aefe1e4"
+      "signature": "29d0007044abcfd75cc64cab4d81373cd437b4c5f0039408d839e730d58229be"
     },
     {
       "source": "src/walk/mission-holo.authoring.js",

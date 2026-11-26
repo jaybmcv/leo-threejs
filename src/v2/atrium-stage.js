@@ -13,6 +13,7 @@ import {addStageConcertDecor,stageConcertCollider} from './stage-concert.js';
 // benches, one per row, so seat rows step all the way down to the stage. The stage-wide viewpoint (x 68) stands on the top
 // tier, as in the concept.
 const CENTRE=[108,30],RISE=.24,BENCH={depth:.65,height:.3};
+export const STAGE_PLATFORM={x0:106,x1:120,z0:14,z1:46,rise:.36};
 const TIERS=[
  {inner:6.5,outer:26.6,benches:[10.8,15.1,19.4,23.4]},
  {inner:26.6,outer:32.6,benches:[29.6]},
@@ -129,7 +130,7 @@ export function addStageDecor(out,layout){
  solid(b.map(band=>({...band,y0:0,y1:band.rise})));
  for(const bench of b.filter(band=>band.bench).map(benchOf)){boards(bench.inner,bench.outer,bench.start,bench.end,bench.y1);solid([bench]);nosing(bench.inner,bench.start,bench.end,bench.y1);}
  // The stage deck: boards across the stage (14 x 32 m, 0.36 m up), a darker front and sides, and the same pale nosing.
- const [x0,x1,z0,z1,h]=[106,120,14,46,.36];
+ const {x0,x1,z0,z1,rise:h}=STAGE_PLATFORM;
  for(let x=x0;x<x1-1e-6;x+=BOARD_W){const xb=Math.min(x1,x+BOARD_W);let z=z0;while(z<z1-1e-6){const zb=Math.min(z1,z+2.4+rnd()*2);quad([[x,h,z],[xb,h,z],[xb,h,zb],[x,h,zb]],tone(),[0,1,0]);z=zb;}}
  quad([[x0,0,z0],[x0,0,z1],[x0,h,z1],[x0,h,z0]],FACE,[-1,0,0]);
  for(const [z,s] of [[z0,-1],[z1,1]])quad([[x0,0,z],[x1,0,z],[x1,h,z],[x0,h,z]],FACE,[0,0,s]);
@@ -152,7 +153,8 @@ export function addStageDecor(out,layout){
 // step up, collidable) and its sign (phase6-programme.js); the backdrop becomes a cream stone wall, its face where it was.
 export function addAtriumStage({parts,rests,y}){
  const room='atrium6-stage',add=(part,size,centre,mat,options={})=>parts.push({room,part,size,at:centre,mat,yaw:0,deck:6,phase6:true,selectedDesign:'stage-a',...options});
- add('p6_stage_platform',[14,.36,32],[113,y+.18,30],'oak');
+ const {x0,x1,z0,z1,rise}=STAGE_PLATFORM;
+ add('p6_stage_platform',[x1-x0,rise,z1-z0],[(x0+x1)/2,y+rise/2,(z0+z1)/2],'oak');
  add('p6_stage_backdrop',[.28,3.1,29],[119.86,y+1.91,30],'cream',{noCollide:true,stageShape:{kind:'wall',floor:y}});
  for(const side of[-1,1]){
   const g=stageConcertCollider(side);g.computeBoundingBox();const b=g.boundingBox,size=b.getSize(new T.Vector3()),centre=b.getCenter(new T.Vector3());g.dispose();

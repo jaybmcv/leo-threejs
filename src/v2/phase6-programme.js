@@ -2,7 +2,7 @@ import {addReflectionTerraces} from './reflection-terraces.js';
 import {addWelcomeCourtParts} from './atrium-lobby-park.js';
 import {addAtriumStage} from './atrium-stage.js';
 import {hydrateHullLayout} from '../plan/envelope-data-v2.js';
-import {ATRIUM_ZONES,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS,ATRIUM_BOULEVARD_TREES,ATRIUM_PROMENADE_LAMPS,ATRIUM_FESTOONS} from '../plan/atrium-v2.js';
+import {ATRIUM_ZONES,ATRIUM_STAGE,ATRIUM_TERRACES,ATRIUM_LAKE_BRIDGE,phase6Owners,BOW_CAFE_THEMES,phase6LakePolygon,ATRIUM_GARDEN_POCKETS,ATRIUM_BOULEVARD_TREES,ATRIUM_PROMENADE_LAMPS,ATRIUM_FESTOONS} from '../plan/atrium-v2.js';
 import {patchDepth,worldPoint} from '../plan/hull-skin-v2.js';
 import {contains,distanceToSegment,bounds} from '../plan/geometry-v2.js';
 export const windowSeatsFor=o=>Math.max(1,Math.ceil((o[1]-o[0])/3-1e-6));
@@ -82,12 +82,12 @@ const bed=contains(lake,[x,z])?y-.16:y;add('atrium6-lake','garden_planter',[2.4,
  for(const f of ATRIUM_FESTOONS)for(const[x,z]of f.posts)add('atrium6-food','p6_stall_post',[.10,2.8,.10],[x,y+1.4,z],'metal');
  sign('atrium6-lake','REFLECTION LAKE / SHALLOW EDGE',17,-8,8);for(const x of[14,20])add('atrium6-lake','p6_lake_sign_post',[.08,2.96,.08],[x,y+1.32,-8],'metal');
  addAtriumStage({parts,rests,y});
- sign('atrium6-stage','THE COMMON STAGE',119.69,30,9,y+.36,6,-Math.PI/2);
+ sign(ATRIUM_STAGE.id,ATRIUM_STAGE.name,119.69,30,9,y+.36,6,-Math.PI/2);
  add('atrium6-lobby','counter_body',[6,.88,1],[-109,y+.44,-14],'cream');add('atrium6-lobby','counter_top',[6.12,.09,1.12],[-109,y+.925,-14]);
  sign('atrium6-lobby','LEO ATRIUM / RECEPTION',-109,-14.5,7);for(const x of[-111.5,-106.5])add('atrium6-lobby','p6_sign_post',[.08,2.8,.08],[x,y+1.4,-14.5],'metal');
  for(const x of[-117,-112,-107,-102])for(const z of[14,23])if(fits(x,z,2,1.5))bench('atrium6-lobby',x,z,Math.PI);
  add('atrium6-lobby','directory_base',[3,.22,1],[-109,y+.11,7],'metal');add('atrium6-lobby','directory_stem',[.18,1.405,.18],[-109,y+.9225,7],'metal');
- add('atrium6-lobby','sign',[5,1.25,.12],[-109,y+2.25,7],'navy',{text:'DECK 6 / ATRIUM\nFORWARD: PARK / LAKE / FOOD / STAGE\nAFT: LIFTS + STAIRS / MEET HERE',yaw:Math.PI,noCollide:true});
+ add('atrium6-lobby','sign',[5,1.25,.12],[-109,y+2.25,7],'navy',{text:'DECK 6 / ATRIUM\nFORWARD: PARK / LAKE / FOOD\n'+ATRIUM_STAGE.name+'\nAFT: LIFTS + STAIRS / MEET HERE',yaw:Math.PI,noCollide:true});
  for(const z of[-27,29])plant('atrium6-lobby',-103,z);
  addWelcomeCourtParts(add,y); // G1 welcome court: the desk and its planters (atrium-lobby-park.js)
  // Runtime lawn clearances need only these parts. Prepared layouts omit the

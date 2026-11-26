@@ -1,6 +1,6 @@
 import {DECKS} from '../model.js';
 import {floorY} from '../transit.js';
-import {mapRooms as SHIP_AREAS,currentMapPlaces} from '../v2/map-labels.js';
+import {mapRooms as SHIP_AREAS,currentMapPlaces,mapPlaceOnDeck} from '../v2/map-labels.js';
 import {contains} from '../plan/geometry-v2.js';
 import {MAP,MAP_CLASS} from './deck-map.prepared.js';
 import {FIN_PLATFORMS} from '../fin-crown.js';
@@ -48,7 +48,7 @@ export function drawMiniMap(canvas,map,{x,y,z,yaw,places=[]}){
   g.save();g.translate(w/2,h/2);g.rotate(turn);g.scale(scale,scale);g.imageSmoothingEnabled=false;
   g.drawImage(plan,-mx,-mz);
   g.fillStyle='#f4f0e8';
-  for(const p of currentMapPlaces(places)){if(deckOf(p.at[1])!==deck)continue;const [px,pz]=toMap(p.at[0],p.at[2]);g.beginPath();g.arc(px-mx,pz-mz,3*dpr/scale,0,Math.PI*2);g.fill();}
+  for(const p of currentMapPlaces(places)){if(!mapPlaceOnDeck(p,deck.number,deckOf(p.at[1])?.number))continue;const [px,pz]=toMap(p.at[0],p.at[2]);g.beginPath();g.arc(px-mx,pz-mz,3*dpr/scale,0,Math.PI*2);g.fill();}
   g.restore();
   miniNames(g,{w,h,dpr,x,z,turn,y:floorY(deck.number)});
  }
@@ -106,7 +106,7 @@ export function drawFullMap(canvas,map,number,{walker,places=[]}){
  const at=(x,z)=>{const [mx,mz]=toMap(x,z);return [ox+mx*scale,oz+mz*scale];};
  // Room names, where a room is big enough on screen to hold one.
  g.textAlign='center';g.textBaseline='middle';
- const y=floorY(number),here=currentMapPlaces(places).filter(p=>deckOf(p.at[1])?.number===number);
+ const y=floorY(number),here=currentMapPlaces(places).filter(p=>mapPlaceOnDeck(p,number,deckOf(p.at[1])?.number));
  // (A room with a place marker in it is named by the marker.)
  for(const a of SHIP_AREAS){if(Math.abs(a.center[1]-y)>2.2||a.kind==='lifeboats')continue;
   if(here.some(p=>Math.abs(p.at[0]-a.center[0])<=a.width/2&&Math.abs(p.at[2]-a.center[2])<=a.depth/2))continue;const [cx,cz]=at(a.center[0],a.center[2]),size=Math.min(a.width,a.depth)/MAP.cell*scale;if(size<26*dpr)continue;

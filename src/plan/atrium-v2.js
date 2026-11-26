@@ -1,14 +1,16 @@
 // Phase 6 accepted programme. Geometry stays in the existing atrium and room envelopes.
 export const ATRIUM_PROTOTYPE={stage:2,cafe:'nose-commons-05',interiorReach:4,fogFar:650,skyY:40.02,waterDepth:.16};
 const rect=(x0,x1,z0,z1)=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]];
+export const ATRIUM_STAGE_LINES=['Red-Mars Rocks','Amphitheater'];
 export const ATRIUM_ZONES=[
  {id:'atrium6-lobby',name:'Arrival lobby',bounds:[-123,-96,-32,32],colour:0xdacdb8},
  {id:'atrium6-park',name:'Voyager park',bounds:[-90,-4,-56,-6],colour:0x789974},
  {id:'atrium6-lake',name:'Reflection lake',bounds:[4,120,-56,-6],colour:0x71aeb3},
  {id:'atrium6-food',name:'Atrium food hall',bounds:[-90,58,6,56],colour:0xd6bea0},
- {id:'atrium6-stage',name:'Common stage',bounds:[66,122,6,56],colour:0xf2d7b4},
+ {id:'atrium6-stage',name:ATRIUM_STAGE_LINES.join(' '),bounds:[66,122,6,56],colour:0xf2d7b4},
  {id:'atrium6-commons',name:'Voyage Commons',bounds:[150,174,-18,18],colour:0xd9d3c4}
 ].map(z=>({...z,polygon:rect(...z.bounds)}));
+export const ATRIUM_STAGE=ATRIUM_ZONES.find(z=>z.id==='atrium6-stage');
 export const ATRIUM_LAKE_BRIDGE={deck:6,bounds:[58.5,61.5,-57,-5],rise:.22};
 export const ATRIUM_TERRACES=Array.from({length:10},(_,i)=>[-1,1].map(side=>({id:'p6-terrace-'+(i+6)+'-'+(side<0?'port':'starboard'),name:'Neighborhood '+(i+1)+' dining terrace',deck:i+6,side,polygon:rect(-126,-123.8,...(side<0?[-17,-10.4]:[10.4,17]))}))).flat();
 export function phase6Owners(layout){return [...ATRIUM_ZONES.map(z=>({...z,deck:6,y:layout.decks[5].y,height:8,visibilityYMin:layout.decks[5].y-.2,visibilityPolygons:[z.polygon],phase6Atrium:true})),...ATRIUM_TERRACES.map(t=>({...t,y:layout.decks[t.deck-1].y,height:3.4,visibilityPolygons:[t.polygon],phase6Atrium:true,showFromBelow:true})),{id:'p6-crew-gallery',name:'Crew service gallery',deck:20,y:layout.decks[19].y,height:3.4,polygon:rect(127.8,136.2,-16,16),phase6Atrium:true}];}
