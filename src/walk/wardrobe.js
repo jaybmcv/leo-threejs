@@ -62,10 +62,14 @@ export function bomberGeometry(source){
  return g;
 }
 
-// `figure`: the visitor's own walker's (avatar.js createWalker). Returns {set(outfit), outfit, jacket, dispose()}.
-export function createWardrobe(figure){
+// `figure`: the visitor's own walker's (avatar.js createWalker). `reskin`: the walker's, which shows or hides parts it
+// draws through merged copies (avatar.js mergeDraws) and merges them again; without it the parts are shown or hidden as
+// they are. Returns {set(outfit), outfit, jacket, dispose()}.
+export function createWardrobe(figure,{reskin=change=>change()}={}){
  const parts=figure.asset.meshes.filter(m=>HOODIE.includes(nameOf(m))),hoodie=parts.find(m=>nameOf(m)==='hoodie.001');
- let jacket=null,material=null,outfit='default';
+ let jacket=null,material=null,outfit='default',worn=false;
+ // The jacket on or off, and the hoodie the other way, only when that changes (each change merges the parts again).
+ const wear=on=>{if(on===worn)return;worn=on;reskin(()=>{if(on&&!jacket)build();for(const p of parts)p.visible=!on;if(jacket)jacket.visible=on;});};
  function build(){
   material=new T.MeshStandardMaterial({name:'Wardrobe_bomber',vertexColors:true,roughness:.6,metalness:.05,side:T.DoubleSide});
   jacket=new T.SkinnedMesh(bomberGeometry(hoodie.geometry),material);jacket.name='Wardrobe_bomber';
@@ -77,12 +81,7 @@ export function createWardrobe(figure){
  }
  return {
   get outfit(){return outfit;},get jacket(){return jacket;},
-  set(value){
-   outfit=cleanOutfit(value);const on=outfit==='bomber'&&!!hoodie;
-   if(on&&!jacket)build();
-   for(const p of parts)p.visible=!on;if(jacket)jacket.visible=on;
-   return outfit;
-  },
-  dispose(){if(!jacket)return;jacket.removeFromParent();jacket.geometry.dispose();material.dispose();jacket=material=null;for(const p of parts)p.visible=true;outfit='default';}
+  set(value){outfit=cleanOutfit(value);wear(outfit==='bomber'&&!!hoodie);return outfit;},
+  dispose(){if(!jacket)return;wear(false);jacket.removeFromParent();jacket.geometry.dispose();material.dispose();jacket=material=null;outfit='default';}
  };
 }
