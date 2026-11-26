@@ -278,6 +278,10 @@
     ],
     "via": null
   },
+  "src/walk/gaming-wall-lights.js": {
+    "owners": ["d16-training-aft"],
+    "via": "inherited"
+  },
   "src/walk/hamster-ball.js": {
     "owners": [
       "commons-10"
