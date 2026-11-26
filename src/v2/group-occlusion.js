@@ -22,8 +22,10 @@ import {geometryKept} from './shader-hooks.js';
 // Main camera only; other cameras (the photo booth, portable views) draw all. On by default where it was measured
 // (Chrome and Edge on Windows: Chromium's ANGLE on Direct3D 11, occlusionByDefault); ?occlusion=1 turns it on elsewhere, and
 // ?occlusion=0 off, to compare.
-// Drawn where its geometry says, or recoloured only by its own hook (see measure()).
-const kept = m => geometryKept(m) || m.userData?.recolourOnly === true && !m.isShaderMaterial && !m.isRawShaderMaterial && !m.displacementMap;
+// Drawn where its geometry says, or recoloured only by its own hook (see measure()): the material says so and its hook is
+// the one marked so, or film look's or corner shading's wrapping it. A copy given another hook of its own loses the mark.
+const recolours = h => h?.recolourOnly === true || h?.filmLook === true || h?.cornerShade === true;
+const kept = m => geometryKept(m) || m.userData?.recolourOnly === true && recolours(m.onBeforeCompile) && !m.isShaderMaterial && !m.isRawShaderMaterial && !m.displacementMap;
 const corners = new Uint8Array([0,0,0, 1,0,0, 1,1,0, 0,1,0, 0,0,1, 1,0,1, 1,1,1, 0,1,1]);
 const faces = new Uint8Array([0,2,1, 0,3,2, 4,5,6, 4,6,7, 0,1,5, 0,5,4, 3,7,6, 3,6,2, 0,4,7, 0,7,3, 1,2,6, 1,6,5]);
 

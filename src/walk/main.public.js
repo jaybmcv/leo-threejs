@@ -448,7 +448,7 @@ async function buildShip(){
  // Decals and seams only matter from outside.
  // Exterior visibility was resolved by the build.
  ship.v2Haze=preparedHaze(ship);preparedFacade(ship,scene);const b0=performance.now();baked=preparedBake(ship);for(const g of baked.bands.values())scene.add(g);quietFloorReflections(scene,scene.environment);timings.push([`${baked.sources} meshes merged into ${baked.meshes} in ${Math.round(performance.now()-b0)} ms`,Math.round(performance.now()-t0)]);
- haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});await hallTurn();voyagerLawn=createVoyagerLawn(ship,scene,layout,{phone});cabinGlass=createCabinGlass(ship,scene);if(deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('privacybatch')!=='0')privacyBatch=batchPrivacy(cabinGlass.root);crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);
+ haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});await hallTurn();voyagerLawn=createVoyagerLawn(ship,scene,layout,{phone});cabinGlass=createCabinGlass(ship,scene);if(deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('privacybatch')!=='0')privacyBatch=batchPrivacy(cabinGlass.root,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  status('Preparing the walk · 2/4 · placing activities…');await idle();
  const featureRoots=[];

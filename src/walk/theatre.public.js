@@ -167,7 +167,7 @@ function costume(material,name,coat,legs){
  m.onBeforeCompile=s=>{s.fragmentShader=s.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n'+code);};
  m.customProgramCacheKey=()=>name;
  // The hook recolours only: the walk's occlusion (group-occlusion.js) may leave a hidden actor out.
- m.userData.recolourOnly=true;
+ m.userData.recolourOnly=m.onBeforeCompile.recolourOnly=true;
  return m;
 }
 function spotGlow(g,w,h){
