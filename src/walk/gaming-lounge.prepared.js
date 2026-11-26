@@ -242,39 +242,12 @@ export function createGamingLounge(ship,light=null,{still=false,requestBoards=()
   dark:new T.MeshStandardMaterial({name:'Gaming_kit',color:0x18191d,roughness:.5}),bezel:new T.MeshStandardMaterial({name:'Gaming_bezel',color:0x0c0d10,roughness:.35,side:T.DoubleSide})};
  const refreshments=createGamingRefreshments(M.keys);group.add(refreshments.group);
  const parts=new Map();const piece=(m,g)=>{(parts.get(m)||parts.set(m,[]).get(m)).push(g.index?g.toNonIndexed():g);};
- const at=(g,x,y,z,ry=0)=>{g.rotateY(ry);g.translate(x,y,z);return g;};
- // Hexagon wall lights in honeycomb clusters: a dark frame, the glowing face and a soft halo on the wall behind.
- const R=.2,cells=[[0,0],[1,0],[.5,1],[1.5,1],[2,0],[-.5,1]];
- const hexes=[];
- const cluster=(x,y,z,ry,n=4,flip=1)=>{for(const [c,r] of cells.slice(0,n))hexes.push({x:x+c*R*1.75*flip,y:y+r*R*1.52,z,ry});};
- // Outboard wall over the PCs (clear of the title in the middle), the entry wall over the screens, both end walls.
- for(const x of [-20,-12.5,-6.2,7.5])cluster(x,2.2,-SIDE,0,x===-6.2?3:5);
- for(const x of [-18.7,-9.7,-.5,13.8])cluster(x,2.15,SIDE,Math.PI,5);
- for(const z of [-5,0,4.2])cluster(z,2.05,0,Math.PI/2,z?4:6);
- for(const z of [-5.6,4])cluster(z,2.1,0,-Math.PI/2,4);
- const hexFace=new ReplayGeometry("src/walk/gaming-lounge.js:9",T.CylinderGeometry,R*.84,R*.84,.02,6).rotateX(Math.PI/2),hexFrame=new ReplayGeometry("src/walk/gaming-lounge.js:10",T.CylinderGeometry,R*.97,R*.97,.03,6).rotateX(Math.PI/2),halo=new ReplayGeometry("src/walk/gaming-lounge.js:11",T.PlaneGeometry,R*5,R*5);
- for(const h of hexes){
-  // End-wall clusters run along z: their `x` is the along-wall offset; place them on the wall they face.
-  let px=h.x,pz=h.z;const n=h.ry===0?[0,1]:h.ry===Math.PI?[0,-1]:h.ry===Math.PI/2?[1,0]:[-1,0];
-  if(Math.abs(h.ry)===Math.PI/2){pz=h.x;px=h.ry>0?-END:END;}
-  const off=d=>[px+n[0]*d,pz+n[1]*d];
-  piece(M.dark,at(hexFrame.clone(),off(.015)[0],h.y,off(.015)[1],h.ry));
-  piece(M.hex,at(hexFace.clone(),off(.025)[0],h.y,off(.025)[1],h.ry));
-  piece(M.halo,at(halo.clone(),off(.004)[0],h.y,off(.004)[1],h.ry));
- }
- // The light strip round the top of the walls, with a soft cool wash on the wall below it.
- const strip=M.basic('light_strip',0xcfe6ff);
- const runs=[[[-END,-SIDE],[END,-SIDE],[0,1]],[[-END,SIDE],[DOOR[0],SIDE],[0,-1]],[[DOOR[1],SIDE],[END,SIDE],[0,-1]],[[-END,-SIDE],[-END,SIDE],[1,0]],[[END,-SIDE],[END,SIDE],[-1,0]]];
- const wash=[];
- for(const [a,b,n] of runs){
-  const len=Math.hypot(b[0]-a[0],b[1]-a[1]),ry=-Math.atan2(b[1]-a[1],b[0]-a[0]),cx=(a[0]+b[0])/2,cz=(a[1]+b[1])/2;
-  piece(strip,new ReplayGeometry("src/walk/gaming-lounge.js:12",T.BoxGeometry,len,.035,.04).rotateY(ry).translate(cx+n[0]*.03,3.12,cz+n[1]*.03));
-  const g=new ReplayGeometry("src/walk/gaming-lounge.js:13",T.PlaneGeometry,len,.5);const cols=[];for(let i=0;i<g.attributes.position.count;i++){const k=g.attributes.position.getY(i)>0?.09:0;cols.push(.55*k,.75*k,k);}
-  g.setAttribute('color',new T.Float32BufferAttribute(cols,3));
-  g.rotateY(Math.atan2(n[0],n[1]));g.translate(cx+n[0]*.006,2.86,cz+n[1]*.006);wash.push(g);
- }
- const washMesh=new T.Mesh(replayMerged("src/walk/gaming-lounge.js",nativeMergeGeometries,wash),new T.MeshBasicMaterial({name:'Gaming_light_wash',vertexColors:true,transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}));
- washMesh.name='Gaming_light_wash';group.add(washMesh);
+ // The opaque wall fittings are prepared from the finished hull lining.
+ const wallLight=name=>new ReplayGeometry("src/walk/gaming-lounge.js:9",T.BufferGeometry,name);
+ piece(M.dark,wallLight('frame'));
+ const addWallLight=(material,name)=>{const o=new T.Mesh(wallLight(name),material);o.name=material.name;group.add(o);};
+ addWallLight(M.hex,'hex');addWallLight(M.halo,'halo');addWallLight(M.basic('light_strip',0xcfe6ff),'strip');
+ addWallLight(new T.MeshBasicMaterial({name:'Gaming_light_wash',vertexColors:true,transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}),'wash');
  // PC kit: two curved monitors round the sitter's eye, keyboard and mouse in colour, the tower's colour strip, a headset.
  const pc=M.basic('pc_screen',0xffffff);pc.side=T.DoubleSide;pc.map=canvas(512,288,shooter);
  const controller=controllerGeometry(),headset=headsetGeometry();
