@@ -32,7 +32,7 @@ let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 const phoneBatching=(()=>{const query=new URLSearchParams(location.search);if(!preparedPhone)return query.get('deskbatch')==='low'?{}:{merge:true};const mode=query.get('phonebatch');
  return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
 import {createFeatureBatches} from '../v2/feature-batches.js';
-let phoneBands=null,wayfindingSigns=null,fogCull=null,featureBatches=null;
+let phoneBands=null,wayfindingSigns=null,fogCull=null,featureBatches=null,groupOcclusion=null;
 // The atrium geometry pack binds the band pieces the merge hides, so it runs only without the merge, and the Detail menu
 // chooses its distant detail. The merged bands keep full detail and still draw faster: on them the menu sets the atrium's
 // haze (detail-levels.js), and Auto starts at High, the look before the menu came back. ?detail=high|balanced|performance
@@ -58,6 +58,7 @@ import {createFrameReadout} from './frame-readout.js';
 import {deskAntialias,heldRes} from './pixel-switches.js';
 import {mergePhoneFurnishing} from '../v2/phone-furnishing.js';
 import {mergeScaledFurnishing} from '../v2/scaled-furnishing.js';
+import {createGroupOcclusion} from '../v2/group-occlusion.js';
 import {mergePhoneBands} from '../v2/phone-bands.js';
 import {deskPieceSize,gpuName} from '../v2/desk-piece.js';
 import {createAtriumPvs} from '../v2/atrium-pvs.js';
@@ -320,7 +321,7 @@ const deskPiece=deskPieceSize({query:new URLSearchParams(location.search),phone:
 // buffer the shaders write the depth, so polygon offset has never applied. With linear depth it would, and pull the hex
 // sub-floor (finish-kit.js) over the Arrival Hall's finish, so it stays off.
 if(linearDepth){const gl=renderer.getContext(),enable=gl.enable.bind(gl);gl.enable=cap=>{if(cap!==gl.POLYGON_OFFSET_FILL)enable(cap);};}
-const frameReadout=createFrameReadout(renderer,{extra:()=>remotes?.crowdLine()});
+const frameReadout=createFrameReadout(renderer,{extra:()=>[remotes?.crowdLine(),groupOcclusion?.line()].filter(Boolean).join('\n')});
 // Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
 // The Res button steps through them and the choice is remembered for the next visit. ?res=high, med or low holds a
 // level for this visit in the saved one's place (pixel-switches.js): nothing is saved, and it never steps down.
@@ -569,7 +570,9 @@ async function buildShip(){
  isolateStaticWorld(ship,scene);{const hidden=(preparedPhone||phoneBatching.merge)&&!OWNER_BAKE_PAGE?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // While the arrival hall is walked, the floors' occlusion scan (floor-occlusion.js) gives the page turns: a second of work.
  if(deskDetail&&!OWNER_BAKE_PAGE)installQuadFacingTest(renderer,scene,camera,arrival?.active?{floorOcclusion:await createFloorOcclusionAsync(scene,camera,yieldToPage)}:{});
- if(deskDetail&&!OWNER_BAKE_PAGE)featureBatches=await createFeatureBatches(scene,renderer,featureRoots);
+ // Room features and lifts the frame's own walls and floors hide sit out the main pass (group-occlusion.js); ?occlusion=0 draws them.
+ if(deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('occlusion')!=='0')groupOcclusion=createGroupOcclusion(renderer,scene,camera,[...featureRoots,...scene.children.filter(o=>o.isGroup&&o.userData.keepLive&&/^Walk_lift_/.test(o.name))]);
+ if(deskDetail&&!OWNER_BAKE_PAGE)featureBatches=await createFeatureBatches(scene,renderer,featureRoots,{skip:groupOcclusion?.hiddenRoot});
  // The groups holding only those instanced meshes once the live draws have their final parents (V2_live_source_draws: a
  // deck's cabin shells, a cabin template's fittings), and groups of only such groups, innermost first: cull() hides each
  // while nothing in it shows, so three's scene walk and matrix pass skip it.
