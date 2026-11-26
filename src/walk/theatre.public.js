@@ -166,6 +166,8 @@ function costume(material,name,coat,legs){
  const code=`{vec3 c=diffuseColor.rgb;float shorts=step(.12,c.r-c.b);diffuseColor.rgb=mix(${glsl(coat)}*(.7+c.g*2.),${glsl(legs)}*(.55+c.r*.45),shorts);}`;
  m.onBeforeCompile=s=>{s.fragmentShader=s.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n'+code);};
  m.customProgramCacheKey=()=>name;
+ // The hook recolours only: the walk's occlusion (group-occlusion.js) may leave a hidden actor out.
+ m.userData.recolourOnly=true;
  return m;
 }
 function spotGlow(g,w,h){

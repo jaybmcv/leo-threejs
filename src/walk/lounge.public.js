@@ -55,7 +55,12 @@ export function createLounge(ship,colliders){
  for(const leaf of leaves.values())for(const o of leaf.meshes){const list=byMaterial.get(o.material)||byMaterial.set(o.material,[]).get(o.material);list.push({leaf,g:worldGeometry(o)});o.removeFromParent();}
  const doorMeshes=[...byMaterial].map(([mat,items])=>{
   const g=replayMerged("src/walk/lounge.js",nativeMergeGeometries,items.map(i=>i.g));let start=0;const ranges=items.map(i=>{const r={leaf:i.leaf,start,count:i.g.attributes.position.count};start+=r.count;return r;});
-  const mesh=place(g,mat,'Walk_lounge_doors'),base=g.attributes.position.array.slice();return {mesh,ranges,base};});
+  const mesh=place(g,mat,'Walk_lounge_doors'),base=g.attributes.position.array.slice();
+  // Where the doors can draw, shut or fully open (slideDoors moves their vertices; the bounds stay as built), so the
+  // walk's occlusion (group-occlusion.js) may leave them out when hidden.
+  const box=new T.Box3().setFromArray(base);for(const r of ranges){const leaf=new T.Box3().setFromArray(base.subarray(r.start*3,(r.start+r.count)*3));leaf.min.add(r.leaf.slide);leaf.max.add(r.leaf.slide);box.union(leaf);}
+  mesh.userData.occlusionBox=box.expandByScalar(.05);
+  return {mesh,ranges,base};});
  let doorsMoved=true;
  function slideDoors(){
   for(const {mesh,ranges,base} of doorMeshes){const p=mesh.geometry.attributes.position,a=p.array;
@@ -81,7 +86,12 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
     .replace('#include <beginnormal_vertex>','#include <beginnormal_vertex>\nfloat swingA=uAmp*sin(uTime*uRate+aPhase);objectNormal=swingAbout(objectNormal,swingA);')
     .replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed=swingAbout(transformed-(aPivot-vec3(0.,'+floorY.toFixed(4)+',0.)),swingA)+(aPivot-vec3(0.,'+floorY.toFixed(4)+',0.));');};
   mat.customProgramCacheKey=()=>'lounge-hammocks';
-  place(replayMerged("src/walk/lounge.js",nativeMergeGeometries,parts),mat,'Walk_lounge_hammocks');
+  const hung=place(replayMerged("src/walk/lounge.js",nativeMergeGeometries,parts),mat,'Walk_lounge_hammocks');
+  // Where they can draw: each vertex swings at most SWAY.amp about its pivot, so moves at most its distance from it
+  // times that (for the walk's occlusion, group-occlusion.js).
+  {const pos=hung.geometry.attributes.position,piv=hung.geometry.attributes.aPivot;let reach=0;
+   for(let i=0;i<pos.count;i++)reach=Math.max(reach,Math.hypot(pos.getX(i)-piv.getX(i),pos.getY(i)-(piv.getY(i)-floorY),pos.getZ(i)-piv.getZ(i)));
+   hung.userData.occlusionBox=new T.Box3().setFromBufferAttribute(pos).expandByScalar(reach*SWAY.amp+.05);}
   for(const o of hammocks)o.removeFromParent();
  }
  // How a hammock (a rest spot's mesh) hangs now: the same swing as the shader's.
@@ -103,7 +113,9 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  if(aquarium)aquarium.group.userData={band:bandOf(toWorld(0,aquarium.low,0).y),top:bandOf(toWorld(0,aquarium.top,0).y)};
  const {ROOM}=LOUNGE;
  const panels=[];root.parent?.parent?.traverse(o=>{if(o.isMesh&&o.name==='Circadian_light')panels.push(o);});for(const o of panels)o.removeFromParent();
- {const sky=createLoungeSky(frame,ROOM,LOUNGE.CEILING-.16,uniforms.uTime);place(sky.geometry,sky.material,'Walk_lounge_glass_roof');}
+ {const sky=createLoungeSky(frame,ROOM,LOUNGE.CEILING-.16,uniforms.uTime);const roof=place(sky.geometry,sky.material,'Walk_lounge_glass_roof');
+  // Its shader draws the geometry where it is (lounge-sky.js): its own bounds, for the walk's occlusion.
+  roof.userData.occlusionBox=new T.Box3().setFromBufferAttribute(roof.geometry.attributes.position);}
  // The neon and halo materials, which burn brighter in the room's mood (lounge-mood.js).
  const glows=[];root.traverse(o=>{if(o.isMesh&&/^Lounge_(neon_glow|additive_glow)$/.test(o.material?.name)&&!glows.includes(o.material))glows.push(o.material);});
 

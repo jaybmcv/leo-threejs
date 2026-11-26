@@ -29,6 +29,8 @@ function recolour(material,name,code){
  const m=material.clone();m.name=name;
  m.onBeforeCompile=s=>{s.fragmentShader=s.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n'+code);};
  m.customProgramCacheKey=()=>name;
+ // The hook recolours only: the walk's occlusion (group-occlusion.js) may leave a hidden kitten out.
+ m.userData.recolourOnly=true;
  return m;
 }
 const glsl=c=>{c=new T.Color(c);return `vec3(${c.r.toFixed(4)},${c.g.toFixed(4)},${c.b.toFixed(4)})`;};
