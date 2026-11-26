@@ -395,12 +395,13 @@
         "Hydro_Nip_Main_Sign_Body",
         "Hydro_Nip_Main_Sign_Rim",
         "Lounge_porch_floor",
-        "Hammock"
+        "Hammock",
+        "Terpene_Tasting_Deck"
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 129,
-      "signature": "7e4c50cd6732062d4cadc772507f131a76b323f7bc8d89e94b331702fe937457"
+      "placements": 130,
+      "signature": "7f97832068bad0a0c845e54cdb8f2ca525528bf5853f0d96758e442acd1da477"
     },
     {
       "source": "src/interior-polish.js",
@@ -4278,7 +4279,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 4,
-      "signature": "dacd29fd064ef5d8630f9102f60363ee03f462999bcad83f2e7ea8f46a603b5a"
+      "signature": "eb48c1ced9896208124c25d8c189aa1c22bbc8cb5ad7227e002988fb8808c07c"
     },
     {
       "source": "src/walk/lounge.js",
@@ -4294,7 +4295,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 4,
-      "signature": "d0320efdc73ef77198e0d7da81f3e816f279ccec1819dfb08b08b70dfd66967d"
+      "signature": "23d60d264739ff314253d6be9788c6e12a53117ae50aee16b0ec19a34f73ebde"
     },
     {
       "source": "src/walk/lounge.prepared.js",
@@ -4310,7 +4311,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 4,
-      "signature": "557a4fe18803e5b9636bd3f5a0b80dad6f16f5823a2de714d931dfcbb00a41ef"
+      "signature": "ad9eb6d50b0fb867986c99c56b8f1ad37720d8fb960ed88e152fbed01cbfc867"
     },
     {
       "source": "src/walk/lounge.public.js",
@@ -4326,7 +4327,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 4,
-      "signature": "cef341f40aaf6efd4eb138b0f277d00160654fd2507221d0c3b77b83c5abde6c"
+      "signature": "053886afcbc165f33d0c0ac026c01c591a5510b408c5128bbe71e620ebf3aef1"
     },
     {
       "source": "src/walk/main.authoring.js",
