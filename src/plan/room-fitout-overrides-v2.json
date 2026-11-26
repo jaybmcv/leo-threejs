@@ -169,6 +169,7 @@
     ]
   },
   "commons-1": {
+    "terpeneBar": {"at":[122,38.6173],"yaw":-0.212112},
     "mazeRugMove": {"from":[127,16.5],"to":[124.5,17],"yaw":90},
     "mazeCushions": [
       {"cell":[2,0],"seat":[0.35,-0.55],"pipe":[-0.6,0.02]},
