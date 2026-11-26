@@ -505,7 +505,7 @@ function skateBusy(){return !!(resting||run||inBall||treasure?.active||controlle
 // installed before the walk first draws.
 installFilmLook({renderer,scene,keep:()=>walker?.holder});
 const frog=createFrog(scene,colliders),frogTrip=createFrogTrip({renderer,camera,light:()=>matchMedia('(pointer:coarse)').matches||getAtriumQuality()==='performance'});
-const restAndTravelTargets=new Set(['sit','lie','stand','call','inside','waiting','clubhouse-call','clubhouse-inside','launch-ladder','hydro-portal','mct','tube']);
+const tripEndingTargets=new Set(['selfie','photo-spot','play','emergency-drill','mct-repair','pool','pinball','darts','outside']);
 // Travel sheets take the keys while the trip still draws behind them.
 const travelPanelOpen=()=>['map-sheet','places','lift-panel','aboard-sheet'].some(id=>!$(id).hidden);
 input.escapePointer=()=>frogTrip.active;
@@ -519,7 +519,7 @@ const actions={
   // Nothing to use in front: Enter or E presses Stuck? Pop out, when it is up (unstuck.js).
   const t=target();if(!t){unstuck.press();return;}
   if(t.kind==='frog'){frogTrip.start();$('prompt').hidden=true;$('use').hidden=true;return;}
-  if(!restAndTravelTargets.has(t.kind))frogTrip.end(true);
+  if(tripEndingTargets.has(t.kind))frogTrip.end(true);
   if(t.kind==='carry-item'||t.kind==='carry-desk'){carry.use(t);return;}
   if(t.kind==='arrival-tour'){closePanels();arrivalTour.open();return;}
   if(t.kind==='trolley-push'){emote=null;wardPush.begin(controller);return;}
@@ -564,7 +564,7 @@ const actions={
   else if(t.kind==='tv'){closePanels();crownTv.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
  },
- escape(){if(travelPanelOpen()){closePanels();return;}if(frogTrip.active){frogTrip.end();return;}if(wardPush?.engaged){wardPush.release();return;}if(treasure?.active){treasure.leave();return;}closePanels();arrivalTour?.close();},
+ escape(){if(frogTrip.active){if(travelPanelOpen())closePanels();else frogTrip.end();return;}if(wardPush?.engaged){wardPush.release();return;}if(treasure?.active){treasure.leave();return;}closePanels();arrivalTour?.close();},
  // (Nothing below until the walk is ready.)
  places(){if(ready())togglePlaces();},
  map(){if(ready())toggleMap();},

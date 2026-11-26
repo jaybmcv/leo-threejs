@@ -53,7 +53,7 @@ for(const mode of ['', '.public','.prepared','.authoring']){
  const source=fs.readFileSync('src/walk/main'+mode+'.js','utf8'),body=source.slice(source.indexOf('function target(){'),source.indexOf('const touch=',source.indexOf('function target(){')));
  const state=createCarryState(desks,{storage:{getItem:()=>null,setItem(){}}}),controller={position:new T.Vector3()},carry={isOpen:false,near:runInNewContext('(function(p){'+nearBody+'})',{opened:false,spots,state,contains,carryItem})};
  const rest=spotIndex(programme.rests.map(s=>({...s,point:new T.Vector3(...s.point)})));
- const target=runInNewContext('('+body.trim()+')',{...services,controller,carry,rest,T,heading:Math.PI/2,inBall:false,scope:null,remotes:null,ball:{mesh:{position:new T.Vector3(0,1000,0)}},BALL:{radius:1}});
+ const target=runInNewContext('('+body.trim()+')',{...services,controller,carry,rest,T,heading:Math.PI/2,inBall:false,resting:null,run:null,frogTrip:{active:false},frog:quiet,hydroCargoPortal:null,scope:null,remotes:null,ball:{mesh:{position:new T.Vector3(0,1000,0)}},BALL:{radius:1}});
  for(const s of spots){
   controller.position.fromArray(s.approach);assert.equal(target().kind,'carry-item');state.pickup(s.item);
   const seat=rest.pick(controller.position,new T.Vector3(1,0,0));assert.equal(target().kind,seat?'sit':'carry-desk',mode+' keeps the original interaction after pick-up');

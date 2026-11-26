@@ -88,8 +88,10 @@ for(const suffix of ['','.public','.prepared','.authoring']){
  };
  const input={enabled:true,down:new Set()},follow={},holder=new T.Group(),ui=new Map(),list={appendChild(){}};
  const $=id=>{if(!ui.has(id))ui.set(id,{hidden:true,querySelector:()=>list});return ui.get(id);};
- const services=Object.fromEntries('wardPush carry prank arrivalTour treasure pawsOff mctRepair emergencyDrill furSettings controlsSettings graphicsSettings maze graffiti crownTv atriumGeometry voyagerLawn roomViewJob ownerHiding featureBatches keelClub'.split(' ').map(k=>[k,null]));
- let target=frog.near(seat.point),mapDeck,menu,gameOpened=false;
+ const services=Object.fromEntries('prank pawsOff mctRepair emergencyDrill furSettings controlsSettings graphicsSettings maze graffiti crownTv atriumGeometry voyagerLawn roomViewJob ownerHiding featureBatches keelClub'.split(' ').map(k=>[k,null]));
+ const wardPush={engaged:false,begin(){this.engaged=true;},release(){this.engaged=false;}};
+ const treasure={active:false,leave(){this.active=false;},close(){}};
+ let target=frog.near(seat.point),mapDeck,menu,gameOpened=false,pickedUp,tourClosed=false;
  const controller=new Controller(colliders);controller.place(seat.point);
  const drawRenderer={clear(){},clearDepth(){},render(){}};
  const walk=runInNewContext([
@@ -103,6 +105,7 @@ for(const suffix of ['','.public','.prepared','.authoring']){
   section('function restPose(dt)','// The lift panel'),
   '({actions,draw,restPose,get resting(){return resting;}})'
  ].join('\n'),{...services,T,$,controller,input,camera,colliders,follow,scene,heading:0,emote:null,resting:null,inBall:false,
+  wardPush,treasure,carry:{use(t){pickedUp=t.item;},close(){}},arrivalTour:{close(){tourClosed=true;}},
   lifts:{},lounge:null,walker:{holder,body:new T.Group(),hipHeight:1},PILLOW_TILT:.12,WALKER:{height:1.75},
   ready:()=>true,target:()=>target,arcade:{open(){gameOpened=true;}},chat:{close(){}},closeCamera(){},closeOutside(){},
   createFrog:()=>frog,createFrogTrip:()=>trip,renderer:drawRenderer,sky:scene,haze:scene,skyCamera:camera.clone(),hazeCamera:camera.clone(),
@@ -128,15 +131,28 @@ for(const suffix of ['','.public','.prepared','.authoring']){
  assert(menu.go(place));menu.close();assert($('places').hidden&&input.enabled);
  assert(controller.position.distanceTo(vector(place.at))<.02&&controller.grounded,'Go-to places the walker on the apron');
  drawAt(30000);stillTripping(30);
+ target={kind:'carry-item',item:'ration'};walk.actions.use();assert.equal(pickedUp,'ration');
+ drawAt(31000);stillTripping(31);
+ target={kind:'trolley-push'};walk.actions.use();assert(wardPush.engaged);
+ drawAt(32000);stillTripping(32);
+ walk.actions.use();assert(!wardPush.engaged);
+ drawAt(33000);stillTripping(33);
  drawAt(39999);stillTripping(39.999);
  drawAt(40000);assert(!trip.active&&!trip.audio.active&&trip.warp===0);
  target={kind:'frog'};walk.actions.use();drawAt(41000);
  target={kind:'play'};walk.actions.use();assert(gameOpened&&!trip.active,'Full-screen game still ends the trip');
  target={kind:'frog'};walk.actions.use();drawAt(42000);walk.draw(camera.clone());
  assert(!trip.active,'A separate camera view still ends the trip');
+ walk.actions.map();
+ wardPush.engaged=treasure.active=true;
+ walk.actions.escape();assert(!wardPush.engaged&&treasure.active&&!$('map-sheet').hidden,'Escape still releases the trolley first without a trip');
+ walk.actions.escape();assert(!treasure.active&&!$('map-sheet').hidden,'Escape still leaves treasure without a trip');
+ walk.actions.escape();assert(tourClosed&&$('map-sheet').hidden&&input.enabled,'Escape still closes the panel and arrival tour without a trip');
+ target={kind:'frog'};walk.actions.use();drawAt(43000);walk.actions.escape();assert(trip.active);
+ drawAt(43450);assert(!trip.active,'Escape still ends the trip with no panel open');
 }
 trip.dispose();
-console.log('PASS sitting, standing, map and Go-to preserve the picture, audio and original 40-second deadline in all four walks');
+console.log('PASS rest, map, Go-to, carry pickup and trolley preserve the 40-second picture and audio in all four walks; Escape keeps its normal handlers');
 
 // Pointer lock consumes Escape before ordinary key handlers. It must still cancel the frog on that first press.
 const handlers=[],surface={addEventListener(){}};let escapes=0,unlocked=0;
