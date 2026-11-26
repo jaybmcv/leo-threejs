@@ -54,7 +54,7 @@ function worldNow(o,out=new Matrix4()){
  return out;
 }
 // Its print where it will be drawn, not where its world matrix last put it.
-const printNow=o=>ownerPrint(o,o.isMesh?worldNow(o):o.matrixWorld);
+export const printNow=o=>ownerPrint(o,o.isMesh?worldNow(o):o.matrixWorld);
 // How far the near plane's corners lie from the eye (null for a camera the bake does not cover).
 export function nearCorner(camera){
  if(!camera?.isPerspectiveCamera)return null;const t=Math.tan((camera.getEffectiveFOV?camera.getEffectiveFOV():camera.fov)*Math.PI/360);

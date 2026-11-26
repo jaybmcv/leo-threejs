@@ -71,6 +71,9 @@ pass('a key\'s walk script and build configuration read back as ownerKey wrote t
  assert.equal(ownerPrint(later.piece),ownerPrint(ship().piece),'a merged piece\'s print has no bounds');
  const {data,dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:0,conds:1,entries:1,blocks:0});assert.deepEqual(hiddenBy(data,later),[false,true]);
  pass('and a merged piece whose geometry changed drops what the bands it draws proved, though its sources did not change');}
+{const stored=fullBake(ship()),later=ship();later.piece.position.x+=1;// the walk leaves a hidden branch's world matrices stale
+ assert.equal(ownerPrint(later.piece),ownerPrint(ship().piece),'its world matrix still says where it was');
+ const {dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:0,conds:1,entries:1,blocks:0});pass('a merged piece is read where it will be drawn, not where a stale world matrix puts it');}
 {const stored=fullBake(ship()),later=ship(w=>{const g=w.lamp2.geometry;g.translate(0,0,.4);g.computeBoundingBox();});
  const {dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:1,conds:0,entries:1,blocks:0});pass('a part whose boxes changed is not carried');}
 {const stored=fullBake(ship()),later=ship(w=>{w.lamp.castShadow=true;});const {dropped}=carry(stored,later);assert.equal(dropped.parts,1);pass('nor one the bake would no longer hide (a shadow caster)');}
