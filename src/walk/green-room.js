@@ -4,8 +4,8 @@ import {frame,toWorld} from '../plan/rooms.js';
 import {GREEN_ROOM_ID} from '../plan/room-names-v2.js';
 import {makeGreenRoomPrints,makeStageLoop} from './green-room-art.js';
 
-const PI=Math.PI,side=-PI/2,end=PI;
-const matte=(color,roughness=.8,metalness=0)=>new T.MeshStandardMaterial({color,roughness,metalness});
+const PI=Math.PI,side=-PI/2,end=PI,fill=.38;
+const matte=(color,roughness=.8,metalness=0)=>new T.MeshStandardMaterial({color:new T.Color(color).multiplyScalar(fill),roughness,metalness});
 const neon=color=>new T.MeshBasicMaterial({color,toneMapped:false});
 
 export function createGreenRoom({still=false}={}){
@@ -64,7 +64,7 @@ export function createGreenRoom({still=false}={}){
   cyl(.055,.25,[24.91,1.19,z+.39],brass);cyl(.049,.12,[24.89,1.13,z+.57],jade);
   box([.18,.052,.32],[24.87,1.094,z-.38],black);
  }
- const curtain=new T.MeshStandardMaterial({vertexColors:true,roughness:.3,metalness:.36,side:T.DoubleSide});
+ const curtain=new T.MeshStandardMaterial({color:new T.Color().setScalar(fill),vertexColors:true,roughness:.3,metalness:.36,side:T.DoubleSide});
  for(const [bay,z] of [-.36,2.88].entries()){
   const g=new T.PlaneGeometry(2.76,2.71,48,1),p=g.attributes.position,colors=[];
   const a=new T.Color(bay?0x147f7b:0x8b2d79),b=new T.Color(bay?0x57d5bd:0xe987be);
