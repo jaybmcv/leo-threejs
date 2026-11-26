@@ -27,6 +27,9 @@ import {preparedResourceReady} from './prepared-resource.public.js';
 const ART=typeof __ART_URLS__!=='undefined'?__ART_URLS__:{};
 const TYPES={Float32Array,Int8Array,Uint8Array,Int16Array,Uint16Array,Uint32Array};
 const STEP=1/120,LOOK=.0032,HAZE=0xd9dcd6;
+// Both cats draw as one skinned mesh per material, as in the walk (avatar.js mergeDraws): 4 draws each, not 15.
+// ?walkermerge=0 draws them part by part, as main.js then draws your own cat, for an A/B.
+const mergeDraws=()=>new URLSearchParams(location.search).get('walkermerge')!=='0';
 // Frames drawn at most this often (ms): it shares the page's one thread with the ship loading behind it, so it never
 // draws faster than a 60 Hz screen, and only 30 a second once the ship is in and the walk builds (the build's turns
 // between its steps are what it draws in).
@@ -156,12 +159,12 @@ export function startArrivalPreview({renderer,sky,skyCamera,fov,near,far,environ
   ground.addStatic(soup(array(header.ground)),o=>o.isMesh);ground.commit();
   solid.raycastGround=(ray,far)=>ground.raycast(ray,far);
   controller=new Controller(solid);controller.place(start);follow=new FollowCamera(camera,solid);follow.yaw=startYaw;
-  walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion);
+  walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion,{mergeDraws:mergeDraws()});
   if(state==='done'){walker?.dispose();walker=null;return;}
-  walker.setFur(fur);createWardrobe(walker.figure).set(outfit);scene.add(walker.holder);
+  walker.setFur(fur);createWardrobe(walker.figure,{reskin:walker.reskin}).set(outfit);scene.add(walker.holder);
   // The welcome guide (arrival-tour.js) where the walk stands it: a Cosmo as others see one, in the usual hoodie.
-  guide=await createWalker(globalThis.LeoCosmo.createDLCat,motion);if(state==='done'){guide.dispose();guide=null;return;}
-  guide.setFur(0);createWardrobe(guide.figure).set('default');guide.holder.position.set(...toWorld('d02-arrival-1',[-16,0,-3]));
+  guide=await createWalker(globalThis.LeoCosmo.createDLCat,motion,{mergeDraws:mergeDraws()});if(state==='done'){guide.dispose();guide=null;return;}
+  guide.setFur(0);createWardrobe(guide.figure,{reskin:guide.reskin}).set('default');guide.holder.position.set(...toWorld('d02-arrival-1',[-16,0,-3]));
   guide.holder.rotation.y=yawToWorld('d02-arrival-1',Math.PI/2);scene.add(guide.holder);
   await aboard;if(state==='done')return;
   begin();
