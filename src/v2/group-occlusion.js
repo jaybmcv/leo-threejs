@@ -63,7 +63,9 @@ void main() {
 export function occlusionByDefault(gl) {
  const debug = gl.getExtension('WEBGL_debug_renderer_info'), name = debug ? String(gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)) : '';
  const agent = typeof navigator === 'undefined' ? '' : navigator.userAgent;
- return /ANGLE/.test(name) && /Direct3D11|D3D11/i.test(name) && /Chrome\//.test(agent) && !/Firefox\//.test(agent);
+ // Not inside another page (the Otherside embed) until it has been tried there.
+ const framed = typeof window !== 'undefined' && window.top !== window;
+ return !framed && /ANGLE/.test(name) && /Direct3D11|D3D11/i.test(name) && /Chrome\//.test(agent) && !/Firefox\//.test(agent);
 }
 
 /** roots: the groups' roots (they may gain children later). Returns {stats, hiddenRoot(root), dispose()} or null. */
@@ -117,9 +119,10 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
   box.makeEmpty();
   g.root.traverse(o => {
    if (!(o.isMesh || o.isPoints || o.isLine || o.isSprite) || !o.geometry) return;
-   // Bones, point sizes, a shader that moves vertices, a part never culled or bounds that cannot be read: such a member says
+   // Bones, point sizes, a sprite turning to the eye, a batch's own instances, a shader that moves vertices, a part never
+   // culled or bounds that cannot be read: such a member says
    // nothing of where it draws, so it always draws and stays out of the box; the rest of its group can still be left out.
-   if (o.isSkinnedMesh || o.isPoints || !o.frustumCulled || [o.material].flat().some(m => m && !geometryKept(m)) || !memberBox(o, part)) { untrusted.add(o); return; }
+   if (o.isSkinnedMesh || o.isPoints || o.isSprite || o.isBatchedMesh || !o.frustumCulled || [o.material].flat().some(m => m && !geometryKept(m)) || !memberBox(o, part)) { untrusted.add(o); return; }
    untrusted.delete(o);
    if (!part.isEmpty()) box.union(part);
   });
@@ -215,7 +218,8 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
   }
   if (!list.length) return;
   list.sort((a, b) => (b.hidden - a.hidden) || a.box.distanceToPoint(eye) - b.box.distanceToPoint(eye));
-  if (list.length > most) list.length = most;
+  // Hidden groups come first and are never cut: an unasked one would stay hidden on an old answer.
+  if (list.length > most) list.length = Math.max(most, list.filter(g => g.hidden).length);
   const state = renderer.state, program = gl.getParameter(gl.CURRENT_PROGRAM), was = gl.getParameter(gl.VERTEX_ARRAY_BINDING);
   // three's own state calls, so its cache knows what is set; the program and vertex array go back as they were.
   state.setBlending(NoBlending);
