@@ -11,40 +11,29 @@
 // than 24 levels. It is written to walk-owner-bake.<hash>.json beside the walk script (--site), replacing the build's
 // empty one, or output/perf-walk/owner-bake/<tag>.json. --if-missing reuses an existing valid bake and fills missing café coverage.
 // --supplement-only adds the café cell to an existing validated bake for the exact same build.
+// With --site it is also kept, with each row's digest at the bench and café seeds, in [--store=<file>] (default
+// output/leo-interior-v02/owner-bake/last.json; none: not kept), which scripts/walk-owner-carry.mjs carries to later
+// builds of the same scene (walk-owner-carry-rows.mjs says what that depends on).
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import http from 'node:http';
-import {spawn} from 'node:child_process';
 import {createHash} from 'node:crypto';
-import WebSocket from 'ws';
-import {build as bundle} from './native-bundle.mjs';
 import {PVS_GRID} from '../src/v2/atrium-pvs.js';
 import {OWNER_BAKE_VERSION,ownerBakeFile,ownerBakeProblem,ownerKey} from '../src/v2/owner-hiding.js';
 import {contains,distanceToSegment} from '../src/plan/geometry-v2.js';
 import {cafe,coversCafe,addCafeCell} from './walk-owner-hotspots.mjs';
 import {tablesDiffer,withoutMoved} from './walk-owner-bake.scene.js';
+import {openPage as openWalk,pageScript,walkPage} from './walk-owner-page.mjs';
+import {OWNER_STORE} from './walk-owner-carry-rows.mjs';
 // The bake is for discrete desktop GPUs' piece size (src/v2/desk-piece.js), whatever GPU bakes it: its key holds the size.
 import {DESK_PIECE} from '../src/v2/desk-piece.js';
-import {ANGLE} from './chrome-setup.mjs';
 
 const arg=(name,fallback)=>process.argv.find(a=>a.startsWith('--'+name+'='))?.slice(name.length+3)??fallback;
 const SITE_DIR=arg('site',null),TAG=arg('tag',null),PAGES=Number(arg('pages',2)),MINUTES=Number(arg('minutes',80)),TOP=Number(arg('top',8)),SLABS=Number(arg('slabs',2)),MARGIN=Number(arg('margin',4));
 const POSES=Number(arg('poses',200)),MAX_PIXELS=Number(arg('max-pixels',8)),CDP=Number(arg('cdp',9348)),CHROME=arg('chrome','C:/Program Files/Google/Chrome/Application/chrome.exe');
 if(!SITE_DIR===!TAG)throw Error('Give one of --site=<built site dir> or --tag=<debug build>');
 if(!Number.isInteger(PAGES)||PAGES<1||PAGES>8)throw Error('--pages takes a whole number from 1 to 8');
-const EV_TIMEOUT_MS=10*60e3,PV=PVS_GRID,sleep=ms=>new Promise(r=>setTimeout(r,ms)),started=Date.now();
-
-// The walk: its page URL and script name.
-async function walkPage(){
- if(SITE_DIR){
-  const dir=path.resolve(SITE_DIR),types={'.html':'text/html','.js':'text/javascript','.json':'application/json','.bin':'application/octet-stream','.png':'image/png','.jpg':'image/jpeg','.glb':'model/gltf-binary','.mp4':'video/mp4','.wasm':'application/wasm','.gz':'application/gzip','.ktx2':'image/ktx2'};
-  const server=http.createServer(async(q,s)=>{try{const p=path.join(dir,decodeURIComponent(new URL(q.url,'http://x').pathname));if(!p.startsWith(dir))throw Error('outside');const body=await fs.readFile(p);s.writeHead(200,{'content-type':types[path.extname(p)]||'application/octet-stream'});s.end(body);}catch{s.writeHead(404);s.end();}});
-  await new Promise(r=>server.listen(0,'127.0.0.1',r));process.on('exit',()=>server.close());
-  const html=await fs.readFile(path.join(dir,'walk.html'),'utf8');return {url:`http://127.0.0.1:${server.address().port}/walk.html`,script:/LEO_WALK_BOOT\("([^"]+)"\)/.exec(html)?.[1],dir};
- }
- const site='http://127.0.0.1:'+arg('port',4221),html=await fetch(`${site}/${TAG}/walk.html`).then(r=>r.text());
- return {url:`${site}/${TAG}/walk.html`,script:/LEO_WALK_BOOT\("([^"]+)"\)|src="\.?\/?(walk\.[0-9a-z]+\.js)"/.exec(html)?.slice(1).find(Boolean),dir:null};
-}
+const STORE=SITE_DIR&&arg('store',OWNER_STORE)!=='none'?path.resolve(arg('store',OWNER_STORE)):null;
+const PV=PVS_GRID,started=Date.now();
 
 // Cells to bake: centres inside Deck 6's atrium outline or within MARGIN of it, over SLABS slabs from its floor; as blocks of
 // TOP x TOP cells, one per slab, nearest the bench views first.
@@ -62,51 +51,16 @@ async function region(){
 }
 
 let seed=null;
-// Chrome number n on its own CDP port, with a profile of its own; killed when the bake ends.
-const chromes=new Set();process.on('exit',()=>{for(const c of chromes)c.kill();});
-async function browser(n){
- const port=CDP+n,profile=path.resolve('output/perf-walk/chrome-profile-owner-'+port);await fs.rm(profile,{recursive:true,force:true,maxRetries:20,retryDelay:250});await fs.mkdir(profile,{recursive:true});
- const chrome=spawn(CHROME,['--remote-debugging-port='+port,'--user-data-dir='+profile,'--no-first-run','--no-default-browser-check','--disable-extensions','--headless=new',...ANGLE,'--enable-gpu','--ignore-gpu-blocklist',
-  '--disable-background-timer-throttling','--disable-renderer-backgrounding','--js-flags=--max-old-space-size=8192','--window-size=1920,1080','about:blank'],{stdio:'ignore'});
- chromes.add(chrome);chrome.once('exit',()=>chromes.delete(chrome));
- for(let i=0;i<80;i++){try{await fetch('http://127.0.0.1:'+port+'/json/version');break;}catch{await sleep(250);}}
- const tab=await fetch('http://127.0.0.1:'+port+'/json/new?about:blank',{method:'PUT'}).then(r=>r.json()),socket=new WebSocket(tab.webSocketDebuggerUrl,{maxPayload:1<<30});
- await new Promise((r,j)=>{socket.once('open',r);socket.once('error',j);});let id=0;const pending=new Map();
- socket.on('message',raw=>{const m=JSON.parse(raw);if(m.id){const p=pending.get(m.id);pending.delete(m.id);m.error?p?.reject(Error(m.error.message)):p?.resolve(m.result);}});
- socket.on('close',()=>{for(const p of pending.values())p.reject(Error('The page connection closed'));pending.clear();});
- const send=(method,params={})=>new Promise((resolve,reject)=>{if(socket.readyState!==WebSocket.OPEN)return reject(Error('The page connection is closed'));const k=++id;pending.set(k,{resolve,reject});socket.send(JSON.stringify({id:k,method,params}));});
- const ev=async expression=>{let timer;const late=new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('The page did not answer within '+EV_TIMEOUT_MS/1000+' s')),EV_TIMEOUT_MS);});
-  const r=await Promise.race([send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}),late]).finally(()=>clearTimeout(timer));if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value;};
- await send('Runtime.enable');await send('Page.enable');
- return {ev,send,close(){socket.close();chrome.kill();}};
-}
-// A page with the walk up and the bake installed; its setup() answer.
+// A page with the walk up and the bake installed, stood at the seed; its setup() answer.
 async function openPage(n,walk,script){
- const page=await browser(n),url=new URL(walk.url);
- // Board through the public build's guest form, with authentication and multiplayer kept local.
- url.search=new URLSearchParams({lv:'2',view:'first',halloween:'0',ownerBake:'',deskpiece:DESK_PIECE.discrete,live:'ws://127.0.0.1:1/live',creamery:'http://127.0.0.1:1'});
- await page.send('Page.navigate',{url:url.href});
- const until=Date.now()+10*60e3;
- let state;
- for(;;){
-  if(Date.now()>until)throw Error(`The walk did not come up within 10 minutes on page ${n}: ${JSON.stringify(state)}`);
-  try{
-   state=await page.ev(`(()=>{
-    const form=document.getElementById('who-guest');
-    if(form?.getClientRects().length)form.requestSubmit();
-    return {ready:document.body?.dataset.ready==='1',host:!!globalThis.__ownerBakeHost,
-     stage:document.getElementById('loading-text')?.textContent,failed:document.body?.dataset.failed};
-   })()`);
-  }catch(e){if(!/execution context was destroyed|cannot find context/i.test(e.message))throw e;}
-  if(state?.failed)throw Error(`Walk startup failed on page ${n}: ${state.failed} (${state.stage})`);
-  if(state?.ready&&state.host)break;
-  await sleep(500);
- }
- console.log(`owner bake: page ${n} ready`);
- await page.ev(script);return {page,setup:await page.ev(`__ownerBake.setup(${JSON.stringify(seed&&{at:seed.at,yaw:seed.yaw})})`)};
+ const page=await openWalk(n,walk,script,{cdp:CDP,chrome:CHROME});
+ return {page,setup:await page.ev(`__ownerBake.setup(${JSON.stringify(seed&&{at:seed.at,yaw:seed.yaw})})`)};
 }
+// Each row's digest (walk-owner-bake.scene.js rowDigests) of `data`'s tables where the page stands now.
+const rowsOf=(page,data)=>page.ev(`__ownerBake.rows(${JSON.stringify({parts:data.parts,conds:data.conds})})`);
 
-// Run the supplemental cell in its actual deck state. Tables are local to this setup.
+// Run the supplemental cell in its actual deck state. Tables are local to this setup. Returns {combined, rows}: rows are
+// the digests of the combined tables' rows here (addCafeCell keeps the base's tables).
 async function extendCafe(page,base){
  const setup=await page.ev(`__ownerBake.setup(${JSON.stringify({at:cafe.at,yaw:cafe.yaw})})`);
  if(setup.key!==base.key||setup.nearMargin!==base.nearMargin)throw Error('Café scene differs from the base bake');
@@ -120,10 +74,20 @@ async function extendCafe(page,base){
  const check=await page.ev(`__ownerBake.check(${JSON.stringify(focus)},100,4523)`);
  if(check.resolved!==check.parts||check.condsResolved!==check.conds||check.poses.length!==100||check.poses.some(p=>p.big>MAX_PIXELS||!p.hidden))throw Error('Café render check failed');
  console.log('owner bake:',cafe.name,focus.blocks.at(-1)[6].length,'shared proofs, maximum changed pixels',Math.max(...check.poses.map(p=>p.big)));
- return combined;
+ return {combined,rows:await rowsOf(page,combined)};
+}
+// Writes the walk's bake and, with --site, keeps it in the store with its row digests: `main` at the bench seed, `rows` at
+// the café's (scripts/walk-owner-carry.mjs carries it from there). Each file is whole or absent.
+async function save(complete,main,{rows},code){
+ const write=async(file,data)=>{await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file+'.part',JSON.stringify(data));await fs.rename(file+'.part',file);};
+ await write(out,complete);
+ if(!STORE)return;
+ const digests=({parts,conds})=>({parts,conds});
+ await write(STORE,{...complete,carry:{code,seed:{at:seed.at,yaw:seed.yaw??0},cafeSeed:{at:cafe.at,yaw:cafe.yaw},main:digests(main),cafe:digests(rows)}});
+ console.log('owner bake: kept for carrying in',STORE);
 }
 
-const walk=await walkPage();if(!walk.script)throw Error('No walk script named in walk.html');
+const walk=await walkPage({site:SITE_DIR,tag:TAG,port:arg('port',4221)});if(!walk.script)throw Error('No walk script named in walk.html');
 const scriptKey=ownerKey(walk.script),out=arg('out',walk.dir?path.join(walk.dir,ownerBakeFile(walk.script)):path.resolve('output/perf-walk/owner-bake',TAG+'.json'));
 const onlyCafe=process.argv.includes('--supplement-only');
 let previous=null;
@@ -136,12 +100,12 @@ if(onlyCafe||process.argv.includes('--if-missing')){
  }
 }
 const blocks=await region();console.log(`owner bake: ${walk.script}, ${blocks.length} blocks of ${TOP}x${TOP} cells x ${SLABS} slabs, ${PAGES} pages, ${MINUTES} min`);
-const script=(await bundle({entryPoints:['scripts/walk-owner-bake.page.js'],bundle:true,minify:true,format:'iife',write:false,target:'es2022'})).outputFiles[0].text;
+const {text:script,code}=await pageScript();
 if(previous){
  const {page}=await openPage(0,walk,script);
  try{
-  const combined=await extendCafe(page,previous);
-  await fs.writeFile(out+'.part',JSON.stringify(combined));await fs.rename(out+'.part',out);
+  const main=await rowsOf(page,previous),cafeRun=await extendCafe(page,previous);
+  await save(cafeRun.combined,main,cafeRun,code);
  }finally{page.close();}
  process.exit(0);
 }
@@ -169,12 +133,14 @@ const pruned=await pages[0].page.ev(`__ownerBake.prune(${JSON.stringify(data)})`
 await fs.mkdir(path.dirname(out),{recursive:true});await fs.writeFile(out+'.unchecked',JSON.stringify(data));
 const check=data.blocks.length?await pages[0].page.ev(`__ownerBake.check(${JSON.stringify(data)},${POSES})`):{resolved:0,parts:0,condsResolved:0,conds:0,poses:[]},worst=Math.max(0,...check.poses.map(p=>p.big));
 console.log('check:',JSON.stringify({resolved:`${check.resolved}/${check.parts}`,conds:`${check.condsResolved}/${check.conds}`,poses:check.poses.length,worstPixels:worst,maxDelta:Math.max(0,...check.poses.map(p=>p.max)),meanHidden:Math.round(check.poses.reduce((a,p)=>a+p.hidden,0)/Math.max(1,check.poses.length))}));
-let complete;
+let main,cafeRun;
 try{
 if(check.resolved!==check.parts||check.condsResolved!==check.conds)throw Error('The walk could not match every baked part and condition; the bake was not kept');
 if(worst>MAX_PIXELS)throw Error(`A pose changed ${worst} pixels (> ${MAX_PIXELS}); the bake was not kept`);
-complete=await extendCafe(pages[0].page,data);
+// The rows' digests while the walker still stands at the seed the bake was proven from; then the café, from its own.
+main=await rowsOf(pages[0].page,data);
+cafeRun=await extendCafe(pages[0].page,data);
 }finally{for(const {page} of pages)page.close();}
-await fs.writeFile(out+'.part',JSON.stringify(complete));await fs.rm(out+'.unchecked',{force:true});await fs.rename(out+'.part',out);
+await save(cafeRun.combined,main,cafeRun,code);await fs.rm(out+'.unchecked',{force:true});
 console.log(`owner bake: ${done}/${blocks.length} blocks, ${entries.length} entries, ${(Buffer.byteLength(JSON.stringify(data))/1024).toFixed(0)} KB -> ${out} in ${((Date.now()-started)/60e3).toFixed(1)} min`);
 process.exit(0);

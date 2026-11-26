@@ -102,9 +102,11 @@ function boardPose(bone){
 // `createDLCat` comes from the Cosmo bundle; `motion` is ecctrl-locomotion.json, the donor clips for the walk.
 // The longest step Cosmo's rig takes in one solve: the figure's own cap (dlCatFigure.ts apply, stepMax), a 20 fps frame.
 const RIG_CAP=.05;
-// mergeDraws: draw the body's parts as one skinned mesh per material (merged-skin.js); cacheBones: the scene pass and the
-// bone texture leave the figure alone on frames nothing moved it (figure-matrices.js), and the scene walk skips the
-// bones (bone-walk.js). Both for other visitors (remotes.js), which nothing draws into shadow maps.
+// mergeDraws: draw the body's parts as one skinned mesh per material (merged-skin.js), for your own cat (main.js) and
+// other visitors (remotes.js); a part shown or hidden later goes through reskin(), which merges them again round it.
+// cacheBones: the scene pass and the bone texture leave the figure alone on frames nothing moved it
+// (figure-matrices.js), and the scene walk skips the bones (bone-walk.js). For other visitors only, which nothing draws
+// into shadow maps.
 export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBones=false}={}){
  const cat=await createDLCat({height:COSMO_HEIGHT,castShadow:true,receiveShadow:true});
  const figure=new DLCatFigure(cat,()=>DEFAULT_DLCAT_TUNING,motion);figure.stylProportions=false;
@@ -153,14 +155,20 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
  const paw=bone('hand.R'),shoulder=bone('upper_arm.R'),elbow=bone('forearm.R'),hung=new T.Quaternion(),lean=new T.Vector3(),hold=new T.Quaternion(),q=new T.Quaternion();
  let hang=0,lastPose=null;const anchor=new T.Vector3(),pace=rigPace(RIG_CAP);
  // Last, once every part is in place: the parts stay for what reads them, hidden, and the merged copies draw.
- figure.root.updateMatrixWorld(true);const merged=mergeDraws?mergeSkinnedParts(figure.asset.meshes):null;
+ figure.root.updateMatrixWorld(true);let merged=mergeDraws?mergeSkinnedParts(figure.asset.meshes):null;
  // What is done on top of a solve below starts from the solved pose on frames without one (solved-pose.js).
  const held=solvedPose(bones,figure.asset.root);
  const matrices=cacheBones?figureMatrices(figure):null,walk=cacheBones?boneWalk(bones):null;
  // Bones moved on top of a solve, or back to it.
  const touched=()=>{held.touched();matrices?.changed();};
  return {
-  holder,body,figure,hipHeight,setFur,boardFeet,merged,
+  holder,body,figure,hipHeight,setFur,boardFeet,
+  // (merged-skin.js, with mergeDraws: the merged copies drawn now, or null)
+  get merged(){return merged;},
+  // change() shows or hides parts (a change of clothes). Merged, the parts are drawn as they were first,
+  // change() runs, and those then shown are merged again: a hidden part's triangles would otherwise still draw in its
+  // merged copy, and a part shown again would draw twice. Returns what change() returns.
+  reskin(change){if(!merged)return change();merged.dispose();try{return change();}finally{merged=mergeSkinnedParts(figure.asset.meshes);}},
   // (figure-matrices.js, with cacheBones: how many times the figure's matrices were made, for crowd-draw.js)
   matrices,
   // Where the right paw is drawn (the grapple line leaves from it).
