@@ -1285,7 +1285,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 6,
-      "signature": "8d6849cab9ae76e34e8a1f4b32d6a05d0965b714ba299c90dec35e093948c5a5"
+      "signature": "5e755d6220e57dd53b9c59518cfed7d85984bed6a284b58e2a8a02a38f220299"
     },
     {
       "source": "src/walk/baggage.js",
@@ -4359,7 +4359,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "81b5fefb973bcb279954f469018d4183a107f24f82a2f51962d43d2cd3eb021d"
+      "signature": "498314ecf39267bd102cc0f9d406949fd93b5a9bdd1f39deb29d3461475af793"
     },
     {
       "source": "src/walk/main.js",
@@ -4381,7 +4381,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "4dbd1bf68b8b43b5502edca12ef2150a4b476ba942baefd70ee802a42b51cf54"
+      "signature": "5adb706c8b1d6bda70f013bda422c22d4782dddbec9bb30d7d4edec2d730fb98"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4401,7 +4401,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "243ab62d8d4d6af8352ca663961a3e6f0321f305ef7337fc47439c2039b8966f"
+      "signature": "665d2831ed887fb8bb545f1a3042f27831b0dcc4b6b71e786bc0ec16484d7918"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4421,7 +4421,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "4f2cbdf4d193fbca50a211336495626fb8f9f6eaf95887f74853db7a4faa46d5"
+      "signature": "8abd08e3b29027c065674fa39f5a2c21014ef18587895ebddcd5d9ddef74406e"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -4587,7 +4587,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "51a0cbbb63159b3ad93be903ae46b678586b658569535d53763b24db8f6fe05d"
+      "signature": "da74f4cd0fe1023a6791e6f2f6a33235e6855e42db351cba30d448d4b96e944f"
     },
     {
       "source": "src/walk/minimap.authoring.js",
@@ -6426,7 +6426,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 5,
-      "signature": "b8093c7513a6ea6d5dea5b5f83f4de7fa812dfd295e481a0d227e709fee993b2"
+      "signature": "8bdbb5c5f899ec2edfccf604dcf6b7a210534c4210a8453a0f1b7cc81e14f42e"
     },
     {
       "source": "src/walk/windows.js",
