@@ -3,6 +3,7 @@ import * as T from 'three';
 import {createCanvas} from '@napi-rs/canvas';
 import layout from '../src/plan/selected-layout.js';
 import {contains} from '../src/plan/geometry-v2.js';
+import {addHangingGardens} from '../src/v2/atrium-gardens.js';
 import {addAtriumStage,stageGeometry} from '../src/v2/atrium-stage.js';
 import {stageConcertParts,stageConcertFixtures,stageConcertGeometry,addStageConcertDecor,STAGE_ROOF,stageRoofTop} from '../src/v2/stage-concert.js';
 import {addStageRoofSign} from '../src/v2/stage-roof-sign.js';
@@ -47,6 +48,15 @@ assert(face.userData.noCollide&&face.material.isMeshBasicMaterial&&face.material
 assert(face.geometry.attributes.normal.getX(0)<-.999,'The lettering faces the seats');
 assert(Math.abs(signBounds.getCenter(new T.Vector3()).z-STAGE_ROOF.centre)<1e-5);
 assert(signBounds.min.y>y+stageRoofTop(STAGE_ROOF.centre)&&signBounds.min.x>=STAGE_ROOF.front);
+// The supplied walk link settles on the Deck 7 overlook beside the atrium cutout.
+const gardens=new T.Group(),eye=new T.Vector3(88.57,layout.decks[6].y+1.75*.93,37.5),sight=new T.Raycaster();
+addHangingGardens(gardens,layout);
+for(let row=0;row<=4;row++)for(let col=0;col<=12;col++){
+ const end=new T.Vector3(signBounds.min.x,T.MathUtils.lerp(signBounds.min.y,signBounds.max.y,row/4),T.MathUtils.lerp(signBounds.min.z,signBounds.max.z,col/12));
+ const delta=end.sub(eye);sight.far=delta.length();sight.set(eye,delta.normalize());
+ assert.equal(sight.intersectObjects(gardens.children,false).length,0,'Leaves obscure the roof sign from the Deck 7 overlook');
+}
+for(const o of gardens.children)o.geometry.dispose();
 const downward=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,2);
 for(const g of signDecor){
  g.computeBoundingBox();const b=g.boundingBox,c=b.getCenter(new T.Vector3());

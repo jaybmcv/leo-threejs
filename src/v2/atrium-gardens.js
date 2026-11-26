@@ -118,8 +118,10 @@ function addPlanterStrip(chosen,d,reserved){
   if([a,b,[x,z]].some(p=>reserved([p[0]+nx*.2,p[1]+nz*.2])))continue;
   const h=Math.abs(Math.sin(x*12.9898+d.number*78.233+z*3.1)*43758.5453)%1,u=noise(along/14)*.65+h*.35;
   const variant=u<pDense?DENSE:u>1-pLight?LIGHT:MEDIUM,flip=(h*17)%1<.5?-1:1;
+  // Keep the cascade above the Deck 7 stage overlook short enough to clear the roof sign.
+  const drop=d.number===8&&Math.abs(x-89)<.5&&z>37&&z<40 ? .55 : 1;
   const m=new T.Matrix4().makeRotationY(Math.atan2(-nx,-nz)).setPosition(x+nx*.02,d.y,z+nz*.02);
-  m.multiply(new T.Matrix4().makeScale(flip*len/SLOT,.85+((h*7)%1)*.35-t*.2*((h*13)%1),1));
+  m.multiply(new T.Matrix4().makeScale(flip*len/SLOT,drop*(.85+((h*7)%1)*.35-t*.2*((h*13)%1)),1));
   chosen[variant].push(m);
  }
 }
