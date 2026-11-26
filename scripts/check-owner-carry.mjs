@@ -67,11 +67,16 @@ pass('a key\'s walk script and build configuration read back as ownerKey wrote t
  const {data,dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:0,conds:1,entries:1,blocks:0});assert.deepEqual(hiddenBy(data,later),[false,true]);pass('a band whose merge source moved drops what it proved');}
 {const stored=fullBake(ship()),later=ship(w=>{w.piece.userData.sources=[w.s2.uuid,w.s1.uuid];});
  const {dropped}=carry(stored,later);assert.ok(dropped.entries>=1);pass('so does a merged piece that draws its sources otherwise');}
+{const stored=fullBake(ship()),later=ship(w=>{const p=w.piece.geometry.attributes.position;p.setY(0,p.getY(0)-.5);});// what is drawn, not what the bake read
+ assert.equal(ownerPrint(later.piece),ownerPrint(ship().piece),'a merged piece\'s print has no bounds');
+ const {data,dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:0,conds:1,entries:1,blocks:0});assert.deepEqual(hiddenBy(data,later),[false,true]);
+ pass('and a merged piece whose geometry changed drops what the bands it draws proved, though its sources did not change');}
 {const stored=fullBake(ship()),later=ship(w=>{const g=w.lamp2.geometry;g.translate(0,0,.4);g.computeBoundingBox();});
  const {dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:1,conds:0,entries:1,blocks:0});pass('a part whose boxes changed is not carried');}
 {const stored=fullBake(ship()),later=ship(w=>{w.lamp.castShadow=true;});const {dropped}=carry(stored,later);assert.equal(dropped.parts,1);pass('nor one the bake would no longer hide (a shadow caster)');}
 {const stored=fullBake(ship()),later=ship(w=>{w.scene.position.x=3;});
- const {data,dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:2,conds:3,entries:2,blocks:1});assert.equal(data.blocks.length,0);assert.equal(data.entries.length,0);
+ // The merges' root keeps its row (its print is its pieces' names; they count for the bands they draw), nothing relies on it alone.
+ const {data,dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:2,conds:2,entries:2,blocks:1});assert.equal(data.blocks.length,0);assert.equal(data.entries.length,0);
  assert.equal(ownerBakeProblem(data,LATER),null,'what is left is still a whole bake: an empty one');pass('a scene change every proof relies on empties it');}
 
 {const stored=fullBake(ship(),{cafe:true}),later=ship();stored.carry.cafe.conds[0]='Atrium_wall#seen otherwise from the café';

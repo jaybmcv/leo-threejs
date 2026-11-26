@@ -23,6 +23,8 @@ class Grow{constructor(Type,size=1<<20){this.Type=Type;this.a=new Type(size);thi
 // A merge source: copied into a merged deck mesh and never drawn itself (it counts through that mesh).
 const copied=o=>{if(o.userData.bandMerged)return true;for(let p=o.parent;p;p=p.parent)if(p.userData?.mergedSources)return true;return false;};
 const moving=o=>{for(let q=o;q;q=q.parent)if(MOVING.test(q.name||''))return true;return false;};
+// The band a merge source belongs to: what must be shown for its triangles to be drawn (through a merged piece).
+const bandOf=q=>{for(let p=q.parent;p;p=p.parent){if(p.userData?.mergedSources)return p.parent;if(/^Walk_band_\d+$/.test(p.name||''))return p;}return null;};
 
 /** Occluder soup: {positions (Float32Array, 9 per triangle), sides, conds (indices into `conditions`), conditions
  * ([path, print] of what must be drawn: a merge source's band group, or the mesh itself), bandConds (the band ones),
@@ -32,7 +34,6 @@ const moving=o=>{for(let q=o;q;q=q.parent)if(MOVING.test(q.name||''))return true
 export function collectOccluders(scene,{emptyHook}={}){
  const byUuid=new Map();scene.traverse(q=>byUuid.set(q.uuid,q));
  const conditions=[],index=new Map(),condOf=o=>{let i=index.get(o);if(i===undefined){i=conditions.length;conditions.push([ownerPath(o,scene),ownerPrint(o)]);index.set(o,i);}return i;};
- const bandOf=q=>{for(let p=q.parent;p;p=p.parent){if(p.userData?.mergedSources)return p.parent;if(/^Walk_band_\d+$/.test(p.name||''))return p;}return null;};
  const positions=new Grow(Float32Array),sides=new Grow(Uint8Array),conds=new Grow(Uint32Array),bandConds=new Set(),stats={meshes:0,sources:0,triangles:0,skippedMaterials:0,noArrays:0};let mergeRoot=null;
  const a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3(),added=new Set();// every piece of a split merge lists all its sources
  const add=(o,condOf)=>{let cond=null;const g=o.geometry,p=g?.attributes?.position,ix=g?.index;if(!p?.array||ix&&!ix.array){stats.noArrays++;return;}if(morphs(g))return;
@@ -105,11 +106,16 @@ const F64=new Float64Array(1),W64=new Uint32Array(F64.buffer);
 const numberWords=list=>{const out=new Uint32Array(list.length*2);list.forEach((v,i)=>{F64[0]=v;out[i*2]=W64[0];out[i*2+1]=W64[1];});return out;};
 const boxNumbers=b=>[b.min.x,b.min.y,b.min.z,b.max.x,b.max.y,b.max.z];
 
+// A typed array's bytes as 32-bit words (a view when they divide into words).
+const arrayWords=a=>a.byteLength%4===0?new Uint32Array(a.buffer,a.byteOffset,a.byteLength/4):Uint32Array.from(new Uint8Array(a.buffer,a.byteOffset,a.byteLength));
+
 /** What each row's proofs read, as the scene is now, for carrying a bake to a later build of the same scene
  * (scripts/walk-owner-carry.mjs): {parts, conds}, Maps from a row's path to `print#digest`. A wall (condition): the
- * triangles it adds to the occluder soup with their sides, in order (a band: its merge sources'; the merged pieces' root:
- * each merged piece's path and print and the paths of the sources it draws). A part: the boxes the proof covered, or a
- * cabin part's slots. Rows come from collectOccluders and collectTargets themselves, so one the bake would not use now
+ * triangles it adds to the occluder soup with their sides, in order. A band's are its merge sources', but what draws them
+ * is the merged pieces listing those sources (merged by material across bands): every such piece counts for the band, by
+ * its path, print, source paths, groups, draw range and geometry arrays, so a piece that draws anything else drops each
+ * band it draws (a band with a piece whose arrays are gone has none). A part: the boxes the proof covered, or a cabin
+ * part's slots. Rows come from collectOccluders and collectTargets themselves, so one the bake would not use now
  * (a cut-out or shader-hooked material, a shadow caster, a mover) has none; neither has a path met twice (null).
  * Prints alone are identities within one build: a vertex moved inside a wall's box, alphaTest set on its material or a
  * band's merge source moved leaves them as they were. */
@@ -117,10 +123,15 @@ export function rowDigests(scene,{emptyHook}={}){
  const occ=collectOccluders(scene,{emptyHook}),n=occ.conditions.length,a=new Uint32Array(n).fill(0x811c9dc5),b=new Uint32Array(n).fill(0x9747b28c),count=new Uint32Array(n);
  const soup=new Uint32Array(occ.positions.buffer,occ.positions.byteOffset,occ.positions.length);
  for(let t=0;t<occ.conds.length;t++){const c=occ.conds[t];let x=a[c],y=b[c];for(let i=t*9,e=i+9;i<e;i++){x=fnv(x,soup[i]);y=mur(y,soup[i]);}a[c]=fnv(x,occ.sides[t]+1);b[c]=mur(y,occ.sides[t]+1);count[c]++;}
- if(occ.mergeRoot!==null){const byUuid=new Map();scene.traverse(q=>byUuid.set(q.uuid,q));let pieces='';
-  scene.traverse(o=>{if(o.isMesh&&o.userData.sources?.length)pieces+=ownerPath(o,scene)+'|'+ownerPrint(o)+'|'+o.userData.sources.map(id=>{const q=byUuid.get(id);return q?ownerPath(q,scene):'?';}).join(',')+';';});
-  [a[occ.mergeRoot],b[occ.mergeRoot]]=words(a[occ.mergeRoot],b[occ.mergeRoot],textWords(pieces));}
- const conds=new Map();occ.conditions.forEach(([path,print],i)=>conds.set(path,conds.has(path)?null:print+'#'+hex(a[i],b[i],count[i])));
+ const blind=new Set();
+ if(occ.bandConds.size){const byUuid=new Map();scene.traverse(q=>byUuid.set(q.uuid,q));const condAt=new Map(occ.conditions.map(([path],i)=>[path,i]));
+  scene.traverse(o=>{if(!o.isMesh||!o.userData.sources?.length)return;const g=o.geometry,p=g?.attributes?.position,bands=new Set();
+   const sources=o.userData.sources.map(id=>{const q=byUuid.get(id),band=q&&bandOf(q),k=band&&condAt.get(ownerPath(band,scene));if(k!==undefined&&occ.bandConds.has(k))bands.add(k);return q?ownerPath(q,scene):'?';});
+   if(!bands.size)return;if(!p?.array||g.index&&!g.index.array){for(const k of bands)blind.add(k);return;}
+   let [x,y]=words(0x811c9dc5,0x9747b28c,textWords([ownerPath(o,scene),ownerPrint(o),sources.join(','),JSON.stringify(g.groups),g.drawRange.start,g.drawRange.count].join('|')));
+   [x,y]=words(x,y,arrayWords(p.array));if(g.index)[x,y]=words(x,y,arrayWords(g.index.array));
+   for(const k of bands){a[k]=fnv(fnv(a[k],x),y);b[k]=mur(mur(b[k],x),y);}});}
+ const conds=new Map();occ.conditions.forEach(([path,print],i)=>conds.set(path,conds.has(path)||blind.has(i)?null:print+'#'+hex(a[i],b[i],count[i])));
  const parts=new Map();
  for(const {parts:list} of collectTargets(scene,{emptyHook}))for(const p of list){
   let x=0x811c9dc5,y=0x9747b28c,k=0;
