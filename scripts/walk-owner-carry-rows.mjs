@@ -40,11 +40,13 @@ export function carryProblem(stored,{code,key}){
 
 /** `stored` for the walk keyed `key`: only the rows whose digests read now (`main` at the bench seed, `cafe` at the café
  * seed: rows(tables) of walk-owner-bake.page.js, one per row) equal those stored, with the entries relying on them
- * alone. Returns {data, dropped} (as pruneOwnerBake); data.blocks is empty when nothing is left. Check carryProblem first. */
+ * alone. Returns {data, dropped} (as pruneOwnerBake) and `changed` {parts, conds}: the stored rows' indices that did not
+ * match. data.blocks is empty when nothing is left. Check carryProblem first. */
 export function carryRows(stored,{key,main,cafe=null}){
  const c=stored.carry;if(!fits(main,stored)||c.cafe!==null&&!fits(cafe,stored))throw Error('The digests read now do not fit the stored tables');
  // A row with no digest (the scene had none for it) never matches, even another missing one, where it was baked.
  const same=k=>stored[k].map((_,i)=>c.main[k][i]!==null&&c.main[k][i]===main[k][i]&&(c.cafe===null||c.cafe[k][i]===cafe[k][i]));
- const {carry,...rest}=stored,{data,dropped}=keepOwnerRows(rest,same('parts'),same('conds'));
- return {data:{...data,key,carried:{from:stored.key,made:stored.made??null}},dropped};
+ const ok={parts:same('parts'),conds:same('conds')},{carry,...rest}=stored,{data,dropped}=keepOwnerRows(rest,ok.parts,ok.conds);
+ const changed=k=>ok[k].flatMap((v,i)=>v?[]:[i]);
+ return {data:{...data,key,carried:{from:stored.key,made:stored.made??null}},dropped,changed:{parts:changed('parts'),conds:changed('conds')}};
 }

@@ -57,7 +57,7 @@ pass('a key\'s walk script and build configuration read back as ownerKey wrote t
 // Changes a print does not see: the old key (the walk script's hash) was what caught them.
 {const stored=fullBake(ship()),later=ship(w=>{const p=w.wall.geometry.attributes.position;for(let n=0;n<p.count;n++)if(p.getX(n)===0)p.setX(n,1.5);});
  assert.equal(ownerPrint(later.wall),stored.conds[0][1],'same count, box and transform: the print is unchanged');
- const {data,dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:0,conds:1,entries:1,blocks:0});assert.deepEqual(data.parts,[stored.parts[1]]);
+ const {data,dropped,changed}=carry(stored,later);assert.deepEqual(dropped,{parts:0,conds:1,entries:1,blocks:0});assert.deepEqual(data.parts,[stored.parts[1]]);assert.deepEqual(changed,{parts:[],conds:[0]});
  assert.deepEqual(hiddenBy(data,later),[true,false]);pass('a wall whose inner vertex moved inside its box drops what it proved, and only that');}
 {const stored=fullBake(ship()),later=ship(w=>{w.wall.material.alphaTest=.5;});
  assert.equal(ownerPrint(later.wall),stored.conds[0][1],'alphaTest is not in the print');

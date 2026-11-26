@@ -40,8 +40,11 @@ try{
  await ev('stand',c.seed);const main=await ev('rows',tables);
  {const why=carryProblem(stored,{code,key:main.key});if(why)none(why);}
  let cafeNow=null;if(c.cafe){await ev('stand',c.cafeSeed);cafeNow=await ev('rows',tables);await ev('stand',c.seed);}
- const {data:carried,dropped}=carryRows(stored,{key:main.key,main,cafe:cafeNow});
+ const {data:carried,dropped,changed}=carryRows(stored,{key:main.key,main,cafe:cafeNow});
  console.log('owner carry: rows read again in',minutes(),'dropped',JSON.stringify(dropped));
+ // What changed, by name: the walls (mostly bands) and parts whose digests differ now.
+ const name=row=>JSON.parse(row[0]).map(s=>s[0]).filter(Boolean).join('/');
+ for(const k of ['conds','parts']){const list=changed[k].map(i=>name(stored[k][i]));if(list.length)console.log(`owner carry: ${k==='conds'?'walls':'parts'} changed (${list.length}):`,list.slice(0,16).join(', ')+(list.length>16?', …':''));}
  if(!carried.blocks.length)none('every proof relies on a part or wall that changed');
  // The full bake's own steps from here: whatever moved since is dropped, then the self-check at the bench seed and the café.
  const {data,dropped:moved}=await ev('prune',carried);if(moved.entries)console.log('owner carry: moved since reading',JSON.stringify(moved));
