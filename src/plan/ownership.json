@@ -4421,7 +4421,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "ec4c570335187c241b5736aa07c9ec10cc2a36364dca5eb1f70ea3c65dd90d0e"
+      "signature": "409461bd361d1fd99f99d2406a188bc22b88db1b0f74ec45a1eb869f35d02c76"
     },
     {
       "source": "src/walk/marks.authoring.js",
