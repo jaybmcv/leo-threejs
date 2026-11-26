@@ -94,6 +94,48 @@ export function collectTargets(scene,{emptyHook}={}){
  visit(scene);return [...groups.values()];
 }
 
+// Two independent 32-bit lanes over 32-bit words (FNV-1a and a murmur3 round), so a digest is 64 bits.
+const fnv=(h,w)=>Math.imul(h^w,0x01000193)>>>0;
+const mur=(h,k)=>{k=Math.imul(k,0xcc9e2d51);k=k<<15|k>>>17;h^=Math.imul(k,0x1b873593);h=h<<13|h>>>19;return Math.imul(h,5)+0xe6546b64>>>0;};
+const hex=(a,b,n)=>a.toString(16).padStart(8,'0')+b.toString(16).padStart(8,'0')+'.'+n;
+const words=(x,y,list)=>{for(const v of list){x=fnv(x,v);y=mur(y,v);}return [x,y];};
+const textWords=t=>{const out=new Uint32Array(t.length+1);out[0]=t.length;for(let i=0;i<t.length;i++)out[i+1]=t.charCodeAt(i);return out;};
+// A number's exact float64 bits.
+const F64=new Float64Array(1),W64=new Uint32Array(F64.buffer);
+const numberWords=list=>{const out=new Uint32Array(list.length*2);list.forEach((v,i)=>{F64[0]=v;out[i*2]=W64[0];out[i*2+1]=W64[1];});return out;};
+const boxNumbers=b=>[b.min.x,b.min.y,b.min.z,b.max.x,b.max.y,b.max.z];
+
+/** What each row's proofs read, as the scene is now, for carrying a bake to a later build of the same scene
+ * (scripts/walk-owner-carry.mjs): {parts, conds}, Maps from a row's path to `print#digest`. A wall (condition): the
+ * triangles it adds to the occluder soup with their sides, in order (a band: its merge sources'; the merged pieces' root:
+ * each merged piece's path and print and the paths of the sources it draws). A part: the boxes the proof covered, or a
+ * cabin part's slots. Rows come from collectOccluders and collectTargets themselves, so one the bake would not use now
+ * (a cut-out or shader-hooked material, a shadow caster, a mover) has none; neither has a path met twice (null).
+ * Prints alone are identities within one build: a vertex moved inside a wall's box, alphaTest set on its material or a
+ * band's merge source moved leaves them as they were. */
+export function rowDigests(scene,{emptyHook}={}){
+ const occ=collectOccluders(scene,{emptyHook}),n=occ.conditions.length,a=new Uint32Array(n).fill(0x811c9dc5),b=new Uint32Array(n).fill(0x9747b28c),count=new Uint32Array(n);
+ const soup=new Uint32Array(occ.positions.buffer,occ.positions.byteOffset,occ.positions.length);
+ for(let t=0;t<occ.conds.length;t++){const c=occ.conds[t];let x=a[c],y=b[c];for(let i=t*9,e=i+9;i<e;i++){x=fnv(x,soup[i]);y=mur(y,soup[i]);}a[c]=fnv(x,occ.sides[t]+1);b[c]=mur(y,occ.sides[t]+1);count[c]++;}
+ if(occ.mergeRoot!==null){const byUuid=new Map();scene.traverse(q=>byUuid.set(q.uuid,q));let pieces='';
+  scene.traverse(o=>{if(o.isMesh&&o.userData.sources?.length)pieces+=ownerPath(o,scene)+'|'+ownerPrint(o)+'|'+o.userData.sources.map(id=>{const q=byUuid.get(id);return q?ownerPath(q,scene):'?';}).join(',')+';';});
+  [a[occ.mergeRoot],b[occ.mergeRoot]]=words(a[occ.mergeRoot],b[occ.mergeRoot],textWords(pieces));}
+ const conds=new Map();occ.conditions.forEach(([path,print],i)=>conds.set(path,conds.has(path)?null:print+'#'+hex(a[i],b[i],count[i])));
+ const parts=new Map();
+ for(const {parts:list} of collectTargets(scene,{emptyHook}))for(const p of list){
+  let x=0x811c9dc5,y=0x9747b28c,k=0;
+  if(p.slots)for(const s of p.slots){[x,y]=words(x,y,textWords(String(s.id)));[x,y]=words(x,y,numberWords([...s.centre.toArray(),...boxNumbers(s.box)]));k++;}
+  else for(const box of p.boxes){[x,y]=words(x,y,numberWords(boxNumbers(box)));k++;}
+  parts.set(p.path,parts.has(p.path)?null:p.print+'#'+(p.slots?'s':'b')+hex(x,y,k));}
+ return {parts,conds};
+}
+/** rowDigests for a bake's tables {parts, conds} (rows [path, print, ...]): {parts, conds}, one digest per row, null for
+ * a row the scene has none for. */
+export function tableDigests(scene,tables,options){
+ const d=rowDigests(scene,options);
+ return {parts:tables.parts.map(r=>d.parts.get(r[0])??null),conds:tables.conds.map(r=>d.conds.get(r[0])??null)};
+}
+
 // Two pages' tables ({parts, conditions}: rows [path, print, ...]): null when they hold different things (rows of other
 // paths, or another count), else the rows whose prints differ: parts or walls that moved on their own between the pages.
 export function tablesDiffer(a,b){
