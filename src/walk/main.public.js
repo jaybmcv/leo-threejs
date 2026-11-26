@@ -1,4 +1,6 @@
 import {installQuadFacingTest} from '../v2/quad-facing.js';
+import {yieldToPage,hallTurn} from '../v2/yield-to-page.js';
+import {createFloorOcclusionAsync} from '../v2/floor-occlusion.js';
 // Key events with no `code` (Otherside's browser) get one before any handler reads it.
 import './key-code.js';
 import {createVoyagerLawn} from '../v2/voyager-lawn.js';
@@ -30,7 +32,7 @@ let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 const phoneBatching=(()=>{const query=new URLSearchParams(location.search);if(!preparedPhone)return query.get('deskbatch')==='low'?{}:{merge:true};const mode=query.get('phonebatch');
  return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
 import {createFeatureBatches} from '../v2/feature-batches.js';
-let phoneBands=null,wayfindingSigns=null,fogCull=null,featureBatches=null;
+let phoneBands=null,wayfindingSigns=null,fogCull=null,featureBatches=null,groupOcclusion=null;
 // The atrium geometry pack binds the band pieces the merge hides, so it runs only without the merge, and the Detail menu
 // chooses its distant detail. The merged bands keep full detail and still draw faster: on them the menu sets the atrium's
 // haze (detail-levels.js), and Auto starts at High, the look before the menu came back. ?detail=high|balanced|performance
@@ -55,6 +57,8 @@ import {batchFurnishing} from '../v2/furnishing-batches.js';
 import {createFrameReadout} from './frame-readout.js';
 import {deskAntialias,heldRes} from './pixel-switches.js';
 import {mergePhoneFurnishing} from '../v2/phone-furnishing.js';
+import {mergeScaledFurnishing} from '../v2/scaled-furnishing.js';
+import {createGroupOcclusion,occlusionByDefault} from '../v2/group-occlusion.js';
 import {mergePhoneBands} from '../v2/phone-bands.js';
 import {deskPieceSize,gpuName} from '../v2/desk-piece.js';
 import {createAtriumPvs} from '../v2/atrium-pvs.js';
@@ -79,9 +83,13 @@ function startOwnerHiding(){
   // A real bake the walk will not use (another key, format or grid): say why. The build's empty file stays quiet.
   if(!hiding&&data?.blocks?.length)console.info('Owner hiding not used:',ownerBakeProblem(data,key));}).catch(e=>console.warn('Owner hiding not used:',e.message));
 }
+import {startArrivalPreview} from '../v2/arrival-preview.js';
+import {arrivalStart} from '../v2/arrival-start.js';
+import {loadCosmoScript} from './cosmo-script.js';
 import {loadPreparedShip,preparedBake,preparedFacade,preparedHaze,preparedPlacements,preparedDecks,preparedSigns,preparedPhone} from '../v2/prepared-runtime.public.js';
 import {renderGotoMenu} from '../v2/goto-menu.js';
 import {gotoStand as v2GotoStand,yarnPlace} from '../v2/wayfinding.js';
+import {createGreenRoom} from './green-room.js';
 import {addWayfindingGuides} from '../v2/wayfinding-guides.js';
 import {createHangarDoor} from '../v2/hangar-door.js';
 import {createShuttleDoors} from './shuttle-doors.js';
@@ -141,7 +149,7 @@ import {createHaze} from '../v2/haze.js';
 import {createStarDrift} from './star-drift.js';
 import {createAmbience} from './ambience.js';
 import {createStageDj} from '../v2/common-stage-dj.js';
-let stageDj=null;
+let stageDj=null,greenRoom=null;
 import {createLullaby} from './lullaby.js';
 import {createLoungeSound} from './lounge-sound.js';
 import {createLoungeMood} from './lounge-mood.js';
@@ -313,7 +321,7 @@ const deskPiece=deskPieceSize({query:new URLSearchParams(location.search),phone:
 // buffer the shaders write the depth, so polygon offset has never applied. With linear depth it would, and pull the hex
 // sub-floor (finish-kit.js) over the Arrival Hall's finish, so it stays off.
 if(linearDepth){const gl=renderer.getContext(),enable=gl.enable.bind(gl);gl.enable=cap=>{if(cap!==gl.POLYGON_OFFSET_FILL)enable(cap);};}
-const frameReadout=createFrameReadout(renderer,{extra:()=>remotes?.crowdLine()});
+const frameReadout=createFrameReadout(renderer,{extra:()=>[remotes?.crowdLine(),groupOcclusion?.line()].filter(Boolean).join('\n')});
 // Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
 // The Res button steps through them and the choice is remembered for the next visit. ?res=high, med or low holds a
 // level for this visit in the saved one's place (pixel-switches.js): nothing is saved, and it never steps down.
@@ -364,6 +372,11 @@ const environmentReady=loadEnvironment(renderer).then(t=>{scene.environment=t;qu
 function resize(){const w=innerWidth,h=innerHeight;if(!w||!h)return;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
 addEventListener('resize',resize);resize();
 
+// A start in the arrival hall (arrival-start.js) walks it while the rest of the ship downloads and builds
+// (arrival-preview.js), once the visitor is aboard; the walk takes over where they stand just before its first frame
+// (takeOverArrival). Until then it has the view and the keys: the walk's own actions and poses wait (arrival.active).
+let arrival=arrivalStart?startArrivalPreview({renderer,sky,skyCamera,fov:camera.fov,near:camera.near,far:camera.far,environment:environmentReady.then(()=>scene.environment),
+ aboard:LIVE_URL?identity.then(r=>r.pass?null:boarded):Promise.resolve(),fur:furColour,outfit}):null;
 deferRoomFrames();const ship=await loadPreparedShip(scene,status);scene.add(ship.root);
 const colliders=new Colliders();
 // The Camera button's portable selfie lens (portable-selfie.js): drawn in place of the walker's view while its panel is open.
@@ -432,12 +445,13 @@ async function buildShip(){
  // Decals and seams only matter from outside.
  // Exterior visibility was resolved by the build.
  ship.v2Haze=preparedHaze(ship);preparedFacade(ship,scene);const b0=performance.now();baked=preparedBake(ship);for(const g of baked.bands.values())scene.add(g);quietFloorReflections(scene,scene.environment);timings.push([`${baked.sources} meshes merged into ${baked.meshes} in ${Math.round(performance.now()-b0)} ms`,Math.round(performance.now()-t0)]);
- haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});voyagerLawn=createVoyagerLawn(ship,scene,layout,{phone});cabinGlass=createCabinGlass(ship,scene);crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);
+ haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});await hallTurn();voyagerLawn=createVoyagerLawn(ship,scene,layout,{phone});cabinGlass=createCabinGlass(ship,scene);crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  status('Preparing the walk · 2/4 · placing activities…');await idle();
  const featureRoots=[];
  const toBand=(o,y=o.position.y)=>{const band=bandOf(y);let g=baked.bands.get(band);if(!g){g=new T.Group();g.name='Walk_band_'+band;g.userData.band=band;baked.bands.set(band,g);scene.add(g);}g.add(o);featureRoots.push(o);};
  toBand(stageDj.group);
+ greenRoom=createGreenRoom({still:matchMedia('(prefers-reduced-motion: reduce)').matches});toBand(greenRoom.group);
  // The shuttle cabins' door casings and sliding leaves on Deck 2 (shuttle-doors.js).
  shuttleDoors=createShuttleDoors(toBand);
  // Opaque lift and deck signs of one material on one band draw as one mesh (300 signs in 36 materials). The call lights
@@ -460,6 +474,7 @@ async function buildShip(){
  if(hydration)toBand(hydration.group);
  if(trolley)toBand(trolley.group);
  if(typeof __WALK_DEBUG__!=="undefined"&&__WALK_DEBUG__)ship.v2RuntimeFeatures={wardTrolley,baggage,freightGate};if(wardTrolley)toBand(wardTrolley.group);
+ await hallTurn();
  {const trolleyGroup=scene.getObjectByName('Ward_supply_trolley_world');wardPush=trolleyGroup?createWardPush(trolleyGroup,colliders):null;}
  if(mazeHold)toBand(mazeHold.group);
  if(mctBay)toBand(mctBay.group);
@@ -534,7 +549,7 @@ async function buildShip(){
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  status('Preparing the walk · 4/4 · setting nearby details…');await idle();
- if(phoneBatching.merge)mergePhoneFurnishing(ship.inside);phase4Visibility=phase4Culling(ship.inside,colliders);ship.inside.traverse(o=>{if(!o.isInstancedMesh||o.userData.phase4)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
+ if(phoneBatching.merge){mergePhoneFurnishing(ship.inside);if(!preparedPhone&&new URLSearchParams(location.search).get('p4merge')!=='0')mergeScaledFurnishing(ship.inside);}await hallTurn();phase4Visibility=phase4Culling(ship.inside,colliders);await hallTurn();ship.inside.traverse(o=>{if(!o.isInstancedMesh||o.userData.phase4)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
   const box=o.boundingBox.clone().applyMatrix4(o.matrixWorld);let cabins=false,walls=false,boat=false;for(let q=o;q;q=q.parent){if(q.name==='V2_cabin_instances')cabins=true;if(q.name==='V2_cabin_shells')walls=true;if(/^Area_d\d+-lifeboats-/.test(q.name))boat=true;}
   o.userData.span=[box.min.y,box.max.y];o.userData.cabins=cabins;o.userData.cabinWalls=walls;o.userData.boat=boat;instanced.push(o);});
  // Furniture in the repeated cabins draws only for the cabins nearest the walker; their walls and doors always draw.
@@ -551,10 +566,14 @@ async function buildShip(){
  // Parts wholly beyond the indoor fog draw no longer (fog-cull.js); ?fogcull=0 draws them, to compare.
  // Not with the atrium detail pack, whose source checks include the layers the cull changes.
  if(!atriumPack&&new URLSearchParams(location.search).get('fogcull')!=='0')fogCull=createFogCull(scene,camera);
- wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);
+ await hallTurn();wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);await hallTurn();
  isolateStaticWorld(ship,scene);{const hidden=(preparedPhone||phoneBatching.merge)&&!OWNER_BAKE_PAGE?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
- if(deskDetail&&!OWNER_BAKE_PAGE)installQuadFacingTest(renderer,scene,camera);
- if(deskDetail&&!OWNER_BAKE_PAGE)featureBatches=await createFeatureBatches(scene,renderer,featureRoots);
+ // While the arrival hall is walked, the floors' occlusion scan (floor-occlusion.js) gives the page turns: a second of work.
+ if(deskDetail&&!OWNER_BAKE_PAGE)installQuadFacingTest(renderer,scene,camera,{...(arrival?.active?{floorOcclusion:await createFloorOcclusionAsync(scene,camera,yieldToPage)}:{}),skipped:()=>groupOcclusion?.stats.skipped??0});
+ // Room features and lifts the frame's own walls and floors hide sit out the main pass (group-occlusion.js): by default on
+ // Chrome and Edge on Windows, where it was measured; ?occlusion=1 elsewhere, ?occlusion=0 off.
+ {const asked=new URLSearchParams(location.search).get('occlusion');if(deskDetail&&!OWNER_BAKE_PAGE&&(asked==='1'||asked!=='0'&&occlusionByDefault(renderer.getContext())))groupOcclusion=createGroupOcclusion(renderer,scene,camera,[...featureRoots,...scene.children.filter(o=>o.isGroup&&o.userData.keepLive&&/^Walk_lift_/.test(o.name))]);}
+ if(deskDetail&&!OWNER_BAKE_PAGE)featureBatches=await createFeatureBatches(scene,renderer,featureRoots,{skip:groupOcclusion?.hiddenRoot});
  // The groups holding only those instanced meshes once the live draws have their final parents (V2_live_source_draws: a
  // deck's cabin shells, a cabin template's fittings), and groups of only such groups, innermost first: cull() hides each
  // while nothing in it shows, so three's scene walk and matrix pass skip it.
@@ -631,7 +650,7 @@ function cull(p,now=performance.now()){
  }
 }
 
-const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),lockHint:$('camera-lock-hint'),onAction:(a,arg)=>{if((prank?.locked||prank?.isOpen)&&a!=='escape')return;if(a==='respawn'&&wardPush?.engaged){wardPush.reset(controller);return;}actions[a]?.(arg);}});
+const input=new WalkInput(renderer.domElement,{joystick:$('joystick'),stick:$('stick'),lockHint:$('camera-lock-hint'),onAction:(a,arg)=>{if(arrival?.active||arrivalStart&&document.body.dataset.ready!=='1')return;if((prank?.locked||prank?.isOpen)&&a!=='escape')return;if(a==='respawn'&&wardPush?.engaged){wardPush.reset(controller);return;}actions[a]?.(arg);}});
 const follow=new FollowCamera(camera,colliders);
 const controller=new Controller(colliders);
 let walker=null;
@@ -759,6 +778,10 @@ const ready=()=>document.body.dataset.ready==='1';
 // so a first look at another area does not freeze; on desktop every picture then uploads, one between frames
 // (src/v2/shader-warmup.js). Started at the end of this script, once everything is built.
 let shaderWarmup=null,warmed=false;
+// Its pictures upload one between frames from the first view, or from the end of the warm-up if that is later: the warm-up
+// can still be going when its watchdog lets the walk draw (a slow machine, or the arrival hall's turns between its shaders).
+function uploadWarmTextures(){if(!firstViewReady||!shaderWarmup?.textures||shaderWarmup.uploaded)return;
+ shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}
 // The ship log boards (changes-board.js): the walk stands still while one is open; its hearts are Leo live's.
 // Go there in a change's details drops the walker where its pictures were taken, looking as they do.
 const changeLog=createChangesBoards({
@@ -781,9 +804,10 @@ function openLog(){changeLog.open({near:controller.position});}
 function goToSpot(spot){spot=remapSpot(spot);if(!goTo({at:spot.at,yaw:spot.yaw,resolved:true}))return false;emote=null;follow.pitch=spot.pitch;follow.look(0,0);follow.mode=spot.view;return true;}
 
 async function loadCosmo(){
- globalThis.LEO_THREE=T;globalThis.LEO_COSMO_EMOTES=__EMOTES_URL__;
- await new Promise((resolve,reject)=>{const s=Object.assign(document.createElement('script'),{src:__COSMO_SCRIPT__,async:true});s.onload=resolve;s.onerror=()=>reject(new Error('Cosmo could not load'));document.head.appendChild(s);});
- walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion);walker.setFur(furColour);wardrobe=createWardrobe(walker.figure);wardrobe.set(outfit);scene.add(walker.holder);
+ await loadCosmoScript(T);
+ // Your own cat draws as one skinned mesh per material, as other visitors do (merged-skin.js): 4 draws, not 15.
+ // ?walkermerge=0 draws it part by part, as before, for an A/B.
+ walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion,{mergeDraws:new URLSearchParams(location.search).get('walkermerge')!=='0'});walker.setFur(furColour);wardrobe=createWardrobe(walker.figure,{reskin:walker.reskin});wardrobe.set(outfit);scene.add(walker.holder);
  cosmoKit=await globalThis.LeoCosmo.createCosmoKit({poses:[...KITTEN_POSE_NAMES,...ACTOR_POSE_NAMES,'scanPatient']});
 }
 
@@ -801,6 +825,7 @@ const spot=remapSpot(readSpot()),back=spot?null:takeSpot(),view=spot||back;
 const stand=spot?findStand(colliders,spot.at):back?publicStand(back.at,{colliders,stand:at=>findStand(colliders,at,{radius:0}),check:at=>v2GotoStand(colliders,at)}):null;
 controller.place(stand||findStand(colliders,START.position.toArray())||START.position);
 follow.yaw=stand?view.yaw:START.yaw;if(stand){follow.pitch=view.pitch;follow.look(0,0);follow.mode=view.view;}
+const placedAt=controller.position.clone();
 walker.holder.position.copy(controller.position);
 // Balls of yarn to push about: the arrival hall's, and one in each of six common areas (yarn.js).
 const yarn=createYarn(colliders),yarns=[yarn];
@@ -941,7 +966,7 @@ function myPose(riding=false){
 }
 // A hidden tab (or a covered window) draws no frames, so when frames stop it says it is still here from a timer
 // instead (browsers run one about once a second in the background).
-if(live)setInterval(()=>{if(document.hidden||performance.now()-last>1000)live.pose(myPose());},1000);
+if(live)setInterval(()=>{if(!arrival?.active&&(document.hidden||performance.now()-last>1000))live.pose(myPose());},1000);
 // Where this visitor stands, kept for a reload within 10 minutes (last-spot.js): on foot in a public area, or the
 // arrival hall once they are somewhere restricted (public-area.js) or in a game. Passing through (a lift, a jump, a
 // seat, the hamster ball) keeps the spot from before. Only a page that has been aboard Leo live, or started from a
@@ -1058,6 +1083,19 @@ function toggleMap(){
  $('minimap-button').addEventListener('click',toggleMap);}
 let last=performance.now(),acc=0,lastHud=0,lastHeading=heading,lastSpeed=0,turnRate=0,accel=0;const STEP=1/120,wish=new T.Vector3();
 const SPEED={stand:WALKER.walk,crouch:WALKER.crouch,slide:WALKER.crouch,prone:WALKER.prone};
+// The arrival hall walked before the walk was up (arrival-preview.js): the walk goes on from where the visitor last stood
+// on its ground, facing as they did, standing (a jump in the air ends on the ground it left). Not if something has sent
+// the walker elsewhere since the walk placed it (a Builder's Hub link), nor if the full ship has no ground there.
+function takeOverArrival(pose){
+ if(!pose||!controller.position.equals(placedAt))return;
+ // Where they stood, or the nearest standing spot within 2 m (findStand keeps a capsule's width off walls and benches).
+ const at=findStand(colliders,pose.at.toArray(),{radius:0})||findStand(colliders,pose.at.toArray(),{radius:2});
+ if(!at){console.info('The arrival hall hand-over found no standing spot near',pose.at.toArray(),'so the walk starts at the arrival spot.');return;}
+ controller.place(at);walker.holder.position.copy(controller.position);safe.copy(controller.position);heading=lastHeading=pose.heading;
+ follow.mode='third';follow.yaw=pose.yaw;follow.pitch=pose.pitch;follow.distance=follow.current=pose.distance;follow.look(0,0);
+ // Keys held now carry on; a jump, a hook or a look queued for the walk before it had the keys does not.
+ input.jumpQueued=input.hookQueued=false;input.look.x=input.look.y=0;input.zoom=0;
+}
 // Should anything stop the warm-up starting (it is the last thing this script does), the walk still draws. From here
 // on an error in the rest of this script is therefore not a failed start, which the page is told (walk.html,
 // LEO_WALK_FAILED): before this line nothing can make the walk ready, so an error there is one.
@@ -1066,6 +1104,7 @@ renderer.setAnimationLoop(()=>{
  // Under the Builder's Hub the walk stands still, as in a background tab, and draws nothing, once it has its first view.
  if(hubPanel.isOpen()&&firstViewReady){showAim(false);return;}
  if(!warmed)return;
+ if(arrival){const pose=arrival.finish();arrival=null;takeOverArrival(pose);last=performance.now();}
  frameReadout.begin();
  // Our own clamped clock: with the loop's timestamp argument the fixed steps stalled in testing.
  const now=performance.now(),dt=Math.min(.1,Math.max(0,(now-last)/1000));watchFrames(now-last,now);observeAtriumFrame(now-last,now,{active:document.body.dataset.ready==='1'&&!document.hidden&&document.hasFocus()&&!graphicsSettings?.isOpen&&!controlsSettings?.isOpen&&!furSettings?.isOpen});last=now;
@@ -1173,7 +1212,7 @@ renderer.setAnimationLoop(()=>{
  bodies.length=0;bodies.push(p);if(remotes)for(const r of remotes.remotes.values())bodies.push(r.cur);
  // 4B: the atrium warms first; any room mood after it wins where they meet.
  atriumMood?.update(dt);
- stageBeams?.update(camera,now/1000);
+ stageBeams?.update(camera,now/1000,phone||preparedPhone||res===RES.length-1||getAtriumQuality()==='performance');
  if(arrivalMood)arrivalMood.update(dt,camera.getWorldPosition(eye));
  if(lounge){lounge.update(dt,bodies);loungeMood.update(dt,camera.getWorldPosition(eye));}
  if(recovery)recovery.update(dt,camera.getWorldPosition(eye));
@@ -1188,7 +1227,7 @@ renderer.setAnimationLoop(()=>{
  hydroPortal?.update(dt,p,ambience.on,camera);hydroParkPortal?.update(dt,p,ambience.on,camera);hydroCargoPortal?.update(dt,p,ambience.on,camera);
  trainingSound?.update(p,ambience.on,loungeSound?.audible);loungeSound?.update(p,ambience.on,camera,trainingSound?.audible);keelSound?.update(p,ambience.on,camera,keelClub?.surfClock?.());
  lullaby?.update(p,ambience.on);
- stageDj?.update(dt,p,ambience.on,camera);
+ stageDj?.update(dt,p,ambience.on,camera);greenRoom?.update(dt,p);
  missionHolo?.update(dt,p);
  missionTimer?.update(dt,p);
  surgeryArms?.update(dt,p,remotes?.remotes);
@@ -1206,7 +1245,7 @@ renderer.setAnimationLoop(()=>{
  if(now-lastMini>66&&!$('minimap-button').hidden){lastMini=now;miniMap(p);}
  drift.update(dt);
  // A game covers the window: the ship need not be drawn behind it.
- if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!dartsGame.isOpen&&!mctRepair?.isOpen&&!emergencyDrill?.isOpen){if(deskDetail)closeHaze(scene.fog,getAtriumQuality());keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});if(hazeHeld)closeHaze(scene.fog,'performance');fogCull?.guard();draw(prank?.locked?prank.camera:portable.active?portableView():camera);fogCull?.update(performance.now());if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';startOwnerHiding();hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}if(shaderWarmup?.textures)shaderWarmup.uploaded=uploadTextures(renderer,shaderWarmup.textures,()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)))).finally(()=>{shaderWarmup.textures=null;});}}
+ if(!arcade.isOpen&&!pool.isOpen&&!pinballGame.isOpen&&!dartsGame.isOpen&&!mctRepair?.isOpen&&!emergencyDrill?.isOpen){if(deskDetail)closeHaze(scene.fog,getAtriumQuality());keelClub?.mood(scene.fog,camera.getWorldPosition(eye),{hemi,fill});if(hazeHeld)closeHaze(scene.fog,'performance');fogCull?.guard();draw(prank?.locked?prank.camera:portable.active?portableView():camera);fogCull?.update(performance.now());if(!firstViewReady){firstViewReady=true;timings.push(['First complete frame',Math.round(performance.now()-t0)]);document.body.dataset.ready='1';startOwnerHiding();hubPanel.resume();if(new URLSearchParams(location.search).get('controls')==='1')controlsSettings?.open();try{localStorage.removeItem(STARTING);}catch{}uploadWarmTextures();}}
  const shot=booth.update(now),spotShot=photoSpots?.update(now)||shot,camShot=portable.update(now),left=shot.left||spotShot.left||camShot.left;$('countdown').hidden=!left;if(left)$('countdown').textContent=String(left);
  if(shot.due)takePhoto();
  if(spotShot!==shot&&spotShot.due)takePhoto(photoSpots);
@@ -1607,7 +1646,8 @@ const cornerShade=phone||phoneTest.get('corner')==='0'?null:installCornerShade(s
 if(cornerShade&&deskDetail){const corner=()=>cornerShade.setOn(DETAIL[getAtriumQuality()].corner);corner();subscribeAtriumQuality(corner);}
 // The shader warm-up (see shaderWarmup): the walk's scene with the arrival hall's lamps both ways, then its sky and haze.
 // The phone ship uploads nothing ahead and keeps no list of pictures.
+// With the arrival hall walked meanwhile (arrival-preview.js), the scene's shaders are handed over a few at a time.
 Promise.race([environmentReady,new Promise(r=>setTimeout(r,WARM_WAIT_MS))])
- .then(()=>Promise.all([warmShaders(renderer,scene,camera,{lights:[arrivalMood?.lamps].filter(Boolean)}),warmShaders(renderer,haze,hazeCamera),warmShaders(renderer,sky,skyCamera)]))
- .then(([main,...rest])=>{shaderWarmup={proof:main.proof,textures:preparedPhone?null:new Set([main,...rest].flatMap(w=>[...w.textures])),uploaded:null};})
+ .then(()=>Promise.all([warmShaders(renderer,scene,camera,{lights:[arrivalMood?.lamps].filter(Boolean),turn:arrival?.active?yieldToPage:null}),warmShaders(renderer,haze,hazeCamera),warmShaders(renderer,sky,skyCamera)]))
+ .then(([main,...rest])=>{shaderWarmup={proof:main.proof,textures:preparedPhone?null:new Set([main,...rest].flatMap(w=>[...w.textures])),uploaded:null};uploadWarmTextures();})
  .catch(e=>console.warn('Shader warm-up skipped.',e)).finally(()=>{warmed=true;cornerShade?.start(colliders).catch(e=>console.warn('Corner shading skipped.',e));});

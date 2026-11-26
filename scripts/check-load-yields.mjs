@@ -2,8 +2,10 @@
 // (src/v2/facade.js compactRenderGeometry): same output as before, less waiting. Usage: node scripts/check-load-yields.mjs
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {yieldToPage,yieldEvery,PAINT_MS} from '../src/v2/yield-to-page.js';
+import {yieldToPage,yieldEvery,PAINT_MS,setFrameTurns} from '../src/v2/yield-to-page.js';
 import {compactRenderGeometry} from '../src/v2/facade.js';
+import {rememberMergedBounds,retainedDrawTree} from '../src/v2/draw-bounds.js';
+import {installDistantArchitecture} from '../src/v2/distant-architecture.js';
 
 function check(name,fn){return Promise.resolve(fn()).then(()=>console.log('PASS '+name));}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -27,6 +29,22 @@ await check('a sliced yield gives a turn only after its slice of work',async()=>
   await pause();assert.equal(yields,1,'and the slice starts again');
  }finally{globalThis.scheduler=was;}
 });
+await check('while the arrival hall is walked: a due turn waits for its frame; a page given none waits once, then not until one comes',async()=>{
+ const g=globalThis,saved={raf:g.requestAnimationFrame,add:g.addEventListener,remove:g.removeEventListener};
+ let asked=[];g.requestAnimationFrame=f=>{asked.push(f);return asked.length;};g.addEventListener=()=>{};g.removeEventListener=()=>{};
+ const frame=()=>{const now=asked;asked=[];for(const f of now)f(performance.now());};
+ let due=true;setFrameTurns({due:()=>due});
+ try{
+  let done=false;const turn=yieldToPage().then(()=>{done=true;});await sleep(10);assert.equal(done,false,'it waits for the frame');
+  frame();await turn;
+  const t0=performance.now();await yieldToPage();assert.ok(performance.now()-t0>=40,'no frame: it waits a while once');
+  for(let i=0;i<5;i++)await yieldToPage();
+  assert.equal(asked.length,1,'then no turn asks for a frame: the one asked for is still to come');
+  frame();let again=false;const next=yieldToPage().then(()=>{again=true;});await sleep(10);assert.equal(again,false,'once it came, turns wait for frames again');
+  frame();await next;
+  due=false;await yieldToPage();assert.equal(asked.length,0,'a turn not due asks for no frame');
+ }finally{setFrameTurns(null);g.requestAnimationFrame=saved.raf;g.addEventListener=saved.add;g.removeEventListener=saved.remove;}
+});
 await check('compaction keeps the vertices an index uses in first-use order, as the Map version did',()=>{
  // The version before typed arrays, kept here as the reference; the last case is a few pieces of a big shared pool.
  const before=source=>{const ids=source.index?Array.from(new Set(source.index.array)):Array.from({length:source.attributes.position.count},(_,i)=>i),remap=new Map(ids.map((id,i)=>[id,i])),g=new T.BufferGeometry();
@@ -45,4 +63,39 @@ await check('compaction keeps the vertices an index uses in first-use order, as 
  // An index past the vertex list (none in the ship) keeps what the version before made of it.
  const bad=new T.BufferGeometry();bad.setAttribute('position',new T.BufferAttribute(new Float32Array(12).map((_,i)=>i),3));bad.attributes.position.count=3;bad.setIndex([0,1,3,2,1,0]);
  const a=before(bad),b=compactRenderGeometry(bad);assert.deepEqual([...b.index.array],[...a.index.array]);assert.deepEqual([...b.attributes.position.array],[...a.attributes.position.array]);
+});
+await check('the band merge\'s pieces of one shared pool, through one scratch array: the same copies, the scratch left clear',()=>{
+ let seed=11;const rand=n=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed%n;};
+ const vertices=300000,pos=new T.BufferAttribute(new Float32Array(vertices*3).map(()=>rand(1000)/7),3),uv=new T.BufferAttribute(new Float32Array(vertices*2).map(()=>rand(100)/9),2);
+ const scratch={remap:null};
+ for(let k=0;k<60;k++){const g=new T.BufferGeometry();g.setAttribute('position',pos);g.setAttribute('uv',uv);
+  const base=rand(vertices-80000),spread=k%5===0?70000:500+rand(9000),idx=new Uint32Array(3*(1+rand(4000))).map(()=>base+rand(spread));
+  if(k===13)idx[7]=vertices+2;g.setIndex(new T.BufferAttribute(idx,1));
+  // k 13 indexes past the pool (none in the ship): both read past it, as the version before did, so their bounds are NaN.
+  const warn=console.warn,error=console.error;if(k===13)console.warn=console.error=()=>{};
+  let a,b,c;try{a=compactRenderGeometry(g);b=compactRenderGeometry(g,{scratch,bounds:false});c=compactRenderGeometry(g,{scratch});}finally{console.warn=warn;console.error=error;}
+  for(const name of ['position','uv'])for(const x of [b,c]){assert.equal(x.attributes[name].array.constructor,a.attributes[name].array.constructor);assert.deepEqual(new Uint8Array(x.attributes[name].array.buffer),new Uint8Array(a.attributes[name].array.buffer),name+' '+k);}
+  for(const x of [b,c]){assert.equal(x.index.array.constructor,a.index.array.constructor);assert.deepEqual([...x.index.array],[...a.index.array],'index '+k);}
+  assert.equal(b.boundingBox,null);assert.equal(b.boundingSphere,null);if(k!==13)assert.ok(c.boundingBox.equals(a.boundingBox)&&c.boundingSphere.equals(a.boundingSphere));
+ }
+ assert.equal(scratch.remap.length,vertices);assert.ok(scratch.remap.every(v=>v===-1),'left clear');
+});
+await check('a signed index and a failed copy leave the scratch as the Map version would, and clear',()=>{
+ const pool=new T.BufferAttribute(new Float32Array(300).map((_,i)=>i),3),scratch={remap:null};
+ const signed=new T.BufferGeometry();signed.setAttribute('position',pool);signed.setIndex(new T.BufferAttribute(new Int32Array([4,-1,6]),1));
+ // Index -1 reads past the pool (as the version before did): its bounds are NaN, which three warns of.
+ const warn=console.warn,error=console.error;console.warn=console.error=()=>{};let a,b;try{a=compactRenderGeometry(signed);b=compactRenderGeometry(signed,{scratch});}finally{console.warn=warn;console.error=error;}assert.deepEqual([...b.index.array],[...a.index.array]);assert.equal(b.attributes.position.count,a.attributes.position.count);
+ const g=new T.BufferGeometry();g.setAttribute('position',pool);g.setIndex([3,4,5]);let n=0;
+ const plain=compactRenderGeometry(g);const saved=Object.getOwnPropertyDescriptor(T.BufferGeometry.prototype,'setIndex');T.BufferGeometry.prototype.setIndex=function(){if(n++===0)throw Error('lost');return saved.value.apply(this,arguments);};
+ try{assert.throws(()=>compactRenderGeometry(g,{scratch}),/lost/);const again=compactRenderGeometry(g,{scratch});assert.deepEqual([...again.index.array],[...plain.index.array]);assert.equal(again.attributes.position.count,3);}
+ finally{Object.defineProperty(T.BufferGeometry.prototype,'setIndex',saved);}assert.ok(scratch.remap.every(v=>v===-1),'left clear');
+});
+await check('plain arrays read directly; half floats and interleaved or strided indices through the accessors',async()=>{
+ // A unit triangle in half floats (stored as 0x3c00 for 1), and an index interleaved at stride 2, offset 1.
+ const half=new T.BufferGeometry();const h=new T.Float16BufferAttribute(new Uint16Array(9),3);h.setXYZ(1,1,0,0);h.setXYZ(2,0,1,0);half.setAttribute('position',h);half.setIndex([0,1,2]);
+ const woven=new T.BufferGeometry();woven.setAttribute('position',new T.BufferAttribute(new Float32Array([0,0,0,1,0,0,3,1,0]),3));woven.index=new T.InterleavedBufferAttribute(new T.InterleavedBuffer(new Uint16Array([9,0,9,1,9,2]),2),1,1);
+ for(const [g,most] of [[half,1],[woven,3]]){rememberMergedBounds(g);const t=retainedDrawTree(g);assert.equal(t.boxes[9],most,'max x');}
+ const ship={inside:new T.Group(),facade:new T.Group()},band=new T.Group(),meshes=[half,woven].map(g=>{g.userData.preparedRanges=[{name:'Deck_slab',start:0,count:1,userData:{}}];const o=new T.Mesh(g,new T.MeshBasicMaterial());band.add(o);return o;});
+ band.updateMatrixWorld(true);const root=await installDistantArchitecture(ship,{bands:new Map([['b',band]])},new T.Group(),{});
+ const xs=root.children.filter(o=>o.name.startsWith('V2_distant_deck_')).flatMap(o=>[...o.geometry.attributes.position.array].filter((_,i)=>i%3===0));assert.deepEqual(xs.sort((p,q)=>p-q),[0,0,0,1,1,3]);
 });

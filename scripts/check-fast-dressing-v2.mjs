@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
+import sharp from 'sharp';
 import {preparedManifest,preparedArrayReader} from './prepared-patch-v2.mjs';
 import {parseGlb} from './patch-models-v2.mjs';
 import {checkFastPatchCollision} from './fast-collision-v2.mjs';
@@ -34,7 +35,11 @@ export async function canonicalPrepared(directory,{owner=o=>o,skipOwners=new Set
  const indexed=async(g,a)=>{const ix=await read(g.index),x=await read(a.array),n=a.itemSize,out=new x.constructor(ix.length*n);for(let i=0;i<ix.length;i++)for(let k=0;k<n;k++)out[i*n+k]=x[ix[i]*n+k];return x.constructor.name+':'+ix.length+':'+sha(bytesOf(out));};
  const geometry=id=>id===undefined||id===null?id:once('g'+id,async()=>{const g=m.geometries[id],attributes={};for(const [k,a]of Object.entries(g.attributes).sort())attributes[k]={...a,array:g.index==null?await array(a.array):await indexed(g,a)};return sha(JSON.stringify(await deep({...g,attributes,index:g.index==null?null:'indexed'})));});
  const textures=new Map(m.textures.map(t=>[t.uuid,t])),images=new Map(m.images.map(i=>[i.uuid,i]));
- const material=id=>id===undefined?id:Array.isArray(id)?Promise.all(id.map(material)):once('m'+id,async()=>{const x=m.materials[id],refs={};for(const [k,v]of Object.entries(x))if(textures.has(v)){const t=textures.get(v);refs[k]={...t,image:images.get(t.image)?sha(JSON.stringify(images.get(t.image))):t.image};}return sha(JSON.stringify(await deep({...x,...refs})));});
+ // A whole build carries a picture as lossless WebP where a fast build may still carry its PNG (prepared-pictures.mjs):
+ // the same picture either way, so a PNG or WebP data URL counts by its pixels.
+ const pictureKey=image=>once('p'+image.uuid,async()=>{const url=image.url;if(typeof url!=='string'||!/^data:image\/(png|webp);base64,/.test(url))return sha(JSON.stringify(image));
+  const {data,info}=await sharp(Buffer.from(url.slice(url.indexOf(',')+1),'base64')).ensureAlpha().raw().toBuffer({resolveWithObject:true});return sha(JSON.stringify({...image,url:info.width+'x'+info.height}))+':'+sha(data);});
+ const material=id=>id===undefined?id:Array.isArray(id)?Promise.all(id.map(material)):once('m'+id,async()=>{const x=m.materials[id],refs={};for(const [k,v]of Object.entries(x))if(textures.has(v)){const t=textures.get(v);refs[k]={...t,image:images.get(t.image)?await pictureKey(images.get(t.image)):t.image};}return sha(JSON.stringify(await deep({...x,...refs})));});
  const graph=async g=>{if(!g)return g;const nodes=[];for(const n of g.nodes||[])nodes.push(await deep({...n,geometry:await geometry(n.geometry),material:await material(n.material),instanceMatrix:await array(n.instanceMatrix),instanceColor:await array(n.instanceColor)}));return {root:await deep(g.root),nodes};};
  const bvh=async r=>({...await deep({...r,geometry:undefined,roots:undefined,index:undefined,indirect:undefined,windowFlags:undefined}),geometry:await geometry(r.geometry),roots:await Promise.all(r.roots.map(array)),index:r.index!=null&&r.index===m.geometries[r.geometry].index?'geometry index':await array(r.index),indirect:await array(r.indirect),windowFlags:await array(r.windowFlags)});
  // Static bands are rebuilt whole by a patch, so their BVH layout and memoized bounds are not part of the content.

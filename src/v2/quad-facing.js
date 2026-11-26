@@ -117,8 +117,11 @@ export function createSurfaceFacingTest() {
  };
 }
 
-export function installQuadFacingTest(renderer, scene, camera) {
- const floorOcclusion = createFloorOcclusion(scene,camera);
+// `options.floorOcclusion`: one made already (createFloorOcclusionAsync, so its scan gave the page turns), or null for none.
+// `options.skipped()`: draws another wrapper left out of this main pass (group-occlusion.js), counted towards the dense
+// test as this test's own omissions are, so leaving them out does not switch the dense path off.
+export function installQuadFacingTest(renderer, scene, camera, options = {}) {
+ const floorOcclusion = 'floorOcclusion' in options ? options.floorOcclusion : createFloorOcclusion(scene,camera);
  const surfaceAway = createSurfaceFacingTest(), facingAway = createQuadFacingTest(), outside = createDrawBoundsTest(), submit = renderer.renderBufferDirect;
  // These draws also straddle distant decks from the shuttle and medical rooms.
  // The material selects which draws to test; geometry and camera still decide visibility.
@@ -190,7 +193,7 @@ export function installQuadFacingTest(renderer, scene, camera) {
   after.apply(this, arguments);
   if (r === renderer && view === camera && !r.getRenderTarget() && !scene.overrideMaterial && !r.xr.isPresenting) {
    floorOcclusion?.finish();
-   dense = r.info.render.calls + omitted >= (dense ? 850 : 900);
+   dense = r.info.render.calls + omitted + (options.skipped?.() ?? 0) >= (dense ? 850 : 900);
    omitted = 0;
   }
  };
