@@ -32,7 +32,8 @@ let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 const phoneBatching=(()=>{const query=new URLSearchParams(location.search);if(!preparedPhone)return query.get('deskbatch')==='low'?{}:{merge:true};const mode=query.get('phonebatch');
  return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
 import {createFeatureBatches} from '../v2/feature-batches.js';
-let phoneBands=null,wayfindingSigns=null,fogCull=null,featureBatches=null,groupOcclusion=null;
+import {createCabinBatches} from '../v2/cabin-batches.js';
+let phoneBands=null,wayfindingSigns=null,fogCull=null,featureBatches=null,groupOcclusion=null,cabinBatches=null;
 // The atrium geometry pack binds the band pieces the merge hides, so it runs only without the merge, and the Detail menu
 // chooses its distant detail. The merged bands keep full detail and still draw faster: on them the menu sets the atrium's
 // haze (detail-levels.js), and Auto starts at High, the look before the menu came back. ?detail=high|balanced|performance
@@ -322,7 +323,7 @@ const deskPiece=deskPieceSize({query:new URLSearchParams(location.search),phone:
 // buffer the shaders write the depth, so polygon offset has never applied. With linear depth it would, and pull the hex
 // sub-floor (finish-kit.js) over the Arrival Hall's finish, so it stays off.
 if(linearDepth){const gl=renderer.getContext(),enable=gl.enable.bind(gl);gl.enable=cap=>{if(cap!==gl.POLYGON_OFFSET_FILL)enable(cap);};}
-const frameReadout=createFrameReadout(renderer,{extra:()=>[remotes?.crowdLine(),groupOcclusion?.line()].filter(Boolean).join('\n')});
+const frameReadout=createFrameReadout(renderer,{extra:()=>[remotes?.crowdLine(),groupOcclusion?.line(),cabinBatches?.line()].filter(Boolean).join('\n')});
 // Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
 // The Res button steps through them and the choice is remembered for the next visit. ?res=high, med or low holds a
 // level for this visit in the saved one's place (pixel-switches.js): nothing is saved, and it never steps down.
@@ -570,7 +571,7 @@ async function buildShip(){
  await hallTurn();wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);await hallTurn();
  isolateStaticWorld(ship,scene);{const hidden=(preparedPhone||phoneBatching.merge)&&!OWNER_BAKE_PAGE?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // While the arrival hall is walked, the floors' occlusion scan (floor-occlusion.js) gives the page turns: a second of work.
- if(deskDetail&&!OWNER_BAKE_PAGE)installQuadFacingTest(renderer,scene,camera,{...(arrival?.active?{floorOcclusion:await createFloorOcclusionAsync(scene,camera,yieldToPage)}:{}),skipped:()=>groupOcclusion?.stats.skipped??0});
+ if(deskDetail&&!OWNER_BAKE_PAGE)installQuadFacingTest(renderer,scene,camera,{...(arrival?.active?{floorOcclusion:await createFloorOcclusionAsync(scene,camera,yieldToPage)}:{}),skipped:()=>(groupOcclusion?.stats.skipped??0)+(cabinBatches?.stats.folded??0)});
  // Room features, baked room dressing, named feature groups, cabin furniture and lifts the frame's own walls and floors hide
  // sit out the main pass (group-occlusion.js, occlusion-groups.js): by default on
  // Chrome and Edge on Windows, where it was measured; ?occlusion=1 elsewhere, ?occlusion=0 off.
@@ -583,6 +584,9 @@ async function buildShip(){
  // The cabins' parts on every deck draw with one object per look of material (share-materials.js), so equal draws sort
  // together and three refreshes each look once. Corner shading still treats every part as before. Not on phones.
  if(!preparedPhone){const alone=cornerShadeLeavesAlone(scene);shareEquivalentMaterials(scene,{member:o=>o.userData.v2Cabins&&!o.userData.proxySpans,split:o=>alone.has(o.material)?'alone':''});}
+ // Then each material's cabin parts draw as one instanced multi-draw in the main pass (cabin-batches.js), without what
+ // group occlusion leaves out; ?cabinbatch=0 draws them part by part, to compare.
+ if(deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('cabinbatch')!=='0')cabinBatches=await createCabinBatches(scene,renderer,instanced,{nearSlots:NEAR_CABINS,skip:groupOcclusion&&(o=>groupOcclusion.hiddenRoot(o.parent,o)||groupOcclusion.hiddenRoot(o,o))});
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
@@ -1268,7 +1272,8 @@ function draw(view){
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();
  if(view===camera){
   const main=()=>renderer.render(scene,view);
-  const render=()=>featureBatches?featureBatches.around(view,main):main();
+  const features=()=>featureBatches?featureBatches.around(view,main):main();
+  const render=()=>cabinBatches?cabinBatches.around(view,features):features();
   if(ownerHiding)ownerHiding.around(view,render);else render();
  }else renderer.render(scene,view);
  if(frogTrip.active&&view===camera)frogTrip.render();frameReadout.frame(performance.now());
