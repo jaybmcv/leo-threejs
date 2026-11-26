@@ -1,10 +1,9 @@
 import * as T from 'three';
 import layout from '../plan/selected-layout.js';
 import {contains} from '../plan/geometry-v2.js';
-import {getAtriumQuality} from '../v2/atrium-quality.js';
 import {onLoungeAtriumWalkway} from '../v2/lounge-light-boundary.js';
-import {LOUNGE} from '../hydro-nip-lounge.js';
 import {AQUARIUM} from './lounge-aquarium.js';
+import {createMazeMist} from './maze-mist.js';
 
 // The Hydro-Nip Lounge's mood on foot; the room, its doors and hammocks are lounge.js:
 // - the maze's catnip mist is drawn in the tower, with fewer layers on phones and at lower detail;
@@ -19,11 +18,7 @@ const MOOD={hemi:.32,fill:.12,env:.22,sky:0xffb26b,ground:0x5a2f99,neon:1.35,glo
 
 // `lounge` is what createLounge returned; `light` the walk's shared lights ({hemi,fill,scene}). Adds lounge.inside.
 export function createLoungeMood(lounge,light=null){
- const {frame,mists,glows}=lounge,inverse=frame.clone().invert();
- const {MAZE}=LOUNGE,tower=new T.Box3(new T.Vector3(MAZE.x0,LOUNGE.FLOOR,MAZE.z0),new T.Vector3(MAZE.x1,MAZE.top,MAZE.z1));
- const localEye=new T.Vector3(),phone=globalThis.LEO_WALK_PHONE||globalThis.matchMedia?.('(pointer:coarse)').matches;
- const layers=mists.map(o=>({o,planes:o.geometry.attributes.position.count/6}));
- let mist=1,detail=null;
+ const {frame,glows}=lounge,updateMist=createMazeMist(lounge);
  const inRoom=loungeMoodRegion(),lit=glows.map(m=>({m,k:m.name==='Lounge_neon_glow'?MOOD.neon:MOOD.glow}));
  const base=light&&{hemi:light.hemi.intensity,fill:light.fill.intensity,env:light.scene.environmentIntensity,sky:light.hemi.color.clone(),ground:light.hemi.groundColor.clone()};
  const sky=new T.Color(MOOD.sky),ground=new T.Color(MOOD.ground);let mood=0,shown=0,waterMix=0;
@@ -43,10 +38,7 @@ export function createLoungeMood(lounge,light=null){
  return {
   // After the lounge's own step (doors and hammocks), with the camera's position.
   update(dt,eye){
-   const inside=tower.containsPoint(localEye.copy(eye).applyMatrix4(inverse)),k=1-Math.exp(-4*dt),quality=phone?'performance':getAtriumQuality();
-   if(quality!==detail){detail=quality;const fraction=detail==='performance'?1/3:detail==='balanced'?2/3:1;
-    for(const {o,planes} of layers)o.geometry.setDrawRange(0,Math.floor(planes*fraction)*6);}
-   mist+=((inside?.76:1)-mist)*k;for(const o of mists)o.material.opacity=o.material.userData.full*mist;
+   const k=1-Math.exp(-4*dt);updateMist();
    const underwater=inWaterView(eye);waterMix+=((underwater?1:0)-waterMix)*k;if(waterTint)waterTint.style.opacity=waterMix.toFixed(3);
    mood+=((underwater||inRoom(eye)?1:0)-mood)*k;if(Math.abs(mood-shown)>.002||(mood<.002&&shown)){shown=mood<.002?0:mood;setMood(shown);}
   },
