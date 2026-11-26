@@ -16,7 +16,7 @@ import {prepareClubhouseAccess} from '../src/v2/clubhouse-access.js';
 import {Colliders,solid} from '../src/walk/collision.js';
 import {groundMesh} from '../src/v2/ground.js';
 import {Controller} from '../src/walk/controller.js';
-import {findRestSpots} from '../src/walk/rest.js';
+import {findRestSpots,solidSpots} from '../src/walk/rest.js';
 import {createPhotoSpots} from '../src/walk/photo-spots.js';
 import {SWIM,swimWorld,limitSwim,gemNear} from '../src/walk/aquarium-treasure/layout.js';
 import {featurePlaces} from '../src/v2/goto-features.js';
@@ -174,6 +174,14 @@ for(let i=0;i<queue.length;i++){
  }
 }
 assert.equal(reached.size,2,'The rotated ground maze must reach both platform exits');console.log('PASS maze interior',seen.size,'reachable capsule positions');
+const mazeSeats=solidSpots(findRestSpots(source.root).filter(s=>s.sitReach),col),pipes=root.getObjectByName('Haze_maze_water_pipe');
+assert.equal(mazeSeats.length,5,'Every maze cushion has seat collision under its anchor');
+assert(pipes?.isInstancedMesh&&pipes.count===mazeSeats.length&&!solid(pipes),'One non-solid water pipe per cushion');
+for(const s of mazeSeats){
+ close(s.height,r.y+.15);
+ assert(queue.some(([x,y,z])=>Math.abs(y-r.y)<.03&&Math.hypot(x-s.point.x,z-s.point.z)<s.sitReach),'Reach the cushion on foot from the maze entrance');
+}
+console.log('PASS five ground cushions reachable from the maze entrance and one non-solid pipe per seat');
 // The old rear tube gap is guarded again, and the shortened Deck 18 link has an end guard.
 for(const p of [[-128.75,32.3,-43.2],[-89.8,28.3,-47.4]]){segment.start.set(p[0],p[1]+.75,p[2]);segment.end.set(p[0],p[1]+1.65,p[2]);assert(col.overlaps(segment,.35),'Missing closed-edge guard '+p);}
 const serviceBounds=names=>{const b=new T.Box3();root.updateMatrixWorld(true);source.root.traverse(o=>{if(o.isMesh&&names.includes(o.name))b.union(new T.Box3().setFromObject(o,true));});return b;};
