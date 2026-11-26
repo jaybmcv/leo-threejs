@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import * as T from 'three';
 import {createCanvas} from '@napi-rs/canvas';
 import layout from '../src/plan/selected-layout.js';
+import {createGardenCommons} from '../src/model.js';
+import {resolveRoomFrames} from '../src/plan/rooms.js';
 import {installWalkCanvas} from '../src/walk/canvas.js';
 import {polygonGeometry,floor,bounds,mesh} from '../src/v2/geometry.js';
 import {buildCorridorFloors} from '../src/v2/corridor-floor-union.js';
@@ -20,7 +22,8 @@ import {installGround} from '../src/v2/ground.js';
 import {bakeForWalking} from '../src/walk/render-bake.js';
 import {Colliders,solid} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
-import {LOUNGE_PLAN,applyLoungeBalconyCut,applyLoungeWalkwayExtension} from '../src/plan/lounge-layout-v2.js';
+import {createLoungeFalls} from '../src/walk/lounge-falls.js';
+import {LOUNGE_PLAN,LOUNGE_UPPER_CONNECTOR,applyLoungeBalconyCut,applyLoungeUpperConnector,applyLoungeWalkwayExtension} from '../src/plan/lounge-layout-v2.js';
 
 installWalkCanvas(createCanvas);
 // This Deck 18 cut must leave the Deck 19 walkway and every other gallery untouched.
@@ -191,4 +194,53 @@ console.log('PASS: velvet, 65 mm transitions and clipped floor borders on Decks 
   const face=cast([x,level-sign*.2,-42.2],[0,sign,0],baked)[0];assert.equal(face?.object.material.name,'Lounge_velvet_carpet');assert(Math.abs(face.point.y-level)<.00002,'The walk bake keeps both sides flush across the joint');
  }
  console.log('PASS Deck 19 mural infill: flush carpet and underside, joined orange glass guard, solid wall and level round trip');
+}
+
+// The pond-side connector joins both gallery floors and keeps the stair cut and its far stub.
+{
+ const r=layout.rooms.find(r=>r.id==='commons-1'),link=r.components.galleries.find(g=>g.id===LOUNGE_UPPER_CONNECTOR);
+ const copy=structuredClone(r);copy.components.galleries=copy.components.galleries.filter(g=>g.id!==LOUNGE_UPPER_CONNECTOR);
+ applyLoungeUpperConnector(copy);applyLoungeUpperConnector(copy);assert.deepEqual(copy.components,r.components);
+ const [outer,gap]=link.guardRuns,y=deck.y,depth=link.size[1],{x0,x1,z0,z1}=bounds(link.polygon);
+ assert.equal(link.size[0],4);assert.equal(depth,.28);assert.equal(link.center[1],y);
+ assert.deepEqual(outer[0],[x1,z1]);assert.equal(outer[1][1],z1);assert.equal(outer.at(-2)[0],x0);
+ for(const [x,z] of outer.slice(1,-1))assert(Math.abs(Math.hypot(x-x0-1.75,z-z1+1.75)-1.75)<1e-8,'Use a quarter-circle at the turn');
+ const root=new T.Group(),source=createGardenCommons(1),ship={root,inside:root,cutaway:new Set()};root.add(source.root);resolveRoomFrames(root);
+ buildRoomShell(ship,r,root);applyLoungeFloorFinish(ship);root.updateMatrixWorld(true);
+ const slabs=root.getObjectsByProperty('name','V2_garden_gallery'),probe=new T.Raycaster();
+ const cast=(at,dir,objects,far=.4)=>{probe.set(new T.Vector3(...at),new T.Vector3(...dir));probe.far=far;return probe.intersectObjects(objects);};
+ for(const [x,z] of [[-94.71,-44.6],[-94.69,-44.6],[-96.3,-47.95],[-96.3,-48],[-98.45,-45.1],[-93.1,-51.7]])for(const [level,sign]of [[y,-1],[y-depth,1]]){
+  const hits=cast([x,level-sign*.2,z],[0,sign,0],slabs);assert.equal(hits.length,1,'One top or underside at '+[x,z]);
+  assert(Math.abs(hits[0].point.y-level)<.00002);assert.equal(hits[0].object.material.name,'Lounge_velvet_carpet');
+ }
+ for(const [x,z] of [[-98.5,-43.25],[-98.75,-46],[-93.1,-48.55]])assert.equal(cast([x,y+.2,z],[0,-1,0],slabs).length,0,'Rounded edge and stair opening stay open');
+ for(const [x,z,dx,dz] of [[-94.85,-44.6,1,0],[-96.3,-47.8,0,-1]])assert.equal(cast([x,y-depth/2,z],[dx,0,dz],slabs).length,0,'No slab sides at the joints');
+ for(const [name,height] of [['V2_garden_guard_glass',.6],['V2_garden_guard_cap',1.1],['Lounge_rail_glow',.04]]){
+  const rails=root.getObjectsByProperty('name',name);if(name!=='V2_garden_guard_glass')assert.equal(rails[0].material.color.getHex(),0xff6b20);
+  for(const run of [outer,gap])for(let i=1;i<run.length;i++){
+   const [a,b]=[run[i-1],run[i]],normal=new T.Vector2(b[1]-a[1],a[0]-b[0]).normalize();
+   for(const t of [0,.5,1]){const x=a[0]+t*(b[0]-a[0]),z=a[1]+t*(b[1]-a[1]);assert(cast([x-normal.x*.16,y+height,z-normal.y*.16],[normal.x,0,normal.y],rails,.3).length,'Continuous '+name+' at '+[x,z]);}
+  }
+  for(const [x,z,dx,dz] of [[-94.85,-44.6,1,0],[-96.3,-47.8,0,-1]])assert.equal(cast([x,y+height,z],[dx,0,dz],rails).length,0,'Open join for '+name);
+  for(const [x,z,dx,dz] of [[-94.85,-42.9,1,0],[-99,-47.8,0,-1],[-93.1,-51.7,0,-1]])assert(cast([x,y+height,z],[dx,0,dz],rails).length,'Adjacent guard stays in place');
+ }
+ const volume=new T.Box3(new T.Vector3(x0-.05,y-depth,z0-.05),new T.Vector3(x1+.05,y+1.15,z1+.05)),falls=createLoungeFalls(ship);
+ falls.group.updateMatrixWorld(true);
+ for(const o of falls.group.getObjectsByProperty('isMesh',true))assert(!volume.intersectsBox(new T.Box3().setFromObject(o,true)),'Connector clears '+o.name);
+ const hangers=source.root.getObjectByName('Lounge_sheen_loose');assert(new T.Box3().setFromObject(hangers,true).max.y<y-depth,'Leave the hanging fixtures below the underside');
+ const col=installGround(new Colliders(),new Colliders());col.addStatic(root,solid);col.commit();const walker=new Controller(col);
+ const start=new T.Vector3(-93.66,y,-40.65),walk=(yaw,seconds)=>{
+  const a=T.MathUtils.degToRad(yaw),v=new T.Vector3(Math.sin(a)*2.25,0,Math.cos(a)*2.25),idle=new T.Vector3(),steps=Math.round(seconds*120);
+  for(let i=0;i<steps+30;i++){
+   walker.step(1/120,i<steps?v:idle);assert(walker.grounded&&Math.abs(walker.position.y-y)<.00002,'Connector stays at Deck 19 height');
+  }
+ };
+ walker.place(start);walk(206,1.7);walk(270,.95);assert(walker.position.x<-96,'Walk left onto the new floor');
+ walk(180,2.36);assert(walker.position.z<-49,'Reach the cross gallery');walk(0,2.36);walk(90,.95);walk(17.6,1.6);
+ assert(walker.position.distanceTo(start)<.25,'Walk back to the start');
+ for(const [at,yaw] of [[[-96.95,y,-44.85],317.8125],[[-96.9,y,-47.45],90]]){
+  walker.place(new T.Vector3(...at));walk(yaw,1.5);const stop=walker.position.clone();assert(stop.distanceTo(new T.Vector3(...at))>1,'Reach the rail');
+  walk(yaw,.6);assert(walker.position.distanceTo(stop)<.02,'Rail stops the cat');walk(yaw+180,.65);assert(walker.position.distanceTo(stop)>1,'Walk away from the rail');
+ }
+ console.log('PASS Deck 19 pond-side connector: flush velvet joints, rounded glass guard, open stair gap, clear dressing and level round trip');
 }
