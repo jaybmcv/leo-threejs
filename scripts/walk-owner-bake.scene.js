@@ -106,6 +106,10 @@ const F64=new Float64Array(1),W64=new Uint32Array(F64.buffer);
 const numberWords=list=>{const out=new Uint32Array(list.length*2);list.forEach((v,i)=>{F64[0]=v;out[i*2]=W64[0];out[i*2+1]=W64[1];});return out;};
 const boxNumbers=b=>[b.min.x,b.min.y,b.min.z,b.max.x,b.max.y,b.max.z];
 
+// A merged piece's material as far as it decides whether the piece draws its sources' triangles as walls: the wall test's
+// verdict and what it reads (the bake tests the sources' materials; the walk draws the piece's).
+const pieceMaterial=(m,empty)=>m?[plainOpaque(m,empty)?1:0,m.type,m.side,m.transparent,m.opacity,m.alphaTest,m.blending,m.depthTest,m.depthWrite,m.depthFunc,m.colorWrite,
+ m.stencilWrite,m.stencilFunc,!!m.alphaMap,m.alphaHash,m.alphaToCoverage,m.transmission??0,m.wireframe,m.visible,m.clippingPlanes?.length??0,m.onBeforeCompile===empty?0:1].join(':'):'none';
 // A typed array's bytes as 32-bit words (a view when they divide into words).
 const arrayWords=a=>a.byteLength%4===0?new Uint32Array(a.buffer,a.byteOffset,a.byteLength/4):Uint32Array.from(new Uint8Array(a.buffer,a.byteOffset,a.byteLength));
 
@@ -114,7 +118,7 @@ const arrayWords=a=>a.byteLength%4===0?new Uint32Array(a.buffer,a.byteOffset,a.b
  * triangles it adds to the occluder soup with their sides, in order. A band's are its merge sources', but what draws them
  * is the merged pieces listing those sources (merged by material across bands): every such piece counts for the band, by
  * its path, print where it will be drawn (owner-hiding.js printNow: the walk leaves a hidden branch's world matrices
- * stale), source paths, groups, draw range and geometry arrays, so a piece that draws anything else drops each
+ * stale), its own materials as the wall test reads them (pieceMaterial), source paths, groups, draw range and geometry arrays, so a piece that draws anything else drops each
  * band it draws (a band with a piece whose arrays are gone has none). A part: the boxes the proof covered, or a cabin
  * part's slots. Rows come from collectOccluders and collectTargets themselves, so one the bake would not use now
  * (a cut-out or shader-hooked material, a shadow caster, a mover) has none; neither has a path met twice (null).
@@ -129,7 +133,7 @@ export function rowDigests(scene,{emptyHook}={}){
   scene.traverse(o=>{if(!o.isMesh||!o.userData.sources?.length)return;const g=o.geometry,p=g?.attributes?.position,bands=new Set();
    const sources=o.userData.sources.map(id=>{const q=byUuid.get(id),band=q&&bandOf(q),k=band&&condAt.get(ownerPath(band,scene));if(k!==undefined&&occ.bandConds.has(k))bands.add(k);return q?ownerPath(q,scene):'?';});
    if(!bands.size)return;if(!p?.array||g.index&&!g.index.array){for(const k of bands)blind.add(k);return;}
-   let [x,y]=words(0x811c9dc5,0x9747b28c,textWords([ownerPath(o,scene),printNow(o),sources.join(','),JSON.stringify(g.groups),g.drawRange.start,g.drawRange.count].join('|')));
+   let [x,y]=words(0x811c9dc5,0x9747b28c,textWords([ownerPath(o,scene),printNow(o),[o.material].flat().map(m=>pieceMaterial(m,emptyHook)).join(';'),sources.join(','),JSON.stringify(g.groups),g.drawRange.start,g.drawRange.count].join('|')));
    [x,y]=words(x,y,arrayWords(p.array));if(g.index)[x,y]=words(x,y,arrayWords(g.index.array));
    for(const k of bands){a[k]=fnv(fnv(a[k],x),y);b[k]=mur(mur(b[k],x),y);}});}
  const conds=new Map();occ.conditions.forEach(([path,print],i)=>conds.set(path,conds.has(path)||blind.has(i)?null:print+'#'+hex(a[i],b[i],count[i])));

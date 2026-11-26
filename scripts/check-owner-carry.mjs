@@ -71,6 +71,9 @@ pass('a key\'s walk script and build configuration read back as ownerKey wrote t
  assert.equal(ownerPrint(later.piece),ownerPrint(ship().piece),'a merged piece\'s print has no bounds');
  const {data,dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:0,conds:1,entries:1,blocks:0});assert.deepEqual(hiddenBy(data,later),[false,true]);
  pass('and a merged piece whose geometry changed drops what the bands it draws proved, though its sources did not change');}
+{const stored=fullBake(ship()),later=ship(w=>{w.piece.material[0].alphaTest=.5;});// the walk draws the piece's material, the bake reads the sources'
+ assert.equal(ownerPrint(later.piece),ownerPrint(ship().piece),'alphaTest is not in the print');
+ const {dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:0,conds:1,entries:1,blocks:0});pass('so does a merged piece whose own material became a cut-out');}
 {const stored=fullBake(ship()),later=ship();later.piece.position.x+=1;// the walk leaves a hidden branch's world matrices stale
  assert.equal(ownerPrint(later.piece),ownerPrint(ship().piece),'its world matrix still says where it was');
  const {dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:0,conds:1,entries:1,blocks:0});pass('a merged piece is read where it will be drawn, not where a stale world matrix puts it');}
