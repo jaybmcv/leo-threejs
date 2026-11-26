@@ -1205,7 +1205,7 @@ renderer.setAnimationLoop(()=>{
  bodies.length=0;bodies.push(p);if(remotes)for(const r of remotes.remotes.values())bodies.push(r.cur);
  // 4B: the atrium warms first; any room mood after it wins where they meet.
  atriumMood?.update(dt);
- stageBeams?.update(camera,now/1000);
+ stageBeams?.update(camera,now/1000,phone||preparedPhone||res===RES.length-1||getAtriumQuality()==='performance');
  if(arrivalMood)arrivalMood.update(dt,camera.getWorldPosition(eye));
  if(lounge){lounge.update(dt,bodies);loungeMood.update(dt,camera.getWorldPosition(eye));}
  if(recovery)recovery.update(dt,camera.getWorldPosition(eye));
