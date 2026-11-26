@@ -53,9 +53,11 @@ void main(){
  gl_FragColor=vec4(clamp(c,0.0,1.0),1.0);
 }`;
 const ease=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
-export function frogStrength(elapsed){return ease(elapsed)*ease((20-elapsed)/5);}
+const TRIP_SECONDS=40,FADE_SECONDS=5;
+export function frogStrength(elapsed){return ease(elapsed)*ease((TRIP_SECONDS-elapsed)/FADE_SECONDS);}
 export function createFrogTrip({renderer,camera,light=()=>false,now=()=>performance.now()}){
  let start=null,fade=null,fadeFrom=0,strength=0,baseFov=null,pass=null,mild=false,lite=false;
+ const secondsSinceLick=()=>(now()-start)/1000;
  const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
  function releasePass(){
   if(!pass)return;
@@ -70,8 +72,8 @@ export function createFrogTrip({renderer,camera,light=()=>false,now=()=>performa
  function end(immediate=false){if(start===null)return;if(immediate){release();return;}if(fade===null){fade=now();fadeFrom=strength;}}
  function update(){
   if(start===null)return false;
-  const elapsed=(now()-start)/1000;
-  if(elapsed>=20||(fade!==null&&now()-fade>=450)){release();return false;}
+  const elapsed=secondsSinceLick();
+  if(elapsed>=TRIP_SECONDS||(fade!==null&&now()-fade>=450)){release();return false;}
   mild=!!reduced?.matches;lite=light();
   strength=fade===null?frogStrength(elapsed):fadeFrom*(1-ease((now()-fade)/450));
   camera.fov=baseFov+(mild?0:strength*3*Math.sin(elapsed*Math.PI*2/4));camera.updateProjectionMatrix();
@@ -88,7 +90,7 @@ export function createFrogTrip({renderer,camera,light=()=>false,now=()=>performa
    const scene=new T.Scene(),quad=new T.Mesh(new T.PlaneGeometry(2,2),material);quad.frustumCulled=false;scene.add(quad);pass={picture,history,material,quad,scene,view:new T.Camera(),previous:false};
   }
   renderer.copyFramebufferToTexture(pass.picture);
-  const u=pass.material.uniforms;u.time.value=(now()-start)/1000;u.strength.value=strength*(mild?.28:1);
+  const u=pass.material.uniforms;u.time.value=secondsSinceLick();u.strength.value=strength*(mild?.28:1);
   u.warp.value=strength*(mild?.12:lite?.72:1);u.trails.value=pass.previous?strength:0;u.overlay.value=strength*(mild?.72:1);
   renderer.render(pass.scene,pass.view);
   // The first frame seeds a fresh history texture before the shader reads it.
@@ -96,7 +98,7 @@ export function createFrogTrip({renderer,camera,light=()=>false,now=()=>performa
  }
  const leave=()=>end(true);globalThis.addEventListener?.('pagehide',leave);
  const visibility=()=>{if(globalThis.document?.hidden)leave();};globalThis.document?.addEventListener('visibilitychange',visibility);
- return {get active(){return start!==null;},get strength(){return strength;},get baseFov(){return baseFov;},get mild(){return mild;},get light(){return lite;},get audio(){return frogAudioState();},
+ return {get active(){return start!==null;},get elapsed(){return start===null?0:secondsSinceLick();},get strength(){return strength;},get baseFov(){return baseFov;},get mild(){return mild;},get light(){return lite;},get audio(){return frogAudioState();},
   get warp(){return pass?.material.uniforms.warp.value??0;},get trails(){return pass?.material.uniforms.trails.value??0;},get overlay(){return pass?.material.uniforms.overlay.value??0;},
   start(){if(start!==null)return;start=now();baseFov=camera.fov;strength=0;fade=null;mild=!!reduced?.matches;lite=light();try{startFrogAudio();}catch{stopFrogAudio();}},end,update,render,
   dispose(){release();globalThis.removeEventListener?.('pagehide',leave);globalThis.document?.removeEventListener('visibilitychange',visibility);}};

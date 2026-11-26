@@ -525,9 +525,10 @@ function skateBusy(){return !!(resting||run||inBall||treasure?.active||controlle
 // installed before the walk first draws.
 installFilmLook({renderer,scene,keep:()=>walker?.holder});
 const frog=createFrog(scene,colliders),frogTrip=createFrogTrip({renderer,camera,light:()=>matchMedia('(pointer:coarse)').matches||getAtriumQuality()==='performance'});
-// A relocation, including a portal or a fall recovery, restores the local look first.
+const restAndTravelTargets=new Set(['sit','lie','stand','call','inside','waiting','clubhouse-call','clubhouse-inside','launch-ladder','hydro-portal','mct','tube']);
+// Travel sheets take the keys while the trip still draws behind them.
+const travelPanelOpen=()=>['map-sheet','places','lift-panel','aboard-sheet'].some(id=>!$(id).hidden);
 input.escapePointer=()=>frogTrip.active;
-const placeWalker=controller.place.bind(controller);controller.place=p=>{frogTrip.end(true);return placeWalker(p);};
 const actions={
  backpack(){if(ready())carry?.open();},
  view(){follow.mode=follow.mode==='first'?'third':'first';},
@@ -538,7 +539,7 @@ const actions={
   // Nothing to use in front: Enter or E presses Stuck? Pop out, when it is up (unstuck.js).
   const t=target();if(!t){unstuck.press();return;}
   if(t.kind==='frog'){frogTrip.start();$('prompt').hidden=true;$('use').hidden=true;return;}
-  frogTrip.end(true);
+  if(!restAndTravelTargets.has(t.kind))frogTrip.end(true);
   if(t.kind==='carry-item'||t.kind==='carry-desk'){carry.use(t);return;}
   if(t.kind==='arrival-tour'){closePanels();arrivalTour.open();return;}
   if(t.kind==='trolley-push'){emote=null;wardPush.begin(controller);return;}
@@ -583,7 +584,7 @@ const actions={
   else if(t.kind==='tv'){closePanels();crownTv.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
  },
- escape(){if(frogTrip.active){frogTrip.end();return;}if(wardPush?.engaged){wardPush.release();return;}if(treasure?.active){treasure.leave();return;}closePanels();arrivalTour?.close();},
+ escape(){if(travelPanelOpen()){closePanels();return;}if(frogTrip.active){frogTrip.end();return;}if(wardPush?.engaged){wardPush.release();return;}if(treasure?.active){treasure.leave();return;}closePanels();arrivalTour?.close();},
  // (Nothing below until the walk is ready.)
  places(){if(ready())togglePlaces();},
  map(){if(ready())toggleMap();},
@@ -1048,7 +1049,7 @@ renderer.setAnimationLoop(()=>{
 });
 // One frame of the ship from `view`: the sky, the haze past the far plane, then the ship.
 function draw(view){
- if(frogTrip.active){if(!input.enabled||view!==camera)frogTrip.end(true);else frogTrip.update();}
+ if(frogTrip.active){if(view!==camera||(!input.enabled&&!travelPanelOpen()))frogTrip.end(true);else frogTrip.update();}
  view.updateMatrixWorld(true);atriumGeometry?.update(view,renderer.domElement.height);voyagerLawn?.update(view);
  for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,view);if(frogTrip.active&&view===camera)frogTrip.render();
@@ -1107,7 +1108,7 @@ $('photo-names').addEventListener('change',()=>{if(photoSource)renderPhoto();});
 // its controls under it. The cat stays where it is (input is off, as in any sheet) and Escape or Close puts everything back.
 function portableView(){const c=renderer.domElement;portable.aim(c.width,c.height);return portable.camera;}
 function openCamera(){
- if(!lifts)return;closePanels();portable.open();
+ if(!lifts)return;frogTrip.end(true);closePanels();portable.open();
  for(const key of ['side','dist','height','fov']){$('camera-'+key).value=portable.settings[key];$('camera-'+key+'-out').textContent=$('camera-'+key).value;}
  $('camera-timer-set').value=String(portable.settings.timer);$('camera-timer').textContent='';
  $('camera-panel').hidden=$('camera-frame').hidden=false;document.body.classList.add('camera-mode');photoSpots?.show(false);input.enabled=false;input.down.clear();$('camera-capture').focus();
@@ -1162,11 +1163,11 @@ function hud(p){
  if(chip.dataset.count!==String(near)){chip.dataset.count=String(near);chip.hidden=!near;chip.querySelector('b').textContent=String(near);
   chip.querySelector('span').textContent=near===1?' change here':' changes here';chip.setAttribute('aria-label',`${near} change${near===1?'':'s'} made around here: open the ship log`);}
  const t=run||graffiti?.active?null:resting?{kind:resting.spot.tube&&!tubeDock(resting.spot.tube)?'waiting':undefined,label:resting.spot.tube?(tubeDock(resting.spot.tube)?'Get out at the dock':'Paddle to a dock to get out'):resting.stand?'Leave the capsule':resting.spot.mct?'Get out':resting.lie?'Get up':'Stand up'}:target();
- const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=frogTrip.active||!show||touch&&!t?.passive;
+ const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=!show||touch&&!t?.passive;
  // Lift status and walk-in portals show instructions without a use key.
  const waiting=t?.kind==='waiting'||!!t?.passive;prompt.classList.toggle('waiting',waiting);$('use').disabled=waiting;
  if(show){prompt.querySelector('.label').textContent=t.label;$('use').textContent=t.label;}
- $('use').hidden=frogTrip.active||!show||!!t?.passive;
+ $('use').hidden=!show||!!t?.passive;
 }
 
 // Sitting and lying: the walker leaves the controller, eases onto the spot and back off again.
@@ -1282,14 +1283,14 @@ function toggleEmotes(){
  EMOTES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';const label=name.replace(/_/g,' ');b.textContent=`${bindingLabel(walkBindings.get('emote:'+i))} · ${label[0].toUpperCase()}${label.slice(1)}`;b.onclick=()=>{closePanels();actions.emote(i);};list.appendChild(b);});
  panel.hidden=false;input.enabled=false;list.querySelector('button')?.focus();
 }
-function goTo(place){frogTrip.end(true);if(prank?.locked||prank?.isOpen)prank.cancel();place=remapSpot(place);const q=place.id?v2GotoStand(colliders,place.at):findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();
+function goTo(place){if(prank?.locked||prank?.isOpen)prank.cancel();place=remapSpot(place);const q=place.id?v2GotoStand(colliders,place.at):findStand(colliders,place.at);if(!q)return false;if(pawsOff?.active)pawsOff.leave();
  treasure?.leave(false);wardPush?.release();
  // Going elsewhere from a transporter's driver's seat leaves it parked where it is.
  if(resting?.spot.mct?.seat==='driver')mct.park(resting.spot.mct.cart);resting=null;
  // Going somewhere else leaves the ball behind, back in the gardens.
  if(inBall){leaveBall(q);ball.mesh.position.copy(ballHome);}controller.place(q);heading=place.yaw;follow.yaw=place.yaw;follow.current=.4;return true;}
 // Keys held when a panel opened would otherwise keep walking after it closes.
-function closePanels(){carry?.close();furSettings?.close();emergencyDrill?.close();frogTrip.end(true);mctRepair?.close();controlsSettings?.close();graphicsSettings?.close();if(prank?.locked||prank?.isOpen)prank.cancel();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','spot-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();closeCamera();input.enabled=true;input.down.clear();}
+function closePanels(){carry?.close();furSettings?.close();emergencyDrill?.close();mctRepair?.close();controlsSettings?.close();graphicsSettings?.close();if(prank?.locked||prank?.isOpen)prank.cancel();for(const id of ['lift-panel','places','emotes','map-sheet','aboard-sheet','name-sheet','photo-sheet','selfie-setup','spot-setup','comic-sheet','info-sheet','mudwater-sheet','clown-sheet','help-sheet','outside-sheet','vault-sheet'])$(id).hidden=true;closeOutside($('outside-sheet'),$('outside-frame'));maze?.close();treasure?.close();chat.close();graffiti?.close();crownTv?.close();closeCamera();input.enabled=true;input.down.clear();}
 // The list is a current server snapshot, including visitors who have not sent a pose yet.
 // The list of who is aboard, while its sheet is open.
 function showAboardList(){
