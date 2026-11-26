@@ -164,8 +164,9 @@ import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.js';
 import {tileLiftFloor} from './lift-tile-floor.js';
 import {createRecoveryMood} from './recovery.js';
 import {createAtriumMood} from './atrium-mood.js';
+import {createAtriumWaterfall} from './atrium-waterfall.js';
 import {createStageBeams} from '../v2/stage-beams.js';
-let stageBeams=null;
+let stageBeams=null,atriumWaterfall=null;
 import {createArrivalMood} from './arrival-mood.js';
 import {Marks} from './marks.public.js';
 import {createChat} from './chat.js';
@@ -444,6 +445,7 @@ async function buildShip(){
  // Exterior visibility was resolved by the build.
  ship.v2Haze=preparedHaze(ship);preparedFacade(ship,scene);const b0=performance.now();baked=preparedBake(ship);for(const g of baked.bands.values())scene.add(g);quietFloorReflections(scene,scene.environment);timings.push([`${baked.sources} meshes merged into ${baked.meshes} in ${Math.round(performance.now()-b0)} ms`,Math.round(performance.now()-t0)]);
  haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});await hallTurn();voyagerLawn=createVoyagerLawn(ship,scene,layout,{phone});cabinGlass=createCabinGlass(ship,scene);crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);
+ atriumWaterfall=createAtriumWaterfall(ship,scene);
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  status('Preparing the walk · 2/4 · placing activities…');await idle();
  const featureRoots=[];
@@ -1020,6 +1022,7 @@ if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuc
 // (Debug: the vault, vault.js.)
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vault',{get:()=>vault});
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'vaultLift',{get:()=>vaultLift});
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperty(globalThis.__walk,'atriumWaterfall',{get:()=>atriumWaterfall});
 if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)Object.defineProperties(globalThis.__walk,{atriumSight:{get:()=>atriumSight},atriumPvs:{get:()=>atriumPvs},viewSpan:{get:()=>viewSpan},shaderWarmup:{get:()=>shaderWarmup},atriumRooms:{get:()=>atriumRooms}});
 // The ship map: the corner mini-map, redrawn a few times a second, and the full map sheet.
 const mini=$('minimap'),lastMiniPaint={valid:false};let lastMini=0,mapDeck=null,mapShown=[];
@@ -1205,7 +1208,9 @@ renderer.setAnimationLoop(()=>{
  bodies.length=0;bodies.push(p);if(remotes)for(const r of remotes.remotes.values())bodies.push(r.cur);
  // 4B: the atrium warms first; any room mood after it wins where they meet.
  atriumMood?.update(dt);
- stageBeams?.update(camera,now/1000,phone||preparedPhone||res===RES.length-1||getAtriumQuality()==='performance');
+ const reducedAtrium=phone||preparedPhone||res===RES.length-1||getAtriumQuality()==='performance';
+ stageBeams?.update(camera,now/1000,reducedAtrium);
+ atriumWaterfall?.update(camera,now/1000,p,ambience.on,reducedAtrium);
  if(arrivalMood)arrivalMood.update(dt,camera.getWorldPosition(eye));
  if(lounge){lounge.update(dt,bodies);loungeMood.update(dt,camera.getWorldPosition(eye));}
  if(recovery)recovery.update(dt,camera.getWorldPosition(eye));

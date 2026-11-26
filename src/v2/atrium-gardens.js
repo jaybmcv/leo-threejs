@@ -429,9 +429,8 @@ export function addWaterfall(out,water,layout){
  const m=fallFrame();for(const g of rock)out.push(g.applyMatrix4(m));for(const g of sheets)water.push(g.applyMatrix4(m));
  return {x:ATRIUM_WATERFALL.x,z:ATRIUM_WATERFALL.z,width:w,height:TIER_TOP.at(-1),tiers:TIER_TOP.length};
 }
-// The falling water: one opaque Basic mesh with a streak texture (one draw), scrolled by atrium-mood.js while the walker
-// is in the open atrium; the distant copy shares the texture. Without a canvas (headless producers) the sheets join the
-// garden mesh as still water.
+// The falling water is a separate opaque mesh, so atrium-waterfall.js can scroll its texture in the walk.
+// Without a canvas (headless producers) the sheets join the garden mesh as still water.
 function addFallingWater(root,sheets,out){
  const c=walkCanvas();if(!c){out.push(...sheets);return {fallingWater:0};}
  if(typeof c.data==='function')Object.defineProperty(c,'data',{value:undefined});

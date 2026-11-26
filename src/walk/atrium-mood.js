@@ -34,11 +34,9 @@ const POOL_SCALE=3.2,SKY_STEPS=16,NIGHT_EASE=2;
 const lerp=(a,b,t)=>a+(b-a)*t;
 
 // The atrium's pieces, looked for by material name (authored, prepared and distant copies alike) every 2 s for the
-// first 30 s, so meshes that arrive late join in. Each material keeps the values it was loaded with. The waterfall's
-// streaks (atrium-gardens.js, P6_atrium_waterfall) scroll down at about 2 m/s while the walker is in the open atrium;
-// its texture is shared by the near and distant copies, so one offset moves them all.
+// first 30 s, so meshes that arrive late join in. Each material keeps the values it was loaded with.
 function finder(scene){
- const found={fall:null,downlights:null,stems:null,skies:new Set(),materials:new Map()};let tries=0,next=0;
+ const found={downlights:null,stems:null,skies:new Set(),materials:new Map()};let tries=0,next=0;
  // A material joins untouched (nothing changes it before it is kept), so what it holds then is its own. Glass and soffit
  // copies without an emissive colour (a Basic stand-in) are left alone.
  const keep=m=>{if((SHARED.has(m.name)||m.name==='V2_atrium_soffit')&&!m.emissive)return;if(!found.materials.has(m))found.materials.set(m,{colour:m.color?.clone(),emissive:m.emissive?.clone(),intensity:m.emissiveIntensity,opacity:m.opacity});};
@@ -47,7 +45,6 @@ function finder(scene){
   scene.traverse(o=>{if(!o.isMesh)return;if(o.isInstancedMesh&&o.name==='P6_atrium_downlights')found.downlights??=o;
    if(o.isInstancedMesh&&o.name==='P4_p6_reflection_lamp_stem'&&!o.material?.isMeshBasicMaterial)found.stems??=o;
    for(const m of Array.isArray(o.material)?o.material:[o.material]){if(!m)continue;
-    if(m.name==='P6_atrium_waterfall'&&m.map)found.fall??=m.map;
     if(/P6_sky_ceiling$/.test(m.name)&&m.map)found.skies.add(m.map);
     if(SHARED.has(m.name)||OWN.has(m.name))keep(m);}});
   return found;
@@ -147,7 +144,7 @@ export function createAtriumMood(light){
    if(ownAt!==n||ownCount!==found.materials.size){showOwn(found,n,pools,floorPools);ownAt=n;ownCount=found.materials.size;}
    if(floorPools?.visible&&stemsPlaced!==found.stems.instanceMatrix.version){stemsPlaced=found.stems.instanceMatrix.version;placePools(found.stems,floorPools);}
    showSky(found.skies,n);
-   if(inOpenAtrium()){mood+=(1-mood)*(1-Math.exp(-3*step));shown=mood;setMood(mood,found);if(found.fall)found.fall.offset.y=(found.fall.offset.y+step*.9)%1;}
+   if(inOpenAtrium()){mood+=(1-mood)*(1-Math.exp(-3*step));shown=mood;setMood(mood,found);}
    else if(shown){mood=shown=0;setMood(0,found);}
   },
   get mood(){return shown;},
