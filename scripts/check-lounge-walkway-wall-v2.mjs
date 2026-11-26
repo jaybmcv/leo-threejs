@@ -15,6 +15,7 @@ import {mesh,polygonGeometry} from '../src/v2/geometry.js';
 import {prepareLoungeFalls,createLoungeFalls} from '../src/walk/lounge-falls.js';
 import {prepareV2LoungeFalls} from '../src/v2/lounge-falls-fit.js';
 import {LOUNGE_WALKWAY_WALL as W,loungeWalkwayWallLine,loungeWalkwayEdgeZ} from '../src/v2/lounge-walkway-wall.js';
+import {LOUNGE_MURAL_X} from '../src/plan/lounge-layout-v2.js';
 
 // Report #427: the black wall under the open-floor edge of the lounge's Deck 18 walkway, built from the real lounge
 // source, room shell, clubhouse lift and fitted waterfall pond (no full ship build). Jay, 2026-11-24: it stops at the
@@ -41,7 +42,11 @@ assert.equal(wall.material.name,'Lounge_walkway_wall_black');assert(!wall.materi
 assert(solid(wall)&&!wall.userData.noCollide&&wall.userData.room==='commons-1','The wall collides and belongs to the lounge');
 const close=(a,b,e=.002)=>assert(Math.abs(a-b)<e,`${a} != ${b}`);
 close(plan.underside,28.02);close(box.min.y,r.y-W.foot);close(box.max.y,plan.underside+W.top);assert(box.max.y<28.3-.1,'The top stays inside the walkway slab');
-close(box.min.x,W.from,1e-4);close(box.max.x,W.to,1e-4);
+close(box.min.x,LOUNGE_MURAL_X,1e-4);close(box.max.x,W.to,1e-4);
+const seamX=LOUNGE_MURAL_X+.02,seamZ=loungeWalkwayEdgeZ(plan.line,seamX)+W.inset+W.thickness/2;
+const seamRay=new T.Raycaster(new T.Vector3(seamX,plan.underside-.1,seamZ),new T.Vector3(0,1,0),0,.2);
+const seam=seamRay.intersectObjects(structure.getObjectsByProperty('name','V2_garden_gallery'))[0];
+assert(seam,'The extended slab covers the black wall at the mural');close(seam.point.y,plan.underside);
 console.log('PASS one opaque matte black colliding wall, y',box.min.y.toFixed(2),'to',box.max.y.toFixed(2),'x',W.from,'to',W.to);
 
 // Every face points out of the wall: no bottom, the top up, the long faces toward the open floor or the lounge, and

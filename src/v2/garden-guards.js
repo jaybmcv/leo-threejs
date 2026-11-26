@@ -14,15 +14,20 @@ export function buildGardenGuards(parent,r,layout){
  const platforms=[...(r.components.galleries||[]),...(r.components.links||[]),...(r.components.landings||[])].map(p=>({...p,holes:galleryHoles(r,p)}));
  const stairs=(r.components.stairs||[]).map(t=>({...t,polygon:rectangle(t.center[0],t.center[2],t.size[0],t.size[2])}));
  const sourcePlatforms=[];if(r.id==='commons-1'){const at=(x,z)=>[r.x+x-132,r.z+r.side*(z-27)],poly=(x0,x1,z0,z1)=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]].map(([x,z])=>{const p=mazePoint([x,0,z]);return at(p[0],p[2]);}),m=LOUNGE.MAZE;for(const [i,y] of LOUNGE.LEVELS.entries())sourcePlatforms.push({y,polygon:poly(m.x0+.05,m.x1-.05,i?LOUNGE.SPLIT:m.z0,i?m.z1:LOUNGE.SPLIT)});for(const t of LOUNGE.TUBES)sourcePlatforms.push({y:t.level,polygon:[[Math.min(t.from,t.to)-.12,t.z-.875],[Math.max(t.from,t.to)+.12,t.z-.875],[Math.max(t.from,t.to)+.12,t.z+.875],[Math.min(t.from,t.to)-.12,t.z+.875]].map(([x,z])=>at(x,z))});}
- const panes=[],caps=[],feet=[],add=(a,b,y)=>{const length=Math.hypot(a[0]-b[0],a[1]-b[1]);if(length<.04)return;const yaw=-Math.atan2(b[1]-a[1],b[0]-a[0]),at=[(a[0]+b[0])/2,y+.55,(a[1]+b[1])/2];panes.push([[length+.025,1.1,.07],at,yaw]);caps.push([[length+.025,.045,.07],[at[0],y+1.1,at[2]],yaw]);if(r.id==='commons-1')feet.push([[length+.025,.04,.075],[at[0],y+.04,at[2]],yaw]);};
+ const panes=[],caps=[],feet=[],add=(a,b,y,muralEnd=false)=>{const length=Math.hypot(a[0]-b[0],a[1]-b[1]);if(length<.04)return;
+  // Keep the overlap at the old joint and stop flush at the mural.
+  const width=length+(muralEnd?.0125:.025),yaw=-Math.atan2(b[1]-a[1],b[0]-a[0]),at=[(a[0]+b[0])/2+(muralEnd?.00625:0),y+.55,(a[1]+b[1])/2];
+  panes.push([[width,1.1,.07],at,yaw]);caps.push([[width,.045,.07],[at[0],y+1.1,at[2]],yaw]);if(r.id==='commons-1')feet.push([[width,.04,.075],[at[0],y+.04,at[2]],yaw]);};
  const supported=(p,y,skip)=>sourcePlatforms.some(o=>Math.abs(o.y-y)<.13&&contains(o.polygon,p))||platforms.some(o=>o!==skip&&Math.abs(o.center[1]-y)<.42&&contains(o.polygon,p)&&!o.holes.some(h=>contains(h,p)))||stairs.some(t=>t.center[1]>=y-.42&&t.center[1]<=y+2.3&&contains(t.polygon,p))||layout.decks.some(d=>Math.abs(d.y-y)<.02&&contains(d.slab.outline,p)&&!d.slab.holes.some(h=>contains(h.polygon,p)));
  for(const o of platforms)for(const ring of [o.polygon,...o.holes])for(let i=0;i<ring.length;i++){
   const a=ring[i],b=ring[(i+1)%ring.length],dx=b[0]-a[0],dz=b[1]-a[1],length=Math.hypot(dx,dz);if(length<1e-6)continue;
   // The mural and its backing wall close the wall edge and the short return behind it.
   if(o.id==='commons-1-end-8'&&ring===o.polygon&&(dx===0&&a[0]===LOUNGE_MURAL_X||dz===0&&Math.max(a[0],b[0])<=LOUNGE_MURAL_X))continue;
+  const muralEdge=o.id==='commons-1-rear-4'&&ring===o.polygon;
+  if(muralEdge&&dx===0&&a[0]===LOUNGE_MURAL_X)continue;
   const n=Math.ceil(length/.12),at=t=>[a[0]+dx*t,a[1]+dz*t];let start=null;
   for(let k=0;k<=n;k++){const t=(k+.5)/n,p=at(Math.min(1,t)),test=sign=>[p[0]+sign*dz/length*.09,p[1]-sign*dx/length*.09],own=p=>contains(o.polygon,p)&&!o.holes.some(h=>contains(h,p)),left=test(1),right=test(-1),outside=own(left)?right:left,needs=k<n&&own(left)!==own(right)&&!supported(outside,o.center[1],o);
-   if(needs&&start===null)start=k/n;if(!needs&&start!==null){add(at(start),at(k/n),o.center[1]);start=null;}
+   if(needs&&start===null)start=k/n;if(!needs&&start!==null){const from=at(start),to=at(k/n);add(from,to,o.center[1],muralEdge&&dz===0&&Math.min(from[0],to[0])===LOUNGE_MURAL_X);start=null;}
   }
  }
  // Guard each flight side at that tread's own elevation, joining both galleries above cap height.

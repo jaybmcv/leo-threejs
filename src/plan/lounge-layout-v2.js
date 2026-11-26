@@ -22,6 +22,15 @@ export function applyLoungeBalconyCut(r){
 }
 export function applyLoungeWalkwayExtension(r){
  if(r?.id!=='commons-1'||!r.components)return;
+ const lower=r.components.galleries.find(g=>g.id==='commons-1-rear-4');
+ if(lower){
+  const x0=Math.min(...lower.polygon.map(p=>p[0]));
+  if(x0>LOUNGE_MURAL_X){
+   // Carry the full width of the Deck 18 rear gallery straight to the mural.
+   lower.polygon=lower.polygon.flatMap((a,i)=>{const b=lower.polygon[(i+1)%lower.polygon.length];return a[0]===x0&&b[0]===x0?[a,[LOUNGE_MURAL_X,a[1]],[LOUNGE_MURAL_X,b[1]]]:[a];});
+   lower.center[0]-=(x0-LOUNGE_MURAL_X)/2;lower.size[0]+=x0-LOUNGE_MURAL_X;
+  }
+ }
  const end=r.components.galleries.find(g=>g.id==='commons-1-end-8'),rear=r.components.galleries.find(g=>g.id==='commons-1-rear-8');if(!end||!rear)return;
  const x0=Math.min(...end.polygon.map(p=>p[0])),x1=Math.max(...end.polygon.map(p=>p[0])),z1=Math.max(...end.polygon.map(p=>p[1]));
  const z0=Math.min(...end.polygon.filter(p=>p[0]===x0).map(p=>p[1]));

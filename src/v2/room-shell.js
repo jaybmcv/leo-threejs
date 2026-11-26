@@ -47,11 +47,11 @@ export function buildRoomShell(ship,r,structure){
    const slab=polygonGeometry(o.polygon,holes,o.center[1],o.size[1]);
    if(r.id==='commons-1'&&['commons-1-rear-4','commons-1-gallery-link-4','commons-1-stair-turn'].includes(o.id))landingFloors.push(slab);
    else if(['commons-1-rear-8','commons-1-end-8'].includes(o.id))muralFloors.push(slab);else mesh(g,'V2_garden_gallery',slab,floor);
-   if(o.id==='commons-1-end-8'){
+   if(o.id==='commons-1-end-8'||o.id==='commons-1-rear-4'){
     const zs=o.polygon.filter(p=>p[0]===LOUNGE_MURAL_X).map(p=>p[1]);
     if(zs.length===2){
      // Stop the walker at the wallpaper plane so the first-person eye stays in the room.
-     const y=o.center[1],height=r.y+r.height-y,wall=box(g,'V2_lounge_wall_collision',[.02,height,Math.abs(zs[1]-zs[0])],[LOUNGE_MURAL_X-.01,y+height/2,(zs[0]+zs[1])/2]);
+     const y=o.center[1],height=o.id==='commons-1-rear-4'?4:r.y+r.height-y,wall=box(g,'V2_lounge_wall_collision',[.02,height,Math.abs(zs[1]-zs[0])],[LOUNGE_MURAL_X-.01,y+height/2,(zs[0]+zs[1])/2]);
      wall.visible=false;Object.assign(wall.userData,{collisionOnly:true,baked:true});
     }
    }}

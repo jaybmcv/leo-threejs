@@ -30,6 +30,13 @@ const BALCONY_RUNS=[
  {level:LEVELS[1],points:[[120.5,14],[155,14]],offset:[0,.45]},
  {level:LEVELS[1],points:[[109.5,25.07],[112.5,26.001],[120,27.882],[132.5,30.727],[144.5,31.848],[156.5,32.009]],offset:[0,-.45]}
 ];
+// Fill the bare span from the mural to the first lower rear string, keeping the other spans in place.
+const LOWER_REAR_STRING=(()=>{
+ const r=layout.rooms.find(r=>r.id==='commons-1'),rear=r.components.galleries.find(g=>g.id==='commons-1-rear-4');
+ const x=Math.min(...rear.polygon.map(p=>p[0])),z=Math.max(...rear.polygon.filter(p=>p[0]===x).map(p=>p[1]));
+ const local=([x,z])=>[x-r.x+132,27+r.side*(z-r.z)];
+ return {level:LEVELS[0],points:[local([x,z]),local(rear.polygon[0]),BALCONY_RUNS[1].points[0]],offset:BALCONY_RUNS[1].offset,bulbs:7};
+})();
 const BALCONY_CUT=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1');return 27+r.side*(LOUNGE_PLAN.balconyEnd-r.z);})();
 // The two stair flights at the rear galleries' east end are solid under their treads: the lights keep out of them.
 const STAIR_FLIGHTS=[{level:LEVELS[0],x0:155.1,x1:158.4,z0:30.8,z1:38.6},{level:LEVELS[1],x0:151.8,x1:155,z0:30.8,z1:38.1}];
@@ -574,9 +581,9 @@ export function createHydroNipLounge({mirror=1}={}){
  const tubeAt=(x,z,lvl,pad)=>TUBES.some(t=>Math.abs(x-t.to)<1&&Math.abs(z-t.z)<(t.half||TUBE.r)+pad&&(lvl===undefined||lvl===t.level));
  // The lights hang in open air at the gallery edges: not through a stair flight, and not solid to a jumper in the room below.
  const stairAt=(x,z,lvl,pad)=>STAIR_FLIGHTS.some(f=>f.level===lvl&&x>f.x0-pad&&x<f.x1+pad&&z>f.z0-pad&&z<f.z1+pad),hang=loose(M.dark),pots=loose(M.pot);
- for(const{level,points,offset}of BALCONY_RUNS){const y=level-.32,lengths=points.slice(1).map((b,i)=>Math.hypot(b[0]-points[i][0],b[1]-points[i][1])),len=lengths.reduce((a,b)=>a+b,0),spans=Math.max(1,Math.round(len/4.5));
+ for(const{level,points,offset,bulbs:n=8}of [...BALCONY_RUNS,LOWER_REAR_STRING]){const y=level-.32,lengths=points.slice(1).map((b,i)=>Math.hypot(b[0]-points[i][0],b[1]-points[i][1])),len=lengths.reduce((a,b)=>a+b,0),spans=Math.max(1,Math.round(len/4.5));
   const pointAt=t=>{let d=len*t;for(let i=0;i<lengths.length;i++){const part=lengths[i];if(d<=part||i===lengths.length-1){const a=points[i],b=points[i+1],f=part?d/part:0;return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];}d-=part;}return points.at(-1);};
-  for(let s=0;s<spans;s++){let prev=null;const n=8;
+  for(let s=0;s<spans;s++){let prev=null;
    // Retire whole hanging spans over the cut; consume the same seed so the curved edge stays unchanged.
    omit=points===BALCONY_RUNS[0].points&&pointAt((s+1)/spans)[1]>BALCONY_CUT;
    for(let i=0;i<=n;i++){const t=(s+i/n)/spans,[x,z]=pointAt(t),sag=.35*(1-(2*i/n-1)**2),p=[x,y-sag,z];

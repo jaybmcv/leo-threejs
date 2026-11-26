@@ -192,3 +192,41 @@ console.log('PASS: velvet, 65 mm transitions and clipped floor borders on Decks 
  }
  console.log('PASS Deck 19 mural infill: flush carpet and underside, joined orange glass guard, solid wall and level round trip');
 }
+
+// The Deck 18 rear gallery itself reaches the mural at its existing width.
+{
+ const r=layout.rooms.find(r=>r.id==='commons-1'),rear=r.components.galleries.find(g=>g.id==='commons-1-rear-4');
+ const xWall=SYNTHWAVE_MURAL.x,xJoin=-139,y=rear.center[1],z0=-51.1270888,z1=-47.1270888;
+ const root=new T.Group(),ship={root,inside:root,cutaway:new Set()};buildRoomShell(ship,r,root);applyLoungeFloorFinish(ship);root.updateMatrixWorld(true);
+ const slabs=root.getObjectsByProperty('name','V2_garden_gallery'),ray=new T.Raycaster();
+ const cast=(x,y,z,dx,dy,dz,objects,far)=>{ray.set(new T.Vector3(x,y,z),new T.Vector3(dx,dy,dz));ray.far=far;return ray.intersectObjects(objects);};
+ for(const x of [xWall+.002,-140,-139.01,-138.99])for(const z of [z0+.05,-49.4,z1-.05]){
+  for(const [level,sign] of [[y,-1],[y-rear.size[1],1]]){
+   const [hit,other]=cast(x,level-sign*.1,z,0,sign,0,slabs,.2);
+   assert(hit&&!other&&Math.abs(hit.point.y-level)<.00002,'One continuous slab face across the new span');
+   assert.equal(hit.object.material.name,'Lounge_velvet_carpet');
+  }
+ }
+ for(const [x,z] of [[xWall-.002,-49.4],[-140,z0-.05],[-140,z1+.05],[-140,-43]])assert.equal(cast(x,y+.1,z,0,-1,0,slabs,.2).length,0,'The slab stays within the mural and the original width');
+ for(const [name,h] of [['V2_garden_guard_glass',.6],['V2_garden_guard_cap',1.1],['Lounge_rail_glow',.04]]){
+  const rails=root.getObjectsByProperty('name',name);
+  if(name!=='V2_garden_guard_glass')assert.equal(rails[0].material.color.getHex(),0xff6b20);
+  for(const x of [xWall+.002,-140,-139.01,-138.99])for(const dir of [-1,1])assert(cast(x,y+h,-49.4,0,0,dir,rails,2.5).length,'Continuous side rail '+name);
+  for(const z of [z0+.4,-49.4,z1-.4])assert.equal(cast(xJoin+.25,y+h,z,-1,0,0,rails,2).length,0,'Open gallery end has no cross rail '+name);
+  for(const z of [z0,z1])assert.equal(cast(xWall-.002,y+h,z+.1,0,0,-1,rails,.1).length,0,'Side rail stops at the mural '+name);
+ }
+ const col=installGround(new Colliders(),new Colliders());col.addStatic(root,solid);col.commit();
+ const walker=new Controller(col),start=new T.Vector3(-137,y,-48.8);
+ const walk=(x,z,seconds)=>{const wish=new T.Vector3(x,0,z);for(let i=0;i<seconds*120;i++){
+  walker.step(1/120,wish);assert(walker.grounded&&Math.abs(walker.position.y-y)<.001,'Deck 18 walking support across the extension');
+ }};
+ walker.place(start);walk(-2.25,0,3);
+ assert(Math.abs(walker.position.x-xWall-walker.body.radius)<.02,'Cat crosses the old end and stops at the mural');
+ const stopped=walker.position.clone();walk(-2.25,0,.5);assert(walker.position.distanceTo(stopped)<.02);
+ walk(2.25,0,1.5);assert(walker.position.distanceTo(start)<.25,'Cat walks back to the original gallery');
+ for(const [dir,edge] of [[-1,z0],[1,z1]]){
+  walker.place(stopped);walk(0,dir*2.25,2);
+  assert(Math.abs(walker.position.z-edge+dir*(walker.body.radius+.035))<.02,'Glass rail stops the cat at the side of the new span');
+ }
+ console.log('PASS Deck 18 rear gallery: full-width slab and orange glass rails meet the mural, both rails stop the cat, and the level route returns');
+}

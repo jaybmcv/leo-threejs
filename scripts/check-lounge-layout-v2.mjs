@@ -114,7 +114,7 @@ for(let x=-140.4;x<=-137.6;x+=.4)for(let z=-46.8;z<=-39.2;z+=.4){ray.origin.set(
 route('Deck 18 retained maze access',[[-140,28.3,-30],[-139,28.3,-30],[-139,28.3,-37.8],[-137.5,28.3,-37.8]]);
 const guardRay=new T.Raycaster(new T.Vector3(),new T.Vector3(1,0,0),0,1);
 for(const [name,y]of [['V2_garden_guard_glass',28.9],['V2_garden_guard_cap',29.4]]){const guards=structure.getObjectsByProperty('name',name);
- for(let z=-50.7;z<=-47.4;z+=.1){guardRay.set(new T.Vector3(-139.4,y,z),new T.Vector3(1,0,0));assert(guardRay.intersectObjects(guards).length,'Curved balcony cut needs continuous '+name+' at '+z);}
+ for(let z=-50.7;z<=-47.55;z+=.1){guardRay.set(new T.Vector3(-139.4,y,z),new T.Vector3(1,0,0));assert.equal(guardRay.intersectObjects(guards).length,0,'The former cross rail must leave the rear gallery extension open');}
  for(let x=-140.7;x<=-137.3;x+=.1){guardRay.set(new T.Vector3(x,y,-39.1),new T.Vector3(0,0,1));assert(guardRay.intersectObjects(guards).length,'Maze balcony cut needs continuous '+name+' at '+x);}
  assert(guards.every(o=>name.endsWith('_glass')||o.material.color.getHex()===0xff6b20),'Retain the orange cap material');
 }

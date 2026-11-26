@@ -101,6 +101,9 @@ for(const g of [...r.components.galleries,...r.components.links]){
  if(Math.abs(g.center[0]-portal.x)>g.size[0]/2||Math.abs(g.center[2]-portal.z)>g.size[2]/2||g.center[1]<portal.y)continue;
  assert(portal.y+portal.height*.54<g.center[1]-g.size[1]-.01,'The complete oval and halo clear the upper gallery underside');
 }
+const rear=r.components.galleries.find(g=>g.id==='commons-1-rear-4');
+const inboardZ=Math.max(...rear.polygon.filter(([x])=>x===SYNTHWAVE_MURAL.x).map(([,z])=>z));
+assert(inboardZ+.04<portal.z-portal.width*.54,'The new rear gallery and its rail clear the entire portal halo and arrival column');
 assert.equal(mat.blending,T.AdditiveBlending);assert(mat.transparent&&!mat.depthWrite&&!mat.toneMapped&&mesh.userData.noCollide);assert(!('near' in effect)&&!('solid' in effect),'No action or collision');
 effect.update(1,new T.Vector3(),false,null);close(mat.uniforms.uTime.value,1);
 const near=new T.Vector3(portal.x,portal.y,portal.z);assert(hydroPortalLevel(near,true)>0&&hydroPortalLevel(near,true)<=.045);assert.equal(hydroPortalLevel(near,false),0);
@@ -204,7 +207,7 @@ for(const suffix of ['','.public','.prepared','.authoring']){
  assert(main.includes('hydroCargoPortal=createHydroPortal(HYDRO_CARGO_PORTAL);toBand(hydroCargoPortal.group,HYDRO_CARGO_PORTAL.floor)'),'Every walk draws the Deck 2 entry in its own band');
  assert(main.includes('hydroCargoPortal?.update(dt,p,ambience.on,camera)'),'Every walk animates and spatializes the Deck 2 entry');
  assert(main.includes('const hydro=inBall?null:hydroCargoPortal?.prompt(p);if(hydro)return hydro;'),'Every walk supplies the Deck 2 approach prompt to the HUD');
- assert(main.includes("const waiting=t?.kind==='waiting'||!!t?.passive;")&&main.includes('prompt.hidden=!show||touch&&!t?.passive;')&&main.includes("$('use').hidden=!show||!!t?.passive;"),'Walk-in instructions are visible on desktop and touch without a use button');
+ assert(main.includes("const waiting=t?.kind==='waiting'||!!t?.passive;")&&main.includes('prompt.hidden=frogTrip.active||!show||touch&&!t?.passive;')&&main.includes("$('use').hidden=frogTrip.active||!show||!!t?.passive;"),'Walk-in instructions are visible on desktop and touch without a use button');
  assert(main.includes('hydroTravel.step(p,canHook&&input.enabled&&!playing()&&controller.grounded,goTo)'),'Uses the regular Go-to teleport before pose and room updates');
  assert(main.indexOf('hydroTravel.step(')<main.indexOf('live?.pose(myPose('));
 }

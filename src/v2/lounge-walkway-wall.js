@@ -1,15 +1,16 @@
 import * as T from 'three';
 import {mesh} from './geometry.js';
+import {LOUNGE_MURAL_X} from '../plan/lounge-layout-v2.js';
 
 // Report #427: a plain matte black wall under the open-floor edge of the lounge's Deck 18 walkway (commons-1-rear-4),
-// from the Deck 17 floor to the walkway's underside and from the synthwave wall (x -141) to the hall wall (x -88).
+// from the Deck 17 floor to the walkway's underside and from the mural face to the hall wall (x -88).
 // Jay (2026-11-24): it stops at the waterfall pond's rim on each side, and the causeway through the falls is the way
 // between the open floor and the lounge. `pond` is that opening: the fitted pond's rim stones and the leaves on them reach
 // x -103.30 to -96.10 on this line (after #426 moved it toward the hall) (scripts/check-lounge-walkway-wall-v2.mjs holds the wall to the pond as it is built).
 // Where the Terpene Tasting Deck's back bar crosses the line (x -129 to -127.65) the wall meets it; the bar stays put.
-export const LOUNGE_WALKWAY_WALL={gallery:'commons-1-rear-4',from:-141,to:-88,pond:[-103.33,-96.07],inset:.01,thickness:.1,foot:.05,top:.04};
+export const LOUNGE_WALKWAY_WALL={gallery:'commons-1-rear-4',from:LOUNGE_MURAL_X,to:-88,pond:[-103.33,-96.07],inset:.01,thickness:.1,foot:.05,top:.04};
 
-// The walkway's open-floor edge, -88 to -141 in x: the most outboard (lowest z) vertex of the gallery at each x. Past the
+// The walkway's open-floor edge: the most outboard (lowest z) vertex of the gallery at each x. Past the
 // slab's ends it runs straight on to the end walls.
 export function loungeWalkwayWallLine(r){
  const w=LOUNGE_WALKWAY_WALL,g=r?.components?.galleries?.find(g=>g.id===w.gallery);if(!g)return null;
