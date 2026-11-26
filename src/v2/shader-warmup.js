@@ -38,18 +38,29 @@ function* lightStates(groups){
 
 /** `lights`: groups of lights the walk shows and hides. Resolves once every shader is ready or after `waitMs`, whichever
  * is first (the rest go on compiling), with what was done and the textures for uploadTextures. Never rejects: a
- * failure only leaves those shaders to compile when first seen. */
-export async function warmShaders(renderer,scene,camera,{lights=[],waitMs=WARM_WAIT_MS}={}){
+ * failure only leaves those shaders to compile when first seen.
+ * `turn`: while someone walks the arrival hall as the walk starts (arrival-preview.js), the same samples are handed to
+ * three a few at a time instead, each few for every light state (put back before each turn), with `turn()` awaited
+ * once SLICE_MS has gone since the last: one go took 1-1.5 s of the page's thread, a freeze of the hall. */
+const CHUNK=4,SLICE_MS=24;
+export async function warmShaders(renderer,scene,camera,{lights=[],waitMs=WARM_WAIT_MS,turn=null,sliceMs=SLICE_MS}={}){
  const t0=performance.now(),before=count(renderer),proof={samples:0,programs:0,ready:false,ms:0};let textures=new Set();
  try{
   const found=shaderSamples(scene);textures=found.textures;proof.samples=found.samples.length;
   // three's compile walks `traverse` for meshes and `traverseVisible` for lights: the scene's own lights count once.
-  const stand={traverse:fn=>found.samples.forEach(fn),traverseVisible(){}};
-  for(const _ of lightStates(lights))renderer.compileAsync(stand,camera,scene).catch(()=>{});
+  const standFor=samples=>({traverse:fn=>samples.forEach(fn),traverseVisible(){}});
+  let failed=false;
+  if(turn){let slice=performance.now();
+   for(let k=0;k<found.samples.length;k+=CHUNK){const stand=standFor(found.samples.slice(k,k+CHUNK));
+    // As compileAsync below: compile's own work, the waiting is the poll's. A few that fail leave the rest to compile,
+    // and the warm-up is then not ready.
+    for(const _ of lightStates(lights))try{renderer.compile(stand,camera,scene);}catch(e){if(!failed)console.warn('Shader warm-up: some shaders did not compile.',e);failed=true;}
+    if(performance.now()-slice>=sliceMs){await turn();slice=performance.now();}}}
+  else for(const _ of lightStates(lights))renderer.compileAsync(standFor(found.samples),camera,scene).catch(()=>{});
   // compileAsync watches only each material's latest program, so the other light state's would go unwatched: wait on
   // every program instead.
   const programs=[...(renderer.info.programs||[])],end=performance.now()+waitMs;
-  proof.ready=await new Promise(resolve=>{const poll=()=>{if(programs.every(p=>p.isReady?.()??true))resolve(true);else if(performance.now()>end)resolve(false);else setTimeout(poll,10);};poll();});
+  proof.ready=await new Promise(resolve=>{const poll=()=>{if(programs.every(p=>p.isReady?.()??true))resolve(true);else if(performance.now()>end)resolve(false);else setTimeout(poll,10);};poll();})&&!failed;
  }catch(e){console.warn('Shader warm-up stopped.',e);}
  proof.programs=count(renderer)-before;proof.ms=Math.round(performance.now()-t0);
  return {proof,textures};

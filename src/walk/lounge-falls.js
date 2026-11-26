@@ -4,6 +4,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {roomObject} from '../plan/rooms.js';
 import {seeded} from '../polish-kit.js';
 import {LOUNGE} from '../hydro-nip-lounge.js';
+import {POND,PATH,LANDING,FALL,BENCH,fallZ} from '../v2/lounge-falls-layout.js';
 
 // The Hydro-Nip Lounge's waterfall pond on foot (from tester feedback). The shared kitchen island and its four chairs
 // between the Terpene Tasting Deck and the broad stair give way to a rock-rimmed pond. A sheet of glowing water falls
@@ -13,23 +14,14 @@ import {LOUNGE} from '../hydro-nip-lounge.js';
 // mushrooms sit on the rim, vines hang from the lip's ends, and the water lights the floor, the wall and the gallery's
 // underside round it.
 // The water is two small shaders (the falling sheet and the pond's surface), no textures and no lights.
-// Frame: the commons template (model.js), as the lounge is built (hydro-nip-lounge.js): floor 24.3, the rear galleries
-// z 42-46 at 28.3 and 32.3, the back wall at z 46. Neighborhood 1's commons moves it aft and mirrors it.
+// Frame: the commons template, moved aft and mirrored by Neighborhood 1.
 const {FLOOR,LEVELS}=LOUNGE;
-// The pond: a rounded rectangle (a superellipse) between the tasting deck (x 126.5) and the stair's planter (x 147.25),
-// clear of the dome's planter ring (z 32.45) in front. Its bed is solid just under the water; its rim is too high to
+// The pond is narrowed between the dome and stair planter. Its bed is solid just under the water; its rim is too high to
 // step in over from the floor but low enough to step out over from the bed.
-const POND={x:137,z:39,a:6.2,b:4.4,n:3},BED=FLOOR+.22,WATER=FLOOR+.27,RIM=FLOOR+.58;
-const PATH={x0:136.1,x1:137.9,z0:33.9,z1:43.05,top:FLOOR+.36,step:33.3,rail:34.3},LANDING={x0:133.4,x1:140.6,z0:43,z1:45.86,top:FLOOR+.36};
-// The falls: from the lip under the upper gallery's edge (its slab is 32.02-32.3, its front at z 42) to the water,
-// leaning out a little at the foot. The lower gallery's railing is at z 42, just behind the sheet.
-const FALL={x0:132.6,x1:141.4,z:41.82,lip:LEVELS[1]-.28-.26,reach:.35},BENCH={x:137,z:45.5,width:2.4};
+const BED=FLOOR+.22,WATER=FLOOR+.27,RIM=FLOOR+.58;
+// The sheet follows the pond-side edge of Deck 19, clear of the Deck 18 rail behind it.
 const NEAR=50,CYAN=0x46e6ff;
-// The whole assembly (header, falls, pond, causeway, landing, bench, rocks, plants, light, sound) stands SHIFT metres along
-// the ship's +X from the template frame above, toward the stair. 0.75 m keeps the pond's east rim off the x -102 floor
-// samples of the room's walk check (scripts/v2-walk.mjs wants 80% of them reached; at 1 m the rim covered that column)
-// and still leaves over 1 m of floor between its plants and the stair planter's (x 147.25 in the frame; its leaves reach 146.85).
-const SHIFT=.75,MOVE=new T.Matrix4().makeTranslation(SHIFT,0,0);
+const MOVE=new T.Matrix4();
 // What the pond replaces: the kitchen island, its hobs, sink and worktop edge, and the seam over its chairs.
 const OLD=/^(Shared_kitchen_island|Induction_hob|Kitchen_sink|Kitchen_worktop_edge|Polish_tailored_seam)$/,ISLAND={x0:126.5,x1:136.5,z0:36,z1:40.5};
 
@@ -66,7 +58,7 @@ export function prepareLoungeFalls(ship){
 
 // The bench against the back wall, facing the falls: oak slats on stone ends, with a back.
 function bench(){
- const g=new T.Group();g.name='Lounge_falls_bench';g.position.x=SHIFT;
+ const g=new T.Group();g.name='Lounge_falls_bench';
  const oak=new T.MeshStandardMaterial({name:'Lounge_falls_bench_oak',color:0x8a5a36,roughness:.7}),stone=new T.MeshStandardMaterial({name:'Lounge_falls_bench_stone',color:0x8d8a80,roughness:.9,flatShading:true});
  const part=(name,size,[x,y,z],mat,tilt=0)=>{const o=new T.Mesh(new T.BoxGeometry(...size),mat);o.name=name;o.position.set(BENCH.x+x,LANDING.top+y,BENCH.z+z);o.rotation.x=tilt;o.castShadow=o.receiveShadow=true;g.add(o);};
  part('Garden_bench_cushion',[BENCH.width,.08,.46],[0,.43,-.02],oak);
@@ -171,16 +163,16 @@ function createUnfittedLoungeFalls(ship){
   for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getY(i);p.setXYZ(i,x,WATER,z);uv.setXY(i,x,z);}
   // (Built in x, z with the face down; turned up.)
   const ix=g.index.array;for(let i=0;i<ix.length;i+=3)[ix[i+1],ix[i+2]]=[ix[i+2],ix[i+1]];g.computeVertexNormals();
-  const o=new T.Mesh(g,new T.ShaderMaterial({name:'Lounge_falls_pool',vertexShader:VERTEX,fragmentShader:POOL,uniforms:{uTime:time,uFall:{value:new T.Vector3(FALL.x0,FALL.x1,FALL.z-FALL.reach)}}}));
+  const o=new T.Mesh(g,new T.ShaderMaterial({name:'Lounge_falls_pool',vertexShader:VERTEX,fragmentShader:POOL,uniforms:{uTime:time,uFall:{value:new T.Vector3(FALL.x0,FALL.x1,fallZ(POND.x)-FALL.reach)}}}));
   o.name='Lounge_falls_pool';frame.add(o);}
  {const w=FALL.x1-FALL.x0,h=FALL.lip-WATER,g=new T.PlaneGeometry(1,1,32,40),p=g.attributes.position,uv=g.attributes.uv;
-  for(let i=0;i<p.count;i++){const u=p.getX(i)+.5,t=.5-p.getY(i);p.setXYZ(i,FALL.x0+u*w,FALL.lip-t*h,FALL.z-FALL.reach*t**3);uv.setXY(i,u*w,t*h);}
+  for(let i=0;i<p.count;i++){const u=p.getX(i)+.5,t=.5-p.getY(i),x=FALL.x0+u*w;p.setXYZ(i,x,FALL.lip-t*h,fallZ(x)-FALL.reach*t**3);uv.setXY(i,u*w,t*h);}
   const o=new T.Mesh(g,new T.ShaderMaterial({name:'Lounge_falls_sheet',vertexShader:VERTEX,fragmentShader:SHEET,transparent:true,depthWrite:false,side:T.DoubleSide,uniforms:{uTime:time,uSize:{value:new T.Vector2(w,h)}}}));
   o.name='Lounge_falls_sheet';o.renderOrder=2;frame.add(o);}
  // The lip: a stone spout hung on the upper gallery's front edge, under its floor, lit cyan along its underside.
- slab(FALL.x0-.3,FALL.x1+.3,41.5,41.98,FALL.lip-.02,LEVELS[1]-.28,new T.Color(0x9a958a));
- put(M.glow,new T.BoxGeometry(FALL.x1-FALL.x0+.5,.03,.03).translate((FALL.x0+FALL.x1)/2,FALL.lip-.035,41.53),CYAN);
- for(let x=FALL.x0-.2;x<FALL.x1+.25;x+=.45+rnd()*.25)rock(.09+rnd()*.05,[x,LEVELS[1]-.27,41.56+rnd()*.1],1.4,.6,0,1.05);
+ for(let x=FALL.x0;x<FALL.x1-.001;x+=.2){const end=Math.min(x+.2,FALL.x1),z=fallZ((x+end)/2);
+  slab(x,end,z-.22,z+.015,FALL.lip-.045,FALL.lip+.015,new T.Color(0x9a958a));
+  put(M.glow,new T.BoxGeometry(end-x,.018,.018).translate((x+end)/2,FALL.lip-.045,z),CYAN);}
 
  // The causeway: a stone body over the water, flagstones on top, a low step at its foot; and the landing behind the
  // falls, flagged the same, its front face over the water.
@@ -219,7 +211,7 @@ function createUnfittedLoungeFalls(ship){
  for(const p of spots)fern(p,RIM-.08,.85+rnd()*.35);
  for(const [x,z] of [[LANDING.x0+.35,LANDING.z1-.35],[LANDING.x1-.35,LANDING.z1-.35]])fern([x,z],LANDING.top,1.3);
  // Vines hanging from both ends of the lip, down toward the lower gallery's railing.
- for(const s of [-1,1])for(let k=0;k<4;k++){const x=(s<0?FALL.x0-.15:FALL.x1+.15)+s*k*.12,z=41.62+rnd()*.15,len=1.6+rnd()*1.6;
+ for(const s of [-1,1])for(let k=0;k<4;k++){const x=(s<0?FALL.x0-.15:FALL.x1+.15)+s*k*.12,z=fallZ(x)-.04+rnd()*.1,len=1.6+rnd()*1.6;
   for(let d=0;d<len;d+=.16){const y=FALL.lip-d,px=x+Math.sin(d*2.3+k)*.06;blade(greens[(k+Math.round(d*5))%greens.length],new T.Vector3(px,y,z),new T.Vector3(px+Math.cos(d*3+k)*.13,y-.04,z-.06+Math.sin(d*3+k)*.05),.05);}}
 
  // Glowing mushrooms in clusters on the rim, on the landing's corners and either side of the causeway's foot.
@@ -241,7 +233,7 @@ function createUnfittedLoungeFalls(ship){
   put(M.halo,ring,v=>{const d=Math.hypot((v.x-POND.x)/POND.a,(v.z-POND.z)/POND.b);return d<1.2?inner:black;});}
  const wash=(g,color,fade)=>put(M.halo,g,v=>new T.Color(color).multiplyScalar(fade(v)));
  wash(new T.PlaneGeometry(FALL.x1-FALL.x0+2,28-LANDING.top,8,4).rotateY(Math.PI).translate((FALL.x0+FALL.x1)/2,(28+LANDING.top)/2,45.84),CYAN,v=>.2*(1-Math.min(1,Math.abs(v.x-POND.x)/((FALL.x1-FALL.x0)/2+1)))*(.6+.4*(28-v.y)/(28-LANDING.top)));
- wash(new T.PlaneGeometry(FALL.x1-FALL.x0+2,3.8,8,2).rotateX(Math.PI/2).translate((FALL.x0+FALL.x1)/2,LEVELS[0]-.3,43.95),CYAN,v=>.22*(1-Math.min(1,Math.abs(v.x-POND.x)/((FALL.x1-FALL.x0)/2+1)))*(1-(v.z-42.05)/4.5));
+ wash(new T.PlaneGeometry(FALL.x1-FALL.x0+2,3,8,2).rotateX(Math.PI/2).translate((FALL.x0+FALL.x1)/2,LEVELS[0]-.3,39.4),CYAN,v=>.22*(1-Math.min(1,Math.abs(v.x-POND.x)/((FALL.x1-FALL.x0)/2+1)))*(1-(v.z-37.9)/3));
 
  for(const [mat,gs] of lists){const g=mergeGeometries(gs);gs.forEach(x=>x.dispose());const o=new T.Mesh(g,mat);o.name=mat.name;
   o.castShadow=mat===M.stone||mat===M.rope;o.receiveShadow=!mat.transparent;if(mat===M.halo)o.renderOrder=1;frame.add(o);}
@@ -250,8 +242,8 @@ function createUnfittedLoungeFalls(ship){
  return {group,solid,
   update(dt,walker){if(walker.distanceTo(here.copy(centre))<NEAR)time.value+=Math.min(dt,.1);},
   // For checks: the pond's middle and the bench, in the ship's coordinates.
-  centre,bench:new T.Vector3(BENCH.x+SHIFT,LANDING.top,BENCH.z).applyMatrix4(lounge.matrixWorld),
-  soundLine:{a:new T.Vector3(FALL.x0+SHIFT,FLOOR,FALL.z).applyMatrix4(lounge.matrixWorld),b:new T.Vector3(FALL.x1+SHIFT,FLOOR,FALL.z).applyMatrix4(lounge.matrixWorld)},
+  centre,bench:new T.Vector3(BENCH.x,LANDING.top,BENCH.z).applyMatrix4(lounge.matrixWorld),
+  soundLine:{a:new T.Vector3(FALL.x0,FLOOR,fallZ(FALL.x0)).applyMatrix4(lounge.matrixWorld),b:new T.Vector3(FALL.x1,FLOOR,fallZ(FALL.x1)).applyMatrix4(lounge.matrixWorld)},
  };
 }
 
