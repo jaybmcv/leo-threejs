@@ -805,7 +805,9 @@ function goToSpot(spot){spot=remapSpot(spot);if(!goTo({at:spot.at,yaw:spot.yaw,r
 
 async function loadCosmo(){
  await loadCosmoScript(T);
- walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion);walker.setFur(furColour);wardrobe=createWardrobe(walker.figure);wardrobe.set(outfit);scene.add(walker.holder);
+ // Your own cat draws as one skinned mesh per material, as other visitors do (merged-skin.js): 4 draws, not 15.
+ // ?walkermerge=0 draws it part by part, as before, for an A/B.
+ walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion,{mergeDraws:new URLSearchParams(location.search).get('walkermerge')!=='0'});walker.setFur(furColour);wardrobe=createWardrobe(walker.figure,{reskin:walker.reskin});wardrobe.set(outfit);scene.add(walker.holder);
  cosmoKit=await globalThis.LeoCosmo.createCosmoKit({poses:[...KITTEN_POSE_NAMES,...ACTOR_POSE_NAMES,'scanPatient']});
 }
 
