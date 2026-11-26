@@ -7,6 +7,10 @@ import {BRIDGES,createCatTree} from '../src/walk/cat-tree.js';
 import {phase6Programme} from '../src/v2/phase6-programme.js';
 import {planVoidGuards} from '../src/v2/void-guards.js';
 import {polygonGeometry} from '../src/v2/geometry.js';
+import {createShipArea,SHIP_AREAS} from '../src/areas.js';
+import {toWorld} from '../src/plan/rooms.js';
+import {openingPlan,openArrivalAtrium,TREE as ARRIVAL_TREE} from '../src/walk/arrival-atrium.js';
+import {isArrivalTreeDrop} from './v2-walk-policy.mjs';
 const parts=phase6Programme(layout).parts,tree=createCatTree(null);
 
 // Each Great Cat Tree bridge lands on its bow cafe's aft wall: the cafe's real shell (src/v2/room-shell.js) must leave a
@@ -32,3 +36,26 @@ for(const b of BRIDGES){
  assert.equal(rows.length,0,`Deck ${b.deck}: an atrium-edge guard crosses the bridge's landing: ${JSON.stringify(rows)}`);
  console.log(`PASS Deck ${b.deck} bridge lands in a ${door.width} m doorway in ${r.id} (wall solid either side, no fit-out or edge guard in the way)`);
 }
+
+// The arrival hall has its own climbing tree and a short bridge into Hydroponic garden A.
+const root=new T.Group(),ship={root,inside:root,cutaway:new Set()},structure=new T.Group();root.add(structure);
+for(const id of ['d02-arrival-1','d03-farm-1']){
+ root.add(createShipArea(SHIP_AREAS.find(a=>a.id===id)).root);
+ buildRoomShell(ship,layout.rooms.find(r=>r.id===id),structure);
+}
+assert(openArrivalAtrium(ship));
+root.traverse(o=>assert(!o.name.startsWith('Cat_tree_top_guard'),`Arrival top platform still has ${o.name}`));
+for(const name of ['Cat_tree_platform','Cat_tree_branch','Cat_tree_bridge','Atrium_rail_cap','Atrium_trough','Atrium_balustrade_guard']){
+ assert(root.getObjectByName(name),`Missing ${name}`);
+}
+const arrivalCol=new Colliders();arrivalCol.addStatic(root);arrivalCol.commit();
+const [,topHeight]=ARRIVAL_TREE.platforms.at(-1),topZ=ARRIVAL_TREE.z+ARRIVAL_TREE.reach;
+const at=(dx,y,dz)=>toWorld('arrival-assembly',[ARRIVAL_TREE.x+dx,y,topZ+dz]);
+const seg=new T.Line3(),blocked=([x,y,z])=>{seg.start.set(x,y+.75,z);seg.end.set(x,y+1.65,z);return arrivalCol.overlaps(seg,.35);};
+for(const dx of [-.45,.45])for(const dz of [-.35,0,.3,.65])assert(!blocked(at(dx,topHeight,dz)),'A collider blocks the old cage flank');
+const opening=openingPlan(),[,floorY]=at(0,0,0),[,platformY]=at(0,topHeight,0),feet=[[0,0],[.18,0],[-.18,0],[0,.18],[0,-.18]];
+const policy={opening,floorY,platformY,feet},drop={from:at(-.7,topHeight,-.2),to:at(-1.05,.85,-.2),drop:topHeight-.85};
+assert(isArrivalTreeDrop(drop,policy),'An intentional drop from the top platform to the hall must pass');
+assert(!isArrivalTreeDrop({...drop,to:at(-1.05,-.3,-.2)},policy),'A drop below the hall must still fail');
+assert(!isArrivalTreeDrop({...drop,from:at(2,topHeight,-.2)},policy),'A nearby garden edge drop must still fail');
+console.log('PASS Arrival cat tree cage flanks are clear and the garden railing remains');

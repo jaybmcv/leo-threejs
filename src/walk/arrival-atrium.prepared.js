@@ -48,13 +48,10 @@ const POTS=[[-24.6,-15.6,1.1,'palm'],[24.4,-15.6,1.2,'palm'],[24.4,15.6,1.2,'pal
  [2.6,-15.9,.9,'aroid'],[-6.6,15.9,.9,'fern'],[21.4,-15.9,.9,'bloom'],[20.6,15.9,.9,'aroid']];
 // In the garden, the racks either side of the opening [x, z] give way to beds of tall greenery that show from the hall.
 const GARDEN_BEDS=[[-9,-7],[0,-7],[-9,7],[0,7]];
-// Pillows, lanterns, branches, hanging baskets, the ceiling trellis and the sign hung over the arrival spot are
-// dressing: no walker stops on them (nor jumps into the sign). So are the wooden rails' mid rails and posts that took the
-// place of the guards' glass: the guards' own shapes stay solid as collision only (GUARDS), so the rails look like wood
-// and stop a walker exactly as the glass did.
-const DRESSING=new Set(['Atrium_pillow','Cat_tree_branch','Atrium_garden_branch','Atrium_shelf_bracket','Atrium_basket','Atrium_trellis','Atrium_hanging_sign','Cat_tree_top_guard_mid_rail','Cat_tree_top_guard_post','Atrium_rail_mid']);
+// These fittings and the garden's mid rail are dressing. The balustrade has its own collider.
+const DRESSING=new Set(['Atrium_pillow','Cat_tree_branch','Atrium_garden_branch','Atrium_shelf_bracket','Atrium_basket','Atrium_trellis','Atrium_hanging_sign','Atrium_rail_mid']);
 // Solid but never drawn (hidden from drawing like the cabins' collision glass; collision.js keeps baked meshes solid).
-const GUARDS=new Set(['Cat_tree_top_guard','Atrium_balustrade_guard']);
+const GUARDS=new Set(['Atrium_balustrade_guard']);
 // Where the room frame's origin is in the ship (the hall's floor; the garden's is 4 m up).
 const [rx,ry,rz]=placedV1('arrival-room'),ROOM={x:rx,y:ry,z:rz};
 
@@ -198,15 +195,6 @@ export function openArrivalAtrium(ship){
   put('Cat_tree_bridge',M.wood,box(1.2,.08,z1-z0,TREE.x,y-.042,(z0+z1)/2));
   for(const dx of [-.3,0,.3])put('Cat_tree_bridge_seam',M.dark,box(.015,.004,z1-z0,TREE.x+dx,y-.001,(z0+z1)/2));
   branch([TREE.x,y-1.2,TREE.z+.3],[TREE.x,y-.5,z0],[TREE.x,y-.12,(z0+z1)/2],.08);}
- // Along the bridge's sides: a slim wooden rail, no glass: a top rail at 1.1 m (solid) and under it a mid rail on posts
- // about 0.4 m apart. The platform itself stands open round its rim. The guard the glass made, two side panels, stays solid
- // as collision only.
- {const [px,py,pz]=platformAt(TREE.platforms.at(-1));
-  // To the opening's edge, starting a little behind the platform's centre so no one stands off its flanks.
-  const reach=Math.min(Math.abs(TREE.x-cx-.6),Math.abs(TREE.x-cx+.6)),end=b*Math.sqrt(1-reach*reach/(a*a))+.03,z0=pz-.45,n=Math.max(1,Math.round((end-z0)/.4));
-  for(const side of[-1,1]){put('Cat_tree_top_guard',M.trim,box(.05,1.1,end-z0,px+side*.6,py+.55,(z0+end)/2));put('Cat_tree_top_guard_rail',M.trim,box(.05,.05,end-z0,px+side*.6,py+1.1,(z0+end)/2));
-   put('Cat_tree_top_guard_mid_rail',M.trim,box(.05,.05,end-z0,px+side*.6,py+.55,(z0+end)/2));
-   for(let i=0;i<=n;i++)put('Cat_tree_top_guard_post',M.trim,cyl(.018,.018,1.1,px+side*.6,py+.55,z0+(end-z0)*i/n,6));}}
  // The canopy: limbs spreading at the garden's head height, clumps of foliage along them and fans of leaves spilling out.
  {const r=random(7),out=greenery.garden;
   for(let i=0;i<6;i++){const t=i/6*Math.PI*2+.4,d=1.4+r()*.6,ex=TREE.x+Math.cos(t)*d,ez=TREE.z+Math.sin(t)*d,ey=6.3+r()*.5;

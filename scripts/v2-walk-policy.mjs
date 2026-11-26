@@ -12,6 +12,12 @@ export const ROOM_DROP_ALLOWLIST=[
 // mezzanine or out of ray range keeps counting.
 export const POCKET_LID={gap:.5,max:2.8};
 export const enclosedPocket=(pocket,ceiling)=>!!pocket?.sealed&&Number.isFinite(pocket.lid)&&Number.isFinite(ceiling)&&pocket.lid<=POCKET_LID.max&&pocket.lid<=ceiling-POCKET_LID.gap;
+// The open top of the arrival cat tree is a way down to the hall as well as a way up to the garden.
+export function isArrivalTreeDrop(f,{opening,floorY,platformY,feet}){
+ const [x,y,z]=f.from,[tx,ty,tz]=f.to;
+ return f.drop>1&&y>=platformY-.065&&y<=platformY+.02&&ty>=floorY-.02&&opening.open(x,z)&&opening.open(tx,tz)
+  &&feet.some(([dx,dz])=>opening.footing(x+dx,z+dz));
+}
 export function requireRoomDropPolicy(events,layout,options){const r=classifyRoomDrops(events,layout,options);if(r.roomFeatureViolations.length)throw Error('Unapproved room-feature drops over 1 m: '+r.roomFeatureViolations.length);return r;}
 export function classifyRoomDrops(events,layout,{supports=[]}={}){
  const roomFeatureDrops=events.filter(f=>f.category==='room-feature'&&f.drop>1).map(f=>{

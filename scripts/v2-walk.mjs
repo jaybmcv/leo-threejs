@@ -3,7 +3,7 @@ import {V2_BUDGETS} from '../src/plan/budgets-v2.js';
 import {installFloodIndex,proveFloodIndex} from './flood-spatial-index-v2.mjs';
 import {sampleRoomFloor} from './room-floor-samples-v2.mjs';
 import {walkBuildIdentity,WALK_REPORT_VERSION} from './v2-walk-identity.mjs';
-import {classifyRoomDrops,enclosedPocket} from './v2-walk-policy.mjs';
+import {classifyRoomDrops,enclosedPocket,isArrivalTreeDrop} from './v2-walk-policy.mjs';
 import phase2Baseline from '../src/plan/phase2-walk-baseline.json' with {type:'json'};
 import fs from 'node:fs/promises';
 import * as T from 'three';
@@ -15,6 +15,7 @@ const SHIP_AREAS=[...layout.rooms,...layout.fixedRooms].filter(r=>!r.aggregate&&
 import {cabinPlacements,outsideOnly} from '../src/v2/world.js';
 import {BODY,bandOf,Colliders,solid} from '../src/walk/collision.js';
 import {LIFTS,carTriangles} from '../src/walk/lifts.js';
+import {openingPlan} from '../src/walk/arrival-atrium.js';
 import {toWorld,objectRoom} from '../src/plan/rooms.js';
 import {contains} from '../src/plan/geometry-v2.js';
 import {findRestSpots,solidSpots} from '../src/v2/rest.js';
@@ -41,6 +42,7 @@ const {radius:R,height:H,step:STEP}=BODY,G=.35,MIN_NY=Math.cos(BODY.maxSlope*Mat
 const ray=new T.Ray(new T.Vector3(),new T.Vector3(0,-1,0)),seg=new T.Line3(new T.Vector3(),new T.Vector3());
 // The controller's five-ray foot probe (controller.js): the highest walkable ground under the feet.
 const FEET=[[0,0],[.18,0],[-.18,0],[0,.18],[0,-.18]];
+const opening=openingPlan(),arrivalTree={opening,floorY:layout.decks[opening.deck-2].y,platformY:layout.decks[opening.deck-1].y,feet:FEET};
 // The centre ray settles almost every probe; the other four only matter over a gap (a lift sill).
 const probe=(x,y,z,up,down)=>{ray.origin.set(x,y+up,z);ray.direction.set(0,-1,0);const h=col.raycastGround(ray,down);return h&&h.normal.y>=MIN_NY?h.point.y:null;};
 const floorAt=(x,y,z,up=STEP+.05,down=2*STEP+.1)=>{const c=probe(x,y,z,up,down);if(c!==null&&Math.abs(c-y)<=STEP)return c;let best=c;for(const [dx,dz] of FEET.slice(1)){const h=probe(x+dx,y,z+dz,up,down);if(h!==null&&(best===null||h>best))best=h;}return best;};
@@ -68,7 +70,8 @@ const push=(x,y,z)=>{const k=key(x,y,z);if(seen.has(k))return;seen.add(k);X.push
 push(S0.x,S0.y,S0.z);
 const ridden=new Set(),DIRS=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];let falls=0,voidFalls=0,safeCount=null;const voids=[],fallEvents=[],pendingFalls=[],fallKeys=new Set();
 const category=(x,y,z)=>{if((ship.v2GuardPlatforms||[]).some(p=>Math.abs(p.y-y)<.4&&x>=p.x0-.9&&x<=p.x1+.9&&z>=p.z0-.9&&z<=p.z1+.9&&Math.min(Math.abs(x-p.x0),Math.abs(x-p.x1),Math.abs(z-p.z0),Math.abs(z-p.z1))<.9))return 'terrace/bridge';const d=layout.decks.reduce((a,b)=>Math.abs(a.y-y)<Math.abs(b.y-y)?a:b),near=(p,r=.9)=>{for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz)));if(Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<r)return true;}return false;};if(treads.some(t=>Math.abs(t.y-y)<.8&&Math.hypot(t.x-x,t.z-z)<1))return 'stair-side';if(layout.circulation.stairs.some(s=>s.wing!==undefined&&Math.abs(layout.decks[s.deck-1].y-y)<4.1&&(contains(s.polygon,[x,z])||near(s.polygon))))return 'stair-side';if(layout.circulation.ramps.some(s=>contains(s.polygon,[x,z])||near(s.polygon)))return 'ramp';if(layout.circulation.bridges.some(s=>s.deck===d.number&&(contains(s.polygon,[x,z])||near(s.polygon))))return 'terrace/bridge';if(d.slab.holes.some(h=>near(h.polygon)))return 'atrium/void-edge';if(layout.rooms.some(r=>y>=r.y-.2&&y<=r.y+r.height&&r.polygon&&contains(r.polygon,[x,z])))return 'room-feature';return 'other';};
-const recordFall=(x,y,z,nx,fy,nz,newLanding)=>{const k=[x,y,z,nx,fy,nz].map(v=>v.toFixed(2)).join();if(fallKeys.has(k))return;fallKeys.add(k);fallEvents.push({from:[x,y,z],to:[nx,fy,nz],drop:+(y-fy).toFixed(3),category:category(x,y,z),newLanding});};
+const recordFall=(x,y,z,nx,fy,nz,newLanding)=>{const k=[x,y,z,nx,fy,nz].map(v=>v.toFixed(2)).join();if(fallKeys.has(k))return;fallKeys.add(k);
+ const event={from:[x,y,z],to:[nx,fy,nz],drop:+(y-fy).toFixed(3),newLanding};event.category=isArrivalTreeDrop(event,arrivalTree)?'arrival-tree':category(x,y,z);fallEvents.push(event);};
 // Walking off an edge: the walker falls from where it stepped to the first walkable ground below (or none: the void).
 const fall=(x,y,z)=>{ray.origin.set(x,y+STEP,z);ray.direction.set(0,-1,0);const h=col.raycastGround(ray,120);return h&&h.normal.y>=MIN_NY?h.point.y:null;};
 for(let head=0;head<BUDGET;head++){
@@ -158,9 +161,9 @@ if(open)problems.push(`${open} sampled positions open to space`);
 if(voidFalls)problems.push(`${voidFalls} edges fall out of the ship`);
 
 const rampReach=[132,136,140,146,150,160,170,180,190].map(x=>{const y=24.3+Math.max(0,Math.min(24,x-146))/12,fy=floorAt(x,y,0);return {x,y,fy,stands:fy!==null&&stands(x,fy,0),reached:reached(x,y,0,.8)};});
-const fallBreakdown={byHeight:Object.fromEntries([['.4-1m',.4,1],['1-4m',1,4],['4-12m',4,12],['12m+',12,Infinity]].map(([k,a,b])=>[k,fallEvents.filter(f=>f.drop>a&&f.drop<=b).length])),byCategory:Object.fromEntries(['atrium/void-edge','terrace/bridge','stair-side','ramp','room-feature','other'].map(k=>[k,{attempts:fallEvents.filter(f=>f.category===k).length,over1m:fallEvents.filter(f=>f.category===k&&f.drop>1).length}]))};
+const fallBreakdown={byHeight:Object.fromEntries([['.4-1m',.4,1],['1-4m',1,4],['4-12m',4,12],['12m+',12,Infinity]].map(([k,a,b])=>[k,fallEvents.filter(f=>f.drop>a&&f.drop<=b).length])),byCategory:Object.fromEntries(['atrium/void-edge','terrace/bridge','stair-side','ramp','room-feature','arrival-tree','other'].map(k=>[k,{attempts:fallEvents.filter(f=>f.category===k).length,over1m:fallEvents.filter(f=>f.category===k&&f.drop>1).length}]))};
 const safeCabins=CABINS.filter(c=>reached(c.x,c.y,c.z,.7,.6,.6,true)).length,safeRooms=rooms.filter(r=>r.safeReached>0).length;let safeStops=0;for(const l of LIFTS)for(const s of l.stops){const d=s.door||l.door,f=d.axis==='z'?[0,d.sign]:[d.sign,0],h=(d.axis==='z'?l.car.depth:l.car.width)/2;if(reached(l.car.x+f[0]*(h+1),s.y,l.car.z+f[1]*(h+1),.8,.3,.3,true))safeStops++;}if(safeStops!==stopCount)problems.push('lift stops without falling: '+safeStops+'/'+stopCount);if(safeRooms!==rooms.length)problems.push('rooms without falling: '+safeRooms+'/'+rooms.length);
-const guardGaps=fallEvents.filter(f=>f.drop>1&&f.category!=='room-feature');if(guardGaps.length&&!process.env.FALL_BASELINE)problems.push(guardGaps.length+' unguarded drops over 1 m');if(safeCabins!==CABINS.length)problems.push('cabins reachable without falling: '+safeCabins);
+const guardGaps=fallEvents.filter(f=>f.drop>1&&f.category!=='room-feature'&&f.category!=='arrival-tree');if(guardGaps.length&&!process.env.FALL_BASELINE)problems.push(guardGaps.length+' unguarded drops over 1 m');if(safeCabins!==CABINS.length)problems.push('cabins reachable without falling: '+safeCabins);
 const supports=[...(ship.v2RoomFeatureSupports||[])];if(supports.filter(s=>s.room==='d16-childcare-6'&&s.name==='Kitten_step_tower_pad').length!==6)problems.push('Missing six serialized kitten step-tower pad supports');if(supports.filter(s=>s.room==='d16-childcare-6'&&s.name==='Kitten_wall_shelf').length!==30)problems.push('Missing thirty serialized climbable kitten wall shelves');ship.inside.updateMatrixWorld(true);ship.inside.traverse(o=>{if(!o.isMesh||!['Soft_back','Garden_bench_back'].includes(o.name))return;const room=objectRoom(o);if(!['observation-lounge','commons-10'].includes(room))return;const b=new T.Box3().setFromObject(o,true);supports.push({room,name:o.name,top:b.max.y,min:b.min.toArray(),max:b.max.toArray()});});
 // Young explorers' step towers (src/walk/kittens.js) are climbable on purpose: name their 1.05 m top pads (1 x 1 m
 // collider boxes) so the allow-list can match drops from them.
