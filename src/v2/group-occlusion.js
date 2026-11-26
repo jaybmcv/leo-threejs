@@ -170,7 +170,8 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
  function ask() {
   if (issued) return;
   issued = true;
-  if (!enabled) return;
+  // Answers that stop coming (a driver that never makes them available) stop the asking, not the frame.
+  if (!enabled || pending.length > 1024) return;
   const t = performance.now(), near = camera.near + .3, list = [];
   for (const g of groups) {
    if (!g.inView || g.unbounded) continue;
@@ -226,6 +227,8 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
  };
  const before = scene.onBeforeRender, after = scene.onAfterRender;
  scene.onBeforeRender = function(r, world, view, target) {
+  // A lost context loses the program and every query with it: from then on everything draws.
+  if (!disposed && gl.isContextLost()) api.dispose();
   main = !disposed && isMain(view, world);
   if (main) { stats.skipped = 0; begin(); }
   return before.apply(this, arguments);
@@ -236,20 +239,20 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
   return result;
  };
  enrol();
- return {
+ const api = {
   stats,
   /** For the feature batches: whether this frame leaves the root's rows out. */
   hiddenRoot: root => !!byRoot.get(root)?.hidden,
   /** For the Stats readout (frame-readout.js). */
-  line: () => enabled ? `hidden by the frame: ${stats.hidden} of ${stats.inView} room features and lifts in view` : 'hidden by the frame: off',
+  line: () => enabled && !disposed ? `hidden by the frame: ${stats.hidden} of ${stats.inView} room features and lifts in view` : 'hidden by the frame: off',
   get enabled() { return enabled; },
   set enabled(on) { enabled = !!on; if (!enabled) for (const g of groups) g.hidden = false; },
   dispose() {
    disposed = true; main = false;
    for (const g of groups) g.hidden = false;
-   for (const p of pending) gl.deleteQuery(p.q);
-   for (const q of pool) gl.deleteQuery(q);
+   if (!gl.isContextLost()) { for (const p of pending) gl.deleteQuery(p.q); for (const q of pool) gl.deleteQuery(q); }
    pending.length = pool.length = 0;
   },
  };
+ return api;
 }
