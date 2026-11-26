@@ -112,6 +112,9 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
    g.version++;
   }
  }
+ // A group draws nothing while it or a parent is hidden (a deck band out of the view's heights; a root the deck merges
+ // copied, kept hidden): it is neither asked about nor counted.
+ const shown = o => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
  const release = q => pool.push(q);
  function poll() {
   for (let i = 0; i < pending.length;) {
@@ -143,7 +146,7 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
   stats.hidden = 0; stats.inView = 0;
   for (const g of groups) {
    const a = g.last;
-   g.inView = !g.unbounded && !g.box.isEmpty() && frustum.intersectsBox(g.box);
+   g.inView = !g.unbounded && !g.box.isEmpty() && shown(g.root) && frustum.intersectsBox(g.box);
    if (g.inView) stats.inView++;
    g.hidden = enabled && !!a && !a.shown && g.inView && a.version === g.version && frame - a.frame <= stale && a.eye.distanceTo(eye) <= reach;
    if (g.hidden) stats.hidden++;
@@ -238,7 +241,7 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
   /** For the feature batches: whether this frame leaves the root's rows out. */
   hiddenRoot: root => !!byRoot.get(root)?.hidden,
   /** For the Stats readout (frame-readout.js). */
-  line: () => enabled ? `hidden by the frame: ${stats.hidden} of ${stats.inView} rooms and lifts in view` : 'hidden by the frame: off',
+  line: () => enabled ? `hidden by the frame: ${stats.hidden} of ${stats.inView} room features and lifts in view` : 'hidden by the frame: off',
   get enabled() { return enabled; },
   set enabled(on) { enabled = !!on; if (!enabled) for (const g of groups) g.hidden = false; },
   dispose() {
