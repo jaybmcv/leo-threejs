@@ -42,7 +42,7 @@ function scaledShape(g){
  for(const a of rest)for(const i of order)for(let c=0;c<a.itemSize;c++)extra.push(a.array[i*a.itemSize+c]);
  const s=g.boundingSphere;
  return {key:others.join(',')+'|'+others.map(n=>g.attributes[n].itemSize+':'+g.attributes[n].normalized).join(',')+'|'+keyOf(unit,MATCH_EPS)+'|'+keyOf(extra,1e-7),
-  order,unit,centre,scale,others,sphere:s?{centre:s.center.clone(),radius:s.radius}:null};
+  order,unit,extra,centre,scale,others,sphere:s?{centre:s.center.clone(),radius:s.radius}:null};
 }
 // One geometry for the shared shape, indexed over its distinct vertices in the first kind's draw order.
 function sharedGeometry(first){
@@ -61,6 +61,9 @@ function sharedGeometry(first){
  return out;
 }
 const frobenius=s=>Math.hypot(s[0],s[1],s[2]);
+const sameShape=(a,b)=>a.unit.length===b.unit.length&&a.extra.length===b.extra.length&&a.unit.every((v,i)=>Math.abs(v-b.unit[i])<=MATCH_EPS)&&a.extra.every((v,i)=>Object.is(v,b.extra[i]));
+// The size of a matrix's linear part as detail-lod.js reads it (Frobenius norm of the upper 3x3).
+const size3=e=>Math.hypot(e[0],e[1],e[2],e[4],e[5],e[6],e[8],e[9],e[10]);
 
 /** `root` is ship.inside, after phone-furnishing.js. Returns {meshes, sources, kinds}. */
 export function mergeScaledFurnishing(root,{exclude=/^P4_p6_/}={}){
@@ -72,20 +75,30 @@ export function mergeScaledFurnishing(root,{exclude=/^P4_p6_/}={}){
   if(Array.isArray(m)||m.transparent||o.instanceColor||o.morphTexture||!o.userData.ownerRuns||!o.parent||o.onBeforeRender!==T.Object3D.prototype.onBeforeRender)continue;
   const shape=scaledShape(g);if(!shape?.sphere)continue;
   const key=[m.uuid,o.renderOrder,!!o.userData.noCollide,o.castShadow,o.receiveShadow,o.frustumCulled,o.layers.mask,o.parent.uuid,shape.key].join('|');
-  let group=groups.get(key);if(!group)groups.set(key,group=[]);group.push({o,shape});
+  // A key is a hash: it proposes a match, and the values themselves confirm it (or the kind starts a group of its own).
+  let n=0,group;
+  while((group=groups.get(key+'#'+n))&&!sameShape(group[0].shape,shape))n++;
+  if(!group)groups.set(key+'#'+n,group=[]);group.push({o,shape});
  }
  const meshes=[],sources=[],relative=new T.Matrix4(),local=new T.Matrix4(),k=new T.Matrix4(),inverse=new T.Matrix4(),centre=new T.Vector3();
  for(const members of groups.values()){
   if(members.length<2)continue;
   const first=members[0],geometry=sharedGeometry(first);
-  // The shared sphere's centre, in unit space, must be where every kind's own sphere centre falls; its radius at least
-  // every kind's own radius over the size K adds to an instance's matrix (sqrt(3) for a rotation, |K|F with K).
-  const unitCentre=geometry.boundingSphere.center,joined=[];let radius=geometry.boundingSphere.radius;
+  // The shared sphere's centre, in unit space, must be where every kind's own sphere centre falls. Room culling reads an
+  // instance's radius as the mesh's radius times the size of (world x instance), so the shared radius is at least each
+  // kind's radius times size(W M) / size(W M K) over that kind's instances: no instance gets a smaller sphere than before.
+  const unitCentre=geometry.boundingSphere.center,joined=[],w=new T.Matrix4(),wk=new T.Matrix4(),kk=new T.Matrix4();let radius=geometry.boundingSphere.radius;
   for(const e of members){
    const {centre:c,scale,sphere}=e.shape;
    const back=[0,1,2].map(a=>(sphere.centre.getComponent(a)-c[a])/scale[a]);
    if(back.some((v,a)=>Math.abs(v-unitCentre.getComponent(a))>1e-4*Math.max(1,Math.abs(v))))continue;
-   radius=Math.max(radius,sphere.radius*Math.sqrt(3)/frobenius(scale));joined.push(e);
+   const src=e.o;src.updateWorldMatrix(true,false);kk.makeScale(...scale);let ratio=0,ok=true;
+   for(let i=0;i<src.instanceMatrix.count;i++){
+    src.getMatrixAt(i,w);w.premultiply(src.matrixWorld);wk.multiplyMatrices(w,kk);
+    const a=size3(w.elements),b=size3(wk.elements);if(!(b>0)){ok=false;break;}ratio=Math.max(ratio,a/b);
+   }
+   if(!ok)continue;
+   radius=Math.max(radius,sphere.radius*ratio*1.000001);joined.push(e);
   }
   if(joined.length<2){geometry.dispose();continue;}
   geometry.boundingSphere.radius=radius;
@@ -104,7 +117,12 @@ export function mergeScaledFurnishing(root,{exclude=/^P4_p6_/}={}){
   o.layers.mask=first.o.layers.mask;
   // Room culling picks the instances in view, as for phone-furnishing.js's meshes.
   o.frustumCulled=false;o.matrixAutoUpdate=false;
-  o.userData={...first.o.userData,roomOwners:[...owners],ownerRuns:runs,ownerBoxes:first.o.userData.ownerBoxes,phoneMerged,scaledKinds:joined.length};
+  // Room culling writes the instances it shows to the front of the matrices and raises needsUpdate; three would send
+  // the whole buffer each time (1.6 MB for the busiest material), so only the front `count` goes.
+  const matrices=o.instanceMatrix;
+  Object.defineProperty(matrices,'needsUpdate',{configurable:true,set(value){if(value!==true)return;matrices.clearUpdateRanges();matrices.addUpdateRange(0,Math.max(1,Math.min(o.count,matrices.count))*16);matrices.version++;}});
+  const ownerBoxes={};for(const {o:src} of joined)for(const [id,b] of Object.entries(src.userData.ownerBoxes||{}))if(!(id in ownerBoxes))ownerBoxes[id]=b;
+  o.userData={...first.o.userData,roomOwners:[...owners],ownerRuns:runs,ownerBoxes,phoneMerged,scaledKinds:joined.length};
   parent.add(o);o.updateMatrixWorld(true);meshes.push(o);
  }
  return {meshes,sources,kinds:sources.length};
