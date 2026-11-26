@@ -1,5 +1,7 @@
 import {launchFCafeFitout} from './launch-f-fitout.js';
 import {contains,bounds,distanceToSegment} from '../plan/geometry-v2.js';
+export const OBSERVATION_READING_SHELF={x:173.2,z:27,depth:.5,height:2.1,length:5.6};
+
 // Stream E uses the existing Phase 4 instancing, collision and registered-seat protocol.
 export function launchEFitout(layout,phase6){
  const parts=[],rests=[],rooms=[];
@@ -23,7 +25,8 @@ export function launchEFitout(layout,phase6){
   const polys=[r.polygon,...(r.envelope||[]).filter(s=>s.rise<=2&&s.rise+s.height>=1.6).map(s=>s.polygon)];
   const fits=(x,z,w=4,d=4)=>polys.every(p=>[-w/2,w/2].every(dx=>[-d/2,d/2].every(dz=>contains(p,[x+dx,z+dz]))));
   // A 6 m axial route remains clear to the telescope; book collections sit in the aft-side reading bays.
-  for(const s of[-1,1])for(const z of[16,27,38]){const zz=s*z;if(!fits(176,zz,7,7))continue;add(r,'e_bookshelf',[.5,2.1,5.6],[173.2,r.y+1.05,zz],'oak');for(let i=0;i<15;i++)add(r,'e_book',[.23,.36,.19],[173.5,r.y+.65+(i%3)*.48,zz-2.4+Math.floor(i/3)*1.0],['teal','clay','cream'][i%3],{noCollide:true});table(r,178,zz,'sage');}
+  const shelf=OBSERVATION_READING_SHELF;
+  for(const s of[-1,1])for(const z of[16,shelf.z,38]){const zz=s*z;if(!fits(176,zz,7,7))continue;add(r,'e_bookshelf',[shelf.depth,shelf.height,shelf.length],[shelf.x,r.y+shelf.height/2,zz],'oak');for(let i=0;i<15;i++)add(r,'e_book',[.23,.36,.19],[shelf.x+.30,r.y+.65+(i%3)*.48,zz-2.4+Math.floor(i/3)*1.0],['teal','clay','cream'][i%3],{noCollide:true});table(r,178,zz,'sage');}
   for(const x of[186,195,203])for(const s of[-1,1])for(const z of[11,23,35]){const zz=s*z;if(!fits(x,zz,5,5))continue;table(r,x,zz,'clay');}
   for(const s of[-1,1])for(const x of[175,182,189,196,203])for(const z of[18,29,40,47]){const zz=s*z;if(!fits(x,zz,2.2,2.2)||fits(x,zz+s*5,2,2))continue;if(rests.some(q=>q.room===r.id&&Math.hypot(q.point[0]-x,q.point[2]-zz)<4))continue;seat(r,x,zz,Math.atan2(10,s*6),0,'teal');}
   for(let x=175;x<=205;x+=5)for(const s of[-1,1]){let z=52;while(z>8&&!fits(x,s*z,3.4,2.8))z-=.25;if(z<=8||rests.some(q=>q.room===r.id&&Math.hypot(q.point[0]-x,q.point[2]-s*z)<3.5))continue;const yaw=Math.atan2(.45,s*.89);for(const dx of[-.65,.65])seat(r,x+dx,s*z,yaw,0,'teal');add(r,'low_table',[1.0,.10,.7],[x,r.y+.42,s*(z-1.8)],'oak');}

@@ -1,10 +1,13 @@
 import {RecordGeometry,recordMerged} from "../v2/prepared-geometry-record.js";
 import * as T from 'three';
-import {anchorObject,anchoredPoint} from '../plan/rooms.js';
+import {anchorObject,anchoredDirection,anchoredPoint,v1Frame} from '../plan/rooms.js';
+import {OBSERVATION_READING_SHELF as shelf} from '../v2/launch-e-fitout.js';
 import {CROWN} from '../fin-crown.js';
 import {shapePoint} from '../concept-shape.js';
 
-// Comic books lying about the walk, to pick up and read. Each is one entry: its title, its pages in reading order
+const READING_ROOM='observation-lounge',READING_FLOOR=v1Frame(READING_ROOM).origin[1];
+
+// Comic books around the walk, to pick up and read. Each is one entry: its title, its pages in reading order
 // (src/walk/art, hashed into the build by scripts/walk-page.mjs; the first is also the cover), the pages' pixel size, the
 // point on the surface it lies on (before the fin drop), the way its top edge points and, optionally, how near a walker
 // must stand to read it (REACH metres otherwise). Use one and the reader sheet
@@ -19,11 +22,10 @@ export const COMICS=[
  // The Outpost, on the booth table at x -214, z 9 (its top is .72 m up), on the open side clear of the lamp and
  // drinks, facing a walker standing at the table. Its shorter reach leaves the banquette's seats to Sit down.
  {name:'The_Outpost',title:'The Outpost',where:'Crown lounge',pages:['the-outpost-1.jpg','the-outpost-2.jpg','the-outpost-3.jpg'],size:[1073,1600],at:[-214.05,CROWN.floor+.72,8.5],top:[.2,0,1],reach:1.1},
- // One Last Rodeo, a 26 cm comic stood face out on the middle shelf of the Deck 17 reading bookcase (observation-finish.js),
- // its foot at the shelf's front edge so it leans back against the book spines.
- {room:'observation-lounge',name:'One_Last_Rodeo',title:'One Last Rodeo',where:'Deck 17 reading shelves',pages:['one-last-rodeo-1.jpg','one-last-rodeo-2.jpg','one-last-rodeo-3.jpg'],size:[1073,1600],floor:26.3,height:.26,at:[171.27,26.3+.8925,24.6],face:[1,0,0]},
+ // Face out on the top of the starboard Deck 17 bookcase, set in from the front edge.
+ {room:READING_ROOM,name:'One_Last_Rodeo',title:'One Last Rodeo',where:'Deck 17 reading shelves',pages:['one-last-rodeo-1.jpg','one-last-rodeo-2.jpg','one-last-rodeo-3.jpg'],size:[1073,1600],floor:READING_FLOOR,height:.26,displayScale:2.15,at:[shelf.x+shelf.depth/2-.05,READING_FLOOR+shelf.height,shelf.z-1.5],face:[1,0,0]},
 ];
-const NEAR=30,REACH=1.7,BOOK={height:.32,thick:.012},LEAN=.08;
+const NEAR=30,REACH=1.7,BOOK={height:.32,thick:.012};
 
 export function createComics({urls={},anisotropy=1}={}){
  const edge=new T.MeshStandardMaterial({name:'Comic_page_edge',color:0xeee6d6,roughness:.85});
@@ -33,15 +35,18 @@ export function createComics({urls={},anisotropy=1}={}){
   // A box's top face shows its image upright with the image's top toward local -z; turn that toward `top`.
   const book=new T.Mesh(new RecordGeometry("src/walk/comics.js:0",T.BoxGeometry,w,BOOK.thick,h),[edge,edge,cover,edge,edge,edge]);book.name='Comic_'+c.name;
   if(c.face){
-   // Standing: the cover (local +y) turns to face `face`, tipped up by LEAN, and the image's top (local -z) points up.
-   const f=new T.Vector3(...c.face).normalize(),up=new T.Vector3(0,1,0);
-   const n=f.clone().multiplyScalar(Math.cos(LEAN)).addScaledVector(up,Math.sin(LEAN)),u=up.clone().multiplyScalar(Math.cos(LEAN)).addScaledVector(f,-Math.sin(LEAN));
-   book.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(n.clone().cross(u).negate(),n,u.clone().negate()));
-   book.position.copy(u).multiplyScalar(h/2).addScaledVector(n,-BOOK.thick/2);book.position.y+=y-floor+.002;
+   // Scale the cover in its own plane so the prepared box template and its thickness stay the same.
+   const f=new T.Vector3(...c.face),up=new T.Vector3(0,1,0),scale=c.displayScale??1;
+   book.scale.set(scale,1,scale);
+   book.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(up.clone().cross(f),f,up.negate()));
+   book.position.set(0,y-floor+h*scale/2,0).addScaledVector(f,-BOOK.thick/2);
   }else{book.position.y=y-floor+BOOK.thick/2;book.rotation.y=Math.atan2(-c.top[0],-c.top[2]);}
   // Its origin on the floor, so main.js files it with that deck's band.
   const group=new T.Group();group.name='Comic_book_'+c.name;group.position.set(x,floor,z);group.add(book);
-  if(c.room)anchorObject(group,c.room);return {c,group,cover,floor,spot:new T.Vector3(...(c.room?anchoredPoint(c.room,[x,y,z]):[x,y,z])),url:urls[c.pages[0]],loading:false};
+  if(c.room)anchorObject(group,c.room);
+  const spot=new T.Vector3(...(c.room?anchoredPoint(c.room,[x,y,z]):[x,y,z]));
+  const front=c.face&&(c.room?anchoredDirection(c.room,c.face):c.face);
+  return {c,group,cover,floor:group.position.y,spot,front,url:urls[c.pages[0]],loading:false};
  });
  return {
   groups:books.map(b=>b.group),targets:books.map(b=>({name:b.c.name,at:b.spot,room:b.c.room||'crown'})),
@@ -54,7 +59,12 @@ export function createComics({urls={},anisotropy=1}={}){
   },
   // The use prompt for a book within reach on the walker's own level.
   near(p){
-   for(const b of books){if(Math.abs(p.y-b.floor)>1.5||Math.hypot(p.x-b.spot.x,p.z-b.spot.z)>(b.c.reach||REACH))continue;return {kind:'comic',comic:b.c,label:'Read '+b.c.title};}
+   for(const b of books){
+    const dx=p.x-b.spot.x,dz=p.z-b.spot.z;
+    if(Math.abs(p.y-b.floor)>1.5||Math.hypot(dx,dz)>(b.c.reach||REACH))continue;
+    if(b.front&&dx*b.front[0]+dz*b.front[2]<=0)continue;
+    return {kind:'comic',comic:b.c,label:'Read '+b.c.title};
+   }
    return null;
   },
  };

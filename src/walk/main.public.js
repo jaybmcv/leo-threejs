@@ -59,6 +59,7 @@ import {deskAntialias,heldRes} from './pixel-switches.js';
 import {mergePhoneFurnishing} from '../v2/phone-furnishing.js';
 import {mergeScaledFurnishing} from '../v2/scaled-furnishing.js';
 import {createGroupOcclusion,occlusionByDefault} from '../v2/group-occlusion.js';
+import {occlusionGroups} from '../v2/occlusion-groups.js';
 import {mergePhoneBands} from '../v2/phone-bands.js';
 import {deskPieceSize,gpuName} from '../v2/desk-piece.js';
 import {createAtriumPvs} from '../v2/atrium-pvs.js';
@@ -568,9 +569,10 @@ async function buildShip(){
  isolateStaticWorld(ship,scene);{const hidden=(preparedPhone||phoneBatching.merge)&&!OWNER_BAKE_PAGE?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // While the arrival hall is walked, the floors' occlusion scan (floor-occlusion.js) gives the page turns: a second of work.
  if(deskDetail&&!OWNER_BAKE_PAGE)installQuadFacingTest(renderer,scene,camera,{...(arrival?.active?{floorOcclusion:await createFloorOcclusionAsync(scene,camera,yieldToPage)}:{}),skipped:()=>groupOcclusion?.stats.skipped??0});
- // Room features and lifts the frame's own walls and floors hide sit out the main pass (group-occlusion.js): by default on
+ // Room features, baked room dressing, named feature groups, cabin furniture and lifts the frame's own walls and floors hide
+ // sit out the main pass (group-occlusion.js, occlusion-groups.js): by default on
  // Chrome and Edge on Windows, where it was measured; ?occlusion=1 elsewhere, ?occlusion=0 off.
- {const asked=new URLSearchParams(location.search).get('occlusion');if(deskDetail&&!OWNER_BAKE_PAGE&&(asked==='1'||asked!=='0'&&occlusionByDefault(renderer.getContext())))groupOcclusion=createGroupOcclusion(renderer,scene,camera,[...featureRoots,...scene.children.filter(o=>o.isGroup&&o.userData.keepLive&&/^Walk_lift_/.test(o.name))]);}
+ {const asked=new URLSearchParams(location.search).get('occlusion');if(deskDetail&&!OWNER_BAKE_PAGE&&(asked==='1'||asked!=='0'&&occlusionByDefault(renderer.getContext())))groupOcclusion=createGroupOcclusion(renderer,scene,camera,occlusionGroups(scene,{featureRoots,instanced,more:new URLSearchParams(location.search).get('occlusionmore')!=='0'}));}
  if(deskDetail&&!OWNER_BAKE_PAGE)featureBatches=await createFeatureBatches(scene,renderer,featureRoots,{skip:groupOcclusion?.hiddenRoot});
  // The groups holding only those instanced meshes once the live draws have their final parents (V2_live_source_draws: a
  // deck's cabin shells, a cabin template's fittings), and groups of only such groups, innermost first: cull() hides each
