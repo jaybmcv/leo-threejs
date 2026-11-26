@@ -124,7 +124,7 @@ export function createAtriumRooms({scene,parent,placements,views,instanced,linin
  for(const [i,r] of cabins.entries()){let k=kinds.get(r.key);
   if(!k){const sources=[...instanced.filter(o=>o.userData.cabins&&o.userData.cabinIds?.includes(r.id)),...frost.filter(o=>frostAt(o,r))];
    const copy=(to,src,size,name)=>{src.updateWorldMatrix(true,false);const o=new T.InstancedMesh(src.geometry,src.material,size);o.name=name;o.count=0;o.visible=false;o.frustumCulled=false;
-    o.matrixAutoUpdate=false;o.matrix.copy(src.matrixWorld);o.renderOrder=src.renderOrder;o.layers.mask=src.layers.mask;o.castShadow=src.castShadow;o.receiveShadow=src.receiveShadow;
+    o.matrixAutoUpdate=false;o.matrix.copy(src.matrixWorld);o.renderOrder=src.renderOrder;o.layers.mask=src.userData.mainLayers??src.layers.mask;o.castShadow=src.castShadow;o.receiveShadow=src.receiveShadow;
     o.userData={noCollide:true,atriumRoom:true};o.instanceMatrix.setUsage(T.DynamicDrawUsage);to.add(o);return o;};
    const pane=sources.find(o=>o.name==='Cabin_v2_shell_V2_cabin_view_glass'),all=cabins.filter(q=>q.key===r.key);
    k={all,rows:[],shown:'',parts:sources.map(src=>copy(pool,src,ROOMS.cap,'Reach_'+src.name)),pane:pane?copy(parent,pane,all.length,'P6_atrium_room_pane'):null};
