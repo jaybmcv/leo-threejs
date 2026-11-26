@@ -42,9 +42,9 @@ const effects=new T.Scene(),beams=createStageBeams(effects,y),sources=stageBeamS
 const front=sources.filter(f=>f.row==='front'),back=sources.filter(f=>f.row==='back');
 const [cones,pools,lasers]=beams.group.children,matrix=new T.Matrix4(),point=new T.Vector3(),direction=new T.Vector3();
 assert.equal(effects.children.length,1);assert.equal(beams.group.children.length,3);
-assert.equal(cones.count,back.length);assert.equal(pools.count,back.length);assert.equal(lasers.count,front.length);
+assert.equal(cones.count,back.length);assert.equal(pools.count,back.length);assert.equal(lasers.count,front.length*5);
 assert(back.length>=9&&front.length>=9);
-effects.traverse(o=>{assert(!o.isLight);if(o.isMesh){assert(o.isInstancedMesh&&o.userData.noCollide);assert(o.material.isShaderMaterial);assert.equal(o.material.blending,T.AdditiveBlending);assert.equal(o.material.depthWrite,false);assert.equal(o.material.toneMapped,false);assert(!o.castShadow&&!o.receiveShadow);}});
+effects.traverse(o=>{assert(!o.isLight);if(o.isMesh){assert(o.isInstancedMesh&&o.userData.noCollide);assert(o.material.isShaderMaterial&&o.material.forceSinglePass);assert.equal(o.material.blending,T.AdditiveBlending);assert.equal(o.material.depthWrite,false);assert.equal(o.material.toneMapped,false);assert(!o.castShadow&&!o.receiveShadow);}});
 for(const f of sources){
  const fixture=fixtures.find(v=>v.id===f.id);assert(fixture,'Every beam has an existing fixture');
  assert.deepEqual(f.at,fixture.at);assert(Math.abs(f.origin[0]-(fixture.at[0]-.24*Math.sin(fixture.tilt)))<1e-9);assert(Math.abs(f.origin[2]-fixture.at[2])<1e-9);
@@ -63,16 +63,32 @@ const rearBefore=cones.instanceMatrix.array.slice(),poolsBefore=pools.instanceMa
 beams.update(camera,4);assert.notDeepEqual(lasers.instanceMatrix.array,frontBefore,'Front aims change with time');
 assert.deepEqual(cones.instanceMatrix.array,rearBefore,'Rear cones never move');assert.deepEqual(pools.instanceMatrix.array,poolsBefore,'Rear pools never move');
 assert.equal(lasers.material.uniforms.time.value,4);assert.equal(cones.material.uniforms.time,pools.material.uniforms.time,'Cones and their pools change colour together');
-for(let t=0;t<=120;t+=.5)front.forEach((f,i)=>{
- lasers.geometry.computeBoundingBox();const length=lasers.geometry.boundingBox.max.y;assert(length<=18.01,'Outward beams end near the seating');
- const aim=stageBeamAim(t,i);assert(aim.x<-.85&&aim.y<0,'Front beams point out towards the audience below the upper decks');assert(Math.abs(aim.length()-1)<1e-6);
- const end=new T.Vector3(...f.origin).addScaledVector(aim,length);assert(end.y>3&&end.y<4,'Beam stays above the seating camera eye line and below Deck 7');
- assert(lasers.geometry.boundingBox.max.x<=.021,'Keep the outward lasers thin');
- assert(contains(layout.decks[5].atrium.outline,[end.x,end.z]),'Finite fan stays inside the atrium');
- assert(aim.distanceTo(stageBeamAim(t,i+1))+stageBeamAim(t+4,i).distanceTo(stageBeamAim(t+4,i+1))>.05,'Neighbours sweep out of phase, crossing only briefly');
- assert(aim.distanceTo(stageBeamAim(t+.01,i))<.002,'Motion stays smooth');
-});
-front.forEach((f,i)=>{lasers.getMatrixAt(i,matrix);point.setFromMatrixPosition(matrix);assert(point.distanceTo(new T.Vector3(...f.origin))<1e-5);assert(direction.set(0,1,0).transformDirection(matrix).distanceTo(stageBeamAim(4,i))<1e-6);});
+const fullAtFour=lasers.instanceMatrix.array.slice();
+beams.update(camera,4,true);assert.equal(lasers.count,front.length*3);
+assert.deepEqual(lasers.instanceMatrix.array.slice(0,lasers.count*16),fullAtFour.slice(0,lasers.count*16),'Reduced fans keep the centre and both edges');
+assert.deepEqual(cones.instanceMatrix.array,rearBefore);assert.deepEqual(pools.instanceMatrix.array,poolsBefore);
+beams.update(camera,4);assert.equal(lasers.count,front.length*5);
+lasers.geometry.computeBoundingBox();const length=lasers.geometry.boundingBox.max.y;assert(length<=18.01,'Outward beams end near the seating');
+assert(lasers.geometry.boundingBox.max.x<=.021,'Keep the outward lasers thin');
+const turns=[0,-.1,.1,-.05,.05],up=new T.Vector3(0,1,0),phase=lasers.geometry.getAttribute('beamPhase');
+for(let t=0;t<=120;t+=.5){
+ beams.update(camera,t);
+ front.forEach((f,i)=>{
+  const aim=stageBeamAim(t,i),origin=new T.Vector3(...f.origin);
+  assert(aim.distanceTo(stageBeamAim(t,i+1))+stageBeamAim(t+4,i).distanceTo(stageBeamAim(t+4,i+1))>.05,'Neighbours sweep out of phase, crossing only briefly');
+  assert(aim.distanceTo(stageBeamAim(t+.01,i))<.002,'Motion stays smooth');
+  turns.forEach((angle,j)=>{
+   const n=j*front.length+i;lasers.getMatrixAt(n,matrix);point.setFromMatrixPosition(matrix);
+   assert(point.distanceTo(origin)<1e-5,'All five beams start at the fixture lens');
+   assert.equal(phase.getX(n),Math.fround(i*.37),'All rays preserve the fixture colour phase');
+   const ray=direction.set(0,1,0).transformDirection(matrix);
+   assert(ray.distanceTo(aim.clone().applyAxisAngle(up,angle))<1e-6,'Fan angles stay fixed around the original sweep');
+   assert(ray.x<-.85&&ray.y<0,'Front beams point out towards the audience below the upper decks');assert(Math.abs(ray.length()-1)<1e-6);
+   const end=point.addScaledVector(ray,length);assert(end.y>3&&end.y<4,'Beam stays above the seating camera eye line and below Deck 7');
+   assert(contains(layout.decks[5].atrium.outline,[end.x,end.z]),'Finite fan stays inside the atrium');
+  });
+ });
+}
 camera.lookAt(0,camera.position.y,30);camera.updateMatrixWorld(true);beams.update(camera,5);assert(!beams.group.visible,'Hide the offscreen stage');
 camera.position.set(-100,y+2,30);camera.lookAt(113,y+2,30);camera.updateMatrixWorld(true);beams.update(camera,6);assert(!beams.group.visible,'Hide distant beams');
 setAtriumView(new T.Vector3(0,y-4,0));camera.position.set(98.71,y+2,29.92);camera.lookAt(113,y+2,30);camera.updateMatrixWorld(true);beams.update(camera,7);assert(!beams.group.visible,'Follow the atrium visibility gate');
@@ -104,4 +120,4 @@ for(const side of[-1,1]){
  const z=30+side*14.5,ray=new T.Ray(new T.Vector3(105,y+3,z),new T.Vector3(1,0,0));assert(col.raycast(ray,5),'Corner pillar has a collider');
 }
 beams.group.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});
-console.log(JSON.stringify({status:'PASS',fixtures:fixtures.length,beams:{back:back.length,front:front.length,draws:3},triangles,bounds:[bounds.min.toArray(),bounds.max.toArray()],sideStops:stops,walk:'supplied seating to stage and back; audience to back wall and out; both side stacks block and release the cat'}));
+console.log(JSON.stringify({status:'PASS',fixtures:fixtures.length,beams:{back:back.length,front:front.length*5,reducedFront:front.length*3,draws:3},triangles,bounds:[bounds.min.toArray(),bounds.max.toArray()],sideStops:stops,walk:'supplied seating to stage and back; audience to back wall and out; both side stacks block and release the cat'}));
