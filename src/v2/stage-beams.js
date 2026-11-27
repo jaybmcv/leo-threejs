@@ -3,6 +3,8 @@ import {stageConcertFixtures} from './stage-concert.js';
 import {atriumViewSpan} from './atrium-visibility.js';
 
 const FLOOR=.36,LENGTH=18,UP=new T.Vector3(0,1,0);
+// Draw the centre and both edges first so the reduced fan keeps the same width.
+const FAN_TURNS=[0,-.1,.1,-.05,.05].map(pan=>new T.Quaternion().setFromAxisAngle(UP,pan));
 // Use alternate fixtures, skipping the front pair behind the speaker arrays. Origins match the existing lens faces.
 export function stageBeamSources(){
  return stageConcertFixtures().filter((f,i)=>i%27%2===0&&(i>=27||i>0&&i<26)).map(f=>({...f,row:f.at[0]<113?'front':'back',origin:[f.at[0]-.24*Math.sin(f.tilt),f.at[1]-.24*Math.cos(f.tilt)-.012,f.at[2]]}));
@@ -46,7 +48,7 @@ const fragmentShader=`
   else{
    float face=abs(dot(normalize(vNormal),normalize(vEye)));
    float edge=smoothstep(0.,.6,face);
-   if(kind>.5)alpha=(.28*edge+pow(face,12.))*smoothstep(0.,.015,vUv.y)*(1.-smoothstep(.6,1.,vUv.y));
+   if(kind>.5)alpha=.52*(.28*edge+pow(face,12.))*smoothstep(0.,.015,vUv.y)*(1.-smoothstep(.6,1.,vUv.y));
    else alpha=.15*pow(face,1.6)*(1.-.2*vUv.y);
   }
   gl_FragColor=vec4(vColour*(kind>.5&&kind<1.5?1.6:1.),alpha);
@@ -57,30 +59,41 @@ export function createStageBeams(scene,y){
  const group=new T.Group();group.name='Common_stage_beams';group.position.y=y;group.userData.noCollide=true;group.visible=false;scene.add(group);
  const sources=stageBeamSources(),front=sources.filter(f=>f.row==='front'),back=sources.filter(f=>f.row==='back');
  const clock={value:0},palette={value:[0xff3ccf,0x20e8ff,0x40ff78].map(c=>new T.Color(c))};
- const batch=(name,geometry,fixtures,kind)=>{
-  geometry.setAttribute('beamPhase',new T.InstancedBufferAttribute(new Float32Array(fixtures.map((_,i)=>i*.37)),1));
+ const batch=(name,geometry,fixtures,kind,rays=1)=>{
+  const count=fixtures.length*rays;
+  geometry.setAttribute('beamPhase',new T.InstancedBufferAttribute(Float32Array.from({length:count},(_,i)=>(i%fixtures.length)*.37),1));
   const material=new T.ShaderMaterial({name,uniforms:{time:clock,palette,kind:{value:kind}},vertexShader,fragmentShader,transparent:true,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,toneMapped:false});
   material.forceSinglePass=true;
-  const mesh=new T.InstancedMesh(geometry,material,fixtures.length);mesh.name=name;mesh.userData.noCollide=true;mesh.frustumCulled=false;group.add(mesh);return mesh;
+  const mesh=new T.InstancedMesh(geometry,material,count);mesh.name=name;mesh.userData.noCollide=true;mesh.frustumCulled=false;group.add(mesh);return mesh;
  };
  const drop=back[0].origin[1]-FLOOR;
  const cones=batch('Common_stage_down_cones',new T.CylinderGeometry(.62,.07,drop,16,1,true).translate(0,drop/2,0),back,0);
  const pools=batch('Common_stage_floor_pools',new T.PlaneGeometry(1.7,1.7).rotateX(-Math.PI/2),back,2);
- const lasers=batch('Common_stage_front_beams',new T.CylinderGeometry(.02,.02,LENGTH,12,1,true).translate(0,LENGTH/2,0),front,1);
+ const lasers=batch('Common_stage_front_beams',new T.CylinderGeometry(.02,.02,LENGTH,12,1,true).translate(0,LENGTH/2,0),front,1,FAN_TURNS.length);
  lasers.instanceMatrix.setUsage(T.DynamicDrawUsage);
  const matrix=new T.Matrix4(),rotation=new T.Quaternion(),point=new T.Vector3(),direction=new T.Vector3(),scale=new T.Vector3(1,1,1);
  back.forEach((f,i)=>{
   cones.setMatrixAt(i,matrix.compose(point.fromArray(f.origin),rotation.setFromUnitVectors(UP,direction.set(0,-1,0)),scale));
   pools.setMatrixAt(i,matrix.makeTranslation(f.origin[0],FLOOR+.018,f.origin[2]));
  });
- const aim=time=>{front.forEach((f,i)=>lasers.setMatrixAt(i,matrix.compose(point.fromArray(f.origin),rotation.setFromUnitVectors(UP,stageBeamAim(time,i,direction)),scale)));lasers.instanceMatrix.needsUpdate=true;};
+ const ray=new T.Vector3();
+ const aim=(time,rays=FAN_TURNS.length)=>{
+  front.forEach((f,i)=>{
+   point.fromArray(f.origin);stageBeamAim(time,i,direction);
+   for(let j=0;j<rays;j++){
+    ray.copy(direction).applyQuaternion(FAN_TURNS[j]);
+    lasers.setMatrixAt(j*front.length+i,matrix.compose(point,rotation.setFromUnitVectors(UP,ray),scale));
+   }
+  });
+  lasers.count=front.length*rays;lasers.instanceMatrix.needsUpdate=true;
+ };
  aim(0);
  // Follow the atrium visibility gate, then reject distant or offscreen stage effects as a single box.
  const box=new T.Box3(new T.Vector3(106,y+FLOOR,14),new T.Vector3(119.7,y+3.95,46)),centre=box.getCenter(new T.Vector3()),eye=new T.Vector3(),frustum=new T.Frustum(),view=new T.Matrix4();
- return {group,update(camera,time){
+ return {group,update(camera,time,reduced=false){
   const span=atriumViewSpan();group.visible=!!span&&span[0]<=box.max.y&&span[1]>=box.min.y&&camera.getWorldPosition(eye).distanceToSquared(centre)<90**2;
   if(group.visible){view.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);group.visible=frustum.setFromProjectionMatrix(view).intersectsBox(box);}
   if(!group.visible)return;
-  clock.value=time;aim(time);
+  clock.value=time;aim(time,reduced?3:FAN_TURNS.length);
  }};
 }

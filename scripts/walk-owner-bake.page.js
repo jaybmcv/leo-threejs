@@ -7,12 +7,16 @@
 //                   [entry...]]...] with entries [part, [cond...], [cabin id...]?] (parts and conds index setup()'s tables).
 //  check(data,n)    the finished bake loaded through the walk's own createOwnerHiding, and n random poses inside its
 //                   blocks drawn with and without the hiding: changed pixels per pose (a second plain draw is the noise).
+//  stand(seed)      the walker stood at `seed` {at, yaw} and the decks shown there settled (setup does this first).
+//  rows(tables)     the row digests (walk-owner-bake.scene.js rowDigests) of tables {parts, conds} as the scene is now,
+//                   one per row (null for a row the scene has none for), and the walk's key: what a carry compares;
+//                   `where` (the camera and how many bands show) only for the logs.
 import * as T from 'three';
 import {MeshBVH} from 'three-mesh-bvh';
 import {createOwnerProof,OWNER_PROOF} from '../src/v2/owner-proof.js';
 import {createOwnerHiding,ownerBakeProblem,pruneOwnerBake} from '../src/v2/owner-hiding.js';
 import {PVS_GRID} from '../src/v2/atrium-pvs.js';
-import {collectOccluders,collectTargets} from './walk-owner-bake.scene.js';
+import {collectOccluders,collectTargets,tableDigests} from './walk-owner-bake.scene.js';
 
 const PV=PVS_GRID,NEAR_SLOTS=80;
 const cellBox=(i,k,j)=>new T.Box3(new T.Vector3(PV.x0+PV.step*i-PV.step/2,PV.y0+2*k,PV.z0+PV.step*j-PV.step/2),new T.Vector3(PV.x0+PV.step*i+PV.step/2,PV.y0+2*k+2,PV.z0+PV.step*j+PV.step/2));
@@ -26,10 +30,13 @@ const isCell=b=>{const s=b.getSize(new T.Vector3());return s.x<=PV.step+.01&&s.y
 let host,proof,targets,parts,partIndex,conditions,bandConds,mergeRoot;
 // `seed` {at, yaw}: where the walker stands while the bake runs and checks itself (the decks shown there are those a
 // visitor in the baked cells sees).
+const hosted=()=>{host=globalThis.__ownerBakeHost;if(!host?.scene)throw Error('No __ownerBakeHost: open the walk with ?ownerBake');return host;};
+async function stand(seed){
+ hosted();if(!host.goTo({at:seed.at,yaw:seed.yaw,resolved:true}))throw Error('Could not stand the walker at '+JSON.stringify(seed.at));host.follow.mode='third';host.follow.yaw=(seed.yaw??0)*Math.PI/180;
+ for(let n=0;n<60;n++)await new Promise(f=>requestAnimationFrame(f));
+}
 async function setup(seed){
- host=globalThis.__ownerBakeHost;if(!host?.scene)throw Error('No __ownerBakeHost: open the walk with ?ownerBake');
- if(seed){if(!host.goTo({at:seed.at,yaw:seed.yaw,resolved:true}))throw Error('Could not stand the walker at '+JSON.stringify(seed.at));host.follow.mode='third';host.follow.yaw=(seed.yaw??0)*Math.PI/180;
-  for(let n=0;n<60;n++)await new Promise(f=>requestAnimationFrame(f));}
+ hosted();if(seed)await stand(seed);
  host.scene.updateMatrixWorld(true);
  const emptyHook=host.T.Material.prototype.onBeforeCompile,occ=collectOccluders(host.scene,{emptyHook}),g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(occ.positions,3));
  proof=createOwnerProof({bvh:new MeshBVH(g,{indirect:true,maxLeafSize:8}),sides:occ.sides,conds:occ.conds});conditions=occ.conditions;bandConds=occ.bandConds;mergeRoot=occ.mergeRoot;
@@ -38,7 +45,7 @@ async function setup(seed){
 }
 // The parts of one owner group proven from `box`: [{p, conds}]. The group's plain parts together first, then each. The
 // proof splits cell or box itself only for a single cell (a block splits itself first: visit below).
-function proveGroup(box,parts,hint){const depth=isCell(box)?undefined:0;
+function proveGroup(box,parts,hint,wholeOnly){const depth=!wholeOnly&&isCell(box)?undefined:0;
  const out=[],plain=parts.filter(p=>p.boxes),centre=box.getCenter(new T.Vector3());
  const all=new T.Box3();for(const p of plain)for(const b of p.boxes)all.union(b);
  const whole=plain.length>1?proof.prove(box,all,hint,'g:'+plain[0].path,depth):null;
@@ -53,24 +60,32 @@ function proveSlots(box,p,hint){
  for(const s of p.slots.map(s=>[s.centre.distanceToSquared(centre),s]).sort((a,b)=>a[0]-b[0]).slice(0,NEAR_SLOTS).map(e=>e[1])){const u=proof.prove(box,s.box,hint,p.path+'@'+s.id,isCell(box)?undefined:0);if(u){ids.push(s.id);for(const k of u)conds.add(k);}}
  return ids.length?{p,conds,slots:ids}:null;
 }
-async function bake(blocks){
+async function bake(blocks,{staticWhole=false}={}){
  const out=[],hint=new Map(),started=performance.now();let visits=0;
  // A merge source's triangles draw only while its band shows and the merged pieces' root is drawn: entries relying on a band
  // rely on that root too.
  const withRoot=c=>{const s=new Set(c);if(mergeRoot!==null&&[...s].some(k=>bandConds.has(k)))s.add(mergeRoot);return [...s].sort((a,b)=>a-b);};
  const record=(box,proven)=>{if(!proven.length)return;out.push([...cellsOf(box),proven.map(x=>[partIndex.get(x.p),withRoot(x.conds),...(x.slots?[x.slots]:[])])]);};
- const visit=async(box,parts)=>{visits++;const proven=proveGroup(box,parts,hint);record(box,proven);const done=new Set(proven.map(x=>x.p)),rest=parts.filter(p=>!done.has(p));
+ const visit=async(box,parts)=>{visits++;const proven=proveGroup(box,parts,hint,staticWhole);record(box,proven);const done=new Set(proven.map(x=>x.p)),rest=parts.filter(p=>!done.has(p));
   if(!rest.length||isCell(box))return;if(visits%100===0)await new Promise(f=>setTimeout(f,0));for(const h of halves(box))await visit(h,rest);};
  for(const block of blocks){const box=blockBox(block);
   for(const e of targets){const plain=e.parts.filter(p=>p.boxes);if(plain.length)await visit(box.clone(),plain);
+   if(staticWhole)continue;
    const cabins=e.parts.filter(p=>p.slots).map(p=>proveSlots(box,p,hint)).filter(Boolean);record(box,cabins);}}
  return {blocks:out,visits,ms:Math.round(performance.now()-started),stats:{...proof.stats}};
 }
 // After the bake: whatever moved or changed since setup is dropped (pruneOwnerBake in src/v2/owner-hiding.js).
-const prune=data=>{host.scene.updateMatrixWorld(true);return pruneOwnerBake(data,host.scene);};
+const prune=data=>{hosted().scene.updateMatrixWorld(true);return pruneOwnerBake(data,host.scene);};
+function rows(tables){
+ hosted().scene.updateMatrixWorld(true);
+ // Where they were read, for the logs: the digests do not depend on it (rowDigests leaves view state out).
+ let shown=0,bands=0;host.scene.traverse(o=>{if(/^Walk_band_/.test(o.name||'')&&!/^Walk_band_/.test(o.parent?.name||'')){bands++;if(o.visible)shown++;}});
+ return {key:host.key,where:{camera:host.camera.position.toArray().map(v=>+v.toFixed(1)),bands:shown+'/'+bands},
+  ...tableDigests(host.scene,tables,{emptyHook:host.T.Material.prototype.onBeforeCompile})};
+}
 // Picture diffs through the walk's own hiding.
 async function check(data,poses=60,seed=7){
- const {scene,renderer:r,camera}=host,gl=r.getContext(),hiding=createOwnerHiding(data,{key:host.key,scene});if(!hiding)throw Error('The walk would not use this bake: '+ownerBakeProblem(data,host.key));hiding.resolve();
+ const {scene,renderer:r,camera}=hosted(),gl=r.getContext(),hiding=createOwnerHiding(data,{key:host.key,scene});if(!hiding)throw Error('The walk would not use this bake: '+ownerBakeProblem(data,host.key));hiding.resolve();
  const W=r.domElement.width,H=r.domElement.height,A=new Uint8Array(W*H*4),A2=new Uint8Array(W*H*4),B=new Uint8Array(W*H*4);
  const draw=(cam,buf,hide)=>{const rt=r.getRenderTarget();r.setRenderTarget(null);const go=()=>{r.clear();r.render(scene,cam);};if(hide)hiding.around(cam,go);else go();gl.readPixels(0,0,W,H,gl.RGBA,gl.UNSIGNED_BYTE,buf);r.setRenderTarget(rt);};
  const diff=(a,b)=>{let big=0,max=0;for(let p=0;p<a.length;p+=4){const d=Math.max(Math.abs(a[p]-b[p]),Math.abs(a[p+1]-b[p+1]),Math.abs(a[p+2]-b[p+2]));if(d>max)max=d;if(d>24)big++;}return {big,max};};
@@ -81,4 +96,4 @@ async function check(data,poses=60,seed=7){
   if(n%10===9)await new Promise(f=>setTimeout(f,0));}
  return {resolved:hiding.stats.resolved,parts:hiding.stats.parts,condsResolved:hiding.stats.condsResolved,conds:hiding.stats.conds,poses:rows};
 }
-globalThis.__ownerBake={setup,bake,prune,check};
+globalThis.__ownerBake={setup,bake,prune,check,stand,rows};

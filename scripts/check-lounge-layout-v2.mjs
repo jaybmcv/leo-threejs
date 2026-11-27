@@ -98,7 +98,8 @@ for(const [name,y]of [['V2_garden_guard_glass',28.9],['V2_garden_guard_cap',29.4
  for(let z=-56.5;z<-54.9;z+=.1){cornerRay.set(new T.Vector3(-88.7,y,z),new T.Vector3(1,0,0));assert(cornerRay.intersectObjects(rails).length,'Missing far corner rail '+name);}
  cornerRay.far=2;cornerRay.set(new T.Vector3(-91,y,-55.7),new T.Vector3(1,0,0));assert.equal(cornerRay.intersectObjects(rails).length,0,'Old jog rail remains inside landing');
 }
-route('Below filled corner',[[-91,24.3,-55.7],[-89,24.3,-55.7],[-89,24.3,-57]]);
+// The #427 wall closes the floor below the corner's open-floor edge, so the walk reaches it from the lounge side only (Jay, 2026-11-20).
+route('Below filled corner',[[-91,24.3,-55.7],[-89,24.3,-55.7]]);
 walker.place(new T.Vector3(-91.05,28.3,-55.68));walk([2.25,0,0],2,p=>assert(Math.abs(p.y-28.3)<.06,'New corner must support feet'));
 assert(walker.position.x>-89.2&&walker.position.x<-88.5,'Far rail stops the visitor inside the new floor');
 walk([0,0,-2.25],1,p=>assert(Math.abs(p.y-28.3)<.06,'Outer corner rail prevents a fall'));assert(walker.position.z>-56.3&&walker.position.z<-56,'Outer rail stops the visitor');
@@ -218,11 +219,11 @@ assert(serviceBounds(['Laundry_counter','Laundry_machine','Laundry_drum','Parcel
 const chairs=[];source.root.traverse(o=>{if(o.name==='Tail_clearance_chair')chairs.push(o.getWorldPosition(new T.Vector3()));});
 assert.deepEqual(chairs.map(p=>p.toArray()),[[-118.5,24.3,-53],[-116.5,24.3,-53],[-114.5,24.3,-53],[-112.5,24.3,-53]],'Keep all four kitchen chairs');
 const rests=findRestSpots(source.root),seams=[];source.root.traverse(o=>{if(o.name==='Polish_tailored_seam')seams.push(new T.Box3().setFromObject(o,true));});
-// Only the middle seating group moves, centred on the maze door with a 1.75 m approach.
+// The middle seating group stays centred on the maze door with a 1.75 m approach.
 const rug=source.root.getObjectByName('Lounge_rug'),rugBoxes=[];
 for(let start=0;start<rug.geometry.attributes.position.count;start+=36){const b=new T.Box3();for(let i=start;i<start+36;i++)b.expandByPoint(new T.Vector3().fromBufferAttribute(rug.geometry.attributes.position,i).applyMatrix4(rug.matrixWorld));rugBoxes.push(b);}
 assert.equal(rugBoxes.length,3,'Keep exactly three lounge rugs');
-for(const [i,x,z] of [[0,-119.5,-32.5],[1,-129.5,-45.75],[2,-103.15,-30]]){const b=rugBoxes[i],c=b.getCenter(new T.Vector3());close(c.x,x);close(c.z,z);close(b.max.x-b.min.x,i===2?4:7);close(b.max.z-b.min.z,i===2?3:4);}
+for(const [i,x,z] of [[0,-122,-33],[1,-129.5,-45.75],[2,-103.15,-30]]){const b=rugBoxes[i],c=b.getCenter(new T.Vector3());close(c.x,x);close(c.z,z);close(b.max.x-b.min.x,i===1?7:4);close(b.max.z-b.min.z,i===0?7:i===2?3:4);}
 close(rugBoxes[1].max.z,-43.75);
 for(const [x,z] of [[-131.7,-44.85],[-128.3,-47.25],[-126.3,-45.05],[-132.9,-46.75],[-130.3,-44.15]])assert(rests.some(s=>s.kind==='sit'&&Math.hypot(s.point.x-x,s.point.z-z)<.01),'Moved cushion has a sit anchor');
 assert(!rests.some(s=>s.height<25.1&&s.point.x>-113.5&&s.point.x<-105.9&&s.point.z>-35&&s.point.z<-29.8),'No old cushion anchors');
@@ -237,7 +238,7 @@ console.log('PASS three rugs, moved cushion anchors, bare old footprint and cent
 {
  const rug=source.root.getObjectByName('Lounge_rug'),p=rug.geometry.attributes.position,boxes=[];
  for(let i=0;i<p.count;i+=36)boxes.push(new T.Box3().setFromPoints(Array.from({length:36},(_,j)=>new T.Vector3().fromBufferAttribute(p,i+j).applyMatrix4(rug.matrixWorld))));
- assert.equal(boxes.length,3);for(const [i,x0,x1,z0,z1] of [[0,-123,-116,-34.5,-30.5],[1,-133,-126,-47.75,-43.75]]){close(boxes[i].min.x,x0);close(boxes[i].max.x,x1);close(boxes[i].min.z,z0);close(boxes[i].max.z,z1);}
+ assert.equal(boxes.length,3);for(const [i,x0,x1,z0,z1] of [[0,-124,-120,-36.5,-29.5],[1,-133,-126,-47.75,-43.75]]){close(boxes[i].min.x,x0);close(boxes[i].max.x,x1);close(boxes[i].min.z,z0);close(boxes[i].max.z,z1);}
  const small=boxes[2];close(small.min.x,-105.15);close(small.max.x,-101.15);close(small.min.z,-31.5);close(small.max.z,-28.5);
  assert(small.max.z<tank.min.z-.5&&!small.intersectsBox(boxes[1]),'Moved rug clears the glass and larger rug');
  const seats=[[-102.55,25.0196,-30.1],[-104.45,24.47,-28.9],[-101.55,24.47,-31.2]];
@@ -255,8 +256,26 @@ console.log('PASS three rugs, moved cushion anchors, bare old footprint and cent
  walk([-2.25,0,0],1);assert(walker.position.x<small.min.x-.3,'Walk off the far edge of the rug');
  console.log('PASS moved small rug, three sit points, bare old floor, visible photo marker and walk across the photo spot');
 }
-for(const x of [-128.5,-125.5,-122.5]){
- route('Former reading chair '+x,[[x,24.3,-59.8],[x,24.3,-54.8]]);
+// The far rug turns across the maze glass; retain main's independent middle and photo-rug moves.
+const rugVertices=rug.geometry.attributes.position;
+assert.equal(rugVertices.count,108,'Keep exactly three lounge rugs');
+for(const [i,expected] of [[0,[-124,-120,-36.5,-29.5]],[1,[-133,-126,-47.75,-43.75]],[2,[-105.15,-101.15,-31.5,-28.5]]]){
+ const box=new T.Box3();for(let k=i*36;k<(i+1)*36;k++)box.expandByPoint(new T.Vector3().fromBufferAttribute(rugVertices,k).applyMatrix4(rug.matrixWorld));
+ [box.min.x,box.max.x,box.min.z,box.max.z].forEach((v,k)=>close(v,expected[k]));
+}
+const movedSeats=[[-122.8,-35.4],[-120.6,-32.4],[-123,-30.4],[-123.6,-33.6]];
+for(const [x,z] of movedSeats)assert(rests.some(s=>Math.hypot(s.point.x-x,s.point.z-z)<.01&&s.height<25.2),'Moved cushion has a sit spot');
+for(const [x,z] of [[-121.9,-31.7],[-118.9,-33.9],[-116.9,-31.5],[-120.1,-30.9]])assert(!rests.some(s=>Math.hypot(s.point.x-x,s.point.z-z)<.01&&s.height<25.2),'Old cushion spot is gone');
+route('Old rug centre is clear',[[-119.5,24.3,-32.5],[-115.5,24.3,-32.5]]);
+route('Moved rug full circuit',[[-125.1,24.3,-28.75],[-125.1,24.3,-37.25],[-120.3,24.3,-37.25],[-119.25,24.3,-35.8],[-119.25,24.3,-28.75],[-125.1,24.3,-28.75]]);
+walker.place(new T.Vector3(-119.5,24.3,-32.5));walk([2.25,0,0],1.7);
+assert(walker.position.x>-116,'Visitor crosses the old table position');
+walker.place(new T.Vector3(-125.1,24.3,-29));walk([0,0,-2.25],3.5);
+assert(walker.position.z<-36.5&&Math.abs(walker.position.x+125.1)<.05,'Visitor crosses the entire maze-side gap');
+console.log('PASS rotated rug, preserved middle and photo rugs, four moved sit spots and real controller routes');
+// Each walk crosses its old chair spot (z -56) and stops on the open-floor side of the #427 wall (Jay, 2026-11-24).
+for(const [x,end] of [[-128.5,-54.8],[-125.5,-55.1],[-122.5,-55.75]]){
+ route('Former reading chair '+x,[[x,24.3,-59.8],[x,24.3,end]]);
  assert(!rests.some(s=>Math.abs(s.height-24.8)<.5&&Math.hypot(s.point.x-x,s.point.z+56)<1.5),'Invisible chair rest anchor at '+x);
  const b=new T.Box3(new T.Vector3(x-.4,24.3,-56.4),new T.Vector3(x+.4,25.5,-55.6));
  assert(!seams.some(s=>s.intersectsBox(b)),'Floating upholstery seam at '+x);

@@ -6,6 +6,9 @@ const axes = ['x', 'y', 'z'];
 function hooks(o) { return o.onBeforeRender === Object3D.prototype.onBeforeRender && o.onAfterRender === Object3D.prototype.onAfterRender; }
 function normalDepth(m) { return m.depthTest && (m.depthFunc === LessDepth || m.depthFunc === LessEqualDepth) && !m.stencilWrite && !m.polygonOffset && !m.wireframe && m.onBeforeRender === Material.prototype.onBeforeRender && geometryKept(m); }
 const names = /^(V2_facade_terraces_and_atrium_roof|V2_low_deck_merged_(V2_public_hex_floor|V2_public_wall_panels|Walk_finish_[0-9]+[|][0-9]+[|][0-9]+[|][0-9]+)|P6_atrium_floor_actual|P6_atrium_soffits|P6_sky_tip|P6_sky_ceiling|Gaming_hex_floor)$/;
+/** A mesh the floors' occlusion may take as a blocker: it must reach renderBufferDirect itself (quad-facing.js reports what
+ * it drew). */
+export const floorBlocker = o => !!o?.isMesh && !o.isInstancedMesh && names.test(o.name);
 function opaque(m) {
   return (m.isMeshStandardMaterial || m.isMeshBasicMaterial || m.isMeshPhongMaterial || m.isMeshLambertMaterial) && normalDepth(m) &&
     (m.onBeforeCompile === Material.prototype.onBeforeCompile || m.onBeforeCompile.cornerShade || m.onBeforeCompile.filmLook) && m.depthWrite && m.colorWrite && !m.transparent && !m.transmission &&
@@ -13,10 +16,31 @@ function opaque(m) {
 }
 // Use actual rendered geometry and material ranges as blockers. The worker chooses
 // witnesses. Every hidden draw revalidates those witnesses in its current pass.
+// The scan reads every triangle of the floors and facades above (about a second on a desktop), so it pauses every
+// SCAN_TRIANGLES triangles: createFloorOcclusionAsync gives the page a turn there, while someone walks the arrival hall
+// as the ship builds (arrival-preview.js). The same scan in the same order either way.
+const SCAN_TRIANGLES = 4096;
 export function createFloorOcclusion(scene, camera) {
+  const scan = floorScan(scene, camera);
+  let step;
+  do step = scan.next(); while (!step.done);
+  return step.value;
+}
+/** createFloorOcclusion, with `turn()` awaited once `sliceMs` of scanning has run since the last. */
+export async function createFloorOcclusionAsync(scene, camera, turn, sliceMs = 12) {
+  const scan = floorScan(scene, camera);
+  let step, slice = performance.now();
+  while (!(step = scan.next()).done)
+    if (performance.now() - slice >= sliceMs) {
+      await turn();
+      slice = performance.now();
+    }
+  return step.value;
+}
+function* floorScan(scene, camera) {
   if (typeof Worker === 'undefined')
     return null;
-  const anchors = new WeakMap(), packed = [], sources = [], p0 = new Vector3(), p1 = new Vector3(), p2 = new Vector3();
+  const anchors = new WeakMap(), packed = [], sources = [], p0 = new Vector3(), p1 = new Vector3(), p2 = new Vector3(), meshes = [];
   scene.traverse?.(o => {
     if (!names.test(o.name) || !o.isMesh || o.isInstancedMesh || !hooks(o))
       return;
@@ -27,8 +51,15 @@ export function createFloorOcclusion(scene, camera) {
     const world = o.matrixWorld.clone(), det = Math.sign(world.determinant()), source = { g, p, ix, m, world, side: m.side, pv: p.version, iv: ix?.version, frame: -1, ranges: [] };
     source.id = sources.length;
     sources.push(source);
-    const count = ix?.count ?? p.count;
+    meshes.push([o, source, det]);
+  });
+  let scanned = 0;
+  for (const [o, source, det] of meshes) {
+    const { p, ix, m, world } = source, count = ix?.count ?? p.count;
     for (let i = 0; i + 2 < count; i += 3) {
+      // Counted across meshes, so many small floors pause as one big one does.
+      if (++scanned % SCAN_TRIANGLES === 0)
+        yield;
       p0.fromBufferAttribute(p, ix ? ix.getX(i) : i).applyMatrix4(world);
       p1.fromBufferAttribute(p, ix ? ix.getX(i + 1) : i + 1).applyMatrix4(world);
       p2.fromBufferAttribute(p, ix ? ix.getX(i + 2) : i + 2).applyMatrix4(world);
@@ -48,7 +79,7 @@ export function createFloorOcclusion(scene, camera) {
       packed.push(axis, d, Math.sign(area) * det, m.side, source.id, i, p0[u], p0[v], p1[u], p1[v], p2[u], p2[v]);
       anchors.set(o, source);
     }
-  });
+  }
   if (!packed.length)
     return null;
   let worker, url;

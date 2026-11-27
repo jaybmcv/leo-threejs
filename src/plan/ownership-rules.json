@@ -264,11 +264,23 @@
     "owners": ["d16-training-aft"],
     "via": "inherited"
   },
+  "src/walk/green-room.js": {
+    "owners": ["d05-shelter-8"],
+    "via": null
+  },
+  "src/walk/green-room-art.js": {
+    "owners": ["d05-shelter-8"],
+    "via": "inherited"
+  },
   "src/walk/gaming-lounge.js": {
     "owners": [
       "d16-training-aft"
     ],
     "via": null
+  },
+  "src/walk/gaming-wall-lights.js": {
+    "owners": ["d16-training-aft"],
+    "via": "inherited"
   },
   "src/walk/hamster-ball.js": {
     "owners": [

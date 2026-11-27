@@ -4,7 +4,7 @@ import path from 'node:path';
 import {publicOutput} from './layout-selector.mjs';
 const root=path.resolve(publicOutput);
 const port=Number(process.argv[2]||4173);
-const mime={'.html':'text/html; charset=utf-8','.glb':'model/gltf-binary','.json':'application/json','.csv':'text/csv','.md':'text/plain; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.mp4':'video/mp4','.woff2':'font/woff2','.js':'text/javascript; charset=utf-8'};
+const mime={'.html':'text/html; charset=utf-8','.glb':'model/gltf-binary','.json':'application/json','.csv':'text/csv','.md':'text/plain; charset=utf-8','.png':'image/png','.css':'text/css','.webp':'image/webp','.jpg':'image/jpeg','.mp4':'video/mp4','.woff2':'font/woff2','.js':'text/javascript; charset=utf-8'};
 http.createServer(async(req,res)=>{
   try{
     const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);

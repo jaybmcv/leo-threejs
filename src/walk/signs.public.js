@@ -6,6 +6,7 @@ import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/Buffe
 const DECKS=layout.decks;
 import {TRANSIT_CORES,floorY} from '../transit.js';
 import {SHIP_AREAS} from '../areas.js';
+import {roomNameV2} from '../plan/room-names-v2.js';
 import {serviceRoutes} from '../service-circulation.js';
 
 // Wayfinding for walk mode, in the visitor theme's colours and type: a deck plaque beside every lift landing, a stairs
@@ -221,7 +222,9 @@ function directionMaterial(cells){
  });
  m=new T.MeshBasicMaterial({map:texture,toneMapped:false});directions.set(key,m);return m;
 }
-const signBody=new T.MeshBasicMaterial({color:INK}),signGlow=new T.MeshBasicMaterial({color:TEAL,toneMapped:false}),rodGeometry=new ReplayGeometry("src/walk/signs.js:1",T.CylinderGeometry,.015,.015,1,6);
+const signBody=new T.MeshBasicMaterial({color:INK}),signGlow=new T.MeshBasicMaterial({color:TEAL,toneMapped:false}),rodShape=()=>rodGeometry??=new ReplayGeometry("src/walk/signs.js:1",T.CylinderGeometry,.015,.015,1,6);
+// Made on first use, not as this script loads: an arrival-hall start runs it before the prepared ship is in (arrival-start.js).
+let rodGeometry=null;
 // A screen hung from the ceiling `ceiling` metres above `at`, readable from `facing`; `back` is the wording on its other side.
 function hang(parent,material,back,at,facing,width,ceiling){
  const h=width/8,g=new T.Group();g.name='Walk_corridor_sign';g.position.copy(at);g.lookAt(at.clone().add(facing));
@@ -230,13 +233,13 @@ function hang(parent,material,back,at,facing,width,ceiling){
  const rear=new T.Mesh(face.geometry,back);rear.position.z=-.026;rear.rotation.y=Math.PI;g.add(rear);
  // A lit strip under the screen.
  const glow=new T.Mesh(new ReplayGeometry("src/walk/signs.js:4",T.BoxGeometry,width-.1,.014,.03),signGlow);glow.position.y=-h/2-.007;g.add(glow);
- const drop=ceiling-h/2;for(const s of [-1,1]){const rod=new T.Mesh(rodGeometry,signBody);rod.scale.y=drop;rod.position.set(s*width*.4,h/2+drop/2,0);g.add(rod);}
+ const drop=ceiling-h/2;for(const s of [-1,1]){const rod=new T.Mesh(rodShape(),signBody);rod.scale.y=drop;rod.position.set(s*width*.4,h/2+drop/2,0);g.add(rod);}
  anchorObject(g,'circulation-'+Math.max(1,Math.min(20,Math.round((at.y-2.8+39.7)/4)+1)));parent.add(g);return g;
 }
 // The lift cells show lift and stairs icons: each core holds both.
 const LIFTS={fore:'Forward lifts',aft:'Aft lifts'},CORE=['lift','stairs'];
 export function corridorSigns(parent){
- const area=id=>SHIP_AREAS.find(a=>a.id===id),roomName=id=>area(id)?.name||'';
+ const area=id=>SHIP_AREAS.find(a=>a.id===id),roomName=id=>roomNameV2(id,area(id)?.name||'');
  const lifts=TEAL,rooms=ORANGE,height=2.8,ceiling=3.3-height;
  for(let deck=1;deck<=20;deck++){
   const plan=serviceRoutes(deck);if(!plan)continue;

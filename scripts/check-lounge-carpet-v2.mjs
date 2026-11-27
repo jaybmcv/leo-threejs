@@ -38,3 +38,4 @@ dome.traverse(o=>{
  }
 });
 console.log('PASS: nonemissive velvet on main/envelope floors and both galleries; pile and sheen survive both walk bakes; dome floor glow removed; rugs and other rooms preserved');
+await import('./check-lounge-walkway-v2.mjs');

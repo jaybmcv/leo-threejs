@@ -2,6 +2,8 @@ import {launchEFitout} from './launch-e-fitout.js';
 import {applyRoomFitoutOverrides} from './room-fitout-overrides.js';
 import {launchDFitout} from './launch-d-fitout.js';
 import {phase6Programme} from './phase6-programme.js';
+import {greenRoomMaterialKey} from './phase4-mesh-kit.js';
+import {GREEN_ROOM_ID} from '../plan/room-names-v2.js';
 import{contains}from'../plan/geometry-v2.js';
 // Accepted stage-1 kit, rolled out through the normal v2 producers.
 export const PHASE4_ROOMS=[...[7,7,6,6,8].flatMap((count,i)=>Array.from({length:count},(_,j)=>'d'+String(i+1).padStart(2,'0')+'-new-'+(j+1))), 'd16-new-1','d16-new-2',...Array.from({length:10},(_,i)=>['neighborhood-'+(i+1)+'-dining','neighborhood-'+(i+1)+'-cafe']).flat()];
@@ -130,5 +132,9 @@ export function phase4Programme(layout){
  rooms.push({id:s.id,deck:s.deck,name:'Escape shuttle',rests:100});
  }
  const launchD=launchDFitout(layout);parts.push(...launchD.parts);rests.push(...launchD.rests);rooms.push(...launchD.rooms);
- const phase6=phase6Programme(layout);parts.push(...phase6.parts);rests.push(...phase6.rests);const launchE=launchEFitout(layout,phase6);parts.push(...launchE.parts);rests.push(...launchE.rests);rooms.push(...launchE.rooms);return applyRoomFitoutOverrides({parts,rests,rooms,phase6:phase6.owners},layout);
+ const phase6=phase6Programme(layout);parts.push(...phase6.parts);rests.push(...phase6.rests);const launchE=launchEFitout(layout,phase6);parts.push(...launchE.parts);rests.push(...launchE.rests);rooms.push(...launchE.rooms);
+ const data=applyRoomFitoutOverrides({parts,rests,rooms,phase6:phase6.owners},layout);
+ // Use separate cache and batch keys for the dim Green Room finishes.
+ for(const p of data.parts)if(p.room===GREEN_ROOM_ID)p.mat=greenRoomMaterialKey(p.mat);
+ return data;
 }

@@ -6,7 +6,9 @@ import {createHash} from 'node:crypto';
 import {createCanvas} from '@napi-rs/canvas';
 import * as T from 'three';
 import layout from '../src/plan/selected-layout.js';
+import {worldPoint} from '../src/plan/hull-skin-v2.js';
 import {v1Frame,resolveRoomFrames} from '../src/plan/rooms.js';
+import {shellParts} from '../src/v2/hull-prototypes.js';
 import {dressGamingLounge,createGamingLounge} from '../src/walk/gaming-lounge.js';
 import {geometryRecords} from '../src/v2/prepared-geometry-record.js';
 import {findRestSpots,solidSpots} from '../src/walk/rest.js';
@@ -95,6 +97,38 @@ console.log(`Gaming lounge: four shared stations, solid seats and colliders; ${c
 globalThis.document={createElement:()=>createCanvas(1,1)};
 const signature=group=>{const h=createHash('sha256');group.traverse(o=>{if(!o.geometry)return;h.update(o.name);for(const a of Object.values(o.geometry.attributes))h.update(Buffer.from(a.array.buffer,a.array.byteOffset,a.array.byteLength));if(o.geometry.index)h.update(Buffer.from(o.geometry.index.array.buffer));});return h.digest('hex');};
 const expected=createGamingLounge({root},null,{still:true});
+// Check the lights against the same opaque lining and end returns the ship uses.
+const facade=layout.hullPrototypes.prototypes.find(p=>p.ownerId===id),shell=shellParts(facade,q=>worldPoint(facade.chart,q));
+const opaque=new T.MeshBasicMaterial({side:T.DoubleSide}),hull=new T.Mesh(shell.wall,opaque),ends=new T.Mesh(shell.sides,opaque);
+const [aft,bow,,top]=facade.rect,zFront=facade.chart.origin[2]-facade.fixedV;
+const ray=new T.Raycaster(),out=new T.Vector3(0,0,-1),position=new T.Vector3();
+expected.group.updateMatrixWorld(true);
+const light=name=>expected.group.getObjectByName('Gaming_'+name);
+for(const name of ['hex_light','hex_glow']){
+ const mesh=light(name),p=mesh.geometry.attributes.position;
+ for(let i=0;i<p.count;i++){
+  position.fromBufferAttribute(p,i).applyMatrix4(mesh.matrixWorld);
+  assert(position.y<plan.y+top&&position.z<zFront,'The RGB panels stay below the wall top and clear of entry glass');
+  const side=position.x<aft+.06?-1:position.x>bow-.06?1:0,dir=side?new T.Vector3(side,0,0):out;
+  ray.set(position.clone().addScaledVector(dir,-.1),dir);ray.far=.17;
+  const backing=ray.intersectObject(side?ends:hull)[0];
+  assert(backing&&backing.distance>.098,`${name} needs opaque wall backing at ${position.toArray()}`);
+ }
+}
+const strip=light('light_strip'),stripBounds=new T.Box3().setFromObject(strip),y=stripBounds.getCenter(position).y;
+assert(stripBounds.max.z<=zFront+.001&&stripBounds.max.y<plan.y+top,'The strip stays clear of the entry glass and below the wall top');
+const followsWall=(from,dir,surface)=>{
+ ray.set(from,dir);ray.far=60;
+ const led=ray.intersectObject(strip)[0],backing=ray.intersectObject(surface)[0];
+ assert(led&&backing&&backing.distance-led.distance>=0&&backing.distance-led.distance<.05,`The strip needs continuous wall backing from ${from.toArray()}`);
+};
+for(let x=aft+.25;x<bow;x+=.5)followsWall(new T.Vector3(x,y,zFront),out,hull);
+for(const [u,dir] of [[aft,-1],[bow,1]]){
+ ray.set(new T.Vector3(u-dir*.001,y,zFront),out);ray.far=60;
+ const corner=ray.intersectObject(hull)[0].point.z;
+ for(let z=zFront-.15;z>corner+.15;z-=.25)followsWall(new T.Vector3(u-dir*.1,y,z),new T.Vector3(dir,0,0),ends);
+}
+console.log('Gaming lounge: hex faces and halos have solid backing, and the strip follows the three solid runs.');
 const dir=path.resolve('.qa/gaming-lounge-stations');await fs.mkdir(dir,{recursive:true});
 const url=p=>pathToFileURL(path.resolve(p)).href,replay=path.join(dir,'replay.mjs');
 let source=await fs.readFile('src/v2/prepared-geometry-replay.public.js','utf8');
