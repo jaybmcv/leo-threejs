@@ -59,10 +59,11 @@ function part(o){
 // Own values of a material that its batch copy takes over (not its identity, version, listeners or shader hooks).
 const OWN=new Set(['uuid','id','version','_listeners','onBeforeCompile','customProgramCacheKey']);
 const ownKeys=(m,omit=null)=>Object.keys(m).filter(k=>!OWN.has(k)&&!omit?.has(k));
-// `omit`: values the copy keeps as its own (a palette's maps and the values they stand in for).
-export function batchMaterial(m,omit=null){
+// `omit`: values the copy keeps as its own (a palette's maps and the values they stand in for). `id`: the copy's material
+// id (by default the original's, so a batch sorts where its parts did).
+export function batchMaterial(m,omit=null,id=m.id){
  const copy=Object.create(Object.getPrototypeOf(m));
- Object.defineProperty(copy,'id',{value:m.id});
+ Object.defineProperty(copy,'id',{value:id});
  const keys=ownKeys(m,omit);for(const k of keys)copy[k]=m[k];
  copy.uuid=T.MathUtils.generateUUID();copy.version=0;
  // The original's hook, whatever it is when the shader is built, then the batch's lookup. Marked as corner-shaded and

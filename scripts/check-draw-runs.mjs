@@ -45,7 +45,7 @@ const marker=scene.getObjectByName('V2_draw_run_end');assert(marker&&marker.pare
 function pass(list,{view=camera,by=view,end=true,around=true}={}){
  scene.updateMatrixWorld(true);view.updateMatrixWorld();by.updateMatrixWorld();drawn.length=0;
  const render=()=>{for(const o of list){const [object,material,group]=Array.isArray(o)?o:[o,o.material,null];renderer.renderBufferDirect(by,scene,object.geometry,material,object,group);}
-  if(end){marker.onBeforeRender();renderer.renderBufferDirect(by,scene,marker.geometry,marker.material,marker,null);}
+  if(end){marker.onBeforeRender(renderer,scene,by);renderer.renderBufferDirect(by,scene,marker.geometry,marker.material,marker,null);}
   scene.onAfterRender(renderer,scene,by);};
  if(around)runs.around(view,render);else render();
  return drawn.map(d=>d.object.isBatchedMesh?d.object.name+'×'+d.count:d.object.name);
@@ -56,7 +56,8 @@ const matrixAt=(b,h)=>new T.Matrix4().fromArray(b._matricesTexture.image.data,h*
 // One row of four P draws, Q, the palette pair, the glass.
 assert.deepEqual(pass([inst1,inst2,inst3,mesh1,q,towerA,towerB,pane]),['V2_draw_run P×4','q','V2_draw_run P6_tower_architecture×2','pane']);
 assert.equal(runs.stats.folded,4);assert.equal(runs.stats.runs,2);
-assert.equal(drawn[0].material,PB.material,'drawn with the batch copy');assert.equal(drawn[0].camera,camera);
+assert.equal(drawn[0].material,PB.material,'drawn with the batch copy');
+assert.notEqual(PB.material.id,P.id,'a copy has a material id of its own');assert.notEqual(TB.material.id,towerA.material.id);assert.equal(drawn[0].camera,camera);
 // three's multi-draw of the batch becomes the instanced one, with each part's instance count, in submission order.
 ext.multiDrawElementsWEBGL(4,PB._multiDrawCounts,0,5125,PB._multiDrawStarts,0,PB._multiDrawCount);
 assert.deepEqual(Array.from(calls.instanced.at(-1)[6].subarray(0,4)),[3,2,2,1]);
@@ -92,6 +93,16 @@ assert.deepEqual(pass([PB,inst1,TB]),['inst1']);
 assert.deepEqual(pass([inst1,inst2],{end:false}),['V2_draw_run P×2']);
 // The cabin part, a part that was never offered, draws itself.
 assert.deepEqual(pass([cabin,inst1]),['cabin','inst1']);
+// A render with another camera inside the pass reaches the marker: the held row waits for the main pass's own end.
+drawn.length=0;runs.around(camera,()=>{renderer.renderBufferDirect(camera,scene,inst1.geometry,P,inst1,null);marker.onBeforeRender(renderer,scene,other);renderer.renderBufferDirect(other,scene,q.geometry,Q,q,null);
+ renderer.renderBufferDirect(camera,scene,inst2.geometry,P,inst2,null);marker.onBeforeRender(renderer,scene,camera);});
+assert.deepEqual(drawn.map(d=>d.object.isBatchedMesh?d.object.name+'×'+d.count:d.object.name),['q','V2_draw_run P×2']);
+// A row of one replays with the main camera's view matrices, whatever a render inside the pass left in them.
+drawn.length=0;runs.around(camera,()=>{inst1.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse,inst1.matrixWorld);const want=inst1.modelViewMatrix.clone();renderer.renderBufferDirect(camera,scene,inst1.geometry,P,inst1,null);
+ inst1.modelViewMatrix.identity();marker.onBeforeRender(renderer,scene,camera);assert(inst1.modelViewMatrix.equals(want));});
+// A part whose geometry was swapped, or whose geometry changed, draws itself.
+const kept1=mesh1.geometry;mesh1.geometry=box.clone();assert.deepEqual(pass([inst1,mesh1]),['inst1','mesh1']);mesh1.geometry=kept1;assert.deepEqual(pass([inst1,mesh1]),['V2_draw_run P×2']);
+mesh1.onBeforeRender=()=>{};assert.deepEqual(pass([inst1,mesh1]),['inst1','mesh1'],'a hook added later');delete mesh1.onBeforeRender;
 // Switched off: everything as before.
 runs.enabled=false;assert.deepEqual(pass([inst1,inst2]),['inst1','inst2']);runs.enabled=true;
 
@@ -121,4 +132,9 @@ assert.equal(TB.material.roughness,1,'the palette keeps its own values');
 const shader={vertexShader:'a\n#include <batching_vertex>\nb',fragmentShader:'',uniforms:{}};TB.material.onBeforeCompile(shader,null);
 assert.match(shader.vertexShader,/getIndirectIndex\( gl_DrawID \) \+ float\( gl_InstanceID \)/);
 assert(TB.material.onBeforeCompile.cornerShade&&TB.material.onBeforeCompile.filmLook,'corner shading and the film look leave it alone');
+// An edited attribute: the copy is stale, so its parts draw themselves.
+box.attributes.position.needsUpdate=true;assert.deepEqual(pass([inst1,inst3]),['inst1','inst3']);
+// A replaced instance matrix buffer of the same count and version: copied again.
+const fresh=new T.InstancedBufferAttribute(new Float32Array(inst2.instanceMatrix.array.length),16);for(let i=0;i<2;i++)at(7,7,i).toArray(fresh.array,i*16);fresh.version=inst2.instanceMatrix.version;
+inst2.instanceMatrix=fresh;assert.deepEqual(pass([inst2,mesh1]),['V2_draw_run P×2']);assert(matrixAt(PB,heads(PB)[0]).equals(at(7,7,0)));
 console.log('check-draw-runs: ok');

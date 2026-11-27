@@ -111,8 +111,11 @@ export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDIC
    geometryOf.push(c);await yieldWork();}
   const unique=[...new Set(geometryOf)];
   const vertices=unique.reduce((s,g)=>s+g.attributes.position.count,0),indices=unique.reduce((s,g)=>s+g.index.count,0);
-  let slots=0;const members=S.rows.map((o,i)=>{const r={o,head:slots,slots:o.isInstancedMesh?o.instanceMatrix.count:1,pal:i,world:new Float64Array(16).fill(NaN),ok:false,identity:false,dirty:true,version:-1,count:-1,mark:-1};slots+=r.slots;return r;});
-  const v=batchMaterial(S.m,S.palette?PALETTE:null);
+  let slots=0;const members=S.rows.map((o,i)=>{const g=o.geometry,r={o,head:slots,slots:o.isInstancedMesh?o.instanceMatrix.count:1,pal:i,world:new Float64Array(16).fill(NaN),ok:false,identity:false,dirty:true,inst:null,version:-1,count:-1,mark:-1,
+   g,index:g.index,attributes:names.filter(k=>g.attributes[k]).map(k=>[k,g.attributes[k],g.attributes[k].version]),indexVersion:g.index?.version};slots+=r.slots;return r;});
+  // An id of its own: the batch is never sorted (its own place in the lists draws nothing), and three skips a material's
+  // uniforms when both program and id repeat, so two batches copied from one material must not share one.
+  const v=batchMaterial(S.m,S.palette?PALETTE:null,new T.Material().id);
   let palette=null;
   if(S.palette){
    palette={look:paletteTexture(n),glow:paletteTexture(n),key:lookOf(S.m)};
@@ -144,26 +147,32 @@ export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDIC
  const marker=new T.Mesh(new T.BufferGeometry().setAttribute('position',new T.BufferAttribute(new Float32Array(9),3)),new T.MeshBasicMaterial());
  marker.name='V2_draw_run_end';marker.frustumCulled=false;marker.layers.enableAll();marker.userData={noCollide:true,renderOnly:true};
  // Its own hooks keep quad-facing.js's tests and the floors' occlusion off it.
- marker.material.onBeforeRender=function(){};marker.onBeforeRender=()=>flush();
+ marker.material.onBeforeRender=function(){};marker.onBeforeRender=(r,world,view)=>{if(main(view,world))flush();};
  const last=new T.Group();last.name='V2_draw_run_last';last.renderOrder=1e9;last.layers.enableAll();last.userData={noCollide:true,renderOnly:true};
  last.add(marker);scene.add(last);ours.add(marker);
  let mainCamera=null,lost=false,run=null,serial=0;const held=[],calls=[],m4=new T.Matrix4();
  renderer.domElement?.addEventListener?.('webglcontextlost',()=>{lost=true;});
  const inner=renderer.renderBufferDirect;
+ // The main camera's own pass: rows are held and ended only there, never in a render made inside it.
+ const main=(camera,world)=>mainCamera!==null&&camera===mainCamera&&world===scene&&renderer.getRenderTarget()===null&&!scene.overrideMaterial;
  function fits(r,material){
   const o=r.o,e=o.matrixWorld.elements,w=r.world;
   for(let k=0;k<16;k++)if(e[k]!==w[k]){w.set(e);r.ok=fitWorld(e,o.isInstancedMesh);r.identity=identity(e);r.dirty=true;break;}
   if(!r.ok||o.isInstancedMesh&&(o.count<1||o.count>r.slots))return false;
+  // What the batch copied at the start: the same geometry, unchanged, drawn whole, with no hooks or colours added since.
+  const g=o.geometry;
+  if(g!==r.g||g.index!==r.index||g.index&&g.index.version!==r.indexVersion||g.drawRange.start!==0||g.drawRange.count!==Infinity||o.instanceColor||o.morphTexture||o.onBeforeRender!==plainBefore||o.onAfterRender!==plainAfter)return false;
+  for(const [k,a,version] of r.attributes)if(g.attributes[k]!==a||a.version!==version)return false;
   const {v,palette}=r.set;
   return palette?v.usable&&material.visible&&lookOf(material)===lookOf(v.m)&&material.onBeforeCompile===v.m.onBeforeCompile:material===v.m&&v.usable;
  }
  function write(r){
   const o=r.o,t=r.set.batch._matricesTexture,data=t.image.data;
   if(o.isInstancedMesh){const inst=o.instanceMatrix,c=o.count;
-   if(!r.dirty&&r.version===inst.version&&r.count===c)return;
+   if(!r.dirty&&r.inst===inst&&r.version===inst.version&&r.count===c)return;
    if(r.identity)data.set(inst.array.subarray(0,c*16),r.head*16);
    else for(let k=0;k<c;k++){m4.fromArray(inst.array,k*16).premultiply(o.matrixWorld);m4.toArray(data,(r.head+k)*16);}
-   upload(t,r.head,c);r.version=inst.version;r.count=c;r.dirty=false;
+   upload(t,r.head,c);r.inst=inst;r.version=inst.version;r.count=c;r.dirty=false;
   }else if(r.dirty){data.set(o.matrixWorld.elements,r.head*16);upload(t,r.head,1);r.dirty=false;}
  }
  function paint(P,i,material){
@@ -187,13 +196,15 @@ export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDIC
  }
  function flush(){
   if(run===null)return;const set=run;run=null;
-  try{if(held.length===1)inner.apply(renderer,calls[0]);else draw(set,calls[0][0]);}
+  // A render inside the pass (another camera) may have moved a held part's view matrices since three set them.
+  try{if(held.length===1){const [camera,,,,o]=calls[0];o.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse,o.matrixWorld);o.normalMatrix.getNormalMatrix(o.modelViewMatrix);inner.apply(renderer,calls[0]);}
+   else draw(set,calls[0][0]);}
   finally{held.length=0;calls.length=0;}
  }
  renderer.renderBufferDirect=function(camera,world,geometry,material,object,group){
   // The batches' and the marker's own places in the draw lists draw nothing.
   if(ours.has(object))return;
-  if(mainCamera===null||camera!==mainCamera||world!==scene||renderer.getRenderTarget()!==null||scene.overrideMaterial)return inner.apply(this,arguments);
+  if(!main(camera,world))return inner.apply(this,arguments);
   const r=rows.get(object);
   if(!r||group||geometry!==object.geometry||material!==object.material||!fits(r,material)){flush();return inner.apply(this,arguments);}
   if(run!==r.set||r.mark===serial)flush();
@@ -202,7 +213,7 @@ export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDIC
  };
  // Should the opaque draws ever end in a row without the marker after them.
  const after=scene.onAfterRender;
- scene.onAfterRender=function(){flush();return after.apply(this,arguments);};
+ scene.onAfterRender=function(r,world,view){if(main(view,world))flush();return after.apply(this,arguments);};
  return {stats,enabled:true,
   line:()=>`draw runs: ${stats.runs+stats.folded} draws in ${stats.runs}`,
   around(view,draw){
