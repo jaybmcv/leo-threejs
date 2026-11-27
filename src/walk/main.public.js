@@ -33,7 +33,8 @@ const phoneBatching=(()=>{const query=new URLSearchParams(location.search);if(!p
  return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
 import {createFeatureBatches} from '../v2/feature-batches.js';
 import {createCabinBatches} from '../v2/cabin-batches.js';
-let phoneBands=null,wayfindingSigns=null,fogCull=null,featureBatches=null,groupOcclusion=null,cabinBatches=null;
+import {createDrawRuns} from '../v2/draw-runs.js';
+let phoneBands=null,wayfindingSigns=null,fogCull=null,featureBatches=null,liftBatches=null,liftDoorBatches=null,groupOcclusion=null,cabinBatches=null,drawRuns=null;
 // The atrium geometry pack binds the band pieces the merge hides, so it runs only without the merge, and the Detail menu
 // chooses its distant detail. The merged bands keep full detail and still draw faster: on them the menu sets the atrium's
 // haze (detail-levels.js), and Auto starts at High, the look before the menu came back. ?detail=high|balanced|performance
@@ -76,6 +77,9 @@ import {createOwnerHiding,ownerBakeFile,ownerBakeProblem,ownerKey} from '../v2/o
 // up and used around the main camera's draw. ?ownerBake opens the walk as the bake's page instead: geometry arrays are
 // kept and the scene goes to the bake (globalThis.__ownerBakeHost). Not on phones, whose scene is built differently.
 const WALK_SCRIPT=new URL(import.meta.url).pathname.split('/').pop(),OWNER_BAKE_PAGE=new URLSearchParams(location.search).has('ownerBake');
+// The small merges below (the tube lift's glass, the treasure gems, the yarn balls): desktop walk only; ?smallmerge=0 leaves
+// them as they were, to compare.
+const SMALL_MERGE=deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('smallmerge')!=='0';
 let ownerHiding=null;
 function startOwnerHiding(){
  if(preparedPhone)return;const key=ownerKey(WALK_SCRIPT,(phoneBatching.merge?'merge':'batch')+deskPiece);
@@ -135,6 +139,7 @@ import {createWalker,WALKER,EMOTES} from './avatar.js';
 import {bakeForWalking,showBands} from '../v2/render-bake.js';
 import {bandOf} from './collision.js';
 import {mergeMeshes} from './merge-by-material.js';
+import {joinStaticTints} from './static-tints.js';
 import {mergeCallLights} from './call-lights.js';
 import {mergeWayfindingSigns} from './sign-array.js';
 import {sharePlaques} from './plaque-atlas.js';
@@ -325,7 +330,7 @@ const deskPiece=deskPieceSize({query:new URLSearchParams(location.search),phone:
 // buffer the shaders write the depth, so polygon offset has never applied. With linear depth it would, and pull the hex
 // sub-floor (finish-kit.js) over the Arrival Hall's finish, so it stays off.
 if(linearDepth){const gl=renderer.getContext(),enable=gl.enable.bind(gl);gl.enable=cap=>{if(cap!==gl.POLYGON_OFFSET_FILL)enable(cap);};}
-const frameReadout=createFrameReadout(renderer,{extra:()=>[remotes?.crowdLine(),groupOcclusion?.line(),cabinBatches?.line()].filter(Boolean).join('\n')});
+const frameReadout=createFrameReadout(renderer,{extra:()=>[remotes?.crowdLine(),groupOcclusion?.line(),cabinBatches?.line(),drawRuns?.line()].filter(Boolean).join('\n')});
 // Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
 // The Res button steps through them and the choice is remembered for the next visit. ?res=high, med or low holds a
 // level for this visit in the saved one's place (pixel-switches.js): nothing is saved, and it never steps down.
@@ -422,6 +427,9 @@ async function buildShip(){
  // The hidden clubhouse's vault door behind the arcade (vault.js): solid here, as a movable collider of its own.
  vault=prepared.vault;vault.attach(colliders);
  vaultLift=prepared.vaultLift;scene.add(vaultLift.group);
+ // The tube lift's fixed glass (its shaft, cap and landing enclosures: 14 meshes, each drawn twice as double-sided glass)
+ // draws as one mesh.
+ if(SMALL_MERGE){const glass=vaultLift.group.children.find(o=>o.name==='Clubhouse_lift_glass')?.material;if(glass)joinStaticTints(vaultLift.group,[glass]);}
  // Paws Off on the Deck 16 exercise studio's treadmills (paws-off/game.js): their belts, before the room is merged; and
  // on the arcade's treadmill. With Leo live, a run joins the gym round (server/gym.mjs).
  pawsOff=createPawsOff(ship,{ground:p=>findStand(colliders,p.toArray(),{radius:2}),more:arcadeRow?[arcadeRow.treadmill]:[],gym:msg=>!!live?.gym(msg),me:()=>live?.id,onStart:startRun,onEnd:endRun});
@@ -572,13 +580,33 @@ async function buildShip(){
  if(!atriumPack&&new URLSearchParams(location.search).get('fogcull')!=='0')fogCull=createFogCull(scene,camera);
  await hallTurn();wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);await hallTurn();
  isolateStaticWorld(ship,scene);{const hidden=(preparedPhone||phoneBatching.merge)&&!OWNER_BAKE_PAGE?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
+ // Draws of one material that reach the GPU one after another draw as one (draw-runs.js): the decks' common furnishings
+ // and every other instanced mesh outside the repeated cabins, the atrium facade (its lift and aft-core copies' materials
+ // as one palette) and the tube lift. Made before the tests below wrap the renderer, so it sees only what they let
+ // through; what it folds counts towards their dense test. ?drawruns=0 draws them one by one, ?towerpalette=0 keeps the
+ // facade's materials apart.
+ if(deskDetail&&!OWNER_BAKE_PAGE&&renderer.extensions.has('WEBGL_multi_draw')&&new URLSearchParams(location.search).get('drawruns')!=='0'){
+  const instancedParts=[];scene.traverse(o=>{if(o.isInstancedMesh&&!o.isBatchedMesh)instancedParts.push(o);});
+  const meshesOf=root=>{const list=[];root?.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh)list.push(o);});return list;};
+  drawRuns=await createDrawRuns(scene,renderer,[{parts:instancedParts},{parts:meshesOf(ship.facade),palette:new URLSearchParams(location.search).get('towerpalette')!=='0'},{parts:meshesOf(vaultLift?.group)}]);
+ }
  // While the arrival hall is walked, the floors' occlusion scan (floor-occlusion.js) gives the page turns: a second of work.
- if(deskDetail&&!OWNER_BAKE_PAGE)installQuadFacingTest(renderer,scene,camera,{...(arrival?.active?{floorOcclusion:await createFloorOcclusionAsync(scene,camera,yieldToPage)}:{}),skipped:()=>(groupOcclusion?.stats.skipped??0)+(privacyBatch?.replaced??0)+(cabinBatches?.stats.folded??0)});
+ if(deskDetail&&!OWNER_BAKE_PAGE)installQuadFacingTest(renderer,scene,camera,{...(arrival?.active?{floorOcclusion:await createFloorOcclusionAsync(scene,camera,yieldToPage)}:{}),skipped:()=>(groupOcclusion?.stats.skipped??0)+(privacyBatch?.replaced??0)+(cabinBatches?.stats.folded??0)+(liftBatches?.stats.skipped??0)+(drawRuns?.stats.folded??0)});
+ // The lifts' parts of one material draw as one multi-draw across every shaft in view, with their shut landing doors as a
+ // mesh per stop (lift-ride.public.js): feature batches of their own, so what they stand in for counts towards the dense
+ // test above (the room features' batches were already on when it was tuned). The doors' batch does not count: when
+ // the test was tuned a shaft's shut doors were a draw or two a material, not one a stop, and the stops of a shaft the
+ // occlusion hides sit out in that batch rather than in the occlusion's count. ?liftbatch=0 draws them lift by lift.
+ const liftBatching=deskDetail&&!OWNER_BAKE_PAGE&&renderer.extensions.has('WEBGL_multi_draw')&&new URLSearchParams(location.search).get('liftbatch')!=='0';
+ if(liftBatching)lifts.splitLandings();
  // Room features, baked room dressing, named feature groups, cabin furniture and lifts the frame's own walls and floors hide
  // sit out the main pass (group-occlusion.js, occlusion-groups.js): by default on
  // Chrome and Edge on Windows, where it was measured; ?occlusion=1 elsewhere, ?occlusion=0 off.
  {const asked=new URLSearchParams(location.search).get('occlusion');if(deskDetail&&!OWNER_BAKE_PAGE&&(asked==='1'||asked!=='0'&&occlusionByDefault(renderer.getContext())))groupOcclusion=createGroupOcclusion(renderer,scene,camera,occlusionGroups(scene,{featureRoots,instanced,more:new URLSearchParams(location.search).get('occlusionmore')!=='0'}),{trust:new URLSearchParams(location.search).get('occlusiontrust')!=='0'});}
  if(deskDetail&&!OWNER_BAKE_PAGE)featureBatches=await createFeatureBatches(scene,renderer,featureRoots,{skip:groupOcclusion?.hiddenRoot});
+ if(liftBatching){const roots=lifts.lifts.map(l=>l.root),skip=groupOcclusion?.hiddenRoot;
+  liftBatches=await createFeatureBatches(scene,renderer,roots,{skip,take:o=>o.name!=='Lift_door_blade'&&o.name!=='Lift_door_stop_shut'});
+  liftDoorBatches=await createFeatureBatches(scene,renderer,roots,{skip,hide:true,take:o=>o.name==='Lift_door_stop_shut'});}
  // The groups holding only those instanced meshes once the live draws have their final parents (V2_live_source_draws: a
  // deck's cabin shells, a cabin template's fittings), and groups of only such groups, innermost first: cull() hides each
  // while nothing in it shows, so three's scene walk and matrix pass skip it.
@@ -837,9 +865,9 @@ follow.yaw=stand?view.yaw:START.yaw;if(stand){follow.pitch=view.pitch;follow.loo
 const placedAt=controller.position.clone();
 walker.holder.position.copy(controller.position);
 // Balls of yarn to push about: the arrival hall's, and one in each of six common areas (yarn.js).
-const yarn=createYarn(colliders),yarns=[yarn];
+const yarn=createYarn(colliders,{oneDraw:SMALL_MERGE}),yarns=[yarn];
 for(const s of YARN_SPOTS){const place=yarnPlace(PLACES,s.place);if(!place)continue;
- const at=findStand(colliders,place.at.map((v,i)=>v+(place.room?anchoredOffset(place.room,s.offset):s.offset)[i]),{radius:4});if(at)yarns.push(createYarn(colliders,{at:at.toArray(),color:s.color}));}
+ const at=findStand(colliders,place.at.map((v,i)=>v+(place.room?anchoredOffset(place.room,s.offset):s.offset)[i]),{radius:4});if(at)yarns.push(createYarn(colliders,{at:at.toArray(),color:s.color,oneDraw:SMALL_MERGE}));}
 for(const y of yarns)scene.add(y.mesh);
 // The hamster ball (hamster-ball.js), parked in the Deck 17 gardens until someone climbs in.
 const ballHome=findStand(colliders,BALL.home,{radius:4})||new T.Vector3(...BALL.home),ball=createBallMesh();let inBall=false;
@@ -1029,7 +1057,7 @@ function showAboard(){
 }
 $('discord-chip').addEventListener('click',()=>{if($('discord-chip').dataset.in)openName();else connect();});
 // Test hook for dev builds only (scripts set __WALK_DEBUG__); the public build drops it.
-if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuck,frog,frogTrip,get carry(){return carry;},get prank(){return prank;},inOpenAtrium,get atriumMood(){return atriumMood;},skate,glide,get wardPush(){return wardPush;},get portable(){return portable;},get ownerHiding(){return ownerHiding;},registry,get landingDoors(){return shutLandingDoors();},get fogCull(){return fogCull;},get featureBatches(){return featureBatches;},get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get shuttleDoors(){return shuttleDoors;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},get mctRepair(){return mctRepair;},repairStations,emergencyStation,asteroid,outsideGames,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get hydroPortal(){return hydroPortal;},get hydroParkPortal(){return hydroParkPortal;},get hydroCargoPortal(){return hydroCargoPortal;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get stageDj(){return stageDj;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
+if(typeof __WALK_DEBUG__!=='undefined'&&__WALK_DEBUG__)globalThis.__walk={unstuck,frog,frogTrip,get carry(){return carry;},get prank(){return prank;},inOpenAtrium,get atriumMood(){return atriumMood;},skate,glide,get wardPush(){return wardPush;},get portable(){return portable;},get ownerHiding(){return ownerHiding;},registry,get landingDoors(){return shutLandingDoors();},get fogCull(){return fogCull;},get featureBatches(){return featureBatches;},get liftBatches(){return liftBatches;},get liftDoorBatches(){return liftDoorBatches;},get drawRuns(){return drawRuns;},get phase4Visibility(){return phase4Visibility;},renderMetrics,get hangarDoor(){return hangarDoor;},get shuttleDoors(){return shuttleDoors;},get cabinGlass(){return cabinGlass;},restSpots,get leverPanel(){return leverPanel;},get interactionTargets(){return interactionTargets({lifts,restSpots,arcadeRow,pawsOff,scope,theatre,poolTable,pinballMachine,mudwater,changeLog,comics,paintings,missionHolo,chinampa,places:PLACES});},T,scene,camera,renderer,ship,colliders,controller,follow,get arcade(){return arcade;},get emergencyDrill(){return emergencyDrill;},get mctRepair(){return mctRepair;},repairStations,emergencyStation,asteroid,outsideGames,get pawsOff(){return pawsOff;},get mudwater(){return mudwater;},get arcadeRow(){return arcadeRow;},get lounge(){return lounge;},get hydroPortal(){return hydroPortal;},get hydroParkPortal(){return hydroParkPortal;},get hydroCargoPortal(){return hydroCargoPortal;},get graffiti(){return graffiti;},get crownTv(){return crownTv;},get gaming(){return gaming;},get trainingSound(){return trainingSound;},get loungeSound(){return loungeSound;},get stageDj(){return stageDj;},get ambience(){return ambience;},get provisions(){return provisions;},get freightGate(){return freightGate;},get blossom(){return blossom;},get loungeFalls(){return loungeFalls;},changeLog,get walker(){return walker;},get wardrobe(){return wardrobe;},input,get baked(){return baked;},timings,cabinPlacements,get lifts(){return lifts;},get rest(){return rest;},get remotes(){return remotes;},get live(){return live;},get halloween(){return halloween;},get crewGallery(){return crewGallery;},get maze(){return maze;},get pinballMachine(){return pinballMachine;},get pinballGame(){return pinballGame;},get theatre(){return theatre;},get poolTable(){return poolTable;},get surgeryArms(){return surgeryArms;},hat:{wear:w=>wearHat(w||walker,__HAT_URL__),fit,FIT,MeshBVH},actions,PLACES,goTo:p=>goTo(p),get resting(){return resting;},get booth(){return booth;},get photoSpots(){return photoSpots;},get lastPhoto(){return lastPhoto;},yarn,yarns,ball:{mesh:ball.mesh,home:ballHome,get inside(){return inBall;}},get mct(){return mct;},
  // Debug: drop the walker at a point (feet), facing yaw, camera pitch.
  teleport(x,y,z,yaw=follow.yaw,pitch=-.18){resting=null;controller.place(new T.Vector3(x,y,z));follow.yaw=yaw;follow.pitch=pitch;heading=yaw;follow.current=.3;}};
 
@@ -1275,8 +1303,11 @@ function draw(view){
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();
  if(view===camera){
   const main=()=>renderer.render(scene,view);
-  const features=()=>featureBatches?featureBatches.around(view,main):main();
-  const render=()=>cabinBatches?cabinBatches.around(view,features):features();
+  const doors=()=>liftDoorBatches?liftDoorBatches.around(view,main):main();
+  const lifted=()=>liftBatches?liftBatches.around(view,doors):doors();
+  const features=()=>featureBatches?featureBatches.around(view,lifted):lifted();
+  const cabins=()=>cabinBatches?cabinBatches.around(view,features):features();
+  const render=()=>drawRuns?drawRuns.around(view,cabins):cabins();
   if(ownerHiding)ownerHiding.around(view,render);else render();
  }else renderer.render(scene,view);
  if(frogTrip.active&&view===camera)frogTrip.render();frameReadout.frame(performance.now());
@@ -1596,7 +1627,7 @@ maze=createMazeGame({hold:mazeHold,live:()=>live,muted:()=>!ambience.on,
  onClose(){input.enabled=true;input.down.clear();},
 });
 // The upper gallery's aquarium door: a separate swim mode, with its own clock and Leo live board.
-treasure=createTreasureGame({tank:lounge?.aquarium,controller,follow,camera,input,live:()=>live,
+treasure=createTreasureGame({tank:lounge?.aquarium,controller,follow,camera,input,live:()=>live,oneDraw:SMALL_MERGE,
  onEnter(){closePanels();emote=null;},onExit(){emote=null;},
  onOpen(){closePanels();input.enabled=false;input.down.clear();},
  onClose(){input.enabled=true;input.down.clear();},

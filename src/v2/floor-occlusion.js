@@ -6,6 +6,9 @@ const axes = ['x', 'y', 'z'];
 function hooks(o) { return o.onBeforeRender === Object3D.prototype.onBeforeRender && o.onAfterRender === Object3D.prototype.onAfterRender; }
 function normalDepth(m) { return m.depthTest && (m.depthFunc === LessDepth || m.depthFunc === LessEqualDepth) && !m.stencilWrite && !m.polygonOffset && !m.wireframe && m.onBeforeRender === Material.prototype.onBeforeRender && geometryKept(m); }
 const names = /^(V2_facade_terraces_and_atrium_roof|V2_low_deck_merged_(V2_public_hex_floor|V2_public_wall_panels|Walk_finish_[0-9]+[|][0-9]+[|][0-9]+[|][0-9]+)|P6_atrium_floor_actual|P6_atrium_soffits|P6_sky_tip|P6_sky_ceiling|Gaming_hex_floor)$/;
+/** A mesh the floors' occlusion may take as a blocker: it must reach renderBufferDirect itself (quad-facing.js reports what
+ * it drew). */
+export const floorBlocker = o => !!o?.isMesh && !o.isInstancedMesh && names.test(o.name);
 function opaque(m) {
   return (m.isMeshStandardMaterial || m.isMeshBasicMaterial || m.isMeshPhongMaterial || m.isMeshLambertMaterial) && normalDepth(m) &&
     (m.onBeforeCompile === Material.prototype.onBeforeCompile || m.onBeforeCompile.cornerShade || m.onBeforeCompile.filmLook) && m.depthWrite && m.colorWrite && !m.transparent && !m.transmission &&

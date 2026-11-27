@@ -31,7 +31,9 @@ function batchableMatrix(matrix){
  return matrix.determinant()>0&&xy*xy<=1e-12*xx*yy&&xz*xz<=1e-12*xx*zz&&yz*yz<=1e-12*yy*zz;
 }
 // `skip(root, o)`: a row that sits out this frame (group-occlusion.js: its root hidden behind what the frame already drew).
-export async function createFeatureBatches(scene,renderer,roots,{skip=null}={}){
+// `take(o)`: false leaves a part out of the batches (a lift door's blades, shown only while it opens).
+// `hide`: a row the skip leaves out is hidden for the main pass too, so it never reaches group occlusion's own count.
+export async function createFeatureBatches(scene,renderer,roots,{skip=null,take=null,hide=false}={}){
  if(!renderer.extensions.has('WEBGL_multi_draw'))return null;
  const lists=new Map(),records=new Map(),yieldWork=yieldEvery();
  for(const root of roots){
@@ -39,7 +41,7 @@ export async function createFeatureBatches(scene,renderer,roots,{skip=null}={}){
   if(!root.isGroup||!band||(band!==scene&&!/^Walk_band_/.test(band.name)))continue;
   root.traverse(o=>{
    const g=o.geometry,m=o.material;
-   if(!plain(o)||!compatibleMaterial(m)||!g.attributes.position||g.attributes.position.count>12000||
+   if(!plain(o)||take&&!take(o)||!compatibleMaterial(m)||!g.attributes.position||g.attributes.position.count>12000||
       g.drawRange.start!==0||g.drawRange.count!==Infinity||Object.keys(g.morphAttributes).length||
       Object.values(g.attributes).some(a=>!a.array||a.isInterleavedBufferAttribute||a.isFloat16BufferAttribute||a.gpuType!==T.FloatType||a.usage!==T.StaticDrawUsage)||g.index&&!g.index.array)return;
    const key=[band.uuid,m.uuid,o.renderOrder,o.castShadow,o.receiveShadow,!!g.index,geometryKey(g)].join('/');
@@ -94,7 +96,7 @@ export async function createFeatureBatches(scene,renderer,roots,{skip=null}={}){
     const list=set.visible;list.length=0;
     for(const row of set.rows){
      const {o,g,root}=row;
-     if(skip?.(root,o))continue;
+     if(skip?.(root,o)){if(hide&&o.visible){o.visible=false;changed.push(o);}continue;}
      if(!o.visible||!o.layers.test(camera.layers)||!plain(o)||o.geometry!==g||o.material!==set.m||o.renderOrder!==set.order||
         o.receiveShadow!==set.receives||o.castShadow!==set.casts||root.parent!==band)continue;
      if(!underRoot(o.parent,root,band)||!frustum.intersectsObject(o))continue;
