@@ -18,15 +18,28 @@ export const YARN_SPOTS=[
  {place:'Neighborhood garden',offset:[3,0,-3],color:0x3f6bff},
 ];
 const STEP=1/120;
+// One draw a ball (createYarn's oneDraw): the core and the strands are one mesh with one material. The colours become
+// vertex colours; the two looks' other differences (the glow's strength and the roughness) come from two texels of a
+// pair of tiny maps, each part's UVs on its own texel.
+const LOOKS={wool:{glow:.9*.55,rough:.85,u:.25},strand:{glow:.6,rough:.9,u:.75}};
+let lookMaps=null;
+const looks=()=>lookMaps||=['glow','rough'].map(key=>{
+ const t=new T.DataTexture(new Float32Array([LOOKS.wool,LOOKS.strand].flatMap(l=>[l[key],l[key],l[key],1])),2,1,T.RGBAFormat,T.FloatType);
+ t.magFilter=t.minFilter=T.NearestFilter;t.generateMipmaps=false;t.needsUpdate=true;return t;});
+function oneLook(geometry,color,look){
+ const g=geometry,n=g.attributes.position.count,colors=new Float32Array(n*3),uv=new Float32Array(n*2);
+ for(let i=0;i<n;i++){color.toArray(colors,i*3);uv[i*2]=LOOKS[look].u;uv[i*2+1]=.5;}
+ g.setAttribute('color',new T.BufferAttribute(colors,3));g.setAttribute('uv',new T.BufferAttribute(uv,2));return g;
+}
 
-export function createYarn(colliders,{at=YARN.home,color=YARN.color}={}){
+export function createYarn(colliders,{at=YARN.home,color=YARN.color,oneDraw=false}={}){
  const r=YARN.radius,home=new T.Vector3(at[0],at[1]+r+.01,at[2]);
  const ball=new T.Group();ball.name='Walk_yarn_ball';
  // The strands are the core's colour lifted toward white.
  const core=new T.Color(color),light=core.clone().lerp(new T.Color(0xffffff),.35);
  const wool=new T.MeshStandardMaterial({name:'Walk_yarn',color:core,emissive:core.clone().multiplyScalar(.9),emissiveIntensity:.55,roughness:.85});
  const strand=new T.MeshStandardMaterial({name:'Walk_yarn_strand',color:light,emissive:core,emissiveIntensity:.6,roughness:.9});
- ball.add(new T.Mesh(new T.SphereGeometry(r,32,20),wool));
+ const sphere=new T.SphereGeometry(r,32,20);
  // Wound strands: thin rings at many angles over the core, and a loose end trailing onto the floor, all one mesh (one
  // draw a ball, not fifteen: the arrival hall drew 80 for its balls).
  let seed=4471;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
@@ -34,7 +47,11 @@ export function createYarn(colliders,{at=YARN.home,color=YARN.color}={}){
  for(let i=0;i<14;i++)strands.push(ring.clone().applyMatrix4(new T.Matrix4().makeRotationFromEuler(new T.Euler(random()*Math.PI,random()*Math.PI,0))));
  const tail=new T.CatmullRomCurve3([new T.Vector3(0,-.1,r),new T.Vector3(.12,-.4,r+.12),new T.Vector3(.05,-r+.03,r+.4),new T.Vector3(.3,-r+.03,r+.75)]);
  strands.push(new T.TubeGeometry(tail,24,.022,5));
- ball.add(new T.Mesh(mergeGeometries(strands),strand));ring.dispose();strands.forEach(g=>g.dispose());
+ const wound=mergeGeometries(strands);ring.dispose();strands.forEach(g=>g.dispose());
+ if(oneDraw){
+  const [glow,rough]=looks(),both=new T.MeshStandardMaterial({name:'Walk_yarn',color:0xffffff,vertexColors:true,emissive:core,emissiveMap:glow,roughness:1,roughnessMap:rough});
+  ball.add(new T.Mesh(mergeGeometries([oneLook(sphere,core,'wool'),oneLook(wound,light,'strand')]),both));sphere.dispose();wound.dispose();
+ }else{ball.add(new T.Mesh(sphere,wool));ball.add(new T.Mesh(wound,strand));}
  const position=ball.position.copy(home),velocity=new T.Vector3(),seg=new T.Line3(new T.Vector3(),new T.Vector3()),ray=new T.Ray(),
   n=new T.Vector3(),wall=new T.Vector3(),axis=new T.Vector3(),spin=new T.Quaternion();
  let grounded=false,acc=0;

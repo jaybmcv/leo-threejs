@@ -107,7 +107,9 @@ function shutter(parent,w,h){
   return {mesh,mid,out,travel:reach+Math.hypot(b[0]-a[0],b[1]-a[1])/2*Math.sin(TWIST)+.08};});
  // Shut, the blades lie still in the doorway: one merged mesh per material draws them, two draws instead of six
  // (a lift's shutters were over a hundred draws a frame). The blades themselves take over once it opens.
- const shut=m.map((material,k)=>{const parts=blades.filter((b,i)=>i%2===k).map(b=>new T.BufferGeometry().copy(b.mesh.geometry).translate(b.mid[0],b.mid[1],0));
+ // Shut, they lie inside the doorway, so the clipping planes cut nothing: the plain materials draw them, which every
+ // lift shares (the feature batches can then draw the shut car doors of every shaft in view as one).
+ const shut=[mats.door,mats.blade].map((material,k)=>{const parts=blades.filter((b,i)=>i%2===k).map(b=>new T.BufferGeometry().copy(b.mesh.geometry).translate(b.mid[0],b.mid[1],0));
   const mesh=new T.Mesh(mergeGeometries(parts),material);parts.forEach(p=>p.dispose());mesh.name='Lift_door_shut';g.add(mesh);return mesh;});
  const n=new T.Vector3(),q=new T.Vector3();
  // `merged`: another mesh draws this shutter while it is shut (a lift's landing doors, mergeLandings below).
@@ -161,6 +163,21 @@ function mergeLandings(l){
   for(const {mesh,ranges} of meshes){const groups=mesh.geometry.groups;groups.length=0;
    l.stops.forEach((s,i)=>{if(!s.shutter.isShut)return;const r=ranges[i],last=groups.at(-1);if(last&&last.start+last.count===r.start)last.count+=r.count;else groups.push({start:r.start,count:r.count,materialIndex:0});});
    mesh.visible=groups.length>0;}
+ },
+ // A mesh per material at each stop instead, shown while that stop is shut: the feature batches (main.public.js) draw
+ // every shut stop in view, on every shaft, as one draw per material, where the shaft's mesh drew one per unbroken run
+ // of shut stops. Without the batches each would be a draw of its own, so only with them.
+ split(){
+  if(meshes.some(({mesh})=>mesh.geometry.index))return this;
+  const doors=l.stops.map(()=>[]);
+  meshes.forEach(({mesh,ranges},k)=>{
+   const g=mesh.geometry;l.root.remove(mesh);
+   ranges.forEach((r,i)=>{const part=new T.BufferGeometry();for(const [name,a] of Object.entries(g.attributes))part.setAttribute(name,new T.BufferAttribute(a.array.slice(r.start*a.itemSize,(r.start+r.count)*a.itemSize),a.itemSize,a.normalized));
+    const o=new T.Mesh(part,k?mats.blade:mats.door);o.name='Lift_door_stop_shut';o.matrixAutoUpdate=false;l.root.add(o);doors[i].push(o);});
+   g.dispose();
+  });
+  const api={update(){l.stops.forEach((s,i)=>{for(const o of doors[i])o.visible=s.shutter.isShut;});}};
+  api.update();return api;
  }};
 }
 
@@ -188,7 +205,9 @@ export function createLifts(scene,colliders){
   {const t=faces.at(-1).door,b=faceOf({axis:t.axis,sign:-t.sign})===glass?{axis:t.axis==='x'?'z':'x',sign:side?1:-1}:t;
    const across=b.axis==='x'?c.depth:c.width,mars=new T.Mesh(new ReplayGeometry("src/walk/lift-ride.js:3",T.CircleGeometry,Math.min(across,c.height)*.4,64),art());
    mars.name='Car_mars';mars.position.y=c.height*.52;mars.position[b.axis]=-b.sign*((b.axis==='x'?c.width:c.depth)/2-.085);
-   mars.rotation.y=b.axis==='x'?b.sign*Math.PI/2:(b.sign>0?0:Math.PI);car.add(mars);}
+   mars.rotation.y=b.axis==='x'?b.sign*Math.PI/2:(b.sign>0?0:Math.PI);car.add(mars);
+   // Its shader draws the disc where its geometry is: it says so (group-occlusion.js), so it hides with its lift.
+   mars.geometry.computeBoundingBox();mars.userData.occlusionBox=mars.geometry.boundingBox.clone();}
   // Car doors on each open face open with the landing doors; a gate mover closes the face while they're shut.
   for(const f of faces){
    const d=f.door;f.side=d.axis==='z'?new T.Vector3(1,0,0):new T.Vector3(0,0,1);f.front=d.axis==='z'?new T.Vector3(0,0,d.sign):new T.Vector3(d.sign,0,0);
@@ -242,6 +261,8 @@ export function createLifts(scene,colliders){
  let walker=null;
  const rides={
   lifts,inside,signs,level,
+  // Each lift's shut landing doors as a mesh per stop (mergeLandings' split), for the feature batches.
+  splitLandings(){for(const l of lifts)l.landings=l.landings.split();},
   // Called with each call this page makes (the multiplayer link passes it to the server).
   onCall:null,
   // Send a lift to stop `index`; its call light there stays lit until the car arrives. `now`: chosen in the car.
