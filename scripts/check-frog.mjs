@@ -88,7 +88,7 @@ for(const suffix of ['','.public','.prepared','.authoring']){
  };
  const input={enabled:true,down:new Set()},follow={},holder=new T.Group(),ui=new Map(),list={appendChild(){}};
  const $=id=>{if(!ui.has(id))ui.set(id,{hidden:true,querySelector:()=>list});return ui.get(id);};
- const services=Object.fromEntries('prank pawsOff mctRepair emergencyDrill furSettings controlsSettings graphicsSettings maze graffiti crownTv atriumGeometry voyagerLawn roomViewJob ownerHiding featureBatches cabinBatches liftBatches liftDoorBatches drawRuns keelClub'.split(' ').map(k=>[k,null]));
+ const services=Object.fromEntries('prank pawsOff mctRepair emergencyDrill furSettings controlsSettings graphicsSettings maze graffiti crownTv atriumGeometry voyagerLawn roomViewJob ownerHiding featureBatches cabinBatches liftBatches liftDoorBatches drawRuns keelClub phoneBands'.split(' ').map(k=>[k,null]));
  const wardPush={engaged:false,begin(){this.engaged=true;},release(){this.engaged=false;}};
  const treasure={active:false,leave(){this.active=false;},close(){}};
  let target=frog.near(seat.point),mapDeck,menu,gameOpened=false,pickedUp,tourClosed=false;

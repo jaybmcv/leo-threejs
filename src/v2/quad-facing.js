@@ -1,5 +1,5 @@
 import {createDrawBoundsTest} from './draw-bounds.js';
-import {createFloorOcclusion} from './floor-occlusion.js';
+import {HELD, createFloorOcclusion} from './floor-occlusion.js';
 import {FrontSide, BackSide, Material, Matrix4, Object3D, Vector3} from 'three';
 import {geometryKept} from './shader-hooks.js';
 
@@ -223,7 +223,8 @@ export function installQuadFacingTest(renderer, scene, camera, options = {}) {
   if (main && floorOcclusion.anchors.has(object)) {
    const before=renderer.info.render.calls;
    const result=submit.apply(this,arguments);
-   if (renderer.info.render.calls>before) floorOcclusion.submitted(renderer,material,group,object);
+   // Drawn now, or held back by draw-runs.js to be drawn with its row before the opaque draws end.
+   if (renderer.info.render.calls>before || result===HELD) floorOcclusion.submitted(renderer,material,group,object);
    return result;
   }
   if (main) floorOcclusion.requestProof(renderer.info.render.frame,geometry,material,object,group);
