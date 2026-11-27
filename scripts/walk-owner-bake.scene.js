@@ -118,9 +118,13 @@ const arrayWords=a=>a.byteLength%4===0?new Uint32Array(a.buffer,a.byteOffset,a.b
  * triangles it adds to the occluder soup with their sides, in order. A band's are its merge sources', but what draws them
  * is the merged pieces listing those sources (merged by material across bands): every such piece counts for the band, by
  * its path, print where it will be drawn (owner-hiding.js printNow: the walk leaves a hidden branch's world matrices
- * stale), its own materials as the wall test reads them (pieceMaterial), source paths, groups, draw range and geometry
- * arrays, so a piece that draws anything else drops each band it draws (a band with a piece whose arrays are gone has none). A part: the boxes the proof covered, or a cabin
- * part's slots. Rows come from collectOccluders and collectTargets themselves, so one the bake would not use now
+ * stale), its own materials as the wall test reads them (pieceMaterial), source paths, draw range and geometry arrays,
+ * so a piece that draws anything else drops each band it draws (a band with a piece whose arrays are gone has none). Not
+ * its groups: those are the runs it draws for the decks shown where the walker stands now (phone-bands.js update), view
+ * state rather than what the build made, and the 2026-11-27 nightly read them somewhere other than where the carry did,
+ * so a page-only build kept 106 of 3,317 proofs. Which run is which band's follows from the source order and arrays
+ * counted here; the walk code that picks runs is checked by the carry's pixel self-check. A part: the boxes the proof
+ * covered, or a cabin part's slots. Rows come from collectOccluders and collectTargets themselves, so one the bake would not use now
  * (a cut-out or shader-hooked material, a shadow caster, a mover) has none; neither has a path met twice (null).
  * Prints alone are identities within one build: a vertex moved inside a wall's box, alphaTest set on its material or a
  * band's merge source moved leaves them as they were. */
@@ -133,7 +137,7 @@ export function rowDigests(scene,{emptyHook}={}){
   scene.traverse(o=>{if(!o.isMesh||!o.userData.sources?.length)return;const g=o.geometry,p=g?.attributes?.position,bands=new Set();
    const sources=o.userData.sources.map(id=>{const q=byUuid.get(id),band=q&&bandOf(q),k=band&&condAt.get(ownerPath(band,scene));if(k!==undefined&&occ.bandConds.has(k))bands.add(k);return q?ownerPath(q,scene):'?';});
    if(!bands.size)return;if(!p?.array||g.index&&!g.index.array){for(const k of bands)blind.add(k);return;}
-   let [x,y]=words(0x811c9dc5,0x9747b28c,textWords([ownerPath(o,scene),printNow(o),[o.material].flat().map(m=>pieceMaterial(m,emptyHook)).join(';'),sources.join(','),JSON.stringify(g.groups),g.drawRange.start,g.drawRange.count].join('|')));
+   let [x,y]=words(0x811c9dc5,0x9747b28c,textWords([ownerPath(o,scene),printNow(o),[o.material].flat().map(m=>pieceMaterial(m,emptyHook)).join(';'),sources.join(','),g.drawRange.start,g.drawRange.count].join('|')));
    [x,y]=words(x,y,arrayWords(p.array));if(g.index)[x,y]=words(x,y,arrayWords(g.index.array));
    for(const k of bands){a[k]=fnv(fnv(a[k],x),y);b[k]=mur(mur(b[k],x),y);}});}
  const conds=new Map();occ.conditions.forEach(([path,print],i)=>conds.set(path,conds.has(path)||blind.has(i)?null:print+'#'+hex(a[i],b[i],count[i])));
