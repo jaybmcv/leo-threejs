@@ -34,6 +34,12 @@ export const CHUNK=`
 	mat4 batchingMatrix = getBatchingMatrix( getIndirectIndex( gl_DrawID ) + float( gl_InstanceID ) );
 #endif
 `;
+// Parts already in world space (draw-runs.js's deck kinds): every sub-draw's matrix is the identity, so no lookup at all.
+export const PLAIN_CHUNK=`
+#ifdef USE_BATCHING
+	mat4 batchingMatrix = mat4( 1.0 );
+#endif
+`;
 const plainHook=T.Material.prototype.onBeforeCompile,plainRender=T.Material.prototype.onBeforeRender;
 // Parts with more indices than this (a deck's whole lining as one instance) draw on their own: a batch keeps its own
 // copy of every part's geometry.
@@ -60,17 +66,18 @@ function part(o){
 const OWN=new Set(['uuid','id','version','_listeners','onBeforeCompile','customProgramCacheKey']);
 const ownKeys=(m,omit=null)=>Object.keys(m).filter(k=>!OWN.has(k)&&!omit?.has(k));
 // `omit`: values the copy keeps as its own (a palette's maps and the values they stand in for). `id`: the copy's material
-// id (by default the original's, so a batch sorts where its parts did).
-export function batchMaterial(m,omit=null,id=m.id){
+// id (by default the original's, so a batch sorts where its parts did). `chunk`: what stands in for three's batching
+// matrix lookup.
+export function batchMaterial(m,omit=null,id=m.id,chunk=CHUNK){
  const copy=Object.create(Object.getPrototypeOf(m));
  Object.defineProperty(copy,'id',{value:id});
  const keys=ownKeys(m,omit);for(const k of keys)copy[k]=m[k];
  copy.uuid=T.MathUtils.generateUUID();copy.version=0;
  // The original's hook, whatever it is when the shader is built, then the batch's lookup. Marked as corner-shaded and
  // film-looked so neither wraps it again: both reach it through the original's hook.
- const hook=function(shader,renderer){m.onBeforeCompile.call(this,shader,renderer);shader.vertexShader=shader.vertexShader.replace('#include <batching_vertex>',CHUNK);};
+ const hook=function(shader,renderer){m.onBeforeCompile.call(this,shader,renderer);shader.vertexShader=shader.vertexShader.replace('#include <batching_vertex>',chunk);};
  hook.cornerShade=true;hook.filmLook=true;hook.keepsGeometry=keepsGeometry(m.onBeforeCompile);
- const key=function(){return m.customProgramCacheKey.call(m)+'|cabin-instanced';};
+ const tag=chunk===CHUNK?'|cabin-instanced':'|batch-plain',key=function(){return m.customProgramCacheKey.call(m)+tag;};
  copy.onBeforeCompile=hook;copy.customProgramCacheKey=key;
  return {m,copy,keys,hook,key,omit,version:m.version,usable:true,pass:-1};
 }

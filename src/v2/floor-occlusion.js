@@ -5,10 +5,13 @@ import { occlusionWorker } from './occlusion-worker.js';
 const axes = ['x', 'y', 'z'];
 function hooks(o) { return o.onBeforeRender === Object3D.prototype.onBeforeRender && o.onAfterRender === Object3D.prototype.onAfterRender; }
 function normalDepth(m) { return m.depthTest && (m.depthFunc === LessDepth || m.depthFunc === LessEqualDepth) && !m.stencilWrite && !m.polygonOffset && !m.wireframe && m.onBeforeRender === Material.prototype.onBeforeRender && geometryKept(m); }
-const names = /^(V2_facade_terraces_and_atrium_roof|V2_low_deck_merged_(V2_public_hex_floor|V2_public_wall_panels|Walk_finish_[0-9]+[|][0-9]+[|][0-9]+[|][0-9]+)|P6_atrium_floor_actual|P6_atrium_soffits|P6_sky_tip|P6_sky_ceiling|Gaming_hex_floor)$/;
+const names = /^(V2_facade_terraces_and_atrium_roof|V2_low_deck_merged_(V2_public_hex_floor|V2_public_wall_panels|Walk_finish_[0-9]+[|][0-9]+[|][0-9]+[|][0-9]+|Walk_finish_kind_[0-9]+)|P6_atrium_floor_actual|P6_atrium_soffits|P6_sky_tip|P6_sky_ceiling|Gaming_hex_floor)$/;
 /** A mesh the floors' occlusion may take as a blocker: it must reach renderBufferDirect itself (quad-facing.js reports what
  * it drew). */
 export const floorBlocker = o => !!o?.isMesh && !o.isInstancedMesh && names.test(o.name);
+/** What draw-runs.js's renderBufferDirect returns for a draw it holds back: drawn with its row, before the opaque draws
+ * end, so a held blocker counts as drawn (quad-facing.js). */
+export const HELD = Symbol('draw-runs held');
 function opaque(m) {
   return (m.isMeshStandardMaterial || m.isMeshBasicMaterial || m.isMeshPhongMaterial || m.isMeshLambertMaterial) && normalDepth(m) &&
     (m.onBeforeCompile === Material.prototype.onBeforeCompile || m.onBeforeCompile.cornerShade || m.onBeforeCompile.filmLook) && m.depthWrite && m.colorWrite && !m.transparent && !m.transmission &&
@@ -55,8 +58,10 @@ function* floorScan(scene, camera) {
   });
   let scanned = 0;
   for (const [o, source, det] of meshes) {
-    const { p, ix, m, world } = source, count = ix?.count ?? p.count;
-    for (let i = 0; i + 2 < count; i += 3) {
+    // Only what the mesh may draw: a deck kind's piece is a slice of its kind's index (phone-bands.js).
+    const { g, p, ix, m, world } = source, total = ix?.count ?? p.count, first = Math.min(total, Math.ceil(g.drawRange.start / 3) * 3),
+      count = Math.min(total, g.drawRange.start + g.drawRange.count);
+    for (let i = first; i + 2 < count; i += 3) {
       // Counted across meshes, so many small floors pause as one big one does.
       if (++scanned % SCAN_TRIANGLES === 0)
         yield;
@@ -96,7 +101,7 @@ function* floorScan(scene, camera) {
   }
   const raw = Float64Array.from(packed);
   packed.length = 0;
-  const targets = new WeakMap(), geometryIds = new WeakMap(), retired = [], rowsById = new Map(), pending = [], trees = [], scope = [];
+  const targets = new WeakMap(), geometryIds = new WeakMap(), geometryTrees = new WeakMap(), retired = [], rowsById = new Map(), pending = [], trees = [], scope = [];
   const eyes = new Vector3(), frustum = new Frustum(), vp = new Matrix4(), last = new Matrix4(), v = new Vector3();
   let ready = false, busy = false, frame = -1, epoch = 0, pass = 0, nextRow = 0, nextTree = 0, view = null, spent = 0, scopeHash = 0;
   worker.onmessage = ({ data }) => {
@@ -253,17 +258,22 @@ function* floorScan(scene, camera) {
     row.mat.copy(o.matrixWorld);
     const tree = retainedDrawTree(g);
     if (tree) {
-      let registered = geometryIds.get(g);
-      if (registered && registered.tree !== tree)
+      // A tree goes to the worker once, whichever geometries share it (a deck kind's pieces share their kind's,
+      // phone-bands.js); a geometry whose tree changed waits for its disposal, as before.
+      const prior = geometryTrees.get(g);
+      if (prior && prior !== tree)
         return false;
+      geometryTrees.set(g, tree);
+      let registered = geometryIds.get(tree);
       if (!registered) {
         const id = ++nextTree;
         registered = { id, tree };
-        geometryIds.set(g, registered);
+        geometryIds.set(tree, registered);
         trees.push({ id, boxes: tree.boxes, leaves: tree.leaves, stride: tree.stride });
         const dispose = () => {
           retired.push(id);
-          geometryIds.delete(g);
+          geometryIds.delete(tree);
+          geometryTrees.delete(g);
           g.removeEventListener('dispose', dispose);
           if (!pending.length) queueMicrotask(finish);
         };

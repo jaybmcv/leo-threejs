@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {createDrawBoundsTest, rememberMergedBounds} from '../src/v2/draw-bounds.js';
+import {createDrawBoundsTest, rememberMergedBounds, retainedDrawTree} from '../src/v2/draw-bounds.js';
 import {createQuadFacingTest, createSurfaceFacingTest, installQuadFacingTest} from '../src/v2/quad-facing.js';
 import {createFloorOcclusion} from '../src/v2/floor-occlusion.js';
 import {occlusionWorker} from '../src/v2/occlusion-worker.js';
+import {HELD} from '../src/v2/floor-occlusion.js';
 
 // A floor with an open side. A target can be hidden only after that floor
 // was submitted in this pass and every submitted instance is behind it.
@@ -236,4 +237,52 @@ finish(500); dynamicCam.position.x=0; dynamicCam.updateMatrixWorld(); emit(); as
  r.renderBufferDirect(eye,room,tile.geometry,m,tile,null);assert.equal(submitted,60);
  eye.position.z=.04;eye.updateMatrixWorld();info.render.frame++;
  r.renderBufferDirect(eye,room,tile.geometry,m,tile,null);assert.equal(submitted,61);
+}
+// A floor blocker that draw-runs.js holds back (HELD: drawn with its row, before the opaque draws end) counts as drawn for
+// the floors' occlusion; one neither drawn nor held does not.
+{
+ const room=new T.Scene(),eye=new T.PerspectiveCamera(),stone=new T.MeshStandardMaterial(),floor=new T.Mesh(new T.BoxGeometry(40,1,40),[stone]);
+ eye.updateMatrixWorld();
+ const reported=[],floors={anchors:new WeakMap([[floor,{}]]),early:()=>false,requestProof(){},finish(){},submitted:(r,m,group,o)=>reported.push([o,group])};
+ const info={render:{frame:1,calls:0}};let mode='held';
+ const r={info,shadowMap:{enabled:false},xr:{isPresenting:false},getRenderTarget:()=>null,renderBufferDirect(){if(mode==='held')return HELD;if(mode==='drawn')info.render.calls++;}};
+ installQuadFacingTest(r,room,eye,{floorOcclusion:floors});
+ const group={start:0,count:12,materialIndex:0};
+ r.renderBufferDirect(eye,room,floor.geometry,stone,floor,group);assert.deepEqual(reported,[[floor,group]],'a held blocker is reported');
+ mode='drawn';r.renderBufferDirect(eye,room,floor.geometry,stone,floor,group);assert.equal(reported.length,2,'a drawn blocker is reported');
+ mode='none';r.renderBufferDirect(eye,room,floor.geometry,stone,floor,group);assert.equal(reported.length,2,'one neither drawn nor held is not');
+ console.log('Held floor blockers count as drawn.');
+}
+// A deck kind's piece (phone-bands.js) is a slice of its kind's shared index: the floors' occlusion reads only its slice
+// as a blocker. Here the slice is a small floor far away, and the big floor under the target sits elsewhere in the index.
+{
+ const originalWorker=globalThis.Worker;
+ globalThis.Worker=class {
+  constructor(){this.channel={postMessage:data=>queueMicrotask(()=>this.onmessage({data}))};occlusionWorker(this.channel);}
+  postMessage(data){const snapshot=structuredClone(data);queueMicrotask(()=>this.channel.onmessage({data:snapshot}));}
+  terminate(){}
+ };
+ try{
+  const wait=()=>new Promise(done=>setImmediate(done));
+  for(const [start,expected] of [[0,false],[3,true]]){
+   const scene=new T.Scene(),camera=new T.PerspectiveCamera(140,1,.02,100),shared=new T.BufferGeometry();
+   shared.setAttribute('position',new T.Float32BufferAttribute([50,0,50,50,0,52,52,0,50,-10,0,-10,-10,0,10,10,0,-10],3));shared.setIndex([0,1,2,3,4,5]);
+   const g=new T.BufferGeometry();g.setAttribute('position',shared.attributes.position);g.setIndex(shared.index);g.setDrawRange(start,3);
+   const piece=new T.Mesh(g,[new T.MeshStandardMaterial()]);piece.name='V2_low_deck_merged_Walk_finish_kind_0';scene.add(piece);
+   const target=new T.InstancedMesh(new T.BoxGeometry(.2,.2,.2),new T.MeshStandardMaterial(),1);target.setMatrixAt(0,new T.Matrix4().makeTranslation(-3,-2,-3));
+   camera.position.set(-2,2,-2);camera.up.set(0,0,-1);camera.lookAt(-2,-2,-2);camera.updateMatrixWorld();scene.updateMatrixWorld(true);
+   const proof=createFloorOcclusion(scene,camera),renderer={info:{render:{frame:1}}};
+   await wait();proof.submitted(renderer,piece.material[0],{start,count:3,materialIndex:0},piece);
+   proof.requestProof(1,target.geometry,target.material,target,null);proof.finish();await wait();
+   assert.equal(proof.early(1,target.geometry,target.material,target,null),expected,start?'its own slice hides':'another slice of the index does not');
+  }
+  console.log('A deck kind piece blocks only with its own slice.');
+ }finally{if(originalWorker)globalThis.Worker=originalWorker;else delete globalThis.Worker;}
+}
+// A deck kind's pieces share one bounds tree over their kind's index, made before its arrays leave the page.
+{
+ const kind=new T.PlaneGeometry(4,4,8,8),pieces=[0,1].map(i=>{const g=new T.BufferGeometry();g.setAttribute('position',kind.attributes.position);g.setIndex(kind.index);g.setDrawRange(i*192,192);return g;});
+ rememberMergedBounds(kind);const tree=retainedDrawTree(kind);kind.attributes.position.array=null;kind.index.array=null;
+ assert.ok(tree&&pieces.every(g=>retainedDrawTree(g)===tree),'each piece finds its kind\u2019s tree after the arrays are gone');
+ console.log('Deck kind pieces share their kind\u2019s bounds tree.');
 }

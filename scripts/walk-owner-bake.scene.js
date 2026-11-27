@@ -53,12 +53,20 @@ export function collectOccluders(scene,{emptyHook}={}){
 }
 
 const CLUSTER=4;
+// The triangles a geometry may draw: its draw range (a deck kind's piece is a slice of its kind's shared index,
+// phone-bands.js), as whole triangles.
+const faces=g=>{const r=g.drawRange,total=g.index?g.index.count:g.attributes.position.count;return [Math.ceil(r.start/3),Math.floor(Math.min(total,r.start+r.count)/3)];};
+const whole=g=>g.drawRange.start===0&&g.drawRange.count>=(g.index?g.index.count:g.attributes.position.count);
+// The vertices those triangles use, in index order (positions only), or the box round them.
+function slicePositions(g){const p=g.attributes.position,ix=g.index,[f0,f1]=faces(g),out=new Float32Array((f1-f0)*9),v=new T.Vector3();
+ for(let i=f0*3,k=0;i<f1*3;i++,k+=3){v.fromBufferAttribute(p,ix?ix.getX(i):i);out[k]=v.x;out[k+1]=v.y;out[k+2]=v.z;}return out;}
+const sliceBox=g=>whole(g)?new T.Box3().setFromBufferAttribute(g.attributes.position):new T.Box3().setFromArray(slicePositions(g));
 // A big mesh's triangles grouped into 4 m clusters, each with its own box (a far wall's box would cover the whole deck).
 function clusters(o,box){
  const g=o.geometry,p=g.attributes.position,ix=g.index,s=box.getSize(new T.Vector3());
  if(Math.max(s.x,s.y,s.z)<=CLUSTER*1.5||!p?.array||ix&&!ix.array)return [box];
- const m=new Map(),v=[new T.Vector3(),new T.Vector3(),new T.Vector3()],n=(ix?ix.count:p.count)/3;
- for(let f=0;f<n;f++){for(let k=0;k<3;k++)v[k].fromBufferAttribute(p,ix?ix.getX(f*3+k):f*3+k).applyMatrix4(o.matrixWorld);
+ const m=new Map(),v=[new T.Vector3(),new T.Vector3(),new T.Vector3()],[f0,n]=faces(g);
+ for(let f=f0;f<n;f++){for(let k=0;k<3;k++)v[k].fromBufferAttribute(p,ix?ix.getX(f*3+k):f*3+k).applyMatrix4(o.matrixWorld);
   const key=[0,1,2].map(a=>Math.floor((v[0].getComponent(a)+v[1].getComponent(a)+v[2].getComponent(a))/3/CLUSTER)).join(',');let bb=m.get(key);if(!bb)m.set(key,bb=new T.Box3());bb.expandByPoint(v[0]).expandByPoint(v[1]).expandByPoint(v[2]);}
  return [...m.values()];
 }
@@ -79,7 +87,7 @@ export function collectTargets(scene,{emptyHook}={}){
   // A merged deck piece holds every run it may draw in its own arrays (kept on the bake page): its clusters bound it
   // whichever decks show. Only without them do its merge's sources stand in.
   // From every vertex: the walk narrows a merged piece's boundingBox to the decks shown.
-  if(own)return clusters(o,new T.Box3().setFromBufferAttribute(g.attributes.position).applyMatrix4(o.matrixWorld));
+  if(own)return clusters(o,sliceBox(g).applyMatrix4(o.matrixWorld));
   if(!o.userData.sources?.length)return null;
   return o.userData.sources.flatMap(id=>{const q=byUuid.get(id),qg=q?.geometry;if(!qg)return [null];if(!qg.boundingBox){if(!qg.attributes.position?.array)return [null];qg.computeBoundingBox();}q.updateWorldMatrix(true,false);return clusters(q,qg.boundingBox.clone().applyMatrix4(q.matrixWorld));});
 };
@@ -138,7 +146,9 @@ export function rowDigests(scene,{emptyHook}={}){
    const sources=o.userData.sources.map(id=>{const q=byUuid.get(id),band=q&&bandOf(q),k=band&&condAt.get(ownerPath(band,scene));if(k!==undefined&&occ.bandConds.has(k))bands.add(k);return q?ownerPath(q,scene):'?';});
    if(!bands.size)return;if(!p?.array||g.index&&!g.index.array){for(const k of bands)blind.add(k);return;}
    let [x,y]=words(0x811c9dc5,0x9747b28c,textWords([ownerPath(o,scene),printNow(o),[o.material].flat().map(m=>pieceMaterial(m,emptyHook)).join(';'),sources.join(','),g.drawRange.start,g.drawRange.count].join('|')));
-   [x,y]=words(x,y,arrayWords(p.array));if(g.index)[x,y]=words(x,y,arrayWords(g.index.array));
+   // A whole mesh's arrays; a deck kind's piece, the positions its own slice draws (its arrays are its kind's).
+   if(whole(g)){[x,y]=words(x,y,arrayWords(p.array));if(g.index)[x,y]=words(x,y,arrayWords(g.index.array));}
+   else [x,y]=words(x,y,arrayWords(slicePositions(g)));
    for(const k of bands){a[k]=fnv(fnv(a[k],x),y);b[k]=mur(mur(b[k],x),y);}});}
  const conds=new Map();occ.conditions.forEach(([path,print],i)=>conds.set(path,conds.has(path)||blind.has(i)?null:print+'#'+hex(a[i],b[i],count[i])));
  const parts=new Map();
