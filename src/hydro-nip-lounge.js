@@ -608,7 +608,8 @@ export function createHydroNipLounge({mirror=1}={}){
    put(neon(BLACKLIGHT),turn(new T.CylinderGeometry(.045,.045,.5,8).translate(0,0,.12)));
    put(glow(BLACKLIGHT,.75,(u,v)=>[u*.5,v]),turn(new T.PlaneGeometry(1.5,2.4).translate(0,0,.015)));};
   // (The end wall's prints hang between the ground floor's sconces: src/garden-finish.js.)
-  for(const [y,up,ends] of [[FLOOR,2.3,[14,19.5,25,31,37]],[LEVELS[0],1.9,[14,20.5,27,33.5,40]],[LEVELS[1],1.9,[14,20.5,27,33.5,40]]]){
+  // The six old mounts at the aquarium end hang in front of the v2 mural wall.
+  for(const [y,up,ends] of [[FLOOR,2.3,[25,31,37]],[LEVELS[0],1.9,[27,33.5,40]],[LEVELS[1],1.9,[27,33.5,40]]]){
    for(const x of [113.5,119,123.5,128.4,137.4,147.5])sconce(x,y+up,ROOM.z1-.1,[0,0,-1]);
    for(const z of ends){
     // These old side fixtures stood on the retired walkway edge, away from the mural wall.
