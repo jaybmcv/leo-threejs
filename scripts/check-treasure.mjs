@@ -68,6 +68,8 @@ game.leave(false);assert(!game.active);
  const shown=()=>[merged.visible,glows.visible,...gems.map(g=>g.visible)].map(Number).join('');
  assert.equal(gems.length,7);assert.equal(shown(),'110000000','Before a swim the merged gems and glows draw instead of the gems');
  assert.equal(merged.geometry.attributes.position.count,gems.reduce((n,g)=>n+g.geometry.attributes.position.count,0));
+ // The lounge's frame is mirrored, and three turns a mirrored mesh's faces: the glows draw both sides, in one pass.
+ assert(glows.material.side===T.DoubleSide&&glows.material.forceSinglePass,'The glows would be culled in a mirrored tank');
  const m=new T.Matrix4(),at=new T.Vector3(),q=new T.Quaternion(),size=new T.Vector3(),c=new T.Color();
  gems.forEach((g,i)=>{glows.getMatrixAt(i,m);m.decompose(at,q,size);const sprite=g.children.find(o=>o.isSprite);glows.getColorAt(i,c);
   assert(at.distanceTo(g.position)<1e-6&&size.distanceTo(sprite.scale)<1e-6&&Math.hypot(c.r-sprite.material.color.r,c.g-sprite.material.color.g,c.b-sprite.material.color.b)<1e-6,'Glow '+i+' is not at its gem');});

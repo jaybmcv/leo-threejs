@@ -1051,7 +1051,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 30,
-      "signature": "743ce07ec6485966e1c7eb6bc34cf7b1e37cb5acb96f8fa4eba907ef028fb755"
+      "signature": "7daa4265417369613be81c56f04eaaf0c98aecbf3f4249ff07bebe1464d981f2"
     },
     {
       "source": "src/walk/aquarium-treasure/suit.js",
@@ -4424,7 +4424,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "6843a03606139758fe998f54fe6a78d58c20b302866c50d24e19f5a176d9dea7"
+      "signature": "c85740d9d230666c2dbf380a1f13308a4cf155a37385e473144464b192b0f03e"
     },
     {
       "source": "src/walk/marks.authoring.js",

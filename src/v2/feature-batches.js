@@ -32,7 +32,8 @@ function batchableMatrix(matrix){
 }
 // `skip(root, o)`: a row that sits out this frame (group-occlusion.js: its root hidden behind what the frame already drew).
 // `take(o)`: false leaves a part out of the batches (a lift door's blades, shown only while it opens).
-export async function createFeatureBatches(scene,renderer,roots,{skip=null,take=null}={}){
+// `hide`: a row the skip leaves out is hidden for the main pass too, so it never reaches group occlusion's own count.
+export async function createFeatureBatches(scene,renderer,roots,{skip=null,take=null,hide=false}={}){
  if(!renderer.extensions.has('WEBGL_multi_draw'))return null;
  const lists=new Map(),records=new Map(),yieldWork=yieldEvery();
  for(const root of roots){
@@ -95,7 +96,7 @@ export async function createFeatureBatches(scene,renderer,roots,{skip=null,take=
     const list=set.visible;list.length=0;
     for(const row of set.rows){
      const {o,g,root}=row;
-     if(skip?.(root,o))continue;
+     if(skip?.(root,o)){if(hide&&o.visible){o.visible=false;changed.push(o);}continue;}
      if(!o.visible||!o.layers.test(camera.layers)||!plain(o)||o.geometry!==g||o.material!==set.m||o.renderOrder!==set.order||
         o.receiveShadow!==set.receives||o.castShadow!==set.casts||root.parent!==band)continue;
      if(!underRoot(o.parent,root,band)||!frustum.intersectsObject(o))continue;

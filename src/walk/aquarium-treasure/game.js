@@ -186,7 +186,10 @@ function stillGems(gems,map){
  if(!geometry)return null;
  const one=new T.Mesh(geometry,new T.MeshBasicMaterial({vertexColors:true,toneMapped:false}));one.name='Aquarium_treasure_gems';
  const material=new T.ShaderMaterial({name:'Aquarium_treasure_glow',uniforms:{...T.UniformsUtils.clone(T.UniformsLib.fog),map:{value:map}},vertexShader:GLOW_VERTEX,fragmentShader:GLOW_FRAGMENT,
-  transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,fog:true});
+  transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,fog:true,
+  // Both sides, in one pass as a sprite's: the lounge's frame is mirrored, and three turns a mirrored mesh's faces
+  // round (a sprite is no mesh), which would cull these squares.
+  side:T.DoubleSide,forceSinglePass:true});
  const glows=new T.InstancedMesh(new T.PlaneGeometry(1,1),material,gems.length),m=new T.Matrix4(),size=new T.Vector3(),q=new T.Quaternion(),bounds=new T.Box3();
  gems.forEach((o,i)=>{const halo=o.children.find(c=>c.isSprite);size.copy(halo.scale);glows.setMatrixAt(i,m.compose(o.position,q,size));glows.setColorAt(i,halo.material.color);
   bounds.expandByPoint(o.position);});
