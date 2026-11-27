@@ -22,6 +22,10 @@ import {geometryKept} from './shader-hooks.js';
 // Main camera only; other cameras (the photo booth, portable views) draw all. On by default where it was measured
 // (Chrome and Edge on Windows: Chromium's ANGLE on Direct3D 11, occlusionByDefault); ?occlusion=1 turns it on elsewhere, and
 // ?occlusion=0 off, to compare.
+// Drawn where its geometry says, or recoloured only by its own hook (see measure()): the material says so and its hook is
+// the one marked so, or film look's or corner shading's wrapping it. A copy given another hook of its own loses the mark.
+const recolours = h => h?.recolourOnly === true || h?.filmLook === true || h?.cornerShade === true;
+const kept = m => geometryKept(m) || m.userData?.recolourOnly === true && recolours(m.onBeforeCompile) && !m.isShaderMaterial && !m.isRawShaderMaterial && !m.displacementMap;
 const corners = new Uint8Array([0,0,0, 1,0,0, 1,1,0, 0,1,0, 0,0,1, 1,0,1, 1,1,1, 0,1,1]);
 const faces = new Uint8Array([0,2,1, 0,3,2, 4,5,6, 4,6,7, 0,1,5, 0,5,4, 3,7,6, 3,6,2, 0,4,7, 0,7,3, 1,2,6, 1,6,5]);
 
@@ -68,8 +72,11 @@ export function occlusionByDefault(gl) {
  return !framed && /ANGLE/.test(name) && /Direct3D11|D3D11/i.test(name) && /Chrome\//.test(agent) && !/Firefox\//.test(agent);
 }
 
-/** roots: the groups' roots (they may gain children later). Returns {stats, hiddenRoot(root), dispose()} or null. */
-export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 16, reach = .5, stale = 45, most = 128, pad = .05} = {}) {
+/** roots: the groups, or a function giving them, asked again whenever the members are refreshed (for groups made later).
+ * A group is an object (its root: it may gain children later) or {name, parts: [objects]}, several roots that make one
+ * group (pieces of one place that share no parent of their own). No object may be in two groups. Returns {stats,
+ * hiddenRoot(root), dispose()} or null. */
+export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 16, reach = .5, stale = 45, most = 128, pad = .05, trust = true} = {}) {
  const gl = renderer.getContext();
  if (typeof WebGL2RenderingContext === 'undefined' || !(gl instanceof WebGL2RenderingContext) || gl.isContextLost() ||
      renderer.capabilities.reversedDepthBuffer || camera.reversedDepth) return null;
@@ -90,7 +97,7 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
   gl.bindVertexArray(was);
   gl.bindBuffer(gl.ARRAY_BUFFER, array);
  }
- const stats = {groups: 0, inView: 0, hidden: 0, skipped: 0, queries: 0, answers: 0, canaryFailed: 0, strays: 0, ms: 0};
+ const stats = {groups: 0, inView: 0, hidden: 0, skipped: 0, queries: 0, answers: 0, canaryFailed: 0, strays: 0, overlaps: 0, pendingPeak: 0, ms: 0};
  const groups = [], movers = [], byRoot = new Map(), member = new WeakMap(), pool = [], pending = [];
  const eye = new Vector3(), previous = new Vector3(), ahead = new Vector3(), viewProjection = new Matrix4(), frustum = new Frustum(), box = new Box3(), part = new Box3();
  const instanced = new WeakMap(), checked = new WeakMap(), remeasure = new Set(), untrusted = new WeakSet();
@@ -105,10 +112,31 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
 
  // Members: every object under a root belongs to its group (refreshed now and then for children added later).
  function enrol() {
-  for (const root of roots) {
+  stats.overlaps = 0;
+  const now = typeof roots === 'function' ? roots() : roots, current = new Set(now);
+  // A group whose root is no longer given (a removed visitor's thing) is dropped, and draws.
+  for (let i = groups.length - 1; i >= 0; i--) {
+   const g = groups[i];
+   if (current.has(g.root)) continue;
+   g.hidden = false; g.last = null; g.dropped = true; byRoot.delete(g.root); groups.splice(i, 1);
+   const m = movers.indexOf(g);if (m >= 0) movers.splice(m, 1);
+  }
+  for (const root of now) {
    let g = byRoot.get(root);
-   if (!g) { g = {id: groups.length, root, box: new Box3(), raw: new Box3(), matrix: root.matrixWorld.clone(), version: 0, moved: false, hidden: false, last: null}; groups.push(g); byRoot.set(root, g); measure(g); }
-   root.traverse(o => member.set(o, g));
+   if (!g) {
+    const parts = root.isObject3D ? [root] : [...root.parts];
+    g = {id: groups.length, root, parts, box: new Box3(), raw: new Box3(), matrices: parts.map(o => o.matrixWorld.clone()), version: 0, moved: false, hidden: false, last: null};
+    groups.push(g); byRoot.set(root, g); measure(g);
+   } else if (!root.isObject3D && root.parts.length !== g.parts.length) {
+    g.parts = [...root.parts]; g.matrices = g.parts.map(o => o.matrixWorld.clone()); measure(g);
+   }
+    // An object already in another group stays there (and is counted): one answer per object. One new to the group is
+   // measured before the group can be left out again, so a skinned or vertex-moving newcomer is known as such.
+   for (const piece of g.parts) piece.traverse(o => {
+    const was = member.get(o);
+    if (was && was !== g && !was.dropped) { stats.overlaps++; return; }
+    if (was !== g) { member.set(o, g); remeasure.add(g); }
+   });
   }
   stats.groups = groups.length;
  }
@@ -117,12 +145,18 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
   // Hidden members too (each with the world matrix it has: the walk leaves a hidden branch's alone), so one shown later
   // is already inside.
   box.makeEmpty();
-  g.root.traverse(o => {
+  for (const root of g.parts) root.traverse(o => {
    if (!(o.isMesh || o.isPoints || o.isLine || o.isSprite) || !o.geometry) return;
    // Bones, point sizes, a sprite turning to the eye, a batch's own instances, a shader that moves vertices, a part never
    // culled or bounds that cannot be read: such a member says
    // nothing of where it draws, so it always draws and stays out of the box; the rest of its group can still be left out.
-   if (o.isSkinnedMesh || o.isPoints || o.isSprite || o.isBatchedMesh || !o.frustumCulled || [o.material].flat().some(m => m && !geometryKept(m)) || !memberBox(o, part)) { untrusted.add(o); return; }
+   // Two ways back in: a material whose own hook only recolours (userData.recolourOnly: the kittens' and the actors'
+   // looks, which three's film look and corner shading may wrap, both shading only), and a member that declares where
+   // it can draw (userData.occlusionBox, a Box3 in its own space that holds every place its shader or its code can move
+   // its vertices to: the lounge's doors and hammocks, the aquarium's fish).
+   // (`trust` false: neither, to compare.)
+   const declared = trust && o.userData.occlusionBox?.isBox3 === true;
+   if (o.isSkinnedMesh || o.isPoints || o.isSprite || o.isBatchedMesh || !declared && (!o.frustumCulled || [o.material].flat().some(m => m && !(trust ? kept(m) : geometryKept(m)))) || !memberBox(o, part)) { untrusted.add(o); return; }
    untrusted.delete(o);
    if (!part.isEmpty()) box.union(part);
   });
@@ -136,7 +170,7 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
  }
  // A group draws nothing while it or a parent is hidden (a deck band out of the view's heights; a root the deck merges
  // copied, kept hidden): it is neither asked about nor counted.
- const shown = o => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
+ const shown = o => { for (; o; o = o.parent) { if (!o.visible) return false; if (o === scene) return true; } return false; };
  const release = q => pool.push(q);
  function poll() {
   // Canaries first: a frame's answers count only once its canary has shown.
@@ -160,7 +194,7 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
   if (frame - built > 600) { built = frame; enrol(); }
   // Boxes measured again: a group whose root has moved, at once; one seen moving before, every fourth frame; the rest
   // in turn, two a frame (for parts that move inside a root that stays).
-  for (const g of groups) if (!g.matrix.equals(g.root.matrixWorld)) { g.matrix.copy(g.root.matrixWorld); measure(g); }
+  for (const g of groups) if (g.parts.some((o, i) => !g.matrices[i].equals(o.matrixWorld))) { g.parts.forEach((o, i) => g.matrices[i].copy(o.matrixWorld)); measure(g); }
   for (const g of movers) if ((frame + g.id) % 4 === 0) measure(g);
   for (let n = 0; n < 2 && groups.length; n++, boxTurn++) measure(groups[boxTurn % groups.length]);
   for (const g of remeasure) measure(g);
@@ -178,7 +212,7 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
   stats.hidden = 0; stats.inView = 0;
   for (const g of groups) {
    const a = g.last;
-   g.inView = !g.box.isEmpty() && shown(g.root) && frustum.intersectsBox(g.box);
+   g.inView = !g.box.isEmpty() && g.parts.some(shown) && frustum.intersectsBox(g.box);
    if (g.inView) stats.inView++;
    // A box partly off the view was tested only where it was on it: its answer holds only while the view has not turned.
    g.hidden = enabled && !!a && !a.shown && g.inView && a.version === g.version && frame - a.frame <= stale &&
@@ -259,11 +293,13 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
   state.useProgram(program);
   state.buffers.color.setMask(true);
   stats.queries = list.length;
+  stats.pendingPeak = Math.max(stats.pendingPeak, pending.length);
   stats.ms = performance.now() - t;
  }
  // A member's world box, as measure() takes it (null when its bounds cannot be read).
  function memberBox(o, out) {
   const geo = o.geometry;
+  if (trust && o.userData.occlusionBox?.isBox3) return out.copy(o.userData.occlusionBox).applyMatrix4(o.matrixWorld);
   if (o.isInstancedMesh) return out.copy(instanceBounds(o).boundingBox).applyMatrix4(o.matrixWorld);
   if (!geo.boundingBox && !geo.attributes.position?.array) {
    const s = geo.boundingSphere;if (!s) return null;
@@ -324,7 +360,7 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
    return false;
   },
   /** For the Stats readout (frame-readout.js). */
-  line: () => enabled && !disposed ? `hidden by the frame: ${stats.hidden} of ${stats.inView} room features and lifts in view` : 'hidden by the frame: off',
+  line: () => enabled && !disposed ? `hidden by the frame: ${stats.hidden} of ${stats.inView} room parts and lifts in view` : 'hidden by the frame: off',
   get enabled() { return enabled; },
   set enabled(on) { enabled = !!on; if (!enabled) for (const g of groups) g.hidden = false; },
   dispose() {

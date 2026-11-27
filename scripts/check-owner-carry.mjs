@@ -77,6 +77,11 @@ pass('a key\'s walk script and build configuration read back as ownerKey wrote t
 {const stored=fullBake(ship()),later=ship();later.piece.position.x+=1;// the walk leaves a hidden branch's world matrices stale
  assert.equal(ownerPrint(later.piece),ownerPrint(ship().piece),'its world matrix still says where it was');
  const {dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:0,conds:1,entries:1,blocks:0});pass('a merged piece is read where it will be drawn, not where a stale world matrix puts it');}
+// Its groups are the runs it draws for the decks shown where the walker stands (phone-bands.js): read elsewhere, they
+// differ on the very same build. The 2026-11-27 nightly read them away from where the carry stood and lost 97% of its proofs.
+{const stored=fullBake(ship()),later=ship(w=>{w.piece.geometry.groups=[{start:0,count:3,materialIndex:0}];});
+ const {data,dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:0,conds:0,entries:0,blocks:0});
+ assert.deepEqual(hiddenBy(data,later),[false,false]);pass('a merged piece showing other decks\' runs keeps what its bands proved (view state, not the build)');}
 {const stored=fullBake(ship()),later=ship(w=>{const g=w.lamp2.geometry;g.translate(0,0,.4);g.computeBoundingBox();});
  const {dropped}=carry(stored,later);assert.deepEqual(dropped,{parts:1,conds:0,entries:1,blocks:0});pass('a part whose boxes changed is not carried');}
 {const stored=fullBake(ship()),later=ship(w=>{w.lamp.castShadow=true;});const {dropped}=carry(stored,later);assert.equal(dropped.parts,1);pass('nor one the bake would no longer hide (a shadow caster)');}

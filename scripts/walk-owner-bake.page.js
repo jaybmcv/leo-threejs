@@ -9,7 +9,8 @@
 //                   blocks drawn with and without the hiding: changed pixels per pose (a second plain draw is the noise).
 //  stand(seed)      the walker stood at `seed` {at, yaw} and the decks shown there settled (setup does this first).
 //  rows(tables)     the row digests (walk-owner-bake.scene.js rowDigests) of tables {parts, conds} as the scene is now,
-//                   one per row (null for a row the scene has none for), and the walk's key: what a carry compares.
+//                   one per row (null for a row the scene has none for), and the walk's key: what a carry compares;
+//                   `where` (the camera and how many bands show) only for the logs.
 import * as T from 'three';
 import {MeshBVH} from 'three-mesh-bvh';
 import {createOwnerProof,OWNER_PROOF} from '../src/v2/owner-proof.js';
@@ -77,7 +78,10 @@ async function bake(blocks,{staticWhole=false}={}){
 const prune=data=>{hosted().scene.updateMatrixWorld(true);return pruneOwnerBake(data,host.scene);};
 function rows(tables){
  hosted().scene.updateMatrixWorld(true);
- return {key:host.key,...tableDigests(host.scene,tables,{emptyHook:host.T.Material.prototype.onBeforeCompile})};
+ // Where they were read, for the logs: the digests do not depend on it (rowDigests leaves view state out).
+ let shown=0,bands=0;host.scene.traverse(o=>{if(/^Walk_band_/.test(o.name||'')&&!/^Walk_band_/.test(o.parent?.name||'')){bands++;if(o.visible)shown++;}});
+ return {key:host.key,where:{camera:host.camera.position.toArray().map(v=>+v.toFixed(1)),bands:shown+'/'+bands},
+  ...tableDigests(host.scene,tables,{emptyHook:host.T.Material.prototype.onBeforeCompile})};
 }
 // Picture diffs through the walk's own hiding.
 async function check(data,poses=60,seed=7){

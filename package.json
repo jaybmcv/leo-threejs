@@ -30,6 +30,8 @@
     "check:own-walker-merge": "node scripts/check-own-walker-merge.mjs",
     "check:crowd-draw": "node scripts/check-crowd-draw.mjs",
     "check:feature-batches": "node scripts/check-feature-batches.mjs",
+    "check:cabin-batches": "node scripts/check-cabin-batches.mjs",
+    "check:draw-runs": "node scripts/check-draw-runs.mjs",
     "check:share-materials": "node scripts/check-share-materials.mjs",
     "check:owner-proof": "node scripts/check-owner-proof.mjs",
     "check:owner-proof-fuzz": "node scripts/check-owner-proof-fuzz.mjs",
