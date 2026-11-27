@@ -41,7 +41,7 @@ try{
  {const why=carryProblem(stored,{code,key:main.key});if(why)none(why);}
  let cafeNow=null;if(c.cafe){await ev('stand',c.cafeSeed);cafeNow=await ev('rows',tables);await ev('stand',c.seed);}
  const {data:carried,dropped,changed}=carryRows(stored,{key:main.key,main,cafe:cafeNow});
- console.log('owner carry: rows read again in',minutes(),'dropped',JSON.stringify(dropped));
+ console.log('owner carry: rows read again in',minutes(),'at',JSON.stringify([main.where,cafeNow?.where].filter(Boolean)),'dropped',JSON.stringify(dropped));
  // What changed, by name: the walls (mostly bands) and parts whose digests differ now.
  const name=row=>JSON.parse(row[0]).map(s=>s[0]).filter(Boolean).join('/');
  for(const k of ['conds','parts']){const list=changed[k].map(i=>name(stored[k][i]));if(list.length)console.log(`owner carry: ${k==='conds'?'walls':'parts'} changed (${list.length}):`,list.slice(0,16).join(', ')+(list.length>16?', …':''));}

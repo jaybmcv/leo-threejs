@@ -42,11 +42,11 @@ for(const mirror of [false,true]){
 assert.equal(game.near(controller.position)?.op,'enter');game.use({op:'enter'});
 assert(game.active);assert(game.contains(controller.position));assert.equal(game.found,0);
 game.use({op:'finish'});assert(!game.done,'The chest cannot finish a run before the gems');
-function tick(k={x:0,y:0,held:false,jump:false}){now+=1000/60;game.step(1/60,k);game.updateCamera(1/60);
+function tick(k={x:0,y:0,held:false,jump:false},g=game){now+=1000/60;g.step(1/60,k);g.updateCamera(1/60);
  assert(distance(swimLocal(controller.position.toArray()),limitSwim(swimLocal(controller.position.toArray())))<1e-7,'Swimmer left its body bounds');
  assert(camera.position.toArray().every(Number.isFinite));}
-function swimTo(local){const dest=new T.Vector3(...swimWorld(local));let n=0;
- while(controller.position.distanceTo(dest)>.18&&n++<5000){const d=dest.clone().sub(controller.position).normalize();follow.yaw=Math.atan2(d.x,d.z);follow.pitch=Math.asin(d.y);tick({x:0,y:1});}
+function swimTo(local,g=game){const dest=new T.Vector3(...swimWorld(local));let n=0;
+ while(controller.position.distanceTo(dest)>.18&&n++<5000){const d=dest.clone().sub(controller.position).normalize();follow.yaw=Math.atan2(d.x,d.z);follow.pitch=Math.asin(d.y);tick({x:0,y:1},g);}
  assert(n<5000,'Cannot swim to '+local.join(','));
 }
 // All seven need horizontal and vertical movement. The route crosses over the tunnel on the way to the right reef.
@@ -60,6 +60,24 @@ game.use({op:'enter'});assert.equal(game.found,0);assert(!game.done);
 for(const [yaw,pitch] of [[0,0],[Math.PI,0],[Math.PI/2,0],[-Math.PI/2,0],[0,Math.PI/2],[0,-Math.PI/2]]){
  follow.yaw=yaw;follow.pitch=pitch;for(let i=0;i<1000;i++)tick({x:0,y:1});}
 game.leave(false);assert(!game.active);
+// The desktop walk's one draw: while no gem is found, the seven gems draw as one mesh and their glows as one instanced
+// draw, where the gems and glows are; the first find goes back to the gems one by one, and a new swim to the two again.
+{
+ const one=createTreasureGame({tank:new T.Group(),controller,follow,camera,input,live:()=>null,oneDraw:true}),part=n=>one.group.children.find(o=>o.name===n);
+ const gems=one.group.children.filter(o=>o.isMesh&&o.children.some(c=>c.isSprite)),merged=part('Aquarium_treasure_gems'),glows=part('Aquarium_treasure_glows');
+ const shown=()=>[merged.visible,glows.visible,...gems.map(g=>g.visible)].map(Number).join('');
+ assert.equal(gems.length,7);assert.equal(shown(),'110000000','Before a swim the merged gems and glows draw instead of the gems');
+ assert.equal(merged.geometry.attributes.position.count,gems.reduce((n,g)=>n+g.geometry.attributes.position.count,0));
+ // The lounge's frame is mirrored, and three turns a mirrored mesh's faces: the glows draw both sides, in one pass.
+ assert(glows.material.side===T.DoubleSide&&glows.material.forceSinglePass,'The glows would be culled in a mirrored tank');
+ const m=new T.Matrix4(),at=new T.Vector3(),q=new T.Quaternion(),size=new T.Vector3(),c=new T.Color();
+ gems.forEach((g,i)=>{glows.getMatrixAt(i,m);m.decompose(at,q,size);const sprite=g.children.find(o=>o.isSprite);glows.getColorAt(i,c);
+  assert(at.distanceTo(g.position)<1e-6&&size.distanceTo(sprite.scale)<1e-6&&Math.hypot(c.r-sprite.material.color.r,c.g-sprite.material.color.g,c.b-sprite.material.color.b)<1e-6,'Glow '+i+' is not at its gem');});
+ controller.place(new T.Vector3(...swimWorld(SWIM.door)));one.use({op:'enter'});assert.equal(shown(),'110000000');
+ swimTo([SWIM.gems[0][0],SWIM.gems[0][1]-SWIM.offset,SWIM.gems[0][2]],one);assert.equal(one.found,1);assert.equal(shown(),'000111111','The first find shows the six gems left');
+ for(const g of SWIM.gems.slice(1))swimTo([g[0],g[1]-SWIM.offset,g[2]],one);assert.equal(shown(),'000000000');
+ one.leave(false);one.use({op:'enter'});assert.equal(shown(),'110000000','A new swim draws the merged gems again');one.leave(false);
+}
 console.log('Aquarium: seven gems through swim controls, chest, camera, exit, restart, bounds and room transforms pass.');
 
 delete globalThis.document;
