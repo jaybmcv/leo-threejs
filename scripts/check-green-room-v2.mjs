@@ -7,6 +7,8 @@ import layout from '../src/plan/selected-layout.js';
 import {toWorld} from '../src/plan/rooms.js';
 import {buildRoomShell} from '../src/v2/room-shell.js';
 import {addPhase4Colliders,buildPhase4Fitout} from '../src/v2/phase4-fitout.js';
+import {greenRoomMaterials} from '../src/v2/green-room-fitout.js';
+import {material} from '../src/v2/phase4-mesh-kit.js';
 import {gotoFloor} from '../src/v2/goto-floor.js';
 import {roomPlaces} from '../src/v2/wayfinding-data.js';
 import {Colliders,solid} from '../src/walk/collision.js';
@@ -23,6 +25,16 @@ buildRoomShell(ship,room,structure);
 for(const name of ['Room_fittings','Shelter_bench','Equipment_cabinet','Service_counter','Area_identity_panel','Ceiling_light'])
  assert.equal(built.root.getObjectByName(name),undefined,name+' still in the room');
 const shell=structure.getObjectByName('V2_shell_'+id),fit=buildPhase4Fitout(ship,layout,{rooms:[id]});
+for(const [name,finish] of Object.entries(greenRoomMaterials)){
+ const own=fit.meshes.find(o=>o.material.name==='P4_green_room_'+name)?.material,shared=material(name);
+ assert(own,'Missing Green Room finish '+name);
+ assert.notEqual(own,shared,'Green Room shares the ship finish '+name);
+ assert(shared.color.equals(new T.Color(finish.color)),'Shared finish was dimmed: '+name);
+ assert.equal(shared.emissiveIntensity,finish.emissiveIntensity??1);
+ const scale=['fuchsia','mint','amber'].includes(name)?1:['brass','lacquer'].includes(name)?.55:.32;
+ assert(own.color.equals(shared.color.clone().multiplyScalar(scale)),'Wrong Green Room finish brightness: '+name);
+ assert.equal(own.emissiveIntensity,shared.emissiveIntensity*scale);
+}
 const col=new Colliders(),ground=new Colliders();
 col.addStatic(shell,solid);ground.addStatic(shell,o=>o.name==='V2_room_floor');
 addPhase4Colliders(ship,col,ground);col.commit();ground.commit();
@@ -75,4 +87,4 @@ assert.notEqual(Buffer.compare(first,pixels(a)),0,'The screen content must anima
 assert.equal(q.version,stillVersion);
 const drawn=a.version;active.update(.5,inside.clone().add(new T.Vector3(0,4,0)));
 assert.equal(a.version,drawn);
-console.log('PASS Green Room: shelter fittings removed, walking routes clear, eight supported seats, animated stage and reduced-motion still');
+console.log('PASS Green Room: isolated finishes, shelter fittings removed, walking routes clear, eight supported seats, animated stage and reduced-motion still');

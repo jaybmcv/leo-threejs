@@ -2855,7 +2855,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 31,
-      "signature": "2e452d132fc464b992a479957c3081a98b78ffd23d3acf10c1e5175337b983f3"
+      "signature": "488ab1abbdc36cf3b9dc1aa47ef804055ccdc28fbe8ef58d50cc0ed2bed4b0db"
     },
     {
       "source": "src/walk/halloween.authoring.js",
