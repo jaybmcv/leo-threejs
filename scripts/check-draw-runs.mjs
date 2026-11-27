@@ -172,6 +172,8 @@ console.log('check-draw-runs: ok');
  let r=run([[A,g(0,6)],[A,g(6,6)],[B,g(12,12)],[C,g(18,18)]]);
  assert.deepEqual(r.drawn,['batch 0,24,48,96 / 6,6,12,12']);assert(r.results.every(x=>x===HELD),'held draws answer HELD');
  assert.equal(kinds.stats.folded,3);assert.equal(drawn[0].material,batch.material);assert.equal(drawn[0].geometry,shared);
+ // In the kind's own order (index order), whatever order the camera's sort gave.
+ r=run([[C,g(24,12)],[B,g(12,12)],[A,g(6,6)],[A,g(0,6)]]);assert.deepEqual(r.drawn,['batch 0,24,48,96 / 6,6,12,12']);
  // A row of one draws itself, with its group.
  r=run([[B,g(12,12)]]);assert.deepEqual(r.drawn,['V2_low_deck_merged_Walk_finish_kind_0@12']);
  // Another draw between ends the row: A then C draw themselves, around it.

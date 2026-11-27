@@ -329,7 +329,7 @@ const deskPiece=deskPieceSize({query:new URLSearchParams(location.search),phone:
 // With pieces, the floor and wall finishes merge by kind, each kind's pieces in one set of arrays (phone-bands.js), so
 // draw-runs.js draws a kind's pieces in view as one multi-draw. ?deckkinds=0 merges them per material, as before. The
 // owner bake's key carries it: a bake of one way is never used by the other.
-const deckKinds=deskPiece>0&&phoneTest.get('deckkinds')!=='0';
+const deckKinds=deskPiece>0&&renderer.extensions.has('WEBGL_multi_draw')&&phoneTest.get('deckkinds')!=='0';
 // The ship's layers are set apart by height (a floor finish 6 mm over the deck, paint 8 mm): with the logarithmic depth
 // buffer the shaders write the depth, so polygon offset has never applied. With linear depth it would, and pull the hex
 // sub-floor (finish-kit.js) over the Arrival Hall's finish, so it stays off.

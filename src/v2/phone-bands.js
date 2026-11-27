@@ -295,15 +295,15 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece
  update();
  // The kinds' texels: each source material's roughness and metalness, rewritten only when they change. Every 60 calls each
  // source is checked against its kind again (its own values apart from roughness and metalness, and the kind material's
- // corner shading and film look): proof.drift counts the times one no longer matches. A merged source cannot be drawn
+ // corner shading and film look): proof.drift counts the sources that no longer match, each warned once. A merged source cannot be drawn
  // apart again, so this is for the checks to see, not a way back.
- let calls=0;
+ let calls=0;const drifted=new WeakSet();
  const follow=()=>{
   const check=++calls%60===0;
   for(const K of kinds){const data=K.texture.image.data;let dirty=false;
    for(let i=0;i<K.materials.length;i++){const m=K.materials[i],r=Math.fround(m.roughness),s=Math.fround(m.metalness);
     if(data[i*4+1]!==r||data[i*4+2]!==s||data[i*4+3]!==1){data[i*4+1]=r;data[i*4+2]=s;data[i*4+3]=1;dirty=true;}
-    if(check&&(hookFlags(m)!==hookFlags(K.material)||lookOf(m)!==K.looks[i]))proof.drift++;}
+    if(check&&!drifted.has(m)&&(hookFlags(m)!==hookFlags(K.material)||lookOf(m)!==K.looks[i])){drifted.add(m);proof.drift++;console.warn('Deck kind: '+m.name+' no longer matches '+K.material.name+': it keeps drawing with the kind look.');}}
    if(dirty)K.texture.needsUpdate=true;}
  };
  follow();

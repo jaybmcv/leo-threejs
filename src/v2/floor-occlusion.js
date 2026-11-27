@@ -101,7 +101,7 @@ function* floorScan(scene, camera) {
   }
   const raw = Float64Array.from(packed);
   packed.length = 0;
-  const targets = new WeakMap(), geometryIds = new WeakMap(), retired = [], rowsById = new Map(), pending = [], trees = [], scope = [];
+  const targets = new WeakMap(), geometryIds = new WeakMap(), geometryTrees = new WeakMap(), retired = [], rowsById = new Map(), pending = [], trees = [], scope = [];
   const eyes = new Vector3(), frustum = new Frustum(), vp = new Matrix4(), last = new Matrix4(), v = new Vector3();
   let ready = false, busy = false, frame = -1, epoch = 0, pass = 0, nextRow = 0, nextTree = 0, view = null, spent = 0, scopeHash = 0;
   worker.onmessage = ({ data }) => {
@@ -258,17 +258,22 @@ function* floorScan(scene, camera) {
     row.mat.copy(o.matrixWorld);
     const tree = retainedDrawTree(g);
     if (tree) {
-      let registered = geometryIds.get(g);
-      if (registered && registered.tree !== tree)
+      // A tree goes to the worker once, whichever geometries share it (a deck kind's pieces share their kind's,
+      // phone-bands.js); a geometry whose tree changed waits for its disposal, as before.
+      const prior = geometryTrees.get(g);
+      if (prior && prior !== tree)
         return false;
+      geometryTrees.set(g, tree);
+      let registered = geometryIds.get(tree);
       if (!registered) {
         const id = ++nextTree;
         registered = { id, tree };
-        geometryIds.set(g, registered);
+        geometryIds.set(tree, registered);
         trees.push({ id, boxes: tree.boxes, leaves: tree.leaves, stride: tree.stride });
         const dispose = () => {
           retired.push(id);
-          geometryIds.delete(g);
+          geometryIds.delete(tree);
+          geometryTrees.delete(g);
           g.removeEventListener('dispose', dispose);
           if (!pending.length) queueMicrotask(finish);
         };

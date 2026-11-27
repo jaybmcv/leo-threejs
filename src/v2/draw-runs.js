@@ -224,6 +224,10 @@ export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDIC
   follow(v,true);
   for(const [,,g,,,group] of calls){const r=g.drawRange,a=Math.max(group.start,r.start),b=Math.min(group.start+group.count,r.start+r.count);
    if(b<=a||k===set.most)continue;starts[k]=a*4;counts[k]=b-a;k++;}
+  // In the kind's own order (piece, then band, then material), not the camera's: where two of its surfaces meet or lie a
+  // hair apart, the one drawn later wins the edge (the logarithmic depth is written per pixel), so the winner stays the
+  // same however the camera turns.
+  for(let i=1;i<k;i++){const s=starts[i],c=counts[i];let j=i-1;while(j>=0&&starts[j]>s){starts[j+1]=starts[j];counts[j+1]=counts[j];j--;}starts[j+1]=s;counts[j+1]=c;}
   batch._multiDrawCount=k;
   batch.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse,batch.matrixWorld);batch.normalMatrix.getNormalMatrix(batch.modelViewMatrix);
   inner.call(renderer,camera,scene,batch.geometry,v.copy,batch,null);

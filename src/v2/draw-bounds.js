@@ -54,8 +54,10 @@ function makeRecord(g, merged) {
 // Kept by the index (or positions) the geometry draws from, not the geometry: a deck kind's pieces are geometries over one
 // shared index and arrays (phone-bands.js), and share its one tree, made before those arrays leave the page.
 function recordFor(g, merged = false) {
- const p = g.attributes.position, ix = g.index, key = ix ?? p ?? g;
- let record = records.get(key);
+ const p = g.attributes.position, ix = g.index;
+ let key = ix ?? p ?? g, record = records.get(key);
+ // One index over other positions: kept by the geometry, so the two never rebuild each other's.
+ if (record && key === ix && record.p !== p) { key = g; record = records.get(g); }
  if (!record || record.p !== p || record.ix !== ix || record.pv !== p?.version || record.iv !== ix?.version) {
   record = {p, ix, pv:p?.version, iv:ix?.version, tree:makeRecord(g, merged)};
   records.set(key, record);
