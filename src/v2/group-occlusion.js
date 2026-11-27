@@ -22,6 +22,10 @@ import {geometryKept} from './shader-hooks.js';
 // Main camera only; other cameras (the photo booth, portable views) draw all. On by default where it was measured
 // (Chrome and Edge on Windows: Chromium's ANGLE on Direct3D 11, occlusionByDefault); ?occlusion=1 turns it on elsewhere, and
 // ?occlusion=0 off, to compare.
+// Drawn where its geometry says, or recoloured only by its own hook (see measure()): the material says so and its hook is
+// the one marked so, or film look's or corner shading's wrapping it. A copy given another hook of its own loses the mark.
+const recolours = h => h?.recolourOnly === true || h?.filmLook === true || h?.cornerShade === true;
+const kept = m => geometryKept(m) || m.userData?.recolourOnly === true && recolours(m.onBeforeCompile) && !m.isShaderMaterial && !m.isRawShaderMaterial && !m.displacementMap;
 const corners = new Uint8Array([0,0,0, 1,0,0, 1,1,0, 0,1,0, 0,0,1, 1,0,1, 1,1,1, 0,1,1]);
 const faces = new Uint8Array([0,2,1, 0,3,2, 4,5,6, 4,6,7, 0,1,5, 0,5,4, 3,7,6, 3,6,2, 0,4,7, 0,7,3, 1,2,6, 1,6,5]);
 
@@ -72,7 +76,7 @@ export function occlusionByDefault(gl) {
  * A group is an object (its root: it may gain children later) or {name, parts: [objects]}, several roots that make one
  * group (pieces of one place that share no parent of their own). No object may be in two groups. Returns {stats,
  * hiddenRoot(root), dispose()} or null. */
-export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 16, reach = .5, stale = 45, most = 128, pad = .05} = {}) {
+export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 16, reach = .5, stale = 45, most = 128, pad = .05, trust = true} = {}) {
  const gl = renderer.getContext();
  if (typeof WebGL2RenderingContext === 'undefined' || !(gl instanceof WebGL2RenderingContext) || gl.isContextLost() ||
      renderer.capabilities.reversedDepthBuffer || camera.reversedDepth) return null;
@@ -146,7 +150,13 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
    // Bones, point sizes, a sprite turning to the eye, a batch's own instances, a shader that moves vertices, a part never
    // culled or bounds that cannot be read: such a member says
    // nothing of where it draws, so it always draws and stays out of the box; the rest of its group can still be left out.
-   if (o.isSkinnedMesh || o.isPoints || o.isSprite || o.isBatchedMesh || !o.frustumCulled || [o.material].flat().some(m => m && !geometryKept(m)) || !memberBox(o, part)) { untrusted.add(o); return; }
+   // Two ways back in: a material whose own hook only recolours (userData.recolourOnly: the kittens' and the actors'
+   // looks, which three's film look and corner shading may wrap, both shading only), and a member that declares where
+   // it can draw (userData.occlusionBox, a Box3 in its own space that holds every place its shader or its code can move
+   // its vertices to: the lounge's doors and hammocks, the aquarium's fish).
+   // (`trust` false: neither, to compare.)
+   const declared = trust && o.userData.occlusionBox?.isBox3 === true;
+   if (o.isSkinnedMesh || o.isPoints || o.isSprite || o.isBatchedMesh || !declared && (!o.frustumCulled || [o.material].flat().some(m => m && !(trust ? kept(m) : geometryKept(m)))) || !memberBox(o, part)) { untrusted.add(o); return; }
    untrusted.delete(o);
    if (!part.isEmpty()) box.union(part);
   });
@@ -289,6 +299,7 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
  // A member's world box, as measure() takes it (null when its bounds cannot be read).
  function memberBox(o, out) {
   const geo = o.geometry;
+  if (trust && o.userData.occlusionBox?.isBox3) return out.copy(o.userData.occlusionBox).applyMatrix4(o.matrixWorld);
   if (o.isInstancedMesh) return out.copy(instanceBounds(o).boundingBox).applyMatrix4(o.matrixWorld);
   if (!geo.boundingBox && !geo.attributes.position?.array) {
    const s = geo.boundingSphere;if (!s) return null;

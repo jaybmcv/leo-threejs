@@ -401,7 +401,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 130,
-      "signature": "7f97832068bad0a0c845e54cdb8f2ca525528bf5853f0d96758e442acd1da477"
+      "signature": "39b1793956b52980e313534277065b2240487cb37a0969773563595a6d398024"
     },
     {
       "source": "src/interior-polish.js",
@@ -2855,7 +2855,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 31,
-      "signature": "2e452d132fc464b992a479957c3081a98b78ffd23d3acf10c1e5175337b983f3"
+      "signature": "488ab1abbdc36cf3b9dc1aa47ef804055ccdc28fbe8ef58d50cc0ed2bed4b0db"
     },
     {
       "source": "src/walk/halloween.authoring.js",
@@ -3524,7 +3524,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "2cb6a7ed1174127afd49a0de7eb2006565a93df9fdc8e2ff0f817675ea7d967e"
+      "signature": "b47f915f7e30b4810a75d2871732af2d752ab4a940c271f7e224ef7b66799b8b"
     },
     {
       "source": "src/walk/last-spot.js",
@@ -4340,7 +4340,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 4,
-      "signature": "053886afcbc165f33d0c0ac026c01c591a5510b408c5128bbe71e620ebf3aef1"
+      "signature": "b6b98c157c83b73df7e73978d0827a659d3b5807aea65aa0650acef082d292b9"
     },
     {
       "source": "src/walk/main.authoring.js",
@@ -4425,7 +4425,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "ee327789b8c79464fed03cb764efc6d5baa198f1b0e8b90ad1f3daa6c4801b3c"
+      "signature": "2f0ff0362970376291920ab56388978d3c1af6306f676172c89466e703929126"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -6186,7 +6186,7 @@
       ],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 41,
-      "signature": "e5ccebb3de71829942ad516ad2a35081d062725304acb61e7ae706dde98eca38"
+      "signature": "833c521fd44633b3a135d8d6184122ee3ffd5372512d9bb2827af08a611b3144"
     },
     {
       "source": "src/walk/transporter-mesh.js",
