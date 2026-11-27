@@ -97,7 +97,7 @@ assert.deepEqual(users.sort(),['src/walk/fur-settings.js','src/walk/main.authori
 for(const f of [...await files('src/walk/net'),...await files('server'),'src/walk/remotes.js','src/walk/avatar.js','src/walk/crowd-draw.js'])
  assert(!/outfit|wardrobe|bomber/i.test(await fs.readFile(f,'utf8')),f+' must not carry the outfit');
 for(const f of ['src/walk/main.js','src/walk/main.public.js','src/walk/main.prepared.js','src/walk/main.authoring.js']){
- const s=await fs.readFile(f,'utf8');assert.equal((s.match(/createWardrobe\(/g)||[]).length,1);assert(/createWardrobe\(walker\.figure\)/.test(s),f+': the wardrobe dresses the own walker');
+ const s=await fs.readFile(f,'utf8');assert.equal((s.match(/createWardrobe\(/g)||[]).length,1);assert(/createWardrobe\(walker\.figure[,)]/.test(s),f+': the wardrobe dresses the own walker');
  assert(!/remotes[^;\n]*wardrobe|wardrobe[^;\n]*remotes/.test(s));}
 pass('only the visitor\'s own walker is dressed; net, server and other visitors never mention an outfit');
 console.log(`wardrobe: ${passed} checks passed`);

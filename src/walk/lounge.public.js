@@ -4,7 +4,7 @@ import {fitPreparedLounge as fitNativeLounge} from '../v2/prepared-runtime.publi
 import * as T from 'three';
 import {roomObject,deltaMatrix,hasFrameOverride,moverOrientation} from '../plan/rooms.js';
 import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {LOUNGE} from '../hydro-nip-lounge.js';
+import {LOUNGE,terpeneBarPlacement} from '../hydro-nip-lounge.js';
 import {createTerpeneGlassware} from '../terpene-glassware.js';
 import {createLoungeSky} from './lounge-sky.public.js';
 import {createLoungeMural} from './lounge-mural.public.js';
@@ -37,6 +37,9 @@ export function createLounge(ship,colliders){
  const frame=root.matrixWorld,toWorld=(x,y,z)=>new T.Vector3(x,y,z).applyMatrix4(frame);
  // Everything drawn here is placed at the lounge floor's height, so main.js files it with that floor's deck band.
  const floorY=toWorld(0,LOUNGE.FLOOR,0).y,drawn=[];
+ // Where the doors, hammocks and glass roof can draw (userData.occlusionBox, for the walk's occlusion in
+ // group-occlusion.js): set once the prepared lounge is fitted in below, which gives each placed mesh its stored userData.
+ const declared=[];
  const place=(g,mat,name)=>{g.translate(0,-floorY,0);const o=new T.Mesh(g,mat);o.name=name;o.position.y=floorY;o.frustumCulled=false;drawn.push(o);return o;};
 
  // Doors: each leaf (pane and frame) slides along its own `slide`; the doors' state is how far open, 0 to 1.
@@ -55,7 +58,10 @@ export function createLounge(ship,colliders){
  for(const leaf of leaves.values())for(const o of leaf.meshes){const list=byMaterial.get(o.material)||byMaterial.set(o.material,[]).get(o.material);list.push({leaf,g:worldGeometry(o)});o.removeFromParent();}
  const doorMeshes=[...byMaterial].map(([mat,items])=>{
   const g=replayMerged("src/walk/lounge.js",nativeMergeGeometries,items.map(i=>i.g));let start=0;const ranges=items.map(i=>{const r={leaf:i.leaf,start,count:i.g.attributes.position.count};start+=r.count;return r;});
-  const mesh=place(g,mat,'Walk_lounge_doors'),base=g.attributes.position.array.slice();return {mesh,ranges,base};});
+  const mesh=place(g,mat,'Walk_lounge_doors'),base=g.attributes.position.array.slice();
+  // The doors shut or fully open (slideDoors writes `base` moved by each leaf's slide; the bounds stay as built).
+  declared.push([mesh,()=>{const box=new T.Box3().setFromArray(base);for(const r of ranges){const leaf=new T.Box3().setFromArray(base.subarray(r.start*3,(r.start+r.count)*3));leaf.min.addVectors(leaf.min,r.leaf.slide);leaf.max.addVectors(leaf.max,r.leaf.slide);box.union(leaf);}return box.expandByScalar(.05);}]);
+  return {mesh,ranges,base};});
  let doorsMoved=true;
  function slideDoors(){
   for(const {mesh,ranges,base} of doorMeshes){const p=mesh.geometry.attributes.position,a=p.array;
@@ -81,7 +87,11 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
     .replace('#include <beginnormal_vertex>','#include <beginnormal_vertex>\nfloat swingA=uAmp*sin(uTime*uRate+aPhase);objectNormal=swingAbout(objectNormal,swingA);')
     .replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed=swingAbout(transformed-(aPivot-vec3(0.,'+floorY.toFixed(4)+',0.)),swingA)+(aPivot-vec3(0.,'+floorY.toFixed(4)+',0.));');};
   mat.customProgramCacheKey=()=>'lounge-hammocks';
-  place(replayMerged("src/walk/lounge.js",nativeMergeGeometries,parts),mat,'Walk_lounge_hammocks');
+  const hung=place(replayMerged("src/walk/lounge.js",nativeMergeGeometries,parts),mat,'Walk_lounge_hammocks');
+  // Each vertex swings at most SWAY.amp about its pivot, so moves at most its distance from it times that.
+  declared.push([hung,()=>{const pos=hung.geometry.attributes.position,piv=hung.geometry.attributes.aPivot;if(!piv)return null;let reach=0;
+   for(let i=0;i<pos.count;i++)reach=Math.max(reach,Math.hypot(pos.getX(i)-piv.getX(i),pos.getY(i)-(piv.getY(i)-floorY),pos.getZ(i)-piv.getZ(i)));
+   return new T.Box3().setFromBufferAttribute(pos).expandByScalar(reach*SWAY.amp+.05);}]);
   for(const o of hammocks)o.removeFromParent();
  }
  // How a hammock (a rest spot's mesh) hangs now: the same swing as the shader's.
@@ -103,15 +113,18 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  if(aquarium)aquarium.group.userData={band:bandOf(toWorld(0,aquarium.low,0).y),top:bandOf(toWorld(0,aquarium.top,0).y)};
  const {ROOM}=LOUNGE;
  const panels=[];root.parent?.parent?.traverse(o=>{if(o.isMesh&&o.name==='Circadian_light')panels.push(o);});for(const o of panels)o.removeFromParent();
- {const sky=createLoungeSky(frame,ROOM,LOUNGE.CEILING-.16,uniforms.uTime);place(sky.geometry,sky.material,'Walk_lounge_glass_roof');}
+ {const sky=createLoungeSky(frame,ROOM,LOUNGE.CEILING-.16,uniforms.uTime);const roof=place(sky.geometry,sky.material,'Walk_lounge_glass_roof');
+  // Its shader draws the geometry where it is (lounge-sky.js): its own bounds.
+  declared.push([roof,()=>new T.Box3().setFromBufferAttribute(roof.geometry.attributes.position)]);}
  // The neon and halo materials, which burn brighter in the room's mood (lounge-mood.js).
  const glows=[];root.traverse(o=>{if(o.isMesh&&/^Lounge_(neon_glow|additive_glow)$/.test(o.material?.name)&&!glows.includes(o.material))glows.push(o.material);});
 
  fitNativeLounge(ship,layout,drawn,mural);
+ for(const [o,bounds] of declared){const b=bounds();if(b&&!b.isEmpty())o.userData.occlusionBox=b;}
  // Keep the small instanced display live, outside the static bake and hull trimming.
  root.getObjectByName('Terpene_glassware')?.removeFromParent();
  const still=createTerpeneGlassware(),display=new T.Group();display.name='Walk_terpene_glassware';display.position.y=floorY;
- still.group.applyMatrix4(new T.Matrix4().makeTranslation(0,-floorY,0).multiply(frame));display.add(still.group);drawn.push(display);
+ still.group.applyMatrix4(new T.Matrix4().makeTranslation(0,-floorY,0).multiply(frame).multiply(terpeneBarPlacement));display.add(still.group);drawn.push(display);
  return {
   drawn,doors,still,
   // The dome's centre on its floor and its radius in the world, for its lullaby (lullaby.js).

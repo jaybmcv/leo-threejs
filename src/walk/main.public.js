@@ -32,7 +32,8 @@ let atriumGeometry=null,graphicsSettings=null,controlsSettings=null;
 const phoneBatching=(()=>{const query=new URLSearchParams(location.search);if(!preparedPhone)return query.get('deskbatch')==='low'?{}:{merge:true};const mode=query.get('phonebatch');
  return mode==='cull'?{allBands:true,cull:true}:mode==='low'?{}:mode==='band'?{allBands:true}:{allBands:true,merge:true};})();
 import {createFeatureBatches} from '../v2/feature-batches.js';
-let phoneBands=null,wayfindingSigns=null,fogCull=null,featureBatches=null;
+import {createCabinBatches} from '../v2/cabin-batches.js';
+let phoneBands=null,wayfindingSigns=null,fogCull=null,featureBatches=null,groupOcclusion=null,cabinBatches=null;
 // The atrium geometry pack binds the band pieces the merge hides, so it runs only without the merge, and the Detail menu
 // chooses its distant detail. The merged bands keep full detail and still draw faster: on them the menu sets the atrium's
 // haze (detail-levels.js), and Auto starts at High, the look before the menu came back. ?detail=high|balanced|performance
@@ -57,6 +58,9 @@ import {batchFurnishing} from '../v2/furnishing-batches.js';
 import {createFrameReadout} from './frame-readout.js';
 import {deskAntialias,heldRes} from './pixel-switches.js';
 import {mergePhoneFurnishing} from '../v2/phone-furnishing.js';
+import {mergeScaledFurnishing} from '../v2/scaled-furnishing.js';
+import {createGroupOcclusion,occlusionByDefault} from '../v2/group-occlusion.js';
+import {occlusionGroups} from '../v2/occlusion-groups.js';
 import {mergePhoneBands} from '../v2/phone-bands.js';
 import {deskPieceSize,gpuName} from '../v2/desk-piece.js';
 import {createAtriumPvs} from '../v2/atrium-pvs.js';
@@ -102,8 +106,10 @@ let phase4Visibility=null;
 import {v2Signs} from '../v2/signs.js';
 import {isolateStaticWorld} from '../v2/facade.js';
 import {createCabinGlass} from '../v2/prepared-cabin-glass.js';
+// Each deck's corridor frost as one batch (privacy-batch.js); ?privacybatch=0 draws it a mesh at a time.
+import {batchPrivacy} from '../v2/privacy-batch.js';
 import {crewGalleryController} from '../v2/crew-gallery.js';
-let cabinGlass=null,crewGallery=null;
+let cabinGlass=null,crewGallery=null,privacyBatch=null;
 import '../plan/debug.js';
 import {interactionTargets} from '../plan/debug-targets.js';
 import {prepareWalkWorld} from './prepare.public.js';
@@ -320,7 +326,7 @@ const deskPiece=deskPieceSize({query:new URLSearchParams(location.search),phone:
 // buffer the shaders write the depth, so polygon offset has never applied. With linear depth it would, and pull the hex
 // sub-floor (finish-kit.js) over the Arrival Hall's finish, so it stays off.
 if(linearDepth){const gl=renderer.getContext(),enable=gl.enable.bind(gl);gl.enable=cap=>{if(cap!==gl.POLYGON_OFFSET_FILL)enable(cap);};}
-const frameReadout=createFrameReadout(renderer,{extra:()=>remotes?.crowdLine()});
+const frameReadout=createFrameReadout(renderer,{extra:()=>[remotes?.crowdLine(),groupOcclusion?.line(),cabinBatches?.line()].filter(Boolean).join('\n')});
 // Resolution: High is the usual sharpness; Medium and Low draw fewer pixels, for slower laptops and phones.
 // The Res button steps through them and the choice is remembered for the next visit. ?res=high, med or low holds a
 // level for this visit in the saved one's place (pixel-switches.js): nothing is saved, and it never steps down.
@@ -444,7 +450,7 @@ async function buildShip(){
  // Decals and seams only matter from outside.
  // Exterior visibility was resolved by the build.
  ship.v2Haze=preparedHaze(ship);preparedFacade(ship,scene);const b0=performance.now();baked=preparedBake(ship);for(const g of baked.bands.values())scene.add(g);quietFloorReflections(scene,scene.environment);timings.push([`${baked.sources} meshes merged into ${baked.meshes} in ${Math.round(performance.now()-b0)} ms`,Math.round(performance.now()-t0)]);
- haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});await hallTurn();voyagerLawn=createVoyagerLawn(ship,scene,layout,{phone});cabinGlass=createCabinGlass(ship,scene);crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);
+ haze.add(ship.v2Haze);separateAtriumPaving(ship);await installDistantArchitecture(ship,baked,haze,{phone,multiDraw:renderer.extensions.has("WEBGL_multi_draw")});await hallTurn();voyagerLawn=createVoyagerLawn(ship,scene,layout,{phone});cabinGlass=createCabinGlass(ship,scene);if(deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('privacybatch')!=='0')privacyBatch=batchPrivacy(cabinGlass.root,{multiDraw:renderer.extensions.has('WEBGL_multi_draw')});crewGallery=crewGalleryController(ship);hangarDoor=createHangarDoor(scene,colliders);
  atriumWaterfall=createAtriumWaterfall(ship,scene);
  // Signs, the selfie booth (selfie.js) and the Crown lounge hostess (hostess.js) draw with the deck band they're on.
  status('Preparing the walk · 2/4 · placing activities…');await idle();
@@ -549,7 +555,7 @@ async function buildShip(){
  // Instanced meshes (the repeated cabins, lifeboat seating, garden planting) draw when their height range is in view;
  // a deck's 499 repeated cabins only from that deck.
  status('Preparing the walk · 4/4 · setting nearby details…');await idle();
- if(phoneBatching.merge)mergePhoneFurnishing(ship.inside);await hallTurn();phase4Visibility=phase4Culling(ship.inside,colliders);await hallTurn();ship.inside.traverse(o=>{if(!o.isInstancedMesh||o.userData.phase4)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
+ if(phoneBatching.merge){mergePhoneFurnishing(ship.inside);if(!preparedPhone&&new URLSearchParams(location.search).get('p4merge')!=='0')mergeScaledFurnishing(ship.inside);}await hallTurn();phase4Visibility=phase4Culling(ship.inside,colliders);await hallTurn();ship.inside.traverse(o=>{if(!o.isInstancedMesh||o.userData.phase4)return;o.updateWorldMatrix(true,false);if(!o.boundingBox)o.computeBoundingBox();
   const box=o.boundingBox.clone().applyMatrix4(o.matrixWorld);let cabins=false,walls=false,boat=false;for(let q=o;q;q=q.parent){if(q.name==='V2_cabin_instances')cabins=true;if(q.name==='V2_cabin_shells')walls=true;if(/^Area_d\d+-lifeboats-/.test(q.name))boat=true;}
   o.userData.span=[box.min.y,box.max.y];o.userData.cabins=cabins;o.userData.cabinWalls=walls;o.userData.boat=boat;instanced.push(o);});
  // Furniture in the repeated cabins draws only for the cabins nearest the walker; their walls and doors always draw.
@@ -569,8 +575,12 @@ async function buildShip(){
  await hallTurn();wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);await hallTurn();
  isolateStaticWorld(ship,scene);{const hidden=(preparedPhone||phoneBatching.merge)&&!OWNER_BAKE_PAGE?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge)phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE});ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // While the arrival hall is walked, the floors' occlusion scan (floor-occlusion.js) gives the page turns: a second of work.
- if(deskDetail&&!OWNER_BAKE_PAGE)installQuadFacingTest(renderer,scene,camera,arrival?.active?{floorOcclusion:await createFloorOcclusionAsync(scene,camera,yieldToPage)}:{});
- if(deskDetail&&!OWNER_BAKE_PAGE)featureBatches=await createFeatureBatches(scene,renderer,featureRoots);
+ if(deskDetail&&!OWNER_BAKE_PAGE)installQuadFacingTest(renderer,scene,camera,{...(arrival?.active?{floorOcclusion:await createFloorOcclusionAsync(scene,camera,yieldToPage)}:{}),skipped:()=>(groupOcclusion?.stats.skipped??0)+(privacyBatch?.replaced??0)+(cabinBatches?.stats.folded??0)});
+ // Room features, baked room dressing, named feature groups, cabin furniture and lifts the frame's own walls and floors hide
+ // sit out the main pass (group-occlusion.js, occlusion-groups.js): by default on
+ // Chrome and Edge on Windows, where it was measured; ?occlusion=1 elsewhere, ?occlusion=0 off.
+ {const asked=new URLSearchParams(location.search).get('occlusion');if(deskDetail&&!OWNER_BAKE_PAGE&&(asked==='1'||asked!=='0'&&occlusionByDefault(renderer.getContext())))groupOcclusion=createGroupOcclusion(renderer,scene,camera,occlusionGroups(scene,{featureRoots,instanced,more:new URLSearchParams(location.search).get('occlusionmore')!=='0'}),{trust:new URLSearchParams(location.search).get('occlusiontrust')!=='0'});}
+ if(deskDetail&&!OWNER_BAKE_PAGE)featureBatches=await createFeatureBatches(scene,renderer,featureRoots,{skip:groupOcclusion?.hiddenRoot});
  // The groups holding only those instanced meshes once the live draws have their final parents (V2_live_source_draws: a
  // deck's cabin shells, a cabin template's fittings), and groups of only such groups, innermost first: cull() hides each
  // while nothing in it shows, so three's scene walk and matrix pass skip it.
@@ -578,6 +588,9 @@ async function buildShip(){
  // The cabins' parts on every deck draw with one object per look of material (share-materials.js), so equal draws sort
  // together and three refreshes each look once. Corner shading still treats every part as before. Not on phones.
  if(!preparedPhone){const alone=cornerShadeLeavesAlone(scene);shareEquivalentMaterials(scene,{member:o=>o.userData.v2Cabins&&!o.userData.proxySpans,split:o=>alone.has(o.material)?'alone':''});}
+ // Then each material's cabin parts draw as one instanced multi-draw in the main pass (cabin-batches.js), without what
+ // group occlusion leaves out; ?cabinbatch=0 draws them part by part, to compare.
+ if(deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('cabinbatch')!=='0')cabinBatches=await createCabinBatches(scene,renderer,instanced,{nearSlots:NEAR_CABINS,skip:groupOcclusion&&(o=>groupOcclusion.hiddenRoot(o.parent,o)||groupOcclusion.hiddenRoot(o,o))});
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
@@ -629,7 +642,7 @@ function span(p,now){
 }
 function cull(p,now=performance.now()){
  camera.updateMatrixWorld(true);
- cabinGlass?.update(p);crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);phoneBands?.update();wayfindingSigns?.update();
+ cabinGlass?.update(p);privacyBatch?.update();crewGallery?.update(p);const [low,high]=span(p,now);phase4Visibility?.update(camera,p,low,high,now,renderer.domElement.height);showBands(baked.bands,low,high);phoneBands?.update();wayfindingSigns?.update();
  if(phoneHide.length){if(now-phoneHiddenAt>5000){phoneHiddenAt=now;phoneHidden=[];scene.traverse(o=>{if(o.isMesh&&phoneHide.some(f=>f(o)))phoneHidden.push(o);});}for(const o of phoneHidden)o.visible=false;}let shown=false;
  // A deck's cabins show together once atrium-rooms.js has given them the deck's own range (userData.band).
  for(const o of instanced){const [a,b]=o.userData.cabins&&o.userData.band||o.userData.span,v=o.userData.cabins?cabinBandShown(a,b,p.y):a<high&&b>low;if(v&&!o.visible)shown=true;o.visible=v;}
@@ -802,7 +815,9 @@ function goToSpot(spot){spot=remapSpot(spot);if(!goTo({at:spot.at,yaw:spot.yaw,r
 
 async function loadCosmo(){
  await loadCosmoScript(T);
- walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion);walker.setFur(furColour);wardrobe=createWardrobe(walker.figure);wardrobe.set(outfit);scene.add(walker.holder);
+ // Your own cat draws as one skinned mesh per material, as other visitors do (merged-skin.js): 4 draws, not 15.
+ // ?walkermerge=0 draws it part by part, as before, for an A/B.
+ walker=await createWalker(globalThis.LeoCosmo.createDLCat,motion,{mergeDraws:new URLSearchParams(location.search).get('walkermerge')!=='0'});walker.setFur(furColour);wardrobe=createWardrobe(walker.figure,{reskin:walker.reskin});wardrobe.set(outfit);scene.add(walker.holder);
  cosmoKit=await globalThis.LeoCosmo.createCosmoKit({poses:[...KITTEN_POSE_NAMES,...ACTOR_POSE_NAMES,'scanPatient']});
 }
 
@@ -1264,7 +1279,8 @@ function draw(view){
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();
  if(view===camera){
   const main=()=>renderer.render(scene,view);
-  const render=()=>featureBatches?featureBatches.around(view,main):main();
+  const features=()=>featureBatches?featureBatches.around(view,main):main();
+  const render=()=>cabinBatches?cabinBatches.around(view,features):features();
   if(ownerHiding)ownerHiding.around(view,render);else render();
  }else renderer.render(scene,view);
  if(frogTrip.active&&view===camera)frogTrip.render();frameReadout.frame(performance.now());
