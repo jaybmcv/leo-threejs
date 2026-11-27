@@ -31,7 +31,8 @@ function batchableMatrix(matrix){
  return matrix.determinant()>0&&xy*xy<=1e-12*xx*yy&&xz*xz<=1e-12*xx*zz&&yz*yz<=1e-12*yy*zz;
 }
 // `skip(root, o)`: a row that sits out this frame (group-occlusion.js: its root hidden behind what the frame already drew).
-export async function createFeatureBatches(scene,renderer,roots,{skip=null}={}){
+// `take(o)`: false leaves a part out of the batches (a lift door's blades, shown only while it opens).
+export async function createFeatureBatches(scene,renderer,roots,{skip=null,take=null}={}){
  if(!renderer.extensions.has('WEBGL_multi_draw'))return null;
  const lists=new Map(),records=new Map(),yieldWork=yieldEvery();
  for(const root of roots){
@@ -39,7 +40,7 @@ export async function createFeatureBatches(scene,renderer,roots,{skip=null}={}){
   if(!root.isGroup||!band||(band!==scene&&!/^Walk_band_/.test(band.name)))continue;
   root.traverse(o=>{
    const g=o.geometry,m=o.material;
-   if(!plain(o)||!compatibleMaterial(m)||!g.attributes.position||g.attributes.position.count>12000||
+   if(!plain(o)||take&&!take(o)||!compatibleMaterial(m)||!g.attributes.position||g.attributes.position.count>12000||
       g.drawRange.start!==0||g.drawRange.count!==Infinity||Object.keys(g.morphAttributes).length||
       Object.values(g.attributes).some(a=>!a.array||a.isInterleavedBufferAttribute||a.isFloat16BufferAttribute||a.gpuType!==T.FloatType||a.usage!==T.StaticDrawUsage)||g.index&&!g.index.array)return;
    const key=[band.uuid,m.uuid,o.renderOrder,o.castShadow,o.receiveShadow,!!g.index,geometryKey(g)].join('/');

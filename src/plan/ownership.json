@@ -1044,12 +1044,14 @@
       "via": "inherited",
       "fixed": false,
       "features": [
-        "Aquarium_treasure"
+        "Aquarium_treasure",
+        "Aquarium_treasure_gems",
+        "Aquarium_treasure_glows"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 28,
-      "signature": "47dea763cc9d30518a288511aa95a48c931a74d0ba54634b7d06df1dab2739ae"
+      "placements": 30,
+      "signature": "743ce07ec6485966e1c7eb6bc34cf7b1e37cb5acb96f8fa4eba907ef028fb755"
     },
     {
       "source": "src/walk/aquarium-treasure/suit.js",
@@ -3835,14 +3837,15 @@
         "Lift_door_shut",
         "Lift_landing_casing",
         "Lift_doors_shut",
+        "Lift_door_stop_shut",
         "Walk_lift_signs",
         "Walk_lift_",
         "Car_mars"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 19,
-      "signature": "5ec3c4aa5486db688b801a1bbf587fca4448d34107c583644f2149392749ac51"
+      "placements": 20,
+      "signature": "1eb1fe7cf04491c247917a4034a94c09503ef4dff3cc29d535b4c1a9458b76de"
     },
     {
       "source": "src/walk/lift-tile-floor.authoring.js",
@@ -4421,7 +4424,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "32326e07a962798e96db7de4f7e8333262ba2425f5b0d33a39d26103c3cf46b4"
+      "signature": "6843a03606139758fe998f54fe6a78d58c20b302866c50d24e19f5a176d9dea7"
     },
     {
       "source": "src/walk/marks.authoring.js",
@@ -6554,7 +6557,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "4af1bf0e56ae215f5c296841a7d4fcd1e5fa689da8a66856342594ca680c379c"
+      "signature": "003d392e66deca0bfa290055c5ed398b87cbea343beddea36e767fe6e8ddad22"
     },
     {
       "source": "src/walk/zen-garden.js",
