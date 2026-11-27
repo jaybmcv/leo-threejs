@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {compactRenderGeometry} from './facade.js';
-import {batchMaterial, batchable, follow, instancedMultiDraw, kept} from './cabin-batches.js';
-import {floorBlocker} from './floor-occlusion.js';
+import {PLAIN_CHUNK, batchMaterial, batchable, follow, instancedMultiDraw, kept} from './cabin-batches.js';
+import {HELD, floorBlocker} from './floor-occlusion.js';
 import {yieldEvery} from './yield-to-page.js';
 
 // Draws of one material that reach the GPU one after another become one draw. three sorts the opaque draws by material
@@ -33,9 +33,17 @@ import {yieldEvery} from './yield-to-page.js';
 // that is constant over each part (one texel per part, set from the part's own material when the row draws), so
 // each part is shaded with its own values as before.
 //
+// The deck kinds (phone-bands.js `kinds`): the floor and wall finishes' pieces of one kind are slices of one set of
+// arrays and share one material, so three sorts their draws together and none needs copying. A kind's batch draws from
+// those very arrays (its geometry is the kind's), each piece's run of shown bands a sub-draw (the group three passes,
+// clipped to the piece's own range), with no matrices (the pieces are in world space). A held piece that the floors'
+// occlusion takes as a blocker is reported to it as drawn when held (HELD, quad-facing.js): it is drawn before the opaque
+// draws end.
+//
 // Desktop only (WEBGL_multi_draw with its instanced draw). Not on the owner bake's page. main.public.js: ?drawruns=0
 // draws them one by one, ?towerpalette=0 leaves the facade's materials apart.
 const MAX_INDICES=200000;
+
 const PALETTE=new Set(['roughness','metalness','emissive','emissiveIntensity','roughnessMap','metalnessMap','emissiveMap']);
 const NOT_LOOK=new Set(['uuid','id','version','name','userData','_listeners']);
 const plainBefore=T.Object3D.prototype.onBeforeRender,plainAfter=T.Object3D.prototype.onAfterRender;
@@ -79,10 +87,11 @@ function upload(t,head,count){
 }
 function paletteTexture(n){const t=new T.DataTexture(new Float32Array(n*4),n,1,T.RGBAFormat,T.FloatType);t.magFilter=t.minFilter=T.NearestFilter;t.generateMipmaps=false;t.needsUpdate=true;return t;}
 
-/** `groups`: [{parts, palette}], the meshes and instanced meshes that may join a row. Created before quad-facing.js and
- * group-occlusion.js wrap renderBufferDirect. Returns null without the instanced multi-draw, else {stats, line(),
- * around(view, draw), enabled}. stats.folded: draws the last main pass made fewer, for quad-facing.js's dense count. */
-export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDICES}={}){
+/** `groups`: [{parts, palette}], the meshes and instanced meshes that may join a row. `kinds`: phone-bands.js's deck
+ * kinds. Created before quad-facing.js and group-occlusion.js wrap renderBufferDirect. Returns null without the instanced
+ * multi-draw, else {stats, line(), around(view, draw), enabled}. stats.folded: draws the last main pass made fewer, for
+ * quad-facing.js's dense count. */
+export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDICES,kinds=null}={}){
  const lists=instancedMultiDraw(renderer);if(!lists)return null;
  const yieldWork=yieldEvery(),byKey=new Map(),looks=new WeakMap();
  const lookOf=m=>{let c=looks.get(m);if(!c||c.version!==m.version){c={version:m.version,key:lookKey(m)};looks.set(m,c);}return c.key;};
@@ -142,7 +151,21 @@ export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDIC
   scene.add(batch);ours.add(batch);sets.push(set);
   stats.batches++;stats.parts+=n;stats.slots+=slots;await yieldWork();
  }
- if(!sets.length)return null;
+ // A deck kind's batch: its geometry is the kind's own (the same attribute and index objects as its pieces, never
+ // copied, never disposed), its lists as long as the kind has runs, and its material a copy of the kind's with no
+ // matrix lookup.
+ const pieces=new Map();
+ for(const K of kinds??[]){
+  if(K.pieces.length<2||!batchable(K.material))continue;
+  const v=batchMaterial(K.material,null,new T.Material().id,PLAIN_CHUNK),batch=new T.BatchedMesh(Math.max(1,K.runs),1,1,v.copy),first=K.pieces[0];
+  batch.geometry=K.geometry;batch._geometryInitialized=true;
+  batch.name='V2_draw_run '+K.material.name;batch.renderOrder=first.renderOrder;batch.layers.mask=first.layers.mask;batch.receiveShadow=first.receiveShadow;
+  batch.sortObjects=false;batch.perObjectFrustumCulled=false;batch.frustumCulled=false;batch.matrixAutoUpdate=false;
+  batch.userData={noCollide:true,renderOnly:true,drawRun:true};batch.onBeforeRender=()=>{};batch.boundingSphere=new T.Sphere(new T.Vector3(),1e6);
+  const set={batch,v,band:true,most:batch._multiDrawStarts.length};for(const q of K.pieces)pieces.set(q,set);
+  scene.add(batch);ours.add(batch);stats.batches++;stats.parts+=K.pieces.length;
+ }
+ if(!sets.length&&!pieces.size)return null;
  // Ends the last row of the opaque draws: sorted after them all (group order), drawing nothing.
  const marker=new T.Mesh(new T.BufferGeometry().setAttribute('position',new T.BufferAttribute(new Float32Array(9),3)),new T.MeshBasicMaterial());
  marker.name='V2_draw_run_end';marker.frustumCulled=false;marker.layers.enableAll();marker.userData={noCollide:true,renderOnly:true};
@@ -194,22 +217,42 @@ export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDIC
   inner.call(renderer,camera,scene,batch.geometry,v.copy,batch,null);
   stats.runs++;stats.folded+=n-1;
  }
+ // A deck kind's row: a sub-draw per held run, each clipped to its piece's own range (as three clips a group), from the
+ // kind's index (Uint32: four bytes an index).
+ function drawKind(set,camera){
+  const {batch,v}=set,starts=batch._multiDrawStarts,counts=batch._multiDrawCounts;let k=0;
+  follow(v,true);
+  for(const [,,g,,,group] of calls){const r=g.drawRange,a=Math.max(group.start,r.start),b=Math.min(group.start+group.count,r.start+r.count);
+   if(b<=a||k===set.most)continue;starts[k]=a*4;counts[k]=b-a;k++;}
+  batch._multiDrawCount=k;
+  batch.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse,batch.matrixWorld);batch.normalMatrix.getNormalMatrix(batch.modelViewMatrix);
+  inner.call(renderer,camera,scene,batch.geometry,v.copy,batch,null);
+  stats.runs++;stats.folded+=calls.length-1;
+ }
  function flush(){
   if(run===null)return;const set=run;run=null;
   // A render inside the pass (another camera) may have moved a held part's view matrices since three set them.
-  try{if(held.length===1){const [camera,,,,o]=calls[0];o.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse,o.matrixWorld);o.normalMatrix.getNormalMatrix(o.modelViewMatrix);inner.apply(renderer,calls[0]);}
-   else draw(set,calls[0][0]);}
+  try{if(calls.length===1){const [camera,,,,o]=calls[0];o.modelViewMatrix.multiplyMatrices(camera.matrixWorldInverse,o.matrixWorld);o.normalMatrix.getNormalMatrix(o.modelViewMatrix);inner.apply(renderer,calls[0]);}
+   else if(set.band)drawKind(set,calls[0][0]);else draw(set,calls[0][0]);}
   finally{held.length=0;calls.length=0;}
  }
  renderer.renderBufferDirect=function(camera,world,geometry,material,object,group){
   // The batches' and the marker's own places in the draw lists draw nothing.
   if(ours.has(object))return;
   if(!main(camera,world))return inner.apply(this,arguments);
+  // A deck kind's piece: each of its runs joins the row (one piece may add several).
+  const kind=pieces.get(object);
+  if(kind){
+   if(!group||geometry!==object.geometry||material!==object.material[0]||!kind.v.usable||kind.v.m!==material){flush();return inner.apply(this,arguments);}
+   if(run!==kind)flush();
+   if(run===null){run=kind;serial++;}
+   calls.push([camera,world,geometry,material,object,group]);return HELD;
+  }
   const r=rows.get(object);
   if(!r||group||geometry!==object.geometry||material!==object.material||!fits(r,material)){flush();return inner.apply(this,arguments);}
   if(run!==r.set||r.mark===serial)flush();
   if(run===null){run=r.set;serial++;}
-  r.mark=serial;held.push(r);calls.push([camera,world,geometry,material,object,group]);
+  r.mark=serial;held.push(r);calls.push([camera,world,geometry,material,object,group]);return HELD;
  };
  // Should the opaque draws ever end in a row without the marker after them.
  const after=scene.onAfterRender;

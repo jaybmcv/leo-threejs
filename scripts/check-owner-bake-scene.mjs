@@ -2,7 +2,7 @@
 // condition, and which parts may be hidden.
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {collectOccluders,collectTargets,tablesDiffer,withoutMoved} from './walk-owner-bake.scene.js';
+import {collectOccluders,collectTargets,rowDigests,tablesDiffer,withoutMoved} from './walk-owner-bake.scene.js';
 
 let passed=0;const pass=name=>{passed++;console.log('PASS '+name);};
 const quad=(x=0,z=0,mat=new T.MeshStandardMaterial({name:'wall'}),name='Wall')=>{const m=new T.Mesh(new T.PlaneGeometry(2,2),mat);m.name=name;m.position.set(x,1,z);return m;};
@@ -95,4 +95,21 @@ function ship(){
  assert.throws(()=>addCafeCell(base,{...add,blocks:[[...bounds,[2]]]}));
 }
 pass('a café cell reuses only complete existing proofs and leaves every scene table unchanged');
+// Deck kinds (src/v2/phone-bands.js): two pieces are slices of one shared index and arrays. Each is bounded, clustered and
+// digested from its own slice only, not from the kind's whole arrays.
+{const scene=new T.Scene(),band=new T.Group();band.name='Walk_band_4';scene.add(band);
+ const kept=new T.Group();kept.name='Walk_band_4_merged_sources';kept.visible=false;kept.userData={mergedSources:true};band.add(kept);const src=quad(0,-5);kept.add(src);
+ const root=new T.Group();root.name='V2_phone_band_merges';scene.add(root);
+ // A 2 m wall at x 0 and another at x 100, one after the other in one index.
+ const near=new T.PlaneGeometry(2,2),far=new T.PlaneGeometry(2,2).translate(100,0,0),n=near.attributes.position.count;
+ const position=new T.BufferAttribute(new Float32Array([...near.attributes.position.array,...far.attributes.position.array]),3);
+ const index=new T.BufferAttribute(Uint32Array.from([...near.index.array,...far.index.array.map(i=>i+n)]),1),m=new T.MeshStandardMaterial({name:'V2_band_kind_0'});
+ const piece=(start,count)=>{const g=new T.BufferGeometry();g.setAttribute('position',position);g.setIndex(index);g.setDrawRange(start,count);const o=new T.Mesh(g,[m]);o.name='V2_low_deck_merged_Walk_finish_kind_0';o.userData={sources:[src.uuid]};o.position.y=1;root.add(o);return o;};
+ const a=piece(0,6),b=piece(6,6);scene.updateMatrixWorld(true);const digest=s=>{const d=rowDigests(s,{emptyHook:T.Material.prototype.onBeforeCompile});return JSON.stringify([[...d.conds],[...d.parts]]);};
+ const parts=collectTargets(scene).flatMap(g=>g.parts),pa=parts.find(p=>p.o===a),pb=parts.find(p=>p.o===b);
+ assert.ok(pa&&pb);assert.ok(pa.boxes.every(x=>x.max.x<=1+1e-9),'a slice’s boxes stay on its own wall');assert.ok(pb.boxes.every(x=>x.min.x>=99-1e-9));
+ // A vertex of b's wall moves: the band's digest follows it; put back, the digest is as it was.
+ const before=digest(scene),was=position.getX(n);position.setX(n,105);assert.notEqual(digest(scene),before,'a slice’s own vertex counts');
+ position.setX(n,was);assert.equal(digest(scene),before);
+ pass('a deck kind’s pieces are bounded, clustered and digested from their own slice of the shared arrays');}
 console.log(`owner bake scene: ${passed} checks passed`);
