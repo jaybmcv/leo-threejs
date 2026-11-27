@@ -48,10 +48,10 @@ const POTS=[[-24.6,-15.6,1.1,'palm'],[24.4,-15.6,1.2,'palm'],[24.4,15.6,1.2,'pal
  [2.6,-15.9,.9,'aroid'],[-6.6,15.9,.9,'fern'],[21.4,-15.9,.9,'bloom'],[20.6,15.9,.9,'aroid']];
 // In the garden, the racks either side of the opening [x, z] give way to beds of tall greenery that show from the hall.
 const GARDEN_BEDS=[[-9,-7],[0,-7],[-9,7],[0,7]];
-// These fittings and the garden's mid rail are dressing. The balustrade has its own collider.
-const DRESSING=new Set(['Atrium_pillow','Cat_tree_branch','Atrium_garden_branch','Atrium_shelf_bracket','Atrium_basket','Atrium_trellis','Atrium_hanging_sign','Atrium_rail_mid']);
+// These fittings and the rails' posts and mid rails are dressing. The guards have their own colliders.
+const DRESSING=new Set(['Cat_tree_bridge_mid_rail','Cat_tree_bridge_post','Atrium_pillow','Cat_tree_branch','Atrium_garden_branch','Atrium_shelf_bracket','Atrium_basket','Atrium_trellis','Atrium_hanging_sign','Atrium_rail_mid']);
 // Solid but never drawn (hidden from drawing like the cabins' collision glass; collision.js keeps baked meshes solid).
-const GUARDS=new Set(['Atrium_balustrade_guard']);
+const GUARDS=new Set(['Cat_tree_bridge_guard','Atrium_balustrade_guard']);
 // Where the room frame's origin is in the ship (the hall's floor; the garden's is 4 m up).
 const [rx,ry,rz]=placedV1('arrival-room'),ROOM={x:rx,y:ry,z:rz};
 
@@ -194,7 +194,16 @@ export function openArrivalAtrium(ship){
  {const [,y]=TREE.platforms.at(-1),z0=TREE.z+TREE.reach,x=Math.min(Math.abs(TREE.x-cx-.6),Math.abs(TREE.x-cx+.6)),z1=b*Math.sqrt(1-x*x/(a*a))+.03;
   put('Cat_tree_bridge',M.wood,box(1.2,.08,z1-z0,TREE.x,y-.042,(z0+z1)/2));
   for(const dx of [-.3,0,.3])put('Cat_tree_bridge_seam',M.dark,box(.015,.004,z1-z0,TREE.x+dx,y-.001,(z0+z1)/2));
-  branch([TREE.x,y-1.2,TREE.z+.3],[TREE.x,y-.5,z0],[TREE.x,y-.12,(z0+z1)/2],.08);}
+  branch([TREE.x,y-1.2,TREE.z+.3],[TREE.x,y-.5,z0],[TREE.x,y-.12,(z0+z1)/2],.08);
+  // The side rails begin at the platform rim and run to the garden opening.
+  const start=z0+Math.sqrt(TREE.radius**2-(.6-.025)**2),len=z1-start,mid=(start+z1)/2,n=Math.ceil(len/.4);
+  for(const side of [-1,1]){const x=TREE.x+side*.6;
+   put('Cat_tree_bridge_guard',M.trim,box(.05,1.1,len,x,y+.55,mid));
+   put('Cat_tree_bridge_rail',M.trim,box(.05,.05,len,x,y+1.1,mid));
+   put('Cat_tree_bridge_mid_rail',M.trim,box(.05,.05,len,x,y+.55,mid));
+   for(let i=0;i<=n;i++)put('Cat_tree_bridge_post',M.trim,cyl(.018,.018,1.1,x,y+.55,start+len*i/n,6));
+  }
+ }
  // The canopy: limbs spreading at the garden's head height, clumps of foliage along them and fans of leaves spilling out.
  {const r=random(7),out=greenery.garden;
   for(let i=0;i<6;i++){const t=i/6*Math.PI*2+.4,d=1.4+r()*.6,ex=TREE.x+Math.cos(t)*d,ez=TREE.z+Math.sin(t)*d,ey=6.3+r()*.5;

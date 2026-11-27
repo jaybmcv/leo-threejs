@@ -1152,8 +1152,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 70,
-      "signature": "11afdee9bcda296e0e10dad8d10d931ca2b1db718d023efe8263e00293a54edc"
+      "placements": 74,
+      "signature": "4cb0bfb0d1d2d7ff982708fa9fb381b7ce71f817c8c79ae9dfbc9e2abbc94b30"
     },
     {
       "source": "src/walk/arrival-atrium.js",
@@ -1170,8 +1170,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 70,
-      "signature": "96fc6153b28d9ab05261538200064cd79d5f49609f41a278e18804822ee74afb"
+      "placements": 74,
+      "signature": "53928368e69fc27b2f74c6465c208ee8914f45ff4ade5aca27f515d0a5ba0979"
     },
     {
       "source": "src/walk/arrival-atrium.prepared.js",
@@ -1188,8 +1188,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 70,
-      "signature": "aacbd61ec506aa07288b1fd8c0b3ab5623ca565a57a5dae1b08bb7fb7e47713a"
+      "placements": 74,
+      "signature": "69d25a088d15d8fa089f645a49ec77ecc16b08b2c10635d247600d3c0426cc50"
     },
     {
       "source": "src/walk/arrival-atrium.public.js",
@@ -1206,8 +1206,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 70,
-      "signature": "1bfdef656545fa8bfb82d5f250f7b32f2afbed6178ddb7f492e479b5a14e10af"
+      "placements": 74,
+      "signature": "8cbe8881f3820c723ee7ab6efec099f0b552bae390bc097192168232c871a24a"
     },
     {
       "source": "src/walk/arrival-mood.js",

@@ -1,5 +1,7 @@
 
 import {contains} from '../src/plan/geometry-v2.js';
+import {toLocal} from '../src/plan/rooms.js';
+import {TREE} from '../src/walk/arrival-atrium.js';
 export const ROOM_DROP_ALLOWLIST=[
  {room:'observation-lounge',name:'Soft_back',maxDrop:1.15,maxAboveFloor:1.2,reason:'Unchanged v1 rounded lounge-chair backs; a person can climb from the cushion onto a 1.12 m furniture back. No floor or guard edge is exempt.',source:'src/lounge.js'},
  {room:'commons-10',name:'Garden_bench_back',maxDrop:1.1,maxAboveFloor:1.1,reason:'Unchanged v1 cherry-blossom bench back; a 1.06 m furniture drop to its own ground floor, with no lower deck beneath.',source:'src/walk/blossom.js'},
@@ -12,15 +14,18 @@ export const ROOM_DROP_ALLOWLIST=[
 // mezzanine or out of ray range keeps counting.
 export const POCKET_LID={gap:.5,max:2.8};
 export const enclosedPocket=(pocket,ceiling)=>!!pocket?.sealed&&Number.isFinite(pocket.lid)&&Number.isFinite(ceiling)&&pocket.lid<=POCKET_LID.max&&pocket.lid<=ceiling-POCKET_LID.gap;
-// The open top of the arrival cat tree is a way down to the hall as well as a way up to the garden.
-export function isArrivalTreeDrop(f,{opening,floorY,platformY,feet}){
- const [x,y,z]=f.from,[tx,ty,tz]=f.to;
- return f.drop>1&&y>=platformY-.065&&y<=platformY+.02&&ty>=floorY-.02&&opening.open(x,z)&&opening.open(tx,tz)
-  &&feet.some(([dx,dz])=>opening.footing(x+dx,z+dz));
+// The open perch overhangs its planter. Its bridge starts at the perch centre.
+function isArrivalPerchDrop({from,to}){
+ const [angle,top]=TREE.platforms.at(-1),px=TREE.x+Math.cos(angle)*TREE.reach,pz=TREE.z+Math.sin(angle)*TREE.reach;
+ const [x,y,z]=toLocal('arrival-assembly',from),[tx,ty,tz]=toLocal('arrival-assembly',to);
+ if(y<top-.065||y>top+.02||z>=pz||tz>=pz||Math.abs(ty-.85)>.02||Math.hypot(tx-TREE.x,tz-TREE.z)>=TREE.planter)return false;
+ // Match the flood's centre and four foot probes against the disc.
+ return [[0,0],[.18,0],[-.18,0],[0,.18],[0,-.18]].some(([dx,dz])=>Math.hypot(x+dx-px,z+dz-pz)<TREE.radius);
 }
 export function requireRoomDropPolicy(events,layout,options){const r=classifyRoomDrops(events,layout,options);if(r.roomFeatureViolations.length)throw Error('Unapproved room-feature drops over 1 m: '+r.roomFeatureViolations.length);return r;}
 export function classifyRoomDrops(events,layout,{supports=[]}={}){
  const roomFeatureDrops=events.filter(f=>f.category==='room-feature'&&f.drop>1).map(f=>{
+  if(isArrivalPerchDrop(f))return {...f,room:'d03-farm-1',support:'Cat_tree_platform',allow:{source:'src/walk/arrival-atrium.js',reason:'Open perch to its own planter below.'}};
   const room=layout.rooms.find(r=>!r.aggregate&&f.from[1]>=r.y-.02&&f.from[1]<=r.y+r.height&&contains(r.polygon,[f.from[0],f.from[2]]));
   const support=supports.find(o=>o.room===room?.id&&Math.abs(o.top-f.from[1])<.035&&f.from[0]>=o.min[0]-.19&&f.from[0]<=o.max[0]+.19&&f.from[2]>=o.min[2]-.19&&f.from[2]<=o.max[2]+.19);
   const allow=ROOM_DROP_ALLOWLIST.find(a=>a.room===room?.id&&a.name===support?.name&&f.drop<=a.maxDrop&&f.from[1]-room.y<=a.maxAboveFloor&&f.to[1]>=room.y-.02);

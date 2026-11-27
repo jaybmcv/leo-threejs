@@ -39,7 +39,8 @@ const ARRIVAL=(()=>{const r=layout.rooms.find(r=>r.id==='d02-arrival-1'),hole=la
  const box=p=>[Math.min(...p.map(q=>q[0])),Math.max(...p.map(q=>q[0])),Math.min(...p.map(q=>q[1])),Math.max(...p.map(q=>q[1]))],[x0,x1,z0,z1]=box(r.polygon),[h0,h1,k0,k1]=box(hole.polygon),garden=r.y+4;
  return (x,z,y)=>y>r.y+.3&&y<garden-.2&&x>x0&&x<x1&&z>z0&&z<z1?'tree':Math.abs(y-garden)<.15&&x>h0-.6&&x<h1+.6&&z>k0-.6&&z<k1+.6?'opening':null;})();
 // The tree's second and top platforms (arrival-atrium.js TREE: tree frame x -2.5, z 2.2, reach 1.15) stand open: the
-// planner skips guard runs round their rims and at the start of the top platform's bridge to the garden.
+// planner's guard runs round their rims are dropped, so neither the timber ring nor the collision boxes exist. The
+// bridge keeps its side rails (arrival-atrium.js); the other platforms are untouched.
 const OPEN_TREE=ARRIVAL?[[-Math.PI/2,2.25],[Math.PI/2,4]].map(([t,y])=>toWorld('arrival-assembly',[-2.5+Math.cos(t)*1.15,y,2.2+Math.sin(t)*1.15])):[];
 const keepRow=([,axis,a0,a1,at,y,z1])=>{const x=axis===2?(a0+a1)/2:axis?at:(a0+a1)/2,z=axis===2?(at+z1)/2:axis?(a0+a1)/2:at;return !OPEN_TREE.some(p=>Math.abs(y-p[1])<.1&&Math.hypot(x-p[0],z-p[2])<1);};
 const timber=new T.MeshStandardMaterial({name:'V2_guard_timber',color:0xc28a52,roughness:.6});

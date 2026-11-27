@@ -9,8 +9,8 @@ import {planVoidGuards} from '../src/v2/void-guards.js';
 import {polygonGeometry} from '../src/v2/geometry.js';
 import {createShipArea,SHIP_AREAS} from '../src/areas.js';
 import {toWorld} from '../src/plan/rooms.js';
-import {openingPlan,openArrivalAtrium,TREE as ARRIVAL_TREE} from '../src/walk/arrival-atrium.js';
-import {isArrivalTreeDrop} from './v2-walk-policy.mjs';
+import {openArrivalAtrium,TREE as ARRIVAL_TREE} from '../src/walk/arrival-atrium.js';
+import {requireRoomDropPolicy} from './v2-walk-policy.mjs';
 const parts=phase6Programme(layout).parts,tree=createCatTree(null);
 
 // Each Great Cat Tree bridge lands on its bow cafe's aft wall: the cafe's real shell (src/v2/room-shell.js) must leave a
@@ -45,17 +45,24 @@ for(const id of ['d02-arrival-1','d03-farm-1']){
 }
 assert(openArrivalAtrium(ship));
 root.traverse(o=>assert(!o.name.startsWith('Cat_tree_top_guard'),`Arrival top platform still has ${o.name}`));
-for(const name of ['Cat_tree_platform','Cat_tree_branch','Cat_tree_bridge','Atrium_rail_cap','Atrium_trough','Atrium_balustrade_guard']){
+for(const name of ['Cat_tree_platform','Cat_tree_branch','Cat_tree_bridge','Cat_tree_bridge_rail','Cat_tree_bridge_mid_rail','Cat_tree_bridge_post','Cat_tree_bridge_guard','Atrium_rail_cap','Atrium_trough','Atrium_balustrade_guard']){
  assert(root.getObjectByName(name),`Missing ${name}`);
 }
 const arrivalCol=new Colliders();arrivalCol.addStatic(root);arrivalCol.commit();
 const [,topHeight]=ARRIVAL_TREE.platforms.at(-1),topZ=ARRIVAL_TREE.z+ARRIVAL_TREE.reach;
 const at=(dx,y,dz)=>toWorld('arrival-assembly',[ARRIVAL_TREE.x+dx,y,topZ+dz]);
 const seg=new T.Line3(),blocked=([x,y,z])=>{seg.start.set(x,y+.75,z);seg.end.set(x,y+1.65,z);return arrivalCol.overlaps(seg,.35);};
-for(const dx of [-.45,.45])for(const dz of [-.35,0,.3,.65])assert(!blocked(at(dx,topHeight,dz)),'A collider blocks the old cage flank');
-const opening=openingPlan(),[,floorY]=at(0,0,0),[,platformY]=at(0,topHeight,0),feet=[[0,0],[.18,0],[-.18,0],[0,.18],[0,-.18]];
-const policy={opening,floorY,platformY,feet},drop={from:at(-.7,topHeight,-.2),to:at(-1.05,.85,-.2),drop:topHeight-.85};
-assert(isArrivalTreeDrop(drop,policy),'An intentional drop from the top platform to the hall must pass');
-assert(!isArrivalTreeDrop({...drop,to:at(-1.05,-.3,-.2)},policy),'A drop below the hall must still fail');
-assert(!isArrivalTreeDrop({...drop,from:at(2,topHeight,-.2)},policy),'A nearby garden edge drop must still fail');
-console.log('PASS Arrival cat tree cage flanks are clear and the garden railing remains');
+for(const dx of [-.45,.45])for(const dz of [-.35,-.1])assert(!blocked(at(dx,topHeight,dz)),'A collider blocks the old cage flank');
+for(const dz of [.3,.5,.65]){
+ assert(!blocked(at(0,topHeight,dz)),'A collider blocks the bridge centre');
+ for(const dx of [-.45,.45])assert(blocked(at(dx,topHeight,dz)),'The bridge is missing a side collider');
+}
+const drop={category:'room-feature',from:at(-.7,topHeight,-.2),to:at(-1.05,.85,-.2),drop:topHeight-.85};
+assert.equal(requireRoomDropPolicy([drop],layout).roomFeatureDrops[0].support,'Cat_tree_platform');
+for(const event of [
+ {...drop,from:at(-.45,topHeight,.5),to:at(-.8,.85,.5)},
+ {...drop,from:at(-.7,topHeight,-.05),to:at(-.7,.85,.3)},
+ {...drop,to:at(-1.05,-.3,-.2),drop:topHeight+.3},
+ {...drop,from:at(2,topHeight,-.2),to:at(2.35,.85,-.2)}
+])assert.throws(()=>requireRoomDropPolicy([event],layout),/Unapproved room-feature drops/);
+console.log('PASS Arrival cat tree perch is open, both bridge sides are guarded and the garden railing remains');
