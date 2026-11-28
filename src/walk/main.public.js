@@ -82,7 +82,7 @@ const WALK_SCRIPT=new URL(import.meta.url).pathname.split('/').pop(),OWNER_BAKE_
 const SMALL_MERGE=deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('smallmerge')!=='0';
 let ownerHiding=null;
 function startOwnerHiding(){
- if(preparedPhone)return;const key=ownerKey(WALK_SCRIPT,(phoneBatching.merge?'merge':'batch')+deskPiece+(phoneBatching.merge&&deckKinds?'k':''));
+ if(preparedPhone)return;const key=ownerKey(WALK_SCRIPT,(phoneBatching.merge?'merge':'batch')+deskPiece+(phoneBatching.merge&&deckKinds?'k'+(colourKinds?'c':''):''));
  if(OWNER_BAKE_PAGE){globalThis.__ownerBakeHost={T,scene,renderer,camera,key,follow,goTo:place=>goTo(place)};return;}
  const file=ownerBakeFile(WALK_SCRIPT);if(!file)return;
  fetch(new URL(file,import.meta.url)).then(r=>r.ok?r.json():null).then(data=>{const hiding=createOwnerHiding(data,{key,scene});hiding?.resolve();ownerHiding=hiding;
@@ -172,7 +172,6 @@ import {identify,currentPass,bestPass,connect,connectPopup,forget,invite} from '
 import {inOtherside,onGlyph} from './net/otherside.js';
 import {RemotePlayers} from './remotes.js';
 import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.js';
-import {tileLiftFloor} from './lift-tile-floor.js';
 import {createRecoveryMood} from './recovery.js';
 import {createAtriumMood} from './atrium-mood.js';
 import {createStageBeams} from '../v2/stage-beams.js';
@@ -215,7 +214,7 @@ import {mctRepairStations} from './mct-bay.js';
 let mctRepair=null;const repairStations=mctRepairStations();
 import {drillStation} from './emergency-drill/station.js';
 import layout from '../plan/selected-layout.js';
-import {installCornerShade,cornerShadeLeavesAlone} from './corner-shade.js';
+import {installCornerShade,cornerShadeLeavesAlone,cornerShadeSkipsName} from './corner-shade.js';
 import {shareEquivalentMaterials} from './share-materials.js';
 let emergencyDrill=null;const emergencyStation=drillStation(layout),asteroid=asteroidStation(layout);
 import {createPawPool} from './pool/game.js';
@@ -327,9 +326,10 @@ const renderer=new T.WebGLRenderer({antialias:phone?antialiasByDetail:deskAntial
 // (desk-piece.js). ?deskpiece= sets any size, 0 for one draw per material as on a phone.
 const deskPiece=deskPieceSize({query:new URLSearchParams(location.search),phone:preparedPhone,gpu:gpuName(renderer.getContext())});
 // With pieces, the floor and wall finishes merge by kind, each kind's pieces in one set of arrays (phone-bands.js), so
-// draw-runs.js draws a kind's pieces in view as one multi-draw. ?deckkinds=0 merges them per material, as before. The
-// owner bake's key carries it: a bake of one way is never used by the other.
-const deckKinds=deskPiece>0&&renderer.extensions.has('WEBGL_multi_draw')&&phoneTest.get('deckkinds')!=='0';
+// draw-runs.js draws a kind's pieces in view as one multi-draw; the decks' other plain materials (lights, diffusers,
+// screens, glows) merge by colour kind too. ?deckkinds=0 merges them all per material, as before; ?colourkinds=0 keeps
+// the finish kinds only. The owner bake's key carries both: a bake of one way is never used by another.
+const deckKinds=deskPiece>0&&renderer.extensions.has('WEBGL_multi_draw')&&phoneTest.get('deckkinds')!=='0',colourKinds=deckKinds&&phoneTest.get('colourkinds')!=='0';
 // The ship's layers are set apart by height (a floor finish 6 mm over the deck, paint 8 mm): with the logarithmic depth
 // buffer the shaders write the depth, so polygon offset has never applied. With linear depth it would, and pull the hex
 // sub-floor (finish-kit.js) over the Arrival Hall's finish, so it stays off.
@@ -412,8 +412,7 @@ async function buildShip(){
  restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;loungeMood=lounge?createLoungeMood(lounge,{hemi,fill,scene}):null;lullaby=lounge?createLullaby(lounge.dome):null;
  // Its floor, galleries and the promenade in front: glossy acrylic with neon swirls (lounge-floor.js).
  quietFloorReflections(scene,scene.environment);
- // Deck 19's lift lobby and promenade up to the lounge: black ceramic tile (lift-tile-floor.js).
- // The floor finish is in the prepared render bands.
+ // The Deck 19 lift lobby's hex finish is in the prepared render bands.
  // The crew recovery lounge's pod side dims the lights (recovery.js).
  recovery=createRecoveryMood(ship,{hemi,fill,scene});arrivalMood=createArrivalMood(ship,{hemi,fill,scene});atriumMood=createAtriumMood({hemi,fill,scene});stageBeams=createStageBeams(scene,layout.decks[5].y);
  }});
@@ -586,8 +585,9 @@ async function buildShip(){
  await hallTurn();wayfindingSigns=mergeWayfindingSigns(baked.bands.values(),{maxLayers:renderer.getContext().getParameter(renderer.getContext().MAX_ARRAY_TEXTURE_LAYERS)});if(wayfindingSigns)scene.add(wayfindingSigns.root);await hallTurn();
  isolateStaticWorld(ship,scene);{const hidden=(preparedPhone||phoneBatching.merge)&&!OWNER_BAKE_PAGE?releaseBatchedSources(scene):null,{merge,...batching}=phoneBatching;if(merge){
   // A material corner shading will leave alone (corner-shade.js) stays out of the kinds: a kind's material is shaded as one.
-  const alone=phone||phoneTest.get('corner')==='0'?null:(set=>m=>set.has(m))(cornerShadeLeavesAlone(scene));
-  phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE,kinds:deckKinds,alone});}ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
+  // So does one whose merge's name corner shading skips (the name is the material's), as a kind's name is never skipped.
+  const alone=phone||phoneTest.get('corner')==='0'?null:(set=>m=>set.has(m)||cornerShadeSkipsName(m.name))(cornerShadeLeavesAlone(scene));
+  phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE,kinds:deckKinds,colours:colourKinds,alone});}ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // Draws of one material that reach the GPU one after another draw as one (draw-runs.js): the decks' common furnishings
  // and every other instanced mesh outside the repeated cabins, the atrium facade (its lift and aft-core copies' materials
  // as one palette) and the tube lift. Made before the tests below wrap the renderer, so it sees only what they let

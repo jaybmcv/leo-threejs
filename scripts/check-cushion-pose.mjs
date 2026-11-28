@@ -10,10 +10,13 @@ import {walker} from './bake-crowd-motion.mjs';
 
 const source=createGardenCommons(1),root=new T.Group();root.add(source.root);resolveRoomFrames(root);
 const spots=findRestSpots(root),cushions=spots.filter(s=>s.sitPose==='crossLegged'),index=spotIndex(spots);
-const rugMeshes=[];root.traverse(o=>{if(o.isMesh&&/^(Soft_seat|Meditation_cushion)$/.test(o.name)&&o.getWorldPosition(new T.Vector3()).y<25.1)rugMeshes.push(o);});
+const rugMeshes=[],mazeMeshes=[];root.traverse(o=>{
+ if(o.isMesh&&/^(Soft_seat|Meditation_cushion)$/.test(o.name)&&o.getWorldPosition(new T.Vector3()).y<25.1)(o.userData.sitReach?mazeMeshes:rugMeshes).push(o);
+});
 assert.equal(rugMeshes.length,13,'All seven domes and six flat cushions on the three lounge rugs are covered');
-assert.equal(cushions.length,rugMeshes.length,'Every lounge rug seat uses the meditation pose');
-for(const o of rugMeshes){assert.equal(o.userData.sitPose,'crossLegged');const p=o.getWorldPosition(new T.Vector3());assert.equal(cushions.filter(s=>Math.hypot(s.point.x-p.x,s.point.z-p.z)<.01).length,1,'Each cushion has exactly one pose anchor');}
+assert.equal(mazeMeshes.length,5,'Five standalone cushions in the maze');
+assert.equal(cushions.length,rugMeshes.length+mazeMeshes.length,'Every rug and maze cushion uses the meditation pose');
+for(const o of [...rugMeshes,...mazeMeshes]){assert.equal(o.userData.sitPose,'crossLegged');const p=o.getWorldPosition(new T.Vector3());assert.equal(cushions.filter(s=>Math.hypot(s.point.x-p.x,s.point.z-p.z)<.01).length,1,'Each cushion has exactly one pose anchor');}
 assert(spots.some(s=>s.kind==='sit'&&!s.sitPose),'Other seats retain their pose');
 const {w,scene}=await walker(),at=n=>w.figure.bones.get(n).getWorldPosition(new T.Vector3());
 const state={speed:0,grounded:true,stance:'stand',jumpCount:1,jumpS:-1,turnRate:0,accel:0,rise:0};
@@ -86,7 +89,7 @@ for(const spot of cushions){
  assert.equal(index.sitPoseAt(origin,w.hipHeight),'crossLegged');
  assert.equal(index.sitPoseAt(origin.clone().add(new T.Vector3(0,1,0)),w.hipHeight),null);
 }
-console.log('PASS hip contact and shoe clearance on all 13 transformed dome and flat cushions, without matching other levels');
+console.log('PASS hip contact and shoe clearance on all 18 rug and maze cushions, without matching other levels');
 // Use the real remote pose entry points with the existing sit state and the same seat lookup as main.
 for(const Players of [RemotePlayers,AuthoringRemotes]){
  const players=new Players(scene,{sitPose:(p,h)=>index.sitPoseAt(p,h)});

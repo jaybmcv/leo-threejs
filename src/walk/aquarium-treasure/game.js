@@ -31,11 +31,13 @@ export function createTreasureGame({tank,controller,follow,camera,input,live,onO
  const mark=add(new T.ShapeGeometry(arrow),gold,[door[0],door[1]+.08,dz+.38]);mark.rotation.x=-Math.PI/2;
  add(new T.BoxGeometry(.06,.3,.1),gold,[door[0]+.62,dy,dz+.08]);
  joinStaticTints(group, [cyan, gold]);
- const label=canvasTexture(768,192,(g,w,h)=>{g.fillStyle='#0a1928';g.fillRect(0,0,w,h);g.textAlign='center';g.fillStyle='#72edff';g.font='bold 44px sans-serif';g.fillText('AQUARIUM TREASURE',w/2,70);g.fillStyle='#ffffff';g.font='30px sans-serif';g.fillText('ENTER · SWIM · FIND 7 GEMS',w/2,133);});
- const face=new T.PlaneGeometry(2.8,.7);tank.updateWorldMatrix(true,false);
+ // Match the texture to the shorter panel's aspect ratio so the lettering keeps its shape.
+ const label=canvasTexture(840,114,(g,w,h)=>{g.fillStyle='#0a1928';g.fillRect(0,0,w,h);g.textAlign='center';g.fillStyle='#72edff';g.font='bold 48px sans-serif';g.fillText('AQUARIUM TREASURE',w/2,49);g.fillStyle='#ffffff';g.font='34px sans-serif';g.fillText('ENTER · SWIM · FIND 7 GEMS',w/2,99);});
+ const face=new T.PlaneGeometry(2.8,.38);tank.updateWorldMatrix(true,false);
  // Keep the wording readable from the gallery when the lounge's frame is mirrored.
  if(tank.matrixWorld.determinant()<0){const uv=face.attributes.uv;for(let i=0;i<uv.count;i++)uv.setX(i,1-uv.getX(i));}
- add(face,new T.MeshBasicMaterial({map:label,side:T.DoubleSide,toneMapped:false}),[door[0],door[1]+2.75,dz+.03]);
+ // Clear the door frame, the ceiling and the tank post beside the door.
+ add(face,new T.MeshBasicMaterial({map:label,side:T.DoubleSide,toneMapped:false}),[door[0]-.50,door[1]+2.98,dz+.11]);
  // Each stone has a different cut. Flat face colours keep the gems luminous without extra lights.
  const cuts=[[[0,-.38],[.27,.05],[.20,.22],[0,.22]],[[0,-.32],[.27,-.03],[.27,.13],[.17,.25],[0,.25]],[[0,-.38],[.23,-.04],[.19,.20],[0,.25]],[[0,-.34],[.28,0],[.22,.19],[0,.19]],[[0,-.40],[.22,-.06],[.25,.10],[.13,.23],[0,.23]],[[0,-.30],[.27,-.04],[.18,.22],[0,.22]],[[0,-.42],[.21,-.08],[.26,.10],[.17,.23],[0,.23]]];
  const gemGlow=canvasTexture(64,64,(g,w,h)=>{const r=g.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);r.addColorStop(0,'rgba(255,255,255,.38)');r.addColorStop(.4,'rgba(255,255,255,.12)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,w,h);});
