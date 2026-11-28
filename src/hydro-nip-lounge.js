@@ -34,6 +34,7 @@ const BALCONY_CUT=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1');return 
 // The two stair flights at the rear galleries' east end are solid under their treads: the lights keep out of them.
 const STAIR_FLIGHTS=[{level:LEVELS[0],x0:155.1,x1:158.4,z0:30.8,z1:38.6},{level:LEVELS[1],x0:151.8,x1:155,z0:30.8,z1:38.1}];
 const DOME={x:134,z:25,r:6.5},MAZE={x0:114+v2MazeFit.dx,x1:120.5+v2MazeFit.dx,z0:19+v2MazeFit.dz,z1:33+v2MazeFit.dz,top:35.2},MUNCH={x:145.5,z:25};
+const LOGO_RADIUS=2.25,LOGO_Y=FLOOR+DOME.r+2.1+.15;
 const MAIN_LOGO_URL=typeof __HYDRO_NIP_MAIN_LOGO__==='undefined'?null:__HYDRO_NIP_MAIN_LOGO__;
 // The maze inside: a ground floor of 3 x 6 roomy cells, walled to chest height so you and the camera see over the
 // partitions (behind the last row, z 31.5-32.9, the first stair's foot), the lower platform in front of SPLIT and the
@@ -64,6 +65,35 @@ const FLIGHTS=[{xs:[150.3+SDX,153.3+SDX],base:FLOOR,foot:34.85+SDZ,dir:1,rail:0}
 // parallel to the slope. The step glow is the purple of the stair's reference, shown on every riser.
 const SLAB=.34,STEP_GLOW=0x9b4dff;
 const font=new FontLoader().parse(fontData);
+
+function mainLogoSign(){
+ const group=new T.Group();group.name='Hydro_Nip_Main_Sign';group.userData.assetId='hydro-nip-main-logo';
+ const radius=LOGO_RADIUS,depth=.16,body=new T.Mesh(new T.CylinderGeometry(radius,radius,depth,96).rotateX(Math.PI/2),new T.MeshStandardMaterial({name:'Hydro_Nip_Main_Sign_Body',color:0x131127,roughness:.4,metalness:.4}));
+ body.name='Hydro_Nip_Main_Sign_Body';group.add(body);
+ const rimMaterial=new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Sign_Rim',color:CYAN,toneMapped:false}),rimGeometry=new T.TorusGeometry(radius-.025,.035,8,128);
+ for(const side of [1,-1]){const rim=new T.Mesh(rimGeometry,rimMaterial);rim.position.z=side*(depth/2+.006);if(side<0)rim.rotation.y=Math.PI;rim.name='Hydro_Nip_Main_Sign_Rim';group.add(rim);}
+ if(typeof document!=='undefined'&&MAIN_LOGO_URL){
+  // Crop the photo border so only the circular badge reaches the panel edge.
+  const map=new T.TextureLoader().load(MAIN_LOGO_URL);map.colorSpace=T.SRGBColorSpace;map.anisotropy=8;map.offset.set(.02,.018);map.repeat.set(.96,.964);
+  const material=new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Logo',map,toneMapped:false}),geometry=new T.CircleGeometry(radius-.06,96);
+  for(const side of [1,-1]){const face=new T.Mesh(geometry.clone(),material);if(side<0)face.geometry.rotateY(Math.PI);face.position.z=side*(depth/2+.01);face.name=side>0?'Hydro_Nip_Main_Logo_Front':'Hydro_Nip_Main_Logo_Back';face.userData.assetId='hydro-nip-main-logo';group.add(face);}
+ }else{
+  for(const side of [1,-1]){const face=new T.Group();face.position.z=side*(depth/2+.01);if(side<0)face.rotation.y=Math.PI;
+   for(const [text,size,y,color] of [['HYDRO-NIP',.48,.16,0xf36bdc],['LOUNGE',.29,-.38,0x55e5ff]]){const geometry=new TextGeometry(text,{font,size,depth:.012,curveSegments:2});geometry.computeBoundingBox();const bounds=geometry.boundingBox;geometry.translate(-(bounds.max.x+bounds.min.x)/2,y,0);face.add(new T.Mesh(geometry,new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Sign_Fallback',color,toneMapped:false})));}
+   group.add(face);}
+ }
+ group.traverse(o=>{if(o.isMesh)o.userData.noCollide=true;});
+ return group;
+}
+
+// Authoring takes the disc out before the static bake. The prepared room retains its placement group.
+export function takeDomeLogo(root){
+ const source=root.getObjectByName('Hydro_Nip_Main_Sign');if(!source)return null;
+ const logo=source.children.some(o=>o.isMesh)?source:mainLogoSign();
+ source.matrixWorld.decompose(logo.position,logo.quaternion,logo.scale);
+ source.removeFromParent();
+ return logo;
+}
 
 // The garden parts the lounge replaces: planters and trees, the cafe, and the commons' cat figures.
 const REPLACED=/^(Garden_planter|Planting_bed|Planting_detail|Tree_trunk|Tree_canopy|Low_plant|Stylized_tree|Garden_bench(_\w+)?|Planter_\w+|Layered_garden_foliage|Table_foliage|Table_ceramic_vase|Community_cafe_counter|Cafe_\w+|Table_pedestal|Espresso_\w+|Coffee_\w+|Serving_cup|Mars_cat_1\.75m)$/;
@@ -257,24 +287,6 @@ export function createHydroNipLounge({mirror=1}={}){
   if(leaves)for(const s of [-1,1])local.push([neon(GREEN),new T.TubeGeometry(leafCurve(s*(width/2-.42),0,.34,.04),56,.022,4,true)],[neon(GREEN),new T.CylinderGeometry(.015,.015,.5,4).translate(s*(width/2-.42),-.2,.04)]);
   for(const [mat,g] of local){if(bow){const p=g.attributes.position;for(let i=0;i<p.count;i++)p.setZ(i,p.getZ(i)+bow*(1-(p.getX(i)/(width/2))**2));g.computeVertexNormals();}put(mat,mirrored(g.applyMatrix4(m),m));}
  }
- function mainLogoSign({at,normal,diameter=4.5}){
-  const group=new T.Group();group.name='Hydro_Nip_Main_Sign';group.userData.assetId='hydro-nip-main-logo';group.applyMatrix4(placing(at,normal));
-  const radius=diameter/2,depth=.16,body=new T.Mesh(new T.CylinderGeometry(radius,radius,depth,96).rotateX(Math.PI/2),new T.MeshStandardMaterial({name:'Hydro_Nip_Main_Sign_Body',color:0x131127,roughness:.4,metalness:.4}));
-  body.name='Hydro_Nip_Main_Sign_Body';group.add(body);
-  const rimMaterial=new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Sign_Rim',color:CYAN,toneMapped:false}),rimGeometry=new T.TorusGeometry(radius-.025,.035,8,128);
-  for(const side of [1,-1]){const rim=new T.Mesh(rimGeometry,rimMaterial);rim.position.z=side*(depth/2+.006);if(side<0)rim.rotation.y=Math.PI;rim.name='Hydro_Nip_Main_Sign_Rim';group.add(rim);}
-  if(typeof document!=='undefined'&&MAIN_LOGO_URL){
-   // Crop the photo border so only the circular badge reaches the panel edge.
-   const map=new T.TextureLoader().load(MAIN_LOGO_URL);map.colorSpace=T.SRGBColorSpace;map.anisotropy=8;map.offset.set(.02,.018);map.repeat.set(.96,.964);
-   const material=new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Logo',map,toneMapped:false}),geometry=new T.CircleGeometry(radius-.06,96);
-   for(const side of [1,-1]){const face=new T.Mesh(geometry.clone(),material);if(side<0)face.geometry.rotateY(Math.PI);face.position.z=side*(depth/2+.01);face.name=side>0?'Hydro_Nip_Main_Logo_Front':'Hydro_Nip_Main_Logo_Back';face.userData.assetId='hydro-nip-main-logo';group.add(face);}
-  }else{
-   for(const side of [1,-1]){const face=new T.Group();face.position.z=side*(depth/2+.01);if(side<0)face.rotation.y=Math.PI;
-    for(const [text,size,y,color] of [['HYDRO-NIP',.48,.16,0xf36bdc],['LOUNGE',.29,-.38,0x55e5ff]]){const geometry=new TextGeometry(text,{font,size,depth:.012,curveSegments:2});geometry.computeBoundingBox();const bounds=geometry.boundingBox;geometry.translate(-(bounds.max.x+bounds.min.x)/2,y,0);face.add(new T.Mesh(geometry,new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Sign_Fallback',color,toneMapped:false})));}
-    group.add(face);}
-  }
-  root.add(group);
- }
  // A placement that mirrors turns every triangle inside out; swap two corners of each to turn it back.
  function mirrored(g,m){
   if(m.determinant()>0)return g;const n=g.index?g.toNonIndexed():g;
@@ -346,9 +358,11 @@ export function createHydroNipLounge({mirror=1}={}){
     rod(loose(M.dark),[o.x+ux*r,FLOOR+HAMMOCK.bar+HAMMOCK.hang,o.z+uz*r],[o.x+ux*to,FLOOR+top,o.z+uz*to],.012,3);}
   }
  }
- // The approved Hydro-Nip main logo replaces the banner, with a readable face on each side.
- for(const s of [-1,1])rod(M.dark,[DOME.x+s*2,FLOOR+DOME.r-.8,DOME.z],[DOME.x+s*2,FLOOR+DOME.r+.7,DOME.z],.05,6);
- mainLogoSign({at:[DOME.x,FLOOR+DOME.r+2.1,DOME.z],normal:[0,0,-1]});
+ // The fixed bearing seats on the top strut. Its narrow spindle meets the disc on the spin axis.
+ const logo=mainLogoSign(),bottom=LOGO_Y-LOGO_RADIUS,crest=FLOOR+DOME.r-.1,spindle=bottom-crest;
+ cyl(M.dark,.062,.062,.04,[DOME.x,crest+.006,DOME.z]);
+ cyl(M.dark,.022,.022,spindle,[DOME.x,crest+spindle/2,DOME.z]);
+ logo.applyMatrix4(placing([DOME.x,LOGO_Y,DOME.z],[0,0,-1]));root.add(logo);
 
  // The Haze Maze: a three-storey glass tower full of green catnip mist. You walk in at the front into a maze of
  // partitions, find the cat-shelf stair at the back up to the lower platform, then climb the second stair to the upper
