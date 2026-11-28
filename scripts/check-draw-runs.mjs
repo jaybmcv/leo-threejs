@@ -190,10 +190,17 @@ console.log('check-draw-runs: ok');
  // material keeps the kind's textures.
  {const tex=()=>new T.DataTexture(new Float32Array(12),3,1,T.RGBAFormat,T.FloatType),Kc=new T.MeshStandardMaterial({name:'V2_band_colour_kind_0'});
   Kc.map=tex();Kc.emissiveMap=tex();Kc.roughnessMap=Kc.metalnessMap=tex();
-  const w2=new T.Scene(),cp=(start,count)=>{const g=new T.BufferGeometry();for(const k of ['position','normal'])g.setAttribute(k,shared.attributes[k]);g.setIndex(shared.index);g.setDrawRange(start,count);
+  const sharedC=new T.BufferGeometry();for(const k of ['position','normal'])sharedC.setAttribute(k,shared.attributes[k]);sharedC.setAttribute('uv',new T.BufferAttribute(new Uint16Array(n*2).fill(32768),2,true));sharedC.setIndex(shared.index);
+  const w2=new T.Scene(),cp=(start,count)=>{const g=new T.BufferGeometry();for(const k of ['position','normal','uv'])g.setAttribute(k,sharedC.attributes[k]);g.setIndex(sharedC.index);g.setDrawRange(start,count);
    g.boundingBox=new T.Box3(new T.Vector3(-1,-1,-1),new T.Vector3(5,5,5));g.boundingSphere=g.boundingBox.getBoundingSphere(new T.Sphere());const m=new T.Mesh(g,[Kc]);m.name='V2_low_deck_merged_Walk_colour_kind_0';w2.add(m);return m;};
-  const cdr=await createDrawRuns(w2,renderer,[],{kinds:[{geometry:shared,material:Kc,pieces:[cp(0,12),cp(12,12)],runs:2}]}),cb=w2.children.find(o=>o.isBatchedMesh);
-  assert(cdr&&cb&&cb.geometry===shared,'a colour kind gets its multi-draw');
-  assert(cb.material.map===Kc.map&&cb.material.emissiveMap===Kc.emissiveMap&&cb.material.roughnessMap===Kc.roughnessMap,'its batch material keeps the kind textures');}
+  const P1=cp(0,12),P2=cp(12,12),cdr=await createDrawRuns(w2,renderer,[],{kinds:[{geometry:sharedC,material:Kc,pieces:[P1,P2],runs:2}]}),cb=w2.children.find(o=>o.isBatchedMesh);
+  assert(cdr&&cb&&cb.geometry===sharedC&&cb.geometry.attributes.uv===sharedC.attributes.uv,'a colour kind gets its multi-draw, over its arrays with their texel coordinates');
+  assert(cb.material.map===Kc.map&&cb.material.emissiveMap===Kc.emissiveMap&&cb.material.roughnessMap===Kc.roughnessMap,'its batch material keeps the kind textures');
+  const mk=w2.getObjectByName('V2_draw_run_end');w2.updateMatrixWorld(true);drawn.length=0;const res=[];
+  cdr.around(camera,()=>{res.push(renderer.renderBufferDirect(camera,w2,P1.geometry,Kc,P1,g(0,12)));res.push(renderer.renderBufferDirect(camera,w2,P2.geometry,Kc,P2,g(12,12)));
+   mk.onBeforeRender(renderer,w2,camera);renderer.renderBufferDirect(camera,w2,mk.geometry,mk.material,mk,null);w2.onAfterRender(renderer,w2,camera);});
+  assert(res.every(x=>x===HELD),'its held draws answer HELD');assert.equal(drawn.length,1);
+  assert(drawn[0].object===cb&&drawn[0].material===cb.material&&drawn[0].geometry===sharedC&&drawn[0].material.map===Kc.map&&drawn[0].material.emissiveMap===Kc.emissiveMap,'a colour kind’s run is one multi-draw with its textures');
+  assert.deepEqual([drawn[0].starts,drawn[0].counts],[[0,48],[12,12]]);}
  console.log('check-draw-runs: deck kinds ok');
 }

@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import * as T from 'three';
 import {kindTexel, mergePhoneBands} from '../src/v2/phone-bands.js';
 import {floorBlocker} from '../src/v2/floor-occlusion.js';
+import {cornerShadeSkipsName} from '../src/walk/corner-shade.js';
+import {readFileSync} from 'node:fs';
 
 // The band merge's copied sources (src/v2/phone-bands.js), without a GPU: a band's children whose every drawable was
 // copied move into one hidden group in that band, in the same place in the world; the band itself stays as it was; a
@@ -113,7 +115,7 @@ scene.updateMatrixWorld(true);for(const [o,p] of world)assert(o.getWorldPosition
   all.forEach((m,i)=>{const o=part(m,i*9-40,n);g.add(o);parts.push([o,m]);});}
  scene.updateMatrixWorld(true);
  const before=Math.max(...all.map(m=>m.id));
- const merged=await mergePhoneBands({bands},scene,{piece:40,kinds:true,colours:true,alone:m=>/window/i.test(m.name)}),meshes=merged.root.children;
+ const merged=await mergePhoneBands({bands},scene,{piece:40,kinds:true,colours:true,alone:m=>cornerShadeSkipsName(m.name)}),meshes=merged.root.children;
  assert.equal(merged.proof.kinds,2);assert.equal(merged.proof.colourKinds,1);
  const C=merged.kinds.find(K=>K.colours),Fk=merged.kinds.find(K=>!K.colours);
  assert.deepEqual(C.materials,[L1,L2,L3]);assert.deepEqual(Fk.materials,[F1,F2]);
@@ -144,6 +146,10 @@ scene.updateMatrixWorld(true);for(const [o,p] of world)assert(o.getWorldPosition
  pass('colour and glow texels follow their materials, uploading only on a change');
  for(let i=0;i<60;i++)merged.follow();assert.equal(merged.proof.drift,0,'a colour change is no drift');
  L3.fog=false;for(let i=0;i<60;i++)merged.follow();assert(merged.proof.drift>0);L3.fog=true;pass('a colour kind source changed otherwise is counted');
+ {const was=merged.proof.drift;M.emissiveIntensity=2;for(let i=0;i<60;i++)merged.follow();assert.equal(merged.proof.drift,was+1);M.emissiveIntensity=1;pass('a value written on the kind material itself is counted');}
+ {const page=readFileSync(new URL('../src/walk/main.public.js',import.meta.url),'utf8');
+  for(const text of ["m=>set.has(m)||cornerShadeSkipsName(m.name)","kinds:deckKinds,colours:colourKinds,alone","colourKinds=deckKinds&&phoneTest.get('colourkinds')!=='0'"])assert(page.includes(text),'main.public.js no longer has '+text);
+  pass('the walk page passes corner shading’s name rule and the colour kinds switch to the merge');}
  {const s=new T.Scene(),b=new Map();for(const n of [1,2,3]){const g=new T.Group();g.name='Walk_band_'+n;g.userData.band=n;g.position.set(0,n*4,0);b.set(n,g);s.add(g);for(const [i,m] of [L1,L2,L3,F1,F2].entries())g.add(part(m,i*9-40,n));}s.updateMatrixWorld(true);
   const off=await mergePhoneBands({bands:b},s,{piece:40,kinds:true});assert.equal(off.proof.kinds,1);assert(!off.kinds[0].colours);
   for(const m of [L1,L2,L3])assert(off.root.children.some(o=>o.name==='V2_low_deck_merged_'+m.name&&o.material[0]===m));}

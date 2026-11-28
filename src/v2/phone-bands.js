@@ -320,9 +320,11 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece
  // The kinds' texels: each source material's roughness and metalness (and a colour kind's colour and glow), rewritten
  // only when they change. Every 60 calls each source is checked against its kind again (its own values apart from those
  // its kind reads from textures, and the kind material's corner shading and film look): proof.drift counts the sources
- // that no longer match, each warned once. A merged source cannot be drawn apart again, so this is for the checks to see,
- // not a way back.
+ // that no longer match, each warned once, and a kind whose own material no longer holds one for what it reads from its
+ // textures (anything written there would multiply every texel). A merged source cannot be drawn apart again, so this is
+ // for the checks to see, not a way back.
  let calls=0;const drifted=new WeakSet();
+ const unit=(M,colour)=>M.roughness===1&&M.metalness===1&&(!colour||M.color.r===1&&M.color.g===1&&M.color.b===1&&M.emissive.r===1&&M.emissive.g===1&&M.emissive.b===1&&M.emissiveIntensity===1);
  const follow=()=>{
   const check=++calls%60===0;
   for(const K of kinds){const data=K.texture.image.data,tint=K.colours?.image.data,glow=K.glows?.image.data,colour=!!tint;let dirty=false,tinted=false,glowed=false;
@@ -331,6 +333,7 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece
     // A colour kind's colour, and its glow as three's emissive uniform holds it (emissive x intensity).
     if(colour){const c=m.color,e=m.emissive,x=m.emissiveIntensity;if(put(tint,i*4,c.r,c.g,c.b))tinted=true;if(put(glow,i*4,e.r*x,e.g*x,e.b*x))glowed=true;}
     if(check&&!drifted.has(m)&&(hookFlags(m)!==hookFlags(K.material)||lookOf(m,colour)!==K.looks[i])){drifted.add(m);proof.drift++;console.warn('Deck kind: '+m.name+' no longer matches '+K.material.name+': it keeps drawing with the kind look.');}}
+   if(check&&!drifted.has(K.material)&&!unit(K.material,colour)){drifted.add(K.material);proof.drift++;console.warn('Deck kind: '+K.material.name+' has its own values changed: they multiply every texel.');}
    if(dirty)K.texture.needsUpdate=true;if(tinted)K.colours.needsUpdate=true;if(glowed)K.glows.needsUpdate=true;}
  };
  follow();
