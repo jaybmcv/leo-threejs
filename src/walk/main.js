@@ -293,7 +293,7 @@ async function buildShip(){
  // Short railings where a floor drops away (railings.js; planned at build time too).
  ship.inside.add(railingMesh(walkPlan.rails));
  // The fin root comes down through Deck 19's aft lift lobby; a clad casing boxes it in (fin-casing.js).
- const casing=createFinCasing();ship.inside.add(casing);casing.updateWorldMatrix(true,false);const casingFrame=casing.matrixWorld.clone();
+ ship.inside.add(createFinCasing());
  // (The exterior model carries its own copy of the crown lounge, static car floor and all.)
  ship.root.traverse(o=>{if(STATIC_LIFT_PARTS.test(o.name))o.visible=false;});
  // The main lift shafts are walled in nearly clear glass, so with the car away the shaft read as an open drop at your
@@ -438,10 +438,10 @@ async function buildShip(){
  mct=createTransporters({colliders,lifts});for(const g of mct.groups)toBand(g);
  // The forward observation lounge's Mars-viewing compass, a flush inlay on its floor (lounge-compass.js), drawn with its band.
  {const compass=createLoungeCompass();if(compass)toBand(compass);}
- // The shared graffiti wall on the casing's main face (graffiti.js), drawn with Deck 19's band.
- graffiti=createGraffiti(casing.userData.paintFace,casingFrame,{bar:$('spray'),colours:$('spray-colours'),nozzles:$('spray-nozzles'),note:$('spray-note'),connect:$('spray-connect'),done:$('spray-done'),surface:$('viewport')},
-  {live:()=>live,connect,onOpen(){emote=null;input.enabled=false;input.down.clear();},onClose(){input.enabled=true;input.down.clear();}});
- toBand(graffiti.mesh);
+ // The stern paint follows the pressure skin in Deck 19's render bands.
+ graffiti=createGraffiti(baked,{bar:$('spray'),colours:$('spray-colours'),nozzles:$('spray-nozzles'),note:$('spray-note'),connect:$('spray-connect'),done:$('spray-done'),surface:$('viewport')},
+  {colliders,live:()=>live,connect,onOpen(){emote=null;input.enabled=false;input.down.clear();},onClose(){input.enabled=true;input.down.clear();}});
+ toBand(graffiti.group);
  // The Crown lounge TV on the crown lift's aft face (crown-tv.js): the video someone shared through Leo live.
  crownTv=createCrownTv({live:()=>live,base:LIVE_URL?httpBase(LIVE_URL):'',connect,
   els:{sheet:$('tv-sheet'),now:$('tv-now'),status:$('tv-status'),sound:$('tv-sound'),pick:$('tv-pick'),connect:$('tv-connect'),down:$('tv-down'),limits:$('tv-limits'),file:$('tv-file')},
@@ -572,7 +572,7 @@ const actions={
   else if(t.kind==='ball')enterBall();
   else if(t.kind==='ball-out')leaveBall();
   else if(t.kind==='mct')boardCart(t);
-  else if(t.kind==='graffiti'){closePanels();graffiti.open();}
+  else if(t.kind==='graffiti'){closePanels();graffiti.open(controller.position);}
   else if(t.kind==='lever')leverPanel.flip(t.lever);
   // Online the server decides each shot and every page, ours too, fires the shots it accepts; offline we fire our own.
   else if(t.kind==='cannon'){if(live?.live)live.cannon(t.cannon,keelClub.seed());else keelClub.fire(t.cannon);}

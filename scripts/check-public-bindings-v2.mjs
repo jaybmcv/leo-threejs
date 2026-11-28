@@ -1,1 +1,10 @@
-import fs from 'node:fs/promises';import assert from 'node:assert/strict';const source=await fs.readFile('src/walk/main.public.js','utf8'),broken=await fs.readFile('src/walk/main.prepared.js','utf8');const check=s=>{assert(s.includes("const casing=ship.inside.getObjectByName('Walk_fin_root_casing')"),'Prepared public casing must resolve the saved anchor');assert.equal((s.match(/const casing=/g)||[]).length,1);assert.equal((s.match(/const casingFrame=/g)||[]).length,1);};check(source);assert.throws(()=>check(broken),/saved anchor/);const start=source.indexOf(" const casing=ship.inside.getObjectByName('Walk_fin_root_casing')"),end=source.indexOf('\n graffiti=createGraffiti',start),binding=source.slice(start,end);const face={x:1},frame={},saved={userData:{paintFace:face},updateWorldMatrix(){this.updated=true},matrixWorld:{clone:()=>frame}},resolved=new Function('ship',binding+';return{casing,casingFrame};')({inside:{getObjectByName:name=>name==='Walk_fin_root_casing'?saved:null}});assert.equal(resolved.casing,saved);assert.equal(resolved.casingFrame,frame);assert(saved.updated);await fs.mkdir('output/phase3/followup',{recursive:true});await fs.writeFile('output/phase3/followup/public-bindings.json',JSON.stringify({status:'PASS',savedAnchorRestored:true,oldUndefinedBindingRejected:true,noGeometryConstruction:true},null,2));console.log('PASS prepared public fin-casing bindings; old undefined binding rejected');
+import fs from 'node:fs/promises';
+import assert from 'node:assert/strict';
+
+for(const mode of ['','.authoring','.prepared','.public']){
+ const source=await fs.readFile('src/walk/main'+mode+'.js','utf8');
+ assert.equal((source.match(/graffiti=createGraffiti\(baked,/g)||[]).length,1,mode+' must bind graffiti to the render bands');
+ assert(source.includes('toBand(graffiti.group)'),mode+' must draw the graffiti group');
+ assert(source.includes('graffiti.open(controller.position)'),mode+' must open graffiti from the walker’s position');
+}
+console.log('PASS Deck 19 graffiti bindings in all walk modes');

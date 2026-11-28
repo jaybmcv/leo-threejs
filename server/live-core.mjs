@@ -118,7 +118,7 @@ function unseat(v){const k=v.k;if(k===undefined)return;const i=active.indexOf(k)
 const lifts=LIFTS.map(spec=>({spec,stops:spec.stops,state:liftState(spec),sent:''}));
 const log=(...a)=>console.log(new Date().toISOString(),...a);
 const arena=createArena({log});
-// The graffiti wall on Deck 19's fin root casing (graffiti.mjs): its paint, kept in a file, and who painted it.
+// Deck 19 stern graffiti (graffiti.mjs): saved sections and painter attribution.
 const graffiti=createGraffiti({send:(v,msg)=>send(v.ws,msg),log});
 // Paws Off's gym rounds on the treadmills (gym.mjs), in memory only.
 const gym=createGym({log,send,canPlay:policy.canGym});BUDGETS.gym=[2,6];
@@ -406,9 +406,9 @@ function onMessage(v,data,binary){
   case 'chat':chat(v,msg);break;
   // A knock on the Halloween clown's glass (walk/halloween.js): its badge code, if there is one yet.
   case 'clown':if(allowed(v,'clown'))clown(v);break;
-  // The Deck 19 graffiti wall (graffiti.mjs): the whole wall for a visitor come to look, and a stroke of spray paint.
+  // Deck 19 graffiti subscriptions and spray strokes.
   // A stroke over the limit is refused, and the painter told, so their page can take the wall back as it is.
-  case 'wall':if(allowed(v,'wall'))graffiti.look(v);break;
+  case 'wall':if(msg.look===false||allowed(v,'wall'))graffiti.look(v,msg);break;
   case 'paint':graffiti.paint(v,msg,{slow:!allowed(v,'paint')});break;
   // Paws Off (walk/paws-off): stepping onto a treadmill, a fall, stepping off, for the gym round (gym.mjs).
   case 'gym':if(allowed(v,'gym')){if(msg.e==='in'&&!policy.canGym(v.pos)){send(v.ws,{m:'gym',e:'cancel'});break;}gym.message(v,msg);}break;

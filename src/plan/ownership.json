@@ -2543,13 +2543,12 @@
       "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
       "features": [
         "Walk_fin_root_casing",
-        "Fin_root_casing_corner",
-        "Fin_root_casing_wash_light"
+        "Fin_root_casing_corner"
       ],
       "colliders": [],
       "interactionTargets": null,
       "placements": 8,
-      "signature": "4bb347e717eed754207735b8276a9627b5fdc632d202fe5e62654fd3483ea63f"
+      "signature": "995fa001a386a8c20bd05ff303715b40057104dfb546497634de7434f1885597"
     },
     {
       "source": "src/walk/fog-cull.js",
@@ -2785,34 +2784,49 @@
       "signature": "4768a14ce15a6a2c046ab771fdd78413d73df19b4bfad2c4e997d24ed357db6c"
     },
     {
-      "source": "src/walk/graffiti-wall.js",
+      "source": "src/walk/graffiti-surface.js",
       "rooms": [
-        "aft-machinery"
+        "circulation-19"
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
+      "reason": "The paint follows the stern pressure skin where it meets the Deck 19 floor.",
+      "features": [
+        "Walk_stern_graffiti",
+        "Walk_graffiti_section_"
+      ],
+      "colliders": [],
+      "interactionTargets": null,
+      "placements": 2,
+      "signature": "34da879f570c46104bddac670196564abc4e02d7babb19ee136cd41ef150a42b"
+    },
+    {
+      "source": "src/walk/graffiti-wall.js",
+      "rooms": [
+        "circulation-19"
+      ],
+      "via": "frame boundary",
+      "fixed": true,
+      "reason": "The paint follows the stern pressure skin where it meets the Deck 19 floor.",
       "features": [],
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "3a7e0ee04722ceaba30540c438862e769d891bc717dac72602f215a4c8dff588"
+      "signature": "ea1a298d92c5365d63c8d64c69bcaf40ed7fb0c0a952c127c35acbac1252bac1"
     },
     {
       "source": "src/walk/graffiti.js",
       "rooms": [
-        "aft-machinery"
+        "circulation-19"
       ],
       "via": "frame boundary",
       "fixed": true,
-      "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway.",
-      "features": [
-        "Walk_graffiti_wall"
-      ],
+      "reason": "The paint follows the stern pressure skin where it meets the Deck 19 floor.",
+      "features": [],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 3,
-      "signature": "ba9afb6f5fba84ffee4c0ef60e1859f58fc96d654c5dc80ae4c2d807dc0ded85"
+      "placements": 4,
+      "signature": "cf9a52c63a163d5375531563168b54e4abc20c42d1a0136073dd576318f229d3"
     },
     {
       "source": "src/walk/grapple.js",
@@ -4366,7 +4380,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "f55caff9eeaefb37b6962b8c06d6e05d189455ba0e5127da4915bdaaccc78dfe"
+      "signature": "4ca2c48b72bcb64abef734fc8b24f991d30d5f96ddee2b9ad547bb209306d2ff"
     },
     {
       "source": "src/walk/main.js",
@@ -4388,7 +4402,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "001b7a772660b4fb0dd60f746aef216a9f335c2ebdb721150277d28705ea9361"
+      "signature": "0ce1f4718f0ba695759f8a70de89a6bc46ed69b9d6edc2a98ef35ed7243050b7"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4408,7 +4422,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "25d5a28b9bf4004523a6c3b34da96f77357d06995f7090aeaa43d1a753674d66"
+      "signature": "df0fb3e2e6809aba795483f6861666ccc3e96fb7a82d3ce8cae61382f3315ca3"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4428,7 +4442,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "fc3f760ec85ed84e6aeeb29c314d1f227df8c4a1af49699745f216e19752910b"
+      "signature": "a0b5392eb48cd0f43228f06e83b30d0f646be3ff98a0afc08d13500f75a44757"
     },
     {
       "source": "src/walk/marks.authoring.js",

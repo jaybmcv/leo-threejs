@@ -119,8 +119,8 @@ export function connectLive(url,on,opts={}){
     // Chat aboard (walk/chat.js): a line someone said (this visitor's own included), and a line of ours refused.
     case 'chat':if(typeof msg.text==='string'&&typeof msg.id==='string')on.chat?.(msg);break;
     case 'said':on.said?.(msg);break;
-    // The Deck 19 graffiti wall (walk/graffiti.js): the whole wall, someone else's stroke, and a stroke of ours refused.
-    case 'wall':if(typeof msg.cells==='string')on.wall?.(msg);break;
+    // The Deck 19 graffiti wall: snapshots, strokes and refusals.
+    case 'wall':on.wall?.(msg);break;
     case 'stroke':on.stroke?.(msg);break;
     case 'painted':on.painted?.(msg);break;
     // Paws Off's gym round on the treadmills (server/gym.mjs): its countdown, its start, someone out, the results.
@@ -208,8 +208,8 @@ export function connectLive(url,on,opts={}){
   clown(){if(!live())return false;ws.send(JSON.stringify({m:'clown'}));return true;},
   // A line of chat for everyone aboard; false when there is no connection to say it on.
   say(text){if(!live())return false;ws.send(JSON.stringify({m:'chat',text}));return true;},
-  // The graffiti wall: ask for it (and its strokes from then on), and spray one stroke {c, s, p}.
-  wall(){if(live())ws.send(JSON.stringify({m:'wall'}));},
+  // Start or stop watching the painted sections. A stroke uses cells in the shared grid.
+  wall(look){if(live())ws.send(JSON.stringify({m:'wall',look}));},
   paint(stroke){if(!live())return false;ws.send(JSON.stringify({m:'paint',...stroke}));return true;},
   // Paws Off's gym round: stepped on ('in'), fell, stepped off; false when there is no connection to send it on.
   gym(msg){if(!live())return false;ws.send(JSON.stringify({...msg,m:'gym'}));return true;},
