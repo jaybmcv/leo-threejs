@@ -1,5 +1,5 @@
 import layout from './plan/selected-layout.js';
-import {LOUNGE_PLAN} from './plan/lounge-layout-v2.js';
+import {LOUNGE_MURAL_X,LOUNGE_PLAN} from './plan/lounge-layout-v2.js';
 import {FALL,fallZ} from './v2/lounge-falls-layout.js';
 import fitoutOverrides from './plan/room-fitout-overrides-v2.json' with {type:'json'};
 const v2MazeFit=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1'),p=r.components.pieces.find(p=>p.name==='Haze Maze tower'),toLocal=z=>27+r.side*(z-r.z);return {dx:p.center[0]-r.x+132-117.25,dz:toLocal(p.center[2])-26,tubes:r.components.mazeTubes.map(t=>({...t,from:t.from-r.x+132,to:t.to-r.x+132,z:toLocal(t.z),level:r.y+t.rise}))};})();
@@ -23,12 +23,18 @@ import {createTerpeneGlassware} from './terpene-glassware.js';
 const FLOOR=24.3,CEILING=35.65,LEVELS=[28.3,32.3],ROOM={x0:109.5,x1:154.5,z0:14,z1:46};
 // These runs follow the lounge-facing edges of the current Deck 18 and 19 galleries in the commons source frame, so the
 // lights and plants hang where the open room sees them; `offset` points from the edge into the room.
+const REAR_LIGHTS=[[109.5,31.7],[112.5,32.561],[120,34.407],[132.5,36.311],[144.5,36.581],[156.5,36.621]];
+const muralLightX=LOUNGE_MURAL_X-layout.rooms.find(r=>r.id==='commons-1').x+132+.05;
+const [[rearLightX,rearLightZ],[nextLightX,nextLightZ]]=REAR_LIGHTS;
+const muralLightZ=rearLightZ+(muralLightX-rearLightX)*(nextLightZ-rearLightZ)/(nextLightX-rearLightX);
 const BALCONY_RUNS=[
  {level:LEVELS[0],points:[[109.5,12],[109.5,31.377]],offset:[.45,0]},
- {level:LEVELS[0],points:[[109.5,31.7],[112.5,32.561],[120,34.407],[132.5,36.311],[144.5,36.581],[156.5,36.621]],offset:[0,-.45]},
+ {level:LEVELS[0],points:REAR_LIGHTS,offset:[0,-.45]},
  {level:LEVELS[1],points:[[109.5,12],[109.5,24.694]],offset:[.45,0]},
  {level:LEVELS[1],points:[[120.5,14],[155,14]],offset:[0,.45]},
- {level:LEVELS[1],points:[[109.5,25.07],[112.5,26.001],[120,27.882],[132.5,30.727],[144.5,31.848],[156.5,32.009]],offset:[0,-.45]}
+ {level:LEVELS[1],points:[[109.5,25.07],[112.5,26.001],[120,27.882],[132.5,30.727],[144.5,31.848],[156.5,32.009]],offset:[0,-.45]},
+ // Join the first rear string. Hang the new pot under the extension, one pot spacing from its neighbour.
+ {level:LEVELS[0],points:[[muralLightX,muralLightZ],REAR_LIGHTS[0]],offset:[0,-.45],potAt:.32,part:'Lounge_walkway_hangers'}
 ];
 const BALCONY_CUT=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1');return 27+r.side*(LOUNGE_PLAN.balconyEnd-r.z);})();
 // The two stair flights at the rear galleries' east end are solid under their treads: the lights keep out of them.
@@ -628,7 +634,7 @@ export function createHydroNipLounge({mirror=1}={}){
  const tubeAt=(x,z,lvl,pad)=>TUBES.some(t=>Math.abs(x-t.to)<1&&Math.abs(z-t.z)<(t.half||TUBE.r)+pad&&(lvl===undefined||lvl===t.level));
  // The lights hang in open air at the gallery edges: not through a stair flight, and not solid to a jumper in the room below.
  const stairAt=(x,z,lvl,pad)=>STAIR_FLIGHTS.some(f=>f.level===lvl&&x>f.x0-pad&&x<f.x1+pad&&z>f.z0-pad&&z<f.z1+pad),hang=loose(M.dark),pots=loose(M.pot);
- for(const{level,points,offset}of BALCONY_RUNS){const y=level-.32,lengths=points.slice(1).map((b,i)=>Math.hypot(b[0]-points[i][0],b[1]-points[i][1])),len=lengths.reduce((a,b)=>a+b,0),spans=Math.max(1,Math.round(len/4.5));
+ for(const{level,points,offset,potAt=.5,part=null}of BALCONY_RUNS){piece=part;const y=level-.32,lengths=points.slice(1).map((b,i)=>Math.hypot(b[0]-points[i][0],b[1]-points[i][1])),len=lengths.reduce((a,b)=>a+b,0),spans=Math.max(1,Math.round(len/4.5));
   const pointAt=t=>{let d=len*t;for(let i=0;i<lengths.length;i++){const part=lengths[i];if(d<=part||i===lengths.length-1){const a=points[i],b=points[i+1],f=part?d/part:0;return[a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f];}d-=part;}return points.at(-1);};
   for(let s=0;s<spans;s++){let prev=null;const n=8;
    // Retire whole hanging spans over the cut; consume the same seed so the curved edge stays unchanged.
@@ -637,7 +643,7 @@ export function createHydroNipLounge({mirror=1}={}){
     if(tubeAt(x,z,level,.3)||stairAt(x,z,level,.3)){prev=null;continue;}
     if(prev)rod(hang,prev,p,.006,3);if(i<n)put(neon(AMBER),new T.OctahedronGeometry(.05,0).translate(x,y-sag-.06,z));prev=p;}
    // Each pot hangs just inside the gallery edge, clear of the maze and tube landings.
-   const t=(s+.5)/spans,[x,z]=pointAt(t),px=x+offset[0],py=level-.95;
+   const t=(s+potAt)/spans,[x,z]=pointAt(t),px=x+offset[0],py=level-.95;
    // Keep just the pots beside the water behind its sheet; the rest of the row stays put.
    const pz=level===LEVELS[0]&&px>FALL.x0-.4&&px<FALL.x1+.4?Math.max(z+offset[1],fallZ(px)+.55):z+offset[1];
    if(px<MAZE.x1+.5&&(offset[0]||px>MAZE.x0-.5)&&pz>MAZE.z0-.5&&pz<MAZE.z1+.5||tubeAt(px,pz,undefined,.6)||stairAt(px,pz,level,.6))continue;
@@ -647,7 +653,7 @@ export function createHydroNipLounge({mirror=1}={}){
     for(let d=0;d<len;d+=.23)put(M.leaf,new T.OctahedronGeometry(.075,0).scale(1,.4,1.25).rotateY(d*3+k).translate(sx+Math.sin(d*2.3)*.05,py+.1-d,sz+Math.cos(d*2.1)*.05));}}
  }
 
- omit=false;
+ omit=false;piece=null;
  // Blacklight sconces along the rear and end walls, on the floor and both galleries (from tester feedback): a violet tube
  // between dark caps on a back plate, washing the wall round it in violet. Each sits clear of the gallery doors,
  // columns and prints; `n` is the way it faces, into the room.

@@ -23,6 +23,7 @@ import {featurePlaces} from '../src/v2/goto-features.js';
 import {mesh,polygonGeometry} from '../src/v2/geometry.js';
 import {createTreasureBoard} from '../server/aquarium-treasure.mjs';
 import {LOUNGE_PLAN,applyLoungeBalconyCut,applyLoungeLandingCorner} from '../src/plan/lounge-layout-v2.js';
+import {SYNTHWAVE_MURAL} from '../src/v2/community-routes.js';
 import {applyLoungeFloorFinish} from '../src/v2/lounge-floor-material.js';
 
 // Real source furniture, maze, gallery guards and activity colliders, without a full ship build.
@@ -110,11 +111,11 @@ console.log('PASS squared Deck 18 corner',cornerProbes,'top/underside probes, cl
 const end=r.components.galleries.find(g=>g.id==='commons-1-end-4'),snapshot=JSON.stringify(r.components);
 close(Math.min(...end.polygon.map(p=>p[1])),LOUNGE_PLAN.balconyEnd);
 applyLoungeBalconyCut(r);assert.equal(JSON.stringify(r.components),snapshot,'The cut is idempotent on a rebuilt layout');
-for(let x=-140.4;x<=-137.6;x+=.4)for(let z=-46.8;z<=-39.2;z+=.4){ray.origin.set(x,28.5,z);assert.equal(ground.raycast(ray,.6),null,'Removed walkway still supports feet at '+[x,z]);}
+for(let x=-140.4;x<=-137.6;x+=.4)for(let z=-46.5;z<=-39.2;z+=.4){ray.origin.set(x,28.5,z);assert.equal(ground.raycast(ray,.6),null,'Removed walkway still supports feet at '+[x,z]);}
 route('Deck 18 retained maze access',[[-140,28.3,-30],[-139,28.3,-30],[-139,28.3,-37.8],[-137.5,28.3,-37.8]]);
 const guardRay=new T.Raycaster(new T.Vector3(),new T.Vector3(1,0,0),0,1);
 for(const [name,y]of [['V2_garden_guard_glass',28.9],['V2_garden_guard_cap',29.4]]){const guards=structure.getObjectsByProperty('name',name);
- for(let z=-50.7;z<=-47.4;z+=.1){guardRay.set(new T.Vector3(-139.4,y,z),new T.Vector3(1,0,0));assert(guardRay.intersectObjects(guards).length,'Curved balcony cut needs continuous '+name+' at '+z);}
+ for(let z=-50.45;z<=-47;z+=.1){guardRay.set(new T.Vector3(SYNTHWAVE_MURAL.x+.01,y,z),new T.Vector3(1,0,0));assert.equal(guardRay.intersectObjects(guards).length,0,'Mural closes the curved balcony end: '+name+' at '+z);}
  for(let x=-140.7;x<=-137.3;x+=.1){guardRay.set(new T.Vector3(x,y,-39.1),new T.Vector3(0,0,1));assert(guardRay.intersectObjects(guards).length,'Maze balcony cut needs continuous '+name+' at '+x);}
  assert(guards.every(o=>name.endsWith('_glass')||o.material.color.getHex()===0xff6b20),'Retain the orange cap material');
 }
