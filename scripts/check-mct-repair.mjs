@@ -184,6 +184,18 @@ console.log('PASS MCT pile: scattering, drift, push, rotated bounds, reduced mot
 const {chromium}=createRequire(PLAYWRIGHT_FROM)('playwright');
 const bundle=await build({stdin:{contents:"export {createMctRepair} from './src/walk/mct-repair/game.js';",resolveDir:process.cwd()},bundle:true,write:false,format:'iife',globalName:'repairCheck',platform:'browser'});
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--disable-gpu-sandbox',...ANGLE_IF_ASKED]});
+async function clickPart(page,id){
+ const part=page.locator(`[data-part="${id}"]`);
+ const {x,y}=await part.evaluate(el=>{
+  el.focus({preventScroll:true});
+  el.scrollIntoView({block:'nearest'});
+  const r=el.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};
+ });
+ await page.mouse.move(x,y);
+ await page.mouse.down();
+ await page.mouse.up();
+ assert.equal(await part.getAttribute('aria-pressed'),'true',`Mouse selects ${id}`);
+}
 try{
  const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.setContent('<!doctype html><html><body></body></html>');
@@ -210,6 +222,10 @@ try{
      if(list.scrollHeight>list.clientHeight+1||list.scrollWidth>list.clientWidth+1)problems.push('List content overflows');
      if(['auto','scroll','hidden','clip'].includes(getComputedStyle(list).overflowY))problems.push('List clips or scrolls');
      if(rows.length!==repair.state.needed.length)problems.push('Missing required row');
+     const drawing=panel.querySelector('[data-cart]>svg'),targets=bounds(panel.querySelector('[data-hotspots]'));
+     const box=drawing.viewBox.baseVal,project=drawing.getScreenCTM();
+     const a=new DOMPoint(box.x,box.y).matrixTransform(project),b=new DOMPoint(box.x+box.width,box.y+box.height).matrixTransform(project);
+     if([targets.left-a.x,targets.top-a.y,targets.right-b.x,targets.bottom-b.y].some(n=>Math.abs(n)>1))problems.push('Targets do not follow the scaled MCT drawing');
      for(const row of rows){
       const r=bounds(row),text=row.querySelector('span'),icon=row.querySelector('svg'),range=document.createRange();range.selectNodeContents(text);
       if(![list,aside,panel].every(p=>inside(r,bounds(p)))||!inside(r,view))problems.push('Row outside list, panel or window: '+row.textContent);
@@ -220,15 +236,20 @@ try{
      return {problems,count:rows.length,name:root.querySelector('[data-name]').textContent,ids:repair.state.needed.map(p=>p.id).join(',')};
     });
     const before=await measure();seen.add(before.ids);assert.deepEqual(before.problems,[],`${width}x${height}, round ${round+1}, ${before.name}`);
-    const first=await page.evaluate(()=>repair.state.needed[0]);
+    const [first,second]=await page.evaluate(()=>repair.state.needed);
     await page.locator(`[data-view="${first.view}"]`).click();
-    await page.locator(`[data-part="${first.id}"]`).focus();
-    await page.keyboard.press('Enter');
+    await clickPart(page,first.id);
     await page.locator('[data-cart]').click();
     const after=await measure();assert.deepEqual(after.problems,[],`${width}x${height}, installed mark, ${after.name}`);
     assert.equal(await page.locator('[data-required] .done').count(),1);
+    assert.deepEqual(await page.evaluate(()=>repair.state.placed),[first.id],'Mouse selection installs the first part');
+    await page.locator(`[data-view="${second.view}"]`).click();
+    await page.locator(`[data-part="${second.id}"]`).focus();
+    await page.keyboard.press('Enter');
+    await page.locator('[data-cart]').click();
+    assert.deepEqual(await page.evaluate(()=>repair.state.placed),[first.id,second.id],'Keyboard selection installs the second part');
     await page.evaluate(()=>{
-     for(const p of repair.state.needed.slice(1)){document.querySelector(`[data-view="${p.view}"]`).click();document.querySelector(`[data-part="${p.id}"]`).click();document.querySelector('[data-cart]').click();}
+     for(const p of repair.state.needed.slice(2)){document.querySelector(`[data-view="${p.view}"]`).click();document.querySelector(`[data-part="${p.id}"]`).click();document.querySelector('[data-cart]').click();}
     });
     await page.waitForFunction(()=>!document.querySelector('.mct-repair [data-screen]').hidden);
     assert.equal(await page.evaluate(()=>repair.state.phase),round===2?'complete':'clear');
@@ -281,6 +302,6 @@ try{
  },null,{timeout:2000});
  await page.keyboard.press('Escape');
  assert.equal(seen.size,PUZZLES.length,'Every catalogue task was measured');assert.deepEqual(errors,[]);
- console.log(`PASS MCT repair layout: all ${seen.size} tasks, up to ${maxParts} parts, at 1700x870, 1280x720, 390x844, 844x390 and 360x540; readable rows and installed marks, no clipping or list scroll.`);
+ console.log(`PASS MCT repair layout: mouse and keyboard installation, readable lists and aligned targets for all ${seen.size} tasks, up to ${maxParts} parts, at 1700x870, 1280x720, 390x844, 844x390 and 360x540.`);
  console.log('PASS MCT floating bench: a held item follows the pointer, its neighbors move away, and resizing keeps all pieces on the workbench.');
 }finally{await browser.close();}
