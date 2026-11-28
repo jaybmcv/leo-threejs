@@ -47,14 +47,24 @@ function batchableMatrix(matrix){
 // roughness and metalness) batch together, one batch for the kind instead of one for each material; a kind of one material
 // batches as before. `alone(material)`: a material that stays apart (one corner-shade.js leaves alone, or named so that
 // it would: its batch shares the material today, and its name the batch's).
-// - The kind's material is a copy of its members' (look-kinds.js createKind) with a member's material id, the lowest no
-//   other kind has taken: three sorts opaque draws by material id, so the kind draws where its first member did, and
-//   never shares an id with another kind's material (three would skip the second's uniforms, taking it for the first).
-// - Its parts are added in their materials' id order, as three would have drawn them (an unsorted BatchedMesh draws its
-//   instances in the order they were added).
+// - One kind a look for the whole walk: the batches of a look (in every band, and from every call: the features', the
+//   lifts', the lifts' doors') share its material and textures, which have room for KIND_WIDTH members. Its material is
+//   a copy of its members' (look-kinds.js createKind) with a member's material id, the lowest when it is made that no
+//   other kind has taken: three sorts opaque draws by material id, so the kind draws where its first member did, and no
+//   two kinds' materials share an id (three would skip the second's uniforms, taking it for the first).
+// - A batch's parts are added in their materials' id order, as three would have drawn them (an unsorted BatchedMesh draws
+//   its instances in the order they were added).
 // - A part whose material no longer has the kind's look or hooks sits out (draws itself, as before); a kind whose own
 //   material no longer holds one for what it reads from its textures lets all its parts draw themselves.
-const borrowed=new Set();let kindCount=0;
+const KIND_WIDTH=256,kindsByLook=new Map(),borrowed=new Set();let kindCount=0,kindBatches=0;
+function kindFor(look,materials){
+ let kind=kindsByLook.get(look);
+ const fresh=kind?materials.filter(m=>!kind.index.has(m)):materials;
+ if(kind&&kind.materials.length+fresh.length<=kind.width){for(const m of fresh)kind.add(m);return kind;}
+ const id=materials.find(m=>!borrowed.has(m.id))?.id;if(id!==undefined)borrowed.add(id);
+ kind=createKind(materials,{name:'Walk_feature_kind_'+kindCount++,width:Math.max(KIND_WIDTH,materials.length),...(id!==undefined?{id}:{})});
+ kindsByLook.set(look,kind);return kind;
+}
 // `skip(root, o)`: a row that sits out this frame (group-occlusion.js: its root hidden behind what the frame already drew).
 // `take(o)`: false leaves a part out of the batches (a lift door's blades, shown only while it opens).
 // `hide`: a row the skip leaves out is hidden for the main pass too, so it never reaches group occlusion's own count.
@@ -94,26 +104,27 @@ export async function createFeatureBatches(scene,renderer,roots,{skip=null,take=
   record.pass=pass;record.root=root;record.visible=visible;return visible;
  }
  const stats={batches:0,sources:0,active:0,skipped:0,kinds:0,kindMaterials:0,apart:0};
+ // Each look's kind, with all its members in this call (lowest id first).
+ const members=new Map();
+ for(const set of sets)if(set.materials&&set.rows.length>1){let u=members.get(set.look);if(!u)members.set(set.look,u=new Set());for(const m of set.materials)u.add(m);}
+ for(const [look,u] of members){const kind=kindFor(look,[...u].sort((a,b)=>a.id-b.id));if(!kindList.includes(kind))kindList.push(kind);}
  for(const set of sets){
   if(set.rows.length<2)continue;
   let kind=null;
   if(set.materials){
-   // The kind's material id: its members' lowest that no other kind has taken (else a new one).
-   const id=set.materials.find(m=>!borrowed.has(m.id))?.id;if(id!==undefined)borrowed.add(id);
-   kind=createKind(set.materials,{name:'Walk_feature_kind_'+kindCount,...(id!==undefined?{id}:{})});
-   set.kind=kind;kindList.push(kind);
+   kind=kindsByLook.get(set.look);set.kind=kind;
    const order=new Map(set.rows.map((row,i)=>[row,i]));
    set.rows.sort((a,b)=>a.m.id-b.m.id||order.get(a)-order.get(b));
   }
   // A kind's geometries are one per geometry and material (each carries its material's texel).
   const shapes=new Map();
   const shapeOf=row=>{let byMaterial=shapes.get(row.g);if(!byMaterial)shapes.set(row.g,byMaterial=new Map());const k=kind?row.m:null;let shape=byMaterial.get(k);
-   if(!shape)byMaterial.set(k,shape={g:kind?texelGeometry(row.g,kind.index.get(row.m),set.materials.length):row.g});return shape;};
+   if(!shape)byMaterial.set(k,shape={g:kind?texelGeometry(row.g,kind.index.get(row.m),kind.width):row.g});return shape;};
   const shapeOfRow=new Map(set.rows.map(row=>[row,shapeOf(row)]));
   const unique=[...new Set(shapeOfRow.values())];
   const vertices=unique.reduce((sum,s)=>sum+s.g.attributes.position.count,0),indices=unique.reduce((sum,s)=>sum+(s.g.index?.count||0),0);
   const batch=new T.BatchedMesh(set.rows.length,vertices,indices,kind?kind.material:set.m);
-  batch.name='Walk_feature_batch_'+(kind?'kind_'+kindCount++:set.m.name);batch.renderOrder=set.order;
+  batch.name='Walk_feature_batch_'+(kind?'kind_'+kindBatches++:set.m.name);batch.renderOrder=set.order;
   batch.castShadow=set.casts;batch.receiveShadow=set.receives;batch.sortObjects=false;
   batch.perObjectFrustumCulled=false;batch.frustumCulled=false;batch.visible=false;
   batch.userData.noCollide=true;batch.matrixAutoUpdate=false;

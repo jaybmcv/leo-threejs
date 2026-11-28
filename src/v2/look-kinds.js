@@ -62,28 +62,33 @@ const copied=v=>v===null||typeof v!=='object'||v.isTexture?v:typeof v.clone==='f
 const unit=(M,basic)=>M.color.r===1&&M.color.g===1&&M.color.b===1&&(basic||M.roughness===1&&M.metalness===1&&M.emissive.r===1&&M.emissive.g===1&&M.emissive.b===1&&M.emissiveIntensity===1);
 
 /** The kind of `materials` (all of one look, the first the one it copies): its material, named `name`, with material id
- * `id` (by default a new one; three sorts opaque draws by it), and its textures.
- * - The material is a copy of the first member's own values, shader hooks included (as furnishing-batches.js copies
- *   them), so corner-shade.js and film-look.js see it as patched exactly when the members are.
+ * `id` (by default a new one; three sorts opaque draws by it), and its textures, `width` texels wide (by default one a
+ * member; kind.add(m) takes more members while there is room).
+ * - The material is a copy of the first member's own values. Its shader hooks are the first member's, whatever corner-
+ *   shade.js and film-look.js make of them: follow() puts the first member's back whenever they differ (each patches any
+ *   material it finds in the scene, the kind's too, and the order they meet the two in cannot be told apart by their
+ *   flags), so the kind's shader is always the first member's.
  * - kind.index: each member's texel. kind.follow() writes the members' values into the texels (only those that changed).
  * - kind.fits(m): the member still has the kind's look and hooks, and the kind's material still holds one for what it reads
- *   from its textures: a member that does not is drawn apart by whoever can (feature-batches.js), or counted in
- *   kind.drift. */
-export function createKind(materials,{name,id=new T.Material().id}){
- const first=materials[0],n=materials.length,basic=!!first.isMeshBasicMaterial,look=lookOf(first);
+ *   from its textures: a member that does not is drawn apart by whoever can (feature-batches.js), or counted as drift. */
+export function createKind(materials,{name,id=new T.Material().id,width=materials.length}={}){
+ materials=[...materials];
+ const first=materials[0],basic=!!first.isMeshBasicMaterial,look=lookOf(first);
  // Made as three's own copies are, but with the id given (a material's id cannot be set once it is made).
  const M=Object.create(Object.getPrototypeOf(first));
  Object.defineProperty(M,'id',{value:id});
  for(const k of Object.keys(first))if(k!=='id'&&k!=='uuid'&&k!=='version'&&k!=='_listeners')M[k]=copied(first[k]);
  M.uuid=T.MathUtils.generateUUID();M.version=0;M.name=name;M.userData={...first.userData,lookKind:true};
- const colours=texture(n),looksTexture=basic?null:texture(n),glows=basic?null:texture(n);
+ const colours=texture(width),looksTexture=basic?null:texture(width),glows=basic?null:texture(width);
  M.color=new T.Color(1,1,1);M.map=colours;
  if(!basic){M.emissive=new T.Color(1,1,1);M.emissiveIntensity=1;M.roughness=1;M.metalness=1;M.roughnessMap=M.metalnessMap=looksTexture;M.emissiveMap=glows;}
  const index=new Map(materials.map((m,k)=>[m,k]));
- const kind={material:M,materials,index,look,basic,drift:0,
+ const kind={material:M,materials,index,look,basic,width,
+  add(m){if(index.has(m))return index.get(m);if(materials.length>=width)return -1;index.set(m,materials.length);materials.push(m);return materials.length-1;},
   follow(){
+   if(M.onBeforeCompile!==first.onBeforeCompile||M.customProgramCacheKey!==first.customProgramCacheKey){M.onBeforeCompile=first.onBeforeCompile;M.customProgramCacheKey=first.customProgramCacheKey;M.needsUpdate=true;}
    const tint=colours.image.data,rough=looksTexture?.image.data,glow=glows?.image.data;let a=false,b=false,c=false;
-   for(let i=0;i<n;i++){const m=materials[i],col=m.color;if(put(tint,i*4,col.r,col.g,col.b))a=true;
+   for(let i=0;i<materials.length;i++){const m=materials[i],col=m.color;if(put(tint,i*4,col.r,col.g,col.b))a=true;
     if(!basic){const e=m.emissive,x=m.emissiveIntensity;if(put(glow,i*4,e.r*x,e.g*x,e.b*x))b=true;if(put(rough,i*4,0,m.roughness,m.metalness))c=true;}}
    if(a)colours.needsUpdate=true;if(b)glows.needsUpdate=true;if(c)looksTexture.needsUpdate=true;
   },

@@ -117,16 +117,23 @@ console.log('PASS painting frames retain independent deck, frustum and parent vi
   assert.deepEqual([e[i],e[i+1],e[i+2]],[f(m.emissive.r*m.emissiveIntensity),f(m.emissive.g*m.emissiveIntensity),f(m.emissive.b*m.emissiveIntensity)]);
   assert.deepEqual([l[i+1],l[i+2]],[f(m.roughness),f(m.metalness)]);});
  // Each instance's vertices sit at its own material's texel, in the materials' id order.
- const uv=batch.geometry.attributes.uv,n=kind.materials.length,seen=[];
+ const uv=batch.geometry.attributes.uv,n=kind.width,seen=[];
  for(let i=0;i<4;i++){const info=batch._geometryInfo[batch._instanceInfo[i].geometryIndex],u=uv.getX(info.vertexStart);
   for(let v=info.vertexStart;v<info.vertexStart+info.vertexCount;v++)assert.equal(uv.getX(v),u);seen.push(Math.floor(u*n));}
  assert.deepEqual(seen,[0,0,1,2]);
- // A second call whose lowest member is already taken gets another id: no two kinds share one.
- const again=new T.Group();b.add(again);again.position.z=-6;
- for(const m of [mats[0],mats[1]])again.add(new T.Mesh(box,m));
+ // Another call (the lifts' after the features') with parts of that look shares the kind: one material, one id.
+ const again=new T.Group();b.add(again);again.position.z=-6;const late=new T.MeshStandardMaterial({color:0x445566});
+ for(const m of [mats[0],late])again.add(new T.Mesh(box,m));
  const other=await createFeatureBatches(s,renderer,[again],{kinds:true});
- assert.notEqual(other.kinds[0].material.id,K.id);assert.equal(other.kinds[0].material.id,Math.min(mats[0].id,mats[1].id)===K.id?Math.max(mats[0].id,mats[1].id):Math.min(mats[0].id,mats[1].id));
- s.remove(b);s.add(b);b.remove(again);
+ assert.equal(other.kinds[0],kind);assert(s.children.filter(o=>o.isBatchedMesh&&o.material===K).length===2);
+ assert.equal(kind.index.get(late),3,'a later member takes the next texel');b.remove(again);
+ // A kind with no room left: the next is a kind of its own, at the lowest id no kind has taken.
+ {const many=Array.from({length:256},(_,i)=>new T.MeshBasicMaterial({color:i*0x010101,fog:false})),root2=new T.Group();b.add(root2);
+  for(const m of many)root2.add(new T.Mesh(box,m));const full=await createFeatureBatches(s,renderer,[root2],{kinds:true});
+  const extra=new T.MeshBasicMaterial({color:0x123456,fog:false}),root3=new T.Group();b.add(root3);root3.add(new T.Mesh(box,many[0]),new T.Mesh(box,extra));
+  const next=await createFeatureBatches(s,renderer,[root3],{kinds:true});
+  assert.notEqual(next.kinds[0],full.kinds[0]);assert.equal(full.kinds[0].material.id,many[0].id);assert.equal(next.kinds[0].material.id,extra.id,'the first free id');
+  b.remove(root2,root3);}
  const draw=fn=>{s.updateMatrixWorld(true);kinds.around(camera,()=>{s.onBeforeRender(renderer,s,camera,null);fn();});assert(parts.every(o=>o.visible));};
  draw(()=>{assert(batch.visible);assert.deepEqual(parts.slice(0,4).map(o=>o.visible),[false,false,false,false]);assert.equal(kinds.stats.apart,0);});
  // A changed colour shows in its texel at the next pass.
@@ -135,12 +142,22 @@ console.log('PASS painting frames retain independent deck, frustum and parent vi
  mats[1].side=T.DoubleSide;mats[1].needsUpdate=true;
  draw(()=>{assert(parts[2].visible);assert(!parts[0].visible&&!parts[1].visible&&!parts[3].visible);assert.equal(kinds.stats.apart,1);});
  mats[1].side=T.FrontSide;mats[1].needsUpdate=true;draw(()=>assert(!parts[2].visible));
- // So does one whose hooks differ from the kind's (corner shading on it and not on the kind).
- const hook=function(){};hook.cornerShade=true;hook.keepsGeometry=true;mats[0].onBeforeCompile=hook;
- draw(()=>{assert(parts[1].visible&&parts[3].visible);assert(!parts[0].visible&&!parts[2].visible);});
- K.onBeforeCompile=hook;draw(()=>assert(!parts[1].visible&&!parts[3].visible));
+ // So does one whose hooks differ from the kind's, which are always its first member's (corner shading on it alone).
+ const hook=function(){};hook.cornerShade=true;hook.keepsGeometry=true;mats[2].onBeforeCompile=hook;
+ draw(()=>{assert(parts[0].visible);assert(!parts[1].visible&&!parts[2].visible&&!parts[3].visible);});
+ delete mats[2].onBeforeCompile;K.onBeforeCompile=hook;draw(()=>{assert(!parts[0].visible);assert.equal(K.onBeforeCompile,mats[0].onBeforeCompile,"the kind takes its first member's hooks back");});
  // A kind whose own material no longer holds one for what it reads from its textures lets every part draw itself.
  K.roughness=.5;draw(()=>{assert(!batch.visible);assert(parts.slice(0,4).every(o=>o.visible));});K.roughness=1;
+ // Film may wrap the members before the kind is made, corner shading wrap members and kind, and film then wrap the kind
+ // again (film-look.js meets the kind later than the members): the kind takes its first member's hooks back.
+ {const film=()=>{const h=function(){};h.filmLook=true;h.keepsGeometry=true;return h;},corner=()=>{const h=function(){};h.cornerShade=true;h.keepsGeometry=true;return h;};
+  const a=new T.MeshStandardMaterial({color:0x111111,flatShading:true}),c=new T.MeshStandardMaterial({color:0x222222,flatShading:true});
+  for(const m of [a,c])m.onBeforeCompile=film();
+  const r4=new T.Group();b.add(r4);r4.position.z=-6;r4.add(new T.Mesh(box,a),new T.Mesh(box,c));
+  const wrapped=await createFeatureBatches(s,renderer,[r4],{kinds:true}),W=wrapped.kinds[0];
+  for(const m of [a,c,W.material])m.onBeforeCompile=corner();W.material.onBeforeCompile=film();
+  s.updateMatrixWorld(true);wrapped.around(camera,()=>{s.onBeforeRender(renderer,s,camera,null);assert(r4.children.every(o=>!o.visible),'every part batched');});
+  assert.equal(W.material.onBeforeCompile,a.onBeforeCompile);b.remove(r4);}
  // Without kinds every material batches on its own, as before.
  const s2=new T.Scene(),b2=new T.Group(),r2=new T.Group();b2.name='Walk_band_plain';s2.add(b2);b2.add(r2);
  for(const m of [mats[0],mats[0],mats[1],mats[1]])r2.add(new T.Mesh(box,m));
