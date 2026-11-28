@@ -188,6 +188,7 @@
     "converger": {"center":[-97.5,24.3,-34.7],"yaw":-1.5707963267948966,"signCenter":[-99.4,30.9,-31.5],"signYaw":-1.821885322640436},
     "moveLoungeSeating": [{"from":[137,16.5],"to":[117,29.75]}],
     "loungeRug": {"at":[143.35,14],"yaw":0},
+    "loungeSideTables": [[123,0,22.15],[116.1,0,32.5],[127,0,32.8],[112.3,0,29.8],[129.5,4,39],[132.5,8,33.5]],
     "removeGardenPrints": [73],
     "remove": [
       {"part":"Lounge_cat_tree","x":147,"z":18.6}

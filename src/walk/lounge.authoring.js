@@ -122,7 +122,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
   aquarium:aquarium?.group||null,
   // For the room's mood (lounge-mood.js, which the walk pages run after this step and which adds `inside`): the
   // lounge's frame in the world, the maze's mist meshes and the neon and halo materials.
-  frame,mists,glows,
+  frame,mists,glows,tableSmoke:root.userData.tableSmoke,
   // `bodies`: the walker's and every other player's positions.
   update(dt,bodies){
    uniforms.uTime.value=time();aquarium?.update();still.update(dt);
