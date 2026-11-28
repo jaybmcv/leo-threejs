@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {createKind,lookNow,texelGeometry} from './look-kinds.js';
+import {borrowId,createKind,lookNow,texelGeometry} from './look-kinds.js';
 import {yieldEvery} from './yield-to-page.js';
 
 // The named room features and vehicles contain many small meshes that share a material, even when
@@ -56,12 +56,12 @@ function batchableMatrix(matrix){
 //   its instances in the order they were added).
 // - A part whose material no longer has the kind's look or hooks sits out (draws itself, as before); a kind whose own
 //   material no longer holds one for what it reads from its textures lets all its parts draw themselves.
-const KIND_WIDTH=256,kindsByLook=new Map(),borrowed=new Set();let kindCount=0,kindBatches=0;
+const KIND_WIDTH=256,kindsByLook=new Map();let kindCount=0,kindBatches=0;
 function kindFor(look,materials){
  let kind=kindsByLook.get(look);
  const fresh=kind?materials.filter(m=>!kind.index.has(m)):materials;
  if(kind&&kind.materials.length+fresh.length<=kind.width){for(const m of fresh)kind.add(m);return kind;}
- const id=materials.find(m=>!borrowed.has(m.id))?.id;if(id!==undefined)borrowed.add(id);
+ const id=borrowId(materials);
  kind=createKind(materials,{name:'Walk_feature_kind_'+kindCount++,width:Math.max(KIND_WIDTH,materials.length),...(id!==undefined?{id}:{})});
  kindsByLook.set(look,kind);return kind;
 }

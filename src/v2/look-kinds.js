@@ -21,6 +21,26 @@ const identityOf=f=>{let i=functionIds.get(f);if(i===undefined)functionIds.set(f
 const describe=v=>v===null||v===undefined||typeof v!=='object'&&typeof v!=='function'?String(v):typeof v==='function'?'f'+identityOf(v):v.isColor?'c'+v.getHexString():v.isTexture?'t'+v.uuid:typeof v.toArray==='function'?'['+v.toArray().join(',')+']':'o'+JSON.stringify(v);
 // The hooks corner-shade.js and film-look.js put on a material: a kind's material must carry the same as its members.
 export const hookFlags=m=>{const h=m.onBeforeCompile;return (h?.cornerShade?'C':'')+(h?.filmLook?'F':'');};
+// The shader a material is drawn with, as three tells two apart (its program cache key), with its hooks' flags: two
+// materials of one look and one program key are one shader. Each corner-shaded material carries a closure of its own
+// (its earlier hook), but they share one source and one set of uniforms (corner-shade.js), so their keys are equal.
+// Worked out again only when the material is rebuilt or a hook is replaced.
+const programs=new WeakMap();
+export function programKey(m){
+ let c=programs.get(m);
+ if(!c||c.version!==m.version||c.hook!==m.onBeforeCompile||c.key!==m.customProgramCacheKey){
+  let k;try{k=hookFlags(m)+'|'+m.customProgramCacheKey();}catch{k=null;}
+  c={version:m.version,hook:m.onBeforeCompile,key:m.customProgramCacheKey,value:k};programs.set(m,c);}
+ return c.value;
+}
+// Material ids kinds have taken from their members, for the whole walk: three sorts opaque draws by material id and skips a
+// material's uniforms when both program and id repeat, so no two kinds' materials may share one.
+const borrowed=new Set();
+/** The lowest id of `materials` no kind has taken yet (taken now), or undefined when every one is taken. */
+export function borrowId(materials){
+ const m=[...materials].sort((a,b)=>a.id-b.id).find(m=>!borrowed.has(m.id));
+ if(m)borrowed.add(m.id);return m?.id;
+}
 
 /** The look a material shares with the other members of its kind, or null when it cannot join one: a standard (not
  * physical) or basic material, opaque, shown, with no texture, and with no shader hook but corner shading's and the film
@@ -54,12 +74,28 @@ export function texelGeometry(g,k,n){
  view.setAttribute('uv',new T.BufferAttribute(uv,2,true));
  return view;
 }
-const texture=n=>{const t=new T.DataTexture(new Float32Array(n*4),n,1,T.RGBAFormat,T.FloatType);t.magFilter=t.minFilter=T.NearestFilter;t.generateMipmaps=false;t.matrixAutoUpdate=false;t.needsUpdate=true;return t;};
+export const kindTexture=n=>{const t=new T.DataTexture(new Float32Array(n*4),n,1,T.RGBAFormat,T.FloatType);t.magFilter=t.minFilter=T.NearestFilter;t.generateMipmaps=false;t.matrixAutoUpdate=false;t.needsUpdate=true;return t;};
+const texture=kindTexture;
 // A texel as three uploads it (float32), written only when it changes.
 const put=(d,j,r,g,b)=>{r=Math.fround(r);g=Math.fround(g);b=Math.fround(b);if(d[j]===r&&d[j+1]===g&&d[j+2]===b&&d[j+3]===1)return false;d[j]=r;d[j+1]=g;d[j+2]=b;d[j+3]=1;return true;};
-const copied=v=>v===null||typeof v!=='object'||v.isTexture?v:typeof v.clone==='function'?v.clone():Array.isArray(v)?v.slice():Object.getPrototypeOf(v)===Object.prototype?{...v}:v;
+/** Member `material`'s values into texel `i` of a kind's textures (`colours`, and for a lit kind `looks` and `glows`; any may be null), as
+ * three's uniforms hold them; each texture is marked for upload only when one of its texels changed. */
+export function writeTexel({colours,looks=null,glows=null},i,m){
+ if(colours){const col=m.color;if(put(colours.image.data,i*4,col.r,col.g,col.b))colours.needsUpdate=true;}
+ if(looks&&put(looks.image.data,i*4,0,m.roughness,m.metalness))looks.needsUpdate=true;
+ if(glows){const e=m.emissive,x=m.emissiveIntensity;if(put(glows.image.data,i*4,e.r*x,e.g*x,e.b*x))glows.needsUpdate=true;}
+}
+// What a kind's material holds in place of what its textures stand in for (colour, glow, roughness, metalness).
+export const KIND_VALUES=new Set(['color','map','emissive','emissiveIntensity','emissiveMap','roughness','roughnessMap','metalness','metalnessMap']);
+/** Sets `M` to read colour (and for a lit kind glow, roughness and metalness) from `textures`: white, glowing white at
+ * intensity 1, roughness and metalness 1. */
+export function readTexels(M,{colours,looks=null,glows=null}){
+ M.color=new T.Color(1,1,1);M.map=colours;
+ if(looks){M.emissive=new T.Color(1,1,1);M.emissiveIntensity=1;M.roughness=1;M.metalness=1;M.roughnessMap=M.metalnessMap=looks;M.emissiveMap=glows;}
+}
 // A kind's own values that its textures stand in for: any other value here would multiply every texel.
-const unit=(M,basic)=>M.color.r===1&&M.color.g===1&&M.color.b===1&&(basic||M.roughness===1&&M.metalness===1&&M.emissive.r===1&&M.emissive.g===1&&M.emissive.b===1&&M.emissiveIntensity===1);
+export const unitValues=(M,basic)=>M.color.r===1&&M.color.g===1&&M.color.b===1&&(basic||M.roughness===1&&M.metalness===1&&M.emissive.r===1&&M.emissive.g===1&&M.emissive.b===1&&M.emissiveIntensity===1);
+const copied=v=>v===null||typeof v!=='object'||v.isTexture?v:typeof v.clone==='function'?v.clone():Array.isArray(v)?v.slice():Object.getPrototypeOf(v)===Object.prototype?{...v}:v;
 
 /** The kind of `materials` (all of one look, the first the one it copies): its material, named `name`, with material id
  * `id` (by default a new one; three sorts opaque draws by it), and its textures, `width` texels wide (by default one a
@@ -79,20 +115,16 @@ export function createKind(materials,{name,id=new T.Material().id,width=material
  Object.defineProperty(M,'id',{value:id});
  for(const k of Object.keys(first))if(k!=='id'&&k!=='uuid'&&k!=='version'&&k!=='_listeners')M[k]=copied(first[k]);
  M.uuid=T.MathUtils.generateUUID();M.version=0;M.name=name;M.userData={...first.userData,lookKind:true};
- const colours=texture(width),looksTexture=basic?null:texture(width),glows=basic?null:texture(width);
- M.color=new T.Color(1,1,1);M.map=colours;
- if(!basic){M.emissive=new T.Color(1,1,1);M.emissiveIntensity=1;M.roughness=1;M.metalness=1;M.roughnessMap=M.metalnessMap=looksTexture;M.emissiveMap=glows;}
+ const colours=texture(width),looksTexture=basic?null:texture(width),glows=basic?null:texture(width),tex={colours,looks:looksTexture,glows};
+ readTexels(M,tex);
  const index=new Map(materials.map((m,k)=>[m,k]));
  const kind={material:M,materials,index,look,basic,width,
   add(m){if(index.has(m))return index.get(m);if(materials.length>=width)return -1;index.set(m,materials.length);materials.push(m);return materials.length-1;},
   follow(){
    if(M.onBeforeCompile!==first.onBeforeCompile||M.customProgramCacheKey!==first.customProgramCacheKey){M.onBeforeCompile=first.onBeforeCompile;M.customProgramCacheKey=first.customProgramCacheKey;M.needsUpdate=true;}
-   const tint=colours.image.data,rough=looksTexture?.image.data,glow=glows?.image.data;let a=false,b=false,c=false;
-   for(let i=0;i<materials.length;i++){const m=materials[i],col=m.color;if(put(tint,i*4,col.r,col.g,col.b))a=true;
-    if(!basic){const e=m.emissive,x=m.emissiveIntensity;if(put(glow,i*4,e.r*x,e.g*x,e.b*x))b=true;if(put(rough,i*4,0,m.roughness,m.metalness))c=true;}}
-   if(a)colours.needsUpdate=true;if(b)glows.needsUpdate=true;if(c)looksTexture.needsUpdate=true;
+   for(let i=0;i<materials.length;i++)writeTexel(tex,i,materials[i]);
   },
-  usable:()=>unit(M,basic),
+  usable:()=>unitValues(M,basic),
   fits:(m,fresh=false)=>index.has(m)&&lookNow(m,fresh)===look&&hookFlags(m)===hookFlags(M),
   textures:[colours,looksTexture,glows].filter(Boolean)};
  kind.follow();

@@ -1,6 +1,11 @@
 import * as T from 'three';
 import {compactRenderGeometry} from './facade.js';
 import {keepsGeometry} from './shader-hooks.js';
+import {KIND_VALUES,borrowId,kindTexture,lookNow,programKey,readTexels,texelGeometry,unitValues,writeTexel} from './look-kinds.js';
+// A kind's copy keeps a name of its own (never a member's: the moods find materials by name, atrium-mood.js, and would
+// write a member's values into it, over every texel), is always shown (its members are tested one by one), and holds
+// white, intensity 1, roughness and metalness 1 in place of what its textures stand in for.
+const KIND_COPY=new Set([...KIND_VALUES,'name','visible']);
 import {yieldEvery} from './yield-to-page.js';
 
 // The repeated cabins' opaque parts, one draw per material. Each cabin part is an instanced mesh per deck, cabin template
@@ -24,6 +29,15 @@ import {yieldEvery} from './yield-to-page.js';
 // is rebuilt whenever the original is. (A material made with Object.create(original) followed by itself, but made every
 // property three reads per draw a prototype lookup: about 7 µs more a draw.) Only for opaque materials with three's own
 // shading: glass drawn in one batch would change the order it blends in.
+//
+// With `kinds`, parts whose materials differ only in colour, glow, roughness and metalness (look-kinds.js) share one
+// batch: its copy is white, glows white at intensity 1, has roughness and metalness 1, and reads each material's values
+// from tiny float textures through a uv constant over each part (a geometry copy per geometry and material), as the
+// feature kinds do. The batch takes its members' lowest material id no other kind holds (look-kinds.js borrowId), so it
+// sorts where its first member did, and draws its parts in three's own order for them: by material id, then depth. A part
+// whose material no longer has its first member's look or shader (program key) draws itself; the texels follow the
+// materials every pass. `alone(material)`: a material corner shading leaves alone, which keeps a batch of its own. A look
+// of one material batches as before.
 //
 // Desktop only (WEBGL_multi_draw with its instanced draw). Measured 2026-11-26 (RTX 3080, 1920x1080): the Quiet Grove
 // draws 71 fewer, the Deck 6 neighbourhood café 56, the Daily Grind 33. A draw that changes material costs three about
@@ -112,28 +126,46 @@ export function instancedMultiDraw(renderer){
  * of this frame (it then draws, or not, as before). `nearSlots`: the most cabins cull() packs into a fitting.
  * Returns null without the instanced multi-draw, else {stats, around(view, draw)}. stats.folded: draws the last main pass
  * made fewer (parts batched less batches drawn), for quad-facing.js's count of what the frame would have drawn. */
-export async function createCabinBatches(scene,renderer,parts,{skip=null,nearSlots=40}={}){
+export async function createCabinBatches(scene,renderer,parts,{skip=null,nearSlots=40,kinds=false,alone=null}={}){
  const lists=instancedMultiDraw(renderer);if(!lists)return null;
  const yieldWork=yieldEvery(),byKey=new Map(),variants=new Map();
  for(const o of parts){const attributes=part(o);if(!attributes)continue;
-  const key=o.material.uuid+'|'+o.renderOrder+'|'+o.layers.mask+'|'+attributes;let set=byKey.get(key);
-  if(!set)byKey.set(key,set={m:o.material,order:o.renderOrder,layers:o.layers.mask,rows:[]});set.rows.push(o);}
- const batches=[],compact=new Map(),stats={batches:0,parts:0,slots:0,shown:0,folded:0,skipped:0,ms:0};
+  const m=o.material,look=kinds&&!alone?.(m)?lookNow(m,true):null;
+  const key=(look===null?m.uuid:'kind '+look)+'|'+o.renderOrder+'|'+o.layers.mask+'|'+attributes;let set=byKey.get(key);
+  if(!set)byKey.set(key,set={m,look,order:o.renderOrder,layers:o.layers.mask,rows:[]});set.rows.push(o);}
+ const batches=[],compact=new Map(),stats={batches:0,parts:0,slots:0,shown:0,folded:0,skipped:0,ms:0,kinds:0,kindMaterials:0};
+ let kindCount=0;
  for(const set of byKey.values()){
   if(set.rows.length<2)continue;
-  const names=kept(set.m),geometries=[...new Set(set.rows.map(o=>o.geometry))];
-  // Only the vertices each part's index uses (they index pools shared by many parts), only the attributes drawn.
-  const copies=geometries.map(g=>{let c=compact.get(g);if(!c){const view=new T.BufferGeometry();for(const k of names)view.setAttribute(k,g.attributes[k]);view.setIndex(g.index);c=compactRenderGeometry(view,{bounds:false});compact.set(g,c);}return c;});
-  let slots=0;const rows=set.rows.map(o=>{const r={o,head:slots,slots:o.userData.near?nearSlots:o.instanceMatrix.count,version:-1,count:-1};slots+=r.slots;return r;});
-  const vertices=copies.reduce((s,g)=>s+g.attributes.position.count,0),indices=copies.reduce((s,g)=>s+g.index.count,0);
-  let v=variants.get(set.m);if(!v)variants.set(set.m,v=batchMaterial(set.m));
+  // A kind's materials in id order (its first the lowest); a look of one material batches as before.
+  let materials=set.look===null?null:[...new Set(set.rows.map(o=>o.material))].sort((a,b)=>a.id-b.id);
+  if(materials&&materials.length<2)materials=null;
+  const first=materials?materials[0]:set.m,names=kept(first),texel=materials?new Map(materials.map((m,k)=>[m,k])):null;
+  // Only the vertices each part's index uses (they index pools shared by many parts), only the attributes drawn; for a
+  // kind, a copy a geometry and material, at the material's texel.
+  const shapeOf=o=>{const g=o.geometry;let c=compact.get(g);if(!c){const view=new T.BufferGeometry();for(const k of names)view.setAttribute(k,g.attributes[k]);view.setIndex(g.index);c=compactRenderGeometry(view,{bounds:false});compact.set(g,c);}
+   if(!materials)return c;let byTexel=c.userData.texels;if(!byTexel)c.userData.texels=byTexel=new Map();const k=texel.get(o.material),key=k+'/'+materials.length;
+   let t=byTexel.get(key);if(!t)byTexel.set(key,t=texelGeometry(c,k,materials.length));return t;};
+  const shapes=set.rows.map(shapeOf),geometries=[...new Set(shapes)];
+  let slots=0;const rows=set.rows.map((o,i)=>{const r={o,m:o.material,shape:shapes[i],head:slots,slots:o.userData.near?nearSlots:o.instanceMatrix.count,version:-1,count:-1};slots+=r.slots;return r;});
+  const vertices=geometries.reduce((s,g)=>s+g.attributes.position.count,0),indices=geometries.reduce((s,g)=>s+g.index.count,0);
+  let v;
+  if(materials){
+   // The kind's copy: its first member's own values but for what its textures stand in for, with the members' lowest id
+   // no other kind holds.
+   const basic=!!first.isMeshBasicMaterial,tex={colours:kindTexture(materials.length),looks:basic?null:kindTexture(materials.length),glows:basic?null:kindTexture(materials.length)};
+   v=batchMaterial(first,KIND_COPY,borrowId(materials)??new T.Material().id);readTexels(v.copy,tex);
+   v.copy.name='V2_cabin_kind_'+kindCount;v.copy.visible=true;v.copy.needsUpdate=true;
+   v.kind={materials,tex,basic,fit:new Map()};
+   stats.kinds++;stats.kindMaterials+=materials.length;
+  }else{v=variants.get(set.m);if(!v)variants.set(set.m,v=batchMaterial(set.m));}
   const batch=new T.BatchedMesh(slots,vertices,indices,v.copy);
-  batch.name='V2_cabin_batch '+set.m.name;batch.renderOrder=set.order;batch.layers.mask=set.layers;
+  batch.name='V2_cabin_batch '+(materials?'kind_'+kindCount++:set.m.name);batch.renderOrder=set.order;batch.layers.mask=set.layers;
   batch.sortObjects=false;batch.perObjectFrustumCulled=false;batch.frustumCulled=false;batch.matrixAutoUpdate=false;batch.visible=false;
   batch.userData={noCollide:true,renderOnly:true,cabinBatch:true};
-  const ids=new Map(geometries.map((g,i)=>[g,batch.addGeometry(copies[i])]));
+  const ids=new Map(geometries.map(g=>[g,batch.addGeometry(g)]));
   const bytes=batch.geometry.index.array.BYTES_PER_ELEMENT;
-  for(const r of rows){const info=batch._geometryInfo[ids.get(r.o.geometry)];r.start=info.start*bytes;r.count3=info.count;}
+  for(const r of rows){const info=batch._geometryInfo[ids.get(r.shape)];r.start=info.start*bytes;r.count3=info.count;}
   // The batch's lists are written here each main pass, not by BatchedMesh from instances (it has none): sub-draw i
   // reads its first matrix at indirect[i] (a small texture of its own) and the rest after it.
   batch.onBeforeRender=()=>{};
@@ -162,17 +194,22 @@ export async function createCabinBatches(scene,renderer,parts,{skip=null,nearSlo
   t.needsUpdate=true;
  }
  const byDepth=(a,b)=>a.z!==b.z?a.z-b.z:a.o.id-b.o.id;
+ // A kind's parts as three sorts their materials' draws: material id, then depth.
+ const byMaterial=(a,b)=>a.m.id-b.m.id||byDepth(a,b);
+ // A kind's member still drawn by its copy this pass: shown, of its first member's look and shader.
+ const fits=(v,m)=>{const f=v.kind.fit;let c=f.get(m);if(c?.pass===pass)return c.ok;if(!c)f.set(m,c={});c.pass=pass;
+  const look=lookNow(m);c.ok=m.visible&&look!==null&&look===lookNow(v.m)&&programKey(m)===programKey(v.m);return c.ok;};
  function collect(camera){
   const t0=performance.now();pass++;stats.shown=stats.folded=stats.skipped=0;const turn=materialCopies[pass%materialCopies.length];
   viewProjection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);
   frustum.setFromProjectionMatrix(viewProjection,camera.coordinateSystem,camera.reversedDepth);
   for(const B of batches){
    const {batch,v,rows,indirect,instances,drawn}=B;
-   if(v.pass!==pass){v.pass=pass;follow(v,v===turn);}
-   if(!v.usable||!v.m.visible||!camera.layers.test(batch.layers))continue;
+   if(v.pass!==pass){v.pass=pass;follow(v,v===turn);if(v.kind){const {materials,tex}=v.kind;for(let i=0;i<materials.length;i++)writeTexel(tex,i,materials[i]);}}
+   if(!v.usable||(v.kind?!unitValues(v.copy,v.kind.basic):!v.m.visible)||!camera.layers.test(batch.layers))continue;
    drawn.length=0;
    for(const r of rows){const o=r.o;
-    if(!o.visible||o.material!==v.m||o.count<1||o.count>r.slots||o.layers.mask!==batch.layers.mask||!shown(o.parent)||!identity(o.matrixWorld.elements)||!frustum.intersectsObject(o))continue;
+    if(!o.visible||o.material!==r.m||v.kind&&!fits(v,r.m)||o.count<1||o.count>r.slots||o.layers.mask!==batch.layers.mask||!shown(o.parent)||!identity(o.matrixWorld.elements)||!frustum.intersectsObject(o))continue;
     if(skip?.(o)){stats.skipped++;continue;}
     if(r.version!==o.instanceMatrix.version||r.count!==o.count){
      batch._matricesTexture.image.data.set(o.instanceMatrix.array.subarray(0,o.count*16),r.head*16);upload(batch,r.head,o.count);
@@ -183,7 +220,7 @@ export async function createCabinBatches(scene,renderer,parts,{skip=null,nearSlo
    // One part alone draws itself, as before.
    const n=drawn.length;if(n<2)continue;
    // In the order three drew them (front to back, then by object), so surfaces that tie in depth end as they did.
-   drawn.sort(byDepth);let changed=false;
+   drawn.sort(v.kind?byMaterial:byDepth);let changed=false;
    for(let i=0;i<n;i++){const r=drawn[i];batch._multiDrawStarts[i]=r.start;batch._multiDrawCounts[i]=r.count3;instances[i]=r.o.count;
     if(indirect[i]!==r.head){indirect[i]=r.head;changed=true;}r.o.visible=false;hidden.push(r.o);}
    batch._multiDrawCount=n;if(changed)batch._indirectTexture.needsUpdate=true;
