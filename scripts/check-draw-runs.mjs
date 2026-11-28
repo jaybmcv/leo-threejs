@@ -186,5 +186,14 @@ console.log('check-draw-runs: ok');
  r=run([[A,g(0,12)],[B,g(30,6)],[C,g(24,12)]]);assert.deepEqual(r.drawn,['batch 0,96 / 12,12']);
  // Switched off: one by one.
  kinds.enabled=false;r=run([[A,g(0,12)],[B,g(12,12)]]);assert.equal(r.drawn.length,2);kinds.enabled=true;
+ // A colour kind (its material reads colour and glow through map and emissiveMap) is batched the same way: its batch's
+ // material keeps the kind's textures.
+ {const tex=()=>new T.DataTexture(new Float32Array(12),3,1,T.RGBAFormat,T.FloatType),Kc=new T.MeshStandardMaterial({name:'V2_band_colour_kind_0'});
+  Kc.map=tex();Kc.emissiveMap=tex();Kc.roughnessMap=Kc.metalnessMap=tex();
+  const w2=new T.Scene(),cp=(start,count)=>{const g=new T.BufferGeometry();for(const k of ['position','normal'])g.setAttribute(k,shared.attributes[k]);g.setIndex(shared.index);g.setDrawRange(start,count);
+   g.boundingBox=new T.Box3(new T.Vector3(-1,-1,-1),new T.Vector3(5,5,5));g.boundingSphere=g.boundingBox.getBoundingSphere(new T.Sphere());const m=new T.Mesh(g,[Kc]);m.name='V2_low_deck_merged_Walk_colour_kind_0';w2.add(m);return m;};
+  const cdr=await createDrawRuns(w2,renderer,[],{kinds:[{geometry:shared,material:Kc,pieces:[cp(0,12),cp(12,12)],runs:2}]}),cb=w2.children.find(o=>o.isBatchedMesh);
+  assert(cdr&&cb&&cb.geometry===shared,'a colour kind gets its multi-draw');
+  assert(cb.material.map===Kc.map&&cb.material.emissiveMap===Kc.emissiveMap&&cb.material.roughnessMap===Kc.roughnessMap,'its batch material keeps the kind textures');}
  console.log('check-draw-runs: deck kinds ok');
 }

@@ -2215,7 +2215,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "ba9732df0afa8287497ad8eda8cbbd5a7f875d4d111e81711fae1a8d185e2b55"
+      "signature": "aa13778d8cb6ca868688f68a58c605f54c6b42e84036d725a277cc09e22a45d8"
     },
     {
       "source": "src/walk/crowd-draw.js",
@@ -4424,7 +4424,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "11e2856112de7e795cdb18e69d8f3ba3e67a1f36f571b597ab0b49b571c57227"
+      "signature": "3dba5a13f428def619d5bf4518f715d7dcea5f585d6c47e6e45aa457997db8c0"
     },
     {
       "source": "src/walk/marks.authoring.js",

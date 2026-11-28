@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {kindTexel, mergePhoneBands} from '../src/v2/phone-bands.js';
+import {floorBlocker} from '../src/v2/floor-occlusion.js';
 
 // The band merge's copied sources (src/v2/phone-bands.js), without a GPU: a band's children whose every drawable was
 // copied move into one hidden group in that band, in the same place in the world; the band itself stays as it was; a
@@ -94,5 +95,58 @@ scene.updateMatrixWorld(true);for(const [o,p] of world)assert(o.getWorldPosition
  {const [s,b]=again(),one=await mergePhoneBands({bands:b},s,{piece:1e6,kinds:true}),[q]=one.root.children.filter(m=>m.userData.deckKind===0);
   assert(q&&!q.frustumCulled&&q.geometry.drawRange.start===0&&q.geometry.drawRange.count===q.geometry.index.count&&q.geometry.boundingBox.min.x<-30);}
  pass('without kinds, or without pieces, everything merges per material; a kind under the piece size is one piece, unculled as before');}
+// Colour kinds (colours, with kinds and pieces): the decks' other plain materials, equal but for colour, glow, roughness
+// and metalness, merge as one kind whose material reads colour through map and glow through emissiveMap (what three's
+// uniforms would hold, as float32); its material is made after every source's and before the finish kinds'; another side,
+// a textured one, one corner shading skips by name and a floor blocker stay apart; colour and glow follow their materials
+// without counting as drift.
+{const scene=new T.Scene(),bands=new Map(),parts=[];
+ const light=(name,color,emissive,emissiveIntensity,roughness,metalness=0,side=T.FrontSide)=>new T.MeshStandardMaterial({name,color,emissive,emissiveIntensity,roughness,metalness,side});
+ const L1=light('Area_light',0xffebc7,0xffe6b6,.8,.8,.08),L2=light('Warm light',0xffd39c,0xffc783,1,.55),L3=light('Special_screen',0x2b718c,0x000000,1,.75,.08);
+ const Ls=light('Area_light_double',0xffebc7,0xffe6b6,.8,.8,.08,T.DoubleSide),Lt=light('Area_light_tiled',0xffffff,0x000000,1,.8);Lt.map=new T.DataTexture(new Uint8Array(4),1,1);
+ const Lw=light('Window_glow',0xffffff,0xffffff,1,.8),hex=light('V2_public_hex_floor',0xffffff,0x000000,1,.8);
+ const F1=new T.MeshStandardMaterial({name:'Walk_finish_3|1|0|0',vertexColors:true,roughness:.3}),F2=new T.MeshStandardMaterial({name:'Walk_finish_7|5|0|0',vertexColors:true,roughness:.7});
+ const all=[L1,L2,L3,Ls,Lt,Lw,hex,F1,F2];
+ const part=(m,x,n)=>{const g=new T.BoxGeometry(2,1,2);if(m.vertexColors)g.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(g.attributes.position.count*3).fill(.6),3));
+  const o=new T.Mesh(g,m);o.position.set(x+n,0,n*7-14);return o;};
+ for(const n of [1,2,3]){const g=new T.Group();g.name='Walk_band_'+n;g.userData.band=n;g.position.set(0,n*4,0);bands.set(n,g);scene.add(g);
+  all.forEach((m,i)=>{const o=part(m,i*9-40,n);g.add(o);parts.push([o,m]);});}
+ scene.updateMatrixWorld(true);
+ const before=Math.max(...all.map(m=>m.id));
+ const merged=await mergePhoneBands({bands},scene,{piece:40,kinds:true,colours:true,alone:m=>/window/i.test(m.name)}),meshes=merged.root.children;
+ assert.equal(merged.proof.kinds,2);assert.equal(merged.proof.colourKinds,1);
+ const C=merged.kinds.find(K=>K.colours),Fk=merged.kinds.find(K=>!K.colours);
+ assert.deepEqual(C.materials,[L1,L2,L3]);assert.deepEqual(Fk.materials,[F1,F2]);
+ for(const m of [Ls,Lt,Lw,hex])assert(meshes.some(o=>o.name==='V2_low_deck_merged_'+m.name&&o.material[0]===m),m.name+' merges apart');
+ pass('the lights equal but for colour, glow, roughness and metalness are one colour kind; another side, a textured one, one skipped by name and a floor blocker stay apart');
+ const M=C.material;
+ assert(M.name==='V2_band_colour_kind_0'&&M.color.r===1&&M.color.g===1&&M.color.b===1&&M.emissive.r===1&&M.emissive.g===1&&M.emissive.b===1&&M.emissiveIntensity===1);
+ assert(M.map===C.colours&&M.emissiveMap===C.glows&&M.roughnessMap===C.texture&&M.metalnessMap===C.texture&&M.roughness===1&&M.metalness===1);
+ for(const t of [C.colours,C.glows])assert(t.type===T.FloatType&&t.magFilter===T.NearestFilter&&t.minFilter===T.NearestFilter&&!t.generateMipmaps&&!t.matrixAutoUpdate&&t.colorSpace===T.NoColorSpace);
+ pass('the colour kind material is white, glows white at intensity 1, and reads colour and glow from float textures, nearest, unmipped, unconverted');
+ assert(M.id>before&&Fk.material.id>M.id);pass('its material is made after every source and before the finish kinds');
+ const pieces=meshes.filter(o=>o.material[0]===M);
+ assert(pieces.length>=2&&pieces.every(o=>o.name==='V2_low_deck_merged_Walk_colour_kind_0'&&!floorBlocker(o)));
+ assert(meshes.filter(o=>o.material[0]===Fk.material).every(o=>floorBlocker(o)));assert(meshes.some(o=>o.name==='V2_low_deck_merged_V2_public_hex_floor'&&floorBlocker(o)));
+ pass('colour kind pieces are no floor blockers; finish kind pieces and the floor blocker still are');
+ const uv=C.geometry.attributes.uv,p=C.geometry.attributes.position,ix=C.geometry.index;
+ const at=(t,i)=>{const k=Math.floor(uv.getX(i)*t.image.width),d=t.image.data;return [d[k*4],d[k*4+1],d[k*4+2],d[k*4+3]];};
+ const tri=(i)=>[0,1,2].map(j=>[p.getX(ix.getX(i+j)),p.getY(ix.getX(i+j)),p.getZ(ix.getX(i+j))].map(v=>v.toFixed(4)).join(',')).join(' ');
+ const src=new Map();for(const [o,m] of parts){if(!C.materials.includes(m))continue;const g=o.geometry.clone().applyMatrix4(o.matrixWorld),q=g.attributes.position,k=g.index.array;
+  for(let i=0;i<k.length;i+=3)src.set([0,1,2].map(j=>[q.getX(k[i+j]),q.getY(k[i+j]),q.getZ(k[i+j])].map(v=>v.toFixed(4)).join(',')).join(' '),m);}
+ const check=()=>{let n=0;for(const o of pieces){const r=o.geometry.drawRange;for(let i=r.start;i<r.start+r.count;i+=3){const m=src.get(tri(i));assert(m,'a colour kind triangle with no source');n++;
+  for(let j=0;j<3;j++){const v=ix.getX(i+j),c=at(C.colours,v),e=at(C.glows,v),x=m.emissiveIntensity;
+   assert.deepEqual(c,[Math.fround(m.color.r),Math.fround(m.color.g),Math.fround(m.color.b),1],'a vertex reads another colour');
+   assert.deepEqual(e,[Math.fround(m.emissive.r*x),Math.fround(m.emissive.g*x),Math.fround(m.emissive.b*x),1],'a vertex reads another glow');}}}return n;};
+ assert.equal(check(),src.size);pass('every vertex reads its own material’s colour, and its emissive times its intensity, as float32');
+ L2.color.setHex(0x123456);L1.emissiveIntensity=1.6;const v1=C.colours.version,v2=C.glows.version;merged.follow();check();
+ assert(C.colours.version>v1&&C.glows.version>v2);const w1=C.colours.version,w2=C.glows.version;merged.follow();assert(C.colours.version===w1&&C.glows.version===w2,'unchanged texels upload nothing');
+ pass('colour and glow texels follow their materials, uploading only on a change');
+ for(let i=0;i<60;i++)merged.follow();assert.equal(merged.proof.drift,0,'a colour change is no drift');
+ L3.fog=false;for(let i=0;i<60;i++)merged.follow();assert(merged.proof.drift>0);L3.fog=true;pass('a colour kind source changed otherwise is counted');
+ {const s=new T.Scene(),b=new Map();for(const n of [1,2,3]){const g=new T.Group();g.name='Walk_band_'+n;g.userData.band=n;g.position.set(0,n*4,0);b.set(n,g);s.add(g);for(const [i,m] of [L1,L2,L3,F1,F2].entries())g.add(part(m,i*9-40,n));}s.updateMatrixWorld(true);
+  const off=await mergePhoneBands({bands:b},s,{piece:40,kinds:true});assert.equal(off.proof.kinds,1);assert(!off.kinds[0].colours);
+  for(const m of [L1,L2,L3])assert(off.root.children.some(o=>o.name==='V2_low_deck_merged_'+m.name&&o.material[0]===m));}
+ pass('without colours, the lights merge per material and only the finish kind is made');}
 {for(const n of [1,2,7,25,1000,5000])for(let k=0;k<n;k++){const u=kindTexel(k,n)/65535;assert.equal(Math.min(n-1,Math.floor(u*n)),k);}pass('each texel coordinate picks its own texel');}
 console.log(`band merge sources: ${checks} checks passed`);
