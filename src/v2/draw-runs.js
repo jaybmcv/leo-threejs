@@ -2,6 +2,7 @@ import * as T from 'three';
 import {compactRenderGeometry} from './facade.js';
 import {PLAIN_CHUNK, batchMaterial, batchable, follow, instancedMultiDraw, kept} from './cabin-batches.js';
 import {HELD, floorBlocker} from './floor-occlusion.js';
+import {lookNow,programKey,writeTexel} from './look-kinds.js';
 import {yieldEvery} from './yield-to-page.js';
 
 // Draws of one material that reach the GPU one after another become one draw. three sorts the opaque draws by material
@@ -40,11 +41,22 @@ import {yieldEvery} from './yield-to-page.js';
 // occlusion takes as a blocker is reported to it as drawn when held (HELD, quad-facing.js): it is drawn before the opaque
 // draws end.
 //
+// With `looks`, every group's materials that differ only in colour, glow, roughness and metalness (look-kinds.js) share
+// a batch the same way, colour too (a third map, `map`): three gives materials made one after another ids one after
+// another, so the decks' common furnishings (P4_oak, P4_metal, P4_sage ...) and a cabin kind's parts reach the GPU in a
+// row and fold, still in the order and with the survivors three chose. Each material has one texel (its parts' geometry
+// copies carry it), painted from the material a row draws with; a part drawn with another material than it was offered
+// with, or whose material's shader is no longer the batch's (program key, look-kinds.js), draws itself. `alone(material)`:
+// a material corner shading leaves alone, which stays apart. offer(groups) adds more parts later (the atrium's reach
+// cabins, made after the tests wrap the renderer).
+//
 // Desktop only (WEBGL_multi_draw with its instanced draw). Not on the owner bake's page. main.public.js: ?drawruns=0
-// draws them one by one, ?towerpalette=0 leaves the facade's materials apart.
+// draws them one by one, ?towerpalette=0 leaves the facade's materials apart, ?drawkinds=0 keeps colour out (by material,
+// the facade's palette as before), ?reachruns=0 leaves the reach cabins out.
 const MAX_INDICES=200000;
 
 const PALETTE=new Set(['roughness','metalness','emissive','emissiveIntensity','roughnessMap','metalnessMap','emissiveMap']);
+const COLOURED=new Set([...PALETTE,'color','map']);
 const NOT_LOOK=new Set(['uuid','id','version','name','userData','_listeners']);
 const plainBefore=T.Object3D.prototype.onBeforeRender,plainAfter=T.Object3D.prototype.onAfterRender;
 const functionIds=new WeakMap();let nextFunction=0;
@@ -91,66 +103,75 @@ function paletteTexture(n){const t=new T.DataTexture(new Float32Array(n*4),n,1,T
  * kinds. Created before quad-facing.js and group-occlusion.js wrap renderBufferDirect. Returns null without the instanced
  * multi-draw, else {stats, line(), around(view, draw), enabled}. stats.folded: draws the last main pass made fewer, for
  * quad-facing.js's dense count. */
-export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDICES,kinds=null}={}){
+export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDICES,kinds=null,looks=false,alone=null}={}){
  const lists=instancedMultiDraw(renderer);if(!lists)return null;
- const yieldWork=yieldEvery(),byKey=new Map(),looks=new WeakMap();
- const lookOf=m=>{let c=looks.get(m);if(!c||c.version!==m.version){c={version:m.version,key:lookKey(m)};looks.set(m,c);}return c.key;};
- for(const {parts,palette=false} of groups)for(const o of parts){
-  const attributes=part(o,maxIndices);if(!attributes)continue;
-  const look=palette?lookOf(o.material):null;
-  const key=(look!==null?'palette|'+look:o.material.uuid)+'|'+o.renderOrder+'|'+o.layers.mask+'|'+attributes;
-  let set=byKey.get(key);if(!set)byKey.set(key,set={m:o.material,palette:look!==null,layers:o.layers.mask,order:o.renderOrder,rows:[],seen:new Set()});
-  if(!set.seen.has(o)){set.seen.add(o);set.rows.push(o);}
- }
+ const yieldWork=yieldEvery(),palettes=new WeakMap();
+ const lookOf=m=>{let c=palettes.get(m);if(!c||c.version!==m.version){c={version:m.version,key:lookKey(m)};palettes.set(m,c);}return c.key;};
  const sets=[],rows=new Map(),ours=new Set(),stats={batches:0,parts:0,slots:0,runs:0,folded:0};
- for(const S of byKey.values()){
-  // A palette of one material is a batch like any other.
-  if(S.palette&&new Set(S.rows.map(o=>o.material)).size<2)S.palette=false;
-  if(S.rows.length<2)continue;
-  const n=S.rows.length,names=S.palette?[...kept(S.m),'uv']:kept(S.m),copies=new Map(),geometryOf=[];
-  for(let i=0;i<n;i++){const o=S.rows[i],g=o.geometry,share=!S.palette;
-   let c=share?copies.get(g):null;
-   if(!c){const view=new T.BufferGeometry();for(const k of names)if(g.attributes[k])view.setAttribute(k,g.attributes[k]);if(g.index)view.setIndex(g.index);
-    c=compactRenderGeometry(view,{bounds:false});
-    const count=c.attributes.position.count;
-    if(!c.index){const index=new (count>65535?Uint32Array:Uint16Array)(count);for(let k=0;k<count;k++)index[k]=k;c.setIndex(new T.BufferAttribute(index,1));}
-    // A palette part's texel, the same over all its vertices.
-    if(S.palette){const uv=new Float32Array(count*2),u=(i+.5)/n;for(let k=0;k<count;k++){uv[k*2]=u;uv[k*2+1]=.5;}c.setAttribute('uv',new T.BufferAttribute(uv,2));}
-    if(share)copies.set(g,c);}
-   geometryOf.push(c);await yieldWork();}
-  const unique=[...new Set(geometryOf)];
-  const vertices=unique.reduce((s,g)=>s+g.attributes.position.count,0),indices=unique.reduce((s,g)=>s+g.index.count,0);
-  let slots=0;const members=S.rows.map((o,i)=>{const g=o.geometry,r={o,head:slots,slots:o.isInstancedMesh?o.instanceMatrix.count:1,pal:i,world:new Float64Array(16).fill(NaN),ok:false,identity:false,dirty:true,inst:null,version:-1,count:-1,mark:-1,
-   g,index:g.index,attributes:names.filter(k=>g.attributes[k]).map(k=>[k,g.attributes[k],g.attributes[k].version]),indexVersion:g.index?.version};slots+=r.slots;return r;});
-  // An id of its own: the batch is never sorted (its own place in the lists draws nothing), and three skips a material's
-  // uniforms when both program and id repeat, so two batches copied from one material must not share one.
-  const v=batchMaterial(S.m,S.palette?PALETTE:null,new T.Material().id);
-  let palette=null;
-  if(S.palette){
-   palette={look:paletteTexture(n),glow:paletteTexture(n),key:lookOf(S.m)};
-   Object.assign(v.copy,{roughness:1,metalness:1,emissive:new T.Color(1,1,1),emissiveIntensity:1,roughnessMap:palette.look,metalnessMap:palette.look,emissiveMap:palette.glow});
-   v.copy.needsUpdate=true;
+ async function build(groups){
+  const byKey=new Map();
+  for(const {parts,palette=false} of groups)for(const o of parts){
+   if(rows.has(o))continue;
+   const attributes=part(o,maxIndices);if(!attributes)continue;
+   const m=o.material,colour=looks&&!alone?.(m)&&lookNow(m,true)!==null,look=colour?lookNow(m):palette?lookOf(m):null;
+   const key=(look!==null?(colour?'look|':'palette|')+look:m.uuid)+'|'+o.renderOrder+'|'+o.layers.mask+'|'+attributes;
+   let set=byKey.get(key);if(!set)byKey.set(key,set={m,palette:look!==null,colour,layers:o.layers.mask,order:o.renderOrder,rows:[],seen:new Set()});
+   if(!set.seen.has(o)){set.seen.add(o);set.rows.push(o);}
   }
-  const batch=new T.BatchedMesh(slots,vertices,indices,v.copy);
-  batch.name='V2_draw_run '+S.m.name;batch.renderOrder=S.order;batch.layers.mask=S.layers;batch.receiveShadow=S.rows[0].receiveShadow;
-  batch.sortObjects=false;batch.perObjectFrustumCulled=false;batch.frustumCulled=false;batch.matrixAutoUpdate=false;
-  batch.userData={noCollide:true,renderOnly:true,drawRun:true};
-  const ids=new Map(unique.map(g=>[g,batch.addGeometry(g)]));
-  const bytes=batch.geometry.index.array.BYTES_PER_ELEMENT;
-  members.forEach((r,i)=>{const info=batch._geometryInfo[ids.get(geometryOf[i])];r.start=info.start*bytes;r.count3=info.count;});
-  for(const g of unique)g.dispose();
-  // The lists are written when a row draws, not by BatchedMesh from instances (it has none): sub-draw i reads its first
-  // matrix at indirect[i] (a small texture of its own) and the rest after it.
-  batch.onBeforeRender=()=>{};
-  const old=batch._indirectTexture,width=16,indirect=new Uint32Array(width*Math.ceil(n/width));
-  batch._indirectTexture=new T.DataTexture(indirect,width,indirect.length/width,old.format,old.type);batch._indirectTexture.needsUpdate=true;old.dispose();
-  const instances=new Int32Array(n);lists.set(batch._multiDrawCounts,instances);
-  batch.boundingSphere=new T.Sphere(new T.Vector3(),1e6);
-  const set={batch,v,members,indirect,instances,palette,serial:0};
-  for(const r of members){r.set=set;rows.set(r.o,r);}
-  scene.add(batch);ours.add(batch);sets.push(set);
-  stats.batches++;stats.parts+=n;stats.slots+=slots;await yieldWork();
+  for(const S of byKey.values()){
+   // A palette of one material is a batch like any other.
+   const materials=[...new Set(S.rows.map(o=>o.material))];
+   if(S.palette&&materials.length<2)S.palette=S.colour=false;
+   if(S.rows.length<2)continue;
+   // One texel a material, at the same place in each map; one geometry copy a geometry and material.
+   const n=S.rows.length,width=materials.length,texel=new Map(materials.map((m,k)=>[m,k]));
+   const names=S.palette?[...kept(S.m),'uv']:kept(S.m),copies=new Map(),geometryOf=[];
+   for(let i=0;i<n;i++){const o=S.rows[i],g=o.geometry,k=S.palette?texel.get(o.material):0;
+    let byTexel=copies.get(g);if(!byTexel)copies.set(g,byTexel=new Map());let c=byTexel.get(k);
+    if(!c){const view=new T.BufferGeometry();for(const a of names)if(g.attributes[a])view.setAttribute(a,g.attributes[a]);if(g.index)view.setIndex(g.index);
+     c=compactRenderGeometry(view,{bounds:false});
+     const count=c.attributes.position.count;
+     if(!c.index){const index=new (count>65535?Uint32Array:Uint16Array)(count);for(let q=0;q<count;q++)index[q]=q;c.setIndex(new T.BufferAttribute(index,1));}
+     // A palette part's texel, its material's, the same over all its vertices.
+     if(S.palette){const uv=new Float32Array(count*2),u=(k+.5)/width;for(let q=0;q<count;q++){uv[q*2]=u;uv[q*2+1]=.5;}c.setAttribute('uv',new T.BufferAttribute(uv,2));}
+     byTexel.set(k,c);}
+    geometryOf.push(c);await yieldWork();}
+   const unique=[...new Set(geometryOf)];
+   const vertices=unique.reduce((s,g)=>s+g.attributes.position.count,0),indices=unique.reduce((s,g)=>s+g.index.count,0);
+   let slots=0;const members=S.rows.map(o=>{const g=o.geometry,r={o,head:slots,slots:o.isInstancedMesh?o.instanceMatrix.count:1,pal:S.palette?texel.get(o.material):0,mat:o.material,world:new Float64Array(16).fill(NaN),ok:false,identity:false,dirty:true,inst:null,version:-1,count:-1,mark:-1,
+    g,index:g.index,attributes:names.filter(k=>g.attributes[k]).map(k=>[k,g.attributes[k],g.attributes[k].version]),indexVersion:g.index?.version};slots+=r.slots;return r;});
+   // An id of its own: the batch is never sorted (its own place in the lists draws nothing), and three skips a material's
+   // uniforms when both program and id repeat, so two batches copied from one material must not share one.
+   const v=batchMaterial(S.m,S.palette?(S.colour?COLOURED:PALETTE):null,new T.Material().id);
+   let palette=null;
+   if(S.palette){const lit=!S.m.isMeshBasicMaterial;
+    palette={look:lit?paletteTexture(width):null,glow:lit?paletteTexture(width):null,colour:S.colour?paletteTexture(width):null,lookOf:S.colour?lookNow:lookOf};
+    if(lit)Object.assign(v.copy,{roughness:1,metalness:1,emissive:new T.Color(1,1,1),emissiveIntensity:1,roughnessMap:palette.look,metalnessMap:palette.look,emissiveMap:palette.glow});
+    if(S.colour)Object.assign(v.copy,{color:new T.Color(1,1,1),map:palette.colour});
+    v.copy.needsUpdate=true;
+   }
+   const batch=new T.BatchedMesh(slots,vertices,indices,v.copy);
+   batch.name='V2_draw_run '+S.m.name;batch.renderOrder=S.order;batch.layers.mask=S.layers;batch.receiveShadow=S.rows[0].receiveShadow;
+   batch.sortObjects=false;batch.perObjectFrustumCulled=false;batch.frustumCulled=false;batch.matrixAutoUpdate=false;
+   batch.userData={noCollide:true,renderOnly:true,drawRun:true};
+   const ids=new Map(unique.map(g=>[g,batch.addGeometry(g)]));
+   const bytes=batch.geometry.index.array.BYTES_PER_ELEMENT;
+   members.forEach((r,i)=>{const info=batch._geometryInfo[ids.get(geometryOf[i])];r.start=info.start*bytes;r.count3=info.count;});
+   for(const g of unique)g.dispose();
+   // The lists are written when a row draws, not by BatchedMesh from instances (it has none): sub-draw i reads its first
+   // matrix at indirect[i] (a small texture of its own) and the rest after it.
+   batch.onBeforeRender=()=>{};
+   const old=batch._indirectTexture,iw=16,indirect=new Uint32Array(iw*Math.ceil(n/iw));
+   batch._indirectTexture=new T.DataTexture(indirect,iw,indirect.length/iw,old.format,old.type);batch._indirectTexture.needsUpdate=true;old.dispose();
+   const instances=new Int32Array(n);lists.set(batch._multiDrawCounts,instances);
+   batch.boundingSphere=new T.Sphere(new T.Vector3(),1e6);
+   const set={batch,v,members,indirect,instances,palette,serial:0};
+   for(const r of members){r.set=set;rows.set(r.o,r);}
+   scene.add(batch);ours.add(batch);sets.push(set);
+   stats.batches++;stats.parts+=n;stats.slots+=slots;await yieldWork();
+  }
  }
+ await build(groups);
  // A deck kind's batch: its geometry is the kind's own (the same attribute and index objects as its pieces, never
  // copied, never disposed), its lists as long as the kind has runs, and its material a copy of the kind's with no
  // matrix lookup.
@@ -187,7 +208,8 @@ export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDIC
   if(g!==r.g||g.index!==r.index||g.index&&g.index.version!==r.indexVersion||g.drawRange.start!==0||g.drawRange.count!==Infinity||o.instanceColor||o.morphTexture||o.onBeforeRender!==plainBefore||o.onAfterRender!==plainAfter)return false;
   for(const [k,a,version] of r.attributes)if(g.attributes[k]!==a||a.version!==version)return false;
   const {v,palette}=r.set;
-  return palette?v.usable&&material.visible&&lookOf(material)===lookOf(v.m)&&material.onBeforeCompile===v.m.onBeforeCompile:material===v.m&&v.usable;
+  // A palette's part: drawn with the material it was offered with (its texel's), still of the batch's look and shader.
+  return palette?v.usable&&material===r.mat&&material.visible&&palette.lookOf(material)===palette.lookOf(v.m)&&programKey(material)===programKey(v.m):material===v.m&&v.usable;
  }
  function write(r){
   const o=r.o,t=r.set.batch._matricesTexture,data=t.image.data;
@@ -198,13 +220,7 @@ export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDIC
    upload(t,r.head,c);r.inst=inst;r.version=inst.version;r.count=c;r.dirty=false;
   }else if(r.dirty){data.set(o.matrixWorld.elements,r.head*16);upload(t,r.head,1);r.dirty=false;}
  }
- function paint(P,i,material){
-  const look=P.look.image.data,glow=P.glow.image.data,e=material.emissive,s=material.emissiveIntensity;
-  const rough=Math.fround(material.roughness),metal=Math.fround(material.metalness);
-  if(look[i*4+1]!==rough||look[i*4+2]!==metal){look[i*4+1]=rough;look[i*4+2]=metal;look[i*4+3]=1;P.look.needsUpdate=true;}
-  const r=Math.fround(e.r*s),g=Math.fround(e.g*s),b=Math.fround(e.b*s);
-  if(glow[i*4]!==r||glow[i*4+1]!==g||glow[i*4+2]!==b){glow[i*4]=r;glow[i*4+1]=g;glow[i*4+2]=b;glow[i*4+3]=1;P.glow.needsUpdate=true;}
- }
+ const paint=(P,i,material)=>writeTexel({colours:P.colour,looks:P.look,glows:P.glow},i,material);
  function draw(set,camera){
   const {batch,v,indirect,instances,palette}=set,n=held.length;let moved=false;
   follow(v,true);
@@ -262,6 +278,8 @@ export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDIC
  const after=scene.onAfterRender;
  scene.onAfterRender=function(r,world,view){if(main(view,world))flush();return after.apply(this,arguments);};
  return {stats,enabled:true,
+  /** More parts, offered later: groups as above. A part already offered is left as it is. */
+  offer:build,
   line:()=>`draw runs: ${stats.runs+stats.folded} draws in ${stats.runs}`,
   around(view,draw){
    stats.runs=stats.folded=0;

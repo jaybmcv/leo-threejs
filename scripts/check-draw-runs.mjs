@@ -204,3 +204,67 @@ console.log('check-draw-runs: ok');
   assert.deepEqual([drawn[0].starts,drawn[0].counts],[[0,48],[12,12]]);}
  console.log('check-draw-runs: deck kinds ok');
 }
+
+// Draw-run kinds (`looks`): materials that differ only in colour, glow, roughness and metalness fold in one row, each
+// read from its own texel (colour through `map`); a texel a material, shared by its parts; parts of another look or
+// shader, drawn with another material than offered, or left alone stay apart; a basic kind reads colour alone; parts
+// offered later (offer) fold too.
+{
+ const drawn=[],renderer={extensions:{has:n=>n==='WEBGL_multi_draw',get:()=>ext},info:{render:{triangles:0}},shadowMap:{enabled:false},xr:{isPresenting:false},domElement:new EventTarget(),
+  getRenderTarget:()=>null,renderBufferDirect(camera,scene,geometry,material,object,group){drawn.push({object,material,count:object.isBatchedMesh?object._multiDrawCount:null});}};
+ const world=new T.Scene();
+ const look=(name,color,roughness=.5,metalness=0,emissive=0,emissiveIntensity=1)=>new T.MeshStandardMaterial({name,color,roughness,metalness,emissive,emissiveIntensity});
+ const oak=look('P4_oak',0x8a5a2b,.6),metal=look('P4_metal',0x9aa0a6,.3,.8),sage=look('P4_sage',0x9caf88,.7,0,0x203010,2),lonely=look('P4_lonely',0xff0000),odd=look('P4_odd',0x00ff00);
+ odd.side=T.DoubleSide;
+ const glowA=new T.MeshBasicMaterial({name:'Glow_a',color:0xffd080}),glowB=new T.MeshBasicMaterial({name:'Glow_b',color:0x80d0ff});
+ const box=new T.BoxGeometry(1,1,1),plank=new T.BoxGeometry(2,.1,1);
+ const at=(x,y,z)=>new T.Matrix4().makeTranslation(x,y,z);
+ const inst=(name,geometry,material,list)=>{const o=new T.InstancedMesh(geometry,material,list.length);o.name=name;list.forEach((m,i)=>o.setMatrixAt(i,m));world.add(o);return o;};
+ const a1=inst('a1',box,oak,[at(0,0,-5),at(1,0,-5)]),a2=inst('a2',box,oak,[at(2,0,-5)]),b=inst('b',plank,metal,[at(0,1,-6)]),c=inst('c',box,sage,[at(0,2,-6),at(1,2,-6)]);
+ const lone=inst('lone',box,lonely,[at(3,0,-5)]),o1=inst('o1',box,odd,[at(4,0,-5)]),g1=inst('g1',box,glowA,[at(5,0,-5)]),g2=inst('g2',plank,glowB,[at(6,0,-5)]);
+ const runs=await createDrawRuns(world,renderer,[{parts:[a1,a2,b,c,lone,o1,g1,g2]}],{looks:true,alone:m=>m===lonely});
+ const batches=world.children.filter(o=>o.isBatchedMesh);
+ assert.equal(runs.stats.batches,2,'one batch for the oak, metal and sage look, one for the two glows; lonely (alone) and odd (another look) not batched');
+ const K=batches.find(o=>o.name==='V2_draw_run P4_oak'),Gb=batches.find(o=>o.name==='V2_draw_run Glow_a');assert(K&&Gb);
+ assert(K.material.map&&K.material.roughnessMap&&K.material.emissiveMap,'the kind reads colour, roughness, metalness and glow from its maps');
+ assert.equal(K.material.color.getHex(),0xffffff);assert.equal(K.material.roughness,1);assert.equal(K.material.emissive.getHex(),0xffffff);
+ assert(Gb.material.map&&!Gb.material.roughnessMap,'a basic kind reads its colour alone');
+ assert.equal(K.material.map.image.width,3,'a texel a material (oak, metal, sage), not a part');
+ const uvs=new Set(K.geometry.attributes.uv.array.filter((_,i)=>i%2===0));assert.deepEqual([...uvs].sort(),[1/6,.5,5/6].map(Math.fround).sort(),'each part at its material’s texel');
+ const marker=world.getObjectByName('V2_draw_run_end');
+ const pass=list=>{world.updateMatrixWorld(true);camera.updateMatrixWorld();drawn.length=0;
+  runs.around(camera,()=>{for(const e of list){const [o,m]=Array.isArray(e)?e:[e,e.material];renderer.renderBufferDirect(camera,world,o.geometry,m,o,null);}
+   marker.onBeforeRender(renderer,world,camera);renderer.renderBufferDirect(camera,world,marker.geometry,marker.material,marker,null);world.onAfterRender(renderer,world,camera);});
+  return drawn.map(d=>d.object.isBatchedMesh?d.object.name+'×'+d.count:d.object.name);};
+ // oak, oak, metal, sage in a row (three's order: their ids one after another): one draw.
+ assert.deepEqual(pass([a1,a2,b,c]),['V2_draw_run P4_oak×4']);assert.equal(runs.stats.folded,3);
+ const near=(x,y)=>Math.abs(x-y)<1e-6,C=K.material.map.image.data,L=K.material.roughnessMap.image.data,G=K.material.emissiveMap.image.data;
+ const want=[oak,metal,sage];want.forEach((m,k)=>{assert(near(C[k*4],m.color.r)&&near(C[k*4+1],m.color.g)&&near(C[k*4+2],m.color.b),m.name+' colour in its texel');
+  assert(near(L[k*4+1],m.roughness)&&near(L[k*4+2],m.metalness),m.name+' roughness and metalness');assert(near(G[k*4],m.emissive.r*m.emissiveIntensity)&&near(G[k*4+1],m.emissive.g*m.emissiveIntensity),m.name+' glow');});
+ // Another look between ends the row; the glows fold apart.
+ assert.deepEqual(pass([a1,o1,b,g1,g2]),['a1','o1','b','V2_draw_run Glow_a×2']);
+ assert(near(Gb.material.map.image.data[4],glowB.color.r),'the second glow’s colour');
+ // Colour changed: the texel follows at once.
+ metal.color.set(0x112233);pass([a1,b]);assert(near(C[4],metal.color.r)&&near(C[6],metal.color.b));
+ // Drawn with another material than it was offered with (even one of the look): draws itself.
+ assert.deepEqual(pass([a1,[b,sage],c]),['a1','b','c']);
+ // Each material's own corner-shading closure, one program key: still one shader, so it folds; another key does not.
+ const hook=()=>{const f=function(s){s.fragmentShader+='//corner';};f.cornerShade=true;f.keepsGeometry=true;return f;},key=function(){return 'corner';};
+ for(const m of [oak,metal,sage]){m.onBeforeCompile=hook();m.customProgramCacheKey=key;m.needsUpdate=true;}
+ assert.deepEqual(pass([a1,b,c]),['V2_draw_run P4_oak×3'],'own closures, one key');
+ metal.customProgramCacheKey=function(){return 'other';};metal.needsUpdate=true;assert.deepEqual(pass([a1,b,c]),['a1','b','c']);
+ metal.customProgramCacheKey=key;metal.needsUpdate=true;
+ // Its look changed: draws itself; changed back: folds again.
+ sage.side=T.DoubleSide;sage.needsUpdate=true;assert.deepEqual(pass([a1,a2,c]),['V2_draw_run P4_oak×2','c']);sage.side=T.FrontSide;sage.needsUpdate=true;
+ assert.deepEqual(pass([a1,a2,c]),['V2_draw_run P4_oak×3']);
+ // Parts offered later (the reach cabins) fold in batches of their own; a part already offered is left as it was.
+ const r1=inst('r1',box,oak,[at(7,0,-5)]),r2=inst('r2',plank,metal,[at(8,0,-5)]);
+ await runs.offer([{parts:[r1,r2,a1]}]);
+ assert.equal(runs.stats.batches,3,'one batch more');
+ assert.deepEqual(pass([r1,r2]),['V2_draw_run P4_oak×2']);assert.notEqual(drawn[0].object,K,'its own batch');
+ assert.deepEqual(pass([a1,a2]),['V2_draw_run P4_oak×2']);assert.equal(drawn[0].object,K,'an offered part stays in its batch');
+ // Without looks, the same parts fold by material only.
+ const w3=new T.Scene();for(const o of [a1,a2,b,c])w3.add(o.clone());const plainRuns=await createDrawRuns(w3,renderer,[{parts:w3.children.slice()}]);
+ assert.equal(plainRuns.stats.batches,1,'oak alone has two parts');
+ console.log('check-draw-runs: looks ok');
+}

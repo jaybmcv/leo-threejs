@@ -89,3 +89,49 @@ assert.equal(await createCabinBatches(new T.Scene(),bare,parts),null);
 // A lost context stops batching.
 renderer.domElement.dispatchEvent(new Event('webglcontextlost'));pass(()=>assert(wallA.visible&&!L.visible));
 console.log('check-cabin-batches: ok');
+
+// Cabin kinds (`kinds`): parts whose materials differ only in colour, glow, roughness and metalness share one batch with
+// the members' lowest material id, read their values from texels, and draw by material id, then depth; a part whose
+// material changed look or shader, or one left alone, draws as before; texels follow every pass.
+{
+ const renderer={extensions:{has:n=>n==='WEBGL_multi_draw',get:()=>ext},info:{render:{triangles:0}},shadowMap:{enabled:false},domElement:new EventTarget()};
+ const scene=new T.Scene(),shells=new T.Group();scene.add(shells);
+ const look=(name,color,roughness=.5,metalness=0)=>new T.MeshStandardMaterial({name,color,roughness,metalness});
+ const warm=look('Residential_warm_floor',0xb08060,.7),oak=look('Residential_oak',0x8a5a2b,.4),brass=look('Residential_brass',0xc8a040,.3,.9),apart=look('Residential_apart',0x445566);
+ const box=new T.BoxGeometry(1,1,1),plank=new T.BoxGeometry(2,.1,1);box.clearGroups();plank.clearGroups();
+ const at=(x,z)=>new T.Matrix4().makeTranslation(x,0,z);
+ const partOf=(name,geometry,material,matrices)=>{const o=new T.InstancedMesh(geometry,material,matrices.length);o.name=name;matrices.forEach((m,i)=>o.setMatrixAt(i,m));
+  o.userData={cabins:true,cabinWalls:true,boat:false,cabinIds:matrices.map((_,i)=>name+i)};shells.add(o);return o;};
+ // Brass nearest, then oak, warm furthest: three would draw warm's part first all the same (lowest id), then oak's, then brass's.
+ const pWarm=partOf('floor',box,warm,[at(0,-20),at(2,-20)]),pOak=partOf('desk',plank,oak,[at(0,-12)]),pOak2=partOf('shelf',box,oak,[at(1,-14)]),pBrass=partOf('lamp',box,brass,[at(0,-8)]);
+ const pApart=partOf('bed',box,apart,[at(3,-9)]),pApart2=partOf('bed2',plank,apart,[at(4,-9)]);
+ const parts=[pWarm,pOak,pOak2,pBrass,pApart,pApart2],camera=new T.PerspectiveCamera(60,1,.1,100);
+ const kb=await createCabinBatches(scene,renderer,parts,{kinds:true,alone:m=>m===apart});
+ assert.equal(kb.stats.batches,2,'one kind (warm, oak, brass) and apart by its own material');assert.equal(kb.stats.kinds,1);assert.equal(kb.stats.kindMaterials,3);
+ const K=scene.children.find(o=>o.isBatchedMesh&&o.name==='V2_cabin_batch kind_0'),A=scene.children.find(o=>o.isBatchedMesh&&o.name==='V2_cabin_batch Residential_apart');assert(K&&A);
+ assert.equal(K.material.id,Math.min(warm.id,oak.id,brass.id),'the kind sorts where its first member did');assert.equal(A.material.id,apart.id);
+ assert(K.material.map&&K.material.roughnessMap&&K.material.emissiveMap&&K.material.color.getHex()===0xffffff&&K.material.roughness===1,'the kind reads its values from its maps');
+ assert(K.geometry.attributes.uv,'its parts carry their texels');
+ const pass=inspect=>{scene.updateMatrixWorld(true);camera.updateMatrixWorld();kb.around(camera,()=>{scene.onBeforeRender(renderer,scene,camera,null);inspect?.();});};
+ const order=()=>{const heads=Array.from(K._indirectTexture.image.data.subarray(0,K._multiDrawCount)),d=K._matricesTexture.image.data;
+  return heads.map(h=>parts.find(o=>o.count&&d.subarray(h*16,h*16+16).every((v,i)=>v===o.instanceMatrix.array[i]))?.name);};
+ pass(()=>{assert.equal(K._multiDrawCount,4);assert.deepEqual(order(),['floor','desk','shelf','lamp'],'by material id, then depth (the desk nearer than the shelf)');
+  for(const o of [pWarm,pOak,pOak2,pBrass])assert(!o.visible,o.name+' folded');assert(!pApart.visible&&!pApart2.visible,'apart batched by its material');});
+ const near=(x,y)=>Math.abs(x-y)<1e-6,C=K.material.map.image.data,L=K.material.roughnessMap.image.data;
+ [warm,oak,brass].forEach((m,k)=>{assert(near(C[k*4],m.color.r)&&near(C[k*4+2],m.color.b),m.name+' colour');assert(near(L[k*4+1],m.roughness)&&near(L[k*4+2],m.metalness),m.name+' roughness, metalness');});
+ // Colour changed: its texel the next pass.
+ oak.color.set(0x102030);pass();assert(near(C[4],oak.color.r)&&near(C[6],oak.color.b));
+ // A member's look changed: it draws itself; its first member's changed: the others do (the copy follows the first).
+ oak.side=T.DoubleSide;oak.needsUpdate=true;pass(()=>{assert(pOak.visible&&pOak2.visible);assert.equal(K._multiDrawCount,2);});oak.side=T.FrontSide;oak.needsUpdate=true;
+ warm.side=T.DoubleSide;warm.needsUpdate=true;pass(()=>{assert(pWarm.visible&&pOak.visible&&pBrass.visible&&!K.visible,'the others leave the first: each draws itself');});warm.side=T.FrontSide;warm.needsUpdate=true;
+ pass(()=>assert.equal(K._multiDrawCount,4));
+ // Another shader (program key): draws itself; one key with closures of their own: folds.
+ const hook=()=>{const f=function(s){s.fragmentShader+='//c';};f.cornerShade=true;f.keepsGeometry=true;return f;},key=function(){return 'corner';};
+ for(const m of [warm,oak,brass]){m.onBeforeCompile=hook();m.customProgramCacheKey=key;m.needsUpdate=true;}
+ pass(()=>assert.equal(K._multiDrawCount,4,'own closures, one key'));
+ brass.customProgramCacheKey=function(){return 'other';};brass.needsUpdate=true;pass(()=>{assert(pBrass.visible);assert.equal(K._multiDrawCount,3);});
+ // Without kinds: by material, as before.
+ const s2=new T.Scene();const copies=parts.map(o=>{const c=o.clone();c.userData={...o.userData};s2.add(c);return c;});
+ const pb=await createCabinBatches(s2,renderer,copies);assert.equal(pb.stats.batches,2,'oak (two parts) and apart');assert.equal(pb.stats.kinds,0);
+ console.log('check-cabin-batches: kinds ok');
+}
