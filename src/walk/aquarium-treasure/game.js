@@ -15,7 +15,7 @@ const CSS=`
 #treasure-sheet .card{max-height:85vh;overflow:auto}#treasure-sheet p{line-height:1.5}#treasure-sheet ol{padding-left:24px}#treasure-sheet li{padding:6px 0}#treasure-sheet .row{display:flex;gap:10px;flex-wrap:wrap}
 @media(max-width:560px){#treasure-bar{top:100px;font-size:11px;gap:6px}#treasure-bar small{max-width:260px}}
 `;
-export function createTreasureGame({tank,controller,follow,camera,input,live,onOpen,onClose,onEnter,onExit}){
+export function createTreasureGame({tank,controller,follow,camera,input,live,onOpen,onClose,onEnter,onExit,oneDraw=false}){
  if(!tank)return null;
  const group=new T.Group();group.name='Aquarium_treasure';tank.add(group);
  const steel=new T.MeshStandardMaterial({color:0x263b4e,metalness:.5,roughness:.4}),gold=new T.MeshBasicMaterial({color:0xffca55,toneMapped:false});
@@ -31,11 +31,13 @@ export function createTreasureGame({tank,controller,follow,camera,input,live,onO
  const mark=add(new T.ShapeGeometry(arrow),gold,[door[0],door[1]+.08,dz+.38]);mark.rotation.x=-Math.PI/2;
  add(new T.BoxGeometry(.06,.3,.1),gold,[door[0]+.62,dy,dz+.08]);
  joinStaticTints(group, [cyan, gold]);
- const label=canvasTexture(768,192,(g,w,h)=>{g.fillStyle='#0a1928';g.fillRect(0,0,w,h);g.textAlign='center';g.fillStyle='#72edff';g.font='bold 44px sans-serif';g.fillText('AQUARIUM TREASURE',w/2,70);g.fillStyle='#ffffff';g.font='30px sans-serif';g.fillText('ENTER · SWIM · FIND 7 GEMS',w/2,133);});
- const face=new T.PlaneGeometry(2.8,.7);tank.updateWorldMatrix(true,false);
+ // Match the texture to the shorter panel's aspect ratio so the lettering keeps its shape.
+ const label=canvasTexture(840,114,(g,w,h)=>{g.fillStyle='#0a1928';g.fillRect(0,0,w,h);g.textAlign='center';g.fillStyle='#72edff';g.font='bold 48px sans-serif';g.fillText('AQUARIUM TREASURE',w/2,49);g.fillStyle='#ffffff';g.font='34px sans-serif';g.fillText('ENTER · SWIM · FIND 7 GEMS',w/2,99);});
+ const face=new T.PlaneGeometry(2.8,.38);tank.updateWorldMatrix(true,false);
  // Keep the wording readable from the gallery when the lounge's frame is mirrored.
  if(tank.matrixWorld.determinant()<0){const uv=face.attributes.uv;for(let i=0;i<uv.count;i++)uv.setX(i,1-uv.getX(i));}
- add(face,new T.MeshBasicMaterial({map:label,side:T.DoubleSide,toneMapped:false}),[door[0],door[1]+2.75,dz+.03]);
+ // Clear the door frame, the ceiling and the tank post beside the door.
+ add(face,new T.MeshBasicMaterial({map:label,side:T.DoubleSide,toneMapped:false}),[door[0]-.50,door[1]+2.98,dz+.11]);
  // Each stone has a different cut. Flat face colours keep the gems luminous without extra lights.
  const cuts=[[[0,-.38],[.27,.05],[.20,.22],[0,.22]],[[0,-.32],[.27,-.03],[.27,.13],[.17,.25],[0,.25]],[[0,-.38],[.23,-.04],[.19,.20],[0,.25]],[[0,-.34],[.28,0],[.22,.19],[0,.19]],[[0,-.40],[.22,-.06],[.25,.10],[.13,.23],[0,.23]],[[0,-.30],[.27,-.04],[.18,.22],[0,.22]],[[0,-.42],[.21,-.08],[.26,.10],[.17,.23],[0,.23]]];
  const gemGlow=canvasTexture(64,64,(g,w,h)=>{const r=g.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);r.addColorStop(0,'rgba(255,255,255,.38)');r.addColorStop(.4,'rgba(255,255,255,.12)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,w,h);});
@@ -45,6 +47,11 @@ export function createTreasureGame({tank,controller,follow,camera,input,live,onO
    const shade=.45+.55*Math.abs(n.dot(new T.Vector3(.35,.65,.68).normalize())),color=base.clone().multiplyScalar(shade);for(let k=0;k<3;k++)col.push(color.r,color.g,color.b);}
   g.setAttribute('color',new T.Float32BufferAttribute(col,3));const o=add(g,new T.MeshBasicMaterial({vertexColors:true,toneMapped:false}),p);o.rotation.y=i*.37;
   const halo=new T.Sprite(new T.SpriteMaterial({map:gemGlow,color:SWIM.colors[i],transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}));halo.scale.set(1.05,1.05,1);o.add(halo);return o;});
+ // While no swim has found a gem, the seven gems draw as one mesh and their glows as one instanced draw (`oneDraw`): two
+ // draws, not fourteen. A find goes back to the gems one by one, each hiding as it is found.
+ const still=oneDraw?stillGems(gems,gemGlow):null;
+ if(still)group.add(still.gems,still.glows);
+ const showGems=()=>{const all=!!still&&found.size===0;if(still)still.gems.visible=still.glows.visible=all;gems.forEach((g,i)=>g.visible=!all&&!found.has(i));};
  const chest=new T.Group();chest.position.fromArray(SWIM.chest);group.add(chest);
  // Merge the wood, fittings and rivets into one draw per moving part.
  const wood=0x57321f,iron=0xb88236,bright=0xf4c65b;
@@ -73,6 +80,7 @@ export function createTreasureGame({tank,controller,follow,camera,input,live,onO
  document.body.append(bar,sheet);
  let active=false,done=false,t0=0,ran=0,found=new Set(),heldUp=false,heldDown=false,returnAt=null,oldView=null,result=null,board=null,awaiting=false,timeout=null;
  const velocity=new T.Vector3(),p=new T.Vector3(),aim=new T.Vector3();
+ showGems();
  const best=()=>{try{const n=+localStorage.getItem(KEY);return n>0?n:null;}catch{return null;}};
  function hide(){if(sheet.hidden)return;sheet.hidden=true;onClose?.();}
  function leave(returning=true){
@@ -84,7 +92,7 @@ export function createTreasureGame({tank,controller,follow,camera,input,live,onO
   onEnter?.();returnAt=controller.position.clone();oldView={mode:follow.mode,distance:follow.distance};follow.mode='third';follow.distance=2.5;
   follow.pitch=-.1;input.down.clear();controller.velocity.set(0,0,0);controller.grounded=false;controller.ground=null;controller.stance='stand';controller.jumpCount=0;controller.jumpS=-1;
   controller.position.fromArray(swimWorld(SWIM.entry));active=true;done=false;t0=performance.now();found=new Set();result=null;awaiting=false;clearTimeout(timeout);
-  bar.hidden=false;gems.forEach(g=>g.visible=true);lid.rotation.x=0;prize.visible=false;live()?.treasure('start');
+  bar.hidden=false;showGems();lid.rotation.x=0;prize.visible=false;live()?.treasure('start');
  }
  function showBoard(){
   title.textContent='Treasure recovered · '+clock(ran);list.textContent='';
@@ -130,7 +138,7 @@ export function createTreasureGame({tank,controller,follow,camera,input,live,onO
    const bounded=limitSwim(next);p.fromArray(swimWorld(bounded));controller.velocity.copy(p).sub(controller.position).divideScalar(Math.max(dt,.001));controller.position.copy(p);
    controller.grounded=false;controller.ground=null;controller.fell=0;
    const q=swimLocal(p.toArray());
-   if(!done)SWIM.gems.forEach((g,i)=>{if(!found.has(i)&&gemNear(q,g)){found.add(i);gems[i].visible=false;}});
+   if(!done)SWIM.gems.forEach((g,i)=>{if(!found.has(i)&&gemNear(q,g)){found.add(i);showGems();}});
    count.textContent=`${found.size}/7 gems`;time.textContent=clock(done?ran:performance.now()-t0);
    hint.textContent=found.size===7?'Chest open: swim to the gold chest and press E or tap Use.':'Move and look as usual · Space rises · hold C to dive · swim over gems';
    lid.rotation.x=T.MathUtils.damp(lid.rotation.x,found.size===7?-1.9:0,5,dt);prize.visible=found.size===7;
@@ -147,4 +155,48 @@ export function createTreasureGame({tank,controller,follow,camera,input,live,onO
    if(!sheet.hidden)showBoard();
   },
  };
+}
+
+// The gems as one mesh, and their glows as one instanced draw of camera-facing squares drawn as three's sprites are
+// (sprite.glsl.js: the same size, colour, texture, additive blending and fog), in the treasure's own space.
+const GLOW_VERTEX=`
+#include <common>
+#include <fog_pars_vertex>
+#include <logdepthbuf_pars_vertex>
+varying vec2 vUv;varying vec3 vTint;
+void main(){
+ vUv=uv;vTint=instanceColor;mat4 m=modelMatrix*instanceMatrix;
+ vec4 mvPosition=viewMatrix*m*vec4(0.,0.,0.,1.);
+ mvPosition.xy+=position.xy*vec2(length(m[0].xyz),length(m[1].xyz));
+ gl_Position=projectionMatrix*mvPosition;
+ #include <logdepthbuf_vertex>
+ #include <fog_vertex>
+}`;
+const GLOW_FRAGMENT=`
+#include <common>
+#include <fog_pars_fragment>
+#include <logdepthbuf_pars_fragment>
+uniform sampler2D map;varying vec2 vUv;varying vec3 vTint;
+void main(){
+ #include <logdepthbuf_fragment>
+ gl_FragColor=vec4(vTint,1.)*texture2D(map,vUv);
+ #include <colorspace_fragment>
+ #include <fog_fragment>
+}`;
+function stillGems(gems,map){
+ const parts=gems.map(o=>{o.updateMatrix();return o.geometry.clone().applyMatrix4(o.matrix);}),geometry=mergeGeometries(parts);parts.forEach(g=>g.dispose());
+ if(!geometry)return null;
+ const one=new T.Mesh(geometry,new T.MeshBasicMaterial({vertexColors:true,toneMapped:false}));one.name='Aquarium_treasure_gems';
+ const material=new T.ShaderMaterial({name:'Aquarium_treasure_glow',uniforms:{...T.UniformsUtils.clone(T.UniformsLib.fog),map:{value:map}},vertexShader:GLOW_VERTEX,fragmentShader:GLOW_FRAGMENT,
+  transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,fog:true,
+  // Both sides, in one pass as a sprite's: the lounge's frame is mirrored, and three turns a mirrored mesh's faces
+  // round (a sprite is no mesh), which would cull these squares.
+  side:T.DoubleSide,forceSinglePass:true});
+ const glows=new T.InstancedMesh(new T.PlaneGeometry(1,1),material,gems.length),m=new T.Matrix4(),size=new T.Vector3(),q=new T.Quaternion(),bounds=new T.Box3();
+ gems.forEach((o,i)=>{const halo=o.children.find(c=>c.isSprite);size.copy(halo.scale);glows.setMatrixAt(i,m.compose(o.position,q,size));glows.setColorAt(i,halo.material.color);
+  bounds.expandByPoint(o.position);});
+ glows.name='Aquarium_treasure_glows';
+ // Each square turns to the eye about its centre: where it can draw is a sphere of half its diagonal round each gem.
+ glows.userData.occlusionBox=bounds.expandByScalar(Math.max(...gems.map(o=>o.children.find(c=>c.isSprite).scale.x))*Math.SQRT1_2+.01);
+ return {gems:one,glows};
 }

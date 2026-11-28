@@ -74,7 +74,8 @@ async function extendCafe(page,base){
  const check=await page.ev(`__ownerBake.check(${JSON.stringify(focus)},100,4523)`);
  if(check.resolved!==check.parts||check.condsResolved!==check.conds||check.poses.length!==100||check.poses.some(p=>p.big>MAX_PIXELS||!p.hidden))throw Error('Café render check failed');
  console.log('owner bake:',cafe.name,focus.blocks.at(-1)[6].length,'shared proofs, maximum changed pixels',Math.max(...check.poses.map(p=>p.big)));
- return {combined,rows:await rowsOf(page,combined)};
+ const rows=await rowsOf(page,combined);console.log('owner bake: café row digests read at',JSON.stringify(rows.where));
+ return {combined,rows};
 }
 // Writes the walk's bake and, with --site, keeps it in the store with its row digests: `main` at the bench seed, `rows` at
 // the café's (scripts/walk-owner-carry.mjs carries it from there). Each file is whole or absent.
@@ -93,7 +94,7 @@ const onlyCafe=process.argv.includes('--supplement-only');
 let previous=null;
 if(onlyCafe||process.argv.includes('--if-missing')){
  try{previous=JSON.parse(await fs.readFile(out,'utf8'));}catch(error){if(onlyCafe)throw error;}
- if(previous&&(previous.key!==ownerKey(walk.script,'merge'+DESK_PIECE.discrete)||!previous.blocks?.length||ownerBakeProblem(previous,previous.key)))previous=null;
+ if(previous&&(previous.key!==ownerKey(walk.script,'merge'+DESK_PIECE.discrete+'kcsf')||!previous.blocks?.length||ownerBakeProblem(previous,previous.key)))previous=null;
  if(onlyCafe&&!previous)throw Error('A valid current-build owner bake is required for --supplement-only');
  if(previous&&coversCafe(previous)){
   console.log('owner bake: already baked for',walk.script);process.exit(0);
@@ -138,7 +139,7 @@ try{
 if(check.resolved!==check.parts||check.condsResolved!==check.conds)throw Error('The walk could not match every baked part and condition; the bake was not kept');
 if(worst>MAX_PIXELS)throw Error(`A pose changed ${worst} pixels (> ${MAX_PIXELS}); the bake was not kept`);
 // The rows' digests while the walker still stands at the seed the bake was proven from; then the café, from its own.
-main=await rowsOf(pages[0].page,data);
+main=await rowsOf(pages[0].page,data);console.log('owner bake: row digests read at',JSON.stringify(main.where));
 cafeRun=await extendCafe(pages[0].page,data);
 }finally{for(const {page} of pages)page.close();}
 await save(cafeRun.combined,main,cafeRun,code);await fs.rm(out+'.unchecked',{force:true});

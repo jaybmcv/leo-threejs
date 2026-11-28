@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {createHydroNipLounge,LOUNGE} from '../src/hydro-nip-lounge.js';
+import {createHydroNipLounge,LOUNGE,takeDomeLogo} from '../src/hydro-nip-lounge.js';
 import {solid} from '../src/walk/collision.js';
 import {bakeForWalking} from '../src/walk/render-bake.js';
 import {bakeForWalking as authoringBake} from '../src/walk/render-bake.authoring.js';
@@ -54,3 +54,24 @@ console.log('PASS polished planter finish survives native/authoring bake and mat
 const halo=root.getObjectByName('Lounge_dome_tube_glow_loose');assert(halo&&!solid(halo));
 assert(halo.material.blending===T.AdditiveBlending&&!halo.material.depthWrite&&halo.material.opacity<.2,'Faint additive tube halo');
 console.log('PASS dome planting:',plants.length,'instance batches,',triangles,'triangles,',vertices,'bounded vertices; polished base, additive halo, no lights or new colliders');
+
+root.updateMatrixWorld(true);
+const source=root.getObjectByName('Hydro_Nip_Main_Sign'),placement=source.clone(false),pose=source.matrixWorld.clone();
+const disc=takeDomeLogo(root),centre=disc.position.clone(),tubeTop=new T.Box3().setFromObject(frame,true).max.y;
+assert.equal(disc,source,'Walk extracts the authored sign before the static bake');
+assert(!root.getObjectByName(source.name),'No copy of the disc stays in the static room');
+assert(centre.distanceTo(new T.Vector3(DOME.x,FLOOR+DOME.r+2.1+.15,DOME.z))<1e-6,'Disc rises by 15 cm on the same axis');
+disc.traverse(o=>assert(!solid(o),'The turning disc adds no collision'));
+for(let i=0;i<36;i++){
+ const gap=new T.Box3().setFromObject(disc,true).min.y-tubeTop;
+ assert(gap>.04&&gap<.08,'Rotating rims clear the highest dome tube');
+ disc.rotateY(Math.PI/18);
+}
+const fittings=root.children.find(o=>o.name==='Lounge_sheen');
+const spindleTop=new T.Raycaster(new T.Vector3(DOME.x,centre.y-2.24,DOME.z),new T.Vector3(0,-1,0)).intersectObject(fittings)[0];
+assert(spindleTop&&Math.abs(spindleTop.point.y-(centre.y-2.25))<1e-4,'The fixed spindle meets the body on its axis');
+root.add(placement);root.updateMatrixWorld(true);
+const prepared=takeDomeLogo(root);prepared.updateMatrix();
+assert(prepared.getObjectByName('Hydro_Nip_Main_Sign_Body'),'Prepared placement restores the disc geometry');
+assert(prepared.matrix.equals(pose),'Prepared and authored signs share the same pose');
+console.log('PASS centred logo lift, full-turn tube clearance, fixed spindle, and prepared placement');

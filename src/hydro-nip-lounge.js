@@ -34,6 +34,7 @@ const BALCONY_CUT=(()=>{const r=layout.rooms.find(r=>r.id==='commons-1');return 
 // The two stair flights at the rear galleries' east end are solid under their treads: the lights keep out of them.
 const STAIR_FLIGHTS=[{level:LEVELS[0],x0:155.1,x1:158.4,z0:30.8,z1:38.6},{level:LEVELS[1],x0:151.8,x1:155,z0:30.8,z1:38.1}];
 const DOME={x:134,z:25,r:6.5},MAZE={x0:114+v2MazeFit.dx,x1:120.5+v2MazeFit.dx,z0:19+v2MazeFit.dz,z1:33+v2MazeFit.dz,top:35.2},MUNCH={x:145.5,z:25};
+const LOGO_RADIUS=2.25,LOGO_Y=FLOOR+DOME.r+2.1+.15;
 const MAIN_LOGO_URL=typeof __HYDRO_NIP_MAIN_LOGO__==='undefined'?null:__HYDRO_NIP_MAIN_LOGO__;
 // The maze inside: a ground floor of 3 x 6 roomy cells, walled to chest height so you and the camera see over the
 // partitions (behind the last row, z 31.5-32.9, the first stair's foot), the lower platform in front of SPLIT and the
@@ -64,6 +65,35 @@ const FLIGHTS=[{xs:[150.3+SDX,153.3+SDX],base:FLOOR,foot:34.85+SDZ,dir:1,rail:0}
 // parallel to the slope. The step glow is the purple of the stair's reference, shown on every riser.
 const SLAB=.34,STEP_GLOW=0x9b4dff;
 const font=new FontLoader().parse(fontData);
+
+function mainLogoSign(){
+ const group=new T.Group();group.name='Hydro_Nip_Main_Sign';group.userData.assetId='hydro-nip-main-logo';
+ const radius=LOGO_RADIUS,depth=.16,body=new T.Mesh(new T.CylinderGeometry(radius,radius,depth,96).rotateX(Math.PI/2),new T.MeshStandardMaterial({name:'Hydro_Nip_Main_Sign_Body',color:0x131127,roughness:.4,metalness:.4}));
+ body.name='Hydro_Nip_Main_Sign_Body';group.add(body);
+ const rimMaterial=new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Sign_Rim',color:CYAN,toneMapped:false}),rimGeometry=new T.TorusGeometry(radius-.025,.035,8,128);
+ for(const side of [1,-1]){const rim=new T.Mesh(rimGeometry,rimMaterial);rim.position.z=side*(depth/2+.006);if(side<0)rim.rotation.y=Math.PI;rim.name='Hydro_Nip_Main_Sign_Rim';group.add(rim);}
+ if(typeof document!=='undefined'&&MAIN_LOGO_URL){
+  // Crop the photo border so only the circular badge reaches the panel edge.
+  const map=new T.TextureLoader().load(MAIN_LOGO_URL);map.colorSpace=T.SRGBColorSpace;map.anisotropy=8;map.offset.set(.02,.018);map.repeat.set(.96,.964);
+  const material=new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Logo',map,toneMapped:false}),geometry=new T.CircleGeometry(radius-.06,96);
+  for(const side of [1,-1]){const face=new T.Mesh(geometry.clone(),material);if(side<0)face.geometry.rotateY(Math.PI);face.position.z=side*(depth/2+.01);face.name=side>0?'Hydro_Nip_Main_Logo_Front':'Hydro_Nip_Main_Logo_Back';face.userData.assetId='hydro-nip-main-logo';group.add(face);}
+ }else{
+  for(const side of [1,-1]){const face=new T.Group();face.position.z=side*(depth/2+.01);if(side<0)face.rotation.y=Math.PI;
+   for(const [text,size,y,color] of [['HYDRO-NIP',.48,.16,0xf36bdc],['LOUNGE',.29,-.38,0x55e5ff]]){const geometry=new TextGeometry(text,{font,size,depth:.012,curveSegments:2});geometry.computeBoundingBox();const bounds=geometry.boundingBox;geometry.translate(-(bounds.max.x+bounds.min.x)/2,y,0);face.add(new T.Mesh(geometry,new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Sign_Fallback',color,toneMapped:false})));}
+   group.add(face);}
+ }
+ group.traverse(o=>{if(o.isMesh)o.userData.noCollide=true;});
+ return group;
+}
+
+// Authoring takes the disc out before the static bake. The prepared room retains its placement group.
+export function takeDomeLogo(root){
+ const source=root.getObjectByName('Hydro_Nip_Main_Sign');if(!source)return null;
+ const logo=source.children.some(o=>o.isMesh)?source:mainLogoSign();
+ source.matrixWorld.decompose(logo.position,logo.quaternion,logo.scale);
+ source.removeFromParent();
+ return logo;
+}
 
 // The garden parts the lounge replaces: planters and trees, the cafe, and the commons' cat figures.
 const REPLACED=/^(Garden_planter|Planting_bed|Planting_detail|Tree_trunk|Tree_canopy|Low_plant|Stylized_tree|Garden_bench(_\w+)?|Planter_\w+|Layered_garden_foliage|Table_foliage|Table_ceramic_vase|Community_cafe_counter|Cafe_\w+|Table_pedestal|Espresso_\w+|Coffee_\w+|Serving_cup|Mars_cat_1\.75m)$/;
@@ -191,7 +221,7 @@ export function createHydroNipLounge({mirror=1}={}){
  // A loose paint is dressing a walker passes through (hammock ropes, the maze's mist): the walk doesn't collide with it.
  const loose=p=>p&&{...p,loose:true};
  const M={
-  glass:paint('glass',0xcfeeff),mazeGlass:paint('glass',0xa8ffbf),mist:glow(0x7dff8e,.55,(u,v)=>[.5+u*.5,v]),mazeMist:loose(paint('mazeMist',0x7dff8e,{dim:.55,uv:(u,v)=>[.5+u*.5,v]})),frost:paint('frost',0x9fe8b0),beam:glow(0x5fc8ff,.2,()=>[.25,.5]),rug:paint('rug'),
+  glass:paint('glass',0xcfeeff),mazeGlass:paint('glass',0xa8ffbf),mist:glow(0x7dff8e,.55,(u,v)=>[.5+u*.5,v]),mazeMist:loose(paint('mazeMist',0x7dff8e,{dim:.88,uv:(u,v)=>[.5+u*.5,v]})),frost:paint('frost',0x9fe8b0),beam:glow(0x5fc8ff,.2,()=>[.25,.5]),rug:paint('rug'),
   dark:paint('sheen',0x272131),board:paint('sheen',0x16111f),metal:paint('sheen',0xb9c2cc),strut:paint('domeFrame',0xa46aff),
   wood:paint('matte',0x4a2f22),sisal:paint('matte',0xcdb18a),purple:paint('matte',0x6a3fa3),magenta:paint('matte',0xb03a86),teal:paint('matte',0x23857f),
   leaf:paint('leaf',0x4f9a55),flower:paint('leaf',0xd5c4f2),pot:paint('matte',0xb5653d),
@@ -215,6 +245,7 @@ export function createHydroNipLounge({mirror=1}={}){
   g.applyQuaternion(new T.Quaternion().setFromUnitVectors(UP,d.normalize()));put(m,g.translate(...A.add(B).multiplyScalar(.5).toArray()));};
  // Seats keep their own meshes and names (src/walk/rest.js finds Seat, Soft_seat and Meditation_cushion by name).
  const seat=(name,geo,p,[x,y,z])=>{const o=new T.Mesh(tidy(geo,p.color),p.mat);o.name=name;o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;root.add(o);return o;};
+ const cushion=(p,at)=>{const o=seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),p,at);o.userData.sitPose='crossLegged';return o;};
  // A sliding door: two glass leaves in a dark frame across an opening in the plane z = `z`, `width` wide, shown shut.
  // Each leaf is a glass pane (Lounge_door_panel) and its frame (Lounge_door_frame), meshes of their own that the walk
  // slides apart along `slide` (template frame; src/walk/lounge.js), so neither is solid here: the walk makes each leaf
@@ -255,24 +286,6 @@ export function createHydroNipLounge({mirror=1}={}){
   else local.push([neon(frame),new T.TubeGeometry(roundRect(width-.12,height-.12,Math.min(.3,height/4),.03),96,.03,5,true)]);
   if(leaves)for(const s of [-1,1])local.push([neon(GREEN),new T.TubeGeometry(leafCurve(s*(width/2-.42),0,.34,.04),56,.022,4,true)],[neon(GREEN),new T.CylinderGeometry(.015,.015,.5,4).translate(s*(width/2-.42),-.2,.04)]);
   for(const [mat,g] of local){if(bow){const p=g.attributes.position;for(let i=0;i<p.count;i++)p.setZ(i,p.getZ(i)+bow*(1-(p.getX(i)/(width/2))**2));g.computeVertexNormals();}put(mat,mirrored(g.applyMatrix4(m),m));}
- }
- function mainLogoSign({at,normal,diameter=4.5}){
-  const group=new T.Group();group.name='Hydro_Nip_Main_Sign';group.userData.assetId='hydro-nip-main-logo';group.applyMatrix4(placing(at,normal));
-  const radius=diameter/2,depth=.16,body=new T.Mesh(new T.CylinderGeometry(radius,radius,depth,96).rotateX(Math.PI/2),new T.MeshStandardMaterial({name:'Hydro_Nip_Main_Sign_Body',color:0x131127,roughness:.4,metalness:.4}));
-  body.name='Hydro_Nip_Main_Sign_Body';group.add(body);
-  const rimMaterial=new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Sign_Rim',color:CYAN,toneMapped:false}),rimGeometry=new T.TorusGeometry(radius-.025,.035,8,128);
-  for(const side of [1,-1]){const rim=new T.Mesh(rimGeometry,rimMaterial);rim.position.z=side*(depth/2+.006);if(side<0)rim.rotation.y=Math.PI;rim.name='Hydro_Nip_Main_Sign_Rim';group.add(rim);}
-  if(typeof document!=='undefined'&&MAIN_LOGO_URL){
-   // Crop the photo border so only the circular badge reaches the panel edge.
-   const map=new T.TextureLoader().load(MAIN_LOGO_URL);map.colorSpace=T.SRGBColorSpace;map.anisotropy=8;map.offset.set(.02,.018);map.repeat.set(.96,.964);
-   const material=new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Logo',map,toneMapped:false}),geometry=new T.CircleGeometry(radius-.06,96);
-   for(const side of [1,-1]){const face=new T.Mesh(geometry.clone(),material);if(side<0)face.geometry.rotateY(Math.PI);face.position.z=side*(depth/2+.01);face.name=side>0?'Hydro_Nip_Main_Logo_Front':'Hydro_Nip_Main_Logo_Back';face.userData.assetId='hydro-nip-main-logo';group.add(face);}
-  }else{
-   for(const side of [1,-1]){const face=new T.Group();face.position.z=side*(depth/2+.01);if(side<0)face.rotation.y=Math.PI;
-    for(const [text,size,y,color] of [['HYDRO-NIP',.48,.16,0xf36bdc],['LOUNGE',.29,-.38,0x55e5ff]]){const geometry=new TextGeometry(text,{font,size,depth:.012,curveSegments:2});geometry.computeBoundingBox();const bounds=geometry.boundingBox;geometry.translate(-(bounds.max.x+bounds.min.x)/2,y,0);face.add(new T.Mesh(geometry,new T.MeshBasicMaterial({name:'Hydro_Nip_Main_Sign_Fallback',color,toneMapped:false})));}
-    group.add(face);}
-  }
-  root.add(group);
  }
  // A placement that mirrors turns every triangle inside out; swap two corners of each to turn it back.
  function mirrored(g,m){
@@ -345,9 +358,11 @@ export function createHydroNipLounge({mirror=1}={}){
     rod(loose(M.dark),[o.x+ux*r,FLOOR+HAMMOCK.bar+HAMMOCK.hang,o.z+uz*r],[o.x+ux*to,FLOOR+top,o.z+uz*to],.012,3);}
   }
  }
- // The approved Hydro-Nip main logo replaces the banner, with a readable face on each side.
- for(const s of [-1,1])rod(M.dark,[DOME.x+s*2,FLOOR+DOME.r-.8,DOME.z],[DOME.x+s*2,FLOOR+DOME.r+.7,DOME.z],.05,6);
- mainLogoSign({at:[DOME.x,FLOOR+DOME.r+2.1,DOME.z],normal:[0,0,-1]});
+ // The fixed bearing seats on the top strut. Its narrow spindle meets the disc on the spin axis.
+ const logo=mainLogoSign(),bottom=LOGO_Y-LOGO_RADIUS,crest=FLOOR+DOME.r-.1,spindle=bottom-crest;
+ cyl(M.dark,.062,.062,.04,[DOME.x,crest+.006,DOME.z]);
+ cyl(M.dark,.022,.022,spindle,[DOME.x,crest+spindle/2,DOME.z]);
+ logo.applyMatrix4(placing([DOME.x,LOGO_Y,DOME.z],[0,0,-1]));root.add(logo);
 
  // The Haze Maze: a three-storey glass tower full of green catnip mist. You walk in at the front into a maze of
  // partitions, find the cat-shelf stair at the back up to the lower platform, then climb the second stair to the upper
@@ -404,10 +419,44 @@ export function createHydroNipLounge({mirror=1}={}){
   // Cushions to curl up on, on both platforms.
   [[117,23.2,LEVELS[0]],[117,25.4,LEVELS[0]],[116.2,31.2,LEVELS[1]],[119.4,31.6,LEVELS[1]]].map(([x,z,y])=>[x+v2MazeFit.dx,z+v2MazeFit.dz,y]).forEach(([x,z,y],i)=>
    seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),[M.magenta,M.teal][i%2],[x,y+.095,z]));
-  // Catnip mist: crossed soft planes, thick on the ground floor and thinning as you climb.
-  for(let i=0;i<12;i++){const up=i<6?0:i<10?1:2,y=[FLOOR,...LEVELS][up]+1.2+rnd()*.6,[za,zb]=[[z0+1,z1-2],[z0+1,SPLIT-1],[SPLIT+1,z1-1]][up];
-   const z=za+rnd()*(zb-za),x=cx+(rnd()-.5)*3.6,w=2.4+rnd()*2,a=rnd()*Math.PI;
-   for(const da of [0,Math.PI/2])put(M.mazeMist,new T.PlaneGeometry(w,2.2+rnd()).rotateY(a+da).translate(x,y,z));}
+  // Fit each pair in a cell corner, with the seat's short reach clear of the next cell.
+  const pipes=[];
+  for(const {cell:[c,r],seat:[dx,dz],pipe:[px,pz]} of fitoutOverrides['commons-1']?.mazeCushions||[]){
+   const x=C.x0+(c+.5)*C.w+dx,z=C.z0+(r+.5)*C.d+dz;
+   cushion([M.magenta,M.teal,M.purple][pipes.length%3],[x,FLOOR+.075,z]).userData.sitReach=.9;
+   pipes.push([x+px,z+pz]);
+  }
+  if(pipes.length){
+   const lathe=(profile)=>new T.LatheGeometry(profile.map(([x,y])=>new T.Vector2(x,y)),16);
+   const glass=std('Maze_pipe_glass',0xb8fff1,{transparent:true,opacity:.46,roughness:.11,metalness:.24,depthWrite:false});
+   const accent=new T.MeshBasicMaterial({name:'Maze_pipe_neon',color:0x6cebaf,toneMapped:false});
+   const body=lathe([[0,0],[.13,0],[.15,.035],[.14,.15],[.095,.22],[.055,.28],[.055,.51],[.069,.52],[.069,.55],[.043,.55],[.043,.44]]);
+   const stem=new T.CylinderGeometry(.028,.037,.19,12).rotateZ(-.95).translate(.128,.19,0);
+   const bowl=lathe([[.028,0],[.035,.025],[.064,.062],[.065,.077],[.048,.077],[.023,.025]]).translate(.206,.24,0);
+   const rim=new T.TorusGeometry(.058,.007,6,16).rotateX(Math.PI/2).translate(0,.535,0);
+   const water=new T.CylinderGeometry(.119,.119,.047,16).translate(0,.079,0);
+   const matrix=new T.Matrix4();
+   for(const [name,mat,parts] of [['Haze_maze_water_pipe',glass,[body,stem,bowl]],['Haze_maze_pipe_accents',accent,[rim,water]]]){
+    const o=new T.InstancedMesh(mergeGeometries(parts),mat,pipes.length);o.name=name;o.userData.noCollide=true;
+    pipes.forEach(([x,z],i)=>o.setMatrixAt(i,matrix.makeTranslation(x,FLOOR,z)));
+    o.instanceMatrix.needsUpdate=true;o.computeBoundingBox();o.computeBoundingSphere();root.add(o);
+   }
+  }
+  // Tilt the soft planes for both overhead and corridor views. Draw the first set at low detail.
+  const mistLayers=[[],[],[]];
+  const mistPlane=(w,h,pitch,yaw,x,y,z)=>{
+   const g=new T.PlaneGeometry(w,h).rotateX(pitch).rotateY(yaw);g.computeBoundingBox();const {min,max}=g.boundingBox;
+   const fit=(value,low,high,min,max)=>T.MathUtils.clamp(value,low+.08-min,high-.08-max);
+   return g.translate(fit(x,x0,x1,min.x,max.x),fit(y,FLOOR,top,min.y,max.y),fit(z,z0,z1,min.z,max.z));
+  };
+  for(let i=0;i<12;i++){
+   const up=i<6?0:i<10?1:2,y=[FLOOR,...LEVELS][up]+1.05+rnd()*.55,[za,zb,start,count]=[[z0+1,z1-1,0,6],[z0+1,SPLIT-1,6,4],[SPLIT+1,z1-1,10,2]][up];
+   const z=T.MathUtils.lerp(za,zb,(i-start+.23+rnd()*.54)/count),x=cx+(rnd()-.5)*3.7,w=3.2+rnd()*1.1,a=rnd()*Math.PI;
+   mistLayers[0].push(mistPlane(w,2.3+rnd(),-.76,a,x,y,z));
+   mistLayers[1].push(mistPlane(w,2.2+rnd(),-.19,a+Math.PI/2,x,y,z));
+   mistLayers[2].push(mistPlane(w,2.7,-1.15,a,-x+2*cx,y-.3,z+.38));
+  }
+  for(const planes of mistLayers)for(const g of planes)put(M.mazeMist,g);
   // Vines trailing from the roof inside.
   for(let i=0;i<14;i++){const x=x0+.4+rnd()*(x1-x0-.8),z=z0+.4+rnd()*(z1-z0-.8),n=3+Math.floor(rnd()*4);
    for(let k=0;k<n;k++)put(M.leaf,new T.OctahedronGeometry(.09,0).scale(1,.45,1.3).rotateY(rnd()*3).translate(x+Math.sin(k*1.7)*.08,top-.15-k*.2,z));}
@@ -561,7 +610,7 @@ export function createHydroNipLounge({mirror=1}={}){
   {const o=seat('Soft_seat',new T.SphereGeometry(.58,16,10).scale(1,.62,1),M[c],[x,FLOOR+.36,z]);if(x===144.6&&rugMove)o.applyMatrix4(rugMove);if(i<3&&mazeRugTurn)o.applyMatrix4(mazeRugTurn);o.userData.sitPose='crossLegged';});
  // Every flat and dome cushion on the three rugs shares the meditation pose.
  [[126.4,13.4],[131,16.2],[133.6,16],[136.2,13.4],[142.7,14.9],[145.6,17.2]].map((p,i)=>seatingRow(p,Math.floor(i/2))).forEach(([x,z],i)=>
-  {const o=seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),[M.purple,M.teal,M.magenta][i%3],[x,FLOOR+.095,z]);if(x>=142.7&&rugMove)o.applyMatrix4(rugMove);if(i===0&&mazeRugTurn)o.applyMatrix4(mazeRugTurn);o.userData.sitPose='crossLegged';});
+  {const o=cushion([M.purple,M.teal,M.magenta][i%3],[x,FLOOR+.095,z]);if(x>=142.7&&rugMove)o.applyMatrix4(rugMove);if(i===0&&mazeRugTurn)o.applyMatrix4(mazeRugTurn);});
  for(const [x,z] of [[127.2,15],[137.2,15]].map((p,i)=>seatingRow(p,i))){turning=x===127.2?mazeRugTurn:null;cyl(M.wood,.5,.5,.05,[x,FLOOR+.4,z],18);cyl(M.dark,.08,.12,.38,[x,FLOOR+.19,z],8);
   cyl(M.board,.18,.12,.08,[x,FLOOR+.465,z],12);put(M.leaf,new T.SphereGeometry(.15,8,5,0,Math.PI*2,0,Math.PI/2).translate(x,FLOOR+.49,z));}turning=null;
  [[125.8,15.8,PINK],[131.6,13.6,AMBER],[136,16.8,GREEN],[139.6,15.6,PURPLE],[143.4,17.4,CYAN],[128.8,13.1,AMBER]].map((p,i)=>seatingRow(p,[0,0,1,1,2,0][i])).forEach(([x,z,c])=>put(neon(c),new T.IcosahedronGeometry(.09,1).translate(x,FLOOR+.11,z)));

@@ -29,9 +29,15 @@ import {yieldEvery} from './yield-to-page.js';
 // draws 71 fewer, the Deck 6 neighbourhood café 56, the Daily Grind 33. A draw that changes material costs three about
 // 10 µs and one that repeats the last material about 3 µs, and a batch is always a change, so the main pass gains only
 // about 0.15-0.2 ms at the Grove.
-const CHUNK=`
+export const CHUNK=`
 #ifdef USE_BATCHING
 	mat4 batchingMatrix = getBatchingMatrix( getIndirectIndex( gl_DrawID ) + float( gl_InstanceID ) );
+#endif
+`;
+// Parts already in world space (draw-runs.js's deck kinds): every sub-draw's matrix is the identity, so no lookup at all.
+export const PLAIN_CHUNK=`
+#ifdef USE_BATCHING
+	mat4 batchingMatrix = mat4( 1.0 );
 #endif
 `;
 const plainHook=T.Material.prototype.onBeforeCompile,plainRender=T.Material.prototype.onBeforeRender;
@@ -39,14 +45,14 @@ const plainHook=T.Material.prototype.onBeforeCompile,plainRender=T.Material.prot
 // copy of every part's geometry.
 const MAX_INDICES=60000;
 const textured=m=>Object.entries(m).some(([k,v])=>v?.isTexture&&k!=='envMap');
-function batchable(m){
+export function batchable(m){
  return !!m&&(m.isMeshStandardMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial||m.isMeshBasicMaterial)&&!m.transparent&&!m.transmission&&!m.wireframe&&!m.displacementMap
   &&(m.blending===T.NormalBlending||m.blending===T.NoBlending)&&m.onBeforeRender===plainRender&&(m.onBeforeCompile===plainHook||m.onBeforeCompile?.keepsGeometry===true)
   &&Object.entries(m).every(([k,v])=>!v?.isTexture||k==='envMap'||(v.channel??0)===0);
 }
 const identity=e=>e[0]===1&&e[1]===0&&e[2]===0&&e[3]===0&&e[4]===0&&e[5]===1&&e[6]===0&&e[7]===0&&e[8]===0&&e[9]===0&&e[10]===1&&e[11]===0&&e[12]===0&&e[13]===0&&e[14]===0&&e[15]===1;
 // What a part's geometry must carry for its material, in one order: one batch takes parts with the same.
-const kept=m=>['position','normal',...(textured(m)?['uv']:[]),...(m.vertexColors?['color']:[])];
+export const kept=m=>['position','normal',...(textured(m)?['uv']:[]),...(m.vertexColors?['color']:[])];
 function part(o){
  const g=o.geometry,m=o.material;
  if(!o.isInstancedMesh||!o.userData.cabins||o.userData.boat||Array.isArray(m)||!batchable(m)||o.instanceColor||!o.frustumCulled)return null;
@@ -58,25 +64,28 @@ function part(o){
 }
 // Own values of a material that its batch copy takes over (not its identity, version, listeners or shader hooks).
 const OWN=new Set(['uuid','id','version','_listeners','onBeforeCompile','customProgramCacheKey']);
-const ownKeys=m=>Object.keys(m).filter(k=>!OWN.has(k));
-function batchMaterial(m){
+const ownKeys=(m,omit=null)=>Object.keys(m).filter(k=>!OWN.has(k)&&!omit?.has(k));
+// `omit`: values the copy keeps as its own (a palette's maps and the values they stand in for). `id`: the copy's material
+// id (by default the original's, so a batch sorts where its parts did). `chunk`: what stands in for three's batching
+// matrix lookup.
+export function batchMaterial(m,omit=null,id=m.id,chunk=CHUNK){
  const copy=Object.create(Object.getPrototypeOf(m));
- Object.defineProperty(copy,'id',{value:m.id});
- const keys=ownKeys(m);for(const k of keys)copy[k]=m[k];
+ Object.defineProperty(copy,'id',{value:id});
+ const keys=ownKeys(m,omit);for(const k of keys)copy[k]=m[k];
  copy.uuid=T.MathUtils.generateUUID();copy.version=0;
  // The original's hook, whatever it is when the shader is built, then the batch's lookup. Marked as corner-shaded and
  // film-looked so neither wraps it again: both reach it through the original's hook.
- const hook=function(shader,renderer){m.onBeforeCompile.call(this,shader,renderer);shader.vertexShader=shader.vertexShader.replace('#include <batching_vertex>',CHUNK);};
+ const hook=function(shader,renderer){m.onBeforeCompile.call(this,shader,renderer);shader.vertexShader=shader.vertexShader.replace('#include <batching_vertex>',chunk);};
  hook.cornerShade=true;hook.filmLook=true;hook.keepsGeometry=keepsGeometry(m.onBeforeCompile);
- const key=function(){return m.customProgramCacheKey.call(m)+'|cabin-instanced';};
+ const tag=chunk===CHUNK?'|cabin-instanced':'|batch-plain',key=function(){return m.customProgramCacheKey.call(m)+tag;};
  copy.onBeforeCompile=hook;copy.customProgramCacheKey=key;
- return {m,copy,keys,hook,key,version:m.version,usable:true,pass:-1};
+ return {m,copy,keys,hook,key,omit,version:m.version,usable:true,pass:-1};
 }
 // Rebuilt (and checked again) whenever the original is; its values copied over when they differ: at once after a rebuild,
 // else for one material a pass, in turn (a value changed without a rebuild shows in its batch within a few frames).
-function follow(v,turn){
+export function follow(v,turn){
  const {m,copy}=v;let all=turn;
- if(m.version!==v.version){v.version=m.version;v.keys=ownKeys(m);v.usable=batchable(m);v.hook.keepsGeometry=keepsGeometry(m.onBeforeCompile);copy.needsUpdate=true;all=true;}
+ if(m.version!==v.version){v.version=m.version;v.keys=ownKeys(m,v.omit);v.usable=batchable(m);v.hook.keepsGeometry=keepsGeometry(m.onBeforeCompile);copy.needsUpdate=true;all=true;}
  if(all)for(const k of v.keys)if(copy[k]!==m[k])copy[k]=m[k];
  if(copy.onBeforeCompile!==v.hook||copy.customProgramCacheKey!==v.key){copy.onBeforeCompile=v.hook;copy.customProgramCacheKey=v.key;copy.needsUpdate=true;}
 }
@@ -85,7 +94,7 @@ function follow(v,turn){
 // lists it becomes the instanced call with the batch's instance counts. Keyed by the batch's counts array, so nothing
 // else three draws is touched. Three counts each sub-draw's triangles once: the other instances are added for Stats.
 const instancedLists=new WeakMap();
-function instancedMultiDraw(renderer){
+export function instancedMultiDraw(renderer){
  const ext=renderer.extensions.has('WEBGL_multi_draw')?renderer.extensions.get('WEBGL_multi_draw'):null;
  if(!ext||typeof ext.multiDrawElementsInstancedWEBGL!=='function')return null;
  let lists=instancedLists.get(ext);if(lists)return lists;

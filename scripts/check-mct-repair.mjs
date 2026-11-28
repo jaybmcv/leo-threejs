@@ -4,7 +4,7 @@ import {createRequire} from 'node:module';
 import {build} from 'esbuild';
 import {ANGLE_IF_ASKED,PLAYWRIGHT_FROM} from './chrome-setup.mjs';
 import {PARTS,PUZZLES,JUNK,JUNK_NAMES} from '../src/walk/mct-repair/catalog.js';
-import {VIEWS,newRepair,required,workbench,scatterPile,pileMetrics,pilePosition,pileDrop,install,nextRound,formatTime} from '../src/walk/mct-repair/rules.js';
+import {VIEWS,newRepair,required,workbench,scatterPile,pileMetrics,pilePosition,pileDrop,floatingPosition,pushPileMotion,stepPileMotion,install,nextRound,formatTime} from '../src/walk/mct-repair/rules.js';
 import {partArt,cartArt,PART_SPOTS} from '../src/walk/mct-repair/art.js';
 
 const requestedNames=[
@@ -123,7 +123,7 @@ for(const round of [0,1,2]){
  }
 }
 const ui=await fs.readFile('src/walk/mct-repair/game.js','utf8');
-assert(!/mct-float|animation:|grid-template-columns:repeat|createElement\('small'\)/.test(ui),'The pile has no tiles, permanent captions or continuous movement');
+assert(!/animation:|grid-template-columns:repeat|createElement\('small'\)/.test(ui),'The pile has no tiles, permanent captions or CSS animations');
 assert(ui.includes("b.setAttribute('aria-label',p?.name||JUNK_NAMES[id]||label(id))"),'Every covered item retains its accessible name');
 assert(ui.includes("b.addEventListener('focus',()=>{raise(b);itemName();})"),'Keyboard focus uncovers an item');
 for(const mode of ['', '.public','.prepared','.authoring']){
@@ -133,12 +133,69 @@ for(const mode of ['', '.public','.prepared','.authoring']){
 }
 console.log('PASS MCT repair core: all 18 requested names, distinct icons, valid mounts and playable tasks.');
 console.log('PASS MCT repair: 45 repair parts, 27 named junk with unique icons never required or installable, sampled bench counts, all 26 tasks completable, scoring and four walk modes.');
-console.log('PASS MCT pile: scattering, rotated bounds, persistent drops, resizing and keyboard access.');
+const still={x:0,y:0,vx:0,vy:0,phase:1},center={x:200,y:100},step=1/60,bench=pileMetrics(400,200,40);
+let drift=still,reduced=still;
+for(let i=0;i<180;i++){
+ const next=stepPileMotion(drift,center,bench,step,i*step,false);
+ assert(Math.hypot(next.x-drift.x,next.y-drift.y)<.25,'Idle motion is slow enough to click');
+ drift=next;reduced=stepPileMotion(reduced,center,bench,step,i*step,true);
+}
+assert(Math.hypot(drift.x,drift.y)>3,'A resting piece bobs');
+assert.deepEqual(reduced,still,'Reduced motion has no idle bob');
+const push=(x,y,from=center,to=from)=>pushPileMotion(still,{x,y},from,to,100,180);
+const near=push(218,124),far=push(236,148);
+assert(near.vx>far.vx&&far.vx>0&&near.vy>far.vy&&far.vy>0,'Push points away and fades with distance');
+assert(Math.abs(near.vx/near.vy-18/24)<1e-9,'Push follows the radial direction');
+assert.equal(push(99,100),still,'Out-of-range items receive no impulse');
+assert(push(120,124,{x:20,y:100},{x:220,y:100}).vy>0,'A fast drag nudges items along its entire path');
+let gentle=pushPileMotion(still,center,{x:180,y:100},{x:180,y:100},100,45),peak=0;
+for(let i=0;i<180;i++){gentle=stepPileMotion(gentle,center,bench,step,i*step,true);peak=Math.max(peak,gentle.x);}
+assert(peak>0&&peak<5&&Math.abs(gentle.vx)<1&&gentle.x<peak,'Reduced motion pushes gently, then settles');
+const droppedHome=pilePosition(pileDrop(250,120,bench),bench);
+let afterDrop=still;
+for(let i=0;i<300;i++){
+ afterDrop=stepPileMotion(afterDrop,droppedHome,bench,step,i*step,false);
+ assert(Math.hypot(afterDrop.x,afterDrop.y)<17,'A dropped piece bobs near its new spot');
+}
+for(const round of [0,1,2]){
+ const count=[40,48,56][round],points=scatterPile(count,pileRandom);
+ const sizes=[[1240,300],[220,84],[340,112]];
+ for(const [index,point] of points.entries()){
+  let motion={...still,phase:index*2.4};
+  for(let i=0;i<1800;i++){
+   const [w,h]=sizes[Math.floor(i/600)],m=pileMetrics(w,h,count),home=pilePosition(point,m);
+   const before=floatingPosition(home,m,motion);
+   if(i%12===0){const pointer={x:before.x+12,y:before.y-16};motion=pushPileMotion(motion,before,pointer,pointer,105,185);}
+   motion=stepPileMotion(motion,home,m,step,i*step,false);
+   const p=floatingPosition(home,m,motion),half=m.size/Math.SQRT2;
+   assert(m.size>=52&&p.x-half>=0&&p.x+half<=w&&p.y-half>=0&&p.y+half<=h,'Pushed pieces remain tappable and inside resized benches');
+  }
+ }
+}
+const edgeBench=pileMetrics(120,84,56);
+assert.equal(edgeBench.size,52,'A narrow bench favors overlap over smaller targets');
+const edge=pilePosition({x:0,y:0},edgeBench);
+let returning={...still,vx:-160,vy:-160};
+for(let i=0;i<120;i++)returning=stepPileMotion(returning,edge,edgeBench,step,i*step,false);
+assert(returning.x>1&&returning.y>0,'Edge pieces turn back toward the bench');
+console.log('PASS MCT pile: scattering, drift, push, rotated bounds, reduced motion, persistent drops, resizing and keyboard access.');
 
 // Measure the real panel, including the longest twelve-part tasks and installed marks.
 const {chromium}=createRequire(PLAYWRIGHT_FROM)('playwright');
 const bundle=await build({stdin:{contents:"export {createMctRepair} from './src/walk/mct-repair/game.js';",resolveDir:process.cwd()},bundle:true,write:false,format:'iife',globalName:'repairCheck',platform:'browser'});
 const browser=await chromium.launch({channel:'chrome',headless:true,args:['--disable-gpu-sandbox',...ANGLE_IF_ASKED]});
+async function clickPart(page,id){
+ const part=page.locator(`[data-part="${id}"]`);
+ const {x,y}=await part.evaluate(el=>{
+  el.focus({preventScroll:true});
+  el.scrollIntoView({block:'nearest'});
+  const r=el.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};
+ });
+ await page.mouse.move(x,y);
+ await page.mouse.down();
+ await page.mouse.up();
+ assert.equal(await part.getAttribute('aria-pressed'),'true',`Mouse selects ${id}`);
+}
 try{
  const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.setContent('<!doctype html><html><body></body></html>');
@@ -148,7 +205,7 @@ try{
  await page.addScriptTag({content:bundle.outputFiles[0].text});
  await page.evaluate(()=>{globalThis.repair=repairCheck.createMctRepair();});
  const seen=new Set(),maxParts=Math.max(...PUZZLES.map(p=>p.parts.length));assert.equal(maxParts,12);
- for(const [width,height] of [[1700,870],[1280,720],[390,844],[844,390]]){
+ for(const [width,height] of [[1700,870],[1280,720],[390,844],[844,390],[360,540]]){
   await page.setViewportSize({width,height});
   // Twelve evenly spaced draws cover all 12/8/6 choices across the three rounds.
   for(let sample=0;sample<12;sample++){
@@ -165,6 +222,10 @@ try{
      if(list.scrollHeight>list.clientHeight+1||list.scrollWidth>list.clientWidth+1)problems.push('List content overflows');
      if(['auto','scroll','hidden','clip'].includes(getComputedStyle(list).overflowY))problems.push('List clips or scrolls');
      if(rows.length!==repair.state.needed.length)problems.push('Missing required row');
+     const drawing=panel.querySelector('[data-cart]>svg'),targets=bounds(panel.querySelector('[data-hotspots]'));
+     const box=drawing.viewBox.baseVal,project=drawing.getScreenCTM();
+     const a=new DOMPoint(box.x,box.y).matrixTransform(project),b=new DOMPoint(box.x+box.width,box.y+box.height).matrixTransform(project);
+     if([targets.left-a.x,targets.top-a.y,targets.right-b.x,targets.bottom-b.y].some(n=>Math.abs(n)>1))problems.push('Targets do not follow the scaled MCT drawing');
      for(const row of rows){
       const r=bounds(row),text=row.querySelector('span'),icon=row.querySelector('svg'),range=document.createRange();range.selectNodeContents(text);
       if(![list,aside,panel].every(p=>inside(r,bounds(p)))||!inside(r,view))problems.push('Row outside list, panel or window: '+row.textContent);
@@ -175,15 +236,20 @@ try{
      return {problems,count:rows.length,name:root.querySelector('[data-name]').textContent,ids:repair.state.needed.map(p=>p.id).join(',')};
     });
     const before=await measure();seen.add(before.ids);assert.deepEqual(before.problems,[],`${width}x${height}, round ${round+1}, ${before.name}`);
-    const first=await page.evaluate(()=>repair.state.needed[0]);
+    const [first,second]=await page.evaluate(()=>repair.state.needed);
     await page.locator(`[data-view="${first.view}"]`).click();
-    await page.locator(`[data-part="${first.id}"]`).focus();
-    await page.locator(`[data-part="${first.id}"]`).click();
+    await clickPart(page,first.id);
     await page.locator('[data-cart]').click();
     const after=await measure();assert.deepEqual(after.problems,[],`${width}x${height}, installed mark, ${after.name}`);
     assert.equal(await page.locator('[data-required] .done').count(),1);
+    assert.deepEqual(await page.evaluate(()=>repair.state.placed),[first.id],'Mouse selection installs the first part');
+    await page.locator(`[data-view="${second.view}"]`).click();
+    await page.locator(`[data-part="${second.id}"]`).focus();
+    await page.keyboard.press('Enter');
+    await page.locator('[data-cart]').click();
+    assert.deepEqual(await page.evaluate(()=>repair.state.placed),[first.id,second.id],'Keyboard selection installs the second part');
     await page.evaluate(()=>{
-     for(const p of repair.state.needed.slice(1)){document.querySelector(`[data-view="${p.view}"]`).click();document.querySelector(`[data-part="${p.id}"]`).click();document.querySelector('[data-cart]').click();}
+     for(const p of repair.state.needed.slice(2)){document.querySelector(`[data-view="${p.view}"]`).click();document.querySelector(`[data-part="${p.id}"]`).click();document.querySelector('[data-cart]').click();}
     });
     await page.waitForFunction(()=>!document.querySelector('.mct-repair [data-screen]').hidden);
     assert.equal(await page.evaluate(()=>repair.state.phase),round===2?'complete':'clear');
@@ -192,6 +258,50 @@ try{
    await page.keyboard.press('Escape');assert.equal(await page.evaluate(()=>repair.isOpen),false);
   }
  }
+ await page.setViewportSize({width:1280,height:720});
+ const grab=await page.evaluate(()=>{
+  repair.open(3);const random=Math.random;let seed=402;
+  Math.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+  try{document.querySelector('[data-primary]').click();}finally{Math.random=random;}
+  const items=[...document.querySelectorAll('[data-part]')],point=el=>{const r=el.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};};
+  const bench=document.querySelector('[data-pile]').getBoundingClientRect();
+  for(const [i,el] of items.entries()){
+   const p=point(el);
+   if(document.elementFromPoint(p.x,p.y)!==el)continue;
+   const neighbors=items.map((e,index)=>({...point(e),index})).filter(q=>{
+    const d=Math.hypot(q.x-p.x,q.y-p.y);
+    return d>=18&&d<=52&&q.x>bench.left+65&&q.x<bench.right-65&&q.y>bench.top+65&&q.y<bench.bottom-65;
+   });
+   if(neighbors.length)return {i,p,neighbors};
+  }
+ });
+ assert(grab,'The test pile has a visible item with a nearby neighbor');
+ await page.mouse.move(grab.p.x,grab.p.y);
+ await page.mouse.down();
+ await page.waitForFunction(({i,p,neighbors})=>{
+  const items=[...document.querySelectorAll('[data-part]')],center=el=>{const r=el.getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2];};
+  const [x,y]=center(items[i]);
+  return items[i].getAttribute('aria-pressed')==='true'&&Math.hypot(x-p.x,y-p.y)<2&&neighbors.some(({index,x,y})=>{
+   const [nx,ny]=center(items[index]);return Math.hypot(nx-p.x,ny-p.y)>Math.hypot(x-p.x,y-p.y)+3;
+  });
+ },grab,{timeout:2000});
+ const movedTo=grab.p.x+(grab.p.x<640?32:-32);
+ await page.mouse.move(movedTo,grab.p.y,{steps:4});
+ await page.waitForFunction(({i,x,y})=>{
+  const r=document.querySelectorAll('[data-part]')[i].getBoundingClientRect();
+  return Math.hypot(r.x+r.width/2-x,r.y+r.height/2-y)<3;
+ },{i:grab.i,x:movedTo,y:grab.p.y},{timeout:2000});
+ await page.mouse.up();
+ await page.setViewportSize({width:360,height:540});
+ await page.waitForFunction(()=>{
+  const bench=document.querySelector('[data-bench]').getBoundingClientRect();
+  return bench.bottom<=innerHeight&&[...document.querySelectorAll('[data-part]')].every(el=>{
+   const r=el.querySelector('svg').getBoundingClientRect();
+   return el.getBoundingClientRect().width>=52&&r.left>=bench.left&&r.right<=bench.right&&r.top>=bench.top&&r.bottom<=bench.bottom;
+  });
+ },null,{timeout:2000});
+ await page.keyboard.press('Escape');
  assert.equal(seen.size,PUZZLES.length,'Every catalogue task was measured');assert.deepEqual(errors,[]);
- console.log(`PASS MCT repair layout: all ${seen.size} tasks, up to ${maxParts} parts, at 1700x870, 1280x720, 390x844 and 844x390; readable rows and installed marks, no clipping or list scroll.`);
+ console.log(`PASS MCT repair layout: mouse and keyboard installation, readable lists and aligned targets for all ${seen.size} tasks, up to ${maxParts} parts, at 1700x870, 1280x720, 390x844, 844x390 and 360x540.`);
+ console.log('PASS MCT floating bench: a held item follows the pointer, its neighbors move away, and resizing keeps all pieces on the workbench.');
 }finally{await browser.close();}
