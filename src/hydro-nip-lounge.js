@@ -191,7 +191,7 @@ export function createHydroNipLounge({mirror=1}={}){
  // A loose paint is dressing a walker passes through (hammock ropes, the maze's mist): the walk doesn't collide with it.
  const loose=p=>p&&{...p,loose:true};
  const M={
-  glass:paint('glass',0xcfeeff),mazeGlass:paint('glass',0xa8ffbf),mist:glow(0x7dff8e,.55,(u,v)=>[.5+u*.5,v]),mazeMist:loose(paint('mazeMist',0x7dff8e,{dim:.55,uv:(u,v)=>[.5+u*.5,v]})),frost:paint('frost',0x9fe8b0),beam:glow(0x5fc8ff,.2,()=>[.25,.5]),rug:paint('rug'),
+  glass:paint('glass',0xcfeeff),mazeGlass:paint('glass',0xa8ffbf),mist:glow(0x7dff8e,.55,(u,v)=>[.5+u*.5,v]),mazeMist:loose(paint('mazeMist',0x7dff8e,{dim:.88,uv:(u,v)=>[.5+u*.5,v]})),frost:paint('frost',0x9fe8b0),beam:glow(0x5fc8ff,.2,()=>[.25,.5]),rug:paint('rug'),
   dark:paint('sheen',0x272131),board:paint('sheen',0x16111f),metal:paint('sheen',0xb9c2cc),strut:paint('domeFrame',0xa46aff),
   wood:paint('matte',0x4a2f22),sisal:paint('matte',0xcdb18a),purple:paint('matte',0x6a3fa3),magenta:paint('matte',0xb03a86),teal:paint('matte',0x23857f),
   leaf:paint('leaf',0x4f9a55),flower:paint('leaf',0xd5c4f2),pot:paint('matte',0xb5653d),
@@ -215,6 +215,7 @@ export function createHydroNipLounge({mirror=1}={}){
   g.applyQuaternion(new T.Quaternion().setFromUnitVectors(UP,d.normalize()));put(m,g.translate(...A.add(B).multiplyScalar(.5).toArray()));};
  // Seats keep their own meshes and names (src/walk/rest.js finds Seat, Soft_seat and Meditation_cushion by name).
  const seat=(name,geo,p,[x,y,z])=>{const o=new T.Mesh(tidy(geo,p.color),p.mat);o.name=name;o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;root.add(o);return o;};
+ const cushion=(p,at)=>{const o=seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),p,at);o.userData.sitPose='crossLegged';return o;};
  // A sliding door: two glass leaves in a dark frame across an opening in the plane z = `z`, `width` wide, shown shut.
  // Each leaf is a glass pane (Lounge_door_panel) and its frame (Lounge_door_frame), meshes of their own that the walk
  // slides apart along `slide` (template frame; src/walk/lounge.js), so neither is solid here: the walk makes each leaf
@@ -404,10 +405,44 @@ export function createHydroNipLounge({mirror=1}={}){
   // Cushions to curl up on, on both platforms.
   [[117,23.2,LEVELS[0]],[117,25.4,LEVELS[0]],[116.2,31.2,LEVELS[1]],[119.4,31.6,LEVELS[1]]].map(([x,z,y])=>[x+v2MazeFit.dx,z+v2MazeFit.dz,y]).forEach(([x,z,y],i)=>
    seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),[M.magenta,M.teal][i%2],[x,y+.095,z]));
-  // Catnip mist: crossed soft planes, thick on the ground floor and thinning as you climb.
-  for(let i=0;i<12;i++){const up=i<6?0:i<10?1:2,y=[FLOOR,...LEVELS][up]+1.2+rnd()*.6,[za,zb]=[[z0+1,z1-2],[z0+1,SPLIT-1],[SPLIT+1,z1-1]][up];
-   const z=za+rnd()*(zb-za),x=cx+(rnd()-.5)*3.6,w=2.4+rnd()*2,a=rnd()*Math.PI;
-   for(const da of [0,Math.PI/2])put(M.mazeMist,new T.PlaneGeometry(w,2.2+rnd()).rotateY(a+da).translate(x,y,z));}
+  // Fit each pair in a cell corner, with the seat's short reach clear of the next cell.
+  const pipes=[];
+  for(const {cell:[c,r],seat:[dx,dz],pipe:[px,pz]} of fitoutOverrides['commons-1']?.mazeCushions||[]){
+   const x=C.x0+(c+.5)*C.w+dx,z=C.z0+(r+.5)*C.d+dz;
+   cushion([M.magenta,M.teal,M.purple][pipes.length%3],[x,FLOOR+.075,z]).userData.sitReach=.9;
+   pipes.push([x+px,z+pz]);
+  }
+  if(pipes.length){
+   const lathe=(profile)=>new T.LatheGeometry(profile.map(([x,y])=>new T.Vector2(x,y)),16);
+   const glass=std('Maze_pipe_glass',0xb8fff1,{transparent:true,opacity:.46,roughness:.11,metalness:.24,depthWrite:false});
+   const accent=new T.MeshBasicMaterial({name:'Maze_pipe_neon',color:0x6cebaf,toneMapped:false});
+   const body=lathe([[0,0],[.13,0],[.15,.035],[.14,.15],[.095,.22],[.055,.28],[.055,.51],[.069,.52],[.069,.55],[.043,.55],[.043,.44]]);
+   const stem=new T.CylinderGeometry(.028,.037,.19,12).rotateZ(-.95).translate(.128,.19,0);
+   const bowl=lathe([[.028,0],[.035,.025],[.064,.062],[.065,.077],[.048,.077],[.023,.025]]).translate(.206,.24,0);
+   const rim=new T.TorusGeometry(.058,.007,6,16).rotateX(Math.PI/2).translate(0,.535,0);
+   const water=new T.CylinderGeometry(.119,.119,.047,16).translate(0,.079,0);
+   const matrix=new T.Matrix4();
+   for(const [name,mat,parts] of [['Haze_maze_water_pipe',glass,[body,stem,bowl]],['Haze_maze_pipe_accents',accent,[rim,water]]]){
+    const o=new T.InstancedMesh(mergeGeometries(parts),mat,pipes.length);o.name=name;o.userData.noCollide=true;
+    pipes.forEach(([x,z],i)=>o.setMatrixAt(i,matrix.makeTranslation(x,FLOOR,z)));
+    o.instanceMatrix.needsUpdate=true;o.computeBoundingBox();o.computeBoundingSphere();root.add(o);
+   }
+  }
+  // Tilt the soft planes for both overhead and corridor views. Draw the first set at low detail.
+  const mistLayers=[[],[],[]];
+  const mistPlane=(w,h,pitch,yaw,x,y,z)=>{
+   const g=new T.PlaneGeometry(w,h).rotateX(pitch).rotateY(yaw);g.computeBoundingBox();const {min,max}=g.boundingBox;
+   const fit=(value,low,high,min,max)=>T.MathUtils.clamp(value,low+.08-min,high-.08-max);
+   return g.translate(fit(x,x0,x1,min.x,max.x),fit(y,FLOOR,top,min.y,max.y),fit(z,z0,z1,min.z,max.z));
+  };
+  for(let i=0;i<12;i++){
+   const up=i<6?0:i<10?1:2,y=[FLOOR,...LEVELS][up]+1.05+rnd()*.55,[za,zb,start,count]=[[z0+1,z1-1,0,6],[z0+1,SPLIT-1,6,4],[SPLIT+1,z1-1,10,2]][up];
+   const z=T.MathUtils.lerp(za,zb,(i-start+.23+rnd()*.54)/count),x=cx+(rnd()-.5)*3.7,w=3.2+rnd()*1.1,a=rnd()*Math.PI;
+   mistLayers[0].push(mistPlane(w,2.3+rnd(),-.76,a,x,y,z));
+   mistLayers[1].push(mistPlane(w,2.2+rnd(),-.19,a+Math.PI/2,x,y,z));
+   mistLayers[2].push(mistPlane(w,2.7,-1.15,a,-x+2*cx,y-.3,z+.38));
+  }
+  for(const planes of mistLayers)for(const g of planes)put(M.mazeMist,g);
   // Vines trailing from the roof inside.
   for(let i=0;i<14;i++){const x=x0+.4+rnd()*(x1-x0-.8),z=z0+.4+rnd()*(z1-z0-.8),n=3+Math.floor(rnd()*4);
    for(let k=0;k<n;k++)put(M.leaf,new T.OctahedronGeometry(.09,0).scale(1,.45,1.3).rotateY(rnd()*3).translate(x+Math.sin(k*1.7)*.08,top-.15-k*.2,z));}
@@ -561,7 +596,7 @@ export function createHydroNipLounge({mirror=1}={}){
   {const o=seat('Soft_seat',new T.SphereGeometry(.58,16,10).scale(1,.62,1),M[c],[x,FLOOR+.36,z]);if(x===144.6&&rugMove)o.applyMatrix4(rugMove);if(i<3&&mazeRugTurn)o.applyMatrix4(mazeRugTurn);o.userData.sitPose='crossLegged';});
  // Every flat and dome cushion on the three rugs shares the meditation pose.
  [[126.4,13.4],[131,16.2],[133.6,16],[136.2,13.4],[142.7,14.9],[145.6,17.2]].map((p,i)=>seatingRow(p,Math.floor(i/2))).forEach(([x,z],i)=>
-  {const o=seat('Meditation_cushion',new T.CylinderGeometry(.34,.37,.15,16),[M.purple,M.teal,M.magenta][i%3],[x,FLOOR+.095,z]);if(x>=142.7&&rugMove)o.applyMatrix4(rugMove);if(i===0&&mazeRugTurn)o.applyMatrix4(mazeRugTurn);o.userData.sitPose='crossLegged';});
+  {const o=cushion([M.purple,M.teal,M.magenta][i%3],[x,FLOOR+.095,z]);if(x>=142.7&&rugMove)o.applyMatrix4(rugMove);if(i===0&&mazeRugTurn)o.applyMatrix4(mazeRugTurn);});
  for(const [x,z] of [[127.2,15],[137.2,15]].map((p,i)=>seatingRow(p,i))){turning=x===127.2?mazeRugTurn:null;cyl(M.wood,.5,.5,.05,[x,FLOOR+.4,z],18);cyl(M.dark,.08,.12,.38,[x,FLOOR+.19,z],8);
   cyl(M.board,.18,.12,.08,[x,FLOOR+.465,z],12);put(M.leaf,new T.SphereGeometry(.15,8,5,0,Math.PI*2,0,Math.PI/2).translate(x,FLOOR+.49,z));}turning=null;
  [[125.8,15.8,PINK],[131.6,13.6,AMBER],[136,16.8,GREEN],[139.6,15.6,PURPLE],[143.4,17.4,CYAN],[128.8,13.1,AMBER]].map((p,i)=>seatingRow(p,[0,0,1,1,2,0][i])).forEach(([x,z,c])=>put(neon(c),new T.IcosahedronGeometry(.09,1).translate(x,FLOOR+.11,z)));
