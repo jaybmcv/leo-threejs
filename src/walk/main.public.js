@@ -205,7 +205,6 @@ import {createAtriumKittens} from './arrival-atrium.public.js';
 import {createSurgeryArms} from './surgery.public.js';
 import {createImagingScans} from './imaging.js';
 import {createMissionTimer} from './mission-timer.js';
-import {createFinCasing} from './fin-casing.js';
 import {createGraffiti} from './graffiti.js';
 import {createCrownTv} from './crown-tv.js';
 import {createInvasion} from './invasion/game.js';
@@ -552,11 +551,10 @@ async function buildShip(){
  mct=createTransporters({colliders,lifts});for(const g of mct.groups)toBand(g);
  // The forward observation lounge's Mars-viewing compass, a flush inlay on its floor (lounge-compass.js), drawn with its band.
  {const compass=createLoungeCompass();if(compass)toBand(compass);}
- // The shared graffiti wall on the casing's main face (graffiti.js), drawn with Deck 19's band.
- const casing=ship.inside.getObjectByName('Walk_fin_root_casing');if(!casing?.userData.paintFace)throw Error('Prepared fin casing paint anchor missing');casing.updateWorldMatrix(true,false);const casingFrame=casing.matrixWorld.clone();
- graffiti=createGraffiti(casing.userData.paintFace,casingFrame,{bar:$('spray'),colours:$('spray-colours'),nozzles:$('spray-nozzles'),note:$('spray-note'),connect:$('spray-connect'),done:$('spray-done'),surface:$('viewport')},
-  {live:()=>live,connect,onOpen(){emote=null;input.enabled=false;input.down.clear();},onClose(){input.enabled=true;input.down.clear();}});
- toBand(graffiti.mesh);
+ // The stern paint follows the pressure skin in Deck 19's render bands.
+ graffiti=createGraffiti(baked,{bar:$('spray'),colours:$('spray-colours'),nozzles:$('spray-nozzles'),note:$('spray-note'),connect:$('spray-connect'),done:$('spray-done'),surface:$('viewport')},
+  {colliders,live:()=>live,connect,onOpen(){emote=null;input.enabled=false;input.down.clear();},onClose(){input.enabled=true;input.down.clear();}});
+ toBand(graffiti.group);
  // The Crown lounge TV on the crown lift's aft face (crown-tv.js): the video someone shared through Leo live.
  crownTv=createCrownTv({live:()=>live,base:LIVE_URL?httpBase(LIVE_URL):'',connect,
   els:{sheet:$('tv-sheet'),now:$('tv-now'),status:$('tv-status'),sound:$('tv-sound'),pick:$('tv-pick'),connect:$('tv-connect'),down:$('tv-down'),limits:$('tv-limits'),file:$('tv-file')},
@@ -756,7 +754,7 @@ const actions={
   else if(t.kind==='ball')enterBall();
   else if(t.kind==='ball-out')leaveBall();
   else if(t.kind==='mct')boardCart(t);
-  else if(t.kind==='graffiti'){closePanels();graffiti.open();}
+  else if(t.kind==='graffiti'){closePanels();graffiti.open(controller.position);}
   else if(t.kind==='lever')leverPanel.flip(t.lever);
   // Online the server decides each shot and every page, ours too, fires the shots it accepts; offline we fire our own.
   else if(t.kind==='cannon'){if(live?.live)live.cannon(t.cannon,keelClub.seed());else keelClub.fire(t.cannon);}

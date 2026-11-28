@@ -4,13 +4,20 @@
       "src/aft*.js",
       "src/engineering-dressing.js",
       "src/fin-*.js",
-      "src/walk/fin-casing.js",
-      "src/walk/graffiti.js",
-      "src/walk/graffiti-wall.js",
+        "src/walk/fin-casing.js",
       "src/walk/lever-panel.js"
     ],
     "room": "aft-machinery",
     "reason": "Fixed aft machinery, fin structure and crown route; these do not move in the redesign. The lever panel covers the fixed tank bay's doorway."
+    },
+    {
+      "paths": [
+        "src/walk/graffiti.js",
+        "src/walk/graffiti-surface.js",
+        "src/walk/graffiti-wall.js"
+      ],
+      "room": "circulation-19",
+      "reason": "The paint follows the stern pressure skin where it meets the Deck 19 floor."
   },
   {
     "paths": [
