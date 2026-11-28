@@ -115,17 +115,17 @@ for(let i=0;i<10;i++)frame({solveEvery:0});
  m.walker.body.rotation.set(0,0,0);for(let i=0;i<40;i++)frame({solveEvery:.05});
  pass(`in six poses every vertex lies within its parts' culling bounds (the farthest, ${fixedWorst.toFixed(2)} m from mid-body, beyond a fixed 1.8 m sphere)`);}
 
-// The visitor's own shader hooks (the film look, corner shading) come with a draw made later, its skin after them.
+// The visitor's own shader hooks (corner shading) come with a draw made later, its skin after them.
 {const m=crowd.members[0],p=m.parts.find(q=>q.material.map?.name==='body_BaseColor'),mat=p.material,calls=[];
- const hook=function(shader){calls.push('own');shader.vertexShader='// own\n'+shader.vertexShader;};hook.filmLook=true;hook.cornerShade=true;
+ const hook=function(shader){calls.push('own');shader.vertexShader='// own\n'+shader.vertexShader;};hook.cornerShade=true;
  mat.onBeforeCompile=hook;mat.customProgramCacheKey=function(){return 'own-key';};
  mat.map.image={width:2,height:2,data:new Uint8Array(16)};frame();
  const g=[...crowd.groups.values()].find(x=>x.mesh.visible&&x.slots.slice(0,x.count).includes(m.slot)&&x.mesh.material.name===mat.name);
  const shader={vertexShader:T.ShaderLib.standard.vertexShader,uniforms:{}};g.mesh.material.onBeforeCompile(shader,null);
  assert.deepEqual(calls,['own']);assert.ok(shader.vertexShader.startsWith('// own')&&shader.vertexShader.includes('crowdBone( skinIndex.x )'));
- assert.ok(g.mesh.material.onBeforeCompile.filmLook&&g.mesh.material.onBeforeCompile.cornerShade);
+ assert.ok(g.mesh.material.onBeforeCompile.cornerShade);
  assert.equal(g.mesh.material.customProgramCacheKey(),'own-key|crowd-skin');
- pass('a draw made later keeps the visitor\'s own shader hooks and their marks (film look, corner shading), its skin after them');}
+ pass('a draw made later keeps the visitor\'s own shader hooks and their mark (corner shading), its skin after them');}
 
 // A phone's (lean): each part drawn in Lambert with the visitor's own colour map, front faces only, its own hooks and
 // the crowd's skin on Lambert's shader.

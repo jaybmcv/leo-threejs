@@ -23,8 +23,8 @@ import {geometryKept} from './shader-hooks.js';
 // (Chrome and Edge on Windows: Chromium's ANGLE on Direct3D 11, occlusionByDefault); ?occlusion=1 turns it on elsewhere, and
 // ?occlusion=0 off, to compare.
 // Drawn where its geometry says, or recoloured only by its own hook (see measure()): the material says so and its hook is
-// the one marked so, or film look's or corner shading's wrapping it. A copy given another hook of its own loses the mark.
-const recolours = h => h?.recolourOnly === true || h?.filmLook === true || h?.cornerShade === true;
+// the one marked so, or corner shading's wrapping it. A copy given another hook of its own loses the mark.
+const recolours = h => h?.recolourOnly === true || h?.cornerShade === true;
 const kept = m => geometryKept(m) || m.userData?.recolourOnly === true && recolours(m.onBeforeCompile) && !m.isShaderMaterial && !m.isRawShaderMaterial && !m.displacementMap;
 const corners = new Uint8Array([0,0,0, 1,0,0, 1,1,0, 0,1,0, 0,0,1, 1,0,1, 1,1,1, 0,1,1]);
 const faces = new Uint8Array([0,2,1, 0,3,2, 4,5,6, 4,6,7, 0,1,5, 0,5,4, 3,7,6, 3,6,2, 0,4,7, 0,7,3, 1,2,6, 1,6,5]);
@@ -151,7 +151,7 @@ export function createGroupOcclusion(renderer, scene, camera, roots, {recheck = 
    // culled or bounds that cannot be read: such a member says
    // nothing of where it draws, so it always draws and stays out of the box; the rest of its group can still be left out.
    // Two ways back in: a material whose own hook only recolours (userData.recolourOnly: the kittens' and the actors'
-   // looks, which three's film look and corner shading may wrap, both shading only), and a member that declares where
+   // looks, which corner shading may wrap, shading only), and a member that declares where
    // it can draw (userData.occlusionBox, a Box3 in its own space that holds every place its shader or its code can move
    // its vertices to: the lounge's doors and hammocks, the aquarium's fish).
    // (`trust` false: neither, to compare.)

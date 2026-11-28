@@ -2229,7 +2229,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 2,
-      "signature": "b1dc3ad7a5334e362cbd90281a3a64e8581ec416d9d8cf99912d6fc6c472556f"
+      "signature": "d81cf282fcce70dc3227949c0f8089ab220a040e91d417daa364cdaf8671c751"
     },
     {
       "source": "src/walk/crowd-tier.js",
@@ -2243,7 +2243,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "b0be151f43e7cff24f5b2e71aadaa3ce08c4b5ae4b289b7f4afce0d86d9fa484"
+      "signature": "eaa22c2afd6cf7f00c20e3c5df6d59b2d5f74575162d47000a585d2779f11a30"
     },
     {
       "source": "src/walk/crown-tv.js",
@@ -2520,18 +2520,6 @@
       "interactionTargets": null,
       "placements": 1,
       "signature": "c46ead8ce4690099ff6e56a771871defad93b179fa2ccf274c304ba88fb85cf0"
-    },
-    {
-      "source": "src/walk/film-look.js",
-      "rooms": [],
-      "via": "frame boundary",
-      "fixed": true,
-      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
-      "features": [],
-      "colliders": [],
-      "interactionTargets": null,
-      "placements": 5,
-      "signature": "3051482e199dafaa34f2b3a6c407a6add5f787ca411a6b933bdde2a887616133"
     },
     {
       "source": "src/walk/fin-casing.js",
@@ -3971,18 +3959,6 @@
       "signature": "1201576591d8f125b2618cfbfe82a865e6157477d300cfbb9277c96c4c721aff"
     },
     {
-      "source": "src/walk/look.js",
-      "rooms": [],
-      "via": "frame boundary",
-      "fixed": true,
-      "reason": "Rendering, light, culling, readouts and pose state: they batch, shade, cull or pose things other modules placed (signs, plaques, figures, skins), or keep the ship clock; none places anything in a room.",
-      "features": [],
-      "colliders": [],
-      "interactionTargets": null,
-      "placements": 1,
-      "signature": "ec5d9a8574ee6d4ab820dd649c8341d75364a6828508a438d121810af21e3576"
-    },
-    {
       "source": "src/walk/lounge-aquarium.authoring.js",
       "rooms": [
         "commons-1"
@@ -4366,7 +4342,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "f55caff9eeaefb37b6962b8c06d6e05d189455ba0e5127da4915bdaaccc78dfe"
+      "signature": "c65cd46a6cf658a30d02444e3b832b86aacd91460ef3efc039bf20159cce2d97"
     },
     {
       "source": "src/walk/main.js",
@@ -4388,7 +4364,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "001b7a772660b4fb0dd60f746aef216a9f335c2ebdb721150277d28705ea9361"
+      "signature": "5a503c3c628688c980fa22cad9a8d5a6ddb622c95385877014139b747c2c038d"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4408,7 +4384,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "25d5a28b9bf4004523a6c3b34da96f77357d06995f7090aeaa43d1a753674d66"
+      "signature": "33d6b41aec0ed054c25159091e9e0e6670722a847fdbeacf2698682a59d075ef"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4428,7 +4404,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "fc3f760ec85ed84e6aeeb29c314d1f227df8c4a1af49699745f216e19752910b"
+      "signature": "9496910365fcef4748ef2fcbff2aed6b60837ac05994d241429f8e51b08bd2e8"
     },
     {
       "source": "src/walk/marks.authoring.js",

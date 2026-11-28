@@ -19,8 +19,8 @@ const plainHook=T.Material.prototype.onBeforeCompile;
 const functionIds=new WeakMap();let nextFunction=0;
 const identityOf=f=>{let i=functionIds.get(f);if(i===undefined)functionIds.set(f,i=nextFunction++);return i;};
 const describe=v=>v===null||v===undefined||typeof v!=='object'&&typeof v!=='function'?String(v):typeof v==='function'?'f'+identityOf(v):v.isColor?'c'+v.getHexString():v.isTexture?'t'+v.uuid:typeof v.toArray==='function'?'['+v.toArray().join(',')+']':'o'+JSON.stringify(v);
-// The hooks corner-shade.js and film-look.js put on a material: a kind's material must carry the same as its members.
-export const hookFlags=m=>{const h=m.onBeforeCompile;return (h?.cornerShade?'C':'')+(h?.filmLook?'F':'');};
+// The hook corner-shade.js puts on a material: a kind's material must carry the same as its members.
+export const hookFlags=m=>m.onBeforeCompile?.cornerShade?'C':'';
 // The shader a material is drawn with, as three tells two apart (its program cache key), with its hooks' flags: two
 // materials of one look and one program key are one shader. Each corner-shaded material carries a closure of its own
 // (its earlier hook), but they share one source and one set of uniforms (corner-shade.js), so their keys are equal.
@@ -49,7 +49,7 @@ export function lookOf(m){
  const standard=!!m?.isMeshStandardMaterial&&!m.isMeshPhysicalMaterial;
  if(!standard&&!m?.isMeshBasicMaterial||m.transparent||!m.visible)return null;
  if(Object.values(m).some(v=>v?.isTexture))return null;
- const h=m.onBeforeCompile;if(h!==plainHook&&!(h?.keepsGeometry&&(h.cornerShade||h.filmLook)))return null;
+ const h=m.onBeforeCompile;if(h!==plainHook&&!(h?.keepsGeometry&&h.cornerShade))return null;
  return m.type+'|'+Object.keys(m).filter(k=>!OWN.has(k)&&!READ.has(k)).sort().map(k=>k+'='+describe(m[k])).join('|');
 }
 // lookOf, worked out again only when the material is rebuilt (its version) or `fresh` asks.
@@ -101,9 +101,8 @@ const copied=v=>v===null||typeof v!=='object'||v.isTexture?v:typeof v.clone==='f
  * `id` (by default a new one; three sorts opaque draws by it), and its textures, `width` texels wide (by default one a
  * member; kind.add(m) takes more members while there is room).
  * - The material is a copy of the first member's own values. Its shader hooks are the first member's, whatever corner-
- *   shade.js and film-look.js make of them: follow() puts the first member's back whenever they differ (each patches any
- *   material it finds in the scene, the kind's too, and the order they meet the two in cannot be told apart by their
- *   flags), so the kind's shader is always the first member's.
+ *   shade.js makes of them: follow() puts the first member's back whenever they differ (it patches any material it finds
+ *   in the scene, the kind's too, each with a closure of its own), so the kind's shader is always the first member's.
  * - kind.index: each member's texel. kind.follow() writes the members' values into the texels (only those that changed).
  * - kind.fits(m): the member still has the kind's look and hooks, and the kind's material still holds one for what it reads
  *   from its textures: a member that does not is drawn apart by whoever can (feature-batches.js), or counted as drift. */

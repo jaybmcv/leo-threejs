@@ -14,7 +14,7 @@ export const floorBlocker = o => !!o?.isMesh && !o.isInstancedMesh && names.test
 export const HELD = Symbol('draw-runs held');
 function opaque(m) {
   return (m.isMeshStandardMaterial || m.isMeshBasicMaterial || m.isMeshPhongMaterial || m.isMeshLambertMaterial) && normalDepth(m) &&
-    (m.onBeforeCompile === Material.prototype.onBeforeCompile || m.onBeforeCompile.cornerShade || m.onBeforeCompile.filmLook) && m.depthWrite && m.colorWrite && !m.transparent && !m.transmission &&
+    (m.onBeforeCompile === Material.prototype.onBeforeCompile || m.onBeforeCompile.cornerShade) && m.depthWrite && m.colorWrite && !m.transparent && !m.transmission &&
     m.opacity === 1 && !m.alphaMap && !m.alphaTest && !m.alphaHash && !m.alphaToCoverage && !m.clippingPlanes?.length && (m.blending === NormalBlending || m.blending === NoBlending);
 }
 // Use actual rendered geometry and material ranges as blockers. The worker chooses

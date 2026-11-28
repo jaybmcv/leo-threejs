@@ -95,7 +95,7 @@ export function createCrowdTier(scene,{template,motion,most=1000,lean=false}){
   const uniforms={crowdMotion:{value:texture},crowdBind:{value:part.bindMatrix.clone()}};
   const before=source.onBeforeCompile,key=source.customProgramCacheKey;
   const hook=function(shader,renderer){before.call(this,shader,renderer);Object.assign(shader.uniforms,uniforms);shader.vertexShader=crowdShader(shader.vertexShader,PARS);};
-  for(const mark of ['filmLook','cornerShade'])if(before[mark])hook[mark]=before[mark];
+  if(before.cornerShade)hook.cornerShade=before.cornerShade;
   hook.keepsGeometry=false;m.onBeforeCompile=hook;m.customProgramCacheKey=function(){return key.call(this)+'|crowd-tier';};
   return m;
  };

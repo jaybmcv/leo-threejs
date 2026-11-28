@@ -86,11 +86,11 @@ export function createCrowdDraw(scene,{slots=24,lean=false}={}){
   // its image (its source's data, which a clone would share), so the draw has a source of its own on that image.
   if(source.map){const map=source.map.clone();map.source=new T.Source(source.map.image);m.map=map;}
   const uniforms={crowdBones:{value:texture},crowdBind:{value:bindMatrix.clone()}};
-  // The visitor's own hooks come too, the skin after them (the film look, corner shading: film-look.js and
-  // corner-shade.js mark theirs, and leave a material alone that carries them already).
+  // The visitor's own hooks come too, the skin after them (corner shading: corner-shade.js marks its own, and leaves a
+  // material alone that carries it already).
   const before=source.onBeforeCompile,key=source.customProgramCacheKey;
   const hook=function(shader,renderer){before.call(this,shader,renderer);Object.assign(shader.uniforms,uniforms);shader.vertexShader=crowdShader(shader.vertexShader);};
-  for(const mark of ['filmLook','cornerShade'])if(before[mark])hook[mark]=before[mark];
+  if(before.cornerShade)hook.cornerShade=before.cornerShade;
   hook.keepsGeometry=false;m.onBeforeCompile=hook;m.customProgramCacheKey=function(){return key.call(this)+'|crowd-skin';};
   return m;
  };

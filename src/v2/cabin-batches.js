@@ -25,7 +25,7 @@ import {yieldEvery} from './yield-to-page.js';
 //
 // The batch's material is a copy of the parts' own that keeps its id, so the batch sorts exactly where the parts did and
 // the frame is unchanged. It follows the original: its values are copied over when they differ (within a few frames), its shader hook
-// is the original's (whatever corner shading or the film look made of it) with the batch's matrix lookup added, and it
+// is the original's (whatever corner shading made of it) with the batch's matrix lookup added, and it
 // is rebuilt whenever the original is. (A material made with Object.create(original) followed by itself, but made every
 // property three reads per draw a prototype lookup: about 7 µs more a draw.) Only for opaque materials with three's own
 // shading: glass drawn in one batch would change the order it blends in.
@@ -87,10 +87,10 @@ export function batchMaterial(m,omit=null,id=m.id,chunk=CHUNK){
  Object.defineProperty(copy,'id',{value:id});
  const keys=ownKeys(m,omit);for(const k of keys)copy[k]=m[k];
  copy.uuid=T.MathUtils.generateUUID();copy.version=0;
- // The original's hook, whatever it is when the shader is built, then the batch's lookup. Marked as corner-shaded and
- // film-looked so neither wraps it again: both reach it through the original's hook.
+ // The original's hook, whatever it is when the shader is built, then the batch's lookup. Marked as corner-shaded so
+ // corner shading does not wrap it again: it reaches it through the original's hook.
  const hook=function(shader,renderer){m.onBeforeCompile.call(this,shader,renderer);shader.vertexShader=shader.vertexShader.replace('#include <batching_vertex>',chunk);};
- hook.cornerShade=true;hook.filmLook=true;hook.keepsGeometry=keepsGeometry(m.onBeforeCompile);
+ hook.cornerShade=true;hook.keepsGeometry=keepsGeometry(m.onBeforeCompile);
  const tag=chunk===CHUNK?'|cabin-instanced':'|batch-plain',key=function(){return m.customProgramCacheKey.call(m)+tag;};
  copy.onBeforeCompile=hook;copy.customProgramCacheKey=key;
  return {m,copy,keys,hook,key,omit,version:m.version,usable:true,pass:-1};

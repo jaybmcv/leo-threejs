@@ -6,7 +6,6 @@ import {hearGamingBoard} from './gaming-scores.js';
 import {createAtriumGeometryRuntime} from '../v2/atrium-geometry-runtime.js';
 import {getAtriumQuality,observeAtriumFrame} from '../v2/atrium-quality.js';
 import {mountGraphicsSettings} from './graphics-settings.js';
-import {installFilmLook} from './film-look.js';
 import {createFrog} from './frog.js';
 import {createFrogTrip} from './frog-trip.js';
 import {mountControlsSettings} from './controls-settings.js';
@@ -500,9 +499,6 @@ const skate=createSkate({button:$('skate'),hint:$('skate-hint'),flipButton:$('ki
  blocked:()=>document.body.dataset.ready!=='1'?'Still loading':skateBusy()?'Not now: step out of what you’re doing first':skateFooting(controller)});
 // Something else has the walker: a seat or bed, a treadmill, the ball, a swim, the hook, a glide, a game or a camera.
 function skateBusy(){return !!(resting||run||inBall||treasure?.active||controller.hook||controller.gliding||playing()||pawsOff?.active||graffiti?.active||emergencyDrill?.isOpen||prank?.locked||prank?.isOpen||portable?.active||wardPush?.engaged);}
-// The film look (film-look.js, chosen in the Graphics detail sheet): Stylised 3D drawn by the walk's own materials,
-// installed before the walk first draws.
-installFilmLook({renderer,scene,keep:()=>walker?.holder});
 const frog=createFrog(scene,colliders),frogTrip=createFrogTrip({renderer,camera,light:()=>matchMedia('(pointer:coarse)').matches||getAtriumQuality()==='performance'});
 // A relocation, including a portal or a fall recovery, restores the local look first.
 input.escapePointer=()=>frogTrip.active;
