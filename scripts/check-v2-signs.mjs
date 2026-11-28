@@ -3,8 +3,11 @@
 // beside the stair; the check must still reject that placement.
 import fs from 'node:fs/promises';
 import assert from 'node:assert/strict';
+import {Group,Vector3} from 'three';
 import {signPlaces,legacySignPlace} from '../src/plan/signs-v2.js';
 import {runtimeLayout} from './v2-plugin.mjs';
+import {LOWER_AFT_AREAS,createLowerAftArea} from '../src/lower-aft.js';
+import {buildRoomShell} from '../src/v2/room-shell.js';
 import {guideSchedule} from '../src/v2/wayfinding-guide-data.js';
 // Placed from the plan as the walk receives it (v2-layout), since that's what src/v2/signs.js reads.
 const full=JSON.parse(await fs.readFile('output/leo-interior-v02/layout.json','utf8')),layout=runtimeLayout(full);
@@ -54,3 +57,15 @@ const shallow={...sample,height:3,door:{...sample.door,width:.6,center:[...sampl
 const fitted=guideSchedule({...layout,rooms:[shallow]})[0];checkRoomGuide(fitted,shallow);assert(fitted.height<.55&&fitted.width>shallow.door.width);
 assert.throws(()=>checkRoomGuide({...fitted,height:.55},shallow),/trim|ceiling/,'Reject an unscaled sign in a shallow strip');
 console.log(`Room plaques: ${guides.filter(g=>g.plaque).length} wall-mounted, centred, fitted and one per existing doorway; old overhang and shallow-strip overflow rejected`);
+
+// The aft doorway loses its interior lettering and keeps its separate corridor plaque.
+const spares=eligible.find(r=>r.id==='d01-spares-aft'),source=createLowerAftArea(LOWER_AFT_AREAS.find(a=>a.id===spares.id));
+const root=new Group(),structure=new Group();root.add(source.root,structure);
+buildRoomShell({root,cutaway:new Set([source.shell])},spares,structure);
+const [doorX,,doorZ]=spares.door.center;
+for(const sign of source.root.getObjectsByProperty('name','Service_wayfinding')){
+ const at=sign.getWorldPosition(new Vector3());
+ assert(Math.hypot(at.x-doorX,at.z-doorZ)>.5,'Aft spares doorway lettering must be absent from the built room');
+}
+assert(guides.find(g=>g.id===spares.id)?.plaque,'Aft spares must retain its corridor plaque');
+console.log('Aft spares: interior doorway lettering omitted, corridor plaque retained');
