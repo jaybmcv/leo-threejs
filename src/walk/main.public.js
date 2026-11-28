@@ -82,7 +82,7 @@ const WALK_SCRIPT=new URL(import.meta.url).pathname.split('/').pop(),OWNER_BAKE_
 const SMALL_MERGE=deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('smallmerge')!=='0';
 let ownerHiding=null;
 function startOwnerHiding(){
- if(preparedPhone)return;const key=ownerKey(WALK_SCRIPT,(phoneBatching.merge?'merge':'batch')+deskPiece+(phoneBatching.merge&&deckKinds?'k'+(colourKinds?'c':''):''));
+ if(preparedPhone)return;const key=ownerKey(WALK_SCRIPT,(phoneBatching.merge?'merge':'batch')+deskPiece+(phoneBatching.merge&&deckKinds?'k'+(colourKinds?'c':''):'')+(furnishKinds?'f':''));
  if(OWNER_BAKE_PAGE){globalThis.__ownerBakeHost={T,scene,renderer,camera,key,follow,goTo:place=>goTo(place)};return;}
  const file=ownerBakeFile(WALK_SCRIPT);if(!file)return;
  fetch(new URL(file,import.meta.url)).then(r=>r.ok?r.json():null).then(data=>{const hiding=createOwnerHiding(data,{key,scene});hiding?.resolve();ownerHiding=hiding;
@@ -330,6 +330,9 @@ const deskPiece=deskPieceSize({query:new URLSearchParams(location.search),phone:
 // screens, glows) merge by colour kind too. ?deckkinds=0 merges them all per material, as before; ?colourkinds=0 keeps
 // the finish kinds only. The owner bake's key carries both: a bake of one way is never used by another.
 const deckKinds=deskPiece>0&&renderer.extensions.has('WEBGL_multi_draw')&&phoneTest.get('deckkinds')!=='0',colourKinds=deckKinds&&phoneTest.get('colourkinds')!=='0';
+// The rare furnishings' batches by look kind (furnishing-batches.js), on desktops with pieces as the deck kinds are, the
+// owner bake's page included (its batches are rows the bake proves): ?furnishkinds=0 batches them by material.
+const furnishKinds=deskPiece>0&&renderer.extensions.has('WEBGL_multi_draw')&&phoneTest.get('furnishkinds')!=='0';
 // The ship's layers are set apart by height (a floor finish 6 mm over the deck, paint 8 mm): with the logarithmic depth
 // buffer the shaders write the depth, so polygon offset has never applied. With linear depth it would, and pull the hex
 // sub-floor (finish-kit.js) over the Arrival Hall's finish, so it stays off.
@@ -586,7 +589,7 @@ async function buildShip(){
   // A material corner shading will leave alone (corner-shade.js) stays out of the kinds: a kind's material is shaded as one.
   // So does one whose merge's name corner shading skips (the name is the material's), as a kind's name is never skipped.
   const alone=phone||phoneTest.get('corner')==='0'?null:(set=>m=>set.has(m)||cornerShadeSkipsName(m.name))(cornerShadeLeavesAlone(scene));
-  phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE,kinds:deckKinds,colours:colourKinds,alone});}ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
+  phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE,kinds:deckKinds,colours:colourKinds,alone});}ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer,{kinds:furnishKinds,alone:furnishKinds&&!phone&&phoneTest.get('corner')!=='0'?(set=>m=>set.has(m)||cornerShadeSkipsName(m.name))(cornerShadeLeavesAlone(scene)):null});atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // Draws of one material that reach the GPU one after another draw as one (draw-runs.js): the decks' common furnishings
  // and every other instanced mesh outside the repeated cabins, the atrium facade (its lift and aft-core copies' materials
  // as one palette) and the tube lift. Made before the tests below wrap the renderer, so it sees only what they let
@@ -1311,8 +1314,9 @@ function draw(view){
    atriumRooms?.update(camera,controller.position);}}catch(e){roomViewJob=null;console.warn('Atrium room views skipped.',e);}}
  view.updateMatrixWorld(true);atriumGeometry?.update(view,renderer.domElement.height);voyagerLawn?.update(view);
  for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
- // The deck kinds' texels take their source materials' values as the moods left them this frame (phone-bands.js).
- phoneBands?.follow?.();
+ // The deck kinds' and furnishing kinds' texels take their source materials' values as the moods left them this frame
+ // (phone-bands.js, furnishing-batches.js).
+ phoneBands?.follow?.();ship.v2FurnishingBatches?.follow?.();
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();
  if(view===camera){
   const main=()=>renderer.render(scene,view);

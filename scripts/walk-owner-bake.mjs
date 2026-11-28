@@ -94,7 +94,7 @@ const onlyCafe=process.argv.includes('--supplement-only');
 let previous=null;
 if(onlyCafe||process.argv.includes('--if-missing')){
  try{previous=JSON.parse(await fs.readFile(out,'utf8'));}catch(error){if(onlyCafe)throw error;}
- if(previous&&(previous.key!==ownerKey(walk.script,'merge'+DESK_PIECE.discrete+'kc')||!previous.blocks?.length||ownerBakeProblem(previous,previous.key)))previous=null;
+ if(previous&&(previous.key!==ownerKey(walk.script,'merge'+DESK_PIECE.discrete+'kcf')||!previous.blocks?.length||ownerBakeProblem(previous,previous.key)))previous=null;
  if(onlyCafe&&!previous)throw Error('A valid current-build owner bake is required for --supplement-only');
  if(previous&&coversCafe(previous)){
   console.log('owner bake: already baked for',walk.script);process.exit(0);
