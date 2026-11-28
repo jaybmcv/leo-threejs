@@ -610,10 +610,15 @@ async function buildShip(){
  // sit out the main pass (group-occlusion.js, occlusion-groups.js): by default on
  // Chrome and Edge on Windows, where it was measured; ?occlusion=1 elsewhere, ?occlusion=0 off.
  {const asked=new URLSearchParams(location.search).get('occlusion');if(deskDetail&&!OWNER_BAKE_PAGE&&(asked==='1'||asked!=='0'&&occlusionByDefault(renderer.getContext())))groupOcclusion=createGroupOcclusion(renderer,scene,camera,occlusionGroups(scene,{featureRoots,instanced,more:new URLSearchParams(location.search).get('occlusionmore')!=='0'}),{trust:new URLSearchParams(location.search).get('occlusiontrust')!=='0'});}
- if(deskDetail&&!OWNER_BAKE_PAGE)featureBatches=await createFeatureBatches(scene,renderer,featureRoots,{skip:groupOcclusion?.hiddenRoot});
+ // Feature kinds (feature-batches.js, look-kinds.js): the room features' and lifts' parts whose materials differ only in
+ // colour, glow, roughness and metalness batch by kind, not by material. Materials corner shading leaves alone (or would,
+ // by name) stay apart. ?featurekinds=0 batches them by material, as before.
+ const featureKinds=deskDetail&&new URLSearchParams(location.search).get('featurekinds')!=='0';
+ const kindAlone=phone||phoneTest.get('corner')==='0'?null:(set=>m=>set.has(m)||cornerShadeSkipsName(m.name))(cornerShadeLeavesAlone(scene));
+ if(deskDetail&&!OWNER_BAKE_PAGE)featureBatches=await createFeatureBatches(scene,renderer,featureRoots,{skip:groupOcclusion?.hiddenRoot,kinds:featureKinds,alone:kindAlone});
  if(liftBatching){const roots=lifts.lifts.map(l=>l.root),skip=groupOcclusion?.hiddenRoot;
-  liftBatches=await createFeatureBatches(scene,renderer,roots,{skip,take:o=>o.name!=='Lift_door_blade'&&o.name!=='Lift_door_stop_shut'});
-  liftDoorBatches=await createFeatureBatches(scene,renderer,roots,{skip,hide:true,take:o=>o.name==='Lift_door_stop_shut'});}
+  liftBatches=await createFeatureBatches(scene,renderer,roots,{skip,take:o=>o.name!=='Lift_door_blade'&&o.name!=='Lift_door_stop_shut',kinds:featureKinds,alone:kindAlone});
+  liftDoorBatches=await createFeatureBatches(scene,renderer,roots,{skip,hide:true,take:o=>o.name==='Lift_door_stop_shut',kinds:featureKinds,alone:kindAlone});}
  // The groups holding only those instanced meshes once the live draws have their final parents (V2_live_source_draws: a
  // deck's cabin shells, a cabin template's fittings), and groups of only such groups, innermost first: cull() hides each
  // while nothing in it shows, so three's scene walk and matrix pass skip it.

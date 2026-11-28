@@ -89,3 +89,69 @@ console.log('PASS two-part equipment collection, parent visibility and existing 
  roots[0].visible=true;painted(2);s.remove(roots[2]);painted(0);
 }
 console.log('PASS painting frames retain independent deck, frustum and parent visibility');
+
+// Feature kinds (look-kinds.js): parts whose materials differ only in colour, glow, roughness and metalness share one batch.
+{
+ const s=new T.Scene(),b=new T.Group(),root=new T.Group();b.name='Walk_band_kinds';s.add(b);b.add(root);root.position.z=-6;
+ const mats=[[0xff0000,.2,.1,0x102030,1],[0x00ff00,.5,0,0x000000,1],[0x3366cc,.9,.4,0xffffff,.25]].map(([color,roughness,metalness,emissive,emissiveIntensity])=>new T.MeshStandardMaterial({color,roughness,metalness,emissive,emissiveIntensity}));
+ const apart=new T.MeshStandardMaterial({side:T.DoubleSide}),textured=new T.MeshStandardMaterial({map:new T.Texture()}),lonely=new T.MeshStandardMaterial({color:0x808080,flatShading:true});
+ const box=new T.BoxGeometry(),ball=new T.SphereGeometry(.5,8,6),bare=new T.BoxGeometry();bare.deleteAttribute('uv');
+ // Added out of id order: the batch must draw them in id order.
+ const plan=[[box,mats[2]],[ball,mats[0]],[box,mats[1]],[bare,mats[0]],[box,apart],[box,apart],[box,textured],[box,textured],[box,lonely],[bare,lonely]];
+ const parts=plan.map(([g,m],i)=>{const o=new T.Mesh(g,m);o.position.x=i*.4-2;root.add(o);return o;});
+ const kinds=await createFeatureBatches(s,renderer,[root],{kinds:true,alone:m=>m===textured});
+ assert.equal(kinds.stats.kinds,1);assert.equal(kinds.stats.kindMaterials,3);
+ // The kind, the side-apart material's batch and the textured one's; the lonely material's two parts differ in uv, so stay apart.
+ assert.equal(kinds.stats.batches,3);
+ const kind=kinds.kinds[0],K=kind.material,batch=s.children.find(o=>o.isBatchedMesh&&o.material===K);
+ assert.deepEqual(kind.materials,[...mats].sort((a,b)=>a.id-b.id));
+ assert.equal(K.id,Math.min(...mats.map(m=>m.id)),'the kind sorts where its first member did');
+ assert(/^Walk_feature_batch_kind_\d+$/.test(batch.name)&&!/facade|hull|exterior|skin|sky|glass|window|haze|water/i.test(batch.name));
+ // White, glowing white at intensity 1, roughness and metalness 1; float32 nearest texels with no colour-space conversion.
+ assert(K.color.equals(new T.Color(1,1,1))&&K.emissive.equals(new T.Color(1,1,1))&&K.emissiveIntensity===1&&K.roughness===1&&K.metalness===1);
+ for(const t of [K.map,K.emissiveMap,K.roughnessMap,K.metalnessMap]){assert(t?.isDataTexture&&t.type===T.FloatType&&t.magFilter===T.NearestFilter&&t.minFilter===T.NearestFilter&&t.colorSpace===T.NoColorSpace&&!t.matrixAutoUpdate);}
+ assert.equal(K.roughnessMap,K.metalnessMap);
+ const f=Math.fround;
+ kind.materials.forEach((m,k)=>{const c=K.map.image.data,e=K.emissiveMap.image.data,l=K.roughnessMap.image.data,i=k*4;
+  assert.deepEqual([c[i],c[i+1],c[i+2],c[i+3]],[f(m.color.r),f(m.color.g),f(m.color.b),1]);
+  assert.deepEqual([e[i],e[i+1],e[i+2]],[f(m.emissive.r*m.emissiveIntensity),f(m.emissive.g*m.emissiveIntensity),f(m.emissive.b*m.emissiveIntensity)]);
+  assert.deepEqual([l[i+1],l[i+2]],[f(m.roughness),f(m.metalness)]);});
+ // Each instance's vertices sit at its own material's texel, in the materials' id order.
+ const uv=batch.geometry.attributes.uv,n=kind.materials.length,seen=[];
+ for(let i=0;i<4;i++){const info=batch._geometryInfo[batch._instanceInfo[i].geometryIndex],u=uv.getX(info.vertexStart);
+  for(let v=info.vertexStart;v<info.vertexStart+info.vertexCount;v++)assert.equal(uv.getX(v),u);seen.push(Math.floor(u*n));}
+ assert.deepEqual(seen,[0,0,1,2]);
+ // A second call whose lowest member is already taken gets another id: no two kinds share one.
+ const again=new T.Group();b.add(again);again.position.z=-6;
+ for(const m of [mats[0],mats[1]])again.add(new T.Mesh(box,m));
+ const other=await createFeatureBatches(s,renderer,[again],{kinds:true});
+ assert.notEqual(other.kinds[0].material.id,K.id);assert.equal(other.kinds[0].material.id,Math.min(mats[0].id,mats[1].id)===K.id?Math.max(mats[0].id,mats[1].id):Math.min(mats[0].id,mats[1].id));
+ s.remove(b);s.add(b);b.remove(again);
+ const draw=fn=>{s.updateMatrixWorld(true);kinds.around(camera,()=>{s.onBeforeRender(renderer,s,camera,null);fn();});assert(parts.every(o=>o.visible));};
+ draw(()=>{assert(batch.visible);assert.deepEqual(parts.slice(0,4).map(o=>o.visible),[false,false,false,false]);assert.equal(kinds.stats.apart,0);});
+ // A changed colour shows in its texel at the next pass.
+ mats[1].color.setRGB(.25,.5,.75);draw(()=>{});{const k=kind.index.get(mats[1]),c=K.map.image.data;assert.deepEqual([c[k*4],c[k*4+1],c[k*4+2]],[.25,.5,.75]);}
+ // A member that no longer has the kind's look draws itself; the others stay batched.
+ mats[1].side=T.DoubleSide;mats[1].needsUpdate=true;
+ draw(()=>{assert(parts[2].visible);assert(!parts[0].visible&&!parts[1].visible&&!parts[3].visible);assert.equal(kinds.stats.apart,1);});
+ mats[1].side=T.FrontSide;mats[1].needsUpdate=true;draw(()=>assert(!parts[2].visible));
+ // So does one whose hooks differ from the kind's (corner shading on it and not on the kind).
+ const hook=function(){};hook.cornerShade=true;hook.keepsGeometry=true;mats[0].onBeforeCompile=hook;
+ draw(()=>{assert(parts[1].visible&&parts[3].visible);assert(!parts[0].visible&&!parts[2].visible);});
+ K.onBeforeCompile=hook;draw(()=>assert(!parts[1].visible&&!parts[3].visible));
+ // A kind whose own material no longer holds one for what it reads from its textures lets every part draw itself.
+ K.roughness=.5;draw(()=>{assert(!batch.visible);assert(parts.slice(0,4).every(o=>o.visible));});K.roughness=1;
+ // Without kinds every material batches on its own, as before.
+ const s2=new T.Scene(),b2=new T.Group(),r2=new T.Group();b2.name='Walk_band_plain';s2.add(b2);b2.add(r2);
+ for(const m of [mats[0],mats[0],mats[1],mats[1]])r2.add(new T.Mesh(box,m));
+ const plain=await createFeatureBatches(s2,renderer,[r2]);assert.equal(plain.stats.kinds,0);assert.equal(plain.stats.batches,2);
+ assert(s2.children.filter(o=>o.isBatchedMesh).every(o=>mats.includes(o.material)));
+}
+// A basic material's kind reads only its colour.
+{
+ const s=new T.Scene(),b=new T.Group(),root=new T.Group();b.name='Walk_band_glow';s.add(b);b.add(root);
+ for(const c of [0xff8800,0x0088ff])root.add(new T.Mesh(new T.BoxGeometry(),new T.MeshBasicMaterial({color:c})));
+ const glow=await createFeatureBatches(s,renderer,[root],{kinds:true});const K=glow.kinds[0].material;
+ assert(K.isMeshBasicMaterial&&K.map&&!K.emissiveMap&&!K.roughnessMap&&K.color.equals(new T.Color(1,1,1)));
+}
+console.log('PASS feature kinds: one batch a look, texels as the uniforms, id order, parts apart on drift or other hooks');
