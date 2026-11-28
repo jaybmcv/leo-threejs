@@ -67,7 +67,7 @@ export function createVaultLift(colliders){
    g.font='24px sans-serif';g.fillText(status,256,190);tex.needsUpdate=true;
   };
  }
- let shown='',authorized=false,returning=false,carried=false;
+ let shown='',authorized=false,returning=false,carried=false,passwordSummon=false;
  const place=()=>{
   car.position.y=lift.y-base;car.updateMatrixWorld(true);mover.place(car.matrixWorld);
   const setGate=(g,y,open)=>{g.mesh.position.y=y+H*open;g.mesh.scale.y=1-open;g.mesh.visible=open<.999;g.mover.enabled=open<.99;};
@@ -80,7 +80,10 @@ export function createVaultLift(colliders){
  const inside=p=>{const v=local(p);return Math.hypot(v.x,v.z)<CAR-.12&&Math.abs(p.y-lift.y)<.6;};
  const api={group,solid,lift,inside,docks,
   get authorized(){return authorized;},
-  unlock(code){if(!vaultPassword(code))return false;authorized=true;callLift(lift,0);place();return true;},
+  unlock(code){
+   if(!vaultPassword(code))return false;
+   authorized=true;passwordSummon=lift.at!==0||lift.phase==='moving';callLift(lift,0);place();return true;
+  },
   get riding(){return lift.phase==='moving'&&carried;},
   // Upper landings may summon the locked cab. The lounge's password still controls entry there.
   call(l,index,opts){if(!authorized&&lift.at===0&&index>0&&opts?.now)return;if(l!==lift||!Number.isInteger(index)||index<0||index>=docks.length)return;callLift(lift,index,opts);},
@@ -101,7 +104,11 @@ export function createVaultLift(colliders){
    const blocked=Math.abs(x)<WIDTH/2+.35&&Math.abs(z-FRONT)<.5&&Math.abs(w.position.y-lift.y)<.6;
    if(blocked&&(lift.phase==='closing'||lift.phase==='open'&&lift.calls.size)){lift.phase='open';lift.doors=1;lift.dwell=0;place();return;}
    const phase=lift.phase,dy=stepLift(lift,lift.stops,dt);
-   if(carried&&phase==='moving'&&lift.phase==='opening'&&lift.at===0)returning=true;
+   if(phase==='moving'&&lift.phase==='opening'&&lift.at===0){
+    // Keep access for an exiting rider or a visitor who summoned the cab with the password.
+    if(!carried&&!passwordSummon)authorized=false;
+    returning=carried;passwordSummon=false;
+   }
    if(carried&&dy){w.position.y+=dy;w.velocity.set(0,0,0);w.top=w.position.y;}
    place();
   },

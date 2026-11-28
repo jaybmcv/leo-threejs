@@ -108,6 +108,27 @@ for(const i of [1,2]){
  assert(lift.inside(walker.position),'Reboard from Deck '+(i+17));
 }
 ride(0);exit(0);
+
+walker.place(landing(0));assert(lift.unlock('9lives'));tick(2.25,0,1.25);
+ride(2);exit(2);
+walker.place(landing(0));const emptyCall=lift.nearest(walker.position);
+assert.equal(emptyCall?.kind,'clubhouse-call');assert.equal(emptyCall.stop,0);
+lift.call(emptyCall.lift,emptyCall.stop);tick(0,-2.25,1.55);tick(0,0,8);
+assert.equal(lift.lift.at,0);assert.equal(lift.lift.phase,'open');
+tick(0,2.25,1.55);
+assert.equal(lift.nearest(walker.position)?.kind,'clubhouse-password','Empty return restores the password prompt');
+tick(2.25,0,1.1);
+assert(walker.position.x<S.x-S.front-.30,'Empty return keeps the lounge gate solid');
+
+// A password entered while the cab is away grants entry when it arrives.
+walker.place(landing(2));const upperCall=lift.nearest(walker.position);
+assert.equal(upperCall?.kind,'clubhouse-call');
+lift.call(upperCall.lift,upperCall.stop);tick(0,0,8);
+assert.equal(lift.lift.at,2);
+walker.place(landing(0));assert(lift.unlock('9lives'));tick(0,0,8);
+assert.equal(lift.lift.at,0);assert(lift.authorized,'The password summon keeps its authorization');
+tick(2.25,0,1.25);assert(lift.inside(walker.position),'Board after summoning with the password');
+
 for(const z of [-35.12,-29.06])for(let x=-138.25;x<=-133.1;x+=.1)
  assert(clear(x,24.3,z),'Clear route around the tube '+[x,z]);
 
@@ -142,4 +163,4 @@ assert(!clear(S.edge,28.3,S.z),'Negative control: the old rail would block board
 const overhang=new T.Group();box(overhang,'Old_overhang_floor',[2.77,.24,.4],[-89.115,28.18,-49.6]);col.addStatic(overhang);col.commit();
 seg.start.set(-89.8,26.1333332+.75,-50);seg.end.set(-89.8,26.1333332+1.65,-50);
 assert(col.overlaps(seg,.35),'Negative control: former floor strip blocks stair headroom');
-console.log('PASS aligned clubhouse shaft, level doors, locked and summoned gates, both upper round trips, old walls and '+stairSteps+' stair transitions');
+console.log('PASS aligned clubhouse shaft, level doors, empty return relock, password summon, both upper round trips, old walls and '+stairSteps+' stair transitions');
