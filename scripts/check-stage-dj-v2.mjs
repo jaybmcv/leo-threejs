@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {createStageDj,stageDjCollider,STAGE_DJ} from '../src/v2/common-stage-dj.js';
-import {stageDjLevel,stageDjLoop,createStageDjSound} from '../src/walk/stage-dj-sound.js';
+import {stageDjLevel,stageDjLoop,mixStageDj,createStageDjSound} from '../src/walk/stage-dj-sound.js';
 import {addAtriumStage,stageGeometry,stageSeats} from '../src/v2/atrium-stage.js';
 import {Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
@@ -83,6 +83,30 @@ class Audio {
 const buffer=stageDjLoop(new Audio()),data=buffer.getChannelData(0);let energy=0,peak=0;
 for(const n of data){assert(Number.isFinite(n));energy+=n*n;peak=Math.max(peak,Math.abs(n));}
 assert(Math.sqrt(energy/data.length)>.08);assert(peak<1);assert(Math.abs(data[0])===0&&Math.abs(data.at(-1))===0);assert(Math.abs(buffer.duration-16*60/134)<1/22050);
+const rate=context.sampleRate,beatSamples=data.length/16,backingLevel=.04;
+const kick=new Float32Array(data.length),backing=new Float32Array(data.length).fill(backingLevel);
+const overloadAt=Math.floor(data.length-.05*rate);backing[overloadAt]=-1.2;
+mixStageDj(kick,rate);mixStageDj(backing,rate);
+// The silent render isolates the kick. Subtract it from the steady backing render to measure ducking.
+for(let beat=0;beat<16;beat++){
+ const sample=t=>Math.ceil(beat*beatSamples+t*rate),crossings=[];
+ let punch=0,aligned=0,kickEnergy=0;
+ for(let i=sample(.006);i<sample(.18);i++){
+  if(i<sample(.02))punch=Math.max(punch,Math.abs(kick[i]));
+  if(i>=sample(.075)&&kick[i-1]<=0&&kick[i]>0)crossings.push(i);
+  aligned+=data[i]*kick[i];kickEnergy+=kick[i]**2;
+ }
+ assert(punch>.45&&aligned/kickEnergy>.7,`The loop plays the kick on beat ${beat+1}`);
+ assert(Math.abs(kick[sample(.28)])===0&&Math.abs(kick[(sample(0)+kick.length-1)%kick.length])===0,'The kick ends before the next beat');
+ const hz=rate*(crossings.length-1)/(crossings.at(-1)-crossings[0]);
+ assert(crossings.length>=4&&hz>=45&&hz<=55,`The kick settles near 50 Hz on beat ${beat+1}`);
+ const backingGain=t=>(backing[sample(t)]-kick[sample(t)])/backingLevel;
+ const dip=backingGain(.018);
+ assert(dip>.65&&dip<.9&&Math.abs(backingGain(.16)-1)<1e-5,`The backing dips and recovers on beat ${beat+1}`);
+}
+// Peak measured from the shipped 134 BPM loop at this sample rate.
+const previousPeak=.7370203733444214;
+assert(peak<=previousPeak&&Math.abs(backing[overloadAt])<=previousPeak,'The final limiter keeps the output below the previous peak even when driven');
 built=0;globalThis.AudioContext=Audio;globalThis.document={hidden:false,addEventListener(){}};Object.defineProperty(navigator,'userActivation',{value:{hasBeenActive:false},configurable:true});
 const sound=createStageDjSound(STAGE_DJ);sound.update(near,true);assert.equal(built,0,'Wait for a gesture');navigator.userActivation.hasBeenActive=true;sound.update(near,false);sound.update(far,true);assert.equal(built,0,'Do not start muted or far away');
 sound.update(circle,true);assert.equal(built,1);const audienceGain=sound.gain;sound.update(near,true);assert(sound.gain>audienceGain);assert(sound.running);context.currentTime=.5;assert(sound.beat>1);sound.update(back,true);assert.equal(sound.gain,backGain);sound.update(far,true);assert.equal(sound.level,0);sound.update(near,false);assert.equal(sound.gain,0);

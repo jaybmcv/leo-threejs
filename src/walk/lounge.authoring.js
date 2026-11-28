@@ -4,7 +4,7 @@ import {fitNativeLounge} from '../v2/skin-retirement.authoring.js';
 import * as T from 'three';
 import {roomObject,deltaMatrix,hasFrameOverride,moverOrientation} from '../plan/rooms.js';
 import {mergeGeometries as nativeMergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {LOUNGE,terpeneBarPlacement} from '../hydro-nip-lounge.js';
+import {LOUNGE,takeDomeLogo,terpeneBarPlacement} from '../hydro-nip-lounge.js';
 import {createTerpeneGlassware} from '../terpene-glassware.js';
 import {createLoungeSky} from './lounge-sky.authoring.js';
 import {createLoungeMural} from './lounge-mural.authoring.js';
@@ -35,6 +35,7 @@ export function createLounge(ship,colliders){
  const root=roomObject(ship,'Hydro_Nip_Lounge');if(!root)return null;
  root.updateMatrixWorld(true);
  const frame=root.matrixWorld,toWorld=(x,y,z)=>new T.Vector3(x,y,z).applyMatrix4(frame);
+ const logo=takeDomeLogo(root);
  // Everything drawn here is placed at the lounge floor's height, so main.js files it with that floor's deck band.
  const floorY=toWorld(0,LOUNGE.FLOOR,0).y,drawn=[];
  const place=(g,mat,name)=>{g.translate(0,-floorY,0);const o=new T.Mesh(g,mat);o.name=name;o.position.y=floorY;o.frustumCulled=false;drawn.push(o);return o;};
@@ -113,7 +114,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
  const still=createTerpeneGlassware(),display=new T.Group();display.name='Walk_terpene_glassware';display.position.y=floorY;
  still.group.applyMatrix4(new T.Matrix4().makeTranslation(0,-floorY,0).multiply(frame).multiply(terpeneBarPlacement));display.add(still.group);drawn.push(display);
  return {
-  drawn,doors,still,
+  drawn,doors,still,logo,
   // The dome's centre on its floor and its radius in the world, for its lullaby (lullaby.js).
   dome:{centre:toWorld(LOUNGE.DOME.x,LOUNGE.FLOOR,LOUNGE.DOME.z),r:LOUNGE.DOME.r},
   // The wall mural's group (null in Node), filed with the deck bands it spans by main.js.
@@ -126,6 +127,7 @@ vec3 swingAbout(vec3 v,float a){return v*cos(a)+cross(aAxis,v)*sin(a)+aAxis*dot(
   // `bodies`: the walker's and every other player's positions.
   update(dt,bodies){
    uniforms.uTime.value=time();aquarium?.update();still.update(dt);
+   logo?.rotateY(dt*2*Math.PI/25);
    for(const d of doors){const near=bodies.some(b=>Math.abs(b.y-d.centre.y)<DOOR.rise&&Math.hypot(b.x-d.centre.x,b.z-d.centre.z)<DOOR.reach);
     const o=T.MathUtils.clamp(d.open+(near?1:-1)*dt/DOOR.time,0,1);if(o!==d.open){d.open=o;doorsMoved=true;}}
    if(doorsMoved){doorsMoved=false;slideDoors();}

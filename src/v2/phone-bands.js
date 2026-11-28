@@ -177,9 +177,12 @@ export const kindTexel=(k,n)=>Math.round(65535*(k+.5)/n);
  * `piece` (most triangles a piece, 0 for none) splits each bigger material merge into view-culled pieces.
  * `kinds` (with pieces only) merges the floor and wall finishes by kind instead (see above), and `colours` the other
  * plain materials by colour kind as well; `alone(material)`: a material corner-shade.js leaves alone, which stays apart.
+ * `singles` (with colours): a material of one render-bake merge (render-bake.js's Walk_merged_*, static by making), which
+ * merges with nothing on its own, joins a colour kind that has other materials (the Mudwater Arena's card art, screens
+ * and lights were about twenty such meshes, each its own draw, in the heavy views on decks 15-19, 2026-11-28).
  * Returns {root, update, follow, kinds, proof}: add nothing (root is already in `scene`); call update() after showBands
  * and follow() just before the main render. */
-export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece=0,keepArrays=false,kinds:byKind=false,colours=false,alone=null}={}){
+export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece=0,keepArrays=false,kinds:byKind=false,colours=false,singles=false,alone=null}={}){
  const yieldWork=yieldEvery();
  const bands=[...baked.bands.values()].filter(g=>/^Walk_band_/.test(g.name));
  // Band order: by lowest deck, then highest, so the bands a view span shows sit together.
@@ -201,12 +204,16 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece
  // first bucket, so the merges keep their order; a kind of one bucket merges as before.
  const work=[],kindOf=new Map();
  for(const list of buckets.values()){
-  if(list.length<2)continue;
+  const single=list.length<2;
+  if(single&&!(singles&&colours&&/^Walk_merged_/.test(list[0].o.name)))continue;
   const key=byKind&&piece>0?kindKey(list[0].o.material,list[0].o,alone,colours):null;
+  if(single&&key?.[0]!=='c')continue;
   if(key===null){work.push({lists:[list],kind:false});continue;}
   let w=kindOf.get(key);if(!w){kindOf.set(key,w={lists:[],kind:true,colour:key[0]==='c'});work.push(w);}w.lists.push(list);
  }
  for(const w of work)if(w.lists.length<2)w.kind=false;
+ // A single merge whose kind found no other material merges with nothing: it stays as it is.
+ for(let i=work.length-1;i>=0;i--)if(!work[i].kind&&work[i].lists[0].length<2)work.splice(i,1);
  // The kinds' materials, the colour kinds' first (see above): each a copy of its first source's, with what its textures
  // give set to one (roughness, metalness; colour and glow white). Its own name keeps the moods' lookups by name on the
  // source materials, which follow() reads.

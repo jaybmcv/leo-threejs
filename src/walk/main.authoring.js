@@ -402,6 +402,7 @@ async function buildShip(){
  toBand(jaguarGate.group);toBand(asteroid.group);
  for(const g of prepared.entranceSigns.groups)toBand(g);
  if(lounge)for(const o of lounge.drawn)toBand(o);
+ if(lounge?.logo)toBand(lounge.logo);
  if(lounge){hydroPortal=createHydroPortal();toBand(hydroPortal.group,HYDRO_PORTAL.floor);}
  hydroParkPortal=createHydroPortal(HYDRO_PARK_PORTAL);toBand(hydroParkPortal.group,HYDRO_PARK_PORTAL.floor);
  hydroCargoPortal=createHydroPortal(HYDRO_CARGO_PORTAL);toBand(hydroCargoPortal.group,HYDRO_CARGO_PORTAL.floor);
