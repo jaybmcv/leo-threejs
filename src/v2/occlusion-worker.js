@@ -38,9 +38,10 @@ export function occlusionWorker(channel) {
     eye = data.eye;
     frustum = data.frustum;
     nearby = [];
+    const reach = data.reach === 72 ? 72 : 32;
     for (const l of planes.values()) {
       const delta = eye[l.axis] - l.d, abs = Math.abs(delta);
-      if (abs < .85 || abs > 32)
+      if (abs < .85 || abs > reach)
         continue;
       l.sign = Math.sign(delta);
       l.min = abs - data.half;
