@@ -168,7 +168,16 @@ console.log('PASS: velvet, 65 mm transitions and clipped floor borders on Decks 
  close(g.polygon[0][0],xWall);close(g.polygon[0][1],edge(xWall));close(g.polygon.at(-1)[1],edge(xWall)-4);close(g.size[2],4);
  const copy=structuredClone(r),old=copy.components.galleries.find(g=>g.id===LOUNGE_REAR_WALKWAY);
  old.polygon=old.polygon.slice(1,-1);old.center[0]+=(xJoin-xWall)/2;old.size[0]-=xJoin-xWall;
- applyLoungeWalkwayExtension(copy);assert.deepEqual(copy.components,r.components,'The extension only fills the aft ends specified by the plan');
+ const [[a],[b]]=old.polygon,t=(xWall-a)/(b-a);
+ // The saved layout rounds both source samples and the extrapolated end to 1e-7 m.
+ const maxRoundoff=5e-8*(Math.abs(1-t)+Math.abs(t)+1);
+ applyLoungeWalkwayExtension(copy);
+ for(const i of [0,g.polygon.length-1]){
+  const point=old.polygon[i],saved=g.polygon[i];
+  assert(Math.abs(point[1]-saved[1])<=maxRoundoff,`Replayed mural vertex differs beyond layout rounding: ${point} vs ${saved}`);
+  point[1]=saved[1];
+ }
+ assert.deepEqual(copy.components,r.components,'The extension only fills the aft ends specified by the plan');
  const root=new T.Group(),source=createGardenCommons(1),ship={root,inside:root,cutaway:new Set()};root.add(source.root);resolveRoomFrames(root);
  buildRoomShell(ship,r,root);applyLoungeFloorFinish(ship);root.updateMatrixWorld(true);
  const probe=new T.Raycaster(),cast=(x,y,z,dx,dy,dz,objects,far=.4)=>{probe.set(new T.Vector3(x,y,z),new T.Vector3(dx,dy,dz));probe.far=far;return probe.intersectObjects(objects);};
