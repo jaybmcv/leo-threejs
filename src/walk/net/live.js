@@ -55,7 +55,12 @@ export function connectLive(url,on,opts={}){
  // held: what the server last said that keeps this visitor out for now, 'full' or 'replaced' (since heldAt).
  // turnedDown: a pass the server did not take, which is not sent again.
  let ws=null,tries=0,stopped=false,last='',lastAt=0,sentAt=0,name=savedName(),id=null,you=null,refused=false,turnedDown=null,attempt=0,timer=0,held=null,heldAt=0;
+ let prankShare=false,prankTicket=null,prankRequest=0;
  const status=s=>on.status?.(s);
+ function finishPrankTicket(msg){
+  if(!prankTicket)return;
+  const {resolve,timer}=prankTicket;prankTicket=null;clearTimeout(timer);resolve(msg);
+ }
  // One try at coming aboard. The pass comes first and the socket after: the server gives a new socket five seconds
  // to say hello (HELLO_MS), and Creamery may take longer than that to answer (connect.js waits 8 s), so a socket
  // opened while the pass was still on its way was closed unheard, again and again, for every remembered visitor.
@@ -76,7 +81,7 @@ export function connectLive(url,on,opts={}){
    switch(msg.m){
     case 'welcome':
      if(msg.layout!==2||msg.layoutIdentity!==LIVE_IDENTITY){stopped=true;status('layout');ws.close(4004,'layout mismatch');return;}
-     tries=0;held=null;id=msg.id;last='';you=msg.you||null;status('live');on.welcome?.(msg);on.aboard?.(msg.aboard);
+     tries=0;held=null;id=msg.id;last='';you=msg.you||null;prankShare=msg.prankShare===true;status('live');on.welcome?.(msg);on.aboard?.(msg.aboard);
      // A pass the server did not take: come back once without it (with a newer one, if Creamery gives one). The
      // login this browser keeps is forgotten only when the server says it checked the pass and it is bad (you.pass
      // 'bad': an old key, or one from another Creamery). A server that could not check it ('unchecked': it has no
@@ -132,12 +137,13 @@ export function connectLive(url,on,opts={}){
     // The Crown lounge TV (server/tv.mjs): what is on it, and a ticket to upload a video (or why not).
     case 'tv':on.tv?.(msg);break;
     case 'tv-ticket':on.tvTicket?.(msg);break;
+    case 'prank-ticket':if(prankTicket?.request===msg.request)finishPrankTicket(msg);break;
     case 'full':case 'replaced':verdict=msg.m;status(msg.m);break;
     case 'reload':stopped=true;status(msg.why==='layout'?'layout':'offline');break;
    }
   };
   ws.onclose=()=>{
-   if(socket!==ws)return;reader.reset();id=null;on.reset?.();if(stopped)return;
+   if(socket!==ws)return;reader.reset();id=null;prankShare=false;finishPrankTicket(null);on.reset?.();if(stopped)return;
    held=verdict;heldAt=Date.now();
    if(held==='full')timer=setTimeout(open,FULL_MS);else if(!held)retry();
   };
@@ -155,6 +161,7 @@ export function connectLive(url,on,opts={}){
  }
  page?.addEventListener?.('visibilitychange',wake);globalThis.addEventListener?.('focus',wake);
  const live=()=>ws&&ws.readyState===1&&id;
+ const canSharePrank=()=>!!live()&&prankShare;
  // The first try starts once connectLive has returned: the page hears 'connecting' with the link already in hand
  // (said any sooner, main.js's showAboard found no link and hid "Joining…").
  queueMicrotask(open);
@@ -226,6 +233,22 @@ export function connectLive(url,on,opts={}){
   tv(){if(live())ws.send(JSON.stringify({m:'tv'}));},
   tvTicket(){if(!live())return false;ws.send(JSON.stringify({m:'tv-ticket'}));return true;},
   tvDown(){if(live())ws.send(JSON.stringify({m:'tv-down'}));},
+  get prankShare(){return canSharePrank();},
+  async postPrankPhoto(blob){
+   if(!canSharePrank()||prankTicket)return 'failed';
+   const socket=ws,request=++prankRequest;
+   try{
+    const answer=await new Promise(resolve=>{
+     prankTicket={request,resolve,timer:setTimeout(()=>finishPrankTicket(null),5000)};
+     try{socket.send(JSON.stringify({m:'prank-ticket',request}));}catch{finishPrankTicket(null);}
+    });
+    if(answer?.why==='slow')return 'slow';
+    if(!answer?.ok||typeof answer.ticket!=='string'||ws!==socket||!canSharePrank())return 'failed';
+    const response=await fetch(httpBase(url)+'/prank-photo',{method:'POST',body:blob,headers:{'X-Leo-Prank-Ticket':answer.ticket},
+     redirect:'error',signal:AbortSignal.timeout(25000)});
+    return response.ok?'posted':response.status===429?'slow':'failed';
+   }catch{return 'failed';}
+  },
   rename(next){name=next;saveName(next);if(live())ws.send(JSON.stringify({m:'name',name:next}));},
   get live(){return !!live();},
   // How the server has this visitor: {name, verified}.

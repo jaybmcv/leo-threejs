@@ -344,7 +344,7 @@ async function buildShip(){
  for(const o of [...lifts.signs.children,booth.group,...(poolTable?[poolTable.group]:[]),...(pinballMachine?[pinballMachine.group]:[]),...(pawsOff?pawsOff.groups:[]),...(mudwater?[mudwater.group]:[]),...(arcadeRow?[arcadeRow.group]:[])])toBand(o);
  // The scenic photo spots' floor markers (photo-spots.js), each with its deck's band.
  photoSpots=createPhotoSpots();for(const g of photoSpots.groups)toBand(g);
- prank=createPrankButton({scene,colliders,renderer,draw,walker:()=>walker,controller,input,follow,name:()=>live?.you?.name||me.name||savedName(),onBegin(){emote=null;heading=PRANK.portraitYaw;controller.stance='stand';grapple.release();}});toBand(prank.group);
+ prank=createPrankButton({scene,colliders,renderer,draw,walker:()=>walker,controller,input,follow,live:()=>live,name:()=>live?.you?.name||me.name||savedName(),onBegin(){emote=null;heading=PRANK.portraitYaw;controller.stance='stand';grapple.release();}});toBand(prank.group);
  if(concession)toBand(concession);
  toBand(vault.group);
  if(provisions)toBand(provisions.group);
