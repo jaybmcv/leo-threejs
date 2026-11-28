@@ -54,7 +54,7 @@ void main(){
 }`;
 const ease=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
 const TRIP_SECONDS=40,FADE_SECONDS=5;
-const TRIP_PANELS=['map-sheet','places','lift-panel','aboard-sheet','emotes'];
+const TRIP_PANELS=['map-sheet','places','lift-panel','aboard-sheet','emotes','help-sheet'];
 const ENDING_TARGETS=new Set(['selfie','photo-spot','play','emergency-drill','mct-repair','pool','pinball','darts','outside']);
 export function frogStrength(elapsed){return ease(elapsed)*ease((TRIP_SECONDS-elapsed)/FADE_SECONDS);}
 export function createFrogTrip({renderer,camera,light=()=>false,now=()=>performance.now(),panelOpen=()=>false}){

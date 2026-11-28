@@ -106,6 +106,16 @@ drawAt(25000);stillTripping(25,'Go to travel');
 panel='emotes';drawAt(27000);stillTripping(27,'Opening emotes');
 assert(trip.escape(closePanel));assert.equal(panel,null);
 drawAt(28000);stillTripping(28,'Closing emotes');
+
+panel='help-sheet';drawAt(29000);stillTripping(29,'Opening Help');
+drawAt(30000);stillTripping(30,'Keeping Help open');
+assert(trip.escape(closePanel));assert.equal(panel,null);
+drawAt(30250);stillTripping(30.25,'Closing Help');
+const beforeHelpWalk=cat.position.clone(),departure=new T.Vector3(0,0,-4);
+for(let i=0;i<60;i++)cat.step(1/120,departure);
+assert(cat.grounded&&cat.position.distanceTo(beforeHelpWalk)>1,'The cat walks away after closing Help');
+drawAt(30750);stillTripping(30.75,'Walking after closing Help');
+
 trip.endForTarget('carry-item');drawAt(31000);stillTripping(31,'Picking up an item');
 trip.endForTarget('trolley-push');drawAt(32000);stillTripping(32,'Pushing a trolley');
 drawAt(39999);stillTripping(39.999,'The end of the fade');
@@ -116,11 +126,10 @@ assert(!trip.escape(closePanel),'Escape without a trip falls through to the walk
 assert.equal(panel,'map-sheet');closePanel();
 trip.start();drawAt(41000);trip.endForTarget('play');assert(!trip.active,'A full-screen game still ends the trip');
 trip.start();drawAt(42000,camera.clone());assert(!trip.active,'A separate camera view still ends the trip');
-trip.start();panel='help-sheet';drawAt(43000);assert(!trip.active,'A panel outside the trip list still ends the trip');closePanel();
 trip.start();drawAt(44000);assert(trip.escape(closePanel)&&trip.active);
 drawAt(44450);assert(!trip.active,'Escape still ends the trip with no trip panel open');
 trip.dispose();
-console.log('PASS sitting, standing, map, Go to, emotes, pickup and trolley keep the original picture and audio timer; Escape and camera behavior pass');
+console.log('PASS sitting, standing, map, Go to, emotes, Help and walking after Help keep the original picture and audio timer; pickup, trolley, Escape and separate camera behavior pass');
 
 // Pointer lock consumes Escape before ordinary key handlers. It must still cancel the frog on that first press.
 const handlers=[],surface={addEventListener(){}};let escapes=0,unlocked=0;
