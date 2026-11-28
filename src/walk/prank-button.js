@@ -64,8 +64,80 @@ function powderTexture(){
  const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;return texture;
 }
 export const stainSources=asset=>asset.meshes.filter(m=>['body','hoodie.001','hoodie.002'].includes(m.userData.originalName??m.name));
+
+// Sample the topmost triangles in the attachment's local frame, even when the cat has turned or bent over.
+const crownTrees=new WeakMap();
+function crownSurface(parts){
+ const box=new T.Box3(),ray=new T.Ray(),local=new T.Ray(),surfaces=parts.map(({geometry,matrix})=>{
+  let tree=crownTrees.get(geometry);if(!tree){tree=new MeshBVH(geometry,{indirect:true,setBoundingBox:false});crownTrees.set(geometry,tree);}
+  box.union(tree.getBoundingBox(new T.Box3()).applyMatrix4(matrix));
+  return {tree,matrix,inverse:matrix.clone().invert(),normal:new T.Matrix3().getNormalMatrix(matrix)};
+ });
+ const at=(x,z)=>{
+  ray.origin.set(x,box.max.y+1,z);ray.direction.set(0,-1,0);let top=null;
+  for(const {tree,matrix,inverse,normal} of surfaces){
+   const hit=tree.raycastFirst(local.copy(ray).applyMatrix4(inverse),T.DoubleSide);if(!hit)continue;
+   hit.point.applyMatrix4(matrix);if(top&&top.y>=hit.point.y)continue;
+   top={x,y:hit.point.y,z,up:hit.face.normal.applyNormalMatrix(normal).y};
+  }
+  return top;
+ };
+ // The bounds only limit the search. The higher, upward-facing hits describe the usable crown.
+ const points=[],steps=24;
+ for(let j=0;j<=steps;j++)for(let i=0;i<=steps;i++){
+  const hit=at(T.MathUtils.lerp(box.min.x,box.max.x,i/steps),T.MathUtils.lerp(box.min.z,box.max.z,j/steps));
+  if(hit?.up>.45)points.push(hit);
+ }
+ points.sort((a,b)=>b.y-a.y);const crown=points.slice(0,Math.ceil(points.length*.42));
+ // Include the lower parts of a sloping crown when looking for room for all eight splats.
+ return {at,crown,points};
+}
+function crownSplats(parent,parts,materials,lift){
+ if(!parts.length)return;
+ const {at,crown,points}=crownSurface(parts);if(!crown.length)return;
+ const centre=new T.Vector3(),spread=new T.Vector3(),used=[];
+ for(const p of crown)centre.add(p);centre.divideScalar(crown.length);
+ for(const p of crown){spread.x+=(p.x-centre.x)**2;spread.z+=(p.z-centre.z)**2;}
+ const width=4*Math.sqrt(spread.x/crown.length),depth=4*Math.sqrt(spread.z/crown.length),span=Math.min(width,depth);
+ if(span<=0)return;
+ const rings=6,sides=40;
+ function patch(p,r,seed){
+  const positions=[p.x,p.y+lift,p.z],uvs=[.5,.5],index=[];
+  for(let j=1;j<=rings;j++)for(let i=0;i<sides;i++){
+   const a=i/sides*Math.PI*2,edge=1+.14*Math.sin(a*5+seed)+.09*Math.cos(a*9-seed),f=j/rings*edge,u=Math.cos(a)*f,v=Math.sin(a)*f;
+   const hit=at(p.x+u*r,p.z+v*r*.86);
+   if(!hit||hit.up<.35||Math.abs(hit.y-p.y)>r*f*1.2)return null;
+   positions.push(hit.x,hit.y+lift,hit.z);uvs.push(.5+u*.4,.5+v*.4);
+   const a0=1+(j-1)*sides+i,b0=a0-i+(i+1)%sides;
+   if(j===1)index.push(0,b0,a0);else index.push(a0-sides,b0,a0,b0-sides,b0,a0-sides);
+  }
+  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(positions,3));g.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));g.setIndex(index);g.computeVertexNormals();return g;
+ }
+ for(let i=0;i<8;i++){
+  const a=i*2.4,x=centre.x+Math.sin(a)*width*.28,z=centre.z+Math.cos(a)*depth*.28,base=span*(.13+i%2*.025);
+  const distance=p=>(p.x-x)**2+(p.z-z)**2;
+  const nearest=points.slice().sort((a,b)=>distance(a)-distance(b));let stain=null;
+  for(const r of [base,base*.75,base*.5,base*.35]){
+   for(const p of nearest){
+    if(p.y<crown.at(-1).y-span*.12||used.some(q=>Math.hypot(q.x-p.x,q.z-p.z)<(q.r+r)*.8))continue;
+    stain=patch(p,r,i);if(stain){used.push({...p,r});break;}
+   }
+   if(stain)break;
+  }
+  if(stain)parent.add(new T.Mesh(stain,materials[i%3]));
+ }
+}
+
+function bareCrown(walker){
+ const body=walker.figure.asset.meshes.find(m=>m.name==='body'),bone=walker.figure.bones.get('spine.006'),head=body.skeleton.bones.indexOf(bone);
+ const {position,skinIndex,skinWeight}=body.geometry.attributes,index=body.geometry.index,triangles=[];
+ const onHead=i=>[0,1,2,3].some(k=>skinIndex.getComponent(i,k)===head&&skinWeight.getComponent(i,k)>.999);
+ // These triangles are rigid to the same bone as the overlay through every pose.
+ for(let i=0;i<index.count;i+=3){const a=index.getX(i),b=index.getX(i+1),c=index.getX(i+2);if(onHead(a)&&onHead(b)&&onHead(c))triangles.push(a,b,c);}
+ return new T.BufferGeometry().setAttribute('position',position).setIndex(triangles);
+}
 export function createPrankMess(walker){
- const head=[],body=[],hat=new T.Group(),sphere=new T.SphereGeometry(1,12,8),slime=material(green,.16),flour=new T.MeshBasicMaterial({color:white,transparent:true,depthWrite:false,toneMapped:false}),yolk=material(yellow,.2);
+ const head=[],body=[],hat=new T.Group(),slime=material(green,.16),flour=new T.MeshBasicMaterial({color:white,transparent:true,depthWrite:false,toneMapped:false}),yolk=material(yellow,.2);
  slime.emissive.copy(slime.color);slime.emissiveIntensity=.2;yolk.emissive.copy(yolk.color);yolk.emissiveIntensity=.25;
  const side=new T.MeshBasicMaterial({side:T.DoubleSide}),surfaces=stainSources(walker.figure.asset).map(m=>{const g=m.geometry.clone();g.boundsTree=new MeshBVH(g,{indirect:true});const proxy=new T.Mesh(g,side);proxy.userData.source=m;proxy.raycast=acceleratedRaycast;return proxy;}),ray=new T.Raycaster();ray.firstHitOnly=true;
  const surface=(x,y,back,objects=surfaces)=>{ray.set(new T.Vector3(x,y,back?-1:1),new T.Vector3(0,0,back?1:-1));return ray.intersectObjects(objects,false)[0];};
@@ -90,15 +162,26 @@ export function createPrankMess(walker){
   splat(body,yolk,.09,.94,.07,.049,4,back);splat(body,yolk,-.08,.74,.047,.036,8,back);
  }
  for(const o of surfaces){o.geometry.boundsTree=null;o.geometry.dispose();}surfaces.length=0;side.dispose();
- // The hat's actual bounds determine the splats, including a hat changed while messy.
- let lastHat=null;
- const fitHat=()=>{const mount=walker.hat?.mount;if(lastHat===mount||!mount?.children.length)return;lastHat=mount;
-  for(const o of [...hat.children])hat.remove(o);mount.updateWorldMatrix(true,true);const box=new T.Box3().setFromObject(mount),inv=mount.matrixWorld.clone().invert();box.applyMatrix4(inv);
-  const size=box.getSize(new T.Vector3()),top=box.max.y,centre=box.getCenter(new T.Vector3());
-  for(let i=0;i<8;i++)mesh(hat,sphere,i%3===0?flour:i%3===1?yolk:slime,[centre.x+Math.sin(i*2.4)*size.x*.28,top-size.y*.025,centre.z+Math.cos(i*2.4)*size.z*.25],[size.x*(.1+i%2*.03),size.y*.035,size.z*.13]);
-  mount.add(hat);};
- fitHat();
- return {head,body,hat,update:fitHat,dispose(){for(const o of [...head,...body])dispose(o);dispose(hat);sphere.dispose();}};
+ hat.name='Prank_top_splats';hat.matrixAutoUpdate=false;
+ let lastMount,lastModels=[];
+ const fitTop=()=>{
+  const mount=walker.hat?.mount,models=mount?.children.filter(o=>o!==hat)||[];
+  if(hat.parent&&lastMount===mount&&models.length===lastModels.length&&models.every((o,i)=>o===lastModels[i]))return;
+  lastMount=mount;lastModels=models;
+  for(const o of [...hat.children]){o.removeFromParent();o.geometry.dispose();}
+  const parts=[];
+  if(models.length){
+   mount.updateWorldMatrix(true,true);const inverse=mount.matrixWorld.clone().invert();
+   for(const model of models)model.traverseVisible(o=>{if(o.isMesh)parts.push({geometry:o.geometry,matrix:new T.Matrix4().multiplyMatrices(inverse,o.matrixWorld)});});
+  }
+  if(parts.length){hat.matrix.identity();mount.add(hat);}
+  else{const geometry=bareCrown(walker);if(geometry.index.count)parts.push({geometry,matrix:new T.Matrix4()});onBone(walker,'spine.006',hat);}
+  hat.matrixWorldNeedsUpdate=true;hat.updateWorldMatrix(true,false);
+  // A thin lift clears z-fighting. Reproject only when the hat loads, changes or comes off.
+  crownSplats(hat,parts,[flour,yolk,slime],.0015/hat.matrixWorld.getMaxScaleOnAxis());
+ };
+ fitTop();
+ return {head,body,hat,update:fitTop,dispose(){for(const o of [...head,...body,...hat.children]){o.removeFromParent();o.geometry.dispose();}hat.removeFromParent();flour.map?.dispose();for(const m of [flour,yolk,slime])m.dispose();}};
 }
 function shockedFace(walker){
  const root=new T.Group(),dark=new T.MeshBasicMaterial({color:0x291c20}),cream=new T.MeshBasicMaterial({color:0xfffbed}),sphere=new T.SphereGeometry(1,16,10),surface=faceSurface(walker.figure.asset);

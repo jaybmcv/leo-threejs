@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as T from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {MeshBVH} from 'three-mesh-bvh';
 import layout from '../src/plan/selected-layout.js';
 import {contains} from '../src/plan/geometry-v2.js';
 import {plannedStanding} from '../src/v2/standing.js';
@@ -9,16 +11,60 @@ import {prankFittings,attachPrankCollider,stainWeights,stainSources,createPrankM
 import {installPreparedColliders} from '../src/v2/prepared-codec.public.js';
 import {createPrankTiming,PRANK_TIME} from '../src/walk/prank-timing.js';
 import {LIFTS} from '../src/walk/lifts.js';
+import {fit} from '../src/walk/hat.js';
 
 let checks=0;const pass=s=>{checks++;console.log('PASS '+s);};
+
+function checkCrown(group,meshes,label){
+ const v=new T.Vector3(),origin=new T.Vector3(),up=new T.Vector3(0,1,0).transformDirection(group.parent.matrixWorld);
+ const trees=meshes.map(m=>{
+  const positions=[];
+  for(let i=0;i<m.geometry.attributes.position.count;i++)positions.push(...m.getVertexPosition(i,v).applyMatrix4(m.matrixWorld).toArray());
+  const g=new T.BufferGeometry().setAttribute('position',new T.Float32BufferAttribute(positions,3));
+  if(m.geometry.index)g.setIndex(m.geometry.index.clone());return new MeshBVH(g,{indirect:true});
+ });
+ assert.equal(group.children.length,8,label+' has eight top splats');
+ let max=0;const ray=new T.Ray(origin,up.clone().negate());
+ const sample=point=>{
+  origin.copy(point).addScaledVector(up,1);let distance=Infinity;
+  for(const tree of trees){const hit=tree.raycastFirst(ray,T.DoubleSide);if(hit)distance=Math.min(distance,hit.distance);}
+  assert(Number.isFinite(distance),label+' splat extends beyond the surface outline');
+  const gap=distance-1;assert(gap>=-.0005&&gap<=.005,label+' splat is '+(gap*1000).toFixed(2)+' mm off the surface');max=Math.max(max,gap);
+ };
+ // Probe each rendered patch at its vertices, edge midpoints and face centres.
+ const a=new T.Vector3(),b=new T.Vector3(),c=new T.Vector3();
+ for(const o of group.children){const p=o.geometry.attributes.position,index=o.geometry.index;
+  for(let i=0;i<p.count;i++)sample(o.getVertexPosition(i,v).applyMatrix4(o.matrixWorld));
+  for(let i=0;i<index.count;i+=3){
+   o.getVertexPosition(index.getX(i),a).applyMatrix4(o.matrixWorld);o.getVertexPosition(index.getX(i+1),b).applyMatrix4(o.matrixWorld);o.getVertexPosition(index.getX(i+2),c).applyMatrix4(o.matrixWorld);
+   sample(v.copy(a).add(b).add(c).divideScalar(3));sample(v.lerpVectors(a,b,.5));sample(v.lerpVectors(b,c,.5));sample(v.lerpVectors(c,a,.5));
+  }
+ }
+ pass(label+' supports all eight top splats inside its outline (largest gap '+(max*1000).toFixed(2)+' mm)');
+}
 {
  // Embedded textures need no decoding for these geometry and skinning probes.
  const load=T.ImageLoader.prototype.loadAsync;let asset;
  try{T.ImageLoader.prototype.loadAsync=async()=>({width:1,height:1});const {createDLCat}=await import('../src/vendor/cosmo/DLCat.js');asset=await createDLCat({height:1.75});}finally{T.ImageLoader.prototype.loadAsync=load;}
  assert.deepEqual(stainSources(asset).map(m=>m.userData.originalName).sort(),['body','hoodie.001','hoodie.002']);
- const mess=createPrankMess({figure:{asset}});assert(mess.body.length>=12);assert(mess.body.some(o=>o.userData.prankSurface==='hoodie.001'),'stains sit on the outer hoodie');assert(mess.body.some(o=>o.userData.prankSurface==='hoodie.002'),'stains also follow the raised pocket');
+ const body=asset.meshes.find(m=>m.name==='body'),bone=body.skeleton.bones.find(b=>b.userData.originalName==='spine.006');
+ const mount=new T.Group(),walker={figure:{asset,bones:new Map([['spine.006',bone]])},hat:{mount}};
+ const glb=fs.readFileSync(new URL('../src/vendor/captain-hat/captains-hat.glb',import.meta.url));
+ const {scene}=await new GLTFLoader().parseAsync(glb.buffer.slice(glb.byteOffset,glb.byteOffset+glb.byteLength),'');
+ const captain=scene.getObjectByName('CaptainsHat'),parts=[];captain.traverse(o=>{if(o.isMesh)parts.push(o);});
+ bone.add(mount);fit(mount);mount.add(captain);asset.root.rotation.y=.67;
+ const mess=createPrankMess(walker);assert(mess.body.length>=12);assert(mess.body.some(o=>o.userData.prankSurface==='hoodie.001'),'stains sit on the outer hoodie');assert(mess.body.some(o=>o.userData.prankSurface==='hoodie.002'),'stains also follow the raised pocket');
  for(const o of mess.body){assert(o.isSkinnedMesh);assert(o.geometry.attributes.skinWeight);assert(o.geometry.attributes.position.array.every(Number.isFinite));}
- mess.dispose();asset.dispose();pass('the real avatar uses original clothing names and receives skinned stains on its hoodie and pocket');
+ pass('the real avatar uses original clothing names and receives skinned stains on its hoodie and pocket');
+ const measure=(source,label)=>{asset.root.updateMatrixWorld(true);checkCrown(mess.hat,source,label);};
+ assert.equal(mess.hat.parent,mount);measure(parts,'captain hat');
+ const captainSplats=mess.hat.children.slice();bone.rotation.set(.31,-.44,.22);asset.root.position.set(7,-2,9);mess.update();assert.deepEqual(mess.hat.children,captainSplats);measure(parts,'captain hat after turning and lowering the head');
+ walker.hat=null;mount.removeFromParent();mess.update();assert.equal(mess.hat.parent,bone);measure([body],'bare head');
+ const bareSplats=mess.hat.children.slice();walker.hat={mount};captain.removeFromParent();bone.add(mount);mess.update();assert.equal(mess.hat.parent,bone);assert.equal(mess.hat.children.length,8);
+ // A smaller, off-centre fitted cap exercises a differently shaped hat and a late model load.
+ const cap=new T.Mesh(new T.SphereGeometry(1,32,16).scale(.95,.42,.72),new T.MeshBasicMaterial());cap.position.set(.39,.4,-.27);cap.rotation.z=.27;
+ mount.add(cap);mess.update();assert.equal(mess.hat.parent,mount);assert(!bareSplats.some(s=>s.parent));measure([cap],'alternate domed cap');
+ mess.dispose();assert(!mess.hat.parent);cap.geometry.dispose();cap.material.dispose();for(const o of parts){o.geometry.dispose();o.material.dispose();}asset.dispose();
 }
 {
  const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute([0,0,0,1,0,0,0,1,0],3));g.setAttribute('skinIndex',new T.Uint16BufferAttribute([0,1,0,0,0,1,0,0,0,1,0,0],4));g.setAttribute('skinWeight',new T.Float32BufferAttribute([1,0,0,0,.35,.65,0,0,0,1,0,0],4));

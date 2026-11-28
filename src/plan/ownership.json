@@ -5385,12 +5385,13 @@
       "fixed": false,
       "features": [
         "Do_not_press_button",
+        "Prank_top_splats",
         "Prank_mess"
       ],
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
-      "placements": 32,
-      "signature": "d094f97f674e0f096ff5c73f16d4a6412385544795e04033bb05f10d4ce1e595"
+      "placements": 33,
+      "signature": "cb7cd8c784f9cb608f48af4b7bf7ed64083cbc93f30791e050c36ce53aa60e01"
     },
     {
       "source": "src/walk/prepare.js",
