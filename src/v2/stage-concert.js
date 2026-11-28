@@ -4,6 +4,9 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 // Static concert dressing in the stage's Deck 6 frame. The deck, wall and seats belong to atrium-stage.js.
 const STEEL=0x8d9da2,DARK=0x172129,GRILLE=0x34434b,OLIVE=0x697454,BEIGE=0xbca887;
 const FLOOR=.36,EDGE=4.8,RIG_ROWS=[109,117.5];
+export const STAGE_ROOF={front:106.5,centre:30,width:31.4,thickness:.16};
+const roof=z=>5.45+.65*(1-((z-STAGE_ROOF.centre)/(STAGE_ROOF.width/2))**2);
+export const stageRoofTop=z=>roof(z)+STAGE_ROOF.thickness;
 export const stageConcertFixtures=()=>RIG_ROWS.flatMap((x,row)=>Array.from({length:27},(_,i)=>({id:`common-stage-${row}-${i}`,at:[x,3.86,19.6+i*.8],tilt:.22,direction:[-Math.sin(.22),-Math.cos(.22),0]})));
 let parts;
 export function stageConcertParts(){
@@ -12,10 +15,10 @@ export function stageConcertParts(){
  const box=(size,at,colour,extra={})=>parts.push({size,at,colour,...extra});
  const bar=(a,b,width=.09,colour=STEEL,extra={})=>parts.push({a,b,width,colour,...extra});
  // A shallow barrel roof, panelled underneath. Its entire outline stays inside the timber deck.
- const roof=z=>5.45+.65*(1-((z-30)/15.7)**2);
  for(let i=0;i<32;i++){
-  const z0=14.3+i*31.4/32,z1=14.3+(i+1)*31.4/32,dy=roof(z1)-roof(z0),span=Math.hypot(z1-z0,dy),angle=Math.atan2(dy,z1-z0);
-  box([13,.16,span],[113,(roof(z0)+roof(z1))/2+.08,(z0+z1)/2],0x7c898d,{tilt:-angle});
+  const {front,centre,width,thickness}=STAGE_ROOF,edge=centre-width/2;
+  const z0=edge+i*width/32,z1=edge+(i+1)*width/32,dy=roof(z1)-roof(z0),span=Math.hypot(z1-z0,dy),angle=Math.atan2(dy,z1-z0);
+  box([13,thickness,span],[front+6.5,(roof(z0)+roof(z1))/2+thickness/2,(z0+z1)/2],0x7c898d,{tilt:-angle});
   for(let j=0;j<4;j++)box([3.235,.07,span-.012],[108.125+j*3.25,(roof(z0)+roof(z1))/2-.045,(z0+z1)/2], [0xb67d47,0xbf8450,0xad7441,0xb9804a][(i+j)%4],{tilt:-angle});
  }
  // The front and rear curved trusses carry the roof; two straight bars carry the fixture rows.

@@ -1,13 +1,19 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
+import {createCanvas} from '@napi-rs/canvas';
 import layout from '../src/plan/selected-layout.js';
 import {contains} from '../src/plan/geometry-v2.js';
+import {addHangingGardens} from '../src/v2/atrium-gardens.js';
 import {addAtriumStage,stageGeometry} from '../src/v2/atrium-stage.js';
-import {stageConcertParts,stageConcertFixtures,stageConcertGeometry,addStageConcertDecor} from '../src/v2/stage-concert.js';
+import {stageConcertParts,stageConcertFixtures,stageConcertGeometry,addStageConcertDecor,STAGE_ROOF,stageRoofTop} from '../src/v2/stage-concert.js';
+import {addStageRoofSign} from '../src/v2/stage-roof-sign.js';
+import {stageDjCollider,STAGE_DJ} from '../src/v2/common-stage-dj.js';
+import {installWalkCanvas} from '../src/walk/canvas.js';
 import {createStageBeams,stageBeamSources,stageBeamAim} from '../src/v2/stage-beams.js';
 import {setAtriumView} from '../src/v2/atrium-visibility.js';
 import {Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
+import {V2_PLACES,gotoStand} from '../src/v2/wayfinding.js';
 
 const y=layout.decks[5].y,parts=[],rests=[];addAtriumStage({parts,rests,y});
 assert.deepEqual(parts.find(p=>p.part==='p6_stage_platform').size,[14,.36,32]);
@@ -33,6 +39,38 @@ for(const floor of[-11.7,y+.24])for(const z of[26,28,30,32,34]){
  const eye=new T.Vector3(88.57,floor+1.75*.93,36.91),end=new T.Vector3(119.66,y+2.96,z),delta=end.clone().sub(eye),ray=new T.Raycaster(eye,delta.clone().normalize(),0,delta.length());
  assert.equal(ray.intersectObjects(sightMeshes).length,0,'Dressing obscures the back wall sign');
 }
+installWalkCanvas(createCanvas);
+const signRoot=new T.Group(),signDecor=[];
+addStageRoofSign(signRoot,signDecor,y);
+const [face]=signRoot.children,signBounds=new T.Box3().setFromObject(signRoot);
+assert.equal(signRoot.children.length,1);
+assert(face.userData.noCollide&&face.material.isMeshBasicMaterial&&face.material.side===T.FrontSide);
+assert(face.geometry.attributes.normal.getX(0)<-.999,'The lettering faces the seats');
+assert(Math.abs(signBounds.getCenter(new T.Vector3()).z-STAGE_ROOF.centre)<1e-5);
+assert(signBounds.min.y>y+stageRoofTop(STAGE_ROOF.centre)&&signBounds.min.x>=STAGE_ROOF.front);
+// The supplied walk link settles on the Deck 7 overlook beside the atrium cutout.
+const gardens=new T.Group(),eye=new T.Vector3(88.57,layout.decks[6].y+1.75*.93,37.5),sight=new T.Raycaster();
+addHangingGardens(gardens,layout);
+for(let row=0;row<=4;row++)for(let col=0;col<=12;col++){
+ const end=new T.Vector3(signBounds.min.x,T.MathUtils.lerp(signBounds.min.y,signBounds.max.y,row/4),T.MathUtils.lerp(signBounds.min.z,signBounds.max.z,col/12));
+ const delta=end.sub(eye);sight.far=delta.length();sight.set(eye,delta.normalize());
+ assert.equal(sight.intersectObjects(gardens.children,false).length,0,'Leaves obscure the roof sign from the Deck 7 overlook');
+}
+for(const o of gardens.children)o.geometry.dispose();
+const downward=new T.Raycaster(new T.Vector3(),new T.Vector3(0,-1,0),0,2);
+for(const g of signDecor){
+ g.computeBoundingBox();const b=g.boundingBox,c=b.getCenter(new T.Vector3());
+ assert(b.min.x>=STAGE_ROOF.front&&b.max.x<=STAGE_ROOF.front+1,'Sign hardware stays at the roof front');
+ for(const x of [b.min.x,b.max.x])for(const z of [b.min.z,b.max.z])
+  for(const d of layout.decks.filter(d=>d.number>=7&&d.y<=b.max.y+.4))assert(contains(d.atrium.outline,[x,z]),'Sign crosses a balcony');
+ if(b.min.y<y+stageRoofTop(STAGE_ROOF.centre)){
+  downward.ray.origin.set(c.x,y+stageRoofTop(STAGE_ROOF.centre)+.5,c.z);
+  const hit=downward.intersectObjects(sightMeshes)[0];
+  assert(hit&&Math.abs(hit.point.y-b.min.y)<.02,'The mounts meet the top of the roof');
+ }
+ g.dispose();
+}
+face.geometry.dispose();face.material.map.dispose();face.material.dispose();
 sightMeshes.forEach(o=>o.geometry.dispose());sightMat.dispose();
 const rendered=[];addStageConcertDecor(rendered,y);
 for(const g of rendered){assert.equal(g.attributes.color.count,g.attributes.position.count);assert(!g.index);g.dispose();}
@@ -119,5 +157,12 @@ for(const side of[-1,1]){
  // The corner pillars are solid above the cases, where their angled arms are exposed.
  const z=30+side*14.5,ray=new T.Ray(new T.Vector3(105,y+3,z),new T.Vector3(1,0,0));assert(col.raycast(ray,5),'Corner pillar has a collider');
 }
+const dj=stageDjCollider(),djFlat=dj.toNonIndexed(),djMatrix=new T.Matrix4().makeRotationY(STAGE_DJ.yaw).setPosition(...STAGE_DJ.at);
+col.addMover('stage_dj',djFlat.attributes.position.array,djMatrix);dj.dispose();djFlat.dispose();
+const destination=V2_PLACES.find(p=>p.id==='atrium6-stage'),stand=gotoStand(col,destination.at);
+assert(stand&&Math.abs(stand.y-y-.36)<.02,'Go-to lands on the timber platform beside the DJ');
+cat.place(stand);const exitYaw=destination.yaw-.15;
+step(3.8,2.25*Math.sin(exitYaw),2.25*Math.cos(exitYaw));
+assert(cat.grounded&&cat.position.x<104,'Walk off the platform from the Go-to landing');
 beams.group.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});
 console.log(JSON.stringify({status:'PASS',fixtures:fixtures.length,beams:{back:back.length,front:front.length*5,reducedFront:front.length*3,draws:3},triangles,bounds:[bounds.min.toArray(),bounds.max.toArray()],sideStops:stops,walk:'supplied seating to stage and back; audience to back wall and out; both side stacks block and release the cat'}));

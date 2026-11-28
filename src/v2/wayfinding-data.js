@@ -1,4 +1,5 @@
 import {contains} from '../plan/geometry-v2.js';
+import {ATRIUM_STAGE} from '../plan/atrium-v2.js';
 export const sideName=z=>z<0?'Port':'Starboard';
 const wingXs=[-104,-58,-12,34,80],wingNames=['Aster','Birch','Cedar','Dogwood','Elm'];
 export const wingName=x=>wingNames[wingXs.indexOf(x)]||'Transit';
@@ -32,7 +33,8 @@ export function describeV2(layout,point,{crownFloor=120.3}={}){
  const shuttle=layout.shuttles.find(s=>{if(y<s.y-.1||y>s.y+3.2)return false;const dx=x-s.x,dz=z-s.z,c=Math.cos(s.yaw),n=Math.sin(s.yaw),u=c*dx-n*dz,v=n*dx+c*dz;return Math.abs(u)<10.68&&Math.abs(v)<3.63;});
  const coreBay=layout.shuttles.some(s=>Math.abs(s.y-y)<.4&&contains(s.polygon,[x,z]));
  const bay=coreBay||(layout.hullPrototypes?.prototypes||[]).some(p=>p.kind==='bay'&&p.deck===deck.number&&y>=p.chart.origin[1]-.2&&y<p.chart.origin[1]+p.rect[3]&&contains(p.polygon,[x,z]));
- const name=shuttle?'Escape shuttle':bay||room?.kind==='escape-bay'?'Escape shuttle bay':room?.name||(deck.number===6&&Math.abs(z)<20&&x>-120&&x<120?'Open atrium':deck.name);
+ const stage=deck.number===6&&contains(ATRIUM_STAGE.polygon,[x,z]);
+ const name=shuttle?'Escape shuttle':bay||room?.kind==='escape-bay'?'Escape shuttle bay':room?.name||(stage?ATRIUM_STAGE.name:deck.number===6&&Math.abs(z)<20&&x>-120&&x<120?'Open atrium':deck.name);
  // The observation floor is raised 2 m above its Deck 17 approach.
  return 'Deck '+(room?.id==='observation-lounge'?room.deck:deck.number)+' · '+name;
 }
