@@ -57,7 +57,7 @@ export function createGraffiti(baked,els,{colliders,live,connect,onOpen,onClose}
  }
 
  const ray=new T.Raycaster(),ndc=new T.Vector2(),aim=new T.Vector3(),stand=new T.Vector3();
- let camera=null,held=null,pending=[],lastSent=null,sentAt=0,travel=0;
+ let camera=null,walkZoom=1,held=null,pending=[],lastSent=null,sentAt=0,travel=0;
  function cellAt(e){
   if(!camera)return null;const r=els.surface.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);
   ray.setFromCamera(ndc,camera);const hit=ray.intersectObjects(meshes,false)[0];
@@ -94,7 +94,11 @@ export function createGraffiti(baked,els,{colliders,live,connect,onOpen,onClose}
  els.surface.addEventListener('wheel',e=>{if(active)e.stopPropagation();},capture);
 
  function open(p){stand.copy(p);active=true;note='';held=null;document.body.classList.add('spraying');els.bar.hidden=false;if(!asked)ask();showBar();onOpen?.();}
- function close(){if(!active)return;if(held!==null){send();held=null;}active=false;camera=null;document.body.classList.remove('spraying');els.bar.hidden=true;onClose?.();}
+ function close(){
+  if(!active)return;if(held!==null){send();held=null;}active=false;
+  if(camera){camera.zoom=walkZoom;camera.updateProjectionMatrix();camera=null;}
+  document.body.classList.remove('spraying');els.bar.hidden=true;onClose?.();
+ }
  function ask(){
   const l=link();if(!l)return;
   asked=true;askedAt=performance.now();loaded=false;syncing=new Map();l.wall(true);
@@ -126,12 +130,14 @@ export function createGraffiti(baked,els,{colliders,live,connect,onOpen,onClose}
   stroke(msg){const s=loaded&&readStroke(msg);if(s)paintStroke(sections,s,setCell);},
   painted(r){if(r.ok!==false)return;note=REFUSED[r.why]||'';if(loaded&&['slow','closed','sign-in'].includes(r.why)){reset();ask();}if(active)showBar();},
   close,open,
-  // Stay below the roof and frame the patch in front of the walker. At the centre, aim beside the obstruction.
+  // Lower the view and aim level at the slope so fine strokes remain readable while spraying.
   update(view,now=performance.now()){
    if(dirty.size)flushTextures();if(held!==null&&now-sentAt>=SEND_MS)send();
-   if(!active)return;camera=view;
+   if(!active)return;
+   if(!camera){camera=view;walkZoom=view.zoom;view.zoom*=1.45;view.updateProjectionMatrix();}
    const z=T.MathUtils.clamp(stand.z,z0,z1),x=Math.max(stand.x,-220+.12*Math.max(0,Math.abs(z)-17));
-   view.position.set(x,floor+1.86,z);aim.set(-229,33.15,Math.abs(z)<3?(z<0?-5:5):z);
+   const y=floor+1.32;
+   view.position.set(x,y,z);aim.set(-229,y,Math.abs(z)<3?(z<0?-5:5):z);
    view.lookAt(aim);view.updateMatrixWorld();
   },
   ...(debug?{setTestLink(l){reset();testLink=l;}}:{})

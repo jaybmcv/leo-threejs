@@ -2826,7 +2826,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 4,
-      "signature": "d0b5c4e1d21c4ac4515713a82d7f148824ff0d1d9e0b1db2f0f427f203f527d1"
+      "signature": "cf9a52c63a163d5375531563168b54e4abc20c42d1a0136073dd576318f229d3"
     },
     {
       "source": "src/walk/grapple.js",
