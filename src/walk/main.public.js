@@ -597,11 +597,13 @@ async function buildShip(){
  // and every other instanced mesh outside the repeated cabins, the atrium facade (its lift and aft-core copies' materials
  // as one palette) and the tube lift. Made before the tests below wrap the renderer, so it sees only what they let
  // through; what it folds counts towards their dense test. ?drawruns=0 draws them one by one, ?towerpalette=0 keeps the
- // facade's materials apart.
+ // facade's materials apart. Materials that differ only in colour, glow, roughness and metalness fold together when they
+ // reach the GPU in a row (look-kinds.js), but those corner shading leaves alone; ?drawkinds=0 folds by material.
  if(deskDetail&&!OWNER_BAKE_PAGE&&renderer.extensions.has('WEBGL_multi_draw')&&new URLSearchParams(location.search).get('drawruns')!=='0'){
+  const looks=new URLSearchParams(location.search).get('drawkinds')!=='0',alone=phone||phoneTest.get('corner')==='0'?null:(set=>m=>set.has(m)||cornerShadeSkipsName(m.name))(cornerShadeLeavesAlone(scene));
   const instancedParts=[];scene.traverse(o=>{if(o.isInstancedMesh&&!o.isBatchedMesh)instancedParts.push(o);});
   const meshesOf=root=>{const list=[];root?.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh)list.push(o);});return list;};
-  drawRuns=await createDrawRuns(scene,renderer,[{parts:instancedParts},{parts:meshesOf(ship.facade),palette:new URLSearchParams(location.search).get('towerpalette')!=='0'},{parts:meshesOf(vaultLift?.group)}],{kinds:phoneBands?.kinds});
+  drawRuns=await createDrawRuns(scene,renderer,[{parts:instancedParts},{parts:meshesOf(ship.facade),palette:new URLSearchParams(location.search).get('towerpalette')!=='0'},{parts:meshesOf(vaultLift?.group)}],{kinds:phoneBands?.kinds,looks,alone});
  }
  // While the arrival hall is walked, the floors' occlusion scan (floor-occlusion.js) gives the page turns: a second of work.
  if(deskDetail&&!OWNER_BAKE_PAGE)installQuadFacingTest(renderer,scene,camera,{...(arrival?.active?{floorOcclusion:await createFloorOcclusionAsync(scene,camera,yieldToPage)}:{}),skipped:()=>(groupOcclusion?.stats.skipped??0)+(privacyBatch?.replaced??0)+(cabinBatches?.stats.folded??0)+(liftBatches?.stats.skipped??0)+(drawRuns?.stats.folded??0)});
@@ -633,8 +635,11 @@ async function buildShip(){
  // together and three refreshes each look once. Corner shading still treats every part as before. Not on phones.
  if(!preparedPhone){const alone=cornerShadeLeavesAlone(scene);shareEquivalentMaterials(scene,{member:o=>o.userData.v2Cabins&&!o.userData.proxySpans,split:o=>alone.has(o.material)?'alone':''});}
  // Then each material's cabin parts draw as one instanced multi-draw in the main pass (cabin-batches.js), without what
- // group occlusion leaves out; ?cabinbatch=0 draws them part by part, to compare.
- if(deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('cabinbatch')!=='0')cabinBatches=await createCabinBatches(scene,renderer,instanced,{nearSlots:NEAR_CABINS,skip:groupOcclusion&&(o=>groupOcclusion.hiddenRoot(o.parent,o)||groupOcclusion.hiddenRoot(o,o))});
+ // group occlusion leaves out; ?cabinbatch=0 draws them part by part, to compare. Materials that differ only in colour,
+ // glow, roughness and metalness share one (look-kinds.js), but those corner shading leaves alone; ?cabinkinds=0 batches
+ // by material.
+ if(deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('cabinbatch')!=='0')cabinBatches=await createCabinBatches(scene,renderer,instanced,{nearSlots:NEAR_CABINS,
+  kinds:new URLSearchParams(location.search).get('cabinkinds')!=='0',alone:phone||phoneTest.get('corner')==='0'?null:(set=>m=>set.has(m)||cornerShadeSkipsName(m.name))(cornerShadeLeavesAlone(scene)),skip:groupOcclusion&&(o=>groupOcclusion.hiddenRoot(o.parent,o)||groupOcclusion.hiddenRoot(o,o))});
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
@@ -1314,7 +1319,11 @@ function draw(view){
  if(frogTrip.active){if(!input.enabled||view!==camera)frogTrip.end(true);else frogTrip.update();}
  if(roomViewJob){try{const views=roomViewJob.step();if(views){roomViewJob=null;
    atriumRooms=createAtriumRooms({scene,parent:atriumStandIns().find(o=>o.name==='P6_atrium_room_returns'&&!o.userData.distantProxy)?.parent,placements:cabinPlacements(),views,instanced,lining:instanced.find(o=>o.name==='Cabin_v2_shell_V2_lining_polished')?.material});
-   atriumRooms?.update(camera,controller.position);}}catch(e){roomViewJob=null;console.warn('Atrium room views skipped.',e);}}
+   atriumRooms?.update(camera,controller.position);
+   // The reach cabins' parts (made only now) fold in rows as the decks' other parts do (draw-runs.js); ?reachruns=0
+   // draws them part by part.
+   if(atriumRooms&&drawRuns&&new URLSearchParams(location.search).get('reachruns')!=='0'){const reach=[];atriumRooms.pool.traverse(o=>{if(o.isInstancedMesh)reach.push(o);});
+    drawRuns.offer([{parts:reach}]).catch(e=>console.warn('Reach cabins left out of the draw runs.',e));}}}catch(e){roomViewJob=null;console.warn('Atrium room views skipped.',e);}}
  view.updateMatrixWorld(true);atriumGeometry?.update(view,renderer.domElement.height);voyagerLawn?.update(view);
  for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
  // The deck kinds' and furnishing kinds' texels take their source materials' values as the moods left them this frame
