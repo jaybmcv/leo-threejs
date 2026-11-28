@@ -10,6 +10,7 @@ import {rememberMergedBounds} from './draw-bounds.js';
 import * as T from 'three';
 import {compactRenderGeometry} from './facade.js';
 import {yieldEvery} from './yield-to-page.js';
+import {floorBlocker} from './floor-occlusion.js';
 
 const IDENTITY=new T.Matrix4(),release=function(){this.array=null;};
 
@@ -136,24 +137,37 @@ function boundRuns(runs,p,index){
 // a tiny float texture (G and B, as three reads its roughness and metalness maps) through a uv constant over that
 // source's vertices: three's arithmetic is then the uniform path's (roughness 1 x G, metalness 1 x B). follow() keeps
 // the texels to the source materials.
+// Colour kinds: the decks' other opaque, untextured standard materials (about thirty lights, diffusers, screens and glows,
+// each a small merge of one piece that view culling never left out) merge by kind as well, equal but for colour, glow,
+// roughness and metalness. Their kind's material also reads its colour from a second texture through `map` (white x the
+// texel, as the uniform path's colour) and its glow from a third through `emissiveMap` (white at intensity 1 x the texel,
+// the source's emissive x its intensity, which is what three's emissive uniform holds). The colour kinds' materials are
+// made after every source's and before the finish kinds', so the lights still draw before the finishes they sit in.
 const KIND_OWN=new Set(['uuid','id','version','name','roughness','metalness','_listeners','onBeforeCompile','customProgramCacheKey']);
+const COLOUR_OWN=new Set([...KIND_OWN,'color','emissive','emissiveIntensity']);
 const plainHook=T.Material.prototype.onBeforeCompile;
 const ids=new WeakMap();let nextId=0;
 const idOf=f=>{let i=ids.get(f);if(i===undefined)ids.set(f,i=nextId++);return i;};
 const describe=v=>v===null||v===undefined||typeof v!=='object'&&typeof v!=='function'?String(v):typeof v==='function'?'f'+idOf(v):v.isColor?'c'+v.getHexString():v.isTexture?'t'+v.uuid:typeof v.toArray==='function'?'['+v.toArray().join(',')+']':'o'+JSON.stringify(v);
 const hookFlags=m=>{const h=m.onBeforeCompile;return (h?.cornerShade?'C':'')+(h?.filmLook?'F':'');};
-// A material's own values apart from those a kind reads from its texture, its identity and its hooks.
-const lookOf=m=>Object.keys(m).filter(k=>!KIND_OWN.has(k)).sort().map(k=>k+'='+describe(m[k])).join('|');
-// What a source material and its meshes must share to join a kind (null: it merges per material, as before). Hooks are
-// left out: corner-shade.js and film-look.js patch the sources and the kind's material alike, later on.
-export function kindKey(m,o,alone=null){
- if(!/^Walk_finish_/.test(m.name||'')||!m.isMeshStandardMaterial||m.isMeshPhysicalMaterial||m.transparent||!m.visible)return null;
+// A material's own values apart from those a kind reads from its textures, its identity and its hooks.
+const lookOf=(m,colour=false)=>{const own=colour?COLOUR_OWN:KIND_OWN;return Object.keys(m).filter(k=>!own.has(k)).sort().map(k=>k+'='+describe(m[k])).join('|');};
+// What a source material and its meshes must share to join a kind (null: it merges per material, as before): a finish
+// kind ('f#...'), or with `colours` any other material's colour kind ('c#...'). Hooks are left out: corner-shade.js and
+// film-look.js patch the sources and the kind's material alike, later on. A floor blocker's merge is named for
+// floor-occlusion.js, so only finishes may be one.
+export function kindKey(m,o,alone=null,colours=false){
+ const finish=/^Walk_finish_/.test(m.name||'');
+ if(!finish&&!colours||!m.isMeshStandardMaterial||m.isMeshPhysicalMaterial||m.transparent||!m.visible)return null;
  if(Object.values(m).some(v=>v?.isTexture))return null;
  const h=m.onBeforeCompile;if(h!==plainHook&&!h?.cornerShade&&!h?.filmLook)return null;
  if(alone?.(m))return null;
+ if(!finish&&floorBlocker({isMesh:true,name:'V2_low_deck_merged_'+m.name}))return null;
  const layout=Object.entries(o.geometry.attributes).filter(([k])=>k!=='uv').map(([k,a])=>k+':'+a.itemSize+':'+a.normalized+':'+(a.array?.constructor.name??'?')).sort().join(',');
- return o.renderOrder+'#'+layout+'#'+lookOf(m);
+ return (finish?'f':'c')+'#'+o.renderOrder+'#'+layout+'#'+lookOf(m,!finish);
 }
+// A texel's colour as three uploads it (float32), written only when it changes.
+const put=(d,j,r,g,b)=>{r=Math.fround(r);g=Math.fround(g);b=Math.fround(b);if(d[j]===r&&d[j+1]===g&&d[j+2]===b&&d[j+3]===1)return false;d[j]=r;d[j+1]=g;d[j+2]=b;d[j+3]=1;return true;};
 const texel=n=>{const t=new T.DataTexture(new Float32Array(n*4),n,1,T.RGBAFormat,T.FloatType);t.magFilter=t.minFilter=T.NearestFilter;t.generateMipmaps=false;t.matrixAutoUpdate=false;t.needsUpdate=true;return t;};
 // The texel coordinate of material k of n, as Uint16 normalized: nearest sampling picks texel k (the rounding is under
 // half a texel for n up to several thousand).
@@ -161,11 +175,11 @@ export const kindTexel=(k,n)=>Math.round(65535*(k+.5)/n);
 
 /** Merges the deck bands' opaque meshes per material. `hidden` is called with each source once it is copied and hidden.
  * `piece` (most triangles a piece, 0 for none) splits each bigger material merge into view-culled pieces.
- * `kinds` (with pieces only) merges the floor and wall finishes by kind instead (see above); `alone(material)`: a
- * material corner-shade.js leaves alone, which stays apart.
+ * `kinds` (with pieces only) merges the floor and wall finishes by kind instead (see above), and `colours` the other
+ * plain materials by colour kind as well; `alone(material)`: a material corner-shade.js leaves alone, which stays apart.
  * Returns {root, update, follow, kinds, proof}: add nothing (root is already in `scene`); call update() after showBands
  * and follow() just before the main render. */
-export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece=0,keepArrays=false,kinds:byKind=false,alone=null}={}){
+export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece=0,keepArrays=false,kinds:byKind=false,colours=false,alone=null}={}){
  const yieldWork=yieldEvery();
  const bands=[...baked.bands.values()].filter(g=>/^Walk_band_/.test(g.name));
  // Band order: by lowest deck, then highest, so the bands a view span shows sit together.
@@ -188,12 +202,24 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece
  const work=[],kindOf=new Map();
  for(const list of buckets.values()){
   if(list.length<2)continue;
-  const key=byKind&&piece>0?kindKey(list[0].o.material,list[0].o,alone):null;
+  const key=byKind&&piece>0?kindKey(list[0].o.material,list[0].o,alone,colours):null;
   if(key===null){work.push({lists:[list],kind:false});continue;}
-  let w=kindOf.get(key);if(!w){kindOf.set(key,w={lists:[],kind:true});work.push(w);}w.lists.push(list);
+  let w=kindOf.get(key);if(!w){kindOf.set(key,w={lists:[],kind:true,colour:key[0]==='c'});work.push(w);}w.lists.push(list);
  }
  for(const w of work)if(w.lists.length<2)w.kind=false;
- for(const {lists,kind} of work){
+ // The kinds' materials, the colour kinds' first (see above): each a copy of its first source's, with what its textures
+ // give set to one (roughness, metalness; colour and glow white). Its own name keeps the moods' lookups by name on the
+ // source materials, which follow() reads.
+ let finishes=0,tints=0;
+ for(const colour of [true,false])for(const w of work){if(!w.kind||w.colour!==colour)continue;
+  const materials=w.lists.map(l=>l[0].o.material),n=materials.length,material=new T.MeshStandardMaterial().copy(materials[0]),texture=texel(n);
+  material.roughness=1;material.metalness=1;material.roughnessMap=material.metalnessMap=texture;
+  if(colour){w.colours=texel(n);w.glows=texel(n);material.color.setScalar(1);material.emissive.setScalar(1);material.emissiveIntensity=1;material.map=w.colours;material.emissiveMap=w.glows;
+   material.name='V2_band_colour_kind_'+tints;w.name='V2_low_deck_merged_Walk_colour_kind_'+tints++;}
+  else{material.name='V2_band_kind_'+finishes;w.name='V2_low_deck_merged_Walk_finish_kind_'+finishes++;}
+  Object.assign(w,{materials,material,texture});
+ }
+ for(const {lists,kind,colour,name:kindName,material:kindMaterial,texture,colours:tint,glows} of work){
   const materials=lists.map(l=>l[0].o.material);
   // A kind's sources in band order (each bucket is already), each with its material's texel; within a band, in the order
   // three drew their materials (by material id, each material's own parts in order). Where two parts meet, the one drawn
@@ -245,10 +271,8 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece
     merges.push({mesh,runs:piece.runs,split});proof.regions++;
    }
   }else{
-   // The kind's material: the first source material's, with roughness and metalness read from the texture. Its own name
-   // keeps the moods' lookups by name on the source materials, which follow() reads.
-   const n=materials.length,texture=texel(n),material=new T.MeshStandardMaterial().copy(materials[0]);
-   material.name='V2_band_kind_'+kinds.length;material.roughness=1;material.metalness=1;material.roughnessMap=material.metalnessMap=texture;
+   // The kind's material, made above.
+   const n=materials.length,material=kindMaterial;
    const shared=split?await splitPieces(attributes,layout,index,runs,piece,yieldWork,true):{attributes,index,pieces:[{start:0,count:indices,runs:boundRuns(runs,attributes.position,index)}]};
    const geometry=new T.BufferGeometry(),objects={};
    for(const [name,a] of Object.entries(layout))geometry.setAttribute(name,objects[name]=new T.BufferAttribute(shared.attributes[name],a.itemSize,a.normalized));
@@ -256,22 +280,22 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece
    // One bounds tree over the shared index, made while its arrays are here; the pieces find it by their index.
    if(retainDrawBounds)rememberMergedBounds(geometry);
    if(!keepArrays)for(const a of [...Object.values(geometry.attributes),geometry.index])a.onUpload(release);
-   const name='V2_low_deck_merged_Walk_finish_kind_'+kinds.length,pieces=[];
+   const pieces=[];
    for(const p of shared.pieces){
     // Its own geometry over the kind's attributes and index (never disposed alone: that frees the kind's GPU buffers),
     // drawing its slice. Its bounds hold every run it may draw from the start (three would otherwise work them out over
     // the whole kind); update() narrows a split piece's to the runs shown, as before.
     const g=new T.BufferGeometry();for(const key of Object.keys(objects))g.setAttribute(key,objects[key]);g.setIndex(geometry.index);g.setDrawRange(p.start,p.count);
     const box=new T.Box3();for(const r of p.runs)box.union(r.box);g.boundingBox=box;g.boundingSphere=box.getBoundingSphere(new T.Sphere());
-    const mesh=new T.Mesh(g,[material]);mesh.name=name;mesh.renderOrder=list[0].o.renderOrder;
+    const mesh=new T.Mesh(g,[material]);mesh.name=kindName;mesh.renderOrder=list[0].o.renderOrder;
     mesh.matrixAutoUpdate=false;mesh.frustumCulled=split;mesh.userData={noCollide:true,renderOnly:true,fogBackdrop:true,sources,deckKind:kinds.length};root.add(mesh);
     merges.push({mesh,runs:p.runs,split});pieces.push(mesh);proof.regions++;
    }
    // The batch geometry's bounds are never read for culling (draw-runs.js draws it by hand); set so three never works
    // them out over the arrays.
    const all=new T.Box3();for(const q of pieces)all.union(q.geometry.boundingBox);geometry.boundingBox=all;geometry.boundingSphere=all.getBoundingSphere(new T.Sphere());
-   kinds.push({geometry,material,texture,materials,looks:materials.map(lookOf),pieces,runs:shared.pieces.reduce((s,p)=>s+p.runs.length,0)});
-   proof.kinds++;proof.kindMaterials+=n;
+   kinds.push({geometry,material,texture,colours:tint??null,glows:glows??null,materials,looks:materials.map(m=>lookOf(m,colour)),pieces,runs:shared.pieces.reduce((s,p)=>s+p.runs.length,0)});
+   proof.kinds++;proof.kindMaterials+=n;if(colour){proof.colourKinds=(proof.colourKinds||0)+1;proof.colourMaterials=(proof.colourMaterials||0)+n;}
   }
   proof.meshes++;proof.sources+=list.length;proof.vertices+=vertices;proof.triangles+=indices/3;await yieldWork();
  }
@@ -293,18 +317,24 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece
    mesh.visible=groups.length>0;if(split&&mesh.visible)g.boundingBox.getBoundingSphere(g.boundingSphere);}
  };
  update();
- // The kinds' texels: each source material's roughness and metalness, rewritten only when they change. Every 60 calls each
- // source is checked against its kind again (its own values apart from roughness and metalness, and the kind material's
- // corner shading and film look): proof.drift counts the sources that no longer match, each warned once. A merged source cannot be drawn
- // apart again, so this is for the checks to see, not a way back.
+ // The kinds' texels: each source material's roughness and metalness (and a colour kind's colour and glow), rewritten
+ // only when they change. Every 60 calls each source is checked against its kind again (its own values apart from those
+ // its kind reads from textures, and the kind material's corner shading and film look): proof.drift counts the sources
+ // that no longer match, each warned once, and a kind whose own material no longer holds one for what it reads from its
+ // textures (anything written there would multiply every texel). A merged source cannot be drawn apart again, so this is
+ // for the checks to see, not a way back.
  let calls=0;const drifted=new WeakSet();
+ const unit=(M,colour)=>M.roughness===1&&M.metalness===1&&(!colour||M.color.r===1&&M.color.g===1&&M.color.b===1&&M.emissive.r===1&&M.emissive.g===1&&M.emissive.b===1&&M.emissiveIntensity===1);
  const follow=()=>{
   const check=++calls%60===0;
-  for(const K of kinds){const data=K.texture.image.data;let dirty=false;
+  for(const K of kinds){const data=K.texture.image.data,tint=K.colours?.image.data,glow=K.glows?.image.data,colour=!!tint;let dirty=false,tinted=false,glowed=false;
    for(let i=0;i<K.materials.length;i++){const m=K.materials[i],r=Math.fround(m.roughness),s=Math.fround(m.metalness);
     if(data[i*4+1]!==r||data[i*4+2]!==s||data[i*4+3]!==1){data[i*4+1]=r;data[i*4+2]=s;data[i*4+3]=1;dirty=true;}
-    if(check&&!drifted.has(m)&&(hookFlags(m)!==hookFlags(K.material)||lookOf(m)!==K.looks[i])){drifted.add(m);proof.drift++;console.warn('Deck kind: '+m.name+' no longer matches '+K.material.name+': it keeps drawing with the kind look.');}}
-   if(dirty)K.texture.needsUpdate=true;}
+    // A colour kind's colour, and its glow as three's emissive uniform holds it (emissive x intensity).
+    if(colour){const c=m.color,e=m.emissive,x=m.emissiveIntensity;if(put(tint,i*4,c.r,c.g,c.b))tinted=true;if(put(glow,i*4,e.r*x,e.g*x,e.b*x))glowed=true;}
+    if(check&&!drifted.has(m)&&(hookFlags(m)!==hookFlags(K.material)||lookOf(m,colour)!==K.looks[i])){drifted.add(m);proof.drift++;console.warn('Deck kind: '+m.name+' no longer matches '+K.material.name+': it keeps drawing with the kind look.');}}
+   if(check&&!drifted.has(K.material)&&!unit(K.material,colour)){drifted.add(K.material);proof.drift++;console.warn('Deck kind: '+K.material.name+' has its own values changed: they multiply every texel.');}
+   if(dirty)K.texture.needsUpdate=true;if(tinted)K.colours.needsUpdate=true;if(glowed)K.glows.needsUpdate=true;}
  };
  follow();
  return {root,update,follow,kinds,proof};

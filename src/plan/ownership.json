@@ -400,8 +400,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 130,
-      "signature": "39b1793956b52980e313534277065b2240487cb37a0969773563595a6d398024"
+      "placements": 137,
+      "signature": "d105e68dfbc8de0ccd905a866e31457f5769d681fb58aef9656b72a2a5368655"
     },
     {
       "source": "src/interior-polish.js",
@@ -1034,7 +1034,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 28,
-      "signature": "c4cc7b5b5beb6613d1022d32bfea407588fe2c9715cb2b74f7181f72f899e3a3"
+      "signature": "6d3a82491a300f8f8a70022955662a47ad9cdd5b2ea2423689653f5421d7053b"
     },
     {
       "source": "src/walk/aquarium-treasure/game.js",
@@ -1051,7 +1051,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 30,
-      "signature": "7daa4265417369613be81c56f04eaaf0c98aecbf3f4249ff07bebe1464d981f2"
+      "signature": "ebe83ea742b0167c772d2ce17eede62356f0e7b2071bff348493acf19f047982"
     },
     {
       "source": "src/walk/aquarium-treasure/suit.js",
@@ -2215,7 +2215,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "ba9732df0afa8287497ad8eda8cbbd5a7f875d4d111e81711fae1a8d185e2b55"
+      "signature": "aa13778d8cb6ca868688f68a58c605f54c6b42e84036d725a277cc09e22a45d8"
     },
     {
       "source": "src/walk/crowd-draw.js",
@@ -3854,11 +3854,13 @@
       ],
       "via": "frame boundary",
       "fixed": false,
-      "features": [],
+      "features": [
+        "Lift_lobby_hex_floor_finish"
+      ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 3,
-      "signature": "ff7bca23e21183fe50e9647a119bf93713f75a30bbfb5c15a6f6238d67f6f4fd"
+      "placements": 2,
+      "signature": "c866bc6d8bd1f293af157a908bb811a3ba3e046820af8f5afb0343cf1354e27d"
     },
     {
       "source": "src/walk/lift-tile-floor.js",
@@ -3867,11 +3869,13 @@
       ],
       "via": "frame boundary",
       "fixed": false,
-      "features": [],
+      "features": [
+        "Lift_lobby_hex_floor_finish"
+      ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 3,
-      "signature": "900ce8a1321c2e23c67920ca608cef7612a34d7a960fb93d8ed40d51481af854"
+      "placements": 2,
+      "signature": "6833110129011c46f1b294f308f51b5adef0b30c3d441b073219f082088979c9"
     },
     {
       "source": "src/walk/lifts.authoring.js",
@@ -4362,7 +4366,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "004d7b9a2921746700817bd412694fc644f723d510753f0d179141ab7c1b62de"
+      "signature": "9c9e9fc8b4a9dcd7f7bf72453610d3dda13b8b0d08596fa94d4e0196651757b6"
     },
     {
       "source": "src/walk/main.js",
@@ -4384,7 +4388,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "842614fb687d5d618d5cebb26d7a957910ad311b10434428f356e14d1adbdaba"
+      "signature": "52c1efd91fbfb8ca9ebc9b7bb15517ec6d646768c3bc0b1116ae63550d0f0af3"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4404,7 +4408,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "13a3c87611d7d58270024402b1d3a99dfb4cc93eaff4bf382bf91938f45e27d8"
+      "signature": "6afe05a8c2286c47e0a9a6b2205ecb17af727f7feaa90d90a435a265c5138d28"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4424,7 +4428,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "d5266070db9d4a3636f8f55ac9a6be5b5f37a4b6e30001f20eb134d4a78836a2"
+      "signature": "a3570962469b4a5358b80c5dc29957491bd2c9c5484bba66ec5d0218f20f44a6"
     },
     {
       "source": "src/walk/marks.authoring.js",
