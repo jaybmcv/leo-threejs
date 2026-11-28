@@ -94,7 +94,7 @@ import {identify,currentPass,bestPass,connect,connectPopup,forget,invite} from '
 import {inOtherside,onGlyph} from './net/otherside.js';
 import {RemotePlayers} from './remotes.authoring.js';
 import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.authoring.js';
-import {tileLiftFloor} from './lift-tile-floor.authoring.js';
+import {finishLiftLobbyFloor} from './lift-tile-floor.authoring.js';
 import {createRecoveryMood} from './recovery.js';
 import {createAtriumMood} from './atrium-mood.js';
 import {createStageBeams} from '../v2/stage-beams.js';
@@ -317,8 +317,8 @@ async function buildShip(){
  restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;loungeMood=lounge?createLoungeMood(lounge,{hemi,fill,scene}):null;lullaby=lounge?createLullaby(lounge.dome):null;
  // Its floor, galleries and the promenade in front: glossy acrylic with neon swirls (lounge-floor.js).
  glossLoungeFloor(ship);quietFloorReflections(scene,scene.environment);
- // Deck 19's lift lobby and promenade up to the lounge: black ceramic tile (lift-tile-floor.js).
- tileLiftFloor(ship);
+ // Continue the lobby's hex paving over the exposed transit slab.
+ finishLiftLobbyFloor(ship,layout);
  // The crew recovery lounge's pod side dims the lights (recovery.js).
  recovery=createRecoveryMood(ship,{hemi,fill,scene});arrivalMood=createArrivalMood(ship,{hemi,fill,scene});atriumMood=createAtriumMood({hemi,fill,scene});stageBeams=createStageBeams(scene,layout.decks[5].y);
  }});
@@ -402,6 +402,7 @@ async function buildShip(){
  toBand(jaguarGate.group);toBand(asteroid.group);
  for(const g of prepared.entranceSigns.groups)toBand(g);
  if(lounge)for(const o of lounge.drawn)toBand(o);
+ if(lounge?.logo)toBand(lounge.logo);
  if(lounge){hydroPortal=createHydroPortal();toBand(hydroPortal.group,HYDRO_PORTAL.floor);}
  hydroParkPortal=createHydroPortal(HYDRO_PARK_PORTAL);toBand(hydroParkPortal.group,HYDRO_PARK_PORTAL.floor);
  hydroCargoPortal=createHydroPortal(HYDRO_CARGO_PORTAL);toBand(hydroCargoPortal.group,HYDRO_CARGO_PORTAL.floor);

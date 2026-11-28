@@ -82,7 +82,7 @@ const WALK_SCRIPT=new URL(import.meta.url).pathname.split('/').pop(),OWNER_BAKE_
 const SMALL_MERGE=deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('smallmerge')!=='0';
 let ownerHiding=null;
 function startOwnerHiding(){
- if(preparedPhone)return;const key=ownerKey(WALK_SCRIPT,(phoneBatching.merge?'merge':'batch')+deskPiece+(phoneBatching.merge&&deckKinds?'k'+(colourKinds?'c':''):''));
+ if(preparedPhone)return;const key=ownerKey(WALK_SCRIPT,(phoneBatching.merge?'merge':'batch')+deskPiece+(phoneBatching.merge&&deckKinds?'k'+(colourKinds?'c':'')+(colourSingles?'s':''):'')+(furnishKinds?'f':''));
  if(OWNER_BAKE_PAGE){globalThis.__ownerBakeHost={T,scene,renderer,camera,key,follow,goTo:place=>goTo(place)};return;}
  const file=ownerBakeFile(WALK_SCRIPT);if(!file)return;
  fetch(new URL(file,import.meta.url)).then(r=>r.ok?r.json():null).then(data=>{const hiding=createOwnerHiding(data,{key,scene});hiding?.resolve();ownerHiding=hiding;
@@ -172,7 +172,6 @@ import {identify,currentPass,bestPass,connect,connectPopup,forget,invite} from '
 import {inOtherside,onGlyph} from './net/otherside.js';
 import {RemotePlayers} from './remotes.js';
 import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.js';
-import {tileLiftFloor} from './lift-tile-floor.js';
 import {createRecoveryMood} from './recovery.js';
 import {createAtriumMood} from './atrium-mood.js';
 import {createStageBeams} from '../v2/stage-beams.js';
@@ -331,6 +330,11 @@ const deskPiece=deskPieceSize({query:new URLSearchParams(location.search),phone:
 // screens, glows) merge by colour kind too. ?deckkinds=0 merges them all per material, as before; ?colourkinds=0 keeps
 // the finish kinds only. The owner bake's key carries both: a bake of one way is never used by another.
 const deckKinds=deskPiece>0&&renderer.extensions.has('WEBGL_multi_draw')&&phoneTest.get('deckkinds')!=='0',colourKinds=deckKinds&&phoneTest.get('colourkinds')!=='0';
+// A material of one render-bake merge joins a colour kind (phone-bands.js `singles`): ?coloursingles=0 leaves it apart.
+const colourSingles=colourKinds&&phoneTest.get('coloursingles')!=='0';
+// The rare furnishings' batches by look kind (furnishing-batches.js), on desktops with pieces as the deck kinds are, the
+// owner bake's page included (its batches are rows the bake proves): ?furnishkinds=0 batches them by material.
+const furnishKinds=deskPiece>0&&renderer.extensions.has('WEBGL_multi_draw')&&phoneTest.get('furnishkinds')!=='0';
 // The ship's layers are set apart by height (a floor finish 6 mm over the deck, paint 8 mm): with the logarithmic depth
 // buffer the shaders write the depth, so polygon offset has never applied. With linear depth it would, and pull the hex
 // sub-floor (finish-kit.js) over the Arrival Hall's finish, so it stays off.
@@ -413,8 +417,7 @@ async function buildShip(){
  restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;loungeMood=lounge?createLoungeMood(lounge,{hemi,fill,scene}):null;lullaby=lounge?createLullaby(lounge.dome):null;
  // Its floor, galleries and the promenade in front: glossy acrylic with neon swirls (lounge-floor.js).
  quietFloorReflections(scene,scene.environment);
- // Deck 19's lift lobby and promenade up to the lounge: black ceramic tile (lift-tile-floor.js).
- // The floor finish is in the prepared render bands.
+ // The Deck 19 lift lobby's hex finish is in the prepared render bands.
  // The crew recovery lounge's pod side dims the lights (recovery.js).
  recovery=createRecoveryMood(ship,{hemi,fill,scene});arrivalMood=createArrivalMood(ship,{hemi,fill,scene});atriumMood=createAtriumMood({hemi,fill,scene});stageBeams=createStageBeams(scene,layout.decks[5].y);
  }});
@@ -516,6 +519,7 @@ async function buildShip(){
  toBand(jaguarGate.group);toBand(asteroid.group);
  for(const g of prepared.entranceSigns.groups)toBand(g);
  if(lounge)for(const o of lounge.drawn)toBand(o);
+ if(lounge?.logo)toBand(lounge.logo);
  if(lounge){hydroPortal=createHydroPortal();toBand(hydroPortal.group,HYDRO_PORTAL.floor);}
  hydroParkPortal=createHydroPortal(HYDRO_PARK_PORTAL);toBand(hydroParkPortal.group,HYDRO_PARK_PORTAL.floor);
  hydroCargoPortal=createHydroPortal(HYDRO_CARGO_PORTAL);toBand(hydroCargoPortal.group,HYDRO_CARGO_PORTAL.floor);
@@ -588,16 +592,18 @@ async function buildShip(){
   // A material corner shading will leave alone (corner-shade.js) stays out of the kinds: a kind's material is shaded as one.
   // So does one whose merge's name corner shading skips (the name is the material's), as a kind's name is never skipped.
   const alone=phone||phoneTest.get('corner')==='0'?null:(set=>m=>set.has(m)||cornerShadeSkipsName(m.name))(cornerShadeLeavesAlone(scene));
-  phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE,kinds:deckKinds,colours:colourKinds,alone});}ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer);atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
+  phoneBands=await mergePhoneBands(baked,scene,{hidden,menus:!preparedPhone,piece:deskPiece,keepArrays:OWNER_BAKE_PAGE,kinds:deckKinds,colours:colourKinds,singles:colourSingles,alone});}ship.v2LowDeckBatches=await batchLowDeckDraws(baked,renderer,{...batching,hidden,skip:merge?g=>/^Walk_band_/.test(g.name):null});}if(!preparedPhone)ship.v2FurnishingBatches=batchFurnishing(ship.liveDraws,renderer,{kinds:furnishKinds,alone:furnishKinds&&!phone&&phoneTest.get('corner')!=='0'?(set=>m=>set.has(m)||cornerShadeSkipsName(m.name))(cornerShadeLeavesAlone(scene)):null});atriumGeometry=atriumPack?createAtriumGeometryRuntime(baked,renderer,{getQuality:getAtriumQuality}):null;settlePreparedStatic(ship);
  // Draws of one material that reach the GPU one after another draw as one (draw-runs.js): the decks' common furnishings
  // and every other instanced mesh outside the repeated cabins, the atrium facade (its lift and aft-core copies' materials
  // as one palette) and the tube lift. Made before the tests below wrap the renderer, so it sees only what they let
  // through; what it folds counts towards their dense test. ?drawruns=0 draws them one by one, ?towerpalette=0 keeps the
- // facade's materials apart.
+ // facade's materials apart. Materials that differ only in colour, glow, roughness and metalness fold together when they
+ // reach the GPU in a row (look-kinds.js), but those corner shading leaves alone; ?drawkinds=0 folds by material.
  if(deskDetail&&!OWNER_BAKE_PAGE&&renderer.extensions.has('WEBGL_multi_draw')&&new URLSearchParams(location.search).get('drawruns')!=='0'){
+  const looks=new URLSearchParams(location.search).get('drawkinds')!=='0',alone=phone||phoneTest.get('corner')==='0'?null:(set=>m=>set.has(m)||cornerShadeSkipsName(m.name))(cornerShadeLeavesAlone(scene));
   const instancedParts=[];scene.traverse(o=>{if(o.isInstancedMesh&&!o.isBatchedMesh)instancedParts.push(o);});
   const meshesOf=root=>{const list=[];root?.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh)list.push(o);});return list;};
-  drawRuns=await createDrawRuns(scene,renderer,[{parts:instancedParts},{parts:meshesOf(ship.facade),palette:new URLSearchParams(location.search).get('towerpalette')!=='0'},{parts:meshesOf(vaultLift?.group)}],{kinds:phoneBands?.kinds});
+  drawRuns=await createDrawRuns(scene,renderer,[{parts:instancedParts},{parts:meshesOf(ship.facade),palette:new URLSearchParams(location.search).get('towerpalette')!=='0'},{parts:meshesOf(vaultLift?.group)}],{kinds:phoneBands?.kinds,looks,alone});
  }
  // While the arrival hall is walked, the floors' occlusion scan (floor-occlusion.js) gives the page turns: a second of work.
  if(deskDetail&&!OWNER_BAKE_PAGE)installQuadFacingTest(renderer,scene,camera,{...(arrival?.active?{floorOcclusion:await createFloorOcclusionAsync(scene,camera,yieldToPage)}:{}),skipped:()=>(groupOcclusion?.stats.skipped??0)+(privacyBatch?.replaced??0)+(cabinBatches?.stats.folded??0)+(liftBatches?.stats.skipped??0)+(drawRuns?.stats.folded??0)});
@@ -612,10 +618,15 @@ async function buildShip(){
  // sit out the main pass (group-occlusion.js, occlusion-groups.js): by default on
  // Chrome and Edge on Windows, where it was measured; ?occlusion=1 elsewhere, ?occlusion=0 off.
  {const asked=new URLSearchParams(location.search).get('occlusion');if(deskDetail&&!OWNER_BAKE_PAGE&&(asked==='1'||asked!=='0'&&occlusionByDefault(renderer.getContext())))groupOcclusion=createGroupOcclusion(renderer,scene,camera,occlusionGroups(scene,{featureRoots,instanced,more:new URLSearchParams(location.search).get('occlusionmore')!=='0'}),{trust:new URLSearchParams(location.search).get('occlusiontrust')!=='0'});}
- if(deskDetail&&!OWNER_BAKE_PAGE)featureBatches=await createFeatureBatches(scene,renderer,featureRoots,{skip:groupOcclusion?.hiddenRoot});
+ // Feature kinds (feature-batches.js, look-kinds.js): the room features' and lifts' parts whose materials differ only in
+ // colour, glow, roughness and metalness batch by kind, not by material. Materials corner shading leaves alone (or would,
+ // by name) stay apart. ?featurekinds=0 batches them by material, as before.
+ const featureKinds=deskDetail&&new URLSearchParams(location.search).get('featurekinds')!=='0';
+ const kindAlone=phone||phoneTest.get('corner')==='0'?null:(set=>m=>set.has(m)||cornerShadeSkipsName(m.name))(cornerShadeLeavesAlone(scene));
+ if(deskDetail&&!OWNER_BAKE_PAGE)featureBatches=await createFeatureBatches(scene,renderer,featureRoots,{skip:groupOcclusion?.hiddenRoot,kinds:featureKinds,alone:kindAlone});
  if(liftBatching){const roots=lifts.lifts.map(l=>l.root),skip=groupOcclusion?.hiddenRoot;
-  liftBatches=await createFeatureBatches(scene,renderer,roots,{skip,take:o=>o.name!=='Lift_door_blade'&&o.name!=='Lift_door_stop_shut'});
-  liftDoorBatches=await createFeatureBatches(scene,renderer,roots,{skip,hide:true,take:o=>o.name==='Lift_door_stop_shut'});}
+  liftBatches=await createFeatureBatches(scene,renderer,roots,{skip,take:o=>o.name!=='Lift_door_blade'&&o.name!=='Lift_door_stop_shut',kinds:featureKinds,alone:kindAlone});
+  liftDoorBatches=await createFeatureBatches(scene,renderer,roots,{skip,hide:true,take:o=>o.name==='Lift_door_stop_shut',kinds:featureKinds,alone:kindAlone});}
  // The groups holding only those instanced meshes once the live draws have their final parents (V2_live_source_draws: a
  // deck's cabin shells, a cabin template's fittings), and groups of only such groups, innermost first: cull() hides each
  // while nothing in it shows, so three's scene walk and matrix pass skip it.
@@ -624,8 +635,11 @@ async function buildShip(){
  // together and three refreshes each look once. Corner shading still treats every part as before. Not on phones.
  if(!preparedPhone){const alone=cornerShadeLeavesAlone(scene);shareEquivalentMaterials(scene,{member:o=>o.userData.v2Cabins&&!o.userData.proxySpans,split:o=>alone.has(o.material)?'alone':''});}
  // Then each material's cabin parts draw as one instanced multi-draw in the main pass (cabin-batches.js), without what
- // group occlusion leaves out; ?cabinbatch=0 draws them part by part, to compare.
- if(deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('cabinbatch')!=='0')cabinBatches=await createCabinBatches(scene,renderer,instanced,{nearSlots:NEAR_CABINS,skip:groupOcclusion&&(o=>groupOcclusion.hiddenRoot(o.parent,o)||groupOcclusion.hiddenRoot(o,o))});
+ // group occlusion leaves out; ?cabinbatch=0 draws them part by part, to compare. Materials that differ only in colour,
+ // glow, roughness and metalness share one (look-kinds.js), but those corner shading leaves alone; ?cabinkinds=0 batches
+ // by material.
+ if(deskDetail&&!OWNER_BAKE_PAGE&&new URLSearchParams(location.search).get('cabinbatch')!=='0')cabinBatches=await createCabinBatches(scene,renderer,instanced,{nearSlots:NEAR_CABINS,
+  kinds:new URLSearchParams(location.search).get('cabinkinds')!=='0',alone:phone||phoneTest.get('corner')==='0'?null:(set=>m=>set.has(m)||cornerShadeSkipsName(m.name))(cornerShadeLeavesAlone(scene)),skip:groupOcclusion&&(o=>groupOcclusion.hiddenRoot(o.parent,o)||groupOcclusion.hiddenRoot(o,o))});
  // The phone ship drops what is already on the GPU from the page (src/v2/phone-memory.js).
  if(preparedPhone){releasePhoneGeometry(scene);shrinkPhonePictures(renderer,scene);}
 }
@@ -1305,11 +1319,16 @@ function draw(view){
  if(frogTrip.active){if(!input.enabled||view!==camera)frogTrip.end(true);else frogTrip.update();}
  if(roomViewJob){try{const views=roomViewJob.step();if(views){roomViewJob=null;
    atriumRooms=createAtriumRooms({scene,parent:atriumStandIns().find(o=>o.name==='P6_atrium_room_returns'&&!o.userData.distantProxy)?.parent,placements:cabinPlacements(),views,instanced,lining:instanced.find(o=>o.name==='Cabin_v2_shell_V2_lining_polished')?.material});
-   atriumRooms?.update(camera,controller.position);}}catch(e){roomViewJob=null;console.warn('Atrium room views skipped.',e);}}
+   atriumRooms?.update(camera,controller.position);
+   // The reach cabins' parts (made only now) fold in rows as the decks' other parts do (draw-runs.js); ?reachruns=0
+   // draws them part by part.
+   if(atriumRooms&&drawRuns&&new URLSearchParams(location.search).get('reachruns')!=='0'){const reach=[];atriumRooms.pool.traverse(o=>{if(o.isInstancedMesh)reach.push(o);});
+    drawRuns.offer([{parts:reach}]).catch(e=>console.warn('Reach cabins left out of the draw runs.',e));}}}catch(e){roomViewJob=null;console.warn('Atrium room views skipped.',e);}}
  view.updateMatrixWorld(true);atriumGeometry?.update(view,renderer.domElement.height);voyagerLawn?.update(view);
  for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
- // The deck kinds' texels take their source materials' values as the moods left them this frame (phone-bands.js).
- phoneBands?.follow?.();
+ // The deck kinds' and furnishing kinds' texels take their source materials' values as the moods left them this frame
+ // (phone-bands.js, furnishing-batches.js).
+ phoneBands?.follow?.();ship.v2FurnishingBatches?.follow?.();
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();
  if(view===camera){
   const main=()=>renderer.render(scene,view);

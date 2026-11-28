@@ -148,11 +148,31 @@ scene.updateMatrixWorld(true);for(const [o,p] of world)assert(o.getWorldPosition
  L3.fog=false;for(let i=0;i<60;i++)merged.follow();assert(merged.proof.drift>0);L3.fog=true;pass('a colour kind source changed otherwise is counted');
  {const was=merged.proof.drift;M.emissiveIntensity=2;for(let i=0;i<60;i++)merged.follow();assert.equal(merged.proof.drift,was+1);M.emissiveIntensity=1;pass('a value written on the kind material itself is counted');}
  {const page=readFileSync(new URL('../src/walk/main.public.js',import.meta.url),'utf8');
-  for(const text of ["m=>set.has(m)||cornerShadeSkipsName(m.name)","kinds:deckKinds,colours:colourKinds,alone","colourKinds=deckKinds&&phoneTest.get('colourkinds')!=='0'"])assert(page.includes(text),'main.public.js no longer has '+text);
+  for(const text of ["m=>set.has(m)||cornerShadeSkipsName(m.name)","kinds:deckKinds,colours:colourKinds,singles:colourSingles,alone","colourSingles=colourKinds&&phoneTest.get('coloursingles')!=='0'","colourKinds=deckKinds&&phoneTest.get('colourkinds')!=='0'"])assert(page.includes(text),'main.public.js no longer has '+text);
   pass('the walk page passes corner shading’s name rule and the colour kinds switch to the merge');}
  {const s=new T.Scene(),b=new Map();for(const n of [1,2,3]){const g=new T.Group();g.name='Walk_band_'+n;g.userData.band=n;g.position.set(0,n*4,0);b.set(n,g);s.add(g);for(const [i,m] of [L1,L2,L3,F1,F2].entries())g.add(part(m,i*9-40,n));}s.updateMatrixWorld(true);
   const off=await mergePhoneBands({bands:b},s,{piece:40,kinds:true});assert.equal(off.proof.kinds,1);assert(!off.kinds[0].colours);
   for(const m of [L1,L2,L3])assert(off.root.children.some(o=>o.name==='V2_low_deck_merged_'+m.name&&o.material[0]===m));}
  pass('without colours, the lights merge per material and only the finish kind is made');}
+// Singles (with colours): a material of one render-bake merge joins a colour kind that has other materials; one of
+// another name, or one whose kind has no other material, stays as it is; without singles, all stay.
+{const make=()=>{const s=new T.Scene(),b=new Map();
+  const light=(name,color)=>new T.MeshStandardMaterial({name,color,emissive:color,emissiveIntensity:.5,roughness:.6});
+  const A=light('Area_light',0xffebc7),B=light('Warm light',0xffd39c),card=light('Arena_card_art_3_polished',0x884422),loose=light('Lounge_door_panel',0x225588);
+  const odd=new T.MeshStandardMaterial({name:'Arena_screen',color:0x141205,flatShading:true});
+  for(const n of [1,2]){const g=new T.Group();g.name='Walk_band_'+n;g.userData.band=n;g.position.set(0,n*4,0);b.set(n,g);s.add(g);
+   for(const [i,m] of [A,B].entries()){const o=new T.Mesh(new T.BoxGeometry(2,1,2),m);o.name='Walk_merged_'+m.name;o.position.set(i*5,0,n*3);g.add(o);}}
+  const one=(m,name,x)=>{const o=new T.Mesh(new T.BoxGeometry(1,1,1),m);o.name=name;o.position.set(x,0,9);b.get(1).add(o);return o;};
+  const parts={card:one(card,'Walk_merged_'+card.name,20),loose:one(loose,'Walk_lounge_door',24),odd:one(odd,'Walk_merged_'+odd.name,28)};
+  s.updateMatrixWorld(true);return {s,b,A,B,card,loose,odd,parts};};
+ {const t=make(),merged=await mergePhoneBands({bands:t.b},t.s,{piece:40,kinds:true,colours:true,singles:true}),C=merged.kinds.find(K=>K.colours);
+  assert.deepEqual(new Set(C.materials),new Set([t.A,t.B,t.card]),'the single render-bake merge joins the colour kind');
+  assert(!t.parts.card.visible||t.parts.card.parent.name.endsWith('_merged_sources'),'its source is hidden or moved with the merged sources');
+  for(const k of ['loose','odd'])assert(t.parts[k].visible&&/^Walk_band_/.test(t.parts[k].parent.name),k+' stays as it is');
+  assert(!merged.root.children.some(o=>o.material[0]===t.odd||o.material[0]===t.loose),'a single with no kind is not merged alone');
+  pass('a single render-bake merge joins a colour kind; one of another name, or one with no kind, stays as it is');}
+ {const t=make(),merged=await mergePhoneBands({bands:t.b},t.s,{piece:40,kinds:true,colours:true}),C=merged.kinds.find(K=>K.colours);
+  assert.deepEqual(new Set(C.materials),new Set([t.A,t.B]));for(const k of ['card','loose','odd'])assert(t.parts[k].visible);
+  pass('without singles, the single merges stay as they are');}}
 {for(const n of [1,2,7,25,1000,5000])for(let k=0;k<n;k++){const u=kindTexel(k,n)/65535;assert.equal(Math.min(n-1,Math.floor(u*n)),k);}pass('each texel coordinate picks its own texel');}
 console.log(`band merge sources: ${checks} checks passed`);
