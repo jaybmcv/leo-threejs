@@ -4,10 +4,11 @@ import fitoutOverrides from './room-fitout-overrides-v2.json' with {type:'json'}
 // Shared measured lounge layout. All coordinates are ship metres.
 export const LOUNGE_PLAN={tank:[-140.9,-88.1,-27.98,-24.05],entryX:-112.5,doorZ:-45.8,arcadeWall:-88,arcadeStart:-43.9,arcadeGap:.8,balconyEnd:-38.75,converger:fitoutOverrides['commons-1'].converger};
 export const LOUNGE_MURAL_X=-140.692;
+export const LOUNGE_REAR_WALKWAY='commons-1-rear-4';
 export const LOUNGE_UPPER_CONNECTOR='commons-1-connector-8';
 export function applyLoungeLandingCorner(r){
  if(r?.id!=='commons-1'||!r.components)return;
- const rear=r.components.galleries.find(g=>g.id==='commons-1-rear-4'),landing=r.components.landings.find(g=>g.id==='commons-1-stair-turn');if(!rear||!landing)return;
+ const rear=r.components.galleries.find(g=>g.id===LOUNGE_REAR_WALKWAY),landing=r.components.landings.find(g=>g.id==='commons-1-stair-turn');if(!rear||!landing)return;
  const x0=Math.max(...rear.polygon.map(p=>p[0])),x1=Math.max(...landing.polygon.map(p=>p[0]));if(x1<=x0+.001)return;
  // Continue this gallery's end to the landing edge. Stair holes stay open.
  rear.polygon=rear.polygon.flatMap((a,i)=>{const b=rear.polygon[(i+1)%rear.polygon.length];return Math.abs(a[0]-x0)<.001&&Math.abs(b[0]-x0)<.001?[a,[x1,a[1]],[x1,b[1]]]:[a];});
@@ -23,6 +24,13 @@ export function applyLoungeBalconyCut(r){
 }
 export function applyLoungeWalkwayExtension(r){
  if(r?.id!=='commons-1'||!r.components)return;
+ const lower=r.components.galleries.find(g=>g.id===LOUNGE_REAR_WALKWAY);
+ if(lower&&lower.polygon[0][0]>LOUNGE_MURAL_X){
+  // Continue both edges along the aft tangent, keeping the four-metre width.
+  const [a,b]=lower.polygon,dx=LOUNGE_MURAL_X-a[0],dz=dx*(b[1]-a[1])/(b[0]-a[0]);
+  lower.polygon=[[LOUNGE_MURAL_X,a[1]+dz],...lower.polygon,[LOUNGE_MURAL_X,lower.polygon.at(-1)[1]+dz]];
+  lower.center[0]+=dx/2;lower.size[0]-=dx;
+ }
  const end=r.components.galleries.find(g=>g.id==='commons-1-end-8'),rear=r.components.galleries.find(g=>g.id==='commons-1-rear-8');if(!end||!rear)return;
  const x0=Math.min(...end.polygon.map(p=>p[0])),x1=Math.max(...end.polygon.map(p=>p[0])),z1=Math.max(...end.polygon.map(p=>p[1]));
  const z0=Math.min(...end.polygon.filter(p=>p[0]===x0).map(p=>p[1]));

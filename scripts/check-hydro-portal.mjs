@@ -204,7 +204,7 @@ for(const suffix of ['','.public','.prepared','.authoring']){
  assert(main.includes('hydroCargoPortal=createHydroPortal(HYDRO_CARGO_PORTAL);toBand(hydroCargoPortal.group,HYDRO_CARGO_PORTAL.floor)'),'Every walk draws the Deck 2 entry in its own band');
  assert(main.includes('hydroCargoPortal?.update(dt,p,ambience.on,camera)'),'Every walk animates and spatializes the Deck 2 entry');
  assert(main.includes('const hydro=inBall?null:hydroCargoPortal?.prompt(p);if(hydro)return hydro;'),'Every walk supplies the Deck 2 approach prompt to the HUD');
- assert(main.includes("const waiting=t?.kind==='waiting'||!!t?.passive;")&&main.includes('prompt.hidden=!show||touch&&!t?.passive;')&&main.includes("$('use').hidden=!show||!!t?.passive;"),'Walk-in instructions are visible on desktop and touch without a use button');
+ assert(main.includes("const waiting=t?.kind==='waiting'||!!t?.passive;")&&main.includes("const show=!!t&&t.kind!=='riding',prompt=$('prompt');prompt.hidden=frogTrip.active||!show||touch&&!t?.passive;")&&main.includes("$('use').hidden=frogTrip.active||!show||!!t?.passive;"),'Walk-in instructions are visible on desktop and touch without a use button outside a frog trip');
  assert(main.includes('hydroTravel.step(p,canHook&&input.enabled&&!playing()&&controller.grounded,goTo)'),'Uses the regular Go-to teleport before pose and room updates');
  assert(main.indexOf('hydroTravel.step(')<main.indexOf('live?.pose(myPose('));
 }

@@ -1,15 +1,15 @@
 import * as T from 'three';
+import {LOUNGE_MURAL_X,LOUNGE_REAR_WALKWAY} from '../plan/lounge-layout-v2.js';
 import {mesh} from './geometry.js';
 
 // Report #427: a plain matte black wall under the open-floor edge of the lounge's Deck 18 walkway (commons-1-rear-4),
-// from the Deck 17 floor to the walkway's underside and from the synthwave wall (x -141) to the hall wall (x -88).
+// from the Deck 17 floor to the walkway's underside and from the synthwave mural to the hall wall (x -88).
 // Jay (2026-11-24): it stops at the waterfall pond's rim on each side, and the causeway through the falls is the way
 // between the open floor and the lounge. `pond` is that opening: the fitted pond's rim stones and the leaves on them reach
 // x -103.30 to -96.10 on this line (after #426 moved it toward the hall) (scripts/check-lounge-walkway-wall-v2.mjs holds the wall to the pond as it is built).
-export const LOUNGE_WALKWAY_WALL={gallery:'commons-1-rear-4',from:-141,to:-88,pond:[-103.33,-96.07],inset:.01,thickness:.1,foot:.05,top:.04};
+export const LOUNGE_WALKWAY_WALL={gallery:LOUNGE_REAR_WALKWAY,from:LOUNGE_MURAL_X,to:-88,pond:[-103.33,-96.07],inset:.01,thickness:.1,foot:.05,top:.04};
 
-// The walkway's open-floor edge, -88 to -141 in x: the most outboard (lowest z) vertex of the gallery at each x. Past the
-// slab's ends it runs straight on to the end walls.
+// The most outboard (lowest z) vertex of the gallery at each x. Past the slab's forward end it runs to the hall wall.
 export function loungeWalkwayWallLine(r){
  const w=LOUNGE_WALKWAY_WALL,g=r?.components?.galleries?.find(g=>g.id===w.gallery);if(!g)return null;
  const byX=new Map();for(const [x,z] of g.polygon){const k=Math.round(x*1000)/1000;byX.set(k,Math.min(byX.get(k)??Infinity,z));}
@@ -46,7 +46,10 @@ export function loungeWalkwayWallGeometry(r){
   // Inward normals (toward the slab, +z side) per vertex, mitred between neighbouring runs.
   const normal=(a,b)=>{const dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz),n=[-dz/l,dx/l];return n[1]<0?[-n[0],-n[1]]:n;};
   const seg=run.slice(1).map((b,i)=>normal(run[i],b));
-  const off=run.map((p,i)=>{const a=seg[Math.max(0,i-1)],b=seg[Math.min(seg.length-1,i)],m=[a[0]+b[0],a[1]+b[1]],l=Math.hypot(...m),u=[m[0]/l,m[1]/l],k=1/Math.max(.5,u[0]*b[0]+u[1]*b[1]);return [u[0]*k,u[1]*k];});
+  const off=run.map((p,i)=>{const a=seg[Math.max(0,i-1)],b=seg[Math.min(seg.length-1,i)];
+   // Both offset faces end in the mural plane, even where the edge meets it at an angle.
+   if(p[0]===w.from)return [0,1/b[1]];
+   const m=[a[0]+b[0],a[1]+b[1]],l=Math.hypot(...m),u=[m[0]/l,m[1]/l],k=1/Math.max(.5,u[0]*b[0]+u[1]*b[1]);return [u[0]*k,u[1]*k];});
   const front=run.map((p,i)=>[p[0]+off[i][0]*w.inset,p[1]+off[i][1]*w.inset]),back=run.map((p,i)=>[p[0]+off[i][0]*(w.inset+w.thickness),p[1]+off[i][1]*(w.inset+w.thickness)]);
   for(let i=1;i<run.length;i++){
    const f0=front[i-1],f1=front[i],b0=back[i-1],b1=back[i];

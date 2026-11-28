@@ -14,6 +14,7 @@ import {Controller} from '../src/walk/controller.js';
 import {mesh,polygonGeometry} from '../src/v2/geometry.js';
 import {prepareLoungeFalls,createLoungeFalls} from '../src/walk/lounge-falls.js';
 import {prepareV2LoungeFalls} from '../src/v2/lounge-falls-fit.js';
+import {SYNTHWAVE_MURAL} from '../src/v2/community-routes.js';
 import {LOUNGE_WALKWAY_WALL as W,loungeWalkwayWallLine,loungeWalkwayEdgeZ} from '../src/v2/lounge-walkway-wall.js';
 
 // Report #427: the black wall under the open-floor edge of the lounge's Deck 18 walkway, built from the real lounge
@@ -41,7 +42,9 @@ assert.equal(wall.material.name,'Lounge_walkway_wall_black');assert(!wall.materi
 assert(solid(wall)&&!wall.userData.noCollide&&wall.userData.room==='commons-1','The wall collides and belongs to the lounge');
 const close=(a,b,e=.002)=>assert(Math.abs(a-b)<e,`${a} != ${b}`);
 close(plan.underside,28.02);close(box.min.y,r.y-W.foot);close(box.max.y,plan.underside+W.top);assert(box.max.y<28.3-.1,'The top stays inside the walkway slab');
-close(box.min.x,W.from,1e-4);close(box.max.x,W.to,1e-4);
+close(box.min.x,SYNTHWAVE_MURAL.x,1e-4);close(box.max.x,W.to,1e-4);
+const aftEdge=x=>-51.1270888+(x+139)*(-.1540521/.5);
+close(loungeWalkwayEdgeZ(plan.line,SYNTHWAVE_MURAL.x),aftEdge(SYNTHWAVE_MURAL.x));
 console.log('PASS one opaque matte black colliding wall, y',box.min.y.toFixed(2),'to',box.max.y.toFixed(2),'x',W.from,'to',W.to);
 
 // Every face points out of the wall: no bottom, the top up, the long faces toward the open floor or the lounge, and
@@ -62,7 +65,11 @@ console.log('PASS one opaque matte black colliding wall, y',box.min.y.toFixed(2)
  for(let x=W.from+.05;x<W.to-.01;x+=.25){if(x>W.pond[0]-.01&&x<W.pond[1]+.01)continue;const e=loungeWalkwayEdgeZ(plan.line,x);
   for(const y of [r.y+.05,r.y+1.5,r.y+3,plan.underside-.03]){ray.set(new T.Vector3(x,y,e-1),new T.Vector3(0,0,1));ray.far=1.5;const hit=ray.intersectObject(wall)[0];
    assert(hit,'Gap in the wall at '+[x,y].map(v=>v.toFixed(2)));close(hit.point.z,e+W.inset,.003);probes++;}}
- console.log('PASS continuous from the synthwave wall to the hall wall apart from the pond,',probes,'probes');
+ for(const y of [r.y+.05,r.y+1.5,r.y+3,plan.underside-.03]){
+  const x=SYNTHWAVE_MURAL.x+.002;ray.set(new T.Vector3(x,y,aftEdge(x)-.2),new T.Vector3(0,0,1));
+  const hit=ray.intersectObject(wall)[0];assert(hit,'Wall face reaches the mural plane at height '+y);close(hit.point.z,aftEdge(x)+W.inset);
+ }
+ console.log('PASS continuous from the synthwave wall to the hall wall apart from the pond,',probes,'probes and the mural seam');
 }
 
 // The opening is the pond: none of the pond (water, falls, rim, causeway, rope, plants) is inside the wall, and its rim

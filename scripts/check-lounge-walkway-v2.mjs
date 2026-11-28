@@ -23,7 +23,8 @@ import {bakeForWalking} from '../src/walk/render-bake.js';
 import {Colliders,solid} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {createLoungeFalls} from '../src/walk/lounge-falls.js';
-import {LOUNGE_PLAN,LOUNGE_UPPER_CONNECTOR,applyLoungeBalconyCut,applyLoungeUpperConnector,applyLoungeWalkwayExtension} from '../src/plan/lounge-layout-v2.js';
+import {HYDRO_PORTAL} from '../src/walk/hydro-portal.js';
+import {LOUNGE_PLAN,LOUNGE_REAR_WALKWAY,LOUNGE_UPPER_CONNECTOR,applyLoungeBalconyCut,applyLoungeUpperConnector,applyLoungeWalkwayExtension} from '../src/plan/lounge-layout-v2.js';
 
 installWalkCanvas(createCanvas);
 // This Deck 18 cut must leave the Deck 19 walkway and every other gallery untouched.
@@ -158,6 +159,48 @@ for(const number of [17,18]){
 const source=f=>fs.readFileSync(f,'utf8').replaceAll('\r\n','\n').replaceAll('.authoring.js','.js');assert.equal(source('src/v2/finish-kit.js'),source('src/v2/finish-kit.authoring.js'),'Authoring and public finish producers must agree');
 assert.equal(source('src/v2/render-bake.js'),source('src/v2/render-bake.authoring.js'),'Both bake producers must retire covered backing');
 console.log('PASS: velvet, 65 mm transitions and clipped floor borders on Decks 17–19. Existing tile, landings, interior floors, voids and walking support are preserved.');
+
+// The aft end of the Deck 18 rear walkway reaches the mural along the existing four-metre strip.
+{
+ const r=layout.rooms.find(r=>r.id==='commons-1'),g=r.components.galleries.find(g=>g.id===LOUNGE_REAR_WALKWAY);
+ const xWall=SYNTHWAVE_MURAL.x,xJoin=-139,y=r.y+4,edge=x=>-47.1270888+(x-xJoin)*(-.1540521/.5);
+ const close=(a,b)=>assert(Math.abs(a-b)<.00002,`${a} != ${b}`);
+ close(g.polygon[0][0],xWall);close(g.polygon[0][1],edge(xWall));close(g.polygon.at(-1)[1],edge(xWall)-4);close(g.size[2],4);
+ const copy=structuredClone(r),old=copy.components.galleries.find(g=>g.id===LOUNGE_REAR_WALKWAY);
+ old.polygon=old.polygon.slice(1,-1);old.center[0]+=(xJoin-xWall)/2;old.size[0]-=xJoin-xWall;
+ applyLoungeWalkwayExtension(copy);assert.deepEqual(copy.components,r.components,'The extension only fills the aft ends specified by the plan');
+ const root=new T.Group(),source=createGardenCommons(1),ship={root,inside:root,cutaway:new Set()};root.add(source.root);resolveRoomFrames(root);
+ buildRoomShell(ship,r,root);applyLoungeFloorFinish(ship);root.updateMatrixWorld(true);
+ const probe=new T.Raycaster(),cast=(x,y,z,dx,dy,dz,objects,far=.4)=>{probe.set(new T.Vector3(x,y,z),new T.Vector3(dx,dy,dz));probe.far=far;return probe.intersectObjects(objects);};
+ const slabs=root.getObjectsByProperty('name','V2_garden_gallery');
+ for(const x of [xWall+.002,-140.3,-139.7,xJoin-.01,xJoin+.01])for(const offset of [.02,1,2,3,3.98])for(const [level,sign] of [[y,-1],[y-g.size[1],1]]){
+  const hits=cast(x,level-sign*.2,edge(x)-offset,0,sign,0,slabs);
+  assert.equal(hits.length,1,'One slab face across the old joint');close(hits[0].point.y,level);assert.equal(hits[0].object.material.name,'Lounge_velvet_carpet');
+ }
+ for(const [x,z] of [[xWall-.002,-49],[-140,edge(-140)+.02],[-140,edge(-140)-4.02],[-140,-43]])assert.equal(cast(x,y+.2,z,0,-1,0,slabs).length,0,'Slab stops at the mural and both drop edges');
+ for(const [name,height] of [['V2_garden_guard_glass',.6],['V2_garden_guard_cap',1.1],['Lounge_rail_glow',.04]]){
+  const rails=root.getObjectsByProperty('name',name);if(name!=='V2_garden_guard_glass')assert.equal(rails[0].material.color.getHex(),0xff6b20);
+  for(const x of [xWall+.002,-140.4,-139.9,-139.4,xJoin-.01,xJoin+.01])for(const z of [edge(x),edge(x)-4])assert(cast(x,y+height,z+.14,0,0,-1,rails,.28).length,'Both rails meet the mural: '+name);
+  for(const z of [edge(xWall),edge(xWall)-4])assert.equal(cast(xWall-.002,y+height,z+.14,0,0,-1,rails,.28).length,0,'Rail stops at the mural plane: '+name);
+  for(let z=-50;z<-47.4;z+=.15)assert.equal(cast(xJoin+.25,y+height,z,-1,0,0,rails,2).length,0,'No guard across the old end or against the mural: '+name);
+ }
+ const hangers=source.root.getObjectsByProperty('isMesh',true).filter(o=>o.name.startsWith('Lounge_walkway_hangers_'));
+ const boundsFor=o=>new T.Box3().setFromObject(o,true),bulbs=hangers.find(o=>o.name.endsWith('_glow')),pot=hangers.find(o=>o.name.endsWith('_matte'));
+ assert.equal(hangers.length,4,'One set of bulbs, cords, pot and foliage');assert.equal(bulbs.geometry.attributes.position.count,8*24,'One matching eight-bulb span');
+ assert(boundsFor(pot).min.x>xWall&&boundsFor(pot).max.x<xJoin,'The pot hangs below the extension');
+ const portalEdge=HYDRO_PORTAL.z-HYDRO_PORTAL.width*.675;
+ assert(edge(xWall)+.04<portalEdge&&hangers.every(o=>!solid(o)&&boundsFor(o).max.y<y-g.size[1]&&boundsFor(o).max.z<portalEdge),'Extension and dressing clear the portal and the floor directly below it');
+ const col=installGround(new Colliders(),new Colliders());col.addStatic(root,solid);col.commit();const walker=new Controller(col),start=new T.Vector3(-136.9,y,-49);
+ const walk=(x,z,seconds)=>{const wish=new T.Vector3(x*2.25,0,z*2.25);for(let i=0;i<Math.round(seconds*120);i++){
+  walker.step(1/120,wish);assert(walker.grounded&&Math.abs(walker.position.y-y)<.00002,'Walker stays supported at Deck 18 height');
+ }};
+ walker.place(start);walk(-1,0,2.3);close(walker.position.x,xWall+walker.body.radius);
+ walk(-1,0,.65);close(walker.position.x,xWall+walker.body.radius);
+ walk(0,1,1.4);const railStop=walker.position.clone();assert(railStop.z>-47.25&&railStop.z<-47,'Walker reaches the rail on the new stretch');
+ walk(0,1,.6);assert(walker.position.distanceTo(railStop)<.02,'Glass rail stops the walker');
+ walk(0,-1,.9);walk(1,0,1.55);assert(walker.position.distanceTo(start)<.25,'Turn and walk back along the extension');
+ console.log('PASS Deck 18 mural extension: level slab and rails to the mural, matching hanging span, portal clearance and a grounded round trip');
+}
 
 // Check the room-side infill with the real shell, finish, guards and cut bulkhead.
 {

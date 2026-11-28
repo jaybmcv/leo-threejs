@@ -21,7 +21,7 @@ export function polygonGeometry(outline,holes=[],y=0,depth=.24){
 }
 export function strip(parent,name,a,b,y,width,height,material=floor){const len=Math.hypot(b[0]-a[0],b[1]-a[1]);if(len<.001)return null;const o=box(parent,name,[len,height,width],[(a[0]+b[0])/2,y-height/2,(a[1]+b[1])/2],material);o.rotation.y=-Math.atan2(b[1]-a[1],b[0]-a[0]);return o;}
 export function wall(parent,a,b,y,height,material=glass,name='V2_glass_wall'){return strip(parent,name,a,b,y+height,.10,height,material);}
-export function mergeBoxes(parent,name,items,material){if(!items.length)return;const gs=items.map(([size,at,yaw=0])=>new T.BoxGeometry(...size).rotateY(yaw).translate(...at));const o=mesh(parent,name,mergeGeometries(gs),material);gs.forEach(g=>g.dispose());return o;}
+export function mergeBoxes(parent,name,items,material){if(!items.length)return;const gs=items.map(([size,at,yaw=0,fit])=>{const g=new T.BoxGeometry(...size).rotateY(yaw).translate(...at);if(fit)fit(g);return g;});const o=mesh(parent,name,mergeGeometries(gs),material);gs.forEach(g=>g.dispose());return o;}
 export const bounds=p=>({x0:Math.min(...p.map(p=>p[0])),x1:Math.max(...p.map(p=>p[0])),z0:Math.min(...p.map(p=>p[1])),z1:Math.max(...p.map(p=>p[1]))});
 
 // The floor closes a glazing panel at its foot; a second downward cap at the
