@@ -34,6 +34,8 @@ function arrayTexture(data,w,h,depth){
 }
 const skipped=o=>{for(let p=o;p;p=p.parent)if(SKIP.test(p.name||''))return true;return false;};
 // The materials corner shading leaves alone: those an outside mesh (facade, hull, glass...) uses, as the patch would reach it too.
+// Whether a mesh of this name is left alone, by its name only (a deck merge is named for its material, phone-bands.js).
+export const cornerShadeSkipsName=name=>SKIP.test(name||'');
 export function cornerShadeLeavesAlone(scene){const outside=new Set();scene.traverse(o=>{if(o.isMesh&&skipped(o))for(const m of [].concat(o.material))outside.add(m);});return outside;}
 
 // The grid: each wall line darkens the cells within R of it (255 = R or further). Self-contained, as it runs in a worker.
