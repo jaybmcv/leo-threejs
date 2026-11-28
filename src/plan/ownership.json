@@ -400,8 +400,8 @@
       ],
       "colliders": [],
       "interactionTargets": null,
-      "placements": 130,
-      "signature": "39b1793956b52980e313534277065b2240487cb37a0969773563595a6d398024"
+      "placements": 137,
+      "signature": "d105e68dfbc8de0ccd905a866e31457f5769d681fb58aef9656b72a2a5368655"
     },
     {
       "source": "src/interior-polish.js",
@@ -2215,7 +2215,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 4,
-      "signature": "ba9732df0afa8287497ad8eda8cbbd5a7f875d4d111e81711fae1a8d185e2b55"
+      "signature": "aa13778d8cb6ca868688f68a58c605f54c6b42e84036d725a277cc09e22a45d8"
     },
     {
       "source": "src/walk/crowd-draw.js",
@@ -4428,7 +4428,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "f64712e6499309089fc4ca75d50b8614beaa57075d491f6ae5652e70d53ffa50"
+      "signature": "c1ef7d73e862069d8548857ebf71d430ed0769af4ce19136672f64c5ae26ba23"
     },
     {
       "source": "src/walk/marks.authoring.js",
