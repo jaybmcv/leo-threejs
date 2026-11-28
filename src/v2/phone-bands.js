@@ -149,18 +149,18 @@ const plainHook=T.Material.prototype.onBeforeCompile;
 const ids=new WeakMap();let nextId=0;
 const idOf=f=>{let i=ids.get(f);if(i===undefined)ids.set(f,i=nextId++);return i;};
 const describe=v=>v===null||v===undefined||typeof v!=='object'&&typeof v!=='function'?String(v):typeof v==='function'?'f'+idOf(v):v.isColor?'c'+v.getHexString():v.isTexture?'t'+v.uuid:typeof v.toArray==='function'?'['+v.toArray().join(',')+']':'o'+JSON.stringify(v);
-const hookFlags=m=>{const h=m.onBeforeCompile;return (h?.cornerShade?'C':'')+(h?.filmLook?'F':'');};
+const hookFlags=m=>m.onBeforeCompile?.cornerShade?'C':'';
 // A material's own values apart from those a kind reads from its textures, its identity and its hooks.
 const lookOf=(m,colour=false)=>{const own=colour?COLOUR_OWN:KIND_OWN;return Object.keys(m).filter(k=>!own.has(k)).sort().map(k=>k+'='+describe(m[k])).join('|');};
 // What a source material and its meshes must share to join a kind (null: it merges per material, as before): a finish
-// kind ('f#...'), or with `colours` any other material's colour kind ('c#...'). Hooks are left out: corner-shade.js and
-// film-look.js patch the sources and the kind's material alike, later on. A floor blocker's merge is named for
+// kind ('f#...'), or with `colours` any other material's colour kind ('c#...'). Hooks are left out: corner-shade.js
+// patches the sources and the kind's material alike, later on. A floor blocker's merge is named for
 // floor-occlusion.js, so only finishes may be one.
 export function kindKey(m,o,alone=null,colours=false){
  const finish=/^Walk_finish_/.test(m.name||'');
  if(!finish&&!colours||!m.isMeshStandardMaterial||m.isMeshPhysicalMaterial||m.transparent||!m.visible)return null;
  if(Object.values(m).some(v=>v?.isTexture))return null;
- const h=m.onBeforeCompile;if(h!==plainHook&&!h?.cornerShade&&!h?.filmLook)return null;
+ const h=m.onBeforeCompile;if(h!==plainHook&&!h?.cornerShade)return null;
  if(alone?.(m))return null;
  if(!finish&&floorBlocker({isMesh:true,name:'V2_low_deck_merged_'+m.name}))return null;
  const layout=Object.entries(o.geometry.attributes).filter(([k])=>k!=='uv').map(([k,a])=>k+':'+a.itemSize+':'+a.normalized+':'+(a.array?.constructor.name??'?')).sort().join(',');
@@ -326,7 +326,7 @@ export async function mergePhoneBands(baked,scene,{hidden=null,menus=false,piece
  update();
  // The kinds' texels: each source material's roughness and metalness (and a colour kind's colour and glow), rewritten
  // only when they change. Every 60 calls each source is checked against its kind again (its own values apart from those
- // its kind reads from textures, and the kind material's corner shading and film look): proof.drift counts the sources
+ // its kind reads from textures, and the kind material's corner shading): proof.drift counts the sources
  // that no longer match, each warned once, and a kind whose own material no longer holds one for what it reads from its
  // textures (anything written there would multiply every texel). A merged source cannot be drawn apart again, so this is
  // for the checks to see, not a way back.

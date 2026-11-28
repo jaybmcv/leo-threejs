@@ -75,7 +75,7 @@ lining.roughness=.25;pass();pass();assert.equal(L.material.roughness,.25,'a valu
 L.material.onBeforeCompile=()=>{};pass();assert.notEqual(L.material.onBeforeCompile.toString(),'()=>{}','a hook put over the batch copy is replaced');
 const shader={vertexShader:'a\n#include <batching_vertex>\nb',fragmentShader:'',uniforms:{}};L.material.onBeforeCompile(shader,null);
 assert.match(shader.vertexShader,/getIndirectIndex\( gl_DrawID \) \+ float\( gl_InstanceID \)/);
-assert(L.material.onBeforeCompile.cornerShade&&L.material.onBeforeCompile.filmLook,'corner shading and the film look leave it to the original');
+assert(L.material.onBeforeCompile.cornerShade,'corner shading leaves it to the original');
 assert.match(L.material.customProgramCacheKey(),/\|cabin-instanced$/);
 lining.onBeforeCompile=function(s){s.vertexShader='x'+s.vertexShader;};lining.needsUpdate=true;const v=L.material.version;pass();
 assert(L.material.version>v,'rebuilt when the original is');const s2={vertexShader:'#include <batching_vertex>',uniforms:{}};L.material.onBeforeCompile(s2,null);assert(s2.vertexShader.startsWith('x'),'the original hook runs first');

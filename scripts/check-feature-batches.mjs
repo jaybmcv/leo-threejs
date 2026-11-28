@@ -148,14 +148,14 @@ console.log('PASS painting frames retain independent deck, frustum and parent vi
  delete mats[2].onBeforeCompile;K.onBeforeCompile=hook;draw(()=>{assert(!parts[0].visible);assert.equal(K.onBeforeCompile,mats[0].onBeforeCompile,"the kind takes its first member's hooks back");});
  // A kind whose own material no longer holds one for what it reads from its textures lets every part draw itself.
  K.roughness=.5;draw(()=>{assert(!batch.visible);assert(parts.slice(0,4).every(o=>o.visible));});K.roughness=1;
- // Film may wrap the members before the kind is made, corner shading wrap members and kind, and film then wrap the kind
- // again (film-look.js meets the kind later than the members): the kind takes its first member's hooks back.
- {const film=()=>{const h=function(){};h.filmLook=true;h.keepsGeometry=true;return h;},corner=()=>{const h=function(){};h.cornerShade=true;h.keepsGeometry=true;return h;};
+ // Corner shading may wrap the members before the kind is made, then members and kind again, each with a closure of its
+ // own and the kind last: the kind takes its first member's hooks back.
+ {const corner=()=>{const h=function(){};h.cornerShade=true;h.keepsGeometry=true;return h;};
   const a=new T.MeshStandardMaterial({color:0x111111,flatShading:true}),c=new T.MeshStandardMaterial({color:0x222222,flatShading:true});
-  for(const m of [a,c])m.onBeforeCompile=film();
+  for(const m of [a,c])m.onBeforeCompile=corner();
   const r4=new T.Group();b.add(r4);r4.position.z=-6;r4.add(new T.Mesh(box,a),new T.Mesh(box,c));
   const wrapped=await createFeatureBatches(s,renderer,[r4],{kinds:true}),W=wrapped.kinds[0];
-  for(const m of [a,c,W.material])m.onBeforeCompile=corner();W.material.onBeforeCompile=film();
+  for(const m of [a,c,W.material])m.onBeforeCompile=corner();W.material.onBeforeCompile=corner();
   s.updateMatrixWorld(true);wrapped.around(camera,()=>{s.onBeforeRender(renderer,s,camera,null);assert(r4.children.every(o=>!o.visible),'every part batched');});
   assert.equal(W.material.onBeforeCompile,a.onBeforeCompile);b.remove(r4);}
  // Without kinds every material batches on its own, as before.

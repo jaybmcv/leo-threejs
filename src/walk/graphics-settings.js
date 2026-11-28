@@ -1,5 +1,4 @@
 import {getAtriumQuality,getAtriumQualitySelection,setAtriumQuality,subscribeAtriumQuality} from '../v2/atrium-quality.js';
-import {getLook,setLook,subscribeLook} from './look.js';
 import {getTimeChoice,setTimeChoice,subscribeTime} from './ship-time.js';
 
 const choices=[
@@ -14,11 +13,6 @@ const hazeChoices=[
  ['high','High','See the full length of the atrium.'],
  ['balanced','Balanced','Haze closes in across the far end of the atrium.'],
  ['performance','Performance','Haze as close as in the corridors, and no corner shading. From your next visit, edge smoothing turns off and depth is drawn a faster way.'],
-];
-// The walk's look (look.js, film-look.js).
-const looks=[
- ['today','Leo today','The ship as it looks now.'],
- ['film','Film (preview)',"Voyager's Reach's Stylised 3D: light that wraps round forms, richer shade and a warm grade. The ship's shaders are rebuilt when you change, which can take a few seconds."],
 ];
 // The Deck 6 atrium's time of day (ship-time.js, atrium-mood.js).
 const times=[
@@ -77,17 +71,6 @@ export function mountGraphicsSettings({onOpenChange=()=>{},haze=false,held=false
   row.append(radio,copy);fieldset.append(row);radios.set(value,radio);
   radio.addEventListener('change',()=>{if(radio.checked)setAtriumQuality(value);});
  }
- const lookFieldset=el('fieldset',{className:'graphics-look'}),lookRadios=new Map();
- lookFieldset.append(el('legend',{textContent:'Look'}));
- for(const [value,label,description] of looks){
-  const row=el('label'),radio=el('input',{type:'radio',name:'leo-walk-look',value}),copy=el('span');
-  radio.id='walk-look-'+value;
-  copy.append(el('strong',{textContent:label}),el('small',{textContent:description}));
-  row.append(radio,copy);lookFieldset.append(row);lookRadios.set(value,radio);
-  radio.addEventListener('change',()=>{if(radio.checked)setLook(value);});
- }
- const lookStatus=el('p',{className:'graphics-note'});lookStatus.setAttribute('role','status');lookStatus.setAttribute('aria-live','polite');
- lookFieldset.append(lookStatus);
  const timeFieldset=el('fieldset',{className:'graphics-look'}),timeRadios=new Map();
  timeFieldset.append(el('legend',{textContent:'Atrium time of day'}));
  for(const [value,label,description] of times){
@@ -100,7 +83,7 @@ export function mountGraphicsSettings({onOpenChange=()=>{},haze=false,held=false
  const note=el('p',{className:'graphics-note',textContent:(held?'This visit started in Performance, so the haze stays close until your next visit. ':'')+'Changes apply immediately and are remembered on this browser. The Res button controls image sharpness separately.'});
  const autoStatus=el('p',{className:'graphics-note'});autoStatus.setAttribute('role','status');autoStatus.setAttribute('aria-live','polite');
  const actions=el('div',{className:'graphics-actions'}),done=el('button',{type:'button',textContent:'Done'});
- actions.append(done);dialog.append(title,description,fieldset,autoStatus,lookFieldset,timeFieldset,note,actions);
+ actions.append(done);dialog.append(title,description,fieldset,autoStatus,timeFieldset,note,actions);
  document.head.append(style);document.body.append(dialog);mount.append(button);
  const more=document.getElementById('tools-more');
  let opened=false,returnFocus=null,destroyed=false;
@@ -108,12 +91,10 @@ export function mountGraphicsSettings({onOpenChange=()=>{},haze=false,held=false
   const current=getAtriumQualitySelection(),effective=getAtriumQuality();for(const [value,radio]of radios)radio.checked=value===current;
   const label=levels.find(c=>c[0]===effective)[1];
   button.setAttribute('aria-label','Graphics detail: '+(current==='auto'?'Auto — '+label:label));
-  for(const [value,radio]of lookRadios)radio.checked=value===getLook();
-  lookStatus.textContent=getLook()==='film'?'Film look is on.':'Leo today is on.';
   for(const [value,radio]of timeRadios)radio.checked=value===getTimeChoice();
   autoStatus.textContent=current==='auto'?'Currently using '+label+'. Manual choices stay fixed.':'Your chosen detail level stays fixed.';
  };
- const unsubscribe=subscribeAtriumQuality(refresh),unsubscribeLook=subscribeLook(refresh),unsubscribeTime=subscribeTime(refresh);refresh();
+ const unsubscribe=subscribeAtriumQuality(refresh),unsubscribeTime=subscribeTime(refresh);refresh();
  function open(){
   if(opened||destroyed)return;
   returnFocus=document.activeElement;mount.closest('.tools')?.classList.remove('more-open');more?.setAttribute('aria-expanded','false');onOpenChange(true);
@@ -138,7 +119,7 @@ export function mountGraphicsSettings({onOpenChange=()=>{},haze=false,held=false
  dialog.addEventListener('cancel',e=>{e.preventDefault();close();});dialog.addEventListener('close',closed);
  window.addEventListener('keydown',keyboard,true);window.addEventListener('keyup',keyboard,true);
  return {open,close,get isOpen(){return opened;},destroy(){
-  if(destroyed)return;close();destroyed=true;unsubscribe();unsubscribeLook();unsubscribeTime();
+  if(destroyed)return;close();destroyed=true;unsubscribe();unsubscribeTime();
   window.removeEventListener('keydown',keyboard,true);window.removeEventListener('keyup',keyboard,true);
   dialog.remove();button.remove();style.remove();
  }};

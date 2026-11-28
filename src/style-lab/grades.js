@@ -50,5 +50,5 @@ vec3 toonGrade(vec3 c, float inkShare) {
   return c;
 }`;
 
-// Stylised 3D's grade is the walk's film look's own (src/walk/film-shading.js).
+// Stylised 3D's grade (src/walk/film-shading.js).
 export {STYL_GRADE_GLSL} from '../walk/film-shading.js';

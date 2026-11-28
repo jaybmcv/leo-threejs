@@ -1,5 +1,5 @@
-// Voyager's Reach's Stylised 3D, as GLSL: the walk's film look (film-look.js) and the style lab (src/style-lab) both
-// draw with these, so the look the lab previews is the look the walk ships.
+// Voyager's Reach's Stylised 3D, as GLSL, for the style lab (src/style-lab). The walk's opt-in film look, which drew
+// with these too, was removed on 2026-11-28; scripts/check-style-lab-shading.mjs checks the lines of three it swaps.
 
 const glf=n=>Number.isInteger(n)?`${n}.0`:String(n);
 

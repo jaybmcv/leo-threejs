@@ -10,7 +10,7 @@ function compatibleMaterial(m){
  return m&&(m.isMeshStandardMaterial||m.isMeshBasicMaterial||m.isMeshLambertMaterial||m.isMeshPhongMaterial)
   &&m.depthTest&&m.depthWrite&&m.colorWrite&&(m.depthFunc===T.LessDepth||m.depthFunc===T.LessEqualDepth)
   &&(m.blending===T.NormalBlending||m.blending===T.NoBlending)&&!m.transparent&&!m.transmission&&!m.wireframe&&!m.displacementMap&&!m.polygonOffset&&!m.stencilWrite
-  &&(m.onBeforeCompile===standardHook||m.onBeforeCompile.keepsGeometry&&(m.onBeforeCompile.cornerShade||m.onBeforeCompile.filmLook))
+  &&(m.onBeforeCompile===standardHook||m.onBeforeCompile.keepsGeometry&&m.onBeforeCompile.cornerShade)
   &&(!m.normalMap||m.normalMapType!==T.ObjectSpaceNormalMap)&&m.onBeforeRender===T.Material.prototype.onBeforeRender;
 }
 function plain(o){

@@ -132,7 +132,7 @@ assert.equal(TB.material.roughness,1,'the palette keeps its own values');
 // Its shader: the batch's matrix lookup, its maps on the constant uv.
 const shader={vertexShader:'a\n#include <batching_vertex>\nb',fragmentShader:'',uniforms:{}};TB.material.onBeforeCompile(shader,null);
 assert.match(shader.vertexShader,/getIndirectIndex\( gl_DrawID \) \+ float\( gl_InstanceID \)/);
-assert(TB.material.onBeforeCompile.cornerShade&&TB.material.onBeforeCompile.filmLook,'corner shading and the film look leave it alone');
+assert(TB.material.onBeforeCompile.cornerShade,'corner shading leaves it alone');
 // An edited attribute: the copy is stale, so its parts draw themselves.
 box.attributes.position.needsUpdate=true;assert.deepEqual(pass([inst1,inst3]),['inst1','inst3']);
 // A replaced instance matrix buffer of the same count and version: copied again.
