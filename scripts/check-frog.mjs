@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {runInNewContext} from 'node:vm';
 import * as T from 'three';
 import {createFrog,FROG_AT} from '../src/walk/frog.js';
 import {Colliders} from '../src/walk/collision.js';
 import {Controller} from '../src/walk/controller.js';
 import {addAtriumStage,stageGeometry} from '../src/v2/atrium-stage.js';
+import {gotoFloor} from '../src/v2/goto-floor.js';
 import {createFrogTrip,frogStrength} from '../src/walk/frog-trip.js';
 import {walkAudioOutput} from '../src/walk/frog-audio.js';
 import {WalkInput} from '../src/walk/input.js';
@@ -42,8 +41,9 @@ let width=320,draws=0;
 const renderer={getDrawingBufferSize:v=>v.set(width,180),copyFramebufferToTexture(t){
  if(!copies.includes(t))t.addEventListener('dispose',()=>disposed.push(t));copies.push(t);
 },render:s=>{draws++;renderer.uniforms=s.children[0].material.uniforms;}};
-let clock=0,light=false;const trip=createFrogTrip({renderer,camera,light:()=>light,now:()=>clock});
-const frame=ms=>{clock=ms;trip.update();trip.render();};
+let clock=0,light=false,panel=null;
+const trip=createFrogTrip({renderer,camera,light:()=>light,now:()=>clock,panelOpen:id=>panel===id});
+const frame=(ms,view=camera,inputEnabled=true)=>{clock=ms;trip.update(view,inputEnabled);trip.render();};
 const terms=(warp,trails,overlay)=>{
  const expected=[warp,trails,overlay];assert.deepEqual([trip.warp,trip.trails,trip.overlay],expected);
  if(trip.active)assert.deepEqual(['warp','trails','overlay'].map(name=>renderer.uniforms[name].value),expected);
@@ -75,84 +75,52 @@ assert(disposed.includes(oldHistory));assert.equal(copies.length,lightCopies+1);
 assert.equal(frogStrength(41),0);
 console.log('PASS warp, trails and overlay follow the 40-second envelope with a five-second fade; exact FOV and audio restoration');
 
-// Run the walk handlers with a real controller and trip, plus small doubles for the UI and renderer.
-const origin=new T.Vector3(...FROG_AT),vector=at=>new T.Vector3(...at);
-const nearest=rests.reduce((a,b)=>vector(a.point).distanceToSquared(origin)<vector(b.point).distanceToSquared(origin)?a:b);
-const seat={...nearest,point:vector(nearest.point),facing:vector(nearest.facing)};
-const place={id:'apron',at:[104,FROG_AT[1],30],yaw:Math.PI/2};
-for(const suffix of ['','.public','.prepared','.authoring']){
- const source=readFileSync(new URL(`../src/walk/main${suffix}.js`,import.meta.url),'utf8');
- const section=(from,to)=>{
-  const a=source.indexOf(from),b=source.indexOf(to,a);
-  assert(a>=0&&b>a,`main${suffix}.js has ${from}`);return source.slice(a,b);
- };
- const input={enabled:true,down:new Set()},follow={},holder=new T.Group(),ui=new Map(),list={appendChild(){}};
- const $=id=>{if(!ui.has(id))ui.set(id,{hidden:true,querySelector:()=>list});return ui.get(id);};
- const services=Object.fromEntries('prank pawsOff mctRepair emergencyDrill furSettings controlsSettings graphicsSettings maze graffiti crownTv atriumGeometry voyagerLawn roomViewJob ownerHiding featureBatches cabinBatches liftBatches liftDoorBatches drawRuns keelClub phoneBands'.split(' ').map(k=>[k,null]));
- const wardPush={engaged:false,begin(){this.engaged=true;},release(){this.engaged=false;}};
- const treasure={active:false,leave(){this.active=false;},close(){}};
- let target=frog.near(seat.point),mapDeck,menu,gameOpened=false,pickedUp,tourClosed=false;
- const controller=new Controller(colliders);controller.place(seat.point);
- const drawRenderer={clear(){},clearDepth(){},render(){}};
- const walk=runInNewContext([
-  section('const frog=createFrog','let emote=null'),
-  section('function toggleMap()','{const select='),
-  section('function togglePlaces()','// Help:'),
-  section('function goTo(place)','// The list is a current server snapshot'),
-  section('function draw(view)','// The selfie booth'),
-  section('function settle(spot)','const PILLOW_TILT'),
-  section('function standUp()','// In a transporter'),
-  section('function restPose(dt)','// The lift panel'),
-  '({actions,draw,restPose,get resting(){return resting;}})'
- ].join('\n'),{...services,T,$,controller,input,camera,colliders,follow,scene,heading:0,emote:null,resting:null,inBall:false,
-  wardPush,treasure,carry:{use(t){pickedUp=t.item;},close(){}},arrivalTour:{close(){tourClosed=true;}},
-  lifts:{},lounge:null,walker:{holder,body:new T.Group(),hipHeight:1},PILLOW_TILT:.12,WALKER:{height:1.75},
-  ready:()=>true,target:()=>target,arcade:{open(){gameOpened=true;}},chat:{close(){}},closeCamera(){},closeOutside(){},
-  createFrog:()=>frog,createFrogTrip:()=>trip,renderer:drawRenderer,sky:scene,haze:scene,skyCamera:camera.clone(),hazeCamera:camera.clone(),
-  frameReadout:{frame(){}},performance:{now:()=>clock},inClub:()=>false,deckOf:()=>({number:6}),showMap:n=>{mapDeck=n;},
-  document:{createElement:()=>({append(){}})},PLACES:[place],renderGotoMenu(_list,_places,options){menu=options;},
-  remapSpot:p=>p,v2GotoStand:(_colliders,at)=>vector(at)});
- const start=clock,drawAt=ms=>{clock=start+ms;walk.draw(camera);};
- const stillTripping=seconds=>{
-  assert(trip.active&&trip.audio.active&&trip.audio.amount>0&&trip.warp>0,`main${suffix}.js keeps picture and audio`);
-  assert.equal(trip.elapsed,seconds,'time since the lick keeps advancing');
- };
- walk.actions.use();drawAt(1000);stillTripping(1);
- target={kind:'sit',spot:seat};walk.actions.use();walk.restPose(.7);assert.equal(walk.resting.spot,seat);
- drawAt(4000);stillTripping(4);
- walk.actions.use();walk.restPose(.7);assert.equal(walk.resting,null);assert(controller.grounded);
- drawAt(5000);stillTripping(5);
- walk.actions.map();assert.equal(mapDeck,6);assert(!$('map-sheet').hidden&&!input.enabled);
- drawAt(16000);stillTripping(16);
- walk.actions.escape();assert($('map-sheet').hidden&&input.enabled);
- drawAt(17000);stillTripping(17);
- walk.actions.places();assert(!$('places').hidden&&!input.enabled);
- drawAt(25000);stillTripping(25);
- assert(menu.go(place));menu.close();assert($('places').hidden&&input.enabled);
- assert(controller.position.distanceTo(vector(place.at))<.02&&controller.grounded,'Go-to places the walker on the apron');
- drawAt(30000);stillTripping(30);
- target={kind:'carry-item',item:'ration'};walk.actions.use();assert.equal(pickedUp,'ration');
- drawAt(31000);stillTripping(31);
- target={kind:'trolley-push'};walk.actions.use();assert(wardPush.engaged);
- drawAt(32000);stillTripping(32);
- walk.actions.use();assert(!wardPush.engaged);
- drawAt(33000);stillTripping(33);
- drawAt(39999);stillTripping(39.999);
- drawAt(40000);assert(!trip.active&&!trip.audio.active&&trip.warp===0);
- target={kind:'frog'};walk.actions.use();drawAt(41000);
- target={kind:'play'};walk.actions.use();assert(gameOpened&&!trip.active,'Full-screen game still ends the trip');
- target={kind:'frog'};walk.actions.use();drawAt(42000);walk.draw(camera.clone());
- assert(!trip.active,'A separate camera view still ends the trip');
- walk.actions.map();
- wardPush.engaged=treasure.active=true;
- walk.actions.escape();assert(!wardPush.engaged&&treasure.active&&!$('map-sheet').hidden,'Escape still releases the trolley first without a trip');
- walk.actions.escape();assert(!treasure.active&&!$('map-sheet').hidden,'Escape still leaves treasure without a trip');
- walk.actions.escape();assert(tourClosed&&$('map-sheet').hidden&&input.enabled,'Escape still closes the panel and arrival tour without a trip');
- target={kind:'frog'};walk.actions.use();drawAt(43000);walk.actions.escape();assert(trip.active);
- drawAt(43450);assert(!trip.active,'Escape still ends the trip with no panel open');
-}
+// Exercise the same trip policy the walk uses with its seat data, controller and Go-to floor check.
+const origin=new T.Vector3(...FROG_AT);
+const seat=rests.reduce((a,b)=>new T.Vector3(...a.point).distanceToSquared(origin)<new T.Vector3(...b.point).distanceToSquared(origin)?a:b);
+assert.equal(seat.kind,'sit');
+cat.place(new T.Vector3(...seat.point));
+assert.equal(frog.near(cat.position)?.kind,'frog');
+const beforeSit=cat.position.clone(),start=clock;
+const drawAt=(ms,view=camera)=>frame(start+ms,view,panel===null);
+const stillTripping=(seconds,action)=>{
+ assert(trip.active&&trip.audio.active&&trip.audio.amount>0&&trip.warp>0,action+' keeps picture and audio');
+ assert.equal(trip.elapsed,seconds,'time since the lick keeps advancing');
+};
+const closePanel=()=>{panel=null;};
+light=false;trip.start();drawAt(1000);
+trip.endForTarget(seat.kind);drawAt(4000);stillTripping(4,'Sitting on the stage ring');
+cat.place(beforeSit);assert(cat.grounded);drawAt(5000);stillTripping(5,'Standing up');
+
+panel='map-sheet';drawAt(16000);stillTripping(16,'Opening the map');
+assert(trip.escape(closePanel));assert.equal(panel,null);
+drawAt(17000);stillTripping(17,'Closing the map');
+
+panel='places';drawAt(21000);stillTripping(21,'Opening Go to');
+const landing=gotoFloor(colliders,[104,FROG_AT[1],30]);
+assert(landing.ok,landing.reason);
+cat.place(new T.Vector3(...landing.at));closePanel();
+assert(cat.grounded&&cat.position.distanceTo(beforeSit)>1,'Go to lands the walker elsewhere');
+drawAt(25000);stillTripping(25,'Go to travel');
+
+panel='emotes';drawAt(27000);stillTripping(27,'Opening emotes');
+assert(trip.escape(closePanel));assert.equal(panel,null);
+drawAt(28000);stillTripping(28,'Closing emotes');
+trip.endForTarget('carry-item');drawAt(31000);stillTripping(31,'Picking up an item');
+trip.endForTarget('trolley-push');drawAt(32000);stillTripping(32,'Pushing a trolley');
+drawAt(39999);stillTripping(39.999,'The end of the fade');
+drawAt(40000);assert(!trip.active&&!trip.audio.active&&trip.warp===0);
+
+panel='map-sheet';
+assert(!trip.escape(closePanel),'Escape without a trip falls through to the walk');
+assert.equal(panel,'map-sheet');closePanel();
+trip.start();drawAt(41000);trip.endForTarget('play');assert(!trip.active,'A full-screen game still ends the trip');
+trip.start();drawAt(42000,camera.clone());assert(!trip.active,'A separate camera view still ends the trip');
+trip.start();panel='help-sheet';drawAt(43000);assert(!trip.active,'A panel outside the trip list still ends the trip');closePanel();
+trip.start();drawAt(44000);assert(trip.escape(closePanel)&&trip.active);
+drawAt(44450);assert(!trip.active,'Escape still ends the trip with no trip panel open');
 trip.dispose();
-console.log('PASS rest, map, Go-to, carry pickup and trolley preserve the 40-second picture and audio in all four walks; Escape keeps its normal handlers');
+console.log('PASS sitting, standing, map, Go to, emotes, pickup and trolley keep the original picture and audio timer; Escape and camera behavior pass');
 
 // Pointer lock consumes Escape before ordinary key handlers. It must still cancel the frog on that first press.
 const handlers=[],surface={addEventListener(){}};let escapes=0,unlocked=0;

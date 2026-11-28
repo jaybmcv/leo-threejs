@@ -521,10 +521,7 @@ function skateBusy(){return !!(resting||run||inBall||treasure?.active||controlle
 // The film look (film-look.js, chosen in the Graphics detail sheet): Stylised 3D drawn by the walk's own materials,
 // installed before the walk first draws.
 installFilmLook({renderer,scene,keep:()=>walker?.holder});
-const frog=createFrog(scene,colliders),frogTrip=createFrogTrip({renderer,camera,light:()=>matchMedia('(pointer:coarse)').matches||getAtriumQuality()==='performance'});
-const tripEndingTargets=new Set(['selfie','photo-spot','play','emergency-drill','mct-repair','pool','pinball','darts','outside']);
-// Travel sheets take the keys while the trip still draws behind them.
-const travelPanelOpen=()=>['map-sheet','places','lift-panel','aboard-sheet'].some(id=>!$(id).hidden);
+const frog=createFrog(scene,colliders),frogTrip=createFrogTrip({renderer,camera,light:()=>matchMedia('(pointer:coarse)').matches||getAtriumQuality()==='performance',panelOpen:id=>$(id)?.hidden===false});
 input.escapePointer=()=>frogTrip.active;
 const actions={
  backpack(){if(ready())carry?.open();},
@@ -536,7 +533,7 @@ const actions={
   // Nothing to use in front: Enter or E presses Stuck? Pop out, when it is up (unstuck.js).
   const t=target();if(!t){unstuck.press();return;}
   if(t.kind==='frog'){frogTrip.start();$('prompt').hidden=true;$('use').hidden=true;return;}
-  if(tripEndingTargets.has(t.kind))frogTrip.end(true);
+  frogTrip.endForTarget(t.kind);
   if(t.kind==='carry-item'||t.kind==='carry-desk'){carry.use(t);return;}
   if(t.kind==='arrival-tour'){closePanels();arrivalTour.open();return;}
   if(t.kind==='trolley-push'){emote=null;wardPush.begin(controller);return;}
@@ -581,7 +578,7 @@ const actions={
   else if(t.kind==='tv'){closePanels();crownTv.open();}
   else if(t.kind==='clown'){closePanels();input.enabled=false;halloween.knock(t.clown,()=>live?.clown());}
  },
- escape(){if(frogTrip.active){if(travelPanelOpen())closePanels();else frogTrip.end();return;}if(wardPush?.engaged){wardPush.release();return;}if(treasure?.active){treasure.leave();return;}closePanels();arrivalTour?.close();},
+ escape(){if(frogTrip.escape(closePanels))return;if(wardPush?.engaged){wardPush.release();return;}if(treasure?.active){treasure.leave();return;}closePanels();arrivalTour?.close();},
  // (Nothing below until the walk is ready.)
  places(){if(ready())togglePlaces();},
  map(){if(ready())toggleMap();},
@@ -1046,7 +1043,7 @@ renderer.setAnimationLoop(()=>{
 });
 // One frame of the ship from `view`: the sky, the haze past the far plane, then the ship.
 function draw(view){
- if(frogTrip.active){if(view!==camera||(!input.enabled&&!travelPanelOpen()))frogTrip.end(true);else frogTrip.update();}
+ frogTrip.update(view,input.enabled);
  view.updateMatrixWorld(true);atriumGeometry?.update(view,renderer.domElement.height);voyagerLawn?.update(view);
  for(const c of [skyCamera,hazeCamera]){c.position.copy(view.position);c.quaternion.copy(view.quaternion);c.fov=view.fov;c.aspect=view.aspect;c.updateProjectionMatrix();}
  renderer.clear();renderer.render(sky,skyCamera);renderer.clearDepth();renderer.render(haze,hazeCamera);renderer.clearDepth();renderer.render(scene,view);if(frogTrip.active&&view===camera)frogTrip.render();

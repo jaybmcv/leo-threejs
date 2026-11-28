@@ -2627,7 +2627,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 1,
-      "signature": "585809a78132694a5dbacb440cedaa2d441cf9b426768557d797a119df144e21"
+      "signature": "7e1fb432b63337322e3ba3d1f5655291ed593973142e458e9ff5b77f22ba544b"
     },
     {
       "source": "src/walk/frog.js",
@@ -4362,7 +4362,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 52,
-      "signature": "36619c78949baefeae277b4bd107b45a8cefd33be9e582d81e37d582908689a6"
+      "signature": "004d7b9a2921746700817bd412694fc644f723d510753f0d179141ab7c1b62de"
     },
     {
       "source": "src/walk/main.js",
@@ -4384,7 +4384,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 51,
-      "signature": "a22b7a6a94ec9fc8ed62ed97cde74949386692d6e99dc4aadc35c8c53aa0934f"
+      "signature": "842614fb687d5d618d5cebb26d7a957910ad311b10434428f356e14d1adbdaba"
     },
     {
       "source": "src/walk/main.prepared.js",
@@ -4404,7 +4404,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 46,
-      "signature": "3cb6f23a649e0218abad52ec28c6604770de0db077216c62fe7e3c8fe0b4f37b"
+      "signature": "13a3c87611d7d58270024402b1d3a99dfb4cc93eaff4bf382bf91938f45e27d8"
     },
     {
       "source": "src/walk/main.public.js",
@@ -4424,7 +4424,7 @@
       "colliders": [],
       "interactionTargets": "same room frames; see debug world positions",
       "placements": 53,
-      "signature": "07c0a42bbc04b49913feaa69698e87c70e1e601f16400bf44e95a0c1698e0097"
+      "signature": "d5266070db9d4a3636f8f55ac9a6be5b5f37a4b6e30001f20eb134d4a78836a2"
     },
     {
       "source": "src/walk/marks.authoring.js",

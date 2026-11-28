@@ -54,10 +54,14 @@ void main(){
 }`;
 const ease=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
 const TRIP_SECONDS=40,FADE_SECONDS=5;
+const TRIP_PANELS=['map-sheet','places','lift-panel','aboard-sheet','emotes'];
+const ENDING_TARGETS=new Set(['selfie','photo-spot','play','emergency-drill','mct-repair','pool','pinball','darts','outside']);
 export function frogStrength(elapsed){return ease(elapsed)*ease((TRIP_SECONDS-elapsed)/FADE_SECONDS);}
-export function createFrogTrip({renderer,camera,light=()=>false,now=()=>performance.now()}){
+export function createFrogTrip({renderer,camera,light=()=>false,now=()=>performance.now(),panelOpen=()=>false}){
  let start=null,fade=null,fadeFrom=0,strength=0,baseFov=null,pass=null,mild=false,lite=false;
  const secondsSinceLick=()=>(now()-start)/1000;
+ // These panels take the keys while the walk still draws behind them.
+ const tripPanelOpen=()=>TRIP_PANELS.some(panelOpen);
  const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
  function releasePass(){
   if(!pass)return;
@@ -70,8 +74,9 @@ export function createFrogTrip({renderer,camera,light=()=>false,now=()=>performa
   start=null;fade=null;strength=0;baseFov=null;
  }
  function end(immediate=false){if(start===null)return;if(immediate){release();return;}if(fade===null){fade=now();fadeFrom=strength;}}
- function update(){
+ function update(view=camera,inputEnabled=true){
   if(start===null)return false;
+  if(view!==camera||(!inputEnabled&&!tripPanelOpen())){release();return false;}
   const elapsed=secondsSinceLick();
   if(elapsed>=TRIP_SECONDS||(fade!==null&&now()-fade>=450)){release();return false;}
   mild=!!reduced?.matches;lite=light();
@@ -101,5 +106,7 @@ export function createFrogTrip({renderer,camera,light=()=>false,now=()=>performa
  return {get active(){return start!==null;},get elapsed(){return start===null?0:secondsSinceLick();},get strength(){return strength;},get baseFov(){return baseFov;},get mild(){return mild;},get light(){return lite;},get audio(){return frogAudioState();},
   get warp(){return pass?.material.uniforms.warp.value??0;},get trails(){return pass?.material.uniforms.trails.value??0;},get overlay(){return pass?.material.uniforms.overlay.value??0;},
   start(){if(start!==null)return;start=now();baseFov=camera.fov;strength=0;fade=null;mild=!!reduced?.matches;lite=light();try{startFrogAudio();}catch{stopFrogAudio();}},end,update,render,
+  endForTarget(kind){if(ENDING_TARGETS.has(kind))end(true);},
+  escape(closePanels){if(start===null)return false;if(tripPanelOpen())closePanels();else end();return true;},
   dispose(){release();globalThis.removeEventListener?.('pagehide',leave);globalThis.document?.removeEventListener('visibilitychange',visibility);}};
 }
