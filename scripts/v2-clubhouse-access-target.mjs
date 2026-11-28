@@ -120,12 +120,24 @@ assert.equal(lift.nearest(walker.position)?.kind,'clubhouse-password','Empty ret
 tick(2.25,0,1.1);
 assert(walker.position.x<S.x-S.front-.30,'Empty return keeps the lounge gate solid');
 
-// A password entered while the cab is away grants entry when it arrives.
-walker.place(landing(2));const upperCall=lift.nearest(walker.position);
-assert.equal(upperCall?.kind,'clubhouse-call');
-lift.call(upperCall.lift,upperCall.stop);tick(0,0,8);
-assert.equal(lift.lift.at,2);
-walker.place(landing(0));assert(lift.unlock('9lives'));tick(0,0,8);
+const summonWithPassword=()=>{
+ walker.place(landing(2));const upperCall=lift.nearest(walker.position);
+ assert.equal(upperCall?.kind,'clubhouse-call');
+ lift.call(upperCall.lift,upperCall.stop);tick(0,0,8);
+ assert.equal(lift.lift.at,2);assert(!lift.authorized);
+ walker.place(landing(0));assert.equal(lift.nearest(walker.position)?.kind,'clubhouse-password');
+ assert(lift.unlock('9lives'));assert(lift.lift.calls.has(0));
+};
+summonWithPassword();tick(-2.25,0,1.05);
+assert.equal(lift.lift.at,2,'The cat walks away before the cab arrives');
+assert(!lift.authorized,'Walking away clears the password summon');
+tick(0,0,8);assert.equal(lift.lift.at,0);assert.equal(lift.lift.phase,'open');
+tick(2.25,0,1.05);
+assert.equal(lift.nearest(walker.position)?.kind,'clubhouse-password','Abandoned summon restores the password prompt');
+tick(2.25,0,1.1);
+assert(walker.position.x<S.x-S.front-.30,'Abandoned summon keeps the lounge gate solid');
+
+summonWithPassword();tick(0,0,8);
 assert.equal(lift.lift.at,0);assert(lift.authorized,'The password summon keeps its authorization');
 tick(2.25,0,1.25);assert(lift.inside(walker.position),'Board after summoning with the password');
 
@@ -163,4 +175,4 @@ assert(!clear(S.edge,28.3,S.z),'Negative control: the old rail would block board
 const overhang=new T.Group();box(overhang,'Old_overhang_floor',[2.77,.24,.4],[-89.115,28.18,-49.6]);col.addStatic(overhang);col.commit();
 seg.start.set(-89.8,26.1333332+.75,-50);seg.end.set(-89.8,26.1333332+1.65,-50);
 assert(col.overlaps(seg,.35),'Negative control: former floor strip blocks stair headroom');
-console.log('PASS aligned clubhouse shaft, level doors, empty return relock, password summon, both upper round trips, old walls and '+stairSteps+' stair transitions');
+console.log('PASS aligned clubhouse shaft, level doors, empty return relock, abandoned and completed password summons, both upper round trips, old walls and '+stairSteps+' stair transitions');

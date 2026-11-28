@@ -98,7 +98,12 @@ export function createVaultLift(colliders){
   },
   update(dt,w){
    carried=inside(w.position);if(carried&&lift.at>0)authorized=true;
-   const {x,z}=local(w.position);
+   const {x,y,z}=local(w.position);
+   // Keep a password summon active while the caller waits beside the Deck 17 door.
+   if(passwordSummon){
+    if(carried)passwordSummon=false;
+    else if(Math.abs(y)>=.6||Math.abs(x)>WIDTH/2+.35||z<.2||z>=REACH){authorized=false;passwordSummon=false;}
+   }
    if(returning&&!carried&&(z>FRONT+.6||Math.abs(x)>WIDTH/2+.35)){authorized=false;returning=false;}
    // Wait for a walker straddling the sill before closing either gate.
    const blocked=Math.abs(x)<WIDTH/2+.35&&Math.abs(z-FRONT)<.5&&Math.abs(w.position.y-lift.y)<.6;
@@ -107,7 +112,7 @@ export function createVaultLift(colliders){
    if(phase==='moving'&&lift.phase==='opening'&&lift.at===0){
     // Keep access for an exiting rider or a visitor who summoned the cab with the password.
     if(!carried&&!passwordSummon)authorized=false;
-    returning=carried;passwordSummon=false;
+    returning=carried;
    }
    if(carried&&dy){w.position.y+=dy;w.velocity.set(0,0,0);w.top=w.position.y;}
    place();
