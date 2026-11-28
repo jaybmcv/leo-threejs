@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {createDrawRuns} from '../src/v2/draw-runs.js';
+import {HELD} from '../src/v2/floor-occlusion.js';
 
 const calls={plain:[],instanced:[]},drawn=[];
 const ext={multiDrawElementsWEBGL(...a){calls.plain.push(a);},multiDrawElementsInstancedWEBGL(...a){calls.instanced.push(a);}};
@@ -138,3 +139,52 @@ box.attributes.position.needsUpdate=true;assert.deepEqual(pass([inst1,inst3]),['
 const fresh=new T.InstancedBufferAttribute(new Float32Array(inst2.instanceMatrix.array.length),16);for(let i=0;i<2;i++)at(7,7,i).toArray(fresh.array,i*16);fresh.version=inst2.instanceMatrix.version;
 inst2.instanceMatrix=fresh;assert.deepEqual(pass([inst2,mesh1]),['V2_draw_run P×2']);assert(matrixAt(PB,heads(PB)[0]).equals(at(7,7,0)));
 console.log('check-draw-runs: ok');
+
+// Deck kinds (phone-bands.js): a kind's pieces are slices of one shared index and share one material. A main pass's run
+// of their draws is one multi-draw from the kind's own geometry (no copy), a sub-draw per held run clipped to its piece's
+// slice, with no matrix lookup; held draws answer HELD; a row of one, another camera, no group or another material draw
+// as before.
+{
+ const drawn=[],renderer={extensions:{has:n=>n==='WEBGL_multi_draw',get:()=>ext},info:{render:{triangles:0}},shadowMap:{enabled:false},xr:{isPresenting:false},domElement:new EventTarget(),
+  getRenderTarget:()=>null,renderBufferDirect(camera,scene,geometry,material,object,group){drawn.push({camera,object,material,group,geometry,
+   starts:object.isBatchedMesh?Array.from(object._multiDrawStarts.subarray(0,object._multiDrawCount)):null,counts:object.isBatchedMesh?Array.from(object._multiDrawCounts.subarray(0,object._multiDrawCount)):null});}};
+ const world=new T.Scene(),shared=new T.BufferGeometry(),n=36;
+ shared.setAttribute('position',new T.BufferAttribute(new Float32Array(n*3).map((_,i)=>i%5),3));shared.setAttribute('normal',new T.BufferAttribute(new Float32Array(n*3).fill(1),3));
+ shared.setIndex(new T.BufferAttribute(Uint32Array.from({length:n},(_,i)=>i),1));
+ const K=new T.MeshStandardMaterial({name:'V2_band_kind_0',vertexColors:false});
+ const piece=(start,count)=>{const g=new T.BufferGeometry();for(const k of ['position','normal'])g.setAttribute(k,shared.attributes[k]);g.setIndex(shared.index);g.setDrawRange(start,count);
+  g.boundingBox=new T.Box3(new T.Vector3(-1,-1,-1),new T.Vector3(5,5,5));g.boundingSphere=g.boundingBox.getBoundingSphere(new T.Sphere());const m=new T.Mesh(g,[K]);m.name='V2_low_deck_merged_Walk_finish_kind_0';world.add(m);return m;};
+ const A=piece(0,12),B=piece(12,12),C=piece(24,12),plain=new T.Mesh(new T.BoxGeometry(),new T.MeshStandardMaterial({name:'plain'}));plain.name='plain';world.add(plain);
+ const kinds=await createDrawRuns(world,renderer,[],{kinds:[{geometry:shared,material:K,pieces:[A,B,C],runs:5}]});
+ assert(kinds,'draw runs made for kinds alone');
+ const batch=world.children.find(o=>o.isBatchedMesh);
+ assert(batch&&batch.geometry===shared&&batch.geometry.index===shared.index,'the kind batch draws from the kind arrays');
+ assert.equal(batch._multiDrawStarts.length,5,'its lists hold every run of the kind');
+ const sh={vertexShader:'a\n#include <batching_vertex>\nb',fragmentShader:'',uniforms:{}};batch.material.onBeforeCompile(sh,null);
+ assert.match(sh.vertexShader,/batchingMatrix = mat4\( 1\.0 \)/);assert.doesNotMatch(sh.vertexShader,/getIndirectIndex/);
+ const marker=world.getObjectByName('V2_draw_run_end');
+ const run=(list,{view=camera,by=view}={})=>{world.updateMatrixWorld(true);drawn.length=0;const results=[];
+  kinds.around(view,()=>{for(const [o,group,m=o.material[0]] of list)results.push(renderer.renderBufferDirect(by,world,o.geometry,m,o,group));
+   marker.onBeforeRender(renderer,world,by);renderer.renderBufferDirect(by,world,marker.geometry,marker.material,marker,null);world.onAfterRender(renderer,world,by);});
+  return {results,drawn:drawn.map(d=>d.object.isBatchedMesh?'batch '+d.starts.join(',')+' / '+d.counts.join(','):d.object.name+(d.group?'@'+d.group.start:''))};};
+ const g=(start,count)=>({start,count,materialIndex:0});
+ // A's two runs, B's one, C's run reaching back before its slice (clipped to it).
+ let r=run([[A,g(0,6)],[A,g(6,6)],[B,g(12,12)],[C,g(18,18)]]);
+ assert.deepEqual(r.drawn,['batch 0,24,48,96 / 6,6,12,12']);assert(r.results.every(x=>x===HELD),'held draws answer HELD');
+ assert.equal(kinds.stats.folded,3);assert.equal(drawn[0].material,batch.material);assert.equal(drawn[0].geometry,shared);
+ // In the kind's own order (index order), whatever order the camera's sort gave.
+ r=run([[C,g(24,12)],[B,g(12,12)],[A,g(6,6)],[A,g(0,6)]]);assert.deepEqual(r.drawn,['batch 0,24,48,96 / 6,6,12,12']);
+ // A row of one draws itself, with its group.
+ r=run([[B,g(12,12)]]);assert.deepEqual(r.drawn,['V2_low_deck_merged_Walk_finish_kind_0@12']);
+ // Another draw between ends the row: A then C draw themselves, around it.
+ r=run([[A,g(0,12)],[plain,null,plain.material],[C,g(24,12)]]);assert.deepEqual(r.drawn,['V2_low_deck_merged_Walk_finish_kind_0@0','plain','V2_low_deck_merged_Walk_finish_kind_0@24']);
+ // Another camera inside the pass, no group, or another material: as before.
+ r=run([[A,g(0,12)],[B,g(12,12)]],{by:other});assert.deepEqual(r.drawn,['V2_low_deck_merged_Walk_finish_kind_0@0','V2_low_deck_merged_Walk_finish_kind_0@12']);
+ r=run([[A,null],[B,null]]);assert.deepEqual(r.drawn,['V2_low_deck_merged_Walk_finish_kind_0','V2_low_deck_merged_Walk_finish_kind_0']);
+ r=run([[A,g(0,12),P],[B,g(12,12)]]);assert.deepEqual(r.drawn,['V2_low_deck_merged_Walk_finish_kind_0@0','V2_low_deck_merged_Walk_finish_kind_0@12']);
+ // A run wholly outside its piece's slice adds no sub-draw.
+ r=run([[A,g(0,12)],[B,g(30,6)],[C,g(24,12)]]);assert.deepEqual(r.drawn,['batch 0,96 / 12,12']);
+ // Switched off: one by one.
+ kinds.enabled=false;r=run([[A,g(0,12)],[B,g(12,12)]]);assert.equal(r.drawn.length,2);kinds.enabled=true;
+ console.log('check-draw-runs: deck kinds ok');
+}

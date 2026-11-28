@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {mergePhoneBands} from '../src/v2/phone-bands.js';
+import {kindTexel, mergePhoneBands} from '../src/v2/phone-bands.js';
 
 // The band merge's copied sources (src/v2/phone-bands.js), without a GPU: a band's children whose every drawable was
 // copied move into one hidden group in that band, in the same place in the world; the band itself stays as it was; a
@@ -49,4 +49,50 @@ scene.updateMatrixWorld(true);for(const [o,p] of world)assert(o.getWorldPosition
   let last=-1;for(const gr of g.groups){assert(gr.start>last);last=gr.start;}}
  pass('a piece draws only the shown bands, in order, and is bounded by them');
  bands.get(2).visible=true;merged.update();assert.equal(meshes.reduce((n,m)=>n+m.geometry.groups.reduce((c,gr)=>c+gr.count,0),0)/3,[...before.values()].reduce((a,b)=>a+b,0));pass('showing the band again draws every triangle');}
+// Deck kinds (kinds, with pieces): the finishes equal but for roughness and metalness merge as one kind, their pieces
+// slices of one set of arrays, each vertex reading its own material's values through its texel; a finish of another side,
+// one corner shading leaves alone, and anything else merge per material; the texels follow their materials.
+{const scene=new T.Scene(),bands=new Map(),parts=[];
+ const finish=(name,roughness,metalness,side=T.FrontSide)=>new T.MeshStandardMaterial({name,vertexColors:true,roughness,metalness,side});
+ const A=finish('Walk_finish_3|1|0|0',.3,.1),B=finish('Walk_finish_7|5|0|0',.7,.5),D=finish('Walk_finish_7|5|2|0',.7,.5,T.DoubleSide),E=finish('Walk_finish_5|5|0|0',.5,.5),other=new T.MeshStandardMaterial({name:'Walk_other_kind'});
+ const part=(m,x,n,uv=true)=>{const g=new T.BoxGeometry(2,1,2);if(!uv)g.deleteAttribute('uv');g.setAttribute('color',new T.Float32BufferAttribute(new Float32Array(g.attributes.position.count*3).fill(.6),3));
+  const o=new T.Mesh(g,m);o.position.set(x+n,0,n*7-14);return o;};
+ for(const n of [1,2,3]){const g=new T.Group();g.name='Walk_band_'+n;g.userData.band=n;g.position.set(0,n*4,0);bands.set(n,g);scene.add(g);
+  // A with a uv and without (two buckets of one material), B, D (another side), E (left alone), another material.
+  for(const [m,x,uv] of [[A,-35,true],[A,-20,false],[B,-5,true],[B,25,true],[D,40,true],[E,55,true],[other,61,true]]){const o=part(m,x,n,uv);g.add(o);parts.push([o,m]);}}
+ scene.updateMatrixWorld(true);
+ const tri=(a,i)=>[0,1,2].map(j=>[a.getX(i[j]),a.getY(i[j]),a.getZ(i[j])].map(v=>v.toFixed(4)).join(',')).join(' ');
+ const want=new Map();for(const [o,m] of parts){if(m===D||m===E||m===other)continue;const g=o.geometry.clone().applyMatrix4(o.matrixWorld),ix=g.index.array;for(let k=0;k<ix.length;k+=3)want.set(tri(g.attributes.position,[ix[k],ix[k+1],ix[k+2]]),m);}
+ const merged=await mergePhoneBands({bands},scene,{piece:40,kinds:true,alone:m=>m===E}),meshes=merged.root.children;
+ assert.equal(merged.proof.kinds,1);assert.equal(merged.kinds.length,1);const K=merged.kinds[0];
+ assert.deepEqual(K.materials,[A,A,B]);pass('the finishes equal but for roughness and metalness are one kind (one material with and without a uv is two buckets); another side, one left alone and another material stay apart');
+ const pieces=meshes.filter(m=>m.userData.deckKind===0);assert(pieces.length>=2&&pieces.every(m=>m.name==='V2_low_deck_merged_Walk_finish_kind_0'&&m.material.length===1&&m.material[0]===K.material));
+ assert(pieces.every(m=>Object.keys(K.geometry.attributes).every(k=>m.geometry.attributes[k]===K.geometry.attributes[k])&&m.geometry.index===K.geometry.index),'pieces share the kind attributes and index');
+ assert.deepEqual(Object.keys(K.geometry.attributes).sort(),['color','normal','position','uv']);const uv=K.geometry.attributes.uv;assert(uv.array instanceof Uint16Array&&uv.normalized);
+ {const spans=pieces.map(m=>[m.geometry.drawRange.start,m.geometry.drawRange.count]).sort((a,b)=>a[0]-b[0]);let at=0;for(const [s,c] of spans){assert.equal(s,at);assert(c<=40*3&&c%3===0);at+=c;}assert.equal(at,K.geometry.index.count);}
+ pass('its pieces are slices of one set of arrays, end to end, each at most the piece size, with a Uint16 texel coordinate');
+ assert(pieces.every(m=>m.geometry.boundingBox&&m.geometry.boundingSphere&&Number.isFinite(m.geometry.boundingSphere.radius)&&m.frustumCulled));pass('every piece has its bounds from the start');
+ const M=K.material,t=K.texture;assert(M.name==='V2_band_kind_0'&&M.roughness===1&&M.metalness===1&&M.roughnessMap===t&&M.metalnessMap===t&&M.vertexColors&&M.side===T.FrontSide);
+ assert(t.type===T.FloatType&&t.magFilter===T.NearestFilter&&t.minFilter===T.NearestFilter&&!t.generateMipmaps&&t.wrapS===T.ClampToEdgeWrapping&&!t.matrixAutoUpdate);
+ pass('the kind material reads roughness and metalness from a float texture, nearest, unmipped');
+ const texelOf=i=>{const k=Math.floor(uv.getX(i)*t.image.width),d=t.image.data;return [d[k*4+1],d[k*4+2]];};
+ const seen=new Map(),p=K.geometry.attributes.position,ix=K.geometry.index;
+ const check=()=>{seen.clear();for(const m of pieces){const r=m.geometry.drawRange;for(let i=r.start;i<r.start+r.count;i+=3){const key=tri(p,[ix.getX(i),ix.getX(i+1),ix.getX(i+2)]),src=want.get(key);assert(src,'a kind triangle with no source');seen.set(key,(seen.get(key)||0)+1);
+  for(let j=0;j<3;j++){const [r2,m2]=texelOf(ix.getX(i+j));assert(r2===Math.fround(src.roughness)&&m2===Math.fround(src.metalness),'a vertex reads another material');}}}};
+ check();assert.equal(seen.size,want.size);assert([...seen.values()].every(c=>c===1));pass('every source triangle is drawn by one piece, in place, reading its own material’s roughness and metalness');
+ bands.get(2).visible=false;merged.update();
+ for(const m of pieces){const g=m.geometry,r=g.drawRange;for(const gr of g.groups){assert(gr.start>=r.start&&gr.start+gr.count<=r.start+r.count,'a group outside its slice');
+  for(let k=gr.start;k<gr.start+gr.count;k++)assert(Math.abs(p.getY(ix.getX(k))-8)>1,'a hidden band drawn');}}
+ bands.get(2).visible=true;merged.update();pass('a piece draws only its slice’s shown bands');
+ B.roughness=.25;merged.follow();check();const version=t.version;merged.follow();assert.equal(t.version,version,'unchanged texels upload nothing');pass('the texels follow their materials');
+ for(let i=0;i<60;i++)merged.follow();assert.equal(merged.proof.drift,0);A.flatShading=true;for(let i=0;i<60;i++)merged.follow();assert(merged.proof.drift>0);A.flatShading=false;
+ pass('a source no longer like its kind is counted');
+ const again=()=>{const s=new T.Scene(),b=new Map();for(const n of [1,2,3]){const g=new T.Group();g.name='Walk_band_'+n;g.userData.band=n;g.position.set(0,n*4,0);b.set(n,g);s.add(g);
+  for(const [m,x] of [[A,-35],[A,-20],[B,-5],[B,25]])g.add(part(m,x,n));}s.updateMatrixWorld(true);return [s,b];};
+ {const [s,b]=again(),plain=await mergePhoneBands({bands:b},s,{piece:40,kinds:false});assert.equal(plain.proof.kinds,0);assert(plain.root.children.every(m=>m.userData.deckKind===undefined));}
+ {const [s,b]=again(),whole=await mergePhoneBands({bands:b},s,{piece:0,kinds:true});assert.equal(whole.proof.kinds,0);}
+ {const [s,b]=again(),one=await mergePhoneBands({bands:b},s,{piece:1e6,kinds:true}),[q]=one.root.children.filter(m=>m.userData.deckKind===0);
+  assert(q&&!q.frustumCulled&&q.geometry.drawRange.start===0&&q.geometry.drawRange.count===q.geometry.index.count&&q.geometry.boundingBox.min.x<-30);}
+ pass('without kinds, or without pieces, everything merges per material; a kind under the piece size is one piece, unculled as before');}
+{for(const n of [1,2,7,25,1000,5000])for(let k=0;k<n;k++){const u=kindTexel(k,n)/65535;assert.equal(Math.min(n-1,Math.floor(u*n)),k);}pass('each texel coordinate picks its own texel');}
 console.log(`band merge sources: ${checks} checks passed`);
