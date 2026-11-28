@@ -20,8 +20,16 @@ try{const {connectLive}=await import(entry.href);
  const welcome=(ws,you={verified:true})=>say(ws,{m:'welcome',id:'me',layout:2,layoutIdentity:ws.sent[0].layoutIdentity,you});
 
  for(const bad of [{id:'old-server',you:{}},{id:'wrong-layout',layout:1},{id:'stale-v2',layout:2,layoutIdentity:'stale'}]){const statuses=[],{live,ws}=await join({status:s=>statuses.push(s)});assert.equal(ws.sent[0].layout,2);assert.match(ws.sent[0].layoutIdentity,/^[0-9a-f]{64}$/);say(ws,{m:'welcome',...bad});live.pose({pos:[1,2,3],yaw:0},1000);live.score(100,1);assert(!live.live&&!live.id&&ws.code===4004&&statuses.at(-1)==='layout');assert.equal(ws.sent.length,1);}
- {const {live,ws}=await join();welcome(ws);assert(live.live);live.pose({pos:[1,2,3],yaw:0},1000);assert.equal(ws.sent.at(-1).m,'pose');live.close();}
+ {const {live,ws}=await join();welcome(ws);assert(live.live);live.pose({pos:[1,2,3],yaw:0},1000);assert.equal(ws.sent.at(-1).m,'pose');assert(!live.frog('take',1));live.close();}
  console.log('PASS v2 client: old v1, mismatched version and stale layout welcome cannot enable poses or scores; matching welcome can');
+
+ {const seen=[],{live,ws}=await join({frog:(msg,id)=>seen.push({msg,id})});
+  say(ws,{m:'welcome',id:'me',layout:2,layoutIdentity:ws.sent[0].layoutIdentity,frog:null});assert(live.frogSupported);
+  const p={pos:[102.94,-19.7,30],yaw:Math.PI/2,g:true,st:'stand'};
+  assert(live.frog('take',1,p));assert.deepEqual(ws.sent.at(-1),{m:'frog',op:'take',request:1,p});
+  const msg={m:'frog',hold:{id:'me',request:1,at:p.pos,yaw:p.yaw,elapsed:0}};say(ws,msg);assert.deepEqual(seen,[{msg,id:'me'}]);
+  assert(live.frog('end',1));assert.deepEqual(ws.sent.at(-1),{m:'frog',op:'end',request:1});live.close();assert(!live.frogSupported);}
+ console.log('PASS the frog sends a claim and its pose and relays the server’s reply on the same connection');
 
  // "Joining…" on the first connection: the page's status handler reads the link connectLive returns (main.js
  // showAboard hides the chip without one), so it must not hear 'connecting' before it holds that link.

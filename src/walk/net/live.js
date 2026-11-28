@@ -54,7 +54,7 @@ export function connectLive(url,on,opts={}){
  const reader=new WireReader(),key=browserKey();
  // held: what the server last said that keeps this visitor out for now, 'full' or 'replaced' (since heldAt).
  // turnedDown: a pass the server did not take, which is not sent again.
- let ws=null,tries=0,stopped=false,last='',lastAt=0,sentAt=0,name=savedName(),id=null,you=null,refused=false,turnedDown=null,attempt=0,timer=0,held=null,heldAt=0;
+ let ws=null,tries=0,stopped=false,last='',lastAt=0,sentAt=0,name=savedName(),id=null,you=null,refused=false,turnedDown=null,attempt=0,timer=0,held=null,heldAt=0,frogSupported=false;
  const status=s=>on.status?.(s);
  // One try at coming aboard. The pass comes first and the socket after: the server gives a new socket five seconds
  // to say hello (HELLO_MS), and Creamery may take longer than that to answer (connect.js waits 8 s), so a socket
@@ -76,7 +76,7 @@ export function connectLive(url,on,opts={}){
    switch(msg.m){
     case 'welcome':
      if(msg.layout!==2||msg.layoutIdentity!==LIVE_IDENTITY){stopped=true;status('layout');ws.close(4004,'layout mismatch');return;}
-     tries=0;held=null;id=msg.id;last='';you=msg.you||null;status('live');on.welcome?.(msg);on.aboard?.(msg.aboard);
+     tries=0;held=null;id=msg.id;last='';you=msg.you||null;frogSupported='frog' in msg;status('live');on.welcome?.(msg);on.aboard?.(msg.aboard);
      // A pass the server did not take: come back once without it (with a newer one, if Creamery gives one). The
      // login this browser keeps is forgotten only when the server says it checked the pass and it is bad (you.pass
      // 'bad': an old key, or one from another Creamery). A server that could not check it ('unchecked': it has no
@@ -87,6 +87,7 @@ export function connectLive(url,on,opts={}){
     case 'gone':on.gone?.(msg.id);break;
     case 'lift':on.lift?.(msg.id,msg.s);break;
     case 'mark':on.mark?.(msg.id,msg.at);break;
+    case 'frog':on.frog?.(msg,id);break;
     // A Keel Club water cannon shot by someone else (keel-club.js fire): cannon i, the jet's seed and the shot's id.
     case 'cannon':if(Number.isInteger(msg.i)&&Number.isInteger(msg.seed)&&typeof msg.id==='string'&&typeof msg.shot==='string')on.cannon?.(msg.id,msg.i,msg.seed,msg.shot);break;
     // Who is aboard: names, and each one's id in the same order (for asking to join them), or null for an id not given.
@@ -137,7 +138,7 @@ export function connectLive(url,on,opts={}){
    }
   };
   ws.onclose=()=>{
-   if(socket!==ws)return;reader.reset();id=null;on.reset?.();if(stopped)return;
+   if(socket!==ws)return;reader.reset();id=null;frogSupported=false;on.reset?.();if(stopped)return;
    held=verdict;heldAt=Date.now();
    if(held==='full')timer=setTimeout(open,FULL_MS);else if(!held)retry();
   };
@@ -173,6 +174,8 @@ export function connectLive(url,on,opts={}){
   // A ping where the walker stands, for everyone else aboard (walk/marks.js).
   mark(at){if(live())ws.send(JSON.stringify({m:'mark',at}));},
   cannon(i,seed){if(live())ws.send(JSON.stringify({m:'cannon',i,seed}));},
+  get frogSupported(){return frogSupported;},
+  frog(op,request,p){if(!live()||!frogSupported)return false;ws.send(JSON.stringify({m:'frog',op,request,p}));return true;},
   // Alien Cat Invasion, or Paw Pool with game 'pool': a game starts (the server times it), a game's score, and a
   // request for the board. A score, a clear and a maze finish are held while the link is down (heldFinishes, above);
   // lost() is called when one never went.

@@ -40,6 +40,7 @@
 // and limits how often anyone may send. Lifts are the server's: a call goes to the server, which steps every car
 // (lift-motion.js) and tells everyone when a car's plans change.
 import {cleanFur} from '../src/walk/fur-colours.js';
+import {createFrogHold} from './frog-hold.mjs';
 import http from 'node:http';
 import {policy} from '../src/v2/live-spatial.js';
 import {buildInfo} from '../scripts/build-info.mjs';
@@ -93,7 +94,7 @@ const BOUNDS={x:[-400,400],y:[-80,200],z:[-200,200]};
 // name, scores and hearts count, but a giveaway claim wants a fresh one (arena.mjs).
 const PASS={iss:process.env.LEO_PASS_ISS||'https://creamery.marscatsvoyage.com',aud:'leo.marscatsvoyage.com',lapsed:REMEMBER_S,
  key:keySet(process.env.LEO_PASS_JWKS_URL||'https://creamery.marscatsvoyage.com/.well-known/leo-pass-keys.json')};
-const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6],chat:[.5,5],clown:[.2,3],wall:[.5,3],paint:[12,24],tv:[.5,3],'tv-ticket':[.5,5],'tv-down':[.2,2],cannon:[1,3]};
+const BUDGETS={pose:[20,25],call:[3,6],name:[.5,3],ping:[1,4],mark:[.25,2],play:[.2,3],score:[.2,3],board:[.5,4],hearts:[.5,4],heart:[1,6],selfie:[.2,2],giveaway:[.5,4],claim:[.2,3],arena:[1,6],chat:[.5,5],clown:[.2,3],wall:[.5,3],paint:[12,24],tv:[.5,3],'tv-ticket':[.5,5],'tv-down':[.2,2],cannon:[1,3],frog:[2,4]};
 // Keel Club water cannons (walk/keel-club.js): when each last fired; one shot per cannon per CANNON_GAP ms.
 const cannonShots=[],CANNON_GAP=1400;
 
@@ -127,6 +128,7 @@ const maze=createMazeBoard({log,send});
 const treasure=createTreasureBoard({log,send});
 // Leo Pinball's shared high scores (pinball.mjs): its own file, its own message; ranked games replayed here to be checked.
 const pinball=createPinballBoard({log,send,everyone:()=>visitors});
+const frog=createFrogHold({send,broadcast});
 const panel=createSharedPanel({everyone:()=>visitors,broadcast:msg=>broadcast(msg)});BUDGETS.panel=[4,8];
 // The Mars Cat Transporters on Deck 1 (transporters.mjs): who drives each, and where each is parked, in memory only.
 const mct=createTransporters({log,broadcast:msg=>broadcast(msg),send:(v,msg)=>send(v.ws,msg)});BUDGETS.mct=[3,8];
@@ -321,7 +323,7 @@ async function hello(v,msg){
  v.slot=takeSlot();if(!v.slot||!freeSeats.length){v.ws.close(4003,'full');return;}
  // A tester (the page holds a tester invite) wears the captain's hat. Taken on the page's word: it is a hat.
  Object.assign(v,{id,name:(who?cleanName(who.name):cleanName(msg.name))||null,discord:who,hat:msg.hat===true,ready:true});slots.set(v.slot,v);seat(v);
- send(v.ws,{m:'welcome',...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{}),id,aboard:aboard(),you:{name:v.name,verified:!!who,typed:!!who?.typed,...(pass?{pass}:{})},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state(),panel:panel.state()});
+ send(v.ws,{m:'welcome',...(policy.version===2?{layout:2,layoutIdentity:policy.identity}:{}),id,aboard:aboard(),you:{name:v.name,verified:!!who,typed:!!who?.typed,...(pass?{pass}:{})},lifts:lifts.map(l=>({id:l.spec.id,s:liftWire(l.state)})),chat:{mode:CHAT,lines:CHAT==='off'?[]:said},mcts:mct.state(),panel:panel.state(),frog:frog.state()});
  countChanged=true;log('aboard',aboard(),'+',id,v.name||'',who?`${who.glyph?'':'discord:'}${who.discordId}${who.lapsed?' (remembered)':''}`:pass==='unchecked'?'(pass not checked: no keys from Creamery)':pass?'(pass refused)':'');
  if(who&&typeof msg.invite==='string'&&/^[A-Za-z0-9_-]{3,40}$/.test(msg.invite))log('invite',msg.invite,'used by',`discord:${who.discordId}`,who.username||'',who.wallets.join(' ')||'(no verified wallet)');
  // A run this visitor had open when their last connection dropped is theirs again (keepRuns).
@@ -360,6 +362,7 @@ function leave(v){
  gym.left(v);
  mct.left(v);
  panel.left(v);
+ frog.left(v);
  tv.leave(v);
  joins.left(v);
  captainSays.left(v);
@@ -375,6 +378,7 @@ function onMessage(v,data,binary){
  if(!v.ready){if(msg.m==='hello'&&!v.helloSeen){v.helloSeen=true;hello(v,msg).catch(()=>v.ws.close(1011,'hello failed'));}return;}
  switch(msg.m){
   case 'pose':if(allowed(v,'pose'))readPose(v,msg.p);break;
+  case 'frog':if(visitors.has(v)&&(msg.op==='end'||allowed(v,'frog')))frog.message(v,msg,p=>allowed(v,'pose')&&readPose(v,p));break;
   // A verified visitor's name is their Discord name.
   case 'name':if(allowed(v,'name')&&(!v.discord||v.discord.typed)){v.name=cleanName(msg.name)||(v.discord?v.discord.name:null);v.nameVersion=(v.nameVersion||0)+1;if(v.k!==undefined)nameVer[v.k]=v.nameVersion;countChanged=true;}break;
   case 'call':{
@@ -527,7 +531,7 @@ function pagePoses(r,now){
 }
 function flush(){
  const now=Date.now(),t0=performance.now(),dt=Math.min(.25,(now-last)/1000);last=now;flushes++;
- panel.tick(dt);joins.tick();
+ panel.tick(dt);joins.tick();frog.expire();
  for(const l of lifts){stepLift(l.state,l.stops,dt);liftChanged(l,false);}
  // The Aboard list: names, and each one's id (for asking to join them), in the same order; above NAMES_UP_TO, the count alone.
  if(countChanged){countChanged=false;const n=aboard(),here=n<=NAMES_UP_TO?[...visitors].filter(v=>v.ready):null;

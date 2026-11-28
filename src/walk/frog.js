@@ -1,9 +1,9 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {meshTriangles} from './collision.js';
+import {FROG_AT,FROG_BODY_Y,frogInReach} from './frog-lick.js';
 
-// On the paved apron, inside the 6.5 m seating arc and 3.5 m short of the stage.
-export const FROG_AT=[102.17,-19.7,29.01];
+export {FROG_AT};
 export const FROG_SIZE=[.46,.57,.96];
 function marble(eye=false){
  const n=eye?64:256,data=new Uint8Array(n*n*4),colours=['#168aff','#ff640e','#f524dc','#39ee45'].map(c=>new T.Color(c)),c=new T.Color();
@@ -19,6 +19,7 @@ function marble(eye=false){
 }
 export function createFrog(scene,colliders){
  const group=new T.Group();group.name='Common_stage_frog';group.position.set(...FROG_AT);
+ const animal=new T.Group();animal.name='Common_stage_frog_body';animal.position.y=FROG_BODY_Y;group.add(animal);
  const skin=new T.MeshPhysicalMaterial({map:marble(),roughness:.19,clearcoat:1,clearcoatRoughness:.08,emissive:0x195b69,emissiveIntensity:.12});
  const moss=new T.MeshStandardMaterial({color:0x43962d,roughness:1}),wood=new T.MeshStandardMaterial({color:0xb08a54,roughness:1});
  const white=new T.MeshPhysicalMaterial({color:0xe7ffd9,roughness:.12,clearcoat:1}),iris=new T.MeshPhysicalMaterial({map:marble(true),roughness:.1,emissive:0x669999,emissiveIntensity:.18});
@@ -31,6 +32,8 @@ export function createFrog(scene,colliders){
  for(let i=0;i<p.count;i++){const x=p.getX(i),z=p.getZ(i),y=p.getY(i),rough=1+.07*Math.sin(Math.atan2(z,x)*13+y*17);p.setXYZ(i,x*rough,y+(y>.46?.025*Math.sin(i*12.4):0),z*rough);}log.computeVertexNormals();put(bark,log.rotateX(Math.PI/2).translate(0,.15,0));
  for(const z of [-.474,.474])put(wood,new T.CircleGeometry(.12,24).rotateY(z<0?Math.PI:0).translate(0,.15,z));
  for(let i=0;i<18;i++){const a=i*2.399,z=.35*Math.sin(i*9);oval(moss,[.085*Math.cos(a),.235+.018*Math.sin(i),z],[.06,.025,.09]);}
+ const assemble=(root,y)=>{for(const [mat,geometries] of parts){const g=mergeGeometries(geometries);geometries.forEach(g=>g.dispose());root.add(new T.Mesh(g.translate(0,y,0),mat));}parts.clear();};
+ assemble(group,0);
  // A low plump body, folded haunches and splayed front toes face the seats (-X).
  oval(skin,[.015,.345,0],[.19,.17,.18]);oval(skin,[-.105,.405,0],[.14,.105,.185]);
  for(const s of [-1,1]){
@@ -43,10 +46,15 @@ export function createFrog(scene,colliders){
  }
  const smile=new T.CatmullRomCurve3([new T.Vector3(-.221,.392,-.125),new T.Vector3(-.244,.375,0),new T.Vector3(-.221,.392,.125)]);
  put(dark,new T.TubeGeometry(smile,20,.004,5,false));
- for(const [mat,geometries] of parts){const g=mergeGeometries(geometries);geometries.forEach(g=>g.dispose());group.add(new T.Mesh(g,mat));}
+ assemble(animal,-FROG_BODY_Y);
  scene.add(group);
  // A single small collider includes the frog's back, above the walker's step height.
  const box=new T.Mesh(new T.BoxGeometry(...FROG_SIZE)),triangles=[];meshTriangles(box,triangles);box.geometry.dispose();box.material.dispose();
  colliders.addMover('Common_stage_frog',triangles,new T.Matrix4().makeTranslation(FROG_AT[0],FROG_AT[1]+FROG_SIZE[1]/2,FROG_AT[2]));
- return {group,near(p){return Math.abs(p.y-FROG_AT[1])<.65&&Math.hypot(p.x-FROG_AT[0],p.z-FROG_AT[2])<1.8?{kind:'frog',label:'Lick the Frog'}:null;}};
+ return {group,animal,near(p){return frogInReach(p.x,p.y,p.z)?{kind:'frog',label:'Lick the Frog'}:null;},
+  show(holding,grip){
+   const parent=holding&&grip?grip:group;
+   if(animal.parent!==parent){parent.add(animal);animal.position.y=parent===group?FROG_BODY_Y:0;}
+   animal.visible=!holding||!!grip;
+  }};
 }

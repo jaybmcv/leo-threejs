@@ -103,7 +103,7 @@ export class RemotePlayers{
 
  // view: {camera, low, high, photo} — the heights of the deck bands being drawn (main.js cull); photo: the selfie booth is
  // counting down.
- update(dt,{camera,low,high,photo=false,height=0},now=performance.now()){
+ update(dt,{camera,low,high,frog,photo=false,height=0},now=performance.now()){
   camera.getWorldPosition(this.v);
   // A body's height on screen in pixels at 1 m of depth: the drawing height over the view's height there.
   const pxAt1m=height&&camera.isPerspectiveCamera?BODY_M*height/2/Math.tan(T.MathUtils.degToRad(camera.getEffectiveFOV()/2)):0;
@@ -117,13 +117,15 @@ export class RemotePlayers{
    const quiet=now-r.prevMs;r.speed=quiet>STOPPED_AFTER_MS?r.arrival*Math.pow(.5,(quiet-STOPPED_AFTER_MS)/STRIDE_HALF_LIFE_MS):r.speed;
    r.rest=T.MathUtils.clamp(r.rest+(r.tgt.rest?1:-1)*dt/REST_S,0,1);if(r.tgt.rest)r.restKind=r.tgt.rest;
    r.distance=Math.hypot(r.cur.x-eye.x,r.cur.y-eye.y,r.cur.z-eye.z);
+   r.frog=frog?.id===id?frog:null;
+   if(r.frog){const [x,y,z]=r.frog.at;Object.assign(r.cur,{x,y,z,yaw:r.frog.yaw});r.rest=0;r.speed=0;r.distance=Math.hypot(x-eye.x,y-eye.y,z-eye.z);}
    const band=bandOf(r.cur.y+.5);
    if(band>=bandLow&&band<=bandHigh)shown.push(r);else this.release(r);
   }
   // Bodies for the nearest, as many as the budget carries once the crowd can draw the rest; those give theirs back to the
   // pool and join the crowd.
   const budget=this.budget,crowdTier=this.crowdTier;budget?.frame(dt);const tier=budget&&crowdTier?budget.tier:MAX_RIGS;
-  shown.sort((a,b)=>a.distance-b.distance);
+  shown.sort((a,b)=>Number(!!b.frog&&b.distance<20)-Number(!!a.frog&&a.distance<20)||a.distance-b.distance);
   const bodied=tierOf(shown,tier),inTier=new Set(bodied),posed=[];
   for(const r of shown)if(!inTier.has(r))this.release(r);
   // Bodies for those chosen, from the pool (bodies are made one at a time: grow); one still without is drawn in the crowd
@@ -144,7 +146,7 @@ export class RemotePlayers{
    if(!r.walker)continue;
    // A body from the pool may have worn someone else's hat.
    if(r.hat&&!r.walker.hat&&this.hatUrl)wearHat(r.walker,this.hatUrl);else if(!r.hat&&r.walker.hat)r.walker.hat.remove();
-   const lined=!!r.tgt.hook||r.line?.out>0,forced=photo||lined;
+   const lined=!!r.tgt.hook||r.line?.out>0,forced=photo||lined||!!r.frog;
    const unseen=!forced&&!viewFrustum.intersectsSphere(bodySphere.set(bodySphere.center.set(r.cur.x,r.cur.y+.6,r.cur.z),IN_VIEW_M));
    const depth=(r.cur.x-eye.x)*fx+(r.cur.y+BODY_M/2-eye.y)*fy+(r.cur.z-eye.z)*fz,px=pxAt1m/Math.max(depth,.1);
    posed.push({r,unseen,forced,px,natural:unseen?true:forced||!pxAt1m||px>=FULL_PX?0:px>=HALF_PX?HALF_S:THIRD_S});
@@ -217,7 +219,7 @@ export class RemotePlayers{
   // On the grapple line (grapple.js): it reels out from their paw to where it bit, and back in when they let go.
   const hook=t.hook&&!t.rest&&!t.ball?(r.hookAt??=new T.Vector3()).fromArray(t.hook):null;if(hook&&!r.line)r.line=createGrappleLine(this.scene);
   const solves=w.update(dt,{unseen,solveEvery:every,hold,speed:r.rest?0:belt?RUN_ON_BELT:r.speed,grounded:t.grounded,stance:t.ball?'stand':t.stance,jumpCount:t.jumpCount,jumpS:t.jumpS,turnRate:r.turnRate,accel:0,rise:r.rise,
-   emote:floating?null:t.emote,rest:floating?{kind:'float',weight:1,seatHeight:w.hipHeight}:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c),sitPose:r.restKind==='sit'?this.sitPose?.(c,w.hipHeight):null,rim:r.restKind==='tube'?this.tube?.rim:null}:null,catnip:!!this.catnip?.(c),swimming:!t.rest&&!!this.swimming?.(c),board,hook});
+   emote:floating?null:t.emote,rest:floating?{kind:'float',weight:1,seatHeight:w.hipHeight}:r.rest>0?{kind:lie?'lie':'sit',weight:e,seatHeight:w.hipHeight,hammock:lie&&!!this.hammock?.(c),sitPose:r.restKind==='sit'?this.sitPose?.(c,w.hipHeight):null,rim:r.restKind==='tube'?this.tube?.rim:null}:null,catnip:!!this.catnip?.(c),swimming:!t.rest&&!!this.swimming?.(c),board,hook,frog:r.frog});
   r.line?.update(dt,w.hand(this.v2??=new T.Vector3()),hook);
   // A captain's hat is ~200k triangles: past HAT_M it is a few pixels, and not drawn.
   if(w.hat&&r.distance>HAT_M)w.hat.mount.visible=false;

@@ -13,6 +13,7 @@ import {mergeSkinnedParts} from './merged-skin.js';
 import {solvedPose} from './solved-pose.js';
 import {figureMatrices} from './figure-matrices.js';
 import {boneWalk} from './bone-walk.js';
+import {createFrogPose} from './frog-pose.js';
 
 // Cosmo as the walker, animated by Voyager's Reach's own figure (vr/dlCatFigure.ts): the authored Ecctrl walk and jog,
 // the reference sprint, take-off, air and landing, the turning lean, the tail spring, the idle, crouch, slide and
@@ -153,7 +154,7 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
  const hipHeight=bone('spine').getWorldPosition(new T.Vector3()).y-figure.root.getWorldPosition(new T.Vector3()).y;
  let suit=null;
  const paw=bone('hand.R'),shoulder=bone('upper_arm.R'),elbow=bone('forearm.R'),hung=new T.Quaternion(),lean=new T.Vector3(),hold=new T.Quaternion(),q=new T.Quaternion();
- let hang=0,lastPose=null;const anchor=new T.Vector3(),pace=rigPace(RIG_CAP);
+ let hang=0,lastPose=null,frogPose=null;const anchor=new T.Vector3(),pace=rigPace(RIG_CAP);
  // Last, once every part is in place: the parts stay for what reads them, hidden, and the merged copies draw.
  figure.root.updateMatrixWorld(true);let merged=mergeDraws?mergeSkinnedParts(figure.asset.meshes):null;
  // What is done on top of a solve below starts from the solved pose on frames without one (solved-pose.js).
@@ -163,6 +164,7 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
  const touched=()=>{held.touched();matrices?.changed();};
  return {
   holder,body,figure,hipHeight,setFur,boardFeet,
+  get frogGrip(){return frogPose?.grip;},
   // (merged-skin.js, with mergeDraws: the merged copies drawn now, or null)
   get merged(){return merged;},
   // change() shows or hides parts (a change of clothes). Merged, the parts are drawn as they were first,
@@ -193,7 +195,7 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
    // Unseen (first person), the rig solves as on a 20 fps machine, keeping pace exactly (rig-pace.js): he is current when
    // he shows, and the paw the grapple aims from is at most one such step behind. A third of the work at 60 Hz. Time
    // gathered before a change of input is solved with the inputs it was gathered under (the previous frame's pose).
-   const inputs=[s.grounded,s.jumpCount,s.stance,!!s.swimming,s.emote,r?.kind,seated].join('|');
+   const inputs=[s.grounded,s.jumpCount,s.stance,!!s.swimming,s.emote,r?.kind,seated,!!s.frog].join('|');
    const pose={pos:[0,0,0],yaw:0,dt,speedMs:r?0:s.speed,grounded:r?true:s.grounded,swimming:!!s.swimming,submerged:!!s.swimming,stance:r?'stand':s.stance||'stand',
     jumpCount:s.jumpCount||1,jumpS:s.jumpS,turnRate:r?0:s.turnRate||0,accelMs2:r?0:s.accel||0,riseMs:r?0:s.rise||0,emote:r?null:s.emote||null,
     seated,seatedVariant:'passenger',seatHeight:seated?r.seatHeight:undefined,seatForward:0};
@@ -266,6 +268,8 @@ export async function createWalker(createDLCat,motion,{mergeDraws=false,cacheBon
     figure.asset.root.position.y=T.MathUtils.lerp(figure.asset.root.position.y,figure.restOffset,r.weight);
     figure.root.updateMatrixWorld(true);
    }
+   if(s.frog){frogPose??=createFrogPose(holder,figure);frogPose.apply(s.frog);touched();}
+   else frogPose?.apply(null);
    // The hat and the catnip face, shown or hidden above, keep their way through the scene walk.
    walk?.sync();
    return solved;
