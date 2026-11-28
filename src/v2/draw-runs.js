@@ -56,7 +56,11 @@ import {yieldEvery} from './yield-to-page.js';
 const MAX_INDICES=200000;
 
 const PALETTE=new Set(['roughness','metalness','emissive','emissiveIntensity','roughnessMap','metalnessMap','emissiveMap']);
-const COLOURED=new Set([...PALETTE,'color','map']);
+// A palette copy keeps a name of its own (never a member's: the moods find materials by name, atrium-mood.js, and would
+// write a member's values into the copy, over every texel) and the values its maps stand in for.
+const PALETTE_COPY=new Set([...PALETTE,'name']),COLOURED=new Set([...PALETTE_COPY,'color','map']);
+const white=c=>c.r===1&&c.g===1&&c.b===1;
+let paletteCount=0;
 const NOT_LOOK=new Set(['uuid','id','version','name','userData','_listeners']);
 const plainBefore=T.Object3D.prototype.onBeforeRender,plainAfter=T.Object3D.prototype.onAfterRender;
 const functionIds=new WeakMap();let nextFunction=0;
@@ -142,10 +146,13 @@ export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDIC
     g,index:g.index,attributes:names.filter(k=>g.attributes[k]).map(k=>[k,g.attributes[k],g.attributes[k].version]),indexVersion:g.index?.version};slots+=r.slots;return r;});
    // An id of its own: the batch is never sorted (its own place in the lists draws nothing), and three skips a material's
    // uniforms when both program and id repeat, so two batches copied from one material must not share one.
-   const v=batchMaterial(S.m,S.palette?(S.colour?COLOURED:PALETTE):null,new T.Material().id);
+   const v=batchMaterial(S.m,S.palette?(S.colour?COLOURED:PALETTE_COPY):null,new T.Material().id);
    let palette=null;
    if(S.palette){const lit=!S.m.isMeshBasicMaterial;
     palette={look:lit?paletteTexture(width):null,glow:lit?paletteTexture(width):null,colour:S.colour?paletteTexture(width):null,lookOf:S.colour?lookNow:lookOf};
+    v.copy.name='V2_draw_run_palette_'+paletteCount++;
+    // Its own values as its maps need them; anything else (a value written into it) would multiply every texel.
+    const M=v.copy;palette.ok=()=>(!palette.colour||white(M.color))&&(!lit||M.roughness===1&&M.metalness===1&&M.emissiveIntensity===1&&white(M.emissive));
     if(lit)Object.assign(v.copy,{roughness:1,metalness:1,emissive:new T.Color(1,1,1),emissiveIntensity:1,roughnessMap:palette.look,metalnessMap:palette.look,emissiveMap:palette.glow});
     if(S.colour)Object.assign(v.copy,{color:new T.Color(1,1,1),map:palette.colour});
     v.copy.needsUpdate=true;
@@ -209,7 +216,9 @@ export async function createDrawRuns(scene,renderer,groups,{maxIndices=MAX_INDIC
   for(const [k,a,version] of r.attributes)if(g.attributes[k]!==a||a.version!==version)return false;
   const {v,palette}=r.set;
   // A palette's part: drawn with the material it was offered with (its texel's), still of the batch's look and shader.
-  return palette?v.usable&&material===r.mat&&material.visible&&palette.lookOf(material)===palette.lookOf(v.m)&&programKey(material)===programKey(v.m):material===v.m&&v.usable;
+  if(!palette)return material===v.m&&v.usable;
+  const look=palette.lookOf(material);
+  return v.usable&&palette.ok()&&material===r.mat&&material.visible&&look!==null&&look===palette.lookOf(v.m)&&programKey(material)===programKey(v.m);
  }
  function write(r){
   const o=r.o,t=r.set.batch._matricesTexture,data=t.image.data;

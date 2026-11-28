@@ -1,7 +1,11 @@
 import * as T from 'three';
 import {compactRenderGeometry} from './facade.js';
 import {keepsGeometry} from './shader-hooks.js';
-import {KIND_VALUES,borrowId,kindTexture,lookNow,programKey,readTexels,texelGeometry,writeTexel} from './look-kinds.js';
+import {KIND_VALUES,borrowId,kindTexture,lookNow,programKey,readTexels,texelGeometry,unitValues,writeTexel} from './look-kinds.js';
+// A kind's copy keeps a name of its own (never a member's: the moods find materials by name, atrium-mood.js, and would
+// write a member's values into it, over every texel), is always shown (its members are tested one by one), and holds
+// white, intensity 1, roughness and metalness 1 in place of what its textures stand in for.
+const KIND_COPY=new Set([...KIND_VALUES,'name','visible']);
 import {yieldEvery} from './yield-to-page.js';
 
 // The repeated cabins' opaque parts, one draw per material. Each cabin part is an instanced mesh per deck, cabin template
@@ -150,8 +154,9 @@ export async function createCabinBatches(scene,renderer,parts,{skip=null,nearSlo
    // The kind's copy: its first member's own values but for what its textures stand in for, with the members' lowest id
    // no other kind holds.
    const basic=!!first.isMeshBasicMaterial,tex={colours:kindTexture(materials.length),looks:basic?null:kindTexture(materials.length),glows:basic?null:kindTexture(materials.length)};
-   v=batchMaterial(first,KIND_VALUES,borrowId(materials)??new T.Material().id);readTexels(v.copy,tex);v.copy.needsUpdate=true;
-   v.kind={materials,tex,fit:new Map()};
+   v=batchMaterial(first,KIND_COPY,borrowId(materials)??new T.Material().id);readTexels(v.copy,tex);
+   v.copy.name='V2_cabin_kind_'+kindCount;v.copy.visible=true;v.copy.needsUpdate=true;
+   v.kind={materials,tex,basic,fit:new Map()};
    stats.kinds++;stats.kindMaterials+=materials.length;
   }else{v=variants.get(set.m);if(!v)variants.set(set.m,v=batchMaterial(set.m));}
   const batch=new T.BatchedMesh(slots,vertices,indices,v.copy);
@@ -193,7 +198,7 @@ export async function createCabinBatches(scene,renderer,parts,{skip=null,nearSlo
  const byMaterial=(a,b)=>a.m.id-b.m.id||byDepth(a,b);
  // A kind's member still drawn by its copy this pass: shown, of its first member's look and shader.
  const fits=(v,m)=>{const f=v.kind.fit;let c=f.get(m);if(c?.pass===pass)return c.ok;if(!c)f.set(m,c={});c.pass=pass;
-  c.ok=m.visible&&lookNow(m)===lookNow(v.m)&&programKey(m)===programKey(v.m);return c.ok;};
+  const look=lookNow(m);c.ok=m.visible&&look!==null&&look===lookNow(v.m)&&programKey(m)===programKey(v.m);return c.ok;};
  function collect(camera){
   const t0=performance.now();pass++;stats.shown=stats.folded=stats.skipped=0;const turn=materialCopies[pass%materialCopies.length];
   viewProjection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);
@@ -201,7 +206,7 @@ export async function createCabinBatches(scene,renderer,parts,{skip=null,nearSlo
   for(const B of batches){
    const {batch,v,rows,indirect,instances,drawn}=B;
    if(v.pass!==pass){v.pass=pass;follow(v,v===turn);if(v.kind){const {materials,tex}=v.kind;for(let i=0;i<materials.length;i++)writeTexel(tex,i,materials[i]);}}
-   if(!v.usable||!v.kind&&!v.m.visible||!camera.layers.test(batch.layers))continue;
+   if(!v.usable||(v.kind?!unitValues(v.copy,v.kind.basic):!v.m.visible)||!camera.layers.test(batch.layers))continue;
    drawn.length=0;
    for(const r of rows){const o=r.o;
     if(!o.visible||o.material!==r.m||v.kind&&!fits(v,r.m)||o.count<1||o.count>r.slots||o.layers.mask!==batch.layers.mask||!shown(o.parent)||!identity(o.matrixWorld.elements)||!frustum.intersectsObject(o))continue;

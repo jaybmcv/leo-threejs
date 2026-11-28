@@ -263,6 +263,16 @@ console.log('check-draw-runs: ok');
  assert.equal(runs.stats.batches,3,'one batch more');
  assert.deepEqual(pass([r1,r2]),['V2_draw_run P4_oak×2']);assert.notEqual(drawn[0].object,K,'its own batch');
  assert.deepEqual(pass([a1,a2]),['V2_draw_run P4_oak×2']);assert.equal(drawn[0].object,K,'an offered part stays in its batch');
+ // Each part's sub-draw reads its own material's texel (the uv at its first index).
+ const uvAt=(B,i)=>{const ix=B.geometry.index.array,v=ix[B._multiDrawStarts[i]/ix.BYTES_PER_ELEMENT];return B.geometry.attributes.uv.array[v*2];};
+ assert.deepEqual(pass([a1,b,c]),['V2_draw_run P4_oak×3']);assert.deepEqual([0,1,2].map(i=>uvAt(K,i)),[1/6,.5,5/6].map(Math.fround),'oak, metal, sage texels');
+ // The copy has a name of its own (the moods find materials by name), kept as the copy follows its original.
+ assert.match(K.material.name,/^V2_draw_run_palette_\d+$/);assert.notEqual(K.material.name,oak.name);
+ // A value written into the copy (as a mood that found it would): its parts draw themselves until it is put back.
+ K.material.emissiveIntensity=4;assert.deepEqual(pass([a1,b,c]),['a1','b','c']);K.material.emissiveIntensity=1;assert.deepEqual(pass([a1,b,c]),['V2_draw_run P4_oak×3']);
+ K.material.color.set(0xff0000);assert.deepEqual(pass([a1,b]),['a1','b'],'its colour too');K.material.color.set(0xffffff);
+ // The first material given a texture (no look any more): neither it nor the others fold with it.
+ oak.map=new T.Texture();oak.needsUpdate=true;assert.deepEqual(pass([a1,a2,b]),['a1','a2','b']);oak.map=null;oak.needsUpdate=true;assert.deepEqual(pass([a1,a2,b]),['V2_draw_run P4_oak×3']);
  // Without looks, the same parts fold by material only.
  const w3=new T.Scene();for(const o of [a1,a2,b,c])w3.add(o.clone());const plainRuns=await createDrawRuns(w3,renderer,[{parts:w3.children.slice()}]);
  assert.equal(plainRuns.stats.batches,1,'oak alone has two parts');

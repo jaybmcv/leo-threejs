@@ -130,6 +130,18 @@ console.log('check-cabin-batches: ok');
  for(const m of [warm,oak,brass]){m.onBeforeCompile=hook();m.customProgramCacheKey=key;m.needsUpdate=true;}
  pass(()=>assert.equal(K._multiDrawCount,4,'own closures, one key'));
  brass.customProgramCacheKey=function(){return 'other';};brass.needsUpdate=true;pass(()=>{assert(pBrass.visible);assert.equal(K._multiDrawCount,3);});
+ brass.customProgramCacheKey=key;brass.needsUpdate=true;
+ // Each part's sub-draw reads its own material's texel (Uint16 normalized u at its first index).
+ const uvAt=i=>{const ix=K.geometry.index.array,v=ix[K._multiDrawStarts[i]/ix.BYTES_PER_ELEMENT];return K.geometry.attributes.uv.array[v*2];},texel=k=>Math.round(65535*(k+.5)/3);
+ pass(()=>{assert.equal(K._multiDrawCount,4);assert.deepEqual([0,1,2,3].map(uvAt),[texel(0),texel(1),texel(1),texel(2)],'warm, oak, oak, brass texels');});
+ // The copy has a name of its own (the moods find materials by name) and stays shown.
+ assert.equal(K.material.name,'V2_cabin_kind_0');assert(K.material.visible);
+ // A value written into the copy: its parts draw themselves until it is put back.
+ K.material.emissiveIntensity=4;pass(()=>assert(pWarm.visible&&pOak.visible&&!K.visible));K.material.emissiveIntensity=1;pass(()=>assert.equal(K._multiDrawCount,4));
+ // The first material hidden: the copy stays shown, the others still fold, its own part is left to three.
+ warm.visible=false;pass(()=>{assert(K.material.visible&&K.visible);assert.equal(K._multiDrawCount,3);assert(pWarm.visible);});warm.visible=true;
+ // The first material given a texture (no look any more): nothing folds with it.
+ warm.map=new T.Texture();warm.needsUpdate=true;pass(()=>assert(!K.visible&&pOak.visible));warm.map=null;warm.needsUpdate=true;pass(()=>assert.equal(K._multiDrawCount,4));
  // Without kinds: by material, as before.
  const s2=new T.Scene();const copies=parts.map(o=>{const c=o.clone();c.userData={...o.userData};s2.add(c);return c;});
  const pb=await createCabinBatches(s2,renderer,copies);assert.equal(pb.stats.batches,2,'oak (two parts) and apart');assert.equal(pb.stats.kinds,0);
