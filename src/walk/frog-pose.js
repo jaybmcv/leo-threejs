@@ -11,7 +11,7 @@ export function createFrogPose(holder,figure){
   const eyes=figure.asset.meshes.find(m=>m.name==='eyes');
   // The point under the nose, measured on Cosmo's face in the bind pose.
   mouth=new T.Vector3(0,1.221,.243).applyMatrix4(eyes.bindMatrix).applyMatrix4(eyes.skeleton.boneInverses[eyes.skeleton.bones.indexOf(head)]);
-  tongueShape=new T.SphereGeometry(1,16,10);tonguePink=new T.MeshStandardMaterial({color:0xf66a95,roughness:.52});
+  tongueShape=new T.SphereGeometry(1,16,10);tonguePink=new T.MeshStandardMaterial({color:0xff789e,emissive:0x6b223a,emissiveIntensity:.3,roughness:.52});
  }
  const tongue=new T.Mesh(tongueShape,tonguePink),grip=new T.Group();
  tongue.name='Frog_lick_tongue';tongue.visible=false;holder.add(grip,tongue);
@@ -36,14 +36,15 @@ export function createFrogPose(holder,figure){
    });
   }
   // Look down at the frog, then lean in once with the muzzle.
-  turn(chest,xAxis,10*lick);turn(head,xAxis,-38*bend+11*lift+5*lick);turn(head,yAxis,12*lift*(1-lick));
+  turn(chest,xAxis,8*lick);turn(head,xAxis,-38*bend+11*lift+3*lick);turn(head,yAxis,12*lift*(1-lick));
   const home=holder.worldToLocal(origin.set(FROG_AT[0],FROG_AT[1]+FROG_BODY_Y,FROG_AT[2]));
-  grip.position.set(mix(home.x,.035,lift),mix(home.y,1.19,lift),mix(home.z,.49,lift));
+  // Leave space between the muzzle and the frog's face when both hands are up.
+  grip.position.set(mix(home.x,.035,lift),mix(home.y,1.19,lift),mix(home.z,.62,lift));
   const from=Math.atan2(-Math.sin(yaw),Math.cos(yaw));
   grip.rotation.y=from+Math.atan2(Math.sin(-Math.PI/2-from),Math.cos(-Math.PI/2-from))*lift;
   for(const {out,shoulder,elbow,hand} of limbs){
    const a=shoulder.quaternion.clone(),b=elbow.quaternion.clone(),c=hand.quaternion.clone();
-   solveSeatedLimb(holder,shoulder,elbow,hand,[grip.position.x+out*.205,grip.position.y-.035,grip.position.z-.10],[out*.7,-1,-.1]);
+   solveSeatedLimb(holder,shoulder,elbow,hand,[grip.position.x+out*.205,grip.position.y-.035,grip.position.z-mix(.10,.18,lift)],[out*.7,-1,-.1]);
    // Both palms cup the frog from underneath, fingers coming in from the sides.
    const along=new T.Vector3(-out*.66,0,.75).normalize(),across=new T.Vector3().crossVectors(along,up);
    setWorldQuat(hand,rotation.clone().multiply(new T.Quaternion().setFromRotationMatrix(basis.makeBasis(across,along,up))));
@@ -51,9 +52,9 @@ export function createFrogPose(holder,figure){
   }
   if(lick>.001){
    holder.worldToLocal(origin.copy(head.localToWorld(tip.copy(mouth))));
-   // One stroke along the frog, followed by retraction into the muzzle.
+   // One stroke from the cheek along the outer flank, then back into the muzzle.
    const stroke=frogEase(t,1.89,2.57);
-   tip.set(grip.position.x+.045,grip.position.y+mix(.10,.147,stroke),grip.position.z+mix(-.15,.052,stroke)).lerp(origin,1-lick);
+   tip.set(grip.position.x+.15+.025*Math.sin(stroke*Math.PI),grip.position.y+mix(.075,.115,stroke),grip.position.z+mix(-.19,-.026,stroke)).lerp(origin,1-lick);
    direction.subVectors(tip,origin);tongue.position.copy(origin).lerp(tip,.5);
    tongue.quaternion.setFromUnitVectors(up,direction.clone().normalize());tongue.scale.set(.034,direction.length()*.57,.019);tongue.visible=true;
   }

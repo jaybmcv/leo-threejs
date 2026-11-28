@@ -2629,7 +2629,7 @@
       "colliders": [],
       "interactionTargets": null,
       "placements": 3,
-      "signature": "746abfba5d7cf7a89394c042576d60ae01d70e52275b9b7a0dc78e4ba915e1ec"
+      "signature": "da453f82edcb93c1e961818f038b3db8188d0d60d8d7bb4c8fd9b88c8b58fe98"
     },
     {
       "source": "src/walk/frog-trip.js",
