@@ -366,6 +366,12 @@
     ],
     "via": null
   },
+  "src/walk/lounge-table-smoke.js": {
+    "owners": [
+      "commons-1"
+    ],
+    "via": "inherited"
+  },
   "src/walk/lift-tile-floor.js": {
     "owners": [
       "circulation-19"

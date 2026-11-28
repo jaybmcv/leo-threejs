@@ -11,6 +11,7 @@ import fontData from './assets/helvetiker-bold.json' with {type:'json'};
 import {canvasTexture,seeded} from './polish-kit.js';
 import {domePlants} from './lounge-dome-plants.js';
 import {createTerpeneGlassware} from './terpene-glassware.js';
+import {addLoungeTableDressing} from './v2/lounge-table-dressing.js';
 
 // The Hydro-Nip Lounge (feedback-inbox #58, HYDRO_NIP_LOUNGE.md): a catnip lounge in Neighborhood 1's garden commons,
 // concept by Tochtli. Built in the commons template's own frame (x 109.5-154.5, z 8-46, floor 24.3); the commons root
@@ -611,8 +612,17 @@ export function createHydroNipLounge({mirror=1}={}){
  // Every flat and dome cushion on the three rugs shares the meditation pose.
  [[126.4,13.4],[131,16.2],[133.6,16],[136.2,13.4],[142.7,14.9],[145.6,17.2]].map((p,i)=>seatingRow(p,Math.floor(i/2))).forEach(([x,z],i)=>
   {const o=cushion([M.purple,M.teal,M.magenta][i%3],[x,FLOOR+.095,z]);if(x>=142.7&&rugMove)o.applyMatrix4(rugMove);if(i===0&&mazeRugTurn)o.applyMatrix4(mazeRugTurn);});
- for(const [x,z] of [[127.2,15],[137.2,15]].map((p,i)=>seatingRow(p,i))){turning=x===127.2?mazeRugTurn:null;cyl(M.wood,.5,.5,.05,[x,FLOOR+.4,z],18);cyl(M.dark,.08,.12,.38,[x,FLOOR+.19,z],8);
-  cyl(M.board,.18,.12,.08,[x,FLOOR+.465,z],12);put(M.leaf,new T.SphereGeometry(.15,8,5,0,Math.PI*2,0,Math.PI/2).translate(x,FLOOR+.49,z));}turning=null;
+ const rugTops=[],tableHeight=.4,topThickness=.05;
+ for(const [i,point] of [[127.2,15],[137.2,15]].entries()){
+  const [x,z]=seatingRow(point,i);turning=i===0?mazeRugTurn:null;
+  cyl(M.wood,.5,.5,topThickness,[x,FLOOR+tableHeight,z],18);cyl(M.dark,.08,.12,.38,[x,FLOOR+.19,z],8);
+  cyl(M.board,.18,.12,.08,[x,FLOOR+.465,z],12);put(M.leaf,new T.SphereGeometry(.15,8,5,0,Math.PI*2,0,Math.PI/2).translate(x,FLOOR+.49,z));
+  const top=new T.Matrix4().makeTranslation(x,FLOOR+tableHeight+topThickness/2,z);
+  rugTops.push(turning?top.premultiply(turning):top);
+ }turning=null;
+ // Side tables use the same source frame as the lounge seating, with rises above the main floor.
+ const sideTables=fitoutOverrides['commons-1']?.loungeSideTables||[];
+ addLoungeTableDressing(root,rugTops,sideTables.map(([x,rise,z])=>[x,FLOOR+rise,z]));
  [[125.8,15.8,PINK],[131.6,13.6,AMBER],[136,16.8,GREEN],[139.6,15.6,PURPLE],[143.4,17.4,CYAN],[128.8,13.1,AMBER]].map((p,i)=>seatingRow(p,[0,0,1,1,2,0][i])).forEach(([x,z,c])=>put(neon(c),new T.IcosahedronGeometry(.09,1).translate(x,FLOOR+.11,z)));
  // Cat trees: sisal posts, platforms and a bed on top. Remove source-frame instances before their parts merge.
  const removedTrees=fitoutOverrides['commons-1']?.remove||[];
