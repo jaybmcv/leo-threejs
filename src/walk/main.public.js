@@ -172,7 +172,6 @@ import {identify,currentPass,bestPass,connect,connectPopup,forget,invite} from '
 import {inOtherside,onGlyph} from './net/otherside.js';
 import {RemotePlayers} from './remotes.js';
 import {glossLoungeFloor,quietFloorReflections} from './lounge-floor.js';
-import {tileLiftFloor} from './lift-tile-floor.js';
 import {createRecoveryMood} from './recovery.js';
 import {createAtriumMood} from './atrium-mood.js';
 import {createStageBeams} from '../v2/stage-beams.js';
@@ -413,8 +412,7 @@ async function buildShip(){
  restSpots=state.restSpots;rest=spotIndex(state.seats);lounge=state.lounge;loungeMood=lounge?createLoungeMood(lounge,{hemi,fill,scene}):null;lullaby=lounge?createLullaby(lounge.dome):null;
  // Its floor, galleries and the promenade in front: glossy acrylic with neon swirls (lounge-floor.js).
  quietFloorReflections(scene,scene.environment);
- // Deck 19's lift lobby and promenade up to the lounge: black ceramic tile (lift-tile-floor.js).
- // The floor finish is in the prepared render bands.
+ // The Deck 19 lift lobby's hex finish is in the prepared render bands.
  // The crew recovery lounge's pod side dims the lights (recovery.js).
  recovery=createRecoveryMood(ship,{hemi,fill,scene});arrivalMood=createArrivalMood(ship,{hemi,fill,scene});atriumMood=createAtriumMood({hemi,fill,scene});stageBeams=createStageBeams(scene,layout.decks[5].y);
  }});
